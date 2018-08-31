@@ -1,0 +1,3 @@
+fun main() {
+    emit_out(1)
+}
