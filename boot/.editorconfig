@@ -1,2 +1,2 @@
-[*.fs]
+[*.{fs,milone}]
 indent_size = 2

@@ -1,3 +1,2 @@
-fun main() {
-    emit_out(1)
-}
+let main () =
+  emit_out 1

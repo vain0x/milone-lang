@@ -3,11 +3,13 @@ module MiloneLang.Program
   open System
 
   let run (source: string): ProcessOutput =
-    let tokens = Parsing.lex source
+    let tokens = Lexing.tokenize source
     eprintfn "tokens = %A" tokens
-    let stmt = Parsing.parse tokens
-    eprintfn "parsed = %A" stmt
-    Eval.eval stmt
+    let syns = Lexing.compose tokens
+    eprintfn "syn = %A" syns
+    let stmts = Parsing.parse syns
+    eprintfn "parsed = %A" stmts
+    Eval.eval stmts
 
   [<EntryPoint>]
   let main _ =

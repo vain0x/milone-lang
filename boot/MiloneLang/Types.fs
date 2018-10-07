@@ -1,28 +1,65 @@
 namespace rec MiloneLang
 
+  /// Location = (rowIndex, columnIndex).
+  type Loc = int * int
+
   [<RequireQualifiedAccess>]
   type Token =
+    | Unit
     | Int
       of int
+    | String
+      of string
     | Ident
       of string
+    // Punctuation.
     | Punct
       of string
 
+  /// Syntax tree.
   [<RequireQualifiedAccess>]
+  type Syn =
+    | Unit
+    | Int
+      of int
+    | String
+      of string
+    | Ident
+      of string
+    /// Parenthesis.
+    | Paren
+      of Syn list
+    /// Operator.
+    | Op
+      of punct:string
+    | Let
+      of pat:Syn list * body:Syn list
+
+  [<RequireQualifiedAccess>]
+  /// Primitive functions.
   type PrimFun =
     | EmitOut
 
   [<RequireQualifiedAccess>]
   type Expr =
+    | Unit
     | Int
       of int
+    | String
+      of string
+    /// Primitive.
     | Prim
       of PrimFun
+    /// Variable reference.
+    | Ref
+      of string
     | Call
       of Expr * list<Expr>
     | Add
       of Expr * Expr
+    /// x; y; z
+    | Begin
+      of Expr list
 
   [<RequireQualifiedAccess>]
   type Stmt =
@@ -31,8 +68,11 @@ namespace rec MiloneLang
 
   [<RequireQualifiedAccess>]
   type Value =
+    | Unit
     | Int
       of int
+    | String
+      of string
     | PrimFun
       of PrimFun
 

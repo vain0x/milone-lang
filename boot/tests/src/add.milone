@@ -1,3 +1,2 @@
-fun main() {
-    2 + 3
-}
+let main () =
+  2 + 3

@@ -4,98 +4,91 @@ open System
 open System.Text.RegularExpressions
 open MiloneLang
 
-let lex (source: string): list<Token> =
-  let regex =
-    [
-      """[ \t\r\n]+"""
-      """[+;(){}]"""
-      """[0-9a-zA-Z_]+"""
-    ]
-    |> String.concat "|"
-    |> Regex
-
-  let rec go acc index (m: Match) =
-    if m.Success && m.Index = index && m.Length > 0 then
-      let s = m.Value
-      let c = m.Value.[0]
-      let token =
-        if Char.IsWhiteSpace(c) then
-          None
-        else if Char.IsDigit(c) then
-          s |> int |> Token.Int |> Some
-        else if Char.IsLetter(c) || c = '_' then
-          s |> Token.Ident |> Some
-        else
-          Token.Punct s |> Some
-      let acc =
-        match token with
-        | Some token -> token :: acc
-        | None -> acc
-      let index = m.Index + m.Length
-      if index >= source.Length then
-        acc |> List.rev
-      else
-        let m = m.NextMatch()
-        go acc index m
-    else
-      let near =
-        source.Substring(
-          Math.Min(source.Length - 1, index),
-          Math.Max(0, Math.Min(source.Length - index, 8))
-        )
-      failwithf "Unknown token at %d near %s" index near
-  go [] 0 (regex.Match(source))
-
-let parseError message (_, tokens) =
-  let near = tokens |> List.truncate 6
+let parseError message (_, syns) =
+  let near = syns |> List.truncate 6
   failwithf "Parse error %s near %A" message near
 
-/// atom = int / prim
-let rec parseAtom =
-  function
-  | Token.Int value :: tokens ->
-    Expr.Int value, tokens
-  | Token.Ident "emit_out" :: tokens ->
-    Expr.Prim PrimFun.EmitOut, tokens
-  | tokens ->
-    parseError "atom" ((), tokens)
+let (|LeadExpr|_|) token =
+  match token with
+  | Token.Int _
+  | Token.Ident _
+  | Token.Punct "(" -> Some ()
+  | _ -> None
 
-/// call = atom ('(' arg ')')?
-let parseCall tokens =
-  match parseAtom tokens with
-  | first, Token.Punct "(" :: tokens ->
-    match parseExpr tokens with
-    | arg, Token.Punct ")" :: tokens ->
-      Expr.Call (first, [arg]), tokens
-    | t ->
-      parseError "missing args )" t
-  | t -> t
+/// atom = unit / int / string / prim
+let rec parseAtom syns =
+  match syns with
+  | Syn.Unit :: syns ->
+    Some Expr.Unit, syns
+  | Syn.Int value :: syns ->
+    Some (Expr.Int value), syns
+  | Syn.String value :: syns ->
+    Some (Expr.String value), syns
+  | Syn.Ident "emit_out" :: syns ->
+    Some (Expr.Prim PrimFun.EmitOut), syns
+  | Syn.Ident value :: syns ->
+    Some (Expr.Ref value), syns
+  | syns ->
+    None, syns
 
-/// add = call ( '+' call )* / atom
-let parseAdd tokens: Expr * list<Token> =
-  let rec go =
-    function
-    | acc, Token.Punct "+" :: tokens ->
-      let it, tokens = parseCall tokens
-      Expr.Add(acc, it), tokens
+/// call = atom ( atom )*
+let parseCall syns =
+  let rec go acc syns =
+    match parseAtom syns with
+    | Some atom, syns ->
+      go (atom :: acc) syns
+    | None, syns ->
+      match List.rev acc with
+      | [] -> failwith "invalid syns"
+      | [atom] ->
+        atom, syns
+      | atom :: args ->
+        Expr.Call (atom, args), syns
+  go [] syns
+
+/// add = call ( '+' call )*
+let parseAdd syns =
+  let rec go syns =
+    match syns with
+    | acc, Syn.Op "+" :: syns ->
+      let it, syns = parseCall syns
+      Expr.Add (acc, it), syns
     | t -> t
-  parseCall tokens |> go
+  parseCall syns |> go
 
-let parseExpr tokens =
-  parseAdd tokens
+/// begin = add ( ';' add )*
+let parseBegin syns: Expr =
+  let rec go acc syns =
+    match acc, syns with
+    | [expr], [] ->
+      expr
+    | acc, [] ->
+      acc |> List.rev |> Expr.Begin
+    | acc, Syn.Op ";" :: syns ->
+      let expr, syns = parseAdd syns
+      go (expr :: acc) syns
+    | _, syns ->
+      failwithf "Expected ';' but: %A" syns
+  let expr, syns = parseAdd syns
+  go [expr] syns
 
-let parse (tokens: list<Token>): Stmt =
-  match tokens with
-  | Token.Ident "fun"
-    :: Token.Ident "main"
-    :: Token.Punct "(" :: Token.Punct ")"
-    :: Token.Punct "{" :: tokens ->
-    match parseAdd tokens with
-    | body, Token.Punct "}" :: tokens ->
-      if tokens <> [] then
-        failwithf "Unknown tokens: %A" tokens
-      Stmt.FunDecl ("main", body)
-    | t ->
-      parseError "expected } to close fun body" t
-  | t ->
-    parseError "not starting with main fun decl" ((), t)
+let parseExpr = parseBegin
+
+let parseLet acc syns =
+  match syns with
+  | [] ->
+    List.rev acc
+  // let f arg ... = ...
+  | Syn.Let
+    (
+      Syn.Ident ident :: (_ :: _ as args),
+      body
+    ) :: syns ->
+    let body = parseExpr body
+    let s = Stmt.FunDecl (ident, body)
+    parseLet (s :: acc) syns
+  | _ ->
+    failwithf "unimpl %A" syns
+
+let parse (syn: Syn list): Stmt list =
+  parseLet [] syn
