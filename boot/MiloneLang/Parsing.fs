@@ -48,31 +48,41 @@ let parseCall syns =
 
 /// add = call ( '+' call )*
 let parseAdd syns =
-  let rec go syns =
-    match syns with
-    | acc, Syn.Op "+" :: syns ->
-      let it, syns = parseCall syns
-      Expr.Add (acc, it), syns
-    | t -> t
-  parseCall syns |> go
-
-/// begin = add ( ';' add )*
-let parseBegin syns: Expr =
   let rec go acc syns =
-    match acc, syns with
-    | [expr], [] ->
-      expr
-    | acc, [] ->
-      acc |> List.rev |> Expr.Begin
-    | acc, Syn.Op ";" :: syns ->
-      let expr, syns = parseAdd syns
-      go (expr :: acc) syns
-    | _, syns ->
-      failwithf "Expected ';' but: %A" syns
-  let expr, syns = parseAdd syns
-  go [expr] syns
+    match syns with
+    | [] ->
+      acc
+    | Syn.Op "+" :: syns ->
+      let second, syns = parseCall syns
+      let acc = Expr.Add (acc, second)
+      go acc syns
+    | _ ->
+      failwithf "Expected '+' but %A" syns
+  let first, syns = parseCall syns
+  go first syns
 
-let parseExpr = parseBegin
+let parseTerm term =
+  match term with
+  | Syn.Let _ ->
+    failwithf "unimpl let-in"
+  | Syn.Term syns ->
+    parseAdd syns
+  | _ ->
+    failwithf "Expected term but %A" term
+
+let parseTerms terms: Expr =
+  match terms |> List.map parseTerm with
+  | [term] ->
+    term
+  | terms ->
+    Expr.Begin terms
+
+let parseExpr syn =
+  match syn with
+  | Syn.Expr terms ->
+    parseTerms terms
+  | _ ->
+    failwithf "Expected expr buf: %A" syn
 
 let parseLet acc syns =
   match syns with
