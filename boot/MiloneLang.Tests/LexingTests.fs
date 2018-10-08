@@ -6,7 +6,7 @@ open Xunit
 let inline is<'T> (expected: 'T) (actual: 'T) =
   Assert.Equal(expected, actual)
 
-let synLet pat body = Syn.Let (pat, body)
+let synLet pat terms = Syn.Let (pat, Syn.Expr terms)
 
 [<Fact>]
 let tokenizeMainEmpty () =
@@ -51,13 +51,11 @@ let lexMainEmpty () =
   let source = """let main () = 0"""
   let expected =
     [
-      Syn.Let (
-        [
-          Syn.Ident "main"
-          Syn.Unit
-        ],
-        [Syn.Int 0]
-      )
+      synLet [Syn.Ident "main"; Syn.Unit] [
+        Syn.Term [
+          Syn.Int 0
+        ]
+      ]
     ]
   source |> Lexing.lex |> is expected
 
@@ -70,8 +68,10 @@ let main () =
   let expected =
     [
       synLet [Syn.Ident "main"; Syn.Unit] [
-        Syn.Ident "emit_out"
-        Syn.Int 1
+        Syn.Term [
+          Syn.Ident "emit_out"
+          Syn.Int 1
+        ]
       ]
     ]
   source |> Lexing.lex |> is expected
@@ -87,12 +87,14 @@ let main () =
   let expected =
     [
       synLet [Syn.Ident "main"; Syn.Unit] [
-        Syn.Ident "f"
-        Syn.Int 1
-        Syn.Int 2
-        Syn.Int 3
-        Syn.Op "+"
-        Syn.Int 4
+        Syn.Term [
+          Syn.Ident "f"
+          Syn.Int 1
+          Syn.Int 2
+          Syn.Int 3
+          Syn.Op "+"
+          Syn.Int 4
+        ]
       ]
     ]
   source |> Lexing.lex |> is expected
@@ -111,13 +113,19 @@ let lexTests () =
       synLet [Syn.Ident "main"; Syn.Unit] [
         synLet [Syn.Ident "foo"] [
           synLet [Syn.Ident "goo"] [
-            Syn.Int 4
+            Syn.Term [
+              Syn.Int 4
+            ]
           ]
-          Syn.Int 4
-          Syn.Op "+"
-          Syn.Int 6
+          Syn.Term [
+            Syn.Int 4
+            Syn.Op "+"
+            Syn.Int 6
+          ]
         ]
-        Syn.Int 2
+        Syn.Term [
+          Syn.Int 2
+        ]
       ]
     ]
   source |> Lexing.lex |> is expected
@@ -132,13 +140,16 @@ let lexBeginExprTests () =
   let expected =
     [
       synLet [Syn.Ident "main"; Syn.Unit] [
-        Syn.Ident "f"
-        Syn.Ident "x"
-        Syn.Op "+"
-        Syn.Ident "g"
-        Syn.Ident "y"
-        Syn.Op ";"
-        Syn.Int 1
+        Syn.Term [
+          Syn.Ident "f"
+          Syn.Ident "x"
+          Syn.Op "+"
+          Syn.Ident "g"
+          Syn.Ident "y"
+        ]
+        Syn.Term [
+          Syn.Int 1
+        ]
       ]
     ]
   source |> Lexing.lex |> is expected

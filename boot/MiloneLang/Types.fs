@@ -26,14 +26,15 @@ namespace rec MiloneLang
       of string
     | Ident
       of string
-    /// Parenthesis.
-    | Paren
+    | Term
+      of Syn list
+    | Expr
       of Syn list
     /// Operator.
     | Op
       of punct:string
     | Let
-      of pat:Syn list * body:Syn list
+      of pat:Syn list * body:Syn
 
   [<RequireQualifiedAccess>]
   /// Primitive functions.

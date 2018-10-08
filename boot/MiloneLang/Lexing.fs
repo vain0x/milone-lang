@@ -1,7 +1,10 @@
-module MiloneLang.Lexing
+module rec MiloneLang.Lexing
+
+open MiloneLang
 
 // Container of syntax layout.
-type private Outer =
+type Outer =
+  internal
   | Tie
     of close:string
   | Box
@@ -13,6 +16,11 @@ let private (|WithX|) tokens =
     0, tokens
   | (_, (_, x)) :: _ ->
     x, tokens
+
+let private (|NonPunct|_|) token =
+  match token with
+  | Token.Punct _ -> None
+  | _ -> Some ()
 
 let private lexError message (source: string, i) =
   let near = source.Substring(i, min (source.Length - i) 6)
@@ -91,10 +99,104 @@ let tokenize (source: string): list<Token * Loc> =
         lexError "Unknown token" (source, i)
   go ([], 0, 0, 0)
 
-let (|NonPunct|_|) token =
-  match token with
-  | Token.Punct _ -> None
-  | _ -> Some ()
+/// Reads an arg list of `let` or `fun`.
+let rec composeArgs outer tokens =
+  composeFactors [] outer tokens
+
+/// Reads a let construction.
+let composeLet letX tokens =
+  let args, WithX (bodyX, tokens) =
+    composeArgs (Tie "=") tokens
+  let body, tokens =
+    composeExpr (Box (max letX bodyX)) tokens
+  let syn = Syn.Let (List.rev args, body)
+  syn, tokens
+
+/// Reads a token that consists of a group of delimited tokens.
+let composeFactor outer tokens =
+  match outer, tokens with
+  | _, (Token.Punct "(", _) :: tokens ->
+    let expr, tokens = composeExpr (Tie ")") tokens
+    Some expr, tokens
+  | _, (Token.Unit, _) :: tokens ->
+    Some Syn.Unit, tokens
+  | _, (Token.Int value, _) :: tokens ->
+    Some (Syn.Int value), tokens
+  | _, (Token.String value, _) :: tokens ->
+    Some (Syn.String value), tokens
+  | _, (Token.Ident value, _) :: tokens ->
+    Some (Syn.Ident value), tokens
+  | _, (Token.Punct op, _) :: tokens ->
+    Some (Syn.Op op), tokens
+  | _, [] ->
+    None, tokens
+
+let rec composeFactors acc outer tokens =
+  match composeFactor outer tokens with
+  | None, tokens ->
+    acc, tokens
+  | Some syn, tokens ->
+    let acc = syn :: acc
+
+    match outer, tokens with
+    | _, [] ->
+      acc, tokens
+    // Closed by delimiter.
+    | Tie tie, (Token.Punct op, _) :: tokens
+      when op = tie ->
+      acc, tokens
+    // Closed by next term or something.
+    | Box boxX, (NonPunct, (_, x)) :: _
+      when x <= boxX ->
+      acc, tokens
+    // Closed by other elements out of box.
+    | Box boxX, (_, (_, x)) :: _
+      when x < boxX ->
+      acc, tokens
+
+    | _, _ :: _ ->
+      composeFactors acc outer tokens
+
+/// Reads an item of semicolon-separated list.
+let composeTerm outer tokens =
+  match tokens with
+  | (Token.Ident "let", (_, letX)) :: tokens ->
+    let syn, tokens = composeLet letX tokens
+    syn, tokens
+  | tokens ->
+    let syns, tokens = composeFactors [] outer tokens
+    let syn = Syn.Term (List.rev syns)
+    syn, tokens
+
+let composeTerms acc outer tokens =
+  let term, tokens = composeTerm outer tokens
+  let acc = term :: acc
+
+  match outer, tokens with
+  | _, [] ->
+    acc, tokens
+  // Closed by other elements out of box.
+  | Box boxX, (_, (_, x)) :: _
+    when x < boxX ->
+    acc, tokens
+
+  | _, _ :: _ ->
+    composeTerms acc outer tokens
+
+let composeExpr outer tokens =
+  let terms, tokens = composeTerms [] outer tokens
+  let expr = Syn.Expr (List.rev terms)
+  expr, tokens
+
+let rec composeDefs acc outer tokens =
+  match tokens with
+  | [] ->
+    acc, tokens
+  | (Token.Ident "let", (_, letX)) :: tokens ->
+    let syn, tokens = composeLet letX tokens
+    composeDefs (syn :: acc) outer tokens
+  | _ ->
+    failwithf "Expected 'let' but %A" tokens
 
 /// Composes tokens into (a kind of) syntax tree.
 ///
@@ -107,60 +209,11 @@ let (|NonPunct|_|) token =
 /// - Composition algorithm doesn't affect operator fixity.
 ///   - e.g. However you layout, `f 1 2 \n * 3` is `(f 1 2) * 3` .
 let compose (tokens: (Token * Loc) list): Syn list =
-  let rec go acc outer (tokens: (Token * Loc) list): Syn list * _ list =
-    let next tokens t =
-      match outer, tokens with
-      | Box xb, WithX (x, (NonPunct, _) :: _) when xb = x && acc <> [] ->
-        go (Syn.Op ";" :: t :: acc) outer tokens
-      | _ ->
-        go (t :: acc) outer tokens
-
-    match outer, tokens with
-    // Closing conditions.
-
-    // Closing token found. We drop it from tokens.
-    | _, ([] as tokens)
-    | Tie ")", (Token.Punct ")", _) :: tokens
-    | Tie "=", (Token.Punct "=", _) :: tokens ->
-      acc, tokens
-    // Closing token clearing other boxes. We don't drop it.
-    | Box _, (Token.Punct ")", _) :: _
-    | Box _, (Token.Punct "=", _) :: _ ->
-      acc, tokens
-    // Dedents clear boxes.
-    | Box xb, (_, (_, x)) :: _ when x < xb ->
-      acc, tokens
-
-    // Bindings.
-    | _, (Token.Ident "let", _) :: tokens ->
-      let args, WithX (x, tokens) =
-        go [] (Tie "=") tokens
-      let body, tokens =
-        go [] (Box x) tokens
-      Syn.Let (List.rev args, List.rev body) |> next tokens
-
-    // Leaves.
-    | _, (Token.Punct "(", _) :: tokens ->
-      let syns, tokens = go [] (Tie ")") tokens
-      Syn.Paren (List.rev syns) |> next tokens
-    | _, (Token.Unit, _) :: tokens ->
-      Syn.Unit |> next tokens
-    | _, (Token.Int value, _) :: tokens ->
-      Syn.Int value |> next tokens
-    | _, (Token.String value, _) :: tokens ->
-      Syn.String value |> next tokens
-    | _, (Token.Ident value, _) :: tokens ->
-      Syn.Ident value |> next tokens
-    | _, (Token.Punct op, _) :: tokens ->
-      Syn.Op op |> next tokens
-
-    // Out of context errors.
-    | _,
-      ((Token.Punct _ | Token.Ident _), _) :: _ ->
-      failwithf "Token out of context %A" tokens
-
-  let syns, _ = go [] (Box -1) tokens
+  let syns, tokens = composeDefs [] (Box -1) tokens
+  if tokens <> [] then
+    failwithf "Expected eof but %A" tokens
   List.rev syns
 
+/// Performs lexical analysis on string.
 let lex (source: string): Syn list =
   source |> tokenize |> compose
