@@ -1,10 +1,5 @@
 module MiloneLang.Lexing
 
-type private Context =
-  | Ty
-  | Val
-  | Pat
-
 // Container of syntax layout.
 type private Outer =
   | Tie
@@ -112,60 +107,59 @@ let (|NonPunct|_|) token =
 /// - Composition algorithm doesn't affect operator fixity.
 ///   - e.g. However you layout, `f 1 2 \n * 3` is `(f 1 2) * 3` .
 let compose (tokens: (Token * Loc) list): Syn list =
-  let rec go context outer acc (tokens: (Token * Loc) list): Syn list * _ list =
+  let rec go outer acc (tokens: (Token * Loc) list): Syn list * _ list =
     let next tokens t =
       match outer, tokens with
       | Box xb, WithX (x, (NonPunct, _) :: _) when xb = x && acc <> [] ->
-        go context outer (Syn.Op ";" :: t :: acc) tokens
+        go outer (Syn.Op ";" :: t :: acc) tokens
       | _ ->
-        go context outer (t :: acc) tokens
+        go outer (t :: acc) tokens
 
-    match context, outer, tokens with
+    match outer, tokens with
     // Closing conditions.
 
     // Closing token found. We drop it from tokens.
-    | _, _, ([] as tokens)
-    | _, Tie ")", (Token.Punct ")", _) :: tokens
-    | _, Tie "=", (Token.Punct "=", _) :: tokens ->
+    | _, ([] as tokens)
+    | Tie ")", (Token.Punct ")", _) :: tokens
+    | Tie "=", (Token.Punct "=", _) :: tokens ->
       acc, tokens
     // Closing token clearing other boxes. We don't drop it.
-    | _, Box _, (Token.Punct ")", _) :: _
-    | _, Box _, (Token.Punct "=", _) :: _ ->
+    | Box _, (Token.Punct ")", _) :: _
+    | Box _, (Token.Punct "=", _) :: _ ->
       acc, tokens
     // Dedents clear boxes.
-    | _, Box xb, (_, (_, x)) :: _ when x < xb ->
+    | Box xb, (_, (_, x)) :: _ when x < xb ->
       acc, tokens
 
     // Bindings.
-    | _, _, (Token.Ident "let", _) :: tokens ->
+    | _, (Token.Ident "let", _) :: tokens ->
       let args, WithX (x, tokens) =
-        go Context.Pat (Tie "=") [] tokens
+        go (Tie "=") [] tokens
       let body, tokens =
-        go Context.Val (Box x) [] tokens
+        go (Box x) [] tokens
       Syn.Let (List.rev args, List.rev body) |> next tokens
 
     // Leaves.
-    | _, _, (Token.Punct "(", _) :: tokens ->
-      let syns, tokens = go context (Tie ")") [] tokens
+    | _, (Token.Punct "(", _) :: tokens ->
+      let syns, tokens = go (Tie ")") [] tokens
       Syn.Paren (List.rev syns) |> next tokens
-    | _, _, (Token.Unit, _) :: tokens ->
+    | _, (Token.Unit, _) :: tokens ->
       Syn.Unit |> next tokens
-    | _, _, (Token.Int value, _) :: tokens ->
+    | _, (Token.Int value, _) :: tokens ->
       Syn.Int value |> next tokens
-    | _, _, (Token.String value, _) :: tokens ->
+    | _, (Token.String value, _) :: tokens ->
       Syn.String value |> next tokens
-    | (Context.Pat | Context.Val), _, (Token.Ident value, _) :: tokens ->
+    | _, (Token.Ident value, _) :: tokens ->
       Syn.Ident value |> next tokens
-    | Context.Val, _, (Token.Punct op, _) :: tokens ->
+    | _, (Token.Punct op, _) :: tokens ->
       Syn.Op op |> next tokens
 
     // Out of context errors.
-    | (Context.Pat | Context.Ty),
-      _,
+    | _,
       ((Token.Punct _ | Token.Ident _), _) :: _ ->
       failwithf "Token out of context %A" tokens
 
-  let syns, _ = go Context.Ty (Box -1) [] tokens
+  let syns, _ = go (Box -1) [] tokens
   List.rev syns
 
 let lex (source: string): Syn list =
