@@ -107,13 +107,13 @@ let (|NonPunct|_|) token =
 /// - Composition algorithm doesn't affect operator fixity.
 ///   - e.g. However you layout, `f 1 2 \n * 3` is `(f 1 2) * 3` .
 let compose (tokens: (Token * Loc) list): Syn list =
-  let rec go outer acc (tokens: (Token * Loc) list): Syn list * _ list =
+  let rec go acc outer (tokens: (Token * Loc) list): Syn list * _ list =
     let next tokens t =
       match outer, tokens with
       | Box xb, WithX (x, (NonPunct, _) :: _) when xb = x && acc <> [] ->
-        go outer (Syn.Op ";" :: t :: acc) tokens
+        go (Syn.Op ";" :: t :: acc) outer tokens
       | _ ->
-        go outer (t :: acc) tokens
+        go (t :: acc) outer tokens
 
     match outer, tokens with
     // Closing conditions.
@@ -134,14 +134,14 @@ let compose (tokens: (Token * Loc) list): Syn list =
     // Bindings.
     | _, (Token.Ident "let", _) :: tokens ->
       let args, WithX (x, tokens) =
-        go (Tie "=") [] tokens
+        go [] (Tie "=") tokens
       let body, tokens =
-        go (Box x) [] tokens
+        go [] (Box x) tokens
       Syn.Let (List.rev args, List.rev body) |> next tokens
 
     // Leaves.
     | _, (Token.Punct "(", _) :: tokens ->
-      let syns, tokens = go (Tie ")") [] tokens
+      let syns, tokens = go [] (Tie ")") tokens
       Syn.Paren (List.rev syns) |> next tokens
     | _, (Token.Unit, _) :: tokens ->
       Syn.Unit |> next tokens
@@ -159,7 +159,7 @@ let compose (tokens: (Token * Loc) list): Syn list =
       ((Token.Punct _ | Token.Ident _), _) :: _ ->
       failwithf "Token out of context %A" tokens
 
-  let syns, _ = go (Box -1) [] tokens
+  let syns, _ = go [] (Box -1) tokens
   List.rev syns
 
 let lex (source: string): Syn list =
