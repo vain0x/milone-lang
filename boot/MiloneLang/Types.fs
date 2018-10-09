@@ -12,6 +12,8 @@ namespace rec MiloneLang
       of string
     | Ident
       of string
+    | ParenL
+    | ParenR
     // Punctuation.
     | Punct
       of string

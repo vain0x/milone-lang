@@ -6,7 +6,7 @@ open MiloneLang
 type Outer =
   internal
   | Tie
-    of close:string
+    of closing:Token
   | Box
     of column:int
 
@@ -19,6 +19,8 @@ let private (|WithX|) tokens =
 
 let private (|NonPunct|_|) token =
   match token with
+  | Token.ParenL
+  | Token.ParenR
   | Token.Punct _ -> None
   | _ -> Some ()
 
@@ -94,7 +96,9 @@ let tokenize (source: string): list<Token * Loc> =
         let t = Token.Unit, (y, x)
         (t :: acc, y, x + 2, i + 2) |> go
       | '('
-      | ')'
+      | ')' as c ->
+        let t = (if c = '(' then Token.ParenL else Token.ParenR), (y, x)
+        (t :: acc, y, x + 1, i + 1) |> go
       | '+'
       | '=' as c ->
         let t = Token.Punct (string c), (y, x)
@@ -116,7 +120,7 @@ let rec composeArgs outer tokens =
 /// Reads a let construction.
 let composeLet letX tokens =
   let args, WithX (bodyX, tokens) =
-    composeArgs (Tie "=") tokens
+    composeArgs (Tie (Token.Punct "=")) tokens
   let body, tokens =
     composeExpr (Box (max letX bodyX)) tokens
   let syn = Syn.Let (List.rev args, body)
@@ -125,8 +129,8 @@ let composeLet letX tokens =
 /// Reads a token that consists of a group of delimited tokens.
 let composeFactor outer tokens =
   match outer, tokens with
-  | _, (Token.Punct "(", _) :: tokens ->
-    let expr, tokens = composeExpr (Tie ")") tokens
+  | _, (Token.ParenL, _) :: tokens ->
+    let expr, tokens = composeExpr (Tie Token.ParenR) tokens
     Some expr, tokens
   | _, (Token.Unit, _) :: tokens ->
     Some Syn.Unit, tokens
@@ -140,6 +144,8 @@ let composeFactor outer tokens =
     Some (Syn.Op op), tokens
   | _, [] ->
     None, tokens
+  | _, (Token.ParenR, _) :: _ ->
+    failwithf "Unmatched ')' %A" tokens
 
 let rec composeFactors acc outer tokens =
   match composeFactor outer tokens with
@@ -152,8 +158,8 @@ let rec composeFactors acc outer tokens =
     | _, [] ->
       acc, tokens
     // Closed by delimiter.
-    | Tie tie, (Token.Punct op, _) :: tokens
-      when op = tie ->
+    | Tie tie, (token, _) :: tokens
+      when token = tie ->
       acc, tokens
     // Closed by next term or something.
     | Box boxX, (NonPunct, (_, x)) :: _
@@ -210,14 +216,15 @@ let rec composeDefs acc outer tokens =
 
 /// Composes tokens into (a kind of) syntax tree.
 ///
-/// - Composing with tie token ')' will continue
-/// until hits on corresponding ')'.
-/// - Composing with box with column x will continue
-/// until next occurrence of token with column (`<=` x).
-///   - But punct tokens with column (`=` x) don't clear box.
-///   - e.g. In pipeline `f x \n |> g`, you can align f and g on the same column. On the other hand, `f x \n g` (f and g are on the same column) is composed to two boxes: `f x`, `g`.
+/// - Composing with tie token `)` will continue
+/// until hits on corresponding `)`, not depending on indent.
+/// - Composing with box on column `x` will continue
+/// until hits on next token on column (`<` x).
+///   - Exceptionally, operators on column (`=` x) don't clear box.
+///   - e.g. In pipeline `f x \n |> g`, you can align f and `|>` on the same column.
+///     On the other hand, `f x \n g` is composed to two boxes: `f x` and `g`.
 /// - Composition algorithm doesn't affect operator fixity.
-///   - e.g. However you layout, `f 1 2 \n * 3` is `(f 1 2) * 3` .
+///   - e.g. Whatever layout is, `f 1 2 \n * 3` is `(f 1 2) * 3` .
 let compose (tokens: (Token * Loc) list): Syn list =
   let syns, tokens = composeDefs [] (Box -1) tokens
   if tokens <> [] then
