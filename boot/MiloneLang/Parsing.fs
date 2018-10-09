@@ -8,13 +8,6 @@ let parseError message (_, syns) =
   let near = syns |> List.truncate 6
   failwithf "Parse error %s near %A" message near
 
-let (|LeadExpr|_|) token =
-  match token with
-  | Token.Int _
-  | Token.Ident _
-  | Token.Punct "(" -> Some ()
-  | _ -> None
-
 /// atom = unit / int / string / prim
 let rec parseAtom syns =
   match syns with
