@@ -77,7 +77,7 @@ let main () =
   source |> Lexing.lex |> is expected
 
 [<Fact>]
-let lexComplex () =
+let lexOperatorOnGroundDoesNotClearBox () =
   let source = """
 let main () =
   f 1 2
@@ -94,6 +94,36 @@ let main () =
           Syn.Int 3
           Syn.Op "+"
           Syn.Int 4
+        ]
+      ]
+    ]
+  source |> Lexing.lex |> is expected
+
+[<Fact>]
+let lexParenIgnoreIndentLayout () =
+  let source = """let main () =
+  (
+      4
++ 2)
+      + 1
+  2
+"""
+  let expected =
+    [
+      synLet [Syn.Ident "main"; Syn.Unit] [
+        Syn.Term [
+          Syn.Expr [
+            Syn.Term [
+              Syn.Int 4
+              Syn.Op "+"
+              Syn.Int 2
+            ]
+          ]
+          Syn.Op "+"
+          Syn.Int 1
+        ]
+        Syn.Term [
+          Syn.Int 2
         ]
       ]
     ]

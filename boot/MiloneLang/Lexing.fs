@@ -115,7 +115,13 @@ let tokenize (source: string): list<Token * Loc> =
 
 /// Reads an arg list of `let` or `fun`.
 let rec composeArgs outer tokens =
-  composeFactors [] outer tokens
+  let syns, tokens = composeFactors [] outer tokens
+  match outer, tokens with
+  // Drop closing token here because composeFactors don't.
+  | Tie tie, (token, _) :: tokens when tie = token ->
+    syns, tokens
+  | _ ->
+    syns, tokens
 
 /// Reads a let construction.
 let composeLet letX tokens =
@@ -158,7 +164,7 @@ let rec composeFactors acc outer tokens =
     | _, [] ->
       acc, tokens
     // Closed by delimiter.
-    | Tie tie, (token, _) :: tokens
+    | Tie tie, (token, _) :: _
       when token = tie ->
       acc, tokens
     // Closed by next term or something.
@@ -190,6 +196,10 @@ let composeTerms acc outer tokens =
 
   match outer, tokens with
   | _, [] ->
+    acc, tokens
+  // Closed by delimiter.
+  | Tie tie, (token, _) :: tokens
+    when token = tie ->
     acc, tokens
   // Closed by other elements out of box.
   | Box boxX, (_, (_, x)) :: _
