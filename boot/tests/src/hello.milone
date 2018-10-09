@@ -1,0 +1,3 @@
+let main () =
+  printfn "Hello, world!"
+  0

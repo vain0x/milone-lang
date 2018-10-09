@@ -24,6 +24,14 @@ let valueToString =
   | Value.PrimFun _ as it ->
     string it
 
+let primPrintfn ctx format =
+  let format, ctx = evalExpr format ctx
+  match format with
+  | Value.String format ->
+    let ctx = emitOut format ctx
+    Value.Unit, ctx
+  | _ -> failwithf "Expected a string but %A" format
+
 let rec evalExpr (expr: Expr) ctx =
   match expr with
   | Expr.Unit
@@ -41,6 +49,9 @@ let rec evalExpr (expr: Expr) ctx =
     let arg, ctx = evalExpr arg ctx
     let ctx = emitOut (arg |> valueToString) ctx
     Value.Int 0, ctx
+  | Expr.Call (Expr.Prim PrimFun.Printfn, [format]) ->
+    let value, ctx = primPrintfn ctx format
+    value, ctx
   | Expr.Call _ ->
     failwithf "Unknown call: %A" expr
   | Expr.Add (left, right) ->
@@ -58,6 +69,16 @@ let rec evalExpr (expr: Expr) ctx =
       evalExpr (Expr.Begin exprs) ctx
     | _ ->
       failwithf "Expected unit but not"
+
+let evalExprList ctx (exprs: Expr list): Value list * EvalContext =
+  let rec go acc ctx exprs =
+    match exprs with
+    | [] ->
+      List.rev acc, ctx
+    | expr :: exprs ->
+      let value, ctx = evalExpr expr ctx
+      go (value :: acc) ctx exprs
+  go [] ctx exprs
 
 let evalStmt ctx (stmt: Stmt): Value * EvalContext =
   match stmt with

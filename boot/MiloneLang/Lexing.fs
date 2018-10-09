@@ -69,6 +69,14 @@ let private readInt (source: string) (acc, y, x, i) =
   let t = Token.Int (source.Substring(i, r - i) |> int), (y, x)
   t :: acc, y, x + r - i, r
 
+let private readString (source: string) (acc, y, x, i) =
+  assert (source.[i] = '"')
+  let r = readUntil ((<>) '"') (source, i + 1)
+  if r = source.Length then
+    lexError "Expected closing '\"' but eof" (source, r)
+  let t = Token.String (source.Substring(i + 1, r - (i + 1))), (y, x)
+  t :: acc, y, x + r - i + 1, r + 1
+
 let tokenize (source: string): list<Token * Loc> =
   let at i =
     if i < source.Length then source.[i] else '\u0000'
@@ -91,6 +99,8 @@ let tokenize (source: string): list<Token * Loc> =
       | '=' as c ->
         let t = Token.Punct (string c), (y, x)
         go (t :: acc, y, x + 1, i + 1)
+      | '"' ->
+        (acc, y, x, i) |> readString source |> go
       | c when isDigit c ->
         (acc, y, x, i) |> readInt source |> go
       | c when not (isDigit c) && isIdentChar c ->

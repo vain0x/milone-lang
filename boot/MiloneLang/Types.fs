@@ -40,6 +40,7 @@ namespace rec MiloneLang
   /// Primitive functions.
   type PrimFun =
     | EmitOut
+    | Printfn
 
   [<RequireQualifiedAccess>]
   type Expr =

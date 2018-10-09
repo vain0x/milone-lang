@@ -26,6 +26,8 @@ let rec parseAtom syns =
     Some (Expr.String value), syns
   | Syn.Ident "emit_out" :: syns ->
     Some (Expr.Prim PrimFun.EmitOut), syns
+  | Syn.Ident "printfn" :: syns ->
+    Some (Expr.Prim PrimFun.Printfn), syns
   | Syn.Ident value :: syns ->
     Some (Expr.Ref value), syns
   | syns ->

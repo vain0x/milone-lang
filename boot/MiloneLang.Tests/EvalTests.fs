@@ -36,14 +36,10 @@ let testFile fileName =
 
   target |> is expected
 
-[<Fact>]
-let testZero () =
-  testFile "zero"
-
-[<Fact>]
-let testAdd () =
-  testFile "add"
-
-[<Fact>]
-let testEmit1 () =
-  testFile "emit_1"
+[<Theory>]
+[<InlineData("zero")>]
+[<InlineData("add")>]
+[<InlineData("emit_1")>]
+[<InlineData("hello")>]
+let integrationTests (name: string) =
+  testFile name
