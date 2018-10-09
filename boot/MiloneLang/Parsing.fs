@@ -23,6 +23,8 @@ let rec parseAtom syns =
     Some (Expr.Prim PrimFun.Printfn), syns
   | Syn.Ident value :: syns ->
     Some (Expr.Ref value), syns
+  | Syn.Expr terms :: syns ->
+    Some (parseTerms terms), syns
   | syns ->
     None, syns
 
@@ -72,13 +74,6 @@ let parseTerms terms: Expr =
   | terms ->
     Expr.Begin terms
 
-let parseExpr syn =
-  match syn with
-  | Syn.Expr terms ->
-    parseTerms terms
-  | _ ->
-    failwithf "Expected expr buf: %A" syn
-
 let parseLet acc syns =
   match syns with
   | [] ->
@@ -87,9 +82,9 @@ let parseLet acc syns =
   | Syn.Let
     (
       Syn.Ident ident :: (_ :: _ as args),
-      body
+      Syn.Expr body
     ) :: syns ->
-    let body = parseExpr body
+    let body = parseTerms body
     let s = Stmt.FunDecl (ident, body)
     parseLet (s :: acc) syns
   | _ ->

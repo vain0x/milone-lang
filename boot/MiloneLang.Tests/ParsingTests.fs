@@ -48,3 +48,20 @@ let parseBeginExpr () =
       )
     ]
   parseString source |> is expected
+
+[<Fact>]
+let parseParenExpr () =
+  let source = """let main () =
+  1 + (2 + 3) + 4
+"""
+  let expected =
+    [
+      funDecl "main" (
+        exprAdd
+          (exprAdd
+            (Expr.Int 1)
+            (exprAdd (Expr.Int 2) (Expr.Int 3)))
+          (Expr.Int 4)
+      )
+    ]
+  parseString source |> is expected
