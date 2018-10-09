@@ -17,13 +17,22 @@ module MiloneLang.Program
     let ast = Parsing.parse syn
     CIrGen.gen ast
 
+  let transpile (source: string) =
+    let cir = toCir source
+    CPrinting.cprint cir
+
   [<EntryPoint>]
-  let main _ =
-    let output = stdin.ReadToEnd() |> run
-    for line in output.Outs do
-      match line with
-      | StdOut, line ->
-        stdout.WriteLine(line)
-      | StdErr, line ->
-        stderr.WriteLine(line)
-    output.Code
+  let main args =
+    match List.ofArray args with
+    | ["-t"; "c"] ->
+      stdout.Write(stdin.ReadToEnd() |> transpile)
+      0
+    | _ ->
+      let output = stdin.ReadToEnd() |> run
+      for line in output.Outs do
+        match line with
+        | StdOut, line ->
+          stdout.WriteLine(line)
+        | StdErr, line ->
+          stderr.WriteLine(line)
+      output.Code
