@@ -10,6 +10,8 @@
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fs" />
     <Compile Include="Eval.fs" />
+    <Compile Include="CIrGen.fs" />
+    <Compile Include="CPrinting.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

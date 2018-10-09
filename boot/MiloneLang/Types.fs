@@ -37,11 +37,12 @@ namespace rec MiloneLang
       of pat:Syn list * body:Syn
 
   [<RequireQualifiedAccess>]
-  /// Primitive functions.
+  /// Primitive function.
   type PrimFun =
     | EmitOut
     | Printfn
 
+  /// Expression.
   [<RequireQualifiedAccess>]
   type Expr =
     | Unit
@@ -63,8 +64,10 @@ namespace rec MiloneLang
     | Begin
       of Expr list
 
+  /// Statement.
   [<RequireQualifiedAccess>]
   type Stmt =
+    /// Function declaration.
     | FunDecl
       of string * Expr
 
@@ -78,6 +81,7 @@ namespace rec MiloneLang
     | PrimFun
       of PrimFun
 
+  /// Destination channel of outputs.
   type Dest =
     | StdOut
     | StdErr
@@ -94,3 +98,58 @@ namespace rec MiloneLang
     {
       Outs: list<Dest * string>
     }
+
+  /// Type in C language.
+  [<RequireQualifiedAccess>]
+  type CTy =
+    | Void
+    | Int
+    | Char
+    | Ptr
+      of CTy
+
+  [<RequireQualifiedAccess>]
+  type CPrim =
+    | Malloc
+    | Printf
+
+  /// Expression in C language.
+  [<RequireQualifiedAccess>]
+  type CExpr =
+    | Unit
+    | Int
+      of int
+    | Str
+      of string
+    | Ref
+      of string
+    | Add
+      of CExpr * CExpr
+    | Prim
+      of CPrim
+    | Call
+      of CExpr * args:CExpr list
+
+  /// Statement in C language.
+  [<RequireQualifiedAccess>]
+  type CStmt =
+    | Expr
+      of CExpr
+    | Let
+      of name:string * ty:CTy * init:CExpr
+    | Return
+      of CExpr option
+
+  /// Function definition in C language.
+  [<RequireQualifiedAccess>]
+  type CFun =
+    {
+      Name: string
+      Body: CStmt list
+    }
+
+  /// Top-level definition in C language.
+  [<RequireQualifiedAccess>]
+  type CDecl =
+    | Fun
+      of CFun

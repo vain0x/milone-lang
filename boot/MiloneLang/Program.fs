@@ -11,6 +11,12 @@ module MiloneLang.Program
     eprintfn "parsed = %A" stmts
     Eval.eval stmts
 
+  let toCir (source: string) =
+    let tokens = Lexing.tokenize source
+    let syn = Lexing.compose tokens
+    let ast = Parsing.parse syn
+    CIrGen.gen ast
+
   [<EntryPoint>]
   let main _ =
     let output = stdin.ReadToEnd() |> run
