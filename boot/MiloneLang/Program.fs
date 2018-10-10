@@ -2,24 +2,23 @@ module MiloneLang.Program
 
   open System
 
-  let run (source: string): ProcessOutput =
+  let toAst (source: string) =
     let tokens = Lexing.tokenize source
     eprintfn "tokens = %A" tokens
-    let syns = Lexing.compose tokens
-    eprintfn "syn = %A" syns
-    let stmts = Parsing.parse syns
-    eprintfn "parsed = %A" stmts
-    Eval.eval stmts
+    let syn = Lexing.compose tokens
+    eprintfn "syn = %A" syn
+    let ast = Parsing.parse syn
+    eprintfn "ast = %A" ast
+    ast
 
   let toCir (source: string) =
-    let tokens = Lexing.tokenize source
-    let syn = Lexing.compose tokens
-    let ast = Parsing.parse syn
-    CIrGen.gen ast
+    source |> toAst |> CIrGen.gen
+
+  let run (source: string): ProcessOutput =
+    source |> toAst |> Eval.eval
 
   let transpile (source: string) =
-    let cir = toCir source
-    CPrinting.cprint cir
+    source |> toCir |> CPrinting.cprint
 
   [<EntryPoint>]
   let main args =
