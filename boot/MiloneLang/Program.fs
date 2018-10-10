@@ -5,9 +5,7 @@ module MiloneLang.Program
   let toAst (source: string) =
     let tokens = Lexing.tokenize source
     eprintfn "tokens = %A" tokens
-    let syn = Lexing.compose tokens
-    eprintfn "syn = %A" syn
-    let ast = Parsing.parse syn
+    let ast = Parsing.parse tokens
     eprintfn "ast = %A" ast
     ast
 

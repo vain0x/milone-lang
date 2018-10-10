@@ -82,26 +82,16 @@ let evalExprList ctx (exprs: Expr list): Value list * EvalContext =
       go (value :: acc) ctx exprs
   go [] ctx exprs
 
-let evalStmt ctx (stmt: Stmt): Value * EvalContext =
-  match stmt with
-  | Stmt.FunDecl (_, expr) ->
-    evalExpr expr ctx
-
-let evalStmts ctx (stmts: Stmt list): Value * EvalContext =
-  match stmts with
-  | [] ->
-    failwith "no main fun"
-  | Stmt.FunDecl ("main", _) as stmt :: _ ->
-    evalStmt ctx stmt
-  | _ :: stmts ->
-    evalStmts ctx stmts
-
-let eval (stmts: Stmt list): ProcessOutput =
-  match evalStmts initialCtx stmts with
-  | Value.Int code, out ->
-    {
-      Outs = out.Outs |> List.rev
-      Code = code
-    }
-  | v ->
-    failwithf "Exit code must be an integer: %A" v
+let eval (exprs: Expr list): ProcessOutput =
+  match exprs with
+  | [Expr.Let ("main", body)] ->
+    match evalExpr body initialCtx with
+    | Value.Int code, out ->
+      {
+        Outs = out.Outs |> List.rev
+        Code = code
+      }
+    | v ->
+      failwithf "Exit code must be an integer: %A" v
+  | _ ->
+    failwithf "unimpl"

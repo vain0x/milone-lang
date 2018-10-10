@@ -18,33 +18,19 @@ namespace rec MiloneLang
     | Punct
       of string
 
-  /// Syntax tree.
-  [<RequireQualifiedAccess>]
-  type Syn =
-    | Unit
-    | Int
-      of int
-    | String
-      of string
-    | Ident
-      of string
-    | Term
-      of Syn list
-    | Expr
-      of Syn list
-    /// Operator.
-    | Op
-      of punct:string
-    | Let
-      of pat:Syn list * body:Syn
-
   [<RequireQualifiedAccess>]
   /// Primitive function.
   type PrimFun =
     | EmitOut
     | Printfn
 
-  /// Expression.
+  [<RequireQualifiedAccess>]
+  type Pattern =
+    | Unit
+    | Ident
+      of string
+
+  /// Expression in AST.
   [<RequireQualifiedAccess>]
   type Expr =
     | Unit
@@ -67,13 +53,6 @@ namespace rec MiloneLang
     /// x; y; z
     | Begin
       of Expr list
-
-  /// Statement.
-  [<RequireQualifiedAccess>]
-  type Stmt =
-    /// Function declaration.
-    | FunDecl
-      of string * Expr
 
   [<RequireQualifiedAccess>]
   type Value =

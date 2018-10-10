@@ -67,25 +67,19 @@ let genExpr acc ctx arg =
   | Expr.Call _ ->
     failwith "unimpl"
 
-let genDecl ctx (stmt: Stmt) =
-  match stmt with
-  | Stmt.FunDecl (name, expr) ->
-    let result, acc, ctx = genExpr [] ctx expr
+let gen (exprs: Expr list): CDecl list =
+  let ctx: Ctx =
+    {
+      Serial = 0
+    }
+  match exprs with
+  | [Expr.Let (name, body)] ->
+    let result, acc, ctx = genExpr [] ctx body
     let acc = CStmt.Return (Some result) :: acc
     let decl =
       CDecl.Fun {
         Name = name
         Body = List.rev acc
       }
-    decl, ctx
-
-let gen (stmts: Stmt list): CDecl list =
-  let ctx: Ctx =
-    {
-      Serial = 0
-    }
-  match stmts with
-  | [stmt] ->
-    let decl, _ = genDecl ctx stmt
     [decl]
   | _ -> failwith "unimpl"
