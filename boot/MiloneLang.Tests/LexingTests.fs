@@ -103,8 +103,8 @@ let main () =
 let lexParenIgnoreIndentLayout () =
   let source = """let main () =
   (
-      4
-+ 2)
+        4
+  + 2)
       + 1
   2
 """
