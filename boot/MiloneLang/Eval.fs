@@ -61,6 +61,8 @@ let rec evalExpr (expr: Expr) ctx =
     | (Value.String left, _), (Value.String right, _) ->
       left + right |> Value.String, ctx
     | _ -> failwithf "type error: %A" expr
+  | Expr.Let _ ->
+    failwith "unimpl let"
   | Expr.Begin [expr] ->
     evalExpr expr ctx
   | Expr.Begin (expr :: exprs) ->

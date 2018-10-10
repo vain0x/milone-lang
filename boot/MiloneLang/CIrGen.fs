@@ -34,8 +34,8 @@ let genExpr acc ctx arg =
     CExpr.Int value, acc, ctx
   | Expr.String value ->
     CExpr.Str value, acc, ctx
-  | Expr.Ref _ ->
-    failwith "unimpl"
+  | Expr.Ref name ->
+    CExpr.Ref name, acc, ctx
   | Expr.Add (first, second) ->
     // FIXME: in case of string
     let first, acc, ctx = genExpr acc ctx first
@@ -49,6 +49,10 @@ let genExpr acc ctx arg =
     let acc = callPrintf format args :: acc
     let acc = callPrintf (CExpr.Str "\\n") [] :: acc
     CExpr.Unit, acc, ctx
+  | Expr.Let (name, init) ->
+    let init, acc, ctx = genExpr acc ctx init
+    let acc = CStmt.Let (name, CTy.Int, init) :: acc
+    CExpr.Ref name, acc, ctx
   | Expr.Begin (expr :: exprs) ->
     let rec go acc ctx expr exprs =
       match genExpr acc ctx expr, exprs with

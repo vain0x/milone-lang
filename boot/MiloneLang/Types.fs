@@ -62,6 +62,8 @@ namespace rec MiloneLang
       of Expr * list<Expr>
     | Add
       of Expr * Expr
+    | Let
+      of name:string * init:Expr
     /// x; y; z
     | Begin
       of Expr list

@@ -60,8 +60,10 @@ let parseAdd syns =
 
 let parseTerm term =
   match term with
+  | Syn.Let ([Syn.Ident name], Syn.Expr init) ->
+    Expr.Let (name, parseTerms init)
   | Syn.Let _ ->
-    failwithf "unimpl let-in"
+    failwith "unimpl local fun"
   | Syn.Term syns ->
     parseAdd syns
   | _ ->
