@@ -14,12 +14,13 @@ type Outer =
     Bottom: int
   }
 
-let private (|WithX|) tokens =
+/// Column position of the next token if exists or 0.
+let private nextX tokens =
   match tokens with
   | [] ->
-    0, tokens
+    0
   | (_, (_, x)) :: _ ->
-    x, tokens
+    x
 
 let private (|Inside|Outside|End|) (outer: Outer, tokens: (Token * Loc) list) =
   match outer, tokens with
@@ -98,7 +99,7 @@ let parseAtom outer tokens =
 
 /// call = atom ( atom )*
 let parseCall outer tokens =
-  let (WithX (calleeX, _)) = tokens
+  let calleeX = nextX tokens
   let first, tokens =
     match parseAtom outer tokens with
     | Some first, tokens ->
@@ -136,14 +137,15 @@ let parseAdd outer tokens =
 let parseLet outer tokens =
   match tokens with
   | (Token.Ident "let", (_, letX)) :: (tokens as beforePatsTokens) ->
-    let pats, bodyX, tokens =
+    let pats, tokens =
       let inside = { outer with Tie = Token.Punct "=" |> Some }
       match parsePats inside tokens with
-      | pats, (Token.Punct "=", _) :: WithX (bodyX, tokens) ->
-        pats, bodyX, tokens
+      | pats, (Token.Punct "=", _) :: tokens ->
+        pats, tokens
       | _ ->
         failwithf "Missing '=' %A" tokens
     let body, tokens =
+      let bodyX = nextX tokens
       let inside = { outer with Bottom = max letX bodyX }
       parseExpr inside tokens
     let expr =
