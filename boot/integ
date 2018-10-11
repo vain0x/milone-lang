@@ -1,0 +1,25 @@
+#!/bin/bash
+# Perform integration tests.
+
+set -eu
+
+try () {
+    app="./tmp/$1"
+    out="./tmp/$1.out"
+    exp="./tests/targets/$1.out"
+    ./trans "$1"
+
+    set +e
+    $app >$out
+    echo '$? = '$? >>$out
+    diff -q $out $exp || {
+        >&2 echo "FAILED $1"
+    }
+    set -e
+}
+
+try "zero"
+try "add"
+try "hello"
+
+echo "OK" >&2

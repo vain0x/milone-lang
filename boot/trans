@@ -1,8 +1,12 @@
 #!/bin/bash
 
-set -xeu
+set -eu
+
+m="./tests/src/$1.milone"
+c="tmp/$1.c"
+app="tmp/$1"
 
 mkdir -p tmp
-cat "./tests/src/$1.milone" | dotnet run -p MiloneLang -- -t c > "tmp/$1.c"
-gcc -std=c11 "tmp/$1.c" -o "tmp/$1.out"
->&2 echo Created "tmp/$1.out"
+cat $m | dotnet run -p MiloneLang -- -t c >$c
+gcc -std=c11 $c -o $app
+>&2 echo $app

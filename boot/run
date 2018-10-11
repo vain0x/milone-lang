@@ -1,3 +1,0 @@
-#!/bin/bash
-
-cat "./examples/$1.milone" | dotnet run -p MiloneLang
