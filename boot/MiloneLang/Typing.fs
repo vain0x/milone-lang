@@ -14,6 +14,10 @@ type TyCtx =
 let tyFun s t =
   Ty.Fun (s, t)
 
+let tyOf (expr: Expr<Loc * Ty>): Ty =
+  let (_, ty) = Parsing.exprExtract expr
+  ty
+
 /// Merges derived context into base context
 /// for when expr of derived context is done.
 /// We rollback environments but keep serials.
@@ -108,33 +112,34 @@ let unifyTy (ctx: TyCtx) lty rty =
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
 
-let inferRef (ctx: TyCtx) ident =
+let inferRef (ctx: TyCtx) loc ident =
   match ctx.VarEnv |> Map.tryFind ident with
   | Some ty ->
-    Expr.Ref ident, ty, ctx
+    Expr.Ref ((loc, ty), ident), ctx
   | None ->
     failwithf "Couldn't resolve var %s" ident
 
-let inferApp (ctx: TyCtx) callee arg =
-  let arg, argTy, ctx = inferExpr ctx arg
-  let callee, calleeTy, ctx = inferExpr ctx callee
+let inferApp (ctx: TyCtx) loc callee arg =
+  let arg, ctx = inferExpr ctx arg
+  let callee, ctx = inferExpr ctx callee
   let appTyVar, ctx = freshTyVar "a" ctx
   let appTy = Ty.Var appTyVar
-  let ctx = unifyTy ctx calleeTy (Ty.Fun(argTy, appTy))
-  Expr.Call (callee, [arg]), appTy, ctx
+  let ctx = unifyTy ctx (tyOf callee) (Ty.Fun(tyOf arg, appTy))
+  Expr.Call ((loc, appTy), callee, [arg]), ctx
 
-let inferAdd (ctx: TyCtx) lexpr rexpr =
-  let lexpr, _lty, ctx = inferExpr ctx lexpr
-  let rexpr, _rty, ctx = inferExpr ctx rexpr
+let inferAdd (ctx: TyCtx) loc lexpr rexpr =
+  let lexpr, ctx = inferExpr ctx lexpr
+  let rexpr, ctx = inferExpr ctx rexpr
   // FIXME: impl
-  Expr.Add (lexpr, rexpr), Ty.Int, ctx
+  let addTy = Ty.Int
+  Expr.Add ((loc, addTy), lexpr, rexpr), ctx
 
-let inferLet ctx name init =
+let inferLet ctx loc name init =
   let name, ty, ctx = freshVar name ctx
-  let init, tyInit, initCtx = inferExpr ctx init
+  let init, initCtx = inferExpr ctx init
   let ctx = rollback ctx initCtx
-  let ctx = unifyTy ctx tyInit ty
-  Expr.Let (name, init), Ty.Unit, ctx
+  let ctx = unifyTy ctx ty (tyOf init)
+  Expr.Let ((loc, Ty.Unit), name, init), ctx
 
 let inferExprs ctx exprs =
   let rec go acc ctx exprs =
@@ -142,43 +147,43 @@ let inferExprs ctx exprs =
     | [] ->
       List.rev acc, Ty.Unit, ctx
     | [expr] ->
-      let expr, ty, ctx = inferExpr ctx expr
-      List.rev (expr :: acc), ty, ctx
+      let expr, ctx = inferExpr ctx expr
+      List.rev (expr :: acc), tyOf expr, ctx
     | expr :: exprs ->
-      let expr, ty, ctx = inferExpr ctx expr
-      let ctx = unifyTy ctx ty Ty.Unit
+      let expr, ctx = inferExpr ctx expr
+      let ctx = unifyTy ctx (tyOf expr) Ty.Unit
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let inferBlock ctx exprs =
+let inferBlock ctx loc exprs =
   let exprs, ty, ctx = inferExprs ctx exprs
-  Expr.Begin exprs, ty, ctx
+  Expr.Begin ((loc, ty), exprs), ctx
 
 let inferExpr ctx expr =
   match expr with
-  | Expr.Unit ->
-    expr, Ty.Unit, ctx
-  | Expr.Int _ ->
-    expr, Ty.Int, ctx
-  | Expr.String _ ->
-    expr, Ty.Str, ctx
-  | Expr.Prim PrimFun.Printfn ->
-    expr, tyFun Ty.Str Ty.Unit, ctx
-  | Expr.Ref ident ->
-    inferRef ctx ident
-  | Expr.Call (callee, [arg]) ->
-    inferApp ctx callee arg
-  | Expr.Add (l, r) ->
-    inferAdd ctx l r
-  | Expr.Let (name, init) ->
-    inferLet ctx name init
-  | Expr.Begin exprs ->
-    let exprs, ty, ctx = inferExprs ctx exprs
-    Expr.Begin exprs, ty, ctx
+  | Expr.Unit loc ->
+    Expr.Unit (loc, Ty.Unit), ctx
+  | Expr.Int (loc, value) ->
+    Expr.Int ((loc, Ty.Int), value), ctx
+  | Expr.String (loc, value) ->
+    Expr.String ((loc, Ty.Str), value), ctx
+  | Expr.Prim (loc, PrimFun.Printfn) ->
+    let ty = Ty.Fun (Ty.Str, Ty.Unit)
+    Expr.Prim ((loc, ty), PrimFun.Printfn), ctx
+  | Expr.Ref (loc, ident) ->
+    inferRef ctx loc ident
+  | Expr.Call (loc, callee, [arg]) ->
+    inferApp ctx loc callee arg
+  | Expr.Add (loc, l, r) ->
+    inferAdd ctx loc l r
+  | Expr.Let (loc, name, init) ->
+    inferLet ctx loc name init
+  | Expr.Begin (loc, exprs) ->
+    inferBlock ctx loc exprs
   | Expr.Call _ ->
     failwith "unimpl"
 
-let infer (exprs: Expr list): Expr list * TyCtx =
+let infer (exprs: Expr<Loc> list): Expr<Loc * Ty> list * TyCtx =
   let ctx =
     {
       VarSerial = 0

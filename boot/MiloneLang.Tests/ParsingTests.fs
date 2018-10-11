@@ -1,22 +1,34 @@
 module MiloneLang.Parsing.ParsingTests
 
 open MiloneLang
+open MiloneLang.Assets
 open Xunit
 
-let inline is<'T> (expected: 'T) (actual: 'T) =
-  Assert.Equal(expected, actual)
+let locO = (0, 0)
 
-let parseStr source =
-  source |> Lexing.tokenize |> Parsing.parse
+let parseStr source: Expr<unit> list =
+  source
+  |> Lexing.tokenize
+  |> Parsing.parse
+  |> List.map (Parsing.exprMap ignore)
+
+let exprInt value =
+  Expr.Int ((), value)
+
+let exprRef ident =
+  Expr.Ref ((), ident)
 
 let exprCall f args =
-  Expr.Call (f, args)
+  Expr.Call ((), f, args)
 
 let exprAdd left right =
-  Expr.Add (left, right)
+  Expr.Add ((), left, right)
 
 let exprLet name body =
-  Expr.Let (name, body)
+  Expr.Let ((), name, body)
+
+let exprBlock exprs =
+  Expr.Begin ((), exprs)
 
 [<Fact>]
 let parseMainEmpty () =
@@ -24,7 +36,7 @@ let parseMainEmpty () =
   let expected =
     [
       exprLet "main" (
-        Expr.Int 0
+        Expr.Int ((), 0)
       )
     ]
   source |> parseStr |> is expected
@@ -34,17 +46,17 @@ let parseSimpleExprs () =
   let table =
     [
       "()",
-        Expr.Unit
+        Expr.Unit ()
       "1",
-        Expr.Int 1
+        exprInt 1
       "\"Hello, world!\"",
-        Expr.String "Hello, world!"
+        Expr.String ((), "Hello, world!")
       "printfn",
-        Expr.Prim PrimFun.Printfn
+        Expr.Prim ((), PrimFun.Printfn)
       "x",
-        Expr.Ref "x"
+        Expr.Ref ((), "x")
       "f 1",
-        exprCall (Expr.Ref "f") [Expr.Int 1]
+        exprCall (exprRef "f") [exprInt 1]
     ]
   for fragment, expectedExpr in table do
     let source = sprintf "let main () =\n  %s" fragment
@@ -65,13 +77,13 @@ let main () =
       exprLet "main"
         (exprAdd
           (exprCall
-            (Expr.Ref "f")
+            (exprRef "f")
             [
-              Expr.Int 1
-              Expr.Int 2
-              Expr.Int 3
+              exprInt 1
+              exprInt 2
+              exprInt 3
             ])
-          (Expr.Int 4))
+          (exprInt 4))
     ]
   source |> parseStr |> is expected
 
@@ -87,11 +99,11 @@ let parseParensRelaxLayout () =
   let expected =
     [
       exprLet "main" (
-        Expr.Begin [
+        exprBlock [
           exprAdd
-            (exprAdd (Expr.Int 4) (Expr.Int 2))
-            (Expr.Int 1)
-          Expr.Int 2
+            (exprAdd (exprInt 4) (exprInt 2))
+            (exprInt 1)
+          exprInt 2
         ])
     ]
   source |> parseStr |> is expected
@@ -108,13 +120,13 @@ let parseIndentLayoutTest () =
   let expected =
     [
       exprLet "main" (
-        Expr.Begin [
+        exprBlock [
           exprLet "foo" (
-            Expr.Begin [
-              exprLet "goo" (Expr.Int 4)
-              exprAdd (Expr.Int 4) (Expr.Int 6)
+            exprBlock [
+              exprLet "goo" (exprInt 4)
+              exprAdd (exprInt 4) (exprInt 6)
             ])
-          Expr.Int 2
+          exprInt 2
         ])
     ]
   source |> parseStr |> is expected
@@ -129,11 +141,11 @@ let parseBeginExpr () =
   let expected =
     [
       exprLet "main" (
-        Expr.Begin [
+        exprBlock [
           exprAdd
-            (exprCall (Expr.Ref "f") [Expr.Ref "x"])
-            (exprCall (Expr.Ref "g") [Expr.Ref "y"])
-          Expr.Int 1
+            (exprCall (exprRef "f") [exprRef "x"])
+            (exprCall (exprRef "g") [exprRef "y"])
+          exprInt 1
         ]
       )
     ]
@@ -149,9 +161,9 @@ let parseParenExpr () =
       exprLet "main" (
         exprAdd
           (exprAdd
-            (Expr.Int 1)
-            (exprAdd (Expr.Int 2) (Expr.Int 3)))
-          (Expr.Int 4)
+            (exprInt 1)
+            (exprAdd (exprInt 2) (exprInt 3)))
+          (exprInt 4)
       )
     ]
   source |> parseStr |> is expected
@@ -165,10 +177,10 @@ let parseSemicolonInLineOne () =
   let expected =
     [
       exprLet "main" (
-        Expr.Begin [
-          exprCall (Expr.Prim PrimFun.Printfn) [Expr.String "Hello, "]
-          exprCall (Expr.Prim PrimFun.Printfn) [Expr.String "World!"]
-          Expr.Int 0
+        exprBlock [
+          exprCall (Expr.Prim ((), PrimFun.Printfn)) [Expr.String ((), "Hello, ")]
+          exprCall (Expr.Prim ((), PrimFun.Printfn)) [Expr.String ((), "World!")]
+          exprInt 0
         ])
     ]
   source |> parseStr |> is expected

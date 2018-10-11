@@ -42,27 +42,28 @@ namespace rec MiloneLang
 
   /// Expression in AST.
   [<RequireQualifiedAccess>]
-  type Expr =
+  type Expr<'a> =
     | Unit
+      of 'a
     | Int
-      of int
+      of 'a * int
     | String
-      of string
+      of 'a * string
     /// Primitive.
     | Prim
-      of PrimFun
+      of 'a * PrimFun
     /// Variable reference.
     | Ref
-      of ident:string
+      of 'a * ident:string
     | Call
-      of Expr * list<Expr>
+      of 'a * Expr<'a> * Expr<'a> list
     | Add
-      of Expr * Expr
+      of 'a * Expr<'a> * Expr<'a>
     | Let
-      of ident:string * init:Expr
+      of 'a * ident:string * init:Expr<'a>
     /// x; y; z
     | Begin
-      of Expr list
+      of 'a * Expr<'a> list
 
   /// Type in C language.
   [<RequireQualifiedAccess>]
