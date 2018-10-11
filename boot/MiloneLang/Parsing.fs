@@ -4,7 +4,7 @@ open System
 open System.Text.RegularExpressions
 open MiloneLang
 
-// Container of syntax layout.
+/// Container of syntax layout.
 type Outer =
   {
     /// Closing token for the current box.
@@ -22,56 +22,49 @@ let private nextX tokens =
   | (_, (_, x)) :: _ ->
     x
 
-let private (|Inside|Outside|End|) (outer: Outer, tokens: (Token * Loc) list) =
+/// Gets if next token exists and is inside the outer box.
+let private nextInside (outer: Outer) (tokens: (Token * Loc) list) =
   match outer, tokens with
   | _, [] ->
-    End
+    false
   // Closed by delimiter.
-  | { Tie = Some tie }, (t, _ as token) :: _
+  | { Tie = Some tie }, (t, _) :: _
     when t = tie ->
-    Outside (token, tokens)
+    false
   // Closed by something out of box.
-  | { Bottom = boxX }, (_, (_, x) as token) :: _
+  | { Bottom = boxX }, (_, (_, x)) :: _
     when x < boxX ->
-    Outside (token, tokens)
+    false
   | _ ->
-    Inside tokens
+    true
 
 let parseError message (_, syns) =
   let near = syns |> List.truncate 6
   failwithf "Parse error %s near %A" message near
 
-let parsePat token =
-  match token with
-  | Token.Unit, _ ->
-    Some Pattern.Unit
-  | Token.Ident value, _ ->
-    Some (Pattern.Ident value)
+let parsePat outer tokens =
+  if nextInside outer tokens |> not then None, tokens else
+  match tokens with
+  | (Token.Unit, _) :: tokens ->
+    Some Pattern.Unit, tokens
+  | (Token.Ident value, _) :: tokens ->
+    Some (Pattern.Ident value), tokens
   | _ ->
-    None
+    None, tokens
 
 let parsePats (outer: Outer) (tokens: _ list) =
   let rec go acc (tokens: _ list) =
-    match outer, tokens with
-    | Inside (token :: tokens) ->
-      match parsePat token with
-      | Some pat ->
-        go (pat :: acc) tokens
-      | None ->
-        failwithf "Expected a pattern %A" (token :: tokens)
-    | _ ->
+    match parsePat outer tokens with
+    | Some pat, tokens ->
+      go (pat :: acc) tokens
+    | None, _ ->
       List.rev acc, tokens
   go [] tokens
 
 /// Tries to read a token that consists of a group of delimited expression.
 /// atom = unit / int / string / prim / ref / ( expr )
 let parseAtom outer tokens =
-  match outer, tokens with
-  | End
-  | Outside _ ->
-    None, tokens
-  | Inside tokens ->
-
+  if nextInside outer tokens |> not then None, tokens else
   match tokens with
   | (Token.Unit, _) :: tokens ->
     Some Expr.Unit, tokens
@@ -105,7 +98,7 @@ let parseCall outer tokens =
     | Some first, tokens ->
       first, tokens
     | _ ->
-      failwithf "Expected a factor %A" tokens
+      failwithf "Expected an atom %A" tokens
   let inside =
     { outer with Bottom = max outer.Bottom (calleeX + 1) }
   let rec go acc tokens =
@@ -161,13 +154,13 @@ let parseLet outer tokens =
   | _ ->
     parseAdd outer tokens
 
+/// block = ( let )+
 let rec parseBlock outer tokens =
   let rec go acc tokens =
-    match outer, tokens with
-    | Inside tokens ->
+    if nextInside outer tokens then
       let expr, tokens = parseLet outer tokens
       go (expr :: acc) tokens
-    | _ ->
+    else
       List.rev acc, tokens
   go [] tokens
 
