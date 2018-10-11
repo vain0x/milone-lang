@@ -155,3 +155,20 @@ let parseParenExpr () =
       )
     ]
   source |> parseStr |> is expected
+
+[<Fact>]
+let parseSemicolonInLineOne () =
+  let source = """let main () =
+  printfn "Hello, " ; printfn "World!" ;
+  0
+"""
+  let expected =
+    [
+      exprLet "main" (
+        Expr.Begin [
+          exprCall (Expr.Prim PrimFun.Printfn) [Expr.String "Hello, "]
+          exprCall (Expr.Prim PrimFun.Printfn) [Expr.String "World!"]
+          Expr.Int 0
+        ])
+    ]
+  source |> parseStr |> is expected

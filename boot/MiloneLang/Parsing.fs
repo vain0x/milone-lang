@@ -157,11 +157,13 @@ let parseLet outer tokens =
 /// block = ( let )+
 let rec parseBlock outer tokens =
   let rec go acc tokens =
-    if nextInside outer tokens then
+    match tokens with
+    | _ when nextInside outer tokens |> not ->
+      List.rev acc, tokens
+    | (Token.Punct ";", _) :: tokens
+    | tokens ->
       let expr, tokens = parseLet outer tokens
       go (expr :: acc) tokens
-    else
-      List.rev acc, tokens
   go [] tokens
 
 let parseExpr outer tokens =

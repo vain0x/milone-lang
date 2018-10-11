@@ -78,6 +78,7 @@ let tokenize (source: string): list<Token * Loc> =
         let t = (if c = '(' then Token.ParenL else Token.ParenR), (y, x)
         (t :: acc, y, x + 1, i + 1) |> go
       | '+'
+      | ';'
       | '=' as c ->
         let t = Token.Punct (string c), (y, x)
         go (t :: acc, y, x + 1, i + 1)
