@@ -21,5 +21,8 @@ module MiloneLang.Program
     | ["-t"; "c"] ->
       stdout.Write(stdin.ReadToEnd() |> transpile)
       0
+    | ["--infer"] ->
+      stdout.Write(stdin.ReadToEnd() |> toAst |> Typing.infer |> sprintf "%A")
+      0
     | _ ->
       1

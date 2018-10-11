@@ -18,6 +18,17 @@ namespace rec MiloneLang
     | Punct
       of string
 
+  /// Type of expressions.
+  [<RequireQualifiedAccess>]
+  type Ty =
+    | Unit
+    | Int
+    | Str
+    | Fun
+      of Ty * Ty
+    | Var
+      of string
+
   [<RequireQualifiedAccess>]
   /// Primitive function.
   type PrimFun =
@@ -42,13 +53,13 @@ namespace rec MiloneLang
       of PrimFun
     /// Variable reference.
     | Ref
-      of string
+      of ident:string
     | Call
       of Expr * list<Expr>
     | Add
       of Expr * Expr
     | Let
-      of name:string * init:Expr
+      of ident:string * init:Expr
     /// x; y; z
     | Begin
       of Expr list

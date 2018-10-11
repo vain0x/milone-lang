@@ -9,6 +9,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fs" />
+    <Compile Include="Typing.fs" />
     <Compile Include="CIrGen.fs" />
     <Compile Include="CPrinting.fs" />
     <Compile Include="Program.fs" />

@@ -1,7 +1,6 @@
 module rec MiloneLang.Parsing
 
 open System
-open System.Text.RegularExpressions
 open MiloneLang
 
 /// Container of syntax layout.
