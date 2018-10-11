@@ -2,12 +2,8 @@ module MiloneLang.CPrintingTests
 
 open System
 open System.IO
+open MiloneLang.Assets
 open Xunit
-
-let inline is<'T> (expected: 'T) (actual: 'T) =
-  Assert.Equal(expected, actual)
-
-let testsDir = Tests.testsDir
 
 let testFile fileName =
   let source =
