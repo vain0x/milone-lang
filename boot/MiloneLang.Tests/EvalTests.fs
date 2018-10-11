@@ -7,22 +7,23 @@ open Xunit
 let inline is<'T> (expected: 'T) (actual: 'T) =
   Assert.Equal(expected, actual)
 
-let testsDir =
+let testsDir = lazy (
   let rec go (dir: string) =
     if IO.Path.GetFileName(dir) = "boot" then
       IO.Path.Combine(dir, "tests")
     else
       IO.Path.GetDirectoryName(dir) |> go
   go Environment.CurrentDirectory
+)
 
 let testFile fileName =
   let source =
     IO.File.ReadAllText(
-      IO.Path.Combine(testsDir, "src", fileName + ".milone")
+      IO.Path.Combine(testsDir.Value, "src", fileName + ".milone")
     )
   let target =
     IO.File.ReadAllText(
-      IO.Path.Combine(testsDir, "targets", fileName + ".out")
+      IO.Path.Combine(testsDir.Value, "targets", fileName + ".out")
     ).TrimEnd()
   let output = Program.run source
   let expected =

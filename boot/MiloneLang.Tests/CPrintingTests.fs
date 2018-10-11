@@ -12,11 +12,11 @@ let testsDir = Tests.testsDir
 let testFile fileName =
   let source =
     IO.File.ReadAllText(
-      IO.Path.Combine(testsDir, "src", fileName + ".milone")
+      IO.Path.Combine(testsDir.Value, "src", fileName + ".milone")
     )
   let target =
     IO.File.ReadAllText(
-      IO.Path.Combine(testsDir, "c", fileName + ".c")
+      IO.Path.Combine(testsDir.Value, "c", fileName + ".c")
     )
   let cir = Program.toCir source
   CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
