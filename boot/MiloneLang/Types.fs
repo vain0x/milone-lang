@@ -44,26 +44,27 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type Expr<'a> =
     | Unit
-      of 'a
     | Int
-      of 'a * int
+      of int
     | String
-      of 'a * string
+      of string
     /// Primitive.
     | Prim
-      of 'a * PrimFun
+      of PrimFun
     /// Variable reference.
     | Ref
-      of 'a * ident:string
+      of ident:string
     | Call
-      of 'a * Expr<'a> * Expr<'a> list
+      of ExprT<'a> * ExprT<'a> list
     | Add
-      of 'a * Expr<'a> * Expr<'a>
+      of ExprT<'a> * ExprT<'a>
     | Let
-      of 'a * ident:string * init:Expr<'a>
+      of ident:string * init:ExprT<'a>
     /// x; y; z
     | Begin
-      of 'a * Expr<'a> list
+      of ExprT<'a> list
+
+  type ExprT<'a> = Expr<'a> * 'a
 
   /// Type in C language.
   [<RequireQualifiedAccess>]

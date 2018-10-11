@@ -4,31 +4,33 @@ open MiloneLang
 open MiloneLang.Assets
 open Xunit
 
-let locO = (0, 0)
+let exprTMap f = Parsing.exprTMap f
 
-let parseStr source: Expr<unit> list =
+let withUnit x = x, ()
+
+let parseStr source: ExprT<unit> list =
   source
   |> Lexing.tokenize
   |> Parsing.parse
-  |> List.map (Parsing.exprMap ignore)
+  |> List.map (exprTMap ignore)
 
 let exprInt value =
-  Expr.Int ((), value)
+  Expr.Int value, ()
 
 let exprRef ident =
-  Expr.Ref ((), ident)
+  Expr.Ref ident, ()
 
-let exprCall f args =
-  Expr.Call ((), f, args)
+let exprCall callee args =
+  Expr.Call (callee, List.map (exprTMap ignore) args), ()
 
-let exprAdd left right =
-  Expr.Add ((), left, right)
+let exprFdd left right =
+  Expr.Add (left,  right), ()
 
 let exprLet name body =
-  Expr.Let ((), name, body)
+  Expr.Let (name,  body), ()
 
 let exprBlock exprs =
-  Expr.Begin ((), exprs)
+  Expr.Begin (List.map (exprTMap ignore) exprs), ()
 
 [<Fact>]
 let parseMainEmpty () =
@@ -36,7 +38,7 @@ let parseMainEmpty () =
   let expected =
     [
       exprLet "main" (
-        Expr.Int ((), 0)
+        exprInt 0
       )
     ]
   source |> parseStr |> is expected
@@ -46,15 +48,15 @@ let parseSimpleExprs () =
   let table =
     [
       "()",
-        Expr.Unit ()
+        (Expr.Unit, ())
       "1",
         exprInt 1
       "\"Hello, world!\"",
-        Expr.String ((), "Hello, world!")
+        (Expr.String "Hello, world!", ())
       "printfn",
-        Expr.Prim ((), PrimFun.Printfn)
+        (Expr.Prim PrimFun.Printfn, ())
       "x",
-        Expr.Ref ((), "x")
+        exprRef "x"
       "f 1",
         exprCall (exprRef "f") [exprInt 1]
     ]
@@ -75,7 +77,7 @@ let main () =
   let expected =
     [
       exprLet "main"
-        (exprAdd
+        (exprFdd
           (exprCall
             (exprRef "f")
             [
@@ -100,8 +102,8 @@ let parseParensRelaxLayout () =
     [
       exprLet "main" (
         exprBlock [
-          exprAdd
-            (exprAdd (exprInt 4) (exprInt 2))
+          exprFdd
+            (exprFdd (exprInt 4) (exprInt 2))
             (exprInt 1)
           exprInt 2
         ])
@@ -124,7 +126,7 @@ let parseIndentLayoutTest () =
           exprLet "foo" (
             exprBlock [
               exprLet "goo" (exprInt 4)
-              exprAdd (exprInt 4) (exprInt 6)
+              exprFdd (exprInt 4) (exprInt 6)
             ])
           exprInt 2
         ])
@@ -142,7 +144,7 @@ let parseBeginExpr () =
     [
       exprLet "main" (
         exprBlock [
-          exprAdd
+          exprFdd
             (exprCall (exprRef "f") [exprRef "x"])
             (exprCall (exprRef "g") [exprRef "y"])
           exprInt 1
@@ -159,10 +161,10 @@ let parseParenExpr () =
   let expected =
     [
       exprLet "main" (
-        exprAdd
-          (exprAdd
+        exprFdd
+          (exprFdd
             (exprInt 1)
-            (exprAdd (exprInt 2) (exprInt 3)))
+            (exprFdd (exprInt 2) (exprInt 3)))
           (exprInt 4)
       )
     ]
@@ -178,8 +180,8 @@ let parseSemicolonInLineOne () =
     [
       exprLet "main" (
         exprBlock [
-          exprCall (Expr.Prim ((), PrimFun.Printfn)) [Expr.String ((), "Hello, ")]
-          exprCall (Expr.Prim ((), PrimFun.Printfn)) [Expr.String ((), "World!")]
+          exprCall (Expr.Prim PrimFun.Printfn, ()) [Expr.String "Hello, ", ()]
+          exprCall (Expr.Prim PrimFun.Printfn, ()) [Expr.String "World!", ()]
           exprInt 0
         ])
     ]

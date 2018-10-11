@@ -13,38 +13,33 @@ type Outer =
     Bottom: int
   }
 
-let exprExtract (expr: Expr<'x>): 'x =
-  match expr with
-  | Expr.Unit a -> a
-  | Expr.Int (a, _) -> a
-  | Expr.String (a, _) -> a
-  | Expr.Prim (a, _) -> a
-  | Expr.Ref (a, _) -> a
-  | Expr.Call (a, _, _) -> a
-  | Expr.Add (a, _, _) -> a
-  | Expr.Let (a, _, _) -> a
-  | Expr.Begin (a, _) -> a
+let exprExtract (expr: ExprT<'a>): 'a =
+  snd expr
+
+let exprTMap (f: 'x -> 'y) (expr: ExprT<'x>): ExprT<'y> =
+  let expr, a = expr
+  exprMap f expr, f a
 
 let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
   match expr with
-  | Expr.Unit a ->
-    Expr.Unit (f a)
-  | Expr.Int (a, value) ->
-    Expr.Int (f a, value)
-  | Expr.String (a, value) ->
-    Expr.String (f a, value)
-  | Expr.Prim (a, value) ->
-    Expr.Prim (f a, value)
-  | Expr.Ref (a, ident) ->
-    Expr.Ref (f a, ident)
-  | Expr.Call (a, callee, args) ->
-    Expr.Call (f a, exprMap f callee, List.map (exprMap f) args)
-  | Expr.Add (a, l, r) ->
-    Expr.Add (f a, exprMap f l, exprMap f r)
-  | Expr.Let (a, ident, init) ->
-    Expr.Let (f a, ident, exprMap f init)
-  | Expr.Begin (a, exprs) ->
-    Expr.Begin (f a, List.map (exprMap f) exprs)
+  | Expr.Unit ->
+    Expr.Unit
+  | Expr.Int value ->
+    Expr.Int value
+  | Expr.String value ->
+    Expr.String value
+  | Expr.Prim value ->
+    Expr.Prim value
+  | Expr.Ref ident ->
+    Expr.Ref ident
+  | Expr.Call (callee, args) ->
+    Expr.Call (exprTMap f callee, List.map (exprTMap f) args)
+  | Expr.Add (l, r) ->
+    Expr.Add (exprTMap f l, exprTMap f r)
+  | Expr.Let (ident, init) ->
+    Expr.Let (ident, exprTMap f init)
+  | Expr.Begin exprs ->
+    Expr.Begin (List.map (exprTMap f) exprs)
 
 let private nextLoc tokens =
   match tokens with
@@ -106,15 +101,15 @@ let parseAtom outer tokens =
   if nextInside outer tokens |> not then None, tokens else
   match tokens with
   | (Token.Unit, loc) :: tokens ->
-    Some (Expr.Unit loc), tokens
+    Some (Expr.Unit, loc), tokens
   | (Token.Int value, loc) :: tokens ->
-    Some (Expr.Int (loc, value)), tokens
+    Some (Expr.Int value, loc), tokens
   | (Token.String value, loc) :: tokens ->
-    Some (Expr.String (loc, value)), tokens
+    Some (Expr.String value, loc), tokens
   | (Token.Ident "printfn", loc) :: tokens ->
-    Some (Expr.Prim (loc, PrimFun.Printfn)), tokens
+    Some (Expr.Prim PrimFun.Printfn, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
-    Some (Expr.Ref (loc, value)), tokens
+    Some (Expr.Ref value, loc), tokens
   | (Token.ParenL, _) :: tokens ->
     let inside = { outer with Tie = Some Token.ParenR }
     match parseExpr inside tokens with
@@ -148,7 +143,7 @@ let parseCall outer tokens =
   | [], tokens ->
     first, tokens
   | args, tokens ->
-    Expr.Call (calleeLoc, first, List.rev args), tokens
+    (Expr.Call (first, List.rev args), calleeLoc), tokens
 
 /// add = call ( '+' call )*
 let parseAdd outer tokens =
@@ -156,7 +151,7 @@ let parseAdd outer tokens =
     match tokens with
     | (Token.Punct "+", opLoc) :: tokens ->
       let second, syns = parseCall outer tokens
-      let acc = Expr.Add (opLoc, expr, second)
+      let acc = Expr.Add (expr, second), opLoc
       go acc syns
     | _ ->
       expr, tokens
@@ -182,7 +177,7 @@ let parseLet outer tokens =
       match pats with
       | [Pattern.Ident name]
       | [Pattern.Ident name; Pattern.Unit] ->
-        Expr.Let (letLoc, name, body)
+        Expr.Let (name, body), letLoc
       | [] ->
         failwithf "Expected a pattern at %A" beforePatsTokens
       | _ ->
@@ -210,7 +205,7 @@ let parseExpr outer tokens =
   | [expr], tokens ->
     expr, tokens
   | exprs, tokens ->
-    Expr.Begin (nextLoc tokens, exprs), tokens
+    (Expr.Begin exprs, nextLoc tokens), tokens
 
 /// Composes tokens into (a kind of) syntax tree.
 ///
@@ -223,7 +218,7 @@ let parseExpr outer tokens =
 ///     On the other hand, `f x \n g` is composed to two boxes: `f x` and `g`.
 /// - Composition algorithm doesn't affect operator fixity.
 ///   - e.g. Whatever layout is, `f 1 2 \n * 3` is `(f 1 2) * 3` .
-let parse (tokens: (Token * Loc) list): Expr<Loc> list =
+let parse (tokens: (Token * Loc) list): ExprT<Loc> list =
   let outer = { Tie = None; Bottom = -1 }
   let exprs, tokens = parseBlock outer tokens
   if tokens <> [] then
