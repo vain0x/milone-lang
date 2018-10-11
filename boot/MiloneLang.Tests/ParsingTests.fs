@@ -4,33 +4,36 @@ open MiloneLang
 open MiloneLang.Assets
 open Xunit
 
-let exprTMap f = Parsing.exprTMap f
+let exprMap f = Parsing.exprMap f
 
 let withUnit x = x, ()
 
-let parseStr source: ExprT<unit> list =
+let parseStr source: Expr<unit> list =
   source
   |> Lexing.tokenize
   |> Parsing.parse
-  |> List.map (exprTMap ignore)
+  |> List.map (exprMap ignore)
 
 let exprInt value =
-  Expr.Int value, ()
+  Expr.Int (value, ())
+
+let exprStr value =
+  Expr.String (value, ())
 
 let exprRef ident =
-  Expr.Ref ident, ()
+  Expr.Ref (ident, ())
 
 let exprCall callee args =
-  Expr.Call (callee, List.map (exprTMap ignore) args), ()
+  Expr.Call (callee, List.map (exprMap ignore) args, ())
 
 let exprFdd left right =
-  Expr.Add (left,  right), ()
+  Expr.Add (left,  right, ())
 
 let exprLet name body =
-  Expr.Let (name,  body), ()
+  Expr.Let (name,  body, ())
 
 let exprBlock exprs =
-  Expr.Begin (List.map (exprTMap ignore) exprs), ()
+  Expr.Begin (List.map (exprMap ignore) exprs, ())
 
 [<Fact>]
 let parseMainEmpty () =
@@ -48,13 +51,13 @@ let parseSimpleExprs () =
   let table =
     [
       "()",
-        (Expr.Unit, ())
+        Expr.Unit ()
       "1",
         exprInt 1
       "\"Hello, world!\"",
-        (Expr.String "Hello, world!", ())
+        exprStr "Hello, world!"
       "printfn",
-        (Expr.Prim PrimFun.Printfn, ())
+        Expr.Prim (PrimFun.Printfn, ())
       "x",
         exprRef "x"
       "f 1",
@@ -180,8 +183,8 @@ let parseSemicolonInLineOne () =
     [
       exprLet "main" (
         exprBlock [
-          exprCall (Expr.Prim PrimFun.Printfn, ()) [Expr.String "Hello, ", ()]
-          exprCall (Expr.Prim PrimFun.Printfn, ()) [Expr.String "World!", ()]
+          exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "Hello, "]
+          exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "World!"]
           exprInt 0
         ])
     ]
