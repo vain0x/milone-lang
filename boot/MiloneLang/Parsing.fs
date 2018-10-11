@@ -72,8 +72,6 @@ let parseAtom outer tokens =
     Some (Expr.Int value), tokens
   | (Token.String value, _) :: tokens ->
     Some (Expr.String value), tokens
-  | (Token.Ident "emit_out", _) :: tokens ->
-    Some (Expr.Prim PrimFun.EmitOut), tokens
   | (Token.Ident "printfn", _) :: tokens ->
     Some (Expr.Prim PrimFun.Printfn), tokens
   | (Token.Ident value, _) :: tokens ->

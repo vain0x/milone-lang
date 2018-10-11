@@ -25,7 +25,7 @@ let tokenizeMainEmpty () =
 let tokenizeComplex () =
   let source = """
 let main () =
-  emit_out 1
+  f 1
 """
   let expected =
     [
@@ -37,9 +37,9 @@ let main () =
         (1, 9)
       Token.Punct "=",
         (1, 12)
-      Token.Ident "emit_out",
+      Token.Ident "f",
         (2, 2)
       Token.Int 1,
-        (2, 11)
+        (2, 4)
     ]
   source |> Lexing.tokenize |> is expected

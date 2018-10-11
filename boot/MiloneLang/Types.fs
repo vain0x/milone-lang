@@ -21,7 +21,6 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   /// Primitive function.
   type PrimFun =
-    | EmitOut
     | Printfn
 
   [<RequireQualifiedAccess>]
