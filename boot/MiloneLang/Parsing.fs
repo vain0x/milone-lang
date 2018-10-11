@@ -21,11 +21,6 @@ let private (|WithX|) tokens =
   | (_, (_, x)) :: _ ->
     x, tokens
 
-let private (|NonPunct|_|) token =
-  match token with
-  | Token.Punct _ -> None
-  | _ -> Some ()
-
 let private (|Inside|Outside|End|) (outer: Outer, tokens: (Token * Loc) list) =
   match outer, tokens with
   | _, [] ->
