@@ -54,34 +54,6 @@ namespace rec MiloneLang
     | Begin
       of Expr list
 
-  [<RequireQualifiedAccess>]
-  type Value =
-    | Unit
-    | Int
-      of int
-    | String
-      of string
-    | PrimFun
-      of PrimFun
-
-  /// Destination channel of outputs.
-  type Dest =
-    | StdOut
-    | StdErr
-
-  [<RequireQualifiedAccess>]
-  type ProcessOutput =
-    {
-      Outs: list<Dest * string>
-      Code: int
-    }
-
-  [<RequireQualifiedAccess>]
-  type EvalContext =
-    {
-      Outs: list<Dest * string>
-    }
-
   /// Type in C language.
   [<RequireQualifiedAccess>]
   type CTy =

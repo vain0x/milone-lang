@@ -10,7 +10,6 @@
     <Compile Include="Assets.fs" />
     <Compile Include="LexingTests.fs" />
     <Compile Include="ParsingTests.fs" />
-    <Compile Include="EvalTests.fs" />
     <Compile Include="CPrintingTests.fs" />
     <Watch Include="../tests" />
   </ItemGroup>

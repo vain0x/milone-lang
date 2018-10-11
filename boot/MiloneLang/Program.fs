@@ -12,9 +12,6 @@ module MiloneLang.Program
   let toCir (source: string) =
     source |> toAst |> CIrGen.gen
 
-  let run (source: string): ProcessOutput =
-    source |> toAst |> Eval.eval
-
   let transpile (source: string) =
     source |> toCir |> CPrinting.cprint
 
@@ -25,11 +22,4 @@ module MiloneLang.Program
       stdout.Write(stdin.ReadToEnd() |> transpile)
       0
     | _ ->
-      let output = stdin.ReadToEnd() |> run
-      for line in output.Outs do
-        match line with
-        | StdOut, line ->
-          stdout.WriteLine(line)
-        | StdErr, line ->
-          stderr.WriteLine(line)
-      output.Code
+      1
