@@ -24,9 +24,8 @@ let tyOf (expr: Expr<Ty * Loc>): Ty =
 let rollback bctx dctx =
   assert (bctx.VarSerial <= dctx.VarSerial)
   assert (bctx.TySerial <= dctx.TySerial)
-  { bctx with
-      VarSerial = dctx.VarSerial
-      TySerial = dctx.TySerial
+  { dctx with
+      VarEnv = dctx.VarEnv
   }
 
 let freshTyVar name (ctx: TyCtx) =
@@ -130,8 +129,13 @@ let inferApp (ctx: TyCtx) loc callee arg =
 let inferAdd (ctx: TyCtx) loc lexpr rexpr =
   let lexpr, ctx = inferExpr ctx lexpr
   let rexpr, ctx = inferExpr ctx rexpr
-  // FIXME: impl
-  let addTy = Ty.Int
+
+  // Infer types so that left and right are of the same type.
+  let addTyVar, ctx = freshTyVar "a" ctx
+  let lty, rty, addTy = tyOf lexpr, tyOf rexpr, Ty.Var addTyVar
+  let ctx = unifyTy ctx lty rty
+  let ctx = unifyTy ctx lty addTy
+
   Expr.Add (lexpr, rexpr, (addTy, loc)), ctx
 
 let inferLet ctx loc name init =
@@ -183,6 +187,17 @@ let inferExpr ctx expr =
   | Expr.Call _ ->
     failwith "unimpl"
 
+/// Replaces type vars embedded in exprs
+/// with inference results.
+let substTyExpr ctx expr =
+  let subst (ty, loc) =
+    match substTy ctx ty with
+    | Ty.Var _ ->
+      failwithf "Couldn't determine type %A" ty
+    | ty ->
+      ty, loc
+  Parsing.exprMap subst expr
+
 let infer (exprs: Expr<Loc> list): Expr<Ty * Loc> list * TyCtx =
   let ctx =
     {
@@ -192,4 +207,5 @@ let infer (exprs: Expr<Loc> list): Expr<Ty * Loc> list * TyCtx =
       TyEnv = Map.empty
     }
   let exprs, _, ctx = inferExprs ctx exprs
+  let exprs = List.map (substTyExpr ctx) exprs
   exprs, ctx
