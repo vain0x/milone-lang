@@ -2,17 +2,17 @@ module MiloneLang.Program
 
   open System
 
-  let toAst (source: string) =
+  let toAst (source: string): Expr<Loc> list =
     let tokens = Lexing.tokenize source
     eprintfn "tokens = %A" tokens
     let ast = Parsing.parse tokens
     eprintfn "ast = %A" ast
     ast
 
-  let toCir (source: string) =
+  let toCir (source: string): CDecl list =
     source |> toAst |> Typing.infer |> CIrGen.gen
 
-  let transpile (source: string) =
+  let transpile (source: string): string =
     source |> toCir |> CPrinting.cprint
 
   [<EntryPoint>]

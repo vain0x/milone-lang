@@ -8,7 +8,7 @@ let ( *- ) acc second =
 
 let eol = Environment.NewLine
 
-let rec cprintTy acc ty =
+let rec cprintTy acc ty: string list =
   match ty with
   | CTy.Void ->
     acc *- "void"
@@ -20,7 +20,7 @@ let rec cprintTy acc ty =
     let acc = cprintTy acc ty
     acc *- "*"
 
-let rec cprintExpr acc expr =
+let rec cprintExpr acc expr: string list =
   let rec cprintExprList acc index separator exprs =
     match exprs with
     | [] -> acc
@@ -55,7 +55,7 @@ let rec cprintExpr acc expr =
     let acc = acc *- ")"
     acc
 
-let cprintStmt acc stmt =
+let cprintStmt acc stmt: string list =
   let acc = acc *- "    "
   match stmt with
   | CStmt.Return None ->
@@ -73,7 +73,7 @@ let cprintStmt acc stmt =
     let acc = cprintExpr acc init
     acc *- ";" *- eol
 
-let rec cprintStmts acc stmts =
+let rec cprintStmts acc stmts: string list =
   match stmts with
   | [] ->
     acc
@@ -101,7 +101,7 @@ let cprintHeader acc =
     *- "#include <stdio.h>" *- eol
     *- eol
 
-let cprintRun (printer: string list -> string list) =
+let cprintRun (printer: string list -> string list): string =
   printer [] |> List.rev |> String.concat ""
 
 let cprint (decls: CDecl list): string =

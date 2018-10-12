@@ -11,7 +11,7 @@ type Ctx =
 let tyOf expr =
   Typing.tyOf expr
 
-let cty ty =
+let cty ty: CTy =
   match ty with
   | Ty.Unit ->
     CTy.Void
@@ -41,7 +41,9 @@ let genExprList acc ctx exprs =
       go (result :: results) acc ctx exprs
   go [] acc ctx exprs
 
-let genExpr acc ctx arg =
+let genExpr
+  (acc: CStmt list) (ctx: Ctx) (arg: Expr<Ty * Loc>)
+  : CExpr * CStmt list * Ctx =
   match arg with
   | Expr.Begin ([], _)
   | Expr.Unit _ ->

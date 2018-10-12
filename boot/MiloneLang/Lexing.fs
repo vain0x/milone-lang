@@ -2,6 +2,12 @@ module rec MiloneLang.Lexing
 
 open MiloneLang
 
+type Acc = (Token * Loc) list
+
+type RowIndex = int
+type ColumnIndex = int
+type Read = Acc * RowIndex * ColumnIndex * int
+
 let private lexError message (source: string, i) =
   let near = source.Substring(i, min (source.Length - i) 6)
   failwithf "Lex error near '%s': %s" message near
@@ -24,12 +30,12 @@ let private readUntil pred (source: string, i) =
       r
   go i
 
-let private readSpace (source: string) (acc, y, x, i) =
+let private readSpace (source: string) (acc, y, x, i): Read =
   assert (source.[i] = ' ')
   let r = readUntil ((=) ' ') (source, i + 1)
   acc, y, x + r - i, r
 
-let private readLinebreak (source: string) (acc, y, x, i) =
+let private readLinebreak (source: string) (acc, y, _x, i): Read =
   assert (source.[i] = '\r' || source.[i] = '\n')
   let r =
     if i + 1 < source.Length && source.StartsWith("\r\n")
@@ -37,19 +43,19 @@ let private readLinebreak (source: string) (acc, y, x, i) =
     else i + 1
   acc, y + 1, 0, r
 
-let private readIdent (source: string) (acc, y, x, i) =
+let private readIdent (source: string) (acc, y, x, i): Read =
   assert (isIdentChar source.[i])
   let r = readUntil isIdentChar (source, i + 1)
   let t = Token.Ident (source.Substring(i, r - i)), (y, x)
   t :: acc, y, x + r - i, r
 
-let private readInt (source: string) (acc, y, x, i) =
+let private readInt (source: string) (acc, y, x, i): Read =
   assert (isDigit source.[i])
   let r = readUntil isDigit (source, i + 1)
   let t = Token.Int (source.Substring(i, r - i) |> int), (y, x)
   t :: acc, y, x + r - i, r
 
-let private readString (source: string) (acc, y, x, i) =
+let private readString (source: string) (acc, y, x, i): Read =
   assert (source.[i] = '"')
   let r = readUntil ((<>) '"') (source, i + 1)
   if r = source.Length then
@@ -57,7 +63,7 @@ let private readString (source: string) (acc, y, x, i) =
   let t = Token.String (source.Substring(i + 1, r - (i + 1))), (y, x)
   t :: acc, y, x + r - i + 1, r + 1
 
-let tokenize (source: string): list<Token * Loc> =
+let tokenize (source: string): (Token * Loc) list =
   let at i =
     if i < source.Length then source.[i] else '\u0000'
   let rec go (acc, y, x, i) =

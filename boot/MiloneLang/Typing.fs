@@ -3,6 +3,8 @@ module rec MiloneLang.Typing
 open System
 open MiloneLang
 
+type TyExpr = Expr<Ty * Loc>
+
 type TyCtx =
   {
     VarSerial: int
@@ -21,34 +23,34 @@ let tyOf (expr: Expr<Ty * Loc>): Ty =
 /// Merges derived context into base context
 /// for when expr of derived context is done.
 /// We rollback environments but keep serials.
-let rollback bctx dctx =
+let rollback bctx dctx: TyCtx =
   assert (bctx.VarSerial <= dctx.VarSerial)
   assert (bctx.TySerial <= dctx.TySerial)
   { dctx with
       VarEnv = dctx.VarEnv
   }
 
-let freshTyVar name (ctx: TyCtx) =
+let freshTyVar name (ctx: TyCtx): string * TyCtx =
   let serial = ctx.TySerial + 1
   let ctx = { ctx with TySerial = ctx.TySerial + 1 }
   let name = sprintf "'%s_%d" name serial
   name, ctx
 
-let resolveTyVar name (ctx: TyCtx) =
+let resolveTyVar name (ctx: TyCtx): Ty =
   match ctx.TyEnv |> Map.tryFind name with
   | Some ty ->
     ty
   | None ->
     Ty.Var name
 
-let freshVar ident (ctx: TyCtx) =
+let freshVar ident (ctx: TyCtx): string * Ty * TyCtx =
   let tyVar, ctx = freshTyVar ident ctx
   let ty = Ty.Var tyVar
   let ctx = { ctx with VarEnv = ctx.VarEnv |> Map.add ident ty }
   ident, ty, ctx
 
 /// Gets if the specified type var doesn't appear in the specified type.
-let isFreshTyVar ty tyVar =
+let isFreshTyVar ty tyVar: bool =
   let rec go ty =
     match ty with
     | Ty.Unit
@@ -62,7 +64,7 @@ let isFreshTyVar ty tyVar =
   go ty
 
 /// Adds type-var/type binding.
-let bindTy (ctx: TyCtx) tyVar ty =
+let bindTy (ctx: TyCtx) tyVar ty: TyCtx =
   // Don't bind itself.
   if substTy ctx ty = Ty.Var tyVar then
     ctx
@@ -71,7 +73,7 @@ let bindTy (ctx: TyCtx) tyVar ty =
 
 /// Substitutes occurrances of already-infered type vars
 /// with their results.
-let substTy (ctx: TyCtx) ty =
+let substTy (ctx: TyCtx) ty: Ty =
   let rec go ty =
     match ty with
     | Ty.Unit
@@ -87,7 +89,7 @@ let substTy (ctx: TyCtx) ty =
 
 /// Resolves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
-let unifyTy (ctx: TyCtx) lty rty =
+let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
   let rec go lty rty ctx =
     match substTy ctx lty, substTy ctx rty with
     | Ty.Var ltv, Ty.Var rtv when ltv = rtv ->
@@ -163,7 +165,7 @@ let inferBlock ctx loc exprs =
   let exprs, ty, ctx = inferExprs ctx exprs
   Expr.Begin (exprs, (ty, loc)), ctx
 
-let inferExpr ctx expr =
+let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
   match expr with
   | Expr.Unit loc ->
     Expr.Unit (Ty.Unit, loc), ctx

@@ -46,7 +46,7 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
   | Expr.Begin (exprs, a) ->
     Expr.Begin (List.map (exprMap f) exprs, f a)
 
-let private nextLoc tokens =
+let private nextLoc tokens: Loc =
   match tokens with
   | [] ->
     (-1, 0)
@@ -54,7 +54,7 @@ let private nextLoc tokens =
     loc
 
 /// Column position of the next token if exists or 0.
-let private nextX tokens =
+let private nextX tokens: int =
   match tokens with
   | [] ->
     0
@@ -62,7 +62,7 @@ let private nextX tokens =
     x
 
 /// Gets if next token exists and is inside the outer box.
-let private nextInside (outer: Outer) (tokens: (Token * Loc) list) =
+let private nextInside (outer: Outer) tokens: bool =
   match outer, tokens with
   | _, [] ->
     false
@@ -81,7 +81,7 @@ let parseError message (_, syns) =
   let near = syns |> List.truncate 6
   failwithf "Parse error %s near %A" message near
 
-let parsePat outer tokens =
+let parsePat outer tokens: Pattern option * _ list =
   if nextInside outer tokens |> not then None, tokens else
   match tokens with
   | (Token.Unit, _) :: tokens ->
@@ -91,7 +91,7 @@ let parsePat outer tokens =
   | _ ->
     None, tokens
 
-let parsePats (outer: Outer) (tokens: _ list) =
+let parsePats (outer: Outer) (tokens: _ list): Pattern list * _ list =
   let rec go acc (tokens: _ list) =
     match parsePat outer tokens with
     | Some pat, tokens ->
@@ -102,7 +102,7 @@ let parsePats (outer: Outer) (tokens: _ list) =
 
 /// Tries to read a token that consists of a group of delimited expression.
 /// atom = unit / int / string / prim / ref / ( expr )
-let parseAtom outer tokens =
+let parseAtom outer tokens: Expr<Loc> option * (Token * Loc) list =
   if nextInside outer tokens |> not then None, tokens else
   match tokens with
   | (Token.Unit, loc) :: tokens ->
@@ -203,7 +203,7 @@ let rec parseBlock outer tokens =
       go (expr :: acc) tokens
   go [] tokens
 
-let parseExpr outer tokens =
+let parseExpr (outer: Outer) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =
   match parseBlock outer tokens with
   | [], _ ->
     failwithf "Expected an expr but %A" tokens
