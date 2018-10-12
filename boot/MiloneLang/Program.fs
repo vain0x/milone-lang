@@ -10,7 +10,7 @@ module MiloneLang.Program
     ast
 
   let toCir (source: string) =
-    source |> toAst |> CIrGen.gen
+    source |> toAst |> Typing.infer |> CIrGen.gen
 
   let transpile (source: string) =
     source |> toCir |> CPrinting.cprint

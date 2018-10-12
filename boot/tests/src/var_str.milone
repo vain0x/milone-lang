@@ -1,0 +1,3 @@
+let main () =
+  let message = "hello"
+  0

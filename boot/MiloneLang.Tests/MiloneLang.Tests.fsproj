@@ -11,7 +11,7 @@
     <Compile Include="LexingTests.fs" />
     <Compile Include="ParsingTests.fs" />
     <Compile Include="CPrintingTests.fs" />
-    <Watch Include="../tests" />
+    <Watch Include="../tests/**" />
   </ItemGroup>
 
   <ItemGroup>

@@ -8,6 +8,22 @@ type Ctx =
     Serial: int
   }
 
+let tyOf expr =
+  Typing.tyOf expr
+
+let cty ty =
+  match ty with
+  | Ty.Unit ->
+    CTy.Void
+  | Ty.Int ->
+    CTy.Int
+  | Ty.Str ->
+    CTy.Ptr CTy.Char
+  | Ty.Fun _ ->
+    CTy.Ptr CTy.Void
+  | Ty.Var _ ->
+    failwith "Type vars must be resolved in type inference phase."
+
 let callPrintf format args =
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
 
@@ -36,8 +52,7 @@ let genExpr acc ctx arg =
     CExpr.Str value, acc, ctx
   | Expr.Ref (name, _) ->
     CExpr.Ref name, acc, ctx
-  | Expr.Add (first, second, _) ->
-    // FIXME: in case of string
+  | Expr.Add (first, second, (Ty.Int, _)) ->
     let first, acc, ctx = genExpr acc ctx first
     let second, acc, ctx = genExpr acc ctx second
     let name, ctx = freshName ctx
@@ -50,8 +65,9 @@ let genExpr acc ctx arg =
     let acc = callPrintf (CExpr.Str "\\n") [] :: acc
     CExpr.Unit, acc, ctx
   | Expr.Let (name, init, _) ->
+    let cty = cty (tyOf init)
     let init, acc, ctx = genExpr acc ctx init
-    let acc = CStmt.Let (name, CTy.Int, init) :: acc
+    let acc = CStmt.Let (name, cty, init) :: acc
     CExpr.Ref name, acc, ctx
   | Expr.Begin (expr :: exprs, _) ->
     let rec go acc ctx expr exprs =
@@ -64,10 +80,11 @@ let genExpr acc ctx arg =
   | Expr.Call (_, [], _) ->
     failwith "never"
   | Expr.Prim _
-  | Expr.Call _ ->
+  | Expr.Call _
+  | Expr.Add _ ->
     failwith "unimpl"
 
-let gen (exprs: Expr<_> list): CDecl list =
+let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
   let ctx: Ctx =
     {
       Serial = 0
