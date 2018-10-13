@@ -21,6 +21,22 @@ let tokenizeMainEmpty () =
   |> Lexing.tokenize |> List.unzip |> fst
   |> is expected
 
+
+[<Fact>]
+let tokenizeOps () =
+  let unwrapPunct token =
+    match token with
+    | Token.Punct op -> Some op
+    | _ -> None
+  let source = """+ - <- *- :,-,:"""
+  let expected = ["+"; "-"; "<-"; "*-"; ":,-,:"]
+  source
+  |> Lexing.tokenize
+  |> List.unzip
+  |> fst
+  |> List.choose unwrapPunct
+  |> is expected
+
 [<Fact>]
 let tokenizeComplex () =
   let source = """

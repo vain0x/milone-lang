@@ -10,7 +10,7 @@ type Read = Acc * RowIndex * ColumnIndex * int
 
 let private lexError message (source: string, i) =
   let near = source.Substring(i, min (source.Length - i) 6)
-  failwithf "Lex error near '%s': %s" message near
+  failwithf "Lex error '%s' near %s" message near
 
 let private isDigit c =
   '0' <= c && c <= '9'
@@ -20,6 +20,9 @@ let private isAlpha c =
 
 let private isIdentChar c =
   c = '_' || isDigit c || isAlpha c
+
+let private isOpChar (c: char) =
+  "+-*/%=<>^&|:@;.,".Contains(c)
 
 /// Finds the first position that doesn't satisfy the specified predicate starting from `i`.
 let private takeWhile pred (source: string, i) =
@@ -42,6 +45,12 @@ let private readLinebreak (source: string) (acc, y, _x, i): Read =
     then i + 2
     else i + 1
   acc, y + 1, 0, r
+
+let private readOp (source: string) (acc, y, x, i): Read =
+  assert (isOpChar source.[i])
+  let r = takeWhile isOpChar (source, i + 1)
+  let t = Token.Punct (source.Substring(i, r - i)), (y, x)
+  t :: acc, y, x + r - i, r
 
 let private readIdent (source: string) (acc, y, x, i): Read =
   assert (isIdentChar source.[i])
@@ -83,6 +92,7 @@ let tokenize (source: string): (Token * Loc) list =
       | '\r'
       | '\n' ->
         (acc, y, x, i) |> readLinebreak source |> go
+      // Don't split unit literal `()`.
       | '(' when at (i + 1) = ')' ->
         let t = Token.Unit, (y, x)
         (t :: acc, y, x + 2, i + 2) |> go
@@ -90,11 +100,8 @@ let tokenize (source: string): (Token * Loc) list =
       | ')' as c ->
         let t = (if c = '(' then Token.ParenL else Token.ParenR), (y, x)
         (t :: acc, y, x + 1, i + 1) |> go
-      | '+'
-      | ';'
-      | '=' as c ->
-        let t = Token.Punct (string c), (y, x)
-        go (t :: acc, y, x + 1, i + 1)
+      | c when isOpChar c ->
+        (acc, y, x, i) |> readOp source |> go
       | '"' ->
         (acc, y, x, i) |> readString source |> go
       | c when isDigit c ->
