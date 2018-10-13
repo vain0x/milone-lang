@@ -22,7 +22,7 @@ let private isIdentChar c =
   c = '_' || isDigit c || isAlpha c
 
 /// Finds the first position that doesn't satisfy the specified predicate starting from `i`.
-let private readUntil pred (source: string, i) =
+let private takeWhile pred (source: string, i) =
   let rec go r =
     if r < source.Length && pred source.[r] then
       go (r + 1)
@@ -32,7 +32,7 @@ let private readUntil pred (source: string, i) =
 
 let private readSpace (source: string) (acc, y, x, i): Read =
   assert (source.[i] = ' ')
-  let r = readUntil ((=) ' ') (source, i + 1)
+  let r = takeWhile ((=) ' ') (source, i + 1)
   acc, y, x + r - i, r
 
 let private readLinebreak (source: string) (acc, y, _x, i): Read =
@@ -45,19 +45,19 @@ let private readLinebreak (source: string) (acc, y, _x, i): Read =
 
 let private readIdent (source: string) (acc, y, x, i): Read =
   assert (isIdentChar source.[i])
-  let r = readUntil isIdentChar (source, i + 1)
+  let r = takeWhile isIdentChar (source, i + 1)
   let t = tokenIdent (source.Substring(i, r - i)), (y, x)
   t :: acc, y, x + r - i, r
 
 let private readInt (source: string) (acc, y, x, i): Read =
   assert (isDigit source.[i])
-  let r = readUntil isDigit (source, i + 1)
+  let r = takeWhile isDigit (source, i + 1)
   let t = Token.Int (source.Substring(i, r - i) |> int), (y, x)
   t :: acc, y, x + r - i, r
 
 let private readString (source: string) (acc, y, x, i): Read =
   assert (source.[i] = '"')
-  let r = readUntil ((<>) '"') (source, i + 1)
+  let r = takeWhile ((<>) '"') (source, i + 1)
   if r = source.Length then
     lexError "Expected closing '\"' but eof" (source, r)
   let t = Token.String (source.Substring(i + 1, r - (i + 1))), (y, x)
