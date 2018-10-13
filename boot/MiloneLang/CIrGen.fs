@@ -37,6 +37,9 @@ let cop op =
   match op with
   | Op.Add -> COp.Add
   | Op.Sub -> COp.Sub
+  | Op.Mul -> COp.Mul
+  | Op.Div -> COp.Div
+  | Op.Mod -> COp.Mod
 
 let callPrintf format args =
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))

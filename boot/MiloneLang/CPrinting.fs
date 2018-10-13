@@ -12,6 +12,9 @@ let opStr op =
   match op with
   | COp.Add -> "+"
   | COp.Sub -> "-"
+  | COp.Mul -> "*"
+  | COp.Div -> "/"
+  | COp.Mod -> "%"
 
 let rec cprintTy acc ty: string list =
   match ty with

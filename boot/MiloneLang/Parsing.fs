@@ -199,23 +199,41 @@ let parseCall outer tokens =
   | args, tokens ->
     Expr.Call (first, List.rev args, calleeLoc), tokens
 
-/// add = call ( '+' call )*
-let parseAdd outer tokens =
-  let rec go expr tokens =
-    match tokens with
-    | (Token.Punct "+", opLoc) :: tokens ->
-      ho expr Op.Add opLoc tokens
-    | (Token.Punct "-", opLoc) :: tokens ->
-      ho expr Op.Sub opLoc tokens
+let parseNextLevelOp level outer tokens =
+  match level with
+  | OpLevel.Add -> parseOp OpLevel.Mul outer tokens
+  | OpLevel.Mul -> parseCall outer tokens
+
+/// mul = call ( ('*'|'/'|'%') call )*
+/// add = mul ( ('+'|'-') mul )*
+let parseOp level outer tokens =
+  let rec loop expr tokens =
+    let next expr op opLoc tokens =
+      let second, tokens = parseNextLevelOp level outer tokens
+      let acc = Expr.Op (op, expr, second, opLoc)
+      loop acc tokens
+    match level, tokens with
+    | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
+      next expr Op.Add opLoc tokens
+    | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->
+      next expr Op.Sub opLoc tokens
+    | OpLevel.Mul, (Token.Punct "*", opLoc) :: tokens ->
+      next expr Op.Mul opLoc tokens
+    | OpLevel.Mul, (Token.Punct "/", opLoc) :: tokens ->
+      next expr Op.Div opLoc tokens
+    | OpLevel.Mul, (Token.Punct "%", opLoc) :: tokens ->
+      next expr Op.Mod opLoc tokens
     | _ ->
       expr, tokens
-  and ho expr op opLoc tokens =
-    let second, syns = parseCall outer tokens
-    let acc = Expr.Op (op, expr, second, opLoc)
-    go acc syns
 
-  let first, tokens = parseCall outer tokens
-  go first tokens
+  let first, tokens = parseNextLevelOp level outer tokens
+  loop first tokens
+
+let parseMul outer tokens =
+  parseOp OpLevel.Mul outer tokens
+
+let parseAdd outer tokens =
+  parseOp OpLevel.Add outer tokens
 
 /// let = 'let' ( pat )* '=' expr / call
 let parseLet outer tokens =

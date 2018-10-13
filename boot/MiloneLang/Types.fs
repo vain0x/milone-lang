@@ -45,9 +45,17 @@ namespace rec MiloneLang
       of string
 
   [<RequireQualifiedAccess>]
+  type OpLevel =
+    | Add
+    | Mul
+
+  [<RequireQualifiedAccess>]
   type Op =
     | Add
     | Sub
+    | Mul
+    | Div
+    | Mod
 
   /// Expression in AST.
   [<RequireQualifiedAccess>]
@@ -94,6 +102,9 @@ namespace rec MiloneLang
   type COp =
     | Add
     | Sub
+    | Mul
+    | Div
+    | Mod
 
   /// Expression in C language.
   [<RequireQualifiedAccess>]
