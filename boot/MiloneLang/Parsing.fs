@@ -3,6 +3,11 @@ module rec MiloneLang.Parsing
 open System
 open MiloneLang
 
+[<RequireQualifiedAccess>]
+type TokenRole =
+  | Open
+  | Close
+
 /// Container of syntax layout.
 type Outer =
   {
@@ -48,6 +53,25 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Let (ident, exprMap f init, f a)
   | Expr.Begin (exprs, a) ->
     Expr.Begin (List.map (exprMap f) exprs, f a)
+
+let tokenRole tokens: TokenRole =
+  match tokens with
+  | []
+  | (Token.Then, _) :: _
+  | (Token.Else, _) :: _
+  | (Token.ParenR, _) :: _
+  | (Token.Punct _, _) :: _
+    -> TokenRole.Close
+  | (Token.Unit, _) :: _
+  | (Token.Int _, _) :: _
+  | (Token.String _, _) :: _
+  | (Token.Ident _, _) :: _
+  | (Token.ParenL, _) :: _
+  | (Token.If _, _) :: _
+    -> TokenRole.Open
+
+let leadsExpr tokens =
+  tokenRole tokens = TokenRole.Open
 
 let private nextLoc tokens: Loc =
   match tokens with
@@ -262,22 +286,6 @@ let parseLet outer tokens =
     expr, tokens
   | _ ->
     parseAdd outer tokens
-
-let leadsExpr tokens =
-  match tokens with
-  | [] -> false
-  | (Token.Unit, _) :: _
-  | (Token.Int _, _) :: _
-  | (Token.String _, _) :: _
-  | (Token.Ident _, _) :: _
-  | (Token.ParenL, _) :: _
-  | (Token.If _, _) :: _
-    -> true
-  | (Token.Then, _) :: _
-  | (Token.Else, _) :: _
-  | (Token.ParenR, _) :: _
-  | (Token.Punct _, _) :: _
-    -> false
 
 /// block = ( let )+
 let rec parseBlock outer tokens =
