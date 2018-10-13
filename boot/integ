@@ -21,5 +21,8 @@ try () {
 try "zero"
 try "add"
 try "hello"
+try "var_1"
+try "var_str"
+try "if_else"
 
 echo "OK" >&2
