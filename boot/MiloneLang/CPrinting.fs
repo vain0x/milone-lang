@@ -1,5 +1,5 @@
 /// Prints C language code from C langauge IR.
-module MiloneLang.CPrinting
+module rec MiloneLang.CPrinting
 
 open System
 
@@ -54,9 +54,13 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExprList acc 0 ", " args
     let acc = acc *- ")"
     acc
+  | CExpr.Set (l, r) ->
+    let acc = cprintExpr acc l *- " = "
+    let acc = cprintExpr acc r
+    acc
 
-let cprintStmt acc stmt: string list =
-  let acc = acc *- "    "
+let cprintStmt acc indent stmt: string list =
+  let acc = acc *- indent
   match stmt with
   | CStmt.Return None ->
     acc *- "return;" *- eol
@@ -69,23 +73,38 @@ let cprintStmt acc stmt: string list =
     acc *- ";" *- eol
   | CStmt.Let (name, ty, init) ->
     let acc = cprintTy acc ty
-    let acc = acc *- " " *- name *- " = "
-    let acc = cprintExpr acc init
+    let acc = acc *- " " *- name
+    let acc =
+      match init with
+      | Some init ->
+        let acc = acc *- " = "
+        cprintExpr acc init
+      | None ->
+        acc
     acc *- ";" *- eol
+  | CStmt.If (pred, thenStmts, elseStmts) ->
+    let acc = acc *- "if ("
+    let acc = cprintExpr acc pred
+    let acc = acc *- ") {" *- eol
+    let acc = cprintStmts acc (indent + "    ") thenStmts
+    let acc = acc *- indent *- "} else {" *- eol
+    let acc = cprintStmts acc (indent + "    ") elseStmts
+    let acc = acc *- indent *- "}" *- eol
+    acc
 
-let rec cprintStmts acc stmts: string list =
+let rec cprintStmts acc indent stmts: string list =
   match stmts with
   | [] ->
     acc
   | stmt :: stmts ->
-    let acc = cprintStmt acc stmt
-    cprintStmts acc stmts
+    let acc = cprintStmt acc indent stmt
+    cprintStmts acc indent stmts
 
 let cprintDecl acc decl =
   match decl with
   | CDecl.Fun decl ->
     let acc = acc *- "int" *- " " *- decl.Name *- "() {" *- eol
-    let acc = cprintStmts acc decl.Body
+    let acc = cprintStmts acc "    " decl.Body
     let acc = acc *- "}" *- eol
     acc
 

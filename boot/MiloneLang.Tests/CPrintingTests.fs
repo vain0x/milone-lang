@@ -25,5 +25,6 @@ let testFile fileName =
 [<InlineData("hello")>]
 [<InlineData("var_1")>]
 [<InlineData("var_str")>]
+[<InlineData("if_else")>]
 let integrationTests (name: string) =
   testFile name

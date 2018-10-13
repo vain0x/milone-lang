@@ -124,6 +124,16 @@ let inferRef (ctx: TyCtx) loc ident =
   | None ->
     failwithf "Couldn't resolve var %s" ident
 
+/// if bool then 'a else 'a
+let inferIf ctx pred thenCl elseCl loc =
+  let pred, ctx = inferExpr ctx pred
+  let thenCl, ctx = inferExpr ctx thenCl
+  let elseCl, ctx = inferExpr ctx elseCl
+  let ty = tyOf thenCl
+  let ctx = unifyTy ctx (tyOf pred) Ty.Bool
+  let ctx = unifyTy ctx ty (tyOf elseCl)
+  Expr.If (pred, thenCl, elseCl, (ty, loc)), ctx
+
 let inferApp (ctx: TyCtx) loc callee arg =
   let arg, ctx = inferExpr ctx arg
   let callee, ctx = inferExpr ctx callee
@@ -184,6 +194,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     Expr.Ref (ident, (Ty.Bool, loc)), ctx
   | Expr.Ref (ident, loc) ->
     inferRef ctx loc ident
+  | Expr.If (pred, thenCl, elseCl, loc) ->
+    inferIf ctx pred thenCl elseCl loc
   | Expr.Call (callee, [arg], loc) ->
     inferApp ctx loc callee arg
   | Expr.Add (l, r, loc) ->

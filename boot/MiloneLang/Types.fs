@@ -12,6 +12,9 @@ namespace rec MiloneLang
       of string
     | Ident
       of string
+    | If
+    | Then
+    | Else
     | ParenL
     | ParenR
     // Punctuation.
@@ -56,6 +59,8 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of ident:string * 'a
+    | If
+      of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
     | Call
       of Expr<'a> * Expr<'a> list * 'a
     | Add
@@ -96,6 +101,8 @@ namespace rec MiloneLang
       of CPrim
     | Call
       of CExpr * args:CExpr list
+    | Set
+      of CExpr * CExpr
 
   /// Statement in C language.
   [<RequireQualifiedAccess>]
@@ -103,9 +110,11 @@ namespace rec MiloneLang
     | Expr
       of CExpr
     | Let
-      of name:string * ty:CTy * init:CExpr
+      of name:string * ty:CTy * init:CExpr option
     | Return
       of CExpr option
+    | If
+      of pred:CExpr * thenCl:CStmt list * elseCl:CStmt list
 
   /// Function definition in C language.
   [<RequireQualifiedAccess>]

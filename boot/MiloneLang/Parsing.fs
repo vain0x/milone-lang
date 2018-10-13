@@ -20,6 +20,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.String (_, a) -> a
   | Expr.Prim (_, a) -> a
   | Expr.Ref (_, a) -> a
+  | Expr.If (_, _, _, a) -> a
   | Expr.Call (_, _, a) -> a
   | Expr.Add (_, _, a) -> a
   | Expr.Let (_, _, a) -> a
@@ -37,6 +38,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Prim (value, f a)
   | Expr.Ref (ident, a) ->
     Expr.Ref (ident, f a)
+  | Expr.If (pred, thenCl, elseCl, a) ->
+    Expr.If (exprMap f pred, exprMap f thenCl, exprMap f elseCl, f a)
   | Expr.Call (callee, args, a) ->
     Expr.Call (exprMap f callee, List.map (exprMap f) args, f a)
   | Expr.Add (l, r, a) ->
@@ -100,6 +103,45 @@ let parsePats (outer: Outer) (tokens: _ list): Pattern list * _ list =
       List.rev acc, tokens
   go [] tokens
 
+let parseIf (outer: Outer) loc tokens =
+  let _, ifX = loc
+  let ifBox =
+    { outer with
+        Bottom = max outer.Bottom ifX
+    }
+  let predInside: Outer =
+    {
+      Bottom = ifX + 1
+      Tie = Some Token.Then
+    }
+  let pred, tokens =
+    parseExpr predInside tokens
+
+  match tokens with
+  | (Token.Then, _) as t :: tokens when nextInside ifBox [t] ->
+    let thenOuter =
+      {
+        Bottom = max (ifX + 1) (nextX tokens)
+        Tie = Some Token.Else
+      }
+    let thenCl, tokens =
+      parseExpr thenOuter tokens
+    match tokens with
+    | (Token.Else, _) as t :: tokens when nextInside ifBox [t] ->
+      let elseOuter =
+        { ifBox with
+            Bottom = max (ifX + 1) (nextX tokens)
+        }
+      let elseCl, tokens =
+        parseExpr elseOuter tokens
+      Expr.If (pred, thenCl, elseCl, loc), tokens
+    | _ ->
+      // Assume `else ()` if missing.
+      let elseCl = Expr.Unit loc
+      Expr.If (pred, thenCl, elseCl, loc), tokens
+  | _ ->
+    failwithf "Expected 'then' but %A" tokens
+
 /// Tries to read a token that consists of a group of delimited expression.
 /// atom = unit / int / string / prim / ref / ( expr )
 let parseAtom outer tokens: Expr<Loc> option * (Token * Loc) list =
@@ -122,7 +164,12 @@ let parseAtom outer tokens: Expr<Loc> option * (Token * Loc) list =
       Some expr, tokens
     | _ ->
       failwithf "Expected ')' %A" tokens
+  | (Token.If, loc) :: tokens ->
+    let expr, tokens = parseIf outer loc tokens
+    Some expr, tokens
   | []
+  | (Token.Else, _) :: _
+  | (Token.Then, _) :: _
   | (Token.ParenR, _) :: _
   | (Token.Punct _, _) :: _ ->
     None, tokens

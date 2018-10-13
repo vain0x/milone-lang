@@ -46,7 +46,7 @@ let private readLinebreak (source: string) (acc, y, _x, i): Read =
 let private readIdent (source: string) (acc, y, x, i): Read =
   assert (isIdentChar source.[i])
   let r = readUntil isIdentChar (source, i + 1)
-  let t = Token.Ident (source.Substring(i, r - i)), (y, x)
+  let t = tokenIdent (source.Substring(i, r - i)), (y, x)
   t :: acc, y, x + r - i, r
 
 let private readInt (source: string) (acc, y, x, i): Read =
@@ -62,6 +62,13 @@ let private readString (source: string) (acc, y, x, i): Read =
     lexError "Expected closing '\"' but eof" (source, r)
   let t = Token.String (source.Substring(i + 1, r - (i + 1))), (y, x)
   t :: acc, y, x + r - i + 1, r + 1
+
+let private tokenIdent ident =
+  match ident with
+  | "if" -> Token.If
+  | "then" -> Token.Then
+  | "else" -> Token.Else
+  | _ -> Token.Ident ident
 
 let tokenize (source: string): (Token * Loc) list =
   let at i =

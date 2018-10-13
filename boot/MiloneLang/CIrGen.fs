@@ -30,6 +30,9 @@ let cty ty: CTy =
   | Ty.Var _ ->
     failwith "Type vars must be resolved in type inference phase."
 
+let ctyOf expr =
+  cty (tyOf expr)
+
 let callPrintf format args =
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
 
@@ -37,6 +40,25 @@ let freshName (ctx: Ctx) =
   let name = "l" + string ctx.Serial
   let ctx = { ctx with Serial = ctx.Serial + 1 }
   name, ctx
+
+let freshVar (ctx: Ctx) (ty: CTy) =
+  let name, ctx = freshName ctx
+  name, CExpr.Ref name, ctx
+
+/// if pred then thenCl else elseCl ->
+/// T result;
+/// if (pred) { ..; result = thenCl; } else { ..; result = elseCl; }
+/// ..(result)
+let genIfExpr acc ctx pred thenCl elseCl ty =
+  let resultName, result, ctx = freshVar ctx (ctyOf thenCl)
+  let pred, acc, ctx = genExpr acc ctx pred
+  let thenCl, thenStmts, ctx = genExpr [] ctx thenCl
+  let elseCl, elseStmts, ctx = genExpr [] ctx elseCl
+  let thenStmts = CStmt.Expr (CExpr.Set (result, thenCl)) :: thenStmts
+  let elseStmts = CStmt.Expr (CExpr.Set (result, elseCl)) :: elseStmts
+  let acc = CStmt.Let (resultName, cty ty, None) :: acc
+  let acc = CStmt.If (pred, List.rev thenStmts, List.rev elseStmts) :: acc
+  result, acc, ctx
 
 let genExprList acc ctx exprs =
   let rec go results acc ctx exprs =
@@ -64,11 +86,13 @@ let genExpr
     CExpr.Int 0, acc, ctx
   | Expr.Ref (name, _) ->
     CExpr.Ref name, acc, ctx
+  | Expr.If (pred, thenCl, elseCl, (ty, _)) ->
+    genIfExpr acc ctx pred thenCl elseCl ty
   | Expr.Add (first, second, (Ty.Int, _)) ->
     let first, acc, ctx = genExpr acc ctx first
     let second, acc, ctx = genExpr acc ctx second
     let name, ctx = freshName ctx
-    let acc = CStmt.Let (name, CTy.Int, CExpr.Add(first, second)) :: acc
+    let acc = CStmt.Let (name, CTy.Int, Some (CExpr.Add (first, second))) :: acc
     CExpr.Ref name, acc, ctx
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _), format :: args, _) ->
     let format, acc, ctx = genExpr acc ctx format
@@ -79,7 +103,7 @@ let genExpr
   | Expr.Let (name, init, _) ->
     let cty = cty (tyOf init)
     let init, acc, ctx = genExpr acc ctx init
-    let acc = CStmt.Let (name, cty, init) :: acc
+    let acc = CStmt.Let (name, cty, Some init) :: acc
     CExpr.Ref name, acc, ctx
   | Expr.Begin (expr :: exprs, _) ->
     let rec go acc ctx expr exprs =
