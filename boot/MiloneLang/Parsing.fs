@@ -105,9 +105,10 @@ let parsePats (outer: Outer) (tokens: _ list): Pattern list * _ list =
 
 let parseIf (outer: Outer) loc tokens =
   let _, ifX = loc
-  let ifBox =
-    { outer with
-        Bottom = max outer.Bottom ifX
+  let ifBox: Outer =
+    {
+      Bottom = max outer.Bottom ifX
+      Tie = None
     }
   let predInside: Outer =
     {
@@ -119,7 +120,7 @@ let parseIf (outer: Outer) loc tokens =
 
   match tokens with
   | (Token.Then, _) as t :: tokens when nextInside ifBox [t] ->
-    let thenOuter =
+    let thenOuter: Outer =
       {
         Bottom = max (ifX + 1) (nextX tokens)
         Tie = Some Token.Else
@@ -128,9 +129,10 @@ let parseIf (outer: Outer) loc tokens =
       parseExpr thenOuter tokens
     match tokens with
     | (Token.Else, _) as t :: tokens when nextInside ifBox [t] ->
-      let elseOuter =
-        { ifBox with
-            Bottom = max (ifX + 1) (nextX tokens)
+      let elseOuter: Outer =
+        {
+          Bottom = max (ifX + 1) (nextX tokens)
+          Tie = None
         }
       let elseCl, tokens =
         parseExpr elseOuter tokens
@@ -238,16 +240,34 @@ let parseLet outer tokens =
   | _ ->
     parseAdd outer tokens
 
+let leadsExpr tokens =
+  match tokens with
+  | [] -> false
+  | (Token.Unit, _) :: _
+  | (Token.Int _, _) :: _
+  | (Token.String _, _) :: _
+  | (Token.Ident _, _) :: _
+  | (Token.ParenL, _) :: _
+  | (Token.If _, _) :: _
+    -> true
+  | (Token.Then, _) :: _
+  | (Token.Else, _) :: _
+  | (Token.ParenR, _) :: _
+  | (Token.Punct _, _) :: _
+    -> false
+
 /// block = ( let )+
 let rec parseBlock outer tokens =
   let rec go acc tokens =
+    let nextInside = nextInside outer tokens
     match tokens with
-    | _ when nextInside outer tokens |> not ->
-      List.rev acc, tokens
     | (Token.Punct ";", _) :: tokens
-    | tokens ->
+    | tokens
+      when nextInside && leadsExpr tokens ->
       let expr, tokens = parseLet outer tokens
       go (expr :: acc) tokens
+    | _ ->
+      List.rev acc, tokens
   go [] tokens
 
 let parseExpr (outer: Outer) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =

@@ -24,5 +24,6 @@ try "hello"
 try "var_1"
 try "var_str"
 try "if_else"
+try "if_else_complex"
 
 echo "OK" >&2
