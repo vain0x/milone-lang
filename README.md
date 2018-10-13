@@ -21,10 +21,10 @@ For self-hosting, I avoid the use of complex mechanism in compiler source code, 
 - Lexing
     - From source code to list of tokens
     - With hand-written tokenizer
-- Parsing (synstax analysis)
+- Parsing (syntax analysis)
     - From token list to abstract syntax tree
     - With hand-written [recursive descent parser](https://en.wikipedia.org/wiki/Recursive_descent_parser)
-    - Indent-based semilocon insertion is applied on this stage.
+    - Indent-based semicolon insertion is applied on this stage.
 - Typing (type checking)
     - Collect type info for each expression
     - Simple unification-based type inference
@@ -36,4 +36,4 @@ For self-hosting, I avoid the use of complex mechanism in compiler source code, 
 
 ## See Also
 
-This project is inpired with [rui314/9cc\: A Small C Compiler](https://github.com/rui314/9cc).
+This project is inspired with [rui314/9cc\: A Small C Compiler](https://github.com/rui314/9cc).
