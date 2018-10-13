@@ -8,6 +8,11 @@ type Ctx =
     Serial: int
   }
 
+let emptyCtx: Ctx =
+  {
+    Serial = 0
+  }
+
 let tyOf expr =
   Typing.tyOf expr
 
@@ -15,6 +20,7 @@ let cty ty: CTy =
   match ty with
   | Ty.Unit ->
     CTy.Void
+  | Ty.Bool
   | Ty.Int ->
     CTy.Int
   | Ty.Str ->
@@ -52,6 +58,10 @@ let genExpr
     CExpr.Int value, acc, ctx
   | Expr.String (value, _) ->
     CExpr.Str value, acc, ctx
+  | Expr.Ref ("true", _) ->
+    CExpr.Int 1, acc, ctx
+  | Expr.Ref ("false", _) ->
+    CExpr.Int 0, acc, ctx
   | Expr.Ref (name, _) ->
     CExpr.Ref name, acc, ctx
   | Expr.Add (first, second, (Ty.Int, _)) ->
@@ -87,13 +97,9 @@ let genExpr
     failwith "unimpl"
 
 let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
-  let ctx: Ctx =
-    {
-      Serial = 0
-    }
   match exprs with
   | [Expr.Let (name, body, _)] ->
-    let result, acc, _ctx = genExpr [] ctx body
+    let result, acc, _ctx = genExpr [] emptyCtx body
     let acc = CStmt.Return (Some result) :: acc
     let decl =
       CDecl.Fun {

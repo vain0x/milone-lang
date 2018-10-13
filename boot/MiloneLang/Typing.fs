@@ -54,6 +54,7 @@ let isFreshTyVar ty tyVar: bool =
   let rec go ty =
     match ty with
     | Ty.Unit
+    | Ty.Bool
     | Ty.Int
     | Ty.Str ->
       true
@@ -77,6 +78,7 @@ let substTy (ctx: TyCtx) ty: Ty =
   let rec go ty =
     match ty with
     | Ty.Unit
+    | Ty.Bool
     | Ty.Int
     | Ty.Str ->
       ty
@@ -101,12 +103,14 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Fun (lsty, ltty), Ty.Fun (rsty, rtty) ->
       ctx |> go lsty rsty |> go ltty rtty
     | Ty.Unit, Ty.Unit
+    | Ty.Bool, Ty.Bool
     | Ty.Int, Ty.Int
     | Ty.Str, Ty.Str ->
       ctx
     | Ty.Var _, _ ->
       failwithf "Couldn't unify (due to self recursion) %A %A" lty rty
     | Ty.Unit, _
+    | Ty.Bool, _
     | Ty.Int _, _
     | Ty.Str _, _
     | Ty.Fun _, _ ->
@@ -176,6 +180,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
   | Expr.Prim (PrimFun.Printfn, loc) ->
     let ty = Ty.Fun (Ty.Str, Ty.Unit)
     Expr.Prim (PrimFun.Printfn, (ty, loc)), ctx
+  | Expr.Ref (ident, loc) when ident = "true" || ident = "false" ->
+    Expr.Ref (ident, (Ty.Bool, loc)), ctx
   | Expr.Ref (ident, loc) ->
     inferRef ctx loc ident
   | Expr.Call (callee, [arg], loc) ->

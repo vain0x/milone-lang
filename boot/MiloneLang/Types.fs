@@ -22,6 +22,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type Ty =
     | Unit
+    | Bool
     | Int
     | Str
     | Fun
