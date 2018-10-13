@@ -33,6 +33,11 @@ let cty ty: CTy =
 let ctyOf expr =
   cty (tyOf expr)
 
+let cop op =
+  match op with
+  | Op.Add -> COp.Add
+  | Op.Sub -> COp.Sub
+
 let callPrintf format args =
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
 
@@ -88,11 +93,11 @@ let genExpr
     CExpr.Ref name, acc, ctx
   | Expr.If (pred, thenCl, elseCl, (ty, _)) ->
     genIfExpr acc ctx pred thenCl elseCl ty
-  | Expr.Add (first, second, (Ty.Int, _)) ->
+  | Expr.Op (op, first, second, (Ty.Int, _)) ->
     let first, acc, ctx = genExpr acc ctx first
     let second, acc, ctx = genExpr acc ctx second
     let name, ctx = freshName ctx
-    let acc = CStmt.Let (name, CTy.Int, Some (CExpr.Add (first, second))) :: acc
+    let acc = CStmt.Let (name, CTy.Int, Some (CExpr.Op (cop op, first, second))) :: acc
     CExpr.Ref name, acc, ctx
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _), format :: args, _) ->
     let format, acc, ctx = genExpr acc ctx format
@@ -117,7 +122,7 @@ let genExpr
     failwith "never"
   | Expr.Prim _
   | Expr.Call _
-  | Expr.Add _ ->
+  | Expr.Op _ ->
     failwith "unimpl"
 
 let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =

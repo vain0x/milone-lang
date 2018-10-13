@@ -26,8 +26,11 @@ let exprRef ident =
 let exprCall callee args =
   Expr.Call (callee, List.map (exprMap ignore) args, ())
 
-let exprFdd left right =
-  Expr.Add (left,  right, ())
+let exprAdd left right =
+  Expr.Op (Op.Add, left,  right, ())
+
+let exprSub left right =
+  Expr.Op (Op.Sub, left,  right, ())
 
 let exprLet name body =
   Expr.Let (name,  body, ())
@@ -80,7 +83,7 @@ let main () =
   let expected =
     [
       exprLet "main"
-        (exprFdd
+        (exprAdd
           (exprCall
             (exprRef "f")
             [
@@ -105,8 +108,8 @@ let parseParensRelaxLayout () =
     [
       exprLet "main" (
         exprBlock [
-          exprFdd
-            (exprFdd (exprInt 4) (exprInt 2))
+          exprAdd
+            (exprAdd (exprInt 4) (exprInt 2))
             (exprInt 1)
           exprInt 2
         ])
@@ -129,7 +132,7 @@ let parseIndentLayoutTest () =
           exprLet "foo" (
             exprBlock [
               exprLet "goo" (exprInt 4)
-              exprFdd (exprInt 4) (exprInt 6)
+              exprAdd (exprInt 4) (exprInt 6)
             ])
           exprInt 2
         ])
@@ -147,7 +150,7 @@ let parseBeginExpr () =
     [
       exprLet "main" (
         exprBlock [
-          exprFdd
+          exprAdd
             (exprCall (exprRef "f") [exprRef "x"])
             (exprCall (exprRef "g") [exprRef "y"])
           exprInt 1
@@ -164,10 +167,10 @@ let parseParenExpr () =
   let expected =
     [
       exprLet "main" (
-        exprFdd
-          (exprFdd
+        exprAdd
+          (exprAdd
             (exprInt 1)
-            (exprFdd (exprInt 2) (exprInt 3)))
+            (exprAdd (exprInt 2) (exprInt 3)))
           (exprInt 4)
       )
     ]
@@ -187,5 +190,24 @@ let parseSemicolonInLineOne () =
           exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "World!"]
           exprInt 0
         ])
+    ]
+  source |> parseStr |> is expected
+
+[<Fact>]
+let parseAddSubExpr () =
+  let source = """let main () =
+  1 - 2 + 3 - 4
+"""
+  let expected =
+    [
+      exprLet "main" (
+        exprSub
+          (exprAdd
+            (exprSub
+              (exprInt 1)
+              (exprInt 2))
+            (exprInt 3))
+          (exprInt 4)
+      )
     ]
   source |> parseStr |> is expected

@@ -22,7 +22,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.Ref (_, a) -> a
   | Expr.If (_, _, _, a) -> a
   | Expr.Call (_, _, a) -> a
-  | Expr.Add (_, _, a) -> a
+  | Expr.Op (_, _, _, a) -> a
   | Expr.Let (_, _, a) -> a
   | Expr.Begin (_, a) -> a
 
@@ -42,8 +42,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.If (exprMap f pred, exprMap f thenCl, exprMap f elseCl, f a)
   | Expr.Call (callee, args, a) ->
     Expr.Call (exprMap f callee, List.map (exprMap f) args, f a)
-  | Expr.Add (l, r, a) ->
-    Expr.Add (exprMap f l, exprMap f r, f a)
+  | Expr.Op (op, l, r, a) ->
+    Expr.Op (op, exprMap f l, exprMap f r, f a)
   | Expr.Let (ident, init, a) ->
     Expr.Let (ident, exprMap f init, f a)
   | Expr.Begin (exprs, a) ->
@@ -204,11 +204,16 @@ let parseAdd outer tokens =
   let rec go expr tokens =
     match tokens with
     | (Token.Punct "+", opLoc) :: tokens ->
-      let second, syns = parseCall outer tokens
-      let acc = Expr.Add (expr, second, opLoc)
-      go acc syns
+      ho expr Op.Add opLoc tokens
+    | (Token.Punct "-", opLoc) :: tokens ->
+      ho expr Op.Sub opLoc tokens
     | _ ->
       expr, tokens
+  and ho expr op opLoc tokens =
+    let second, syns = parseCall outer tokens
+    let acc = Expr.Op (op, expr, second, opLoc)
+    go acc syns
+
   let first, tokens = parseCall outer tokens
   go first tokens
 

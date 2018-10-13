@@ -142,7 +142,7 @@ let inferApp (ctx: TyCtx) loc callee arg =
   let ctx = unifyTy ctx (tyOf callee) (Ty.Fun(tyOf arg, appTy))
   Expr.Call (callee, [arg], (appTy, loc)), ctx
 
-let inferAdd (ctx: TyCtx) loc lexpr rexpr =
+let inferOpInt (ctx: TyCtx) loc op lexpr rexpr =
   let lexpr, ctx = inferExpr ctx lexpr
   let rexpr, ctx = inferExpr ctx rexpr
 
@@ -152,7 +152,7 @@ let inferAdd (ctx: TyCtx) loc lexpr rexpr =
   let ctx = unifyTy ctx lty rty
   let ctx = unifyTy ctx lty addTy
 
-  Expr.Add (lexpr, rexpr, (addTy, loc)), ctx
+  Expr.Op (op, lexpr, rexpr, (addTy, loc)), ctx
 
 let inferLet ctx loc name init =
   let name, ty, ctx = freshVar name ctx
@@ -198,8 +198,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferIf ctx pred thenCl elseCl loc
   | Expr.Call (callee, [arg], loc) ->
     inferApp ctx loc callee arg
-  | Expr.Add (l, r, loc) ->
-    inferAdd ctx loc l r
+  | Expr.Op (op, l, r, loc) ->
+    inferOpInt ctx loc op l r
   | Expr.Let (name, init, loc) ->
     inferLet ctx loc name init
   | Expr.Begin (exprs, loc) ->

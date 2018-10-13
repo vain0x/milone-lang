@@ -21,6 +21,7 @@ let testFile fileName =
 [<Theory>]
 [<InlineData("zero")>]
 [<InlineData("add")>]
+[<InlineData("arith")>]
 // [<InlineData("emit_1")>]
 [<InlineData("hello")>]
 [<InlineData("var_1")>]

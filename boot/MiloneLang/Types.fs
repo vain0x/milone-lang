@@ -44,6 +44,11 @@ namespace rec MiloneLang
     | Ident
       of string
 
+  [<RequireQualifiedAccess>]
+  type Op =
+    | Add
+    | Sub
+
   /// Expression in AST.
   [<RequireQualifiedAccess>]
   type Expr<'a> =
@@ -63,8 +68,8 @@ namespace rec MiloneLang
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
     | Call
       of Expr<'a> * Expr<'a> list * 'a
-    | Add
-      of Expr<'a> * Expr<'a> * 'a
+    | Op
+      of Op * Expr<'a> * Expr<'a> * 'a
     | Let
       of ident:string * init:Expr<'a> * 'a
     /// x; y; z
@@ -85,6 +90,11 @@ namespace rec MiloneLang
     | Malloc
     | Printf
 
+  [<RequireQualifiedAccess>]
+  type COp =
+    | Add
+    | Sub
+
   /// Expression in C language.
   [<RequireQualifiedAccess>]
   type CExpr =
@@ -95,8 +105,8 @@ namespace rec MiloneLang
       of string
     | Ref
       of string
-    | Add
-      of CExpr * CExpr
+    | Op
+      of COp * CExpr * CExpr
     | Prim
       of CPrim
     | Call

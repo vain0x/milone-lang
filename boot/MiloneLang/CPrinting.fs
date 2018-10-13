@@ -8,6 +8,11 @@ let ( *- ) acc second =
 
 let eol = Environment.NewLine
 
+let opStr op =
+  match op with
+  | COp.Add -> "+"
+  | COp.Sub -> "-"
+
 let rec cprintTy acc ty: string list =
   match ty with
   | CTy.Void ->
@@ -41,10 +46,10 @@ let rec cprintExpr acc expr: string list =
     acc *- "malloc"
   | CExpr.Prim CPrim.Printf ->
     acc *- "printf"
-  | CExpr.Add (first, second) ->
+  | CExpr.Op (op, first, second) ->
     let acc = acc *- "("
     let acc = cprintExpr acc first
-    let acc = acc *- " + "
+    let acc = acc *- " " *- opStr op *- " "
     let acc = cprintExpr acc second
     let acc = acc *- ")"
     acc

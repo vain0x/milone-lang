@@ -20,6 +20,7 @@ try () {
 
 try "zero"
 try "add"
+try "arith"
 try "hello"
 try "var_1"
 try "var_str"
