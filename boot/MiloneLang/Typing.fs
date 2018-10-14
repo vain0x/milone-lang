@@ -28,7 +28,7 @@ let rollback bCtx dCtx: TyCtx =
   assert (bCtx.VarSerial <= dCtx.VarSerial)
   assert (bCtx.TySerial <= dCtx.TySerial)
   { dCtx with
-      VarEnv = dCtx.VarEnv
+      VarEnv = bCtx.VarEnv
   }
 
 let freshTyVar name (ctx: TyCtx): string * TyCtx =

@@ -5,12 +5,12 @@ module rec MiloneLang.CIrGen
 [<RequireQualifiedAccess>]
 type Ctx =
   {
-    Serial: int
+    VarSerial: int
   }
 
-let emptyCtx: Ctx =
+let ctxFromTyCtx (tyCtx: Typing.TyCtx): Ctx =
   {
-    Serial = 0
+    VarSerial = tyCtx.VarSerial
   }
 
 let tyOf expr =
@@ -53,13 +53,17 @@ let callPrintf format args =
   let format = CExpr.Str (format + "\\n")
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
 
-let freshName (ctx: Ctx) =
-  let name = "l" + string ctx.Serial
-  let ctx = { ctx with Serial = ctx.Serial + 1 }
+let uniqueName name serial =
+  sprintf "%s_%d" name serial
+
+let freshName (ctx: Ctx) (name: string) =
+  let serial = ctx.VarSerial + 1
+  let name = uniqueName name serial
+  let ctx = { ctx with VarSerial = ctx.VarSerial + 1 }
   name, ctx
 
-let freshVar (ctx: Ctx) (ty: CTy) =
-  let name, ctx = freshName ctx
+let freshVar (ctx: Ctx) (name: string) (ty: CTy) =
+  let name, ctx = freshName ctx name
   name, CExpr.Ref name, ctx
 
 let genOpExpr acc ctx op first second ty loc =
@@ -79,7 +83,7 @@ let genOpExpr acc ctx op first second ty loc =
     let ty = CTy.Int
     let first, acc, ctx = genExpr acc ctx first
     let second, acc, ctx = genExpr acc ctx second
-    let name, ctx = freshName ctx
+    let name, ctx = freshName ctx "op"
     let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second))) :: acc
     CExpr.Ref name, acc, ctx
 
@@ -88,7 +92,7 @@ let genOpExpr acc ctx op first second ty loc =
 /// if (pred) { ..; result = thenCl; } else { ..; result = elseCl; }
 /// ..(result)
 let genIfExpr acc ctx pred thenCl elseCl ty =
-  let resultName, result, ctx = freshVar ctx (ctyOf thenCl)
+  let resultName, result, ctx = freshVar ctx "if" (ctyOf thenCl)
   let pred, acc, ctx = genExpr acc ctx pred
   let thenCl, thenStmts, ctx = genExpr [] ctx thenCl
   let elseCl, elseStmts, ctx = genExpr [] ctx elseCl
@@ -106,9 +110,6 @@ let genExprList acc ctx exprs =
       let result, acc, ctx = genExpr acc ctx expr
       go (result :: results) acc ctx exprs
   go [] acc ctx exprs
-
-let uniqueName name serial =
-  sprintf "%s_%d" name serial
 
 let genExpr
   (acc: CStmt list) (ctx: Ctx) (arg: Expr<Ty * Loc>)
@@ -156,10 +157,11 @@ let genExpr
     failwith "unimpl"
 
 let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
+  let ctx = ctxFromTyCtx tyCtx
   match exprs with
   | [Expr.Let (name, serial, body, _)] ->
     let name = if name = "main" then name else uniqueName name serial
-    let result, acc, _ctx = genExpr [] emptyCtx body
+    let result, acc, _ctx = genExpr [] ctx body
     let acc = CStmt.Return (Some result) :: acc
     let decl =
       CDecl.Fun {

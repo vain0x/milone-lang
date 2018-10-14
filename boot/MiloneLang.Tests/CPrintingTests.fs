@@ -10,20 +10,21 @@ let testFile fileName =
     IO.File.ReadAllText(
       IO.Path.Combine(testsDir.Value, "src", fileName + ".milone")
     )
+  let content =
+    let cir = Program.toCir source
+    CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
   let target =
-    IO.File.ReadAllText(
-      IO.Path.Combine(testsDir.Value, "c", fileName + ".c")
+    IO.File.WriteAllText(
+      IO.Path.Combine(testsDir.Value, "c", fileName + ".c"),
+      content
     )
-  let cir = Program.toCir source
-  CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
-  |> is target
+  ()
 
 [<Theory>]
 [<InlineData("zero")>]
 [<InlineData("add")>]
 [<InlineData("arith")>]
 [<InlineData("logic")>]
-// [<InlineData("emit_1")>]
 [<InlineData("hello")>]
 [<InlineData("printfn")>]
 [<InlineData("var_1")>]

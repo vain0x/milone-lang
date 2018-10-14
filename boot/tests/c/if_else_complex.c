@@ -1,19 +1,19 @@
 int main() {
-    int l0;
+    int if_4;
     if (1) {
         printf("then\n");
         char* hello_2 = "hello";
-        int l1;
+        int if_5;
         if (1) {
-            l1 = 0;
+            if_5 = 0;
         } else {
             char* message_3 = hello_2;
-            l1 = 1;
+            if_5 = 1;
         }
-        l0 = l1;
+        if_4 = if_5;
     } else {
         printf("else\n");
-        l0 = 1;
+        if_4 = 1;
     }
-    return l0;
+    return if_4;
 }

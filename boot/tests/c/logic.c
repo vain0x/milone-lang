@@ -1,31 +1,31 @@
 int main() {
-    int l3 = (1 <= 2);
-    int l2;
-    if (l3) {
-        int l4 = (2 < 3);
-        l2 = l4;
+    int op_5 = (1 <= 2);
+    int if_4;
+    if (op_5) {
+        int op_6 = (2 < 3);
+        if_4 = op_6;
     } else {
-        l2 = 0;
+        if_4 = 0;
     }
-    int l1;
-    if (l2) {
-        l1 = 1;
+    int if_3;
+    if (if_4) {
+        if_3 = 1;
     } else {
-        int l6 = (3 > 2);
-        int l5;
-        if (l6) {
-            int l7 = (2 >= 1);
-            l5 = l7;
+        int op_8 = (3 > 2);
+        int if_7;
+        if (op_8) {
+            int op_9 = (2 >= 1);
+            if_7 = op_9;
         } else {
-            l5 = 0;
+            if_7 = 0;
         }
-        l1 = l5;
+        if_3 = if_7;
     }
-    int l0;
-    if (l1) {
-        l0 = 0;
+    int if_2;
+    if (if_3) {
+        if_2 = 0;
     } else {
-        l0 = 1;
+        if_2 = 1;
     }
-    return l0;
+    return if_2;
 }

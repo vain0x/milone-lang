@@ -12,7 +12,8 @@
     <Compile Include="ParsingTests.fs" />
     <Compile Include="CIrGenTests.fs" />
     <Compile Include="CPrintingTests.fs" />
-    <Watch Include="../tests/**" />
+    <Watch Include="../tests/src/**" />
+    <Watch Include="../tests/targets/**" />
   </ItemGroup>
 
   <ItemGroup>
