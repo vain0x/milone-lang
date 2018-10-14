@@ -136,11 +136,10 @@ let genExpr
     let args, ctx = genExprList acc ctx args
     let acc = callPrintf format args :: acc
     CExpr.Unit, acc, ctx
-  | Expr.Let (name, serial, init, _) ->
+  | Expr.Let (Pat.Ident (name, serial, (ty, _)), init, _) ->
     let name = uniqueName name serial
-    let cty = cty (tyOf init)
     let init, acc, ctx = genExpr acc ctx init
-    let acc = CStmt.Let (name, cty, Some init) :: acc
+    let acc = CStmt.Let (name, cty ty, Some init) :: acc
     CExpr.Ref name, acc, ctx
   | Expr.Begin (expr :: exprs, _) ->
     let rec go acc ctx expr exprs =
@@ -153,13 +152,14 @@ let genExpr
   | Expr.Call (_, [], _) ->
     failwith "never"
   | Expr.Prim _
-  | Expr.Call _ ->
+  | Expr.Call _
+  | Expr.Let _ ->
     failwith "unimpl"
 
 let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
   let ctx = ctxFromTyCtx tyCtx
   match exprs with
-  | [Expr.Let (name, serial, body, _)] ->
+  | [Expr.Let (Pat.Ident (name, serial, _), body, _)] ->
     let name = if name = "main" then name else uniqueName name serial
     let result, acc, _ctx = genExpr [] ctx body
     let acc = CStmt.Return (Some result) :: acc

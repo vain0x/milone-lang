@@ -8,6 +8,13 @@ type TokenRole =
   | Open
   | Close
 
+let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
+  match pat with
+  | Pat.Unit a ->
+    Pat.Unit (f a)
+  | Pat.Ident (name, serial, a) ->
+    Pat.Ident (name, serial, f a)
+
 let exprExtract (expr: Expr<'a>): 'a =
   match expr with
   | Expr.Unit a -> a
@@ -18,7 +25,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.If (_, _, _, a) -> a
   | Expr.Call (_, _, a) -> a
   | Expr.Op (_, _, _, a) -> a
-  | Expr.Let (_, _, _, a) -> a
+  | Expr.Let (_, _, a) -> a
   | Expr.Begin (_, a) -> a
 
 let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
@@ -39,8 +46,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Call (exprMap f callee, List.map (exprMap f) args, f a)
   | Expr.Op (op, l, r, a) ->
     Expr.Op (op, exprMap f l, exprMap f r, f a)
-  | Expr.Let (ident, serial, init, a) ->
-    Expr.Let (ident, serial, exprMap f init, f a)
+  | Expr.Let (pat, init, a) ->
+    Expr.Let (patMap f pat, exprMap f init, f a)
   | Expr.Begin (exprs, a) ->
     Expr.Begin (List.map (exprMap f) exprs, f a)
 
@@ -103,7 +110,7 @@ let parsePat boxX tokens: Pat<_> option * _ list =
     | (Token.Unit, loc) :: tokens ->
       Some (Pat.Unit loc), tokens
     | (Token.Ident value, loc) :: tokens ->
-      Some (Pat.Ident (value, loc)), tokens
+      Some (Pat.Ident (value, 0, loc)), tokens
     | _ ->
       None, tokens
 
@@ -163,9 +170,9 @@ let parseLet boxX letLoc tokens =
     parseExpr bodyX tokens
   let expr =
     match pats with
-    | [Pat.Ident (name, _)]
-    | [Pat.Ident (name, _); Pat.Unit _] ->
-      Expr.Let (name, 0, body, letLoc)
+    | [Pat.Ident _ as pat]
+    | [Pat.Ident _ as pat; Pat.Unit _] ->
+      Expr.Let (pat, body, letLoc)
     | [] ->
       failwithf "Expected a pattern at %A" patsTokens
     | _ ->

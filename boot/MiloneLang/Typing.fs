@@ -222,12 +222,17 @@ let inferOp (ctx: TyCtx) loc op left right =
   | Op.Or ->
     inferOpLogic ctx loc op left right
 
-let inferLet ctx loc name init =
-  let name, serial, ty, ctx = freshVar name ctx
-  let init, initCtx = inferExpr ctx init
-  let ctx = rollback ctx initCtx
-  let ctx = unifyTy ctx ty (tyOf init)
-  Expr.Let (name, serial, init, (Ty.Unit, loc)), ctx
+let inferLet ctx pat init loc =
+  match pat with
+  | Pat.Unit _ ->
+    failwith "unimpl let () = .."
+  | Pat.Ident (name, _, patLoc) ->
+    let name, serial, ty, ctx = freshVar name ctx
+    let init, initCtx = inferExpr ctx init
+    let ctx = rollback ctx initCtx
+    let ctx = unifyTy ctx ty (tyOf init)
+    let pat = Pat.Ident (name, serial, (ty, patLoc))
+    Expr.Let (pat, init, (Ty.Unit, loc)), ctx
 
 let inferExprs ctx exprs =
   let rec go acc ctx exprs =
@@ -267,8 +272,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferApp ctx loc callee args
   | Expr.Op (op, l, r, loc) ->
     inferOp ctx loc op l r
-  | Expr.Let (name, _, init, loc) ->
-    inferLet ctx loc name init
+  | Expr.Let (pat, init, loc) ->
+    inferLet ctx pat init loc
   | Expr.Begin (exprs, loc) ->
     inferBlock ctx loc exprs
   | Expr.Call _ ->

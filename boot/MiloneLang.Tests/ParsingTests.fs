@@ -36,7 +36,7 @@ let exprSub left right =
   Expr.Op (Op.Sub, left,  right, ())
 
 let exprLet name body =
-  Expr.Let (name, 0, body, ())
+  Expr.Let (Pat.Ident (name, 0, ()), body, ())
 
 let exprBlock exprs =
   Expr.Begin (List.map (exprMap ignore) exprs, ())

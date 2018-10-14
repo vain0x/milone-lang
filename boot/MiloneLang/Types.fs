@@ -76,7 +76,7 @@ namespace rec MiloneLang
     | Unit
       of 'a
     | Ident
-      of string * 'a
+      of name:string * serial: int * 'a
 
   /// Expression in AST.
   [<RequireQualifiedAccess>]
@@ -100,7 +100,7 @@ namespace rec MiloneLang
     | Op
       of Op * Expr<'a> * Expr<'a> * 'a
     | Let
-      of ident:string * serial:int * init:Expr<'a> * 'a
+      of pat:Pat<'a> * init:Expr<'a> * 'a
     /// x; y; z
     | Begin
       of Expr<'a> list * 'a
