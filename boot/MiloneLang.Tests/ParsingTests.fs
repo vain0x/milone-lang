@@ -26,6 +26,9 @@ let exprRef ident =
 let exprCall callee args =
   Expr.Call (callee, List.map (exprMap ignore) args, ())
 
+let exprOp op left right =
+  Expr.Op (op, left,  right, ())
+
 let exprAdd left right =
   Expr.Op (Op.Add, left,  right, ())
 
@@ -208,6 +211,31 @@ let parseAddSubExpr () =
               (exprInt 2))
             (exprInt 3))
           (exprInt 4)
+      )
+    ]
+  source |> parseStr |> is expected
+
+[<Fact>]
+let parseComparisonExpr () =
+  let source = """let main () =
+  1 + 1 <= 2
+  11 % 5 = 1
+"""
+  let expected =
+    [
+      exprLet "main" (
+        exprBlock [
+          exprOp Op.Le
+            (exprAdd
+              (exprInt 1)
+              (exprInt 1))
+            (exprInt 2)
+          exprOp Op.Eq
+            (exprOp Op.Mod
+              (exprInt 11)
+              (exprInt 5))
+            (exprInt 1)
+        ]
       )
     ]
   source |> parseStr |> is expected

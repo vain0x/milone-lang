@@ -202,6 +202,7 @@ let parseCall boxX tokens =
 
 let parseNextLevelOp level outer tokens =
   match level with
+  | OpLevel.Cmp -> parseOp OpLevel.Add outer tokens
   | OpLevel.Add -> parseOp OpLevel.Mul outer tokens
   | OpLevel.Mul -> parseCall outer tokens
 
@@ -211,6 +212,18 @@ let rec parseOps level boxX expr tokens =
     let expr = Expr.Op (op, expr, second, opLoc)
     parseOps level boxX expr tokens
   match level, tokens with
+  | OpLevel.Cmp, (Token.Punct "=", opLoc) :: tokens ->
+    next expr Op.Eq opLoc tokens
+  | OpLevel.Cmp, (Token.Punct "<>", opLoc) :: tokens ->
+    next expr Op.Ne opLoc tokens
+  | OpLevel.Cmp, (Token.Punct "<", opLoc) :: tokens ->
+    next expr Op.Lt opLoc tokens
+  | OpLevel.Cmp, (Token.Punct "<=", opLoc) :: tokens ->
+    next expr Op.Le opLoc tokens
+  | OpLevel.Cmp, (Token.Punct ">", opLoc) :: tokens ->
+    next expr Op.Gt opLoc tokens
+  | OpLevel.Cmp, (Token.Punct ">=", opLoc) :: tokens ->
+    next expr Op.Ge opLoc tokens
   | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
     next expr Op.Add opLoc tokens
   | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->
@@ -235,6 +248,9 @@ let parseMul boxX tokens =
 
 let parseAdd boxX tokens =
   parseOp OpLevel.Add boxX tokens
+
+let parseCmp boxX tokens =
+  parseOp OpLevel.Cmp boxX tokens
 
 /// let = 'let' ( pat )* '=' expr / call
 let parseLet boxX tokens =
@@ -261,7 +277,7 @@ let parseLet boxX tokens =
         failwithf "unimpl let %A" pats
     expr, tokens
   | _ ->
-    parseAdd boxX tokens
+    parseCmp boxX tokens
 
 /// block = let ( ';' let )*
 let rec parseBlock boxX tokens =

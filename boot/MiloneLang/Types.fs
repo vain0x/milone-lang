@@ -48,6 +48,8 @@ namespace rec MiloneLang
   type OpLevel =
     | Add
     | Mul
+    /// Comparison
+    | Cmp
 
   [<RequireQualifiedAccess>]
   type Op =
@@ -56,6 +58,18 @@ namespace rec MiloneLang
     | Mul
     | Div
     | Mod
+    //// Equal
+    | Eq
+    /// Not Equal
+    | Ne
+    /// Less than
+    | Lt
+    /// Less than or equal to
+    | Le
+    /// Greater than
+    | Gt
+    /// Greater than or equal to
+    | Ge
 
   /// Expression in AST.
   [<RequireQualifiedAccess>]
@@ -105,6 +119,18 @@ namespace rec MiloneLang
     | Mul
     | Div
     | Mod
+    //// Equal
+    | Eq
+    /// Not Equal
+    | Ne
+    /// Less than
+    | Lt
+    /// Less than or equal to
+    | Le
+    /// Greater than
+    | Gt
+    /// Greater than or equal to
+    | Ge
 
   /// Expression in C language.
   [<RequireQualifiedAccess>]

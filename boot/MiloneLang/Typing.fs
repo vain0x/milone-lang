@@ -142,17 +142,38 @@ let inferApp (ctx: TyCtx) loc callee arg =
   let ctx = unifyTy ctx (tyOf callee) (Ty.Fun(tyOf arg, appTy))
   Expr.Call (callee, [arg], (appTy, loc)), ctx
 
-let inferOpInt (ctx: TyCtx) loc op lexpr rexpr =
-  let lexpr, ctx = inferExpr ctx lexpr
-  let rexpr, ctx = inferExpr ctx rexpr
+let inferOpCore (ctx: TyCtx) loc op left right =
+  let left, ctx = inferExpr ctx left
+  let right, ctx = inferExpr ctx right
 
   // Infer types so that left and right are of the same type.
   let addTyVar, ctx = freshTyVar "a" ctx
-  let lty, rty, addTy = tyOf lexpr, tyOf rexpr, Ty.Var addTyVar
+  let lty, rty, ty = tyOf left, tyOf right, Ty.Var addTyVar
   let ctx = unifyTy ctx lty rty
-  let ctx = unifyTy ctx lty addTy
+  let ctx = unifyTy ctx lty ty
 
-  Expr.Op (op, lexpr, rexpr, (addTy, loc)), ctx
+  Expr.Op (op, left, right, (ty, loc)), ctx
+
+let inferOpCmp (ctx: TyCtx) loc op left right =
+  let expr, ctx = inferOp ctx loc op left right
+  let ctx = unifyTy ctx (tyOf expr) Ty.Bool
+  expr, ctx
+
+let inferOp (ctx: TyCtx) loc op left right =
+  match op with
+  | Op.Add
+  | Op.Sub
+  | Op.Mul
+  | Op.Div
+  | Op.Mod ->
+    inferOpCore ctx loc op left right
+  | Op.Eq
+  | Op.Ne
+  | Op.Lt
+  | Op.Le
+  | Op.Gt
+  | Op.Ge ->
+    inferOpCmp ctx loc op left right
 
 let inferLet ctx loc name init =
   let name, ty, ctx = freshVar name ctx
@@ -199,7 +220,7 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
   | Expr.Call (callee, [arg], loc) ->
     inferApp ctx loc callee arg
   | Expr.Op (op, l, r, loc) ->
-    inferOpInt ctx loc op l r
+    inferOp ctx loc op l r
   | Expr.Let (name, init, loc) ->
     inferLet ctx loc name init
   | Expr.Begin (exprs, loc) ->

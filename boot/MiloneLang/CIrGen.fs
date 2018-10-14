@@ -40,6 +40,12 @@ let cop op =
   | Op.Mul -> COp.Mul
   | Op.Div -> COp.Div
   | Op.Mod -> COp.Mod
+  | Op.Eq -> COp.Eq
+  | Op.Ne -> COp.Ne
+  | Op.Lt -> COp.Lt
+  | Op.Le -> COp.Le
+  | Op.Gt -> COp.Gt
+  | Op.Ge -> COp.Ge
 
 let callPrintf format args =
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
