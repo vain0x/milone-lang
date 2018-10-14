@@ -50,6 +50,7 @@ let cop op =
   | Op.Or -> failwith "We don't use && || in C language"
 
 let callPrintf format args =
+  let format = CExpr.Str (format + "\\n")
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
 
 let freshName (ctx: Ctx) =
@@ -127,11 +128,9 @@ let genExpr
     genIfExpr acc ctx pred thenCl elseCl ty
   | Expr.Op (op, first, second, (ty, loc)) ->
     genOpExpr acc ctx op first second ty loc
-  | Expr.Call (Expr.Prim (PrimFun.Printfn, _), format :: args, _) ->
-    let format, acc, ctx = genExpr acc ctx format
+  | Expr.Call (Expr.Prim (PrimFun.Printfn, _), (Expr.String (format, _)) :: args, _) ->
     let args, ctx = genExprList acc ctx args
     let acc = callPrintf format args :: acc
-    let acc = callPrintf (CExpr.Str "\\n") [] :: acc
     CExpr.Unit, acc, ctx
   | Expr.Let (name, init, _) ->
     let cty = cty (tyOf init)

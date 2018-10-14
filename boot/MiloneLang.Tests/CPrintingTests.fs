@@ -25,6 +25,7 @@ let testFile fileName =
 [<InlineData("logic")>]
 // [<InlineData("emit_1")>]
 [<InlineData("hello")>]
+[<InlineData("printfn")>]
 [<InlineData("var_1")>]
 [<InlineData("var_str")>]
 [<InlineData("if_else")>]

@@ -1,8 +1,7 @@
 int main() {
     int l0;
     if (1) {
-        printf("then");
-        printf("\n");
+        printf("then\n");
         char* hello = "hello";
         int l1;
         if (1) {
@@ -13,8 +12,7 @@ int main() {
         }
         l0 = l1;
     } else {
-        printf("else");
-        printf("\n");
+        printf("else\n");
         l0 = 1;
     }
     return l0;

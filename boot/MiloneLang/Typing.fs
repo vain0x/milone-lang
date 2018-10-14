@@ -135,24 +135,39 @@ let inferIf ctx pred thenCl elseCl loc =
   let ctx = unifyTy ctx ty (tyOf elseCl)
   Expr.If (pred, thenCl, elseCl, (ty, loc)), ctx
 
-let inferApp (ctx: TyCtx) loc callee args =
-  /// During inference of `f w x ..`,
-  /// assume we concluded `f w : 'f`.
-  /// We can also conclude `f w : 'x -> 'g`.
-  let rec go acc ctx calleeTy args =
-    match args with
-    | [] ->
-      List.rev acc, calleeTy, ctx
-    | arg :: args ->
-      let appTyVar, ctx = freshTyVar "app" ctx
-      let appTy = Ty.Var appTyVar
-      let arg, ctx = inferExpr ctx arg
-      let ctx = unifyTy ctx calleeTy (Ty.Fun (tyOf arg, appTy))
-      go (arg :: acc) ctx appTy args
+/// During inference of `f w x ..`,
+/// assume we concluded `f w : 'f`.
+/// We can also conclude `f w : 'x -> 'g`.
+let rec inferAppArgs acc (ctx: TyCtx) calleeTy args =
+  match args with
+  | [] ->
+    List.rev acc, calleeTy, ctx
+  | arg :: args ->
+    let appTyVar, ctx = freshTyVar "app" ctx
+    let appTy = Ty.Var appTyVar
+    let arg, ctx = inferExpr ctx arg
+    let ctx = unifyTy ctx calleeTy (Ty.Fun (tyOf arg, appTy))
+    inferAppArgs (arg :: acc) ctx appTy args
 
+let inferApp (ctx: TyCtx) loc callee args =
   let callee, ctx = inferExpr ctx callee
-  let args, appTy, ctx = go [] ctx (tyOf callee) args
+  let args, appTy, ctx = inferAppArgs [] ctx (tyOf callee) args
   Expr.Call (callee, args, (appTy, loc)), ctx
+
+let inferAppPrintfn ctx loc args =
+  match args with
+  | [] -> failwith "Never"
+  | Expr.String (format, _) :: _ ->
+    let calleeTy =
+      // FIXME: too rough
+      if format.Contains("%s")
+      then Ty.Fun (Ty.Str, Ty.Fun (Ty.Str, Ty.Unit))
+      else Ty.Fun (Ty.Str, Ty.Unit)
+    let args, appTy, ctx = inferAppArgs [] ctx calleeTy args
+    let callee = Expr.Prim (PrimFun.Printfn, (calleeTy, loc))
+    Expr.Call (callee, args, (appTy, loc)), ctx
+  | _ ->
+    failwith """First arg of printfn must be string literal, ".."."""
 
 let inferOpCore (ctx: TyCtx) loc op left right =
   let left, ctx = inferExpr ctx left
@@ -234,15 +249,14 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     Expr.Int (value, (Ty.Int, loc)), ctx
   | Expr.String (value, loc) ->
     Expr.String (value, (Ty.Str, loc)), ctx
-  | Expr.Prim (PrimFun.Printfn, loc) ->
-    let ty = Ty.Fun (Ty.Str, Ty.Unit)
-    Expr.Prim (PrimFun.Printfn, (ty, loc)), ctx
   | Expr.Ref (ident, loc) when ident = "true" || ident = "false" ->
     Expr.Ref (ident, (Ty.Bool, loc)), ctx
   | Expr.Ref (ident, loc) ->
     inferRef ctx loc ident
   | Expr.If (pred, thenCl, elseCl, loc) ->
     inferIf ctx pred thenCl elseCl loc
+  | Expr.Call (Expr.Prim (PrimFun.Printfn, _), args, loc) ->
+    inferAppPrintfn ctx loc args
   | Expr.Call (callee, args, loc) ->
     inferApp ctx loc callee args
   | Expr.Op (op, l, r, loc) ->
@@ -253,6 +267,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferBlock ctx loc exprs
   | Expr.Call _ ->
     failwith "unimpl"
+  | Expr.Prim _ ->
+    failwith "printfn must appear in form of `printfn format args..`."
 
 /// Replaces type vars embedded in exprs
 /// with inference results.

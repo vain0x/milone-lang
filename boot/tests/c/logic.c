@@ -9,7 +9,7 @@ int main() {
     }
     int l1;
     if (l2) {
-        l1 = 0;
+        l1 = 1;
     } else {
         int l6 = (3 > 2);
         int l5;

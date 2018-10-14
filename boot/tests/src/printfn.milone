@@ -1,0 +1,5 @@
+let main () =
+  printfn "No formats"
+  let hello = "Hello!"
+  printfn "%s" hello
+  0
