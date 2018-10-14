@@ -1,4 +1,4 @@
-/// Prints C language code from C langauge IR.
+/// Prints C language code from C language IR.
 module rec MiloneLang.CPrinting
 
 open System
@@ -62,8 +62,8 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExpr acc second
     let acc = acc *- ")"
     acc
-  | CExpr.Call (functor, args) ->
-    let acc = cprintExpr acc functor
+  | CExpr.Call (callee, args) ->
+    let acc = cprintExpr acc callee
     let acc = acc *- "("
     let acc = cprintExprList acc 0 ", " args
     let acc = acc *- ")"
