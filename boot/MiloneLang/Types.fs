@@ -40,12 +40,6 @@ namespace rec MiloneLang
     | Printfn
 
   [<RequireQualifiedAccess>]
-  type Pat =
-    | Unit
-    | Ident
-      of string
-
-  [<RequireQualifiedAccess>]
   type OpLevel =
     | Add
     | Mul
@@ -75,6 +69,14 @@ namespace rec MiloneLang
     | Ge
     | And
     | Or
+
+  /// Pattern in AST.
+  [<RequireQualifiedAccess>]
+  type Pat<'a> =
+    | Unit
+      of 'a
+    | Ident
+      of string * 'a
 
   /// Expression in AST.
   [<RequireQualifiedAccess>]
