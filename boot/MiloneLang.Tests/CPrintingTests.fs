@@ -28,6 +28,7 @@ let testFile fileName =
 [<InlineData("printfn")>]
 [<InlineData("var_1")>]
 [<InlineData("var_str")>]
+[<InlineData("shadowing")>]
 [<InlineData("if_else")>]
 [<InlineData("if_else_complex")>]
 let integrationTests (name: string) =

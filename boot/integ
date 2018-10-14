@@ -24,6 +24,7 @@ try "arith"
 try "hello"
 try "var_1"
 try "var_str"
+try "shadowing"
 try "if_else"
 try "if_else_complex"
 

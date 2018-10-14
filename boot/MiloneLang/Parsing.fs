@@ -14,11 +14,11 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.Int (_, a) -> a
   | Expr.String (_, a) -> a
   | Expr.Prim (_, a) -> a
-  | Expr.Ref (_, a) -> a
+  | Expr.Ref (_, _, a) -> a
   | Expr.If (_, _, _, a) -> a
   | Expr.Call (_, _, a) -> a
   | Expr.Op (_, _, _, a) -> a
-  | Expr.Let (_, _, a) -> a
+  | Expr.Let (_, _, _, a) -> a
   | Expr.Begin (_, a) -> a
 
 let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
@@ -31,16 +31,16 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.String (value, f a)
   | Expr.Prim (value, a) ->
     Expr.Prim (value, f a)
-  | Expr.Ref (ident, a) ->
-    Expr.Ref (ident, f a)
+  | Expr.Ref (ident, serial, a) ->
+    Expr.Ref (ident, serial, f a)
   | Expr.If (pred, thenCl, elseCl, a) ->
     Expr.If (exprMap f pred, exprMap f thenCl, exprMap f elseCl, f a)
   | Expr.Call (callee, args, a) ->
     Expr.Call (exprMap f callee, List.map (exprMap f) args, f a)
   | Expr.Op (op, l, r, a) ->
     Expr.Op (op, exprMap f l, exprMap f r, f a)
-  | Expr.Let (ident, init, a) ->
-    Expr.Let (ident, exprMap f init, f a)
+  | Expr.Let (ident, serial, init, a) ->
+    Expr.Let (ident, serial, exprMap f init, f a)
   | Expr.Begin (exprs, a) ->
     Expr.Begin (List.map (exprMap f) exprs, f a)
 
@@ -163,7 +163,7 @@ let parseAtom boxX tokens: Expr<Loc> option * (Token * Loc) list =
     | (Token.Ident "printfn", loc) :: tokens ->
       Some (Expr.Prim (PrimFun.Printfn, loc)), tokens
     | (Token.Ident value, loc) :: tokens ->
-      Some (Expr.Ref (value, loc)), tokens
+      Some (Expr.Ref (value, 0, loc)), tokens
     | (Token.ParenL, _) :: tokens ->
       let expr, tokens = parseParen boxX tokens
       Some expr, tokens
@@ -282,7 +282,7 @@ let parseLet boxX tokens =
       match pats with
       | [Pattern.Ident name]
       | [Pattern.Ident name; Pattern.Unit] ->
-        Expr.Let (name, body, letLoc)
+        Expr.Let (name, 0, body, letLoc)
       | [] ->
         failwithf "Expected a pattern at %A" patsTokens
       | _ ->

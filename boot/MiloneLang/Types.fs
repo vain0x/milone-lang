@@ -89,7 +89,7 @@ namespace rec MiloneLang
       of PrimFun * 'a
     /// Variable reference.
     | Ref
-      of ident:string * 'a
+      of ident:string * serial:int * 'a
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
     | Call
@@ -97,7 +97,7 @@ namespace rec MiloneLang
     | Op
       of Op * Expr<'a> * Expr<'a> * 'a
     | Let
-      of ident:string * init:Expr<'a> * 'a
+      of ident:string * serial:int * init:Expr<'a> * 'a
     /// x; y; z
     | Begin
       of Expr<'a> list * 'a

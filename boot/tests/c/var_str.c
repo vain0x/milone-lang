@@ -1,4 +1,4 @@
 int main() {
-    char* message = "hello";
+    char* message_2 = "hello";
     return 0;
 }

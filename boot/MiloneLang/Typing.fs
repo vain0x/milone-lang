@@ -8,7 +8,8 @@ type TyExpr = Expr<Ty * Loc>
 type TyCtx =
   {
     VarSerial: int
-    VarEnv: Map<string, Ty>
+    /// Identifier to type and serial.
+    VarEnv: Map<string, Ty * int>
     TySerial: int
     TyEnv: Map<string, Ty>
   }
@@ -43,11 +44,16 @@ let resolveTyVar name (ctx: TyCtx): Ty =
   | None ->
     Ty.Var name
 
-let freshVar ident (ctx: TyCtx): string * Ty * TyCtx =
+let freshVar ident (ctx: TyCtx): string * int * Ty * TyCtx =
   let tyVar, ctx = freshTyVar ident ctx
   let ty = Ty.Var tyVar
-  let ctx = { ctx with VarEnv = ctx.VarEnv |> Map.add ident ty }
-  ident, ty, ctx
+  let serial = ctx.VarSerial + 1
+  let ctx =
+    { ctx with
+        VarSerial = ctx.VarSerial + 1
+        VarEnv = ctx.VarEnv |> Map.add ident (ty, serial)
+    }
+  ident, serial, ty, ctx
 
 /// Gets if the specified type var doesn't appear in the specified type.
 let isFreshTyVar ty tyVar: bool =
@@ -120,8 +126,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
 
 let inferRef (ctx: TyCtx) loc ident =
   match ctx.VarEnv |> Map.tryFind ident with
-  | Some ty ->
-    Expr.Ref (ident, (ty, loc)), ctx
+  | Some (ty, serial) ->
+    Expr.Ref (ident, serial, (ty, loc)), ctx
   | None ->
     failwithf "Couldn't resolve var %s" ident
 
@@ -217,11 +223,11 @@ let inferOp (ctx: TyCtx) loc op left right =
     inferOpLogic ctx loc op left right
 
 let inferLet ctx loc name init =
-  let name, ty, ctx = freshVar name ctx
+  let name, serial, ty, ctx = freshVar name ctx
   let init, initCtx = inferExpr ctx init
   let ctx = rollback ctx initCtx
   let ctx = unifyTy ctx ty (tyOf init)
-  Expr.Let (name, init, (Ty.Unit, loc)), ctx
+  Expr.Let (name, serial, init, (Ty.Unit, loc)), ctx
 
 let inferExprs ctx exprs =
   let rec go acc ctx exprs =
@@ -249,9 +255,9 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     Expr.Int (value, (Ty.Int, loc)), ctx
   | Expr.String (value, loc) ->
     Expr.String (value, (Ty.Str, loc)), ctx
-  | Expr.Ref (ident, loc) when ident = "true" || ident = "false" ->
-    Expr.Ref (ident, (Ty.Bool, loc)), ctx
-  | Expr.Ref (ident, loc) ->
+  | Expr.Ref (ident, serial, loc) when ident = "true" || ident = "false" ->
+    Expr.Ref (ident, serial, (Ty.Bool, loc)), ctx
+  | Expr.Ref (ident, _, loc) ->
     inferRef ctx loc ident
   | Expr.If (pred, thenCl, elseCl, loc) ->
     inferIf ctx pred thenCl elseCl loc
@@ -261,7 +267,7 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferApp ctx loc callee args
   | Expr.Op (op, l, r, loc) ->
     inferOp ctx loc op l r
-  | Expr.Let (name, init, loc) ->
+  | Expr.Let (name, _, init, loc) ->
     inferLet ctx loc name init
   | Expr.Begin (exprs, loc) ->
     inferBlock ctx loc exprs

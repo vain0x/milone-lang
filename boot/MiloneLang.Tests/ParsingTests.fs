@@ -21,7 +21,7 @@ let exprStr value =
   Expr.String (value, ())
 
 let exprRef ident =
-  Expr.Ref (ident, ())
+  Expr.Ref (ident, 0, ())
 
 let exprCall callee args =
   Expr.Call (callee, List.map (exprMap ignore) args, ())
@@ -36,7 +36,7 @@ let exprSub left right =
   Expr.Op (Op.Sub, left,  right, ())
 
 let exprLet name body =
-  Expr.Let (name,  body, ())
+  Expr.Let (name, 0, body, ())
 
 let exprBlock exprs =
   Expr.Begin (List.map (exprMap ignore) exprs, ())

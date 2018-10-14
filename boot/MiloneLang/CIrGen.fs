@@ -66,12 +66,12 @@ let genOpExpr acc ctx op first second ty loc =
   match op with
   | Op.And ->
     // l && r ---> if l then r else false
-    let falseLit = Expr.Ref ("false", (Ty.Bool, loc))
+    let falseLit = Expr.Ref ("false", 0, (Ty.Bool, loc))
     let expr = Expr.If (first, second, falseLit, (ty, loc))
     genExpr acc ctx expr
   | Op.Or ->
     // l || r ---> if l then true else r
-    let trueLit = Expr.Ref ("true", (Ty.Bool, loc))
+    let trueLit = Expr.Ref ("true", 0, (Ty.Bool, loc))
     let expr = Expr.If (first, trueLit, second, (ty, loc))
     genExpr acc ctx expr
   | _ ->
@@ -107,6 +107,9 @@ let genExprList acc ctx exprs =
       go (result :: results) acc ctx exprs
   go [] acc ctx exprs
 
+let uniqueName name serial =
+  sprintf "%s_%d" name serial
+
 let genExpr
   (acc: CStmt list) (ctx: Ctx) (arg: Expr<Ty * Loc>)
   : CExpr * CStmt list * Ctx =
@@ -118,12 +121,12 @@ let genExpr
     CExpr.Int value, acc, ctx
   | Expr.String (value, _) ->
     CExpr.Str value, acc, ctx
-  | Expr.Ref ("true", _) ->
+  | Expr.Ref ("true", _, _) ->
     CExpr.Int 1, acc, ctx
-  | Expr.Ref ("false", _) ->
+  | Expr.Ref ("false", _, _) ->
     CExpr.Int 0, acc, ctx
-  | Expr.Ref (name, _) ->
-    CExpr.Ref name, acc, ctx
+  | Expr.Ref (name, serial, _) ->
+    CExpr.Ref (uniqueName name serial), acc, ctx
   | Expr.If (pred, thenCl, elseCl, (ty, _)) ->
     genIfExpr acc ctx pred thenCl elseCl ty
   | Expr.Op (op, first, second, (ty, loc)) ->
@@ -132,7 +135,8 @@ let genExpr
     let args, ctx = genExprList acc ctx args
     let acc = callPrintf format args :: acc
     CExpr.Unit, acc, ctx
-  | Expr.Let (name, init, _) ->
+  | Expr.Let (name, serial, init, _) ->
+    let name = uniqueName name serial
     let cty = cty (tyOf init)
     let init, acc, ctx = genExpr acc ctx init
     let acc = CStmt.Let (name, cty, Some init) :: acc
@@ -153,7 +157,8 @@ let genExpr
 
 let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
   match exprs with
-  | [Expr.Let (name, body, _)] ->
+  | [Expr.Let (name, serial, body, _)] ->
+    let name = if name = "main" then name else uniqueName name serial
     let result, acc, _ctx = genExpr [] emptyCtx body
     let acc = CStmt.Return (Some result) :: acc
     let decl =
