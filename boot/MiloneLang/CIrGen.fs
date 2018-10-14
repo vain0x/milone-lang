@@ -6,12 +6,20 @@ module rec MiloneLang.CIrGen
 type Ctx =
   {
     VarSerial: int
+    Decls: CDecl list
   }
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): Ctx =
   {
     VarSerial = tyCtx.VarSerial
+    Decls = []
   }
+
+let ctxRollBack _bCtx dCtx =
+  dCtx
+
+let ctxAddDecl (ctx: Ctx) decl =
+  { ctx with Decls = decl :: ctx.Decls }
 
 let tyOf expr =
   Typing.tyOf expr
@@ -87,6 +95,17 @@ let genOpExpr acc ctx op first second ty loc =
     let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second))) :: acc
     CExpr.Ref name, acc, ctx
 
+let genCall acc ctx callee args ty =
+  match args with
+  | [arg] ->
+    let callee, acc, ctx = genExpr acc ctx callee
+    let arg, acc, ctx = genExpr acc ctx arg
+    CExpr.Call (callee, [arg]), acc, ctx
+  | [] ->
+    failwith "Never zero-arg call"
+  | _ ->
+    failwith "unimpl call with 2+ args"
+
 /// if pred then thenCl else elseCl ->
 /// T result;
 /// if (pred) { ..; result = thenCl; } else { ..; result = elseCl; }
@@ -101,6 +120,29 @@ let genIfExpr acc ctx pred thenCl elseCl ty =
   let acc = CStmt.Let (resultName, cty ty, None) :: acc
   let acc = CStmt.If (pred, List.rev thenStmts, List.rev elseStmts) :: acc
   result, acc, ctx
+
+let genLetVal acc ctx pat init =
+  match pat with
+  | Pat.Ident (name, serial, (ty, _)) ->
+    let name = uniqueName name serial
+    let init, acc, ctx = genExpr acc ctx init
+    let acc = CStmt.Let (name, cty ty, Some init) :: acc
+    CExpr.Ref name, acc, ctx
+  | _ ->
+    failwith "In `let x = ..`, `x` must be an identifier for now."
+
+let genLetFun acc ctx callee pats body =
+  match callee with
+  | Pat.Ident (name, serial, (funTy, _)) ->
+    let name = uniqueName name serial
+    let resultVoid = tyOf body = Ty.Unit
+    let result, body, ctx = genExpr [] ctx body
+    let body = CStmt.Return (Some result) :: body
+    let decl = CDecl.Fun { Name = name; Body = List.rev body }
+    let ctx = ctxAddDecl ctx decl
+    CExpr.Unit, acc, ctx
+  | _ ->
+    failwith "In `let f () = ..`, `f` must be an identifier for now."
 
 let genExprList acc ctx exprs =
   let rec go results acc ctx exprs =
@@ -136,11 +178,12 @@ let genExpr
     let args, ctx = genExprList acc ctx args
     let acc = callPrintf format args :: acc
     CExpr.Unit, acc, ctx
-  | Expr.Let ([Pat.Ident (name, serial, (ty, _))], init, _) ->
-    let name = uniqueName name serial
-    let init, acc, ctx = genExpr acc ctx init
-    let acc = CStmt.Let (name, cty ty, Some init) :: acc
-    CExpr.Ref name, acc, ctx
+  | Expr.Call (callee, args, (ty, _)) ->
+    genCall acc ctx callee args ty
+  | Expr.Let ([pat], init, _) ->
+    genLetVal acc ctx pat init
+  | Expr.Let (callee :: pats, body, _) ->
+    genLetFun acc ctx callee pats body
   | Expr.Begin (expr :: exprs, _) ->
     let rec go acc ctx expr exprs =
       match genExpr acc ctx expr, exprs with
@@ -149,24 +192,25 @@ let genExpr
       | (_, acc, ctx), expr :: exprs ->
         go acc ctx expr exprs
     go acc ctx expr exprs
-  | Expr.Call (_, [], _) ->
-    failwith "never"
+  | Expr.Let ([], _, _) ->
+    failwith "Never zero-patterns let"
   | Expr.Prim _
   | Expr.Call _
   | Expr.Let _ ->
-    failwith "unimpl"
+    failwithf "unimpl %A" arg
 
 let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
   let ctx = ctxFromTyCtx tyCtx
   match exprs with
-  | [Expr.Let (Pat.Ident (name, serial, _) :: _, body, _)] ->
-    let name = if name = "main" then name else uniqueName name serial
-    let result, acc, _ctx = genExpr [] ctx body
+  | [Expr.Let ([Pat.Ident ("main", serial, _); Pat.Unit _], body, _)] ->
+    let result, acc, bodyCtx = genExpr [] ctx body
+    let ctx = ctxRollBack ctx bodyCtx
     let acc = CStmt.Return (Some result) :: acc
     let decl =
       CDecl.Fun {
-        Name = name
+        Name = "main"
         Body = List.rev acc
       }
-    [decl]
-  | _ -> failwith "unimpl"
+    List.rev (decl :: ctx.Decls)
+  | _ ->
+    failwith "unimpl"

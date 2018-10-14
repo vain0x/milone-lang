@@ -224,15 +224,30 @@ let inferOp (ctx: TyCtx) loc op left right =
 
 let inferLet ctx pats init loc =
   match pats with
-  | Pat.Ident (name, _, patLoc) :: _ ->
+  | [Pat.Ident (name, _, patLoc)] ->
+    // let x = init
+    // Define new variable defined by this let to the context. This won't roll back there.
     let name, serial, ty, ctx = freshVar name ctx
+    // Type init expression.
     let init, initCtx = inferExpr ctx init
+    // Roll back context to remove out-of-scope symbols,
+    // defined inside `init`.
     let ctx = rollback ctx initCtx
     let ctx = unifyTy ctx ty (tyOf init)
     let pats = [Pat.Ident (name, serial, (ty, patLoc))]
     Expr.Let (pats, init, (Ty.Unit, loc)), ctx
+  | [Pat.Ident (name, _, patLoc); Pat.Unit unitLoc] ->
+    // let f () = body
+    let name, serial, ty, ctx = freshVar name ctx
+    // FIXME: currently functions cannot capture local variables
+    let bodyCtx = { ctx with VarEnv = Map.empty }
+    let body, bodyCtx = inferExpr bodyCtx init
+    let ctx = rollback ctx bodyCtx
+    let ctx = unifyTy ctx ty (Ty.Fun (Ty.Unit, tyOf body))
+    let pats = [Pat.Ident (name, serial, (ty, patLoc)); Pat.Unit (Ty.Unit, unitLoc)]
+    Expr.Let (pats, body, (Ty.Unit, loc)), ctx
   | _ ->
-    failwith "unimpl let"
+    failwith "unimpl use of let"
 
 let inferExprs ctx exprs =
   let rec go acc ctx exprs =

@@ -15,8 +15,8 @@ let opStr op =
   | COp.Mul -> "*"
   | COp.Div -> "/"
   | COp.Mod -> "%"
-  | COp.Eq -> "="
-  | COp.Ne -> "<>"
+  | COp.Eq -> "=="
+  | COp.Ne -> "!="
   | COp.Lt -> "<"
   | COp.Le -> "<="
   | COp.Gt -> ">"
@@ -117,17 +117,24 @@ let rec cprintStmts acc indent stmts: string list =
 let cprintDecl acc decl =
   match decl with
   | CDecl.Fun decl ->
-    let acc = acc *- "int" *- " " *- decl.Name *- "() {" *- eol
+    let arg = if decl.Name = "main" then "" else "void* _"
+    let acc = acc *- "int" *- " " *- decl.Name
+    let acc = acc *- "(" *- arg *- ") {" *- eol
     let acc = cprintStmts acc "    " decl.Body
     let acc = acc *- "}" *- eol
     acc
 
-let cprintDecls acc decls =
-  match decls with
-  | [decl] ->
-    cprintDecl acc decl
-  | _ ->
-    failwith "unimpl"
+let rec cprintDecls acc decls =
+  let rec go acc decls =
+    match decls with
+    | [] ->
+      acc
+    | [decl] ->
+      cprintDecl acc decl
+    | decl :: decls ->
+      let acc = cprintDecl acc decl *- eol
+      go acc decls
+  go acc decls
 
 let cprintHeader acc =
   acc

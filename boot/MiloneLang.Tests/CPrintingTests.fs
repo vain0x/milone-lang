@@ -32,5 +32,6 @@ let testFile fileName =
 [<InlineData("shadowing")>]
 [<InlineData("if_else")>]
 [<InlineData("if_else_complex")>]
+[<InlineData("factorial")>]
 let integrationTests (name: string) =
   testFile name
