@@ -36,7 +36,10 @@ let exprSub left right =
   Expr.Op (Op.Sub, left,  right, ())
 
 let exprLet name body =
-  Expr.Let (Pat.Ident (name, 0, ()), body, ())
+  Expr.Let ([Pat.Ident (name, 0, ())], body, ())
+
+let exprLetMain body =
+  Expr.Let ([Pat.Ident ("main", 0, ()); Pat.Unit ()], body, ())
 
 let exprBlock exprs =
   Expr.Begin (List.map (exprMap ignore) exprs, ())
@@ -46,7 +49,7 @@ let parseMainEmpty () =
   let source = """let main () = 0"""
   let expected =
     [
-      exprLet "main" (
+      exprLetMain (
         exprInt 0
       )
     ]
@@ -72,7 +75,7 @@ let parseSimpleExprs () =
   for fragment, expectedExpr in table do
     let source = sprintf "let main () =\n  %s" fragment
     let expected =
-      [exprLet "main" expectedExpr]
+      [exprLetMain expectedExpr]
     source |> parseStr |> is expected
 
 [<Fact>]
@@ -85,7 +88,7 @@ let main () =
 """
   let expected =
     [
-      exprLet "main"
+      exprLetMain
         (exprAdd
           (exprCall
             (exprRef "f")
@@ -109,7 +112,7 @@ let parseParensRelaxLayout () =
 """
   let expected =
     [
-      exprLet "main" (
+      exprLetMain (
         exprBlock [
           exprAdd
             (exprAdd (exprInt 4) (exprInt 2))
@@ -130,7 +133,7 @@ let parseIndentLayoutTest () =
 """
   let expected =
     [
-      exprLet "main" (
+      exprLetMain (
         exprBlock [
           exprLet "foo" (
             exprBlock [
@@ -151,7 +154,7 @@ let parseBeginExpr () =
 """
   let expected =
     [
-      exprLet "main" (
+      exprLetMain (
         exprBlock [
           exprAdd
             (exprCall (exprRef "f") [exprRef "x"])
@@ -169,7 +172,7 @@ let parseParenExpr () =
 """
   let expected =
     [
-      exprLet "main" (
+      exprLetMain (
         exprAdd
           (exprAdd
             (exprInt 1)
@@ -187,7 +190,7 @@ let parseSemicolonInLineOne () =
 """
   let expected =
     [
-      exprLet "main" (
+      exprLetMain (
         exprBlock [
           exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "Hello, "]
           exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "World!"]
@@ -203,7 +206,7 @@ let parseAddSubExpr () =
 """
   let expected =
     [
-      exprLet "main" (
+      exprLetMain (
         exprSub
           (exprAdd
             (exprSub
@@ -222,7 +225,7 @@ let parseComparisonAndLogicExpr () =
 """
   let expected =
     [
-      exprLet "main" (
+      exprLetMain (
         exprOp Op.Or
           (exprOp Op.And
             (exprOp Op.Le

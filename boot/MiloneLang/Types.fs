@@ -100,7 +100,7 @@ namespace rec MiloneLang
     | Op
       of Op * Expr<'a> * Expr<'a> * 'a
     | Let
-      of pat:Pat<'a> * init:Expr<'a> * 'a
+      of pats:Pat<'a> list * init:Expr<'a> * 'a
     /// x; y; z
     | Begin
       of Expr<'a> list * 'a

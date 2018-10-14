@@ -46,8 +46,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Call (exprMap f callee, List.map (exprMap f) args, f a)
   | Expr.Op (op, l, r, a) ->
     Expr.Op (op, exprMap f l, exprMap f r, f a)
-  | Expr.Let (pat, init, a) ->
-    Expr.Let (patMap f pat, exprMap f init, f a)
+  | Expr.Let (pats, init, a) ->
+    Expr.Let (List.map (patMap f) pats, exprMap f init, f a)
   | Expr.Begin (exprs, a) ->
     Expr.Begin (List.map (exprMap f) exprs, f a)
 
@@ -156,7 +156,6 @@ let parseParen boxX tokens =
     failwithf "Expected ')' %A" tokens
 
 let parseLet boxX letLoc tokens =
-  let patsTokens = tokens
   let _, letX = letLoc
   let pats, tokens =
     let patsX = max boxX (letX + 1)
@@ -168,16 +167,7 @@ let parseLet boxX letLoc tokens =
   let body, tokens =
     let bodyX = max boxX (nextX tokens)
     parseExpr bodyX tokens
-  let expr =
-    match pats with
-    | [Pat.Ident _ as pat]
-    | [Pat.Ident _ as pat; Pat.Unit _] ->
-      Expr.Let (pat, body, letLoc)
-    | [] ->
-      failwithf "Expected a pattern at %A" patsTokens
-    | _ ->
-      failwithf "unimpl let %A" pats
-  expr, tokens
+  Expr.Let (pats, body, letLoc), tokens
 
 /// Tries to read a token that consists of a group of delimited expression.
 /// atom = unit / int / string / prim / ref / ( expr )
