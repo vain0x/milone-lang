@@ -27,5 +27,6 @@ try "var_str"
 try "shadowing"
 try "if_else"
 try "if_else_complex"
+try "factorial"
 
 echo "OK" >&2

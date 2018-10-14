@@ -34,6 +34,18 @@ let rec cprintTy acc ty: string list =
     let acc = cprintTy acc ty
     acc *- "*"
 
+let rec cprintParams acc ps: string list =
+  let rec go acc ps =
+    match ps with
+    | [] -> acc
+    | [name, ty] ->
+      cprintTy acc ty *- " " *- name
+    | (name, ty) :: ps ->
+      let acc = cprintTy acc ty
+      let acc = acc *- " " *- name *- ", "
+      go acc ps
+  go acc ps
+
 let rec cprintExpr acc expr: string list =
   let rec cprintExprList acc index separator exprs =
     match exprs with
@@ -117,9 +129,9 @@ let rec cprintStmts acc indent stmts: string list =
 let cprintDecl acc decl =
   match decl with
   | CDecl.Fun decl ->
-    let arg = if decl.Name = "main" then "" else "void* _"
-    let acc = acc *- "int" *- " " *- decl.Name
-    let acc = acc *- "(" *- arg *- ") {" *- eol
+    let acc = acc *- "int" *- " " *- decl.Name *- "("
+    let acc = cprintParams acc decl.Params
+    let acc = acc *- ") {" *- eol
     let acc = cprintStmts acc "    " decl.Body
     let acc = acc *- "}" *- eol
     acc

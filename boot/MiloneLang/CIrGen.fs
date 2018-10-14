@@ -132,13 +132,18 @@ let genLetVal acc ctx pat init =
     failwith "In `let x = ..`, `x` must be an identifier for now."
 
 let genLetFun acc ctx callee pats body =
-  match callee with
-  | Pat.Ident (name, serial, (funTy, _)) ->
+  match callee, pats with
+  | Pat.Ident (name, serial, (_, _)),
+    [Pat.Ident (paramName, paramSerial, (paramTy, _))] ->
     let name = uniqueName name serial
-    let resultVoid = tyOf body = Ty.Unit
     let result, body, ctx = genExpr [] ctx body
     let body = CStmt.Return (Some result) :: body
-    let decl = CDecl.Fun { Name = name; Body = List.rev body }
+    let decl =
+      CDecl.Fun {
+        Name = name
+        Params = [uniqueName paramName paramSerial, cty paramTy]
+        Body = List.rev body
+      }
     let ctx = ctxAddDecl ctx decl
     CExpr.Unit, acc, ctx
   | _ ->
@@ -209,6 +214,7 @@ let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
     let decl =
       CDecl.Fun {
         Name = "main"
+        Params = []
         Body = List.rev acc
       }
     List.rev (decl :: ctx.Decls)

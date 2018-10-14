@@ -175,6 +175,7 @@ namespace rec MiloneLang
   type CFun =
     {
       Name: string
+      Params: (string * CTy) list
       Body: CStmt list
     }
 

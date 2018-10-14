@@ -70,6 +70,19 @@ let isFreshTyVar ty tyVar: bool =
       tv <> tyVar
   go ty
 
+/// Gets if the specified type is resolved to a morphic type.
+let isMonomorphic ctx ty: bool =
+  match substTy ctx ty with
+  | Ty.Unit
+  | Ty.Bool
+  | Ty.Int
+  | Ty.Str ->
+    true
+  | Ty.Var _ ->
+    false
+  | Ty.Fun (sTy, tTy) ->
+    isMonomorphic ctx sTy && isMonomorphic ctx tTy
+
 /// Adds type-var/type binding.
 let bindTy (ctx: TyCtx) tyVar ty: TyCtx =
   // Don't bind itself.
@@ -245,6 +258,24 @@ let inferLet ctx pats init loc =
     let ctx = rollback ctx bodyCtx
     let ctx = unifyTy ctx ty (Ty.Fun (Ty.Unit, tyOf body))
     let pats = [Pat.Ident (name, serial, (ty, patLoc)); Pat.Unit (Ty.Unit, unitLoc)]
+    Expr.Let (pats, body, (Ty.Unit, loc)), ctx
+  | [Pat.Ident (name, _, patLoc); Pat.Ident (argName, _, argLoc)] ->
+    // let f x = body
+    let name, serial, ty, ctx = freshVar name ctx
+
+    // FIXME: currently functions are recursive by default
+    let bodyCtx = ctx
+    let argName, argSerial, argTy, bodyCtx = freshVar argName bodyCtx
+    let body, bodyCtx = inferExpr bodyCtx init
+    if not (isMonomorphic bodyCtx argTy) then
+      failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A" argTy
+    let ctx = rollback ctx bodyCtx
+
+    let ctx = unifyTy ctx ty (Ty.Fun (argTy, tyOf body))
+    let pats = [
+      Pat.Ident (name, serial, (ty, patLoc))
+      Pat.Ident (argName, argSerial, (argTy, argLoc))
+    ]
     Expr.Let (pats, body, (Ty.Unit, loc)), ctx
   | _ ->
     failwith "unimpl use of let"
