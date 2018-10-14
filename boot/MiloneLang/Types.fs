@@ -50,6 +50,8 @@ namespace rec MiloneLang
     | Mul
     /// Comparison
     | Cmp
+    | And
+    | Or
 
   [<RequireQualifiedAccess>]
   type Op =
@@ -70,6 +72,8 @@ namespace rec MiloneLang
     | Gt
     /// Greater than or equal to
     | Ge
+    | And
+    | Or
 
   /// Expression in AST.
   [<RequireQualifiedAccess>]

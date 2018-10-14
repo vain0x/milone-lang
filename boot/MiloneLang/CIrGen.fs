@@ -46,6 +46,8 @@ let cop op =
   | Op.Le -> COp.Le
   | Op.Gt -> COp.Gt
   | Op.Ge -> COp.Ge
+  | Op.And
+  | Op.Or -> failwith "We don't use && || in C language"
 
 let callPrintf format args =
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
@@ -58,6 +60,27 @@ let freshName (ctx: Ctx) =
 let freshVar (ctx: Ctx) (ty: CTy) =
   let name, ctx = freshName ctx
   name, CExpr.Ref name, ctx
+
+let genOpExpr acc ctx op first second ty loc =
+  match op with
+  | Op.And ->
+    // l && r ---> if l then r else false
+    let falseLit = Expr.Ref ("false", (Ty.Bool, loc))
+    let expr = Expr.If (first, second, falseLit, (ty, loc))
+    genExpr acc ctx expr
+  | Op.Or ->
+    // l || r ---> if l then true else r
+    let trueLit = Expr.Ref ("true", (Ty.Bool, loc))
+    let expr = Expr.If (first, trueLit, second, (ty, loc))
+    genExpr acc ctx expr
+  | _ ->
+    // Currently no support of non-int add/cmp/etc.
+    let ty = CTy.Int
+    let first, acc, ctx = genExpr acc ctx first
+    let second, acc, ctx = genExpr acc ctx second
+    let name, ctx = freshName ctx
+    let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second))) :: acc
+    CExpr.Ref name, acc, ctx
 
 /// if pred then thenCl else elseCl ->
 /// T result;
@@ -102,12 +125,8 @@ let genExpr
     CExpr.Ref name, acc, ctx
   | Expr.If (pred, thenCl, elseCl, (ty, _)) ->
     genIfExpr acc ctx pred thenCl elseCl ty
-  | Expr.Op (op, first, second, (Ty.Int, _)) ->
-    let first, acc, ctx = genExpr acc ctx first
-    let second, acc, ctx = genExpr acc ctx second
-    let name, ctx = freshName ctx
-    let acc = CStmt.Let (name, CTy.Int, Some (CExpr.Op (cop op, first, second))) :: acc
-    CExpr.Ref name, acc, ctx
+  | Expr.Op (op, first, second, (ty, loc)) ->
+    genOpExpr acc ctx op first second ty loc
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _), format :: args, _) ->
     let format, acc, ctx = genExpr acc ctx format
     let args, ctx = genExprList acc ctx args
@@ -130,8 +149,7 @@ let genExpr
   | Expr.Call (_, [], _) ->
     failwith "never"
   | Expr.Prim _
-  | Expr.Call _
-  | Expr.Op _ ->
+  | Expr.Call _ ->
     failwith "unimpl"
 
 let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =

@@ -147,15 +147,26 @@ let inferOpCore (ctx: TyCtx) loc op left right =
   let right, ctx = inferExpr ctx right
 
   // Infer types so that left and right are of the same type.
-  let addTyVar, ctx = freshTyVar "a" ctx
-  let lty, rty, ty = tyOf left, tyOf right, Ty.Var addTyVar
-  let ctx = unifyTy ctx lty rty
-  let ctx = unifyTy ctx lty ty
+  let resultTyVar, ctx = freshTyVar "a" ctx
+  let lTy, rTy, resultTy = tyOf left, tyOf right, Ty.Var resultTyVar
+  let ctx = unifyTy ctx lTy rTy
 
-  Expr.Op (op, left, right, (ty, loc)), ctx
+  left, Expr.Op (op, left, right, (resultTy, loc)), ctx
+
+let inferOpArith (ctx: TyCtx) loc op left right =
+  let left, expr, ctx = inferOpCore ctx loc op left right
+  let ctx = unifyTy ctx (tyOf left) Ty.Int
+  let ctx = unifyTy ctx (tyOf expr) Ty.Int
+  expr, ctx
 
 let inferOpCmp (ctx: TyCtx) loc op left right =
-  let expr, ctx = inferOp ctx loc op left right
+  let _, expr, ctx = inferOpCore ctx loc op left right
+  let ctx = unifyTy ctx (tyOf expr) Ty.Bool
+  expr, ctx
+
+let inferOpLogic (ctx: TyCtx) loc op left right =
+  let left, expr, ctx = inferOpCore ctx loc op left right
+  let ctx = unifyTy ctx (tyOf left) Ty.Bool
   let ctx = unifyTy ctx (tyOf expr) Ty.Bool
   expr, ctx
 
@@ -166,7 +177,7 @@ let inferOp (ctx: TyCtx) loc op left right =
   | Op.Mul
   | Op.Div
   | Op.Mod ->
-    inferOpCore ctx loc op left right
+    inferOpArith ctx loc op left right
   | Op.Eq
   | Op.Ne
   | Op.Lt
@@ -174,6 +185,9 @@ let inferOp (ctx: TyCtx) loc op left right =
   | Op.Gt
   | Op.Ge ->
     inferOpCmp ctx loc op left right
+  | Op.And
+  | Op.Or ->
+    inferOpLogic ctx loc op left right
 
 let inferLet ctx loc name init =
   let name, ty, ctx = freshVar name ctx

@@ -216,26 +216,28 @@ let parseAddSubExpr () =
   source |> parseStr |> is expected
 
 [<Fact>]
-let parseComparisonExpr () =
+let parseComparisonAndLogicExpr () =
   let source = """let main () =
-  1 + 1 <= 2
-  11 % 5 = 1
+  1 <= 2 && 2 < 3 || 3 > 2 && 2 >= 1
 """
   let expected =
     [
       exprLet "main" (
-        exprBlock [
-          exprOp Op.Le
-            (exprAdd
+        exprOp Op.Or
+          (exprOp Op.And
+            (exprOp Op.Le
               (exprInt 1)
-              (exprInt 1))
-            (exprInt 2)
-          exprOp Op.Eq
-            (exprOp Op.Mod
-              (exprInt 11)
-              (exprInt 5))
-            (exprInt 1)
-        ]
+              (exprInt 2))
+            (exprOp Op.Lt
+              (exprInt 2)
+              (exprInt 3)))
+          (exprOp Op.And
+            (exprOp Op.Gt
+              (exprInt 3)
+              (exprInt 2))
+            (exprOp Op.Ge
+              (exprInt 2)
+              (exprInt 1)))
       )
     ]
   source |> parseStr |> is expected
