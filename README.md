@@ -1,5 +1,7 @@
 # MILONE-LANG
 
+[![Build Status](https://travis-ci.org/vain0x/milone-lang.svg?branch=master)](https://travis-ci.org/vain0x/milone-lang)
+
 *Work in Progress*
 
 ## What
@@ -9,6 +11,8 @@ This is a compiler of programming language, code name **milone-lang**, which is 
 The goal is **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to make a milone-lang compiler that can compile milone-lang compiler itself.
 
 This project is my study. Don't use in production.
+
+[Milone-lang Code Example](./boot/tests/src/factorial.milone)
 
 ## How
 

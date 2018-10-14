@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -eu
+
+if [[ "$1" = 'restore' ]]
+then
+    dotnet restore
+fi
+
+if [[ "$1" = 'test' ]]
+then
+    dotnet test MiloneLang.Tests -c Release --no-restore
+    ./integ
+fi
