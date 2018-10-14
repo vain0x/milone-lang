@@ -38,7 +38,7 @@ let private readSpace (source: string) (acc, y, x, i): Read =
   let r = takeWhile ((=) ' ') (source, i + 1)
   acc, y, x + r - i, r
 
-let private readLinebreak (source: string) (acc, y, _x, i): Read =
+let private readEol (source: string) (acc, y, _x, i): Read =
   assert (source.[i] = '\r' || source.[i] = '\n')
   let r =
     if i + 1 < source.Length && source.StartsWith("\r\n")
@@ -91,7 +91,7 @@ let tokenize (source: string): (Token * Loc) list =
         (acc, y, x, i) |> readSpace source |> go
       | '\r'
       | '\n' ->
-        (acc, y, x, i) |> readLinebreak source |> go
+        (acc, y, x, i) |> readEol source |> go
       // Don't split unit literal `()`.
       | '(' when at (i + 1) = ')' ->
         let t = Token.Unit, (y, x)

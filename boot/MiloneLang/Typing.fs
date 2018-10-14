@@ -23,11 +23,11 @@ let tyOf (expr: Expr<Ty * Loc>): Ty =
 /// Merges derived context into base context
 /// for when expr of derived context is done.
 /// We rollback environments but keep serials.
-let rollback bctx dctx: TyCtx =
-  assert (bctx.VarSerial <= dctx.VarSerial)
-  assert (bctx.TySerial <= dctx.TySerial)
-  { dctx with
-      VarEnv = dctx.VarEnv
+let rollback bCtx dCtx: TyCtx =
+  assert (bCtx.VarSerial <= dCtx.VarSerial)
+  assert (bCtx.TySerial <= dCtx.TySerial)
+  { dCtx with
+      VarEnv = dCtx.VarEnv
   }
 
 let freshTyVar name (ctx: TyCtx): string * TyCtx =
@@ -100,8 +100,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       bindTy ctx ltv rty
     | _, Ty.Var _ ->
       go rty lty ctx
-    | Ty.Fun (lsty, ltty), Ty.Fun (rsty, rtty) ->
-      ctx |> go lsty rsty |> go ltty rtty
+    | Ty.Fun (lSTy, lTTy), Ty.Fun (rSTy, rTTy) ->
+      ctx |> go lSTy rSTy |> go lTTy rTTy
     | Ty.Unit, Ty.Unit
     | Ty.Bool, Ty.Bool
     | Ty.Int, Ty.Int
