@@ -40,7 +40,7 @@ namespace rec MiloneLang
     | Printfn
 
   [<RequireQualifiedAccess>]
-  type Pattern =
+  type Pat =
     | Unit
     | Ident
       of string

@@ -95,19 +95,19 @@ let parseError message (_, tokens) =
   let near = tokens |> List.map fst |> List.truncate 6
   failwithf "Parse error %s near %A" message near
 
-let parsePat boxX tokens: Pattern option * _ list =
+let parsePat boxX tokens: Pat option * _ list =
   if nextInside boxX tokens |> not then
     None, tokens
   else
     match tokens with
     | (Token.Unit, _) :: tokens ->
-      Some Pattern.Unit, tokens
+      Some Pat.Unit, tokens
     | (Token.Ident value, _) :: tokens ->
-      Some (Pattern.Ident value), tokens
+      Some (Pat.Ident value), tokens
     | _ ->
       None, tokens
 
-let parsePats boxX (tokens: _ list): Pattern list * _ list =
+let parsePats boxX (tokens: _ list): Pat list * _ list =
   let rec go acc (tokens: _ list) =
     match parsePat boxX tokens with
     | Some pat, tokens ->
@@ -163,8 +163,8 @@ let parseLet boxX letLoc tokens =
     parseExpr bodyX tokens
   let expr =
     match pats with
-    | [Pattern.Ident name]
-    | [Pattern.Ident name; Pattern.Unit] ->
+    | [Pat.Ident name]
+    | [Pat.Ident name; Pat.Unit] ->
       Expr.Let (name, 0, body, letLoc)
     | [] ->
       failwithf "Expected a pattern at %A" patsTokens
