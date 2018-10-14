@@ -72,7 +72,7 @@ let bindTy (ctx: TyCtx) tyVar ty: TyCtx =
   else
     { ctx with TyEnv = ctx.TyEnv |> Map.add tyVar ty }
 
-/// Substitutes occurrances of already-infered type vars
+/// Substitutes occurrences of already-inferred type vars
 /// with their results.
 let substTy (ctx: TyCtx) ty: Ty =
   let rec go ty =
@@ -114,6 +114,7 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Int _, _
     | Ty.Str _, _
     | Ty.Fun _, _ ->
+      let lty, rty = substTy ctx lty, substTy ctx rty
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
 
@@ -134,20 +135,31 @@ let inferIf ctx pred thenCl elseCl loc =
   let ctx = unifyTy ctx ty (tyOf elseCl)
   Expr.If (pred, thenCl, elseCl, (ty, loc)), ctx
 
-let inferApp (ctx: TyCtx) loc callee arg =
-  let arg, ctx = inferExpr ctx arg
+let inferApp (ctx: TyCtx) loc callee args =
+  /// During inference of `f w x ..`,
+  /// assume we concluded `f w : 'f`.
+  /// We can also conclude `f w : 'x -> 'g`.
+  let rec go acc ctx calleeTy args =
+    match args with
+    | [] ->
+      List.rev acc, calleeTy, ctx
+    | arg :: args ->
+      let appTyVar, ctx = freshTyVar "app" ctx
+      let appTy = Ty.Var appTyVar
+      let arg, ctx = inferExpr ctx arg
+      let ctx = unifyTy ctx calleeTy (Ty.Fun (tyOf arg, appTy))
+      go (arg :: acc) ctx appTy args
+
   let callee, ctx = inferExpr ctx callee
-  let appTyVar, ctx = freshTyVar "a" ctx
-  let appTy = Ty.Var appTyVar
-  let ctx = unifyTy ctx (tyOf callee) (Ty.Fun(tyOf arg, appTy))
-  Expr.Call (callee, [arg], (appTy, loc)), ctx
+  let args, appTy, ctx = go [] ctx (tyOf callee) args
+  Expr.Call (callee, args, (appTy, loc)), ctx
 
 let inferOpCore (ctx: TyCtx) loc op left right =
   let left, ctx = inferExpr ctx left
   let right, ctx = inferExpr ctx right
 
   // Infer types so that left and right are of the same type.
-  let resultTyVar, ctx = freshTyVar "a" ctx
+  let resultTyVar, ctx = freshTyVar "op" ctx
   let lTy, rTy, resultTy = tyOf left, tyOf right, Ty.Var resultTyVar
   let ctx = unifyTy ctx lTy rTy
 
@@ -231,8 +243,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferRef ctx loc ident
   | Expr.If (pred, thenCl, elseCl, loc) ->
     inferIf ctx pred thenCl elseCl loc
-  | Expr.Call (callee, [arg], loc) ->
-    inferApp ctx loc callee arg
+  | Expr.Call (callee, args, loc) ->
+    inferApp ctx loc callee args
   | Expr.Op (op, l, r, loc) ->
     inferOp ctx loc op l r
   | Expr.Let (name, init, loc) ->
