@@ -148,6 +148,30 @@ let parseParen boxX tokens =
   | _ ->
     failwithf "Expected ')' %A" tokens
 
+let parseLet boxX letLoc tokens =
+  let patsTokens = tokens
+  let _, letX = letLoc
+  let pats, tokens =
+    let patsX = max boxX (letX + 1)
+    match parsePats patsX tokens with
+    | pats, (Token.Punct "=", _) :: tokens ->
+      pats, tokens
+    | _ ->
+      failwithf "Missing '=' %A" tokens
+  let body, tokens =
+    let bodyX = max boxX (nextX tokens)
+    parseExpr bodyX tokens
+  let expr =
+    match pats with
+    | [Pattern.Ident name]
+    | [Pattern.Ident name; Pattern.Unit] ->
+      Expr.Let (name, 0, body, letLoc)
+    | [] ->
+      failwithf "Expected a pattern at %A" patsTokens
+    | _ ->
+      failwithf "unimpl let %A" pats
+  expr, tokens
+
 /// Tries to read a token that consists of a group of delimited expression.
 /// atom = unit / int / string / prim / ref / ( expr )
 let parseAtom boxX tokens: Expr<Loc> option * (Token * Loc) list =
@@ -171,8 +195,9 @@ let parseAtom boxX tokens: Expr<Loc> option * (Token * Loc) list =
     | (Token.If, loc) :: tokens ->
       let expr, tokens = parseIf boxX loc tokens
       Some expr, tokens
-    | (Token.Let, _) :: _ ->
-      failwith "unimpl"
+    | (Token.Let, letLoc) :: tokens ->
+      let expr, tokens = parseLet boxX letLoc tokens
+      Some expr, tokens
     | []
     | (Token.Else, _) :: _
     | (Token.Then, _) :: _
@@ -268,29 +293,10 @@ let parseOr boxX tokens =
   parseOp OpLevel.Or boxX tokens
 
 /// let = 'let' ( pat )* '=' expr / call
-let parseLet boxX tokens =
+let parseBinding boxX tokens =
   match tokens with
-  | (Token.Let, (_, letX as letLoc)) :: (tokens as patsTokens) ->
-    let pats, tokens =
-      let patsX = max boxX (letX + 1)
-      match parsePats patsX tokens with
-      | pats, (Token.Punct "=", _) :: tokens ->
-        pats, tokens
-      | _ ->
-        failwithf "Missing '=' %A" tokens
-    let body, tokens =
-      let bodyX = max boxX (nextX tokens)
-      parseExpr bodyX tokens
-    let expr =
-      match pats with
-      | [Pattern.Ident name]
-      | [Pattern.Ident name; Pattern.Unit] ->
-        Expr.Let (name, 0, body, letLoc)
-      | [] ->
-        failwithf "Expected a pattern at %A" patsTokens
-      | _ ->
-        failwithf "unimpl let %A" pats
-    expr, tokens
+  | (Token.Let, letLoc) :: tokens ->
+    parseLet boxX letLoc tokens
   | _ ->
     parseOr boxX tokens
 
@@ -302,7 +308,7 @@ let rec parseBlock boxX tokens =
     | (Token.Punct ";", _) :: tokens
     | tokens
       when nextInside && leadsExpr tokens ->
-      let expr, tokens = parseLet boxX tokens
+      let expr, tokens = parseBinding boxX tokens
       go (expr :: acc) tokens
     | _ ->
       List.rev acc, tokens
