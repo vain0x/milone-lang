@@ -11,7 +11,7 @@ let tokenizeMainEmpty () =
   let source = """let main () = 0"""
   let expected =
     [
-      Token.Ident "let"
+      Token.Let
       Token.Ident "main"
       Token.Unit
       Token.Punct "="
@@ -45,7 +45,7 @@ let main () =
 """
   let expected =
     [
-      Token.Ident "let",
+      Token.Let,
         (1, 0)
       Token.Ident "main",
         (1, 4)

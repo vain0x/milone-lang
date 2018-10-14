@@ -12,6 +12,7 @@ namespace rec MiloneLang
       of string
     | Ident
       of string
+    | Let
     | If
     | Then
     | Else

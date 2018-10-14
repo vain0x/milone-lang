@@ -58,6 +58,7 @@ let tokenRole tokens: TokenRole =
   | (Token.Ident _, _) :: _
   | (Token.ParenL, _) :: _
   | (Token.If _, _) :: _
+  | (Token.Let, _) :: _
     -> TokenRole.Open
 
 let leadsExpr tokens =
@@ -170,6 +171,8 @@ let parseAtom boxX tokens: Expr<Loc> option * (Token * Loc) list =
     | (Token.If, loc) :: tokens ->
       let expr, tokens = parseIf boxX loc tokens
       Some expr, tokens
+    | (Token.Let, _) :: _ ->
+      failwith "unimpl"
     | []
     | (Token.Else, _) :: _
     | (Token.Then, _) :: _
@@ -267,7 +270,7 @@ let parseOr boxX tokens =
 /// let = 'let' ( pat )* '=' expr / call
 let parseLet boxX tokens =
   match tokens with
-  | (Token.Ident "let", (_, letX as letLoc)) :: (tokens as patsTokens) ->
+  | (Token.Let, (_, letX as letLoc)) :: (tokens as patsTokens) ->
     let pats, tokens =
       let patsX = max boxX (letX + 1)
       match parsePats patsX tokens with

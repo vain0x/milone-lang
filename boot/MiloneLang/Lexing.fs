@@ -74,6 +74,7 @@ let private readString (source: string) (acc, y, x, i): Read =
 
 let private tokenIdent ident =
   match ident with
+  | "let" -> Token.Let
   | "if" -> Token.If
   | "then" -> Token.Then
   | "else" -> Token.Else
