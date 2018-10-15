@@ -26,8 +26,7 @@ let tyOf expr =
 
 let cty ty: CTy =
   match ty with
-  | Ty.Unit ->
-    CTy.Void
+  | Ty.Unit
   | Ty.Bool
   | Ty.Int ->
     CTy.Int
