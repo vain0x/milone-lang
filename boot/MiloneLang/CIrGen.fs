@@ -148,6 +148,31 @@ let genLetFun acc ctx callee pats body =
   | _ ->
     failwith "In `let f () = ..`, `f` must be an identifier for now."
 
+/// Generates an expression that is immediately ignored.
+let genExprAsStmt acc ctx expr =
+  match expr with
+  | CExpr.Unit
+  | CExpr.Int _
+  | CExpr.Str _
+  | CExpr.Ref _
+  | CExpr.Prim _
+  | CExpr.Op _ ->
+    // Ignore pure expression.
+    acc, ctx
+  | CExpr.Call _
+  | CExpr.Set _ ->
+    CStmt.Expr expr :: acc, ctx
+
+let genBegin acc ctx expr exprs =
+  let rec go acc ctx expr exprs =
+    match genExpr acc ctx expr, exprs with
+    | (result, acc, ctx), [] ->
+      result, acc, ctx
+    | (result, acc, ctx), expr :: exprs ->
+      let acc, ctx = genExprAsStmt acc ctx result
+      go acc ctx expr exprs
+  go acc ctx expr exprs
+
 let genExprList acc ctx exprs =
   let rec go results acc ctx exprs =
     match exprs with
@@ -189,13 +214,7 @@ let genExpr
   | Expr.Let (callee :: pats, body, _) ->
     genLetFun acc ctx callee pats body
   | Expr.Begin (expr :: exprs, _) ->
-    let rec go acc ctx expr exprs =
-      match genExpr acc ctx expr, exprs with
-      | (result, acc, ctx), [] ->
-        result, acc, ctx
-      | (_, acc, ctx), expr :: exprs ->
-        go acc ctx expr exprs
-    go acc ctx expr exprs
+    genBegin acc ctx expr exprs
   | Expr.Let ([], _, _) ->
     failwith "Never zero-patterns let"
   | Expr.Prim _
@@ -206,7 +225,7 @@ let genExpr
 let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
   let ctx = ctxFromTyCtx tyCtx
   match exprs with
-  | [Expr.Let ([Pat.Ident ("main", serial, _); Pat.Unit _], body, _)] ->
+  | [Expr.Let ([Pat.Ident ("main", _, _); Pat.Unit _], body, _)] ->
     let result, acc, bodyCtx = genExpr [] ctx body
     let ctx = ctxRollBack ctx bodyCtx
     let acc = CStmt.Return (Some result) :: acc
