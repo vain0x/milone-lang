@@ -280,7 +280,7 @@ let inferLet ctx pats init loc =
   | _ ->
     failwith "unimpl use of let"
 
-let inferExprs ctx exprs =
+let inferExprs ctx exprs: Expr<Ty * Loc> list * Ty * TyCtx =
   let rec go acc ctx exprs =
     match exprs with
     | [] ->
@@ -306,7 +306,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     Expr.Int (value, (Ty.Int, loc)), ctx
   | Expr.String (value, loc) ->
     Expr.String (value, (Ty.Str, loc)), ctx
-  | Expr.Ref (ident, serial, loc) when ident = "true" || ident = "false" ->
+  | Expr.Ref (ident, serial, loc)
+    when ident = "true" || ident = "false" ->
     Expr.Ref (ident, serial, (Ty.Bool, loc)), ctx
   | Expr.Ref (ident, _, loc) ->
     inferRef ctx loc ident
@@ -347,5 +348,15 @@ let infer (exprs: Expr<Loc> list): Expr<Ty * Loc> list * TyCtx =
       TyEnv = Map.empty
     }
   let exprs, _, ctx = inferExprs ctx exprs
+
+  // Type check of main.
+  let ctx =
+    match exprs with
+    | Expr.Let ([Pat.Ident ("main", _, (ty, _)); Pat.Unit _], _, _) :: _ ->
+    unifyTy ctx ty (Ty.Fun (Ty.Unit, Ty.Int))
+    | _ ->
+      failwithf "Last expression must be `let main`."
+
+  // Substitute all types.
   let exprs = List.map (substTyExpr ctx) exprs
   exprs, ctx
