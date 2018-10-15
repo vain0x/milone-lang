@@ -12,6 +12,6 @@ int factorial_2(int x_3) {
 }
 
 int main() {
-    int op_8 = (factorial_2(5) == 720);
+    int op_8 = (factorial_2(5) - 120);
     return op_8;
 }
