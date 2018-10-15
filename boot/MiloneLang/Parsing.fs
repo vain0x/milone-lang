@@ -126,24 +126,27 @@ let parsePats boxX (tokens: _ list): Pat<_> list * _ list =
 let parseThenCl boxX tokens =
   match tokens with
   | (Token.Then, _) as t :: tokens when nextInside boxX [t] ->
-    let innerX = max boxX (nextX tokens)
-    parseExpr innerX tokens
+    parseExpr boxX tokens
   | _ ->
     failwithf "Expected 'then' but %A" tokens
 
 let parseElseCl boxX ifLoc tokens =
   match tokens with
   | (Token.Else, _) as t :: tokens when nextInside boxX [t] ->
-    let innerX = max boxX (nextX tokens)
-    parseExpr innerX tokens
+    let insideX =
+      match tokens with
+      | (Token.If, _) :: _ ->
+        boxX
+      | _ ->
+        max boxX (nextX tokens)
+    parseExpr insideX tokens
   | _ ->
     // Append `else ()` if missing.
     Expr.Unit ifLoc, tokens
 
+/// You can align contents on the same column as if/then/else.
 let parseIf boxX ifLoc tokens =
-  let _, ifX = ifLoc
-  let innerX = max boxX (ifX + 1)
-  let pred, tokens = parseExpr innerX tokens
+  let pred, tokens = parseExpr boxX tokens
   let thenCl, tokens = parseThenCl boxX tokens
   let elseCl, tokens = parseElseCl boxX ifLoc tokens
   Expr.If (pred, thenCl, elseCl, ifLoc), tokens
