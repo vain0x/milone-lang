@@ -301,18 +301,29 @@ let parseBinding boxX tokens =
     parseOr boxX tokens
 
 /// block = let ( ';' let )*
+/// All expressions are aligned on the same column,
+/// except it is preceded by 1+ semicolons.
 let rec parseBlock boxX tokens =
-  let rec go acc tokens =
-    let nextInside = nextInside boxX tokens
+  let rec go acc alignX tokens =
     match tokens with
+    | (Token.Punct ";", _) :: (Token.Punct ";", _) :: tokens
+      when nextX tokens >= alignX ->
+      go acc alignX tokens
     | (Token.Punct ";", _) :: tokens
-    | tokens
-      when nextInside && leadsExpr tokens ->
+      when nextX tokens >= alignX ->
       let expr, tokens = parseBinding boxX tokens
-      go (expr :: acc) tokens
+      go (expr :: acc) alignX tokens
+    | tokens
+      when nextX tokens = alignX && leadsExpr tokens ->
+      let expr, tokens = parseBinding boxX tokens
+      go (expr :: acc) alignX tokens
     | _ ->
       List.rev acc, tokens
-  go [] tokens
+
+  if nextInside boxX tokens then
+    go [] (nextX tokens) tokens
+  else
+    failwithf "Expected a list of expressions."
 
 let parseExpr (boxX: int) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =
   match parseBlock boxX tokens with
