@@ -163,7 +163,7 @@ let genExprAsStmt acc ctx expr =
   | CExpr.Set _ ->
     CStmt.Expr expr :: acc, ctx
 
-let genBegin acc ctx expr exprs =
+let genAndThen acc ctx expr exprs =
   let rec go acc ctx expr exprs =
     match genExpr acc ctx expr, exprs with
     | (result, acc, ctx), [] ->
@@ -186,7 +186,7 @@ let genExpr
   (acc: CStmt list) (ctx: Ctx) (arg: Expr<Ty * Loc>)
   : CExpr * CStmt list * Ctx =
   match arg with
-  | Expr.Begin ([], _)
+  | Expr.AndThen ([], _)
   | Expr.Unit _ ->
     CExpr.Unit, acc, ctx
   | Expr.Int (value, _) ->
@@ -209,12 +209,12 @@ let genExpr
     CExpr.Unit, acc, ctx
   | Expr.Call (callee, args, (ty, _)) ->
     genCall acc ctx callee args ty
+  | Expr.AndThen (expr :: exprs, _) ->
+    genAndThen acc ctx expr exprs
   | Expr.Let ([pat], init, _) ->
     genLetVal acc ctx pat init
   | Expr.Let (callee :: pats, body, _) ->
     genLetFun acc ctx callee pats body
-  | Expr.Begin (expr :: exprs, _) ->
-    genBegin acc ctx expr exprs
   | Expr.Let ([], _, _) ->
     failwith "Never zero-patterns let"
   | Expr.Anno _ ->

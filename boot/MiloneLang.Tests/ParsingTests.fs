@@ -60,8 +60,8 @@ let exprLet name body =
 let exprLetMain body =
   Expr.Let ([Pat.Ident ("main", 0, ()); Pat.Unit ()], body, ())
 
-let exprBlock exprs =
-  Expr.Begin (List.map (exprMap ignore) exprs, ())
+let exprAndThen exprs =
+  Expr.AndThen (List.map (exprMap ignore) exprs, ())
 
 [<Fact>]
 let parseMainEmpty () =
@@ -132,7 +132,7 @@ let parseParensRelaxLayout () =
   let expected =
     [
       exprLetMain (
-        exprBlock [
+        exprAndThen [
           exprAdd
             (exprAdd (exprInt 4) (exprInt 2))
             (exprInt 1)
@@ -153,9 +153,9 @@ let parseIndentLayoutTest () =
   let expected =
     [
       exprLetMain (
-        exprBlock [
+        exprAndThen [
           exprLet "foo" (
-            exprBlock [
+            exprAndThen [
               exprLet "goo" (exprInt 4)
               exprAdd (exprInt 4) (exprInt 6)
             ])
@@ -174,7 +174,7 @@ let parseBeginExpr () =
   let expected =
     [
       exprLetMain (
-        exprBlock [
+        exprAndThen [
           exprAdd
             (exprCall (exprRef "f") [exprRef "x"])
             (exprCall (exprRef "g") [exprRef "y"])
@@ -210,7 +210,7 @@ let parseSemicolonInLineOne () =
   let expected =
     [
       exprLetMain (
-        exprBlock [
+        exprAndThen [
           exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "Hello, "]
           exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "World!"]
           exprInt 0

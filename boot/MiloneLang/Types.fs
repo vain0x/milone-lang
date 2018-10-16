@@ -111,8 +111,8 @@ namespace rec MiloneLang
     /// Type annotation `x : 'x`.
     | Anno
       of Expr<'a> * Ty * 'a
-    /// x; y; z
-    | Begin
+    /// `x; y`
+    | AndThen
       of Expr<'a> list * 'a
     | Let
       of pats:Pat<'a> list * init:Expr<'a> * 'a

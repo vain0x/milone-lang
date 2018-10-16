@@ -301,9 +301,9 @@ let inferExprs ctx exprs: Expr<Ty * Loc> list * Ty * TyCtx =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let inferBlock ctx loc exprs =
+let inferAndThen ctx loc exprs =
   let exprs, ty, ctx = inferExprs ctx exprs
-  Expr.Begin (exprs, (ty, loc)), ctx
+  Expr.AndThen (exprs, (ty, loc)), ctx
 
 let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
   match expr with
@@ -328,10 +328,10 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferOp ctx loc op l r
   | Expr.Anno (expr, ty, _) ->
     inferAnno ctx expr ty
+  | Expr.AndThen (exprs, loc) ->
+    inferAndThen ctx loc exprs
   | Expr.Let (pat, init, loc) ->
     inferLet ctx pat init loc
-  | Expr.Begin (exprs, loc) ->
-    inferBlock ctx loc exprs
   | Expr.Call _ ->
     failwith "unimpl"
   | Expr.Prim _ ->

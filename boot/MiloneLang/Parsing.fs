@@ -23,8 +23,8 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.Call (_, _, a) -> a
   | Expr.Op (_, _, _, a) -> a
   | Expr.Anno (_, _, a) -> a
+  | Expr.AndThen (_, a) -> a
   | Expr.Let (_, _, a) -> a
-  | Expr.Begin (_, a) -> a
 
 let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
   match expr with
@@ -46,10 +46,10 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Op (op, exprMap f l, exprMap f r, f a)
   | Expr.Anno (expr, ty, a) ->
     Expr.Anno (exprMap f expr, ty, f a)
+  | Expr.AndThen (exprs, a) ->
+    Expr.AndThen (List.map (exprMap f) exprs, f a)
   | Expr.Let (pats, init, a) ->
     Expr.Let (List.map (patMap f) pats, exprMap f init, f a)
-  | Expr.Begin (exprs, a) ->
-    Expr.Begin (List.map (exprMap f) exprs, f a)
 
 /// Gets if next token exists and should lead some construction (expr/pat/ty).
 /// We use this for a kind of prediction.
@@ -370,10 +370,10 @@ let parseBinding boxX tokens =
   | _ ->
     parseAnno boxX tokens
 
-/// block = let ( ';' let )*
+/// and-then = let ( ';' let )*
 /// All expressions are aligned on the same column,
 /// except it is preceded by 1+ semicolons.
-let rec parseBlock boxX tokens =
+let rec parseAndThen boxX tokens =
   let rec go acc alignX tokens =
     match tokens with
     | (Token.Punct ";", _) :: (Token.Punct ";", _) :: tokens
@@ -396,17 +396,17 @@ let rec parseBlock boxX tokens =
     failwithf "Expected a list of expressions."
 
 let parseExpr (boxX: int) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =
-  match parseBlock boxX tokens with
+  match parseAndThen boxX tokens with
   | [], _ ->
     failwithf "Expected an expr but %A" tokens
   | [expr], tokens ->
     expr, tokens
   | exprs, tokens ->
-    Expr.Begin (exprs, nextLoc tokens), tokens
+    Expr.AndThen (exprs, nextLoc tokens), tokens
 
 /// Composes tokens into (a kind of) syntax tree.
 let parse (tokens: (Token * Loc) list): Expr<Loc> list =
-  let exprs, tokens = parseBlock -1 tokens
+  let exprs, tokens = parseAndThen -1 tokens
   if tokens <> [] then
     failwithf "Expected eof but %A" tokens
   exprs
