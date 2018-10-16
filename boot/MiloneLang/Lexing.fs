@@ -64,12 +64,12 @@ let private readInt (source: string) (acc, y, x, i): Read =
   let t = Token.Int (source.Substring(i, r - i) |> int), (y, x)
   t :: acc, y, x + r - i, r
 
-let private readString (source: string) (acc, y, x, i): Read =
+let private readStr (source: string) (acc, y, x, i): Read =
   assert (source.[i] = '"')
   let r = takeWhile ((<>) '"') (source, i + 1)
   if r = source.Length then
     lexError "Expected closing '\"' but eof" (source, r)
-  let t = Token.String (source.Substring(i + 1, r - (i + 1))), (y, x)
+  let t = Token.Str (source.Substring(i + 1, r - (i + 1))), (y, x)
   t :: acc, y, x + r - i + 1, r + 1
 
 let private tokenIdent ident =
@@ -110,7 +110,7 @@ let tokenize (source: string): (Token * Loc) list =
       | c when isOpChar c ->
         (acc, y, x, i) |> readOp source |> go
       | '"' ->
-        (acc, y, x, i) |> readString source |> go
+        (acc, y, x, i) |> readStr source |> go
       | c when isDigit c ->
         (acc, y, x, i) |> readInt source |> go
       | c when not (isDigit c) && isIdentChar c ->

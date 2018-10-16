@@ -16,7 +16,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   match expr with
   | Expr.Unit a -> a
   | Expr.Int (_, a) -> a
-  | Expr.String (_, a) -> a
+  | Expr.Str (_, a) -> a
   | Expr.Prim (_, a) -> a
   | Expr.Ref (_, _, a) -> a
   | Expr.If (_, _, _, a) -> a
@@ -32,8 +32,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Unit (f a)
   | Expr.Int (value, a) ->
     Expr.Int (value, f a)
-  | Expr.String (value, a) ->
-    Expr.String (value, f a)
+  | Expr.Str (value, a) ->
+    Expr.Str (value, f a)
   | Expr.Prim (value, a) ->
     Expr.Prim (value, f a)
   | Expr.Ref (ident, serial, a) ->
@@ -69,7 +69,7 @@ let tokenRole tokens: bool * bool =
     false, false
   | (Token.Unit, _) :: _
   | (Token.Int _, _) :: _
-  | (Token.String _, _) :: _
+  | (Token.Str _, _) :: _
   | (Token.Ident _, _) :: _
   | (Token.ParenL, _) :: _ ->
     // It can be an expr or pat.
@@ -254,8 +254,8 @@ let parseAtom boxX tokens: Expr<Loc> option * (Token * Loc) list =
       Some (Expr.Unit loc), tokens
     | (Token.Int value, loc) :: tokens ->
       Some (Expr.Int (value, loc)), tokens
-    | (Token.String value, loc) :: tokens ->
-      Some (Expr.String (value, loc)), tokens
+    | (Token.Str value, loc) :: tokens ->
+      Some (Expr.Str (value, loc)), tokens
     | (Token.Ident "printfn", loc) :: tokens ->
       Some (Expr.Prim (PrimFun.Printfn, loc)), tokens
     | (Token.Ident value, loc) :: tokens ->

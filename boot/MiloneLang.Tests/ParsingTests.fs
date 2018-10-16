@@ -37,7 +37,7 @@ let exprInt value =
   Expr.Int (value, ())
 
 let exprStr value =
-  Expr.String (value, ())
+  Expr.Str (value, ())
 
 let exprRef ident =
   Expr.Ref (ident, 0, ())

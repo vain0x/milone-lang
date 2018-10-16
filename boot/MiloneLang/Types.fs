@@ -8,7 +8,7 @@ namespace rec MiloneLang
     | Unit
     | Int
       of int
-    | String
+    | Str
       of string
     | Ident
       of string
@@ -90,7 +90,7 @@ namespace rec MiloneLang
       of 'a
     | Int
       of int * 'a
-    | String
+    | Str
       of string * 'a
     /// Primitive.
     | Prim

@@ -176,7 +176,7 @@ let inferApp (ctx: TyCtx) loc callee args =
 let inferAppPrintfn ctx loc args =
   match args with
   | [] -> failwith "Never"
-  | Expr.String (format, _) :: _ ->
+  | Expr.Str (format, _) :: _ ->
     let calleeTy =
       // FIXME: too rough
       if format.Contains("%s") then
@@ -311,8 +311,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     Expr.Unit (Ty.Unit, loc), ctx
   | Expr.Int (value, loc) ->
     Expr.Int (value, (Ty.Int, loc)), ctx
-  | Expr.String (value, loc) ->
-    Expr.String (value, (Ty.Str, loc)), ctx
+  | Expr.Str (value, loc) ->
+    Expr.Str (value, (Ty.Str, loc)), ctx
   | Expr.Ref (ident, serial, loc)
     when ident = "true" || ident = "false" ->
     Expr.Ref (ident, serial, (Ty.Bool, loc)), ctx

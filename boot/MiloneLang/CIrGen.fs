@@ -191,7 +191,7 @@ let genExpr
     CExpr.Unit, acc, ctx
   | Expr.Int (value, _) ->
     CExpr.Int value, acc, ctx
-  | Expr.String (value, _) ->
+  | Expr.Str (value, _) ->
     CExpr.Str value, acc, ctx
   | Expr.Ref ("true", _, _) ->
     CExpr.Int 1, acc, ctx
@@ -203,7 +203,7 @@ let genExpr
     genIfExpr acc ctx pred thenCl elseCl ty
   | Expr.Op (op, first, second, (ty, loc)) ->
     genOpExpr acc ctx op first second ty loc
-  | Expr.Call (Expr.Prim (PrimFun.Printfn, _), (Expr.String (format, _)) :: args, _) ->
+  | Expr.Call (Expr.Prim (PrimFun.Printfn, _), (Expr.Str (format, _)) :: args, _) ->
     let args, ctx = genExprList acc ctx args
     let acc = callPrintf format args :: acc
     CExpr.Unit, acc, ctx
