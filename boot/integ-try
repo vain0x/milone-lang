@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -eu
+
+name=$(basename "$1" .milone)
+
+app="./tmp/$name"
+out="./tmp/$name.out"
+exp="./tests/targets/$name.out"
+./trans "$name"
+
+set +e
+$app >$out
+echo '$? = '$? >>$out
+diff -q $out $exp || {
+    >&2 echo "FAILED $name"
+}
+set -e

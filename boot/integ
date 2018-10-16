@@ -3,32 +3,10 @@
 
 set -eu
 
-try () {
-    app="./tmp/$1"
-    out="./tmp/$1.out"
-    exp="./tests/targets/$1.out"
-    ./trans "$1"
-
-    set +e
-    $app >$out
-    echo '$? = '$? >>$out
-    diff -q $out $exp || {
-        >&2 echo "FAILED $1"
-    }
-    set -e
+try_all () {
+    find ./tests/src -name '*.milone' -type f -exec ./integ-try "{}" \;
 }
 
-try "zero"
-try "add"
-try "arith"
-try "anno"
-try "hello"
-try "var_1"
-try "var_str"
-try "shadowing"
-try "if_else"
-try "if_else_complex"
-try "factorial"
-try "fizz_buzz"
+try_all
 
 echo "OK" >&2
