@@ -179,8 +179,10 @@ let inferAppPrintfn ctx loc args =
   | Expr.String (format, _) :: _ ->
     let calleeTy =
       // FIXME: too rough
-      if format.Contains("%s")
-      then Ty.Fun (Ty.Str, Ty.Fun (Ty.Str, Ty.Unit))
+      if format.Contains("%s") then
+        Ty.Fun (Ty.Str, Ty.Fun (Ty.Str, Ty.Unit))
+      else if format.Contains("%d") then
+        Ty.Fun (Ty.Str, Ty.Fun (Ty.Int, Ty.Unit))
       else Ty.Fun (Ty.Str, Ty.Unit)
     let args, appTy, ctx = inferAppArgs [] ctx calleeTy args
     let callee = Expr.Prim (PrimFun.Printfn, (calleeTy, loc))

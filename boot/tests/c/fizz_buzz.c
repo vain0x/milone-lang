@@ -23,7 +23,7 @@ int fizzBuzz_2(int i_3) {
                     printf("Buzz\n");
                     if_12 = 0;
                 } else {
-                    printf("number\n");
+                    printf("%d\n", i_3);
                     if_12 = 0;
                 }
                 if_9 = if_12;
