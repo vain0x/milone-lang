@@ -1,0 +1,3 @@
+let main () =
+  let id x = x : int
+  id 1 - 1

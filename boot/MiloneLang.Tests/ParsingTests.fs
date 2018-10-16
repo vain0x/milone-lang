@@ -14,6 +14,17 @@ let parseStr source: Expr<unit> list =
   |> Parsing.parse
   |> List.map (exprMap ignore)
 
+let parseTyExprStr source: Ty =
+  let ty, tokens =
+    source
+    |> Lexing.tokenize
+    |> Parsing.parseTy 0
+  if tokens <> [] then failwithf "Expected eof but %A" tokens
+  ty
+
+let tyFun sTy tTy =
+  Ty.Fun (sTy, tTy)
+
 let exprInt value =
   Expr.Int (value, ())
 
@@ -244,3 +255,12 @@ let parseComparisonAndLogicExpr () =
       )
     ]
   source |> parseStr |> is expected
+
+[<Fact>]
+let parseFunTypeExprs () =
+  let source = """unit -> (int -> bool) -> string"""
+  let expected =
+    tyFun
+      Ty.Unit
+      (tyFun (tyFun Ty.Int Ty.Bool) Ty.Str)
+  source |> parseTyExprStr |> is expected

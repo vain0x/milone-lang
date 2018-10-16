@@ -217,6 +217,8 @@ let genExpr
     genBegin acc ctx expr exprs
   | Expr.Let ([], _, _) ->
     failwith "Never zero-patterns let"
+  | Expr.Anno _ ->
+    failwith "Never type annotation expr after typing"
   | Expr.Prim _
   | Expr.Call _
   | Expr.Let _ ->

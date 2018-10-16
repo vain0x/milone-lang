@@ -18,7 +18,10 @@ namespace rec MiloneLang
     | Else
     | ParenL
     | ParenR
-    // Punctuation.
+    | Colon
+    /// `->`
+    | Arrow
+    /// Punctuation.
     | Punct
       of string
 
@@ -99,6 +102,9 @@ namespace rec MiloneLang
       of Expr<'a> * Expr<'a> list * 'a
     | Op
       of Op * Expr<'a> * Expr<'a> * 'a
+    /// Type annotation `x : 'x`.
+    | Anno
+      of Expr<'a> * Ty * 'a
     | Let
       of pats:Pat<'a> list * init:Expr<'a> * 'a
     /// x; y; z

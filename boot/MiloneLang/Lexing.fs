@@ -49,7 +49,7 @@ let private readEol (source: string) (acc, y, _x, i): Read =
 let private readOp (source: string) (acc, y, x, i): Read =
   assert (isOpChar source.[i])
   let r = takeWhile isOpChar (source, i + 1)
-  let t = Token.Punct (source.Substring(i, r - i)), (y, x)
+  let t = tokenPunct (source.Substring(i, r - i)), (y, x)
   t :: acc, y, x + r - i, r
 
 let private readIdent (source: string) (acc, y, x, i): Read =
@@ -79,6 +79,12 @@ let private tokenIdent ident =
   | "then" -> Token.Then
   | "else" -> Token.Else
   | _ -> Token.Ident ident
+
+let private tokenPunct str =
+  match str with
+  | ":" -> Token.Colon
+  | "->" -> Token.Arrow
+  | _ -> Token.Punct str
 
 let tokenize (source: string): (Token * Loc) list =
   let at i =

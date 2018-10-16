@@ -25,6 +25,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.If (_, _, _, a) -> a
   | Expr.Call (_, _, a) -> a
   | Expr.Op (_, _, _, a) -> a
+  | Expr.Anno (_, _, a) -> a
   | Expr.Let (_, _, a) -> a
   | Expr.Begin (_, a) -> a
 
@@ -46,6 +47,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Call (exprMap f callee, List.map (exprMap f) args, f a)
   | Expr.Op (op, l, r, a) ->
     Expr.Op (op, exprMap f l, exprMap f r, f a)
+  | Expr.Anno (expr, ty, a) ->
+    Expr.Anno (exprMap f expr, ty, f a)
   | Expr.Let (pats, init, a) ->
     Expr.Let (List.map (patMap f) pats, exprMap f init, f a)
   | Expr.Begin (exprs, a) ->
@@ -57,6 +60,8 @@ let tokenRole tokens: TokenRole =
   | (Token.Then, _) :: _
   | (Token.Else, _) :: _
   | (Token.ParenR, _) :: _
+  | (Token.Colon, _) :: _
+  | (Token.Arrow, _) :: _
   | (Token.Punct _, _) :: _
     -> TokenRole.Close
   | (Token.Unit, _) :: _
@@ -101,6 +106,42 @@ let private nextInside boxX tokens: bool =
 let parseError message (_, tokens) =
   let near = tokens |> List.map fst |> List.truncate 6
   failwithf "Parse error %s near %A" message near
+
+let parseTyAtom boxX tokens: Ty option * _ list =
+  if nextInside boxX tokens |> not then
+    None, tokens
+  else
+    match tokens with
+    | (Token.Ident "unit", _) :: tokens ->
+      Some Ty.Unit, tokens
+    | (Token.Ident "bool", _) :: tokens ->
+      Some Ty.Bool, tokens
+    | (Token.Ident "int", _) :: tokens ->
+      Some Ty.Int, tokens
+    | (Token.Ident "string", _) :: tokens ->
+      Some Ty.Str, tokens
+    | (Token.ParenL, _) :: tokens ->
+      match parseTy (nextX tokens) tokens with
+      | ty, (Token.ParenR, _) :: tokens ->
+        Some ty, tokens
+      | _, tokens ->
+        parseError "Expected ')'" ((), tokens)
+    | _ ->
+      None, tokens
+
+/// ty-fun = ty-atom ( '->' ty-fun )?
+let parseTyFun boxX tokens =
+  match parseTyAtom boxX tokens with
+  | Some sTy, (Token.Arrow, _) :: tokens ->
+    let tTy, tokens = parseTyFun boxX tokens
+    Ty.Fun(sTy, tTy), tokens
+  | Some ty, tokens ->
+    ty, tokens
+  | None, tokens ->
+    parseError "Expected a type atom" (None, tokens)
+
+let parseTy boxX tokens: Ty * _ list =
+  parseTyFun boxX tokens
 
 let parsePat boxX tokens: Pat<_> option * _ list =
   if nextInside boxX tokens |> not then
@@ -201,6 +242,8 @@ let parseAtom boxX tokens: Expr<Loc> option * (Token * Loc) list =
     | []
     | (Token.Else, _) :: _
     | (Token.Then, _) :: _
+    | (Token.Colon, _) :: _
+    | (Token.Arrow, _) :: _
     | (Token.ParenR, _) :: _
     | (Token.Punct _, _) :: _ ->
       None, tokens
@@ -280,13 +323,22 @@ let parseOp level boxX tokens =
 let parseOr boxX tokens =
   parseOp OpLevel.Or boxX tokens
 
-/// let = 'let' ( pat )* '=' expr / call
+/// anno = or ( ':' ty )?
+let parseAnno boxX tokens =
+  match parseOr boxX tokens with
+  | expr, (Token.Colon, loc) :: tokens ->
+    let ty, tokens = parseTy (nextX tokens) tokens
+    Expr.Anno (expr, ty, loc), tokens
+  | expr, tokens ->
+    expr, tokens
+
+/// let = 'let' ( pat )* '=' expr / anno
 let parseBinding boxX tokens =
   match tokens with
   | (Token.Let, letLoc) :: tokens ->
     parseLet boxX letLoc tokens
   | _ ->
-    parseOr boxX tokens
+    parseAnno boxX tokens
 
 /// block = let ( ';' let )*
 /// All expressions are aligned on the same column,

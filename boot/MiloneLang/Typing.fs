@@ -237,6 +237,11 @@ let inferOp (ctx: TyCtx) loc op left right =
   | Op.Or ->
     inferOpLogic ctx loc op left right
 
+let inferAnno ctx expr ty =
+  let expr, ctx = inferExpr ctx expr
+  let ctx = unifyTy ctx (tyOf expr) ty
+  expr, ctx
+
 let inferLet ctx pats init loc =
   match pats with
   | [Pat.Ident (name, _, patLoc)] ->
@@ -321,6 +326,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferApp ctx loc callee args
   | Expr.Op (op, l, r, loc) ->
     inferOp ctx loc op l r
+  | Expr.Anno (expr, ty, _) ->
+    inferAnno ctx expr ty
   | Expr.Let (pat, init, loc) ->
     inferLet ctx pat init loc
   | Expr.Begin (exprs, loc) ->

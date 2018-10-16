@@ -25,6 +25,7 @@ let testFile fileName =
 [<InlineData("add")>]
 [<InlineData("arith")>]
 [<InlineData("logic")>]
+[<InlineData("anno")>]
 [<InlineData("hello")>]
 [<InlineData("printfn")>]
 [<InlineData("var_1")>]
