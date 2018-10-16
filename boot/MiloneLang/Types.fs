@@ -16,8 +16,11 @@ namespace rec MiloneLang
     | If
     | Then
     | Else
+    /// `(`
     | ParenL
+    /// `)`
     | ParenR
+    /// `:`
     | Colon
     /// `->`
     | Arrow
@@ -32,10 +35,10 @@ namespace rec MiloneLang
     | Bool
     | Int
     | Str
-    | Fun
-      of Ty * Ty
     | Var
       of string
+    | Fun
+      of Ty * Ty
 
   [<RequireQualifiedAccess>]
   /// Primitive function.
@@ -79,11 +82,11 @@ namespace rec MiloneLang
     | Unit
       of 'a
     | Ident
-      of name:string * serial: int * 'a
+      of ident:string * serial: int * 'a
     | Anno
       of Pat<'a> * Ty * 'a
 
-  /// Expression in AST.
+  /// Expression in AST. `a` is loc, ty, etc.
   [<RequireQualifiedAccess>]
   type Expr<'a> =
     | Unit
@@ -100,6 +103,7 @@ namespace rec MiloneLang
       of ident:string * serial:int * 'a
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
+    /// `f x y ..`
     | Call
       of Expr<'a> * Expr<'a> list * 'a
     | Op
@@ -107,11 +111,11 @@ namespace rec MiloneLang
     /// Type annotation `x : 'x`.
     | Anno
       of Expr<'a> * Ty * 'a
-    | Let
-      of pats:Pat<'a> list * init:Expr<'a> * 'a
     /// x; y; z
     | Begin
       of Expr<'a> list * 'a
+    | Let
+      of pats:Pat<'a> list * init:Expr<'a> * 'a
 
   /// Type in C language.
   [<RequireQualifiedAccess>]
@@ -157,20 +161,22 @@ namespace rec MiloneLang
       of string
     | Ref
       of string
-    | Op
-      of COp * CExpr * CExpr
     | Prim
       of CPrim
     | Call
       of CExpr * args:CExpr list
+    | Op
+      of COp * CExpr * CExpr
     | Set
       of CExpr * CExpr
 
   /// Statement in C language.
   [<RequireQualifiedAccess>]
   type CStmt =
+    /// `x;`
     | Expr
       of CExpr
+    /// `T x = a;`
     | Let
       of name:string * ty:CTy * init:CExpr option
     | Return
