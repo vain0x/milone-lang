@@ -277,18 +277,6 @@ let parseOp level boxX tokens =
   let first, tokens = parseNextLevelOp level boxX tokens
   parseOps level boxX first tokens
 
-let parseMul boxX tokens =
-  parseOp OpLevel.Mul boxX tokens
-
-let parseAdd boxX tokens =
-  parseOp OpLevel.Add boxX tokens
-
-let parseCmp boxX tokens =
-  parseOp OpLevel.Cmp boxX tokens
-
-let parseAnd boxX tokens =
-  parseOp OpLevel.And boxX tokens
-
 let parseOr boxX tokens =
   parseOp OpLevel.Or boxX tokens
 
