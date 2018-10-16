@@ -80,6 +80,8 @@ namespace rec MiloneLang
       of 'a
     | Ident
       of name:string * serial: int * 'a
+    | Anno
+      of Pat<'a> * Ty * 'a
 
   /// Expression in AST.
   [<RequireQualifiedAccess>]

@@ -18,9 +18,17 @@ let parseTyExprStr source: Ty =
   let ty, tokens =
     source
     |> Lexing.tokenize
-    |> Parsing.parseTy 0
+    |> Parsing.parseTy -1
   if tokens <> [] then failwithf "Expected eof but %A" tokens
   ty
+
+let parseStrAsPat source: Pat<unit> =
+  let pat, tokens =
+    source
+    |> Lexing.tokenize
+    |> Parsing.parsePat -1
+  if tokens <> [] then failwithf "Expected eof but %A" tokens
+  patMap ignore pat
 
 let tyFun sTy tTy =
   Ty.Fun (sTy, tTy)
@@ -264,3 +272,10 @@ let parseFunTypeExprs () =
       Ty.Unit
       (tyFun (tyFun Ty.Int Ty.Bool) Ty.Str)
   source |> parseTyExprStr |> is expected
+
+[<Fact>]
+let parsePatAnno () =
+  let source = """x : int"""
+  let expected =
+    Pat.Anno (Pat.Ident ("x", 0, ()), Ty.Int, ())
+  source |> parseStrAsPat |> is expected

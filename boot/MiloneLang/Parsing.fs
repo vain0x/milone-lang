@@ -3,17 +3,14 @@ module rec MiloneLang.Parsing
 open System
 open MiloneLang
 
-[<RequireQualifiedAccess>]
-type TokenRole =
-  | Open
-  | Close
-
 let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
   match pat with
   | Pat.Unit a ->
     Pat.Unit (f a)
   | Pat.Ident (name, serial, a) ->
     Pat.Ident (name, serial, f a)
+  | Pat.Anno (pat, ty, a) ->
+    Pat.Anno (patMap f pat, ty, f a)
 
 let exprExtract (expr: Expr<'a>): 'a =
   match expr with
@@ -54,7 +51,12 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
   | Expr.Begin (exprs, a) ->
     Expr.Begin (List.map (exprMap f) exprs, f a)
 
-let tokenRole tokens: TokenRole =
+/// Gets if next token exists and should lead some construction (expr/pat/ty).
+/// We use this for a kind of prediction.
+/// E.g. if you are looking for an expr and the following token is an integer,
+/// the following tokens should start with an expression,
+/// even if we don't know how many tokens participate that expr.
+let tokenRole tokens: bool * bool =
   match tokens with
   | []
   | (Token.Then, _) :: _
@@ -62,19 +64,28 @@ let tokenRole tokens: TokenRole =
   | (Token.ParenR, _) :: _
   | (Token.Colon, _) :: _
   | (Token.Arrow, _) :: _
-  | (Token.Punct _, _) :: _
-    -> TokenRole.Close
+  | (Token.Punct _, _) :: _ ->
+    // These tokens are read only in specific contexts.
+    false, false
   | (Token.Unit, _) :: _
   | (Token.Int _, _) :: _
   | (Token.String _, _) :: _
   | (Token.Ident _, _) :: _
-  | (Token.ParenL, _) :: _
+  | (Token.ParenL, _) :: _ ->
+    // It can be an expr or pat.
+    true, true
   | (Token.If _, _) :: _
-  | (Token.Let, _) :: _
-    -> TokenRole.Open
+  | (Token.Let, _) :: _ ->
+    // It is an expr, not pat.
+    true, false
 
 let leadsExpr tokens =
-  tokenRole tokens = TokenRole.Open
+  let leadsExpr, _ = tokenRole tokens
+  leadsExpr
+
+let leadsPat tokens =
+  let _, leadsPat = tokenRole tokens
+  leadsPat
 
 let private nextLoc tokens: Loc =
   match tokens with
@@ -143,24 +154,43 @@ let parseTyFun boxX tokens =
 let parseTy boxX tokens: Ty * _ list =
   parseTyFun boxX tokens
 
-let parsePat boxX tokens: Pat<_> option * _ list =
-  if nextInside boxX tokens |> not then
-    None, tokens
+let parsePatAtom boxX tokens: Pat<_> * _ list =
+  match tokens with
+  | _ when not (nextInside boxX tokens && leadsPat tokens) ->
+    parseError "Expected a pattern atom" ((), tokens)
+  | (Token.Unit, loc) :: tokens ->
+    Pat.Unit loc, tokens
+  | (Token.Ident value, loc) :: tokens ->
+    Pat.Ident (value, 0, loc), tokens
+  | (Token.ParenL, _) :: tokens ->
+    match parsePat (nextX tokens) tokens with
+    | pat, (Token.ParenR, _) :: tokens ->
+      pat, tokens
+    | _, tokens ->
+      parseError "Expected ')'" ((), tokens)
+  | _ ->
+    failwith "never"
+
+let parsePatAnno boxX tokens =
+  match parsePatAtom boxX tokens with
+  | pat, (Token.Colon, loc) :: tokens ->
+    let ty, tokens = parseTy (nextX tokens) tokens
+    Pat.Anno (pat, ty, loc), tokens
+  | pat, tokens ->
+    pat, tokens
+
+let parsePat boxX tokens: Pat<_> * _ list =
+  if not (nextInside boxX tokens && leadsPat tokens) then
+    parseError "Expected a pattern" ((), tokens)
   else
-    match tokens with
-    | (Token.Unit, loc) :: tokens ->
-      Some (Pat.Unit loc), tokens
-    | (Token.Ident value, loc) :: tokens ->
-      Some (Pat.Ident (value, 0, loc)), tokens
-    | _ ->
-      None, tokens
+    parsePatAnno boxX tokens
 
 let parsePats boxX (tokens: _ list): Pat<_> list * _ list =
   let rec go acc (tokens: _ list) =
-    match parsePat boxX tokens with
-    | Some pat, tokens ->
+    if nextInside boxX tokens && leadsPat tokens then
+      let pat, tokens = parsePat boxX tokens
       go (pat :: acc) tokens
-    | None, _ ->
+    else
       List.rev acc, tokens
   go [] tokens
 
