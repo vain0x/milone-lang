@@ -114,7 +114,7 @@ let private nextInside boxX tokens: bool =
   | _ ->
     true
 
-let parseError message (_, tokens) =
+let parseError message tokens =
   let near = tokens |> List.map fst |> List.truncate 6
   failwithf "Parse error %s near %A" message near
 
@@ -136,7 +136,7 @@ let parseTyAtom boxX tokens: Ty option * _ list =
       | ty, (Token.ParenR, _) :: tokens ->
         Some ty, tokens
       | _, tokens ->
-        parseError "Expected ')'" ((), tokens)
+        parseError "Expected ')'" tokens
     | _ ->
       None, tokens
 
@@ -149,7 +149,7 @@ let parseTyFun boxX tokens =
   | Some ty, tokens ->
     ty, tokens
   | None, tokens ->
-    parseError "Expected a type atom" (None, tokens)
+    parseError "Expected a type atom" tokens
 
 let parseTy boxX tokens: Ty * _ list =
   parseTyFun boxX tokens
@@ -157,7 +157,7 @@ let parseTy boxX tokens: Ty * _ list =
 let parsePatAtom boxX tokens: Pat<_> * _ list =
   match tokens with
   | _ when not (nextInside boxX tokens && leadsPat tokens) ->
-    parseError "Expected a pattern atom" ((), tokens)
+    parseError "Expected a pattern atom" tokens
   | (Token.Unit, loc) :: tokens ->
     Pat.Unit loc, tokens
   | (Token.Ident value, loc) :: tokens ->
@@ -167,7 +167,7 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
     | pat, (Token.ParenR, _) :: tokens ->
       pat, tokens
     | _, tokens ->
-      parseError "Expected ')'" ((), tokens)
+      parseError "Expected ')'" tokens
   | _ ->
     failwith "never"
 
@@ -181,7 +181,7 @@ let parsePatAnno boxX tokens =
 
 let parsePat boxX tokens: Pat<_> * _ list =
   if not (nextInside boxX tokens && leadsPat tokens) then
-    parseError "Expected a pattern" ((), tokens)
+    parseError "Expected a pattern" tokens
   else
     parsePatAnno boxX tokens
 
@@ -243,63 +243,53 @@ let parseLet boxX letLoc tokens =
     parseExpr bodyX tokens
   Expr.Let (pats, body, letLoc), tokens
 
-/// Tries to read a token that consists of a group of delimited expression.
 /// atom = unit / int / string / prim / ref / ( expr )
-let parseAtom boxX tokens: Expr<Loc> option * (Token * Loc) list =
-  if nextInside boxX tokens |> not then
-    None, tokens
-  else
-    match tokens with
-    | (Token.Unit, loc) :: tokens ->
-      Some (Expr.Unit loc), tokens
-    | (Token.Int value, loc) :: tokens ->
-      Some (Expr.Int (value, loc)), tokens
-    | (Token.Str value, loc) :: tokens ->
-      Some (Expr.Str (value, loc)), tokens
-    | (Token.Ident "printfn", loc) :: tokens ->
-      Some (Expr.Prim (PrimFun.Printfn, loc)), tokens
-    | (Token.Ident value, loc) :: tokens ->
-      Some (Expr.Ref (value, 0, loc)), tokens
-    | (Token.ParenL, _) :: tokens ->
-      let expr, tokens = parseParen boxX tokens
-      Some expr, tokens
-    | (Token.If, loc) :: tokens ->
-      let expr, tokens = parseIf boxX loc tokens
-      Some expr, tokens
-    | (Token.Let, letLoc) :: tokens ->
-      let expr, tokens = parseLet boxX letLoc tokens
-      Some expr, tokens
-    | []
-    | (Token.Else, _) :: _
-    | (Token.Then, _) :: _
-    | (Token.Colon, _) :: _
-    | (Token.Arrow, _) :: _
-    | (Token.ParenR, _) :: _
-    | (Token.Punct _, _) :: _ ->
-      None, tokens
+let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
+  match tokens with
+  | _ when not (nextInside boxX tokens) ->
+    parseError "Expected an atomic expression" tokens
+  | (Token.Unit, loc) :: tokens ->
+    Expr.Unit loc, tokens
+  | (Token.Int value, loc) :: tokens ->
+    Expr.Int (value, loc), tokens
+  | (Token.Str value, loc) :: tokens ->
+    Expr.Str (value, loc), tokens
+  | (Token.Ident "printfn", loc) :: tokens ->
+    Expr.Prim (PrimFun.Printfn, loc), tokens
+  | (Token.Ident value, loc) :: tokens ->
+    Expr.Ref (value, 0, loc), tokens
+  | (Token.ParenL, _) :: tokens ->
+    parseParen boxX tokens
+  | (Token.If, loc) :: tokens ->
+    parseIf boxX loc tokens
+  | (Token.Let, letLoc) :: tokens ->
+    parseLet boxX letLoc tokens
+  | []
+  | (Token.Else, _) :: _
+  | (Token.Then, _) :: _
+  | (Token.Colon, _) :: _
+  | (Token.Arrow, _) :: _
+  | (Token.ParenR, _) :: _
+  | (Token.Punct _, _) :: _ ->
+    parseError "Expected an atomic expression" tokens
 
 /// call = atom ( atom )*
 let parseCall boxX tokens =
   let calleeLoc = nextLoc tokens
   let _, calleeX = calleeLoc
   let insideX = max boxX (calleeX + 1)
-  let first, tokens =
-    match parseAtom boxX tokens with
-    | Some first, tokens ->
-      first, tokens
-    | _ ->
-      failwithf "Expected an atom %A" tokens
+  let callee, tokens = parseAtom boxX tokens
   let rec go acc tokens =
-    match parseAtom insideX tokens with
-    | Some atom, tokens ->
-      go (atom :: acc) tokens
-    | None, _ ->
-      acc, tokens
+    if nextInside insideX tokens && leadsExpr tokens then
+      let expr, tokens = parseAtom insideX tokens
+      go (expr :: acc) tokens
+    else
+      List.rev acc, tokens
   match go [] tokens with
   | [], tokens ->
-    first, tokens
+    callee, tokens
   | args, tokens ->
-    Expr.Call (first, List.rev args, calleeLoc), tokens
+    Expr.Call (callee, args, calleeLoc), tokens
 
 let parseNextLevelOp level outer tokens =
   match level with
@@ -344,18 +334,17 @@ let rec parseOps level boxX expr tokens =
   | _ ->
     expr, tokens
 
-/// mul = call ( ('*'|'/'|'%') call )*
-/// add = mul ( ('+'|'-') mul )*
+/// E.g. add = mul ( ('+'|'-') mul )*
 let parseOp level boxX tokens =
   let first, tokens = parseNextLevelOp level boxX tokens
   parseOps level boxX first tokens
 
-let parseOr boxX tokens =
+let parseTerm boxX tokens =
   parseOp OpLevel.Or boxX tokens
 
-/// anno = or ( ':' ty )?
+/// anno = term ( ':' ty )?
 let parseAnno boxX tokens =
-  match parseOr boxX tokens with
+  match parseTerm boxX tokens with
   | expr, (Token.Colon, loc) :: tokens ->
     let ty, tokens = parseTy (nextX tokens) tokens
     Expr.Anno (expr, ty, loc), tokens
@@ -370,14 +359,12 @@ let parseBinding boxX tokens =
   | _ ->
     parseAnno boxX tokens
 
-/// and-then = let ( ';' let )*
-/// All expressions are aligned on the same column,
+/// All expressions must be aligned on the same column,
 /// except it is preceded by 1+ semicolons.
-let rec parseAndThen boxX tokens =
+let rec parseBindings boxX tokens =
   let rec go acc alignX tokens =
     match tokens with
-    | (Token.Punct ";", _) :: (Token.Punct ";", _) :: tokens
-      when nextX tokens >= alignX ->
+    | (Token.Punct ";", _) :: ((Token.Punct ";", _) :: _ as tokens) ->
       go acc alignX tokens
     | (Token.Punct ";", _) :: tokens
       when nextX tokens >= alignX ->
@@ -389,14 +376,11 @@ let rec parseAndThen boxX tokens =
       go (expr :: acc) alignX tokens
     | _ ->
       List.rev acc, tokens
+  go [] (nextX tokens) tokens
 
-  if nextInside boxX tokens then
-    go [] (nextX tokens) tokens
-  else
-    failwithf "Expected a list of expressions."
-
-let parseExpr (boxX: int) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =
-  match parseAndThen boxX tokens with
+/// and-then = binding ( ';' binding )*
+let parseAndThen boxX tokens =
+  match parseBindings boxX tokens with
   | [], _ ->
     failwithf "Expected an expr but %A" tokens
   | [expr], tokens ->
@@ -404,9 +388,16 @@ let parseExpr (boxX: int) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc
   | exprs, tokens ->
     Expr.AndThen (exprs, nextLoc tokens), tokens
 
+let parseExpr (boxX: int) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =
+  parseAndThen boxX tokens
+
+/// module = ( binding ( ';' binding )* )?
 /// Composes tokens into (a kind of) syntax tree.
 let parse (tokens: (Token * Loc) list): Expr<Loc> list =
-  let exprs, tokens = parseAndThen -1 tokens
+  let exprs, tokens =
+    match tokens with
+    | [] -> [], []
+    | _ -> parseBindings -1 tokens
   if tokens <> [] then
     failwithf "Expected eof but %A" tokens
   exprs
