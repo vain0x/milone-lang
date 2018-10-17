@@ -3,6 +3,12 @@ module rec MiloneLang.Parsing
 open System
 open MiloneLang
 
+let patExtract (pat: Pat<'a>): 'a =
+  match pat with
+  | Pat.Unit a -> a
+  | Pat.Ident (_, _, a) -> a
+  | Pat.Anno (_, _, a) -> a
+
 let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
   match pat with
   | Pat.Unit a ->

@@ -14,8 +14,9 @@ type TyCtx =
     TyEnv: Map<string, Ty>
   }
 
-let tyFun s t =
-  Ty.Fun (s, t)
+let patTy (pat: Pat<Ty * Loc>): Ty =
+  let ty, _ = Parsing.patExtract pat
+  ty
 
 let tyOf (expr: Expr<Ty * Loc>): Ty =
   let ty, _ = Parsing.exprExtract expr
@@ -137,6 +138,18 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
 
+let inferPat ctx pat =
+  match pat with
+  | Pat.Unit loc ->
+    Pat.Unit (Ty.Unit, loc), ctx
+  | Pat.Anno (pat, ty, _) ->
+    let pat, ctx = inferPat ctx pat
+    let ctx = unifyTy ctx (patTy pat) ty
+    pat, ctx
+  | Pat.Ident (ident, _, loc) ->
+    let ident, serial, ty, ctx = freshVar ident ctx
+    Pat.Ident (ident, serial, (ty, loc)), ctx
+
 let inferRef (ctx: TyCtx) loc ident =
   match ctx.VarEnv |> Map.tryFind ident with
   | Some (ty, serial) ->
@@ -242,48 +255,34 @@ let inferAnno ctx expr ty =
   let ctx = unifyTy ctx (tyOf expr) ty
   expr, ctx
 
-let inferLet ctx pats init loc =
-  match pats with
-  | [Pat.Ident (name, _, patLoc)] ->
-    // let x = init
-    // Define new variable defined by this let to the context. This won't roll back there.
-    let name, serial, ty, ctx = freshVar name ctx
-    // Type init expression.
-    let init, initCtx = inferExpr ctx init
-    // Roll back context to remove out-of-scope symbols,
-    // defined inside `init`.
-    let ctx = rollback ctx initCtx
-    let ctx = unifyTy ctx ty (tyOf init)
-    let pats = [Pat.Ident (name, serial, (ty, patLoc))]
-    Expr.Let (pats, init, (Ty.Unit, loc)), ctx
-  | [Pat.Ident (name, _, patLoc); Pat.Unit unitLoc] ->
-    // let f () = body
-    let name, serial, ty, ctx = freshVar name ctx
-    // FIXME: currently functions cannot capture local variables
-    let bodyCtx = { ctx with VarEnv = Map.empty }
-    let body, bodyCtx = inferExpr bodyCtx init
-    let ctx = rollback ctx bodyCtx
-    let ctx = unifyTy ctx ty (Ty.Fun (Ty.Unit, tyOf body))
-    let pats = [Pat.Ident (name, serial, (ty, patLoc)); Pat.Unit (Ty.Unit, unitLoc)]
-    Expr.Let (pats, body, (Ty.Unit, loc)), ctx
-  | [Pat.Ident (name, _, patLoc); Pat.Ident (argName, _, argLoc)] ->
-    // let f x = body
-    let name, serial, ty, ctx = freshVar name ctx
+let inferLetVal ctx pat init loc =
+  // Define new variables defined by the pat to the context.
+  let pat, ctx = inferPat ctx pat
+  // Type init expression.
+  let init, initCtx = inferExpr ctx init
+  // Remove symbols defined inside `init`.
+  let ctx = rollback ctx initCtx
+  let ctx = unifyTy ctx (patTy pat) (tyOf init)
+  Expr.Let ([pat], init, (Ty.Unit, loc)), ctx
 
-    // FIXME: currently functions are recursive by default
-    let bodyCtx = ctx
-    let argName, argSerial, argTy, bodyCtx = freshVar argName bodyCtx
-    let body, bodyCtx = inferExpr bodyCtx init
-    if not (isMonomorphic bodyCtx argTy) then
-      failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A" argTy
-    let ctx = rollback ctx bodyCtx
+let inferLetFun ctx pat pats body loc =
+  match pat, pats with
+  | Pat.Ident (callee, _, calleeLoc), [argPat] ->
+    let callee, serial, calleeTy, ctx = freshVar callee ctx
+    let calleePat = Pat.Ident (callee, serial, (calleeTy, calleeLoc))
 
-    let ctx = unifyTy ctx ty (Ty.Fun (argTy, tyOf body))
-    let pats = [
-      Pat.Ident (name, serial, (ty, patLoc))
-      Pat.Ident (argName, argSerial, (argTy, argLoc))
-    ]
-    Expr.Let (pats, body, (Ty.Unit, loc)), ctx
+    // FIXME: functions cannot capture local variables
+    // FIXME: local functions are recursive by default
+    let bodyCtx = { ctx with VarEnv = ctx.VarEnv |> Map.filter (fun k _ -> k = callee) }
+    let argPat, bodyCtx = inferPat bodyCtx argPat
+    let body, bodyCtx = inferExpr bodyCtx body
+    if not (isMonomorphic bodyCtx (patTy argPat)) then
+      failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A" argPat
+
+    let ctx = rollback ctx bodyCtx
+    let ctx = unifyTy ctx calleeTy (Ty.Fun (patTy argPat, tyOf body))
+
+    Expr.Let ([calleePat; argPat], body, (Ty.Unit, loc)), ctx
   | _ ->
     failwith "unimpl use of let"
 
@@ -330,12 +329,16 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferAnno ctx expr ty
   | Expr.AndThen (exprs, loc) ->
     inferAndThen ctx loc exprs
-  | Expr.Let (pat, init, loc) ->
-    inferLet ctx pat init loc
+  | Expr.Let ([pat], init, loc) ->
+    inferLetVal ctx pat init loc
+  | Expr.Let (pat :: pats, body, loc) ->
+    inferLetFun ctx pat pats body loc
   | Expr.Call _ ->
     failwith "unimpl"
   | Expr.Prim _ ->
     failwith "printfn must appear in form of `printfn format args..`."
+  | Expr.Let ([], _, _) ->
+    failwith "Never let with no pats"
 
 /// Replaces type vars embedded in exprs
 /// with inference results.

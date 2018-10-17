@@ -1,3 +1,4 @@
 let main () =
-  let id x = x : int
-  id 1 - 1
+  let f x = x : int
+  let g (x : int) = x
+  f 1 - g 1
