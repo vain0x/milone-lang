@@ -3,11 +3,12 @@
 set -eu
 
 name=$(basename "$1" .milone)
+echo $name
 
 app="./tmp/$name"
 out="./tmp/$name.out"
 exp="./tests/targets/$name.out"
-./trans "$name"
+./trans "$name" 2>/dev/null
 
 set +e
 $app >$out
