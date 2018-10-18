@@ -154,7 +154,6 @@ namespace rec MiloneLang
   /// Expression in C language.
   [<RequireQualifiedAccess>]
   type CExpr =
-    | Unit
     | Int
       of int
     | Str

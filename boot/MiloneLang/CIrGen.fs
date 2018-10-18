@@ -56,6 +56,8 @@ let cop op =
   | Op.And
   | Op.Or -> failwith "We don't use && || in C language"
 
+let cexprUnit = CExpr.Int 0
+
 let callPrintf format args =
   let format = CExpr.Str (format + "\\n")
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args, CTy.Int))
@@ -144,14 +146,13 @@ let genLetFun acc ctx callee pats body =
         Body = List.rev body
       }
     let ctx = ctxAddDecl ctx decl
-    CExpr.Unit, acc, ctx
+    cexprUnit, acc, ctx
   | _ ->
     failwith "In `let f () = ..`, `f` must be an identifier for now."
 
 /// Generates an expression that is immediately ignored.
 let genExprAsStmt acc ctx expr =
   match expr with
-  | CExpr.Unit
   | CExpr.Int _
   | CExpr.Str _
   | CExpr.Ref _
@@ -188,7 +189,7 @@ let genExpr
   match arg with
   | Expr.AndThen ([], _)
   | Expr.Unit _ ->
-    CExpr.Unit, acc, ctx
+    cexprUnit, acc, ctx
   | Expr.Int (value, _) ->
     CExpr.Int value, acc, ctx
   | Expr.Str (value, _) ->
@@ -206,7 +207,7 @@ let genExpr
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _), (Expr.Str (format, _)) :: args, _) ->
     let args, ctx = genExprList acc ctx args
     let acc = callPrintf format args :: acc
-    CExpr.Unit, acc, ctx
+    cexprUnit, acc, ctx
   | Expr.Call (callee, args, (ty, _)) ->
     genCall acc ctx callee args ty
   | Expr.AndThen (expr :: exprs, _) ->
