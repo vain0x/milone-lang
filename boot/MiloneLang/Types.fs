@@ -164,11 +164,11 @@ namespace rec MiloneLang
     | Prim
       of CPrim
     | Call
-      of CExpr * args:CExpr list
+      of CExpr * args:CExpr list * CTy
     | Op
-      of COp * CExpr * CExpr
+      of COp * CExpr * CExpr * CTy
     | Set
-      of CExpr * CExpr
+      of CExpr * CExpr * CTy
 
   /// Statement in C language.
   [<RequireQualifiedAccess>]

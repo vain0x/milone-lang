@@ -58,7 +58,7 @@ let cop op =
 
 let callPrintf format args =
   let format = CExpr.Str (format + "\\n")
-  CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
+  CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args, CTy.Int))
 
 let uniqueName name serial =
   sprintf "%s_%d" name serial
@@ -91,7 +91,7 @@ let genOpExpr acc ctx op first second ty loc =
     let first, acc, ctx = genExpr acc ctx first
     let second, acc, ctx = genExpr acc ctx second
     let name, ctx = freshName ctx "op"
-    let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second))) :: acc
+    let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second, CTy.Int))) :: acc
     CExpr.Ref name, acc, ctx
 
 let genCall acc ctx callee args ty =
@@ -99,7 +99,7 @@ let genCall acc ctx callee args ty =
   | [arg] ->
     let callee, acc, ctx = genExpr acc ctx callee
     let arg, acc, ctx = genExpr acc ctx arg
-    CExpr.Call (callee, [arg]), acc, ctx
+    CExpr.Call (callee, [arg], cty ty), acc, ctx
   | [] ->
     failwith "Never zero-arg call"
   | _ ->
@@ -110,12 +110,12 @@ let genCall acc ctx callee args ty =
 /// if (pred) { ..; result = thenCl; } else { ..; result = elseCl; }
 /// ..(result)
 let genIfExpr acc ctx pred thenCl elseCl ty =
-  let resultName, result, ctx = freshVar ctx "if" (ctyOf thenCl)
+  let resultName, result, ctx = freshVar ctx "if" (cty ty)
   let pred, acc, ctx = genExpr acc ctx pred
   let thenCl, thenStmts, ctx = genExpr [] ctx thenCl
   let elseCl, elseStmts, ctx = genExpr [] ctx elseCl
-  let thenStmts = CStmt.Expr (CExpr.Set (result, thenCl)) :: thenStmts
-  let elseStmts = CStmt.Expr (CExpr.Set (result, elseCl)) :: elseStmts
+  let thenStmts = CStmt.Expr (CExpr.Set (result, thenCl, cty ty)) :: thenStmts
+  let elseStmts = CStmt.Expr (CExpr.Set (result, elseCl, cty ty)) :: elseStmts
   let acc = CStmt.Let (resultName, cty ty, None) :: acc
   let acc = CStmt.If (pred, List.rev thenStmts, List.rev elseStmts) :: acc
   result, acc, ctx
