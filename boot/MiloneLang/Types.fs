@@ -159,7 +159,7 @@ namespace rec MiloneLang
     | Str
       of string
     | Ref
-      of string
+      of string * CTy
     | Prim
       of CPrim
     | Call

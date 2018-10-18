@@ -73,7 +73,7 @@ let freshName (ctx: Ctx) (name: string) =
 
 let freshVar (ctx: Ctx) (name: string) (ty: CTy) =
   let name, ctx = freshName ctx name
-  name, CExpr.Ref name, ctx
+  name, CExpr.Ref (name, ty), ctx
 
 let genOpExpr acc ctx op first second ty loc =
   match op with
@@ -94,7 +94,7 @@ let genOpExpr acc ctx op first second ty loc =
     let second, acc, ctx = genExpr acc ctx second
     let name, ctx = freshName ctx "op"
     let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second, CTy.Int))) :: acc
-    CExpr.Ref name, acc, ctx
+    CExpr.Ref (name, ty), acc, ctx
 
 let genCall acc ctx callee args ty =
   match args with
@@ -128,7 +128,7 @@ let genLetVal acc ctx pat init =
     let name = uniqueName name serial
     let init, acc, ctx = genExpr acc ctx init
     let acc = CStmt.Let (name, cty ty, Some init) :: acc
-    CExpr.Ref name, acc, ctx
+    CExpr.Ref (name, cty ty), acc, ctx
   | _ ->
     failwith "In `let x = ..`, `x` must be an identifier for now."
 
@@ -198,8 +198,8 @@ let genExpr
     CExpr.Int 1, acc, ctx
   | Expr.Ref ("false", _, _) ->
     CExpr.Int 0, acc, ctx
-  | Expr.Ref (name, serial, _) ->
-    CExpr.Ref (uniqueName name serial), acc, ctx
+  | Expr.Ref (name, serial, (ty, _)) ->
+    CExpr.Ref (uniqueName name serial, cty ty), acc, ctx
   | Expr.If (pred, thenCl, elseCl, (ty, _)) ->
     genIfExpr acc ctx pred thenCl elseCl ty
   | Expr.Op (op, first, second, (ty, loc)) ->

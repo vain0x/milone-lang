@@ -59,7 +59,7 @@ let rec cprintExpr acc expr: string list =
     acc *- string value
   | CExpr.Str value ->
     acc *- "\"" *- value *- "\""
-  | CExpr.Ref value ->
+  | CExpr.Ref (value, _) ->
     acc *- value
   | CExpr.Prim CPrim.Malloc ->
     acc *- "malloc"
