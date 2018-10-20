@@ -65,8 +65,10 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Int
     | Ty.Str ->
       true
-    | Ty.Fun (sty, tty) ->
-      go sty && go tty
+    | Ty.Fun (sTy, tTy) ->
+      go sTy && go tTy
+    | Ty.Tuple (lTy, rTy) ->
+      go lTy && go rTy
     | Ty.Var tv ->
       tv <> tyVar
   go ty
@@ -83,6 +85,8 @@ let isMonomorphic ctx ty: bool =
     false
   | Ty.Fun (sTy, tTy) ->
     isMonomorphic ctx sTy && isMonomorphic ctx tTy
+  | Ty.Tuple (lTy, rTy) ->
+    isMonomorphic ctx lTy && isMonomorphic ctx rTy
 
 /// Adds type-var/type binding.
 let bindTy (ctx: TyCtx) tyVar ty: TyCtx =
@@ -104,6 +108,8 @@ let substTy (ctx: TyCtx) ty: Ty =
       ty
     | Ty.Fun (sty, tty) ->
       Ty.Fun (go sty, go tty)
+    | Ty.Tuple (lTy, rTy) ->
+      Ty.Tuple (go lTy, go rTy)
     | Ty.Var tyVar ->
       let ty2 = resolveTyVar tyVar ctx
       if ty = ty2 then ty else go ty2
@@ -122,6 +128,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       go rty lty ctx
     | Ty.Fun (lSTy, lTTy), Ty.Fun (rSTy, rTTy) ->
       ctx |> go lSTy rSTy |> go lTTy rTTy
+    | Ty.Tuple (llTy, lrTy), Ty.Tuple (rlTy, rrTy) ->
+      ctx |> go llTy rlTy |> go lrTy rrTy
     | Ty.Unit, Ty.Unit
     | Ty.Bool, Ty.Bool
     | Ty.Int, Ty.Int
@@ -133,7 +141,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Bool, _
     | Ty.Int _, _
     | Ty.Str _, _
-    | Ty.Fun _, _ ->
+    | Ty.Fun _, _
+    | Ty.Tuple _, _ ->
       let lty, rty = substTy ctx lty, substTy ctx rty
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
@@ -142,13 +151,13 @@ let inferPat ctx pat =
   match pat with
   | Pat.Unit loc ->
     Pat.Unit (Ty.Unit, loc), ctx
+  | Pat.Ident (ident, _, loc) ->
+    let ident, serial, ty, ctx = freshVar ident ctx
+    Pat.Ident (ident, serial, (ty, loc)), ctx
   | Pat.Anno (pat, ty, _) ->
     let pat, ctx = inferPat ctx pat
     let ctx = unifyTy ctx (patTy pat) ty
     pat, ctx
-  | Pat.Ident (ident, _, loc) ->
-    let ident, serial, ty, ctx = freshVar ident ctx
-    Pat.Ident (ident, serial, (ty, loc)), ctx
 
 let inferRef (ctx: TyCtx) loc ident =
   match ctx.VarEnv |> Map.tryFind ident with
@@ -231,6 +240,12 @@ let inferOpLogic (ctx: TyCtx) loc op left right =
   let ctx = unifyTy ctx (tyOf expr) Ty.Bool
   expr, ctx
 
+let inferOpTie (ctx: TyCtx) loc op left right =
+  let left, ctx = inferExpr ctx left
+  let right, ctx = inferExpr ctx right
+  let tupleTy = Ty.Tuple (tyOf left, tyOf right)
+  Expr.Op (op, left, right, (tupleTy, loc)), ctx
+
 let inferOp (ctx: TyCtx) loc op left right =
   match op with
   | Op.Add
@@ -249,6 +264,8 @@ let inferOp (ctx: TyCtx) loc op left right =
   | Op.And
   | Op.Or ->
     inferOpLogic ctx loc op left right
+  | Op.Tie ->
+    inferOpTie ctx loc op left right
 
 let inferAnno ctx expr ty =
   let expr, ctx = inferExpr ctx expr

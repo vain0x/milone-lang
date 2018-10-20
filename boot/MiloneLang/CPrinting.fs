@@ -33,6 +33,10 @@ let rec cprintTy acc ty: string list =
   | CTy.Ptr ty ->
     let acc = cprintTy acc ty
     acc *- "*"
+  | CTy.Val ->
+    acc *- "Val"
+  | CTy.Tuple2 ->
+    acc *- "Tuple2"
 
 let rec cprintParams acc ps: string list =
   let rec go acc ps =
@@ -59,12 +63,26 @@ let rec cprintExpr acc expr: string list =
     acc *- string value
   | CExpr.Str value ->
     acc *- "\"" *- value *- "\""
+  | CExpr.Val (expr, variant, ty) ->
+    let acc = acc *- "(Val) { ." *- variant *- " = "
+    let acc = cprintExpr acc expr
+    acc *- " }"
   | CExpr.Ref (value, _) ->
     acc *- value
   | CExpr.Prim CPrim.Malloc ->
     acc *- "malloc"
   | CExpr.Prim CPrim.Printf ->
     acc *- "printf"
+  | CExpr.Arrow (left, field, _) ->
+    let acc = cprintExpr acc left
+    acc *- "->" *- field
+  | CExpr.Cast (expr, ty) ->
+    let acc = acc *- "(("
+    let acc = cprintTy acc ty
+    let acc = acc *- ")"
+    let acc = cprintExpr acc expr
+    let acc = acc *- ")"
+    acc
   | CExpr.Op (op, first, second, _) ->
     let acc = acc *- "("
     let acc = cprintExpr acc first
@@ -106,6 +124,15 @@ let cprintStmt acc indent stmt: string list =
       | None ->
         acc
     acc *- ";" *- eol
+  | CStmt.LetTuple2 (name, l, r) ->
+    let acc = cprintTy acc CTy.Val
+    let acc = acc *- " " *- name *- " = (Val) { .t2 = malloc(sizeof(Tuple2)) };" *- eol *- indent
+    let acc = acc *- "*" *- name *- ".t2 = (Tuple2) { "
+    let acc = cprintExpr acc l
+    let acc = acc *- ", "
+    let acc = cprintExpr acc r
+    let acc = acc *- " };" *- eol
+    acc
   | CStmt.If (pred, thenStmts, elseStmts) ->
     let acc = acc *- "if ("
     let acc = cprintExpr acc pred
@@ -149,6 +176,11 @@ let rec cprintDecls acc decls =
 let cprintHeader acc =
   acc
     *- "#include <stdio.h>" *- eol
+    *- "#include <stdlib.h>" *- eol
+    *- eol
+    *- "struct Tuple2;" *- eol
+    *- "typedef union Val { int i; char* s; struct Tuple2* t2; } Val;" *- eol
+    *- "typedef struct Tuple2 { Val t0, t1; } Tuple2;" *- eol
     *- eol
 
 let cprintRun (printer: string list -> string list): string =

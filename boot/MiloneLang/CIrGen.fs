@@ -34,11 +34,26 @@ let cty ty: CTy =
     CTy.Ptr CTy.Char
   | Ty.Fun _ ->
     CTy.Ptr CTy.Void
+  | Ty.Tuple _ ->
+    CTy.Val
   | Ty.Var _ ->
     failwith "Type vars must be resolved in type inference phase."
 
 let ctyOf expr =
   cty (tyOf expr)
+
+let cexprTy expr =
+  match expr with
+  | CExpr.Int _ -> CTy.Int
+  | CExpr.Str _ -> CTy.Ptr CTy.Char
+  | CExpr.Val _ -> CTy.Val
+  | CExpr.Ref (_, ty)
+  | CExpr.Arrow (_, _, ty)
+  | CExpr.Cast (_, ty)
+  | CExpr.Op (_, _, _, ty)
+  | CExpr.Call (_, _, ty)
+  | CExpr.Set (_, _, ty) -> ty
+  | CExpr.Prim _ -> failwith "unimpl"
 
 let cop op =
   match op with
@@ -54,7 +69,8 @@ let cop op =
   | Op.Gt -> COp.Gt
   | Op.Ge -> COp.Ge
   | Op.And
-  | Op.Or -> failwith "We don't use && || in C language"
+  | Op.Or
+  | Op.Tie -> failwith "We don't use '&&' '||' ',' in C language"
 
 let cexprUnit = CExpr.Int 0
 
@@ -75,6 +91,24 @@ let freshVar (ctx: Ctx) (name: string) (ty: CTy) =
   let name, ctx = freshName ctx name
   name, CExpr.Ref (name, ty), ctx
 
+/// Generates and converts to Val.
+let genExprVal acc ctx expr =
+  let expr, acc, ctx = genExpr acc ctx expr
+  let ty = cexprTy expr
+  match ty with
+  | CTy.Val ->
+    expr, acc, ctx
+  | CTy.Int ->
+    CExpr.Val (expr, "i", ty), acc, ctx
+  | CTy.Ptr CTy.Char ->
+    CExpr.Val (expr, "s", ty), acc, ctx
+  | CTy.Tuple2 ->
+    CExpr.Val (expr, "t2", ty), acc, ctx
+  | CTy.Void
+  | CTy.Char
+  | CTy.Ptr _ ->
+    failwith "unimpl"
+
 let genOpExpr acc ctx op first second ty loc =
   match op with
   | Op.And ->
@@ -87,6 +121,12 @@ let genOpExpr acc ctx op first second ty loc =
     let trueLit = Expr.Ref ("true", 0, (Ty.Bool, loc))
     let expr = Expr.If (first, trueLit, second, (ty, loc))
     genExpr acc ctx expr
+  | Op.Tie ->
+    let first, acc, ctx = genExprVal acc ctx first
+    let second, acc, ctx = genExprVal acc ctx second
+    let tempName, temp, ctx = freshVar ctx "t" CTy.Val
+    let acc = CStmt.LetTuple2 (tempName, first, second) :: acc
+    temp, acc, ctx
   | _ ->
     // Currently no support of non-int add/cmp/etc.
     let ty = CTy.Int
@@ -155,8 +195,11 @@ let genExprAsStmt acc ctx expr =
   match expr with
   | CExpr.Int _
   | CExpr.Str _
+  | CExpr.Val _
   | CExpr.Ref _
   | CExpr.Prim _
+  | CExpr.Arrow _
+  | CExpr.Cast _
   | CExpr.Op _ ->
     // Ignore pure expression.
     acc, ctx

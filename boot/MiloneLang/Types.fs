@@ -39,6 +39,8 @@ namespace rec MiloneLang
       of string
     | Fun
       of Ty * Ty
+    | Tuple
+      of Ty * Ty
 
   [<RequireQualifiedAccess>]
   /// Primitive function.
@@ -53,6 +55,7 @@ namespace rec MiloneLang
     | Cmp
     | And
     | Or
+    | Tie
 
   [<RequireQualifiedAccess>]
   type Op =
@@ -75,6 +78,8 @@ namespace rec MiloneLang
     | Ge
     | And
     | Or
+    /// Comma to make a tuple
+    | Tie
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
@@ -125,6 +130,10 @@ namespace rec MiloneLang
     | Char
     | Ptr
       of CTy
+    /// Union of primitive types. Defined by emitted code.
+    | Val
+    /// Pair of `Val`s.
+    | Tuple2
 
   [<RequireQualifiedAccess>]
   type CPrim =
@@ -158,10 +167,18 @@ namespace rec MiloneLang
       of int
     | Str
       of string
+    /// `(Val) { .. }`
+    | Val
+      of CExpr * variant:string * CTy
     | Ref
       of string * CTy
     | Prim
       of CPrim
+    /// `x->y`
+    | Arrow
+      of CExpr * field:string * CTy
+    | Cast
+      of CExpr * CTy
     | Call
       of CExpr * args:CExpr list * CTy
     | Op
@@ -178,6 +195,9 @@ namespace rec MiloneLang
     /// `T x = a;`
     | Let
       of name:string * ty:CTy * init:CExpr option
+    /// `Val v = { .ptr = (heap-allocated (l, r)) }`
+    | LetTuple2
+      of name:string * CExpr * CExpr
     | Return
       of CExpr option
     | If

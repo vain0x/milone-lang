@@ -177,6 +177,7 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
   | _ ->
     failwith "never"
 
+/// pat-anno = pat-atom ( ':' ty )?
 let parsePatAnno boxX tokens =
   match parsePatAtom boxX tokens with
   | pat, (Token.Colon, loc) :: tokens ->
@@ -299,6 +300,7 @@ let parseCall boxX tokens =
 
 let parseNextLevelOp level outer tokens =
   match level with
+  | OpLevel.Tie -> parseOp OpLevel.Or outer tokens
   | OpLevel.Or -> parseOp OpLevel.And outer tokens
   | OpLevel.And -> parseOp OpLevel.Cmp outer tokens
   | OpLevel.Cmp -> parseOp OpLevel.Add outer tokens
@@ -311,6 +313,8 @@ let rec parseOps level boxX expr tokens =
     let expr = Expr.Op (op, expr, second, opLoc)
     parseOps level boxX expr tokens
   match level, tokens with
+  | OpLevel.Tie, (Token.Punct ",", opLoc) :: tokens ->
+    next expr Op.Tie opLoc tokens
   | OpLevel.Or, (Token.Punct "||", opLoc) :: tokens ->
     next expr Op.Or opLoc tokens
   | OpLevel.And, (Token.Punct "&&", opLoc) :: tokens ->
@@ -346,7 +350,7 @@ let parseOp level boxX tokens =
   parseOps level boxX first tokens
 
 let parseTerm boxX tokens =
-  parseOp OpLevel.Or boxX tokens
+  parseOp OpLevel.Tie boxX tokens
 
 /// anno = term ( ':' ty )?
 let parseAnno boxX tokens =
