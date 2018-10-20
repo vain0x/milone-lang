@@ -1,87 +1,73 @@
 /// Generates CIR from AST.
 module rec MiloneLang.CIrGen
 
+type MirCtx = Mir.MirCtx
+
 /// IR generation context.
 [<RequireQualifiedAccess>]
 type Ctx =
   {
     VarSerial: int
+    VarName: Map<int, string>
+    Stmts: CStmt list
     Decls: CDecl list
   }
 
-let ctxFromTyCtx (tyCtx: Typing.TyCtx): Ctx =
+let ctxFromMirCtx (mirCtx: MirCtx): Ctx =
   {
-    VarSerial = tyCtx.VarSerial
+    VarSerial = mirCtx.VarSerial
+    VarName = mirCtx.VarName
+    Stmts = []
     Decls = []
   }
 
-let ctxRollBack _bCtx dCtx =
-  dCtx
+let ctxNewBlock (ctx: Ctx) =
+  { ctx with Stmts = [] }
+
+let ctxRollBack (bCtx: Ctx) (dCtx: Ctx) =
+  { dCtx with Stmts = bCtx.Stmts }
+
+let ctxAddStmt (ctx: Ctx) stmt =
+  { ctx with Stmts = stmt :: ctx.Stmts }
 
 let ctxAddDecl (ctx: Ctx) decl =
   { ctx with Decls = decl :: ctx.Decls }
 
+let ctxUniqueName (ctx: Ctx) serial =
+  let ident =
+    match ctx.VarName |> Map.tryFind serial with
+    | Some ident -> ident
+    | None -> ""
+  sprintf "%s_%d" ident serial
+
 let tyOf expr =
   Typing.tyOf expr
 
-let cty ty: CTy =
+let cty (ty: MTy): CTy =
   match ty with
-  | Ty.Unit
-  | Ty.Bool
-  | Ty.Int ->
+  | MTy.Unit
+  | MTy.Bool
+  | MTy.Int ->
     CTy.Int
-  | Ty.Str ->
+  | MTy.Str ->
     CTy.Ptr CTy.Char
-  | Ty.Fun _ ->
+  | MTy.Fun _ ->
     CTy.Ptr CTy.Void
-  | Ty.Tuple (lTy, rTy) ->
-    CTy.Val (CValTy.Tuple [cty lTy; cty rTy])
-  | Ty.Var _ ->
-    failwith "Type vars must be resolved in type inference phase."
+  | MTy.Box boxTy ->
+    CTy.Box (cboxTy boxTy)
 
-let ctyOf expr =
-  cty (tyOf expr)
-
-let cexprTy expr =
-  match expr with
-  | CExpr.Int _ -> CTy.Int
-  | CExpr.Str _ -> CTy.Ptr CTy.Char
-  | CExpr.Val (_, vTy) -> CTy.Val vTy
-  | CExpr.Ref (_, ty)
-  | CExpr.Arrow (_, _, ty)
-  | CExpr.Cast (_, ty)
-  | CExpr.Op (_, _, _, ty)
-  | CExpr.Call (_, _, ty)
-  | CExpr.Set (_, _, ty) -> ty
-  | CExpr.Prim _ -> failwith "unimpl"
-
-/// Gets CValTy from target of a function type.
-let targetValTy ty =
+let cboxTy (ty: MBoxTy): CBoxTy =
   match ty with
-  | Ty.Fun (_, tTy) ->
-    match cty tTy with
-    | CTy.Int -> CValTy.Int
-    | CTy.Ptr CTy.Char -> CValTy.Str
-    | CTy.Val vTy -> vTy
-    | _ -> failwith "unimpl"
-  | _ -> failwithf "Unexpected %A" ty
-
-let cop op =
-  match op with
-  | Op.Add -> COp.Add
-  | Op.Sub -> COp.Sub
-  | Op.Mul -> COp.Mul
-  | Op.Div -> COp.Div
-  | Op.Mod -> COp.Mod
-  | Op.Eq -> COp.Eq
-  | Op.Ne -> COp.Ne
-  | Op.Lt -> COp.Lt
-  | Op.Le -> COp.Le
-  | Op.Gt -> COp.Gt
-  | Op.Ge -> COp.Ge
-  | Op.And
-  | Op.Or
-  | Op.Tie -> failwith "We don't use '&&' '||' ',' in C language"
+  | MBoxTy.Unit
+  | MBoxTy.Bool
+  | MBoxTy.Int ->
+    CBoxTy.Int
+  | MBoxTy.Str ->
+    CBoxTy.Str
+  | MBoxTy.Fun _ ->
+    CBoxTy.Int // FIXME: what if function boxed?
+  | MBoxTy.Tuple (lTy, rTy) ->
+    CBoxTy.Tuple [cty lTy; cty rTy]
 
 let cexprUnit = CExpr.Int 0
 
@@ -89,218 +75,203 @@ let callPrintf format args =
   let format = CExpr.Str (format + "\\n")
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args, CTy.Int))
 
-let uniqueName name serial =
-  sprintf "%s_%d" name serial
-
-let freshName (ctx: Ctx) (name: string) =
+let ctxFreshName (ctx: Ctx) (ident: string) =
   let serial = ctx.VarSerial + 1
-  let name = uniqueName name serial
-  let ctx = { ctx with VarSerial = ctx.VarSerial + 1 }
-  name, ctx
+  let ctx =
+    {
+      ctx with
+        VarSerial = ctx.VarSerial + 1
+        VarName = ctx.VarName |> Map.add serial ident
+    }
+  let ident = ctxUniqueName ctx serial
+  ident, ctx
 
-let freshVar (ctx: Ctx) (name: string) (ty: CTy) =
-  let name, ctx = freshName ctx name
+let ctxFreshVar (ctx: Ctx) (name: string) (ty: CTy) =
+  let name, ctx = ctxFreshName ctx name
   name, CExpr.Ref (name, ty), ctx
 
-/// Generates and converts to Val.
-let genExprVal acc ctx expr =
-  let expr, acc, ctx = genExpr acc ctx expr
-  let ty = cexprTy expr
+let genExprIf ctx pred thenCl elseCl _ty =
+  let pred, ctx = genExpr ctx pred
+  let thenCl, ctx = genExpr ctx thenCl
+  let elseCl, ctx = genExpr ctx elseCl
+  CExpr.If (pred, thenCl, elseCl), ctx
+
+let genExprBox ctx expr (ty, _) =
+  let expr, ctx = genExpr ctx expr
   match ty with
-  | CTy.Val vTy ->
-    expr, vTy, acc, ctx
-  | CTy.Int ->
-    CExpr.Val (expr, CValTy.Int), CValTy.Int, acc, ctx
-  | CTy.Ptr CTy.Char ->
-    CExpr.Val (expr, CValTy.Str), CValTy.Str, acc, ctx
-  | CTy.Void
-  | CTy.Char
-  | CTy.Ptr _ ->
-    failwith "unimpl"
+  | MTy.Unit
+  | MTy.Bool
+  | MTy.Int ->
+    CExpr.Box (expr, CBoxTy.Int), ctx
+  | MTy.Str ->
+    CExpr.Box (expr, CBoxTy.Str), ctx
+  | MTy.Fun _ ->
+    failwith "unimpl boxing of functions"
+  | MTy.Box _ ->
+    expr, ctx
 
-let genOpExpr acc ctx op first second ty loc =
-  match op with
-  | Op.And ->
-    // l && r ---> if l then r else false
-    let falseLit = Expr.Ref ("false", 0, (Ty.Bool, loc))
-    let expr = Expr.If (first, second, falseLit, (ty, loc))
-    genExpr acc ctx expr
-  | Op.Or ->
-    // l || r ---> if l then true else r
-    let trueLit = Expr.Ref ("true", 0, (Ty.Bool, loc))
-    let expr = Expr.If (first, trueLit, second, (ty, loc))
-    genExpr acc ctx expr
-  | Op.Tie ->
-    let first, firstVTy, acc, ctx = genExprVal acc ctx first
-    let second, secondVTy, acc, ctx = genExprVal acc ctx second
-    let tupleTy = CTy.Val (CValTy.Tuple [CTy.Val firstVTy; CTy.Val secondVTy])
-    let tempName, temp, ctx = freshVar ctx "t" tupleTy
-    let acc = CStmt.LetTuple2 (tempName, first, second) :: acc
-    temp, acc, ctx
-  | _ ->
-    // Currently no support of non-int add/cmp/etc.
-    let ty = CTy.Int
-    let first, acc, ctx = genExpr acc ctx first
-    let second, acc, ctx = genExpr acc ctx second
-    let name, ctx = freshName ctx "op"
-    let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second, CTy.Int))) :: acc
-    CExpr.Ref (name, ty), acc, ctx
+/// `((Val)v).t[i]`
+let genExprUnbox ctx expr index (ty, _) =
+  let expr, ctx = genExpr ctx expr
+  let valTy =
+    match ty with
+    | MTy.Unit
+    | MTy.Bool
+    | MTy.Int ->
+      CBoxTy.Int
+    | MTy.Str ->
+      CBoxTy.Str
+    | MTy.Fun _ ->
+      failwith "unimpl unboxing functions"
+    | MTy.Box _ ->
+      failwith "Don't unbox from box to box."
+  CExpr.Unbox (expr, index, valTy, cty ty), ctx
 
-let genCall acc ctx callee args ty =
+let genExprCall ctx callee args ty =
   match args with
   | [arg] ->
-    let callee, acc, ctx = genExpr acc ctx callee
-    let arg, acc, ctx = genExpr acc ctx arg
-    CExpr.Call (callee, [arg], cty ty), acc, ctx
+    let callee, ctx = genExpr ctx callee
+    let arg, ctx = genExpr ctx arg
+    CExpr.Call (callee, [arg], cty ty), ctx
   | [arg1; arg2] ->
-    let callee, acc, ctx = genExpr acc ctx callee
-    let arg2, acc, ctx = genExpr acc ctx arg2
-    let arg1, acc, ctx = genExpr acc ctx arg1
-    CExpr.Call (callee, [arg1; arg2], cty ty), acc, ctx
+    let callee, ctx = genExpr ctx callee
+    let arg2, ctx = genExpr ctx arg2
+    let arg1, ctx = genExpr ctx arg1
+    CExpr.Call (callee, [arg1; arg2], cty ty), ctx
   | [] ->
     failwith "Never zero-arg call"
   | _ ->
     failwith "unimpl call with 2+ args"
 
-/// if pred then thenCl else elseCl ->
-/// T result;
-/// if (pred) { ..; result = thenCl; } else { ..; result = elseCl; }
-/// ..(result)
-let genIfExpr acc ctx pred thenCl elseCl ty =
-  let resultName, result, ctx = freshVar ctx "if" (cty ty)
-  let pred, acc, ctx = genExpr acc ctx pred
-  let thenCl, thenStmts, ctx = genExpr [] ctx thenCl
-  let elseCl, elseStmts, ctx = genExpr [] ctx elseCl
-  let thenStmts = CStmt.Expr (CExpr.Set (result, thenCl, cty ty)) :: thenStmts
-  let elseStmts = CStmt.Expr (CExpr.Set (result, elseCl, cty ty)) :: elseStmts
-  let acc = CStmt.Let (resultName, cty ty, None) :: acc
-  let acc = CStmt.If (pred, List.rev thenStmts, List.rev elseStmts) :: acc
-  result, acc, ctx
+let genExprOp ctx op first second ty loc =
+  // Currently no support of non-int add/cmp/etc.
+  let ty = CTy.Int
+  let first, ctx = genExpr ctx first
+  let second, ctx = genExpr ctx second
+  // let tempIdent, temp, ctx = ctxFreshVar ctx "op" ty
+  let opExpr = CExpr.Op (op, first, second, ty)
+  // let ctx = ctxAddStmt ctx (CStmt.Let (tempIdent, Some opExpr, ty))
+  // temp, ctx
+  opExpr, ctx
 
-let genLetVal acc ctx pat init =
-  match pat with
-  | Pat.Ident (name, serial, (ty, _)) ->
-    let name = uniqueName name serial
-    let init, acc, ctx = genExpr acc ctx init
-    let acc = CStmt.Let (name, cty ty, Some init) :: acc
-    CExpr.Ref (name, cty ty), acc, ctx
-  | _ ->
-    failwith "In `let x = ..`, `x` must be an identifier for now."
-
-let genLetFun acc ctx callee pats body =
-  match callee, pats with
-  | Pat.Ident (name, serial, (_, _)),
-    [Pat.Ident (paramName, paramSerial, (paramTy, _))] ->
-    let name = uniqueName name serial
-    let result, body, ctx = genExpr [] ctx body
-    let body = CStmt.Return (Some result) :: body
-    let decl =
-      CDecl.Fun {
-        Name = name
-        Params = [uniqueName paramName paramSerial, cty paramTy]
-        Body = List.rev body
-      }
-    let ctx = ctxAddDecl ctx decl
-    cexprUnit, acc, ctx
-  | _ ->
-    failwith "In `let f () = ..`, `f` must be an identifier for now."
-
-/// Generates an expression that is immediately ignored.
-let genExprAsStmt acc ctx expr =
-  match expr with
-  | CExpr.Int _
-  | CExpr.Str _
-  | CExpr.Val _
-  | CExpr.Ref _
-  | CExpr.Prim _
-  | CExpr.Arrow _
-  | CExpr.Cast _
-  | CExpr.Op _ ->
-    // Ignore pure expression.
-    acc, ctx
-  | CExpr.Call _
-  | CExpr.Set _ ->
-    CStmt.Expr expr :: acc, ctx
-
-let genAndThen acc ctx expr exprs =
-  let rec go acc ctx expr exprs =
-    match genExpr acc ctx expr, exprs with
-    | (result, acc, ctx), [] ->
-      result, acc, ctx
-    | (result, acc, ctx), expr :: exprs ->
-      let acc, ctx = genExprAsStmt acc ctx result
-      go acc ctx expr exprs
-  go acc ctx expr exprs
-
-let genExprList acc ctx exprs =
-  let rec go results acc ctx exprs =
+let genExprList ctx exprs =
+  let rec go results ctx exprs =
     match exprs with
     | [] -> List.rev results, ctx
     | expr :: exprs ->
-      let result, acc, ctx = genExpr acc ctx expr
-      go (result :: results) acc ctx exprs
-  go [] acc ctx exprs
+      let result, ctx = genExpr ctx expr
+      go (result :: results) ctx exprs
+  go [] ctx exprs
 
-let genExpr
-  (acc: CStmt list) (ctx: Ctx) (arg: Expr<Ty * Loc>)
-  : CExpr * CStmt list * Ctx =
+let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
   match arg with
-  | Expr.AndThen ([], _)
-  | Expr.Unit _ ->
-    cexprUnit, acc, ctx
-  | Expr.Int (value, _) ->
-    CExpr.Int value, acc, ctx
-  | Expr.Str (value, _) ->
-    CExpr.Str value, acc, ctx
-  | Expr.Prim (PrimFun.Fst, (fstFnTy, _)) ->
-    CExpr.Prim (CPrim.Tuple (targetValTy fstFnTy)), acc, ctx
-  | Expr.Ref ("true", _, _) ->
-    CExpr.Int 1, acc, ctx
-  | Expr.Ref ("false", _, _) ->
-    CExpr.Int 0, acc, ctx
-  | Expr.Ref (name, serial, (ty, _)) ->
-    CExpr.Ref (uniqueName name serial, cty ty), acc, ctx
-  | Expr.If (pred, thenCl, elseCl, (ty, _)) ->
-    genIfExpr acc ctx pred thenCl elseCl ty
-  | Expr.Op (op, first, second, (ty, loc)) ->
-    genOpExpr acc ctx op first second ty loc
-  | Expr.Call (Expr.Prim (PrimFun.Printfn, _), (Expr.Str (format, _)) :: args, _) ->
-    let args, ctx = genExprList acc ctx args
-    let acc = callPrintf format args :: acc
-    cexprUnit, acc, ctx
-  | Expr.Call (Expr.Prim (PrimFun.Fst, _) as callee, [arg], (ty, loc)) ->
-    let args = [arg; Expr.Int (0,( Ty.Int, loc))]
-    genCall acc ctx callee args ty
-  | Expr.Call (callee, args, (ty, _)) ->
-    genCall acc ctx callee args ty
-  | Expr.AndThen (expr :: exprs, _) ->
-    genAndThen acc ctx expr exprs
-  | Expr.Let ([pat], init, _) ->
-    genLetVal acc ctx pat init
-  | Expr.Let (callee :: pats, body, _) ->
-    genLetFun acc ctx callee pats body
-  | Expr.Let ([], _, _) ->
-    failwith "Never zero-patterns let"
-  | Expr.Anno _ ->
-    failwith "Never type annotation expr after typing"
-  | Expr.Prim _
-  | Expr.Call _
-  | Expr.Let _ ->
+  | MExpr.Unit _ ->
+    cexprUnit, ctx
+  | MExpr.Int (value, _) ->
+    CExpr.Int value, ctx
+  | MExpr.Str (value, _) ->
+    CExpr.Str value, ctx
+  | MExpr.Bool (false, _) ->
+    CExpr.Int 0, ctx
+  | MExpr.Bool (true, _) ->
+    CExpr.Int 1, ctx
+  | MExpr.Ref (_, (MTy.Unit, _)) ->
+    cexprUnit, ctx
+  | MExpr.Ref (serial, (ty, _)) ->
+    CExpr.Ref (ctxUniqueName ctx serial, cty ty), ctx
+  | MExpr.If (pred, thenCl, elseCl, (ty, _)) ->
+    genExprIf ctx pred thenCl elseCl ty
+  | MExpr.Box (expr, a) ->
+    genExprBox ctx expr a
+  | MExpr.Unbox (expr, index, a) ->
+    genExprUnbox ctx expr index a
+  | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _) ->
+    let args, ctx = genExprList ctx args
+    let ctx = ctxAddStmt ctx (callPrintf format args)
+    cexprUnit, ctx
+  | MExpr.Call (callee, args, (ty, _)) ->
+    genExprCall ctx callee args ty
+  | MExpr.Op (op, first, second, (ty, loc)) ->
+    genExprOp ctx op first second ty loc
+  | MExpr.Prim _
+  | MExpr.Call _ ->
     failwithf "unimpl %A" arg
 
-let gen (exprs: Expr<Ty * _> list, tyCtx: Typing.TyCtx): CDecl list =
-  let ctx = ctxFromTyCtx tyCtx
-  match exprs with
-  | [Expr.Let ([Pat.Ident ("main", _, _); Pat.Unit _], body, _)] ->
-    let result, acc, bodyCtx = genExpr [] ctx body
-    let ctx = ctxRollBack ctx bodyCtx
-    let acc = CStmt.Return (Some result) :: acc
-    let decl =
-      CDecl.Fun {
-        Name = "main"
-        Params = []
-        Body = List.rev acc
-      }
-    List.rev (decl :: ctx.Decls)
-  | _ ->
-    failwith "unimpl"
+let genStmt ctx stmt =
+  match stmt with
+  | MStmt.Expr _ ->
+    // No side-effect.
+    ctx
+  | MStmt.LetVal (serial, init, (ty, _)) ->
+    let ident = ctxUniqueName ctx serial
+    let init, ctx =
+      match init with
+      | None -> None, ctx
+      | Some init ->
+        let init, ctx = genExpr ctx init
+        Some init, ctx
+    ctxAddStmt ctx (CStmt.Let (ident, init, cty ty))
+  | MStmt.LetBox (serial, elems, (ty, _)) ->
+    let ident = ctxUniqueName ctx serial
+    let ctx = ctxAddStmt ctx (CStmt.LetBox (ident, List.length elems))
+    let left = CExpr.Ref (ident, cty ty)
+    let rec go ctx i elems =
+      match elems with
+      | [] ->
+        ctx
+      | (elem, elemA) :: elems ->
+        let elem, ctx = genExprBox ctx elem elemA
+        let stmt = CStmt.Emplace (left, i, elem)
+        let ctx = ctxAddStmt ctx stmt
+        go ctx (i + 1) elems
+    go ctx 0 elems
+  | MStmt.Set (serial, right, (ty, _)) ->
+    let right, ctx = genExpr ctx right
+    let ident = ctxUniqueName ctx serial
+    let left = CExpr.Ref (ident, cty ty)
+    ctxAddStmt ctx (CStmt.Set (left, right, cty ty))
+  | MStmt.Return (expr, _) ->
+    let expr, ctx = genExpr ctx expr
+    ctxAddStmt ctx (CStmt.Return (Some expr))
+  | MStmt.If (pred, thenCl, elseCl, _a) ->
+    let pred, ctx = genExpr ctx pred
+    let thenCl, ctx = genBlock ctx thenCl
+    let elseCl, ctx = genBlock ctx elseCl
+    let ctx = ctxAddStmt ctx (CStmt.If (pred, thenCl, elseCl))
+    ctx
+
+let genBlock (ctx: Ctx) (stmts: MStmt<_> list) =
+  let bodyCtx = genStmts (ctxNewBlock ctx) stmts
+  let stmts = bodyCtx.Stmts
+  let ctx = ctxRollBack ctx bodyCtx
+  List.rev stmts, ctx
+
+let genStmts (ctx: Ctx) (stmts: MStmt<_> list): Ctx =
+  let rec go ctx stmts =
+    match stmts with
+    | [] -> ctx
+    | stmt :: stmts ->
+      let ctx = genStmt ctx stmt
+      go ctx stmts
+  go ctx stmts
+
+let genDecls (ctx: Ctx) decls =
+  match decls with
+  | [] ->
+    ctx.Decls |> List.rev
+  | MDecl.LetFun (callee, args, resultTy, body, _) :: decls ->
+    let ident, args =
+      if List.isEmpty decls
+      then "main", []
+      else ctxUniqueName ctx callee, args
+    let args =
+      List.map (fun (arg, (ty, _)) -> ctxUniqueName ctx arg, cty ty) args
+    let body, _ctx = genBlock ctx body
+    let funDecl = CDecl.Fun (ident, args, cty resultTy, body)
+    let ctx = ctxAddDecl ctx funDecl
+    genDecls ctx decls
+
+let gen (mirCtx: MirCtx): CDecl list =
+  let ctx = ctxFromMirCtx mirCtx
+  let decls = List.rev mirCtx.Decls
+  genDecls ctx decls

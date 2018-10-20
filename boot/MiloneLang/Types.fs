@@ -123,36 +123,39 @@ namespace rec MiloneLang
     | Let
       of pats:Pat<'a> list * init:Expr<'a> * 'a
 
-  /// Variant of union `Val`.
+  /// Type in middle IR.
+  /// These have statically fixed size to be placed on stack.
   [<RequireQualifiedAccess>]
-  type CValTy =
+  type MTy =
+    | Unit
+    | Bool
     | Int
     | Str
-    | Tuple
-      of CTy list
+    | Fun
+      of MTy * MTy
+    | Box
+      of MBoxTy
 
-  /// Type in C language.
+  /// Type in middle IR.
+  /// This kind of values may have dynamic size, so you can't use directly.
   [<RequireQualifiedAccess>]
-  type CTy =
-    | Void
+  type MBoxTy =
+    | Unit
+    | Bool
     | Int
-    | Char
-    | Ptr
-      of CTy
-    /// Union of primitive types. Defined by emitted code.
-    | Val
-      of CValTy
-
-  [<RequireQualifiedAccess>]
-  type CPrim =
-    | Malloc
-    | Printf
-    /// Gets an element of tuple.
+    | Str
+    | Fun
+      of MTy * MTy
     | Tuple
-      of CValTy
+      of MTy * MTy
 
   [<RequireQualifiedAccess>]
-  type COp =
+  type MPrim =
+    | Printfn
+
+  /// Operator in middle IR.
+  [<RequireQualifiedAccess>]
+  type MOp =
     | Add
     | Sub
     | Mul
@@ -171,6 +174,90 @@ namespace rec MiloneLang
     /// Greater than or equal to
     | Ge
 
+  /// Expression in middle IR.
+  [<RequireQualifiedAccess>]
+  type MExpr<'a> =
+    | Unit
+      of 'a
+    | Bool
+      of bool * 'a
+    | Int
+      of int * 'a
+    | Str
+      of string * 'a
+    /// Primitive.
+    | Prim
+      of MPrim * 'a
+    /// Variable reference.
+    | Ref
+      of serial:int * 'a
+    | If
+      of pred:MExpr<'a> * thenInit:MExpr<'a> * elseInit:MExpr<'a> * 'a
+    /// Wrap value with box (heap allocated container).
+    | Box
+      of MExpr<'a> * 'a
+    /// Get value from a box.
+    | Unbox
+      of MExpr<'a> * int * 'a
+    | Call
+      of callee:MExpr<'a> * args:MExpr<'a> list * 'a
+    | Op
+      of MOp * left:MExpr<'a> * right:MExpr<'a> * 'a
+
+  /// Statement in middle IR.
+  [<RequireQualifiedAccess>]
+  type MStmt<'a> =
+    /// Expression statement.
+    | Expr
+      of MExpr<'a> * 'a
+    /// Local variable declaration.
+    | LetVal
+      of serial:int * init:MExpr<'a> option * 'a
+    /// Declare box variable and emplace contents.
+    | LetBox
+      of serial:int * elems:(MExpr<'a> * 'a) list * 'a
+    /// Set to local variable.
+    | Set
+      of serial:int * init:MExpr<'a> * 'a
+    | Return
+      of MExpr<'a> * 'a
+    | If
+      of pred:MExpr<'a> * thenCl:MStmt<'a> list * elseCl:MStmt<'a> list * 'a
+
+  /// Declaration in middle IR.
+  [<RequireQualifiedAccess>]
+  type MDecl<'a> =
+    | LetFun
+      of callee:int * args:(int * 'a) list * result:MTy * body:MStmt<'a> list * 'a
+
+  /// Variant of union `Val`.
+  [<RequireQualifiedAccess>]
+  type CBoxTy =
+    | Int
+    | Str
+    | Tuple
+      of CTy list
+
+  /// Type in C language.
+  [<RequireQualifiedAccess>]
+  type CTy =
+    | Void
+    | Int
+    | Char
+    | Ptr
+      of CTy
+    /// Union of primitive types. Defined by emitted code.
+    | Box
+      of CBoxTy
+
+  [<RequireQualifiedAccess>]
+  type CPrim =
+    | Malloc
+    | Printf
+
+  [<RequireQualifiedAccess>]
+  type COp = MOp
+
   /// Expression in C language.
   [<RequireQualifiedAccess>]
   type CExpr =
@@ -178,24 +265,25 @@ namespace rec MiloneLang
       of int
     | Str
       of string
-    /// `(Val) { .. }`
-    | Val
-      of CExpr * CValTy
-    | Ref
-      of string * CTy
     | Prim
       of CPrim
-    /// `x->y`
-    | Arrow
-      of CExpr * field:string * CTy
+    | Ref
+      of string * CTy
+    /// Wrap with Box.
+    | Box
+      of CExpr * CBoxTy
+    /// `x.y`
+    | Unbox
+      of CExpr * int * CBoxTy * CTy
     | Cast
       of CExpr * CTy
     | Call
       of CExpr * args:CExpr list * CTy
     | Op
       of COp * CExpr * CExpr * CTy
-    | Set
-      of CExpr * CExpr * CTy
+    /// pred ? t : e
+    | If
+      of pred:CExpr * thenCl:CExpr * elseCl:CExpr
 
   /// Statement in C language.
   [<RequireQualifiedAccess>]
@@ -205,26 +293,23 @@ namespace rec MiloneLang
       of CExpr
     /// `T x = a;`
     | Let
-      of name:string * ty:CTy * init:CExpr option
-    /// `Val v = { .ptr = (heap-allocated (l, r)) }`
-    | LetTuple2
-      of name:string * CExpr * CExpr
+      of ident:string * init:CExpr option * CTy
+    /// `x = a;`
+    | Set
+      of CExpr * CExpr * CTy
+    /// `Box b = {.t = ..}`
+    | LetBox
+      of ident:string * int
+    /// `((Box)b).t[i] = a;`
+    | Emplace
+      of CExpr * int * CExpr
     | Return
       of CExpr option
     | If
       of pred:CExpr * thenCl:CStmt list * elseCl:CStmt list
 
-  /// Function definition in C language.
-  [<RequireQualifiedAccess>]
-  type CFun =
-    {
-      Name: string
-      Params: (string * CTy) list
-      Body: CStmt list
-    }
-
   /// Top-level definition in C language.
   [<RequireQualifiedAccess>]
   type CDecl =
     | Fun
-      of CFun
+      of ident:string * args:(string * CTy) list * CTy * body:CStmt list

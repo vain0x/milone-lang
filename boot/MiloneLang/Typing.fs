@@ -8,6 +8,8 @@ type TyExpr = Expr<Ty * Loc>
 type TyCtx =
   {
     VarSerial: int
+    /// Identifier serial number to human readable name.
+    VarName: Map<int, string>
     /// Identifier to type and serial.
     VarEnv: Map<string, Ty * int>
     TySerial: int
@@ -53,6 +55,7 @@ let freshVar ident (ctx: TyCtx): string * int * Ty * TyCtx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
         VarEnv = ctx.VarEnv |> Map.add ident (ty, serial)
+        VarName = ctx.VarName |> Map.add serial ident
     }
   ident, serial, ty, ctx
 
@@ -385,6 +388,7 @@ let infer (exprs: Expr<Loc> list): Expr<Ty * Loc> list * TyCtx =
   let ctx =
     {
       VarSerial = 0
+      VarName = Map.empty
       VarEnv = Map.empty
       TySerial = 0
       TyEnv = Map.empty

@@ -24,15 +24,9 @@ let opStr op =
 
 let valVariantName vTy =
   match vTy with
-  | CValTy.Int -> "i"
-  | CValTy.Str -> "s"
-  | CValTy.Tuple _ -> "t"
-
-let tupleFn ty =
-  match ty with
-  | CValTy.Int -> "tuple_i"
-  | CValTy.Str -> "tuple_s"
-  | CValTy.Tuple _ -> failwith "unimpl"
+  | CBoxTy.Int -> "i"
+  | CBoxTy.Str -> "s"
+  | CBoxTy.Tuple _ -> "t"
 
 let rec cprintTy acc ty: string list =
   match ty with
@@ -45,8 +39,8 @@ let rec cprintTy acc ty: string list =
   | CTy.Ptr ty ->
     let acc = cprintTy acc ty
     acc *- "*"
-  | CTy.Val _ ->
-    acc *- "Val"
+  | CTy.Box _ ->
+    acc *- "Box"
 
 let rec cprintParams acc ps: string list =
   let rec go acc ps =
@@ -73,7 +67,7 @@ let rec cprintExpr acc expr: string list =
     acc *- string value
   | CExpr.Str value ->
     acc *- "\"" *- value *- "\""
-  | CExpr.Val (expr, vTy) ->
+  | CExpr.Box (expr, vTy) ->
     let acc = acc *- "(Val){." *- valVariantName vTy *- " = "
     let acc = cprintExpr acc expr
     acc *- "}"
@@ -83,11 +77,9 @@ let rec cprintExpr acc expr: string list =
     acc *- "malloc"
   | CExpr.Prim CPrim.Printf ->
     acc *- "printf"
-  | CExpr.Prim (CPrim.Tuple ty) ->
-    acc *- tupleFn ty
-  | CExpr.Arrow (left, field, _) ->
+  | CExpr.Unbox (left, index, valTy, _) ->
     let acc = cprintExpr acc left
-    acc *- "->" *- field
+    acc *- ".t[" *- string index *- "]." *- valVariantName valTy
   | CExpr.Cast (expr, ty) ->
     let acc = acc *- "(("
     let acc = cprintTy acc ty
@@ -108,9 +100,14 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExprList acc 0 ", " args
     let acc = acc *- ")"
     acc
-  | CExpr.Set (l, r, _) ->
-    let acc = cprintExpr acc l *- " = "
-    let acc = cprintExpr acc r
+  | CExpr.If (pred, thenCl, elseCl) ->
+    let acc = acc *- "("
+    let acc = cprintExpr acc pred
+    let acc = acc *- " ? "
+    let acc = cprintExpr acc thenCl
+    let acc = acc *- " : "
+    let acc = cprintExpr acc elseCl
+    let acc = acc *- ")"
     acc
 
 let cprintStmt acc indent stmt: string list =
@@ -125,7 +122,7 @@ let cprintStmt acc indent stmt: string list =
   | CStmt.Expr expr ->
     let acc = cprintExpr acc expr
     acc *- ";" *- eol
-  | CStmt.Let (name, ty, init) ->
+  | CStmt.Let (name, init, ty) ->
     let acc = cprintTy acc ty
     let acc = acc *- " " *- name
     let acc =
@@ -136,13 +133,20 @@ let cprintStmt acc indent stmt: string list =
       | None ->
         acc
     acc *- ";" *- eol
-  | CStmt.LetTuple2 (name, l, r) ->
-    let acc = acc *- "Val " *- name *- " = {.t = malloc(2 * sizeof(Val))};" *- eol *- indent
-    let acc = acc *- name *- ".t[0] = "
+  | CStmt.LetBox (name, len) ->
+    acc *- "Box " *- name
+        *- " = {.t = malloc("
+        *- string len
+        *- " * sizeof(Box))};"
+        *- eol
+  | CStmt.Set (l, r, _) ->
+    let acc = cprintExpr acc l *- " = "
+    let acc = cprintExpr acc r *- ";" *- eol
+    acc
+  | CStmt.Emplace (l, index, elem) ->
     let acc = cprintExpr acc l
-    let acc = acc *- ";" *- eol *- indent
-    let acc = acc *- name *- ".t[1] = "
-    let acc = cprintExpr acc r
+    let acc = acc *- ".t[" *- string index *- "] = "
+    let acc = cprintExpr acc elem
     let acc = acc *- ";" *- eol
     acc
   | CStmt.If (pred, thenStmts, elseStmts) ->
@@ -165,11 +169,12 @@ let rec cprintStmts acc indent stmts: string list =
 
 let cprintDecl acc decl =
   match decl with
-  | CDecl.Fun decl ->
-    let acc = acc *- "int" *- " " *- decl.Name *- "("
-    let acc = cprintParams acc decl.Params
+  | CDecl.Fun (ident, args, resultTy, body) ->
+    let acc = cprintTy acc resultTy
+    let acc = acc *- " " *- ident *- "("
+    let acc = cprintParams acc args
     let acc = acc *- ") {" *- eol
-    let acc = cprintStmts acc "    " decl.Body
+    let acc = cprintStmts acc "    " body
     let acc = acc *- "}" *- eol
     acc
 
@@ -189,14 +194,11 @@ let cprintHeader acc =
   let header = """#include <stdio.h>
 #include <stdlib.h>
 
-typedef union Val {
+typedef union Box {
   int i;
   char* s;
-  union Val* t;
-} Val;
-
-int tuple_i(Val v, int i) { return v.t[i].i; }
-char* tuple_s(Val v, int i) { return v.t[i].s; }
+  union Box* t;
+} Box;
 """
   acc *- header *- eol
 
