@@ -1,9 +1,9 @@
 int main() {
-    int if_2;
+    int if_3;
     if (1) {
-        if_2 = 0;
+        if_3 = 0;
     } else {
-        if_2 = 1;
+        if_3 = 1;
     }
-    return if_2;
+    return if_3;
 }

@@ -1,17 +1,19 @@
 int factorial_2(int x_3) {
-    int op_5 = (x_3 == 0);
-    int if_4;
-    if (op_5) {
-        if_4 = 1;
+    int if_5;
+    int op_6 = (x_3 == 0);
+    if (op_6) {
+        if_5 = 1;
     } else {
-        int op_6 = (x_3 - 1);
-        int op_7 = (x_3 * factorial_2(op_6));
-        if_4 = op_7;
+        int op_7 = (x_3 - 1);
+        int call_8 = factorial_2(op_7);
+        int op_9 = (x_3 * call_8);
+        if_5 = op_9;
     }
-    return if_4;
+    return if_5;
 }
 
 int main() {
-    int op_8 = (factorial_2(5) - 120);
-    return op_8;
+    int call_10 = factorial_2(5);
+    int op_11 = (call_10 - 120);
+    return op_11;
 }

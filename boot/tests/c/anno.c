@@ -7,6 +7,8 @@ int g_4(int x_5) {
 }
 
 int main() {
-    int op_6 = (f_2(1) - g_4(1));
-    return op_6;
+    int call_7 = f_2(1);
+    int call_8 = g_4(1);
+    int op_9 = (call_7 - call_8);
+    return op_9;
 }
