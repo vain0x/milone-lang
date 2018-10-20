@@ -182,6 +182,9 @@ let cprintHeader acc =
     *- "typedef union Val { int i; char* s; struct Tuple2* t2; } Val;" *- eol
     *- "typedef struct Tuple2 { Val t0, t1; } Tuple2;" *- eol
     *- eol
+    *- "int fst_i(Val v) { return v.t2->t0.i; }" *- eol
+    *- "char* fst_s(Val v) { return v.t2->t0.s; }" *- eol
+    *- eol
 
 let cprintRun (printer: string list -> string list): string =
   printer [] |> List.rev |> String.concat ""

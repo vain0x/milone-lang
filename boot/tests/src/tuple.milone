@@ -1,3 +1,9 @@
 let main () =
   let a = 1, "snd"
+  let x = 1 * fst a
+  printfn "%d" x
+
+  let b = "fst", 2
+  let y = fst b
+  printfn "%s" y
   0

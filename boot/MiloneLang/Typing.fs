@@ -212,6 +212,17 @@ let inferAppPrintfn ctx loc args =
   | _ ->
     failwith """First arg of printfn must be string literal, ".."."""
 
+let inferAppFst ctx calleeLoc arg loc =
+  let fstTyVar, ctx = freshTyVar "fst" ctx
+  let sndTyVar, ctx = freshTyVar "snd" ctx
+  let fstTy, sndTy = Ty.Var fstTyVar, Ty.Var sndTyVar
+  let argTy = Ty.Tuple (fstTy, sndTy)
+  let arg, ctx = inferExpr ctx arg
+  let ctx = unifyTy ctx (tyOf arg) argTy
+  let calleeTy = Ty.Fun (argTy, Ty.Var fstTyVar)
+  let callee = Expr.Prim (PrimFun.Fst, (calleeTy, calleeLoc))
+  Expr.Call (callee, [arg], (fstTy, loc)), ctx
+
 let inferOpCore (ctx: TyCtx) loc op left right =
   let left, ctx = inferExpr ctx left
   let right, ctx = inferExpr ctx right
@@ -338,6 +349,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferIf ctx pred thenCl elseCl loc
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _), args, loc) ->
     inferAppPrintfn ctx loc args
+  | Expr.Call (Expr.Prim (PrimFun.Fst, calleeLoc), [arg], loc) ->
+    inferAppFst ctx calleeLoc arg loc
   | Expr.Call (callee, args, loc) ->
     inferApp ctx loc callee args
   | Expr.Op (op, l, r, loc) ->

@@ -136,6 +136,23 @@ let genOpExpr acc ctx op first second ty loc =
     let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second, CTy.Int))) :: acc
     CExpr.Ref (name, ty), acc, ctx
 
+let genPrimFst acc ctx ty =
+  match ty with
+  | Ty.Fun (_, lTy) ->
+    let name =
+      match cty lTy with
+      | CTy.Int -> "fst_i"
+      | CTy.Ptr CTy.Char -> "fst_s"
+      | CTy.Val
+      | CTy.Void
+      | CTy.Char
+      | CTy.Ptr _
+      | CTy.Tuple2 -> failwith "unimpl"
+    let fTy = CTy.Ptr CTy.Void // bad
+    CExpr.Ref (name, fTy), acc, ctx
+  | _ ->
+    failwith "Invalid type of `fst`"
+
 let genCall acc ctx callee args ty =
   match args with
   | [arg] ->
@@ -237,6 +254,8 @@ let genExpr
     CExpr.Int value, acc, ctx
   | Expr.Str (value, _) ->
     CExpr.Str value, acc, ctx
+  | Expr.Prim (PrimFun.Fst, (ty, _)) ->
+    genPrimFst acc ctx ty
   | Expr.Ref ("true", _, _) ->
     CExpr.Int 1, acc, ctx
   | Expr.Ref ("false", _, _) ->
