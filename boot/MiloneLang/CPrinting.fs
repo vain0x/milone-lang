@@ -22,6 +22,18 @@ let opStr op =
   | COp.Gt -> ">"
   | COp.Ge -> ">="
 
+let valVariantName vTy =
+  match vTy with
+  | CValTy.Int -> "i"
+  | CValTy.Str -> "s"
+  | CValTy.Tuple _ -> "t"
+
+let tupleFn ty =
+  match ty with
+  | CValTy.Int -> "tuple_i"
+  | CValTy.Str -> "tuple_s"
+  | CValTy.Tuple _ -> failwith "unimpl"
+
 let rec cprintTy acc ty: string list =
   match ty with
   | CTy.Void ->
@@ -33,10 +45,8 @@ let rec cprintTy acc ty: string list =
   | CTy.Ptr ty ->
     let acc = cprintTy acc ty
     acc *- "*"
-  | CTy.Val ->
+  | CTy.Val _ ->
     acc *- "Val"
-  | CTy.Tuple2 ->
-    acc *- "Tuple2"
 
 let rec cprintParams acc ps: string list =
   let rec go acc ps =
@@ -63,16 +73,18 @@ let rec cprintExpr acc expr: string list =
     acc *- string value
   | CExpr.Str value ->
     acc *- "\"" *- value *- "\""
-  | CExpr.Val (expr, variant, ty) ->
-    let acc = acc *- "(Val) { ." *- variant *- " = "
+  | CExpr.Val (expr, vTy) ->
+    let acc = acc *- "(Val){." *- valVariantName vTy *- " = "
     let acc = cprintExpr acc expr
-    acc *- " }"
+    acc *- "}"
   | CExpr.Ref (value, _) ->
     acc *- value
   | CExpr.Prim CPrim.Malloc ->
     acc *- "malloc"
   | CExpr.Prim CPrim.Printf ->
     acc *- "printf"
+  | CExpr.Prim (CPrim.Tuple ty) ->
+    acc *- tupleFn ty
   | CExpr.Arrow (left, field, _) ->
     let acc = cprintExpr acc left
     acc *- "->" *- field
@@ -125,13 +137,13 @@ let cprintStmt acc indent stmt: string list =
         acc
     acc *- ";" *- eol
   | CStmt.LetTuple2 (name, l, r) ->
-    let acc = cprintTy acc CTy.Val
-    let acc = acc *- " " *- name *- " = (Val) { .t2 = malloc(sizeof(Tuple2)) };" *- eol *- indent
-    let acc = acc *- "*" *- name *- ".t2 = (Tuple2) { "
+    let acc = acc *- "Val " *- name *- " = {.t = malloc(2 * sizeof(Val))};" *- eol *- indent
+    let acc = acc *- name *- ".t[0] = "
     let acc = cprintExpr acc l
-    let acc = acc *- ", "
+    let acc = acc *- ";" *- eol *- indent
+    let acc = acc *- name *- ".t[1] = "
     let acc = cprintExpr acc r
-    let acc = acc *- " };" *- eol
+    let acc = acc *- ";" *- eol
     acc
   | CStmt.If (pred, thenStmts, elseStmts) ->
     let acc = acc *- "if ("
@@ -174,17 +186,19 @@ let rec cprintDecls acc decls =
   go acc decls
 
 let cprintHeader acc =
-  acc
-    *- "#include <stdio.h>" *- eol
-    *- "#include <stdlib.h>" *- eol
-    *- eol
-    *- "struct Tuple2;" *- eol
-    *- "typedef union Val { int i; char* s; struct Tuple2* t2; } Val;" *- eol
-    *- "typedef struct Tuple2 { Val t0, t1; } Tuple2;" *- eol
-    *- eol
-    *- "int fst_i(Val v) { return v.t2->t0.i; }" *- eol
-    *- "char* fst_s(Val v) { return v.t2->t0.s; }" *- eol
-    *- eol
+  let header = """#include <stdio.h>
+#include <stdlib.h>
+
+typedef union Val {
+  int i;
+  char* s;
+  union Val* t;
+} Val;
+
+int tuple_i(Val v, int i) { return v.t[i].i; }
+char* tuple_s(Val v, int i) { return v.t[i].s; }
+"""
+  acc *- header *- eol
 
 let cprintRun (printer: string list -> string list): string =
   printer [] |> List.rev |> String.concat ""

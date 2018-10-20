@@ -34,8 +34,8 @@ let cty ty: CTy =
     CTy.Ptr CTy.Char
   | Ty.Fun _ ->
     CTy.Ptr CTy.Void
-  | Ty.Tuple _ ->
-    CTy.Val
+  | Ty.Tuple (lTy, rTy) ->
+    CTy.Val (CValTy.Tuple [cty lTy; cty rTy])
   | Ty.Var _ ->
     failwith "Type vars must be resolved in type inference phase."
 
@@ -46,7 +46,7 @@ let cexprTy expr =
   match expr with
   | CExpr.Int _ -> CTy.Int
   | CExpr.Str _ -> CTy.Ptr CTy.Char
-  | CExpr.Val _ -> CTy.Val
+  | CExpr.Val (_, vTy) -> CTy.Val vTy
   | CExpr.Ref (_, ty)
   | CExpr.Arrow (_, _, ty)
   | CExpr.Cast (_, ty)
@@ -54,6 +54,17 @@ let cexprTy expr =
   | CExpr.Call (_, _, ty)
   | CExpr.Set (_, _, ty) -> ty
   | CExpr.Prim _ -> failwith "unimpl"
+
+/// Gets CValTy from target of a function type.
+let targetValTy ty =
+  match ty with
+  | Ty.Fun (_, tTy) ->
+    match cty tTy with
+    | CTy.Int -> CValTy.Int
+    | CTy.Ptr CTy.Char -> CValTy.Str
+    | CTy.Val vTy -> vTy
+    | _ -> failwith "unimpl"
+  | _ -> failwithf "Unexpected %A" ty
 
 let cop op =
   match op with
@@ -96,14 +107,12 @@ let genExprVal acc ctx expr =
   let expr, acc, ctx = genExpr acc ctx expr
   let ty = cexprTy expr
   match ty with
-  | CTy.Val ->
-    expr, acc, ctx
+  | CTy.Val vTy ->
+    expr, vTy, acc, ctx
   | CTy.Int ->
-    CExpr.Val (expr, "i", ty), acc, ctx
+    CExpr.Val (expr, CValTy.Int), CValTy.Int, acc, ctx
   | CTy.Ptr CTy.Char ->
-    CExpr.Val (expr, "s", ty), acc, ctx
-  | CTy.Tuple2 ->
-    CExpr.Val (expr, "t2", ty), acc, ctx
+    CExpr.Val (expr, CValTy.Str), CValTy.Str, acc, ctx
   | CTy.Void
   | CTy.Char
   | CTy.Ptr _ ->
@@ -122,9 +131,10 @@ let genOpExpr acc ctx op first second ty loc =
     let expr = Expr.If (first, trueLit, second, (ty, loc))
     genExpr acc ctx expr
   | Op.Tie ->
-    let first, acc, ctx = genExprVal acc ctx first
-    let second, acc, ctx = genExprVal acc ctx second
-    let tempName, temp, ctx = freshVar ctx "t" CTy.Val
+    let first, firstVTy, acc, ctx = genExprVal acc ctx first
+    let second, secondVTy, acc, ctx = genExprVal acc ctx second
+    let tupleTy = CTy.Val (CValTy.Tuple [CTy.Val firstVTy; CTy.Val secondVTy])
+    let tempName, temp, ctx = freshVar ctx "t" tupleTy
     let acc = CStmt.LetTuple2 (tempName, first, second) :: acc
     temp, acc, ctx
   | _ ->
@@ -136,29 +146,17 @@ let genOpExpr acc ctx op first second ty loc =
     let acc = CStmt.Let (name, ty, Some (CExpr.Op (cop op, first, second, CTy.Int))) :: acc
     CExpr.Ref (name, ty), acc, ctx
 
-let genPrimFst acc ctx ty =
-  match ty with
-  | Ty.Fun (_, lTy) ->
-    let name =
-      match cty lTy with
-      | CTy.Int -> "fst_i"
-      | CTy.Ptr CTy.Char -> "fst_s"
-      | CTy.Val
-      | CTy.Void
-      | CTy.Char
-      | CTy.Ptr _
-      | CTy.Tuple2 -> failwith "unimpl"
-    let fTy = CTy.Ptr CTy.Void // bad
-    CExpr.Ref (name, fTy), acc, ctx
-  | _ ->
-    failwith "Invalid type of `fst`"
-
 let genCall acc ctx callee args ty =
   match args with
   | [arg] ->
     let callee, acc, ctx = genExpr acc ctx callee
     let arg, acc, ctx = genExpr acc ctx arg
     CExpr.Call (callee, [arg], cty ty), acc, ctx
+  | [arg1; arg2] ->
+    let callee, acc, ctx = genExpr acc ctx callee
+    let arg2, acc, ctx = genExpr acc ctx arg2
+    let arg1, acc, ctx = genExpr acc ctx arg1
+    CExpr.Call (callee, [arg1; arg2], cty ty), acc, ctx
   | [] ->
     failwith "Never zero-arg call"
   | _ ->
@@ -254,8 +252,8 @@ let genExpr
     CExpr.Int value, acc, ctx
   | Expr.Str (value, _) ->
     CExpr.Str value, acc, ctx
-  | Expr.Prim (PrimFun.Fst, (ty, _)) ->
-    genPrimFst acc ctx ty
+  | Expr.Prim (PrimFun.Fst, (fstFnTy, _)) ->
+    CExpr.Prim (CPrim.Tuple (targetValTy fstFnTy)), acc, ctx
   | Expr.Ref ("true", _, _) ->
     CExpr.Int 1, acc, ctx
   | Expr.Ref ("false", _, _) ->
@@ -270,6 +268,9 @@ let genExpr
     let args, ctx = genExprList acc ctx args
     let acc = callPrintf format args :: acc
     cexprUnit, acc, ctx
+  | Expr.Call (Expr.Prim (PrimFun.Fst, _) as callee, [arg], (ty, loc)) ->
+    let args = [arg; Expr.Int (0,( Ty.Int, loc))]
+    genCall acc ctx callee args ty
   | Expr.Call (callee, args, (ty, _)) ->
     genCall acc ctx callee args ty
   | Expr.AndThen (expr :: exprs, _) ->

@@ -123,6 +123,14 @@ namespace rec MiloneLang
     | Let
       of pats:Pat<'a> list * init:Expr<'a> * 'a
 
+  /// Variant of union `Val`.
+  [<RequireQualifiedAccess>]
+  type CValTy =
+    | Int
+    | Str
+    | Tuple
+      of CTy list
+
   /// Type in C language.
   [<RequireQualifiedAccess>]
   type CTy =
@@ -133,13 +141,15 @@ namespace rec MiloneLang
       of CTy
     /// Union of primitive types. Defined by emitted code.
     | Val
-    /// Pair of `Val`s.
-    | Tuple2
+      of CValTy
 
   [<RequireQualifiedAccess>]
   type CPrim =
     | Malloc
     | Printf
+    /// Gets an element of tuple.
+    | Tuple
+      of CValTy
 
   [<RequireQualifiedAccess>]
   type COp =
@@ -170,7 +180,7 @@ namespace rec MiloneLang
       of string
     /// `(Val) { .. }`
     | Val
-      of CExpr * variant:string * CTy
+      of CExpr * CValTy
     | Ref
       of string * CTy
     | Prim
