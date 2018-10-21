@@ -8,6 +8,8 @@ let exprLoc = exprExtract >> snd
 
 let patTy = Typing.patTy
 
+let patExtract = Parsing.patExtract
+
 /// Middle IR generation context.
 [<RequireQualifiedAccess>]
 type MirCtx =
@@ -209,24 +211,38 @@ let mirifyExprLetVal ctx pat init (_, letLoc) =
 
 let mirifyExprLetFun ctx pat pats body (_, letLoc) =
   let letA = MTy.Unit, letLoc
-  let mirifyFunBlock ctx expr =
-    let blockTy, blockLoc = exprExtract expr
-    let stmts, lastExpr, ctx = mirifyBlock ctx expr
-    let stmts = MStmt.Return (lastExpr, (MTy.Unit, blockLoc)) :: stmts
-    List.rev stmts, unboxTy blockTy, ctx
+
+  let defineArgs ctx argPat =
+    match argPat with
+    | Pat.Ident (_, serial, (ty, loc)) ->
+      // NOTE: Optimize for usual cases to not generate redundant local vars.
+      [serial, (unboxTy ty, loc)], ctx
+    | _ ->
+      let argTy, argLoc = patExtract argPat
+      let argTy = unboxTy argTy
+      let arg, argSerial, ctx = ctxFreshVar ctx "arg" (argTy, argLoc)
+      let args = [argSerial, (argTy, argLoc)]
+      let ctx = mirifyPat ctx argPat arg
+      args, ctx
+
+  let mirifyFunBody ctx argPat body =
+    let blockTy, blockLoc = exprExtract body
+
+    let args, ctx = defineArgs ctx argPat
+    let lastExpr, ctx = mirifyExpr ctx body
+    let returnStmt = MStmt.Return (lastExpr, (MTy.Unit, blockLoc))
+    let ctx = ctxAddStmt ctx returnStmt
+
+    let stmts, ctx = ctxTakeStmts ctx
+    let body = List.rev stmts
+    args, unboxTy blockTy, body, ctx
+
   match pat, pats with
   | Pat.Ident (_, calleeSerial, (_, _)),
-    [Pat.Unit (_, argLoc)] ->
-    let _, argSerial, ctx = ctxFreshVar ctx "arg" (MTy.Unit, argLoc)
-    let body, resultTy, ctx = mirifyFunBlock ctx body
-    let args = [argSerial, (MTy.Unit, argLoc)]
-    let decl = MDecl.LetFun (calleeSerial, args, resultTy, body, letA)
-    let ctx = ctxAddDecl ctx decl
-    MExpr.Unit letA, ctx
-  | Pat.Ident (_, calleeSerial, (_, _)),
-    [Pat.Ident (_, argSerial, (argTy, argLoc))] ->
-    let body, resultTy, ctx = mirifyFunBlock ctx body
-    let args = [argSerial, (unboxTy argTy, argLoc)]
+    [argPat] ->
+    let bodyCtx = ctxNewBlock ctx
+    let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPat body
+    let ctx = ctxRollBack ctx bodyCtx
     let decl = MDecl.LetFun (calleeSerial, args, resultTy, body, letA)
     let ctx = ctxAddDecl ctx decl
     MExpr.Unit letA, ctx
