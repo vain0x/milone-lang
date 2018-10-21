@@ -24,9 +24,10 @@ let opStr op =
 
 let boxField vTy =
   match vTy with
-  | CBoxTy.Int -> "i"
-  | CBoxTy.Str -> "s"
-  | CBoxTy.Tuple _ -> "t"
+  | CBoxTy.Self -> ""
+  | CBoxTy.Int -> ".i"
+  | CBoxTy.Str -> ".s"
+  | CBoxTy.Tuple _ -> ".t"
 
 let rec cprintTy acc ty: string list =
   match ty with
@@ -68,7 +69,7 @@ let rec cprintExpr acc expr: string list =
   | CExpr.Str value ->
     acc *- "\"" *- value *- "\""
   | CExpr.Box (expr, vTy) ->
-    let acc = acc *- "(Box){." *- boxField vTy *- " = "
+    let acc = acc *- "(Box){" *- boxField vTy *- " = "
     let acc = cprintExpr acc expr
     acc *- "}"
   | CExpr.Ref (value, _) ->
@@ -79,7 +80,7 @@ let rec cprintExpr acc expr: string list =
     acc *- "printf"
   | CExpr.Unbox (left, index, valTy, _) ->
     let acc = cprintExpr acc left
-    acc *- ".t[" *- string index *- "]." *- boxField valTy
+    acc *- ".t[" *- string index *- "]" *- boxField valTy
   | CExpr.Cast (expr, ty) ->
     let acc = acc *- "(("
     let acc = cprintTy acc ty

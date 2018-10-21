@@ -101,16 +101,21 @@ let boxTy (ty: Ty): MBoxTy =
   | Ty.Var _ ->
     failwith "Never type variable here."
 
+/// Wraps an expression with unbox function if necessary.
+let unboxExpr expr index resultTy loc =
+  MExpr.Unbox (expr, index, (resultTy, loc))
+
 let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MirCtx =
   match pat with
   | Pat.Unit (_, loc) ->
     ctxAddStmt ctx (MStmt.Expr (expr, (MTy.Unit, loc)))
   | Pat.Ident (_, serial, (ty, loc)) ->
     ctxAddStmt ctx (MStmt.LetVal (serial, Some expr, (unboxTy ty, loc)))
-  | Pat.Tuple (l, _r, (ty, loc)) ->
-    let fstExpr = MExpr.Unbox (expr, 0, (unboxTy (patTy l), loc))
+  | Pat.Tuple (l, r, (_, loc)) ->
+    let fstExpr = unboxExpr expr 0 (unboxTy (patTy l)) loc
     // FIXME: snd
-    mirifyPat ctx l fstExpr
+    let ctx = mirifyPat ctx l fstExpr
+    ctx
   | Pat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."
 
@@ -140,7 +145,7 @@ let mirifyExprIf ctx pred thenCl elseCl (ty, loc) =
 /// fst a ==> unbox 0 a
 let mirifyExprCallFst ctx _calleeLoc arg (ty, callLoc) =
   let arg, ctx = mirifyExpr ctx arg
-  MExpr.Unbox (arg, 0, (unboxTy ty, callLoc)), ctx
+  unboxExpr arg 0 (unboxTy ty) callLoc, ctx
 
 let mirifyExprCall ctx callee args (ty, loc) =
   let ty = unboxTy ty

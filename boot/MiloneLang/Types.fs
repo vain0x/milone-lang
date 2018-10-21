@@ -235,6 +235,7 @@ namespace rec MiloneLang
   /// Variant of union `Box`.
   [<RequireQualifiedAccess>]
   type CBoxTy =
+    | Self
     | Int
     | Str
     | Tuple

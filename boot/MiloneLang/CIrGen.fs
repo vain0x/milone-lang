@@ -104,7 +104,7 @@ let genExprBox ctx expr (ty, _) =
   | MTy.Box _ ->
     expr, ctx
 
-/// `((Val)v).t[i]`
+/// `box.t[i].?`
 let genExprUnbox ctx expr index (ty, _) =
   let expr, ctx = genExpr ctx expr
   let valTy =
@@ -118,7 +118,7 @@ let genExprUnbox ctx expr index (ty, _) =
     | MTy.Fun _ ->
       failwith "unimpl unboxing functions"
     | MTy.Box _ ->
-      failwith "Don't unbox from box to box."
+      CBoxTy.Self
   CExpr.Unbox (expr, index, valTy, cty ty), ctx
 
 let genExprCall ctx callee args ty =
