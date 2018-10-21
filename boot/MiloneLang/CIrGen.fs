@@ -90,12 +90,6 @@ let ctxFreshVar (ctx: Ctx) (name: string) (ty: CTy) =
   let name, ctx = ctxFreshName ctx name
   name, CExpr.Ref (name, ty), ctx
 
-let genExprIf ctx pred thenCl elseCl _ty =
-  let pred, ctx = genExpr ctx pred
-  let thenCl, ctx = genExpr ctx thenCl
-  let elseCl, ctx = genExpr ctx elseCl
-  CExpr.If (pred, thenCl, elseCl), ctx
-
 let genExprBox ctx expr (ty, _) =
   let expr, ctx = genExpr ctx expr
   match ty with
@@ -179,8 +173,6 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     cexprUnit, ctx
   | MExpr.Ref (serial, (ty, _)) ->
     CExpr.Ref (ctxUniqueName ctx serial, cty ty), ctx
-  | MExpr.If (pred, thenCl, elseCl, (ty, _)) ->
-    genExprIf ctx pred thenCl elseCl ty
   | MExpr.Box (expr, a) ->
     genExprBox ctx expr a
   | MExpr.Unbox (expr, index, a) ->

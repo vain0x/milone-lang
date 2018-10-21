@@ -193,8 +193,6 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of serial:int * 'a
-    | If
-      of pred:MExpr<'a> * thenInit:MExpr<'a> * elseInit:MExpr<'a> * 'a
     /// Wrap value with box (heap allocated container).
     | Box
       of MExpr<'a> * 'a
@@ -283,9 +281,6 @@ namespace rec MiloneLang
       of CExpr * args:CExpr list * CTy
     | Op
       of COp * CExpr * CExpr * CTy
-    /// pred ? t : e
-    | If
-      of pred:CExpr * thenCl:CExpr * elseCl:CExpr
 
   /// Statement in C language.
   [<RequireQualifiedAccess>]

@@ -100,15 +100,6 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExprList acc 0 ", " args
     let acc = acc *- ")"
     acc
-  | CExpr.If (pred, thenCl, elseCl) ->
-    let acc = acc *- "("
-    let acc = cprintExpr acc pred
-    let acc = acc *- " ? "
-    let acc = cprintExpr acc thenCl
-    let acc = acc *- " : "
-    let acc = cprintExpr acc elseCl
-    let acc = acc *- ")"
-    acc
 
 let cprintStmt acc indent stmt: string list =
   let acc = acc *- indent
