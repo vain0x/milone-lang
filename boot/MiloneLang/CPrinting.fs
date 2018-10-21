@@ -22,7 +22,7 @@ let opStr op =
   | COp.Gt -> ">"
   | COp.Ge -> ">="
 
-let valVariantName vTy =
+let boxField vTy =
   match vTy with
   | CBoxTy.Int -> "i"
   | CBoxTy.Str -> "s"
@@ -68,7 +68,7 @@ let rec cprintExpr acc expr: string list =
   | CExpr.Str value ->
     acc *- "\"" *- value *- "\""
   | CExpr.Box (expr, vTy) ->
-    let acc = acc *- "(Val){." *- valVariantName vTy *- " = "
+    let acc = acc *- "(Box){." *- boxField vTy *- " = "
     let acc = cprintExpr acc expr
     acc *- "}"
   | CExpr.Ref (value, _) ->
@@ -79,7 +79,7 @@ let rec cprintExpr acc expr: string list =
     acc *- "printf"
   | CExpr.Unbox (left, index, valTy, _) ->
     let acc = cprintExpr acc left
-    acc *- ".t[" *- string index *- "]." *- valVariantName valTy
+    acc *- ".t[" *- string index *- "]." *- boxField valTy
   | CExpr.Cast (expr, ty) ->
     let acc = acc *- "(("
     let acc = cprintTy acc ty
