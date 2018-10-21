@@ -7,6 +7,7 @@ let patExtract (pat: Pat<'a>): 'a =
   match pat with
   | Pat.Unit a -> a
   | Pat.Ident (_, _, a) -> a
+  | Pat.Tuple (_, _, a) -> a
   | Pat.Anno (_, _, a) -> a
 
 let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
@@ -15,6 +16,8 @@ let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
     Pat.Unit (f a)
   | Pat.Ident (name, serial, a) ->
     Pat.Ident (name, serial, f a)
+  | Pat.Tuple (l, r, a) ->
+    Pat.Tuple (patMap f l, patMap f r, f a)
   | Pat.Anno (pat, ty, a) ->
     Pat.Anno (patMap f pat, ty, f a)
 
@@ -180,9 +183,18 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
   | _ ->
     failwith "never"
 
-/// pat-anno = pat-atom ( ':' ty )?
-let parsePatAnno boxX tokens =
+/// pat-tuple = pat-atom ( ',' pat-atom )?
+let parsePatTuple boxX tokens =
   match parsePatAtom boxX tokens with
+  | l, (Token.Punct ",", loc) :: tokens ->
+    let r, tokens = parsePatAtom boxX tokens
+    Pat.Tuple (l, r, loc), tokens
+  | l, tokens ->
+    l, tokens
+
+/// pat-anno = pat-tuple ( ':' ty )?
+let parsePatAnno boxX tokens =
+  match parsePatTuple boxX tokens with
   | pat, (Token.Colon, loc) :: tokens ->
     let ty, tokens = parseTy (nextX tokens) tokens
     Pat.Anno (pat, ty, loc), tokens

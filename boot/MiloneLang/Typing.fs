@@ -157,6 +157,11 @@ let inferPat ctx pat =
   | Pat.Ident (ident, _, loc) ->
     let ident, serial, ty, ctx = freshVar ident ctx
     Pat.Ident (ident, serial, (ty, loc)), ctx
+  | Pat.Tuple (l, r, loc) ->
+    let l, ctx = inferPat ctx l
+    let r, ctx = inferPat ctx r
+    let tupleTy = Ty.Tuple (patTy l, patTy r)
+    Pat.Tuple (l, r, (tupleTy, loc)), ctx
   | Pat.Anno (pat, ty, _) ->
     let pat, ctx = inferPat ctx pat
     let ctx = unifyTy ctx (patTy pat) ty

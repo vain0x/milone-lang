@@ -89,6 +89,8 @@ namespace rec MiloneLang
       of 'a
     | Ident
       of ident:string * serial: int * 'a
+    | Tuple
+      of Pat<'a> * Pat<'a> * 'a
     | Anno
       of Pat<'a> * Ty * 'a
 

@@ -6,6 +6,8 @@ let exprExtract = Parsing.exprExtract
 
 let exprLoc = exprExtract >> snd
 
+let patTy = Typing.patTy
+
 /// Middle IR generation context.
 [<RequireQualifiedAccess>]
 type MirCtx =
@@ -99,8 +101,18 @@ let boxTy (ty: Ty): MBoxTy =
   | Ty.Var _ ->
     failwith "Never type variable here."
 
-let mirifyPat (pat: Pat<Ty * Loc>): Pat<Ty * Loc> =
-  pat
+let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MirCtx =
+  match pat with
+  | Pat.Unit (_, loc) ->
+    ctxAddStmt ctx (MStmt.Expr (expr, (MTy.Unit, loc)))
+  | Pat.Ident (_, serial, (ty, loc)) ->
+    ctxAddStmt ctx (MStmt.LetVal (serial, Some expr, (unboxTy ty, loc)))
+  | Pat.Tuple (l, _r, (ty, loc)) ->
+    let fstExpr = MExpr.Unbox (expr, 0, (unboxTy (patTy l), loc))
+    // FIXME: snd
+    mirifyPat ctx l fstExpr
+  | Pat.Anno _ ->
+    failwith "Never annotation pattern in MIR-ify stage."
 
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
@@ -185,13 +197,9 @@ let mirifyExprAndThen ctx exprs _ =
   List.last exprs, ctx
 
 let mirifyExprLetVal ctx pat init (_, letLoc) =
-  match pat with
-  | Pat.Ident (_, serial, (ty, loc)) ->
-    let init, ctx = mirifyExpr ctx init
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (serial, Some init, (unboxTy ty, loc)))
-    MExpr.Unit (MTy.Unit, letLoc), ctx
-  | _ ->
-    failwith "In `let x = ..`, `x` must be an identifier for now."
+  let init, ctx = mirifyExpr ctx init
+  let ctx = mirifyPat ctx pat init
+  MExpr.Unit (MTy.Unit, letLoc), ctx
 
 let mirifyExprLetFun ctx pat pats body (_, letLoc) =
   let letA = MTy.Unit, letLoc
