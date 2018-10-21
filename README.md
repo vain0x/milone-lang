@@ -32,11 +32,14 @@ For self-hosting, I avoid the use of complex mechanism in compiler source code, 
 - Typing (type checking)
     - Collect type info for each expression
     - Simple unification-based type inference
+- Mir (intermediate representation)
+    - From AST to middle intermediate representation (MIR)
+    - Pattern match erasure, auto boxing, etc.
 - CIrGen: C language IR generation.
-    - From AST and type info to IR
-    - IR is a C AST-ish tree.
+    - From MIR and type info to C IR
+    - C IR is an original C language AST-ish thing.
 - CPrinting:
-    - From IR to C language source code
+    - From C IR to C language source code
 
 ## See Also
 
