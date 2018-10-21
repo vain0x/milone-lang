@@ -18,16 +18,21 @@ int main() {
     tuple_17.t[0] = (Box){.s = "z"};
     tuple_17.t[1] = (Box){.s = "w"};
     char* z_6 = tuple_17.t[0].s;
+    char* w_7 = tuple_17.t[1].s;
     printf("z=%s\n", z_6);
     int call_18 = 0;
+    printf("w=%s\n", w_7);
+    int call_19 = 0;
+    Box tuple_21 = {.t = malloc(2 * sizeof(Box))};
+    tuple_21.t[0] = (Box){.s = "p"};
+    tuple_21.t[1] = (Box){.s = "q"};
     Box tuple_20 = {.t = malloc(2 * sizeof(Box))};
-    tuple_20.t[0] = (Box){.s = "p"};
-    tuple_20.t[1] = (Box){.s = "q"};
-    Box tuple_19 = {.t = malloc(2 * sizeof(Box))};
-    tuple_19.t[0] = tuple_20;
-    tuple_19.t[1] = (Box){.s = "r"};
-    char* p_8 = tuple_19.t[0].t[0].s;
+    tuple_20.t[0] = tuple_21;
+    tuple_20.t[1] = (Box){.s = "r"};
+    char* p_8 = tuple_20.t[0].t[0].s;
+    char* q_9 = tuple_20.t[0].t[1].s;
+    char* r_10 = tuple_20.t[1].s;
     printf("p=%s\n", p_8);
-    int call_21 = 0;
+    int call_22 = 0;
     return 0;
 }

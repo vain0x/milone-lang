@@ -113,8 +113,9 @@ let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MirCtx =
     ctxAddStmt ctx (MStmt.LetVal (serial, Some expr, (unboxTy ty, loc)))
   | Pat.Tuple (l, r, (_, loc)) ->
     let fstExpr = unboxExpr expr 0 (unboxTy (patTy l)) loc
-    // FIXME: snd
+    let sndExpr = unboxExpr expr 1 (unboxTy (patTy r)) loc
     let ctx = mirifyPat ctx l fstExpr
+    let ctx = mirifyPat ctx r sndExpr
     ctx
   | Pat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."

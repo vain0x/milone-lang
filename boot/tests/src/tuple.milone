@@ -9,6 +9,7 @@ let main () =
 
   let z, w = "z", "w"
   printfn "z=%s" z
+  printfn "w=%s" w
 
   let (p, q), r = ("p", "q"), "r"
   printfn "p=%s" p
