@@ -1,5 +1,7 @@
 #!/bin/bash
-# Perform integration tests.
+# Perform integration tests
+# to verify stdout and exit codes.
+# USAGE: ./integ
 
 set -eu
 
@@ -8,5 +10,3 @@ try_all () {
 }
 
 try_all
-
-echo "OK" >&2

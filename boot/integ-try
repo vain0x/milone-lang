@@ -1,9 +1,13 @@
 #!/bin/bash
 
+# Run milone code and verify stdout and exit code.
+# SAMPLE: ./integ-try ./tests/src/hello.milone
+# SAMPLE: ./integ-try hello
+
 set -eu
 
 name=$(basename "$1" .milone)
-echo $name
+echo -n "$name ... "
 
 app="./tmp/$name"
 out="./tmp/$name.out"
@@ -13,7 +17,9 @@ exp="./tests/targets/$name.out"
 set +e
 $app >$out
 echo '$? = '$? >>$out
-diff -q $out $exp || {
-    >&2 echo "FAILED $name"
+diff -q $out $exp >/dev/null && {
+    >&2 echo "✔ ok"
+} || {
+    >&2 echo "✘ FAILED"
 }
 set -e
