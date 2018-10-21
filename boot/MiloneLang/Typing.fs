@@ -339,13 +339,12 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
   match expr with
   | Expr.Unit loc ->
     Expr.Unit (Ty.Unit, loc), ctx
+  | Expr.Bool (value, loc) ->
+    Expr.Bool (value, (Ty.Bool, loc)), ctx
   | Expr.Int (value, loc) ->
     Expr.Int (value, (Ty.Int, loc)), ctx
   | Expr.Str (value, loc) ->
     Expr.Str (value, (Ty.Str, loc)), ctx
-  | Expr.Ref (ident, serial, loc)
-    when ident = "true" || ident = "false" ->
-    Expr.Ref (ident, serial, (Ty.Bool, loc)), ctx
   | Expr.Ref (ident, _, loc) ->
     inferRef ctx loc ident
   | Expr.If (pred, thenCl, elseCl, loc) ->
@@ -366,8 +365,6 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferLetVal ctx pat init loc
   | Expr.Let (pat :: pats, body, loc) ->
     inferLetFun ctx pat pats body loc
-  | Expr.Call _ ->
-    failwith "unimpl"
   | Expr.Prim _ ->
     failwith "printfn must appear in form of `printfn format args..`."
   | Expr.Let ([], _, _) ->

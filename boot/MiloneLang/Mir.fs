@@ -142,13 +142,13 @@ let mirifyExprCall ctx callee args (ty, loc) =
 
 /// l && r ==> if l then r else false
 let mirifyExprOpAnd ctx l r (ty, loc) =
-  let falseRef = Expr.Ref ("false", 0, (ty, loc))
-  mirifyExprIf ctx l r falseRef (ty, loc)
+  let falseExpr = Expr.Bool (false, (ty, loc))
+  mirifyExprIf ctx l r falseExpr (ty, loc)
 
 /// l || r ==> if l then true else r
 let mirifyExprOpOr ctx l r (ty, loc) =
-  let trueRef = Expr.Ref ("true", 0, (ty, loc))
-  mirifyExprIf ctx l trueRef r (ty, loc)
+  let trueExpr = Expr.Bool (true, (ty, loc))
+  mirifyExprIf ctx l trueExpr r (ty, loc)
 
 /// Wraps a value with box.
 let boxExpr (ty, loc) (expr, ctx) =
@@ -223,16 +223,14 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
   match expr with
   | Expr.Unit (_, loc) ->
     MExpr.Unit (MTy.Unit, loc), ctx
+  | Expr.Bool (value, (_, loc)) ->
+    MExpr.Bool (value, (MTy.Bool, loc)), ctx
   | Expr.Int (value, (_, loc)) ->
     MExpr.Int (value, (MTy.Int, loc)), ctx
   | Expr.Str (value, (_, loc)) ->
     MExpr.Str (value, (MTy.Str, loc)), ctx
   | Expr.Prim (PrimFun.Printfn, (ty, loc)) ->
     MExpr.Prim (MPrim.Printfn, (unboxTy ty, loc)), ctx // FIXME: boxTy?
-  | Expr.Ref ("true", _, (_, loc)) ->
-    MExpr.Bool (true, (MTy.Bool, loc)), ctx
-  | Expr.Ref ("false", _, (_, loc)) ->
-    MExpr.Bool (false, (MTy.Bool, loc)), ctx
   | Expr.Ref (_, serial, (ty, loc)) ->
     MExpr.Ref (serial, (unboxTy ty, loc)), ctx
   | Expr.If (pred, thenCl, elseCl, (ty, loc)) ->

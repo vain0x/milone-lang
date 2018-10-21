@@ -50,8 +50,8 @@ namespace rec MiloneLang
 
   [<RequireQualifiedAccess>]
   type OpLevel =
-    | Add
     | Mul
+    | Add
     /// Comparison
     | Cmp
     | And
@@ -60,11 +60,11 @@ namespace rec MiloneLang
 
   [<RequireQualifiedAccess>]
   type Op =
-    | Add
-    | Sub
     | Mul
     | Div
     | Mod
+    | Add
+    | Sub
     //// Equal
     | Eq
     /// Not Equal
@@ -97,6 +97,8 @@ namespace rec MiloneLang
   type Expr<'a> =
     | Unit
       of 'a
+    | Bool
+      of bool * 'a
     | Int
       of int * 'a
     | Str
@@ -156,11 +158,11 @@ namespace rec MiloneLang
   /// Operator in middle IR.
   [<RequireQualifiedAccess>]
   type MOp =
-    | Add
-    | Sub
     | Mul
     | Div
     | Mod
+    | Add
+    | Sub
     //// Equal
     | Eq
     /// Not Equal
@@ -230,7 +232,7 @@ namespace rec MiloneLang
     | LetFun
       of callee:int * args:(int * 'a) list * result:MTy * body:MStmt<'a> list * 'a
 
-  /// Variant of union `Val`.
+  /// Variant of union `Box`.
   [<RequireQualifiedAccess>]
   type CBoxTy =
     | Int
@@ -269,10 +271,10 @@ namespace rec MiloneLang
       of CPrim
     | Ref
       of string * CTy
-    /// Wrap with Box.
+    /// Wrap with `Box`.
     | Box
       of CExpr * CBoxTy
-    /// `x.y`
+    /// Get content of `Box`.
     | Unbox
       of CExpr * int * CBoxTy * CTy
     | Cast

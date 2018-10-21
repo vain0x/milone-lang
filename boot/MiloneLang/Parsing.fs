@@ -21,6 +21,7 @@ let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
 let exprExtract (expr: Expr<'a>): 'a =
   match expr with
   | Expr.Unit a -> a
+  | Expr.Bool (_, a) -> a
   | Expr.Int (_, a) -> a
   | Expr.Str (_, a) -> a
   | Expr.Prim (_, a) -> a
@@ -36,6 +37,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
   match expr with
   | Expr.Unit a ->
     Expr.Unit (f a)
+  | Expr.Bool (value, a) ->
+    Expr.Bool (value, f a)
   | Expr.Int (value, a) ->
     Expr.Int (value, f a)
   | Expr.Str (value, a) ->
@@ -261,6 +264,10 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
     Expr.Int (value, loc), tokens
   | (Token.Str value, loc) :: tokens ->
     Expr.Str (value, loc), tokens
+  | (Token.Ident "false", loc) :: tokens ->
+    Expr.Bool (false, loc), tokens
+  | (Token.Ident "true", loc) :: tokens ->
+    Expr.Bool (true, loc), tokens
   | (Token.Ident "printfn", loc) :: tokens ->
     Expr.Prim (PrimFun.Printfn, loc), tokens
   | (Token.Ident "fst", loc) :: tokens ->
