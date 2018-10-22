@@ -72,6 +72,26 @@ let private readStr (source: string) (acc, y, x, i): Read =
   let t = Token.Str (source.Substring(i + 1, r - (i + 1))), (y, x)
   t :: acc, y, x + r - i + 1, r + 1
 
+let private readChar (source: string) (acc, y, x, i): Read =
+  assert (source.[i] = '\'')
+  let c, len =
+    // FIXME: range check
+    if source.[i + 1] = '\\' then
+      let c =
+        match source.[i + 2] with
+        | 'n' -> '\n'
+        | 'r' -> '\r'
+        | c -> c
+      c, 2
+    else
+      source.[i + 1], i + 1
+  let r = i + 1 + len + 1
+  if source.[r - 1] <> '\'' then
+    lexError "Expected closing '\''" (source, r - 1)
+  // FIXME: char token
+  let t = Token.Int (int c), (y, x)
+  t :: acc, y, x + r - i, r
+
 let private tokenIdent ident =
   match ident with
   | "let" -> Token.Let
@@ -111,6 +131,8 @@ let tokenize (source: string): (Token * Loc) list =
         (acc, y, x, i) |> readOp source |> go
       | '"' ->
         (acc, y, x, i) |> readStr source |> go
+      | '\'' ->
+        (acc, y, x, i) |> readChar source |> go
       | c when isDigit c ->
         (acc, y, x, i) |> readInt source |> go
       | c when not (isDigit c) && isIdentChar c ->

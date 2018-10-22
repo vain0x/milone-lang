@@ -21,7 +21,6 @@ let tokenizeMainEmpty () =
   |> Lexing.tokenize |> List.unzip |> fst
   |> is expected
 
-
 [<Fact>]
 let tokenizeOps () =
   let unwrapPunct token =
@@ -35,6 +34,21 @@ let tokenizeOps () =
   |> List.unzip
   |> fst
   |> List.choose unwrapPunct
+  |> is expected
+
+[<Fact>]
+let tokenizeCharLiteral () =
+  let unwrapInt (token, _) =
+    match token with
+    | Token.Int value ->
+      value
+    | _ ->
+      failwithf "Expected int token but %A" token
+  let source = """'a' '\'' '\n'"""
+  let expected = [int 'a'; int '\''; int '\n']
+  source
+  |> Lexing.tokenize
+  |> List.map unwrapInt
   |> is expected
 
 [<Fact>]
