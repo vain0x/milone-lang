@@ -137,6 +137,11 @@ let genExprCall ctx callee args ty =
   | _ ->
     failwith "unimpl call with 2+ args"
 
+let genExprCallPrintfn ctx format args =
+  let args, ctx = genExprList ctx args
+  let ctx = ctxAddStmt ctx (callPrintf format args)
+  cexprUnit, ctx
+
 let genExprOp ctx op first second ty loc =
   // Currently no support of non-int add/cmp/etc.
   let ty = CTy.Int
@@ -178,9 +183,7 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
   | MExpr.Unbox (expr, index, a) ->
     genExprUnbox ctx expr index a
   | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _) ->
-    let args, ctx = genExprList ctx args
-    let ctx = ctxAddStmt ctx (callPrintf format args)
-    cexprUnit, ctx
+    genExprCallPrintfn ctx format args
   | MExpr.Call (callee, args, (ty, _)) ->
     genExprCall ctx callee args ty
   | MExpr.Op (op, first, second, (ty, loc)) ->
