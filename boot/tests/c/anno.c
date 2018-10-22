@@ -9,6 +9,5 @@ int g_4(int x_5) {
 int main() {
     int call_7 = f_2(1);
     int call_8 = g_4(1);
-    int op_9 = (call_7 - call_8);
-    return op_9;
+    return (call_7 - call_8);
 }

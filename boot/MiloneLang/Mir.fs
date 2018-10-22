@@ -208,10 +208,8 @@ let mirifyExprOpTie ctx l r (ty, loc) =
 /// x op y ==> `x op y` if `x : int`
 /// C language supports all operators.
 let mirifyExprOpInt ctx op l r (ty, loc) =
-    let opExpr = MExpr.Op (op, l, r, (ty, loc))
-    let temp, tempSerial, ctx = ctxFreshVar ctx "op" (ty, loc)
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, Some opExpr, (ty, loc)))
-    temp, ctx
+  let opExpr = MExpr.Op (op, l, r, (ty, loc))
+  opExpr, ctx
 
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mirifyExprOpStrCmp ctx op l r (ty, loc) =
