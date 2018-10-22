@@ -1,0 +1,5 @@
+let main () =
+  let hello = "Hello"
+  let world = ", world!"
+  printfn "%s" (hello + world)
+  0

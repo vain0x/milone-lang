@@ -242,6 +242,11 @@ let inferOpCore (ctx: TyCtx) loc op left right =
 
   left, Expr.Op (op, left, right, (resultTy, loc)), ctx
 
+let inferOpAdd (ctx: TyCtx) loc op left right =
+  let left, expr, ctx = inferOpCore ctx loc op left right
+  let ctx = unifyTy ctx (tyOf left) (tyOf expr)
+  expr, ctx
+
 let inferOpArith (ctx: TyCtx) loc op left right =
   let left, expr, ctx = inferOpCore ctx loc op left right
   let ctx = unifyTy ctx (tyOf left) Ty.Int
@@ -267,7 +272,8 @@ let inferOpTie (ctx: TyCtx) loc op left right =
 
 let inferOp (ctx: TyCtx) loc op left right =
   match op with
-  | Op.Add
+  | Op.Add ->
+    inferOpAdd ctx loc op left right
   | Op.Sub
   | Op.Mul
   | Op.Div

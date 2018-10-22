@@ -211,6 +211,12 @@ let mirifyExprOpInt ctx op l r (ty, loc) =
   let opExpr = MExpr.Op (op, l, r, (ty, loc))
   opExpr, ctx
 
+let mirifyExprOpStrAdd ctx _op l r (_, loc) =
+  let tyStrStrStr = MTy.Fun (MTy.Str, MTy.Fun (MTy.Str, MTy.Str))
+  let strAdd = MExpr.Prim (MPrim.StrAdd, (tyStrStrStr, loc))
+  let strAddExpr = MExpr.Call (strAdd, [l; r], (MTy.Str, loc))
+  strAddExpr, ctx
+
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mirifyExprOpStrCmp ctx op l r (ty, loc) =
   let strCmp = MExpr.Prim (MPrim.StrCmp, (MTy.Fun (MTy.Str, MTy.Int), loc))
@@ -226,6 +232,8 @@ let mirifyExprOp ctx op l r (ty, loc) =
   match lTy with
   | Ty.Int ->
     mirifyExprOpInt ctx op l r (ty, loc)
+  | Ty.Str when op = MOp.Add ->
+    mirifyExprOpStrAdd ctx op l r (ty, loc)
   | Ty.Str when opIsComparison op ->
     mirifyExprOpStrCmp ctx op l r (ty, loc)
   | _ ->

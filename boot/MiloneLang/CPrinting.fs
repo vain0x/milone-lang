@@ -191,6 +191,17 @@ typedef union Box {
   char* s;
   union Box* t;
 } Box;
+
+char* str_add(char* left, char* right) {
+  int left_len = strlen(left), right_len = strlen(right);
+  if (left_len == 0 || right_len == 0) {
+    return left_len ? right : left;
+  }
+  char* t = (char*)malloc((left_len + right_len + 1) * sizeof(char));
+  strcpy(t, left);
+  strcpy(t + left_len, right);
+  return t;
+}
 """
   acc *- header *- eol
 

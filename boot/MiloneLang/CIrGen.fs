@@ -142,6 +142,13 @@ let genExprCallPrintfn ctx format args =
   let ctx = ctxAddStmt ctx (callPrintf format args)
   cexprUnit, ctx
 
+let genExprCallStrAdd ctx l r =
+  let l, ctx = genExpr ctx l
+  let r, ctx = genExpr ctx r
+  let strAddRef = CExpr.Ref ("str_add", CTy.Ptr CTy.Void)
+  let callExpr = CExpr.Call (strAddRef, [l; r], CTy.Ptr CTy.Char)
+  callExpr, ctx
+
 let genExprOp ctx op first second ty loc =
   // Currently no support of non-int add/cmp/etc.
   let ty = CTy.Int
@@ -174,7 +181,7 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     CExpr.Int 0, ctx
   | MExpr.Bool (true, _) ->
     CExpr.Int 1, ctx
-  | MExpr.Prim (MPrim.StrCmp, (ty, loc)) ->
+  | MExpr.Prim (MPrim.StrCmp, (ty, _loc)) ->
     CExpr.Ref ("strcmp", cty ty), ctx
   | MExpr.Ref (_, (MTy.Unit, _)) ->
     cexprUnit, ctx
@@ -186,6 +193,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     genExprUnbox ctx expr index a
   | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _) ->
     genExprCallPrintfn ctx format args
+  | MExpr.Call (MExpr.Prim (MPrim.StrAdd, _), [l; r], _) ->
+    genExprCallStrAdd ctx l r
   | MExpr.Call (callee, args, (ty, _)) ->
     genExprCall ctx callee args ty
   | MExpr.Op (op, first, second, (ty, loc)) ->

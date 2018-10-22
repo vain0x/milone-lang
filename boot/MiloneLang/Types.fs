@@ -156,10 +156,13 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MPrim =
     | Printfn
+    /// Concatenates two strings.
+    | StrAdd
     // Compare two strings.
     | StrCmp
 
   /// Operator in middle IR.
+  /// Operands must be int.
   [<RequireQualifiedAccess>]
   type MOp =
     | Mul
