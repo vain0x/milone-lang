@@ -205,7 +205,15 @@ let mirifyExprOpTie ctx l r (ty, loc) =
   let ctx = ctxAddStmt ctx (MStmt.LetBox (tempSerial, elems, (ty, loc)))
   MExpr.Ref (tempSerial, (ty, loc)), ctx
 
-// a <=> b ==> strcmp(a, b) <=> 0
+/// x op y ==> `x op y` if `x : int`
+/// C language supports all operators.
+let mirifyExprOpInt ctx op l r (ty, loc) =
+    let opExpr = MExpr.Op (op, l, r, (ty, loc))
+    let temp, tempSerial, ctx = ctxFreshVar ctx "op" (ty, loc)
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, Some opExpr, (ty, loc)))
+    temp, ctx
+
+/// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mirifyExprOpStrCmp ctx op l r (ty, loc) =
   let strCmp = MExpr.Prim (MPrim.StrCmp, (MTy.Fun (MTy.Str, MTy.Int), loc))
   let strCmpExpr = MExpr.Call (strCmp, [l; r], (MTy.Int, loc))
@@ -219,10 +227,7 @@ let mirifyExprOp ctx op l r (ty, loc) =
   let r, ctx = mirifyExpr ctx r
   match lTy with
   | Ty.Int ->
-    let opExpr = MExpr.Op (op, l, r, (ty, loc))
-    let temp, tempSerial, ctx = ctxFreshVar ctx "op" (ty, loc)
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, Some opExpr, (ty, loc)))
-    temp, ctx
+    mirifyExprOpInt ctx op l r (ty, loc)
   | Ty.Str when opIsComparison op ->
     mirifyExprOpStrCmp ctx op l r (ty, loc)
   | _ ->
