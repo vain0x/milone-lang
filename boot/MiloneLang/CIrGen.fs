@@ -174,6 +174,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     CExpr.Int 0, ctx
   | MExpr.Bool (true, _) ->
     CExpr.Int 1, ctx
+  | MExpr.Prim (MPrim.StrCmp, (ty, loc)) ->
+    CExpr.Ref ("strcmp", cty ty), ctx
   | MExpr.Ref (_, (MTy.Unit, _)) ->
     cexprUnit, ctx
   | MExpr.Ref (serial, (ty, _)) ->

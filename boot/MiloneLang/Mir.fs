@@ -4,6 +4,8 @@ type TyCtx = Typing.TyCtx
 
 let exprExtract = Parsing.exprExtract
 
+let exprTy = exprExtract >> fst
+
 let exprLoc = exprExtract >> snd
 
 let patTy = Typing.patTy
@@ -59,6 +61,18 @@ let ctxLetFreshVar (ctx: MirCtx) (ident: string) (ty: MTy, loc) =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (serial, None, (ty, loc)))
   let setStmt expr = MStmt.Set (serial, expr, (ty, loc))
   refExpr, setStmt, ctx
+
+let opIsComparison op =
+  match op with
+  | MOp.Eq
+  | MOp.Ne
+  | MOp.Lt
+  | MOp.Le
+  | MOp.Gt
+  | MOp.Ge ->
+    true
+  | _ ->
+    false
 
 let mopFrom op =
   match op with
@@ -191,14 +205,28 @@ let mirifyExprOpTie ctx l r (ty, loc) =
   let ctx = ctxAddStmt ctx (MStmt.LetBox (tempSerial, elems, (ty, loc)))
   MExpr.Ref (tempSerial, (ty, loc)), ctx
 
+// a <=> b ==> strcmp(a, b) <=> 0
+let mirifyExprOpStrCmp ctx op l r (ty, loc) =
+  let strCmp = MExpr.Prim (MPrim.StrCmp, (MTy.Fun (MTy.Str, MTy.Int), loc))
+  let strCmpExpr = MExpr.Call (strCmp, [l; r], (MTy.Int, loc))
+  let zeroExpr = MExpr.Int (0, (MTy.Int, loc))
+  let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, (ty, loc))
+  opExpr, ctx
+
 let mirifyExprOp ctx op l r (ty, loc) =
-  let ty = unboxTy ty
+  let ty, lTy = unboxTy ty, exprTy l
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
-  let opExpr = MExpr.Op (op, l, r, (ty, loc))
-  let temp, tempSerial, ctx = ctxFreshVar ctx "op" (ty, loc)
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, Some opExpr, (ty, loc)))
-  temp, ctx
+  match lTy with
+  | Ty.Int ->
+    let opExpr = MExpr.Op (op, l, r, (ty, loc))
+    let temp, tempSerial, ctx = ctxFreshVar ctx "op" (ty, loc)
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, Some opExpr, (ty, loc)))
+    temp, ctx
+  | Ty.Str when opIsComparison op ->
+    mirifyExprOpStrCmp ctx op l r (ty, loc)
+  | _ ->
+    failwithf "unimpl"
 
 let mirifyExprAndThen ctx exprs _ =
   let exprs, ctx = mirifyExprs ctx exprs

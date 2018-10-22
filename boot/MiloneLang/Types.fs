@@ -156,6 +156,8 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MPrim =
     | Printfn
+    // Compare two strings.
+    | StrCmp
 
   /// Operator in middle IR.
   [<RequireQualifiedAccess>]
