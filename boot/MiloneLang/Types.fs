@@ -65,7 +65,7 @@ namespace rec MiloneLang
     | Mod
     | Add
     | Sub
-    //// Equal
+    /// Equal
     | Eq
     /// Not Equal
     | Ne
@@ -158,7 +158,7 @@ namespace rec MiloneLang
     | Printfn
     /// Concatenates two strings.
     | StrAdd
-    // Compare two strings.
+    /// Compare two strings.
     | StrCmp
 
   /// Operator in middle IR.
