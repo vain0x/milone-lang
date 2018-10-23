@@ -100,26 +100,31 @@ let unboxTy (ty: Ty): MTy =
   | Ty.Fun (lTy, rTy) ->
     MTy.Fun (unboxTy lTy, unboxTy rTy)
   | Ty.Tuple (lTy, rTy) ->
-    MTy.Box (MBoxTy.Tuple (unboxTy lTy, unboxTy rTy))
+    MTy.Tuple (unboxTy lTy, unboxTy rTy)
   | Ty.Var _ ->
     failwith "Never type variable here."
 
-let boxTy (ty: Ty): MBoxTy =
+/// Wraps a value with box if necessary.
+let boxExpr (ty, loc) (expr, ctx) =
   match ty with
-  | Ty.Unit -> MBoxTy.Unit
-  | Ty.Bool -> MBoxTy.Bool
-  | Ty.Int -> MBoxTy.Int
-  | Ty.Str -> MBoxTy.Str
-  | Ty.Fun (lTy, rTy) ->
-    MBoxTy.Fun (unboxTy lTy, unboxTy rTy)
-  | Ty.Tuple (lTy, rTy) ->
-    MBoxTy.Tuple (unboxTy lTy, unboxTy rTy)
-  | Ty.Var _ ->
-    failwith "Never type variable here."
+  | Ty.Tuple _ ->
+    expr, ctx
+  | _ ->
+    MExpr.Box (expr, (MTy.Box (unboxTy ty), loc)), ctx
 
-/// Wraps an expression with unbox function if necessary.
-let unboxExpr expr index resultTy loc =
-  MExpr.Unbox (expr, index, (resultTy, loc))
+/// Wraps an expression with unbox operation.
+let unboxExpr expr resultTy loc =
+  MExpr.Unbox (expr, (unboxTy resultTy, loc))
+
+/// Wraps an expression with projection operation.
+/// And unbox if necessary.
+let projExpr expr index resultTy loc =
+  let projExpr = MExpr.Proj (expr, index, (unboxTy resultTy, loc))
+  match resultTy with
+  | Ty.Tuple _ ->
+    projExpr
+  | _ ->
+    unboxExpr projExpr resultTy loc
 
 let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MirCtx =
   match pat with
@@ -128,8 +133,8 @@ let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MirCtx =
   | Pat.Ident (_, serial, (ty, loc)) ->
     ctxAddStmt ctx (MStmt.LetVal (serial, Some expr, (unboxTy ty, loc)))
   | Pat.Tuple (l, r, (_, loc)) ->
-    let fstExpr = unboxExpr expr 0 (unboxTy (patTy l)) loc
-    let sndExpr = unboxExpr expr 1 (unboxTy (patTy r)) loc
+    let fstExpr = projExpr expr 0 (patTy l) loc
+    let sndExpr = projExpr expr 1 (patTy r) loc
     let ctx = mirifyPat ctx l fstExpr
     let ctx = mirifyPat ctx r sndExpr
     ctx
@@ -171,7 +176,7 @@ let mirifyExprIndex ctx l r ty loc =
 /// fst a ==> unbox 0 a
 let mirifyExprCallFst ctx _calleeLoc arg (ty, callLoc) =
   let arg, ctx = mirifyExpr ctx arg
-  unboxExpr arg 0 (unboxTy ty) callLoc, ctx
+  projExpr arg 0 ty callLoc, ctx
 
 let mirifyExprCall ctx callee args (ty, loc) =
   let ty = unboxTy ty
@@ -193,10 +198,6 @@ let mirifyExprOpOr ctx l r (ty, loc) =
   let trueExpr = Expr.Bool (true, (ty, loc))
   mirifyExprIf ctx l trueExpr r (ty, loc)
 
-/// Wraps a value with box.
-let boxExpr (ty, loc) (expr, ctx) =
-  MExpr.Box (expr, (MTy.Box (boxTy ty), loc)), ctx
-
 /// Creates a tuple inside a box.
 let mirifyExprOpTie ctx l r (ty, loc) =
   let lTy, rTy =
@@ -205,13 +206,13 @@ let mirifyExprOpTie ctx l r (ty, loc) =
     | _ -> failwith "Tuple constructor's type must be a tuple."
   let lLoc, rLoc = exprLoc l, exprLoc r
 
-  let ty = MTy.Box (MBoxTy.Tuple (lTy, rTy))
+  let ty = MTy.Box (MTy.Tuple (lTy, rTy))
   let _, tempSerial, ctx = ctxFreshVar ctx "tuple" (ty, loc)
 
   let l, ctx = mirifyExpr ctx l |> boxExpr (exprExtract l)
   let r, ctx = mirifyExpr ctx r |> boxExpr (exprExtract r)
   let elems = [l, (lTy, lLoc); r, (rTy, rLoc)]
-  let ctx = ctxAddStmt ctx (MStmt.LetBox (tempSerial, elems, (ty, loc)))
+  let ctx = ctxAddStmt ctx (MStmt.LetTuple (tempSerial, elems, (ty, loc)))
   MExpr.Ref (tempSerial, (ty, loc)), ctx
 
 /// x op y ==> `x op y` if `x : int`

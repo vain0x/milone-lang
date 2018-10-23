@@ -55,18 +55,22 @@ let cty (ty: MTy): CTy =
     CTy.Ptr CTy.Void
   | MTy.Box boxTy ->
     CTy.Box (cboxTy boxTy)
+  | MTy.Tuple _ ->
+    CTy.Box (cboxTy ty)
 
-let cboxTy (ty: MBoxTy): CBoxTy =
+let cboxTy (ty: MTy): CBoxTy =
   match ty with
-  | MBoxTy.Unit
-  | MBoxTy.Bool
-  | MBoxTy.Int ->
+  | MTy.Unit
+  | MTy.Bool
+  | MTy.Int ->
     CBoxTy.Int
-  | MBoxTy.Str ->
+  | MTy.Str ->
     CBoxTy.Str
-  | MBoxTy.Fun _ ->
+  | MTy.Fun _ ->
     CBoxTy.Int // FIXME: what if function boxed?
-  | MBoxTy.Tuple (lTy, rTy) ->
+  | MTy.Box boxTy ->
+    cboxTy boxTy
+  | MTy.Tuple (lTy, rTy) ->
     CBoxTy.Tuple [cty lTy; cty rTy]
 
 let cexprUnit = CExpr.Int 0
@@ -103,23 +107,30 @@ let genExprBox ctx expr (ty, _) =
     failwith "unimpl boxing of functions"
   | MTy.Box _ ->
     expr, ctx
+  | MTy.Tuple (lTy, rTy) ->
+    expr, ctx
 
-/// `box.t[i].?`
-let genExprUnbox ctx expr index (ty, _) =
+/// `box.?`
+let genExprUnbox ctx expr (ty, _) =
   let expr, ctx = genExpr ctx expr
-  let valTy =
+  let expr =
     match ty with
     | MTy.Unit
     | MTy.Bool
     | MTy.Int ->
-      CBoxTy.Int
+      CExpr.Unbox (expr, CBoxTy.Int)
     | MTy.Str ->
-      CBoxTy.Str
-    | MTy.Fun _ ->
-      failwith "unimpl unboxing functions"
-    | MTy.Box _ ->
-      CBoxTy.Self
-  CExpr.Unbox (expr, index, valTy), ctx
+      CExpr.Unbox (expr, CBoxTy.Str)
+    | MTy.Fun _
+    | MTy.Box _
+    | MTy.Tuple _ ->
+      expr
+  expr, ctx
+
+/// `box.t[i]`
+let genExprProj ctx expr index _ =
+  let expr, ctx = genExpr ctx expr
+  CExpr.Proj (expr, index), ctx
 
 /// `x[i]`
 let genExprIndex ctx l r =
@@ -195,8 +206,10 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Box (expr, a) ->
     genExprBox ctx expr a
-  | MExpr.Unbox (expr, index, a) ->
-    genExprUnbox ctx expr index a
+  | MExpr.Unbox (expr, a) ->
+    genExprUnbox ctx expr a
+  | MExpr.Proj (expr, index, a) ->
+    genExprProj ctx expr index a
   | MExpr.Index (l, r, _) ->
     genExprIndex ctx l r
   | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _) ->
@@ -225,7 +238,7 @@ let genStmt ctx stmt =
         let init, ctx = genExpr ctx init
         Some init, ctx
     ctxAddStmt ctx (CStmt.Let (ident, init, cty ty))
-  | MStmt.LetBox (serial, elems, _) ->
+  | MStmt.LetTuple (serial, elems, _) ->
     let ident = ctxUniqueName ctx serial
     let ctx = ctxAddStmt ctx (CStmt.LetBox (ident, List.length elems))
     let left = CExpr.Ref ident

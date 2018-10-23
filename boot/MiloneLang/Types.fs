@@ -137,7 +137,6 @@ namespace rec MiloneLang
       of pats:Pat<'a> list * init:Expr<'a> * 'a
 
   /// Type in middle IR.
-  /// These have statically fixed size to be placed on stack.
   [<RequireQualifiedAccess>]
   type MTy =
     | Unit
@@ -147,18 +146,7 @@ namespace rec MiloneLang
     | Fun
       of MTy * MTy
     | Box
-      of MBoxTy
-
-  /// Type in middle IR.
-  /// This kind of values may have dynamic size, so you can't use directly.
-  [<RequireQualifiedAccess>]
-  type MBoxTy =
-    | Unit
-    | Bool
-    | Int
-    | Str
-    | Fun
-      of MTy * MTy
+      of MTy
     | Tuple
       of MTy * MTy
 
@@ -209,11 +197,14 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of serial:int * 'a
-    /// Wrap value with box (heap allocated container).
+    /// Wrap a value with box.
     | Box
       of MExpr<'a> * 'a
-    /// Get value from a box.
+    /// Unwrap a box.
     | Unbox
+      of MExpr<'a> * 'a
+    /// Projection. Gets an element from tuple box.
+    | Proj
       of MExpr<'a> * int * 'a
     | Index
       of MExpr<'a> * MExpr<'a> * 'a
@@ -231,8 +222,8 @@ namespace rec MiloneLang
     /// Local variable declaration.
     | LetVal
       of serial:int * init:MExpr<'a> option * 'a
-    /// Declare box variable and emplace contents.
-    | LetBox
+    /// Declares a tuple box variable filled by elements.
+    | LetTuple
       of serial:int * elems:(MExpr<'a> * 'a) list * 'a
     /// Set to local variable.
     | Set
@@ -251,7 +242,6 @@ namespace rec MiloneLang
   /// Variant of union `Box`.
   [<RequireQualifiedAccess>]
   type CBoxTy =
-    | Self
     | Int
     | Str
     | Tuple
@@ -288,12 +278,15 @@ namespace rec MiloneLang
       of CPrim
     | Ref
       of string
-    /// Wrap with `Box`.
+    /// Wrap a value with `Box`.
     | Box
       of CExpr * CBoxTy
-    /// Get content of `Box`.
+    /// Unwrap a `Box`.
     | Unbox
-      of CExpr * int * CBoxTy
+      of CExpr * CBoxTy
+    /// Projection. Get an element from tuple box.
+    | Proj
+      of CExpr * int
     | Cast
       of CExpr * CTy
     /// `a[i]`

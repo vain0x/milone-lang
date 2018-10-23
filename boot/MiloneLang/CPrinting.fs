@@ -24,7 +24,6 @@ let opStr op =
 
 let boxField vTy =
   match vTy with
-  | CBoxTy.Self -> ""
   | CBoxTy.Int -> ".i"
   | CBoxTy.Str -> ".s"
   | CBoxTy.Tuple _ -> ".t"
@@ -78,9 +77,12 @@ let rec cprintExpr acc expr: string list =
     acc *- "malloc"
   | CExpr.Prim CPrim.Printf ->
     acc *- "printf"
-  | CExpr.Unbox (left, index, valTy) ->
+  | CExpr.Unbox (left, valTy) ->
     let acc = cprintExpr acc left
-    acc *- ".t[" *- string index *- "]" *- boxField valTy
+    acc *- boxField valTy
+  | CExpr.Proj (left, index) ->
+    let acc = cprintExpr acc left
+    acc *- ".t[" *- string index *- "]"
   | CExpr.Cast (expr, ty) ->
     let acc = acc *- "(("
     let acc = cprintTy acc ty
