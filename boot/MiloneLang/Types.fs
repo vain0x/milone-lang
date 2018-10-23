@@ -287,22 +287,22 @@ namespace rec MiloneLang
     | Prim
       of CPrim
     | Ref
-      of string * CTy
+      of string
     /// Wrap with `Box`.
     | Box
       of CExpr * CBoxTy
     /// Get content of `Box`.
     | Unbox
-      of CExpr * int * CBoxTy * CTy
+      of CExpr * int * CBoxTy
     | Cast
       of CExpr * CTy
     /// `a[i]`
     | Index
-      of CExpr * CExpr * CTy
+      of CExpr * CExpr
     | Call
-      of CExpr * args:CExpr list * CTy
+      of CExpr * args:CExpr list
     | Op
-      of COp * CExpr * CExpr * CTy
+      of COp * CExpr * CExpr
 
   /// Statement in C language.
   [<RequireQualifiedAccess>]
@@ -315,7 +315,7 @@ namespace rec MiloneLang
       of ident:string * init:CExpr option * CTy
     /// `x = a;`
     | Set
-      of CExpr * CExpr * CTy
+      of CExpr * CExpr
     /// `Box b = {.t = ..}`
     | LetBox
       of ident:string * int

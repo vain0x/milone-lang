@@ -72,13 +72,13 @@ let rec cprintExpr acc expr: string list =
     let acc = acc *- "(Box){" *- boxField vTy *- " = "
     let acc = cprintExpr acc expr
     acc *- "}"
-  | CExpr.Ref (value, _) ->
+  | CExpr.Ref (value) ->
     acc *- value
   | CExpr.Prim CPrim.Malloc ->
     acc *- "malloc"
   | CExpr.Prim CPrim.Printf ->
     acc *- "printf"
-  | CExpr.Unbox (left, index, valTy, _) ->
+  | CExpr.Unbox (left, index, valTy) ->
     let acc = cprintExpr acc left
     acc *- ".t[" *- string index *- "]" *- boxField valTy
   | CExpr.Cast (expr, ty) ->
@@ -88,19 +88,19 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExpr acc expr
     let acc = acc *- ")"
     acc
-  | CExpr.Index (l, r, _) ->
+  | CExpr.Index (l, r) ->
     let acc = cprintExpr acc l
     let acc = acc *- "["
     let acc = cprintExpr acc r
     let acc = acc *- "]"
     acc
-  | CExpr.Call (callee, args, _) ->
+  | CExpr.Call (callee, args) ->
     let acc = cprintExpr acc callee
     let acc = acc *- "("
     let acc = cprintExprList acc 0 ", " args
     let acc = acc *- ")"
     acc
-  | CExpr.Op (op, first, second, _) ->
+  | CExpr.Op (op, first, second) ->
     let acc = acc *- "("
     let acc = cprintExpr acc first
     let acc = acc *- " " *- opStr op *- " "
@@ -137,7 +137,7 @@ let cprintStmt acc indent stmt: string list =
         *- string len
         *- " * sizeof(Box))};"
         *- eol
-  | CStmt.Set (l, r, _) ->
+  | CStmt.Set (l, r) ->
     let acc = cprintExpr acc l *- " = "
     let acc = cprintExpr acc r *- ";" *- eol
     acc

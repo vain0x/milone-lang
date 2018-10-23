@@ -73,7 +73,7 @@ let cexprUnit = CExpr.Int 0
 
 let callPrintf format args =
   let format = CExpr.Str (format + "\\n")
-  CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args, CTy.Int))
+  CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
 
 let ctxFreshName (ctx: Ctx) (ident: string) =
   let serial = ctx.VarSerial + 1
@@ -86,9 +86,9 @@ let ctxFreshName (ctx: Ctx) (ident: string) =
   let ident = ctxUniqueName ctx serial
   ident, ctx
 
-let ctxFreshVar (ctx: Ctx) (name: string) (ty: CTy) =
+let ctxFreshVar (ctx: Ctx) (name: string) =
   let name, ctx = ctxFreshName ctx name
-  name, CExpr.Ref (name, ty), ctx
+  name, CExpr.Ref name, ctx
 
 let genExprBox ctx expr (ty, _) =
   let expr, ctx = genExpr ctx expr
@@ -119,25 +119,25 @@ let genExprUnbox ctx expr index (ty, _) =
       failwith "unimpl unboxing functions"
     | MTy.Box _ ->
       CBoxTy.Self
-  CExpr.Unbox (expr, index, valTy, cty ty), ctx
+  CExpr.Unbox (expr, index, valTy), ctx
 
 /// `x[i]`
-let genExprIndex ctx l r (ty, _) =
+let genExprIndex ctx l r =
   let l, ctx = genExpr ctx l
   let r, ctx = genExpr ctx r
-  CExpr.Index (l, r, cty ty), ctx
+  CExpr.Index (l, r), ctx
 
 let genExprCall ctx callee args ty =
   match args with
   | [arg] ->
     let callee, ctx = genExpr ctx callee
     let arg, ctx = genExpr ctx arg
-    CExpr.Call (callee, [arg], cty ty), ctx
+    CExpr.Call (callee, [arg]), ctx
   | [arg1; arg2] ->
     let callee, ctx = genExpr ctx callee
     let arg2, ctx = genExpr ctx arg2
     let arg1, ctx = genExpr ctx arg1
-    CExpr.Call (callee, [arg1; arg2], cty ty), ctx
+    CExpr.Call (callee, [arg1; arg2]), ctx
   | [] ->
     failwith "Never zero-arg call"
   | _ ->
@@ -151,8 +151,8 @@ let genExprCallPrintfn ctx format args =
 let genExprCallStrAdd ctx l r =
   let l, ctx = genExpr ctx l
   let r, ctx = genExpr ctx r
-  let strAddRef = CExpr.Ref ("str_add", CTy.Ptr CTy.Void)
-  let callExpr = CExpr.Call (strAddRef, [l; r], CTy.Ptr CTy.Char)
+  let strAddRef = CExpr.Ref "str_add"
+  let callExpr = CExpr.Call (strAddRef, [l; r])
   callExpr, ctx
 
 let genExprOp ctx op first second ty loc =
@@ -161,7 +161,7 @@ let genExprOp ctx op first second ty loc =
   let first, ctx = genExpr ctx first
   let second, ctx = genExpr ctx second
   // let tempIdent, temp, ctx = ctxFreshVar ctx "op" ty
-  let opExpr = CExpr.Op (op, first, second, ty)
+  let opExpr = CExpr.Op (op, first, second)
   // let ctx = ctxAddStmt ctx (CStmt.Let (tempIdent, Some opExpr, ty))
   // temp, ctx
   opExpr, ctx
@@ -187,18 +187,18 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     CExpr.Int 0, ctx
   | MExpr.Bool (true, _) ->
     CExpr.Int 1, ctx
-  | MExpr.Prim (MPrim.StrCmp, (ty, _loc)) ->
-    CExpr.Ref ("strcmp", cty ty), ctx
+  | MExpr.Prim (MPrim.StrCmp, _) ->
+    CExpr.Ref "strcmp", ctx
   | MExpr.Ref (_, (MTy.Unit, _)) ->
     cexprUnit, ctx
-  | MExpr.Ref (serial, (ty, _)) ->
-    CExpr.Ref (ctxUniqueName ctx serial, cty ty), ctx
+  | MExpr.Ref (serial, _) ->
+    CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Box (expr, a) ->
     genExprBox ctx expr a
   | MExpr.Unbox (expr, index, a) ->
     genExprUnbox ctx expr index a
-  | MExpr.Index (l, r, a) ->
-    genExprIndex ctx l r a
+  | MExpr.Index (l, r, _) ->
+    genExprIndex ctx l r
   | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _) ->
     genExprCallPrintfn ctx format args
   | MExpr.Call (MExpr.Prim (MPrim.StrAdd, _), [l; r], _) ->
@@ -225,10 +225,10 @@ let genStmt ctx stmt =
         let init, ctx = genExpr ctx init
         Some init, ctx
     ctxAddStmt ctx (CStmt.Let (ident, init, cty ty))
-  | MStmt.LetBox (serial, elems, (ty, _)) ->
+  | MStmt.LetBox (serial, elems, _) ->
     let ident = ctxUniqueName ctx serial
     let ctx = ctxAddStmt ctx (CStmt.LetBox (ident, List.length elems))
-    let left = CExpr.Ref (ident, cty ty)
+    let left = CExpr.Ref ident
     let rec go ctx i elems =
       match elems with
       | [] ->
@@ -239,11 +239,11 @@ let genStmt ctx stmt =
         let ctx = ctxAddStmt ctx stmt
         go ctx (i + 1) elems
     go ctx 0 elems
-  | MStmt.Set (serial, right, (ty, _)) ->
+  | MStmt.Set (serial, right, _) ->
     let right, ctx = genExpr ctx right
     let ident = ctxUniqueName ctx serial
-    let left = CExpr.Ref (ident, cty ty)
-    ctxAddStmt ctx (CStmt.Set (left, right, cty ty))
+    let left = CExpr.Ref (ident)
+    ctxAddStmt ctx (CStmt.Set (left, right))
   | MStmt.Return (expr, _) ->
     let expr, ctx = genExpr ctx expr
     ctxAddStmt ctx (CStmt.Return (Some expr))
