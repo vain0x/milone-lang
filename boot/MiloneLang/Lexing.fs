@@ -84,7 +84,7 @@ let private readChar (source: string) (acc, y, x, i): Read =
         | c -> c
       c, 2
     else
-      source.[i + 1], i + 1
+      source.[i + 1], 1
   let r = i + 1 + len + 1
   if source.[r - 1] <> '\'' then
     lexError "Expected closing '\''" (source, r - 1)
