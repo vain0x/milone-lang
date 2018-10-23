@@ -1,0 +1,3 @@
+let main () =
+  let hello = "hello"
+  if hello.[0] = 'h' && hello.[4] = 'o' then 0 else 1

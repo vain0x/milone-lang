@@ -88,17 +88,23 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExpr acc expr
     let acc = acc *- ")"
     acc
-  | CExpr.Op (op, first, second, _) ->
-    let acc = acc *- "("
-    let acc = cprintExpr acc first
-    let acc = acc *- " " *- opStr op *- " "
-    let acc = cprintExpr acc second
-    let acc = acc *- ")"
+  | CExpr.Index (l, r, _) ->
+    let acc = cprintExpr acc l
+    let acc = acc *- "["
+    let acc = cprintExpr acc r
+    let acc = acc *- "]"
     acc
   | CExpr.Call (callee, args, _) ->
     let acc = cprintExpr acc callee
     let acc = acc *- "("
     let acc = cprintExprList acc 0 ", " args
+    let acc = acc *- ")"
+    acc
+  | CExpr.Op (op, first, second, _) ->
+    let acc = acc *- "("
+    let acc = cprintExpr acc first
+    let acc = acc *- " " *- opStr op *- " "
+    let acc = cprintExpr acc second
     let acc = acc *- ")"
     acc
 

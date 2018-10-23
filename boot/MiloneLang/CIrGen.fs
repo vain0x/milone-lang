@@ -121,6 +121,12 @@ let genExprUnbox ctx expr index (ty, _) =
       CBoxTy.Self
   CExpr.Unbox (expr, index, valTy, cty ty), ctx
 
+/// `x[i]`
+let genExprIndex ctx l r (ty, _) =
+  let l, ctx = genExpr ctx l
+  let r, ctx = genExpr ctx r
+  CExpr.Index (l, r, cty ty), ctx
+
 let genExprCall ctx callee args ty =
   match args with
   | [arg] ->
@@ -191,6 +197,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     genExprBox ctx expr a
   | MExpr.Unbox (expr, index, a) ->
     genExprUnbox ctx expr index a
+  | MExpr.Index (l, r, a) ->
+    genExprIndex ctx l r a
   | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _) ->
     genExprCallPrintfn ctx format args
   | MExpr.Call (MExpr.Prim (MPrim.StrAdd, _), [l; r], _) ->

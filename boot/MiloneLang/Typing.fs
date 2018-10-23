@@ -184,6 +184,16 @@ let inferIf ctx pred thenCl elseCl loc =
   let ctx = unifyTy ctx ty (tyOf elseCl)
   Expr.If (pred, thenCl, elseCl, (ty, loc)), ctx
 
+/// `x.[i] : 'y` <== x : 'x, i : int
+/// NOTE: Currently only the `x : string` case can compile, however,
+/// we don't infer that for compatibility.
+let inferIndex ctx l r loc =
+  let tyVar, ctx = freshTyVar "app" ctx
+  let l, ctx = inferExpr ctx l
+  let r, ctx = inferExpr ctx r
+  let ctx = unifyTy ctx (tyOf r) Ty.Int
+  Expr.Index (l, r, (Ty.Var tyVar, loc)), ctx
+
 /// During inference of `f w x ..`,
 /// assume we concluded `f w : 'f`.
 /// We can also conclude `f w : 'x -> 'g`.
@@ -360,6 +370,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferRef ctx loc ident
   | Expr.If (pred, thenCl, elseCl, loc) ->
     inferIf ctx pred thenCl elseCl loc
+  | Expr.Index (l, r, loc) ->
+    inferIndex ctx l r loc
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _), args, loc) ->
     inferAppPrintfn ctx loc args
   | Expr.Call (Expr.Prim (PrimFun.Fst, calleeLoc), [arg], loc) ->

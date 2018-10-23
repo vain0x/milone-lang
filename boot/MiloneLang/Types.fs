@@ -20,8 +20,14 @@ namespace rec MiloneLang
     | ParenL
     /// `)`
     | ParenR
+    /// `[`
+    | BracketL
+    /// `]`
+    | BracketR
     /// `:`
     | Colon
+    /// `.`
+    | Dot
     /// `->`
     | Arrow
     /// Punctuation.
@@ -113,6 +119,9 @@ namespace rec MiloneLang
       of ident:string * serial:int * 'a
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
+    /// `x.[i]`
+    | Index
+      of Expr<'a> * Expr<'a> * 'a
     /// `f x y ..`
     | Call
       of Expr<'a> * Expr<'a> list * 'a
@@ -206,6 +215,8 @@ namespace rec MiloneLang
     /// Get value from a box.
     | Unbox
       of MExpr<'a> * int * 'a
+    | Index
+      of MExpr<'a> * MExpr<'a> * 'a
     | Call
       of callee:MExpr<'a> * args:MExpr<'a> list * 'a
     | Op
@@ -285,6 +296,9 @@ namespace rec MiloneLang
       of CExpr * int * CBoxTy * CTy
     | Cast
       of CExpr * CTy
+    /// `a[i]`
+    | Index
+      of CExpr * CExpr * CTy
     | Call
       of CExpr * args:CExpr list * CTy
     | Op

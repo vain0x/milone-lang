@@ -103,6 +103,7 @@ let private tokenIdent ident =
 let private tokenPunct str =
   match str with
   | ":" -> Token.Colon
+  | "." -> Token.Dot
   | "->" -> Token.Arrow
   | _ -> Token.Punct str
 
@@ -127,6 +128,10 @@ let tokenize (source: string): (Token * Loc) list =
       | ')' as c ->
         let t = (if c = '(' then Token.ParenL else Token.ParenR), (y, x)
         (t :: acc, y, x + 1, i + 1) |> go
+      | '[' ->
+        ((Token.BracketL, (y, x)) :: acc, y, x + 1, i + 1) |> go
+      | ']' ->
+        ((Token.BracketR, (y, x)) :: acc, y, x + 1, i + 1) |> go
       | c when isOpChar c ->
         (acc, y, x, i) |> readOp source |> go
       | '"' ->

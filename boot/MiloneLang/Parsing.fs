@@ -30,6 +30,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.Prim (_, a) -> a
   | Expr.Ref (_, _, a) -> a
   | Expr.If (_, _, _, a) -> a
+  | Expr.Index (_, _, a) -> a
   | Expr.Call (_, _, a) -> a
   | Expr.Op (_, _, _, a) -> a
   | Expr.Anno (_, _, a) -> a
@@ -52,6 +53,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Ref (ident, serial, f a)
   | Expr.If (pred, thenCl, elseCl, a) ->
     Expr.If (exprMap f pred, exprMap f thenCl, exprMap f elseCl, f a)
+  | Expr.Index (l, r, a) ->
+    Expr.Index (exprMap f l, exprMap f r, f a)
   | Expr.Call (callee, args, a) ->
     Expr.Call (exprMap f callee, List.map (exprMap f) args, f a)
   | Expr.Op (op, l, r, a) ->
@@ -74,7 +77,10 @@ let tokenRole tokens: bool * bool =
   | (Token.Then, _) :: _
   | (Token.Else, _) :: _
   | (Token.ParenR, _) :: _
+  | (Token.BracketL, _) :: _ // FIXME: list literals not supported
+  | (Token.BracketR, _) :: _
   | (Token.Colon, _) :: _
+  | (Token.Dot, _) :: _
   | (Token.Arrow, _) :: _
   | (Token.Punct _, _) :: _ ->
     // These tokens are read only in specific contexts.
@@ -295,21 +301,39 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   | []
   | (Token.Else, _) :: _
   | (Token.Then, _) :: _
-  | (Token.Colon, _) :: _
-  | (Token.Arrow, _) :: _
   | (Token.ParenR, _) :: _
+  | (Token.BracketL, _) :: _
+  | (Token.BracketR, _) :: _
+  | (Token.Colon, _) :: _
+  | (Token.Dot, _) :: _
+  | (Token.Arrow, _) :: _
   | (Token.Punct _, _) :: _ ->
     parseError "Expected an atomic expression" tokens
 
-/// call = atom ( atom )*
+/// index = atom ( '.' '[' expr ']' )*
+let parseIndex boxX tokens =
+  let callee, tokens = parseAtom boxX tokens
+  let rec go acc tokens =
+    match tokens with
+    | (Token.Dot, loc) :: (Token.BracketL, _) :: tokens ->
+      match parseExpr boxX tokens with
+      | expr, (Token.BracketR, _) :: tokens ->
+        go (Expr.Index (acc, expr, loc)) tokens
+      | _, tokens ->
+        parseError "Expected closing ']'" tokens
+    | _ ->
+      acc, tokens
+  go callee tokens
+
+/// call = index ( index )*
 let parseCall boxX tokens =
   let calleeLoc = nextLoc tokens
   let _, calleeX = calleeLoc
   let insideX = max boxX (calleeX + 1)
-  let callee, tokens = parseAtom boxX tokens
+  let callee, tokens = parseIndex boxX tokens
   let rec go acc tokens =
     if nextInside insideX tokens && leadsExpr tokens then
-      let expr, tokens = parseAtom insideX tokens
+      let expr, tokens = parseIndex insideX tokens
       go (expr :: acc) tokens
     else
       List.rev acc, tokens
