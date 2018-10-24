@@ -145,8 +145,6 @@ namespace rec MiloneLang
     | Str
     | Fun
       of MTy * MTy
-    | Box
-      of MTy
     | Tuple
       of MTy * MTy
 
@@ -197,13 +195,7 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of serial:int * 'a
-    /// Wrap a value with box.
-    | Box
-      of MExpr<'a> * 'a
-    /// Unwrap a box.
-    | Unbox
-      of MExpr<'a> * 'a
-    /// Projection. Gets an element from tuple box.
+    /// Projection. Gets an element of tuple.
     | Proj
       of MExpr<'a> * int * 'a
     | Index
@@ -239,14 +231,6 @@ namespace rec MiloneLang
     | LetFun
       of callee:int * args:(int * 'a) list * result:MTy * body:MStmt<'a> list * 'a
 
-  /// Variant of union `Box`.
-  [<RequireQualifiedAccess>]
-  type CBoxTy =
-    | Int
-    | Str
-    | Tuple
-      of CTy list
-
   /// Type in C language.
   [<RequireQualifiedAccess>]
   type CTy =
@@ -255,9 +239,8 @@ namespace rec MiloneLang
     | Char
     | Ptr
       of CTy
-    /// Union of primitive types. Defined by emitted code.
-    | Box
-      of CBoxTy
+    | Struct
+      of ident:string
 
   [<RequireQualifiedAccess>]
   type CPrim =
@@ -278,17 +261,13 @@ namespace rec MiloneLang
       of CPrim
     | Ref
       of string
-    /// Wrap a value with `Box`.
-    | Box
-      of CExpr * CBoxTy
-    /// Unwrap a `Box`.
-    | Unbox
-      of CExpr * CBoxTy
     /// Projection. Get an element from tuple box.
     | Proj
       of CExpr * int
     | Cast
       of CExpr * CTy
+    | Nav
+      of CExpr * field:string
     /// `a[i]`
     | Index
       of CExpr * CExpr
@@ -309,12 +288,6 @@ namespace rec MiloneLang
     /// `x = a;`
     | Set
       of CExpr * CExpr
-    /// `Box b = {.t = ..}`
-    | LetBox
-      of ident:string * int
-    /// `((Box)b).t[i] = a;`
-    | Emplace
-      of CExpr * int * CExpr
     | Return
       of CExpr option
     | If
@@ -323,5 +296,7 @@ namespace rec MiloneLang
   /// Top-level definition in C language.
   [<RequireQualifiedAccess>]
   type CDecl =
+    | Struct
+      of ident:string * fields:(string * CTy) list
     | Fun
       of ident:string * args:(string * CTy) list * CTy * body:CStmt list

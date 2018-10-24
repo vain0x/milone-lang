@@ -9,14 +9,20 @@ type Ctx =
   {
     VarSerial: int
     VarName: Map<int, string>
+    TySerial: int
+    TyEnv: Map<MTy, CTy>
     Stmts: CStmt list
     Decls: CDecl list
   }
+
+let tupleField i = sprintf "t%d" i
 
 let ctxFromMirCtx (mirCtx: MirCtx): Ctx =
   {
     VarSerial = mirCtx.VarSerial
     VarName = mirCtx.VarName
+    TySerial = 0
+    TyEnv = Map.empty
     Stmts = []
     Decls = []
   }
@@ -33,6 +39,21 @@ let ctxAddStmt (ctx: Ctx) stmt =
 let ctxAddDecl (ctx: Ctx) decl =
   { ctx with Decls = decl :: ctx.Decls }
 
+let ctxAddTupleDecl (ctx: Ctx) lTy rTy =
+  let tupleTy = MTy.Tuple (lTy, rTy)
+  let lTy, ctx = cty ctx lTy
+  let rTy, ctx = cty ctx rTy
+  let serial = ctx.TySerial + 1
+  let ident = sprintf "Tuple_%d" serial
+  let fields = [tupleField 0, lTy; tupleField 1, rTy]
+  let ctx =
+    { ctx with
+        TySerial = ctx.TySerial + 1
+        TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct ident)
+        Decls = CDecl.Struct (ident, fields) :: ctx.Decls
+    }
+  CTy.Struct ident, ctx
+
 let ctxUniqueName (ctx: Ctx) serial =
   let ident =
     match ctx.VarName |> Map.tryFind serial with
@@ -43,35 +64,22 @@ let ctxUniqueName (ctx: Ctx) serial =
 let tyOf expr =
   Typing.tyOf expr
 
-let cty (ty: MTy): CTy =
+let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
   match ty with
   | MTy.Unit
   | MTy.Bool
   | MTy.Int ->
-    CTy.Int
+    CTy.Int, ctx
   | MTy.Str ->
-    CTy.Ptr CTy.Char
+    CTy.Ptr CTy.Char, ctx
   | MTy.Fun _ ->
-    CTy.Ptr CTy.Void
-  | MTy.Box boxTy ->
-    CTy.Box (cboxTy boxTy)
-  | MTy.Tuple _ ->
-    CTy.Box (cboxTy ty)
-
-let cboxTy (ty: MTy): CBoxTy =
-  match ty with
-  | MTy.Unit
-  | MTy.Bool
-  | MTy.Int ->
-    CBoxTy.Int
-  | MTy.Str ->
-    CBoxTy.Str
-  | MTy.Fun _ ->
-    CBoxTy.Int // FIXME: what if function boxed?
-  | MTy.Box boxTy ->
-    cboxTy boxTy
+    CTy.Ptr CTy.Void, ctx
   | MTy.Tuple (lTy, rTy) ->
-    CBoxTy.Tuple [cty lTy; cty rTy]
+    match ctx.TyEnv |> Map.tryFind ty with
+    | None ->
+      ctxAddTupleDecl ctx lTy rTy
+    | Some ty ->
+      ty, ctx
 
 let cexprUnit = CExpr.Int 0
 
@@ -94,40 +102,7 @@ let ctxFreshVar (ctx: Ctx) (name: string) =
   let name, ctx = ctxFreshName ctx name
   name, CExpr.Ref name, ctx
 
-let genExprBox ctx expr (ty, _) =
-  let expr, ctx = genExpr ctx expr
-  match ty with
-  | MTy.Unit
-  | MTy.Bool
-  | MTy.Int ->
-    CExpr.Box (expr, CBoxTy.Int), ctx
-  | MTy.Str ->
-    CExpr.Box (expr, CBoxTy.Str), ctx
-  | MTy.Fun _ ->
-    failwith "unimpl boxing of functions"
-  | MTy.Box _ ->
-    expr, ctx
-  | MTy.Tuple (lTy, rTy) ->
-    expr, ctx
-
-/// `box.?`
-let genExprUnbox ctx expr (ty, _) =
-  let expr, ctx = genExpr ctx expr
-  let expr =
-    match ty with
-    | MTy.Unit
-    | MTy.Bool
-    | MTy.Int ->
-      CExpr.Unbox (expr, CBoxTy.Int)
-    | MTy.Str ->
-      CExpr.Unbox (expr, CBoxTy.Str)
-    | MTy.Fun _
-    | MTy.Box _
-    | MTy.Tuple _ ->
-      expr
-  expr, ctx
-
-/// `box.t[i]`
+/// `tuple.ti`
 let genExprProj ctx expr index _ =
   let expr, ctx = genExpr ctx expr
   CExpr.Proj (expr, index), ctx
@@ -204,10 +179,6 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     cexprUnit, ctx
   | MExpr.Ref (serial, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.Box (expr, a) ->
-    genExprBox ctx expr a
-  | MExpr.Unbox (expr, a) ->
-    genExprUnbox ctx expr a
   | MExpr.Proj (expr, index, a) ->
     genExprProj ctx expr index a
   | MExpr.Index (l, r, _) ->
@@ -237,18 +208,20 @@ let genStmt ctx stmt =
       | Some init ->
         let init, ctx = genExpr ctx init
         Some init, ctx
-    ctxAddStmt ctx (CStmt.Let (ident, init, cty ty))
-  | MStmt.LetTuple (serial, elems, _) ->
+    let cty, ctx = cty ctx ty
+    ctxAddStmt ctx (CStmt.Let (ident, init, cty))
+  | MStmt.LetTuple (serial, elems, (ty, _)) ->
     let ident = ctxUniqueName ctx serial
-    let ctx = ctxAddStmt ctx (CStmt.LetBox (ident, List.length elems))
-    let left = CExpr.Ref ident
+    let tupleTy, ctx = cty ctx ty
+    let ctx = ctxAddStmt ctx (CStmt.Let (ident, None, tupleTy))
     let rec go ctx i elems =
       match elems with
       | [] ->
         ctx
-      | (elem, elemA) :: elems ->
-        let elem, ctx = genExprBox ctx elem elemA
-        let stmt = CStmt.Emplace (left, i, elem)
+      | (elem, _) :: elems ->
+        let left = CExpr.Nav (CExpr.Ref ident, tupleField i)
+        let elem, ctx = genExpr ctx elem
+        let stmt = CStmt.Set (left, elem)
         let ctx = ctxAddStmt ctx stmt
         go ctx (i + 1) elems
     go ctx 0 elems
@@ -291,10 +264,18 @@ let genDecls (ctx: Ctx) decls =
       if List.isEmpty decls
       then "main", []
       else ctxUniqueName ctx callee, args
-    let args =
-      List.map (fun (arg, (ty, _)) -> ctxUniqueName ctx arg, cty ty) args
-    let body, _ctx = genBlock ctx body
-    let funDecl = CDecl.Fun (ident, args, cty resultTy, body)
+    let rec go acc ctx args =
+      match args with
+      | [] ->
+        List.rev acc, ctx
+      | (arg, (ty, _)) :: args ->
+        let ident = ctxUniqueName ctx arg
+        let cty, ctx = cty ctx ty
+        go ((ident, cty) :: acc) ctx args
+    let args, ctx = go [] ctx args
+    let body, ctx = genBlock ctx body
+    let resultTy, ctx = cty ctx resultTy
+    let funDecl = CDecl.Fun (ident, args, resultTy, body)
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls
 

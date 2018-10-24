@@ -22,12 +22,6 @@ let opStr op =
   | COp.Gt -> ">"
   | COp.Ge -> ">="
 
-let boxField vTy =
-  match vTy with
-  | CBoxTy.Int -> ".i"
-  | CBoxTy.Str -> ".s"
-  | CBoxTy.Tuple _ -> ".t"
-
 let rec cprintTy acc ty: string list =
   match ty with
   | CTy.Void ->
@@ -39,8 +33,8 @@ let rec cprintTy acc ty: string list =
   | CTy.Ptr ty ->
     let acc = cprintTy acc ty
     acc *- "*"
-  | CTy.Box _ ->
-    acc *- "Box"
+  | CTy.Struct ident ->
+    acc *- "struct " *- ident
 
 let rec cprintParams acc ps: string list =
   let rec go acc ps =
@@ -67,28 +61,25 @@ let rec cprintExpr acc expr: string list =
     acc *- string value
   | CExpr.Str value ->
     acc *- "\"" *- value *- "\""
-  | CExpr.Box (expr, vTy) ->
-    let acc = acc *- "(Box){" *- boxField vTy *- " = "
-    let acc = cprintExpr acc expr
-    acc *- "}"
   | CExpr.Ref (value) ->
     acc *- value
   | CExpr.Prim CPrim.Malloc ->
     acc *- "malloc"
   | CExpr.Prim CPrim.Printf ->
     acc *- "printf"
-  | CExpr.Unbox (left, valTy) ->
-    let acc = cprintExpr acc left
-    acc *- boxField valTy
   | CExpr.Proj (left, index) ->
     let acc = cprintExpr acc left
-    acc *- ".t[" *- string index *- "]"
+    acc *- ".t" *- string index
   | CExpr.Cast (expr, ty) ->
     let acc = acc *- "(("
     let acc = cprintTy acc ty
     let acc = acc *- ")"
     let acc = cprintExpr acc expr
     let acc = acc *- ")"
+    acc
+  | CExpr.Nav (expr, field) ->
+    let acc = cprintExpr acc expr
+    let acc = acc *- "." *- field
     acc
   | CExpr.Index (l, r) ->
     let acc = cprintExpr acc l
@@ -133,21 +124,9 @@ let cprintStmt acc indent stmt: string list =
       | None ->
         acc
     acc *- ";" *- eol
-  | CStmt.LetBox (name, len) ->
-    acc *- "Box " *- name
-        *- " = {.t = malloc("
-        *- string len
-        *- " * sizeof(Box))};"
-        *- eol
   | CStmt.Set (l, r) ->
     let acc = cprintExpr acc l *- " = "
     let acc = cprintExpr acc r *- ";" *- eol
-    acc
-  | CStmt.Emplace (l, index, elem) ->
-    let acc = cprintExpr acc l
-    let acc = acc *- ".t[" *- string index *- "] = "
-    let acc = cprintExpr acc elem
-    let acc = acc *- ";" *- eol
     acc
   | CStmt.If (pred, thenStmts, elseStmts) ->
     let acc = acc *- "if ("
@@ -169,6 +148,19 @@ let rec cprintStmts acc indent stmts: string list =
 
 let cprintDecl acc decl =
   match decl with
+  | CDecl.Struct (ident, fields) ->
+    let acc = acc *- "struct " *- ident *- " {" *- eol
+    let rec go acc fields =
+      match fields with
+      | [] -> acc
+      | (ident, ty) :: fields ->
+        let acc = acc *- "    "
+        let acc = cprintTy acc ty
+        let acc = acc *- " " *- ident *- ";" *- eol
+        go acc fields
+    let acc = go acc fields
+    let acc = acc *- "};" *- eol
+    acc
   | CDecl.Fun (ident, args, resultTy, body) ->
     let acc = cprintTy acc resultTy
     let acc = acc *- " " *- ident *- "("
@@ -193,12 +185,7 @@ let rec cprintDecls acc decls =
 let cprintHeader acc =
   let header = """#include <stdio.h>
 #include <stdlib.h>
-
-typedef union Box {
-  int i;
-  char* s;
-  union Box* t;
-} Box;
+#include <string.h>
 
 char* str_add(char* left, char* right) {
   int left_len = strlen(left), right_len = strlen(right);
