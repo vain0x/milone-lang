@@ -34,11 +34,12 @@ let rollback bCtx dCtx: TyCtx =
       VarEnv = bCtx.VarEnv
   }
 
-let freshTyVar name (ctx: TyCtx): string * TyCtx =
+let freshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
   let serial = ctx.TySerial + 1
   let ctx = { ctx with TySerial = ctx.TySerial + 1 }
-  let name = sprintf "'%s_%d" name serial
-  name, ctx
+  let ident = sprintf "'%s_%d" ident serial
+  let ty = Ty.Var ident
+  ty, ident, ctx
 
 let resolveTyVar name (ctx: TyCtx): Ty =
   match ctx.TyEnv |> Map.tryFind name with
@@ -48,8 +49,7 @@ let resolveTyVar name (ctx: TyCtx): Ty =
     Ty.Var name
 
 let freshVar ident (ctx: TyCtx): string * int * Ty * TyCtx =
-  let tyVar, ctx = freshTyVar ident ctx
-  let ty = Ty.Var tyVar
+  let ty, _, ctx = freshTyVar ident ctx
   let serial = ctx.VarSerial + 1
   let ctx =
     { ctx with
@@ -188,11 +188,11 @@ let inferIf ctx pred thenCl elseCl loc =
 /// NOTE: Currently only the `x : string` case can compile, however,
 /// we don't infer that for compatibility.
 let inferIndex ctx l r loc =
-  let tyVar, ctx = freshTyVar "app" ctx
+  let ty, _, ctx = freshTyVar "app" ctx
   let l, ctx = inferExpr ctx l
   let r, ctx = inferExpr ctx r
   let ctx = unifyTy ctx (tyOf r) Ty.Int
-  Expr.Index (l, r, (Ty.Var tyVar, loc)), ctx
+  Expr.Index (l, r, (ty, loc)), ctx
 
 /// During inference of `f w x ..`,
 /// assume we concluded `f w : 'f`.
@@ -202,8 +202,7 @@ let rec inferAppArgs acc (ctx: TyCtx) calleeTy args =
   | [] ->
     List.rev acc, calleeTy, ctx
   | arg :: args ->
-    let appTyVar, ctx = freshTyVar "app" ctx
-    let appTy = Ty.Var appTyVar
+    let appTy, _, ctx = freshTyVar "app" ctx
     let arg, ctx = inferExpr ctx arg
     let ctx = unifyTy ctx calleeTy (Ty.Fun (tyOf arg, appTy))
     inferAppArgs (arg :: acc) ctx appTy args
@@ -231,13 +230,12 @@ let inferAppPrintfn ctx loc args =
     failwith """First arg of printfn must be string literal, ".."."""
 
 let inferAppFst ctx calleeLoc arg loc =
-  let fstTyVar, ctx = freshTyVar "fst" ctx
-  let sndTyVar, ctx = freshTyVar "snd" ctx
-  let fstTy, sndTy = Ty.Var fstTyVar, Ty.Var sndTyVar
+  let fstTy, _, ctx = freshTyVar "fst" ctx
+  let sndTy, _, ctx = freshTyVar "snd" ctx
   let argTy = Ty.Tuple (fstTy, sndTy)
   let arg, ctx = inferExpr ctx arg
   let ctx = unifyTy ctx (tyOf arg) argTy
-  let calleeTy = Ty.Fun (argTy, Ty.Var fstTyVar)
+  let calleeTy = Ty.Fun (argTy, fstTy)
   let callee = Expr.Prim (PrimFun.Fst, (calleeTy, calleeLoc))
   Expr.Call (callee, [arg], (fstTy, loc)), ctx
 
@@ -246,8 +244,8 @@ let inferOpCore (ctx: TyCtx) loc op left right =
   let right, ctx = inferExpr ctx right
 
   // Infer types so that left and right are of the same type.
-  let resultTyVar, ctx = freshTyVar "op" ctx
-  let lTy, rTy, resultTy = tyOf left, tyOf right, Ty.Var resultTyVar
+  let resultTy, _, ctx = freshTyVar "op" ctx
+  let lTy, rTy = tyOf left, tyOf right
   let ctx = unifyTy ctx lTy rTy
 
   left, Expr.Op (op, left, right, (resultTy, loc)), ctx
