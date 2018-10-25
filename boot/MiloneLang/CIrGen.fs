@@ -150,10 +150,7 @@ let genExprOp ctx op first second ty loc =
   let ty = CTy.Int
   let first, ctx = genExpr ctx first
   let second, ctx = genExpr ctx second
-  // let tempIdent, temp, ctx = ctxFreshVar ctx "op" ty
   let opExpr = CExpr.Op (op, first, second)
-  // let ctx = ctxAddStmt ctx (CStmt.Let (tempIdent, Some opExpr, ty))
-  // temp, ctx
   opExpr, ctx
 
 let genExprList ctx exprs =
