@@ -145,6 +145,13 @@ let mirifyExprIf ctx pred thenCl elseCl (ty, loc) =
   let ctx = ctxAddStmt ctx ifStmt
   temp, ctx
 
+// FIXME: currently equivalent to let-val
+let mirifyExprMatch ctx target (pat, body) =
+  let target, ctx = mirifyExpr ctx target
+  let ctx = mirifyPat ctx pat target
+  let body, ctx = mirifyExpr ctx body
+  body, ctx
+
 let mirifyExprIndex ctx l r ty loc =
   match exprTy l, ty with
   | Ty.Str, Ty.Int ->
@@ -316,6 +323,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     MExpr.Ref (serial, (unboxTy ty, loc)), ctx
   | Expr.If (pred, thenCl, elseCl, (ty, loc)) ->
     mirifyExprIf ctx pred thenCl elseCl (ty, loc)
+  | Expr.Match (target, arm, _) ->
+    mirifyExprMatch ctx target arm
   | Expr.Index (l, r, (ty, loc)) ->
     mirifyExprIndex ctx l r ty loc
   | Expr.Call (Expr.Ref ("not", -1, _), [arg], a) ->

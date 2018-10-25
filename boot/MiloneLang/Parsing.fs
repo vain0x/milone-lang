@@ -30,6 +30,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.Prim (_, a) -> a
   | Expr.Ref (_, _, a) -> a
   | Expr.If (_, _, _, a) -> a
+  | Expr.Match (_, _, a) -> a
   | Expr.Index (_, _, a) -> a
   | Expr.Call (_, _, a) -> a
   | Expr.Op (_, _, _, a) -> a
@@ -53,6 +54,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Ref (ident, serial, f a)
   | Expr.If (pred, thenCl, elseCl, a) ->
     Expr.If (exprMap f pred, exprMap f thenCl, exprMap f elseCl, f a)
+  | Expr.Match (target, (pat, body), a) ->
+    Expr.Match (exprMap f target, (patMap f pat, exprMap f body), f a)
   | Expr.Index (l, r, a) ->
     Expr.Index (exprMap f l, exprMap f r, f a)
   | Expr.Call (callee, args, a) ->
@@ -76,11 +79,13 @@ let tokenRole tokens: bool * bool =
   | []
   | (Token.Then, _) :: _
   | (Token.Else, _) :: _
+  | (Token.With, _) :: _
   | (Token.ParenR, _) :: _
   | (Token.BracketL, _) :: _ // FIXME: list literals not supported
   | (Token.BracketR, _) :: _
   | (Token.Colon, _) :: _
   | (Token.Dot, _) :: _
+  | (Token.Pipe, _) :: _
   | (Token.Arrow, _) :: _
   | (Token.Punct _, _) :: _ ->
     // These tokens are read only in specific contexts.
@@ -93,6 +98,7 @@ let tokenRole tokens: bool * bool =
     // It can be an expr or pat.
     true, true
   | (Token.If _, _) :: _
+  | (Token.Match _, _) :: _
   | (Token.Let, _) :: _ ->
     // It is an expr, not pat.
     true, false
@@ -247,6 +253,31 @@ let parseIf boxX ifLoc tokens =
   let elseCl, tokens = parseElseCl boxX ifLoc tokens
   Expr.If (pred, thenCl, elseCl, ifLoc), tokens
 
+let parseMatchArm boxX tokens =
+  let tokens =
+    match tokens with
+    | (Token.Pipe, _) :: tokens -> tokens
+    | _ -> tokens
+  let pat, tokens =
+    match parsePat boxX tokens with
+    | pat, (Token.Arrow, _) :: tokens ->
+      pat, tokens
+    | _, tokens ->
+      parseError "Expected '->'" tokens
+  let body, tokens =
+    parseExpr boxX tokens
+  (pat, body), tokens
+
+let parseMatch boxX matchLoc tokens =
+  let target, tokens =
+    match parseExpr boxX tokens with
+    | expr, (Token.With, _) :: tokens ->
+      expr, tokens
+    | _, tokens ->
+      parseError "Expected 'with'" tokens
+  let arm, tokens = parseMatchArm boxX tokens
+  Expr.Match (target, arm, matchLoc), tokens
+
 let parseParen boxX tokens =
   match parseExpr boxX tokens with
   | expr, (Token.ParenR, _) :: tokens ->
@@ -268,7 +299,8 @@ let parseLet boxX letLoc tokens =
     parseExpr bodyX tokens
   Expr.Let (pats, body, letLoc), tokens
 
-/// atom = unit / int / string / prim / ref / ( expr )
+/// atom  = unit / int / string / bool / prim / ref
+///       / ( expr ) / if-then-else / match-with / let
 let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   match tokens with
   | _ when not (nextInside boxX tokens) ->
@@ -291,16 +323,20 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
     parseParen boxX tokens
   | (Token.If, loc) :: tokens ->
     parseIf boxX loc tokens
+  | (Token.Match, loc) :: tokens ->
+    parseMatch boxX loc tokens
   | (Token.Let, letLoc) :: tokens ->
     parseLet boxX letLoc tokens
   | []
   | (Token.Else, _) :: _
   | (Token.Then, _) :: _
+  | (Token.With, _) :: _
   | (Token.ParenR, _) :: _
   | (Token.BracketL, _) :: _
   | (Token.BracketR, _) :: _
   | (Token.Colon, _) :: _
   | (Token.Dot, _) :: _
+  | (Token.Pipe, _) :: _
   | (Token.Arrow, _) :: _
   | (Token.Punct _, _) :: _ ->
     parseError "Expected an atomic expression" tokens

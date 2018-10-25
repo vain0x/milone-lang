@@ -98,12 +98,15 @@ let private tokenIdent ident =
   | "if" -> Token.If
   | "then" -> Token.Then
   | "else" -> Token.Else
+  | "match" -> Token.Match
+  | "with" -> Token.With
   | _ -> Token.Ident ident
 
 let private tokenPunct str =
   match str with
   | ":" -> Token.Colon
   | "." -> Token.Dot
+  | "|" -> Token.Pipe
   | "->" -> Token.Arrow
   | _ -> Token.Punct str
 

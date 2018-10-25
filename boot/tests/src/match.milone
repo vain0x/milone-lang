@@ -1,0 +1,5 @@
+let main () =
+  let f (x : int) = x * x
+  match f 3 with
+  | y ->
+    y - 9

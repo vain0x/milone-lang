@@ -16,6 +16,8 @@ namespace rec MiloneLang
     | If
     | Then
     | Else
+    | Match
+    | With
     /// `(`
     | ParenL
     /// `)`
@@ -28,6 +30,8 @@ namespace rec MiloneLang
     | Colon
     /// `.`
     | Dot
+    /// `|`
+    | Pipe
     /// `->`
     | Arrow
     /// Punctuation.
@@ -118,6 +122,8 @@ namespace rec MiloneLang
       of ident:string * serial:int * 'a
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
+    | Match
+      of target:Expr<'a> * arm:(Pat<'a> * Expr<'a>) * 'a
     /// `x.[i]`
     | Index
       of Expr<'a> * Expr<'a> * 'a

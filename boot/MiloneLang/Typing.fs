@@ -185,6 +185,14 @@ let inferIf ctx pred thenCl elseCl loc =
   let ctx = unifyTy ctx ty (tyOf elseCl)
   Expr.If (pred, thenCl, elseCl, (ty, loc)), ctx
 
+/// match 'a with ( | 'a -> 'b )*
+let inferMatch ctx target (pat, body) loc =
+  let target, ctx = inferExpr ctx target
+  let pat, ctx = inferPat ctx pat
+  let body, ctx = inferExpr ctx body
+  let ctx = unifyTy ctx (tyOf target) (patTy pat)
+  Expr.Match (target, (pat, body), (tyOf body, loc)), ctx
+
 /// `x.[i] : 'y` <== x : 'x, i : int
 /// NOTE: Currently only the `x : string` case can compile, however,
 /// we don't infer that for compatibility.
@@ -359,6 +367,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferRef ctx loc ident
   | Expr.If (pred, thenCl, elseCl, loc) ->
     inferIf ctx pred thenCl elseCl loc
+  | Expr.Match (target, arm, loc) ->
+    inferMatch ctx target arm loc
   | Expr.Index (l, r, loc) ->
     inferIndex ctx l r loc
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _), args, loc) ->
