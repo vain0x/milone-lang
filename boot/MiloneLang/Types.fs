@@ -176,10 +176,6 @@ namespace rec MiloneLang
     | Lt
     /// Less than or equal to
     | Le
-    /// Greater than
-    | Gt
-    /// Greater than or equal to
-    | Ge
 
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]

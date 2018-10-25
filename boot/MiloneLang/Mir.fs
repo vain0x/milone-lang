@@ -67,9 +67,7 @@ let opIsComparison op =
   | MOp.Eq
   | MOp.Ne
   | MOp.Lt
-  | MOp.Le
-  | MOp.Gt
-  | MOp.Ge ->
+  | MOp.Le ->
     true
   | _ ->
     false
@@ -85,11 +83,11 @@ let mopFrom op =
   | Op.Ne -> MOp.Ne
   | Op.Lt -> MOp.Lt
   | Op.Le -> MOp.Le
-  | Op.Gt -> MOp.Gt
-  | Op.Ge -> MOp.Ge
+  | Op.Gt
+  | Op.Ge
   | Op.And
   | Op.Or
-  | Op.Tie -> failwith "We don't use '&&' '||' ',' in MIR"
+  | Op.Tie -> failwith "We don't use > >= && || , in MIR"
 
 let unboxTy (ty: Ty): MTy =
   match ty with
@@ -233,7 +231,13 @@ let mirifyExprOp ctx op l r a =
     mirifyExprOpTie ctx l r a
   | _ ->
 
-  let op, (ty, loc) = mopFrom op, a
+  let op, l, r =
+    match op with
+    | Op.Gt -> MOp.Lt, r, l
+    | Op.Ge -> MOp.Le, r, l
+    | _ -> mopFrom op, l, r
+
+  let ty, loc = a
   let ty, lTy = unboxTy ty, exprTy l
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r

@@ -19,8 +19,6 @@ let opStr op =
   | COp.Ne -> "!="
   | COp.Lt -> "<"
   | COp.Le -> "<="
-  | COp.Gt -> ">"
-  | COp.Ge -> ">="
 
 let rec cprintTy acc ty: string list =
   match ty with
