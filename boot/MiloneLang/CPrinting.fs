@@ -93,6 +93,11 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExprList acc 0 ", " args
     let acc = acc *- ")"
     acc
+  | CExpr.UniOp (MUniOp.Not, arg) ->
+    let acc = acc *- "!("
+    let acc = cprintExpr acc arg
+    let acc = acc *- ")"
+    acc
   | CExpr.Op (op, first, second) ->
     let acc = acc *- "("
     let acc = cprintExpr acc first

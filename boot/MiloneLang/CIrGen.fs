@@ -141,6 +141,10 @@ let genExprCallStrAdd ctx l r =
   let callExpr = CExpr.Call (strAddRef, [l; r])
   callExpr, ctx
 
+let genExprUniOp ctx arg =
+  let arg, ctx = genExpr ctx arg
+  CExpr.UniOp (MUniOp.Not, arg), ctx
+
 let genExprOp ctx op first second ty loc =
   // Currently no support of non-int add/cmp/etc.
   let ty = CTy.Int
@@ -189,6 +193,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     genExprCallStrAdd ctx l r
   | MExpr.Call (callee, args, (ty, _)) ->
     genExprCall ctx callee args ty
+  | MExpr.UniOp (MUniOp.Not, arg, _) ->
+    genExprUniOp ctx arg
   | MExpr.Op (op, first, second, (ty, loc)) ->
     genExprOp ctx op first second ty loc
   | MExpr.Prim _

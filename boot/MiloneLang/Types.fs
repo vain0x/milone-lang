@@ -156,6 +156,10 @@ namespace rec MiloneLang
     /// Compare two strings.
     | StrCmp
 
+  [<RequireQualifiedAccess>]
+  type MUniOp =
+    | Not
+
   /// Operator in middle IR.
   /// Operands must be int.
   [<RequireQualifiedAccess>]
@@ -202,6 +206,8 @@ namespace rec MiloneLang
       of MExpr<'a> * MExpr<'a> * 'a
     | Call
       of callee:MExpr<'a> * args:MExpr<'a> list * 'a
+    | UniOp
+      of MUniOp * arg:MExpr<'a> * 'a
     | Op
       of MOp * left:MExpr<'a> * right:MExpr<'a> * 'a
 
@@ -273,6 +279,8 @@ namespace rec MiloneLang
       of CExpr * CExpr
     | Call
       of CExpr * args:CExpr list
+    | UniOp
+      of MUniOp * CExpr
     | Op
       of COp * CExpr * CExpr
 

@@ -168,6 +168,7 @@ let inferPat ctx pat =
     pat, ctx
 
 let inferRef (ctx: TyCtx) loc ident =
+  eprintfn "%A" ctx
   match ctx.VarEnv |> Map.tryFind ident with
   | Some (ty, serial) ->
     Expr.Ref (ident, serial, (ty, loc)), ctx
@@ -323,7 +324,7 @@ let inferLetFun ctx pat pats body loc =
 
     // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default
-    let bodyCtx = { ctx with VarEnv = ctx.VarEnv |> Map.filter (fun k _ -> k = callee) }
+    let bodyCtx = ctx
     let argPat, bodyCtx = inferPat bodyCtx argPat
     let body, bodyCtx = inferExpr bodyCtx body
     if not (isMonomorphic bodyCtx (patTy argPat)) then
@@ -411,6 +412,19 @@ let infer (exprs: Expr<Loc> list): Expr<Ty * Loc> list * TyCtx =
       TySerial = 0
       TyEnv = Map.empty
     }
+
+  let prims =
+    [
+      "not", Ty.Fun (Ty.Bool, Ty.Bool), -1
+    ]
+  let rec go ctx prims =
+    match prims with
+    | [] -> ctx
+    | (ident, ty, serial) :: prims ->
+      let ctx = { ctx with VarEnv = ctx.VarEnv |> Map.add ident (ty, serial) }
+      go ctx prims
+  let ctx = go ctx prims
+
   let exprs, _, ctx = inferExprs ctx exprs
 
   // Type check of main.

@@ -156,6 +156,11 @@ let mirifyExprIndex ctx l r ty loc =
   | _ ->
     failwith "unimpl non-string indexing"
 
+/// not a ==> !a
+let mirifyExprCallNot ctx arg (ty, notLoc) =
+  let arg, ctx = mirifyExpr ctx arg
+  MExpr.UniOp (MUniOp.Not, arg, (unboxTy ty, notLoc)), ctx
+
 /// fst a ==> unbox 0 a
 let mirifyExprCallFst ctx _calleeLoc arg (ty, callLoc) =
   let arg, ctx = mirifyExpr ctx arg
@@ -299,6 +304,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     mirifyExprIf ctx pred thenCl elseCl (ty, loc)
   | Expr.Index (l, r, (ty, loc)) ->
     mirifyExprIndex ctx l r ty loc
+  | Expr.Call (Expr.Ref ("not", -1, _), [arg], a) ->
+    mirifyExprCallNot ctx arg a
   | Expr.Call (Expr.Prim (PrimFun.Fst, (_, calleeLoc)), [arg], a) ->
     mirifyExprCallFst ctx calleeLoc arg a
   | Expr.Call (callee, args, a) ->
