@@ -285,8 +285,6 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
     Expr.Bool (true, loc), tokens
   | (Token.Ident "printfn", loc) :: tokens ->
     Expr.Prim (PrimFun.Printfn, loc), tokens
-  | (Token.Ident "fst", loc) :: tokens ->
-    Expr.Prim (PrimFun.Fst, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
     Expr.Ref (value, 0, loc), tokens
   | (Token.ParenL, _) :: tokens ->

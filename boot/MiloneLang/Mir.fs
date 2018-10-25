@@ -306,8 +306,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     mirifyExprIndex ctx l r ty loc
   | Expr.Call (Expr.Ref ("not", -1, _), [arg], a) ->
     mirifyExprCallNot ctx arg a
-  | Expr.Call (Expr.Prim (PrimFun.Fst, (_, calleeLoc)), [arg], a) ->
-    mirifyExprCallFst ctx calleeLoc arg a
   | Expr.Call (callee, args, a) ->
     mirifyExprCall ctx callee args a
   | Expr.Op (Op.And, l, r, a) ->
@@ -326,7 +324,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     mirifyExprLetFun ctx pat pats body a
   | Expr.Call (_, [], _)
   | Expr.Anno _
-  | Expr.Prim (PrimFun.Fst, _)
   | Expr.Let ([], _, _) ->
     failwith "Never"
 

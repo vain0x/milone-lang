@@ -1,10 +1,10 @@
 let main () =
   let a = 1, "snd"
-  let x = 1 * fst a
+  let x, _x = a
   printfn "%d" x
 
   let b = "fst", 2
-  let y = fst b
+  let y, _y = b
   printfn "%s" y
 
   let z, w = "z", "w"

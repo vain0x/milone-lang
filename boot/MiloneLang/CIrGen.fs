@@ -147,7 +147,6 @@ let genExprUniOp ctx arg =
 
 let genExprOp ctx op first second ty loc =
   // Currently no support of non-int add/cmp/etc.
-  let ty = CTy.Int
   let first, ctx = genExpr ctx first
   let second, ctx = genExpr ctx second
   let opExpr = CExpr.Op (op, first, second)

@@ -52,7 +52,6 @@ namespace rec MiloneLang
   /// Primitive function.
   type PrimFun =
     | Printfn
-    | Fst
 
   [<RequireQualifiedAccess>]
   type OpLevel =
