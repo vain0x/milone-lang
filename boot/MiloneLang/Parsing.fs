@@ -136,38 +136,35 @@ let parseError message tokens =
   let near = tokens |> List.map fst |> List.truncate 6
   failwithf "Parse error %s near %A" message near
 
-let parseTyAtom boxX tokens: Ty option * _ list =
-  if nextInside boxX tokens |> not then
-    None, tokens
-  else
-    match tokens with
-    | (Token.Ident "unit", _) :: tokens ->
-      Some Ty.Unit, tokens
-    | (Token.Ident "bool", _) :: tokens ->
-      Some Ty.Bool, tokens
-    | (Token.Ident "int", _) :: tokens ->
-      Some Ty.Int, tokens
-    | (Token.Ident "string", _) :: tokens ->
-      Some Ty.Str, tokens
-    | (Token.ParenL, _) :: tokens ->
-      match parseTy (nextX tokens) tokens with
-      | ty, (Token.ParenR, _) :: tokens ->
-        Some ty, tokens
-      | _, tokens ->
-        parseError "Expected ')'" tokens
-    | _ ->
-      None, tokens
+let parseTyAtom boxX tokens: Ty * _ list =
+  match tokens with
+  | _ when nextInside boxX tokens |> not ->
+    parseError "Expected a type atom" tokens
+  | (Token.Ident "unit", _) :: tokens ->
+    Ty.Unit, tokens
+  | (Token.Ident "bool", _) :: tokens ->
+    Ty.Bool, tokens
+  | (Token.Ident "int", _) :: tokens ->
+    Ty.Int, tokens
+  | (Token.Ident "string", _) :: tokens ->
+    Ty.Str, tokens
+  | (Token.ParenL, _) :: tokens ->
+    match parseTy (nextX tokens) tokens with
+    | ty, (Token.ParenR, _) :: tokens ->
+      ty, tokens
+    | _, tokens ->
+      parseError "Expected ')'" tokens
+  | _ ->
+    parseError "Expected a type atom" tokens
 
 /// ty-fun = ty-atom ( '->' ty-fun )?
 let parseTyFun boxX tokens =
   match parseTyAtom boxX tokens with
-  | Some sTy, (Token.Arrow, _) :: tokens ->
+  | sTy, (Token.Arrow, _) :: tokens ->
     let tTy, tokens = parseTyFun boxX tokens
     Ty.Fun(sTy, tTy), tokens
-  | Some ty, tokens ->
+  | ty, tokens ->
     ty, tokens
-  | None, tokens ->
-    parseError "Expected a type atom" tokens
 
 let parseTy boxX tokens: Ty * _ list =
   parseTyFun boxX tokens
