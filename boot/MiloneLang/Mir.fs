@@ -223,7 +223,17 @@ let mirifyExprOpStrCmp ctx op l r (ty, loc) =
   let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, (ty, loc))
   opExpr, ctx
 
-let mirifyExprOp ctx op l r (ty, loc) =
+let mirifyExprOp ctx op l r a =
+  match op with
+  | Op.And ->
+    mirifyExprOpAnd ctx l r a
+  | Op.Or ->
+    mirifyExprOpOr ctx l r a
+  | Op.Tie ->
+    mirifyExprOpTie ctx l r a
+  | _ ->
+
+  let op, (ty, loc) = mopFrom op, a
   let ty, lTy = unboxTy ty, exprTy l
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
@@ -308,14 +318,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     mirifyExprCallNot ctx arg a
   | Expr.Call (callee, args, a) ->
     mirifyExprCall ctx callee args a
-  | Expr.Op (Op.And, l, r, a) ->
-    mirifyExprOpAnd ctx l r a
-  | Expr.Op (Op.Or, l, r, a) ->
-    mirifyExprOpOr ctx l r a
-  | Expr.Op (Op.Tie, l, r, a) ->
-    mirifyExprOpTie ctx l r a
   | Expr.Op (op, l, r, a) ->
-    mirifyExprOp ctx (mopFrom op) l r a
+    mirifyExprOp ctx op l r a
   | Expr.AndThen (exprs, a) ->
     mirifyExprAndThen ctx exprs a
   | Expr.Let ([pat], init, a) ->
