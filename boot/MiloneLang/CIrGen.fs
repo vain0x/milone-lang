@@ -140,6 +140,10 @@ let genExprCall ctx callee args ty =
   | _ ->
     failwith "unimpl call with 2+ args"
 
+let genExprCallExit ctx arg =
+  let arg, ctx = genExpr ctx arg
+  CExpr.Call (CExpr.Ref "exit", [arg]), ctx
+
 let genExprCallPrintfn ctx format args =
   let args, ctx = genExprList ctx args
   let ctx = ctxAddStmt ctx (callPrintf format args)
@@ -184,6 +188,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     CExpr.Int 0, ctx
   | MExpr.Bool (true, _) ->
     CExpr.Int 1, ctx
+  | MExpr.Prim (MPrim.Exit, _) ->
+    CExpr.Ref "exit", ctx
   | MExpr.Prim (MPrim.StrCmp, _) ->
     CExpr.Ref "strcmp", ctx
   | MExpr.Ref (_, (MTy.Unit, _)) ->

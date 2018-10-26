@@ -55,6 +55,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   /// Primitive function.
   type PrimFun =
+    | Exit
     | Printfn
 
   [<RequireQualifiedAccess>]
@@ -155,6 +156,7 @@ namespace rec MiloneLang
 
   [<RequireQualifiedAccess>]
   type MPrim =
+    | Exit
     | Printfn
     /// Concatenates two strings.
     | StrAdd

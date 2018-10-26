@@ -221,6 +221,14 @@ let inferApp (ctx: TyCtx) loc callee args =
   let args, appTy, ctx = inferAppArgs [] ctx (tyOf callee) args
   Expr.Call (callee, args, (appTy, loc)), ctx
 
+let inferAppExit ctx calleeLoc arg callLoc =
+  let arg, ctx = inferExpr ctx arg
+  let ctx = unifyTy ctx (tyOf arg) (Ty.Int)
+  let resultTy, _, ctx = freshTyVar "exit" ctx
+  let funTy = Ty.Fun (Ty.Int, resultTy)
+  let callee = Expr.Prim (PrimFun.Exit, (funTy, calleeLoc))
+  Expr.Call (callee, [arg], (resultTy, callLoc)), ctx
+
 let inferAppPrintfn ctx loc args =
   match args with
   | [] -> failwith "Never"
@@ -371,6 +379,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferMatch ctx target arm loc
   | Expr.Index (l, r, loc) ->
     inferIndex ctx l r loc
+  | Expr.Call (Expr.Prim (PrimFun.Exit, calleeLoc), [arg], loc) ->
+    inferAppExit ctx calleeLoc arg loc
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _), args, loc) ->
     inferAppPrintfn ctx loc args
   | Expr.Call (callee, args, loc) ->

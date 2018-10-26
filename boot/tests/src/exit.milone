@@ -1,0 +1,5 @@
+let main () =
+  let t = exit 1
+  let (x : int), (y : string) = t
+  printfn "%s" (exit 2)
+  exit 0

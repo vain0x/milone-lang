@@ -162,15 +162,17 @@ let mirifyExprIndex ctx l r ty loc =
   | _ ->
     failwith "unimpl non-string indexing"
 
+let mirifyExprCallExit ctx (exitTy, exitLoc) arg (ty, loc) =
+  let arg, ctx = mirifyExpr ctx arg
+  let callee = MExpr.Prim (MPrim.Exit, (unboxTy exitTy, exitLoc))
+  let callExpr = MExpr.Call (callee, [arg], (unboxTy ty, loc))
+  let ctx = ctxAddStmt ctx (MStmt.Expr (callExpr, (MTy.Unit, loc)))
+  MExpr.Unit (unboxTy ty, loc), ctx
+
 /// not a ==> !a
 let mirifyExprCallNot ctx arg (ty, notLoc) =
   let arg, ctx = mirifyExpr ctx arg
   MExpr.UniOp (MUniOp.Not, arg, (unboxTy ty, notLoc)), ctx
-
-/// fst a ==> unbox 0 a
-let mirifyExprCallFst ctx _calleeLoc arg (ty, callLoc) =
-  let arg, ctx = mirifyExpr ctx arg
-  projExpr arg 0 ty callLoc, ctx
 
 let mirifyExprCall ctx callee args (ty, loc) =
   let ty = unboxTy ty
@@ -260,6 +262,7 @@ let mirifyExprOp ctx op l r a =
     failwithf "unimpl"
 
 let mirifyExprAndThen ctx exprs _ =
+  // Discard non-last expressions.
   let exprs, ctx = mirifyExprs ctx exprs
   List.last exprs, ctx
 
@@ -330,6 +333,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     mirifyExprIndex ctx l r ty loc
   | Expr.Call (Expr.Ref ("not", -1, _), [arg], a) ->
     mirifyExprCallNot ctx arg a
+  | Expr.Call (Expr.Prim (PrimFun.Exit, exitA), [arg], a) ->
+    mirifyExprCallExit ctx exitA arg a
   | Expr.Call (callee, args, a) ->
     mirifyExprCall ctx callee args a
   | Expr.Op (op, l, r, a) ->
@@ -340,6 +345,7 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     mirifyExprLetVal ctx pat init a
   | Expr.Let (pat :: pats, body, a) ->
     mirifyExprLetFun ctx pat pats body a
+  | Expr.Prim (PrimFun.Exit, _)
   | Expr.Call (_, [], _)
   | Expr.Anno _
   | Expr.Let ([], _, _) ->
