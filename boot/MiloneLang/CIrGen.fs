@@ -81,8 +81,6 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
     | Some ty ->
       ty, ctx
 
-let cexprUnit = CExpr.Int 0
-
 let callPrintf format args =
   let format = CExpr.Str (format + "\\n")
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
@@ -101,6 +99,19 @@ let ctxFreshName (ctx: Ctx) (ident: string) =
 let ctxFreshVar (ctx: Ctx) (name: string) =
   let name, ctx = ctxFreshName ctx name
   name, CExpr.Ref name, ctx
+
+/// `0` or `(T) {}`
+let genExprDefault ctx ty =
+  match ty with
+  | MTy.Unit
+  | MTy.Bool
+  | MTy.Int
+  | MTy.Str ->
+    CExpr.Int 0, ctx
+  | MTy.Fun _
+  | MTy.Tuple _ ->
+    let ty, ctx = cty ctx ty
+    CExpr.Cast (CExpr.Default, ty), ctx
 
 /// `tuple.ti`
 let genExprProj ctx expr index _ =
@@ -132,7 +143,7 @@ let genExprCall ctx callee args ty =
 let genExprCallPrintfn ctx format args =
   let args, ctx = genExprList ctx args
   let ctx = ctxAddStmt ctx (callPrintf format args)
-  cexprUnit, ctx
+  genExprDefault ctx MTy.Str
 
 let genExprCallStrAdd ctx l r =
   let l, ctx = genExpr ctx l
@@ -163,8 +174,8 @@ let genExprList ctx exprs =
 
 let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
   match arg with
-  | MExpr.Unit _ ->
-    cexprUnit, ctx
+  | MExpr.Unit (ty, _) ->
+    genExprDefault ctx ty
   | MExpr.Int (value, _) ->
     CExpr.Int value, ctx
   | MExpr.Str (value, _) ->
@@ -176,7 +187,7 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
   | MExpr.Prim (MPrim.StrCmp, _) ->
     CExpr.Ref "strcmp", ctx
   | MExpr.Ref (_, (MTy.Unit, _)) ->
-    cexprUnit, ctx
+    genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Proj (expr, index, a) ->

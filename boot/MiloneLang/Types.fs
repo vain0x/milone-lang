@@ -262,6 +262,8 @@ namespace rec MiloneLang
   /// Expression in C language.
   [<RequireQualifiedAccess>]
   type CExpr =
+    /// `{}`
+    | Default
     | Int
       of int
     | Str

@@ -55,6 +55,8 @@ let rec cprintExpr acc expr: string list =
       let acc = cprintExpr acc expr
       cprintExprList acc 1 separator exprs
   match expr with
+  | CExpr.Default ->
+    acc *- "{}"
   | CExpr.Int value ->
     acc *- string value
   | CExpr.Str value ->
