@@ -6,6 +6,7 @@ open MiloneLang
 let patExtract (pat: Pat<'a>): 'a =
   match pat with
   | Pat.Unit a -> a
+  | Pat.Int (_, a) -> a
   | Pat.Ident (_, _, a) -> a
   | Pat.Tuple (_, _, a) -> a
   | Pat.Anno (_, _, a) -> a
@@ -14,6 +15,8 @@ let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
   match pat with
   | Pat.Unit a ->
     Pat.Unit (f a)
+  | Pat.Int (value, a) ->
+    Pat.Int (value, f a)
   | Pat.Ident (name, serial, a) ->
     Pat.Ident (name, serial, f a)
   | Pat.Tuple (l, r, a) ->
@@ -181,6 +184,8 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
     parseError "Expected a pattern atom" tokens
   | (Token.Unit, loc) :: tokens ->
     Pat.Unit loc, tokens
+  | (Token.Int value, loc) :: tokens ->
+    Pat.Int (value, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
     Pat.Ident (value, 0, loc), tokens
   | (Token.ParenL, _) :: tokens ->

@@ -107,21 +107,45 @@ let unboxTy (ty: Ty): MTy =
 let projExpr expr index resultTy loc =
   MExpr.Proj (expr, index, (unboxTy resultTy, loc))
 
-let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MirCtx =
+/// Decomposes pattern matching into let-val statements and conditions.
+let rec analyzePat ctx preds pat expr =
   match pat with
-  | Pat.Unit _ ->
+  | Pat.Unit (_, loc) ->
     // Discard result.
-    ctx
+    preds, true, ctx
+  | Pat.Int (value, (_, loc)) ->
+    let intExpr = MExpr.Int (value, (MTy.Int, loc))
+    let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, (MTy.Bool, loc))
+    eqExpr :: preds, false, ctx
   | Pat.Ident (_, serial, (ty, loc)) ->
-    ctxAddStmt ctx (MStmt.LetVal (serial, Some expr, (unboxTy ty, loc)))
+    let letStmt = MStmt.LetVal (serial, Some expr, (unboxTy ty, loc))
+    preds, true, ctxAddStmt ctx letStmt
   | Pat.Tuple (l, r, (_, loc)) ->
     let fstExpr = projExpr expr 0 (patTy l) loc
     let sndExpr = projExpr expr 1 (patTy r) loc
-    let ctx = mirifyPat ctx l fstExpr
-    let ctx = mirifyPat ctx r sndExpr
-    ctx
+    let preds, lCovered, ctx = analyzePat ctx preds l fstExpr
+    let preds, rCovered, ctx = analyzePat ctx preds r sndExpr
+    let covered = lCovered && rCovered
+    preds, covered, ctx
   | Pat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."
+
+/// Processes pattern matching
+/// to generate let-val statements for each subexpression,
+/// get a condition to the pattern to match,
+/// and determine if the pattern covers the whole.
+let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MExpr<_> option * bool * MirCtx =
+  match analyzePat ctx [] pat expr with
+  | [], cover, ctx ->
+    None, cover, ctx
+  | pred :: preds, cover, ctx ->
+    let _, loc = patExtract pat
+    let rec combinePreds acc preds =
+      match preds with
+      | [] -> Some acc
+      | pred :: preds ->
+        combinePreds (MExpr.Op (MOp.And, acc, pred, (MTy.Bool, loc))) preds
+    combinePreds pred preds, cover, ctx
 
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
@@ -146,12 +170,30 @@ let mirifyExprIf ctx pred thenCl elseCl (ty, loc) =
   let ctx = ctxAddStmt ctx ifStmt
   temp, ctx
 
-// FIXME: currently equivalent to let-val
-let mirifyExprMatch ctx target (pat, body) =
+let mstmtExit (ty, loc) =
+  let exitFun = MExpr.Prim (MPrim.Exit, (MTy.Fun (MTy.Int, ty), loc))
+  let one = MExpr.Int (1, (MTy.Int, loc))
+  let callExpr = MExpr.Call (exitFun, [one], (ty, loc))
+  MStmt.Expr (callExpr, (MTy.Unit, loc))
+
+let mirifyExprMatch ctx target (pat, body) (ty, loc) =
+  let ty = unboxTy ty
+  let temp, tempSet, ctx = ctxLetFreshVar ctx "match" (ty, loc)
+
   let target, ctx = mirifyExpr ctx target
-  let ctx = mirifyPat ctx pat target
-  let body, ctx = mirifyExpr ctx body
-  body, ctx
+  match mirifyPat ctx pat target with
+  | None, _, ctx ->
+    // FIXME: check covering
+    let body, ctx = mirifyExpr ctx body
+    let ctx = ctxAddStmt ctx (tempSet body)
+    temp, ctx
+  | Some pred, _, ctx ->
+    let body, bodyVal, ctx = mirifyBlock ctx body
+    let body = tempSet bodyVal :: body |> List.rev
+    let rest = [mstmtExit (ty, loc)]
+    let ifStmt = MStmt.If (pred, body, rest, (ty, loc))
+    let ctx = ctxAddStmt ctx ifStmt
+    temp, ctx
 
 let mirifyExprIndex ctx l r ty loc =
   match exprTy l, ty with
@@ -268,8 +310,11 @@ let mirifyExprAndThen ctx exprs _ =
 
 let mirifyExprLetVal ctx pat init (_, letLoc) =
   let init, ctx = mirifyExpr ctx init
-  let ctx = mirifyPat ctx pat init
-  MExpr.Unit (MTy.Unit, letLoc), ctx
+  match mirifyPat ctx pat init with
+  | None, true, ctx ->
+    MExpr.Unit (MTy.Unit, letLoc), ctx
+  | _ ->
+    failwithf "Let pattern must be exhaustive for now %A" pat
 
 let mirifyExprLetFun ctx pat pats body (_, letLoc) =
   let letA = MTy.Unit, letLoc
@@ -284,8 +329,11 @@ let mirifyExprLetFun ctx pat pats body (_, letLoc) =
       let argTy = unboxTy argTy
       let arg, argSerial, ctx = ctxFreshVar ctx "arg" (argTy, argLoc)
       let args = [argSerial, (argTy, argLoc)]
-      let ctx = mirifyPat ctx argPat arg
-      args, ctx
+      match mirifyPat ctx argPat arg with
+      | None, true, ctx ->
+        args, ctx
+      | _ ->
+        failwithf "Argument pattern must be exhaustive for now: %A" argPat
 
   let mirifyFunBody ctx argPat body =
     let blockTy, blockLoc = exprExtract body
@@ -327,8 +375,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     MExpr.Ref (serial, (unboxTy ty, loc)), ctx
   | Expr.If (pred, thenCl, elseCl, (ty, loc)) ->
     mirifyExprIf ctx pred thenCl elseCl (ty, loc)
-  | Expr.Match (target, arm, _) ->
-    mirifyExprMatch ctx target arm
+  | Expr.Match (target, arm, a) ->
+    mirifyExprMatch ctx target arm a
   | Expr.Index (l, r, (ty, loc)) ->
     mirifyExprIndex ctx l r ty loc
   | Expr.Call (Expr.Ref ("not", -1, _), [arg], a) ->

@@ -1,0 +1,4 @@
+let main () =
+  match 3 * 3 with
+  | 9 ->
+    0

@@ -97,6 +97,8 @@ namespace rec MiloneLang
   type Pat<'a> =
     | Unit
       of 'a
+    | Int
+      of int * 'a
     | Ident
       of ident:string * serial: int * 'a
     | Tuple
@@ -184,6 +186,10 @@ namespace rec MiloneLang
     | Lt
     /// Less than or equal to
     | Le
+    /// `&&`
+    /// We don't use this for `&&` from Milone-lang
+    /// but for generated codes.
+    | And
 
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]

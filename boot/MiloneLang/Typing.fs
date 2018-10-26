@@ -154,6 +154,8 @@ let inferPat ctx pat =
   match pat with
   | Pat.Unit loc ->
     Pat.Unit (Ty.Unit, loc), ctx
+  | Pat.Int (value, loc) ->
+    Pat.Int (value, (Ty.Int, loc)), ctx
   | Pat.Ident (ident, _, loc) ->
     let ident, serial, ty, ctx = freshVar ident ctx
     Pat.Ident (ident, serial, (ty, loc)), ctx
