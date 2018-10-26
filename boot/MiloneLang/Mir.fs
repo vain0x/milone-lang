@@ -109,8 +109,9 @@ let projExpr expr index resultTy loc =
 
 let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MirCtx =
   match pat with
-  | Pat.Unit (_, loc) ->
-    ctxAddStmt ctx (MStmt.Expr (expr, (MTy.Unit, loc)))
+  | Pat.Unit _ ->
+    // Discard result.
+    ctx
   | Pat.Ident (_, serial, (ty, loc)) ->
     ctxAddStmt ctx (MStmt.LetVal (serial, Some expr, (unboxTy ty, loc)))
   | Pat.Tuple (l, r, (_, loc)) ->

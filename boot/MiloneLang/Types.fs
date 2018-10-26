@@ -205,6 +205,8 @@ namespace rec MiloneLang
       of MExpr<'a> * int * 'a
     | Index
       of MExpr<'a> * MExpr<'a> * 'a
+    /// Call a function.
+    /// This must occur in variable initializer if impure.
     | Call
       of callee:MExpr<'a> * args:MExpr<'a> list * 'a
     | UniOp
