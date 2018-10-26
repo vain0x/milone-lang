@@ -210,9 +210,9 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
 
 let genStmt ctx stmt =
   match stmt with
-  | MStmt.Expr _ ->
-    // No side-effect.
-    ctx
+  | MStmt.Expr (expr, _) ->
+    let expr, ctx = genExpr ctx expr
+    ctxAddStmt ctx (CStmt.Expr expr)
   | MStmt.LetVal (serial, init, (ty, _)) ->
     let ident = ctxUniqueName ctx serial
     let init, ctx =
