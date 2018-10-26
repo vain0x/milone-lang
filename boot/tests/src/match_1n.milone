@@ -1,4 +1,4 @@
 let main () =
-  match 3 * 3 with
-  | 9 ->
+  match 2 * 2, 3 * 3 with
+  | 4, 9 ->
     0

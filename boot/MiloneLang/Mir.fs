@@ -110,7 +110,7 @@ let projExpr expr index resultTy loc =
 /// Decomposes pattern matching into let-val statements and conditions.
 let rec analyzePat ctx preds pat expr =
   match pat with
-  | Pat.Unit (_, loc) ->
+  | Pat.Unit _ ->
     // Discard result.
     preds, true, ctx
   | Pat.Int (value, (_, loc)) ->
@@ -144,7 +144,7 @@ let mirifyPat ctx (pat: Pat<Ty * Loc>) (expr: MExpr<_>): MExpr<_> option * bool 
       match preds with
       | [] -> Some acc
       | pred :: preds ->
-        combinePreds (MExpr.Op (MOp.And, acc, pred, (MTy.Bool, loc))) preds
+        combinePreds (MExpr.Op (MOp.And, pred, acc, (MTy.Bool, loc))) preds
     combinePreds pred preds, cover, ctx
 
 let mirifyBlock ctx expr =
