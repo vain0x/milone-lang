@@ -126,7 +126,7 @@ namespace rec MiloneLang
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
     | Match
-      of target:Expr<'a> * arm:(Pat<'a> * Expr<'a>) * 'a
+      of target:Expr<'a> * (Pat<'a> * Expr<'a>) * (Pat<'a> * Expr<'a>) * 'a
     /// `x.[i]`
     | Index
       of Expr<'a> * Expr<'a> * 'a

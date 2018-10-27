@@ -5,6 +5,10 @@ int f_2(int x_3) {
 int main() {
     int match_6;
     int call_7 = f_2(3);
+    if (!((call_7 == 1))) goto next_2;
+    match_6 = 1;
+    goto end_match_1;
+next_2:;
     int y_4 = call_7;
     match_6 = (y_4 - 9);
     goto end_match_1;

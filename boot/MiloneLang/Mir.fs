@@ -180,23 +180,31 @@ let mstmtExit (ty, loc) =
   let callExpr = MExpr.Call (exitFun, [one], (ty, loc))
   MStmt.Expr (callExpr, (MTy.Unit, loc))
 
-let mirifyExprMatch ctx target (pat, body) (ty, loc) =
+let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) (ty, loc) =
   let ty = unboxTy ty
   let temp, tempSet, ctx = ctxLetFreshVar ctx "match" (ty, loc)
   let endLabelStmt, endLabel, ctx = ctxFreshLabel ctx "end_match" loc
-  let nextLabelStmt, nextLabel, ctx = ctxFreshLabel ctx "next" loc
 
   let target, ctx = mirifyExpr ctx target
 
   // First arm.
-  let cover, ctx = mirifyPat ctx nextLabel pat target
-  let body, ctx = mirifyExpr ctx body
+  let nextLabelStmt, nextLabel, ctx = ctxFreshLabel ctx "next" loc
+  let cover1, ctx = mirifyPat ctx nextLabel pat1 target
+  let body, ctx = mirifyExpr ctx body1
+  let ctx = ctxAddStmt ctx (tempSet body)
+  let ctx = ctxAddStmt ctx (MStmt.Goto (endLabel, (MTy.Unit, loc)))
+  let ctx = ctxAddStmt ctx nextLabelStmt
+
+  // Second, last arm.
+  let nextLabelStmt, nextLabel, ctx = ctxFreshLabel ctx "next" loc
+  let cover2, ctx = mirifyPat ctx nextLabel pat2 target
+  let body, ctx = mirifyExpr ctx body2
   let ctx = ctxAddStmt ctx (tempSet body)
   let ctx = ctxAddStmt ctx (MStmt.Goto (endLabel, (MTy.Unit, loc)))
 
   // Exhaust case (unless covered).
   let ctx =
-    if cover then ctx else
+    if cover1 || cover2 then ctx else
       let ctx = ctxAddStmt ctx nextLabelStmt
       let ctx = ctxAddStmt ctx (mstmtExit (ty, loc))
       ctx
@@ -385,8 +393,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     MExpr.Ref (serial, (unboxTy ty, loc)), ctx
   | Expr.If (pred, thenCl, elseCl, (ty, loc)) ->
     mirifyExprIf ctx pred thenCl elseCl (ty, loc)
-  | Expr.Match (target, arm, a) ->
-    mirifyExprMatch ctx target arm a
+  | Expr.Match (target, arm1, arm2, a) ->
+    mirifyExprMatch ctx target arm1 arm2 a
   | Expr.Index (l, r, (ty, loc)) ->
     mirifyExprIndex ctx l r ty loc
   | Expr.Call (Expr.Ref ("not", -1, _), [arg], a) ->

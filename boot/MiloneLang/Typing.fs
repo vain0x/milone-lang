@@ -188,12 +188,21 @@ let inferIf ctx pred thenCl elseCl loc =
   Expr.If (pred, thenCl, elseCl, (ty, loc)), ctx
 
 /// match 'a with ( | 'a -> 'b )*
-let inferMatch ctx target (pat, body) loc =
+let inferMatch ctx target (pat1, body1) (pat2, body2) loc =
   let target, ctx = inferExpr ctx target
-  let pat, ctx = inferPat ctx pat
-  let body, ctx = inferExpr ctx body
-  let ctx = unifyTy ctx (tyOf target) (patTy pat)
-  Expr.Match (target, (pat, body), (tyOf body, loc)), ctx
+
+  // arm1
+  let pat1, ctx = inferPat ctx pat1
+  let body1, ctx = inferExpr ctx body1
+  let ctx = unifyTy ctx (tyOf target) (patTy pat1)
+
+  // arm2
+  let pat2, ctx = inferPat ctx pat2
+  let body2, ctx = inferExpr ctx body2
+  let ctx = unifyTy ctx (tyOf target) (patTy pat2)
+  let ctx = unifyTy ctx (tyOf body1) (tyOf body2)
+
+  Expr.Match (target, (pat1, body1), (pat2, body2), (tyOf body1, loc)), ctx
 
 /// `x.[i] : 'y` <== x : 'x, i : int
 /// NOTE: Currently only the `x : string` case can compile, however,
@@ -377,8 +386,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferRef ctx loc ident
   | Expr.If (pred, thenCl, elseCl, loc) ->
     inferIf ctx pred thenCl elseCl loc
-  | Expr.Match (target, arm, loc) ->
-    inferMatch ctx target arm loc
+  | Expr.Match (target, arm1, arm2, loc) ->
+    inferMatch ctx target arm1 arm2 loc
   | Expr.Index (l, r, loc) ->
     inferIndex ctx l r loc
   | Expr.Call (Expr.Prim (PrimFun.Exit, calleeLoc), [arg], loc) ->

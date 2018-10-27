@@ -33,7 +33,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.Prim (_, a) -> a
   | Expr.Ref (_, _, a) -> a
   | Expr.If (_, _, _, a) -> a
-  | Expr.Match (_, _, a) -> a
+  | Expr.Match (_, _, _, a) -> a
   | Expr.Index (_, _, a) -> a
   | Expr.Call (_, _, a) -> a
   | Expr.Op (_, _, _, a) -> a
@@ -57,8 +57,10 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Ref (ident, serial, f a)
   | Expr.If (pred, thenCl, elseCl, a) ->
     Expr.If (exprMap f pred, exprMap f thenCl, exprMap f elseCl, f a)
-  | Expr.Match (target, (pat, body), a) ->
-    Expr.Match (exprMap f target, (patMap f pat, exprMap f body), f a)
+  | Expr.Match (target, (pat1, body1), (pat2, body2), a) ->
+    let arm1 = (patMap f pat1, exprMap f body1)
+    let arm2 = (patMap f pat2, exprMap f body2)
+    Expr.Match (exprMap f target, arm1, arm2, f a)
   | Expr.Index (l, r, a) ->
     Expr.Index (exprMap f l, exprMap f r, f a)
   | Expr.Call (callee, args, a) ->
@@ -280,8 +282,9 @@ let parseMatch boxX matchLoc tokens =
       expr, tokens
     | _, tokens ->
       parseError "Expected 'with'" tokens
-  let arm, tokens = parseMatchArm boxX tokens
-  Expr.Match (target, arm, matchLoc), tokens
+  let arm1, tokens = parseMatchArm boxX tokens
+  let arm2, tokens = parseMatchArm boxX tokens
+  Expr.Match (target, arm1, arm2, matchLoc), tokens
 
 let parseParen boxX tokens =
   match parseExpr boxX tokens with
