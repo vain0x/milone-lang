@@ -252,12 +252,13 @@ let genStmt ctx stmt =
   | MStmt.Return (expr, _) ->
     let expr, ctx = genExpr ctx expr
     ctxAddStmt ctx (CStmt.Return (Some expr))
-  | MStmt.If (pred, thenCl, elseCl, _a) ->
+  | MStmt.Label (label, _) ->
+    ctxAddStmt ctx (CStmt.Label label)
+  | MStmt.Goto (label, _) ->
+    ctxAddStmt ctx (CStmt.Goto label)
+  | MStmt.GotoUnless (pred, label, _) ->
     let pred, ctx = genExpr ctx pred
-    let thenCl, ctx = genBlock ctx thenCl
-    let elseCl, ctx = genBlock ctx elseCl
-    let ctx = ctxAddStmt ctx (CStmt.If (pred, thenCl, elseCl))
-    ctx
+    ctxAddStmt ctx (CStmt.GotoUnless (pred, label))
 
 let genBlock (ctx: Ctx) (stmts: MStmt<_> list) =
   let bodyCtx = genStmts (ctxNewBlock ctx) stmts

@@ -108,18 +108,19 @@ let rec cprintExpr acc expr: string list =
     acc
 
 let cprintStmt acc indent stmt: string list =
-  let acc = acc *- indent
   match stmt with
   | CStmt.Return None ->
-    acc *- "return;" *- eol
+    acc *- indent *- "return;" *- eol
   | CStmt.Return (Some expr) ->
-    let acc = acc *- "return "
+    let acc = acc *- indent *- "return "
     let acc = cprintExpr acc expr
     acc *- ";" *- eol
   | CStmt.Expr expr ->
+    let acc = acc *- indent
     let acc = cprintExpr acc expr
     acc *- ";" *- eol
   | CStmt.Let (name, init, ty) ->
+    let acc = acc *- indent
     let acc = cprintTy acc ty
     let acc = acc *- " " *- name
     let acc =
@@ -131,17 +132,18 @@ let cprintStmt acc indent stmt: string list =
         acc
     acc *- ";" *- eol
   | CStmt.Set (l, r) ->
+    let acc = acc *- indent
     let acc = cprintExpr acc l *- " = "
     let acc = cprintExpr acc r *- ";" *- eol
     acc
-  | CStmt.If (pred, thenStmts, elseStmts) ->
-    let acc = acc *- "if ("
+  | CStmt.Label label ->
+    acc *- label *- ":;" *- eol
+  | CStmt.Goto label ->
+    acc *- indent *- "goto " *- label *- ";" *- eol
+  | CStmt.GotoUnless (pred, label) ->
+    let acc = acc *- indent *- "if (!("
     let acc = cprintExpr acc pred
-    let acc = acc *- ") {" *- eol
-    let acc = cprintStmts acc (indent + "    ") thenStmts
-    let acc = acc *- indent *- "} else {" *- eol
-    let acc = cprintStmts acc (indent + "    ") elseStmts
-    let acc = acc *- indent *- "}" *- eol
+    let acc = acc *- ")) goto " *- label *- ";" *- eol
     acc
 
 let rec cprintStmts acc indent stmts: string list =

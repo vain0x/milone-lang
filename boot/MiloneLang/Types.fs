@@ -239,8 +239,12 @@ namespace rec MiloneLang
       of serial:int * init:MExpr<'a> * 'a
     | Return
       of MExpr<'a> * 'a
-    | If
-      of pred:MExpr<'a> * thenCl:MStmt<'a> list * elseCl:MStmt<'a> list * 'a
+    | Label
+      of string * 'a
+    | Goto
+      of string * 'a
+    | GotoUnless
+      of MExpr<'a> * string * 'a
 
   /// Declaration in middle IR.
   [<RequireQualifiedAccess>]
@@ -309,10 +313,14 @@ namespace rec MiloneLang
     /// `x = a;`
     | Set
       of CExpr * CExpr
+    | Label
+      of string
+    | Goto
+      of string
+    | GotoUnless
+      of CExpr * string
     | Return
       of CExpr option
-    | If
-      of pred:CExpr * thenCl:CStmt list * elseCl:CStmt list
 
   /// Top-level definition in C language.
   [<RequireQualifiedAccess>]
