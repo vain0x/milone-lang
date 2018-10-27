@@ -186,10 +186,6 @@ namespace rec MiloneLang
     | Lt
     /// Less than or equal to
     | Le
-    /// `&&`
-    /// We don't use this for `&&` from Milone-lang
-    /// but for generated codes.
-    | And
 
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
