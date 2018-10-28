@@ -219,29 +219,30 @@ let parsePatCons boxX tokens =
   | l, tokens ->
     l, tokens
 
-/// pat-tuple = pat-cons ( ',' pat-cons )?
-let parsePatTuple boxX tokens =
-  match parsePatCons boxX tokens with
-  | l, (Token.Punct ",", loc) :: tokens ->
-    let r, tokens = parsePatCons boxX tokens
-    Pat.Tuple (l, r, loc), tokens
-  | l, tokens ->
-    l, tokens
-
-/// pat-anno = pat-tuple ( ':' ty )?
+/// pat-anno = pat-cons ( ':' ty )?
 let parsePatAnno boxX tokens =
-  match parsePatTuple boxX tokens with
+  match parsePatCons boxX tokens with
   | pat, (Token.Colon, loc) :: tokens ->
     let ty, tokens = parseTy (nextX tokens) tokens
     Pat.Anno (pat, ty, loc), tokens
   | pat, tokens ->
     pat, tokens
 
+/// pat-tuple = pat-anno ( ',' pat-anno )?
+let parsePatTuple boxX tokens =
+  match parsePatAnno boxX tokens with
+  | l, (Token.Punct ",", loc) :: tokens ->
+    let r, tokens = parsePatAnno boxX tokens
+    Pat.Tuple (l, r, loc), tokens
+  | l, tokens ->
+    l, tokens
+
+/// pat = pat-tuple
 let parsePat boxX tokens: Pat<_> * _ list =
   if not (nextInside boxX tokens && leadsPat tokens) then
     parseError "Expected a pattern" tokens
   else
-    parsePatAnno boxX tokens
+    parsePatTuple boxX tokens
 
 let parsePats boxX (tokens: _ list): Pat<_> list * _ list =
   let rec go acc (tokens: _ list) =

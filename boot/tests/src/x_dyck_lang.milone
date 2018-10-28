@@ -1,5 +1,5 @@
 let main () =
-  let go ((((s : string), n), i), d) =
+  let go (((s : string, n), i), d) =
     if i >= n then
       d = 0
     else if s.[i] = '(' then
