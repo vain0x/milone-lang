@@ -96,7 +96,8 @@ let mopFrom op =
   | Op.Ge
   | Op.And
   | Op.Or
-  | Op.Tie -> failwith "We don't use > >= && || , in MIR"
+  | Op.Cons
+  | Op.Tie -> failwith "We don't use > >= && || :: , in MIR"
 
 let unboxTy (ty: Ty): MTy =
   match ty with
@@ -106,6 +107,8 @@ let unboxTy (ty: Ty): MTy =
   | Ty.Str -> MTy.Str
   | Ty.Fun (lTy, rTy) ->
     MTy.Fun (unboxTy lTy, unboxTy rTy)
+  | Ty.List ty ->
+    MTy.List (unboxTy ty)
   | Ty.Tuple (lTy, rTy) ->
     MTy.Tuple (unboxTy lTy, unboxTy rTy)
   | Ty.Var _ ->
@@ -143,6 +146,19 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Ty * Loc>) (expr: MExpr<_>): bool
     covered, ctx
   | Pat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."
+
+let desugarExprList items (ty, loc) =
+  let rec go acc items =
+    match items with
+    | [] ->
+      acc
+    | item :: items ->
+      go (Expr.Op (Op.Cons, item, acc, (ty, loc))) items
+  go (Expr.List ([], (ty, loc))) (List.rev items)
+
+/// `[a; b; c]` -> `a :: b :: c :: []`
+let mirifyExprList ctx items a =
+  mirifyExpr ctx (desugarExprList items a)
 
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
@@ -254,6 +270,23 @@ let mirifyExprOpOr ctx l r (ty, loc) =
   let trueExpr = Expr.Bool (true, (ty, loc))
   mirifyExprIf ctx l trueExpr r (ty, loc)
 
+let mirifyExprOpCons ctx l r (ty, loc) =
+  let itemTy =
+    match ty with
+    | Ty.List ty -> unboxTy ty
+    | _ -> failwith "List constructor's type must be a list."
+  let lLoc, rLoc = exprLoc l, exprLoc r
+
+  let listTy = MTy.List itemTy
+  let _, tempSerial, ctx = ctxFreshVar ctx "list" (listTy, loc)
+
+  let l, ctx = mirifyExpr ctx l
+  let r, ctx = mirifyExpr ctx r
+  let l = l, (itemTy, lLoc)
+  let r = r, (listTy, rLoc)
+  let ctx = ctxAddStmt ctx (MStmt.LetCons (tempSerial, l, r, (listTy, loc)))
+  MExpr.Ref (tempSerial, (listTy, loc)), ctx
+
 /// Creates a tuple inside a box.
 let mirifyExprOpTie ctx l r (ty, loc) =
   let lTy, rTy =
@@ -297,6 +330,8 @@ let mirifyExprOp ctx op l r a =
     mirifyExprOpAnd ctx l r a
   | Op.Or ->
     mirifyExprOpOr ctx l r a
+  | Op.Cons ->
+    mirifyExprOpCons ctx l r a
   | Op.Tie ->
     mirifyExprOpTie ctx l r a
   | _ ->
@@ -391,6 +426,10 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<MTy * Loc> * MirCtx =
     MExpr.Prim (MPrim.Printfn, (unboxTy ty, loc)), ctx // FIXME: boxTy?
   | Expr.Ref (_, serial, (ty, loc)) ->
     MExpr.Ref (serial, (unboxTy ty, loc)), ctx
+  | Expr.List ([], (ty, loc)) ->
+    MExpr.Nil (unboxTy ty, loc), ctx
+  | Expr.List (items, a) ->
+    mirifyExprList ctx items a
   | Expr.If (pred, thenCl, elseCl, (ty, loc)) ->
     mirifyExprIf ctx pred thenCl elseCl (ty, loc)
   | Expr.Match (target, arm1, arm2, a) ->

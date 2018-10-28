@@ -39,6 +39,21 @@ let ctxAddStmt (ctx: Ctx) stmt =
 let ctxAddDecl (ctx: Ctx) decl =
   { ctx with Decls = decl :: ctx.Decls }
 
+let ctxAddListDecl (ctx: Ctx) itemTy =
+  let listTy = MTy.List itemTy
+  let itemTy, ctx = cty ctx itemTy
+  let serial = ctx.TySerial + 1
+  let ident = sprintf "List_%d" serial
+  let selfTy = CTy.Ptr (CTy.Struct ident)
+  let fields = ["head", itemTy; "tail", selfTy]
+  let ctx =
+    { ctx with
+        TySerial = ctx.TySerial + 1
+        TyEnv = ctx.TyEnv |> Map.add listTy selfTy
+        Decls = CDecl.Struct (ident, fields) :: ctx.Decls
+    }
+  selfTy, ctx
+
 let ctxAddTupleDecl (ctx: Ctx) lTy rTy =
   let tupleTy = MTy.Tuple (lTy, rTy)
   let lTy, ctx = cty ctx lTy
@@ -74,6 +89,12 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
     CTy.Ptr CTy.Char, ctx
   | MTy.Fun _ ->
     CTy.Ptr CTy.Void, ctx
+  | MTy.List itemTy ->
+    match ctx.TyEnv |> Map.tryFind ty with
+    | None ->
+      ctxAddListDecl ctx itemTy
+    | Some ty ->
+      ty, ctx
   | MTy.Tuple (lTy, rTy) ->
     match ctx.TyEnv |> Map.tryFind ty with
     | None ->
@@ -105,9 +126,12 @@ let genExprDefault ctx ty =
   match ty with
   | MTy.Unit
   | MTy.Bool
-  | MTy.Int
-  | MTy.Str ->
+  | MTy.Int ->
     CExpr.Int 0, ctx
+  | MTy.Str
+  | MTy.List _ ->
+    let ty, ctx = cty ctx ty
+    CExpr.Cast (CExpr.Int 0, ty), ctx
   | MTy.Fun _
   | MTy.Tuple _ ->
     let ty, ctx = cty ctx ty
@@ -147,7 +171,7 @@ let genExprCallExit ctx arg =
 let genExprCallPrintfn ctx format args =
   let args, ctx = genExprList ctx args
   let ctx = ctxAddStmt ctx (callPrintf format args)
-  genExprDefault ctx MTy.Str
+  genExprDefault ctx MTy.Unit
 
 let genExprCallStrAdd ctx l r =
   let l, ctx = genExpr ctx l
@@ -188,6 +212,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     CExpr.Int 0, ctx
   | MExpr.Bool (true, _) ->
     CExpr.Int 1, ctx
+  | MExpr.Nil _ ->
+    CExpr.Ref "NULL", ctx
   | MExpr.Prim (MPrim.Exit, _) ->
     CExpr.Ref "exit", ctx
   | MExpr.Prim (MPrim.StrCmp, _) ->
@@ -196,6 +222,10 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
+  | MExpr.ListIsEmpty _
+  | MExpr.ListHead _
+  | MExpr.ListTail _ ->
+    failwith "unimpl"
   | MExpr.Proj (expr, index, a) ->
     genExprProj ctx expr index a
   | MExpr.Index (l, r, _) ->
@@ -229,6 +259,22 @@ let genStmt ctx stmt =
         Some init, ctx
     let cty, ctx = cty ctx ty
     ctxAddStmt ctx (CStmt.Let (ident, init, cty))
+  | MStmt.LetCons (serial, (head, _), (tail, _), (ty, _)) ->
+    let temp = ctxUniqueName ctx serial
+    let listTy, ctx = cty ctx ty
+    let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, listTy))
+
+    // head
+    let head, ctx = genExpr ctx head
+    let stmt = CStmt.Set (CExpr.Arrow (CExpr.Ref temp, "head"), head)
+    let ctx = ctxAddStmt ctx stmt
+
+    // tail
+    let tail, ctx = genExpr ctx tail
+    let stmt = CStmt.Set (CExpr.Arrow (CExpr.Ref temp, "tail"), tail)
+    let ctx = ctxAddStmt ctx stmt
+
+    ctx
   | MStmt.LetTuple (serial, elems, (ty, _)) ->
     let ident = ctxUniqueName ctx serial
     let tupleTy, ctx = cty ctx ty

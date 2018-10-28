@@ -51,6 +51,8 @@ namespace rec MiloneLang
       of Ty * Ty
     | Tuple
       of Ty * Ty
+    | List
+      of Ty
 
   [<RequireQualifiedAccess>]
   /// Primitive function.
@@ -62,6 +64,7 @@ namespace rec MiloneLang
   type OpLevel =
     | Mul
     | Add
+    | Cons
     /// Comparison
     | Cmp
     | And
@@ -89,6 +92,8 @@ namespace rec MiloneLang
     | Ge
     | And
     | Or
+    /// `::`
+    | Cons
     /// Comma to make a tuple
     | Tie
 
@@ -123,6 +128,8 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of ident:string * serial:int * 'a
+    | List
+      of Expr<'a> list * 'a
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
     | Match
@@ -153,6 +160,8 @@ namespace rec MiloneLang
     | Str
     | Fun
       of MTy * MTy
+    | List
+      of MTy
     | Tuple
       of MTy * MTy
 
@@ -198,12 +207,20 @@ namespace rec MiloneLang
       of int * 'a
     | Str
       of string * 'a
+    | Nil
+      of 'a
     /// Primitive.
     | Prim
       of MPrim * 'a
     /// Variable reference.
     | Ref
       of serial:int * 'a
+    | ListIsEmpty
+      of MExpr<'a> * 'a
+    | ListHead
+      of MExpr<'a> * 'a
+    | ListTail
+      of MExpr<'a> * 'a
     /// Projection. Gets an element of tuple.
     | Proj
       of MExpr<'a> * int * 'a
@@ -227,6 +244,8 @@ namespace rec MiloneLang
     /// Local variable declaration.
     | LetVal
       of serial:int * init:MExpr<'a> option * 'a
+    | LetCons
+      of serial:int * head:(MExpr<'a> * 'a) * tail:(MExpr<'a> * 'a) * 'a
     /// Declares a tuple box variable filled by elements.
     | LetTuple
       of serial:int * elems:(MExpr<'a> * 'a) list * 'a
@@ -287,6 +306,8 @@ namespace rec MiloneLang
       of CExpr * CTy
     | Nav
       of CExpr * field:string
+    | Arrow
+      of CExpr * field:string
     /// `a[i]`
     | Index
       of CExpr * CExpr
@@ -306,6 +327,9 @@ namespace rec MiloneLang
     /// `T x = a;`
     | Let
       of ident:string * init:CExpr option * CTy
+    /// `T* x = (T*)malloc(sizeof T);`
+    | LetAlloc
+      of ident:string * CTy
     /// `x = a;`
     | Set
       of CExpr * CExpr

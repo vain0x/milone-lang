@@ -72,6 +72,8 @@ let isFreshTyVar ty tyVar: bool =
       go sTy && go tTy
     | Ty.Tuple (lTy, rTy) ->
       go lTy && go rTy
+    | Ty.List ty ->
+      go ty
     | Ty.Var tv ->
       tv <> tyVar
   go ty
@@ -88,6 +90,8 @@ let isMonomorphic ctx ty: bool =
     false
   | Ty.Fun (sTy, tTy) ->
     isMonomorphic ctx sTy && isMonomorphic ctx tTy
+  | Ty.List ty ->
+    isMonomorphic ctx ty
   | Ty.Tuple (lTy, rTy) ->
     isMonomorphic ctx lTy && isMonomorphic ctx rTy
 
@@ -113,6 +117,8 @@ let substTy (ctx: TyCtx) ty: Ty =
       Ty.Fun (go sty, go tty)
     | Ty.Tuple (lTy, rTy) ->
       Ty.Tuple (go lTy, go rTy)
+    | Ty.List ty ->
+      Ty.List (go ty)
     | Ty.Var tyVar ->
       let ty2 = resolveTyVar tyVar ctx
       if ty = ty2 then ty else go ty2
@@ -131,6 +137,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       go rty lty ctx
     | Ty.Fun (lSTy, lTTy), Ty.Fun (rSTy, rTTy) ->
       ctx |> go lSTy rSTy |> go lTTy rTTy
+    | Ty.List lTy, Ty.List rTy ->
+      ctx |> go lTy rTy
     | Ty.Tuple (llTy, lrTy), Ty.Tuple (rlTy, rrTy) ->
       ctx |> go llTy rlTy |> go lrTy rrTy
     | Ty.Unit, Ty.Unit
@@ -145,7 +153,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Int _, _
     | Ty.Str _, _
     | Ty.Fun _, _
-    | Ty.Tuple _, _ ->
+    | Ty.Tuple _, _
+    | Ty.List _, _ ->
       let lty, rty = substTy ctx lty, substTy ctx rty
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
@@ -170,12 +179,23 @@ let inferPat ctx pat =
     pat, ctx
 
 let inferRef (ctx: TyCtx) loc ident =
-  eprintfn "%A" ctx
   match ctx.VarEnv |> Map.tryFind ident with
   | Some (ty, serial) ->
     Expr.Ref (ident, serial, (ty, loc)), ctx
   | None ->
     failwithf "Couldn't resolve var %s" ident
+
+let inferList ctx items loc =
+  let itemTy, _, ctx = freshTyVar "item" ctx
+  let rec go acc ctx items =
+    match items with
+    | [] -> List.rev acc, ctx
+    | item :: items ->
+      let item, ctx = inferExpr ctx item
+      let ctx = unifyTy ctx (tyOf item) itemTy
+      go (item :: acc) ctx items
+  let items, ctx = go [] ctx items
+  Expr.List (items, (Ty.List itemTy, loc)), ctx
 
 /// if bool then 'a else 'a
 let inferIf ctx pred thenCl elseCl loc =
@@ -290,6 +310,15 @@ let inferOpLogic (ctx: TyCtx) loc op left right =
   let ctx = unifyTy ctx (tyOf expr) Ty.Bool
   expr, ctx
 
+let inferOpCons ctx loc op left right =
+  let itemTy, _, ctx = freshTyVar "list" ctx
+  let listTy = Ty.List itemTy
+  let left, ctx = inferExpr ctx left
+  let ctx = unifyTy ctx (tyOf left) itemTy
+  let right, ctx = inferExpr ctx right
+  let ctx = unifyTy ctx (tyOf right) listTy
+  Expr.Op (op, left, right, (listTy, loc)), ctx
+
 let inferOpTie (ctx: TyCtx) loc op left right =
   let left, ctx = inferExpr ctx left
   let right, ctx = inferExpr ctx right
@@ -315,6 +344,8 @@ let inferOp (ctx: TyCtx) loc op left right =
   | Op.And
   | Op.Or ->
     inferOpLogic ctx loc op left right
+  | Op.Cons ->
+    inferOpCons ctx loc op left right
   | Op.Tie ->
     inferOpTie ctx loc op left right
 
@@ -384,6 +415,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     Expr.Str (value, (Ty.Str, loc)), ctx
   | Expr.Ref (ident, _, loc) ->
     inferRef ctx loc ident
+  | Expr.List (items, loc) ->
+    inferList ctx items loc
   | Expr.If (pred, thenCl, elseCl, loc) ->
     inferIf ctx pred thenCl elseCl loc
   | Expr.Match (target, arm1, arm2, loc) ->

@@ -81,6 +81,10 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExpr acc expr
     let acc = acc *- "." *- field
     acc
+  | CExpr.Arrow (expr, field) ->
+    let acc = cprintExpr acc expr
+    let acc = acc *- "->" *- field
+    acc
   | CExpr.Index (l, r) ->
     let acc = cprintExpr acc l
     let acc = acc *- "["
@@ -130,6 +134,19 @@ let cprintStmt acc indent stmt: string list =
       | None ->
         acc
     acc *- ";" *- eol
+  | CStmt.LetAlloc (name, ptrTy) ->
+    let valTy =
+      match ptrTy with
+      | CTy.Ptr ty -> ty
+      | _ -> failwithf "Expected pointer type but %A" ptrTy
+    let acc = acc *- indent
+    let acc = cprintTy acc ptrTy
+    let acc = acc *- " " *- name *- " = ("
+    let acc = cprintTy acc ptrTy
+    let acc = acc *- ")malloc(sizeof("
+    let acc = cprintTy acc valTy
+    let acc = acc *- "));" *- eol
+    acc
   | CStmt.Set (l, r) ->
     let acc = acc *- indent
     let acc = cprintExpr acc l *- " = "

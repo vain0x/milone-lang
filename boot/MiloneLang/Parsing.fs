@@ -32,6 +32,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.Str (_, a) -> a
   | Expr.Prim (_, a) -> a
   | Expr.Ref (_, _, a) -> a
+  | Expr.List (_, a) -> a
   | Expr.If (_, _, _, a) -> a
   | Expr.Match (_, _, _, a) -> a
   | Expr.Index (_, _, a) -> a
@@ -55,6 +56,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Prim (value, f a)
   | Expr.Ref (ident, serial, a) ->
     Expr.Ref (ident, serial, f a)
+  | Expr.List (items, a) ->
+    Expr.List (List.map (exprMap f) items, f a)
   | Expr.If (pred, thenCl, elseCl, a) ->
     Expr.If (exprMap f pred, exprMap f thenCl, exprMap f elseCl, f a)
   | Expr.Match (target, (pat1, body1), (pat2, body2), a) ->
@@ -86,7 +89,6 @@ let tokenRole tokens: bool * bool =
   | (Token.Else, _) :: _
   | (Token.With, _) :: _
   | (Token.ParenR, _) :: _
-  | (Token.BracketL, _) :: _ // FIXME: list literals not supported
   | (Token.BracketR, _) :: _
   | (Token.Colon, _) :: _
   | (Token.Dot, _) :: _
@@ -99,7 +101,8 @@ let tokenRole tokens: bool * bool =
   | (Token.Int _, _) :: _
   | (Token.Str _, _) :: _
   | (Token.Ident _, _) :: _
-  | (Token.ParenL, _) :: _ ->
+  | (Token.ParenL, _) :: _
+  | (Token.BracketL, _) :: _ ->
     // It can be an expr or pat.
     true, true
   | (Token.If _, _) :: _
@@ -232,6 +235,13 @@ let parsePats boxX (tokens: _ list): Pat<_> list * _ list =
       List.rev acc, tokens
   go [] tokens
 
+let parseList boxX bracketLoc tokens =
+  match parseBindings boxX tokens with
+  | exprs, (Token.BracketR, _) :: tokens ->
+    Expr.List (exprs, bracketLoc), tokens
+  | _, tokens ->
+    parseError "Expected ']'" tokens
+
 let parseThenCl boxX tokens =
   match tokens with
   | (Token.Then, _) as t :: tokens when nextInside boxX [t] ->
@@ -331,6 +341,8 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
     Expr.Ref (value, 0, loc), tokens
   | (Token.ParenL, _) :: tokens ->
     parseParen boxX tokens
+  | (Token.BracketL, bracketLoc) :: tokens ->
+    parseList boxX bracketLoc tokens
   | (Token.If, loc) :: tokens ->
     parseIf boxX loc tokens
   | (Token.Match, loc) :: tokens ->
@@ -342,7 +354,6 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   | (Token.Then, _) :: _
   | (Token.With, _) :: _
   | (Token.ParenR, _) :: _
-  | (Token.BracketL, _) :: _
   | (Token.BracketR, _) :: _
   | (Token.Colon, _) :: _
   | (Token.Dot, _) :: _
@@ -389,7 +400,8 @@ let parseNextLevelOp level outer tokens =
   | OpLevel.Tie -> parseOp OpLevel.Or outer tokens
   | OpLevel.Or -> parseOp OpLevel.And outer tokens
   | OpLevel.And -> parseOp OpLevel.Cmp outer tokens
-  | OpLevel.Cmp -> parseOp OpLevel.Add outer tokens
+  | OpLevel.Cmp -> parseOp OpLevel.Cons outer tokens
+  | OpLevel.Cons -> parseOp OpLevel.Add outer tokens
   | OpLevel.Add -> parseOp OpLevel.Mul outer tokens
   | OpLevel.Mul -> parseCall outer tokens
 
@@ -417,6 +429,8 @@ let rec parseOps level boxX expr tokens =
     next expr Op.Gt opLoc tokens
   | OpLevel.Cmp, (Token.Punct ">=", opLoc) :: tokens ->
     next expr Op.Ge opLoc tokens
+  | OpLevel.Cons, (Token.Punct "::", opLoc) :: tokens ->
+    next expr Op.Cons opLoc tokens
   | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
     next expr Op.Add opLoc tokens
   | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->
