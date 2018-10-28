@@ -1,0 +1,24 @@
+let main () =
+  let go ((((s : string), n), i), d) =
+    if i >= n then
+      d = 0
+    else if s.[i] = '(' then
+      go (((s, n), i + 1), d + 1)
+    else if d <= 0 then
+      false
+    else
+      go (((s, n), i + 1), d - 1)
+  let parse (s, n) =
+    if go (((s, n), 0), 0) then "Accept" else "Reject"
+
+  let case1 = "()", 2
+  let case2 = "()((())(()))()", 14
+  let case3 = "(()", 3
+  let case4 = ")(", 2
+
+  printfn "case1 (A): %s" (parse case1)
+  printfn "case2 (A): %s" (parse case2)
+  printfn "case3 (R): %s" (parse case3)
+  printfn "case4 (R): %s" (parse case4)
+
+  0

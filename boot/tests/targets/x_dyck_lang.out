@@ -1,0 +1,5 @@
+case1 (A): Accept
+case2 (A): Accept
+case3 (R): Reject
+case4 (R): Reject
+$? = 0
