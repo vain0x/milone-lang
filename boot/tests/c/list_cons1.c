@@ -14,7 +14,6 @@ int main() {
     match_5 = (x1_2 - 1);
     goto end_match_1;
 next_2:;
-    struct List_1* __3 = list_6;
     exit(1);
     match_5 = 0;
     goto end_match_1;

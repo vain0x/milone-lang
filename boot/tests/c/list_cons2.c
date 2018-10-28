@@ -32,7 +32,6 @@ int main() {
     match_9 = (call_12 + call_13);
     goto end_match_3;
 next_4:;
-    struct List_1* __6 = list_10;
     exit(1);
     match_9 = 0;
     goto end_match_3;

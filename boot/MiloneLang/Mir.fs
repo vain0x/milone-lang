@@ -144,7 +144,8 @@ let mirifyPatCons ctx endLabel l r (ty, loc) expr =
 /// Determines if the pattern covers the whole.
 let mirifyPat ctx (endLabel: string) (pat: Pat<Ty * Loc>) (expr: MExpr<_>): bool * MirCtx =
   match pat with
-  | Pat.Unit _ ->
+  | Pat.Unit _
+  | Pat.Ident ("_", _, _) ->
     // Discard result.
     true, ctx
   | Pat.Int (value, (_, loc)) ->
