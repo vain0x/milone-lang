@@ -33,6 +33,10 @@ let parseStrAsPat source: Pat<unit> =
 let tyFun sTy tTy =
   Ty.Fun (sTy, tTy)
 
+let patNil = Pat.Nil ()
+
+let patCons l r = Pat.Cons (l, r, ())
+
 let exprInt value =
   Expr.Int (value, ())
 
@@ -42,11 +46,20 @@ let exprStr value =
 let exprRef ident =
   Expr.Ref (ident, 0, ())
 
+let exprList items =
+  Expr.List (items, ())
+
+let exprNil =
+  exprList []
+
 let exprCall callee args =
   Expr.Call (callee, List.map (exprMap ignore) args, ())
 
 let exprOp op left right =
   Expr.Op (op, left,  right, ())
+
+let exprCons l r =
+  Expr.Op (Op.Cons, l, r, ())
 
 let exprAdd left right =
   Expr.Op (Op.Add, left,  right, ())
@@ -265,6 +278,35 @@ let parseComparisonAndLogicExpr () =
   source |> parseStr |> is expected
 
 [<Fact>]
+let parseExprListLiteral () =
+  let source = """[
+  f
+    0
+  x
+]"""
+  let expected =
+    [
+      exprList [
+        exprCall (exprRef "f") [exprInt 0]
+        exprRef "x"
+      ]]
+  source |> parseStr |> is expected
+
+[<Fact>]
+let parseExprCons () =
+  let source = """
+  0 :: 1 :: 2
+  :: []
+"""
+  let expected =
+    [
+      exprCons (exprInt 0)
+        (exprCons (exprInt 1)
+          (exprCons (exprInt 2) exprNil)
+        )]
+  source |> parseStr |> is expected
+
+[<Fact>]
 let parseFunTypeExprs () =
   let source = """unit -> (int -> bool) -> string"""
   let expected =
@@ -272,6 +314,14 @@ let parseFunTypeExprs () =
       Ty.Unit
       (tyFun (tyFun Ty.Int Ty.Bool) Ty.Str)
   source |> parseTyExprStr |> is expected
+
+[<Fact>]
+let parsePatCons () =
+  let source = """x :: y :: []"""
+  let x = Pat.Ident ("x", 0, ())
+  let y = Pat.Ident ("y", 0, ())
+  let expected = patCons x (patCons y patNil)
+  source |> parseStrAsPat |> is expected
 
 [<Fact>]
 let parsePatAnno () =

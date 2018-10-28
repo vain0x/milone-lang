@@ -119,6 +119,25 @@ let unboxTy (ty: Ty): MTy =
 let projExpr expr index resultTy loc =
   MExpr.Proj (expr, index, (unboxTy resultTy, loc))
 
+let listItemTy ty =
+  match ty with
+  | Ty.List itemTy ->
+    itemTy
+  | _ ->
+    failwithf "Expected to be a list type: %A" ty
+
+let mirifyPatCons ctx endLabel l r (ty, loc) expr =
+  let itemTy = unboxTy (listItemTy ty)
+  let isEmpty = MExpr.ListIsEmpty (expr, (unboxTy ty, loc))
+  let nonEmpty = MExpr.UniOp (MUniOp.Not, isEmpty, (MTy.Bool, loc))
+  let gotoStmt = MStmt.GotoUnless (nonEmpty, endLabel, (MTy.Unit, loc))
+  let ctx = ctxAddStmt ctx gotoStmt
+  let head = MExpr.ListHead (expr, (itemTy, loc))
+  let tail = MExpr.ListTail (expr, (unboxTy ty, loc))
+  let _, ctx = mirifyPat ctx endLabel l head
+  let _, ctx = mirifyPat ctx endLabel r tail
+  false, ctx
+
 /// Processes pattern matching
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
@@ -134,9 +153,16 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Ty * Loc>) (expr: MExpr<_>): bool
     let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, (MTy.Unit, loc))
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
+  | Pat.Nil (ty, loc) ->
+    let isEmptyExpr = MExpr.ListIsEmpty (expr, (unboxTy ty, loc))
+    let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, (MTy.Unit, loc))
+    let ctx = ctxAddStmt ctx gotoStmt
+    false, ctx
   | Pat.Ident (_, serial, (ty, loc)) ->
     let letStmt = MStmt.LetVal (serial, Some expr, (unboxTy ty, loc))
     true, ctxAddStmt ctx letStmt
+  | Pat.Cons (l, r, (ty, loc)) ->
+    mirifyPatCons ctx endLabel l r (ty, loc) expr
   | Pat.Tuple (l, r, (_, loc)) ->
     let fstExpr = projExpr expr 0 (patTy l) loc
     let sndExpr = projExpr expr 1 (patTy r) loc

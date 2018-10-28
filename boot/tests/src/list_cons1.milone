@@ -1,0 +1,6 @@
+let main () =
+  match 1 :: [] with
+  | x1 :: [] ->
+    x1 - 1
+  | _ ->
+    exit 1

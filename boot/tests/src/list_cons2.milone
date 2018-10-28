@@ -1,0 +1,9 @@
+let main () =
+  let abs x =
+    if x >= 0 then x else 0 - x
+
+  match 1 :: 2:: [] with
+  | x1 :: x2 :: [] ->
+    abs (x1 - 1) + abs (x2 - 2)
+  | _ ->
+    exit 1

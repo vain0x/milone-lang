@@ -159,15 +159,29 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
 
+let inferPatCons ctx l r loc =
+  let itemTy, _, ctx = freshTyVar "cons" ctx
+  let listTy = Ty.List itemTy
+  let l, ctx = inferPat ctx l
+  let ctx = unifyTy ctx (patTy l) itemTy
+  let r, ctx = inferPat ctx r
+  let ctx = unifyTy ctx (patTy r) listTy
+  Pat.Cons (l, r, (listTy, loc)), ctx
+
 let inferPat ctx pat =
   match pat with
   | Pat.Unit loc ->
     Pat.Unit (Ty.Unit, loc), ctx
   | Pat.Int (value, loc) ->
     Pat.Int (value, (Ty.Int, loc)), ctx
+  | Pat.Nil loc ->
+    let ty, _, ctx = freshTyVar "nil" ctx
+    Pat.Nil (ty, loc), ctx
   | Pat.Ident (ident, _, loc) ->
     let ident, serial, ty, ctx = freshVar ident ctx
     Pat.Ident (ident, serial, (ty, loc)), ctx
+  | Pat.Cons (l, r, loc) ->
+    inferPatCons ctx l r loc
   | Pat.Tuple (l, r, loc) ->
     let l, ctx = inferPat ctx l
     let r, ctx = inferPat ctx r

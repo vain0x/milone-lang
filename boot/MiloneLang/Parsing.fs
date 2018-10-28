@@ -7,7 +7,9 @@ let patExtract (pat: Pat<'a>): 'a =
   match pat with
   | Pat.Unit a -> a
   | Pat.Int (_, a) -> a
+  | Pat.Nil a -> a
   | Pat.Ident (_, _, a) -> a
+  | Pat.Cons (_, _, a) -> a
   | Pat.Tuple (_, _, a) -> a
   | Pat.Anno (_, _, a) -> a
 
@@ -17,8 +19,12 @@ let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
     Pat.Unit (f a)
   | Pat.Int (value, a) ->
     Pat.Int (value, f a)
+  | Pat.Nil a ->
+    Pat.Nil (f a)
   | Pat.Ident (name, serial, a) ->
     Pat.Ident (name, serial, f a)
+  | Pat.Cons (l, r, a) ->
+    Pat.Cons (patMap f l, patMap f r, f a)
   | Pat.Tuple (l, r, a) ->
     Pat.Tuple (patMap f l, patMap f r, f a)
   | Pat.Anno (pat, ty, a) ->
@@ -199,14 +205,25 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
       pat, tokens
     | _, tokens ->
       parseError "Expected ')'" tokens
+  | (Token.BracketL, loc) :: (Token.BracketR, _) :: tokens ->
+    Pat.Nil loc, tokens
   | _ ->
     failwith "never"
 
-/// pat-tuple = pat-atom ( ',' pat-atom )?
-let parsePatTuple boxX tokens =
+/// pat-cons = pat-atom ( '::' pat-cons )?
+let parsePatCons boxX tokens =
   match parsePatAtom boxX tokens with
+  | l, (Token.Punct "::", loc) :: tokens ->
+    let r, tokens = parsePatCons boxX tokens
+    Pat.Cons (l, r, loc), tokens
+  | l, tokens ->
+    l, tokens
+
+/// pat-tuple = pat-cons ( ',' pat-cons )?
+let parsePatTuple boxX tokens =
+  match parsePatCons boxX tokens with
   | l, (Token.Punct ",", loc) :: tokens ->
-    let r, tokens = parsePatAtom boxX tokens
+    let r, tokens = parsePatCons boxX tokens
     Pat.Tuple (l, r, loc), tokens
   | l, tokens ->
     l, tokens
@@ -410,6 +427,10 @@ let rec parseOps level boxX expr tokens =
     let second, tokens = parseNextLevelOp level boxX tokens
     let expr = Expr.Op (op, expr, second, opLoc)
     parseOps level boxX expr tokens
+  let nextR expr op opLoc tokens =
+    let second, tokens = parseOp level boxX tokens
+    let expr = Expr.Op (op, expr, second, opLoc)
+    parseOps level boxX expr tokens
   match level, tokens with
   | OpLevel.Tie, (Token.Punct ",", opLoc) :: tokens ->
     next expr Op.Tie opLoc tokens
@@ -430,7 +451,7 @@ let rec parseOps level boxX expr tokens =
   | OpLevel.Cmp, (Token.Punct ">=", opLoc) :: tokens ->
     next expr Op.Ge opLoc tokens
   | OpLevel.Cons, (Token.Punct "::", opLoc) :: tokens ->
-    next expr Op.Cons opLoc tokens
+    nextR expr Op.Cons opLoc tokens
   | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
     next expr Op.Add opLoc tokens
   | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->

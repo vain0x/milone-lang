@@ -104,8 +104,12 @@ namespace rec MiloneLang
       of 'a
     | Int
       of int * 'a
+    | Nil
+      of 'a
     | Ident
       of ident:string * serial: int * 'a
+    | Cons
+      of Pat<'a> * Pat<'a> * 'a
     | Tuple
       of Pat<'a> * Pat<'a> * 'a
     | Anno
