@@ -399,14 +399,15 @@ let inferLetFun ctx pat pats body loc =
   | _ ->
     failwith "unimpl use of let"
 
+/// Returns in reversed order.
 let inferExprs ctx exprs: Expr<Ty * Loc> list * Ty * TyCtx =
   let rec go acc ctx exprs =
     match exprs with
     | [] ->
-      List.rev acc, Ty.Unit, ctx
+      acc, Ty.Unit, ctx
     | [expr] ->
       let expr, ctx = inferExpr ctx expr
-      List.rev (expr :: acc), tyOf expr, ctx
+      expr :: acc, tyOf expr, ctx
     | expr :: exprs ->
       let expr, ctx = inferExpr ctx expr
       let ctx = unifyTy ctx (tyOf expr) Ty.Unit
@@ -415,7 +416,7 @@ let inferExprs ctx exprs: Expr<Ty * Loc> list * Ty * TyCtx =
 
 let inferAndThen ctx loc exprs =
   let exprs, ty, ctx = inferExprs ctx exprs
-  Expr.AndThen (exprs, (ty, loc)), ctx
+  Expr.AndThen (List.rev exprs, (ty, loc)), ctx
 
 let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
   match expr with
@@ -502,5 +503,5 @@ let infer (exprs: Expr<Loc> list): Expr<Ty * Loc> list * TyCtx =
       failwithf "Last expression must be `let main`."
 
   // Substitute all types.
-  let exprs = List.map (substTyExpr ctx) exprs
+  let exprs = List.map (substTyExpr ctx) (List.rev exprs)
   exprs, ctx

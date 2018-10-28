@@ -1,0 +1,24 @@
+let rev xs =
+  let go (acc, xs) =
+    match xs with
+    | [] ->
+      acc
+    | (x : int) :: xs ->
+      go (x :: acc, xs)
+  go ([], xs)
+
+let printList xs =
+  match xs with
+  | [] ->
+    ()
+  | x :: xs ->
+    printfn "%d" x
+    printList xs
+
+let main () =
+  let xs = 0 :: 1 :: 2 :: []
+  printfn "xs:"
+  printList xs
+  printfn "rev xs:"
+  printList (rev xs)
+  0
