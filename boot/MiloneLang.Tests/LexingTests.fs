@@ -18,7 +18,29 @@ let tokenizeMainEmpty () =
       Token.Int 0
     ]
   source
-  |> Lexing.tokenize |> List.unzip |> fst
+  |> Lexing.tokenize |> List.map fst
+  |> is expected
+
+[<Fact>]
+let tokenizeLineComment () =
+  let source = """
+/// Entry point.
+let main _ =
+  1 // After expression
+    - 1
+// EOF"""
+  let expected =
+    [
+      Token.Let
+      Token.Ident "main"
+      Token.Ident "_"
+      Token.Punct "="
+      Token.Int 1
+      Token.Punct "-"
+      Token.Int 1
+    ]
+  source
+  |> Lexing.tokenize |> List.map fst
   |> is expected
 
 [<Fact>]

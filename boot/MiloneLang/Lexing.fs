@@ -46,6 +46,17 @@ let private readEol (source: string) (acc, y, _x, i): Read =
     else i + 1
   acc, y + 1, 0, r
 
+let private readLineComment (source: string) (acc, y, x, i): Read =
+  assert (source.[i] = '/' && source.[i + 1] = '/')
+  let rec go r =
+    if r < source.Length && source.[r] <> '\r' && source.[r] <> '\n' then
+      go (r + 1)
+    else
+      r
+  let r = go (i + 2)
+  // No need to read EOL here.
+  acc, y, x + r - i, r
+
 let private readOp (source: string) (acc, y, x, i): Read =
   assert (isOpChar source.[i])
   let r = takeWhile isOpChar (source, i + 1)
@@ -123,6 +134,8 @@ let tokenize (source: string): (Token * Loc) list =
       | '\r'
       | '\n' ->
         (acc, y, x, i) |> readEol source |> go
+      | '/' when at (i + 1) = '/' ->
+        (acc, y, x, i) |> readLineComment source |> go
       // Don't split unit literal `()`.
       | '(' when at (i + 1) = ')' ->
         let t = Token.Unit, (y, x)
