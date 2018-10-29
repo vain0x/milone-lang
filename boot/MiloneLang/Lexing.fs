@@ -47,7 +47,7 @@ let private readEol (source: string) (acc, y, _x, i): Read =
   acc, y + 1, 0, r
 
 let private readLineComment (source: string) (acc, y, x, i): Read =
-  assert (source.[i] = '/' && source.[i + 1] = '/')
+  // assert (source.[i] = '/' && source.[i + 1] = '/')
   let rec go r =
     if r < source.Length && source.[r] <> '\r' && source.[r] <> '\n' then
       go (r + 1)
@@ -143,6 +143,9 @@ let tokenize (source: string): (Token * Loc) list =
       | '\r'
       | '\n' ->
         (acc, y, x, i) |> readEol source |> go
+      // FIXME: attributes are comments for now
+      | '[' when at (i + 1) = '<' ->
+        (acc, y, x, i) |> readLineComment source |> go
       | '/' when at (i + 1) = '/' ->
         (acc, y, x, i) |> readLineComment source |> go
       // Don't split unit literal `()`.

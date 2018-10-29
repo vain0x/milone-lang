@@ -93,6 +93,7 @@ let parseMainModule () =
 
 let rec private helper () = 0
 
+[<EntryPoint>]
 let main _ =
   helper ()
 """
