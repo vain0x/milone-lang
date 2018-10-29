@@ -148,10 +148,6 @@ let tokenize (source: string): (Token * Loc) list =
         (acc, y, x, i) |> readLineComment source |> go
       | '/' when at (i + 1) = '/' ->
         (acc, y, x, i) |> readLineComment source |> go
-      // Don't split unit literal `()`.
-      | '(' when at (i + 1) = ')' ->
-        let t = Token.Unit, (y, x)
-        (t :: acc, y, x + 2, i + 2) |> go
       | '('
       | ')' as c ->
         let t = (if c = '(' then Token.ParenL else Token.ParenR), (y, x)

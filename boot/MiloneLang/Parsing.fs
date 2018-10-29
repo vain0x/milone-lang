@@ -90,7 +90,6 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
 /// even if we don't know how many tokens participate that expr.
 let tokenRole tokens: bool * bool =
   match tokens with
-  | (Token.Unit, _) :: _
   | (Token.Int _, _) :: _
   | (Token.Str _, _) :: _
   | (Token.Ident _, _) :: _
@@ -184,7 +183,7 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
   match tokens with
   | _ when not (nextInside boxX tokens && leadsPat tokens) ->
     parseError "Expected a pattern atom" tokens
-  | (Token.Unit, loc) :: tokens ->
+  | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Pat.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
     Pat.Int (value, loc), tokens
@@ -341,7 +340,7 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   match tokens with
   | _ when not (nextInside boxX tokens) ->
     parseError "Expected an atomic expression" tokens
-  | (Token.Unit, loc) :: tokens ->
+  | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Expr.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
     Expr.Int (value, loc), tokens

@@ -13,7 +13,8 @@ let tokenizeMainEmpty () =
     [
       Token.Let
       Token.Ident "main"
-      Token.Unit
+      Token.ParenL
+      Token.ParenR
       Token.Punct "="
       Token.Int 0
     ]
@@ -85,8 +86,10 @@ let main () =
         (1, 0)
       Token.Ident "main",
         (1, 4)
-      Token.Unit,
+      Token.ParenL,
         (1, 9)
+      Token.ParenR,
+        (1, 10)
       Token.Punct "=",
         (1, 12)
       Token.Ident "f",

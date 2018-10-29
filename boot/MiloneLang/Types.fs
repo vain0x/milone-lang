@@ -5,7 +5,6 @@ namespace rec MiloneLang
 
   [<RequireQualifiedAccess>]
   type Token =
-    | Unit
     | Int
       of int
     | Str
