@@ -399,26 +399,33 @@ let mirifyExprLetVal ctx pat init (_, letLoc) =
 let mirifyExprLetFun ctx pat pats body (_, letLoc) =
   let letA = MTy.Unit, letLoc
 
-  let defineArgs ctx argPat =
+  let defineArg ctx argPat =
     match argPat with
     | Pat.Ident (_, serial, (ty, loc)) ->
       // NOTE: Optimize for usual cases to not generate redundant local vars.
-      [serial, (unboxTy ty, loc)], ctx
+      (serial, (unboxTy ty, loc)), ctx
     | _ ->
       let argTy, argLoc = patExtract argPat
       let argTy = unboxTy argTy
       let arg, argSerial, ctx = ctxFreshVar ctx "arg" (argTy, argLoc)
-      let args = [argSerial, (argTy, argLoc)]
       match mirifyPat ctx "_never_" argPat arg with
       | true, ctx ->
-        args, ctx
+        (argSerial, (argTy, argLoc)), ctx
       | false, _ ->
         failwithf "Argument pattern must be exhaustive for now: %A" argPat
 
-  let mirifyFunBody ctx argPat body =
+  let rec defineArgs acc ctx argPats =
+    match argPats with
+    | [] ->
+      List.rev acc, ctx
+    | argPat :: argPats ->
+      let arg, ctx = defineArg ctx argPat
+      defineArgs (arg :: acc) ctx argPats
+
+  let mirifyFunBody ctx argPats body =
     let blockTy, blockLoc = exprExtract body
 
-    let args, ctx = defineArgs ctx argPat
+    let args, ctx = defineArgs [] ctx argPats
     let lastExpr, ctx = mirifyExpr ctx body
     let returnStmt = MStmt.Return (lastExpr, (MTy.Unit, blockLoc))
     let ctx = ctxAddStmt ctx returnStmt
@@ -428,10 +435,9 @@ let mirifyExprLetFun ctx pat pats body (_, letLoc) =
     args, unboxTy blockTy, body, ctx
 
   match pat, pats with
-  | Pat.Ident (_, calleeSerial, (_, _)),
-    [argPat] ->
+  | Pat.Ident (_, calleeSerial, (_, _)), argPats ->
     let bodyCtx = ctxNewBlock ctx
-    let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPat body
+    let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = ctxRollBack ctx bodyCtx
     let decl = MDecl.LetFun (calleeSerial, args, resultTy, body, letA)
     let ctx = ctxAddDecl ctx decl

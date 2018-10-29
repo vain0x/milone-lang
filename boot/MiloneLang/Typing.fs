@@ -379,9 +379,24 @@ let inferLetVal ctx pat init loc =
   Expr.Let ([pat], init, (Ty.Unit, loc)), ctx
 
 let inferLetFun ctx pat pats body loc =
+  /// Infer argument patterns.
+  /// Infer each pattern from last to the first, building function type.
+  /// Like this: { f x y : 'z } -> { f x : (y : 'y) -> 'z }
+  let inferArgs ctx ty pats =
+    let rec go acc ty ctx pats =
+      match pats with
+      | [] ->
+        acc, ty, ctx
+      | pat :: pats ->
+        let pat, ctx = inferPat ctx pat
+        let ty = Ty.Fun (patTy pat, ty)
+        go (pat :: acc) ty ctx pats
+    go [] ty ctx (List.rev pats)
+
   match pat, pats with
-  | Pat.Ident (callee, _, calleeLoc), [argPat] ->
+  | Pat.Ident (callee, _, calleeLoc), argPats ->
     let callee, serial, calleeTy, ctx = freshVar callee ctx
+    let bodyTy, _, ctx = freshTyVar "body" ctx
     let calleePat = Pat.Ident (callee, serial, (calleeTy, calleeLoc))
 
     let ctx =
@@ -391,15 +406,17 @@ let inferLetFun ctx pat pats body loc =
     // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default
     let bodyCtx = ctx
-    let argPat, bodyCtx = inferPat bodyCtx argPat
+    let argPats, funTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
     let body, bodyCtx = inferExpr bodyCtx body
-    let bodyCtx = unifyTy bodyCtx calleeTy (Ty.Fun (patTy argPat, tyOf body))
-    if not (isMonomorphic bodyCtx (patTy argPat)) then
-      failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A" argPat
+    let bodyCtx = unifyTy bodyCtx (tyOf body) bodyTy
+    let bodyCtx = unifyTy bodyCtx calleeTy funTy
+
+    if argPats |> List.forall (fun pat -> isMonomorphic bodyCtx (patTy pat)) |> not then
+      failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A" argPats
 
     let ctx = rollback ctx bodyCtx
 
-    Expr.Let ([calleePat; argPat], body, (Ty.Unit, loc)), ctx
+    Expr.Let (calleePat :: argPats, body, (Ty.Unit, loc)), ctx
   | _ ->
     failwith "unimpl use of let"
 
