@@ -99,6 +99,28 @@ let mopFrom op =
   | Op.Cons
   | Op.Tie -> failwith "We don't use > >= && || :: , in MIR"
 
+let mexprExtract expr =
+  match expr with
+  | MExpr.Unit (ty, loc) -> ty, loc
+  | MExpr.Bool (_, loc) -> MTy.Bool, loc
+  | MExpr.Int (_, loc) -> MTy.Int, loc
+  | MExpr.Str (_, loc) -> MTy.Str, loc
+  | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
+  | MExpr.Prim (_, loc) -> MTy.Unit, loc // FIXME: incorrect type
+  | MExpr.Ref (_, ty, loc) -> ty, loc
+  | MExpr.ListIsEmpty (_, itemTy, loc) -> MTy.List itemTy, loc
+  | MExpr.ListHead (_, itemTy, loc) -> MTy.List itemTy, loc
+  | MExpr.ListTail (_, itemTy, loc) -> MTy.List itemTy, loc
+  | MExpr.Proj (_, _, elemTy, loc) -> elemTy, loc
+  | MExpr.Index (_, _, ty, loc) -> ty, loc
+  | MExpr.Call (_, _, ty, loc) -> ty, loc
+  | MExpr.UniOp (_, _, ty, loc) -> ty, loc
+  | MExpr.Op (_, _, _, ty, loc) -> ty, loc
+
+let mexprTy expr =
+  let ty, _ = mexprExtract expr
+  ty
+
 let unboxTy (ty: Ty): MTy =
   match ty with
   | Ty.Unit -> MTy.Unit
