@@ -161,20 +161,17 @@ let genExprIndex ctx l r =
   CExpr.Index (l, r), ctx
 
 let genExprCall ctx callee args ty =
-  match args with
-  | [arg] ->
-    let callee, ctx = genExpr ctx callee
-    let arg, ctx = genExpr ctx arg
-    CExpr.Call (callee, [arg]), ctx
-  | [arg1; arg2] ->
-    let callee, ctx = genExpr ctx callee
-    let arg2, ctx = genExpr ctx arg2
-    let arg1, ctx = genExpr ctx arg1
-    CExpr.Call (callee, [arg1; arg2]), ctx
-  | [] ->
-    failwith "Never zero-arg call"
-  | _ ->
-    failwith "unimpl call with 2+ args"
+  let rec genArgs acc ctx args =
+    match args with
+    | [] ->
+      List.rev acc, ctx
+    | arg :: args ->
+      let arg, ctx = genExpr ctx arg
+      genArgs (arg :: acc) ctx args
+
+  let callee, ctx = genExpr ctx callee
+  let args, ctx = genArgs [] ctx args
+  CExpr.Call (callee, args), ctx
 
 let genExprCallExit ctx arg =
   let arg, ctx = genExpr ctx arg

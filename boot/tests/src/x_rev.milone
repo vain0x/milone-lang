@@ -1,11 +1,11 @@
 let rev xs =
-  let go (acc, xs) =
+  let go acc xs =
     match xs with
     | [] ->
       acc
     | (x : int) :: xs ->
-      go (x :: acc, xs)
-  go ([], xs)
+      go (x :: acc) xs
+  go [] xs
 
 let printList xs =
   match xs with
