@@ -209,7 +209,7 @@ let genExprList ctx exprs =
       go (result :: results) ctx exprs
   go [] ctx exprs
 
-let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
+let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
   match arg with
   | MExpr.Unit (ty, _) ->
     genExprDefault ctx ty
@@ -227,29 +227,29 @@ let genExpr (ctx: Ctx) (arg: MExpr<MTy * Loc>): CExpr * Ctx =
     CExpr.Ref "exit", ctx
   | MExpr.Prim (MPrim.StrCmp, _) ->
     CExpr.Ref "strcmp", ctx
-  | MExpr.Ref (_, (MTy.Unit, _)) ->
+  | MExpr.Ref (_, MTy.Unit, _) ->
     genExprDefault ctx MTy.Unit
-  | MExpr.Ref (serial, _) ->
+  | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.ListIsEmpty (expr, _) ->
+  | MExpr.ListIsEmpty (expr, _, _) ->
     genExprListIsEmpty ctx expr
-  | MExpr.ListHead (expr, _) ->
+  | MExpr.ListHead (expr, _, _) ->
     genExprListHead ctx expr
-  | MExpr.ListTail (expr,_) ->
+  | MExpr.ListTail (expr, _, _) ->
     genExprListTail ctx expr
-  | MExpr.Proj (expr, index, a) ->
+  | MExpr.Proj (expr, index, _, a) ->
     genExprProj ctx expr index a
-  | MExpr.Index (l, r, _) ->
+  | MExpr.Index (l, r, _, _) ->
     genExprIndex ctx l r
-  | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _) ->
+  | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _, _) ->
     genExprCallPrintfn ctx format args
-  | MExpr.Call (MExpr.Prim (MPrim.StrAdd, _), [l; r], _) ->
+  | MExpr.Call (MExpr.Prim (MPrim.StrAdd, _), [l; r], _, _) ->
     genExprCallStrAdd ctx l r
-  | MExpr.Call (callee, args, (ty, _)) ->
+  | MExpr.Call (callee, args, ty, _) ->
     genExprCall ctx callee args ty
-  | MExpr.UniOp (MUniOp.Not, arg, _) ->
+  | MExpr.UniOp (MUniOp.Not, arg, _, _) ->
     genExprUniOp ctx arg
-  | MExpr.Op (op, first, second, (ty, loc)) ->
+  | MExpr.Op (op, first, second, ty, loc) ->
     genExprOp ctx op first second ty loc
   | MExpr.Prim _
   | MExpr.Call _ ->
@@ -260,7 +260,7 @@ let genStmt ctx stmt =
   | MStmt.Expr (expr, _) ->
     let expr, ctx = genExpr ctx expr
     ctxAddStmt ctx (CStmt.Expr expr)
-  | MStmt.LetVal (serial, init, (ty, _)) ->
+  | MStmt.LetVal (serial, init, ty, _) ->
     let ident = ctxUniqueName ctx serial
     let init, ctx =
       match init with
@@ -270,9 +270,9 @@ let genStmt ctx stmt =
         Some init, ctx
     let cty, ctx = cty ctx ty
     ctxAddStmt ctx (CStmt.Let (ident, init, cty))
-  | MStmt.LetCons (serial, (head, _), (tail, _), (ty, _)) ->
+  | MStmt.LetCons (serial, head, tail, itemTy, _) ->
     let temp = ctxUniqueName ctx serial
-    let listTy, ctx = cty ctx ty
+    let listTy, ctx = cty ctx (MTy.List itemTy)
     let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, listTy))
 
     // head
@@ -286,15 +286,15 @@ let genStmt ctx stmt =
     let ctx = ctxAddStmt ctx stmt
 
     ctx
-  | MStmt.LetTuple (serial, elems, (ty, _)) ->
+  | MStmt.LetTuple (serial, elems, tupleTy, _) ->
     let ident = ctxUniqueName ctx serial
-    let tupleTy, ctx = cty ctx ty
+    let tupleTy, ctx = cty ctx tupleTy
     let ctx = ctxAddStmt ctx (CStmt.Let (ident, None, tupleTy))
     let rec go ctx i elems =
       match elems with
       | [] ->
         ctx
-      | (elem, _) :: elems ->
+      | elem :: elems ->
         let left = CExpr.Nav (CExpr.Ref ident, tupleField i)
         let elem, ctx = genExpr ctx elem
         let stmt = CStmt.Set (left, elem)
@@ -345,7 +345,7 @@ let genDecls (ctx: Ctx) decls =
       match args with
       | [] ->
         List.rev acc, ctx
-      | (arg, (ty, _)) :: args ->
+      | (arg, ty, _) :: args ->
         let ident = ctxUniqueName ctx arg
         let cty, ctx = cty ctx ty
         go ((ident, cty) :: acc) ctx args

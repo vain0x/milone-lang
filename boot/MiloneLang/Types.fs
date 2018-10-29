@@ -211,8 +211,9 @@ namespace rec MiloneLang
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
   type MExpr<'a> =
+    /// Default value of the type.
     | Unit
-      of 'a
+      of MTy * 'a
     | Bool
       of bool * 'a
     | Int
@@ -220,32 +221,32 @@ namespace rec MiloneLang
     | Str
       of string * 'a
     | Nil
-      of 'a
+      of itemTy:MTy * 'a
     /// Primitive.
     | Prim
       of MPrim * 'a
     /// Variable reference.
     | Ref
-      of serial:int * 'a
+      of serial:int * MTy * 'a
     | ListIsEmpty
-      of MExpr<'a> * 'a
+      of MExpr<'a> * itemTy:MTy * 'a
     | ListHead
-      of MExpr<'a> * 'a
+      of MExpr<'a> * itemTy:MTy * 'a
     | ListTail
-      of MExpr<'a> * 'a
+      of MExpr<'a> * itemTy:MTy * 'a
     /// Projection. Gets an element of tuple.
     | Proj
-      of MExpr<'a> * int * 'a
+      of MExpr<'a> * int * elemTy:MTy * 'a
     | Index
-      of MExpr<'a> * MExpr<'a> * 'a
+      of MExpr<'a> * MExpr<'a> * itemTy:MTy * 'a
     /// Call a function.
     /// This must occur in variable initializer if impure.
     | Call
-      of callee:MExpr<'a> * args:MExpr<'a> list * 'a
+      of callee:MExpr<'a> * args:MExpr<'a> list * resultTy:MTy * 'a
     | UniOp
-      of MUniOp * arg:MExpr<'a> * 'a
+      of MUniOp * arg:MExpr<'a> * resultTy:MTy * 'a
     | Op
-      of MOp * left:MExpr<'a> * right:MExpr<'a> * 'a
+      of MOp * left:MExpr<'a> * right:MExpr<'a> * resultTy:MTy * 'a
 
   /// Statement in middle IR.
   [<RequireQualifiedAccess>]
@@ -255,12 +256,12 @@ namespace rec MiloneLang
       of MExpr<'a> * 'a
     /// Local variable declaration.
     | LetVal
-      of serial:int * init:MExpr<'a> option * 'a
+      of serial:int * init:MExpr<'a> option * MTy * 'a
     | LetCons
-      of serial:int * head:(MExpr<'a> * 'a) * tail:(MExpr<'a> * 'a) * 'a
+      of serial:int * head:MExpr<'a> * tail:MExpr<'a> * itemTy:MTy * 'a
     /// Declares a tuple box variable filled by elements.
     | LetTuple
-      of serial:int * elems:(MExpr<'a> * 'a) list * 'a
+      of serial:int * elems:MExpr<'a> list * tupleTy:MTy * 'a
     /// Set to local variable.
     | Set
       of serial:int * init:MExpr<'a> * 'a
@@ -277,7 +278,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MDecl<'a> =
     | LetFun
-      of callee:int * args:(int * 'a) list * result:MTy * body:MStmt<'a> list * 'a
+      of callee:int * args:(int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
 
   /// Type in C language.
   [<RequireQualifiedAccess>]
@@ -341,7 +342,7 @@ namespace rec MiloneLang
       of ident:string * init:CExpr option * CTy
     /// `T* x = (T*)malloc(sizeof T);`
     | LetAlloc
-      of ident:string * CTy
+      of ident:string * valTy:CTy
     /// `x = a;`
     | Set
       of CExpr * CExpr
