@@ -88,6 +88,17 @@ let parseMainEmpty () =
   source |> parseStr |> is expected
 
 [<Fact>]
+let parseMainModule () =
+  let source = """module Program
+
+let rec private helper () = 0
+
+let main _ =
+  helper ()
+"""
+  source |> parseStr |> List.length |> is 2
+
+[<Fact>]
 let parseSimpleExprs () =
   let table =
     [

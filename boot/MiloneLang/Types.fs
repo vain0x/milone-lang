@@ -12,7 +12,9 @@ namespace rec MiloneLang
       of string
     | Ident
       of string
+    | Do
     | Let
+    | Rec
     | If
     | Then
     | Else
@@ -37,6 +39,13 @@ namespace rec MiloneLang
     /// Punctuation.
     | Punct
       of string
+    | Private
+    | Internal
+    | Public
+    | Module
+    | Namespace
+    | Open
+    | Type
 
   /// Type of expressions.
   [<RequireQualifiedAccess>]

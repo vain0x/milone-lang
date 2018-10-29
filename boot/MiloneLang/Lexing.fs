@@ -105,12 +105,21 @@ let private readChar (source: string) (acc, y, x, i): Read =
 
 let private tokenIdent ident =
   match ident with
+  | "do" -> Token.Do
   | "let" -> Token.Let
   | "if" -> Token.If
   | "then" -> Token.Then
   | "else" -> Token.Else
   | "match" -> Token.Match
   | "with" -> Token.With
+  | "rec" -> Token.Rec
+  | "private" -> Token.Private
+  | "internal" -> Token.Internal
+  | "public" -> Token.Public
+  | "module" -> Token.Module
+  | "namespace" -> Token.Namespace
+  | "open" -> Token.Open
+  | "type" -> Token.Type
   | _ -> Token.Ident ident
 
 let private tokenPunct str =

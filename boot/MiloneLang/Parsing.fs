@@ -90,19 +90,6 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
 /// even if we don't know how many tokens participate that expr.
 let tokenRole tokens: bool * bool =
   match tokens with
-  | []
-  | (Token.Then, _) :: _
-  | (Token.Else, _) :: _
-  | (Token.With, _) :: _
-  | (Token.ParenR, _) :: _
-  | (Token.BracketR, _) :: _
-  | (Token.Colon, _) :: _
-  | (Token.Dot, _) :: _
-  | (Token.Pipe, _) :: _
-  | (Token.Arrow, _) :: _
-  | (Token.Punct _, _) :: _ ->
-    // These tokens are read only in specific contexts.
-    false, false
   | (Token.Unit, _) :: _
   | (Token.Int _, _) :: _
   | (Token.Str _, _) :: _
@@ -113,9 +100,13 @@ let tokenRole tokens: bool * bool =
     true, true
   | (Token.If _, _) :: _
   | (Token.Match _, _) :: _
+  | (Token.Do, _) :: _
   | (Token.Let, _) :: _ ->
     // It is an expr, not pat.
     true, false
+  | _ ->
+    // Other tokens are read only in specific contexts.
+    false, false
 
 let leadsExpr tokens =
   let leadsExpr, _ = tokenRole tokens
@@ -321,10 +312,19 @@ let parseParen boxX tokens =
   | _ ->
     failwithf "Expected ')' %A" tokens
 
+let parseAccessModifier tokens =
+  match tokens with
+  | ((Token.Private | Token.Internal | Token.Public), _) :: tokens ->
+    // FIXME: support access modifiers
+    tokens
+  | _ ->
+    tokens
+
 let parseLet boxX letLoc tokens =
   let _, letX = letLoc
   let pats, tokens =
     let patsX = max boxX (letX + 1)
+    let tokens = parseAccessModifier tokens
     match parsePats patsX tokens with
     | pats, (Token.Punct "=", _) :: tokens ->
       pats, tokens
@@ -367,17 +367,7 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
     parseMatch boxX loc tokens
   | (Token.Let, letLoc) :: tokens ->
     parseLet boxX letLoc tokens
-  | []
-  | (Token.Else, _) :: _
-  | (Token.Then, _) :: _
-  | (Token.With, _) :: _
-  | (Token.ParenR, _) :: _
-  | (Token.BracketR, _) :: _
-  | (Token.Colon, _) :: _
-  | (Token.Dot, _) :: _
-  | (Token.Pipe, _) :: _
-  | (Token.Arrow, _) :: _
-  | (Token.Punct _, _) :: _ ->
+  | _ ->
     parseError "Expected an atomic expression" tokens
 
 /// index = atom ( '.' '[' expr ']' )*
@@ -486,6 +476,9 @@ let parseAnno boxX tokens =
 /// let = 'let' ( pat )* '=' expr / anno
 let parseBinding boxX tokens =
   match tokens with
+  | (Token.Let, letLoc) :: (Token.Rec, _) :: tokens ->
+    // FIXME: use `rec`
+    parseLet boxX letLoc tokens
   | (Token.Let, letLoc) :: tokens ->
     parseLet boxX letLoc tokens
   | _ ->
@@ -523,13 +516,32 @@ let parseAndThen boxX tokens =
 let parseExpr (boxX: int) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =
   parseAndThen boxX tokens
 
+/// stub
+let parseModule (boxX: int) tokens =
+  match tokens with
+  | (Token.Module, (_, moduleX))
+    :: (Token.Ident _, _)
+    :: (Token.Punct "=", _) :: tokens ->
+    parseBindings (moduleX + 1) tokens
+  | _ ->
+    parseBindings boxX tokens
+
 /// module = ( binding ( ';' binding )* )?
 /// Composes tokens into (a kind of) syntax tree.
 let parse (tokens: (Token * Loc) list): Expr<Loc> list =
   let exprs, tokens =
     match tokens with
-    | [] -> [], []
-    | _ -> parseBindings -1 tokens
+    | [] ->
+      [], []
+    | (Token.Module, (_, moduleX))
+      :: (Token.Ident _, _)
+      :: (Token.Rec, _) :: tokens ->
+      parseModule moduleX tokens
+    | (Token.Module, (_, moduleX))
+      :: (Token.Ident _, _) :: tokens ->
+      parseModule moduleX tokens
+    | _ ->
+      parseModule -1 tokens
   if tokens <> [] then
     failwithf "Expected eof but %A" tokens
   exprs

@@ -1,5 +1,5 @@
 let rev xs =
-  let go acc xs =
+  let rec go acc xs =
     match xs with
     | [] ->
       acc
@@ -7,7 +7,7 @@ let rev xs =
       go (x :: acc) xs
   go [] xs
 
-let printList xs =
+let rec printList xs =
   match xs with
   | [] ->
     ()
