@@ -249,15 +249,33 @@ let cprintHeader acc =
 #include <stdlib.h>
 #include <string.h>
 
-char* str_add(char* left, char* right) {
-  int left_len = strlen(left), right_len = strlen(right);
-  if (left_len == 0 || right_len == 0) {
-    return left_len ? right : left;
+struct String {
+  char* str;
+  int len;
+};
+
+int int_cmp(int l, int r) {
+  if (l == r) return 0;
+  if (l < r) return -1;
+  return 1;
+}
+
+String str_cmp(String left, String right) {
+  if (left.len != right.len) {
+    return int_cmp(left.len, right.len);
   }
-  char* t = (char*)malloc((left_len + right_len + 1) * sizeof(char));
-  strcpy(t, left);
-  strcpy(t + left_len, right);
-  return t;
+  return strcmp(left.str, right.str);
+}
+
+String str_add(String left, String right) {
+  if (left.len == 0 || right.len == 0) {
+    return right.len == 0 ? left : right;
+  }
+  int len = left.len + right.len;
+  char* str = (char*)malloc((len + 1) * sizeof(char));
+  strcpy(str, left.str);
+  strcpy(str + left.len, right.str);
+  return (String){.str = str, .len = len};
 }
 """
   acc *- header *- eol
