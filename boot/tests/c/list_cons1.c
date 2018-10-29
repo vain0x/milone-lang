@@ -9,9 +9,9 @@ int main() {
     list_6->head = 1;
     list_6->tail = NULL;
     if (!(!(!(list_6)))) goto next_2;
-    int x1_2 = list_6->head;
+    int x1_3 = list_6->head;
     if (!(!(list_6->tail))) goto next_2;
-    match_5 = (x1_2 - 1);
+    match_5 = (x1_3 - 1);
     goto end_match_1;
 next_2:;
     exit(1);

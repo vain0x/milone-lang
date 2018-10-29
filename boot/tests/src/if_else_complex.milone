@@ -1,4 +1,4 @@
-let main () =
+let main _ =
   if true then
     printfn "then"
     let hello = "hello"

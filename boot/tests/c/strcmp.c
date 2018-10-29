@@ -1,10 +1,10 @@
 int main() {
-    int le_2 = (strcmp("a", "b") < 0);
-    int eq_3 = (strcmp("o", "o") == 0);
+    int le_3 = (strcmp("a", "b") < 0);
+    int eq_4 = (strcmp("o", "o") == 0);
     int if_5;
     int if_6;
-    if (!(le_2)) goto else_3;
-    if_6 = eq_3;
+    if (!(le_3)) goto else_3;
+    if_6 = eq_4;
     goto end_if_4;
 else_3:;
     if_6 = 0;

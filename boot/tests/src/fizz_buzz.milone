@@ -1,4 +1,4 @@
-let main () =
+let main _ =
   let fizzBuzz i =
     if i <= 15 then
       if i % 15 = 0 then

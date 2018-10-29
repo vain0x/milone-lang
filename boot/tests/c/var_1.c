@@ -1,4 +1,4 @@
 int main() {
-    int x_2 = (2 + 3);
-    return (x_2 + x_2);
+    int x_3 = (2 + 3);
+    return (x_3 + x_3);
 }

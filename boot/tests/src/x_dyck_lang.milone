@@ -1,4 +1,4 @@
-let main () =
+let main _ =
   let go (((s : string, n), i), d) =
     if i >= n then
       d = 0

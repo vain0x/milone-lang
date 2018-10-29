@@ -384,16 +384,20 @@ let inferLetFun ctx pat pats body loc =
     let callee, serial, calleeTy, ctx = freshVar callee ctx
     let calleePat = Pat.Ident (callee, serial, (calleeTy, calleeLoc))
 
+    let ctx =
+      if callee <> "main" then ctx else
+        unifyTy ctx calleeTy (Ty.Fun (Ty.Unit, Ty.Int))
+
     // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default
     let bodyCtx = ctx
     let argPat, bodyCtx = inferPat bodyCtx argPat
     let body, bodyCtx = inferExpr bodyCtx body
+    let bodyCtx = unifyTy bodyCtx calleeTy (Ty.Fun (patTy argPat, tyOf body))
     if not (isMonomorphic bodyCtx (patTy argPat)) then
       failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A" argPat
 
     let ctx = rollback ctx bodyCtx
-    let ctx = unifyTy ctx calleeTy (Ty.Fun (patTy argPat, tyOf body))
 
     Expr.Let ([calleePat; argPat], body, (Ty.Unit, loc)), ctx
   | _ ->
@@ -493,14 +497,6 @@ let infer (exprs: Expr<Loc> list): Expr<Ty * Loc> list * TyCtx =
   let ctx = go ctx prims
 
   let exprs, _, ctx = inferExprs ctx exprs
-
-  // Type check of main.
-  let ctx =
-    match exprs with
-    | Expr.Let ([Pat.Ident ("main", _, (ty, _)); Pat.Unit _], _, _) :: _ ->
-    unifyTy ctx ty (Ty.Fun (Ty.Unit, Ty.Int))
-    | _ ->
-      failwithf "Last expression must be `let main`."
 
   // Substitute all types.
   let exprs = List.map (substTyExpr ctx) (List.rev exprs)

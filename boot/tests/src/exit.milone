@@ -1,4 +1,4 @@
-let main () =
+let main _ =
   let t = exit 1
   let (x : int), (y : string) = t
   printfn "%s" (exit 2)

@@ -1,4 +1,4 @@
-int not_2(int arg_6) {
+int not_3(int arg_6) {
     printf("shadowing not\n");
     int call_7 = 0;
     return 0;
@@ -14,6 +14,6 @@ int main() {
 else_1:;
     if_4 = 0;
 end_if_2:;
-    int call_8 = not_2(0);
+    int call_8 = not_3(0);
     return 0;
 }

@@ -15,7 +15,7 @@ let printList xs =
     printfn "%d" x
     printList xs
 
-let main () =
+let main _ =
   let xs = 0 :: 1 :: 2 :: []
   printfn "xs:"
   printList xs

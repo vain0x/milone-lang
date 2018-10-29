@@ -1,4 +1,4 @@
-let main () =
+let main _ =
   printfn "No formats"
   let hello = "Hello!"
   printfn "%s" hello

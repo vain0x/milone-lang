@@ -1,10 +1,10 @@
-int abs_2(int x_3) {
+int abs_3(int x_4) {
     int if_8;
-    if (!((0 <= x_3))) goto else_1;
-    if_8 = x_3;
+    if (!((0 <= x_4))) goto else_1;
+    if_8 = x_4;
     goto end_if_2;
 else_1:;
-    if_8 = (0 - x_3);
+    if_8 = (0 - x_4);
 end_if_2:;
     return if_8;
 }
@@ -23,12 +23,12 @@ int main() {
     list_10->head = 1;
     list_10->tail = list_11;
     if (!(!(!(list_10)))) goto next_4;
-    int x1_4 = list_10->head;
+    int x1_5 = list_10->head;
     if (!(!(!(list_10->tail)))) goto next_4;
-    int x2_5 = list_10->tail->head;
+    int x2_6 = list_10->tail->head;
     if (!(!(list_10->tail->tail))) goto next_4;
-    int call_12 = abs_2((x1_4 - 1));
-    int call_13 = abs_2((x2_5 - 2));
+    int call_12 = abs_3((x1_5 - 1));
+    int call_13 = abs_3((x2_6 - 2));
     match_9 = (call_12 + call_13);
     goto end_match_3;
 next_4:;

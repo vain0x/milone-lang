@@ -1,4 +1,4 @@
-let main () =
+let main _ =
   let a = 1, "snd"
   let x, _x = a
   printfn "%d" x

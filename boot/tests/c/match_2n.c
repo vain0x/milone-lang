@@ -14,7 +14,7 @@ int main() {
     goto end_match_1;
 next_2:;
     if (!((tuple_5.t0 == 999))) goto next_3;
-    int y_2 = tuple_5.t1;
+    int y_3 = tuple_5.t1;
     match_4 = 1;
     goto end_match_1;
 next_3:;

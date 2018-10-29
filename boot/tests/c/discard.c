@@ -1,4 +1,4 @@
-int f_2(int arg_6) {
+int f_3(int arg_6) {
     printf("hello\n");
     int call_7 = 0;
     return 0;
@@ -10,8 +10,8 @@ struct Tuple_1 {
 };
 
 int main() {
-    int call_9 = f_2(0);
-    int call_10 = f_2(0);
+    int call_9 = f_3(0);
+    int call_10 = f_3(0);
     struct Tuple_1 tuple_8;
     tuple_8.t0 = 0;
     tuple_8.t1 = 0;
