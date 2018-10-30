@@ -140,6 +140,10 @@ let genExprDefault ctx ty =
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
 
+let genExprStrLen ctx expr =
+  let expr, ctx = genExpr ctx expr
+  CExpr.Call (CExpr.Ref "strlen", [expr]), ctx
+
 let genExprListIsEmpty ctx expr =
   let expr, ctx = genExpr ctx expr
   CExpr.UniOp (MUniOp.Not, expr), ctx
@@ -236,6 +240,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
+  | MExpr.StrLen (expr, _) ->
+    genExprStrLen ctx expr
   | MExpr.ListIsEmpty (expr, _, _) ->
     genExprListIsEmpty ctx expr
   | MExpr.ListHead (expr, _, _) ->

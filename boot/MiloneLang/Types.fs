@@ -151,6 +151,9 @@ namespace rec MiloneLang
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
     | Match
       of target:Expr<'a> * (Pat<'a> * Expr<'a>) * (Pat<'a> * Expr<'a>) * 'a
+    /// `r.x`
+    | Nav
+      of subject:Expr<'a> * message:string * 'a
     /// `x.[i]`
     | Index
       of Expr<'a> * Expr<'a> * 'a
@@ -236,6 +239,8 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of serial:int * MTy * 'a
+    | StrLen
+      of MExpr<'a> * 'a
     | ListIsEmpty
       of MExpr<'a> * itemTy:MTy * 'a
     | ListHead

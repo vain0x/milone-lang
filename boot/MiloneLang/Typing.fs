@@ -243,6 +243,14 @@ let inferMatch ctx target (pat1, body1) (pat2, body2) loc =
 
   Expr.Match (target, (pat1, body1), (pat2, body2), (tyOf body1, loc)), ctx
 
+let inferNav ctx sub mes loc =
+  let sub, ctx = inferExpr ctx sub
+  match substTy ctx (tyOf sub), mes with
+  | Ty.Str, "Length" ->
+    Expr.Nav (sub, mes, (Ty.Int, loc)), ctx
+  | _ ->
+    failwithf "Unknown nav %A" (sub, mes, loc)
+
 /// `x.[i] : 'y` <== x : 'x, i : int
 /// NOTE: Currently only the `x : string` case can compile, however,
 /// we don't infer that for compatibility.
@@ -464,6 +472,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     inferIf ctx pred thenCl elseCl loc
   | Expr.Match (target, arm1, arm2, loc) ->
     inferMatch ctx target arm1 arm2 loc
+  | Expr.Nav (receiver, field, loc) ->
+    inferNav ctx receiver field loc
   | Expr.Index (l, r, loc) ->
     inferIndex ctx l r loc
   | Expr.Call (Expr.Prim (PrimFun.Exit, calleeLoc), [arg], loc) ->

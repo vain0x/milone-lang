@@ -42,6 +42,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.List (_, a) -> a
   | Expr.If (_, _, _, a) -> a
   | Expr.Match (_, _, _, a) -> a
+  | Expr.Nav (_, _, a) -> a
   | Expr.Index (_, _, a) -> a
   | Expr.Call (_, _, a) -> a
   | Expr.Op (_, _, _, a) -> a
@@ -73,6 +74,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     let arm1 = (patMap f pat1, exprMap f body1)
     let arm2 = (patMap f pat2, exprMap f body2)
     Expr.Match (exprMap f target, arm1, arm2, f a)
+  | Expr.Nav (sub, mes, a) ->
+    Expr.Nav (exprMap f sub, mes, f a)
   | Expr.Index (l, r, a) ->
     Expr.Index (exprMap f l, exprMap f r, f a)
   | Expr.Call (callee, args, a) ->
@@ -400,7 +403,7 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   | _ ->
     parseError "Expected an atomic expression" tokens
 
-/// index = atom ( '.' '[' expr ']' )*
+/// index = atom ( '.' '[' expr ']' | '.' field )*
 let parseIndex boxX tokens =
   let callee, tokens = parseAtom boxX tokens
   let rec go acc tokens =
@@ -411,6 +414,10 @@ let parseIndex boxX tokens =
         go (Expr.Index (acc, expr, loc)) tokens
       | _, tokens ->
         parseError "Expected closing ']'" tokens
+    | (Token.Dot, loc) :: (Token.Ident field, _) :: tokens ->
+      go (Expr.Nav (acc, field, loc)) tokens
+    | (Token.Dot, _) :: tokens ->
+      parseError "Expected .[] or .field" tokens
     | _ ->
       acc, tokens
   go callee tokens

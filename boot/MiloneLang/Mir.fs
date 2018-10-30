@@ -109,6 +109,7 @@ let mexprExtract expr =
   | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.Prim (_, loc) -> MTy.Unit, loc // FIXME: incorrect type
   | MExpr.Ref (_, ty, loc) -> ty, loc
+  | MExpr.StrLen (_, loc) -> MTy.Int, loc
   | MExpr.ListIsEmpty (_, itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.ListHead (_, itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.ListTail (_, itemTy, loc) -> MTy.List itemTy, loc
@@ -282,6 +283,15 @@ let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) (ty, loc) =
   // End of match.
   let ctx = ctxAddStmt ctx endLabelStmt
   temp, ctx
+
+let mirifyExprNav ctx sub mes (ty, loc) =
+  let subTy = exprTy sub
+  let sub, ctx = mirifyExpr ctx sub
+  match subTy, mes with
+  | Ty.Str, "Length" ->
+    MExpr.StrLen (sub, loc), ctx
+  | _ ->
+    failwithf "Never nav %A" (sub, mes, ty, loc)
 
 let mirifyExprIndex ctx l r ty loc =
   match exprTy l, exprTy r with
@@ -488,6 +498,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<Loc> * MirCtx =
     mirifyExprIf ctx pred thenCl elseCl (ty, loc)
   | Expr.Match (target, arm1, arm2, a) ->
     mirifyExprMatch ctx target arm1 arm2 a
+  | Expr.Nav (l, r, a) ->
+    mirifyExprNav ctx l r a
   | Expr.Index (l, r, (ty, loc)) ->
     mirifyExprIndex ctx l r ty loc
   | Expr.Call (Expr.Ref ("not", -1, _), [arg], a) ->
