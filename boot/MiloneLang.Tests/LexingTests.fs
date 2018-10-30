@@ -67,11 +67,19 @@ let tokenizeCharLiteral () =
       value
     | _ ->
       failwithf "Expected char token but %A" token
-  let source = """'a' '\'' '\n'"""
-  let expected = ['a'; '\''; '\n']
+  let source = """'a' '\'' '\n' '\u0000'"""
+  let expected = ['a'; '\''; '\n'; '\u0000']
   source
   |> Lexing.tokenize
   |> List.map unwrapChar
+  |> is expected
+
+[<Fact>]
+let tokenizeStrLiteral () =
+  let source = "\"HELLO!\\n\\\"NEW\\\"\\nWORLD!\""
+  let expected = [Token.Str "HELLO!\n\"NEW\"\nWORLD!", (0, 0)]
+  source
+  |> Lexing.tokenize
   |> is expected
 
 [<Fact>]

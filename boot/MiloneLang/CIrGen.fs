@@ -105,7 +105,7 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ty, ctx
 
 let callPrintf format args =
-  let format = CExpr.Str (format + "\\n")
+  let format = CExpr.Str (format + "\n")
   CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
 
 let ctxFreshName (ctx: Ctx) (ident: string) =

@@ -48,13 +48,40 @@ let rec cprintParams acc ps: string list =
 
 let cprintExprChar value =
   match value with
-  | '\u0000' -> "\\0"
   | '\r' -> "\\r"
   | '\n' -> "\\n"
   | '\t' -> "\\t"
   | '\'' -> "\\'"
   | '\\' -> "\\\\"
+  | '\u0000' -> "\\0"
   | _ -> string value
+
+let cprintExprStr acc (value: string) =
+  let rec chunk i =
+    if i >= value.Length || value.[i] = '\\'
+    then i
+    else chunk (i + 1)
+  let rec go acc i =
+    if i >= value.Length then
+      acc
+    else
+      match value.[i] with
+      | '\u0000' ->
+        // FIXME: support
+        go (acc *- "\\0") (i + 1)
+      | '\r' ->
+        go (acc *- "\\r") (i + 1)
+      | '\n' ->
+        go (acc *- "\\n") (i + 1)
+      | '\t' ->
+        go (acc *- "\\t") (i + 1)
+      | '\"' ->
+        go (acc *- "\\\"") (i + 1)
+      | '\\' ->
+        go (acc *- "\\\\") (i + 1)
+      | _ ->
+        go (acc *- string value.[i]) (i + 1)
+  go (acc *- "\"") 0 *- "\""
 
 let rec cprintExpr acc expr: string list =
   let rec cprintExprList acc index separator exprs =
@@ -72,7 +99,7 @@ let rec cprintExpr acc expr: string list =
   | CExpr.Char value ->
     acc *- "'" *- cprintExprChar value *- "'"
   | CExpr.Str value ->
-    acc *- "\"" *- value *- "\""
+    cprintExprStr acc value
   | CExpr.Ref (value) ->
     acc *- value
   | CExpr.Prim CPrim.Malloc ->

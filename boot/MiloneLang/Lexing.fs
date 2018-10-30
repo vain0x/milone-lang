@@ -77,29 +77,52 @@ let private readInt (source: string) (acc, y, x, i): Read =
 
 let private readStr (source: string) (acc, y, x, i): Read =
   assert (source.[i] = '"')
-  let r = takeWhile ((<>) '"') (source, i + 1)
-  if r = source.Length then
-    lexError "Expected closing '\"' but eof" (source, r)
-  let t = Token.Str (source.Substring(i + 1, r - (i + 1))), (y, x)
-  t :: acc, y, x + r - i + 1, r + 1
+  let rec chunk i =
+    if i >= source.Length || source.[i] = '"' || source.[i] = '\\'
+    then i
+    else chunk (i + 1)
+  let unescape i =
+    match source.[i] with
+    | 'r' -> "\r"
+    | 'n' -> "\n"
+    | 't' -> "\t"
+    | '"' -> "\""
+    | '\\' -> "\\"
+    | 'u' -> failwith "unimpl unicode esc"
+    | c -> failwithf "unimpl escape %c" c
+  let rec go acc i =
+    if i >= source.Length then
+      lexError "Expected closing '\"'" (source, i)
+    else if source.[i] = '"' then
+      acc, i + 1
+    else if source.[i] = '\\' then
+      go (unescape (i + 1) :: acc) (i + 2)
+    else
+      let r = chunk i
+      go (source.Substring(i, r - i) :: acc) r
+  let chunks, r = go [] (i + 1)
+  let str = chunks |> List.rev |> String.concat ""
+  let t = Token.Str str, (y, x)
+  t :: acc, y, x + r - i, r
 
 let private readChar (source: string) (acc, y, x, i): Read =
   assert (source.[i] = '\'')
   let c, len =
     // FIXME: range check
     if source.[i + 1] = '\\' then
-      let c =
-        match source.[i + 2] with
-        | 'n' -> '\n'
-        | 'r' -> '\r'
-        | c -> c
-      c, 2
+      match source.[i + 2] with
+      | '\'' -> '\'', 2
+      | '\\' -> '\\', 2
+      | 't' -> '\t', 2
+      | 'r' -> '\r', 2
+      | 'n' -> '\n', 2
+      | 'u' -> '\u0000', 6
+      | c -> c, 2
     else
       source.[i + 1], 1
   let r = i + 1 + len + 1
   if source.[r - 1] <> '\'' then
     lexError "Expected closing '\''" (source, r - 1)
-  // FIXME: char token
   let t = Token.Char c, (y, x)
   t :: acc, y, x + r - i, r
 
