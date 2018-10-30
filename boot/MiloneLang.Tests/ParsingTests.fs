@@ -33,6 +33,12 @@ let parseStrAsPat source: Pat<unit> =
 let tyFun sTy tTy =
   Ty.Fun (sTy, tTy)
 
+let tyList ty =
+  Ty.List ty
+
+let tyTuple l r =
+  Ty.Tuple (l, r)
+
 let patNil = Pat.Nil ()
 
 let patCons l r = Pat.Cons (l, r, ())
@@ -317,6 +323,18 @@ let parseExprCons () =
           (exprCons (exprInt 2) exprNil)
         )]
   source |> parseStr |> is expected
+
+[<Fact>]
+let parseListTypeExprs () =
+  let source = """int list list"""
+  let expected = tyList (tyList Ty.Int)
+  source |> parseTyExprStr |> is expected
+
+[<Fact>]
+let parseTupleTypeExprs () =
+  let source = """string * char list"""
+  let expected = tyTuple Ty.Str (tyList Ty.Char)
+  source |> parseTyExprStr |> is expected
 
 [<Fact>]
 let parseFunTypeExprs () =

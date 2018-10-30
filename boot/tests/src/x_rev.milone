@@ -1,9 +1,9 @@
 let rev xs =
-  let rec go acc xs =
+  let rec go acc (xs : int list) =
     match xs with
     | [] ->
       acc
-    | (x : int) :: xs ->
+    | x :: xs ->
       go (x :: acc) xs
   go [] xs
 

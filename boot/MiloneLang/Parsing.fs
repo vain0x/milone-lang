@@ -173,12 +173,35 @@ let parseTyAtom boxX tokens: Ty * _ list =
   | _ ->
     parseError "Expected a type atom" tokens
 
-/// ty-fun = ty-atom ( '->' ty-fun )?
+/// ty-list = ty-atom ( 'list' )*
+let parseTyList boxX tokens =
+  let rec go first tokens =
+    match tokens with
+    | (Token.Ident "list", _) :: tokens ->
+      go (Ty.List first) tokens
+    | tokens ->
+      first, tokens
+  let first, tokens = parseTyAtom boxX tokens
+  go first tokens
+
+/// ty-tuple = ty-list ( '\*' ty-tuple )\*
+let parseTyTuple boxX tokens =
+  let rec go first tokens =
+    match tokens with
+    | (Token.Punct "*", _) :: tokens ->
+      let second, tokens = parseTyList boxX tokens
+      go (Ty.Tuple (first, second)) tokens
+    | _ ->
+      first, tokens
+  let first, tokens = parseTyList boxX tokens
+  go first tokens
+
+/// ty-fun = ty-tuple ( '->' ty-fun )?
 let parseTyFun boxX tokens =
-  match parseTyAtom boxX tokens with
+  match parseTyTuple boxX tokens with
   | sTy, (Token.Arrow, _) :: tokens ->
     let tTy, tokens = parseTyFun boxX tokens
-    Ty.Fun(sTy, tTy), tokens
+    Ty.Fun (sTy, tTy), tokens
   | ty, tokens ->
     ty, tokens
 
