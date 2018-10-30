@@ -316,7 +316,13 @@ let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
 let inferOpAdd (ctx: TyCtx) op left right loc resultTy =
   let operandTy, _, ctx = freshTyVar "operand" ctx
   let ctx = unifyTy ctx operandTy resultTy
-  inferOpCore ctx op left right loc operandTy resultTy
+  let expr, ctx = inferOpCore ctx op left right loc operandTy resultTy
+  match substTy ctx operandTy with
+  | Ty.Int
+  | Ty.Str ->
+    expr, ctx
+  | ty ->
+    failwithf "Type: No support (+) for %A (%A + %A)" ty left right
 
 let inferOpArith (ctx: TyCtx) op left right loc resultTy =
   let ctx = unifyTy ctx resultTy Ty.Int
