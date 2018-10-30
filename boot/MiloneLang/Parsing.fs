@@ -35,6 +35,7 @@ let exprExtract (expr: Expr<'a>): 'a =
   | Expr.Unit a -> a
   | Expr.Bool (_, a) -> a
   | Expr.Int (_, a) -> a
+  | Expr.Char (_, a) -> a
   | Expr.Str (_, a) -> a
   | Expr.Prim (_, a) -> a
   | Expr.Ref (_, _, a) -> a
@@ -56,6 +57,8 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
     Expr.Bool (value, f a)
   | Expr.Int (value, a) ->
     Expr.Int (value, f a)
+  | Expr.Char (value, a) ->
+    Expr.Char (value, f a)
   | Expr.Str (value, a) ->
     Expr.Str (value, f a)
   | Expr.Prim (value, a) ->
@@ -91,6 +94,7 @@ let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
 let tokenRole tokens: bool * bool =
   match tokens with
   | (Token.Int _, _) :: _
+  | (Token.Char _, _) :: _
   | (Token.Str _, _) :: _
   | (Token.Ident _, _) :: _
   | (Token.ParenL, _) :: _
@@ -156,6 +160,8 @@ let parseTyAtom boxX tokens: Ty * _ list =
     Ty.Bool, tokens
   | (Token.Ident "int", _) :: tokens ->
     Ty.Int, tokens
+  | (Token.Ident "char", _) :: tokens ->
+    Ty.Char, tokens
   | (Token.Ident "string", _) :: tokens ->
     Ty.Str, tokens
   | (Token.ParenL, _) :: tokens ->
@@ -334,7 +340,7 @@ let parseLet boxX letLoc tokens =
     parseExpr bodyX tokens
   Expr.Let (pats, body, letLoc), tokens
 
-/// atom  = unit / int / string / bool / prim / ref
+/// atom  = unit / int / char /string / bool / prim / ref
 ///       / ( expr ) / if-then-else / match-with / let
 let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   match tokens with
@@ -344,6 +350,8 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
     Expr.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
     Expr.Int (value, loc), tokens
+  | (Token.Char value, loc) :: tokens ->
+    Expr.Char (value, loc), tokens
   | (Token.Str value, loc) :: tokens ->
     Expr.Str (value, loc), tokens
   | (Token.Ident "false", loc) :: tokens ->

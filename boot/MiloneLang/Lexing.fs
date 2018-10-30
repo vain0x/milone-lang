@@ -100,7 +100,7 @@ let private readChar (source: string) (acc, y, x, i): Read =
   if source.[r - 1] <> '\'' then
     lexError "Expected closing '\''" (source, r - 1)
   // FIXME: char token
-  let t = Token.Int (int c), (y, x)
+  let t = Token.Char c, (y, x)
   t :: acc, y, x + r - i, r
 
 let private tokenIdent ident =

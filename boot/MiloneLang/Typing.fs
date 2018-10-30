@@ -66,6 +66,7 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Unit
     | Ty.Bool
     | Ty.Int
+    | Ty.Char
     | Ty.Str ->
       true
     | Ty.Fun (sTy, tTy) ->
@@ -84,6 +85,7 @@ let isMonomorphic ctx ty: bool =
   | Ty.Unit
   | Ty.Bool
   | Ty.Int
+  | Ty.Char
   | Ty.Str ->
     true
   | Ty.Var _ ->
@@ -111,6 +113,7 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.Unit
     | Ty.Bool
     | Ty.Int
+    | Ty.Char
     | Ty.Str ->
       ty
     | Ty.Fun (sty, tty) ->
@@ -144,14 +147,16 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Unit, Ty.Unit
     | Ty.Bool, Ty.Bool
     | Ty.Int, Ty.Int
+    | Ty.Char, Ty.Char
     | Ty.Str, Ty.Str ->
       ctx
     | Ty.Var _, _ ->
       failwithf "Couldn't unify (due to self recursion) %A %A" lty rty
     | Ty.Unit, _
     | Ty.Bool, _
-    | Ty.Int _, _
-    | Ty.Str _, _
+    | Ty.Int, _
+    | Ty.Char, _
+    | Ty.Str, _
     | Ty.Fun _, _
     | Ty.Tuple _, _
     | Ty.List _, _ ->
@@ -447,6 +452,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Ty * Loc> * TyCtx =
     Expr.Bool (value, (Ty.Bool, loc)), ctx
   | Expr.Int (value, loc) ->
     Expr.Int (value, (Ty.Int, loc)), ctx
+  | Expr.Char (value, loc) ->
+    Expr.Char (value, (Ty.Char, loc)), ctx
   | Expr.Str (value, loc) ->
     Expr.Str (value, (Ty.Str, loc)), ctx
   | Expr.Ref (ident, _, loc) ->

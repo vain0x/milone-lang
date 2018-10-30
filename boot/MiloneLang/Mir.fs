@@ -104,6 +104,7 @@ let mexprExtract expr =
   | MExpr.Unit (ty, loc) -> ty, loc
   | MExpr.Bool (_, loc) -> MTy.Bool, loc
   | MExpr.Int (_, loc) -> MTy.Int, loc
+  | MExpr.Char (_, loc) -> MTy.Char, loc
   | MExpr.Str (_, loc) -> MTy.Str, loc
   | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.Prim (_, loc) -> MTy.Unit, loc // FIXME: incorrect type
@@ -126,6 +127,7 @@ let unboxTy (ty: Ty): MTy =
   | Ty.Unit -> MTy.Unit
   | Ty.Bool -> MTy.Bool
   | Ty.Int -> MTy.Int
+  | Ty.Char -> MTy.Char
   | Ty.Str -> MTy.Str
   | Ty.Fun (lTy, rTy) ->
     MTy.Fun (unboxTy lTy, unboxTy rTy)
@@ -282,11 +284,11 @@ let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) (ty, loc) =
   temp, ctx
 
 let mirifyExprIndex ctx l r ty loc =
-  match exprTy l, ty with
+  match exprTy l, exprTy r with
   | Ty.Str, Ty.Int ->
     let l, ctx = mirifyExpr ctx l
     let r, ctx = mirifyExpr ctx r
-    MExpr.Index (l, r, MTy.Int, loc), ctx
+    MExpr.Index (l, r, MTy.Char, loc), ctx
   | _ ->
     failwith "unimpl non-string indexing"
 
@@ -349,9 +351,10 @@ let mirifyExprOpTie ctx l r (ty, loc) =
   let ctx = ctxAddStmt ctx (MStmt.LetTuple (tempSerial, elems, ty, loc))
   MExpr.Ref (tempSerial, ty, loc), ctx
 
-/// x op y ==> `x op y` if `x : int`
+/// x op y ==> `x op y` if `x : {scalar}`
+/// where scalar types are int, char, etc.
 /// C language supports all operators.
-let mirifyExprOpInt ctx op l r (ty, loc) =
+let mirifyExprOpScalar ctx op l r (ty, loc) =
   let opExpr = MExpr.Op (op, l, r, ty, loc)
   opExpr, ctx
 
@@ -391,8 +394,9 @@ let mirifyExprOp ctx op l r a =
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
   match lTy with
-  | Ty.Int ->
-    mirifyExprOpInt ctx op l r (ty, loc)
+  | Ty.Int
+  | Ty.Char ->
+    mirifyExprOpScalar ctx op l r (ty, loc)
   | Ty.Str when op = MOp.Add ->
     mirifyExprOpStrAdd ctx op l r (ty, loc)
   | Ty.Str when opIsComparison op ->
@@ -468,6 +472,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<Loc> * MirCtx =
     MExpr.Bool (value, loc), ctx
   | Expr.Int (value, (_, loc)) ->
     MExpr.Int (value, loc), ctx
+  | Expr.Char (value, (_, loc)) ->
+    MExpr.Char (value, loc), ctx
   | Expr.Str (value, (_, loc)) ->
     MExpr.Str (value, loc), ctx
   | Expr.Prim (PrimFun.Printfn, (_, loc)) ->

@@ -46,6 +46,16 @@ let rec cprintParams acc ps: string list =
       go acc ps
   go acc ps
 
+let cprintExprChar value =
+  match value with
+  | '\u0000' -> "\\0"
+  | '\r' -> "\\r"
+  | '\n' -> "\\n"
+  | '\t' -> "\\t"
+  | '\'' -> "\\'"
+  | '\\' -> "\\\\"
+  | _ -> string value
+
 let rec cprintExpr acc expr: string list =
   let rec cprintExprList acc index separator exprs =
     match exprs with
@@ -59,6 +69,8 @@ let rec cprintExpr acc expr: string list =
     acc *- "{}"
   | CExpr.Int value ->
     acc *- string value
+  | CExpr.Char value ->
+    acc *- "'" *- cprintExprChar value *- "'"
   | CExpr.Str value ->
     acc *- "\"" *- value *- "\""
   | CExpr.Ref (value) ->

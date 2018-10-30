@@ -61,17 +61,17 @@ let tokenizeOps () =
 
 [<Fact>]
 let tokenizeCharLiteral () =
-  let unwrapInt (token, _) =
+  let unwrapChar (token, _) =
     match token with
-    | Token.Int value ->
+    | Token.Char value ->
       value
     | _ ->
-      failwithf "Expected int token but %A" token
+      failwithf "Expected char token but %A" token
   let source = """'a' '\'' '\n'"""
-  let expected = [int 'a'; int '\''; int '\n']
+  let expected = ['a'; '\''; '\n']
   source
   |> Lexing.tokenize
-  |> List.map unwrapInt
+  |> List.map unwrapChar
   |> is expected
 
 [<Fact>]

@@ -5,7 +5,7 @@ int go_3(char* s_7, int n_6, int i_5, int d_4) {
     goto end_if_2;
 else_1:;
     int if_16;
-    if (!((s_7[i_5] == 40))) goto else_3;
+    if (!((s_7[i_5] == '('))) goto else_3;
     int call_17 = go_3(s_7, n_6, (i_5 + 1), (d_4 + 1));
     if_16 = call_17;
     goto end_if_4;

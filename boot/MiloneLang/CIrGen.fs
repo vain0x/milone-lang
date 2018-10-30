@@ -85,6 +85,8 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
   | MTy.Bool
   | MTy.Int ->
     CTy.Int, ctx
+  | MTy.Char ->
+    CTy.Char, ctx
   | MTy.Str ->
     CTy.Ptr CTy.Char, ctx
   | MTy.Fun _ ->
@@ -128,6 +130,7 @@ let genExprDefault ctx ty =
   | MTy.Bool
   | MTy.Int ->
     CExpr.Int 0, ctx
+  | MTy.Char
   | MTy.Str
   | MTy.List _ ->
     let ty, ctx = cty ctx ty
@@ -215,6 +218,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx ty
   | MExpr.Int (value, _) ->
     CExpr.Int value, ctx
+  | MExpr.Char (value, _) ->
+    CExpr.Char value, ctx
   | MExpr.Str (value, _) ->
     CExpr.Str value, ctx
   | MExpr.Bool (false, _) ->

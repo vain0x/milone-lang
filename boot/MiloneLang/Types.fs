@@ -7,6 +7,8 @@ namespace rec MiloneLang
   type Token =
     | Int
       of int
+    | Char
+      of char
     | Str
       of string
     | Ident
@@ -52,6 +54,7 @@ namespace rec MiloneLang
     | Unit
     | Bool
     | Int
+    | Char
     | Str
     | Var
       of string
@@ -132,6 +135,8 @@ namespace rec MiloneLang
       of bool * 'a
     | Int
       of int * 'a
+    | Char
+      of char * 'a
     | Str
       of string * 'a
     /// Primitive.
@@ -169,6 +174,7 @@ namespace rec MiloneLang
     | Unit
     | Bool
     | Int
+    | Char
     | Str
     | Fun
       of MTy * MTy
@@ -218,6 +224,8 @@ namespace rec MiloneLang
       of bool * 'a
     | Int
       of int * 'a
+    | Char
+      of char * 'a
     | Str
       of string * 'a
     | Nil
@@ -306,6 +314,8 @@ namespace rec MiloneLang
     | Default
     | Int
       of int
+    | Char
+      of char
     | Str
       of string
     | Prim
