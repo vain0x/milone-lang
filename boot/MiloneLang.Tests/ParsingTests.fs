@@ -4,6 +4,9 @@ open MiloneLang
 open MiloneLang.Assets
 open Xunit
 
+let noSerial = Parsing.noSerial
+let noTy = Parsing.noTy
+
 let exprMap f = Parsing.exprMap f
 
 let withUnit x = x, ()
@@ -12,7 +15,7 @@ let parseStr source: Expr<unit> list =
   source
   |> Lexing.tokenize
   |> Parsing.parse
-  |> List.map (exprMap ignore)
+  |> List.map (exprMap id ignore)
 
 let parseTyExprStr source: Ty =
   let ty, tokens =
@@ -28,7 +31,7 @@ let parseStrAsPat source: Pat<unit> =
     |> Lexing.tokenize
     |> Parsing.parsePat -1
   if tokens <> [] then failwithf "Expected eof but %A" tokens
-  patMap ignore pat
+  patMap id ignore pat
 
 let tyFun sTy tTy =
   Ty.Fun (sTy, tTy)
@@ -39,9 +42,9 @@ let tyList ty =
 let tyTuple l r =
   Ty.Tuple (l, r)
 
-let patNil = Pat.Nil ()
+let patNil = Pat.Nil (noTy, ())
 
-let patCons l r = Pat.Cons (l, r, ())
+let patCons l r = Pat.Cons (l, r, noTy, ())
 
 let exprInt value =
   Expr.Int (value, ())
@@ -50,37 +53,37 @@ let exprStr value =
   Expr.Str (value, ())
 
 let exprRef ident =
-  Expr.Ref (ident, 0, ())
+  Expr.Ref (ident, noSerial, noTy, ())
 
 let exprList items =
-  Expr.List (items, ())
+  Expr.List (items, noTy, ())
 
 let exprNil =
   exprList []
 
 let exprCall callee args =
-  Expr.Call (callee, List.map (exprMap ignore) args, ())
+  Expr.Call (callee, args, noTy, ())
 
 let exprOp op left right =
-  Expr.Op (op, left,  right, ())
+  Expr.Op (op, left,  right, noTy, ())
 
 let exprCons l r =
-  Expr.Op (Op.Cons, l, r, ())
+  Expr.Op (Op.Cons, l, r, noTy, ())
 
 let exprAdd left right =
-  Expr.Op (Op.Add, left,  right, ())
+  Expr.Op (Op.Add, left,  right, noTy, ())
 
 let exprSub left right =
-  Expr.Op (Op.Sub, left,  right, ())
+  Expr.Op (Op.Sub, left,  right, noTy, ())
 
 let exprLet name body =
-  Expr.Let ([Pat.Ident (name, 0, ())], body, ())
+  Expr.Let ([Pat.Ident (name, noSerial, noTy, ())], body, ())
 
 let exprLetMain body =
-  Expr.Let ([Pat.Ident ("main", 0, ()); Pat.Unit ()], body, ())
+  Expr.Let ([Pat.Ident ("main", noSerial, noTy, ()); Pat.Unit ()], body, ())
 
 let exprAndThen exprs =
-  Expr.AndThen (List.map (exprMap ignore) exprs, ())
+  Expr.AndThen (exprs, noTy, ())
 
 [<Fact>]
 let parseMainEmpty () =
@@ -116,7 +119,7 @@ let parseSimpleExprs () =
       "\"Hello, world!\"",
         exprStr "Hello, world!"
       "printfn",
-        Expr.Prim (PrimFun.Printfn, ())
+        Expr.Prim (PrimFun.Printfn, noTy, ())
       "x",
         exprRef "x"
       "f 1",
@@ -242,8 +245,12 @@ let parseSemicolonInLineOne () =
     [
       exprLetMain (
         exprAndThen [
-          exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "Hello, "]
-          exprCall (Expr.Prim (PrimFun.Printfn, ())) [exprStr "World!"]
+          exprCall
+            (Expr.Prim (PrimFun.Printfn, noTy, ()))
+            [exprStr "Hello, "]
+          exprCall
+            (Expr.Prim (PrimFun.Printfn, noTy, ()))
+            [exprStr "World!"]
           exprInt 0
         ])
     ]
@@ -348,8 +355,8 @@ let parseFunTypeExprs () =
 [<Fact>]
 let parsePatCons () =
   let source = """x :: y :: []"""
-  let x = Pat.Ident ("x", 0, ())
-  let y = Pat.Ident ("y", 0, ())
+  let x = Pat.Ident ("x", noSerial, noTy, ())
+  let y = Pat.Ident ("y", noSerial, noTy, ())
   let expected = patCons x (patCons y patNil)
   source |> parseStrAsPat |> is expected
 
@@ -357,5 +364,5 @@ let parsePatCons () =
 let parsePatAnno () =
   let source = """x : int"""
   let expected =
-    Pat.Anno (Pat.Ident ("x", 0, ()), Ty.Int, ())
+    Pat.Anno (Pat.Ident ("x", noSerial, noTy, ()), Ty.Int, ())
   source |> parseStrAsPat |> is expected

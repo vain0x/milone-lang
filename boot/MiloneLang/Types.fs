@@ -51,6 +51,7 @@ namespace rec MiloneLang
   /// Type of expressions.
   [<RequireQualifiedAccess>]
   type Ty =
+    | Error
     | Unit
     | Bool
     | Int
@@ -116,13 +117,13 @@ namespace rec MiloneLang
     | Int
       of int * 'a
     | Nil
-      of 'a
+      of itemTy:Ty * 'a
     | Ident
-      of ident:string * serial: int * 'a
+      of ident:string * serial:int * Ty * 'a
     | Cons
-      of Pat<'a> * Pat<'a> * 'a
+      of Pat<'a> * Pat<'a> * itemTy:Ty * 'a
     | Tuple
-      of Pat<'a> * Pat<'a> * 'a
+      of Pat<'a> * Pat<'a> * tupleTy:Ty * 'a
     | Anno
       of Pat<'a> * Ty * 'a
 
@@ -141,33 +142,33 @@ namespace rec MiloneLang
       of string * 'a
     /// Primitive.
     | Prim
-      of PrimFun * 'a
+      of PrimFun * Ty * 'a
     /// Variable reference.
     | Ref
-      of ident:string * serial:int * 'a
+      of ident:string * serial:int * Ty * 'a
     | List
-      of Expr<'a> list * 'a
+      of Expr<'a> list * itemTy:Ty * 'a
     | If
-      of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * 'a
+      of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * Ty * 'a
     | Match
-      of target:Expr<'a> * (Pat<'a> * Expr<'a>) * (Pat<'a> * Expr<'a>) * 'a
+      of target:Expr<'a> * (Pat<'a> * Expr<'a>) * (Pat<'a> * Expr<'a>) * Ty * 'a
     /// `r.x`
     | Nav
-      of subject:Expr<'a> * message:string * 'a
+      of subject:Expr<'a> * message:string * Ty * 'a
     /// `x.[i]`
     | Index
-      of Expr<'a> * Expr<'a> * 'a
+      of Expr<'a> * Expr<'a> * Ty * 'a
     /// `f x y ..`
     | Call
-      of Expr<'a> * Expr<'a> list * 'a
+      of Expr<'a> * Expr<'a> list * Ty * 'a
     | Op
-      of Op * Expr<'a> * Expr<'a> * 'a
+      of Op * Expr<'a> * Expr<'a> * Ty * 'a
     /// Type annotation `x : 'x`.
     | Anno
       of Expr<'a> * Ty * 'a
     /// `x; y`
     | AndThen
-      of Expr<'a> list * 'a
+      of Expr<'a> list * Ty * 'a
     | Let
       of pats:Pat<'a> list * init:Expr<'a> * 'a
 

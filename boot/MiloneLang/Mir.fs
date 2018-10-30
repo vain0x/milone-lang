@@ -136,8 +136,10 @@ let unboxTy (ty: Ty): MTy =
     MTy.List (unboxTy ty)
   | Ty.Tuple (lTy, rTy) ->
     MTy.Tuple (unboxTy lTy, unboxTy rTy)
+  | Ty.Error ->
+    failwith "Never type error in MIR"
   | Ty.Var _ ->
-    failwith "Never type variable here."
+    failwith "Never type variable in MIR."
 
 let listItemTy ty =
   match ty with
@@ -167,29 +169,29 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
 /// Determines if the pattern covers the whole.
-let mirifyPat ctx (endLabel: string) (pat: Pat<Ty * Loc>) (expr: MExpr<Loc>): bool * MirCtx =
+let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * MirCtx =
   match pat with
   | Pat.Unit _
-  | Pat.Ident ("_", _, _) ->
+  | Pat.Ident ("_", _, _, _) ->
     // Discard result.
     true, ctx
-  | Pat.Int (value, (_, loc)) ->
+  | Pat.Int (value, loc) ->
     let intExpr = MExpr.Int (value, loc)
     let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, MTy.Bool, loc)
     let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
-  | Pat.Nil (Ty.List itemTy, loc) ->
+  | Pat.Nil (itemTy, loc) ->
     let isEmptyExpr = MExpr.ListIsEmpty (expr, unboxTy itemTy, loc)
     let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
-  | Pat.Ident (_, serial, (ty, loc)) ->
+  | Pat.Ident (_, serial, ty, loc) ->
     let letStmt = MStmt.LetVal (serial, Some expr, unboxTy ty, loc)
     true, ctxAddStmt ctx letStmt
-  | Pat.Cons (l, r, (Ty.List itemTy, loc)) ->
+  | Pat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
-  | Pat.Tuple (l, r, (_, loc)) ->
+  | Pat.Tuple (l, r, _, loc) ->
     let fstExpr = projExpr expr 0 (patTy l) loc
     let sndExpr = projExpr expr 1 (patTy r) loc
     let lCovered, ctx = mirifyPat ctx endLabel l fstExpr
@@ -198,22 +200,19 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Ty * Loc>) (expr: MExpr<Loc>): bo
     covered, ctx
   | Pat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."
-  | Pat.Nil _
-  | Pat.Cons _ ->
-    failwith "Never nil/cons patterns must be of list type."
 
-let desugarExprList items a =
+let desugarExprList items itemTy loc =
   let rec go acc items =
     match items with
     | [] ->
       acc
     | item :: items ->
-      go (Expr.Op (Op.Cons, item, acc, a)) items
-  go (Expr.List ([], a)) (List.rev items)
+      go (Expr.Op (Op.Cons, item, acc, Ty.List itemTy, loc)) items
+  go (Expr.List ([], itemTy, loc)) (List.rev items)
 
 /// `[a; b; c]` -> `a :: b :: c :: []`
-let mirifyExprList ctx items a =
-  mirifyExpr ctx (desugarExprList items a)
+let mirifyExprList ctx items itemTy loc =
+  mirifyExpr ctx (desugarExprList items itemTy loc)
 
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
@@ -222,7 +221,7 @@ let mirifyBlock ctx expr =
   let ctx = ctxRollBack ctx blockCtx
   stmts, expr, ctx
 
-let mirifyExprIf ctx pred thenCl elseCl (ty, loc) =
+let mirifyExprIf ctx pred thenCl elseCl ty loc =
   let ty = unboxTy ty
   let temp, tempSet, ctx = ctxLetFreshVar ctx "if" ty loc
   let elseLabelStmt, elseLabel, ctx = ctxFreshLabel ctx "else" loc
@@ -251,7 +250,7 @@ let mstmtExit (ty: MTy) loc =
   let callExpr = MExpr.Call (exitFun, [one], ty, loc)
   MStmt.Expr (callExpr, loc)
 
-let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) (ty, loc) =
+let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) ty loc =
   let ty = unboxTy ty
   let temp, tempSet, ctx = ctxLetFreshVar ctx "match" ty loc
   let endLabelStmt, endLabel, ctx = ctxFreshLabel ctx "end_match" loc
@@ -284,7 +283,7 @@ let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) (ty, loc) =
   let ctx = ctxAddStmt ctx endLabelStmt
   temp, ctx
 
-let mirifyExprNav ctx sub mes (ty, loc) =
+let mirifyExprNav ctx sub mes ty loc =
   let subTy = exprTy sub
   let sub, ctx = mirifyExpr ctx sub
   match subTy, mes with
@@ -293,7 +292,7 @@ let mirifyExprNav ctx sub mes (ty, loc) =
   | _ ->
     failwithf "Never nav %A" (sub, mes, ty, loc)
 
-let mirifyExprIndex ctx l r ty loc =
+let mirifyExprIndex ctx l r _ loc =
   match exprTy l, exprTy r with
   | Ty.Str, Ty.Int ->
     let l, ctx = mirifyExpr ctx l
@@ -302,7 +301,7 @@ let mirifyExprIndex ctx l r ty loc =
   | _ ->
     failwith "unimpl non-string indexing"
 
-let mirifyExprCallExit ctx exitLoc arg (ty, loc) =
+let mirifyExprCallExit ctx exitLoc arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
   let callee = MExpr.Prim (MPrim.Exit, exitLoc)
   let callExpr = MExpr.Call (callee, [arg], unboxTy ty, loc)
@@ -310,11 +309,11 @@ let mirifyExprCallExit ctx exitLoc arg (ty, loc) =
   MExpr.Unit (unboxTy ty, loc), ctx
 
 /// not a ==> !a
-let mirifyExprCallNot ctx arg (ty, notLoc) =
+let mirifyExprCallNot ctx arg ty notLoc =
   let arg, ctx = mirifyExpr ctx arg
   MExpr.UniOp (MUniOp.Not, arg, unboxTy ty, notLoc), ctx
 
-let mirifyExprCall ctx callee args (ty, loc) =
+let mirifyExprCall ctx callee args ty loc =
   let ty = unboxTy ty
   let callee, ctx = mirifyExpr ctx callee
   let args, ctx = mirifyExprs ctx args
@@ -325,16 +324,16 @@ let mirifyExprCall ctx callee args (ty, loc) =
   temp, ctx
 
 /// l && r ==> if l then r else false
-let mirifyExprOpAnd ctx l r (ty, loc) =
-  let falseExpr = Expr.Bool (false, (ty, loc))
-  mirifyExprIf ctx l r falseExpr (ty, loc)
+let mirifyExprOpAnd ctx l r ty loc =
+  let falseExpr = Expr.Bool (false, loc)
+  mirifyExprIf ctx l r falseExpr ty loc
 
 /// l || r ==> if l then true else r
-let mirifyExprOpOr ctx l r (ty, loc) =
-  let trueExpr = Expr.Bool (true, (ty, loc))
-  mirifyExprIf ctx l trueExpr r (ty, loc)
+let mirifyExprOpOr ctx l r ty loc =
+  let trueExpr = Expr.Bool (true, loc)
+  mirifyExprIf ctx l trueExpr r ty loc
 
-let mirifyExprOpCons ctx l r (ty, loc) =
+let mirifyExprOpCons ctx l r ty loc =
   let itemTy = listItemTy ty
   let listTy = MTy.List itemTy
   let _, tempSerial, ctx = ctxFreshVar ctx "list" listTy loc
@@ -344,8 +343,7 @@ let mirifyExprOpCons ctx l r (ty, loc) =
   let ctx = ctxAddStmt ctx (MStmt.LetCons (tempSerial, l, r, itemTy, loc))
   MExpr.Ref (tempSerial, listTy, loc), ctx
 
-/// Creates a tuple inside a box.
-let mirifyExprOpTie ctx l r (ty, loc) =
+let mirifyExprOpTie ctx l r ty loc =
   let lTy, rTy =
     match ty with
     | Ty.Tuple (lTy, rTy) -> unboxTy lTy, unboxTy rTy
@@ -381,16 +379,16 @@ let mirifyExprOpStrCmp ctx op l r (ty, loc) =
   let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, ty, loc)
   opExpr, ctx
 
-let mirifyExprOp ctx op l r a =
+let mirifyExprOp ctx op l r ty loc =
   match op with
   | Op.And ->
-    mirifyExprOpAnd ctx l r a
+    mirifyExprOpAnd ctx l r ty loc
   | Op.Or ->
-    mirifyExprOpOr ctx l r a
+    mirifyExprOpOr ctx l r ty loc
   | Op.Cons ->
-    mirifyExprOpCons ctx l r a
+    mirifyExprOpCons ctx l r ty loc
   | Op.Tie ->
-    mirifyExprOpTie ctx l r a
+    mirifyExprOpTie ctx l r ty loc
   | _ ->
 
   let op, l, r =
@@ -399,7 +397,6 @@ let mirifyExprOp ctx op l r a =
     | Op.Ge -> MOp.Le, r, l
     | _ -> mopFrom op, l, r
 
-  let ty, loc = a
   let ty, lTy = unboxTy ty, exprTy l
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
@@ -414,7 +411,7 @@ let mirifyExprOp ctx op l r a =
   | _ ->
     failwithf "unimpl"
 
-let mirifyExprAndThen ctx exprs _ =
+let mirifyExprAndThen ctx exprs =
   // Discard non-last expressions.
   let exprs, ctx = mirifyExprs ctx exprs
   List.last exprs, ctx
@@ -427,10 +424,10 @@ let mirifyExprLetVal ctx pat init letLoc =
   | false, _ ->
     failwithf "Let pattern must be exhaustive for now %A" pat
 
-let mirifyExprLetFun ctx pat pats body (_, letLoc) =
+let mirifyExprLetFun ctx pat pats body letLoc =
   let defineArg ctx argPat =
     match argPat with
-    | Pat.Ident (_, serial, (ty, loc)) ->
+    | Pat.Ident (_, serial, ty, loc) ->
       // NOTE: Optimize for usual cases to not generate redundant local vars.
       (serial, unboxTy ty, loc), ctx
     | _ ->
@@ -464,7 +461,7 @@ let mirifyExprLetFun ctx pat pats body (_, letLoc) =
     args, unboxTy blockTy, body, ctx
 
   match pat, pats with
-  | Pat.Ident (_, calleeSerial, (_, _)), argPats ->
+  | Pat.Ident (_, calleeSerial, _, _), argPats ->
     let bodyCtx = ctxNewBlock ctx
     let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = ctxRollBack ctx bodyCtx
@@ -474,51 +471,50 @@ let mirifyExprLetFun ctx pat pats body (_, letLoc) =
   | _ ->
     failwith "First pattern of `let` for function must be an identifier."
 
-let mirifyExpr (ctx: MirCtx) (expr: Expr<Ty * Loc>): MExpr<Loc> * MirCtx =
+let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   match expr with
-  | Expr.Unit (_, loc) ->
+  | Expr.Unit loc ->
     MExpr.Unit (MTy.Unit, loc), ctx
-  | Expr.Bool (value, (_, loc)) ->
+  | Expr.Bool (value, loc) ->
     MExpr.Bool (value, loc), ctx
-  | Expr.Int (value, (_, loc)) ->
+  | Expr.Int (value, loc) ->
     MExpr.Int (value, loc), ctx
-  | Expr.Char (value, (_, loc)) ->
+  | Expr.Char (value, loc) ->
     MExpr.Char (value, loc), ctx
-  | Expr.Str (value, (_, loc)) ->
+  | Expr.Str (value, loc) ->
     MExpr.Str (value, loc), ctx
-  | Expr.Prim (PrimFun.Printfn, (_, loc)) ->
+  | Expr.Prim (PrimFun.Printfn, _, loc) ->
     MExpr.Prim (MPrim.Printfn, loc), ctx
-  | Expr.Ref (_, serial, (ty, loc)) ->
+  | Expr.Ref (_, serial, ty, loc) ->
     MExpr.Ref (serial, unboxTy ty, loc), ctx
-  | Expr.List ([], (Ty.List ty, loc)) ->
-    MExpr.Nil (unboxTy ty, loc), ctx
-  | Expr.List (items, a) ->
-    mirifyExprList ctx items a
-  | Expr.If (pred, thenCl, elseCl, (ty, loc)) ->
-    mirifyExprIf ctx pred thenCl elseCl (ty, loc)
-  | Expr.Match (target, arm1, arm2, a) ->
-    mirifyExprMatch ctx target arm1 arm2 a
-  | Expr.Nav (l, r, a) ->
-    mirifyExprNav ctx l r a
-  | Expr.Index (l, r, (ty, loc)) ->
+  | Expr.List ([], itemTy, loc) ->
+    MExpr.Nil (unboxTy itemTy, loc), ctx
+  | Expr.List (items, itemTy, loc) ->
+    mirifyExprList ctx items itemTy loc
+  | Expr.If (pred, thenCl, elseCl, ty, loc) ->
+    mirifyExprIf ctx pred thenCl elseCl ty loc
+  | Expr.Match (target, arm1, arm2, ty, loc) ->
+    mirifyExprMatch ctx target arm1 arm2 ty loc
+  | Expr.Nav (l, r, ty, loc) ->
+    mirifyExprNav ctx l r ty loc
+  | Expr.Index (l, r, ty, loc) ->
     mirifyExprIndex ctx l r ty loc
-  | Expr.Call (Expr.Ref ("not", -1, _), [arg], a) ->
-    mirifyExprCallNot ctx arg a
-  | Expr.Call (Expr.Prim (PrimFun.Exit, (_, exitLoc)), [arg], a) ->
-    mirifyExprCallExit ctx exitLoc arg a
-  | Expr.Call (callee, args, a) ->
-    mirifyExprCall ctx callee args a
-  | Expr.Op (op, l, r, a) ->
-    mirifyExprOp ctx op l r a
-  | Expr.AndThen (exprs, a) ->
-    mirifyExprAndThen ctx exprs a
-  | Expr.Let ([pat], init, (_, letLoc)) ->
+  | Expr.Call (Expr.Ref ("not", -1, _, _), [arg], ty, loc) ->
+    mirifyExprCallNot ctx arg ty loc
+  | Expr.Call (Expr.Prim (PrimFun.Exit, _, exitLoc), [arg], ty, loc) ->
+    mirifyExprCallExit ctx exitLoc arg ty loc
+  | Expr.Call (callee, args, ty, loc) ->
+    mirifyExprCall ctx callee args ty loc
+  | Expr.Op (op, l, r, ty, loc) ->
+    mirifyExprOp ctx op l r ty loc
+  | Expr.AndThen (exprs, _, _) ->
+    mirifyExprAndThen ctx exprs
+  | Expr.Let ([pat], init, letLoc) ->
     mirifyExprLetVal ctx pat init letLoc
-  | Expr.Let (pat :: pats, body, a) ->
-    mirifyExprLetFun ctx pat pats body a
-  | Expr.List ([], _)
-  | Expr.Prim (PrimFun.Exit, _)
-  | Expr.Call (_, [], _)
+  | Expr.Let (pat :: pats, body, letLoc) ->
+    mirifyExprLetFun ctx pat pats body letLoc
+  | Expr.Prim (PrimFun.Exit, _, _)
+  | Expr.Call (_, [], _, _)
   | Expr.Anno _
   | Expr.Let ([], _, _) ->
     failwith "Never"
@@ -533,7 +529,7 @@ let mirifyExprs ctx exprs =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let mirify (exprs: Expr<Ty * Loc> list, tyCtx: TyCtx): MirCtx =
+let mirify (exprs: Expr<Loc> list, tyCtx: TyCtx): MirCtx =
   let ctx = ctxFromTyCtx tyCtx
   let _exprs, ctx = mirifyExprs ctx exprs
   assert (List.isEmpty ctx.Stmts)

@@ -3,91 +3,127 @@ module rec MiloneLang.Parsing
 open System
 open MiloneLang
 
-let patExtract (pat: Pat<'a>): 'a =
-  match pat with
-  | Pat.Unit a -> a
-  | Pat.Int (_, a) -> a
-  | Pat.Nil a -> a
-  | Pat.Ident (_, _, a) -> a
-  | Pat.Cons (_, _, a) -> a
-  | Pat.Tuple (_, _, a) -> a
-  | Pat.Anno (_, _, a) -> a
+/// Placeholder. No variable serials in the parsing phase.
+let noSerial = 0
 
-let patMap (f: 'x -> 'y) (pat: Pat<'x>): Pat<'y> =
+/// Placeholder. No type info in the parsing phase.
+let noTy = Ty.Error
+
+let patExtract (pat: Pat<'a>): Ty * 'a =
   match pat with
   | Pat.Unit a ->
-    Pat.Unit (f a)
-  | Pat.Int (value, a) ->
-    Pat.Int (value, f a)
-  | Pat.Nil a ->
-    Pat.Nil (f a)
-  | Pat.Ident (name, serial, a) ->
-    Pat.Ident (name, serial, f a)
-  | Pat.Cons (l, r, a) ->
-    Pat.Cons (patMap f l, patMap f r, f a)
-  | Pat.Tuple (l, r, a) ->
-    Pat.Tuple (patMap f l, patMap f r, f a)
-  | Pat.Anno (pat, ty, a) ->
-    Pat.Anno (patMap f pat, ty, f a)
+    Ty.Unit, a
+  | Pat.Int (_, a) ->
+    Ty.Int, a
+  | Pat.Nil (itemTy, a) ->
+    Ty.List itemTy, a
+  | Pat.Ident (_, _, ty, a) ->
+    ty, a
+  | Pat.Cons (_, _, itemTy, a) ->
+    Ty.List itemTy, a
+  | Pat.Tuple (_, _, ty, a) ->
+    ty, a
+  | Pat.Anno (_, ty, a) ->
+    ty, a
 
-let exprExtract (expr: Expr<'a>): 'a =
-  match expr with
-  | Expr.Unit a -> a
-  | Expr.Bool (_, a) -> a
-  | Expr.Int (_, a) -> a
-  | Expr.Char (_, a) -> a
-  | Expr.Str (_, a) -> a
-  | Expr.Prim (_, a) -> a
-  | Expr.Ref (_, _, a) -> a
-  | Expr.List (_, a) -> a
-  | Expr.If (_, _, _, a) -> a
-  | Expr.Match (_, _, _, a) -> a
-  | Expr.Nav (_, _, a) -> a
-  | Expr.Index (_, _, a) -> a
-  | Expr.Call (_, _, a) -> a
-  | Expr.Op (_, _, _, a) -> a
-  | Expr.Anno (_, _, a) -> a
-  | Expr.AndThen (_, a) -> a
-  | Expr.Let (_, _, a) -> a
+let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
+  let rec go pat =
+    match pat with
+    | Pat.Unit a ->
+      Pat.Unit (g a)
+    | Pat.Int (value, a) ->
+      Pat.Int (value, g a)
+    | Pat.Nil (itemTy, a) ->
+      Pat.Nil (f itemTy, g a)
+    | Pat.Ident (name, serial, ty, a) ->
+      Pat.Ident (name, serial, f ty, g a)
+    | Pat.Cons (l, r, itemTy, a) ->
+      Pat.Cons (go l, go r, f itemTy, g a)
+    | Pat.Tuple (l, r, ty, a) ->
+      Pat.Tuple (go l, go r, f ty, g a)
+    | Pat.Anno (pat, ty, a) ->
+      Pat.Anno (go pat, f ty, g a)
+  go pat
 
-let exprMap (f: 'x -> 'y) (expr: Expr<'x>): Expr<'y> =
+let exprExtract (expr: Expr<'a>): Ty * 'a =
   match expr with
   | Expr.Unit a ->
-    Expr.Unit (f a)
-  | Expr.Bool (value, a) ->
-    Expr.Bool (value, f a)
-  | Expr.Int (value, a) ->
-    Expr.Int (value, f a)
-  | Expr.Char (value, a) ->
-    Expr.Char (value, f a)
-  | Expr.Str (value, a) ->
-    Expr.Str (value, f a)
-  | Expr.Prim (value, a) ->
-    Expr.Prim (value, f a)
-  | Expr.Ref (ident, serial, a) ->
-    Expr.Ref (ident, serial, f a)
-  | Expr.List (items, a) ->
-    Expr.List (List.map (exprMap f) items, f a)
-  | Expr.If (pred, thenCl, elseCl, a) ->
-    Expr.If (exprMap f pred, exprMap f thenCl, exprMap f elseCl, f a)
-  | Expr.Match (target, (pat1, body1), (pat2, body2), a) ->
-    let arm1 = (patMap f pat1, exprMap f body1)
-    let arm2 = (patMap f pat2, exprMap f body2)
-    Expr.Match (exprMap f target, arm1, arm2, f a)
-  | Expr.Nav (sub, mes, a) ->
-    Expr.Nav (exprMap f sub, mes, f a)
-  | Expr.Index (l, r, a) ->
-    Expr.Index (exprMap f l, exprMap f r, f a)
-  | Expr.Call (callee, args, a) ->
-    Expr.Call (exprMap f callee, List.map (exprMap f) args, f a)
-  | Expr.Op (op, l, r, a) ->
-    Expr.Op (op, exprMap f l, exprMap f r, f a)
-  | Expr.Anno (expr, ty, a) ->
-    Expr.Anno (exprMap f expr, ty, f a)
-  | Expr.AndThen (exprs, a) ->
-    Expr.AndThen (List.map (exprMap f) exprs, f a)
-  | Expr.Let (pats, init, a) ->
-    Expr.Let (List.map (patMap f) pats, exprMap f init, f a)
+    Ty.Unit, a
+  | Expr.Bool (_, a) ->
+    Ty.Bool, a
+  | Expr.Int (_, a) ->
+    Ty.Int, a
+  | Expr.Char (_, a) ->
+    Ty.Char, a
+  | Expr.Str (_, a) ->
+    Ty.Str, a
+  | Expr.Prim (_, ty, a) ->
+    ty, a
+  | Expr.Ref (_, _, ty, a) ->
+    ty, a
+  | Expr.List (_, itemTy, a) ->
+    Ty.List itemTy, a
+  | Expr.If (_, _, _, ty, a) ->
+    ty, a
+  | Expr.Match (_, _, _, ty, a) ->
+    ty, a
+  | Expr.Nav (_, _, ty, a) ->
+    ty, a
+  | Expr.Index (_, _, ty, a) ->
+    ty, a
+  | Expr.Call (_, _, ty, a) ->
+    ty, a
+  | Expr.Op (_, _, _, ty, a) ->
+    ty, a
+  | Expr.Anno (_, ty, a) ->
+    ty, a
+  | Expr.AndThen (_, ty, a) ->
+    ty, a
+  | Expr.Let (_, _, a) ->
+    Ty.Unit, a
+
+let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
+  let goPat pat =
+    patMap f g pat
+  let rec go expr =
+    match expr with
+    | Expr.Unit a ->
+      Expr.Unit (g a)
+    | Expr.Bool (value, a) ->
+      Expr.Bool (value, g a)
+    | Expr.Int (value, a) ->
+      Expr.Int (value, g a)
+    | Expr.Char (value, a) ->
+      Expr.Char (value, g a)
+    | Expr.Str (value, a) ->
+      Expr.Str (value, g a)
+    | Expr.Prim (value, ty, a) ->
+      Expr.Prim (value, f ty, g a)
+    | Expr.Ref (ident, serial, ty, a) ->
+      Expr.Ref (ident, serial, f ty, g a)
+    | Expr.List (items, itemTy, a) ->
+      Expr.List (List.map go items, f itemTy, g a)
+    | Expr.If (pred, thenCl, elseCl, ty, a) ->
+      Expr.If (go pred, go thenCl, go elseCl, f ty, g a)
+    | Expr.Match (target, (pat1, body1), (pat2, body2), ty, a) ->
+      let arm1 = (goPat pat1, go body1)
+      let arm2 = (goPat pat2, go body2)
+      Expr.Match (go target, arm1, arm2, f ty, g a)
+    | Expr.Nav (sub, mes, ty, a) ->
+      Expr.Nav (go sub, mes, f ty, g a)
+    | Expr.Index (l, r, ty, a) ->
+      Expr.Index (go l, go r, f ty, g a)
+    | Expr.Call (callee, args, ty, a) ->
+      Expr.Call (go callee, List.map go args, f ty, g a)
+    | Expr.Op (op, l, r, ty, a) ->
+      Expr.Op (op, go l, go r, f ty, g a)
+    | Expr.Anno (expr, ty, a) ->
+      Expr.Anno (go expr, f ty, g a)
+    | Expr.AndThen (exprs, ty, a) ->
+      Expr.AndThen (List.map go exprs, f ty, g a)
+    | Expr.Let (pats, init, a) ->
+      Expr.Let (List.map goPat pats, go init, g a)
+  go expr
 
 /// Gets if next token exists and should lead some construction (expr/pat/ty).
 /// We use this for a kind of prediction.
@@ -220,7 +256,7 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
   | (Token.Int value, loc) :: tokens ->
     Pat.Int (value, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
-    Pat.Ident (value, 0, loc), tokens
+    Pat.Ident (value, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
     match parsePat (nextX tokens) tokens with
     | pat, (Token.ParenR, _) :: tokens ->
@@ -228,7 +264,7 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
     | _, tokens ->
       parseError "Expected ')'" tokens
   | (Token.BracketL, loc) :: (Token.BracketR, _) :: tokens ->
-    Pat.Nil loc, tokens
+    Pat.Nil (noTy, loc), tokens
   | _ ->
     failwith "never"
 
@@ -237,7 +273,7 @@ let parsePatCons boxX tokens =
   match parsePatAtom boxX tokens with
   | l, (Token.Punct "::", loc) :: tokens ->
     let r, tokens = parsePatCons boxX tokens
-    Pat.Cons (l, r, loc), tokens
+    Pat.Cons (l, r, noTy, loc), tokens
   | l, tokens ->
     l, tokens
 
@@ -255,7 +291,7 @@ let parsePatTuple boxX tokens =
   match parsePatAnno boxX tokens with
   | l, (Token.Punct ",", loc) :: tokens ->
     let r, tokens = parsePatAnno boxX tokens
-    Pat.Tuple (l, r, loc), tokens
+    Pat.Tuple (l, r, noTy, loc), tokens
   | l, tokens ->
     l, tokens
 
@@ -278,7 +314,7 @@ let parsePats boxX (tokens: _ list): Pat<_> list * _ list =
 let parseList boxX bracketLoc tokens =
   match parseBindings boxX tokens with
   | exprs, (Token.BracketR, _) :: tokens ->
-    Expr.List (exprs, bracketLoc), tokens
+    Expr.List (exprs, noTy, bracketLoc), tokens
   | _, tokens ->
     parseError "Expected ']'" tokens
 
@@ -308,7 +344,7 @@ let parseIf boxX ifLoc tokens =
   let pred, tokens = parseExpr boxX tokens
   let thenCl, tokens = parseThenCl boxX tokens
   let elseCl, tokens = parseElseCl boxX ifLoc tokens
-  Expr.If (pred, thenCl, elseCl, ifLoc), tokens
+  Expr.If (pred, thenCl, elseCl, noTy, ifLoc), tokens
 
 let parseMatchArm boxX tokens =
   let tokens =
@@ -334,7 +370,7 @@ let parseMatch boxX matchLoc tokens =
       parseError "Expected 'with'" tokens
   let arm1, tokens = parseMatchArm boxX tokens
   let arm2, tokens = parseMatchArm boxX tokens
-  Expr.Match (target, arm1, arm2, matchLoc), tokens
+  Expr.Match (target, arm1, arm2, noTy, matchLoc), tokens
 
 let parseParen boxX tokens =
   match parseExpr boxX tokens with
@@ -385,11 +421,11 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   | (Token.Ident "true", loc) :: tokens ->
     Expr.Bool (true, loc), tokens
   | (Token.Ident "exit", loc) :: tokens ->
-    Expr.Prim (PrimFun.Exit, loc), tokens
+    Expr.Prim (PrimFun.Exit, noTy, loc), tokens
   | (Token.Ident "printfn", loc) :: tokens ->
-    Expr.Prim (PrimFun.Printfn, loc), tokens
+    Expr.Prim (PrimFun.Printfn, noTy, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
-    Expr.Ref (value, 0, loc), tokens
+    Expr.Ref (value, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
     parseParen boxX tokens
   | (Token.BracketL, bracketLoc) :: tokens ->
@@ -411,11 +447,11 @@ let parseIndex boxX tokens =
     | (Token.Dot, loc) :: (Token.BracketL, _) :: tokens ->
       match parseExpr boxX tokens with
       | expr, (Token.BracketR, _) :: tokens ->
-        go (Expr.Index (acc, expr, loc)) tokens
+        go (Expr.Index (acc, expr, noTy, loc)) tokens
       | _, tokens ->
         parseError "Expected closing ']'" tokens
     | (Token.Dot, loc) :: (Token.Ident field, _) :: tokens ->
-      go (Expr.Nav (acc, field, loc)) tokens
+      go (Expr.Nav (acc, field, noTy, loc)) tokens
     | (Token.Dot, _) :: tokens ->
       parseError "Expected .[] or .field" tokens
     | _ ->
@@ -438,7 +474,7 @@ let parseCall boxX tokens =
   | [], tokens ->
     callee, tokens
   | args, tokens ->
-    Expr.Call (callee, args, calleeLoc), tokens
+    Expr.Call (callee, args, noTy, calleeLoc), tokens
 
 let parseNextLevelOp level outer tokens =
   match level with
@@ -453,11 +489,11 @@ let parseNextLevelOp level outer tokens =
 let rec parseOps level boxX expr tokens =
   let next expr op opLoc tokens =
     let second, tokens = parseNextLevelOp level boxX tokens
-    let expr = Expr.Op (op, expr, second, opLoc)
+    let expr = Expr.Op (op, expr, second, noTy, opLoc)
     parseOps level boxX expr tokens
   let nextR expr op opLoc tokens =
     let second, tokens = parseOp level boxX tokens
-    let expr = Expr.Op (op, expr, second, opLoc)
+    let expr = Expr.Op (op, expr, second, noTy, opLoc)
     parseOps level boxX expr tokens
   match level, tokens with
   | OpLevel.Tie, (Token.Punct ",", opLoc) :: tokens ->
@@ -548,7 +584,7 @@ let parseAndThen boxX tokens =
   | [expr], tokens ->
     expr, tokens
   | exprs, tokens ->
-    Expr.AndThen (exprs, nextLoc tokens), tokens
+    Expr.AndThen (exprs, noTy, nextLoc tokens), tokens
 
 let parseExpr (boxX: int) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =
   parseAndThen boxX tokens
