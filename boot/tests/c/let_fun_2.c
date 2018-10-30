@@ -1,5 +1,5 @@
-int add_3(int x_5, int y_4) {
-    return (x_5 + y_4);
+int add_3(int x_4, int y_5) {
+    return (x_4 + y_5);
 }
 
 int main() {

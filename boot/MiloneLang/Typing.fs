@@ -46,8 +46,7 @@ let resolveTyVar name (ctx: TyCtx): Ty =
   | None ->
     Ty.Var name
 
-let freshVar ident (ctx: TyCtx): string * int * Ty * TyCtx =
-  let ty, _, ctx = freshTyVar ident ctx
+let freshVar (ctx: TyCtx) ident ty: int * TyCtx =
   let serial = ctx.VarSerial + 1
   let ctx =
     { ctx with
@@ -55,7 +54,7 @@ let freshVar ident (ctx: TyCtx): string * int * Ty * TyCtx =
         VarEnv = ctx.VarEnv |> Map.add ident (ty, serial)
         VarName = ctx.VarName |> Map.add serial ident
     }
-  ident, serial, ty, ctx
+  serial, ctx
 
 /// Gets if the specified type var doesn't appear in the specified type.
 let isFreshTyVar ty tyVar: bool =
@@ -167,88 +166,88 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
 
-let inferPatCons ctx l r loc =
-  let itemTy, _, ctx = freshTyVar "cons" ctx
-  let listTy = Ty.List itemTy
-  let l, ctx = inferPat ctx l
-  let ctx = unifyTy ctx (patTy l) itemTy
-  let r, ctx = inferPat ctx r
-  let ctx = unifyTy ctx (patTy r) listTy
+let inferPatCons ctx l r loc listTy =
+  let itemTy, _, ctx = freshTyVar "item" ctx
+  let ctx = unifyTy ctx listTy (Ty.List itemTy)
+  let l, ctx = inferPat ctx l itemTy
+  let r, ctx = inferPat ctx r listTy
   Pat.Cons (l, r, itemTy, loc), ctx
 
-let inferPat ctx pat =
+let inferPat ctx pat ty =
   match pat with
   | Pat.Unit _
   | Pat.Int _ ->
+    let ctx = unifyTy ctx ty (patTy pat)
     pat, ctx
   | Pat.Nil (_, loc) ->
-    let ty, _, ctx = freshTyVar "nil" ctx
-    Pat.Nil (ty, loc), ctx
+    let itemTy, _, ctx = freshTyVar "item" ctx
+    let ctx = unifyTy ctx ty (Ty.List itemTy)
+    Pat.Nil (itemTy, loc), ctx
   | Pat.Ident (ident, _, _, loc) ->
-    let ident, serial, ty, ctx = freshVar ident ctx
+    let serial, ctx = freshVar ctx ident ty
     Pat.Ident (ident, serial, ty, loc), ctx
   | Pat.Cons (l, r, _, loc) ->
-    inferPatCons ctx l r loc
+    inferPatCons ctx l r loc ty
   | Pat.Tuple (l, r, _, loc) ->
-    let l, ctx = inferPat ctx l
-    let r, ctx = inferPat ctx r
-    let tupleTy = Ty.Tuple (patTy l, patTy r)
-    Pat.Tuple (l, r, tupleTy, loc), ctx
-  | Pat.Anno (pat, ty, _) ->
-    let pat, ctx = inferPat ctx pat
-    let ctx = unifyTy ctx (patTy pat) ty
+    let lTy, _, ctx = freshTyVar "elem" ctx
+    let rTy, _, ctx = freshTyVar "elem" ctx
+    let l, ctx = inferPat ctx l lTy
+    let r, ctx = inferPat ctx r rTy
+    let ctx = unifyTy ctx ty (Ty.Tuple (lTy, rTy))
+    Pat.Tuple (l, r, ty, loc), ctx
+  | Pat.Anno (pat, annoTy, _) ->
+    let ctx = unifyTy ctx ty annoTy
+    let pat, ctx = inferPat ctx pat annoTy
     pat, ctx
 
-let inferRef (ctx: TyCtx) loc ident =
+let inferRef (ctx: TyCtx) ident loc ty =
   match ctx.VarEnv |> Map.tryFind ident with
-  | Some (ty, serial) ->
+  | Some (refTy, serial) ->
+    let ctx = unifyTy ctx refTy ty
     Expr.Ref (ident, serial, ty, loc), ctx
   | None ->
     failwithf "Couldn't resolve var %s" ident
 
-let inferList ctx items loc =
+let inferList ctx items loc listTy =
   let itemTy, _, ctx = freshTyVar "item" ctx
+  let ctx = unifyTy ctx listTy (Ty.List itemTy)
   let rec go acc ctx items =
     match items with
     | [] -> List.rev acc, ctx
     | item :: items ->
-      let item, ctx = inferExpr ctx item
-      let ctx = unifyTy ctx (tyOf item) itemTy
+      let item, ctx = inferExpr ctx item itemTy
       go (item :: acc) ctx items
   let items, ctx = go [] ctx items
   Expr.List (items, itemTy, loc), ctx
 
 /// if bool then 'a else 'a
-let inferIf ctx pred thenCl elseCl loc =
-  let pred, ctx = inferExpr ctx pred
-  let thenCl, ctx = inferExpr ctx thenCl
-  let elseCl, ctx = inferExpr ctx elseCl
-  let ty = tyOf thenCl
-  let ctx = unifyTy ctx (tyOf pred) Ty.Bool
-  let ctx = unifyTy ctx ty (tyOf elseCl)
-  Expr.If (pred, thenCl, elseCl, ty, loc), ctx
+let inferIf ctx pred thenCl elseCl loc resultTy =
+  let pred, ctx = inferExpr ctx pred Ty.Bool
+  let thenCl, ctx = inferExpr ctx thenCl resultTy
+  let elseCl, ctx = inferExpr ctx elseCl resultTy
+  Expr.If (pred, thenCl, elseCl, resultTy, loc), ctx
 
 /// match 'a with ( | 'a -> 'b )*
-let inferMatch ctx target (pat1, body1) (pat2, body2) loc =
-  let target, ctx = inferExpr ctx target
+let inferMatch ctx target (pat1, body1) (pat2, body2) loc resultTy =
+  let targetTy, _, ctx = freshTyVar "target" ctx
+  let target, ctx = inferExpr ctx target targetTy
 
   // arm1
-  let pat1, ctx = inferPat ctx pat1
-  let body1, ctx = inferExpr ctx body1
-  let ctx = unifyTy ctx (tyOf target) (patTy pat1)
+  let pat1, ctx = inferPat ctx pat1 targetTy
+  let body1, ctx = inferExpr ctx body1 resultTy
 
   // arm2
-  let pat2, ctx = inferPat ctx pat2
-  let body2, ctx = inferExpr ctx body2
-  let ctx = unifyTy ctx (tyOf target) (patTy pat2)
-  let ctx = unifyTy ctx (tyOf body1) (tyOf body2)
+  let pat2, ctx = inferPat ctx pat2 targetTy
+  let body2, ctx = inferExpr ctx body2 resultTy
 
-  Expr.Match (target, (pat1, body1), (pat2, body2), tyOf body1, loc), ctx
+  Expr.Match (target, (pat1, body1), (pat2, body2), resultTy, loc), ctx
 
-let inferNav ctx sub mes loc =
-  let sub, ctx = inferExpr ctx sub
-  match substTy ctx (tyOf sub), mes with
+let inferNav ctx sub mes loc resultTy =
+  let subTy, _, ctx = freshTyVar "sub" ctx
+  let sub, ctx = inferExpr ctx sub subTy
+  match substTy ctx subTy, mes with
   | Ty.Str, "Length" ->
+    let ctx = unifyTy ctx resultTy Ty.Int
     Expr.Nav (sub, mes, Ty.Int, loc), ctx
   | _ ->
     failwithf "Unknown nav %A" (sub, mes, loc)
@@ -256,240 +255,231 @@ let inferNav ctx sub mes loc =
 /// `x.[i] : 'y` <== x : 'x, i : int
 /// NOTE: Currently only the `x : string` case can compile, however,
 /// we don't infer that for compatibility.
-let inferIndex ctx l r loc =
-  let ty, _, ctx = freshTyVar "app" ctx
-  let l, ctx = inferExpr ctx l
-  let r, ctx = inferExpr ctx r
-  let ctx = unifyTy ctx (tyOf r) Ty.Int
-  Expr.Index (l, r, ty, loc), ctx
+let inferIndex ctx l r loc resultTy =
+  let subTy, _, ctx = freshTyVar "sub" ctx
+  let l, ctx = inferExpr ctx l subTy
+  let r, ctx = inferExpr ctx r Ty.Int
+  match substTy ctx subTy with
+  | Ty.Str ->
+    let ctx = unifyTy ctx resultTy Ty.Char
+    Expr.Index (l, r, resultTy, loc), ctx
+  | subTy ->
+    failwithf "Type: Index not supported %A" (subTy, l, r)
 
 /// During inference of `f w x ..`,
 /// assume we concluded `f w : 'f`.
 /// We can also conclude `f w : 'x -> 'g`.
-let rec inferAppArgs acc (ctx: TyCtx) calleeTy args =
+let rec inferAppArgs acc (ctx: TyCtx) args callTy =
   match args with
   | [] ->
-    List.rev acc, calleeTy, ctx
+    acc, callTy, ctx
   | arg :: args ->
-    let appTy, _, ctx = freshTyVar "app" ctx
-    let arg, ctx = inferExpr ctx arg
-    let ctx = unifyTy ctx calleeTy (Ty.Fun (tyOf arg, appTy))
-    inferAppArgs (arg :: acc) ctx appTy args
+    let argTy, _, ctx = freshTyVar "arg" ctx
+    let arg, ctx = inferExpr ctx arg argTy
+    inferAppArgs (arg :: acc) ctx args (Ty.Fun (argTy, callTy))
 
-let inferApp (ctx: TyCtx) loc callee args =
-  let callee, ctx = inferExpr ctx callee
-  let args, appTy, ctx = inferAppArgs [] ctx (tyOf callee) args
-  Expr.Call (callee, args, appTy, loc), ctx
+let inferApp (ctx: TyCtx) callee args loc callTy =
+  let args, calleeTy, ctx = inferAppArgs [] ctx (List.rev args) callTy
+  let callee, ctx = inferExpr ctx callee calleeTy
+  Expr.Call (callee, args, callTy, loc), ctx
 
-let inferAppExit ctx calleeLoc arg callLoc =
-  let arg, ctx = inferExpr ctx arg
-  let ctx = unifyTy ctx (tyOf arg) (Ty.Int)
-  let resultTy, _, ctx = freshTyVar "exit" ctx
-  let funTy = Ty.Fun (Ty.Int, resultTy)
+let inferAppExit ctx calleeLoc arg callLoc callTy =
+  let arg, ctx = inferExpr ctx arg Ty.Int
+  let funTy = Ty.Fun (Ty.Int, callTy)
   let callee = Expr.Prim (PrimFun.Exit, funTy, calleeLoc)
-  Expr.Call (callee, [arg], resultTy, callLoc), ctx
+  Expr.Call (callee, [arg], callTy, callLoc), ctx
 
-let inferAppPrintfn ctx loc args =
+let inferAppPrintfn ctx args loc callTy =
   match args with
-  | [] -> failwith "Never"
   | Expr.Str (format, _) :: _ ->
-    let calleeTy =
+    let ctx = unifyTy ctx callTy Ty.Unit
+    let funTy =
       // FIXME: too rough
       if format.Contains("%s") then
         Ty.Fun (Ty.Str, Ty.Fun (Ty.Str, Ty.Unit))
       else if format.Contains("%d") then
         Ty.Fun (Ty.Str, Ty.Fun (Ty.Int, Ty.Unit))
-      else Ty.Fun (Ty.Str, Ty.Unit)
-    let args, appTy, ctx = inferAppArgs [] ctx calleeTy args
+      else
+        Ty.Fun (Ty.Str, Ty.Unit)
+    let args, calleeTy, ctx = inferAppArgs [] ctx (List.rev args) callTy
+    let ctx = unifyTy ctx calleeTy funTy
     let callee = Expr.Prim (PrimFun.Printfn, calleeTy, loc)
-    Expr.Call (callee, args, appTy, loc), ctx
+    Expr.Call (callee, args, callTy, loc), ctx
   | _ ->
     failwith """First arg of printfn must be string literal, ".."."""
 
-let inferOpCore (ctx: TyCtx) loc op left right =
-  let left, ctx = inferExpr ctx left
-  let right, ctx = inferExpr ctx right
+let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
+  let left, ctx = inferExpr ctx left operandTy
+  let right, ctx = inferExpr ctx right operandTy
+  Expr.Op (op, left, right, resultTy, loc), ctx
 
-  // Infer types so that left and right are of the same type.
-  let resultTy, _, ctx = freshTyVar "op" ctx
-  let lTy, rTy = tyOf left, tyOf right
-  let ctx = unifyTy ctx lTy rTy
+let inferOpAdd (ctx: TyCtx) op left right loc resultTy =
+  let operandTy, _, ctx = freshTyVar "operand" ctx
+  let ctx = unifyTy ctx operandTy resultTy
+  inferOpCore ctx op left right loc operandTy resultTy
 
-  left, Expr.Op (op, left, right, resultTy, loc), ctx
+let inferOpArith (ctx: TyCtx) op left right loc resultTy =
+  let ctx = unifyTy ctx resultTy Ty.Int
+  inferOpCore ctx op left right loc Ty.Int resultTy
 
-let inferOpAdd (ctx: TyCtx) loc op left right =
-  let left, expr, ctx = inferOpCore ctx loc op left right
-  let ctx = unifyTy ctx (tyOf left) (tyOf expr)
-  expr, ctx
+let inferOpCmp (ctx: TyCtx) op left right loc resultTy =
+  let operandTy, _, ctx = freshTyVar "operand" ctx
+  let ctx = unifyTy ctx resultTy Ty.Bool
+  inferOpCore ctx op left right loc operandTy resultTy
 
-let inferOpArith (ctx: TyCtx) loc op left right =
-  let left, expr, ctx = inferOpCore ctx loc op left right
-  let ctx = unifyTy ctx (tyOf left) Ty.Int
-  let ctx = unifyTy ctx (tyOf expr) Ty.Int
-  expr, ctx
+let inferOpLogic (ctx: TyCtx) op left right loc resultTy =
+  let ctx = unifyTy ctx resultTy Ty.Bool
+  inferOpCore ctx op left right loc Ty.Bool Ty.Bool
 
-let inferOpCmp (ctx: TyCtx) loc op left right =
-  let _, expr, ctx = inferOpCore ctx loc op left right
-  let ctx = unifyTy ctx (tyOf expr) Ty.Bool
-  expr, ctx
-
-let inferOpLogic (ctx: TyCtx) loc op left right =
-  let left, expr, ctx = inferOpCore ctx loc op left right
-  let ctx = unifyTy ctx (tyOf left) Ty.Bool
-  let ctx = unifyTy ctx (tyOf expr) Ty.Bool
-  expr, ctx
-
-let inferOpCons ctx loc op left right =
-  let itemTy, _, ctx = freshTyVar "list" ctx
-  let listTy = Ty.List itemTy
-  let left, ctx = inferExpr ctx left
-  let ctx = unifyTy ctx (tyOf left) itemTy
-  let right, ctx = inferExpr ctx right
-  let ctx = unifyTy ctx (tyOf right) listTy
+let inferOpCons ctx op left right loc listTy =
+  let itemTy, _, ctx = freshTyVar "item" ctx
+  let ctx = unifyTy ctx listTy (Ty.List itemTy)
+  let left, ctx = inferExpr ctx left itemTy
+  let right, ctx = inferExpr ctx right listTy
   Expr.Op (op, left, right, listTy, loc), ctx
 
-let inferOpTie (ctx: TyCtx) loc op left right =
-  let left, ctx = inferExpr ctx left
-  let right, ctx = inferExpr ctx right
-  let tupleTy = Ty.Tuple (tyOf left, tyOf right)
+let inferOpTie (ctx: TyCtx) op left right loc tupleTy =
+  let lTy, _, ctx = freshTyVar "elem" ctx
+  let rTy, _, ctx = freshTyVar "elem" ctx
+  let ctx = unifyTy ctx tupleTy (Ty.Tuple (lTy, rTy))
+  let left, ctx = inferExpr ctx left lTy
+  let right, ctx = inferExpr ctx right rTy
   Expr.Op (op, left, right, tupleTy, loc), ctx
 
-let inferOp (ctx: TyCtx) loc op left right =
+let inferOp (ctx: TyCtx) op left right loc ty =
   match op with
   | Op.Add ->
-    inferOpAdd ctx loc op left right
+    inferOpAdd ctx op left right loc ty
   | Op.Sub
   | Op.Mul
   | Op.Div
   | Op.Mod ->
-    inferOpArith ctx loc op left right
+    inferOpArith ctx op left right loc ty
   | Op.Eq
   | Op.Ne
   | Op.Lt
   | Op.Le
   | Op.Gt
   | Op.Ge ->
-    inferOpCmp ctx loc op left right
+    inferOpCmp ctx op left right loc ty
   | Op.And
   | Op.Or ->
-    inferOpLogic ctx loc op left right
+    inferOpLogic ctx op left right loc ty
   | Op.Cons ->
-    inferOpCons ctx loc op left right
+    inferOpCons ctx op left right loc ty
   | Op.Tie ->
-    inferOpTie ctx loc op left right
+    inferOpTie ctx op left right loc ty
 
-let inferAnno ctx expr ty =
-  let expr, ctx = inferExpr ctx expr
-  let ctx = unifyTy ctx (tyOf expr) ty
-  expr, ctx
+let inferAnno ctx expr annoTy ty =
+  let ctx = unifyTy ctx annoTy ty
+  inferExpr ctx expr annoTy
 
-let inferLetVal ctx pat init loc =
-  // Define new variables defined by the pat to the context.
-  let pat, ctx = inferPat ctx pat
+let inferLetVal ctx pat init loc unitTy =
+  let ctx = unifyTy ctx unitTy Ty.Unit
+  let initTy, _, ctx = freshTyVar "init" ctx
   // Type init expression.
-  let init, initCtx = inferExpr ctx init
+  let init, initCtx = inferExpr ctx init initTy
   // Remove symbols defined inside `init`.
   let ctx = rollback ctx initCtx
-  let ctx = unifyTy ctx (patTy pat) (tyOf init)
+  // Define new variables defined by the pat to the context.
+  let pat, ctx = inferPat ctx pat initTy
   Expr.Let ([pat], init, loc), ctx
 
-let inferLetFun ctx pat pats body loc =
-  /// Infer argument patterns.
-  /// Infer each pattern from last to the first, building function type.
-  /// Like this: { f x y : 'z } -> { f x : (y : 'y) -> 'z }
-  let inferArgs ctx ty pats =
-    let rec go acc ty ctx pats =
-      match pats with
-      | [] ->
-        acc, ty, ctx
-      | pat :: pats ->
-        let pat, ctx = inferPat ctx pat
-        let ty = Ty.Fun (patTy pat, ty)
-        go (pat :: acc) ty ctx pats
-    go [] ty ctx (List.rev pats)
+let inferLetFun ctx calleePat argPats body loc unitTy =
+  /// Infers argument patterns,
+  /// constructing function's type.
+  let rec inferArgs ctx bodyTy argPats =
+    match argPats with
+    | [] ->
+      [], bodyTy, ctx
+    | argPat :: argPats ->
+      let argTy, _, ctx = freshTyVar "arg" ctx
+      let pat, ctx = inferPat ctx argPat argTy
+      let pats, bodyTy, ctx = inferArgs ctx bodyTy argPats
+      pat :: pats, Ty.Fun (argTy, bodyTy), ctx
 
-  match pat, pats with
-  | Pat.Ident (callee, _, _, calleeLoc), argPats ->
-    let callee, serial, calleeTy, ctx = freshVar callee ctx
+  match calleePat with
+  | Pat.Ident (callee, _, _, calleeLoc) ->
+    let ctx = unifyTy ctx unitTy Ty.Unit
+    let funTy, _, ctx =
+      if callee = "main"
+      then Ty.Fun (Ty.Unit, Ty.Int), "", ctx
+      else freshTyVar "fun" ctx
     let bodyTy, _, ctx = freshTyVar "body" ctx
-    let calleePat = Pat.Ident (callee, serial, calleeTy, calleeLoc)
-
-    let ctx =
-      if callee <> "main" then ctx else
-        unifyTy ctx calleeTy (Ty.Fun (Ty.Unit, Ty.Int))
+    let serial, ctx = freshVar ctx callee funTy
 
     // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default
     let bodyCtx = ctx
-    let argPats, funTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
-    let body, bodyCtx = inferExpr bodyCtx body
-    let bodyCtx = unifyTy bodyCtx (tyOf body) bodyTy
-    let bodyCtx = unifyTy bodyCtx calleeTy funTy
+    let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
+    let bodyCtx = unifyTy bodyCtx funTy actualFunTy
+    let body, bodyCtx = inferExpr bodyCtx body bodyTy
 
-    if argPats |> List.forall (fun pat -> isMonomorphic bodyCtx (patTy pat)) |> not then
-      failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A" argPats
+    if isMonomorphic bodyCtx funTy |> not then
+      failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A %A" (substTy bodyCtx funTy) argPats
 
     let ctx = rollback ctx bodyCtx
 
+    let calleePat = Pat.Ident (callee, serial, funTy, calleeLoc)
     Expr.Let (calleePat :: argPats, body, loc), ctx
   | _ ->
-    failwith "unimpl use of let"
+    failwith "First pattern of let with parameters must be an identifier."
 
 /// Returns in reversed order.
-let inferExprs ctx exprs: Expr<Loc> list * Ty * TyCtx =
+let inferExprs ctx exprs lastTy: Expr<Loc> list * TyCtx =
   let rec go acc ctx exprs =
     match exprs with
     | [] ->
-      acc, Ty.Unit, ctx
+      acc, ctx
     | [expr] ->
-      let expr, ctx = inferExpr ctx expr
-      expr :: acc, tyOf expr, ctx
+      let expr, ctx = inferExpr ctx expr lastTy
+      expr :: acc, ctx
     | expr :: exprs ->
-      let expr, ctx = inferExpr ctx expr
-      let ctx = unifyTy ctx (tyOf expr) Ty.Unit
+      let expr, ctx = inferExpr ctx expr Ty.Unit
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let inferAndThen ctx loc exprs =
-  let exprs, ty, ctx = inferExprs ctx exprs
-  Expr.AndThen (List.rev exprs, ty, loc), ctx
+let inferAndThen ctx loc exprs lastTy =
+  let exprs, ctx = inferExprs ctx exprs lastTy
+  Expr.AndThen (List.rev exprs, lastTy, loc), ctx
 
-let inferExpr (ctx: TyCtx) (expr: Expr<Loc>): Expr<Loc> * TyCtx =
+let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   match expr with
   | Expr.Unit _
   | Expr.Bool _
   | Expr.Int _
   | Expr.Char _
   | Expr.Str _ ->
+    let ctx = unifyTy ctx (tyOf expr) ty
     expr, ctx
   | Expr.Ref (ident, _, _, loc) ->
-    inferRef ctx loc ident
+    inferRef ctx ident loc ty
   | Expr.List (items, _, loc) ->
-    inferList ctx items loc
+    inferList ctx items loc ty
   | Expr.If (pred, thenCl, elseCl, _, loc) ->
-    inferIf ctx pred thenCl elseCl loc
+    inferIf ctx pred thenCl elseCl loc ty
   | Expr.Match (target, arm1, arm2, _, loc) ->
-    inferMatch ctx target arm1 arm2 loc
+    inferMatch ctx target arm1 arm2 loc ty
   | Expr.Nav (receiver, field,  _,loc) ->
-    inferNav ctx receiver field loc
+    inferNav ctx receiver field loc ty
   | Expr.Index (l, r, _, loc) ->
-    inferIndex ctx l r loc
+    inferIndex ctx l r loc ty
   | Expr.Call (Expr.Prim (PrimFun.Exit, _, calleeLoc), [arg], _, loc) ->
-    inferAppExit ctx calleeLoc arg loc
+    inferAppExit ctx calleeLoc arg loc ty
   | Expr.Call (Expr.Prim (PrimFun.Printfn, _, _), args, _, loc) ->
-    inferAppPrintfn ctx loc args
+    inferAppPrintfn ctx args loc ty
   | Expr.Call (callee, args, _, loc) ->
-    inferApp ctx loc callee args
+    inferApp ctx callee args loc ty
   | Expr.Op (op, l, r, _, loc) ->
-    inferOp ctx loc op l r
-  | Expr.Anno (expr, ty, _) ->
-    inferAnno ctx expr ty
+    inferOp ctx op l r loc ty
+  | Expr.Anno (expr, annoTy, _) ->
+    inferAnno ctx expr annoTy ty
   | Expr.AndThen (exprs, _, loc) ->
-    inferAndThen ctx loc exprs
+    inferAndThen ctx loc exprs ty
   | Expr.Let ([pat], init, loc) ->
-    inferLetVal ctx pat init loc
-  | Expr.Let (pat :: pats, body, loc) ->
-    inferLetFun ctx pat pats body loc
+    inferLetVal ctx pat init loc ty
+  | Expr.Let (calleePat :: argPats, body, loc) ->
+    inferLetFun ctx calleePat argPats body loc ty
   | Expr.Prim _ ->
     failwith "printfn must appear in form of `printfn format args..`."
   | Expr.Let ([], _, _) ->
@@ -528,7 +518,7 @@ let infer (exprs: Expr<Loc> list): Expr<Loc> list * TyCtx =
       go ctx prims
   let ctx = go ctx prims
 
-  let exprs, _, ctx = inferExprs ctx exprs
+  let exprs, ctx = inferExprs ctx exprs Ty.Unit
 
   // Substitute all types.
   let exprs = List.map (substTyExpr ctx) (List.rev exprs)

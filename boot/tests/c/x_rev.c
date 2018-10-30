@@ -3,18 +3,18 @@ struct List_1 {
     struct List_1* tail;
 };
 
-struct List_1* go_3(struct List_1* acc_5, struct List_1* xs_4) {
+struct List_1* go_3(struct List_1* acc_4, struct List_1* xs_5) {
     struct List_1* match_15;
-    if (!(!(xs_4))) goto next_2;
-    match_15 = acc_5;
+    if (!(!(xs_5))) goto next_2;
+    match_15 = acc_4;
     goto end_match_1;
 next_2:;
-    if (!(!(!(xs_4)))) goto next_3;
-    int x_6 = xs_4->head;
-    struct List_1* xs_7 = xs_4->tail;
+    if (!(!(!(xs_5)))) goto next_3;
+    int x_6 = xs_5->head;
+    struct List_1* xs_7 = xs_5->tail;
     struct List_1* list_16 = (struct List_1*)malloc(sizeof(struct List_1));
     list_16->head = x_6;
-    list_16->tail = acc_5;
+    list_16->tail = acc_4;
     struct List_1* call_17 = go_3(list_16, xs_7);
     match_15 = call_17;
     goto end_match_1;
