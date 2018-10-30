@@ -8,13 +8,14 @@ let main _ =
       false
     else
       go s n (i + 1) (d - 1)
-  let parse (s, n) =
+  let parse (s : string) =
+    let n = s.Length
     if go s n 0 0 then "Accept" else "Reject"
 
-  let case1 = "()", 2
-  let case2 = "()((())(()))()", 14
-  let case3 = "(()", 3
-  let case4 = ")(", 2
+  let case1 = "()"
+  let case2 = "()((())(()))()"
+  let case3 = "(()"
+  let case4 = ")("
 
   printfn "case1 (A): %s" (parse case1)
   printfn "case2 (A): %s" (parse case2)

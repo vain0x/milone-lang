@@ -25,53 +25,35 @@ end_if_2:;
     return if_15;
 }
 
-struct Tuple_1 {
-    char* t0;
-    int t1;
-};
-
-char* parse_8(struct Tuple_1 arg_20) {
-    char* s_9 = arg_20.t0;
-    int n_10 = arg_20.t1;
-    char* if_21;
-    int call_22 = go_3(s_9, n_10, 0, 0);
-    if (!(call_22)) goto else_7;
-    if_21 = "Accept";
+char* parse_8(char* s_9) {
+    int n_10 = strlen(s_9);
+    char* if_20;
+    int call_21 = go_3(s_9, n_10, 0, 0);
+    if (!(call_21)) goto else_7;
+    if_20 = "Accept";
     goto end_if_8;
 else_7:;
-    if_21 = "Reject";
+    if_20 = "Reject";
 end_if_8:;
-    return if_21;
+    return if_20;
 }
 
 int main() {
-    struct Tuple_1 tuple_23;
-    tuple_23.t0 = "()";
-    tuple_23.t1 = 2;
-    struct Tuple_1 case1_11 = tuple_23;
-    struct Tuple_1 tuple_24;
-    tuple_24.t0 = "()((())(()))()";
-    tuple_24.t1 = 14;
-    struct Tuple_1 case2_12 = tuple_24;
-    struct Tuple_1 tuple_25;
-    tuple_25.t0 = "(()";
-    tuple_25.t1 = 3;
-    struct Tuple_1 case3_13 = tuple_25;
-    struct Tuple_1 tuple_26;
-    tuple_26.t0 = ")(";
-    tuple_26.t1 = 2;
-    struct Tuple_1 case4_14 = tuple_26;
-    char* call_27 = parse_8(case1_11);
-    printf("case1 (A): %s\n", call_27);
-    int call_28 = 0;
-    char* call_29 = parse_8(case2_12);
-    printf("case2 (A): %s\n", call_29);
-    int call_30 = 0;
-    char* call_31 = parse_8(case3_13);
-    printf("case3 (R): %s\n", call_31);
-    int call_32 = 0;
-    char* call_33 = parse_8(case4_14);
-    printf("case4 (R): %s\n", call_33);
-    int call_34 = 0;
+    char* case1_11 = "()";
+    char* case2_12 = "()((())(()))()";
+    char* case3_13 = "(()";
+    char* case4_14 = ")(";
+    char* call_22 = parse_8(case1_11);
+    printf("case1 (A): %s\n", call_22);
+    int call_23 = 0;
+    char* call_24 = parse_8(case2_12);
+    printf("case2 (A): %s\n", call_24);
+    int call_25 = 0;
+    char* call_26 = parse_8(case3_13);
+    printf("case3 (R): %s\n", call_26);
+    int call_27 = 0;
+    char* call_28 = parse_8(case4_14);
+    printf("case4 (R): %s\n", call_28);
+    int call_29 = 0;
     return 0;
 }
