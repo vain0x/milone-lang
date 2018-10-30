@@ -2,13 +2,75 @@
 
 set -eu
 
-if [[ "$1" = 'restore' ]]
+# Converts milone code to C code
+# and compiles it with GCC.
+# SAMPLE: compile hello
+compile() {
+    m="./tests/src/$1.milone"
+    c="tmp/$1.c"
+    app="tmp/$1"
+
+    mkdir -p tmp
+    cat $m | dotnet run -p MiloneLang -- -t c >$c
+    gcc -std=c11 $c -o $app
+    >&2 echo $app
+}
+
+# Runs a milone code
+# and verifies its stdout/exit code to be expected.
+# SAMPLE: integ hello
+# SAMPLE: integ ./tests/src/hello.milone
+integ() {
+    name=$(basename "$1" .milone)
+    app="./tmp/$name"
+    out="./tmp/$name.out"
+    expected="./tests/targets/$name.out"
+    code=0
+
+    >&2 echo -n "$name ... "
+    compile "$name" 2>/dev/null
+
+    set +e
+    $app >$out
+    echo '$? = '$? >>$out
+    if diff -q $out $expected
+    then
+        >&2 echo "✔ ok"
+    else
+        >&2 echo "✘ FAILED"
+        code=1
+    fi
+    set -e
+    return $code
+}
+
+# Tests all milone codes.
+# SAMPLE: integ_all
+integ_all() {
+    find ./tests/src -name '*.milone' -type f -exec ./task integ "{}" \;
+}
+
+if [[ "$1" = restore ]]
 then
     dotnet restore
-fi
-
-if [[ "$1" = 'test' ]]
+elif [[ "$1" = test ]]
 then
     dotnet test MiloneLang.Tests -c Release --no-restore
-    ./integ
+    integ_all
+elif [[ "$1" = integ-all ]]
+then
+    shift
+    integ_all
+elif [[ "$1" = integ ]]
+then
+    shift
+    integ "$@"
+elif [[ "$1" = inspect ]]
+then
+    shift
+    compile "$@"
+    code "./tmp/$1.c"
+else
+    >&2 echo "USAGE: ./task restore|integ-all|integ|inspect"
+    exit 1
 fi
