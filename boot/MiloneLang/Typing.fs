@@ -66,6 +66,7 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Int
     | Ty.Char
     | Ty.Str
+    | Ty.Box
     | Ty.Tuple [] ->
       true
     | Ty.Fun (sTy, tTy) ->
@@ -86,6 +87,7 @@ let isMonomorphic ctx ty: bool =
   | Ty.Int
   | Ty.Char
   | Ty.Str
+  | Ty.Box
   | Ty.Tuple [] ->
     true
   | Ty.Error
@@ -116,6 +118,7 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.Bool
     | Ty.Int
     | Ty.Char
+    | Ty.Box
     | Ty.Str ->
       ty
     | Ty.Fun (sty, tty) ->
@@ -153,7 +156,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Bool, Ty.Bool
     | Ty.Int, Ty.Int
     | Ty.Char, Ty.Char
-    | Ty.Str, Ty.Str ->
+    | Ty.Str, Ty.Str
+    | Ty.Box, Ty.Box ->
       ctx
     | Ty.Var _, _ ->
       failwithf "Couldn't unify (due to self recursion) %A %A" lty rty
@@ -162,6 +166,7 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Int, _
     | Ty.Char, _
     | Ty.Str, _
+    | Ty.Box, _
     | Ty.Fun _, _
     | Ty.Tuple _, _
     | Ty.List _, _ ->
@@ -210,6 +215,16 @@ let inferPat ctx pat ty =
     let ctx = unifyTy ctx ty annoTy
     let pat, ctx = inferPat ctx pat annoTy
     pat, ctx
+
+let inferPrimBox ctx loc ty =
+  let argTy, _, ctx = freshTyVar "box" ctx
+  let ctx = unifyTy ctx (Ty.Fun (argTy, Ty.Box)) ty
+  Expr.Prim (PrimFun.Box, ty, loc), ctx
+
+let inferPrimUnbox ctx loc ty =
+  let resultTy, _, ctx = freshTyVar "unbox" ctx
+  let ctx = unifyTy ctx (Ty.Fun (Ty.Box, resultTy)) ty
+  Expr.Prim (PrimFun.Unbox, ty, loc), ctx
 
 let inferRef (ctx: TyCtx) ident loc ty =
   match ctx.VarEnv |> Map.tryFind ident with
@@ -472,6 +487,10 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   | Expr.Str _ ->
     let ctx = unifyTy ctx (tyOf expr) ty
     expr, ctx
+  | Expr.Prim (PrimFun.Box, _, loc) ->
+    inferPrimBox ctx loc ty
+  | Expr.Prim (PrimFun.Unbox, _, loc) ->
+    inferPrimUnbox ctx loc ty
   | Expr.Ref (ident, _, _, loc) ->
     inferRef ctx ident loc ty
   | Expr.List (items, _, loc) ->

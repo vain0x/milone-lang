@@ -123,6 +123,7 @@ let unboxTy (ty: Ty): MTy =
   | Ty.Int -> MTy.Int
   | Ty.Char -> MTy.Char
   | Ty.Str -> MTy.Str
+  | Ty.Box -> MTy.Box
   | Ty.Fun (lTy, rTy) ->
     MTy.Fun (unboxTy lTy, unboxTy rTy)
   | Ty.List ty ->
@@ -308,6 +309,14 @@ let mirifyExprCallExit ctx exitLoc arg ty loc =
   let callExpr = MExpr.Call (callee, [arg], unboxTy ty, loc)
   let ctx = ctxAddStmt ctx (MStmt.Expr (callExpr, loc))
   MExpr.Unit (unboxTy ty, loc), ctx
+
+let mirifyExprCallBox ctx arg ty loc =
+  let arg, ctx = mirifyExpr ctx arg
+  MExpr.UniOp (MUniOp.Box, arg, unboxTy ty, loc), ctx
+
+let mirifyExprCallUnbox ctx arg ty loc =
+  let arg, ctx = mirifyExpr ctx arg
+  MExpr.UniOp (MUniOp.Unbox, arg, unboxTy ty, loc), ctx
 
 /// not a ==> !a
 let mirifyExprCallNot ctx arg ty notLoc =
@@ -506,6 +515,10 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprCallNot ctx arg ty loc
   | Expr.Call (Expr.Prim (PrimFun.Exit, _, exitLoc), [arg], ty, loc) ->
     mirifyExprCallExit ctx exitLoc arg ty loc
+  | Expr.Call (Expr.Prim (PrimFun.Box, _, _), [arg], ty, loc) ->
+    mirifyExprCallBox ctx arg ty loc
+  | Expr.Call (Expr.Prim (PrimFun.Unbox, _, _), [arg], ty, loc) ->
+    mirifyExprCallUnbox ctx arg ty loc
   | Expr.Call (callee, args, ty, loc) ->
     mirifyExprCall ctx callee args ty loc
   | Expr.Op (op, l, r, ty, loc) ->
@@ -518,7 +531,7 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprLetVal ctx pat init letLoc
   | Expr.Let (pat :: pats, body, letLoc) ->
     mirifyExprLetFun ctx pat pats body letLoc
-  | Expr.Prim (PrimFun.Exit, _, _)
+  | Expr.Prim _
   | Expr.Call (_, [], _, _)
   | Expr.Anno _
   | Expr.Let ([], _, _) ->

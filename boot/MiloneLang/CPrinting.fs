@@ -136,8 +136,12 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExprList acc 0 ", " args
     let acc = acc *- ")"
     acc
-  | CExpr.UniOp (CUniOp.Not, arg) ->
-    let acc = acc *- "!("
+  | CExpr.UniOp (op, arg) ->
+    let acc =
+      match op with
+      | CUniOp.Not -> acc *- "!"
+      | CUniOp.Deref -> acc *- "*"
+    let acc = acc *- "("
     let acc = cprintExpr acc arg
     let acc = acc *- ")"
     acc
@@ -173,15 +177,15 @@ let cprintStmt acc indent stmt: string list =
       | None ->
         acc
     acc *- ";" *- eol
-  | CStmt.LetAlloc (name, ptrTy) ->
+  | CStmt.LetAlloc (name, valPtrTy, varTy) ->
     let valTy =
-      match ptrTy with
+      match valPtrTy with
       | CTy.Ptr ty -> ty
-      | _ -> failwithf "Expected pointer type but %A" ptrTy
+      | _ -> failwithf "Expected pointer type but %A" valPtrTy
     let acc = acc *- indent
-    let acc = cprintTy acc ptrTy
+    let acc = cprintTy acc varTy
     let acc = acc *- " " *- name *- " = ("
-    let acc = cprintTy acc ptrTy
+    let acc = cprintTy acc varTy
     let acc = acc *- ")malloc(sizeof("
     let acc = cprintTy acc valTy
     let acc = acc *- "));" *- eol

@@ -96,6 +96,7 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
     CTy.Char, ctx
   | MTy.Str ->
     CTy.Ptr CTy.Char, ctx
+  | MTy.Box
   | MTy.Fun _ ->
     CTy.Ptr CTy.Void, ctx
   | MTy.List itemTy ->
@@ -139,6 +140,7 @@ let genExprDefault ctx ty =
     CExpr.Int 0, ctx
   | MTy.Char
   | MTy.Str
+  | MTy.Box
   | MTy.List _ ->
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Int 0, ty), ctx
@@ -187,13 +189,27 @@ let genExprCallStrAdd ctx l r =
   let callExpr = CExpr.Call (strAddRef, [l; r])
   callExpr, ctx
 
-let genExprUniOp ctx op arg =
+let genExprUniOp ctx op arg ty =
+  let argTy = Mir.mexprTy arg
   let arg, ctx = genExpr ctx arg
   match op with
   | MUniOp.Not ->
     CExpr.UniOp (CUniOp.Not, arg), ctx
   | MUniOp.StrLen ->
     CExpr.Call (CExpr.Ref "strlen", [arg]), ctx
+  | MUniOp.Box ->
+    let tempIdent, temp, ctx = ctxFreshVar ctx "box"
+    let argTy, ctx = cty ctx argTy
+    // void* p = (void*)malloc(sizeof T);
+    let ctx = ctxAddStmt ctx (CStmt.LetAlloc (tempIdent, CTy.Ptr argTy, CTy.Ptr CTy.Void))
+    // *(T*)p = t;
+    let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (temp, CTy.Ptr argTy))
+    let ctx = ctxAddStmt ctx (CStmt.Set (left, arg))
+    temp, ctx
+  | MUniOp.Unbox ->
+    let valTy, ctx = cty ctx ty
+    let deref = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (arg, CTy.Ptr valTy))
+    deref, ctx
   | MUniOp.ListIsEmpty ->
     CExpr.UniOp (CUniOp.Not, arg), ctx
   | MUniOp.ListHead ->
@@ -251,8 +267,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprCallStrAdd ctx l r
   | MExpr.Call (callee, args, ty, _) ->
     genExprCall ctx callee args ty
-  | MExpr.UniOp (op, arg, _, _) ->
-    genExprUniOp ctx op arg
+  | MExpr.UniOp (op, arg, ty, _) ->
+    genExprUniOp ctx op arg ty
   | MExpr.Op (op, first, second, ty, loc) ->
     genExprOp ctx op first second ty loc
   | MExpr.Prim _
@@ -277,7 +293,7 @@ let genStmt ctx stmt =
   | MStmt.LetCons (serial, head, tail, itemTy, _) ->
     let temp = ctxUniqueName ctx serial
     let listTy, ctx = cty ctx (MTy.List itemTy)
-    let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, listTy))
+    let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, listTy, listTy))
 
     // head
     let head, ctx = genExpr ctx head

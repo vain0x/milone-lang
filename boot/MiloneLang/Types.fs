@@ -57,6 +57,7 @@ namespace rec MiloneLang
     | Int
     | Char
     | Str
+    | Box
     | Var
       of string
     | Fun
@@ -71,6 +72,8 @@ namespace rec MiloneLang
   type PrimFun =
     | Exit
     | Printfn
+    | Box
+    | Unbox
 
   [<RequireQualifiedAccess>]
   type OpLevel =
@@ -179,6 +182,7 @@ namespace rec MiloneLang
     | Int
     | Char
     | Str
+    | Box
     | Fun
       of MTy * MTy
     | List
@@ -199,6 +203,8 @@ namespace rec MiloneLang
   type MUniOp =
     | Not
     | StrLen
+    | Box
+    | Unbox
     | ListIsEmpty
     | ListHead
     | ListTail
@@ -308,6 +314,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type CUniOp =
     | Not
+    | Deref
 
   [<RequireQualifiedAccess>]
   type COp = MOp
@@ -355,9 +362,9 @@ namespace rec MiloneLang
     /// `T x = a;`
     | Let
       of ident:string * init:CExpr option * CTy
-    /// `T* x = (T*)malloc(sizeof T);`
+    /// `U* x = (U*)malloc(sizeof T);`
     | LetAlloc
-      of ident:string * valTy:CTy
+      of ident:string * valTy:CTy * ptrTy:CTy
     /// `x = a;`
     | Set
       of CExpr * CExpr
