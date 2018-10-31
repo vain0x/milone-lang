@@ -39,10 +39,14 @@ let tyFun sTy tTy =
 let tyList ty =
   Ty.List ty
 
-let tyTuple l r =
-  Ty.Tuple (l, r)
+let tyTuple itemTys =
+  Ty.Tuple itemTys
+
+let patInt value = Pat.Int (value, ())
 
 let patNil = Pat.Nil (noTy, ())
+
+let patTuple itemPats = Pat.Tuple (itemPats, noTy, ())
 
 let patCons l r = Pat.Cons (l, r, noTy, ())
 
@@ -339,8 +343,8 @@ let parseListTypeExprs () =
 
 [<Fact>]
 let parseTupleTypeExprs () =
-  let source = """string * char list"""
-  let expected = tyTuple Ty.Str (tyList Ty.Char)
+  let source = """string * char list * int"""
+  let expected = tyTuple [Ty.Str; tyList Ty.Char; Ty.Int]
   source |> parseTyExprStr |> is expected
 
 [<Fact>]
@@ -351,6 +355,12 @@ let parseFunTypeExprs () =
       Ty.Unit
       (tyFun (tyFun Ty.Int Ty.Bool) Ty.Str)
   source |> parseTyExprStr |> is expected
+
+[<Fact>]
+let parsePatTuple () =
+  let source = """1, 2, (3, 4)"""
+  let expected = patTuple [patInt 1; patInt 2; patTuple [patInt 3; patInt 4]]
+  source |> parseStrAsPat |> is expected
 
 [<Fact>]
 let parsePatCons () =

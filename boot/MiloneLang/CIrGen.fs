@@ -54,20 +54,27 @@ let ctxAddListDecl (ctx: Ctx) itemTy =
     }
   selfTy, ctx
 
-let ctxAddTupleDecl (ctx: Ctx) lTy rTy =
-  let tupleTy = MTy.Tuple (lTy, rTy)
-  let lTy, ctx = cty ctx lTy
-  let rTy, ctx = cty ctx rTy
+let ctxAddTupleDecl (ctx: Ctx) itemTys =
+  let rec go acc ctx i itemTys =
+    match itemTys with
+    | [] ->
+      List.rev acc, ctx
+    | itemTy :: itemTys ->
+      let itemTy, ctx = cty ctx itemTy
+      let field = tupleField i, itemTy
+      go (field :: acc) ctx (i + 1) itemTys
+  let fields, ctx = go [] ctx 0 itemTys
+
+  let tupleTy = MTy.Tuple itemTys
   let serial = ctx.TySerial + 1
-  let ident = sprintf "Tuple_%d" serial
-  let fields = [tupleField 0, lTy; tupleField 1, rTy]
+  let tupleTyIdent = sprintf "Tuple_%d" serial
   let ctx =
     { ctx with
         TySerial = ctx.TySerial + 1
-        TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct ident)
-        Decls = CDecl.Struct (ident, fields) :: ctx.Decls
+        TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct tupleTyIdent)
+        Decls = CDecl.Struct (tupleTyIdent, fields) :: ctx.Decls
     }
-  CTy.Struct ident, ctx
+  CTy.Struct tupleTyIdent, ctx
 
 let ctxUniqueName (ctx: Ctx) serial =
   let ident =
@@ -97,10 +104,10 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ctxAddListDecl ctx itemTy
     | Some ty ->
       ty, ctx
-  | MTy.Tuple (lTy, rTy) ->
+  | MTy.Tuple itemTys ->
     match ctx.TyEnv |> Map.tryFind ty with
     | None ->
-      ctxAddTupleDecl ctx lTy rTy
+      ctxAddTupleDecl ctx itemTys
     | Some ty ->
       ty, ctx
 

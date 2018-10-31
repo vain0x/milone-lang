@@ -6,8 +6,6 @@ let exprExtract = Parsing.exprExtract
 
 let exprTy = exprExtract >> fst
 
-let exprLoc = exprExtract >> snd
-
 let patTy = Typing.patTy
 
 let patExtract = Parsing.patExtract
@@ -96,8 +94,7 @@ let mopFrom op =
   | Op.Ge
   | Op.And
   | Op.Or
-  | Op.Cons
-  | Op.Tie -> failwith "We don't use > >= && || :: , in MIR"
+  | Op.Cons -> failwith "We don't use > >= && || :: , in MIR"
 
 let mexprExtract expr =
   match expr with
@@ -134,8 +131,8 @@ let unboxTy (ty: Ty): MTy =
     MTy.Fun (unboxTy lTy, unboxTy rTy)
   | Ty.List ty ->
     MTy.List (unboxTy ty)
-  | Ty.Tuple (lTy, rTy) ->
-    MTy.Tuple (unboxTy lTy, unboxTy rTy)
+  | Ty.Tuple itemTys ->
+    MTy.Tuple (List.map unboxTy itemTys)
   | Ty.Error ->
     failwith "Never type error in MIR"
   | Ty.Var _ ->
@@ -191,13 +188,20 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     true, ctxAddStmt ctx letStmt
   | Pat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
-  | Pat.Tuple (l, r, _, loc) ->
-    let fstExpr = projExpr expr 0 (patTy l) loc
-    let sndExpr = projExpr expr 1 (patTy r) loc
-    let lCovered, ctx = mirifyPat ctx endLabel l fstExpr
-    let rCovered, ctx = mirifyPat ctx endLabel r sndExpr
-    let covered = lCovered && rCovered
-    covered, ctx
+  | Pat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->
+    let rec go covered ctx i itemPats itemTys =
+      match itemPats, itemTys with
+      | [], [] ->
+        covered, ctx
+      | itemPat :: itemPats, itemTy :: itemTys ->
+        let item = projExpr expr i itemTy loc
+        let itemCovered, ctx = mirifyPat ctx endLabel itemPat item
+        go (covered && itemCovered) ctx (i + 1) itemPats itemTys
+      | _ ->
+        failwith "Never"
+    go true ctx 0 itemPats itemTys
+  | Pat.Tuple _ ->
+    failwith "Never: Tuple pattern must be of tuple type."
   | Pat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."
 
@@ -343,20 +347,24 @@ let mirifyExprOpCons ctx l r ty loc =
   let ctx = ctxAddStmt ctx (MStmt.LetCons (tempSerial, l, r, itemTy, loc))
   MExpr.Ref (tempSerial, listTy, loc), ctx
 
-let mirifyExprOpTie ctx l r ty loc =
-  let lTy, rTy =
+let mirifyExprTuple ctx items ty loc =
+  let itemTys =
     match ty with
-    | Ty.Tuple (lTy, rTy) -> unboxTy lTy, unboxTy rTy
+    | Ty.Tuple itemTys -> List.map unboxTy itemTys
     | _ -> failwith "Tuple constructor's type must be a tuple."
-  let lLoc, rLoc = exprLoc l, exprLoc r
-
-  let ty = MTy.Tuple (lTy, rTy)
+  let ty = MTy.Tuple itemTys
   let _, tempSerial, ctx = ctxFreshVar ctx "tuple" ty loc
 
-  let l, ctx = mirifyExpr ctx l
-  let r, ctx = mirifyExpr ctx r
-  let elems = [l; r]
-  let ctx = ctxAddStmt ctx (MStmt.LetTuple (tempSerial, elems, ty, loc))
+  let rec go acc ctx items =
+    match items with
+    | [] ->
+      List.rev acc, ctx
+    | item :: items ->
+      let item, ctx = mirifyExpr ctx item
+      go (item :: acc) ctx items
+  let items, ctx = go [] ctx items
+
+  let ctx = ctxAddStmt ctx (MStmt.LetTuple (tempSerial, items, ty, loc))
   MExpr.Ref (tempSerial, ty, loc), ctx
 
 /// x op y ==> `x op y` if `x : {scalar}`
@@ -387,8 +395,6 @@ let mirifyExprOp ctx op l r ty loc =
     mirifyExprOpOr ctx l r ty loc
   | Op.Cons ->
     mirifyExprOpCons ctx l r ty loc
-  | Op.Tie ->
-    mirifyExprOpTie ctx l r ty loc
   | _ ->
 
   let op, l, r =
@@ -507,6 +513,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprCall ctx callee args ty loc
   | Expr.Op (op, l, r, ty, loc) ->
     mirifyExprOp ctx op l r ty loc
+  | Expr.Tuple (items, ty, loc) ->
+    mirifyExprTuple ctx items ty loc
   | Expr.AndThen (exprs, _, _) ->
     mirifyExprAndThen ctx exprs
   | Expr.Let ([pat], init, letLoc) ->

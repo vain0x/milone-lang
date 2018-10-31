@@ -21,7 +21,7 @@ let patExtract (pat: Pat<'a>): Ty * 'a =
     ty, a
   | Pat.Cons (_, _, itemTy, a) ->
     Ty.List itemTy, a
-  | Pat.Tuple (_, _, ty, a) ->
+  | Pat.Tuple (_, ty, a) ->
     ty, a
   | Pat.Anno (_, ty, a) ->
     ty, a
@@ -39,8 +39,8 @@ let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
       Pat.Ident (name, serial, f ty, g a)
     | Pat.Cons (l, r, itemTy, a) ->
       Pat.Cons (go l, go r, f itemTy, g a)
-    | Pat.Tuple (l, r, ty, a) ->
-      Pat.Tuple (go l, go r, f ty, g a)
+    | Pat.Tuple (itemPats, ty, a) ->
+      Pat.Tuple (List.map go itemPats, f ty, g a)
     | Pat.Anno (pat, ty, a) ->
       Pat.Anno (go pat, f ty, g a)
   go pat
@@ -74,6 +74,8 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
   | Expr.Call (_, _, ty, a) ->
     ty, a
   | Expr.Op (_, _, _, ty, a) ->
+    ty, a
+  | Expr.Tuple (_, ty, a) ->
     ty, a
   | Expr.Anno (_, ty, a) ->
     ty, a
@@ -117,6 +119,8 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Call (go callee, List.map go args, f ty, g a)
     | Expr.Op (op, l, r, ty, a) ->
       Expr.Op (op, go l, go r, f ty, g a)
+    | Expr.Tuple (exprs, ty, a) ->
+      Expr.Tuple (List.map go exprs, f ty, g a)
     | Expr.Anno (expr, ty, a) ->
       Expr.Anno (go expr, f ty, g a)
     | Expr.AndThen (exprs, ty, a) ->
@@ -223,17 +227,21 @@ let parseTyList boxX tokens =
   let first, tokens = parseTyAtom boxX tokens
   go first tokens
 
-/// ty-tuple = ty-list ( '\*' ty-tuple )\*
+/// ty-tuple = ty-list ( '\*' ty-list )\*
 let parseTyTuple boxX tokens =
-  let rec go first tokens =
+  let rec go acc tokens =
     match tokens with
-    | (Token.Punct "*", _) :: tokens ->
+    | (Token.Punct "*", _) :: tokens when nextInside boxX tokens ->
       let second, tokens = parseTyList boxX tokens
-      go (Ty.Tuple (first, second)) tokens
+      go (second :: acc) tokens
     | _ ->
-      first, tokens
+      List.rev acc, tokens
   let first, tokens = parseTyList boxX tokens
-  go first tokens
+  match go [] tokens with
+  | [], tokens ->
+    first, tokens
+  | itemTys, tokens ->
+    Ty.Tuple (first :: itemTys), tokens
 
 /// ty-fun = ty-tuple ( '->' ty-fun )?
 let parseTyFun boxX tokens =
@@ -286,14 +294,22 @@ let parsePatAnno boxX tokens =
   | pat, tokens ->
     pat, tokens
 
-/// pat-tuple = pat-anno ( ',' pat-anno )?
+/// pat-tuple = pat-anno ( ',' pat-anno )*
 let parsePatTuple boxX tokens =
-  match parsePatAnno boxX tokens with
-  | l, (Token.Punct ",", loc) :: tokens ->
-    let r, tokens = parsePatAnno boxX tokens
-    Pat.Tuple (l, r, noTy, loc), tokens
-  | l, tokens ->
-    l, tokens
+  let rec go acc tokens =
+    match tokens with
+    | (Token.Punct ",", _) :: tokens when nextInside boxX tokens ->
+      let second, tokens = parsePatAnno boxX tokens
+      go (second :: acc) tokens
+    | _ ->
+      List.rev acc, tokens
+  let loc = nextLoc tokens
+  let first, tokens = parsePatAnno boxX tokens
+  match go [] tokens with
+  | [], tokens ->
+    first, tokens
+  | itemPats, tokens ->
+    Pat.Tuple (first :: itemPats, noTy, loc), tokens
 
 /// pat = pat-tuple
 let parsePat boxX tokens: Pat<_> * _ list =
@@ -478,7 +494,6 @@ let parseCall boxX tokens =
 
 let parseNextLevelOp level outer tokens =
   match level with
-  | OpLevel.Tie -> parseOp OpLevel.Or outer tokens
   | OpLevel.Or -> parseOp OpLevel.And outer tokens
   | OpLevel.And -> parseOp OpLevel.Cmp outer tokens
   | OpLevel.Cmp -> parseOp OpLevel.Cons outer tokens
@@ -496,8 +511,6 @@ let rec parseOps level boxX expr tokens =
     let expr = Expr.Op (op, expr, second, noTy, opLoc)
     parseOps level boxX expr tokens
   match level, tokens with
-  | OpLevel.Tie, (Token.Punct ",", opLoc) :: tokens ->
-    next expr Op.Tie opLoc tokens
   | OpLevel.Or, (Token.Punct "||", opLoc) :: tokens ->
     next expr Op.Or opLoc tokens
   | OpLevel.And, (Token.Punct "&&", opLoc) :: tokens ->
@@ -535,11 +548,28 @@ let parseOp level boxX tokens =
   parseOps level boxX first tokens
 
 let parseTerm boxX tokens =
-  parseOp OpLevel.Tie boxX tokens
+  parseOp OpLevel.Or boxX tokens
 
-/// anno = term ( ':' ty )?
+/// tuple = term ( ',' term )*
+let parseTuple boxX tokens =
+  let rec go acc tokens =
+    match tokens with
+    | (Token.Punct ",", _) :: tokens when nextInside boxX tokens ->
+      let second, tokens = parseTerm boxX tokens
+      go (second :: acc) tokens
+    | tokens ->
+      List.rev acc, tokens
+  let loc = nextLoc tokens
+  let first, tokens = parseTerm boxX tokens
+  match go [] tokens with
+  | [], tokens ->
+    first, tokens
+  | acc, tokens ->
+    Expr.Tuple (first :: acc, noTy, loc), tokens
+
+/// anno = tuple ( ':' ty )?
 let parseAnno boxX tokens =
-  match parseTerm boxX tokens with
+  match parseTuple boxX tokens with
   | expr, (Token.Colon, loc) :: tokens ->
     let ty, tokens = parseTy (nextX tokens) tokens
     Expr.Anno (expr, ty, loc), tokens

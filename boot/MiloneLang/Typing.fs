@@ -65,12 +65,13 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Bool
     | Ty.Int
     | Ty.Char
-    | Ty.Str ->
+    | Ty.Str
+    | Ty.Tuple [] ->
       true
     | Ty.Fun (sTy, tTy) ->
       go sTy && go tTy
-    | Ty.Tuple (lTy, rTy) ->
-      go lTy && go rTy
+    | Ty.Tuple (itemTy :: itemTys) ->
+      go itemTy && go (Ty.Tuple itemTys)
     | Ty.List ty ->
       go ty
     | Ty.Var tv ->
@@ -84,7 +85,8 @@ let isMonomorphic ctx ty: bool =
   | Ty.Bool
   | Ty.Int
   | Ty.Char
-  | Ty.Str ->
+  | Ty.Str
+  | Ty.Tuple [] ->
     true
   | Ty.Error
   | Ty.Var _ ->
@@ -93,8 +95,8 @@ let isMonomorphic ctx ty: bool =
     isMonomorphic ctx sTy && isMonomorphic ctx tTy
   | Ty.List ty ->
     isMonomorphic ctx ty
-  | Ty.Tuple (lTy, rTy) ->
-    isMonomorphic ctx lTy && isMonomorphic ctx rTy
+  | Ty.Tuple (itemTy :: itemTys) ->
+    isMonomorphic ctx itemTy && isMonomorphic ctx (Ty.Tuple itemTys)
 
 /// Adds type-var/type binding.
 let bindTy (ctx: TyCtx) tyVar ty: TyCtx =
@@ -118,8 +120,8 @@ let substTy (ctx: TyCtx) ty: Ty =
       ty
     | Ty.Fun (sty, tty) ->
       Ty.Fun (go sty, go tty)
-    | Ty.Tuple (lTy, rTy) ->
-      Ty.Tuple (go lTy, go rTy)
+    | Ty.Tuple itemTys ->
+      Ty.Tuple (List.map go itemTys)
     | Ty.List ty ->
       Ty.List (go ty)
     | Ty.Var tyVar ->
@@ -142,10 +144,11 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       ctx |> go lSTy rSTy |> go lTTy rTTy
     | Ty.List lTy, Ty.List rTy ->
       ctx |> go lTy rTy
-    | Ty.Tuple (llTy, lrTy), Ty.Tuple (rlTy, rrTy) ->
-      ctx |> go llTy rlTy |> go lrTy rrTy
+    | Ty.Tuple (lTy :: lTys), Ty.Tuple (rTy :: rTys) ->
+      ctx |> go lTy rTy |> go (Ty.Tuple lTys) (Ty.Tuple rTys)
     | Ty.Error, _
     | _, Ty.Error
+    | Ty.Tuple [], Ty.Tuple []
     | Ty.Unit, Ty.Unit
     | Ty.Bool, Ty.Bool
     | Ty.Int, Ty.Int
@@ -165,6 +168,19 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       let lty, rty = substTy ctx lty, substTy ctx rty
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
+
+let inferPatTuple ctx itemPats loc tupleTy =
+  let rec go accPats accTys ctx itemPats =
+    match itemPats with
+    | [] ->
+      List.rev accPats, List.rev accTys, ctx
+    | itemPat :: itemPats ->
+      let itemTy, _, ctx = freshTyVar "item" ctx
+      let itemPat, ctx = inferPat ctx itemPat itemTy
+      go (itemPat :: accPats) (itemTy :: accTys) ctx itemPats
+  let itemPats, itemTys, ctx = go [] [] ctx itemPats
+  let ctx = unifyTy ctx tupleTy (Ty.Tuple itemTys)
+  Pat.Tuple (itemPats, tupleTy, loc), ctx
 
 let inferPatCons ctx l r loc listTy =
   let itemTy, _, ctx = freshTyVar "item" ctx
@@ -188,13 +204,8 @@ let inferPat ctx pat ty =
     Pat.Ident (ident, serial, ty, loc), ctx
   | Pat.Cons (l, r, _, loc) ->
     inferPatCons ctx l r loc ty
-  | Pat.Tuple (l, r, _, loc) ->
-    let lTy, _, ctx = freshTyVar "elem" ctx
-    let rTy, _, ctx = freshTyVar "elem" ctx
-    let l, ctx = inferPat ctx l lTy
-    let r, ctx = inferPat ctx r rTy
-    let ctx = unifyTy ctx ty (Ty.Tuple (lTy, rTy))
-    Pat.Tuple (l, r, ty, loc), ctx
+  | Pat.Tuple (items, _, loc) ->
+    inferPatTuple ctx items loc ty
   | Pat.Anno (pat, annoTy, _) ->
     let ctx = unifyTy ctx ty annoTy
     let pat, ctx = inferPat ctx pat annoTy
@@ -344,14 +355,6 @@ let inferOpCons ctx op left right loc listTy =
   let right, ctx = inferExpr ctx right listTy
   Expr.Op (op, left, right, listTy, loc), ctx
 
-let inferOpTie (ctx: TyCtx) op left right loc tupleTy =
-  let lTy, _, ctx = freshTyVar "elem" ctx
-  let rTy, _, ctx = freshTyVar "elem" ctx
-  let ctx = unifyTy ctx tupleTy (Ty.Tuple (lTy, rTy))
-  let left, ctx = inferExpr ctx left lTy
-  let right, ctx = inferExpr ctx right rTy
-  Expr.Op (op, left, right, tupleTy, loc), ctx
-
 let inferOp (ctx: TyCtx) op left right loc ty =
   match op with
   | Op.Add ->
@@ -373,8 +376,19 @@ let inferOp (ctx: TyCtx) op left right loc ty =
     inferOpLogic ctx op left right loc ty
   | Op.Cons ->
     inferOpCons ctx op left right loc ty
-  | Op.Tie ->
-    inferOpTie ctx op left right loc ty
+
+let inferTuple (ctx: TyCtx) items loc tupleTy =
+  let rec go acc itemTys ctx items =
+    match items with
+    | [] ->
+      List.rev acc, List.rev itemTys, ctx
+    | item :: items ->
+      let itemTy, _, ctx = freshTyVar "item" ctx
+      let item, ctx = inferExpr ctx item itemTy
+      go (item :: acc) (itemTy :: itemTys) ctx items
+  let items, itemTys, ctx = go [] [] ctx items
+  let ctx = unifyTy ctx tupleTy (Ty.Tuple itemTys)
+  Expr.Tuple (items, tupleTy, loc), ctx
 
 let inferAnno ctx expr annoTy ty =
   let ctx = unifyTy ctx annoTy ty
@@ -478,6 +492,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferApp ctx callee args loc ty
   | Expr.Op (op, l, r, _, loc) ->
     inferOp ctx op l r loc ty
+  | Expr.Tuple (items, _, loc) ->
+    inferTuple ctx items loc ty
   | Expr.Anno (expr, annoTy, _) ->
     inferAnno ctx expr annoTy ty
   | Expr.AndThen (exprs, _, loc) ->

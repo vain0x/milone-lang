@@ -62,7 +62,7 @@ namespace rec MiloneLang
     | Fun
       of Ty * Ty
     | Tuple
-      of Ty * Ty
+      of Ty list
     | List
       of Ty
 
@@ -81,7 +81,6 @@ namespace rec MiloneLang
     | Cmp
     | And
     | Or
-    | Tie
 
   [<RequireQualifiedAccess>]
   type Op =
@@ -106,8 +105,6 @@ namespace rec MiloneLang
     | Or
     /// `::`
     | Cons
-    /// Comma to make a tuple
-    | Tie
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
@@ -123,7 +120,7 @@ namespace rec MiloneLang
     | Cons
       of Pat<'a> * Pat<'a> * itemTy:Ty * 'a
     | Tuple
-      of Pat<'a> * Pat<'a> * tupleTy:Ty * 'a
+      of Pat<'a> list * tupleTy:Ty * 'a
     | Anno
       of Pat<'a> * Ty * 'a
 
@@ -163,6 +160,8 @@ namespace rec MiloneLang
       of Expr<'a> * Expr<'a> list * Ty * 'a
     | Op
       of Op * Expr<'a> * Expr<'a> * Ty * 'a
+    | Tuple
+      of Expr<'a> list * Ty * 'a
     /// Type annotation `x : 'x`.
     | Anno
       of Expr<'a> * Ty * 'a
@@ -185,7 +184,7 @@ namespace rec MiloneLang
     | List
       of MTy
     | Tuple
-      of MTy * MTy
+      of MTy list
 
   [<RequireQualifiedAccess>]
   type MPrim =
