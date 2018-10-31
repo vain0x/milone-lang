@@ -198,6 +198,10 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MUniOp =
     | Not
+    | StrLen
+    | ListIsEmpty
+    | ListHead
+    | ListTail
 
   /// Operator in middle IR.
   /// Operands must be int.
@@ -239,14 +243,6 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of serial:int * MTy * 'a
-    | StrLen
-      of MExpr<'a> * 'a
-    | ListIsEmpty
-      of MExpr<'a> * itemTy:MTy * 'a
-    | ListHead
-      of MExpr<'a> * itemTy:MTy * 'a
-    | ListTail
-      of MExpr<'a> * itemTy:MTy * 'a
     /// Projection. Gets an element of tuple.
     | Proj
       of MExpr<'a> * int * elemTy:MTy * 'a
@@ -310,6 +306,10 @@ namespace rec MiloneLang
     | Printf
 
   [<RequireQualifiedAccess>]
+  type CUniOp =
+    | Not
+
+  [<RequireQualifiedAccess>]
   type COp = MOp
 
   /// Expression in C language.
@@ -342,7 +342,7 @@ namespace rec MiloneLang
     | Call
       of CExpr * args:CExpr list
     | UniOp
-      of MUniOp * CExpr
+      of CUniOp * CExpr
     | Op
       of COp * CExpr * CExpr
 

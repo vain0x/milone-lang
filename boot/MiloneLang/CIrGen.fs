@@ -147,22 +147,6 @@ let genExprDefault ctx ty =
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
 
-let genExprStrLen ctx expr =
-  let expr, ctx = genExpr ctx expr
-  CExpr.Call (CExpr.Ref "strlen", [expr]), ctx
-
-let genExprListIsEmpty ctx expr =
-  let expr, ctx = genExpr ctx expr
-  CExpr.UniOp (MUniOp.Not, expr), ctx
-
-let genExprListHead ctx expr =
-  let expr, ctx = genExpr ctx expr
-  CExpr.Arrow (expr, "head"), ctx
-
-let genExprListTail ctx expr =
-  let expr, ctx = genExpr ctx expr
-  CExpr.Arrow (expr, "tail"), ctx
-
 /// `tuple.ti`
 let genExprProj ctx expr index _ =
   let expr, ctx = genExpr ctx expr
@@ -203,9 +187,19 @@ let genExprCallStrAdd ctx l r =
   let callExpr = CExpr.Call (strAddRef, [l; r])
   callExpr, ctx
 
-let genExprUniOp ctx arg =
+let genExprUniOp ctx op arg =
   let arg, ctx = genExpr ctx arg
-  CExpr.UniOp (MUniOp.Not, arg), ctx
+  match op with
+  | MUniOp.Not ->
+    CExpr.UniOp (CUniOp.Not, arg), ctx
+  | MUniOp.StrLen ->
+    CExpr.Call (CExpr.Ref "strlen", [arg]), ctx
+  | MUniOp.ListIsEmpty ->
+    CExpr.UniOp (CUniOp.Not, arg), ctx
+  | MUniOp.ListHead ->
+    CExpr.Arrow (arg, "head"), ctx
+  | MUniOp.ListTail ->
+    CExpr.Arrow (arg, "tail"), ctx
 
 let genExprOp ctx op first second ty loc =
   // Currently no support of non-int add/cmp/etc.
@@ -247,14 +241,6 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.StrLen (expr, _) ->
-    genExprStrLen ctx expr
-  | MExpr.ListIsEmpty (expr, _, _) ->
-    genExprListIsEmpty ctx expr
-  | MExpr.ListHead (expr, _, _) ->
-    genExprListHead ctx expr
-  | MExpr.ListTail (expr, _, _) ->
-    genExprListTail ctx expr
   | MExpr.Proj (expr, index, _, a) ->
     genExprProj ctx expr index a
   | MExpr.Index (l, r, _, _) ->
@@ -265,8 +251,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprCallStrAdd ctx l r
   | MExpr.Call (callee, args, ty, _) ->
     genExprCall ctx callee args ty
-  | MExpr.UniOp (MUniOp.Not, arg, _, _) ->
-    genExprUniOp ctx arg
+  | MExpr.UniOp (op, arg, _, _) ->
+    genExprUniOp ctx op arg
   | MExpr.Op (op, first, second, ty, loc) ->
     genExprOp ctx op first second ty loc
   | MExpr.Prim _

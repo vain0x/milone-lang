@@ -136,7 +136,7 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExprList acc 0 ", " args
     let acc = acc *- ")"
     acc
-  | CExpr.UniOp (MUniOp.Not, arg) ->
+  | CExpr.UniOp (CUniOp.Not, arg) ->
     let acc = acc *- "!("
     let acc = cprintExpr acc arg
     let acc = acc *- ")"

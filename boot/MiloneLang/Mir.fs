@@ -106,10 +106,6 @@ let mexprExtract expr =
   | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.Prim (_, loc) -> MTy.Unit, loc // FIXME: incorrect type
   | MExpr.Ref (_, ty, loc) -> ty, loc
-  | MExpr.StrLen (_, loc) -> MTy.Int, loc
-  | MExpr.ListIsEmpty (_, itemTy, loc) -> MTy.List itemTy, loc
-  | MExpr.ListHead (_, itemTy, loc) -> MTy.List itemTy, loc
-  | MExpr.ListTail (_, itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.Proj (_, _, elemTy, loc) -> elemTy, loc
   | MExpr.Index (_, _, ty, loc) -> ty, loc
   | MExpr.Call (_, _, ty, loc) -> ty, loc
@@ -152,12 +148,13 @@ let projExpr expr index resultTy loc =
 
 let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let itemTy = unboxTy itemTy
-  let isEmpty = MExpr.ListIsEmpty (expr, itemTy, loc)
+  let listTy = MTy.List itemTy
+  let isEmpty = MExpr.UniOp (MUniOp.ListIsEmpty, expr, MTy.Bool, loc)
   let nonEmpty = MExpr.UniOp (MUniOp.Not, isEmpty, MTy.Bool, loc)
   let gotoStmt = MStmt.GotoUnless (nonEmpty, endLabel, loc)
   let ctx = ctxAddStmt ctx gotoStmt
-  let head = MExpr.ListHead (expr, itemTy, loc)
-  let tail = MExpr.ListTail (expr, itemTy, loc)
+  let head = MExpr.UniOp (MUniOp.ListHead, expr, itemTy, loc)
+  let tail = MExpr.UniOp (MUniOp.ListTail, expr, listTy, loc)
   let _, ctx = mirifyPat ctx endLabel l head
   let _, ctx = mirifyPat ctx endLabel r tail
   false, ctx
@@ -179,7 +176,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
   | Pat.Nil (itemTy, loc) ->
-    let isEmptyExpr = MExpr.ListIsEmpty (expr, unboxTy itemTy, loc)
+    let isEmptyExpr = MExpr.UniOp (MUniOp.ListIsEmpty, expr, unboxTy (Ty.List itemTy), loc)
     let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
@@ -292,7 +289,7 @@ let mirifyExprNav ctx sub mes ty loc =
   let sub, ctx = mirifyExpr ctx sub
   match subTy, mes with
   | Ty.Str, "Length" ->
-    MExpr.StrLen (sub, loc), ctx
+    MExpr.UniOp (MUniOp.StrLen, sub, MTy.Int, loc), ctx
   | _ ->
     failwithf "Never nav %A" (sub, mes, ty, loc)
 
