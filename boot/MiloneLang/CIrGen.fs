@@ -121,7 +121,8 @@ let cOpFrom op =
   | MOp.Lt -> COp.Lt
   | MOp.Le -> COp.Le
   | MOp.StrAdd
-  | MOp.StrCmp -> failwith "Never"
+  | MOp.StrCmp
+  | MOp.StrIndex -> failwith "Never"
 
 let callPrintf format args =
   let format = CExpr.Str (format + "\n")
@@ -159,12 +160,6 @@ let genExprDefault ctx ty =
   | MTy.Tuple _ ->
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
-
-/// `x[i]`
-let genExprIndex ctx l r =
-  let l, ctx = genExpr ctx l
-  let r, ctx = genExpr ctx r
-  CExpr.Index (l, r), ctx
 
 let genExprCall ctx callee args ty =
   let rec genArgs acc ctx args =
@@ -232,6 +227,10 @@ let genExprOp ctx op l r =
     genExprOpAsCall ctx "str_add" l r
   | MOp.StrCmp ->
     genExprOpAsCall ctx "str_cmp" l r
+  | MOp.StrIndex ->
+    let l, ctx = genExpr ctx l
+    let r, ctx = genExpr ctx r
+    CExpr.Index (l, r), ctx
   | _ ->
     let l, ctx = genExpr ctx l
     let r, ctx = genExpr ctx r
@@ -267,8 +266,6 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.Index (l, r, _, _) ->
-    genExprIndex ctx l r
   | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Value (Value.Str format, _)) :: args, _, _) ->
     genExprCallPrintfn ctx format args
   | MExpr.Call (callee, args, ty, _) ->

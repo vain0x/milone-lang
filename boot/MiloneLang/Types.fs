@@ -235,6 +235,7 @@ namespace rec MiloneLang
     | StrAdd
     /// Compare two strings.
     | StrCmp
+    | StrIndex
 
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
@@ -252,8 +253,6 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of serial:int * MTy * 'a
-    | Index
-      of MExpr<'a> * MExpr<'a> * itemTy:MTy * 'a
     /// Call a function.
     /// This must occur in variable initializer if impure.
     | Call

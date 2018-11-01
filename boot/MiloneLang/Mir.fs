@@ -103,7 +103,6 @@ let mexprExtract expr =
   | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.Prim (_, loc) -> MTy.Unit, loc // FIXME: incorrect type
   | MExpr.Ref (_, ty, loc) -> ty, loc
-  | MExpr.Index (_, _, ty, loc) -> ty, loc
   | MExpr.Call (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
   | MExpr.Op (_, _, _, ty, loc) -> ty, loc
@@ -297,7 +296,7 @@ let mirifyExprIndex ctx l r _ loc =
   | Ty.Str, Ty.Int ->
     let l, ctx = mirifyExpr ctx l
     let r, ctx = mirifyExpr ctx r
-    MExpr.Index (l, r, MTy.Char, loc), ctx
+    MExpr.Op (MOp.StrIndex, l, r, MTy.Char, loc), ctx
   | _ ->
     failwith "unimpl non-string indexing"
 
