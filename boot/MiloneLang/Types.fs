@@ -307,11 +307,6 @@ namespace rec MiloneLang
       of ident:string
 
   [<RequireQualifiedAccess>]
-  type CPrim =
-    | Malloc
-    | Printf
-
-  [<RequireQualifiedAccess>]
   type CUniOp =
     | Not
     | Deref
@@ -330,8 +325,6 @@ namespace rec MiloneLang
       of char
     | Str
       of string
-    | Prim
-      of CPrim
     | Ref
       of string
     /// Projection. Get an element from tuple box.

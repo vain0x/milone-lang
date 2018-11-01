@@ -102,10 +102,6 @@ let rec cprintExpr acc expr: string list =
     cprintExprStr acc value
   | CExpr.Ref (value) ->
     acc *- value
-  | CExpr.Prim CPrim.Malloc ->
-    acc *- "malloc"
-  | CExpr.Prim CPrim.Printf ->
-    acc *- "printf"
   | CExpr.Proj (left, index) ->
     let acc = cprintExpr acc left
     acc *- ".t" *- string index

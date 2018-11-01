@@ -111,7 +111,7 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
 
 let callPrintf format args =
   let format = CExpr.Str (format + "\n")
-  CStmt.Expr (CExpr.Call (CExpr.Prim CPrim.Printf, format :: args))
+  CStmt.Expr (CExpr.Call (CExpr.Ref "printf", format :: args))
 
 let ctxFreshName (ctx: Ctx) (ident: string) =
   let serial = ctx.VarSerial + 1
