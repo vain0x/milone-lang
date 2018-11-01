@@ -42,7 +42,7 @@ let tyList ty =
 let tyTuple itemTys =
   Ty.Tuple itemTys
 
-let patInt value = Pat.Int (value, ())
+let patInt value = Pat.Value (Value.Int value, ())
 
 let patNil = Pat.Nil (noTy, ())
 
@@ -51,10 +51,10 @@ let patTuple itemPats = Pat.Tuple (itemPats, noTy, ())
 let patCons l r = Pat.Cons (l, r, noTy, ())
 
 let exprInt value =
-  Expr.Int (value, ())
+  Expr.Value (Value.Int value, ())
 
 let exprStr value =
-  Expr.Str (value, ())
+  Expr.Value (Value.Str value, ())
 
 let exprRef ident =
   Expr.Ref (ident, noSerial, noTy, ())

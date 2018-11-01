@@ -83,9 +83,6 @@ let ctxUniqueName (ctx: Ctx) serial =
     | None -> ""
   sprintf "%s_%d" ident serial
 
-let tyOf expr =
-  Typing.tyOf expr
-
 let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
   match ty with
   | MTy.Unit
@@ -235,18 +232,18 @@ let genExprList ctx exprs =
 
 let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
   match arg with
+  | MExpr.Value (Value.Int value, _) ->
+    CExpr.Int value, ctx
+  | MExpr.Value (Value.Char value, _) ->
+    CExpr.Char value, ctx
+  | MExpr.Value (Value.Str value, _) ->
+    CExpr.Str value, ctx
+  | MExpr.Value (Value.Bool false, _) ->
+    CExpr.Int 0, ctx
+  | MExpr.Value (Value.Bool true, _) ->
+    CExpr.Int 1, ctx
   | MExpr.Unit (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Int (value, _) ->
-    CExpr.Int value, ctx
-  | MExpr.Char (value, _) ->
-    CExpr.Char value, ctx
-  | MExpr.Str (value, _) ->
-    CExpr.Str value, ctx
-  | MExpr.Bool (false, _) ->
-    CExpr.Int 0, ctx
-  | MExpr.Bool (true, _) ->
-    CExpr.Int 1, ctx
   | MExpr.Nil _ ->
     CExpr.Ref "NULL", ctx
   | MExpr.Prim (MPrim.Exit, _) ->
@@ -261,7 +258,7 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprProj ctx expr index a
   | MExpr.Index (l, r, _, _) ->
     genExprIndex ctx l r
-  | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Str (format, _)) :: args, _, _) ->
+  | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Value (Value.Str format, _)) :: args, _, _) ->
     genExprCallPrintfn ctx format args
   | MExpr.Call (MExpr.Prim (MPrim.StrAdd, _), [l; r], _, _) ->
     genExprCallStrAdd ctx l r

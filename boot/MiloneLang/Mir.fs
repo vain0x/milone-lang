@@ -99,10 +99,7 @@ let mopFrom op =
 let mexprExtract expr =
   match expr with
   | MExpr.Unit (ty, loc) -> ty, loc
-  | MExpr.Bool (_, loc) -> MTy.Bool, loc
-  | MExpr.Int (_, loc) -> MTy.Int, loc
-  | MExpr.Char (_, loc) -> MTy.Char, loc
-  | MExpr.Str (_, loc) -> MTy.Str, loc
+  | MExpr.Value (value, loc) -> unboxTy (Parsing.valueTy value), loc
   | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.Prim (_, loc) -> MTy.Unit, loc // FIXME: incorrect type
   | MExpr.Ref (_, ty, loc) -> ty, loc
@@ -170,8 +167,8 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
   | Pat.Ident ("_", _, _, _) ->
     // Discard result.
     true, ctx
-  | Pat.Int (value, loc) ->
-    let intExpr = MExpr.Int (value, loc)
+  | Pat.Value (Value.Int value, loc) ->
+    let intExpr = MExpr.Value (Value.Int value, loc)
     let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, MTy.Bool, loc)
     let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
@@ -198,6 +195,8 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
       | _ ->
         failwith "Never"
     go true ctx 0 itemPats itemTys
+  | Pat.Value _ ->
+    failwith "unimpl"
   | Pat.Tuple _ ->
     failwith "Never: Tuple pattern must be of tuple type."
   | Pat.Anno _ ->
@@ -248,7 +247,7 @@ let mirifyExprIf ctx pred thenCl elseCl ty loc =
 
 let mstmtExit (ty: MTy) loc =
   let exitFun = MExpr.Prim (MPrim.Exit, loc)
-  let one = MExpr.Int (1, loc)
+  let one = MExpr.Value (Value.Int 1, loc)
   let callExpr = MExpr.Call (exitFun, [one], ty, loc)
   MStmt.Expr (callExpr, loc)
 
@@ -335,12 +334,12 @@ let mirifyExprCall ctx callee args ty loc =
 
 /// l && r ==> if l then r else false
 let mirifyExprOpAnd ctx l r ty loc =
-  let falseExpr = Expr.Bool (false, loc)
+  let falseExpr = Expr.Value (Value.Bool false, loc)
   mirifyExprIf ctx l r falseExpr ty loc
 
 /// l || r ==> if l then true else r
 let mirifyExprOpOr ctx l r ty loc =
-  let trueExpr = Expr.Bool (true, loc)
+  let trueExpr = Expr.Value (Value.Bool true, loc)
   mirifyExprIf ctx l trueExpr r ty loc
 
 let mirifyExprOpCons ctx l r ty loc =
@@ -389,7 +388,7 @@ let mirifyExprOpStrAdd ctx _op l r (_, loc) =
 let mirifyExprOpStrCmp ctx op l r (ty, loc) =
   let strCmp = MExpr.Prim (MPrim.StrCmp, loc)
   let strCmpExpr = MExpr.Call (strCmp, [l; r], MTy.Int, loc)
-  let zeroExpr = MExpr.Int (0, loc)
+  let zeroExpr = MExpr.Value (Value.Int 0, loc)
   let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, ty, loc)
   opExpr, ctx
 
@@ -485,16 +484,10 @@ let mirifyExprLetFun ctx pat pats body letLoc =
 
 let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   match expr with
+  | Expr.Value (value, loc) ->
+    MExpr.Value (value, loc), ctx
   | Expr.Unit loc ->
     MExpr.Unit (MTy.Unit, loc), ctx
-  | Expr.Bool (value, loc) ->
-    MExpr.Bool (value, loc), ctx
-  | Expr.Int (value, loc) ->
-    MExpr.Int (value, loc), ctx
-  | Expr.Char (value, loc) ->
-    MExpr.Char (value, loc), ctx
-  | Expr.Str (value, loc) ->
-    MExpr.Str (value, loc), ctx
   | Expr.Prim (PrimFun.Printfn, _, loc) ->
     MExpr.Prim (MPrim.Printfn, loc), ctx
   | Expr.Ref (_, serial, ty, loc) ->

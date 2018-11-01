@@ -112,10 +112,10 @@ namespace rec MiloneLang
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
   type Pat<'a> =
+    | Value
+      of Value * 'a
     | Unit
       of 'a
-    | Int
-      of int * 'a
     | Nil
       of itemTy:Ty * 'a
     | Ident
@@ -127,19 +127,25 @@ namespace rec MiloneLang
     | Anno
       of Pat<'a> * Ty * 'a
 
+  /// Value in AST.
+  [<RequireQualifiedAccess>]
+  type Value =
+    | Bool
+      of bool
+    | Int
+      of int
+    | Char
+      of char
+    | Str
+      of string
+
   /// Expression in AST. `a` is loc, ty, etc.
   [<RequireQualifiedAccess>]
   type Expr<'a> =
+    | Value
+      of Value * 'a
     | Unit
       of 'a
-    | Bool
-      of bool * 'a
-    | Int
-      of int * 'a
-    | Char
-      of char * 'a
-    | Str
-      of string * 'a
     /// Primitive.
     | Prim
       of PrimFun * Ty * 'a
@@ -230,17 +236,11 @@ namespace rec MiloneLang
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
   type MExpr<'a> =
+    | Value
+      of Value * 'a
     /// Default value of the type.
     | Unit
       of MTy * 'a
-    | Bool
-      of bool * 'a
-    | Int
-      of int * 'a
-    | Char
-      of char * 'a
-    | Str
-      of string * 'a
     | Nil
       of itemTy:MTy * 'a
     /// Primitive.

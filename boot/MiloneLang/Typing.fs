@@ -196,10 +196,10 @@ let inferPatCons ctx l r loc listTy =
 
 let inferPat ctx pat ty =
   match pat with
-  | Pat.Unit _
-  | Pat.Int _ ->
-    let ctx = unifyTy ctx ty (patTy pat)
-    pat, ctx
+  | Pat.Unit _ ->
+    pat, unifyTy ctx ty Ty.Unit
+  | Pat.Value (value, _) ->
+    pat, unifyTy ctx ty (Parsing.valueTy value)
   | Pat.Nil (_, loc) ->
     let itemTy, _, ctx = freshTyVar "item" ctx
     let ctx = unifyTy ctx ty (Ty.List itemTy)
@@ -317,7 +317,7 @@ let inferAppExit ctx calleeLoc arg callLoc callTy =
 
 let inferAppPrintfn ctx args loc callTy =
   match args with
-  | Expr.Str (format, _) :: _ ->
+  | Expr.Value (Value.Str format, _) :: _ ->
     let ctx = unifyTy ctx callTy Ty.Unit
     let funTy =
       // FIXME: too rough
@@ -480,13 +480,10 @@ let inferAndThen ctx loc exprs lastTy =
 
 let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   match expr with
-  | Expr.Unit _
-  | Expr.Bool _
-  | Expr.Int _
-  | Expr.Char _
-  | Expr.Str _ ->
-    let ctx = unifyTy ctx (tyOf expr) ty
-    expr, ctx
+  | Expr.Value (value, _) ->
+    expr, unifyTy ctx (Parsing.valueTy value) ty
+  | Expr.Unit _ ->
+    expr, unifyTy ctx ty Ty.Unit
   | Expr.Prim (PrimFun.Box, _, loc) ->
     inferPrimBox ctx loc ty
   | Expr.Prim (PrimFun.Unbox, _, loc) ->

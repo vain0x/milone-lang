@@ -11,10 +11,10 @@ let noTy = Ty.Error
 
 let patExtract (pat: Pat<'a>): Ty * 'a =
   match pat with
+  | Pat.Value (value, a) ->
+    valueTy value, a
   | Pat.Unit a ->
     Ty.Unit, a
-  | Pat.Int (_, a) ->
-    Ty.Int, a
   | Pat.Nil (itemTy, a) ->
     Ty.List itemTy, a
   | Pat.Ident (_, _, ty, a) ->
@@ -29,10 +29,10 @@ let patExtract (pat: Pat<'a>): Ty * 'a =
 let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
   let rec go pat =
     match pat with
+    | Pat.Value (value, a) ->
+      Pat.Value (value, g a)
     | Pat.Unit a ->
       Pat.Unit (g a)
-    | Pat.Int (value, a) ->
-      Pat.Int (value, g a)
     | Pat.Nil (itemTy, a) ->
       Pat.Nil (f itemTy, g a)
     | Pat.Ident (name, serial, ty, a) ->
@@ -45,18 +45,19 @@ let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
       Pat.Anno (go pat, f ty, g a)
   go pat
 
+let valueTy (value: Value): Ty =
+  match value with
+  | Value.Bool _ -> Ty.Bool
+  | Value.Int _ -> Ty.Int
+  | Value.Char _ -> Ty.Char
+  | Value.Str _ -> Ty.Str
+
 let exprExtract (expr: Expr<'a>): Ty * 'a =
   match expr with
+  | Expr.Value (value, a) ->
+    valueTy value, a
   | Expr.Unit a ->
     Ty.Unit, a
-  | Expr.Bool (_, a) ->
-    Ty.Bool, a
-  | Expr.Int (_, a) ->
-    Ty.Int, a
-  | Expr.Char (_, a) ->
-    Ty.Char, a
-  | Expr.Str (_, a) ->
-    Ty.Str, a
   | Expr.Prim (_, ty, a) ->
     ty, a
   | Expr.Ref (_, _, ty, a) ->
@@ -89,16 +90,10 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
     patMap f g pat
   let rec go expr =
     match expr with
+    | Expr.Value (value, a) ->
+      Expr.Value (value, g a)
     | Expr.Unit a ->
       Expr.Unit (g a)
-    | Expr.Bool (value, a) ->
-      Expr.Bool (value, g a)
-    | Expr.Int (value, a) ->
-      Expr.Int (value, g a)
-    | Expr.Char (value, a) ->
-      Expr.Char (value, g a)
-    | Expr.Str (value, a) ->
-      Expr.Str (value, g a)
     | Expr.Prim (value, ty, a) ->
       Expr.Prim (value, f ty, g a)
     | Expr.Ref (ident, serial, ty, a) ->
@@ -262,7 +257,7 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Pat.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
-    Pat.Int (value, loc), tokens
+    Pat.Value (Value.Int value, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
     Pat.Ident (value, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
@@ -427,15 +422,15 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Expr.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
-    Expr.Int (value, loc), tokens
+    Expr.Value (Value.Int value, loc), tokens
   | (Token.Char value, loc) :: tokens ->
-    Expr.Char (value, loc), tokens
+    Expr.Value (Value.Char value, loc), tokens
   | (Token.Str value, loc) :: tokens ->
-    Expr.Str (value, loc), tokens
+    Expr.Value (Value.Str value, loc), tokens
   | (Token.Ident "false", loc) :: tokens ->
-    Expr.Bool (false, loc), tokens
+    Expr.Value (Value.Bool false, loc), tokens
   | (Token.Ident "true", loc) :: tokens ->
-    Expr.Bool (true, loc), tokens
+    Expr.Value (Value.Bool true, loc), tokens
   | (Token.Ident "exit", loc) :: tokens ->
     Expr.Prim (PrimFun.Exit, noTy, loc), tokens
   | (Token.Ident "box", loc) :: tokens ->
