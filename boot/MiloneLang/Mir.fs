@@ -244,10 +244,10 @@ let mirifyExprIf ctx pred thenCl elseCl ty loc =
 
   temp, ctx
 
-let mstmtExit (ty: MTy) loc =
-  let exitFun = MExpr.Prim (MPrim.Exit, loc)
+/// exit(1);
+let mstmtExit1 (ty: MTy) loc =
   let one = MExpr.Value (Value.Int 1, loc)
-  let callExpr = MExpr.Call (exitFun, [one], ty, loc)
+  let callExpr = MExpr.UniOp (MUniOp.Exit, one, ty, loc)
   MStmt.Expr (callExpr, loc)
 
 let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) ty loc =
@@ -276,7 +276,7 @@ let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) ty loc =
   let ctx =
     if cover1 || cover2 then ctx else
       let ctx = ctxAddStmt ctx nextLabelStmt
-      let ctx = ctxAddStmt ctx (mstmtExit ty loc)
+      let ctx = ctxAddStmt ctx (mstmtExit1 ty loc)
       ctx
 
   // End of match.
@@ -303,9 +303,8 @@ let mirifyExprIndex ctx l r _ loc =
 
 let mirifyExprCallExit ctx exitLoc arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  let callee = MExpr.Prim (MPrim.Exit, exitLoc)
-  let callExpr = MExpr.Call (callee, [arg], unboxTy ty, loc)
-  let ctx = ctxAddStmt ctx (MStmt.Expr (callExpr, loc))
+  let opExpr = MExpr.UniOp (MUniOp.Exit, arg, unboxTy ty, exitLoc)
+  let ctx = ctxAddStmt ctx (MStmt.Expr (opExpr, loc))
   MExpr.Unit (unboxTy ty, loc), ctx
 
 let mirifyExprCallBox ctx arg ty loc =

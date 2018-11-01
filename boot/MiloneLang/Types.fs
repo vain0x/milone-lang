@@ -198,7 +198,6 @@ namespace rec MiloneLang
 
   [<RequireQualifiedAccess>]
   type MPrim =
-    | Exit
     | Printfn
 
   [<RequireQualifiedAccess>]
@@ -213,6 +212,7 @@ namespace rec MiloneLang
     | ListIsEmpty
     | ListHead
     | ListTail
+    | Exit
 
   /// Operator in middle IR.
   /// Operands must be int.

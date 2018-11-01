@@ -1,6 +1,6 @@
 int main() {
-    int le_3 = (strcmp("a", "b") < 0);
-    int eq_4 = (strcmp("o", "o") == 0);
+    int le_3 = (str_cmp("a", "b") < 0);
+    int eq_4 = (str_cmp("o", "o") == 0);
     int if_5;
     int if_6;
     if (!(le_3)) goto else_3;

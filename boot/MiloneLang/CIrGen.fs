@@ -223,6 +223,8 @@ let genExprUniOp ctx op arg ty =
     CExpr.Arrow (arg, "head"), ctx
   | MUniOp.ListTail ->
     CExpr.Arrow (arg, "tail"), ctx
+  | MUniOp.Exit ->
+    CExpr.Call (CExpr.Ref "exit", [arg]), ctx
 
 let genExprOp ctx op l r =
   match op with
@@ -261,8 +263,6 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx ty
   | MExpr.Nil _ ->
     CExpr.Ref "NULL", ctx
-  | MExpr.Prim (MPrim.Exit, _) ->
-    CExpr.Ref "exit", ctx
   | MExpr.Ref (_, MTy.Unit, _) ->
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
