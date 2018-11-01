@@ -200,10 +200,6 @@ namespace rec MiloneLang
   type MPrim =
     | Exit
     | Printfn
-    /// Concatenates two strings.
-    | StrAdd
-    /// Compare two strings.
-    | StrCmp
 
   [<RequireQualifiedAccess>]
   type MUniOp =
@@ -235,6 +231,10 @@ namespace rec MiloneLang
     | Lt
     /// Less than or equal to
     | Le
+    /// Concatenates two strings.
+    | StrAdd
+    /// Compare two strings.
+    | StrCmp
 
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]

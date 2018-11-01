@@ -120,6 +120,8 @@ let cOpFrom op =
   | MOp.Ne -> COp.Ne
   | MOp.Lt -> COp.Lt
   | MOp.Le -> COp.Le
+  | MOp.StrAdd
+  | MOp.StrCmp -> failwith "Never"
 
 let callPrintf format args =
   let format = CExpr.Str (format + "\n")
@@ -186,11 +188,10 @@ let genExprCallPrintfn ctx format args =
   let ctx = ctxAddStmt ctx (callPrintf format args)
   genExprDefault ctx MTy.Unit
 
-let genExprCallStrAdd ctx l r =
+let genExprOpAsCall ctx ident l r =
   let l, ctx = genExpr ctx l
   let r, ctx = genExpr ctx r
-  let strAddRef = CExpr.Ref "str_add"
-  let callExpr = CExpr.Call (strAddRef, [l; r])
+  let callExpr = CExpr.Call (CExpr.Ref ident, [l; r])
   callExpr, ctx
 
 let genExprUniOp ctx op arg ty =
@@ -223,12 +224,17 @@ let genExprUniOp ctx op arg ty =
   | MUniOp.ListTail ->
     CExpr.Arrow (arg, "tail"), ctx
 
-let genExprOp ctx op first second ty loc =
-  // Currently no support of non-int add/cmp/etc.
-  let first, ctx = genExpr ctx first
-  let second, ctx = genExpr ctx second
-  let opExpr = CExpr.Op (op, first, second)
-  opExpr, ctx
+let genExprOp ctx op l r =
+  match op with
+  | MOp.StrAdd ->
+    genExprOpAsCall ctx "str_add" l r
+  | MOp.StrCmp ->
+    genExprOpAsCall ctx "str_cmp" l r
+  | _ ->
+    let l, ctx = genExpr ctx l
+    let r, ctx = genExpr ctx r
+    let opExpr = CExpr.Op (cOpFrom op, l, r)
+    opExpr, ctx
 
 let genExprList ctx exprs =
   let rec go results ctx exprs =
@@ -257,8 +263,6 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     CExpr.Ref "NULL", ctx
   | MExpr.Prim (MPrim.Exit, _) ->
     CExpr.Ref "exit", ctx
-  | MExpr.Prim (MPrim.StrCmp, _) ->
-    CExpr.Ref "strcmp", ctx
   | MExpr.Ref (_, MTy.Unit, _) ->
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
@@ -267,14 +271,12 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprIndex ctx l r
   | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Value (Value.Str format, _)) :: args, _, _) ->
     genExprCallPrintfn ctx format args
-  | MExpr.Call (MExpr.Prim (MPrim.StrAdd, _), [l; r], _, _) ->
-    genExprCallStrAdd ctx l r
   | MExpr.Call (callee, args, ty, _) ->
     genExprCall ctx callee args ty
   | MExpr.UniOp (op, arg, ty, _) ->
     genExprUniOp ctx op arg ty
-  | MExpr.Op (op, first, second, ty, loc) ->
-    genExprOp ctx (cOpFrom op) first second ty loc
+  | MExpr.Op (op, l, r, _, _) ->
+    genExprOp ctx op l r
   | MExpr.Prim _
   | MExpr.Call _ ->
     failwithf "unimpl %A" arg

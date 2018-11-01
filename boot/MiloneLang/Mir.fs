@@ -379,14 +379,12 @@ let mirifyExprOpScalar ctx op l r (ty, loc) =
   opExpr, ctx
 
 let mirifyExprOpStrAdd ctx _op l r (_, loc) =
-  let strAdd = MExpr.Prim (MPrim.StrAdd, loc)
-  let strAddExpr = MExpr.Call (strAdd, [l; r], MTy.Str, loc)
+  let strAddExpr = MExpr.Op (MOp.StrAdd, l, r, MTy.Str, loc)
   strAddExpr, ctx
 
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mirifyExprOpStrCmp ctx op l r (ty, loc) =
-  let strCmp = MExpr.Prim (MPrim.StrCmp, loc)
-  let strCmpExpr = MExpr.Call (strCmp, [l; r], MTy.Int, loc)
+  let strCmpExpr = MExpr.Op (MOp.StrCmp, l, r, MTy.Int, loc)
   let zeroExpr = MExpr.Value (Value.Int 0, loc)
   let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, ty, loc)
   opExpr, ctx
