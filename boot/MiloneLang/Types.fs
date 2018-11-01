@@ -312,7 +312,20 @@ namespace rec MiloneLang
     | Deref
 
   [<RequireQualifiedAccess>]
-  type COp = MOp
+  type COp =
+    | Mul
+    | Div
+    | Mod
+    | Add
+    | Sub
+    //// Equal
+    | Eq
+    /// Not Equal
+    | Ne
+    /// Less than
+    | Lt
+    /// Less than or equal to
+    | Le
 
   /// Expression in C language.
   [<RequireQualifiedAccess>]

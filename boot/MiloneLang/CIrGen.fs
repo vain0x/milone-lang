@@ -109,6 +109,18 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
     | Some ty ->
       ty, ctx
 
+let cOpFrom op =
+  match op with
+  | MOp.Mul -> COp.Mul
+  | MOp.Div -> COp.Div
+  | MOp.Mod -> COp.Mod
+  | MOp.Add -> COp.Add
+  | MOp.Sub -> COp.Sub
+  | MOp.Eq -> COp.Eq
+  | MOp.Ne -> COp.Ne
+  | MOp.Lt -> COp.Lt
+  | MOp.Le -> COp.Le
+
 let callPrintf format args =
   let format = CExpr.Str (format + "\n")
   CStmt.Expr (CExpr.Call (CExpr.Ref "printf", format :: args))
@@ -262,7 +274,7 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
   | MExpr.UniOp (op, arg, ty, _) ->
     genExprUniOp ctx op arg ty
   | MExpr.Op (op, first, second, ty, loc) ->
-    genExprOp ctx op first second ty loc
+    genExprOp ctx (cOpFrom op) first second ty loc
   | MExpr.Prim _
   | MExpr.Call _ ->
     failwithf "unimpl %A" arg
