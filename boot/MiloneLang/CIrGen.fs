@@ -146,11 +146,6 @@ let genExprDefault ctx ty =
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
 
-/// `tuple.ti`
-let genExprProj ctx expr index _ =
-  let expr, ctx = genExpr ctx expr
-  CExpr.Proj (expr, index), ctx
-
 /// `x[i]`
 let genExprIndex ctx l r =
   let l, ctx = genExpr ctx l
@@ -207,6 +202,8 @@ let genExprUniOp ctx op arg ty =
     let valTy, ctx = cty ctx ty
     let deref = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (arg, CTy.Ptr valTy))
     deref, ctx
+  | MUniOp.Proj index ->
+    CExpr.Proj (arg, index), ctx
   | MUniOp.ListIsEmpty ->
     CExpr.UniOp (CUniOp.Not, arg), ctx
   | MUniOp.ListHead ->
@@ -254,8 +251,6 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.Proj (expr, index, _, a) ->
-    genExprProj ctx expr index a
   | MExpr.Index (l, r, _, _) ->
     genExprIndex ctx l r
   | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Value (Value.Str format, _)) :: args, _, _) ->

@@ -211,6 +211,9 @@ namespace rec MiloneLang
     | StrLen
     | Box
     | Unbox
+    /// Projection. Gets an element of tuple.
+    | Proj
+      of int
     | ListIsEmpty
     | ListHead
     | ListTail
@@ -249,9 +252,6 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of serial:int * MTy * 'a
-    /// Projection. Gets an element of tuple.
-    | Proj
-      of MExpr<'a> * int * elemTy:MTy * 'a
     | Index
       of MExpr<'a> * MExpr<'a> * itemTy:MTy * 'a
     /// Call a function.

@@ -103,7 +103,6 @@ let mexprExtract expr =
   | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.Prim (_, loc) -> MTy.Unit, loc // FIXME: incorrect type
   | MExpr.Ref (_, ty, loc) -> ty, loc
-  | MExpr.Proj (_, _, elemTy, loc) -> elemTy, loc
   | MExpr.Index (_, _, ty, loc) -> ty, loc
   | MExpr.Call (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
@@ -142,7 +141,7 @@ let listItemTy ty =
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
 let projExpr expr index resultTy loc =
-  MExpr.Proj (expr, index, unboxTy resultTy, loc)
+  MExpr.UniOp (MUniOp.Proj index, expr, unboxTy resultTy, loc)
 
 let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let itemTy = unboxTy itemTy
