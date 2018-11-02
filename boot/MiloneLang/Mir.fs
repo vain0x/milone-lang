@@ -304,9 +304,11 @@ let mirifyExprCallExit ctx arg ty loc =
   let ctx = ctxAddStmt ctx (MStmt.Expr (opExpr, loc))
   MExpr.Default (unboxTy ty, loc), ctx
 
-let mirifyExprCallBox ctx arg ty loc =
+let mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
-  MExpr.UniOp (MUniOp.Box, arg, unboxTy ty, loc), ctx
+  let temp, tempSerial, ctx = ctxFreshVar ctx "box" MTy.Box loc
+  let ctx = ctxAddStmt ctx (MStmt.LetBox (tempSerial, arg, loc))
+  temp, ctx
 
 let mirifyExprCallUnbox ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg

@@ -128,21 +128,6 @@ let callPrintf format args =
   let format = CExpr.Str (format + "\n")
   CStmt.Expr (CExpr.Call (CExpr.Ref "printf", format :: args))
 
-let ctxFreshName (ctx: Ctx) (ident: string) =
-  let serial = ctx.VarSerial + 1
-  let ctx =
-    {
-      ctx with
-        VarSerial = ctx.VarSerial + 1
-        VarName = ctx.VarName |> Map.add serial ident
-    }
-  let ident = ctxUniqueName ctx serial
-  ident, ctx
-
-let ctxFreshVar (ctx: Ctx) (name: string) =
-  let name, ctx = ctxFreshName ctx name
-  name, CExpr.Ref name, ctx
-
 /// `0`, `NULL`, or `(T) {}`
 let genExprDefault ctx ty =
   match ty with
@@ -201,15 +186,6 @@ let genExprUniOp ctx op arg ty =
     CExpr.UniOp (CUniOp.Not, arg), ctx
   | MUniOp.StrLen ->
     CExpr.Call (CExpr.Ref "strlen", [arg]), ctx
-  | MUniOp.Box ->
-    let tempIdent, temp, ctx = ctxFreshVar ctx "box"
-    let argTy, ctx = cty ctx argTy
-    // void* p = (void*)malloc(sizeof T);
-    let ctx = ctxAddStmt ctx (CStmt.LetAlloc (tempIdent, CTy.Ptr argTy, CTy.Ptr CTy.Void))
-    // *(T*)p = t;
-    let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (temp, CTy.Ptr argTy))
-    let ctx = ctxAddStmt ctx (CStmt.Set (left, arg))
-    temp, ctx
   | MUniOp.Unbox ->
     let valTy, ctx = cty ctx ty
     let deref = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (arg, CTy.Ptr valTy))
@@ -290,6 +266,15 @@ let genStmt ctx stmt =
         Some init, ctx
     let cty, ctx = cty ctx ty
     ctxAddStmt ctx (CStmt.Let (ident, init, cty))
+  | MStmt.LetBox (serial, arg, _) ->
+    let argTy, ctx = cty ctx (Mir.mexprTy arg)
+    let arg, ctx = genExpr ctx arg
+    // void* p = (void*)malloc(sizeof T);
+    let temp = ctxUniqueName ctx serial
+    let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, CTy.Ptr argTy, CTy.Ptr CTy.Void))
+    // *(T*)p = t;
+    let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (CExpr.Ref temp, CTy.Ptr argTy))
+    ctxAddStmt ctx (CStmt.Set (left, arg))
   | MStmt.LetCons (serial, head, tail, itemTy, _) ->
     let temp = ctxUniqueName ctx serial
     let listTy, ctx = cty ctx (MTy.List itemTy)

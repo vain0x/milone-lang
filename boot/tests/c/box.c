@@ -14,11 +14,11 @@ end_if_2:;
 }
 
 int main() {
-    void* box_11 = (void*)malloc(sizeof(int));
-    *(((int*)box_11)) = 2;
-    int call_9 = printIntOrStr_2(1, box_11);
-    void* box_12 = (void*)malloc(sizeof(char*));
-    *(((char**)box_12)) = "Fizz";
-    int call_10 = printIntOrStr_2(0, box_12);
+    void* box_9 = (void*)malloc(sizeof(int));
+    *(((int*)box_9)) = 2;
+    int call_10 = printIntOrStr_2(1, box_9);
+    void* box_11 = (void*)malloc(sizeof(char*));
+    *(((char**)box_11)) = "Fizz";
+    int call_12 = printIntOrStr_2(0, box_11);
     return 0;
 }

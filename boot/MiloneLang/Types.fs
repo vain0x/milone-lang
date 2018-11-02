@@ -209,7 +209,6 @@ namespace rec MiloneLang
   type MUniOp =
     | Not
     | StrLen
-    | Box
     | Unbox
     /// Projection. Get an item of tuple.
     | Proj
@@ -269,6 +268,9 @@ namespace rec MiloneLang
     /// Local variable declaration.
     | LetVal
       of serial:int * init:MExpr<'a> option * MTy * 'a
+    /// `let .. = box x`
+    | LetBox
+      of serial:int * MExpr<'a> * 'a
     /// `let .. = x :: xs`
     | LetCons
       of serial:int * head:MExpr<'a> * tail:MExpr<'a> * itemTy:MTy * 'a
