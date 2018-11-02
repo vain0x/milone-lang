@@ -230,8 +230,6 @@ namespace rec MiloneLang
     /// Default value of the type.
     | Unit
       of MTy * 'a
-    | Nil
-      of itemTy:MTy * 'a
     /// Variable reference.
     | Ref
       of serial:int * MTy * 'a

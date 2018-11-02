@@ -100,7 +100,6 @@ let mexprExtract expr =
   match expr with
   | MExpr.Unit (ty, loc) -> ty, loc
   | MExpr.Value (value, loc) -> unboxTy (Parsing.valueTy value), loc
-  | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
   | MExpr.Ref (_, ty, loc) -> ty, loc
   | MExpr.Call (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
@@ -495,7 +494,7 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   | Expr.Ref (_, serial, ty, loc) ->
     MExpr.Ref (serial, unboxTy ty, loc), ctx
   | Expr.List ([], itemTy, loc) ->
-    MExpr.Nil (unboxTy itemTy, loc), ctx
+    MExpr.Unit (MTy.List (unboxTy itemTy), loc), ctx
   | Expr.List (items, itemTy, loc) ->
     mirifyExprList ctx items itemTy loc
   | Expr.If (pred, thenCl, elseCl, ty, loc) ->

@@ -264,8 +264,6 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     CExpr.Int 1, ctx
   | MExpr.Unit (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Nil _ ->
-    CExpr.Ref "NULL", ctx
   | MExpr.Ref (_, MTy.Unit, _) ->
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
