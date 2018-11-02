@@ -98,7 +98,7 @@ let mopFrom op =
 
 let mexprExtract expr =
   match expr with
-  | MExpr.Unit (ty, loc) -> ty, loc
+  | MExpr.Default (ty, loc) -> ty, loc
   | MExpr.Value (value, loc) -> unboxTy (Parsing.valueTy value), loc
   | MExpr.Ref (_, ty, loc) -> ty, loc
   | MExpr.Call (_, _, ty, loc) -> ty, loc
@@ -302,7 +302,7 @@ let mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
   let opExpr = MExpr.UniOp (MUniOp.Exit, arg, unboxTy ty, loc)
   let ctx = ctxAddStmt ctx (MStmt.Expr (opExpr, loc))
-  MExpr.Unit (unboxTy ty, loc), ctx
+  MExpr.Default (unboxTy ty, loc), ctx
 
 let mirifyExprCallBox ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
@@ -434,7 +434,7 @@ let mirifyExprLetVal ctx pat init letLoc =
   let init, ctx = mirifyExpr ctx init
   match mirifyPat ctx "_never_" pat init with
   | true, ctx ->
-    MExpr.Unit (MTy.Unit, letLoc), ctx
+    MExpr.Default (MTy.Unit, letLoc), ctx
   | false, _ ->
     failwithf "Let pattern must be exhaustive for now %A" pat
 
@@ -481,7 +481,7 @@ let mirifyExprLetFun ctx pat pats body letLoc =
     let ctx = ctxRollBack ctx bodyCtx
     let decl = MDecl.LetFun (calleeSerial, args, resultTy, body, letLoc)
     let ctx = ctxAddDecl ctx decl
-    MExpr.Unit (MTy.Unit, letLoc), ctx
+    MExpr.Default (MTy.Unit, letLoc), ctx
   | _ ->
     failwith "First pattern of `let` for function must be an identifier."
 
@@ -490,11 +490,11 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   | Expr.Value (value, loc) ->
     MExpr.Value (value, loc), ctx
   | Expr.Unit loc ->
-    MExpr.Unit (MTy.Unit, loc), ctx
+    MExpr.Default (MTy.Unit, loc), ctx
   | Expr.Ref (_, serial, ty, loc) ->
     MExpr.Ref (serial, unboxTy ty, loc), ctx
   | Expr.List ([], itemTy, loc) ->
-    MExpr.Unit (MTy.List (unboxTy itemTy), loc), ctx
+    MExpr.Default (MTy.List (unboxTy itemTy), loc), ctx
   | Expr.List (items, itemTy, loc) ->
     mirifyExprList ctx items itemTy loc
   | Expr.If (pred, thenCl, elseCl, ty, loc) ->

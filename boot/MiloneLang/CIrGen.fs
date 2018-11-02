@@ -262,7 +262,7 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     CExpr.Int 0, ctx
   | MExpr.Value (Value.Bool true, _) ->
     CExpr.Int 1, ctx
-  | MExpr.Unit (ty, _) ->
+  | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
   | MExpr.Ref (_, MTy.Unit, _) ->
     genExprDefault ctx MTy.Unit

@@ -227,8 +227,7 @@ namespace rec MiloneLang
   type MExpr<'a> =
     | Value
       of Value * 'a
-    /// Default value of the type.
-    | Unit
+    | Default
       of MTy * 'a
     /// Variable reference.
     | Ref
