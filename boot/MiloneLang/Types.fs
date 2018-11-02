@@ -3,6 +3,7 @@ namespace rec MiloneLang
   /// Location = (rowIndex, columnIndex).
   type Loc = int * int
 
+  /// Word or punctuation in source code.
   [<RequireQualifiedAccess>]
   type Token =
     | Int
@@ -67,38 +68,47 @@ namespace rec MiloneLang
     | List
       of Ty
 
+  /// Precedence level of binary operators.
   [<RequireQualifiedAccess>]
   type OpLevel =
     | Mul
     | Add
     | Cons
-    /// Comparison
+    /// Comparison.
     | Cmp
     | And
     | Or
 
+  /// Binary operators in AST.
   [<RequireQualifiedAccess>]
   type Op =
+    /// `*` Multiplier
     | Mul
+    /// `/` Divisor
     | Div
+    /// `%` Modulo
     | Mod
+    /// `+` Addition
     | Add
+    /// `-` Subtract
     | Sub
-    /// Equal
+    /// `=` Equal
     | Eq
-    /// Not Equal
+    /// `<>` Not Equal
     | Ne
-    /// Less than
+    /// `<` Less than
     | Lt
-    /// Less than or equal to
+    /// `<=` Less than or equal to
     | Le
-    /// Greater than
+    /// `>` Greater than
     | Gt
-    /// Greater than or equal to
+    /// `>=` Greater than or equal to
     | Ge
+    /// `&&`
     | And
+    /// `||`
     | Or
-    /// `::`
+    /// `::` Construction
     | Cons
 
   /// Pattern in AST.
@@ -108,14 +118,18 @@ namespace rec MiloneLang
       of Value * 'a
     | Unit
       of 'a
+    /// `[]`
     | Nil
       of itemTy:Ty * 'a
+    /// Variable reference pattern or `_`.
     | Ref
       of ident:string * serial:int * Ty * 'a
+    /// `::`
     | Cons
       of Pat<'a> * Pat<'a> * itemTy:Ty * 'a
     | Tuple
       of Pat<'a> list * tupleTy:Ty * 'a
+    /// Type annotation pattern, e.g. `x : int`.
     | Anno
       of Pat<'a> * Ty * 'a
 
@@ -131,7 +145,7 @@ namespace rec MiloneLang
     | Str
       of string
 
-  /// Expression in AST. `a` is loc, ty, etc.
+  /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]
   type Expr<'a> =
     | Value
@@ -143,11 +157,12 @@ namespace rec MiloneLang
       of ident:string * serial:int * Ty * 'a
     | List
       of Expr<'a> list * itemTy:Ty * 'a
+    /// If-then-else. Else clause is `()` if omit.
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * Ty * 'a
     | Match
       of target:Expr<'a> * (Pat<'a> * Expr<'a>) * (Pat<'a> * Expr<'a>) * Ty * 'a
-    /// `r.x`
+    /// `s.m`
     | Nav
       of subject:Expr<'a> * message:string * Ty * 'a
     /// `x.[i]`
@@ -156,8 +171,10 @@ namespace rec MiloneLang
     /// `f x y ..`
     | Call
       of Expr<'a> * Expr<'a> list * Ty * 'a
+    /// Binary operation, e.g. `x + y`.
     | Op
       of Op * Expr<'a> * Expr<'a> * Ty * 'a
+    /// Tuple constructor, e.g. `x, y, z`.
     | Tuple
       of Expr<'a> list * Ty * 'a
     /// Type annotation `x : 'x`.
@@ -178,6 +195,7 @@ namespace rec MiloneLang
     | Char
     | Str
     | Box
+    /// Function type, e.g. `int -> int`.
     | Fun
       of MTy * MTy
     | List
@@ -185,13 +203,15 @@ namespace rec MiloneLang
     | Tuple
       of MTy list
 
+  /// Unary operator in middle IR.
+  /// Or primitive function with single parameter.
   [<RequireQualifiedAccess>]
   type MUniOp =
     | Not
     | StrLen
     | Box
     | Unbox
-    /// Projection. Gets an element of tuple.
+    /// Projection. Get an item of tuple.
     | Proj
       of int
     | ListIsEmpty
@@ -199,8 +219,8 @@ namespace rec MiloneLang
     | ListTail
     | Exit
 
-  /// Operator in middle IR.
-  /// Operands must be int.
+  /// Binary operator in middle IR.
+  /// Or primitive function with two parameters.
   [<RequireQualifiedAccess>]
   type MOp =
     | Mul
@@ -208,21 +228,20 @@ namespace rec MiloneLang
     | Mod
     | Add
     | Sub
-    //// Equal
     | Eq
-    /// Not Equal
     | Ne
-    /// Less than
     | Lt
-    /// Less than or equal to
     | Le
-    /// Concatenates two strings.
+    /// Concatenate two strings.
     | StrAdd
     /// Compare two strings.
     | StrCmp
+    /// Get a char.
     | StrIndex
 
   /// Expression in middle IR.
+  /// Doesn't cause side-effects except for call expressions.
+  /// Doesn't introduce variables.
   [<RequireQualifiedAccess>]
   type MExpr<'a> =
     | Value
@@ -232,8 +251,7 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of serial:int * MTy * 'a
-    /// Call a function.
-    /// This must occur in variable initializer if impure.
+    /// Must occur in variable initializer.
     | Call
       of callee:MExpr<'a> * args:MExpr<'a> list * resultTy:MTy * 'a
     | UniOp
@@ -242,17 +260,19 @@ namespace rec MiloneLang
       of MOp * left:MExpr<'a> * right:MExpr<'a> * resultTy:MTy * 'a
 
   /// Statement in middle IR.
+  /// Doesn't introduce global things, e.g. functions.
   [<RequireQualifiedAccess>]
   type MStmt<'a> =
-    /// Expression statement.
+    /// Statement to evaluate an expression, e.g. `f ();`.
     | Expr
       of MExpr<'a> * 'a
     /// Local variable declaration.
     | LetVal
       of serial:int * init:MExpr<'a> option * MTy * 'a
+    /// `let .. = x :: xs`
     | LetCons
       of serial:int * head:MExpr<'a> * tail:MExpr<'a> * itemTy:MTy * 'a
-    /// Declares a tuple box variable filled by elements.
+    /// `let .. = x, y, ..`
     | LetTuple
       of serial:int * elems:MExpr<'a> list * tupleTy:MTy * 'a
     /// Set to local variable.
@@ -318,7 +338,7 @@ namespace rec MiloneLang
       of string
     | Ref
       of string
-    /// Projection. Get an element from tuple box.
+    /// Projection. Get an item of tuple.
     | Proj
       of CExpr * int
     | Cast
