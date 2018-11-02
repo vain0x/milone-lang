@@ -143,7 +143,7 @@ let ctxFreshVar (ctx: Ctx) (name: string) =
   let name, ctx = ctxFreshName ctx name
   name, CExpr.Ref name, ctx
 
-/// `0` or `(T) {}`
+/// `0`, `NULL`, or `(T) {}`
 let genExprDefault ctx ty =
   match ty with
   | MTy.Unit
@@ -154,8 +154,7 @@ let genExprDefault ctx ty =
   | MTy.Str
   | MTy.Box
   | MTy.List _ ->
-    let ty, ctx = cty ctx ty
-    CExpr.Cast (CExpr.Int 0, ty), ctx
+    CExpr.Ref "NULL", ctx
   | MTy.Fun _
   | MTy.Tuple _ ->
     let ty, ctx = cty ctx ty
