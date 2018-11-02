@@ -210,9 +210,9 @@ let inferPat ctx pat ty =
     let itemTy, _, ctx = freshTyVar "item" ctx
     let ctx = unifyTy ctx ty (Ty.List itemTy)
     Pat.Nil (itemTy, loc), ctx
-  | Pat.Ident (ident, _, _, loc) ->
+  | Pat.Ref (ident, _, _, loc) ->
     let serial, ctx = freshVar ctx ident ty
-    Pat.Ident (ident, serial, ty, loc), ctx
+    Pat.Ref (ident, serial, ty, loc), ctx
   | Pat.Cons (l, r, _, loc) ->
     inferPatCons ctx l r loc ty
   | Pat.Tuple (items, _, loc) ->
@@ -446,7 +446,7 @@ let inferLetFun ctx calleePat argPats body loc unitTy =
       pat :: pats, Ty.Fun (argTy, bodyTy), ctx
 
   match calleePat with
-  | Pat.Ident (callee, _, _, calleeLoc) ->
+  | Pat.Ref (callee, _, _, calleeLoc) ->
     let ctx = unifyTy ctx unitTy Ty.Unit
     let funTy, _, ctx =
       if callee = "main"
@@ -467,7 +467,7 @@ let inferLetFun ctx calleePat argPats body loc unitTy =
 
     let ctx = rollback ctx bodyCtx
 
-    let calleePat = Pat.Ident (callee, serial, funTy, calleeLoc)
+    let calleePat = Pat.Ref (callee, serial, funTy, calleeLoc)
     Expr.Let (calleePat :: argPats, body, loc), ctx
   | _ ->
     failwith "First pattern of let with parameters must be an identifier."

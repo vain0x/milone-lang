@@ -46,6 +46,8 @@ let patInt value = Pat.Value (Value.Int value, ())
 
 let patNil = Pat.Nil (noTy, ())
 
+let patRef ident = Pat.Ref (ident, noSerial, noTy, ())
+
 let patTuple itemPats = Pat.Tuple (itemPats, noTy, ())
 
 let patCons l r = Pat.Cons (l, r, noTy, ())
@@ -80,11 +82,11 @@ let exprAdd left right =
 let exprSub left right =
   Expr.Op (Op.Sub, left,  right, noTy, ())
 
-let exprLet name body =
-  Expr.Let ([Pat.Ident (name, noSerial, noTy, ())], body, ())
+let exprLet ident body =
+  Expr.Let ([patRef ident], body, ())
 
 let exprLetMain body =
-  Expr.Let ([Pat.Ident ("main", noSerial, noTy, ()); Pat.Unit ()], body, ())
+  Expr.Let ([patRef "main"; Pat.Unit ()], body, ())
 
 let exprAndThen exprs =
   Expr.AndThen (exprs, noTy, ())
@@ -365,14 +367,13 @@ let parsePatTuple () =
 [<Fact>]
 let parsePatCons () =
   let source = """x :: y :: []"""
-  let x = Pat.Ident ("x", noSerial, noTy, ())
-  let y = Pat.Ident ("y", noSerial, noTy, ())
+  let x = patRef "x"
+  let y = patRef "y"
   let expected = patCons x (patCons y patNil)
   source |> parseStrAsPat |> is expected
 
 [<Fact>]
 let parsePatAnno () =
   let source = """x : int"""
-  let expected =
-    Pat.Anno (Pat.Ident ("x", noSerial, noTy, ()), Ty.Int, ())
+  let expected = Pat.Anno (patRef "x", Ty.Int, ())
   source |> parseStrAsPat |> is expected

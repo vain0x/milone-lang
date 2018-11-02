@@ -17,7 +17,7 @@ let patExtract (pat: Pat<'a>): Ty * 'a =
     Ty.Unit, a
   | Pat.Nil (itemTy, a) ->
     Ty.List itemTy, a
-  | Pat.Ident (_, _, ty, a) ->
+  | Pat.Ref (_, _, ty, a) ->
     ty, a
   | Pat.Cons (_, _, itemTy, a) ->
     Ty.List itemTy, a
@@ -35,8 +35,8 @@ let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
       Pat.Unit (g a)
     | Pat.Nil (itemTy, a) ->
       Pat.Nil (f itemTy, g a)
-    | Pat.Ident (name, serial, ty, a) ->
-      Pat.Ident (name, serial, f ty, g a)
+    | Pat.Ref (ident, serial, ty, a) ->
+      Pat.Ref (ident, serial, f ty, g a)
     | Pat.Cons (l, r, itemTy, a) ->
       Pat.Cons (go l, go r, f itemTy, g a)
     | Pat.Tuple (itemPats, ty, a) ->
@@ -254,8 +254,8 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
     Pat.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
     Pat.Value (Value.Int value, loc), tokens
-  | (Token.Ident value, loc) :: tokens ->
-    Pat.Ident (value, noSerial, noTy, loc), tokens
+  | (Token.Ident ident, loc) :: tokens ->
+    Pat.Ref (ident, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
     match parsePat (nextX tokens) tokens with
     | pat, (Token.ParenR, _) :: tokens ->

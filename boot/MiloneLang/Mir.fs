@@ -160,7 +160,7 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
 let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * MirCtx =
   match pat with
   | Pat.Unit _
-  | Pat.Ident ("_", _, _, _) ->
+  | Pat.Ref ("_", _, _, _) ->
     // Discard result.
     true, ctx
   | Pat.Value (Value.Int value, loc) ->
@@ -174,7 +174,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
-  | Pat.Ident (_, serial, ty, loc) ->
+  | Pat.Ref (_, serial, ty, loc) ->
     let letStmt = MStmt.LetVal (serial, Some expr, unboxTy ty, loc)
     true, ctxAddStmt ctx letStmt
   | Pat.Cons (l, r, itemTy, loc) ->
@@ -441,7 +441,7 @@ let mirifyExprLetVal ctx pat init letLoc =
 let mirifyExprLetFun ctx pat pats body letLoc =
   let defineArg ctx argPat =
     match argPat with
-    | Pat.Ident (_, serial, ty, loc) ->
+    | Pat.Ref (_, serial, ty, loc) ->
       // NOTE: Optimize for usual cases to not generate redundant local vars.
       (serial, unboxTy ty, loc), ctx
     | _ ->
@@ -475,7 +475,7 @@ let mirifyExprLetFun ctx pat pats body letLoc =
     args, unboxTy blockTy, body, ctx
 
   match pat, pats with
-  | Pat.Ident (_, calleeSerial, _, _), argPats ->
+  | Pat.Ref (_, calleeSerial, _, _), argPats ->
     let bodyCtx = ctxNewBlock ctx
     let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = ctxRollBack ctx bodyCtx

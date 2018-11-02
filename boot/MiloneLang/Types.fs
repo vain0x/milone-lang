@@ -110,7 +110,7 @@ namespace rec MiloneLang
       of 'a
     | Nil
       of itemTy:Ty * 'a
-    | Ident
+    | Ref
       of ident:string * serial:int * Ty * 'a
     | Cons
       of Pat<'a> * Pat<'a> * itemTy:Ty * 'a
