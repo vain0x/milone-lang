@@ -162,17 +162,22 @@ let genExprDefault ctx ty =
     CExpr.Cast (CExpr.Default, ty), ctx
 
 let genExprCall ctx callee args ty =
-  let rec genArgs acc ctx args =
-    match args with
-    | [] ->
-      List.rev acc, ctx
-    | arg :: args ->
-      let arg, ctx = genExpr ctx arg
-      genArgs (arg :: acc) ctx args
+  match callee, args with
+  | MExpr.Ref (serial, _, _), (MExpr.Value (Value.Str format, _)) :: args
+    when serial = Typing.SerialPrintfn ->
+    genExprCallPrintfn ctx format args
+  | _ ->
+    let rec genArgs acc ctx args =
+      match args with
+      | [] ->
+        List.rev acc, ctx
+      | arg :: args ->
+        let arg, ctx = genExpr ctx arg
+        genArgs (arg :: acc) ctx args
 
-  let callee, ctx = genExpr ctx callee
-  let args, ctx = genArgs [] ctx args
-  CExpr.Call (callee, args), ctx
+    let callee, ctx = genExpr ctx callee
+    let args, ctx = genArgs [] ctx args
+    CExpr.Call (callee, args), ctx
 
 let genExprCallExit ctx arg =
   let arg, ctx = genExpr ctx arg
@@ -266,17 +271,12 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.Call (MExpr.Prim (MPrim.Printfn, _), (MExpr.Value (Value.Str format, _)) :: args, _, _) ->
-    genExprCallPrintfn ctx format args
   | MExpr.Call (callee, args, ty, _) ->
     genExprCall ctx callee args ty
   | MExpr.UniOp (op, arg, ty, _) ->
     genExprUniOp ctx op arg ty
   | MExpr.Op (op, l, r, _, _) ->
     genExprOp ctx op l r
-  | MExpr.Prim _
-  | MExpr.Call _ ->
-    failwithf "unimpl %A" arg
 
 let genStmt ctx stmt =
   match stmt with

@@ -101,7 +101,6 @@ let mexprExtract expr =
   | MExpr.Unit (ty, loc) -> ty, loc
   | MExpr.Value (value, loc) -> unboxTy (Parsing.valueTy value), loc
   | MExpr.Nil (itemTy, loc) -> MTy.List itemTy, loc
-  | MExpr.Prim (_, loc) -> MTy.Unit, loc // FIXME: incorrect type
   | MExpr.Ref (_, ty, loc) -> ty, loc
   | MExpr.Call (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
@@ -300,9 +299,9 @@ let mirifyExprIndex ctx l r _ loc =
   | _ ->
     failwith "unimpl non-string indexing"
 
-let mirifyExprCallExit ctx exitLoc arg ty loc =
+let mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  let opExpr = MExpr.UniOp (MUniOp.Exit, arg, unboxTy ty, exitLoc)
+  let opExpr = MExpr.UniOp (MUniOp.Exit, arg, unboxTy ty, loc)
   let ctx = ctxAddStmt ctx (MStmt.Expr (opExpr, loc))
   MExpr.Unit (unboxTy ty, loc), ctx
 
@@ -320,14 +319,24 @@ let mirifyExprCallNot ctx arg ty notLoc =
   MExpr.UniOp (MUniOp.Not, arg, unboxTy ty, notLoc), ctx
 
 let mirifyExprCall ctx callee args ty loc =
-  let ty = unboxTy ty
-  let callee, ctx = mirifyExpr ctx callee
-  let args, ctx = mirifyExprs ctx args
-  let callExpr = MExpr.Call (callee, args, ty, loc)
+  match callee, args with
+  | Expr.Ref (_, serial, _, _), [arg] when serial = Typing.SerialNot ->
+    mirifyExprCallNot ctx arg ty loc
+  | Expr.Ref (_, serial, _, _), [arg] when serial = Typing.SerialExit ->
+    mirifyExprCallExit ctx arg ty loc
+  | Expr.Ref (_, serial, _, _), [arg] when serial = Typing.SerialBox ->
+    mirifyExprCallBox ctx arg ty loc
+  | Expr.Ref (_, serial, _, _), [arg] when serial = Typing.SerialUnbox ->
+    mirifyExprCallUnbox ctx arg ty loc
+  | _ ->
+    let ty = unboxTy ty
+    let callee, ctx = mirifyExpr ctx callee
+    let args, ctx = mirifyExprs ctx args
+    let callExpr = MExpr.Call (callee, args, ty, loc)
 
-  let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, Some callExpr, ty, loc))
-  temp, ctx
+    let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, Some callExpr, ty, loc))
+    temp, ctx
 
 /// l && r ==> if l then r else false
 let mirifyExprOpAnd ctx l r ty loc =
@@ -483,8 +492,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     MExpr.Value (value, loc), ctx
   | Expr.Unit loc ->
     MExpr.Unit (MTy.Unit, loc), ctx
-  | Expr.Prim (PrimFun.Printfn, _, loc) ->
-    MExpr.Prim (MPrim.Printfn, loc), ctx
   | Expr.Ref (_, serial, ty, loc) ->
     MExpr.Ref (serial, unboxTy ty, loc), ctx
   | Expr.List ([], itemTy, loc) ->
@@ -499,14 +506,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprNav ctx l r ty loc
   | Expr.Index (l, r, ty, loc) ->
     mirifyExprIndex ctx l r ty loc
-  | Expr.Call (Expr.Ref ("not", -1, _, _), [arg], ty, loc) ->
-    mirifyExprCallNot ctx arg ty loc
-  | Expr.Call (Expr.Prim (PrimFun.Exit, _, exitLoc), [arg], ty, loc) ->
-    mirifyExprCallExit ctx exitLoc arg ty loc
-  | Expr.Call (Expr.Prim (PrimFun.Box, _, _), [arg], ty, loc) ->
-    mirifyExprCallBox ctx arg ty loc
-  | Expr.Call (Expr.Prim (PrimFun.Unbox, _, _), [arg], ty, loc) ->
-    mirifyExprCallUnbox ctx arg ty loc
   | Expr.Call (callee, args, ty, loc) ->
     mirifyExprCall ctx callee args ty loc
   | Expr.Op (op, l, r, ty, loc) ->
@@ -519,7 +518,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprLetVal ctx pat init letLoc
   | Expr.Let (pat :: pats, body, letLoc) ->
     mirifyExprLetFun ctx pat pats body letLoc
-  | Expr.Prim _
   | Expr.Call (_, [], _, _)
   | Expr.Anno _
   | Expr.Let ([], _, _) ->

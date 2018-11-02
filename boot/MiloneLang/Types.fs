@@ -68,14 +68,6 @@ namespace rec MiloneLang
       of Ty
 
   [<RequireQualifiedAccess>]
-  /// Primitive function.
-  type PrimFun =
-    | Exit
-    | Printfn
-    | Box
-    | Unbox
-
-  [<RequireQualifiedAccess>]
   type OpLevel =
     | Mul
     | Add
@@ -146,9 +138,6 @@ namespace rec MiloneLang
       of Value * 'a
     | Unit
       of 'a
-    /// Primitive.
-    | Prim
-      of PrimFun * Ty * 'a
     /// Variable reference.
     | Ref
       of ident:string * serial:int * Ty * 'a
@@ -197,10 +186,6 @@ namespace rec MiloneLang
       of MTy list
 
   [<RequireQualifiedAccess>]
-  type MPrim =
-    | Printfn
-
-  [<RequireQualifiedAccess>]
   type MUniOp =
     | Not
     | StrLen
@@ -247,9 +232,6 @@ namespace rec MiloneLang
       of MTy * 'a
     | Nil
       of itemTy:MTy * 'a
-    /// Primitive.
-    | Prim
-      of MPrim * 'a
     /// Variable reference.
     | Ref
       of serial:int * MTy * 'a

@@ -123,7 +123,7 @@ let parseSimpleExprs () =
       "\"Hello, world!\"",
         exprStr "Hello, world!"
       "printfn",
-        Expr.Prim (PrimFun.Printfn, noTy, ())
+        Expr.Ref ("printfn", noSerial, noTy, ())
       "x",
         exprRef "x"
       "f 1",
@@ -250,10 +250,10 @@ let parseSemicolonInLineOne () =
       exprLetMain (
         exprAndThen [
           exprCall
-            (Expr.Prim (PrimFun.Printfn, noTy, ()))
+            (Expr.Ref ("printfn", noSerial, noTy, ()))
             [exprStr "Hello, "]
           exprCall
-            (Expr.Prim (PrimFun.Printfn, noTy, ()))
+            (Expr.Ref ("printfn", noSerial, noTy, ()))
             [exprStr "World!"]
           exprInt 0
         ])

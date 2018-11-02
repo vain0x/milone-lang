@@ -58,8 +58,6 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     valueTy value, a
   | Expr.Unit a ->
     Ty.Unit, a
-  | Expr.Prim (_, ty, a) ->
-    ty, a
   | Expr.Ref (_, _, ty, a) ->
     ty, a
   | Expr.List (_, itemTy, a) ->
@@ -94,8 +92,6 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Value (value, g a)
     | Expr.Unit a ->
       Expr.Unit (g a)
-    | Expr.Prim (value, ty, a) ->
-      Expr.Prim (value, f ty, g a)
     | Expr.Ref (ident, serial, ty, a) ->
       Expr.Ref (ident, serial, f ty, g a)
     | Expr.List (items, itemTy, a) ->
@@ -431,14 +427,6 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
     Expr.Value (Value.Bool false, loc), tokens
   | (Token.Ident "true", loc) :: tokens ->
     Expr.Value (Value.Bool true, loc), tokens
-  | (Token.Ident "exit", loc) :: tokens ->
-    Expr.Prim (PrimFun.Exit, noTy, loc), tokens
-  | (Token.Ident "box", loc) :: tokens ->
-    Expr.Prim (PrimFun.Box, noTy, loc), tokens
-  | (Token.Ident "unbox", loc) :: tokens ->
-    Expr.Prim (PrimFun.Unbox, noTy, loc), tokens
-  | (Token.Ident "printfn", loc) :: tokens ->
-    Expr.Prim (PrimFun.Printfn, noTy, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
     Expr.Ref (value, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
