@@ -15,16 +15,21 @@ let patExtract = Parsing.patExtract
 type MirCtx =
   {
     VarSerial: int
-    VarName: Map<int, string>
+    Vars: Map<int, string * MTy * Loc>
     LabelSerial: int
     Decls: MDecl<Loc> list
     Stmts: MStmt<Loc> list
   }
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
+  let vars =
+    tyCtx.Vars |> Map.map (fun _ (ident, ty, loc) ->
+      let ty = unboxTy (Typing.substTy tyCtx ty)
+      ident, ty, loc
+    )
   {
     VarSerial = tyCtx.VarSerial
-    VarName = tyCtx.VarName
+    Vars = vars
     LabelSerial = 0
     Decls = []
     Stmts = []
@@ -51,7 +56,7 @@ let ctxFreshVar (ctx: MirCtx) (ident: string) (ty: MTy) loc =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        VarName = ctx.VarName |> Map.add serial ident
+        Vars = ctx.Vars |> Map.add serial (ident, ty, loc)
     }
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx

@@ -8,7 +8,7 @@ type MirCtx = Mir.MirCtx
 type Ctx =
   {
     VarSerial: int
-    VarName: Map<int, string>
+    Vars: Map<int, string * MTy * Loc>
     TySerial: int
     TyEnv: Map<MTy, CTy>
     Stmts: CStmt list
@@ -20,7 +20,7 @@ let tupleField i = sprintf "t%d" i
 let ctxFromMirCtx (mirCtx: MirCtx): Ctx =
   {
     VarSerial = mirCtx.VarSerial
-    VarName = mirCtx.VarName
+    Vars = mirCtx.Vars
     TySerial = 0
     TyEnv = Map.empty
     Stmts = []
@@ -78,8 +78,8 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
 
 let ctxUniqueName (ctx: Ctx) serial =
   let ident =
-    match ctx.VarName |> Map.tryFind serial with
-    | Some ident -> ident
+    match ctx.Vars |> Map.tryFind serial with
+    | Some (ident, _, _) -> ident
     | None -> ""
   sprintf "%s_%d" ident serial
 
@@ -178,7 +178,7 @@ let genExprOpAsCall ctx ident l r =
   let callExpr = CExpr.Call (CExpr.Ref ident, [l; r])
   callExpr, ctx
 
-let genExprUniOp ctx op arg ty =
+let genExprUniOp ctx op arg ty loc =
   let argTy = Mir.mexprTy arg
   let arg, ctx = genExpr ctx arg
   match op with
@@ -246,8 +246,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Call (callee, args, ty, _) ->
     genExprCall ctx callee args ty
-  | MExpr.UniOp (op, arg, ty, _) ->
-    genExprUniOp ctx op arg ty
+  | MExpr.UniOp (op, arg, ty, loc) ->
+    genExprUniOp ctx op arg ty loc
   | MExpr.Op (op, l, r, _, _) ->
     genExprOp ctx op l r
 
