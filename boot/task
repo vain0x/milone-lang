@@ -25,7 +25,6 @@ integ() {
     app="./tmp/$name"
     out="./tmp/$name.out"
     expected="./tests/targets/$name.out"
-    code=0
 
     >&2 echo -n "$name ... "
     compile "$name" 2>/dev/null
@@ -38,16 +37,16 @@ integ() {
         >&2 echo "✔ ok"
     else
         >&2 echo "✘ FAILED"
-        code=1
+        echo -n '*'
     fi
     set -e
-    return $code
 }
 
 # Tests all milone codes.
 # SAMPLE: integ_all
 integ_all() {
-    find ./tests/src -name '*.milone' -type f -exec ./task integ "{}" \;
+    err=$(find ./tests/src -name '*.milone' -type f -exec ./task integ "{}" \;)
+    exit $([[ -z $err ]])
 }
 
 if [[ "$1" = restore ]]
