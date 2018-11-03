@@ -15,16 +15,21 @@ let patExtract = Parsing.patExtract
 type MirCtx =
   {
     VarSerial: int
-    VarName: Map<int, string>
+    Vars: Map<int, string * MTy * Loc>
     LabelSerial: int
     Decls: MDecl<Loc> list
     Stmts: MStmt<Loc> list
   }
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
+  let vars =
+    tyCtx.Vars |> Map.map (fun _ (ident, ty, loc) ->
+      let ty = unboxTy (Typing.substTy tyCtx ty)
+      ident, ty, loc
+    )
   {
     VarSerial = tyCtx.VarSerial
-    VarName = tyCtx.VarName
+    Vars = vars
     LabelSerial = 0
     Decls = []
     Stmts = []
@@ -51,7 +56,7 @@ let ctxFreshVar (ctx: MirCtx) (ident: string) (ty: MTy) loc =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        VarName = ctx.VarName |> Map.add serial ident
+        Vars = ctx.Vars |> Map.add serial (ident, ty, loc)
     }
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
@@ -481,7 +486,7 @@ let mirifyExprLetFun ctx pat pats body letLoc =
     let bodyCtx = ctxNewBlock ctx
     let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = ctxRollBack ctx bodyCtx
-    let decl = MDecl.LetFun (calleeSerial, args, resultTy, body, letLoc)
+    let decl = MDecl.LetFun (calleeSerial, args, [], resultTy, body, letLoc)
     let ctx = ctxAddDecl ctx decl
     MExpr.Default (MTy.Unit, letLoc), ctx
   | _ ->
@@ -534,8 +539,9 @@ let mirifyExprs ctx exprs =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let mirify (exprs: Expr<Loc> list, tyCtx: TyCtx): MirCtx =
+let mirify (exprs: Expr<Loc> list, tyCtx: TyCtx): MDecl<_> list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
   let _exprs, ctx = mirifyExprs ctx exprs
   assert (List.isEmpty ctx.Stmts)
-  ctx
+  let decls = List.rev ctx.Decls
+  decls, ctx

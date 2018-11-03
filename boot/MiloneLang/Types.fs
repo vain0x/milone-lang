@@ -293,7 +293,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MDecl<'a> =
     | LetFun
-      of callee:int * args:(int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
+      of callee:int * args:(int * MTy * 'a) list * caps:(int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
 
   /// Type in C language.
   [<RequireQualifiedAccess>]

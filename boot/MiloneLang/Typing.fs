@@ -6,8 +6,8 @@ open MiloneLang
 type TyCtx =
   {
     VarSerial: int
-    /// Identifier serial number to human readable name.
-    VarName: Map<int, string>
+    /// Identifier serial number to human readable name, type, location.
+    Vars: Map<int, string * Ty * Loc>
     /// Identifier to type and serial.
     VarEnv: Map<string, Ty * int>
     TySerial: int
@@ -19,6 +19,15 @@ let SerialExit = -2
 let SerialBox = -3
 let SerialUnbox = -4
 let SerialPrintfn = -5
+
+let knownSerials =
+  [
+    SerialNot
+    SerialExit
+    SerialBox
+    SerialUnbox
+    SerialPrintfn
+  ]
 
 let patTy (pat: Pat<Loc>): Ty =
   let ty, _ = Parsing.patExtract pat
@@ -52,13 +61,13 @@ let resolveTyVar name (ctx: TyCtx): Ty =
   | None ->
     Ty.Var name
 
-let freshVar (ctx: TyCtx) ident ty: int * TyCtx =
+let freshVar (ctx: TyCtx) ident ty loc: int * TyCtx =
   let serial = ctx.VarSerial + 1
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
         VarEnv = ctx.VarEnv |> Map.add ident (ty, serial)
-        VarName = ctx.VarName |> Map.add serial ident
+        Vars = ctx.Vars |> Map.add serial (ident, ty, loc)
     }
   serial, ctx
 
@@ -211,7 +220,7 @@ let inferPat ctx pat ty =
     let ctx = unifyTy ctx ty (Ty.List itemTy)
     Pat.Nil (itemTy, loc), ctx
   | Pat.Ref (ident, _, _, loc) ->
-    let serial, ctx = freshVar ctx ident ty
+    let serial, ctx = freshVar ctx ident ty loc
     Pat.Ref (ident, serial, ty, loc), ctx
   | Pat.Cons (l, r, _, loc) ->
     inferPatCons ctx l r loc ty
@@ -453,7 +462,7 @@ let inferLetFun ctx calleePat argPats body loc unitTy =
       then Ty.Fun (Ty.Unit, Ty.Int), "", ctx
       else freshTyVar "fun" ctx
     let bodyTy, _, ctx = freshTyVar "body" ctx
-    let serial, ctx = freshVar ctx callee funTy
+    let serial, ctx = freshVar ctx callee funTy calleeLoc
 
     // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default
@@ -540,7 +549,7 @@ let infer (exprs: Expr<Loc> list): Expr<Loc> list * TyCtx =
   let ctx =
     {
       VarSerial = 0
-      VarName = Map.empty
+      Vars = Map.empty
       VarEnv = Map.empty
       TySerial = 0
       TyEnv = Map.empty
