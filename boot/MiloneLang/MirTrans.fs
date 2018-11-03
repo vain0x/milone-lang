@@ -203,11 +203,18 @@ let declosureFunBody callee args body ctx =
     let argSerials = args |> List.map (fun (serial, _, _) -> serial)
     callee :: argSerials
 
+  let baseCtx = ctx
   let ctx = ctx |> ctxPushScope localSerials
-  let body, ctx = (body, ctx) |> stFlatMap declosureStmt
-  let caps = ctx |> ctxCaps
-  let ctx = ctx |> ctxPopScope ctx
 
+  // Traverse for dependency collection.
+  let _, ctx = (body, ctx) |> stFlatMap declosureStmt
+  let caps = ctx |> ctxCaps
+  let ctx = ctx |> ctxAddFun callee caps
+
+  // Traverse again. We can now convert recursive calls correctly.
+  let body, ctx = (body, ctx) |> stFlatMap declosureStmt
+
+  let ctx = ctx |> ctxPopScope baseCtx
   caps, body, ctx
 
 let deconstructCaps capsRef caps body =
@@ -239,8 +246,6 @@ let addCapsArg caps args body loc ctx =
 let declosureDeclLetFun callee args ty body loc ctx =
   let caps, body, ctx = declosureFunBody callee args body ctx
   let args, body, ctx = addCapsArg caps args body loc ctx
-
-  let ctx = ctx |> ctxAddFun callee caps
   MDecl.LetFun (callee, args, caps, ty, body, loc), ctx
 
 let declosureDecl (decl, ctx) =
