@@ -1,7 +1,7 @@
 /// Generates CIR from AST.
 module rec MiloneLang.CIrGen
 
-type MirCtx = Mir.MirCtx
+type MirTransCtx = MirTrans.MirTransCtx
 
 /// IR generation context.
 [<RequireQualifiedAccess>]
@@ -17,7 +17,7 @@ type Ctx =
 
 let tupleField i = sprintf "t%d" i
 
-let ctxFromMirCtx (mirCtx: MirCtx): Ctx =
+let ctxFromMirCtx (mirCtx: MirTransCtx): Ctx =
   {
     VarSerial = mirCtx.VarSerial
     Vars = mirCtx.Vars
@@ -341,7 +341,7 @@ let genDecls (ctx: Ctx) decls =
   match decls with
   | [] ->
     ctx.Decls |> List.rev
-  | MDecl.LetFun (callee, args, resultTy, body, _) :: decls ->
+  | MDecl.LetFun (callee, args, _caps, resultTy, body, _) :: decls ->
     let ident, args =
       if List.isEmpty decls
       then "main", []
@@ -361,7 +361,6 @@ let genDecls (ctx: Ctx) decls =
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls
 
-let gen (mirCtx: MirCtx): CDecl list =
-  let ctx = ctxFromMirCtx mirCtx
-  let decls = List.rev mirCtx.Decls
+let gen (decls, mirTransCtx: MirTransCtx): CDecl list =
+  let ctx = ctxFromMirCtx mirTransCtx
   genDecls ctx decls

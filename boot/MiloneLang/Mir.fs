@@ -486,7 +486,7 @@ let mirifyExprLetFun ctx pat pats body letLoc =
     let bodyCtx = ctxNewBlock ctx
     let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = ctxRollBack ctx bodyCtx
-    let decl = MDecl.LetFun (calleeSerial, args, resultTy, body, letLoc)
+    let decl = MDecl.LetFun (calleeSerial, args, [], resultTy, body, letLoc)
     let ctx = ctxAddDecl ctx decl
     MExpr.Default (MTy.Unit, letLoc), ctx
   | _ ->
@@ -539,8 +539,9 @@ let mirifyExprs ctx exprs =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let mirify (exprs: Expr<Loc> list, tyCtx: TyCtx): MirCtx =
+let mirify (exprs: Expr<Loc> list, tyCtx: TyCtx): MDecl<_> list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
   let _exprs, ctx = mirifyExprs ctx exprs
   assert (List.isEmpty ctx.Stmts)
-  ctx
+  let decls = List.rev ctx.Decls
+  decls, ctx

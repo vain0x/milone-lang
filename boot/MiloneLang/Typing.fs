@@ -20,6 +20,15 @@ let SerialBox = -3
 let SerialUnbox = -4
 let SerialPrintfn = -5
 
+let knownSerials =
+  [
+    SerialNot
+    SerialExit
+    SerialBox
+    SerialUnbox
+    SerialPrintfn
+  ]
+
 let patTy (pat: Pat<Loc>): Ty =
   let ty, _ = Parsing.patExtract pat
   ty
