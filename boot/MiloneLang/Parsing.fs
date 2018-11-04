@@ -2,6 +2,7 @@ module rec MiloneLang.Parsing
 
 open System
 open MiloneLang
+open MiloneLang.Helpers
 
 /// Placeholder. No variable serials in the parsing phase.
 let noSerial = 0

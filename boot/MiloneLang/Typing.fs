@@ -2,6 +2,7 @@ module rec MiloneLang.Typing
 
 open System
 open MiloneLang
+open MiloneLang.Helpers
 
 type TyCtx =
   {
@@ -340,14 +341,7 @@ let inferCallPrintfn ctx args loc callTy =
   match args with
   | Expr.Value (Value.Str format, _) :: _ ->
     let ctx = unifyTy ctx callTy Ty.Unit
-    let funTy =
-      // FIXME: too rough
-      if format.Contains("%s") then
-        Ty.Fun (Ty.Str, Ty.Fun (Ty.Str, Ty.Unit))
-      else if format.Contains("%d") then
-        Ty.Fun (Ty.Str, Ty.Fun (Ty.Int, Ty.Unit))
-      else
-        Ty.Fun (Ty.Str, Ty.Unit)
+    let funTy = analyzeFormat format
     let args, calleeTy, ctx = inferCallArgs [] ctx (List.rev args) callTy
     let ctx = unifyTy ctx calleeTy funTy
     let callee = Expr.Ref ("printfn", SerialPrintfn, calleeTy, loc)
