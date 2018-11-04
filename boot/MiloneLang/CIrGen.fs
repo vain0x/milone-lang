@@ -145,41 +145,13 @@ let genExprDefault ctx ty =
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
 
-let genExprCall ctx callee args ty =
-  match callee, args with
-  | MExpr.Ref (serial, _, _), (MExpr.Value (Value.Str format, _)) :: args
-    when serial = Typing.SerialPrintfn ->
-    genExprCallPrintfn ctx format args
-  | _ ->
-    let rec genArgs acc ctx args =
-      match args with
-      | [] ->
-        List.rev acc, ctx
-      | arg :: args ->
-        let arg, ctx = genExpr ctx arg
-        genArgs (arg :: acc) ctx args
-
-    let callee, ctx = genExpr ctx callee
-    let args, ctx = genArgs [] ctx args
-    CExpr.Call (callee, args), ctx
-
-let genExprCallExit ctx arg =
-  let arg, ctx = genExpr ctx arg
-  CExpr.Call (CExpr.Ref "exit", [arg]), ctx
-
-let genExprCallPrintfn ctx format args =
-  let args, ctx = genExprList ctx args
-  let ctx = ctxAddStmt ctx (callPrintf format args)
-  genExprDefault ctx MTy.Unit
-
 let genExprOpAsCall ctx ident l r =
   let l, ctx = genExpr ctx l
   let r, ctx = genExpr ctx r
   let callExpr = CExpr.Call (CExpr.Ref ident, [l; r])
   callExpr, ctx
 
-let genExprUniOp ctx op arg ty loc =
-  let argTy = Mir.mexprTy arg
+let genExprUniOp ctx op arg ty _ =
   let arg, ctx = genExpr ctx arg
   match op with
   | MUniOp.Not ->
@@ -244,76 +216,127 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.Call (callee, args, ty, _) ->
-    genExprCall ctx callee args ty
   | MExpr.UniOp (op, arg, ty, loc) ->
     genExprUniOp ctx op arg ty loc
   | MExpr.Op (op, l, r, _, _) ->
     genExprOp ctx op l r
 
+let genExprCallPrintfn ctx format args =
+  let args, ctx = genExprList ctx args
+  let ctx = ctxAddStmt ctx (callPrintf format args)
+  genExprDefault ctx MTy.Unit
+
+let genExprCall ctx callee args ty =
+  match callee, args with
+  | MExpr.Ref (serial, _, _), (MExpr.Value (Value.Str format, _)) :: args
+    when serial = Typing.SerialPrintfn ->
+    genExprCallPrintfn ctx format args
+  | _ ->
+    let rec genArgs acc ctx args =
+      match args with
+      | [] ->
+        List.rev acc, ctx
+      | arg :: args ->
+        let arg, ctx = genExpr ctx arg
+        genArgs (arg :: acc) ctx args
+
+    let callee, ctx = genExpr ctx callee
+    let args, ctx = genArgs [] ctx args
+    CExpr.Call (callee, args), ctx
+
+let genInitExprCore ctx serial expr ty =
+  let ident = ctxUniqueName ctx serial
+  let cty, ctx = cty ctx ty
+  ctxAddStmt ctx (CStmt.Let (ident, expr, cty))
+
+let genInitBox ctx serial arg =
+  let argTy, ctx = cty ctx (Mir.mexprTy arg)
+  let arg, ctx = genExpr ctx arg
+
+  // void* p = (void*)malloc(sizeof T);
+  let temp = ctxUniqueName ctx serial
+  let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, CTy.Ptr argTy, CTy.Ptr CTy.Void))
+
+  // *(T*)p = t;
+  let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (CExpr.Ref temp, CTy.Ptr argTy))
+  let ctx = ctxAddStmt ctx (CStmt.Set (left, arg))
+
+  ctx
+
+let genInitCons ctx serial head tail itemTy =
+  let temp = ctxUniqueName ctx serial
+  let listTy, ctx = cty ctx (MTy.List itemTy)
+  let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, listTy, listTy))
+
+  // head
+  let head, ctx = genExpr ctx head
+  let stmt = CStmt.Set (CExpr.Arrow (CExpr.Ref temp, "head"), head)
+  let ctx = ctxAddStmt ctx stmt
+
+  // tail
+  let tail, ctx = genExpr ctx tail
+  let stmt = CStmt.Set (CExpr.Arrow (CExpr.Ref temp, "tail"), tail)
+  let ctx = ctxAddStmt ctx stmt
+
+  ctx
+
+let genInitTuple ctx serial items tupleTy =
+  let ident = ctxUniqueName ctx serial
+  let tupleTy, ctx = cty ctx tupleTy
+  let ctx = ctxAddStmt ctx (CStmt.Let (ident, None, tupleTy))
+  let rec go ctx i items =
+    match items with
+    | [] ->
+      ctx
+    | item :: items ->
+      let left = CExpr.Nav (CExpr.Ref ident, tupleField i)
+      let item, ctx = genExpr ctx item
+      let stmt = CStmt.Set (left, item)
+      let ctx = ctxAddStmt ctx stmt
+      go ctx (i + 1) items
+  go ctx 0 items
+
+let genStmtLetVal ctx serial init ty =
+  match init with
+  | MInit.UnInit ->
+    genInitExprCore ctx serial None ty
+  | MInit.Expr expr ->
+    let expr, ctx = genExpr ctx expr
+    genInitExprCore ctx serial (Some expr) ty
+  | MInit.Call (callee, args) ->
+    let expr, ctx = genExprCall ctx callee args ty
+    genInitExprCore ctx serial (Some expr) ty
+  | MInit.Box arg ->
+    genInitBox ctx serial arg
+  | MInit.Cons (head, tail, itemTy) ->
+    genInitCons ctx serial head tail itemTy
+  | MInit.Tuple items ->
+    genInitTuple ctx serial items ty
+
+let genStmtDo ctx expr =
+  let expr, ctx = genExpr ctx expr
+  ctxAddStmt ctx (CStmt.Expr expr)
+
+let genStmtSet ctx serial right =
+  let right, ctx = genExpr ctx right
+  let ident = ctxUniqueName ctx serial
+  let left = CExpr.Ref (ident)
+  ctxAddStmt ctx (CStmt.Set (left, right))
+
+let genStmtReturn ctx expr =
+  let expr, ctx = genExpr ctx expr
+  ctxAddStmt ctx (CStmt.Return (Some expr))
+
 let genStmt ctx stmt =
   match stmt with
-  | MStmt.Expr (expr, _) ->
-    let expr, ctx = genExpr ctx expr
-    ctxAddStmt ctx (CStmt.Expr expr)
+  | MStmt.Do (expr, _) ->
+    genStmtDo ctx expr
   | MStmt.LetVal (serial, init, ty, _) ->
-    let ident = ctxUniqueName ctx serial
-    let init, ctx =
-      match init with
-      | None -> None, ctx
-      | Some init ->
-        let init, ctx = genExpr ctx init
-        Some init, ctx
-    let cty, ctx = cty ctx ty
-    ctxAddStmt ctx (CStmt.Let (ident, init, cty))
-  | MStmt.LetBox (serial, arg, _) ->
-    let argTy, ctx = cty ctx (Mir.mexprTy arg)
-    let arg, ctx = genExpr ctx arg
-    // void* p = (void*)malloc(sizeof T);
-    let temp = ctxUniqueName ctx serial
-    let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, CTy.Ptr argTy, CTy.Ptr CTy.Void))
-    // *(T*)p = t;
-    let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (CExpr.Ref temp, CTy.Ptr argTy))
-    ctxAddStmt ctx (CStmt.Set (left, arg))
-  | MStmt.LetCons (serial, head, tail, itemTy, _) ->
-    let temp = ctxUniqueName ctx serial
-    let listTy, ctx = cty ctx (MTy.List itemTy)
-    let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, listTy, listTy))
-
-    // head
-    let head, ctx = genExpr ctx head
-    let stmt = CStmt.Set (CExpr.Arrow (CExpr.Ref temp, "head"), head)
-    let ctx = ctxAddStmt ctx stmt
-
-    // tail
-    let tail, ctx = genExpr ctx tail
-    let stmt = CStmt.Set (CExpr.Arrow (CExpr.Ref temp, "tail"), tail)
-    let ctx = ctxAddStmt ctx stmt
-
-    ctx
-  | MStmt.LetTuple (serial, elems, tupleTy, _) ->
-    let ident = ctxUniqueName ctx serial
-    let tupleTy, ctx = cty ctx tupleTy
-    let ctx = ctxAddStmt ctx (CStmt.Let (ident, None, tupleTy))
-    let rec go ctx i elems =
-      match elems with
-      | [] ->
-        ctx
-      | elem :: elems ->
-        let left = CExpr.Nav (CExpr.Ref ident, tupleField i)
-        let elem, ctx = genExpr ctx elem
-        let stmt = CStmt.Set (left, elem)
-        let ctx = ctxAddStmt ctx stmt
-        go ctx (i + 1) elems
-    go ctx 0 elems
+    genStmtLetVal ctx serial init ty
   | MStmt.Set (serial, right, _) ->
-    let right, ctx = genExpr ctx right
-    let ident = ctxUniqueName ctx serial
-    let left = CExpr.Ref (ident)
-    ctxAddStmt ctx (CStmt.Set (left, right))
+    genStmtSet ctx serial right
   | MStmt.Return (expr, _) ->
-    let expr, ctx = genExpr ctx expr
-    ctxAddStmt ctx (CStmt.Return (Some expr))
+    genStmtReturn ctx expr
   | MStmt.Label (label, _) ->
     ctxAddStmt ctx (CStmt.Label label)
   | MStmt.Goto (label, _) ->

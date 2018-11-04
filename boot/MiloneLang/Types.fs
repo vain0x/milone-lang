@@ -239,45 +239,46 @@ namespace rec MiloneLang
     | StrIndex
 
   /// Expression in middle IR.
-  /// Doesn't cause side-effects except for call expressions.
-  /// Doesn't introduce variables.
   [<RequireQualifiedAccess>]
   type MExpr<'a> =
     | Value
       of Value * 'a
     | Default
       of MTy * 'a
-    /// Variable reference.
     | Ref
       of serial:int * MTy * 'a
-    /// Must occur in variable initializer.
-    | Call
-      of callee:MExpr<'a> * args:MExpr<'a> list * resultTy:MTy * 'a
     | UniOp
       of MUniOp * arg:MExpr<'a> * resultTy:MTy * 'a
     | Op
       of MOp * left:MExpr<'a> * right:MExpr<'a> * resultTy:MTy * 'a
+
+  /// Variable initializer in mid-level IR.
+  [<RequireQualifiedAccess>]
+  type MInit<'a> =
+    /// Remain uninitialized at first; initialized later by `MStmt.Set`.
+    | UnInit
+    | Expr
+      of MExpr<'a>
+    | Call
+      of callee:MExpr<'a> * args:MExpr<'a> list
+    | Box
+      of MExpr<'a>
+    | Cons
+      of head:MExpr<'a> * tail:MExpr<'a> * itemTy:MTy
+    | Tuple
+      of items:MExpr<'a> list
 
   /// Statement in middle IR.
   /// Doesn't introduce global things, e.g. functions.
   [<RequireQualifiedAccess>]
   type MStmt<'a> =
     /// Statement to evaluate an expression, e.g. `f ();`.
-    | Expr
+    | Do
       of MExpr<'a> * 'a
-    /// Local variable declaration.
+    /// Declare a local variable.
     | LetVal
-      of serial:int * init:MExpr<'a> option * MTy * 'a
-    /// `let .. = box x`
-    | LetBox
-      of serial:int * MExpr<'a> * 'a
-    /// `let .. = x :: xs`
-    | LetCons
-      of serial:int * head:MExpr<'a> * tail:MExpr<'a> * itemTy:MTy * 'a
-    /// `let .. = x, y, ..`
-    | LetTuple
-      of serial:int * elems:MExpr<'a> list * tupleTy:MTy * 'a
-    /// Set to local variable.
+      of serial:int * MInit<'a> * MTy * 'a
+    /// Set to uninitialized local variable.
     | Set
       of serial:int * init:MExpr<'a> * 'a
     | Return

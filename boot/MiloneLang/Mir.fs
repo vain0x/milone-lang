@@ -63,7 +63,7 @@ let ctxFreshVar (ctx: MirCtx) (ident: string) (ty: MTy) loc =
 
 let ctxLetFreshVar (ctx: MirCtx) (ident: string) (ty: MTy) loc =
   let refExpr, serial, ctx = ctxFreshVar ctx ident ty loc
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (serial, None, ty, loc))
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (serial, MInit.UnInit, ty, loc))
   let setStmt expr = MStmt.Set (serial, expr, loc)
   refExpr, setStmt, ctx
 
@@ -106,7 +106,6 @@ let mexprExtract expr =
   | MExpr.Default (ty, loc) -> ty, loc
   | MExpr.Value (value, loc) -> unboxTy (Parsing.valueTy value), loc
   | MExpr.Ref (_, ty, loc) -> ty, loc
-  | MExpr.Call (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
   | MExpr.Op (_, _, _, ty, loc) -> ty, loc
 
@@ -180,7 +179,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
   | Pat.Ref (_, serial, ty, loc) ->
-    let letStmt = MStmt.LetVal (serial, Some expr, unboxTy ty, loc)
+    let letStmt = MStmt.LetVal (serial, MInit.Expr expr, unboxTy ty, loc)
     true, ctxAddStmt ctx letStmt
   | Pat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
@@ -250,7 +249,7 @@ let mirifyExprIf ctx pred thenCl elseCl ty loc =
 let mstmtExit1 (ty: MTy) loc =
   let one = MExpr.Value (Value.Int 1, loc)
   let callExpr = MExpr.UniOp (MUniOp.Exit, one, ty, loc)
-  MStmt.Expr (callExpr, loc)
+  MStmt.Do (callExpr, loc)
 
 let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) ty loc =
   let ty = unboxTy ty
@@ -306,13 +305,13 @@ let mirifyExprIndex ctx l r _ loc =
 let mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
   let opExpr = MExpr.UniOp (MUniOp.Exit, arg, unboxTy ty, loc)
-  let ctx = ctxAddStmt ctx (MStmt.Expr (opExpr, loc))
+  let ctx = ctxAddStmt ctx (MStmt.Do (opExpr, loc))
   MExpr.Default (unboxTy ty, loc), ctx
 
 let mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
   let temp, tempSerial, ctx = ctxFreshVar ctx "box" MTy.Box loc
-  let ctx = ctxAddStmt ctx (MStmt.LetBox (tempSerial, arg, loc))
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Box arg, MTy.Box, loc))
   temp, ctx
 
 let mirifyExprCallUnbox ctx arg ty loc =
@@ -338,10 +337,9 @@ let mirifyExprCall ctx callee args ty loc =
     let ty = unboxTy ty
     let callee, ctx = mirifyExpr ctx callee
     let args, ctx = mirifyExprs ctx args
-    let callExpr = MExpr.Call (callee, args, ty, loc)
 
     let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, Some callExpr, ty, loc))
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, args), ty, loc))
     temp, ctx
 
 /// l && r ==> if l then r else false
@@ -361,7 +359,7 @@ let mirifyExprOpCons ctx l r ty loc =
 
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
-  let ctx = ctxAddStmt ctx (MStmt.LetCons (tempSerial, l, r, itemTy, loc))
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Cons (l, r, itemTy), listTy, loc))
   MExpr.Ref (tempSerial, listTy, loc), ctx
 
 let mirifyExprTuple ctx items ty loc =
@@ -381,7 +379,7 @@ let mirifyExprTuple ctx items ty loc =
       go (item :: acc) ctx items
   let items, ctx = go [] ctx items
 
-  let ctx = ctxAddStmt ctx (MStmt.LetTuple (tempSerial, items, ty, loc))
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Tuple items, ty, loc))
   MExpr.Ref (tempSerial, ty, loc), ctx
 
 /// x op y ==> `x op y` if `x : {scalar}`

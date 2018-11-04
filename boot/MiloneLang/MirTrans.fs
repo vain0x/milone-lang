@@ -107,11 +107,6 @@ let declosureExprRef serial (expr, ctx) =
   let ctx = ctx |> ctxAddRef serial
   expr, ctx
 
-let declosureExprCall callee args resultTy loc (ctx: MirTransCtx) =
-  let callee, ctx = (callee, ctx) |> declosureExpr
-  let args, ctx = (args, ctx) |> stMap declosureExpr
-  MExpr.Call (callee, args, resultTy, loc), ctx
-
 let declosureExpr (expr, ctx) =
   match expr with
   | MExpr.Value _
@@ -119,8 +114,6 @@ let declosureExpr (expr, ctx) =
     expr, ctx
   | MExpr.Ref (serial, _, _) ->
     declosureExprRef serial (expr, ctx)
-  | MExpr.Call (callee, args, resultTy, loc) ->
-    declosureExprCall callee args resultTy loc ctx
   | MExpr.UniOp (op, arg, ty, loc) ->
     let arg, ctx = (arg, ctx) |> declosureExpr
     MExpr.UniOp (op, arg, ty, loc), ctx
@@ -129,27 +122,51 @@ let declosureExpr (expr, ctx) =
     let r, ctx = (r, ctx) |> declosureExpr
     MExpr.Op (op, l, r, ty, loc), ctx
 
+let declosureInitCall callee args (ctx: MirTransCtx) =
+  let callee, ctx = (callee, ctx) |> declosureExpr
+  let args, ctx = (args, ctx) |> stMap declosureExpr
+  MInit.Call (callee, args), ctx
+
+let declosureInit (init, ctx) =
+  match init with
+  | MInit.UnInit _ ->
+    init, ctx
+  | MInit.Expr expr ->
+    let expr, ctx = (expr, ctx) |> declosureExpr
+    MInit.Expr expr, ctx
+  | MInit.Call (callee, args) ->
+    declosureInitCall callee args ctx
+  | MInit.Box expr ->
+    let expr, ctx = (expr, ctx) |> declosureExpr
+    MInit.Box expr, ctx
+  | MInit.Cons (head, tail, itemTy) ->
+    let head, ctx = (head, ctx) |> declosureExpr
+    let tail, ctx = (tail, ctx) |> declosureExpr
+    MInit.Cons (head, tail, itemTy), ctx
+  | MInit.Tuple items ->
+    let items, ctx = (items, ctx) |> stMap declosureExpr
+    MInit.Tuple items, ctx
+
 let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
   let result =
     match init with
-    | Some (MExpr.Call (MExpr.Ref (callee, _, _) as refExpr, args, callTy, callLoc)) ->
+    | MInit.Call (MExpr.Ref (callee, _, _) as refExpr, args) ->
       match ctx.Caps |> Map.tryFind callee with
       | Some (_ :: _ as caps) ->
-        let buildCapsTuple (caps: (int * MTy * Loc) list) callLoc ctx =
+        let buildCapsTuple caps loc ctx =
           let tupleTy = caps |> List.map (fun (_, ty, _) -> ty) |> MTy.Tuple
           let items = caps |> List.map MExpr.Ref
-          let capsRef, capsSerial, ctx = ctx |> ctxFreshVar "caps" tupleTy callLoc
-          let letCaps = MStmt.LetTuple (capsSerial, items, tupleTy, callLoc)
+          let capsRef, capsSerial, ctx = ctx |> ctxFreshVar "caps" tupleTy loc
+          let letCaps = MStmt.LetVal (capsSerial, MInit.Tuple items, tupleTy, loc)
           capsRef, letCaps, ctx
 
         // Add caps arg.
-        let capsRef, letCaps, ctx = buildCapsTuple caps callLoc ctx
+        let capsRef, letCaps, ctx = buildCapsTuple caps loc ctx
         let args = capsRef :: args
         let acc = letCaps :: acc
 
-        let init = Some (MExpr.Call (refExpr, args, callTy, loc))
         let ctx = ctx |> ctxAddLocal serial
-        Some (MStmt.LetVal (serial, init, ty, loc) :: acc, ctx)
+        Some (MStmt.LetVal (serial, MInit.Call (refExpr, args), ty, loc) :: acc, ctx)
       | None
       | Some [] ->
         None
@@ -160,30 +177,17 @@ let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
   | Some result ->
     result
   | None ->
-    let init, ctx = (init, ctx) |> stOptionMap declosureExpr
+    let init, ctx = (init, ctx) |> declosureInit
     let ctx = ctx |> ctxAddLocal serial
     MStmt.LetVal (serial, init, ty, loc) :: acc, ctx
 
 let declosureStmt (stmt, acc, ctx) =
   match stmt with
-  | MStmt.Expr (expr, loc) ->
+  | MStmt.Do (expr, loc) ->
     let expr, ctx = declosureExpr (expr, ctx)
-    MStmt.Expr (expr, loc) :: acc, ctx
+    MStmt.Do (expr, loc) :: acc, ctx
   | MStmt.LetVal (serial, init, ty, loc) ->
     declosureStmtLetVal serial init ty loc (acc, ctx)
-  | MStmt.LetBox (serial, init, loc) ->
-    let init, ctx = (init, ctx) |> declosureExpr
-    let ctx = ctx |> ctxAddLocal serial
-    MStmt.LetBox (serial, init, loc) :: acc, ctx
-  | MStmt.LetCons (serial, head, tail, ty, loc) ->
-    let head, ctx = (head, ctx) |> declosureExpr
-    let tail, ctx = (tail, ctx) |> declosureExpr
-    let ctx = ctx |> ctxAddLocal serial
-    MStmt.LetCons (serial, head, tail, ty, loc) :: acc, ctx
-  | MStmt.LetTuple (serial, items, ty, loc) ->
-    let items, ctx = (items, ctx) |> stMap declosureExpr
-    let ctx = ctx |> ctxAddLocal serial
-    MStmt.LetTuple (serial, items, ty, loc) :: acc, ctx
   | MStmt.Set (serial, init, loc) ->
     let init, ctx = (init, ctx) |> declosureExpr
     MStmt.Set (serial, init, loc) :: acc, ctx
@@ -224,7 +228,7 @@ let deconstructCaps capsRef caps body =
       body
     | (serial, ty, loc) :: caps ->
       let projExpr = MExpr.UniOp (MUniOp.Proj i, capsRef, ty, loc)
-      let letStmt = MStmt.LetVal (serial, Some projExpr, ty, loc)
+      let letStmt = MStmt.LetVal (serial, MInit.Expr projExpr, ty, loc)
       go (i + 1) (letStmt :: body) caps
   go 0 body caps
 
