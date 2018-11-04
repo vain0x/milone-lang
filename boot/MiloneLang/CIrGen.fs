@@ -94,7 +94,7 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
   | MTy.Char ->
     CTy.Char, ctx
   | MTy.Str ->
-    CTy.Ptr CTy.Char, ctx
+    CTy.Struct "String", ctx
   | MTy.Box
   | MTy.Fun _ ->
     CTy.Ptr CTy.Void, ctx
@@ -126,10 +126,6 @@ let cOpFrom op =
   | MOp.StrCmp
   | MOp.StrIndex -> failwith "Never"
 
-let callPrintf format args =
-  let format = CExpr.Str (format + "\n")
-  CStmt.Expr (CExpr.Call (CExpr.Ref "printf", format :: args))
-
 /// `0`, `NULL`, or `(T) {}`
 let genExprDefault ctx ty =
   match ty with
@@ -138,10 +134,10 @@ let genExprDefault ctx ty =
   | MTy.Int ->
     CExpr.Int 0, ctx
   | MTy.Char
-  | MTy.Str
   | MTy.Box
   | MTy.List _ ->
     CExpr.Ref "NULL", ctx
+  | MTy.Str
   | MTy.Fun _
   | MTy.Tuple _ ->
     let ty, ctx = cty ctx ty
@@ -158,8 +154,10 @@ let genExprUniOp ctx op arg ty _ =
   match op with
   | MUniOp.Not ->
     CExpr.UniOp (CUniOp.Not, arg), ctx
+  | MUniOp.StrPtr ->
+    CExpr.Nav (arg, "str"), ctx
   | MUniOp.StrLen ->
-    CExpr.Call (CExpr.Ref "strlen", [arg]), ctx
+    CExpr.Nav (arg, "len"), ctx
   | MUniOp.Unbox ->
     let valTy, ctx = cty ctx ty
     let deref = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (arg, CTy.Ptr valTy))
@@ -184,7 +182,7 @@ let genExprOp ctx op l r =
   | MOp.StrIndex ->
     let l, ctx = genExpr ctx l
     let r, ctx = genExpr ctx r
-    CExpr.Index (l, r), ctx
+    CExpr.Index (CExpr.Nav (l, "str"), r), ctx
   | _ ->
     let l, ctx = genExpr ctx l
     let r, ctx = genExpr ctx r
@@ -207,7 +205,7 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
   | MExpr.Value (Value.Char value, _) ->
     CExpr.Char value, ctx
   | MExpr.Value (Value.Str value, _) ->
-    CExpr.Str value, ctx
+    CExpr.StrObj value, ctx
   | MExpr.Value (Value.Bool false, _) ->
     CExpr.Int 0, ctx
   | MExpr.Value (Value.Bool true, _) ->
@@ -224,8 +222,25 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprOp ctx op l r
 
 let genExprCallPrintfn ctx format args =
-  let args, ctx = genExprList ctx args
-  let ctx = ctxAddStmt ctx (callPrintf format args)
+  // Insert implicit cast from str to str ptr.
+  let rec go acc ctx args =
+    match args with
+    | [] ->
+      List.rev acc, ctx
+    | MExpr.Value (Value.Str value, _) :: args ->
+      go (CExpr.StrRaw value :: acc) ctx args
+    | arg :: args when mexprTy arg = MTy.Str ->
+      let arg, ctx = genExpr ctx arg
+      let acc = CExpr.Nav (arg, "str") :: acc
+      go acc ctx args
+    | arg :: args ->
+      let arg, ctx = genExpr ctx arg
+      go (arg :: acc) ctx args
+
+  let args, ctx = go [] ctx args
+  let format = CExpr.StrRaw (format + "\n")
+  let expr = CStmt.Expr (CExpr.Call (CExpr.Ref "printf", format :: args))
+  let ctx = ctxAddStmt ctx expr
   genExprDefault ctx MTy.Unit
 
 let genExprCall ctx callee args ty =
@@ -234,16 +249,8 @@ let genExprCall ctx callee args ty =
     when serial = SerialPrintfn ->
     genExprCallPrintfn ctx format args
   | _ ->
-    let rec genArgs acc ctx args =
-      match args with
-      | [] ->
-        List.rev acc, ctx
-      | arg :: args ->
-        let arg, ctx = genExpr ctx arg
-        genArgs (arg :: acc) ctx args
-
     let callee, ctx = genExpr ctx callee
-    let args, ctx = genArgs [] ctx args
+    let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
 
 let genInitExprCore ctx serial expr ty =

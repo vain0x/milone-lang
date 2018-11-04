@@ -110,8 +110,8 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.Bool
     | Ty.Int
     | Ty.Char
-    | Ty.Box
-    | Ty.Str ->
+    | Ty.Str
+    | Ty.Box ->
       ty
     | Ty.Fun (sty, tty) ->
       Ty.Fun (go sty, go tty)

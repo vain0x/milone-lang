@@ -55,7 +55,7 @@ let cprintExprChar value =
   | '\u0000' -> "\\0"
   | _ -> string value
 
-let cprintExprStr acc (value: string) =
+let cprintExprStrRaw acc (value: string) =
   let rec chunk i =
     if i >= value.Length || value.[i] = '\\'
     then i
@@ -82,6 +82,12 @@ let cprintExprStr acc (value: string) =
         go (acc *- string value.[i]) (i + 1)
   go (acc *- "\"") 0 *- "\""
 
+let cprintExprStrObj acc (value: string) =
+  let acc = acc *- "(struct String){.str = "
+  let acc = cprintExprStrRaw acc value
+  let acc = acc *- ", .len = " *- string value.Length *- "}"
+  acc
+
 let rec cprintExpr acc expr: string list =
   let rec cprintExprList acc index separator exprs =
     match exprs with
@@ -97,8 +103,12 @@ let rec cprintExpr acc expr: string list =
     acc *- string value
   | CExpr.Char value ->
     acc *- "'" *- cprintExprChar value *- "'"
-  | CExpr.Str value ->
-    cprintExprStr acc value
+  | CExpr.StrObj value ->
+    cprintExprStrObj acc value
+  | CExpr.StrRaw value->
+    cprintExprStrRaw acc value
+  | CExpr.Nav (CExpr.StrObj value, "len") ->
+    acc *- string value.Length
   | CExpr.Ref (value) ->
     acc *- value
   | CExpr.Proj (left, index) ->
@@ -260,14 +270,14 @@ int int_cmp(int l, int r) {
   return 1;
 }
 
-String str_cmp(String left, String right) {
+int str_cmp(struct String left, struct String right) {
   if (left.len != right.len) {
     return int_cmp(left.len, right.len);
   }
   return strcmp(left.str, right.str);
 }
 
-String str_add(String left, String right) {
+struct String str_add(struct String left, struct String right) {
   if (left.len == 0 || right.len == 0) {
     return right.len == 0 ? left : right;
   }
@@ -275,7 +285,7 @@ String str_add(String left, String right) {
   char* str = (char*)malloc((len + 1) * sizeof(char));
   strcpy(str, left.str);
   strcpy(str + left.len, right.str);
-  return (String){.str = str, .len = len};
+  return (struct String){.str = str, .len = len};
 }
 """
   acc *- header *- eol

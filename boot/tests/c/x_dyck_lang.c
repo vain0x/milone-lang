@@ -1,11 +1,11 @@
-int go_3(char* s_4, int n_5, int i_6, int d_7) {
+int go_3(struct String s_4, int n_5, int i_6, int d_7) {
     int if_15;
     if (!((n_5 <= i_6))) goto else_1;
     if_15 = (d_7 == 0);
     goto end_if_2;
 else_1:;
     int if_16;
-    if (!((s_4[i_6] == '('))) goto else_3;
+    if (!((s_4.str[i_6] == '('))) goto else_3;
     int call_17 = go_3(s_4, n_5, (i_6 + 1), (d_7 + 1));
     if_16 = call_17;
     goto end_if_4;
@@ -25,35 +25,35 @@ end_if_2:;
     return if_15;
 }
 
-char* parse_8(char* s_9) {
-    int n_10 = strlen(s_9);
-    char* if_20;
+struct String parse_8(struct String s_9) {
+    int n_10 = s_9.len;
+    struct String if_20;
     int call_21 = go_3(s_9, n_10, 0, 0);
     if (!(call_21)) goto else_7;
-    if_20 = "Accept";
+    if_20 = (struct String){.str = "Accept", .len = 6};
     goto end_if_8;
 else_7:;
-    if_20 = "Reject";
+    if_20 = (struct String){.str = "Reject", .len = 6};
 end_if_8:;
     return if_20;
 }
 
 int main() {
-    char* case1_11 = "()";
-    char* case2_12 = "()((())(()))()";
-    char* case3_13 = "(()";
-    char* case4_14 = ")(";
-    char* call_22 = parse_8(case1_11);
-    printf("case1 (A): %s\n", call_22);
+    struct String case1_11 = (struct String){.str = "()", .len = 2};
+    struct String case2_12 = (struct String){.str = "()((())(()))()", .len = 14};
+    struct String case3_13 = (struct String){.str = "(()", .len = 3};
+    struct String case4_14 = (struct String){.str = ")(", .len = 2};
+    struct String call_22 = parse_8(case1_11);
+    printf("case1 (A): %s\n", call_22.str);
     int call_23 = 0;
-    char* call_24 = parse_8(case2_12);
-    printf("case2 (A): %s\n", call_24);
+    struct String call_24 = parse_8(case2_12);
+    printf("case2 (A): %s\n", call_24.str);
     int call_25 = 0;
-    char* call_26 = parse_8(case3_13);
-    printf("case3 (R): %s\n", call_26);
+    struct String call_26 = parse_8(case3_13);
+    printf("case3 (R): %s\n", call_26.str);
     int call_27 = 0;
-    char* call_28 = parse_8(case4_14);
-    printf("case4 (R): %s\n", call_28);
+    struct String call_28 = parse_8(case4_14);
+    printf("case4 (R): %s\n", call_28.str);
     int call_29 = 0;
     return 0;
 }

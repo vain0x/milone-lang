@@ -1,6 +1,6 @@
 int main() {
-    int le_3 = (str_cmp("a", "b") < 0);
-    int eq_4 = (str_cmp("o", "o") == 0);
+    int le_3 = (str_cmp((struct String){.str = "a", .len = 1}, (struct String){.str = "b", .len = 1}) < 0);
+    int eq_4 = (str_cmp((struct String){.str = "o", .len = 1}, (struct String){.str = "o", .len = 1}) == 0);
     int if_5;
     int if_6;
     if (!(le_3)) goto else_3;

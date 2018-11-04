@@ -208,6 +208,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MUniOp =
     | Not
+    | StrPtr
     | StrLen
     | Unbox
     /// Projection. Get an item of tuple.
@@ -337,7 +338,9 @@ namespace rec MiloneLang
       of int
     | Char
       of char
-    | Str
+    | StrRaw
+      of string
+    | StrObj
       of string
     | Ref
       of string
