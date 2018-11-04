@@ -58,6 +58,7 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Int
     | Ty.Char
     | Ty.Str
+    | Ty.Range
     | Ty.Box
     | Ty.Tuple [] ->
       true
@@ -79,6 +80,7 @@ let isMonomorphic ctx ty: bool =
   | Ty.Int
   | Ty.Char
   | Ty.Str
+  | Ty.Range
   | Ty.Box
   | Ty.Tuple [] ->
     true
@@ -111,6 +113,7 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.Int
     | Ty.Char
     | Ty.Str
+    | Ty.Range
     | Ty.Box ->
       ty
     | Ty.Fun (sty, tty) ->
@@ -149,6 +152,7 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Int, Ty.Int
     | Ty.Char, Ty.Char
     | Ty.Str, Ty.Str
+    | Ty.Range, Ty.Range
     | Ty.Box, Ty.Box ->
       ctx
     | Ty.Var _, _ ->
@@ -158,6 +162,7 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Int, _
     | Ty.Char, _
     | Ty.Str, _
+    | Ty.Range, _
     | Ty.Box, _
     | Ty.Fun _, _
     | Ty.Tuple _, _
@@ -277,19 +282,23 @@ let inferNav ctx sub mes loc resultTy =
   | _ ->
     failwithf "Unknown nav %A" (sub, mes, loc)
 
-/// `x.[i] : 'y` <== x : 'x, i : int
+/// `x.[i] : 'y` <== x : 'x, i : int or i : range
 /// NOTE: Currently only the `x : string` case can compile, however,
 /// we don't infer that for compatibility.
 let inferIndex ctx l r loc resultTy =
   let subTy, _, ctx = freshTyVar "sub" ctx
+  let indexTy, _, ctx = freshTyVar "index" ctx
   let l, ctx = inferExpr ctx l subTy
-  let r, ctx = inferExpr ctx r Ty.Int
-  match substTy ctx subTy with
-  | Ty.Str ->
+  let r, ctx = inferExpr ctx r indexTy
+  match substTy ctx subTy, substTy ctx indexTy with
+  | Ty.Str, Ty.Int ->
     let ctx = unifyTy ctx resultTy Ty.Char
     Expr.Index (l, r, resultTy, loc), ctx
-  | subTy ->
-    failwithf "Type: Index not supported %A" (subTy, l, r)
+  | Ty.Str, Ty.Range ->
+    let ctx = unifyTy ctx resultTy Ty.Str
+    Expr.Index (l, r, resultTy, loc), ctx
+  | subTy, indexTy ->
+    failwithf "Type: Index not supported %A" (subTy, indexTy, l, r)
 
 /// During inference of `f w x ..`,
 /// assume we concluded `f w : 'f`.
@@ -361,6 +370,10 @@ let inferOpCons ctx op left right loc listTy =
   let right, ctx = inferExpr ctx right listTy
   Expr.Op (op, left, right, listTy, loc), ctx
 
+let inferOpRange ctx op left right loc ty =
+  let ctx = unifyTy ctx ty Ty.Range
+  inferOpCore ctx op left right loc Ty.Int ty
+
 let inferOp (ctx: TyCtx) op left right loc ty =
   match op with
   | Op.Add ->
@@ -382,6 +395,8 @@ let inferOp (ctx: TyCtx) op left right loc ty =
     inferOpLogic ctx op left right loc ty
   | Op.Cons ->
     inferOpCons ctx op left right loc ty
+  | Op.Range ->
+    inferOpRange ctx op left right loc ty
 
 let inferTuple (ctx: TyCtx) items loc tupleTy =
   let rec go acc itemTys ctx items =

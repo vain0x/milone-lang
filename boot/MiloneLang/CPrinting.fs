@@ -270,10 +270,13 @@ int int_cmp(int l, int r) {
   return 1;
 }
 
+int int_clamp(int x, int l, int r) {
+  if (x < l) return l;
+  if (x > r) return r;
+  return x;
+}
+
 int str_cmp(struct String left, struct String right) {
-  if (left.len != right.len) {
-    return int_cmp(left.len, right.len);
-  }
   return strcmp(left.str, right.str);
 }
 
@@ -285,6 +288,21 @@ struct String str_add(struct String left, struct String right) {
   char* str = (char*)malloc((len + 1) * sizeof(char));
   strcpy(str, left.str);
   strcpy(str + left.len, right.str);
+  return (struct String){.str = str, .len = len};
+}
+
+struct String str_slice(struct String s, int l, int r) {
+  l = int_clamp(l, 0, s.len);
+  r = int_clamp(r + 1, l, s.len);
+  int len = r - l;
+  char* str;
+  if (r == s.len) {
+    str = s.str + l;
+  } else {
+    str = (char*)malloc((len + 1) * sizeof(char));
+    strncpy(str, s.str + l, len);
+    str[len] = '\0';
+  }
   return (struct String){.str = str, .len = len};
 }
 """

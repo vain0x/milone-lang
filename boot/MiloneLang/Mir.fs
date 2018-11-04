@@ -83,7 +83,8 @@ let mopFrom op =
   | Op.Ge
   | Op.And
   | Op.Or
-  | Op.Cons -> failwith "We don't use > >= && || :: , in MIR"
+  | Op.Cons
+  | Op.Range -> failwith "We don't use > >= && || :: .. in MIR"
 
 let unboxTy (ty: Ty): MTy =
   match ty with
@@ -103,6 +104,8 @@ let unboxTy (ty: Ty): MTy =
     failwith "Never type error in MIR"
   | Ty.Var _ ->
     failwith "Never type variable in MIR."
+  | Ty.Range ->
+    failwith "Never range as object in MIR."
 
 let listItemTy ty =
   match ty with
@@ -271,6 +274,19 @@ let mirifyExprIndex ctx l r _ loc =
     let l, ctx = mirifyExpr ctx l
     let r, ctx = mirifyExpr ctx r
     MExpr.Op (MOp.StrIndex, l, r, MTy.Char, loc), ctx
+  | Ty.Str, Ty.Range ->
+    let rl, rr =
+      match r with
+      | Expr.Op (Op.Range, rl, rr, _, _) -> rl, rr
+      | _ -> failwith "Never"
+    let l, ctx = mirifyExpr ctx l
+    let rl, ctx = mirifyExpr ctx rl
+    let rr, ctx = mirifyExpr ctx rr
+    let temp, tempSerial, ctx = ctxFreshVar ctx "slice" MTy.Str loc
+    let strSliceRef = MExpr.Ref (SerialStrSlice, MTy.Unit, loc) // FIXME: wrong type
+    let callInit = MInit.Call (strSliceRef, [l; rl; rr])
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, callInit, MTy.Str, loc))
+    temp, ctx
   | _ ->
     failwith "unimpl non-string indexing"
 

@@ -34,6 +34,8 @@ namespace rec MiloneLang
     | Colon
     /// `.`
     | Dot
+    /// `..`
+    | Range
     /// `|`
     | Pipe
     /// `->`
@@ -58,6 +60,7 @@ namespace rec MiloneLang
     | Int
     | Char
     | Str
+    | Range
     | Box
     | Var
       of string
@@ -78,6 +81,7 @@ namespace rec MiloneLang
     | Cmp
     | And
     | Or
+    | Range
 
   /// Binary operators in AST.
   [<RequireQualifiedAccess>]
@@ -110,6 +114,8 @@ namespace rec MiloneLang
     | Or
     /// `::` Construction
     | Cons
+    /// `..`
+    | Range
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]

@@ -248,6 +248,11 @@ let genExprCall ctx callee args ty =
   | MExpr.Ref (serial, _, _), (MExpr.Value (Value.Str format, _)) :: args
     when serial = SerialPrintfn ->
     genExprCallPrintfn ctx format args
+  | MExpr.Ref (serial, _, _), args
+    when serial = SerialStrSlice ->
+    let callee = CExpr.Ref "str_slice"
+    let args, ctx = genExprList ctx args
+    CExpr.Call (callee, args), ctx
   | _ ->
     let callee, ctx = genExpr ctx callee
     let args, ctx = genExprList ctx args
