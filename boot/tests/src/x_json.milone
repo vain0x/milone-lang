@@ -1,5 +1,22 @@
 // Incomplete.
 
+let listRev xs =
+  let rec go acc (xs : string list) =
+    match xs with
+    | [] ->
+      acc
+    | x :: xs ->
+      go (x :: acc) xs
+  go [] xs
+
+let rec printList xs =
+  match xs with
+  | [] ->
+    ()
+  | x :: xs ->
+    printfn "%s" x
+    printList xs
+
 let isDigit c =
   '0' <= c && c <= '9'
 
@@ -10,20 +27,25 @@ let tokenize (s : string) =
     else
       readInt (i + 1)
 
-  let rec go i =
-    if i < s.Length then
-      if s.[i] = ' ' then
-        go (i + 1)
-      else if s.[i] = '[' || s.[i] = ']' || s.[i] = ',' then
-        printfn "punct %c" s.[i]
-        go (i + 1)
-      else if isDigit s.[i] then
-        let r = readInt i
-        printfn "int %s" s.[i..r - 1]
-        go r
-  go 0
+  let rec go acc i =
+    if i >= s.Length then
+      listRev acc
+    else if s.[i] = ' ' then
+      go acc (i + 1)
+    else if s.[i] = '[' || s.[i] = ']' || s.[i] = ',' then
+      let acc = "punct " + s.[i..i] :: acc
+      go acc (i + 1)
+    else if isDigit s.[i] then
+      let r = readInt i
+      let acc = "int " + s.[i..r - 1] :: acc
+      go acc r
+    else
+      printfn "ERROR: Unknown Token '%c'" s.[i]
+      exit 1
+  go [] 0
 
 let main _ =
   let source = "[0, 1000000007, 314159]"
-  tokenize source
+  let tokens = tokenize source
+  printList tokens
   0
