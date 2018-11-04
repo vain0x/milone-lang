@@ -1,12 +1,11 @@
 /// Prints C language code from C language IR.
 module rec MiloneLang.CPrinting
 
-open System
-
 let ( *- ) acc second =
   second :: acc
 
-let eol = Environment.NewLine
+let eol = """
+"""
 
 let opStr op =
   match op with

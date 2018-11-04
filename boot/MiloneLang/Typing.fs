@@ -1,6 +1,5 @@
 module rec MiloneLang.Typing
 
-open System
 open MiloneLang
 open MiloneLang.Helpers
 
@@ -14,29 +13,6 @@ type TyCtx =
     TySerial: int
     TyEnv: Map<string, Ty>
   }
-
-let SerialNot = -1
-let SerialExit = -2
-let SerialBox = -3
-let SerialUnbox = -4
-let SerialPrintfn = -5
-
-let knownSerials =
-  [
-    SerialNot
-    SerialExit
-    SerialBox
-    SerialUnbox
-    SerialPrintfn
-  ]
-
-let patTy (pat: Pat<Loc>): Ty =
-  let ty, _ = Parsing.patExtract pat
-  ty
-
-let tyOf (expr: Expr< Loc>): Ty =
-  let ty, _ = Parsing.exprExtract expr
-  ty
 
 /// Merges derived context into base context
 /// for when expr of derived context is done.
@@ -215,7 +191,7 @@ let inferPat ctx pat ty =
   | Pat.Unit _ ->
     pat, unifyTy ctx ty Ty.Unit
   | Pat.Value (value, _) ->
-    pat, unifyTy ctx ty (Parsing.valueTy value)
+    pat, unifyTy ctx ty (valueTy value)
   | Pat.Nil (_, loc) ->
     let itemTy, _, ctx = freshTyVar "item" ctx
     let ctx = unifyTy ctx ty (Ty.List itemTy)
@@ -496,7 +472,7 @@ let inferAndThen ctx loc exprs lastTy =
 let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   match expr with
   | Expr.Value (value, _) ->
-    expr, unifyTy ctx (Parsing.valueTy value) ty
+    expr, unifyTy ctx (valueTy value) ty
   | Expr.Unit _ ->
     expr, unifyTy ctx ty Ty.Unit
   | Expr.Ref (ident, _, _, loc) ->
@@ -537,7 +513,7 @@ let substTyExpr ctx expr =
       failwithf "Couldn't determine type %A" ty
     | ty ->
       ty
-  Parsing.exprMap subst id expr
+  exprMap subst id expr
 
 let infer (exprs: Expr<Loc> list): Expr<Loc> list * TyCtx =
   let ctx =

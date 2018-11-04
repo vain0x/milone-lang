@@ -1,5 +1,7 @@
 module rec MiloneLang.MirTrans
 
+open MiloneLang.Helpers
+
 [<RequireQualifiedAccess>]
 type MirTransCtx =
   {
@@ -14,40 +16,9 @@ type MirTransCtx =
     Locals: Set<int>
   }
 
-/// `List.map`, modifying context.
-let stMap f (xs, ctx) =
-  let rec go acc (xs, ctx) =
-    match xs with
-    | [] ->
-      List.rev acc, ctx
-    | x :: xs ->
-      let y, ctx = f (x, ctx)
-      go (y :: acc) (xs, ctx)
-  go [] (xs, ctx)
-
-/// `List.bind`, modifying context.
-let stFlatMap f (xs, ctx) =
-  let rec go acc xs ctx =
-    match xs with
-    | [] ->
-      List.rev acc, ctx
-    | x :: xs ->
-      let acc, ctx = f (x, acc, ctx)
-      go acc xs ctx
-  go [] xs ctx
-
-/// `Option.map`, modifying context.
-let stOptionMap f (x, ctx) =
-  match x with
-  | Some x ->
-    let x, ctx = f (x, ctx)
-    Some x, ctx
-  | None ->
-    None, ctx
-
 let ctxFromMirCtx (mirCtx: Mir.MirCtx): MirTransCtx =
   // Primitive functions are known.
-  let known = Set.ofList Typing.knownSerials
+  let known = Set.ofList knownSerials
   {
     VarSerial = mirCtx.VarSerial
     Vars = mirCtx.Vars

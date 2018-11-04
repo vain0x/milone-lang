@@ -1,6 +1,8 @@
 /// Generates CIR from AST.
 module rec MiloneLang.CIrGen
 
+open MiloneLang.Helpers
+
 type MirTransCtx = MirTrans.MirTransCtx
 
 /// IR generation context.
@@ -229,7 +231,7 @@ let genExprCallPrintfn ctx format args =
 let genExprCall ctx callee args ty =
   match callee, args with
   | MExpr.Ref (serial, _, _), (MExpr.Value (Value.Str format, _)) :: args
-    when serial = Typing.SerialPrintfn ->
+    when serial = SerialPrintfn ->
     genExprCallPrintfn ctx format args
   | _ ->
     let rec genArgs acc ctx args =
@@ -250,7 +252,7 @@ let genInitExprCore ctx serial expr ty =
   ctxAddStmt ctx (CStmt.Let (ident, expr, cty))
 
 let genInitBox ctx serial arg =
-  let argTy, ctx = cty ctx (Mir.mexprTy arg)
+  let argTy, ctx = cty ctx (mexprTy arg)
   let arg, ctx = genExpr ctx arg
 
   // void* p = (void*)malloc(sizeof T);

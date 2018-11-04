@@ -1,14 +1,8 @@
 module rec MiloneLang.Mir
 
+open MiloneLang.Helpers
+
 type TyCtx = Typing.TyCtx
-
-let exprExtract = Parsing.exprExtract
-
-let exprTy = exprExtract >> fst
-
-let patTy = Typing.patTy
-
-let patExtract = Parsing.patExtract
 
 /// Middle IR generation context.
 [<RequireQualifiedAccess>]
@@ -74,16 +68,6 @@ let ctxFreshLabel (ctx: MirCtx) (ident: string) loc =
   let labelStmt = MStmt.Label (ident, loc)
   labelStmt, ident, ctx
 
-let opIsComparison op =
-  match op with
-  | MOp.Eq
-  | MOp.Ne
-  | MOp.Lt
-  | MOp.Le ->
-    true
-  | _ ->
-    false
-
 let mopFrom op =
   match op with
   | Op.Add -> MOp.Add
@@ -100,18 +84,6 @@ let mopFrom op =
   | Op.And
   | Op.Or
   | Op.Cons -> failwith "We don't use > >= && || :: , in MIR"
-
-let mexprExtract expr =
-  match expr with
-  | MExpr.Default (ty, loc) -> ty, loc
-  | MExpr.Value (value, loc) -> unboxTy (Parsing.valueTy value), loc
-  | MExpr.Ref (_, ty, loc) -> ty, loc
-  | MExpr.UniOp (_, _, ty, loc) -> ty, loc
-  | MExpr.Op (_, _, _, ty, loc) -> ty, loc
-
-let mexprTy expr =
-  let ty, _ = mexprExtract expr
-  ty
 
 let unboxTy (ty: Ty): MTy =
   match ty with
@@ -325,13 +297,13 @@ let mirifyExprCallNot ctx arg ty notLoc =
 
 let mirifyExprCall ctx callee args ty loc =
   match callee, args with
-  | Expr.Ref (_, serial, _, _), [arg] when serial = Typing.SerialNot ->
+  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialNot ->
     mirifyExprCallNot ctx arg ty loc
-  | Expr.Ref (_, serial, _, _), [arg] when serial = Typing.SerialExit ->
+  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialExit ->
     mirifyExprCallExit ctx arg ty loc
-  | Expr.Ref (_, serial, _, _), [arg] when serial = Typing.SerialBox ->
+  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialBox ->
     mirifyExprCallBox ctx arg ty loc
-  | Expr.Ref (_, serial, _, _), [arg] when serial = Typing.SerialUnbox ->
+  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialUnbox ->
     mirifyExprCallUnbox ctx arg ty loc
   | _ ->
     let ty = unboxTy ty

@@ -2,14 +2,8 @@ module MiloneLang.Parsing.ParsingTests
 
 open MiloneLang
 open MiloneLang.Assets
+open MiloneLang.Helpers
 open Xunit
-
-let noSerial = Parsing.noSerial
-let noTy = Parsing.noTy
-
-let exprMap f = Parsing.exprMap f
-
-let withUnit x = x, ()
 
 let parseStr source: Expr<unit> list =
   source
