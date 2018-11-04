@@ -253,8 +253,10 @@ let inferList ctx items loc listTy =
 /// if bool then 'a else 'a
 let inferIf ctx pred thenCl elseCl loc resultTy =
   let pred, ctx = inferExpr ctx pred Ty.Bool
-  let thenCl, ctx = inferExpr ctx thenCl resultTy
-  let elseCl, ctx = inferExpr ctx elseCl resultTy
+  let thenCl, thenCtx = inferExpr ctx thenCl resultTy
+  let ctx = rollback ctx thenCtx
+  let elseCl, elseCtx = inferExpr ctx elseCl resultTy
+  let ctx = rollback ctx elseCtx
   Expr.If (pred, thenCl, elseCl, resultTy, loc), ctx
 
 /// match 'a with ( | 'a -> 'b )*
