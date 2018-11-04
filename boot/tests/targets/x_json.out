@@ -1,0 +1,8 @@
+punct [
+int 0
+punct ,
+int 1000000007
+punct ,
+int 314159
+punct ]
+$? = 0
