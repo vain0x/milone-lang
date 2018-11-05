@@ -341,8 +341,14 @@ let mirifyExprOpOr ctx l r ty loc =
   let trueExpr = Expr.Value (Value.Bool true, loc)
   mirifyExprIf ctx l trueExpr r ty loc
 
+/// `x |> f` ==> `(f x)`
+/// `x |> f a b ..` ==> `(f a b .. x)` (adhoc workaround)
 let mirifyExprOpPipe ctx l r ty loc =
-  mirifyExprCall ctx r [l] ty loc
+  match r with
+  | Expr.Call (callee, args, ty, loc) ->
+    mirifyExprCall ctx callee (args @ [l]) ty loc
+  | _ ->
+    mirifyExprCall ctx r [l] ty loc
 
 let mirifyExprOpCons ctx l r ty loc =
   let itemTy = listItemTy ty
