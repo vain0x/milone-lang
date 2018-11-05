@@ -361,6 +361,13 @@ let inferOpCmp (ctx: TyCtx) op left right loc resultTy =
   let ctx = unifyTy ctx resultTy Ty.Bool
   inferOpCore ctx op left right loc operandTy resultTy
 
+let inferOpPipe ctx op l r loc ty =
+  let argTy, _, ctx = freshTyVar "arg" ctx
+  let funTy = Ty.Fun (argTy, ty)
+  let l, ctx = inferExpr ctx l argTy
+  let r, ctx = inferExpr ctx r funTy
+  Expr.Op (op, l, r, ty, loc), ctx
+
 let inferOpLogic (ctx: TyCtx) op left right loc resultTy =
   let ctx = unifyTy ctx resultTy Ty.Bool
   inferOpCore ctx op left right loc Ty.Bool Ty.Bool
@@ -392,6 +399,8 @@ let inferOp (ctx: TyCtx) op left right loc ty =
   | Op.Gt
   | Op.Ge ->
     inferOpCmp ctx op left right loc ty
+  | Op.Pipe ->
+    inferOpPipe ctx op left right loc ty
   | Op.And
   | Op.Or ->
     inferOpLogic ctx op left right loc ty

@@ -81,6 +81,7 @@ let mopFrom op =
   | Op.Le -> MOp.Le
   | Op.Gt
   | Op.Ge
+  | Op.Pipe
   | Op.And
   | Op.Or
   | Op.Cons
@@ -340,6 +341,9 @@ let mirifyExprOpOr ctx l r ty loc =
   let trueExpr = Expr.Value (Value.Bool true, loc)
   mirifyExprIf ctx l trueExpr r ty loc
 
+let mirifyExprOpPipe ctx l r ty loc =
+  mirifyExprCall ctx r [l] ty loc
+
 let mirifyExprOpCons ctx l r ty loc =
   let itemTy = listItemTy ty
   let listTy = MTy.List itemTy
@@ -394,6 +398,8 @@ let mirifyExprOp ctx op l r ty loc =
     mirifyExprOpAnd ctx l r ty loc
   | Op.Or ->
     mirifyExprOpOr ctx l r ty loc
+  | Op.Pipe ->
+    mirifyExprOpPipe ctx l r ty loc
   | Op.Cons ->
     mirifyExprOpCons ctx l r ty loc
   | _ ->

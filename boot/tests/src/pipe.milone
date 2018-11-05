@@ -1,0 +1,6 @@
+let inc (x : int) = x + 1
+let twice (x : int) = x * x
+
+let main _ =
+  let n = 1 |> inc |> twice |> twice
+  n - 16

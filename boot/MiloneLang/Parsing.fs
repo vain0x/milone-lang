@@ -366,7 +366,8 @@ let parseNextLevelOp level outer tokens =
   match level with
   | OpLevel.Range -> parseOp OpLevel.Or outer tokens
   | OpLevel.Or -> parseOp OpLevel.And outer tokens
-  | OpLevel.And -> parseOp OpLevel.Cmp outer tokens
+  | OpLevel.And -> parseOp OpLevel.Pipe outer tokens
+  | OpLevel.Pipe -> parseOp OpLevel.Cmp outer tokens
   | OpLevel.Cmp -> parseOp OpLevel.Cons outer tokens
   | OpLevel.Cons -> parseOp OpLevel.Add outer tokens
   | OpLevel.Add -> parseOp OpLevel.Mul outer tokens
@@ -388,6 +389,8 @@ let rec parseOps level boxX expr tokens =
     next expr Op.Or opLoc tokens
   | OpLevel.And, (Token.Punct "&&", opLoc) :: tokens ->
     next expr Op.And opLoc tokens
+  | OpLevel.Pipe, (Token.Punct "|>", opLoc) :: tokens ->
+    next expr Op.Pipe opLoc tokens
   | OpLevel.Cmp, (Token.Punct "=", opLoc) :: tokens ->
     next expr Op.Eq opLoc tokens
   | OpLevel.Cmp, (Token.Punct "<>", opLoc) :: tokens ->

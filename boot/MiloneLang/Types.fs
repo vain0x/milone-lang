@@ -79,6 +79,7 @@ namespace rec MiloneLang
     | Cons
     /// Comparison.
     | Cmp
+    | Pipe
     | And
     | Or
     | Range
@@ -108,6 +109,8 @@ namespace rec MiloneLang
     | Gt
     /// `>=` Greater than or equal to
     | Ge
+    /// `|>`
+    | Pipe
     /// `&&`
     | And
     /// `||`
