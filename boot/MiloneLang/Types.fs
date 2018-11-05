@@ -124,6 +124,11 @@ namespace rec MiloneLang
     /// `..`
     | Range
 
+  [<RequireQualifiedAccess>]
+  type TyDef =
+    | Union
+      of l:(string * int) * r:(string * int)
+
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
   type Pat<'a> =
@@ -198,6 +203,9 @@ namespace rec MiloneLang
       of Expr<'a> list * Ty * 'a
     | Let
       of pats:Pat<'a> list * init:Expr<'a> * 'a
+    /// Type definition.
+    | TyDef
+      of ident:string * serial:int * TyDef * 'a
 
   /// Type in middle IR.
   [<RequireQualifiedAccess>]

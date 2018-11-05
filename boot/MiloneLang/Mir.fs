@@ -528,6 +528,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   | Expr.Anno _
   | Expr.Let ([], _, _) ->
     failwith "Never"
+  | Expr.TyDef _ ->
+    failwith "Never: Type definition is erased in typing."
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =

@@ -332,6 +332,21 @@ let parseExprCons () =
   source |> parseStr |> is expected
 
 [<Fact>]
+let parseExprTyDefUnion () =
+  let source = """
+type Answer =
+  | Yes
+  | No
+"""
+  let tyDef =
+    TyDef.Union (("Yes", noSerial), ("No", noSerial))
+  let expected =
+    [
+      Expr.TyDef ("Answer", noSerial, tyDef, ())
+    ]
+  source |> parseStr |> is expected
+
+[<Fact>]
 let parseListTypeExprs () =
   let source = """int list list"""
   let expected = tyList (tyList Ty.Int)

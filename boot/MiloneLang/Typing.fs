@@ -534,6 +534,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferLetVal ctx pat init loc ty
   | Expr.Let (calleePat :: argPats, body, loc) ->
     inferLetFun ctx calleePat argPats body loc ty
+  | Expr.TyDef (ident, _, tyDef, loc) ->
+    failwith "unimpl"
   | Expr.Let ([], _, _) ->
     failwith "Never let with no pats"
 

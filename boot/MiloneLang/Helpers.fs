@@ -111,6 +111,8 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     ty, a
   | Expr.Let (_, _, a) ->
     Ty.Unit, a
+  | Expr.TyDef (_, _, _, a) ->
+    Ty.Unit, a
 
 let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
   let goPat pat =
@@ -147,6 +149,8 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.AndThen (List.map go exprs, f ty, g a)
     | Expr.Let (pats, init, a) ->
       Expr.Let (List.map goPat pats, go init, g a)
+    | Expr.TyDef (ident, serial, tyDef, a) ->
+      Expr.TyDef (ident, serial, tyDef, g a)
   go expr
 
 let exprTy expr =
