@@ -110,6 +110,8 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ctxAddTupleDecl ctx itemTys
     | Some ty ->
       ty, ctx
+  | MTy.Ref _ ->
+    failwith "unimpl"
 
 let cOpFrom op =
   match op with
@@ -142,6 +144,8 @@ let genExprDefault ctx ty =
   | MTy.Tuple _ ->
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
+  | MTy.Ref _ ->
+    failwith "unimpl"
 
 let genExprOpAsCall ctx ident l r =
   let l, ctx = genExpr ctx l

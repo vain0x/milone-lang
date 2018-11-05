@@ -101,6 +101,8 @@ let unboxTy (ty: Ty): MTy =
     MTy.List (unboxTy ty)
   | Ty.Tuple itemTys ->
     MTy.Tuple (List.map unboxTy itemTys)
+  | Ty.Ref (_, serial) ->
+    MTy.Ref serial
   | Ty.Error ->
     failwith "Never type error in MIR"
   | Ty.Var _ ->

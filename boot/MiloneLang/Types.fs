@@ -63,6 +63,9 @@ namespace rec MiloneLang
     | Str
     | Range
     | Box
+    /// Type reference, i.e. name of some type.
+    | Ref
+      of ident:string * serial:int
     | Var
       of string
     | Fun
@@ -205,6 +208,8 @@ namespace rec MiloneLang
     | Char
     | Str
     | Box
+    | Ref
+      of int
     /// Function type, e.g. `int -> int`.
     | Fun
       of MTy * MTy

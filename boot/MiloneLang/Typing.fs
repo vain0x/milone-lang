@@ -68,6 +68,8 @@ let isFreshTyVar ty tyVar: bool =
       go itemTy && go (Ty.Tuple itemTys)
     | Ty.List ty ->
       go ty
+    | Ty.Ref _ ->
+      false
     | Ty.Var tv ->
       tv <> tyVar
   go ty
@@ -82,7 +84,8 @@ let isMonomorphic ctx ty: bool =
   | Ty.Str
   | Ty.Range
   | Ty.Box
-  | Ty.Tuple [] ->
+  | Ty.Tuple []
+  | Ty.Ref _ ->
     true
   | Ty.Error
   | Ty.Var _ ->
@@ -114,7 +117,8 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.Char
     | Ty.Str
     | Ty.Range
-    | Ty.Box ->
+    | Ty.Box
+    | Ty.Ref _ ->
       ty
     | Ty.Fun (sty, tty) ->
       Ty.Fun (go sty, go tty)
@@ -155,6 +159,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Range, Ty.Range
     | Ty.Box, Ty.Box ->
       ctx
+    | Ty.Ref (_, l), Ty.Ref (_, r) when l <> noSerial && l = r ->
+      ctx
     | Ty.Var _, _ ->
       failwithf "Couldn't unify (due to self recursion) %A %A" lty rty
     | Ty.Unit, _
@@ -166,7 +172,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Box, _
     | Ty.Fun _, _
     | Ty.Tuple _, _
-    | Ty.List _, _ ->
+    | Ty.List _, _
+    | Ty.Ref _, _ ->
       let lty, rty = substTy ctx lty, substTy ctx rty
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
