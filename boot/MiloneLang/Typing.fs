@@ -5,9 +5,13 @@ open MiloneLang.Helpers
 
 type TyCtx =
   {
+    /// Next serial number for variables.
+    /// We need to identify variables by serial number rather than names
+    /// due to scope locality and shadowing.
     VarSerial: int
-    /// Identifier serial number to human readable name, type, location.
-    Vars: Map<int, string * Ty * Loc>
+    /// Value level identifiers.
+    /// From serial number to (source identifier, type, location).
+    Vars: Map<int, string * ValueIdent * Ty * Loc>
     /// Identifier to type and serial.
     VarEnv: Map<string, Ty * int>
     TySerial: int
@@ -43,8 +47,8 @@ let ctxAddTy tyIdent tyDef loc ctx =
     let refTy = Ty.Ref (tyIdent, tySerial)
 
     // Register variants as values.
-    let lSerial, ctx = freshVar ctx lIdent refTy loc
-    let rSerial, ctx = freshVar ctx rIdent refTy loc
+    let lSerial, ctx = freshVar ctx lIdent ValueIdent.Arm refTy loc
+    let rSerial, ctx = freshVar ctx rIdent ValueIdent.Arm refTy loc
 
     let tyDef = TyDef.Union ((lIdent, lSerial), (rIdent, rSerial))
     let ctx =
@@ -61,13 +65,13 @@ let resolveTyVar name (ctx: TyCtx): Ty =
   | None ->
     Ty.Var name
 
-let freshVar (ctx: TyCtx) ident ty loc: int * TyCtx =
+let freshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
   let serial = ctx.VarSerial + 1
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
         VarEnv = ctx.VarEnv |> Map.add ident (ty, serial)
-        Vars = ctx.Vars |> Map.add serial (ident, ty, loc)
+        Vars = ctx.Vars |> Map.add serial (ident, valueIdent, ty, loc)
     }
   serial, ctx
 
@@ -231,7 +235,7 @@ let inferPat ctx pat ty =
     let ctx = unifyTy ctx ty (Ty.List itemTy)
     Pat.Nil (itemTy, loc), ctx
   | Pat.Ref (ident, _, _, loc) ->
-    let serial, ctx = freshVar ctx ident ty loc
+    let serial, ctx = freshVar ctx ident ValueIdent.Var ty loc
     Pat.Ref (ident, serial, ty, loc), ctx
   | Pat.Cons (l, r, _, loc) ->
     inferPatCons ctx l r loc ty
@@ -487,7 +491,7 @@ let inferLetFun ctx calleePat argPats body loc unitTy =
       then Ty.Fun (Ty.Unit, Ty.Int), "", ctx
       else freshTyVar "fun" ctx
     let bodyTy, _, ctx = freshTyVar "body" ctx
-    let serial, ctx = freshVar ctx callee funTy calleeLoc
+    let serial, ctx = freshVar ctx callee ValueIdent.Fun funTy calleeLoc
 
     // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default

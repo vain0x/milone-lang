@@ -9,7 +9,7 @@ type TyCtx = Typing.TyCtx
 type MirCtx =
   {
     VarSerial: int
-    Vars: Map<int, string * MTy * Loc>
+    Vars: Map<int, string * ValueIdent * MTy * Loc>
     Tys: Map<int, string * TyDef * Loc>
     LabelSerial: int
     Decls: MDecl<Loc> list
@@ -18,9 +18,9 @@ type MirCtx =
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
   let vars =
-    tyCtx.Vars |> Map.map (fun _ (ident, ty, loc) ->
+    tyCtx.Vars |> Map.map (fun _ (ident, valueIdent, ty, loc) ->
       let ty = unboxTy (Typing.substTy tyCtx ty)
-      ident, ty, loc
+      ident, valueIdent, ty, loc
     )
   {
     VarSerial = tyCtx.VarSerial
@@ -52,7 +52,7 @@ let ctxFreshVar (ctx: MirCtx) (ident: string) (ty: MTy) loc =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        Vars = ctx.Vars |> Map.add serial (ident, ty, loc)
+        Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Var, ty, loc)
     }
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx

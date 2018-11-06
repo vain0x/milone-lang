@@ -10,7 +10,7 @@ type MirTransCtx = MirTrans.MirTransCtx
 type Ctx =
   {
     VarSerial: int
-    Vars: Map<int, string * MTy * Loc>
+    Vars: Map<int, string * ValueIdent * MTy * Loc>
     TySerial: int
     TyEnv: Map<MTy, CTy>
     Tys: Map<int, string * TyDef * Loc>
@@ -96,7 +96,7 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
 let ctxUniqueName (ctx: Ctx) serial =
   let ident =
     match ctx.Vars |> Map.tryFind serial with
-    | Some (ident, _, _) -> ident
+    | Some (ident, _, _, _) -> ident
     | None -> ""
   sprintf "%s_%d" ident serial
 

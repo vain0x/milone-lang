@@ -163,6 +163,14 @@ namespace rec MiloneLang
     | Str
       of string
 
+  /// Value-level identifier.
+  [<RequireQualifiedAccess>]
+  type ValueIdent =
+    | Var
+    | Fun
+    /// Arm of union with no argument.
+    | Arm
+
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]
   type Expr<'a> =

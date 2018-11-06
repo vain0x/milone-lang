@@ -6,7 +6,7 @@ open MiloneLang.Helpers
 type MirTransCtx =
   {
     VarSerial: int
-    Vars: Map<int, string * MTy * Loc>
+    Vars: Map<int, string * ValueIdent * MTy * Loc>
     Tys: Map<int, string * TyDef * Loc>
     LabelSerial: int
 
@@ -37,7 +37,7 @@ let ctxFreshVar (ident: string) (ty: MTy) loc (ctx: MirTransCtx) =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        Vars = ctx.Vars |> Map.add serial (ident, ty, loc)
+        Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Var, ty, loc)
     }
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
@@ -73,10 +73,13 @@ let ctxCaps (ctx: MirTransCtx) =
   let refs = Set.difference ctx.Refs ctx.Locals
   let refs = Set.difference refs ctx.Known
 
-  refs |> Set.toList |> List.map
+  refs |> Set.toList |> List.choose
     (fun serial ->
-      let _, ty, loc = ctx.Vars |> Map.find serial
-      serial, ty, loc
+      match ctx.Vars |> Map.find serial with
+      | _, ValueIdent.Var, ty, loc ->
+        Some (serial, ty, loc)
+      | _ ->
+        None
     )
 
 let declosureExprRef serial (expr, ctx) =
