@@ -13,6 +13,7 @@ type Ctx =
     Vars: Map<int, string * MTy * Loc>
     TySerial: int
     TyEnv: Map<MTy, CTy>
+    Tys: Map<int, string * TyDef * Loc>
     Stmts: CStmt list
     Decls: CDecl list
   }
@@ -25,6 +26,7 @@ let ctxFromMirCtx (mirCtx: MirTransCtx): Ctx =
     Vars = mirCtx.Vars
     TySerial = 0
     TyEnv = Map.empty
+    Tys = mirCtx.Tys
     Stmts = []
     Decls = []
   }
@@ -78,6 +80,19 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
     }
   CTy.Struct tupleTyIdent, ctx
 
+let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
+  let tags =
+    variants |> List.map (fun (_, serial) -> ctxUniqueName ctx serial)
+
+  let enumTyIdent = sprintf "%s_%d" tyIdent tySerial
+  let enumTy = CTy.Enum enumTyIdent
+  let ctx =
+    { ctx with
+        TyEnv = ctx.TyEnv |> Map.add (MTy.Ref tySerial) enumTy
+        Decls = CDecl.Enum (enumTyIdent, tags) :: ctx.Decls
+    }
+  enumTy, ctx
+
 let ctxUniqueName (ctx: Ctx) serial =
   let ident =
     match ctx.Vars |> Map.tryFind serial with
@@ -110,8 +125,16 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ctxAddTupleDecl ctx itemTys
     | Some ty ->
       ty, ctx
-  | MTy.Ref _ ->
-    failwith "unimpl"
+  | MTy.Ref serial ->
+    match ctx.Tys |> Map.tryFind serial with
+    | Some (tyIdent, TyDef.Union ((lvIdent, lvSerial), (rvIdent, rvSerial)), _) ->
+      match ctx.TyEnv |> Map.tryFind ty with
+      | Some ty ->
+        ty, ctx
+      | None ->
+        ctxAddUnionDecl ctx tyIdent serial [lvIdent, lvSerial; rvIdent, rvSerial]
+    | None ->
+      failwith "Unknown type reference"
 
 let cOpFrom op =
   match op with
@@ -382,6 +405,8 @@ let genDecls (ctx: Ctx) decls =
   match decls with
   | [] ->
     ctx.Decls |> List.rev
+  | MDecl.TyDef _ :: decls ->
+    genDecls ctx decls
   | MDecl.LetFun (callee, args, _caps, resultTy, body, _) :: decls ->
     let ident, args =
       if List.isEmpty decls

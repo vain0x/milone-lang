@@ -7,6 +7,7 @@ type MirTransCtx =
   {
     VarSerial: int
     Vars: Map<int, string * MTy * Loc>
+    Tys: Map<int, string * TyDef * Loc>
     LabelSerial: int
 
     /// Known identifiers and their dependencies.
@@ -23,6 +24,7 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): MirTransCtx =
     VarSerial = mirCtx.VarSerial
     Vars = mirCtx.Vars
     LabelSerial = mirCtx.LabelSerial
+    Tys = mirCtx.Tys
 
     Caps = Map.empty
     Known = known
@@ -51,6 +53,9 @@ let ctxPopScope (baseCtx: MirTransCtx) (derivedCtx: MirTransCtx) =
       Refs = baseCtx.Refs
       Locals = baseCtx.Locals
   }
+
+let ctxAddKnown serial (ctx: MirTransCtx) =
+  { ctx with Known = Set.add serial ctx.Known }
 
 let ctxAddRef serial (ctx: MirTransCtx) =
   { ctx with Refs = Set.add serial ctx.Refs }
@@ -172,6 +177,12 @@ let declosureStmt (stmt, acc, ctx) =
     let pred, ctx = (pred, ctx) |> declosureExpr
     MStmt.GotoUnless (pred, label, loc) :: acc, ctx
 
+let declosureDeclTyDef decl tyDef ctx =
+  match tyDef with
+  | TyDef.Union ((_, lvSerial), (_, rvSerial)) ->
+    let ctx = ctx |> ctxAddKnown lvSerial |> ctxAddKnown rvSerial
+    decl, ctx
+
 let declosureFunBody callee args body ctx =
   /// Variables known to the function body.
   let localSerials =
@@ -225,6 +236,8 @@ let declosureDeclLetFun callee args ty body loc ctx =
 
 let declosureDecl (decl, ctx) =
   match decl with
+  | MDecl.TyDef (_, tyDef, _) ->
+    declosureDeclTyDef decl tyDef ctx
   | MDecl.LetFun (callee, args, _, ty, body, loc) ->
     declosureDeclLetFun callee args ty body loc ctx
 

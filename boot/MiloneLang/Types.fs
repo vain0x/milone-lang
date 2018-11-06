@@ -319,6 +319,8 @@ namespace rec MiloneLang
   type MDecl<'a> =
     | LetFun
       of callee:int * args:(int * MTy * 'a) list * caps:(int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
+    | TyDef
+      of int * TyDef * 'a
 
   /// Type in C language.
   [<RequireQualifiedAccess>]
@@ -329,6 +331,8 @@ namespace rec MiloneLang
     | Ptr
       of CTy
     | Struct
+      of ident:string
+    | Enum
       of ident:string
 
   [<RequireQualifiedAccess>]
@@ -415,5 +419,7 @@ namespace rec MiloneLang
   type CDecl =
     | Struct
       of ident:string * fields:(string * CTy) list
+    | Enum
+      of ident:string * variants:string list
     | Fun
       of ident:string * args:(string * CTy) list * CTy * body:CStmt list

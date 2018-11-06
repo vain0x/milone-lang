@@ -10,6 +10,7 @@ type MirCtx =
   {
     VarSerial: int
     Vars: Map<int, string * MTy * Loc>
+    Tys: Map<int, string * TyDef * Loc>
     LabelSerial: int
     Decls: MDecl<Loc> list
     Stmts: MStmt<Loc> list
@@ -24,6 +25,7 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
   {
     VarSerial = tyCtx.VarSerial
     Vars = vars
+    Tys = tyCtx.Tys
     LabelSerial = 0
     Decls = []
     Stmts = []
@@ -492,6 +494,10 @@ let mirifyExprLetFun ctx pat pats body letLoc =
   | _ ->
     failwith "First pattern of `let` for function must be an identifier."
 
+let mirifyExprTyDef ctx tySerial tyDef loc =
+  let ctx = ctxAddDecl ctx (MDecl.TyDef (tySerial, tyDef, loc))
+  MExpr.Default (MTy.Unit, loc), ctx
+
 let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   match expr with
   | Expr.Value (value, loc) ->
@@ -524,12 +530,12 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprLetVal ctx pat init letLoc
   | Expr.Let (pat :: pats, body, letLoc) ->
     mirifyExprLetFun ctx pat pats body letLoc
+  | Expr.TyDef (_, tySerial, tyDef, loc) ->
+    mirifyExprTyDef ctx tySerial tyDef loc
   | Expr.Call (_, [], _, _)
   | Expr.Anno _
   | Expr.Let ([], _, _) ->
     failwith "Never"
-  | Expr.TyDef _ ->
-    failwith "Never: Type definition is erased in typing."
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =

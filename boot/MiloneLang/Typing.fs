@@ -12,6 +12,7 @@ type TyCtx =
     VarEnv: Map<string, Ty * int>
     TySerial: int
     TyEnv: Map<string, Ty>
+    Tys: Map<int, string * TyDef * Loc>
   }
 
 /// Merges derived context into base context
@@ -24,12 +25,34 @@ let rollback bCtx dCtx: TyCtx =
       VarEnv = bCtx.VarEnv
   }
 
-let freshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
+let ctxFreshTySerial (ctx: TyCtx) =
   let serial = ctx.TySerial + 1
   let ctx = { ctx with TySerial = ctx.TySerial + 1 }
+  serial, ctx
+
+let freshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
+  let serial, ctx = ctxFreshTySerial ctx
   let ident = sprintf "'%s_%d" ident serial
   let ty = Ty.Var ident
   ty, ident, ctx
+
+let ctxAddTy tyIdent tyDef loc ctx =
+  match tyDef with
+  | TyDef.Union ((lIdent, _), (rIdent, _)) ->
+    let tySerial, ctx = ctxFreshTySerial ctx
+    let refTy = Ty.Ref (tyIdent, tySerial)
+
+    // Register variants as values.
+    let lSerial, ctx = freshVar ctx lIdent refTy loc
+    let rSerial, ctx = freshVar ctx rIdent refTy loc
+
+    let tyDef = TyDef.Union ((lIdent, lSerial), (rIdent, rSerial))
+    let ctx =
+      { ctx with
+          TyEnv = ctx.TyEnv |> Map.add tyIdent refTy
+          Tys = ctx.Tys |> Map.add tySerial (tyIdent, tyDef, loc)
+      }
+    tySerial, tyDef, ctx
 
 let resolveTyVar name (ctx: TyCtx): Ty =
   match ctx.TyEnv |> Map.tryFind name with
@@ -60,6 +83,7 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Str
     | Ty.Range
     | Ty.Box
+    | Ty.Ref _
     | Ty.Tuple [] ->
       true
     | Ty.Fun (sTy, tTy) ->
@@ -68,8 +92,6 @@ let isFreshTyVar ty tyVar: bool =
       go itemTy && go (Ty.Tuple itemTys)
     | Ty.List ty ->
       go ty
-    | Ty.Ref _ ->
-      false
     | Ty.Var tv ->
       tv <> tyVar
   go ty
@@ -502,6 +524,10 @@ let inferAndThen ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
   Expr.AndThen (List.rev exprs, lastTy, loc), ctx
 
+let inferExprTyDef ctx ident tyDef loc =
+  let serial, tyDef, ctx = ctx |> ctxAddTy ident tyDef loc
+  Expr.TyDef (ident, serial, tyDef, loc), ctx
+
 let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   match expr with
   | Expr.Value (value, _) ->
@@ -535,7 +561,7 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   | Expr.Let (calleePat :: argPats, body, loc) ->
     inferLetFun ctx calleePat argPats body loc ty
   | Expr.TyDef (ident, _, tyDef, loc) ->
-    failwith "unimpl"
+    inferExprTyDef ctx ident tyDef loc
   | Expr.Let ([], _, _) ->
     failwith "Never let with no pats"
 
@@ -558,6 +584,7 @@ let infer (exprs: Expr<Loc> list): Expr<Loc> list * TyCtx =
       VarEnv = Map.empty
       TySerial = 0
       TyEnv = Map.empty
+      Tys = Map.empty
     }
 
   let exprs, ctx = inferExprs ctx exprs Ty.Unit

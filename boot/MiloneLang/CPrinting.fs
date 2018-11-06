@@ -32,6 +32,8 @@ let rec cprintTy acc ty: string list =
     acc *- "*"
   | CTy.Struct ident ->
     acc *- "struct " *- ident
+  | CTy.Enum ident ->
+    acc *- "enum " *- ident
 
 let rec cprintParams acc ps: string list =
   let rec go acc ps =
@@ -231,6 +233,18 @@ let cprintDecl acc decl =
         let acc = acc *- " " *- ident *- ";" *- eol
         go acc fields
     let acc = go acc fields
+    let acc = acc *- "};" *- eol
+    acc
+  | CDecl.Enum (tyIdent, variants) ->
+    let acc = acc *- "enum " *- tyIdent *- " {" *- eol
+    let rec go acc variants =
+      match variants with
+      | [] -> acc
+      | variant :: variants ->
+        let acc = acc *- "    "
+        let acc = acc *- variant *- "," *- eol
+        go acc variants
+    let acc = go acc variants
     let acc = acc *- "};" *- eol
     acc
   | CDecl.Fun (ident, args, resultTy, body) ->

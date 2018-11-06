@@ -1,0 +1,8 @@
+type Status =
+  | Ok
+  | Cancel
+
+let main _ =
+  let ok = Ok
+  let cancel = Cancel
+  0
