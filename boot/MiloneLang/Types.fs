@@ -168,8 +168,8 @@ namespace rec MiloneLang
   type ValueIdent =
     | Var
     | Fun
-    /// Arm of union with no argument.
-    | Arm
+    /// Variant of union with no argument.
+    | Variant
 
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]

@@ -47,8 +47,8 @@ let ctxAddTy tyIdent tyDef loc ctx =
     let refTy = Ty.Ref (tyIdent, tySerial)
 
     // Register variants as values.
-    let lSerial, ctx = freshVar ctx lIdent ValueIdent.Arm refTy loc
-    let rSerial, ctx = freshVar ctx rIdent ValueIdent.Arm refTy loc
+    let lSerial, ctx = freshVar ctx lIdent ValueIdent.Variant refTy loc
+    let rSerial, ctx = freshVar ctx rIdent ValueIdent.Variant refTy loc
 
     let tyDef = TyDef.Union ((lIdent, lSerial), (rIdent, rSerial))
     let ctx =
