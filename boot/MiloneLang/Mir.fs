@@ -182,6 +182,13 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
   | Pat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."
 
+let mirifyExprRef (ctx: MirCtx) serial ty loc =
+  match ctx.Vars |> Map.tryFind serial with
+  | Some (_, ValueIdent.Variant tySerial, _, _) ->
+    MExpr.Variant (tySerial, serial, unboxTy ty, loc), ctx
+  | _ ->
+    MExpr.Ref (serial, unboxTy ty, loc), ctx
+
 let desugarExprList items itemTy loc =
   let rec go acc items =
     match items with
@@ -505,7 +512,7 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   | Expr.Unit loc ->
     MExpr.Default (MTy.Unit, loc), ctx
   | Expr.Ref (_, serial, ty, loc) ->
-    MExpr.Ref (serial, unboxTy ty, loc), ctx
+    mirifyExprRef ctx serial ty loc
   | Expr.List ([], itemTy, loc) ->
     MExpr.Default (MTy.List (unboxTy itemTy), loc), ctx
   | Expr.List (items, itemTy, loc) ->

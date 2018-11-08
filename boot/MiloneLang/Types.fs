@@ -280,6 +280,8 @@ namespace rec MiloneLang
       of MTy * 'a
     | Ref
       of serial:int * MTy * 'a
+    | Variant
+      of tySerial:int * serial:int * MTy * 'a
     | UniOp
       of MUniOp * arg:MExpr<'a> * resultTy:MTy * 'a
     | Op

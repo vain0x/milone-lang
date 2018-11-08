@@ -243,6 +243,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
+  | MExpr.Variant (_, serial, _, _) ->
+    CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.UniOp (op, arg, ty, loc) ->
     genExprUniOp ctx op arg ty loc
   | MExpr.Op (op, l, r, _, _) ->

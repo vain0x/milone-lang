@@ -162,6 +162,7 @@ let mexprExtract expr =
   | MExpr.Default (ty, loc) -> ty, loc
   | MExpr.Lit (lit, loc) -> litMTy lit, loc
   | MExpr.Ref (_, ty, loc) -> ty, loc
+  | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
   | MExpr.Op (_, _, _, ty, loc) -> ty, loc
 
