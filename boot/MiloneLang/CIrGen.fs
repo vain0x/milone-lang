@@ -227,15 +227,15 @@ let genExprList ctx exprs =
 
 let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
   match arg with
-  | MExpr.Value (Value.Int value, _) ->
+  | MExpr.Lit (Lit.Int value, _) ->
     CExpr.Int value, ctx
-  | MExpr.Value (Value.Char value, _) ->
+  | MExpr.Lit (Lit.Char value, _) ->
     CExpr.Char value, ctx
-  | MExpr.Value (Value.Str value, _) ->
+  | MExpr.Lit (Lit.Str value, _) ->
     CExpr.StrObj value, ctx
-  | MExpr.Value (Value.Bool false, _) ->
+  | MExpr.Lit (Lit.Bool false, _) ->
     CExpr.Int 0, ctx
-  | MExpr.Value (Value.Bool true, _) ->
+  | MExpr.Lit (Lit.Bool true, _) ->
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
@@ -254,7 +254,7 @@ let genExprCallPrintfn ctx format args =
     match args with
     | [] ->
       List.rev acc, ctx
-    | MExpr.Value (Value.Str value, _) :: args ->
+    | MExpr.Lit (Lit.Str value, _) :: args ->
       go (CExpr.StrRaw value :: acc) ctx args
     | arg :: args when mexprTy arg = MTy.Str ->
       let arg, ctx = genExpr ctx arg
@@ -272,7 +272,7 @@ let genExprCallPrintfn ctx format args =
 
 let genExprCall ctx callee args ty =
   match callee, args with
-  | MExpr.Ref (serial, _, _), (MExpr.Value (Value.Str format, _)) :: args
+  | MExpr.Ref (serial, _, _), (MExpr.Lit (Lit.Str format, _)) :: args
     when serial = SerialPrintfn ->
     genExprCallPrintfn ctx format args
   | MExpr.Ref (serial, _, _), args

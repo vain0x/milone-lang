@@ -147,8 +147,8 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
   | Pat.Ref ("_", _, _, _) ->
     // Discard result.
     true, ctx
-  | Pat.Value (Value.Int value, loc) ->
-    let intExpr = MExpr.Value (Value.Int value, loc)
+  | Pat.Lit (Lit.Int value, loc) ->
+    let intExpr = MExpr.Lit (Lit.Int value, loc)
     let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, MTy.Bool, loc)
     let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
@@ -175,7 +175,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
       | _ ->
         failwith "Never"
     go true ctx 0 itemPats itemTys
-  | Pat.Value _ ->
+  | Pat.Lit _ ->
     failwith "unimpl"
   | Pat.Tuple _ ->
     failwith "Never: Tuple pattern must be of tuple type."
@@ -227,7 +227,7 @@ let mirifyExprIf ctx pred thenCl elseCl ty loc =
 
 /// exit(1);
 let mstmtExit1 (ty: MTy) loc =
-  let one = MExpr.Value (Value.Int 1, loc)
+  let one = MExpr.Lit (Lit.Int 1, loc)
   let callExpr = MExpr.UniOp (MUniOp.Exit, one, ty, loc)
   MStmt.Do (callExpr, loc)
 
@@ -337,12 +337,12 @@ let mirifyExprCall ctx callee args ty loc =
 
 /// l && r ==> if l then r else false
 let mirifyExprOpAnd ctx l r ty loc =
-  let falseExpr = Expr.Value (Value.Bool false, loc)
+  let falseExpr = Expr.Lit (Lit.Bool false, loc)
   mirifyExprIf ctx l r falseExpr ty loc
 
 /// l || r ==> if l then true else r
 let mirifyExprOpOr ctx l r ty loc =
-  let trueExpr = Expr.Value (Value.Bool true, loc)
+  let trueExpr = Expr.Lit (Lit.Bool true, loc)
   mirifyExprIf ctx l trueExpr r ty loc
 
 /// `x |> f` ==> `(f x)`
@@ -398,7 +398,7 @@ let mirifyExprOpStrAdd ctx _op l r (_, loc) =
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mirifyExprOpStrCmp ctx op l r (ty, loc) =
   let strCmpExpr = MExpr.Op (MOp.StrCmp, l, r, MTy.Int, loc)
-  let zeroExpr = MExpr.Value (Value.Int 0, loc)
+  let zeroExpr = MExpr.Lit (Lit.Int 0, loc)
   let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, ty, loc)
   opExpr, ctx
 
@@ -500,8 +500,8 @@ let mirifyExprTyDef ctx tySerial tyDef loc =
 
 let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   match expr with
-  | Expr.Value (value, loc) ->
-    MExpr.Value (value, loc), ctx
+  | Expr.Lit (lit, loc) ->
+    MExpr.Lit (lit, loc), ctx
   | Expr.Unit loc ->
     MExpr.Default (MTy.Unit, loc), ctx
   | Expr.Ref (_, serial, ty, loc) ->

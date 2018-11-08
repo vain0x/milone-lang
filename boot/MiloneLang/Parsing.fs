@@ -166,7 +166,7 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Pat.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
-    Pat.Value (Value.Int value, loc), tokens
+    Pat.Lit (Lit.Int value, loc), tokens
   | (Token.Ident ident, loc) :: tokens ->
     Pat.Ref (ident, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
@@ -343,15 +343,15 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Expr.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
-    Expr.Value (Value.Int value, loc), tokens
+    Expr.Lit (Lit.Int value, loc), tokens
   | (Token.Char value, loc) :: tokens ->
-    Expr.Value (Value.Char value, loc), tokens
+    Expr.Lit (Lit.Char value, loc), tokens
   | (Token.Str value, loc) :: tokens ->
-    Expr.Value (Value.Str value, loc), tokens
+    Expr.Lit (Lit.Str value, loc), tokens
   | (Token.Ident "false", loc) :: tokens ->
-    Expr.Value (Value.Bool false, loc), tokens
+    Expr.Lit (Lit.Bool false, loc), tokens
   | (Token.Ident "true", loc) :: tokens ->
-    Expr.Value (Value.Bool true, loc), tokens
+    Expr.Lit (Lit.Bool true, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
     Expr.Ref (value, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->

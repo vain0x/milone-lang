@@ -31,24 +31,24 @@ let stOptionMap f (x, ctx) =
   | None ->
     None, ctx
 
-let valueTy (value: Value): Ty =
-  match value with
-  | Value.Bool _ -> Ty.Bool
-  | Value.Int _ -> Ty.Int
-  | Value.Char _ -> Ty.Char
-  | Value.Str _ -> Ty.Str
+let litTy (lit: Lit): Ty =
+  match lit with
+  | Lit.Bool _ -> Ty.Bool
+  | Lit.Int _ -> Ty.Int
+  | Lit.Char _ -> Ty.Char
+  | Lit.Str _ -> Ty.Str
 
-let valueMTy (value: Value): MTy =
-  match value with
-  | Value.Bool _ -> MTy.Bool
-  | Value.Int _ -> MTy.Int
-  | Value.Char _ -> MTy.Char
-  | Value.Str _ -> MTy.Str
+let litMTy (lit: Lit): MTy =
+  match lit with
+  | Lit.Bool _ -> MTy.Bool
+  | Lit.Int _ -> MTy.Int
+  | Lit.Char _ -> MTy.Char
+  | Lit.Str _ -> MTy.Str
 
 let patExtract (pat: Pat<'a>): Ty * 'a =
   match pat with
-  | Pat.Value (value, a) ->
-    valueTy value, a
+  | Pat.Lit (lit, a) ->
+    litTy lit, a
   | Pat.Unit a ->
     Ty.Unit, a
   | Pat.Nil (itemTy, a) ->
@@ -65,8 +65,8 @@ let patExtract (pat: Pat<'a>): Ty * 'a =
 let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
   let rec go pat =
     match pat with
-    | Pat.Value (value, a) ->
-      Pat.Value (value, g a)
+    | Pat.Lit (lit, a) ->
+      Pat.Lit (lit, g a)
     | Pat.Unit a ->
       Pat.Unit (g a)
     | Pat.Nil (itemTy, a) ->
@@ -83,8 +83,8 @@ let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
 
 let exprExtract (expr: Expr<'a>): Ty * 'a =
   match expr with
-  | Expr.Value (value, a) ->
-    valueTy value, a
+  | Expr.Lit (lit, a) ->
+    litTy lit, a
   | Expr.Unit a ->
     Ty.Unit, a
   | Expr.Ref (_, _, ty, a) ->
@@ -119,8 +119,8 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
     patMap f g pat
   let rec go expr =
     match expr with
-    | Expr.Value (value, a) ->
-      Expr.Value (value, g a)
+    | Expr.Lit (lit, a) ->
+      Expr.Lit (lit, g a)
     | Expr.Unit a ->
       Expr.Unit (g a)
     | Expr.Ref (ident, serial, ty, a) ->
@@ -160,7 +160,7 @@ let exprTy expr =
 let mexprExtract expr =
   match expr with
   | MExpr.Default (ty, loc) -> ty, loc
-  | MExpr.Value (value, loc) -> valueMTy value, loc
+  | MExpr.Lit (lit, loc) -> litMTy lit, loc
   | MExpr.Ref (_, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
   | MExpr.Op (_, _, _, ty, loc) -> ty, loc

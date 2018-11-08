@@ -228,8 +228,8 @@ let inferPat ctx pat ty =
   match pat with
   | Pat.Unit _ ->
     pat, unifyTy ctx ty Ty.Unit
-  | Pat.Value (value, _) ->
-    pat, unifyTy ctx ty (valueTy value)
+  | Pat.Lit (lit, _) ->
+    pat, unifyTy ctx ty (litTy lit)
   | Pat.Nil (_, loc) ->
     let itemTy, _, ctx = freshTyVar "item" ctx
     let ctx = unifyTy ctx ty (Ty.List itemTy)
@@ -359,7 +359,7 @@ let inferCall (ctx: TyCtx) callee args loc callTy =
 
 let inferCallPrintfn ctx args loc callTy =
   match args with
-  | Expr.Value (Value.Str format, _) :: _ ->
+  | Expr.Lit (Lit.Str format, _) :: _ ->
     let ctx = unifyTy ctx callTy Ty.Unit
     let funTy = analyzeFormat format
     let args, calleeTy, ctx = inferCallArgs [] ctx (List.rev args) callTy
@@ -534,8 +534,8 @@ let inferExprTyDef ctx ident tyDef loc =
 
 let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   match expr with
-  | Expr.Value (value, _) ->
-    expr, unifyTy ctx (valueTy value) ty
+  | Expr.Lit (lit, _) ->
+    expr, unifyTy ctx (litTy lit) ty
   | Expr.Unit _ ->
     expr, unifyTy ctx ty Ty.Unit
   | Expr.Ref (ident, _, _, loc) ->

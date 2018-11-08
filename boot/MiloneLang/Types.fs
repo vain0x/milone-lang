@@ -132,8 +132,8 @@ namespace rec MiloneLang
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
   type Pat<'a> =
-    | Value
-      of Value * 'a
+    | Lit
+      of Lit * 'a
     | Unit
       of 'a
     /// `[]`
@@ -151,9 +151,9 @@ namespace rec MiloneLang
     | Anno
       of Pat<'a> * Ty * 'a
 
-  /// Value in AST.
+  /// Literal of primitive value.
   [<RequireQualifiedAccess>]
-  type Value =
+  type Lit =
     | Bool
       of bool
     | Int
@@ -174,8 +174,8 @@ namespace rec MiloneLang
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]
   type Expr<'a> =
-    | Value
-      of Value * 'a
+    | Lit
+      of Lit * 'a
     | Unit
       of 'a
     /// Variable reference.
@@ -273,8 +273,8 @@ namespace rec MiloneLang
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
   type MExpr<'a> =
-    | Value
-      of Value * 'a
+    | Lit
+      of Lit * 'a
     | Default
       of MTy * 'a
     | Ref

@@ -88,7 +88,7 @@ let declosureExprRef serial (expr, ctx) =
 
 let declosureExpr (expr, ctx) =
   match expr with
-  | MExpr.Value _
+  | MExpr.Lit _
   | MExpr.Default _ ->
     expr, ctx
   | MExpr.Ref (serial, _, _) ->
