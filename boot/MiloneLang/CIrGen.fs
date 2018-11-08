@@ -80,18 +80,31 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
     }
   CTy.Struct tupleTyIdent, ctx
 
-let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
-  let tags =
-    variants |> List.map (fun (_, serial) -> ctxUniqueName ctx serial)
+/// Calculates tag type's name of union type.
+let ctxTagTyIdent _ tyIdent tySerial =
+  sprintf "%sTag_%d" tyIdent tySerial
 
-  let enumTyIdent = sprintf "%s_%d" tyIdent tySerial
-  let enumTy = CTy.Enum enumTyIdent
+let ctxUnionTyIdent _ tyIdent tySerial =
+  sprintf "%s_%d" tyIdent tySerial
+
+let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
+  let tags = variants |> List.map (fun (_, serial) -> ctxUniqueName ctx serial)
+
+  let tagTyIdent = ctxTagTyIdent ctx tyIdent tySerial
+  let tagTy = CTy.Enum tagTyIdent
+
+  let unionTyIdent = ctxUnionTyIdent ctx tyIdent tySerial
+  let unionTy = CTy.Struct unionTyIdent
   let ctx =
     { ctx with
-        TyEnv = ctx.TyEnv |> Map.add (MTy.Ref tySerial) enumTy
-        Decls = CDecl.Enum (enumTyIdent, tags) :: ctx.Decls
+        TyEnv = ctx.TyEnv |> Map.add (MTy.Ref tySerial) unionTy
+        Decls =
+          CDecl.Struct (unionTyIdent, ["tag", tagTy])
+          :: CDecl.Enum (tagTyIdent, tags)
+          :: ctx.Decls
     }
-  enumTy, ctx
+
+  unionTy, ctx
 
 let ctxUniqueName (ctx: Ctx) serial =
   let ident =
@@ -170,6 +183,11 @@ let genExprDefault ctx ty =
   | MTy.Ref _ ->
     failwith "unimpl"
 
+let genExprVariant ctx serial ty =
+  let ty, ctx = cty ctx ty
+  let tag = CExpr.Ref (ctxUniqueName ctx serial)
+  CExpr.Init (["tag", tag], ty), ctx
+
 let genExprOpAsCall ctx ident l r =
   let l, ctx = genExpr ctx l
   let r, ctx = genExpr ctx r
@@ -243,8 +261,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.Variant (_, serial, _, _) ->
-    CExpr.Ref (ctxUniqueName ctx serial), ctx
+  | MExpr.Variant (_, serial, ty, _) ->
+    genExprVariant ctx serial ty
   | MExpr.UniOp (op, arg, ty, loc) ->
     genExprUniOp ctx op arg ty loc
   | MExpr.Op (op, l, r, _, _) ->

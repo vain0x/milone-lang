@@ -382,6 +382,9 @@ namespace rec MiloneLang
       of string
     | Ref
       of string
+    /// `(struct T){.x = x, ..}` Initializer.
+    | Init
+      of fields:(string * CExpr) list * CTy
     /// Projection. Get an item of tuple.
     | Proj
       of CExpr * int

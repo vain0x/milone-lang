@@ -7,6 +7,19 @@ let ( *- ) acc second =
 let eol = """
 """
 
+let join sep f (xs, acc) =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      acc
+    | [x] ->
+      f (x, acc)
+    | x :: xs ->
+      let acc = f (x, acc)
+      let acc = acc *- sep
+      go acc xs
+  go acc xs
+
 let opStr op =
   match op with
   | COp.Add -> "+"
@@ -90,6 +103,19 @@ let cprintExprStrObj acc (value: string) =
   let acc = acc *- ", .len = " *- string value.Length *- "}"
   acc
 
+let cprintExprInit acc fields ty =
+  let acc = acc *- "("
+  let acc = cprintTy acc ty
+  let acc = acc *- "){"
+  let acc =
+    (fields, acc) |> join ", " (fun ((field, value), acc) ->
+      let acc = acc *- "." *- field *- " = "
+      let acc = cprintExpr acc value
+      acc
+    )
+  let acc = acc *- "}"
+  acc
+
 let rec cprintExpr acc expr: string list =
   let rec cprintExprList acc index separator exprs =
     match exprs with
@@ -109,6 +135,8 @@ let rec cprintExpr acc expr: string list =
     cprintExprStrObj acc value
   | CExpr.StrRaw value->
     cprintExprStrRaw acc value
+  | CExpr.Init (fields, ty) ->
+    cprintExprInit acc fields ty
   | CExpr.Nav (CExpr.StrObj value, "len") ->
     acc *- string value.Length
   | CExpr.Ref (value) ->
