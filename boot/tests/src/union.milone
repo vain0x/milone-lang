@@ -1,8 +1,9 @@
 type Status =
   | Ok
-  | Cancel
+  | Err of string
 
 let main _ =
   let ok = Ok
-  let cancel = Cancel
+  let err1 = Err "No such a file."
+  let err2 = Err "Access denied."
   0

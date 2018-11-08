@@ -126,6 +126,9 @@ let declosureInit (init, ctx) =
   | MInit.Tuple items ->
     let items, ctx = (items, ctx) |> stMap declosureExpr
     MInit.Tuple items, ctx
+  | MInit.Union (serial, arg, argTy) ->
+    let arg, ctx = (arg, ctx) |> declosureExpr
+    MInit.Union (serial, arg, argTy), ctx
 
 let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
   let result =
@@ -183,7 +186,7 @@ let declosureStmt (stmt, acc, ctx) =
 
 let declosureDeclTyDef decl tyDef ctx =
   match tyDef with
-  | TyDef.Union ((_, lvSerial), (_, rvSerial)) ->
+  | TyDef.Union ((_, lvSerial, _), (_, rvSerial, _)) ->
     let ctx = ctx |> ctxAddKnown lvSerial |> ctxAddKnown rvSerial
     decl, ctx
 

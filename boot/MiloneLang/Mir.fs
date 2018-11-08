@@ -70,6 +70,14 @@ let ctxFreshLabel (ctx: MirCtx) (ident: string) loc =
   let labelStmt = MStmt.Label (ident, loc)
   labelStmt, ident, ctx
 
+/// Gets if the serial denotes to a variant function.
+let ctxIsVariantFun (ctx: MirCtx) serial =
+  match ctx.Vars |> Map.tryFind serial with
+  | Some (_, ValueIdent.Variant _, _, _) ->
+    true
+  | _ ->
+    false
+
 let mopFrom op =
   match op with
   | Op.Add -> MOp.Add
@@ -323,6 +331,14 @@ let mirifyExprCallNot ctx arg ty notLoc =
   let arg, ctx = mirifyExpr ctx arg
   MExpr.UniOp (MUniOp.Not, arg, unboxTy ty, notLoc), ctx
 
+let mirifyExprCallVariantFun (ctx: MirCtx) serial arg ty loc =
+  let ty = unboxTy ty
+  let arg, ctx = mirifyExpr ctx arg
+  let temp, tempSerial, ctx = ctxFreshVar ctx "variant" ty loc
+  let init = MInit.Union (serial, arg, mexprTy arg)
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, init, ty, loc))
+  temp, ctx
+
 let mirifyExprCall ctx callee args ty loc =
   match callee, args with
   | Expr.Ref (_, serial, _, _), [arg] when serial = SerialNot ->
@@ -333,6 +349,8 @@ let mirifyExprCall ctx callee args ty loc =
     mirifyExprCallBox ctx arg ty loc
   | Expr.Ref (_, serial, _, _), [arg] when serial = SerialUnbox ->
     mirifyExprCallUnbox ctx arg ty loc
+  | Expr.Ref (_, serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
+    mirifyExprCallVariantFun ctx serial arg ty loc
   | _ ->
     let ty = unboxTy ty
     let callee, ctx = mirifyExpr ctx callee

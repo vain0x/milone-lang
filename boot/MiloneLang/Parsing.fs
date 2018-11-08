@@ -139,14 +139,14 @@ let parseTyDefUnion boxX tokens =
       go acc tokens
     | (Token.Ident variant, _) :: (Token.Of, _) :: tokens ->
       let variantTy, tokens = parseTy boxX tokens
-      go ((variant, variantTy) :: acc) tokens
+      go ((variant, Some variantTy) :: acc) tokens
     | (Token.Ident variant, _) :: tokens ->
-      go ((variant, Ty.Unit) :: acc) tokens
+      go ((variant, None) :: acc) tokens
     | _ ->
       List.rev acc, tokens
   match go [] tokens with
-  | [(lv, _); (rv, _)], tokens ->
-    TyDef.Union ((lv, noSerial), (rv, noSerial)), tokens
+  | [(lv, lt); (rv, rt)], tokens ->
+    TyDef.Union ((lv, noSerial, lt), (rv, noSerial, rt)), tokens
   | _ ->
     failwith "unimpl union"
 

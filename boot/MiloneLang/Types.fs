@@ -127,7 +127,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type TyDef =
     | Union
-      of l:(string * int) * r:(string * int)
+      of l:(string * int * Ty option) * r:(string * int * Ty option)
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
@@ -302,6 +302,8 @@ namespace rec MiloneLang
       of head:MExpr<'a> * tail:MExpr<'a> * itemTy:MTy
     | Tuple
       of items:MExpr<'a> list
+    | Union
+      of serial:int * arg:MExpr<'a> * MTy
 
   /// Statement in middle IR.
   /// Doesn't introduce global things, e.g. functions.
@@ -432,7 +434,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type CDecl =
     | Struct
-      of ident:string * fields:(string * CTy) list
+      of ident:string * fields:(string * CTy) list * variants:(string * CTy) list
     | Enum
       of ident:string * variants:string list
     | Fun

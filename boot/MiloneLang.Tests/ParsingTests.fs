@@ -335,11 +335,11 @@ let parseExprCons () =
 let parseExprTyDefUnion () =
   let source = """
 type Answer =
-  | Yes
+  | Yes of int
   | No
 """
   let tyDef =
-    TyDef.Union (("Yes", noSerial), ("No", noSerial))
+    TyDef.Union (("Yes", noSerial, Some Ty.Int), ("No", noSerial, None))
   let expected =
     [
       Expr.TyDef ("Answer", noSerial, tyDef, ())

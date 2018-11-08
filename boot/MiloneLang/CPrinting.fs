@@ -250,17 +250,29 @@ let rec cprintStmts acc indent stmts: string list =
 
 let cprintDecl acc decl =
   match decl with
-  | CDecl.Struct (ident, fields) ->
+  | CDecl.Struct (ident, fields, variants) ->
+    let cprintFields indent acc fields =
+      let rec go acc fields =
+        match fields with
+        | [] ->
+          acc
+        | (ident, ty) :: fields ->
+          let acc = acc *- indent
+          let acc = cprintTy acc ty
+          let acc = acc *- " " *- ident *- ";" *- eol
+          go acc fields
+      go acc fields
     let acc = acc *- "struct " *- ident *- " {" *- eol
-    let rec go acc fields =
-      match fields with
-      | [] -> acc
-      | (ident, ty) :: fields ->
-        let acc = acc *- "    "
-        let acc = cprintTy acc ty
-        let acc = acc *- " " *- ident *- ";" *- eol
-        go acc fields
-    let acc = go acc fields
+    let acc = cprintFields "    " acc fields
+    let acc =
+      match variants with
+      | [] ->
+        acc
+      | _ ->
+        let acc = acc *- "    union {" *- eol
+        let acc = cprintFields "        " acc variants
+        let acc = acc *- "    };" *- eol
+        acc
     let acc = acc *- "};" *- eol
     acc
   | CDecl.Enum (tyIdent, variants) ->

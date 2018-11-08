@@ -54,7 +54,7 @@ let ctxAddListDecl (ctx: Ctx) itemTy =
     { ctx with
         TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add listTy selfTy
-        Decls = CDecl.Struct (ident, fields) :: ctx.Decls
+        Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
   selfTy, ctx
 
@@ -76,7 +76,7 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
     { ctx with
         TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct tupleTyIdent)
-        Decls = CDecl.Struct (tupleTyIdent, fields) :: ctx.Decls
+        Decls = CDecl.Struct (tupleTyIdent, fields, []) :: ctx.Decls
     }
   CTy.Struct tupleTyIdent, ctx
 
@@ -88,7 +88,12 @@ let ctxUnionTyIdent _ tyIdent tySerial =
   sprintf "%s_%d" tyIdent tySerial
 
 let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
-  let tags = variants |> List.map (fun (_, serial) -> ctxUniqueName ctx serial)
+  let tags =
+    variants |> List.map (fun (_, serial, _) ->
+      ctxUniqueName ctx serial)
+  let variants =
+    variants |> List.choose (fun (_, serial, ty) ->
+      ty |> Option.map (fun ty -> ctxUniqueName ctx serial, ty))
 
   let tagTyIdent = ctxTagTyIdent ctx tyIdent tySerial
   let tagTy = CTy.Enum tagTyIdent
@@ -99,11 +104,10 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
     { ctx with
         TyEnv = ctx.TyEnv |> Map.add (MTy.Ref tySerial) unionTy
         Decls =
-          CDecl.Struct (unionTyIdent, ["tag", tagTy])
+          CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
           :: CDecl.Enum (tagTyIdent, tags)
           :: ctx.Decls
     }
-
   unionTy, ctx
 
 let ctxUniqueName (ctx: Ctx) serial =
@@ -140,12 +144,18 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ty, ctx
   | MTy.Ref serial ->
     match ctx.Tys |> Map.tryFind serial with
-    | Some (tyIdent, TyDef.Union ((lvIdent, lvSerial), (rvIdent, rvSerial)), _) ->
+    | Some (tyIdent, TyDef.Union ((lvIdent, lvSerial, lvTy), (rvIdent, rvSerial, rvTy)), _) ->
       match ctx.TyEnv |> Map.tryFind ty with
       | Some ty ->
         ty, ctx
       | None ->
-        ctxAddUnionDecl ctx tyIdent serial [lvIdent, lvSerial; rvIdent, rvSerial]
+        // FIXME: convert Ty to CTy
+        let lvTy = match lvTy with | Some _ -> Some (CTy.Struct "String") | None -> None
+        let rvTy = match rvTy with | Some _ -> Some (CTy.Struct "String") | None -> None
+        ctxAddUnionDecl ctx tyIdent serial [
+          lvIdent, lvSerial, lvTy
+          rvIdent, rvSerial, rvTy
+        ]
     | None ->
       failwith "Unknown type reference"
 
@@ -357,6 +367,19 @@ let genInitTuple ctx serial items tupleTy =
       go ctx (i + 1) items
   go ctx 0 items
 
+let genInitUnion ctx varSerial variantSerial arg argTy unionTy =
+  let arg, ctx = genExpr ctx arg
+  let temp = ctxUniqueName ctx varSerial
+  let unionTy, ctx = cty ctx unionTy
+  let fields =
+    [
+      "tag", CExpr.Ref (ctxUniqueName ctx variantSerial)
+      ctxUniqueName ctx variantSerial, arg
+    ]
+  let init = CExpr.Init (fields, unionTy)
+  let ctx = ctxAddStmt ctx (CStmt.Let (temp, Some init, unionTy))
+  ctx
+
 let genStmtLetVal ctx serial init ty =
   match init with
   | MInit.UnInit ->
@@ -373,6 +396,8 @@ let genStmtLetVal ctx serial init ty =
     genInitCons ctx serial head tail itemTy
   | MInit.Tuple items ->
     genInitTuple ctx serial items ty
+  | MInit.Union (variantSerial, arg, argTy) ->
+    genInitUnion ctx serial variantSerial arg argTy ty
 
 let genStmtDo ctx expr =
   let expr, ctx = genExpr ctx expr
