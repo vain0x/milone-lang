@@ -170,6 +170,7 @@ namespace rec MiloneLang
     | Fun
     /// Variant of union with no argument.
     | Variant
+      of tySerial:int
 
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]
