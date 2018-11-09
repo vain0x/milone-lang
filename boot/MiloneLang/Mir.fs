@@ -182,6 +182,8 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     false, ctx
   | Pat.Ref (_, serial, ty, loc) ->
     mirifyPatRef ctx endLabel serial ty loc expr
+  | Pat.Call _ ->
+    failwith "unimpl"
   | Pat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | Pat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->
@@ -532,6 +534,13 @@ let mirifyExprLetFun ctx pat pats body letLoc =
   | _ ->
     failwith "First pattern of `let` for function must be an identifier."
 
+let mirifyExprLet ctx pat body loc =
+  match pat with
+  | Pat.Call (callee, args, _, _)->
+    mirifyExprLetFun ctx callee args body loc
+  | _ ->
+    mirifyExprLetVal ctx pat body loc
+
 let mirifyExprTyDef ctx tySerial tyDef loc =
   let ctx = ctxAddDecl ctx (MDecl.TyDef (tySerial, tyDef, loc))
   MExpr.Default (MTy.Unit, loc), ctx
@@ -564,15 +573,12 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprTuple ctx items ty loc
   | Expr.AndThen (exprs, _, _) ->
     mirifyExprAndThen ctx exprs
-  | Expr.Let ([pat], init, letLoc) ->
-    mirifyExprLetVal ctx pat init letLoc
-  | Expr.Let (pat :: pats, body, letLoc) ->
-    mirifyExprLetFun ctx pat pats body letLoc
+  | Expr.Let (pat, body, loc) ->
+    mirifyExprLet ctx pat body loc
   | Expr.TyDef (_, tySerial, tyDef, loc) ->
     mirifyExprTyDef ctx tySerial tyDef loc
   | Expr.Call (_, [], _, _)
-  | Expr.Anno _
-  | Expr.Let ([], _, _) ->
+  | Expr.Anno _ ->
     failwith "Never"
 
 let mirifyExprs ctx exprs =

@@ -55,6 +55,8 @@ let patExtract (pat: Pat<'a>): Ty * 'a =
     Ty.List itemTy, a
   | Pat.Ref (_, _, ty, a) ->
     ty, a
+  | Pat.Call (_, _, ty, a) ->
+    ty, a
   | Pat.Cons (_, _, itemTy, a) ->
     Ty.List itemTy, a
   | Pat.Tuple (_, ty, a) ->
@@ -73,6 +75,8 @@ let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
       Pat.Nil (f itemTy, g a)
     | Pat.Ref (ident, serial, ty, a) ->
       Pat.Ref (ident, serial, f ty, g a)
+    | Pat.Call (callee, args, ty, a) ->
+      Pat.Call (go callee, List.map go args, f ty, g a)
     | Pat.Cons (l, r, itemTy, a) ->
       Pat.Cons (go l, go r, f itemTy, g a)
     | Pat.Tuple (itemPats, ty, a) ->
@@ -147,8 +151,8 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Anno (go expr, f ty, g a)
     | Expr.AndThen (exprs, ty, a) ->
       Expr.AndThen (List.map go exprs, f ty, g a)
-    | Expr.Let (pats, init, a) ->
-      Expr.Let (List.map goPat pats, go init, g a)
+    | Expr.Let (pat, init, a) ->
+      Expr.Let (goPat pat, go init, g a)
     | Expr.TyDef (ident, serial, tyDef, a) ->
       Expr.TyDef (ident, serial, tyDef, g a)
   go expr

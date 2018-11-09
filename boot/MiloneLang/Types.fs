@@ -142,6 +142,8 @@ namespace rec MiloneLang
     /// Variable reference pattern or `_`.
     | Ref
       of ident:string * serial:int * Ty * 'a
+    | Call
+      of callee:Pat<'a> * args:Pat<'a> list * Ty * 'a
     /// `::`
     | Cons
       of Pat<'a> * Pat<'a> * itemTy:Ty * 'a
@@ -211,7 +213,7 @@ namespace rec MiloneLang
     | AndThen
       of Expr<'a> list * Ty * 'a
     | Let
-      of pats:Pat<'a> list * init:Expr<'a> * 'a
+      of pat:Pat<'a> * init:Expr<'a> * 'a
     /// Type definition.
     | TyDef
       of ident:string * serial:int * TyDef * 'a

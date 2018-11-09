@@ -256,6 +256,8 @@ let inferPat ctx pat ty =
     Pat.Nil (itemTy, loc), ctx
   | Pat.Ref (ident, _, _, loc) ->
     inferPatRef ctx ident loc ty
+  | Pat.Call _ ->
+    failwith "unimpl"
   | Pat.Cons (l, r, _, loc) ->
     inferPatCons ctx l r loc ty
   | Pat.Tuple (items, _, loc) ->
@@ -478,8 +480,7 @@ let inferAnno ctx expr annoTy ty =
   let ctx = unifyTy ctx annoTy ty
   inferExpr ctx expr annoTy
 
-let inferLetVal ctx pat init loc unitTy =
-  let ctx = unifyTy ctx unitTy Ty.Unit
+let inferLetVal ctx pat init loc =
   let initTy, _, ctx = freshTyVar "init" ctx
   // Type init expression.
   let init, initCtx = inferExpr ctx init initTy
@@ -487,9 +488,9 @@ let inferLetVal ctx pat init loc unitTy =
   let ctx = rollback ctx initCtx
   // Define new variables defined by the pat to the context.
   let pat, ctx = inferPat ctx pat initTy
-  Expr.Let ([pat], init, loc), ctx
+  Expr.Let (pat, init, loc), ctx
 
-let inferLetFun ctx calleePat argPats body loc unitTy =
+let inferLetFun ctx calleePat argPats body bodyTy loc =
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx bodyTy argPats =
@@ -504,12 +505,10 @@ let inferLetFun ctx calleePat argPats body loc unitTy =
 
   match calleePat with
   | Pat.Ref (callee, _, _, calleeLoc) ->
-    let ctx = unifyTy ctx unitTy Ty.Unit
     let funTy, _, ctx =
       if callee = "main"
       then Ty.Fun (Ty.Unit, Ty.Int), "", ctx
       else freshTyVar "fun" ctx
-    let bodyTy, _, ctx = freshTyVar "body" ctx
     let serial, ctx = freshVar ctx callee ValueIdent.Fun funTy calleeLoc
 
     // FIXME: functions cannot capture local variables
@@ -525,9 +524,24 @@ let inferLetFun ctx calleePat argPats body loc unitTy =
     let ctx = rollback ctx bodyCtx
 
     let calleePat = Pat.Ref (callee, serial, funTy, calleeLoc)
-    Expr.Let (calleePat :: argPats, body, loc), ctx
+    calleePat, argPats, body, loc, ctx
   | _ ->
     failwith "First pattern of let with parameters must be an identifier."
+
+let inferLet ctx pat body loc ty =
+  let ctx = unifyTy ctx ty Ty.Unit
+  match pat with
+  | Pat.Anno (Pat.Call (callee, args, _, callLoc), annoTy, annoLoc) ->
+    let callee, args, body, loc, ctx = inferLetFun ctx callee args body annoTy loc
+    let pat = Pat.Call (callee, args, ty, callLoc)
+    Expr.Let (pat, body, loc), ctx
+  | Pat.Call (callee, args, _, callLoc) ->
+    let bodyTy, _, ctx = freshTyVar "body" ctx
+    let callee, args, body, loc, ctx = inferLetFun ctx callee args body bodyTy loc
+    let pat = Pat.Call (callee, args, ty, callLoc)
+    Expr.Let (pat, body, loc), ctx
+  | _ ->
+    inferLetVal ctx pat body loc
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: Expr<Loc> list * TyCtx =
@@ -579,14 +593,10 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferAnno ctx expr annoTy ty
   | Expr.AndThen (exprs, _, loc) ->
     inferAndThen ctx loc exprs ty
-  | Expr.Let ([pat], init, loc) ->
-    inferLetVal ctx pat init loc ty
-  | Expr.Let (calleePat :: argPats, body, loc) ->
-    inferLetFun ctx calleePat argPats body loc ty
+  | Expr.Let (pat, body, loc) ->
+    inferLet ctx pat body loc ty
   | Expr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDef ctx ident tyDef loc
-  | Expr.Let ([], _, _) ->
-    failwith "Never let with no pats"
 
 /// Replaces type vars embedded in exprs
 /// with inference results.

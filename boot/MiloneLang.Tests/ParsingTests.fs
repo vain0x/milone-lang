@@ -42,6 +42,8 @@ let patNil = Pat.Nil (noTy, ())
 
 let patRef ident = Pat.Ref (ident, noSerial, noTy, ())
 
+let patCall callee args = Pat.Call (callee, args, noTy, ())
+
 let patTuple itemPats = Pat.Tuple (itemPats, noTy, ())
 
 let patCons l r = Pat.Cons (l, r, noTy, ())
@@ -77,10 +79,10 @@ let exprSub left right =
   Expr.Op (Op.Sub, left,  right, noTy, ())
 
 let exprLet ident body =
-  Expr.Let ([patRef ident], body, ())
+  Expr.Let (patRef ident, body, ())
 
 let exprLetMain body =
-  Expr.Let ([patRef "main"; Pat.Unit ()], body, ())
+  Expr.Let (patCall (patRef "main") [Pat.Unit ()], body, ())
 
 let exprAndThen exprs =
   Expr.AndThen (exprs, noTy, ())

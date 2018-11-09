@@ -180,9 +180,27 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
   | _ ->
     failwith "never"
 
-/// pat-cons = pat-atom ( '::' pat-cons )?
+/// pat-call = pat-atom ( pat-atom )*
+let parsePatCall boxX tokens =
+  let calleeLoc = nextLoc tokens
+  let _, calleeX = calleeLoc
+  let insideX = max boxX (calleeX + 1)
+  let callee, tokens = parsePatAtom boxX tokens
+  let rec go acc tokens =
+    if nextInside insideX tokens && leadsPat tokens then
+      let expr, tokens = parsePatAtom insideX tokens
+      go (expr :: acc) tokens
+    else
+      List.rev acc, tokens
+  match go [] tokens with
+  | [], tokens ->
+    callee, tokens
+  | args, tokens ->
+    Pat.Call (callee, args, noTy, calleeLoc), tokens
+
+/// pat-cons = pat-call ( '::' pat-cons )?
 let parsePatCons boxX tokens =
-  match parsePatAtom boxX tokens with
+  match parsePatCall boxX tokens with
   | l, (Token.Punct "::", loc) :: tokens ->
     let r, tokens = parsePatCons boxX tokens
     Pat.Cons (l, r, noTy, loc), tokens
@@ -309,18 +327,18 @@ let parseAccessModifier tokens =
 
 let parseLet boxX letLoc tokens =
   let _, letX = letLoc
-  let pats, tokens =
-    let patsX = max boxX (letX + 1)
-    let tokens = parseAccessModifier tokens
-    match parsePats patsX tokens with
-    | pats, (Token.Punct "=", _) :: tokens ->
-      pats, tokens
+  let tokens = parseAccessModifier tokens
+  let patsX = max boxX (letX + 1)
+  let pat, tokens =
+    match parsePat patsX tokens with
+    | pat, (Token.Punct "=", _) :: tokens ->
+      pat, tokens
     | _ ->
       failwithf "Missing '=' %A" tokens
   let body, tokens =
     let bodyX = max boxX (nextX tokens)
     parseExpr bodyX tokens
-  Expr.Let (pats, body, letLoc), tokens
+  Expr.Let (pat, body, letLoc), tokens
 
 let parseBindingTy boxX keywordLoc tokens =
   let _, keywordX = keywordLoc
