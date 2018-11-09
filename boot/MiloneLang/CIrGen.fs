@@ -13,7 +13,7 @@ type Ctx =
     Vars: Map<int, string * ValueIdent * MTy * Loc>
     TySerial: int
     TyEnv: Map<MTy, CTy>
-    Tys: Map<int, string * TyDef * Loc>
+    Tys: Map<int, string * MTyDef * Loc>
     Stmts: CStmt list
     Decls: CDecl list
   }
@@ -89,11 +89,17 @@ let ctxUnionTyIdent _ tyIdent tySerial =
 
 let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
   let tags =
-    variants |> List.map (fun (_, serial, _) ->
+    variants |> List.map (fun (serial, _, _) ->
       ctxUniqueName ctx serial)
-  let variants =
-    variants |> List.choose (fun (_, serial, ty) ->
-      ty |> Option.map (fun ty -> ctxUniqueName ctx serial, ty))
+  let variants, ctx =
+    (variants, ctx) |> stFlatMap (fun ((serial, argTy, _), acc, ctx) ->
+      match argTy with
+      | MTy.Unit ->
+        acc, ctx
+      | _ ->
+        let argTy, ctx = cty ctx argTy
+        (ctxUniqueName ctx serial, argTy) :: acc, ctx
+    )
 
   let tagTyIdent = ctxTagTyIdent ctx tyIdent tySerial
   let tagTy = CTy.Enum tagTyIdent
@@ -144,17 +150,14 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ty, ctx
   | MTy.Ref serial ->
     match ctx.Tys |> Map.tryFind serial with
-    | Some (tyIdent, TyDef.Union ((lvIdent, lvSerial, lvTy), (rvIdent, rvSerial, rvTy)), _) ->
+    | Some (tyIdent, MTyDef.Union ((lvSerial, lArgTy, lVariantTy), (rvSerial, rArgTy, rVariantTy)), _) ->
       match ctx.TyEnv |> Map.tryFind ty with
       | Some ty ->
         ty, ctx
       | None ->
-        // FIXME: convert Ty to CTy
-        let lvTy = match lvTy with | Some _ -> Some (CTy.Struct "String") | None -> None
-        let rvTy = match rvTy with | Some _ -> Some (CTy.Struct "String") | None -> None
         ctxAddUnionDecl ctx tyIdent serial [
-          lvIdent, lvSerial, lvTy
-          rvIdent, rvSerial, rvTy
+          lvSerial, lArgTy, lVariantTy
+          rvSerial, rArgTy, rVariantTy
         ]
     | None ->
       failwith "Unknown type reference"

@@ -10,7 +10,7 @@ type MirCtx =
   {
     VarSerial: int
     Vars: Map<int, string * ValueIdent * MTy * Loc>
-    Tys: Map<int, string * TyDef * Loc>
+    Tys: Map<int, string * MTyDef * Loc>
     LabelSerial: int
     Decls: MDecl<Loc> list
     Stmts: MStmt<Loc> list
@@ -22,10 +22,15 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
       let ty = unboxTy (Typing.substTy tyCtx ty)
       ident, valueIdent, ty, loc
     )
+  let tys =
+    tyCtx.Tys |> Map.map (fun tySerial (ident, tyDef, loc) ->
+      let tyDef = mtyDef tySerial tyDef
+      ident, tyDef, loc
+    )
   {
     VarSerial = tyCtx.VarSerial
     Vars = vars
-    Tys = tyCtx.Tys
+    Tys = tys
     LabelSerial = 0
     Decls = []
     Stmts = []
@@ -96,6 +101,23 @@ let mopFrom op =
   | Op.Or
   | Op.Cons
   | Op.Range -> failwith "We don't use > >= && || :: .. in MIR"
+
+let mtyDef tySerial (tyDef: TyDef) =
+  match tyDef with
+  | TyDef.Union ((_, lSerial, lTy), (_, rSerial, rTy)) ->
+    let lArgTy, lVariantTy =
+      match lTy with
+      | None ->
+        MTy.Unit, MTy.Ref tySerial
+      | Some ty ->
+        unboxTy ty, MTy.Fun (unboxTy ty, MTy.Ref tySerial)
+    let rArgTy, rVariantTy =
+      match rTy with
+      | None ->
+        MTy.Unit, MTy.Ref tySerial
+      | Some ty ->
+        unboxTy ty, MTy.Fun (unboxTy ty, MTy.Ref tySerial)
+    MTyDef.Union ((lSerial, lArgTy, lVariantTy), (rSerial, rArgTy, rVariantTy))
 
 let unboxTy (ty: Ty): MTy =
   match ty with

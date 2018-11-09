@@ -2,14 +2,27 @@ type Status =
   | Ok
   | Err of string
 
-let main _ =
-  let ok = Ok
-  let err1 = Err "No such file or directory."
-  let err2 = Err "Access denied."
+type Limit =
+  | LimitVal of int
+  | LimitDiv
 
-  match err1 with
-  | Ok ->
-    exit 1
-  | Err e ->
-    if e <> "No such file or directory." then exit 2
-    0
+let main _ =
+  let () =
+    let ok = Ok
+    let err1 = Err "No such file or directory."
+    let err2 = Err "Access denied."
+
+    match err1 with
+    | Ok ->
+      exit 1
+    | Err e ->
+      if e <> "No such file or directory." then exit 2
+
+  let () =
+    match LimitVal 1 with
+    | LimitVal x ->
+      if x <> 1 then exit 1
+    | LimitDiv ->
+      exit 2
+
+  0

@@ -218,6 +218,11 @@ namespace rec MiloneLang
     | TyDef
       of ident:string * serial:int * TyDef * 'a
 
+  [<RequireQualifiedAccess>]
+  type MTyDef =
+    | Union
+      of l:(int * MTy * MTy) * r:(int * MTy * MTy)
+
   /// Type in middle IR.
   [<RequireQualifiedAccess>]
   type MTy =

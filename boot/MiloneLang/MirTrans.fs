@@ -7,7 +7,7 @@ type MirTransCtx =
   {
     VarSerial: int
     Vars: Map<int, string * ValueIdent * MTy * Loc>
-    Tys: Map<int, string * TyDef * Loc>
+    Tys: Map<int, string * MTyDef * Loc>
     LabelSerial: int
 
     /// Known identifiers and their dependencies.
