@@ -4,11 +4,12 @@ type Status =
 
 let main _ =
   let ok = Ok
-  let err1 = Err "No such a file."
+  let err1 = Err "No such file or directory."
   let err2 = Err "Access denied."
 
-  match ok with
+  match err1 with
   | Ok ->
+    exit 1
+  | Err e ->
+    if e <> "No such file or directory." then exit 2
     0
-  | _ ->
-    1

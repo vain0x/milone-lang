@@ -148,12 +148,30 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
 let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
   match ctx.Vars |> Map.find serial with
   | _, ValueIdent.Variant _, _, _ ->
-    // compare tags
+    // Compare tags.
     let lTagExpr = MExpr.UniOp (MUniOp.Tag, expr, MTy.Int, loc)
     let rTagExpr = MExpr.Ref (serial, MTy.Int, loc)
     let eqExpr = MExpr.Op (MOp.Eq, lTagExpr, rTagExpr, MTy.Bool, loc)
     let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
+    false, ctx
+  | _ ->
+    let letStmt = MStmt.LetVal (serial, MInit.Expr expr, unboxTy ty, loc)
+    true, ctxAddStmt ctx letStmt
+
+let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
+  match ctx.Vars |> Map.find serial, args with
+  | (_, ValueIdent.Variant _, MTy.Fun (argTy, _), _), [arg] ->
+    // Compare tags.
+    let lTagExpr = MExpr.UniOp (MUniOp.Tag, expr, MTy.Int, loc)
+    let rTagExpr = MExpr.Ref (serial, MTy.Int, loc)
+    let eqExpr = MExpr.Op (MOp.Eq, lTagExpr, rTagExpr, MTy.Bool, loc)
+    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+    let ctx = ctxAddStmt ctx gotoStmt
+
+    // Extract content.
+    let extractExpr = MExpr.UniOp (MUniOp.GetVariant serial, expr, argTy, loc)
+    let _, ctx = mirifyPat ctx endLabel arg extractExpr
     false, ctx
   | _ ->
     let letStmt = MStmt.LetVal (serial, MInit.Expr expr, unboxTy ty, loc)
@@ -182,8 +200,8 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     false, ctx
   | Pat.Ref (_, serial, ty, loc) ->
     mirifyPatRef ctx endLabel serial ty loc expr
-  | Pat.Call _ ->
-    failwith "unimpl"
+  | Pat.Call (Pat.Ref (_, serial, _, _), args, ty, loc) ->
+    mirifyPatCall ctx endLabel serial args ty loc expr
   | Pat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | Pat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->
@@ -200,6 +218,8 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     go true ctx 0 itemPats itemTys
   | Pat.Lit _ ->
     failwith "unimpl"
+  | Pat.Call _ ->
+    failwith "Never: Call pattern incorrect."
   | Pat.Tuple _ ->
     failwith "Never: Tuple pattern must be of tuple type."
   | Pat.Anno _ ->

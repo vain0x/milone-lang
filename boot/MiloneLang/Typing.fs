@@ -224,6 +224,20 @@ let inferPatRef (ctx: TyCtx) ident loc ty =
       serial, ty, ctx
   Pat.Ref (ident, serial, ty, loc), ctx
 
+let inferPatCall (ctx: TyCtx) callee args loc ty =
+  match callee, args with
+  | Pat.Ref (ident, _, _, refLoc), [arg] ->
+    match ctx.VarEnv |> Map.tryFind ident with
+    | Some (ValueIdent.Variant _, (Ty.Fun (argTy, callTy) as variantTy), serial) ->
+      let arg, ctx = inferPat ctx arg argTy
+      let callee = Pat.Ref (ident, serial, variantTy, refLoc)
+      let ctx = unifyTy ctx ty callTy
+      Pat.Call (callee, [arg], ty, loc), ctx
+    | _ ->
+      failwith "Type Error: Not a function variant."
+  | _ ->
+    failwith "unimpl use of call pattern"
+
 let inferPatTuple ctx itemPats loc tupleTy =
   let rec go accPats accTys ctx itemPats =
     match itemPats with
@@ -256,8 +270,8 @@ let inferPat ctx pat ty =
     Pat.Nil (itemTy, loc), ctx
   | Pat.Ref (ident, _, _, loc) ->
     inferPatRef ctx ident loc ty
-  | Pat.Call _ ->
-    failwith "unimpl"
+  | Pat.Call (callee, args, _, loc) ->
+    inferPatCall ctx callee args loc ty
   | Pat.Cons (l, r, _, loc) ->
     inferPatCons ctx l r loc ty
   | Pat.Tuple (items, _, loc) ->

@@ -221,6 +221,8 @@ let genExprUniOp ctx op arg ty _ =
     CExpr.Proj (arg, index), ctx
   | MUniOp.Tag ->
     CExpr.Nav (arg, "tag"), ctx
+  | MUniOp.GetVariant serial ->
+    CExpr.Nav (arg, ctxUniqueName ctx serial), ctx
   | MUniOp.ListIsEmpty ->
     CExpr.UniOp (CUniOp.Not, arg), ctx
   | MUniOp.ListHead ->

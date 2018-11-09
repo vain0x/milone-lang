@@ -250,6 +250,8 @@ namespace rec MiloneLang
       of int
     /// Get union tag.
     | Tag
+    | GetVariant
+      of int
     | ListIsEmpty
     | ListHead
     | ListTail
