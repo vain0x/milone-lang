@@ -246,6 +246,8 @@ namespace rec MiloneLang
     /// Projection. Get an item of tuple.
     | Proj
       of int
+    /// Get union tag.
+    | Tag
     | ListIsEmpty
     | ListHead
     | ListTail

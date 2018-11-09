@@ -219,6 +219,8 @@ let genExprUniOp ctx op arg ty _ =
     deref, ctx
   | MUniOp.Proj index ->
     CExpr.Proj (arg, index), ctx
+  | MUniOp.Tag ->
+    CExpr.Nav (arg, "tag"), ctx
   | MUniOp.ListIsEmpty ->
     CExpr.UniOp (CUniOp.Not, arg), ctx
   | MUniOp.ListHead ->

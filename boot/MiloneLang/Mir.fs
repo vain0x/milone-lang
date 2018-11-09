@@ -145,6 +145,20 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let _, ctx = mirifyPat ctx endLabel r tail
   false, ctx
 
+let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
+  match ctx.Vars |> Map.find serial with
+  | _, ValueIdent.Variant _, _, _ ->
+    // compare tags
+    let lTagExpr = MExpr.UniOp (MUniOp.Tag, expr, MTy.Int, loc)
+    let rTagExpr = MExpr.Ref (serial, MTy.Int, loc)
+    let eqExpr = MExpr.Op (MOp.Eq, lTagExpr, rTagExpr, MTy.Bool, loc)
+    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+    let ctx = ctxAddStmt ctx gotoStmt
+    false, ctx
+  | _ ->
+    let letStmt = MStmt.LetVal (serial, MInit.Expr expr, unboxTy ty, loc)
+    true, ctxAddStmt ctx letStmt
+
 /// Processes pattern matching
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
@@ -167,8 +181,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
   | Pat.Ref (_, serial, ty, loc) ->
-    let letStmt = MStmt.LetVal (serial, MInit.Expr expr, unboxTy ty, loc)
-    true, ctxAddStmt ctx letStmt
+    mirifyPatRef ctx endLabel serial ty loc expr
   | Pat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | Pat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->

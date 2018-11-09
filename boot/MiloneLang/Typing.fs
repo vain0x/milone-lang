@@ -13,7 +13,7 @@ type TyCtx =
     /// From serial number to (source identifier, type, location).
     Vars: Map<int, string * ValueIdent * Ty * Loc>
     /// Identifier to type and serial.
-    VarEnv: Map<string, Ty * int>
+    VarEnv: Map<string, ValueIdent * Ty * int>
     TySerial: int
     TyEnv: Map<string, Ty>
     Tys: Map<int, string * TyDef * Loc>
@@ -79,7 +79,7 @@ let freshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        VarEnv = ctx.VarEnv |> Map.add ident (ty, serial)
+        VarEnv = ctx.VarEnv |> Map.add ident (valueIdent, ty, serial)
         Vars = ctx.Vars |> Map.add serial (ident, valueIdent, ty, loc)
     }
   serial, ctx
@@ -213,6 +213,17 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
 
+let inferPatRef (ctx: TyCtx) ident loc ty =
+  let serial, ty, ctx =
+    match ctx.VarEnv |> Map.tryFind ident with
+    | Some (ValueIdent.Variant _, variantTy, serial) ->
+      let ctx = unifyTy ctx ty variantTy
+      serial, ty, ctx
+    | _ ->
+      let serial, ctx = freshVar ctx ident ValueIdent.Var ty loc
+      serial, ty, ctx
+  Pat.Ref (ident, serial, ty, loc), ctx
+
 let inferPatTuple ctx itemPats loc tupleTy =
   let rec go accPats accTys ctx itemPats =
     match itemPats with
@@ -244,8 +255,7 @@ let inferPat ctx pat ty =
     let ctx = unifyTy ctx ty (Ty.List itemTy)
     Pat.Nil (itemTy, loc), ctx
   | Pat.Ref (ident, _, _, loc) ->
-    let serial, ctx = freshVar ctx ident ValueIdent.Var ty loc
-    Pat.Ref (ident, serial, ty, loc), ctx
+    inferPatRef ctx ident loc ty
   | Pat.Cons (l, r, _, loc) ->
     inferPatCons ctx l r loc ty
   | Pat.Tuple (items, _, loc) ->
@@ -257,7 +267,7 @@ let inferPat ctx pat ty =
 
 let inferRef (ctx: TyCtx) ident loc ty =
   match ctx.VarEnv |> Map.tryFind ident, ident with
-  | Some (refTy, serial), _ ->
+  | Some (_, refTy, serial), _ ->
     let ctx = unifyTy ctx refTy ty
     Expr.Ref (ident, serial, ty, loc), ctx
   | None, "not" ->

@@ -6,4 +6,9 @@ let main _ =
   let ok = Ok
   let err1 = Err "No such a file."
   let err2 = Err "Access denied."
-  0
+
+  match ok with
+  | Ok ->
+    0
+  | _ ->
+    1
