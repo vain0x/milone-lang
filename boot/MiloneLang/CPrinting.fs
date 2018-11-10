@@ -7,6 +7,19 @@ let ( *- ) acc second =
 let eol = """
 """
 
+let join sep f (xs, acc) =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      acc
+    | [x] ->
+      f (x, acc)
+    | x :: xs ->
+      let acc = f (x, acc)
+      let acc = acc *- sep
+      go acc xs
+  go acc xs
+
 let opStr op =
   match op with
   | COp.Add -> "+"
@@ -32,6 +45,8 @@ let rec cprintTy acc ty: string list =
     acc *- "*"
   | CTy.Struct ident ->
     acc *- "struct " *- ident
+  | CTy.Enum ident ->
+    acc *- "enum " *- ident
 
 let rec cprintParams acc ps: string list =
   let rec go acc ps =
@@ -88,6 +103,19 @@ let cprintExprStrObj acc (value: string) =
   let acc = acc *- ", .len = " *- string value.Length *- "}"
   acc
 
+let cprintExprInit acc fields ty =
+  let acc = acc *- "("
+  let acc = cprintTy acc ty
+  let acc = acc *- "){"
+  let acc =
+    (fields, acc) |> join ", " (fun ((field, value), acc) ->
+      let acc = acc *- "." *- field *- " = "
+      let acc = cprintExpr acc value
+      acc
+    )
+  let acc = acc *- "}"
+  acc
+
 let rec cprintExpr acc expr: string list =
   let rec cprintExprList acc index separator exprs =
     match exprs with
@@ -107,6 +135,8 @@ let rec cprintExpr acc expr: string list =
     cprintExprStrObj acc value
   | CExpr.StrRaw value->
     cprintExprStrRaw acc value
+  | CExpr.Init (fields, ty) ->
+    cprintExprInit acc fields ty
   | CExpr.Nav (CExpr.StrObj value, "len") ->
     acc *- string value.Length
   | CExpr.Ref (value) ->
@@ -220,17 +250,41 @@ let rec cprintStmts acc indent stmts: string list =
 
 let cprintDecl acc decl =
   match decl with
-  | CDecl.Struct (ident, fields) ->
+  | CDecl.Struct (ident, fields, variants) ->
+    let cprintFields indent acc fields =
+      let rec go acc fields =
+        match fields with
+        | [] ->
+          acc
+        | (ident, ty) :: fields ->
+          let acc = acc *- indent
+          let acc = cprintTy acc ty
+          let acc = acc *- " " *- ident *- ";" *- eol
+          go acc fields
+      go acc fields
     let acc = acc *- "struct " *- ident *- " {" *- eol
-    let rec go acc fields =
-      match fields with
+    let acc = cprintFields "    " acc fields
+    let acc =
+      match variants with
+      | [] ->
+        acc
+      | _ ->
+        let acc = acc *- "    union {" *- eol
+        let acc = cprintFields "        " acc variants
+        let acc = acc *- "    };" *- eol
+        acc
+    let acc = acc *- "};" *- eol
+    acc
+  | CDecl.Enum (tyIdent, variants) ->
+    let acc = acc *- "enum " *- tyIdent *- " {" *- eol
+    let rec go acc variants =
+      match variants with
       | [] -> acc
-      | (ident, ty) :: fields ->
+      | variant :: variants ->
         let acc = acc *- "    "
-        let acc = cprintTy acc ty
-        let acc = acc *- " " *- ident *- ";" *- eol
-        go acc fields
-    let acc = go acc fields
+        let acc = acc *- variant *- "," *- eol
+        go acc variants
+    let acc = go acc variants
     let acc = acc *- "};" *- eol
     acc
   | CDecl.Fun (ident, args, resultTy, body) ->

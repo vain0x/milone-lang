@@ -143,6 +143,7 @@ let private tokenIdent ident =
   | "namespace" -> Token.Namespace
   | "open" -> Token.Open
   | "type" -> Token.Type
+  | "of" -> Token.Of
   | _ -> Token.Ident ident
 
 let private tokenPunct str =

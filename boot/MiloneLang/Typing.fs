@@ -5,13 +5,18 @@ open MiloneLang.Helpers
 
 type TyCtx =
   {
+    /// Next serial number for variables.
+    /// We need to identify variables by serial number rather than names
+    /// due to scope locality and shadowing.
     VarSerial: int
-    /// Identifier serial number to human readable name, type, location.
-    Vars: Map<int, string * Ty * Loc>
+    /// Value level identifiers.
+    /// From serial number to (source identifier, type, location).
+    Vars: Map<int, string * ValueIdent * Ty * Loc>
     /// Identifier to type and serial.
-    VarEnv: Map<string, Ty * int>
+    VarEnv: Map<string, ValueIdent * Ty * int>
     TySerial: int
     TyEnv: Map<string, Ty>
+    Tys: Map<int, string * TyDef * Loc>
   }
 
 /// Merges derived context into base context
@@ -24,12 +29,39 @@ let rollback bCtx dCtx: TyCtx =
       VarEnv = bCtx.VarEnv
   }
 
-let freshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
+let ctxFreshTySerial (ctx: TyCtx) =
   let serial = ctx.TySerial + 1
   let ctx = { ctx with TySerial = ctx.TySerial + 1 }
+  serial, ctx
+
+let freshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
+  let serial, ctx = ctxFreshTySerial ctx
   let ident = sprintf "'%s_%d" ident serial
   let ty = Ty.Var ident
   ty, ident, ctx
+
+let ctxAddTy tyIdent tyDef loc ctx =
+  match tyDef with
+  | TyDef.Union variants ->
+    let tySerial, ctx = ctxFreshTySerial ctx
+    let refTy = Ty.Ref (tyIdent, tySerial)
+
+    // Register variants as values.
+    let variants, ctx =
+      (variants, ctx) |> stMap (fun ((lIdent, _, hasArg, lArgTy), ctx) ->
+        let valueIdent = ValueIdent.Variant tySerial
+        let lTy = if hasArg then Ty.Fun (lArgTy, refTy) else refTy
+        let lSerial, ctx = freshVar ctx lIdent valueIdent lTy loc
+        (lIdent, lSerial, hasArg, lArgTy), ctx
+      )
+
+    let tyDef = TyDef.Union variants
+    let ctx =
+      { ctx with
+          TyEnv = ctx.TyEnv |> Map.add tyIdent refTy
+          Tys = ctx.Tys |> Map.add tySerial (tyIdent, tyDef, loc)
+      }
+    tySerial, tyDef, ctx
 
 let resolveTyVar name (ctx: TyCtx): Ty =
   match ctx.TyEnv |> Map.tryFind name with
@@ -38,13 +70,13 @@ let resolveTyVar name (ctx: TyCtx): Ty =
   | None ->
     Ty.Var name
 
-let freshVar (ctx: TyCtx) ident ty loc: int * TyCtx =
+let freshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
   let serial = ctx.VarSerial + 1
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        VarEnv = ctx.VarEnv |> Map.add ident (ty, serial)
-        Vars = ctx.Vars |> Map.add serial (ident, ty, loc)
+        VarEnv = ctx.VarEnv |> Map.add ident (valueIdent, ty, serial)
+        Vars = ctx.Vars |> Map.add serial (ident, valueIdent, ty, loc)
     }
   serial, ctx
 
@@ -60,6 +92,7 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Str
     | Ty.Range
     | Ty.Box
+    | Ty.Ref _
     | Ty.Tuple [] ->
       true
     | Ty.Fun (sTy, tTy) ->
@@ -82,7 +115,8 @@ let isMonomorphic ctx ty: bool =
   | Ty.Str
   | Ty.Range
   | Ty.Box
-  | Ty.Tuple [] ->
+  | Ty.Tuple []
+  | Ty.Ref _ ->
     true
   | Ty.Error
   | Ty.Var _ ->
@@ -114,7 +148,8 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.Char
     | Ty.Str
     | Ty.Range
-    | Ty.Box ->
+    | Ty.Box
+    | Ty.Ref _ ->
       ty
     | Ty.Fun (sty, tty) ->
       Ty.Fun (go sty, go tty)
@@ -155,6 +190,8 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Range, Ty.Range
     | Ty.Box, Ty.Box ->
       ctx
+    | Ty.Ref (_, l), Ty.Ref (_, r) when l <> noSerial && l = r ->
+      ctx
     | Ty.Var _, _ ->
       failwithf "Couldn't unify (due to self recursion) %A %A" lty rty
     | Ty.Unit, _
@@ -166,10 +203,36 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Box, _
     | Ty.Fun _, _
     | Ty.Tuple _, _
-    | Ty.List _, _ ->
+    | Ty.List _, _
+    | Ty.Ref _, _ ->
       let lty, rty = substTy ctx lty, substTy ctx rty
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
+
+let inferPatRef (ctx: TyCtx) ident loc ty =
+  let serial, ty, ctx =
+    match ctx.VarEnv |> Map.tryFind ident with
+    | Some (ValueIdent.Variant _, variantTy, serial) ->
+      let ctx = unifyTy ctx ty variantTy
+      serial, ty, ctx
+    | _ ->
+      let serial, ctx = freshVar ctx ident ValueIdent.Var ty loc
+      serial, ty, ctx
+  Pat.Ref (ident, serial, ty, loc), ctx
+
+let inferPatCall (ctx: TyCtx) callee args loc ty =
+  match callee, args with
+  | Pat.Ref (ident, _, _, refLoc), [arg] ->
+    match ctx.VarEnv |> Map.tryFind ident with
+    | Some (ValueIdent.Variant _, (Ty.Fun (argTy, callTy) as variantTy), serial) ->
+      let arg, ctx = inferPat ctx arg argTy
+      let callee = Pat.Ref (ident, serial, variantTy, refLoc)
+      let ctx = unifyTy ctx ty callTy
+      Pat.Call (callee, [arg], ty, loc), ctx
+    | _ ->
+      failwith "Type Error: Not a function variant."
+  | _ ->
+    failwith "unimpl use of call pattern"
 
 let inferPatTuple ctx itemPats loc tupleTy =
   let rec go accPats accTys ctx itemPats =
@@ -195,15 +258,16 @@ let inferPat ctx pat ty =
   match pat with
   | Pat.Unit _ ->
     pat, unifyTy ctx ty Ty.Unit
-  | Pat.Value (value, _) ->
-    pat, unifyTy ctx ty (valueTy value)
+  | Pat.Lit (lit, _) ->
+    pat, unifyTy ctx ty (litTy lit)
   | Pat.Nil (_, loc) ->
     let itemTy, _, ctx = freshTyVar "item" ctx
     let ctx = unifyTy ctx ty (Ty.List itemTy)
     Pat.Nil (itemTy, loc), ctx
   | Pat.Ref (ident, _, _, loc) ->
-    let serial, ctx = freshVar ctx ident ty loc
-    Pat.Ref (ident, serial, ty, loc), ctx
+    inferPatRef ctx ident loc ty
+  | Pat.Call (callee, args, _, loc) ->
+    inferPatCall ctx callee args loc ty
   | Pat.Cons (l, r, _, loc) ->
     inferPatCons ctx l r loc ty
   | Pat.Tuple (items, _, loc) ->
@@ -215,7 +279,7 @@ let inferPat ctx pat ty =
 
 let inferRef (ctx: TyCtx) ident loc ty =
   match ctx.VarEnv |> Map.tryFind ident, ident with
-  | Some (refTy, serial), _ ->
+  | Some (_, refTy, serial), _ ->
     let ctx = unifyTy ctx refTy ty
     Expr.Ref (ident, serial, ty, loc), ctx
   | None, "not" ->
@@ -326,7 +390,7 @@ let inferCall (ctx: TyCtx) callee args loc callTy =
 
 let inferCallPrintfn ctx args loc callTy =
   match args with
-  | Expr.Value (Value.Str format, _) :: _ ->
+  | Expr.Lit (Lit.Str format, _) :: _ ->
     let ctx = unifyTy ctx callTy Ty.Unit
     let funTy = analyzeFormat format
     let args, calleeTy, ctx = inferCallArgs [] ctx (List.rev args) callTy
@@ -426,8 +490,7 @@ let inferAnno ctx expr annoTy ty =
   let ctx = unifyTy ctx annoTy ty
   inferExpr ctx expr annoTy
 
-let inferLetVal ctx pat init loc unitTy =
-  let ctx = unifyTy ctx unitTy Ty.Unit
+let inferLetVal ctx pat init loc =
   let initTy, _, ctx = freshTyVar "init" ctx
   // Type init expression.
   let init, initCtx = inferExpr ctx init initTy
@@ -435,9 +498,9 @@ let inferLetVal ctx pat init loc unitTy =
   let ctx = rollback ctx initCtx
   // Define new variables defined by the pat to the context.
   let pat, ctx = inferPat ctx pat initTy
-  Expr.Let ([pat], init, loc), ctx
+  Expr.Let (pat, init, loc), ctx
 
-let inferLetFun ctx calleePat argPats body loc unitTy =
+let inferLetFun ctx calleePat argPats body bodyTy loc =
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx bodyTy argPats =
@@ -452,13 +515,11 @@ let inferLetFun ctx calleePat argPats body loc unitTy =
 
   match calleePat with
   | Pat.Ref (callee, _, _, calleeLoc) ->
-    let ctx = unifyTy ctx unitTy Ty.Unit
     let funTy, _, ctx =
       if callee = "main"
       then Ty.Fun (Ty.Unit, Ty.Int), "", ctx
       else freshTyVar "fun" ctx
-    let bodyTy, _, ctx = freshTyVar "body" ctx
-    let serial, ctx = freshVar ctx callee funTy calleeLoc
+    let serial, ctx = freshVar ctx callee ValueIdent.Fun funTy calleeLoc
 
     // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default
@@ -473,9 +534,24 @@ let inferLetFun ctx calleePat argPats body loc unitTy =
     let ctx = rollback ctx bodyCtx
 
     let calleePat = Pat.Ref (callee, serial, funTy, calleeLoc)
-    Expr.Let (calleePat :: argPats, body, loc), ctx
+    calleePat, argPats, body, loc, ctx
   | _ ->
     failwith "First pattern of let with parameters must be an identifier."
+
+let inferLet ctx pat body loc ty =
+  let ctx = unifyTy ctx ty Ty.Unit
+  match pat with
+  | Pat.Anno (Pat.Call (callee, args, _, callLoc), annoTy, annoLoc) ->
+    let callee, args, body, loc, ctx = inferLetFun ctx callee args body annoTy loc
+    let pat = Pat.Call (callee, args, ty, callLoc)
+    Expr.Let (pat, body, loc), ctx
+  | Pat.Call (callee, args, _, callLoc) ->
+    let bodyTy, _, ctx = freshTyVar "body" ctx
+    let callee, args, body, loc, ctx = inferLetFun ctx callee args body bodyTy loc
+    let pat = Pat.Call (callee, args, ty, callLoc)
+    Expr.Let (pat, body, loc), ctx
+  | _ ->
+    inferLetVal ctx pat body loc
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: Expr<Loc> list * TyCtx =
@@ -495,10 +571,14 @@ let inferAndThen ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
   Expr.AndThen (List.rev exprs, lastTy, loc), ctx
 
+let inferExprTyDef ctx ident tyDef loc =
+  let serial, tyDef, ctx = ctx |> ctxAddTy ident tyDef loc
+  Expr.TyDef (ident, serial, tyDef, loc), ctx
+
 let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   match expr with
-  | Expr.Value (value, _) ->
-    expr, unifyTy ctx (valueTy value) ty
+  | Expr.Lit (lit, _) ->
+    expr, unifyTy ctx (litTy lit) ty
   | Expr.Unit _ ->
     expr, unifyTy ctx ty Ty.Unit
   | Expr.Ref (ident, _, _, loc) ->
@@ -523,12 +603,10 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferAnno ctx expr annoTy ty
   | Expr.AndThen (exprs, _, loc) ->
     inferAndThen ctx loc exprs ty
-  | Expr.Let ([pat], init, loc) ->
-    inferLetVal ctx pat init loc ty
-  | Expr.Let (calleePat :: argPats, body, loc) ->
-    inferLetFun ctx calleePat argPats body loc ty
-  | Expr.Let ([], _, _) ->
-    failwith "Never let with no pats"
+  | Expr.Let (pat, body, loc) ->
+    inferLet ctx pat body loc ty
+  | Expr.TyDef (ident, _, tyDef, loc) ->
+    inferExprTyDef ctx ident tyDef loc
 
 /// Replaces type vars embedded in exprs
 /// with inference results.
@@ -549,6 +627,7 @@ let infer (exprs: Expr<Loc> list): Expr<Loc> list * TyCtx =
       VarEnv = Map.empty
       TySerial = 0
       TyEnv = Map.empty
+      Tys = Map.empty
     }
 
   let exprs, ctx = inferExprs ctx exprs Ty.Unit

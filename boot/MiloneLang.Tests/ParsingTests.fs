@@ -36,21 +36,23 @@ let tyList ty =
 let tyTuple itemTys =
   Ty.Tuple itemTys
 
-let patInt value = Pat.Value (Value.Int value, ())
+let patInt value = Pat.Lit (Lit.Int value, ())
 
 let patNil = Pat.Nil (noTy, ())
 
 let patRef ident = Pat.Ref (ident, noSerial, noTy, ())
+
+let patCall callee args = Pat.Call (callee, args, noTy, ())
 
 let patTuple itemPats = Pat.Tuple (itemPats, noTy, ())
 
 let patCons l r = Pat.Cons (l, r, noTy, ())
 
 let exprInt value =
-  Expr.Value (Value.Int value, ())
+  Expr.Lit (Lit.Int value, ())
 
 let exprStr value =
-  Expr.Value (Value.Str value, ())
+  Expr.Lit (Lit.Str value, ())
 
 let exprRef ident =
   Expr.Ref (ident, noSerial, noTy, ())
@@ -77,10 +79,10 @@ let exprSub left right =
   Expr.Op (Op.Sub, left,  right, noTy, ())
 
 let exprLet ident body =
-  Expr.Let ([patRef ident], body, ())
+  Expr.Let (patRef ident, body, ())
 
 let exprLetMain body =
-  Expr.Let ([patRef "main"; Pat.Unit ()], body, ())
+  Expr.Let (patCall (patRef "main") [Pat.Unit ()], body, ())
 
 let exprAndThen exprs =
   Expr.AndThen (exprs, noTy, ())
@@ -329,6 +331,21 @@ let parseExprCons () =
         (exprCons (exprInt 1)
           (exprCons (exprInt 2) exprNil)
         )]
+  source |> parseStr |> is expected
+
+[<Fact>]
+let parseExprTyDefUnion () =
+  let source = """
+type Answer =
+  | Yes of int
+  | No
+"""
+  let tyDef =
+    TyDef.Union ["Yes", noSerial, true, Ty.Int; "No", noSerial, false, Ty.Unit]
+  let expected =
+    [
+      Expr.TyDef ("Answer", noSerial, tyDef, ())
+    ]
   source |> parseStr |> is expected
 
 [<Fact>]

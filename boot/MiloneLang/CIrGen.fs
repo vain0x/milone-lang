@@ -10,9 +10,10 @@ type MirTransCtx = MirTrans.MirTransCtx
 type Ctx =
   {
     VarSerial: int
-    Vars: Map<int, string * MTy * Loc>
+    Vars: Map<int, string * ValueIdent * MTy * Loc>
     TySerial: int
     TyEnv: Map<MTy, CTy>
+    Tys: Map<int, string * MTyDef * Loc>
     Stmts: CStmt list
     Decls: CDecl list
   }
@@ -25,6 +26,7 @@ let ctxFromMirCtx (mirCtx: MirTransCtx): Ctx =
     Vars = mirCtx.Vars
     TySerial = 0
     TyEnv = Map.empty
+    Tys = mirCtx.Tys
     Stmts = []
     Decls = []
   }
@@ -52,7 +54,7 @@ let ctxAddListDecl (ctx: Ctx) itemTy =
     { ctx with
         TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add listTy selfTy
-        Decls = CDecl.Struct (ident, fields) :: ctx.Decls
+        Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
   selfTy, ctx
 
@@ -74,14 +76,49 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
     { ctx with
         TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct tupleTyIdent)
-        Decls = CDecl.Struct (tupleTyIdent, fields) :: ctx.Decls
+        Decls = CDecl.Struct (tupleTyIdent, fields, []) :: ctx.Decls
     }
   CTy.Struct tupleTyIdent, ctx
+
+/// Calculates tag type's name of union type.
+let ctxTagTyIdent _ tyIdent tySerial =
+  sprintf "%sTag_%d" tyIdent tySerial
+
+let ctxUnionTyIdent _ tyIdent tySerial =
+  sprintf "%s_%d" tyIdent tySerial
+
+let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
+  let tags =
+    variants |> List.map (fun (serial, _, _, _) ->
+      ctxUniqueName ctx serial)
+  let variants, ctx =
+    (variants, ctx) |> stFlatMap (fun ((serial, hasArg, argTy, _), acc, ctx) ->
+      if hasArg then
+        let argTy, ctx = cty ctx argTy
+        (ctxUniqueName ctx serial, argTy) :: acc, ctx
+      else
+        acc, ctx
+    )
+
+  let tagTyIdent = ctxTagTyIdent ctx tyIdent tySerial
+  let tagTy = CTy.Enum tagTyIdent
+
+  let unionTyIdent = ctxUnionTyIdent ctx tyIdent tySerial
+  let unionTy = CTy.Struct unionTyIdent
+  let ctx =
+    { ctx with
+        TyEnv = ctx.TyEnv |> Map.add (MTy.Ref tySerial) unionTy
+        Decls =
+          CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
+          :: CDecl.Enum (tagTyIdent, tags)
+          :: ctx.Decls
+    }
+  unionTy, ctx
 
 let ctxUniqueName (ctx: Ctx) serial =
   let ident =
     match ctx.Vars |> Map.tryFind serial with
-    | Some (ident, _, _) -> ident
+    | Some (ident, _, _, _) -> ident
     | None -> ""
   sprintf "%s_%d" ident serial
 
@@ -110,6 +147,16 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ctxAddTupleDecl ctx itemTys
     | Some ty ->
       ty, ctx
+  | MTy.Ref serial ->
+    match ctx.Tys |> Map.tryFind serial with
+    | Some (tyIdent, MTyDef.Union variants, _) ->
+      match ctx.TyEnv |> Map.tryFind ty with
+      | Some ty ->
+        ty, ctx
+      | None ->
+        ctxAddUnionDecl ctx tyIdent serial variants
+    | None ->
+      failwith "Unknown type reference"
 
 let cOpFrom op =
   match op with
@@ -142,6 +189,13 @@ let genExprDefault ctx ty =
   | MTy.Tuple _ ->
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
+  | MTy.Ref _ ->
+    failwith "unimpl"
+
+let genExprVariant ctx serial ty =
+  let ty, ctx = cty ctx ty
+  let tag = CExpr.Ref (ctxUniqueName ctx serial)
+  CExpr.Init (["tag", tag], ty), ctx
 
 let genExprOpAsCall ctx ident l r =
   let l, ctx = genExpr ctx l
@@ -164,6 +218,10 @@ let genExprUniOp ctx op arg ty _ =
     deref, ctx
   | MUniOp.Proj index ->
     CExpr.Proj (arg, index), ctx
+  | MUniOp.Tag ->
+    CExpr.Nav (arg, "tag"), ctx
+  | MUniOp.GetVariant serial ->
+    CExpr.Nav (arg, ctxUniqueName ctx serial), ctx
   | MUniOp.ListIsEmpty ->
     CExpr.UniOp (CUniOp.Not, arg), ctx
   | MUniOp.ListHead ->
@@ -200,15 +258,15 @@ let genExprList ctx exprs =
 
 let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
   match arg with
-  | MExpr.Value (Value.Int value, _) ->
+  | MExpr.Lit (Lit.Int value, _) ->
     CExpr.Int value, ctx
-  | MExpr.Value (Value.Char value, _) ->
+  | MExpr.Lit (Lit.Char value, _) ->
     CExpr.Char value, ctx
-  | MExpr.Value (Value.Str value, _) ->
+  | MExpr.Lit (Lit.Str value, _) ->
     CExpr.StrObj value, ctx
-  | MExpr.Value (Value.Bool false, _) ->
+  | MExpr.Lit (Lit.Bool false, _) ->
     CExpr.Int 0, ctx
-  | MExpr.Value (Value.Bool true, _) ->
+  | MExpr.Lit (Lit.Bool true, _) ->
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
@@ -216,6 +274,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     genExprDefault ctx MTy.Unit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
+  | MExpr.Variant (_, serial, ty, _) ->
+    genExprVariant ctx serial ty
   | MExpr.UniOp (op, arg, ty, loc) ->
     genExprUniOp ctx op arg ty loc
   | MExpr.Op (op, l, r, _, _) ->
@@ -227,7 +287,7 @@ let genExprCallPrintfn ctx format args =
     match args with
     | [] ->
       List.rev acc, ctx
-    | MExpr.Value (Value.Str value, _) :: args ->
+    | MExpr.Lit (Lit.Str value, _) :: args ->
       go (CExpr.StrRaw value :: acc) ctx args
     | arg :: args when mexprTy arg = MTy.Str ->
       let arg, ctx = genExpr ctx arg
@@ -245,7 +305,7 @@ let genExprCallPrintfn ctx format args =
 
 let genExprCall ctx callee args ty =
   match callee, args with
-  | MExpr.Ref (serial, _, _), (MExpr.Value (Value.Str format, _)) :: args
+  | MExpr.Ref (serial, _, _), (MExpr.Lit (Lit.Str format, _)) :: args
     when serial = SerialPrintfn ->
     genExprCallPrintfn ctx format args
   | MExpr.Ref (serial, _, _), args
@@ -310,6 +370,19 @@ let genInitTuple ctx serial items tupleTy =
       go ctx (i + 1) items
   go ctx 0 items
 
+let genInitUnion ctx varSerial variantSerial arg argTy unionTy =
+  let arg, ctx = genExpr ctx arg
+  let temp = ctxUniqueName ctx varSerial
+  let unionTy, ctx = cty ctx unionTy
+  let fields =
+    [
+      "tag", CExpr.Ref (ctxUniqueName ctx variantSerial)
+      ctxUniqueName ctx variantSerial, arg
+    ]
+  let init = CExpr.Init (fields, unionTy)
+  let ctx = ctxAddStmt ctx (CStmt.Let (temp, Some init, unionTy))
+  ctx
+
 let genStmtLetVal ctx serial init ty =
   match init with
   | MInit.UnInit ->
@@ -326,6 +399,8 @@ let genStmtLetVal ctx serial init ty =
     genInitCons ctx serial head tail itemTy
   | MInit.Tuple items ->
     genInitTuple ctx serial items ty
+  | MInit.Union (variantSerial, arg, argTy) ->
+    genInitUnion ctx serial variantSerial arg argTy ty
 
 let genStmtDo ctx expr =
   let expr, ctx = genExpr ctx expr
@@ -378,6 +453,8 @@ let genDecls (ctx: Ctx) decls =
   match decls with
   | [] ->
     ctx.Decls |> List.rev
+  | MDecl.TyDef _ :: decls ->
+    genDecls ctx decls
   | MDecl.LetFun (callee, args, _caps, resultTy, body, _) :: decls ->
     let ident, args =
       if List.isEmpty decls

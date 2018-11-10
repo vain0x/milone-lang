@@ -50,6 +50,7 @@ namespace rec MiloneLang
     | Namespace
     | Open
     | Type
+    | Of
 
   /// Type of expressions.
   [<RequireQualifiedAccess>]
@@ -62,6 +63,9 @@ namespace rec MiloneLang
     | Str
     | Range
     | Box
+    /// Type reference, i.e. name of some type.
+    | Ref
+      of ident:string * serial:int
     | Var
       of string
     | Fun
@@ -120,11 +124,18 @@ namespace rec MiloneLang
     /// `..`
     | Range
 
+  /// Type definition.
+  [<RequireQualifiedAccess>]
+  type TyDef =
+    /// Union type. Variants: (ident, serial, has-argument, argument type).
+    | Union
+      of (string * int * bool * Ty) list
+
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
   type Pat<'a> =
-    | Value
-      of Value * 'a
+    | Lit
+      of Lit * 'a
     | Unit
       of 'a
     /// `[]`
@@ -133,6 +144,8 @@ namespace rec MiloneLang
     /// Variable reference pattern or `_`.
     | Ref
       of ident:string * serial:int * Ty * 'a
+    | Call
+      of callee:Pat<'a> * args:Pat<'a> list * Ty * 'a
     /// `::`
     | Cons
       of Pat<'a> * Pat<'a> * itemTy:Ty * 'a
@@ -142,9 +155,9 @@ namespace rec MiloneLang
     | Anno
       of Pat<'a> * Ty * 'a
 
-  /// Value in AST.
+  /// Literal of primitive value.
   [<RequireQualifiedAccess>]
-  type Value =
+  type Lit =
     | Bool
       of bool
     | Int
@@ -154,11 +167,20 @@ namespace rec MiloneLang
     | Str
       of string
 
+  /// Value-level identifier.
+  [<RequireQualifiedAccess>]
+  type ValueIdent =
+    | Var
+    | Fun
+    /// Variant of union with no argument.
+    | Variant
+      of tySerial:int
+
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]
   type Expr<'a> =
-    | Value
-      of Value * 'a
+    | Lit
+      of Lit * 'a
     | Unit
       of 'a
     /// Variable reference.
@@ -193,7 +215,17 @@ namespace rec MiloneLang
     | AndThen
       of Expr<'a> list * Ty * 'a
     | Let
-      of pats:Pat<'a> list * init:Expr<'a> * 'a
+      of pat:Pat<'a> * init:Expr<'a> * 'a
+    /// Type definition.
+    | TyDef
+      of ident:string * serial:int * TyDef * 'a
+
+  /// Type definition in mid-level IR.
+  [<RequireQualifiedAccess>]
+  type MTyDef =
+    /// Union type. Variants: (serial, argument type, variant type) list.
+    | Union
+      of (int * bool * MTy * MTy) list
 
   /// Type in middle IR.
   [<RequireQualifiedAccess>]
@@ -204,6 +236,8 @@ namespace rec MiloneLang
     | Char
     | Str
     | Box
+    | Ref
+      of int
     /// Function type, e.g. `int -> int`.
     | Fun
       of MTy * MTy
@@ -222,6 +256,10 @@ namespace rec MiloneLang
     | Unbox
     /// Projection. Get an item of tuple.
     | Proj
+      of int
+    /// Get union tag.
+    | Tag
+    | GetVariant
       of int
     | ListIsEmpty
     | ListHead
@@ -251,12 +289,14 @@ namespace rec MiloneLang
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
   type MExpr<'a> =
-    | Value
-      of Value * 'a
+    | Lit
+      of Lit * 'a
     | Default
       of MTy * 'a
     | Ref
       of serial:int * MTy * 'a
+    | Variant
+      of tySerial:int * serial:int * MTy * 'a
     | UniOp
       of MUniOp * arg:MExpr<'a> * resultTy:MTy * 'a
     | Op
@@ -277,6 +317,8 @@ namespace rec MiloneLang
       of head:MExpr<'a> * tail:MExpr<'a> * itemTy:MTy
     | Tuple
       of items:MExpr<'a> list
+    | Union
+      of serial:int * arg:MExpr<'a> * MTy
 
   /// Statement in middle IR.
   /// Doesn't introduce global things, e.g. functions.
@@ -305,6 +347,8 @@ namespace rec MiloneLang
   type MDecl<'a> =
     | LetFun
       of callee:int * args:(int * MTy * 'a) list * caps:(int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
+    | TyDef
+      of int * TyDef * 'a
 
   /// Type in C language.
   [<RequireQualifiedAccess>]
@@ -315,6 +359,8 @@ namespace rec MiloneLang
     | Ptr
       of CTy
     | Struct
+      of ident:string
+    | Enum
       of ident:string
 
   [<RequireQualifiedAccess>]
@@ -353,6 +399,9 @@ namespace rec MiloneLang
       of string
     | Ref
       of string
+    /// `(struct T){.x = x, ..}` Initializer.
+    | Init
+      of fields:(string * CExpr) list * CTy
     /// Projection. Get an item of tuple.
     | Proj
       of CExpr * int
@@ -400,6 +449,8 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type CDecl =
     | Struct
-      of ident:string * fields:(string * CTy) list
+      of ident:string * fields:(string * CTy) list * variants:(string * CTy) list
+    | Enum
+      of ident:string * variants:string list
     | Fun
       of ident:string * args:(string * CTy) list * CTy * body:CStmt list

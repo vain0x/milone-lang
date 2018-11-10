@@ -6,7 +6,8 @@ open MiloneLang.Helpers
 type MirTransCtx =
   {
     VarSerial: int
-    Vars: Map<int, string * MTy * Loc>
+    Vars: Map<int, string * ValueIdent * MTy * Loc>
+    Tys: Map<int, string * MTyDef * Loc>
     LabelSerial: int
 
     /// Known identifiers and their dependencies.
@@ -23,6 +24,7 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): MirTransCtx =
     VarSerial = mirCtx.VarSerial
     Vars = mirCtx.Vars
     LabelSerial = mirCtx.LabelSerial
+    Tys = mirCtx.Tys
 
     Caps = Map.empty
     Known = known
@@ -35,7 +37,7 @@ let ctxFreshVar (ident: string) (ty: MTy) loc (ctx: MirTransCtx) =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        Vars = ctx.Vars |> Map.add serial (ident, ty, loc)
+        Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Var, ty, loc)
     }
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
@@ -51,6 +53,9 @@ let ctxPopScope (baseCtx: MirTransCtx) (derivedCtx: MirTransCtx) =
       Refs = baseCtx.Refs
       Locals = baseCtx.Locals
   }
+
+let ctxAddKnown serial (ctx: MirTransCtx) =
+  { ctx with Known = Set.add serial ctx.Known }
 
 let ctxAddRef serial (ctx: MirTransCtx) =
   { ctx with Refs = Set.add serial ctx.Refs }
@@ -68,10 +73,13 @@ let ctxCaps (ctx: MirTransCtx) =
   let refs = Set.difference ctx.Refs ctx.Locals
   let refs = Set.difference refs ctx.Known
 
-  refs |> Set.toList |> List.map
+  refs |> Set.toList |> List.choose
     (fun serial ->
-      let _, ty, loc = ctx.Vars |> Map.find serial
-      serial, ty, loc
+      match ctx.Vars |> Map.find serial with
+      | _, ValueIdent.Var, ty, loc ->
+        Some (serial, ty, loc)
+      | _ ->
+        None
     )
 
 let declosureExprRef serial (expr, ctx) =
@@ -80,8 +88,9 @@ let declosureExprRef serial (expr, ctx) =
 
 let declosureExpr (expr, ctx) =
   match expr with
-  | MExpr.Value _
-  | MExpr.Default _ ->
+  | MExpr.Lit _
+  | MExpr.Default _
+  | MExpr.Variant _ ->
     expr, ctx
   | MExpr.Ref (serial, _, _) ->
     declosureExprRef serial (expr, ctx)
@@ -117,6 +126,9 @@ let declosureInit (init, ctx) =
   | MInit.Tuple items ->
     let items, ctx = (items, ctx) |> stMap declosureExpr
     MInit.Tuple items, ctx
+  | MInit.Union (serial, arg, argTy) ->
+    let arg, ctx = (arg, ctx) |> declosureExpr
+    MInit.Union (serial, arg, argTy), ctx
 
 let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
   let result =
@@ -172,6 +184,15 @@ let declosureStmt (stmt, acc, ctx) =
     let pred, ctx = (pred, ctx) |> declosureExpr
     MStmt.GotoUnless (pred, label, loc) :: acc, ctx
 
+let declosureDeclTyDef decl tyDef ctx =
+  match tyDef with
+  | TyDef.Union variants ->
+    let ctx =
+      variants |> List.fold (fun ctx (_, variantSerial, _, _) ->
+        ctx |> ctxAddKnown variantSerial
+      ) ctx
+    decl, ctx
+
 let declosureFunBody callee args body ctx =
   /// Variables known to the function body.
   let localSerials =
@@ -225,6 +246,8 @@ let declosureDeclLetFun callee args ty body loc ctx =
 
 let declosureDecl (decl, ctx) =
   match decl with
+  | MDecl.TyDef (_, tyDef, _) ->
+    declosureDeclTyDef decl tyDef ctx
   | MDecl.LetFun (callee, args, _, ty, body, loc) ->
     declosureDeclLetFun callee args ty body loc ctx
 
