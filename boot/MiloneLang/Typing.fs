@@ -42,24 +42,20 @@ let freshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
 
 let ctxAddTy tyIdent tyDef loc ctx =
   match tyDef with
-  | TyDef.Union ((lIdent, _, lArgTy), (rIdent, _, rArgTy)) ->
+  | TyDef.Union variants ->
     let tySerial, ctx = ctxFreshTySerial ctx
     let refTy = Ty.Ref (tyIdent, tySerial)
 
     // Register variants as values.
-    let valueIdent = ValueIdent.Variant tySerial
-    let lTy =
-      match lArgTy with
-      | Some ty -> Ty.Fun (ty, refTy)
-      | None -> refTy
-    let rTy =
-      match rArgTy with
-      | Some ty -> Ty.Fun (ty, refTy)
-      | None -> refTy
-    let lSerial, ctx = freshVar ctx lIdent valueIdent lTy loc
-    let rSerial, ctx = freshVar ctx rIdent valueIdent rTy loc
+    let variants, ctx =
+      (variants, ctx) |> stMap (fun ((lIdent, _, hasArg, lArgTy), ctx) ->
+        let valueIdent = ValueIdent.Variant tySerial
+        let lTy = if hasArg then Ty.Fun (lArgTy, refTy) else refTy
+        let lSerial, ctx = freshVar ctx lIdent valueIdent lTy loc
+        (lIdent, lSerial, hasArg, lArgTy), ctx
+      )
 
-    let tyDef = TyDef.Union ((lIdent, lSerial, lArgTy), (rIdent, rSerial, rArgTy))
+    let tyDef = TyDef.Union variants
     let ctx =
       { ctx with
           TyEnv = ctx.TyEnv |> Map.add tyIdent refTy

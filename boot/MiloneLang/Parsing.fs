@@ -138,17 +138,15 @@ let parseTyDefUnion boxX tokens =
     | (Token.Pipe _, _) :: tokens ->
       go acc tokens
     | (Token.Ident variant, _) :: (Token.Of, _) :: tokens ->
-      let variantTy, tokens = parseTy boxX tokens
-      go ((variant, Some variantTy) :: acc) tokens
+      let argTy, tokens = parseTy boxX tokens
+      go ((variant, noSerial, true, argTy) :: acc) tokens
     | (Token.Ident variant, _) :: tokens ->
-      go ((variant, None) :: acc) tokens
+      go ((variant, noSerial, false, Ty.Unit) :: acc) tokens
     | _ ->
       List.rev acc, tokens
   match go [] tokens with
-  | [(lv, lt); (rv, rt)], tokens ->
-    TyDef.Union ((lv, noSerial, lt), (rv, noSerial, rt)), tokens
-  | _ ->
-    failwith "unimpl union"
+  | variants, tokens ->
+    TyDef.Union variants, tokens
 
 let parseTyDef boxX tokens =
   match tokens with

@@ -6,6 +6,13 @@ type Limit =
   | LimitVal of int
   | LimitDiv
 
+type ApiResponse =
+  | ARJson
+    of string
+  | ARError
+    of int * string
+  | ARCancel
+
 let main _ =
   let () =
     let ok = Ok
@@ -24,5 +31,19 @@ let main _ =
       if x <> 1 then exit 1
     | LimitDiv ->
       exit 2
+
+  let () =
+    match ARCancel with
+    | ARCancel ->
+      ()
+    | _ ->
+      exit 1
+
+  let () =
+    match ARError (404, "Not Found") with
+    | ARError (statusCode, statusText) ->
+      if statusCode <> 404 || statusText <> "Not Found" then exit 1
+    | _ ->
+      exit 1
 
   0

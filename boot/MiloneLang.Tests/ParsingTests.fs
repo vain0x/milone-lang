@@ -341,7 +341,7 @@ type Answer =
   | No
 """
   let tyDef =
-    TyDef.Union (("Yes", noSerial, Some Ty.Int), ("No", noSerial, None))
+    TyDef.Union ["Yes", noSerial, true, Ty.Int; "No", noSerial, false, Ty.Unit]
   let expected =
     [
       Expr.TyDef ("Answer", noSerial, tyDef, ())

@@ -124,10 +124,12 @@ namespace rec MiloneLang
     /// `..`
     | Range
 
+  /// Type definition.
   [<RequireQualifiedAccess>]
   type TyDef =
+    /// Union type. Variants: (ident, serial, has-argument, argument type).
     | Union
-      of l:(string * int * Ty option) * r:(string * int * Ty option)
+      of (string * int * bool * Ty) list
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
@@ -218,10 +220,12 @@ namespace rec MiloneLang
     | TyDef
       of ident:string * serial:int * TyDef * 'a
 
+  /// Type definition in mid-level IR.
   [<RequireQualifiedAccess>]
   type MTyDef =
+    /// Union type. Variants: (serial, argument type, variant type) list.
     | Union
-      of l:(int * MTy * MTy) * r:(int * MTy * MTy)
+      of (int * bool * MTy * MTy) list
 
   /// Type in middle IR.
   [<RequireQualifiedAccess>]

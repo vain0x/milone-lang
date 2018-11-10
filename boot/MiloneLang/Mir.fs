@@ -104,20 +104,14 @@ let mopFrom op =
 
 let mtyDef tySerial (tyDef: TyDef) =
   match tyDef with
-  | TyDef.Union ((_, lSerial, lTy), (_, rSerial, rTy)) ->
-    let lArgTy, lVariantTy =
-      match lTy with
-      | None ->
-        MTy.Unit, MTy.Ref tySerial
-      | Some ty ->
-        unboxTy ty, MTy.Fun (unboxTy ty, MTy.Ref tySerial)
-    let rArgTy, rVariantTy =
-      match rTy with
-      | None ->
-        MTy.Unit, MTy.Ref tySerial
-      | Some ty ->
-        unboxTy ty, MTy.Fun (unboxTy ty, MTy.Ref tySerial)
-    MTyDef.Union ((lSerial, lArgTy, lVariantTy), (rSerial, rArgTy, rVariantTy))
+  | TyDef.Union variants ->
+    let variants =
+      variants |> List.map (fun (_, variantSerial, hasArg, argTy) ->
+        let argTy = unboxTy argTy
+        let variantTy = MTy.Fun (argTy, MTy.Ref tySerial)
+        variantSerial, hasArg, argTy, variantTy
+      )
+    MTyDef.Union variants
 
 let unboxTy (ty: Ty): MTy =
   match ty with

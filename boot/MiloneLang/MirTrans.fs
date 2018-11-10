@@ -186,8 +186,11 @@ let declosureStmt (stmt, acc, ctx) =
 
 let declosureDeclTyDef decl tyDef ctx =
   match tyDef with
-  | TyDef.Union ((_, lvSerial, _), (_, rvSerial, _)) ->
-    let ctx = ctx |> ctxAddKnown lvSerial |> ctxAddKnown rvSerial
+  | TyDef.Union variants ->
+    let ctx =
+      variants |> List.fold (fun ctx (_, variantSerial, _, _) ->
+        ctx |> ctxAddKnown variantSerial
+      ) ctx
     decl, ctx
 
 let declosureFunBody callee args body ctx =

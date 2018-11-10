@@ -89,16 +89,15 @@ let ctxUnionTyIdent _ tyIdent tySerial =
 
 let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
   let tags =
-    variants |> List.map (fun (serial, _, _) ->
+    variants |> List.map (fun (serial, _, _, _) ->
       ctxUniqueName ctx serial)
   let variants, ctx =
-    (variants, ctx) |> stFlatMap (fun ((serial, argTy, _), acc, ctx) ->
-      match argTy with
-      | MTy.Unit ->
-        acc, ctx
-      | _ ->
+    (variants, ctx) |> stFlatMap (fun ((serial, hasArg, argTy, _), acc, ctx) ->
+      if hasArg then
         let argTy, ctx = cty ctx argTy
         (ctxUniqueName ctx serial, argTy) :: acc, ctx
+      else
+        acc, ctx
     )
 
   let tagTyIdent = ctxTagTyIdent ctx tyIdent tySerial
@@ -150,15 +149,12 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ty, ctx
   | MTy.Ref serial ->
     match ctx.Tys |> Map.tryFind serial with
-    | Some (tyIdent, MTyDef.Union ((lvSerial, lArgTy, lVariantTy), (rvSerial, rArgTy, rVariantTy)), _) ->
+    | Some (tyIdent, MTyDef.Union variants, _) ->
       match ctx.TyEnv |> Map.tryFind ty with
       | Some ty ->
         ty, ctx
       | None ->
-        ctxAddUnionDecl ctx tyIdent serial [
-          lvSerial, lArgTy, lVariantTy
-          rvSerial, rArgTy, rVariantTy
-        ]
+        ctxAddUnionDecl ctx tyIdent serial variants
     | None ->
       failwith "Unknown type reference"
 
