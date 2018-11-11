@@ -4,21 +4,21 @@ struct Tuple_1 {
 };
 
 int main() {
-    int match_4;
-    struct Tuple_1 tuple_5;
-    tuple_5.t0 = (2 * 2);
-    tuple_5.t1 = (3 * 3);
-    if (!((tuple_5.t0 == 4))) goto next_2;
-    if (!((tuple_5.t1 == 9))) goto next_2;
-    match_4 = 0;
+    int match_;
+    struct Tuple_1 tuple_;
+    tuple_.t0 = (2 * 2);
+    tuple_.t1 = (3 * 3);
+    if (!((tuple_.t0 == 4))) goto next_2;
+    if (!((tuple_.t1 == 9))) goto next_2;
+    match_ = 0;
     goto end_match_1;
 next_2:;
-    if (!((tuple_5.t0 == 999))) goto next_3;
-    int y_3 = tuple_5.t1;
-    match_4 = 1;
+    if (!((tuple_.t0 == 999))) goto next_3;
+    int y_ = tuple_.t1;
+    match_ = 1;
     goto end_match_1;
 next_3:;
     exit(1);
 end_match_1:;
-    return match_4;
+    return match_;
 }

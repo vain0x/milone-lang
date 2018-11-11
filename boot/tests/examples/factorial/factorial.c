@@ -1,16 +1,16 @@
-int factorial_3(int x_4) {
-    int if_5;
-    if (!((x_4 == 0))) goto else_1;
-    if_5 = 1;
+int factorial_(int x_) {
+    int if_;
+    if (!((x_ == 0))) goto else_1;
+    if_ = 1;
     goto end_if_2;
 else_1:;
-    int call_6 = factorial_3((x_4 - 1));
-    if_5 = (x_4 * call_6);
+    int call_ = factorial_((x_ - 1));
+    if_ = (x_ * call_);
 end_if_2:;
-    return if_5;
+    return if_;
 }
 
 int main() {
-    int call_7 = factorial_3(5);
-    return (call_7 - 120);
+    int call_1 = factorial_(5);
+    return (call_1 - 120);
 }

@@ -3,45 +3,45 @@ struct List_1 {
     struct List_1* tail;
 };
 
-struct List_1* go_3(struct List_1* acc_4, struct List_1* xs_5) {
-    struct List_1* match_28;
-    if (!(!(xs_5))) goto next_2;
-    match_28 = acc_4;
+struct List_1* go_(struct List_1* acc_, struct List_1* xs_1) {
+    struct List_1* match_;
+    if (!(!(xs_1))) goto next_2;
+    match_ = acc_;
     goto end_match_1;
 next_2:;
-    if (!(!(!(xs_5)))) goto next_3;
-    struct String x_6 = xs_5->head;
-    struct List_1* xs_7 = xs_5->tail;
-    struct List_1* list_29 = (struct List_1*)malloc(sizeof(struct List_1));
-    list_29->head = x_6;
-    list_29->tail = acc_4;
-    struct List_1* call_30 = go_3(list_29, xs_7);
-    match_28 = call_30;
+    if (!(!(!(xs_1)))) goto next_3;
+    struct String x_ = xs_1->head;
+    struct List_1* xs_2 = xs_1->tail;
+    struct List_1* list_ = (struct List_1*)malloc(sizeof(struct List_1));
+    list_->head = x_;
+    list_->tail = acc_;
+    struct List_1* call_ = go_(list_, xs_2);
+    match_ = call_;
     goto end_match_1;
 next_3:;
     exit(1);
 end_match_1:;
-    return match_28;
+    return match_;
 }
 
-struct List_1* listRev_1(struct List_1* xs_2) {
-    struct List_1* call_31 = go_3(NULL, xs_2);
-    return call_31;
+struct List_1* listRev_(struct List_1* xs_) {
+    struct List_1* call_1 = go_(NULL, xs_);
+    return call_1;
 }
 
-int printList_8(struct List_1* xs_9) {
-    int match_32;
-    if (!(!(xs_9))) goto next_5;
-    match_32 = 0;
+int printList_(struct List_1* xs_3) {
+    int match_1;
+    if (!(!(xs_3))) goto next_5;
+    match_1 = 0;
     goto end_match_4;
 next_5:;
-    if (!(!(!(xs_9)))) goto next_6;
-    struct String x_10 = xs_9->head;
-    struct List_1* xs_11 = xs_9->tail;
-    printf("%s\n", x_10.str);
-    int call_33 = 0;
-    int call_34 = printList_8(xs_11);
-    match_32 = 0;
+    if (!(!(!(xs_3)))) goto next_6;
+    struct String x_1 = xs_3->head;
+    struct List_1* xs_4 = xs_3->tail;
+    printf("%s\n", x_1.str);
+    int call_2 = 0;
+    int call_3 = printList_(xs_4);
+    match_1 = 0;
     goto end_match_4;
 next_6:;
     exit(1);
@@ -49,130 +49,130 @@ end_match_4:;
     return 0;
 }
 
-int isDigit_12(char c_13) {
-    int if_35;
-    if (!(('0' <= c_13))) goto else_7;
-    if_35 = (c_13 <= '9');
+int isDigit_(char c_) {
+    int if_;
+    if (!(('0' <= c_))) goto else_7;
+    if_ = (c_ <= '9');
     goto end_if_8;
 else_7:;
-    if_35 = 0;
+    if_ = 0;
 end_if_8:;
-    return if_35;
+    return if_;
 }
 
 struct Tuple_2 {
     struct String t0;
 };
 
-int readInt_16(struct Tuple_2 caps_61, int i_17) {
-    struct String s_15 = caps_61.t0;
-    int if_36;
-    int if_37;
-    if (!((s_15.len <= i_17))) goto else_11;
-    if_37 = 1;
+int readInt_(struct Tuple_2 caps_1, int i_) {
+    struct String s_ = caps_1.t0;
+    int if_1;
+    int if_2;
+    if (!((s_.len <= i_))) goto else_11;
+    if_2 = 1;
     goto end_if_12;
 else_11:;
-    int call_38 = isDigit_12(s_15.str[i_17]);
-    if_37 = !(call_38);
+    int call_4 = isDigit_(s_.str[i_]);
+    if_2 = !(call_4);
 end_if_12:;
-    if (!(if_37)) goto else_9;
-    if_36 = i_17;
+    if (!(if_2)) goto else_9;
+    if_1 = i_;
     goto end_if_10;
 else_9:;
-    struct Tuple_2 caps_60;
-    caps_60.t0 = s_15;
-    int call_39 = readInt_16(caps_60, (i_17 + 1));
-    if_36 = call_39;
+    struct Tuple_2 caps_;
+    caps_.t0 = s_;
+    int call_5 = readInt_(caps_, (i_ + 1));
+    if_1 = call_5;
 end_if_10:;
-    return if_36;
+    return if_1;
 }
 
-struct List_1* go_18(struct Tuple_2 caps_67, struct List_1* acc_19, int i_20) {
-    struct String s_15 = caps_67.t0;
-    struct List_1* if_40;
-    if (!((s_15.len <= i_20))) goto else_13;
-    struct List_1* call_41 = listRev_1(acc_19);
-    if_40 = call_41;
+struct List_1* go_1(struct Tuple_2 caps_7, struct List_1* acc_1, int i_1) {
+    struct String s_ = caps_7.t0;
+    struct List_1* if_3;
+    if (!((s_.len <= i_1))) goto else_13;
+    struct List_1* call_6 = listRev_(acc_1);
+    if_3 = call_6;
     goto end_if_14;
 else_13:;
-    struct List_1* if_42;
-    if (!((s_15.str[i_20] == ' '))) goto else_15;
-    struct Tuple_2 caps_63;
-    caps_63.t0 = s_15;
-    struct List_1* call_43 = go_18(caps_63, acc_19, (i_20 + 1));
-    if_42 = call_43;
+    struct List_1* if_4;
+    if (!((s_.str[i_1] == ' '))) goto else_15;
+    struct Tuple_2 caps_3;
+    caps_3.t0 = s_;
+    struct List_1* call_7 = go_1(caps_3, acc_1, (i_1 + 1));
+    if_4 = call_7;
     goto end_if_16;
 else_15:;
-    struct List_1* if_44;
-    int if_45;
-    int if_46;
-    if (!((s_15.str[i_20] == '['))) goto else_21;
-    if_46 = 1;
+    struct List_1* if_5;
+    int if_6;
+    int if_7;
+    if (!((s_.str[i_1] == '['))) goto else_21;
+    if_7 = 1;
     goto end_if_22;
 else_21:;
-    if_46 = (s_15.str[i_20] == ']');
+    if_7 = (s_.str[i_1] == ']');
 end_if_22:;
-    if (!(if_46)) goto else_19;
-    if_45 = 1;
+    if (!(if_7)) goto else_19;
+    if_6 = 1;
     goto end_if_20;
 else_19:;
-    if_45 = (s_15.str[i_20] == ',');
+    if_6 = (s_.str[i_1] == ',');
 end_if_20:;
-    if (!(if_45)) goto else_17;
-    struct String slice_48 = str_slice(s_15, i_20, i_20);
-    struct List_1* list_47 = (struct List_1*)malloc(sizeof(struct List_1));
-    list_47->head = str_add((struct String){.str = "punct ", .len = 6}, slice_48);
-    list_47->tail = acc_19;
-    struct List_1* acc_21 = list_47;
-    struct Tuple_2 caps_64;
-    caps_64.t0 = s_15;
-    struct List_1* call_49 = go_18(caps_64, acc_21, (i_20 + 1));
-    if_44 = call_49;
+    if (!(if_6)) goto else_17;
+    struct String slice_ = str_slice(s_, i_1, i_1);
+    struct List_1* list_1 = (struct List_1*)malloc(sizeof(struct List_1));
+    list_1->head = str_add((struct String){.str = "punct ", .len = 6}, slice_);
+    list_1->tail = acc_1;
+    struct List_1* acc_2 = list_1;
+    struct Tuple_2 caps_4;
+    caps_4.t0 = s_;
+    struct List_1* call_8 = go_1(caps_4, acc_2, (i_1 + 1));
+    if_5 = call_8;
     goto end_if_18;
 else_17:;
-    struct List_1* if_50;
-    int call_51 = isDigit_12(s_15.str[i_20]);
-    if (!(call_51)) goto else_23;
-    struct Tuple_2 caps_65;
-    caps_65.t0 = s_15;
-    int call_52 = readInt_16(caps_65, i_20);
-    int r_22 = call_52;
-    struct String slice_54 = str_slice(s_15, i_20, (r_22 - 1));
-    struct List_1* list_53 = (struct List_1*)malloc(sizeof(struct List_1));
-    list_53->head = str_add((struct String){.str = "int ", .len = 4}, slice_54);
-    list_53->tail = acc_19;
-    struct List_1* acc_23 = list_53;
-    struct Tuple_2 caps_66;
-    caps_66.t0 = s_15;
-    struct List_1* call_55 = go_18(caps_66, acc_23, r_22);
-    if_50 = call_55;
+    struct List_1* if_8;
+    int call_9 = isDigit_(s_.str[i_1]);
+    if (!(call_9)) goto else_23;
+    struct Tuple_2 caps_5;
+    caps_5.t0 = s_;
+    int call_10 = readInt_(caps_5, i_1);
+    int r_ = call_10;
+    struct String slice_1 = str_slice(s_, i_1, (r_ - 1));
+    struct List_1* list_2 = (struct List_1*)malloc(sizeof(struct List_1));
+    list_2->head = str_add((struct String){.str = "int ", .len = 4}, slice_1);
+    list_2->tail = acc_1;
+    struct List_1* acc_3 = list_2;
+    struct Tuple_2 caps_6;
+    caps_6.t0 = s_;
+    struct List_1* call_11 = go_1(caps_6, acc_3, r_);
+    if_8 = call_11;
     goto end_if_24;
 else_23:;
-    printf("ERROR: Unknown Token '%c'\n", s_15.str[i_20]);
-    int call_56 = 0;
+    printf("ERROR: Unknown Token '%c'\n", s_.str[i_1]);
+    int call_12 = 0;
     exit(1);
-    if_50 = NULL;
+    if_8 = NULL;
 end_if_24:;
-    if_44 = if_50;
+    if_5 = if_8;
 end_if_18:;
-    if_42 = if_44;
+    if_4 = if_5;
 end_if_16:;
-    if_40 = if_42;
+    if_3 = if_4;
 end_if_14:;
-    return if_40;
+    return if_3;
 }
 
-struct List_1* tokenize_14(struct String s_15) {
-    struct Tuple_2 caps_69;
-    caps_69.t0 = s_15;
-    struct List_1* call_57 = go_18(caps_69, NULL, 0);
-    return call_57;
+struct List_1* tokenize_(struct String s_) {
+    struct Tuple_2 caps_9;
+    caps_9.t0 = s_;
+    struct List_1* call_13 = go_1(caps_9, NULL, 0);
+    return call_13;
 }
 
 int main() {
-    struct String source_26 = (struct String){.str = "[0, 1000000007, 314159]", .len = 23};
-    struct List_1* call_58 = tokenize_14(source_26);
-    struct List_1* tokens_27 = call_58;
-    int call_59 = printList_8(tokens_27);
+    struct String source_ = (struct String){.str = "[0, 1000000007, 314159]", .len = 23};
+    struct List_1* call_14 = tokenize_(source_);
+    struct List_1* tokens_ = call_14;
+    int call_15 = printList_(tokens_);
     return 0;
 }

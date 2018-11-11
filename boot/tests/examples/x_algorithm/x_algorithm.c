@@ -1,106 +1,106 @@
-int test_1(int pred_2) {
-    int if_16;
-    if (!(!(pred_2))) goto else_1;
+int test_(int pred_) {
+    int if_;
+    if (!(!(pred_))) goto else_1;
     exit(1);
-    if_16 = 0;
+    if_ = 0;
     goto end_if_2;
 else_1:;
-    if_16 = 0;
+    if_ = 0;
 end_if_2:;
     return 0;
 }
 
-int neg_3(int x_4) {
-    return (0 - x_4);
+int neg_(int x_) {
+    return (0 - x_);
 }
 
-int abs_5(int x_6) {
-    int if_17;
-    if (!((0 <= x_6))) goto else_3;
-    if_17 = x_6;
+int abs_(int x_1) {
+    int if_1;
+    if (!((0 <= x_1))) goto else_3;
+    if_1 = x_1;
     goto end_if_4;
 else_3:;
-    int call_18 = neg_3(x_6);
-    if_17 = call_18;
+    int call_ = neg_(x_1);
+    if_1 = call_;
 end_if_4:;
-    return if_17;
+    return if_1;
 }
 
-int gcd_7(int x_8, int y_9) {
-    int if_19;
-    if (!((y_9 == 0))) goto else_5;
-    int call_20 = abs_5(x_8);
-    if_19 = call_20;
+int gcd_(int x_2, int y_) {
+    int if_2;
+    if (!((y_ == 0))) goto else_5;
+    int call_1 = abs_(x_2);
+    if_2 = call_1;
     goto end_if_6;
 else_5:;
-    int call_21 = gcd_7(y_9, (x_8 % y_9));
-    if_19 = call_21;
+    int call_2 = gcd_(y_, (x_2 % y_));
+    if_2 = call_2;
 end_if_6:;
-    return if_19;
+    return if_2;
 }
 
 struct Tuple_1 {
     int t0;
 };
 
-int go_12(struct Tuple_1 caps_50, int k_13) {
-    int x_11 = caps_50.t0;
-    int if_22;
-    if (!((x_11 < (k_13 * k_13)))) goto else_7;
-    if_22 = 1;
+int go_(struct Tuple_1 caps_1, int k_) {
+    int x_3 = caps_1.t0;
+    int if_3;
+    if (!((x_3 < (k_ * k_)))) goto else_7;
+    if_3 = 1;
     goto end_if_8;
 else_7:;
-    int if_23;
-    if (!(((x_11 % k_13) != 0))) goto else_9;
-    struct Tuple_1 caps_49;
-    caps_49.t0 = x_11;
-    int call_24 = go_12(caps_49, (k_13 + 1));
-    if_23 = call_24;
+    int if_4;
+    if (!(((x_3 % k_) != 0))) goto else_9;
+    struct Tuple_1 caps_;
+    caps_.t0 = x_3;
+    int call_3 = go_(caps_, (k_ + 1));
+    if_4 = call_3;
     goto end_if_10;
 else_9:;
-    if_23 = 0;
+    if_4 = 0;
 end_if_10:;
-    if_22 = if_23;
+    if_3 = if_4;
 end_if_8:;
-    return if_22;
+    return if_3;
 }
 
-int isPrime_10(int x_11) {
-    int if_25;
-    if (!((2 <= x_11))) goto else_11;
-    struct Tuple_1 caps_52;
-    caps_52.t0 = x_11;
-    int call_26 = go_12(caps_52, 2);
-    if_25 = call_26;
+int isPrime_(int x_3) {
+    int if_5;
+    if (!((2 <= x_3))) goto else_11;
+    struct Tuple_1 caps_3;
+    caps_3.t0 = x_3;
+    int call_4 = go_(caps_3, 2);
+    if_5 = call_4;
     goto end_if_12;
 else_11:;
-    if_25 = 0;
+    if_5 = 0;
 end_if_12:;
-    return if_25;
+    return if_5;
 }
 
 int main() {
-    int call_27 = abs_5(0);
-    int call_28 = test_1((call_27 == 0));
-    int call_29 = abs_5(1);
-    int call_30 = test_1((call_29 == 1));
-    int call_31 = neg_3(1);
-    int call_32 = abs_5(call_31);
-    int call_33 = test_1((call_32 == 1));
-    int call_34 = gcd_7(1, 1);
-    int call_35 = test_1((call_34 == 1));
-    int call_36 = gcd_7(12, 18);
-    int call_37 = test_1((call_36 == 6));
-    int call_38 = neg_3(6);
-    int call_39 = gcd_7(4, call_38);
-    int call_40 = test_1((call_39 == 2));
-    int call_41 = isPrime_10(2);
-    int call_42 = test_1(call_41);
-    int call_43 = isPrime_10(3);
-    int call_44 = test_1(call_43);
-    int call_45 = isPrime_10(4);
-    int call_46 = test_1(!(call_45));
-    int call_47 = isPrime_10(1000000007);
-    int call_48 = test_1(call_47);
+    int call_5 = abs_(0);
+    int call_6 = test_((call_5 == 0));
+    int call_7 = abs_(1);
+    int call_8 = test_((call_7 == 1));
+    int call_9 = neg_(1);
+    int call_10 = abs_(call_9);
+    int call_11 = test_((call_10 == 1));
+    int call_12 = gcd_(1, 1);
+    int call_13 = test_((call_12 == 1));
+    int call_14 = gcd_(12, 18);
+    int call_15 = test_((call_14 == 6));
+    int call_16 = neg_(6);
+    int call_17 = gcd_(4, call_16);
+    int call_18 = test_((call_17 == 2));
+    int call_19 = isPrime_(2);
+    int call_20 = test_(call_19);
+    int call_21 = isPrime_(3);
+    int call_22 = test_(call_21);
+    int call_23 = isPrime_(4);
+    int call_24 = test_(!(call_23));
+    int call_25 = isPrime_(1000000007);
+    int call_26 = test_(call_25);
     return 0;
 }

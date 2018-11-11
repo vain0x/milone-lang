@@ -1,5 +1,5 @@
 int main() {
-    int x_3 = 1;
-    int x_4 = 0;
-    return x_4;
+    int x_ = 1;
+    int x_1 = 0;
+    return x_1;
 }

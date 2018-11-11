@@ -1,10 +1,10 @@
 int main() {
-    int if_3;
+    int if_;
     if (!(1)) goto else_1;
-    if_3 = 0;
+    if_ = 0;
     goto end_if_2;
 else_1:;
-    if_3 = 1;
+    if_ = 1;
 end_if_2:;
-    return if_3;
+    return if_;
 }

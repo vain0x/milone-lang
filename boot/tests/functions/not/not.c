@@ -1,19 +1,19 @@
-int not_3(int arg_6) {
+int not_(int arg_) {
     printf("shadowing not\n");
-    int call_7 = 0;
+    int call_1 = 0;
     return 0;
 }
 
 int main() {
-    int if_4;
+    int if_;
     if (!(!(0))) goto else_1;
     printf("not false\n");
-    int call_5 = 0;
-    if_4 = 0;
+    int call_ = 0;
+    if_ = 0;
     goto end_if_2;
 else_1:;
-    if_4 = 0;
+    if_ = 0;
 end_if_2:;
-    int call_8 = not_3(0);
+    int call_2 = not_(0);
     return 0;
 }
