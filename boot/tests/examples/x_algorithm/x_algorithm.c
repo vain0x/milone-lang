@@ -39,11 +39,11 @@ end_if_6:;
     return if_2;
 }
 
-struct Tuple_1 {
+struct IntTuple1 {
     int t0;
 };
 
-int go_(struct Tuple_1 caps_1, int k_) {
+int go_(struct IntTuple1 caps_1, int k_) {
     int x_3 = caps_1.t0;
     int if_3;
     if (!((x_3 < (k_ * k_)))) goto else_7;
@@ -52,7 +52,7 @@ int go_(struct Tuple_1 caps_1, int k_) {
 else_7:;
     int if_4;
     if (!(((x_3 % k_) != 0))) goto else_9;
-    struct Tuple_1 caps_;
+    struct IntTuple1 caps_;
     caps_.t0 = x_3;
     int call_3 = go_(caps_, (k_ + 1));
     if_4 = call_3;
@@ -68,7 +68,7 @@ end_if_8:;
 int isPrime_(int x_3) {
     int if_5;
     if (!((2 <= x_3))) goto else_11;
-    struct Tuple_1 caps_3;
+    struct IntTuple1 caps_3;
     caps_3.t0 = x_3;
     int call_4 = go_(caps_3, 2);
     if_5 = call_4;

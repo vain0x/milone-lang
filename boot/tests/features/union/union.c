@@ -1,52 +1,52 @@
-enum StatusTag_1 {
+enum Status_Tag {
     Ok_,
     Err_,
 };
 
-struct Status_1 {
-    enum StatusTag_1 tag;
+struct Status_ {
+    enum Status_Tag tag;
     union {
         struct String Err_;
     };
 };
 
-enum LimitTag_2 {
+enum Limit_Tag {
     LimitVal_,
     LimitDiv_,
 };
 
-struct Limit_2 {
-    enum LimitTag_2 tag;
+struct Limit_ {
+    enum Limit_Tag tag;
     union {
         int LimitVal_;
     };
 };
 
-struct Tuple_1 {
+struct IntStringTuple2 {
     int t0;
     struct String t1;
 };
 
-enum ApiResponseTag_3 {
+enum ApiResponse_Tag {
     ARJson_,
     ARError_,
     ARCancel_,
 };
 
-struct ApiResponse_3 {
-    enum ApiResponseTag_3 tag;
+struct ApiResponse_ {
+    enum ApiResponse_Tag tag;
     union {
         struct String ARJson_;
-        struct Tuple_1 ARError_;
+        struct IntStringTuple2 ARError_;
     };
 };
 
 int main() {
-    struct Status_1 ok_ = (struct Status_1){.tag = Ok_};
-    struct Status_1 variant_ = (struct Status_1){.tag = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
-    struct Status_1 err1_ = variant_;
-    struct Status_1 variant_1 = (struct Status_1){.tag = Err_, .Err_ = (struct String){.str = "Access denied.", .len = 14}};
-    struct Status_1 err2_ = variant_1;
+    struct Status_ ok_ = (struct Status_){.tag = Ok_};
+    struct Status_ variant_ = (struct Status_){.tag = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
+    struct Status_ err1_ = variant_;
+    struct Status_ variant_1 = (struct Status_){.tag = Err_, .Err_ = (struct String){.str = "Access denied.", .len = 14}};
+    struct Status_ err2_ = variant_1;
     int match_;
     if (!((err1_.tag == Ok_))) goto next_2;
     exit(1);
@@ -69,7 +69,7 @@ next_3:;
     exit(1);
 end_match_1:;
     int match_1;
-    struct Limit_2 variant_2 = (struct Limit_2){.tag = LimitVal_, .LimitVal_ = 1};
+    struct Limit_ variant_2 = (struct Limit_){.tag = LimitVal_, .LimitVal_ = 1};
     if (!((variant_2.tag == LimitVal_))) goto next_7;
     int x_ = variant_2.LimitVal_;
     int if_1;
@@ -91,7 +91,7 @@ next_10:;
     exit(1);
 end_match_6:;
     int match_2;
-    if (!(((struct ApiResponse_3){.tag = ARCancel_}.tag == ARCancel_))) goto next_12;
+    if (!(((struct ApiResponse_){.tag = ARCancel_}.tag == ARCancel_))) goto next_12;
     match_2 = 0;
     goto end_match_11;
 next_12:;
@@ -100,10 +100,10 @@ next_12:;
     goto end_match_11;
 end_match_11:;
     int match_3;
-    struct Tuple_1 tuple_;
+    struct IntStringTuple2 tuple_;
     tuple_.t0 = 404;
     tuple_.t1 = (struct String){.str = "Not Found", .len = 9};
-    struct ApiResponse_3 variant_3 = (struct ApiResponse_3){.tag = ARError_, .ARError_ = tuple_};
+    struct ApiResponse_ variant_3 = (struct ApiResponse_){.tag = ARError_, .ARError_ = tuple_};
     if (!((variant_3.tag == ARError_))) goto next_15;
     int statusCode_ = variant_3.ARError_.t0;
     struct String statusText_ = variant_3.ARError_.t1;

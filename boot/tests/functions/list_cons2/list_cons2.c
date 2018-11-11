@@ -9,17 +9,17 @@ end_if_2:;
     return if_;
 }
 
-struct List_1 {
+struct IntList {
     int head;
-    struct List_1* tail;
+    struct IntList* tail;
 };
 
 int main() {
     int match_;
-    struct List_1* list_1 = (struct List_1*)malloc(sizeof(struct List_1));
+    struct IntList* list_1 = (struct IntList*)malloc(sizeof(struct IntList));
     list_1->head = 2;
     list_1->tail = NULL;
-    struct List_1* list_ = (struct List_1*)malloc(sizeof(struct List_1));
+    struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
     list_->head = 1;
     list_->tail = list_1;
     if (!(!(!(list_)))) goto next_4;

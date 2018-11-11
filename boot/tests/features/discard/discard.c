@@ -4,7 +4,7 @@ int f_(int arg_) {
     return 0;
 }
 
-struct Tuple_1 {
+struct UnitUnitTuple2 {
     int t0;
     int t1;
 };
@@ -12,7 +12,7 @@ struct Tuple_1 {
 int main() {
     int call_1 = f_(0);
     int call_2 = f_(0);
-    struct Tuple_1 tuple_;
+    struct UnitUnitTuple2 tuple_;
     tuple_.t0 = 0;
     tuple_.t1 = 0;
     return 0;

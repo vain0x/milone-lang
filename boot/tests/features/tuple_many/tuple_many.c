@@ -1,15 +1,15 @@
-struct Tuple_1 {
+struct IntIntTuple2 {
     int t0;
     int t1;
 };
 
-struct Tuple_2 {
+struct IntIntIntIntTuple2Tuple3 {
     int t0;
     int t1;
-    struct Tuple_1 t2;
+    struct IntIntTuple2 t2;
 };
 
-struct Tuple_3 {
+struct IntIntIntIntIntIntIntIntIntIntIntTuple11 {
     int t0;
     int t1;
     int t2;
@@ -24,10 +24,10 @@ struct Tuple_3 {
 };
 
 int main() {
-    struct Tuple_1 tuple_1;
+    struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 3;
     tuple_1.t1 = 4;
-    struct Tuple_2 tuple_;
+    struct IntIntIntIntTuple2Tuple3 tuple_;
     tuple_.t0 = 1;
     tuple_.t1 = 2;
     tuple_.t2 = tuple_1;
@@ -64,7 +64,7 @@ end_if_4:;
 else_1:;
     if_ = 0;
 end_if_2:;
-    struct Tuple_3 tuple_2;
+    struct IntIntIntIntIntIntIntIntIntIntIntTuple11 tuple_2;
     tuple_2.t0 = 1;
     tuple_2.t1 = 2;
     tuple_2.t2 = 3;
@@ -76,6 +76,6 @@ end_if_2:;
     tuple_2.t8 = 9;
     tuple_2.t9 = 10;
     tuple_2.t10 = 11;
-    struct Tuple_3 t11_ = tuple_2;
+    struct IntIntIntIntIntIntIntIntIntIntIntTuple11 t11_ = tuple_2;
     return 0;
 }

@@ -1,11 +1,11 @@
-struct List_1 {
+struct IntList {
     int head;
-    struct List_1* tail;
+    struct IntList* tail;
 };
 
 int main() {
     int match_;
-    struct List_1* list_ = (struct List_1*)malloc(sizeof(struct List_1));
+    struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
     if (!(!(!(list_)))) goto next_2;
