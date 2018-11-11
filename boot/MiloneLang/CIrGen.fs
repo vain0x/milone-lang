@@ -14,11 +14,16 @@ type Ctx =
     TySerial: int
     TyEnv: Map<MTy, CTy>
     Tys: Map<int, string * MTyDef * Loc>
+    TyUniqueNames: Map<MTy, string>
     Stmts: CStmt list
     Decls: CDecl list
   }
 
 let tupleField i = sprintf "t%d" i
+
+/// Calculates tag type's name of union type.
+let tagTyIdent tyIdent =
+  sprintf "%sTag" tyIdent
 
 let calculateVarUniqueNames vars =
   let groups = vars |> Map.toList |> Seq.groupBy (fun (_, (ident, _, _, _)) -> ident)
@@ -29,14 +34,25 @@ let calculateVarUniqueNames vars =
   ))
   |> Map.ofSeq
 
+let calculateTyUniqueNames tys =
+  let groups = tys |> Map.toList |> Seq.groupBy (fun (_, (ident, _, _)) -> ident)
+  groups |> Seq.collect (fun (ident, tys) ->
+    tys |> Seq.mapi (fun i (serial, _) ->
+      let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
+      (MTy.Ref serial, ident)
+  ))
+  |> Map.ofSeq
+
 let ctxFromMirCtx (mirCtx: MirTransCtx): Ctx =
   let varNames = calculateVarUniqueNames mirCtx.Vars
+  let tyNames = calculateTyUniqueNames mirCtx.Tys
   {
     Vars = mirCtx.Vars
     VarUniqueNames = varNames
     TySerial = 0
     TyEnv = Map.empty
     Tys = mirCtx.Tys
+    TyUniqueNames = tyNames
     Stmts = []
     Decls = []
   }
@@ -56,11 +72,10 @@ let ctxAddDecl (ctx: Ctx) decl =
 let ctxAddListDecl (ctx: Ctx) itemTy =
   let listTy = MTy.List itemTy
   let itemTy, ctx = cty ctx itemTy
-  let serial = ctx.TySerial + 1
-  let ident = sprintf "List_%d" serial
+  let ident, ctx = ctxUniqueTyName ctx listTy
   let selfTy = CTy.Ptr (CTy.Struct ident)
   let fields = ["head", itemTy; "tail", selfTy]
-  let ctx =
+  let ctx: Ctx =
     { ctx with
         TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add listTy selfTy
@@ -80,22 +95,14 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
   let fields, ctx = go [] ctx 0 itemTys
 
   let tupleTy = MTy.Tuple itemTys
-  let serial = ctx.TySerial + 1
-  let tupleTyIdent = sprintf "Tuple_%d" serial
-  let ctx =
+  let tupleTyIdent, ctx = ctxUniqueTyName ctx tupleTy
+  let ctx: Ctx =
     { ctx with
         TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct tupleTyIdent)
         Decls = CDecl.Struct (tupleTyIdent, fields, []) :: ctx.Decls
     }
   CTy.Struct tupleTyIdent, ctx
-
-/// Calculates tag type's name of union type.
-let ctxTagTyIdent _ tyIdent tySerial =
-  sprintf "%sTag_%d" tyIdent tySerial
-
-let ctxUnionTyIdent _ tyIdent tySerial =
-  sprintf "%s_%d" tyIdent tySerial
 
 let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
   let tags =
@@ -110,11 +117,10 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
         acc, ctx
     )
 
-  let tagTyIdent = ctxTagTyIdent ctx tyIdent tySerial
-  let tagTy = CTy.Enum tagTyIdent
-
-  let unionTyIdent = ctxUnionTyIdent ctx tyIdent tySerial
+  let unionTyIdent, ctx = ctxUniqueTyName ctx (MTy.Ref tySerial)
   let unionTy = CTy.Struct unionTyIdent
+  let tagTyIdent = tagTyIdent unionTyIdent
+  let tagTy = CTy.Enum tagTyIdent
   let ctx =
     { ctx with
         TyEnv = ctx.TyEnv |> Map.add (MTy.Ref tySerial) unionTy
@@ -131,6 +137,37 @@ let ctxUniqueName (ctx: Ctx) serial =
     ident
   | None ->
     failwithf "Unknown value-level identifier serial %d" serial
+
+let ctxUniqueTyName (ctx: Ctx) ty =
+  let rec go ty (ctx: Ctx) =
+    match ctx.TyUniqueNames |> Map.tryFind ty with
+    | Some ident ->
+      ident, ctx
+    | None ->
+      let ident, ctx =
+        match ty with
+        | MTy.Unit -> "Unit", ctx
+        | MTy.Bool -> "Bool", ctx
+        | MTy.Int -> "Int", ctx
+        | MTy.Char -> "Char", ctx
+        | MTy.Str -> "String", ctx
+        | MTy.Box -> "Object", ctx
+        | MTy.Fun (sTy, tTy) ->
+          let sTy, ctx = ctx |> go sTy
+          let tTy, ctx = ctx |> go tTy
+          sprintf "%s%sFun" sTy tTy, ctx
+        | MTy.List itemTy ->
+          let itemTy, ctx = ctx |> go itemTy
+          sprintf "%sList" itemTy, ctx
+        | MTy.Tuple itemTys ->
+          let len = itemTys |> List.length
+          let itemTys, ctx = (itemTys, ctx) |> stMap (fun (itemTy, ctx) -> ctx |> go itemTy)
+          sprintf "%s%s%d" (itemTys |> String.concat "") "Tuple" len, ctx
+        | MTy.Ref serial ->
+          failwithf "Unknown type serial %d" serial
+      let ctx = { ctx with TyUniqueNames = ctx.TyUniqueNames |> Map.add ty ident }
+      ident, ctx
+  go ty ctx
 
 let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
   match ty with
