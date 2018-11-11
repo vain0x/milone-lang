@@ -2,13 +2,22 @@
 
 set -eu
 
-# Converts milone code to C code
-# and compiles it with GCC.
-# SAMPLE: compile hello
+# Finds path to test case directory.
+# Sample:
+#   locate hello
+# Output:
+#   tests/examples/hello
+locate() {
+    echo $(find tests/*/$1 -type d)
+}
+
+# Converts milone code to C code and compiles it with GCC.
+# Sample:
+#   compile hello
 compile() {
-    m="./tests/src/$1.milone"
-    c="tmp/$1.c"
-    app="tmp/$1"
+    m="$(locate $1)/$1.milone"
+    c="$(locate $1)/~$1.c"
+    app="$(locate $1)/~$1"
 
     mkdir -p tmp
     cat $m | dotnet run -p MiloneLang -- -t c >$c
@@ -18,13 +27,18 @@ compile() {
 
 # Runs a milone code
 # and verifies its stdout/exit code to be expected.
-# SAMPLE: integ hello
-# SAMPLE: integ ./tests/src/hello.milone
+# Sample:
+#   integ hello
+# Sample:
+#   integ tests/examples/hello
+# Output:
+#   hello ... ✔ ok
 integ() {
-    name=$(basename "$1" .milone)
-    app="./tmp/$name"
-    out="./tmp/$name.out"
-    expected="./tests/targets/$name.out"
+    echo "integ $1"
+    name=$(basename "$1")
+    app="$(locate $name)/~$name"
+    out="$(locate $name)/~$name.out"
+    expected="$(locate $name)/$name.out"
 
     >&2 echo -n "$name ... "
     compile "$name" 2>/dev/null
@@ -43,9 +57,10 @@ integ() {
 }
 
 # Tests all milone codes.
-# SAMPLE: integ_all
+# Sample:
+#   integ_all
 integ_all() {
-    err=$(find ./tests/src -name '*.milone' -type f -exec ./task integ "{}" \;)
+    err=$(find tests/*/* -type d -exec ./task integ "{}" \;)
     exit $([[ -z $err ]])
 }
 
@@ -69,6 +84,10 @@ then
     shift
     compile "$@"
     code "./tmp/$1.c"
+elif [[ "$1" = locate ]]
+then
+    shift
+    locate "$@"
 else
     >&2 echo "USAGE: ./task restore|integ-all|integ|inspect"
     exit 1

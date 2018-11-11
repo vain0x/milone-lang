@@ -5,31 +5,34 @@ open System.IO
 open MiloneLang.Assets
 open Xunit
 
-let testFile fileName =
+let testFile category case =
   async {
     let! source =
       IO.File.ReadAllTextAsync(
-        IO.Path.Combine(testsDir.Value, "src", fileName + ".milone")
+        IO.Path.Combine(testsDir.Value, category, case, case + ".milone")
       ) |> Async.AwaitTask
     let content =
       let cir = Program.toCir source
       CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
     do!
       IO.File.WriteAllTextAsync(
-        IO.Path.Combine(testsDir.Value, "c", fileName + ".c"),
+        IO.Path.Combine(testsDir.Value, category, case, case + ".c"),
         content
       ) |> Async.AwaitTask
   }
 
 let collectTestTargets () =
   seq {
-    let files = IO.Directory.GetFiles(Path.Combine(testsDir.Value, "src"), "*.milone")
-    for file in files do
-      let name = IO.Path.GetFileNameWithoutExtension(file)
-      yield [|name :> obj|]
+    for category in IO.Directory.GetDirectories(testsDir.Value) do
+      // features, examples, etc.
+      let category = Path.GetFileName(category)
+      let categoryDir = Path.Combine(testsDir.Value, category)
+      for case in IO.Directory.GetDirectories(categoryDir) do
+        let case = Path.GetFileName(case)
+        yield [|category :> obj; case :> obj|]
   }
 
 [<Theory>]
 [<MemberData("collectTestTargets")>]
-let integrationTests (name: string) =
-  testFile name
+let integrationTests (category: string) (case: string) =
+  testFile category case
