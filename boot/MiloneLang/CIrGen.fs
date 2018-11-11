@@ -9,8 +9,8 @@ type MirTransCtx = MirTrans.MirTransCtx
 [<RequireQualifiedAccess>]
 type Ctx =
   {
-    VarSerial: int
     Vars: Map<int, string * ValueIdent * MTy * Loc>
+    VarUniqueNames: Map<int, string>
     TySerial: int
     TyEnv: Map<MTy, CTy>
     Tys: Map<int, string * MTyDef * Loc>
@@ -20,10 +20,20 @@ type Ctx =
 
 let tupleField i = sprintf "t%d" i
 
+let calculateVarUniqueNames vars =
+  let groups = vars |> Map.toList |> Seq.groupBy (fun (_, (ident, _, _, _)) -> ident)
+  groups |> Seq.collect (fun (ident, vars) ->
+    vars |> Seq.mapi (fun i (serial, _) ->
+      let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
+      (serial, ident)
+  ))
+  |> Map.ofSeq
+
 let ctxFromMirCtx (mirCtx: MirTransCtx): Ctx =
+  let varNames = calculateVarUniqueNames mirCtx.Vars
   {
-    VarSerial = mirCtx.VarSerial
     Vars = mirCtx.Vars
+    VarUniqueNames = varNames
     TySerial = 0
     TyEnv = Map.empty
     Tys = mirCtx.Tys
@@ -116,11 +126,11 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
   unionTy, ctx
 
 let ctxUniqueName (ctx: Ctx) serial =
-  let ident =
-    match ctx.Vars |> Map.tryFind serial with
-    | Some (ident, _, _, _) -> ident
-    | None -> ""
-  sprintf "%s_%d" ident serial
+  match ctx.VarUniqueNames |> Map.tryFind serial with
+  | Some ident ->
+    ident
+  | None ->
+    failwithf "Unknown value-level identifier serial %d" serial
 
 let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
   match ty with
