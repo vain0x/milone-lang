@@ -1,0 +1,10 @@
+let main _ =
+  match () with
+  | () -> ()
+
+  match 0 :: [] with
+  | _ :: _ :: [] -> exit 1
+  | _ :: [] -> ()
+  | [] -> exit 1
+
+  0

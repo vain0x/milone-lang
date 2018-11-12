@@ -12,6 +12,7 @@ next_2:;
     int y_ = call_;
     match_ = (y_ - 9);
     goto end_match_1;
+next_3:;
 end_match_1:;
     return match_;
 }

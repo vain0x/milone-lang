@@ -97,7 +97,7 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     Ty.List itemTy, a
   | Expr.If (_, _, _, ty, a) ->
     ty, a
-  | Expr.Match (_, _, _, ty, a) ->
+  | Expr.Match (_, _, ty, a) ->
     ty, a
   | Expr.Nav (_, _, ty, a) ->
     ty, a
@@ -133,10 +133,9 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.List (List.map go items, f itemTy, g a)
     | Expr.If (pred, thenCl, elseCl, ty, a) ->
       Expr.If (go pred, go thenCl, go elseCl, f ty, g a)
-    | Expr.Match (target, (pat1, body1), (pat2, body2), ty, a) ->
-      let arm1 = (goPat pat1, go body1)
-      let arm2 = (goPat pat2, go body2)
-      Expr.Match (go target, arm1, arm2, f ty, g a)
+    | Expr.Match (target, arms, ty, a) ->
+      let arms = arms |> List.map (fun (pat, body) -> goPat pat, go body)
+      Expr.Match (go target, arms, f ty, g a)
     | Expr.Nav (sub, mes, ty, a) ->
       Expr.Nav (go sub, mes, f ty, g a)
     | Expr.Index (l, r, ty, a) ->

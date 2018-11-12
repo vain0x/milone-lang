@@ -98,6 +98,7 @@ next_12:;
     exit(1);
     match_2 = 0;
     goto end_match_11;
+next_13:;
 end_match_11:;
     int match_3;
     struct IntStringTuple2 tuple_;
@@ -128,6 +129,7 @@ next_15:;
     exit(1);
     match_3 = 0;
     goto end_match_14;
+next_20:;
 end_match_14:;
     return 0;
 }

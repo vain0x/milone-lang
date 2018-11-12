@@ -192,7 +192,7 @@ namespace rec MiloneLang
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * Ty * 'a
     | Match
-      of target:Expr<'a> * (Pat<'a> * Expr<'a>) * (Pat<'a> * Expr<'a>) * Ty * 'a
+      of target:Expr<'a> * (Pat<'a> * Expr<'a>) list * Ty * 'a
     /// `s.m`
     | Nav
       of subject:Expr<'a> * message:string * Ty * 'a

@@ -324,19 +324,18 @@ let inferIf ctx pred thenCl elseCl loc resultTy =
   Expr.If (pred, thenCl, elseCl, resultTy, loc), ctx
 
 /// match 'a with ( | 'a -> 'b )*
-let inferMatch ctx target (pat1, body1) (pat2, body2) loc resultTy =
+let inferMatch ctx target arms loc resultTy =
   let targetTy, _, ctx = freshTyVar "target" ctx
   let target, ctx = inferExpr ctx target targetTy
 
-  // arm1
-  let pat1, ctx = inferPat ctx pat1 targetTy
-  let body1, ctx = inferExpr ctx body1 resultTy
+  let arms, ctx =
+    (arms, ctx) |> stMap (fun ((pat, body), ctx) ->
+      let pat, ctx = inferPat ctx pat targetTy
+      let body, ctx = inferExpr ctx body resultTy
+      (pat, body), ctx
+    )
 
-  // arm2
-  let pat2, ctx = inferPat ctx pat2 targetTy
-  let body2, ctx = inferExpr ctx body2 resultTy
-
-  Expr.Match (target, (pat1, body1), (pat2, body2), resultTy, loc), ctx
+  Expr.Match (target, arms, resultTy, loc), ctx
 
 let inferNav ctx sub mes loc resultTy =
   let subTy, _, ctx = freshTyVar "sub" ctx
@@ -587,8 +586,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferList ctx items loc ty
   | Expr.If (pred, thenCl, elseCl, _, loc) ->
     inferIf ctx pred thenCl elseCl loc ty
-  | Expr.Match (target, arm1, arm2, _, loc) ->
-    inferMatch ctx target arm1 arm2 loc ty
+  | Expr.Match (target, arms, _, loc) ->
+    inferMatch ctx target arms loc ty
   | Expr.Nav (receiver, field,  _,loc) ->
     inferNav ctx receiver field loc ty
   | Expr.Index (l, r, _, loc) ->

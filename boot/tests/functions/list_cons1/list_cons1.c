@@ -17,6 +17,7 @@ next_2:;
     exit(1);
     match_ = 0;
     goto end_match_1;
+next_3:;
 end_match_1:;
     return match_;
 }

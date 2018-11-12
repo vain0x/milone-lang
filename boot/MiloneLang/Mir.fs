@@ -297,37 +297,33 @@ let mstmtExit1 (ty: MTy) loc =
   let callExpr = MExpr.UniOp (MUniOp.Exit, one, ty, loc)
   MStmt.Do (callExpr, loc)
 
-let mirifyExprMatch ctx target (pat1, body1) (pat2, body2) ty loc =
+let mirifyExprMatch ctx target arms ty loc =
   let ty = unboxTy ty
   let temp, tempSet, ctx = ctxLetFreshVar ctx "match" ty loc
   let endLabelStmt, endLabel, ctx = ctxFreshLabel ctx "end_match" loc
 
   let target, ctx = mirifyExpr ctx target
 
-  // First arm.
-  let nextLabelStmt, nextLabel, ctx = ctxFreshLabel ctx "next" loc
-  let cover1, ctx = mirifyPat ctx nextLabel pat1 target
-  let body, ctx = mirifyExpr ctx body1
-  let ctx = ctxAddStmt ctx (tempSet body)
-  let ctx = ctxAddStmt ctx (MStmt.Goto (endLabel, loc))
-  let ctx = ctxAddStmt ctx nextLabelStmt
-
-  // Second, last arm.
-  let nextLabelStmt, nextLabel, ctx = ctxFreshLabel ctx "next" loc
-  let cover2, ctx = mirifyPat ctx nextLabel pat2 target
-  let body, ctx = mirifyExpr ctx body2
-  let ctx = ctxAddStmt ctx (tempSet body)
-  let ctx = ctxAddStmt ctx (MStmt.Goto (endLabel, loc))
-
-  // Exhaust case (unless covered).
-  let ctx =
-    if cover1 || cover2 then ctx else
+  let rec go allCovered ctx arms =
+    match arms with
+    | (pat, body) :: arms ->
+      let nextLabelStmt, nextLabel, ctx = ctxFreshLabel ctx "next" loc
+      let covered, ctx = mirifyPat ctx nextLabel pat target
+      let body, ctx = mirifyExpr ctx body
+      let ctx = ctxAddStmt ctx (tempSet body)
+      let ctx = ctxAddStmt ctx (MStmt.Goto (endLabel, loc))
       let ctx = ctxAddStmt ctx nextLabelStmt
-      let ctx = ctxAddStmt ctx (mstmtExit1 ty loc)
-      ctx
+      go (allCovered || covered) ctx arms
+    | [] ->
+      // Exhaust case (unless covered).
+      if allCovered
+      then ctx
+      else ctxAddStmt ctx (mstmtExit1 ty loc)
+  let ctx = go false ctx arms
 
   // End of match.
   let ctx = ctxAddStmt ctx endLabelStmt
+
   temp, ctx
 
 let mirifyExprNav ctx sub mes ty loc =
@@ -595,8 +591,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprList ctx items itemTy loc
   | Expr.If (pred, thenCl, elseCl, ty, loc) ->
     mirifyExprIf ctx pred thenCl elseCl ty loc
-  | Expr.Match (target, arm1, arm2, ty, loc) ->
-    mirifyExprMatch ctx target arm1 arm2 ty loc
+  | Expr.Match (target, arms, ty, loc) ->
+    mirifyExprMatch ctx target arms ty loc
   | Expr.Nav (l, r, ty, loc) ->
     mirifyExprNav ctx l r ty loc
   | Expr.Index (l, r, ty, loc) ->

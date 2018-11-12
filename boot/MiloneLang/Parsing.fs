@@ -304,9 +304,16 @@ let parseMatch boxX matchLoc tokens =
       expr, tokens
     | _, tokens ->
       parseError "Expected 'with'" tokens
-  let arm1, tokens = parseMatchArm boxX tokens
-  let arm2, tokens = parseMatchArm boxX tokens
-  Expr.Match (target, arm1, arm2, noTy, matchLoc), tokens
+
+  let rec go acc tokens =
+    match parseMatchArm boxX tokens with
+    | arm, (Token.Pipe, _) :: tokens ->
+      go (arm :: acc) tokens
+    | arm, tokens ->
+      List.rev (arm :: acc), tokens
+
+  let arms, tokens = go [] tokens
+  Expr.Match (target, arms, noTy, matchLoc), tokens
 
 let parseParen boxX tokens =
   match parseExpr boxX tokens with
