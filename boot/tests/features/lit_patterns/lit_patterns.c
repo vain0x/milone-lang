@@ -1,0 +1,33 @@
+int main() {
+    int match_;
+    match_ = 0;
+    goto end_match_1;
+next_2:;
+end_match_1:;
+    int match_1;
+    if (!((0 == 0))) goto next_4;
+    match_1 = 0;
+    goto end_match_3;
+next_4:;
+    exit(1);
+    match_1 = 0;
+    goto end_match_3;
+next_5:;
+end_match_3:;
+    int match_2;
+    if (!(('b' == 'B'))) goto next_7;
+    exit(1);
+    match_2 = 0;
+    goto end_match_6;
+next_7:;
+    if (!(('b' == 'a'))) goto next_8;
+    match_2 = 0;
+    goto end_match_6;
+next_8:;
+    exit(2);
+    match_2 = 0;
+    goto end_match_6;
+next_9:;
+end_match_6:;
+    return 0;
+}

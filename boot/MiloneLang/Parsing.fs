@@ -165,6 +165,8 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
     Pat.Unit loc, tokens
   | (Token.Int value, loc) :: tokens ->
     Pat.Lit (Lit.Int value, loc), tokens
+  | (Token.Char value, loc) :: tokens ->
+    Pat.Lit (Lit.Char value, loc), tokens
   | (Token.Ident ident, loc) :: tokens ->
     Pat.Ref (ident, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->

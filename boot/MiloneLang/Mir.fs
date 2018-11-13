@@ -148,6 +148,23 @@ let listItemTy ty =
 let projExpr expr index resultTy loc =
   MExpr.UniOp (MUniOp.Proj index, expr, unboxTy resultTy, loc)
 
+let inferPatLit ctx endLabel lit expr loc =
+  match lit with
+  | Lit.Int value ->
+    let intExpr = MExpr.Lit (Lit.Int value, loc)
+    let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, MTy.Bool, loc)
+    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+    let ctx = ctxAddStmt ctx gotoStmt
+    false, ctx
+  | Lit.Char value ->
+    let intExpr = MExpr.Lit (Lit.Char value, loc)
+    let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, MTy.Bool, loc)
+    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+    let ctx = ctxAddStmt ctx gotoStmt
+    false, ctx
+  | _ ->
+    failwith "unimpl lit pattern"
+
 let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let itemTy = unboxTy itemTy
   let listTy = MTy.List itemTy
@@ -203,12 +220,8 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
   | Pat.Ref ("_", _, _, _) ->
     // Discard result.
     true, ctx
-  | Pat.Lit (Lit.Int value, loc) ->
-    let intExpr = MExpr.Lit (Lit.Int value, loc)
-    let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, MTy.Bool, loc)
-    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
-    let ctx = ctxAddStmt ctx gotoStmt
-    false, ctx
+  | Pat.Lit (lit, loc) ->
+    inferPatLit ctx endLabel lit expr loc
   | Pat.Nil (itemTy, loc) ->
     let isEmptyExpr = MExpr.UniOp (MUniOp.ListIsEmpty, expr, unboxTy (Ty.List itemTy), loc)
     let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
@@ -232,8 +245,6 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
       | _ ->
         failwith "Never"
     go true ctx 0 itemPats itemTys
-  | Pat.Lit _ ->
-    failwith "unimpl"
   | Pat.Call _ ->
     failwith "Never: Call pattern incorrect."
   | Pat.Tuple _ ->

@@ -1,0 +1,15 @@
+let main _ =
+  match () with
+  | () -> ()
+
+  match 1 with
+  | 0 -> exit 1
+  | 1 -> ()
+  | _ -> exit 1
+
+  match 'a' with
+  | 'A' -> exit 1
+  | 'a' -> ()
+  | _ -> exit 1
+
+  0
