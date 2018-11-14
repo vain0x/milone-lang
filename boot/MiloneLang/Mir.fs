@@ -150,15 +150,11 @@ let projExpr expr index resultTy loc =
 
 let inferPatLit ctx endLabel lit expr loc =
   match lit with
-  | Lit.Int value ->
-    let intExpr = MExpr.Lit (Lit.Int value, loc)
-    let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, MTy.Bool, loc)
-    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
-    let ctx = ctxAddStmt ctx gotoStmt
-    false, ctx
-  | Lit.Char value ->
-    let intExpr = MExpr.Lit (Lit.Char value, loc)
-    let eqExpr = MExpr.Op (MOp.Eq, expr, intExpr, MTy.Bool, loc)
+  | Lit.Bool _
+  | Lit.Int _
+  | Lit.Char _ ->
+    let litExpr = MExpr.Lit (lit, loc)
+    let eqExpr = MExpr.Op (MOp.Eq, expr, litExpr, MTy.Bool, loc)
     let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx

@@ -163,6 +163,10 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
     parseError "Expected a pattern atom" tokens
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Pat.Unit loc, tokens
+  | (Token.Ident "true", loc) :: tokens ->
+    Pat.Lit (Lit.Bool true, loc), tokens
+  | (Token.Ident "false", loc) :: tokens ->
+    Pat.Lit (Lit.Bool false, loc), tokens
   | (Token.Int value, loc) :: tokens ->
     Pat.Lit (Lit.Int value, loc), tokens
   | (Token.Char value, loc) :: tokens ->

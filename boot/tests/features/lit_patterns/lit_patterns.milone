@@ -2,6 +2,11 @@ let main _ =
   match () with
   | () -> ()
 
+  match true with
+  | false -> exit 1
+  | true -> ()
+  | _ -> exit 1
+
   match 1 with
   | 0 -> exit 1
   | 1 -> ()
