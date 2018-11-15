@@ -6,6 +6,8 @@ namespace rec MiloneLang
   /// Word or punctuation in source code.
   [<RequireQualifiedAccess>]
   type Token =
+    | Bool
+      of bool
     | Int
       of int
     | Char
@@ -62,7 +64,7 @@ namespace rec MiloneLang
     | Char
     | Str
     | Range
-    | Box
+    | Obj
     /// Type reference, i.e. name of some type.
     | Ref
       of ident:string * serial:int
@@ -121,6 +123,7 @@ namespace rec MiloneLang
     | Or
     /// `::` Construction
     | Cons
+      of Ty
     /// `..`
     | Range
 
@@ -207,7 +210,7 @@ namespace rec MiloneLang
       of Op * Expr<'a> * Expr<'a> * Ty * 'a
     /// Tuple constructor, e.g. `x, y, z`.
     | Tuple
-      of Expr<'a> list * Ty * 'a
+      of Expr<'a> list * itemTys:Ty list * 'a
     /// Type annotation `x : 'x`.
     | Anno
       of Expr<'a> * Ty * 'a
@@ -231,11 +234,17 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MTy =
     | Unit
+    /// Boolean.
     | Bool
+    /// Integer.
     | Int
+    /// Character.
     | Char
+    /// String.
     | Str
-    | Box
+    /// Object.
+    | Obj
+    /// Reference to named type.
     | Ref
       of int
     /// Function type, e.g. `int -> int`.

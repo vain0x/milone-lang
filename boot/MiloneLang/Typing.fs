@@ -22,7 +22,7 @@ type TyCtx =
 /// Merges derived context into base context
 /// for when expr of derived context is done.
 /// We rollback environments but keep serials.
-let rollback bCtx dCtx: TyCtx =
+let ctxRollback bCtx dCtx: TyCtx =
   assert (bCtx.VarSerial <= dCtx.VarSerial)
   assert (bCtx.TySerial <= dCtx.TySerial)
   { dCtx with
@@ -34,7 +34,7 @@ let ctxFreshTySerial (ctx: TyCtx) =
   let ctx = { ctx with TySerial = ctx.TySerial + 1 }
   serial, ctx
 
-let freshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
+let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
   let serial, ctx = ctxFreshTySerial ctx
   let ident = sprintf "'%s_%d" ident serial
   let ty = Ty.Var ident
@@ -51,7 +51,7 @@ let ctxAddTy tyIdent tyDef loc ctx =
       (variants, ctx) |> stMap (fun ((lIdent, _, hasArg, lArgTy), ctx) ->
         let valueIdent = ValueIdent.Variant tySerial
         let lTy = if hasArg then Ty.Fun (lArgTy, refTy) else refTy
-        let lSerial, ctx = freshVar ctx lIdent valueIdent lTy loc
+        let lSerial, ctx = ctxFreshVar ctx lIdent valueIdent lTy loc
         (lIdent, lSerial, hasArg, lArgTy), ctx
       )
 
@@ -63,14 +63,14 @@ let ctxAddTy tyIdent tyDef loc ctx =
       }
     tySerial, tyDef, ctx
 
-let resolveTyVar name (ctx: TyCtx): Ty =
+let ctxResolveTyVar name (ctx: TyCtx): Ty =
   match ctx.TyEnv |> Map.tryFind name with
   | Some ty ->
     ty
   | None ->
     Ty.Var name
 
-let freshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
+let ctxFreshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
   let serial = ctx.VarSerial + 1
   let ctx =
     { ctx with
@@ -91,7 +91,7 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Char
     | Ty.Str
     | Ty.Range
-    | Ty.Box
+    | Ty.Obj
     | Ty.Ref _
     | Ty.Tuple [] ->
       true
@@ -114,7 +114,7 @@ let isMonomorphic ctx ty: bool =
   | Ty.Char
   | Ty.Str
   | Ty.Range
-  | Ty.Box
+  | Ty.Obj
   | Ty.Tuple []
   | Ty.Ref _ ->
     true
@@ -148,7 +148,7 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.Char
     | Ty.Str
     | Ty.Range
-    | Ty.Box
+    | Ty.Obj
     | Ty.Ref _ ->
       ty
     | Ty.Fun (sty, tty) ->
@@ -158,7 +158,7 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.List ty ->
       Ty.List (go ty)
     | Ty.Var tyVar ->
-      let ty2 = resolveTyVar tyVar ctx
+      let ty2 = ctxResolveTyVar tyVar ctx
       if ty = ty2 then ty else go ty2
   go ty
 
@@ -188,7 +188,7 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Char, Ty.Char
     | Ty.Str, Ty.Str
     | Ty.Range, Ty.Range
-    | Ty.Box, Ty.Box ->
+    | Ty.Obj, Ty.Obj ->
       ctx
     | Ty.Ref (_, l), Ty.Ref (_, r) when l <> noSerial && l = r ->
       ctx
@@ -200,7 +200,7 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Char, _
     | Ty.Str, _
     | Ty.Range, _
-    | Ty.Box, _
+    | Ty.Obj, _
     | Ty.Fun _, _
     | Ty.Tuple _, _
     | Ty.List _, _
@@ -216,7 +216,7 @@ let inferPatRef (ctx: TyCtx) ident loc ty =
       let ctx = unifyTy ctx ty variantTy
       serial, ty, ctx
     | _ ->
-      let serial, ctx = freshVar ctx ident ValueIdent.Var ty loc
+      let serial, ctx = ctxFreshVar ctx ident ValueIdent.Var ty loc
       serial, ty, ctx
   Pat.Ref (ident, serial, ty, loc), ctx
 
@@ -240,7 +240,7 @@ let inferPatTuple ctx itemPats loc tupleTy =
     | [] ->
       List.rev accPats, List.rev accTys, ctx
     | itemPat :: itemPats ->
-      let itemTy, _, ctx = freshTyVar "item" ctx
+      let itemTy, _, ctx = ctxFreshTyVar "item" ctx
       let itemPat, ctx = inferPat ctx itemPat itemTy
       go (itemPat :: accPats) (itemTy :: accTys) ctx itemPats
   let itemPats, itemTys, ctx = go [] [] ctx itemPats
@@ -248,7 +248,7 @@ let inferPatTuple ctx itemPats loc tupleTy =
   Pat.Tuple (itemPats, tupleTy, loc), ctx
 
 let inferPatCons ctx l r loc listTy =
-  let itemTy, _, ctx = freshTyVar "item" ctx
+  let itemTy, _, ctx = ctxFreshTyVar "item" ctx
   let ctx = unifyTy ctx listTy (Ty.List itemTy)
   let l, ctx = inferPat ctx l itemTy
   let r, ctx = inferPat ctx r listTy
@@ -261,7 +261,7 @@ let inferPat ctx pat ty =
   | Pat.Lit (lit, _) ->
     pat, unifyTy ctx ty (litTy lit)
   | Pat.Nil (_, loc) ->
-    let itemTy, _, ctx = freshTyVar "item" ctx
+    let itemTy, _, ctx = ctxFreshTyVar "item" ctx
     let ctx = unifyTy ctx ty (Ty.List itemTy)
     Pat.Nil (itemTy, loc), ctx
   | Pat.Ref (ident, _, _, loc) ->
@@ -289,12 +289,12 @@ let inferRef (ctx: TyCtx) ident loc ty =
     let funTy = Ty.Fun (Ty.Int, ty)
     Expr.Ref (ident, SerialExit, funTy, loc), ctx
   | None, "box" ->
-    let argTy, _, ctx = freshTyVar "box" ctx
-    let ctx = unifyTy ctx (Ty.Fun (argTy, Ty.Box)) ty
+    let argTy, _, ctx = ctxFreshTyVar "box" ctx
+    let ctx = unifyTy ctx (Ty.Fun (argTy, Ty.Obj)) ty
     Expr.Ref (ident, SerialBox, ty, loc), ctx
   | None, "unbox" ->
-    let resultTy, _, ctx = freshTyVar "unbox" ctx
-    let ctx = unifyTy ctx (Ty.Fun (Ty.Box, resultTy)) ty
+    let resultTy, _, ctx = ctxFreshTyVar "unbox" ctx
+    let ctx = unifyTy ctx (Ty.Fun (Ty.Obj, resultTy)) ty
     Expr.Ref (ident, SerialUnbox, ty, loc), ctx
   | None, "printfn" ->
     // The function's type is unified by call expr handler.
@@ -303,7 +303,7 @@ let inferRef (ctx: TyCtx) ident loc ty =
     failwithf "Couldn't resolve var %s" ident
 
 let inferList ctx items loc listTy =
-  let itemTy, _, ctx = freshTyVar "item" ctx
+  let itemTy, _, ctx = ctxFreshTyVar "item" ctx
   let ctx = unifyTy ctx listTy (Ty.List itemTy)
   let rec go acc ctx items =
     match items with
@@ -318,14 +318,14 @@ let inferList ctx items loc listTy =
 let inferIf ctx pred thenCl elseCl loc resultTy =
   let pred, ctx = inferExpr ctx pred Ty.Bool
   let thenCl, thenCtx = inferExpr ctx thenCl resultTy
-  let ctx = rollback ctx thenCtx
+  let ctx = ctxRollback ctx thenCtx
   let elseCl, elseCtx = inferExpr ctx elseCl resultTy
-  let ctx = rollback ctx elseCtx
+  let ctx = ctxRollback ctx elseCtx
   Expr.If (pred, thenCl, elseCl, resultTy, loc), ctx
 
 /// match 'a with ( | 'a -> 'b )*
 let inferMatch ctx target arms loc resultTy =
-  let targetTy, _, ctx = freshTyVar "target" ctx
+  let targetTy, _, ctx = ctxFreshTyVar "target" ctx
   let target, ctx = inferExpr ctx target targetTy
 
   let arms, ctx =
@@ -338,12 +338,13 @@ let inferMatch ctx target arms loc resultTy =
   Expr.Match (target, arms, resultTy, loc), ctx
 
 let inferNav ctx sub mes loc resultTy =
-  let subTy, _, ctx = freshTyVar "sub" ctx
+  let subTy, _, ctx = ctxFreshTyVar "sub" ctx
   let sub, ctx = inferExpr ctx sub subTy
   match substTy ctx subTy, mes with
   | Ty.Str, "Length" ->
     let ctx = unifyTy ctx resultTy Ty.Int
-    Expr.Nav (sub, mes, Ty.Int, loc), ctx
+    let funExpr = Expr.Ref (mes, SerialStrLength, Ty.Fun (Ty.Str, Ty.Int), loc)
+    Expr.Call (funExpr, [sub], Ty.Int, loc), ctx
   | _ ->
     failwithf "Unknown nav %A" (sub, mes, loc)
 
@@ -351,8 +352,8 @@ let inferNav ctx sub mes loc resultTy =
 /// NOTE: Currently only the `x : string` case can compile, however,
 /// we don't infer that for compatibility.
 let inferIndex ctx l r loc resultTy =
-  let subTy, _, ctx = freshTyVar "sub" ctx
-  let indexTy, _, ctx = freshTyVar "index" ctx
+  let subTy, _, ctx = ctxFreshTyVar "sub" ctx
+  let indexTy, _, ctx = ctxFreshTyVar "index" ctx
   let l, ctx = inferExpr ctx l subTy
   let r, ctx = inferExpr ctx r indexTy
   match substTy ctx subTy, substTy ctx indexTy with
@@ -373,7 +374,7 @@ let rec inferCallArgs acc (ctx: TyCtx) args callTy =
   | [] ->
     acc, callTy, ctx
   | arg :: args ->
-    let argTy, _, ctx = freshTyVar "arg" ctx
+    let argTy, _, ctx = ctxFreshTyVar "arg" ctx
     let arg, ctx = inferExpr ctx arg argTy
     inferCallArgs (arg :: acc) ctx args (Ty.Fun (argTy, callTy))
 
@@ -405,7 +406,7 @@ let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
   Expr.Op (op, left, right, resultTy, loc), ctx
 
 let inferOpAdd (ctx: TyCtx) op left right loc resultTy =
-  let operandTy, _, ctx = freshTyVar "operand" ctx
+  let operandTy, _, ctx = ctxFreshTyVar "operand" ctx
   let ctx = unifyTy ctx operandTy resultTy
   let expr, ctx = inferOpCore ctx op left right loc operandTy resultTy
   match substTy ctx operandTy with
@@ -420,12 +421,12 @@ let inferOpArith (ctx: TyCtx) op left right loc resultTy =
   inferOpCore ctx op left right loc Ty.Int resultTy
 
 let inferOpCmp (ctx: TyCtx) op left right loc resultTy =
-  let operandTy, _, ctx = freshTyVar "operand" ctx
+  let operandTy, _, ctx = ctxFreshTyVar "operand" ctx
   let ctx = unifyTy ctx resultTy Ty.Bool
   inferOpCore ctx op left right loc operandTy resultTy
 
 let inferOpPipe ctx op l r loc ty =
-  let argTy, _, ctx = freshTyVar "arg" ctx
+  let argTy, _, ctx = ctxFreshTyVar "arg" ctx
   let funTy = Ty.Fun (argTy, ty)
   let l, ctx = inferExpr ctx l argTy
   let r, ctx = inferExpr ctx r funTy
@@ -435,12 +436,12 @@ let inferOpLogic (ctx: TyCtx) op left right loc resultTy =
   let ctx = unifyTy ctx resultTy Ty.Bool
   inferOpCore ctx op left right loc Ty.Bool Ty.Bool
 
-let inferOpCons ctx op left right loc listTy =
-  let itemTy, _, ctx = freshTyVar "item" ctx
+let inferOpCons ctx left right loc listTy =
+  let itemTy, _, ctx = ctxFreshTyVar "item" ctx
   let ctx = unifyTy ctx listTy (Ty.List itemTy)
   let left, ctx = inferExpr ctx left itemTy
   let right, ctx = inferExpr ctx right listTy
-  Expr.Op (op, left, right, listTy, loc), ctx
+  Expr.Op (Op.Cons itemTy, left, right, listTy, loc), ctx
 
 let inferOpRange ctx op left right loc ty =
   let ctx = unifyTy ctx ty Ty.Range
@@ -467,8 +468,8 @@ let inferOp (ctx: TyCtx) op left right loc ty =
   | Op.And
   | Op.Or ->
     inferOpLogic ctx op left right loc ty
-  | Op.Cons ->
-    inferOpCons ctx op left right loc ty
+  | Op.Cons _ ->
+    inferOpCons ctx left right loc ty
   | Op.Range ->
     inferOpRange ctx op left right loc ty
 
@@ -478,23 +479,23 @@ let inferTuple (ctx: TyCtx) items loc tupleTy =
     | [] ->
       List.rev acc, List.rev itemTys, ctx
     | item :: items ->
-      let itemTy, _, ctx = freshTyVar "item" ctx
+      let itemTy, _, ctx = ctxFreshTyVar "item" ctx
       let item, ctx = inferExpr ctx item itemTy
       go (item :: acc) (itemTy :: itemTys) ctx items
   let items, itemTys, ctx = go [] [] ctx items
   let ctx = unifyTy ctx tupleTy (Ty.Tuple itemTys)
-  Expr.Tuple (items, tupleTy, loc), ctx
+  Expr.Tuple (items, itemTys, loc), ctx
 
 let inferAnno ctx expr annoTy ty =
   let ctx = unifyTy ctx annoTy ty
   inferExpr ctx expr annoTy
 
 let inferLetVal ctx pat init loc =
-  let initTy, _, ctx = freshTyVar "init" ctx
+  let initTy, _, ctx = ctxFreshTyVar "init" ctx
   // Type init expression.
   let init, initCtx = inferExpr ctx init initTy
   // Remove symbols defined inside `init`.
-  let ctx = rollback ctx initCtx
+  let ctx = ctxRollback ctx initCtx
   // Define new variables defined by the pat to the context.
   let pat, ctx = inferPat ctx pat initTy
   Expr.Let (pat, init, loc), ctx
@@ -507,7 +508,7 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
     | [] ->
       [], bodyTy, ctx
     | argPat :: argPats ->
-      let argTy, _, ctx = freshTyVar "arg" ctx
+      let argTy, _, ctx = ctxFreshTyVar "arg" ctx
       let pat, ctx = inferPat ctx argPat argTy
       let pats, bodyTy, ctx = inferArgs ctx bodyTy argPats
       pat :: pats, Ty.Fun (argTy, bodyTy), ctx
@@ -517,10 +518,9 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
     let funTy, _, ctx =
       if callee = "main"
       then Ty.Fun (Ty.Unit, Ty.Int), "", ctx
-      else freshTyVar "fun" ctx
-    let serial, ctx = freshVar ctx callee ValueIdent.Fun funTy calleeLoc
+      else ctxFreshTyVar "fun" ctx
+    let serial, ctx = ctxFreshVar ctx callee ValueIdent.Fun funTy calleeLoc
 
-    // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default
     let bodyCtx = ctx
     let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
@@ -530,7 +530,7 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
     if isMonomorphic bodyCtx funTy |> not then
       failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A %A" (substTy bodyCtx funTy) argPats
 
-    let ctx = rollback ctx bodyCtx
+    let ctx = ctxRollback ctx bodyCtx
 
     let calleePat = Pat.Ref (callee, serial, funTy, calleeLoc)
     calleePat, argPats, body, loc, ctx
@@ -545,7 +545,7 @@ let inferLet ctx pat body loc ty =
     let pat = Pat.Call (callee, args, ty, callLoc)
     Expr.Let (pat, body, loc), ctx
   | Pat.Call (callee, args, _, callLoc) ->
-    let bodyTy, _, ctx = freshTyVar "body" ctx
+    let bodyTy, _, ctx = ctxFreshTyVar "body" ctx
     let callee, args, body, loc, ctx = inferLetFun ctx callee args body bodyTy loc
     let pat = Pat.Call (callee, args, ty, callLoc)
     Expr.Let (pat, body, loc), ctx

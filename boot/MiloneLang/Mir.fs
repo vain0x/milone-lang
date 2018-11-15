@@ -99,7 +99,7 @@ let mopFrom op =
   | Op.Pipe
   | Op.And
   | Op.Or
-  | Op.Cons
+  | Op.Cons _
   | Op.Range -> failwith "We don't use > >= && || :: .. in MIR"
 
 let mtyDef tySerial (tyDef: TyDef) =
@@ -120,7 +120,7 @@ let unboxTy (ty: Ty): MTy =
   | Ty.Int -> MTy.Int
   | Ty.Char -> MTy.Char
   | Ty.Str -> MTy.Str
-  | Ty.Box -> MTy.Box
+  | Ty.Obj -> MTy.Obj
   | Ty.Fun (lTy, rTy) ->
     MTy.Fun (unboxTy lTy, unboxTy rTy)
   | Ty.List ty ->
@@ -135,13 +135,6 @@ let unboxTy (ty: Ty): MTy =
     failwith "Never type variable in MIR."
   | Ty.Range ->
     failwith "Never range as object in MIR."
-
-let listItemTy ty =
-  match ty with
-  | Ty.List ty ->
-    unboxTy ty
-  | _ ->
-    failwith "List constructor's type must be a list."
 
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
@@ -181,6 +174,12 @@ let mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MExpr.Lit (lit, loc)
   let eqExpr, ctx = cmpExpr ctx MOp.Eq expr litExpr MTy.Bool loc
   let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+  let ctx = ctxAddStmt ctx gotoStmt
+  false, ctx
+
+let mirifyPatNil ctx endLabel itemTy expr loc =
+  let isEmptyExpr = MExpr.UniOp (MUniOp.ListIsEmpty, expr, unboxTy (Ty.List itemTy), loc)
+  let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
   let ctx = ctxAddStmt ctx gotoStmt
   false, ctx
 
@@ -229,6 +228,19 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
     let letStmt = MStmt.LetVal (serial, MInit.Expr expr, unboxTy ty, loc)
     true, ctxAddStmt ctx letStmt
 
+let mirifyPatTuple ctx endLabel itemPats itemTys expr loc =
+  let rec go covered ctx i itemPats itemTys =
+    match itemPats, itemTys with
+    | [], [] ->
+      covered, ctx
+    | itemPat :: itemPats, itemTy :: itemTys ->
+      let item = projExpr expr i itemTy loc
+      let itemCovered, ctx = mirifyPat ctx endLabel itemPat item
+      go (covered && itemCovered) ctx (i + 1) itemPats itemTys
+    | _ ->
+      failwith "Never"
+  go true ctx 0 itemPats itemTys
+
 /// Processes pattern matching
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
@@ -242,10 +254,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
   | Pat.Lit (lit, loc) ->
     mirifyPatLit ctx endLabel lit expr loc
   | Pat.Nil (itemTy, loc) ->
-    let isEmptyExpr = MExpr.UniOp (MUniOp.ListIsEmpty, expr, unboxTy (Ty.List itemTy), loc)
-    let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
-    let ctx = ctxAddStmt ctx gotoStmt
-    false, ctx
+    mirifyPatNil ctx endLabel itemTy expr loc
   | Pat.Ref (_, serial, ty, loc) ->
     mirifyPatRef ctx endLabel serial ty loc expr
   | Pat.Call (Pat.Ref (_, serial, _, _), args, ty, loc) ->
@@ -253,17 +262,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
   | Pat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | Pat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->
-    let rec go covered ctx i itemPats itemTys =
-      match itemPats, itemTys with
-      | [], [] ->
-        covered, ctx
-      | itemPat :: itemPats, itemTy :: itemTys ->
-        let item = projExpr expr i itemTy loc
-        let itemCovered, ctx = mirifyPat ctx endLabel itemPat item
-        go (covered && itemCovered) ctx (i + 1) itemPats itemTys
-      | _ ->
-        failwith "Never"
-    go true ctx 0 itemPats itemTys
+    mirifyPatTuple ctx endLabel itemPats itemTys expr loc
   | Pat.Call _ ->
     failwith "Never: Call pattern incorrect."
   | Pat.Tuple _ ->
@@ -284,7 +283,7 @@ let desugarExprList items itemTy loc =
     | [] ->
       acc
     | item :: items ->
-      go (Expr.Op (Op.Cons, item, acc, Ty.List itemTy, loc)) items
+      go (Expr.Op (Op.Cons itemTy, item, acc, Ty.List itemTy, loc)) items
   go (Expr.List ([], itemTy, loc)) (List.rev items)
 
 /// `[a; b; c]` -> `a :: b :: c :: []`
@@ -356,15 +355,6 @@ let mirifyExprMatch ctx target arms ty loc =
 
   temp, ctx
 
-let mirifyExprNav ctx sub mes ty loc =
-  let subTy = exprTy sub
-  let sub, ctx = mirifyExpr ctx sub
-  match subTy, mes with
-  | Ty.Str, "Length" ->
-    MExpr.UniOp (MUniOp.StrLen, sub, MTy.Int, loc), ctx
-  | _ ->
-    failwithf "Never nav %A" (sub, mes, ty, loc)
-
 let mirifyExprIndex ctx l r _ loc =
   match exprTy l, exprTy r with
   | Ty.Str, Ty.Int ->
@@ -395,13 +385,17 @@ let mirifyExprCallExit ctx arg ty loc =
 
 let mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
-  let temp, tempSerial, ctx = ctxFreshVar ctx "box" MTy.Box loc
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Box arg, MTy.Box, loc))
+  let temp, tempSerial, ctx = ctxFreshVar ctx "box" MTy.Obj loc
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Box arg, MTy.Obj, loc))
   temp, ctx
 
 let mirifyExprCallUnbox ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
   MExpr.UniOp (MUniOp.Unbox, arg, unboxTy ty, loc), ctx
+
+let mirifyExprCallStrLength ctx arg ty loc =
+  let arg, ctx = mirifyExpr ctx arg
+  MExpr.UniOp (MUniOp.StrLen, arg, unboxTy ty, loc), ctx
 
 /// not a ==> !a
 let mirifyExprCallNot ctx arg ty notLoc =
@@ -426,6 +420,8 @@ let mirifyExprCall ctx callee args ty loc =
     mirifyExprCallBox ctx arg ty loc
   | Expr.Ref (_, serial, _, _), [arg] when serial = SerialUnbox ->
     mirifyExprCallUnbox ctx arg ty loc
+  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialStrLength ->
+    mirifyExprCallStrLength ctx arg ty loc
   | Expr.Ref (_, serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
     mirifyExprCallVariantFun ctx serial arg ty loc
   | _ ->
@@ -456,9 +452,9 @@ let mirifyExprOpPipe ctx l r ty loc =
   | _ ->
     mirifyExprCall ctx r [l] ty loc
 
-let mirifyExprOpCons ctx l r ty loc =
-  let itemTy = listItemTy ty
-  let listTy = MTy.List itemTy
+let mirifyExprOpCons ctx l r itemTy listTy loc =
+  let itemTy = unboxTy itemTy
+  let listTy = unboxTy listTy
   let _, tempSerial, ctx = ctxFreshVar ctx "list" listTy loc
 
   let l, ctx = mirifyExpr ctx l
@@ -466,11 +462,8 @@ let mirifyExprOpCons ctx l r ty loc =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Cons (l, r, itemTy), listTy, loc))
   MExpr.Ref (tempSerial, listTy, loc), ctx
 
-let mirifyExprTuple ctx items ty loc =
-  let itemTys =
-    match ty with
-    | Ty.Tuple itemTys -> List.map unboxTy itemTys
-    | _ -> failwith "Tuple constructor's type must be a tuple."
+let mirifyExprTuple ctx items itemTys loc =
+  let itemTys = List.map unboxTy itemTys
   let ty = MTy.Tuple itemTys
   let _, tempSerial, ctx = ctxFreshVar ctx "tuple" ty loc
 
@@ -494,8 +487,8 @@ let mirifyExprOp ctx op l r ty loc =
     mirifyExprOpOr ctx l r ty loc
   | Op.Pipe ->
     mirifyExprOpPipe ctx l r ty loc
-  | Op.Cons ->
-    mirifyExprOpCons ctx l r ty loc
+  | Op.Cons itemTy ->
+    mirifyExprOpCons ctx l r itemTy ty loc
   | Op.Gt ->
     mirifyExprOp ctx Op.Lt r l ty loc
   | Op.Ge ->
@@ -610,22 +603,21 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprIf ctx pred thenCl elseCl ty loc
   | Expr.Match (target, arms, ty, loc) ->
     mirifyExprMatch ctx target arms ty loc
-  | Expr.Nav (l, r, ty, loc) ->
-    mirifyExprNav ctx l r ty loc
   | Expr.Index (l, r, ty, loc) ->
     mirifyExprIndex ctx l r ty loc
   | Expr.Call (callee, args, ty, loc) ->
     mirifyExprCall ctx callee args ty loc
   | Expr.Op (op, l, r, ty, loc) ->
     mirifyExprOp ctx op l r ty loc
-  | Expr.Tuple (items, ty, loc) ->
-    mirifyExprTuple ctx items ty loc
+  | Expr.Tuple (items, itemTys, loc) ->
+    mirifyExprTuple ctx items itemTys loc
   | Expr.AndThen (exprs, _, _) ->
     mirifyExprAndThen ctx exprs
   | Expr.Let (pat, body, loc) ->
     mirifyExprLet ctx pat body loc
   | Expr.TyDef (_, tySerial, tyDef, loc) ->
     mirifyExprTyDef ctx tySerial tyDef loc
+  | Expr.Nav _
   | Expr.Call (_, [], _, _)
   | Expr.Anno _ ->
     failwith "Never"

@@ -128,6 +128,8 @@ let private readChar (source: string) (acc, y, x, i): Read =
 
 let private tokenIdent ident =
   match ident with
+  | "true" -> Token.Bool true
+  | "false" -> Token.Bool false
   | "do" -> Token.Do
   | "let" -> Token.Let
   | "if" -> Token.If

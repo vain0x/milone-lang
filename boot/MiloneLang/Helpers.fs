@@ -107,8 +107,8 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     ty, a
   | Expr.Op (_, _, _, ty, a) ->
     ty, a
-  | Expr.Tuple (_, ty, a) ->
-    ty, a
+  | Expr.Tuple (_, itemTys, a) ->
+    Ty.Tuple itemTys, a
   | Expr.Anno (_, ty, a) ->
     ty, a
   | Expr.AndThen (_, ty, a) ->
@@ -142,10 +142,12 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Index (go l, go r, f ty, g a)
     | Expr.Call (callee, args, ty, a) ->
       Expr.Call (go callee, List.map go args, f ty, g a)
+    | Expr.Op (Op.Cons itemTy, l, r, ty, a) ->
+      Expr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
     | Expr.Op (op, l, r, ty, a) ->
       Expr.Op (op, go l, go r, f ty, g a)
-    | Expr.Tuple (exprs, ty, a) ->
-      Expr.Tuple (List.map go exprs, f ty, g a)
+    | Expr.Tuple (exprs, itemTys, a) ->
+      Expr.Tuple (List.map go exprs, List.map f itemTys, g a)
     | Expr.Anno (expr, ty, a) ->
       Expr.Anno (go expr, f ty, g a)
     | Expr.AndThen (exprs, ty, a) ->
@@ -207,6 +209,9 @@ let SerialPrintfn = -5
 [<Literal>]
 let SerialStrSlice = -6
 
+[<Literal>]
+let SerialStrLength = -7
+
 let knownSerials =
   [
     SerialNot
@@ -215,6 +220,7 @@ let knownSerials =
     SerialUnbox
     SerialPrintfn
     SerialStrSlice
+    SerialStrLength
   ]
 
 let analyzeFormat (format: string) =

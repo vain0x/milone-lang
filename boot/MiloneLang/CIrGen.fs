@@ -151,7 +151,7 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | MTy.Int -> "Int", ctx
         | MTy.Char -> "Char", ctx
         | MTy.Str -> "String", ctx
-        | MTy.Box -> "Object", ctx
+        | MTy.Obj -> "Object", ctx
         | MTy.Fun (sTy, tTy) ->
           let sTy, ctx = ctx |> go sTy
           let tTy, ctx = ctx |> go tTy
@@ -179,7 +179,7 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
     CTy.Char, ctx
   | MTy.Str ->
     CTy.Struct "String", ctx
-  | MTy.Box
+  | MTy.Obj
   | MTy.Fun _ ->
     CTy.Ptr CTy.Void, ctx
   | MTy.List itemTy ->
@@ -228,7 +228,7 @@ let genExprDefault ctx ty =
   | MTy.Int ->
     CExpr.Int 0, ctx
   | MTy.Char
-  | MTy.Box
+  | MTy.Obj
   | MTy.List _ ->
     CExpr.Ref "NULL", ctx
   | MTy.Str

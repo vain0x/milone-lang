@@ -10,6 +10,7 @@ open MiloneLang.Helpers
 /// even if we don't know how many tokens participate that expr.
 let tokenRole tokens: bool * bool =
   match tokens with
+  | (Token.Bool _, _) :: _
   | (Token.Int _, _) :: _
   | (Token.Char _, _) :: _
   | (Token.Str _, _) :: _
@@ -163,10 +164,8 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
     parseError "Expected a pattern atom" tokens
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Pat.Unit loc, tokens
-  | (Token.Ident "true", loc) :: tokens ->
-    Pat.Lit (Lit.Bool true, loc), tokens
-  | (Token.Ident "false", loc) :: tokens ->
-    Pat.Lit (Lit.Bool false, loc), tokens
+  | (Token.Bool value, loc) :: tokens ->
+    Pat.Lit (Lit.Bool value, loc), tokens
   | (Token.Int value, loc) :: tokens ->
     Pat.Lit (Lit.Int value, loc), tokens
   | (Token.Char value, loc) :: tokens ->
@@ -373,16 +372,14 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
     parseError "Expected an atomic expression" tokens
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
     Expr.Unit loc, tokens
+  | (Token.Bool value, loc) :: tokens ->
+    Expr.Lit (Lit.Bool value, loc), tokens
   | (Token.Int value, loc) :: tokens ->
     Expr.Lit (Lit.Int value, loc), tokens
   | (Token.Char value, loc) :: tokens ->
     Expr.Lit (Lit.Char value, loc), tokens
   | (Token.Str value, loc) :: tokens ->
     Expr.Lit (Lit.Str value, loc), tokens
-  | (Token.Ident "false", loc) :: tokens ->
-    Expr.Lit (Lit.Bool false, loc), tokens
-  | (Token.Ident "true", loc) :: tokens ->
-    Expr.Lit (Lit.Bool true, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
     Expr.Ref (value, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
@@ -477,7 +474,7 @@ let rec parseOps level boxX expr tokens =
   | OpLevel.Cmp, (Token.Punct ">=", opLoc) :: tokens ->
     next expr Op.Ge opLoc tokens
   | OpLevel.Cons, (Token.Punct "::", opLoc) :: tokens ->
-    nextR expr Op.Cons opLoc tokens
+    nextR expr (Op.Cons noTy) opLoc tokens
   | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
     next expr Op.Add opLoc tokens
   | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->
@@ -514,7 +511,7 @@ let parseTuple boxX tokens =
   | [], tokens ->
     first, tokens
   | acc, tokens ->
-    Expr.Tuple (first :: acc, noTy, loc), tokens
+    Expr.Tuple (first :: acc, [], loc), tokens
 
 /// anno = tuple ( ':' ty )?
 let parseAnno boxX tokens =
