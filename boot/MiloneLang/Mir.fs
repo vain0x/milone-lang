@@ -148,18 +148,41 @@ let listItemTy ty =
 let projExpr expr index resultTy loc =
   MExpr.UniOp (MUniOp.Proj index, expr, unboxTy resultTy, loc)
 
-let inferPatLit ctx endLabel lit expr loc =
-  match lit with
-  | Lit.Bool _
-  | Lit.Int _
-  | Lit.Char _ ->
-    let litExpr = MExpr.Lit (lit, loc)
-    let eqExpr = MExpr.Op (MOp.Eq, expr, litExpr, MTy.Bool, loc)
-    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
-    let ctx = ctxAddStmt ctx gotoStmt
-    false, ctx
+let strAddExpr ctx _op l r (_, loc) =
+  MExpr.Op (MOp.StrAdd, l, r, MTy.Str, loc), ctx
+
+/// x op y ==> `x op y` if `x : {scalar}`
+/// where scalar types are int, char, etc.
+/// C language supports all operators.
+let opScalarExpr ctx op l r (ty, loc) =
+  MExpr.Op (op, l, r, ty, loc), ctx
+
+/// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
+let strCmpExpr ctx op l r (ty, loc) =
+  let strCmpExpr = MExpr.Op (MOp.StrCmp, l, r, MTy.Int, loc)
+  let zeroExpr = MExpr.Lit (Lit.Int 0, loc)
+  let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, ty, loc)
+  opExpr, ctx
+
+/// Generates a comparison expression.
+let cmpExpr ctx (op: MOp) (l: MExpr<_>) r (ty: MTy) loc =
+  assert (opIsComparison op)
+  match mexprTy l with
+  | MTy.Bool
+  | MTy.Int
+  | MTy.Char ->
+    opScalarExpr ctx op l r (ty, loc)
+  | MTy.Str ->
+    strCmpExpr ctx op l r (ty, loc)
   | _ ->
-    failwith "unimpl lit pattern"
+    failwith "unimpl"
+
+let mirifyPatLit ctx endLabel lit expr loc =
+  let litExpr = MExpr.Lit (lit, loc)
+  let eqExpr, ctx = cmpExpr ctx MOp.Eq expr litExpr MTy.Bool loc
+  let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+  let ctx = ctxAddStmt ctx gotoStmt
+  false, ctx
 
 let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let itemTy = unboxTy itemTy
@@ -217,7 +240,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
     // Discard result.
     true, ctx
   | Pat.Lit (lit, loc) ->
-    inferPatLit ctx endLabel lit expr loc
+    mirifyPatLit ctx endLabel lit expr loc
   | Pat.Nil (itemTy, loc) ->
     let isEmptyExpr = MExpr.UniOp (MUniOp.ListIsEmpty, expr, unboxTy (Ty.List itemTy), loc)
     let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
@@ -463,24 +486,6 @@ let mirifyExprTuple ctx items ty loc =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Tuple items, ty, loc))
   MExpr.Ref (tempSerial, ty, loc), ctx
 
-/// x op y ==> `x op y` if `x : {scalar}`
-/// where scalar types are int, char, etc.
-/// C language supports all operators.
-let mirifyExprOpScalar ctx op l r (ty, loc) =
-  let opExpr = MExpr.Op (op, l, r, ty, loc)
-  opExpr, ctx
-
-let mirifyExprOpStrAdd ctx _op l r (_, loc) =
-  let strAddExpr = MExpr.Op (MOp.StrAdd, l, r, MTy.Str, loc)
-  strAddExpr, ctx
-
-/// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
-let mirifyExprOpStrCmp ctx op l r (ty, loc) =
-  let strCmpExpr = MExpr.Op (MOp.StrCmp, l, r, MTy.Int, loc)
-  let zeroExpr = MExpr.Lit (Lit.Int 0, loc)
-  let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, ty, loc)
-  opExpr, ctx
-
 let mirifyExprOp ctx op l r ty loc =
   match op with
   | Op.And ->
@@ -491,27 +496,32 @@ let mirifyExprOp ctx op l r ty loc =
     mirifyExprOpPipe ctx l r ty loc
   | Op.Cons ->
     mirifyExprOpCons ctx l r ty loc
+  | Op.Gt ->
+    mirifyExprOp ctx Op.Lt r l ty loc
+  | Op.Ge ->
+    mirifyExprOp ctx Op.Le r l ty loc
+  | Op.Eq
+  | Op.Ne
+  | Op.Lt
+  | Op.Le ->
+    let op = mopFrom op
+    let ty = unboxTy ty
+    let l, ctx = mirifyExpr ctx l
+    let r, ctx = mirifyExpr ctx r
+    cmpExpr ctx op l r ty loc
   | _ ->
-
-  let op, l, r =
-    match op with
-    | Op.Gt -> MOp.Lt, r, l
-    | Op.Ge -> MOp.Le, r, l
-    | _ -> mopFrom op, l, r
-
-  let ty, lTy = unboxTy ty, exprTy l
-  let l, ctx = mirifyExpr ctx l
-  let r, ctx = mirifyExpr ctx r
-  match lTy with
-  | Ty.Int
-  | Ty.Char ->
-    mirifyExprOpScalar ctx op l r (ty, loc)
-  | Ty.Str when op = MOp.Add ->
-    mirifyExprOpStrAdd ctx op l r (ty, loc)
-  | Ty.Str when opIsComparison op ->
-    mirifyExprOpStrCmp ctx op l r (ty, loc)
-  | _ ->
-    failwithf "unimpl"
+    let op = mopFrom op
+    let ty, lTy = unboxTy ty, exprTy l
+    let l, ctx = mirifyExpr ctx l
+    let r, ctx = mirifyExpr ctx r
+    match lTy with
+    | Ty.Int
+    | Ty.Char ->
+      opScalarExpr ctx op l r (ty, loc)
+    | Ty.Str when op = MOp.Add ->
+      strAddExpr ctx op l r (ty, loc)
+    | _ ->
+      failwithf "unimpl"
 
 let mirifyExprAndThen ctx exprs =
   // Discard non-last expressions.

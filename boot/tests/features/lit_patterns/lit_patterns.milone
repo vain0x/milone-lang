@@ -17,4 +17,9 @@ let main _ =
   | 'a' -> ()
   | _ -> exit 1
 
+  match "a" with
+  | "an" -> exit 1
+  | "a" -> ()
+  | _ -> exit 1
+
   0
