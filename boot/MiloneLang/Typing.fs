@@ -520,7 +520,6 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
       else freshTyVar "fun" ctx
     let serial, ctx = freshVar ctx callee ValueIdent.Fun funTy calleeLoc
 
-    // FIXME: functions cannot capture local variables
     // FIXME: local functions are recursive by default
     let bodyCtx = ctx
     let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
