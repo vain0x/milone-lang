@@ -83,7 +83,7 @@ elif [[ "$1" = inspect ]]
 then
     shift
     compile "$@"
-    code "./tmp/$1.c"
+    code "$(locate $1)/~$1.c"
 elif [[ "$1" = locate ]]
 then
     shift
