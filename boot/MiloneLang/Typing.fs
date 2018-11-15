@@ -91,7 +91,7 @@ let isFreshTyVar ty tyVar: bool =
     | Ty.Char
     | Ty.Str
     | Ty.Range
-    | Ty.Box
+    | Ty.Obj
     | Ty.Ref _
     | Ty.Tuple [] ->
       true
@@ -114,7 +114,7 @@ let isMonomorphic ctx ty: bool =
   | Ty.Char
   | Ty.Str
   | Ty.Range
-  | Ty.Box
+  | Ty.Obj
   | Ty.Tuple []
   | Ty.Ref _ ->
     true
@@ -148,7 +148,7 @@ let substTy (ctx: TyCtx) ty: Ty =
     | Ty.Char
     | Ty.Str
     | Ty.Range
-    | Ty.Box
+    | Ty.Obj
     | Ty.Ref _ ->
       ty
     | Ty.Fun (sty, tty) ->
@@ -188,7 +188,7 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Char, Ty.Char
     | Ty.Str, Ty.Str
     | Ty.Range, Ty.Range
-    | Ty.Box, Ty.Box ->
+    | Ty.Obj, Ty.Obj ->
       ctx
     | Ty.Ref (_, l), Ty.Ref (_, r) when l <> noSerial && l = r ->
       ctx
@@ -200,7 +200,7 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Char, _
     | Ty.Str, _
     | Ty.Range, _
-    | Ty.Box, _
+    | Ty.Obj, _
     | Ty.Fun _, _
     | Ty.Tuple _, _
     | Ty.List _, _
@@ -290,11 +290,11 @@ let inferRef (ctx: TyCtx) ident loc ty =
     Expr.Ref (ident, SerialExit, funTy, loc), ctx
   | None, "box" ->
     let argTy, _, ctx = freshTyVar "box" ctx
-    let ctx = unifyTy ctx (Ty.Fun (argTy, Ty.Box)) ty
+    let ctx = unifyTy ctx (Ty.Fun (argTy, Ty.Obj)) ty
     Expr.Ref (ident, SerialBox, ty, loc), ctx
   | None, "unbox" ->
     let resultTy, _, ctx = freshTyVar "unbox" ctx
-    let ctx = unifyTy ctx (Ty.Fun (Ty.Box, resultTy)) ty
+    let ctx = unifyTy ctx (Ty.Fun (Ty.Obj, resultTy)) ty
     Expr.Ref (ident, SerialUnbox, ty, loc), ctx
   | None, "printfn" ->
     // The function's type is unified by call expr handler.

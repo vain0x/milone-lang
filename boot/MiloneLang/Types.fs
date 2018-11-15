@@ -64,7 +64,7 @@ namespace rec MiloneLang
     | Char
     | Str
     | Range
-    | Box
+    | Obj
     /// Type reference, i.e. name of some type.
     | Ref
       of ident:string * serial:int
@@ -234,11 +234,17 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MTy =
     | Unit
+    /// Boolean.
     | Bool
+    /// Integer.
     | Int
+    /// Character.
     | Char
+    /// String.
     | Str
-    | Box
+    /// Object.
+    | Obj
+    /// Reference to named type.
     | Ref
       of int
     /// Function type, e.g. `int -> int`.

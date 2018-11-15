@@ -120,7 +120,7 @@ let unboxTy (ty: Ty): MTy =
   | Ty.Int -> MTy.Int
   | Ty.Char -> MTy.Char
   | Ty.Str -> MTy.Str
-  | Ty.Box -> MTy.Box
+  | Ty.Obj -> MTy.Obj
   | Ty.Fun (lTy, rTy) ->
     MTy.Fun (unboxTy lTy, unboxTy rTy)
   | Ty.List ty ->
@@ -388,8 +388,8 @@ let mirifyExprCallExit ctx arg ty loc =
 
 let mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
-  let temp, tempSerial, ctx = ctxFreshVar ctx "box" MTy.Box loc
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Box arg, MTy.Box, loc))
+  let temp, tempSerial, ctx = ctxFreshVar ctx "box" MTy.Obj loc
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Box arg, MTy.Obj, loc))
   temp, ctx
 
 let mirifyExprCallUnbox ctx arg ty loc =
