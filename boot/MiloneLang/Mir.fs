@@ -177,6 +177,12 @@ let mirifyPatLit ctx endLabel lit expr loc =
   let ctx = ctxAddStmt ctx gotoStmt
   false, ctx
 
+let mirifyPatNil ctx endLabel itemTy expr loc =
+  let isEmptyExpr = MExpr.UniOp (MUniOp.ListIsEmpty, expr, unboxTy (Ty.List itemTy), loc)
+  let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
+  let ctx = ctxAddStmt ctx gotoStmt
+  false, ctx
+
 let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let itemTy = unboxTy itemTy
   let listTy = MTy.List itemTy
@@ -222,6 +228,19 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
     let letStmt = MStmt.LetVal (serial, MInit.Expr expr, unboxTy ty, loc)
     true, ctxAddStmt ctx letStmt
 
+let mirifyPatTuple ctx endLabel itemPats itemTys expr loc =
+  let rec go covered ctx i itemPats itemTys =
+    match itemPats, itemTys with
+    | [], [] ->
+      covered, ctx
+    | itemPat :: itemPats, itemTy :: itemTys ->
+      let item = projExpr expr i itemTy loc
+      let itemCovered, ctx = mirifyPat ctx endLabel itemPat item
+      go (covered && itemCovered) ctx (i + 1) itemPats itemTys
+    | _ ->
+      failwith "Never"
+  go true ctx 0 itemPats itemTys
+
 /// Processes pattern matching
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
@@ -235,10 +254,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
   | Pat.Lit (lit, loc) ->
     mirifyPatLit ctx endLabel lit expr loc
   | Pat.Nil (itemTy, loc) ->
-    let isEmptyExpr = MExpr.UniOp (MUniOp.ListIsEmpty, expr, unboxTy (Ty.List itemTy), loc)
-    let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
-    let ctx = ctxAddStmt ctx gotoStmt
-    false, ctx
+    mirifyPatNil ctx endLabel itemTy expr loc
   | Pat.Ref (_, serial, ty, loc) ->
     mirifyPatRef ctx endLabel serial ty loc expr
   | Pat.Call (Pat.Ref (_, serial, _, _), args, ty, loc) ->
@@ -246,17 +262,7 @@ let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * 
   | Pat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | Pat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->
-    let rec go covered ctx i itemPats itemTys =
-      match itemPats, itemTys with
-      | [], [] ->
-        covered, ctx
-      | itemPat :: itemPats, itemTy :: itemTys ->
-        let item = projExpr expr i itemTy loc
-        let itemCovered, ctx = mirifyPat ctx endLabel itemPat item
-        go (covered && itemCovered) ctx (i + 1) itemPats itemTys
-      | _ ->
-        failwith "Never"
-    go true ctx 0 itemPats itemTys
+    mirifyPatTuple ctx endLabel itemPats itemTys expr loc
   | Pat.Call _ ->
     failwith "Never: Call pattern incorrect."
   | Pat.Tuple _ ->
