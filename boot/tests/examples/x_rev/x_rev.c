@@ -5,11 +5,11 @@ struct IntList {
 
 struct IntList* go_(struct IntList* acc_, struct IntList* xs_1) {
     struct IntList* match_;
-    if (!(!(xs_1))) goto next_2;
+    if (!((!(xs_1)))) goto next_2;
     match_ = acc_;
     goto end_match_1;
 next_2:;
-    if (!(!(!(xs_1)))) goto next_3;
+    if (!((!((!(xs_1)))))) goto next_3;
     int x_ = xs_1->head;
     struct IntList* xs_2 = xs_1->tail;
     struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
@@ -31,11 +31,11 @@ struct IntList* rev_(struct IntList* xs_) {
 
 int printList_(struct IntList* xs_3) {
     int match_1;
-    if (!(!(xs_3))) goto next_5;
+    if (!((!(xs_3)))) goto next_5;
     match_1 = 0;
     goto end_match_4;
 next_5:;
-    if (!(!(!(xs_3)))) goto next_6;
+    if (!((!((!(xs_3)))))) goto next_6;
     int x_1 = xs_3->head;
     struct IntList* xs_4 = xs_3->tail;
     printf("%d\n", x_1);

@@ -22,11 +22,11 @@ int main() {
     struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
     list_->head = 1;
     list_->tail = list_1;
-    if (!(!(!(list_)))) goto next_4;
+    if (!((!((!(list_)))))) goto next_4;
     int x1_ = list_->head;
-    if (!(!(!(list_->tail)))) goto next_4;
+    if (!((!((!(list_->tail)))))) goto next_4;
     int x2_ = list_->tail->head;
-    if (!(!(list_->tail->tail))) goto next_4;
+    if (!((!(list_->tail->tail)))) goto next_4;
     int call_ = abs_((x1_ - 1));
     int call_1 = abs_((x2_ - 2));
     match_ = (call_ + call_1);

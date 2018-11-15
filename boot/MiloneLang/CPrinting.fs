@@ -172,13 +172,14 @@ let rec cprintExpr acc expr: string list =
     let acc = acc *- ")"
     acc
   | CExpr.UniOp (op, arg) ->
+    let acc = acc *- "("
     let acc =
       match op with
       | CUniOp.Not -> acc *- "!"
       | CUniOp.Deref -> acc *- "*"
     let acc = acc *- "("
     let acc = cprintExpr acc arg
-    let acc = acc *- ")"
+    let acc = acc *- "))"
     acc
   | CExpr.Op (op, first, second) ->
     let acc = acc *- "("

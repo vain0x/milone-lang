@@ -1,6 +1,6 @@
 int test_(int pred_) {
     int if_;
-    if (!(!(pred_))) goto else_1;
+    if (!((!(pred_)))) goto else_1;
     exit(1);
     if_ = 0;
     goto end_if_2;
@@ -99,7 +99,7 @@ int main() {
     int call_21 = isPrime_(3);
     int call_22 = test_(call_21);
     int call_23 = isPrime_(4);
-    int call_24 = test_(!(call_23));
+    int call_24 = test_((!(call_23)));
     int call_25 = isPrime_(1000000007);
     int call_26 = test_(call_25);
     return 0;

@@ -57,7 +57,7 @@ end_if_6:;
 else_3:;
     if_1 = 0;
 end_if_4:;
-    if (!(!(if_1))) goto else_1;
+    if (!((!(if_1)))) goto else_1;
     exit(1);
     if_ = 0;
     goto end_if_2;

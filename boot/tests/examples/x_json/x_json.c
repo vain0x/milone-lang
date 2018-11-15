@@ -5,11 +5,11 @@ struct StringList {
 
 struct StringList* go_(struct StringList* acc_, struct StringList* xs_1) {
     struct StringList* match_;
-    if (!(!(xs_1))) goto next_2;
+    if (!((!(xs_1)))) goto next_2;
     match_ = acc_;
     goto end_match_1;
 next_2:;
-    if (!(!(!(xs_1)))) goto next_3;
+    if (!((!((!(xs_1)))))) goto next_3;
     struct String x_ = xs_1->head;
     struct StringList* xs_2 = xs_1->tail;
     struct StringList* list_ = (struct StringList*)malloc(sizeof(struct StringList));
@@ -31,11 +31,11 @@ struct StringList* listRev_(struct StringList* xs_) {
 
 int printList_(struct StringList* xs_3) {
     int match_1;
-    if (!(!(xs_3))) goto next_5;
+    if (!((!(xs_3)))) goto next_5;
     match_1 = 0;
     goto end_match_4;
 next_5:;
-    if (!(!(!(xs_3)))) goto next_6;
+    if (!((!((!(xs_3)))))) goto next_6;
     struct String x_1 = xs_3->head;
     struct StringList* xs_4 = xs_3->tail;
     printf("%s\n", x_1.str);
@@ -73,7 +73,7 @@ int readInt_(struct StringTuple1 caps_1, int i_) {
     goto end_if_12;
 else_11:;
     int call_4 = isDigit_(s_.str[i_]);
-    if_2 = !(call_4);
+    if_2 = (!(call_4));
 end_if_12:;
     if (!(if_2)) goto else_9;
     if_1 = i_;

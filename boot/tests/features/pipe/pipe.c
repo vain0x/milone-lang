@@ -37,7 +37,7 @@ end_if_4:;
     int if_2;
     void* call_3 = sub_(100, 98);
     void* call_4 = between_(2, 3, call_3);
-    if (!(!(call_4))) goto else_5;
+    if (!((!(call_4)))) goto else_5;
     exit(2);
     if_2 = 0;
     goto end_if_6;

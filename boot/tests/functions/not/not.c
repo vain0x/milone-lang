@@ -6,7 +6,7 @@ int not_(int arg_) {
 
 int main() {
     int if_;
-    if (!(!(0))) goto else_1;
+    if (!((!(0)))) goto else_1;
     printf("not false\n");
     int call_ = 0;
     if_ = 0;
