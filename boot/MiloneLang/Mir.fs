@@ -349,15 +349,6 @@ let mirifyExprMatch ctx target arms ty loc =
 
   temp, ctx
 
-let mirifyExprNav ctx sub mes ty loc =
-  let subTy = exprTy sub
-  let sub, ctx = mirifyExpr ctx sub
-  match subTy, mes with
-  | Ty.Str, "Length" ->
-    MExpr.UniOp (MUniOp.StrLen, sub, MTy.Int, loc), ctx
-  | _ ->
-    failwithf "Never nav %A" (sub, mes, ty, loc)
-
 let mirifyExprIndex ctx l r _ loc =
   match exprTy l, exprTy r with
   | Ty.Str, Ty.Int ->
@@ -396,6 +387,10 @@ let mirifyExprCallUnbox ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
   MExpr.UniOp (MUniOp.Unbox, arg, unboxTy ty, loc), ctx
 
+let mirifyExprCallStrLength ctx arg ty loc =
+  let arg, ctx = mirifyExpr ctx arg
+  MExpr.UniOp (MUniOp.StrLen, arg, unboxTy ty, loc), ctx
+
 /// not a ==> !a
 let mirifyExprCallNot ctx arg ty notLoc =
   let arg, ctx = mirifyExpr ctx arg
@@ -419,6 +414,8 @@ let mirifyExprCall ctx callee args ty loc =
     mirifyExprCallBox ctx arg ty loc
   | Expr.Ref (_, serial, _, _), [arg] when serial = SerialUnbox ->
     mirifyExprCallUnbox ctx arg ty loc
+  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialStrLength ->
+    mirifyExprCallStrLength ctx arg ty loc
   | Expr.Ref (_, serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
     mirifyExprCallVariantFun ctx serial arg ty loc
   | _ ->
@@ -600,8 +597,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprIf ctx pred thenCl elseCl ty loc
   | Expr.Match (target, arms, ty, loc) ->
     mirifyExprMatch ctx target arms ty loc
-  | Expr.Nav (l, r, ty, loc) ->
-    mirifyExprNav ctx l r ty loc
   | Expr.Index (l, r, ty, loc) ->
     mirifyExprIndex ctx l r ty loc
   | Expr.Call (callee, args, ty, loc) ->
@@ -616,6 +611,7 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprLet ctx pat body loc
   | Expr.TyDef (_, tySerial, tyDef, loc) ->
     mirifyExprTyDef ctx tySerial tyDef loc
+  | Expr.Nav _
   | Expr.Call (_, [], _, _)
   | Expr.Anno _ ->
     failwith "Never"

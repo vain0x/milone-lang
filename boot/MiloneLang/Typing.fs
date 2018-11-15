@@ -343,7 +343,8 @@ let inferNav ctx sub mes loc resultTy =
   match substTy ctx subTy, mes with
   | Ty.Str, "Length" ->
     let ctx = unifyTy ctx resultTy Ty.Int
-    Expr.Nav (sub, mes, Ty.Int, loc), ctx
+    let funExpr = Expr.Ref (mes, SerialStrLength, Ty.Fun (Ty.Str, Ty.Int), loc)
+    Expr.Call (funExpr, [sub], Ty.Int, loc), ctx
   | _ ->
     failwithf "Unknown nav %A" (sub, mes, loc)
 
