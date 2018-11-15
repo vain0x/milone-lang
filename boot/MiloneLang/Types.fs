@@ -6,6 +6,8 @@ namespace rec MiloneLang
   /// Word or punctuation in source code.
   [<RequireQualifiedAccess>]
   type Token =
+    | Bool
+      of bool
     | Int
       of int
     | Char
