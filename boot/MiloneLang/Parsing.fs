@@ -511,7 +511,7 @@ let parseTuple boxX tokens =
   | [], tokens ->
     first, tokens
   | acc, tokens ->
-    Expr.Tuple (first :: acc, noTy, loc), tokens
+    Expr.Tuple (first :: acc, [], loc), tokens
 
 /// anno = tuple ( ':' ty )?
 let parseAnno boxX tokens =

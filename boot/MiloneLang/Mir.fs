@@ -466,11 +466,8 @@ let mirifyExprOpCons ctx l r ty loc =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Cons (l, r, itemTy), listTy, loc))
   MExpr.Ref (tempSerial, listTy, loc), ctx
 
-let mirifyExprTuple ctx items ty loc =
-  let itemTys =
-    match ty with
-    | Ty.Tuple itemTys -> List.map unboxTy itemTys
-    | _ -> failwith "Tuple constructor's type must be a tuple."
+let mirifyExprTuple ctx items itemTys loc =
+  let itemTys = List.map unboxTy itemTys
   let ty = MTy.Tuple itemTys
   let _, tempSerial, ctx = ctxFreshVar ctx "tuple" ty loc
 
@@ -618,8 +615,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprCall ctx callee args ty loc
   | Expr.Op (op, l, r, ty, loc) ->
     mirifyExprOp ctx op l r ty loc
-  | Expr.Tuple (items, ty, loc) ->
-    mirifyExprTuple ctx items ty loc
+  | Expr.Tuple (items, itemTys, loc) ->
+    mirifyExprTuple ctx items itemTys loc
   | Expr.AndThen (exprs, _, _) ->
     mirifyExprAndThen ctx exprs
   | Expr.Let (pat, body, loc) ->

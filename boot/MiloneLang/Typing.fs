@@ -483,7 +483,7 @@ let inferTuple (ctx: TyCtx) items loc tupleTy =
       go (item :: acc) (itemTy :: itemTys) ctx items
   let items, itemTys, ctx = go [] [] ctx items
   let ctx = unifyTy ctx tupleTy (Ty.Tuple itemTys)
-  Expr.Tuple (items, tupleTy, loc), ctx
+  Expr.Tuple (items, itemTys, loc), ctx
 
 let inferAnno ctx expr annoTy ty =
   let ctx = unifyTy ctx annoTy ty

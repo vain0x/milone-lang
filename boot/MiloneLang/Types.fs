@@ -209,7 +209,7 @@ namespace rec MiloneLang
       of Op * Expr<'a> * Expr<'a> * Ty * 'a
     /// Tuple constructor, e.g. `x, y, z`.
     | Tuple
-      of Expr<'a> list * Ty * 'a
+      of Expr<'a> list * itemTys:Ty list * 'a
     /// Type annotation `x : 'x`.
     | Anno
       of Expr<'a> * Ty * 'a
