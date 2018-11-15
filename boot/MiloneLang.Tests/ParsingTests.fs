@@ -70,7 +70,7 @@ let exprOp op left right =
   Expr.Op (op, left,  right, noTy, ())
 
 let exprCons l r =
-  Expr.Op (Op.Cons, l, r, noTy, ())
+  Expr.Op (Op.Cons noTy, l, r, noTy, ())
 
 let exprAdd left right =
   Expr.Op (Op.Add, left,  right, noTy, ())

@@ -99,7 +99,7 @@ let mopFrom op =
   | Op.Pipe
   | Op.And
   | Op.Or
-  | Op.Cons
+  | Op.Cons _
   | Op.Range -> failwith "We don't use > >= && || :: .. in MIR"
 
 let mtyDef tySerial (tyDef: TyDef) =
@@ -135,13 +135,6 @@ let unboxTy (ty: Ty): MTy =
     failwith "Never type variable in MIR."
   | Ty.Range ->
     failwith "Never range as object in MIR."
-
-let listItemTy ty =
-  match ty with
-  | Ty.List ty ->
-    unboxTy ty
-  | _ ->
-    failwith "List constructor's type must be a list."
 
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
@@ -284,7 +277,7 @@ let desugarExprList items itemTy loc =
     | [] ->
       acc
     | item :: items ->
-      go (Expr.Op (Op.Cons, item, acc, Ty.List itemTy, loc)) items
+      go (Expr.Op (Op.Cons itemTy, item, acc, Ty.List itemTy, loc)) items
   go (Expr.List ([], itemTy, loc)) (List.rev items)
 
 /// `[a; b; c]` -> `a :: b :: c :: []`
@@ -456,9 +449,9 @@ let mirifyExprOpPipe ctx l r ty loc =
   | _ ->
     mirifyExprCall ctx r [l] ty loc
 
-let mirifyExprOpCons ctx l r ty loc =
-  let itemTy = listItemTy ty
-  let listTy = MTy.List itemTy
+let mirifyExprOpCons ctx l r itemTy listTy loc =
+  let itemTy = unboxTy itemTy
+  let listTy = unboxTy listTy
   let _, tempSerial, ctx = ctxFreshVar ctx "list" listTy loc
 
   let l, ctx = mirifyExpr ctx l
@@ -491,8 +484,8 @@ let mirifyExprOp ctx op l r ty loc =
     mirifyExprOpOr ctx l r ty loc
   | Op.Pipe ->
     mirifyExprOpPipe ctx l r ty loc
-  | Op.Cons ->
-    mirifyExprOpCons ctx l r ty loc
+  | Op.Cons itemTy ->
+    mirifyExprOpCons ctx l r itemTy ty loc
   | Op.Gt ->
     mirifyExprOp ctx Op.Lt r l ty loc
   | Op.Ge ->

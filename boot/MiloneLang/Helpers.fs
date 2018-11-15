@@ -142,6 +142,8 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Index (go l, go r, f ty, g a)
     | Expr.Call (callee, args, ty, a) ->
       Expr.Call (go callee, List.map go args, f ty, g a)
+    | Expr.Op (Op.Cons itemTy, l, r, ty, a) ->
+      Expr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
     | Expr.Op (op, l, r, ty, a) ->
       Expr.Op (op, go l, go r, f ty, g a)
     | Expr.Tuple (exprs, itemTys, a) ->

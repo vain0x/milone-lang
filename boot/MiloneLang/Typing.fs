@@ -435,12 +435,12 @@ let inferOpLogic (ctx: TyCtx) op left right loc resultTy =
   let ctx = unifyTy ctx resultTy Ty.Bool
   inferOpCore ctx op left right loc Ty.Bool Ty.Bool
 
-let inferOpCons ctx op left right loc listTy =
+let inferOpCons ctx left right loc listTy =
   let itemTy, _, ctx = freshTyVar "item" ctx
   let ctx = unifyTy ctx listTy (Ty.List itemTy)
   let left, ctx = inferExpr ctx left itemTy
   let right, ctx = inferExpr ctx right listTy
-  Expr.Op (op, left, right, listTy, loc), ctx
+  Expr.Op (Op.Cons itemTy, left, right, listTy, loc), ctx
 
 let inferOpRange ctx op left right loc ty =
   let ctx = unifyTy ctx ty Ty.Range
@@ -467,8 +467,8 @@ let inferOp (ctx: TyCtx) op left right loc ty =
   | Op.And
   | Op.Or ->
     inferOpLogic ctx op left right loc ty
-  | Op.Cons ->
-    inferOpCons ctx op left right loc ty
+  | Op.Cons _ ->
+    inferOpCons ctx left right loc ty
   | Op.Range ->
     inferOpRange ctx op left right loc ty
 

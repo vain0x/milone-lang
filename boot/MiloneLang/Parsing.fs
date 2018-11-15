@@ -474,7 +474,7 @@ let rec parseOps level boxX expr tokens =
   | OpLevel.Cmp, (Token.Punct ">=", opLoc) :: tokens ->
     next expr Op.Ge opLoc tokens
   | OpLevel.Cons, (Token.Punct "::", opLoc) :: tokens ->
-    nextR expr Op.Cons opLoc tokens
+    nextR expr (Op.Cons noTy) opLoc tokens
   | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
     next expr Op.Add opLoc tokens
   | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->

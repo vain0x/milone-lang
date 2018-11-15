@@ -123,6 +123,7 @@ namespace rec MiloneLang
     | Or
     /// `::` Construction
     | Cons
+      of Ty
     /// `..`
     | Range
 
