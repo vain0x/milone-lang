@@ -34,7 +34,6 @@ compile() {
 # Output:
 #   hello ... ✔ ok
 integ() {
-    echo "integ $1"
     name=$(basename "$1")
     app="$(locate $name)/~$name"
     out="$(locate $name)/~$name.out"
@@ -61,6 +60,7 @@ integ() {
 #   integ_all
 integ_all() {
     err=$(find tests/*/* -type d -exec ./task integ "{}" \;)
+    >&2 echo $err
     exit $([[ -z $err ]])
 }
 
