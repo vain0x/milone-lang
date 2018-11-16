@@ -381,7 +381,7 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   | (Token.Str value, loc) :: tokens ->
     Expr.Lit (Lit.Str value, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
-    Expr.Ref (value, noSerial, noTy, loc), tokens
+    Expr.Ref (value, noArity, noSerial, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
     parseParen boxX tokens
   | (Token.BracketL, bracketLoc) :: tokens ->

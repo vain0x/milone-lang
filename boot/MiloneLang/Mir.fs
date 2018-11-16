@@ -413,17 +413,17 @@ let mirifyExprCallVariantFun (ctx: MirCtx) serial arg ty loc =
 
 let mirifyExprOpApp ctx callee arg ty loc =
   match callee with
-  | Expr.Ref (_, serial, _, _) when serial = SerialNot ->
+  | Expr.Ref (_, serial, _, _, _) when serial = SerialNot ->
     mirifyExprCallNot ctx arg ty loc
-  | Expr.Ref (_, serial, _, _) when serial = SerialExit ->
+  | Expr.Ref (_, serial, _, _, _) when serial = SerialExit ->
     mirifyExprCallExit ctx arg ty loc
-  | Expr.Ref (_, serial, _, _) when serial = SerialBox ->
+  | Expr.Ref (_, serial, _, _, _) when serial = SerialBox ->
     mirifyExprCallBox ctx arg ty loc
-  | Expr.Ref (_, serial, _, _) when serial = SerialUnbox ->
+  | Expr.Ref (_, serial, _, _, _) when serial = SerialUnbox ->
     mirifyExprCallUnbox ctx arg ty loc
-  | Expr.Ref (_, serial, _, _) when serial = SerialStrLength ->
+  | Expr.Ref (_, serial, _, _, _) when serial = SerialStrLength ->
     mirifyExprCallStrLength ctx arg ty loc
-  | Expr.Ref (_, serial, _, _) when ctxIsVariantFun ctx serial ->
+  | Expr.Ref (_, serial, _, _, _) when ctxIsVariantFun ctx serial ->
     mirifyExprCallVariantFun ctx serial arg ty loc
   | _ ->
     let ty = unboxTy ty
@@ -439,11 +439,28 @@ let mirifyExprOpApp ctx callee arg ty loc =
         callee, acc, ctx
 
     let callee, args, ctx = dig [arg] ctx callee
+    let arity = exprArity callee
     let callee, ctx = mirifyExpr ctx callee
     let args, ctx = mirifyExprs ctx args
 
+    // Split argument list by the arity of callee.
+    // Once function's argument list is fulfilled,
+    // rest arguments are chain of applications to the result.
+    // E.g. `(f x y z w)` -> `(f(x, y) z) w` where f's arity is 2.
+    let subArgs = List.truncate arity args
     let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, args), ty, loc))
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, subArgs), ty, loc))
+
+    let rec unfold callee ctx args =
+      match args with
+      | [] ->
+        callee, ctx
+      | arg :: args ->
+        let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
+        let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, [arg]), ty, loc))
+        unfold temp ctx args
+    let temp, ctx = unfold temp ctx (List.skip (min arity (List.length args)) args)
+
     temp, ctx
 
 /// `x |> f` ==> `f x`
@@ -603,7 +620,7 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     MExpr.Lit (lit, loc), ctx
   | Expr.Unit loc ->
     MExpr.Default (MTy.Unit, loc), ctx
-  | Expr.Ref (_, serial, ty, loc) ->
+  | Expr.Ref (_, serial, _, ty, loc) ->
     mirifyExprRef ctx serial ty loc
   | Expr.List ([], itemTy, loc) ->
     MExpr.Default (MTy.List (unboxTy itemTy), loc), ctx

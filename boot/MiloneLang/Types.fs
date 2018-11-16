@@ -177,6 +177,7 @@ namespace rec MiloneLang
   type ValueIdent =
     | Var
     | Fun
+      of arity:int
     /// Variant of union with no argument.
     | Variant
       of tySerial:int
@@ -190,7 +191,7 @@ namespace rec MiloneLang
       of 'a
     /// Variable reference.
     | Ref
-      of ident:string * serial:int * Ty * 'a
+      of ident:string * serial:int * arity:int * Ty * 'a
     | List
       of Expr<'a> list * itemTy:Ty * 'a
     /// If-then-else. Else clause is `()` if omit.
