@@ -297,7 +297,7 @@ let inferRef (ctx: TyCtx) ident loc ty =
     let ctx = unifyTy ctx (Ty.Fun (Ty.Obj, resultTy)) ty
     Expr.Ref (ident, SerialUnbox, ty, loc), ctx
   | None, "printfn" ->
-    // The function's type is unified by call expr handler.
+    // The function's type is unified in app expression inference.
     Expr.Ref (ident, SerialPrintfn, ty, loc), ctx
   | None, _ ->
     failwithf "Couldn't resolve var %s" ident
@@ -344,7 +344,7 @@ let inferNav ctx sub mes loc resultTy =
   | Ty.Str, "Length" ->
     let ctx = unifyTy ctx resultTy Ty.Int
     let funExpr = Expr.Ref (mes, SerialStrLength, Ty.Fun (Ty.Str, Ty.Int), loc)
-    Expr.Call (funExpr, [sub], Ty.Int, loc), ctx
+    Expr.Op (Op.App, funExpr, sub, Ty.Int, loc), ctx
   | _ ->
     failwithf "Unknown nav %A" (sub, mes, loc)
 
@@ -366,39 +366,25 @@ let inferIndex ctx l r loc resultTy =
   | subTy, indexTy ->
     failwithf "Type: Index not supported %A" (subTy, indexTy, l, r)
 
-/// During inference of `f w x ..`,
-/// assume we concluded `f w : 'f`.
-/// We can also conclude `f w : 'x -> 'g`.
-let rec inferCallArgs acc (ctx: TyCtx) args callTy =
-  match args with
-  | [] ->
-    acc, callTy, ctx
-  | arg :: args ->
-    let argTy, _, ctx = ctxFreshTyVar "arg" ctx
-    let arg, ctx = inferExpr ctx arg argTy
-    inferCallArgs (arg :: acc) ctx args (Ty.Fun (argTy, callTy))
-
-let inferCall (ctx: TyCtx) callee args loc callTy =
-  let args, calleeTy, ctx = inferCallArgs [] ctx (List.rev args) callTy
-  let callee, ctx = inferExpr ctx callee calleeTy
-  match callee, args with
-  | Expr.Ref (_, serial, _, _), args when serial = SerialPrintfn ->
-    // Super special case.
-    inferCallPrintfn ctx args loc callTy
-  | _ ->
-    Expr.Call (callee, args, callTy, loc), ctx
-
-let inferCallPrintfn ctx args loc callTy =
-  match args with
-  | Expr.Lit (Lit.Str format, _) :: _ ->
-    let ctx = unifyTy ctx callTy Ty.Unit
+let inferOpAppPrintfn ctx arg calleeTy =
+  match arg with
+  | Expr.Lit (Lit.Str format, _) ->
     let funTy = analyzeFormat format
-    let args, calleeTy, ctx = inferCallArgs [] ctx (List.rev args) callTy
-    let ctx = unifyTy ctx calleeTy funTy
-    let callee = Expr.Ref ("printfn", SerialPrintfn, calleeTy, loc)
-    Expr.Call (callee, args, callTy, loc), ctx
+    unifyTy ctx calleeTy funTy
   | _ ->
     failwith """First arg of printfn must be string literal, ".."."""
+
+let inferOpApp ctx callee arg loc appTy =
+  let argTy, _, ctx = ctxFreshTyVar "arg" ctx
+  let arg, ctx = inferExpr ctx arg argTy
+  let callee, ctx = inferExpr ctx callee (Ty.Fun (argTy, appTy))
+  let ctx =
+    match callee with
+    | Expr.Ref (_, serial, calleeTy, _) when serial = SerialPrintfn ->
+      inferOpAppPrintfn ctx arg calleeTy
+    | _ ->
+      ctx
+  Expr.Op (Op.App, callee, arg, appTy, loc), ctx
 
 let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
   let left, ctx = inferExpr ctx left operandTy
@@ -425,12 +411,8 @@ let inferOpCmp (ctx: TyCtx) op left right loc resultTy =
   let ctx = unifyTy ctx resultTy Ty.Bool
   inferOpCore ctx op left right loc operandTy resultTy
 
-let inferOpPipe ctx op l r loc ty =
-  let argTy, _, ctx = ctxFreshTyVar "arg" ctx
-  let funTy = Ty.Fun (argTy, ty)
-  let l, ctx = inferExpr ctx l argTy
-  let r, ctx = inferExpr ctx r funTy
-  Expr.Op (op, l, r, ty, loc), ctx
+let inferOpPipe ctx _op l r loc ty =
+  inferOpApp ctx r l loc ty
 
 let inferOpLogic (ctx: TyCtx) op left right loc resultTy =
   let ctx = unifyTy ctx resultTy Ty.Bool
@@ -463,6 +445,8 @@ let inferOp (ctx: TyCtx) op left right loc ty =
   | Op.Gt
   | Op.Ge ->
     inferOpCmp ctx op left right loc ty
+  | Op.App ->
+    inferOpApp ctx left right loc ty
   | Op.Pipe ->
     inferOpPipe ctx op left right loc ty
   | Op.And
@@ -592,8 +576,6 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferNav ctx receiver field loc ty
   | Expr.Index (l, r, _, loc) ->
     inferIndex ctx l r loc ty
-  | Expr.Call (callee, args, _, loc) ->
-    inferCall ctx callee args loc ty
   | Expr.Op (op, l, r, _, loc) ->
     inferOp ctx op l r loc ty
   | Expr.Tuple (items, _, loc) ->

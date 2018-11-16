@@ -103,8 +103,6 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     ty, a
   | Expr.Index (_, _, ty, a) ->
     ty, a
-  | Expr.Call (_, _, ty, a) ->
-    ty, a
   | Expr.Op (_, _, _, ty, a) ->
     ty, a
   | Expr.Tuple (_, itemTys, a) ->
@@ -140,8 +138,6 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Nav (go sub, mes, f ty, g a)
     | Expr.Index (l, r, ty, a) ->
       Expr.Index (go l, go r, f ty, g a)
-    | Expr.Call (callee, args, ty, a) ->
-      Expr.Call (go callee, List.map go args, f ty, g a)
     | Expr.Op (Op.Cons itemTy, l, r, ty, a) ->
       Expr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
     | Expr.Op (op, l, r, ty, a) ->

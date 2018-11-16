@@ -121,6 +121,8 @@ namespace rec MiloneLang
     | And
     /// `||`
     | Or
+    /// `f x` Application
+    | App
     /// `::` Construction
     | Cons
       of Ty
@@ -202,9 +204,6 @@ namespace rec MiloneLang
     /// `x.[i]`
     | Index
       of Expr<'a> * Expr<'a> * Ty * 'a
-    /// `f x y ..`
-    | Call
-      of Expr<'a> * Expr<'a> list * Ty * 'a
     /// Binary operation, e.g. `x + y`.
     | Op
       of Op * Expr<'a> * Expr<'a> * Ty * 'a

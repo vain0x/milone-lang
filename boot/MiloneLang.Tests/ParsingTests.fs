@@ -63,8 +63,8 @@ let exprList items =
 let exprNil =
   exprList []
 
-let exprCall callee args =
-  Expr.Call (callee, args, noTy, ())
+let exprApp callee arg =
+  Expr.Op (Op.App, callee, arg, noTy, ())
 
 let exprOp op left right =
   Expr.Op (op, left,  right, noTy, ())
@@ -86,6 +86,15 @@ let exprLetMain body =
 
 let exprAndThen exprs =
   Expr.AndThen (exprs, noTy, ())
+
+let exprCall callee args =
+  let rec go callee args =
+    match args with
+    | [] ->
+      callee
+    | arg :: args ->
+      go (exprApp callee arg) args
+  go callee args
 
 [<Fact>]
 let parseMainEmpty () =

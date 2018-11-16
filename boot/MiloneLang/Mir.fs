@@ -99,6 +99,7 @@ let mopFrom op =
   | Op.Pipe
   | Op.And
   | Op.Or
+  | Op.App
   | Op.Cons _
   | Op.Range -> failwith "We don't use > >= && || :: .. in MIR"
 
@@ -410,28 +411,45 @@ let mirifyExprCallVariantFun (ctx: MirCtx) serial arg ty loc =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, init, ty, loc))
   temp, ctx
 
-let mirifyExprCall ctx callee args ty loc =
-  match callee, args with
-  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialNot ->
+let mirifyExprOpApp ctx callee arg ty loc =
+  match callee with
+  | Expr.Ref (_, serial, _, _) when serial = SerialNot ->
     mirifyExprCallNot ctx arg ty loc
-  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialExit ->
+  | Expr.Ref (_, serial, _, _) when serial = SerialExit ->
     mirifyExprCallExit ctx arg ty loc
-  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialBox ->
+  | Expr.Ref (_, serial, _, _) when serial = SerialBox ->
     mirifyExprCallBox ctx arg ty loc
-  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialUnbox ->
+  | Expr.Ref (_, serial, _, _) when serial = SerialUnbox ->
     mirifyExprCallUnbox ctx arg ty loc
-  | Expr.Ref (_, serial, _, _), [arg] when serial = SerialStrLength ->
+  | Expr.Ref (_, serial, _, _) when serial = SerialStrLength ->
     mirifyExprCallStrLength ctx arg ty loc
-  | Expr.Ref (_, serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
+  | Expr.Ref (_, serial, _, _) when ctxIsVariantFun ctx serial ->
     mirifyExprCallVariantFun ctx serial arg ty loc
   | _ ->
     let ty = unboxTy ty
+
+    /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
+    let rec dig acc ctx callee =
+      match callee with
+      | Expr.Op (Op.App, callee, arg, _, _) ->
+        dig (arg :: acc) ctx callee
+      | Expr.Op (Op.Pipe, arg, callee, _, _) ->
+        dig (arg :: acc) ctx callee
+      | _ ->
+        callee, acc, ctx
+
+    let callee, args, ctx = dig [arg] ctx callee
     let callee, ctx = mirifyExpr ctx callee
     let args, ctx = mirifyExprs ctx args
 
     let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
     let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, args), ty, loc))
     temp, ctx
+
+/// `x |> f` ==> `(f x)`
+/// `x |> f a b ..` ==> `(f a b .. x)` (adhoc workaround)
+let mirifyExprOpPipe ctx l r ty loc =
+  mirifyExprOpApp ctx r l ty loc
 
 /// l && r ==> if l then r else false
 let mirifyExprOpAnd ctx l r ty loc =
@@ -442,15 +460,6 @@ let mirifyExprOpAnd ctx l r ty loc =
 let mirifyExprOpOr ctx l r ty loc =
   let trueExpr = Expr.Lit (Lit.Bool true, loc)
   mirifyExprIf ctx l trueExpr r ty loc
-
-/// `x |> f` ==> `(f x)`
-/// `x |> f a b ..` ==> `(f a b .. x)` (adhoc workaround)
-let mirifyExprOpPipe ctx l r ty loc =
-  match r with
-  | Expr.Call (callee, args, _, loc) ->
-    mirifyExprCall ctx callee (args @ [l]) ty loc
-  | _ ->
-    mirifyExprCall ctx r [l] ty loc
 
 let mirifyExprOpCons ctx l r itemTy listTy loc =
   let itemTy = unboxTy itemTy
@@ -485,6 +494,8 @@ let mirifyExprOp ctx op l r ty loc =
     mirifyExprOpAnd ctx l r ty loc
   | Op.Or ->
     mirifyExprOpOr ctx l r ty loc
+  | Op.App ->
+    mirifyExprOpApp ctx l r ty loc
   | Op.Pipe ->
     mirifyExprOpPipe ctx l r ty loc
   | Op.Cons itemTy ->
@@ -605,8 +616,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprMatch ctx target arms ty loc
   | Expr.Index (l, r, ty, loc) ->
     mirifyExprIndex ctx l r ty loc
-  | Expr.Call (callee, args, ty, loc) ->
-    mirifyExprCall ctx callee args ty loc
   | Expr.Op (op, l, r, ty, loc) ->
     mirifyExprOp ctx op l r ty loc
   | Expr.Tuple (items, itemTys, loc) ->
@@ -618,7 +627,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   | Expr.TyDef (_, tySerial, tyDef, loc) ->
     mirifyExprTyDef ctx tySerial tyDef loc
   | Expr.Nav _
-  | Expr.Call (_, [], _, _)
   | Expr.Anno _ ->
     failwith "Never"
 
