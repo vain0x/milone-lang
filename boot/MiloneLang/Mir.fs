@@ -446,8 +446,7 @@ let mirifyExprOpApp ctx callee arg ty loc =
     let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, args), ty, loc))
     temp, ctx
 
-/// `x |> f` ==> `(f x)`
-/// `x |> f a b ..` ==> `(f a b .. x)` (adhoc workaround)
+/// `x |> f` ==> `f x`
 let mirifyExprOpPipe ctx l r ty loc =
   mirifyExprOpApp ctx r l ty loc
 
