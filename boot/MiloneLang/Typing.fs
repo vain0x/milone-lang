@@ -371,11 +371,13 @@ let inferIndex ctx l r loc resultTy =
   | subTy, indexTy ->
     failwithf "Type: Index not supported %A" (subTy, indexTy, l, r)
 
-let inferOpAppPrintfn ctx arg calleeTy =
+let inferOpAppPrintfn ctx ident serial arg calleeTy loc =
   match arg with
   | Expr.Lit (Lit.Str format, _) ->
     let funTy = analyzeFormat format
-    unifyTy ctx calleeTy funTy
+    let arity = arityTy funTy
+    let ctx = unifyTy ctx calleeTy funTy
+    Expr.Ref (ident, serial, arity, calleeTy, loc), ctx
   | _ ->
     failwith """First arg of printfn must be string literal, ".."."""
 
@@ -383,12 +385,12 @@ let inferOpApp ctx callee arg loc appTy =
   let argTy, _, ctx = ctxFreshTyVar "arg" ctx
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (Ty.Fun (argTy, appTy))
-  let ctx =
+  let callee, ctx =
     match callee with
-    | Expr.Ref (_, serial, _, calleeTy, _) when serial = SerialPrintfn ->
-      inferOpAppPrintfn ctx arg calleeTy
+    | Expr.Ref (ident, serial, _, calleeTy, loc) when serial = SerialPrintfn ->
+      inferOpAppPrintfn ctx ident serial arg calleeTy loc
     | _ ->
-      ctx
+      callee, ctx
   Expr.Op (Op.App, callee, arg, appTy, loc), ctx
 
 let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =

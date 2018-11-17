@@ -246,3 +246,10 @@ let analyzeFormat (format: string) =
       else
         go (i + 1)
   Ty.Fun (Ty.Str, go 0)
+
+let rec arityTy ty =
+  match ty with
+  | Ty.Fun (_, ty) ->
+    1 + arityTy ty
+  | _ ->
+    0
