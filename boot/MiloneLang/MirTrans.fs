@@ -11,7 +11,7 @@ type MirTransCtx =
     LabelSerial: int
 
     /// Known identifiers and their dependencies.
-    Caps: Map<int, (int * MTy * Loc) list>
+    Caps: Map<int, (int * int * MTy * Loc) list>
     Known: Set<int>
     Refs: Set<int>
     Locals: Set<int>
@@ -39,7 +39,7 @@ let ctxFreshVar (ident: string) (ty: MTy) loc (ctx: MirTransCtx) =
         VarSerial = ctx.VarSerial + 1
         Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Var, ty, loc)
     }
-  let refExpr = MExpr.Ref (serial, ty, loc)
+  let refExpr = MExpr.Ref (serial, 1, ty, loc)
   refExpr, serial, ctx
 
 let ctxPushScope locals (ctx: MirTransCtx) =
@@ -77,7 +77,7 @@ let ctxCaps (ctx: MirTransCtx) =
     (fun serial ->
       match ctx.Vars |> Map.find serial with
       | _, ValueIdent.Var, ty, loc ->
-        Some (serial, ty, loc)
+        Some (serial, 1, ty, loc)
       | _ ->
         None
     )
@@ -92,7 +92,7 @@ let declosureExpr (expr, ctx) =
   | MExpr.Default _
   | MExpr.Variant _ ->
     expr, ctx
-  | MExpr.Ref (serial, _, _) ->
+  | MExpr.Ref (serial, _, _, _) ->
     declosureExprRef serial (expr, ctx)
   | MExpr.UniOp (op, arg, ty, loc) ->
     let arg, ctx = (arg, ctx) |> declosureExpr
@@ -133,11 +133,11 @@ let declosureInit (init, ctx) =
 let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
   let result =
     match init with
-    | MInit.Call (MExpr.Ref (callee, _, _) as refExpr, args) ->
+    | MInit.Call (MExpr.Ref (callee, _, _, _) as refExpr, args) ->
       match ctx.Caps |> Map.tryFind callee with
       | Some (_ :: _ as caps) ->
         let buildCapsTuple caps loc ctx =
-          let tupleTy = caps |> List.map (fun (_, ty, _) -> ty) |> MTy.Tuple
+          let tupleTy = caps |> List.map (fun (_, _, ty, _) -> ty) |> MTy.Tuple
           let items = caps |> List.map MExpr.Ref
           let capsRef, capsSerial, ctx = ctx |> ctxFreshVar "caps" tupleTy loc
           let letCaps = MStmt.LetVal (capsSerial, MInit.Tuple items, tupleTy, loc)
@@ -196,7 +196,7 @@ let declosureDeclTyDef decl tyDef ctx =
 let declosureFunBody callee args body ctx =
   /// Variables known to the function body.
   let localSerials =
-    let argSerials = args |> List.map (fun (serial, _, _) -> serial)
+    let argSerials = args |> List.map (fun (serial, _, _, _) -> serial)
     callee :: argSerials
 
   let baseCtx = ctx
@@ -218,7 +218,7 @@ let deconstructCaps capsRef caps body =
     match caps with
     | [] ->
       body
-    | (serial, ty, loc) :: caps ->
+    | (serial, _, ty, loc) :: caps ->
       let projExpr = MExpr.UniOp (MUniOp.Proj i, capsRef, ty, loc)
       let letStmt = MStmt.LetVal (serial, MInit.Expr projExpr, ty, loc)
       go (i + 1) (letStmt :: body) caps
@@ -230,13 +230,13 @@ let addCapsArg caps args body loc ctx =
     // Static functions are intact.
     args, body, ctx
   | _ ->
-    let tys = caps |> List.map (fun (_, ty, _) -> ty)
+    let tys = caps |> List.map (fun (_, _, ty, _) -> ty)
     let capsTy = if tys |> List.isEmpty then MTy.Unit else MTy.Tuple tys
 
     let capsRef, capsSerial, ctx = ctx |> ctxFreshVar "caps" capsTy loc
     let body = deconstructCaps capsRef caps body
 
-    let args = (capsSerial, capsTy, loc) :: args
+    let args = (capsSerial, 1, capsTy, loc) :: args
     args, body, ctx
 
 let declosureDeclLetFun callee args ty body loc ctx =

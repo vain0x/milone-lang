@@ -303,7 +303,7 @@ namespace rec MiloneLang
     | Default
       of MTy * 'a
     | Ref
-      of serial:int * MTy * 'a
+      of serial:int * arity:int * MTy * 'a
     | Variant
       of tySerial:int * serial:int * MTy * 'a
     | UniOp
@@ -355,7 +355,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MDecl<'a> =
     | LetFun
-      of callee:int * args:(int * MTy * 'a) list * caps:(int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
+      of callee:int * args:(int * int * MTy * 'a) list * caps:(int * int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
     | TyDef
       of int * TyDef * 'a
 

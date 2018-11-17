@@ -317,9 +317,9 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Ref (_, MTy.Unit, _) ->
+  | MExpr.Ref (_, _, MTy.Unit, _) ->
     genExprDefault ctx MTy.Unit
-  | MExpr.Ref (serial, _, _) ->
+  | MExpr.Ref (serial, _, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Variant (_, serial, ty, _) ->
     genExprVariant ctx serial ty
@@ -352,10 +352,10 @@ let genExprCallPrintfn ctx format args =
 
 let genExprCall ctx callee args ty =
   match callee, args with
-  | MExpr.Ref (serial, _, _), (MExpr.Lit (Lit.Str format, _)) :: args
+  | MExpr.Ref (serial, _, _, _), (MExpr.Lit (Lit.Str format, _)) :: args
     when serial = SerialPrintfn ->
     genExprCallPrintfn ctx format args
-  | MExpr.Ref (serial, _, _), args
+  | MExpr.Ref (serial, _, _, _), args
     when serial = SerialStrSlice ->
     let callee = CExpr.Ref "str_slice"
     let args, ctx = genExprList ctx args
@@ -511,7 +511,7 @@ let genDecls (ctx: Ctx) decls =
       match args with
       | [] ->
         List.rev acc, ctx
-      | (arg, ty, _) :: args ->
+      | (arg, _, ty, _) :: args ->
         let ident = ctxUniqueName ctx arg
         let cty, ctx = cty ctx ty
         go ((ident, cty) :: acc) ctx args

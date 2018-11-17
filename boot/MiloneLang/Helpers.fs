@@ -31,6 +31,17 @@ let stOptionMap f (x, ctx) =
   | None ->
     None, ctx
 
+/// Maps over a list, collecting things, mutating context.
+let exMap f (xs, acc, ctx) =
+  let rec go ys xs acc ctx =
+    match xs with
+    | [] ->
+      List.rev ys, acc, ctx
+    | x :: xs ->
+      let y, acc, ctx = f (x, acc, ctx)
+      go (y :: ys) xs acc ctx
+  go [] xs acc ctx
+
 let litTy (lit: Lit): Ty =
   match lit with
   | Lit.Bool _ -> Ty.Bool
@@ -169,7 +180,7 @@ let mexprExtract expr =
   match expr with
   | MExpr.Default (ty, loc) -> ty, loc
   | MExpr.Lit (lit, loc) -> litMTy lit, loc
-  | MExpr.Ref (_, ty, loc) -> ty, loc
+  | MExpr.Ref (_, _, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
   | MExpr.Op (_, _, _, ty, loc) -> ty, loc
