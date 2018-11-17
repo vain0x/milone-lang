@@ -32,6 +32,16 @@ let opStr op =
   | COp.Lt -> "<"
   | COp.Le -> "<="
 
+let cprintTyFunPtr name argTys resultTy acc =
+  let acc = cprintTy acc resultTy
+  let acc = acc *- "(*" *- name *- ")" *- "("
+  let rec go acc argTys =
+    (argTys, acc) |> join ", " (fun (argTy, acc) ->
+      cprintTy acc argTy
+    )
+  let acc = go acc argTys
+  acc *- ")"
+
 let rec cprintTy acc ty: string list =
   match ty with
   | CTy.Void ->
@@ -43,10 +53,20 @@ let rec cprintTy acc ty: string list =
   | CTy.Ptr ty ->
     let acc = cprintTy acc ty
     acc *- "*"
+  | CTy.FunPtr (argTys, resultTy) ->
+    cprintTyFunPtr "" argTys resultTy acc
   | CTy.Struct ident ->
     acc *- "struct " *- ident
   | CTy.Enum ident ->
     acc *- "enum " *- ident
+
+/// `T x` or `T (*x)(..)`
+let cprintTyWithName acc name ty =
+  match ty with
+  | CTy.FunPtr (argTys, resultTy) ->
+    cprintTyFunPtr name argTys resultTy acc
+  | _ ->
+    cprintTy acc ty *- " " *- name
 
 let rec cprintParams acc ps: string list =
   let rec go acc ps =
@@ -203,8 +223,7 @@ let cprintStmt acc indent stmt: string list =
     acc *- ";" *- eol
   | CStmt.Let (name, init, ty) ->
     let acc = acc *- indent
-    let acc = cprintTy acc ty
-    let acc = acc *- " " *- name
+    let acc = cprintTyWithName acc name ty
     let acc =
       match init with
       | Some init ->
@@ -219,8 +238,8 @@ let cprintStmt acc indent stmt: string list =
       | CTy.Ptr ty -> ty
       | _ -> failwithf "Expected pointer type but %A" valPtrTy
     let acc = acc *- indent
-    let acc = cprintTy acc varTy
-    let acc = acc *- " " *- name *- " = ("
+    let acc = cprintTyWithName acc name varTy
+    let acc = acc *- " = ("
     let acc = cprintTy acc varTy
     let acc = acc *- ")malloc(sizeof("
     let acc = cprintTy acc valTy
@@ -259,8 +278,8 @@ let cprintDecl acc decl =
           acc
         | (ident, ty) :: fields ->
           let acc = acc *- indent
-          let acc = cprintTy acc ty
-          let acc = acc *- " " *- ident *- ";" *- eol
+          let acc = cprintTyWithName acc ident ty
+          let acc = acc *- ";" *- eol
           go acc fields
       go acc fields
     let acc = acc *- "struct " *- ident *- " {" *- eol
@@ -289,8 +308,8 @@ let cprintDecl acc decl =
     let acc = acc *- "};" *- eol
     acc
   | CDecl.Fun (ident, args, resultTy, body) ->
-    let acc = cprintTy acc resultTy
-    let acc = acc *- " " *- ident *- "("
+    let acc = cprintTyWithName acc ident resultTy
+    let acc = acc *- "("
     let acc = cprintParams acc args
     let acc = acc *- ") {" *- eol
     let acc = cprintStmts acc "    " body

@@ -177,6 +177,7 @@ namespace rec MiloneLang
   type ValueIdent =
     | Var
     | Fun
+      of arity:int
     /// Variant of union with no argument.
     | Variant
       of tySerial:int
@@ -190,7 +191,7 @@ namespace rec MiloneLang
       of 'a
     /// Variable reference.
     | Ref
-      of ident:string * serial:int * Ty * 'a
+      of ident:string * serial:int * arity:int * Ty * 'a
     | List
       of Expr<'a> list * itemTy:Ty * 'a
     /// If-then-else. Else clause is `()` if omit.
@@ -302,7 +303,7 @@ namespace rec MiloneLang
     | Default
       of MTy * 'a
     | Ref
-      of serial:int * MTy * 'a
+      of serial:int * arity:int * MTy * 'a
     | Variant
       of tySerial:int * serial:int * MTy * 'a
     | UniOp
@@ -319,6 +320,11 @@ namespace rec MiloneLang
       of MExpr<'a>
     | Call
       of callee:MExpr<'a> * args:MExpr<'a> list
+    | App
+      of callee:MExpr<'a> * arg:MExpr<'a>
+    /// Creates a function object, packing environment.
+    | Fun
+      of subFunSerial:int * envSerial:int
     | Box
       of MExpr<'a>
     | Cons
@@ -354,7 +360,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MDecl<'a> =
     | LetFun
-      of callee:int * args:(int * MTy * 'a) list * caps:(int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
+      of callee:int * args:(int * int * MTy * 'a) list * caps:(int * int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
     | TyDef
       of int * TyDef * 'a
 
@@ -366,6 +372,8 @@ namespace rec MiloneLang
     | Char
     | Ptr
       of CTy
+    | FunPtr
+      of CTy list * CTy
     | Struct
       of ident:string
     | Enum

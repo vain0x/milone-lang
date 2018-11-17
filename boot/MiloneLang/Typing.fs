@@ -209,6 +209,11 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       failwithf "Couldn't unify %A %A" lty rty
   go lty rty ctx
 
+let valueIdentArity v =
+  match v with
+  | ValueIdent.Fun arity -> arity
+  | _ -> 1
+
 let inferPatRef (ctx: TyCtx) ident loc ty =
   let serial, ty, ctx =
     match ctx.VarEnv |> Map.tryFind ident with
@@ -279,26 +284,26 @@ let inferPat ctx pat ty =
 
 let inferRef (ctx: TyCtx) ident loc ty =
   match ctx.VarEnv |> Map.tryFind ident, ident with
-  | Some (_, refTy, serial), _ ->
+  | Some (valueIdent, refTy, serial), _ ->
     let ctx = unifyTy ctx refTy ty
-    Expr.Ref (ident, serial, ty, loc), ctx
+    Expr.Ref (ident, serial, valueIdentArity valueIdent, ty, loc), ctx
   | None, "not" ->
     let ctx = unifyTy ctx (Ty.Fun (Ty.Bool, Ty.Bool)) ty
-    Expr.Ref (ident, SerialNot, ty, loc), ctx
+    Expr.Ref (ident, SerialNot, 1, ty, loc), ctx
   | None, "exit" ->
     let funTy = Ty.Fun (Ty.Int, ty)
-    Expr.Ref (ident, SerialExit, funTy, loc), ctx
+    Expr.Ref (ident, SerialExit, 1, funTy, loc), ctx
   | None, "box" ->
     let argTy, _, ctx = ctxFreshTyVar "box" ctx
     let ctx = unifyTy ctx (Ty.Fun (argTy, Ty.Obj)) ty
-    Expr.Ref (ident, SerialBox, ty, loc), ctx
+    Expr.Ref (ident, SerialBox, 1, ty, loc), ctx
   | None, "unbox" ->
     let resultTy, _, ctx = ctxFreshTyVar "unbox" ctx
     let ctx = unifyTy ctx (Ty.Fun (Ty.Obj, resultTy)) ty
-    Expr.Ref (ident, SerialUnbox, ty, loc), ctx
+    Expr.Ref (ident, SerialUnbox, 1, ty, loc), ctx
   | None, "printfn" ->
     // The function's type is unified in app expression inference.
-    Expr.Ref (ident, SerialPrintfn, ty, loc), ctx
+    Expr.Ref (ident, SerialPrintfn, 9999, ty, loc), ctx
   | None, _ ->
     failwithf "Couldn't resolve var %s" ident
 
@@ -343,7 +348,7 @@ let inferNav ctx sub mes loc resultTy =
   match substTy ctx subTy, mes with
   | Ty.Str, "Length" ->
     let ctx = unifyTy ctx resultTy Ty.Int
-    let funExpr = Expr.Ref (mes, SerialStrLength, Ty.Fun (Ty.Str, Ty.Int), loc)
+    let funExpr = Expr.Ref (mes, SerialStrLength, 1, Ty.Fun (Ty.Str, Ty.Int), loc)
     Expr.Op (Op.App, funExpr, sub, Ty.Int, loc), ctx
   | _ ->
     failwithf "Unknown nav %A" (sub, mes, loc)
@@ -366,11 +371,13 @@ let inferIndex ctx l r loc resultTy =
   | subTy, indexTy ->
     failwithf "Type: Index not supported %A" (subTy, indexTy, l, r)
 
-let inferOpAppPrintfn ctx arg calleeTy =
+let inferOpAppPrintfn ctx ident serial arg calleeTy loc =
   match arg with
   | Expr.Lit (Lit.Str format, _) ->
     let funTy = analyzeFormat format
-    unifyTy ctx calleeTy funTy
+    let arity = arityTy funTy
+    let ctx = unifyTy ctx calleeTy funTy
+    Expr.Ref (ident, serial, arity, calleeTy, loc), ctx
   | _ ->
     failwith """First arg of printfn must be string literal, ".."."""
 
@@ -378,12 +385,12 @@ let inferOpApp ctx callee arg loc appTy =
   let argTy, _, ctx = ctxFreshTyVar "arg" ctx
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (Ty.Fun (argTy, appTy))
-  let ctx =
+  let callee, ctx =
     match callee with
-    | Expr.Ref (_, serial, calleeTy, _) when serial = SerialPrintfn ->
-      inferOpAppPrintfn ctx arg calleeTy
+    | Expr.Ref (ident, serial, _, calleeTy, loc) when serial = SerialPrintfn ->
+      inferOpAppPrintfn ctx ident serial arg calleeTy loc
     | _ ->
-      ctx
+      callee, ctx
   Expr.Op (Op.App, callee, arg, appTy, loc), ctx
 
 let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
@@ -499,11 +506,12 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
 
   match calleePat with
   | Pat.Ref (callee, _, _, calleeLoc) ->
+    let arity = List.length argPats
     let funTy, _, ctx =
       if callee = "main"
       then Ty.Fun (Ty.Unit, Ty.Int), "", ctx
       else ctxFreshTyVar "fun" ctx
-    let serial, ctx = ctxFreshVar ctx callee ValueIdent.Fun funTy calleeLoc
+    let serial, ctx = ctxFreshVar ctx callee (ValueIdent.Fun arity) funTy calleeLoc
 
     // FIXME: local functions are recursive by default
     let bodyCtx = ctx
@@ -564,7 +572,7 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     expr, unifyTy ctx (litTy lit) ty
   | Expr.Unit _ ->
     expr, unifyTy ctx ty Ty.Unit
-  | Expr.Ref (ident, _, _, loc) ->
+  | Expr.Ref (ident, _, _, _, loc) ->
     inferRef ctx ident loc ty
   | Expr.List (items, _, loc) ->
     inferList ctx items loc ty

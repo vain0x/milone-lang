@@ -31,6 +31,17 @@ let stOptionMap f (x, ctx) =
   | None ->
     None, ctx
 
+/// Maps over a list, collecting things, mutating context.
+let exMap f (xs, acc, ctx) =
+  let rec go ys xs acc ctx =
+    match xs with
+    | [] ->
+      List.rev ys, acc, ctx
+    | x :: xs ->
+      let y, acc, ctx = f (x, acc, ctx)
+      go (y :: ys) xs acc ctx
+  go [] xs acc ctx
+
 let litTy (lit: Lit): Ty =
   match lit with
   | Lit.Bool _ -> Ty.Bool
@@ -91,7 +102,7 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     litTy lit, a
   | Expr.Unit a ->
     Ty.Unit, a
-  | Expr.Ref (_, _, ty, a) ->
+  | Expr.Ref (_, _, _, ty, a) ->
     ty, a
   | Expr.List (_, itemTy, a) ->
     Ty.List itemTy, a
@@ -125,8 +136,8 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Lit (lit, g a)
     | Expr.Unit a ->
       Expr.Unit (g a)
-    | Expr.Ref (ident, serial, ty, a) ->
-      Expr.Ref (ident, serial, f ty, g a)
+    | Expr.Ref (ident, serial, arity, ty, a) ->
+      Expr.Ref (ident, serial, arity, f ty, g a)
     | Expr.List (items, itemTy, a) ->
       Expr.List (List.map go items, f itemTy, g a)
     | Expr.If (pred, thenCl, elseCl, ty, a) ->
@@ -158,11 +169,18 @@ let exprTy expr =
   let ty, _ = exprExtract expr
   ty
 
+let exprArity expr =
+  match expr with
+  | Expr.Ref (_, _, arity, _, _) ->
+    arity
+  | _ ->
+    1
+
 let mexprExtract expr =
   match expr with
   | MExpr.Default (ty, loc) -> ty, loc
   | MExpr.Lit (lit, loc) -> litMTy lit, loc
-  | MExpr.Ref (_, ty, loc) -> ty, loc
+  | MExpr.Ref (_, _, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
   | MExpr.Op (_, _, _, ty, loc) -> ty, loc
@@ -180,6 +198,8 @@ let opIsComparison op =
     true
   | _ ->
     false
+
+let noArity = 0
 
 /// Placeholder. No variable serials in the parsing phase.
 let noSerial = 0
@@ -237,3 +257,10 @@ let analyzeFormat (format: string) =
       else
         go (i + 1)
   Ty.Fun (Ty.Str, go 0)
+
+let rec arityTy ty =
+  match ty with
+  | Ty.Fun (_, ty) ->
+    1 + arityTy ty
+  | _ ->
+    0

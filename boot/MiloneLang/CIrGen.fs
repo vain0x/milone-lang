@@ -69,6 +69,22 @@ let ctxAddStmt (ctx: Ctx) stmt =
 let ctxAddDecl (ctx: Ctx) decl =
   { ctx with Decls = decl :: ctx.Decls }
 
+let ctxAddFunDecl (ctx: Ctx) sTy tTy =
+  let funTy = MTy.Fun (sTy, tTy)
+  let ident, ctx = ctxUniqueTyName ctx funTy
+  let selfTy = CTy.Struct ident
+  let envTy = CTy.Ptr CTy.Void
+  let sTy, ctx = cty ctx sTy
+  let tTy, ctx = cty ctx tTy
+  let fields = ["fun", CTy.FunPtr ([envTy; sTy], tTy); "env", envTy]
+  let ctx: Ctx =
+    { ctx with
+        TySerial = ctx.TySerial + 1
+        TyEnv = ctx.TyEnv |> Map.add funTy selfTy
+        Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
+    }
+  selfTy, ctx
+
 let ctxAddListDecl (ctx: Ctx) itemTy =
   let listTy = MTy.List itemTy
   let itemTy, ctx = cty ctx itemTy
@@ -179,9 +195,14 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
     CTy.Char, ctx
   | MTy.Str ->
     CTy.Struct "String", ctx
-  | MTy.Obj
-  | MTy.Fun _ ->
+  | MTy.Obj ->
     CTy.Ptr CTy.Void, ctx
+  | MTy.Fun (sTy, tTy) ->
+    match ctx.TyEnv |> Map.tryFind ty with
+    | None ->
+      ctxAddFunDecl ctx sTy tTy
+    | Some ty ->
+      ty, ctx
   | MTy.List itemTy ->
     match ctx.TyEnv |> Map.tryFind ty with
     | None ->
@@ -317,9 +338,9 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Ref (_, MTy.Unit, _) ->
+  | MExpr.Ref (_, _, MTy.Unit, _) ->
     genExprDefault ctx MTy.Unit
-  | MExpr.Ref (serial, _, _) ->
+  | MExpr.Ref (serial, _, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Variant (_, serial, ty, _) ->
     genExprVariant ctx serial ty
@@ -352,10 +373,10 @@ let genExprCallPrintfn ctx format args =
 
 let genExprCall ctx callee args ty =
   match callee, args with
-  | MExpr.Ref (serial, _, _), (MExpr.Lit (Lit.Str format, _)) :: args
+  | MExpr.Ref (serial, _, _, _), (MExpr.Lit (Lit.Str format, _)) :: args
     when serial = SerialPrintfn ->
     genExprCallPrintfn ctx format args
-  | MExpr.Ref (serial, _, _), args
+  | MExpr.Ref (serial, _, _, _), args
     when serial = SerialStrSlice ->
     let callee = CExpr.Ref "str_slice"
     let args, ctx = genExprList ctx args
@@ -365,10 +386,28 @@ let genExprCall ctx callee args ty =
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
 
+let genExprApp ctx callee arg =
+  let callee, ctx = genExpr ctx callee
+  let arg, ctx = genExpr ctx arg
+  let funPtr = CExpr.Nav (callee, "fun")
+  let envArg = CExpr.Nav (callee, "env")
+  CExpr.Call (funPtr, [envArg; arg]), ctx
+
 let genInitExprCore ctx serial expr ty =
   let ident = ctxUniqueName ctx serial
   let cty, ctx = cty ctx ty
   ctxAddStmt ctx (CStmt.Let (ident, expr, cty))
+
+let genInitFun ctx serial funSerial envSerial ty =
+  let ident = ctxUniqueName ctx serial
+  let ty, ctx = cty ctx ty
+  let fields =
+    [
+      "fun", CExpr.Ref (ctxUniqueName ctx funSerial)
+      "env", CExpr.Ref (ctxUniqueName ctx envSerial)
+    ]
+  let initExpr = CExpr.Init (fields, ty)
+  ctxAddStmt ctx (CStmt.Let (ident, Some initExpr, ty))
 
 let genInitBox ctx serial arg =
   let argTy, ctx = cty ctx (mexprTy arg)
@@ -440,6 +479,11 @@ let genStmtLetVal ctx serial init ty =
   | MInit.Call (callee, args) ->
     let expr, ctx = genExprCall ctx callee args ty
     genInitExprCore ctx serial (Some expr) ty
+  | MInit.App (callee, arg) ->
+    let expr, ctx = genExprApp ctx callee arg
+    genInitExprCore ctx serial (Some expr) ty
+  | MInit.Fun (funSerial, envSerial) ->
+    genInitFun ctx serial funSerial envSerial ty
   | MInit.Box arg ->
     genInitBox ctx serial arg
   | MInit.Cons (head, tail, itemTy) ->
@@ -511,7 +555,7 @@ let genDecls (ctx: Ctx) decls =
       match args with
       | [] ->
         List.rev acc, ctx
-      | (arg, ty, _) :: args ->
+      | (arg, _, ty, _) :: args ->
         let ident = ctxUniqueName ctx arg
         let cty, ctx = cty ctx ty
         go ((ident, cty) :: acc) ctx args

@@ -55,7 +55,7 @@ let exprStr value =
   Expr.Lit (Lit.Str value, ())
 
 let exprRef ident =
-  Expr.Ref (ident, noSerial, noTy, ())
+  Expr.Ref (ident, noArity, noSerial, noTy, ())
 
 let exprList items =
   Expr.List (items, noTy, ())
@@ -130,7 +130,7 @@ let parseSimpleExprs () =
       "\"Hello, world!\"",
         exprStr "Hello, world!"
       "printfn",
-        Expr.Ref ("printfn", noSerial, noTy, ())
+        exprRef "printfn"
       "x",
         exprRef "x"
       "f 1",
@@ -257,10 +257,10 @@ let parseSemicolonInLineOne () =
       exprLetMain (
         exprAndThen [
           exprCall
-            (Expr.Ref ("printfn", noSerial, noTy, ()))
+            (exprRef "printfn")
             [exprStr "Hello, "]
           exprCall
-            (Expr.Ref ("printfn", noSerial, noTy, ()))
+            (exprRef "printfn")
             [exprStr "World!"]
           exprInt 0
         ])
