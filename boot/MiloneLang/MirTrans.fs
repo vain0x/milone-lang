@@ -82,6 +82,26 @@ let ctxCaps (ctx: MirTransCtx) =
         None
     )
 
+// ## Declosure: Lambda conversion
+// Performs closure conversion to make all functions be context-free.
+//
+// Function definitions may use out-side local variables.
+// We call these variables *variables captured by the function* .
+//
+// In this stage, we calculate captured variables
+// by listing all variable references occurred in function bodies
+// and local variables defined in function bodies.
+// See `ctxCaps`.
+//
+// Capturing function definitions are converted to have an additional arg
+// to receive captured variables.
+//
+// Calls to functions are converted to pass an additional arg --
+// a tuple that consists of the captured variables.
+//
+// NOTE: Not supporting partial application and function objects,
+// i.e., functions must be used in call expression with full args for now.
+
 let declosureExprRef serial (expr, ctx) =
   let ctx = ctx |> ctxAddRef serial
   expr, ctx
@@ -133,7 +153,7 @@ let declosureInit (init, ctx) =
 let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
   let result =
     match init with
-    | MInit.Call (MExpr.Ref (callee, _, _, _) as refExpr, args) ->
+    | MInit.Call (MExpr.Ref (callee, arity, refTy, refLoc), args) ->
       match ctx.Caps |> Map.tryFind callee with
       | Some (_ :: _ as caps) ->
         let buildCapsTuple caps loc ctx =
@@ -141,11 +161,12 @@ let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
           let items = caps |> List.map MExpr.Ref
           let capsRef, capsSerial, ctx = ctx |> ctxFreshVar "caps" tupleTy loc
           let letCaps = MStmt.LetVal (capsSerial, MInit.Tuple items, tupleTy, loc)
-          capsRef, letCaps, ctx
+          capsRef, tupleTy, letCaps, ctx
 
         // Add caps arg.
-        let capsRef, letCaps, ctx = buildCapsTuple caps loc ctx
+        let capsRef, capsTy, letCaps, ctx = buildCapsTuple caps loc ctx
         let args = capsRef :: args
+        let refExpr = MExpr.Ref (callee, arity + 1, MTy.Fun (capsTy, refTy), refLoc)
         let acc = letCaps :: acc
 
         let ctx = ctx |> ctxAddLocal serial
@@ -251,24 +272,6 @@ let declosureDecl (decl, ctx) =
   | MDecl.LetFun (callee, args, _, ty, body, loc) ->
     declosureDeclLetFun callee args ty body loc ctx
 
-/// Performs closure conversion to make all functions be context-free.
-///
-/// Function definitions may use out-side local variables.
-/// We call these variables *variables captured by the function* .
-///
-/// In this stage, we calculate captured variables
-/// by listing all variable references occurred in function bodies
-/// and local variables defined in function bodies.
-/// See `ctxCaps`.
-///
-/// Capturing function definitions are converted to have an additional arg
-/// to receive captured variables.
-///
-/// Calls to functions are converted to pass an additional arg --
-/// a tuple that consists of the captured variables.
-///
-/// NOTE: Not supporting partial application and function objects,
-/// i.e., functions must be used in call expression with full args for now.
 let declosure (decls, ctx: MirTransCtx) =
   (decls, ctx) |> stMap declosureDecl
 
