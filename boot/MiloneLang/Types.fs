@@ -320,6 +320,11 @@ namespace rec MiloneLang
       of MExpr<'a>
     | Call
       of callee:MExpr<'a> * args:MExpr<'a> list
+    | App
+      of callee:MExpr<'a> * arg:MExpr<'a>
+    /// Creates a function object, packing environment.
+    | Fun
+      of subFunSerial:int * envSerial:int
     | Box
       of MExpr<'a>
     | Cons
@@ -367,6 +372,8 @@ namespace rec MiloneLang
     | Char
     | Ptr
       of CTy
+    | FunPtr
+      of CTy list * CTy
     | Struct
       of ident:string
     | Enum

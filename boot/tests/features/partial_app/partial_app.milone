@@ -1,0 +1,7 @@
+let twice f (x : int) = f (f x) : int
+
+let dec (y : int) x = x - y
+
+let main _ =
+  let dec3 = dec 3
+  twice dec3 8 - 2 //=> 0
