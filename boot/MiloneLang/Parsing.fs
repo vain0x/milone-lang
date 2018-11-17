@@ -423,14 +423,10 @@ let parseCall boxX tokens =
   let rec go acc tokens =
     if nextInside insideX tokens && leadsExpr tokens then
       let expr, tokens = parseIndex insideX tokens
-      go (expr :: acc) tokens
+      go (Expr.Op (Op.App, acc, expr, noTy, calleeLoc)) tokens
     else
-      List.rev acc, tokens
-  match go [] tokens with
-  | [], tokens ->
-    callee, tokens
-  | args, tokens ->
-    Expr.Call (callee, args, noTy, calleeLoc), tokens
+      acc, tokens
+  go callee tokens
 
 let parseNextLevelOp level outer tokens =
   match level with
