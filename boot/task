@@ -22,7 +22,7 @@ compile() {
 
     mkdir -p tmp
     cat $m | dotnet run -p MiloneLang -- "$2" - >$c
-    gcc -std=c11 -Wall -Wno-unused-variable -Wno-unused-but-set-variable $c -o $app
+    gcc -std=c11 -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label $c -o $app
 }
 
 # Runs a milone code
