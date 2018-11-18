@@ -273,7 +273,6 @@ namespace rec MiloneLang
     | ListIsEmpty
     | ListHead
     | ListTail
-    | Exit
 
   /// Binary operator in middle IR.
   /// Or primitive function with two parameters.
@@ -355,6 +354,8 @@ namespace rec MiloneLang
       of string * 'a
     | GotoUnless
       of MExpr<'a> * string * 'a
+    | Exit
+      of MExpr<'a> * 'a
 
   /// Declaration in middle IR.
   [<RequireQualifiedAccess>]

@@ -215,6 +215,9 @@ let declosureStmt (stmt, acc, ctx) =
   | MStmt.GotoUnless (pred, label, loc) ->
     let pred, ctx = (pred, ctx) |> declosureExpr
     MStmt.GotoUnless (pred, label, loc) :: acc, ctx
+  | MStmt.Exit (arg, loc) ->
+    let arg, ctx = (arg, ctx) |> declosureExpr
+    MStmt.Exit (arg, loc) :: acc, ctx
 
 let declosureDeclTyDef decl tyDef ctx =
   match tyDef with
@@ -458,6 +461,8 @@ let unetaStmt (stmt, acc, ctx) =
     stmt :: acc, ctx
   | MStmt.GotoUnless (pred, label, loc) ->
     MStmt.GotoUnless (pred, label, loc) :: acc, ctx
+  | MStmt.Exit (arg, loc) ->
+    MStmt.Exit (arg, loc) :: acc, ctx
 
 let unetaDeclTyDef decl tyDef ctx =
   match tyDef with

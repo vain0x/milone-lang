@@ -296,8 +296,6 @@ let genExprUniOp ctx op arg ty _ =
     CExpr.Arrow (arg, "head"), ctx
   | MUniOp.ListTail ->
     CExpr.Arrow (arg, "tail"), ctx
-  | MUniOp.Exit ->
-    CExpr.Call (CExpr.Ref "exit", [arg]), ctx
 
 let genExprOp ctx op l r =
   match op with
@@ -524,6 +522,9 @@ let genStmt ctx stmt =
   | MStmt.GotoUnless (pred, label, _) ->
     let pred, ctx = genExpr ctx pred
     ctxAddStmt ctx (CStmt.GotoUnless (pred, label))
+  | MStmt.Exit (arg, _) ->
+    let arg, ctx = genExpr ctx arg
+    ctxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))
 
 let genBlock (ctx: Ctx) (stmts: MStmt<_> list) =
   let bodyCtx = genStmts (ctxNewBlock ctx) stmts

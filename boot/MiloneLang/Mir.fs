@@ -321,12 +321,6 @@ let mirifyExprIf ctx pred thenCl elseCl ty loc =
 
   temp, ctx
 
-/// exit(1);
-let mstmtExit1 (ty: MTy) loc =
-  let one = MExpr.Lit (Lit.Int 1, loc)
-  let callExpr = MExpr.UniOp (MUniOp.Exit, one, ty, loc)
-  MStmt.Do (callExpr, loc)
-
 let mirifyExprMatch ctx target arms ty loc =
   let ty = unboxTy ty
   let temp, tempSet, ctx = ctxLetFreshVar ctx "match" ty loc
@@ -348,7 +342,7 @@ let mirifyExprMatch ctx target arms ty loc =
       // Exhaust case (unless covered).
       if allCovered
       then ctx
-      else ctxAddStmt ctx (mstmtExit1 ty loc)
+      else ctxAddStmt ctx (MStmt.Exit (MExpr.Lit (Lit.Int 1, loc), loc))
   let ctx = go false ctx arms
 
   // End of match.
@@ -380,8 +374,7 @@ let mirifyExprIndex ctx l r _ loc =
 
 let mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  let opExpr = MExpr.UniOp (MUniOp.Exit, arg, unboxTy ty, loc)
-  let ctx = ctxAddStmt ctx (MStmt.Do (opExpr, loc))
+  let ctx = ctxAddStmt ctx (MStmt.Exit (arg, loc))
   MExpr.Default (unboxTy ty, loc), ctx
 
 let mirifyExprCallBox ctx arg _ loc =
