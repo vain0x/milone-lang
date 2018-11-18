@@ -2,24 +2,44 @@ module MiloneLang.Program
 
   open System
 
-  let toAst (source: string): Expr<Loc> list =
+  type Verbosity =
+    | Verbose
+    | Silent
+
+  let toCir verbosity (source: string): CDecl list =
+    let log label obj =
+      match verbosity with
+      | Verbosity.Verbose ->
+        eprintfn "%s = %A" label obj
+      | Verbosity.Silent ->
+        ()
+
     let tokens = Lexing.tokenize source
-    eprintfn "tokens = %A" tokens
+    log "tokens" tokens
     let ast = Parsing.parse tokens
-    eprintfn "ast = %A" ast
-    ast
+    log "ast" ast
+    let typedAst, tyCtx = Typing.infer ast
+    log "typed" typedAst
+    let mir, mirCtx = Mir.mirify (typedAst, tyCtx)
+    log "mir" mir
+    let mir, mirTransCtx = MirTrans.trans (mir, mirCtx)
+    log "trans" mir
+    let cir = CIrGen.gen (mir, mirTransCtx)
+    log "cir" cir
+    cir
 
-  let toCir (source: string): CDecl list =
-    source |> toAst |> Typing.infer |> Mir.mirify |> MirTrans.trans |> CIrGen.gen
-
-  let transpile (source: string): string =
-    source |> toCir |> CPrinting.cprint
+  let compile verbosity (source: string): string =
+    source |> toCir verbosity |> CPrinting.cprint
 
   [<EntryPoint>]
   let main args =
     match List.ofArray args with
-    | ["-t"; "c"] ->
-      stdout.Write(stdin.ReadToEnd() |> transpile)
+    | ["-v"; "-"] ->
+      stdout.Write(stdin.ReadToEnd() |> compile Verbosity.Verbose)
+      0
+    | ["-q"; "-"] ->
+      stdout.Write(stdin.ReadToEnd() |> compile Verbosity.Silent)
       0
     | _ ->
+      eprintfn "USAGE: `milone -v -` or `milone -`"
       1

@@ -3,6 +3,7 @@ module MiloneLang.CPrintingTests
 open System
 open System.IO
 open MiloneLang.Assets
+open MiloneLang.Program
 open Xunit
 
 let testFile category case =
@@ -12,7 +13,7 @@ let testFile category case =
         IO.Path.Combine(testsDir.Value, category, case, case + ".milone")
       ) |> Async.AwaitTask
     let content =
-      let cir = Program.toCir source
+      let cir = toCir Verbosity.Silent source
       CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
     do!
       IO.File.WriteAllTextAsync(

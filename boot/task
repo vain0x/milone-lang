@@ -13,16 +13,16 @@ locate() {
 
 # Converts milone code to C code and compiles it with GCC.
 # Sample:
-#   compile hello
+#   compile hello -v
+#   compile hello -q
 compile() {
     m="$(locate $1)/$1.milone"
     c="$(locate $1)/~$1.c"
     app="$(locate $1)/~$1"
 
     mkdir -p tmp
-    cat $m | dotnet run -p MiloneLang -- -t c >$c
+    cat $m | dotnet run -p MiloneLang -- "$2" - >$c
     gcc -std=c11 -Wall -Wno-unused-variable -Wno-unused-but-set-variable $c -o $app
-    >&2 echo $app
 }
 
 # Runs a milone code
@@ -40,7 +40,7 @@ integ() {
     expected="$(locate $name)/$name.out"
 
     >&2 echo -n "$name ... "
-    compile "$name" 2>/dev/null
+    compile "$name" -q
 
     set +e
     $app >$out
@@ -82,7 +82,7 @@ then
 elif [[ "$1" = inspect ]]
 then
     shift
-    compile "$@"
+    compile "$@" -v
     code "$(locate $1)/~$1.c"
 elif [[ "$1" = locate ]]
 then
