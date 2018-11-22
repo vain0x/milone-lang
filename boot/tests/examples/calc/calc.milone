@@ -165,8 +165,8 @@ let rec tokenListPrint tokens =
 let evalExpr tokens =
   let evalTerm tokens =
     match tokens with
-    | TkInt n :: tokens1 ->
-      n, tokens1
+    | TkInt n :: tokens ->
+      n, tokens
     | _ ->
       printfn "expected an int"
       exit 1
@@ -174,9 +174,9 @@ let evalExpr tokens =
   let evalMul tokens =
     let rec go acc tokens =
       match tokens with
-      | TkOp '*' :: tokens1 ->
-        let r, tokens1 = evalTerm tokens1
-        go (acc * r) tokens1
+      | TkOp '*' :: tokens ->
+        let r, tokens = evalTerm tokens
+        go (acc * r) tokens
       | _ ->
         acc, tokens
     let l, tokens = evalTerm tokens
@@ -185,12 +185,12 @@ let evalExpr tokens =
   let evalAdd tokens =
     let rec go acc tokens =
       match tokens with
-      | TkOp '+' :: tokens1 ->
-        let r, tokens1 = evalMul tokens1
-        go (acc + r) tokens1
-      | TkOp '-' :: tokens2 ->
-        let r, tokens2 = evalMul tokens2
-        go (acc - r) tokens2
+      | TkOp '+' :: tokens ->
+        let r, tokens = evalMul tokens
+        go (acc + r) tokens
+      | TkOp '-' :: tokens ->
+        let r, tokens = evalMul tokens
+        go (acc - r) tokens
       | _ ->
         acc, tokens
     let l, tokens = evalMul tokens
