@@ -1,1 +1,4 @@
 * text=auto
+
+*.milone    linguist-language=fsharp
+*.c         linguist-detectable=false
