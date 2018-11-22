@@ -1,0 +1,6 @@
+int 2
+op +
+int 3
+op *
+int 4
+$? = 0

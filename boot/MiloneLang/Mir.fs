@@ -652,6 +652,7 @@ let mirifyExprs ctx exprs =
 let mirify (exprs: Expr<Loc> list, tyCtx: TyCtx): MDecl<_> list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
   let _exprs, ctx = mirifyExprs ctx exprs
+  // NOTE: This will fail when you write top-level value expression.
   assert (List.isEmpty ctx.Stmts)
   let decls = List.rev ctx.Decls
   decls, ctx

@@ -1,0 +1,177 @@
+// Arithmetic expression evaluator.
+
+type Token =
+  | TkInt
+    of int
+  | TkOp
+    of char
+
+let assert ok =
+  if not ok then
+    printfn "Assertion failed."
+    exit 1
+
+let charEq (l: char) (r: char) =
+  l = r
+
+let charBetween (l: char) (r: char) (c: char) =
+  l <= c && c <= r
+
+let strContains (c: char) (s: string) =
+  let rec go i =
+    i < s.Length && (s.[i] = c || go (i + 1))
+  go 0
+
+let strStartsWith (prefix: string) (s: string) =
+  let rec go i = i >= prefix.Length || (s.[i] = prefix.[i] && go (i + 1))
+  s.Length >= prefix.Length && go 0
+
+let strConcat (xs: string list) =
+  let rec go  (xs: string list) =
+    match xs with
+    | [] -> ""
+    | x :: xs -> x + go xs
+  go xs
+
+let strListRev (xs: string list) =
+  let rec go acc (xs: string list) =
+    match xs with
+    | [] ->
+      acc
+    | x :: xs ->
+      go (x :: acc) xs
+  go [] xs
+
+let digitToString n =
+  match n with
+  | 0 -> "0"
+  | 1 -> "1"
+  | 2 -> "2"
+  | 3 -> "3"
+  | 4 -> "4"
+  | 5 -> "5"
+  | 6 -> "6"
+  | 7 -> "7"
+  | 8 -> "8"
+  | 9 -> "9"
+  | _ -> exit 1
+
+let digitToInt c =
+  match c with
+  | '0' -> 0
+  | '1' -> 1
+  | '2' -> 2
+  | '3' -> 3
+  | '4' -> 4
+  | '5' -> 5
+  | '6' -> 6
+  | '7' -> 7
+  | '8' -> 8
+  | '9' -> 9
+  | _ -> exit 1
+
+let intToString (value: int): string =
+  let rec go acc n =
+    if n <= 0 then
+      acc
+    else
+      go (digitToString (n % 10) + acc) (n / 10)
+  if value = 0 then
+    "0"
+  else
+    go "" value
+
+let private intParseCore (source: string) (l: int) (r: int) =
+  let rec go (acc: int) (i: int) =
+    if i >= r then
+      acc
+    else
+      go (acc * 10 + digitToInt source.[i]) (i + 1)
+  go 0 l
+
+let private intParse (source: string) =
+  intParseCore source 0 source.Length
+
+let tokenListRev (xs: Token list) =
+  let rec go acc (xs: Token list) =
+    match xs with
+    | [] ->
+      acc
+    | x :: xs ->
+      go (x :: acc) xs
+  go [] xs
+
+let isDigit () c =
+  charBetween '0' '9' c
+
+let takeWhile (pred: char -> bool) (source: string, i: int) =
+  let rec go (r: int) =
+    if r < source.Length && pred source.[r] then
+      go (r + 1)
+    else
+      r
+  go i
+
+let private readSpace (source: string) (acc: Token list, i: int) =
+  assert (source.[i] = ' ')
+  let r = takeWhile (charEq ' ') (source, i + 1)
+  acc, r
+
+let private readEol (source: string) (acc: Token list, i: int) =
+  assert (source.[i] = '\r' || source.[i] = '\n')
+  let r =
+    if i + 1 < source.Length && source.[i] = '\r' && source.[i + 1] = '\n'
+    then i + 2
+    else i + 1
+  acc, r
+
+let private readInt (source: string) (acc: Token list, i: int) =
+  assert (isDigit () source.[i])
+  let r = takeWhile (isDigit ()) (source, i)
+  let n = intParseCore source i r
+  TkInt n :: acc, r
+
+let tokenize (source: string): Token list =
+  let at (i: int) =
+    if i < source.Length then source.[i] else '\u0000'
+  let rec go (acc, i) =
+    if i >= source.Length then
+      acc |> tokenListRev
+    else
+      match source.[i] with
+      | ' ' ->
+        (acc, i) |> readSpace source |> go
+      | '\r' ->
+        (acc,i) |> readEol source |> go
+      | '\n' ->
+        (acc, i) |> readEol source |> go
+      | c ->
+        if isDigit () c then
+          (acc, i) |> readInt source |> go
+        else
+          (TkOp c :: acc, i + 1) |> go
+  go ([], 0)
+
+let rec tokenListPrint tokens =
+  match tokens with
+  | [] -> ()
+  | TkInt n :: tokens ->
+    printfn "int %d" n
+    tokenListPrint tokens
+  | TkOp c :: tokens ->
+    printfn "op %c" c
+    tokenListPrint tokens
+
+let main _ =
+  assert (strContains '+' "+-*/")
+  assert (strStartsWith "hell" "hello")
+  assert (strStartsWith "heaven" "hello" |> not)
+  assert (strConcat ["a"; ","; "b"] = "a,b")
+  assert ((["a"; ","; "b"] |> strListRev |> strConcat) = "b,a")
+  assert (intToString 1024 = "1024")
+  assert (intParse "1024" = 1024)
+
+  let source = "2 + 3\r\n    * 4"
+  source |> tokenize |> tokenListPrint
+
+  0
