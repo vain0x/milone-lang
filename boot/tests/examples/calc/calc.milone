@@ -162,6 +162,51 @@ let rec tokenListPrint tokens =
     printfn "op %c" c
     tokenListPrint tokens
 
+let evalExpr tokens =
+  let evalTerm tokens =
+    match tokens with
+    | TkInt n :: tokens1 ->
+      n, tokens1
+    | _ ->
+      printfn "expected an int"
+      exit 1
+
+  let evalMul tokens =
+    let rec go acc tokens =
+      match tokens with
+      | TkOp '*' :: tokens1 ->
+        let r, tokens1 = evalTerm tokens1
+        go (acc * r) tokens1
+      | _ ->
+        acc, tokens
+    let l, tokens = evalTerm tokens
+    go l tokens
+
+  let evalAdd tokens =
+    let rec go acc tokens =
+      match tokens with
+      | TkOp '+' :: tokens1 ->
+        let r, tokens1 = evalMul tokens1
+        go (acc + r) tokens1
+      | TkOp '-' :: tokens2 ->
+        let r, tokens2 = evalMul tokens2
+        go (acc - r) tokens2
+      | _ ->
+        acc, tokens
+    let l, tokens = evalMul tokens
+    go l tokens
+
+  evalAdd tokens
+
+let eval str =
+  match str |> tokenize |> evalExpr with
+  | value, [] ->
+    value
+  | _, tokens ->
+    printfn "ERROR: couldn't parse tokens:"
+    tokenListPrint tokens
+    exit 1
+
 let main _ =
   assert (strContains '+' "+-*/")
   assert (strStartsWith "hell" "hello")
@@ -171,7 +216,10 @@ let main _ =
   assert (intToString 1024 = "1024")
   assert (intParse "1024" = 1024)
 
-  let source = "2 + 3\r\n    * 4"
+  let source = "2 + 3\r\n    - 4"
   source |> tokenize |> tokenListPrint
+
+  assert (eval source = 2 + 3 - 4)
+  assert (eval "2 - 3 * 4 + 5" = 2 - 3 * 4 + 5)
 
   0

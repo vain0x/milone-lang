@@ -422,8 +422,8 @@ struct CharTuple1 {
 };
 
 int fun_(void* env_, char arg_6) {
-    int call_64 = charEq_((*(((struct CharTuple1*)env_))).t0, arg_6);
-    return call_64;
+    int call_84 = charEq_((*(((struct CharTuple1*)env_))).t0, arg_6);
+    return call_84;
 }
 
 struct Token_ListIntTuple2 {
@@ -495,8 +495,8 @@ struct UnitTuple1 {
 };
 
 int fun_1(void* env_2, char arg_7) {
-    int call_65 = isDigit_((*(((struct UnitTuple1*)env_2))).t0, arg_7);
-    return call_65;
+    int call_85 = isDigit_((*(((struct UnitTuple1*)env_2))).t0, arg_7);
+    return call_85;
 }
 
 struct Token_ListIntTuple2 readInt_(struct String source_5, struct Token_ListIntTuple2 arg_4) {
@@ -662,13 +662,139 @@ end_match_77:;
     return 0;
 }
 
+struct IntToken_ListTuple2 {
+    int t0;
+    struct Token_List* t1;
+};
+
+struct IntToken_ListTuple2 evalTerm_(struct Token_List* tokens_4) {
+    struct IntToken_ListTuple2 match_7;
+    if (!((!((!(tokens_4)))))) goto next_82;
+    if (!((tokens_4->head.tag == TkInt_))) goto next_82;
+    int n_4 = tokens_4->head.TkInt_;
+    struct Token_List* tokens1_ = tokens_4->tail;
+    struct IntToken_ListTuple2 tuple_11;
+    tuple_11.t0 = n_4;
+    tuple_11.t1 = tokens1_;
+    match_7 = tuple_11;
+    goto end_match_81;
+next_82:;
+    printf("expected an int\n");
+    int call_47 = 0;
+    exit(1);
+    match_7 = ((struct IntToken_ListTuple2){});
+    goto end_match_81;
+next_83:;
+end_match_81:;
+    return match_7;
+}
+
+struct IntToken_ListTuple2 go_9(int acc_8, struct Token_List* tokens_6) {
+    struct IntToken_ListTuple2 match_8;
+    if (!((!((!(tokens_6)))))) goto next_85;
+    if (!((tokens_6->head.tag == TkOp_))) goto next_85;
+    if (!((tokens_6->head.TkOp_ == '*'))) goto next_85;
+    struct Token_List* tokens1_1 = tokens_6->tail;
+    struct IntToken_ListTuple2 call_48 = evalTerm_(tokens1_1);
+    int r_7 = call_48.t0;
+    struct Token_List* tokens1_2 = call_48.t1;
+    struct IntToken_ListTuple2 call_49 = go_9((acc_8 * r_7), tokens1_2);
+    match_8 = call_49;
+    goto end_match_84;
+next_85:;
+    struct IntToken_ListTuple2 tuple_12;
+    tuple_12.t0 = acc_8;
+    tuple_12.t1 = tokens_6;
+    match_8 = tuple_12;
+    goto end_match_84;
+next_86:;
+end_match_84:;
+    return match_8;
+}
+
+struct IntToken_ListTuple2 evalMul_(struct Token_List* tokens_5) {
+    struct IntToken_ListTuple2 call_50 = evalTerm_(tokens_5);
+    int l_3 = call_50.t0;
+    struct Token_List* tokens_7 = call_50.t1;
+    struct IntToken_ListTuple2 call_51 = go_9(l_3, tokens_7);
+    return call_51;
+}
+
+struct IntToken_ListTuple2 go_10(int acc_9, struct Token_List* tokens_9) {
+    struct IntToken_ListTuple2 match_9;
+    if (!((!((!(tokens_9)))))) goto next_88;
+    if (!((tokens_9->head.tag == TkOp_))) goto next_88;
+    if (!((tokens_9->head.TkOp_ == '+'))) goto next_88;
+    struct Token_List* tokens1_3 = tokens_9->tail;
+    struct IntToken_ListTuple2 call_52 = evalMul_(tokens1_3);
+    int r_8 = call_52.t0;
+    struct Token_List* tokens1_4 = call_52.t1;
+    struct IntToken_ListTuple2 call_53 = go_10((acc_9 + r_8), tokens1_4);
+    match_9 = call_53;
+    goto end_match_87;
+next_88:;
+    if (!((!((!(tokens_9)))))) goto next_89;
+    if (!((tokens_9->head.tag == TkOp_))) goto next_89;
+    if (!((tokens_9->head.TkOp_ == '-'))) goto next_89;
+    struct Token_List* tokens2_ = tokens_9->tail;
+    struct IntToken_ListTuple2 call_54 = evalMul_(tokens2_);
+    int r_9 = call_54.t0;
+    struct Token_List* tokens2_1 = call_54.t1;
+    struct IntToken_ListTuple2 call_55 = go_10((acc_9 - r_9), tokens2_1);
+    match_9 = call_55;
+    goto end_match_87;
+next_89:;
+    struct IntToken_ListTuple2 tuple_13;
+    tuple_13.t0 = acc_9;
+    tuple_13.t1 = tokens_9;
+    match_9 = tuple_13;
+    goto end_match_87;
+next_90:;
+end_match_87:;
+    return match_9;
+}
+
+struct IntToken_ListTuple2 evalAdd_(struct Token_List* tokens_8) {
+    struct IntToken_ListTuple2 call_56 = evalMul_(tokens_8);
+    int l_4 = call_56.t0;
+    struct Token_List* tokens_10 = call_56.t1;
+    struct IntToken_ListTuple2 call_57 = go_10(l_4, tokens_10);
+    return call_57;
+}
+
+struct IntToken_ListTuple2 evalExpr_(struct Token_List* tokens_3) {
+    struct IntToken_ListTuple2 call_58 = evalAdd_(tokens_3);
+    return call_58;
+}
+
+int eval_(struct String str_) {
+    int match_10;
+    struct Token_List* call_59 = tokenize_(str_);
+    struct IntToken_ListTuple2 call_60 = evalExpr_(call_59);
+    int value_1 = call_60.t0;
+    if (!((!(call_60.t1)))) goto next_92;
+    match_10 = value_1;
+    goto end_match_91;
+next_92:;
+    struct Token_List* tokens_11 = call_60.t1;
+    printf("ERROR: couldn't parse tokens:\n");
+    int call_61 = 0;
+    int call_62 = tokenListPrint_(tokens_11);
+    exit(1);
+    match_10 = 0;
+    goto end_match_91;
+next_93:;
+end_match_91:;
+    return match_10;
+}
+
 int main() {
-    int call_47 = strContains_('+', (struct String){.str = "+-*/", .len = 4});
-    int call_48 = assert_(call_47);
-    int call_49 = strStartsWith_((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});
-    int call_50 = assert_(call_49);
-    int call_51 = strStartsWith_((struct String){.str = "heaven", .len = 6}, (struct String){.str = "hello", .len = 5});
-    int call_52 = assert_((!(call_51)));
+    int call_63 = strContains_('+', (struct String){.str = "+-*/", .len = 4});
+    int call_64 = assert_(call_63);
+    int call_65 = strStartsWith_((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});
+    int call_66 = assert_(call_65);
+    int call_67 = strStartsWith_((struct String){.str = "heaven", .len = 6}, (struct String){.str = "hello", .len = 5});
+    int call_68 = assert_((!(call_67)));
     struct StringList* list_6 = (struct StringList*)malloc(sizeof(struct StringList));
     list_6->head = (struct String){.str = "b", .len = 1};
     list_6->tail = NULL;
@@ -678,8 +804,8 @@ int main() {
     struct StringList* list_4 = (struct StringList*)malloc(sizeof(struct StringList));
     list_4->head = (struct String){.str = "a", .len = 1};
     list_4->tail = list_5;
-    struct String call_53 = strConcat_(list_4);
-    int call_54 = assert_((str_cmp(call_53, (struct String){.str = "a,b", .len = 3}) == 0));
+    struct String call_69 = strConcat_(list_4);
+    int call_70 = assert_((str_cmp(call_69, (struct String){.str = "a,b", .len = 3}) == 0));
     struct StringList* list_9 = (struct StringList*)malloc(sizeof(struct StringList));
     list_9->head = (struct String){.str = "b", .len = 1};
     list_9->tail = NULL;
@@ -689,15 +815,19 @@ int main() {
     struct StringList* list_7 = (struct StringList*)malloc(sizeof(struct StringList));
     list_7->head = (struct String){.str = "a", .len = 1};
     list_7->tail = list_8;
-    struct StringList* call_55 = strListRev_(list_7);
-    struct String call_56 = strConcat_(call_55);
-    int call_57 = assert_((str_cmp(call_56, (struct String){.str = "b,a", .len = 3}) == 0));
-    struct String call_58 = intToString_(1024);
-    int call_59 = assert_((str_cmp(call_58, (struct String){.str = "1024", .len = 4}) == 0));
-    int call_60 = intParse_((struct String){.str = "1024", .len = 4});
-    int call_61 = assert_((call_60 == 1024));
-    struct String source_7 = (struct String){.str = "2 + 3\r\n    * 4", .len = 14};
-    struct Token_List* call_62 = tokenize_(source_7);
-    int call_63 = tokenListPrint_(call_62);
+    struct StringList* call_71 = strListRev_(list_7);
+    struct String call_72 = strConcat_(call_71);
+    int call_73 = assert_((str_cmp(call_72, (struct String){.str = "b,a", .len = 3}) == 0));
+    struct String call_74 = intToString_(1024);
+    int call_75 = assert_((str_cmp(call_74, (struct String){.str = "1024", .len = 4}) == 0));
+    int call_76 = intParse_((struct String){.str = "1024", .len = 4});
+    int call_77 = assert_((call_76 == 1024));
+    struct String source_7 = (struct String){.str = "2 + 3\r\n    - 4", .len = 14};
+    struct Token_List* call_78 = tokenize_(source_7);
+    int call_79 = tokenListPrint_(call_78);
+    int call_80 = eval_(source_7);
+    int call_81 = assert_((call_80 == ((2 + 3) - 4)));
+    int call_82 = eval_((struct String){.str = "2 - 3 * 4 + 5", .len = 13});
+    int call_83 = assert_((call_82 == ((2 - (3 * 4)) + 5)));
     return 0;
 }

@@ -1,6 +1,6 @@
 int 2
 op +
 int 3
-op *
+op -
 int 4
 $? = 0
