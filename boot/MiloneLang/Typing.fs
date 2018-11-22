@@ -63,6 +63,7 @@ let ctxAddTy tyIdent tyDef loc ctx =
       }
     tySerial, tyDef, ctx
 
+/// NOTE: currently used also for type reference resolution.
 let ctxResolveTyVar name (ctx: TyCtx): Ty =
   match ctx.TyEnv |> Map.tryFind name with
   | Some ty ->
@@ -79,6 +80,31 @@ let ctxFreshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
         Vars = ctx.Vars |> Map.add serial (ident, valueIdent, ty, loc)
     }
   serial, ctx
+
+/// Resolves type references in type annotation.
+let ctxResolveTy ctx ty =
+  let rec go ty =
+    match ty with
+    | Ty.Error
+    | Ty.Unit
+    | Ty.Bool
+    | Ty.Int
+    | Ty.Char
+    | Ty.Str
+    | Ty.Range
+    | Ty.Obj ->
+      ty
+    | Ty.Ref (ident, _) ->
+      ctxResolveTyVar ident ctx
+    | Ty.Fun (sty, tty) ->
+      Ty.Fun (go sty, go tty)
+    | Ty.Tuple itemTys ->
+      Ty.Tuple (List.map go itemTys)
+    | Ty.List ty ->
+      Ty.List (go ty)
+    | Ty.Var _ ->
+      failwith "Never"
+  go ty
 
 /// Gets if the specified type var doesn't appear in the specified type.
 let isFreshTyVar ty tyVar: bool =
@@ -278,6 +304,7 @@ let inferPat ctx pat ty =
   | Pat.Tuple (items, _, loc) ->
     inferPatTuple ctx items loc ty
   | Pat.Anno (pat, annoTy, _) ->
+    let annoTy = ctxResolveTy ctx annoTy
     let ctx = unifyTy ctx ty annoTy
     let pat, ctx = inferPat ctx pat annoTy
     pat, ctx
@@ -478,6 +505,7 @@ let inferTuple (ctx: TyCtx) items loc tupleTy =
   Expr.Tuple (items, itemTys, loc), ctx
 
 let inferAnno ctx expr annoTy ty =
+  let annoTy = ctxResolveTy ctx annoTy
   let ctx = unifyTy ctx annoTy ty
   inferExpr ctx expr annoTy
 
@@ -532,7 +560,8 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
 let inferLet ctx pat body loc ty =
   let ctx = unifyTy ctx ty Ty.Unit
   match pat with
-  | Pat.Anno (Pat.Call (callee, args, _, callLoc), annoTy, annoLoc) ->
+  | Pat.Anno (Pat.Call (callee, args, _, callLoc), annoTy, _) ->
+    let annoTy = ctxResolveTy ctx annoTy
     let callee, args, body, loc, ctx = inferLetFun ctx callee args body annoTy loc
     let pat = Pat.Call (callee, args, ty, callLoc)
     Expr.Let (pat, body, loc), ctx

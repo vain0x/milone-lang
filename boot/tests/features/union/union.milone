@@ -46,4 +46,7 @@ let main _ =
     | _ ->
       exit 1
 
+  // Type annotations should work.
+  let ok: Status = Ok: Status
+
   0

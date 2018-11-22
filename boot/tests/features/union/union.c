@@ -131,5 +131,6 @@ next_15:;
     goto end_match_14;
 next_20:;
 end_match_14:;
+    struct Status_ ok_1 = (struct Status_){.tag = Ok_};
     return 0;
 }
