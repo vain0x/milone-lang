@@ -362,8 +362,10 @@ let inferMatch ctx target arms loc resultTy =
 
   let arms, ctx =
     (arms, ctx) |> stMap (fun ((pat, body), ctx) ->
+      let baseCtx = ctx
       let pat, ctx = inferPat ctx pat targetTy
       let body, ctx = inferExpr ctx body resultTy
+      let ctx = ctxRollback baseCtx ctx
       (pat, body), ctx
     )
 
