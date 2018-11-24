@@ -391,11 +391,12 @@ let inferIndex ctx l r loc resultTy =
   let l, ctx = inferExpr ctx l subTy
   let r, ctx = inferExpr ctx r indexTy
   match substTy ctx subTy, substTy ctx indexTy with
-  | Ty.Str, Ty.Int ->
-    let ctx = unifyTy ctx resultTy Ty.Char
-    Expr.Index (l, r, resultTy, loc), ctx
   | Ty.Str, Ty.Range ->
     let ctx = unifyTy ctx resultTy Ty.Str
+    Expr.Index (l, r, resultTy, loc), ctx
+  | Ty.Str, _ ->
+    let ctx = unifyTy ctx indexTy Ty.Int
+    let ctx = unifyTy ctx resultTy Ty.Char
     Expr.Index (l, r, resultTy, loc), ctx
   | subTy, indexTy ->
     failwithf "Type: Index not supported %A" (subTy, indexTy, l, r)

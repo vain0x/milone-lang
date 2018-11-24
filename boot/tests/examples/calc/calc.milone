@@ -81,8 +81,8 @@ let intToString (value: int): string =
   else
     go "" value
 
-let private intParseCore (source: string) (l: int) (r: int) =
-  let rec go (acc: int) (i: int) =
+let private intParseCore (source: string) l r =
+  let rec go (acc: int) i =
     if i >= r then
       acc
     else
@@ -104,20 +104,20 @@ let tokenListRev (xs: Token list) =
 let isDigit () c =
   charBetween '0' '9' c
 
-let takeWhile (pred: char -> bool) (source: string, i: int) =
-  let rec go (r: int) =
+let takeWhile (pred: char -> bool) (source: string, i) =
+  let rec go r =
     if r < source.Length && pred source.[r] then
       go (r + 1)
     else
       r
   go i
 
-let private readSpace (source: string) (acc: Token list, i: int) =
+let private readSpace (source: string) (acc: Token list, i) =
   assert (source.[i] = ' ')
   let r = takeWhile (charEq ' ') (source, i + 1)
   acc, r
 
-let private readEol (source: string) (acc: Token list, i: int) =
+let private readEol (source: string) (acc: Token list, i) =
   assert (source.[i] = '\r' || source.[i] = '\n')
   let r =
     if i + 1 < source.Length && source.[i] = '\r' && source.[i + 1] = '\n'
@@ -125,14 +125,14 @@ let private readEol (source: string) (acc: Token list, i: int) =
     else i + 1
   acc, r
 
-let private readInt (source: string) (acc: Token list, i: int) =
+let private readInt (source: string) (acc: Token list, i) =
   assert (isDigit () source.[i])
   let r = takeWhile (isDigit ()) (source, i)
   let n = intParseCore source i r
   TkInt n :: acc, r
 
 let tokenize (source: string): Token list =
-  let at (i: int) =
+  let at i =
     if i < source.Length then source.[i] else '\u0000'
   let rec go (acc, i) =
     if i >= source.Length then
