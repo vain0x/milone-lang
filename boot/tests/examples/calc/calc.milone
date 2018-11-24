@@ -212,7 +212,7 @@ let main _ =
   assert (strStartsWith "hell" "hello")
   assert (strStartsWith "heaven" "hello" |> not)
   assert (strConcat ["a"; ","; "b"] = "a,b")
-  assert ((["a"; ","; "b"] |> strListRev |> strConcat) = "b,a")
+  assert (["a"; ","; "b"] |> strListRev |> strConcat = "b,a")
   assert (intToString 1024 = "1024")
   assert (intParse "1024" = 1024)
 

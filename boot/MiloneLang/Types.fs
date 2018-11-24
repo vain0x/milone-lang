@@ -83,11 +83,13 @@ namespace rec MiloneLang
     | Mul
     | Add
     | Cons
+    /// `|>`
+    | Pipe
     /// Comparison.
     | Cmp
-    | Pipe
     | And
     | Or
+    /// `..`
     | Range
 
   /// Binary operators in AST.

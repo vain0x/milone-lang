@@ -21,6 +21,24 @@ end_if_2:;
     return if_;
 }
 
+struct IntList {
+    int head;
+    struct IntList* tail;
+};
+
+int len_(struct IntList* xs_) {
+    int match_;
+    if (!((!(xs_)))) goto next_8;
+    match_ = 0;
+    goto end_match_7;
+next_8:;
+    match_ = 1;
+    goto end_match_7;
+next_9:;
+end_match_7:;
+    return match_;
+}
+
 int main() {
     int call_ = inc_(1);
     int call_1 = twice_(call_);
@@ -44,5 +62,17 @@ end_if_4:;
 else_5:;
     if_2 = 0;
 end_if_6:;
+    int if_3;
+    struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
+    list_->head = 1;
+    list_->tail = NULL;
+    int call_5 = len_(list_);
+    if (!((call_5 == 0))) goto else_10;
+    exit(1);
+    if_3 = 0;
+    goto end_if_11;
+else_10:;
+    if_3 = 0;
+end_if_11:;
     return 0;
 }
