@@ -1,3 +1,9 @@
+struct IntTuple1;
+
+int sub_(struct IntTuple1 caps_, int x_);
+
+int main();
+
 struct IntTuple1 {
     int t0;
 };

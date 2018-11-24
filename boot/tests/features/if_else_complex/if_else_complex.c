@@ -1,3 +1,5 @@
+int main();
+
 int main() {
     int if_;
     if (!(1)) goto else_1;

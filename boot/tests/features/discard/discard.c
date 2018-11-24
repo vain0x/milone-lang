@@ -1,3 +1,9 @@
+int f_(int arg_);
+
+struct UnitUnitTuple2;
+
+int main();
+
 int f_(int arg_) {
     printf("hello\n");
     int call_ = 0;

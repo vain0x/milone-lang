@@ -1,3 +1,19 @@
+int test_(int pred_);
+
+int neg_(int x_);
+
+int abs_(int x_1);
+
+int gcd_(int x_2, int y_);
+
+struct IntTuple1;
+
+int go_(struct IntTuple1 caps_1, int k_);
+
+int isPrime_(int x_3);
+
+int main();
+
 int test_(int pred_) {
     int if_;
     if (!((!(pred_)))) goto else_1;

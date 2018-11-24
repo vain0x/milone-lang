@@ -1,3 +1,23 @@
+struct StringList;
+
+struct StringList* go_(struct StringList* acc_, struct StringList* xs_1);
+
+struct StringList* listRev_(struct StringList* xs_);
+
+int printList_(struct StringList* xs_3);
+
+int isDigit_(char c_);
+
+struct StringTuple1;
+
+int readInt_(struct StringTuple1 caps_1, int i_);
+
+struct StringList* go_1(struct StringTuple1 caps_7, struct StringList* acc_1, int i_1);
+
+struct StringList* tokenize_(struct String s_);
+
+int main();
+
 struct StringList {
     struct String head;
     struct StringList* tail;

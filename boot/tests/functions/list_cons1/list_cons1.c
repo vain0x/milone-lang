@@ -1,3 +1,7 @@
+struct IntList;
+
+int main();
+
 struct IntList {
     int head;
     struct IntList* tail;

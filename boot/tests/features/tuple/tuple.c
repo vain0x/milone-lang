@@ -1,3 +1,13 @@
+struct IntStringTuple2;
+
+struct StringIntTuple2;
+
+struct StringStringTuple2;
+
+struct StringStringTuple2StringTuple2;
+
+int main();
+
 struct IntStringTuple2 {
     int t0;
     struct String t1;

@@ -162,11 +162,18 @@ let rec tokenListPrint tokens =
     printfn "op %c" c
     tokenListPrint tokens
 
-let evalExpr tokens =
+let rec evalExpr tokens =
   let evalTerm tokens =
     match tokens with
     | TkInt n :: tokens ->
       n, tokens
+    | TkOp '(' :: tokens ->
+      match evalExpr tokens with
+      | value, TkOp ')' :: tokens ->
+        value, tokens
+      | _ ->
+        printfn "expected ')'"
+        exit 1
     | _ ->
       printfn "expected an int"
       exit 1
@@ -221,5 +228,6 @@ let main _ =
 
   assert (eval source = 2 + 3 - 4)
   assert (eval "2 - 3 * 4 + 5" = 2 - 3 * 4 + 5)
+  assert (eval "(2 - 3) * 4 + (1 + (2 + 2))" = (2 - 3) * 4 + (1 + (2 + 2)))
 
   0

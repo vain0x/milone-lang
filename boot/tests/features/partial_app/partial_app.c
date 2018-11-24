@@ -1,3 +1,15 @@
+struct IntIntFun;
+
+int twice_(struct IntIntFun f_, int x_);
+
+int dec_(int y_, int x_1);
+
+struct IntTuple1;
+
+int fun_(void* env_, int arg_);
+
+int main();
+
 struct IntIntFun {
     int(*fun)(void*, int);
     void* env;

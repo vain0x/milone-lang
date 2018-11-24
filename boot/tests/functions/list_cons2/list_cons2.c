@@ -1,3 +1,9 @@
+int abs_(int x_);
+
+struct IntList;
+
+int main();
+
 int abs_(int x_) {
     int if_;
     if (!((0 <= x_))) goto else_1;

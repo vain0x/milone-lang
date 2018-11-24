@@ -1,3 +1,9 @@
+int go_(struct String s_, int i_, int d_);
+
+struct String parse_(struct String s_1);
+
+int main();
+
 int go_(struct String s_, int i_, int d_) {
     int if_;
     if (!((s_.len <= i_))) goto else_1;

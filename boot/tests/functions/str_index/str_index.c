@@ -1,3 +1,7 @@
+char at_(int i_, struct String s_);
+
+int main();
+
 char at_(int i_, struct String s_) {
     return s_.str[i_];
 }

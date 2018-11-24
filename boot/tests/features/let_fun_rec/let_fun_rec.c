@@ -1,3 +1,9 @@
+struct StringIntTuple2;
+
+int go_(struct StringIntTuple2 caps_1, int i_);
+
+int main();
+
 struct StringIntTuple2 {
     struct String t0;
     int t1;

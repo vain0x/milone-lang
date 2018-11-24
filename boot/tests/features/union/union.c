@@ -1,3 +1,19 @@
+enum Status_Tag;
+
+struct Status_;
+
+enum Limit_Tag;
+
+struct Limit_;
+
+struct IntStringTuple2;
+
+enum ApiResponse_Tag;
+
+struct ApiResponse_;
+
+int main();
+
 enum Status_Tag {
     Ok_,
     Err_,

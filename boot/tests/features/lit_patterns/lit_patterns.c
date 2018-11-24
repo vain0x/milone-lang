@@ -1,3 +1,5 @@
+int main();
+
 int main() {
     int match_;
     match_ = 0;

@@ -1,3 +1,17 @@
+int inc_(int x_);
+
+int twice_(int x_1);
+
+int sub_(int x_2, int y_);
+
+int between_(int l_, int r_, int x_3);
+
+struct IntList;
+
+int len_(struct IntList* xs_);
+
+int main();
+
 int inc_(int x_) {
     return (x_ + 1);
 }

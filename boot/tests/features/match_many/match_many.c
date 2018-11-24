@@ -1,3 +1,9 @@
+struct IntList;
+
+struct IntIntTuple2;
+
+int main();
+
 struct IntList {
     int head;
     struct IntList* tail;

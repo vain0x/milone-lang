@@ -1,3 +1,7 @@
+int printIntOrStr_(int isInt_, void* value_);
+
+int main();
+
 int printIntOrStr_(int isInt_, void* value_) {
     int if_;
     if (!(isInt_)) goto else_1;

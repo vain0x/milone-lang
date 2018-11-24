@@ -1,3 +1,9 @@
+int f_(char __);
+
+int g_(struct String __1);
+
+int main();
+
 int f_(char __) {
     return 0;
 }

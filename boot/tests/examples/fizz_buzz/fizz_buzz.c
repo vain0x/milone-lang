@@ -1,3 +1,7 @@
+int fizzBuzz_(int i_);
+
+int main();
+
 int fizzBuzz_(int i_) {
     int if_;
     if (!((i_ <= 15))) goto else_1;

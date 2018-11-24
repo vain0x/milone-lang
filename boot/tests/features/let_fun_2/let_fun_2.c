@@ -1,3 +1,7 @@
+int add_(int x_, int y_);
+
+int main();
+
 int add_(int x_, int y_) {
     return (x_ + y_);
 }

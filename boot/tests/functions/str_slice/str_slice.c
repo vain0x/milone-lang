@@ -1,3 +1,5 @@
+int main();
+
 int main() {
     struct String str_ = (struct String){.str = "Hello, John!", .len = 12};
     int if_;

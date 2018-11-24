@@ -1,3 +1,7 @@
+int f_(int x_);
+
+int main();
+
 int f_(int x_) {
     return (x_ * x_);
 }

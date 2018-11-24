@@ -1,3 +1,5 @@
+int main();
+
 int main() {
     int if_;
     int if_1;

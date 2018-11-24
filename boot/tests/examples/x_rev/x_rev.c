@@ -1,3 +1,13 @@
+struct IntList;
+
+struct IntList* go_(struct IntList* acc_, struct IntList* xs_1);
+
+struct IntList* rev_(struct IntList* xs_);
+
+int printList_(struct IntList* xs_3);
+
+int main();
+
 struct IntList {
     int head;
     struct IntList* tail;

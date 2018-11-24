@@ -316,7 +316,34 @@ let cprintDecl acc decl =
     let acc = acc *- "}" *- eol
     acc
 
+/// Prints forward declaration.
+let cprintDeclForward acc decl =
+  match decl with
+  | CDecl.Struct (ident, _, _) ->
+    let acc = acc *- "struct " *- ident *- ";" *- eol
+    acc
+  | CDecl.Enum (tyIdent, _) ->
+    let acc = acc *- "enum " *- tyIdent *- ";" *- eol
+    acc
+  | CDecl.Fun (ident, args, resultTy, _) ->
+    let acc = cprintTyWithName acc ident resultTy
+    let acc = acc *- "("
+    let acc = cprintParams acc args
+    let acc = acc *- ");" *- eol
+    acc
+
+let rec cprintDeclForwards acc decls =
+  let rec go acc decls =
+    match decls with
+    | [] ->
+      acc
+    | decl :: decls ->
+      let acc = cprintDeclForward acc decl *- eol
+      go acc decls
+  go acc decls
+
 let rec cprintDecls acc decls =
+  let acc = cprintDeclForwards acc decls
   let rec go acc decls =
     match decls with
     | [] ->

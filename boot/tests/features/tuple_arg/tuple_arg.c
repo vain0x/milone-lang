@@ -1,3 +1,9 @@
+struct IntIntTuple2;
+
+int sub_(struct IntIntTuple2 arg_);
+
+int main();
+
 struct IntIntTuple2 {
     int t0;
     int t1;

@@ -1,3 +1,7 @@
+int not_(int arg_);
+
+int main();
+
 int not_(int arg_) {
     printf("shadowing not\n");
     int call_1 = 0;

@@ -1,3 +1,7 @@
+struct IntStringTuple2;
+
+int main();
+
 struct IntStringTuple2 {
     int t0;
     struct String t1;

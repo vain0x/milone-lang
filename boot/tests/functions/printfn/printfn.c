@@ -1,3 +1,5 @@
+int main();
+
 int main() {
     printf("No formats\n");
     int call_ = 0;

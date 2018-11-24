@@ -1,3 +1,7 @@
+int factorial_(int x_);
+
+int main();
+
 int factorial_(int x_) {
     int if_;
     if (!((x_ == 0))) goto else_1;

@@ -1,3 +1,11 @@
+struct IntIntTuple2;
+
+struct IntIntIntIntTuple2Tuple3;
+
+struct IntIntIntIntIntIntIntIntIntIntIntTuple11;
+
+int main();
+
 struct IntIntTuple2 {
     int t0;
     int t1;

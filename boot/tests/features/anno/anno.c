@@ -1,3 +1,9 @@
+int f_(int x_);
+
+int g_(int x_1);
+
+int main();
+
 int f_(int x_) {
     return x_;
 }
