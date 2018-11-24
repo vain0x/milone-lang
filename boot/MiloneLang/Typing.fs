@@ -318,8 +318,9 @@ let inferRef (ctx: TyCtx) ident loc ty =
     let ctx = unifyTy ctx (Ty.Fun (Ty.Bool, Ty.Bool)) ty
     Expr.Ref (ident, SerialNot, 1, ty, loc), ctx
   | None, "exit" ->
-    let funTy = Ty.Fun (Ty.Int, ty)
-    Expr.Ref (ident, SerialExit, 1, funTy, loc), ctx
+    let resultTy, _, ctx = ctxFreshTyVar "exit" ctx
+    let ctx = unifyTy ctx (Ty.Fun (Ty.Int, resultTy)) ty
+    Expr.Ref (ident, SerialExit, 1, ty, loc), ctx
   | None, "box" ->
     let argTy, _, ctx = ctxFreshTyVar "box" ctx
     let ctx = unifyTy ctx (Ty.Fun (argTy, Ty.Obj)) ty
