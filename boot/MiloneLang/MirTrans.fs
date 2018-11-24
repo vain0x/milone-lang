@@ -295,6 +295,29 @@ let declosure (decls, ctx: MirTransCtx) =
 // Convert them to statements to create a function object with specified arguments.
 //
 // Thanks to declosure, in this stage, functions don't rely on local scope.
+//
+// ### Example
+//
+// Consider `let sum x y z = x + y + z` and partial application `sum 1 2`.
+// Here the given arguments is `1, 2`, the rest arguments is `z`.
+// We define a helper function called `sumObj` like this:
+//    let sumObj env z =
+//      let x, y = unbox env
+//      add x y z
+// and convert partial application into the following.
+//    let env = box (x, y)
+//    (sumObj, env) :> (int -> int)
+//
+// ### Function references
+//
+// You can think of function reference as a kind of partial application
+// with given arguments is empty. In term of the above example,
+//    let sumObj env x y z =
+//      let () = unbox env
+//      add x y z
+// is defined for function reference `sum` and the use site is converted to:
+//    let env = box ()
+//    (sumObj, ()) :> (int -> int -> int -> int)
 
 let ctxIsFun serial (ctx: MirTransCtx) =
   match ctx.Vars |> Map.tryFind serial with
@@ -360,7 +383,7 @@ let buildForwardingArgs capsArg lastArg capsArgTy argTys loc =
       go (arg :: acc) argTys (i + 1)
   go [] argTys 0
 
-/// Packs arguments into boxed tuple.
+/// Packs items into a boxed tuple, called environment.
 let buildEnvTuple args loc acc ctx =
   let envTy = args |> List.map mexprTy |> MTy.Tuple
   let envRef, envSerial, ctx = ctx |> ctxFreshVar "env" envTy loc
@@ -369,7 +392,13 @@ let buildEnvTuple args loc acc ctx =
   let acc = MStmt.LetVal (boxSerial, MInit.Box envRef, MTy.Obj, loc) :: acc
   boxSerial, acc, ctx
 
+/// Resolves partial application.
+/// 1. Define an underlying function, accepting environment and rest arguments,
+///   to call the callee with full arguments.
+/// 2. Create a boxed tuple called environment from given arguments.
+/// 3. Create a function object, pair of the underlying function and environment.
 let resolvePartialApp arity funTy loc argLen callee args acc ctx =
+  // FIXME: support `arity > argLen + 1` cases
   assert (arity = argLen + 1)
   let resultTy = appliedTy arity funTy
   let appArgTy = appliedTy (arity - 1) funTy |> funArgTy
@@ -389,7 +418,7 @@ let resolvePartialApp arity funTy loc argLen callee args acc ctx =
       MStmt.Return (temp, loc)
     ]
     body, ctx
-  // makeFun(g, env=(..args))
+  // (g, env=(..args)) as int -> int
   let funArgs =
     [
       envArgSerial, 1, MTy.Obj, loc
