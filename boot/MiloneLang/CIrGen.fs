@@ -474,7 +474,7 @@ let genStmtLetVal ctx serial init ty =
   | MInit.Expr expr ->
     let expr, ctx = genExpr ctx expr
     genInitExprCore ctx serial (Some expr) ty
-  | MInit.Call (callee, args) ->
+  | MInit.Call (callee, args, _) ->
     let expr, ctx = genExprCall ctx callee args ty
     genInitExprCore ctx serial (Some expr) ty
   | MInit.App (callee, arg) ->

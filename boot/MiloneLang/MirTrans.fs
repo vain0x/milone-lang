@@ -129,10 +129,10 @@ let declosureExpr (expr, ctx) =
     let r, ctx = (r, ctx) |> declosureExpr
     MExpr.Op (op, l, r, ty, loc), ctx
 
-let declosureInitCall callee args (ctx: MirTransCtx) =
+let declosureInitCall callee args calleeTy (ctx: MirTransCtx) =
   let callee, ctx = (callee, ctx) |> declosureExpr
   let args, ctx = (args, ctx) |> stMap declosureExpr
-  MInit.Call (callee, args), ctx
+  MInit.Call (callee, args, calleeTy), ctx
 
 let declosureInit (init, ctx) =
   match init with
@@ -141,8 +141,8 @@ let declosureInit (init, ctx) =
   | MInit.Expr expr ->
     let expr, ctx = (expr, ctx) |> declosureExpr
     MInit.Expr expr, ctx
-  | MInit.Call (callee, args) ->
-    declosureInitCall callee args ctx
+  | MInit.Call (callee, args, calleeTy) ->
+    declosureInitCall callee args calleeTy ctx
   | MInit.Fun (funSerial, envSerial) ->
     MInit.Fun (funSerial, envSerial), ctx
   | MInit.Box expr ->
@@ -164,7 +164,7 @@ let declosureInit (init, ctx) =
 let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
   let result =
     match init with
-    | MInit.Call (MExpr.Ref (callee, arity, refTy, refLoc), args) ->
+    | MInit.Call (MExpr.Ref (callee, arity, _, refLoc), args, calleeTy) ->
       match ctx.Caps |> Map.tryFind callee with
       | Some (_ :: _ as caps) ->
         let buildCapsTuple caps loc ctx =
@@ -177,11 +177,12 @@ let declosureStmtLetVal serial init ty loc (acc, ctx: MirTransCtx) =
         // Add caps arg.
         let capsRef, capsTy, letCaps, ctx = buildCapsTuple caps loc ctx
         let args = capsRef :: args
-        let refExpr = MExpr.Ref (callee, arity + 1, MTy.Fun (capsTy, refTy), refLoc)
+        let calleeTy = MTy.Fun (capsTy, calleeTy)
+        let refExpr = MExpr.Ref (callee, arity + 1, calleeTy, refLoc)
         let acc = letCaps :: acc
 
         let ctx = ctx |> ctxAddLocal serial
-        Some (MStmt.LetVal (serial, MInit.Call (refExpr, args), ty, loc) :: acc, ctx)
+        Some (MStmt.LetVal (serial, MInit.Call (refExpr, args, calleeTy), ty, loc) :: acc, ctx)
       | None
       | Some [] ->
         None
@@ -397,7 +398,7 @@ let buildEnvTuple args loc acc ctx =
 ///   to call the callee with full arguments.
 /// 2. Create a boxed tuple called environment from given arguments.
 /// 3. Create a function object, pair of the underlying function and environment.
-let resolvePartialApp arity funTy loc argLen callee args acc ctx =
+let resolvePartialApp arity funTy loc argLen callee args calleeTy acc ctx =
   // FIXME: support `arity > argLen + 1` cases
   assert (arity = argLen + 1)
   let resultTy = appliedTy arity funTy
@@ -412,7 +413,7 @@ let resolvePartialApp arity funTy loc argLen callee args acc ctx =
   let body, ctx =
     let temp, tempSerial, ctx = ctxFreshVar "call" resultTy loc ctx
     let callArgs = buildForwardingArgs envArg appArg envTy envTys loc
-    let init = MInit.Call (callee, callArgs)
+    let init = MInit.Call (callee, callArgs, calleeTy)
     let body = [
       MStmt.LetVal (tempSerial, init, resultTy, loc)
       MStmt.Return (temp, loc)
@@ -431,20 +432,20 @@ let resolvePartialApp arity funTy loc argLen callee args acc ctx =
 
   MInit.Fun (subFunSerial, envSerial), acc, ctx
 
-let unetaInitCallFun arity funTy loc callee args acc (ctx: MirTransCtx) =
+let unetaInitCallFun arity funTy loc callee args calleeTy acc (ctx: MirTransCtx) =
   let argLen = List.length args
   if argLen < arity then
-    resolvePartialApp arity funTy loc argLen callee args acc ctx
+    resolvePartialApp arity funTy loc argLen callee args calleeTy acc ctx
   else
     let callArgs, restArgs = splitAt arity args
-    let init = MInit.Call (callee, callArgs)
+    let init = MInit.Call (callee, callArgs, calleeTy)
     let initTy = appliedTy arity funTy
     unroll initTy loc init restArgs acc ctx
 
-let unetaInitCall loc callee args acc (ctx: MirTransCtx) =
+let unetaInitCall loc callee args calleeTy acc (ctx: MirTransCtx) =
   match callee, args with
   | MExpr.Ref (serial, arity, funTy, loc), _ when ctx |> ctxIsFun serial ->
-    unetaInitCallFun arity funTy loc callee args acc ctx
+    unetaInitCallFun arity funTy loc callee args calleeTy acc ctx
   | _, arg :: args ->
     let initTy = appliedTy 1 (mexprTy callee)
     unroll initTy loc (MInit.App (callee, arg)) args acc ctx
@@ -457,8 +458,8 @@ let unetaInit loc (init, acc, ctx) =
     init, acc, ctx
   | MInit.Expr expr ->
     MInit.Expr expr, acc, ctx
-  | MInit.Call (callee, args) ->
-    unetaInitCall loc callee args acc ctx
+  | MInit.Call (callee, args, calleeTy ) ->
+    unetaInitCall loc callee args calleeTy acc ctx
   | MInit.Box expr ->
     MInit.Box expr, acc, ctx
   | MInit.Cons (head, tail, itemTy) ->

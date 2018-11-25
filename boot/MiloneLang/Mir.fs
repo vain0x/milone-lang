@@ -365,8 +365,9 @@ let mirifyExprIndex ctx l r _ loc =
     let rl, ctx = mirifyExpr ctx rl
     let rr, ctx = mirifyExpr ctx rr
     let temp, tempSerial, ctx = ctxFreshVar ctx "slice" MTy.Str loc
-    let strSliceRef = MExpr.Ref (SerialStrSlice, 3, MTy.Unit, loc) // FIXME: wrong type
-    let callInit = MInit.Call (strSliceRef, [l; rl; rr])
+    let funTy = MTy.Fun (MTy.Str, MTy.Fun (MTy.Int, MTy.Fun (MTy.Int, MTy.Str)))
+    let strSliceRef = MExpr.Ref (SerialStrSlice, 3, funTy, loc)
+    let callInit = MInit.Call (strSliceRef, [l; rl; rr], funTy)
     let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, callInit, MTy.Str, loc))
     temp, ctx
   | _ ->
@@ -432,11 +433,12 @@ let mirifyExprOpApp ctx callee arg ty loc =
         callee, acc, ctx
 
     let callee, args, ctx = roll [arg] ctx callee
+    let calleeTy = exprTy callee
     let callee, ctx = mirifyExpr ctx callee
     let args, ctx = mirifyExprs ctx args
 
     let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, args), ty, loc))
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, args, unboxTy calleeTy), ty, loc))
 
     temp, ctx
 

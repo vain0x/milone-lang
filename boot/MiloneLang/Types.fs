@@ -320,7 +320,7 @@ namespace rec MiloneLang
     | Expr
       of MExpr<'a>
     | Call
-      of callee:MExpr<'a> * args:MExpr<'a> list
+      of callee:MExpr<'a> * args:MExpr<'a> list * calleeTy:MTy
     | App
       of callee:MExpr<'a> * arg:MExpr<'a>
     /// Creates a function object, packing environment.
