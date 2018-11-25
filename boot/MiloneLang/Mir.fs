@@ -422,37 +422,21 @@ let mirifyExprOpApp ctx callee arg ty loc =
     let ty = unboxTy ty
 
     /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
-    let rec dig acc ctx callee =
+    let rec roll acc ctx callee =
       match callee with
       | Expr.Op (Op.App, callee, arg, _, _) ->
-        dig (arg :: acc) ctx callee
+        roll (arg :: acc) ctx callee
       | Expr.Op (Op.Pipe, arg, callee, _, _) ->
-        dig (arg :: acc) ctx callee
+        roll (arg :: acc) ctx callee
       | _ ->
         callee, acc, ctx
 
-    let callee, args, ctx = dig [arg] ctx callee
-    let arity = exprArity callee
+    let callee, args, ctx = roll [arg] ctx callee
     let callee, ctx = mirifyExpr ctx callee
     let args, ctx = mirifyExprs ctx args
 
-    // Split argument list by the arity of callee.
-    // Once function's argument list is fulfilled,
-    // rest arguments are chain of applications to the result.
-    // E.g. `(f x y z w)` -> `(f(x, y) z) w` where f's arity is 2.
-    let subArgs = List.truncate arity args
     let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, subArgs), ty, loc))
-
-    let rec unfold callee ctx args =
-      match args with
-      | [] ->
-        callee, ctx
-      | arg :: args ->
-        let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
-        let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, [arg]), ty, loc))
-        unfold temp ctx args
-    let temp, ctx = unfold temp ctx (List.skip (min arity (List.length args)) args)
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, args), ty, loc))
 
     temp, ctx
 
