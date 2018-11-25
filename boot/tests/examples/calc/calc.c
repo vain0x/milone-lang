@@ -54,13 +54,13 @@ struct Token_List* tokenListRev_(struct Token_List* xs_6);
 
 int isDigit_(int arg_, char c_3);
 
-struct CharBoolFun;
+struct CharBoolFun1;
 
-struct CharBoolFunStringTuple2;
+struct CharBoolFun1StringTuple2;
 
-int go_7(struct CharBoolFunStringTuple2 caps_13, int r_3);
+int go_7(struct CharBoolFun1StringTuple2 caps_13, int r_3);
 
-int takeWhile_(struct CharBoolFun pred_, struct StringIntTuple2 arg_1);
+int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_1);
 
 struct CharTuple1;
 
@@ -480,19 +480,19 @@ int isDigit_(int arg_, char c_3) {
     return call_18;
 }
 
-struct CharBoolFun {
+struct CharBoolFun1 {
     int(*fun)(void*, char);
     void* env;
 };
 
-struct CharBoolFunStringTuple2 {
-    struct CharBoolFun t0;
+struct CharBoolFun1StringTuple2 {
+    struct CharBoolFun1 t0;
     struct String t1;
 };
 
-int go_7(struct CharBoolFunStringTuple2 caps_13, int r_3) {
+int go_7(struct CharBoolFun1StringTuple2 caps_13, int r_3) {
     struct String source_2 = caps_13.t1;
-    struct CharBoolFun pred_ = caps_13.t0;
+    struct CharBoolFun1 pred_ = caps_13.t0;
     int if_10;
     int if_11;
     if (!((r_3 < source_2.len))) goto else_56;
@@ -503,7 +503,7 @@ else_56:;
     if_11 = 0;
 end_if_57:;
     if (!(if_11)) goto else_54;
-    struct CharBoolFunStringTuple2 caps_12;
+    struct CharBoolFun1StringTuple2 caps_12;
     caps_12.t0 = pred_;
     caps_12.t1 = source_2;
     int call_20 = go_7(caps_12, (r_3 + 1));
@@ -515,10 +515,10 @@ end_if_55:;
     return if_10;
 }
 
-int takeWhile_(struct CharBoolFun pred_, struct StringIntTuple2 arg_1) {
+int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_1) {
     struct String source_2 = arg_1.t0;
     int i_3 = arg_1.t1;
-    struct CharBoolFunStringTuple2 caps_15;
+    struct CharBoolFun1StringTuple2 caps_15;
     caps_15.t0 = pred_;
     caps_15.t1 = source_2;
     int call_21 = go_7(caps_15, i_3);
@@ -547,7 +547,7 @@ struct Token_ListIntTuple2 readSpace_(struct String source_3, struct Token_ListI
     env_1.t0 = ' ';
     void* box_ = (void*)malloc(sizeof(struct CharTuple1));
     (*(((struct CharTuple1*)box_))) = env_1;
-    struct CharBoolFun call_23 = (struct CharBoolFun){.fun = fun_, .env = box_};
+    struct CharBoolFun1 call_23 = (struct CharBoolFun1){.fun = fun_, .env = box_};
     struct StringIntTuple2 tuple_;
     tuple_.t0 = source_3;
     tuple_.t1 = (i_4 + 1);
@@ -616,7 +616,7 @@ struct Token_ListIntTuple2 readInt_(struct String source_5, struct Token_ListInt
     env_3.t0 = 0;
     void* box_1 = (void*)malloc(sizeof(struct UnitTuple1));
     (*(((struct UnitTuple1*)box_1))) = env_3;
-    struct CharBoolFun call_28 = (struct CharBoolFun){.fun = fun_1, .env = box_1};
+    struct CharBoolFun1 call_28 = (struct CharBoolFun1){.fun = fun_1, .env = box_1};
     struct StringIntTuple2 tuple_3;
     tuple_3.t0 = source_5;
     tuple_3.t1 = i_6;

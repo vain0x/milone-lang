@@ -319,10 +319,12 @@ namespace rec MiloneLang
     | UnInit
     | Expr
       of MExpr<'a>
+    /// Call to normal function.
     | Call
       of callee:MExpr<'a> * args:MExpr<'a> list * calleeTy:MTy
+    /// Call to function object.
     | App
-      of callee:MExpr<'a> * arg:MExpr<'a>
+      of callee:MExpr<'a> * args:MExpr<'a> list
     /// Creates a function object, packing environment.
     | Fun
       of subFunSerial:int * envSerial:int

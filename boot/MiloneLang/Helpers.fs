@@ -56,6 +56,16 @@ let litMTy (lit: Lit): MTy =
   | Lit.Char _ -> MTy.Char
   | Lit.Str _ -> MTy.Str
 
+/// Converts nested function type to multi-arguments function type.
+let rec rollFunTy ty =
+  let rec go n acc ty =
+    match ty with
+    | MTy.Fun (sTy, tTy) ->
+      go (n + 1) (sTy :: acc) tTy
+    | tTy ->
+      n, List.rev acc, tTy
+  go 0 [] ty
+
 let patExtract (pat: Pat<'a>): Ty * 'a =
   match pat with
   | Pat.Lit (lit, a) ->
@@ -262,5 +272,12 @@ let rec arityTy ty =
   match ty with
   | Ty.Fun (_, ty) ->
     1 + arityTy ty
+  | _ ->
+    0
+
+let rec arityMTy ty =
+  match ty with
+  | MTy.Fun (_, ty) ->
+    1 + arityMTy ty
   | _ ->
     0

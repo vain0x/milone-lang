@@ -349,35 +349,28 @@ let argTys n ty =
       List.rev acc
   go [] n ty
 
-let funArgTy ty =
-  match ty with
-  | MTy.Fun (ty, _) ->
-    ty
-  | _ ->
-    failwith "Never: Type error."
-
-/// `f(x, y)` -> `(f x) y`
-let unroll initTy loc init args acc ctx =
-  match args, initTy with
-  | [], _ ->
+/// Creates an initializer to call the result of call expression.
+/// E.g. `let lift f = List.map f in lift id xs`,
+/// the `init` is to call `lift id` and here we make an initializer to call it.
+let restCall initTy loc init args acc ctx =
+  match args with
+  | [] ->
     init, acc, ctx
-  | arg :: args, MTy.Fun (_, appTy) ->
+  | args ->
     let temp, tempSerial, ctx  = ctxFreshVar "app" initTy loc ctx
     let acc = MStmt.LetVal (tempSerial, init, initTy, loc) :: acc
-    let init, initTy = MInit.App (temp, arg), appTy
-    unroll initTy loc init args acc ctx
-  | _ ->
-    failwith "type error"
+    let init = MInit.Call (temp, args, initTy)
+    init, acc, ctx
 
 /// Builds an argument list to call an underlying function of partial application.
 /// E.g. When it's partial application like `let f x y = x + y + a in g 1`,
 /// we are generating function like `let g t y = f t.0 t.1 y` where `t = (a, 1)`,
 /// this function builds `f t.0 t.1 y` part.
-let buildForwardingArgs capsArg lastArg capsArgTy argTys loc =
+let buildForwardingArgs capsArg restArgs capsArgTy argTys loc =
   let rec go acc argTys i =
     match argTys with
     | [] ->
-      List.rev (lastArg :: acc)
+      List.rev acc @ restArgs
     | argTy :: argTys ->
       let caps = MExpr.UniOp (MUniOp.Unbox, capsArg, capsArgTy, loc)
       let arg = MExpr.UniOp (MUniOp.Proj i, caps, argTy, loc)
@@ -393,6 +386,25 @@ let buildEnvTuple args loc acc ctx =
   let acc = MStmt.LetVal (boxSerial, MInit.Box envRef, MTy.Obj, loc) :: acc
   boxSerial, acc, ctx
 
+/// Calculates rest argument types for the function with the specified arity
+/// after partially applied the specified number of arguments.
+/// E.g. if arity=2, argLen=1, funTy=`int->string->(char->unit)` then `[string]`
+let rec restArgTys arity argLen funTy =
+  if arity <= 0 then
+    []
+  else if argLen <= 0 then
+    match funTy with
+    | MTy.Fun (sTy, tTy) ->
+      sTy :: restArgTys (arity - 1) 0 tTy
+    | _ ->
+      failwith "Never: Type error."
+  else
+    match funTy with
+    | MTy.Fun (_, ty) ->
+      restArgTys (arity - 1) (argLen - 1) ty
+    | _ ->
+      failwith "Never: Type error."
+
 /// Resolves partial application.
 /// 1. Define an underlying function, accepting environment and rest arguments,
 ///   to call the callee with full arguments.
@@ -400,19 +412,29 @@ let buildEnvTuple args loc acc ctx =
 /// 3. Create a function object, pair of the underlying function and environment.
 let resolvePartialApp arity funTy loc argLen callee args calleeTy acc ctx =
   // FIXME: support `arity > argLen + 1` cases
-  assert (arity = argLen + 1)
+  assert (argLen < arity)
   let resultTy = appliedTy arity funTy
-  let appArgTy = appliedTy (arity - 1) funTy |> funArgTy
-  let envTys = argTys (arity - 1) funTy
+  let restArgTys = restArgTys arity argLen funTy
+  let envTys = argTys argLen funTy
   let envTy = MTy.Tuple envTys
   let _, subFunSerial, ctx = ctxFreshVar "fun" funTy loc ctx
   let envArg, envArgSerial, ctx = ctxFreshVar "env" MTy.Obj loc ctx
-  let appArg, appArgSerial, ctx = ctxFreshVar "arg" appArgTy loc ctx
+
+  let restArgs, funArgs, ctx =
+    let rec go restArgs funArgs argTys ctx =
+      match argTys with
+      | [] ->
+        List.rev restArgs, List.rev funArgs, ctx
+      | argTy :: argTys ->
+        let arg, serial, ctx = ctxFreshVar "arg" argTy loc ctx
+        let funArg = serial, arityMTy argTy, argTy, loc
+        go (arg :: restArgs) (funArg :: funArgs) argTys ctx
+    go [] [] restArgTys ctx
 
   // let g env x = callee ..(unbox env) x
   let body, ctx =
     let temp, tempSerial, ctx = ctxFreshVar "call" resultTy loc ctx
-    let callArgs = buildForwardingArgs envArg appArg envTy envTys loc
+    let callArgs = buildForwardingArgs envArg restArgs envTy envTys loc
     let init = MInit.Call (callee, callArgs, calleeTy)
     let body = [
       MStmt.LetVal (tempSerial, init, resultTy, loc)
@@ -420,11 +442,7 @@ let resolvePartialApp arity funTy loc argLen callee args calleeTy acc ctx =
     ]
     body, ctx
   // (g, env=(..args)) as int -> int
-  let funArgs =
-    [
-      envArgSerial, 1, MTy.Obj, loc
-      appArgSerial, 1, appArgTy, loc
-    ]
+  let funArgs = (envArgSerial, 0, MTy.Obj, loc) :: funArgs
   let decl = MDecl.LetFun (subFunSerial, funArgs, [], resultTy, body, loc)
 
   let envSerial, acc, ctx = buildEnvTuple args loc acc ctx
@@ -440,15 +458,14 @@ let unetaInitCallFun arity funTy loc callee args calleeTy acc (ctx: MirTransCtx)
     let callArgs, restArgs = splitAt arity args
     let init = MInit.Call (callee, callArgs, calleeTy)
     let initTy = appliedTy arity funTy
-    unroll initTy loc init restArgs acc ctx
+    restCall initTy loc init restArgs acc ctx
 
-let unetaInitCall loc callee args calleeTy acc (ctx: MirTransCtx) =
+let unetaInitCall callee args calleeTy acc (ctx: MirTransCtx) =
   match callee, args with
   | MExpr.Ref (serial, arity, funTy, loc), _ when ctx |> ctxIsFun serial ->
     unetaInitCallFun arity funTy loc callee args calleeTy acc ctx
-  | _, arg :: args ->
-    let initTy = appliedTy 1 (mexprTy callee)
-    unroll initTy loc (MInit.App (callee, arg)) args acc ctx
+  | _, args ->
+    MInit.App (callee, args), acc, ctx
   | _ ->
     failwith "Never"
 
@@ -459,7 +476,7 @@ let unetaInit loc (init, acc, ctx) =
   | MInit.Expr expr ->
     MInit.Expr expr, acc, ctx
   | MInit.Call (callee, args, calleeTy ) ->
-    unetaInitCall loc callee args calleeTy acc ctx
+    unetaInitCall callee args calleeTy acc ctx
   | MInit.Box expr ->
     MInit.Box expr, acc, ctx
   | MInit.Cons (head, tail, itemTy) ->

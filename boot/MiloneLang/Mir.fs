@@ -464,7 +464,7 @@ let mirifyExprOpCons ctx l r itemTy listTy loc =
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Cons (l, r, itemTy), listTy, loc))
-  MExpr.Ref (tempSerial, 2, listTy, loc), ctx
+  MExpr.Ref (tempSerial, 0, listTy, loc), ctx
 
 let mirifyExprTuple ctx items itemTys loc =
   let itemTys = List.map unboxTy itemTys

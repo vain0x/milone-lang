@@ -71,12 +71,13 @@ let ctxAddDecl (ctx: Ctx) decl =
 
 let ctxAddFunDecl (ctx: Ctx) sTy tTy =
   let funTy = MTy.Fun (sTy, tTy)
+  let _, argTys, resultTy = rollFunTy funTy
   let ident, ctx = ctxUniqueTyName ctx funTy
   let selfTy = CTy.Struct ident
   let envTy = CTy.Ptr CTy.Void
-  let sTy, ctx = cty ctx sTy
-  let tTy, ctx = cty ctx tTy
-  let fields = ["fun", CTy.FunPtr ([envTy; sTy], tTy); "env", envTy]
+  let argTys, ctx = cirifyTys (argTys, ctx)
+  let resultTy, ctx = cty ctx resultTy
+  let fields = ["fun", CTy.FunPtr (envTy :: argTys, resultTy); "env", envTy]
   let ctx: Ctx =
     { ctx with
         TySerial = ctx.TySerial + 1
@@ -168,10 +169,11 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | MTy.Char -> "Char", ctx
         | MTy.Str -> "String", ctx
         | MTy.Obj -> "Object", ctx
-        | MTy.Fun (sTy, tTy) ->
-          let sTy, ctx = ctx |> go sTy
-          let tTy, ctx = ctx |> go tTy
-          sprintf "%s%sFun" sTy tTy, ctx
+        | MTy.Fun _ ->
+          let arity, argTys, resultTy = rollFunTy ty
+          let argTys, ctx = (argTys, ctx) |> stMap (fun (argTy, ctx) -> ctx |> go argTy)
+          let resultTy, ctx = ctx |> go resultTy
+          sprintf "%s%sFun%d" (argTys |> String.concat "") resultTy arity, ctx
         | MTy.List itemTy ->
           let itemTy, ctx = ctx |> go itemTy
           sprintf "%sList" itemTy, ctx
@@ -225,6 +227,9 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
         ctxAddUnionDecl ctx tyIdent serial variants
     | None ->
       failwith "Unknown type reference"
+
+let cirifyTys (tys, ctx) =
+  stMap (fun (ty, ctx) -> cty ctx ty) (tys, ctx)
 
 let cOpFrom op =
   match op with
@@ -384,12 +389,12 @@ let genExprCall ctx callee args ty =
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
 
-let genExprApp ctx callee arg =
+let genExprApp ctx callee args =
   let callee, ctx = genExpr ctx callee
-  let arg, ctx = genExpr ctx arg
+  let args, ctx = genExprList ctx args
   let funPtr = CExpr.Nav (callee, "fun")
   let envArg = CExpr.Nav (callee, "env")
-  CExpr.Call (funPtr, [envArg; arg]), ctx
+  CExpr.Call (funPtr, envArg :: args), ctx
 
 let genInitExprCore ctx serial expr ty =
   let ident = ctxUniqueName ctx serial
@@ -477,8 +482,8 @@ let genStmtLetVal ctx serial init ty =
   | MInit.Call (callee, args, _) ->
     let expr, ctx = genExprCall ctx callee args ty
     genInitExprCore ctx serial (Some expr) ty
-  | MInit.App (callee, arg) ->
-    let expr, ctx = genExprApp ctx callee arg
+  | MInit.App (callee, args) ->
+    let expr, ctx = genExprApp ctx callee args
     genInitExprCore ctx serial (Some expr) ty
   | MInit.Fun (funSerial, envSerial) ->
     genInitFun ctx serial funSerial envSerial ty
