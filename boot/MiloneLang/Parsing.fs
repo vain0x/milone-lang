@@ -403,7 +403,7 @@ let parseIndex boxX tokens =
     | (Token.Dot, loc) :: (Token.BracketL, _) :: tokens ->
       match parseExpr boxX tokens with
       | expr, (Token.BracketR, _) :: tokens ->
-        go (Expr.Index (acc, expr, noTy, loc)) tokens
+        go (hxIndex acc expr noTy loc) tokens
       | _, tokens ->
         parseError "Expected closing ']'" tokens
     | (Token.Dot, loc) :: (Token.Ident field, _) :: tokens ->

@@ -129,6 +129,8 @@ namespace rec MiloneLang
       of Ty
     /// `..`
     | Range
+    /// `.[ ]`
+    | Index
 
   /// Type definition.
   [<RequireQualifiedAccess>]
@@ -209,9 +211,6 @@ namespace rec MiloneLang
     /// `s.m`
     | Nav
       of subject:Expr<'a> * message:string * Ty * 'a
-    /// `x.[i]`
-    | Index
-      of Expr<'a> * Expr<'a> * Ty * 'a
     /// Binary operation, e.g. `x + y`.
     | Op
       of Op * Expr<'a> * Expr<'a> * Ty * 'a

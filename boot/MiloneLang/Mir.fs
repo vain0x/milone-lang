@@ -101,7 +101,8 @@ let mopFrom op =
   | Op.Or
   | Op.App
   | Op.Cons _
-  | Op.Range -> failwith "We don't use > >= && || :: .. in MIR"
+  | Op.Range
+  | Op.Index -> failwith "We don't use > >= && || :: .. in MIR"
 
 let mtyDef tySerial (tyDef: TyDef) =
   match tyDef with
@@ -493,6 +494,8 @@ let mirifyExprOp ctx op l r ty loc =
     mirifyExprOpPipe ctx l r ty loc
   | Op.Cons itemTy ->
     mirifyExprOpCons ctx l r itemTy ty loc
+  | Op.Index ->
+    mirifyExprIndex ctx l r ty loc
   | Op.Gt ->
     mirifyExprOp ctx Op.Lt r l ty loc
   | Op.Ge ->
@@ -601,8 +604,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprIf ctx pred thenCl elseCl ty loc
   | Expr.Match (target, arms, ty, loc) ->
     mirifyExprMatch ctx target arms ty loc
-  | Expr.Index (l, r, ty, loc) ->
-    mirifyExprIndex ctx l r ty loc
   | Expr.Op (op, l, r, ty, loc) ->
     mirifyExprOp ctx op l r ty loc
   | Expr.Inf (InfOp.List itemTy, [], _, loc) ->

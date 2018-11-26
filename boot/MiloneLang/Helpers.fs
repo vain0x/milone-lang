@@ -123,8 +123,6 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     ty, a
   | Expr.Nav (_, _, ty, a) ->
     ty, a
-  | Expr.Index (_, _, ty, a) ->
-    ty, a
   | Expr.Op (_, _, _, ty, a) ->
     ty, a
   | Expr.Inf (_, _, ty, a) ->
@@ -150,8 +148,6 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Match (go target, arms, f ty, g a)
     | Expr.Nav (sub, mes, ty, a) ->
       Expr.Nav (go sub, mes, f ty, g a)
-    | Expr.Index (l, r, ty, a) ->
-      Expr.Index (go l, go r, f ty, g a)
     | Expr.Op (Op.Cons itemTy, l, r, ty, a) ->
       Expr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
     | Expr.Op (op, l, r, ty, a) ->
@@ -199,6 +195,9 @@ let opIsComparison op =
     true
   | _ ->
     false
+
+let hxIndex l r ty loc =
+  Expr.Op (Op.Index, l, r, ty, loc)
 
 let hxAnno expr ty loc =
   Expr.Inf (InfOp.Anno, [expr], ty, loc)

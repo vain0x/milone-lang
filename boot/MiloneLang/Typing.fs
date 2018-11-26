@@ -386,11 +386,11 @@ let inferIndex ctx l r loc resultTy =
   match substTy ctx subTy, substTy ctx indexTy with
   | Ty.Str, Ty.Range ->
     let ctx = unifyTy ctx resultTy Ty.Str
-    Expr.Index (l, r, resultTy, loc), ctx
+    hxIndex l r resultTy loc, ctx
   | Ty.Str, _ ->
     let ctx = unifyTy ctx indexTy Ty.Int
     let ctx = unifyTy ctx resultTy Ty.Char
-    Expr.Index (l, r, resultTy, loc), ctx
+    hxIndex l r resultTy loc, ctx
   | subTy, indexTy ->
     failwithf "Type: Index not supported %A" (subTy, indexTy, l, r)
 
@@ -486,6 +486,8 @@ let inferOp (ctx: TyCtx) op left right loc ty =
     inferOpCons ctx left right loc ty
   | Op.Range ->
     inferOpRange ctx op left right loc ty
+  | Op.Index ->
+    inferIndex ctx left right loc ty
 
 let inferTuple (ctx: TyCtx) items loc tupleTy =
   let rec go acc itemTys ctx items =
@@ -603,8 +605,6 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferMatch ctx target arms loc ty
   | Expr.Nav (receiver, field,  _,loc) ->
     inferNav ctx receiver field loc ty
-  | Expr.Index (l, r, _, loc) ->
-    inferIndex ctx l r loc ty
   | Expr.Op (op, l, r, _, loc) ->
     inferOp ctx op l r loc ty
   | Expr.Inf (InfOp.List _, items, _, loc) ->
