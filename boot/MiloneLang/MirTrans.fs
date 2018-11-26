@@ -267,7 +267,7 @@ let addCapsArg caps args body loc ctx =
     args, body, ctx
   | _ ->
     let tys = caps |> List.map (fun (_, _, ty, _) -> ty)
-    let capsTy = if tys |> List.isEmpty then MTy.Unit else MTy.Tuple tys
+    let capsTy = MTy.Tuple tys
 
     let capsRef, capsSerial, ctx = ctx |> ctxFreshVar "caps" capsTy loc
     let body = deconstructCaps capsRef caps body

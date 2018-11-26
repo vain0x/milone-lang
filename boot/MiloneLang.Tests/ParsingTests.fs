@@ -82,7 +82,7 @@ let exprLet ident body =
   Expr.Let (patRef ident, body, ())
 
 let exprLetMain body =
-  Expr.Let (patCall (patRef "main") [Pat.Unit ()], body, ())
+  Expr.Let (patCall (patRef "main") [patUnit ()], body, ())
 
 let exprAndThen exprs =
   hxAndThen exprs ()
@@ -124,7 +124,7 @@ let parseSimpleExprs () =
   let table =
     [
       "()",
-        Expr.Unit ()
+        hxUnit ()
       "1",
         exprInt 1
       "\"Hello, world!\"",
@@ -350,7 +350,7 @@ type Answer =
   | No
 """
   let tyDef =
-    TyDef.Union ["Yes", noSerial, true, Ty.Int; "No", noSerial, false, Ty.Unit]
+    TyDef.Union ["Yes", noSerial, true, Ty.Int; "No", noSerial, false, tyUnit]
   let expected =
     [
       Expr.TyDef ("Answer", noSerial, tyDef, ())
@@ -374,7 +374,7 @@ let parseFunTypeExprs () =
   let source = """unit -> (int -> bool) -> string"""
   let expected =
     tyFun
-      Ty.Unit
+      tyUnit
       (tyFun (tyFun Ty.Int Ty.Bool) Ty.Str)
   source |> parseTyExprStr |> is expected
 

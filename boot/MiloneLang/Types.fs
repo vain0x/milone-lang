@@ -58,7 +58,6 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type Ty =
     | Error
-    | Unit
     | Bool
     | Int
     | Char
@@ -143,8 +142,6 @@ namespace rec MiloneLang
   type Pat<'a> =
     | Lit
       of Lit * 'a
-    | Unit
-      of 'a
     /// `[]`
     | Nil
       of itemTy:Ty * 'a
@@ -201,8 +198,6 @@ namespace rec MiloneLang
   type Expr<'a> =
     | Lit
       of Lit * 'a
-    | Unit
-      of 'a
     /// Variable reference.
     | Ref
       of ident:string * serial:int * arity:int * Ty * 'a
@@ -239,7 +234,6 @@ namespace rec MiloneLang
   /// Type in middle IR.
   [<RequireQualifiedAccess>]
   type MTy =
-    | Unit
     /// Boolean.
     | Bool
     /// Integer.

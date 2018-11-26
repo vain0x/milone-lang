@@ -86,7 +86,6 @@ let ctxResolveTy ctx ty =
   let rec go ty =
     match ty with
     | Ty.Error
-    | Ty.Unit
     | Ty.Bool
     | Ty.Int
     | Ty.Char
@@ -111,7 +110,6 @@ let isFreshTyVar ty tyVar: bool =
   let rec go ty =
     match ty with
     | Ty.Error
-    | Ty.Unit
     | Ty.Bool
     | Ty.Int
     | Ty.Char
@@ -134,7 +132,6 @@ let isFreshTyVar ty tyVar: bool =
 /// Gets if the specified type is resolved to a morphic type.
 let isMonomorphic ctx ty: bool =
   match substTy ctx ty with
-  | Ty.Unit
   | Ty.Bool
   | Ty.Int
   | Ty.Char
@@ -168,7 +165,6 @@ let substTy (ctx: TyCtx) ty: Ty =
   let rec go ty =
     match ty with
     | Ty.Error
-    | Ty.Unit
     | Ty.Bool
     | Ty.Int
     | Ty.Char
@@ -208,7 +204,6 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Error, _
     | _, Ty.Error
     | Ty.Tuple [], Ty.Tuple []
-    | Ty.Unit, Ty.Unit
     | Ty.Bool, Ty.Bool
     | Ty.Int, Ty.Int
     | Ty.Char, Ty.Char
@@ -220,7 +215,6 @@ let unifyTy (ctx: TyCtx) (lty: Ty) (rty: Ty): TyCtx =
       ctx
     | Ty.Var _, _ ->
       failwithf "Couldn't unify (due to self recursion) %A %A" lty rty
-    | Ty.Unit, _
     | Ty.Bool, _
     | Ty.Int, _
     | Ty.Char, _
@@ -287,8 +281,6 @@ let inferPatCons ctx l r loc listTy =
 
 let inferPat ctx pat ty =
   match pat with
-  | Pat.Unit _ ->
-    pat, unifyTy ctx ty Ty.Unit
   | Pat.Lit (lit, _) ->
     pat, unifyTy ctx ty (litTy lit)
   | Pat.Nil (_, loc) ->
@@ -541,7 +533,7 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
     let arity = List.length argPats
     let funTy, _, ctx =
       if callee = "main"
-      then Ty.Fun (Ty.Unit, Ty.Int), "", ctx
+      then Ty.Fun (tyUnit, Ty.Int), "", ctx // FIXME: argument type is string[]
       else ctxFreshTyVar "fun" ctx
     let serial, ctx = ctxFreshVar ctx callee (ValueIdent.Fun arity) funTy calleeLoc
 
@@ -562,7 +554,7 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
     failwith "First pattern of let with parameters must be an identifier."
 
 let inferLet ctx pat body loc ty =
-  let ctx = unifyTy ctx ty Ty.Unit
+  let ctx = unifyTy ctx ty tyUnit
   match pat with
   | Pat.Anno (Pat.Call (callee, args, _, callLoc), annoTy, _) ->
     let annoTy = ctxResolveTy ctx annoTy
@@ -587,7 +579,7 @@ let inferExprs ctx exprs lastTy: Expr<Loc> list * TyCtx =
       let expr, ctx = inferExpr ctx expr lastTy
       expr :: acc, ctx
     | expr :: exprs ->
-      let expr, ctx = inferExpr ctx expr Ty.Unit
+      let expr, ctx = inferExpr ctx expr tyUnit
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
@@ -603,8 +595,6 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   match expr with
   | Expr.Lit (lit, _) ->
     expr, unifyTy ctx (litTy lit) ty
-  | Expr.Unit _ ->
-    expr, unifyTy ctx ty Ty.Unit
   | Expr.Ref (ident, _, _, _, loc) ->
     inferRef ctx ident loc ty
   | Expr.If (pred, thenCl, elseCl, _, loc) ->
@@ -654,7 +644,7 @@ let infer (exprs: Expr<Loc> list): Expr<Loc> list * TyCtx =
       Tys = Map.empty
     }
 
-  let exprs, ctx = inferExprs ctx exprs Ty.Unit
+  let exprs, ctx = inferExprs ctx exprs tyUnit
 
   // Substitute all types.
   let exprs = List.map (substTyExpr ctx) (List.rev exprs)

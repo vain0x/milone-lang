@@ -116,7 +116,6 @@ let mtyDef tySerial (tyDef: TyDef) =
 
 let unboxTy (ty: Ty): MTy =
   match ty with
-  | Ty.Unit -> MTy.Unit
   | Ty.Bool -> MTy.Bool
   | Ty.Int -> MTy.Int
   | Ty.Char -> MTy.Char
@@ -248,7 +247,6 @@ let mirifyPatTuple ctx endLabel itemPats itemTys expr loc =
 /// Determines if the pattern covers the whole.
 let mirifyPat ctx (endLabel: string) (pat: Pat<Loc>) (expr: MExpr<Loc>): bool * MirCtx =
   match pat with
-  | Pat.Unit _
   | Pat.Ref ("_", _, _, _) ->
     // Discard result.
     true, ctx
@@ -531,7 +529,7 @@ let mirifyExprLetVal ctx pat init letLoc =
   let init, ctx = mirifyExpr ctx init
   match mirifyPat ctx "_never_" pat init with
   | true, ctx ->
-    MExpr.Default (MTy.Unit, letLoc), ctx
+    MExpr.Default (mtyUnit, letLoc), ctx
   | false, _ ->
     failwithf "Let pattern must be exhaustive for now %A" pat
 
@@ -578,7 +576,7 @@ let mirifyExprLetFun ctx pat pats body letLoc =
     let ctx = ctxRollBack ctx bodyCtx
     let decl = MDecl.LetFun (calleeSerial, args, [], resultTy, body, letLoc)
     let ctx = ctxAddDecl ctx decl
-    MExpr.Default (MTy.Unit, letLoc), ctx
+    MExpr.Default (mtyUnit, letLoc), ctx
   | _ ->
     failwith "First pattern of `let` for function must be an identifier."
 
@@ -591,14 +589,12 @@ let mirifyExprLet ctx pat body loc =
 
 let mirifyExprTyDef ctx tySerial tyDef loc =
   let ctx = ctxAddDecl ctx (MDecl.TyDef (tySerial, tyDef, loc))
-  MExpr.Default (MTy.Unit, loc), ctx
+  MExpr.Default (mtyUnit, loc), ctx
 
 let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   match expr with
   | Expr.Lit (lit, loc) ->
     MExpr.Lit (lit, loc), ctx
-  | Expr.Unit loc ->
-    MExpr.Default (MTy.Unit, loc), ctx
   | Expr.Ref (_, serial, arity, ty, loc) ->
     mirifyExprRef ctx serial arity ty loc
   | Expr.If (pred, thenCl, elseCl, ty, loc) ->
@@ -613,6 +609,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     MExpr.Default (MTy.List (unboxTy itemTy), loc), ctx
   | Expr.Inf (InfOp.List itemTy, items, _, loc) ->
     mirifyExprList ctx items itemTy loc
+  | Expr.Inf (InfOp.Tuple, [], _, loc) ->
+    MExpr.Default (mtyUnit, loc), ctx
   | Expr.Inf (InfOp.Tuple, items, Ty.Tuple itemTys, loc) ->
     mirifyExprTuple ctx items itemTys loc
   | Expr.Inf (InfOp.AndThen, exprs, _, _) ->

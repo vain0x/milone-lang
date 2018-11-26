@@ -42,6 +42,15 @@ let exMap f (xs, acc, ctx) =
       go (y :: ys) xs acc ctx
   go [] xs acc ctx
 
+let tyUnit =
+  Ty.Tuple []
+
+let patUnit loc =
+  Pat.Tuple ([], Ty.Tuple [], loc)
+
+let mtyUnit =
+  MTy.Tuple []
+
 let litTy (lit: Lit): Ty =
   match lit with
   | Lit.Bool _ -> Ty.Bool
@@ -70,8 +79,6 @@ let patExtract (pat: Pat<'a>): Ty * 'a =
   match pat with
   | Pat.Lit (lit, a) ->
     litTy lit, a
-  | Pat.Unit a ->
-    Ty.Unit, a
   | Pat.Nil (itemTy, a) ->
     Ty.List itemTy, a
   | Pat.Ref (_, _, ty, a) ->
@@ -90,8 +97,6 @@ let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
     match pat with
     | Pat.Lit (lit, a) ->
       Pat.Lit (lit, g a)
-    | Pat.Unit a ->
-      Pat.Unit (g a)
     | Pat.Nil (itemTy, a) ->
       Pat.Nil (f itemTy, g a)
     | Pat.Ref (ident, serial, ty, a) ->
@@ -110,8 +115,6 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
   match expr with
   | Expr.Lit (lit, a) ->
     litTy lit, a
-  | Expr.Unit a ->
-    Ty.Unit, a
   | Expr.Ref (_, _, _, ty, a) ->
     ty, a
   | Expr.If (_, _, _, ty, a) ->
@@ -127,9 +130,9 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
   | Expr.Inf (_, _, ty, a) ->
     ty, a
   | Expr.Let (_, _, a) ->
-    Ty.Unit, a
+    tyUnit, a
   | Expr.TyDef (_, _, _, a) ->
-    Ty.Unit, a
+    tyUnit, a
 
 let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
   let goPat pat =
@@ -138,8 +141,6 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
     match expr with
     | Expr.Lit (lit, a) ->
       Expr.Lit (lit, g a)
-    | Expr.Unit a ->
-      Expr.Unit (g a)
     | Expr.Ref (ident, serial, arity, ty, a) ->
       Expr.Ref (ident, serial, arity, f ty, g a)
     | Expr.If (pred, thenCl, elseCl, ty, a) ->
@@ -208,6 +209,9 @@ let hxAndThen items loc =
 let hxTuple items loc =
   Expr.Inf (InfOp.Tuple, items, Ty.Tuple (List.map exprTy items), loc)
 
+let hxUnit loc =
+  hxTuple [] loc
+
 let hxList items itemTy loc =
   Expr.Inf (InfOp.List itemTy, items, Ty.List itemTy, loc)
 
@@ -254,7 +258,7 @@ let knownSerials =
 let analyzeFormat (format: string) =
   let rec go i =
     if i >= format.Length then
-      Ty.Unit
+      tyUnit
     else
       if i + 1 < format.Length && format.[i] = '%' then
         match format.[i + 1] with

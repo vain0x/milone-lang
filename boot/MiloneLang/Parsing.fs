@@ -74,7 +74,7 @@ let parseTyAtom boxX tokens: Ty * _ list =
   | _ when nextInside boxX tokens |> not ->
     parseError "Expected a type atom" tokens
   | (Token.Ident "unit", _) :: tokens ->
-    Ty.Unit, tokens
+    tyUnit, tokens
   | (Token.Ident "bool", _) :: tokens ->
     Ty.Bool, tokens
   | (Token.Ident "int", _) :: tokens ->
@@ -142,7 +142,7 @@ let parseTyDefUnion boxX tokens =
       let argTy, tokens = parseTy boxX tokens
       go ((variant, noSerial, true, argTy) :: acc) tokens
     | (Token.Ident variant, _) :: tokens ->
-      go ((variant, noSerial, false, Ty.Unit) :: acc) tokens
+      go ((variant, noSerial, false, tyUnit) :: acc) tokens
     | _ ->
       List.rev acc, tokens
   match go [] tokens with
@@ -163,7 +163,7 @@ let parsePatAtom boxX tokens: Pat<_> * _ list =
   | _ when not (nextInside boxX tokens && leadsPat tokens) ->
     parseError "Expected a pattern atom" tokens
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
-    Pat.Unit loc, tokens
+    patUnit loc, tokens
   | (Token.Bool value, loc) :: tokens ->
     Pat.Lit (Lit.Bool value, loc), tokens
   | (Token.Int value, loc) :: tokens ->
@@ -280,7 +280,7 @@ let parseElseCl boxX ifLoc tokens =
     parseExpr insideX tokens
   | _ ->
     // Append `else ()` if missing.
-    Expr.Unit ifLoc, tokens
+    hxUnit ifLoc, tokens
 
 /// You can align contents on the same column as if/then/else.
 let parseIf boxX ifLoc tokens =
@@ -371,7 +371,7 @@ let parseAtom boxX tokens: Expr<Loc> * (Token * Loc) list =
   | _ when not (nextInside boxX tokens) ->
     parseError "Expected an atomic expression" tokens
   | (Token.ParenL, loc) :: (Token.ParenR, _) :: tokens ->
-    Expr.Unit loc, tokens
+    hxUnit loc, tokens
   | (Token.Bool value, loc) :: tokens ->
     Expr.Lit (Lit.Bool value, loc), tokens
   | (Token.Int value, loc) :: tokens ->

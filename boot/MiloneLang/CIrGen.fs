@@ -163,7 +163,6 @@ let ctxUniqueTyName (ctx: Ctx) ty =
     | None ->
       let ident, ctx =
         match ty with
-        | MTy.Unit -> "Unit", ctx
         | MTy.Bool -> "Bool", ctx
         | MTy.Int -> "Int", ctx
         | MTy.Char -> "Char", ctx
@@ -177,6 +176,8 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | MTy.List itemTy ->
           let itemTy, ctx = ctx |> go itemTy
           sprintf "%sList" itemTy, ctx
+        | MTy.Tuple [] ->
+          "Unit", ctx
         | MTy.Tuple itemTys ->
           let len = itemTys |> List.length
           let itemTys, ctx = (itemTys, ctx) |> stMap (fun (itemTy, ctx) -> ctx |> go itemTy)
@@ -189,7 +190,6 @@ let ctxUniqueTyName (ctx: Ctx) ty =
 
 let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
   match ty with
-  | MTy.Unit
   | MTy.Bool
   | MTy.Int ->
     CTy.Int, ctx
@@ -211,6 +211,8 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ctxAddListDecl ctx itemTy
     | Some ty ->
       ty, ctx
+  | MTy.Tuple [] ->
+    CTy.Int, ctx
   | MTy.Tuple itemTys ->
     match ctx.TyEnv |> Map.tryFind ty with
     | None ->
@@ -249,7 +251,7 @@ let cOpFrom op =
 /// `0`, `NULL`, or `(T) {}`
 let genExprDefault ctx ty =
   match ty with
-  | MTy.Unit
+  | MTy.Tuple []
   | MTy.Bool
   | MTy.Int ->
     CExpr.Int 0, ctx
@@ -341,8 +343,8 @@ let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Ref (_, _, MTy.Unit, _) ->
-    genExprDefault ctx MTy.Unit
+  | MExpr.Ref (_, _, MTy.Tuple [], _) ->
+    genExprDefault ctx mtyUnit
   | MExpr.Ref (serial, _, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Variant (_, serial, ty, _) ->
@@ -372,7 +374,7 @@ let genExprCallPrintfn ctx format args =
   let format = CExpr.StrRaw (format + "\n")
   let expr = CStmt.Expr (CExpr.Call (CExpr.Ref "printf", format :: args))
   let ctx = ctxAddStmt ctx expr
-  genExprDefault ctx MTy.Unit
+  genExprDefault ctx mtyUnit
 
 let genExprCall ctx callee args ty =
   match callee, args with
