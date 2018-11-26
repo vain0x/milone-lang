@@ -58,7 +58,7 @@ let exprRef ident =
   Expr.Ref (ident, noArity, noSerial, noTy, ())
 
 let exprList items =
-  Expr.List (items, noTy, ())
+  hxList items noTy ()
 
 let exprNil =
   exprList []
@@ -85,7 +85,7 @@ let exprLetMain body =
   Expr.Let (patCall (patRef "main") [Pat.Unit ()], body, ())
 
 let exprAndThen exprs =
-  Expr.AndThen (exprs, noTy, ())
+  hxAndThen exprs ()
 
 let exprCall callee args =
   let rec go callee args =

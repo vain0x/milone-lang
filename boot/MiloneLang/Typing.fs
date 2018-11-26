@@ -345,7 +345,7 @@ let inferList ctx items loc listTy =
       let item, ctx = inferExpr ctx item itemTy
       go (item :: acc) ctx items
   let items, ctx = go [] ctx items
-  Expr.List (items, itemTy, loc), ctx
+  hxList items itemTy loc, ctx
 
 /// if bool then 'a else 'a
 let inferIf ctx pred thenCl elseCl loc resultTy =
@@ -506,7 +506,7 @@ let inferTuple (ctx: TyCtx) items loc tupleTy =
       go (item :: acc) (itemTy :: itemTys) ctx items
   let items, itemTys, ctx = go [] [] ctx items
   let ctx = unifyTy ctx tupleTy (Ty.Tuple itemTys)
-  Expr.Tuple (items, itemTys, loc), ctx
+  hxTuple items loc, ctx
 
 let inferAnno ctx expr annoTy ty =
   let annoTy = ctxResolveTy ctx annoTy
@@ -593,7 +593,7 @@ let inferExprs ctx exprs lastTy: Expr<Loc> list * TyCtx =
 
 let inferAndThen ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
-  Expr.AndThen (List.rev exprs, lastTy, loc), ctx
+  hxAndThen (List.rev exprs) loc, ctx
 
 let inferExprTyDef ctx ident tyDef loc =
   let serial, tyDef, ctx = ctx |> ctxAddTy ident tyDef loc
@@ -607,8 +607,6 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     expr, unifyTy ctx ty Ty.Unit
   | Expr.Ref (ident, _, _, _, loc) ->
     inferRef ctx ident loc ty
-  | Expr.List (items, _, loc) ->
-    inferList ctx items loc ty
   | Expr.If (pred, thenCl, elseCl, _, loc) ->
     inferIf ctx pred thenCl elseCl loc ty
   | Expr.Match (target, arms, _, loc) ->
@@ -619,16 +617,20 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferIndex ctx l r loc ty
   | Expr.Op (op, l, r, _, loc) ->
     inferOp ctx op l r loc ty
-  | Expr.Tuple (items, _, loc) ->
+  | Expr.Inf (InfOp.List _, items, _, loc) ->
+    inferList ctx items loc ty
+  | Expr.Inf (InfOp.Tuple, items, _, loc) ->
     inferTuple ctx items loc ty
-  | Expr.Anno (expr, annoTy, _) ->
+  | Expr.Inf (InfOp.Anno, [expr], annoTy, _) ->
     inferAnno ctx expr annoTy ty
-  | Expr.AndThen (exprs, _, loc) ->
+  | Expr.Inf (InfOp.AndThen, exprs, _, loc) ->
     inferAndThen ctx loc exprs ty
   | Expr.Let (pat, body, loc) ->
     inferLet ctx pat body loc ty
   | Expr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDef ctx ident tyDef loc
+  | Expr.Inf (InfOp.Anno, _, _, _) ->
+    failwith "Never"
 
 /// Replaces type vars embedded in exprs
 /// with inference results.

@@ -114,8 +114,6 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     Ty.Unit, a
   | Expr.Ref (_, _, _, ty, a) ->
     ty, a
-  | Expr.List (_, itemTy, a) ->
-    Ty.List itemTy, a
   | Expr.If (_, _, _, ty, a) ->
     ty, a
   | Expr.Match (_, _, ty, a) ->
@@ -126,11 +124,7 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     ty, a
   | Expr.Op (_, _, _, ty, a) ->
     ty, a
-  | Expr.Tuple (_, itemTys, a) ->
-    Ty.Tuple itemTys, a
-  | Expr.Anno (_, ty, a) ->
-    ty, a
-  | Expr.AndThen (_, ty, a) ->
+  | Expr.Inf (_, _, ty, a) ->
     ty, a
   | Expr.Let (_, _, a) ->
     Ty.Unit, a
@@ -148,8 +142,6 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Unit (g a)
     | Expr.Ref (ident, serial, arity, ty, a) ->
       Expr.Ref (ident, serial, arity, f ty, g a)
-    | Expr.List (items, itemTy, a) ->
-      Expr.List (List.map go items, f itemTy, g a)
     | Expr.If (pred, thenCl, elseCl, ty, a) ->
       Expr.If (go pred, go thenCl, go elseCl, f ty, g a)
     | Expr.Match (target, arms, ty, a) ->
@@ -163,12 +155,10 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
     | Expr.Op (op, l, r, ty, a) ->
       Expr.Op (op, go l, go r, f ty, g a)
-    | Expr.Tuple (exprs, itemTys, a) ->
-      Expr.Tuple (List.map go exprs, List.map f itemTys, g a)
-    | Expr.Anno (expr, ty, a) ->
-      Expr.Anno (go expr, f ty, g a)
-    | Expr.AndThen (exprs, ty, a) ->
-      Expr.AndThen (List.map go exprs, f ty, g a)
+    | Expr.Inf (InfOp.List itemTy, items, resultTy, a) ->
+      Expr.Inf (InfOp.List (f itemTy), List.map go items, f resultTy, g a)
+    | Expr.Inf (infOp, args, resultTy, a) ->
+      Expr.Inf (infOp, List.map go args, f resultTy, g a)
     | Expr.Let (pat, init, a) ->
       Expr.Let (goPat pat, go init, g a)
     | Expr.TyDef (ident, serial, tyDef, a) ->
@@ -208,6 +198,18 @@ let opIsComparison op =
     true
   | _ ->
     false
+
+let hxAnno expr ty loc =
+  Expr.Inf (InfOp.Anno, [expr], ty, loc)
+
+let hxAndThen items loc =
+  Expr.Inf (InfOp.AndThen, items, exprTy (List.last items), loc)
+
+let hxTuple items loc =
+  Expr.Inf (InfOp.Tuple, items, Ty.Tuple (List.map exprTy items), loc)
+
+let hxList items itemTy loc =
+  Expr.Inf (InfOp.List itemTy, items, Ty.List itemTy, loc)
 
 let noArity = 0
 

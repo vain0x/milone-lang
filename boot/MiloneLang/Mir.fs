@@ -285,7 +285,7 @@ let desugarExprList items itemTy loc =
       acc
     | item :: items ->
       go (Expr.Op (Op.Cons itemTy, item, acc, Ty.List itemTy, loc)) items
-  go (Expr.List ([], itemTy, loc)) (List.rev items)
+  go (hxList [] itemTy loc) (List.rev items)
 
 /// `[a; b; c]` -> `a :: b :: c :: []`
 let mirifyExprList ctx items itemTy loc =
@@ -601,10 +601,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     MExpr.Default (MTy.Unit, loc), ctx
   | Expr.Ref (_, serial, arity, ty, loc) ->
     mirifyExprRef ctx serial arity ty loc
-  | Expr.List ([], itemTy, loc) ->
-    MExpr.Default (MTy.List (unboxTy itemTy), loc), ctx
-  | Expr.List (items, itemTy, loc) ->
-    mirifyExprList ctx items itemTy loc
   | Expr.If (pred, thenCl, elseCl, ty, loc) ->
     mirifyExprIf ctx pred thenCl elseCl ty loc
   | Expr.Match (target, arms, ty, loc) ->
@@ -613,16 +609,21 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprIndex ctx l r ty loc
   | Expr.Op (op, l, r, ty, loc) ->
     mirifyExprOp ctx op l r ty loc
-  | Expr.Tuple (items, itemTys, loc) ->
+  | Expr.Inf (InfOp.List itemTy, [], _, loc) ->
+    MExpr.Default (MTy.List (unboxTy itemTy), loc), ctx
+  | Expr.Inf (InfOp.List itemTy, items, _, loc) ->
+    mirifyExprList ctx items itemTy loc
+  | Expr.Inf (InfOp.Tuple, items, Ty.Tuple itemTys, loc) ->
     mirifyExprTuple ctx items itemTys loc
-  | Expr.AndThen (exprs, _, _) ->
+  | Expr.Inf (InfOp.AndThen, exprs, _, _) ->
     mirifyExprAndThen ctx exprs
   | Expr.Let (pat, body, loc) ->
     mirifyExprLet ctx pat body loc
   | Expr.TyDef (_, tySerial, tyDef, loc) ->
     mirifyExprTyDef ctx tySerial tyDef loc
   | Expr.Nav _
-  | Expr.Anno _ ->
+  | Expr.Inf (InfOp.Anno, _, _, _)
+  | Expr.Inf (InfOp.Tuple, _, _, _) ->
     failwith "Never"
 
 let mirifyExprs ctx exprs =

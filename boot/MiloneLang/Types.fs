@@ -184,6 +184,18 @@ namespace rec MiloneLang
     | Variant
       of tySerial:int
 
+  [<RequireQualifiedAccess>]
+  type InfOp =
+    /// Type annotation `x : 'x`.
+    | Anno
+    /// `x; y`
+    | AndThen
+    /// Tuple constructor, e.g. `x, y, z`.
+    | Tuple
+    /// List constructor, e.g. `[x; y; z]`.
+    | List
+      of itemTy:Ty
+
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]
   type Expr<'a> =
@@ -194,8 +206,6 @@ namespace rec MiloneLang
     /// Variable reference.
     | Ref
       of ident:string * serial:int * arity:int * Ty * 'a
-    | List
-      of Expr<'a> list * itemTy:Ty * 'a
     /// If-then-else. Else clause is `()` if omit.
     | If
       of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * Ty * 'a
@@ -210,15 +220,9 @@ namespace rec MiloneLang
     /// Binary operation, e.g. `x + y`.
     | Op
       of Op * Expr<'a> * Expr<'a> * Ty * 'a
-    /// Tuple constructor, e.g. `x, y, z`.
-    | Tuple
-      of Expr<'a> list * itemTys:Ty list * 'a
-    /// Type annotation `x : 'x`.
-    | Anno
-      of Expr<'a> * Ty * 'a
-    /// `x; y`
-    | AndThen
-      of Expr<'a> list * Ty * 'a
+    /// Operation with infinite arguments.
+    | Inf
+      of InfOp * Expr<'a> list * Ty * 'a
     | Let
       of pat:Pat<'a> * init:Expr<'a> * 'a
     /// Type definition.

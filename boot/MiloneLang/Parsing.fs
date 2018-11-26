@@ -257,7 +257,7 @@ let parsePats boxX (tokens: _ list): Pat<_> list * _ list =
 let parseList boxX bracketLoc tokens =
   match parseBindings boxX tokens with
   | exprs, (Token.BracketR, _) :: tokens ->
-    Expr.List (exprs, noTy, bracketLoc), tokens
+    hxList exprs noTy bracketLoc, tokens
   | _, tokens ->
     parseError "Expected ']'" tokens
 
@@ -507,14 +507,14 @@ let parseTuple boxX tokens =
   | [], tokens ->
     first, tokens
   | acc, tokens ->
-    Expr.Tuple (first :: acc, [], loc), tokens
+    hxTuple (first :: acc) loc, tokens
 
 /// anno = tuple ( ':' ty )?
 let parseAnno boxX tokens =
   match parseTuple boxX tokens with
   | expr, (Token.Colon, loc) :: tokens ->
     let ty, tokens = parseTy (nextX tokens) tokens
-    Expr.Anno (expr, ty, loc), tokens
+    hxAnno expr ty loc, tokens
   | expr, tokens ->
     expr, tokens
 
@@ -558,7 +558,7 @@ let parseAndThen boxX tokens =
   | [expr], tokens ->
     expr, tokens
   | exprs, tokens ->
-    Expr.AndThen (exprs, noTy, nextLoc tokens), tokens
+    hxAndThen exprs (nextLoc tokens), tokens
 
 let parseExpr (boxX: int) (tokens: (Token * Loc) list): Expr<Loc> * (Token * Loc) list =
   parseAndThen boxX tokens
