@@ -327,26 +327,10 @@ let inferRef (ctx: TyCtx) ident loc ty =
   | None, _ ->
     failwithf "Couldn't resolve var %s" ident
 
-let inferList ctx items loc listTy =
+let inferNil ctx loc listTy =
   let itemTy, _, ctx = ctxFreshTyVar "item" ctx
   let ctx = unifyTy ctx listTy (Ty.List itemTy)
-  let rec go acc ctx items =
-    match items with
-    | [] -> List.rev acc, ctx
-    | item :: items ->
-      let item, ctx = inferExpr ctx item itemTy
-      go (item :: acc) ctx items
-  let items, ctx = go [] ctx items
-  hxList items itemTy loc, ctx
-
-/// if bool then 'a else 'a
-let inferIf ctx pred thenCl elseCl loc resultTy =
-  let pred, ctx = inferExpr ctx pred Ty.Bool
-  let thenCl, thenCtx = inferExpr ctx thenCl resultTy
-  let ctx = ctxRollback ctx thenCtx
-  let elseCl, elseCtx = inferExpr ctx elseCl resultTy
-  let ctx = ctxRollback ctx elseCtx
-  Expr.If (pred, thenCl, elseCl, resultTy, loc), ctx
+  hxNil itemTy loc, ctx
 
 /// match 'a with ( | 'a -> 'b )*
 let inferMatch ctx target arms loc resultTy =
@@ -440,9 +424,6 @@ let inferOpCmp (ctx: TyCtx) op left right loc resultTy =
   let operandTy, _, ctx = ctxFreshTyVar "operand" ctx
   let ctx = unifyTy ctx resultTy Ty.Bool
   inferOpCore ctx op left right loc operandTy resultTy
-
-let inferOpPipe ctx _op l r loc ty =
-  inferOpApp ctx r l loc ty
 
 let inferOpCons ctx left right loc listTy =
   let itemTy, _, ctx = ctxFreshTyVar "item" ctx
@@ -580,8 +561,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferNav ctx receiver field loc ty
   | Expr.Op (op, l, r, _, loc) ->
     inferOp ctx op l r loc ty
-  | Expr.Inf (InfOp.List _, items, _, loc) ->
-    inferList ctx items loc ty
+  | Expr.Inf (InfOp.List _, [], _, loc) ->
+    inferNil ctx loc ty
   | Expr.Inf (InfOp.Tuple, items, _, loc) ->
     inferTuple ctx items loc ty
   | Expr.Inf (InfOp.Anno, [expr], annoTy, _) ->
@@ -595,7 +576,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   | Expr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDef ctx ident tyDef loc
   | Expr.If _
-  | Expr.Inf (InfOp.Anno, _, _, _) ->
+  | Expr.Inf (InfOp.Anno, _, _, _)
+  | Expr.Inf (InfOp.List _, _, _, _) ->
     failwith "Never"
   | Expr.Error (error, loc) ->
     failwithf "Never: %s at %A" error loc
