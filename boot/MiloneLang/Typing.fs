@@ -444,10 +444,6 @@ let inferOpCmp (ctx: TyCtx) op left right loc resultTy =
 let inferOpPipe ctx _op l r loc ty =
   inferOpApp ctx r l loc ty
 
-let inferOpLogic (ctx: TyCtx) op left right loc resultTy =
-  let ctx = unifyTy ctx resultTy Ty.Bool
-  inferOpCore ctx op left right loc Ty.Bool Ty.Bool
-
 let inferOpCons ctx left right loc listTy =
   let itemTy, _, ctx = ctxFreshTyVar "item" ctx
   let ctx = unifyTy ctx listTy (Ty.List itemTy)
@@ -477,17 +473,16 @@ let inferOp (ctx: TyCtx) op left right loc ty =
     inferOpCmp ctx op left right loc ty
   | Op.App ->
     inferOpApp ctx left right loc ty
-  | Op.Pipe ->
-    inferOpPipe ctx op left right loc ty
-  | Op.And
-  | Op.Or ->
-    inferOpLogic ctx op left right loc ty
   | Op.Cons _ ->
     inferOpCons ctx left right loc ty
   | Op.Range ->
     inferOpRange ctx op left right loc ty
   | Op.Index ->
     inferIndex ctx left right loc ty
+  | Op.And
+  | Op.Or
+  | Op.Pipe ->
+    failwith "Never: Desugared operators"
 
 let inferTuple (ctx: TyCtx) items loc tupleTy =
   let rec go acc itemTys ctx items =

@@ -277,19 +277,6 @@ let mirifyExprRef (ctx: MirCtx) serial arity ty loc =
   | _ ->
     MExpr.Ref (serial, arity, unboxTy ty, loc), ctx
 
-let desugarExprList items itemTy loc =
-  let rec go acc items =
-    match items with
-    | [] ->
-      acc
-    | item :: items ->
-      go (Expr.Op (Op.Cons itemTy, item, acc, Ty.List itemTy, loc)) items
-  go (hxList [] itemTy loc) (List.rev items)
-
-/// `[a; b; c]` -> `a :: b :: c :: []`
-let mirifyExprList ctx items itemTy loc =
-  mirifyExpr ctx (desugarExprList items itemTy loc)
-
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
   let expr, blockCtx = mirifyExpr blockCtx expr
@@ -441,20 +428,6 @@ let mirifyExprOpApp ctx callee arg ty loc =
 
     temp, ctx
 
-/// `x |> f` ==> `f x`
-let mirifyExprOpPipe ctx l r ty loc =
-  mirifyExprOpApp ctx r l ty loc
-
-/// l && r ==> if l then r else false
-let mirifyExprOpAnd ctx l r ty loc =
-  let falseExpr = Expr.Lit (Lit.Bool false, loc)
-  mirifyExprIf ctx l r falseExpr ty loc
-
-/// l || r ==> if l then true else r
-let mirifyExprOpOr ctx l r ty loc =
-  let trueExpr = Expr.Lit (Lit.Bool true, loc)
-  mirifyExprIf ctx l trueExpr r ty loc
-
 let mirifyExprOpCons ctx l r itemTy listTy loc =
   let itemTy = unboxTy itemTy
   let listTy = unboxTy listTy
@@ -484,14 +457,8 @@ let mirifyExprTuple ctx items itemTys loc =
 
 let mirifyExprOp ctx op l r ty loc =
   match op with
-  | Op.And ->
-    mirifyExprOpAnd ctx l r ty loc
-  | Op.Or ->
-    mirifyExprOpOr ctx l r ty loc
   | Op.App ->
     mirifyExprOpApp ctx l r ty loc
-  | Op.Pipe ->
-    mirifyExprOpPipe ctx l r ty loc
   | Op.Cons itemTy ->
     mirifyExprOpCons ctx l r itemTy ty loc
   | Op.Index ->
@@ -509,6 +476,10 @@ let mirifyExprOp ctx op l r ty loc =
     let l, ctx = mirifyExpr ctx l
     let r, ctx = mirifyExpr ctx r
     cmpExpr ctx op l r ty loc
+  | Op.And
+  | Op.Or
+  | Op.Pipe ->
+    failwith "Never: Desugared operators"
   | _ ->
     let op = mopFrom op
     let ty, lTy = unboxTy ty, exprTy l
@@ -597,8 +568,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprOp ctx op l r ty loc
   | Expr.Inf (InfOp.List itemTy, [], _, loc) ->
     MExpr.Default (MTy.List (unboxTy itemTy), loc), ctx
-  | Expr.Inf (InfOp.List itemTy, items, _, loc) ->
-    mirifyExprList ctx items itemTy loc
   | Expr.Inf (InfOp.Tuple, [], _, loc) ->
     MExpr.Default (mtyUnit, loc), ctx
   | Expr.Inf (InfOp.Tuple, items, Ty.Tuple itemTys, loc) ->
@@ -613,7 +582,8 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprTyDef ctx tySerial tyDef loc
   | Expr.Nav _
   | Expr.Inf (InfOp.Anno, _, _, _)
-  | Expr.Inf (InfOp.Tuple, _, _, _) ->
+  | Expr.Inf (InfOp.Tuple, _, _, _)
+  | Expr.Inf (InfOp.List _, _, _, _) ->
     failwith "Never"
   | Expr.Error (error, loc) ->
     failwithf "Never: %s at %A" error loc
