@@ -219,9 +219,13 @@ namespace rec MiloneLang
       of InfOp * Expr<'a> list * Ty * 'a
     | Let
       of pat:Pat<'a> * init:Expr<'a> * 'a
+    | LetFun
+      of ident:string * serial:int * args:Pat<'a> list * body:Expr<'a> * resultTy:Ty * 'a
     /// Type definition.
     | TyDef
       of ident:string * serial:int * TyDef * 'a
+    | Error
+      of string * 'a
 
   /// Type definition in mid-level IR.
   [<RequireQualifiedAccess>]

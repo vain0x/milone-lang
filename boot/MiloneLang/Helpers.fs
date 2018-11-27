@@ -129,8 +129,12 @@ let exprExtract (expr: Expr<'a>): Ty * 'a =
     ty, a
   | Expr.Let (_, _, a) ->
     tyUnit, a
+  | Expr.LetFun (_, _, _, _, ty, a) ->
+    ty, a
   | Expr.TyDef (_, _, _, a) ->
     tyUnit, a
+  | Expr.Error (_, a) ->
+    Ty.Error, a
 
 let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
   let goPat pat =
@@ -158,8 +162,12 @@ let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
       Expr.Inf (infOp, List.map go args, f resultTy, g a)
     | Expr.Let (pat, init, a) ->
       Expr.Let (goPat pat, go init, g a)
+    | Expr.LetFun (ident, serial, args, body, resultTy, a) ->
+      Expr.LetFun (ident, serial, List.map goPat args, go body, f resultTy, g a)
     | Expr.TyDef (ident, serial, tyDef, a) ->
       Expr.TyDef (ident, serial, tyDef, g a)
+    | Expr.Error (error, a) ->
+      Expr.Error (error, g a)
   go expr
 
 let exprTy expr =
@@ -196,6 +204,12 @@ let opIsComparison op =
   | _ ->
     false
 
+let hxTrue loc =
+  Expr.Lit (Lit.Bool true, loc)
+
+let hxFalse loc =
+  Expr.Lit (Lit.Bool false, loc)
+
 let hxIndex l r ty loc =
   Expr.Op (Op.Index, l, r, ty, loc)
 
@@ -213,6 +227,9 @@ let hxUnit loc =
 
 let hxList items itemTy loc =
   Expr.Inf (InfOp.List itemTy, items, Ty.List itemTy, loc)
+
+let hxNil itemTy loc =
+  hxList [] itemTy loc
 
 let noArity = 0
 

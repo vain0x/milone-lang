@@ -536,7 +536,7 @@ let mirifyExprLetVal ctx pat init letLoc =
   | false, _ ->
     failwithf "Let pattern must be exhaustive for now %A" pat
 
-let mirifyExprLetFun ctx pat pats body letLoc =
+let mirifyExprLetFun ctx calleeSerial argPats body letLoc =
   let defineArg ctx argPat =
     match argPat with
     | Pat.Ref (_, serial, ty, loc) ->
@@ -572,23 +572,12 @@ let mirifyExprLetFun ctx pat pats body letLoc =
     let body = List.rev stmts
     args, unboxTy blockTy, body, ctx
 
-  match pat, pats with
-  | Pat.Ref (_, calleeSerial, _, _), argPats ->
-    let bodyCtx = ctxNewBlock ctx
-    let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
-    let ctx = ctxRollBack ctx bodyCtx
-    let decl = MDecl.LetFun (calleeSerial, args, [], resultTy, body, letLoc)
-    let ctx = ctxAddDecl ctx decl
-    MExpr.Default (mtyUnit, letLoc), ctx
-  | _ ->
-    failwith "First pattern of `let` for function must be an identifier."
-
-let mirifyExprLet ctx pat body loc =
-  match pat with
-  | Pat.Call (callee, args, _, _)->
-    mirifyExprLetFun ctx callee args body loc
-  | _ ->
-    mirifyExprLetVal ctx pat body loc
+  let bodyCtx = ctxNewBlock ctx
+  let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
+  let ctx = ctxRollBack ctx bodyCtx
+  let decl = MDecl.LetFun (calleeSerial, args, [], resultTy, body, letLoc)
+  let ctx = ctxAddDecl ctx decl
+  MExpr.Default (mtyUnit, letLoc), ctx
 
 let mirifyExprTyDef ctx tySerial tyDef loc =
   let ctx = ctxAddDecl ctx (MDecl.TyDef (tySerial, tyDef, loc))
@@ -617,13 +606,17 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
   | Expr.Inf (InfOp.AndThen, exprs, _, _) ->
     mirifyExprAndThen ctx exprs
   | Expr.Let (pat, body, loc) ->
-    mirifyExprLet ctx pat body loc
+    mirifyExprLetVal ctx pat body loc
+  | Expr.LetFun (_, serial, args, body, _, loc) ->
+    mirifyExprLetFun ctx serial args body loc
   | Expr.TyDef (_, tySerial, tyDef, loc) ->
     mirifyExprTyDef ctx tySerial tyDef loc
   | Expr.Nav _
   | Expr.Inf (InfOp.Anno, _, _, _)
   | Expr.Inf (InfOp.Tuple, _, _, _) ->
     failwith "Never"
+  | Expr.Error (error, loc) ->
+    failwithf "Never: %s at %A" error loc
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =

@@ -18,7 +18,9 @@ module MiloneLang.Program
     log "tokens" tokens
     let ast = Parsing.parse tokens
     log "ast" ast
-    let typedAst, tyCtx = Typing.infer ast
+    let desugared = Desugaring.desugar ast
+    log "desugared" ast
+    let typedAst, tyCtx = Typing.infer desugared
     log "typed" typedAst
     let mir, mirCtx = Mir.mirify (typedAst, tyCtx)
     log "mir" mir

@@ -517,7 +517,9 @@ let inferLetVal ctx pat init loc =
   let pat, ctx = inferPat ctx pat initTy
   Expr.Let (pat, init, loc), ctx
 
-let inferLetFun ctx calleePat argPats body bodyTy loc =
+let inferLetFun ctx calleeName argPats body loc =
+  let bodyTy, _, ctx = ctxFreshTyVar "body" ctx
+
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx bodyTy argPats =
@@ -530,46 +532,24 @@ let inferLetFun ctx calleePat argPats body bodyTy loc =
       let pats, bodyTy, ctx = inferArgs ctx bodyTy argPats
       pat :: pats, Ty.Fun (argTy, bodyTy), ctx
 
-  match calleePat with
-  | Pat.Ref (callee, _, _, calleeLoc) ->
-    let arity = List.length argPats
-    let funTy, _, ctx =
-      if callee = "main"
-      then Ty.Fun (tyUnit, Ty.Int), "", ctx // FIXME: argument type is string[]
-      else ctxFreshTyVar "fun" ctx
-    let serial, ctx = ctxFreshVar ctx callee (ValueIdent.Fun arity) funTy calleeLoc
+  let arity = List.length argPats
+  let funTy, _, ctx =
+    if calleeName = "main"
+    then Ty.Fun (tyUnit, Ty.Int), "", ctx // FIXME: argument type is string[]
+    else ctxFreshTyVar "fun" ctx
+  let serial, ctx = ctxFreshVar ctx calleeName (ValueIdent.Fun arity) funTy loc
 
-    // FIXME: local functions are recursive by default
-    let bodyCtx = ctx
-    let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
-    let bodyCtx = unifyTy bodyCtx funTy actualFunTy
-    let body, bodyCtx = inferExpr bodyCtx body bodyTy
+  // FIXME: local functions are recursive by default
+  let bodyCtx = ctx
+  let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
+  let bodyCtx = unifyTy bodyCtx funTy actualFunTy
+  let body, bodyCtx = inferExpr bodyCtx body bodyTy
 
-    if isMonomorphic bodyCtx funTy |> not then
-      failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A %A" (substTy bodyCtx funTy) argPats
+  if isMonomorphic bodyCtx funTy |> not then
+    failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A %A" (substTy bodyCtx funTy) argPats
 
-    let ctx = ctxRollback ctx bodyCtx
-
-    let calleePat = Pat.Ref (callee, serial, funTy, calleeLoc)
-    calleePat, argPats, body, loc, ctx
-  | _ ->
-    failwith "First pattern of let with parameters must be an identifier."
-
-let inferLet ctx pat body loc ty =
-  let ctx = unifyTy ctx ty tyUnit
-  match pat with
-  | Pat.Anno (Pat.Call (callee, args, _, callLoc), annoTy, _) ->
-    let annoTy = ctxResolveTy ctx annoTy
-    let callee, args, body, loc, ctx = inferLetFun ctx callee args body annoTy loc
-    let pat = Pat.Call (callee, args, ty, callLoc)
-    Expr.Let (pat, body, loc), ctx
-  | Pat.Call (callee, args, _, callLoc) ->
-    let bodyTy, _, ctx = ctxFreshTyVar "body" ctx
-    let callee, args, body, loc, ctx = inferLetFun ctx callee args body bodyTy loc
-    let pat = Pat.Call (callee, args, ty, callLoc)
-    Expr.Let (pat, body, loc), ctx
-  | _ ->
-    inferLetVal ctx pat body loc
+  let ctx = ctxRollback ctx bodyCtx
+  Expr.LetFun (calleeName, serial, argPats, body, funTy, loc), ctx
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: Expr<Loc> list * TyCtx =
@@ -616,11 +596,15 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
   | Expr.Inf (InfOp.AndThen, exprs, _, loc) ->
     inferAndThen ctx loc exprs ty
   | Expr.Let (pat, body, loc) ->
-    inferLet ctx pat body loc ty
+    inferLetVal ctx pat body loc
+  | Expr.LetFun (calleeName, _, args, body, _, loc) ->
+    inferLetFun ctx calleeName args body loc
   | Expr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDef ctx ident tyDef loc
   | Expr.Inf (InfOp.Anno, _, _, _) ->
     failwith "Never"
+  | Expr.Error (error, loc) ->
+    failwithf "Never: %s at %A" error loc
 
 /// Replaces type vars embedded in exprs
 /// with inference results.
