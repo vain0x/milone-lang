@@ -284,29 +284,6 @@ let mirifyBlock ctx expr =
   let ctx = ctxRollBack ctx blockCtx
   stmts, expr, ctx
 
-let mirifyExprIf ctx pred thenCl elseCl ty loc =
-  let ty = unboxTy ty
-  let temp, tempSet, ctx = ctxLetFreshVar ctx "if" ty loc
-  let elseLabelStmt, elseLabel, ctx = ctxFreshLabel ctx "else" loc
-  let endLabelStmt, endLabel, ctx = ctxFreshLabel ctx "end_if" loc
-
-  let pred, ctx = mirifyExpr ctx pred
-  // if not pred then goto else
-  let ctx = ctxAddStmt ctx (MStmt.GotoUnless (pred, elseLabel, loc))
-  let thenVal, ctx = mirifyExpr ctx thenCl
-  let ctx = ctxAddStmt ctx (tempSet thenVal)
-  // goto end_if
-  let ctx = ctxAddStmt ctx (MStmt.Goto (endLabel, loc))
-
-  // else:
-  let ctx = ctxAddStmt ctx elseLabelStmt
-  let elseVal, ctx = mirifyExpr ctx elseCl
-  let ctx = ctxAddStmt ctx (tempSet elseVal)
-  // end_if:
-  let ctx = ctxAddStmt ctx endLabelStmt
-
-  temp, ctx
-
 let mirifyExprMatch ctx target arms ty loc =
   let ty = unboxTy ty
   let temp, tempSet, ctx = ctxLetFreshVar ctx "match" ty loc
@@ -560,8 +537,6 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     MExpr.Lit (lit, loc), ctx
   | Expr.Ref (_, serial, arity, ty, loc) ->
     mirifyExprRef ctx serial arity ty loc
-  | Expr.If (pred, thenCl, elseCl, ty, loc) ->
-    mirifyExprIf ctx pred thenCl elseCl ty loc
   | Expr.Match (target, arms, ty, loc) ->
     mirifyExprMatch ctx target arms ty loc
   | Expr.Op (op, l, r, ty, loc) ->
@@ -580,6 +555,7 @@ let mirifyExpr (ctx: MirCtx) (expr: Expr<Loc>): MExpr<Loc> * MirCtx =
     mirifyExprLetFun ctx serial args body loc
   | Expr.TyDef (_, tySerial, tyDef, loc) ->
     mirifyExprTyDef ctx tySerial tyDef loc
+  | Expr.If _
   | Expr.Nav _
   | Expr.Inf (InfOp.Anno, _, _, _)
   | Expr.Inf (InfOp.Tuple, _, _, _)

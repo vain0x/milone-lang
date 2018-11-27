@@ -574,8 +574,6 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     expr, unifyTy ctx (litTy lit) ty
   | Expr.Ref (ident, _, _, _, loc) ->
     inferRef ctx ident loc ty
-  | Expr.If (pred, thenCl, elseCl, _, loc) ->
-    inferIf ctx pred thenCl elseCl loc ty
   | Expr.Match (target, arms, _, loc) ->
     inferMatch ctx target arms loc ty
   | Expr.Nav (receiver, field,  _,loc) ->
@@ -596,6 +594,7 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferLetFun ctx calleeName args body loc
   | Expr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDef ctx ident tyDef loc
+  | Expr.If _
   | Expr.Inf (InfOp.Anno, _, _, _) ->
     failwith "Never"
   | Expr.Error (error, loc) ->
