@@ -5,42 +5,58 @@ struct String parse_(struct String s_1);
 int main();
 
 int go_(struct String s_, int i_, int d_) {
-    int if_;
-    if (!((s_.len <= i_))) goto else_1;
-    if_ = (d_ == 0);
-    goto end_if_2;
-else_1:;
-    int if_1;
-    if (!((s_.str[i_] == '('))) goto else_3;
+    int match_;
+    if (!(((s_.len <= i_) == 1))) goto next_2;
+    match_ = (d_ == 0);
+    goto end_match_1;
+next_2:;
+    if (!(((s_.len <= i_) == 0))) goto next_3;
+    int match_1;
+    if (!(((s_.str[i_] == '(') == 1))) goto next_5;
     int call_ = go_(s_, (i_ + 1), (d_ + 1));
-    if_1 = call_;
-    goto end_if_4;
-else_3:;
-    int if_2;
-    if (!((d_ <= 0))) goto else_5;
-    if_2 = 0;
-    goto end_if_6;
-else_5:;
+    match_1 = call_;
+    goto end_match_4;
+next_5:;
+    if (!(((s_.str[i_] == '(') == 0))) goto next_6;
+    int match_2;
+    if (!(((d_ <= 0) == 1))) goto next_8;
+    match_2 = 0;
+    goto end_match_7;
+next_8:;
+    if (!(((d_ <= 0) == 0))) goto next_9;
     int call_1 = go_(s_, (i_ + 1), (d_ - 1));
-    if_2 = call_1;
-end_if_6:;
-    if_1 = if_2;
-end_if_4:;
-    if_ = if_1;
-end_if_2:;
-    return if_;
+    match_2 = call_1;
+    goto end_match_7;
+next_9:;
+    exit(1);
+end_match_7:;
+    match_1 = match_2;
+    goto end_match_4;
+next_6:;
+    exit(1);
+end_match_4:;
+    match_ = match_1;
+    goto end_match_1;
+next_3:;
+    exit(1);
+end_match_1:;
+    return match_;
 }
 
 struct String parse_(struct String s_1) {
-    struct String if_3;
+    struct String match_3;
     int call_2 = go_(s_1, 0, 0);
-    if (!(call_2)) goto else_7;
-    if_3 = (struct String){.str = "Accept", .len = 6};
-    goto end_if_8;
-else_7:;
-    if_3 = (struct String){.str = "Reject", .len = 6};
-end_if_8:;
-    return if_3;
+    if (!((call_2 == 1))) goto next_11;
+    match_3 = (struct String){.str = "Accept", .len = 6};
+    goto end_match_10;
+next_11:;
+    if (!((call_2 == 0))) goto next_12;
+    match_3 = (struct String){.str = "Reject", .len = 6};
+    goto end_match_10;
+next_12:;
+    exit(1);
+end_match_10:;
+    return match_3;
 }
 
 int main() {

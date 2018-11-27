@@ -5,14 +5,18 @@ struct IntList;
 int main();
 
 int abs_(int x_) {
-    int if_;
-    if (!((0 <= x_))) goto else_1;
-    if_ = x_;
-    goto end_if_2;
-else_1:;
-    if_ = (0 - x_);
-end_if_2:;
-    return if_;
+    int match_;
+    if (!(((0 <= x_) == 1))) goto next_2;
+    match_ = x_;
+    goto end_match_1;
+next_2:;
+    if (!(((0 <= x_) == 0))) goto next_3;
+    match_ = (0 - x_);
+    goto end_match_1;
+next_3:;
+    exit(1);
+end_match_1:;
+    return match_;
 }
 
 struct IntList {
@@ -21,27 +25,27 @@ struct IntList {
 };
 
 int main() {
-    int match_;
+    int match_1;
     struct IntList* list_1 = (struct IntList*)malloc(sizeof(struct IntList));
     list_1->head = 2;
     list_1->tail = NULL;
     struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
     list_->head = 1;
     list_->tail = list_1;
-    if (!((!((!(list_)))))) goto next_4;
+    if (!((!((!(list_)))))) goto next_5;
     int x1_ = list_->head;
-    if (!((!((!(list_->tail)))))) goto next_4;
+    if (!((!((!(list_->tail)))))) goto next_5;
     int x2_ = list_->tail->head;
-    if (!((!(list_->tail->tail)))) goto next_4;
+    if (!((!(list_->tail->tail)))) goto next_5;
     int call_ = abs_((x1_ - 1));
     int call_1 = abs_((x2_ - 2));
-    match_ = (call_ + call_1);
-    goto end_match_3;
-next_4:;
-    exit(1);
-    match_ = 0;
-    goto end_match_3;
+    match_1 = (call_ + call_1);
+    goto end_match_4;
 next_5:;
-end_match_3:;
-    return match_;
+    exit(1);
+    match_1 = 0;
+    goto end_match_4;
+next_6:;
+end_match_4:;
+    return match_1;
 }

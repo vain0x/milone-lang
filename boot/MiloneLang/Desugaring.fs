@@ -18,7 +18,12 @@ let onPats pats =
 
 /// `if p then t else e` ==> `match p with true -> t | false -> e`
 let onIf pred thenCl elseCl ty loc =
-  Expr.If (onExpr pred, onExpr thenCl, onExpr elseCl, ty, loc)
+  let arms =
+    [
+      Pat.Lit (Lit.Bool true, loc), onExpr thenCl
+      Pat.Lit (Lit.Bool false, loc), onExpr elseCl
+    ]
+  Expr.Match (onExpr pred, arms, ty, loc)
 
 let rec onArms arms =
   match arms with

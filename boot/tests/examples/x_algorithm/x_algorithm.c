@@ -15,14 +15,18 @@ int isPrime_(int x_3);
 int main();
 
 int test_(int pred_) {
-    int if_;
-    if (!((!(pred_)))) goto else_1;
+    int match_;
+    if (!(((!(pred_)) == 1))) goto next_2;
     exit(1);
-    if_ = 0;
-    goto end_if_2;
-else_1:;
-    if_ = 0;
-end_if_2:;
+    match_ = 0;
+    goto end_match_1;
+next_2:;
+    if (!(((!(pred_)) == 0))) goto next_3;
+    match_ = 0;
+    goto end_match_1;
+next_3:;
+    exit(1);
+end_match_1:;
     return 0;
 }
 
@@ -31,28 +35,36 @@ int neg_(int x_) {
 }
 
 int abs_(int x_1) {
-    int if_1;
-    if (!((0 <= x_1))) goto else_3;
-    if_1 = x_1;
-    goto end_if_4;
-else_3:;
+    int match_1;
+    if (!(((0 <= x_1) == 1))) goto next_5;
+    match_1 = x_1;
+    goto end_match_4;
+next_5:;
+    if (!(((0 <= x_1) == 0))) goto next_6;
     int call_ = neg_(x_1);
-    if_1 = call_;
-end_if_4:;
-    return if_1;
+    match_1 = call_;
+    goto end_match_4;
+next_6:;
+    exit(1);
+end_match_4:;
+    return match_1;
 }
 
 int gcd_(int x_2, int y_) {
-    int if_2;
-    if (!((y_ == 0))) goto else_5;
+    int match_2;
+    if (!(((y_ == 0) == 1))) goto next_8;
     int call_1 = abs_(x_2);
-    if_2 = call_1;
-    goto end_if_6;
-else_5:;
+    match_2 = call_1;
+    goto end_match_7;
+next_8:;
+    if (!(((y_ == 0) == 0))) goto next_9;
     int call_2 = gcd_(y_, (x_2 % y_));
-    if_2 = call_2;
-end_if_6:;
-    return if_2;
+    match_2 = call_2;
+    goto end_match_7;
+next_9:;
+    exit(1);
+end_match_7:;
+    return match_2;
 }
 
 struct IntTuple1 {
@@ -61,38 +73,50 @@ struct IntTuple1 {
 
 int go_(struct IntTuple1 caps_1, int k_) {
     int x_3 = caps_1.t0;
-    int if_3;
-    if (!((x_3 < (k_ * k_)))) goto else_7;
-    if_3 = 1;
-    goto end_if_8;
-else_7:;
-    int if_4;
-    if (!(((x_3 % k_) != 0))) goto else_9;
+    int match_3;
+    if (!(((x_3 < (k_ * k_)) == 1))) goto next_11;
+    match_3 = 1;
+    goto end_match_10;
+next_11:;
+    if (!(((x_3 < (k_ * k_)) == 0))) goto next_12;
+    int match_4;
+    if (!((((x_3 % k_) != 0) == 1))) goto next_14;
     struct IntTuple1 caps_;
     caps_.t0 = x_3;
     int call_3 = go_(caps_, (k_ + 1));
-    if_4 = call_3;
-    goto end_if_10;
-else_9:;
-    if_4 = 0;
-end_if_10:;
-    if_3 = if_4;
-end_if_8:;
-    return if_3;
+    match_4 = call_3;
+    goto end_match_13;
+next_14:;
+    if (!((((x_3 % k_) != 0) == 0))) goto next_15;
+    match_4 = 0;
+    goto end_match_13;
+next_15:;
+    exit(1);
+end_match_13:;
+    match_3 = match_4;
+    goto end_match_10;
+next_12:;
+    exit(1);
+end_match_10:;
+    return match_3;
 }
 
 int isPrime_(int x_3) {
-    int if_5;
-    if (!((2 <= x_3))) goto else_11;
+    int match_5;
+    if (!(((2 <= x_3) == 1))) goto next_17;
     struct IntTuple1 caps_3;
     caps_3.t0 = x_3;
     int call_4 = go_(caps_3, 2);
-    if_5 = call_4;
-    goto end_if_12;
-else_11:;
-    if_5 = 0;
-end_if_12:;
-    return if_5;
+    match_5 = call_4;
+    goto end_match_16;
+next_17:;
+    if (!(((2 <= x_3) == 0))) goto next_18;
+    match_5 = 0;
+    goto end_match_16;
+next_18:;
+    exit(1);
+end_match_16:;
+    return match_5;
 }
 
 int main() {
