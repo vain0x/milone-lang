@@ -10,9 +10,9 @@ int isDigit_(char c_);
 
 struct StringTuple1;
 
-int readInt_(struct StringTuple1 caps_1, int i_);
+int readInt_(struct StringTuple1 arg_, int i_);
 
-struct StringList* go_1(struct StringTuple1 caps_7, struct StringList* acc_1, int i_1);
+struct StringList* go_1(struct StringTuple1 arg_1, struct StringList* acc_1, int i_1);
 
 struct StringList* tokenize_(struct String s_);
 
@@ -88,8 +88,8 @@ struct StringTuple1 {
     struct String t0;
 };
 
-int readInt_(struct StringTuple1 caps_1, int i_) {
-    struct String s_ = caps_1.t0;
+int readInt_(struct StringTuple1 arg_, int i_) {
+    struct String s_ = arg_.t0;
     int match_3;
     int match_4;
     if (!(((s_.len <= i_) == 1))) goto next_12;
@@ -108,9 +108,9 @@ end_match_11:;
     goto end_match_10;
 next_14:;
     if (!((match_4 == 0))) goto next_15;
-    struct StringTuple1 caps_;
-    caps_.t0 = s_;
-    int call_5 = readInt_(caps_, (i_ + 1));
+    struct StringTuple1 tuple_;
+    tuple_.t0 = s_;
+    int call_5 = readInt_(tuple_, (i_ + 1));
     match_3 = call_5;
     goto end_match_10;
 next_15:;
@@ -119,8 +119,8 @@ end_match_10:;
     return match_3;
 }
 
-struct StringList* go_1(struct StringTuple1 caps_7, struct StringList* acc_1, int i_1) {
-    struct String s_ = caps_7.t0;
+struct StringList* go_1(struct StringTuple1 arg_1, struct StringList* acc_1, int i_1) {
+    struct String s_ = arg_1.t0;
     struct StringList* match_5;
     if (!(((s_.len <= i_1) == 1))) goto next_17;
     struct StringList* call_6 = listRev_(acc_1);
@@ -130,9 +130,9 @@ next_17:;
     if (!(((s_.len <= i_1) == 0))) goto next_18;
     struct StringList* match_6;
     if (!(((s_.str[i_1] == ' ') == 1))) goto next_20;
-    struct StringTuple1 caps_3;
-    caps_3.t0 = s_;
-    struct StringList* call_7 = go_1(caps_3, acc_1, (i_1 + 1));
+    struct StringTuple1 tuple_1;
+    tuple_1.t0 = s_;
+    struct StringList* call_7 = go_1(tuple_1, acc_1, (i_1 + 1));
     match_6 = call_7;
     goto end_match_19;
 next_20:;
@@ -166,9 +166,9 @@ end_match_23:;
     list_1->head = str_add((struct String){.str = "punct ", .len = 6}, slice_);
     list_1->tail = acc_1;
     struct StringList* acc_2 = list_1;
-    struct StringTuple1 caps_4;
-    caps_4.t0 = s_;
-    struct StringList* call_8 = go_1(caps_4, acc_2, (i_1 + 1));
+    struct StringTuple1 tuple_2;
+    tuple_2.t0 = s_;
+    struct StringList* call_8 = go_1(tuple_2, acc_2, (i_1 + 1));
     match_7 = call_8;
     goto end_match_22;
 next_29:;
@@ -176,18 +176,18 @@ next_29:;
     struct StringList* match_10;
     int call_9 = isDigit_(s_.str[i_1]);
     if (!((call_9 == 1))) goto next_32;
-    struct StringTuple1 caps_5;
-    caps_5.t0 = s_;
-    int call_10 = readInt_(caps_5, i_1);
+    struct StringTuple1 tuple_3;
+    tuple_3.t0 = s_;
+    int call_10 = readInt_(tuple_3, i_1);
     int r_ = call_10;
     struct String slice_1 = str_slice(s_, i_1, (r_ - 1));
     struct StringList* list_2 = (struct StringList*)malloc(sizeof(struct StringList));
     list_2->head = str_add((struct String){.str = "int ", .len = 4}, slice_1);
     list_2->tail = acc_1;
     struct StringList* acc_3 = list_2;
-    struct StringTuple1 caps_6;
-    caps_6.t0 = s_;
-    struct StringList* call_11 = go_1(caps_6, acc_3, r_);
+    struct StringTuple1 tuple_4;
+    tuple_4.t0 = s_;
+    struct StringList* call_11 = go_1(tuple_4, acc_3, r_);
     match_10 = call_11;
     goto end_match_31;
 next_32:;
@@ -219,9 +219,9 @@ end_match_16:;
 }
 
 struct StringList* tokenize_(struct String s_) {
-    struct StringTuple1 caps_9;
-    caps_9.t0 = s_;
-    struct StringList* call_13 = go_1(caps_9, NULL, 0);
+    struct StringTuple1 tuple_5;
+    tuple_5.t0 = s_;
+    struct StringList* call_13 = go_1(tuple_5, NULL, 0);
     return call_13;
 }
 

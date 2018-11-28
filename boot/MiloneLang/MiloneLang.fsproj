@@ -12,6 +12,7 @@
     <Compile Include="Parsing.fs" />
     <Compile Include="Desugaring.fs" />
     <Compile Include="Typing.fs" />
+    <Compile Include="FunTrans.fs" />
     <Compile Include="Mir.fs" />
     <Compile Include="MirTrans.fs" />
     <Compile Include="CIrGen.fs" />

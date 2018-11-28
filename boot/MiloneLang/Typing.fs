@@ -577,6 +577,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferExprTyDef ctx ident tyDef loc
   | Expr.If _
   | Expr.Inf (InfOp.Anno, _, _, _)
+  | Expr.Inf (InfOp.Fun, _, _, _)
+  | Expr.Inf (InfOp.Call, _, _, _)
   | Expr.Inf (InfOp.List _, _, _, _) ->
     failwith "Never"
   | Expr.Error (error, loc) ->
@@ -608,4 +610,13 @@ let infer (exprs: Expr<Loc> list): Expr<Loc> list * TyCtx =
 
   // Substitute all types.
   let exprs = List.map (substTyExpr ctx) (List.rev exprs)
+
+  let ctx =
+    let vars =
+      ctx.Vars |> Map.map (fun _ (ident, valueIdent, ty, loc) ->
+        let ty = substTy ctx ty
+        ident, valueIdent, ty, loc
+      )
+    { ctx with Vars = vars }
+
   exprs, ctx

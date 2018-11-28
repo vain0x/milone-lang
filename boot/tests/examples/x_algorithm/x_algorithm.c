@@ -8,7 +8,7 @@ int gcd_(int x_2, int y_);
 
 struct IntTuple1;
 
-int go_(struct IntTuple1 caps_1, int k_);
+int go_(struct IntTuple1 arg_, int k_);
 
 int isPrime_(int x_3);
 
@@ -71,8 +71,8 @@ struct IntTuple1 {
     int t0;
 };
 
-int go_(struct IntTuple1 caps_1, int k_) {
-    int x_3 = caps_1.t0;
+int go_(struct IntTuple1 arg_, int k_) {
+    int x_3 = arg_.t0;
     int match_3;
     if (!(((x_3 < (k_ * k_)) == 1))) goto next_11;
     match_3 = 1;
@@ -81,9 +81,9 @@ next_11:;
     if (!(((x_3 < (k_ * k_)) == 0))) goto next_12;
     int match_4;
     if (!((((x_3 % k_) != 0) == 1))) goto next_14;
-    struct IntTuple1 caps_;
-    caps_.t0 = x_3;
-    int call_3 = go_(caps_, (k_ + 1));
+    struct IntTuple1 tuple_;
+    tuple_.t0 = x_3;
+    int call_3 = go_(tuple_, (k_ + 1));
     match_4 = call_3;
     goto end_match_13;
 next_14:;
@@ -104,9 +104,9 @@ end_match_10:;
 int isPrime_(int x_3) {
     int match_5;
     if (!(((2 <= x_3) == 1))) goto next_17;
-    struct IntTuple1 caps_3;
-    caps_3.t0 = x_3;
-    int call_4 = go_(caps_3, 2);
+    struct IntTuple1 tuple_1;
+    tuple_1.t0 = x_3;
+    int call_4 = go_(tuple_1, 2);
     match_5 = call_4;
     goto end_match_16;
 next_17:;

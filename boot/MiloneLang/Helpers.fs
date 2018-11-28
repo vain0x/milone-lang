@@ -219,6 +219,9 @@ let hxAnno expr ty loc =
 let hxAndThen items loc =
   Expr.Inf (InfOp.AndThen, items, exprTy (List.last items), loc)
 
+let hxCall callee args callTy loc =
+  Expr.Inf (InfOp.Call, callee :: args, callTy, loc)
+
 let hxTuple items loc =
   Expr.Inf (InfOp.Tuple, items, Ty.Tuple (List.map exprTy items), loc)
 

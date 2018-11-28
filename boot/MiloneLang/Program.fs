@@ -22,7 +22,9 @@ module MiloneLang.Program
     log "desugared" ast
     let typedAst, tyCtx = Typing.infer desugared
     log "typed" typedAst
-    let mir, mirCtx = Mir.mirify (typedAst, tyCtx)
+    let funTransAst, tyCtx = FunTrans.trans (typedAst, tyCtx)
+    log "funTrans" funTransAst
+    let mir, mirCtx = Mir.mirify (funTransAst, tyCtx)
     log "mir" mir
     let mir, mirTransCtx = MirTrans.trans (mir, mirCtx)
     log "trans" mir
