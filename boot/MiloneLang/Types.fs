@@ -189,7 +189,10 @@ namespace rec MiloneLang
     | Anno
     /// `x; y`
     | AndThen
+    /// Call to a function, not a function object.
     | Call
+    /// Call to a function object.
+    | App
     /// Tuple constructor, e.g. `x, y, z`.
     | Tuple
     /// List constructor, e.g. `[x; y; z]`.
@@ -197,6 +200,7 @@ namespace rec MiloneLang
       of itemTy:Ty
     /// Function object constructor.
     | Fun
+      of funSerial:int
 
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]

@@ -33,7 +33,19 @@ let ctxFromTyCtx (ftCtx: Typing.TyCtx): FunTransCtx =
 let ctxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: FunTransCtx) =
   { tyCtx with
       VarSerial = ctx.VarSerial
+      Vars = ctx.Vars
+      Tys = ctx.Tys
   }
+
+let ctxFreshFun (ident: string) arity (ty: Ty) loc (ctx: FunTransCtx) =
+  let serial = ctx.VarSerial + 1
+  let ctx =
+    { ctx with
+        VarSerial = ctx.VarSerial + 1
+        Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Fun arity, ty, loc)
+    }
+  let refExpr = Expr.Ref (ident, serial, arity, ty, loc)
+  refExpr, serial, ctx
 
 let ctxFreshVar (ident: string) (ty: Ty) loc (ctx: FunTransCtx) =
   let serial = ctx.VarSerial + 1
@@ -278,8 +290,210 @@ let declosureExpr (expr, ctx) =
 let declosure (exprs, ctx: FunTransCtx) =
   (exprs, ctx) |> stMap declosureExpr
 
-let trans (decls, tyCtx) =
+// ## Un-eta
+//
+// Resolve partial applications and function references.
+// Convert them to statements to create a function object with specified arguments.
+//
+// Thanks to declosure, in this stage, functions don't rely on local scope.
+//
+// ### Example
+//
+// Consider `let sum x y z = x + y + z` and partial application `sum 1 2`.
+// Here the given arguments is `1, 2`, the rest arguments is `z`.
+// We define a helper function called `sumObj` like this:
+//    let sumObj env z =
+//      let x, y = unbox env
+//      add x y z
+// and convert partial application into the following.
+//    let env = box (x, y)
+//    (sumObj, env) :> (int -> int)
+//
+// ### Function references
+//
+// You can think of function reference as a kind of partial application
+// with given arguments is empty. In term of the above example,
+//    let sumObj env x y z =
+//      let () = unbox env
+//      add x y z
+// is defined for function reference `sum` and the use site is converted to:
+//    let env = box ()
+//    (sumObj, ()) :> (int -> int -> int -> int)
+
+let ctxIsFun serial (ctx: FunTransCtx) =
+  match ctx.Vars |> Map.tryFind serial with
+  | _ when serial < 0 ->
+    // FIXME: too ugly
+    true
+  | Some (_, ValueIdent.Fun _, _, _) ->
+    true
+  | Some (_, ValueIdent.Variant _, _, _) ->
+    // FIXME: not a function
+    true
+  | _ ->
+    false
+
+let splitAt i xs =
+  List.truncate i xs, List.skip (min i (List.length xs)) xs
+
+let appliedTy n ty =
+  match ty with
+  | Ty.Fun (_, ty) when n > 0 ->
+    appliedTy (n - 1) ty
+  | _ ->
+    ty
+
+/// E.g. given init = `id x` and args `x, y` then we should return `(id x) y`.
+let restCall callee args resultTy loc =
+  match args with
+  | [] ->
+    callee
+  | args ->
+    hxApps callee args resultTy loc
+
+/// Resolves partial application.
+/// 1. Define an underlying function, accepting environment and rest arguments,
+///   to call the callee with full arguments.
+/// 2. Create a boxed tuple called environment from given arguments.
+/// 3. Create a function object, pair of the underlying function and environment.
+let resolvePartialApp callee arity args argLen callLoc ctx =
+  assert (argLen < arity)
+
+  let funTy = exprTy callee
+  let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
+  let envArgRef, envArgSerial, ctx = ctxFreshVar "env" Ty.Obj callLoc ctx
+  let envArgPat = Pat.Ref ("env", envArgSerial, Ty.Obj, callLoc)
+  let resultTy = appliedTy arity funTy
+
+  let restArgPats, restArgs, ctx =
+    let rec go n restTy ctx =
+      match n, restTy with
+      | 0, _ ->
+        [], [], ctx
+      | n, Ty.Fun (argTy, restTy) ->
+        let argRef, argSerial, ctx = ctxFreshVar "arg" argTy callLoc ctx
+        let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
+        let restArgPat = Pat.Ref ("arg", argSerial, argTy, callLoc)
+        restArgPat :: restArgPats, argRef :: restArgs, ctx
+      | _, _ ->
+        failwith "Never: Type error"
+    let n = arity - argLen
+    let restTy = callee |> exprTy |> appliedTy n
+    go n restTy ctx
+
+  let envPat, envTy, envArgs, ctx =
+    let rec go args ctx =
+      match args with
+      | [] ->
+        [], [], [], ctx
+      | arg :: args ->
+        let argTy, argLoc = exprExtract arg
+        let argRef, argSerial, ctx = ctxFreshVar "arg" argTy argLoc ctx
+        let argPat = Pat.Ref ("arg", argSerial, argTy, argLoc)
+        let argPats, argTys, argRefs, ctx = go args ctx
+        argPat :: argPats, argTy :: argTys, argRef :: argRefs, ctx
+    let argPats, argTys, argRefs, ctx = go args ctx
+    let envTy = Ty.Tuple argTys
+    let envPat = Pat.Tuple (argPats, envTy, callLoc)
+    envPat, envTy, argRefs, ctx
+
+  let argPats = envArgPat :: restArgPats
+  let forwardArgs = envArgs @ restArgs
+  let unboxRef = Expr.Ref ("unbox", SerialUnbox, 1, Ty.Fun (Ty.Obj, envTy), callLoc)
+  let unboxExpr = hxCall unboxRef [envArgRef] envTy callLoc
+  let deconstructLet = Expr.Let (envPat, unboxExpr, callLoc)
+  let body =
+    hxAndThen [
+      deconstructLet
+      hxCall callee forwardArgs resultTy callLoc
+    ] callLoc
+  let funLet = Expr.LetFun ("fun", funSerial, argPats, body, resultTy, callLoc)
+
+  let envExpr =
+    let tuple = hxTuple args callLoc
+    let boxRef = Expr.Ref ("box", SerialBox, 1, Ty.Fun (envTy, Ty.Obj), callLoc)
+    hxCall boxRef [tuple] Ty.Obj callLoc
+  hxAndThen [
+    funLet
+    Expr.Inf (InfOp.Fun funSerial, [envExpr], appliedTy argLen funTy, callLoc)
+  ] callLoc, ctx
+
+let unetaCallDirect callee arity calleeLoc args resultTy callLoc ctx =
+  let argLen = List.length args
+  if argLen < arity then
+    resolvePartialApp callee arity args argLen callLoc ctx
+  else
+    let callArgs, restArgs = splitAt arity args
+    let callResultTy = appliedTy arity (exprTy callee)
+    let callExpr = hxCall callee callArgs callResultTy calleeLoc
+    restCall callExpr restArgs resultTy callLoc, ctx
+
+let unetaCall callee args resultTy loc ctx =
+  match callee, args with
+  | Expr.Ref (_, serial, arity, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
+    unetaCallDirect callee arity calleeLoc args resultTy loc ctx
+  | _, args ->
+    // FIXME: Split by arity.
+    hxApps callee args resultTy loc, ctx
+  | _ ->
+    failwith "Never"
+
+let unetaExprInf infOp args ty loc ctx =
+  let args, ctx = (args, ctx) |> stMap unetaExpr
+  match infOp, args with
+  | InfOp.Call, callee :: args ->
+    unetaCall callee args ty loc ctx
+  | _ ->
+    Expr.Inf (infOp, args, ty, loc), ctx
+
+let unetaExprLetFun ident callee argPats body ty loc ctx =
+  let argPats, ctx = (argPats, ctx) |> stMap unetaPat
+  let body, ctx = (body, ctx) |> unetaExpr
+  Expr.LetFun (ident, callee, argPats, body, ty, loc), ctx
+
+let unetaPat (pat, ctx) =
+  pat, ctx
+
+let unetaExpr (expr, ctx) =
+  match expr with
+  | Expr.Lit _
+  | Expr.TyDef _
+  | Expr.Error _ ->
+    expr, ctx
+  | Expr.Ref _ ->
+    expr, ctx
+  | Expr.Match (target, arms, ty, loc) ->
+    let target, ctx = (target, ctx) |> unetaExpr
+    let arms, ctx = (arms, ctx) |> stMap (fun ((pat, body), ctx) ->
+      let pat, ctx = (pat, ctx) |> unetaPat
+      let body, ctx = (body, ctx) |> unetaExpr
+      (pat, body), ctx)
+    Expr.Match (target, arms, ty, loc), ctx
+  | Expr.Nav (subject, message, ty, loc) ->
+    let subject, ctx = unetaExpr (subject, ctx)
+    Expr.Nav (subject, message, ty, loc), ctx
+  | Expr.Op (op, l, r, ty, loc) ->
+    let l, ctx = (l, ctx) |> unetaExpr
+    let r, ctx = (r, ctx) |> unetaExpr
+    Expr.Op (op, l, r, ty, loc), ctx
+  | Expr.Inf (infOp, args, ty, loc) ->
+    unetaExprInf infOp args ty loc ctx
+  | Expr.Let (pat, init, loc) ->
+    let pat, ctx = (pat, ctx) |> unetaPat
+    let init, ctx = (init, ctx) |> unetaExpr
+    Expr.Let (pat, init, loc), ctx
+  | Expr.LetFun (ident, callee, args, body, ty, loc) ->
+    unetaExprLetFun ident callee args body ty loc ctx
+  | Expr.If _ ->
+    failwith "Never: If expressions are desugared"
+
+let uneta (exprs, ctx: FunTransCtx) =
+  let exprs, ctx = (exprs, ctx) |> stMap unetaExpr
+  exprs, ctx
+
+/// Performs transformation about functions.
+let trans (exprs, tyCtx) =
   let ctx = ctxFromTyCtx tyCtx
-  let decls, ctx = (decls, ctx) |> declosure //|> uneta
+  let exprs, ctx = (exprs, ctx) |> declosure |> uneta
   let tyCtx = ctx |> ctxFeedbackToTyCtx tyCtx
-  decls, tyCtx
+  exprs, tyCtx

@@ -468,6 +468,26 @@ let mirifyExprInfCall ctx callee args ty loc =
   | _ ->
     core ()
 
+let mirifyExprInfApp ctx callee args resultTy loc =
+  let callee, ctx = mirifyExpr ctx callee
+  let args, ctx = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+  let resultTy = unboxTy resultTy
+  let tempRef, tempSerial, ctx = ctxFreshVar ctx "app" resultTy loc
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.App (callee, args), resultTy, loc))
+  tempRef, ctx
+
+let mirifyExprInfFun ctx funSerial env funTy loc =
+  let envTy, envLoc = exprExtract env
+  let envTy = unboxTy envTy
+  let env, ctx = mirifyExpr ctx env
+  let _, envSerial, ctx = ctxFreshVar ctx "env" envTy envLoc
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (envSerial, MInit.Expr env, envTy, envLoc))
+
+  let funTy = unboxTy funTy
+  let tempRef, tempSerial, ctx = ctxFreshVar ctx "fun" funTy loc
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Fun (funSerial, envSerial), funTy, loc))
+  tempRef, ctx
+
 let mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
   | InfOp.List _, [], Ty.List itemTy ->
@@ -480,8 +500,10 @@ let mirifyExprInf ctx infOp args ty loc =
     mirifyExprAndThen ctx args
   | InfOp.Call, callee :: args, _ ->
     mirifyExprInfCall ctx callee args ty loc
-  | InfOp.Fun, _, _ ->
-    failwith "FIXME: unimpl"
+  | InfOp.App, callee :: args, _ ->
+    mirifyExprInfApp ctx callee args ty loc
+  | InfOp.Fun funSerial, [env], _ ->
+    mirifyExprInfFun ctx funSerial env ty loc
   | t ->
     failwithf "Never: %A" t
 

@@ -3,8 +3,6 @@ module rec MiloneLang.CIrGen
 
 open MiloneLang.Helpers
 
-type MirTransCtx = MirTrans.MirTransCtx
-
 /// IR generation context.
 [<RequireQualifiedAccess>]
 type Ctx =
@@ -43,7 +41,7 @@ let calculateTyUniqueNames tys =
   ))
   |> Map.ofSeq
 
-let ctxFromMirCtx (mirCtx: MirTransCtx): Ctx =
+let ctxFromMirCtx (mirCtx: Mir.MirCtx): Ctx =
   let varNames = calculateVarUniqueNames mirCtx.Vars
   let tyNames = calculateTyUniqueNames mirCtx.Tys
   {
@@ -574,6 +572,6 @@ let genDecls (ctx: Ctx) decls =
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls
 
-let gen (decls, mirTransCtx: MirTransCtx): CDecl list =
-  let ctx = ctxFromMirCtx mirTransCtx
+let gen (decls, mirCtx: Mir.MirCtx): CDecl list =
+  let ctx = ctxFromMirCtx mirCtx
   genDecls ctx decls

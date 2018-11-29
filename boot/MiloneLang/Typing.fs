@@ -577,7 +577,8 @@ let inferExpr (ctx: TyCtx) (expr: Expr<Loc>) ty: Expr<Loc> * TyCtx =
     inferExprTyDef ctx ident tyDef loc
   | Expr.If _
   | Expr.Inf (InfOp.Anno, _, _, _)
-  | Expr.Inf (InfOp.Fun, _, _, _)
+  | Expr.Inf (InfOp.Fun _, _, _, _)
+  | Expr.Inf (InfOp.App, _, _, _)
   | Expr.Inf (InfOp.Call, _, _, _)
   | Expr.Inf (InfOp.List _, _, _, _) ->
     failwith "Never"

@@ -26,9 +26,7 @@ module MiloneLang.Program
     log "funTrans" funTransAst
     let mir, mirCtx = Mir.mirify (funTransAst, tyCtx)
     log "mir" mir
-    let mir, mirTransCtx = MirTrans.trans (mir, mirCtx)
-    log "trans" mir
-    let cir = CIrGen.gen (mir, mirTransCtx)
+    let cir = CIrGen.gen (mir, mirCtx)
     log "cir" cir
     cir
 
