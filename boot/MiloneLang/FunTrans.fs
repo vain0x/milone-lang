@@ -430,19 +430,29 @@ let unetaCallDirect callee arity calleeLoc args resultTy callLoc ctx =
 let unetaCall callee args resultTy loc ctx =
   match callee, args with
   | Expr.Ref (_, serial, arity, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
+    let args, ctx = (args, ctx) |> stMap unetaExpr
     unetaCallDirect callee arity calleeLoc args resultTy loc ctx
   | _, args ->
+    let callee, ctx = (callee, ctx) |> unetaExpr
+    let args, ctx = (args, ctx) |> stMap unetaExpr
     // FIXME: Split by arity.
     hxApps callee args resultTy loc, ctx
   | _ ->
     failwith "Never"
 
+let unetaRef expr serial calleeLoc (ctx: FunTransCtx) =
+  match ctx.Vars |> Map.tryFind serial with
+  | Some (_, ValueIdent.Fun arity, _, _) ->
+    resolvePartialApp expr arity [] 0 calleeLoc ctx
+  | _ ->
+    expr, ctx
+
 let unetaExprInf infOp args ty loc ctx =
-  let args, ctx = (args, ctx) |> stMap unetaExpr
   match infOp, args with
   | InfOp.Call, callee :: args ->
     unetaCall callee args ty loc ctx
   | _ ->
+    let args, ctx = (args, ctx) |> stMap unetaExpr
     Expr.Inf (infOp, args, ty, loc), ctx
 
 let unetaExprLetFun ident callee argPats body ty loc ctx =
@@ -459,8 +469,8 @@ let unetaExpr (expr, ctx) =
   | Expr.TyDef _
   | Expr.Error _ ->
     expr, ctx
-  | Expr.Ref _ ->
-    expr, ctx
+  | Expr.Ref (_, serial, _, _, calleeLoc) ->
+    unetaRef expr serial calleeLoc ctx
   | Expr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> unetaExpr
     let arms, ctx = (arms, ctx) |> stMap (fun ((pat, body), ctx) ->

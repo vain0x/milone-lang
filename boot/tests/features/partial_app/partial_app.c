@@ -14,7 +14,11 @@ struct IntIntTuple2;
 
 int fun_1(void* env_1, int arg_2, int arg_3);
 
+int fun_2(void* env_2, int arg_6, int arg_7, int arg_8, int arg_9);
+
 struct IntIntIntFun2;
+
+struct IntIntIntIntIntFun4;
 
 int main();
 
@@ -59,8 +63,18 @@ int fun_1(void* env_1, int arg_2, int arg_3) {
     return call_2;
 }
 
+int fun_2(void* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
+    int call_3 = add4_(arg_6, arg_7, arg_8, arg_9);
+    return call_3;
+}
+
 struct IntIntIntFun2 {
     int(*fun)(void*, int, int);
+    void* env;
+};
+
+struct IntIntIntIntIntFun4 {
+    int(*fun)(void*, int, int, int, int);
     void* env;
 };
 
@@ -69,9 +83,9 @@ int main() {
     tuple_.t0 = 3;
     void* box_ = (void*)malloc(sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;
-    void* env_2 = box_;
-    struct IntIntFun1 fun_2 = (struct IntIntFun1){.fun = fun_, .env = env_2};
-    struct IntIntFun1 dec3_ = fun_2;
+    void* env_3 = box_;
+    struct IntIntFun1 fun_3 = (struct IntIntFun1){.fun = fun_, .env = env_3};
+    struct IntIntFun1 dec3_ = fun_3;
     int match_;
     int call_1 = twice_(dec3_, 8);
     if (!(((call_1 != 2) == 1))) goto next_2;
@@ -90,9 +104,9 @@ end_match_1:;
     tuple_1.t1 = 3;
     void* box_1 = (void*)malloc(sizeof(struct IntIntTuple2));
     (*(((struct IntIntTuple2*)box_1))) = tuple_1;
-    void* env_3 = box_1;
-    struct IntIntIntFun2 fun_3 = (struct IntIntIntFun2){.fun = fun_1, .env = env_3};
-    struct IntIntIntFun2 add2_ = fun_3;
+    void* env_4 = box_1;
+    struct IntIntIntFun2 fun_4 = (struct IntIntIntFun2){.fun = fun_1, .env = env_4};
+    struct IntIntIntFun2 add2_ = fun_4;
     int match_1;
     int app_2 = add2_.fun(add2_.env, 5, 7);
     if (!(((app_2 != (((2 + 3) + 5) + 7)) == 1))) goto next_5;
@@ -106,5 +120,23 @@ next_5:;
 next_6:;
     exit(1);
 end_match_4:;
+    void* box_2 = (void*)malloc(sizeof(int));
+    (*(((int*)box_2))) = 0;
+    void* env_5 = box_2;
+    struct IntIntIntIntIntFun4 fun_5 = (struct IntIntIntIntIntFun4){.fun = fun_2, .env = env_5};
+    struct IntIntIntIntIntFun4 f_1 = fun_5;
+    int match_2;
+    int app_3 = f_1.fun(f_1.env, 1, 2, 3, 4);
+    if (!(((app_3 != (((1 + 2) + 3) + 4)) == 1))) goto next_8;
+    exit(1);
+    match_2 = 0;
+    goto end_match_7;
+next_8:;
+    if (!(((app_3 != (((1 + 2) + 3) + 4)) == 0))) goto next_9;
+    match_2 = 0;
+    goto end_match_7;
+next_9:;
+    exit(1);
+end_match_7:;
     return 0;
 }

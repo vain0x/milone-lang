@@ -11,4 +11,7 @@ let main _ =
   let add2 = add4 2 3
   if add2 5 7 <> (2 + 3 + 5 + 7) then exit 1
 
+  let f = add4
+  if f 1 2 3 4 <> (1 + 2 + 3 + 4) then exit 1
+
   0
