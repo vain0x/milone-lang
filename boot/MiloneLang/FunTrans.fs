@@ -375,11 +375,10 @@ let resolvePartialApp callee arity args argLen callLoc ctx =
         let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
         let restArgPat = Pat.Ref ("arg", argSerial, argTy, callLoc)
         restArgPat :: restArgPats, argRef :: restArgs, ctx
-      | _, _ ->
+      | _ ->
         failwith "Never: Type error"
-    let n = arity - argLen
-    let restTy = callee |> exprTy |> appliedTy n
-    go n restTy ctx
+    let restTy = callee |> exprTy |> appliedTy argLen
+    go (arity - argLen) restTy ctx
 
   let envPat, envTy, envArgs, ctx =
     let rec go args ctx =
