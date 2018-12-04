@@ -349,7 +349,7 @@ let restCall callee args resultTy loc =
   | [] ->
     callee
   | args ->
-    hxApps callee args resultTy loc
+    hxExec callee args resultTy loc
 
 type CalleeKind =
   | Fun
@@ -362,7 +362,7 @@ let hxCallTo calleeKind callee args resultTy loc =
   | CalleeKind.Fun, args ->
     hxCall callee args resultTy loc
   | CalleeKind.Obj, args ->
-    hxApps callee args resultTy loc
+    hxExec callee args resultTy loc
 
 let createRestArgsAndPats callee arity argLen callLoc ctx =
   let rec go n restTy ctx =
@@ -432,10 +432,10 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
     createEnvPatAndTy envItems callLoc ctx
   let forwardArgs =
     envRefs @ restArgs
-  let forwardCall =
+  let forwardExpr =
     hxCall callee forwardArgs resultTy callLoc
   let funLet, funSerial, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats resultTy callLoc ctx
+    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats resultTy callLoc ctx
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =
@@ -473,10 +473,10 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
     | _ ->
       failwith "Never"
 
-  let forwardCall =
-    hxApps calleeRef forwardArgs resultTy callLoc
+  let forwardExpr =
+    hxExec calleeRef forwardArgs resultTy callLoc
   let funLet, funSerial, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats resultTy callLoc ctx
+    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats resultTy callLoc ctx
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =

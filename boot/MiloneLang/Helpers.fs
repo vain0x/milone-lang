@@ -222,8 +222,8 @@ let hxAndThen items loc =
 let hxCall callee args resultTy loc =
   Expr.Inf (InfOp.Call, callee :: args, resultTy, loc)
 
-let hxApps callee args resultTy loc =
-  Expr.Inf (InfOp.App, callee :: args, resultTy, loc)
+let hxExec callee args resultTy loc =
+  Expr.Inf (InfOp.Exec, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
   Expr.Inf (InfOp.Tuple, items, Ty.Tuple (List.map exprTy items), loc)

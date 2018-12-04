@@ -389,7 +389,7 @@ let genExprCall ctx callee args ty =
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
 
-let genExprApp ctx callee args =
+let genExprExec ctx callee args =
   let callee, ctx = genExpr ctx callee
   let args, ctx = genExprList ctx args
   let funPtr = CExpr.Nav (callee, "fun")
@@ -482,8 +482,8 @@ let genStmtLetVal ctx serial init ty =
   | MInit.Call (callee, args, _) ->
     let expr, ctx = genExprCall ctx callee args ty
     genInitExprCore ctx serial (Some expr) ty
-  | MInit.App (callee, args) ->
-    let expr, ctx = genExprApp ctx callee args
+  | MInit.Exec (callee, args) ->
+    let expr, ctx = genExprExec ctx callee args
     genInitExprCore ctx serial (Some expr) ty
   | MInit.Fun (funSerial, envSerial) ->
     genInitFun ctx serial funSerial envSerial ty

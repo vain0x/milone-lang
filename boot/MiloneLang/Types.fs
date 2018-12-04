@@ -192,7 +192,7 @@ namespace rec MiloneLang
     /// Call to a function, not a function object.
     | Call
     /// Call to a function object.
-    | App
+    | Exec
     /// Tuple constructor, e.g. `x, y, z`.
     | Tuple
     /// List constructor, e.g. `[x; y; z]`.
@@ -331,7 +331,7 @@ namespace rec MiloneLang
     | Call
       of callee:MExpr<'a> * args:MExpr<'a> list * calleeTy:MTy
     /// Call to function object.
-    | App
+    | Exec
       of callee:MExpr<'a> * args:MExpr<'a> list
     /// Creates a function object, packing environment.
     | Fun

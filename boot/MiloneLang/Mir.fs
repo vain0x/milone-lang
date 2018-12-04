@@ -468,12 +468,12 @@ let mirifyExprInfCall ctx callee args ty loc =
   | _ ->
     core ()
 
-let mirifyExprInfApp ctx callee args resultTy loc =
+let mirifyExprInfExec ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
   let args, ctx = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
   let resultTy = unboxTy resultTy
   let tempRef, tempSerial, ctx = ctxFreshVar ctx "app" resultTy loc
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.App (callee, args), resultTy, loc))
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Exec (callee, args), resultTy, loc))
   tempRef, ctx
 
 let mirifyExprInfFun ctx funSerial env funTy loc =
@@ -500,8 +500,8 @@ let mirifyExprInf ctx infOp args ty loc =
     mirifyExprAndThen ctx args
   | InfOp.Call, callee :: args, _ ->
     mirifyExprInfCall ctx callee args ty loc
-  | InfOp.App, callee :: args, _ ->
-    mirifyExprInfApp ctx callee args ty loc
+  | InfOp.Exec, callee :: args, _ ->
+    mirifyExprInfExec ctx callee args ty loc
   | InfOp.Fun funSerial, [env], _ ->
     mirifyExprInfFun ctx funSerial env ty loc
   | t ->
