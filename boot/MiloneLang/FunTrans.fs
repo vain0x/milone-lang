@@ -351,99 +351,180 @@ let restCall callee args resultTy loc =
   | args ->
     hxApps callee args resultTy loc
 
-/// Resolves partial application.
-/// 1. Define an underlying function, accepting environment and rest arguments,
-///   to call the callee with full arguments.
-/// 2. Create a boxed tuple called environment from given arguments.
-/// 3. Create a function object, pair of the underlying function and environment.
-let resolvePartialApp callee arity args argLen callLoc ctx =
-  assert (argLen < arity)
+type CalleeKind =
+  | Fun
+  | Obj
 
-  let funTy = exprTy callee
-  let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
-  let envArgRef, envArgSerial, ctx = ctxFreshVar "env" Ty.Obj callLoc ctx
-  let envArgPat = Pat.Ref ("env", envArgSerial, Ty.Obj, callLoc)
-  let resultTy = appliedTy arity funTy
+let hxCallTo calleeKind callee args resultTy loc =
+  match calleeKind, args with
+  | _, [] ->
+    callee
+  | CalleeKind.Fun, args ->
+    hxCall callee args resultTy loc
+  | CalleeKind.Obj, args ->
+    hxApps callee args resultTy loc
 
-  let restArgPats, restArgs, ctx =
-    let rec go n restTy ctx =
-      match n, restTy with
-      | 0, _ ->
-        [], [], ctx
-      | n, Ty.Fun (argTy, restTy) ->
-        let argRef, argSerial, ctx = ctxFreshVar "arg" argTy callLoc ctx
-        let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
-        let restArgPat = Pat.Ref ("arg", argSerial, argTy, callLoc)
-        restArgPat :: restArgPats, argRef :: restArgs, ctx
-      | _ ->
-        failwith "Never: Type error"
-    let restTy = callee |> exprTy |> appliedTy argLen
-    go (arity - argLen) restTy ctx
+let createRestArgsAndPats callee arity argLen callLoc ctx =
+  let rec go n restTy ctx =
+    match n, restTy with
+    | 0, _ ->
+      [], [], ctx
+    | n, Ty.Fun (argTy, restTy) ->
+      let argRef, argSerial, ctx = ctxFreshVar "arg" argTy callLoc ctx
+      let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
+      let restArgPat = Pat.Ref ("arg", argSerial, argTy, callLoc)
+      restArgPat :: restArgPats, argRef :: restArgs, ctx
+    | _ ->
+      failwith "Never: Type error"
+  let restTy = callee |> exprTy |> appliedTy argLen
+  go (arity - argLen) restTy ctx
 
-  let envPat, envTy, envArgs, ctx =
-    let rec go args ctx =
-      match args with
-      | [] ->
-        [], [], [], ctx
-      | arg :: args ->
-        let argTy, argLoc = exprExtract arg
-        let argRef, argSerial, ctx = ctxFreshVar "arg" argTy argLoc ctx
-        let argPat = Pat.Ref ("arg", argSerial, argTy, argLoc)
-        let argPats, argTys, argRefs, ctx = go args ctx
-        argPat :: argPats, argTy :: argTys, argRef :: argRefs, ctx
-    let argPats, argTys, argRefs, ctx = go args ctx
-    let envTy = Ty.Tuple argTys
-    let envPat = Pat.Tuple (argPats, envTy, callLoc)
-    envPat, envTy, argRefs, ctx
+let createEnvPatAndTy items callLoc ctx =
+  let rec go items ctx =
+    match items with
+    | [] ->
+      [], [], [], ctx
+    | item :: items ->
+      let itemTy, itemLoc = exprExtract item
+      let itemRef, itemSerial, ctx = ctxFreshVar "arg" itemTy itemLoc ctx
+      let itemPat = Pat.Ref ("arg", itemSerial, itemTy, itemLoc)
+      let itemPats, argTys, argRefs, ctx = go items ctx
+      itemPat :: itemPats, itemTy :: argTys, itemRef :: argRefs, ctx
+  let itemPats, itemTys, itemRefs, ctx = go items ctx
+  let envTy = Ty.Tuple itemTys
+  let envPat = Pat.Tuple (itemPats, envTy, callLoc)
+  envPat, envTy, itemRefs, ctx
 
-  let argPats = envArgPat :: restArgPats
-  let forwardArgs = envArgs @ restArgs
+let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
   let unboxRef = Expr.Ref ("unbox", SerialUnbox, 1, Ty.Fun (Ty.Obj, envTy), callLoc)
   let unboxExpr = hxCall unboxRef [envArgRef] envTy callLoc
-  let deconstructLet = Expr.Let (envPat, unboxExpr, callLoc)
-  let body =
-    hxAndThen [
-      deconstructLet
-      hxCall callee forwardArgs resultTy callLoc
-    ] callLoc
-  let funLet = Expr.LetFun ("fun", funSerial, argPats, body, resultTy, callLoc)
-
-  let envExpr =
-    let tuple = hxTuple args callLoc
-    let boxRef = Expr.Ref ("box", SerialBox, 1, Ty.Fun (envTy, Ty.Obj), callLoc)
-    hxCall boxRef [tuple] Ty.Obj callLoc
   hxAndThen [
-    funLet
-    Expr.Inf (InfOp.Fun funSerial, [envExpr], appliedTy argLen funTy, callLoc)
-  ] callLoc, ctx
+    Expr.Let (envPat, unboxExpr, callLoc)
+    next
+  ] callLoc
 
-let unetaCallDirect callee arity calleeLoc args resultTy callLoc ctx =
+/// Creates a let expression to define an underlying function.
+/// It takes an environment and rest arguments
+/// and calls the partial-applied callee with full arguments.
+let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats resultTy callLoc ctx =
+  let envArgRef, envArgSerial, ctx = ctxFreshVar "env" Ty.Obj callLoc ctx
+  let envArgPat = Pat.Ref ("env", envArgSerial, Ty.Obj, callLoc)
+  let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
+  let argPats = envArgPat :: restArgPats
+  let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
+  let letFun = Expr.LetFun ("fun", funSerial, argPats, body, resultTy, callLoc)
+  letFun, funSerial, ctx
+
+let createEnvBoxExpr args envTy callLoc =
+  let tuple = hxTuple args callLoc
+  let boxRef = Expr.Ref ("box", SerialBox, 1, Ty.Fun (envTy, Ty.Obj), callLoc)
+  hxCall boxRef [tuple] Ty.Obj callLoc
+
+/// In the case the callee is a function.
+let resolvePartialAppFun callee arity args argLen callLoc ctx =
+  let funTy = exprTy callee
+  let resultTy = appliedTy arity funTy
+  let envItems = args
+
+  let restArgPats, restArgs, ctx =
+    createRestArgsAndPats callee arity argLen callLoc ctx
+  let envPat, envTy, envRefs, ctx =
+    createEnvPatAndTy envItems callLoc ctx
+  let forwardArgs =
+    envRefs @ restArgs
+  let forwardCall =
+    hxCall callee forwardArgs resultTy callLoc
+  let funLet, funSerial, ctx =
+    createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats resultTy callLoc ctx
+  let envBoxExpr =
+    createEnvBoxExpr envItems envTy callLoc
+  let funObjExpr =
+    Expr.Inf (InfOp.Fun funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
+  let expr =
+    hxAndThen [
+      funLet
+      funObjExpr
+    ] callLoc
+  expr, ctx
+
+/// In the case that the callee is a function object.
+/// We need to include it to the environment.
+let resolvePartialAppObj callee arity args argLen callLoc ctx =
+  let funTy = exprTy callee
+  let resultTy = appliedTy arity funTy
+
+  // Introduce a variable for memoization.
+  let calleeRef, calleeLet, ctx =
+    let calleeRef, calleeSerial, ctx = ctxFreshVar "callee" funTy callLoc ctx
+    let calleePat = Pat.Ref ("callee", calleeSerial, funTy, callLoc)
+    let calleeLet = Expr.Let (calleePat, callee, callLoc)
+    calleeRef, calleeLet, ctx
+  let envItems = calleeRef :: args
+
+  let restArgPats, restArgs, ctx =
+    createRestArgsAndPats callee arity argLen callLoc ctx
+
+  let envPat, envTy, envRefs, ctx =
+    createEnvPatAndTy envItems callLoc ctx
+  let calleeRef, forwardArgs =
+    match envRefs @ restArgs with
+    | calleeRef :: forwardArgs ->
+      calleeRef, forwardArgs
+    | _ ->
+      failwith "Never"
+
+  let forwardCall =
+    hxApps calleeRef forwardArgs resultTy callLoc
+  let funLet, funSerial, ctx =
+    createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats resultTy callLoc ctx
+  let envBoxExpr =
+    createEnvBoxExpr envItems envTy callLoc
+  let funObjExpr =
+    Expr.Inf (InfOp.Fun funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
+  let expr =
+    hxAndThen [
+      calleeLet
+      funLet
+      funObjExpr
+    ] callLoc
+  expr, ctx
+
+let resolvePartialApp calleeKind callee arity args argLen callLoc ctx =
+  assert (argLen < arity)
+  match calleeKind with
+  | CalleeKind.Fun ->
+    resolvePartialAppFun callee arity args argLen callLoc ctx
+  | CalleeKind.Obj ->
+    resolvePartialAppObj callee arity args argLen callLoc ctx
+
+let unetaCallCore calleeKind callee arity calleeLoc args resultTy callLoc ctx =
   let argLen = List.length args
   if argLen < arity then
-    resolvePartialApp callee arity args argLen callLoc ctx
+    resolvePartialApp calleeKind callee arity args argLen callLoc ctx
   else
     let callArgs, restArgs = splitAt arity args
     let callResultTy = appliedTy arity (exprTy callee)
-    let callExpr = hxCall callee callArgs callResultTy calleeLoc
-    restCall callExpr restArgs resultTy callLoc, ctx
+    let callExpr = hxCallTo calleeKind callee callArgs callResultTy calleeLoc
+    hxCallTo CalleeKind.Obj callExpr restArgs resultTy callLoc, ctx
 
 let unetaCall callee args resultTy loc ctx =
   match callee, args with
   | Expr.Ref (_, serial, arity, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
     let args, ctx = (args, ctx) |> stMap unetaExpr
-    unetaCallDirect callee arity calleeLoc args resultTy loc ctx
+    unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
   | _, args ->
+    let calleeTy, calleeLoc = exprExtract callee
     let callee, ctx = (callee, ctx) |> unetaExpr
     let args, ctx = (args, ctx) |> stMap unetaExpr
-    // FIXME: Split by arity.
-    hxApps callee args resultTy loc, ctx
+    let arity = arityTy calleeTy // FIXME: maybe wrong
+    unetaCallCore CalleeKind.Obj callee arity calleeLoc args resultTy loc ctx
   | _ ->
     failwith "Never"
 
 let unetaRef expr serial calleeLoc (ctx: FunTransCtx) =
   match ctx.Vars |> Map.tryFind serial with
   | Some (_, ValueIdent.Fun arity, _, _) ->
-    resolvePartialApp expr arity [] 0 calleeLoc ctx
+    resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
   | _ ->
     expr, ctx
 

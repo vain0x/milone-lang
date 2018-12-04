@@ -1,0 +1,9 @@
+let bindInt (f: int -> string -> unit) (x: int) = f x
+
+let printInt value label =
+  printfn "%d: %s" value label
+
+let main _ =
+  let print42 = bindInt printInt 42
+  print42 "The answer"
+  0
