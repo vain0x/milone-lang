@@ -144,9 +144,20 @@ let declosurePat (pat, ctx) =
     let pat, ctx = (pat, ctx) |> declosurePat
     Pat.Anno (pat, ty, loc), ctx
 
-let declosureExprRef serial (expr, ctx) =
+let declosureExprRefAsCallee serial (expr, ctx) =
   let ctx = ctx |> ctxAddRef serial
   expr, ctx
+
+let declosureExprRef serial (expr, ctx) =
+  let ctx = ctx |> ctxAddRef serial
+  match ctx.Caps |> Map.tryFind serial with
+  | Some (_ :: _) ->
+    let resultTy, loc = exprExtract expr
+    match declosureCall expr [] resultTy loc ctx with
+    | Some expr -> expr, ctx
+    | None -> expr, ctx
+  | _ ->
+    expr, ctx
 
 let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
   match callee with
@@ -169,7 +180,12 @@ let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
     None
 
 let declosureExprCall callee args resultTy loc (ctx: FunTransCtx) =
-  let callee, ctx = (callee, ctx) |> declosureExpr
+  let callee, ctx =
+    match callee with
+    | Expr.Ref (_, serial, _, _, _) ->
+      (callee, ctx) |> declosureExprRefAsCallee serial
+    | _ ->
+      (callee, ctx) |> declosureExpr
   let args, ctx = (args, ctx) |> stMap declosureExpr
   match declosureCall callee args resultTy loc ctx with
   | Some expr ->
