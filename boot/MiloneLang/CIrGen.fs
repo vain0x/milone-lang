@@ -384,6 +384,10 @@ let genExprCall ctx callee args ty =
     let callee = CExpr.Ref "str_slice"
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
+  | MExpr.Ref (serial, _, _, _), [arg]
+    when serial = SerialCharFun ->
+    let arg, ctx = genExpr ctx arg
+    CExpr.Cast (arg, CTy.Char), ctx
   | _ ->
     let callee, ctx = genExpr ctx callee
     let args, ctx = genExprList ctx args

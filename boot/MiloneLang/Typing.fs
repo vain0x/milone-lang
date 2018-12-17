@@ -324,6 +324,10 @@ let inferRef (ctx: TyCtx) ident loc ty =
   | None, "printfn" ->
     // The function's type is unified in app expression inference.
     HExpr.Ref (ident, SerialPrintfn, 9999, ty, loc), ctx
+  | None, "char" ->
+    // FIXME: `char` can take non-int values, including chars.
+    let ctx = unifyTy ctx (Ty.Fun (Ty.Int, Ty.Char)) ty
+    HExpr.Ref (ident, SerialCharFun, 1, ty, loc), ctx
   | None, _ ->
     failwithf "Couldn't resolve var %s" ident
 

@@ -1,0 +1,5 @@
+let main _ =
+  if char 97 <> 'a' then exit 1
+  if char 0 <> '\u0000' then exit 1
+
+  0
