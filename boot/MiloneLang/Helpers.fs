@@ -46,7 +46,7 @@ let tyUnit =
   Ty.Tuple []
 
 let patUnit loc =
-  Pat.Tuple ([], Ty.Tuple [], loc)
+  HPat.Tuple ([], Ty.Tuple [], loc)
 
 let mtyUnit =
   MTy.Tuple []
@@ -75,99 +75,99 @@ let rec rollFunTy ty =
       n, List.rev acc, tTy
   go 0 [] ty
 
-let patExtract (pat: Pat<'a>): Ty * 'a =
+let patExtract (pat: HPat): Ty * Loc =
   match pat with
-  | Pat.Lit (lit, a) ->
+  | HPat.Lit (lit, a) ->
     litTy lit, a
-  | Pat.Nil (itemTy, a) ->
+  | HPat.Nil (itemTy, a) ->
     Ty.List itemTy, a
-  | Pat.Ref (_, _, ty, a) ->
+  | HPat.Ref (_, _, ty, a) ->
     ty, a
-  | Pat.Call (_, _, ty, a) ->
+  | HPat.Call (_, _, ty, a) ->
     ty, a
-  | Pat.Cons (_, _, itemTy, a) ->
+  | HPat.Cons (_, _, itemTy, a) ->
     Ty.List itemTy, a
-  | Pat.Tuple (_, ty, a) ->
+  | HPat.Tuple (_, ty, a) ->
     ty, a
-  | Pat.Anno (_, ty, a) ->
+  | HPat.Anno (_, ty, a) ->
     ty, a
 
-let patMap (f: Ty -> Ty) (g: 'a -> 'b) (pat: Pat<'a>): Pat<'b> =
+let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
   let rec go pat =
     match pat with
-    | Pat.Lit (lit, a) ->
-      Pat.Lit (lit, g a)
-    | Pat.Nil (itemTy, a) ->
-      Pat.Nil (f itemTy, g a)
-    | Pat.Ref (ident, serial, ty, a) ->
-      Pat.Ref (ident, serial, f ty, g a)
-    | Pat.Call (callee, args, ty, a) ->
-      Pat.Call (go callee, List.map go args, f ty, g a)
-    | Pat.Cons (l, r, itemTy, a) ->
-      Pat.Cons (go l, go r, f itemTy, g a)
-    | Pat.Tuple (itemPats, ty, a) ->
-      Pat.Tuple (List.map go itemPats, f ty, g a)
-    | Pat.Anno (pat, ty, a) ->
-      Pat.Anno (go pat, f ty, g a)
+    | HPat.Lit (lit, a) ->
+      HPat.Lit (lit, g a)
+    | HPat.Nil (itemTy, a) ->
+      HPat.Nil (f itemTy, g a)
+    | HPat.Ref (ident, serial, ty, a) ->
+      HPat.Ref (ident, serial, f ty, g a)
+    | HPat.Call (callee, args, ty, a) ->
+      HPat.Call (go callee, List.map go args, f ty, g a)
+    | HPat.Cons (l, r, itemTy, a) ->
+      HPat.Cons (go l, go r, f itemTy, g a)
+    | HPat.Tuple (itemPats, ty, a) ->
+      HPat.Tuple (List.map go itemPats, f ty, g a)
+    | HPat.Anno (pat, ty, a) ->
+      HPat.Anno (go pat, f ty, g a)
   go pat
 
-let exprExtract (expr: Expr<'a>): Ty * 'a =
+let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
-  | Expr.Lit (lit, a) ->
+  | HExpr.Lit (lit, a) ->
     litTy lit, a
-  | Expr.Ref (_, _, _, ty, a) ->
+  | HExpr.Ref (_, _, _, ty, a) ->
     ty, a
-  | Expr.If (_, _, _, ty, a) ->
+  | HExpr.If (_, _, _, ty, a) ->
     ty, a
-  | Expr.Match (_, _, ty, a) ->
+  | HExpr.Match (_, _, ty, a) ->
     ty, a
-  | Expr.Nav (_, _, ty, a) ->
+  | HExpr.Nav (_, _, ty, a) ->
     ty, a
-  | Expr.Op (_, _, _, ty, a) ->
+  | HExpr.Op (_, _, _, ty, a) ->
     ty, a
-  | Expr.Inf (_, _, ty, a) ->
+  | HExpr.Inf (_, _, ty, a) ->
     ty, a
-  | Expr.Let (_, _, a) ->
+  | HExpr.Let (_, _, a) ->
     tyUnit, a
-  | Expr.LetFun (_, _, _, _, ty, a) ->
+  | HExpr.LetFun (_, _, _, _, ty, a) ->
     ty, a
-  | Expr.TyDef (_, _, _, a) ->
+  | HExpr.TyDef (_, _, _, a) ->
     tyUnit, a
-  | Expr.Error (_, a) ->
+  | HExpr.Error (_, a) ->
     Ty.Error, a
 
-let exprMap (f: Ty -> Ty) (g: 'a -> 'b) (expr: Expr<'a>): Expr<'b> =
+let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat =
     patMap f g pat
   let rec go expr =
     match expr with
-    | Expr.Lit (lit, a) ->
-      Expr.Lit (lit, g a)
-    | Expr.Ref (ident, serial, arity, ty, a) ->
-      Expr.Ref (ident, serial, arity, f ty, g a)
-    | Expr.If (pred, thenCl, elseCl, ty, a) ->
-      Expr.If (go pred, go thenCl, go elseCl, f ty, g a)
-    | Expr.Match (target, arms, ty, a) ->
+    | HExpr.Lit (lit, a) ->
+      HExpr.Lit (lit, g a)
+    | HExpr.Ref (ident, serial, arity, ty, a) ->
+      HExpr.Ref (ident, serial, arity, f ty, g a)
+    | HExpr.If (pred, thenCl, elseCl, ty, a) ->
+      HExpr.If (go pred, go thenCl, go elseCl, f ty, g a)
+    | HExpr.Match (target, arms, ty, a) ->
       let arms = arms |> List.map (fun (pat, body) -> goPat pat, go body)
-      Expr.Match (go target, arms, f ty, g a)
-    | Expr.Nav (sub, mes, ty, a) ->
-      Expr.Nav (go sub, mes, f ty, g a)
-    | Expr.Op (Op.Cons itemTy, l, r, ty, a) ->
-      Expr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
-    | Expr.Op (op, l, r, ty, a) ->
-      Expr.Op (op, go l, go r, f ty, g a)
-    | Expr.Inf (InfOp.List itemTy, items, resultTy, a) ->
-      Expr.Inf (InfOp.List (f itemTy), List.map go items, f resultTy, g a)
-    | Expr.Inf (infOp, args, resultTy, a) ->
-      Expr.Inf (infOp, List.map go args, f resultTy, g a)
-    | Expr.Let (pat, init, a) ->
-      Expr.Let (goPat pat, go init, g a)
-    | Expr.LetFun (ident, serial, args, body, resultTy, a) ->
-      Expr.LetFun (ident, serial, List.map goPat args, go body, f resultTy, g a)
-    | Expr.TyDef (ident, serial, tyDef, a) ->
-      Expr.TyDef (ident, serial, tyDef, g a)
-    | Expr.Error (error, a) ->
-      Expr.Error (error, g a)
+      HExpr.Match (go target, arms, f ty, g a)
+    | HExpr.Nav (sub, mes, ty, a) ->
+      HExpr.Nav (go sub, mes, f ty, g a)
+    | HExpr.Op (Op.Cons itemTy, l, r, ty, a) ->
+      HExpr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
+    | HExpr.Op (op, l, r, ty, a) ->
+      HExpr.Op (op, go l, go r, f ty, g a)
+    | HExpr.Inf (InfOp.List itemTy, items, resultTy, a) ->
+      HExpr.Inf (InfOp.List (f itemTy), List.map go items, f resultTy, g a)
+    | HExpr.Inf (infOp, args, resultTy, a) ->
+      HExpr.Inf (infOp, List.map go args, f resultTy, g a)
+    | HExpr.Let (pat, init, a) ->
+      HExpr.Let (goPat pat, go init, g a)
+    | HExpr.LetFun (ident, serial, args, body, resultTy, a) ->
+      HExpr.LetFun (ident, serial, List.map goPat args, go body, f resultTy, g a)
+    | HExpr.TyDef (ident, serial, tyDef, a) ->
+      HExpr.TyDef (ident, serial, tyDef, g a)
+    | HExpr.Error (error, a) ->
+      HExpr.Error (error, g a)
   go expr
 
 let exprTy expr =
@@ -176,7 +176,7 @@ let exprTy expr =
 
 let exprArity expr =
   match expr with
-  | Expr.Ref (_, _, arity, _, _) ->
+  | HExpr.Ref (_, _, arity, _, _) ->
     arity
   | _ ->
     1
@@ -205,34 +205,34 @@ let opIsComparison op =
     false
 
 let hxTrue loc =
-  Expr.Lit (Lit.Bool true, loc)
+  HExpr.Lit (Lit.Bool true, loc)
 
 let hxFalse loc =
-  Expr.Lit (Lit.Bool false, loc)
+  HExpr.Lit (Lit.Bool false, loc)
 
 let hxIndex l r ty loc =
-  Expr.Op (Op.Index, l, r, ty, loc)
+  HExpr.Op (Op.Index, l, r, ty, loc)
 
 let hxAnno expr ty loc =
-  Expr.Inf (InfOp.Anno, [expr], ty, loc)
+  HExpr.Inf (InfOp.Anno, [expr], ty, loc)
 
 let hxAndThen items loc =
-  Expr.Inf (InfOp.AndThen, items, exprTy (List.last items), loc)
+  HExpr.Inf (InfOp.AndThen, items, exprTy (List.last items), loc)
 
 let hxCall callee args resultTy loc =
-  Expr.Inf (InfOp.Call, callee :: args, resultTy, loc)
+  HExpr.Inf (InfOp.Call, callee :: args, resultTy, loc)
 
 let hxExec callee args resultTy loc =
-  Expr.Inf (InfOp.Exec, callee :: args, resultTy, loc)
+  HExpr.Inf (InfOp.Exec, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  Expr.Inf (InfOp.Tuple, items, Ty.Tuple (List.map exprTy items), loc)
+  HExpr.Inf (InfOp.Tuple, items, Ty.Tuple (List.map exprTy items), loc)
 
 let hxUnit loc =
   hxTuple [] loc
 
 let hxList items itemTy loc =
-  Expr.Inf (InfOp.List itemTy, items, Ty.List itemTy, loc)
+  HExpr.Inf (InfOp.List itemTy, items, Ty.List itemTy, loc)
 
 let hxNil itemTy loc =
   hxList [] itemTy loc

@@ -141,25 +141,25 @@ namespace rec MiloneLang
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
-  type Pat<'a> =
+  type HPat =
     | Lit
-      of Lit * 'a
+      of Lit * Loc
     /// `[]`
     | Nil
-      of itemTy:Ty * 'a
+      of itemTy:Ty * Loc
     /// Variable reference pattern or `_`.
     | Ref
-      of ident:string * serial:int * Ty * 'a
+      of ident:string * serial:int * Ty * Loc
     | Call
-      of callee:Pat<'a> * args:Pat<'a> list * Ty * 'a
+      of callee:HPat * args:HPat list * Ty * Loc
     /// `::`
     | Cons
-      of Pat<'a> * Pat<'a> * itemTy:Ty * 'a
+      of HPat * HPat * itemTy:Ty * Loc
     | Tuple
-      of Pat<'a> list * tupleTy:Ty * 'a
+      of HPat list * tupleTy:Ty * Loc
     /// Type annotation pattern, e.g. `x : int`.
     | Anno
-      of Pat<'a> * Ty * 'a
+      of HPat * Ty * Loc
 
   /// Literal of primitive value.
   [<RequireQualifiedAccess>]
@@ -204,35 +204,35 @@ namespace rec MiloneLang
 
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]
-  type Expr<'a> =
+  type HExpr =
     | Lit
-      of Lit * 'a
+      of Lit * Loc
     /// Variable reference.
     | Ref
-      of ident:string * serial:int * arity:int * Ty * 'a
+      of ident:string * serial:int * arity:int * Ty * Loc
     /// If-then-else. Else clause is `()` if omit.
     | If
-      of pred:Expr<'a> * thenCl:Expr<'a> * elseCl:Expr<'a> * Ty * 'a
+      of pred:HExpr * thenCl:HExpr * elseCl:HExpr * Ty * Loc
     | Match
-      of target:Expr<'a> * (Pat<'a> * Expr<'a>) list * Ty * 'a
+      of target:HExpr * (HPat * HExpr) list * Ty * Loc
     /// `s.m`
     | Nav
-      of subject:Expr<'a> * message:string * Ty * 'a
+      of subject:HExpr * message:string * Ty * Loc
     /// Binary operation, e.g. `x + y`.
     | Op
-      of Op * Expr<'a> * Expr<'a> * Ty * 'a
+      of Op * HExpr * HExpr * Ty * Loc
     /// Operation with infinite arguments.
     | Inf
-      of InfOp * Expr<'a> list * Ty * 'a
+      of InfOp * HExpr list * Ty * Loc
     | Let
-      of pat:Pat<'a> * init:Expr<'a> * 'a
+      of pat:HPat * init:HExpr * Loc
     | LetFun
-      of ident:string * serial:int * args:Pat<'a> list * body:Expr<'a> * resultTy:Ty * 'a
+      of ident:string * serial:int * args:HPat list * body:HExpr * resultTy:Ty * Loc
     /// Type definition.
     | TyDef
-      of ident:string * serial:int * TyDef * 'a
+      of ident:string * serial:int * TyDef * Loc
     | Error
-      of string * 'a
+      of string * Loc
 
   /// Type definition in mid-level IR.
   [<RequireQualifiedAccess>]

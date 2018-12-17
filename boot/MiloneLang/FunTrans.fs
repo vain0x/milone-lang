@@ -44,7 +44,7 @@ let ctxFreshFun (ident: string) arity (ty: Ty) loc (ctx: FunTransCtx) =
         VarSerial = ctx.VarSerial + 1
         Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Fun arity, ty, loc)
     }
-  let refExpr = Expr.Ref (ident, serial, arity, ty, loc)
+  let refExpr = HExpr.Ref (ident, serial, arity, ty, loc)
   refExpr, serial, ctx
 
 let ctxFreshVar (ident: string) (ty: Ty) loc (ctx: FunTransCtx) =
@@ -54,7 +54,7 @@ let ctxFreshVar (ident: string) (ty: Ty) loc (ctx: FunTransCtx) =
         VarSerial = ctx.VarSerial + 1
         Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Var, ty, loc)
     }
-  let refExpr = Expr.Ref (ident, serial, 1, ty, loc)
+  let refExpr = HExpr.Ref (ident, serial, 1, ty, loc)
   refExpr, serial, ctx
 
 let ctxPushScope locals (ctx: FunTransCtx) =
@@ -118,31 +118,31 @@ let ctxCaps (ctx: FunTransCtx) =
 // i.e., functions must be used in call expression with full args for now.
 
 let buildCapsTuple caps loc =
-  let items = caps |> List.map Expr.Ref
+  let items = caps |> List.map HExpr.Ref
   hxTuple items loc
 
 let declosurePat (pat, ctx) =
   match pat with
-  | Pat.Lit _
-  | Pat.Nil _ ->
+  | HPat.Lit _
+  | HPat.Nil _ ->
     pat, ctx
-  | Pat.Ref (_, serial, _, _) ->
+  | HPat.Ref (_, serial, _, _) ->
     let ctx = ctx |> ctxAddLocal serial
     pat, ctx
-  | Pat.Cons (l, r, itemTy, loc) ->
+  | HPat.Cons (l, r, itemTy, loc) ->
     let l, ctx = (l, ctx) |> declosurePat
     let r, ctx = (r, ctx) |> declosurePat
-    Pat.Cons (l, r, itemTy, loc), ctx
-  | Pat.Tuple (items, ty, loc) ->
+    HPat.Cons (l, r, itemTy, loc), ctx
+  | HPat.Tuple (items, ty, loc) ->
     let items, ctx = (items, ctx) |> stMap declosurePat
-    Pat.Tuple (items, ty, loc), ctx
-  | Pat.Call (callee, args, ty, loc) ->
+    HPat.Tuple (items, ty, loc), ctx
+  | HPat.Call (callee, args, ty, loc) ->
     let callee, ctx = (callee, ctx) |> declosurePat
     let args, ctx = (args, ctx) |> stMap declosurePat
-    Pat.Call (callee, args, ty, loc), ctx
-  | Pat.Anno (pat, ty, loc) ->
+    HPat.Call (callee, args, ty, loc), ctx
+  | HPat.Anno (pat, ty, loc) ->
     let pat, ctx = (pat, ctx) |> declosurePat
-    Pat.Anno (pat, ty, loc), ctx
+    HPat.Anno (pat, ty, loc), ctx
 
 let declosureExprRefAsCallee serial (expr, ctx) =
   let ctx = ctx |> ctxAddRef serial
@@ -161,7 +161,7 @@ let declosureExprRef serial (expr, ctx) =
 
 let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
   match callee with
-  | Expr.Ref (ident, callee, arity, calleeTy, refLoc) ->
+  | HExpr.Ref (ident, callee, arity, calleeTy, refLoc) ->
     match ctx.Caps |> Map.tryFind callee with
     | Some (_ :: _ as caps) ->
       let capsExpr = buildCapsTuple caps loc
@@ -172,7 +172,7 @@ let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
       let arity = arity + 1
       let calleeTy = Ty.Fun (capsTy, calleeTy)
 
-      let callee = Expr.Ref (ident, callee, arity, calleeTy, refLoc)
+      let callee = HExpr.Ref (ident, callee, arity, calleeTy, refLoc)
       hxCall callee args resultTy loc |> Some
     | _ ->
       None
@@ -182,7 +182,7 @@ let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
 let declosureExprCall callee args resultTy loc (ctx: FunTransCtx) =
   let callee, ctx =
     match callee with
-    | Expr.Ref (_, serial, _, _, _) ->
+    | HExpr.Ref (_, serial, _, _, _) ->
       (callee, ctx) |> declosureExprRefAsCallee serial
     | _ ->
       (callee, ctx) |> declosureExpr
@@ -197,9 +197,9 @@ let declosureExprApp expr resultTy loc ctx =
   /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
   let rec roll acc callee =
     match callee with
-    | Expr.Op (Op.App, callee, arg, _, _) ->
+    | HExpr.Op (Op.App, callee, arg, _, _) ->
       roll (arg :: acc) callee
-    | Expr.Op (Op.Pipe, arg, callee, _, _) ->
+    | HExpr.Op (Op.Pipe, arg, callee, _, _) ->
       roll (arg :: acc) callee
     | _ ->
       callee, acc
@@ -209,7 +209,7 @@ let declosureExprApp expr resultTy loc ctx =
 let declosureExprLetVal pat init loc ctx =
   let pat, ctx = declosurePat (pat, ctx)
   let init, ctx = declosureExpr (init, ctx)
-  Expr.Let (pat, init, loc), ctx
+  HExpr.Let (pat, init, loc), ctx
 
 let declosureFunBody callee args body ctx =
   let baseCtx = ctx
@@ -235,8 +235,8 @@ let addCapsArg caps args body loc ctx =
     args, body, ctx
   | _ ->
     let capsTy = caps |> List.map (fun (_, _, _, ty, _) -> ty) |> Ty.Tuple
-    let capsPats = caps |> List.map (fun (ident, serial, _, ty, loc) -> Pat.Ref (ident, serial, ty, loc))
-    let capsPat = Pat.Tuple (capsPats, capsTy, loc)
+    let capsPats = caps |> List.map (fun (ident, serial, _, ty, loc) -> HPat.Ref (ident, serial, ty, loc))
+    let capsPat = HPat.Tuple (capsPats, capsTy, loc)
     capsPat :: args, body, ctx
 
 let declosureExprLetFun ident callee args body ty loc ctx =
@@ -244,7 +244,7 @@ let declosureExprLetFun ident callee args body ty loc ctx =
     declosureFunBody callee args body ctx
   let args, body, ctx =
     addCapsArg caps args body loc ctx
-  Expr.LetFun (ident, callee, args, body, ty, loc), ctx
+  HExpr.LetFun (ident, callee, args, body, ty, loc), ctx
 
 let declosureExprTyDef expr tyDef ctx =
   match tyDef with
@@ -258,11 +258,11 @@ let declosureExprTyDef expr tyDef ctx =
 let declosureExprOp ctx op l r ty loc =
   let l, ctx = declosureExpr (l, ctx)
   let r, ctx = declosureExpr (r, ctx)
-  Expr.Op (op, l, r, ty, loc), ctx
+  HExpr.Op (op, l, r, ty, loc), ctx
 
 let declosureExprInf ctx infOp items ty loc =
   let items, ctx = (items, ctx) |> stMap declosureExpr
-  Expr.Inf (infOp, items, ty, loc), ctx
+  HExpr.Inf (infOp, items, ty, loc), ctx
 
 let declosureExprMatch target arms ty loc ctx =
   let target, ctx = declosureExpr (target, ctx)
@@ -271,36 +271,36 @@ let declosureExprMatch target arms ty loc ctx =
     let body, ctx = declosureExpr (body, ctx)
     (pat, body), ctx
   let arms, ctx = (arms, ctx) |> stMap go
-  Expr.Match (target, arms, ty, loc), ctx
+  HExpr.Match (target, arms, ty, loc), ctx
 
 let declosureExpr (expr, ctx) =
   match expr with
-  | Expr.Lit _ ->
+  | HExpr.Lit _ ->
     expr, ctx
-  | Expr.Ref (_, serial, _, _, _) ->
+  | HExpr.Ref (_, serial, _, _, _) ->
     declosureExprRef serial (expr, ctx)
-  | Expr.Match (target, arms, ty, loc) ->
+  | HExpr.Match (target, arms, ty, loc) ->
     declosureExprMatch target arms ty loc ctx
-  | Expr.Nav (subject, message, ty, loc) ->
+  | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = declosureExpr (subject, ctx)
-    Expr.Nav (subject, message, ty, loc), ctx
-  | Expr.Op (Op.App, _, _, ty, loc) ->
+    HExpr.Nav (subject, message, ty, loc), ctx
+  | HExpr.Op (Op.App, _, _, ty, loc) ->
     declosureExprApp expr ty loc ctx
-  | Expr.Op (op, l, r, ty, loc) ->
+  | HExpr.Op (op, l, r, ty, loc) ->
     declosureExprOp ctx op l r ty loc
-  | Expr.Inf (infOp, items, ty, loc) ->
+  | HExpr.Inf (infOp, items, ty, loc) ->
     declosureExprInf ctx infOp items ty loc
-  | Expr.Let (pat, body, loc) ->
+  | HExpr.Let (pat, body, loc) ->
     declosureExprLetVal pat body loc ctx
-  | Expr.LetFun (ident, callee, args, body, ty, loc) ->
+  | HExpr.LetFun (ident, callee, args, body, ty, loc) ->
     declosureExprLetFun ident callee args body ty loc ctx
-  | Expr.TyDef (_, _, tyDef, _) ->
+  | HExpr.TyDef (_, _, tyDef, _) ->
     declosureExprTyDef expr tyDef ctx
-  | Expr.If _
-  | Expr.Inf (InfOp.Anno, _, _, _)
-  | Expr.Inf (InfOp.List _, _, _, _) ->
+  | HExpr.If _
+  | HExpr.Inf (InfOp.Anno, _, _, _)
+  | HExpr.Inf (InfOp.List _, _, _, _) ->
     failwith "Never"
-  | Expr.Error (error, loc) ->
+  | HExpr.Error (error, loc) ->
     failwithf "Never: %s at %A" error loc
 
 let declosure (exprs, ctx: FunTransCtx) =
@@ -388,7 +388,7 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
     | n, Ty.Fun (argTy, restTy) ->
       let argRef, argSerial, ctx = ctxFreshVar "arg" argTy callLoc ctx
       let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
-      let restArgPat = Pat.Ref ("arg", argSerial, argTy, callLoc)
+      let restArgPat = HPat.Ref ("arg", argSerial, argTy, callLoc)
       restArgPat :: restArgPats, argRef :: restArgs, ctx
     | _ ->
       failwith "Never: Type error"
@@ -403,19 +403,19 @@ let createEnvPatAndTy items callLoc ctx =
     | item :: items ->
       let itemTy, itemLoc = exprExtract item
       let itemRef, itemSerial, ctx = ctxFreshVar "arg" itemTy itemLoc ctx
-      let itemPat = Pat.Ref ("arg", itemSerial, itemTy, itemLoc)
+      let itemPat = HPat.Ref ("arg", itemSerial, itemTy, itemLoc)
       let itemPats, argTys, argRefs, ctx = go items ctx
       itemPat :: itemPats, itemTy :: argTys, itemRef :: argRefs, ctx
   let itemPats, itemTys, itemRefs, ctx = go items ctx
   let envTy = Ty.Tuple itemTys
-  let envPat = Pat.Tuple (itemPats, envTy, callLoc)
+  let envPat = HPat.Tuple (itemPats, envTy, callLoc)
   envPat, envTy, itemRefs, ctx
 
 let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
-  let unboxRef = Expr.Ref ("unbox", SerialUnbox, 1, Ty.Fun (Ty.Obj, envTy), callLoc)
+  let unboxRef = HExpr.Ref ("unbox", SerialUnbox, 1, Ty.Fun (Ty.Obj, envTy), callLoc)
   let unboxExpr = hxCall unboxRef [envArgRef] envTy callLoc
   hxAndThen [
-    Expr.Let (envPat, unboxExpr, callLoc)
+    HExpr.Let (envPat, unboxExpr, callLoc)
     next
   ] callLoc
 
@@ -424,16 +424,16 @@ let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
 /// and calls the partial-applied callee with full arguments.
 let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats resultTy callLoc ctx =
   let envArgRef, envArgSerial, ctx = ctxFreshVar "env" Ty.Obj callLoc ctx
-  let envArgPat = Pat.Ref ("env", envArgSerial, Ty.Obj, callLoc)
+  let envArgPat = HPat.Ref ("env", envArgSerial, Ty.Obj, callLoc)
   let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
   let argPats = envArgPat :: restArgPats
   let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
-  let letFun = Expr.LetFun ("fun", funSerial, argPats, body, resultTy, callLoc)
+  let letFun = HExpr.LetFun ("fun", funSerial, argPats, body, resultTy, callLoc)
   letFun, funSerial, ctx
 
 let createEnvBoxExpr args envTy callLoc =
   let tuple = hxTuple args callLoc
-  let boxRef = Expr.Ref ("box", SerialBox, 1, Ty.Fun (envTy, Ty.Obj), callLoc)
+  let boxRef = HExpr.Ref ("box", SerialBox, 1, Ty.Fun (envTy, Ty.Obj), callLoc)
   hxCall boxRef [tuple] Ty.Obj callLoc
 
 /// In the case the callee is a function.
@@ -455,7 +455,7 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =
-    Expr.Inf (InfOp.Fun funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
+    HExpr.Inf (InfOp.Fun funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
   let expr =
     hxAndThen [
       funLet
@@ -472,8 +472,8 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
   // Introduce a variable for memoization.
   let calleeRef, calleeLet, ctx =
     let calleeRef, calleeSerial, ctx = ctxFreshVar "callee" funTy callLoc ctx
-    let calleePat = Pat.Ref ("callee", calleeSerial, funTy, callLoc)
-    let calleeLet = Expr.Let (calleePat, callee, callLoc)
+    let calleePat = HPat.Ref ("callee", calleeSerial, funTy, callLoc)
+    let calleeLet = HExpr.Let (calleePat, callee, callLoc)
     calleeRef, calleeLet, ctx
   let envItems = calleeRef :: args
 
@@ -496,7 +496,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =
-    Expr.Inf (InfOp.Fun funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
+    HExpr.Inf (InfOp.Fun funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
   let expr =
     hxAndThen [
       calleeLet
@@ -525,7 +525,7 @@ let unetaCallCore calleeKind callee arity calleeLoc args resultTy callLoc ctx =
 
 let unetaCall callee args resultTy loc ctx =
   match callee, args with
-  | Expr.Ref (_, serial, arity, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
+  | HExpr.Ref (_, serial, arity, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
     let args, ctx = (args, ctx) |> stMap unetaExpr
     unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
   | _, args ->
@@ -550,47 +550,47 @@ let unetaExprInf infOp args ty loc ctx =
     unetaCall callee args ty loc ctx
   | _ ->
     let args, ctx = (args, ctx) |> stMap unetaExpr
-    Expr.Inf (infOp, args, ty, loc), ctx
+    HExpr.Inf (infOp, args, ty, loc), ctx
 
 let unetaExprLetFun ident callee argPats body ty loc ctx =
   let argPats, ctx = (argPats, ctx) |> stMap unetaPat
   let body, ctx = (body, ctx) |> unetaExpr
-  Expr.LetFun (ident, callee, argPats, body, ty, loc), ctx
+  HExpr.LetFun (ident, callee, argPats, body, ty, loc), ctx
 
 let unetaPat (pat, ctx) =
   pat, ctx
 
 let unetaExpr (expr, ctx) =
   match expr with
-  | Expr.Lit _
-  | Expr.TyDef _
-  | Expr.Error _ ->
+  | HExpr.Lit _
+  | HExpr.TyDef _
+  | HExpr.Error _ ->
     expr, ctx
-  | Expr.Ref (_, serial, _, _, calleeLoc) ->
+  | HExpr.Ref (_, serial, _, _, calleeLoc) ->
     unetaRef expr serial calleeLoc ctx
-  | Expr.Match (target, arms, ty, loc) ->
+  | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> unetaExpr
     let arms, ctx = (arms, ctx) |> stMap (fun ((pat, body), ctx) ->
       let pat, ctx = (pat, ctx) |> unetaPat
       let body, ctx = (body, ctx) |> unetaExpr
       (pat, body), ctx)
-    Expr.Match (target, arms, ty, loc), ctx
-  | Expr.Nav (subject, message, ty, loc) ->
+    HExpr.Match (target, arms, ty, loc), ctx
+  | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = unetaExpr (subject, ctx)
-    Expr.Nav (subject, message, ty, loc), ctx
-  | Expr.Op (op, l, r, ty, loc) ->
+    HExpr.Nav (subject, message, ty, loc), ctx
+  | HExpr.Op (op, l, r, ty, loc) ->
     let l, ctx = (l, ctx) |> unetaExpr
     let r, ctx = (r, ctx) |> unetaExpr
-    Expr.Op (op, l, r, ty, loc), ctx
-  | Expr.Inf (infOp, args, ty, loc) ->
+    HExpr.Op (op, l, r, ty, loc), ctx
+  | HExpr.Inf (infOp, args, ty, loc) ->
     unetaExprInf infOp args ty loc ctx
-  | Expr.Let (pat, init, loc) ->
+  | HExpr.Let (pat, init, loc) ->
     let pat, ctx = (pat, ctx) |> unetaPat
     let init, ctx = (init, ctx) |> unetaExpr
-    Expr.Let (pat, init, loc), ctx
-  | Expr.LetFun (ident, callee, args, body, ty, loc) ->
+    HExpr.Let (pat, init, loc), ctx
+  | HExpr.LetFun (ident, callee, args, body, ty, loc) ->
     unetaExprLetFun ident callee args body ty loc ctx
-  | Expr.If _ ->
+  | HExpr.If _ ->
     failwith "Never: If expressions are desugared"
 
 let uneta (exprs, ctx: FunTransCtx) =

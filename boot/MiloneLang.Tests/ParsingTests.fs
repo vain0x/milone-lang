@@ -5,11 +5,13 @@ open MiloneLang.Assets
 open MiloneLang.Helpers
 open Xunit
 
-let parseStr source: Expr<unit> list =
+let loc = (0, 0)
+
+let parseStr source: HExpr list =
   source
   |> Lexing.tokenize
   |> Parsing.parse
-  |> List.map (exprMap id ignore)
+  |> List.map (exprMap id (fun _ -> loc))
 
 let parseTyExprStr source: Ty =
   let ty, tokens =
@@ -19,13 +21,13 @@ let parseTyExprStr source: Ty =
   if tokens <> [] then failwithf "Expected eof but %A" tokens
   ty
 
-let parseStrAsPat source: Pat<unit> =
+let parseStrAsPat source: HPat =
   let pat, tokens =
     source
     |> Lexing.tokenize
     |> Parsing.parsePat -1
   if tokens <> [] then failwithf "Expected eof but %A" tokens
-  patMap id ignore pat
+  patMap id (fun _ -> loc) pat
 
 let tyFun sTy tTy =
   Ty.Fun (sTy, tTy)
@@ -36,56 +38,56 @@ let tyList ty =
 let tyTuple itemTys =
   Ty.Tuple itemTys
 
-let patInt value = Pat.Lit (Lit.Int value, ())
+let patInt value = HPat.Lit (Lit.Int value, loc)
 
-let patNil = Pat.Nil (noTy, ())
+let patNil = HPat.Nil (noTy, loc)
 
-let patRef ident = Pat.Ref (ident, noSerial, noTy, ())
+let patRef ident = HPat.Ref (ident, noSerial, noTy, loc)
 
-let patCall callee args = Pat.Call (callee, args, noTy, ())
+let patCall callee args = HPat.Call (callee, args, noTy, loc)
 
-let patTuple itemPats = Pat.Tuple (itemPats, noTy, ())
+let patTuple itemPats = HPat.Tuple (itemPats, noTy, loc)
 
-let patCons l r = Pat.Cons (l, r, noTy, ())
+let patCons l r = HPat.Cons (l, r, noTy, loc)
 
 let exprInt value =
-  Expr.Lit (Lit.Int value, ())
+  HExpr.Lit (Lit.Int value, loc)
 
 let exprStr value =
-  Expr.Lit (Lit.Str value, ())
+  HExpr.Lit (Lit.Str value, loc)
 
 let exprRef ident =
-  Expr.Ref (ident, noArity, noSerial, noTy, ())
+  HExpr.Ref (ident, noArity, noSerial, noTy, loc)
 
 let exprList items =
-  hxList items noTy ()
+  hxList items noTy loc
 
 let exprNil =
   exprList []
 
 let exprApp callee arg =
-  Expr.Op (Op.App, callee, arg, noTy, ())
+  HExpr.Op (Op.App, callee, arg, noTy, loc)
 
 let exprOp op left right =
-  Expr.Op (op, left,  right, noTy, ())
+  HExpr.Op (op, left,  right, noTy, loc)
 
 let exprCons l r =
-  Expr.Op (Op.Cons noTy, l, r, noTy, ())
+  HExpr.Op (Op.Cons noTy, l, r, noTy, loc)
 
 let exprAdd left right =
-  Expr.Op (Op.Add, left,  right, noTy, ())
+  HExpr.Op (Op.Add, left,  right, noTy, loc)
 
 let exprSub left right =
-  Expr.Op (Op.Sub, left,  right, noTy, ())
+  HExpr.Op (Op.Sub, left,  right, noTy, loc)
 
 let exprLet ident body =
-  Expr.Let (patRef ident, body, ())
+  HExpr.Let (patRef ident, body, loc)
 
 let exprLetMain body =
-  Expr.Let (patCall (patRef "main") [patUnit ()], body, ())
+  HExpr.Let (patCall (patRef "main") [patUnit loc], body, loc)
 
 let exprAndThen exprs =
-  hxAndThen exprs ()
+  hxAndThen exprs loc
 
 let exprCall callee args =
   let rec go callee args =
@@ -124,7 +126,7 @@ let parseSimpleExprs () =
   let table =
     [
       "()",
-        hxUnit ()
+        hxUnit loc
       "1",
         exprInt 1
       "\"Hello, world!\"",
@@ -353,7 +355,7 @@ type Answer =
     TyDef.Union ["Yes", noSerial, true, Ty.Int; "No", noSerial, false, tyUnit]
   let expected =
     [
-      Expr.TyDef ("Answer", noSerial, tyDef, ())
+      HExpr.TyDef ("Answer", noSerial, tyDef, loc)
     ]
   source |> parseStr |> is expected
 
@@ -395,5 +397,5 @@ let parsePatCons () =
 [<Fact>]
 let parsePatAnno () =
   let source = """x : int"""
-  let expected = Pat.Anno (patRef "x", Ty.Int, ())
+  let expected = HPat.Anno (patRef "x", Ty.Int, loc)
   source |> parseStrAsPat |> is expected
