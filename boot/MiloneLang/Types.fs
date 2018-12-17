@@ -306,76 +306,76 @@ namespace rec MiloneLang
 
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
-  type MExpr<'a> =
+  type MExpr =
     | Lit
-      of Lit * 'a
+      of Lit * Loc
     | Default
-      of MTy * 'a
+      of MTy * Loc
     | Ref
-      of serial:int * arity:int * MTy * 'a
+      of serial:int * arity:int * MTy * Loc
     | Variant
-      of tySerial:int * serial:int * MTy * 'a
+      of tySerial:int * serial:int * MTy * Loc
     | UniOp
-      of MUniOp * arg:MExpr<'a> * resultTy:MTy * 'a
+      of MUniOp * arg:MExpr * resultTy:MTy * Loc
     | Op
-      of MOp * left:MExpr<'a> * right:MExpr<'a> * resultTy:MTy * 'a
+      of MOp * left:MExpr * right:MExpr * resultTy:MTy * Loc
 
   /// Variable initializer in mid-level IR.
   [<RequireQualifiedAccess>]
-  type MInit<'a> =
+  type MInit =
     /// Remain uninitialized at first; initialized later by `MStmt.Set`.
     | UnInit
     | Expr
-      of MExpr<'a>
+      of MExpr
     /// Call to normal function.
     | Call
-      of callee:MExpr<'a> * args:MExpr<'a> list * calleeTy:MTy
+      of callee:MExpr * args:MExpr list * calleeTy:MTy
     /// Call to function object.
     | Exec
-      of callee:MExpr<'a> * args:MExpr<'a> list
+      of callee:MExpr * args:MExpr list
     /// Creates a function object, packing environment.
     | Fun
       of subFunSerial:int * envSerial:int
     | Box
-      of MExpr<'a>
+      of MExpr
     | Cons
-      of head:MExpr<'a> * tail:MExpr<'a> * itemTy:MTy
+      of head:MExpr * tail:MExpr * itemTy:MTy
     | Tuple
-      of items:MExpr<'a> list
+      of items:MExpr list
     | Union
-      of serial:int * arg:MExpr<'a> * MTy
+      of serial:int * arg:MExpr * MTy
 
   /// Statement in middle IR.
   /// Doesn't introduce global things, e.g. functions.
   [<RequireQualifiedAccess>]
-  type MStmt<'a> =
+  type MStmt =
     /// Statement to evaluate an expression, e.g. `f ();`.
     | Do
-      of MExpr<'a> * 'a
+      of MExpr * Loc
     /// Declare a local variable.
     | LetVal
-      of serial:int * MInit<'a> * MTy * 'a
+      of serial:int * MInit * MTy * Loc
     /// Set to uninitialized local variable.
     | Set
-      of serial:int * init:MExpr<'a> * 'a
+      of serial:int * init:MExpr * Loc
     | Return
-      of MExpr<'a> * 'a
+      of MExpr * Loc
     | Label
-      of string * 'a
+      of string * Loc
     | Goto
-      of string * 'a
+      of string * Loc
     | GotoUnless
-      of MExpr<'a> * string * 'a
+      of MExpr * string * Loc
     | Exit
-      of MExpr<'a> * 'a
+      of MExpr * Loc
 
   /// Declaration in middle IR.
   [<RequireQualifiedAccess>]
-  type MDecl<'a> =
+  type MDecl =
     | LetFun
-      of callee:int * args:(int * int * MTy * 'a) list * caps:(int * int * MTy * 'a) list * resultTy:MTy * body:MStmt<'a> list * 'a
+      of callee:int * args:(int * int * MTy * Loc) list * caps:(int * int * MTy * Loc) list * resultTy:MTy * body:MStmt list * Loc
     | TyDef
-      of int * TyDef * 'a
+      of int * TyDef * Loc
 
   /// Type in C language.
   [<RequireQualifiedAccess>]

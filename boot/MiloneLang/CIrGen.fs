@@ -327,7 +327,7 @@ let genExprList ctx exprs =
       go (result :: results) ctx exprs
   go [] ctx exprs
 
-let genExpr (ctx: Ctx) (arg: MExpr<Loc>): CExpr * Ctx =
+let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
   match arg with
   | MExpr.Lit (Lit.Int value, _) ->
     CExpr.Int value, ctx
@@ -531,13 +531,13 @@ let genStmt ctx stmt =
     let arg, ctx = genExpr ctx arg
     ctxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))
 
-let genBlock (ctx: Ctx) (stmts: MStmt<_> list) =
+let genBlock (ctx: Ctx) (stmts: MStmt list) =
   let bodyCtx = genStmts (ctxNewBlock ctx) stmts
   let stmts = bodyCtx.Stmts
   let ctx = ctxRollBack ctx bodyCtx
   List.rev stmts, ctx
 
-let genStmts (ctx: Ctx) (stmts: MStmt<_> list): Ctx =
+let genStmts (ctx: Ctx) (stmts: MStmt list): Ctx =
   let rec go ctx stmts =
     match stmts with
     | [] -> ctx

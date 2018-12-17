@@ -12,8 +12,8 @@ type MirCtx =
     Vars: Map<int, string * ValueIdent * MTy * Loc>
     Tys: Map<int, string * MTyDef * Loc>
     LabelSerial: int
-    Decls: MDecl<Loc> list
-    Stmts: MStmt<Loc> list
+    Decls: MDecl list
+    Stmts: MStmt list
   }
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
@@ -45,7 +45,7 @@ let ctxRollBack (bCtx: MirCtx) (dCtx: MirCtx) =
 let ctxAddDecl (ctx: MirCtx) decl =
   { ctx with Decls = decl :: ctx.Decls }
 
-let ctxAddStmt (ctx: MirCtx) (stmt: MStmt<Loc>) =
+let ctxAddStmt (ctx: MirCtx) (stmt: MStmt) =
   { ctx with Stmts = stmt :: ctx.Stmts }
 
 /// Returns statements in reversed order.
@@ -159,7 +159,7 @@ let strCmpExpr ctx op l r (ty, loc) =
   opExpr, ctx
 
 /// Generates a comparison expression.
-let cmpExpr ctx (op: MOp) (l: MExpr<_>) r (ty: MTy) loc =
+let cmpExpr ctx (op: MOp) (l: MExpr) r (ty: MTy) loc =
   assert (opIsComparison op)
   match mexprTy l with
   | MTy.Bool
@@ -246,7 +246,7 @@ let mirifyPatTuple ctx endLabel itemPats itemTys expr loc =
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
 /// Determines if the pattern covers the whole.
-let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr<Loc>): bool * MirCtx =
+let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   match pat with
   | HPat.Ref ("_", _, _, _) ->
     // Discard result.
@@ -562,7 +562,7 @@ let mirifyExprTyDef ctx tySerial tyDef loc =
   let ctx = ctxAddDecl ctx (MDecl.TyDef (tySerial, tyDef, loc))
   MExpr.Default (mtyUnit, loc), ctx
 
-let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr<Loc> * MirCtx =
+let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   match expr with
   | HExpr.Lit (lit, loc) ->
     MExpr.Lit (lit, loc), ctx
@@ -599,7 +599,7 @@ let mirifyExprs ctx exprs =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let mirify (exprs: HExpr list, tyCtx: TyCtx): MDecl<_> list * MirCtx =
+let mirify (exprs: HExpr list, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
   let _exprs, ctx = mirifyExprs ctx exprs
   // NOTE: This will fail when you write top-level value expression.
