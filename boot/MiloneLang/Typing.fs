@@ -17,15 +17,11 @@ type TyCtx =
     TySerial: int
     TyEnv: Map<string, Ty>
     Tys: Map<int, string * TyDef * Loc>
-    Errors: (string * Loc) list
+    Diags: Diag list
   }
 
-let ctxAddError (ctx: TyCtx) message loc =
-  { ctx with Errors = (message, loc) :: ctx.Errors }
-
-let ctxAddTyError ctx lRootTy lTy rRootTy rTy loc =
-  let message = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lTy rTy
-  ctxAddError ctx message loc
+let ctxAddErr (ctx: TyCtx) message loc =
+  { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
 
 /// Merges derived context into base context
 /// for when expr of derived context is done.
@@ -238,7 +234,8 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Ref _, _ ->
       let lRootTy = substTy ctx lRootTy
       let rRootTy = substTy ctx rRootTy
-      ctxAddTyError ctx lRootTy lSubstTy rRootTy rSubstTy loc
+      let message = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
+      ctxAddErr ctx message loc
   go lty rty ctx
 
 let valueIdentArity v =
@@ -361,11 +358,11 @@ let inferRef (ctx: TyCtx) ident loc ty =
       | Ty.Error _ ->
         ctx
       | argTy ->
-        ctxAddError ctx (sprintf "Expected int or char %A" argTy) loc
+        ctxAddErr ctx (sprintf "Expected int or char %A" argTy) loc
     HExpr.Ref (ident, SerialIntFun, 1, ty, loc), ctx
   | None, _ ->
     let message = sprintf "Couldn't resolve var %s" ident
-    let ctx = ctxAddError ctx message loc
+    let ctx = ctxAddErr ctx message loc
     hxAbort ctx loc
 
 let inferNil ctx loc listTy =
@@ -398,7 +395,7 @@ let inferNav ctx sub mes loc resultTy =
     let funExpr = HExpr.Ref (mes, SerialStrLength, 1, Ty.Fun (Ty.Str, Ty.Int), loc)
     HExpr.Op (Op.App, funExpr, sub, Ty.Int, loc), ctx
   | _ ->
-    let ctx = ctxAddError ctx (sprintf "Unknown nav %A.%s" sub mes) loc
+    let ctx = ctxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
     hxAbort ctx loc
 
 /// `x.[i] : 'y` <== x : 'x, i : int or i : range
@@ -639,7 +636,7 @@ let substTyExpr ctx expr =
       ty
   exprMap subst id expr
 
-let infer (exprs: HExpr list): HExpr list * (string * Loc) list * TyCtx =
+let infer (exprs: HExpr list): HExpr list * TyCtx =
   let ctx =
     {
       VarSerial = 0
@@ -648,7 +645,7 @@ let infer (exprs: HExpr list): HExpr list * (string * Loc) list * TyCtx =
       TySerial = 0
       TyEnv = Map.empty
       Tys = Map.empty
-      Errors = []
+      Diags = []
     }
 
   let exprs, ctx = inferExprs ctx exprs tyUnit
@@ -664,6 +661,4 @@ let infer (exprs: HExpr list): HExpr list * (string * Loc) list * TyCtx =
       )
     { ctx with Vars = vars }
 
-  let errors = List.rev ctx.Errors
-
-  exprs, errors, ctx
+  exprs,  ctx

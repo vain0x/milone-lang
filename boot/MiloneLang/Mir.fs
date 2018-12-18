@@ -14,6 +14,7 @@ type MirCtx =
     LabelSerial: int
     Decls: MDecl list
     Stmts: MStmt list
+    Diags: Diag list
   }
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
@@ -34,6 +35,7 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
     LabelSerial = 0
     Decls = []
     Stmts = []
+    Diags = tyCtx.Diags
   }
 
 let ctxNewBlock (ctx: MirCtx) =

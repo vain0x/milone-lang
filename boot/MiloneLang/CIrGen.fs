@@ -15,6 +15,7 @@ type Ctx =
     TyUniqueNames: Map<MTy, string>
     Stmts: CStmt list
     Decls: CDecl list
+    Diags: Diag list
   }
 
 let tupleField i = sprintf "t%d" i
@@ -53,6 +54,7 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): Ctx =
     TyUniqueNames = tyNames
     Stmts = []
     Decls = []
+    Diags = mirCtx.Diags
   }
 
 let ctxNewBlock (ctx: Ctx) =
@@ -568,7 +570,7 @@ let genStmts (ctx: Ctx) (stmts: MStmt list): Ctx =
 let genDecls (ctx: Ctx) decls =
   match decls with
   | [] ->
-    ctx.Decls |> List.rev
+    ctx
   | MDecl.TyDef _ :: decls ->
     genDecls ctx decls
   | MDecl.LetFun (callee, args, _caps, resultTy, body, _) :: decls ->
@@ -591,6 +593,23 @@ let genDecls (ctx: Ctx) decls =
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls
 
-let gen (decls, mirCtx: Mir.MirCtx): CDecl list =
+let genDiags (ctx: Ctx) =
+  let rec go (ctx: Ctx) diags =
+    match diags with
+    | [] ->
+      ctx
+    | Diag.Err (message, (y, x)) :: diags ->
+      let message = sprintf "%d:%d %s" (1 + y) (1 + x) message
+      let ctx = ctxAddDecl ctx (CDecl.ErrDir (message, 1 + y))
+      go ctx diags
+  let diags = ctx.Diags |> List.rev
+  let ctx = go ctx diags
+  let success = diags |> List.isEmpty
+  success, ctx
+
+let gen (decls, mirCtx: Mir.MirCtx): CDecl list * bool =
   let ctx = ctxFromMirCtx mirCtx
-  genDecls ctx decls
+  let ctx = genDecls ctx decls
+  let success, ctx = genDiags ctx
+  let decls = ctx.Decls |> List.rev
+  decls, success

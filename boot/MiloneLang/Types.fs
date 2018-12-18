@@ -3,10 +3,11 @@ namespace rec MiloneLang
   /// Location = (rowIndex, columnIndex).
   type Loc = int * int
 
+  /// Diagnostic; something bad in source code in terms of language server protocol.
   [<RequireQualifiedAccess>]
-  type Err =
-    | UnifyTy
-      of Ty * Ty * Loc
+  type Diag =
+    | Err
+      of string * Loc
 
   /// Word or punctuation in source code.
   [<RequireQualifiedAccess>]
@@ -482,6 +483,9 @@ namespace rec MiloneLang
   /// Top-level definition in C language.
   [<RequireQualifiedAccess>]
   type CDecl =
+    /// `#error` directive to cause compile error manually.
+    | ErrDir
+      of message:string * line:int
     | Struct
       of ident:string * fields:(string * CTy) list * variants:(string * CTy) list
     | Enum

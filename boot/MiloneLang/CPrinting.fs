@@ -270,6 +270,10 @@ let rec cprintStmts acc indent stmts: string list =
 
 let cprintDecl acc decl =
   match decl with
+  | CDecl.ErrDir (message, line) ->
+    let acc = acc *- "#line " *- string line *- eol
+    let acc = acc *- "#error " *- message *- eol
+    acc
   | CDecl.Struct (ident, fields, variants) ->
     let cprintFields indent acc fields =
       let rec go acc fields =
@@ -319,17 +323,19 @@ let cprintDecl acc decl =
 /// Prints forward declaration.
 let cprintDeclForward acc decl =
   match decl with
+  | CDecl.ErrDir _ ->
+    acc
   | CDecl.Struct (ident, _, _) ->
-    let acc = acc *- "struct " *- ident *- ";" *- eol
+    let acc = acc *- "struct " *- ident *- ";" *- eol *- eol
     acc
   | CDecl.Enum (tyIdent, _) ->
-    let acc = acc *- "enum " *- tyIdent *- ";" *- eol
+    let acc = acc *- "enum " *- tyIdent *- ";" *- eol *- eol
     acc
   | CDecl.Fun (ident, args, resultTy, _) ->
     let acc = cprintTyWithName acc ident resultTy
     let acc = acc *- "("
     let acc = cprintParams acc args
-    let acc = acc *- ");" *- eol
+    let acc = acc *- ");" *- eol *- eol
     acc
 
 let rec cprintDeclForwards acc decls =
@@ -338,7 +344,7 @@ let rec cprintDeclForwards acc decls =
     | [] ->
       acc
     | decl :: decls ->
-      let acc = cprintDeclForward acc decl *- eol
+      let acc = cprintDeclForward acc decl
       go acc decls
   go acc decls
 

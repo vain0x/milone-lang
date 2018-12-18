@@ -16,11 +16,8 @@ let testFile category case =
         IO.Path.Combine(testsDir.Value, category, case, case + ".milone")
       ) |> Async.AwaitTask
     let content =
-      match toCir Verbosity.Silent source with
-      | cir, [] ->
-        CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
-      | _, errors ->
-        errors |> List.map (fun (msg, (y, x)) -> sprintf "// %A %s%s" (y + 1, x + 1) msg eol) |> String.concat ""
+      let cir, _ = toCir Verbosity.Silent source
+      CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
     do!
       IO.File.WriteAllTextAsync(
         IO.Path.Combine(testsDir.Value, category, case, case + ".c"),
