@@ -3,6 +3,11 @@ namespace rec MiloneLang
   /// Location = (rowIndex, columnIndex).
   type Loc = int * int
 
+  [<RequireQualifiedAccess>]
+  type Err =
+    | UnifyTy
+      of Ty * Ty * Loc
+
   /// Word or punctuation in source code.
   [<RequireQualifiedAccess>]
   type Token =
