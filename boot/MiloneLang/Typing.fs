@@ -244,11 +244,10 @@ let valueIdentArity v =
   | _ -> 1
 
 /// Creates an expression to abort.
-let hxAbort (ctx: TyCtx) loc =
-  let resultTy, _, ctx = ctxFreshTyVar "exit" ctx
-  let funTy = Ty.Fun (Ty.Int, resultTy)
+let hxAbort (ctx: TyCtx) ty loc =
+  let funTy = Ty.Fun (Ty.Int, ty)
   let exitExpr = HExpr.Ref ("exit", SerialExit, 1, funTy, loc)
-  let callExpr = HExpr.Op (Op.App, exitExpr, HExpr.Lit (Lit.Int 1, loc), resultTy, loc)
+  let callExpr = HExpr.Op (Op.App, exitExpr, HExpr.Lit (Lit.Int 1, loc), ty, loc)
   callExpr, ctx
 
 let inferPatRef (ctx: TyCtx) ident loc ty =
@@ -363,7 +362,7 @@ let inferRef (ctx: TyCtx) ident loc ty =
   | None, _ ->
     let message = sprintf "Couldn't resolve var %s" ident
     let ctx = ctxAddErr ctx message loc
-    hxAbort ctx loc
+    hxAbort ctx ty loc
 
 let inferNil ctx loc listTy =
   let itemTy, _, ctx = ctxFreshTyVar "item" ctx
@@ -396,7 +395,7 @@ let inferNav ctx sub mes loc resultTy =
     HExpr.Op (Op.App, funExpr, sub, Ty.Int, loc), ctx
   | _ ->
     let ctx = ctxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
-    hxAbort ctx loc
+    hxAbort ctx resultTy loc
 
 /// `x.[i] : 'y` <== x : 'x, i : int or i : range
 /// NOTE: Currently only the `x : string` case can compile, however,
