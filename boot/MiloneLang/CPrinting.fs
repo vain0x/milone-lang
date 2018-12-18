@@ -406,6 +406,10 @@ struct String str_slice(struct String s, int l, int r) {
   }
   return (struct String){.str = str, .len = len};
 }
+
+int str_to_int(struct String s) {
+  return atoi(s.str);
+}
 """
   acc *- header *- eol
 

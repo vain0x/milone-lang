@@ -374,6 +374,18 @@ let genExprCallPrintfn ctx format args =
   let ctx = ctxAddStmt ctx expr
   genExprDefault ctx mtyUnit
 
+let genExprCallInt arg argTy ctx =
+  let arg, ctx = genExpr ctx arg
+  match argTy with
+  | MTy.Int ->
+    arg, ctx
+  | MTy.Char ->
+    CExpr.Cast (arg, CTy.Int), ctx
+  | MTy.Str ->
+    CExpr.Call (CExpr.Ref "str_to_int", [arg]), ctx
+  | _ ->
+    failwith "Never: Type Error `int`"
+
 let genExprCall ctx callee args ty =
   match callee, args with
   | MExpr.Ref (serial, _, _, _), (MExpr.Lit (Lit.Str format, _)) :: args
@@ -388,6 +400,9 @@ let genExprCall ctx callee args ty =
     when serial = SerialCharFun ->
     let arg, ctx = genExpr ctx arg
     CExpr.Cast (arg, CTy.Char), ctx
+  | MExpr.Ref (serial, _, MTy.Fun (argTy, _), _), [arg]
+    when serial = SerialIntFun ->
+    genExprCallInt arg argTy ctx
   | _ ->
     let callee, ctx = genExpr ctx callee
     let args, ctx = genExprList ctx args

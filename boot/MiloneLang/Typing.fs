@@ -328,6 +328,21 @@ let inferRef (ctx: TyCtx) ident loc ty =
     // FIXME: `char` can take non-int values, including chars.
     let ctx = unifyTy ctx (Ty.Fun (Ty.Int, Ty.Char)) ty
     HExpr.Ref (ident, SerialCharFun, 1, ty, loc), ctx
+  | None, "int" ->
+    let argTy, _, ctx = ctxFreshTyVar "intArg" ctx
+    let ctx = unifyTy ctx (Ty.Fun (argTy, Ty.Int)) ty
+    let ctx =
+      match substTy ctx argTy with
+      | Ty.Var _ ->
+        unifyTy ctx Ty.Int argTy
+      | Ty.Int
+      | Ty.Char
+      | Ty.Str
+      | Ty.Error _ ->
+        ctx
+      | argTy ->
+        failwithf "Expected int or char %A" argTy
+    HExpr.Ref (ident, SerialIntFun, 1, ty, loc), ctx
   | None, _ ->
     failwithf "Couldn't resolve var %s" ident
 
