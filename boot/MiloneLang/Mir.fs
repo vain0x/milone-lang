@@ -38,6 +38,9 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
     Diags = tyCtx.Diags
   }
 
+let ctxAddErr (ctx: MirCtx) message loc =
+  { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
+
 let ctxNewBlock (ctx: MirCtx) =
   { ctx with Stmts = [] }
 
@@ -104,7 +107,7 @@ let mopFrom op =
   | Op.App
   | Op.Cons _
   | Op.Range
-  | Op.Index -> failwith "We don't use > >= && || :: .. in MIR"
+  | Op.Index -> failwith "Never: We don't use > >= && || :: .. in MIR"
 
 let mtyDef tySerial (tyDef: TyDef) =
   match tyDef with
@@ -511,11 +514,11 @@ let mirifyExprInf ctx infOp args ty loc =
 
 let mirifyExprLetVal ctx pat init letLoc =
   let init, ctx = mirifyExpr ctx init
-  match mirifyPat ctx "_never_" pat init with
-  | true, ctx ->
-    MExpr.Default (mtyUnit, letLoc), ctx
-  | false, _ ->
-    failwithf "Let pattern must be exhaustive for now %A" pat
+  let exhaustive, ctx = mirifyPat ctx "_never_" pat init
+  let ctx =
+    if exhaustive then ctx else
+    ctxAddErr ctx "Let pattern must be exhaustive for now" letLoc
+  MExpr.Default (mtyUnit, letLoc), ctx
 
 let mirifyExprLetFun ctx calleeSerial argPats body letLoc =
   let defineArg ctx argPat =
@@ -527,11 +530,11 @@ let mirifyExprLetFun ctx calleeSerial argPats body letLoc =
       let argTy, argLoc = patExtract argPat
       let argTy = unboxTy argTy
       let arg, argSerial, ctx = ctxFreshVar ctx "arg" argTy argLoc
-      match mirifyPat ctx "_never_" argPat arg with
-      | true, ctx ->
-        (argSerial, 1, argTy, argLoc), ctx
-      | false, _ ->
-        failwithf "Argument pattern must be exhaustive for now: %A" argPat
+      let exhaustive, ctx = mirifyPat ctx "_never_" argPat arg
+      let ctx =
+        if exhaustive then ctx else
+        ctxAddErr ctx "Argument pattern must be exhaustive for now" argLoc
+      (argSerial, 1, argTy, argLoc), ctx
 
   let rec defineArgs acc ctx argPats =
     match argPats with
@@ -589,7 +592,8 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   | HExpr.Inf (InfOp.List _, _, _, _) ->
     failwith "Never"
   | HExpr.Error (error, loc) ->
-    failwithf "Never: %s at %A" error loc
+    let ctx = ctxAddErr ctx error loc
+    MExpr.Default (MTy.Obj, loc), ctx
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =

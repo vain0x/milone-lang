@@ -6,4 +6,7 @@ let main _ =
     match ((1, 2), 3) with
     | (1, "type error"), 3 -> ()
 
+  // ERROR! Index to int.
+  (0).[0]
+
   () // ERROR! This should be an int.

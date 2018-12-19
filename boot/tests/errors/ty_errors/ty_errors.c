@@ -51,6 +51,7 @@ next_5:;
     exit(1);
 end_match_4:;
     int deepUnificationError_ = 0;
+    exit(1);
     return 0;
 }
 
@@ -60,5 +61,8 @@ end_match_4:;
 #line 7
 #error 7:7 While unifying 'Tuple [Tuple [Int; Int]; Int]' and 'Tuple [Tuple [Int; Str]; Int]', failed to unify 'Int' and 'Str'.
 
-#line 9
-#error 9:3 While unifying 'Int' and 'Tuple []', failed to unify 'Int' and 'Tuple []'.
+#line 10
+#error 10:6 Type: Index not supported
+
+#line 12
+#error 12:3 While unifying 'Int' and 'Tuple []', failed to unify 'Int' and 'Tuple []'.

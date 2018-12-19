@@ -57,6 +57,9 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): Ctx =
     Diags = mirCtx.Diags
   }
 
+let ctxAddErr (ctx: Ctx) message loc =
+  { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
+
 let ctxNewBlock (ctx: Ctx) =
   { ctx with Stmts = [] }
 
@@ -153,7 +156,7 @@ let ctxUniqueName (ctx: Ctx) serial =
   | Some ident ->
     ident
   | None ->
-    failwithf "Unknown value-level identifier serial %d" serial
+    failwithf "Never: Unknown value-level identifier serial %d" serial
 
 let ctxUniqueTyName (ctx: Ctx) ty =
   let rec go ty (ctx: Ctx) =
@@ -183,7 +186,8 @@ let ctxUniqueTyName (ctx: Ctx) ty =
           let itemTys, ctx = (itemTys, ctx) |> stMap (fun (itemTy, ctx) -> ctx |> go itemTy)
           sprintf "%s%s%d" (itemTys |> String.concat "") "Tuple" len, ctx
         | MTy.Ref serial ->
-          failwithf "Unknown type serial %d" serial
+          // FIXME: This occurs when recursive union types defined.
+          failwithf "Never: Unknown type serial %d" serial
       let ctx = { ctx with TyUniqueNames = ctx.TyUniqueNames |> Map.add ty ident }
       ident, ctx
   go ty ctx
@@ -228,7 +232,7 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       | None ->
         ctxAddUnionDecl ctx tyIdent serial variants
     | None ->
-      failwith "Unknown type reference"
+      CTy.Void, ctxAddErr ctx "Unknown type reference" (0, 0) // FIXME: source location
 
 let cirifyTys (tys, ctx) =
   stMap (fun (ty, ctx) -> cty ctx ty) (tys, ctx)
@@ -261,11 +265,10 @@ let genExprDefault ctx ty =
     CExpr.Ref "NULL", ctx
   | MTy.Str
   | MTy.Fun _
-  | MTy.Tuple _ ->
+  | MTy.Tuple _
+  | MTy.Ref _ ->
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
-  | MTy.Ref _ ->
-    failwith "unimpl"
 
 let genExprVariant ctx serial ty =
   let ty, ctx = cty ctx ty

@@ -183,7 +183,7 @@ let parsePatAtom boxX tokens: HPat * _ list =
   | (Token.BracketL, loc) :: (Token.BracketR, _) :: tokens ->
     HPat.Nil (noTy, loc), tokens
   | _ ->
-    failwith "never"
+    failwith "Never"
 
 /// pat-call = pat-atom ( pat-atom )*
 let parsePatCall boxX tokens =

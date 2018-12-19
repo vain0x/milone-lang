@@ -236,7 +236,7 @@ let cprintStmt acc indent stmt: string list =
     let valTy =
       match valPtrTy with
       | CTy.Ptr ty -> ty
-      | _ -> failwithf "Expected pointer type but %A" valPtrTy
+      | _ -> failwithf "Never: Expected pointer type but %A" valPtrTy
     let acc = acc *- indent
     let acc = cprintTyWithName acc name varTy
     let acc = acc *- " = ("

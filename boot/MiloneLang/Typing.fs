@@ -221,7 +221,8 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Ref (_, l), Ty.Ref (_, r) when l <> noSerial && l = r ->
       ctx
     | Ty.Var _, _ ->
-      failwithf "Couldn't unify (due to self recursion) %A %A" lty rty
+      let message = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
+      ctxAddErr ctx message loc
     | Ty.Bool, _
     | Ty.Int, _
     | Ty.Char, _
@@ -271,7 +272,8 @@ let inferPatCall (ctx: TyCtx) callee args loc ty =
       let ctx = unifyTy ctx loc ty callTy
       HPat.Call (callee, [arg], ty, loc), ctx
     | _ ->
-      failwith "Type Error: Not a function variant."
+      let ctx = ctxAddErr ctx "Expected a function variant." loc
+      patUnit loc, ctx
   | _ ->
     failwith "unimpl use of call pattern"
 
@@ -413,9 +415,9 @@ let inferIndex ctx l r loc resultTy =
     let ctx = unifyTy ctx loc indexTy Ty.Int
     let ctx = unifyTy ctx loc resultTy Ty.Char
     hxIndex l r resultTy loc, ctx
-  | subTy, indexTy ->
-
-    failwithf "Type: Index not supported %A" (subTy, indexTy, l, r)
+  | _ ->
+    let ctx = ctxAddErr ctx "Type: Index not supported" loc
+    hxAbort ctx resultTy loc
 
 let inferOpAppPrintfn ctx ident serial arg calleeTy loc =
   match arg with
@@ -425,7 +427,8 @@ let inferOpAppPrintfn ctx ident serial arg calleeTy loc =
     let ctx = unifyTy ctx loc calleeTy funTy
     HExpr.Ref (ident, serial, arity, calleeTy, loc), ctx
   | _ ->
-    failwith """First arg of printfn must be string literal, ".."."""
+    let ctx = ctxAddErr ctx """First arg of printfn must be string literal, "..".""" loc
+    hxAbort ctx calleeTy loc
 
 let inferOpApp ctx callee arg loc appTy =
   let argTy, _, ctx = ctxFreshTyVar "arg" ctx
@@ -453,7 +456,8 @@ let inferOpAdd (ctx: TyCtx) op left right loc resultTy =
   | Ty.Str ->
     expr, ctx
   | ty ->
-    failwithf "Type: No support (+) for %A (%A + %A)" ty left right
+    let ctx = ctxAddErr ctx (sprintf "Type: No support (+) for %A" ty) loc
+    hxAbort ctx resultTy loc
 
 let inferOpArith (ctx: TyCtx) op left right loc resultTy =
   let ctx = unifyTy ctx loc resultTy Ty.Int
@@ -560,8 +564,13 @@ let inferLetFun ctx calleeName argPats body loc =
   let bodyCtx = unifyTy bodyCtx loc funTy actualFunTy
   let body, bodyCtx = inferExpr bodyCtx body bodyTy
 
-  if isMonomorphic bodyCtx funTy |> not then
-    failwithf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A %A" (substTy bodyCtx funTy) argPats
+  let ctx =
+    if isMonomorphic bodyCtx funTy |> not then
+      let funTy = substTy bodyCtx funTy
+      let message = sprintf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A %A" funTy argPats
+      ctxAddErr ctx message loc
+    else
+      ctx
 
   let ctx = ctxRollback ctx bodyCtx
   HExpr.LetFun (calleeName, serial, argPats, body, funTy, loc), ctx
@@ -622,7 +631,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   | HExpr.Inf (InfOp.List _, _, _, _) ->
     failwith "Never"
   | HExpr.Error (error, loc) ->
-    failwithf "Never: %s at %A" error loc
+    let ctx = ctxAddErr ctx error loc
+    hxAbort ctx ty loc
 
 /// Replaces type vars embedded in exprs
 /// with inference results.
