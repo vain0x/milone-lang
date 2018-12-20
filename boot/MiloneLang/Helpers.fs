@@ -320,6 +320,5 @@ let rec arityMTy ty =
 
 let tyDefIdent tyDef =
   match tyDef with
-  | TyDef.Fv (ident, _) -> ident
   | TyDef.Bv (ident, _, _) -> ident
   | TyDef.Union (ident, _, _) -> ident

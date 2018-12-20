@@ -115,7 +115,6 @@ let mtyDef (tySerial, tyDef: TyDef) =
         variantSerial, hasArg, argTy, variantTy
       )
     Some (tySerial, MTyDef.Union (tyIdent, variants, loc))
-  | TyDef.Fv _
   | TyDef.Bv _ ->
     None
 

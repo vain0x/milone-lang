@@ -43,16 +43,12 @@ let ctxFreshTySerial (ctx: TyCtx) =
   serial, ctx
 
 let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
-  // FIXME: track location info
-  let noLoc = 0, 0
-
   let serial, ctx = ctxFreshTySerial ctx
   let ident = sprintf "'%s_%d" ident serial
   let ty = Ty.Var (ident, serial)
   let ctx =
     { ctx with
         TyEnv = ctx.TyEnv |> Map.add ident serial
-        Tys = ctx.Tys |> Map.add serial (TyDef.Fv (ident, noLoc))
     }
   ty, ident, ctx
 
@@ -79,7 +75,6 @@ let ctxAddTy tyIdent tyDef loc ctx =
           Tys = ctx.Tys |> Map.add tySerial tyDef
       }
     tySerial, tyDef, ctx
-  | TyDef.Fv _
   | TyDef.Bv _ ->
     failwith "Never: You can't say `type 'a = ..`."
 
@@ -103,7 +98,6 @@ let ctxResolveTyRef name (ctx: TyCtx) =
   match ctx.TyEnv |> Map.tryFind name with
   | Some tySerial ->
     match ctx.Tys |> Map.tryFind tySerial with
-    | Some (TyDef.Fv _)
     | Some (TyDef.Bv _)
     | None ->
       Ty.Error
@@ -228,7 +222,6 @@ let substTy (ctx: TyCtx) ty: Ty =
         go ty
       | Some (TyDef.Union (ident, _, _)) ->
         Ty.Ref (ident, tySerial)
-      | Some (TyDef.Fv _)
       | None ->
         ty
   go ty

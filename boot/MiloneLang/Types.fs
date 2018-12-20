@@ -141,9 +141,6 @@ namespace rec MiloneLang
   /// Type definition.
   [<RequireQualifiedAccess>]
   type TyDef =
-    /// Free type variable.
-    | Fv
-      of ident:string * Loc
     /// Bound type variable.
     | Bv
       of ident:string * Ty * Loc
