@@ -133,7 +133,7 @@ let parseTyFun boxX tokens =
 let parseTy boxX tokens: Ty * _ list =
   parseTyFun boxX tokens
 
-let parseTyDefUnion boxX tokens =
+let parseTyDefUnion boxX tyIdent tyIdentLoc tokens =
   let rec go acc tokens =
     match tokens with
     | (Token.Pipe _, _) :: tokens ->
@@ -147,14 +147,14 @@ let parseTyDefUnion boxX tokens =
       List.rev acc, tokens
   match go [] tokens with
   | variants, tokens ->
-    TyDef.Union variants, tokens
+    TyDef.Union (tyIdent, variants, tyIdentLoc), tokens
 
-let parseTyDef boxX tokens =
+let parseTyDef boxX tyIdent tyIdentLoc tokens =
   match tokens with
   | (Token.Pipe, _) :: tokens when nextInside boxX tokens ->
-    parseTyDefUnion boxX tokens
+    parseTyDefUnion boxX tyIdent tyIdentLoc tokens
   | (Token.Ident _, _) :: (Token.Of _, _) :: _ when nextInside boxX tokens ->
-    parseTyDefUnion boxX tokens
+    parseTyDefUnion boxX tyIdent tyIdentLoc tokens
   | _ ->
     parseError "Expected type definition" tokens
 
@@ -358,8 +358,8 @@ let parseBindingTy boxX keywordLoc tokens =
   match tokens with
   | _ when not (nextInside boxX tokens) ->
     parseError "Expected type name" tokens
-  | (Token.Ident tyIdent, _) :: (Token.Punct "=", _) :: tokens ->
-    let tyDef, tokens = parseTyDef (keywordX + 1) tokens
+  | (Token.Ident tyIdent, tyIdentLoc) :: (Token.Punct "=", _) :: tokens ->
+    let tyDef, tokens = parseTyDef (keywordX + 1) tyIdent tyIdentLoc tokens
     HExpr.TyDef (tyIdent, noSerial, tyDef, keywordLoc), tokens
   | tokens ->
     parseError "Expected '='" tokens

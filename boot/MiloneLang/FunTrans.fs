@@ -7,7 +7,7 @@ type FunTransCtx =
   {
     VarSerial: int
     Vars: Map<int, string * ValueIdent * Ty * Loc>
-    Tys: Map<int, string * TyDef * Loc>
+    Tys: Map<int, TyDef>
 
     /// Known identifiers and their dependencies.
     Caps: Map<int, (string * int * int * Ty * Loc) list>
@@ -248,11 +248,13 @@ let declosureExprLetFun ident callee args body ty loc ctx =
 
 let declosureExprTyDef expr tyDef ctx =
   match tyDef with
-  | TyDef.Union variants ->
+  | TyDef.Union (_, variants, _) ->
     let ctx =
       variants |> List.fold (fun ctx (_, variantSerial, _, _) ->
         ctx |> ctxAddKnown variantSerial
       ) ctx
+    expr, ctx
+  | TyDef.Bv _ ->
     expr, ctx
 
 let declosureExprOp ctx op l r ty loc =

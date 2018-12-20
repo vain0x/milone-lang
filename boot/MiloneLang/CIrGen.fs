@@ -11,7 +11,7 @@ type Ctx =
     VarUniqueNames: Map<int, string>
     TySerial: int
     TyEnv: Map<MTy, CTy>
-    Tys: Map<int, string * MTyDef * Loc>
+    Tys: Map<int, MTyDef>
     TyUniqueNames: Map<MTy, string>
     Stmts: CStmt list
     Decls: CDecl list
@@ -34,7 +34,7 @@ let calculateVarUniqueNames vars =
   |> Map.ofSeq
 
 let calculateTyUniqueNames tys =
-  let groups = tys |> Map.toList |> Seq.groupBy (fun (_, (ident, _, _)) -> ident)
+  let groups = tys |> Map.toList |> Seq.groupBy (fun (_, (MTyDef.Union (ident, _, _))) -> ident)
   groups |> Seq.collect (fun (ident, tys) ->
     tys |> Seq.mapi (fun i (serial, _) ->
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
@@ -225,7 +225,7 @@ let cty (ctx: Ctx) (ty: MTy): CTy * Ctx =
       ty, ctx
   | MTy.Ref serial ->
     match ctx.Tys |> Map.tryFind serial with
-    | Some (tyIdent, MTyDef.Union variants, _) ->
+    | Some (MTyDef.Union (tyIdent, variants, _)) ->
       match ctx.TyEnv |> Map.tryFind ty with
       | Some ty ->
         ty, ctx

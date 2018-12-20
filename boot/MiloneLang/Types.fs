@@ -74,7 +74,7 @@ namespace rec MiloneLang
     | Ref
       of ident:string * serial:int
     | Var
-      of string
+      of ident:string * serial:int
     | Fun
       of Ty * Ty
     | Tuple
@@ -141,9 +141,12 @@ namespace rec MiloneLang
   /// Type definition.
   [<RequireQualifiedAccess>]
   type TyDef =
+    /// Bound type variable.
+    | Bv
+      of ident:string * Ty * Loc
     /// Union type. Variants: (ident, serial, has-argument, argument type).
     | Union
-      of (string * int * bool * Ty) list
+      of ident:string * variants:(string * int * bool * Ty) list * Loc
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
@@ -245,7 +248,7 @@ namespace rec MiloneLang
   type MTyDef =
     /// Union type. Variants: (serial, argument type, variant type) list.
     | Union
-      of (int * bool * MTy * MTy) list
+      of ident:string * variants:(int * bool * MTy * MTy) list * Loc
 
   /// Type in middle IR.
   [<RequireQualifiedAccess>]

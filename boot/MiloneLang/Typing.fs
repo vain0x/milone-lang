@@ -15,8 +15,8 @@ type TyCtx =
     /// Identifier to type and serial.
     VarEnv: Map<string, ValueIdent * Ty * int>
     TySerial: int
-    TyEnv: Map<string, Ty>
-    Tys: Map<int, string * TyDef * Loc>
+    TyEnv: Map<string, int>
+    Tys: Map<int, TyDef>
     Diags: Diag list
   }
 
@@ -33,6 +33,7 @@ let ctxRollback bCtx dCtx: TyCtx =
   assert (bCtx.VarSerial <= dCtx.VarSerial)
   assert (bCtx.TySerial <= dCtx.TySerial)
   { dCtx with
+      TyEnv = bCtx.TyEnv
       VarEnv = bCtx.VarEnv
   }
 
@@ -44,12 +45,16 @@ let ctxFreshTySerial (ctx: TyCtx) =
 let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
   let serial, ctx = ctxFreshTySerial ctx
   let ident = sprintf "'%s_%d" ident serial
-  let ty = Ty.Var ident
+  let ty = Ty.Var (ident, serial)
+  let ctx =
+    { ctx with
+        TyEnv = ctx.TyEnv |> Map.add ident serial
+    }
   ty, ident, ctx
 
 let ctxAddTy tyIdent tyDef loc ctx =
   match tyDef with
-  | TyDef.Union variants ->
+  | TyDef.Union (_, variants, _) ->
     let tySerial, ctx = ctxFreshTySerial ctx
     let refTy = Ty.Ref (tyIdent, tySerial)
 
@@ -63,21 +68,15 @@ let ctxAddTy tyIdent tyDef loc ctx =
         (lIdent, lSerial, hasArg, lArgTy), ctx
       )
 
-    let tyDef = TyDef.Union variants
+    let tyDef = TyDef.Union (tyIdent, variants, loc)
     let ctx =
       { ctx with
-          TyEnv = ctx.TyEnv |> Map.add tyIdent refTy
-          Tys = ctx.Tys |> Map.add tySerial (tyIdent, tyDef, loc)
+          TyEnv = ctx.TyEnv |> Map.add tyIdent tySerial
+          Tys = ctx.Tys |> Map.add tySerial tyDef
       }
     tySerial, tyDef, ctx
-
-/// NOTE: currently used also for type reference resolution.
-let ctxResolveTyVar name (ctx: TyCtx): Ty =
-  match ctx.TyEnv |> Map.tryFind name with
-  | Some ty ->
-    ty
-  | None ->
-    Ty.Var name
+  | TyDef.Bv _ ->
+    failwith "Never: You can't say `type 'a = ..`."
 
 let ctxFreshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
   let serial = ctx.VarSerial + 1
@@ -95,9 +94,29 @@ let ctxAddVarAlias (ctx: TyCtx) serial aliasIdent =
       VarEnv = ctx.VarEnv |> Map.add aliasIdent (valueIdent, ty, serial)
   }
 
+let ctxFindTyDef name (ctx: TyCtx) =
+  match ctx.TyEnv |> Map.tryFind name with
+  | Some tySerial ->
+    match ctx.Tys |> Map.tryFind tySerial with
+    | Some tyDef ->
+      Some (tySerial, tyDef)
+    | None ->
+      None
+  | None ->
+    None
+
+let ctxResolveTyRef name (ctx: TyCtx) =
+  match ctx |> ctxFindTyDef name with
+  | Some (_, TyDef.Bv _)
+  | None ->
+    Ty.Error
+  | Some (tySerial, tyDef) ->
+    Ty.Ref (tyDefIdent tyDef, tySerial)
+
 /// Resolves type references in type annotation.
+/// FIXME: Don't modify ctx for now.
 let ctxResolveTy ctx ty =
-  let rec go ty =
+  let rec go (ty, ctx) =
     match ty with
     | Ty.Error
     | Ty.Bool
@@ -106,21 +125,25 @@ let ctxResolveTy ctx ty =
     | Ty.Str
     | Ty.Range
     | Ty.Obj ->
-      ty
+      ty, ctx
     | Ty.Ref (ident, _) ->
-      ctxResolveTyVar ident ctx
-    | Ty.Fun (sty, tty) ->
-      Ty.Fun (go sty, go tty)
+      ctxResolveTyRef ident ctx, ctx
+    | Ty.Fun (sTy, tTy) ->
+      let sTy, ctx = go (sTy, ctx)
+      let tTy, ctx = go (tTy, ctx)
+      Ty.Fun (sTy, tTy), ctx
     | Ty.Tuple itemTys ->
-      Ty.Tuple (List.map go itemTys)
+      let itemTys, ctx = (itemTys, ctx) |> stMap go
+      Ty.Tuple itemTys, ctx
     | Ty.List ty ->
-      Ty.List (go ty)
+      let ty, ctx = go (ty, ctx)
+      Ty.List ty, ctx
     | Ty.Var _ ->
       failwith "Never"
-  go ty
+  go (ty, ctx)
 
 /// Gets if the specified type var doesn't appear in the specified type.
-let isFreshTyVar ty tyVar: bool =
+let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
     match ty with
     | Ty.Error
@@ -139,8 +162,8 @@ let isFreshTyVar ty tyVar: bool =
       go itemTy && go (Ty.Tuple itemTys)
     | Ty.List ty ->
       go ty
-    | Ty.Var tv ->
-      tv <> tyVar
+    | Ty.Var (_, s) ->
+      s <> tySerial
   go ty
 
 /// Gets if the specified type is resolved to a morphic type.
@@ -166,12 +189,19 @@ let isMonomorphic ctx ty: bool =
     isMonomorphic ctx itemTy && isMonomorphic ctx (Ty.Tuple itemTys)
 
 /// Adds type-var/type binding.
-let bindTy (ctx: TyCtx) tyVar ty: TyCtx =
+let bindTy (ctx: TyCtx) tyIdent tySerial ty: TyCtx =
+  // FIXME: track location info
+  let noLoc = 0, 0
+
   // Don't bind itself.
-  if substTy ctx ty = Ty.Var tyVar then
-    ctx
-  else
-    { ctx with TyEnv = ctx.TyEnv |> Map.add tyVar ty }
+  match substTy ctx ty with
+  | Ty.Var (_, s) when s = tySerial -> ctx
+  | _ ->
+
+  { ctx with
+      TyEnv = ctx.TyEnv |> Map.add tyIdent tySerial
+      Tys = ctx.Tys |> Map.add tySerial (TyDef.Bv (tyIdent, ty, noLoc))
+  }
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
@@ -193,9 +223,14 @@ let substTy (ctx: TyCtx) ty: Ty =
       Ty.Tuple (List.map go itemTys)
     | Ty.List ty ->
       Ty.List (go ty)
-    | Ty.Var tyVar ->
-      let ty2 = ctxResolveTyVar tyVar ctx
-      if ty = ty2 then ty else go ty2
+    | Ty.Var (_, tySerial) ->
+      match ctx.Tys |> Map.tryFind tySerial with
+      | Some (TyDef.Bv (_, ty, _)) ->
+        go ty
+      | Some (TyDef.Union (ident, _, _)) ->
+        Ty.Ref (ident, tySerial)
+      | None ->
+        ty
   go ty
 
 /// Resolves type equation `lty = rty` as possible
@@ -206,10 +241,10 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
     let lSubstTy = substTy ctx lty
     let rSubstTy = substTy ctx rty
     match lSubstTy, rSubstTy with
-    | Ty.Var ltv, Ty.Var rtv when ltv = rtv ->
-      bindTy ctx ltv rty
-    | Ty.Var ltv, _ when isFreshTyVar rty ltv ->
-      bindTy ctx ltv rty
+    | Ty.Var (lIdent, ltv), Ty.Var (_, rtv) when ltv = rtv ->
+      bindTy ctx lIdent ltv rty
+    | Ty.Var (lIdent, ltv), _ when tyIsFreeIn rty ltv ->
+      bindTy ctx lIdent ltv rty
     | _, Ty.Var _ ->
       go rty lty ctx
     | Ty.Fun (lSTy, lTTy), Ty.Fun (rSTy, rTTy) ->
@@ -324,7 +359,7 @@ let inferPat ctx pat ty =
   | HPat.Tuple (items, _, loc) ->
     inferPatTuple ctx items loc ty
   | HPat.Anno (pat, annoTy, loc) ->
-    let annoTy = ctxResolveTy ctx annoTy
+    let annoTy, ctx = ctxResolveTy ctx annoTy
     let ctx = unifyTy ctx loc ty annoTy
     let pat, ctx = inferPat ctx pat annoTy
     pat, ctx
@@ -401,9 +436,11 @@ let inferNav ctx sub mes loc resultTy =
   let asUnionTyName sub =
     match sub with
     | HExpr.Ref (ident, _, _, _, _) ->
-      match (ctx: TyCtx).TyEnv |> Map.tryFind ident with
-      | Some (Ty.Ref _) -> Some ident
-      | _ -> None
+      match ctx |> ctxFindTyDef ident with
+      | Some (_, tyDef) ->
+        Some (tyDefIdent tyDef)
+      | None ->
+        None
     | _ ->
       None
   match asUnionTyName sub with
@@ -547,7 +584,7 @@ let inferTuple (ctx: TyCtx) items loc tupleTy =
   hxTuple items loc, ctx
 
 let inferAnno ctx expr annoTy ty loc =
-  let annoTy = ctxResolveTy ctx annoTy
+  let annoTy, ctx = ctxResolveTy ctx annoTy
   let ctx = unifyTy ctx loc annoTy ty
   inferExpr ctx expr annoTy
 
