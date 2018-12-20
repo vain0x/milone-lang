@@ -254,6 +254,9 @@ let declosureExprTyDef expr tyDef ctx =
         ctx |> ctxAddKnown variantSerial
       ) ctx
     expr, ctx
+  | TyDef.Fv _
+  | TyDef.Bv _ ->
+    expr, ctx
 
 let declosureExprOp ctx op l r ty loc =
   let l, ctx = declosureExpr (l, ctx)

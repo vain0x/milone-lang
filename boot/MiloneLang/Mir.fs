@@ -23,7 +23,7 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
       let ty = unboxTy (Typing.substTy tyCtx ty)
       ident, valueIdent, ty, loc
     )
-  let tys = tyCtx.Tys |> Map.map mtyDef
+  let tys = tyCtx.Tys |> Map.toList |> List.choose mtyDef |> Map.ofList
   {
     VarSerial = tyCtx.VarSerial
     Vars = vars
@@ -105,7 +105,7 @@ let mopFrom op =
   | Op.Range
   | Op.Index -> failwith "Never: We don't use > >= && || :: .. in MIR"
 
-let mtyDef tySerial (tyDef: TyDef) =
+let mtyDef (tySerial, tyDef: TyDef) =
   match tyDef with
   | TyDef.Union (tyIdent, variants, loc) ->
     let variants =
@@ -114,7 +114,10 @@ let mtyDef tySerial (tyDef: TyDef) =
         let variantTy = MTy.Fun (argTy, MTy.Ref tySerial)
         variantSerial, hasArg, argTy, variantTy
       )
-    MTyDef.Union (tyIdent, variants, loc)
+    Some (tySerial, MTyDef.Union (tyIdent, variants, loc))
+  | TyDef.Fv _
+  | TyDef.Bv _ ->
+    None
 
 let unboxTy (ty: Ty): MTy =
   match ty with
