@@ -98,24 +98,21 @@ let ctxAddVarAlias (ctx: TyCtx) serial aliasIdent =
       VarEnv = ctx.VarEnv |> Map.add aliasIdent (valueIdent, ty, serial)
   }
 
-/// NOTE: currently used also for type reference resolution.
-let ctxResolveTyVar name (ctx: TyCtx) =
+let ctxResolveTyRef name (ctx: TyCtx) =
   match ctx.TyEnv |> Map.tryFind name with
   | Some tySerial ->
     match ctx.Tys |> Map.tryFind tySerial with
-    | Some (TyDef.Fv _) ->
-      Ty.Var (name, tySerial), ctx
-    | Some (TyDef.Bv (_, ty, _)) ->
-      ty, ctx
-    | Some tyDef ->
-      Ty.Ref (tyDefIdent tyDef, tySerial), ctx
+    | Some (TyDef.Fv _)
+    | Some (TyDef.Bv _)
     | None ->
-      Ty.Var (name, tySerial), ctx
+      Ty.Error
+    | Some tyDef ->
+      Ty.Ref (tyDefIdent tyDef, tySerial)
   | None ->
-    let ty, _, ctx = ctxFreshTyVar name ctx
-    ty, ctx
+    Ty.Error
 
 /// Resolves type references in type annotation.
+/// FIXME: Don't modify ctx for now.
 let ctxResolveTy ctx ty =
   let rec go (ty, ctx) =
     match ty with
@@ -128,7 +125,7 @@ let ctxResolveTy ctx ty =
     | Ty.Obj ->
       ty, ctx
     | Ty.Ref (ident, _) ->
-      ctxResolveTyVar ident ctx
+      ctxResolveTyRef ident ctx, ctx
     | Ty.Fun (sTy, tTy) ->
       let sTy, ctx = go (sTy, ctx)
       let tTy, ctx = go (tTy, ctx)
