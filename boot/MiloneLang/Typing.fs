@@ -33,6 +33,7 @@ let ctxRollback bCtx dCtx: TyCtx =
   assert (bCtx.VarSerial <= dCtx.VarSerial)
   assert (bCtx.TySerial <= dCtx.TySerial)
   { dCtx with
+      TyEnv = bCtx.TyEnv
       VarEnv = bCtx.VarEnv
   }
 
