@@ -12,10 +12,14 @@ enum ApiResponse_Tag;
 
 struct ApiResponse_;
 
+enum Ok_Tag;
+
+struct Ok_;
+
 int main();
 
 enum Status_Tag {
-    Ok_,
+    Ok_1,
     Err_,
 };
 
@@ -57,14 +61,22 @@ struct ApiResponse_ {
     };
 };
 
+enum Ok_Tag {
+    Ok_,
+};
+
+struct Ok_ {
+    enum Ok_Tag tag;
+};
+
 int main() {
-    struct Status_ ok_ = (struct Status_){.tag = Ok_};
+    struct Status_ ok_ = (struct Status_){.tag = Ok_1};
     struct Status_ variant_ = (struct Status_){.tag = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
     struct Status_ err1_ = variant_;
     struct Status_ variant_1 = (struct Status_){.tag = Err_, .Err_ = (struct String){.str = "Access denied.", .len = 14}};
     struct Status_ err2_ = variant_1;
     int match_;
-    if (!((err1_.tag == Ok_))) goto next_2;
+    if (!((err1_.tag == Ok_1))) goto next_2;
     exit(1);
     match_ = 0;
     goto end_match_1;
@@ -163,6 +175,8 @@ next_17:;
     goto end_match_16;
 next_24:;
 end_match_16:;
-    struct Status_ ok_1 = (struct Status_){.tag = Ok_};
+    struct Status_ ok_1 = (struct Status_){.tag = Ok_1};
+    struct Ok_ okOk_ = (struct Ok_){.tag = Ok_};
+    struct Status_ statusOk_ = (struct Status_){.tag = Ok_1};
     return 0;
 }

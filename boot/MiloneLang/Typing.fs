@@ -20,6 +20,9 @@ type TyCtx =
     Diags: Diag list
   }
 
+let variantFullName tyIdent variantIdent =
+  sprintf "%s_%s" tyIdent variantIdent
+
 let ctxAddErr (ctx: TyCtx) message loc =
   { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
 
@@ -56,6 +59,7 @@ let ctxAddTy tyIdent tyDef loc ctx =
         let valueIdent = ValueIdent.Variant tySerial
         let lTy = if hasArg then Ty.Fun (lArgTy, refTy) else refTy
         let lSerial, ctx = ctxFreshVar ctx lIdent valueIdent lTy loc
+        let ctx = ctxAddVarAlias ctx lSerial (variantFullName tyIdent lIdent)
         (lIdent, lSerial, hasArg, lArgTy), ctx
       )
 
@@ -84,6 +88,12 @@ let ctxFreshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
         Vars = ctx.Vars |> Map.add serial (ident, valueIdent, ty, loc)
     }
   serial, ctx
+
+let ctxAddVarAlias (ctx: TyCtx) serial aliasIdent =
+  let _, valueIdent, ty, loc = ctx.Vars |> Map.find serial
+  { ctx with
+      VarEnv = ctx.VarEnv |> Map.add aliasIdent (valueIdent, ty, serial)
+  }
 
 /// Resolves type references in type annotation.
 let ctxResolveTy ctx ty =
@@ -388,6 +398,21 @@ let inferMatch ctx target arms loc resultTy =
   HExpr.Match (target, arms, resultTy, loc), ctx
 
 let inferNav ctx sub mes loc resultTy =
+  let asUnionTyName sub =
+    match sub with
+    | HExpr.Ref (ident, _, _, _, _) ->
+      match (ctx: TyCtx).TyEnv |> Map.tryFind ident with
+      | Some (Ty.Ref _) -> Some ident
+      | _ -> None
+    | _ ->
+      None
+  match asUnionTyName sub with
+  | Some tyName ->
+    // FIXME: Terrible implementation for test passing.
+    // We should find type or value from the namespace of the type to which the subject denote.s
+    inferRef ctx (variantFullName tyName mes) loc resultTy
+  | _ ->
+
   let subTy, _, ctx = ctxFreshTyVar "sub" ctx
   let sub, ctx = inferExpr ctx sub subTy
   match substTy ctx subTy, mes with
