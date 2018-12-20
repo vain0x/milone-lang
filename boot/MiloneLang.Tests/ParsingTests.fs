@@ -352,7 +352,10 @@ type Answer =
   | No
 """
   let tyDef =
-    TyDef.Union ["Yes", noSerial, true, Ty.Int; "No", noSerial, false, tyUnit]
+    TyDef.Union ("Answer", [
+      "Yes", noSerial, true, Ty.Int
+      "No", noSerial, false, tyUnit
+    ], (1, 5))
   let expected =
     [
       HExpr.TyDef ("Answer", noSerial, tyDef, loc)

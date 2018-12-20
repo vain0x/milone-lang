@@ -10,7 +10,7 @@ type MirCtx =
   {
     VarSerial: int
     Vars: Map<int, string * ValueIdent * MTy * Loc>
-    Tys: Map<int, string * MTyDef * Loc>
+    Tys: Map<int, MTyDef>
     LabelSerial: int
     Decls: MDecl list
     Stmts: MStmt list
@@ -23,11 +23,7 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
       let ty = unboxTy (Typing.substTy tyCtx ty)
       ident, valueIdent, ty, loc
     )
-  let tys =
-    tyCtx.Tys |> Map.map (fun tySerial (ident, tyDef, loc) ->
-      let tyDef = mtyDef tySerial tyDef
-      ident, tyDef, loc
-    )
+  let tys = tyCtx.Tys |> Map.map mtyDef
   {
     VarSerial = tyCtx.VarSerial
     Vars = vars
@@ -111,14 +107,14 @@ let mopFrom op =
 
 let mtyDef tySerial (tyDef: TyDef) =
   match tyDef with
-  | TyDef.Union variants ->
+  | TyDef.Union (tyIdent, variants, loc) ->
     let variants =
       variants |> List.map (fun (_, variantSerial, hasArg, argTy) ->
         let argTy = unboxTy argTy
         let variantTy = MTy.Fun (argTy, MTy.Ref tySerial)
         variantSerial, hasArg, argTy, variantTy
       )
-    MTyDef.Union variants
+    MTyDef.Union (tyIdent, variants, loc)
 
 let unboxTy (ty: Ty): MTy =
   match ty with

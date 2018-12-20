@@ -143,7 +143,7 @@ namespace rec MiloneLang
   type TyDef =
     /// Union type. Variants: (ident, serial, has-argument, argument type).
     | Union
-      of (string * int * bool * Ty) list
+      of ident:string * variants:(string * int * bool * Ty) list * Loc
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
@@ -245,7 +245,7 @@ namespace rec MiloneLang
   type MTyDef =
     /// Union type. Variants: (serial, argument type, variant type) list.
     | Union
-      of (int * bool * MTy * MTy) list
+      of ident:string * variants:(int * bool * MTy * MTy) list * Loc
 
   /// Type in middle IR.
   [<RequireQualifiedAccess>]

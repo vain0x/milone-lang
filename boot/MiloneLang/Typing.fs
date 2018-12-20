@@ -16,7 +16,7 @@ type TyCtx =
     VarEnv: Map<string, ValueIdent * Ty * int>
     TySerial: int
     TyEnv: Map<string, Ty>
-    Tys: Map<int, string * TyDef * Loc>
+    Tys: Map<int, TyDef>
     Diags: Diag list
   }
 
@@ -49,7 +49,7 @@ let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
 
 let ctxAddTy tyIdent tyDef loc ctx =
   match tyDef with
-  | TyDef.Union variants ->
+  | TyDef.Union (_, variants, _) ->
     let tySerial, ctx = ctxFreshTySerial ctx
     let refTy = Ty.Ref (tyIdent, tySerial)
 
@@ -63,11 +63,11 @@ let ctxAddTy tyIdent tyDef loc ctx =
         (lIdent, lSerial, hasArg, lArgTy), ctx
       )
 
-    let tyDef = TyDef.Union variants
+    let tyDef = TyDef.Union (tyIdent, variants, loc)
     let ctx =
       { ctx with
           TyEnv = ctx.TyEnv |> Map.add tyIdent refTy
-          Tys = ctx.Tys |> Map.add tySerial (tyIdent, tyDef, loc)
+          Tys = ctx.Tys |> Map.add tySerial tyDef
       }
     tySerial, tyDef, ctx
 
