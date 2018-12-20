@@ -94,17 +94,24 @@ let ctxAddVarAlias (ctx: TyCtx) serial aliasIdent =
       VarEnv = ctx.VarEnv |> Map.add aliasIdent (valueIdent, ty, serial)
   }
 
-let ctxResolveTyRef name (ctx: TyCtx) =
+let ctxFindTyDef name (ctx: TyCtx) =
   match ctx.TyEnv |> Map.tryFind name with
   | Some tySerial ->
     match ctx.Tys |> Map.tryFind tySerial with
-    | Some (TyDef.Bv _)
-    | None ->
-      Ty.Error
     | Some tyDef ->
-      Ty.Ref (tyDefIdent tyDef, tySerial)
+      Some (tySerial, tyDef)
+    | None ->
+      None
+  | None ->
+    None
+
+let ctxResolveTyRef name (ctx: TyCtx) =
+  match ctx |> ctxFindTyDef name with
+  | Some (_, TyDef.Bv _)
   | None ->
     Ty.Error
+  | Some (tySerial, tyDef) ->
+    Ty.Ref (tyDefIdent tyDef, tySerial)
 
 /// Resolves type references in type annotation.
 /// FIXME: Don't modify ctx for now.
@@ -429,14 +436,11 @@ let inferNav ctx sub mes loc resultTy =
   let asUnionTyName sub =
     match sub with
     | HExpr.Ref (ident, _, _, _, _) ->
-      match (ctx: TyCtx).TyEnv |> Map.tryFind ident with
-      | Some tySerial ->
-        match ctx.Tys |> Map.tryFind tySerial with
-        | Some tyDef ->
-          Some (tyDefIdent tyDef)
-        | None ->
-          None
-      | _ -> None
+      match ctx |> ctxFindTyDef ident with
+      | Some (_, tyDef) ->
+        Some (tyDefIdent tyDef)
+      | None ->
+        None
     | _ ->
       None
   match asUnionTyName sub with
