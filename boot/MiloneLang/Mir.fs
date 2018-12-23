@@ -131,12 +131,14 @@ let unboxTy (ty: Ty): MTy =
     MTy.List (unboxTy ty)
   | Ty.Tuple itemTys ->
     MTy.Tuple (List.map unboxTy itemTys)
-  | Ty.Ref (_, serial) ->
+  | Ty.Ref serial ->
     MTy.Ref serial
   | Ty.Error ->
     failwith "Never type error in MIR"
+  | Ty.RefIdent _ ->
+    failwith "Never Ty.RefIdent in MIR"
   | Ty.Var _ ->
-    failwith "Never type variable in MIR."
+    failwith "Never Ty.Var in MIR"
   | Ty.Range ->
     failwith "Never range as object in MIR."
 

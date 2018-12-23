@@ -64,17 +64,21 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type Ty =
     | Error
+    /// Identifier which refers to a specific type.
+    | RefIdent
+      of ident:string
+    /// Type reference, i.e. some union type.
+    | Ref
+      of serial:int
+    /// Type variable, i.e. some binding.
+    | Var
+      of serial:int
     | Bool
     | Int
     | Char
     | Str
     | Range
     | Obj
-    /// Type reference, i.e. name of some type.
-    | Ref
-      of ident:string * serial:int
-    | Var
-      of ident:string * serial:int
     | Fun
       of Ty * Ty
     | Tuple
