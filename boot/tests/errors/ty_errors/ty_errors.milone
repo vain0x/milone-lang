@@ -9,4 +9,7 @@ let main _ =
   // ERROR! Index to int.
   (0).[0]
 
+  // ERROR! Recursive type.
+  let rec f x = x f
+
   () // ERROR! This should be an int.

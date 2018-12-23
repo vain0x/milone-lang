@@ -248,7 +248,7 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
     match lSubstTy, rSubstTy with
     | Ty.Var l, Ty.Var r when l = r ->
       ctx
-    | Ty.Var lSerial, _ when tyIsFreeIn rty lSerial ->
+    | Ty.Var lSerial, _ when tyIsFreeIn rSubstTy lSerial ->
       bindTy ctx lSerial rty
     | _, Ty.Var _ ->
       go rty lty ctx
@@ -706,12 +706,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
 /// Replaces type vars embedded in exprs
 /// with inference results.
 let substTyExpr ctx expr =
-  let subst ty =
-    match substTy ctx ty with
-    | Ty.Var _ ->
-      failwithf "Couldn't determine type %A" ty
-    | ty ->
-      ty
+  let subst ty = substTy ctx ty
   exprMap subst id expr
 
 let infer (exprs: HExpr list): HExpr list * TyCtx =

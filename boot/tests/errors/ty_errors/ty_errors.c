@@ -1,3 +1,9 @@
+void* fun_(void* env_, void* arg_);
+
+struct ObjectObjectFun1;
+
+void* f_(void* x_);
+
 struct UnitUnitFun1;
 
 struct IntIntTuple2;
@@ -5,6 +11,25 @@ struct IntIntTuple2;
 struct IntIntTuple2IntTuple2;
 
 int main();
+
+void* fun_(void* env_, void* arg_) {
+    void* call_ = f_(arg_);
+    return call_;
+}
+
+struct ObjectObjectFun1 {
+    void*(*fun)(void*, void*);
+    void* env;
+};
+
+void* f_(void* x_) {
+    void* box_ = (void*)malloc(sizeof(int));
+    (*(((int*)box_))) = 0;
+    void* env_1 = box_;
+    struct ObjectObjectFun1 fun_1 = (struct ObjectObjectFun1){.fun = fun_, .env = env_1};
+    void* app_1 = x_.fun(x_.env, fun_1);
+    return app_1;
+}
 
 struct UnitUnitFun1 {
     int(*fun)(void*, int);
@@ -64,5 +89,8 @@ end_match_4:;
 #line 10
 #error 10:6 Type: Index not supported
 
-#line 12
-#error 12:3 While unifying 'Int' and 'Tuple []', failed to unify 'Int' and 'Tuple []'.
+#line 13
+#error 13:17 Couldn't unify 'Var 19' and 'Fun (Fun (Var 19,Var 17),Var 17)' due to self recursion.
+
+#line 15
+#error 15:3 While unifying 'Int' and 'Tuple []', failed to unify 'Int' and 'Tuple []'.

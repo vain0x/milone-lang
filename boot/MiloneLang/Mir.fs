@@ -138,7 +138,7 @@ let unboxTy (ty: Ty): MTy =
   | Ty.RefIdent _ ->
     failwith "Never Ty.RefIdent in MIR"
   | Ty.Var _ ->
-    failwith "Never Ty.Var in MIR"
+    MTy.Obj
   | Ty.Range ->
     failwith "Never range as object in MIR."
 
