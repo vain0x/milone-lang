@@ -18,14 +18,9 @@ type MirCtx =
   }
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
-  let vars =
-    tyCtx.Vars |> Map.map (fun _ (ident, valueIdent, ty, loc) ->
-      let ty = Typing.substTy tyCtx ty
-      ident, valueIdent, ty, loc
-    )
   {
     VarSerial = tyCtx.VarSerial
-    Vars = vars
+    Vars = tyCtx.Vars
     Tys = tyCtx.Tys
     LabelSerial = 0
     Decls = []
