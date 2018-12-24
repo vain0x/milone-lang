@@ -99,13 +99,6 @@ let mopFrom op =
   | Op.Range
   | Op.Index -> failwith "Never: We don't use > >= && || :: .. in MIR"
 
-let mtyDef (tySerial, tyDef: TyDef) =
-  match tyDef with
-  | TyDef.Union (tyIdent, variants, loc) ->
-    Some (tySerial, TyDef.Union (tyIdent, variants, loc))
-  | TyDef.Bv _ ->
-    None
-
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
 let projExpr expr index resultTy loc =
