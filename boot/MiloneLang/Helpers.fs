@@ -48,9 +48,6 @@ let tyUnit =
 let patUnit loc =
   HPat.Tuple ([], Ty.Tuple [], loc)
 
-let mtyUnit =
-  MTy.Tuple []
-
 let litTy (lit: Lit): Ty =
   match lit with
   | Lit.Bool _ -> Ty.Bool
@@ -58,18 +55,11 @@ let litTy (lit: Lit): Ty =
   | Lit.Char _ -> Ty.Char
   | Lit.Str _ -> Ty.Str
 
-let litMTy (lit: Lit): MTy =
-  match lit with
-  | Lit.Bool _ -> MTy.Bool
-  | Lit.Int _ -> MTy.Int
-  | Lit.Char _ -> MTy.Char
-  | Lit.Str _ -> MTy.Str
-
 /// Converts nested function type to multi-arguments function type.
 let rec rollFunTy ty =
   let rec go n acc ty =
     match ty with
-    | MTy.Fun (sTy, tTy) ->
+    | Ty.Fun (sTy, tTy) ->
       go (n + 1) (sTy :: acc) tTy
     | tTy ->
       n, List.rev acc, tTy
@@ -184,7 +174,7 @@ let exprArity expr =
 let mexprExtract expr =
   match expr with
   | MExpr.Default (ty, loc) -> ty, loc
-  | MExpr.Lit (lit, loc) -> litMTy lit, loc
+  | MExpr.Lit (lit, loc) -> litTy lit, loc
   | MExpr.Ref (_, _, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
@@ -308,13 +298,6 @@ let rec arityTy ty =
   match ty with
   | Ty.Fun (_, ty) ->
     1 + arityTy ty
-  | _ ->
-    0
-
-let rec arityMTy ty =
-  match ty with
-  | MTy.Fun (_, ty) ->
-    1 + arityMTy ty
   | _ ->
     0
 

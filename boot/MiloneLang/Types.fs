@@ -247,37 +247,6 @@ namespace rec MiloneLang
     | Error
       of string * Loc
 
-  /// Type definition in mid-level IR.
-  [<RequireQualifiedAccess>]
-  type MTyDef =
-    /// Union type. Variants: (serial, argument type, variant type) list.
-    | Union
-      of ident:string * variants:(int * bool * MTy * MTy) list * Loc
-
-  /// Type in middle IR.
-  [<RequireQualifiedAccess>]
-  type MTy =
-    /// Boolean.
-    | Bool
-    /// Integer.
-    | Int
-    /// Character.
-    | Char
-    /// String.
-    | Str
-    /// Object.
-    | Obj
-    /// Reference to named type.
-    | Ref
-      of int
-    /// Function type, e.g. `int -> int`.
-    | Fun
-      of MTy * MTy
-    | List
-      of MTy
-    | Tuple
-      of MTy list
-
   /// Unary operator in middle IR.
   /// Or primitive function with single parameter.
   [<RequireQualifiedAccess>]
@@ -323,15 +292,15 @@ namespace rec MiloneLang
     | Lit
       of Lit * Loc
     | Default
-      of MTy * Loc
+      of Ty * Loc
     | Ref
-      of serial:int * arity:int * MTy * Loc
+      of serial:int * arity:int * Ty * Loc
     | Variant
-      of tySerial:int * serial:int * MTy * Loc
+      of tySerial:int * serial:int * Ty * Loc
     | UniOp
-      of MUniOp * arg:MExpr * resultTy:MTy * Loc
+      of MUniOp * arg:MExpr * resultTy:Ty * Loc
     | Op
-      of MOp * left:MExpr * right:MExpr * resultTy:MTy * Loc
+      of MOp * left:MExpr * right:MExpr * resultTy:Ty * Loc
 
   /// Variable initializer in mid-level IR.
   [<RequireQualifiedAccess>]
@@ -342,7 +311,7 @@ namespace rec MiloneLang
       of MExpr
     /// Call to normal function.
     | Call
-      of callee:MExpr * args:MExpr list * calleeTy:MTy
+      of callee:MExpr * args:MExpr list * calleeTy:Ty
     /// Call to function object.
     | Exec
       of callee:MExpr * args:MExpr list
@@ -352,11 +321,11 @@ namespace rec MiloneLang
     | Box
       of MExpr
     | Cons
-      of head:MExpr * tail:MExpr * itemTy:MTy
+      of head:MExpr * tail:MExpr * itemTy:Ty
     | Tuple
       of items:MExpr list
     | Union
-      of serial:int * arg:MExpr * MTy
+      of serial:int * arg:MExpr * Ty
 
   /// Statement in middle IR.
   /// Doesn't introduce global things, e.g. functions.
@@ -367,7 +336,7 @@ namespace rec MiloneLang
       of MExpr * Loc
     /// Declare a local variable.
     | LetVal
-      of serial:int * MInit * MTy * Loc
+      of serial:int * MInit * Ty * Loc
     /// Set to uninitialized local variable.
     | Set
       of serial:int * init:MExpr * Loc
@@ -386,7 +355,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type MDecl =
     | LetFun
-      of callee:int * args:(int * int * MTy * Loc) list * caps:(int * int * MTy * Loc) list * resultTy:MTy * body:MStmt list * Loc
+      of callee:int * args:(int * int * Ty * Loc) list * caps:(int * int * Ty * Loc) list * resultTy:Ty * body:MStmt list * Loc
     | TyDef
       of int * TyDef * Loc
 
