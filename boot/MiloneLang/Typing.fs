@@ -22,7 +22,7 @@ type TyCtx =
   }
 
 let variantFullName tyIdent variantIdent =
-  sprintf "%s_%s" tyIdent variantIdent
+  sprintf "%s.%s" tyIdent variantIdent
 
 let ctxAddErr (ctx: TyCtx) message loc =
   { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
@@ -734,6 +734,15 @@ let infer (exprs: HExpr list): HExpr list * TyCtx =
       TyEnv = Map.empty
       Tys = Map.empty
       Diags = []
+    }
+
+  let ctx =
+    let strLengthVarDef = VarDef.Fun ("String.length", 1, Ty.Fun (Ty.Str, Ty.Int), (0, 0))
+    { ctx with
+        VarEnv = ctx.VarEnv |> Map.add "String.length" SerialStrLength
+        Vars = ctx.Vars |> Map.add SerialStrLength strLengthVarDef
+        TyEnv = ctx.TyEnv |> Map.add "String" -1
+        Tys = ctx.Tys |> Map.add -1 (TyDef.Union ("String", [], (0, 0)))
     }
 
   let exprs, ctx = inferExprs ctx exprs tyUnit

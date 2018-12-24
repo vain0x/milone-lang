@@ -28,5 +28,17 @@ next_5:;
 next_6:;
     exit(1);
 end_match_4:;
+    int match_2;
+    if (!(((hello_.len != 5) == 1))) goto next_8;
+    exit(1);
+    match_2 = 0;
+    goto end_match_7;
+next_8:;
+    if (!(((hello_.len != 5) == 0))) goto next_9;
+    match_2 = 0;
+    goto end_match_7;
+next_9:;
+    exit(1);
+end_match_7:;
     return 0;
 }
