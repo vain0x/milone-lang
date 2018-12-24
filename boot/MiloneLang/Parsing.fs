@@ -563,7 +563,8 @@ let parseAndThen boxX tokens =
 let parseExpr (boxX: int) (tokens: (Token * Loc) list): HExpr * (Token * Loc) list =
   parseAndThen boxX tokens
 
-/// stub
+/// module = 'module' identifier = ..
+/// FIXME: stub
 let parseModule (boxX: int) tokens =
   match tokens with
   | (Token.Module, (_, moduleX))
@@ -573,21 +574,23 @@ let parseModule (boxX: int) tokens =
   | _ ->
     parseBindings boxX tokens
 
+let parseTopLevel tokens =
+  match tokens with
+  | [] ->
+    [], []
+  | (Token.Module, (_, moduleX))
+    :: (Token.Ident _, _)
+    :: (Token.Rec, _) :: tokens ->
+    parseModule moduleX tokens
+  | (Token.Module, (_, moduleX))
+    :: (Token.Ident _, _) :: tokens ->
+    parseModule moduleX tokens
+  | _ ->
+    parseModule 0 tokens
+
 /// module = ( 'module' 'rec'? ident bindings / bindings )?
 let parse (tokens: (Token * Loc) list): HExpr list =
-  let exprs, tokens =
-    match tokens with
-    | [] ->
-      [], []
-    | (Token.Module, (_, moduleX))
-      :: (Token.Ident _, _)
-      :: (Token.Rec, _) :: tokens ->
-      parseModule moduleX tokens
-    | (Token.Module, (_, moduleX))
-      :: (Token.Ident _, _) :: tokens ->
-      parseModule moduleX tokens
-    | _ ->
-      parseModule -1 tokens
+  let exprs, tokens = parseTopLevel tokens
   if tokens <> [] then
     failwithf "Expected eof but %A" tokens
   exprs
