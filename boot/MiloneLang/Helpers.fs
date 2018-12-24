@@ -49,7 +49,7 @@ let patUnit loc =
   HPat.Tuple ([], Ty.Tuple [], loc)
 
 let mtyUnit =
-  MTy.Tuple []
+  Ty.Tuple []
 
 let litTy (lit: Lit): Ty =
   match lit with
@@ -58,18 +58,18 @@ let litTy (lit: Lit): Ty =
   | Lit.Char _ -> Ty.Char
   | Lit.Str _ -> Ty.Str
 
-let litMTy (lit: Lit): MTy =
+let litMTy (lit: Lit): Ty =
   match lit with
-  | Lit.Bool _ -> MTy.Bool
-  | Lit.Int _ -> MTy.Int
-  | Lit.Char _ -> MTy.Char
-  | Lit.Str _ -> MTy.Str
+  | Lit.Bool _ -> Ty.Bool
+  | Lit.Int _ -> Ty.Int
+  | Lit.Char _ -> Ty.Char
+  | Lit.Str _ -> Ty.Str
 
 /// Converts nested function type to multi-arguments function type.
 let rec rollFunTy ty =
   let rec go n acc ty =
     match ty with
-    | MTy.Fun (sTy, tTy) ->
+    | Ty.Fun (sTy, tTy) ->
       go (n + 1) (sTy :: acc) tTy
     | tTy ->
       n, List.rev acc, tTy
@@ -313,7 +313,7 @@ let rec arityTy ty =
 
 let rec arityMTy ty =
   match ty with
-  | MTy.Fun (_, ty) ->
+  | Ty.Fun (_, ty) ->
     1 + arityMTy ty
   | _ ->
     0
