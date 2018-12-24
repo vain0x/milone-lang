@@ -364,7 +364,7 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
   | MExpr.Ref (_, _, Ty.Tuple [], _) ->
-    genExprDefault ctx mtyUnit
+    genExprDefault ctx tyUnit
   | MExpr.Ref (serial, _, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Variant (_, serial, ty, _) ->
@@ -394,7 +394,7 @@ let genExprCallPrintfn ctx format args =
   let format = CExpr.StrRaw (format + "\n")
   let expr = CStmt.Expr (CExpr.Call (CExpr.Ref "printf", format :: args))
   let ctx = ctxAddStmt ctx expr
-  genExprDefault ctx mtyUnit
+  genExprDefault ctx tyUnit
 
 let genExprCallInt arg argTy ctx =
   let arg, ctx = genExpr ctx arg

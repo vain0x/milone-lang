@@ -48,17 +48,7 @@ let tyUnit =
 let patUnit loc =
   HPat.Tuple ([], Ty.Tuple [], loc)
 
-let mtyUnit =
-  Ty.Tuple []
-
 let litTy (lit: Lit): Ty =
-  match lit with
-  | Lit.Bool _ -> Ty.Bool
-  | Lit.Int _ -> Ty.Int
-  | Lit.Char _ -> Ty.Char
-  | Lit.Str _ -> Ty.Str
-
-let litMTy (lit: Lit): Ty =
   match lit with
   | Lit.Bool _ -> Ty.Bool
   | Lit.Int _ -> Ty.Int
@@ -184,7 +174,7 @@ let exprArity expr =
 let mexprExtract expr =
   match expr with
   | MExpr.Default (ty, loc) -> ty, loc
-  | MExpr.Lit (lit, loc) -> litMTy lit, loc
+  | MExpr.Lit (lit, loc) -> litTy lit, loc
   | MExpr.Ref (_, _, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
@@ -308,13 +298,6 @@ let rec arityTy ty =
   match ty with
   | Ty.Fun (_, ty) ->
     1 + arityTy ty
-  | _ ->
-    0
-
-let rec arityMTy ty =
-  match ty with
-  | Ty.Fun (_, ty) ->
-    1 + arityMTy ty
   | _ ->
     0
 
