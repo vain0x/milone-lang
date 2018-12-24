@@ -3,6 +3,8 @@ module rec MiloneLang.Parsing
 open MiloneLang
 open MiloneLang.Helpers
 
+let locY (y, _) = y
+
 /// Gets if next token exists and should lead some construction (expr/pat/ty).
 /// We use this for a kind of prediction.
 /// E.g. if you are looking for an expr and the following token is an integer,
@@ -269,15 +271,14 @@ let parseThenCl boxX tokens =
     failwithf "Expected 'then' but %A" tokens
 
 let parseElseCl boxX ifLoc tokens =
+  let nextInside = nextInside boxX tokens
   match tokens with
-  | (Token.Else, _) as t :: tokens when nextInside boxX [t] ->
-    let insideX =
-      match tokens with
-      | (Token.If, _) :: _ ->
-        boxX
-      | _ ->
-        max boxX (nextX tokens)
-    parseExpr insideX tokens
+  | (Token.Else, elseLoc) :: (Token.If, ifLoc) :: tokens
+    when nextInside && (locY elseLoc = locY ifLoc) ->
+    // HACK: Parse next expr as if the `if` in `else if` is placed where `else` is.
+    parseExpr1 boxX ((Token.If, elseLoc) :: tokens)
+  | (Token.Else, _) :: tokens when nextInside ->
+    parseExpr (nextX tokens) tokens
   | _ ->
     // Append `else ()` if missing.
     hxUnit ifLoc, tokens
@@ -518,6 +519,9 @@ let parseAnno boxX tokens =
   | expr, tokens ->
     expr, tokens
 
+let parseExpr1 boxX tokens =
+  parseAnno boxX tokens
+
 /// let = 'let' ( pat )* '=' expr / anno
 let parseBinding boxX tokens =
   match tokens with
@@ -529,15 +533,13 @@ let parseBinding boxX tokens =
   | (Token.Type, keywordLoc) :: tokens ->
     parseBindingTy boxX keywordLoc tokens
   | _ ->
-    parseAnno boxX tokens
+    parseExpr1 boxX tokens
 
 /// All expressions must be aligned on the same column,
-/// except it is preceded by 1+ semicolons.
+/// except it is preceded by semicolon.
 let rec parseBindings boxX tokens =
   let rec go acc alignX tokens =
     match tokens with
-    | (Token.Punct ";", _) :: ((Token.Punct ";", _) :: _ as tokens) ->
-      go acc alignX tokens
     | (Token.Punct ";", _) :: tokens
       when nextX tokens >= alignX ->
       let expr, tokens = parseBinding boxX tokens
@@ -563,7 +565,8 @@ let parseAndThen boxX tokens =
 let parseExpr (boxX: int) (tokens: (Token * Loc) list): HExpr * (Token * Loc) list =
   parseAndThen boxX tokens
 
-/// stub
+/// module = 'module' identifier = ..
+/// FIXME: stub
 let parseModule (boxX: int) tokens =
   match tokens with
   | (Token.Module, (_, moduleX))
@@ -573,21 +576,23 @@ let parseModule (boxX: int) tokens =
   | _ ->
     parseBindings boxX tokens
 
+let parseTopLevel tokens =
+  match tokens with
+  | [] ->
+    [], []
+  | (Token.Module, (_, moduleX))
+    :: (Token.Ident _, _)
+    :: (Token.Rec, _) :: tokens ->
+    parseModule moduleX tokens
+  | (Token.Module, (_, moduleX))
+    :: (Token.Ident _, _) :: tokens ->
+    parseModule moduleX tokens
+  | _ ->
+    parseModule 0 tokens
+
 /// module = ( 'module' 'rec'? ident bindings / bindings )?
 let parse (tokens: (Token * Loc) list): HExpr list =
-  let exprs, tokens =
-    match tokens with
-    | [] ->
-      [], []
-    | (Token.Module, (_, moduleX))
-      :: (Token.Ident _, _)
-      :: (Token.Rec, _) :: tokens ->
-      parseModule moduleX tokens
-    | (Token.Module, (_, moduleX))
-      :: (Token.Ident _, _) :: tokens ->
-      parseModule moduleX tokens
-    | _ ->
-      parseModule -1 tokens
+  let exprs, tokens = parseTopLevel tokens
   if tokens <> [] then
     failwithf "Expected eof but %A" tokens
   exprs
