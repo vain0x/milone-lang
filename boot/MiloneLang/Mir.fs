@@ -9,7 +9,7 @@ type TyCtx = Typing.TyCtx
 type MirCtx =
   {
     VarSerial: int
-    Vars: Map<int, string * ValueIdent * Ty * Loc>
+    Vars: Map<int, VarDef>
     Tys: Map<int, TyDef>
     LabelSerial: int
     Decls: MDecl list
@@ -52,7 +52,7 @@ let ctxFreshVar (ctx: MirCtx) (ident: string) (ty: Ty) loc =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Var, ty, loc)
+        Vars = ctx.Vars |> Map.add serial (VarDef.Var (ident, ty, loc))
     }
   let refExpr = MExpr.Ref (serial, 1, ty, loc)
   refExpr, serial, ctx
@@ -73,7 +73,7 @@ let ctxFreshLabel (ctx: MirCtx) (ident: string) loc =
 /// Gets if the serial denotes to a variant function.
 let ctxIsVariantFun (ctx: MirCtx) serial =
   match ctx.Vars |> Map.tryFind serial with
-  | Some (_, ValueIdent.Variant _, _, _) ->
+  | Some (VarDef.Variant _) ->
     true
   | _ ->
     false
@@ -160,7 +160,7 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
 
 let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
   match ctx.Vars |> Map.find serial with
-  | _, ValueIdent.Variant _, _, _ ->
+  | VarDef.Variant _ ->
     // Compare tags.
     let lTagExpr = MExpr.UniOp (MUniOp.Tag, expr, Ty.Int, loc)
     let rTagExpr = MExpr.Ref (serial, 0, Ty.Int, loc)
@@ -174,7 +174,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
 
 let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
   match ctx.Vars |> Map.find serial, args with
-  | (_, ValueIdent.Variant _, Ty.Fun (argTy, _), _), [arg] ->
+  | VarDef.Variant (_, _, _, argTy, _, _), [arg] ->
     // Compare tags.
     let lTagExpr = MExpr.UniOp (MUniOp.Tag, expr, Ty.Int, loc)
     let rTagExpr = MExpr.Ref (serial, 0, Ty.Int, loc)
@@ -233,7 +233,7 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
 
 let mirifyExprRef (ctx: MirCtx) serial arity ty loc =
   match ctx.Vars |> Map.tryFind serial with
-  | Some (_, ValueIdent.Variant tySerial, _, _) ->
+  | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
     MExpr.Variant (tySerial, serial, ty, loc), ctx
   | _ ->
     MExpr.Ref (serial, arity, ty, loc), ctx
@@ -508,8 +508,8 @@ let mirifyExprLetFun ctx calleeSerial argPats body letLoc =
   let ctx = ctxAddDecl ctx decl
   MExpr.Default (tyUnit, letLoc), ctx
 
-let mirifyExprTyDef ctx tySerial tyDef loc =
-  let ctx = ctxAddDecl ctx (MDecl.TyDef (tySerial, tyDef, loc))
+let mirifyExprTyDecl ctx tySerial tyDecl loc =
+  let ctx = ctxAddDecl ctx MDecl.TyDef
   MExpr.Default (tyUnit, loc), ctx
 
 let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
@@ -528,8 +528,8 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprLetVal ctx pat body loc
   | HExpr.LetFun (_, serial, args, body, loc) ->
     mirifyExprLetFun ctx serial args body loc
-  | HExpr.TyDef (_, tySerial, tyDef, loc) ->
-    mirifyExprTyDef ctx tySerial tyDef loc
+  | HExpr.TyDef (_, tySerial, tyDecl, loc) ->
+    mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.If _
   | HExpr.Nav _
   | HExpr.Inf (InfOp.Anno, _, _, _)

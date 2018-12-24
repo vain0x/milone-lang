@@ -9,13 +9,14 @@ type TyCtx =
     /// We need to identify variables by serial number rather than names
     /// due to scope locality and shadowing.
     VarSerial: int
-    /// Value level identifiers.
-    /// From serial number to (source identifier, type, location).
-    Vars: Map<int, string * ValueIdent * Ty * Loc>
-    /// Identifier to type and serial.
-    VarEnv: Map<string, ValueIdent * Ty * int>
+    /// Variable serial to variable definition.
+    Vars: Map<int, VarDef>
+    /// Identifier to variable serial.
+    VarEnv: Map<string, int>
     TySerial: int
+    /// Identifier to type serial.
     TyEnv: Map<string, int>
+    /// Type serial to type definition.
     Tys: Map<int, TyDef>
     Diags: Diag list
   }
@@ -52,46 +53,56 @@ let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
     }
   ty, ident, ctx
 
-let ctxAddTy tyIdent tyDef loc ctx =
-  match tyDef with
-  | TyDef.Union (_, variants, _) ->
+let ctxAddTy tyIdent tyDecl loc ctx =
+  match tyDecl with
+  | TyDecl.Union (_, variants, _) ->
     let tySerial, ctx = ctxFreshTySerial ctx
     let refTy = Ty.Ref tySerial
 
-    // Register variants as values.
-    let variants, ctx =
-      (variants, ctx) |> stMap (fun ((lIdent, _, hasArg, lArgTy), ctx) ->
-        let valueIdent = ValueIdent.Variant tySerial
-        let lTy = if hasArg then Ty.Fun (lArgTy, refTy) else refTy
-        let lSerial, ctx = ctxFreshVar ctx lIdent valueIdent lTy loc
-        let ctx = ctxAddVarAlias ctx lSerial (variantFullName tyIdent lIdent)
-        (lIdent, lSerial, hasArg, lArgTy), ctx
-      )
+    // Register variants as variables.
+    let variants, serials, ctx =
+      let rec go variantAcc serialAcc variants ctx =
+        match variants with
+        | [] ->
+          List.rev variantAcc, List.rev serialAcc, ctx
+        | (lIdent, _, hasArg, lArgTy) :: variants ->
+          let lTy = if hasArg then Ty.Fun (lArgTy, refTy) else refTy
+          let varDef = VarDef.Variant (lIdent, tySerial, hasArg, lArgTy, lTy, loc)
+          let lSerial, ctx = ctxFreshVarCore ctx lIdent varDef
+          let ctx = ctxAddVarAlias ctx lSerial (variantFullName tyIdent lIdent)
+          let variant = lIdent, lSerial, hasArg, lArgTy
+          go (variant :: variantAcc) (lSerial :: serialAcc) variants ctx
+      go [] [] variants ctx
 
-    let tyDef = TyDef.Union (tyIdent, variants, loc)
+    let tyDef = TyDef.Union (tyIdent, serials, loc)
     let ctx =
       { ctx with
           TyEnv = ctx.TyEnv |> Map.add tyIdent tySerial
           Tys = ctx.Tys |> Map.add tySerial tyDef
       }
-    tySerial, tyDef, ctx
-  | TyDef.Bv _ ->
-    failwith "Never: You can't say `type 'a = ..`."
 
-let ctxFreshVar (ctx: TyCtx) ident valueIdent ty loc: int * TyCtx =
+    let tyDecl = TyDecl.Union (tyIdent, variants, loc)
+    tySerial, tyDecl, ctx
+
+let ctxFreshVarCore (ctx: TyCtx) ident varDef: int * TyCtx =
   let serial = ctx.VarSerial + 1
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        VarEnv = ctx.VarEnv |> Map.add ident (valueIdent, ty, serial)
-        Vars = ctx.Vars |> Map.add serial (ident, valueIdent, ty, loc)
+        VarEnv = ctx.VarEnv |> Map.add ident serial
+        Vars = ctx.Vars |> Map.add serial varDef
     }
   serial, ctx
 
+let ctxFreshVar ctx ident ty loc =
+  ctxFreshVarCore ctx ident (VarDef.Var (ident, ty, loc))
+
+let ctxFreshFun ctx ident arity ty loc =
+  ctxFreshVarCore ctx ident (VarDef.Fun (ident, arity, ty, loc))
+
 let ctxAddVarAlias (ctx: TyCtx) serial aliasIdent =
-  let _, valueIdent, ty, loc = ctx.Vars |> Map.find serial
   { ctx with
-      VarEnv = ctx.VarEnv |> Map.add aliasIdent (valueIdent, ty, serial)
+      VarEnv = ctx.VarEnv |> Map.add aliasIdent serial
   }
 
 let ctxFindTyDef name (ctx: TyCtx) =
@@ -291,10 +302,13 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
       failwith "Never"
   go lty rty ctx
 
-let valueIdentArity v =
-  match v with
-  | ValueIdent.Fun arity -> arity
-  | _ -> 1
+let ctxResolveVar (ctx: TyCtx) ident =
+  match ctx.VarEnv |> Map.tryFind ident with
+  | None -> None
+  | Some serial ->
+    match ctx.Vars |> Map.tryFind serial with
+    | None -> None
+    | Some varDef -> Some (serial, varDef)
 
 /// Creates an expression to abort.
 let hxAbort (ctx: TyCtx) ty loc =
@@ -305,20 +319,20 @@ let hxAbort (ctx: TyCtx) ty loc =
 
 let inferPatRef (ctx: TyCtx) ident loc ty =
   let serial, ty, ctx =
-    match ctx.VarEnv |> Map.tryFind ident with
-    | Some (ValueIdent.Variant _, variantTy, serial) ->
+    match ctxResolveVar ctx ident with
+    | Some (serial, VarDef.Variant (_, _, _, _, variantTy, _)) ->
       let ctx = unifyTy ctx loc ty variantTy
       serial, ty, ctx
     | _ ->
-      let serial, ctx = ctxFreshVar ctx ident ValueIdent.Var ty loc
+      let serial, ctx = ctxFreshVar ctx ident ty loc
       serial, ty, ctx
   HPat.Ref (ident, serial, ty, loc), ctx
 
 let inferPatCall (ctx: TyCtx) callee args loc ty =
   match callee, args with
   | HPat.Ref (ident, _, _, refLoc), [arg] ->
-    match ctx.VarEnv |> Map.tryFind ident with
-    | Some (ValueIdent.Variant _, (Ty.Fun (argTy, callTy) as variantTy), serial) ->
+    match ctxResolveVar ctx ident with
+    | Some (serial, VarDef.Variant (_, _, true, _, (Ty.Fun (argTy, callTy) as variantTy), _)) ->
       let arg, ctx = inferPat ctx arg argTy
       let callee = HPat.Ref (ident, serial, variantTy, refLoc)
       let ctx = unifyTy ctx loc ty callTy
@@ -372,10 +386,11 @@ let inferPat ctx pat ty =
     pat, ctx
 
 let inferRef (ctx: TyCtx) ident loc ty =
-  match ctx.VarEnv |> Map.tryFind ident, ident with
-  | Some (valueIdent, refTy, serial), _ ->
+  match ctxResolveVar ctx ident, ident with
+  | Some (serial, varDef), _ ->
+    let refTy, arity = varDefTyArity varDef
     let ctx = unifyTy ctx loc refTy ty
-    HExpr.Ref (ident, serial, valueIdentArity valueIdent, ty, loc), ctx
+    HExpr.Ref (ident, serial, arity, ty, loc), ctx
   | None, "not" ->
     let ctx = unifyTy ctx loc (Ty.Fun (Ty.Bool, Ty.Bool)) ty
     HExpr.Ref (ident, SerialNot, 1, ty, loc), ctx
@@ -625,7 +640,7 @@ let inferLetFun ctx calleeName argPats body loc =
     if calleeName = "main"
     then Ty.Fun (tyUnit, Ty.Int), "", ctx // FIXME: argument type is string[]
     else ctxFreshTyVar "fun" ctx
-  let serial, ctx = ctxFreshVar ctx calleeName (ValueIdent.Fun arity) funTy loc
+  let serial, ctx = ctxFreshFun ctx calleeName arity funTy loc
 
   // FIXME: local functions are recursive by default
   let bodyCtx = ctx
@@ -662,9 +677,9 @@ let inferAndThen ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
   hxAndThen (List.rev exprs) loc, ctx
 
-let inferExprTyDef ctx ident tyDef loc =
-  let serial, tyDef, ctx = ctx |> ctxAddTy ident tyDef loc
-  HExpr.TyDef (ident, serial, tyDef, loc), ctx
+let inferExprTyDecl ctx ident tyDecl loc =
+  let serial, tyDecl, ctx = ctx |> ctxAddTy ident tyDecl loc
+  HExpr.TyDef (ident, serial, tyDecl, loc), ctx
 
 let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   match expr with
@@ -691,7 +706,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   | HExpr.LetFun (calleeName, _, args, body, loc) ->
     inferLetFun ctx calleeName args body loc
   | HExpr.TyDef (ident, _, tyDef, loc) ->
-    inferExprTyDef ctx ident tyDef loc
+    inferExprTyDecl ctx ident tyDef loc
   | HExpr.If _
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.Fun _, _, _, _)
@@ -728,9 +743,18 @@ let infer (exprs: HExpr list): HExpr list * TyCtx =
 
   let ctx =
     let vars =
-      ctx.Vars |> Map.map (fun _ (ident, valueIdent, ty, loc) ->
-        let ty = substTy ctx ty
-        ident, valueIdent, ty, loc
+      ctx.Vars |> Map.map (fun _ varDef ->
+        match varDef with
+        | VarDef.Var (ident, ty, loc) ->
+          let ty = substTy ctx ty
+          VarDef.Var (ident, ty, loc)
+        | VarDef.Fun (ident, arity, ty, loc) ->
+          let ty = substTy ctx ty
+          VarDef.Fun (ident, arity, ty, loc)
+        | VarDef.Variant (ident, tySerial, hasArg, argTy, ty, loc) ->
+          let argTy = substTy ctx argTy
+          let ty = substTy ctx ty
+          VarDef.Variant (ident, tySerial, hasArg, argTy, ty, loc)
       )
     { ctx with Vars = vars }
 

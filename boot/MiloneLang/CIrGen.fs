@@ -7,7 +7,7 @@ open MiloneLang.Helpers
 [<RequireQualifiedAccess>]
 type Ctx =
   {
-    Vars: Map<int, string * ValueIdent * Ty * Loc>
+    Vars: Map<int, VarDef>
     VarUniqueNames: Map<int, string>
     TySerial: int
     TyEnv: Map<Ty, CTy>
@@ -25,7 +25,7 @@ let tagTyIdent tyIdent =
   sprintf "%sTag" tyIdent
 
 let calculateVarUniqueNames vars =
-  let groups = vars |> Map.toList |> Seq.groupBy (fun (_, (ident, _, _, _)) -> ident)
+  let groups = vars |> Map.toList |> Seq.groupBy (fun (_, varDef) -> varDefIdent varDef)
   groups |> Seq.collect (fun (ident, vars) ->
     vars |> Seq.mapi (fun i (serial, _) ->
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
@@ -125,6 +125,14 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
   CTy.Struct tupleTyIdent, ctx
 
 let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
+  let variants =
+    variants |> List.map (fun variantSerial ->
+      match ctx.Vars |> Map.tryFind variantSerial with
+      | Some (VarDef.Variant (ident, _, hasArg, argTy, _, _)) ->
+        ident, variantSerial, hasArg, argTy
+      | _ -> failwith "Never"
+    )
+
   let tags =
     variants |> List.map (fun (_, serial, _, _) ->
       ctxUniqueName ctx serial)

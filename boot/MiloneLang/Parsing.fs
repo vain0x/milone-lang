@@ -147,7 +147,7 @@ let parseTyDefUnion boxX tyIdent tyIdentLoc tokens =
       List.rev acc, tokens
   match go [] tokens with
   | variants, tokens ->
-    TyDef.Union (tyIdent, variants, tyIdentLoc), tokens
+    TyDecl.Union (tyIdent, variants, tyIdentLoc), tokens
 
 let parseTyDef boxX tyIdent tyIdentLoc tokens =
   match tokens with
@@ -359,8 +359,8 @@ let parseBindingTy boxX keywordLoc tokens =
   | _ when not (nextInside boxX tokens) ->
     parseError "Expected type name" tokens
   | (Token.Ident tyIdent, tyIdentLoc) :: (Token.Punct "=", _) :: tokens ->
-    let tyDef, tokens = parseTyDef (keywordX + 1) tyIdent tyIdentLoc tokens
-    HExpr.TyDef (tyIdent, noSerial, tyDef, keywordLoc), tokens
+    let tyDecl, tokens = parseTyDef (keywordX + 1) tyIdent tyIdentLoc tokens
+    HExpr.TyDef (tyIdent, noSerial, tyDecl, keywordLoc), tokens
   | tokens ->
     parseError "Expected '='" tokens
 

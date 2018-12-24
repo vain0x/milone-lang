@@ -305,3 +305,19 @@ let tyDefIdent tyDef =
   match tyDef with
   | TyDef.Bv (ident, _, _) -> ident
   | TyDef.Union (ident, _, _) -> ident
+
+let varDefIdent varDef =
+  match varDef with
+  | VarDef.Var (ident, _, _) -> ident
+  | VarDef.Fun (ident, _, _, _) -> ident
+  | VarDef.Variant (ident, _, _, _, _, _) -> ident
+
+let varDefTyArity varDef =
+  match varDef with
+  | VarDef.Var (_, ty, _) ->
+    ty, 1
+  | VarDef.Fun (_, arity, ty, _) ->
+    ty, arity
+  | VarDef.Variant (_, _, hasArg, _, ty, _) ->
+    let arity = if hasArg then 1 else 0
+    ty, arity

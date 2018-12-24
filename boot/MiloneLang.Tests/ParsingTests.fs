@@ -351,14 +351,14 @@ type Answer =
   | Yes of int
   | No
 """
-  let tyDef =
-    TyDef.Union ("Answer", [
+  let tyDecl =
+    TyDecl.Union ("Answer", [
       "Yes", noSerial, true, Ty.Int
       "No", noSerial, false, tyUnit
     ], (1, 5))
   let expected =
     [
-      HExpr.TyDef ("Answer", noSerial, tyDef, loc)
+      HExpr.TyDef ("Answer", noSerial, tyDecl, loc)
     ]
   source |> parseStr |> is expected
 

@@ -6,7 +6,7 @@ open MiloneLang.Helpers
 type FunTransCtx =
   {
     VarSerial: int
-    Vars: Map<int, string * ValueIdent * Ty * Loc>
+    Vars: Map<int, VarDef>
     Tys: Map<int, TyDef>
 
     /// Known identifiers and their dependencies.
@@ -42,7 +42,7 @@ let ctxFreshFun (ident: string) arity (ty: Ty) loc (ctx: FunTransCtx) =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Fun arity, ty, loc)
+        Vars = ctx.Vars |> Map.add serial (VarDef.Fun (ident, arity, ty, loc))
     }
   let refExpr = HExpr.Ref (ident, serial, arity, ty, loc)
   refExpr, serial, ctx
@@ -52,7 +52,7 @@ let ctxFreshVar (ident: string) (ty: Ty) loc (ctx: FunTransCtx) =
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        Vars = ctx.Vars |> Map.add serial (ident, ValueIdent.Var, ty, loc)
+        Vars = ctx.Vars |> Map.add serial (VarDef.Var (ident, ty, loc))
     }
   let refExpr = HExpr.Ref (ident, serial, 1, ty, loc)
   refExpr, serial, ctx
@@ -91,8 +91,9 @@ let ctxCaps (ctx: FunTransCtx) =
   refs |> Set.toList |> List.choose
     (fun serial ->
       match ctx.Vars |> Map.find serial with
-      | ident, ValueIdent.Var, ty, loc ->
-        Some (ident, serial, 1, ty, loc)
+      | VarDef.Var (ident, ty, loc) ->
+        let arity = 1
+        Some (ident, serial, arity, ty, loc)
       | _ ->
         None
     )
@@ -246,15 +247,13 @@ let declosureExprLetFun ident callee args body loc ctx =
     addCapsArg caps args body loc ctx
   HExpr.LetFun (ident, callee, args, body, loc), ctx
 
-let declosureExprTyDef expr tyDef ctx =
-  match tyDef with
-  | TyDef.Union (_, variants, _) ->
+let declosureExprTyDecl expr tyDecl ctx =
+  match tyDecl with
+  | TyDecl.Union (_, variants, _) ->
     let ctx =
       variants |> List.fold (fun ctx (_, variantSerial, _, _) ->
         ctx |> ctxAddKnown variantSerial
       ) ctx
-    expr, ctx
-  | TyDef.Bv _ ->
     expr, ctx
 
 let declosureExprOp ctx op l r ty loc =
@@ -296,8 +295,8 @@ let declosureExpr (expr, ctx) =
     declosureExprLetVal pat body loc ctx
   | HExpr.LetFun (ident, callee, args, body, loc) ->
     declosureExprLetFun ident callee args body loc ctx
-  | HExpr.TyDef (_, _, tyDef, _) ->
-    declosureExprTyDef expr tyDef ctx
+  | HExpr.TyDef (_, _, tyDecl, _) ->
+    declosureExprTyDecl expr tyDecl ctx
   | HExpr.If _
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.List _, _, _, _) ->
@@ -343,9 +342,9 @@ let ctxIsFun serial (ctx: FunTransCtx) =
   | _ when serial < 0 ->
     // FIXME: too ugly
     true
-  | Some (_, ValueIdent.Fun _, _, _) ->
+  | Some (VarDef.Fun _) ->
     true
-  | Some (_, ValueIdent.Variant _, _, _) ->
+  | Some (VarDef.Variant _) ->
     // FIXME: not a function
     true
   | _ ->
@@ -541,7 +540,7 @@ let unetaCall callee args resultTy loc ctx =
 
 let unetaRef expr serial calleeLoc (ctx: FunTransCtx) =
   match ctx.Vars |> Map.tryFind serial with
-  | Some (_, ValueIdent.Fun arity, _, _) ->
+  | Some (VarDef.Fun (_, arity, _, _)) ->
     resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
   | _ ->
     expr, ctx

@@ -142,15 +142,33 @@ namespace rec MiloneLang
     /// `.[ ]`
     | Index
 
+  /// Type declaration.
+  [<RequireQualifiedAccess>]
+  type TyDecl =
+    /// Union type.
+    /// Variants: (ident, serial, has-argument, argument type).
+    | Union
+      of ident:string * variants:(string * int * bool * Ty) list * Loc
+
   /// Type definition.
   [<RequireQualifiedAccess>]
   type TyDef =
     /// Bound type variable.
     | Bv
       of ident:string * Ty * Loc
-    /// Union type. Variants: (ident, serial, has-argument, argument type).
     | Union
-      of ident:string * variants:(string * int * bool * Ty) list * Loc
+      of ident:string * variants:int list * Loc
+
+  /// Variable definition in high-level IR.
+  [<RequireQualifiedAccess>]
+  type VarDef =
+    | Var
+      of ident:string * Ty * Loc
+    | Fun
+      of ident:string * arity:int * Ty * Loc
+    /// Variant constructor.
+    | Variant
+      of ident:string * tySerial:int * hasArg:bool * argTy:Ty * Ty * Loc
 
   /// Pattern in AST.
   [<RequireQualifiedAccess>]
@@ -185,16 +203,6 @@ namespace rec MiloneLang
       of char
     | Str
       of string
-
-  /// Value-level identifier.
-  [<RequireQualifiedAccess>]
-  type ValueIdent =
-    | Var
-    | Fun
-      of arity:int
-    /// Variant of union with no argument.
-    | Variant
-      of tySerial:int
 
   [<RequireQualifiedAccess>]
   type InfOp =
@@ -241,9 +249,9 @@ namespace rec MiloneLang
       of pat:HPat * init:HExpr * Loc
     | LetFun
       of ident:string * serial:int * args:HPat list * body:HExpr * Loc
-    /// Type definition.
+    /// Type declaration.
     | TyDef
-      of ident:string * serial:int * TyDef * Loc
+      of ident:string * serial:int * TyDecl * Loc
     | Error
       of string * Loc
 
@@ -356,8 +364,8 @@ namespace rec MiloneLang
   type MDecl =
     | LetFun
       of callee:int * args:(int * int * Ty * Loc) list * caps:(int * int * Ty * Loc) list * resultTy:Ty * body:MStmt list * Loc
+    // FIXME: Unused!
     | TyDef
-      of int * TyDef * Loc
 
   /// Type in C language.
   [<RequireQualifiedAccess>]
