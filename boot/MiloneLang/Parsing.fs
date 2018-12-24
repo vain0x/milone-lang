@@ -536,12 +536,10 @@ let parseBinding boxX tokens =
     parseExpr1 boxX tokens
 
 /// All expressions must be aligned on the same column,
-/// except it is preceded by 1+ semicolons.
+/// except it is preceded by semicolon.
 let rec parseBindings boxX tokens =
   let rec go acc alignX tokens =
     match tokens with
-    | (Token.Punct ";", _) :: ((Token.Punct ";", _) :: _ as tokens) ->
-      go acc alignX tokens
     | (Token.Punct ";", _) :: tokens
       when nextX tokens >= alignX ->
       let expr, tokens = parseBinding boxX tokens
