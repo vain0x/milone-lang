@@ -239,12 +239,12 @@ let addCapsArg caps args body loc ctx =
     let capsPat = HPat.Tuple (capsPats, capsTy, loc)
     capsPat :: args, body, ctx
 
-let declosureExprLetFun ident callee args body ty loc ctx =
+let declosureExprLetFun ident callee args body loc ctx =
   let caps, args, body, ctx =
     declosureFunBody callee args body ctx
   let args, body, ctx =
     addCapsArg caps args body loc ctx
-  HExpr.LetFun (ident, callee, args, body, ty, loc), ctx
+  HExpr.LetFun (ident, callee, args, body, loc), ctx
 
 let declosureExprTyDef expr tyDef ctx =
   match tyDef with
@@ -294,8 +294,8 @@ let declosureExpr (expr, ctx) =
     declosureExprInf ctx infOp items ty loc
   | HExpr.Let (pat, body, loc) ->
     declosureExprLetVal pat body loc ctx
-  | HExpr.LetFun (ident, callee, args, body, ty, loc) ->
-    declosureExprLetFun ident callee args body ty loc ctx
+  | HExpr.LetFun (ident, callee, args, body, loc) ->
+    declosureExprLetFun ident callee args body loc ctx
   | HExpr.TyDef (_, _, tyDef, _) ->
     declosureExprTyDef expr tyDef ctx
   | HExpr.If _
@@ -424,13 +424,13 @@ let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
 /// Creates a let expression to define an underlying function.
 /// It takes an environment and rest arguments
 /// and calls the partial-applied callee with full arguments.
-let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats resultTy callLoc ctx =
+let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
   let envArgRef, envArgSerial, ctx = ctxFreshVar "env" Ty.Obj callLoc ctx
   let envArgPat = HPat.Ref ("env", envArgSerial, Ty.Obj, callLoc)
   let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
   let argPats = envArgPat :: restArgPats
   let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
-  let letFun = HExpr.LetFun ("fun", funSerial, argPats, body, resultTy, callLoc)
+  let letFun = HExpr.LetFun ("fun", funSerial, argPats, body, callLoc)
   letFun, funSerial, ctx
 
 let createEnvBoxExpr args envTy callLoc =
@@ -453,7 +453,7 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
   let forwardExpr =
     hxCall callee forwardArgs resultTy callLoc
   let funLet, funSerial, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats resultTy callLoc ctx
+    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =
@@ -494,7 +494,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
   let forwardExpr =
     hxExec calleeRef forwardArgs resultTy callLoc
   let funLet, funSerial, ctx =
-    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats resultTy callLoc ctx
+    createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =
@@ -554,10 +554,10 @@ let unetaExprInf infOp args ty loc ctx =
     let args, ctx = (args, ctx) |> stMap unetaExpr
     HExpr.Inf (infOp, args, ty, loc), ctx
 
-let unetaExprLetFun ident callee argPats body ty loc ctx =
+let unetaExprLetFun ident callee argPats body loc ctx =
   let argPats, ctx = (argPats, ctx) |> stMap unetaPat
   let body, ctx = (body, ctx) |> unetaExpr
-  HExpr.LetFun (ident, callee, argPats, body, ty, loc), ctx
+  HExpr.LetFun (ident, callee, argPats, body, loc), ctx
 
 let unetaPat (pat, ctx) =
   pat, ctx
@@ -590,8 +590,8 @@ let unetaExpr (expr, ctx) =
     let pat, ctx = (pat, ctx) |> unetaPat
     let init, ctx = (init, ctx) |> unetaExpr
     HExpr.Let (pat, init, loc), ctx
-  | HExpr.LetFun (ident, callee, args, body, ty, loc) ->
-    unetaExprLetFun ident callee args body ty loc ctx
+  | HExpr.LetFun (ident, callee, args, body, loc) ->
+    unetaExprLetFun ident callee args body loc ctx
   | HExpr.If _ ->
     failwith "Never: If expressions are desugared"
 

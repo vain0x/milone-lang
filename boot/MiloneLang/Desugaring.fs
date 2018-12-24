@@ -69,11 +69,11 @@ let onLet pat body loc =
   | HPat.Anno (HPat.Call (HPat.Ref (ident, serial, _, _), args, _, _), annoTy, annoLoc) ->
     let body = hxAnno (onExpr body) annoTy annoLoc
     let args = onPats args
-    HExpr.LetFun (ident, serial, args, body, noTy, loc)
+    HExpr.LetFun (ident, serial, args, body, loc)
   | HPat.Call (HPat.Ref (ident, serial, _, _), args, _, _) ->
     let body = onExpr body
     let args = onPats args
-    HExpr.LetFun (ident, serial, args, body, noTy, loc)
+    HExpr.LetFun (ident, serial, args, body, loc)
   | HPat.Anno (HPat.Call _, _, _)
   | HPat.Call _ ->
     HExpr.Error ("Error: To define a function, the first pattern must be just an identifier.", loc)

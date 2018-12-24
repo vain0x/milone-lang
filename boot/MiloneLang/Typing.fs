@@ -642,7 +642,7 @@ let inferLetFun ctx calleeName argPats body loc =
       ctx
 
   let ctx = ctxRollback ctx bodyCtx
-  HExpr.LetFun (calleeName, serial, argPats, body, funTy, loc), ctx
+  HExpr.LetFun (calleeName, serial, argPats, body, loc), ctx
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
@@ -688,7 +688,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferAndThen ctx loc exprs ty
   | HExpr.Let (pat, body, loc) ->
     inferLetVal ctx pat body loc
-  | HExpr.LetFun (calleeName, _, args, body, _, loc) ->
+  | HExpr.LetFun (calleeName, _, args, body, loc) ->
     inferLetFun ctx calleeName args body loc
   | HExpr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDef ctx ident tyDef loc

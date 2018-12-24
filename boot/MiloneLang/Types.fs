@@ -240,7 +240,7 @@ namespace rec MiloneLang
     | Let
       of pat:HPat * init:HExpr * Loc
     | LetFun
-      of ident:string * serial:int * args:HPat list * body:HExpr * resultTy:Ty * Loc
+      of ident:string * serial:int * args:HPat list * body:HExpr * Loc
     /// Type definition.
     | TyDef
       of ident:string * serial:int * TyDef * Loc
