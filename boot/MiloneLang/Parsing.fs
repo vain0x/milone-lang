@@ -351,7 +351,13 @@ let parseLet boxX letLoc tokens =
   let body, tokens =
     let bodyX = max boxX (nextX tokens)
     parseExpr bodyX tokens
-  HExpr.Let (pat, body, letLoc), tokens
+  let next, tokens =
+    match tokens with
+    | [] ->
+      hxUnit letLoc, []
+    | _ ->
+      parseExpr boxX tokens
+  HExpr.Let (pat, body, next, noTy, letLoc), tokens
 
 let parseBindingTy boxX keywordLoc tokens =
   let _, keywordX = keywordLoc

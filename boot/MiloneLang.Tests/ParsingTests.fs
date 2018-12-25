@@ -80,11 +80,11 @@ let exprAdd left right =
 let exprSub left right =
   HExpr.Op (Op.Sub, left,  right, noTy, loc)
 
-let exprLet ident body =
-  HExpr.Let (patRef ident, body, loc)
+let exprLet ident body next =
+  HExpr.Let (patRef ident, body, next, noTy, loc)
 
 let exprLetMain body =
-  HExpr.Let (patCall (patRef "main") [patUnit loc], body, loc)
+  HExpr.Let (patCall (patRef "main") [patUnit loc], body, hxUnit loc, noTy, loc)
 
 let exprAndThen exprs =
   hxAndThen exprs loc
@@ -119,7 +119,7 @@ let rec private helper () = 0
 let main _ =
   helper ()
 """
-  source |> parseStr |> List.length |> is 2
+  source |> parseStr |> List.length |> is 1
 
 [<Fact>]
 let parseSimpleExprs () =
@@ -200,14 +200,12 @@ let parseIndentLayoutTest () =
   let expected =
     [
       exprLetMain (
-        exprAndThen [
           exprLet "foo" (
-            exprAndThen [
-              exprLet "goo" (exprInt 4)
+            exprLet "goo" (exprInt 4) (
               exprAdd (exprInt 4) (exprInt 6)
-            ])
-          exprInt 2
-        ])
+            ))
+            (exprInt 2)
+          )
     ]
   source |> parseStr |> is expected
 

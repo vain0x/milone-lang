@@ -64,21 +64,23 @@ let onExprList items loc =
 ///   `let-fun f(x) = body`
 /// `let pat = body` ==>
 ///   `let-val pat = body`
-let onLet pat body loc =
+let onLet pat body next ty loc =
   match pat with
   | HPat.Anno (HPat.Call (HPat.Ref (ident, serial, _, _), args, _, _), annoTy, annoLoc) ->
     let body = hxAnno (onExpr body) annoTy annoLoc
     let args = onPats args
-    HExpr.LetFun (ident, serial, args, body, loc)
+    let next = onExpr next
+    HExpr.LetFun (ident, serial, args, body, next, ty, loc)
   | HPat.Call (HPat.Ref (ident, serial, _, _), args, _, _) ->
     let body = onExpr body
     let args = onPats args
-    HExpr.LetFun (ident, serial, args, body, loc)
+    let next = onExpr next
+    HExpr.LetFun (ident, serial, args, body, next, ty, loc)
   | HPat.Anno (HPat.Call _, _, _)
   | HPat.Call _ ->
     HExpr.Error ("Error: To define a function, the first pattern must be just an identifier.", loc)
   | _ ->
-    HExpr.Let (onPat pat, onExpr body, loc)
+    HExpr.Let (onPat pat, onExpr body, onExpr next, ty, loc)
 
 let rec onExprs exprs =
   List.map onExpr exprs
@@ -101,8 +103,8 @@ let onExpr (expr: HExpr): HExpr =
     onExprList items loc
   | HExpr.Inf (infOp, args, ty, loc) ->
     HExpr.Inf (infOp, onExprs args, ty, loc)
-  | HExpr.Let (pat, body, loc) ->
-    onLet pat body loc
+  | HExpr.Let (pat, body, next, ty, loc) ->
+    onLet pat body next ty loc
   | HExpr.LetFun _
   | HExpr.Error _ ->
     failwith "Never"

@@ -1,4 +1,15 @@
 let main _ =
-  let x = 1
-  let x = 0
-  x
+  let case1 =
+    let x = 1
+    let x = 0
+    if x <> 0 then exit 1
+
+  let case2 =
+    let x = 0
+    (
+      let x = 1
+      if x <> 1 then exit 1
+    )
+    if x <> 0 then exit 1
+
+  0

@@ -458,15 +458,16 @@ let mirifyExprInf ctx infOp args ty loc =
   | t ->
     failwithf "Never: %A" t
 
-let mirifyExprLetVal ctx pat init letLoc =
+let mirifyExprLetVal ctx pat init next letLoc =
   let init, ctx = mirifyExpr ctx init
   let exhaustive, ctx = mirifyPat ctx "_never_" pat init
   let ctx =
     if exhaustive then ctx else
     ctxAddErr ctx "Let pattern must be exhaustive for now" letLoc
-  MExpr.Default (tyUnit, letLoc), ctx
+  let next, ctx = mirifyExpr ctx next
+  next, ctx
 
-let mirifyExprLetFun ctx calleeSerial argPats body letLoc =
+let mirifyExprLetFun ctx calleeSerial argPats body next letLoc =
   let defineArg ctx argPat =
     match argPat with
     | HPat.Ref (_, serial, ty, loc) ->
@@ -506,7 +507,9 @@ let mirifyExprLetFun ctx calleeSerial argPats body letLoc =
   let ctx = ctxRollBack ctx bodyCtx
   let decl = MDecl.LetFun (calleeSerial, args, [], resultTy, body, letLoc)
   let ctx = ctxAddDecl ctx decl
-  MExpr.Default (tyUnit, letLoc), ctx
+
+  let next, ctx = mirifyExpr ctx next
+  next, ctx
 
 let mirifyExprTyDecl ctx tySerial tyDecl loc =
   let ctx = ctxAddDecl ctx MDecl.TyDef
@@ -524,10 +527,10 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprOp ctx op l r ty loc
   | HExpr.Inf (infOp, args, ty, loc) ->
     mirifyExprInf ctx infOp args ty loc
-  | HExpr.Let (pat, body, loc) ->
-    mirifyExprLetVal ctx pat body loc
-  | HExpr.LetFun (_, serial, args, body, loc) ->
-    mirifyExprLetFun ctx serial args body loc
+  | HExpr.Let (pat, body, next, _, loc) ->
+    mirifyExprLetVal ctx pat body next loc
+  | HExpr.LetFun (_, serial, args, body, next, _, loc) ->
+    mirifyExprLetFun ctx serial args body next loc
   | HExpr.TyDef (_, tySerial, tyDecl, loc) ->
     mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.If _
@@ -554,6 +557,6 @@ let mirify (exprs: HExpr list, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
   let _exprs, ctx = mirifyExprs ctx exprs
   // NOTE: This will fail when you write top-level value expression.
-  assert (List.isEmpty ctx.Stmts)
+  // assert (List.isEmpty ctx.Stmts)
   let decls = List.rev ctx.Decls
   decls, ctx

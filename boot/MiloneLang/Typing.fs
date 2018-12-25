@@ -610,17 +610,21 @@ let inferAnno ctx expr annoTy ty loc =
   let ctx = unifyTy ctx loc annoTy ty
   inferExpr ctx expr annoTy
 
-let inferLetVal ctx pat init loc =
+let inferLetVal ctx pat init next ty loc =
   let initTy, _, ctx = ctxFreshTyVar "init" ctx
   // Type init expression.
   let init, initCtx = inferExpr ctx init initTy
   // Remove symbols defined inside `init`.
   let ctx = ctxRollback ctx initCtx
-  // Define new variables defined by the pat to the context.
-  let pat, ctx = inferPat ctx pat initTy
-  HExpr.Let (pat, init, loc), ctx
 
-let inferLetFun ctx calleeName argPats body loc =
+  // Define new variables defined by the pat to the context.
+  let pat, nextCtx = inferPat ctx pat initTy
+  let next, nextCtx = inferExpr nextCtx next ty
+  let ctx = ctxRollback ctx nextCtx
+
+  HExpr.Let (pat, init, next, ty, loc), ctx
+
+let inferLetFun ctx calleeName argPats body next ty loc =
   let bodyTy, _, ctx = ctxFreshTyVar "body" ctx
 
   /// Infers argument patterns,
@@ -640,24 +644,29 @@ let inferLetFun ctx calleeName argPats body loc =
     if calleeName = "main"
     then Ty.Fun (tyUnit, Ty.Int), "", ctx // FIXME: argument type is string[]
     else ctxFreshTyVar "fun" ctx
-  let serial, ctx = ctxFreshFun ctx calleeName arity funTy loc
 
-  // FIXME: local functions are recursive by default
-  let bodyCtx = ctx
+  // Define function itself for recursive call.
+  // FIXME: Functions are recursive by default.
+  let serial, nextCtx = ctxFreshFun ctx calleeName arity funTy loc
+
+  let bodyCtx = nextCtx
   let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
   let bodyCtx = unifyTy bodyCtx loc funTy actualFunTy
   let body, bodyCtx = inferExpr bodyCtx body bodyTy
+  let nextCtx = ctxRollback nextCtx bodyCtx
 
-  let ctx =
+  let nextCtx =
     if isMonomorphic bodyCtx funTy |> not then
       let funTy = substTy bodyCtx funTy
       let message = sprintf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A %A" funTy argPats
-      ctxAddErr ctx message loc
+      ctxAddErr nextCtx message loc
     else
-      ctx
+      nextCtx
 
-  let ctx = ctxRollback ctx bodyCtx
-  HExpr.LetFun (calleeName, serial, argPats, body, loc), ctx
+  let next, nextCtx = inferExpr nextCtx next ty
+  let ctx = ctxRollback ctx nextCtx
+
+  HExpr.LetFun (calleeName, serial, argPats, body, next, ty, loc), ctx
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
@@ -701,10 +710,10 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferAnno ctx expr annoTy ty loc
   | HExpr.Inf (InfOp.AndThen, exprs, _, loc) ->
     inferAndThen ctx loc exprs ty
-  | HExpr.Let (pat, body, loc) ->
-    inferLetVal ctx pat body loc
-  | HExpr.LetFun (calleeName, _, args, body, loc) ->
-    inferLetFun ctx calleeName args body loc
+  | HExpr.Let (pat, body, next, _, loc) ->
+    inferLetVal ctx pat body next ty loc
+  | HExpr.LetFun (calleeName, _, args, body, next, _, loc) ->
+    inferLetFun ctx calleeName args body next ty loc
   | HExpr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDecl ctx ident tyDef loc
   | HExpr.If _
