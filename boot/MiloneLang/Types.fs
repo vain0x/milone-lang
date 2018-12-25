@@ -59,6 +59,7 @@ namespace rec MiloneLang
     | Open
     | Type
     | Of
+    | In
 
   /// Type of expressions.
   [<RequireQualifiedAccess>]
@@ -246,9 +247,9 @@ namespace rec MiloneLang
     | Inf
       of InfOp * HExpr list * Ty * Loc
     | Let
-      of pat:HPat * init:HExpr * Loc
+      of pat:HPat * init:HExpr * next:HExpr * Ty * Loc
     | LetFun
-      of ident:string * serial:int * args:HPat list * body:HExpr * Loc
+      of ident:string * serial:int * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
     /// Type declaration.
     | TyDef
       of ident:string * serial:int * TyDecl * Loc
