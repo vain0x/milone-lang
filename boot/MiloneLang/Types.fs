@@ -59,6 +59,7 @@ namespace rec MiloneLang
     | Open
     | Type
     | Of
+    | In
 
   /// Type of expressions.
   [<RequireQualifiedAccess>]
