@@ -14,9 +14,6 @@ let assert ok =
 let charEq (l: char) (r: char) =
   l = r
 
-let charBetween (l: char) (r: char) (c: char) =
-  l <= c && c <= r
-
 let strContains (c: char) (s: string) =
   let rec go i =
     i < s.Length && (s.[i] = c || go (i + 1))
@@ -42,56 +39,6 @@ let strListRev (xs: string list) =
       go (x :: acc) xs
   go [] xs
 
-let digitToString n =
-  match n with
-  | 0 -> "0"
-  | 1 -> "1"
-  | 2 -> "2"
-  | 3 -> "3"
-  | 4 -> "4"
-  | 5 -> "5"
-  | 6 -> "6"
-  | 7 -> "7"
-  | 8 -> "8"
-  | 9 -> "9"
-  | _ -> exit 1
-
-let digitToInt c =
-  match c with
-  | '0' -> 0
-  | '1' -> 1
-  | '2' -> 2
-  | '3' -> 3
-  | '4' -> 4
-  | '5' -> 5
-  | '6' -> 6
-  | '7' -> 7
-  | '8' -> 8
-  | '9' -> 9
-  | _ -> exit 1
-
-let intToString (value: int): string =
-  let rec go acc n =
-    if n <= 0 then
-      acc
-    else
-      go (digitToString (n % 10) + acc) (n / 10)
-  if value = 0 then
-    "0"
-  else
-    go "" value
-
-let private intParseCore (source: string) l r =
-  let rec go (acc: int) i =
-    if i >= r then
-      acc
-    else
-      go (acc * 10 + digitToInt source.[i]) (i + 1)
-  go 0 l
-
-let private intParse (source: string) =
-  intParseCore source 0 source.Length
-
 let tokenListRev (xs: Token list) =
   let rec go acc (xs: Token list) =
     match xs with
@@ -101,8 +48,8 @@ let tokenListRev (xs: Token list) =
       go (x :: acc) xs
   go [] xs
 
-let isDigit () c =
-  charBetween '0' '9' c
+let isDigit c =
+  '0' <= c && c <= '9'
 
 let takeWhile (pred: char -> bool) (source: string, i) =
   let rec go r =
@@ -126,9 +73,9 @@ let private readEol (source: string) (acc: Token list, i) =
   acc, r
 
 let private readInt (source: string) (acc: Token list, i) =
-  assert (isDigit () source.[i])
-  let r = takeWhile (isDigit ()) (source, i)
-  let n = intParseCore source i r
+  assert (isDigit source.[i])
+  let r = takeWhile isDigit (source, i)
+  let n = source.[i..r - 1] |> int
   TkInt n :: acc, r
 
 let tokenize (source: string): Token list =
@@ -146,7 +93,7 @@ let tokenize (source: string): Token list =
       | '\n' ->
         (acc, i) |> readEol source |> go
       | c ->
-        if isDigit () c then
+        if isDigit c then
           (acc, i) |> readInt source |> go
         else
           (TkOp c :: acc, i + 1) |> go
@@ -220,8 +167,6 @@ let main _ =
   assert (strStartsWith "heaven" "hello" |> not)
   assert (strConcat ["a"; ","; "b"] = "a,b")
   assert (["a"; ","; "b"] |> strListRev |> strConcat = "b,a")
-  assert (intToString 1024 = "1024")
-  assert (intParse "1024" = 1024)
 
   let source = "2 + 3\r\n    - 4"
   source |> tokenize |> tokenListPrint
