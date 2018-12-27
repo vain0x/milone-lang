@@ -263,7 +263,7 @@ let SerialCharFun = -8
 let SerialIntFun = -9
 
 [<Literal>]
-let SerialMain = -10
+let SerialStringFun = -10
 
 let knownSerials =
   [
@@ -276,6 +276,7 @@ let knownSerials =
     SerialStrLength
     SerialCharFun
     SerialIntFun
+    SerialStringFun
   ]
 
 let analyzeFormat (format: string) =

@@ -7,4 +7,10 @@ let main _ =
   if int "42" - 42 <> 0 then exit 1
   if int "-1" + 1 <> 0 then exit 1
 
+  if string 0 <> "0" then exit 1
+  if string (0 - 97) <> "-97" then exit 1
+  if string 'a' <> "a" then exit 1
+  if string '\u0000' <> "" then exit 1
+  if string "fix" <> "fix" then exit 1
+
   0

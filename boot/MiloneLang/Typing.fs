@@ -428,6 +428,19 @@ let inferRef (ctx: TyCtx) ident loc ty =
       | argTy ->
         ctxAddErr ctx (sprintf "Expected int or char %A" argTy) loc
     HExpr.Ref (ident, SerialIntFun, 1, ty, loc), ctx
+  | None, "string" ->
+    let argTy, _, ctx = ctxFreshTyVar "stringArg" ctx
+    let ctx = unifyTy ctx loc (Ty.Fun (argTy, Ty.Str)) ty
+    let ctx =
+      match substTy ctx argTy with
+      | Ty.Int
+      | Ty.Char
+      | Ty.Str
+      | Ty.Error _ ->
+        ctx
+      | _ ->
+        ctxAddErr ctx (sprintf "FIXME: Not implemented `string` for %A" argTy) loc
+    HExpr.Ref (ident, SerialStringFun, 1, ty, loc), ctx
   | None, _ ->
     let message = sprintf "Couldn't resolve var %s" ident
     let ctx = ctxAddErr ctx message loc

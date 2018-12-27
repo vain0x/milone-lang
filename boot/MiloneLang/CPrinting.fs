@@ -416,6 +416,18 @@ struct String str_slice(struct String s, int l, int r) {
 int str_to_int(struct String s) {
   return atoi(s.str);
 }
+
+struct String str_of_int(int value) {
+  char* str = calloc(20, sizeof(char));
+  sprintf(str, "%d", value);
+  return (struct String){.str = str, .len = strlen(str)};
+}
+
+struct String str_of_char(char value) {
+  char* str = calloc(2, sizeof(char));
+  str[0] = value;
+  return (struct String){.str = str, .len = strlen(str)};
+}
 """
   acc *- header *- eol
 
