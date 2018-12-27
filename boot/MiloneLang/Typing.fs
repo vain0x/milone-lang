@@ -733,7 +733,7 @@ let substTyExpr ctx expr =
   let subst ty = substTy ctx ty
   exprMap subst id expr
 
-let infer (exprs: HExpr list): HExpr list * TyCtx =
+let infer (expr: HExpr): HExpr * TyCtx =
   let ctx =
     {
       VarSerial = 0
@@ -754,10 +754,10 @@ let infer (exprs: HExpr list): HExpr list * TyCtx =
         Tys = ctx.Tys |> Map.add -1 (TyDef.Union ("String", [], (0, 0)))
     }
 
-  let exprs, ctx = inferExprs ctx exprs tyUnit
+  let expr, ctx = inferExpr ctx expr tyUnit
 
   // Substitute all types.
-  let exprs = List.map (substTyExpr ctx) (List.rev exprs)
+  let expr = substTyExpr ctx expr
 
   let ctx =
     let vars =
@@ -776,4 +776,4 @@ let infer (exprs: HExpr list): HExpr list * TyCtx =
       )
     { ctx with Vars = vars }
 
-  exprs,  ctx
+  expr, ctx

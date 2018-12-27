@@ -307,8 +307,8 @@ let declosureExpr (expr, ctx) =
   | HExpr.Error (error, loc) ->
     failwithf "Never: %s at %A" error loc
 
-let declosure (exprs, ctx: FunTransCtx) =
-  (exprs, ctx) |> stMap declosureExpr
+let declosure (expr, ctx: FunTransCtx) =
+  (expr, ctx) |> declosureExpr
 
 // ## Un-eta
 //
@@ -589,13 +589,12 @@ let unetaExpr (expr, ctx) =
   | HExpr.If _ ->
     failwith "Never: If expressions are desugared"
 
-let uneta (exprs, ctx: FunTransCtx) =
-  let exprs, ctx = (exprs, ctx) |> stMap unetaExpr
-  exprs, ctx
+let uneta (expr, ctx: FunTransCtx) =
+  (expr, ctx) |> unetaExpr
 
 /// Performs transformation about functions.
-let trans (exprs, tyCtx) =
+let trans (expr, tyCtx) =
   let ctx = ctxFromTyCtx tyCtx
-  let exprs, ctx = (exprs, ctx) |> declosure |> uneta
+  let expr, ctx = (expr, ctx) |> declosure |> uneta
   let tyCtx = ctx |> ctxFeedbackToTyCtx tyCtx
-  exprs, tyCtx
+  expr, tyCtx

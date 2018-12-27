@@ -553,10 +553,11 @@ let mirifyExprs ctx exprs =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let mirify (exprs: HExpr list, tyCtx: TyCtx): MDecl list * MirCtx =
+let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
-  let _exprs, ctx = mirifyExprs ctx exprs
-  // NOTE: This will fail when you write top-level value expression.
-  // assert (List.isEmpty ctx.Stmts)
+
+  // FIXME: Don't discard the result expression because it may cause some effects.
+  let _expr, ctx = mirifyExpr ctx expr
+
   let decls = List.rev ctx.Decls
   decls, ctx

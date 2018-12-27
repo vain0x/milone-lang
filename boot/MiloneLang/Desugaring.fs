@@ -109,5 +109,5 @@ let onExpr (expr: HExpr): HExpr =
   | HExpr.Error _ ->
     failwith "Never"
 
-let desugar (exprs: HExpr list): HExpr list =
-  onExprs exprs
+let desugar (expr: HExpr): HExpr =
+  onExpr expr

@@ -7,11 +7,11 @@ open Xunit
 
 let loc = (0, 0)
 
-let parseStr source: HExpr list =
+let parseStr source: HExpr =
   source
   |> Lexing.tokenize
   |> Parsing.parse
-  |> List.map (exprMap id (fun _ -> loc))
+  |> exprMap id (fun _ -> loc)
 
 let parseTyExprStr source: Ty =
   let ty, tokens =
@@ -102,11 +102,9 @@ let exprCall callee args =
 let parseMainEmpty () =
   let source = """let main () = 0"""
   let expected =
-    [
-      exprLetMain (
-        exprInt 0
-      )
-    ]
+    exprLetMain (
+      exprInt 0
+    )
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -119,7 +117,7 @@ let rec private helper () = 0
 let main _ =
   helper ()
 """
-  source |> parseStr |> List.length |> is 1
+  source |> parseStr |> ignore // no exception
 
 [<Fact>]
 let parseSimpleExprs () =
@@ -141,7 +139,7 @@ let parseSimpleExprs () =
   for fragment, expectedExpr in table do
     let source = sprintf "let main () =\n  %s" fragment
     let expected =
-      [exprLetMain expectedExpr]
+      exprLetMain expectedExpr
     source |> parseStr |> is expected
 
 [<Fact>]
@@ -153,18 +151,16 @@ let main () =
   + 4
 """
   let expected =
-    [
-      exprLetMain
-        (exprAdd
-          (exprCall
-            (exprRef "f")
-            [
-              exprInt 1
-              exprInt 2
-              exprInt 3
-            ])
-          (exprInt 4))
-    ]
+    exprLetMain
+      (exprAdd
+        (exprCall
+          (exprRef "f")
+          [
+            exprInt 1
+            exprInt 2
+            exprInt 3
+          ])
+        (exprInt 4))
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -177,15 +173,13 @@ let parseParensRelaxLayout () =
   2
 """
   let expected =
-    [
-      exprLetMain (
-        exprAndThen [
-          exprAdd
-            (exprAdd (exprInt 4) (exprInt 2))
-            (exprInt 1)
-          exprInt 2
-        ])
-    ]
+    exprLetMain (
+      exprAndThen [
+        exprAdd
+          (exprAdd (exprInt 4) (exprInt 2))
+          (exprInt 1)
+        exprInt 2
+      ])
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -198,15 +192,13 @@ let parseIndentLayoutTest () =
   2
 """
   let expected =
-    [
-      exprLetMain (
-          exprLet "foo" (
-            exprLet "goo" (exprInt 4) (
-              exprAdd (exprInt 4) (exprInt 6)
-            ))
-            (exprInt 2)
-          )
-    ]
+    exprLetMain (
+        exprLet "foo" (
+          exprLet "goo" (exprInt 4) (
+            exprAdd (exprInt 4) (exprInt 6)
+          ))
+          (exprInt 2)
+        )
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -217,16 +209,13 @@ let parseBeginExpr () =
   1
 """
   let expected =
-    [
-      exprLetMain (
-        exprAndThen [
-          exprAdd
-            (exprCall (exprRef "f") [exprRef "x"])
-            (exprCall (exprRef "g") [exprRef "y"])
-          exprInt 1
-        ]
-      )
-    ]
+    exprLetMain (
+      exprAndThen [
+        exprAdd
+          (exprCall (exprRef "f") [exprRef "x"])
+          (exprCall (exprRef "g") [exprRef "y"])
+        exprInt 1
+      ])
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -235,15 +224,12 @@ let parseParenExpr () =
   1 + (2 + 3) + 4
 """
   let expected =
-    [
-      exprLetMain (
-        exprAdd
-          (exprAdd
-            (exprInt 1)
-            (exprAdd (exprInt 2) (exprInt 3)))
-          (exprInt 4)
-      )
-    ]
+    exprLetMain (
+      exprAdd
+        (exprAdd
+          (exprInt 1)
+          (exprAdd (exprInt 2) (exprInt 3)))
+        (exprInt 4))
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -253,18 +239,16 @@ let parseSemicolonInLineOne () =
   0
 """
   let expected =
-    [
-      exprLetMain (
-        exprAndThen [
-          exprCall
-            (exprRef "printfn")
-            [exprStr "Hello, "]
-          exprCall
-            (exprRef "printfn")
-            [exprStr "World!"]
-          exprInt 0
-        ])
-    ]
+    exprLetMain (
+      exprAndThen [
+        exprCall
+          (exprRef "printfn")
+          [exprStr "Hello, "]
+        exprCall
+          (exprRef "printfn")
+          [exprStr "World!"]
+        exprInt 0
+      ])
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -273,17 +257,14 @@ let parseAddSubExpr () =
   1 - 2 + 3 - 4
 """
   let expected =
-    [
-      exprLetMain (
-        exprSub
-          (exprAdd
-            (exprSub
-              (exprInt 1)
-              (exprInt 2))
-            (exprInt 3))
-          (exprInt 4)
-      )
-    ]
+    exprLetMain (
+      exprSub
+        (exprAdd
+          (exprSub
+            (exprInt 1)
+            (exprInt 2))
+          (exprInt 3))
+        (exprInt 4))
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -292,25 +273,22 @@ let parseComparisonAndLogicExpr () =
   1 <= 2 && 2 < 3 || 3 > 2 && 2 >= 1
 """
   let expected =
-    [
-      exprLetMain (
-        exprOp Op.Or
-          (exprOp Op.And
-            (exprOp Op.Le
-              (exprInt 1)
-              (exprInt 2))
-            (exprOp Op.Lt
-              (exprInt 2)
-              (exprInt 3)))
-          (exprOp Op.And
-            (exprOp Op.Gt
-              (exprInt 3)
-              (exprInt 2))
-            (exprOp Op.Ge
-              (exprInt 2)
-              (exprInt 1)))
-      )
-    ]
+    exprLetMain (
+      exprOp Op.Or
+        (exprOp Op.And
+          (exprOp Op.Le
+            (exprInt 1)
+            (exprInt 2))
+          (exprOp Op.Lt
+            (exprInt 2)
+            (exprInt 3)))
+        (exprOp Op.And
+          (exprOp Op.Gt
+            (exprInt 3)
+            (exprInt 2))
+          (exprOp Op.Ge
+            (exprInt 2)
+            (exprInt 1))))
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -321,11 +299,10 @@ let parseExprListLiteral () =
   x
 ]"""
   let expected =
-    [
-      exprList [
-        exprCall (exprRef "f") [exprInt 0]
-        exprRef "x"
-      ]]
+    exprList [
+      exprCall (exprRef "f") [exprInt 0]
+      exprRef "x"
+    ]
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -335,11 +312,10 @@ let parseExprCons () =
   :: []
 """
   let expected =
-    [
-      exprCons (exprInt 0)
-        (exprCons (exprInt 1)
-          (exprCons (exprInt 2) exprNil)
-        )]
+    exprCons (exprInt 0)
+      (exprCons (exprInt 1)
+        (exprCons (exprInt 2) exprNil)
+      )
   source |> parseStr |> is expected
 
 [<Fact>]
@@ -355,9 +331,7 @@ type Answer =
       "No", noSerial, false, tyUnit
     ], (1, 5))
   let expected =
-    [
-      HExpr.TyDef ("Answer", noSerial, tyDecl, loc)
-    ]
+    HExpr.TyDef ("Answer", noSerial, tyDecl, loc)
   source |> parseStr |> is expected
 
 [<Fact>]

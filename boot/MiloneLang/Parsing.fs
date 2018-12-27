@@ -581,14 +581,14 @@ let parseModule (boxX: int) tokens =
   | (Token.Module, (_, moduleX))
     :: (Token.Ident _, _)
     :: (Token.Punct "=", _) :: tokens ->
-    parseBindings (moduleX + 1) tokens
+    parseExpr (moduleX + 1) tokens
   | _ ->
-    parseBindings boxX tokens
+    parseExpr boxX tokens
 
 let parseTopLevel tokens =
   match tokens with
   | [] ->
-    [], []
+    hxUnit (0, 0), []
   | (Token.Module, (_, moduleX))
     :: (Token.Ident _, _)
     :: (Token.Rec, _) :: tokens ->
@@ -600,8 +600,8 @@ let parseTopLevel tokens =
     parseModule 0 tokens
 
 /// module = ( 'module' 'rec'? ident bindings / bindings )?
-let parse (tokens: (Token * Loc) list): HExpr list =
-  let exprs, tokens = parseTopLevel tokens
+let parse (tokens: (Token * Loc) list): HExpr =
+  let expr, tokens = parseTopLevel tokens
   if tokens <> [] then
     failwithf "Expected eof but %A" tokens
-  exprs
+  expr
