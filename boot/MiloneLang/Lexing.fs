@@ -137,6 +137,7 @@ let private tokenIdent ident =
   | "else" -> Token.Else
   | "match" -> Token.Match
   | "with" -> Token.With
+  | "as" -> Token.As
   | "when" -> Token.When
   | "rec" -> Token.Rec
   | "private" -> Token.Private

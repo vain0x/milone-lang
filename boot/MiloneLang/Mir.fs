@@ -208,6 +208,13 @@ let mirifyPatTuple ctx endLabel itemPats itemTys expr loc =
       failwith "Never"
   go true ctx 0 itemPats itemTys
 
+let mirifyPatAs ctx endLabel pat serial expr loc =
+  let ty, _ = patExtract pat
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (serial, MInit.Expr expr, ty, loc))
+  let expr = MExpr.Ref (serial, 0, ty, loc)
+  let covers, ctx = mirifyPat ctx endLabel pat expr
+  covers, ctx
+
 /// Processes pattern matching
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
@@ -229,6 +236,8 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | HPat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->
     mirifyPatTuple ctx endLabel itemPats itemTys expr loc
+  | HPat.As (pat, _, serial, loc) ->
+    mirifyPatAs ctx endLabel pat serial expr loc
   | HPat.Or _ ->
     failwith "Unimpl nested OR pattern."
   | HPat.Call _ ->
@@ -265,6 +274,8 @@ let patsIsCovering pats =
       false
     | HPat.Tuple (itemPats, _, _) ->
       itemPats |> List.forall go
+    | HPat.As (pat, _, _, _) ->
+      go pat
     | HPat.Anno (pat, _, _) ->
       go pat
     | HPat.Or (first, second, _, _) ->

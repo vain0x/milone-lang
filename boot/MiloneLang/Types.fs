@@ -30,6 +30,7 @@ namespace rec MiloneLang
     | Else
     | Match
     | With
+    | As
     | When
     /// `(`
     | ParenL
@@ -190,6 +191,8 @@ namespace rec MiloneLang
       of HPat * HPat * itemTy:Ty * Loc
     | Tuple
       of HPat list * tupleTy:Ty * Loc
+    | As
+      of HPat * ident:string * serial:int * Loc
     /// Type annotation pattern, e.g. `x : int`.
     | Anno
       of HPat * Ty * Loc

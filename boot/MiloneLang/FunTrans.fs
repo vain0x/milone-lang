@@ -141,6 +141,10 @@ let declosurePat (pat, ctx) =
     let callee, ctx = (callee, ctx) |> declosurePat
     let args, ctx = (args, ctx) |> stMap declosurePat
     HPat.Call (callee, args, ty, loc), ctx
+  | HPat.As (pat, ident, serial, loc) ->
+    let ctx = ctx |> ctxAddLocal serial
+    let pat, ctx = (pat, ctx) |> declosurePat
+    HPat.As (pat, ident, serial, loc), ctx
   | HPat.Anno (pat, ty, loc) ->
     let pat, ctx = (pat, ctx) |> declosurePat
     HPat.Anno (pat, ty, loc), ctx

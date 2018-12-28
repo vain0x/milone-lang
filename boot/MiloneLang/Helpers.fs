@@ -79,6 +79,9 @@ let rec patExtract (pat: HPat): Ty * Loc =
     Ty.List itemTy, a
   | HPat.Tuple (_, ty, a) ->
     ty, a
+  | HPat.As (pat, _, _, a) ->
+    let ty, _ = patExtract pat
+    ty, a
   | HPat.Anno (_, ty, a) ->
     ty, a
   | HPat.Or (_, _, ty, a) ->
@@ -99,6 +102,8 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Cons (go l, go r, f itemTy, g a)
     | HPat.Tuple (itemPats, ty, a) ->
       HPat.Tuple (List.map go itemPats, f ty, g a)
+    | HPat.As (pat, ident, serial, a) ->
+      HPat.As (go pat, ident, serial, g a)
     | HPat.Anno (pat, ty, a) ->
       HPat.Anno (go pat, f ty, g a)
     | HPat.Or (first, second, ty, a) ->
@@ -136,6 +141,12 @@ let patNormalize pat =
             ))
       gogo itemPats |> List.map
         (fun itemPats -> HPat.Tuple (itemPats, ty, loc))
+    | HPat.As (innerPat, _, _, _) ->
+      match go innerPat with
+      | [_] ->
+        [pat]
+      | _ ->
+        failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
     | HPat.Anno (pat, annoTy, loc) ->
       go pat |> List.map
         (fun pat -> HPat.Anno (pat, annoTy, loc))

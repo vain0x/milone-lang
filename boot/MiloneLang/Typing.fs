@@ -379,6 +379,10 @@ let inferPat ctx pat ty =
     inferPatCons ctx l r loc ty
   | HPat.Tuple (items, _, loc) ->
     inferPatTuple ctx items loc ty
+  | HPat.As (pat, ident, _, loc) ->
+    let serial, ctx = ctxFreshVar ctx ident ty loc
+    let pat, ctx = inferPat ctx pat ty
+    HPat.As (pat, ident, serial, loc), ctx
   | HPat.Anno (pat, annoTy, loc) ->
     let annoTy, ctx = ctxResolveTy ctx annoTy
     let ctx = unifyTy ctx loc ty annoTy

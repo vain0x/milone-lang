@@ -214,7 +214,7 @@ let parsePatCons boxX tokens =
   | l, tokens ->
     l, tokens
 
-/// pat-anno = pat-cons ( ':' ty )?
+/// pat-anno = pat-as ( ':' ty )?
 let parsePatAnno boxX tokens =
   match parsePatCons boxX tokens with
   | pat, (Token.Colon, loc) :: tokens ->
@@ -240,8 +240,16 @@ let parsePatTuple boxX tokens =
   | itemPats, tokens ->
     HPat.Tuple (first :: itemPats, noTy, loc), tokens
 
-let parsePatOr boxX tokens =
+/// pat-as = pat-tuple ( 'as' identifer )?
+let parsePatAs boxX tokens =
   match parsePatTuple boxX tokens with
+  | pat, (Token.As, loc) :: (Token.Ident ident, _) :: tokens ->
+    HPat.As (pat, ident, noSerial, loc), tokens
+  | pat, tokens ->
+    pat, tokens
+
+let parsePatOr boxX tokens =
+  match parsePatAs boxX tokens with
   | first, (Token.Pipe, loc) :: tokens ->
     let second, tokens = parsePatOr boxX tokens
     HPat.Or (first, second, noTy, loc), tokens
