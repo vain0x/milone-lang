@@ -230,7 +230,7 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   | HPat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->
     mirifyPatTuple ctx endLabel itemPats itemTys expr loc
   | HPat.Or _ ->
-    failwith "Unimpl nested or pattern."
+    failwith "Unimpl nested OR pattern."
   | HPat.Call _ ->
     failwith "Never: Call pattern incorrect."
   | HPat.Tuple _ ->

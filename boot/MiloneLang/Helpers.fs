@@ -105,21 +105,45 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Or (go first, go second, f ty, g a)
   go pat
 
+/// Converts a pattern in disjunctive normal form.
+/// E.g. `A, [B | C]` → `(A | [B]), (A | [C])`
 let patNormalize pat =
-  // FIXME: Support nested OR pattern.
-  let rec go pat acc =
+  let rec go pat =
     match pat with
     | HPat.Lit _
     | HPat.Ref _
-    | HPat.Nil _
-    | HPat.Call _
-    | HPat.Cons _
-    | HPat.Tuple _
-    | HPat.Anno _  ->
-      pat :: acc
+    | HPat.Nil _ ->
+      [pat]
+    | HPat.Call (callee, [arg], ty, loc) ->
+      go callee |> List.collect (fun callee ->
+        go arg |> List.map (fun arg ->
+          HPat.Call (callee, [arg], ty, loc)
+        ))
+    | HPat.Cons (l, r, ty, loc) ->
+      go l |> List.collect (fun l ->
+        go r |> List.map (fun r ->
+          HPat.Cons (l, r, ty, loc)
+        ))
+    | HPat.Tuple (itemPats, ty, loc) ->
+      let rec gogo itemPats =
+        match itemPats with
+        | [] -> [[]]
+        | itemPat :: itemPats ->
+          let itemPat = go itemPat
+          gogo itemPats |> List.collect (fun itemPats ->
+            itemPat |> List.map (fun itemPat ->
+              itemPat :: itemPats
+            ))
+      gogo itemPats |> List.map
+        (fun itemPats -> HPat.Tuple (itemPats, ty, loc))
+    | HPat.Anno (pat, annoTy, loc) ->
+      go pat |> List.map
+        (fun pat -> HPat.Anno (pat, annoTy, loc))
     | HPat.Or (first, second, _, _) ->
-      acc |> go first |> go second
-  [] |> go pat |> List.rev
+      List.append (go first) (go second)
+    | HPat.Call _ ->
+      failwith "Unimpl"
+  go pat
 
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
