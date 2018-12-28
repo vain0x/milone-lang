@@ -252,43 +252,147 @@ let mirifyBlock ctx expr =
   let ctx = ctxRollBack ctx blockCtx
   stmts, expr, ctx
 
+/// Gets if the target must match with any of the patterns.
+let patsIsCovering pats =
+  let rec go pat =
+    match pat with
+    | HPat.Ref _ ->
+      true
+    | HPat.Lit _
+    | HPat.Nil _
+    | HPat.Cons _
+    | HPat.Call _ ->
+      false
+    | HPat.Tuple (itemPats, _, _) ->
+      itemPats |> List.forall go
+    | HPat.Anno (pat, _, _) ->
+      go pat
+    | HPat.Or (first, second, _, _) ->
+      go first || go second
+  List.exists go pats
+
 let mirifyExprMatch ctx target arms ty loc =
+  let noLabel = "<NEVER>"
   let temp, tempSet, ctx = ctxLetFreshVar ctx "match" ty loc
   let endLabelStmt, endLabel, ctx = ctxFreshLabel ctx "end_match" loc
 
   let target, ctx = mirifyExpr ctx target
 
-  // Normalize arms by duplicating bodies for each OR pattern.
-  let arms =
-    arms |> List.collect (fun (pat, guard, body) ->
-      patNormalize pat |> List.map (fun pat -> (pat, guard, body))
-    )
+  let isCovering =
+    arms
+    |> List.choose
+      (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
+    |> patsIsCovering
 
-  let rec go allCovered ctx arms =
+  /// By walking over arms, calculates what kind of MIR instructions to emit.
+  let rec goArms ctx acc firstPat arms =
     match arms with
     | (pat, guard, body) :: arms ->
-      let nextLabelStmt, nextLabel, ctx = ctxFreshLabel ctx "next" loc
+      let pats = patNormalize pat
+      let disjCount = pats |> List.length
 
-      // Perform pattern matching. Go to the next arm on failure.
-      let covered, ctx = mirifyPat ctx nextLabel pat target
+      // No need to jump to body from pattern if no OR patterns.
+      let needsJump = disjCount > 1
+
+      let bodyLabel, ctx =
+        if not needsJump then noLabel, ctx else
+        let _, bodyLabel, ctx = ctxFreshLabel ctx "match_body" loc
+        bodyLabel, ctx
+
+      let rec goPats ctx acc firstPat pats =
+        match pats with
+        | pat :: pats ->
+          // Label on the pattern.
+          // The first pattern's label is unnecessary and not created.
+          let acc, ctx =
+            if firstPat then acc, ctx else
+            let _, patLabel, ctx = ctxFreshLabel ctx "next" loc
+            MatchIR.PatLabel patLabel :: acc, ctx
+          let acc =
+            MatchIR.Pat (pat, noLabel) :: acc
+          let acc =
+            if not needsJump then acc else
+            MatchIR.GoBody bodyLabel :: acc
+
+          goPats ctx acc false pats
+        | [] ->
+          acc, ctx
+
+      let acc, ctx = goPats ctx acc firstPat pats
+
+      let acc =
+        if not needsJump then acc else
+        MatchIR.BodyLabel bodyLabel :: acc
+      let acc = MatchIR.Guard (guard, noLabel) :: acc
+      let acc = MatchIR.Body body :: acc
+      goArms ctx acc false arms
+    | [] ->
+      let _, exhaustLabel, ctx = ctxFreshLabel ctx "next" loc
+      let acc = MatchIR.PatLabel exhaustLabel :: acc
+      acc, ctx
+
+  /// Fixes up instructions.
+  /// 1. By walking over instructions in the reversed order,
+  /// fill `nextLabel` fields.
+  /// 2. Remove trivial guards.
+  let rec fixUp acc nextLabel instructionsRev =
+    match instructionsRev with
+    | MatchIR.PatLabel patLabel as instruction :: rest ->
+      // The leading instructions refers to this label as next one.
+      fixUp (instruction :: acc) patLabel rest
+    | MatchIR.Pat (pat, _) :: rest ->
+      let acc = MatchIR.Pat (pat, nextLabel) :: acc
+      fixUp acc nextLabel rest
+    | MatchIR.Guard (guard, _) :: rest ->
+      let acc =
+        // Trivial guard is unnecessary.
+        if guard |> hxIsAlwaysTrue then acc else
+        MatchIR.Guard (guard, nextLabel) :: acc
+      fixUp acc nextLabel rest
+    | instruction :: rest ->
+      fixUp (instruction :: acc) nextLabel rest
+    | [] ->
+      acc
+
+  /// Emits MIR instructions based on matching IRs.
+  let rec emit ctx instructions =
+    match instructions with
+    | MatchIR.PatLabel patLabel :: rest ->
+      let ctx = ctxAddStmt ctx (MStmt.Label (patLabel, loc))
+      emit ctx rest
+    | MatchIR.Pat (pat, nextLabel) :: rest ->
+      // Perform pattern matching. Go to the next pattern on failure.
+      let _, ctx = mirifyPat ctx nextLabel pat target
+      emit ctx rest
+    | MatchIR.GoBody bodyLabel :: rest ->
+      let ctx = ctxAddStmt ctx (MStmt.Goto (bodyLabel, loc))
+      emit ctx rest
+    | MatchIR.BodyLabel bodyLabel :: rest ->
+      let ctx = ctxAddStmt ctx (MStmt.Label (bodyLabel, loc))
+      emit ctx rest
+    | MatchIR.Guard (guard, nextLabel) :: rest ->
       let ctx =
         if guard |> hxIsAlwaysTrue then ctx else
         let guard, ctx = mirifyExpr ctx guard
         ctxAddStmt ctx (MStmt.GotoUnless (guard, nextLabel, loc))
-
+      emit ctx rest
+    | MatchIR.Body body :: rest ->
+      // Enter into the body.
       let body, ctx = mirifyExpr ctx body
+      // Leave the match.
       let ctx = ctxAddStmt ctx (tempSet body)
       let ctx = ctxAddStmt ctx (MStmt.Goto (endLabel, loc))
-      let ctx = ctxAddStmt ctx nextLabelStmt
-      go (allCovered || covered) ctx arms
+      emit ctx rest
     | [] ->
-      // Exhaust case (unless covered).
-      if allCovered
-      then ctx
-      else ctxAddStmt ctx (MStmt.Exit (MExpr.Lit (Lit.Int 1, loc), loc))
-  let ctx = go false ctx arms
+      // Abort if exhaust.
+      if isCovering then ctx else
+      let abortStmt = MStmt.Exit (MExpr.Lit (Lit.Int 1, loc), loc)
+      let ctx = ctxAddStmt ctx abortStmt
+      ctx
 
-  // End of match.
+  let instructionsRev, ctx = goArms ctx [] true arms
+  let instructions = fixUp [] endLabel instructionsRev
+  let ctx = emit ctx instructions
   let ctx = ctxAddStmt ctx endLabelStmt
 
   temp, ctx

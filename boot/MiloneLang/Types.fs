@@ -298,6 +298,22 @@ namespace rec MiloneLang
     /// Get a char.
     | StrIndex
 
+  /// Intermediate language between HIR and MIR for match expressions.
+  [<RequireQualifiedAccess>]
+  type MatchIR =
+    | PatLabel
+      of string
+    | Pat
+      of HPat * nextLabel:string
+    | GoBody
+      of bodyLabel:string
+    | BodyLabel
+      of bodyLabel:string
+    | Guard
+      of guard:HExpr * nextLabel:string
+    | Body
+      of body:HExpr
+
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
   type MExpr =
