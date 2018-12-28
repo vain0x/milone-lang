@@ -141,9 +141,17 @@ let declosurePat (pat, ctx) =
     let callee, ctx = (callee, ctx) |> declosurePat
     let args, ctx = (args, ctx) |> stMap declosurePat
     HPat.Call (callee, args, ty, loc), ctx
+  | HPat.As (pat, ident, serial, loc) ->
+    let ctx = ctx |> ctxAddLocal serial
+    let pat, ctx = (pat, ctx) |> declosurePat
+    HPat.As (pat, ident, serial, loc), ctx
   | HPat.Anno (pat, ty, loc) ->
     let pat, ctx = (pat, ctx) |> declosurePat
     HPat.Anno (pat, ty, loc), ctx
+  | HPat.Or (first, second, ty, loc) ->
+    let first, ctx = (first, ctx) |> declosurePat
+    let second, ctx = (second, ctx) |> declosurePat
+    HPat.Or (first, second, ty, loc), ctx
 
 let declosureExprRefAsCallee serial (expr, ctx) =
   let ctx = ctx |> ctxAddRef serial
@@ -270,10 +278,11 @@ let declosureExprInf ctx infOp items ty loc =
 
 let declosureExprMatch target arms ty loc ctx =
   let target, ctx = declosureExpr (target, ctx)
-  let go ((pat, body), ctx) =
+  let go ((pat, guard, body), ctx) =
     let pat, ctx = declosurePat (pat, ctx)
+    let guard, ctx = declosureExpr (guard, ctx)
     let body, ctx = declosureExpr (body, ctx)
-    (pat, body), ctx
+    (pat, guard, body), ctx
   let arms, ctx = (arms, ctx) |> stMap go
   HExpr.Match (target, arms, ty, loc), ctx
 
@@ -565,10 +574,11 @@ let unetaExpr (expr, ctx) =
     unetaRef expr serial calleeLoc ctx
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> unetaExpr
-    let arms, ctx = (arms, ctx) |> stMap (fun ((pat, body), ctx) ->
+    let arms, ctx = (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
       let pat, ctx = (pat, ctx) |> unetaPat
+      let guard, ctx = (guard, ctx) |> unetaExpr
       let body, ctx = (body, ctx) |> unetaExpr
-      (pat, body), ctx)
+      (pat, guard, body), ctx)
     HExpr.Match (target, arms, ty, loc), ctx
   | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = unetaExpr (subject, ctx)

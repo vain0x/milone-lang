@@ -214,7 +214,7 @@ let parsePatCons boxX tokens =
   | l, tokens ->
     l, tokens
 
-/// pat-anno = pat-cons ( ':' ty )?
+/// pat-anno = pat-as ( ':' ty )?
 let parsePatAnno boxX tokens =
   match parsePatCons boxX tokens with
   | pat, (Token.Colon, loc) :: tokens ->
@@ -240,12 +240,28 @@ let parsePatTuple boxX tokens =
   | itemPats, tokens ->
     HPat.Tuple (first :: itemPats, noTy, loc), tokens
 
-/// pat = pat-tuple
+/// pat-as = pat-tuple ( 'as' identifer )?
+let parsePatAs boxX tokens =
+  match parsePatTuple boxX tokens with
+  | pat, (Token.As, loc) :: (Token.Ident ident, _) :: tokens ->
+    HPat.As (pat, ident, noSerial, loc), tokens
+  | pat, tokens ->
+    pat, tokens
+
+let parsePatOr boxX tokens =
+  match parsePatAs boxX tokens with
+  | first, (Token.Pipe, loc) :: tokens ->
+    let second, tokens = parsePatOr boxX tokens
+    HPat.Or (first, second, noTy, loc), tokens
+  | first, tokens ->
+    first, tokens
+
+/// pat = pat-or
 let parsePat boxX tokens: HPat * _ list =
   if not (nextInside boxX tokens && leadsPat tokens) then
     parseError "Expected a pattern" tokens
   else
-    parsePatTuple boxX tokens
+    parsePatOr boxX tokens
 
 let parsePats boxX (tokens: _ list): HPat list * _ list =
   let rec go acc (tokens: _ list) =
@@ -295,15 +311,20 @@ let parseMatchArm boxX tokens =
     match tokens with
     | (Token.Pipe, _) :: tokens -> tokens
     | _ -> tokens
-  let pat, tokens =
+  let pat, guard, tokens =
     match parsePat boxX tokens with
-    | pat, (Token.Arrow, _) :: tokens ->
-      pat, tokens
-    | _, tokens ->
-      parseError "Expected '->'" tokens
+    | pat, (Token.When, _) :: tokens ->
+      let guard, tokens = parseExpr1 boxX tokens
+      pat, guard, tokens
+    | pat, tokens ->
+      pat, hxTrue (0, 0), tokens
+  let tokens =
+    match tokens with
+    | (Token.Arrow, _) :: tokens -> tokens
+    | _ -> parseError "Expected '->'" tokens
   let body, tokens =
     parseExpr boxX tokens
-  (pat, body), tokens
+  (pat, guard, body), tokens
 
 let parseMatch boxX matchLoc tokens =
   let target, tokens =

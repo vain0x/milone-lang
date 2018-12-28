@@ -379,11 +379,20 @@ let inferPat ctx pat ty =
     inferPatCons ctx l r loc ty
   | HPat.Tuple (items, _, loc) ->
     inferPatTuple ctx items loc ty
+  | HPat.As (pat, ident, _, loc) ->
+    let serial, ctx = ctxFreshVar ctx ident ty loc
+    let pat, ctx = inferPat ctx pat ty
+    HPat.As (pat, ident, serial, loc), ctx
   | HPat.Anno (pat, annoTy, loc) ->
     let annoTy, ctx = ctxResolveTy ctx annoTy
     let ctx = unifyTy ctx loc ty annoTy
     let pat, ctx = inferPat ctx pat annoTy
     pat, ctx
+  | HPat.Or (first, second, _, loc) ->
+    // FIXME: Error if two patterns introduce different bindings.
+    let first, ctx = inferPat ctx first ty
+    let second, ctx = inferPat ctx second ty
+    HPat.Or (first, second, ty, loc), ctx
 
 let inferRef (ctx: TyCtx) ident loc ty =
   match ctxResolveVar ctx ident, ident with
@@ -457,12 +466,13 @@ let inferMatch ctx target arms loc resultTy =
   let target, ctx = inferExpr ctx target targetTy
 
   let arms, ctx =
-    (arms, ctx) |> stMap (fun ((pat, body), ctx) ->
+    (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
       let baseCtx = ctx
       let pat, ctx = inferPat ctx pat targetTy
+      let guard, ctx = inferExpr ctx guard Ty.Bool
       let body, ctx = inferExpr ctx body resultTy
       let ctx = ctxRollback baseCtx ctx
-      (pat, body), ctx
+      (pat, guard, body), ctx
     )
 
   HExpr.Match (target, arms, resultTy, loc), ctx

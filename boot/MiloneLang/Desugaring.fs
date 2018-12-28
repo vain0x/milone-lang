@@ -18,10 +18,11 @@ let onPats pats =
 
 /// `if p then t else e` ==> `match p with true -> t | false -> e`
 let onIf pred thenCl elseCl ty loc =
+  let trueLit = hxTrue (0, 0)
   let arms =
     [
-      HPat.Lit (Lit.Bool true, loc), onExpr thenCl
-      HPat.Lit (Lit.Bool false, loc), onExpr elseCl
+      HPat.Lit (Lit.Bool true, loc), trueLit, onExpr thenCl
+      HPat.Lit (Lit.Bool false, loc), trueLit, onExpr elseCl
     ]
   HExpr.Match (onExpr pred, arms, ty, loc)
 
@@ -29,8 +30,8 @@ let rec onArms arms =
   match arms with
   | [] ->
     []
-  | (pat, body) :: arms ->
-    (onPat pat, onExpr body) :: onArms arms
+  | (pat, guard, body) :: arms ->
+    (onPat pat, onExpr guard, onExpr body) :: onArms arms
 
 let rec onExprOp op l r ty loc =
   match op with

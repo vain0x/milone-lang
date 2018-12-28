@@ -65,7 +65,7 @@ let rec rollFunTy ty =
       n, List.rev acc, tTy
   go 0 [] ty
 
-let patExtract (pat: HPat): Ty * Loc =
+let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HPat.Lit (lit, a) ->
     litTy lit, a
@@ -79,7 +79,12 @@ let patExtract (pat: HPat): Ty * Loc =
     Ty.List itemTy, a
   | HPat.Tuple (_, ty, a) ->
     ty, a
+  | HPat.As (pat, _, _, a) ->
+    let ty, _ = patExtract pat
+    ty, a
   | HPat.Anno (_, ty, a) ->
+    ty, a
+  | HPat.Or (_, _, ty, a) ->
     ty, a
 
 let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
@@ -97,8 +102,58 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Cons (go l, go r, f itemTy, g a)
     | HPat.Tuple (itemPats, ty, a) ->
       HPat.Tuple (List.map go itemPats, f ty, g a)
+    | HPat.As (pat, ident, serial, a) ->
+      HPat.As (go pat, ident, serial, g a)
     | HPat.Anno (pat, ty, a) ->
       HPat.Anno (go pat, f ty, g a)
+    | HPat.Or (first, second, ty, a) ->
+      HPat.Or (go first, go second, f ty, g a)
+  go pat
+
+/// Converts a pattern in disjunctive normal form.
+/// E.g. `A, [B | C]` → `(A | [B]), (A | [C])`
+let patNormalize pat =
+  let rec go pat =
+    match pat with
+    | HPat.Lit _
+    | HPat.Ref _
+    | HPat.Nil _ ->
+      [pat]
+    | HPat.Call (callee, [arg], ty, loc) ->
+      go callee |> List.collect (fun callee ->
+        go arg |> List.map (fun arg ->
+          HPat.Call (callee, [arg], ty, loc)
+        ))
+    | HPat.Cons (l, r, ty, loc) ->
+      go l |> List.collect (fun l ->
+        go r |> List.map (fun r ->
+          HPat.Cons (l, r, ty, loc)
+        ))
+    | HPat.Tuple (itemPats, ty, loc) ->
+      let rec gogo itemPats =
+        match itemPats with
+        | [] -> [[]]
+        | itemPat :: itemPats ->
+          let itemPat = go itemPat
+          gogo itemPats |> List.collect (fun itemPats ->
+            itemPat |> List.map (fun itemPat ->
+              itemPat :: itemPats
+            ))
+      gogo itemPats |> List.map
+        (fun itemPats -> HPat.Tuple (itemPats, ty, loc))
+    | HPat.As (innerPat, _, _, _) ->
+      match go innerPat with
+      | [_] ->
+        [pat]
+      | _ ->
+        failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
+    | HPat.Anno (pat, annoTy, loc) ->
+      go pat |> List.map
+        (fun pat -> HPat.Anno (pat, annoTy, loc))
+    | HPat.Or (first, second, _, _) ->
+      List.append (go first) (go second)
+    | HPat.Call _ ->
+      failwith "Unimpl"
   go pat
 
 let exprExtract (expr: HExpr): Ty * Loc =
@@ -138,7 +193,9 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HExpr.If (pred, thenCl, elseCl, ty, a) ->
       HExpr.If (go pred, go thenCl, go elseCl, f ty, g a)
     | HExpr.Match (target, arms, ty, a) ->
-      let arms = arms |> List.map (fun (pat, body) -> goPat pat, go body)
+      let arms =
+        arms |> List.map (fun (pat, guard, body) ->
+          goPat pat, go guard, go body)
       HExpr.Match (go target, arms, f ty, g a)
     | HExpr.Nav (sub, mes, ty, a) ->
       HExpr.Nav (go sub, mes, f ty, g a)

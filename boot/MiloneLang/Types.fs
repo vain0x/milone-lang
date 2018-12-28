@@ -30,6 +30,8 @@ namespace rec MiloneLang
     | Else
     | Match
     | With
+    | As
+    | When
     /// `(`
     | ParenL
     /// `)`
@@ -189,9 +191,13 @@ namespace rec MiloneLang
       of HPat * HPat * itemTy:Ty * Loc
     | Tuple
       of HPat list * tupleTy:Ty * Loc
+    | As
+      of HPat * ident:string * serial:int * Loc
     /// Type annotation pattern, e.g. `x : int`.
     | Anno
       of HPat * Ty * Loc
+    | Or
+      of HPat * HPat * Ty * Loc
 
   /// Literal of primitive value.
   [<RequireQualifiedAccess>]
@@ -236,7 +242,7 @@ namespace rec MiloneLang
     | If
       of pred:HExpr * thenCl:HExpr * elseCl:HExpr * Ty * Loc
     | Match
-      of target:HExpr * (HPat * HExpr) list * Ty * Loc
+      of target:HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
     /// `s.m`
     | Nav
       of subject:HExpr * message:string * Ty * Loc
@@ -294,6 +300,22 @@ namespace rec MiloneLang
     | StrCmp
     /// Get a char.
     | StrIndex
+
+  /// Intermediate language between HIR and MIR for match expressions.
+  [<RequireQualifiedAccess>]
+  type MatchIR =
+    | PatLabel
+      of string
+    | Pat
+      of HPat * nextLabel:string
+    | GoBody
+      of bodyLabel:string
+    | BodyLabel
+      of bodyLabel:string
+    | Guard
+      of guard:HExpr * nextLabel:string
+    | Body
+      of body:HExpr
 
   /// Expression in middle IR.
   [<RequireQualifiedAccess>]
