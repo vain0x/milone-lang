@@ -133,6 +133,11 @@ let cmpExpr ctx (op: MOp) (l: MExpr) r (ty: Ty) loc =
   | _ ->
     failwith "unimpl"
 
+let hxIsAlwaysTrue expr =
+  match expr with
+  | HExpr.Lit (Lit.Bool true, _) -> true
+  | _ -> false
+
 let mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MExpr.Lit (lit, loc)
   let eqExpr, ctx = cmpExpr ctx MOp.Eq expr litExpr Ty.Bool loc
@@ -253,9 +258,16 @@ let mirifyExprMatch ctx target arms ty loc =
 
   let rec go allCovered ctx arms =
     match arms with
-    | (pat, body) :: arms ->
+    | (pat, guard, body) :: arms ->
       let nextLabelStmt, nextLabel, ctx = ctxFreshLabel ctx "next" loc
+
+      // Perform pattern matching. Go to the next arm on failure.
       let covered, ctx = mirifyPat ctx nextLabel pat target
+      let ctx =
+        if guard |> hxIsAlwaysTrue then ctx else
+        let guard, ctx = mirifyExpr ctx guard
+        ctxAddStmt ctx (MStmt.GotoUnless (guard, nextLabel, loc))
+
       let body, ctx = mirifyExpr ctx body
       let ctx = ctxAddStmt ctx (tempSet body)
       let ctx = ctxAddStmt ctx (MStmt.Goto (endLabel, loc))

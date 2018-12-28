@@ -65,7 +65,7 @@ let rec rollFunTy ty =
       n, List.rev acc, tTy
   go 0 [] ty
 
-let patExtract (pat: HPat): Ty * Loc =
+let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HPat.Lit (lit, a) ->
     litTy lit, a
@@ -138,7 +138,9 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HExpr.If (pred, thenCl, elseCl, ty, a) ->
       HExpr.If (go pred, go thenCl, go elseCl, f ty, g a)
     | HExpr.Match (target, arms, ty, a) ->
-      let arms = arms |> List.map (fun (pat, body) -> goPat pat, go body)
+      let arms =
+        arms |> List.map (fun (pat, guard, body) ->
+          goPat pat, go guard, go body)
       HExpr.Match (go target, arms, f ty, g a)
     | HExpr.Nav (sub, mes, ty, a) ->
       HExpr.Nav (go sub, mes, f ty, g a)

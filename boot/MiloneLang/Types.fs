@@ -30,6 +30,7 @@ namespace rec MiloneLang
     | Else
     | Match
     | With
+    | When
     /// `(`
     | ParenL
     /// `)`
@@ -236,7 +237,7 @@ namespace rec MiloneLang
     | If
       of pred:HExpr * thenCl:HExpr * elseCl:HExpr * Ty * Loc
     | Match
-      of target:HExpr * (HPat * HExpr) list * Ty * Loc
+      of target:HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
     /// `s.m`
     | Nav
       of subject:HExpr * message:string * Ty * Loc

@@ -270,10 +270,11 @@ let declosureExprInf ctx infOp items ty loc =
 
 let declosureExprMatch target arms ty loc ctx =
   let target, ctx = declosureExpr (target, ctx)
-  let go ((pat, body), ctx) =
+  let go ((pat, guard, body), ctx) =
     let pat, ctx = declosurePat (pat, ctx)
+    let guard, ctx = declosureExpr (guard, ctx)
     let body, ctx = declosureExpr (body, ctx)
-    (pat, body), ctx
+    (pat, guard, body), ctx
   let arms, ctx = (arms, ctx) |> stMap go
   HExpr.Match (target, arms, ty, loc), ctx
 
@@ -565,10 +566,11 @@ let unetaExpr (expr, ctx) =
     unetaRef expr serial calleeLoc ctx
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> unetaExpr
-    let arms, ctx = (arms, ctx) |> stMap (fun ((pat, body), ctx) ->
+    let arms, ctx = (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
       let pat, ctx = (pat, ctx) |> unetaPat
+      let guard, ctx = (guard, ctx) |> unetaExpr
       let body, ctx = (body, ctx) |> unetaExpr
-      (pat, body), ctx)
+      (pat, guard, body), ctx)
     HExpr.Match (target, arms, ty, loc), ctx
   | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = unetaExpr (subject, ctx)

@@ -295,15 +295,20 @@ let parseMatchArm boxX tokens =
     match tokens with
     | (Token.Pipe, _) :: tokens -> tokens
     | _ -> tokens
-  let pat, tokens =
+  let pat, guard, tokens =
     match parsePat boxX tokens with
-    | pat, (Token.Arrow, _) :: tokens ->
-      pat, tokens
-    | _, tokens ->
-      parseError "Expected '->'" tokens
+    | pat, (Token.When, _) :: tokens ->
+      let guard, tokens = parseExpr1 boxX tokens
+      pat, guard, tokens
+    | pat, tokens ->
+      pat, hxTrue (0, 0), tokens
+  let tokens =
+    match tokens with
+    | (Token.Arrow, _) :: tokens -> tokens
+    | _ -> parseError "Expected '->'" tokens
   let body, tokens =
     parseExpr boxX tokens
-  (pat, body), tokens
+  (pat, guard, body), tokens
 
 let parseMatch boxX matchLoc tokens =
   let target, tokens =

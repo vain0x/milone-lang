@@ -457,12 +457,13 @@ let inferMatch ctx target arms loc resultTy =
   let target, ctx = inferExpr ctx target targetTy
 
   let arms, ctx =
-    (arms, ctx) |> stMap (fun ((pat, body), ctx) ->
+    (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
       let baseCtx = ctx
       let pat, ctx = inferPat ctx pat targetTy
+      let guard, ctx = inferExpr ctx guard Ty.Bool
       let body, ctx = inferExpr ctx body resultTy
       let ctx = ctxRollback baseCtx ctx
-      (pat, body), ctx
+      (pat, guard, body), ctx
     )
 
   HExpr.Match (target, arms, resultTy, loc), ctx
