@@ -240,12 +240,20 @@ let parsePatTuple boxX tokens =
   | itemPats, tokens ->
     HPat.Tuple (first :: itemPats, noTy, loc), tokens
 
-/// pat = pat-tuple
+let parsePatOr boxX tokens =
+  match parsePatTuple boxX tokens with
+  | first, (Token.Pipe, loc) :: tokens ->
+    let second, tokens = parsePatOr boxX tokens
+    HPat.Or (first, second, noTy, loc), tokens
+  | first, tokens ->
+    first, tokens
+
+/// pat = pat-or
 let parsePat boxX tokens: HPat * _ list =
   if not (nextInside boxX tokens && leadsPat tokens) then
     parseError "Expected a pattern" tokens
   else
-    parsePatTuple boxX tokens
+    parsePatOr boxX tokens
 
 let parsePats boxX (tokens: _ list): HPat list * _ list =
   let rec go acc (tokens: _ list) =

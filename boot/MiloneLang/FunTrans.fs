@@ -144,6 +144,10 @@ let declosurePat (pat, ctx) =
   | HPat.Anno (pat, ty, loc) ->
     let pat, ctx = (pat, ctx) |> declosurePat
     HPat.Anno (pat, ty, loc), ctx
+  | HPat.Or (first, second, ty, loc) ->
+    let first, ctx = (first, ctx) |> declosurePat
+    let second, ctx = (second, ctx) |> declosurePat
+    HPat.Or (first, second, ty, loc), ctx
 
 let declosureExprRefAsCallee serial (expr, ctx) =
   let ctx = ctx |> ctxAddRef serial

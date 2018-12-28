@@ -1,0 +1,11 @@
+// Simple case.
+let isZeroOrOne x =
+  match x with
+  | 0
+  | 1 -> true
+  | _ -> false
+
+let main _ =
+  if not (isZeroOrOne 0 && isZeroOrOne 1) then exit 1
+  if isZeroOrOne 2 then exit 1
+  0

@@ -384,6 +384,11 @@ let inferPat ctx pat ty =
     let ctx = unifyTy ctx loc ty annoTy
     let pat, ctx = inferPat ctx pat annoTy
     pat, ctx
+  | HPat.Or (first, second, _, loc) ->
+    // FIXME: Error if two patterns introduce different bindings.
+    let first, ctx = inferPat ctx first ty
+    let second, ctx = inferPat ctx second ty
+    HPat.Or (first, second, ty, loc), ctx
 
 let inferRef (ctx: TyCtx) ident loc ty =
   match ctxResolveVar ctx ident, ident with

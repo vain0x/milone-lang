@@ -193,6 +193,8 @@ namespace rec MiloneLang
     /// Type annotation pattern, e.g. `x : int`.
     | Anno
       of HPat * Ty * Loc
+    | Or
+      of HPat * HPat * Ty * Loc
 
   /// Literal of primitive value.
   [<RequireQualifiedAccess>]

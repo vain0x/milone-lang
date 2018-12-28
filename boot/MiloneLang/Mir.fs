@@ -229,6 +229,8 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | HPat.Tuple (itemPats, Ty.Tuple itemTys, loc) ->
     mirifyPatTuple ctx endLabel itemPats itemTys expr loc
+  | HPat.Or _ ->
+    failwith "Unimpl nested or pattern."
   | HPat.Call _ ->
     failwith "Never: Call pattern incorrect."
   | HPat.Tuple _ ->
@@ -255,6 +257,12 @@ let mirifyExprMatch ctx target arms ty loc =
   let endLabelStmt, endLabel, ctx = ctxFreshLabel ctx "end_match" loc
 
   let target, ctx = mirifyExpr ctx target
+
+  // Normalize arms by duplicating bodies for each OR pattern.
+  let arms =
+    arms |> List.collect (fun (pat, guard, body) ->
+      patNormalize pat |> List.map (fun pat -> (pat, guard, body))
+    )
 
   let rec go allCovered ctx arms =
     match arms with

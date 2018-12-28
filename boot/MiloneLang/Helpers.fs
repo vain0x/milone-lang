@@ -81,6 +81,8 @@ let rec patExtract (pat: HPat): Ty * Loc =
     ty, a
   | HPat.Anno (_, ty, a) ->
     ty, a
+  | HPat.Or (_, _, ty, a) ->
+    ty, a
 
 let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
   let rec go pat =
@@ -99,7 +101,25 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Tuple (List.map go itemPats, f ty, g a)
     | HPat.Anno (pat, ty, a) ->
       HPat.Anno (go pat, f ty, g a)
+    | HPat.Or (first, second, ty, a) ->
+      HPat.Or (go first, go second, f ty, g a)
   go pat
+
+let patNormalize pat =
+  // FIXME: Support nested OR pattern.
+  let rec go pat acc =
+    match pat with
+    | HPat.Lit _
+    | HPat.Ref _
+    | HPat.Nil _
+    | HPat.Call _
+    | HPat.Cons _
+    | HPat.Tuple _
+    | HPat.Anno _  ->
+      pat :: acc
+    | HPat.Or (first, second, _, _) ->
+      acc |> go first |> go second
+  [] |> go pat |> List.rev
 
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
