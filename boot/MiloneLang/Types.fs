@@ -63,6 +63,18 @@ namespace rec MiloneLang
     | Of
     | In
 
+  /// Type constructors.
+  type TyCon =
+    | Bool
+    | Int
+    | Char
+    | Str
+    | Range
+    | Obj
+    | Fun
+    | Tuple
+    | List
+
   /// Type of expressions.
   [<RequireQualifiedAccess>]
   type Ty =
@@ -76,18 +88,8 @@ namespace rec MiloneLang
     /// Type variable, i.e. some binding.
     | Var
       of serial:int
-    | Bool
-    | Int
-    | Char
-    | Str
-    | Range
-    | Obj
-    | Fun
-      of Ty * Ty
-    | Tuple
-      of Ty list
-    | List
-      of Ty
+    | Con
+      of TyCon * Ty list
 
   /// Precedence level of binary operators.
   [<RequireQualifiedAccess>]

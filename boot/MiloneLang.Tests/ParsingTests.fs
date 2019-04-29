@@ -29,15 +29,6 @@ let parseStrAsPat source: HPat =
   if tokens <> [] then failwithf "Expected eof but %A" tokens
   patMap id (fun _ -> loc) pat
 
-let tyFun sTy tTy =
-  Ty.Fun (sTy, tTy)
-
-let tyList ty =
-  Ty.List ty
-
-let tyTuple itemTys =
-  Ty.Tuple itemTys
-
 let patInt value = HPat.Lit (Lit.Int value, loc)
 
 let patNil = HPat.Nil (noTy, loc)
@@ -327,7 +318,7 @@ type Answer =
 """
   let tyDecl =
     TyDecl.Union ("Answer", [
-      "Yes", noSerial, true, Ty.Int
+      "Yes", noSerial, true, tyInt
       "No", noSerial, false, tyUnit
     ], (1, 5))
   let expected =
@@ -337,13 +328,13 @@ type Answer =
 [<Fact>]
 let parseListTypeExprs () =
   let source = """int list list"""
-  let expected = tyList (tyList Ty.Int)
+  let expected = tyList (tyList tyInt)
   source |> parseTyExprStr |> is expected
 
 [<Fact>]
 let parseTupleTypeExprs () =
   let source = """string * char list * int"""
-  let expected = tyTuple [Ty.Str; tyList Ty.Char; Ty.Int]
+  let expected = tyTuple [tyStr; tyList tyChar; tyInt]
   source |> parseTyExprStr |> is expected
 
 [<Fact>]
@@ -352,7 +343,7 @@ let parseFunTypeExprs () =
   let expected =
     tyFun
       tyUnit
-      (tyFun (tyFun Ty.Int Ty.Bool) Ty.Str)
+      (tyFun (tyFun tyInt tyBool) tyStr)
   source |> parseTyExprStr |> is expected
 
 [<Fact>]
@@ -372,5 +363,5 @@ let parsePatCons () =
 [<Fact>]
 let parsePatAnno () =
   let source = """x : int"""
-  let expected = HPat.Anno (patRef "x", Ty.Int, loc)
+  let expected = HPat.Anno (patRef "x", tyInt, loc)
   source |> parseStrAsPat |> is expected

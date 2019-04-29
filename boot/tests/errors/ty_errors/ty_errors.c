@@ -84,16 +84,16 @@ end_match_4:;
 #error 3:5 Couldn't resolve var f
 
 #line 7
-#error 7:7 While unifying 'Tuple [Tuple [Int; Int]; Int]' and 'Tuple [Tuple [Int; Str]; Int]', failed to unify 'Int' and 'Str'.
+#error 7:7 While unifying 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Int,[])]); Con (Int,[])])' and 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Str,[])]); Con (Int,[])])', failed to unify 'Con (Int,[])' and 'Con (Str,[])'.
 
 #line 10
 #error 10:6 Type: Index not supported
 
 #line 13
-#error 13:17 Couldn't unify 'Var 19' and 'Fun (Fun (Var 19,Var 17),Var 17)' due to self recursion.
+#error 13:17 Couldn't unify 'Var 19' and 'Con (Fun,[Con (Fun,[Var 19; Var 17]); Var 17])' due to self recursion.
 
 #line 13
-#error 13:3 Reject polymorphic functions are not supported for now due to lack of let-polymorphism Fun (Var 19,Var 17) [Ref ("x",5,Var 19,(12, 12))]
+#error 13:3 Reject polymorphic functions are not supported for now due to lack of let-polymorphism Con (Fun,[Var 19; Var 17]) [Ref ("x",5,Var 19,(12, 12))]
 
 #line 15
-#error 15:3 While unifying 'Int' and 'Tuple []', failed to unify 'Int' and 'Tuple []'.
+#error 15:3 While unifying 'Con (Int,[])' and 'Con (Tuple,[])', failed to unify 'Con (Int,[])' and 'Con (Tuple,[])'.

@@ -8,10 +8,10 @@ open Xunit
 [<Fact>]
 let analyzeFormatTests () =
   analyzeFormat "Brave 100%%"
-  |> is (Ty.Fun (Ty.Str, tyUnit))
+  |> is (tyFun tyStr tyUnit)
 
   analyzeFormat "Hello, %s!"
-  |> is (Ty.Fun (Ty.Str, Ty.Fun (Ty.Str, tyUnit)))
+  |> is (tyFun tyStr (tyFun tyStr tyUnit))
 
   analyzeFormat "Welcome to %s. Entry price is %c%d!"
-  |> is (Ty.Fun (Ty.Str, Ty.Fun (Ty.Str, Ty.Fun (Ty.Char, Ty.Fun (Ty.Int, tyUnit)))))
+  |> is (tyFun tyStr (tyFun tyStr (tyFun tyChar (tyFun tyInt tyUnit))))

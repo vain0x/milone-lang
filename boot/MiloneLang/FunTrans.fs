@@ -179,7 +179,7 @@ let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
       // Add caps arg.
       let args = capsExpr :: args
       let arity = arity + 1
-      let calleeTy = Ty.Fun (capsTy, calleeTy)
+      let calleeTy = tyFun capsTy calleeTy
 
       let callee = HExpr.Ref (ident, callee, arity, calleeTy, refLoc)
       hxCall callee args resultTy loc |> Some
@@ -244,7 +244,7 @@ let addCapsArg caps args body loc ctx =
     // Static functions are intact.
     args, body, ctx
   | _ ->
-    let capsTy = caps |> List.map (fun (_, _, _, ty, _) -> ty) |> Ty.Tuple
+    let capsTy = caps |> List.map (fun (_, _, _, ty, _) -> ty) |> tyTuple
     let capsPats = caps |> List.map (fun (ident, serial, _, ty, loc) -> HPat.Ref (ident, serial, ty, loc))
     let capsPat = HPat.Tuple (capsPats, capsTy, loc)
     capsPat :: args, body, ctx
@@ -367,7 +367,7 @@ let splitAt i xs =
 
 let appliedTy n ty =
   match ty with
-  | Ty.Fun (_, ty) when n > 0 ->
+  | Ty.Con (TyCon.Fun, [_; ty]) when n > 0 ->
     appliedTy (n - 1) ty
   | _ ->
     ty
@@ -398,7 +398,7 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
     match n, restTy with
     | 0, _ ->
       [], [], ctx
-    | n, Ty.Fun (argTy, restTy) ->
+    | n, Ty.Con (TyCon.Fun, [argTy; restTy]) ->
       let argRef, argSerial, ctx = ctxFreshVar "arg" argTy callLoc ctx
       let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
       let restArgPat = HPat.Ref ("arg", argSerial, argTy, callLoc)
@@ -420,12 +420,12 @@ let createEnvPatAndTy items callLoc ctx =
       let itemPats, argTys, argRefs, ctx = go items ctx
       itemPat :: itemPats, itemTy :: argTys, itemRef :: argRefs, ctx
   let itemPats, itemTys, itemRefs, ctx = go items ctx
-  let envTy = Ty.Tuple itemTys
+  let envTy = tyTuple itemTys
   let envPat = HPat.Tuple (itemPats, envTy, callLoc)
   envPat, envTy, itemRefs, ctx
 
 let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
-  let unboxRef = HExpr.Ref ("unbox", SerialUnbox, 1, Ty.Fun (Ty.Obj, envTy), callLoc)
+  let unboxRef = HExpr.Ref ("unbox", SerialUnbox, 1, tyFun tyObj envTy, callLoc)
   let unboxExpr = hxCall unboxRef [envArgRef] envTy callLoc
   HExpr.Let (envPat, unboxExpr, next, exprTy next, callLoc)
 
@@ -433,8 +433,8 @@ let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
 /// It takes an environment and rest arguments
 /// and calls the partial-applied callee with full arguments.
 let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
-  let envArgRef, envArgSerial, ctx = ctxFreshVar "env" Ty.Obj callLoc ctx
-  let envArgPat = HPat.Ref ("env", envArgSerial, Ty.Obj, callLoc)
+  let envArgRef, envArgSerial, ctx = ctxFreshVar "env" tyObj callLoc ctx
+  let envArgPat = HPat.Ref ("env", envArgSerial, tyObj, callLoc)
   let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
   let argPats = envArgPat :: restArgPats
   let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
@@ -443,8 +443,8 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
 
 let createEnvBoxExpr args envTy callLoc =
   let tuple = hxTuple args callLoc
-  let boxRef = HExpr.Ref ("box", SerialBox, 1, Ty.Fun (envTy, Ty.Obj), callLoc)
-  hxCall boxRef [tuple] Ty.Obj callLoc
+  let boxRef = HExpr.Ref ("box", SerialBox, 1, tyFun envTy tyObj, callLoc)
+  hxCall boxRef [tuple] tyObj callLoc
 
 /// In the case the callee is a function.
 let resolvePartialAppFun callee arity args argLen callLoc ctx =

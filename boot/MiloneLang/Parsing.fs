@@ -78,13 +78,13 @@ let parseTyAtom boxX tokens: Ty * _ list =
   | (Token.Ident "unit", _) :: tokens ->
     tyUnit, tokens
   | (Token.Ident "bool", _) :: tokens ->
-    Ty.Bool, tokens
+    tyBool, tokens
   | (Token.Ident "int", _) :: tokens ->
-    Ty.Int, tokens
+    tyInt, tokens
   | (Token.Ident "char", _) :: tokens ->
-    Ty.Char, tokens
+    tyChar, tokens
   | (Token.Ident "string", _) :: tokens ->
-    Ty.Str, tokens
+    tyStr, tokens
   | (Token.Ident ident, _) :: tokens ->
     Ty.RefIdent ident, tokens
   | (Token.ParenL, _) :: tokens ->
@@ -101,7 +101,7 @@ let parseTyList boxX tokens =
   let rec go first tokens =
     match tokens with
     | (Token.Ident "list", _) :: tokens ->
-      go (Ty.List first) tokens
+      go (tyList first) tokens
     | tokens ->
       first, tokens
   let first, tokens = parseTyAtom boxX tokens
@@ -121,14 +121,14 @@ let parseTyTuple boxX tokens =
   | [], tokens ->
     first, tokens
   | itemTys, tokens ->
-    Ty.Tuple (first :: itemTys), tokens
+    tyTuple (first :: itemTys), tokens
 
 /// ty-fun = ty-tuple ( '->' ty-fun )?
 let parseTyFun boxX tokens =
   match parseTyTuple boxX tokens with
   | sTy, (Token.Arrow, _) :: tokens ->
     let tTy, tokens = parseTyFun boxX tokens
-    Ty.Fun (sTy, tTy), tokens
+    tyFun sTy tTy, tokens
   | ty, tokens ->
     ty, tokens
 

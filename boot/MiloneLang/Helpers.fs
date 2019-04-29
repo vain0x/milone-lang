@@ -42,24 +42,45 @@ let exMap f (xs, acc, ctx) =
       go (y :: ys) xs acc ctx
   go [] xs acc ctx
 
+let tyBool = Ty.Con (TyCon.Bool, [])
+
+let tyInt = Ty.Con (TyCon.Int, [])
+
+let tyChar = Ty.Con (TyCon.Char, [])
+
+let tyStr = Ty.Con (TyCon.Str, [])
+
+let tyObj = Ty.Con (TyCon.Obj, [])
+
+let tyRange = Ty.Con (TyCon.Range, [])
+
+let tyTuple tys =
+  Ty.Con (TyCon.Tuple, tys)
+
+let tyList ty =
+  Ty.Con (TyCon.List, [ty])
+
+let tyFun sourceTy targetTy =
+  Ty.Con (TyCon.Fun, [sourceTy; targetTy])
+
 let tyUnit =
-  Ty.Tuple []
+  tyTuple []
 
 let patUnit loc =
-  HPat.Tuple ([], Ty.Tuple [], loc)
+  HPat.Tuple ([], tyUnit, loc)
 
 let litTy (lit: Lit): Ty =
   match lit with
-  | Lit.Bool _ -> Ty.Bool
-  | Lit.Int _ -> Ty.Int
-  | Lit.Char _ -> Ty.Char
-  | Lit.Str _ -> Ty.Str
+  | Lit.Bool _ -> tyBool
+  | Lit.Int _ -> tyInt
+  | Lit.Char _ -> tyChar
+  | Lit.Str _ -> tyStr
 
 /// Converts nested function type to multi-arguments function type.
 let rec rollFunTy ty =
   let rec go n acc ty =
     match ty with
-    | Ty.Fun (sTy, tTy) ->
+    | Ty.Con (TyCon.Fun, [sTy; tTy]) ->
       go (n + 1) (sTy :: acc) tTy
     | tTy ->
       n, List.rev acc, tTy
@@ -70,13 +91,13 @@ let rec patExtract (pat: HPat): Ty * Loc =
   | HPat.Lit (lit, a) ->
     litTy lit, a
   | HPat.Nil (itemTy, a) ->
-    Ty.List itemTy, a
+    tyList itemTy, a
   | HPat.Ref (_, _, ty, a) ->
     ty, a
   | HPat.Call (_, _, ty, a) ->
     ty, a
   | HPat.Cons (_, _, itemTy, a) ->
-    Ty.List itemTy, a
+    tyList itemTy, a
   | HPat.Tuple (_, ty, a) ->
     ty, a
   | HPat.As (pat, _, _, a) ->
@@ -273,13 +294,13 @@ let hxExec callee args resultTy loc =
   HExpr.Inf (InfOp.Exec, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HExpr.Inf (InfOp.Tuple, items, Ty.Tuple (List.map exprTy items), loc)
+  HExpr.Inf (InfOp.Tuple, items, tyTuple (List.map exprTy items), loc)
 
 let hxUnit loc =
   hxTuple [] loc
 
 let hxList items itemTy loc =
-  HExpr.Inf (InfOp.List itemTy, items, Ty.List itemTy, loc)
+  HExpr.Inf (InfOp.List itemTy, items, tyList itemTy, loc)
 
 let hxNil itemTy loc =
   hxList [] itemTy loc
@@ -344,20 +365,20 @@ let analyzeFormat (format: string) =
       if i + 1 < format.Length && format.[i] = '%' then
         match format.[i + 1] with
         | 's' ->
-          Ty.Fun (Ty.Str, go (i + 2))
+          tyFun tyStr (go (i + 2))
         | 'd' ->
-          Ty.Fun (Ty.Int, go (i + 2))
+          tyFun tyInt (go (i + 2))
         | 'c' ->
-          Ty.Fun (Ty.Char, go (i + 2))
+          tyFun  tyChar (go (i + 2))
         | _ ->
           go (i + 2)
       else
         go (i + 1)
-  Ty.Fun (Ty.Str, go 0)
+  tyFun tyStr (go 0)
 
 let rec arityTy ty =
   match ty with
-  | Ty.Fun (_, ty) ->
+  | Ty.Con (TyCon.Fun, [_; ty]) ->
     1 + arityTy ty
   | _ ->
     0
