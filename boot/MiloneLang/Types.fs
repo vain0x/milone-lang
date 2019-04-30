@@ -328,6 +328,8 @@ namespace rec MiloneLang
       of Ty * Loc
     | Ref
       of serial:int * arity:int * Ty * Loc
+    | Fun
+      of serial:int * Ty * Loc
     | Variant
       of tySerial:int * serial:int * Ty * Loc
     | UniOp

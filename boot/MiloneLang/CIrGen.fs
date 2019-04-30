@@ -299,6 +299,10 @@ let genExprDefault ctx ty =
   | Ty.Var _ ->
     failwith "Never"
 
+let genExprFun ctx serial _ty _loc =
+  let ident = ctxUniqueName ctx serial
+  CExpr.Ref ident, ctx
+
 let genExprVariant ctx serial ty =
   let ty, ctx = cty ctx ty
   let tag = CExpr.Ref (ctxUniqueName ctx serial)
@@ -379,6 +383,8 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     genExprDefault ctx tyUnit
   | MExpr.Ref (serial, _, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
+  | MExpr.Fun (serial, ty, loc) ->
+    genExprFun ctx serial ty loc
   | MExpr.Variant (_, serial, ty, _) ->
     genExprVariant ctx serial ty
   | MExpr.UniOp (op, arg, ty, loc) ->
