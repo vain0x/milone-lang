@@ -57,7 +57,7 @@ let ctxAddTy tyIdent tyDecl loc ctx =
   match tyDecl with
   | TyDecl.Union (_, variants, _) ->
     let tySerial, ctx = ctxFreshTySerial ctx
-    let refTy = Ty.Ref tySerial
+    let refTy = tyRef tySerial []
 
     // Register variants as variables.
     let variants, serials, ctx =
@@ -122,17 +122,17 @@ let ctxResolveTyRefIdent ident (ctx: TyCtx) =
   | None ->
     Ty.Error
   | Some (tySerial, _) ->
-    Ty.Ref tySerial
+    tyRef tySerial []
 
 /// Resolves type references in type annotation.
-/// FIXME: Don't modify ctx for now.
+/// FIXME: ctx is unnecessary
 let ctxResolveTy ctx ty =
   let rec go (ty, ctx) =
     match ty with
     | Ty.Error
-    | Ty.Ref _ ->
+    | Ty.Con (TyCon.Ref _, _) ->
       ty, ctx
-    | Ty.RefIdent ident ->
+    | Ty.Con (TyCon.RefIdent ident, _) ->
       ctxResolveTyRefIdent ident ctx, ctx
     | Ty.Con (tyCon, tys) ->
       let tys, ctx = (tys, ctx) |> stMap go
@@ -146,8 +146,6 @@ let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
     match ty with
     | Ty.Error
-    | Ty.RefIdent _
-    | Ty.Ref _
     | Ty.Con (_, []) ->
       true
     | Ty.Con (tyCon, ty :: tys) ->
@@ -160,15 +158,12 @@ let tyIsFreeIn ty tySerial: bool =
 let isMonomorphic ctx ty: bool =
   match substTy ctx ty with
   | Ty.Error
-  | Ty.Ref _
   | Ty.Con (_, []) ->
     true
   | Ty.Con (tyCon, ty :: tys) ->
     isMonomorphic ctx ty && isMonomorphic ctx (Ty.Con (tyCon, tys))
   | Ty.Var tySerial ->
     (ctx: TyCtx).Tys |> Map.containsKey tySerial
-  | Ty.RefIdent _ ->
-    failwith "Never"
 
 /// Adds type-var/type binding.
 let bindTy (ctx: TyCtx) tySerial ty: TyCtx =
@@ -192,7 +187,6 @@ let substTy (ctx: TyCtx) ty: Ty =
   let rec go ty =
     match ty with
     | Ty.Error
-    | Ty.Ref _
     | Ty.Con (_, []) ->
       ty
     | Ty.Con (tyCon, tys) ->
@@ -203,8 +197,6 @@ let substTy (ctx: TyCtx) ty: Ty =
         go ty
       | _ ->
         ty
-    | Ty.RefIdent ident ->
-      failwithf "Unresolved type name %A" ident
   go ty
 
 /// Resolves type equation `lty = rty` as possible
@@ -228,19 +220,14 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Error, _
     | _, Ty.Error ->
       ctx
-    | Ty.Ref l, Ty.Ref r when l = r ->
-      ctx
     | Ty.Var _, _ ->
       let message = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
       ctxAddErr ctx message loc
-    | Ty.Ref _, _
     | Ty.Con _, _ ->
       let lRootTy = substTy ctx lRootTy
       let rRootTy = substTy ctx rRootTy
       let message = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
       ctxAddErr ctx message loc
-    | Ty.RefIdent _, _ ->
-      failwith "Never"
   go lty rty ctx
 
 let ctxResolveVar (ctx: TyCtx) ident =

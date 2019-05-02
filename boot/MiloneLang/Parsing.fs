@@ -86,7 +86,7 @@ let parseTyAtom boxX tokens: Ty * _ list =
   | (Token.Ident "string", _) :: tokens ->
     tyStr, tokens
   | (Token.Ident ident, _) :: tokens ->
-    Ty.RefIdent ident, tokens
+    Ty.Con (TyCon.RefIdent ident, []), tokens
   | (Token.ParenL, _) :: tokens ->
     match parseTy (nextX tokens) tokens with
     | ty, (Token.ParenR, _) :: tokens ->

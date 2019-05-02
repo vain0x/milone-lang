@@ -66,6 +66,9 @@ let tyFun sourceTy targetTy =
 let tyUnit =
   tyTuple []
 
+let tyRef serial tys =
+  Ty.Con (TyCon.Ref serial, tys)
+
 let patUnit loc =
   HPat.Tuple ([], tyUnit, loc)
 

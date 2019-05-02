@@ -74,17 +74,17 @@ namespace rec MiloneLang
     | Fun
     | Tuple
     | List
-
-  /// Type of expressions.
-  [<RequireQualifiedAccess>]
-  type Ty =
-    | Error
-    /// Identifier which refers to a specific type.
+    /// Identifier which refers to a specific type, e.g. `Option`.
     | RefIdent
       of ident:string
     /// Type reference, i.e. some union type.
     | Ref
       of serial:int
+
+  /// Type of expressions.
+  [<RequireQualifiedAccess>]
+  type Ty =
+    | Error
     /// Type variable, i.e. some binding.
     | Var
       of serial:int

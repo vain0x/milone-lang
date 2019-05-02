@@ -38,7 +38,7 @@ let calculateTyUniqueNames tys =
   groups |> Seq.collect (fun (ident, tys) ->
     tys |> Seq.mapi (fun i (serial, _) ->
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
-      (Ty.Ref serial, ident)
+      tyRef serial [], ident
   ))
   |> Map.ofSeq
 
@@ -145,13 +145,13 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
         acc, ctx
     )
 
-  let unionTyIdent, ctx = ctxUniqueTyName ctx (Ty.Ref tySerial)
+  let unionTyIdent, ctx = ctxUniqueTyName ctx (tyRef tySerial [])
   let unionTy = CTy.Struct unionTyIdent
   let tagTyIdent = tagTyIdent unionTyIdent
   let tagTy = CTy.Enum tagTyIdent
   let ctx =
     { ctx with
-        TyEnv = ctx.TyEnv |> Map.add (Ty.Ref tySerial) unionTy
+        TyEnv = ctx.TyEnv |> Map.add (tyRef tySerial []) unionTy
         Decls =
           CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
           :: CDecl.Enum (tagTyIdent, tags)
@@ -194,14 +194,14 @@ let ctxUniqueTyName (ctx: Ctx) ty =
           let len = itemTys |> List.length
           let itemTys, ctx = (itemTys, ctx) |> stMap (fun (itemTy, ctx) -> ctx |> go itemTy)
           sprintf "%s%s%d" (itemTys |> String.concat "") "Tuple" len, ctx
-        | Ty.Ref serial ->
+        | Ty.Con (TyCon.Ref serial, _) ->
           // FIXME: This occurs when recursive union types defined.
           failwithf "Never: Unknown type serial %d" serial
         | Ty.Con (TyCon.Range, _)
         | Ty.Con (TyCon.List, _)
         | Ty.Con (TyCon.Fun, _)
-        | Ty.Error
-        | Ty.RefIdent _ ->
+        | Ty.Con (TyCon.RefIdent _, _)
+        | Ty.Error ->
           failwithf "Never"
       let ctx = { ctx with TyUniqueNames = ctx.TyUniqueNames |> Map.add ty ident }
       ident, ctx
@@ -239,7 +239,7 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
       ctxAddTupleDecl ctx itemTys
     | Some ty ->
       ty, ctx
-  | Ty.Ref serial ->
+  | Ty.Con (TyCon.Ref serial, _) ->
     match ctx.Tys |> Map.tryFind serial with
     | Some (TyDef.Union (tyIdent, variants, _)) ->
       match ctx.TyEnv |> Map.tryFind ty with
@@ -254,8 +254,8 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
   | Ty.Con (TyCon.List, _)
   | Ty.Con (TyCon.Fun, _)
   | Ty.Con (TyCon.Range, _)
-  | Ty.Error
-  | Ty.RefIdent _ ->
+  | Ty.Con (TyCon.RefIdent _, _)
+  | Ty.Error ->
     failwith "Never"
 
 let cirifyTys (tys, ctx) =
@@ -290,12 +290,12 @@ let genExprDefault ctx ty =
   | Ty.Con (TyCon.Str, _)
   | Ty.Con (TyCon.Fun, _)
   | Ty.Con (TyCon.Tuple, _)
-  | Ty.Ref _ ->
+  | Ty.Con (TyCon.Ref _, _) ->
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
   | Ty.Con (TyCon.Range, _)
+  | Ty.Con (TyCon.RefIdent _, _)
   | Ty.Error
-  | Ty.RefIdent _
   | Ty.Var _ ->
     failwith "Never"
 
