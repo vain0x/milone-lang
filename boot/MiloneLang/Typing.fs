@@ -46,7 +46,7 @@ let ctxFreshTySerial (ctx: TyCtx) =
 let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
   let serial, ctx = ctxFreshTySerial ctx
   let ident = sprintf "'%s_%d" ident serial
-  let ty = Ty.Var serial
+  let ty = Ty.Meta serial
   let ctx =
     { ctx with
         TyEnv = ctx.TyEnv |> Map.add ident serial
@@ -118,7 +118,7 @@ let ctxFindTyDef name (ctx: TyCtx) =
 
 let ctxResolveTyRefIdent ident (ctx: TyCtx) =
   match ctx |> ctxFindTyDef ident with
-  | Some (_, TyDef.Bv _)
+  | Some (_, TyDef.Meta _)
   | None ->
     Ty.Error
   | Some (tySerial, _) ->
@@ -137,7 +137,7 @@ let ctxResolveTy ctx ty =
     | Ty.Con (tyCon, tys) ->
       let tys, ctx = (tys, ctx) |> stMap go
       Ty.Con (tyCon, tys), ctx
-    | Ty.Var _ ->
+    | Ty.Meta _ ->
       failwith "Never"
   go (ty, ctx)
 
@@ -150,7 +150,7 @@ let tyIsFreeIn ty tySerial: bool =
       true
     | Ty.Con (tyCon, ty :: tys) ->
       go ty && go (Ty.Con (tyCon, tys))
-    | Ty.Var s ->
+    | Ty.Meta s ->
       s <> tySerial
   go ty
 
@@ -162,7 +162,7 @@ let isMonomorphic ctx ty: bool =
     true
   | Ty.Con (tyCon, ty :: tys) ->
     isMonomorphic ctx ty && isMonomorphic ctx (Ty.Con (tyCon, tys))
-  | Ty.Var tySerial ->
+  | Ty.Meta tySerial ->
     (ctx: TyCtx).Tys |> Map.containsKey tySerial
 
 /// Adds type-var/type binding.
@@ -174,11 +174,11 @@ let bindTy (ctx: TyCtx) tySerial ty: TyCtx =
 
   // Don't bind itself.
   match substTy ctx ty with
-  | Ty.Var s when s = tySerial -> ctx
+  | Ty.Meta s when s = tySerial -> ctx
   | _ ->
 
   { ctx with
-      Tys = ctx.Tys |> Map.add tySerial (TyDef.Bv (noIdent, ty, noLoc))
+      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, noLoc))
   }
 
 /// Substitutes occurrences of already-inferred type vars
@@ -191,9 +191,9 @@ let substTy (ctx: TyCtx) ty: Ty =
       ty
     | Ty.Con (tyCon, tys) ->
       Ty.Con (tyCon, List.map go tys)
-    | Ty.Var tySerial ->
+    | Ty.Meta tySerial ->
       match ctx.Tys |> Map.tryFind tySerial with
-      | Some (TyDef.Bv (_, ty, _)) ->
+      | Some (TyDef.Meta (_, ty, _)) ->
         go ty
       | _ ->
         ty
@@ -207,11 +207,11 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
     let lSubstTy = substTy ctx lty
     let rSubstTy = substTy ctx rty
     match lSubstTy, rSubstTy with
-    | Ty.Var l, Ty.Var r when l = r ->
+    | Ty.Meta l, Ty.Meta r when l = r ->
       ctx
-    | Ty.Var lSerial, _ when tyIsFreeIn rSubstTy lSerial ->
+    | Ty.Meta lSerial, _ when tyIsFreeIn rSubstTy lSerial ->
       bindTy ctx lSerial rty
-    | _, Ty.Var _ ->
+    | _, Ty.Meta _ ->
       go rty lty ctx
     | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
       ctx
@@ -220,7 +220,7 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
     | Ty.Error, _
     | _, Ty.Error ->
       ctx
-    | Ty.Var _, _ ->
+    | Ty.Meta _, _ ->
       let message = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
       ctxAddErr ctx message loc
     | Ty.Con _, _ ->
@@ -355,7 +355,7 @@ let inferRef (ctx: TyCtx) ident loc ty =
     let ctx = unifyTy ctx loc (tyFun argTy tyInt) ty
     let ctx =
       match substTy ctx argTy with
-      | Ty.Var _ ->
+      | Ty.Meta _ ->
         unifyTy ctx loc tyInt argTy
       | Ty.Con ((TyCon.Int | TyCon.Char | TyCon.Str), _)
       | Ty.Error _ ->

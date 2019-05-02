@@ -178,7 +178,7 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | Ty.Con (TyCon.Int, _) -> "Int", ctx
         | Ty.Con (TyCon.Char, _) -> "Char", ctx
         | Ty.Con (TyCon.Str, _) -> "String", ctx
-        | Ty.Var _ // FIXME: Unresolved type variables are `obj` for now.
+        | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
         | Ty.Con (TyCon.Obj, _) -> "Object", ctx
         | Ty.Con (TyCon.Fun, _) ->
           let arity, argTys, resultTy = rollFunTy ty
@@ -216,7 +216,7 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
     CTy.Char, ctx
   | Ty.Con (TyCon.Str, _) ->
     CTy.Struct "String", ctx
-  | Ty.Var _ // FIXME: Unresolved type variables are `obj` for now.
+  | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
   | Ty.Con (TyCon.Obj, _) ->
     CTy.Ptr CTy.Void, ctx
   | Ty.Con (TyCon.Fun, [sTy; tTy]) ->
@@ -247,7 +247,7 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
         ty, ctx
       | None ->
         ctxAddUnionDecl ctx tyIdent serial variants
-    | Some (TyDef.Bv _) ->
+    | Some (TyDef.Meta _) ->
       failwith "Never"
     | None ->
       CTy.Void, ctxAddErr ctx "Unknown type reference" (0, 0) // FIXME: source location
@@ -296,7 +296,7 @@ let genExprDefault ctx ty =
   | Ty.Con (TyCon.Range, _)
   | Ty.Con (TyCon.RefIdent _, _)
   | Ty.Error
-  | Ty.Var _ ->
+  | Ty.Meta _ ->
     failwith "Never"
 
 let genExprFun ctx serial _ty _loc =

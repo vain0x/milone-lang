@@ -86,7 +86,7 @@ namespace rec MiloneLang
   type Ty =
     | Error
     /// Type variable, i.e. some binding.
-    | Var
+    | Meta
       of serial:int
     | Con
       of TyCon * Ty list
@@ -159,7 +159,7 @@ namespace rec MiloneLang
   [<RequireQualifiedAccess>]
   type TyDef =
     /// Bound type variable.
-    | Bv
+    | Meta
       of ident:string * Ty * Loc
     | Union
       of ident:string * variants:int list * Loc
