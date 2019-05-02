@@ -53,44 +53,45 @@ let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
     }
   ty, ident, ctx
 
-let ctxAddVariant tyIdent tySerial refTy variant loc ctx =
-  let lIdent, _, hasArg, lArgTy = variant
-  let lTy = if hasArg then tyFun lArgTy refTy else refTy
-  let varDef = VarDef.Variant (lIdent, tySerial, hasArg, lArgTy, lTy, loc)
-  let lSerial, ctx = ctxFreshVarCore ctx lIdent varDef
-  let ctx = ctxAddVarAlias ctx lSerial (variantFullName tyIdent lIdent)
-  let variant = lIdent, lSerial, hasArg, lArgTy
-  variant, lSerial, ctx
+let ctxAddVariant unionTyIdent unionTySerial unionTy variant loc ctx =
+  let variantIdent, _, hasArg, argTy = variant
+  let variantTy = if hasArg then tyFun argTy unionTy else unionTy
+  let variantVarDef = VarDef.Variant (variantIdent, unionTySerial, hasArg, argTy, variantTy, loc)
+  let variantSerial, ctx = ctxFreshVarCore ctx variantIdent variantVarDef
+  let ctx = ctxAddVarAlias ctx variantSerial (variantFullName unionTyIdent variantIdent)
+  let variant = variantIdent, variantSerial, hasArg, argTy
+  variant, variantSerial, ctx
 
-let ctxAddVariants tyIdent tySerial refTy variants loc ctx =
-  let rec go variantAcc serialAcc variants ctx =
+let ctxAddVariants unionTyIdent unionTySerial unionTy variants loc ctx =
+  let rec go variantAcc variantSerialAcc variants ctx =
     match variants with
     | [] ->
-      List.rev variantAcc, List.rev serialAcc, ctx
+      List.rev variantAcc, List.rev variantSerialAcc, ctx
     | variant :: variants ->
-      let variant, lSerial, ctx = ctxAddVariant tyIdent tySerial refTy variant loc ctx
-      go (variant :: variantAcc) (lSerial :: serialAcc) variants ctx
+      let variant, lSerial, ctx = ctxAddVariant unionTyIdent unionTySerial unionTy variant loc ctx
+      go (variant :: variantAcc) (lSerial :: variantSerialAcc) variants ctx
   go [] [] variants ctx
 
 let ctxAddTy tyIdent tyDecl loc ctx =
   match tyDecl with
   | TyDecl.Union (_, variants, _) ->
-    let tySerial, ctx = ctxFreshTySerial ctx
-    let refTy = tyRef tySerial []
+    let unionTySerial, ctx = ctxFreshTySerial ctx
+    let unionTy = tyRef unionTySerial []
+    let unionTyIdent = tyIdent
 
     // Register variants as variables.
-    let variants, serials, ctx =
-      ctxAddVariants tyIdent tySerial refTy variants loc ctx
+    let variants, variantSerials, ctx =
+      ctxAddVariants unionTyIdent unionTySerial unionTy variants loc ctx
 
-    let tyDef = TyDef.Union (tyIdent, serials, loc)
+    let unionTyDef = TyDef.Union (unionTyIdent, variantSerials, loc)
     let ctx =
       { ctx with
-          TyEnv = ctx.TyEnv |> Map.add tyIdent tySerial
-          Tys = ctx.Tys |> Map.add tySerial tyDef
+          TyEnv = ctx.TyEnv |> Map.add unionTyIdent unionTySerial
+          Tys = ctx.Tys |> Map.add unionTySerial unionTyDef
       }
 
-    let tyDecl = TyDecl.Union (tyIdent, variants, loc)
-    tySerial, tyDecl, ctx
+    let unionTyDecl = TyDecl.Union (unionTyIdent, variants, loc)
+    unionTySerial, unionTyDecl, ctx
 
 let ctxFreshVarCore (ctx: TyCtx) ident varDef: int * TyCtx =
   let serial = ctx.VarSerial + 1
