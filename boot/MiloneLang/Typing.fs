@@ -62,6 +62,16 @@ let ctxAddVariant tyIdent tySerial refTy variant loc ctx =
   let variant = lIdent, lSerial, hasArg, lArgTy
   variant, lSerial, ctx
 
+let ctxAddVariants tyIdent tySerial refTy variants loc ctx =
+  let rec go variantAcc serialAcc variants ctx =
+    match variants with
+    | [] ->
+      List.rev variantAcc, List.rev serialAcc, ctx
+    | variant :: variants ->
+      let variant, lSerial, ctx = ctxAddVariant tyIdent tySerial refTy variant loc ctx
+      go (variant :: variantAcc) (lSerial :: serialAcc) variants ctx
+  go [] [] variants ctx
+
 let ctxAddTy tyIdent tyDecl loc ctx =
   match tyDecl with
   | TyDecl.Union (_, variants, _) ->
@@ -70,14 +80,7 @@ let ctxAddTy tyIdent tyDecl loc ctx =
 
     // Register variants as variables.
     let variants, serials, ctx =
-      let rec go variantAcc serialAcc variants ctx =
-        match variants with
-        | [] ->
-          List.rev variantAcc, List.rev serialAcc, ctx
-        | variant :: variants ->
-          let variant, lSerial, ctx = ctxAddVariant tyIdent tySerial refTy variant loc ctx
-          go (variant :: variantAcc) (lSerial :: serialAcc) variants ctx
-      go [] [] variants ctx
+      ctxAddVariants tyIdent tySerial refTy variants loc ctx
 
     let tyDef = TyDef.Union (tyIdent, serials, loc)
     let ctx =
