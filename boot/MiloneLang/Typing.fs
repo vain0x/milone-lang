@@ -53,6 +53,15 @@ let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
     }
   ty, ident, ctx
 
+let ctxAddVariant tyIdent tySerial refTy variant loc ctx =
+  let lIdent, _, hasArg, lArgTy = variant
+  let lTy = if hasArg then tyFun lArgTy refTy else refTy
+  let varDef = VarDef.Variant (lIdent, tySerial, hasArg, lArgTy, lTy, loc)
+  let lSerial, ctx = ctxFreshVarCore ctx lIdent varDef
+  let ctx = ctxAddVarAlias ctx lSerial (variantFullName tyIdent lIdent)
+  let variant = lIdent, lSerial, hasArg, lArgTy
+  variant, lSerial, ctx
+
 let ctxAddTy tyIdent tyDecl loc ctx =
   match tyDecl with
   | TyDecl.Union (_, variants, _) ->
@@ -65,12 +74,8 @@ let ctxAddTy tyIdent tyDecl loc ctx =
         match variants with
         | [] ->
           List.rev variantAcc, List.rev serialAcc, ctx
-        | (lIdent, _, hasArg, lArgTy) :: variants ->
-          let lTy = if hasArg then tyFun lArgTy refTy else refTy
-          let varDef = VarDef.Variant (lIdent, tySerial, hasArg, lArgTy, lTy, loc)
-          let lSerial, ctx = ctxFreshVarCore ctx lIdent varDef
-          let ctx = ctxAddVarAlias ctx lSerial (variantFullName tyIdent lIdent)
-          let variant = lIdent, lSerial, hasArg, lArgTy
+        | variant :: variants ->
+          let variant, lSerial, ctx = ctxAddVariant tyIdent tySerial refTy variant loc ctx
           go (variant :: variantAcc) (lSerial :: serialAcc) variants ctx
       go [] [] variants ctx
 
