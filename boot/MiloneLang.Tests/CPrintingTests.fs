@@ -11,12 +11,9 @@ let eol = """
 
 let testFile category case =
   async {
-    let! source =
-      IO.File.ReadAllTextAsync(
-        IO.Path.Combine(testsDir.Value, category, case, case + ".milone")
-      ) |> Async.AwaitTask
+    let dirPath = IO.Path.Combine(testsDir.Value, category, case)
     let content =
-      let cir, _ = toCir Verbosity.Silent source
+      let cir, _ = toCir Verbosity.Silent dirPath
       CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
     do!
       IO.File.WriteAllTextAsync(

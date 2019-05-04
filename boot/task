@@ -16,12 +16,12 @@ locate() {
 #   compile hello -v
 #   compile hello -q
 compile() {
-    m="$(locate $1)/$1.milone"
+    dir="$(locate $1)"
     c="$(locate $1)/~$1.c"
     app="$(locate $1)/~$1"
 
     mkdir -p tmp
-    cat $m | dotnet run -p MiloneLang -- "$2" - >$c
+    dotnet run -p MiloneLang -- "$2" $dir >$c
     if [[ $? != 0 ]]
     then
         echo 'milone-lang compile error.'
