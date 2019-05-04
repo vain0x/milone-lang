@@ -232,6 +232,27 @@ namespace rec MiloneLang
     | Fun
       of funSerial:int
 
+  /// Primitive in high-level IR.
+  [<RequireQualifiedAccess>]
+  type HPrim =
+    | Not
+    | Exit
+    | Box
+    | Unbox
+    | Printfn
+    | StrSlice
+    | StrLength
+    | Char
+    | Int
+    | String
+
+  [<RequireQualifiedAccess>]
+  type HValRef =
+    | Var
+      of serial:int
+    | Prim
+      of HPrim
+
   /// Expression in AST. `a` is typically a source location info.
   [<RequireQualifiedAccess>]
   type HExpr =
@@ -239,7 +260,7 @@ namespace rec MiloneLang
       of Lit * Loc
     /// Variable reference.
     | Ref
-      of ident:string * serial:int * arity:int * Ty * Loc
+      of ident:string * HValRef * arity:int * Ty * Loc
     /// If-then-else. Else clause is `()` if omit.
     | If
       of pred:HExpr * thenCl:HExpr * elseCl:HExpr * Ty * Loc
@@ -328,6 +349,8 @@ namespace rec MiloneLang
       of Ty * Loc
     | Ref
       of serial:int * arity:int * Ty * Loc
+    | Prim
+      of HPrim * Ty * Loc
     | Fun
       of serial:int * Ty * Loc
     | Variant

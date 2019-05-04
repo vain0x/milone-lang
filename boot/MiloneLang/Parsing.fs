@@ -412,7 +412,7 @@ let parseAtom boxX tokens: HExpr * (Token * Loc) list =
   | (Token.Str value, loc) :: tokens ->
     HExpr.Lit (Lit.Str value, loc), tokens
   | (Token.Ident value, loc) :: tokens ->
-    HExpr.Ref (value, noArity, noSerial, noTy, loc), tokens
+    HExpr.Ref (value, HValRef.Var noSerial, noArity, noTy, loc), tokens
   | (Token.ParenL, _) :: tokens ->
     parseParen boxX tokens
   | (Token.BracketL, bracketLoc) :: tokens ->

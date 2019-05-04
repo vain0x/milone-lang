@@ -257,6 +257,7 @@ let mexprExtract expr =
   | MExpr.Default (ty, loc) -> ty, loc
   | MExpr.Lit (lit, loc) -> litTy lit, loc
   | MExpr.Ref (_, _, ty, loc) -> ty, loc
+  | MExpr.Prim (_, ty, loc) -> ty, loc
   | MExpr.Fun (_, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
@@ -317,50 +318,6 @@ let noSerial = 0
 /// Placeholder. No type info in the parsing phase.
 let noTy = Ty.Error
 
-[<Literal>]
-let SerialNot = -1
-
-[<Literal>]
-let SerialExit = -2
-
-[<Literal>]
-let SerialBox = -3
-
-[<Literal>]
-let SerialUnbox = -4
-
-[<Literal>]
-let SerialPrintfn = -5
-
-[<Literal>]
-let SerialStrSlice = -6
-
-[<Literal>]
-let SerialStrLength = -7
-
-[<Literal>]
-let SerialCharFun = -8
-
-[<Literal>]
-let SerialIntFun = -9
-
-[<Literal>]
-let SerialStringFun = -10
-
-let knownSerials =
-  [
-    SerialNot
-    SerialExit
-    SerialBox
-    SerialUnbox
-    SerialPrintfn
-    SerialStrSlice
-    SerialStrLength
-    SerialCharFun
-    SerialIntFun
-    SerialStringFun
-  ]
-
 let analyzeFormat (format: string) =
   let rec go i =
     if i >= format.Length then
@@ -407,3 +364,19 @@ let varDefTyArity varDef =
   | VarDef.Variant (_, _, hasArg, _, ty, _) ->
     let arity = if hasArg then 1 else 0
     ty, arity
+
+let primToArity prim =
+  match prim with
+  | HPrim.Not
+  | HPrim.Exit
+  | HPrim.Box
+  | HPrim.Unbox
+  | HPrim.StrLength
+  | HPrim.Char
+  | HPrim.Int
+  | HPrim.String ->
+    1
+  | HPrim.StrSlice ->
+    3
+  | HPrim.Printfn ->
+    9999

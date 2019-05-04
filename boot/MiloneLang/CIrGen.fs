@@ -391,6 +391,8 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     genExprUniOp ctx op arg ty loc
   | MExpr.Op (op, l, r, _, _) ->
     genExprOp ctx op l r
+  | MExpr.Prim _ ->
+    failwith "Never: Primitives must be used as callee"
 
 let genExprCallPrintfn ctx format args =
   // Insert implicit cast from str to str ptr.
@@ -440,23 +442,18 @@ let genExprCallString arg argTy ctx =
 
 let genExprCall ctx callee args ty =
   match callee, args with
-  | MExpr.Ref (serial, _, _, _), (MExpr.Lit (Lit.Str format, _)) :: args
-    when serial = SerialPrintfn ->
+  | MExpr.Prim (HPrim.Printfn, _, _), (MExpr.Lit (Lit.Str format, _)) :: args ->
     genExprCallPrintfn ctx format args
-  | MExpr.Ref (serial, _, _, _), args
-    when serial = SerialStrSlice ->
+  | MExpr.Prim (HPrim.StrSlice, _, _), args ->
     let callee = CExpr.Ref "str_slice"
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
-  | MExpr.Ref (serial, _, _, _), [arg]
-    when serial = SerialCharFun ->
+  | MExpr.Prim (HPrim.Char, _, _), [arg] ->
     let arg, ctx = genExpr ctx arg
     CExpr.Cast (arg, CTy.Char), ctx
-  | MExpr.Ref (serial, _, Ty.Con (TyCon.Fun, [argTy; _]), _), [arg]
-    when serial = SerialIntFun ->
+  | MExpr.Prim (HPrim.Int, Ty.Con (TyCon.Fun, [argTy; _]), _), [arg] ->
     genExprCallInt arg argTy ctx
-  | MExpr.Ref (serial, _, Ty.Con (TyCon.Fun, [argTy; _]), _), [arg]
-    when serial = SerialStringFun ->
+  | MExpr.Prim (HPrim.String, Ty.Con (TyCon.Fun, [argTy; _]), _), [arg] ->
     genExprCallString arg argTy ctx
   | _ ->
     let callee, ctx = genExpr ctx callee

@@ -48,7 +48,7 @@ let exprStr value =
   HExpr.Lit (Lit.Str value, loc)
 
 let exprRef ident =
-  HExpr.Ref (ident, noArity, noSerial, noTy, loc)
+  HExpr.Ref (ident, HValRef.Var noSerial, noArity, noTy, loc)
 
 let exprList items =
   hxList items noTy loc

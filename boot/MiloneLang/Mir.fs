@@ -245,14 +245,18 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   | HPat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."
 
-let mirifyExprRef (ctx: MirCtx) serial arity ty loc =
-  match ctx.Vars |> Map.tryFind serial with
-  | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
-    MExpr.Variant (tySerial, serial, ty, loc), ctx
-  | Some (VarDef.Fun (_, _, ty, loc)) ->
-    MExpr.Fun (serial, ty, loc), ctx
-  | _ ->
-    MExpr.Ref (serial, arity, ty, loc), ctx
+let mirifyExprRef (ctx: MirCtx) valRef arity ty loc =
+  match valRef with
+  | HValRef.Var serial ->
+    match ctx.Vars |> Map.tryFind serial with
+    | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
+      MExpr.Variant (tySerial, serial, ty, loc), ctx
+    | Some (VarDef.Fun (_, _, ty, loc)) ->
+      MExpr.Fun (serial, ty, loc), ctx
+    | _ ->
+      MExpr.Ref (serial, arity, ty, loc), ctx
+  | HValRef.Prim prim ->
+    MExpr.Prim (prim, ty, loc), ctx
 
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
@@ -424,7 +428,7 @@ let mirifyExprIndex ctx l r _ loc =
     let rr, ctx = mirifyExpr ctx rr
     let temp, tempSerial, ctx = ctxFreshVar ctx "slice" tyStr loc
     let funTy = tyFun tyStr (tyFun tyInt (tyFun tyInt tyStr))
-    let strSliceRef = MExpr.Ref (SerialStrSlice, 3, funTy, loc)
+    let strSliceRef = MExpr.Prim (HPrim.StrSlice, funTy, loc)
     let callInit = MInit.Call (strSliceRef, [l; rl; rr], funTy)
     let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, callInit, tyStr, loc))
     temp, ctx
@@ -539,17 +543,17 @@ let mirifyExprInfCall ctx callee args ty loc =
   match args with
   | [arg] ->
     match callee with
-    | HExpr.Ref (_, serial, _, _, _) when serial = SerialNot ->
+    | HExpr.Ref (_, HValRef.Prim HPrim.Not, _, _, _) ->
       mirifyExprCallNot ctx arg ty loc
-    | HExpr.Ref (_, serial, _, _, _) when serial = SerialExit ->
+    | HExpr.Ref (_, HValRef.Prim HPrim.Exit, _, _, _) ->
       mirifyExprCallExit ctx arg ty loc
-    | HExpr.Ref (_, serial, _, _, _) when serial = SerialBox ->
+    | HExpr.Ref (_, HValRef.Prim HPrim.Box, _, _, _) ->
       mirifyExprCallBox ctx arg ty loc
-    | HExpr.Ref (_, serial, _, _, _) when serial = SerialUnbox ->
+    | HExpr.Ref (_, HValRef.Prim HPrim.Unbox, _, _, _) ->
       mirifyExprCallUnbox ctx arg ty loc
-    | HExpr.Ref (_, serial, _, _, _) when serial = SerialStrLength ->
+    | HExpr.Ref (_, HValRef.Prim HPrim.StrLength, _, _, _) ->
       mirifyExprCallStrLength ctx arg ty loc
-    | HExpr.Ref (_, serial, _, _, _) when ctxIsVariantFun ctx serial ->
+    | HExpr.Ref (_, HValRef.Var serial, _, _, _) when ctxIsVariantFun ctx serial ->
       mirifyExprCallVariantFun ctx serial arg ty loc
     | _ ->
       core ()

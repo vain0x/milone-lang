@@ -250,7 +250,7 @@ let ctxResolveVar (ctx: TyCtx) ident =
 /// Creates an expression to abort.
 let hxAbort (ctx: TyCtx) ty loc =
   let funTy = tyFun tyInt ty
-  let exitExpr = HExpr.Ref ("exit", SerialExit, 1, funTy, loc)
+  let exitExpr = HExpr.Ref ("exit", HValRef.Prim HPrim.Exit, 1, funTy, loc)
   let callExpr = HExpr.Op (Op.App, exitExpr, HExpr.Lit (Lit.Int 1, loc), ty, loc)
   callExpr, ctx
 
@@ -336,29 +336,29 @@ let inferRef (ctx: TyCtx) ident loc ty =
   | Some (serial, varDef), _ ->
     let refTy, arity = varDefTyArity varDef
     let ctx = unifyTy ctx loc refTy ty
-    HExpr.Ref (ident, serial, arity, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Var serial, arity, ty, loc), ctx
   | None, "not" ->
     let ctx = unifyTy ctx loc (tyFun tyBool tyBool) ty
-    HExpr.Ref (ident, SerialNot, 1, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.Not, 1, ty, loc), ctx
   | None, "exit" ->
     let resultTy, _, ctx = ctxFreshTyVar "exit" ctx
     let ctx = unifyTy ctx loc (tyFun tyInt resultTy) ty
-    HExpr.Ref (ident, SerialExit, 1, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.Exit, 1, ty, loc), ctx
   | None, "box" ->
     let argTy, _, ctx = ctxFreshTyVar "box" ctx
     let ctx = unifyTy ctx loc (tyFun argTy tyObj) ty
-    HExpr.Ref (ident, SerialBox, 1, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.Box, 1, ty, loc), ctx
   | None, "unbox" ->
     let resultTy, _, ctx = ctxFreshTyVar "unbox" ctx
     let ctx = unifyTy ctx loc (tyFun tyObj resultTy) ty
-    HExpr.Ref (ident, SerialUnbox, 1, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.Unbox, 1, ty, loc), ctx
   | None, "printfn" ->
     // The function's type is unified in app expression inference.
-    HExpr.Ref (ident, SerialPrintfn, 9999, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, 9999, ty, loc), ctx
   | None, "char" ->
     // FIXME: `char` can take non-int values, including chars.
     let ctx = unifyTy ctx loc (tyFun tyInt tyChar) ty
-    HExpr.Ref (ident, SerialCharFun, 1, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.Char, 1, ty, loc), ctx
   | None, "int" ->
     let argTy, _, ctx = ctxFreshTyVar "intArg" ctx
     let ctx = unifyTy ctx loc (tyFun argTy tyInt) ty
@@ -371,7 +371,7 @@ let inferRef (ctx: TyCtx) ident loc ty =
         ctx
       | argTy ->
         ctxAddErr ctx (sprintf "Expected int or char %A" argTy) loc
-    HExpr.Ref (ident, SerialIntFun, 1, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.Int, 1, ty, loc), ctx
   | None, "string" ->
     let argTy, _, ctx = ctxFreshTyVar "stringArg" ctx
     let ctx = unifyTy ctx loc (tyFun argTy tyStr) ty
@@ -382,7 +382,7 @@ let inferRef (ctx: TyCtx) ident loc ty =
         ctx
       | _ ->
         ctxAddErr ctx (sprintf "FIXME: Not implemented `string` for %A" argTy) loc
-    HExpr.Ref (ident, SerialStringFun, 1, ty, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.String, 1, ty, loc), ctx
   | None, _ ->
     let message = sprintf "Couldn't resolve var %s" ident
     let ctx = ctxAddErr ctx message loc
@@ -411,6 +411,13 @@ let inferMatch ctx target arms loc resultTy =
   HExpr.Match (target, arms, resultTy, loc), ctx
 
 let inferNav ctx sub mes loc resultTy =
+  // FIXME: This is just patch for tests to pass.
+  match sub, mes with
+  | HExpr.Ref ("String", _, _, _, _), "length" ->
+    let strLengthFunTy = tyFun tyStr tyInt
+    HExpr.Ref ("String.length", HValRef.Prim HPrim.StrLength, 1, strLengthFunTy, loc), ctx
+  |_ ->
+
   let asUnionTyName sub =
     match sub with
     | HExpr.Ref (ident, _, _, _, _) ->
@@ -433,7 +440,7 @@ let inferNav ctx sub mes loc resultTy =
   match substTy ctx subTy, mes with
   | tyStr, "Length" ->
     let ctx = unifyTy ctx loc resultTy tyInt
-    let funExpr = HExpr.Ref (mes, SerialStrLength, 1, tyFun tyStr tyInt, loc)
+    let funExpr = HExpr.Ref (mes, HValRef.Prim HPrim.StrLength, 1, tyFun tyStr tyInt, loc)
     HExpr.Op (Op.App, funExpr, sub, tyInt, loc), ctx
   | _ ->
     let ctx = ctxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
@@ -459,13 +466,13 @@ let inferIndex ctx l r loc resultTy =
     let ctx = ctxAddErr ctx "Type: Index not supported" loc
     hxAbort ctx resultTy loc
 
-let inferOpAppPrintfn ctx ident serial arg calleeTy loc =
+let inferOpAppPrintfn ctx ident arg calleeTy loc =
   match arg with
   | HExpr.Lit (Lit.Str format, _) ->
     let funTy = analyzeFormat format
     let arity = arityTy funTy
     let ctx = unifyTy ctx loc calleeTy funTy
-    HExpr.Ref (ident, serial, arity, calleeTy, loc), ctx
+    HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, arity, calleeTy, loc), ctx
   | _ ->
     let ctx = ctxAddErr ctx """First arg of printfn must be string literal, "..".""" loc
     hxAbort ctx calleeTy loc
@@ -476,8 +483,8 @@ let inferOpApp ctx callee arg loc appTy =
   let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
   let callee, ctx =
     match callee with
-    | HExpr.Ref (ident, serial, _, calleeTy, loc) when serial = SerialPrintfn ->
-      inferOpAppPrintfn ctx ident serial arg calleeTy loc
+    | HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, _, calleeTy, loc) ->
+      inferOpAppPrintfn ctx ident arg calleeTy loc
     | _ ->
       callee, ctx
   HExpr.Op (Op.App, callee, arg, appTy, loc), ctx
@@ -698,15 +705,6 @@ let infer (expr: HExpr): HExpr * TyCtx =
       TyEnv = Map.empty
       Tys = Map.empty
       Diags = []
-    }
-
-  let ctx =
-    let strLengthVarDef = VarDef.Fun ("String.length", 1, tyFun tyStr tyInt, (0, 0))
-    { ctx with
-        VarEnv = ctx.VarEnv |> Map.add "String.length" SerialStrLength
-        Vars = ctx.Vars |> Map.add SerialStrLength strLengthVarDef
-        TyEnv = ctx.TyEnv |> Map.add "String" -1
-        Tys = ctx.Tys |> Map.add -1 (TyDef.Union ("String", [], (0, 0)))
     }
 
   let expr, ctx = inferExpr ctx expr tyUnit
