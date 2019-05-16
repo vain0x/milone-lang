@@ -621,8 +621,6 @@ let genDecls (ctx: Ctx) decls =
   match decls with
   | [] ->
     ctx
-  | MDecl.TyDef _ :: decls ->
-    genDecls ctx decls
   | MDecl.LetFun (callee, args, resultTy, body, _) :: decls ->
     let ident, args =
       if List.isEmpty decls

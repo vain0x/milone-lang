@@ -414,8 +414,6 @@ type MStmt =
 type MDecl =
   | LetFun
     of callee:int * args:(int * int * Ty * Loc) list * resultTy:Ty * body:MStmt list * Loc
-  // FIXME: Unused!
-  | TyDef
 
 /// Type in C language.
 [<RequireQualifiedAccess>]
