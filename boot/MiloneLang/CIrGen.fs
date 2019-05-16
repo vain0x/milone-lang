@@ -621,11 +621,11 @@ let genDecls (ctx: Ctx) decls =
   match decls with
   | [] ->
     ctx
-  | MDecl.LetFun (callee, args, resultTy, body, _) :: decls ->
+  | MDecl.LetFun (funDecl, _) :: decls ->
     let ident, args =
       if List.isEmpty decls
       then "main", []
-      else ctxUniqueName ctx callee, args
+      else ctxUniqueName ctx funDecl.Callee, funDecl.Args
     let rec go acc ctx args =
       match args with
       | [] ->
@@ -635,8 +635,8 @@ let genDecls (ctx: Ctx) decls =
         let cty, ctx = cty ctx ty
         go ((ident, cty) :: acc) ctx args
     let args, ctx = go [] ctx args
-    let body, ctx = genBlock ctx body
-    let resultTy, ctx = cty ctx resultTy
+    let body, ctx = genBlock ctx funDecl.Body
+    let resultTy, ctx = cty ctx funDecl.ResultTy
     let funDecl = CDecl.Fun (ident, args, resultTy, body)
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls

@@ -340,6 +340,17 @@ type MatchIR =
   | Body
     of body:HExpr
 
+/// Function declaration in middle IR.
+[<RequireQualifiedAccess>]
+type MFunDecl =
+  {
+    Callee: int
+    /// serial, arity, ty, loc
+    Args: (int * int * Ty * Loc) list
+    ResultTy: Ty
+    Body: MStmt list
+  }
+
 /// Expression in middle IR.
 [<RequireQualifiedAccess>]
 type MExpr =
@@ -413,7 +424,7 @@ type MStmt =
 [<RequireQualifiedAccess>]
 type MDecl =
   | LetFun
-    of callee:int * args:(int * int * Ty * Loc) list * resultTy:Ty * body:MStmt list * Loc
+    of MFunDecl * Loc
 
 /// Type in C language.
 [<RequireQualifiedAccess>]

@@ -643,7 +643,7 @@ let mirifyExprLetFun ctx calleeSerial argPats body next letLoc =
   let bodyCtx = ctxNewBlock ctx
   let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
   let ctx = ctxRollBack ctx bodyCtx
-  let decl = MDecl.LetFun (calleeSerial, args, resultTy, body, letLoc)
+  let decl = MDecl.LetFun ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body }, letLoc)
   let ctx = ctxAddDecl ctx decl
 
   let next, ctx = mirifyExpr ctx next
