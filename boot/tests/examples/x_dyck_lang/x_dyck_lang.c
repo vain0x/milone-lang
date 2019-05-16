@@ -1,8 +1,24 @@
-int go_(struct String s_, int i_, int d_);
-
 struct String parse_(struct String s_1);
 
+int go_(struct String s_, int i_, int d_);
+
 int main();
+
+struct String parse_(struct String s_1) {
+    struct String match_3;
+    int call_2 = go_(s_1, 0, 0);
+    if (!((call_2 == 1))) goto next_11;
+    match_3 = (struct String){.str = "Accept", .len = 6};
+    goto end_match_10;
+next_11:;
+    if (!((call_2 == 0))) goto next_12;
+    match_3 = (struct String){.str = "Reject", .len = 6};
+    goto end_match_10;
+next_12:;
+    exit(1);
+end_match_10:;
+    return match_3;
+}
 
 int go_(struct String s_, int i_, int d_) {
     int match_;
@@ -41,22 +57,6 @@ next_3:;
     exit(1);
 end_match_1:;
     return match_;
-}
-
-struct String parse_(struct String s_1) {
-    struct String match_3;
-    int call_2 = go_(s_1, 0, 0);
-    if (!((call_2 == 1))) goto next_11;
-    match_3 = (struct String){.str = "Accept", .len = 6};
-    goto end_match_10;
-next_11:;
-    if (!((call_2 == 0))) goto next_12;
-    match_3 = (struct String){.str = "Reject", .len = 6};
-    goto end_match_10;
-next_12:;
-    exit(1);
-end_match_10:;
-    return match_3;
 }
 
 int main() {

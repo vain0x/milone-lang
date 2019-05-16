@@ -12,7 +12,6 @@ type MirCtx =
     Vars: Map<int, VarDef>
     Tys: Map<int, TyDef>
     LabelSerial: int
-    Decls: MDecl list
     Stmts: MStmt list
     Diags: Diag list
   }
@@ -23,7 +22,6 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
     Vars = tyCtx.Vars
     Tys = tyCtx.Tys
     LabelSerial = 0
-    Decls = []
     Stmts = []
     Diags = tyCtx.Diags
   }
@@ -36,9 +34,6 @@ let ctxNewBlock (ctx: MirCtx) =
 
 let ctxRollBack (bCtx: MirCtx) (dCtx: MirCtx) =
   { dCtx with Stmts = bCtx.Stmts }
-
-let ctxAddDecl (ctx: MirCtx) decl =
-  { ctx with Decls = decl :: ctx.Decls }
 
 let ctxAddStmt (ctx: MirCtx) (stmt: MStmt) =
   { ctx with Stmts = stmt :: ctx.Stmts }
@@ -643,8 +638,8 @@ let mirifyExprLetFun ctx calleeSerial argPats body next letLoc =
   let bodyCtx = ctxNewBlock ctx
   let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
   let ctx = ctxRollBack ctx bodyCtx
-  let decl = MDecl.LetFun ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body }, letLoc)
-  let ctx = ctxAddDecl ctx decl
+  let letFunStmt = MStmt.LetFun ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body }, letLoc)
+  let ctx = ctxAddStmt ctx letFunStmt
 
   let next, ctx = mirifyExpr ctx next
   next, ctx
@@ -690,11 +685,25 @@ let mirifyExprs ctx exprs =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
+/// Collect all declaration contained by the statements.
+let collectDecls (stmts: MStmt list) =
+  let rec go decls stmts =
+    match stmts with
+    | MStmt.LetFun (funDecl, loc) :: stmts ->
+      let decls = MDecl.LetFun (funDecl, loc) :: decls
+      let decls = go decls funDecl.Body
+      go decls stmts
+    | _ :: stmts ->
+      go decls stmts
+    | [] ->
+      decls
+  go [] stmts
+
 let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
 
   // FIXME: Don't discard the result expression because it may cause some effects.
   let _expr, ctx = mirifyExpr ctx expr
 
-  let decls = List.rev ctx.Decls
+  let decls = collectDecls ctx.Stmts
   decls, ctx

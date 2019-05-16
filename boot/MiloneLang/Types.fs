@@ -419,6 +419,8 @@ type MStmt =
     of MExpr * string * Loc
   | Exit
     of MExpr * Loc
+  | LetFun
+    of MFunDecl * Loc
 
 /// Declaration in middle IR.
 [<RequireQualifiedAccess>]

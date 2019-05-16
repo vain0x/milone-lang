@@ -10,9 +10,9 @@ int isDigit_(char c_);
 
 struct StringTuple1;
 
-int readInt_(struct StringTuple1 arg_, int i_);
-
 struct StringList* go_1(struct StringTuple1 arg_1, struct StringList* acc_1, int i_1);
+
+int readInt_(struct StringTuple1 arg_, int i_);
 
 struct StringList* tokenize_(struct String s_);
 
@@ -87,37 +87,6 @@ end_match_7:;
 struct StringTuple1 {
     struct String t0;
 };
-
-int readInt_(struct StringTuple1 arg_, int i_) {
-    struct String s_ = arg_.t0;
-    int match_3;
-    int match_4;
-    if (!(((s_.len <= i_) == 1))) goto next_12;
-    match_4 = 1;
-    goto end_match_11;
-next_12:;
-    if (!(((s_.len <= i_) == 0))) goto next_13;
-    int call_4 = isDigit_(s_.str[i_]);
-    match_4 = (!(call_4));
-    goto end_match_11;
-next_13:;
-    exit(1);
-end_match_11:;
-    if (!((match_4 == 1))) goto next_14;
-    match_3 = i_;
-    goto end_match_10;
-next_14:;
-    if (!((match_4 == 0))) goto next_15;
-    struct StringTuple1 tuple_;
-    tuple_.t0 = s_;
-    int call_5 = readInt_(tuple_, (i_ + 1));
-    match_3 = call_5;
-    goto end_match_10;
-next_15:;
-    exit(1);
-end_match_10:;
-    return match_3;
-}
 
 struct StringList* go_1(struct StringTuple1 arg_1, struct StringList* acc_1, int i_1) {
     struct String s_ = arg_1.t0;
@@ -216,6 +185,37 @@ next_18:;
     exit(1);
 end_match_16:;
     return match_5;
+}
+
+int readInt_(struct StringTuple1 arg_, int i_) {
+    struct String s_ = arg_.t0;
+    int match_3;
+    int match_4;
+    if (!(((s_.len <= i_) == 1))) goto next_12;
+    match_4 = 1;
+    goto end_match_11;
+next_12:;
+    if (!(((s_.len <= i_) == 0))) goto next_13;
+    int call_4 = isDigit_(s_.str[i_]);
+    match_4 = (!(call_4));
+    goto end_match_11;
+next_13:;
+    exit(1);
+end_match_11:;
+    if (!((match_4 == 1))) goto next_14;
+    match_3 = i_;
+    goto end_match_10;
+next_14:;
+    if (!((match_4 == 0))) goto next_15;
+    struct StringTuple1 tuple_;
+    tuple_.t0 = s_;
+    int call_5 = readInt_(tuple_, (i_ + 1));
+    match_3 = call_5;
+    goto end_match_10;
+next_15:;
+    exit(1);
+end_match_10:;
+    return match_3;
 }
 
 struct StringList* tokenize_(struct String s_) {

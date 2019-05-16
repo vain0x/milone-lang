@@ -601,6 +601,8 @@ let genStmt ctx stmt =
   | MStmt.Exit (arg, _) ->
     let arg, ctx = genExpr ctx arg
     ctxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))
+  | MStmt.LetFun _ ->
+    ctx
 
 let genBlock (ctx: Ctx) (stmts: MStmt list) =
   let bodyCtx = genStmts (ctxNewBlock ctx) stmts

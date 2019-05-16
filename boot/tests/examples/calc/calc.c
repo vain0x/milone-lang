@@ -62,9 +62,9 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
 
 struct StringTuple1;
 
-char at_(struct StringTuple1 arg_10, int i_6);
-
 struct Token_List* go_6(struct StringTuple1 arg_11, struct Token_ListIntTuple2 arg_12);
+
+char at_(struct StringTuple1 arg_10, int i_6);
 
 struct Token_List* tokenize_(struct String source_4);
 
@@ -72,15 +72,15 @@ int tokenListPrint_(struct Token_List* tokens_);
 
 struct IntToken_ListTuple2;
 
-struct IntToken_ListTuple2 evalTerm_(struct Token_List* tokens_4);
+struct IntToken_ListTuple2 go_8(int acc_7, struct Token_List* tokens_14);
+
+struct IntToken_ListTuple2 evalAdd_(struct Token_List* tokens_13);
 
 struct IntToken_ListTuple2 go_7(int acc_6, struct Token_List* tokens_9);
 
 struct IntToken_ListTuple2 evalMul_(struct Token_List* tokens_8);
 
-struct IntToken_ListTuple2 go_8(int acc_7, struct Token_List* tokens_14);
-
-struct IntToken_ListTuple2 evalAdd_(struct Token_List* tokens_13);
+struct IntToken_ListTuple2 evalTerm_(struct Token_List* tokens_4);
 
 struct IntToken_ListTuple2 evalExpr_(struct Token_List* tokens_3);
 
@@ -509,22 +509,6 @@ struct StringTuple1 {
     struct String t0;
 };
 
-char at_(struct StringTuple1 arg_10, int i_6) {
-    struct String source_4 = arg_10.t0;
-    char match_16;
-    if (!(((i_6 < source_4.len) == 1))) goto next_50;
-    match_16 = source_4.str[i_6];
-    goto end_match_49;
-next_50:;
-    if (!(((i_6 < source_4.len) == 0))) goto next_51;
-    match_16 = '\0';
-    goto end_match_49;
-next_51:;
-    exit(1);
-end_match_49:;
-    return match_16;
-}
-
 struct Token_List* go_6(struct StringTuple1 arg_11, struct Token_ListIntTuple2 arg_12) {
     struct String source_4 = arg_11.t0;
     struct Token_List* acc_5 = arg_12.t0;
@@ -612,6 +596,22 @@ end_match_52:;
     return match_17;
 }
 
+char at_(struct StringTuple1 arg_10, int i_6) {
+    struct String source_4 = arg_10.t0;
+    char match_16;
+    if (!(((i_6 < source_4.len) == 1))) goto next_50;
+    match_16 = source_4.str[i_6];
+    goto end_match_49;
+next_50:;
+    if (!(((i_6 < source_4.len) == 0))) goto next_51;
+    match_16 = '\0';
+    goto end_match_49;
+next_51:;
+    exit(1);
+end_match_49:;
+    return match_16;
+}
+
 struct Token_List* tokenize_(struct String source_4) {
     struct StringTuple1 tuple_22;
     tuple_22.t0 = source_4;
@@ -657,6 +657,79 @@ struct IntToken_ListTuple2 {
     int t0;
     struct Token_List* t1;
 };
+
+struct IntToken_ListTuple2 go_8(int acc_7, struct Token_List* tokens_14) {
+    struct IntToken_ListTuple2 match_24;
+    if (!((!((!(tokens_14)))))) goto next_78;
+    if (!((tokens_14->head.tag == TkOp_))) goto next_78;
+    if (!((tokens_14->head.TkOp_ == '+'))) goto next_78;
+    struct Token_List* tokens_15 = tokens_14->tail;
+    struct IntToken_ListTuple2 call_45 = evalMul_(tokens_15);
+    int r_6 = call_45.t0;
+    struct Token_List* tokens_16 = call_45.t1;
+    struct IntToken_ListTuple2 call_46 = go_8((acc_7 + r_6), tokens_16);
+    match_24 = call_46;
+    goto end_match_77;
+next_78:;
+    if (!((!((!(tokens_14)))))) goto next_79;
+    if (!((tokens_14->head.tag == TkOp_))) goto next_79;
+    if (!((tokens_14->head.TkOp_ == '-'))) goto next_79;
+    struct Token_List* tokens_17 = tokens_14->tail;
+    struct IntToken_ListTuple2 call_47 = evalMul_(tokens_17);
+    int r_7 = call_47.t0;
+    struct Token_List* tokens_18 = call_47.t1;
+    struct IntToken_ListTuple2 call_48 = go_8((acc_7 - r_7), tokens_18);
+    match_24 = call_48;
+    goto end_match_77;
+next_79:;
+    struct IntToken_ListTuple2 tuple_27;
+    tuple_27.t0 = acc_7;
+    tuple_27.t1 = tokens_14;
+    match_24 = tuple_27;
+    goto end_match_77;
+next_80:;
+end_match_77:;
+    return match_24;
+}
+
+struct IntToken_ListTuple2 evalAdd_(struct Token_List* tokens_13) {
+    struct IntToken_ListTuple2 call_49 = evalMul_(tokens_13);
+    int l_2 = call_49.t0;
+    struct Token_List* tokens_19 = call_49.t1;
+    struct IntToken_ListTuple2 call_50 = go_8(l_2, tokens_19);
+    return call_50;
+}
+
+struct IntToken_ListTuple2 go_7(int acc_6, struct Token_List* tokens_9) {
+    struct IntToken_ListTuple2 match_23;
+    if (!((!((!(tokens_9)))))) goto next_75;
+    if (!((tokens_9->head.tag == TkOp_))) goto next_75;
+    if (!((tokens_9->head.TkOp_ == '*'))) goto next_75;
+    struct Token_List* tokens_10 = tokens_9->tail;
+    struct IntToken_ListTuple2 call_41 = evalTerm_(tokens_10);
+    int r_5 = call_41.t0;
+    struct Token_List* tokens_11 = call_41.t1;
+    struct IntToken_ListTuple2 call_42 = go_7((acc_6 * r_5), tokens_11);
+    match_23 = call_42;
+    goto end_match_74;
+next_75:;
+    struct IntToken_ListTuple2 tuple_26;
+    tuple_26.t0 = acc_6;
+    tuple_26.t1 = tokens_9;
+    match_23 = tuple_26;
+    goto end_match_74;
+next_76:;
+end_match_74:;
+    return match_23;
+}
+
+struct IntToken_ListTuple2 evalMul_(struct Token_List* tokens_8) {
+    struct IntToken_ListTuple2 call_43 = evalTerm_(tokens_8);
+    int l_1 = call_43.t0;
+    struct Token_List* tokens_12 = call_43.t1;
+    struct IntToken_ListTuple2 call_44 = go_7(l_1, tokens_12);
+    return call_44;
+}
 
 struct IntToken_ListTuple2 evalTerm_(struct Token_List* tokens_4) {
     struct IntToken_ListTuple2 match_21;
@@ -706,79 +779,6 @@ next_69:;
     exit(1);
 end_match_67:;
     return match_21;
-}
-
-struct IntToken_ListTuple2 go_7(int acc_6, struct Token_List* tokens_9) {
-    struct IntToken_ListTuple2 match_23;
-    if (!((!((!(tokens_9)))))) goto next_75;
-    if (!((tokens_9->head.tag == TkOp_))) goto next_75;
-    if (!((tokens_9->head.TkOp_ == '*'))) goto next_75;
-    struct Token_List* tokens_10 = tokens_9->tail;
-    struct IntToken_ListTuple2 call_41 = evalTerm_(tokens_10);
-    int r_5 = call_41.t0;
-    struct Token_List* tokens_11 = call_41.t1;
-    struct IntToken_ListTuple2 call_42 = go_7((acc_6 * r_5), tokens_11);
-    match_23 = call_42;
-    goto end_match_74;
-next_75:;
-    struct IntToken_ListTuple2 tuple_26;
-    tuple_26.t0 = acc_6;
-    tuple_26.t1 = tokens_9;
-    match_23 = tuple_26;
-    goto end_match_74;
-next_76:;
-end_match_74:;
-    return match_23;
-}
-
-struct IntToken_ListTuple2 evalMul_(struct Token_List* tokens_8) {
-    struct IntToken_ListTuple2 call_43 = evalTerm_(tokens_8);
-    int l_1 = call_43.t0;
-    struct Token_List* tokens_12 = call_43.t1;
-    struct IntToken_ListTuple2 call_44 = go_7(l_1, tokens_12);
-    return call_44;
-}
-
-struct IntToken_ListTuple2 go_8(int acc_7, struct Token_List* tokens_14) {
-    struct IntToken_ListTuple2 match_24;
-    if (!((!((!(tokens_14)))))) goto next_78;
-    if (!((tokens_14->head.tag == TkOp_))) goto next_78;
-    if (!((tokens_14->head.TkOp_ == '+'))) goto next_78;
-    struct Token_List* tokens_15 = tokens_14->tail;
-    struct IntToken_ListTuple2 call_45 = evalMul_(tokens_15);
-    int r_6 = call_45.t0;
-    struct Token_List* tokens_16 = call_45.t1;
-    struct IntToken_ListTuple2 call_46 = go_8((acc_7 + r_6), tokens_16);
-    match_24 = call_46;
-    goto end_match_77;
-next_78:;
-    if (!((!((!(tokens_14)))))) goto next_79;
-    if (!((tokens_14->head.tag == TkOp_))) goto next_79;
-    if (!((tokens_14->head.TkOp_ == '-'))) goto next_79;
-    struct Token_List* tokens_17 = tokens_14->tail;
-    struct IntToken_ListTuple2 call_47 = evalMul_(tokens_17);
-    int r_7 = call_47.t0;
-    struct Token_List* tokens_18 = call_47.t1;
-    struct IntToken_ListTuple2 call_48 = go_8((acc_7 - r_7), tokens_18);
-    match_24 = call_48;
-    goto end_match_77;
-next_79:;
-    struct IntToken_ListTuple2 tuple_27;
-    tuple_27.t0 = acc_7;
-    tuple_27.t1 = tokens_14;
-    match_24 = tuple_27;
-    goto end_match_77;
-next_80:;
-end_match_77:;
-    return match_24;
-}
-
-struct IntToken_ListTuple2 evalAdd_(struct Token_List* tokens_13) {
-    struct IntToken_ListTuple2 call_49 = evalMul_(tokens_13);
-    int l_2 = call_49.t0;
-    struct Token_List* tokens_19 = call_49.t1;
-    struct IntToken_ListTuple2 call_50 = go_8(l_2, tokens_19);
-    return call_50;
 }
 
 struct IntToken_ListTuple2 evalExpr_(struct Token_List* tokens_3) {
