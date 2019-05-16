@@ -413,7 +413,7 @@ type MStmt =
 [<RequireQualifiedAccess>]
 type MDecl =
   | LetFun
-    of callee:int * args:(int * int * Ty * Loc) list * caps:(int * int * Ty * Loc) list * resultTy:Ty * body:MStmt list * Loc
+    of callee:int * args:(int * int * Ty * Loc) list * resultTy:Ty * body:MStmt list * Loc
   // FIXME: Unused!
   | TyDef
 

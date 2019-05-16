@@ -623,7 +623,7 @@ let genDecls (ctx: Ctx) decls =
     ctx
   | MDecl.TyDef _ :: decls ->
     genDecls ctx decls
-  | MDecl.LetFun (callee, args, _caps, resultTy, body, _) :: decls ->
+  | MDecl.LetFun (callee, args, resultTy, body, _) :: decls ->
     let ident, args =
       if List.isEmpty decls
       then "main", []
