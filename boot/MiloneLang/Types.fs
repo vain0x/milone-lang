@@ -438,7 +438,7 @@ type CUniOp =
   | Deref
 
 [<RequireQualifiedAccess>]
-type COp =
+type CBinOp =
   | Mul
   | Div
   | Mod
@@ -487,8 +487,8 @@ type CExpr =
     of CExpr * args:CExpr list
   | UniOp
     of CUniOp * CExpr
-  | Op
-    of COp * CExpr * CExpr
+  | BinOp
+    of CBinOp * CExpr * CExpr
 
 /// Statement in C language.
 [<RequireQualifiedAccess>]

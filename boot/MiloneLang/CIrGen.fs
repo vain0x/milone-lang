@@ -263,15 +263,15 @@ let cirifyTys (tys, ctx) =
 
 let cOpFrom op =
   match op with
-  | MOp.Mul -> COp.Mul
-  | MOp.Div -> COp.Div
-  | MOp.Mod -> COp.Mod
-  | MOp.Add -> COp.Add
-  | MOp.Sub -> COp.Sub
-  | MOp.Eq -> COp.Eq
-  | MOp.Ne -> COp.Ne
-  | MOp.Lt -> COp.Lt
-  | MOp.Le -> COp.Le
+  | MOp.Mul -> CBinOp.Mul
+  | MOp.Div -> CBinOp.Div
+  | MOp.Mod -> CBinOp.Mod
+  | MOp.Add -> CBinOp.Add
+  | MOp.Sub -> CBinOp.Sub
+  | MOp.Eq -> CBinOp.Eq
+  | MOp.Ne -> CBinOp.Ne
+  | MOp.Lt -> CBinOp.Lt
+  | MOp.Le -> CBinOp.Le
   | MOp.StrAdd
   | MOp.StrCmp
   | MOp.StrIndex -> failwith "Never"
@@ -353,7 +353,7 @@ let genExprOp ctx op l r =
   | _ ->
     let l, ctx = genExpr ctx l
     let r, ctx = genExpr ctx r
-    let opExpr = CExpr.Op (cOpFrom op, l, r)
+    let opExpr = CExpr.BinOp (cOpFrom op, l, r)
     opExpr, ctx
 
 let genExprList ctx exprs =
