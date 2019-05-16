@@ -253,7 +253,7 @@ type HValRef =
   | Prim
     of HPrim
 
-/// Expression in AST. `a` is typically a source location info.
+/// Expression in AST.
 [<RequireQualifiedAccess>]
 type HExpr =
   | Lit
