@@ -96,7 +96,8 @@ let ctxCaps (ctx: FunTransCtx) =
         None
     )
 
-// ## Declosure: Lambda conversion
+// ## Declosure: Closure conversion
+//
 // Performs closure conversion to make all functions be context-free.
 //
 // Function definitions may use out-side local variables.
@@ -113,8 +114,7 @@ let ctxCaps (ctx: FunTransCtx) =
 // Calls to functions are converted to pass an additional arg --
 // a tuple that consists of the captured variables.
 //
-// NOTE: Not supporting partial application and function objects,
-// i.e., functions must be used in call expression with full args for now.
+// Note we refer to context-free functions as *procedures* (or proc).
 
 let buildCapsTuple caps loc =
   let items = caps |> List.map (fun (ident, serial, arity, ty, loc) ->
@@ -465,7 +465,7 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =
-    HExpr.Inf (InfOp.Fun funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
+    HExpr.Inf (InfOp.Closure funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
   let expr =
     funLet funObjExpr
   expr, ctx
@@ -502,10 +502,10 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
     createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
-  let funObjExpr =
-    HExpr.Inf (InfOp.Fun funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
+  let closureExpr =
+    HExpr.Inf (InfOp.Closure funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
   let expr =
-    calleeLet (funLet funObjExpr)
+    calleeLet (funLet closureExpr)
   expr, ctx
 
 let resolvePartialApp calleeKind callee arity args argLen callLoc ctx =

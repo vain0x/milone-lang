@@ -247,7 +247,7 @@ let mirifyExprRef (ctx: MirCtx) valRef arity ty loc =
     | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
       MExpr.Variant (tySerial, serial, ty, loc), ctx
     | Some (VarDef.Fun (_, _, ty, loc)) ->
-      MExpr.Fun (serial, ty, loc), ctx
+      MExpr.Proc (serial, ty, loc), ctx
     | _ ->
       MExpr.Ref (serial, arity, ty, loc), ctx
   | HValRef.Prim prim ->
@@ -562,14 +562,14 @@ let mirifyExprInfExec ctx callee args resultTy loc =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Exec (callee, args), resultTy, loc))
   tempRef, ctx
 
-let mirifyExprInfFun ctx funSerial env funTy loc =
+let mirifyExprInfClosure ctx funSerial env funTy loc =
   let envTy, envLoc = exprExtract env
   let env, ctx = mirifyExpr ctx env
   let _, envSerial, ctx = ctxFreshVar ctx "env" envTy envLoc
   let ctx = ctxAddStmt ctx (MStmt.LetVal (envSerial, MInit.Expr env, envTy, envLoc))
 
   let tempRef, tempSerial, ctx = ctxFreshVar ctx "fun" funTy loc
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Fun (funSerial, envSerial), funTy, loc))
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Closure (funSerial, envSerial), funTy, loc))
   tempRef, ctx
 
 let mirifyExprInf ctx infOp args ty loc =
@@ -586,8 +586,8 @@ let mirifyExprInf ctx infOp args ty loc =
     mirifyExprInfCall ctx callee args ty loc
   | InfOp.Exec, callee :: args, _ ->
     mirifyExprInfExec ctx callee args ty loc
-  | InfOp.Fun funSerial, [env], _ ->
-    mirifyExprInfFun ctx funSerial env ty loc
+  | InfOp.Closure funSerial, [env], _ ->
+    mirifyExprInfClosure ctx funSerial env ty loc
   | t ->
     failwithf "Never: %A" t
 
@@ -638,8 +638,8 @@ let mirifyExprLetFun ctx calleeSerial argPats body next letLoc =
   let bodyCtx = ctxNewBlock ctx
   let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
   let ctx = ctxRollBack ctx bodyCtx
-  let letFunStmt = MStmt.LetFun ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body }, letLoc)
-  let ctx = ctxAddStmt ctx letFunStmt
+  let procStmt = MStmt.Proc ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body }, letLoc)
+  let ctx = ctxAddStmt ctx procStmt
 
   let next, ctx = mirifyExpr ctx next
   next, ctx
@@ -689,9 +689,9 @@ let mirifyExprs ctx exprs =
 let collectDecls (stmts: MStmt list) =
   let rec go decls stmts =
     match stmts with
-    | MStmt.LetFun (funDecl, loc) :: stmts ->
-      let decls = MDecl.LetFun (funDecl, loc) :: decls
-      let decls = go decls funDecl.Body
+    | MStmt.Proc (procDecl, loc) :: stmts ->
+      let decls = MDecl.Proc (procDecl, loc) :: decls
+      let decls = go decls procDecl.Body
       go decls stmts
     | _ :: stmts ->
       go decls stmts

@@ -258,7 +258,7 @@ let mexprExtract expr =
   | MExpr.Lit (lit, loc) -> litTy lit, loc
   | MExpr.Ref (_, _, ty, loc) -> ty, loc
   | MExpr.Prim (_, ty, loc) -> ty, loc
-  | MExpr.Fun (_, ty, loc) -> ty, loc
+  | MExpr.Proc (_, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
   | MExpr.Op (_, _, _, ty, loc) -> ty, loc

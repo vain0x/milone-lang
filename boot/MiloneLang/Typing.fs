@@ -680,7 +680,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferExprTyDecl ctx ident tyDef loc
   | HExpr.If _
   | HExpr.Inf (InfOp.Anno, _, _, _)
-  | HExpr.Inf (InfOp.Fun _, _, _, _)
+  | HExpr.Inf (InfOp.Closure _, _, _, _)
   | HExpr.Inf (InfOp.Exec, _, _, _)
   | HExpr.Inf (InfOp.Call, _, _, _)
   | HExpr.Inf (InfOp.List _, _, _, _) ->

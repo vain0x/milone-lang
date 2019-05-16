@@ -299,7 +299,7 @@ let genExprDefault ctx ty =
   | Ty.Meta _ ->
     failwith "Never"
 
-let genExprFun ctx serial _ty _loc =
+let genExprProc ctx serial _ty _loc =
   let ident = ctxUniqueName ctx serial
   CExpr.Ref ident, ctx
 
@@ -383,8 +383,8 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     genExprDefault ctx tyUnit
   | MExpr.Ref (serial, _, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
-  | MExpr.Fun (serial, ty, loc) ->
-    genExprFun ctx serial ty loc
+  | MExpr.Proc (serial, ty, loc) ->
+    genExprProc ctx serial ty loc
   | MExpr.Variant (_, serial, ty, _) ->
     genExprVariant ctx serial ty
   | MExpr.UniOp (op, arg, ty, loc) ->
@@ -472,7 +472,7 @@ let genInitExprCore ctx serial expr ty =
   let cty, ctx = cty ctx ty
   ctxAddStmt ctx (CStmt.Let (ident, expr, cty))
 
-let genInitFun ctx serial funSerial envSerial ty =
+let genInitClosure ctx serial funSerial envSerial ty =
   let ident = ctxUniqueName ctx serial
   let ty, ctx = cty ctx ty
   let fields =
@@ -556,8 +556,8 @@ let genStmtLetVal ctx serial init ty =
   | MInit.Exec (callee, args) ->
     let expr, ctx = genExprExec ctx callee args
     genInitExprCore ctx serial (Some expr) ty
-  | MInit.Fun (funSerial, envSerial) ->
-    genInitFun ctx serial funSerial envSerial ty
+  | MInit.Closure (funSerial, envSerial) ->
+    genInitClosure ctx serial funSerial envSerial ty
   | MInit.Box arg ->
     genInitBox ctx serial arg
   | MInit.Cons (head, tail, itemTy) ->
@@ -601,7 +601,7 @@ let genStmt ctx stmt =
   | MStmt.Exit (arg, _) ->
     let arg, ctx = genExpr ctx arg
     ctxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))
-  | MStmt.LetFun _ ->
+  | MStmt.Proc _ ->
     ctx
 
 let genBlock (ctx: Ctx) (stmts: MStmt list) =
@@ -623,11 +623,11 @@ let genDecls (ctx: Ctx) decls =
   match decls with
   | [] ->
     ctx
-  | MDecl.LetFun (funDecl, _) :: decls ->
+  | MDecl.Proc (procDecl, _) :: decls ->
     let ident, args =
       if List.isEmpty decls
       then "main", []
-      else ctxUniqueName ctx funDecl.Callee, funDecl.Args
+      else ctxUniqueName ctx procDecl.Callee, procDecl.Args
     let rec go acc ctx args =
       match args with
       | [] ->
@@ -637,8 +637,8 @@ let genDecls (ctx: Ctx) decls =
         let cty, ctx = cty ctx ty
         go ((ident, cty) :: acc) ctx args
     let args, ctx = go [] ctx args
-    let body, ctx = genBlock ctx funDecl.Body
-    let resultTy, ctx = cty ctx funDecl.ResultTy
+    let body, ctx = genBlock ctx procDecl.Body
+    let resultTy, ctx = cty ctx procDecl.ResultTy
     let funDecl = CDecl.Fun (ident, args, resultTy, body)
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls

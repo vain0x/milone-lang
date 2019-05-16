@@ -228,8 +228,8 @@ type InfOp =
   /// List constructor, e.g. `[x; y; z]`.
   | List
     of itemTy:Ty
-  /// Function object constructor.
-  | Fun
+  /// Closure constructor.
+  | Closure
     of funSerial:int
 
 /// Primitive in high-level IR.
@@ -340,9 +340,9 @@ type MatchIR =
   | Body
     of body:HExpr
 
-/// Function declaration in middle IR.
+/// Procedure declaration in middle IR.
 [<RequireQualifiedAccess>]
-type MFunDecl =
+type MProcDecl =
   {
     Callee: int
     /// serial, arity, ty, loc
@@ -362,7 +362,8 @@ type MExpr =
     of serial:int * arity:int * Ty * Loc
   | Prim
     of HPrim * Ty * Loc
-  | Fun
+  /// Procedure
+  | Proc
     of serial:int * Ty * Loc
   | Variant
     of tySerial:int * serial:int * Ty * Loc
@@ -384,8 +385,8 @@ type MInit =
   /// Call to function object.
   | Exec
     of callee:MExpr * args:MExpr list
-  /// Creates a function object, packing environment.
-  | Fun
+  /// Construct a closure, packing environment.
+  | Closure
     of subFunSerial:int * envSerial:int
   | Box
     of MExpr
@@ -419,14 +420,14 @@ type MStmt =
     of MExpr * string * Loc
   | Exit
     of MExpr * Loc
-  | LetFun
-    of MFunDecl * Loc
+  | Proc
+    of MProcDecl * Loc
 
 /// Declaration in middle IR.
 [<RequireQualifiedAccess>]
 type MDecl =
-  | LetFun
-    of MFunDecl * Loc
+  | Proc
+    of MProcDecl * Loc
 
 /// Type in C language.
 [<RequireQualifiedAccess>]
