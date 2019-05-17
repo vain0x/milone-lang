@@ -181,7 +181,7 @@ let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
       let calleeTy = tyFun capsTy calleeTy
 
       let callee = HExpr.Ref (ident, HValRef.Var callee, arity, calleeTy, refLoc)
-      hxCall callee args resultTy loc |> Some
+      hxCallProc callee args resultTy loc |> Some
     | _ ->
       None
   | _ ->
@@ -199,7 +199,7 @@ let declosureExprCall callee args resultTy loc (ctx: FunTransCtx) =
   | Some expr ->
     expr, ctx
   | None ->
-    hxCall callee args resultTy loc, ctx
+    hxCallProc callee args resultTy loc, ctx
 
 let declosureExprApp expr resultTy loc ctx =
   /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
@@ -378,7 +378,7 @@ let restCall callee args resultTy loc =
   | [] ->
     callee
   | args ->
-    hxExec callee args resultTy loc
+    hxCallClosure callee args resultTy loc
 
 type CalleeKind =
   | Fun
@@ -389,9 +389,9 @@ let hxCallTo calleeKind callee args resultTy loc =
   | _, [] ->
     callee
   | CalleeKind.Fun, args ->
-    hxCall callee args resultTy loc
+    hxCallProc callee args resultTy loc
   | CalleeKind.Obj, args ->
-    hxExec callee args resultTy loc
+    hxCallClosure callee args resultTy loc
 
 let createRestArgsAndPats callee arity argLen callLoc ctx =
   let rec go n restTy ctx =
@@ -426,7 +426,7 @@ let createEnvPatAndTy items callLoc ctx =
 
 let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
   let unboxRef = HExpr.Ref ("unbox", HValRef.Prim HPrim.Unbox, 1, tyFun tyObj envTy, callLoc)
-  let unboxExpr = hxCall unboxRef [envArgRef] envTy callLoc
+  let unboxExpr = hxCallProc unboxRef [envArgRef] envTy callLoc
   HExpr.Let (envPat, unboxExpr, next, exprTy next, callLoc)
 
 /// Creates a let expression to define an underlying function.
@@ -444,7 +444,7 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
 let createEnvBoxExpr args envTy callLoc =
   let tuple = hxTuple args callLoc
   let boxRef = HExpr.Ref ("box", HValRef.Prim HPrim.Box, 1, tyFun envTy tyObj, callLoc)
-  hxCall boxRef [tuple] tyObj callLoc
+  hxCallProc boxRef [tuple] tyObj callLoc
 
 /// In the case the callee is a function.
 let resolvePartialAppFun callee arity args argLen callLoc ctx =
@@ -459,7 +459,7 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
   let forwardArgs =
     envRefs @ restArgs
   let forwardExpr =
-    hxCall callee forwardArgs resultTy callLoc
+    hxCallProc callee forwardArgs resultTy callLoc
   let funLet, funSerial, ctx =
     createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
   let envBoxExpr =
@@ -497,7 +497,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
       failwith "Never"
 
   let forwardExpr =
-    hxExec calleeRef forwardArgs resultTy callLoc
+    hxCallClosure calleeRef forwardArgs resultTy callLoc
   let funLet, funSerial, ctx =
     createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
   let envBoxExpr =
@@ -557,7 +557,7 @@ let unetaRef expr valRef calleeLoc (ctx: FunTransCtx) =
 
 let unetaExprInf infOp args ty loc ctx =
   match infOp, args with
-  | InfOp.Call, callee :: args ->
+  | InfOp.CallProc, callee :: args ->
     unetaCall callee args ty loc ctx
   | _ ->
     let args, ctx = (args, ctx) |> stMap unetaExpr

@@ -681,8 +681,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   | HExpr.If _
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.Closure _, _, _, _)
-  | HExpr.Inf (InfOp.Exec, _, _, _)
-  | HExpr.Inf (InfOp.Call, _, _, _)
+  | HExpr.Inf (InfOp.CallProc, _, _, _)
+  | HExpr.Inf (InfOp.CallClosure, _, _, _)
   | HExpr.Inf (InfOp.List _, _, _, _) ->
     failwith "Never"
   | HExpr.Error (error, loc) ->

@@ -440,7 +440,7 @@ let genExprCallString arg argTy ctx =
   | _ ->
     failwith "Never: Type Error `int`"
 
-let genExprCall ctx callee args ty =
+let genExprCallProc ctx callee args ty =
   match callee, args with
   | MExpr.Prim (HPrim.Printfn, _, _), (MExpr.Lit (Lit.Str format, _)) :: args ->
     genExprCallPrintfn ctx format args
@@ -460,7 +460,7 @@ let genExprCall ctx callee args ty =
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
 
-let genExprExec ctx callee args =
+let genExprCallClosure ctx callee args =
   let callee, ctx = genExpr ctx callee
   let args, ctx = genExprList ctx args
   let funPtr = CExpr.Nav (callee, "fun")
@@ -550,11 +550,11 @@ let genStmtLetVal ctx serial init ty =
   | MInit.Expr expr ->
     let expr, ctx = genExpr ctx expr
     genInitExprCore ctx serial (Some expr) ty
-  | MInit.Call (callee, args, _) ->
-    let expr, ctx = genExprCall ctx callee args ty
+  | MInit.CallProc (callee, args, _) ->
+    let expr, ctx = genExprCallProc ctx callee args ty
     genInitExprCore ctx serial (Some expr) ty
-  | MInit.Exec (callee, args) ->
-    let expr, ctx = genExprExec ctx callee args
+  | MInit.CallClosure (callee, args) ->
+    let expr, ctx = genExprCallClosure ctx callee args
     genInitExprCore ctx serial (Some expr) ty
   | MInit.Closure (funSerial, envSerial) ->
     genInitClosure ctx serial funSerial envSerial ty

@@ -292,11 +292,11 @@ let hxAnno expr ty loc =
 let hxAndThen items loc =
   HExpr.Inf (InfOp.AndThen, items, exprTy (List.last items), loc)
 
-let hxCall callee args resultTy loc =
-  HExpr.Inf (InfOp.Call, callee :: args, resultTy, loc)
+let hxCallProc callee args resultTy loc =
+  HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)
 
-let hxExec callee args resultTy loc =
-  HExpr.Inf (InfOp.Exec, callee :: args, resultTy, loc)
+let hxCallClosure callee args resultTy loc =
+  HExpr.Inf (InfOp.CallClosure, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
   HExpr.Inf (InfOp.Tuple, items, tyTuple (List.map exprTy items), loc)

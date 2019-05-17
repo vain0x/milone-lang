@@ -424,7 +424,7 @@ let mirifyExprIndex ctx l r _ loc =
     let temp, tempSerial, ctx = ctxFreshVar ctx "slice" tyStr loc
     let funTy = tyFun tyStr (tyFun tyInt (tyFun tyInt tyStr))
     let strSliceRef = MExpr.Prim (HPrim.StrSlice, funTy, loc)
-    let callInit = MInit.Call (strSliceRef, [l; rl; rr], funTy)
+    let callInit = MInit.CallProc (strSliceRef, [l; rl; rr], funTy)
     let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, callInit, tyStr, loc))
     temp, ctx
   | _ ->
@@ -527,13 +527,13 @@ let mirifyExprAndThen ctx exprs =
   let exprs, ctx = mirifyExprs ctx exprs
   List.last exprs, ctx
 
-let mirifyExprInfCall ctx callee args ty loc =
+let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =
     let calleeTy = exprTy callee
     let callee, ctx = mirifyExpr ctx callee
     let (args, ctx) = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
     let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Call (callee, args, calleeTy), ty, loc))
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.CallProc (callee, args, calleeTy), ty, loc))
     temp, ctx
   match args with
   | [arg] ->
@@ -555,11 +555,11 @@ let mirifyExprInfCall ctx callee args ty loc =
   | _ ->
     core ()
 
-let mirifyExprInfExec ctx callee args resultTy loc =
+let mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
   let args, ctx = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
   let tempRef, tempSerial, ctx = ctxFreshVar ctx "app" resultTy loc
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Exec (callee, args), resultTy, loc))
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.CallClosure (callee, args), resultTy, loc))
   tempRef, ctx
 
 let mirifyExprInfClosure ctx funSerial env funTy loc =
@@ -582,10 +582,10 @@ let mirifyExprInf ctx infOp args ty loc =
     mirifyExprTuple ctx args itemTys loc
   | InfOp.AndThen, _, _ ->
     mirifyExprAndThen ctx args
-  | InfOp.Call, callee :: args, _ ->
-    mirifyExprInfCall ctx callee args ty loc
-  | InfOp.Exec, callee :: args, _ ->
-    mirifyExprInfExec ctx callee args ty loc
+  | InfOp.CallProc, callee :: args, _ ->
+    mirifyExprInfCallProc ctx callee args ty loc
+  | InfOp.CallClosure, callee :: args, _ ->
+    mirifyExprInfCallClosure ctx callee args ty loc
   | InfOp.Closure funSerial, [env], _ ->
     mirifyExprInfClosure ctx funSerial env ty loc
   | t ->

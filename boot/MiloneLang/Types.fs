@@ -219,10 +219,10 @@ type InfOp =
   | Anno
   /// `x; y`
   | AndThen
-  /// Call to a function, not a function object.
-  | Call
-  /// Call to a function object.
-  | Exec
+  /// Direct call to procedure or primitive.
+  | CallProc
+  /// Indirect call to closure.
+  | CallClosure
   /// Tuple constructor, e.g. `x, y, z`.
   | Tuple
   /// List constructor, e.g. `[x; y; z]`.
@@ -379,11 +379,11 @@ type MInit =
   | UnInit
   | Expr
     of MExpr
-  /// Call to normal function.
-  | Call
+  /// Direct call to procedure or primitive.
+  | CallProc
     of callee:MExpr * args:MExpr list * calleeTy:Ty
-  /// Call to function object.
-  | Exec
+  /// Indirect call to closure.
+  | CallClosure
     of callee:MExpr * args:MExpr list
   /// Construct a closure, packing environment.
   | Closure
