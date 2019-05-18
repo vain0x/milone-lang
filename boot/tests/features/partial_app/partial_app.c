@@ -6,15 +6,15 @@ int dec_(int y_, int x_1);
 
 int add4_(int x1_, int x2_, int x3_, int x4_);
 
-struct IntTuple1;
-
-int fun_(void* env_, int arg_);
+int fun_2(void* env_2, int arg_6, int arg_7, int arg_8, int arg_9);
 
 struct IntIntTuple2;
 
 int fun_1(void* env_1, int arg_2, int arg_3);
 
-int fun_2(void* env_2, int arg_6, int arg_7, int arg_8, int arg_9);
+struct IntTuple1;
+
+int fun_(void* env_, int arg_);
 
 struct IntIntIntFun2;
 
@@ -41,14 +41,9 @@ int add4_(int x1_, int x2_, int x3_, int x4_) {
     return (((x1_ + x2_) + x3_) + x4_);
 }
 
-struct IntTuple1 {
-    int t0;
-};
-
-int fun_(void* env_, int arg_) {
-    int arg_1 = (*(((struct IntTuple1*)env_))).t0;
-    int call_ = dec_(arg_1, arg_);
-    return call_;
+int fun_2(void* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
+    int call_3 = add4_(arg_6, arg_7, arg_8, arg_9);
+    return call_3;
 }
 
 struct IntIntTuple2 {
@@ -63,9 +58,14 @@ int fun_1(void* env_1, int arg_2, int arg_3) {
     return call_2;
 }
 
-int fun_2(void* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
-    int call_3 = add4_(arg_6, arg_7, arg_8, arg_9);
-    return call_3;
+struct IntTuple1 {
+    int t0;
+};
+
+int fun_(void* env_, int arg_) {
+    int arg_1 = (*(((struct IntTuple1*)env_))).t0;
+    int call_ = dec_(arg_1, arg_);
+    return call_;
 }
 
 struct IntIntIntFun2 {

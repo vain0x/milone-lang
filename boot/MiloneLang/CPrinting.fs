@@ -22,15 +22,15 @@ let join sep f (xs, acc) =
 
 let opStr op =
   match op with
-  | COp.Add -> "+"
-  | COp.Sub -> "-"
-  | COp.Mul -> "*"
-  | COp.Div -> "/"
-  | COp.Mod -> "%"
-  | COp.Eq -> "=="
-  | COp.Ne -> "!="
-  | COp.Lt -> "<"
-  | COp.Le -> "<="
+  | CBinOp.Add -> "+"
+  | CBinOp.Sub -> "-"
+  | CBinOp.Mul -> "*"
+  | CBinOp.Div -> "/"
+  | CBinOp.Mod -> "%"
+  | CBinOp.Eq -> "=="
+  | CBinOp.Ne -> "!="
+  | CBinOp.Lt -> "<"
+  | CBinOp.Le -> "<="
 
 let cprintTyFunPtr name argTys resultTy acc =
   let acc = cprintTy acc resultTy
@@ -201,7 +201,7 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExpr acc arg
     let acc = acc *- "))"
     acc
-  | CExpr.Op (op, first, second) ->
+  | CExpr.BinOp (op, first, second) ->
     let acc = acc *- "("
     let acc = cprintExpr acc first
     let acc = acc *- " " *- opStr op *- " "

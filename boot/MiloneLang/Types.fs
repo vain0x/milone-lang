@@ -219,17 +219,17 @@ type InfOp =
   | Anno
   /// `x; y`
   | AndThen
-  /// Call to a function, not a function object.
-  | Call
-  /// Call to a function object.
-  | Exec
+  /// Direct call to procedure or primitive.
+  | CallProc
+  /// Indirect call to closure.
+  | CallClosure
   /// Tuple constructor, e.g. `x, y, z`.
   | Tuple
   /// List constructor, e.g. `[x; y; z]`.
   | List
     of itemTy:Ty
-  /// Function object constructor.
-  | Fun
+  /// Closure constructor.
+  | Closure
     of funSerial:int
 
 /// Primitive in high-level IR.
@@ -253,7 +253,7 @@ type HValRef =
   | Prim
     of HPrim
 
-/// Expression in AST. `a` is typically a source location info.
+/// Expression in AST.
 [<RequireQualifiedAccess>]
 type HExpr =
   | Lit
@@ -340,6 +340,17 @@ type MatchIR =
   | Body
     of body:HExpr
 
+/// Procedure declaration in middle IR.
+[<RequireQualifiedAccess>]
+type MProcDecl =
+  {
+    Callee: int
+    /// serial, arity, ty, loc
+    Args: (int * int * Ty * Loc) list
+    ResultTy: Ty
+    Body: MStmt list
+  }
+
 /// Expression in middle IR.
 [<RequireQualifiedAccess>]
 type MExpr =
@@ -351,7 +362,8 @@ type MExpr =
     of serial:int * arity:int * Ty * Loc
   | Prim
     of HPrim * Ty * Loc
-  | Fun
+  /// Procedure
+  | Proc
     of serial:int * Ty * Loc
   | Variant
     of tySerial:int * serial:int * Ty * Loc
@@ -367,14 +379,14 @@ type MInit =
   | UnInit
   | Expr
     of MExpr
-  /// Call to normal function.
-  | Call
+  /// Direct call to procedure or primitive.
+  | CallProc
     of callee:MExpr * args:MExpr list * calleeTy:Ty
-  /// Call to function object.
-  | Exec
+  /// Indirect call to closure.
+  | CallClosure
     of callee:MExpr * args:MExpr list
-  /// Creates a function object, packing environment.
-  | Fun
+  /// Construct a closure, packing environment.
+  | Closure
     of subFunSerial:int * envSerial:int
   | Box
     of MExpr
@@ -408,14 +420,14 @@ type MStmt =
     of MExpr * string * Loc
   | Exit
     of MExpr * Loc
+  | Proc
+    of MProcDecl * Loc
 
 /// Declaration in middle IR.
 [<RequireQualifiedAccess>]
 type MDecl =
-  | LetFun
-    of callee:int * args:(int * int * Ty * Loc) list * caps:(int * int * Ty * Loc) list * resultTy:Ty * body:MStmt list * Loc
-  // FIXME: Unused!
-  | TyDef
+  | Proc
+    of MProcDecl * Loc
 
 /// Type in C language.
 [<RequireQualifiedAccess>]
@@ -438,7 +450,7 @@ type CUniOp =
   | Deref
 
 [<RequireQualifiedAccess>]
-type COp =
+type CBinOp =
   | Mul
   | Div
   | Mod
@@ -487,8 +499,8 @@ type CExpr =
     of CExpr * args:CExpr list
   | UniOp
     of CUniOp * CExpr
-  | Op
-    of COp * CExpr * CExpr
+  | BinOp
+    of CBinOp * CExpr * CExpr
 
 /// Statement in C language.
 [<RequireQualifiedAccess>]
