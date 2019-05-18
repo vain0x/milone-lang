@@ -38,6 +38,18 @@ let ctxRollback bCtx dCtx: TyCtx =
       VarEnv = bCtx.VarEnv
   }
 
+let ctxToTyCtx (ctx: TyCtx): TyContext =
+  {
+    TySerial = ctx.TySerial
+    Tys = ctx.Tys
+  }
+
+let ctxWithTyCtx (ctx: TyCtx) (tyCtx: TyContext): TyCtx =
+  { ctx with
+      TySerial = tyCtx.TySerial
+      Tys = tyCtx.Tys
+  }
+
 let ctxFreshTySerial (ctx: TyCtx) =
   let serial = ctx.TySerial + 1
   let ctx = { ctx with TySerial = ctx.TySerial + 1 }
@@ -179,14 +191,14 @@ let tyIsMonomorphic ty: bool =
   go [ty]
 
 /// Adds type-var/type binding.
-let bindTy (ctx: TyCtx) tySerial ty: TyCtx =
+let bindTyCore (ctx: TyContext) tySerial ty =
   // FIXME: track location info
   let noLoc = 0, 0
   // FIXME: track identifier
   let noIdent = "unknown"
 
   // Don't bind itself.
-  match substTy ctx ty with
+  match substTyCore ctx ty with
   | Ty.Meta s when s = tySerial -> ctx
   | _ ->
 
@@ -196,7 +208,7 @@ let bindTy (ctx: TyCtx) tySerial ty: TyCtx =
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
-let substTy (ctx: TyCtx) ty: Ty =
+let substTyCore (ctx: TyContext) ty: Ty =
   let rec go ty =
     match ty with
     | Ty.Error
@@ -212,36 +224,51 @@ let substTy (ctx: TyCtx) ty: Ty =
         ty
   go ty
 
-/// Resolves type equation `lty = rty` as possible
+/// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
-let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
+let unifyTyCore (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
   let lRootTy, rRootTy = lty, rty
-  let rec go lty rty ctx =
-    let lSubstTy = substTy ctx lty
-    let rSubstTy = substTy ctx rty
+  let rec go lty rty (msgAcc, ctx) =
+    let lSubstTy = substTyCore ctx lty
+    let rSubstTy = substTyCore ctx rty
     match lSubstTy, rSubstTy with
     | Ty.Meta l, Ty.Meta r when l = r ->
-      ctx
+      msgAcc, ctx
     | Ty.Meta lSerial, _ when tyIsFreeIn rSubstTy lSerial ->
-      bindTy ctx lSerial rty
+      let ctx = bindTyCore ctx lSerial rty
+      msgAcc, ctx
     | _, Ty.Meta _ ->
-      go rty lty ctx
+      go rty lty (msgAcc, ctx)
     | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
-      ctx
+      msgAcc, ctx
     | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
-      ctx |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
+      (msgAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
     | Ty.Error, _
     | _, Ty.Error ->
-      ctx
+      msgAcc, ctx
     | Ty.Meta _, _ ->
-      let message = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
-      ctxAddErr ctx message loc
+      let msg = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
+      msg :: msgAcc, ctx
     | Ty.Con _, _ ->
-      let lRootTy = substTy ctx lRootTy
-      let rRootTy = substTy ctx rRootTy
-      let message = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
-      ctxAddErr ctx message loc
-  go lty rty ctx
+      let lRootTy = substTyCore ctx lRootTy
+      let rRootTy = substTyCore ctx rRootTy
+      let msg = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
+      msg :: msgAcc, ctx
+  let msgAcc, ctx =
+    go lty rty ([], ctx)
+  List.rev msgAcc, ctx
+
+let bindTy (ctx: TyCtx) tySerial ty =
+  bindTyCore (ctxToTyCtx ctx) tySerial ty |> ctxWithTyCtx ctx
+
+let substTy (ctx: TyCtx) ty: Ty =
+  substTyCore (ctxToTyCtx ctx) ty
+
+let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
+  let msgs, tyCtx = unifyTyCore (ctxToTyCtx ctx) lty rty
+  let ctx = ctxWithTyCtx ctx tyCtx
+  let ctx = List.fold (fun ctx msg -> ctxAddErr ctx msg loc) ctx msgs
+  ctx
 
 /// Assume all bound type variables are resolved by `substTy`.
 let tyCollectFreeVars ty =

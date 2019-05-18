@@ -96,6 +96,14 @@ type Ty =
 type TyScheme =
   | ForAll of int list * Ty
 
+/// Type context.
+[<RequireQualifiedAccess>]
+type TyContext =
+  {
+    TySerial: int
+    Tys: Map<int, TyDef>
+  }
+
 /// Precedence level of binary operators.
 [<RequireQualifiedAccess>]
 type OpLevel =

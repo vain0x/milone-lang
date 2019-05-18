@@ -64,6 +64,7 @@ type MonoCtx =
   {
     VarSerial: int
     Vars: Map<int, VarDef>
+    TySerial: int
     Tys: Map<int, TyDef>
 
     /// Map from
@@ -86,73 +87,33 @@ type MonoCtx =
     InfiniteLoopDetector: int
   }
 
-// #############################################################################
-// START OF COPY FROM TYPING
-// FIXME: DRY!!
-
-let bindTy (ctx: MonoCtx) tySerial ty: MonoCtx =
-  let noLoc = 0, 0
-  let noIdent = "unknown"
-
-  match substTy ctx ty with
-  | Ty.Meta s when s = tySerial -> ctx
-  | _ ->
-
-  { ctx with
-      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, noLoc))
+let ctxToTyCtx (monoCtx: MonoCtx): TyContext =
+  {
+    TySerial = monoCtx.TySerial
+    Tys = monoCtx.Tys
   }
 
-let substTy (ctx: MonoCtx) ty: Ty =
-  let rec go ty =
-    match ty with
-    | Ty.Error
-    | Ty.Con (_, []) ->
-      ty
-    | Ty.Con (tyCon, tys) ->
-      Ty.Con (tyCon, List.map go tys)
-    | Ty.Meta tySerial ->
-      match ctx.Tys |> Map.tryFind tySerial with
-      | Some (TyDef.Meta (_, ty, _)) ->
-        go ty
-      | _ ->
-        ty
-  go ty
+let ctxWithTyCtx (tyCtx: TyContext) (monoCtx: MonoCtx) =
+  { monoCtx with
+      TySerial = tyCtx.TySerial
+      Tys = tyCtx.Tys
+  }
 
-let unifyTy (ctx: MonoCtx) (lty: Ty) (rty: Ty) =
-  let lRootTy, rRootTy = lty, rty
-  let rec go lty rty ctx =
-    let lSubstTy = substTy ctx lty
-    let rSubstTy = substTy ctx rty
-    match lSubstTy, rSubstTy with
-    | Ty.Meta l, Ty.Meta r when l = r ->
-      ctx
-    | Ty.Meta lSerial, _ when Typing.tyIsFreeIn rSubstTy lSerial ->
-      bindTy ctx lSerial rty
-    | _, Ty.Meta _ ->
-      go rty lty ctx
-    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
-      ctx
-    | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
-      ctx |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
-    | Ty.Error, _
-    | _, Ty.Error ->
-      ctx
-    | Ty.Meta _, _ ->
-      eprintfn "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
-      ctx
-    | Ty.Con _, _ ->
-      eprintfn "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
-      ctx
-  go lty rty ctx
+let bindTy (monoCtx: MonoCtx) tySerial ty: MonoCtx =
+  monoCtx |> ctxWithTyCtx (Typing.bindTyCore (ctxToTyCtx monoCtx) tySerial ty)
 
-/// Replaces type vars embedded in exprs
-/// with inference results.
+let substTy (monoCtx: MonoCtx) ty: Ty =
+  Typing.substTyCore (ctxToTyCtx monoCtx) ty
+
+let unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) =
+  let tyCtx = ctxToTyCtx monoCtx
+  let msgs, tyCtx = Typing.unifyTyCore tyCtx lTy rTy
+  msgs |> List.iter (eprintfn "%s")
+  monoCtx |> ctxWithTyCtx tyCtx
+
 let substTyExpr ctx expr =
   let subst ty = substTy ctx ty
   exprMap subst id expr
-
-// END OF COPY FROM TYPING
-// #############################################################################
 
 let substTyPat ctx pat =
   let subst ty = substTy ctx ty
@@ -339,6 +300,7 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
     {
       VarSerial = tyCtx.VarSerial
       Vars = tyCtx.Vars
+      TySerial = tyCtx.TySerial
       Tys = tyCtx.Tys
 
       GenericFunUseSiteTys = Map.empty
@@ -376,6 +338,7 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
       tyCtx with
         VarSerial = monoCtx.VarSerial
         Vars = monoCtx.Vars
+        TySerial = monoCtx.TySerial
         Tys = monoCtx.Tys
     }
 
