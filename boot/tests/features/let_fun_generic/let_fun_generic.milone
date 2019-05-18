@@ -1,0 +1,12 @@
+let main _ =
+  let id x = x
+  let _: int = id 42
+  let _: string list = id ["A"]
+
+  let failWith msg =
+    printfn "%s" msg
+    exit 1
+  let _: int list = failWith "string -> int list"
+  let _: string list = failWith "string -> string list"
+
+  0

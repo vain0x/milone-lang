@@ -92,8 +92,5 @@ end_match_4:;
 #line 13
 #error 13:17 Couldn't unify 'Meta 19' and 'Con (Fun,[Con (Fun,[Meta 19; Meta 17]); Meta 17])' due to self recursion.
 
-#line 13
-#error 13:3 Reject polymorphic functions are not supported for now due to lack of let-polymorphism Con (Fun,[Meta 19; Meta 17]) [Ref ("x",5,Meta 19,(12, 12))]
-
 #line 15
 #error 15:3 While unifying 'Con (Int,[])' and 'Con (Tuple,[])', failed to unify 'Con (Int,[])' and 'Con (Tuple,[])'.

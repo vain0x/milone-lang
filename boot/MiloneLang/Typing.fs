@@ -239,6 +239,50 @@ let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
       ctxAddErr ctx message loc
   go lty rty ctx
 
+/// Assume all bound type variables are resolved by `substTy`.
+let tyCollectFreeVars ty =
+  let rec go fvAcc tys =
+    match tys with
+    | [] ->
+      fvAcc
+    | Ty.Error :: tys
+    | Ty.Con (_, []) :: tys ->
+      go fvAcc tys
+    | Ty.Con (_, tys1) :: tys2 ->
+      let acc = go fvAcc tys1
+      let acc = go acc tys2
+      acc
+    | Ty.Meta serial :: tys ->
+      let acc = serial :: fvAcc
+      go acc tys
+  go [] [ty] |> listUnique
+
+/// Assume all bound type variables are resolved by `substTy`.
+let tyGeneralize (ty: Ty) =
+  let fvs = tyCollectFreeVars ty
+  TyScheme.ForAll (fvs, ty)
+
+let tySchemeInstantiate ctx (tyScheme: TyScheme) =
+  match tyScheme with
+  | TyScheme.ForAll ([], ty) ->
+    ty, ctx
+  | TyScheme.ForAll (fvs, ty) ->
+    // Generate fresh type variable for each bound type variable.
+    let mapping, ctx =
+      (fvs, ctx) |> stMap (fun (fv, ctx) ->
+        let newSerial, ctx = ctxFreshTySerial ctx
+        (fv, newSerial), ctx
+      )
+
+    // Replace bound variables in the type with fresh ones.
+    let ty =
+      let extendedCtx =
+        mapping |> List.fold
+          (fun ctx (src, target) -> bindTy ctx src (Ty.Meta target)) ctx
+      substTy extendedCtx ty
+
+    ty, ctx
+
 let ctxResolveVar (ctx: TyCtx) ident =
   match ctx.VarEnv |> Map.tryFind ident with
   | None -> None
@@ -246,6 +290,19 @@ let ctxResolveVar (ctx: TyCtx) ident =
     match ctx.Vars |> Map.tryFind serial with
     | None -> None
     | Some varDef -> Some (serial, varDef)
+
+let ctxGeneralizeFun (ctx: TyCtx) funSerial =
+  match ctx.Vars |> Map.find funSerial with
+  | VarDef.Fun (ident, arity, TyScheme.ForAll ([], funTy), loc) ->
+    let funTy = substTy ctx funTy
+    let funTyScheme = tyGeneralize funTy
+    let varDef = VarDef.Fun (ident, arity, funTyScheme, loc)
+    let ctx = { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
+    ctx
+  | VarDef.Fun _ ->
+    failwith "Can't generalize already-generalized function"
+  | _ ->
+    failwith "Expected function"
 
 /// Creates an expression to abort.
 let hxAbort (ctx: TyCtx) ty loc =
@@ -333,8 +390,20 @@ let inferPat ctx pat ty =
 
 let inferRef (ctx: TyCtx) ident loc ty =
   match ctxResolveVar ctx ident, ident with
+  | Some (serial, VarDef.Fun (ident, arity, tyScheme, loc)), _ ->
+    let refTy, ctx = tySchemeInstantiate ctx tyScheme
+    let ctx = unifyTy ctx loc refTy ty
+    HExpr.Ref (ident, HValRef.Var serial, arity, ty, loc), ctx
   | Some (serial, varDef), _ ->
-    let refTy, arity = varDefTyArity varDef
+    let refTy, arity =
+      match varDef with
+      | VarDef.Var (_, ty, _) ->
+        ty, 1
+      | VarDef.Variant (_, _, hasArg, _, ty, _) ->
+        let arity = if hasArg then 1 else 0
+        ty, arity
+      | VarDef.Fun _ ->
+        failwith "NEVER"
     let ctx = unifyTy ctx loc refTy ty
     HExpr.Ref (ident, HValRef.Var serial, arity, ty, loc), ctx
   | None, "not" ->
@@ -609,21 +678,16 @@ let inferLetFun ctx calleeName argPats body next ty loc =
 
   // Define function itself for recursive call.
   // FIXME: Functions are recursive by default.
-  let serial, nextCtx = ctxFreshFun ctx calleeName arity funTy loc
+  let serial, nextCtx =
+    let funTyScheme = TyScheme.ForAll ([], funTy)
+    ctxFreshFun ctx calleeName arity funTyScheme loc
 
   let bodyCtx = nextCtx
   let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
   let bodyCtx = unifyTy bodyCtx loc funTy actualFunTy
   let body, bodyCtx = inferExpr bodyCtx body bodyTy
   let nextCtx = ctxRollback nextCtx bodyCtx
-
-  let nextCtx =
-    if isMonomorphic bodyCtx funTy |> not then
-      let funTy = substTy bodyCtx funTy
-      let message = sprintf "Reject polymorphic functions are not supported for now due to lack of let-polymorphism %A %A" funTy argPats
-      ctxAddErr nextCtx message loc
-    else
-      nextCtx
+  let nextCtx = ctxGeneralizeFun nextCtx serial
 
   let next, nextCtx = inferExpr nextCtx next ty
   let ctx = ctxRollback ctx nextCtx
@@ -719,9 +783,9 @@ let infer (expr: HExpr): HExpr * TyCtx =
         | VarDef.Var (ident, ty, loc) ->
           let ty = substTy ctx ty
           VarDef.Var (ident, ty, loc)
-        | VarDef.Fun (ident, arity, ty, loc) ->
+        | VarDef.Fun (ident, arity, TyScheme.ForAll (args, ty), loc) ->
           let ty = substTy ctx ty
-          VarDef.Fun (ident, arity, ty, loc)
+          VarDef.Fun (ident, arity, TyScheme.ForAll (args, ty), loc)
         | VarDef.Variant (ident, tySerial, hasArg, argTy, ty, loc) ->
           let argTy = substTy ctx argTy
           let ty = substTy ctx ty
