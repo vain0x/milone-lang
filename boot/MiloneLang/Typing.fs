@@ -163,16 +163,20 @@ let tyIsFreeIn ty tySerial: bool =
       s <> tySerial
   go ty
 
-/// Gets if the specified type is resolved to a morphic type.
-let isMonomorphic ctx ty: bool =
-  match substTy ctx ty with
-  | Ty.Error
-  | Ty.Con (_, []) ->
-    true
-  | Ty.Con (tyCon, ty :: tys) ->
-    isMonomorphic ctx ty && isMonomorphic ctx (Ty.Con (tyCon, tys))
-  | Ty.Meta tySerial ->
-    (ctx: TyCtx).Tys |> Map.containsKey tySerial
+/// Gets if the type is monomorphic.
+/// Assume all bound type variables are resolved by `substTy`.
+let tyIsMonomorphic ty: bool =
+  let rec go tys =
+    match tys with
+    | [] ->
+      true
+    | Ty.Meta _ :: _ ->
+      false
+    | Ty.Error :: tys ->
+      go tys
+    | Ty.Con (_, tys1) :: tys2 ->
+      go tys1 && go tys2
+  go [ty]
 
 /// Adds type-var/type binding.
 let bindTy (ctx: TyCtx) tySerial ty: TyCtx =
@@ -298,6 +302,12 @@ let ctxGeneralizeFun (ctx: TyCtx) funSerial =
     let funTyScheme = tyGeneralize funTy
     let varDef = VarDef.Fun (ident, arity, funTyScheme, loc)
     let ctx = { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
+
+    match funTyScheme with
+    | TyScheme.ForAll ([], _) -> ()
+    | TyScheme.ForAll (_ :: _, _) ->
+      eprintfn "Generalize %A" funTyScheme
+
     ctx
   | VarDef.Fun _ ->
     failwith "Can't generalize already-generalized function"

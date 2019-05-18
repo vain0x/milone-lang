@@ -29,10 +29,12 @@ module MiloneLang.Program
     log "typed" typedAst
     let funTransAst, tyCtx = FunTrans.trans (typedAst, tyCtx)
     log "funTrans" funTransAst
-    let mir, mirCtx = Mir.mirify (funTransAst, tyCtx)
-    log "mir" mir
+    let monoAst, tyCtx = Monomorphizing.monify (funTransAst, tyCtx)
+    log "monoAst" monoAst
+    let mir, mirCtx = Mir.mirify (monoAst, tyCtx)
+    // log "mir" mir
     let cir, success = CIrGen.gen (mir, mirCtx)
-    log "cir" cir
+    // log "cir" cir
     cir, success
 
   let runCompile verbosity projectDir =

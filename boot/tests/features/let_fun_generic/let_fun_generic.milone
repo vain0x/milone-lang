@@ -1,12 +1,22 @@
 let main _ =
   let id x = x
+
+  // id<int> instance
   let _: int = id 42
+  // id<int> should be reused
+  let _: int = id 1
+  // Another instance of id
   let _: string list = id ["A"]
 
-  let failWith msg =
-    printfn "%s" msg
-    exit 1
-  let _: int list = failWith "string -> int list"
-  let _: string list = failWith "string -> string list"
+  let rec listMap f xs =
+    match xs with
+    | [] ->
+      []
+    | x :: xs ->
+      f x :: listMap f xs
+  let f x =
+    printfn "%d" x
+    x * x
+  let _ = [1; 2; 3] |> listMap f |> listMap f
 
   0
