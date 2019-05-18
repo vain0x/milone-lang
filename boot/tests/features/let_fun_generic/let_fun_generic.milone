@@ -19,4 +19,9 @@ let main _ =
     x * x
   let _ = [1; 2; 3] |> listMap f |> listMap f
 
+  let flip (x, y) = y, x
+  match (1, "a") |> flip |> flip with
+  | 1, "a" -> ()
+  | _ -> exit 1
+
   0

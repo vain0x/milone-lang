@@ -1,3 +1,11 @@
+struct IntStringTuple2;
+
+struct StringIntTuple2;
+
+struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_3);
+
+struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_2);
+
 int fun_1(void* env_1, int arg_1);
 
 int fun_(void* env_, int arg_);
@@ -17,6 +25,34 @@ struct StringList* id_1(struct StringList* x_);
 int id_2(int x_);
 
 int main();
+
+struct IntStringTuple2 {
+    int t0;
+    struct String t1;
+};
+
+struct StringIntTuple2 {
+    struct String t0;
+    int t1;
+};
+
+struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_3) {
+    int x_3 = arg_3.t0;
+    struct String y_ = arg_3.t1;
+    struct StringIntTuple2 tuple_1;
+    tuple_1.t0 = y_;
+    tuple_1.t1 = x_3;
+    return tuple_1;
+}
+
+struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_2) {
+    struct String x_3 = arg_2.t0;
+    int y_ = arg_2.t1;
+    struct IntStringTuple2 tuple_;
+    tuple_.t0 = y_;
+    tuple_.t1 = x_3;
+    return tuple_;
+}
 
 int fun_1(void* env_1, int arg_1) {
     int call_6 = f_1(arg_1);
@@ -105,5 +141,21 @@ int main() {
     list_2->tail = list_3;
     struct IntList* call_7 = listMap_1(fun_3, list_2);
     struct IntList* call_8 = listMap_1(fun_2, call_7);
+    int match_1;
+    struct IntStringTuple2 tuple_2;
+    tuple_2.t0 = 1;
+    tuple_2.t1 = (struct String){.str = "a", .len = 1};
+    struct StringIntTuple2 call_9 = flip_1(tuple_2);
+    struct IntStringTuple2 call_10 = flip_2(call_9);
+    if (!((call_10.t0 == 1))) goto next_5;
+    if (!((str_cmp(call_10.t1, (struct String){.str = "a", .len = 1}) == 0))) goto next_5;
+    match_1 = 0;
+    goto end_match_4;
+next_5:;
+    exit(1);
+    match_1 = 0;
+    goto end_match_4;
+next_6:;
+end_match_4:;
     return 0;
 }
