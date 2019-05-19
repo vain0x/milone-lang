@@ -571,6 +571,7 @@ let unetaExprLetFun ident callee argPats body next ty loc ctx =
   HExpr.LetFun (ident, callee, argPats, body, next, ty, loc), ctx
 
 let unetaPat (pat, ctx) =
+  // FIXME: Enter `when` patterns
   pat, ctx
 
 let unetaExpr (expr, ctx) =

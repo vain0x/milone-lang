@@ -37,23 +37,27 @@ open MiloneLang.Helpers
 //    IntStringPair (1, "one") |> flipIntStringPair |> flipStringIntPair
 // ```
 //
-// In short, this conversion *duplicates* each generic definition
+// In short, this conversion *clones* each generic definition
 // for each combination of type parameters in use-site
 // with type parameters replaced with such monomorphic types.
 //
 // ### Algorithm
 //
-// FIXME: Write in English.
+// Repeat the following while something happens:
 //
-// すべての部分式について、以下を変化がなくなるまで行う。
-// 1. 多相関数 f の参照式で、その使用側の型 t が単相型である式について、
-//    f を型 t に単相化したものがすでにあれば単相版の参照に置き換える。
-//    なければ、f と型 t のペアをマークする。
-// 2. 多相関数 f の定義式について、
-//    マークされている「f と単相型 t のペア」につき、この定義式を複製して、
-//    f の型 t に対する単相版として記録し、マークを削除する。
-
-// FIXME: We don't support generic types yet.
+// 1. For each reference expression to generic function `f`,
+//    if the use-site type `t` is monomorphic,
+//    replace with the monomorphized instance of (`f`, `t`) if exists;
+//    or mark the pair (`f`, `t`) for later otherwise.
+// 2. For each definition expression of generic function `f`,
+//    for each marked pair (`f`, `t`),
+//    clone the definition and unify the function type with `t`.
+//    The cloned function is referred to as monomorphized instance of (`f`, `t`).
+//
+// Do the same with generic type definitions.
+// FIXME: We don't support generic non-primitive types yet.
+//
+// NOTE: The algorithm seems inefficient and the finiteness is unproven.
 
 [<RequireQualifiedAccess>]
 type Mode =
@@ -198,6 +202,7 @@ let ctxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
     useSiteTys, ctx
 
 let monifyPat (pat, ctx) =
+  // FIXME: Enter `when` patterns
   pat, ctx
 
 let monifyExprRefGenericFun ctx ident genericFunSerial arity useSiteTy loc =
@@ -329,6 +334,7 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
     go (expr, monoCtx)
 
   // Remove generic function definitions.
+  // WARNING: Bad kind of code reuse.
   let expr, monoCtx =
     let monoCtx = { monoCtx with Mode = Mode.RemoveGenerics }
     monifyExpr (expr, monoCtx)

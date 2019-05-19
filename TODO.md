@@ -6,16 +6,6 @@ List of tasks. Because this is just a note for the author, it's not easy to unde
 
 It has too many features just for self-hosting.
 
-### Inline functions
-
-Implement function inlining to implement generic functions.
-
-### Hindley-Milner type inference
-
-- Generalize type of variable after definition analysis.
-- Instantiate type scheme of function that is referenced in an expression.
-- Inline generic functions to call-site.
-
 ### Recursive modules/functions
 
 Support `let rec` and `module rec`.
