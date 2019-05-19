@@ -87,6 +87,10 @@ For self-hosting, I avoid the use of complex mechanism in compiler source code, 
     - From/to AST
     - Convert function definitions and applications
     - See [lambda lifting](https://en.wikipedia.org/wiki/Lambda_lifting)
+- Monomorphization
+    - From/to AST
+    - Resolve generics by cloning generic definitions for each combination of type parameters
+    - See [Monomorphizing.fs](boot/MiloneLang/Monomorphizing.fs) for details.
 - MIR
     - From AST to mid-level intermediate representation (MIR)
     - Convert expressions to imperative statements
