@@ -91,6 +91,19 @@ type Ty =
   | Con
     of TyCon * Ty list
 
+/// Generalized type.
+[<RequireQualifiedAccess>]
+type TyScheme =
+  | ForAll of int list * Ty
+
+/// Type context.
+[<RequireQualifiedAccess>]
+type TyContext =
+  {
+    TySerial: int
+    Tys: Map<int, TyDef>
+  }
+
 /// Precedence level of binary operators.
 [<RequireQualifiedAccess>]
 type OpLevel =
@@ -170,7 +183,7 @@ type VarDef =
   | Var
     of ident:string * Ty * Loc
   | Fun
-    of ident:string * arity:int * Ty * Loc
+    of ident:string * arity:int * TyScheme * Loc
   /// Variant constructor.
   | Variant
     of ident:string * tySerial:int * hasArg:bool * argTy:Ty * Ty * Loc

@@ -246,7 +246,7 @@ let mirifyExprRef (ctx: MirCtx) valRef arity ty loc =
     match ctx.Vars |> Map.tryFind serial with
     | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
       MExpr.Variant (tySerial, serial, ty, loc), ctx
-    | Some (VarDef.Fun (_, _, ty, loc)) ->
+    | Some (VarDef.Fun (_, _, _, loc)) ->
       MExpr.Proc (serial, ty, loc), ctx
     | _ ->
       MExpr.Ref (serial, arity, ty, loc), ctx

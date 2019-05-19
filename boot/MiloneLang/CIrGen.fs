@@ -283,6 +283,7 @@ let genExprDefault ctx ty =
   | Ty.Con (TyCon.Bool, _)
   | Ty.Con (TyCon.Int, _) ->
     CExpr.Int 0, ctx
+  | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
   | Ty.Con (TyCon.Char, _)
   | Ty.Con (TyCon.Obj, _)
   | Ty.Con (TyCon.List, _) ->
@@ -295,8 +296,7 @@ let genExprDefault ctx ty =
     CExpr.Cast (CExpr.Default, ty), ctx
   | Ty.Con (TyCon.Range, _)
   | Ty.Con (TyCon.RefIdent _, _)
-  | Ty.Error
-  | Ty.Meta _ ->
+  | Ty.Error ->
     failwith "Never"
 
 let genExprProc ctx serial _ty _loc =

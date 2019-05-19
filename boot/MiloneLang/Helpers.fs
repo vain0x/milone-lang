@@ -1,6 +1,12 @@
 module MiloneLang.Helpers
 
+let listUnique (xs: 'x list): 'x list =
+  xs |> set |> Set.toList
+
 /// `List.map`, modifying context.
+///
+/// USAGE:
+///   let ys, ctx = (xs, ctx) |> go (fun (x, ctx) -> y, ctx)
 let stMap f (xs, ctx) =
   let rec go acc (xs, ctx) =
     match xs with
@@ -12,6 +18,9 @@ let stMap f (xs, ctx) =
   go [] (xs, ctx)
 
 /// `List.bind`, modifying context.
+///
+/// USAGE:
+///   let ys, ctx = (xs, ctx) |> go (fun (x, ctx) -> ys, ctx)
 let stFlatMap f (xs, ctx) =
   let rec go acc xs ctx =
     match xs with
@@ -354,16 +363,6 @@ let varDefIdent varDef =
   | VarDef.Var (ident, _, _) -> ident
   | VarDef.Fun (ident, _, _, _) -> ident
   | VarDef.Variant (ident, _, _, _, _, _) -> ident
-
-let varDefTyArity varDef =
-  match varDef with
-  | VarDef.Var (_, ty, _) ->
-    ty, 1
-  | VarDef.Fun (_, arity, ty, _) ->
-    ty, arity
-  | VarDef.Variant (_, _, hasArg, _, ty, _) ->
-    let arity = if hasArg then 1 else 0
-    ty, arity
 
 let primToArity prim =
   match prim with

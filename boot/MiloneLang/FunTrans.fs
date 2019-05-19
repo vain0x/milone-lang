@@ -37,10 +37,11 @@ let ctxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: FunTransCtx) =
 
 let ctxFreshFun (ident: string) arity (ty: Ty) loc (ctx: FunTransCtx) =
   let serial = ctx.VarSerial + 1
+  let tyScheme = Typing.tyGeneralize ty
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1
-        Vars = ctx.Vars |> Map.add serial (VarDef.Fun (ident, arity, ty, loc))
+        Vars = ctx.Vars |> Map.add serial (VarDef.Fun (ident, arity, tyScheme, loc))
     }
   let refExpr = HExpr.Ref (ident, HValRef.Var serial, arity, ty, loc)
   refExpr, serial, ctx
@@ -570,6 +571,7 @@ let unetaExprLetFun ident callee argPats body next ty loc ctx =
   HExpr.LetFun (ident, callee, argPats, body, next, ty, loc), ctx
 
 let unetaPat (pat, ctx) =
+  // FIXME: Enter `when` patterns
   pat, ctx
 
 let unetaExpr (expr, ctx) =

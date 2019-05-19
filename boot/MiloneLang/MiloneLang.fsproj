@@ -13,6 +13,7 @@
     <Compile Include="Desugaring.fs" />
     <Compile Include="Typing.fs" />
     <Compile Include="FunTrans.fs" />
+    <Compile Include="Monomorphizing.fs" />
     <Compile Include="Mir.fs" />
     <Compile Include="CIrGen.fs" />
     <Compile Include="CPrinting.fs" />

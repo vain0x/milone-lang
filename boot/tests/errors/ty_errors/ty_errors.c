@@ -1,9 +1,3 @@
-void* fun_(void* env_, void* arg_);
-
-struct ObjectObjectFun1;
-
-void* f_(void* x_);
-
 struct UnitUnitFun1;
 
 struct IntIntTuple2;
@@ -11,25 +5,6 @@ struct IntIntTuple2;
 struct IntIntTuple2IntTuple2;
 
 int main();
-
-void* fun_(void* env_, void* arg_) {
-    void* call_ = f_(arg_);
-    return call_;
-}
-
-struct ObjectObjectFun1 {
-    void*(*fun)(void*, void*);
-    void* env;
-};
-
-void* f_(void* x_) {
-    void* box_ = (void*)malloc(sizeof(int));
-    (*(((int*)box_))) = 0;
-    void* env_1 = box_;
-    struct ObjectObjectFun1 fun_1 = (struct ObjectObjectFun1){.fun = fun_, .env = env_1};
-    void* app_1 = x_.fun(x_.env, fun_1);
-    return app_1;
-}
 
 struct UnitUnitFun1 {
     int(*fun)(void*, int);
@@ -91,9 +66,6 @@ end_match_4:;
 
 #line 13
 #error 13:17 Couldn't unify 'Meta 19' and 'Con (Fun,[Con (Fun,[Meta 19; Meta 17]); Meta 17])' due to self recursion.
-
-#line 13
-#error 13:3 Reject polymorphic functions are not supported for now due to lack of let-polymorphism Con (Fun,[Meta 19; Meta 17]) [Ref ("x",5,Meta 19,(12, 12))]
 
 #line 15
 #error 15:3 While unifying 'Con (Int,[])' and 'Con (Tuple,[])', failed to unify 'Con (Int,[])' and 'Con (Tuple,[])'.
