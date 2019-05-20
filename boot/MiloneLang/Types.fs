@@ -295,6 +295,8 @@ type HExpr =
   /// Type declaration.
   | TyDef
     of ident:string * serial:int * TyDecl * Loc
+  | Open
+    of ident:string list * Loc
   | Error
     of string * Loc
 

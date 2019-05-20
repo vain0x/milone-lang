@@ -211,6 +211,8 @@ let exprExtract (expr: HExpr): Ty * Loc =
     ty, a
   | HExpr.TyDef (_, _, _, a) ->
     tyUnit, a
+  | HExpr.Open (_, a) ->
+    tyUnit, a
   | HExpr.Error (_, a) ->
     Ty.Error, a
 
@@ -246,6 +248,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.LetFun (ident, serial, List.map goPat args, go body, go next, f ty, g a)
     | HExpr.TyDef (ident, serial, tyDef, a) ->
       HExpr.TyDef (ident, serial, tyDef, g a)
+    | HExpr.Open (path, a) ->
+      HExpr.Open (path, g a)
     | HExpr.Error (error, a) ->
       HExpr.Error (error, g a)
   go expr

@@ -395,6 +395,24 @@ let parseBindingTy boxX keywordLoc tokens =
   | tokens ->
     parseError "Expected '='" tokens
 
+/// open ident ('.' ident)*
+let parseBindingOpen _boxX keywordLoc tokens =
+  let rec go identAcc tokens =
+    match tokens with
+    | (Token.Dot, _) :: (Token.Ident secondIdent, _) :: tokens ->
+      go (secondIdent :: identAcc) tokens
+    | (Token.Dot, _) :: tokens ->
+      parseError "Expected identifier" tokens
+    | _ ->
+      identAcc |> List.rev, tokens
+
+  match tokens with
+  | (Token.Ident ident, _) :: tokens ->
+    let path, tokens = go [ident] tokens
+    HExpr.Open (path, keywordLoc), tokens
+  | _ ->
+    parseError "Expected identifier" tokens
+
 /// atom  = unit / int / char /string / bool / prim / ref
 ///       / ( expr ) / if-then-else / match-with / let
 let parseAtom boxX tokens: HExpr * (Token * Loc) list =
@@ -562,6 +580,8 @@ let parseBinding boxX tokens =
     parseLet boxX letLoc tokens
   | (Token.Type, keywordLoc) :: tokens ->
     parseBindingTy boxX keywordLoc tokens
+  | (Token.Open, keywordLoc) :: tokens ->
+    parseBindingOpen boxX keywordLoc tokens
   | _ ->
     parseExpr1 boxX tokens
 

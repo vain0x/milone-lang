@@ -288,6 +288,7 @@ let declosureExprMatch target arms ty loc ctx =
 
 let declosureExpr (expr, ctx) =
   match expr with
+  | HExpr.Open _
   | HExpr.Lit _
   | HExpr.Ref (_, HValRef.Prim _, _, _, _) ->
     expr, ctx
@@ -578,6 +579,7 @@ let unetaExpr (expr, ctx) =
   match expr with
   | HExpr.Lit _
   | HExpr.TyDef _
+  | HExpr.Open _
   | HExpr.Error _ ->
     expr, ctx
   | HExpr.Ref (_, valRef, _, _, calleeLoc) ->

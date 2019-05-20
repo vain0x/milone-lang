@@ -90,7 +90,8 @@ let onExpr (expr: HExpr): HExpr =
   match expr with
   | HExpr.Lit _
   | HExpr.Ref _
-  | HExpr.TyDef _ ->
+  | HExpr.TyDef _
+  | HExpr.Open _ ->
     expr
   | HExpr.If (pred, thenCl, elseCl, ty, loc) ->
     onIf pred thenCl elseCl ty loc

@@ -647,6 +647,9 @@ let mirifyExprLetFun ctx calleeSerial argPats body next letLoc =
 let mirifyExprTyDecl ctx _tySerial _tyDecl loc =
   MExpr.Default (tyUnit, loc), ctx
 
+let mirifyExprOpen ctx loc =
+  MExpr.Default (tyUnit, loc), ctx
+
 let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   match expr with
   | HExpr.Lit (lit, loc) ->
@@ -665,6 +668,8 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprLetFun ctx serial args body next loc
   | HExpr.TyDef (_, tySerial, tyDecl, loc) ->
     mirifyExprTyDecl ctx tySerial tyDecl loc
+  | HExpr.Open (_, loc) ->
+    mirifyExprOpen ctx loc
   | HExpr.If _
   | HExpr.Nav _
   | HExpr.Inf (InfOp.Anno, _, _, _)
