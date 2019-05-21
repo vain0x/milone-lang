@@ -13,26 +13,10 @@ module MiloneLang.Program
     ast
 
   let parseProjectModules (projectDir: string) =
+    let modulePath moduleName = IO.Path.Combine(projectDir, sprintf "%s.milone" moduleName)
+    let readModuleFile moduleName = IO.File.ReadAllText(modulePath moduleName)
     let projectName = IO.Path.GetFileName(projectDir)
-
-    let rec go moduleAcc moduleMap moduleName =
-      if moduleMap |> Map.containsKey moduleName then
-        moduleAcc, moduleMap
-      else
-        let moduleAst = parseModuleFile projectDir moduleName
-        let dependencies = Typing.findOpenModules projectName moduleAst
-        let moduleMap = moduleMap |> Map.add moduleName moduleAst
-        let moduleAcc, moduleMap =
-          List.fold (fun (moduleAcc, moduleMap) dep ->
-            let moduleAcc, moduleMap = go moduleAcc moduleMap dep
-            moduleAcc, moduleMap
-          ) ([], moduleMap) dependencies
-        moduleAst :: moduleAcc, moduleMap
-
-    let moduleAcc, _ = go [] Map.empty projectName
-    let modules = moduleAcc |> List.rev
-
-    MiloneLang.Helpers.hxAndThen modules (0, 0)
+    Bundling.parseProjectModules readModuleFile projectName
 
   let toCir verbosity (projectDir: string): CDecl list * bool =
     let log label obj =

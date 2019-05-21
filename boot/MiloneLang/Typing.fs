@@ -837,23 +837,3 @@ let infer (expr: HExpr): HExpr * TyCtx =
     { ctx with Vars = vars }
 
   expr, ctx
-
-let findOpenPaths expr =
-  let rec go expr =
-    match expr with
-    | HExpr.Open (path, _) ->
-      [path]
-    | HExpr.Inf (InfOp.AndThen, exprs, _, _) ->
-      exprs |> List.collect go
-    | _ ->
-      []
-  go expr
-
-let findOpenModules projectName expr =
-  let extractor path =
-    match path with
-    | prefix :: moduleName :: _ when prefix = projectName ->
-      Some moduleName
-    | _ ->
-      None
-  findOpenPaths expr |> List.choose extractor
