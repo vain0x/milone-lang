@@ -1,0 +1,5 @@
+module helpers
+
+let main _ =
+  printfn "Hello"
+  0
