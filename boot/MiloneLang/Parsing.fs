@@ -25,7 +25,8 @@ let tokenRole tokens: bool * bool =
   | (Token.Match _, _) :: _
   | (Token.Do, _) :: _
   | (Token.Let, _) :: _
-  | (Token.Type, _) :: _ ->
+  | (Token.Type, _) :: _
+  | (Token.Open, _) :: _ ->
     // It is an expr, not pat.
     true, false
   | _ ->
