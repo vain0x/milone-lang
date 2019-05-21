@@ -1,5 +1,5 @@
 module helpers
 
-let main _ =
-  printfn "Hello"
-  0
+type Val = | Int of int
+
+let f x = x

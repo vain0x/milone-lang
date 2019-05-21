@@ -22,6 +22,32 @@ let findOpenModules projectName expr =
       None
   findOpenPaths expr |> List.choose extractor
 
+/// Insert the second expression to the bottom of the first expression.
+/// This is bad way because of variable capturing issues.
+let spliceExpr firstExpr secondExpr =
+  let rec go expr =
+    match expr with
+    | HExpr.Let (pat, init, next, ty, loc) ->
+      let next = go next
+      HExpr.Let (pat, init, next, ty, loc)
+    | HExpr.LetFun (ident, serial, args, body, next, ty, loc) ->
+      let next = go next
+      HExpr.LetFun (ident, serial, args, body, next, ty, loc)
+    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+      let rec goLast exprs =
+        match exprs with
+        | [] ->
+          [secondExpr]
+        | [lastExpr] ->
+          [go lastExpr]
+        | x :: xs ->
+          x :: goLast xs
+      let exprs = goLast exprs
+      HExpr.Inf (InfOp.AndThen, exprs, ty, loc)
+    | _ ->
+      hxAndThen [expr; secondExpr] (0, 0)
+  go firstExpr
+
 let parseProjectModules readModuleFile projectName =
   let rec go moduleAcc moduleMap moduleName =
     if moduleMap |> Map.containsKey moduleName then
@@ -42,4 +68,4 @@ let parseProjectModules readModuleFile projectName =
   let moduleAcc, _ = go [] Map.empty projectName
   let modules = moduleAcc |> List.rev
 
-  MiloneLang.Helpers.hxAndThen modules (0, 0)
+  List.reduce spliceExpr modules
