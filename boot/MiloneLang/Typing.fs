@@ -3,6 +3,31 @@ module rec MiloneLang.Typing
 open MiloneLang
 open MiloneLang.Helpers
 
+/// Reference of namespace.
+[<RequireQualifiedAccess>]
+type NsRef =
+  /// Type as namespace to host static members, e.g. `String.Join`.
+  | TyStatic
+    of int
+  /// Type as namespace to host instance members, e.g. `(_: string).Length`.
+  | TyDynamic
+    of int
+
+/// Identifier to denote some symbol in namespace.
+[<RequireQualifiedAccess>]
+type IdentRef =
+  | Var
+    of string
+  | Ty
+    of string
+
+[<RequireQualifiedAccess>]
+type SymbolRef =
+  | Var
+    of int
+  | Ty
+    of int
+
 type TyCtx =
   {
     /// Next serial number for variables.
@@ -18,11 +43,10 @@ type TyCtx =
     TyEnv: Map<string, int>
     /// Type serial to type definition.
     Tys: Map<int, TyDef>
+    /// Namespaces.
+    Ns: (NsRef * IdentRef * SymbolRef) list
     Diags: Diag list
   }
-
-let variantFullName tyIdent variantIdent =
-  sprintf "%s.%s" tyIdent variantIdent
 
 let ctxAddErr (ctx: TyCtx) message loc =
   { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
@@ -70,7 +94,14 @@ let ctxAddVariant unionTyIdent unionTySerial unionTy variant loc ctx =
   let variantTy = if hasArg then tyFun argTy unionTy else unionTy
   let variantVarDef = VarDef.Variant (variantIdent, unionTySerial, hasArg, argTy, variantTy, loc)
   let variantSerial, ctx = ctxFreshVarCore ctx variantIdent variantVarDef
-  let ctx = ctxAddVarAlias ctx variantSerial (variantFullName unionTyIdent variantIdent)
+
+  // The variant is the static member of the namespace.
+  let ctx =
+    let nsRef = NsRef.TyStatic unionTySerial
+    let memRef = IdentRef.Var variantIdent
+    let symbol = SymbolRef.Var variantSerial
+    ctxAddNsMember ctx nsRef memRef symbol
+
   let variant = variantIdent, variantSerial, hasArg, argTy
   variant, variantSerial, ctx
 
@@ -510,6 +541,20 @@ let inferMatch ctx target arms loc resultTy =
 
   HExpr.Match (target, arms, resultTy, loc), ctx
 
+let ctxAddNsMember (ctx: TyCtx) ns mem symbol =
+  { ctx with Ns = (ns, mem, symbol) :: ctx.Ns }
+
+let ctxFindNs (ctx: TyCtx) ns mem =
+  let rec go nss =
+    match nss with
+    | [] ->
+      None
+    | (xNs, xMem, symbol) :: _ when xNs = ns && xMem = mem ->
+      Some symbol
+    | _ :: nss ->
+      go nss
+  go ctx.Ns
+
 let inferNav ctx sub mes loc resultTy =
   // FIXME: This is just patch for tests to pass.
   match sub, mes with
@@ -518,33 +563,75 @@ let inferNav ctx sub mes loc resultTy =
     HExpr.Ref ("String.length", HValRef.Prim HPrim.StrLength, 1, strLengthFunTy, loc), ctx
   |_ ->
 
-  let asUnionTyName sub =
+  // Resolve path in the following order:
+  // 1. <type>.<static-member>
+  // 2. <value>.<instance-member>
+  // NOTE: This implementation is very experimental.
+  // NOTE: Nesting (`a.b.c`) is ignored yet.
+
+  let findTyStaticMemberSerial () =
     match sub with
-    | HExpr.Ref (ident, _, _, _, _) ->
-      match ctx |> ctxFindTyDef ident with
-      | Some (_, tyDef) ->
-        Some (tyDefIdent tyDef)
-      | None ->
-        None
-    | _ ->
-      None
-  match asUnionTyName sub with
-  | Some tyName ->
-    // FIXME: Terrible implementation for test passing.
-    // We should find type or value from the namespace of the type to which the subject denote.s
-    inferRef ctx (variantFullName tyName mes) loc resultTy
-  | _ ->
+    | HExpr.Ref (tyStaticIdent, _, _, _, _) ->
+      match ctxFindTyDef tyStaticIdent ctx with
+      | Some (tySerial, _) ->
+        match ctxFindNs ctx (NsRef.TyStatic tySerial) (IdentRef.Var mes) with
+        | Some (SymbolRef.Var memberSerial) ->
+          Some memberSerial
+        | _ -> None
+      | _ -> None
+    | _ -> None
+
+  let findTyStaticMember () =
+    // FIXME: DRY to reuse inferRef
+    let ty = resultTy
+    match findTyStaticMemberSerial () with
+    | Some serial ->
+      match ctx.Vars |> Map.find serial with
+      | VarDef.Fun (ident, arity, tyScheme, loc) ->
+        let refTy, ctx = tySchemeInstantiate ctx tyScheme
+        let ctx = unifyTy ctx loc refTy ty
+        Some (HExpr.Ref (ident, HValRef.Var serial, arity, ty, loc), ctx)
+      | varDef ->
+        let refTy, arity =
+          match varDef with
+          | VarDef.Var (_, ty, _) ->
+            ty, 1
+          | VarDef.Variant (_, _, hasArg, _, ty, _) ->
+            let arity = if hasArg then 1 else 0
+            ty, arity
+          | VarDef.Fun _ ->
+            failwith "NEVER"
+        let ctx = unifyTy ctx loc refTy ty
+        Some (HExpr.Ref (mes, HValRef.Var serial, arity, ty, loc), ctx)
+    | _ -> None
+
+  let findTyDynamicMember ctx sub subTy =
+    match subTy, mes with
+    | Ty.Con (TyCon.Str, []), "Length" ->
+      let ctx = unifyTy ctx loc resultTy tyInt
+      let funExpr = HExpr.Ref (mes, HValRef.Prim HPrim.StrLength, 1, tyFun tyStr tyInt, loc)
+      Some (HExpr.Op (Op.App, funExpr, sub, tyInt, loc), ctx)
+    | _ -> None
+
+  let hxError () =
+    let ctx = ctxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
+    hxAbort ctx resultTy loc
+
+  match findTyStaticMember () with
+  | Some (expr, ctx) ->
+    expr, ctx
+  | None ->
 
   let subTy, _, ctx = ctxFreshTyVar "sub" ctx
   let sub, ctx = inferExpr ctx sub subTy
-  match substTy ctx subTy, mes with
-  | tyStr, "Length" ->
-    let ctx = unifyTy ctx loc resultTy tyInt
-    let funExpr = HExpr.Ref (mes, HValRef.Prim HPrim.StrLength, 1, tyFun tyStr tyInt, loc)
-    HExpr.Op (Op.App, funExpr, sub, tyInt, loc), ctx
-  | _ ->
-    let ctx = ctxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
-    hxAbort ctx resultTy loc
+  let subTy = substTy ctx subTy
+
+  match findTyDynamicMember ctx sub subTy with
+  | Some (expr, ctx) ->
+    expr, ctx
+  | None ->
+
+  hxError ()
 
 /// `x.[i] : 'y` <== x : 'x, i : int or i : range
 /// NOTE: Currently only the `x : string` case can compile, however,
@@ -805,6 +892,7 @@ let infer (expr: HExpr): HExpr * TyCtx =
       TySerial = 0
       TyEnv = Map.empty
       Tys = Map.empty
+      Ns = []
       Diags = []
     }
 
