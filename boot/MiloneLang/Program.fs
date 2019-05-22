@@ -5,10 +5,18 @@ module MiloneLang.Program
     | Verbose
     | Silent
 
-  let readProjectSource (projectDir: string) =
+  let parseModuleFile (projectDir: string) (moduleName: string) =
+    let filePath = IO.Path.Combine(projectDir, sprintf "%s.milone" moduleName)
+    let source = IO.File.ReadAllText(filePath)
+    let tokens = Lexing.tokenize source
+    let ast = Parsing.parse tokens
+    ast
+
+  let parseProjectModules (projectDir: string) =
+    let modulePath moduleName = IO.Path.Combine(projectDir, sprintf "%s.milone" moduleName)
+    let readModuleFile moduleName = IO.File.ReadAllText(modulePath moduleName)
     let projectName = IO.Path.GetFileName(projectDir)
-    let mainPath = IO.Path.Combine(projectDir, sprintf "%s.milone" projectName)
-    IO.File.ReadAllText(mainPath)
+    Bundling.parseProjectModules readModuleFile projectName
 
   let toCir verbosity (projectDir: string): CDecl list * bool =
     let log label obj =
@@ -18,11 +26,11 @@ module MiloneLang.Program
       | Verbosity.Silent ->
         ()
 
-    let source = readProjectSource projectDir
-    let tokens = Lexing.tokenize source
-    log "tokens" tokens
-    let ast = Parsing.parse tokens
-    log "ast" ast
+    let ast = parseProjectModules projectDir
+    // let tokens = Lexing.tokenize source
+    // log "tokens" tokens
+    // let ast = Parsing.parse tokens
+    // log "ast" ast
     let desugared = Desugaring.desugar ast
     log "desugared" ast
     let typedAst, tyCtx = Typing.infer desugared

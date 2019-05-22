@@ -1,0 +1,5 @@
+module helpers
+
+type Val = | Int of int
+
+let f x = x

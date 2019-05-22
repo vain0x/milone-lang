@@ -250,6 +250,7 @@ let rec monifyExpr (expr, ctx) =
   match expr with
   | HExpr.Error _
   | HExpr.TyDef _
+  | HExpr.Open _
   | HExpr.Lit _
   | HExpr.Ref (_, HValRef.Prim _, _, _, _) ->
     expr, ctx

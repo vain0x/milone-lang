@@ -753,6 +753,10 @@ let inferExprTyDecl ctx ident tyDecl loc =
   let serial, tyDecl, ctx = ctx |> ctxAddTy ident tyDecl loc
   HExpr.TyDef (ident, serial, tyDecl, loc), ctx
 
+let inferExprOpen ctx path ty loc =
+  let ctx = unifyTy ctx loc ty tyUnit
+  HExpr.Open (path, loc), ctx
+
 let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   match expr with
   | HExpr.Lit (lit, loc) ->
@@ -779,6 +783,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferLetFun ctx calleeName args body next ty loc
   | HExpr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDecl ctx ident tyDef loc
+  | HExpr.Open (path, loc) ->
+    inferExprOpen ctx path ty loc
   | HExpr.If _
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.Closure _, _, _, _)
