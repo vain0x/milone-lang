@@ -199,6 +199,8 @@ type HPat =
   /// Variable reference pattern or `_`.
   | Ref
     of ident:string * serial:int * Ty * Loc
+  | Nav
+    of HPat * string * Ty * Loc
   | Call
     of callee:HPat * args:HPat list * Ty * Loc
   /// `::`

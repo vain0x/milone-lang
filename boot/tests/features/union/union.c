@@ -176,5 +176,16 @@ end_match_16:;
     struct Status_ ok_1 = (struct Status_){.tag = Ok_1};
     struct Ok_ okOk_ = (struct Ok_){.tag = Ok_};
     struct Status_ statusOk_ = (struct Status_){.tag = Ok_1};
+    int match_8;
+    if (!(((struct Status_){.tag = Ok_1}.tag == Ok_1))) goto next_26;
+    match_8 = 0;
+    goto end_match_25;
+next_26:;
+    if (!(((struct Status_){.tag = Ok_1}.tag == Err_))) goto next_27;
+    exit(1);
+    match_8 = 0;
+    goto end_match_25;
+next_27:;
+end_match_25:;
     return 0;
 }

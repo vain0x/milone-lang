@@ -106,6 +106,8 @@ let rec patExtract (pat: HPat): Ty * Loc =
     tyList itemTy, a
   | HPat.Ref (_, _, ty, a) ->
     ty, a
+  | HPat.Nav (_, _, ty, a) ->
+    ty, a
   | HPat.Call (_, _, ty, a) ->
     ty, a
   | HPat.Cons (_, _, itemTy, a) ->
@@ -129,6 +131,8 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Nil (f itemTy, g a)
     | HPat.Ref (ident, serial, ty, a) ->
       HPat.Ref (ident, serial, f ty, g a)
+    | HPat.Nav (pat, ident, ty, a) ->
+      HPat.Nav (pat, ident, f ty, g a)
     | HPat.Call (callee, args, ty, a) ->
       HPat.Call (go callee, List.map go args, f ty, g a)
     | HPat.Cons (l, r, itemTy, a) ->
@@ -152,6 +156,9 @@ let patNormalize pat =
     | HPat.Ref _
     | HPat.Nil _ ->
       [pat]
+    | HPat.Nav (pat, ident, ty, loc) ->
+      go pat |> List.map
+        (fun pat -> HPat.Nav (pat, ident, ty, loc))
     | HPat.Call (callee, [arg], ty, loc) ->
       go callee |> List.collect (fun callee ->
         go arg |> List.map (fun arg ->

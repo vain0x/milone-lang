@@ -56,4 +56,10 @@ let main _ =
   let okOk: Ok = Ok.Ok
   let statusOk: Status = Status.Ok
 
+  match Status.Ok with
+  | Status.Ok ->
+    ()
+  | Status.Err _ ->
+    exit 1
+
   0
