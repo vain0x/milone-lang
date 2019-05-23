@@ -188,15 +188,27 @@ let parsePatAtom boxX tokens: HPat * _ list =
   | _ ->
     failwith "Never"
 
-/// pat-call = pat-atom ( pat-atom )*
+/// pat-nav = pat-atom ( '.' ident )?
+let parsePatNav boxX tokens =
+  let pat, tokens = parsePatAtom boxX tokens
+
+  match tokens with
+  | (Token.Dot, loc) :: (Token.Ident ident, _) :: tokens ->
+    HPat.Nav (pat, ident, noTy, loc), tokens
+  | (Token.Dot, _) :: tokens ->
+    parseError "Expected identifier" tokens
+  | _ ->
+    pat, tokens
+
+/// pat-call = pat-nav ( pat-nav )*
 let parsePatCall boxX tokens =
   let calleeLoc = nextLoc tokens
   let _, calleeX = calleeLoc
   let insideX = max boxX (calleeX + 1)
-  let callee, tokens = parsePatAtom boxX tokens
+  let callee, tokens = parsePatNav boxX tokens
   let rec go acc tokens =
     if nextInside insideX tokens && leadsPat tokens then
-      let expr, tokens = parsePatAtom insideX tokens
+      let expr, tokens = parsePatNav insideX tokens
       go (expr :: acc) tokens
     else
       List.rev acc, tokens

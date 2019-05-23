@@ -157,6 +157,32 @@ let ctxAddVarAlias (ctx: TyCtx) serial aliasIdent =
       VarEnv = ctx.VarEnv |> Map.add aliasIdent serial
   }
 
+let ctxAddNsMember (ctx: TyCtx) ns mem symbol =
+  { ctx with Ns = (ns, mem, symbol) :: ctx.Ns }
+
+let ctxFindNs (ctx: TyCtx) ns mem =
+  let rec go nss =
+    match nss with
+    | [] ->
+      None
+    | (xNs, xMem, symbol) :: _ when xNs = ns && xMem = mem ->
+      Some symbol
+    | _ :: nss ->
+      go nss
+  go ctx.Ns
+
+let ctxResolveQualifiedVariant ctx tyIdent variantIdent =
+  match ctxFindTyDef tyIdent ctx with
+  | Some (tySerial, _) ->
+    match ctxFindNs ctx (NsRef.TyStatic tySerial) (IdentRef.Var variantIdent) with
+    | Some (SymbolRef.Var serial) ->
+      match ctxFindVar ctx serial with
+      | VarDef.Variant (ident, tySerial, hasArg, argTy, ty, loc) ->
+        Some (serial, (ident, tySerial, hasArg, argTy, ty, loc))
+      | _ -> None
+    | _ -> None
+  | None -> None
+
 let ctxFindTyDef name (ctx: TyCtx) =
   match ctx.TyEnv |> Map.tryFind name with
   | Some tySerial ->
@@ -345,6 +371,9 @@ let tySchemeInstantiate ctx (tyScheme: TyScheme) =
 
     ty, ctx
 
+let ctxFindVar (ctx: TyCtx) serial =
+  ctx.Vars |> Map.find serial
+
 let ctxResolveVar (ctx: TyCtx) ident =
   match ctx.VarEnv |> Map.tryFind ident with
   | None -> None
@@ -384,18 +413,44 @@ let inferPatRef (ctx: TyCtx) ident loc ty =
       serial, ty, ctx
   HPat.Ref (ident, serial, ty, loc), ctx
 
+let inferPatNav (ctx: TyCtx) l r loc ty =
+  match l with
+  | HPat.Ref (l, _, _, _) ->
+    match ctxResolveQualifiedVariant ctx l r with
+    | Some (variantSerial, (variantIdent, _, false, _, variantTy, _)) ->
+      let ctx = unifyTy ctx loc ty variantTy
+      HPat.Ref (variantIdent, variantSerial, ty, loc), ctx
+    | _ ->
+      failwith "Unknown type"
+  | _ ->
+    failwith "invalid use of nav pattern"
+
 let inferPatCall (ctx: TyCtx) callee args loc ty =
+  let core ctx calleeSerial arg calleeLoc callLoc ty =
+    match ctxFindVar ctx calleeSerial with
+    | VarDef.Variant (ident, _, true, _, (Ty.Con (TyCon.Fun, [argTy; callTy]) as variantTy), _) ->
+      let arg, ctx = inferPat ctx arg argTy
+      let callee = HPat.Ref (ident, calleeSerial, variantTy, calleeLoc)
+      let ctx = unifyTy ctx callLoc ty callTy
+      HPat.Call (callee, [arg], ty, callLoc), ctx
+    | _ ->
+      let ctx = ctxAddErr ctx "Expected a function variant." callLoc
+      patUnit callLoc, ctx
+
   match callee, args with
   | HPat.Ref (ident, _, _, refLoc), [arg] ->
     match ctxResolveVar ctx ident with
-    | Some (serial, VarDef.Variant (_, _, true, _, (Ty.Con (TyCon.Fun, [argTy; callTy]) as variantTy), _)) ->
-      let arg, ctx = inferPat ctx arg argTy
-      let callee = HPat.Ref (ident, serial, variantTy, refLoc)
-      let ctx = unifyTy ctx loc ty callTy
-      HPat.Call (callee, [arg], ty, loc), ctx
-    | _ ->
-      let ctx = ctxAddErr ctx "Expected a function variant." loc
-      patUnit loc, ctx
+    | Some (serial, _) ->
+      core ctx serial arg refLoc loc ty
+    | None ->
+      let ctx = ctxAddErr ctx "Unknown variant" refLoc
+      patUnit refLoc, ctx
+  | HPat.Nav (HPat.Ref (tyIdent, _, _, _), variantIdent, _, refLoc), [arg] ->
+    match ctxResolveQualifiedVariant ctx tyIdent variantIdent with
+    | Some (serial, _) ->
+      core ctx serial arg refLoc loc ty
+    | None ->
+      failwith "unknown variant"
   | _ ->
     failwith "unimpl use of call pattern"
 
@@ -429,6 +484,8 @@ let inferPat ctx pat ty =
     HPat.Nil (itemTy, loc), ctx
   | HPat.Ref (ident, _, _, loc) ->
     inferPatRef ctx ident loc ty
+  | HPat.Nav (l, r, _, loc) ->
+    inferPatNav ctx l r loc ty
   | HPat.Call (callee, args, _, loc) ->
     inferPatCall ctx callee args loc ty
   | HPat.Cons (l, r, _, loc) ->
@@ -540,20 +597,6 @@ let inferMatch ctx target arms loc resultTy =
     )
 
   HExpr.Match (target, arms, resultTy, loc), ctx
-
-let ctxAddNsMember (ctx: TyCtx) ns mem symbol =
-  { ctx with Ns = (ns, mem, symbol) :: ctx.Ns }
-
-let ctxFindNs (ctx: TyCtx) ns mem =
-  let rec go nss =
-    match nss with
-    | [] ->
-      None
-    | (xNs, xMem, symbol) :: _ when xNs = ns && xMem = mem ->
-      Some symbol
-    | _ :: nss ->
-      go nss
-  go ctx.Ns
 
 let inferNav ctx sub mes loc resultTy =
   // FIXME: This is just patch for tests to pass.

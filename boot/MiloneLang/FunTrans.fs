@@ -125,7 +125,8 @@ let buildCapsTuple caps loc =
 let declosurePat (pat, ctx) =
   match pat with
   | HPat.Lit _
-  | HPat.Nil _ ->
+  | HPat.Nil _
+  | HPat.Nav _ ->
     pat, ctx
   | HPat.Ref (_, serial, _, _) ->
     let ctx = ctx |> ctxAddLocal serial

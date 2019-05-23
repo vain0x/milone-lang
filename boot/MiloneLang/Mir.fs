@@ -233,6 +233,8 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     mirifyPatAs ctx endLabel pat serial expr loc
   | HPat.Or _ ->
     failwith "Unimpl nested OR pattern."
+  | HPat.Nav _ ->
+    failwith "Never: Nav pattern in mirify"
   | HPat.Call _ ->
     failwith "Never: Call pattern incorrect."
   | HPat.Tuple _ ->
@@ -268,6 +270,7 @@ let patsIsCovering pats =
       true
     | HPat.Lit _
     | HPat.Nil _
+    | HPat.Nav _
     | HPat.Cons _
     | HPat.Call _ ->
       false
