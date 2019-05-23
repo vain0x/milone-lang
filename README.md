@@ -108,14 +108,6 @@ For self-hosting, I avoid the use of complex mechanism in compiler source code, 
 - Install .NET Core CLI Tools 2.1
 - Install [F# 4.1](http://ionide.io/#requirements)
 
-### Dev: Run
-
-To compile something, run `dotnet run -p MiloneLang -- -q -`. For example:
-
-```sh
-$ echo 'let main _ = printfn "Hello, world!"; 0' | dotnet run -p MiloneLang -- -q -
-```
-
 ### Dev: Tasks
 
 [task](./boot/task) provides a set of testing scripts.
