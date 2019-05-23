@@ -329,12 +329,6 @@ let ctxGeneralizeFun (ctx: TyCtx) funSerial =
     let funTyScheme = tyGeneralize funTy
     let varDef = VarDef.Fun (ident, arity, funTyScheme, loc)
     let ctx = { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
-
-    match funTyScheme with
-    | TyScheme.ForAll ([], _) -> ()
-    | TyScheme.ForAll (_ :: _, _) ->
-      eprintfn "Generalize %A" funTyScheme
-
     ctx
   | VarDef.Fun _ ->
     failwith "Can't generalize already-generalized function"
