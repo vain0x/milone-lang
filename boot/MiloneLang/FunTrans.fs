@@ -261,6 +261,8 @@ let declosureExprLetFun ident callee args body next ty loc ctx =
 
 let declosureExprTyDecl expr tyDecl ctx =
   match tyDecl with
+  | TyDecl.Synonym _ ->
+    expr, ctx
   | TyDecl.Union (_, variants, _) ->
     let ctx =
       variants |> List.fold (fun ctx (_, variantSerial, _, _) ->
