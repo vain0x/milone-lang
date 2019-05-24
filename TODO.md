@@ -12,20 +12,6 @@ Support `let rec` and `module rec`.
 
 To implement `module rec`, iterate over the body and find `let` expressions to collect name of functions defined in the module.
 
-### Record types
-
-Support record definitions, field access expressions and `with` update expressions.
-
-It's unnecessary because we have tuples as replacement, however, painful.
-
-```
-type R = { X: int, .. }
-
-X.Foo
-
-{ X with Foo = 1 }
-```
-
 ### Generic equality/string/etc.
 
 Automatically generate these functions for each type.
@@ -65,8 +51,9 @@ These features are unnecessary because we have replacement.
 
 - sprintf, printf, failwithf
     - Generic `string` function is enough.
-- Map
+- Set/Map
     - We can replace them with associative lists
+- Record types
 - Bugs about arity calculation
 
 ### Not Supported
