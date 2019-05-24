@@ -37,14 +37,6 @@ Because it's verbose to implement classes such as `File` from .NET standard libr
     _ioFileWriteAllText: string -> string -> unit
 ```
 
-### Multiple-file Project
-
-We don't use `fsproj`. Plan:
-
-- Compiler reads a source code from the standard input
-- Parse it and find `open` statements that match `open D.X`, where `D` is the working directory name.
-- We assume that there exists a file with name `X.milone` for each `open D.X`. Read the file to parse. And find `open` statements, and do things recursively.
-
 ### Low Priority
 
 These features are unnecessary because we have replacement.
