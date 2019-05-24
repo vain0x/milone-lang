@@ -6,6 +6,22 @@ List of tasks. Because this is just a note for the author, it's not easy to unde
 
 It has too many features just for self-hosting.
 
+### Type synonyms
+
+```fsharp
+type FooId = int
+```
+
+### Recursive unions
+
+Recursive unions should be allowed for expression types.
+
+```fsharp
+type Expr =
+    | Int of int
+    | Add of Expr * Expr
+```
+
 ### Recursive modules/functions
 
 Support `let rec` and `module rec`.
@@ -18,12 +34,6 @@ Automatically generate these functions for each type.
 
 - `string`
 - `=`
-
-### Module system
-
-`module`
-
-No plan for nested module supports.
 
 ### IO primitives
 
