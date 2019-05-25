@@ -163,6 +163,8 @@ type Op =
 /// Type declaration.
 [<RequireQualifiedAccess>]
 type TyDecl =
+  | Synonym
+    of ty:Ty * Loc
   /// Union type.
   /// Variants: (ident, serial, has-argument, argument type).
   | Union

@@ -117,6 +117,17 @@ let ctxAddVariants unionTyIdent unionTySerial unionTy variants loc ctx =
 
 let ctxAddTy tyIdent tyDecl loc ctx =
   match tyDecl with
+  | TyDecl.Synonym (ty, loc) ->
+    let ty, ctx = ctxResolveTy ctx ty
+    let synonymTySerial, ctx = ctxFreshTySerial ctx
+    let synonymTyDef = TyDef.Meta (tyIdent, ty, loc)
+    let ctx =
+      { ctx with
+          TyEnv = ctx.TyEnv |> Map.add tyIdent synonymTySerial
+          Tys = ctx.Tys |> Map.add synonymTySerial synonymTyDef
+      }
+    synonymTySerial, tyDecl, ctx
+
   | TyDecl.Union (_, variants, _) ->
     let unionTySerial, ctx = ctxFreshTySerial ctx
     let unionTy = tyRef unionTySerial []
@@ -196,9 +207,10 @@ let ctxFindTyDef name (ctx: TyCtx) =
 
 let ctxResolveTyRefIdent ident (ctx: TyCtx) =
   match ctx |> ctxFindTyDef ident with
-  | Some (_, TyDef.Meta _)
   | None ->
     Ty.Error
+  | Some (_, TyDef.Meta (_, ty, _)) ->
+    ty
   | Some (tySerial, _) ->
     tyRef tySerial []
 

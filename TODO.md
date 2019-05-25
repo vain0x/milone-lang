@@ -6,12 +6,6 @@ List of tasks. Because this is just a note for the author, it's not easy to unde
 
 It has too many features just for self-hosting.
 
-### Type synonyms
-
-```fsharp
-type FooId = int
-```
-
 ### Recursive unions
 
 Recursive unions should be allowed for expression types.

@@ -159,7 +159,8 @@ let parseTyDef boxX tyIdent tyIdentLoc tokens =
   | (Token.Ident _, _) :: (Token.Of _, _) :: _ when nextInside boxX tokens ->
     parseTyDefUnion boxX tyIdent tyIdentLoc tokens
   | _ ->
-    parseError "Expected type definition" tokens
+    let ty, tokens = parseTy boxX tokens
+    TyDecl.Synonym (ty, tyIdentLoc), tokens
 
 let parsePatAtom boxX tokens: HPat * _ list =
   match tokens with
