@@ -11,10 +11,18 @@ type UnionB = | T of UnionA list
 
 let main _ =
   let _: SynonymB = 0
-  let UnionB = UnionB.T [UnionA.T]
+  let _: UnionB = UnionB.T [UnionA.T]
+
+  match UnionX.VariantY with
+  | VariantX -> // Is a variant pattern rather than variable
+    exit 1
+  | _ ->
+    ()
 
   0
 
 type SynonymA = int
 
 type UnionA = | T
+
+type UnionX = | VariantX | VariantY

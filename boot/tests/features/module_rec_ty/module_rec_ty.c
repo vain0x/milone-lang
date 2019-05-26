@@ -8,6 +8,10 @@ enum UnionB_Tag;
 
 struct UnionB_;
 
+enum UnionX_Tag;
+
+struct UnionX_;
+
 int main();
 
 enum UnionA_Tag {
@@ -34,11 +38,29 @@ struct UnionB_ {
     };
 };
 
+enum UnionX_Tag {
+    VariantX_,
+    VariantY_,
+};
+
+struct UnionX_ {
+    enum UnionX_Tag tag;
+};
+
 int main() {
     struct UnionA_List* list_ = (struct UnionA_List*)malloc(sizeof(struct UnionA_List));
     list_->head = (struct UnionA_){.tag = T_1};
     list_->tail = NULL;
     struct UnionB_ variant_ = (struct UnionB_){.tag = T_, .T_ = list_};
-    struct UnionB_ UnionB_ = variant_;
+    int match_;
+    if (!(((struct UnionX_){.tag = VariantY_}.tag == VariantX_))) goto next_2;
+    exit(1);
+    match_ = 0;
+    goto end_match_1;
+next_2:;
+    match_ = 0;
+    goto end_match_1;
+next_3:;
+end_match_1:;
     return 0;
 }
