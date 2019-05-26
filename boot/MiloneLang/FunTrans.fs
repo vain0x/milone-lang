@@ -546,10 +546,33 @@ let unetaCallCore calleeKind callee arity calleeLoc args resultTy callLoc ctx =
 
 let unetaCall callee args resultTy loc ctx =
   match callee, args with
-  | HExpr.Ref (_, HValRef.Var serial, arity, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
+  | HExpr.Ref (_, HValRef.Var serial, _, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
+    let arity =
+      match (ctx: FunTransCtx).Vars |> Map.find serial with
+      | VarDef.Fun (_, arity, _, _) ->
+        arity
+      | VarDef.Variant (_, _, hasArg, _, _, _) ->
+        if hasArg then 1 else 0
+      | _ ->
+        1
     let args, ctx = (args, ctx) |> stMap unetaExpr
     unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
-  | HExpr.Ref (_, HValRef.Prim _, arity, _, calleeLoc), _ ->
+  | HExpr.Ref (_, HValRef.Prim prim, _, primTy, calleeLoc), _ ->
+    let arity =
+      match prim with
+      | HPrim.Not
+      | HPrim.Exit
+      | HPrim.Box
+      | HPrim.Unbox
+      | HPrim.StrLength
+      | HPrim.Char
+      | HPrim.Int
+      | HPrim.String ->
+        1
+      | HPrim.StrSlice ->
+        3
+      | HPrim.Printfn ->
+        primTy |> arityTy
     let args, ctx = (args, ctx) |> stMap unetaExpr
     unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
   | _, args ->
