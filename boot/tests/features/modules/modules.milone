@@ -1,4 +1,4 @@
-module modules
+module rec modules
 
 open modules.helpers
 open modules.helpers

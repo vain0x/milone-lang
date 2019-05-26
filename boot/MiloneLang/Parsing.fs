@@ -653,8 +653,14 @@ let parseTopLevel tokens =
   | [] ->
     AExpr.TupleLit ([], (0, 0)), []
   | (Token.Module, (_, moduleX))
+    :: (Token.Rec, _)
     :: (Token.Ident _, _)
-    :: (Token.Rec, _) :: tokens ->
+    :: (Token.Dot, _)
+    :: (Token.Ident _, _) :: tokens ->
+    parseModule moduleX tokens
+  | (Token.Module, (_, moduleX))
+    :: (Token.Rec, _)
+    :: (Token.Ident _, _) :: tokens ->
     parseModule moduleX tokens
   | (Token.Module, (_, moduleX))
     :: (Token.Ident _, _) :: tokens ->

@@ -1,4 +1,4 @@
-module helpers
+module rec modules.helpers
 
 type Val = | Int of int
 
