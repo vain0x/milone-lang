@@ -97,6 +97,14 @@ let ctxCaps (ctx: FunTransCtx) =
         None
     )
 
+let ctxSetFunArity funSerial arity (ctx: FunTransCtx) =
+  match ctx.Vars |> Map.find funSerial with
+  | VarDef.Fun (ident, _, tyScheme, loc) ->
+    let varDef = VarDef.Fun (ident, arity, tyScheme, loc)
+    { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
+  | _ ->
+    ctx
+
 // ## Declosure: Closure conversion
 //
 // Performs closure conversion to make all functions be context-free.
@@ -239,22 +247,27 @@ let declosureFunBody callee args body ctx =
   let ctx = ctx |> ctxPopScope baseCtx
   caps, args, body, ctx
 
-let addCapsArg caps args body loc ctx =
+let addCapsArg callee caps args body loc ctx =
   match caps with
   | [] ->
     // Static functions are intact.
     args, body, ctx
   | _ ->
-    let capsTy = caps |> List.map (fun (_, _, _, ty, _) -> ty) |> tyTuple
-    let capsPats = caps |> List.map (fun (ident, serial, _, ty, loc) -> HPat.Ref (ident, serial, ty, loc))
-    let capsPat = HPat.Tuple (capsPats, capsTy, loc)
-    capsPat :: args, body, ctx
+    let args =
+      let capsTy = caps |> List.map (fun (_, _, _, ty, _) -> ty) |> tyTuple
+      let capsPats = caps |> List.map (fun (ident, serial, _, ty, loc) -> HPat.Ref (ident, serial, ty, loc))
+      let capsPat = HPat.Tuple (capsPats, capsTy, loc)
+      capsPat :: args
+    let ctx =
+      let arity = args |> List.length
+      ctx |> ctxSetFunArity callee arity
+    args, body, ctx
 
 let declosureExprLetFun ident callee args body next ty loc ctx =
   let caps, args, body, ctx =
     declosureFunBody callee args body ctx
   let args, body, ctx =
-    addCapsArg caps args body loc ctx
+    addCapsArg callee caps args body loc ctx
   let next, ctx =
     declosureExpr (next, ctx)
   HExpr.LetFun (ident, callee, args, body, next, ty, loc), ctx
