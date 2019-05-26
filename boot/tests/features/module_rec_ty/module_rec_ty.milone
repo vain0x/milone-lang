@@ -1,0 +1,20 @@
+
+// Use of type reference defined later.
+type SynonymB = SynonymA
+
+type UnionB = | T of UnionA list
+
+// Mutually recursive types.
+// FIXME: can't compile due to stack overflow.
+// type RecB = | T of RecA list
+// type RecA = | T of RecB list
+
+let main _ =
+  let _: SynonymB = 0
+  let UnionB = UnionB.T [UnionA.T]
+
+  0
+
+type SynonymA = int
+
+type UnionA = | T
