@@ -109,7 +109,7 @@ let onExpr (expr: HExpr): HExpr =
     onLet pat body next ty loc
   | HExpr.LetFun _
   | HExpr.Error _ ->
-    failwith "Never"
+    failwithf "Never %A" expr
 
 let desugar (expr: HExpr): HExpr =
   onExpr expr

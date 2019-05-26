@@ -1,5 +1,6 @@
 module MiloneLang.Bundling
 
+open MiloneLang.AstToHir
 open MiloneLang.Helpers
 
 let findOpenPaths expr =
@@ -56,14 +57,15 @@ let parseProjectModules readModuleFile projectName =
       let source = readModuleFile moduleName
       let tokens = Lexing.tokenize source
       let moduleAst = Parsing.parse tokens
-      let dependencies = findOpenModules projectName moduleAst
-      let moduleMap = moduleMap |> Map.add moduleName moduleAst
+      let moduleHir = AstToHir.astToHir moduleAst
+      let dependencies = findOpenModules projectName moduleHir
+      let moduleMap = moduleMap |> Map.add moduleName moduleHir
       let moduleAcc, moduleMap =
         List.fold (fun (moduleAcc, moduleMap) dep ->
           let moduleAcc, moduleMap = go moduleAcc moduleMap dep
           moduleAcc, moduleMap
         ) ([], moduleMap) dependencies
-      moduleAst :: moduleAcc, moduleMap
+      moduleHir :: moduleAcc, moduleMap
 
   let moduleAcc, _ = go [] Map.empty projectName
   let modules = moduleAcc |> List.rev
