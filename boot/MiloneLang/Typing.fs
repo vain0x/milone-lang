@@ -414,7 +414,96 @@ let hxAbort (ctx: TyCtx) ty loc =
   let callExpr = HExpr.Op (Op.App, exitExpr, HExpr.Lit (Lit.Int 1, loc), ty, loc)
   callExpr, ctx
 
-let inferPatRef (ctx: TyCtx) ident loc ty =
+/// Traverse over in-module declarations to build environment
+/// to resolve mutually recursive references correctly.
+let collectVarDecls ctx expr =
+  let rec goPat (pat, ctx) =
+    match pat with
+    | HPat.Lit _
+    | HPat.Nav _
+    | HPat.Nil _
+    // NOTE: OR patterns doesn't appear because not entering `match` arms.
+    | HPat.Or _ ->
+      pat, ctx
+
+    | HPat.Ref (ident, _, ty, loc) ->
+      // FIXME: handle variant case
+      let varTy, _, ctx = ctxFreshTyVar "var" ctx
+      let varSerial, ctx = ctxFreshVar ctx ident varTy loc
+      HPat.Ref (ident, varSerial, ty, loc), ctx
+
+    | HPat.Call (callee, args, ty, loc) ->
+      let args, ctx = (args, ctx) |> stMap goPat
+      HPat.Call (callee, args, ty, loc), ctx
+
+    | HPat.Cons (l, r, ty, loc) ->
+      let l, ctx = (l, ctx) |> goPat
+      let r, ctx = (r, ctx) |> goPat
+      HPat.Cons (l, r, ty, loc), ctx
+
+    | HPat.Tuple (items, ty, loc) ->
+      let items, ctx = (items, ctx) |> stMap goPat
+      HPat.Tuple (items, ty, loc), ctx
+
+    | HPat.As (pat, ident, _, loc) ->
+      let varSerial, ctx = ctxFreshVar ctx ident noTy loc
+      let pat, ctx = (pat, ctx) |> goPat
+      HPat.As (pat, ident, varSerial, loc), ctx
+
+    | HPat.Anno (pat, ty, loc) ->
+      let pat, ctx = (pat, ctx) |> goPat
+      HPat.Anno (pat, ty, loc), ctx
+
+  let rec goExpr (expr, ctx) =
+    match expr with
+    | HExpr.Let (pat, init, next, ty, loc) ->
+      let pat, ctx = (pat, ctx) |> goPat
+      let next, ctx = (next, ctx) |> goExpr
+      HExpr.Let (pat, init, next, ty, loc), ctx
+
+    | HExpr.LetFun (ident, _, args, body, next, ty, loc) ->
+      let funTy, _, ctx = ctxFreshTyVar "fun" ctx
+      let arity = args |> List.length
+      let tyScheme = TyScheme.ForAll ([], funTy)
+      let varSerial, ctx = ctxFreshFun ctx ident arity tyScheme loc
+      let next, ctx = (next, ctx) |> goExpr
+      HExpr.LetFun (ident, varSerial, args, body, next, ty, loc), ctx
+
+    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+      let exprs, ctx = (exprs, ctx) |> stMap goExpr
+      HExpr.Inf (InfOp.AndThen, exprs, ty, loc), ctx
+
+    | _ ->
+      expr, ctx
+
+  goExpr (expr, ctx)
+
+let ctxTryResolvePredefinedVar (ctx: TyCtx) maybeVarSerial newTy loc =
+  let oldTy =
+    match ctx.Vars |> Map.tryFind maybeVarSerial with
+    | Some (VarDef.Var (_, oldTy, _)) ->
+      Some oldTy
+    | Some (VarDef.Fun (_, _, TyScheme.ForAll ([], oldTy), _)) ->
+      Some oldTy
+    | Some (VarDef.Fun _) ->
+      None
+    | Some (VarDef.Variant (_, _, _, _, oldTy, _)) ->
+      Some oldTy
+    | None ->
+      None
+  match oldTy with
+  | Some oldTy ->
+    let ctx = unifyTy ctx loc oldTy newTy
+    true, ctx
+  | None ->
+    false, ctx
+
+let inferPatRef (ctx: TyCtx) ident oldSerial loc ty =
+  let predefined, ctx = ctxTryResolvePredefinedVar ctx oldSerial ty loc
+  if predefined then
+    HPat.Ref (ident, oldSerial, ty, loc), ctx
+  else
+
   let serial, ty, ctx =
     match ctxResolveVar ctx ident with
     | Some (serial, VarDef.Variant (_, _, _, _, variantTy, _)) ->
@@ -494,8 +583,8 @@ let inferPat ctx pat ty =
     let itemTy, _, ctx = ctxFreshTyVar "item" ctx
     let ctx = unifyTy ctx loc ty (tyList itemTy)
     HPat.Nil (itemTy, loc), ctx
-  | HPat.Ref (ident, _, _, loc) ->
-    inferPatRef ctx ident loc ty
+  | HPat.Ref (ident, oldSerial, _, loc) ->
+    inferPatRef ctx ident oldSerial loc ty
   | HPat.Nav (l, r, _, loc) ->
     inferPatNav ctx l r loc ty
   | HPat.Call (callee, args, _, loc) ->
@@ -825,7 +914,7 @@ let inferLetVal ctx pat init next ty loc =
 
   HExpr.Let (pat, init, next, ty, loc), ctx
 
-let inferLetFun ctx calleeName argPats body next ty loc =
+let inferLetFun ctx calleeName oldSerial argPats body next ty loc =
   let bodyTy, _, ctx = ctxFreshTyVar "body" ctx
 
   /// Infers argument patterns,
@@ -848,9 +937,15 @@ let inferLetFun ctx calleeName argPats body next ty loc =
   // Define function itself for recursive call.
   // FIXME: Functions are recursive by default.
   let serial, nextCtx =
-    let funTyScheme = TyScheme.ForAll ([], funTy)
-    let arity = List.length argPats
-    ctxFreshFun ctx calleeName arity funTyScheme loc
+    match ctx.Vars |> Map.tryFind oldSerial with
+    | Some (VarDef.Fun (_, _, TyScheme.ForAll ([], oldTy), _)) ->
+      // In the case the function is predefined.
+      let ctx = unifyTy ctx loc oldTy funTy
+      oldSerial, ctx
+    | _ ->
+      let funTyScheme = TyScheme.ForAll ([], funTy)
+      let arity = List.length argPats
+      ctxFreshFun ctx calleeName arity funTyScheme loc
 
   let bodyCtx = nextCtx
   let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
@@ -912,8 +1007,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferAndThen ctx loc exprs ty
   | HExpr.Let (pat, body, next, _, loc) ->
     inferLetVal ctx pat body next ty loc
-  | HExpr.LetFun (calleeName, _, args, body, next, _, loc) ->
-    inferLetFun ctx calleeName args body next ty loc
+  | HExpr.LetFun (calleeName, oldSerial, args, body, next, _, loc) ->
+    inferLetFun ctx calleeName oldSerial args body next ty loc
   | HExpr.TyDef (ident, _, tyDef, loc) ->
     inferExprTyDecl ctx ident tyDef loc
   | HExpr.Open (path, loc) ->
@@ -947,6 +1042,8 @@ let infer (expr: HExpr): HExpr * TyCtx =
       Ns = []
       Diags = []
     }
+
+  let expr, ctx = collectVarDecls ctx expr
 
   let expr, ctx = inferExpr ctx expr tyUnit
 
