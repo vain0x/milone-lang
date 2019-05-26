@@ -16,6 +16,10 @@ enum Ok_Tag;
 
 struct Ok_;
 
+enum OkWrapper_Tag;
+
+struct OkWrapper_;
+
 int main();
 
 enum Status_Tag {
@@ -67,6 +71,17 @@ enum Ok_Tag {
 
 struct Ok_ {
     enum Ok_Tag tag;
+};
+
+enum OkWrapper_Tag {
+    T_,
+};
+
+struct OkWrapper_ {
+    enum OkWrapper_Tag tag;
+    union {
+        struct Ok_ T_;
+    };
 };
 
 int main() {
@@ -187,5 +202,7 @@ next_26:;
     goto end_match_25;
 next_27:;
 end_match_25:;
+    struct OkWrapper_ variant_4 = (struct OkWrapper_){.tag = T_, .T_ = (struct Ok_){.tag = Ok_}};
+    struct OkWrapper_ okWrapper_ = variant_4;
     return 0;
 }

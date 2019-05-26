@@ -45,6 +45,7 @@ type TyCtx =
     Tys: Map<int, TyDef>
     /// Namespaces.
     Ns: (NsRef * IdentRef * SymbolRef) list
+    UnifyQueue: (Ty * Ty * Loc) list
     Diags: Diag list
   }
 
@@ -89,11 +90,41 @@ let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
     }
   ty, ident, ctx
 
+let ctxUnifyLater (ctx: TyCtx) unresolvedTy metaTy loc =
+  { ctx with UnifyQueue = (unresolvedTy, metaTy, loc) :: ctx.UnifyQueue }
+
+let ctxResolveUnifyQueue (ctx: TyCtx) =
+  let rec go ctx queue =
+    match queue with
+    | [] ->
+      ctx
+    | (unresolvedTy, metaTy, loc) :: queue ->
+      let resolvedTy, ctx = ctxResolveTy ctx unresolvedTy
+      let ctx = unifyTy ctx loc resolvedTy metaTy
+      go ctx queue
+  let queue = ctx.UnifyQueue
+  let ctx = { ctx with UnifyQueue = [] }
+  go ctx queue
+
 let ctxAddVariant unionTyIdent unionTySerial unionTy variant loc ctx =
-  let variantIdent, _, hasArg, argTy = variant
-  let variantTy = if hasArg then tyFun argTy unionTy else unionTy
-  let variantVarDef = VarDef.Variant (variantIdent, unionTySerial, hasArg, argTy, variantTy, loc)
-  let variantSerial, ctx = ctxFreshVarCore ctx variantIdent variantVarDef
+  let variantIdent, _, hasArg, unresolvedArgTy =
+    variant
+  let argTy, ctx =
+    if hasArg then
+      let argTy, _, ctx = ctxFreshTyVar "arg" ctx
+      let ctx = ctxUnifyLater ctx unresolvedArgTy argTy loc
+      argTy, ctx
+    else
+      tyUnit, ctx
+  let variantTy =
+    if hasArg then
+      tyFun argTy unionTy
+    else
+      unionTy
+  let variantVarDef =
+    VarDef.Variant (variantIdent, unionTySerial, hasArg, argTy, variantTy, loc)
+  let variantSerial, ctx =
+    ctxFreshVarCore ctx variantIdent variantVarDef
 
   // The variant is the static member of the namespace.
   let ctx =
@@ -115,17 +146,20 @@ let ctxAddVariants unionTyIdent unionTySerial unionTy variants loc ctx =
       go (variant :: variantAcc) (lSerial :: variantSerialAcc) variants ctx
   go [] [] variants ctx
 
+/// Add a type declaration to the context.
+/// At the moment we can't resolve types correctly
+/// because some type definitions are still unseen.
 let ctxAddTy tyIdent tyDecl loc ctx =
   match tyDecl with
-  | TyDecl.Synonym (ty, loc) ->
-    let ty, ctx = ctxResolveTy ctx ty
+  | TyDecl.Synonym (bodyTy, synonymLoc) ->
     let synonymTySerial, ctx = ctxFreshTySerial ctx
-    let synonymTyDef = TyDef.Meta (tyIdent, ty, loc)
+    let synonymTy, _, ctx = ctxFreshTyVar "synonym" ctx
     let ctx =
       { ctx with
           TyEnv = ctx.TyEnv |> Map.add tyIdent synonymTySerial
-          Tys = ctx.Tys |> Map.add synonymTySerial synonymTyDef
+          Tys = ctx.Tys |> Map.add synonymTySerial (TyDef.Meta (tyIdent, synonymTy, loc))
       }
+    let ctx = ctxUnifyLater ctx bodyTy synonymTy synonymLoc
     synonymTySerial, tyDecl, ctx
 
   | TyDecl.Union (_, variants, _) ->
@@ -414,7 +448,123 @@ let hxAbort (ctx: TyCtx) ty loc =
   let callExpr = HExpr.Op (Op.App, exitExpr, HExpr.Lit (Lit.Int 1, loc), ty, loc)
   callExpr, ctx
 
-let inferPatRef (ctx: TyCtx) ident loc ty =
+/// Collect types defined in recursive module.
+let collectTyDecls ctx expr =
+  let rec go (expr, ctx) =
+    match expr with
+    | HExpr.Let (pat, init, next, ty, loc) ->
+      let next, ctx = (next, ctx) |> go
+      HExpr.Let (pat, init, next, ty, loc), ctx
+
+    | HExpr.LetFun (ident, serial, args, body, next, ty, loc) ->
+      let next, ctx = (next, ctx) |> go
+      HExpr.LetFun (ident, serial, args, body, next, ty, loc), ctx
+
+    | HExpr.TyDef (ident, _, tyDecl, loc) ->
+      let tySerial, tyDecl, ctx = ctx |> ctxAddTy ident tyDecl loc
+      HExpr.TyDef (ident, tySerial, tyDecl, loc), ctx
+
+    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+      let exprs, ctx = (exprs, ctx) |> stMap go
+      HExpr.Inf (InfOp.AndThen, exprs, ty, loc), ctx
+
+    | _ ->
+      expr, ctx
+
+  let expr, ctx = (expr, ctx) |> go
+  let ctx = ctxResolveUnifyQueue ctx
+  expr, ctx
+
+/// Traverse over in-module variable declarations to build environment
+/// to resolve mutually recursive references correctly.
+let collectVarDecls ctx expr =
+  let rec goPat (pat, ctx) =
+    match pat with
+    | HPat.Lit _
+    | HPat.Nav _
+    | HPat.Nil _
+    // NOTE: OR patterns doesn't appear because not entering `match` arms.
+    | HPat.Or _ ->
+      pat, ctx
+
+    | HPat.Ref (ident, _, ty, loc) ->
+      // FIXME: handle variant case
+      let varTy, _, ctx = ctxFreshTyVar "var" ctx
+      let varSerial, ctx = ctxFreshVar ctx ident varTy loc
+      HPat.Ref (ident, varSerial, ty, loc), ctx
+
+    | HPat.Call (callee, args, ty, loc) ->
+      let args, ctx = (args, ctx) |> stMap goPat
+      HPat.Call (callee, args, ty, loc), ctx
+
+    | HPat.Cons (l, r, ty, loc) ->
+      let l, ctx = (l, ctx) |> goPat
+      let r, ctx = (r, ctx) |> goPat
+      HPat.Cons (l, r, ty, loc), ctx
+
+    | HPat.Tuple (items, ty, loc) ->
+      let items, ctx = (items, ctx) |> stMap goPat
+      HPat.Tuple (items, ty, loc), ctx
+
+    | HPat.As (pat, ident, _, loc) ->
+      let varSerial, ctx = ctxFreshVar ctx ident noTy loc
+      let pat, ctx = (pat, ctx) |> goPat
+      HPat.As (pat, ident, varSerial, loc), ctx
+
+    | HPat.Anno (pat, ty, loc) ->
+      let pat, ctx = (pat, ctx) |> goPat
+      HPat.Anno (pat, ty, loc), ctx
+
+  let rec goExpr (expr, ctx) =
+    match expr with
+    | HExpr.Let (pat, init, next, ty, loc) ->
+      let pat, ctx = (pat, ctx) |> goPat
+      let next, ctx = (next, ctx) |> goExpr
+      HExpr.Let (pat, init, next, ty, loc), ctx
+
+    | HExpr.LetFun (ident, _, args, body, next, ty, loc) ->
+      let funTy, _, ctx = ctxFreshTyVar "fun" ctx
+      let arity = args |> List.length
+      let tyScheme = TyScheme.ForAll ([], funTy)
+      let varSerial, ctx = ctxFreshFun ctx ident arity tyScheme loc
+      let next, ctx = (next, ctx) |> goExpr
+      HExpr.LetFun (ident, varSerial, args, body, next, ty, loc), ctx
+
+    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+      let exprs, ctx = (exprs, ctx) |> stMap goExpr
+      HExpr.Inf (InfOp.AndThen, exprs, ty, loc), ctx
+
+    | _ ->
+      expr, ctx
+
+  goExpr (expr, ctx)
+
+let ctxTryResolvePredefinedVar (ctx: TyCtx) maybeVarSerial newTy loc =
+  let oldTy =
+    match ctx.Vars |> Map.tryFind maybeVarSerial with
+    | Some (VarDef.Var (_, oldTy, _)) ->
+      Some oldTy
+    | Some (VarDef.Fun (_, _, TyScheme.ForAll ([], oldTy), _)) ->
+      Some oldTy
+    | Some (VarDef.Fun _) ->
+      None
+    | Some (VarDef.Variant (_, _, _, _, oldTy, _)) ->
+      Some oldTy
+    | None ->
+      None
+  match oldTy with
+  | Some oldTy ->
+    let ctx = unifyTy ctx loc oldTy newTy
+    true, ctx
+  | None ->
+    false, ctx
+
+let inferPatRef (ctx: TyCtx) ident oldSerial loc ty =
+  let predefined, ctx = ctxTryResolvePredefinedVar ctx oldSerial ty loc
+  if predefined then
+    HPat.Ref (ident, oldSerial, ty, loc), ctx
+  else
+
   let serial, ty, ctx =
     match ctxResolveVar ctx ident with
     | Some (serial, VarDef.Variant (_, _, _, _, variantTy, _)) ->
@@ -494,8 +644,8 @@ let inferPat ctx pat ty =
     let itemTy, _, ctx = ctxFreshTyVar "item" ctx
     let ctx = unifyTy ctx loc ty (tyList itemTy)
     HPat.Nil (itemTy, loc), ctx
-  | HPat.Ref (ident, _, _, loc) ->
-    inferPatRef ctx ident loc ty
+  | HPat.Ref (ident, oldSerial, _, loc) ->
+    inferPatRef ctx ident oldSerial loc ty
   | HPat.Nav (l, r, _, loc) ->
     inferPatNav ctx l r loc ty
   | HPat.Call (callee, args, _, loc) ->
@@ -825,7 +975,7 @@ let inferLetVal ctx pat init next ty loc =
 
   HExpr.Let (pat, init, next, ty, loc), ctx
 
-let inferLetFun ctx calleeName argPats body next ty loc =
+let inferLetFun ctx calleeName oldSerial argPats body next ty loc =
   let bodyTy, _, ctx = ctxFreshTyVar "body" ctx
 
   /// Infers argument patterns,
@@ -848,9 +998,15 @@ let inferLetFun ctx calleeName argPats body next ty loc =
   // Define function itself for recursive call.
   // FIXME: Functions are recursive by default.
   let serial, nextCtx =
-    let funTyScheme = TyScheme.ForAll ([], funTy)
-    let arity = List.length argPats
-    ctxFreshFun ctx calleeName arity funTyScheme loc
+    match ctx.Vars |> Map.tryFind oldSerial with
+    | Some (VarDef.Fun (_, _, TyScheme.ForAll ([], oldTy), _)) ->
+      // In the case the function is predefined.
+      let ctx = unifyTy ctx loc oldTy funTy
+      oldSerial, ctx
+    | _ ->
+      let funTyScheme = TyScheme.ForAll ([], funTy)
+      let arity = List.length argPats
+      ctxFreshFun ctx calleeName arity funTyScheme loc
 
   let bodyCtx = nextCtx
   let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
@@ -882,9 +1038,14 @@ let inferAndThen ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
   hxAndThen (List.rev exprs) loc, ctx
 
-let inferExprTyDecl ctx ident tyDecl loc =
-  let serial, tyDecl, ctx = ctx |> ctxAddTy ident tyDecl loc
-  HExpr.TyDef (ident, serial, tyDecl, loc), ctx
+let inferExprTyDecl ctx ident oldSerial tyDecl loc =
+  if oldSerial <> noSerial then
+    // In the case the definition already processed due to `module rec`.
+    HExpr.TyDef (ident, oldSerial, tyDecl, loc), ctx
+  else
+    let serial, tyDecl, ctx = ctx |> ctxAddTy ident tyDecl loc
+    let ctx = ctx |> ctxResolveUnifyQueue
+    HExpr.TyDef (ident, serial, tyDecl, loc), ctx
 
 let inferExprOpen ctx path ty loc =
   let ctx = unifyTy ctx loc ty tyUnit
@@ -912,10 +1073,10 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferAndThen ctx loc exprs ty
   | HExpr.Let (pat, body, next, _, loc) ->
     inferLetVal ctx pat body next ty loc
-  | HExpr.LetFun (calleeName, _, args, body, next, _, loc) ->
-    inferLetFun ctx calleeName args body next ty loc
-  | HExpr.TyDef (ident, _, tyDef, loc) ->
-    inferExprTyDecl ctx ident tyDef loc
+  | HExpr.LetFun (calleeName, oldSerial, args, body, next, _, loc) ->
+    inferLetFun ctx calleeName oldSerial args body next ty loc
+  | HExpr.TyDef (ident, oldSerial, tyDef, loc) ->
+    inferExprTyDecl ctx ident oldSerial tyDef loc
   | HExpr.Open (path, loc) ->
     inferExprOpen ctx path ty loc
   | HExpr.If _
@@ -945,8 +1106,12 @@ let infer (expr: HExpr): HExpr * TyCtx =
       TyEnv = Map.empty
       Tys = Map.empty
       Ns = []
+      UnifyQueue = []
       Diags = []
     }
+
+  let expr, ctx = collectTyDecls ctx expr
+  let expr, ctx = collectVarDecls ctx expr
 
   let expr, ctx = inferExpr ctx expr tyUnit
 
