@@ -205,13 +205,13 @@ let monifyPat (pat, ctx) =
   // FIXME: Enter `when` patterns
   pat, ctx
 
-let monifyExprRefGenericFun ctx ident genericFunSerial arity useSiteTy loc =
+let monifyExprRefGenericFun ctx ident genericFunSerial useSiteTy loc =
   match ctxFindMonomorphizedFun ctx genericFunSerial useSiteTy with
   | Some monoFunSerial ->
-    HExpr.Ref (ident, HValRef.Var monoFunSerial, arity, useSiteTy, loc), ctx
+    HExpr.Ref (ident, HValRef.Var monoFunSerial, useSiteTy, loc), ctx
   | None ->
     let ctx = ctxMarkUseOfGenericFun ctx genericFunSerial useSiteTy
-    HExpr.Ref (ident, HValRef.Var genericFunSerial, arity, useSiteTy, loc), ctx
+    HExpr.Ref (ident, HValRef.Var genericFunSerial, useSiteTy, loc), ctx
 
 let monifyExprLetFun ctx ident callee args body next ty loc =
   let genericFunSerial = callee
@@ -252,17 +252,17 @@ let rec monifyExpr (expr, ctx) =
   | HExpr.TyDef _
   | HExpr.Open _
   | HExpr.Lit _
-  | HExpr.Ref (_, HValRef.Prim _, _, _, _) ->
+  | HExpr.Ref (_, HValRef.Prim _, _, _) ->
     expr, ctx
 
-  | HExpr.Ref (ident, HValRef.Var serial, arity, useSiteTy, loc) ->
+  | HExpr.Ref (ident, HValRef.Var serial, useSiteTy, loc) ->
     match ctxFindVarDef ctx serial with
     | VarDef.Var _
     | VarDef.Variant _
     | VarDef.Fun (_, _, TyScheme.ForAll ([], _), _) ->
       expr, ctx
     | VarDef.Fun _ ->
-      monifyExprRefGenericFun ctx ident serial arity useSiteTy loc
+      monifyExprRefGenericFun ctx ident serial useSiteTy loc
 
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> monifyExpr

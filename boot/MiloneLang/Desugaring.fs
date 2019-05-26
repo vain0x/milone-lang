@@ -4,7 +4,7 @@ open MiloneLang
 open MiloneLang.Helpers
 
 let hxRef name loc =
-  HExpr.Ref (name, HValRef.Var noSerial, 0, noTy, loc)
+  HExpr.Ref (name, HValRef.Var noSerial, noTy, loc)
 
 /// `x = false`
 let hxNot expr loc =

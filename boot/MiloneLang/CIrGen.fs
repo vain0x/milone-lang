@@ -379,9 +379,9 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Ref (_, _, Ty.Con (TyCon.Tuple, []), _) ->
+  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), _) ->
     genExprDefault ctx tyUnit
-  | MExpr.Ref (serial, _, _, _) ->
+  | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Proc (serial, ty, loc) ->
     genExprProc ctx serial ty loc
