@@ -111,7 +111,7 @@ let onExpr (expr: AExpr): HExpr =
     HExpr.Lit (lit, loc)
 
   | AExpr.Ident (ident, loc) ->
-    HExpr.Ref (ident, HValRef.Var noSerial, noArity, noTy, loc)
+    HExpr.Ref (ident, HValRef.Var noSerial, noTy, loc)
 
   | AExpr.ListLit (exprs, loc) ->
     let exprs = exprs |> List.map onExpr

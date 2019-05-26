@@ -200,7 +200,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HExpr.Lit (lit, a) ->
     litTy lit, a
-  | HExpr.Ref (_, _, _, ty, a) ->
+  | HExpr.Ref (_, _, ty, a) ->
     ty, a
   | HExpr.If (_, _, _, ty, a) ->
     ty, a
@@ -230,8 +230,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     match expr with
     | HExpr.Lit (lit, a) ->
       HExpr.Lit (lit, g a)
-    | HExpr.Ref (ident, serial, arity, ty, a) ->
-      HExpr.Ref (ident, serial, arity, f ty, g a)
+    | HExpr.Ref (ident, serial, ty, a) ->
+      HExpr.Ref (ident, serial, f ty, g a)
     | HExpr.If (pred, thenCl, elseCl, ty, a) ->
       HExpr.If (go pred, go thenCl, go elseCl, f ty, g a)
     | HExpr.Match (target, arms, ty, a) ->
@@ -265,18 +265,11 @@ let exprTy expr =
   let ty, _ = exprExtract expr
   ty
 
-let exprArity expr =
-  match expr with
-  | HExpr.Ref (_, _, arity, _, _) ->
-    arity
-  | _ ->
-    1
-
 let mexprExtract expr =
   match expr with
   | MExpr.Default (ty, loc) -> ty, loc
   | MExpr.Lit (lit, loc) -> litTy lit, loc
-  | MExpr.Ref (_, _, ty, loc) -> ty, loc
+  | MExpr.Ref (_, ty, loc) -> ty, loc
   | MExpr.Prim (_, ty, loc) -> ty, loc
   | MExpr.Proc (_, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc

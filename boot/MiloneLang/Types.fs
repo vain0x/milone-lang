@@ -387,7 +387,7 @@ type HExpr =
     of Lit * Loc
   /// Variable reference.
   | Ref
-    of ident:string * HValRef * arity:int * Ty * Loc
+    of ident:string * HValRef * Ty * Loc
   /// If-then-else. Else clause is `()` if omit.
   | If
     of pred:HExpr * thenCl:HExpr * elseCl:HExpr * Ty * Loc
@@ -488,7 +488,7 @@ type MExpr =
   | Default
     of Ty * Loc
   | Ref
-    of serial:int * arity:int * Ty * Loc
+    of serial:int * Ty * Loc
   | Prim
     of HPrim * Ty * Loc
   /// Procedure
