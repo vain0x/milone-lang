@@ -16,6 +16,10 @@ type ApiResponse =
     of int * string
   | ARCancel
 
+type OkWrapper =
+  | T
+    of Ok // use another union types
+
 let main _ =
   let () =
     let ok = Ok
@@ -61,5 +65,7 @@ let main _ =
     ()
   | Status.Err _ ->
     exit 1
+
+  let okWrapper = OkWrapper.T Ok.Ok
 
   0
