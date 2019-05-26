@@ -63,6 +63,116 @@ type Token =
   | Of
   | In
 
+/// Type expression in AST.
+[<RequireQualifiedAccess>]
+type ATy =
+  | Error
+    of string * Loc
+  | Missing
+    of Loc
+  | Ident
+    of string * Loc
+  | Suffix
+    of ATy * string * Loc
+  /// Tuple type, e.g. `int * string`.
+  | Tuple
+    of ATy list * Loc
+  /// Function type, e.g. `int -> string`.
+  | Fun
+    of ATy * ATy * Loc
+
+/// Pattern in AST.
+[<RequireQualifiedAccess>]
+type APat =
+  | Error
+    of string * Loc
+  | Missing
+    of Loc
+  | Lit
+    of Lit * Loc
+  | Ident
+    of string * Loc
+  | ListLit
+    of APat list * Loc
+  | Nav
+    of APat * string * Loc
+  | Call
+    of APat * APat list * Loc
+  /// `::`
+  | Cons
+    of APat * APat * Loc
+  | TupleLit
+    of APat list * Loc
+  | As
+    of APat * string * Loc
+  /// Type annotation, e.g. `x: int`.
+  | Anno
+    of APat * ATy * Loc
+  | Or
+    of APat * APat * Loc
+
+/// Match arm node in AST.
+[<RequireQualifiedAccess>]
+type AArm =
+  /// (pattern, guard, body).
+  | T
+    of APat * AExpr * AExpr * Loc
+
+/// Variant node in AST.
+[<RequireQualifiedAccess>]
+type AVariant =
+  /// (identifier, payload-type).
+  | T
+    of string * ATy option * Loc
+
+/// Expression in AST.
+[<RequireQualifiedAccess>]
+type AExpr =
+  | Error
+    of string * Loc
+  | Missing
+    of Loc
+  | Lit
+    of Lit * Loc
+  | Ident
+    of string * Loc
+  /// List literal, e.g. `[]`, `[2; 3]`.
+  | ListLit
+    of AExpr list * Loc
+  /// condition, then-clause, else-clause. Else clause is `None` is missing.
+  | If
+    of AExpr * AExpr * AExpr * Loc
+  | Match
+    of AExpr * AArm list * Loc
+  /// Navigation expression, e.g. `str.Length`.
+  | Nav
+    of AExpr * string * Loc
+  | Index
+    of AExpr * AExpr * Loc
+  /// Binary operation, e.g. `x + y`.
+  | Bin
+    of Op * AExpr * AExpr * Loc
+  /// Tuple literal, e.g. `()`, `2, "two"`.
+  | TupleLit
+    of AExpr list * Loc
+  /// Type annotation.
+  | Anno
+    of AExpr * ATy * Loc
+  /// Semicolon-separated expressions.
+  | Semi
+    of AExpr list * Loc
+  /// (pattern, initializer, body). Let-in expression.
+  | Let
+    of APat * AExpr * AExpr * Loc
+  /// Type synonym definition, e.g. `type UserId = int`.
+  | TySynonym
+    of string * ATy * Loc
+  /// Discriminated union type definition, e.g. `type Result = | Ok | Err of int`.
+  | TyUnion
+    of string * AVariant list * Loc
+  | Open
+    of string list * Loc
+
 /// Type constructors.
 type TyCon =
   | Bool
