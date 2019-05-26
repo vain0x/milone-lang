@@ -5,13 +5,6 @@ module MiloneLang.Program
     | Verbose
     | Silent
 
-  let parseModuleFile (projectDir: string) (moduleName: string) =
-    let filePath = IO.Path.Combine(projectDir, sprintf "%s.milone" moduleName)
-    let source = IO.File.ReadAllText(filePath)
-    let tokens = Lexing.tokenize source
-    let ast = Parsing.parse tokens
-    ast
-
   let parseProjectModules (projectDir: string) =
     let modulePath moduleName = IO.Path.Combine(projectDir, sprintf "%s.milone" moduleName)
     let readModuleFile moduleName = IO.File.ReadAllText(modulePath moduleName)

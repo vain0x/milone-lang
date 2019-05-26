@@ -10,7 +10,6 @@
     <Compile Include="Assets.fs" />
     <Compile Include="HelpersTests.fs" />
     <Compile Include="LexingTests.fs" />
-    <Compile Include="ParsingTests.fs" />
     <Compile Include="CIrGenTests.fs" />
     <Compile Include="CPrintingTests.fs" />
     <Watch Include="../tests/**/*.milone" />
