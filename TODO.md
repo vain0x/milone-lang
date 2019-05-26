@@ -16,12 +16,6 @@ type Expr =
     | Add of Expr * Expr
 ```
 
-### Recursive modules/functions
-
-Support `let rec` and `module rec`.
-
-To implement `module rec`, iterate over the body and find `let` expressions to collect name of functions defined in the module.
-
 ### Generic equality/string/etc.
 
 Automatically generate these functions for each type.
