@@ -145,18 +145,29 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
   let tags =
     variants |> List.map (fun (_, serial, _, _) ->
       ctxUniqueName ctx serial)
-  let variants, ctx =
+  let makeVariants ctx =
     (variants, ctx) |> stFlatMap (fun ((_, serial, hasArg, argTy), acc, ctx) ->
       if hasArg then
         let argTy, ctx = cty ctx argTy
-        (ctxUniqueName ctx serial, argTy) :: acc, ctx
+        (ctxUniqueName ctx serial, CTy.Ptr argTy) :: acc, ctx
       else
         acc, ctx
     )
+  // HACK: Get rid of the resulting context because it can be invalid
+  // in the case where some payload type contains the discriminated union itself,
+  // to incur C compiler error, use of incomplete type.
+  // E.g. `type ThisUnion = | A of ThisUnion * int`
+  // will generate invalid code
+  // `struct Tuple2 { ThisUnion t0; .. }; struct ThisUnion { .. };`.
+  let variants, _ = makeVariants ctx
+
   let tagEnumDecl = CDecl.Enum (tagTyIdent, tags)
   let structDecl = CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
-
   let ctx = { ctx with Decls = structDecl :: tagEnumDecl :: ctx.Decls }
+
+  // Regenerate payload types.
+  let _, ctx = makeVariants ctx
+
   unionTy, ctx
 
 let ctxUniqueName (ctx: Ctx) serial =
@@ -332,7 +343,7 @@ let genExprUniOp ctx op arg ty _ =
   | MUniOp.Tag ->
     CExpr.Nav (arg, "tag"), ctx
   | MUniOp.GetVariant serial ->
-    CExpr.Nav (arg, ctxUniqueName ctx serial), ctx
+    CExpr.UniOp (CUniOp.Deref, CExpr.Nav (arg, ctxUniqueName ctx serial)), ctx
   | MUniOp.ListIsEmpty ->
     CExpr.UniOp (CUniOp.Not, arg), ctx
   | MUniOp.ListHead ->
@@ -497,6 +508,22 @@ let genInitBox ctx serial arg =
 
   ctx
 
+let genInitIndirect ctx serial payload ty =
+  let varName = ctxUniqueName ctx serial
+  let payloadTy, ctx = cty ctx ty
+  let ptrTy = CTy.Ptr payloadTy
+
+  let payload, ctx = genExpr ctx payload
+
+  // T* p = (T*)malloc(sizeof T);
+  let ctx = ctxAddStmt ctx (CStmt.LetAlloc (varName, ptrTy, ptrTy))
+
+  // *(T*)p = t;
+  let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (CExpr.Ref varName, ptrTy))
+  let ctx = ctxAddStmt ctx (CStmt.Set (left, payload))
+
+  ctx
+
 let genInitCons ctx serial head tail itemTy =
   let temp = ctxUniqueName ctx serial
   let listTy, ctx = cty ctx (tyList itemTy)
@@ -530,14 +557,15 @@ let genInitTuple ctx serial items tupleTy =
       go ctx (i + 1) items
   go ctx 0 items
 
-let genInitUnion ctx varSerial variantSerial arg argTy unionTy =
-  let arg, ctx = genExpr ctx arg
+let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
   let temp = ctxUniqueName ctx varSerial
   let unionTy, ctx = cty ctx unionTy
+  let variantName = ctxUniqueName ctx variantSerial
+  let payloadExpr = CExpr.Ref (ctxUniqueName ctx payloadSerial)
   let fields =
     [
       "tag", CExpr.Ref (ctxUniqueName ctx variantSerial)
-      ctxUniqueName ctx variantSerial, arg
+      variantName, payloadExpr
     ]
   let init = CExpr.Init (fields, unionTy)
   let ctx = ctxAddStmt ctx (CStmt.Let (temp, Some init, unionTy))
@@ -560,12 +588,14 @@ let genStmtLetVal ctx serial init ty =
     genInitClosure ctx serial funSerial envSerial ty
   | MInit.Box arg ->
     genInitBox ctx serial arg
+  | MInit.Indirect payload ->
+    genInitIndirect ctx serial payload ty
   | MInit.Cons (head, tail, itemTy) ->
     genInitCons ctx serial head tail itemTy
   | MInit.Tuple items ->
     genInitTuple ctx serial items ty
-  | MInit.Union (variantSerial, arg, argTy) ->
-    genInitUnion ctx serial variantSerial arg argTy ty
+  | MInit.Variant (variantSerial, payloadSerial) ->
+    genInitVariant ctx serial variantSerial payloadSerial ty
 
 let genStmtDo ctx expr =
   let expr, ctx = genExpr ctx expr

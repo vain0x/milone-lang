@@ -273,8 +273,8 @@ enum Token_Tag {
 struct Token_ {
     enum Token_Tag tag;
     union {
-        int TkInt_;
-        char TkOp_;
+        int* TkInt_;
+        char* TkOp_;
     };
 };
 
@@ -495,7 +495,9 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
     struct String slice_ = str_slice(source_3, i_5, (r_4 - 1));
     int call_21 = str_to_int(slice_);
     int n_ = call_21;
-    struct Token_ variant_ = (struct Token_){.tag = TkInt_, .TkInt_ = n_};
+    int* payload_ = (int*)malloc(sizeof(int));
+    (*(((int*)payload_))) = n_;
+    struct Token_ variant_ = (struct Token_){.tag = TkInt_, .TkInt_ = payload_};
     struct Token_List* list_2 = (struct Token_List*)malloc(sizeof(struct Token_List));
     list_2->head = variant_;
     list_2->tail = acc_4;
@@ -571,7 +573,9 @@ next_61:;
     if (!((call_29 == 0))) goto next_62;
     struct StringTuple1 tuple_20;
     tuple_20.t0 = source_4;
-    struct Token_ variant_1 = (struct Token_){.tag = TkOp_, .TkOp_ = c_2};
+    char* payload_1 = (char*)malloc(sizeof(char));
+    (*(((char*)payload_1))) = c_2;
+    struct Token_ variant_1 = (struct Token_){.tag = TkOp_, .TkOp_ = payload_1};
     struct Token_List* list_3 = (struct Token_List*)malloc(sizeof(struct Token_List));
     list_3->head = variant_1;
     list_3->tail = acc_5;
@@ -630,7 +634,7 @@ int tokenListPrint_(struct Token_List* tokens_) {
 next_64:;
     if (!((!((!(tokens_)))))) goto next_65;
     if (!((tokens_->head.tag == TkInt_))) goto next_65;
-    int n_1 = tokens_->head.TkInt_;
+    int n_1 = (*(tokens_->head.TkInt_));
     struct Token_List* tokens_1 = tokens_->tail;
     printf("int %d\n", n_1);
     int call_34 = 0;
@@ -640,7 +644,7 @@ next_64:;
 next_65:;
     if (!((!((!(tokens_)))))) goto next_66;
     if (!((tokens_->head.tag == TkOp_))) goto next_66;
-    char c_3 = tokens_->head.TkOp_;
+    char c_3 = (*(tokens_->head.TkOp_));
     struct Token_List* tokens_2 = tokens_->tail;
     printf("op %c\n", c_3);
     int call_36 = 0;
@@ -662,7 +666,7 @@ struct IntToken_ListTuple2 go_8(int acc_7, struct Token_List* tokens_14) {
     struct IntToken_ListTuple2 match_24;
     if (!((!((!(tokens_14)))))) goto next_78;
     if (!((tokens_14->head.tag == TkOp_))) goto next_78;
-    if (!((tokens_14->head.TkOp_ == '+'))) goto next_78;
+    if (!(((*(tokens_14->head.TkOp_)) == '+'))) goto next_78;
     struct Token_List* tokens_15 = tokens_14->tail;
     struct IntToken_ListTuple2 call_45 = evalMul_(tokens_15);
     int r_6 = call_45.t0;
@@ -673,7 +677,7 @@ struct IntToken_ListTuple2 go_8(int acc_7, struct Token_List* tokens_14) {
 next_78:;
     if (!((!((!(tokens_14)))))) goto next_79;
     if (!((tokens_14->head.tag == TkOp_))) goto next_79;
-    if (!((tokens_14->head.TkOp_ == '-'))) goto next_79;
+    if (!(((*(tokens_14->head.TkOp_)) == '-'))) goto next_79;
     struct Token_List* tokens_17 = tokens_14->tail;
     struct IntToken_ListTuple2 call_47 = evalMul_(tokens_17);
     int r_7 = call_47.t0;
@@ -704,7 +708,7 @@ struct IntToken_ListTuple2 go_7(int acc_6, struct Token_List* tokens_9) {
     struct IntToken_ListTuple2 match_23;
     if (!((!((!(tokens_9)))))) goto next_75;
     if (!((tokens_9->head.tag == TkOp_))) goto next_75;
-    if (!((tokens_9->head.TkOp_ == '*'))) goto next_75;
+    if (!(((*(tokens_9->head.TkOp_)) == '*'))) goto next_75;
     struct Token_List* tokens_10 = tokens_9->tail;
     struct IntToken_ListTuple2 call_41 = evalTerm_(tokens_10);
     int r_5 = call_41.t0;
@@ -735,7 +739,7 @@ struct IntToken_ListTuple2 evalTerm_(struct Token_List* tokens_4) {
     struct IntToken_ListTuple2 match_21;
     if (!((!((!(tokens_4)))))) goto next_68;
     if (!((tokens_4->head.tag == TkInt_))) goto next_68;
-    int n_2 = tokens_4->head.TkInt_;
+    int n_2 = (*(tokens_4->head.TkInt_));
     struct Token_List* tokens_5 = tokens_4->tail;
     struct IntToken_ListTuple2 tuple_24;
     tuple_24.t0 = n_2;
@@ -745,14 +749,14 @@ struct IntToken_ListTuple2 evalTerm_(struct Token_List* tokens_4) {
 next_68:;
     if (!((!((!(tokens_4)))))) goto next_69;
     if (!((tokens_4->head.tag == TkOp_))) goto next_69;
-    if (!((tokens_4->head.TkOp_ == '('))) goto next_69;
+    if (!(((*(tokens_4->head.TkOp_)) == '('))) goto next_69;
     struct Token_List* tokens_6 = tokens_4->tail;
     struct IntToken_ListTuple2 match_22;
     struct IntToken_ListTuple2 call_38 = evalExpr_(tokens_6);
     int value_ = call_38.t0;
     if (!((!((!(call_38.t1)))))) goto next_71;
     if (!((call_38.t1->head.tag == TkOp_))) goto next_71;
-    if (!((call_38.t1->head.TkOp_ == ')'))) goto next_71;
+    if (!(((*(call_38.t1->head.TkOp_)) == ')'))) goto next_71;
     struct Token_List* tokens_7 = call_38.t1->tail;
     struct IntToken_ListTuple2 tuple_25;
     tuple_25.t0 = value_;

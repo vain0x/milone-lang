@@ -1,12 +1,12 @@
 struct IntIntTuple2;
 
-struct UnitLazyList_Fun1;
-
-struct IntUnitLazyList_Fun1Tuple2;
-
 enum LazyList_Tag;
 
 struct LazyList_;
+
+struct UnitLazyList_Fun1;
+
+struct IntUnitLazyList_Fun1Tuple2;
 
 struct LazyList_ fun_(void* env_, int arg_);
 
@@ -25,16 +25,6 @@ struct IntIntTuple2 {
     int t1;
 };
 
-struct UnitLazyList_Fun1 {
-    struct LazyList_(*fun)(void*, int);
-    void* env;
-};
-
-struct IntUnitLazyList_Fun1Tuple2 {
-    int t0;
-    struct UnitLazyList_Fun1 t1;
-};
-
 enum LazyList_Tag {
     Nil_,
     Cons_,
@@ -43,8 +33,18 @@ enum LazyList_Tag {
 struct LazyList_ {
     enum LazyList_Tag tag;
     union {
-        struct IntUnitLazyList_Fun1Tuple2 Cons_;
+        struct IntUnitLazyList_Fun1Tuple2* Cons_;
     };
+};
+
+struct UnitLazyList_Fun1 {
+    struct LazyList_(*fun)(void*, int);
+    void* env;
+};
+
+struct IntUnitLazyList_Fun1Tuple2 {
+    int t0;
+    struct UnitLazyList_Fun1 t1;
 };
 
 struct LazyList_ fun_(void* env_, int arg_) {
@@ -76,8 +76,8 @@ int go_(int n_1, struct LazyList_ xs_1) {
     goto end_match_4;
 next_5:;
     if (!((xs_1.tag == Cons_))) goto next_6;
-    int head_1 = xs_1.Cons_.t0;
-    struct UnitLazyList_Fun1 tail_1 = xs_1.Cons_.t1;
+    int head_1 = (*(xs_1.Cons_)).t0;
+    struct UnitLazyList_Fun1 tail_1 = (*(xs_1.Cons_)).t1;
     printf("%d\n", head_1);
     int call_ = 0;
     struct LazyList_ app_ = tail_1.fun(tail_1.env, 0);
@@ -107,7 +107,9 @@ struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
     struct IntUnitLazyList_Fun1Tuple2 tuple_;
     tuple_.t0 = head_;
     tuple_.t1 = tail_;
-    struct LazyList_ variant_ = (struct LazyList_){.tag = Cons_, .Cons_ = tuple_};
+    struct IntUnitLazyList_Fun1Tuple2* payload_ = (struct IntUnitLazyList_Fun1Tuple2*)malloc(sizeof(struct IntUnitLazyList_Fun1Tuple2));
+    (*(((struct IntUnitLazyList_Fun1Tuple2*)payload_))) = tuple_;
+    struct LazyList_ variant_ = (struct LazyList_){.tag = Cons_, .Cons_ = payload_};
     return variant_;
 }
 

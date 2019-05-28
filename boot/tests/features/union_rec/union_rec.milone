@@ -1,4 +1,5 @@
 /// Infinite sequence of integer.
+/// Example of indirectly recursive discriminated union type.
 type LazyList =
   | Nil
   | Cons
