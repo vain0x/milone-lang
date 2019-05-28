@@ -125,6 +125,16 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
   CTy.Struct tupleTyIdent, ctx
 
 let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
+  // Generate identifiers and make types.
+  let unionTyRef = tyRef tySerial []
+  let unionTyIdent, ctx = ctxUniqueTyName ctx unionTyRef
+  let unionTy = CTy.Struct unionTyIdent
+  let tagTyIdent = tagTyIdent unionTyIdent
+  let tagTy = CTy.Enum tagTyIdent
+
+  // Register type name to prevent infinite loop in the case of recursive unions.
+  let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add unionTyRef unionTy }
+
   let variants =
     variants |> List.map (fun variantSerial ->
       match ctx.Vars |> Map.tryFind variantSerial with
@@ -132,7 +142,6 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
         ident, variantSerial, hasArg, argTy
       | _ -> failwith "Never"
     )
-
   let tags =
     variants |> List.map (fun (_, serial, _, _) ->
       ctxUniqueName ctx serial)
@@ -144,19 +153,10 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
       else
         acc, ctx
     )
+  let tagEnumDecl = CDecl.Enum (tagTyIdent, tags)
+  let structDecl = CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
 
-  let unionTyIdent, ctx = ctxUniqueTyName ctx (tyRef tySerial [])
-  let unionTy = CTy.Struct unionTyIdent
-  let tagTyIdent = tagTyIdent unionTyIdent
-  let tagTy = CTy.Enum tagTyIdent
-  let ctx =
-    { ctx with
-        TyEnv = ctx.TyEnv |> Map.add (tyRef tySerial []) unionTy
-        Decls =
-          CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
-          :: CDecl.Enum (tagTyIdent, tags)
-          :: ctx.Decls
-    }
+  let ctx = { ctx with Decls = structDecl :: tagEnumDecl :: ctx.Decls }
   unionTy, ctx
 
 let ctxUniqueName (ctx: Ctx) serial =
