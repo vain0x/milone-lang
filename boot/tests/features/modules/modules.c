@@ -17,15 +17,17 @@ enum Val_Tag {
 struct Val_ {
     enum Val_Tag tag;
     union {
-        int Int_;
+        int* Int_;
     };
 };
 
 int main() {
     int match_;
-    struct Val_ variant_ = (struct Val_){.tag = Int_, .Int_ = 0};
+    int* payload_ = (int*)malloc(sizeof(int));
+    (*(((int*)payload_))) = 0;
+    struct Val_ variant_ = (struct Val_){.tag = Int_, .Int_ = payload_};
     if (!((variant_.tag == Int_))) goto next_2;
-    int x_1 = variant_.Int_;
+    int x_1 = (*(variant_.Int_));
     match_ = x_1;
     goto end_match_1;
 next_2:;

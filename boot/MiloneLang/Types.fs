@@ -519,12 +519,14 @@ type MInit =
     of subFunSerial:int * envSerial:int
   | Box
     of MExpr
+  | Indirect
+    of MExpr
   | Cons
     of head:MExpr * tail:MExpr * itemTy:Ty
   | Tuple
     of items:MExpr list
-  | Union
-    of serial:int * arg:MExpr * Ty
+  | Variant
+    of serial:int * payloadSerial:int
 
 /// Statement in middle IR.
 /// Doesn't introduce global things, e.g. functions.
@@ -642,7 +644,7 @@ type CStmt =
     of ident:string * init:CExpr option * CTy
   /// `U* x = (U*)malloc(sizeof T);`
   | LetAlloc
-    of ident:string * valTy:CTy * ptrTy:CTy
+    of ident:string * valPtrTy:CTy * varTy:CTy
   /// `x = a;`
   | Set
     of CExpr * CExpr

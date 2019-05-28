@@ -458,9 +458,15 @@ let mirifyExprCallNot ctx arg ty notLoc =
   MExpr.UniOp (MUniOp.Not, arg, ty, notLoc), ctx
 
 let mirifyExprCallVariantFun (ctx: MirCtx) serial arg ty loc =
+  // Put payload on the heap.
   let arg, ctx = mirifyExpr ctx arg
+  let payloadTy = mexprTy arg
+  let _, payloadSerial, ctx = ctxFreshVar ctx "payload" payloadTy loc
+  let payloadInit = MInit.Indirect arg
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (payloadSerial, payloadInit, payloadTy, loc))
+
   let temp, tempSerial, ctx = ctxFreshVar ctx "variant" ty loc
-  let init = MInit.Union (serial, arg, mexprTy arg)
+  let init = MInit.Variant (serial, payloadSerial)
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, init, ty, loc))
   temp, ctx
 

@@ -8,11 +8,11 @@ int startsWithDoubleBits_(struct IntList* xs_);
 
 int nestedCase_(int arg_1);
 
-struct IntIntTuple2;
-
 enum Expr_Tag;
 
 struct Expr_;
+
+struct IntIntTuple2;
 
 int performComplexMatching_(struct Expr_ expr_);
 
@@ -166,11 +166,6 @@ end_match_25:;
     return 0;
 }
 
-struct IntIntTuple2 {
-    int t0;
-    int t1;
-};
-
 enum Expr_Tag {
     Add_,
 };
@@ -178,20 +173,25 @@ enum Expr_Tag {
 struct Expr_ {
     enum Expr_Tag tag;
     union {
-        struct IntIntTuple2 Add_;
+        struct IntIntTuple2* Add_;
     };
+};
+
+struct IntIntTuple2 {
+    int t0;
+    int t1;
 };
 
 int performComplexMatching_(struct Expr_ expr_) {
     int match_7;
     if (!((expr_.tag == Add_))) goto next_30;
-    if (!((expr_.Add_.t0 == 0))) goto next_30;
-    if (!((expr_.Add_.t1 == 0))) goto next_30;
+    if (!(((*(expr_.Add_)).t0 == 0))) goto next_30;
+    if (!(((*(expr_.Add_)).t1 == 0))) goto next_30;
     goto match_body_29;
 next_30:;
     if (!((expr_.tag == Add_))) goto next_31;
-    if (!((expr_.Add_.t0 == 0))) goto next_31;
-    if (!((expr_.Add_.t1 == 1))) goto next_31;
+    if (!(((*(expr_.Add_)).t0 == 0))) goto next_31;
+    if (!(((*(expr_.Add_)).t1 == 1))) goto next_31;
     goto match_body_29;
 match_body_29:;
     match_7 = 1;
@@ -209,7 +209,9 @@ int complexCase_(int arg_2) {
     struct IntIntTuple2 tuple_;
     tuple_.t0 = 0;
     tuple_.t1 = 1;
-    struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = tuple_};
+    struct IntIntTuple2* payload_ = (struct IntIntTuple2*)malloc(sizeof(struct IntIntTuple2));
+    (*(((struct IntIntTuple2*)payload_))) = tuple_;
+    struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = payload_};
     int call_5 = performComplexMatching_(variant_);
     if (!(((!(call_5)) == 1))) goto next_34;
     exit(1);
@@ -226,7 +228,9 @@ end_match_33:;
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 1;
     tuple_1.t1 = 2;
-    struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = tuple_1};
+    struct IntIntTuple2* payload_1 = (struct IntIntTuple2*)malloc(sizeof(struct IntIntTuple2));
+    (*(((struct IntIntTuple2*)payload_1))) = tuple_1;
+    struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = payload_1};
     int call_6 = performComplexMatching_(variant_1);
     if (!((call_6 == 1))) goto next_37;
     exit(1);

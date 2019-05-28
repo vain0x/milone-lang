@@ -6,11 +6,11 @@ enum Limit_Tag;
 
 struct Limit_;
 
-struct IntStringTuple2;
-
 enum ApiResponse_Tag;
 
 struct ApiResponse_;
+
+struct IntStringTuple2;
 
 enum Ok_Tag;
 
@@ -30,7 +30,7 @@ enum Status_Tag {
 struct Status_ {
     enum Status_Tag tag;
     union {
-        struct String Err_;
+        struct String* Err_;
     };
 };
 
@@ -42,13 +42,8 @@ enum Limit_Tag {
 struct Limit_ {
     enum Limit_Tag tag;
     union {
-        int LimitVal_;
+        int* LimitVal_;
     };
-};
-
-struct IntStringTuple2 {
-    int t0;
-    struct String t1;
 };
 
 enum ApiResponse_Tag {
@@ -60,9 +55,14 @@ enum ApiResponse_Tag {
 struct ApiResponse_ {
     enum ApiResponse_Tag tag;
     union {
-        struct String ARJson_;
-        struct IntStringTuple2 ARError_;
+        struct String* ARJson_;
+        struct IntStringTuple2* ARError_;
     };
+};
+
+struct IntStringTuple2 {
+    int t0;
+    struct String t1;
 };
 
 enum Ok_Tag {
@@ -80,15 +80,19 @@ enum OkWrapper_Tag {
 struct OkWrapper_ {
     enum OkWrapper_Tag tag;
     union {
-        struct Ok_ T_;
+        struct Ok_* T_;
     };
 };
 
 int main() {
     struct Status_ ok_ = (struct Status_){.tag = Ok_1};
-    struct Status_ variant_ = (struct Status_){.tag = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
+    struct String* payload_ = (struct String*)malloc(sizeof(struct String));
+    (*(((struct String*)payload_))) = (struct String){.str = "No such file or directory.", .len = 26};
+    struct Status_ variant_ = (struct Status_){.tag = Err_, .Err_ = payload_};
     struct Status_ err1_ = variant_;
-    struct Status_ variant_1 = (struct Status_){.tag = Err_, .Err_ = (struct String){.str = "Access denied.", .len = 14}};
+    struct String* payload_1 = (struct String*)malloc(sizeof(struct String));
+    (*(((struct String*)payload_1))) = (struct String){.str = "Access denied.", .len = 14};
+    struct Status_ variant_1 = (struct Status_){.tag = Err_, .Err_ = payload_1};
     struct Status_ err2_ = variant_1;
     int match_;
     if (!((err1_.tag == Ok_1))) goto next_2;
@@ -97,7 +101,7 @@ int main() {
     goto end_match_1;
 next_2:;
     if (!((err1_.tag == Err_))) goto next_3;
-    struct String e_ = err1_.Err_;
+    struct String e_ = (*(err1_.Err_));
     int match_1;
     if (!(((str_cmp(e_, (struct String){.str = "No such file or directory.", .len = 26}) != 0) == 1))) goto next_5;
     exit(2);
@@ -115,9 +119,11 @@ end_match_4:;
 next_3:;
 end_match_1:;
     int match_2;
-    struct Limit_ variant_2 = (struct Limit_){.tag = LimitVal_, .LimitVal_ = 1};
+    int* payload_2 = (int*)malloc(sizeof(int));
+    (*(((int*)payload_2))) = 1;
+    struct Limit_ variant_2 = (struct Limit_){.tag = LimitVal_, .LimitVal_ = payload_2};
     if (!((variant_2.tag == LimitVal_))) goto next_8;
-    int x_ = variant_2.LimitVal_;
+    int x_ = (*(variant_2.LimitVal_));
     int match_3;
     if (!(((x_ != 1) == 1))) goto next_11;
     exit(1);
@@ -153,10 +159,12 @@ end_match_13:;
     struct IntStringTuple2 tuple_;
     tuple_.t0 = 404;
     tuple_.t1 = (struct String){.str = "Not Found", .len = 9};
-    struct ApiResponse_ variant_3 = (struct ApiResponse_){.tag = ARError_, .ARError_ = tuple_};
+    struct IntStringTuple2* payload_3 = (struct IntStringTuple2*)malloc(sizeof(struct IntStringTuple2));
+    (*(((struct IntStringTuple2*)payload_3))) = tuple_;
+    struct ApiResponse_ variant_3 = (struct ApiResponse_){.tag = ARError_, .ARError_ = payload_3};
     if (!((variant_3.tag == ARError_))) goto next_17;
-    int statusCode_ = variant_3.ARError_.t0;
-    struct String statusText_ = variant_3.ARError_.t1;
+    int statusCode_ = (*(variant_3.ARError_)).t0;
+    struct String statusText_ = (*(variant_3.ARError_)).t1;
     int match_6;
     int match_7;
     if (!(((statusCode_ != 404) == 1))) goto next_21;
@@ -202,7 +210,9 @@ next_26:;
     goto end_match_25;
 next_27:;
 end_match_25:;
-    struct OkWrapper_ variant_4 = (struct OkWrapper_){.tag = T_, .T_ = (struct Ok_){.tag = Ok_}};
+    struct Ok_* payload_4 = (struct Ok_*)malloc(sizeof(struct Ok_));
+    (*(((struct Ok_*)payload_4))) = (struct Ok_){.tag = Ok_};
+    struct OkWrapper_ variant_4 = (struct OkWrapper_){.tag = T_, .T_ = payload_4};
     struct OkWrapper_ okWrapper_ = variant_4;
     return 0;
 }
