@@ -61,6 +61,7 @@ type Token =
   | Open
   | Type
   | Of
+  | Fun
   | In
 
 /// Type expression in AST.
@@ -144,6 +145,8 @@ type AExpr =
     of AExpr * AExpr * AExpr * Loc
   | Match
     of AExpr * AArm list * Loc
+  | Fun
+    of APat list * AExpr * Loc
   /// Navigation expression, e.g. `str.Length`.
   | Nav
     of AExpr * string * Loc

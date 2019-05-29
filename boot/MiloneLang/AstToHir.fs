@@ -147,6 +147,15 @@ let onExpr (expr: AExpr): HExpr =
     let arms = arms |> List.map onArm
     HExpr.Match (target, arms, noTy, loc)
 
+  | AExpr.Fun (pats, body, loc) ->
+    // Desugar to let expression.
+    // `fun x y .. -> z` ==> `let f x y .. = z in f`
+    let ident = "fun"
+    let pat = APat.Call (APat.Ident (ident, loc), pats, loc)
+    let next = AExpr.Ident (ident, loc)
+    let expr = AExpr.Let (pat, body, next, loc)
+    expr |> onExpr
+
   | AExpr.Nav (l, r, loc) ->
     let l = l |> onExpr
     HExpr.Nav (l, r, noTy, loc)
