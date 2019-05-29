@@ -205,22 +205,26 @@ let parsePatNav boxX tokens =
   | _ ->
     pat, tokens
 
-/// pat-call = pat-nav ( pat-nav )*
-let parsePatCall boxX tokens =
-  let calleeLoc = nextLoc tokens
-  let _, calleeX = calleeLoc
-  let insideX = max boxX (calleeX + 1)
-  let callee, tokens = parsePatNav boxX tokens
+let parsePatCallArgs insideX tokens =
   let rec go acc tokens =
     if nextInside insideX tokens && leadsPat tokens then
       let expr, tokens = parsePatNav insideX tokens
       go (expr :: acc) tokens
     else
       List.rev acc, tokens
-  match go [] tokens with
-  | [], tokens ->
+  go [] tokens
+
+/// pat-call = pat-nav ( pat-nav )*
+let parsePatCall boxX tokens =
+  let calleeLoc = nextLoc tokens
+  let _, calleeX = calleeLoc
+  let insideX = max boxX (calleeX + 1)
+  let callee, tokens = parsePatNav boxX tokens
+  let args, tokens = parsePatCallArgs insideX tokens
+  match args with
+  | [] ->
     callee, tokens
-  | args, tokens ->
+  | _ ->
     APat.Call (callee, args, calleeLoc), tokens
 
 /// pat-cons = pat-call ( '::' pat-cons )?
@@ -367,8 +371,10 @@ let parseMatch boxX matchLoc tokens =
 
 /// fun-expr = 'fun' pats '->' expr
 let parseFun boxX funLoc tokens =
+  let _, funX = funLoc
+  let patBoxX = funX + 1
   let pats, tokens =
-    match parsePats boxX tokens with
+    match parsePatCallArgs patBoxX tokens with
     | pats, (Token.Arrow, _) :: tokens ->
       pats, tokens
     | _ ->
