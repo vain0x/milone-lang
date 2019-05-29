@@ -31,6 +31,7 @@ let tokenRole tokens: bool * bool =
     true, true
   | (Token.If _, _) :: _
   | (Token.Match _, _) :: _
+  | (Token.Fun, _) :: _
   | (Token.Do, _) :: _
   | (Token.Let, _) :: _
   | (Token.Type, _) :: _
@@ -204,22 +205,26 @@ let parsePatNav boxX tokens =
   | _ ->
     pat, tokens
 
-/// pat-call = pat-nav ( pat-nav )*
-let parsePatCall boxX tokens =
-  let calleeLoc = nextLoc tokens
-  let _, calleeX = calleeLoc
-  let insideX = max boxX (calleeX + 1)
-  let callee, tokens = parsePatNav boxX tokens
+let parsePatCallArgs insideX tokens =
   let rec go acc tokens =
     if nextInside insideX tokens && leadsPat tokens then
       let expr, tokens = parsePatNav insideX tokens
       go (expr :: acc) tokens
     else
       List.rev acc, tokens
-  match go [] tokens with
-  | [], tokens ->
+  go [] tokens
+
+/// pat-call = pat-nav ( pat-nav )*
+let parsePatCall boxX tokens =
+  let calleeLoc = nextLoc tokens
+  let _, calleeX = calleeLoc
+  let insideX = max boxX (calleeX + 1)
+  let callee, tokens = parsePatNav boxX tokens
+  let args, tokens = parsePatCallArgs insideX tokens
+  match args with
+  | [] ->
     callee, tokens
-  | args, tokens ->
+  | _ ->
     APat.Call (callee, args, calleeLoc), tokens
 
 /// pat-cons = pat-call ( '::' pat-cons )?
@@ -364,6 +369,21 @@ let parseMatch boxX matchLoc tokens =
   let arms, tokens = go [] tokens
   AExpr.Match (target, arms, matchLoc), tokens
 
+/// fun-expr = 'fun' pats '->' expr
+let parseFun boxX funLoc tokens =
+  let _, funX = funLoc
+  let patBoxX = funX + 1
+  let pats, tokens =
+    match parsePatCallArgs patBoxX tokens with
+    | pats, (Token.Arrow, _) :: tokens ->
+      pats, tokens
+    | _ ->
+      parseError "Missing '->'" tokens
+  let body, tokens =
+    let bodyX = nextX tokens
+    parseExpr bodyX tokens
+  AExpr.Fun (pats, body, funLoc), tokens
+
 let parseParen boxX tokens =
   match parseExpr boxX tokens with
   | expr, (Token.ParenR, _) :: tokens ->
@@ -462,6 +482,8 @@ let parseAtom boxX tokens: AExpr * (Token * Loc) list =
     parseIf boxX loc tokens
   | (Token.Match, loc) :: tokens ->
     parseMatch boxX loc tokens
+  | (Token.Fun, loc) :: tokens ->
+    parseFun boxX loc tokens
   | (Token.Let, letLoc) :: tokens ->
     parseLet boxX letLoc tokens
   | _ ->

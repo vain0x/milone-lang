@@ -148,6 +148,7 @@ let private tokenIdent ident =
   | "open" -> Token.Open
   | "type" -> Token.Type
   | "of" -> Token.Of
+  | "fun" -> Token.Fun
   | "in" -> Token.In
   | _ -> Token.Ident ident
 
