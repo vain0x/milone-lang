@@ -6,16 +6,6 @@ List of tasks. Because this is just a note for the author, it's not easy to unde
 
 It has too many features just for self-hosting.
 
-### Recursive unions
-
-Recursive unions should be allowed for expression types.
-
-```fsharp
-type Expr =
-    | Int of int
-    | Add of Expr * Expr
-```
-
 ### Generic equality/string/etc.
 
 Automatically generate these functions for each type.
@@ -35,6 +25,27 @@ Because it's verbose to implement classes such as `File` from .NET standard libr
     _ioFileWriteAllText: string -> string -> unit
 ```
 
+### Library functions
+
+assert, failwith, List.map, String.concat, etc.
+
+### Format strings
+
+printfn, eprintfn, failwithf, etc.
+
+### Small things
+
+- namespace rec
+- type variables (`_`, `'a`) in type expressions
+- name of payload (`a:` in `type A = | A of a:int`)
+- List patterns
+- str.Substring
+- str.Contains
+- *- operator
+- multiline string
+- top-level value definitions
+- bump memory allocator instead of malloc
+
 ### Low Priority
 
 These features are unnecessary because we have replacement.
@@ -45,6 +56,7 @@ These features are unnecessary because we have replacement.
     - We can replace them with associative lists
 - Record types
 - Bugs about arity calculation
+- Bugs about interaction between module-rec and let-polymorphism
 
 ### Not Supported
 
