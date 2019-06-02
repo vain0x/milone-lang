@@ -1,6 +1,7 @@
 module rec MiloneLang.FunTrans
 
 open MiloneLang.Helpers
+open MiloneLang.Types
 
 [<RequireQualifiedAccess>]
 type FunTransCtx =
