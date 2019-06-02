@@ -35,6 +35,7 @@ printfn, eprintfn, failwithf, etc.
 
 ### Small things
 
+- option type
 - type variables (`_`, `'a`) in type expressions
 - name of payload (`a:` in `type A = | A of a:int`)
 - List patterns
