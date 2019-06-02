@@ -1,58 +1,59 @@
-module MiloneLang.Program
-  open System
+module rec MiloneLang.Program
 
-  type Verbosity =
-    | Verbose
-    | Silent
+open System
 
-  let parseProjectModules (projectDir: string) =
-    let modulePath moduleName = IO.Path.Combine(projectDir, sprintf "%s.milone" moduleName)
-    let readModuleFile moduleName = IO.File.ReadAllText(modulePath moduleName)
-    let projectName = IO.Path.GetFileName(projectDir)
-    Bundling.parseProjectModules readModuleFile projectName
+type Verbosity =
+  | Verbose
+  | Silent
 
-  let toCir verbosity (projectDir: string): CDecl list * bool =
-    let log label obj =
-      match verbosity with
-      | Verbosity.Verbose ->
-        eprintfn "%s = %A" label obj
-      | Verbosity.Silent ->
-        ()
+let parseProjectModules (projectDir: string) =
+  let modulePath moduleName = IO.Path.Combine(projectDir, sprintf "%s.milone" moduleName)
+  let readModuleFile moduleName = IO.File.ReadAllText(modulePath moduleName)
+  let projectName = IO.Path.GetFileName(projectDir)
+  Bundling.parseProjectModules readModuleFile projectName
 
-    let ast = parseProjectModules projectDir
-    // let tokens = Lexing.tokenize source
-    // log "tokens" tokens
-    // let ast = Parsing.parse tokens
-    // log "ast" ast
-    let desugared = Desugaring.desugar ast
-    log "desugared" ast
-    let typedAst, tyCtx = Typing.infer desugared
-    log "typed" typedAst
-    let funTransAst, tyCtx = FunTrans.trans (typedAst, tyCtx)
-    log "funTrans" funTransAst
-    let monoAst, tyCtx = Monomorphizing.monify (funTransAst, tyCtx)
-    log "monoAst" monoAst
-    let mir, mirCtx = Mir.mirify (monoAst, tyCtx)
-    log "mir" mir
-    let cir, success = CIrGen.gen (mir, mirCtx)
-    log "cir" cir
-    cir, success
+let toCir verbosity (projectDir: string): CDecl list * bool =
+  let log label obj =
+    match verbosity with
+    | Verbosity.Verbose ->
+      eprintfn "%s = %A" label obj
+    | Verbosity.Silent ->
+      ()
 
-  let runCompile verbosity projectDir =
-    let cir, success = toCir verbosity projectDir
-    let exitCode = if success then 0 else 1
-    printf "%s" (CPrinting.cprint cir)
-    exitCode
+  let ast = parseProjectModules projectDir
+  // let tokens = Lexing.tokenize source
+  // log "tokens" tokens
+  // let ast = Parsing.parse tokens
+  // log "ast" ast
+  let desugared = Desugaring.desugar ast
+  log "desugared" ast
+  let typedAst, tyCtx = Typing.infer desugared
+  log "typed" typedAst
+  let funTransAst, tyCtx = FunTrans.trans (typedAst, tyCtx)
+  log "funTrans" funTransAst
+  let monoAst, tyCtx = Monomorphizing.monify (funTransAst, tyCtx)
+  log "monoAst" monoAst
+  let mir, mirCtx = Mir.mirify (monoAst, tyCtx)
+  log "mir" mir
+  let cir, success = CIrGen.gen (mir, mirCtx)
+  log "cir" cir
+  cir, success
 
-  [<EntryPoint>]
-  let main args =
-    match List.ofArray args with
-    | ["-v"; projectDir] ->
-      runCompile Verbosity.Verbose projectDir
-    | ["-q"; projectDir] ->
-      runCompile Verbosity.Silent projectDir
-    | _ ->
-      eprintfn """USAGE: milone [OPTIONS] <project-dir>
+let runCompile verbosity projectDir =
+  let cir, success = toCir verbosity projectDir
+  let exitCode = if success then 0 else 1
+  printf "%s" (CPrinting.cprint cir)
+  exitCode
+
+[<EntryPoint>]
+let main args =
+  match List.ofArray args with
+  | ["-v"; projectDir] ->
+    runCompile Verbosity.Verbose projectDir
+  | ["-q"; projectDir] ->
+    runCompile Verbosity.Silent projectDir
+  | _ ->
+    eprintfn """USAGE: milone [OPTIONS] <project-dir>
 
 EXAMPLE
     milone -q /path/to/foo
@@ -73,4 +74,4 @@ OPTIONS
     -q  No debug logs
     -v  Verbose debug logs
 """
-      1
+    1

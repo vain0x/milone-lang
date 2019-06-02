@@ -1,5 +1,7 @@
 module MiloneLang.Helpers
 
+open MiloneLang.Types
+
 let listUnique (xs: 'x list): 'x list =
   xs |> set |> Set.toList
 
