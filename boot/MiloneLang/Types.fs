@@ -368,6 +368,7 @@ type InfOp =
 type HPrim =
   | Not
   | Exit
+  | Assert
   | Box
   | Unbox
   | Printfn

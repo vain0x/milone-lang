@@ -693,6 +693,9 @@ let inferRef (ctx: TyCtx) ident loc ty =
     let resultTy, _, ctx = ctxFreshTyVar "exit" ctx
     let ctx = unifyTy ctx loc (tyFun tyInt resultTy) ty
     HExpr.Ref (ident, HValRef.Prim HPrim.Exit, ty, loc), ctx
+  | None, "assert" ->
+    let ctx = unifyTy ctx loc (tyFun tyBool tyUnit) ty
+    HExpr.Ref (ident, HValRef.Prim HPrim.Assert, ty, loc), ctx
   | None, "box" ->
     let argTy, _, ctx = ctxFreshTyVar "box" ctx
     let ctx = unifyTy ctx loc (tyFun argTy tyObj) ty

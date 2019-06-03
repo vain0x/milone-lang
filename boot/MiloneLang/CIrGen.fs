@@ -455,6 +455,12 @@ let genExprCallProc ctx callee args ty =
   match callee, args with
   | MExpr.Prim (HPrim.Printfn, _, _), (MExpr.Lit (Lit.Str format, _)) :: args ->
     genExprCallPrintfn ctx format args
+  | MExpr.Prim (HPrim.Assert, _, _), args ->
+    let callee = CExpr.Ref "milone_assert"
+    let args, ctx = genExprList ctx args
+    let assertCall = CExpr.Call (callee, args)
+    let ctx = ctxAddStmt ctx (CStmt.Expr assertCall)
+    genExprDefault ctx ty
   | MExpr.Prim (HPrim.StrSlice, _, _), args ->
     let callee = CExpr.Ref "str_slice"
     let args, ctx = genExprList ctx args

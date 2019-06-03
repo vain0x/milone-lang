@@ -561,6 +561,7 @@ let unetaCall callee args resultTy loc ctx =
       match prim with
       | HPrim.Not
       | HPrim.Exit
+      | HPrim.Assert
       | HPrim.Box
       | HPrim.Unbox
       | HPrim.StrLength

@@ -428,6 +428,12 @@ struct String str_of_char(char value) {
   str[0] = value;
   return (struct String){.str = str, .len = strlen(str)};
 }
+
+void milone_assert(int cond) {
+  if (!cond) {
+    exit(1);
+  }
+}
 """
   acc *- header *- eol
 

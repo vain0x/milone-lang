@@ -374,6 +374,7 @@ let primToArity prim =
   match prim with
   | HPrim.Not
   | HPrim.Exit
+  | HPrim.Assert
   | HPrim.Box
   | HPrim.Unbox
   | HPrim.StrLength
