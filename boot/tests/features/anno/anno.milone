@@ -1,4 +1,8 @@
 let main _ =
   let f x = x : int
   let g (x : int) = x
-  f 1 - g 1
+  let zero = f 1 - g 1
+
+  let xs: _ list = [1]
+
+  zero

@@ -249,13 +249,15 @@ let ctxResolveTyRefIdent ident (ctx: TyCtx) =
     tyRef tySerial []
 
 /// Resolves type references in type annotation.
-/// FIXME: ctx is unnecessary
 let ctxResolveTy ctx ty =
   let rec go (ty, ctx) =
     match ty with
     | Ty.Error
     | Ty.Con (TyCon.Ref _, _) ->
       ty, ctx
+    | Ty.Con (TyCon.RefIdent "_", _) ->
+      let tySerial, ctx = ctxFreshTySerial ctx
+      Ty.Meta tySerial, ctx
     | Ty.Con (TyCon.RefIdent ident, _) ->
       ctxResolveTyRefIdent ident ctx, ctx
     | Ty.Con (tyCon, tys) ->
