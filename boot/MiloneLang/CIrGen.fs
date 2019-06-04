@@ -78,8 +78,15 @@ let ctxAddFunDecl (ctx: Ctx) sTy tTy =
   let ident, ctx = ctxUniqueTyName ctx funTy
   let selfTy = CTy.Struct ident
   let envTy = CTy.Ptr CTy.Void
-  let argTys, ctx = cirifyTys (argTys, ctx)
-  let resultTy, ctx = cty ctx resultTy
+
+  let makeSignature ctx =
+    let argTys, ctx = cirifyTys (argTys, ctx)
+    let resultTy, ctx = cty ctx resultTy
+    argTys, resultTy, ctx
+
+  // HACK: See AddUnionDecl for details.
+  let argTys, resultTy, _ = makeSignature ctx
+
   let fields = ["fun", CTy.FunPtr (envTy :: argTys, resultTy); "env", envTy]
   let ctx: Ctx =
     { ctx with
@@ -87,6 +94,9 @@ let ctxAddFunDecl (ctx: Ctx) sTy tTy =
         TyEnv = ctx.TyEnv |> Map.add funTy selfTy
         Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
+
+  let _, _, ctx = makeSignature ctx
+
   selfTy, ctx
 
 let ctxAddListDecl (ctx: Ctx) itemTy =

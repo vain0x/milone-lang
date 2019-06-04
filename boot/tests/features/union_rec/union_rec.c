@@ -1,12 +1,10 @@
+struct UnitLazyList_Fun1;
+
 enum LazyList_Tag;
 
 struct LazyList_;
 
-struct UnitLazyList_Fun1;
-
 struct IntUnitLazyList_Fun1Tuple2;
-
-struct UnitLazyList_Fun1;
 
 struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_);
 
@@ -22,6 +20,11 @@ struct LazyList_ makeTail_(int n_2, int prev_, int arg_3);
 
 int main();
 
+struct UnitLazyList_Fun1 {
+    struct LazyList_(*fun)(void*, int);
+    void* env;
+};
+
 enum LazyList_Tag {
     Nil_,
     Cons_,
@@ -34,19 +37,9 @@ struct LazyList_ {
     };
 };
 
-struct UnitLazyList_Fun1 {
-    struct LazyList_(*fun)(void*, int);
-    void* env;
-};
-
 struct IntUnitLazyList_Fun1Tuple2 {
     int t0;
     struct UnitLazyList_Fun1 t1;
-};
-
-struct UnitLazyList_Fun1 {
-    struct LazyList_(*fun)(void*, int);
-    void* env;
 };
 
 struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
