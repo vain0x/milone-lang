@@ -13,7 +13,7 @@ type ApiResponse =
   | ARJson
     of string
   | ARError
-    of int * string
+    of code:int * msg:string
   | ARCancel
 
 type OkWrapper =

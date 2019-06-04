@@ -108,16 +108,26 @@ let parseTySuffix boxX tokens: ATy * _ list =
   let first, tokens = parseTyAtom boxX tokens
   go first tokens
 
-/// ty-tuple = ty-suffix ( '\*' ty-suffix )\*
+/// ty-prefix = ( ident ':' )? ty-suffix
+let parseTyPrefix boxX tokens =
+  match tokens with
+  // NOTE: Allow 'foo:Foo' in any kind of type expressions
+  // except for payload types.
+  | (Token.Ident _, _) :: (Token.Colon, _) :: tokens ->
+    parseTySuffix boxX tokens
+  | _ ->
+    parseTySuffix boxX tokens
+
+/// ty-tuple = ty-prefix ( '\*' ty-prefix )\*
 let parseTyTuple boxX tokens =
   let rec go acc opLoc tokens =
     match tokens with
     | (Token.Punct "*", opLoc) :: tokens when nextInside boxX tokens ->
-      let second, tokens = parseTySuffix boxX tokens
+      let second, tokens = parseTyPrefix boxX tokens
       go (second :: acc) opLoc tokens
     | _ ->
       List.rev acc, opLoc, tokens
-  let first, tokens = parseTySuffix boxX tokens
+  let first, tokens = parseTyPrefix boxX tokens
   let noLoc = (0, 0)
   match go [] noLoc tokens with
   | [], _, tokens ->

@@ -37,7 +37,6 @@ printfn, eprintfn, failwithf, etc.
 
 - option type
 - type variables (`'a`) in type expressions
-- name of payload (`a:` in `type A = | A of a:int`)
 - List patterns
 - str.Substring
 - str.Contains
