@@ -105,6 +105,61 @@ let ctxSetFunArity funSerial arity (ctx: FunTransCtx) =
   | _ ->
     ctx
 
+// ## Main hoisting
+//
+// Converts the whole program to be wrapped in the main function.
+//
+// ### Example
+//
+// ```fsharp
+// let success = 0
+// let main _ =
+//    success
+// ```
+//
+// to
+//
+// ```fsharp
+// let main _ =
+//    let success = 0
+//    success
+// ```
+
+let hoistMain expr =
+  let rec go expr =
+    match expr with
+    | HExpr.LetFun ("main", serial, args, body, next, ty, loc) ->
+      let makeMain rest =
+        HExpr.LetFun ("main", serial, args, hxAndThen [rest; body] loc, next, ty, loc)
+      next, makeMain
+
+    | HExpr.Let (pat, init, next, ty, loc) ->
+      let next, f = go next
+      HExpr.Let (pat, init, next, ty, loc), f
+
+    | HExpr.LetFun (ident, serial, args, body, next, ty, loc) ->
+      let next, f = go next
+      HExpr.LetFun (ident, serial, args, body, next, ty, loc), f
+
+    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+      let rec goLast exprs =
+        match exprs with
+        | [] ->
+          [], id
+        | [last] ->
+          let last, f = go last
+          [last], f
+        | expr :: exprs ->
+          let exprs, f = goLast exprs
+          expr :: exprs, f
+      let exprs, f = goLast exprs
+      HExpr.Inf (InfOp.AndThen, exprs, ty, loc), f
+    | _ ->
+      expr, id
+
+  let expr, makeMain = go expr
+  makeMain expr
+
 // ## Declosure: Closure conversion
 //
 // Performs closure conversion to make all functions be context-free.
@@ -656,6 +711,7 @@ let uneta (expr, ctx: FunTransCtx) =
 /// Performs transformation about functions.
 let trans (expr, tyCtx) =
   let ctx = ctxFromTyCtx tyCtx
+  let expr = hoistMain expr
   let expr, ctx = (expr, ctx) |> declosure |> uneta
   let tyCtx = ctx |> ctxFeedbackToTyCtx tyCtx
   expr, tyCtx

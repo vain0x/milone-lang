@@ -40,7 +40,6 @@ printfn, eprintfn, failwithf, etc.
 - str.Substring
 - str.Contains
 - multiline string
-- top-level value definitions
 - bump memory allocator instead of malloc
 
 ### Low Priority

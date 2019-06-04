@@ -718,6 +718,7 @@ let collectDecls (stmts: MStmt list) =
 let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
 
+  // OK: It's safe to discard the expression thanks to main hoisting.
   let _expr, ctx = mirifyExpr ctx expr
 
   let stmts = ctx.Stmts |> List.rev
