@@ -91,6 +91,7 @@ let mopFrom op =
   | Op.Or
   | Op.App
   | Op.Cons _
+  | Op.ConsRev
   | Op.Range
   | Op.Index -> failwith "Never: We don't use > >= && || :: .. in MIR"
 

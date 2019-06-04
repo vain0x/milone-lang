@@ -1,9 +1,6 @@
 /// Prints C language code from C language IR.
 module rec MiloneLang.CPrinting
 
-let ( *- ) acc second =
-  second :: acc
-
 let eol = """
 """
 

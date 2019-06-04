@@ -245,6 +245,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Nav (go sub, mes, f ty, g a)
     | HExpr.Op (Op.Cons itemTy, l, r, ty, a) ->
       HExpr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
+    | HExpr.Op (Op.ConsRev, l, r, ty, a) ->
+      HExpr.Op (Op.ConsRev, go l, go r, f ty, g a)
     | HExpr.Op (op, l, r, ty, a) ->
       HExpr.Op (op, go l, go r, f ty, g a)
     | HExpr.Inf (InfOp.List itemTy, items, resultTy, a) ->

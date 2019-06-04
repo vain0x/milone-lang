@@ -39,7 +39,6 @@ printfn, eprintfn, failwithf, etc.
 - type variables (`'a`) in type expressions
 - str.Substring
 - str.Contains
-- *- operator
 - multiline string
 - top-level value definitions
 - bump memory allocator instead of malloc

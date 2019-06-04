@@ -266,9 +266,11 @@ type Op =
   | Or
   /// `f x` Application
   | App
-  /// `::` Construction
+  /// `::` Cons cell constructor
   | Cons
     of Ty
+  /// `*-` Reversed cons
+  | ConsRev
   /// `..`
   | Range
   /// `.[ ]`

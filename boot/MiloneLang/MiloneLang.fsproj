@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Polyfills.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="Lexing.fs" />
