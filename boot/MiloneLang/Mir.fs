@@ -610,7 +610,7 @@ let mirifyExprLetVal ctx pat init next letLoc =
   let next, ctx = mirifyExpr ctx next
   next, ctx
 
-let mirifyExprLetFun ctx calleeSerial argPats body next letLoc =
+let mirifyExprLetFun ctx calleeIdent calleeSerial argPats body next letLoc =
   let defineArg ctx argPat =
     match argPat with
     | HPat.Ref (_, serial, ty, loc) ->
@@ -648,7 +648,7 @@ let mirifyExprLetFun ctx calleeSerial argPats body next letLoc =
   let bodyCtx = ctxNewBlock ctx
   let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
   let ctx = ctxRollBack ctx bodyCtx
-  let procStmt = MStmt.Proc ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body }, letLoc)
+  let procStmt = MStmt.Proc ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body; Main = calleeIdent = "main" }, letLoc)
   let ctx = ctxAddStmt ctx procStmt
 
   let next, ctx = mirifyExpr ctx next
@@ -674,8 +674,8 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprInf ctx infOp args ty loc
   | HExpr.Let (pat, body, next, _, loc) ->
     mirifyExprLetVal ctx pat body next loc
-  | HExpr.LetFun (_, serial, args, body, next, _, loc) ->
-    mirifyExprLetFun ctx serial args body next loc
+  | HExpr.LetFun (ident, serial, args, body, next, _, loc) ->
+    mirifyExprLetFun ctx ident serial args body next loc
   | HExpr.TyDef (_, tySerial, tyDecl, loc) ->
     mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.Open (_, loc) ->
@@ -705,20 +705,21 @@ let collectDecls (stmts: MStmt list) =
   let rec go decls stmts =
     match stmts with
     | MStmt.Proc (procDecl, loc) :: stmts ->
-      let decls = MDecl.Proc (procDecl, loc) :: decls
       let decls = go decls procDecl.Body
-      go decls stmts
+      let decls = MDecl.Proc (procDecl, loc) :: decls
+      let decls = go decls stmts
+      decls
     | _ :: stmts ->
       go decls stmts
     | [] ->
       decls
-  go [] stmts
+  go [] stmts |> List.rev
 
 let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = ctxFromTyCtx tyCtx
 
-  // FIXME: Don't discard the result expression because it may cause some effects.
   let _expr, ctx = mirifyExpr ctx expr
 
-  let decls = collectDecls ctx.Stmts
+  let stmts = ctx.Stmts |> List.rev
+  let decls = collectDecls stmts
   decls, ctx

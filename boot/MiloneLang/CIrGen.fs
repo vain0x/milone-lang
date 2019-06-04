@@ -661,7 +661,7 @@ let genDecls (ctx: Ctx) decls =
     ctx
   | MDecl.Proc (procDecl, _) :: decls ->
     let ident, args =
-      if List.isEmpty decls
+      if procDecl.Main
       then "main", []
       else ctxUniqueName ctx procDecl.Callee, procDecl.Args
     let rec go acc ctx args =

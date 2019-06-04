@@ -1,37 +1,18 @@
-int fun_3(void* env_1, int arg_1, int arg_2);
-
-int fun_1(int x_3, int y_1);
-
-int fun_2(void* env_, int arg_);
-
-int fun_(int x_1);
-
 struct IntIntFun1;
 
 int twice_1(struct IntIntFun1 f_, int x_);
 
+int fun_(int x_1);
+
+int fun_2(void* env_, int arg_);
+
+int fun_1(int x_3, int y_1);
+
+int fun_3(void* env_1, int arg_1, int arg_2);
+
 struct IntIntIntFun2;
 
 int main();
-
-int fun_3(void* env_1, int arg_1, int arg_2) {
-    int call_2 = fun_1(arg_1, arg_2);
-    return call_2;
-}
-
-int fun_1(int x_3, int y_1) {
-    return (x_3 / y_1);
-}
-
-int fun_2(void* env_, int arg_) {
-    int call_ = fun_(arg_);
-    return call_;
-}
-
-int fun_(int x_1) {
-    int y_ = (x_1 + 1);
-    return y_;
-}
 
 struct IntIntFun1 {
     int(*fun)(void*, int);
@@ -42,6 +23,25 @@ int twice_1(struct IntIntFun1 f_, int x_) {
     int app_ = f_.fun(f_.env, x_);
     int app_1 = f_.fun(f_.env, app_);
     return app_1;
+}
+
+int fun_(int x_1) {
+    int y_ = (x_1 + 1);
+    return y_;
+}
+
+int fun_2(void* env_, int arg_) {
+    int call_ = fun_(arg_);
+    return call_;
+}
+
+int fun_1(int x_3, int y_1) {
+    return (x_3 / y_1);
+}
+
+int fun_3(void* env_1, int arg_1, int arg_2) {
+    int call_2 = fun_1(arg_1, arg_2);
+    return call_2;
 }
 
 struct IntIntIntFun2 {

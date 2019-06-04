@@ -485,6 +485,7 @@ type MProcDecl =
     Args: (int * int * Ty * Loc) list
     ResultTy: Ty
     Body: MStmt list
+    Main: bool
   }
 
 /// Expression in middle IR.

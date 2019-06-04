@@ -10,15 +10,15 @@ struct StringUnitFun1 bindInt_(struct IntStringUnitFun2 f_, int x_);
 
 int printInt_(int value_, struct String label_);
 
+int fun_1(void* env_1, int arg_3, struct String arg_4);
+
 struct StringTuple1;
+
+int der_(struct StringTuple1 arg_8, int n_, struct String f_1);
 
 struct StringTuple1Tuple1;
 
 int fun_2(void* env_2, int arg_5, struct String arg_6);
-
-int der_(struct StringTuple1 arg_8, int n_, struct String f_1);
-
-int fun_1(void* env_1, int arg_3, struct String arg_4);
 
 int main();
 
@@ -62,19 +62,14 @@ int printInt_(int value_, struct String label_) {
     return 0;
 }
 
+int fun_1(void* env_1, int arg_3, struct String arg_4) {
+    int call_1 = printInt_(arg_3, arg_4);
+    return 0;
+}
+
 struct StringTuple1 {
     struct String t0;
 };
-
-struct StringTuple1Tuple1 {
-    struct StringTuple1 t0;
-};
-
-int fun_2(void* env_2, int arg_5, struct String arg_6) {
-    struct StringTuple1 arg_7 = (*(((struct StringTuple1Tuple1*)env_2))).t0;
-    int call_5 = der_(arg_7, arg_5, arg_6);
-    return 0;
-}
 
 int der_(struct StringTuple1 arg_8, int n_, struct String f_1) {
     struct String d_ = arg_8.t0;
@@ -97,8 +92,13 @@ end_match_1:;
     return 0;
 }
 
-int fun_1(void* env_1, int arg_3, struct String arg_4) {
-    int call_1 = printInt_(arg_3, arg_4);
+struct StringTuple1Tuple1 {
+    struct StringTuple1 t0;
+};
+
+int fun_2(void* env_2, int arg_5, struct String arg_6) {
+    struct StringTuple1 arg_7 = (*(((struct StringTuple1Tuple1*)env_2))).t0;
+    int call_5 = der_(arg_7, arg_5, arg_6);
     return 0;
 }
 

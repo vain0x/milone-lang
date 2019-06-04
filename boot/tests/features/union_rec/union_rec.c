@@ -1,5 +1,3 @@
-struct IntIntTuple2;
-
 enum LazyList_Tag;
 
 struct LazyList_;
@@ -8,22 +6,21 @@ struct UnitLazyList_Fun1;
 
 struct IntUnitLazyList_Fun1Tuple2;
 
-struct LazyList_ fun_(void* env_, int arg_);
+struct UnitLazyList_Fun1;
 
-struct LazyList_ makeTail_(int n_2, int prev_, int arg_3);
+struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_);
 
 int go_(int n_1, struct LazyList_ xs_1);
 
 int lazyListPrint_(int n_, struct LazyList_ xs_);
 
-struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_);
+struct IntIntTuple2;
+
+struct LazyList_ fun_(void* env_, int arg_);
+
+struct LazyList_ makeTail_(int n_2, int prev_, int arg_3);
 
 int main();
-
-struct IntIntTuple2 {
-    int t0;
-    int t1;
-};
 
 enum LazyList_Tag {
     Nil_,
@@ -47,24 +44,19 @@ struct IntUnitLazyList_Fun1Tuple2 {
     struct UnitLazyList_Fun1 t1;
 };
 
-struct LazyList_ fun_(void* env_, int arg_) {
-    int arg_1 = (*(((struct IntIntTuple2*)env_))).t0;
-    int arg_2 = (*(((struct IntIntTuple2*)env_))).t1;
-    struct LazyList_ call_3 = makeTail_(arg_1, arg_2, 0);
-    return call_3;
-}
+struct UnitLazyList_Fun1 {
+    struct LazyList_(*fun)(void*, int);
+    void* env;
+};
 
-struct LazyList_ makeTail_(int n_2, int prev_, int arg_3) {
-    int head_2 = (n_2 * prev_);
-    struct IntIntTuple2 tuple_1;
-    tuple_1.t0 = (n_2 + 1);
-    tuple_1.t1 = head_2;
-    void* box_ = (void*)malloc(sizeof(struct IntIntTuple2));
-    (*(((struct IntIntTuple2*)box_))) = tuple_1;
-    void* env_1 = box_;
-    struct UnitLazyList_Fun1 fun_1 = (struct UnitLazyList_Fun1){.fun = fun_, .env = env_1};
-    struct LazyList_ call_4 = cons_(fun_1, head_2);
-    return call_4;
+struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
+    struct IntUnitLazyList_Fun1Tuple2 tuple_;
+    tuple_.t0 = head_;
+    tuple_.t1 = tail_;
+    struct IntUnitLazyList_Fun1Tuple2* payload_ = (struct IntUnitLazyList_Fun1Tuple2*)malloc(sizeof(struct IntUnitLazyList_Fun1Tuple2));
+    (*(((struct IntUnitLazyList_Fun1Tuple2*)payload_))) = tuple_;
+    struct LazyList_ variant_ = (struct LazyList_){.tag = Cons_, .Cons_ = payload_};
+    return variant_;
 }
 
 int go_(int n_1, struct LazyList_ xs_1) {
@@ -103,14 +95,29 @@ int lazyListPrint_(int n_, struct LazyList_ xs_) {
     return 0;
 }
 
-struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
-    struct IntUnitLazyList_Fun1Tuple2 tuple_;
-    tuple_.t0 = head_;
-    tuple_.t1 = tail_;
-    struct IntUnitLazyList_Fun1Tuple2* payload_ = (struct IntUnitLazyList_Fun1Tuple2*)malloc(sizeof(struct IntUnitLazyList_Fun1Tuple2));
-    (*(((struct IntUnitLazyList_Fun1Tuple2*)payload_))) = tuple_;
-    struct LazyList_ variant_ = (struct LazyList_){.tag = Cons_, .Cons_ = payload_};
-    return variant_;
+struct IntIntTuple2 {
+    int t0;
+    int t1;
+};
+
+struct LazyList_ fun_(void* env_, int arg_) {
+    int arg_1 = (*(((struct IntIntTuple2*)env_))).t0;
+    int arg_2 = (*(((struct IntIntTuple2*)env_))).t1;
+    struct LazyList_ call_3 = makeTail_(arg_1, arg_2, 0);
+    return call_3;
+}
+
+struct LazyList_ makeTail_(int n_2, int prev_, int arg_3) {
+    int head_2 = (n_2 * prev_);
+    struct IntIntTuple2 tuple_1;
+    tuple_1.t0 = (n_2 + 1);
+    tuple_1.t1 = head_2;
+    void* box_ = (void*)malloc(sizeof(struct IntIntTuple2));
+    (*(((struct IntIntTuple2*)box_))) = tuple_1;
+    void* env_1 = box_;
+    struct UnitLazyList_Fun1 fun_1 = (struct UnitLazyList_Fun1){.fun = fun_, .env = env_1};
+    struct LazyList_ call_4 = cons_(fun_1, head_2);
+    return call_4;
 }
 
 int main() {

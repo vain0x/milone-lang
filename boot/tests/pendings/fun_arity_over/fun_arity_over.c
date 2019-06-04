@@ -1,10 +1,10 @@
 struct IntTuple1;
 
+int inc_(struct IntTuple1 arg_3, int arg_4, int y_);
+
 struct IntTuple1UnitTuple2;
 
 int fun_(void* env_, int arg_);
-
-int inc_(struct IntTuple1 arg_3, int arg_4, int y_);
 
 struct IntIntFun1;
 
@@ -18,6 +18,11 @@ struct IntTuple1 {
     int t0;
 };
 
+int inc_(struct IntTuple1 arg_3, int arg_4, int y_) {
+    int x_ = arg_3.t0;
+    return (x_ + y_);
+}
+
 struct IntTuple1UnitTuple2 {
     struct IntTuple1 t0;
     int t1;
@@ -28,11 +33,6 @@ int fun_(void* env_, int arg_) {
     int arg_2 = (*(((struct IntTuple1UnitTuple2*)env_))).t1;
     int call_ = inc_(arg_1, 0, arg_);
     return call_;
-}
-
-int inc_(struct IntTuple1 arg_3, int arg_4, int y_) {
-    int x_ = arg_3.t0;
-    return (x_ + y_);
 }
 
 struct IntIntFun1 {

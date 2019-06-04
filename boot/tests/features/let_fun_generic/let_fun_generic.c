@@ -1,16 +1,8 @@
-struct IntStringTuple2;
+int id_2(int x_);
 
-struct StringIntTuple2;
+struct StringList;
 
-struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_3);
-
-struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_2);
-
-int fun_1(void* env_1, int arg_1);
-
-int fun_(void* env_, int arg_);
-
-int f_1(int x_2);
+struct StringList* id_1(struct StringList* x_);
 
 struct IntIntFun1;
 
@@ -18,56 +10,33 @@ struct IntList;
 
 struct IntList* listMap_1(struct IntIntFun1 f_, struct IntList* xs_);
 
-struct StringList;
+int f_1(int x_2);
 
-struct StringList* id_1(struct StringList* x_);
+int fun_(void* env_, int arg_);
 
-int id_2(int x_);
+int fun_1(void* env_1, int arg_1);
+
+struct StringIntTuple2;
+
+struct IntStringTuple2;
+
+struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_2);
+
+struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_3);
 
 int main();
 
-struct IntStringTuple2 {
-    int t0;
-    struct String t1;
+int id_2(int x_) {
+    return x_;
+}
+
+struct StringList {
+    struct String head;
+    struct StringList* tail;
 };
 
-struct StringIntTuple2 {
-    struct String t0;
-    int t1;
-};
-
-struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_3) {
-    int x_3 = arg_3.t0;
-    struct String y_ = arg_3.t1;
-    struct StringIntTuple2 tuple_1;
-    tuple_1.t0 = y_;
-    tuple_1.t1 = x_3;
-    return tuple_1;
-}
-
-struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_2) {
-    struct String x_3 = arg_2.t0;
-    int y_ = arg_2.t1;
-    struct IntStringTuple2 tuple_;
-    tuple_.t0 = y_;
-    tuple_.t1 = x_3;
-    return tuple_;
-}
-
-int fun_1(void* env_1, int arg_1) {
-    int call_6 = f_1(arg_1);
-    return call_6;
-}
-
-int fun_(void* env_, int arg_) {
-    int call_5 = f_1(arg_);
-    return call_5;
-}
-
-int f_1(int x_2) {
-    printf("%d\n", x_2);
-    int call_4 = 0;
-    return (x_2 * x_2);
+struct StringList* id_1(struct StringList* x_) {
+    return x_;
 }
 
 struct IntIntFun1 {
@@ -102,17 +71,48 @@ end_match_1:;
     return match_;
 }
 
-struct StringList {
-    struct String head;
-    struct StringList* tail;
-};
-
-struct StringList* id_1(struct StringList* x_) {
-    return x_;
+int f_1(int x_2) {
+    printf("%d\n", x_2);
+    int call_4 = 0;
+    return (x_2 * x_2);
 }
 
-int id_2(int x_) {
-    return x_;
+int fun_(void* env_, int arg_) {
+    int call_5 = f_1(arg_);
+    return call_5;
+}
+
+int fun_1(void* env_1, int arg_1) {
+    int call_6 = f_1(arg_1);
+    return call_6;
+}
+
+struct StringIntTuple2 {
+    struct String t0;
+    int t1;
+};
+
+struct IntStringTuple2 {
+    int t0;
+    struct String t1;
+};
+
+struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_2) {
+    struct String x_3 = arg_2.t0;
+    int y_ = arg_2.t1;
+    struct IntStringTuple2 tuple_;
+    tuple_.t0 = y_;
+    tuple_.t1 = x_3;
+    return tuple_;
+}
+
+struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_3) {
+    int x_3 = arg_3.t0;
+    struct String y_ = arg_3.t1;
+    struct StringIntTuple2 tuple_1;
+    tuple_1.t0 = y_;
+    tuple_1.t1 = x_3;
+    return tuple_1;
 }
 
 int main() {
