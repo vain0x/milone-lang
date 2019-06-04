@@ -176,6 +176,27 @@ let parseTyDefBody boxX tokens =
     let ty, tokens = parseTy boxX tokens
     ATyDef.Synonym ty, tokens
 
+let parsePatList boxX tokens =
+  let rec go patAcc tokens =
+    match tokens with
+    | (Token.BracketR, _) :: tokens ->
+      List.rev patAcc, tokens
+    | (Token.Punct ";", _) :: tokens ->
+      let pat, tokens = parsePat boxX tokens
+      go (pat :: patAcc) tokens
+    | _ ->
+      parseError "Expected ';' or ']'" tokens
+
+  match tokens with
+  | (Token.BracketL, loc) :: (Token.BracketR, _) :: tokens ->
+    APat.ListLit ([], loc), tokens
+  | (Token.BracketL, loc) :: tokens ->
+    let pat, tokens = parsePat boxX tokens
+    let pats, tokens = go [pat] tokens
+    APat.ListLit (pats, loc), tokens
+  | _ ->
+    failwith "NEVER"
+
 let parsePatAtom boxX tokens: APat * _ list =
   match tokens with
   | _ when not (nextInside boxX tokens && leadsPat tokens) ->
@@ -198,8 +219,8 @@ let parsePatAtom boxX tokens: APat * _ list =
       pat, tokens
     | _, tokens ->
       parseError "Expected ')'" tokens
-  | (Token.BracketL, loc) :: (Token.BracketR, _) :: tokens ->
-    APat.ListLit ([], loc), tokens
+  | (Token.BracketL, _) :: _ ->
+    parsePatList boxX tokens
   | _ ->
     failwith "Never"
 

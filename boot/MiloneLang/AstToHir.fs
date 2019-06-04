@@ -50,7 +50,7 @@ let onPat (pat: APat): HPat =
   | APat.Error (msg, loc) ->
     failwithf "Pattern error %s %A" msg loc
 
-  | APat.Missing (msg, loc) ->
+  | APat.Missing (_, loc) ->
     failwithf "Missing pattern %A" loc
 
   | APat.Lit (lit, loc) ->
@@ -60,12 +60,11 @@ let onPat (pat: APat): HPat =
     HPat.Ref (ident, noSerial, noTy, loc)
 
   | APat.ListLit (pats, loc) ->
+    // Desugar to (::).
     let pats = pats |> List.map onPat
-    match pats with
-    | [] ->
-      HPat.Nil (noTy, loc)
-    | _ ->
-      failwith "List pattern not supported"
+    let nilPat = HPat.Nil (noTy, loc)
+    let consPat tail head = HPat.Cons (head, tail, noTy, loc)
+    pats |> List.rev |> List.fold consPat nilPat
 
   | APat.Nav (l, r, loc) ->
     let l = l |> onPat

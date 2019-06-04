@@ -37,7 +37,6 @@ printfn, eprintfn, failwithf, etc.
 
 - option type
 - type variables (`'a`) in type expressions
-- List patterns
 - str.Substring
 - str.Contains
 - *- operator
