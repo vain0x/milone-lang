@@ -431,6 +431,64 @@ void milone_assert(int cond) {
     exit(1);
   }
 }
+
+struct String file_read_all_text(struct String file_name) {
+  FILE *fp = fopen(file_name.str, "r");
+  if (!fp) {
+    fprintf(stderr, "File '%s' not found.", file_name.str);
+    abort();
+  }
+
+  fseek(fp, 0, SEEK_END);
+  int size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  char *content = calloc(size + 1, sizeof(char));
+  fread(content, 1, size, fp);
+
+  fclose(fp);
+  return (struct String){.str = content, .len = size};
+}
+
+int file_write_all_text(struct String file_name, struct String content) {
+  FILE *fp = fopen(file_name.str, "w");
+  if (!fp) {
+    fprintf(stderr, "File '%s' not found.", file_name.str);
+    abort();
+  }
+
+  fprintf(fp, "%s", content.str);
+
+  fclose(fp);
+  return 0;
+}
+
+static int s_argc;
+static char **s_argv;
+
+int arg_count(int _unit) {
+  return s_argc;
+}
+
+struct String arg_get(int index) {
+  if (!(0 <= index && index < s_argc)) {
+    abort();
+  }
+
+  char *str = s_argv[index];
+  int len = strlen(str);
+  return (struct String){.str = str, .len = len};
+}
+
+int main(int argc, char** argv) {
+  s_argc = argc - 1;
+  s_argv = argv + 1;
+
+  int milone_main();
+  return milone_main();
+}
+
+#define main milone_main
 """
   acc *- header *- eol
 
