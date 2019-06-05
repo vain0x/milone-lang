@@ -628,6 +628,8 @@ let unetaCall callee args resultTy loc ctx =
         3
       | HPrim.Printfn ->
         primTy |> arityTy
+      | HPrim.NativeFun (_, arity) ->
+        arity
     let args, ctx = (args, ctx) |> stMap unetaExpr
     unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
   | _, args ->

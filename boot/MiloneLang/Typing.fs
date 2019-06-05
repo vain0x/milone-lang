@@ -737,6 +737,8 @@ let inferRef (ctx: TyCtx) ident loc ty =
       | _ ->
         ctxAddErr ctx (sprintf "FIXME: Not implemented `string` for %A" argTy) loc
     HExpr.Ref (ident, HValRef.Prim HPrim.String, ty, loc), ctx
+  | None, "__nativeFun" ->
+    HExpr.Ref (ident, HValRef.Prim (HPrim.NativeFun ("<NativeFunIdent>", -1)), ty, loc), ctx
   | None, _ ->
     let message = sprintf "Couldn't resolve var %s" ident
     let ctx = ctxAddErr ctx message loc
@@ -861,6 +863,23 @@ let inferIndex ctx l r loc resultTy =
     let ctx = ctxAddErr ctx "Type: Index not supported" loc
     hxAbort ctx resultTy loc
 
+let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
+  match firstArg, arg with
+  | HExpr.Lit (Lit.Str nativeFunIdent, _),
+    HExpr.Lit (Lit.Int arity, _) ->
+    let rec go ty arity ctx =
+      if arity = 0 then
+        ty, ctx
+      else
+        let argTy, _, ctx = ctxFreshTyVar "arg" ctx
+        go (tyFun argTy ty) (arity - 1) ctx
+    let resultTy, _, ctx = ctxFreshTyVar "result" ctx
+    let funTy, ctx = go resultTy arity ctx
+    let ctx = unifyTy ctx loc funTy appTy
+    HExpr.Ref (nativeFunIdent, HValRef.Prim (HPrim.NativeFun (nativeFunIdent, arity)), appTy, loc), ctx
+  | _ ->
+    HExpr.Op (Op.App, callee, arg, appTy, loc), ctx
+
 let inferOpAppPrintfn ctx ident arg calleeTy loc =
   match arg with
   | HExpr.Lit (Lit.Str format, _) ->
@@ -875,13 +894,14 @@ let inferOpApp ctx callee arg loc appTy =
   let argTy, _, ctx = ctxFreshTyVar "arg" ctx
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
-  let callee, ctx =
-    match callee with
-    | HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, calleeTy, loc) ->
-      inferOpAppPrintfn ctx ident arg calleeTy loc
-    | _ ->
-      callee, ctx
-  HExpr.Op (Op.App, callee, arg, appTy, loc), ctx
+  match callee with
+  | HExpr.Op (Op.App, HExpr.Ref (_, HValRef.Prim (HPrim.NativeFun _), _, _), firstArg, _, _) ->
+    inferOpAppNativeFun ctx callee firstArg arg appTy loc
+  | HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, calleeTy, loc) ->
+    let callee, ctx = inferOpAppPrintfn ctx ident arg calleeTy loc
+    HExpr.Op (Op.App, callee, arg, appTy, loc), ctx
+  | _ ->
+    HExpr.Op (Op.App, callee, arg, appTy, loc), ctx
 
 let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
   let left, ctx = inferExpr ctx left operandTy

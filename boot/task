@@ -39,13 +39,14 @@ compile() {
 # Runs a milone code
 # and verifies its stdout/exit code to be expected.
 # Sample:
-#   integ hello
+#   integ hello args..
 # Sample:
-#   integ tests/examples/hello
+#   integ tests/examples/hello args..
 # Output:
 #   hello ... ✔ ok
 integ() {
     name=$(basename "$1")
+    shift
     app="$(locate $name)/~$name"
     out="$(locate $name)/~$name.out"
     expected="$(locate $name)/$name.out"
@@ -61,7 +62,7 @@ integ() {
     # Run.
     if [[ $comple_exit_code = 0 ]]
     then
-        $app >>$out
+        $app "$@" >>$out
         echo '$? = '$? >>$out
     fi
 
