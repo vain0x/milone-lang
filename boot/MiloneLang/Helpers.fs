@@ -388,3 +388,5 @@ let primToArity prim =
     3
   | HPrim.Printfn ->
     9999
+  | HPrim.NativeFun (_, arity) ->
+    arity

@@ -379,6 +379,8 @@ type HPrim =
   | Char
   | Int
   | String
+  | NativeFun
+    of string * int
 
 [<RequireQualifiedAccess>]
 type HValRef =

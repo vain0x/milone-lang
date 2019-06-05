@@ -463,6 +463,9 @@ let genExprCallString arg argTy ctx =
 
 let genExprCallProc ctx callee args ty =
   match callee, args with
+  | MExpr.Prim (HPrim.NativeFun (nativeFunIdent, _), _, _), args ->
+    let args, ctx = genExprList ctx args
+    CExpr.Call (CExpr.Ref nativeFunIdent, args), ctx
   | MExpr.Prim (HPrim.Printfn, _, _), (MExpr.Lit (Lit.Str format, _)) :: args ->
     genExprCallPrintfn ctx format args
   | MExpr.Prim (HPrim.Assert, _, _), args ->
