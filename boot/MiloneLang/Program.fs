@@ -7,7 +7,7 @@ type Verbosity =
   | Silent
 
 let parseProjectModules (projectDir: string) =
-  let modulePath moduleName = IO.Path.Combine(projectDir, sprintf "%s.milone" moduleName)
+  let modulePath moduleName = IO.Path.Combine(projectDir, sprintf "%s.fs" moduleName)
   let readModuleFile moduleName = IO.File.ReadAllText(modulePath moduleName)
   let projectName = IO.Path.GetFileName(projectDir)
   Bundling.parseProjectModules readModuleFile projectName
@@ -63,8 +63,8 @@ DESCRIPTION
     and write compiled C-language code to standard output
     or compile error messages to standard error.
 
-    Note that `foo.milone` is the entry point of the project
-    that is located at `/path/to/foo`.
+    Note that `Foo.fs` is the entry point of the project
+    that is located at `/path/to/Foo`.
 
 ARGS
     project-dir
