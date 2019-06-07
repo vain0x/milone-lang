@@ -1,201 +1,405 @@
+//! Lexical analysis.
+//! Create a list of tokens from a text of single file.
+//! Consists of two transformations: scan and recognize.
+
 module rec MiloneLang.Lexing
 
 open MiloneLang
 
-type Acc = (Token * Loc) list
+// ## Scan
+//
+// Read the source code from start to end
+// to make a mapping from spans to token kinds.
+//
+// ### Motivation
+//
+// There are two reasons why I separated the most simplest phase
+// in the compiler to two paths:
+// 1. Scanning must be written carefully not to access out of range,
+//    which makes things complicated unnecessarily
+//    such as looking ahead for escape sequence analysis.
+// 2. Line number tracking is verbose when it's mixed with
+//    scanning multi-line tokens/spaces.
+//
+// ### Example
+//
+// Given the source code "let main _ = 0", the scanner should
+// build a list of tokens like this:
+//
+//  0.. 3   Ident   (let)
+//  4.. 8   Ident   (main)
+//  9..10   Ident   (_)
+// 11..12   Op      (=)
+// 13..14   IntLit  (0)
 
-type RowIndex = int
-type ColumnIndex = int
-type Read = Acc * RowIndex * ColumnIndex * int
+/// Kind of token in the scanning phase.
+[<RequireQualifiedAccess>]
+type TokenKind =
+  | Error
+  | Ident
+  | IntLit
+  | CharLit
+  | StrLit
+  | Op
+  | Pun
 
-let private lexError message (source: string, i) =
-  let near = source.Substring(i, min (source.Length - i) 6)
-  failwithf "Lex error '%s' near %s" message near
+/// (kind, start, end)
+/// where indexes are in bytes.
+type ScanAcc = (TokenKind * int * int) list
 
-let private isDigit c =
+let charNull: char = char 0
+
+let charIsSpace (c: char): bool =
+  c = ' ' || c = '\t' || c = '\r' || c = '\n'
+
+let charIsDigit (c: char): bool =
   '0' <= c && c <= '9'
 
-let private isAlpha c =
+let charIsAlpha (c: char): bool =
   ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
 
-let private isIdentChar c =
-  c = '_' || isDigit c || isAlpha c
+let charIsIdent (c: char): bool =
+  c = '_' || charIsDigit c || charIsAlpha c
 
-let private isOpChar (c: char) =
-  "+-*/%=<>^&|:@;.,".Contains(c)
+let charIsOp (c: char): bool =
+  "+-*/%=<>^&|:@;.," |> strContainsChar c
 
-/// Finds the first position that doesn't satisfy the specified predicate starting from `i`.
-let private takeWhile pred (source: string, i) =
-  let rec go r =
-    if r < source.Length && pred source.[r] then
-      go (r + 1)
+let charIsPun (c: char): bool =
+  "()[]" |> strContainsChar c
+
+/// `s.[i..].StartsWith(prefix)`
+let strNthStartsWith (i: int) (prefix: string) (s: string): bool =
+  /// `s.[si..].StartsWith(prefix.[pi..])`
+  let rec go pi si =
+    pi = prefix.Length || (
+      si < s.Length
+      && prefix.[pi] = s.[si]
+      && go (pi + 1) (si + 1)
+    )
+  i + prefix.Length <= s.Length && go 0 i
+
+let scanError (acc: ScanAcc, text: string, i: int) =
+  (TokenKind.Error, i, i + 1) :: acc, text, i + 1
+
+let scanSpace (acc: ScanAcc, text: string, i: int) =
+  assert (text.[i] |> charIsSpace)
+  let rec go i =
+    if i < text.Length && text.[i] |> charIsSpace then
+      go (i + 1)
     else
-      r
-  go i
+      i
+  acc, text, go i
 
-let private readSpace (source: string) (acc, y, x, i): Read =
-  assert (source.[i] = ' ')
-  let r = takeWhile ((=) ' ') (source, i + 1)
-  acc, y, x + r - i, r
-
-let private readEol (source: string) (acc, y, _x, i): Read =
-  assert (source.[i] = '\r' || source.[i] = '\n')
-  let r =
-    if i + 1 < source.Length && source.StartsWith("\r\n")
-    then i + 2
-    else i + 1
-  acc, y + 1, 0, r
-
-let private readLineComment (source: string) (acc, y, x, i): Read =
-  // assert (source.[i] = '/' && source.[i + 1] = '/')
-  let rec go r =
-    if r < source.Length && source.[r] <> '\r' && source.[r] <> '\n' then
-      go (r + 1)
+let scanLine (acc: ScanAcc, text: string, i: int) =
+  let rec go i =
+    if i = text.Length then
+      i
+    else if text.[i] = '\n' then
+      i + 1
     else
-      r
-  let r = go (i + 2)
-  // No need to read EOL here.
-  acc, y, x + r - i, r
+      go (i + 1)
+  acc, text, go i
 
-let private readOp (source: string) (acc, y, x, i): Read =
-  assert (isOpChar source.[i])
-  let r = takeWhile isOpChar (source, i + 1)
-  let t = tokenPunct (source.Substring(i, r - i)), (y, x)
-  t :: acc, y, x + r - i, r
+let scanPun (acc: ScanAcc, text: string, i: int) =
+  assert (text.[i] |> charIsPun)
+  let endIndex = i + 1
+  (TokenKind.Pun, i, endIndex) :: acc, text, endIndex
 
-let private readIdent (source: string) (acc, y, x, i): Read =
-  assert (isIdentChar source.[i])
-  let r = takeWhile isIdentChar (source, i + 1)
-  let t = tokenIdent (source.Substring(i, r - i)), (y, x)
-  t :: acc, y, x + r - i, r
+let scanOp (acc: ScanAcc, text: string, i: int) =
+  assert (text.[i] |> charIsOp)
+  let rec go i =
+    if i < text.Length && text.[i] |> charIsOp then
+      go (i + 1)
+    else
+      i
+  let endIndex = go i
+  (TokenKind.Op, i, endIndex) :: acc, text, endIndex
 
-let private readInt (source: string) (acc, y, x, i): Read =
-  assert (isDigit source.[i])
-  let r = takeWhile isDigit (source, i + 1)
-  let t = Token.Int (source.Substring(i, r - i) |> int), (y, x)
-  t :: acc, y, x + r - i, r
+let scanIdent (acc: ScanAcc, text: string, i: int) =
+  assert (text.[i] |> charIsIdent && text.[i] |> charIsDigit |> not)
+  let rec go i =
+    if i < text.Length && text.[i] |> charIsIdent then
+      go (i + 1)
+    else
+      i
+  let endIndex = go i
+  (TokenKind.Ident, i, endIndex) :: acc, text, endIndex
 
-let private readStr (source: string) (acc, y, x, i): Read =
-  assert (source.[i] = '"')
-  let rec chunk i =
-    if i >= source.Length || source.[i] = '"' || source.[i] = '\\'
-    then i
-    else chunk (i + 1)
-  let unescape i =
-    match source.[i] with
-    | 'r' -> "\r"
-    | 'n' -> "\n"
-    | 't' -> "\t"
-    | '"' -> "\""
-    | '\\' -> "\\"
-    | 'u' -> failwith "unimpl unicode esc"
-    | c -> failwithf "unimpl escape %c" c
+let scanIntLit (acc: ScanAcc, text: string, i: int) =
+  assert (text.[i] |> charIsDigit)
+  let rec go i =
+    if i < text.Length && text.[i] |> charIsDigit then
+      go (i + 1)
+    else
+      i
+  let endIndex = go i
+  (TokenKind.IntLit, i, endIndex) :: acc, text, endIndex
+
+let scanCharLit (acc: ScanAcc, text: string, i: int) =
+  assert (text.[i] = '\'')
+  let rec go i =
+    if i + 1 < text.Length && text.[i] = '\\' then
+      // Skip escape sequence.
+      go (i + 2)
+    else if i < text.Length && text.[i] = '\'' then
+      // Complete.
+      TokenKind.CharLit, i + 1
+    else if i < text.Length && text.[i] <> '\n' then
+      // Go ahead.
+      go (i + 1)
+    else
+      // Missed the closing quote.
+      assert (i = text.Length || text.[i] = '\n')
+      TokenKind.Error, i
+  let kind, endIndex = go (i + 1)
+  (kind, i, endIndex) :: acc, text, endIndex
+
+let scanStrLit (acc: ScanAcc, text: string, i: int) =
+  assert (text.[i] = '"')
+  let rec go i =
+    if i + 1 < text.Length && text.[i] = '\\' then
+      // Escape sequence.
+      go (i + 2)
+    else if i < text.Length && text.[i] = '"' then
+      // Success.
+      TokenKind.StrLit, i + 1
+    else if i < text.Length && text.[i] <> '\n' then
+      // Go ahead.
+      go (i + 1)
+    else
+      // Missed the closing quote.
+      assert (i = text.Length || text.[i] = '\n')
+      TokenKind.Error, i
+  let kind, endIndex = go (i + 1)
+  (kind, i, endIndex) :: acc, text, endIndex
+
+let scanRoot (text: string) =
+  let rec go (acc, text, i) =
+    let t = acc, text, i
+    let follow prefix = text |> strNthStartsWith i prefix
+
+    if i >= text.Length then
+      text, acc |> listRev
+    else if follow "//" || follow "[<" then
+      // Skip comments. Attributes are also skipped for now.
+      t |> scanLine |> go
+    else if text.[i] |> charIsSpace then
+      t |> scanSpace |> go
+    else if text.[i] |> charIsOp then
+      t |> scanOp |> go
+    else if text.[i] |> charIsDigit then
+      t |> scanIntLit |> go
+    else if text.[i] |> charIsIdent then
+      t |> scanIdent |> go
+    else if text.[i] = '\'' then
+      t |> scanCharLit |> go
+    else if text.[i] = '"' then
+      t |> scanStrLit |> go
+    else if text.[i] |> charIsPun then
+      t |> scanPun |> go
+    else
+      t |> scanError |> go
+  go ([], text, 0)
+
+// ## Recognize
+//
+// Parse text ranges as tokens.
+// Calculate line numbers and column numbers for token ranges.
+
+/// Assume that the l-th byte is at the y-th line and x-th column.
+/// Calculate line/column numbers for the r-th byte
+/// by counting number of line breaks in the range.
+let advanceTextPos (y, x) (text: string) (l: int) (r: int) =
+  let rec go y x i =
+    if i = r then
+      y, x
+    else if text.[i] = '\n' then
+      go (y + 1) 0 (i + 1)
+    else
+      go y (x + 1) (i + 1)
+  go y x l
+
+let tokenFromIdent (text: string) l r: Token =
+  match text |> strSlice l r with
+  | "true" ->
+    Token.Bool true
+  | "false" ->
+    Token.Bool false
+  | "do" ->
+    Token.Do
+  | "let" ->
+    Token.Let
+  | "if" ->
+    Token.If
+  | "then" ->
+    Token.Then
+  | "else" ->
+    Token.Else
+  | "match" ->
+    Token.Match
+  | "with" ->
+    Token.With
+  | "as" ->
+    Token.As
+  | "when" ->
+    Token.When
+  | "rec" ->
+    Token.Rec
+  | "private" ->
+    Token.Private
+  | "internal" ->
+    Token.Internal
+  | "public" ->
+    Token.Public
+  | "module" ->
+    Token.Module
+  | "namespace" ->
+    Token.Namespace
+  | "open" ->
+    Token.Open
+  | "type" ->
+    Token.Type
+  | "of" ->
+    Token.Of
+  | "fun" ->
+    Token.Fun
+  | "in" ->
+    Token.In
+  | s ->
+    Token.Ident s
+
+let tokenFromOp (text: string) l r: Token =
+  match text |> strSlice l r with
+  | ":" ->
+    Token.Colon
+  | "." ->
+    Token.Dot
+  | "|" ->
+    Token.Pipe
+  | "->" ->
+    Token.Arrow
+  | s ->
+    Token.Punct s
+
+let tokenFromPun (text: string) (l: int) r =
+  assert (r - l = 1)
+  match text.[l] with
+  | '(' ->
+    Token.ParenL
+  | ')' ->
+    Token.ParenR
+  | '[' ->
+    Token.BracketL
+  | ']' ->
+    Token.BracketR
+  | _ ->
+    failwith "NEVER! charIsPun is broken"
+
+let tokenFromIntLit (text: string) l r: Token =
+  let value = text |> strSlice l r |> int
+  Token.Int value
+
+let tokenFromCharLit (text: string) l r: Token =
+  assert (l + 2 <= r && text.[l] = '\'' && text.[r - 1] = '\'')
+
+  // FIXME: redundant characters are just ignored.
+  let i = l + 1
+  let value =
+    match text.[i] with
+    | '\\' ->
+      match text.[i + 1] with
+      | 'u' ->
+        charNull
+      | 't' ->
+        '\t'
+      | 'r' ->
+        '\r'
+      | 'n' ->
+        '\n'
+      | c ->
+        c
+    | c ->
+      c
+
+  Token.Char value
+
+let tokenFromStrLit (text: string) l r: Token =
+  assert (l + 2 <= r && text.[l] = '"' && text.[r - 1] = '"')
+
+  // Process a string as alternation of unescaped parts and escape sequences.
+  // E.g. "hello\nworld" -> "hello" + "\n" + "world"
   let rec go acc i =
-    if i >= source.Length then
-      lexError "Expected closing '\"'" (source, i)
-    else if source.[i] = '"' then
-      acc, i + 1
-    else if source.[i] = '\\' then
-      go (unescape (i + 1) :: acc) (i + 2)
+    // Take an unescaped part.
+    let rec next i =
+      if i = r - 1 || text.[i] = '\\' then
+        i
+      else
+        next (i + 1)
+    let endIndex = next i
+    let acc = (text |> strSlice i endIndex) :: acc
+    let i = endIndex
+
+    // Take an escape sequence or halt.
+    if i = r - 1 then
+      acc |> listRev |> strConcat
     else
-      let r = chunk i
-      go (source.Substring(i, r - i) :: acc) r
-  let chunks, r = go [] (i + 1)
-  let str = chunks |> List.rev |> String.concat ""
-  let t = Token.Str str, (y, x)
-  t :: acc, y, x + r - i, r
-
-let private readChar (source: string) (acc, y, x, i): Read =
-  assert (source.[i] = '\'')
-  let c, len =
-    // FIXME: range check
-    if source.[i + 1] = '\\' then
-      match source.[i + 2] with
-      | '\'' -> '\'', 2
-      | '\\' -> '\\', 2
-      | 't' -> '\t', 2
-      | 'r' -> '\r', 2
-      | 'n' -> '\n', 2
-      | 'u' -> '\u0000', 6
-      | c -> c, 2
-    else
-      source.[i + 1], 1
-  let r = i + 1 + len + 1
-  if source.[r - 1] <> '\'' then
-    lexError "Expected closing '\''" (source, r - 1)
-  let t = Token.Char c, (y, x)
-  t :: acc, y, x + r - i, r
-
-let private tokenIdent ident =
-  match ident with
-  | "true" -> Token.Bool true
-  | "false" -> Token.Bool false
-  | "do" -> Token.Do
-  | "let" -> Token.Let
-  | "if" -> Token.If
-  | "then" -> Token.Then
-  | "else" -> Token.Else
-  | "match" -> Token.Match
-  | "with" -> Token.With
-  | "as" -> Token.As
-  | "when" -> Token.When
-  | "rec" -> Token.Rec
-  | "private" -> Token.Private
-  | "internal" -> Token.Internal
-  | "public" -> Token.Public
-  | "module" -> Token.Module
-  | "namespace" -> Token.Namespace
-  | "open" -> Token.Open
-  | "type" -> Token.Type
-  | "of" -> Token.Of
-  | "fun" -> Token.Fun
-  | "in" -> Token.In
-  | _ -> Token.Ident ident
-
-let private tokenPunct str =
-  match str with
-  | ":" -> Token.Colon
-  | "." -> Token.Dot
-  | "|" -> Token.Pipe
-  | "->" -> Token.Arrow
-  | _ -> Token.Punct str
-
-let tokenize (source: string): (Token * Loc) list =
-  let at i =
-    if i < source.Length then source.[i] else '\u0000'
-  let rec go (acc, y, x, i) =
-    if i >= source.Length then
-      acc |> List.rev
-    else
-      match source.[i] with
-      | ' ' ->
-        (acc, y, x, i) |> readSpace source |> go
-      | '\r'
-      | '\n' ->
-        (acc, y, x, i) |> readEol source |> go
-      // FIXME: attributes are comments for now
-      | '[' when at (i + 1) = '<' ->
-        (acc, y, x, i) |> readLineComment source |> go
-      | '/' when at (i + 1) = '/' ->
-        (acc, y, x, i) |> readLineComment source |> go
-      | '('
-      | ')' as c ->
-        let t = (if c = '(' then Token.ParenL else Token.ParenR), (y, x)
-        (t :: acc, y, x + 1, i + 1) |> go
-      | '[' ->
-        ((Token.BracketL, (y, x)) :: acc, y, x + 1, i + 1) |> go
-      | ']' ->
-        ((Token.BracketR, (y, x)) :: acc, y, x + 1, i + 1) |> go
-      | c when isOpChar c ->
-        (acc, y, x, i) |> readOp source |> go
-      | '"' ->
-        (acc, y, x, i) |> readStr source |> go
-      | '\'' ->
-        (acc, y, x, i) |> readChar source |> go
-      | c when isDigit c ->
-        (acc, y, x, i) |> readInt source |> go
-      | c when not (isDigit c) && isIdentChar c ->
-        (acc, y, x, i) |> readIdent source |> go
+      assert (text.[i] = '\\')
+      match text.[i + 1] with
+      | 'u' ->
+        go ("\u0000" :: acc) (i + 6)
+      | 't' ->
+        go ("\t" :: acc) (i + 2)
+      | 'r' ->
+        go ("\r" :: acc) (i + 2)
+      | 'n' ->
+        go ("\n" :: acc) (i + 2)
       | _ ->
-        lexError "Unknown token" (source, i)
-  go ([], 0, 0, 0)
+        go ((text |> strSlice (i + 1) (i + 2)) :: acc) (i + 2)
+  let value = go [] (l + 1)
+
+  Token.Str value
+
+let recognizeToken kind (text: string) l r =
+  match kind with
+  | TokenKind.Error ->
+    failwith "Invalid char"
+
+  | TokenKind.Op ->
+    tokenFromOp text l r
+
+  | TokenKind.Pun ->
+    tokenFromPun text l r
+
+  | TokenKind.IntLit ->
+    tokenFromIntLit text l r
+
+  | TokenKind.CharLit ->
+    tokenFromCharLit text l r
+
+  | TokenKind.StrLit ->
+    tokenFromStrLit text l r
+
+  | TokenKind.Ident ->
+    tokenFromIdent text l r
+
+let recognizeTokens (text, tokens) =
+  /// Assume the previous token ends with last-th byte at (line, column) = (y, x) position.
+  let rec go acc y x last tokens =
+    match tokens with
+    | [] ->
+      acc |> listRev
+    | (kind, l, r) :: tokens ->
+      // Locate l-th byte.
+      let y, x = advanceTextPos (y, x) text last l
+
+      // Recognize the token.
+      let token = recognizeToken kind text l r
+      let acc = (token, (y, x)) :: acc
+
+      // Locate r-th byte.
+      let y, x = advanceTextPos (y, x) text l r
+      go acc y x r tokens
+  go [] 0 0 0 tokens
+
+let tokenize (text: string): (Token * Loc) list =
+  text |> scanRoot |> recognizeTokens
