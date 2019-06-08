@@ -64,7 +64,7 @@ let parseProjectModules readModuleFile projectName =
         List.fold (fun (moduleAcc, moduleMap) dep ->
           let moduleAcc, moduleMap = go moduleAcc moduleMap dep
           moduleAcc, moduleMap
-        ) ([], moduleMap) dependencies
+        ) (moduleAcc, moduleMap) dependencies
       moduleHir :: moduleAcc, moduleMap
 
   let moduleAcc, _ = go [] Map.empty projectName
