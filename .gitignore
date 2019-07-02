@@ -1,2 +1,3 @@
 .vscode/ipch
 boot/tmp
+symbolCache.db
