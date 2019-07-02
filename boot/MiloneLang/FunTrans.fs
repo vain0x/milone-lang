@@ -38,7 +38,9 @@ let ctxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: FunTransCtx) =
 
 let ctxFreshFun (ident: string) arity (ty: Ty) loc (ctx: FunTransCtx) =
   let serial = ctx.VarSerial + 1
-  let tyScheme = Typing.tyGeneralize ty
+  let tyScheme =
+    let isOwned _ = true // FIXME: is it okay?
+    Typing.tyGeneralize isOwned ty
   let ctx =
     { ctx with
         VarSerial = ctx.VarSerial + 1

@@ -394,8 +394,12 @@ let tyCollectFreeVars ty =
   go [] [ty] |> listUnique
 
 /// Assume all bound type variables are resolved by `substTy`.
-let tyGeneralize (ty: Ty) =
-  let fvs = tyCollectFreeVars ty
+///
+/// `isOwned` checks if the type variable is introduced by the most recent `let`.
+/// For example, `let f x = (let g = f in g x)` will have too generic type
+/// without this checking (according to TaPL).
+let tyGeneralize isOwned (ty: Ty) =
+  let fvs = tyCollectFreeVars ty |> List.filter isOwned
   TyScheme.ForAll (fvs, ty)
 
 let tySchemeInstantiate ctx (tyScheme: TyScheme) =
@@ -430,11 +434,12 @@ let ctxResolveVar (ctx: TyCtx) ident =
     | None -> None
     | Some varDef -> Some (serial, varDef)
 
-let ctxGeneralizeFun (ctx: TyCtx) funSerial =
+let ctxGeneralizeFun (ctx: TyCtx) (outerCtx: TyCtx) funSerial =
   match ctx.Vars |> Map.find funSerial with
   | VarDef.Fun (ident, arity, TyScheme.ForAll ([], funTy), loc) ->
+    let isOwned tySerial = tySerial >= outerCtx.TySerial
     let funTy = substTy ctx funTy
-    let funTyScheme = tyGeneralize funTy
+    let funTyScheme = tyGeneralize isOwned funTy
     let varDef = VarDef.Fun (ident, arity, funTyScheme, loc)
     let ctx = { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
     ctx
@@ -1002,6 +1007,7 @@ let inferLetVal ctx pat init next ty loc =
   HExpr.Let (pat, init, next, ty, loc), ctx
 
 let inferLetFun ctx calleeName oldSerial argPats body next ty loc =
+  let outerCtx = ctx
   let bodyTy, _, ctx = ctxFreshTyVar "body" ctx
 
   /// Infers argument patterns,
@@ -1039,7 +1045,7 @@ let inferLetFun ctx calleeName oldSerial argPats body next ty loc =
   let bodyCtx = unifyTy bodyCtx loc funTy actualFunTy
   let body, bodyCtx = inferExpr bodyCtx body bodyTy
   let nextCtx = ctxRollback nextCtx bodyCtx
-  let nextCtx = ctxGeneralizeFun nextCtx serial
+  let nextCtx = ctxGeneralizeFun nextCtx outerCtx serial
 
   let next, nextCtx = inferExpr nextCtx next ty
   let ctx = ctxRollback ctx nextCtx
