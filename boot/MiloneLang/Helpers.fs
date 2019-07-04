@@ -53,6 +53,44 @@ let exMap f (xs, acc, ctx) =
       go (y :: ys) xs acc ctx
   go [] xs acc ctx
 
+let ufEmpty (): Map<int, int * int> =
+  Map.empty
+
+/// `uf |> ufRoot u` = `(v, n), uf` where
+/// `v` is the root of `u`,
+/// `n` is the size of the component.
+let rec ufRoot (u: int) uf =
+  match uf |> Map.tryFind u with
+  | None ->
+    (u, 1), uf
+  | Some (v, n) ->
+    if u = v then
+      (v, n), uf
+    else
+      let (v, n), uf = uf |> ufRoot v
+      let uf = uf |> Map.add u (v, n)
+      (v, n), uf
+
+/// Merges two components identified by two vertices.
+let rec ufMerge (u: int) (v: int) uf =
+  let (u, un), uf = uf |> ufRoot u
+  let (v, vn), uf = uf |> ufRoot v
+  if u = v then
+    uf
+  else if un < vn then
+    uf |> ufMerge v u
+  else
+    uf |> Map.add v (u, 0) |> Map.add u (u, un + vn)
+
+/// Enumerates the component members.
+let ufMembers (root: int) uf =
+  let (root, _), uf = uf |> ufRoot root
+  uf |> Map.fold (fun (acc, uf) u _ ->
+    let (v, _), uf = uf |> ufRoot u
+    let acc = if v = root then u :: acc else acc
+    acc, uf
+  ) ([], uf)
+
 let tyBool = Ty.Con (TyCon.Bool, [])
 
 let tyInt = Ty.Con (TyCon.Int, [])

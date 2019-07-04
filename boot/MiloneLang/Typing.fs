@@ -434,11 +434,32 @@ let ctxResolveVar (ctx: TyCtx) ident =
     | None -> None
     | Some varDef -> Some (serial, varDef)
 
-let ctxGeneralizeFun (ctx: TyCtx) (outerCtx: TyCtx) funSerial =
+let ctxCreateUnificationGraph (derivedCtx: TyCtx) =
+  let merge uf tySerial tyDef =
+    match tyDef with
+    | TyDef.Meta (_, ty, _) ->
+      tyCollectFreeVars ty
+      |> List.fold (fun uf another -> uf |> ufMerge tySerial another) uf
+
+    | TyDef.Union _ ->
+      // FIXME: union payload types may use the meta type
+      uf
+
+  derivedCtx.Tys |> Map.fold merge (ufEmpty ())
+
+/// Gets if the meta type is independent of meta types in `baseCtx`.
+let ctxOwnsMetaTy uf (baseCtx: TyCtx) tySerial =
+  // FIXME: Discarding the updated uf is less performant.
+  let tySerials, _ = uf |> ufMembers tySerial
+  (tySerial :: tySerials)
+  |> List.forall (fun tySerial -> tySerial >= baseCtx.TySerial)
+
+let ctxGeneralizeFun (ctx: TyCtx) (outerCtx: TyCtx) (bodyCtx: TyCtx) funSerial =
   match ctx.Vars |> Map.find funSerial with
   | VarDef.Fun (ident, arity, TyScheme.ForAll ([], funTy), loc) ->
-    let isOwned tySerial = tySerial >= outerCtx.TySerial
-    let funTy = substTy ctx funTy
+    let uf = ctxCreateUnificationGraph bodyCtx
+    let isOwned tySerial = ctxOwnsMetaTy uf outerCtx tySerial
+    let funTy = substTy bodyCtx funTy
     let funTyScheme = tyGeneralize isOwned funTy
     let varDef = VarDef.Fun (ident, arity, funTyScheme, loc)
     let ctx = { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
@@ -1045,7 +1066,7 @@ let inferLetFun ctx calleeName oldSerial argPats body next ty loc =
   let bodyCtx = unifyTy bodyCtx loc funTy actualFunTy
   let body, bodyCtx = inferExpr bodyCtx body bodyTy
   let nextCtx = ctxRollback nextCtx bodyCtx
-  let nextCtx = ctxGeneralizeFun nextCtx outerCtx serial
+  let nextCtx = ctxGeneralizeFun nextCtx outerCtx bodyCtx serial
 
   let next, nextCtx = inferExpr nextCtx next ty
   let ctx = ctxRollback ctx nextCtx
