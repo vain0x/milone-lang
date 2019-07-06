@@ -43,8 +43,10 @@ type TyCtx =
     TyEnv: Map<string, int>
     /// Type serial to type definition.
     Tys: Map<int, TyDef>
+    TyDepths: Map<int, int>
     /// Namespaces.
     Ns: (NsRef * IdentRef * SymbolRef) list
+    LetDepth: int
     UnifyQueue: (Ty * Ty * Loc) list
     Diags: Diag list
   }
@@ -61,23 +63,33 @@ let ctxRollback bCtx dCtx: TyCtx =
   { dCtx with
       TyEnv = bCtx.TyEnv
       VarEnv = bCtx.VarEnv
+      LetDepth = bCtx.LetDepth
   }
 
 let ctxToTyCtx (ctx: TyCtx): TyContext =
   {
     TySerial = ctx.TySerial
     Tys = ctx.Tys
+    TyDepths = ctx.TyDepths
   }
 
 let ctxWithTyCtx (ctx: TyCtx) (tyCtx: TyContext): TyCtx =
   { ctx with
       TySerial = tyCtx.TySerial
       Tys = tyCtx.Tys
+      TyDepths = tyCtx.TyDepths
   }
+
+let ctxIncLetDepth (ctx: TyCtx) =
+  { ctx with LetDepth = ctx.LetDepth + 1 }
 
 let ctxFreshTySerial (ctx: TyCtx) =
   let serial = ctx.TySerial + 1
-  let ctx = { ctx with TySerial = ctx.TySerial + 1 }
+  let ctx =
+    { ctx with
+        TySerial = ctx.TySerial + 1
+        TyDepths = ctx.TyDepths |> Map.add serial ctx.LetDepth
+    }
   serial, ctx
 
 let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
@@ -307,8 +319,18 @@ let bindTyCore (ctx: TyContext) tySerial ty =
   | Ty.Meta s when s = tySerial -> ctx
   | _ ->
 
+  // Update depth of all related meta types to the minimum.
+  let tyDepths =
+    let tySerials = tySerial :: tyCollectFreeVars ty
+    let depth =
+      tySerials
+      |> List.map (fun tySerial -> ctx.TyDepths |> Map.find tySerial)
+      |> List.min
+    tySerials |> List.fold (fun tyDepths tySerial -> tyDepths |> Map.add tySerial depth) ctx.TyDepths
+
   { ctx with
       Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, noLoc))
+      TyDepths = tyDepths
   }
 
 /// Substitutes occurrences of already-inferred type vars
@@ -434,31 +456,12 @@ let ctxResolveVar (ctx: TyCtx) ident =
     | None -> None
     | Some varDef -> Some (serial, varDef)
 
-let ctxCreateUnificationGraph (derivedCtx: TyCtx) =
-  let merge uf tySerial tyDef =
-    match tyDef with
-    | TyDef.Meta (_, ty, _) ->
-      tyCollectFreeVars ty
-      |> List.fold (fun uf another -> uf |> ufMerge tySerial another) uf
-
-    | TyDef.Union _ ->
-      // FIXME: union payload types may use the meta type
-      uf
-
-  derivedCtx.Tys |> Map.fold merge (ufEmpty ())
-
-/// Gets if the meta type is independent of meta types in `baseCtx`.
-let ctxOwnsMetaTy uf (baseCtx: TyCtx) tySerial =
-  // FIXME: Discarding the updated uf is less performant.
-  let tySerials, _ = uf |> ufMembers tySerial
-  (tySerial :: tySerials)
-  |> List.forall (fun tySerial -> tySerial >= baseCtx.TySerial)
-
 let ctxGeneralizeFun (ctx: TyCtx) (outerCtx: TyCtx) (bodyCtx: TyCtx) funSerial =
   match ctx.Vars |> Map.find funSerial with
   | VarDef.Fun (ident, arity, TyScheme.ForAll ([], funTy), loc) ->
-    let uf = ctxCreateUnificationGraph bodyCtx
-    let isOwned tySerial = ctxOwnsMetaTy uf outerCtx tySerial
+    let isOwned tySerial =
+      let depth = bodyCtx.TyDepths |> Map.find tySerial
+      depth > outerCtx.LetDepth
     let funTy = substTy bodyCtx funTy
     let funTyScheme = tyGeneralize isOwned funTy
     let varDef = VarDef.Fun (ident, arity, funTyScheme, loc)
@@ -1029,6 +1032,8 @@ let inferLetVal ctx pat init next ty loc =
 
 let inferLetFun ctx calleeName oldSerial argPats body next ty loc =
   let outerCtx = ctx
+
+  let ctx = ctx |> ctxIncLetDepth
   let bodyTy, _, ctx = ctxFreshTyVar "body" ctx
 
   /// Infers argument patterns,
@@ -1158,7 +1163,9 @@ let infer (expr: HExpr): HExpr * TyCtx =
       TySerial = 0
       TyEnv = Map.empty
       Tys = Map.empty
+      TyDepths = Map.empty
       Ns = []
+      LetDepth = 0
       UnifyQueue = []
       Diags = []
     }

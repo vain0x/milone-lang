@@ -70,6 +70,7 @@ type MonoCtx =
     Vars: Map<int, VarDef>
     TySerial: int
     Tys: Map<int, TyDef>
+    TyDepths: Map<int, int>
 
     /// Map from
     /// - generic function serial
@@ -95,12 +96,14 @@ let ctxToTyCtx (monoCtx: MonoCtx): TyContext =
   {
     TySerial = monoCtx.TySerial
     Tys = monoCtx.Tys
+    TyDepths = monoCtx.TyDepths
   }
 
 let ctxWithTyCtx (tyCtx: TyContext) (monoCtx: MonoCtx) =
   { monoCtx with
       TySerial = tyCtx.TySerial
       Tys = tyCtx.Tys
+      TyDepths = tyCtx.TyDepths
   }
 
 let bindTy (monoCtx: MonoCtx) tySerial ty: MonoCtx =
@@ -308,6 +311,7 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
       Vars = tyCtx.Vars
       TySerial = tyCtx.TySerial
       Tys = tyCtx.Tys
+      TyDepths = tyCtx.TyDepths
 
       GenericFunUseSiteTys = Map.empty
       GenericFunMonoSerials = Map.empty
