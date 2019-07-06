@@ -273,8 +273,6 @@ type Op =
   /// `::` Cons cell constructor
   | Cons
     of Ty
-  /// `*-` Reversed cons
-  | ConsRev
   /// `..`
   | Range
   /// `.[ ]`

@@ -48,8 +48,8 @@ let tokenizeOps () =
     match token with
     | Token.Punct op -> Some op
     | _ -> None
-  let source = """+ - <- *- :,-,:"""
-  let expected = ["+"; "-"; "<-"; "*-"; ":,-,:"]
+  let source = """+ - <- :,-,:"""
+  let expected = ["+"; "-"; "<-"; ":,-,:"]
   source
   |> Lexing.tokenize
   |> List.unzip

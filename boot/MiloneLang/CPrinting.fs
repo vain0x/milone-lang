@@ -1,6 +1,8 @@
 /// Prints C language code from C language IR.
 module rec MiloneLang.CPrinting
 
+open MiloneLang.Helpers
+
 let eol = """
 """
 
@@ -13,7 +15,7 @@ let join sep f (xs, acc) =
       f (x, acc)
     | x :: xs ->
       let acc = f (x, acc)
-      let acc = acc *- sep
+      let acc = acc |> cons sep
       go acc xs
   go acc xs
 
@@ -31,31 +33,31 @@ let opStr op =
 
 let cprintTyFunPtr name argTys resultTy acc =
   let acc = cprintTy acc resultTy
-  let acc = acc *- "(*" *- name *- ")" *- "("
+  let acc = acc |> cons "(*" |> cons name |> cons ")" |> cons "("
   let rec go acc argTys =
     (argTys, acc) |> join ", " (fun (argTy, acc) ->
       cprintTy acc argTy
     )
   let acc = go acc argTys
-  acc *- ")"
+  acc |> cons ")"
 
 let rec cprintTy acc ty: string list =
   match ty with
   | CTy.Void ->
-    acc *- "void"
+    acc |> cons "void"
   | CTy.Int ->
-    acc *- "int"
+    acc |> cons "int"
   | CTy.Char ->
-    acc *- "char"
+    acc |> cons "char"
   | CTy.Ptr ty ->
     let acc = cprintTy acc ty
-    acc *- "*"
+    acc |> cons "*"
   | CTy.FunPtr (argTys, resultTy) ->
     cprintTyFunPtr "" argTys resultTy acc
   | CTy.Struct ident ->
-    acc *- "struct " *- ident
+    acc |> cons "struct " |> cons ident
   | CTy.Enum ident ->
-    acc *- "enum " *- ident
+    acc |> cons "enum " |> cons ident
 
 /// `T x` or `T (*x)(..)`
 let cprintTyWithName acc name ty =
@@ -63,17 +65,17 @@ let cprintTyWithName acc name ty =
   | CTy.FunPtr (argTys, resultTy) ->
     cprintTyFunPtr name argTys resultTy acc
   | _ ->
-    cprintTy acc ty *- " " *- name
+    cprintTy acc ty |> cons " " |> cons name
 
 let rec cprintParams acc ps: string list =
   let rec go acc ps =
     match ps with
     | [] -> acc
     | [name, ty] ->
-      cprintTy acc ty *- " " *- name
+      cprintTy acc ty |> cons " " |> cons name
     | (name, ty) :: ps ->
       let acc = cprintTy acc ty
-      let acc = acc *- " " *- name *- ", "
+      let acc = acc |> cons " " |> cons name |> cons ", "
       go acc ps
   go acc ps
 
@@ -99,38 +101,38 @@ let cprintExprStrRaw acc (value: string) =
       match value.[i] with
       | '\u0000' ->
         // FIXME: support
-        go (acc *- "\\0") (i + 1)
+        go (acc |> cons "\\0") (i + 1)
       | '\r' ->
-        go (acc *- "\\r") (i + 1)
+        go (acc |> cons "\\r") (i + 1)
       | '\n' ->
-        go (acc *- "\\n") (i + 1)
+        go (acc |> cons "\\n") (i + 1)
       | '\t' ->
-        go (acc *- "\\t") (i + 1)
+        go (acc |> cons "\\t") (i + 1)
       | '\"' ->
-        go (acc *- "\\\"") (i + 1)
+        go (acc |> cons "\\\"") (i + 1)
       | '\\' ->
-        go (acc *- "\\\\") (i + 1)
+        go (acc |> cons "\\\\") (i + 1)
       | _ ->
-        go (acc *- string value.[i]) (i + 1)
-  go (acc *- "\"") 0 *- "\""
+        go (acc |> cons (string value.[i])) (i + 1)
+  go (acc |> cons "\"") 0 |> cons "\""
 
 let cprintExprStrObj acc (value: string) =
-  let acc = acc *- "(struct String){.str = "
+  let acc = acc |> cons "(struct String){.str = "
   let acc = cprintExprStrRaw acc value
-  let acc = acc *- ", .len = " *- string value.Length *- "}"
+  let acc = acc |> cons ", .len = " |> cons (string value.Length) |> cons "}"
   acc
 
 let cprintExprInit acc fields ty =
-  let acc = acc *- "("
+  let acc = acc |> cons "("
   let acc = cprintTy acc ty
-  let acc = acc *- "){"
+  let acc = acc |> cons "){"
   let acc =
     (fields, acc) |> join ", " (fun ((field, value), acc) ->
-      let acc = acc *- "." *- field *- " = "
+      let acc = acc |> cons "." |> cons field |> cons " = "
       let acc = cprintExpr acc value
       acc
     )
-  let acc = acc *- "}"
+  let acc = acc |> cons "}"
   acc
 
 let rec cprintExpr acc expr: string list =
@@ -138,16 +140,16 @@ let rec cprintExpr acc expr: string list =
     match exprs with
     | [] -> acc
     | expr :: exprs ->
-      let acc = if index > 0 then acc *- separator else acc
+      let acc = if index > 0 then acc |> cons separator else acc
       let acc = cprintExpr acc expr
       cprintExprList acc 1 separator exprs
   match expr with
   | CExpr.Default ->
-    acc *- "{}"
+    acc |> cons "{}"
   | CExpr.Int value ->
-    acc *- string value
+    acc |> cons (string value)
   | CExpr.Char value ->
-    acc *- "'" *- cprintExprChar value *- "'"
+    acc |> cons "'" |> cons (cprintExprChar value) |> cons "'"
   | CExpr.StrObj value ->
     cprintExprStrObj acc value
   | CExpr.StrRaw value->
@@ -155,106 +157,106 @@ let rec cprintExpr acc expr: string list =
   | CExpr.Init (fields, ty) ->
     cprintExprInit acc fields ty
   | CExpr.Nav (CExpr.StrObj value, "len") ->
-    acc *- string value.Length
+    acc |> cons (string value.Length)
   | CExpr.Ref (value) ->
-    acc *- value
+    acc |> cons value
   | CExpr.Proj (left, index) ->
     let acc = cprintExpr acc left
-    acc *- ".t" *- string index
+    acc |> cons ".t" |> cons (string index)
   | CExpr.Cast (expr, ty) ->
-    let acc = acc *- "(("
+    let acc = acc |> cons "(("
     let acc = cprintTy acc ty
-    let acc = acc *- ")"
+    let acc = acc |> cons ")"
     let acc = cprintExpr acc expr
-    let acc = acc *- ")"
+    let acc = acc |> cons ")"
     acc
   | CExpr.Nav (expr, field) ->
     let acc = cprintExpr acc expr
-    let acc = acc *- "." *- field
+    let acc = acc |> cons "." |> cons field
     acc
   | CExpr.Arrow (expr, field) ->
     let acc = cprintExpr acc expr
-    let acc = acc *- "->" *- field
+    let acc = acc |> cons "->" |> cons field
     acc
   | CExpr.Index (l, r) ->
     let acc = cprintExpr acc l
-    let acc = acc *- "["
+    let acc = acc |> cons "["
     let acc = cprintExpr acc r
-    let acc = acc *- "]"
+    let acc = acc |> cons "]"
     acc
   | CExpr.Call (callee, args) ->
     let acc = cprintExpr acc callee
-    let acc = acc *- "("
+    let acc = acc |> cons "("
     let acc = cprintExprList acc 0 ", " args
-    let acc = acc *- ")"
+    let acc = acc |> cons ")"
     acc
   | CExpr.UniOp (op, arg) ->
-    let acc = acc *- "("
+    let acc = acc |> cons "("
     let acc =
       match op with
-      | CUniOp.Not -> acc *- "!"
-      | CUniOp.Deref -> acc *- "*"
-    let acc = acc *- "("
+      | CUniOp.Not -> acc |> cons "!"
+      | CUniOp.Deref -> acc |> cons "*"
+    let acc = acc |> cons "("
     let acc = cprintExpr acc arg
-    let acc = acc *- "))"
+    let acc = acc |> cons "))"
     acc
   | CExpr.BinOp (op, first, second) ->
-    let acc = acc *- "("
+    let acc = acc |> cons "("
     let acc = cprintExpr acc first
-    let acc = acc *- " " *- opStr op *- " "
+    let acc = acc |> cons " " |> cons (opStr op) |> cons " "
     let acc = cprintExpr acc second
-    let acc = acc *- ")"
+    let acc = acc |> cons ")"
     acc
 
 let cprintStmt acc indent stmt: string list =
   match stmt with
   | CStmt.Return None ->
-    acc *- indent *- "return;" *- eol
+    acc |> cons indent |> cons "return;" |> cons eol
   | CStmt.Return (Some expr) ->
-    let acc = acc *- indent *- "return "
+    let acc = acc |> cons indent |> cons "return "
     let acc = cprintExpr acc expr
-    acc *- ";" *- eol
+    acc |> cons ";" |> cons eol
   | CStmt.Expr expr ->
-    let acc = acc *- indent
+    let acc = acc |> cons indent
     let acc = cprintExpr acc expr
-    acc *- ";" *- eol
+    acc |> cons ";" |> cons eol
   | CStmt.Let (name, init, ty) ->
-    let acc = acc *- indent
+    let acc = acc |> cons indent
     let acc = cprintTyWithName acc name ty
     let acc =
       match init with
       | Some init ->
-        let acc = acc *- " = "
+        let acc = acc |> cons " = "
         cprintExpr acc init
       | None ->
         acc
-    acc *- ";" *- eol
+    acc |> cons ";" |> cons eol
   | CStmt.LetAlloc (name, valPtrTy, varTy) ->
     let valTy =
       match valPtrTy with
       | CTy.Ptr ty -> ty
       | _ -> failwithf "Never: Expected pointer type but %A" valPtrTy
-    let acc = acc *- indent
+    let acc = acc |> cons indent
     let acc = cprintTyWithName acc name varTy
-    let acc = acc *- " = ("
+    let acc = acc |> cons " = ("
     let acc = cprintTy acc varTy
-    let acc = acc *- ")malloc(sizeof("
+    let acc = acc |> cons ")malloc(sizeof("
     let acc = cprintTy acc valTy
-    let acc = acc *- "));" *- eol
+    let acc = acc |> cons "));" |> cons eol
     acc
   | CStmt.Set (l, r) ->
-    let acc = acc *- indent
-    let acc = cprintExpr acc l *- " = "
-    let acc = cprintExpr acc r *- ";" *- eol
+    let acc = acc |> cons indent
+    let acc = cprintExpr acc l |> cons " = "
+    let acc = cprintExpr acc r |> cons ";" |> cons eol
     acc
   | CStmt.Label label ->
-    acc *- label *- ":;" *- eol
+    acc |> cons label |> cons ":;" |> cons eol
   | CStmt.Goto label ->
-    acc *- indent *- "goto " *- label *- ";" *- eol
+    acc |> cons indent |> cons "goto " |> cons label |> cons ";" |> cons eol
   | CStmt.GotoUnless (pred, label) ->
-    let acc = acc *- indent *- "if (!("
+    let acc = acc |> cons indent |> cons "if (!("
     let acc = cprintExpr acc pred
-    let acc = acc *- ")) goto " *- label *- ";" *- eol
+    let acc = acc |> cons ")) goto " |> cons label |> cons ";" |> cons eol
     acc
 
 let rec cprintStmts acc indent stmts: string list =
@@ -268,8 +270,8 @@ let rec cprintStmts acc indent stmts: string list =
 let cprintDecl acc decl =
   match decl with
   | CDecl.ErrDir (message, line) ->
-    let acc = acc *- "#line " *- string line *- eol
-    let acc = acc *- "#error " *- message *- eol
+    let acc = acc |> cons "#line " |> cons (string line) |> cons eol
+    let acc = acc |> cons "#error " |> cons message |> cons eol
     acc
   | CDecl.Struct (ident, fields, variants) ->
     let cprintFields indent acc fields =
@@ -278,43 +280,43 @@ let cprintDecl acc decl =
         | [] ->
           acc
         | (ident, ty) :: fields ->
-          let acc = acc *- indent
+          let acc = acc |> cons indent
           let acc = cprintTyWithName acc ident ty
-          let acc = acc *- ";" *- eol
+          let acc = acc |> cons ";" |> cons eol
           go acc fields
       go acc fields
-    let acc = acc *- "struct " *- ident *- " {" *- eol
+    let acc = acc |> cons "struct " |> cons ident |> cons " {" |> cons eol
     let acc = cprintFields "    " acc fields
     let acc =
       match variants with
       | [] ->
         acc
       | _ ->
-        let acc = acc *- "    union {" *- eol
+        let acc = acc |> cons "    union {" |> cons eol
         let acc = cprintFields "        " acc variants
-        let acc = acc *- "    };" *- eol
+        let acc = acc |> cons "    };" |> cons eol
         acc
-    let acc = acc *- "};" *- eol
+    let acc = acc |> cons "};" |> cons eol
     acc
   | CDecl.Enum (tyIdent, variants) ->
-    let acc = acc *- "enum " *- tyIdent *- " {" *- eol
+    let acc = acc |> cons "enum " |> cons tyIdent |> cons " {" |> cons eol
     let rec go acc variants =
       match variants with
       | [] -> acc
       | variant :: variants ->
-        let acc = acc *- "    "
-        let acc = acc *- variant *- "," *- eol
+        let acc = acc |> cons "    "
+        let acc = acc |> cons variant |> cons "," |> cons eol
         go acc variants
     let acc = go acc variants
-    let acc = acc *- "};" *- eol
+    let acc = acc |> cons "};" |> cons eol
     acc
   | CDecl.Fun (ident, args, resultTy, body) ->
     let acc = cprintTyWithName acc ident resultTy
-    let acc = acc *- "("
+    let acc = acc |> cons "("
     let acc = cprintParams acc args
-    let acc = acc *- ") {" *- eol
+    let acc = acc |> cons ") {" |> cons eol
     let acc = cprintStmts acc "    " body
-    let acc = acc *- "}" *- eol
+    let acc = acc |> cons "}" |> cons eol
     acc
 
 /// Prints forward declaration.
@@ -323,16 +325,16 @@ let cprintDeclForward acc decl =
   | CDecl.ErrDir _ ->
     acc
   | CDecl.Struct (ident, _, _) ->
-    let acc = acc *- "struct " *- ident *- ";" *- eol *- eol
+    let acc = acc |> cons "struct " |> cons ident |> cons ";" |> cons eol |> cons eol
     acc
   | CDecl.Enum (tyIdent, _) ->
-    let acc = acc *- "enum " *- tyIdent *- ";" *- eol *- eol
+    let acc = acc |> cons "enum " |> cons tyIdent |> cons ";" |> cons eol |> cons eol
     acc
   | CDecl.Fun (ident, args, resultTy, _) ->
     let acc = cprintTyWithName acc ident resultTy
-    let acc = acc *- "("
+    let acc = acc |> cons "("
     let acc = cprintParams acc args
-    let acc = acc *- ");" *- eol *- eol
+    let acc = acc |> cons ");" |> cons eol |> cons eol
     acc
 
 let rec cprintDeclForwards acc decls =
@@ -354,7 +356,7 @@ let rec cprintDecls acc decls =
     | [decl] ->
       cprintDecl acc decl
     | decl :: decls ->
-      let acc = cprintDecl acc decl *- eol
+      let acc = cprintDecl acc decl |> cons eol
       go acc decls
   go acc decls
 
@@ -490,7 +492,7 @@ int main(int argc, char** argv) {
 
 #define main milone_main
 """
-  acc *- header *- eol
+  acc |> cons header |> cons eol
 
 let cprintRun (printer: string list -> string list): string =
   printer [] |> List.rev |> String.concat ""
