@@ -216,6 +216,10 @@ type TyContext =
   {
     TySerial: int
     Tys: Map<int, TyDef>
+
+    /// type serial -> let-depth,
+    /// where `let-depth` is the number of ancestral `let` expressions.
+    TyDepths: Map<int, int>
   }
 
 /// Precedence level of binary operators.
