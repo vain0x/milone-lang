@@ -1,3 +1,5 @@
+/// Converts HIR to MIR.
+/// Deconstructs pattern matching.
 module rec MiloneLang.Mir
 
 open MiloneLang.Helpers

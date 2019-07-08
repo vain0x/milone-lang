@@ -1,3 +1,4 @@
+// Resolves polymorphic functions.
 module rec MiloneLang.Monomorphizing
 
 open MiloneLang
@@ -18,26 +19,23 @@ open MiloneLang.Helpers
 //
 // ### Example
 //
-// The code below contains use of generic type `Pair<'a, 'b>`
+// The code below contains use of generic type `'a * 'b`
 // and two use of generic function `flip`.
 //
 // ```fsharp
-//    type Pair = | Pair of 'a * 'b
-//    let flip (Pair (x, y)) = Pair (y, x)
-//    Pair (1, "one") |> flip |> flip
+//    let flip (x, y) = (y, x)
+//    (1, "one") |> flip |> flip
 // ```
 //
 // The monomorphization converts it to the code below:
 //
 // ```fsharp
-//    type IntStringPair = | IntStringPair of int * string
-//    type StringIntPair = | StringIntPair of string * int
-//    let flipIntStringPair (IntStringPair (x, y)) = StringIntPair (y, x)
-//    let flipStringIntPair (StringIntPair (x, y)) = IntStringPair (y, x)
-//    IntStringPair (1, "one") |> flipIntStringPair |> flipStringIntPair
+//    let flipIntStringPair ((x, y): int * string): string * int = (y, x)
+//    let flipStringIntPair ((x, y): string * int): int * string = (y, x)
+//    (1, "one") |> flipIntStringPair |> flipStringIntPair
 // ```
 //
-// In short, this conversion *clones* each generic definition
+// In short, this conversion *clones* generic definitions
 // for each combination of type parameters in use-site
 // with type parameters replaced with such monomorphic types.
 //
@@ -53,9 +51,6 @@ open MiloneLang.Helpers
 //    for each marked pair (`f`, `t`),
 //    clone the definition and unify the function type with `t`.
 //    The cloned function is referred to as monomorphized instance of (`f`, `t`).
-//
-// Do the same with generic type definitions.
-// FIXME: We don't support generic non-primitive types yet.
 //
 // NOTE: The algorithm seems inefficient and the finiteness is unproven.
 

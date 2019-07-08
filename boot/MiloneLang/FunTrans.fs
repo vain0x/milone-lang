@@ -1,3 +1,4 @@
+/// Conversion about functions.
 module rec MiloneLang.FunTrans
 
 open MiloneLang.Helpers

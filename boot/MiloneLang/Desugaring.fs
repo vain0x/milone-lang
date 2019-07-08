@@ -1,3 +1,4 @@
+/// Converts HIR to resolve some syntax sugars.
 module rec MiloneLang.Desugaring
 
 open MiloneLang

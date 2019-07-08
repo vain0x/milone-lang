@@ -1,4 +1,5 @@
-/// Prints C language code from C language IR.
+/// Converts C-IR to C language code.
+/// Includes runtime functions.
 module rec MiloneLang.CPrinting
 
 open MiloneLang.Helpers
