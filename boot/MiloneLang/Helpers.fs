@@ -55,6 +55,14 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
+let nameCtxEmpty () =
+  NameCtx (Map.empty, 0)
+
+let nameCtxAdd ident (NameCtx (map, serial)) =
+  let map = map |> Map.add serial ident
+  let serial = serial + 1
+  serial, NameCtx (map, serial)
+
 let tyBool = Ty.Con (TyCon.Bool, [])
 
 let tyInt = Ty.Con (TyCon.Int, [])

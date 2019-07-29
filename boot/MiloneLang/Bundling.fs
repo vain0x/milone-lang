@@ -49,25 +49,22 @@ let spliceExpr firstExpr secondExpr =
       hxAndThen [expr; secondExpr] (0, 0)
   go firstExpr
 
-let parseProjectModules readModuleFile projectName =
-  let rec go moduleAcc moduleMap moduleName =
+let parseProjectModules readModuleFile projectName nameCtx =
+  let rec go (moduleAcc, moduleMap, nameCtx) moduleName =
     if moduleMap |> Map.containsKey moduleName then
-      moduleAcc, moduleMap
+      moduleAcc, moduleMap, nameCtx
     else
       let source = readModuleFile moduleName
       let tokens = Lexing.tokenize source
       let moduleAst = Parsing.parse tokens
-      let moduleHir = AstToHir.astToHir moduleAst
+      let moduleHir, nameCtx = AstToHir.astToHir (moduleAst, nameCtx)
       let dependencies = findOpenModules projectName moduleHir
       let moduleMap = moduleMap |> Map.add moduleName moduleHir
-      let moduleAcc, moduleMap =
-        List.fold (fun (moduleAcc, moduleMap) dep ->
-          let moduleAcc, moduleMap = go moduleAcc moduleMap dep
-          moduleAcc, moduleMap
-        ) (moduleAcc, moduleMap) dependencies
-      moduleHir :: moduleAcc, moduleMap
+      let moduleAcc, moduleMap, nameCtx =
+        List.fold go (moduleAcc, moduleMap, nameCtx) dependencies
+      moduleHir :: moduleAcc, moduleMap, nameCtx
 
-  let moduleAcc, _ = go [] Map.empty projectName
+  let moduleAcc, _, nameCtx = go ([], Map.empty, nameCtx) projectName
   let modules = moduleAcc |> List.rev
 
-  List.reduce spliceExpr modules
+  List.reduce spliceExpr modules, nameCtx

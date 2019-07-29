@@ -186,6 +186,7 @@ type AExpr =
     of string list * Loc
 
 /// Type constructors.
+[<RequireQualifiedAccess>]
 type TyCon =
   | Bool
   | Int
@@ -285,6 +286,10 @@ type Op =
   | Range
   /// `.[ ]`
   | Index
+
+type NameCtx =
+  | NameCtx
+    of Map<int, string> * last: int
 
 /// Type declaration.
 [<RequireQualifiedAccess>]
