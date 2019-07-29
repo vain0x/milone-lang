@@ -3,14 +3,6 @@ module rec MiloneLang.Parsing
 open MiloneLang
 open MiloneLang.Helpers
 
-/// Body of type definition in AST.
-[<RequireQualifiedAccess>]
-type ATyDef =
-  | Synonym
-    of ATy
-  | Union
-    of AVariant list
-
 let locY (y, _) = y
 
 /// Gets if next token exists and should lead some construction (expr/pat/ty).

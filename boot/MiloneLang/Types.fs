@@ -127,6 +127,14 @@ type AVariant =
   | T
     of string * ATy option * Loc
 
+/// Body of type definition in AST.
+[<RequireQualifiedAccess>]
+type ATyDef =
+  | Synonym
+    of ATy
+  | Union
+    of AVariant list
+
 /// Expression in AST.
 [<RequireQualifiedAccess>]
 type AExpr =
