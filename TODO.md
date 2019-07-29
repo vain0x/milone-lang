@@ -13,18 +13,6 @@ Automatically generate these functions for each type.
 - `string`
 - `=`
 
-### IO primitives
-
-To compile multiple-file projects, we need some IO primitives.
-
-Because it's verbose to implement classes such as `File` from .NET standard library, I have a plan to use non-F# primitives.
-
-```fsharp
-    _ioStdinReadToEnd: unit -> string
-    _ioFileReadAllText: string -> string
-    _ioFileWriteAllText: string -> string -> unit
-```
-
 ### Library functions
 
 assert, failwith, List.map, String.concat, etc.
