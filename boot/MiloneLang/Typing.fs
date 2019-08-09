@@ -30,15 +30,14 @@ type SymbolRef =
 
 type TyCtx =
   {
-    /// Next serial number for variables.
+    /// Next serial number.
     /// We need to identify variables by serial number rather than names
     /// due to scope locality and shadowing.
-    VarSerial: int
+    Serial: int
     /// Variable serial to variable definition.
     Vars: Map<int, VarDef>
     /// Identifier to variable serial.
     VarEnv: Map<string, int>
-    TySerial: int
     /// Identifier to type serial.
     TyEnv: Map<string, int>
     /// Type serial to type definition.
@@ -58,8 +57,7 @@ let ctxAddErr (ctx: TyCtx) message loc =
 /// for when expr of derived context is done.
 /// We rollback environments but keep serials.
 let ctxRollback bCtx dCtx: TyCtx =
-  assert (bCtx.VarSerial <= dCtx.VarSerial)
-  assert (bCtx.TySerial <= dCtx.TySerial)
+  assert (bCtx.Serial <= dCtx.Serial)
   { dCtx with
       TyEnv = bCtx.TyEnv
       VarEnv = bCtx.VarEnv
@@ -68,14 +66,14 @@ let ctxRollback bCtx dCtx: TyCtx =
 
 let ctxToTyCtx (ctx: TyCtx): TyContext =
   {
-    TySerial = ctx.TySerial
+    Serial = ctx.Serial
     Tys = ctx.Tys
     TyDepths = ctx.TyDepths
   }
 
 let ctxWithTyCtx (ctx: TyCtx) (tyCtx: TyContext): TyCtx =
   { ctx with
-      TySerial = tyCtx.TySerial
+      Serial = tyCtx.Serial
       Tys = tyCtx.Tys
       TyDepths = tyCtx.TyDepths
   }
@@ -84,10 +82,10 @@ let ctxIncLetDepth (ctx: TyCtx) =
   { ctx with LetDepth = ctx.LetDepth + 1 }
 
 let ctxFreshTySerial (ctx: TyCtx) =
-  let serial = ctx.TySerial + 1
+  let serial = ctx.Serial + 1
   let ctx =
     { ctx with
-        TySerial = ctx.TySerial + 1
+        Serial = ctx.Serial + 1
         TyDepths = ctx.TyDepths |> Map.add serial ctx.LetDepth
     }
   serial, ctx
@@ -194,10 +192,10 @@ let ctxAddTy tyIdent tyDecl loc ctx =
     unionTySerial, unionTyDecl, ctx
 
 let ctxFreshVarCore (ctx: TyCtx) ident varDef: int * TyCtx =
-  let serial = ctx.VarSerial + 1
+  let serial = ctx.Serial + 1
   let ctx =
     { ctx with
-        VarSerial = ctx.VarSerial + 1
+        Serial = ctx.Serial + 1
         VarEnv = ctx.VarEnv |> Map.add ident serial
         Vars = ctx.Vars |> Map.add serial varDef
     }
@@ -1153,13 +1151,14 @@ let substTyExpr ctx expr =
   let subst ty = substTy ctx ty
   exprMap subst id expr
 
-let infer (expr: HExpr): HExpr * TyCtx =
+let infer (expr: HExpr, nameCtx: NameCtx): HExpr * TyCtx =
+  let (NameCtx (_, serial)) = nameCtx
+
   let ctx =
     {
-      VarSerial = 0
+      Serial = serial
       Vars = Map.empty
       VarEnv = Map.empty
-      TySerial = 0
       TyEnv = Map.empty
       Tys = Map.empty
       TyDepths = Map.empty

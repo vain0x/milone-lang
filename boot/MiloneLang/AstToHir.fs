@@ -60,9 +60,7 @@ let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
     HPat.Lit (lit, loc), nameCtx
 
   | APat.Ident (ident, loc) ->
-    // FIXME: In type inference, serial is used.
-    // let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    let serial = noSerial
+    let serial, nameCtx = nameCtx |> nameCtxAdd ident
     HPat.Ref (ident, serial, noTy, loc), nameCtx
 
   | APat.ListLit (pats, loc) ->

@@ -223,7 +223,7 @@ type TyScheme =
 [<RequireQualifiedAccess>]
 type TyContext =
   {
-    TySerial: int
+    Serial: int
     Tys: Map<int, TyDef>
 
     /// type serial -> let-depth,

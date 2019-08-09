@@ -61,9 +61,9 @@ type Mode =
 
 type MonoCtx =
   {
-    VarSerial: int
+    Serial: int
+
     Vars: Map<int, VarDef>
-    TySerial: int
     Tys: Map<int, TyDef>
     TyDepths: Map<int, int>
 
@@ -89,14 +89,14 @@ type MonoCtx =
 
 let ctxToTyCtx (monoCtx: MonoCtx): TyContext =
   {
-    TySerial = monoCtx.TySerial
+    Serial = monoCtx.Serial
     Tys = monoCtx.Tys
     TyDepths = monoCtx.TyDepths
   }
 
 let ctxWithTyCtx (tyCtx: TyContext) (monoCtx: MonoCtx) =
   { monoCtx with
-      TySerial = tyCtx.TySerial
+      Serial = tyCtx.Serial
       Tys = tyCtx.Tys
       TyDepths = tyCtx.TyDepths
   }
@@ -147,11 +147,11 @@ let ctxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial ident arity useSiteTy
 
   let monoTyScheme = TyScheme.ForAll ([], useSiteTy)
   let varDef = VarDef.Fun (ident, arity, monoTyScheme, loc)
-  let monoFunSerial = ctx.VarSerial + 1
+  let monoFunSerial = ctx.Serial + 1
   let ctx =
     { ctx with
-        VarSerial =
-          ctx.VarSerial + 1
+        Serial =
+          ctx.Serial + 1
         Vars =
           ctx.Vars |> Map.add monoFunSerial varDef
         GenericFunMonoSerials =
@@ -302,9 +302,8 @@ let rec monifyExpr (expr, ctx) =
 let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
   let monoCtx: MonoCtx =
     {
-      VarSerial = tyCtx.VarSerial
+      Serial = tyCtx.Serial
       Vars = tyCtx.Vars
-      TySerial = tyCtx.TySerial
       Tys = tyCtx.Tys
       TyDepths = tyCtx.TyDepths
 
@@ -342,9 +341,8 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
   let tyCtx =
     {
       tyCtx with
-        VarSerial = monoCtx.VarSerial
+        Serial = monoCtx.Serial
         Vars = monoCtx.Vars
-        TySerial = monoCtx.TySerial
         Tys = monoCtx.Tys
     }
 

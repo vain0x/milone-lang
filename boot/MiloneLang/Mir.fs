@@ -10,7 +10,7 @@ type TyCtx = Typing.TyCtx
 [<RequireQualifiedAccess>]
 type MirCtx =
   {
-    VarSerial: int
+    Serial: int
     Vars: Map<int, VarDef>
     Tys: Map<int, TyDef>
     LabelSerial: int
@@ -20,7 +20,7 @@ type MirCtx =
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
   {
-    VarSerial = tyCtx.VarSerial
+    Serial = tyCtx.Serial
     Vars = tyCtx.Vars
     Tys = tyCtx.Tys
     LabelSerial = 0
@@ -45,10 +45,10 @@ let ctxTakeStmts (ctx: MirCtx) =
   ctx.Stmts, { ctx with Stmts = [] }
 
 let ctxFreshVar (ctx: MirCtx) (ident: string) (ty: Ty) loc =
-  let serial = ctx.VarSerial + 1
+  let serial = ctx.Serial + 1
   let ctx =
     { ctx with
-        VarSerial = ctx.VarSerial + 1
+        Serial = ctx.Serial + 1
         Vars = ctx.Vars |> Map.add serial (VarDef.Var (ident, ty, loc))
     }
   let refExpr = MExpr.Ref (serial, ty, loc)
