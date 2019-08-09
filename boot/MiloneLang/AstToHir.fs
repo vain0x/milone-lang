@@ -198,8 +198,8 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.TySynonym (ident, ty, loc) ->
     // FIXME: In type inference, noSerial is used as marker.
-    let serial = noSerial
-    // let serial, nameCtx = nameCtx |> nameCtxAdd ident
+    // let serial = noSerial
+    let serial, nameCtx = nameCtx |> nameCtxAdd ident
     let ty, nameCtx = (ty, nameCtx) |> onTy
     HExpr.TyDef (ident, serial, TyDecl.Synonym (ty, loc), loc), nameCtx
 
@@ -215,9 +215,9 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
           false, tyUnit, nameCtx
       (ident, serial, hasPayload, payloadTy), nameCtx
     // FIXME: In type inference, noSerial is used as marker.
-    let unionSerial = noSerial
-    // let unionSerial, nameCtx =
-    //   nameCtx |> nameCtxAdd ident
+    // let unionSerial = noSerial
+    let unionSerial, nameCtx =
+      nameCtx |> nameCtxAdd ident
     let variants, nameCtx =
       (variants, nameCtx) |> stMap onVariant
     HExpr.TyDef (ident, unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx

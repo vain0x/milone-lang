@@ -59,8 +59,8 @@ let nameCtxEmpty () =
   NameCtx (Map.empty, 0)
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
-  let map = map |> Map.add serial ident
   let serial = serial + 1
+  let map = map |> Map.add serial ident
   serial, NameCtx (map, serial)
 
 let tyBool = Ty.Con (TyCon.Bool, [])
