@@ -56,7 +56,7 @@ end_match_4:;
 }
 
 #line 3
-#error 3:5 Couldn't resolve var f
+#error 3:5 Undefined variable f
 
 #line 7
 #error 7:7 While unifying 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Int,[])]); Con (Int,[])])' and 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Str,[])]); Con (Int,[])])', failed to unify 'Con (Int,[])' and 'Con (Str,[])'.
@@ -65,7 +65,7 @@ end_match_4:;
 #error 10:6 Type: Index not supported
 
 #line 13
-#error 13:17 Couldn't unify 'Meta 32' and 'Con (Fun,[Con (Fun,[Meta 32; Meta 29]); Meta 29])' due to self recursion.
+#error 13:17 Couldn't unify 'Meta 42' and 'Con (Fun,[Con (Fun,[Meta 42; Meta 40]); Meta 40])' due to self recursion.
 
 #line 15
 #error 15:3 While unifying 'Con (Int,[])' and 'Con (Tuple,[])', failed to unify 'Con (Int,[])' and 'Con (Tuple,[])'.

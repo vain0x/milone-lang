@@ -2,7 +2,7 @@ struct IntIntFun1;
 
 int twice_1(struct IntIntFun1 f_, int x_);
 
-int fun_(int x_1);
+int fun_(int x_2);
 
 int fun_2(void* env_, int arg_);
 
@@ -25,8 +25,8 @@ int twice_1(struct IntIntFun1 f_, int x_) {
     return app_1;
 }
 
-int fun_(int x_1) {
-    int y_ = (x_1 + 1);
+int fun_(int x_2) {
+    int y_ = (x_2 + 1);
     return y_;
 }
 
@@ -55,14 +55,14 @@ int main() {
     void* env_2 = box_;
     struct IntIntFun1 fun_4 = (struct IntIntFun1){.fun = fun_2, .env = env_2};
     int call_1 = twice_1(fun_4, 40);
-    int x_2 = call_1;
+    int x_1 = call_1;
     int match_;
-    if (!(((x_2 != 42) == 1))) goto next_2;
+    if (!(((x_1 != 42) == 1))) goto next_2;
     exit(1);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    if (!(((x_2 != 42) == 0))) goto next_3;
+    if (!(((x_1 != 42) == 0))) goto next_3;
     match_ = 0;
     goto end_match_1;
 next_3:;

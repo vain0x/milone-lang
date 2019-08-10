@@ -34,6 +34,8 @@ type ScopeCtx =
     /// Variable serial to definition map.
     Vars: Map<int, VarDef>
 
+    VarDepths: Map<int, int>
+
     /// Type serial to definition map.
     Tys: Map<int, TyDef>
 
@@ -62,6 +64,7 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
     Serial = serial
     NameMap = nameMap
     Vars = Map.empty
+    VarDepths = Map.empty
     Tys = Map.empty
     TyDepths = Map.empty
     LocalSerial = localSerial
@@ -90,7 +93,10 @@ let scopeCtxIsVariant varSerial scopeCtx =
 
 /// Defines a variable, without adding to any scope.
 let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
-  { scopeCtx with Vars = scopeCtx.Vars |> Map.add varSerial varDef }
+  { scopeCtx with
+      Vars = scopeCtx.Vars |> Map.add varSerial varDef
+      VarDepths = scopeCtx.VarDepths |> Map.add varSerial scopeCtx.LetDepth
+  }
 
 /// Defines a type, without adding to any scope.
 let scopeCtxDefineTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
@@ -441,7 +447,251 @@ let collectDecls (expr, ctx) =
 
   goExpr (expr, ctx)
 
+// -----------------------------------------------
+// Name Resolution
+// -----------------------------------------------
+
+let primFromIdent ident =
+  match ident with
+  | "not" ->
+    HPrim.Not |> Some
+
+  | "exit" ->
+    HPrim.Exit |> Some
+
+  | "assert" ->
+    HPrim.Assert |> Some
+
+  | "box" ->
+    HPrim.Box |> Some
+
+  | "unbox" ->
+    HPrim.Unbox |> Some
+
+  | "printfn" ->
+    HPrim.Printfn |> Some
+
+  | "char" ->
+    HPrim.Char |> Some
+
+  | "int" ->
+    HPrim.Int |> Some
+
+  | "string" ->
+    HPrim.String |> Some
+
+  | "__nativeFun" ->
+    HPrim.NativeFun ("<native-fun>", -1) |> Some
+
+  | _ ->
+    None
+
+let onPat (pat: HPat, ctx: ScopeCtx) =
+  match pat with
+  | HPat.Lit _
+  | HPat.Nil _ ->
+    pat, ctx
+
+  | HPat.Ref (ident, serial, ty, loc) ->
+    let variantSerial =
+      match ctx |> scopeCtxResolveLocalVar ident with
+      | Some varSerial ->
+        match ctx |> scopeCtxGetVar varSerial with
+        | VarDef.Variant _ ->
+          Some varSerial
+
+        | _ ->
+          None
+
+      | None ->
+        None
+
+    match variantSerial with
+    | Some variantSerial ->
+      HPat.Ref (ident, variantSerial, ty, loc), ctx
+
+    | None ->
+      let varDef = VarDef.Var (ident, ty, loc)
+      let ctx =
+        // FIXME: Don't define '_'
+        ctx |> scopeCtxDefineLocalVar serial varDef
+      HPat.Ref (ident, serial, ty, loc), ctx
+
+  | HPat.Nav (l, r, ty, loc) ->
+    let varSerial =
+      match ctx |> scopeCtxResolvePatAsScope l with
+      | Some scopeSerial ->
+        ctx |> scopeCtxResolveVar scopeSerial r
+
+      | None ->
+        None
+
+    match varSerial with
+    | Some varSerial ->
+      HPat.Ref (r, varSerial, ty, loc), ctx
+
+    | None ->
+      let l, ctx = (l, ctx) |> onPat
+      HPat.Nav (l, r, ty, loc), ctx
+
+  | HPat.Call (callee, args, ty, loc) ->
+    let callee, ctx = (callee, ctx) |> onPat
+    let args, ctx = (args, ctx) |> stMap onPat
+    HPat.Call (callee, args, ty, loc), ctx
+
+  | HPat.Cons (l, r, itemTy, loc) ->
+    let l, ctx = (l, ctx) |> onPat
+    let r, ctx = (r, ctx) |> onPat
+    HPat.Cons (l, r, itemTy, loc), ctx
+
+  | HPat.Tuple (pats, tupleTy, loc) ->
+    let pats, ctx = (pats, ctx) |> stMap onPat
+    HPat.Tuple (pats, tupleTy, loc), ctx
+
+  | HPat.As (pat, ident, serial, loc) ->
+    let varDef = VarDef.Var (ident, noTy, loc)
+    let ctx = ctx |> scopeCtxDefineLocalVar serial varDef
+    let pat, ctx = (pat, ctx) |> onPat
+    HPat.As (pat, ident, serial, loc), ctx
+
+  | HPat.Anno (pat, ty, loc) ->
+    let ty = ctx |> scopeCtxResolveTy ty
+    let pat, ctx = (pat, ctx) |> onPat
+    HPat.Anno (pat, ty, loc), ctx
+
+  | HPat.Or (l, r, ty, loc) ->
+    // FIXME: Currently variable bindings in OR patterns are not supported correctly.
+    let l, ctx = (l, ctx) |> onPat
+    let r, ctx = (r, ctx) |> onPat
+    HPat.Or (l, r, ty, loc), ctx
+
+let onExpr (expr: HExpr, ctx: ScopeCtx) =
+  match expr with
+  | HExpr.Error _
+  | HExpr.Open _
+  | HExpr.Lit _
+  | HExpr.Ref (_, HValRef.Prim _, _, _) ->
+    expr, ctx
+
+  | HExpr.Ref (_, HValRef.Var serial, ty, loc) ->
+    let ident = ctx |> scopeCtxGetIdent serial
+    match ctx |> scopeCtxResolveLocalVar ident with
+    | Some serial ->
+      HExpr.Ref (ident, HValRef.Var serial, ty, loc), ctx
+
+    | None ->
+      match primFromIdent ident with
+      | Some prim ->
+        HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
+
+      | None ->
+        HExpr.Error ("Undefined variable " + ident, loc), ctx
+
+  | HExpr.Match (target, arms, ty, loc) ->
+    let target, ctx =
+      (target, ctx) |> onExpr
+    let arms, ctx =
+      (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
+        let parent, ctx = ctx |> scopeCtxStartScope
+        let pat, ctx = (pat, ctx) |> onPat
+        let guard, ctx = (guard, ctx) |> onExpr
+        let body, ctx = (body, ctx) |> onExpr
+        let ctx = ctx |> scopeCtxFinishScope parent
+        (pat, guard, body), ctx
+      )
+    HExpr.Match (target, arms, ty, loc), ctx
+
+  | HExpr.Nav (l, r, ty, loc) ->
+    // FIXME: Patchwork for tests to pass
+    match l, r with
+    | HExpr.Ref ("String", _, _, _), "length" ->
+      HExpr.Ref ("String.length", HValRef.Prim HPrim.StrLength, ty, loc), ctx
+
+    |_ ->
+
+    // Keep the nav expression unresolved so that type inference does.
+    let keepUnresolved () =
+      let l, ctx = (l, ctx) |> onExpr
+      HExpr.Nav (l, r, ty, loc), ctx
+
+    match ctx |> scopeCtxResolveExprAsScope l with
+    | Some scopeSerial ->
+      match ctx |> scopeCtxResolveVar scopeSerial r with
+      | Some varSerial ->
+        HExpr.Ref (r, HValRef.Var varSerial, ty, loc), ctx
+
+      | _ ->
+        // X.ty patterns don't appear yet, so don't search for types.
+
+        keepUnresolved ()
+
+    | _ ->
+      keepUnresolved ()
+
+  | HExpr.Op (op, l, r, ty, loc) ->
+    let l, ctx = (l, ctx) |> onExpr
+    let r, ctx = (r, ctx) |> onExpr
+    HExpr.Op (op, l, r, ty, loc), ctx
+
+  | HExpr.Inf (op, items, ty, loc) ->
+    let items, ctx = (items, ctx) |> stMap onExpr
+    HExpr.Inf (op, items, ty, loc), ctx
+
+  | HExpr.Let (pat, body, next, ty, loc) ->
+    let body, ctx =
+      let parent, ctx = ctx |> scopeCtxStartScope
+      let body, ctx = (body, ctx) |> onExpr
+      let ctx = ctx |> scopeCtxFinishScope parent
+      body, ctx
+
+    let pat, next, ctx =
+      let parent, ctx = ctx |> scopeCtxStartScope
+      let pat, ctx = (pat, ctx) |> onPat
+      let next, ctx = (next, ctx) |> onExpr
+      let ctx = ctx |> scopeCtxFinishScope parent
+      pat, next, ctx
+
+    HExpr.Let (pat, body, next, ty, loc), ctx
+
+  | HExpr.LetFun (_, serial, pats, body, next, ty, loc) ->
+    let ident = ctx |> scopeCtxGetIdent serial
+
+    let parent, ctx = ctx |> scopeCtxStartScope
+    let ctx = ctx |> scopeCtxOnEnterLetBody
+
+    // Define the function itself for recursive referencing.
+    // FIXME: Functions are recursive even if `rec` is missing.
+    let ctx =
+      let arity = pats |> List.length
+      let tyScheme = TyScheme.ForAll ([], ty)
+      ctx |> scopeCtxDefineFunUniquely serial arity tyScheme loc
+
+    let pats, body, ctx =
+      // Introduce a function body scope.
+      let parent, ctx = ctx |> scopeCtxStartScope
+      let pats, ctx = (pats, ctx) |> stMap onPat
+      let body, ctx = (body, ctx) |> onExpr
+      let ctx = ctx |> scopeCtxFinishScope parent
+      pats, body, ctx
+
+    let ctx = ctx |> scopeCtxOnLeaveLetBody
+    let next, ctx = (next, ctx) |> onExpr
+    let ctx = ctx |> scopeCtxFinishScope parent
+
+    HExpr.LetFun (ident, serial, pats, body, next, ty, loc), ctx
+
+  | HExpr.TyDef (_, serial, tyDecl, loc) ->
+    // Unlike the collection stage, here type expressions should resolve.
+    let ctx = ctx |> scopeCtxDefineTyDef serial tyDecl loc
+    expr, ctx
+
+  | HExpr.If _
+  | HExpr.Inf (InfOp.Anno, _, _, _)
+  | HExpr.Inf (InfOp.List _, _, _, _) ->
+    failwith "Never"
+
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx
   (expr, scopeCtx) 
   |> collectDecls
+  |> onExpr
