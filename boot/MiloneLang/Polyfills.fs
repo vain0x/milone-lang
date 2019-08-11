@@ -82,6 +82,3 @@ let strConcat (xs: string list) =
   //   | x :: xs ->
   //     x + go xs
   // go xs
-
-/// Useful operator to build a list.
-let ( *- ) tail head = head :: tail

@@ -1,3 +1,5 @@
+/// Converts AST to HIR.
+/// Just a data conversion to keep the parser decoupled.
 module rec MiloneLang.AstToHir
 
 open MiloneLang.Helpers

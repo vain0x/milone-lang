@@ -3,14 +3,6 @@ module rec MiloneLang.Parsing
 open MiloneLang
 open MiloneLang.Helpers
 
-/// Body of type definition in AST.
-[<RequireQualifiedAccess>]
-type ATyDef =
-  | Synonym
-    of ATy
-  | Union
-    of AVariant list
-
 let locY (y, _) = y
 
 /// Gets if next token exists and should lead some construction (expr/pat/ty).
@@ -596,8 +588,6 @@ let rec parseOps level boxX expr tokens =
     next expr Op.Pipe opLoc tokens
   | OpLevel.Cons, (Token.Punct "::", opLoc) :: tokens ->
     nextR expr (Op.Cons noTy) opLoc tokens
-  | OpLevel.Cons, (Token.Punct "*-", opLoc) :: tokens ->
-    next expr Op.ConsRev opLoc tokens
   | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
     next expr Op.Add opLoc tokens
   | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->

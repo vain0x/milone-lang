@@ -1,3 +1,4 @@
+/// Converts HIR to resolve some syntax sugars.
 module rec MiloneLang.Desugaring
 
 open MiloneLang
@@ -45,9 +46,6 @@ let rec onExprOp op l r ty loc =
     // `x |> f` ==> `f x`
     // NOTE: Evaluation order does change.
     onExprOp Op.App r l ty loc
-  | Op.ConsRev ->
-    // `tail *- head` ==> `head :: tail`
-    onExprOp (Op.Cons noTy) r l ty loc
   | _ ->
     HExpr.Op (op, onExpr l, onExpr r, ty, loc)
 

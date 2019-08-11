@@ -1,5 +1,5 @@
 //! Lexical analysis.
-//! Create a list of tokens from a text of single file.
+//! Creates a list of tokens from a text of single file.
 //! Consists of two transformations: scan and recognize.
 
 module rec MiloneLang.Lexing

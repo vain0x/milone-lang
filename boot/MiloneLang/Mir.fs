@@ -1,3 +1,5 @@
+/// Converts HIR to MIR.
+/// Deconstructs pattern matching.
 module rec MiloneLang.Mir
 
 open MiloneLang.Helpers
@@ -91,7 +93,6 @@ let mopFrom op =
   | Op.Or
   | Op.App
   | Op.Cons _
-  | Op.ConsRev
   | Op.Range
   | Op.Index -> failwith "Never: We don't use > >= && || :: .. in MIR"
 

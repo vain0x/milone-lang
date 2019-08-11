@@ -46,21 +46,23 @@ Note that the actual output, [factorial.c](./boot/tests/examples/factorial/facto
 The compiler can compile a single-file CLI application for now.
 
 - Indent-aware parsing
-- Basic type inference
+- Polymorphic type inference (Hindley-Milner)
 - Expressions
     - Literals: `1`, `"str"`, etc.
-    - Basic operators: `+`, `::`, etc.
+    - Basic operations: `+`, `::`, etc.
     - Function applications: `f x y` and `y |> f x`
-    - Pattern matching
+    - Function abstractions: `let f x y = ..` and `fun x y -> ..`
+    - Let and match expressions
 - Functions
     - Local variable capturing
     - Partial applications
     - Function objects
 - Types
-    - Basic built-in types: `int`, `string`, tuples, lists, functions, etc.
+    - Built-in types: `unit`, `int`, `char`, `string`, tuples, lists, functions
     - Discriminated unions (non-recursive and non-generic)
 - IO
     - `printfn` with `%s`, `%d`
+    - Some file IOs
 
 See [boot/tests/examples directory](./boot/tests/examples) for non-trivial, working codes.
 
@@ -73,18 +75,28 @@ For self-hosting, I avoid the use of complex mechanism in compiler source code, 
 ### How: Stages
 
 - Lexing (lexical analysis)
-    - The input is a source code and the output is a list of tokens.
+    - Inputs: source code string. Output: list of tokens.
     - Tokenizer is hand-written.
 - Parsing (syntax analysis)
-    - Input: a list of tokens. Output: abstract syntax tree (AST).
+    - Input: list of tokens. Output: abstract syntax tree (AST).
     - Parser is hand-written, [recursive descent parser](https://en.wikipedia.org/wiki/Recursive_descent_parser).
     - Indent-based semicolon insertion is applied on this stage.
-- Typing (type checking)
-    - From/to AST
-    - Simple unification-based type inference
+- AstToHir
+    - From AST to high-level intermediate representation (HIR)
+    - Just a data conversion to keep the parser decoupled
+    - Desugar lambda expressions
+- Bundling
+    - Input: source files. Output: abstract syntax tree.
+    - Resolve module dependencies, load source files, parse them, and concatenate them into single HIR.
+- Desugaring
+    - From/to HIR
+    - Remove some syntax sugars
+- Typing (type inference)
+    - From/to HIR
+    - Hindley-Milner (unification-based, polymorphic) type inference
     - Collect symbol info and types of expression
 - FunTrans
-    - From/to AST
+    - From/to HIR
     - Convert function definitions and applications
     - See [lambda lifting](https://en.wikipedia.org/wiki/Lambda_lifting)
 - Monomorphization

@@ -994,8 +994,7 @@ let inferOp (ctx: TyCtx) op left right loc ty =
     inferIndex ctx left right loc ty
   | Op.And
   | Op.Or
-  | Op.Pipe
-  | Op.ConsRev ->
+  | Op.Pipe ->
     failwith "Never: Desugared operators"
 
 let inferTuple (ctx: TyCtx) items loc tupleTy =

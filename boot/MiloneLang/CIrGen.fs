@@ -1,4 +1,4 @@
-/// Generates CIR from AST.
+/// Generates CIR from MIR.
 module rec MiloneLang.CIrGen
 
 open MiloneLang.Helpers
