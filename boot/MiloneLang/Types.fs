@@ -197,9 +197,6 @@ type TyCon =
   | Fun
   | Tuple
   | List
-  /// Identifier which refers to a specific type, e.g. `Option`.
-  | RefIdent
-    of ident:string
   /// Type reference, i.e. some union type.
   | Ref
     of serial:int

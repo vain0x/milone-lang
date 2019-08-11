@@ -221,7 +221,6 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | Ty.Con (TyCon.Range, _)
         | Ty.Con (TyCon.List, _)
         | Ty.Con (TyCon.Fun, _)
-        | Ty.Con (TyCon.RefIdent _, _)
         | Ty.Error ->
           failwithf "Never"
       let ctx = { ctx with TyUniqueNames = ctx.TyUniqueNames |> Map.add ty ident }
@@ -275,7 +274,6 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
   | Ty.Con (TyCon.List, _)
   | Ty.Con (TyCon.Fun, _)
   | Ty.Con (TyCon.Range, _)
-  | Ty.Con (TyCon.RefIdent _, _)
   | Ty.Error ->
     failwith "Never"
 
@@ -316,7 +314,6 @@ let genExprDefault ctx ty =
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
   | Ty.Con (TyCon.Range, _)
-  | Ty.Con (TyCon.RefIdent _, _)
   | Ty.Error ->
     failwith "Never"
 
