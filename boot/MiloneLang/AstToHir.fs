@@ -29,8 +29,8 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
     Ty.Con (TyCon.Obj, []), nameCtx
 
   | ATy.Ident (ident, _) ->
-    // FIXME: ideally use `TyCon.Ref serial`
-    Ty.Con (TyCon.RefIdent ident, []), nameCtx
+    let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
+    Ty.Con (TyCon.Ref tySerial, []), nameCtx
 
   | ATy.Suffix (lTy, "list", _) ->
     let lTy, nameCtx = (lTy, nameCtx) |> onTy

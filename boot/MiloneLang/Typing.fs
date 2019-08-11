@@ -9,6 +9,7 @@ type TyCtx =
     /// We need to identify variables by serial number rather than names
     /// due to scope locality and shadowing.
     Serial: int
+    NameMap: Map<int, string>
     /// Variable serial to variable definition.
     Vars: Map<int, VarDef>
     /// Identifier to type serial.
@@ -20,6 +21,12 @@ type TyCtx =
     UnifyQueue: (Ty * Ty * Loc) list
     Diags: Diag list
   }
+
+let ctxGetIdent serial (ctx: TyCtx) =
+  ctx.NameMap |> Map.find serial
+
+let ctxGetTy tySerial (ctx: TyCtx) =
+  ctx.Tys |> Map.find tySerial
 
 let ctxAddErr (ctx: TyCtx) message loc =
   { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
@@ -89,38 +96,26 @@ let ctxResolveUnifyQueue (ctx: TyCtx) =
   let ctx = { ctx with UnifyQueue = [] }
   go ctx queue
 
-let ctxFindTyDef name (ctx: TyCtx) =
-  match ctx.TyEnv |> Map.tryFind name with
-  | Some tySerial ->
-    match ctx.Tys |> Map.tryFind tySerial with
-    | Some tyDef ->
-      Some (tySerial, tyDef)
-    | None ->
-      None
-  | None ->
-    None
-
-let ctxResolveTyRefIdent ident (ctx: TyCtx) =
-  match ctx |> ctxFindTyDef ident with
-  | None ->
-    Ty.Error
-  | Some (_, TyDef.Meta (_, ty, _)) ->
-    ty
-  | Some (tySerial, _) ->
-    tyRef tySerial []
-
 /// Resolves type references in type annotation.
 let ctxResolveTy ctx ty =
   let rec go (ty, ctx) =
     match ty with
-    | Ty.Error
-    | Ty.Con (TyCon.Ref _, _) ->
-      ty, ctx
-    | Ty.Con (TyCon.RefIdent "_", _) ->
+
+    | Ty.Con (TyCon.Ref serial, []) when ctx |> ctxGetIdent serial = "_" ->
       let tySerial, ctx = ctxFreshTySerial ctx
       Ty.Meta tySerial, ctx
-    | Ty.Con (TyCon.RefIdent ident, _) ->
-      ctxResolveTyRefIdent ident ctx, ctx
+
+    | Ty.Error ->
+      ty, ctx
+
+    | Ty.Con (TyCon.Ref tySerial, _) ->
+      match ctx |> ctxGetTy tySerial with
+      | TyDef.Meta (_, bodyTy, _) ->
+        bodyTy, ctx
+
+      | _ ->
+        ty, ctx
+
     | Ty.Con (tyCon, tys) ->
       let tys, ctx = (tys, ctx) |> stMap go
       Ty.Con (tyCon, tys), ctx
@@ -724,7 +719,7 @@ let inferLetFun ctx calleeName varSerial argPats body next ty loc =
       varSerial, ctx
     | _ ->
       failwith "NEVER: It must be a pre-generalized function"
- 
+
   let bodyCtx = nextCtx
   let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
   let bodyCtx = unifyTy bodyCtx loc funTy actualFunTy
@@ -813,6 +808,7 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
   let ctx =
     {
       Serial = scopeCtx.Serial
+      NameMap = scopeCtx.NameMap
       Vars = scopeCtx.Vars
       Tys = scopeCtx.Tys
       TyEnv = Map.empty
@@ -852,7 +848,7 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
           let ty, _, ctx = ctxFreshTyVar ident ctx
           let varDef = VarDef.Var (ident, ty, loc)
           (varSerial, varDef), ctx
-        
+
         | VarDef.Fun (ident, arity, _, loc) ->
           let ty, _, ctx = ctxFreshTyVar ident ctx
           let tyScheme = TyScheme.ForAll ([], ty)

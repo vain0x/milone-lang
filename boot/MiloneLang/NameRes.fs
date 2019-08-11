@@ -274,6 +274,9 @@ let scopeCtxResolveTy ty scopeCtx =
         let tys = tys |> List.map go
         Ty.Con (TyCon.Ref tySerial, tys)
 
+      | None when ident = "_" && List.isEmpty tys ->
+        Ty.Con (TyCon.Ref serial, tys)
+
       | None ->
         Ty.Error
 
@@ -634,6 +637,9 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     HExpr.Op (op, l, r, ty, loc), ctx
 
   | HExpr.Inf (op, items, ty, loc) ->
+    // Necessary in case of annotation expression.
+    let ty = ctx |> scopeCtxResolveTy ty
+
     let items, ctx = (items, ctx) |> stMap onExpr
     HExpr.Inf (op, items, ty, loc), ctx
 
@@ -685,13 +691,11 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     let ctx = ctx |> scopeCtxDefineTyDef serial tyDecl loc
     expr, ctx
 
-  | HExpr.If _
-  | HExpr.Inf (InfOp.Anno, _, _, _)
-  | HExpr.Inf (InfOp.List _, _, _, _) ->
+  | HExpr.If _ ->
     failwith "Never"
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx
-  (expr, scopeCtx) 
+  (expr, scopeCtx)
   |> collectDecls
   |> onExpr
