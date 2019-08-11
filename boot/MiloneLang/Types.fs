@@ -186,6 +186,7 @@ type AExpr =
     of string list * Loc
 
 /// Type constructors.
+[<RequireQualifiedAccess>]
 type TyCon =
   | Bool
   | Int
@@ -196,9 +197,6 @@ type TyCon =
   | Fun
   | Tuple
   | List
-  /// Identifier which refers to a specific type, e.g. `Option`.
-  | RefIdent
-    of ident:string
   /// Type reference, i.e. some union type.
   | Ref
     of serial:int
@@ -222,7 +220,7 @@ type TyScheme =
 [<RequireQualifiedAccess>]
 type TyContext =
   {
-    TySerial: int
+    Serial: int
     Tys: Map<int, TyDef>
 
     /// type serial -> let-depth,
@@ -285,6 +283,10 @@ type Op =
   | Range
   /// `.[ ]`
   | Index
+
+type NameCtx =
+  | NameCtx
+    of Map<int, string> * last: int
 
 /// Type declaration.
 [<RequireQualifiedAccess>]

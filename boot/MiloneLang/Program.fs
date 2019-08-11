@@ -1,6 +1,7 @@
 module rec MiloneLang.Program
 
 open System
+open MiloneLang.Helpers
 
 type Verbosity =
   | Verbose
@@ -20,14 +21,17 @@ let toCir verbosity (projectDir: string): CDecl list * bool =
     | Verbosity.Silent ->
       ()
 
-  let ast = parseProjectModules projectDir
+  let nameCtx = nameCtxEmpty ()
+  let ast, nameCtx = parseProjectModules projectDir nameCtx
   // let tokens = Lexing.tokenize source
   // log "tokens" tokens
   // let ast = Parsing.parse tokens
   // log "ast" ast
   let desugared = Desugaring.desugar ast
   log "desugared" ast
-  let typedAst, tyCtx = Typing.infer desugared
+  let nameRes, scopeCtx = NameRes.nameRes (desugared, nameCtx)
+  log "nameRes" nameRes
+  let typedAst, tyCtx = Typing.infer (nameRes, scopeCtx)
   log "typed" typedAst
   let funTransAst, tyCtx = FunTrans.trans (typedAst, tyCtx)
   log "funTrans" funTransAst

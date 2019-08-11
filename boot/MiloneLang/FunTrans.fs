@@ -7,7 +7,7 @@ open MiloneLang.Types
 [<RequireQualifiedAccess>]
 type FunTransCtx =
   {
-    VarSerial: int
+    Serial: int
     Vars: Map<int, VarDef>
     Tys: Map<int, TyDef>
 
@@ -20,7 +20,7 @@ type FunTransCtx =
 
 let ctxFromTyCtx (ftCtx: Typing.TyCtx): FunTransCtx =
   {
-    VarSerial = ftCtx.VarSerial
+    Serial = ftCtx.Serial
     Vars = ftCtx.Vars
     Tys = ftCtx.Tys
 
@@ -32,29 +32,29 @@ let ctxFromTyCtx (ftCtx: Typing.TyCtx): FunTransCtx =
 
 let ctxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: FunTransCtx) =
   { tyCtx with
-      VarSerial = ctx.VarSerial
+      Serial = ctx.Serial
       Vars = ctx.Vars
       Tys = ctx.Tys
   }
 
 let ctxFreshFun (ident: string) arity (ty: Ty) loc (ctx: FunTransCtx) =
-  let serial = ctx.VarSerial + 1
+  let serial = ctx.Serial + 1
   let tyScheme =
     let isOwned _ = true // FIXME: is it okay?
     Typing.tyGeneralize isOwned ty
   let ctx =
     { ctx with
-        VarSerial = ctx.VarSerial + 1
+        Serial = ctx.Serial + 1
         Vars = ctx.Vars |> Map.add serial (VarDef.Fun (ident, arity, tyScheme, loc))
     }
   let refExpr = HExpr.Ref (ident, HValRef.Var serial, ty, loc)
   refExpr, serial, ctx
 
 let ctxFreshVar (ident: string) (ty: Ty) loc (ctx: FunTransCtx) =
-  let serial = ctx.VarSerial + 1
+  let serial = ctx.Serial + 1
   let ctx =
     { ctx with
-        VarSerial = ctx.VarSerial + 1
+        Serial = ctx.Serial + 1
         Vars = ctx.Vars |> Map.add serial (VarDef.Var (ident, ty, loc))
     }
   let refExpr = HExpr.Ref (ident, HValRef.Var serial, ty, loc)
