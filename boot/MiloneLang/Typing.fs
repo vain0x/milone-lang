@@ -12,8 +12,6 @@ type TyCtx =
     NameMap: Map<int, string>
     /// Variable serial to variable definition.
     Vars: Map<int, VarDef>
-    /// Identifier to type serial.
-    TyEnv: Map<string, int>
     /// Type serial to type definition.
     Tys: Map<int, TyDef>
     TyDepths: Map<int, int>
@@ -37,7 +35,6 @@ let ctxAddErr (ctx: TyCtx) message loc =
 let ctxRollback bCtx dCtx: TyCtx =
   assert (bCtx.Serial <= dCtx.Serial)
   { dCtx with
-      TyEnv = bCtx.TyEnv
       LetDepth = bCtx.LetDepth
   }
 
@@ -70,15 +67,10 @@ let ctxFreshTySerial (ctx: TyCtx) =
     }
   serial, ctx
 
-let ctxFreshTyVar ident (ctx: TyCtx): Ty * string * TyCtx =
+let ctxFreshTyVar ident (ctx: TyCtx): Ty * unit * TyCtx =
   let serial, ctx = ctxFreshTySerial ctx
-  let ident = sprintf "'%s_%d" ident serial
   let ty = Ty.Meta serial
-  let ctx =
-    { ctx with
-        TyEnv = ctx.TyEnv |> Map.add ident serial
-    }
-  ty, ident, ctx
+  ty, (), ctx
 
 let ctxUnifyLater (ctx: TyCtx) unresolvedTy metaTy loc =
   { ctx with UnifyQueue = (unresolvedTy, metaTy, loc) :: ctx.UnifyQueue }
@@ -706,7 +698,7 @@ let inferLetFun ctx calleeName varSerial argPats body next ty loc =
 
   let funTy, _, ctx =
     if calleeName = "main"
-    then tyFun tyUnit tyInt, "", ctx // FIXME: argument type is string[]
+    then tyFun tyUnit tyInt, (), ctx // FIXME: argument type is string[]
     else ctxFreshTyVar "fun" ctx
 
   // Define function itself for recursive call.
@@ -811,7 +803,6 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
       NameMap = scopeCtx.NameMap
       Vars = scopeCtx.Vars
       Tys = scopeCtx.Tys
-      TyEnv = Map.empty
       TyDepths = scopeCtx.TyDepths
       LetDepth = 0
       UnifyQueue = []
@@ -822,9 +813,6 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
     let tys, ctx =
       (Map.toList ctx.Tys, ctx)
       |> stMap (fun ((tySerial, tyDef), ctx) ->
-        // Import type environment from name res.
-        let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add (tyDefIdent tyDef) tySerial }
-
         match tyDef with
         | TyDef.Meta (ident, bodyTy, loc) ->
           // Replace types with type vars and unify later.
