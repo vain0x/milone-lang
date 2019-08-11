@@ -18,7 +18,7 @@ type Binding =
   | Parent
     of int * Scope
 
-/// scopeSerial * (scopeSerial, binding) list.
+/// (scopeSerial, binding) list.
 type Scope = (int * Binding) list
 
 [<RequireQualifiedAccess>]
