@@ -433,7 +433,10 @@ let collectDecls (expr, ctx) =
       let ctx =
         let arity = args |> List.length
         let tyScheme = TyScheme.ForAll ([], ty)
-        ctx |> scopeCtxDefineFunUniquely serial arity tyScheme loc
+        ctx
+        |> scopeCtxOnEnterLetBody
+        |> scopeCtxDefineFunUniquely serial arity tyScheme loc
+        |> scopeCtxOnLeaveLetBody
       let next, ctx = (next, ctx) |> goExpr
       HExpr.LetFun (ident, serial, args, body, next, ty, loc), ctx
 

@@ -1,3 +1,14 @@
+let listRev xs =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      acc
+
+    | x :: xs ->
+      go (x :: acc) xs
+
+  go [] xs
+
 let main _ =
   let id x = x
 
@@ -23,5 +34,9 @@ let main _ =
   match (1, "a") |> flip |> flip with
   | 1, "a" -> ()
   | _ -> exit 1
+
+  match [1; 2] |> listRev, ["a"; "b"] |> listRev with
+  | [2; 1], ["b"; "a"] -> ()
+  | _ -> assert false
 
   0

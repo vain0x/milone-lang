@@ -1,4 +1,4 @@
-int f_(int x_1);
+int f_1(int x_1);
 
 enum Val_Tag;
 
@@ -6,7 +6,7 @@ struct Val_;
 
 int main();
 
-int f_(int x_1) {
+int f_1(int x_1) {
     return x_1;
 }
 
@@ -34,7 +34,7 @@ next_2:;
     exit(1);
 end_match_1:;
     int n_ = match_;
-    int call_ = f_(n_);
+    int call_ = f_1(n_);
     int m_ = call_;
     return m_;
 }
