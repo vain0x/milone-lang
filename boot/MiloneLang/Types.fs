@@ -207,7 +207,7 @@ type Ty =
     of Loc
   /// Type variable, i.e. some binding.
   | Meta
-    of serial:int
+    of serial:int * Loc
   | Con
     of TyCon * Ty list
 
