@@ -261,7 +261,7 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
     None
 
 /// Resolves type identifiers in a type expression.
-let scopeCtxResolveTy ty scopeCtx =
+let scopeCtxResolveTy ty loc scopeCtx =
   let rec go ty =
     match ty with
     | Ty.Error _ ->
@@ -278,7 +278,7 @@ let scopeCtxResolveTy ty scopeCtx =
         Ty.Con (TyCon.Ref serial, tys)
 
       | None ->
-        Ty.Error
+        Ty.Error loc
 
     | Ty.Con (tyCon, tys) ->
       let tys = tys |> List.map go
@@ -353,15 +353,15 @@ let scopeCtxDefineTyDef tySerial tyDecl loc ctx =
 
   match tyDef with
   | TyDef.Meta (tyIdent, bodyTy, loc) ->
-    let bodyTy = ctx |> scopeCtxResolveTy bodyTy
+    let bodyTy = ctx |> scopeCtxResolveTy bodyTy loc
     ctx |> scopeCtxDefineTy tySerial (TyDef.Meta (tyIdent, bodyTy, loc))
 
   | TyDef.Union (_, variantSerials, _unionLoc) ->
     let rec go ctx variantSerial =
       match ctx |> scopeCtxGetVar variantSerial with
       | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
-        let payloadTy = ctx |> scopeCtxResolveTy payloadTy
-        let variantTy = ctx |> scopeCtxResolveTy variantTy
+        let payloadTy = ctx |> scopeCtxResolveTy payloadTy loc
+        let variantTy = ctx |> scopeCtxResolveTy variantTy loc
         let varDef = VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc)
         ctx |> scopeCtxDefineVar variantSerial varDef
       | _ ->
@@ -558,7 +558,7 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
     HPat.As (pat, ident, serial, loc), ctx
 
   | HPat.Anno (pat, ty, loc) ->
-    let ty = ctx |> scopeCtxResolveTy ty
+    let ty = ctx |> scopeCtxResolveTy ty loc
     let pat, ctx = (pat, ctx) |> onPat
     HPat.Anno (pat, ty, loc), ctx
 
@@ -638,7 +638,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HExpr.Inf (op, items, ty, loc) ->
     // Necessary in case of annotation expression.
-    let ty = ctx |> scopeCtxResolveTy ty
+    let ty = ctx |> scopeCtxResolveTy ty loc
 
     let items, ctx = (items, ctx) |> stMap onExpr
     HExpr.Inf (op, items, ty, loc), ctx

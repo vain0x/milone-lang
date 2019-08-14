@@ -7,9 +7,9 @@ open MiloneLang.Helpers
 
 let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
-  | ATy.Error _
-  | ATy.Missing _ ->
-    Ty.Error, nameCtx
+  | ATy.Error (_, loc)
+  | ATy.Missing loc ->
+    Ty.Error loc, nameCtx
 
   | ATy.Ident ("unit", _) ->
     Ty.Con (TyCon.Tuple, []), nameCtx
@@ -37,8 +37,8 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
     let lTy, nameCtx = (lTy, nameCtx) |> onTy
     Ty.Con (TyCon.List, [lTy]), nameCtx
 
-  | ATy.Suffix _ ->
-    Ty.Error, nameCtx
+  | ATy.Suffix (_, _, loc) ->
+    Ty.Error loc, nameCtx
 
   | ATy.Tuple (itemTys, _) ->
     let itemTys, nameCtx = (itemTys, nameCtx) |> stMap onTy

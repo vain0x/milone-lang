@@ -98,7 +98,7 @@ let ctxResolveTy ctx ty =
       let tySerial, ctx = ctxFreshTySerial ctx
       Ty.Meta tySerial, ctx
 
-    | Ty.Error ->
+    | Ty.Error _ ->
       ty, ctx
 
     | Ty.Con (TyCon.Ref tySerial, _) ->
@@ -120,7 +120,7 @@ let ctxResolveTy ctx ty =
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
     match ty with
-    | Ty.Error
+    | Ty.Error _
     | Ty.Con (_, []) ->
       true
     | Ty.Con (tyCon, ty :: tys) ->
@@ -138,7 +138,7 @@ let tyIsMonomorphic ty: bool =
       true
     | Ty.Meta _ :: _ ->
       false
-    | Ty.Error :: tys ->
+    | Ty.Error _ :: tys ->
       go tys
     | Ty.Con (_, tys1) :: tys2 ->
       go tys1 && go tys2
@@ -175,7 +175,7 @@ let bindTyCore (ctx: TyContext) tySerial ty =
 let substTyCore (ctx: TyContext) ty: Ty =
   let rec go ty =
     match ty with
-    | Ty.Error
+    | Ty.Error _
     | Ty.Con (_, []) ->
       ty
     | Ty.Con (tyCon, tys) ->
@@ -207,8 +207,8 @@ let unifyTyCore (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
       msgAcc, ctx
     | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
       (msgAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
-    | Ty.Error, _
-    | _, Ty.Error ->
+    | Ty.Error _, _
+    | _, Ty.Error _ ->
       msgAcc, ctx
     | Ty.Meta _, _ ->
       let msg = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
@@ -240,7 +240,7 @@ let tyCollectFreeVars ty =
     match tys with
     | [] ->
       fvAcc
-    | Ty.Error :: tys
+    | Ty.Error _ :: tys
     | Ty.Con (_, []) :: tys ->
       go fvAcc tys
     | Ty.Con (_, tys1) :: tys2 ->

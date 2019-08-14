@@ -204,6 +204,7 @@ type TyCon =
 [<RequireQualifiedAccess>]
 type Ty =
   | Error
+    of Loc
   /// Type variable, i.e. some binding.
   | Meta
     of serial:int

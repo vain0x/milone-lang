@@ -222,8 +222,8 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | Ty.Con (TyCon.Range, _)
         | Ty.Con (TyCon.List, _)
         | Ty.Con (TyCon.Fun, _)
-        | Ty.Error ->
-          failwithf "Never"
+        | Ty.Error _ ->
+          failwithf "Never %A" ty
       let ctx = { ctx with TyUniqueNames = ctx.TyUniqueNames |> Map.add ty ident }
       ident, ctx
   go ty ctx
@@ -275,8 +275,8 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
   | Ty.Con (TyCon.List, _)
   | Ty.Con (TyCon.Fun, _)
   | Ty.Con (TyCon.Range, _)
-  | Ty.Error ->
-    failwith "Never"
+  | Ty.Error _ ->
+    failwithf "Never %A" ty
 
 let cirifyTys (tys, ctx) =
   stMap (fun (ty, ctx) -> cty ctx ty) (tys, ctx)
@@ -315,8 +315,8 @@ let genExprDefault ctx ty =
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
   | Ty.Con (TyCon.Range, _)
-  | Ty.Error ->
-    failwith "Never"
+  | Ty.Error _ ->
+    failwithf "Never %A" ty
 
 let genExprProc ctx serial _ty _loc =
   let ident = ctxUniqueName ctx serial

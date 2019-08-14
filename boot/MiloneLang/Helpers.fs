@@ -233,7 +233,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HExpr.Open (_, a) ->
     tyUnit, a
   | HExpr.Error (_, a) ->
-    Ty.Error, a
+    Ty.Error a, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat =
@@ -340,8 +340,10 @@ let noArity = 0
 /// Placeholder. No variable serials in the parsing phase.
 let noSerial = 0
 
+let noLoc = -1, -1
+
 /// Placeholder. No type info in the parsing phase.
-let noTy = Ty.Error
+let noTy = Ty.Error noLoc
 
 let analyzeFormat (format: string) =
   let rec go i =
