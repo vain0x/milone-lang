@@ -1,6 +1,7 @@
 module rec MiloneLang.Typing
 
 open MiloneLang
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 type TyCtx =

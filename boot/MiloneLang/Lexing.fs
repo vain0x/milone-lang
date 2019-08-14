@@ -4,6 +4,7 @@
 
 module rec MiloneLang.Lexing
 
+open MiloneLang.Types
 open MiloneLang
 
 // ## Scan

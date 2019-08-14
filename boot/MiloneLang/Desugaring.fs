@@ -2,6 +2,7 @@
 module rec MiloneLang.Desugaring
 
 open MiloneLang
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 let hxRef name loc =

@@ -2,6 +2,7 @@
 /// Deconstructs pattern matching.
 module rec MiloneLang.Mir
 
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 type TyCtx = Typing.TyCtx

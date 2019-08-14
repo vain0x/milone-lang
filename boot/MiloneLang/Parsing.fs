@@ -1,6 +1,7 @@
 module rec MiloneLang.Parsing
 
 open MiloneLang
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 let locY (y, _) = y

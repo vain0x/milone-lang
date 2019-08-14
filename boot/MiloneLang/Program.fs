@@ -1,6 +1,7 @@
 module rec MiloneLang.Program
 
 open System
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 type Verbosity =

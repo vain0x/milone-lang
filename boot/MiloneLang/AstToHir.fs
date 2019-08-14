@@ -2,6 +2,7 @@
 /// Just a data conversion to keep the parser decoupled.
 module rec MiloneLang.AstToHir
 
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =

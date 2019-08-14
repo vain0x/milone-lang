@@ -1,6 +1,7 @@
 /// Generates CIR from MIR.
 module rec MiloneLang.CIrGen
 
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 /// IR generation context.

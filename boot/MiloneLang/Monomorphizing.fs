@@ -2,6 +2,7 @@
 module rec MiloneLang.Monomorphizing
 
 open MiloneLang
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 // ## Monomorphization

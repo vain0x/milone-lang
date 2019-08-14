@@ -1,4 +1,3 @@
-[<AutoOpen>]
 module rec MiloneLang.Types
 
 /// Location = (rowIndex, columnIndex).

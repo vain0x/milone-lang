@@ -1,6 +1,7 @@
 module MiloneLang.Bundling
 
 open MiloneLang.AstToHir
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 let findOpenPaths expr =

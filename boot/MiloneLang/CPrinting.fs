@@ -2,6 +2,7 @@
 /// Includes runtime functions.
 module rec MiloneLang.CPrinting
 
+open MiloneLang.Types
 open MiloneLang.Helpers
 
 let eol = """

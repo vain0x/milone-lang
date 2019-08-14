@@ -2,6 +2,7 @@ module MiloneLang.Lexing.LexingTests
 
 open MiloneLang
 open MiloneLang.Assets
+open MiloneLang.Types
 open Xunit
 
 [<Fact>]
