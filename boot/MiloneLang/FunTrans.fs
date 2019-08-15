@@ -230,7 +230,7 @@ let declosureExprRef serial (expr, ctx) =
   | Some (_ :: _) ->
     let resultTy, loc = exprExtract expr
     match declosureCall expr [] resultTy loc ctx with
-    | Some expr -> expr, ctx
+    | Some (expr, ctx) -> expr, ctx
     | None -> expr, ctx
   | _ ->
     expr, ctx
@@ -243,12 +243,15 @@ let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
       let capsExpr = buildCapsTuple caps loc
       let capsTy = exprTy capsExpr
 
+      // Count captured variables as occurrences of reference.
+      let capsExpr, ctx = (capsExpr, ctx) |> declosureExpr
+
       // Add caps arg.
       let args = capsExpr :: args
       let calleeTy = tyFun capsTy calleeTy
 
       let callee = HExpr.Ref (ident, HValRef.Var callee, calleeTy, refLoc)
-      hxCallProc callee args resultTy loc |> Some
+      (hxCallProc callee args resultTy loc, ctx) |> Some
     | _ ->
       None
   | _ ->
@@ -263,7 +266,7 @@ let declosureExprCall callee args resultTy loc (ctx: FunTransCtx) =
       (callee, ctx) |> declosureExpr
   let args, ctx = (args, ctx) |> stMap declosureExpr
   match declosureCall callee args resultTy loc ctx with
-  | Some expr ->
+  | Some (expr, ctx) ->
     expr, ctx
   | None ->
     hxCallProc callee args resultTy loc, ctx
