@@ -383,9 +383,11 @@ let parseMatch boxX matchLoc tokens =
     | _, tokens ->
       parseError "Expected 'with'" tokens
 
+  let pipeX = nextX tokens
+
   let rec go acc tokens =
     match parseMatchArm boxX tokens with
-    | arm, (Token.Pipe, _) :: tokens ->
+    | arm, (Token.Pipe, (_, x)) :: tokens when x = pipeX ->
       go (arm :: acc) tokens
     | arm, tokens ->
       List.rev (arm :: acc), tokens
