@@ -188,7 +188,7 @@ let parsePatList boxX tokens =
     let pats, tokens = go [pat] tokens
     APat.ListLit (pats, loc), tokens
   | _ ->
-    failwith "NEVER"
+    parseError "NEVER" tokens
 
 let parsePatAtom boxX tokens: APat * _ list =
   match tokens with
@@ -215,7 +215,7 @@ let parsePatAtom boxX tokens: APat * _ list =
   | (Token.BracketL, _) :: _ ->
     parsePatList boxX tokens
   | _ ->
-    failwith "Never"
+    parseError "NEVER" tokens
 
 /// pat-nav = pat-atom ( '.' ident )?
 let parsePatNav boxX tokens =
@@ -331,7 +331,7 @@ let parseThenCl boxX tokens =
   | (Token.Then, _) as t :: tokens when nextInside boxX [t] ->
     parseExpr boxX tokens
   | _ ->
-    failwithf "Expected 'then' but %A" tokens
+    parseError "Expected 'then'" tokens
 
 let parseElseCl boxX ifLoc tokens =
   let nextInside = nextInside boxX tokens
@@ -415,7 +415,7 @@ let parseParen boxX tokens =
   | expr, (Token.ParenR, _) :: tokens ->
     expr, tokens
   | _ ->
-    failwithf "Expected ')' %A" tokens
+    parseError "Expected ')'" tokens
 
 let parseAccessModifier tokens =
   match tokens with
@@ -676,7 +676,7 @@ let rec parseBindings boxX tokens =
 let parseSemi boxX tokens =
   match parseBindings boxX tokens with
   | [], _ ->
-    failwithf "Expected an expr but %A" tokens
+    parseError "Expected an expr" tokens
   | [expr], tokens ->
     expr, tokens
   | exprs, tokens ->
@@ -720,5 +720,5 @@ let parseTopLevel tokens =
 let parse (tokens: (Token * Loc) list): AExpr =
   let expr, tokens = parseTopLevel tokens
   if tokens <> [] then
-    failwithf "Expected eof but %A" tokens
+    parseError "Expected eof" tokens
   expr
