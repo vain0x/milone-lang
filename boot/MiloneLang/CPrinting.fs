@@ -444,11 +444,21 @@ struct String file_read_all_text(struct String file_name) {
   }
 
   fseek(fp, 0, SEEK_END);
-  int size = ftell(fp);
+  long size = ftell(fp);
+  if (size < 0) {
+    fclose(fp);
+    fprintf(stderr, "%s", "Couldn't retrieve the file size.");
+    abort();
+  }
   fseek(fp, 0, SEEK_SET);
 
-  char *content = calloc(size + 1, sizeof(char));
-  fread(content, 1, size, fp);
+  char *content = calloc((size_t)size + 1, sizeof(char));
+  size_t read_size = fread(content, 1, (size_t)size, fp);
+  if (read_size != (size_t)size) {
+    fclose(fp);
+    fprintf(stderr, "%s", "Couldn't retrieve the file contents");
+    abort();
+  }
 
   fclose(fp);
   return (struct String){.str = content, .len = size};
