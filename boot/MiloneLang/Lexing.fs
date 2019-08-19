@@ -41,6 +41,7 @@ type TokenKind =
   | IntLit
   | CharLit
   | StrLit
+  | StrLitRaw
   | Op
   | Pun
 
@@ -78,6 +79,10 @@ let strNthStartsWith (i: int) (prefix: string) (s: string): bool =
       && go (pi + 1) (si + 1)
     )
   i + prefix.Length <= s.Length && go 0 i
+
+/// Followed by `"""`?
+let strContainsRawQuotes (i: int) (s: string): bool =
+  strNthStartsWith i "\"\"\"" s
 
 let scanError (acc: ScanAcc, text: string, i: int) =
   (TokenKind.Error, i, i + 1) :: acc, text, i + 1
@@ -174,6 +179,19 @@ let scanStrLit (acc: ScanAcc, text: string, i: int) =
   let kind, endIndex = go (i + 1)
   (kind, i, endIndex) :: acc, text, endIndex
 
+let scanStrLitRaw (acc: ScanAcc, text: string, i: int) =
+  assert (text |> strContainsRawQuotes i)
+  let rec go i =
+    if text |> strContainsRawQuotes i then
+      TokenKind.StrLitRaw, i + 3
+    else if i + 1 < text.Length then
+      go (i + 1)
+    else
+      assert (i = text.Length)
+      TokenKind.Error, i
+  let kind, endIndex = go (i + 3)
+  (kind, i, endIndex) :: acc, text, endIndex
+
 let scanRoot (text: string) =
   let rec go (acc, text, i) =
     let t = acc, text, i
@@ -194,6 +212,8 @@ let scanRoot (text: string) =
       t |> scanIdent |> go
     else if text.[i] = '\'' then
       t |> scanCharLit |> go
+    else if text |> strContainsRawQuotes i then
+      t |> scanStrLitRaw |> go
     else if text.[i] = '"' then
       t |> scanStrLit |> go
     else if text.[i] |> charIsPun then
@@ -360,6 +380,10 @@ let tokenFromStrLit (text: string) l r: Token =
 
   Token.Str value
 
+let tokenFromStrLitRaw (text: string) l r =
+  assert (l + 6 <= r && text |> strContainsRawQuotes l && text |> strContainsRawQuotes (r - 3))
+  Token.Str (text |> strSlice (l + 3) (r - 3))
+
 let recognizeToken kind (text: string) l r =
   match kind with
   | TokenKind.Error ->
@@ -379,6 +403,9 @@ let recognizeToken kind (text: string) l r =
 
   | TokenKind.StrLit ->
     tokenFromStrLit text l r
+
+  | TokenKind.StrLitRaw ->
+    tokenFromStrLitRaw text l r
 
   | TokenKind.Ident ->
     tokenFromIdent text l r
