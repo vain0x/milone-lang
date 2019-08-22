@@ -348,6 +348,36 @@ let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
 
   | _ -> failwithf "Never: Primitives must appear as callee."
 
+/// Tries to *sugar* a match expression to if expression
+/// when `match p with true -> body | false -> alt`.
+let mirifyExprMatchAsIfStmt ctx target arms ty loc =
+  match exprTy target, arms with
+  | Ty.Con (TyCon.Bool, []),
+    [ HPat.Lit (Lit.Bool true, _), HExpr.Lit (Lit.Bool true, _), body;
+      HPat.Lit (Lit.Bool false, _), HExpr.Lit (Lit.Bool true, _), alt ] ->
+      let temp, tempSet, ctx = ctxLetFreshVar ctx "if" ty loc
+      let elseLabelStmt, elseLabel, ctx = ctxFreshLabel ctx "else" loc
+      let endLabelStmt, endLabel, ctx = ctxFreshLabel ctx "end_if" loc
+
+      let target, ctx = mirifyExpr ctx target
+
+      let ctx =
+        ctxAddStmt ctx (MStmt.GotoUnless(target, elseLabel, loc))
+
+      let body, ctx = mirifyExpr ctx body
+      let ctx = ctxAddStmt ctx (tempSet body)
+
+      let ctx =
+        ctxAddStmt ctx (MStmt.Goto(endLabel, loc))
+
+      let ctx = ctxAddStmt ctx elseLabelStmt
+      let alt, ctx = mirifyExpr ctx alt
+      let ctx = ctxAddStmt ctx (tempSet alt)
+      let ctx = ctxAddStmt ctx endLabelStmt
+      Some(temp, ctx)
+
+  | _ -> None
+
 /// Gets if the target must match with any of the patterns.
 let private patsIsCovering pats =
   let rec go pat =
@@ -371,7 +401,7 @@ let private patsIsCovering pats =
 
   List.exists go pats
 
-let private mirifyExprMatch ctx target arms ty loc =
+let private mirifyExprMatchFull ctx target arms ty loc =
   let noLabel = "<NEVER>"
   let temp, tempSet, ctx = mirCtxLetFreshVar ctx "match" ty loc
   let endLabelStmt, endLabel, ctx = mirCtxFreshLabel ctx "end_match" loc
@@ -512,6 +542,11 @@ let private mirifyExprMatch ctx target arms ty loc =
   let ctx = mirCtxAddStmt ctx endLabelStmt
 
   temp, ctx
+
+let private mirifyExprMatch ctx target arms ty loc =
+  match mirifyExprMatchAsIfStmt ctx target arms ty loc with
+  | Some (result, ctx) -> result, ctx
+  | None -> mirifyExprMatchFull ctx target arms ty loc
 
 let private mirifyExprIndex ctx l r _ loc =
   match exprToTy l, exprToTy r with
