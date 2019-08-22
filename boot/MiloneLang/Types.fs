@@ -312,7 +312,6 @@ type Op =
   | App
   /// `::` Cons cell constructor
   | Cons
-    of Ty
   /// `..`
   | Range
   /// `.[ ]`
@@ -578,7 +577,7 @@ type MInit =
   | Indirect
     of MExpr
   | Cons
-    of head:MExpr * tail:MExpr * itemTy:Ty
+    of head:MExpr * tail:MExpr
   | Tuple
     of items:MExpr list
   | Variant

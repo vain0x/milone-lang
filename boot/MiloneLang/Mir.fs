@@ -473,12 +473,12 @@ let mirifyExprCallVariantFun (ctx: MirCtx) serial arg ty loc =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, init, ty, loc))
   temp, ctx
 
-let mirifyExprOpCons ctx l r itemTy listTy loc =
+let mirifyExprOpCons ctx l r listTy loc =
   let _, tempSerial, ctx = ctxFreshVar ctx "list" listTy loc
 
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
-  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Cons (l, r, itemTy), listTy, loc))
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Cons (l, r), listTy, loc))
   MExpr.Ref (tempSerial, listTy, loc), ctx
 
 let mirifyExprTuple ctx items itemTys loc =
@@ -499,8 +499,8 @@ let mirifyExprTuple ctx items itemTys loc =
 
 let mirifyExprOp ctx op l r ty loc =
   match op with
-  | Op.Cons itemTy ->
-    mirifyExprOpCons ctx l r itemTy ty loc
+  | Op.Cons ->
+    mirifyExprOpCons ctx l r ty loc
   | Op.Index ->
     mirifyExprIndex ctx l r ty loc
   | Op.Gt ->

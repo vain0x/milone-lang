@@ -58,7 +58,7 @@ let onExprList items loc =
       hxNil noTy loc
     | item :: items ->
       let item = onExpr item
-      HExpr.Op (Op.Cons noTy, item, go items, noTy, loc)
+      HExpr.Op (Op.Cons, item, go items, noTy, loc)
   go items
 
 /// `let f x : ty = body` ==>

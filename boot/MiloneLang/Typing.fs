@@ -620,7 +620,7 @@ let inferOpCons ctx left right loc listTy =
   let ctx = unifyTy ctx loc listTy (tyList itemTy)
   let left, ctx = inferExpr ctx left itemTy
   let right, ctx = inferExpr ctx right listTy
-  HExpr.Op (Op.Cons itemTy, left, right, listTy, loc), ctx
+  HExpr.Op (Op.Cons, left, right, listTy, loc), ctx
 
 let inferOpRange ctx op left right loc ty =
   let ctx = unifyTy ctx loc ty tyRange

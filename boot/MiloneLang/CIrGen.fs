@@ -542,9 +542,9 @@ let genInitIndirect ctx serial payload ty =
 
   ctx
 
-let genInitCons ctx serial head tail itemTy =
+let genInitCons ctx serial head tail listTy =
   let temp = ctxUniqueName ctx serial
-  let listTy, ctx = cty ctx (tyList itemTy)
+  let listTy, ctx = cty ctx listTy
   let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, listTy, listTy))
 
   // head
@@ -608,8 +608,8 @@ let genStmtLetVal ctx serial init ty =
     genInitBox ctx serial arg
   | MInit.Indirect payload ->
     genInitIndirect ctx serial payload ty
-  | MInit.Cons (head, tail, itemTy) ->
-    genInitCons ctx serial head tail itemTy
+  | MInit.Cons (head, tail) ->
+    genInitCons ctx serial head tail ty
   | MInit.Tuple items ->
     genInitTuple ctx serial items ty
   | MInit.Variant (variantSerial, payloadSerial) ->
