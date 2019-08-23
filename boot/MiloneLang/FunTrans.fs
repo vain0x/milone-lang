@@ -482,7 +482,7 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
       let restArgPat = HPat.Ref ("arg", argSerial, argTy, callLoc)
       restArgPat :: restArgPats, argRef :: restArgs, ctx
     | _ ->
-      failwith "Never: Type error"
+      failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
   let restTy = callee |> exprTy |> appliedTy argLen
   go (arity - argLen) restTy ctx
 

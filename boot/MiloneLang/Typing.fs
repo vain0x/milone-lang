@@ -330,7 +330,7 @@ let inferPatRef (ctx: TyCtx) ident varSerial loc ty =
   HPat.Ref (ident, varSerial, ty, loc), ctx
 
 let inferPatNav (ctx: TyCtx) l r loc ty =
-  failwith "invalid use of nav pattern"
+  failwithf "invalid use of nav pattern %A" (l, r, loc, ty)
 
 let inferPatCall (ctx: TyCtx) callee args loc ty =
   match args with
