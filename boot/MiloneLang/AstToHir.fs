@@ -173,6 +173,12 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     let r, nameCtx = (r, nameCtx) |> onExpr
     HExpr.Op (Op.Index, l, r, noTy, loc), nameCtx
 
+  | AExpr.Uni (UniOp.Neg, arg, loc) ->
+    // Desugar `-x` to `0 - x`.
+    let zero = AExpr.Lit (Lit.Int 0, loc)
+    let expr = AExpr.Bin (Op.Sub, zero, arg, loc)
+    (expr, nameCtx) |> onExpr
+
   | AExpr.Bin (op, l, r, loc) ->
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr

@@ -160,6 +160,10 @@ type AExpr =
     of AExpr * string * Loc
   | Index
     of AExpr * AExpr * Loc
+  /// Unary operation, e.g. `-x`.
+  /// Currently `-` is the only unary operation.
+  | Uni
+    of UniOp * AExpr * Loc
   /// Binary operation, e.g. `x + y`.
   | Bin
     of Op * AExpr * AExpr * Loc
@@ -242,6 +246,12 @@ type OpLevel =
   | Or
   /// `..`
   | Range
+
+/// Unary operators in AST.
+[<RequireQualifiedAccess>]
+type UniOp =
+  /// `-`
+  | Neg
 
 /// Binary operators in AST.
 [<RequireQualifiedAccess>]

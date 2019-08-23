@@ -28,7 +28,8 @@ let tokenRole tokens: bool * bool =
   | (Token.Do, _) :: _
   | (Token.Let, _) :: _
   | (Token.Type, _) :: _
-  | (Token.Open, _) :: _ ->
+  | (Token.Open, _) :: _
+  | (Token.Punct "-", _) :: _ ->
     // It is an expr, not pat.
     true, false
   | _ ->
@@ -38,6 +39,14 @@ let tokenRole tokens: bool * bool =
 let leadsExpr tokens =
   let leadsExpr, _ = tokenRole tokens
   leadsExpr
+
+let leadsArg tokens =
+  match tokens with
+  | (Token.Punct "-", _) :: _ ->
+    false
+
+  | _ ->
+    leadsExpr tokens
 
 let leadsPat tokens =
   let _, leadsPat = tokenRole tokens
@@ -534,19 +543,29 @@ let parseSuffix boxX tokens =
       acc, tokens
   go callee tokens
 
-/// call = suffix ( index )*
+/// call = suffix ( suffix )*
 let parseCall boxX tokens =
   let calleeLoc = nextLoc tokens
   let _, calleeX = calleeLoc
   let insideX = max boxX (calleeX + 1)
   let callee, tokens = parseSuffix boxX tokens
   let rec go acc tokens =
-    if nextInside insideX tokens && leadsExpr tokens then
+    if nextInside insideX tokens && leadsArg tokens then
       let expr, tokens = parseSuffix insideX tokens
       go (AExpr.Bin (Op.App, acc, expr, calleeLoc)) tokens
     else
       acc, tokens
   go callee tokens
+
+/// prefix = '-'? call
+let parsePrefix boxX tokens =
+  match tokens with
+  | (Token.Punct "-", loc) :: tokens ->
+    let arg, tokens = parseCall boxX tokens
+    AExpr.Uni (UniOp.Neg, arg, loc), tokens
+
+  | _ ->
+    parseCall boxX tokens
 
 let parseNextLevelOp level outer tokens =
   match level with
@@ -557,7 +576,7 @@ let parseNextLevelOp level outer tokens =
   | OpLevel.Pipe -> parseOp OpLevel.Cons outer tokens
   | OpLevel.Cons -> parseOp OpLevel.Add outer tokens
   | OpLevel.Add -> parseOp OpLevel.Mul outer tokens
-  | OpLevel.Mul -> parseCall outer tokens
+  | OpLevel.Mul -> parsePrefix outer tokens
 
 let rec parseOps level boxX expr tokens =
   let next expr op opLoc tokens =
