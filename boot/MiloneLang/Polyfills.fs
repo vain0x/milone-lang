@@ -37,6 +37,20 @@ let listMap f xs =
       go (f x :: acc) xs
   go [] xs
 
+let listTruncate count xs =
+  let rec go count xs =
+    match xs with
+    | [] ->
+      []
+
+    | _ when count <= 0 ->
+      []
+
+    | x :: xs ->
+      x :: go (count - 1) xs
+
+  go count xs
+
 let intMin (x: int) (y: int): int =
   if x > y then y else x
 
