@@ -102,14 +102,15 @@ let ctxAddFunDecl (ctx: Ctx) sTy tTy =
 
 let ctxAddListDecl (ctx: Ctx) itemTy =
   let listTy = tyList itemTy
-  let itemTy, ctx = cty ctx itemTy
   let ident, ctx = ctxUniqueTyName ctx listTy
   let selfTy = CTy.Ptr (CTy.Struct ident)
+  let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add listTy selfTy }
+
+  let itemTy, ctx = cty ctx itemTy
   let fields = ["head", itemTy; "tail", selfTy]
   let ctx: Ctx =
     { ctx with
         TySerial = ctx.TySerial + 1
-        TyEnv = ctx.TyEnv |> Map.add listTy selfTy
         Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
   selfTy, ctx
