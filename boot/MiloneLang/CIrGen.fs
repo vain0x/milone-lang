@@ -10,7 +10,6 @@ type Ctx =
   {
     Vars: Map<int, VarDef>
     VarUniqueNames: Map<int, string>
-    TySerial: int
     TyEnv: Map<Ty, CTy>
     Tys: Map<int, TyDef>
     TyUniqueNames: Map<Ty, string>
@@ -49,7 +48,6 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): Ctx =
   {
     Vars = mirCtx.Vars
     VarUniqueNames = varNames
-    TySerial = 0
     TyEnv = Map.empty
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
@@ -91,7 +89,6 @@ let ctxAddFunDecl (ctx: Ctx) sTy tTy =
   let fields = ["fun", CTy.FunPtr (envTy :: argTys, resultTy); "env", envTy]
   let ctx: Ctx =
     { ctx with
-        TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add funTy selfTy
         Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
@@ -110,7 +107,6 @@ let ctxAddListDecl (ctx: Ctx) itemTy =
   let fields = ["head", itemTy; "tail", selfTy]
   let ctx: Ctx =
     { ctx with
-        TySerial = ctx.TySerial + 1
         Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
   selfTy, ctx
@@ -130,7 +126,6 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
   let tupleTyIdent, ctx = ctxUniqueTyName ctx tupleTy
   let ctx: Ctx =
     { ctx with
-        TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct tupleTyIdent)
         Decls = CDecl.Struct (tupleTyIdent, fields, []) :: ctx.Decls
     }
