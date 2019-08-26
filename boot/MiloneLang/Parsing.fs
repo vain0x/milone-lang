@@ -29,7 +29,7 @@ let tokenRole tokens: bool * bool =
   | (Token.Let, _) :: _
   | (Token.Type, _) :: _
   | (Token.Open, _) :: _
-  | (Token.Punct "-", _) :: _ ->
+  | (Token.Minus, _) :: _ ->
     // It is an expr, not pat.
     true, false
   | _ ->
@@ -42,7 +42,7 @@ let leadsExpr tokens =
 
 let leadsArg tokens =
   match tokens with
-  | (Token.Punct "-", _) :: _ ->
+  | (Token.Minus, _) :: _ ->
     false
 
   | _ ->
@@ -124,7 +124,7 @@ let parseTyPrefix boxX tokens =
 let parseTyTuple boxX tokens =
   let rec go acc opLoc tokens =
     match tokens with
-    | (Token.Punct "*", opLoc) :: tokens when nextInside boxX tokens ->
+    | (Token.Star, opLoc) :: tokens when nextInside boxX tokens ->
       let second, tokens = parseTyPrefix boxX tokens
       go (second :: acc) opLoc tokens
     | _ ->
@@ -183,7 +183,7 @@ let parsePatList boxX tokens =
     match tokens with
     | (Token.BracketR, _) :: tokens ->
       List.rev patAcc, tokens
-    | (Token.Punct ";", _) :: tokens ->
+    | (Token.Semi, _) :: tokens ->
       let pat, tokens = parsePat boxX tokens
       go (pat :: patAcc) tokens
     | _ ->
@@ -263,7 +263,7 @@ let parsePatCall boxX tokens =
 /// pat-cons = pat-call ( '::' pat-cons )?
 let parsePatCons boxX tokens =
   match parsePatCall boxX tokens with
-  | head, (Token.Punct "::", loc) :: tokens ->
+  | head, (Token.ColonColon, loc) :: tokens ->
     let tail, tokens = parsePatCons boxX tokens
     APat.Cons (head, tail, loc), tokens
   | pat, tokens ->
@@ -282,7 +282,7 @@ let parsePatAnno boxX tokens =
 let parsePatTuple boxX tokens =
   let rec go acc tokens =
     match tokens with
-    | (Token.Punct ",", _) :: tokens when nextInside boxX tokens ->
+    | (Token.Comma, _) :: tokens when nextInside boxX tokens ->
       let second, tokens = parsePatAnno boxX tokens
       go (second :: acc) tokens
     | _ ->
@@ -440,7 +440,7 @@ let parseLet boxX letLoc tokens =
   let patsX = max boxX (letX + 1)
   let pat, tokens =
     match parsePat patsX tokens with
-    | pat, (Token.Punct "=", _) :: tokens ->
+    | pat, (Token.Eq, _) :: tokens ->
       pat, tokens
     | _ ->
       parseError "Missing '='" tokens
@@ -464,7 +464,7 @@ let parseTyDef boxX keywordLoc tokens =
   match tokens with
   | _ when not (nextInside boxX tokens) ->
     parseError "Expected type name" tokens
-  | (Token.Ident tyIdent, _) :: (Token.Punct "=", _) :: tokens ->
+  | (Token.Ident tyIdent, _) :: (Token.Eq, _) :: tokens ->
     match parseTyDefBody (keywordX + 1) tokens with
     | ATyDef.Synonym ty, tokens ->
       AExpr.TySynonym (tyIdent, ty, keywordLoc), tokens
@@ -560,7 +560,7 @@ let parseCall boxX tokens =
 /// prefix = '-'? call
 let parsePrefix boxX tokens =
   match tokens with
-  | (Token.Punct "-", loc) :: tokens ->
+  | (Token.Minus, loc) :: tokens ->
     let arg, tokens = parseCall boxX tokens
     AExpr.Uni (UniOp.Neg, arg, loc), tokens
 
@@ -588,37 +588,37 @@ let rec parseOps level boxX expr tokens =
     let expr = AExpr.Bin (op, expr, second, opLoc)
     parseOps level boxX expr tokens
   match level, tokens with
-  | OpLevel.Range, (Token.Punct "..", opLoc) :: tokens ->
+  | OpLevel.Range, (Token.DotDot, opLoc) :: tokens ->
     next expr Op.Range opLoc tokens
-  | OpLevel.Or, (Token.Punct "||", opLoc) :: tokens ->
+  | OpLevel.Or, (Token.PipePipe, opLoc) :: tokens ->
     next expr Op.Or opLoc tokens
-  | OpLevel.And, (Token.Punct "&&", opLoc) :: tokens ->
+  | OpLevel.And, (Token.AmpAmp, opLoc) :: tokens ->
     next expr Op.And opLoc tokens
-  | OpLevel.Cmp, (Token.Punct "=", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.Eq, opLoc) :: tokens ->
     next expr Op.Eq opLoc tokens
-  | OpLevel.Cmp, (Token.Punct "<>", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.LtGt, opLoc) :: tokens ->
     next expr Op.Ne opLoc tokens
-  | OpLevel.Cmp, (Token.Punct "<", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.Lt, opLoc) :: tokens ->
     next expr Op.Lt opLoc tokens
-  | OpLevel.Cmp, (Token.Punct "<=", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.LtEq, opLoc) :: tokens ->
     next expr Op.Le opLoc tokens
-  | OpLevel.Cmp, (Token.Punct ">", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.Gt, opLoc) :: tokens ->
     next expr Op.Gt opLoc tokens
-  | OpLevel.Cmp, (Token.Punct ">=", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.GtEq, opLoc) :: tokens ->
     next expr Op.Ge opLoc tokens
-  | OpLevel.Pipe, (Token.Punct "|>", opLoc) :: tokens ->
+  | OpLevel.Pipe, (Token.App, opLoc) :: tokens ->
     next expr Op.Pipe opLoc tokens
-  | OpLevel.Cons, (Token.Punct "::", opLoc) :: tokens ->
+  | OpLevel.Cons, (Token.ColonColon, opLoc) :: tokens ->
     nextR expr (Op.Cons noTy) opLoc tokens
-  | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
+  | OpLevel.Add, (Token.Plus, opLoc) :: tokens ->
     next expr Op.Add opLoc tokens
-  | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->
+  | OpLevel.Add, (Token.Minus, opLoc) :: tokens ->
     next expr Op.Sub opLoc tokens
-  | OpLevel.Mul, (Token.Punct "*", opLoc) :: tokens ->
+  | OpLevel.Mul, (Token.Star, opLoc) :: tokens ->
     next expr Op.Mul opLoc tokens
-  | OpLevel.Mul, (Token.Punct "/", opLoc) :: tokens ->
+  | OpLevel.Mul, (Token.Slash, opLoc) :: tokens ->
     next expr Op.Div opLoc tokens
-  | OpLevel.Mul, (Token.Punct "%", opLoc) :: tokens ->
+  | OpLevel.Mul, (Token.Percent, opLoc) :: tokens ->
     next expr Op.Mod opLoc tokens
   | _ ->
     expr, tokens
@@ -635,7 +635,7 @@ let parseTerm boxX tokens =
 let parseTuple boxX tokens =
   let rec go acc tokens =
     match tokens with
-    | (Token.Punct ",", _) :: tokens when nextInside boxX tokens ->
+    | (Token.Comma, _) :: tokens when nextInside boxX tokens ->
       let second, tokens = parseTerm boxX tokens
       go (second :: acc) tokens
     | tokens ->
@@ -679,7 +679,7 @@ let parseBinding boxX tokens =
 let rec parseBindings boxX tokens =
   let rec go acc alignX tokens =
     match tokens with
-    | (Token.Punct ";", _) :: tokens
+    | (Token.Semi, _) :: tokens
       when nextX tokens >= alignX ->
       let expr, tokens = parseBinding boxX tokens
       go (expr :: acc) alignX tokens
@@ -710,7 +710,7 @@ let parseModule (boxX: int) tokens =
   match tokens with
   | (Token.Module, (_, moduleX))
     :: (Token.Ident _, _)
-    :: (Token.Punct "=", _) :: tokens ->
+    :: (Token.Eq, _) :: tokens ->
     parseExpr (moduleX + 1) tokens
   | _ ->
     parseExpr boxX tokens

@@ -12,6 +12,7 @@ type Diag =
 /// Word or punctuation in source code.
 [<RequireQualifiedAccess>]
 type Token =
+  | Error
   | Bool
     of bool
   | Int
@@ -40,19 +41,42 @@ type Token =
   | BracketL
   /// `]`
   | BracketR
-  /// `:`
-  | Colon
-  /// `.`
-  | Dot
-  /// `..`
-  | Range
-  /// `|`
-  | Pipe
+  /// `&`
+  | Amp
+  /// `&&`
+  | AmpAmp
   /// `->`
   | Arrow
-  /// Punctuation.
-  | Punct
-    of string
+  /// `|>`
+  | App
+  | Colon
+  | ColonColon
+  | Comma
+  | Dot
+  | DotDot
+  /// `=`
+  | Eq
+  /// `>`
+  | Gt
+  /// `>=`
+  | GtEq
+  /// `<`
+  | Lt
+  /// `<=`
+  | LtEq
+  /// `<>`
+  | LtGt
+  | Minus
+  | Percent
+  /// `|`
+  | Pipe
+  /// `||`
+  | PipePipe
+  | Plus
+  /// `;`
+  | Semi
+  | Star
+  | Slash
   | Private
   | Internal
   | Public

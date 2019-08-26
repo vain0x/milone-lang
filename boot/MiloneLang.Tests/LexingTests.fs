@@ -14,7 +14,7 @@ let tokenizeMainEmpty () =
       Token.Ident "main"
       Token.ParenL
       Token.ParenR
-      Token.Punct "="
+      Token.Eq
       Token.Int 0
     ]
   source
@@ -34,28 +34,13 @@ let main _ =
       Token.Let
       Token.Ident "main"
       Token.Ident "_"
-      Token.Punct "="
+      Token.Eq
       Token.Int 1
-      Token.Punct "-"
+      Token.Minus
       Token.Int 1
     ]
   source
   |> Lexing.tokenize |> List.map fst
-  |> is expected
-
-[<Fact>]
-let tokenizeOps () =
-  let unwrapPunct token =
-    match token with
-    | Token.Punct op -> Some op
-    | _ -> None
-  let source = """+ - <- :,-,:"""
-  let expected = ["+"; "-"; "<-"; ":,-,:"]
-  source
-  |> Lexing.tokenize
-  |> List.unzip
-  |> fst
-  |> List.choose unwrapPunct
   |> is expected
 
 [<Fact>]
@@ -97,7 +82,7 @@ let main () =
         (1, 9)
       Token.ParenR,
         (1, 10)
-      Token.Punct "=",
+      Token.Eq,
         (1, 12)
       Token.Ident "f",
         (2, 2)
