@@ -323,7 +323,7 @@ let genExprVariant ctx serial ty =
   let tag = CExpr.Ref (ctxUniqueName ctx serial)
   CExpr.Init (["tag", tag], ty), ctx
 
-let genExprOpAsCall ctx ident l r =
+let genExprBinAsCall ctx ident l r =
   let l, ctx = genExpr ctx l
   let r, ctx = genExpr ctx r
   let callExpr = CExpr.Call (CExpr.Ref ident, [l; r])
@@ -355,12 +355,12 @@ let genExprUniOp ctx op arg ty _ =
   | MUniOp.ListTail ->
     CExpr.Arrow (arg, "tail"), ctx
 
-let genExprOp ctx op l r =
+let genExprBin ctx op l r =
   match op with
   | MOp.StrAdd ->
-    genExprOpAsCall ctx "str_add" l r
+    genExprBinAsCall ctx "str_add" l r
   | MOp.StrCmp ->
-    genExprOpAsCall ctx "str_cmp" l r
+    genExprBinAsCall ctx "str_cmp" l r
   | MOp.StrIndex ->
     let l, ctx = genExpr ctx l
     let r, ctx = genExpr ctx r
@@ -404,8 +404,8 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     genExprVariant ctx serial ty
   | MExpr.UniOp (op, arg, ty, loc) ->
     genExprUniOp ctx op arg ty loc
-  | MExpr.Op (op, l, r, _, _) ->
-    genExprOp ctx op l r
+  | MExpr.Bin (op, l, r, _, _) ->
+    genExprBin ctx op l r
   | MExpr.Prim _ ->
     failwith "Never: Primitives must be used as callee"
 

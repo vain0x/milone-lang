@@ -553,7 +553,7 @@ type MExpr =
     of tySerial:int * serial:int * Ty * Loc
   | UniOp
     of MUniOp * arg:MExpr * resultTy:Ty * Loc
-  | Op
+  | Bin
     of MOp * left:MExpr * right:MExpr * resultTy:Ty * Loc
 
 /// Variable initializer in mid-level IR.

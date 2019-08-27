@@ -284,7 +284,7 @@ let mexprExtract expr =
   | MExpr.Proc (_, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.UniOp (_, _, ty, loc) -> ty, loc
-  | MExpr.Op (_, _, _, ty, loc) -> ty, loc
+  | MExpr.Bin (_, _, _, ty, loc) -> ty, loc
 
 let mexprTy expr =
   let ty, _ = mexprExtract expr

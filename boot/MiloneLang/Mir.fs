@@ -103,19 +103,19 @@ let projExpr expr index resultTy loc =
   MExpr.UniOp (MUniOp.Proj index, expr, resultTy, loc)
 
 let strAddExpr ctx _op l r (_, loc) =
-  MExpr.Op (MOp.StrAdd, l, r, tyStr, loc), ctx
+  MExpr.Bin (MOp.StrAdd, l, r, tyStr, loc), ctx
 
 /// x op y ==> `x op y` if `x : {scalar}`
 /// where scalar types are int, char, etc.
 /// C language supports all operators.
 let opScalarExpr ctx op l r (ty, loc) =
-  MExpr.Op (op, l, r, ty, loc), ctx
+  MExpr.Bin (op, l, r, ty, loc), ctx
 
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let strCmpExpr ctx op l r (ty, loc) =
-  let strCmpExpr = MExpr.Op (MOp.StrCmp, l, r, tyInt, loc)
+  let strCmpExpr = MExpr.Bin (MOp.StrCmp, l, r, tyInt, loc)
   let zeroExpr = MExpr.Lit (Lit.Int 0, loc)
-  let opExpr = MExpr.Op (op, strCmpExpr, zeroExpr, ty, loc)
+  let opExpr = MExpr.Bin (op, strCmpExpr, zeroExpr, ty, loc)
   opExpr, ctx
 
 /// Generates a comparison expression.
@@ -165,7 +165,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
     // Compare tags.
     let lTagExpr = MExpr.UniOp (MUniOp.Tag, expr, tyInt, loc)
     let rTagExpr = MExpr.Ref (serial, tyInt, loc)
-    let eqExpr = MExpr.Op (MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
+    let eqExpr = MExpr.Bin (MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
     let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
@@ -179,7 +179,7 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
     // Compare tags.
     let lTagExpr = MExpr.UniOp (MUniOp.Tag, expr, tyInt, loc)
     let rTagExpr = MExpr.Ref (serial, tyInt, loc)
-    let eqExpr = MExpr.Op (MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
+    let eqExpr = MExpr.Bin (MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
     let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
     let ctx = ctxAddStmt ctx gotoStmt
 
@@ -418,7 +418,7 @@ let mirifyExprIndex ctx l r _ loc =
   | Ty.Con (TyCon.Str, _), Ty.Con (TyCon.Int, _) ->
     let l, ctx = mirifyExpr ctx l
     let r, ctx = mirifyExpr ctx r
-    MExpr.Op (MOp.StrIndex, l, r, tyChar, loc), ctx
+    MExpr.Bin (MOp.StrIndex, l, r, tyChar, loc), ctx
   | Ty.Con (TyCon.Str, _), Ty.Con (TyCon.Range, _) ->
     let rl, rr =
       match r with
