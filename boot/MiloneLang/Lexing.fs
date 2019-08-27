@@ -297,8 +297,6 @@ let tokenFromOp (text: string) l r: Token =
     Token.AmpAmp
   | "->" ->
     Token.Arrow
-  | "|>" ->
-    Token.App
   | ":" ->
     Token.Colon
   | "::" ->
@@ -327,6 +325,8 @@ let tokenFromOp (text: string) l r: Token =
     Token.Percent
   | "|" ->
     Token.Pipe
+  | "|>" ->
+    Token.PipeGt
   | "||" ->
     Token.PipePipe
   | "+" ->

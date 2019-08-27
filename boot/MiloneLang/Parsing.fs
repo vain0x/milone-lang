@@ -606,7 +606,7 @@ let rec parseOps level boxX expr tokens =
     next expr Op.Gt opLoc tokens
   | OpLevel.Cmp, (Token.GtEq, opLoc) :: tokens ->
     next expr Op.Ge opLoc tokens
-  | OpLevel.Pipe, (Token.App, opLoc) :: tokens ->
+  | OpLevel.Pipe, (Token.PipeGt, opLoc) :: tokens ->
     next expr Op.Pipe opLoc tokens
   | OpLevel.Cons, (Token.ColonColon, opLoc) :: tokens ->
     nextR expr (Op.Cons noTy) opLoc tokens

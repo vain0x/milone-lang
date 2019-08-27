@@ -3,13 +3,13 @@ module rec MiloneLang.Types
 /// Location = (rowIndex, columnIndex).
 type Loc = int * int
 
-/// Diagnostic; something bad in source code in terms of language server protocol.
+/// Diagnostic; something bad in source code.
 [<RequireQualifiedAccess>]
 type Diag =
   | Err
     of string * Loc
 
-/// Word or punctuation in source code.
+/// Words and punctuations in source code.
 [<RequireQualifiedAccess>]
 type Token =
   | Error
@@ -47,8 +47,6 @@ type Token =
   | AmpAmp
   /// `->`
   | Arrow
-  /// `|>`
-  | App
   | Colon
   | ColonColon
   | Comma
@@ -70,6 +68,8 @@ type Token =
   | Percent
   /// `|`
   | Pipe
+  /// `|>`
+  | PipeGt
   /// `||`
   | PipePipe
   | Plus
