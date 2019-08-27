@@ -634,10 +634,10 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     | _ ->
       keepUnresolved ()
 
-  | HExpr.Op (op, l, r, ty, loc) ->
+  | HExpr.Bin (op, l, r, ty, loc) ->
     let l, ctx = (l, ctx) |> onExpr
     let r, ctx = (r, ctx) |> onExpr
-    HExpr.Op (op, l, r, ty, loc), ctx
+    HExpr.Bin (op, l, r, ty, loc), ctx
 
   | HExpr.Inf (op, items, ty, loc) ->
     // Necessary in case of annotation expression.

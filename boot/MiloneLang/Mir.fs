@@ -422,7 +422,7 @@ let mirifyExprIndex ctx l r _ loc =
   | Ty.Con (TyCon.Str, _), Ty.Con (TyCon.Range, _) ->
     let rl, rr =
       match r with
-      | HExpr.Op (Op.Range, rl, rr, _, _) -> rl, rr
+      | HExpr.Bin (Op.Range, rl, rr, _, _) -> rl, rr
       | _ -> failwith "Never"
     let l, ctx = mirifyExpr ctx l
     let rl, ctx = mirifyExpr ctx rl
@@ -497,16 +497,16 @@ let mirifyExprTuple ctx items itemTys loc =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Tuple items, ty, loc))
   MExpr.Ref (tempSerial, ty, loc), ctx
 
-let mirifyExprOp ctx op l r ty loc =
+let mirifyExprBin ctx op l r ty loc =
   match op with
   | Op.Cons ->
     mirifyExprOpCons ctx l r ty loc
   | Op.Index ->
     mirifyExprIndex ctx l r ty loc
   | Op.Gt ->
-    mirifyExprOp ctx Op.Lt r l ty loc
+    mirifyExprBin ctx Op.Lt r l ty loc
   | Op.Ge ->
-    mirifyExprOp ctx Op.Le r l ty loc
+    mirifyExprBin ctx Op.Le r l ty loc
   | Op.Eq
   | Op.Ne
   | Op.Lt
@@ -670,8 +670,8 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprRef ctx serial ty loc
   | HExpr.Match (target, arms, ty, loc) ->
     mirifyExprMatch ctx target arms ty loc
-  | HExpr.Op (op, l, r, ty, loc) ->
-    mirifyExprOp ctx op l r ty loc
+  | HExpr.Bin (op, l, r, ty, loc) ->
+    mirifyExprBin ctx op l r ty loc
   | HExpr.Inf (infOp, args, ty, loc) ->
     mirifyExprInf ctx infOp args ty loc
   | HExpr.Let (pat, body, next, _, loc) ->

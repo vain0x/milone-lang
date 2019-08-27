@@ -451,7 +451,7 @@ type HExpr =
   | Nav
     of subject:HExpr * message:string * Ty * Loc
   /// Binary operation, e.g. `x + y`.
-  | Op
+  | Bin
     of Op * HExpr * HExpr * Ty * Loc
   /// Operation with infinite arguments.
   | Inf

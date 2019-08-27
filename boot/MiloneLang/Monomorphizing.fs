@@ -282,10 +282,10 @@ let rec monifyExpr (expr, ctx) =
     let subject, ctx = monifyExpr (subject, ctx)
     HExpr.Nav (subject, message, ty, loc), ctx
 
-  | HExpr.Op (op, l, r, ty, loc) ->
+  | HExpr.Bin (op, l, r, ty, loc) ->
     let l, ctx = (l, ctx) |> monifyExpr
     let r, ctx = (r, ctx) |> monifyExpr
-    HExpr.Op (op, l, r, ty, loc), ctx
+    HExpr.Bin (op, l, r, ty, loc), ctx
 
   | HExpr.Inf (InfOp.Closure funSerial, args, useSiteTy, loc) ->
     let funSerial, ctx = ctxProcessVarRef ctx funSerial useSiteTy
