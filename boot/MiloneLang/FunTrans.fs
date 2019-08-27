@@ -133,7 +133,7 @@ let hoistMain expr =
     match expr with
     | HExpr.LetFun ("main", serial, args, body, next, ty, loc) ->
       let makeMain rest =
-        HExpr.LetFun ("main", serial, args, hxAndThen [rest; body] loc, next, ty, loc)
+        HExpr.LetFun ("main", serial, args, hxSemi [rest; body] loc, next, ty, loc)
       next, makeMain
 
     | HExpr.Let (pat, init, next, ty, loc) ->
@@ -144,7 +144,7 @@ let hoistMain expr =
       let next, f = go next
       HExpr.LetFun (ident, serial, args, body, next, ty, loc), f
 
-    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+    | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
       let rec goLast exprs =
         match exprs with
         | [] ->
@@ -156,7 +156,7 @@ let hoistMain expr =
           let exprs, f = goLast exprs
           expr :: exprs, f
       let exprs, f = goLast exprs
-      HExpr.Inf (InfOp.AndThen, exprs, ty, loc), f
+      HExpr.Inf (InfOp.Semi, exprs, ty, loc), f
     | _ ->
       expr, id
 

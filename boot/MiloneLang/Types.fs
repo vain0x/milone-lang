@@ -396,7 +396,7 @@ type InfOp =
   /// Type annotation `x : 'x`.
   | Anno
   /// `x; y`
-  | AndThen
+  | Semi
   /// Direct call to procedure or primitive.
   | CallProc
   /// Indirect call to closure.

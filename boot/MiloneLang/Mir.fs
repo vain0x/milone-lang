@@ -534,7 +534,7 @@ let mirifyExprOp ctx op l r ty loc =
     | _ ->
       failwithf "unimpl"
 
-let mirifyExprAndThen ctx exprs =
+let mirifyExprSemi ctx exprs =
   // Discard non-last expressions.
   let exprs, ctx = mirifyExprs ctx exprs
   List.last exprs, ctx
@@ -592,8 +592,8 @@ let mirifyExprInf ctx infOp args ty loc =
     MExpr.Default (tyUnit, loc), ctx
   | InfOp.Tuple, _, Ty.Con (TyCon.Tuple, itemTys) ->
     mirifyExprTuple ctx args itemTys loc
-  | InfOp.AndThen, _, _ ->
-    mirifyExprAndThen ctx args
+  | InfOp.Semi, _, _ ->
+    mirifyExprSemi ctx args
   | InfOp.CallProc, callee :: args, _ ->
     mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ ->

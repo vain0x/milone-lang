@@ -195,7 +195,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.Semi (exprs, loc) ->
     let exprs, nameCtx = (exprs, nameCtx) |> stMap onExpr
-    HExpr.Inf (InfOp.AndThen, exprs, noTy, loc), nameCtx
+    HExpr.Inf (InfOp.Semi, exprs, noTy, loc), nameCtx
 
   | AExpr.Let (pat, init, next, loc) ->
     let pat, nameCtx = (pat, nameCtx) |> onPat

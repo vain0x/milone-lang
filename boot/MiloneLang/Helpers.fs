@@ -312,8 +312,8 @@ let hxIndex l r ty loc =
 let hxAnno expr ty loc =
   HExpr.Inf (InfOp.Anno, [expr], ty, loc)
 
-let hxAndThen items loc =
-  HExpr.Inf (InfOp.AndThen, items, exprTy (List.last items), loc)
+let hxSemi items loc =
+  HExpr.Inf (InfOp.Semi, items, exprTy (List.last items), loc)
 
 let hxCallProc callee args resultTy loc =
   HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)

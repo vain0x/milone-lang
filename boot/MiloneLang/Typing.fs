@@ -752,9 +752,9 @@ let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let inferAndThen ctx loc exprs lastTy =
+let inferSemi ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
-  hxAndThen (List.rev exprs) loc, ctx
+  hxSemi (List.rev exprs) loc, ctx
 
 let inferExprTyDecl ctx ident tySerial tyDecl loc =
   HExpr.TyDef (ident, tySerial, tyDecl, loc), ctx
@@ -783,8 +783,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferTuple ctx items loc ty
   | HExpr.Inf (InfOp.Anno, [expr], annoTy, loc) ->
     inferAnno ctx expr annoTy ty loc
-  | HExpr.Inf (InfOp.AndThen, exprs, _, loc) ->
-    inferAndThen ctx loc exprs ty
+  | HExpr.Inf (InfOp.Semi, exprs, _, loc) ->
+    inferSemi ctx loc exprs ty
   | HExpr.Let (pat, body, next, _, loc) ->
     inferLetVal ctx pat body next ty loc
   | HExpr.LetFun (calleeName, oldSerial, args, body, next, _, loc) ->
