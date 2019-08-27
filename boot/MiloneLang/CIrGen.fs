@@ -406,8 +406,6 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     genExprUniOp ctx op arg ty loc
   | MExpr.Bin (op, l, r, _, _) ->
     genExprBin ctx op l r
-  | MExpr.Prim _ ->
-    failwith "Never: Primitives must be used as callee"
 
 let genExprCallPrintfn ctx format args =
   // Insert implicit cast from str to str ptr.
@@ -455,30 +453,42 @@ let genExprCallString arg argTy ctx =
   | _ ->
     failwith "Never: Type Error `int`"
 
-let genExprCallProc ctx callee args ty =
-  match callee, args with
-  | MExpr.Prim (HPrim.NativeFun (nativeFunIdent, _), _, _), args ->
+let genExprCallPrim ctx prim args primTy resultTy =
+  match prim, args, primTy with
+  | HPrim.NativeFun (nativeFunIdent, _), _, _ ->
     let args, ctx = genExprList ctx args
     CExpr.Call (CExpr.Ref nativeFunIdent, args), ctx
-  | MExpr.Prim (HPrim.Printfn, _, _), (MExpr.Lit (Lit.Str format, _)) :: args ->
+
+  | HPrim.Printfn, (MExpr.Lit (Lit.Str format, _)) :: args, _ ->
     genExprCallPrintfn ctx format args
-  | MExpr.Prim (HPrim.Assert, _, _), args ->
+
+  | HPrim.Assert, _, _ ->
     let callee = CExpr.Ref "milone_assert"
     let args, ctx = genExprList ctx args
     let assertCall = CExpr.Call (callee, args)
     let ctx = ctxAddStmt ctx (CStmt.Expr assertCall)
-    genExprDefault ctx ty
-  | MExpr.Prim (HPrim.StrSlice, _, _), args ->
+    genExprDefault ctx resultTy
+
+  | HPrim.StrSlice, _, _ ->
     let callee = CExpr.Ref "str_slice"
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
-  | MExpr.Prim (HPrim.Char, _, _), [arg] ->
+
+  | HPrim.Char, [arg], _ ->
     let arg, ctx = genExpr ctx arg
     CExpr.Cast (arg, CTy.Char), ctx
-  | MExpr.Prim (HPrim.Int, Ty.Con (TyCon.Fun, [argTy; _]), _), [arg] ->
+
+  | HPrim.Int, [arg], Ty.Con (TyCon.Fun, [argTy; _]) ->
     genExprCallInt arg argTy ctx
-  | MExpr.Prim (HPrim.String, Ty.Con (TyCon.Fun, [argTy; _]), _), [arg] ->
+
+  | HPrim.String, [arg], Ty.Con (TyCon.Fun, [argTy; _]) ->
     genExprCallString arg argTy ctx
+
+  | _ ->
+    failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
+
+let genExprCallProc ctx callee args ty =
+  match callee, args with
   | _ ->
     let callee, ctx = genExpr ctx callee
     let args, ctx = genExprList ctx args
@@ -590,6 +600,9 @@ let genStmtLetVal ctx serial init ty =
     genInitExprCore ctx serial None ty
   | MInit.Expr expr ->
     let expr, ctx = genExpr ctx expr
+    genInitExprCore ctx serial (Some expr) ty
+  | MInit.CallPrim (prim, args, calleeTy) ->
+    let expr, ctx = genExprCallPrim ctx prim args calleeTy ty
     genInitExprCore ctx serial (Some expr) ty
   | MInit.CallProc (callee, args, _) ->
     let expr, ctx = genExprCallProc ctx callee args ty

@@ -544,8 +544,6 @@ type MExpr =
     of Ty * Loc
   | Ref
     of serial:int * Ty * Loc
-  | Prim
-    of HPrim * Ty * Loc
   /// Procedure
   | Proc
     of serial:int * Ty * Loc
@@ -563,7 +561,10 @@ type MInit =
   | UnInit
   | Expr
     of MExpr
-  /// Direct call to procedure or primitive.
+  /// Call to primitive.
+  | CallPrim
+    of HPrim * args:MExpr list * primTy:Ty
+  /// Direct call to procedure.
   | CallProc
     of callee:MExpr * args:MExpr list * calleeTy:Ty
   /// Indirect call to closure.

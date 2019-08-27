@@ -255,8 +255,8 @@ let mirifyExprRef (ctx: MirCtx) valRef ty loc =
       MExpr.Proc (serial, ty, loc), ctx
     | _ ->
       MExpr.Ref (serial, ty, loc), ctx
-  | HValRef.Prim prim ->
-    MExpr.Prim (prim, ty, loc), ctx
+  | HValRef.Prim _ ->
+    failwithf "Never: Primitives must appear as callee."
 
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
@@ -429,9 +429,8 @@ let mirifyExprIndex ctx l r _ loc =
     let rr, ctx = mirifyExpr ctx rr
     let temp, tempSerial, ctx = ctxFreshVar ctx "slice" tyStr loc
     let funTy = tyFun tyStr (tyFun tyInt (tyFun tyInt tyStr))
-    let strSliceRef = MExpr.Prim (HPrim.StrSlice, funTy, loc)
-    let callInit = MInit.CallProc (strSliceRef, [l; rl; rr], funTy)
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, callInit, tyStr, loc))
+    let callPrim = MInit.CallPrim (HPrim.StrSlice, [l; rl; rr], funTy)
+    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, callPrim, tyStr, loc))
     temp, ctx
   | _ ->
     failwith "unimpl non-string indexing"
@@ -541,12 +540,20 @@ let mirifyExprSemi ctx exprs =
 
 let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =
-    let calleeTy = exprTy callee
-    let callee, ctx = mirifyExpr ctx callee
-    let (args, ctx) = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
-    let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.CallProc (callee, args, calleeTy), ty, loc))
-    temp, ctx
+    match callee with
+    | HExpr.Ref (_, HValRef.Prim prim, _, _) ->
+      let primTy = exprTy callee
+      let (args, ctx) = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+      let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
+      let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.CallPrim (prim, args, primTy), ty, loc))
+      temp, ctx
+    | _ ->
+      let calleeTy = exprTy callee
+      let callee, ctx = mirifyExpr ctx callee
+      let (args, ctx) = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+      let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
+      let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.CallProc (callee, args, calleeTy), ty, loc))
+      temp, ctx
   match args with
   | [arg] ->
     match callee with
