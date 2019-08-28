@@ -175,7 +175,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
 
 let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
   match ctx.Vars |> Map.find serial, args with
-  | VarDef.Variant (_, _, _, argTy, _, _), [arg] ->
+  | VarDef.Variant (_, _, _, payloadTy, _, _), [payload] ->
     // Compare tags.
     let lTagExpr = MExpr.Uni (MUniOp.Tag, expr, tyInt, loc)
     let rTagExpr = MExpr.Ref (serial, tyInt, loc)
@@ -184,8 +184,8 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
     let ctx = ctxAddStmt ctx gotoStmt
 
     // Extract content.
-    let extractExpr = MExpr.Uni (MUniOp.GetVariant serial, expr, argTy, loc)
-    let _, ctx = mirifyPat ctx endLabel arg extractExpr
+    let extractExpr = MExpr.Uni (MUniOp.GetVariant serial, expr, payloadTy, loc)
+    let _, ctx = mirifyPat ctx endLabel payload extractExpr
     false, ctx
   | _ ->
     let letStmt = MStmt.LetVal (serial, MInit.Expr expr, ty, loc)
@@ -459,12 +459,12 @@ let mirifyExprCallNot ctx arg ty notLoc =
   let arg, ctx = mirifyExpr ctx arg
   MExpr.Uni (MUniOp.Not, arg, ty, notLoc), ctx
 
-let mirifyExprCallVariantFun (ctx: MirCtx) serial arg ty loc =
+let mirifyExprCallVariantFun (ctx: MirCtx) serial payload ty loc =
   // Put payload on the heap.
-  let arg, ctx = mirifyExpr ctx arg
-  let payloadTy = mexprTy arg
+  let payload, ctx = mirifyExpr ctx payload
+  let payloadTy = mexprTy payload
   let _, payloadSerial, ctx = ctxFreshVar ctx "payload" payloadTy loc
-  let payloadInit = MInit.Indirect arg
+  let payloadInit = MInit.Indirect payload
   let ctx = ctxAddStmt ctx (MStmt.LetVal (payloadSerial, payloadInit, payloadTy, loc))
 
   let temp, tempSerial, ctx = ctxFreshVar ctx "variant" ty loc

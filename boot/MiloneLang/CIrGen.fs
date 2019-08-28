@@ -145,18 +145,18 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
   let variants =
     variants |> List.map (fun variantSerial ->
       match ctx.Vars |> Map.tryFind variantSerial with
-      | Some (VarDef.Variant (ident, _, hasArg, argTy, _, _)) ->
-        ident, variantSerial, hasArg, argTy
+      | Some (VarDef.Variant (ident, _, hasPayload, payloadTy, _, _)) ->
+        ident, variantSerial, hasPayload, payloadTy
       | _ -> failwith "Never"
     )
   let tags =
     variants |> List.map (fun (_, serial, _, _) ->
       ctxUniqueName ctx serial)
   let makeVariants ctx =
-    (variants, ctx) |> stFlatMap (fun ((_, serial, hasArg, argTy), acc, ctx) ->
-      if hasArg then
-        let argTy, ctx = cty ctx argTy
-        (ctxUniqueName ctx serial, CTy.Ptr argTy) :: acc, ctx
+    (variants, ctx) |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
+      if hasPayload then
+        let payloadTy, ctx = cty ctx payloadTy
+        (ctxUniqueName ctx serial, CTy.Ptr payloadTy) :: acc, ctx
       else
         acc, ctx
     )

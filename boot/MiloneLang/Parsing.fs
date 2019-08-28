@@ -157,8 +157,8 @@ let parseTyDefUnion boxX tokens =
     | (Token.Pipe, _) :: tokens ->
       go acc tokens
     | (Token.Ident variantIdent, loc) :: (Token.Of, _) :: tokens ->
-      let argTy, tokens = parseTy boxX tokens
-      go (AVariant.T (variantIdent, Some argTy, loc) :: acc) tokens
+      let payloadTy, tokens = parseTy boxX tokens
+      go (AVariant.T (variantIdent, Some payloadTy, loc) :: acc) tokens
     | (Token.Ident variantIdent, loc) :: tokens ->
       go (AVariant.T (variantIdent, None, loc) :: acc) tokens
     | _ ->

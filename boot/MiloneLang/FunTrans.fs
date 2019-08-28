@@ -611,8 +611,8 @@ let unetaCall callee args resultTy loc ctx =
       match (ctx: FunTransCtx).Vars |> Map.find serial with
       | VarDef.Fun (_, arity, _, _) ->
         arity
-      | VarDef.Variant (_, _, hasArg, _, _, _) ->
-        if hasArg then 1 else 0
+      | VarDef.Variant (_, _, hasPayload, _, _, _) ->
+        if hasPayload then 1 else 0
       | _ ->
         1
     let args, ctx = (args, ctx) |> stMap unetaExpr

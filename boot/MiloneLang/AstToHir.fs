@@ -209,10 +209,10 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.TyDef (ident, serial, TyDecl.Synonym (ty, loc), loc), nameCtx
 
   | AExpr.TyUnion (ident, variants, loc) ->
-    let onVariant (AVariant.T (ident, argTy, _variantLoc), nameCtx) =
+    let onVariant (AVariant.T (ident, payloadTy, _variantLoc), nameCtx) =
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let hasPayload, payloadTy, nameCtx =
-        match argTy with
+        match payloadTy with
         | Some ty ->
           let ty, nameCtx = (ty, nameCtx) |> onTy
           true, ty, nameCtx

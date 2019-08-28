@@ -334,14 +334,14 @@ let inferPatNav (ctx: TyCtx) l r loc ty =
 
 let inferPatCall (ctx: TyCtx) callee args loc ty =
   match args with
-  | [arg] ->
+  | [payload] ->
     // FIXME: We should verify that callee is a variant pattern.
-    let _, argLoc = arg |> patExtract
-    let argTy, _, ctx = ctx |> ctxFreshTyVar "arg" argLoc
-    let funTy = tyFun argTy ty
+    let _, payloadLoc = payload |> patExtract
+    let payloadTy, _, ctx = ctx |> ctxFreshTyVar "arg" payloadLoc
+    let funTy = tyFun payloadTy ty
     let callee, ctx = inferPat ctx callee funTy
-    let arg, ctx = inferPat ctx arg argTy
-    HPat.Call (callee, [arg], ty, loc), ctx
+    let payload, ctx = inferPat ctx payload payloadTy
+    HPat.Call (callee, [payload], ty, loc), ctx
 
   | _ ->
     failwith "invalid use of call pattern"
@@ -888,10 +888,10 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
         | VarDef.Fun (ident, arity, TyScheme.ForAll (args, ty), loc) ->
           let ty = substTy ctx ty
           VarDef.Fun (ident, arity, TyScheme.ForAll (args, ty), loc)
-        | VarDef.Variant (ident, tySerial, hasArg, argTy, ty, loc) ->
-          let argTy = substTy ctx argTy
+        | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, ty, loc) ->
+          let payloadTy = substTy ctx payloadTy
           let ty = substTy ctx ty
-          VarDef.Variant (ident, tySerial, hasArg, argTy, ty, loc)
+          VarDef.Variant (ident, tySerial, hasPayload, payloadTy, ty, loc)
       )
     { ctx with Vars = vars }
 
