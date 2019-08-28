@@ -1,33 +1,42 @@
 # TODO
 
-List of tasks. Because this is just a note for the author, it's not easy to understand what comments means. Feel free to ask with GitHub issues for details.
+List of tasks. Because this is just a note for the author, it's not easy to understand what comments mean. Feel free to ask with GitHub issues for details.
+
+### Don't think rewriting
+
+Rewriting from scratch is only an option after self-hosting is achieved.
 
 ### Re-think features
 
 It has too many features just for self-hosting.
 
-### Generic equality/string/etc.
-
-Automatically generate these functions for each type.
-
-- `string`
-- `=`
-
-### Library functions
-
-assert, failwith, List.map, String.concat, etc.
-
 ### Format strings
 
 printfn, eprintfn, failwithf, etc.
 
-### Small things
+### Types
 
-- option type
-- type variables (`'a`) in type expressions
-- str.Substring
-- str.Contains
-- bump memory allocator instead of malloc
+- Records
+- Option type
+    - Desugar to `list` or auto-gen unions
+- Type variables (`'a`) in type expressions
+
+### Transformations
+
+- Desugar `list` to auto-gen unions
+- Auto-gen primitives for each type: `string`, `=`, etc.
+
+### Runtime
+
+- Bump memory allocator instead of malloc
+- Garbage Collection in case of out of memory
+
+### Others
+
+- Integrate name resolution and type inference into one path, keeping two modules decoupled
+    - Currently let-depth calculation is unfortunately duplicated
+- Integrate "operators" with primitives in HIR/MIR
+    - Operators are just primitives associated with special syntax in at least milone-lang
 
 ### Low Priority
 
@@ -37,8 +46,6 @@ These features are unnecessary because we have replacement.
     - Generic `string` function is enough.
 - Set/Map
     - We can replace them with associative lists
-- Record types
-- Bugs about arity calculation
 - Bugs about interaction between module-rec and let-polymorphism
 
 ## Not Supported
