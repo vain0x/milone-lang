@@ -200,7 +200,7 @@ type AExpr =
   /// Semicolon-separated expressions.
   | Semi
     of AExpr list * Loc
-  /// (pattern, initializer, body). Let-in expression.
+  /// (pattern, initializer, next). Let-in expression.
   | Let
     of APat * AExpr * AExpr * Loc
   /// Type synonym definition, e.g. `type UserId = int`.
