@@ -282,7 +282,7 @@ let mexprExtract expr =
   | MExpr.Ref (_, ty, loc) -> ty, loc
   | MExpr.Proc (_, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
-  | MExpr.UniOp (_, _, ty, loc) -> ty, loc
+  | MExpr.Uni (_, _, ty, loc) -> ty, loc
   | MExpr.Bin (_, _, _, ty, loc) -> ty, loc
 
 let mexprTy expr =

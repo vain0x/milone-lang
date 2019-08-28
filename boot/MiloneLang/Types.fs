@@ -549,7 +549,7 @@ type MExpr =
     of serial:int * Ty * Loc
   | Variant
     of tySerial:int * serial:int * Ty * Loc
-  | UniOp
+  | Uni
     of MUniOp * arg:MExpr * resultTy:Ty * Loc
   | Bin
     of MOp * left:MExpr * right:MExpr * resultTy:Ty * Loc

@@ -402,7 +402,7 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     genExprProc ctx serial ty loc
   | MExpr.Variant (_, serial, ty, _) ->
     genExprVariant ctx serial ty
-  | MExpr.UniOp (op, arg, ty, loc) ->
+  | MExpr.Uni (op, arg, ty, loc) ->
     genExprUniOp ctx op arg ty loc
   | MExpr.Bin (op, l, r, _, _) ->
     genExprBin ctx op l r
