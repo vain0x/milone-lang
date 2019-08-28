@@ -40,11 +40,11 @@ struct CharBoolFun1;
 
 struct CharBoolFun1StringTuple2;
 
-int go_5(struct CharBoolFun1StringTuple2 arg_6, int r_1);
+int go_5(struct CharBoolFun1StringTuple2 arg_5, int r_1);
 
 struct StringIntTuple2;
 
-int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_5);
+int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_6);
 
 struct CharTuple1;
 
@@ -334,9 +334,9 @@ struct CharBoolFun1StringTuple2 {
     struct String t1;
 };
 
-int go_5(struct CharBoolFun1StringTuple2 arg_6, int r_1) {
-    struct CharBoolFun1 pred_ = arg_6.t0;
-    struct String source_ = arg_6.t1;
+int go_5(struct CharBoolFun1StringTuple2 arg_5, int r_1) {
+    struct CharBoolFun1 pred_ = arg_5.t0;
+    struct String source_ = arg_5.t1;
     int match_10;
     int match_11;
     if (!(((r_1 < source_.len) == 1))) goto next_33;
@@ -372,9 +372,9 @@ struct StringIntTuple2 {
     int t1;
 };
 
-int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_5) {
-    struct String source_ = arg_5.t0;
-    int i_2 = arg_5.t1;
+int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_6) {
+    struct String source_ = arg_6.t0;
+    int i_2 = arg_6.t1;
     struct CharBoolFun1StringTuple2 tuple_5;
     tuple_5.t0 = pred_;
     tuple_5.t1 = source_;
@@ -388,8 +388,8 @@ struct CharTuple1 {
 
 int fun_(void* env_, char arg_) {
     char arg_1 = (*(((struct CharTuple1*)env_))).t0;
-    int call_14 = charEq_(arg_1, arg_);
-    return call_14;
+    int call_13 = charEq_(arg_1, arg_);
+    return call_13;
 }
 
 struct Token_ListIntTuple2 {
@@ -400,7 +400,7 @@ struct Token_ListIntTuple2 {
 struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_7) {
     struct Token_List* acc_2 = arg_7.t0;
     int i_3 = arg_7.t1;
-    int call_13 = assert_((source_1.str[i_3] == ' '));
+    int call_14 = assert_((source_1.str[i_3] == ' '));
     struct CharTuple1 tuple_6;
     tuple_6.t0 = ' ';
     void* box_ = (void*)malloc(sizeof(struct CharTuple1));
@@ -474,15 +474,15 @@ end_match_40:;
 }
 
 int fun_1(void* env_1, char arg_2) {
-    int call_19 = isDigit_(arg_2);
-    return call_19;
+    int call_17 = isDigit_(arg_2);
+    return call_17;
 }
 
 struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_9) {
     struct Token_List* acc_4 = arg_9.t0;
     int i_5 = arg_9.t1;
-    int call_17 = isDigit_(source_3.str[i_5]);
-    int call_18 = assert_(call_17);
+    int call_18 = isDigit_(source_3.str[i_5]);
+    int call_19 = assert_(call_18);
     void* box_1 = (void*)malloc(sizeof(int));
     (*(((int*)box_1))) = 0;
     void* env_3 = box_1;

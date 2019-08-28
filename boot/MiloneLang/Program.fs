@@ -36,7 +36,9 @@ let toCir verbosity (projectDir: string): CDecl list * bool =
   log "typed" typedAst
   let funTransAst, tyCtx = FunTrans.trans (typedAst, tyCtx)
   log "funTrans" funTransAst
-  let monoAst, tyCtx = Monomorphizing.monify (funTransAst, tyCtx)
+  let hoistedExpr, tyCtx = Hoist.hoist (funTransAst, tyCtx)
+  log "hoisted" hoistedExpr
+  let monoAst, tyCtx = Monomorphizing.monify (hoistedExpr, tyCtx)
   log "monoAst" monoAst
   let mir, mirCtx = Mir.mirify (monoAst, tyCtx)
   log "mir" mir
