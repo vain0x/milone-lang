@@ -368,7 +368,7 @@ let genExprBin ctx op l r =
   | _ ->
     let l, ctx = genExpr ctx l
     let r, ctx = genExpr ctx r
-    let opExpr = CExpr.BinOp (cOpFrom op, l, r)
+    let opExpr = CExpr.Bin (cOpFrom op, l, r)
     opExpr, ctx
 
 let genExprList ctx exprs =

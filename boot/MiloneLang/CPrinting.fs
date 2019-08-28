@@ -202,7 +202,7 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExpr acc arg
     let acc = acc |> cons "))"
     acc
-  | CExpr.BinOp (op, first, second) ->
+  | CExpr.Bin (op, first, second) ->
     let acc = acc |> cons "("
     let acc = cprintExpr acc first
     let acc = acc |> cons " " |> cons (opStr op) |> cons " "

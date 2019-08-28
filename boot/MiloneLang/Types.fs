@@ -686,7 +686,7 @@ type CExpr =
     of CExpr * args:CExpr list
   | Uni
     of CUniOp * CExpr
-  | BinOp
+  | Bin
     of CBinOp * CExpr * CExpr
 
 /// Statement in C language.
