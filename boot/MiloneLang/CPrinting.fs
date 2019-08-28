@@ -192,7 +192,7 @@ let rec cprintExpr acc expr: string list =
     let acc = cprintExprList acc 0 ", " args
     let acc = acc |> cons ")"
     acc
-  | CExpr.UniOp (op, arg) ->
+  | CExpr.Uni (op, arg) ->
     let acc = acc |> cons "("
     let acc =
       match op with

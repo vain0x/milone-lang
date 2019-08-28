@@ -684,7 +684,7 @@ type CExpr =
     of CExpr * CExpr
   | Call
     of CExpr * args:CExpr list
-  | UniOp
+  | Uni
     of CUniOp * CExpr
   | BinOp
     of CBinOp * CExpr * CExpr

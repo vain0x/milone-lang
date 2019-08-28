@@ -333,23 +333,23 @@ let genExprUniOp ctx op arg ty _ =
   let arg, ctx = genExpr ctx arg
   match op with
   | MUniOp.Not ->
-    CExpr.UniOp (CUniOp.Not, arg), ctx
+    CExpr.Uni (CUniOp.Not, arg), ctx
   | MUniOp.StrPtr ->
     CExpr.Nav (arg, "str"), ctx
   | MUniOp.StrLen ->
     CExpr.Nav (arg, "len"), ctx
   | MUniOp.Unbox ->
     let valTy, ctx = cty ctx ty
-    let deref = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (arg, CTy.Ptr valTy))
+    let deref = CExpr.Uni (CUniOp.Deref, CExpr.Cast (arg, CTy.Ptr valTy))
     deref, ctx
   | MUniOp.Proj index ->
     CExpr.Proj (arg, index), ctx
   | MUniOp.Tag ->
     CExpr.Nav (arg, "tag"), ctx
   | MUniOp.GetVariant serial ->
-    CExpr.UniOp (CUniOp.Deref, CExpr.Nav (arg, ctxUniqueName ctx serial)), ctx
+    CExpr.Uni (CUniOp.Deref, CExpr.Nav (arg, ctxUniqueName ctx serial)), ctx
   | MUniOp.ListIsEmpty ->
-    CExpr.UniOp (CUniOp.Not, arg), ctx
+    CExpr.Uni (CUniOp.Not, arg), ctx
   | MUniOp.ListHead ->
     CExpr.Arrow (arg, "head"), ctx
   | MUniOp.ListTail ->
@@ -526,7 +526,7 @@ let genInitBox ctx serial arg =
   let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, CTy.Ptr argTy, CTy.Ptr CTy.Void))
 
   // *(T*)p = t;
-  let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (CExpr.Ref temp, CTy.Ptr argTy))
+  let left = CExpr.Uni (CUniOp.Deref, CExpr.Cast (CExpr.Ref temp, CTy.Ptr argTy))
   let ctx = ctxAddStmt ctx (CStmt.Set (left, arg))
 
   ctx
@@ -542,7 +542,7 @@ let genInitIndirect ctx serial payload ty =
   let ctx = ctxAddStmt ctx (CStmt.LetAlloc (varName, ptrTy, ptrTy))
 
   // *(T*)p = t;
-  let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (CExpr.Ref varName, ptrTy))
+  let left = CExpr.Uni (CUniOp.Deref, CExpr.Cast (CExpr.Ref varName, ptrTy))
   let ctx = ctxAddStmt ctx (CStmt.Set (left, payload))
 
   ctx
