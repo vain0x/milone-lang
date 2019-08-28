@@ -171,12 +171,18 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   | AExpr.Index (l, r, loc) ->
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr
-    HExpr.Op (Op.Index, l, r, noTy, loc), nameCtx
+    HExpr.Bin (Op.Index, l, r, noTy, loc), nameCtx
+
+  | AExpr.Uni (UniOp.Neg, arg, loc) ->
+    // Desugar `-x` to `0 - x`.
+    let zero = AExpr.Lit (Lit.Int 0, loc)
+    let expr = AExpr.Bin (Op.Sub, zero, arg, loc)
+    (expr, nameCtx) |> onExpr
 
   | AExpr.Bin (op, l, r, loc) ->
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr
-    HExpr.Op (op, l, r, noTy, loc), nameCtx
+    HExpr.Bin (op, l, r, noTy, loc), nameCtx
 
   | AExpr.TupleLit (items, loc) ->
     let items, nameCtx = (items, nameCtx) |> stMap onExpr
@@ -189,7 +195,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.Semi (exprs, loc) ->
     let exprs, nameCtx = (exprs, nameCtx) |> stMap onExpr
-    HExpr.Inf (InfOp.AndThen, exprs, noTy, loc), nameCtx
+    HExpr.Inf (InfOp.Semi, exprs, noTy, loc), nameCtx
 
   | AExpr.Let (pat, init, next, loc) ->
     let pat, nameCtx = (pat, nameCtx) |> onPat
@@ -203,10 +209,10 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.TyDef (ident, serial, TyDecl.Synonym (ty, loc), loc), nameCtx
 
   | AExpr.TyUnion (ident, variants, loc) ->
-    let onVariant (AVariant.T (ident, argTy, _variantLoc), nameCtx) =
+    let onVariant (AVariant.T (ident, payloadTy, _variantLoc), nameCtx) =
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let hasPayload, payloadTy, nameCtx =
-        match argTy with
+        match payloadTy with
         | Some ty ->
           let ty, nameCtx = (ty, nameCtx) |> onTy
           true, ty, nameCtx

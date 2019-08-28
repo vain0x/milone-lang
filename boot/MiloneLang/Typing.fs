@@ -305,7 +305,7 @@ let ctxGeneralizeFun (ctx: TyCtx) (outerCtx: TyCtx) (bodyCtx: TyCtx) funSerial =
 let hxAbort (ctx: TyCtx) ty loc =
   let funTy = tyFun tyInt ty
   let exitExpr = HExpr.Ref ("exit", HValRef.Prim HPrim.Exit, funTy, loc)
-  let callExpr = HExpr.Op (Op.App, exitExpr, HExpr.Lit (Lit.Int 1, loc), ty, loc)
+  let callExpr = HExpr.Bin (Op.App, exitExpr, HExpr.Lit (Lit.Int 1, loc), ty, loc)
   callExpr, ctx
 
 let ctxUnifyVarTy varSerial ty loc ctx =
@@ -330,18 +330,18 @@ let inferPatRef (ctx: TyCtx) ident varSerial loc ty =
   HPat.Ref (ident, varSerial, ty, loc), ctx
 
 let inferPatNav (ctx: TyCtx) l r loc ty =
-  failwith "invalid use of nav pattern"
+  failwithf "invalid use of nav pattern %A" (l, r, loc, ty)
 
 let inferPatCall (ctx: TyCtx) callee args loc ty =
   match args with
-  | [arg] ->
+  | [payload] ->
     // FIXME: We should verify that callee is a variant pattern.
-    let _, argLoc = arg |> patExtract
-    let argTy, _, ctx = ctx |> ctxFreshTyVar "arg" argLoc
-    let funTy = tyFun argTy ty
+    let _, payloadLoc = payload |> patExtract
+    let payloadTy, _, ctx = ctx |> ctxFreshTyVar "arg" payloadLoc
+    let funTy = tyFun payloadTy ty
     let callee, ctx = inferPat ctx callee funTy
-    let arg, ctx = inferPat ctx arg argTy
-    HPat.Call (callee, [arg], ty, loc), ctx
+    let payload, ctx = inferPat ctx payload payloadTy
+    HPat.Call (callee, [payload], ty, loc), ctx
 
   | _ ->
     failwith "invalid use of call pattern"
@@ -506,7 +506,7 @@ let inferNav ctx sub mes loc resultTy =
     | Ty.Con (TyCon.Str, []), "Length" ->
       let ctx = unifyTy ctx loc resultTy tyInt
       let funExpr = HExpr.Ref (mes, HValRef.Prim HPrim.StrLength, tyFun tyStr tyInt, loc)
-      Some (HExpr.Op (Op.App, funExpr, sub, tyInt, loc), ctx)
+      Some (HExpr.Bin (Op.App, funExpr, sub, tyInt, loc), ctx)
     | _ -> None
 
   let hxError () =
@@ -561,7 +561,7 @@ let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
     let ctx = unifyTy ctx loc funTy appTy
     HExpr.Ref (nativeFunIdent, HValRef.Prim (HPrim.NativeFun (nativeFunIdent, arity)), appTy, loc), ctx
   | _ ->
-    HExpr.Op (Op.App, callee, arg, appTy, loc), ctx
+    HExpr.Bin (Op.App, callee, arg, appTy, loc), ctx
 
 let inferOpAppPrintfn ctx ident arg calleeTy loc =
   match arg with
@@ -579,18 +579,18 @@ let inferOpApp ctx callee arg loc appTy =
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
   match callee with
-  | HExpr.Op (Op.App, HExpr.Ref (_, HValRef.Prim (HPrim.NativeFun _), _, _), firstArg, _, _) ->
+  | HExpr.Bin (Op.App, HExpr.Ref (_, HValRef.Prim (HPrim.NativeFun _), _, _), firstArg, _, _) ->
     inferOpAppNativeFun ctx callee firstArg arg appTy loc
   | HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, calleeTy, loc) ->
     let callee, ctx = inferOpAppPrintfn ctx ident arg calleeTy loc
-    HExpr.Op (Op.App, callee, arg, appTy, loc), ctx
+    HExpr.Bin (Op.App, callee, arg, appTy, loc), ctx
   | _ ->
-    HExpr.Op (Op.App, callee, arg, appTy, loc), ctx
+    HExpr.Bin (Op.App, callee, arg, appTy, loc), ctx
 
 let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
   let left, ctx = inferExpr ctx left operandTy
   let right, ctx = inferExpr ctx right operandTy
-  HExpr.Op (op, left, right, resultTy, loc), ctx
+  HExpr.Bin (op, left, right, resultTy, loc), ctx
 
 let inferOpAdd (ctx: TyCtx) op left right loc resultTy =
   let _, operandLoc = left |> exprExtract
@@ -620,13 +620,13 @@ let inferOpCons ctx left right loc listTy =
   let ctx = unifyTy ctx loc listTy (tyList itemTy)
   let left, ctx = inferExpr ctx left itemTy
   let right, ctx = inferExpr ctx right listTy
-  HExpr.Op (Op.Cons itemTy, left, right, listTy, loc), ctx
+  HExpr.Bin (Op.Cons, left, right, listTy, loc), ctx
 
 let inferOpRange ctx op left right loc ty =
   let ctx = unifyTy ctx loc ty tyRange
   inferOpCore ctx op left right loc tyInt ty
 
-let inferOp (ctx: TyCtx) op left right loc ty =
+let inferBin (ctx: TyCtx) op left right loc ty =
   match op with
   | Op.Add ->
     inferOpAdd ctx op left right loc ty
@@ -752,9 +752,9 @@ let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
       go (expr :: acc) ctx exprs
   go [] ctx exprs
 
-let inferAndThen ctx loc exprs lastTy =
+let inferSemi ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
-  hxAndThen (List.rev exprs) loc, ctx
+  hxSemi (List.rev exprs) loc, ctx
 
 let inferExprTyDecl ctx ident tySerial tyDecl loc =
   HExpr.TyDef (ident, tySerial, tyDecl, loc), ctx
@@ -775,16 +775,16 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferMatch ctx target arms loc ty
   | HExpr.Nav (receiver, field,  _,loc) ->
     inferNav ctx receiver field loc ty
-  | HExpr.Op (op, l, r, _, loc) ->
-    inferOp ctx op l r loc ty
+  | HExpr.Bin (op, l, r, _, loc) ->
+    inferBin ctx op l r loc ty
   | HExpr.Inf (InfOp.List _, [], _, loc) ->
     inferNil ctx loc ty
   | HExpr.Inf (InfOp.Tuple, items, _, loc) ->
     inferTuple ctx items loc ty
   | HExpr.Inf (InfOp.Anno, [expr], annoTy, loc) ->
     inferAnno ctx expr annoTy ty loc
-  | HExpr.Inf (InfOp.AndThen, exprs, _, loc) ->
-    inferAndThen ctx loc exprs ty
+  | HExpr.Inf (InfOp.Semi, exprs, _, loc) ->
+    inferSemi ctx loc exprs ty
   | HExpr.Let (pat, body, next, _, loc) ->
     inferLetVal ctx pat body next ty loc
   | HExpr.LetFun (calleeName, oldSerial, args, body, next, _, loc) ->
@@ -888,10 +888,10 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
         | VarDef.Fun (ident, arity, TyScheme.ForAll (args, ty), loc) ->
           let ty = substTy ctx ty
           VarDef.Fun (ident, arity, TyScheme.ForAll (args, ty), loc)
-        | VarDef.Variant (ident, tySerial, hasArg, argTy, ty, loc) ->
-          let argTy = substTy ctx argTy
+        | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, ty, loc) ->
+          let payloadTy = substTy ctx payloadTy
           let ty = substTy ctx ty
-          VarDef.Variant (ident, tySerial, hasArg, argTy, ty, loc)
+          VarDef.Variant (ident, tySerial, hasPayload, payloadTy, ty, loc)
       )
     { ctx with Vars = vars }
 

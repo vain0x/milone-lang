@@ -10,7 +10,7 @@ let hxRef name loc =
 
 /// `x = false`
 let hxNot expr loc =
-  HExpr.Op (Op.Eq, expr, hxFalse loc, noTy, loc)
+  HExpr.Bin (Op.Eq, expr, hxFalse loc, noTy, loc)
 
 let onPat pat =
   pat
@@ -35,7 +35,7 @@ let rec onArms arms =
   | (pat, guard, body) :: arms ->
     (onPat pat, onExpr guard, onExpr body) :: onArms arms
 
-let rec onExprOp op l r ty loc =
+let rec onExprBin op l r ty loc =
   match op with
   | Op.And ->
     // `l && r` ==> `if l then r else false`
@@ -46,9 +46,9 @@ let rec onExprOp op l r ty loc =
   | Op.Pipe ->
     // `x |> f` ==> `f x`
     // NOTE: Evaluation order does change.
-    onExprOp Op.App r l ty loc
+    onExprBin Op.App r l ty loc
   | _ ->
-    HExpr.Op (op, onExpr l, onExpr r, ty, loc)
+    HExpr.Bin (op, onExpr l, onExpr r, ty, loc)
 
 /// `[x; y; ..]` ==> `x :: y :: .. :: []`
 let onExprList items loc =
@@ -58,7 +58,7 @@ let onExprList items loc =
       hxNil noTy loc
     | item :: items ->
       let item = onExpr item
-      HExpr.Op (Op.Cons noTy, item, go items, noTy, loc)
+      HExpr.Bin (Op.Cons, item, go items, noTy, loc)
   go items
 
 /// `let f x : ty = body` ==>
@@ -101,8 +101,8 @@ let onExpr (expr: HExpr): HExpr =
     HExpr.Match (onExpr target, onArms arms, ty, loc)
   | HExpr.Nav (subject, message, ty, loc) ->
     HExpr.Nav (onExpr subject, message, ty, loc)
-  | HExpr.Op (op, l, r, ty, loc) ->
-    onExprOp op l r ty loc
+  | HExpr.Bin (op, l, r, ty, loc) ->
+    onExprBin op l r ty loc
   | HExpr.Inf (InfOp.List _, items, _, loc) ->
     onExprList items loc
   | HExpr.Inf (infOp, args, ty, loc) ->

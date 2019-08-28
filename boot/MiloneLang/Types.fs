@@ -3,15 +3,16 @@ module rec MiloneLang.Types
 /// Location = (rowIndex, columnIndex).
 type Loc = int * int
 
-/// Diagnostic; something bad in source code in terms of language server protocol.
+/// Diagnostic; something bad in source code.
 [<RequireQualifiedAccess>]
 type Diag =
   | Err
     of string * Loc
 
-/// Word or punctuation in source code.
+/// Words and punctuations in source code.
 [<RequireQualifiedAccess>]
 type Token =
+  | Error
   | Bool
     of bool
   | Int
@@ -40,19 +41,42 @@ type Token =
   | BracketL
   /// `]`
   | BracketR
-  /// `:`
-  | Colon
-  /// `.`
-  | Dot
-  /// `..`
-  | Range
-  /// `|`
-  | Pipe
+  /// `&`
+  | Amp
+  /// `&&`
+  | AmpAmp
   /// `->`
   | Arrow
-  /// Punctuation.
-  | Punct
-    of string
+  | Colon
+  | ColonColon
+  | Comma
+  | Dot
+  | DotDot
+  /// `=`
+  | Eq
+  /// `>`
+  | Gt
+  /// `>=`
+  | GtEq
+  /// `<`
+  | Lt
+  /// `<=`
+  | LtEq
+  /// `<>`
+  | LtGt
+  | Minus
+  | Percent
+  /// `|`
+  | Pipe
+  /// `|>`
+  | PipeGt
+  /// `||`
+  | PipePipe
+  | Plus
+  /// `;`
+  | Semi
+  | Star
+  | Slash
   | Private
   | Internal
   | Public
@@ -160,6 +184,10 @@ type AExpr =
     of AExpr * string * Loc
   | Index
     of AExpr * AExpr * Loc
+  /// Unary operation, e.g. `-x`.
+  /// Currently `-` is the only unary operation.
+  | Uni
+    of UniOp * AExpr * Loc
   /// Binary operation, e.g. `x + y`.
   | Bin
     of Op * AExpr * AExpr * Loc
@@ -172,7 +200,7 @@ type AExpr =
   /// Semicolon-separated expressions.
   | Semi
     of AExpr list * Loc
-  /// (pattern, initializer, body). Let-in expression.
+  /// (pattern, initializer, next). Let-in expression.
   | Let
     of APat * AExpr * AExpr * Loc
   /// Type synonym definition, e.g. `type UserId = int`.
@@ -243,6 +271,12 @@ type OpLevel =
   /// `..`
   | Range
 
+/// Unary operators in AST.
+[<RequireQualifiedAccess>]
+type UniOp =
+  /// `-`
+  | Neg
+
 /// Binary operators in AST.
 [<RequireQualifiedAccess>]
 type Op =
@@ -278,7 +312,6 @@ type Op =
   | App
   /// `::` Cons cell constructor
   | Cons
-    of Ty
   /// `..`
   | Range
   /// `.[ ]`
@@ -363,7 +396,7 @@ type InfOp =
   /// Type annotation `x : 'x`.
   | Anno
   /// `x; y`
-  | AndThen
+  | Semi
   /// Direct call to procedure or primitive.
   | CallProc
   /// Indirect call to closure.
@@ -418,7 +451,7 @@ type HExpr =
   | Nav
     of subject:HExpr * message:string * Ty * Loc
   /// Binary operation, e.g. `x + y`.
-  | Op
+  | Bin
     of Op * HExpr * HExpr * Ty * Loc
   /// Operation with infinite arguments.
   | Inf
@@ -511,16 +544,14 @@ type MExpr =
     of Ty * Loc
   | Ref
     of serial:int * Ty * Loc
-  | Prim
-    of HPrim * Ty * Loc
   /// Procedure
   | Proc
     of serial:int * Ty * Loc
   | Variant
     of tySerial:int * serial:int * Ty * Loc
-  | UniOp
+  | Uni
     of MUniOp * arg:MExpr * resultTy:Ty * Loc
-  | Op
+  | Bin
     of MOp * left:MExpr * right:MExpr * resultTy:Ty * Loc
 
 /// Variable initializer in mid-level IR.
@@ -530,7 +561,10 @@ type MInit =
   | UnInit
   | Expr
     of MExpr
-  /// Direct call to procedure or primitive.
+  /// Call to primitive.
+  | CallPrim
+    of HPrim * args:MExpr list * primTy:Ty
+  /// Direct call to procedure.
   | CallProc
     of callee:MExpr * args:MExpr list * calleeTy:Ty
   /// Indirect call to closure.
@@ -544,7 +578,7 @@ type MInit =
   | Indirect
     of MExpr
   | Cons
-    of head:MExpr * tail:MExpr * itemTy:Ty
+    of head:MExpr * tail:MExpr
   | Tuple
     of items:MExpr list
   | Variant
@@ -650,9 +684,9 @@ type CExpr =
     of CExpr * CExpr
   | Call
     of CExpr * args:CExpr list
-  | UniOp
+  | Uni
     of CUniOp * CExpr
-  | BinOp
+  | Bin
     of CBinOp * CExpr * CExpr
 
 /// Statement in C language.

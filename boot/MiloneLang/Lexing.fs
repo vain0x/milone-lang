@@ -291,16 +291,54 @@ let tokenFromIdent (text: string) l r: Token =
 
 let tokenFromOp (text: string) l r: Token =
   match text |> strSlice l r with
-  | ":" ->
-    Token.Colon
-  | "." ->
-    Token.Dot
-  | "|" ->
-    Token.Pipe
+  | "&" ->
+    Token.Amp
+  | "&&" ->
+    Token.AmpAmp
   | "->" ->
     Token.Arrow
-  | s ->
-    Token.Punct s
+  | ":" ->
+    Token.Colon
+  | "::" ->
+    Token.ColonColon
+  | "," ->
+    Token.Comma
+  | "." ->
+    Token.Dot
+  | ".." ->
+    Token.DotDot
+  | "=" ->
+    Token.Eq
+  | ">" ->
+    Token.Gt
+  | ">=" ->
+    Token.GtEq
+  | "<" ->
+    Token.Lt
+  | "<=" ->
+    Token.LtEq
+  | "<>" ->
+    Token.LtGt
+  | "-" ->
+    Token.Minus
+  | "%" ->
+    Token.Percent
+  | "|" ->
+    Token.Pipe
+  | "|>" ->
+    Token.PipeGt
+  | "||" ->
+    Token.PipePipe
+  | "+" ->
+    Token.Plus
+  | ";" ->
+    Token.Semi
+  | "*" ->
+    Token.Star
+  | "/" ->
+    Token.Slash
+  | _ ->
+    Token.Error
 
 let tokenFromPun (text: string) (l: int) r =
   assert (r - l = 1)

@@ -39,4 +39,8 @@ let main _ =
   | [2; 1], ["b"; "a"] -> ()
   | _ -> assert false
 
+  match [(1, "a"); (2, "b")] |> listMap flip with
+  | [("a", 1); ("b", 2)] -> ()
+  | _ -> assert false
+
   0

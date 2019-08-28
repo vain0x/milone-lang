@@ -22,13 +22,14 @@ let tokenRole tokens: bool * bool =
   | (Token.BracketL, _) :: _ ->
     // It can be an expr or pat.
     true, true
-  | (Token.If _, _) :: _
-  | (Token.Match _, _) :: _
+  | (Token.If, _) :: _
+  | (Token.Match, _) :: _
   | (Token.Fun, _) :: _
   | (Token.Do, _) :: _
   | (Token.Let, _) :: _
   | (Token.Type, _) :: _
-  | (Token.Open, _) :: _ ->
+  | (Token.Open, _) :: _
+  | (Token.Minus, _) :: _ ->
     // It is an expr, not pat.
     true, false
   | _ ->
@@ -38,6 +39,14 @@ let tokenRole tokens: bool * bool =
 let leadsExpr tokens =
   let leadsExpr, _ = tokenRole tokens
   leadsExpr
+
+let leadsArg tokens =
+  match tokens with
+  | (Token.Minus, _) :: _ ->
+    false
+
+  | _ ->
+    leadsExpr tokens
 
 let leadsPat tokens =
   let _, leadsPat = tokenRole tokens
@@ -72,10 +81,11 @@ let private nextInside boxX tokens: bool =
     true
 
 let parseError message tokens =
-  let near = tokens |> List.map fst |> List.truncate 6
-  failwithf "Parse error %s near %A" message near
+  let y, x = nextLoc tokens
+  let near = tokens |> listMap fst |> listTruncate 6
+  failwithf "Parse error %s near %A (%d:%d)" message near (y + 1) (x + 1)
 
-let parseTyAtom boxX tokens: ATy * _ list =
+let parseTyAtom boxX tokens =
   match tokens with
   | _ when nextInside boxX tokens |> not ->
     parseError "Expected a type atom" tokens
@@ -91,7 +101,7 @@ let parseTyAtom boxX tokens: ATy * _ list =
     parseError "Expected a type atom" tokens
 
 /// ty-suffix = ty-atom ( ident )*
-let parseTySuffix boxX tokens: ATy * _ list =
+let parseTySuffix boxX tokens =
   let rec go first tokens =
     match tokens with
     | (Token.Ident ident, loc) :: tokens ->
@@ -115,11 +125,11 @@ let parseTyPrefix boxX tokens =
 let parseTyTuple boxX tokens =
   let rec go acc opLoc tokens =
     match tokens with
-    | (Token.Punct "*", opLoc) :: tokens when nextInside boxX tokens ->
+    | (Token.Star, opLoc) :: tokens when nextInside boxX tokens ->
       let second, tokens = parseTyPrefix boxX tokens
       go (second :: acc) opLoc tokens
     | _ ->
-      List.rev acc, opLoc, tokens
+      listRev acc, opLoc, tokens
   let first, tokens = parseTyPrefix boxX tokens
   let noLoc = (0, 0)
   match go [] noLoc tokens with
@@ -137,22 +147,22 @@ let parseTyFun boxX tokens =
   | ty, tokens ->
     ty, tokens
 
-let parseTy boxX tokens: ATy * _ list =
+let parseTy boxX tokens =
   parseTyFun boxX tokens
 
 /// Parse after `type .. = |`.
 let parseTyDefUnion boxX tokens =
   let rec go acc tokens =
     match tokens with
-    | (Token.Pipe _, _) :: tokens ->
+    | (Token.Pipe, _) :: tokens ->
       go acc tokens
     | (Token.Ident variantIdent, loc) :: (Token.Of, _) :: tokens ->
-      let argTy, tokens = parseTy boxX tokens
-      go (AVariant.T (variantIdent, Some argTy, loc) :: acc) tokens
+      let payloadTy, tokens = parseTy boxX tokens
+      go (AVariant.T (variantIdent, Some payloadTy, loc) :: acc) tokens
     | (Token.Ident variantIdent, loc) :: tokens ->
       go (AVariant.T (variantIdent, None, loc) :: acc) tokens
     | _ ->
-      List.rev acc, tokens
+      listRev acc, tokens
   match go [] tokens with
   | variants, tokens ->
     ATyDef.Union variants, tokens
@@ -163,7 +173,7 @@ let parseTyDefBody boxX tokens =
   match tokens with
   | (Token.Pipe, _) :: tokens when nextInside boxX tokens ->
     parseTyDefUnion boxX tokens
-  | (Token.Ident _, _) :: (Token.Of _, _) :: _ when nextInside boxX tokens ->
+  | (Token.Ident _, _) :: (Token.Of, _) :: _ when nextInside boxX tokens ->
     parseTyDefUnion boxX tokens
   | _ ->
     let ty, tokens = parseTy boxX tokens
@@ -173,8 +183,8 @@ let parsePatList boxX tokens =
   let rec go patAcc tokens =
     match tokens with
     | (Token.BracketR, _) :: tokens ->
-      List.rev patAcc, tokens
-    | (Token.Punct ";", _) :: tokens ->
+      listRev patAcc, tokens
+    | (Token.Semi, _) :: tokens ->
       let pat, tokens = parsePat boxX tokens
       go (pat :: patAcc) tokens
     | _ ->
@@ -190,7 +200,7 @@ let parsePatList boxX tokens =
   | _ ->
     parseError "NEVER" tokens
 
-let parsePatAtom boxX tokens: APat * _ list =
+let parsePatAtom boxX tokens =
   match tokens with
   | _ when not (nextInside boxX tokens && leadsPat tokens) ->
     parseError "Expected a pattern atom" tokens
@@ -235,7 +245,7 @@ let parsePatCallArgs insideX tokens =
       let expr, tokens = parsePatNav insideX tokens
       go (expr :: acc) tokens
     else
-      List.rev acc, tokens
+      listRev acc, tokens
   go [] tokens
 
 /// pat-call = pat-nav ( pat-nav )*
@@ -254,7 +264,7 @@ let parsePatCall boxX tokens =
 /// pat-cons = pat-call ( '::' pat-cons )?
 let parsePatCons boxX tokens =
   match parsePatCall boxX tokens with
-  | head, (Token.Punct "::", loc) :: tokens ->
+  | head, (Token.ColonColon, loc) :: tokens ->
     let tail, tokens = parsePatCons boxX tokens
     APat.Cons (head, tail, loc), tokens
   | pat, tokens ->
@@ -273,11 +283,11 @@ let parsePatAnno boxX tokens =
 let parsePatTuple boxX tokens =
   let rec go acc tokens =
     match tokens with
-    | (Token.Punct ",", _) :: tokens when nextInside boxX tokens ->
+    | (Token.Comma, _) :: tokens when nextInside boxX tokens ->
       let second, tokens = parsePatAnno boxX tokens
       go (second :: acc) tokens
     | _ ->
-      List.rev acc, tokens
+      listRev acc, tokens
   let loc = nextLoc tokens
   let first, tokens = parsePatAnno boxX tokens
   match go [] tokens with
@@ -304,19 +314,19 @@ let parsePatOr boxX tokens =
     first, tokens
 
 /// pat = pat-or
-let parsePat boxX tokens: APat * _ list =
+let parsePat boxX tokens =
   if not (nextInside boxX tokens && leadsPat tokens) then
     parseError "Expected a pattern" tokens
   else
     parsePatOr boxX tokens
 
-let parsePats boxX (tokens: _ list): APat list * _ list =
+let parsePats boxX tokens =
   let rec go acc tokens =
     if nextInside boxX tokens && leadsPat tokens then
       let pat, tokens = parsePat boxX tokens
       go (pat :: acc) tokens
     else
-      List.rev acc, tokens
+      listRev acc, tokens
   go [] tokens
 
 let parseList boxX bracketLoc tokens =
@@ -328,7 +338,7 @@ let parseList boxX bracketLoc tokens =
 
 let parseThenCl boxX tokens =
   match tokens with
-  | (Token.Then, _) as t :: tokens when nextInside boxX [t] ->
+  | ((Token.Then, _) as t) :: tokens when nextInside boxX [t] ->
     parseExpr boxX tokens
   | _ ->
     parseError "Expected 'then'" tokens
@@ -390,7 +400,7 @@ let parseMatch boxX matchLoc tokens =
     | arm, (Token.Pipe, (_, x)) :: tokens when x = pipeX ->
       go (arm :: acc) tokens
     | arm, tokens ->
-      List.rev (arm :: acc), tokens
+      listRev (arm :: acc), tokens
 
   let arms, tokens = go [] tokens
   AExpr.Match (target, arms, matchLoc), tokens
@@ -431,7 +441,7 @@ let parseLet boxX letLoc tokens =
   let patsX = max boxX (letX + 1)
   let pat, tokens =
     match parsePat patsX tokens with
-    | pat, (Token.Punct "=", _) :: tokens ->
+    | pat, (Token.Eq, _) :: tokens ->
       pat, tokens
     | _ ->
       parseError "Missing '='" tokens
@@ -440,7 +450,7 @@ let parseLet boxX letLoc tokens =
     parseExpr bodyX tokens
   let next, tokens =
     match tokens with
-    | (Token.In, _) as inToken :: tokens when nextInside boxX [inToken] ->
+    | ((Token.In, _) as inToken) :: tokens when nextInside boxX [inToken] ->
       parseExpr (letX + 1) tokens
     | _ :: _ when nextX tokens = letX ->
       // To omit `in`, the clause must be on the same column as `let`.
@@ -455,7 +465,7 @@ let parseTyDef boxX keywordLoc tokens =
   match tokens with
   | _ when not (nextInside boxX tokens) ->
     parseError "Expected type name" tokens
-  | (Token.Ident tyIdent, _) :: (Token.Punct "=", _) :: tokens ->
+  | (Token.Ident tyIdent, _) :: (Token.Eq, _) :: tokens ->
     match parseTyDefBody (keywordX + 1) tokens with
     | ATyDef.Synonym ty, tokens ->
       AExpr.TySynonym (tyIdent, ty, keywordLoc), tokens
@@ -473,7 +483,7 @@ let parseBindingOpen _boxX keywordLoc tokens =
     | (Token.Dot, _) :: tokens ->
       parseError "Expected identifier" tokens
     | _ ->
-      identAcc |> List.rev, tokens
+      identAcc |> listRev, tokens
 
   match tokens with
   | (Token.Ident ident, _) :: tokens ->
@@ -534,19 +544,29 @@ let parseSuffix boxX tokens =
       acc, tokens
   go callee tokens
 
-/// call = suffix ( index )*
+/// call = suffix ( suffix )*
 let parseCall boxX tokens =
   let calleeLoc = nextLoc tokens
   let _, calleeX = calleeLoc
   let insideX = max boxX (calleeX + 1)
   let callee, tokens = parseSuffix boxX tokens
   let rec go acc tokens =
-    if nextInside insideX tokens && leadsExpr tokens then
+    if nextInside insideX tokens && leadsArg tokens then
       let expr, tokens = parseSuffix insideX tokens
       go (AExpr.Bin (Op.App, acc, expr, calleeLoc)) tokens
     else
       acc, tokens
   go callee tokens
+
+/// prefix = '-'? call
+let parsePrefix boxX tokens =
+  match tokens with
+  | (Token.Minus, loc) :: tokens ->
+    let arg, tokens = parseCall boxX tokens
+    AExpr.Uni (UniOp.Neg, arg, loc), tokens
+
+  | _ ->
+    parseCall boxX tokens
 
 let parseNextLevelOp level outer tokens =
   match level with
@@ -557,7 +577,7 @@ let parseNextLevelOp level outer tokens =
   | OpLevel.Pipe -> parseOp OpLevel.Cons outer tokens
   | OpLevel.Cons -> parseOp OpLevel.Add outer tokens
   | OpLevel.Add -> parseOp OpLevel.Mul outer tokens
-  | OpLevel.Mul -> parseCall outer tokens
+  | OpLevel.Mul -> parsePrefix outer tokens
 
 let rec parseOps level boxX expr tokens =
   let next expr op opLoc tokens =
@@ -569,37 +589,37 @@ let rec parseOps level boxX expr tokens =
     let expr = AExpr.Bin (op, expr, second, opLoc)
     parseOps level boxX expr tokens
   match level, tokens with
-  | OpLevel.Range, (Token.Punct "..", opLoc) :: tokens ->
+  | OpLevel.Range, (Token.DotDot, opLoc) :: tokens ->
     next expr Op.Range opLoc tokens
-  | OpLevel.Or, (Token.Punct "||", opLoc) :: tokens ->
+  | OpLevel.Or, (Token.PipePipe, opLoc) :: tokens ->
     next expr Op.Or opLoc tokens
-  | OpLevel.And, (Token.Punct "&&", opLoc) :: tokens ->
+  | OpLevel.And, (Token.AmpAmp, opLoc) :: tokens ->
     next expr Op.And opLoc tokens
-  | OpLevel.Cmp, (Token.Punct "=", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.Eq, opLoc) :: tokens ->
     next expr Op.Eq opLoc tokens
-  | OpLevel.Cmp, (Token.Punct "<>", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.LtGt, opLoc) :: tokens ->
     next expr Op.Ne opLoc tokens
-  | OpLevel.Cmp, (Token.Punct "<", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.Lt, opLoc) :: tokens ->
     next expr Op.Lt opLoc tokens
-  | OpLevel.Cmp, (Token.Punct "<=", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.LtEq, opLoc) :: tokens ->
     next expr Op.Le opLoc tokens
-  | OpLevel.Cmp, (Token.Punct ">", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.Gt, opLoc) :: tokens ->
     next expr Op.Gt opLoc tokens
-  | OpLevel.Cmp, (Token.Punct ">=", opLoc) :: tokens ->
+  | OpLevel.Cmp, (Token.GtEq, opLoc) :: tokens ->
     next expr Op.Ge opLoc tokens
-  | OpLevel.Pipe, (Token.Punct "|>", opLoc) :: tokens ->
+  | OpLevel.Pipe, (Token.PipeGt, opLoc) :: tokens ->
     next expr Op.Pipe opLoc tokens
-  | OpLevel.Cons, (Token.Punct "::", opLoc) :: tokens ->
-    nextR expr (Op.Cons noTy) opLoc tokens
-  | OpLevel.Add, (Token.Punct "+", opLoc) :: tokens ->
+  | OpLevel.Cons, (Token.ColonColon, opLoc) :: tokens ->
+    nextR expr Op.Cons opLoc tokens
+  | OpLevel.Add, (Token.Plus, opLoc) :: tokens ->
     next expr Op.Add opLoc tokens
-  | OpLevel.Add, (Token.Punct "-", opLoc) :: tokens ->
+  | OpLevel.Add, (Token.Minus, opLoc) :: tokens ->
     next expr Op.Sub opLoc tokens
-  | OpLevel.Mul, (Token.Punct "*", opLoc) :: tokens ->
+  | OpLevel.Mul, (Token.Star, opLoc) :: tokens ->
     next expr Op.Mul opLoc tokens
-  | OpLevel.Mul, (Token.Punct "/", opLoc) :: tokens ->
+  | OpLevel.Mul, (Token.Slash, opLoc) :: tokens ->
     next expr Op.Div opLoc tokens
-  | OpLevel.Mul, (Token.Punct "%", opLoc) :: tokens ->
+  | OpLevel.Mul, (Token.Percent, opLoc) :: tokens ->
     next expr Op.Mod opLoc tokens
   | _ ->
     expr, tokens
@@ -616,11 +636,11 @@ let parseTerm boxX tokens =
 let parseTuple boxX tokens =
   let rec go acc tokens =
     match tokens with
-    | (Token.Punct ",", _) :: tokens when nextInside boxX tokens ->
+    | (Token.Comma, _) :: tokens when nextInside boxX tokens ->
       let second, tokens = parseTerm boxX tokens
       go (second :: acc) tokens
     | tokens ->
-      List.rev acc, tokens
+      listRev acc, tokens
   let loc = nextLoc tokens
   let first, tokens = parseTerm boxX tokens
   match go [] tokens with
@@ -660,7 +680,7 @@ let parseBinding boxX tokens =
 let rec parseBindings boxX tokens =
   let rec go acc alignX tokens =
     match tokens with
-    | (Token.Punct ";", _) :: tokens
+    | (Token.Semi, _) :: tokens
       when nextX tokens >= alignX ->
       let expr, tokens = parseBinding boxX tokens
       go (expr :: acc) alignX tokens
@@ -669,7 +689,7 @@ let rec parseBindings boxX tokens =
       let expr, tokens = parseBinding boxX tokens
       go (expr :: acc) alignX tokens
     | _ ->
-      List.rev acc, tokens
+      listRev acc, tokens
   go [] (nextX tokens) tokens
 
 /// semi = binding ( ';' binding )*
@@ -691,7 +711,7 @@ let parseModule (boxX: int) tokens =
   match tokens with
   | (Token.Module, (_, moduleX))
     :: (Token.Ident _, _)
-    :: (Token.Punct "=", _) :: tokens ->
+    :: (Token.Eq, _) :: tokens ->
     parseExpr (moduleX + 1) tokens
   | _ ->
     parseExpr boxX tokens
@@ -719,6 +739,6 @@ let parseTopLevel tokens =
 /// module = ( 'module' 'rec'? ident bindings / bindings )?
 let parse (tokens: (Token * Loc) list): AExpr =
   let expr, tokens = parseTopLevel tokens
-  if tokens <> [] then
+  if tokens |> listIsEmpty |> not then
     parseError "Expected eof" tokens
   expr

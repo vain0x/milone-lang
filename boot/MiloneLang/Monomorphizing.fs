@@ -200,17 +200,28 @@ let ctxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
     let ctx = ctxMarkSomethingHappened ctx
     useSiteTys, ctx
 
+/// Replaces the variable serial to monomorphized function serial if possible.
+/// Or marks an use of generic function if possible.
+/// Does nothing if the serial is NOT a generic function.
+let ctxProcessVarRef ctx varSerial useSiteTy =
+  match ctxFindVarDef ctx varSerial with
+  | VarDef.Var _
+  | VarDef.Variant _
+  | VarDef.Fun (_, _, TyScheme.ForAll ([], _), _) ->
+    varSerial, ctx
+
+  | VarDef.Fun _ ->
+    match ctxFindMonomorphizedFun ctx varSerial useSiteTy with
+    | Some monoFunSerial ->
+      monoFunSerial, ctx
+
+    | None ->
+      let ctx = ctxMarkUseOfGenericFun ctx varSerial useSiteTy
+      varSerial, ctx
+
 let monifyPat (pat, ctx) =
   // FIXME: Enter `when` patterns
   pat, ctx
-
-let monifyExprRefGenericFun ctx ident genericFunSerial useSiteTy loc =
-  match ctxFindMonomorphizedFun ctx genericFunSerial useSiteTy with
-  | Some monoFunSerial ->
-    HExpr.Ref (ident, HValRef.Var monoFunSerial, useSiteTy, loc), ctx
-  | None ->
-    let ctx = ctxMarkUseOfGenericFun ctx genericFunSerial useSiteTy
-    HExpr.Ref (ident, HValRef.Var genericFunSerial, useSiteTy, loc), ctx
 
 let monifyExprLetFun ctx ident callee args body next ty loc =
   let genericFunSerial = callee
@@ -254,14 +265,9 @@ let rec monifyExpr (expr, ctx) =
   | HExpr.Ref (_, HValRef.Prim _, _, _) ->
     expr, ctx
 
-  | HExpr.Ref (ident, HValRef.Var serial, useSiteTy, loc) ->
-    match ctxFindVarDef ctx serial with
-    | VarDef.Var _
-    | VarDef.Variant _
-    | VarDef.Fun (_, _, TyScheme.ForAll ([], _), _) ->
-      expr, ctx
-    | VarDef.Fun _ ->
-      monifyExprRefGenericFun ctx ident serial useSiteTy loc
+  | HExpr.Ref (ident, HValRef.Var varSerial, useSiteTy, loc) ->
+    let varSerial, ctx = ctxProcessVarRef ctx varSerial useSiteTy
+    HExpr.Ref (ident, HValRef.Var varSerial, useSiteTy, loc), ctx
 
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> monifyExpr
@@ -276,10 +282,15 @@ let rec monifyExpr (expr, ctx) =
     let subject, ctx = monifyExpr (subject, ctx)
     HExpr.Nav (subject, message, ty, loc), ctx
 
-  | HExpr.Op (op, l, r, ty, loc) ->
+  | HExpr.Bin (op, l, r, ty, loc) ->
     let l, ctx = (l, ctx) |> monifyExpr
     let r, ctx = (r, ctx) |> monifyExpr
-    HExpr.Op (op, l, r, ty, loc), ctx
+    HExpr.Bin (op, l, r, ty, loc), ctx
+
+  | HExpr.Inf (InfOp.Closure funSerial, args, useSiteTy, loc) ->
+    let funSerial, ctx = ctxProcessVarRef ctx funSerial useSiteTy
+    let args, ctx = (args, ctx) |> stMap monifyExpr
+    HExpr.Inf (InfOp.Closure funSerial, args, useSiteTy, loc), ctx
 
   | HExpr.Inf (infOp, args, ty, loc) ->
     let args, ctx = (args, ctx) |> stMap monifyExpr
