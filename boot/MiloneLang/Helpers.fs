@@ -220,7 +220,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
     ty, a
   | HExpr.Nav (_, _, ty, a) ->
     ty, a
-  | HExpr.Op (_, _, _, ty, a) ->
+  | HExpr.Bin (_, _, _, ty, a) ->
     ty, a
   | HExpr.Inf (_, _, ty, a) ->
     ty, a
@@ -253,10 +253,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Match (go target, arms, f ty, g a)
     | HExpr.Nav (sub, mes, ty, a) ->
       HExpr.Nav (go sub, mes, f ty, g a)
-    | HExpr.Op (Op.Cons itemTy, l, r, ty, a) ->
-      HExpr.Op (Op.Cons (f itemTy), go l, go r, f ty, g a)
-    | HExpr.Op (op, l, r, ty, a) ->
-      HExpr.Op (op, go l, go r, f ty, g a)
+    | HExpr.Bin (op, l, r, ty, a) ->
+      HExpr.Bin (op, go l, go r, f ty, g a)
     | HExpr.Inf (InfOp.List itemTy, items, resultTy, a) ->
       HExpr.Inf (InfOp.List (f itemTy), List.map go items, f resultTy, g a)
     | HExpr.Inf (infOp, args, resultTy, a) ->
@@ -282,11 +280,10 @@ let mexprExtract expr =
   | MExpr.Default (ty, loc) -> ty, loc
   | MExpr.Lit (lit, loc) -> litTy lit, loc
   | MExpr.Ref (_, ty, loc) -> ty, loc
-  | MExpr.Prim (_, ty, loc) -> ty, loc
   | MExpr.Proc (_, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
-  | MExpr.UniOp (_, _, ty, loc) -> ty, loc
-  | MExpr.Op (_, _, _, ty, loc) -> ty, loc
+  | MExpr.Uni (_, _, ty, loc) -> ty, loc
+  | MExpr.Bin (_, _, _, ty, loc) -> ty, loc
 
 let mexprTy expr =
   let ty, _ = mexprExtract expr
@@ -309,13 +306,13 @@ let hxFalse loc =
   HExpr.Lit (Lit.Bool false, loc)
 
 let hxIndex l r ty loc =
-  HExpr.Op (Op.Index, l, r, ty, loc)
+  HExpr.Bin (Op.Index, l, r, ty, loc)
 
 let hxAnno expr ty loc =
   HExpr.Inf (InfOp.Anno, [expr], ty, loc)
 
-let hxAndThen items loc =
-  HExpr.Inf (InfOp.AndThen, items, exprTy (List.last items), loc)
+let hxSemi items loc =
+  HExpr.Inf (InfOp.Semi, items, exprTy (List.last items), loc)
 
 let hxCallProc callee args resultTy loc =
   HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)

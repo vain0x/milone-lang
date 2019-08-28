@@ -133,7 +133,7 @@ let hoistMain expr =
     match expr with
     | HExpr.LetFun ("main", serial, args, body, next, ty, loc) ->
       let makeMain rest =
-        HExpr.LetFun ("main", serial, args, hxAndThen [rest; body] loc, next, ty, loc)
+        HExpr.LetFun ("main", serial, args, hxSemi [rest; body] loc, next, ty, loc)
       next, makeMain
 
     | HExpr.Let (pat, init, next, ty, loc) ->
@@ -144,7 +144,7 @@ let hoistMain expr =
       let next, f = go next
       HExpr.LetFun (ident, serial, args, body, next, ty, loc), f
 
-    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+    | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
       let rec goLast exprs =
         match exprs with
         | [] ->
@@ -156,7 +156,7 @@ let hoistMain expr =
           let exprs, f = goLast exprs
           expr :: exprs, f
       let exprs, f = goLast exprs
-      HExpr.Inf (InfOp.AndThen, exprs, ty, loc), f
+      HExpr.Inf (InfOp.Semi, exprs, ty, loc), f
     | _ ->
       expr, id
 
@@ -275,9 +275,9 @@ let declosureExprApp expr resultTy loc ctx =
   /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
   let rec roll acc callee =
     match callee with
-    | HExpr.Op (Op.App, callee, arg, _, _) ->
+    | HExpr.Bin (Op.App, callee, arg, _, _) ->
       roll (arg :: acc) callee
-    | HExpr.Op (Op.Pipe, arg, callee, _, _) ->
+    | HExpr.Bin (Op.Pipe, arg, callee, _, _) ->
       roll (arg :: acc) callee
     | _ ->
       callee, acc
@@ -343,10 +343,10 @@ let declosureExprTyDecl expr tyDecl ctx =
       ) ctx
     expr, ctx
 
-let declosureExprOp ctx op l r ty loc =
+let declosureExprBin ctx op l r ty loc =
   let l, ctx = declosureExpr (l, ctx)
   let r, ctx = declosureExpr (r, ctx)
-  HExpr.Op (op, l, r, ty, loc), ctx
+  HExpr.Bin (op, l, r, ty, loc), ctx
 
 let declosureExprInf ctx infOp items ty loc =
   let items, ctx = (items, ctx) |> stMap declosureExpr
@@ -375,10 +375,10 @@ let declosureExpr (expr, ctx) =
   | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = declosureExpr (subject, ctx)
     HExpr.Nav (subject, message, ty, loc), ctx
-  | HExpr.Op (Op.App, _, _, ty, loc) ->
+  | HExpr.Bin (Op.App, _, _, ty, loc) ->
     declosureExprApp expr ty loc ctx
-  | HExpr.Op (op, l, r, ty, loc) ->
-    declosureExprOp ctx op l r ty loc
+  | HExpr.Bin (op, l, r, ty, loc) ->
+    declosureExprBin ctx op l r ty loc
   | HExpr.Inf (infOp, items, ty, loc) ->
     declosureExprInf ctx infOp items ty loc
   | HExpr.Let (pat, body, next, ty, loc) ->
@@ -482,7 +482,7 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
       let restArgPat = HPat.Ref ("arg", argSerial, argTy, callLoc)
       restArgPat :: restArgPats, argRef :: restArgs, ctx
     | _ ->
-      failwith "Never: Type error"
+      failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
   let restTy = callee |> exprTy |> appliedTy argLen
   go (arity - argLen) restTy ctx
 
@@ -611,8 +611,8 @@ let unetaCall callee args resultTy loc ctx =
       match (ctx: FunTransCtx).Vars |> Map.find serial with
       | VarDef.Fun (_, arity, _, _) ->
         arity
-      | VarDef.Variant (_, _, hasArg, _, _, _) ->
-        if hasArg then 1 else 0
+      | VarDef.Variant (_, _, hasPayload, _, _, _) ->
+        if hasPayload then 1 else 0
       | _ ->
         1
     let args, ctx = (args, ctx) |> stMap unetaExpr
@@ -697,10 +697,10 @@ let unetaExpr (expr, ctx) =
   | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = unetaExpr (subject, ctx)
     HExpr.Nav (subject, message, ty, loc), ctx
-  | HExpr.Op (op, l, r, ty, loc) ->
+  | HExpr.Bin (op, l, r, ty, loc) ->
     let l, ctx = (l, ctx) |> unetaExpr
     let r, ctx = (r, ctx) |> unetaExpr
-    HExpr.Op (op, l, r, ty, loc), ctx
+    HExpr.Bin (op, l, r, ty, loc), ctx
   | HExpr.Inf (infOp, args, ty, loc) ->
     unetaExprInf infOp args ty loc ctx
   | HExpr.Let (pat, init, next, ty, loc) ->

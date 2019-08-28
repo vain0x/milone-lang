@@ -10,7 +10,6 @@ type Ctx =
   {
     Vars: Map<int, VarDef>
     VarUniqueNames: Map<int, string>
-    TySerial: int
     TyEnv: Map<Ty, CTy>
     Tys: Map<int, TyDef>
     TyUniqueNames: Map<Ty, string>
@@ -49,7 +48,6 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): Ctx =
   {
     Vars = mirCtx.Vars
     VarUniqueNames = varNames
-    TySerial = 0
     TyEnv = Map.empty
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
@@ -91,7 +89,6 @@ let ctxAddFunDecl (ctx: Ctx) sTy tTy =
   let fields = ["fun", CTy.FunPtr (envTy :: argTys, resultTy); "env", envTy]
   let ctx: Ctx =
     { ctx with
-        TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add funTy selfTy
         Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
@@ -110,7 +107,6 @@ let ctxAddListDecl (ctx: Ctx) itemTy =
   let fields = ["head", itemTy; "tail", selfTy]
   let ctx: Ctx =
     { ctx with
-        TySerial = ctx.TySerial + 1
         Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
   selfTy, ctx
@@ -130,7 +126,6 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
   let tupleTyIdent, ctx = ctxUniqueTyName ctx tupleTy
   let ctx: Ctx =
     { ctx with
-        TySerial = ctx.TySerial + 1
         TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct tupleTyIdent)
         Decls = CDecl.Struct (tupleTyIdent, fields, []) :: ctx.Decls
     }
@@ -150,18 +145,18 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
   let variants =
     variants |> List.map (fun variantSerial ->
       match ctx.Vars |> Map.tryFind variantSerial with
-      | Some (VarDef.Variant (ident, _, hasArg, argTy, _, _)) ->
-        ident, variantSerial, hasArg, argTy
+      | Some (VarDef.Variant (ident, _, hasPayload, payloadTy, _, _)) ->
+        ident, variantSerial, hasPayload, payloadTy
       | _ -> failwith "Never"
     )
   let tags =
     variants |> List.map (fun (_, serial, _, _) ->
       ctxUniqueName ctx serial)
   let makeVariants ctx =
-    (variants, ctx) |> stFlatMap (fun ((_, serial, hasArg, argTy), acc, ctx) ->
-      if hasArg then
-        let argTy, ctx = cty ctx argTy
-        (ctxUniqueName ctx serial, CTy.Ptr argTy) :: acc, ctx
+    (variants, ctx) |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
+      if hasPayload then
+        let payloadTy, ctx = cty ctx payloadTy
+        (ctxUniqueName ctx serial, CTy.Ptr payloadTy) :: acc, ctx
       else
         acc, ctx
     )
@@ -328,7 +323,7 @@ let genExprVariant ctx serial ty =
   let tag = CExpr.Ref (ctxUniqueName ctx serial)
   CExpr.Init (["tag", tag], ty), ctx
 
-let genExprOpAsCall ctx ident l r =
+let genExprBinAsCall ctx ident l r =
   let l, ctx = genExpr ctx l
   let r, ctx = genExpr ctx r
   let callExpr = CExpr.Call (CExpr.Ref ident, [l; r])
@@ -338,34 +333,34 @@ let genExprUniOp ctx op arg ty _ =
   let arg, ctx = genExpr ctx arg
   match op with
   | MUniOp.Not ->
-    CExpr.UniOp (CUniOp.Not, arg), ctx
+    CExpr.Uni (CUniOp.Not, arg), ctx
   | MUniOp.StrPtr ->
     CExpr.Nav (arg, "str"), ctx
   | MUniOp.StrLen ->
     CExpr.Nav (arg, "len"), ctx
   | MUniOp.Unbox ->
     let valTy, ctx = cty ctx ty
-    let deref = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (arg, CTy.Ptr valTy))
+    let deref = CExpr.Uni (CUniOp.Deref, CExpr.Cast (arg, CTy.Ptr valTy))
     deref, ctx
   | MUniOp.Proj index ->
     CExpr.Proj (arg, index), ctx
   | MUniOp.Tag ->
     CExpr.Nav (arg, "tag"), ctx
   | MUniOp.GetVariant serial ->
-    CExpr.UniOp (CUniOp.Deref, CExpr.Nav (arg, ctxUniqueName ctx serial)), ctx
+    CExpr.Uni (CUniOp.Deref, CExpr.Nav (arg, ctxUniqueName ctx serial)), ctx
   | MUniOp.ListIsEmpty ->
-    CExpr.UniOp (CUniOp.Not, arg), ctx
+    CExpr.Uni (CUniOp.Not, arg), ctx
   | MUniOp.ListHead ->
     CExpr.Arrow (arg, "head"), ctx
   | MUniOp.ListTail ->
     CExpr.Arrow (arg, "tail"), ctx
 
-let genExprOp ctx op l r =
+let genExprBin ctx op l r =
   match op with
   | MOp.StrAdd ->
-    genExprOpAsCall ctx "str_add" l r
+    genExprBinAsCall ctx "str_add" l r
   | MOp.StrCmp ->
-    genExprOpAsCall ctx "str_cmp" l r
+    genExprBinAsCall ctx "str_cmp" l r
   | MOp.StrIndex ->
     let l, ctx = genExpr ctx l
     let r, ctx = genExpr ctx r
@@ -373,7 +368,7 @@ let genExprOp ctx op l r =
   | _ ->
     let l, ctx = genExpr ctx l
     let r, ctx = genExpr ctx r
-    let opExpr = CExpr.BinOp (cOpFrom op, l, r)
+    let opExpr = CExpr.Bin (cOpFrom op, l, r)
     opExpr, ctx
 
 let genExprList ctx exprs =
@@ -407,12 +402,10 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     genExprProc ctx serial ty loc
   | MExpr.Variant (_, serial, ty, _) ->
     genExprVariant ctx serial ty
-  | MExpr.UniOp (op, arg, ty, loc) ->
+  | MExpr.Uni (op, arg, ty, loc) ->
     genExprUniOp ctx op arg ty loc
-  | MExpr.Op (op, l, r, _, _) ->
-    genExprOp ctx op l r
-  | MExpr.Prim _ ->
-    failwith "Never: Primitives must be used as callee"
+  | MExpr.Bin (op, l, r, _, _) ->
+    genExprBin ctx op l r
 
 let genExprCallPrintfn ctx format args =
   // Insert implicit cast from str to str ptr.
@@ -460,30 +453,42 @@ let genExprCallString arg argTy ctx =
   | _ ->
     failwith "Never: Type Error `int`"
 
-let genExprCallProc ctx callee args ty =
-  match callee, args with
-  | MExpr.Prim (HPrim.NativeFun (nativeFunIdent, _), _, _), args ->
+let genExprCallPrim ctx prim args primTy resultTy =
+  match prim, args, primTy with
+  | HPrim.NativeFun (nativeFunIdent, _), _, _ ->
     let args, ctx = genExprList ctx args
     CExpr.Call (CExpr.Ref nativeFunIdent, args), ctx
-  | MExpr.Prim (HPrim.Printfn, _, _), (MExpr.Lit (Lit.Str format, _)) :: args ->
+
+  | HPrim.Printfn, (MExpr.Lit (Lit.Str format, _)) :: args, _ ->
     genExprCallPrintfn ctx format args
-  | MExpr.Prim (HPrim.Assert, _, _), args ->
+
+  | HPrim.Assert, _, _ ->
     let callee = CExpr.Ref "milone_assert"
     let args, ctx = genExprList ctx args
     let assertCall = CExpr.Call (callee, args)
     let ctx = ctxAddStmt ctx (CStmt.Expr assertCall)
-    genExprDefault ctx ty
-  | MExpr.Prim (HPrim.StrSlice, _, _), args ->
+    genExprDefault ctx resultTy
+
+  | HPrim.StrSlice, _, _ ->
     let callee = CExpr.Ref "str_slice"
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
-  | MExpr.Prim (HPrim.Char, _, _), [arg] ->
+
+  | HPrim.Char, [arg], _ ->
     let arg, ctx = genExpr ctx arg
     CExpr.Cast (arg, CTy.Char), ctx
-  | MExpr.Prim (HPrim.Int, Ty.Con (TyCon.Fun, [argTy; _]), _), [arg] ->
+
+  | HPrim.Int, [arg], Ty.Con (TyCon.Fun, [argTy; _]) ->
     genExprCallInt arg argTy ctx
-  | MExpr.Prim (HPrim.String, Ty.Con (TyCon.Fun, [argTy; _]), _), [arg] ->
+
+  | HPrim.String, [arg], Ty.Con (TyCon.Fun, [argTy; _]) ->
     genExprCallString arg argTy ctx
+
+  | _ ->
+    failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
+
+let genExprCallProc ctx callee args ty =
+  match callee, args with
   | _ ->
     let callee, ctx = genExpr ctx callee
     let args, ctx = genExprList ctx args
@@ -521,7 +526,7 @@ let genInitBox ctx serial arg =
   let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, CTy.Ptr argTy, CTy.Ptr CTy.Void))
 
   // *(T*)p = t;
-  let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (CExpr.Ref temp, CTy.Ptr argTy))
+  let left = CExpr.Uni (CUniOp.Deref, CExpr.Cast (CExpr.Ref temp, CTy.Ptr argTy))
   let ctx = ctxAddStmt ctx (CStmt.Set (left, arg))
 
   ctx
@@ -537,14 +542,14 @@ let genInitIndirect ctx serial payload ty =
   let ctx = ctxAddStmt ctx (CStmt.LetAlloc (varName, ptrTy, ptrTy))
 
   // *(T*)p = t;
-  let left = CExpr.UniOp (CUniOp.Deref, CExpr.Cast (CExpr.Ref varName, ptrTy))
+  let left = CExpr.Uni (CUniOp.Deref, CExpr.Cast (CExpr.Ref varName, ptrTy))
   let ctx = ctxAddStmt ctx (CStmt.Set (left, payload))
 
   ctx
 
-let genInitCons ctx serial head tail itemTy =
+let genInitCons ctx serial head tail listTy =
   let temp = ctxUniqueName ctx serial
-  let listTy, ctx = cty ctx (tyList itemTy)
+  let listTy, ctx = cty ctx listTy
   let ctx = ctxAddStmt ctx (CStmt.LetAlloc (temp, listTy, listTy))
 
   // head
@@ -596,6 +601,9 @@ let genStmtLetVal ctx serial init ty =
   | MInit.Expr expr ->
     let expr, ctx = genExpr ctx expr
     genInitExprCore ctx serial (Some expr) ty
+  | MInit.CallPrim (prim, args, calleeTy) ->
+    let expr, ctx = genExprCallPrim ctx prim args calleeTy ty
+    genInitExprCore ctx serial (Some expr) ty
   | MInit.CallProc (callee, args, _) ->
     let expr, ctx = genExprCallProc ctx callee args ty
     genInitExprCore ctx serial (Some expr) ty
@@ -608,8 +616,8 @@ let genStmtLetVal ctx serial init ty =
     genInitBox ctx serial arg
   | MInit.Indirect payload ->
     genInitIndirect ctx serial payload ty
-  | MInit.Cons (head, tail, itemTy) ->
-    genInitCons ctx serial head tail itemTy
+  | MInit.Cons (head, tail) ->
+    genInitCons ctx serial head tail ty
   | MInit.Tuple items ->
     genInitTuple ctx serial items ty
   | MInit.Variant (variantSerial, payloadSerial) ->

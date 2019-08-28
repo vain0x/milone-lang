@@ -9,7 +9,7 @@ let findOpenPaths expr =
     match expr with
     | HExpr.Open (path, _) ->
       [path]
-    | HExpr.Inf (InfOp.AndThen, exprs, _, _) ->
+    | HExpr.Inf (InfOp.Semi, exprs, _, _) ->
       exprs |> List.collect go
     | _ ->
       []
@@ -35,7 +35,7 @@ let spliceExpr firstExpr secondExpr =
     | HExpr.LetFun (ident, serial, args, body, next, ty, loc) ->
       let next = go next
       HExpr.LetFun (ident, serial, args, body, next, ty, loc)
-    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+    | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
       let rec goLast exprs =
         match exprs with
         | [] ->
@@ -45,9 +45,9 @@ let spliceExpr firstExpr secondExpr =
         | x :: xs ->
           x :: goLast xs
       let exprs = goLast exprs
-      HExpr.Inf (InfOp.AndThen, exprs, ty, loc)
+      HExpr.Inf (InfOp.Semi, exprs, ty, loc)
     | _ ->
-      hxAndThen [expr; secondExpr] (0, 0)
+      hxSemi [expr; secondExpr] (0, 0)
   go firstExpr
 
 let parseProjectModules readModuleFile projectName nameCtx =

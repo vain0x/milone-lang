@@ -440,9 +440,9 @@ let collectDecls (expr, ctx) =
       let next, ctx = (next, ctx) |> goExpr
       HExpr.LetFun (ident, serial, args, body, next, ty, loc), ctx
 
-    | HExpr.Inf (InfOp.AndThen, exprs, ty, loc) ->
+    | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
       let exprs, ctx = (exprs, ctx) |> stMap goExpr
-      HExpr.Inf (InfOp.AndThen, exprs, ty, loc), ctx
+      HExpr.Inf (InfOp.Semi, exprs, ty, loc), ctx
 
     | HExpr.TyDef (ident, serial, tyDecl, loc) ->
       let ctx = ctx |> scopeCtxDefineTyDeclUniquely serial tyDecl loc
@@ -634,10 +634,10 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     | _ ->
       keepUnresolved ()
 
-  | HExpr.Op (op, l, r, ty, loc) ->
+  | HExpr.Bin (op, l, r, ty, loc) ->
     let l, ctx = (l, ctx) |> onExpr
     let r, ctx = (r, ctx) |> onExpr
-    HExpr.Op (op, l, r, ty, loc), ctx
+    HExpr.Bin (op, l, r, ty, loc), ctx
 
   | HExpr.Inf (op, items, ty, loc) ->
     // Necessary in case of annotation expression.
