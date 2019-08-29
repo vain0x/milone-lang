@@ -121,7 +121,7 @@ let strCmpExpr ctx op l r (ty, loc) =
 /// Generates a comparison expression.
 let cmpExpr ctx (op: MOp) (l: MExpr) r (ty: Ty) loc =
   assert (opIsComparison op)
-  match mexprTy l with
+  match mexprToTy l with
   | Ty.Con ((TyCon.Bool | TyCon.Int | TyCon.Char), _) ->
     opScalarExpr ctx op l r (ty, loc)
   | Ty.Con (TyCon.Str, _) ->
@@ -414,7 +414,7 @@ let mirifyExprMatch ctx target arms ty loc =
   temp, ctx
 
 let mirifyExprIndex ctx l r _ loc =
-  match exprTy l, exprTy r with
+  match exprToTy l, exprToTy r with
   | Ty.Con (TyCon.Str, _), Ty.Con (TyCon.Int, _) ->
     let l, ctx = mirifyExpr ctx l
     let r, ctx = mirifyExpr ctx r
@@ -462,7 +462,7 @@ let mirifyExprCallNot ctx arg ty notLoc =
 let mirifyExprCallVariantFun (ctx: MirCtx) serial payload ty loc =
   // Put payload on the heap.
   let payload, ctx = mirifyExpr ctx payload
-  let payloadTy = mexprTy payload
+  let payloadTy = mexprToTy payload
   let _, payloadSerial, ctx = ctxFreshVar ctx "payload" payloadTy loc
   let payloadInit = MInit.Indirect payload
   let ctx = ctxAddStmt ctx (MStmt.LetVal (payloadSerial, payloadInit, payloadTy, loc))
@@ -522,7 +522,7 @@ let mirifyExprBin ctx op l r ty loc =
     failwith "Never: Apps erased in FunTrans."
   | _ ->
     let op = mopFrom op
-    let lTy = exprTy l
+    let lTy = exprToTy l
     let l, ctx = mirifyExpr ctx l
     let r, ctx = mirifyExpr ctx r
     match lTy with
@@ -542,13 +542,13 @@ let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =
     match callee with
     | HExpr.Ref (_, HValRef.Prim prim, _, _) ->
-      let primTy = exprTy callee
+      let primTy = exprToTy callee
       let (args, ctx) = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
       let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
       let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.CallPrim (prim, args, primTy), ty, loc))
       temp, ctx
     | _ ->
-      let calleeTy = exprTy callee
+      let calleeTy = exprToTy callee
       let callee, ctx = mirifyExpr ctx callee
       let (args, ctx) = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
       let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc

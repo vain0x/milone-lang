@@ -244,7 +244,7 @@ let declosureCall callee args resultTy loc (ctx: FunTransCtx) =
     match ctx.Caps |> Map.tryFind callee with
     | Some (_ :: _ as caps) ->
       let capsExpr = buildCapsTuple caps loc
-      let capsTy = exprTy capsExpr
+      let capsTy = exprToTy capsExpr
 
       // Count captured variables as occurrences of reference.
       let capsExpr, ctx = (capsExpr, ctx) |> declosureExpr
@@ -507,7 +507,7 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
       restArgPat :: restArgPats, argRef :: restArgs, ctx
     | _ ->
       failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
-  let restTy = callee |> exprTy |> appliedTy argLen
+  let restTy = callee |> exprToTy |> appliedTy argLen
   go (arity - argLen) restTy ctx
 
 let createEnvPatAndTy items callLoc ctx =
@@ -529,7 +529,7 @@ let createEnvPatAndTy items callLoc ctx =
 let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
   let unboxRef = HExpr.Ref ("unbox", HValRef.Prim HPrim.Unbox, tyFun tyObj envTy, callLoc)
   let unboxExpr = hxCallProc unboxRef [envArgRef] envTy callLoc
-  HExpr.Let (envPat, unboxExpr, next, exprTy next, callLoc)
+  HExpr.Let (envPat, unboxExpr, next, exprToTy next, callLoc)
 
 /// Creates a let expression to define an underlying function.
 /// It takes an environment and rest arguments
@@ -540,7 +540,7 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
   let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
   let argPats = envArgPat :: restArgPats
   let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
-  let funLet next = HExpr.LetFun ("fun", funSerial, argPats, body, next, exprTy next, callLoc)
+  let funLet next = HExpr.LetFun ("fun", funSerial, argPats, body, next, exprToTy next, callLoc)
   funLet, funSerial, ctx
 
 let createEnvBoxExpr args envTy callLoc =
@@ -550,7 +550,7 @@ let createEnvBoxExpr args envTy callLoc =
 
 /// In the case the callee is a function.
 let resolvePartialAppFun callee arity args argLen callLoc ctx =
-  let funTy = exprTy callee
+  let funTy = exprToTy callee
   let resultTy = appliedTy arity funTy
   let envItems = args
 
@@ -575,14 +575,14 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
 /// In the case that the callee is a function object.
 /// We need to include it to the environment.
 let resolvePartialAppObj callee arity args argLen callLoc ctx =
-  let funTy = exprTy callee
+  let funTy = exprToTy callee
   let resultTy = appliedTy arity funTy
 
   // Introduce a variable for memoization.
   let calleeRef, calleeLet, ctx =
     let calleeRef, calleeSerial, ctx = ctxFreshVar "callee" funTy callLoc ctx
     let calleePat = HPat.Ref ("callee", calleeSerial, funTy, callLoc)
-    let calleeLet next = HExpr.Let (calleePat, callee, next, exprTy next, callLoc)
+    let calleeLet next = HExpr.Let (calleePat, callee, next, exprToTy next, callLoc)
     calleeRef, calleeLet, ctx
   let envItems = calleeRef :: args
 
@@ -624,7 +624,7 @@ let unetaCallCore calleeKind callee arity calleeLoc args resultTy callLoc ctx =
     resolvePartialApp calleeKind callee arity args argLen callLoc ctx
   else
     let callArgs, restArgs = splitAt arity args
-    let callResultTy = appliedTy arity (exprTy callee)
+    let callResultTy = appliedTy arity (exprToTy callee)
     let callExpr = hxCallTo calleeKind callee callArgs callResultTy calleeLoc
     hxCallTo CalleeKind.Obj callExpr restArgs resultTy callLoc, ctx
 
@@ -657,7 +657,7 @@ let unetaCall callee args resultTy loc ctx =
       | HPrim.StrSlice ->
         3
       | HPrim.Printfn ->
-        primTy |> arityTy
+        primTy |> tyToArity
       | HPrim.NativeFun (_, arity) ->
         arity
     let args, ctx = (args, ctx) |> stMap unetaExpr
@@ -666,7 +666,7 @@ let unetaCall callee args resultTy loc ctx =
     let calleeTy, calleeLoc = exprExtract callee
     let callee, ctx = (callee, ctx) |> unetaExpr
     let args, ctx = (args, ctx) |> stMap unetaExpr
-    let arity = arityTy calleeTy // FIXME: maybe wrong
+    let arity = tyToArity calleeTy // FIXME: maybe wrong
     unetaCallCore CalleeKind.Obj callee arity calleeLoc args resultTy loc ctx
   | _ ->
     failwith "Never"

@@ -107,14 +107,14 @@ let scopeCtxDefineTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Adds a variable to a scope.
 let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
-  let varIdent = scopeCtx |> scopeCtxGetVar varSerial |> varDefIdent
+  let varIdent = scopeCtx |> scopeCtxGetVar varSerial |> varDefToIdent
   { scopeCtx with
       Local = (scopeSerial, Binding.Var (varSerial, varIdent)) :: scopeCtx.Local
   }
 
 /// Adds a type to a scope.
 let scopeCtxOpenTy scopeSerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
-  let tyIdent = scopeCtx |> scopeCtxGetTy tySerial |> tyDefIdent
+  let tyIdent = scopeCtx |> scopeCtxGetTy tySerial |> tyDefToIdent
   { scopeCtx with
       Local = (scopeSerial, Binding.Ty (tySerial, tyIdent)) :: scopeCtx.Local
   }

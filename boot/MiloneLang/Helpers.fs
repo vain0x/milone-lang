@@ -162,15 +162,15 @@ let tyCollectFreeVars ty =
 
   go [] [ty] |> listUnique
 
-let rec arityTy ty =
+let rec tyToArity ty =
   match ty with
   | Ty.Con (TyCon.Fun, [_; ty]) ->
-    1 + arityTy ty
+    1 + tyToArity ty
   | _ ->
     0
 
 /// Converts nested function type to multi-arguments function type.
-let rec rollFunTy ty =
+let rec tyToArgList ty =
   let rec go n acc ty =
     match ty with
     | Ty.Con (TyCon.Fun, [sTy; tTy]) ->
@@ -183,7 +183,7 @@ let rec rollFunTy ty =
 // Type definitions (HIR)
 // -----------------------------------------------
 
-let tyDefIdent tyDef =
+let tyDefToIdent tyDef =
   match tyDef with
   | TyDef.Meta (ident, _, _) -> ident
   | TyDef.Union (ident, _, _) -> ident
@@ -192,7 +192,7 @@ let tyDefIdent tyDef =
 // Variable definitions (HIR)
 // -----------------------------------------------
 
-let varDefIdent varDef =
+let varDefToIdent varDef =
   match varDef with
   | VarDef.Var (ident, _, _) -> ident
   | VarDef.Fun (ident, _, _, _) -> ident
@@ -202,7 +202,7 @@ let varDefIdent varDef =
 // Literals
 // -----------------------------------------------
 
-let litTy (lit: Lit): Ty =
+let litToTy (lit: Lit): Ty =
   match lit with
   | Lit.Bool _ -> tyBool
   | Lit.Int _ -> tyInt
@@ -245,7 +245,7 @@ let patNil itemTy loc =
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HPat.Lit (lit, a) ->
-    litTy lit, a
+    litToTy lit, a
   | HPat.Nil (itemTy, a) ->
     tyList itemTy, a
   | HPat.Ref (_, _, ty, a) ->
@@ -357,7 +357,7 @@ let hxAnno expr ty loc =
   HExpr.Inf (InfOp.Anno, [expr], ty, loc)
 
 let hxSemi items loc =
-  HExpr.Inf (InfOp.Semi, items, exprTy (List.last items), loc)
+  HExpr.Inf (InfOp.Semi, items, exprToTy (List.last items), loc)
 
 let hxCallProc callee args resultTy loc =
   HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)
@@ -366,7 +366,7 @@ let hxCallClosure callee args resultTy loc =
   HExpr.Inf (InfOp.CallClosure, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HExpr.Inf (InfOp.Tuple, items, tyTuple (List.map exprTy items), loc)
+  HExpr.Inf (InfOp.Tuple, items, tyTuple (List.map exprToTy items), loc)
 
 let hxUnit loc =
   hxTuple [] loc
@@ -380,7 +380,7 @@ let hxNil itemTy loc =
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HExpr.Lit (lit, a) ->
-    litTy lit, a
+    litToTy lit, a
   | HExpr.Ref (_, _, ty, a) ->
     ty, a
   | HExpr.If (_, _, _, ty, a) ->
@@ -440,7 +440,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Error (error, g a)
   go expr
 
-let exprTy expr =
+let exprToTy expr =
   let ty, _ = exprExtract expr
   ty
 
@@ -465,14 +465,14 @@ let opIsComparison op =
 let mexprExtract expr =
   match expr with
   | MExpr.Default (ty, loc) -> ty, loc
-  | MExpr.Lit (lit, loc) -> litTy lit, loc
+  | MExpr.Lit (lit, loc) -> litToTy lit, loc
   | MExpr.Ref (_, ty, loc) -> ty, loc
   | MExpr.Proc (_, ty, loc) -> ty, loc
   | MExpr.Variant (_, _, ty, loc) -> ty, loc
   | MExpr.Uni (_, _, ty, loc) -> ty, loc
   | MExpr.Bin (_, _, _, ty, loc) -> ty, loc
 
-let mexprTy expr =
+let mexprToTy expr =
   let ty, _ = mexprExtract expr
   ty
 

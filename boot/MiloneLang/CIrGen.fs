@@ -25,7 +25,7 @@ let tagTyIdent tyIdent =
   sprintf "%sTag" tyIdent
 
 let calculateVarUniqueNames vars =
-  let groups = vars |> Map.toList |> Seq.groupBy (fun (_, varDef) -> varDefIdent varDef)
+  let groups = vars |> Map.toList |> Seq.groupBy (fun (_, varDef) -> varDefToIdent varDef)
   groups |> Seq.collect (fun (ident, vars) ->
     vars |> Seq.mapi (fun i (serial, _) ->
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
@@ -34,7 +34,7 @@ let calculateVarUniqueNames vars =
   |> Map.ofSeq
 
 let calculateTyUniqueNames tys =
-  let groups = tys |> Map.toList |> Seq.groupBy (fun (_, tyDef) -> tyDefIdent tyDef)
+  let groups = tys |> Map.toList |> Seq.groupBy (fun (_, tyDef) -> tyDefToIdent tyDef)
   groups |> Seq.collect (fun (ident, tys) ->
     tys |> Seq.mapi (fun i (serial, _) ->
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
@@ -73,7 +73,7 @@ let ctxAddDecl (ctx: Ctx) decl =
 
 let ctxAddFunDecl (ctx: Ctx) sTy tTy =
   let funTy = tyFun sTy tTy
-  let _, argTys, resultTy = rollFunTy funTy
+  let _, argTys, resultTy = tyToArgList funTy
   let ident, ctx = ctxUniqueTyName ctx funTy
   let selfTy = CTy.Struct ident
   let envTy = CTy.Ptr CTy.Void
@@ -199,7 +199,7 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
         | Ty.Con (TyCon.Obj, _) -> "Object", ctx
         | Ty.Con (TyCon.Fun, _) ->
-          let arity, argTys, resultTy = rollFunTy ty
+          let arity, argTys, resultTy = tyToArgList ty
           let argTys, ctx = (argTys, ctx) |> stMap (fun (argTy, ctx) -> ctx |> go argTy)
           let resultTy, ctx = ctx |> go resultTy
           sprintf "%s%sFun%d" (argTys |> String.concat "") resultTy arity, ctx
@@ -415,7 +415,7 @@ let genExprCallPrintfn ctx format args =
       List.rev acc, ctx
     | MExpr.Lit (Lit.Str value, _) :: args ->
       go (CExpr.StrRaw value :: acc) ctx args
-    | arg :: args when mexprTy arg = tyStr ->
+    | arg :: args when mexprToTy arg = tyStr ->
       let arg, ctx = genExpr ctx arg
       let acc = CExpr.Nav (arg, "str") :: acc
       go acc ctx args
@@ -518,7 +518,7 @@ let genInitClosure ctx serial funSerial envSerial ty =
   ctxAddStmt ctx (CStmt.Let (ident, Some initExpr, ty))
 
 let genInitBox ctx serial arg =
-  let argTy, ctx = cty ctx (mexprTy arg)
+  let argTy, ctx = cty ctx (mexprToTy arg)
   let arg, ctx = genExpr ctx arg
 
   // void* p = (void*)malloc(sizeof T);

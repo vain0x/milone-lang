@@ -251,7 +251,7 @@ let inferPatAs ctx pat ident varSerial loc ty =
 let inferPat ctx pat ty =
   match pat with
   | HPat.Lit (lit, loc) ->
-    pat, unifyTy ctx loc ty (litTy lit)
+    pat, unifyTy ctx loc ty (litToTy lit)
   | HPat.Nil (_, loc) ->
     let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
     let ctx = unifyTy ctx loc ty (tyList itemTy)
@@ -642,7 +642,7 @@ let inferExprOpen ctx path ty loc =
 let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   match expr with
   | HExpr.Lit (lit, loc) ->
-    expr, unifyTy ctx loc (litTy lit) ty
+    expr, unifyTy ctx loc (litToTy lit) ty
   | HExpr.Ref (ident, HValRef.Var serial, _, loc) ->
     inferRef ctx ident serial loc ty
   | HExpr.Ref (ident, HValRef.Prim prim, _, loc) ->
