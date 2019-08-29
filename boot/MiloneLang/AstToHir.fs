@@ -39,34 +39,14 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   | ATy.Missing loc ->
     Ty.Error loc, nameCtx
 
-  | ATy.Ident ("unit", _) ->
-    tyUnit, nameCtx
-
-  | ATy.Ident ("bool", _) ->
-    tyBool, nameCtx
-
-  | ATy.Ident ("int", _) ->
-    tyInt, nameCtx
-
-  | ATy.Ident ("char", _) ->
-    tyChar, nameCtx
-
-  | ATy.Ident ("string", _) ->
-    tyStr, nameCtx
-
-  | ATy.Ident ("obj", _) ->
-    tyObj, nameCtx
-
   | ATy.Ident (ident, _) ->
     let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
     tyRef tySerial [], nameCtx
 
-  | ATy.Suffix (lTy, "list", _) ->
+  | ATy.Suffix (lTy, ident, _) ->
     let lTy, nameCtx = (lTy, nameCtx) |> onTy
-    tyList lTy, nameCtx
-
-  | ATy.Suffix (_, _, loc) ->
-    Ty.Error loc, nameCtx
+    let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
+    tyRef tySerial [lTy], nameCtx
 
   | ATy.Tuple (itemTys, _) ->
     let itemTys, nameCtx = (itemTys, nameCtx) |> stMap onTy

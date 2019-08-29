@@ -262,23 +262,32 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
 
 /// Resolves type identifiers in a type expression.
 let scopeCtxResolveTy ty loc scopeCtx =
+  let isDiscardPat ty =
+    match ty with
+    | Ty.Con (TyCon.Ref serial, []) ->
+      (scopeCtx |> scopeCtxGetIdent serial) = "_"
+
+    | _ ->
+      false
+
   let rec go ty =
     match ty with
     | Ty.Error _ ->
       ty
 
+    | _ when isDiscardPat ty ->
+      ty
+
     | Ty.Con (TyCon.Ref serial, tys) ->
       let ident = scopeCtx |> scopeCtxGetIdent serial
+      let tys = tys |> List.map go
+
       match scopeCtx |> scopeCtxResolveLocalTyIdent ident with
       | Some tySerial ->
-        let tys = tys |> List.map go
         Ty.Con (TyCon.Ref tySerial, tys)
 
-      | None when ident = "_" && List.isEmpty tys ->
-        Ty.Con (TyCon.Ref serial, tys)
-
       | None ->
-        Ty.Error loc
+        tyPrimFromIdent ident tys loc
 
     | Ty.Con (tyCon, tys) ->
       let tys = tys |> List.map go
@@ -456,6 +465,32 @@ let collectDecls (expr, ctx) =
 // -----------------------------------------------
 // Name Resolution
 // -----------------------------------------------
+
+let tyPrimFromIdent ident tys loc =
+  match ident, tys with
+  | "unit", [] ->
+    tyUnit
+
+  | "bool", [] ->
+    tyBool
+
+  | "int", [] ->
+    tyInt
+
+  | "char", [] ->
+    tyChar
+
+  | "string", [] ->
+    tyStr
+
+  | "obj", [] ->
+    tyObj
+
+  | "list", [itemTy] ->
+    tyList itemTy
+
+  | _ ->
+    Ty.Error loc
 
 let primFromIdent ident =
   match ident with
