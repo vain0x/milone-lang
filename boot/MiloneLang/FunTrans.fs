@@ -100,14 +100,6 @@ let ctxCaps (ctx: FunTransCtx) =
         None
     )
 
-let ctxSetFunArity funSerial arity (ctx: FunTransCtx) =
-  match ctx.Vars |> Map.find funSerial with
-  | VarDef.Fun (ident, _, tyScheme, loc) ->
-    let varDef = VarDef.Fun (ident, arity, tyScheme, loc)
-    { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
-  | _ ->
-    ctx
-
 // ## Main hoisting
 //
 // Converts the whole program to be wrapped in the main function.
@@ -183,10 +175,21 @@ let hoistMain expr =
 //
 // Note we refer to context-free functions as *procedures* (or proc).
 
+let capsToTy caps =
+  caps
+  |> List.map (fun (_, _, ty, _) -> ty)
+  |> tyTuple
+
 let buildCapsTuple caps loc =
   let items = caps |> List.map (fun (ident, serial, ty, loc) ->
     HExpr.Ref (ident, HValRef.Var serial, ty, loc))
   hxTuple items loc
+
+let capsUpdateFunDef funTy arity caps =
+  let capsTy = caps |> capsToTy
+  let funTy = tyFun capsTy funTy
+  let arity = arity + 1
+  funTy, arity
 
 let declosurePat (pat, ctx) =
   match pat with
@@ -314,13 +317,10 @@ let addCapsArg callee caps args body loc ctx =
     args, body, ctx
   | _ ->
     let args =
-      let capsTy = caps |> List.map (fun (_, _, ty, _) -> ty) |> tyTuple
+      let capsTy = caps |> capsToTy
       let capsPats = caps |> List.map (fun (ident, serial, ty, loc) -> HPat.Ref (ident, serial, ty, loc))
       let capsPat = HPat.Tuple (capsPats, capsTy, loc)
       capsPat :: args
-    let ctx =
-      let arity = args |> List.length
-      ctx |> ctxSetFunArity callee arity
     args, body, ctx
 
 let declosureExprLetFun ident callee args body next ty loc ctx =
@@ -394,8 +394,32 @@ let declosureExpr (expr, ctx) =
   | HExpr.Error (error, loc) ->
     failwithf "Never: %s at %A" error loc
 
+let declosureUpdateFuns (ctx: FunTransCtx) =
+  let update vars varSerial caps =
+    match caps with
+    | [] ->
+      vars
+
+    | _ ->
+      match vars |> Map.find varSerial with
+      | VarDef.Fun (ident, arity, TyScheme.ForAll (fvs, funTy), loc) ->
+        let funTy, arity = caps |> capsUpdateFunDef funTy arity
+        let tyScheme = TyScheme.ForAll (fvs, funTy)
+        let varDef = VarDef.Fun (ident, arity, tyScheme, loc)
+        vars |> Map.add varSerial varDef
+
+      | _ ->
+        vars
+
+  let vars = ctx.Caps |> Map.fold update ctx.Vars
+  { ctx with Vars = vars }
+
+let declosureUpdateCtx (expr, ctx) =
+  let ctx = ctx |> declosureUpdateFuns
+  expr, ctx
+
 let declosure (expr, ctx: FunTransCtx) =
-  (expr, ctx) |> declosureExpr
+  (expr, ctx) |> declosureExpr |> declosureUpdateCtx
 
 // ## Un-eta
 //
