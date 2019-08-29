@@ -20,8 +20,8 @@ let onIf pred thenCl elseCl ty loc =
   let trueLit = hxTrue noLoc
   let arms =
     [
-      HPat.Lit (Lit.Bool true, loc), trueLit, onExpr thenCl
-      HPat.Lit (Lit.Bool false, loc), trueLit, onExpr elseCl
+      HPat.Lit (litTrue, loc), trueLit, onExpr thenCl
+      HPat.Lit (litFalse, loc), trueLit, onExpr elseCl
     ]
   HExpr.Match (onExpr pred, arms, ty, loc)
 

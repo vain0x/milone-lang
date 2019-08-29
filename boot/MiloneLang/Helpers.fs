@@ -202,6 +202,10 @@ let varDefToIdent varDef =
 // Literals
 // -----------------------------------------------
 
+let litTrue = Lit.Bool true
+
+let litFalse = Lit.Bool false
+
 let litToTy (lit: Lit): Ty =
   match lit with
   | Lit.Bool _ -> tyBool
@@ -345,10 +349,10 @@ let patNormalize pat =
 // -----------------------------------------------
 
 let hxTrue loc =
-  HExpr.Lit (Lit.Bool true, loc)
+  HExpr.Lit (litTrue, loc)
 
 let hxFalse loc =
-  HExpr.Lit (Lit.Bool false, loc)
+  HExpr.Lit (litFalse, loc)
 
 let hxIndex l r ty loc =
   HExpr.Bin (Op.Index, l, r, ty, loc)
