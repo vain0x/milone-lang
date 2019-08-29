@@ -381,6 +381,20 @@ let hxList items itemTy loc =
 let hxNil itemTy loc =
   hxList [] itemTy loc
 
+let hxIsUnitLit expr =
+  match expr with
+  | HExpr.Inf (InfOp.Tuple, [], _, _) ->
+    true
+  | _ ->
+    false
+
+let hxIsAlwaysTrue expr =
+  match expr with
+  | HExpr.Lit (Lit.Bool true, _) ->
+    true
+  | _ ->
+    false
+
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HExpr.Lit (lit, a) ->

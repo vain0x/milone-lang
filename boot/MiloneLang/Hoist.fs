@@ -57,14 +57,6 @@ type HoistContext = HoistMode * HExprAcc * HExprAcc
 
 let hxDummy = hxUnit noLoc
 
-let hxIsUnitLit expr =
-  match expr with
-  | HExpr.Inf (InfOp.Tuple, [], _, _) ->
-    true
-
-  | _ ->
-    false
-
 // -----------------------------------------------
 // HExprAcc
 // -----------------------------------------------

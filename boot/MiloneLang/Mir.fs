@@ -129,11 +129,6 @@ let cmpExpr ctx (op: MOp) (l: MExpr) r (ty: Ty) loc =
   | _ ->
     failwith "unimpl"
 
-let hxIsAlwaysTrue expr =
-  match expr with
-  | HExpr.Lit (Lit.Bool true, _) -> true
-  | _ -> false
-
 let mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MExpr.Lit (lit, loc)
   let eqExpr, ctx = cmpExpr ctx MOp.Eq expr litExpr tyBool loc
