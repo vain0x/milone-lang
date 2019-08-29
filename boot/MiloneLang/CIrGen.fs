@@ -267,7 +267,7 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
     | Some (TyDef.Meta _) ->
       failwith "Never"
     | None ->
-      CTy.Void, ctxAddErr ctx "Unknown type reference" (0, 0) // FIXME: source location
+      CTy.Void, ctxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
   | Ty.Con (TyCon.List, _)
   | Ty.Con (TyCon.Fun, _)
   | Ty.Con (TyCon.Range, _)

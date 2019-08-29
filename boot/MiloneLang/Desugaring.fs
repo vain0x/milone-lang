@@ -17,7 +17,7 @@ let onPats pats =
 
 /// `if p then t else e` ==> `match p with true -> t | false -> e`
 let onIf pred thenCl elseCl ty loc =
-  let trueLit = hxTrue (0, 0)
+  let trueLit = hxTrue noLoc
   let arms =
     [
       HPat.Lit (Lit.Bool true, loc), trueLit, onExpr thenCl

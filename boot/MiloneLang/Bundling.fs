@@ -47,7 +47,7 @@ let spliceExpr firstExpr secondExpr =
       let exprs = goLast exprs
       HExpr.Inf (InfOp.Semi, exprs, ty, loc)
     | _ ->
-      hxSemi [expr; secondExpr] (0, 0)
+      hxSemi [expr; secondExpr] noLoc
   go firstExpr
 
 let parseProjectModules readModuleFile projectName nameCtx =

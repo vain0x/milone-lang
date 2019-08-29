@@ -131,7 +131,6 @@ let parseTyTuple boxX tokens =
     | _ ->
       listRev acc, opLoc, tokens
   let first, tokens = parseTyPrefix boxX tokens
-  let noLoc = (0, 0)
   match go [] noLoc tokens with
   | [], _, tokens ->
     first, tokens
@@ -719,7 +718,7 @@ let parseModule (boxX: int) tokens =
 let parseTopLevel tokens =
   match tokens with
   | [] ->
-    AExpr.TupleLit ([], (0, 0)), []
+    AExpr.TupleLit ([], noLoc), []
   | (Token.Module, (_, moduleX))
     :: (Token.Rec, _)
     :: (Token.Ident _, _)
