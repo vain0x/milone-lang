@@ -284,7 +284,7 @@ let scopeCtxResolveTy ty loc scopeCtx =
 
       match scopeCtx |> scopeCtxResolveLocalTyIdent ident with
       | Some tySerial ->
-        Ty.Con (TyCon.Ref tySerial, tys)
+        tyRef tySerial tys
 
       | None ->
         tyPrimFromIdent ident tys loc
@@ -332,12 +332,12 @@ let scopeCtxDefineTyDeclUniquely tySerial tyDecl loc ctx =
     ctx |> scopeCtxDefineLocalTy tySerial (TyDef.Meta (tyIdent, body, loc))
 
   | TyDecl.Union (_, variants, _unionLoc) ->
-    let unionTy = Ty.Con (TyCon.Ref tySerial, [])
+    let unionTy = tyRef tySerial []
     let defineVariant ctx (variantIdent, variantSerial, hasPayload, payloadTy) =
       // E.g. Some: 'T -> 'T option, None: 'T option
       let variantTy =
         if hasPayload then
-          Ty.Con (TyCon.Fun, [payloadTy; unionTy])
+          tyFun payloadTy unionTy
         else
           unionTy
       let varDef =
