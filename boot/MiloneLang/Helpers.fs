@@ -181,6 +181,9 @@ let primToArity prim =
 let patUnit loc =
   HPat.Tuple ([], tyUnit, loc)
 
+let patNil itemTy loc =
+  HPat.Nil (itemTy, loc)
+
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HPat.Lit (lit, a) ->

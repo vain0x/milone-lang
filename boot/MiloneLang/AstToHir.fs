@@ -5,6 +5,34 @@ module rec MiloneLang.AstToHir
 open MiloneLang.Types
 open MiloneLang.Helpers
 
+/// Desugar to a chain of (::).
+let desugarListLitPat pats loc =
+  assert (pats |> listIsEmpty |> not)
+
+  let rec go pats =
+    match pats with
+    | [] ->
+      APat.ListLit ([], loc)
+
+    | head :: pats ->
+      let tail = go pats
+      APat.Cons (head, tail, loc)
+
+  go pats
+
+/// Desugar to let expression.
+/// `fun x y .. -> z` ==> `let f x y .. = z in f`
+let desugarFun pats body loc =
+  let ident = "fun"
+  let pat = APat.Call (APat.Ident (ident, loc), pats, loc)
+  let next = AExpr.Ident (ident, loc)
+  AExpr.Let (pat, body, next, loc)
+
+/// Desugar `-x` to `0 - x`.
+let desugarUniNeg arg loc =
+  let zero = AExpr.Lit (Lit.Int 0, loc)
+  AExpr.Bin (Op.Sub, zero, arg, loc)
+
 let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | ATy.Error (_, loc)
@@ -64,13 +92,12 @@ let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
     HPat.Ref (ident, serial, noTy, loc), nameCtx
 
+  | APat.ListLit ([], loc) ->
+    patNil noTy loc, nameCtx
+
   | APat.ListLit (pats, loc) ->
-    // Desugar to (::).
-    let pats, nameCtx = (pats, nameCtx) |> stMap onPat
-    let nilPat = HPat.Nil (noTy, loc)
-    let consPat tail head = HPat.Cons (head, tail, noTy, loc)
-    let pat = pats |> List.rev |> List.fold consPat nilPat
-    pat, nameCtx
+    let pat = desugarListLitPat pats loc
+    (pat, nameCtx) |> onPat
 
   | APat.Nav (l, r, loc) ->
     let l, nameCtx = (l, nameCtx) |> onPat
@@ -156,12 +183,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.Match (target, arms, noTy, loc), nameCtx
 
   | AExpr.Fun (pats, body, loc) ->
-    // Desugar to let expression.
-    // `fun x y .. -> z` ==> `let f x y .. = z in f`
-    let ident = "fun"
-    let pat = APat.Call (APat.Ident (ident, loc), pats, loc)
-    let next = AExpr.Ident (ident, loc)
-    let expr = AExpr.Let (pat, body, next, loc)
+    let expr = desugarFun pats body loc
     (expr, nameCtx) |> onExpr
 
   | AExpr.Nav (l, r, loc) ->
@@ -174,9 +196,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.Bin (Op.Index, l, r, noTy, loc), nameCtx
 
   | AExpr.Uni (UniOp.Neg, arg, loc) ->
-    // Desugar `-x` to `0 - x`.
-    let zero = AExpr.Lit (Lit.Int 0, loc)
-    let expr = AExpr.Bin (Op.Sub, zero, arg, loc)
+    let expr = desugarUniNeg arg loc
     (expr, nameCtx) |> onExpr
 
   | AExpr.Bin (op, l, r, loc) ->
