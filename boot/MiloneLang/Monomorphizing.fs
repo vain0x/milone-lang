@@ -103,14 +103,14 @@ let ctxWithTyCtx (tyCtx: TyContext) (monoCtx: MonoCtx) =
   }
 
 let bindTy (monoCtx: MonoCtx) tySerial ty: MonoCtx =
-  monoCtx |> ctxWithTyCtx (Typing.bindTyCore (ctxToTyCtx monoCtx) tySerial ty)
+  monoCtx |> ctxWithTyCtx (Typing.typingBind (ctxToTyCtx monoCtx) tySerial ty)
 
 let substTy (monoCtx: MonoCtx) ty: Ty =
-  Typing.substTyCore (ctxToTyCtx monoCtx) ty
+  Typing.typingSubst (ctxToTyCtx monoCtx) ty
 
 let unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) =
   let tyCtx = ctxToTyCtx monoCtx
-  let msgs, tyCtx = Typing.unifyTyCore tyCtx lTy rTy
+  let msgs, tyCtx = Typing.tyUnify tyCtx lTy rTy
   msgs |> List.iter (eprintfn "%s")
   monoCtx |> ctxWithTyCtx tyCtx
 

@@ -145,14 +145,14 @@ let tyIsMonomorphic ty: bool =
   go [ty]
 
 /// Adds type-var/type binding.
-let bindTyCore (ctx: TyContext) tySerial ty =
+let typingBind (ctx: TyContext) tySerial ty =
   // FIXME: track location info
   let noLoc = 0, 0
   // FIXME: track identifier
   let noIdent = "unknown"
 
   // Don't bind itself.
-  match substTyCore ctx ty with
+  match typingSubst ctx ty with
   | Ty.Meta (s, _) when s = tySerial -> ctx
   | _ ->
 
@@ -172,7 +172,7 @@ let bindTyCore (ctx: TyContext) tySerial ty =
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
-let substTyCore (ctx: TyContext) ty: Ty =
+let typingSubst (ctx: TyContext) ty: Ty =
   let rec go ty =
     match ty with
     | Ty.Error _
@@ -190,16 +190,16 @@ let substTyCore (ctx: TyContext) ty: Ty =
 
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
-let unifyTyCore (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
+let tyUnify (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
   let lRootTy, rRootTy = lty, rty
   let rec go lty rty (msgAcc, ctx) =
-    let lSubstTy = substTyCore ctx lty
-    let rSubstTy = substTyCore ctx rty
+    let lSubstTy = typingSubst ctx lty
+    let rSubstTy = typingSubst ctx rty
     match lSubstTy, rSubstTy with
     | Ty.Meta (l, _), Ty.Meta (r, _) when l = r ->
       msgAcc, ctx
     | Ty.Meta (lSerial, _), _ when tyIsFreeIn rSubstTy lSerial ->
-      let ctx = bindTyCore ctx lSerial rty
+      let ctx = typingBind ctx lSerial rty
       msgAcc, ctx
     | _, Ty.Meta _ ->
       go rty lty (msgAcc, ctx)
@@ -214,8 +214,8 @@ let unifyTyCore (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
       let msg = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
       msg :: msgAcc, ctx
     | Ty.Con _, _ ->
-      let lRootTy = substTyCore ctx lRootTy
-      let rRootTy = substTyCore ctx rRootTy
+      let lRootTy = typingSubst ctx lRootTy
+      let rRootTy = typingSubst ctx rRootTy
       let msg = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
       msg :: msgAcc, ctx
   let msgAcc, ctx =
@@ -223,13 +223,13 @@ let unifyTyCore (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
   List.rev msgAcc, ctx
 
 let bindTy (ctx: TyCtx) tySerial ty =
-  bindTyCore (ctxToTyCtx ctx) tySerial ty |> ctxWithTyCtx ctx
+  typingBind (ctxToTyCtx ctx) tySerial ty |> ctxWithTyCtx ctx
 
 let substTy (ctx: TyCtx) ty: Ty =
-  substTyCore (ctxToTyCtx ctx) ty
+  typingSubst (ctxToTyCtx ctx) ty
 
 let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
-  let msgs, tyCtx = unifyTyCore (ctxToTyCtx ctx) lty rty
+  let msgs, tyCtx = tyUnify (ctxToTyCtx ctx) lty rty
   let ctx = ctxWithTyCtx ctx tyCtx
   let ctx = List.fold (fun ctx msg -> ctxAddErr ctx msg loc) ctx msgs
   ctx
