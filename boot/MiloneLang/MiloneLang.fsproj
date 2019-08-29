@@ -16,6 +16,7 @@
     <Compile Include="Desugaring.fs" />
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
+    <Compile Include="Hoist.fs" />
     <Compile Include="FunTrans.fs" />
     <Compile Include="Monomorphizing.fs" />
     <Compile Include="Mir.fs" />

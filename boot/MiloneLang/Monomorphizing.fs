@@ -143,6 +143,20 @@ let ctxFindGenericFunDef (ctx: MonoCtx) serial =
   | _ ->
     None
 
+/// Generalizes all functions that has type variables.
+let ctxForceGeneralizeFuns (ctx: MonoCtx) =
+  let forceGeneralize (varSerial, varDef) =
+    match varDef with
+    | VarDef.Fun (ident, arity, TyScheme.ForAll (_, ty), loc) ->
+      let fvs = ty |> Typing.tyCollectFreeVars
+      varSerial, VarDef.Fun (ident, arity, TyScheme.ForAll (fvs, ty), loc)
+
+    | _ ->
+      varSerial, varDef
+
+  let vars = ctx.Vars |> Map.toList |> List.map forceGeneralize |> Map.ofList
+  { ctx with Vars = vars }
+
 let ctxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial ident arity useSiteTy loc =
   assert (ctxFindMonomorphizedFun ctx genericFunSerial useSiteTy |> Option.isNone)
 
@@ -220,7 +234,6 @@ let ctxProcessVarRef ctx varSerial useSiteTy =
       varSerial, ctx
 
 let monifyPat (pat, ctx) =
-  // FIXME: Enter `when` patterns
   pat, ctx
 
 let monifyExprLetFun ctx ident callee args body next ty loc =
@@ -326,6 +339,8 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
       SomethingHappened = true
       InfiniteLoopDetector = 0
     }
+
+  let monoCtx = monoCtx |> ctxForceGeneralizeFuns
 
   // Monomorphization.
   let rec go (expr, ctx) =

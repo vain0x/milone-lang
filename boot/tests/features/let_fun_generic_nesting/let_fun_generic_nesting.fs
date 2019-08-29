@@ -5,6 +5,7 @@ let main _ =
     let aux () = x
     aux ()
   assert (id 1 = 1)
+  assert (id "a" = "a")
 
   // Case 2.
   let goo x =
@@ -12,5 +13,5 @@ let main _ =
     let gooAux () = id x
     gooAux ()
   assert (goo 1 = 1)
-
+  assert (goo "a" = "a")
   0

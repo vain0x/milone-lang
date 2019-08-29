@@ -59,13 +59,13 @@ struct IntIntTuple2 {
 int fun_1(void* env_1, int arg_2, int arg_3) {
     int arg_4 = (*(((struct IntIntTuple2*)env_1))).t0;
     int arg_5 = (*(((struct IntIntTuple2*)env_1))).t1;
-    int call_2 = add4_(arg_4, arg_5, arg_2, arg_3);
-    return call_2;
+    int call_1 = add4_(arg_4, arg_5, arg_2, arg_3);
+    return call_1;
 }
 
 int fun_2(void* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
-    int call_3 = add4_(arg_6, arg_7, arg_8, arg_9);
-    return call_3;
+    int call_2 = add4_(arg_6, arg_7, arg_8, arg_9);
+    return call_2;
 }
 
 struct IntIntIntFun2 {
@@ -87,13 +87,13 @@ int main() {
     struct IntIntFun1 fun_3 = (struct IntIntFun1){.fun = fun_, .env = env_3};
     struct IntIntFun1 dec3_ = fun_3;
     int match_;
-    int call_1 = twice_(dec3_, 8);
-    if (!(((call_1 != 2) == 1))) goto next_2;
+    int call_3 = twice_(dec3_, 8);
+    if (!(((call_3 != 2) == 1))) goto next_2;
     exit(1);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    if (!(((call_1 != 2) == 0))) goto next_3;
+    if (!(((call_3 != 2) == 0))) goto next_3;
     match_ = 0;
     goto end_match_1;
 next_3:;

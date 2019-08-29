@@ -76,14 +76,14 @@ int der_(struct StringTuple1 arg_8, int n_, struct String f_1) {
     int match_;
     if (!(((n_ == 0) == 1))) goto next_2;
     printf("%s\n", f_1.str);
-    int call_3 = 0;
+    int call_2 = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
     if (!(((n_ == 0) == 0))) goto next_3;
     struct StringTuple1 tuple_1;
     tuple_1.t0 = d_;
-    int call_4 = der_(tuple_1, (n_ - 1), str_add(f_1, d_));
+    int call_3 = der_(tuple_1, (n_ - 1), str_add(f_1, d_));
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -98,7 +98,7 @@ struct StringTuple1Tuple1 {
 
 int fun_2(void* env_2, int arg_5, struct String arg_6) {
     struct StringTuple1 arg_7 = (*(((struct StringTuple1Tuple1*)env_2))).t0;
-    int call_5 = der_(arg_7, arg_5, arg_6);
+    int call_4 = der_(arg_7, arg_5, arg_6);
     return 0;
 }
 
@@ -107,8 +107,8 @@ int main() {
     (*(((int*)box_1))) = 0;
     void* env_4 = box_1;
     struct IntStringUnitFun2 fun_4 = (struct IntStringUnitFun2){.fun = fun_1, .env = env_4};
-    struct StringUnitFun1 call_2 = bindInt_(fun_4, 42);
-    struct StringUnitFun1 print42_ = call_2;
+    struct StringUnitFun1 call_5 = bindInt_(fun_4, 42);
+    struct StringUnitFun1 print42_ = call_5;
     int app_1 = print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
     struct String d_ = (struct String){.str = "'", .len = 1};
     struct StringTuple1 tuple_3;

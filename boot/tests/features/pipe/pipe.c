@@ -45,16 +45,16 @@ struct IntList {
 };
 
 int len_(struct IntList* xs_) {
-    int match_3;
-    if (!((!(xs_)))) goto next_11;
-    match_3 = 0;
-    goto end_match_10;
-next_11:;
-    match_3 = 1;
-    goto end_match_10;
-next_12:;
-end_match_10:;
-    return match_3;
+    int match_1;
+    if (!((!(xs_)))) goto next_5;
+    match_1 = 0;
+    goto end_match_4;
+next_5:;
+    match_1 = 1;
+    goto end_match_4;
+next_6:;
+end_match_4:;
+    return match_1;
 }
 
 int main() {
@@ -62,32 +62,32 @@ int main() {
     int call_1 = twice_(call_);
     int call_2 = twice_(call_1);
     int n_ = call_2;
-    int match_1;
-    if (!(((n_ != 16) == 1))) goto next_5;
-    exit(1);
-    match_1 = 0;
-    goto end_match_4;
-next_5:;
-    if (!(((n_ != 16) == 0))) goto next_6;
-    match_1 = 0;
-    goto end_match_4;
-next_6:;
-    exit(1);
-end_match_4:;
     int match_2;
-    int call_3 = sub_(100, 98);
-    int call_4 = between_(2, 3, call_3);
-    if (!(((!(call_4)) == 1))) goto next_8;
-    exit(2);
+    if (!(((n_ != 16) == 1))) goto next_8;
+    exit(1);
     match_2 = 0;
     goto end_match_7;
 next_8:;
-    if (!(((!(call_4)) == 0))) goto next_9;
+    if (!(((n_ != 16) == 0))) goto next_9;
     match_2 = 0;
     goto end_match_7;
 next_9:;
     exit(1);
 end_match_7:;
+    int match_3;
+    int call_3 = sub_(100, 98);
+    int call_4 = between_(2, 3, call_3);
+    if (!(((!(call_4)) == 1))) goto next_11;
+    exit(2);
+    match_3 = 0;
+    goto end_match_10;
+next_11:;
+    if (!(((!(call_4)) == 0))) goto next_12;
+    match_3 = 0;
+    goto end_match_10;
+next_12:;
+    exit(1);
+end_match_10:;
     int match_4;
     struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
     list_->head = 1;

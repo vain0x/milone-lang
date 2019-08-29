@@ -40,8 +40,8 @@ int fun_1(int x_3, int y_1) {
 }
 
 int fun_3(void* env_1, int arg_1, int arg_2) {
-    int call_2 = fun_1(arg_1, arg_2);
-    return call_2;
+    int call_1 = fun_1(arg_1, arg_2);
+    return call_1;
 }
 
 struct IntIntIntFun2 {
@@ -54,8 +54,8 @@ int main() {
     (*(((int*)box_))) = 0;
     void* env_2 = box_;
     struct IntIntFun1 fun_4 = (struct IntIntFun1){.fun = fun_2, .env = env_2};
-    int call_1 = twice_1(fun_4, 40);
-    int x_1 = call_1;
+    int call_2 = twice_1(fun_4, 40);
+    int x_1 = call_2;
     int match_;
     if (!(((x_1 != 42) == 1))) goto next_2;
     exit(1);
