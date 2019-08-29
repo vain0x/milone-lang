@@ -8,7 +8,7 @@ let listUnique (xs: 'x list): 'x list =
 /// `List.map`, modifying context.
 ///
 /// USAGE:
-///   let ys, ctx = (xs, ctx) |> go (fun (x, ctx) -> y, ctx)
+///   let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
 let stMap f (xs, ctx) =
   let rec go acc (xs, ctx) =
     match xs with
@@ -22,7 +22,7 @@ let stMap f (xs, ctx) =
 /// `List.bind`, modifying context.
 ///
 /// USAGE:
-///   let ys, ctx = (xs, ctx) |> go (fun (x, ctx) -> ys, ctx)
+///   let ys, ctx = (xs, ctx) |> stFlatMap (fun (x, ctx) -> ys, ctx)
 let stFlatMap f (xs, ctx) =
   let rec go acc xs ctx =
     match xs with
