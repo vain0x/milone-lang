@@ -12,42 +12,42 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
     Ty.Error loc, nameCtx
 
   | ATy.Ident ("unit", _) ->
-    Ty.Con (TyCon.Tuple, []), nameCtx
+    tyUnit, nameCtx
 
   | ATy.Ident ("bool", _) ->
-    Ty.Con (TyCon.Bool, []), nameCtx
+    tyBool, nameCtx
 
   | ATy.Ident ("int", _) ->
-    Ty.Con (TyCon.Int, []), nameCtx
+    tyInt, nameCtx
 
   | ATy.Ident ("char", _) ->
-    Ty.Con (TyCon.Char, []), nameCtx
+    tyChar, nameCtx
 
   | ATy.Ident ("string", _) ->
-    Ty.Con (TyCon.Str, []), nameCtx
+    tyStr, nameCtx
 
   | ATy.Ident ("obj", _) ->
-    Ty.Con (TyCon.Obj, []), nameCtx
+    tyObj, nameCtx
 
   | ATy.Ident (ident, _) ->
     let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
-    Ty.Con (TyCon.Ref tySerial, []), nameCtx
+    tyRef tySerial [], nameCtx
 
   | ATy.Suffix (lTy, "list", _) ->
     let lTy, nameCtx = (lTy, nameCtx) |> onTy
-    Ty.Con (TyCon.List, [lTy]), nameCtx
+    tyList lTy, nameCtx
 
   | ATy.Suffix (_, _, loc) ->
     Ty.Error loc, nameCtx
 
   | ATy.Tuple (itemTys, _) ->
     let itemTys, nameCtx = (itemTys, nameCtx) |> stMap onTy
-    Ty.Con (TyCon.Tuple, itemTys), nameCtx
+    tyTuple itemTys, nameCtx
 
   | ATy.Fun (sTy, tTy, _) ->
     let sTy, nameCtx = (sTy, nameCtx) |> onTy
     let tTy, nameCtx = (tTy, nameCtx) |> onTy
-    Ty.Con (TyCon.Fun, [sTy; tTy]), nameCtx
+    tyFun sTy tTy, nameCtx
 
 let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
