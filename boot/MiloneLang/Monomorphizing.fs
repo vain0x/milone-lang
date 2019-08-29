@@ -103,14 +103,14 @@ let ctxWithTyCtx (tyCtx: TyContext) (monoCtx: MonoCtx) =
   }
 
 let bindTy (monoCtx: MonoCtx) tySerial ty: MonoCtx =
-  monoCtx |> ctxWithTyCtx (Typing.typingBind (ctxToTyCtx monoCtx) tySerial ty)
+  monoCtx |> ctxWithTyCtx (typingBind (ctxToTyCtx monoCtx) tySerial ty)
 
 let substTy (monoCtx: MonoCtx) ty: Ty =
-  Typing.typingSubst (ctxToTyCtx monoCtx) ty
+  typingSubst (ctxToTyCtx monoCtx) ty
 
 let unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) =
   let tyCtx = ctxToTyCtx monoCtx
-  let msgs, tyCtx = Typing.tyUnify tyCtx lTy rTy
+  let msgs, tyCtx = typingUnify tyCtx lTy rTy
   msgs |> List.iter (eprintfn "%s")
   monoCtx |> ctxWithTyCtx tyCtx
 
@@ -148,7 +148,7 @@ let ctxForceGeneralizeFuns (ctx: MonoCtx) =
   let forceGeneralize (varSerial, varDef) =
     match varDef with
     | VarDef.Fun (ident, arity, TyScheme.ForAll (_, ty), loc) ->
-      let fvs = ty |> Typing.tyCollectFreeVars
+      let fvs = ty |> tyCollectFreeVars
       varSerial, VarDef.Fun (ident, arity, TyScheme.ForAll (fvs, ty), loc)
 
     | _ ->
@@ -181,7 +181,7 @@ let ctxFindMonomorphizedFun (ctx: MonoCtx) funSerial useSiteTy =
 
 let ctxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
   let useSiteTyIsMonomorphic =
-    useSiteTy |> Typing.tyIsMonomorphic
+    useSiteTy |> tyIsMonomorphic
   let notMonomorphizedYet =
     ctxFindMonomorphizedFun ctx funSerial useSiteTy |> Option.isNone
   let canMark =
