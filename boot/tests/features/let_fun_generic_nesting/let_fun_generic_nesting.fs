@@ -1,19 +1,17 @@
-// FIXME: Introducing `hoist` stage has break the test case.
-//        Monomorphization must be fixed for this.
-
 let main _ =
-  // // Case 1.
-  // let id x =
-  //   // aux must not be generic.
-  //   let aux () = x
-  //   aux ()
-  // assert (id 1 = 1)
+  // Case 1.
+  let id x =
+    // aux must not be generic.
+    let aux () = x
+    aux ()
+  assert (id 1 = 1)
+  assert (id "a" = "a")
 
-  // // Case 2.
-  // let goo x =
-  //   // gooAux must not be generic.
-  //   let gooAux () = id x
-  //   gooAux ()
-  // assert (goo 1 = 1)
-
+  // Case 2.
+  let goo x =
+    // gooAux must not be generic.
+    let gooAux () = id x
+    gooAux ()
+  assert (goo 1 = 1)
+  assert (goo "a" = "a")
   0
