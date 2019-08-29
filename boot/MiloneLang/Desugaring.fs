@@ -5,9 +5,6 @@ open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-let hxRef name loc =
-  HExpr.Ref (name, HValRef.Var noSerial, noTy, loc)
-
 /// `x = false`
 let hxNot expr loc =
   HExpr.Bin (Op.Eq, expr, hxFalse loc, noTy, loc)

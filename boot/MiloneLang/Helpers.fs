@@ -1,4 +1,4 @@
-module MiloneLang.Helpers
+module rec MiloneLang.Helpers
 
 open MiloneLang.Types
 
@@ -55,6 +55,13 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
+/// No location information. Should be fixed.
+let noLoc = -1, -1
+
+// -----------------------------------------------
+// Name context
+// -----------------------------------------------
+
 let nameCtxEmpty () =
   NameCtx (Map.empty, 0)
 
@@ -62,6 +69,13 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
   let map = map |> Map.add serial ident
   serial, NameCtx (map, serial)
+
+// -----------------------------------------------
+// Types
+// -----------------------------------------------
+
+/// Placeholder. No type info in the parsing phase.
+let noTy = Ty.Error noLoc
 
 let tyBool = Ty.Con (TyCon.Bool, [])
 
@@ -90,15 +104,12 @@ let tyUnit =
 let tyRef serial tys =
   Ty.Con (TyCon.Ref serial, tys)
 
-let patUnit loc =
-  HPat.Tuple ([], tyUnit, loc)
-
-let litTy (lit: Lit): Ty =
-  match lit with
-  | Lit.Bool _ -> tyBool
-  | Lit.Int _ -> tyInt
-  | Lit.Char _ -> tyChar
-  | Lit.Str _ -> tyStr
+let rec arityTy ty =
+  match ty with
+  | Ty.Con (TyCon.Fun, [_; ty]) ->
+    1 + arityTy ty
+  | _ ->
+    0
 
 /// Converts nested function type to multi-arguments function type.
 let rec rollFunTy ty =
@@ -109,6 +120,66 @@ let rec rollFunTy ty =
     | tTy ->
       n, List.rev acc, tTy
   go 0 [] ty
+
+// -----------------------------------------------
+// Type definitions (HIR)
+// -----------------------------------------------
+
+let tyDefIdent tyDef =
+  match tyDef with
+  | TyDef.Meta (ident, _, _) -> ident
+  | TyDef.Union (ident, _, _) -> ident
+
+// -----------------------------------------------
+// Variable definitions (HIR)
+// -----------------------------------------------
+
+let varDefIdent varDef =
+  match varDef with
+  | VarDef.Var (ident, _, _) -> ident
+  | VarDef.Fun (ident, _, _, _) -> ident
+  | VarDef.Variant (ident, _, _, _, _, _) -> ident
+
+// -----------------------------------------------
+// Literals
+// -----------------------------------------------
+
+let litTy (lit: Lit): Ty =
+  match lit with
+  | Lit.Bool _ -> tyBool
+  | Lit.Int _ -> tyInt
+  | Lit.Char _ -> tyChar
+  | Lit.Str _ -> tyStr
+
+// -----------------------------------------------
+// Primitives (HIR)
+// -----------------------------------------------
+
+let primToArity prim =
+  match prim with
+  | HPrim.Not
+  | HPrim.Exit
+  | HPrim.Assert
+  | HPrim.Box
+  | HPrim.Unbox
+  | HPrim.StrLength
+  | HPrim.Char
+  | HPrim.Int
+  | HPrim.String ->
+    1
+  | HPrim.StrSlice ->
+    3
+  | HPrim.Printfn ->
+    9999
+  | HPrim.NativeFun (_, arity) ->
+    arity
+
+// -----------------------------------------------
+// Patterns (HIR)
+// -----------------------------------------------
+
+let patUnit loc =
+  HPat.Tuple ([], tyUnit, loc)
 
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
@@ -208,6 +279,43 @@ let patNormalize pat =
       failwith "Unimpl"
   go pat
 
+// -----------------------------------------------
+// Expressions (HIR)
+// -----------------------------------------------
+
+let hxTrue loc =
+  HExpr.Lit (Lit.Bool true, loc)
+
+let hxFalse loc =
+  HExpr.Lit (Lit.Bool false, loc)
+
+let hxIndex l r ty loc =
+  HExpr.Bin (Op.Index, l, r, ty, loc)
+
+let hxAnno expr ty loc =
+  HExpr.Inf (InfOp.Anno, [expr], ty, loc)
+
+let hxSemi items loc =
+  HExpr.Inf (InfOp.Semi, items, exprTy (List.last items), loc)
+
+let hxCallProc callee args resultTy loc =
+  HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)
+
+let hxCallClosure callee args resultTy loc =
+  HExpr.Inf (InfOp.CallClosure, callee :: args, resultTy, loc)
+
+let hxTuple items loc =
+  HExpr.Inf (InfOp.Tuple, items, tyTuple (List.map exprTy items), loc)
+
+let hxUnit loc =
+  hxTuple [] loc
+
+let hxList items itemTy loc =
+  HExpr.Inf (InfOp.List itemTy, items, tyList itemTy, loc)
+
+let hxNil itemTy loc =
+  hxList [] itemTy loc
+
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HExpr.Lit (lit, a) ->
@@ -275,6 +383,24 @@ let exprTy expr =
   let ty, _ = exprExtract expr
   ty
 
+// -----------------------------------------------
+// Binary Operators (MIR)
+// -----------------------------------------------
+
+let opIsComparison op =
+  match op with
+  | MOp.Eq
+  | MOp.Ne
+  | MOp.Lt
+  | MOp.Le ->
+    true
+  | _ ->
+    false
+
+// -----------------------------------------------
+// Expressions (MIR)
+// -----------------------------------------------
+
 let mexprExtract expr =
   match expr with
   | MExpr.Default (ty, loc) -> ty, loc
@@ -289,58 +415,9 @@ let mexprTy expr =
   let ty, _ = mexprExtract expr
   ty
 
-let opIsComparison op =
-  match op with
-  | MOp.Eq
-  | MOp.Ne
-  | MOp.Lt
-  | MOp.Le ->
-    true
-  | _ ->
-    false
-
-let hxTrue loc =
-  HExpr.Lit (Lit.Bool true, loc)
-
-let hxFalse loc =
-  HExpr.Lit (Lit.Bool false, loc)
-
-let hxIndex l r ty loc =
-  HExpr.Bin (Op.Index, l, r, ty, loc)
-
-let hxAnno expr ty loc =
-  HExpr.Inf (InfOp.Anno, [expr], ty, loc)
-
-let hxSemi items loc =
-  HExpr.Inf (InfOp.Semi, items, exprTy (List.last items), loc)
-
-let hxCallProc callee args resultTy loc =
-  HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)
-
-let hxCallClosure callee args resultTy loc =
-  HExpr.Inf (InfOp.CallClosure, callee :: args, resultTy, loc)
-
-let hxTuple items loc =
-  HExpr.Inf (InfOp.Tuple, items, tyTuple (List.map exprTy items), loc)
-
-let hxUnit loc =
-  hxTuple [] loc
-
-let hxList items itemTy loc =
-  HExpr.Inf (InfOp.List itemTy, items, tyList itemTy, loc)
-
-let hxNil itemTy loc =
-  hxList [] itemTy loc
-
-let noArity = 0
-
-/// Placeholder. No variable serials in the parsing phase.
-let noSerial = 0
-
-let noLoc = -1, -1
-
-/// Placeholder. No type info in the parsing phase.
-let noTy = Ty.Error noLoc
+// -----------------------------------------------
+// Print Formats
+// -----------------------------------------------
 
 let analyzeFormat (format: string) =
   let rec go i =
@@ -360,40 +437,3 @@ let analyzeFormat (format: string) =
       else
         go (i + 1)
   tyFun tyStr (go 0)
-
-let rec arityTy ty =
-  match ty with
-  | Ty.Con (TyCon.Fun, [_; ty]) ->
-    1 + arityTy ty
-  | _ ->
-    0
-
-let tyDefIdent tyDef =
-  match tyDef with
-  | TyDef.Meta (ident, _, _) -> ident
-  | TyDef.Union (ident, _, _) -> ident
-
-let varDefIdent varDef =
-  match varDef with
-  | VarDef.Var (ident, _, _) -> ident
-  | VarDef.Fun (ident, _, _, _) -> ident
-  | VarDef.Variant (ident, _, _, _, _, _) -> ident
-
-let primToArity prim =
-  match prim with
-  | HPrim.Not
-  | HPrim.Exit
-  | HPrim.Assert
-  | HPrim.Box
-  | HPrim.Unbox
-  | HPrim.StrLength
-  | HPrim.Char
-  | HPrim.Int
-  | HPrim.String ->
-    1
-  | HPrim.StrSlice ->
-    3
-  | HPrim.Printfn ->
-    9999
-  | HPrim.NativeFun (_, arity) ->
-    arity
