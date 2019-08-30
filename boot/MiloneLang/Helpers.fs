@@ -1,4 +1,4 @@
-module MiloneLang.Helpers
+module rec MiloneLang.Helpers
 
 open MiloneLang.Types
 
@@ -8,7 +8,7 @@ let listUnique (xs: 'x list): 'x list =
 /// `List.map`, modifying context.
 ///
 /// USAGE:
-///   let ys, ctx = (xs, ctx) |> go (fun (x, ctx) -> y, ctx)
+///   let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
 let stMap f (xs, ctx) =
   let rec go acc (xs, ctx) =
     match xs with
@@ -22,7 +22,7 @@ let stMap f (xs, ctx) =
 /// `List.bind`, modifying context.
 ///
 /// USAGE:
-///   let ys, ctx = (xs, ctx) |> go (fun (x, ctx) -> ys, ctx)
+///   let ys, ctx = (xs, ctx) |> stFlatMap (fun (x, ctx) -> ys, ctx)
 let stFlatMap f (xs, ctx) =
   let rec go acc xs ctx =
     match xs with
@@ -55,6 +55,13 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
+/// No location information. Should be fixed.
+let noLoc = -1, -1
+
+// -----------------------------------------------
+// Name context
+// -----------------------------------------------
+
 let nameCtxEmpty () =
   NameCtx (Map.empty, 0)
 
@@ -62,6 +69,13 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
   let map = map |> Map.add serial ident
   serial, NameCtx (map, serial)
+
+// -----------------------------------------------
+// Types (HIR/MIR)
+// -----------------------------------------------
+
+/// Placeholder. No type info in the parsing phase.
+let noTy = Ty.Error noLoc
 
 let tyBool = Ty.Con (TyCon.Bool, [])
 
@@ -90,18 +104,73 @@ let tyUnit =
 let tyRef serial tys =
   Ty.Con (TyCon.Ref serial, tys)
 
-let patUnit loc =
-  HPat.Tuple ([], tyUnit, loc)
+/// Gets if the specified type variable doesn't appear in a type.
+let tyIsFreeIn ty tySerial: bool =
+  let rec go ty =
+    match ty with
+    | Ty.Error _
+    | Ty.Con (_, []) ->
+      true
 
-let litTy (lit: Lit): Ty =
-  match lit with
-  | Lit.Bool _ -> tyBool
-  | Lit.Int _ -> tyInt
-  | Lit.Char _ -> tyChar
-  | Lit.Str _ -> tyStr
+    | Ty.Con (tyCon, ty :: tys) ->
+      go ty && go (Ty.Con (tyCon, tys))
+
+    | Ty.Meta (s, _) ->
+      s <> tySerial
+
+  go ty
+
+/// Gets if the type is monomorphic.
+/// Assume all bound type variables are substituted.
+let tyIsMonomorphic ty: bool =
+  let rec go tys =
+    match tys with
+    | [] ->
+      true
+
+    | Ty.Meta _ :: _ ->
+      false
+
+    | Ty.Error _ :: tys ->
+      go tys
+
+    | Ty.Con (_, tys1) :: tys2 ->
+      go tys1 && go tys2
+
+  go [ty]
+
+/// Gets a list of type variables.
+/// Assume all bound type variables are substituted.
+let tyCollectFreeVars ty =
+  let rec go fvAcc tys =
+    match tys with
+    | [] ->
+      fvAcc
+
+    | Ty.Error _ :: tys
+    | Ty.Con (_, []) :: tys ->
+      go fvAcc tys
+
+    | Ty.Con (_, tys1) :: tys2 ->
+      let acc = go fvAcc tys1
+      let acc = go acc tys2
+      acc
+
+    | Ty.Meta (serial, _) :: tys ->
+      let acc = serial :: fvAcc
+      go acc tys
+
+  go [] [ty] |> listUnique
+
+let rec tyToArity ty =
+  match ty with
+  | Ty.Con (TyCon.Fun, [_; ty]) ->
+    1 + tyToArity ty
+  | _ ->
+    0
 
 /// Converts nested function type to multi-arguments function type.
-let rec rollFunTy ty =
+let rec tyToArgList ty =
   let rec go n acc ty =
     match ty with
     | Ty.Con (TyCon.Fun, [sTy; tTy]) ->
@@ -110,10 +179,77 @@ let rec rollFunTy ty =
       n, List.rev acc, tTy
   go 0 [] ty
 
+// -----------------------------------------------
+// Type definitions (HIR)
+// -----------------------------------------------
+
+let tyDefToIdent tyDef =
+  match tyDef with
+  | TyDef.Meta (ident, _, _) -> ident
+  | TyDef.Union (ident, _, _) -> ident
+
+// -----------------------------------------------
+// Variable definitions (HIR)
+// -----------------------------------------------
+
+let varDefToIdent varDef =
+  match varDef with
+  | VarDef.Var (ident, _, _) -> ident
+  | VarDef.Fun (ident, _, _, _) -> ident
+  | VarDef.Variant (ident, _, _, _, _, _) -> ident
+
+// -----------------------------------------------
+// Literals
+// -----------------------------------------------
+
+let litTrue = Lit.Bool true
+
+let litFalse = Lit.Bool false
+
+let litToTy (lit: Lit): Ty =
+  match lit with
+  | Lit.Bool _ -> tyBool
+  | Lit.Int _ -> tyInt
+  | Lit.Char _ -> tyChar
+  | Lit.Str _ -> tyStr
+
+// -----------------------------------------------
+// Primitives (HIR)
+// -----------------------------------------------
+
+let primToArity prim =
+  match prim with
+  | HPrim.Not
+  | HPrim.Exit
+  | HPrim.Assert
+  | HPrim.Box
+  | HPrim.Unbox
+  | HPrim.StrLength
+  | HPrim.Char
+  | HPrim.Int
+  | HPrim.String ->
+    1
+  | HPrim.StrSlice ->
+    3
+  | HPrim.Printfn ->
+    9999
+  | HPrim.NativeFun (_, arity) ->
+    arity
+
+// -----------------------------------------------
+// Patterns (HIR)
+// -----------------------------------------------
+
+let patUnit loc =
+  HPat.Tuple ([], tyUnit, loc)
+
+let patNil itemTy loc =
+  HPat.Nil (itemTy, loc)
+
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HPat.Lit (lit, a) ->
-    litTy lit, a
+    litToTy lit, a
   | HPat.Nil (itemTy, a) ->
     tyList itemTy, a
   | HPat.Ref (_, _, ty, a) ->
@@ -208,10 +344,61 @@ let patNormalize pat =
       failwith "Unimpl"
   go pat
 
+// -----------------------------------------------
+// Expressions (HIR)
+// -----------------------------------------------
+
+let hxTrue loc =
+  HExpr.Lit (litTrue, loc)
+
+let hxFalse loc =
+  HExpr.Lit (litFalse, loc)
+
+let hxIndex l r ty loc =
+  HExpr.Bin (Op.Index, l, r, ty, loc)
+
+let hxAnno expr ty loc =
+  HExpr.Inf (InfOp.Anno, [expr], ty, loc)
+
+let hxSemi items loc =
+  HExpr.Inf (InfOp.Semi, items, exprToTy (List.last items), loc)
+
+let hxCallProc callee args resultTy loc =
+  HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)
+
+let hxCallClosure callee args resultTy loc =
+  HExpr.Inf (InfOp.CallClosure, callee :: args, resultTy, loc)
+
+let hxTuple items loc =
+  HExpr.Inf (InfOp.Tuple, items, tyTuple (List.map exprToTy items), loc)
+
+let hxUnit loc =
+  hxTuple [] loc
+
+let hxList items itemTy loc =
+  HExpr.Inf (InfOp.List itemTy, items, tyList itemTy, loc)
+
+let hxNil itemTy loc =
+  hxList [] itemTy loc
+
+let hxIsUnitLit expr =
+  match expr with
+  | HExpr.Inf (InfOp.Tuple, [], _, _) ->
+    true
+  | _ ->
+    false
+
+let hxIsAlwaysTrue expr =
+  match expr with
+  | HExpr.Lit (Lit.Bool true, _) ->
+    true
+  | _ ->
+    false
+
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HExpr.Lit (lit, a) ->
-    litTy lit, a
+    litToTy lit, a
   | HExpr.Ref (_, _, ty, a) ->
     ty, a
   | HExpr.If (_, _, _, ty, a) ->
@@ -271,23 +458,13 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Error (error, g a)
   go expr
 
-let exprTy expr =
+let exprToTy expr =
   let ty, _ = exprExtract expr
   ty
 
-let mexprExtract expr =
-  match expr with
-  | MExpr.Default (ty, loc) -> ty, loc
-  | MExpr.Lit (lit, loc) -> litTy lit, loc
-  | MExpr.Ref (_, ty, loc) -> ty, loc
-  | MExpr.Proc (_, ty, loc) -> ty, loc
-  | MExpr.Variant (_, _, ty, loc) -> ty, loc
-  | MExpr.Uni (_, _, ty, loc) -> ty, loc
-  | MExpr.Bin (_, _, _, ty, loc) -> ty, loc
-
-let mexprTy expr =
-  let ty, _ = mexprExtract expr
-  ty
+// -----------------------------------------------
+// Binary Operators (MIR)
+// -----------------------------------------------
 
 let opIsComparison op =
   match op with
@@ -299,48 +476,27 @@ let opIsComparison op =
   | _ ->
     false
 
-let hxTrue loc =
-  HExpr.Lit (Lit.Bool true, loc)
+// -----------------------------------------------
+// Expressions (MIR)
+// -----------------------------------------------
 
-let hxFalse loc =
-  HExpr.Lit (Lit.Bool false, loc)
+let mexprExtract expr =
+  match expr with
+  | MExpr.Default (ty, loc) -> ty, loc
+  | MExpr.Lit (lit, loc) -> litToTy lit, loc
+  | MExpr.Ref (_, ty, loc) -> ty, loc
+  | MExpr.Proc (_, ty, loc) -> ty, loc
+  | MExpr.Variant (_, _, ty, loc) -> ty, loc
+  | MExpr.Uni (_, _, ty, loc) -> ty, loc
+  | MExpr.Bin (_, _, _, ty, loc) -> ty, loc
 
-let hxIndex l r ty loc =
-  HExpr.Bin (Op.Index, l, r, ty, loc)
+let mexprToTy expr =
+  let ty, _ = mexprExtract expr
+  ty
 
-let hxAnno expr ty loc =
-  HExpr.Inf (InfOp.Anno, [expr], ty, loc)
-
-let hxSemi items loc =
-  HExpr.Inf (InfOp.Semi, items, exprTy (List.last items), loc)
-
-let hxCallProc callee args resultTy loc =
-  HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)
-
-let hxCallClosure callee args resultTy loc =
-  HExpr.Inf (InfOp.CallClosure, callee :: args, resultTy, loc)
-
-let hxTuple items loc =
-  HExpr.Inf (InfOp.Tuple, items, tyTuple (List.map exprTy items), loc)
-
-let hxUnit loc =
-  hxTuple [] loc
-
-let hxList items itemTy loc =
-  HExpr.Inf (InfOp.List itemTy, items, tyList itemTy, loc)
-
-let hxNil itemTy loc =
-  hxList [] itemTy loc
-
-let noArity = 0
-
-/// Placeholder. No variable serials in the parsing phase.
-let noSerial = 0
-
-let noLoc = -1, -1
-
-/// Placeholder. No type info in the parsing phase.
-let noTy = Ty.Error noLoc
+// -----------------------------------------------
+// Print Formats
+// -----------------------------------------------
 
 let analyzeFormat (format: string) =
   let rec go i =
@@ -361,39 +517,84 @@ let analyzeFormat (format: string) =
         go (i + 1)
   tyFun tyStr (go 0)
 
-let rec arityTy ty =
-  match ty with
-  | Ty.Con (TyCon.Fun, [_; ty]) ->
-    1 + arityTy ty
+// -----------------------------------------------
+// Type inference algorithm (HIR)
+// -----------------------------------------------
+
+/// Adds type-var/type binding.
+let typingBind (ctx: TyContext) tySerial ty =
+  // FIXME: track location info
+  let noLoc = 0, 0
+  // FIXME: track identifier
+  let noIdent = "unknown"
+
+  // Don't bind itself.
+  match typingSubst ctx ty with
+  | Ty.Meta (s, _) when s = tySerial -> ctx
   | _ ->
-    0
 
-let tyDefIdent tyDef =
-  match tyDef with
-  | TyDef.Meta (ident, _, _) -> ident
-  | TyDef.Union (ident, _, _) -> ident
+  // Update depth of all related meta types to the minimum.
+  let tyDepths =
+    let tySerials = tySerial :: tyCollectFreeVars ty
+    let depth =
+      tySerials
+      |> List.map (fun tySerial -> ctx.TyDepths |> Map.find tySerial)
+      |> List.min
+    tySerials |> List.fold (fun tyDepths tySerial -> tyDepths |> Map.add tySerial depth) ctx.TyDepths
 
-let varDefIdent varDef =
-  match varDef with
-  | VarDef.Var (ident, _, _) -> ident
-  | VarDef.Fun (ident, _, _, _) -> ident
-  | VarDef.Variant (ident, _, _, _, _, _) -> ident
+  { ctx with
+      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, noLoc))
+      TyDepths = tyDepths
+  }
 
-let primToArity prim =
-  match prim with
-  | HPrim.Not
-  | HPrim.Exit
-  | HPrim.Assert
-  | HPrim.Box
-  | HPrim.Unbox
-  | HPrim.StrLength
-  | HPrim.Char
-  | HPrim.Int
-  | HPrim.String ->
-    1
-  | HPrim.StrSlice ->
-    3
-  | HPrim.Printfn ->
-    9999
-  | HPrim.NativeFun (_, arity) ->
-    arity
+/// Substitutes occurrences of already-inferred type vars
+/// with their results.
+let typingSubst (ctx: TyContext) ty: Ty =
+  let rec go ty =
+    match ty with
+    | Ty.Error _
+    | Ty.Con (_, []) ->
+      ty
+    | Ty.Con (tyCon, tys) ->
+      Ty.Con (tyCon, List.map go tys)
+    | Ty.Meta (tySerial, _) ->
+      match ctx.Tys |> Map.tryFind tySerial with
+      | Some (TyDef.Meta (_, ty, _)) ->
+        go ty
+      | _ ->
+        ty
+  go ty
+
+/// Solves type equation `lty = rty` as possible
+/// to add type-var/type bindings.
+let typingUnify (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
+  let lRootTy, rRootTy = lty, rty
+  let rec go lty rty (msgAcc, ctx) =
+    let lSubstTy = typingSubst ctx lty
+    let rSubstTy = typingSubst ctx rty
+    match lSubstTy, rSubstTy with
+    | Ty.Meta (l, _), Ty.Meta (r, _) when l = r ->
+      msgAcc, ctx
+    | Ty.Meta (lSerial, _), _ when tyIsFreeIn rSubstTy lSerial ->
+      let ctx = typingBind ctx lSerial rty
+      msgAcc, ctx
+    | _, Ty.Meta _ ->
+      go rty lty (msgAcc, ctx)
+    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
+      msgAcc, ctx
+    | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
+      (msgAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
+    | Ty.Error _, _
+    | _, Ty.Error _ ->
+      msgAcc, ctx
+    | Ty.Meta _, _ ->
+      let msg = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
+      msg :: msgAcc, ctx
+    | Ty.Con _, _ ->
+      let lRootTy = typingSubst ctx lRootTy
+      let rRootTy = typingSubst ctx rRootTy
+      let msg = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
+      msg :: msgAcc, ctx
+  let msgAcc, ctx =
+    go lty rty ([], ctx)
+  List.rev msgAcc, ctx

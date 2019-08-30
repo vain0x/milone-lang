@@ -5,9 +5,6 @@ open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-let hxRef name loc =
-  HExpr.Ref (name, HValRef.Var noSerial, noTy, loc)
-
 /// `x = false`
 let hxNot expr loc =
   HExpr.Bin (Op.Eq, expr, hxFalse loc, noTy, loc)
@@ -20,11 +17,11 @@ let onPats pats =
 
 /// `if p then t else e` ==> `match p with true -> t | false -> e`
 let onIf pred thenCl elseCl ty loc =
-  let trueLit = hxTrue (0, 0)
+  let trueLit = hxTrue noLoc
   let arms =
     [
-      HPat.Lit (Lit.Bool true, loc), trueLit, onExpr thenCl
-      HPat.Lit (Lit.Bool false, loc), trueLit, onExpr elseCl
+      HPat.Lit (litTrue, loc), trueLit, onExpr thenCl
+      HPat.Lit (litFalse, loc), trueLit, onExpr elseCl
     ]
   HExpr.Match (onExpr pred, arms, ty, loc)
 

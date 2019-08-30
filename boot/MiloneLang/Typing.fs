@@ -116,141 +116,17 @@ let ctxResolveTy ctx ty loc =
       failwith "Never"
   go (ty, ctx)
 
-/// Gets if the specified type var doesn't appear in the specified type.
-let tyIsFreeIn ty tySerial: bool =
-  let rec go ty =
-    match ty with
-    | Ty.Error _
-    | Ty.Con (_, []) ->
-      true
-    | Ty.Con (tyCon, ty :: tys) ->
-      go ty && go (Ty.Con (tyCon, tys))
-    | Ty.Meta (s, _) ->
-      s <> tySerial
-  go ty
-
-/// Gets if the type is monomorphic.
-/// Assume all bound type variables are resolved by `substTy`.
-let tyIsMonomorphic ty: bool =
-  let rec go tys =
-    match tys with
-    | [] ->
-      true
-    | Ty.Meta _ :: _ ->
-      false
-    | Ty.Error _ :: tys ->
-      go tys
-    | Ty.Con (_, tys1) :: tys2 ->
-      go tys1 && go tys2
-  go [ty]
-
-/// Adds type-var/type binding.
-let bindTyCore (ctx: TyContext) tySerial ty =
-  // FIXME: track location info
-  let noLoc = 0, 0
-  // FIXME: track identifier
-  let noIdent = "unknown"
-
-  // Don't bind itself.
-  match substTyCore ctx ty with
-  | Ty.Meta (s, _) when s = tySerial -> ctx
-  | _ ->
-
-  // Update depth of all related meta types to the minimum.
-  let tyDepths =
-    let tySerials = tySerial :: tyCollectFreeVars ty
-    let depth =
-      tySerials
-      |> List.map (fun tySerial -> ctx.TyDepths |> Map.find tySerial)
-      |> List.min
-    tySerials |> List.fold (fun tyDepths tySerial -> tyDepths |> Map.add tySerial depth) ctx.TyDepths
-
-  { ctx with
-      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, noLoc))
-      TyDepths = tyDepths
-  }
-
-/// Substitutes occurrences of already-inferred type vars
-/// with their results.
-let substTyCore (ctx: TyContext) ty: Ty =
-  let rec go ty =
-    match ty with
-    | Ty.Error _
-    | Ty.Con (_, []) ->
-      ty
-    | Ty.Con (tyCon, tys) ->
-      Ty.Con (tyCon, List.map go tys)
-    | Ty.Meta (tySerial, _) ->
-      match ctx.Tys |> Map.tryFind tySerial with
-      | Some (TyDef.Meta (_, ty, _)) ->
-        go ty
-      | _ ->
-        ty
-  go ty
-
-/// Solves type equation `lty = rty` as possible
-/// to add type-var/type bindings.
-let unifyTyCore (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
-  let lRootTy, rRootTy = lty, rty
-  let rec go lty rty (msgAcc, ctx) =
-    let lSubstTy = substTyCore ctx lty
-    let rSubstTy = substTyCore ctx rty
-    match lSubstTy, rSubstTy with
-    | Ty.Meta (l, _), Ty.Meta (r, _) when l = r ->
-      msgAcc, ctx
-    | Ty.Meta (lSerial, _), _ when tyIsFreeIn rSubstTy lSerial ->
-      let ctx = bindTyCore ctx lSerial rty
-      msgAcc, ctx
-    | _, Ty.Meta _ ->
-      go rty lty (msgAcc, ctx)
-    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
-      msgAcc, ctx
-    | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
-      (msgAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
-    | Ty.Error _, _
-    | _, Ty.Error _ ->
-      msgAcc, ctx
-    | Ty.Meta _, _ ->
-      let msg = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
-      msg :: msgAcc, ctx
-    | Ty.Con _, _ ->
-      let lRootTy = substTyCore ctx lRootTy
-      let rRootTy = substTyCore ctx rRootTy
-      let msg = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
-      msg :: msgAcc, ctx
-  let msgAcc, ctx =
-    go lty rty ([], ctx)
-  List.rev msgAcc, ctx
-
 let bindTy (ctx: TyCtx) tySerial ty =
-  bindTyCore (ctxToTyCtx ctx) tySerial ty |> ctxWithTyCtx ctx
+  typingBind (ctxToTyCtx ctx) tySerial ty |> ctxWithTyCtx ctx
 
 let substTy (ctx: TyCtx) ty: Ty =
-  substTyCore (ctxToTyCtx ctx) ty
+  typingSubst (ctxToTyCtx ctx) ty
 
 let unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
-  let msgs, tyCtx = unifyTyCore (ctxToTyCtx ctx) lty rty
+  let msgs, tyCtx = typingUnify (ctxToTyCtx ctx) lty rty
   let ctx = ctxWithTyCtx ctx tyCtx
   let ctx = List.fold (fun ctx msg -> ctxAddErr ctx msg loc) ctx msgs
   ctx
-
-/// Assume all bound type variables are resolved by `substTy`.
-let tyCollectFreeVars ty =
-  let rec go fvAcc tys =
-    match tys with
-    | [] ->
-      fvAcc
-    | Ty.Error _ :: tys
-    | Ty.Con (_, []) :: tys ->
-      go fvAcc tys
-    | Ty.Con (_, tys1) :: tys2 ->
-      let acc = go fvAcc tys1
-      let acc = go acc tys2
-      acc
-    | Ty.Meta (serial, _) :: tys ->
-      let acc = serial :: fvAcc
-      go acc tys
-  go [] [ty] |> listUnique
 
 /// Assume all bound type variables are resolved by `substTy`.
 ///
@@ -375,7 +251,7 @@ let inferPatAs ctx pat ident varSerial loc ty =
 let inferPat ctx pat ty =
   match pat with
   | HPat.Lit (lit, loc) ->
-    pat, unifyTy ctx loc ty (litTy lit)
+    pat, unifyTy ctx loc ty (litToTy lit)
   | HPat.Nil (_, loc) ->
     let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
     let ctx = unifyTy ctx loc ty (tyList itemTy)
@@ -766,7 +642,7 @@ let inferExprOpen ctx path ty loc =
 let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   match expr with
   | HExpr.Lit (lit, loc) ->
-    expr, unifyTy ctx loc (litTy lit) ty
+    expr, unifyTy ctx loc (litToTy lit) ty
   | HExpr.Ref (ident, HValRef.Var serial, _, loc) ->
     inferRef ctx ident serial loc ty
   | HExpr.Ref (ident, HValRef.Prim prim, _, loc) ->

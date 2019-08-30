@@ -107,14 +107,14 @@ let scopeCtxDefineTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Adds a variable to a scope.
 let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
-  let varIdent = scopeCtx |> scopeCtxGetVar varSerial |> varDefIdent
+  let varIdent = scopeCtx |> scopeCtxGetVar varSerial |> varDefToIdent
   { scopeCtx with
       Local = (scopeSerial, Binding.Var (varSerial, varIdent)) :: scopeCtx.Local
   }
 
 /// Adds a type to a scope.
 let scopeCtxOpenTy scopeSerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
-  let tyIdent = scopeCtx |> scopeCtxGetTy tySerial |> tyDefIdent
+  let tyIdent = scopeCtx |> scopeCtxGetTy tySerial |> tyDefToIdent
   { scopeCtx with
       Local = (scopeSerial, Binding.Ty (tySerial, tyIdent)) :: scopeCtx.Local
   }
@@ -262,23 +262,32 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
 
 /// Resolves type identifiers in a type expression.
 let scopeCtxResolveTy ty loc scopeCtx =
+  let isDiscardPat ty =
+    match ty with
+    | Ty.Con (TyCon.Ref serial, []) ->
+      (scopeCtx |> scopeCtxGetIdent serial) = "_"
+
+    | _ ->
+      false
+
   let rec go ty =
     match ty with
     | Ty.Error _ ->
       ty
 
+    | _ when isDiscardPat ty ->
+      ty
+
     | Ty.Con (TyCon.Ref serial, tys) ->
       let ident = scopeCtx |> scopeCtxGetIdent serial
+      let tys = tys |> List.map go
+
       match scopeCtx |> scopeCtxResolveLocalTyIdent ident with
       | Some tySerial ->
-        let tys = tys |> List.map go
-        Ty.Con (TyCon.Ref tySerial, tys)
-
-      | None when ident = "_" && List.isEmpty tys ->
-        Ty.Con (TyCon.Ref serial, tys)
+        tyRef tySerial tys
 
       | None ->
-        Ty.Error loc
+        tyPrimFromIdent ident tys loc
 
     | Ty.Con (tyCon, tys) ->
       let tys = tys |> List.map go
@@ -323,12 +332,12 @@ let scopeCtxDefineTyDeclUniquely tySerial tyDecl loc ctx =
     ctx |> scopeCtxDefineLocalTy tySerial (TyDef.Meta (tyIdent, body, loc))
 
   | TyDecl.Union (_, variants, _unionLoc) ->
-    let unionTy = Ty.Con (TyCon.Ref tySerial, [])
+    let unionTy = tyRef tySerial []
     let defineVariant ctx (variantIdent, variantSerial, hasPayload, payloadTy) =
       // E.g. Some: 'T -> 'T option, None: 'T option
       let variantTy =
         if hasPayload then
-          Ty.Con (TyCon.Fun, [payloadTy; unionTy])
+          tyFun payloadTy unionTy
         else
           unionTy
       let varDef =
@@ -456,6 +465,32 @@ let collectDecls (expr, ctx) =
 // -----------------------------------------------
 // Name Resolution
 // -----------------------------------------------
+
+let tyPrimFromIdent ident tys loc =
+  match ident, tys with
+  | "unit", [] ->
+    tyUnit
+
+  | "bool", [] ->
+    tyBool
+
+  | "int", [] ->
+    tyInt
+
+  | "char", [] ->
+    tyChar
+
+  | "string", [] ->
+    tyStr
+
+  | "obj", [] ->
+    tyObj
+
+  | "list", [itemTy] ->
+    tyList itemTy
+
+  | _ ->
+    Ty.Error loc
 
 let primFromIdent ident =
   match ident with
