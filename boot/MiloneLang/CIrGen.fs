@@ -72,32 +72,45 @@ let ctxAddDecl (ctx: Ctx) decl =
   { ctx with Decls = decl :: ctx.Decls }
 
 let ctxAddFunDecl (ctx: Ctx) sTy tTy =
+  // First, register the type name to the map. Without this,
+  // `cty`ing the signature types could generate this function type too.
   let funTy = tyFun sTy tTy
-  let _, argTys, resultTy = tyToArgList funTy
   let ident, ctx = ctxUniqueTyName ctx funTy
   let selfTy = CTy.Struct ident
+  let ctx: Ctx =
+    { ctx with
+        TyEnv = ctx.TyEnv |> Map.add funTy selfTy
+    }
+
+  // Second, `cty`ing signature types.
   let envTy = CTy.Ptr CTy.Void
+  let _, argTys, resultTy = tyToArgList funTy
 
   let makeSignature ctx =
     let argTys, ctx = cirifyTys (argTys, ctx)
     let resultTy, ctx = cty ctx resultTy
     argTys, resultTy, ctx
 
-  // HACK: See AddUnionDecl for details.
+  // `ctx` is discarded not to generate type declarations yet.
+  // Because the this type's fields refer to types indirectly,
+  // we want to emit these declarations later.
   let argTys, resultTy, _ = makeSignature ctx
 
   let fields = ["fun", CTy.FunPtr (envTy :: argTys, resultTy); "env", envTy]
   let ctx: Ctx =
     { ctx with
-        TyEnv = ctx.TyEnv |> Map.add funTy selfTy
         Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
 
-  let _, _, ctx = makeSignature ctx
+  // Finally, emit the declarations referred in the signature types.
+  let argTys2, resultTy2, ctx = makeSignature ctx
+  assert (argTys2 = argTys && resultTy2 = resultTy)
 
   selfTy, ctx
 
 let ctxAddListDecl (ctx: Ctx) itemTy =
+  // See ctxAddFunDecl for the reason of the operation ordering.
+
   let listTy = tyList itemTy
   let ident, ctx = ctxUniqueTyName ctx listTy
   let selfTy = CTy.Ptr (CTy.Struct ident)
@@ -112,6 +125,8 @@ let ctxAddListDecl (ctx: Ctx) itemTy =
   selfTy, ctx
 
 let ctxAddTupleDecl (ctx: Ctx) itemTys =
+  // See ctxAddFunDecl for the reason of the operation ordering.
+
   let rec go acc ctx i itemTys =
     match itemTys with
     | [] ->
@@ -120,26 +135,25 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
       let itemTy, ctx = cty ctx itemTy
       let field = tupleField i, itemTy
       go (field :: acc) ctx (i + 1) itemTys
-  let fields, ctx = go [] ctx 0 itemTys
 
   let tupleTy = tyTuple itemTys
   let tupleTyIdent, ctx = ctxUniqueTyName ctx tupleTy
-  let ctx: Ctx =
-    { ctx with
-        TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct tupleTyIdent)
-        Decls = CDecl.Struct (tupleTyIdent, fields, []) :: ctx.Decls
-    }
-  CTy.Struct tupleTyIdent, ctx
+  let selfTy = CTy.Struct tupleTyIdent
+  let ctx: Ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add tupleTy selfTy }
+
+  let fields, ctx = go [] ctx 0 itemTys
+  let tupleDecl = CDecl.Struct (tupleTyIdent, fields, [])
+  let ctx: Ctx = { ctx with Decls = tupleDecl :: ctx.Decls }
+  selfTy, ctx
 
 let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
-  // Generate identifiers and make types.
+  // See ctxAddFunDecl for the reason of the operation ordering.
+
   let unionTyRef = tyRef tySerial []
   let unionTyIdent, ctx = ctxUniqueTyName ctx unionTyRef
   let unionTy = CTy.Struct unionTyIdent
   let tagTyIdent = tagTyIdent unionTyIdent
   let tagTy = CTy.Enum tagTyIdent
-
-  // Register type name to prevent infinite loop in the case of recursive unions.
   let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add unionTyRef unionTy }
 
   let variants =
@@ -160,19 +174,12 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
       else
         acc, ctx
     )
-  // HACK: Get rid of the resulting context because it can be invalid
-  // in the case where some payload type contains the discriminated union itself,
-  // to incur C compiler error, use of incomplete type.
-  // E.g. `type ThisUnion = | A of ThisUnion * int`
-  // will generate invalid code
-  // `struct Tuple2 { ThisUnion t0; .. }; struct ThisUnion { .. };`.
   let variants, _ = makeVariants ctx
 
   let tagEnumDecl = CDecl.Enum (tagTyIdent, tags)
   let structDecl = CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
   let ctx = { ctx with Decls = structDecl :: tagEnumDecl :: ctx.Decls }
 
-  // Regenerate payload types.
   let _, ctx = makeVariants ctx
 
   unionTy, ctx
