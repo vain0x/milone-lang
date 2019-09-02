@@ -29,7 +29,6 @@ next_5:;
     match_1 = 0;
     goto end_match_4;
 next_6:;
-    exit(1);
 end_match_4:;
     milone_assert(match_1);
     int call_ = 0;

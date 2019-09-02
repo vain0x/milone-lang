@@ -29,6 +29,28 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
     Diags = tyCtx.Diags
   }
 
+let ctxGetVar (ctx: MirCtx) varSerial =
+  ctx.Vars |> Map.find varSerial
+
+let ctxGetTy (ctx: MirCtx) tySerial =
+  ctx.Tys |> Map.find tySerial
+
+let ctxGetVariants (ctx: MirCtx) tySerial =
+  match ctxGetTy ctx tySerial with
+  | TyDef.Union (_, variantSerials, _) ->
+    variantSerials |> List.map
+      (fun variantSerial ->
+        match ctxGetVar ctx variantSerial with
+        | VarDef.Variant (_, _, _, payloadTy, _, _) ->
+          variantSerial, payloadTy
+        | _ ->
+          failwith "Expected variant"
+      )
+  | _ ->
+    eprintfn "Expected union type"
+    assert false
+    []
+
 let ctxAddErr (ctx: MirCtx) message loc =
   { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
 
@@ -260,8 +282,231 @@ let mirifyBlock ctx expr =
   let ctx = ctxRollBack ctx blockCtx
   stmts, expr, ctx
 
+[<RequireQualifiedAccess>]
+type Space =
+  | CoverAll
+  /// Space identified by int.
+  | Variant
+    of int * Space
+  /// Reference of space. Used for recursive spaces. Never empty.
+  | Ref
+    of int * (unit -> Space)
+  | Union
+    of Space list
+
+let spaceCoverAll =
+  Space.CoverAll
+
+let spaceRef serial thunk =
+  Space.Ref (serial, thunk)
+
+let spaceEmpty =
+  Space.Union []
+
+let spaceUnit =
+  spaceCoverAll
+
+let spaceVariant variant =
+  Space.Variant variant
+
+let spaceSum variants =
+  variants |> listMap spaceVariant |> spaceUnion
+
+let spaceUnion spaces =
+  let rec go spaces acc =
+    match spaces with
+    | [] ->
+      acc
+
+    | Space.Union subspaces :: spaces ->
+      acc |> go subspaces |> go spaces
+
+    | space :: spaces when space |> spaceIsEmpty ->
+      acc |> go spaces
+
+    | space :: spaces ->
+      (space :: acc) |> go spaces
+
+  [] |> go spaces |> Space.Union
+
+let rec spaceIsEmpty space =
+  match space with
+  | Space.CoverAll
+  | Space.Ref _ ->
+    false
+
+  | Space.Variant (_, subspace) ->
+    subspace |> spaceIsEmpty
+
+  | Space.Union spaces ->
+    spaces |> List.forall spaceIsEmpty
+
+let rec spaceExclude first second =
+  match first, second with
+  | _, Space.CoverAll
+  | Space.Union [], _ ->
+    spaceEmpty
+
+  | Space.CoverAll, _
+  | _, Space.Union [] ->
+    first
+
+  | Space.Variant (tag, firstSpace), Space.Variant (secondTag, secondSpace)
+    when tag = secondTag ->
+    let subspace = spaceExclude firstSpace secondSpace
+    spaceVariant (tag, subspace)
+
+  | Space.Variant _, Space.Variant _ ->
+    first
+
+  | _, Space.Union seconds ->
+    seconds |> List.fold spaceExclude first
+
+  | Space.Union firsts, _ ->
+    firsts |> List.map (fun first -> spaceExclude first second) |> spaceUnion
+
+  | Space.Ref (firstRef, _), Space.Ref (secondRef, _)
+    when firstRef = secondRef ->
+    spaceEmpty
+
+  | Space.Ref (_, thunk), _ ->
+    spaceExclude (thunk ()) second
+
+  | _, Space.Ref (_, thunk) ->
+    // Never happens because patterns don't generate ref spaces.
+    assert false
+    spaceExclude first (thunk ())
+
+let spaceCovers other cover =
+  spaceExclude other cover |> spaceIsEmpty
+
+let tyToSpace ctx ty =
+  let rec go ty =
+    match ty with
+    | Ty.Con (TyCon.Bool, []) ->
+      spaceSum
+        [
+          // false
+          0, spaceUnit
+          // true
+          1, spaceUnit
+        ]
+
+    | Ty.Con (TyCon.Ref tySerial, []) ->
+      let variants = ctxGetVariants ctx tySerial
+      let rec thunk () =
+        variants
+        |> List.map (fun (variantSerial, payloadTy) ->
+            variantSerial, go payloadTy
+          )
+        |> spaceSum
+
+      spaceRef tySerial thunk
+
+    | Ty.Con (TyCon.Tuple, []) ->
+      spaceUnit
+
+    | Ty.Con (TyCon.Tuple, itemTys) ->
+      itemTys |> List.mapi (fun i itemTy -> i, go itemTy) |> spaceSum
+
+    | Ty.Con (TyCon.List, [itemTy]) ->
+      let itemSpace = go itemTy
+      let rec thunk () =
+        let consSpace =
+          spaceSum
+            [
+              // head
+              0, itemSpace
+              // tail
+              1, spaceRef (-1) thunk
+            ]
+        spaceSum
+          [
+            // nil
+            0, spaceUnit
+            // cons
+            1, consSpace
+          ]
+      spaceRef (-2) thunk
+
+    | _ ->
+      spaceCoverAll
+
+  go ty
+
+let patToSpace ctx pat =
+  let rec go pat =
+    match pat with
+    | HPat.Lit (Lit.Bool false, _) ->
+      spaceSum [0, spaceUnit]
+
+    | HPat.Lit (Lit.Bool true, _) ->
+      spaceSum [1, spaceUnit]
+
+    | HPat.Ref (_, varSerial, _, _) ->
+      match ctxGetVar ctx varSerial with
+      | VarDef.Var _ ->
+        spaceCoverAll
+
+      | VarDef.Variant _ ->
+        spaceSum [varSerial, spaceUnit]
+
+      | _ ->
+        failwith "Never: Functions can't be patterns"
+
+    | HPat.Call (HPat.Ref (_, varSerial, _, _), [payloadPat], _, _)
+      when ctxIsVariantFun ctx varSerial ->
+      spaceSum [varSerial, go payloadPat]
+
+    | HPat.Tuple ([], _, _) ->
+      spaceUnit
+
+    | HPat.Tuple (itemPats, _, _) ->
+      itemPats |> List.mapi (fun i itemPat -> i, go itemPat) |> spaceSum
+
+    | HPat.Nil _ ->
+      spaceSum [0, spaceUnit]
+
+    | HPat.Cons (headPat, tailPat, _, _) ->
+      let consSpace =
+        spaceSum
+          [
+            0, go headPat
+            1, go tailPat
+          ]
+      spaceSum [1, consSpace]
+
+    | HPat.Or (_first, _second, _, _) ->
+      spaceEmpty
+
+    | HPat.As (pat, _, _, _) ->
+      go pat
+
+    | HPat.Anno (pat, _, _) ->
+      go pat
+
+    | HPat.Lit _
+    | HPat.Nav _
+    | _ ->
+      spaceEmpty
+
+  go pat
+
+let patsToSpace ctx pats =
+  pats |> List.map (patToSpace ctx) |> spaceUnion
+
+let patsIsCovering ctx ty pats =
+  if patsIsCoveringOld pats then
+    true
+  else
+    let tySpace = ty |> tyToSpace ctx
+    let patSpace = pats |> patsToSpace ctx
+    eprintfn "pat=%A ty=%A" pats ty
+    eprintfn "pats=%A tys=%A ex=%A" patSpace tySpace (spaceExclude tySpace patSpace)
+    patSpace |> spaceCovers tySpace
+
 /// Gets if the target must match with any of the patterns.
-let patsIsCovering pats =
+let patsIsCoveringOld pats =
   let rec go pat =
     match pat with
     | HPat.Ref _ ->
@@ -293,7 +538,7 @@ let mirifyExprMatch ctx target arms ty loc =
     arms
     |> List.choose
       (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
-    |> patsIsCovering
+    |> patsIsCovering ctx (mexprToTy target)
 
   /// By walking over arms, calculates what kind of MIR instructions to emit.
   let rec goArms ctx acc firstPat arms =

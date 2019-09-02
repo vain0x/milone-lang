@@ -39,7 +39,6 @@ next_5:;
     match_1 = 0;
     goto end_match_4;
 next_6:;
-    exit(1);
 end_match_4:;
     int match_2;
     struct IntIntTuple2 tuple_1;
@@ -55,7 +54,6 @@ next_8:;
     match_2 = 0;
     goto end_match_7;
 next_9:;
-    exit(1);
 end_match_7:;
     return 0;
 }

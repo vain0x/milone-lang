@@ -13,7 +13,6 @@ next_2:;
     match_ = (x_ * call_);
     goto end_match_1;
 next_3:;
-    exit(1);
 end_match_1:;
     return match_;
 }

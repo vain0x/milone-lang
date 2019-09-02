@@ -67,7 +67,6 @@ next_2:;
     match_ = call_;
     goto end_match_1;
 next_3:;
-    exit(1);
 end_match_1:;
     return match_;
 }
@@ -93,7 +92,6 @@ next_5:;
     match_1 = call_1;
     goto end_match_4;
 next_6:;
-    exit(1);
 end_match_4:;
     return match_1;
 }
@@ -138,7 +136,6 @@ next_8:;
     match_2 = list_2;
     goto end_match_7;
 next_9:;
-    exit(1);
 end_match_7:;
     return match_2;
 }
@@ -185,7 +182,6 @@ next_11:;
     match_3 = list_3;
     goto end_match_10;
 next_12:;
-    exit(1);
 end_match_10:;
     return match_3;
 }

@@ -16,7 +16,6 @@ next_5:;
     match_1 = 1;
     goto end_match_4;
 next_6:;
-    exit(1);
 end_match_4:;
     match_ = match_1;
     goto end_match_1;
@@ -27,7 +26,6 @@ next_2:;
     match_ = 1;
     goto end_match_1;
 next_3:;
-    exit(1);
 end_match_1:;
     return match_;
 }

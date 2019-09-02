@@ -81,7 +81,6 @@ next_12:;
     match_3 = 0;
     goto end_match_11;
 next_13:;
-    exit(1);
 end_match_11:;
     match_2 = 0;
     goto end_match_7;

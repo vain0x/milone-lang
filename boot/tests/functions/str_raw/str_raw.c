@@ -15,7 +15,6 @@ next_2:;
     match_ = (str_cmp(eol_, (struct String){.str = "\r\n", .len = 2}) == 0);
     goto end_match_1;
 next_3:;
-    exit(1);
 end_match_1:;
     milone_assert(match_);
     int call_ = 0;

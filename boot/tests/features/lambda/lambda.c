@@ -66,7 +66,6 @@ next_2:;
     match_ = 0;
     goto end_match_1;
 next_3:;
-    exit(1);
 end_match_1:;
     int match_1;
     void* box_1 = (void*)malloc(sizeof(int));
@@ -83,7 +82,6 @@ next_5:;
     match_1 = 0;
     goto end_match_4;
 next_6:;
-    exit(1);
 end_match_4:;
     return 0;
 }

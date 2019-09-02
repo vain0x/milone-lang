@@ -28,17 +28,14 @@ next_8:;
     match_2 = call_1;
     goto end_match_7;
 next_9:;
-    exit(1);
 end_match_7:;
     match_1 = match_2;
     goto end_match_4;
 next_6:;
-    exit(1);
 end_match_4:;
     match_ = match_1;
     goto end_match_1;
 next_3:;
-    exit(1);
 end_match_1:;
     return match_;
 }
@@ -54,7 +51,6 @@ next_11:;
     match_3 = (struct String){.str = "Reject", .len = 6};
     goto end_match_10;
 next_12:;
-    exit(1);
 end_match_10:;
     return match_3;
 }

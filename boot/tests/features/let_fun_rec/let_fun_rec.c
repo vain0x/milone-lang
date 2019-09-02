@@ -25,7 +25,6 @@ next_5:;
     match_1 = 0;
     goto end_match_4;
 next_6:;
-    exit(1);
 end_match_4:;
     struct StringIntTuple2 tuple_;
     tuple_.t0 = source_;
@@ -38,7 +37,6 @@ next_2:;
     match_ = 0;
     goto end_match_1;
 next_3:;
-    exit(1);
 end_match_1:;
     return 0;
 }

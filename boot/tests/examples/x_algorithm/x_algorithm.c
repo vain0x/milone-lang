@@ -25,7 +25,6 @@ next_2:;
     match_ = 0;
     goto end_match_1;
 next_3:;
-    exit(1);
 end_match_1:;
     return 0;
 }
@@ -45,7 +44,6 @@ next_5:;
     match_1 = call_;
     goto end_match_4;
 next_6:;
-    exit(1);
 end_match_4:;
     return match_1;
 }
@@ -62,7 +60,6 @@ next_8:;
     match_2 = call_2;
     goto end_match_7;
 next_9:;
-    exit(1);
 end_match_7:;
     return match_2;
 }
@@ -91,12 +88,10 @@ next_14:;
     match_4 = 0;
     goto end_match_13;
 next_15:;
-    exit(1);
 end_match_13:;
     match_3 = match_4;
     goto end_match_10;
 next_12:;
-    exit(1);
 end_match_10:;
     return match_3;
 }
@@ -114,7 +109,6 @@ next_17:;
     match_5 = 0;
     goto end_match_16;
 next_18:;
-    exit(1);
 end_match_16:;
     return match_5;
 }

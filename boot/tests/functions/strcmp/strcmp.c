@@ -13,7 +13,6 @@ next_3:;
     match_1 = 0;
     goto end_match_2;
 next_4:;
-    exit(1);
 end_match_2:;
     if (!((match_1 == 1))) goto next_5;
     match_ = 0;
@@ -23,7 +22,6 @@ next_5:;
     match_ = 1;
     goto end_match_1;
 next_6:;
-    exit(1);
 end_match_1:;
     return match_;
 }

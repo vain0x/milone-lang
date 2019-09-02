@@ -31,7 +31,6 @@ int main() {
     match_ = x_;
     goto end_match_1;
 next_2:;
-    exit(1);
 end_match_1:;
     int n_ = match_;
     int call_ = f_1(n_);
