@@ -26,7 +26,6 @@ int main() {
     int* payload_ = (int*)malloc(sizeof(int));
     (*(((int*)payload_))) = 0;
     struct Val_ variant_ = (struct Val_){.tag = Int_, .Int_ = payload_};
-    if (!((variant_.tag == Int_))) goto next_2;
     int x_ = (*(variant_.Int_));
     match_ = x_;
     goto end_match_1;
