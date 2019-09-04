@@ -110,8 +110,7 @@ The following transformations are consist of the compilation in the order:
     - Source codes concatenation
 - [AstToHir](boot/MiloneLang/AstToHir.fs)
     - From abstract syntax tree (AST) to high-level intermediate representation (HIR)
-    - For code decoupling and desugaring
-- [Desugaring](boot/MiloneLang/Desugaring.fs)
+    - For data structure decoupling and desugaring
 - [NameRes](boot/MiloneLang/NameRes.fs) (Name resolution)
 - [Typing](boot/MiloneLang/Typing.fs) (Type inference)
 - [FunTrans](boot/MiloneLang/FunTrans.fs) (Function transformations)

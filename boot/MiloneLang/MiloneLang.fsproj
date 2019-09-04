@@ -13,7 +13,6 @@
     <Compile Include="Parsing.fs" />
     <Compile Include="AstToHir.fs" />
     <Compile Include="Bundling.fs" />
-    <Compile Include="Desugaring.fs" />
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
     <Compile Include="Hoist.fs" />

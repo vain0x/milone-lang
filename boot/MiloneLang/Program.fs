@@ -28,9 +28,7 @@ let toCir verbosity (projectDir: string): CDecl list * bool =
   // log "tokens" tokens
   // let ast = Parsing.parse tokens
   // log "ast" ast
-  let desugared = Desugaring.desugar ast
-  log "desugared" ast
-  let nameRes, scopeCtx = NameRes.nameRes (desugared, nameCtx)
+  let nameRes, scopeCtx = NameRes.nameRes (ast, nameCtx)
   log "nameRes" nameRes
   let typedAst, tyCtx = Typing.infer (nameRes, scopeCtx)
   log "typed" typedAst

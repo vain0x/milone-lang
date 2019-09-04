@@ -150,6 +150,14 @@ type AVariant =
   | T
     of string * ATy option * Loc
 
+/// Let expression in AST.
+[<RequireQualifiedAccess>]
+type ALet =
+  | LetVal
+    of APat * AExpr * AExpr * Loc
+  | LetFun
+    of ident:string * args:APat list * AExpr * AExpr * Loc
+
 /// Body of type definition in AST.
 [<RequireQualifiedAccess>]
 type ATyDef =

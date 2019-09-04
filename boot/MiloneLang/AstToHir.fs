@@ -1,11 +1,48 @@
-/// Converts AST to HIR.
-/// Just a data conversion to keep the parser decoupled.
+/// Converts an abstract syntax tree (AST)
+/// to high-level intermediate representation (HIR).
+///
+/// ## Motivation
+///
+/// 1. AST should be decoupled with HIR.
+///
+/// AST is for syntactical analysis/transformations
+/// but HIR is for semantic analysis/transformations.
+/// The two have different concerns and grow independently.
+///
+/// 2. AST is redundant and confusing
+///
+/// AST is optimal for humans but not for analysis.
+/// For example, `[1; 2]` and `1 :: 2 :: []` have the same meaning
+/// and no need to be distinct for the compiler, i.e. *syntax sugar*.
+/// This stage is the best place to desugar them.
+///
+/// Another example, `let` expressions are confusing whether
+/// they introduce either functions or variables. The two kind of
+/// entities have different behavior in the following stages.
 module rec MiloneLang.AstToHir
 
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-/// Desugar to a chain of (::).
+let apFalse loc =
+  APat.Lit (litFalse, loc)
+
+let apTrue loc =
+  APat.Lit (litTrue, loc)
+
+let axUnit loc =
+  AExpr.TupleLit ([], loc)
+
+let axFalse loc =
+  AExpr.Lit (litFalse, loc)
+
+let axTrue loc =
+  AExpr.Lit (litTrue, loc)
+
+let axNil loc =
+  AExpr.ListLit ([], loc)
+
+/// `[x; y; ..]`. Desugar to a chain of (::).
 let desugarListLitPat pats loc =
   assert (pats |> listIsEmpty |> not)
 
@@ -14,11 +51,45 @@ let desugarListLitPat pats loc =
     | [] ->
       APat.ListLit ([], loc)
 
-    | head :: pats ->
-      let tail = go pats
+    | head :: tail ->
+      let tail = go tail
       APat.Cons (head, tail, loc)
 
   go pats
+
+/// `[x; y; ..]` ==> `x :: y :: .. :: []`
+let desugarListLitExpr items loc =
+  assert (items |> listIsEmpty |> not)
+
+  let rec go items =
+    match items with
+    | [] ->
+      AExpr.ListLit ([], loc)
+
+    | head :: tail ->
+      let tail = go tail
+      AExpr.Bin (Op.Cons, head, tail, loc)
+
+  go items
+
+/// Desugar `if` to `match`.
+/// `if cond then body else alt` ==>
+/// `match cond with | true -> body | false -> alt`.
+let desugarIf cond body alt loc =
+  let alt =
+    match alt with
+    | AExpr.Missing _ ->
+      axUnit loc
+    | _ ->
+      alt
+
+  let arms =
+    [
+      AArm.T (apTrue loc, axTrue loc, body, loc)
+      AArm.T (apFalse loc, axTrue loc, alt, loc)
+    ]
+
+  AExpr.Match (cond, arms, loc)
 
 /// Desugar to let expression.
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
@@ -32,6 +103,44 @@ let desugarFun pats body loc =
 let desugarUniNeg arg loc =
   let zero = AExpr.Lit (Lit.Int 0, loc)
   AExpr.Bin (Op.Sub, zero, arg, loc)
+
+/// `l && r` ==> `if l then r else false`
+let desugarBinAnd l r loc =
+  desugarIf l r (axFalse loc) loc
+
+/// `l || r` ==> `if l then true else r`
+let desugarBinOr l r loc =
+  desugarIf l (axTrue loc) r loc
+
+/// `x |> f` ==> `f x`
+/// NOTE: Evaluation order does change.
+let desugarBinPipe l r loc =
+  AExpr.Bin (Op.App, r, l, loc)
+
+/// Analyzes let syntax.
+///
+/// Annotation move just for simplification:
+/// `let p : ty = body` ==>
+///   `let p = body : ty`
+///
+/// Let to let-fun:
+/// `let f x = body` ==>
+///   `let-fun f(x) = body`
+///
+/// Let to let-val:
+/// `let pat = body` ==>
+///   `let-val pat = body`
+let desugarLet pat body next loc =
+  match pat with
+  | APat.Anno (pat, annoTy, annoLoc) ->
+    let body = AExpr.Anno (body, annoTy, annoLoc)
+    desugarLet pat body next loc
+
+  | APat.Call (APat.Ident (ident, _), args, _) ->
+    ALet.LetFun (ident, args, body, next, loc)
+
+  | _ ->
+    ALet.LetVal (pat, body, next, loc)
 
 let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
@@ -127,25 +236,19 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
     HExpr.Ref (ident, HValRef.Var serial, noTy, loc), nameCtx
 
-  | AExpr.ListLit (exprs, loc) ->
-    let exprs, nameCtx = (exprs, nameCtx) |> stMap onExpr
-    HExpr.Inf (InfOp.List noTy, exprs, noTy, loc), nameCtx
+  | AExpr.ListLit ([], loc) ->
+    hxNil noTy loc, nameCtx
+
+  | AExpr.ListLit (items, loc) ->
+    let expr = desugarListLitExpr items loc
+    (expr, nameCtx) |> onExpr
 
   | AExpr.If (cond, body, alt, loc) ->
-    let cond, nameCtx =
-      (cond, nameCtx) |> onExpr
-    let body, nameCtx =
-      (body, nameCtx) |> onExpr
-    let alt, nameCtx =
-      match alt with
-      | AExpr.Missing loc ->
-        hxUnit loc, nameCtx
-      | expr ->
-        (expr, nameCtx) |> onExpr
-    HExpr.If (cond, body, alt, noTy, loc), nameCtx
+    let expr = desugarIf cond body alt loc
+    (expr, nameCtx) |> onExpr
 
   | AExpr.Match (target, arms, loc) ->
-    // Desugar `| pat -> body` to `|pat when true -> body` so that all arms have guard expressions.
+    // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
     let onArm (AArm.T (pat, guard, body, loc), nameCtx) =
       let pat, nameCtx =
         (pat, nameCtx) |> onPat
@@ -179,6 +282,18 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     let expr = desugarUniNeg arg loc
     (expr, nameCtx) |> onExpr
 
+  | AExpr.Bin (Op.And, l, r, loc) ->
+    let expr = desugarBinAnd l r loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Or, l, r, loc) ->
+    let expr = desugarBinOr l r loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Pipe, l, r, loc) ->
+    let expr = desugarBinPipe l r loc
+    (expr, nameCtx) |> onExpr
+
   | AExpr.Bin (op, l, r, loc) ->
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr
@@ -197,11 +312,20 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     let exprs, nameCtx = (exprs, nameCtx) |> stMap onExpr
     HExpr.Inf (InfOp.Semi, exprs, noTy, loc), nameCtx
 
-  | AExpr.Let (pat, init, next, loc) ->
-    let pat, nameCtx = (pat, nameCtx) |> onPat
-    let init, nameCtx = (init, nameCtx) |> onExpr
-    let next, nameCtx = (next, nameCtx) |> onExpr
-    HExpr.Let (pat, init, next, noTy, loc), nameCtx
+  | AExpr.Let (pat, body, next, loc) ->
+    match desugarLet pat body next loc with
+    | ALet.LetFun (ident, args, body, next, loc) ->
+      let serial, nameCtx = nameCtx |> nameCtxAdd ident
+      let args, nameCtx = (args, nameCtx) |> stMap onPat
+      let body, nameCtx = (body, nameCtx) |> onExpr
+      let next, nameCtx = (next, nameCtx) |> onExpr
+      HExpr.LetFun (ident, serial, args, body, next, noTy, loc), nameCtx
+
+    | ALet.LetVal (pat, body, next, loc) ->
+      let pat, nameCtx = (pat, nameCtx) |> onPat
+      let body, nameCtx = (body, nameCtx) |> onExpr
+      let next, nameCtx = (next, nameCtx) |> onExpr
+      HExpr.Let (pat, body, next, noTy, loc), nameCtx
 
   | AExpr.TySynonym (ident, ty, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
