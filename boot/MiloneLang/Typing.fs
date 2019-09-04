@@ -1,3 +1,8 @@
+/// Infers the type of expressions.
+///
+/// The algorithm is based on rank-based Hindley-Milner type inference.
+/// This article is very helpful (written in Japanese):
+///     <https://rhysd.hatenablog.com/entry/2017/12/16/002048>
 module rec MiloneLang.Typing
 
 open MiloneLang

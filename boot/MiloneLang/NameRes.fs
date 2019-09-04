@@ -1,3 +1,8 @@
+/// Resolves symbols as possible.
+///
+/// This stage traverses the expressions twice
+/// to collect symbol information
+/// and assign the same serials to the same symbols.
 module rec MiloneLang.NameRes
 
 open MiloneLang

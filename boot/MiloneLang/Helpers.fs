@@ -1,3 +1,4 @@
+/// Defines the functions used in multiple modules.
 module rec MiloneLang.Helpers
 
 open MiloneLang.Types

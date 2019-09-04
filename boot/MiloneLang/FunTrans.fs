@@ -1,4 +1,4 @@
-/// Conversion about functions.
+/// Performs some transformations about functions.
 module rec MiloneLang.FunTrans
 
 open MiloneLang.Helpers

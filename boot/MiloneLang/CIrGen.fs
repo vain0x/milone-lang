@@ -1,4 +1,9 @@
-/// Generates CIR from MIR.
+/// Converts MIR to CIR.
+///
+/// CIR is a kind of abstract syntax tree of C.
+///
+/// Maps operations/primitives/types to C operations/functions/types.
+/// Generates type declarations for lists/tuples/etc.
 module rec MiloneLang.CIrGen
 
 open MiloneLang.Types

@@ -1,3 +1,10 @@
+/// Parses a list of tokens to build an abstract syntax tree (AST).
+///
+/// This is a hand-written recursive descent parser.
+///
+/// Caution: Not compatible with F# syntax.
+///   This parser assume the source code is formatted well
+///   in the layout similar to this source code.
 module rec MiloneLang.Parsing
 
 open MiloneLang

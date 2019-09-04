@@ -1,4 +1,4 @@
-/// Converts C-IR to C language code.
+/// Converts CIR to C language source code.
 /// Includes runtime functions.
 module rec MiloneLang.CPrinting
 

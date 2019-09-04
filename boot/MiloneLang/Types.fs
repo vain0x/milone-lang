@@ -1,3 +1,4 @@
+/// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
 /// Location = (rowIndex, columnIndex).

@@ -1,5 +1,4 @@
-/// Define primitives in milone-lang.
-
+/// Defines some functions to fill the gap of F# and milone-lang.
 [<AutoOpen>]
 module rec MiloneLang.Polyfills
 

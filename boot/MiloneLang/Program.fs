@@ -1,3 +1,4 @@
+/// Entry point of the compiler.
 module rec MiloneLang.Program
 
 open System

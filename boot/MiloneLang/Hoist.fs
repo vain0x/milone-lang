@@ -1,41 +1,36 @@
-/// Declaration hoisting.
+/// Rearranges the expression layout for the following stages.
+///
+/// This stage eliminates local (in-function) type/function definitions
+/// by moving them up to the top-level
+/// because monomorphization doesn't want to clone nested definitions.
+///
+/// ### Example
+///
+/// ```fsharp
+///  // At top-level
+///  let serialZero, serialNext =
+///     // Local type definition
+///     type Serial = | Serial of int
+///     // Local function definition
+///     let next (Serial value) = value + 1, Serial (value + 1)
+///     Serial 0, next
+/// ```
+///
+/// to
+///
+/// ```fsharp
+///  // Local type definition hoisted to top-level
+///  type Serial = | Serial of int
+///  // Local function definition hoisted to top-level
+///  let next (Serial value) = value + 1, Serial (value + 1)
+///  let serialZero, serialNext = Serial 0, next
+/// ```
 module rec MiloneLang.Hoist
 
 open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-// ## Hoisting
-//
-// Rearrange expression layout for the following stages.
-//
-// ### Description
-//
-// This stage eliminates local (in-function) type/function definitions
-// by moving them up to the top-level
-// because monomorphization doesn't want to clone nested definitions.
-//
-// ### Example
-//
-// ```fsharp
-// // At global
-// let serialZero, serialNext =
-//    // Local type definition
-//    type Serial = | Serial of int
-//    // Local function definition
-//    let next (Serial value) = value + 1, Serial (value + 1)
-//    Serial 0, next
-// ```
-//
-// to
-//
-// ```
-// // Local type definition hoisted to global
-// type Serial = | Serial of int
-// // Local function definition hoisted to global
-// let next (Serial value) = value + 1, Serial (value + 1)
-// let serialZero, serialNext = Serial 0, next
-// ```
 
 /// Accumulation of expression stack.
 [<RequireQualifiedAccess>]

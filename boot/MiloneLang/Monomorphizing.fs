@@ -1,59 +1,60 @@
-// Resolves polymorphic functions.
+/// Resolves polymorphic functions.
+///
+/// ## Monomorphization
+///
+/// **Monomorphization** refers to a kind of code conversion
+/// to eliminate use of generic types and functions from program.
+///
+/// We need this stage because the target language (C language)
+/// doesn't support generics.
+///
+/// ## Glossary
+///
+/// Types and functions are *monomorphic* if and only if
+/// they have no type parameters.
+///
+/// ### Example
+///
+/// The code below contains use of generic type `'a * 'b`
+/// and two use of generic function `flip`.
+///
+/// ```fsharp
+///   let flip (x, y) = (y, x)
+///   (1, "one") |> flip |> flip
+/// ```
+///
+/// The monomorphization converts it to the code below:
+///
+/// ```fsharp
+///   let flipIntStringPair ((x, y): int * string): string * int = (y, x)
+///   let flipStringIntPair ((x, y): string * int): int * string = (y, x)
+///   (1, "one") |> flipIntStringPair |> flipStringIntPair
+/// ```
+///
+/// In short, this conversion *clones* generic definitions
+/// for each combination of type parameters in use-site
+/// with type parameters replaced with such monomorphic types.
+///
+/// ### Algorithm
+///
+/// Repeat the following while something happens:
+///
+/// 1. For each reference expression to generic function `f`,
+///    if the use-site type `t` is monomorphic,
+///    replace with the monomorphized instance of (`f`, `t`) if exists;
+///    or mark the pair (`f`, `t`) for later otherwise.
+/// 2. For each definition expression of generic function `f`,
+///    for each marked pair (`f`, `t`),
+///    clone the definition and unify the function type with `t`.
+///    The cloned function is referred to as monomorphized instance of (`f`, `t`).
+///
+/// NOTE: The algorithm seems inefficient and the finiteness is unproven.
+
 module rec MiloneLang.Monomorphizing
 
 open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
-
-// ## Monomorphization
-//
-// **Monomorphization** refers to a kind of code conversion
-// to eliminate use of generic types and functions from program.
-//
-// We need this stage because the target language (C language)
-// doesn't support generics.
-//
-// ## Glossary
-//
-// Types and functions are *monomorphic* if and only if
-// they have no type parameters.
-//
-// ### Example
-//
-// The code below contains use of generic type `'a * 'b`
-// and two use of generic function `flip`.
-//
-// ```fsharp
-//    let flip (x, y) = (y, x)
-//    (1, "one") |> flip |> flip
-// ```
-//
-// The monomorphization converts it to the code below:
-//
-// ```fsharp
-//    let flipIntStringPair ((x, y): int * string): string * int = (y, x)
-//    let flipStringIntPair ((x, y): string * int): int * string = (y, x)
-//    (1, "one") |> flipIntStringPair |> flipStringIntPair
-// ```
-//
-// In short, this conversion *clones* generic definitions
-// for each combination of type parameters in use-site
-// with type parameters replaced with such monomorphic types.
-//
-// ### Algorithm
-//
-// Repeat the following while something happens:
-//
-// 1. For each reference expression to generic function `f`,
-//    if the use-site type `t` is monomorphic,
-//    replace with the monomorphized instance of (`f`, `t`) if exists;
-//    or mark the pair (`f`, `t`) for later otherwise.
-// 2. For each definition expression of generic function `f`,
-//    for each marked pair (`f`, `t`),
-//    clone the definition and unify the function type with `t`.
-//    The cloned function is referred to as monomorphized instance of (`f`, `t`).
-//
-// NOTE: The algorithm seems inefficient and the finiteness is unproven.
 
 [<RequireQualifiedAccess>]
 type Mode =
