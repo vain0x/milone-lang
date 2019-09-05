@@ -122,6 +122,7 @@ type APat =
     of APat list * Loc
   | Nav
     of APat * string * Loc
+  /// Variant deconstruction. e.g. `Some x`.
   | Call
     of APat * APat list * Loc
   /// `::`
@@ -136,6 +137,10 @@ type APat =
     of APat * ATy * Loc
   | Or
     of APat * APat * Loc
+  /// Function declaration pattern, e.g. `f x y`.
+  /// Syntactically distinct from the call pattern.
+  | Fun
+    of string * APat list * Loc
 
 /// Match arm node in AST.
 [<RequireQualifiedAccess>]

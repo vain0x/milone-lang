@@ -319,6 +319,26 @@ let parsePatOr boxX tokens =
   | first, tokens ->
     first, tokens
 
+/// pat-let = pat-fun / pat
+/// pat-fun = ident pat-nav+ ( ':' ty )?
+let parsePatLet boxX tokens =
+  match tokens with
+  | (Token.Ident callee, loc) :: nextTokens
+    when nextInside boxX tokens && nextInside boxX nextTokens && leadsPat nextTokens ->
+    let args, tokens = parsePatCallArgs boxX nextTokens
+    let pat = APat.Fun (callee, args, loc)
+
+    match tokens with
+    | (Token.Colon, loc) :: tokens ->
+      let ty, tokens = parseTy boxX tokens
+      APat.Anno (pat, ty, loc), tokens
+
+    | _ ->
+      pat, tokens
+
+  | _ ->
+    parsePat boxX tokens
+
 /// pat = pat-or
 let parsePat boxX tokens =
   if not (nextInside boxX tokens && leadsPat tokens) then
@@ -412,7 +432,7 @@ let parseMatch boxX matchLoc tokens =
   AExpr.Match (target, arms, matchLoc), tokens
 
 /// fun-expr = 'fun' pats '->' expr
-let parseFun boxX funLoc tokens =
+let parseFun _boxX funLoc tokens =
   let _, funX = funLoc
   let patBoxX = funX + 1
   let pats, tokens =
@@ -446,7 +466,7 @@ let parseLet boxX letLoc tokens =
   let tokens = parseAccessModifier tokens
   let patsX = max boxX (letX + 1)
   let pat, tokens =
-    match parsePat patsX tokens with
+    match parsePatLet patsX tokens with
     | pat, (Token.Eq, _) :: tokens ->
       pat, tokens
     | _ ->

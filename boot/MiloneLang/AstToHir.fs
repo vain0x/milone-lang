@@ -95,7 +95,7 @@ let desugarIf cond body alt loc =
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
 let desugarFun pats body loc =
   let ident = "fun"
-  let pat = APat.Call (APat.Ident (ident, loc), pats, loc)
+  let pat = APat.Fun (ident, pats, loc)
   let next = AExpr.Ident (ident, loc)
   AExpr.Let (pat, body, next, loc)
 
@@ -136,7 +136,7 @@ let desugarLet pat body next loc =
     let body = AExpr.Anno (body, annoTy, annoLoc)
     desugarLet pat body next loc
 
-  | APat.Call (APat.Ident (ident, _), args, _) ->
+  | APat.Fun (ident, args, _) ->
     ALet.LetFun (ident, args, body, next, loc)
 
   | _ ->
@@ -220,6 +220,9 @@ let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
     let l, nameCtx = (l, nameCtx) |> onPat
     let r, nameCtx = (r, nameCtx) |> onPat
     HPat.Or (l, r, noTy, loc), nameCtx
+
+  | APat.Fun (_, _, loc) ->
+    failwithf "Invalid occurrence of fun pattern: %A" loc
 
 let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with
