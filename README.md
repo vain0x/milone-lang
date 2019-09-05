@@ -98,7 +98,7 @@ See the comments in source files for details. Most of types are defined in the m
 
 Functions are defined in:
 
-- [Polyfills](boot/MiloneLang/Polyfill.fs)
+- [Polyfills](boot/MiloneLang/Polyfills.fs)
     - Abstraction layer to reduce the gap of F# and milone-lang
 - [Helpers](boot/MiloneLang/Helpers.fs)
 

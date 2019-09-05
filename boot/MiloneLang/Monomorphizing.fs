@@ -49,7 +49,6 @@
 ///    The cloned function is referred to as monomorphized instance of (`f`, `t`).
 ///
 /// NOTE: The algorithm seems inefficient and the finiteness is unproven.
-
 module rec MiloneLang.Monomorphizing
 
 open MiloneLang
