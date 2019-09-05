@@ -412,9 +412,8 @@ type InfOp =
   | CallClosure
   /// Tuple constructor, e.g. `x, y, z`.
   | Tuple
-  /// List constructor, e.g. `[x; y; z]`.
-  | List
-    of itemTy:Ty
+  /// `[]`
+  | Nil
   /// Closure constructor.
   | Closure
     of funSerial:int

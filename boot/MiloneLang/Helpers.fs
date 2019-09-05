@@ -376,11 +376,8 @@ let hxTuple items loc =
 let hxUnit loc =
   hxTuple [] loc
 
-let hxList items itemTy loc =
-  HExpr.Inf (InfOp.List itemTy, items, tyList itemTy, loc)
-
 let hxNil itemTy loc =
-  hxList [] itemTy loc
+  HExpr.Inf (InfOp.Nil, [], tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
@@ -439,8 +436,6 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Nav (go sub, mes, f ty, g a)
     | HExpr.Bin (op, l, r, ty, a) ->
       HExpr.Bin (op, go l, go r, f ty, g a)
-    | HExpr.Inf (InfOp.List itemTy, items, resultTy, a) ->
-      HExpr.Inf (InfOp.List (f itemTy), List.map go items, f resultTy, g a)
     | HExpr.Inf (infOp, args, resultTy, a) ->
       HExpr.Inf (infOp, List.map go args, f resultTy, g a)
     | HExpr.Let (pat, init, next, ty, a) ->

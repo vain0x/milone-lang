@@ -591,7 +591,7 @@ let mirifyExprInfClosure ctx funSerial env funTy loc =
 
 let mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
-  | InfOp.List _, [], Ty.Con (TyCon.List, [itemTy]) ->
+  | InfOp.Nil, [], Ty.Con (TyCon.List, [itemTy]) ->
     MExpr.Default (tyList itemTy, loc), ctx
   | InfOp.Tuple, [], Ty.Con (TyCon.Tuple, []) ->
     MExpr.Default (tyUnit, loc), ctx
@@ -687,10 +687,7 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.Open (_, loc) ->
     mirifyExprOpen ctx loc
-  | HExpr.Nav _
-  | HExpr.Inf (InfOp.Anno, _, _, _)
-  | HExpr.Inf (InfOp.Tuple, _, _, _)
-  | HExpr.Inf (InfOp.List _, _, _, _) ->
+  | HExpr.Nav _ ->
     failwith "Never"
   | HExpr.Error (error, loc) ->
     let ctx = ctxAddErr ctx error loc
