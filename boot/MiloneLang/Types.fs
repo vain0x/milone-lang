@@ -451,9 +451,6 @@ type HExpr =
   /// Variable reference.
   | Ref
     of ident:string * HValRef * Ty * Loc
-  /// If-then-else. Else clause is `()` if omit.
-  | If
-    of pred:HExpr * thenCl:HExpr * elseCl:HExpr * Ty * Loc
   | Match
     of target:HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`

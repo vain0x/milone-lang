@@ -674,7 +674,6 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferExprTyDecl ctx ident oldSerial tyDef loc
   | HExpr.Open (path, loc) ->
     inferExprOpen ctx path ty loc
-  | HExpr.If _
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.Closure _, _, _, _)
   | HExpr.Inf (InfOp.CallProc, _, _, _)

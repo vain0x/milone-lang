@@ -402,8 +402,6 @@ let exprExtract (expr: HExpr): Ty * Loc =
     litToTy lit, a
   | HExpr.Ref (_, _, ty, a) ->
     ty, a
-  | HExpr.If (_, _, _, ty, a) ->
-    ty, a
   | HExpr.Match (_, _, ty, a) ->
     ty, a
   | HExpr.Nav (_, _, ty, a) ->
@@ -432,8 +430,6 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Lit (lit, g a)
     | HExpr.Ref (ident, serial, ty, a) ->
       HExpr.Ref (ident, serial, f ty, g a)
-    | HExpr.If (pred, thenCl, elseCl, ty, a) ->
-      HExpr.If (go pred, go thenCl, go elseCl, f ty, g a)
     | HExpr.Match (target, arms, ty, a) ->
       let arms =
         arms |> List.map (fun (pat, guard, body) ->

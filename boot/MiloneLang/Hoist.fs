@@ -227,9 +227,6 @@ let hoistExprCore (expr, ctx) =
     let ctx = ctx |> hoistCtxAddDecl expr
     hxDummy, ctx
 
-  | HExpr.If _ ->
-    failwith "Never: If is desugared."
-
 let hoistExpr (expr, ctx) =
   if ctx |> hoistCtxIsTopLevel |> not then
     (expr, ctx) |> hoistExprCore

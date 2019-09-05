@@ -687,7 +687,6 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.Open (_, loc) ->
     mirifyExprOpen ctx loc
-  | HExpr.If _
   | HExpr.Nav _
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.Tuple, _, _, _)

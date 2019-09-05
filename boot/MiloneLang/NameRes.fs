@@ -734,9 +734,6 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     let ctx = ctx |> scopeCtxDefineTyDef serial tyDecl loc
     expr, ctx
 
-  | HExpr.If _ ->
-    failwith "Never"
-
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx
   (expr, scopeCtx)
