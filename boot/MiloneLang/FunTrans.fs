@@ -387,10 +387,6 @@ let declosureExpr (expr, ctx) =
     declosureExprLetFun ident callee args body next ty loc ctx
   | HExpr.TyDef (_, _, tyDecl, _) ->
     declosureExprTyDecl expr tyDecl ctx
-  | HExpr.If _
-  | HExpr.Inf (InfOp.Anno, _, _, _)
-  | HExpr.Inf (InfOp.List _, _, _, _) ->
-    failwith "Never"
   | HExpr.Error (error, loc) ->
     failwithf "Never: %s at %A" error loc
 
@@ -734,8 +730,6 @@ let unetaExpr (expr, ctx) =
     HExpr.Let (pat, init, next, ty, loc), ctx
   | HExpr.LetFun (ident, callee, args, body, next, ty, loc) ->
     unetaExprLetFun ident callee args body next ty loc ctx
-  | HExpr.If _ ->
-    failwith "Never: If expressions are desugared"
 
 let uneta (expr, ctx: FunTransCtx) =
   (expr, ctx) |> unetaExpr

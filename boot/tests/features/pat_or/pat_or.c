@@ -184,12 +184,10 @@ struct IntIntTuple2 {
 
 int performComplexMatching_(struct Expr_ expr_) {
     int match_7;
-    if (!((expr_.tag == Add_))) goto next_30;
     if (!(((*(expr_.Add_)).t0 == 0))) goto next_30;
     if (!(((*(expr_.Add_)).t1 == 0))) goto next_30;
     goto match_body_29;
 next_30:;
-    if (!((expr_.tag == Add_))) goto next_31;
     if (!(((*(expr_.Add_)).t0 == 0))) goto next_31;
     if (!(((*(expr_.Add_)).t1 == 1))) goto next_31;
     goto match_body_29;

@@ -658,7 +658,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferNav ctx receiver field loc ty
   | HExpr.Bin (op, l, r, _, loc) ->
     inferBin ctx op l r loc ty
-  | HExpr.Inf (InfOp.List _, [], _, loc) ->
+  | HExpr.Inf (InfOp.Nil, [], _, loc) ->
     inferNil ctx loc ty
   | HExpr.Inf (InfOp.Tuple, items, _, loc) ->
     inferTuple ctx items loc ty
@@ -674,12 +674,11 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferExprTyDecl ctx ident oldSerial tyDef loc
   | HExpr.Open (path, loc) ->
     inferExprOpen ctx path ty loc
-  | HExpr.If _
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.Closure _, _, _, _)
   | HExpr.Inf (InfOp.CallProc, _, _, _)
   | HExpr.Inf (InfOp.CallClosure, _, _, _)
-  | HExpr.Inf (InfOp.List _, _, _, _) ->
+  | HExpr.Inf (InfOp.Nil, _, _, _) ->
     failwith "Never"
   | HExpr.Error (error, loc) ->
     let ctx = ctxAddErr ctx error loc

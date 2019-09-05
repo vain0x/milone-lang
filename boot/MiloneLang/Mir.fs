@@ -32,6 +32,19 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
     Diags = tyCtx.Diags
   }
 
+let ctxIsNewTypeVariant (ctx: MirCtx) varSerial =
+  match ctx.Vars |> Map.find varSerial with
+  | VarDef.Variant (_, tySerial, _, _, _, _) ->
+    match ctx.Tys |> Map.find tySerial with
+    | TyDef.Union (_, variantSerials, _) ->
+      variantSerials |> List.length = 1
+
+    | _ ->
+      failwith "Expected union serial"
+
+  | _ ->
+    failwith "Expected variant serial"
+
 let ctxAddErr (ctx: MirCtx) message loc =
   { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
 
@@ -174,6 +187,15 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
 let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
   match ctx.Vars |> Map.find serial, args with
   | VarDef.Variant (_, _, _, payloadTy, _, _), [payload] ->
+    let extractExpr = MExpr.Uni (MUniOp.GetVariant serial, expr, payloadTy, loc)
+
+    // Special treatment for new-type variants
+    // so that we can deconstruct it with irrefutable patterns
+    // (`let` and arguments) without generating an abort branch.
+    if ctxIsNewTypeVariant ctx serial then
+      mirifyPat ctx endLabel payload extractExpr
+    else
+
     // Compare tags.
     let lTagExpr = MExpr.Uni (MUniOp.Tag, expr, tyInt, loc)
     let rTagExpr = MExpr.Ref (serial, tyInt, loc)
@@ -182,7 +204,6 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
     let ctx = ctxAddStmt ctx gotoStmt
 
     // Extract content.
-    let extractExpr = MExpr.Uni (MUniOp.GetVariant serial, expr, payloadTy, loc)
     let _, ctx = mirifyPat ctx endLabel payload extractExpr
     false, ctx
   | _ ->
@@ -268,6 +289,7 @@ let patsIsCovering pats =
   let rec go pat =
     match pat with
     | HPat.Ref _ ->
+      // FIXME: unit-like variant patterns may not be covering
       true
     | HPat.Lit _
     | HPat.Nil _
@@ -591,7 +613,7 @@ let mirifyExprInfClosure ctx funSerial env funTy loc =
 
 let mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
-  | InfOp.List _, [], Ty.Con (TyCon.List, [itemTy]) ->
+  | InfOp.Nil, [], Ty.Con (TyCon.List, [itemTy]) ->
     MExpr.Default (tyList itemTy, loc), ctx
   | InfOp.Tuple, [], Ty.Con (TyCon.Tuple, []) ->
     MExpr.Default (tyUnit, loc), ctx
@@ -687,11 +709,7 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.Open (_, loc) ->
     mirifyExprOpen ctx loc
-  | HExpr.If _
-  | HExpr.Nav _
-  | HExpr.Inf (InfOp.Anno, _, _, _)
-  | HExpr.Inf (InfOp.Tuple, _, _, _)
-  | HExpr.Inf (InfOp.List _, _, _, _) ->
+  | HExpr.Nav _ ->
     failwith "Never"
   | HExpr.Error (error, loc) ->
     let ctx = ctxAddErr ctx error loc

@@ -122,6 +122,7 @@ type APat =
     of APat list * Loc
   | Nav
     of APat * string * Loc
+  /// Variant deconstruction. e.g. `Some x`.
   | Call
     of APat * APat list * Loc
   /// `::`
@@ -136,6 +137,10 @@ type APat =
     of APat * ATy * Loc
   | Or
     of APat * APat * Loc
+  /// Function declaration pattern, e.g. `f x y`.
+  /// Syntactically distinct from the call pattern.
+  | Fun
+    of string * APat list * Loc
 
 /// Match arm node in AST.
 [<RequireQualifiedAccess>]
@@ -412,9 +417,8 @@ type InfOp =
   | CallClosure
   /// Tuple constructor, e.g. `x, y, z`.
   | Tuple
-  /// List constructor, e.g. `[x; y; z]`.
-  | List
-    of itemTy:Ty
+  /// `[]`
+  | Nil
   /// Closure constructor.
   | Closure
     of funSerial:int
@@ -451,9 +455,6 @@ type HExpr =
   /// Variable reference.
   | Ref
     of ident:string * HValRef * Ty * Loc
-  /// If-then-else. Else clause is `()` if omit.
-  | If
-    of pred:HExpr * thenCl:HExpr * elseCl:HExpr * Ty * Loc
   | Match
     of target:HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`

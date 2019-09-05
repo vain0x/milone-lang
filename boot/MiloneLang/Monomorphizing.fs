@@ -321,9 +321,6 @@ let rec monifyExpr (expr, ctx) =
     let next, ctx = (next, ctx) |> monifyExpr
     monifyExprLetFun ctx ident callee args body next ty loc
 
-  | HExpr.If _ ->
-    failwith "Never: If expressions are desugared"
-
 let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
   let monoCtx: MonoCtx =
     {
