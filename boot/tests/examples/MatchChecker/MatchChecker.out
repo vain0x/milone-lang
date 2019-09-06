@@ -7,7 +7,28 @@ int with literal pats: OK
 int with _: OK
   ty: full
   pats: full
+int with 1|_: OK
+  ty: full
+  pats: full
 int * unit with _, (): OK
   ty: +(var#1 (full), var#0 (full))
   pats: +(var#0 (full), var#1 (full))
+int list with []: OK
+  ty: ref#-1
+  pats: var#0 (full)
+int list with _::_: OK
+  ty: ref#-1
+  pats: var#1 (+(var#1 (full), var#0 (full)))
+int list with [] | _::_: OK
+  ty: ref#-1
+  pats: +(var#1 (+(var#1 (full), var#0 (full))), var#0 (full))
+int list with [] | [_] | _::_::_: OK
+  ty: ref#-1
+  pats: +(var#1 (+(var#1 (var#1 (+(var#1 (full), var#0 (full)))), var#0 (full))), var#1 (+(var#1 (var#0 (full)), var#0 (full))), var#0 (full))
+int list list with [] | [[]] | [_::_] | _::_::_: OK
+  ty: ref#-1
+  pats: +(var#1 (+(var#1 (var#1 (+(var#1 (full), var#0 (full)))), var#0 (full))), var#1 (+(var#1 (full), var#0 (var#1 (+(var#1 (full), var#0 (full)))))), var#1 (+(var#1 (var#0 (full)), var#0 (var#0 (full)))), var#0 (full))
+int list * int list with [], [] | [], _::_ | _::_, [] | _::_, _::_: OK
+  ty: +(var#1 (ref#-1), var#0 (ref#-1))
+  pats: +(var#0 (var#1 (+(var#1 (full), var#0 (full)))), var#1 (var#1 (+(var#1 (full), var#0 (full)))), var#0 (var#0 (full)), var#1 (var#1 (+(var#1 (full), var#0 (full)))), var#0 (var#1 (+(var#1 (full), var#0 (full)))), var#1 (var#0 (full)), var#0 (var#0 (full)), var#1 (var#0 (full)))
 $? = 0

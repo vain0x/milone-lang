@@ -123,8 +123,8 @@ type Space =
     of int * Space
 
   /// Reference of space. Used for recursive spaces. Never empty.
-  // | Ref
-  //   of int * (unit -> Space)
+  | Ref
+    of int * (unit -> Space)
 
   | Union
     of Space list
@@ -132,8 +132,8 @@ type Space =
 let spaceFull =
   Space.Full
 
-// let spaceRef serial thunk =
-//   Space.Ref (serial, thunk)
+let spaceRef serial thunk =
+  Space.Ref (serial, thunk)
 
 let spaceEmpty =
   Space.Union []
@@ -177,7 +177,7 @@ let spaceUnion spaces =
 let rec spaceIsEmpty space =
   let result =
     match space with
-    // | Space.Ref _
+    | Space.Ref _
     | Space.Full ->
       false
 
@@ -218,18 +218,18 @@ let rec spaceExclude first second =
   | Space.Union firsts, _ ->
     firsts |> listMap (fun first -> spaceExclude first second) |> spaceUnion
 
-  // | Space.Ref (firstRef, _), Space.Ref (secondRef, _)
-  //   when firstRef = secondRef ->
-  //   spaceEmpty
+  | Space.Ref (firstRef, _), Space.Ref (secondRef, _)
+    when firstRef = secondRef ->
+    spaceEmpty
 
-  // | Space.Ref (_, thunk), _ ->
-  //   spaceExclude (thunk ()) second
+  | Space.Ref (_, thunk), _ ->
+    spaceExclude (thunk ()) second
 
-  // | _, Space.Ref (_, thunk) ->
-  //   // Never happens because patterns don't generate ref spaces
-  //   // at least in milone-lang... not true perhaps in Scala?
-  //   assert false
-  //   spaceExclude first (thunk ())
+  | _, Space.Ref (_, thunk) ->
+    // Never happens because patterns don't generate ref spaces
+    // at least in milone-lang... not true perhaps in Scala?
+    assert false
+    spaceExclude first (thunk ())
 
 let spaceCovers other cover =
   // printfn "%s covers %s?" (cover |> spaceToString) (other |> spaceToString)
@@ -245,8 +245,8 @@ let spaceToString space =
     | Space.Full ->
       acc |> cons "full"
 
-    // | Space.Ref (refId, _) ->
-    //   acc |> cons "ref#" |> cons (string refId)
+    | Space.Ref (refId, _) ->
+      acc |> cons "ref#" |> cons (string refId)
 
     | Space.Variant (variantId, subspace) ->
       acc |> cons "var#" |> cons (string variantId) |> cons " (" |> go subspace |> cons ")"
@@ -275,22 +275,11 @@ let ConsHeadId = 0
 let ConsTailId = 1
 let ConsRefId = -1
 
-let tyToSpace _ctx ty =
+let tyToSpace ty =
   let rec go ty =
     match ty with
     | Ty.Int ->
       spaceFull
-
-    // | Ty.Ref tySerial ->
-    //   let variants = ctxGetVariants ctx tySerial
-    //   let rec thunk () =
-    //     variants
-    //     |> listMap (fun (variantSerial, payloadTy) ->
-    //         variantSerial, go payloadTy
-    //       )
-    //     |> spaceSum
-
-    //   spaceRef tySerial thunk
 
     | Ty.Tuple [] ->
       spaceUnit
@@ -298,27 +287,28 @@ let tyToSpace _ctx ty =
     | Ty.Tuple itemTys ->
       itemTys |> listMapWithIndex (fun i itemTy -> i, go itemTy) |> spaceSum
 
-    // | Ty.List itemTy ->
-    //   let itemSpace = go itemTy
-    //   let rec thunk () =
-    //     let consSpace =
-    //       spaceSum
-    //         [
-    //           ConsHeadId, itemSpace
-    //           ConsTailId, spaceRef ConsRefId thunk
-    //         ]
-    //     spaceSum
-    //       [
-    //         NilId, spaceUnit
-    //         ConsId, consSpace
-    //       ]
-    //   spaceRef ConsRefId thunk
+    | Ty.List itemTy ->
+      let itemSpace = go itemTy
+      let rec thunk () =
+        let consSpace =
+          spaceSum
+            [
+              ConsHeadId, itemSpace
+              ConsTailId, spaceRef ConsRefId thunk
+            ]
+        spaceSum
+          [
+            NilId, spaceUnit
+            ConsId, consSpace
+          ]
+      spaceRef ConsRefId thunk
 
-    | _ -> failwith "unimpl"
+    | _ ->
+      failwith "NEVER"
 
   go ty
 
-let patToSpace (_ctx: unit) pat =
+let patToSpace pat =
   let rec go pat =
     match pat with
     | Pat.Discard ->
@@ -328,44 +318,31 @@ let patToSpace (_ctx: unit) pat =
       // We assume any number of int patterns can't cover the space.
       spaceEmpty
 
-    // | Pat.Ref (_, varSerial, _, _) ->
-    //   match ctxGetVar ctx varSerial with
-    //   | VarDef.Var _ ->
-    //     spaceFull
-
-    //   | VarDef.Variant _ ->
-    //     spaceSum [varSerial, spaceUnit]
-
-    //   | _ ->
-    //     failwith "Never: Functions can't be patterns"
-
-    // | Pat.Call (Pat.Ref (_, varSerial, _, _), [payloadPat], _, _)
-    //   when ctxIsVariantFun ctx varSerial ->
-    //   spaceSum [varSerial, go payloadPat]
-
     | Pat.TupleLit [] ->
       spaceUnit
 
     | Pat.TupleLit itemPats ->
       itemPats |> listMapWithIndex (fun i itemPat -> i, go itemPat) |> spaceSum
 
-    // | Pat.Nil ->
-    //   spaceSum [NilId, spaceUnit]
+    | Pat.Nil ->
+      spaceSum [NilId, spaceUnit]
 
-    // | Pat.Cons (headPat, tailPat) ->
-    //   let consSpace =
-    //     spaceSum
-    //       [
-    //         ConsHeadId, go headPat
-    //         ConsTailId, go tailPat
-    //       ]
-    //   spaceSum [ConsId, consSpace]
-    | _ -> failwith "unimpl"
+    | Pat.Cons (headPat, tailPat) ->
+      let consSpace =
+        spaceSum
+          [
+            ConsHeadId, go headPat
+            ConsTailId, go tailPat
+          ]
+      spaceSum [ConsId, consSpace]
+
+    | _ ->
+      failwith "NEVER"
 
   go pat
 
-let patsToSpace ctx pats =
-  pats |> listMap (patToSpace ctx) |> spaceUnion
+let patsToSpace pats =
+  pats |> listMap patToSpace |> spaceUnion
 
 type Covering =
   | Covering
@@ -378,6 +355,8 @@ let coveringToString covering =
 
 let main _ =
   assert (spaceEmpty |> spaceIsEmpty)
+
+  let anyConsPat = Pat.Cons (Pat.Discard, Pat.Discard)
 
   let testCases =
     [
@@ -392,22 +371,69 @@ let main _ =
         Open
 
       "int with _",
-        Ty.Tuple [],
+        Ty.Int,
         [Pat.Discard],
+        Covering
+
+      "int with 1|_",
+        Ty.Int,
+        [Pat.IntLit 1; Pat.Discard],
         Covering
 
       "int * unit with _, ()",
         Ty.Tuple [Ty.Int; Ty.Tuple []],
         [Pat.TupleLit [Pat.Discard; Pat.TupleLit []]],
         Covering
+
+      "int list with []",
+        Ty.List Ty.Int,
+        [Pat.Nil],
+        Open
+
+      "int list with _::_",
+        Ty.List Ty.Int,
+        [anyConsPat],
+        Open
+
+      "int list with [] | _::_",
+        Ty.List Ty.Int,
+        [Pat.Nil; anyConsPat],
+        Covering
+
+      "int list with [] | [_] | _::_::_",
+        Ty.List Ty.Int,
+        [
+          Pat.Nil
+          Pat.Cons (Pat.Discard, Pat.Nil)
+          Pat.Cons (Pat.Discard, anyConsPat)
+        ],
+        Covering
+
+      "int list list with [] | [[]] | [_::_] | _::_::_",
+        Ty.List (Ty.List Ty.Int),
+        [
+          Pat.Nil
+          Pat.Cons (Pat.Nil, Pat.Nil)
+          Pat.Cons (anyConsPat, Pat.Discard)
+          Pat.Cons (Pat.Discard, anyConsPat)
+        ],
+        Covering
+
+      "int list * int list with [], [] | [], _::_ | _::_, [] | _::_, _::_",
+        Ty.Tuple [Ty.List Ty.Int; Ty.List Ty.Int],
+        [
+          Pat.TupleLit [Pat.Nil; Pat.Nil]
+          Pat.TupleLit [anyConsPat; Pat.Nil]
+          Pat.TupleLit [Pat.Nil; anyConsPat]
+          Pat.TupleLit [anyConsPat; anyConsPat]
+        ],
+        Covering
     ]
 
   let ok =
     testCases |> listMap (fun (name, ty, pats, covering) ->
-      let ctx = ()
-
-      let tySpace = ty |> tyToSpace ctx
-      let patSpace = pats |> patsToSpace ctx
+      let tySpace = ty |> tyToSpace
+      let patSpace = pats |> patsToSpace
       let actual = if patSpace |> spaceCovers tySpace then Covering else Open
 
       let ok, msg =
