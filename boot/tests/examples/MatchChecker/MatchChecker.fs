@@ -1,15 +1,26 @@
 /// Algorithm to check covering of match expressions.
+///
+/// ## References
+///
+/// - "Pattern matching covering check used in the Swift compiler"
+///   <https://qiita.com/ukitaka/items/7345e74116e11eb10f33> (written in Japanese)
+/// - "A generic algorithm for checking exhaustivity of pattern matching"
+///   <https://infoscience.epfl.ch/record/225497> (written in English)
 module rec MatchChecker
 
 // -----------------------------------------------
 // Polyfills
 // -----------------------------------------------
 
+// Basic auxillary functions.
+
 let id x = x
 
 let ignore _ = ()
 
 let fst (x, _) = x
+
+let cons head tail = head :: tail
 
 let listIsEmpty xs =
   match xs with
@@ -83,9 +94,15 @@ let failwith msg =
 
 [<RequireQualifiedAccess>]
 type Ty =
+  /// Example of open type.
+  /// We assume the number of integers is infinite (rather than 2^N) here.
   | Int
+
+  /// Example of product type.
   | Tuple
     of Ty list
+
+  /// Example of recursive sum type.
   | List
     of Ty
 
@@ -98,18 +115,23 @@ type Pat =
   /// `_`
   | Discard
 
+  /// E.g. `1`.
   | IntLit
     of int
 
+  /// `x, y, ...`
   | TupleLit
     of Pat list
 
+  /// `[]`
   | Nil
+
+  /// `head :: tail`
   | Cons
     of Pat * Pat
 
 // -----------------------------------------------
-// Space
+// Spaces
 // -----------------------------------------------
 
 /// Set of value that patterns cover or types allow.
@@ -122,7 +144,8 @@ type Space =
   | Variant
     of int * Space
 
-  /// Reference of space. Used for recursive spaces. Never empty.
+  /// Reference of space, identified by int.
+  /// Used for recursive spaces. Never empty.
   | Ref
     of int * (unit -> Space)
 
@@ -138,17 +161,15 @@ let spaceRef serial thunk =
 let spaceEmpty =
   Space.Union []
 
-let spaceUnit =
-  spaceFull
-
 let spaceVariant variant =
   Space.Variant variant
 
+/// Sum of spaces. These spaces are disjoint.
 let spaceSum variants =
   variants |> listMap spaceVariant |> spaceUnion
 
 /// Union of spaces.
-/// FIXME: merge variants
+/// FIXME: Merge spaces of the same variants/refs.
 let spaceUnion spaces =
   let rec go spaces acc =
     match spaces with
@@ -174,6 +195,7 @@ let spaceUnion spaces =
   | spaces ->
     Space.Union spaces
 
+/// Gets if the space is empty.
 let rec spaceIsEmpty space =
   let result =
     match space with
@@ -190,38 +212,48 @@ let rec spaceIsEmpty space =
     | _ ->
       failwith "NEVER: suppress warning"
 
-  // printfn "%s is %s" (space |> spaceToString) (if result then "empty" else "NOT empty")
   result
 
+/// Excludes the second space from the first space.
+/// Similar to difference of set.
 let rec spaceExclude first second =
   match first, second with
+  // Full space excludes anything because wildcard patterns match anything.
   | _, Space.Full
   | Space.Union [], _ ->
-    // printfn "%s - %s = %s (empty)" (first |> spaceToString) (second |> spaceToString) (spaceEmpty |> spaceToString)
     spaceEmpty
 
+  // No exclusion if the second is empty.
   | _, Space.Union [] ->
-    // printfn "%s - %s = %s (first)" (first |> spaceToString) (second |> spaceToString) (first |> spaceToString)
     first
 
+  // Matching variant reduces the payload space.
   | Space.Variant (tag, firstSpace), Space.Variant (secondTag, secondSpace)
     when tag = secondTag ->
     let subspace = spaceExclude firstSpace secondSpace
     spaceVariant (tag, subspace)
 
+  // Non-matching variants do nothing because disjoint.
   | Space.Variant _, Space.Variant _ ->
     first
 
+  // `first - (x + y)` = `(first - x) - y`
   | _, Space.Union seconds ->
     seconds |> listFold spaceExclude first
 
+  // `(x + y) - second` = (x - second) + (y - second)`.
+  // Too inefficient but okay for real patterns and types.
   | Space.Union firsts, _ ->
     firsts |> listMap (fun first -> spaceExclude first second) |> spaceUnion
 
+  // `x - x = {}` even if x is infinite.
   | Space.Ref (firstRef, _), Space.Ref (secondRef, _)
     when firstRef = secondRef ->
     spaceEmpty
 
+  // Expand the ref space to calculate the result.
+  // This doesn't run into an infinite loop
+  // because the second (space of patterns) is finite.
   | Space.Ref (_, thunk), _ ->
     spaceExclude (thunk ()) second
 
@@ -231,15 +263,11 @@ let rec spaceExclude first second =
     assert false
     spaceExclude first (thunk ())
 
+/// Gets if the `other` is subspace of the `cover`.
 let spaceCovers other cover =
-  // printfn "%s covers %s?" (cover |> spaceToString) (other |> spaceToString)
-  let excluded = spaceExclude other cover
-  // printfn "%s - %s = %s" (other |> spaceToString) (cover |> spaceToString) (excluded |> spaceToString)
-  excluded |> spaceIsEmpty
+  spaceExclude other cover |> spaceIsEmpty
 
 let spaceToString space =
-  let cons head tail = head :: tail
-
   let rec go space acc =
     match space with
     | Space.Full ->
@@ -273,8 +301,10 @@ let NilId = 0
 let ConsId = 1
 let ConsHeadId = 0
 let ConsTailId = 1
-let ConsRefId = -1
+let ListRefId = -1
 
+/// Generates the space of a type.
+/// The result can be infinite (e.g. lists).
 let tyToSpace ty =
   let rec go ty =
     match ty with
@@ -282,32 +312,41 @@ let tyToSpace ty =
       spaceFull
 
     | Ty.Tuple [] ->
-      spaceUnit
+      // No need to split into cases.
+      spaceFull
 
     | Ty.Tuple itemTys ->
+      // The space of tuple is the *sum* of item types.
+      // These spaces are separated. Use indexes as identifiers.
       itemTys |> listMapWithIndex (fun i itemTy -> i, go itemTy) |> spaceSum
 
     | Ty.List itemTy ->
       let itemSpace = go itemTy
+
+      // Space of the list type is recursive.
+      // The function reifies it step by step.
       let rec thunk () =
+        // Space of the content of `cons`, i.e. ('a * 'a list).
         let consSpace =
           spaceSum
             [
               ConsHeadId, itemSpace
-              ConsTailId, spaceRef ConsRefId thunk
+              ConsTailId, spaceRef ListRefId thunk
             ]
         spaceSum
           [
-            NilId, spaceUnit
+            NilId, spaceFull
             ConsId, consSpace
           ]
-      spaceRef ConsRefId thunk
+
+      spaceRef ListRefId thunk
 
     | _ ->
       failwith "NEVER"
 
   go ty
 
+/// Generates the space of a pattern.
 let patToSpace pat =
   let rec go pat =
     match pat with
@@ -315,17 +354,20 @@ let patToSpace pat =
       spaceFull
 
     | Pat.IntLit _ ->
-      // We assume any number of int patterns can't cover the space.
       spaceEmpty
 
     | Pat.TupleLit [] ->
-      spaceUnit
+      // Any value of unit type matches with the pattern.
+      spaceFull
 
     | Pat.TupleLit itemPats ->
       itemPats |> listMapWithIndex (fun i itemPat -> i, go itemPat) |> spaceSum
 
     | Pat.Nil ->
-      spaceSum [NilId, spaceUnit]
+      spaceSum
+        [
+          NilId, spaceFull
+        ]
 
     | Pat.Cons (headPat, tailPat) ->
       let consSpace =
@@ -334,7 +376,10 @@ let patToSpace pat =
             ConsHeadId, go headPat
             ConsTailId, go tailPat
           ]
-      spaceSum [ConsId, consSpace]
+      spaceSum
+        [
+          ConsId, consSpace
+        ]
 
     | _ ->
       failwith "NEVER"
@@ -344,18 +389,18 @@ let patToSpace pat =
 let patsToSpace pats =
   pats |> listMap patToSpace |> spaceUnion
 
+// -----------------------------------------------
+// Testing
+// -----------------------------------------------
+
 type Covering =
   | Covering
   | Open
 
-let coveringToString covering =
-  match covering with
-  | Covering -> "Covering"
-  | Open -> "open"
-
 let main _ =
   assert (spaceEmpty |> spaceIsEmpty)
 
+  // `_ :: _`
   let anyConsPat = Pat.Cons (Pat.Discard, Pat.Discard)
 
   let testCases =
@@ -432,6 +477,8 @@ let main _ =
 
   let ok =
     testCases |> listMap (fun (name, ty, pats, covering) ->
+      // The pattern matching is covering if
+      // that the space of patterns covers that of the type.
       let tySpace = ty |> tyToSpace
       let patSpace = pats |> patsToSpace
       let actual = if patSpace |> spaceCovers tySpace then Covering else Open
@@ -449,8 +496,12 @@ let main _ =
           false, "NG. Expected open but covering"
 
       printfn "%s: %s" name msg
-      printfn "  ty: %s" (tySpace |> spaceToString)
-      printfn "  pats: %s" (patSpace |> spaceToString)
+
+      if not ok then
+        // Print for debugging.
+        printfn "  ty: %s" (tySpace |> spaceToString)
+        printfn "  pats: %s" (patSpace |> spaceToString)
+
       ok
     )
     |> listForAll id
