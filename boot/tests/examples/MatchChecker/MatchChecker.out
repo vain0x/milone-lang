@@ -1,0 +1,13 @@
+unit with (): OK
+  ty: full
+  pats: full
+int with literal pats: OK
+  ty: full
+  pats: empty
+int with _: OK
+  ty: full
+  pats: full
+int * unit with _, (): OK
+  ty: +(var#1 (full), var#0 (full))
+  pats: +(var#0 (full), var#1 (full))
+$? = 0
