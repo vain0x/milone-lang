@@ -430,6 +430,14 @@ let main _ =
         [Pat.TupleLit [Pat.Discard; Pat.TupleLit []]],
         Covering
 
+      "int * int with 1, _ | _, 1",
+        Ty.Tuple [Ty.Int; Ty.Int],
+        [
+          Pat.TupleLit [Pat.IntLit 1; Pat.Discard]
+          Pat.TupleLit [Pat.Discard; Pat.IntLit 1]
+        ],
+        Open
+
       "int list with []",
         Ty.List Ty.Int,
         [Pat.Nil],
