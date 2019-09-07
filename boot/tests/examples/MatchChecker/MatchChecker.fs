@@ -20,6 +20,10 @@ let ignore _ = ()
 
 let fst (x, _) = x
 
+let failwith msg =
+  printfn "ERROR %s" msg
+  exit 1
+
 let cons head tail = head :: tail
 
 let listIsEmpty xs =
@@ -65,6 +69,16 @@ let listForAll p xs =
       p x && go xs
   go xs
 
+let listExists p xs =
+  // xs |> listForAll (fun x -> p x |> not) |> not
+  let rec go xs =
+    match xs with
+    | [] ->
+      false
+    | x :: xs ->
+      p x || go xs
+  go xs
+
 // USAGE: items |> listFold (fun oldState item -> newState) initialState
 let listFold folder state xs =
   let rec go state xs =
@@ -75,6 +89,17 @@ let listFold folder state xs =
       go (folder state x) xs
   go state xs
 
+let listZip xs ys =
+  let rec go acc xs ys =
+    match xs, ys with
+    | [], _
+    | _, [] ->
+      listRev acc
+    | x :: xs, y :: ys ->
+      go ((x, y) :: acc) xs ys
+
+  go [] xs ys
+
 let strConcat xs =
   let rec go (xs: string list) =
     match xs with
@@ -83,10 +108,6 @@ let strConcat xs =
     | x :: xs ->
       x + go xs
   go xs
-
-let failwith msg =
-  printfn "ERROR %s" msg
-  exit 1
 
 // -----------------------------------------------
 // Types
@@ -119,7 +140,7 @@ type Pat =
   | IntLit
     of int
 
-  /// `x, y, ...`
+  /// E.g. `_, _, _`.
   | TupleLit
     of Pat list
 
@@ -140,14 +161,15 @@ type Space =
   /// Space of wildcard patterns or open types.
   | Full
 
-  /// Space identified by int.
-  | Variant
-    of int * Space
+  /// Space of a constructor, e.g. `Nil(())`, `Cons(head, tail)`.
+  | Ctor
+    of tag:string * items:Space list
 
-  /// Reference of space, identified by int.
-  /// Used for recursive spaces. Never empty.
+  /// Space of a constructor before decomposition.
+  /// Can be decomposed into a space by using `thunk`.
+  /// Used to represent a recursive space. Never empty.
   | Ref
-    of int * (unit -> Space)
+    of tag:string * thunk:(unit -> Space)
 
   | Union
     of Space list
@@ -155,29 +177,22 @@ type Space =
 let spaceFull =
   Space.Full
 
-let spaceRef serial thunk =
-  Space.Ref (serial, thunk)
+let spaceCtor tag items =
+  Space.Ctor (tag, items)
+
+let spaceRef tag thunk =
+  Space.Ref (tag, thunk)
 
 let spaceEmpty =
   Space.Union []
 
-let spaceVariant variant =
-  Space.Variant variant
-
-/// Sum of spaces. These spaces are disjoint.
-let spaceSum variants =
-  variants |> listMap spaceVariant |> spaceUnion
-
 /// Union of spaces.
-/// FIXME: Merge spaces of the same variants/refs.
+/// FIXME: Merge spaces of ctors with the same tag?
 let spaceUnion spaces =
   let rec go spaces acc =
     match spaces with
-    | _ when false ->
-      failwith "NEVER: suppress warning"
-
     | [] ->
-      acc
+      listRev acc
 
     | Space.Union subspaces :: spaces ->
       acc |> go subspaces |> go spaces
@@ -187,6 +202,9 @@ let spaceUnion spaces =
 
     | space :: spaces ->
       (space :: acc) |> go spaces
+
+    | _ ->
+      failwith "NEVER: suppress warning"
 
   match go spaces [] with
   | [space] ->
@@ -199,12 +217,12 @@ let spaceUnion spaces =
 let rec spaceIsEmpty space =
   let result =
     match space with
-    | Space.Ref _
-    | Space.Full ->
+    | Space.Full
+    | Space.Ref _ ->
       false
 
-    | Space.Variant (_, subspace) ->
-      subspace |> spaceIsEmpty
+    | Space.Ctor (_, spaces) ->
+      spaces |> listExists spaceIsEmpty
 
     | Space.Union spaces ->
       spaces |> listForAll spaceIsEmpty
@@ -214,27 +232,93 @@ let rec spaceIsEmpty space =
 
   result
 
+let spaceDecompose space =
+  match space with
+  | Space.Ref (_, thunk) ->
+    let space = thunk ()
+    assert (space |> spaceIsEmpty |> not)
+    space
+
+  | _ ->
+    assert false
+    space
+
+/// Gets if the two spaces are disjoint, i.e., the intersection is empty.
+// let spaceIsDisjoint first second =
+//   let rec go (first, second) =
+//     match first, second with
+//     | Space.Ctor (tag, firsts), Space.Ctor (secondTag, seconds)
+//       when tag = secondTag ->
+//       listZip firsts seconds |> listExists go
+
+//     | Space.Ctor _, Space.Ctor _->
+//       true
+
+//     | _, Space.Union seconds ->
+//       seconds |> listForAll (fun second -> go (first, second))
+
+//     | Space.Union firsts, _ ->
+//       firsts |> listForAll (fun first -> go (first, second))
+
+//     | Space.Ref (tag, _), Space.Ref (secondTag, _)
+//       when tag = secondTag ->
+//       false
+
+//     | Space.Ref _, _ ->
+//       go (spaceExpand first) second
+
+//     | _, Space.Ref _ ->
+//       go first (spaceExpand second)
+
+//     | _ ->
+//       assert false
+//       false
+
+//   go (first, second)
+
 /// Excludes the second space from the first space.
-/// Similar to difference of set.
+/// Similar to difference of sets.
 let rec spaceExclude first second =
   match first, second with
-  // Full space excludes anything because wildcard patterns match anything.
-  | _, Space.Full
   | Space.Union [], _ ->
     spaceEmpty
 
-  // No exclusion if the second is empty.
   | _, Space.Union [] ->
     first
 
-  // Matching variant reduces the payload space.
-  | Space.Variant (tag, firstSpace), Space.Variant (secondTag, secondSpace)
-    when tag = secondTag ->
-    let subspace = spaceExclude firstSpace secondSpace
-    spaceVariant (tag, subspace)
+  // Full space excludes anything because wildcard patterns match anything.
+  | _, Space.Full ->
+    spaceEmpty
 
-  // Non-matching variants do nothing because disjoint.
-  | Space.Variant _, Space.Variant _ ->
+  // Matching constructor reduces the space of items.
+  | Space.Ctor (tag, firsts), Space.Ctor (secondTag, seconds)
+    when tag = secondTag ->
+    // `(s, t) - (u, v) = {} if s <= u and t <= v`.
+    let dominant =
+      listZip firsts seconds
+      |> listForAll (fun (first, second) -> second |> spaceCovers first)
+    if dominant then
+      spaceEmpty
+    else
+
+    // FIXME: disjoint case
+
+    // `(s, t) - (u, v) = (s - u, t) + (s, t - v)`.
+    // For example, the space of bool^2 excluded by the `false, true` pattern
+    // is "the left is not false, or the right is not true."
+    firsts |> listMapWithIndex (fun i _ ->
+      listZip firsts seconds |> listMapWithIndex (fun j (first, second) ->
+        if i = j then
+          spaceExclude first second
+        else
+          first
+      )
+      |> spaceCtor tag
+    )
+    |> spaceUnion
+
+  // Non-matching constructors do nothing because disjoint.
+  | Space.Ctor _, Space.Ctor _ ->
     first
 
   // `first - (x + y)` = `(first - x) - y`
@@ -242,26 +326,26 @@ let rec spaceExclude first second =
     seconds |> listFold spaceExclude first
 
   // `(x + y) - second` = (x - second) + (y - second)`.
-  // Too inefficient but okay for real patterns and types.
+  // Too inefficient but okay for small, hand-written patterns and types.
   | Space.Union firsts, _ ->
     firsts |> listMap (fun first -> spaceExclude first second) |> spaceUnion
 
   // `x - x = {}` even if x is infinite.
-  | Space.Ref (firstRef, _), Space.Ref (secondRef, _)
-    when firstRef = secondRef ->
+  | Space.Ref (tag, _), Space.Ref (secondTag, _)
+    when tag = secondTag ->
     spaceEmpty
 
-  // Expand the ref space to calculate the result.
+  // Decompose the ref space to calculate the result.
   // This doesn't run into an infinite loop
   // because the second (space of patterns) is finite.
-  | Space.Ref (_, thunk), _ ->
-    spaceExclude (thunk ()) second
+  | Space.Ref _, _ ->
+    spaceExclude (spaceDecompose first) second
 
-  | _, Space.Ref (_, thunk) ->
+  | _, Space.Ref _ ->
     // Never happens because patterns don't generate ref spaces
     // at least in milone-lang... not true perhaps in Scala?
     assert false
-    spaceExclude first (thunk ())
+    spaceExclude first (spaceDecompose second)
 
 /// Gets if the `other` is subspace of the `cover`.
 let spaceCovers other cover =
@@ -273,11 +357,17 @@ let spaceToString space =
     | Space.Full ->
       acc |> cons "full"
 
-    | Space.Ref (refId, _) ->
-      acc |> cons "ref#" |> cons (string refId)
+    | Space.Ctor (tag, []) ->
+      acc |> cons tag
 
-    | Space.Variant (variantId, subspace) ->
-      acc |> cons "var#" |> cons (string variantId) |> cons " (" |> go subspace |> cons ")"
+    | Space.Ctor (tag, item :: items) ->
+      let acc = acc |> cons tag |> cons "(" |> go item
+      items
+      |> listFold (fun acc space -> acc |> cons ", " |> go space) acc
+      |> cons ")"
+
+    | Space.Ref (tag, _) ->
+      acc |> cons tag
 
     | Space.Union [] ->
       acc |> cons "empty"
@@ -297,28 +387,15 @@ let spaceToString space =
 // Space generation
 // -----------------------------------------------
 
-let NilId = 0
-let ConsId = 1
-let ConsHeadId = 0
-let ConsTailId = 1
-let ListRefId = -1
-
 /// Generates the space of a type.
-/// The result can be infinite (e.g. lists).
 let tyToSpace ty =
   let rec go ty =
     match ty with
     | Ty.Int ->
       spaceFull
 
-    | Ty.Tuple [] ->
-      // No need to split into cases.
-      spaceFull
-
     | Ty.Tuple itemTys ->
-      // The space of tuple is the *sum* of item types.
-      // These spaces are separated. Use indexes as identifiers.
-      itemTys |> listMapWithIndex (fun i itemTy -> i, go itemTy) |> spaceSum
+      itemTys |> listMap go |> spaceCtor "tuple"
 
     | Ty.List itemTy ->
       let itemSpace = go itemTy
@@ -326,20 +403,15 @@ let tyToSpace ty =
       // Space of the list type is recursive.
       // The function reifies it step by step.
       let rec thunk () =
-        // Space of the content of `cons`, i.e. ('a * 'a list).
-        let consSpace =
-          spaceSum
-            [
-              ConsHeadId, itemSpace
-              ConsTailId, spaceRef ListRefId thunk
-            ]
-        spaceSum
-          [
-            NilId, spaceFull
-            ConsId, consSpace
+        spaceUnion [
+          spaceCtor "nil" []
+          spaceCtor "cons" [
+            itemSpace
+            spaceRef "list" thunk
           ]
+        ]
 
-      spaceRef ListRefId thunk
+      spaceRef "list" thunk
 
     | _ ->
       failwith "NEVER"
@@ -356,30 +428,17 @@ let patToSpace pat =
     | Pat.IntLit _ ->
       spaceEmpty
 
-    | Pat.TupleLit [] ->
-      // Any value of unit type matches with the pattern.
-      spaceFull
-
     | Pat.TupleLit itemPats ->
-      itemPats |> listMapWithIndex (fun i itemPat -> i, go itemPat) |> spaceSum
+      itemPats |> listMap go |> spaceCtor "tuple"
 
     | Pat.Nil ->
-      spaceSum
-        [
-          NilId, spaceFull
-        ]
+      spaceCtor "nil" []
 
     | Pat.Cons (headPat, tailPat) ->
-      let consSpace =
-        spaceSum
-          [
-            ConsHeadId, go headPat
-            ConsTailId, go tailPat
-          ]
-      spaceSum
-        [
-          ConsId, consSpace
-        ]
+      spaceCtor "cons" [
+        go headPat
+        go tailPat
+      ]
 
     | _ ->
       failwith "NEVER"
@@ -397,8 +456,54 @@ type Covering =
   | Covering
   | Open
 
-let main _ =
+let testSpaceIsEmpty () =
   assert (spaceEmpty |> spaceIsEmpty)
+  assert (spaceUnion [spaceEmpty; spaceUnion [spaceEmpty]] |> spaceIsEmpty)
+
+  assert (spaceFull |> spaceIsEmpty |> not)
+  assert (spaceRef "ref" (fun () -> spaceFull) |> spaceIsEmpty |> not)
+  assert (spaceUnion [spaceEmpty; spaceFull] |> spaceIsEmpty |> not)
+
+  assert (spaceCtor "tuple" [] |> spaceIsEmpty |> not)
+  assert (spaceCtor "tuple" [spaceFull; spaceEmpty; spaceFull] |> spaceIsEmpty)
+
+  assert (tyToSpace (Ty.List Ty.Int) |> spaceIsEmpty |> not)
+  assert (tyToSpace (Ty.List (Ty.Tuple [])) |> spaceIsEmpty |> not)
+
+let testSpaceToString () =
+  let cases =
+    [
+      "empty",
+        spaceEmpty
+      "full",
+        spaceFull
+      "nil",
+        spaceCtor "nil" []
+      "tuple(empty, full)",
+        spaceCtor "tuple" [spaceEmpty; spaceFull]
+      "full",
+        tyToSpace Ty.Int
+      "+(nil, cons(full, list))",
+        tyToSpace (Ty.List Ty.Int) |> spaceDecompose
+      "cons(full, nil)",
+        patToSpace (Pat.Cons (Pat.Discard, Pat.Nil))
+    ]
+
+  let ok =
+    cases |> listMap (fun (expected, space) ->
+      let actual = space |> spaceToString
+      if actual = expected then
+        true
+      else
+        printfn "%s: NG (%s)" expected actual
+        false
+    ) |> listForAll id
+
+  assert ok
+
+let main _ =
+  testSpaceIsEmpty ()
+  testSpaceToString ()
 
   // `_ :: _`
   let anyConsPat = Pat.Cons (Pat.Discard, Pat.Discard)

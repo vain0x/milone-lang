@@ -3,6 +3,7 @@ int with literal pats: OK
 int with _: OK
 int with 1|_: OK
 int * unit with _, (): OK
+int * int with 1, _ | _, 1: OK
 int list with []: OK
 int list with _::_: OK
 int list with [] | _::_: OK
