@@ -1,3 +1,5 @@
+#include "milone.h"
+
 int testEol_(int arg_);
 
 int testNoEscape_(int arg_1);

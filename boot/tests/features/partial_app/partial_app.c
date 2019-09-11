@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct IntIntFun1;
 
 int twice_(struct IntIntFun1 f_, int x_);

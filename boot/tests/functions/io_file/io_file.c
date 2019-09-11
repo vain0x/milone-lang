@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct String fileReadAllText_(struct String fileName_);
 
 int fileWriteAllText_(struct String fileName_1, struct String content_);

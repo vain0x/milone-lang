@@ -1,3 +1,5 @@
+#include "milone.h"
+
 int isZeroOrOne_(int x_);
 
 int simpleCase_(int arg_);

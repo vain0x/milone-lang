@@ -1,3 +1,5 @@
+#include "milone.h"
+
 int inc_(int x_);
 
 int twice_(int x_1);

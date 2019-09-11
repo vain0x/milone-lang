@@ -1,3 +1,5 @@
+#include "milone.h"
+
 enum NewTypeInt_Tag;
 
 struct NewTypeInt_;

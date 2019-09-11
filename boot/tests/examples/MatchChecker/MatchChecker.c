@@ -1,3 +1,5 @@
+#include "milone.h"
+
 int id_1(int x_);
 
 enum Space_Tag;

@@ -1,3 +1,5 @@
+#include "milone.h"
+
 int root_(int arg_);
 
 int second_(int arg_1);

@@ -1,3 +1,5 @@
+#include "milone.h"
+
 int go_(struct String s_, int i_, int d_);
 
 struct String parse_(struct String s_1);

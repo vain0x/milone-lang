@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct IntStringTuple2;
 
 int main();

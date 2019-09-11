@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct IntList;
 
 struct IntList* go_2(struct IntList* acc_, struct IntList* xs_1);

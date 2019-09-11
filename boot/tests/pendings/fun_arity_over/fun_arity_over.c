@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct IntTuple1;
 
 int inc_(struct IntTuple1 arg_3, int arg_4, int y_);

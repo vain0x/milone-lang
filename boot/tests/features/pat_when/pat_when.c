@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct IntIntTuple2;
 
 int eq_(struct IntIntTuple2 t_);

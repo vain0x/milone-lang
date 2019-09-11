@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct StringIntTuple2;
 
 int go_(struct StringIntTuple2 arg_, int i_);
