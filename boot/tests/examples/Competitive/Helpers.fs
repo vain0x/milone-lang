@@ -78,7 +78,7 @@ let listReplicate item len =
 
   go [] 0
 
-let listInit gen len =
+let listInit len gen =
   assert (len >= 0)
 
   let rec go acc i =
@@ -118,6 +118,9 @@ let unitObj = box ()
 let intEq (first: int) (second: int) =
   first = second
 
+let intMin (first: int) (second: int) =
+  if second < first then second else first
+
 let intMax (first: int) (second: int) =
   if first < second then second else first
 
@@ -133,7 +136,7 @@ let failwith msg =
 // -----------------------------------------------
 
 let scanIntList len =
-  listInit (fun _ -> scanInt ()) len
+  listInit len (fun _ -> scanInt ())
 
 // -----------------------------------------------
 // Types

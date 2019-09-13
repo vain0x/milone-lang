@@ -452,7 +452,7 @@ let segTreeToList v =
 // Testing
 // -----------------------------------------------
 
-let segTreeTest unit =
+let segTreeTest () =
   let intAdd (x: int) (y: int) = x + y
   let segItemTypeInt = segItemTypeNew 0 intAdd
 
@@ -532,5 +532,3 @@ let segTreeTest unit =
     assert (v |> segTreeToList |> listEq strEq ["a"; "b"])
 
   testPolymorphic ()
-
-  unit
