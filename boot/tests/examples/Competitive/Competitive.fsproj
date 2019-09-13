@@ -8,6 +8,7 @@
   <ItemGroup>
     <Compile Include="Polyfills.fs" />
     <Compile Include="Helpers.fs" />
+    <Compile Include="SegTree.fs" />
     <Compile Include="ABC140A.fs" />
     <Compile Include="ABC140B.fs" />
     <Compile Include="Competitive.fs" />

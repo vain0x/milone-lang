@@ -2,18 +2,24 @@
 module rec Competitive.ABC140B
 
 open Competitive.Helpers
+open Competitive.SegTree
 
 let abc140bSolve n a b c =
+  let segItemTypeInt = segItemTypeNew 0 (fun _ _ -> 0)
+  let a = a |> segTreeOfList segItemTypeInt
+  let b = b |> segTreeOfList segItemTypeInt
+  let c = c |> segTreeOfList segItemTypeInt
+
   let rec go (sum: int) i =
     if i = n then
       sum
     else
-      let ai = a |> vectorGet i
-      let eat = b |> vectorGet (ai - 1) // 0-indexed
+      let ai = a |> segTreeGet i
+      let eat = b |> segTreeGet (ai - 1) // 0-indexed
 
       let bonus =
-        if i + 1 < n && a |> vectorGet (i + 1) = ai + 1 then
-          c |> vectorGet (ai - 1)
+        if i + 1 < n && a |> segTreeGet (i + 1) = ai + 1 then
+          c |> segTreeGet (ai - 1)
         else
           0
 
@@ -25,9 +31,6 @@ let abc140bTest () =
     let n = a |> listLength
     assert (b |> listLength = n)
     assert (c |> listLength = n - 1)
-    let a = vectorOfList typeInt a
-    let b = vectorOfList typeInt b
-    let c = vectorOfList typeInt c
     abc140bSolve n a b c
 
   let case1 () =
@@ -53,8 +56,8 @@ let abc140bTest () =
 
 let abc140bMain () =
   let n = scanInt ()
-  let a = scanIntVector n
-  let b = scanIntVector n
-  let c = scanIntVector (n - 1)
+  let a = scanIntList n
+  let b = scanIntList n
+  let c = scanIntList (n - 1)
   let m = abc140bSolve n a b c
   printfn "%d" m
