@@ -124,6 +124,10 @@ let intMax (first: int) (second: int) =
 let strEq (first: string) (second: string) =
   first = second
 
+let failwith msg =
+  printfn "ERROR %s" msg
+  exit 1
+
 // -----------------------------------------------
 // Standard IO
 // -----------------------------------------------

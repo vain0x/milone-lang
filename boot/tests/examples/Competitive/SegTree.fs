@@ -6,6 +6,22 @@ module rec Competitive.SegTree
 open Competitive.Helpers
 
 // -----------------------------------------------
+// Intervals
+// -----------------------------------------------
+
+type Interval = int * int
+
+let intervalIsDisjoint (first: Interval) (second: Interval) =
+  let xl, xr = first
+  let yl, yr = second
+  xr <= yl || yr <= xl
+
+let intervalCovers (first: Interval) (second: Interval) =
+  let xl, xr = first
+  let yl, yr = second
+  xl <= yl && yr <= xr
+
+// -----------------------------------------------
 // Traits
 // -----------------------------------------------
 
@@ -17,6 +33,9 @@ let segItemTypeToAppend (append, _, _, (_: SegItemTypeTag)) = append
 let segItemTypeToEmptyNode (_, emptyNode, _, (_: SegItemTypeTag)) = emptyNode
 
 let segItemTypeToNoChildren (_, _, noChildren, (_: SegItemTypeTag)): obj = noChildren
+
+let segItemTypeToEmptyItem itemTy =
+  itemTy |> segItemTypeToEmptyNode |> segNodeToItem
 
 let segItemTypeNew emptyItem append =
   let emptyNode = segNodeNewEmpty emptyItem
@@ -77,6 +96,10 @@ let segNodeNew itemTy left right =
 
   | _ ->
     doNew ()
+
+let segNodeToItem node =
+  let item, _, _, _, (_: SegNodeTag) = node
+  item
 
 let segNodeToLength node =
   let _, len, _, _, (_: SegNodeTag) = node
@@ -256,6 +279,37 @@ let segTreeGet index self =
 
   self |> segTreeToRoot |> go index
 
+/// Gets the sum of items at the index.
+/// The end index is exclusive.
+let segTreeSum (ql: int) (qr: int) self =
+  let itemTy, root, (_: SegTreeTag) = self
+
+  let rec go (e: Interval) (q: Interval) node =
+    if intervalIsDisjoint q e then
+      itemTy |> segItemTypeToEmptyItem
+    else if intervalCovers q e then
+      node |> segNodeToItem
+    else
+      assert (node |> segNodeIsEmpty |> not)
+      let leftNode, rightNode = node |> segNodeToChildren
+
+      let el, er = e
+      let m = el + (leftNode |> segNodeToLength)
+
+      let vl = leftNode |> go (el, m) q
+      let vr = rightNode |> go (m, er) q
+      (itemTy |> segItemTypeToAppend) vl vr
+
+  let len = root |> segNodeToLength
+  let q = ql, qr
+
+  if intervalIsDisjoint q (0, len) then
+    itemTy |> segItemTypeToEmptyItem
+  else
+
+  let e = 0, len
+  root |> go e q
+
 /// Replaces an item at the index.
 /// Error if out of range.
 let segTreeSet index newItem self =
@@ -431,6 +485,41 @@ let segTreeTest unit =
     assert (v |> segTreeToList |> listEq intEq [11; 22; 33])
 
   testSet ()
+
+  let testSum () =
+    let v = segTreeOfList segItemTypeInt [3; 1; 4; 1; 5; 9]
+    assert (v |> segTreeSum 0 6 = 3 + 1 + 4 + 1 + 5 + 9)
+    assert (v |> segTreeSum 2 4 = 4 + 1)
+
+  testSum ()
+
+  let testSumMore () =
+    let xs = [3; 1; 4; 1; 5; 9]
+    let v = segTreeOfList segItemTypeInt xs
+    let n = xs |> listLength
+    let rec go l r =
+      if r = n then
+        if l < n then
+          go (l + 1) (l + 1)
+      else
+        let expected =
+          let rec sum (acc: int) i xs =
+            if i = r then
+              acc
+            else
+              match xs with
+              | x :: xs ->
+                let acc = if i < l then acc else acc + x
+                sum acc (i + 1) xs
+              | _ ->
+                failwith "NEVER"
+          sum 0 0 xs
+        let actual = v |> segTreeSum l r
+        assert (actual = expected)
+        go l (r + 1)
+    go 0 0
+
+  testSumMore ()
 
   let testBalance () =
     let v = segTreeOfList segItemTypeInt (listReplicate 1 1000)
