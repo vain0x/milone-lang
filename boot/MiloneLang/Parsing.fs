@@ -355,6 +355,30 @@ let parsePats boxX tokens =
       listRev acc, tokens
   go [] tokens
 
+/// E.g. `i`, `l..r`, `first .. step .. last`.
+/// Doesn't parse `l..` and `..r` for now.
+let parseRange boxX tokens =
+  let rec go acc tokens =
+    match tokens with
+    | (Token.DotDot, _) :: tokens ->
+      let second, tokens = parseTerm boxX tokens
+      go (second :: acc) tokens
+
+    | _ ->
+      acc, tokens
+
+  let loc = nextLoc tokens
+  let acc, tokens =
+    let first, tokens = parseTerm boxX tokens
+    go [first] tokens
+
+  match listRev acc with
+  | [first] ->
+    first, tokens
+
+  | exprs ->
+    AExpr.Range (exprs, loc), tokens
+
 let parseList boxX bracketLoc tokens =
   match parseBindings boxX tokens with
   | exprs, (Token.BracketR, _) :: tokens ->
@@ -551,13 +575,13 @@ let parseAtom boxX tokens: AExpr * (Token * Loc) list =
   | _ ->
     parseError "Expected an atomic expression" tokens
 
-/// suffix = atom ( '.' '[' expr ']' | '.' ident )*
+/// suffix = atom ( '.' '[' range ']' | '.' ident )*
 let parseSuffix boxX tokens =
   let callee, tokens = parseAtom boxX tokens
   let rec go acc tokens =
     match tokens with
     | (Token.Dot, loc) :: (Token.BracketL, _) :: tokens ->
-      match parseExpr boxX tokens with
+      match parseRange boxX tokens with
       | expr, (Token.BracketR, _) :: tokens ->
         go (AExpr.Index (acc, expr, loc)) tokens
       | _, tokens ->
@@ -596,7 +620,6 @@ let parsePrefix boxX tokens =
 
 let parseNextLevelOp level outer tokens =
   match level with
-  | OpLevel.Range -> parseOp OpLevel.Or outer tokens
   | OpLevel.Or -> parseOp OpLevel.And outer tokens
   | OpLevel.And -> parseOp OpLevel.Cmp outer tokens
   | OpLevel.Cmp -> parseOp OpLevel.Pipe outer tokens
@@ -615,8 +638,6 @@ let rec parseOps level boxX expr tokens =
     let expr = AExpr.Bin (op, expr, second, opLoc)
     parseOps level boxX expr tokens
   match level, tokens with
-  | OpLevel.Range, (Token.DotDot, opLoc) :: tokens ->
-    next expr Op.Range opLoc tokens
   | OpLevel.Or, (Token.PipePipe, opLoc) :: tokens ->
     next expr Op.Or opLoc tokens
   | OpLevel.And, (Token.AmpAmp, opLoc) :: tokens ->
@@ -656,7 +677,7 @@ let parseOp level boxX tokens =
   parseOps level boxX first tokens
 
 let parseTerm boxX tokens =
-  parseOp OpLevel.Range boxX tokens
+  parseOp OpLevel.Or boxX tokens
 
 /// tuple = term ( ',' term )*
 let parseTuple boxX tokens =

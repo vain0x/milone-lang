@@ -88,8 +88,6 @@ let tyStr = Ty.Con (TyCon.Str, [])
 
 let tyObj = Ty.Con (TyCon.Obj, [])
 
-let tyRange = Ty.Con (TyCon.Range, [])
-
 let tyTuple tys =
   Ty.Con (TyCon.Tuple, tys)
 
@@ -230,7 +228,7 @@ let primToArity prim =
   | HPrim.Int
   | HPrim.String ->
     1
-  | HPrim.StrSlice ->
+  | HPrim.StrGetSlice ->
     3
   | HPrim.Printfn ->
     9999

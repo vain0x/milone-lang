@@ -110,8 +110,7 @@ let mopFrom op =
   | Op.Or
   | Op.App
   | Op.Cons _
-  | Op.Range
-  | Op.Index -> failwith "Never: We don't use > >= && || :: .. in MIR"
+  | Op.Index -> failwith "Never: We don't use > >= && || :: in MIR"
 
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
@@ -439,19 +438,6 @@ let mirifyExprIndex ctx l r _ loc =
     let l, ctx = mirifyExpr ctx l
     let r, ctx = mirifyExpr ctx r
     MExpr.Bin (MOp.StrIndex, l, r, tyChar, loc), ctx
-  | Ty.Con (TyCon.Str, _), Ty.Con (TyCon.Range, _) ->
-    let rl, rr =
-      match r with
-      | HExpr.Bin (Op.Range, rl, rr, _, _) -> rl, rr
-      | _ -> failwith "Never"
-    let l, ctx = mirifyExpr ctx l
-    let rl, ctx = mirifyExpr ctx rl
-    let rr, ctx = mirifyExpr ctx rr
-    let temp, tempSerial, ctx = ctxFreshVar ctx "slice" tyStr loc
-    let funTy = tyFun tyStr (tyFun tyInt (tyFun tyInt tyStr))
-    let callPrim = MInit.CallPrim (HPrim.StrSlice, [l; rl; rr], funTy)
-    let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, callPrim, tyStr, loc))
-    temp, ctx
   | _ ->
     failwith "unimpl non-string indexing"
 

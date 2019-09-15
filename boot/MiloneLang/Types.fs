@@ -205,6 +205,9 @@ type AExpr =
   /// Binary operation, e.g. `x + y`.
   | Bin
     of Op * AExpr * AExpr * Loc
+  /// Range syntax, e.g. `first..last`, `first .. step .. last`.
+  | Range
+    of AExpr list * Loc
   /// Tuple literal, e.g. `()`, `2, "two"`.
   | TupleLit
     of AExpr list * Loc
@@ -233,7 +236,6 @@ type TyCon =
   | Int
   | Char
   | Str
-  | Range
   | Obj
   | Fun
   | Tuple
@@ -282,8 +284,6 @@ type OpLevel =
   | Cmp
   | And
   | Or
-  /// `..`
-  | Range
 
 /// Unary operators in AST.
 [<RequireQualifiedAccess>]
@@ -326,8 +326,6 @@ type Op =
   | App
   /// `::` Cons cell constructor
   | Cons
-  /// `..`
-  | Range
   /// `.[ ]`
   | Index
 
@@ -432,8 +430,8 @@ type HPrim =
   | Box
   | Unbox
   | Printfn
-  | StrSlice
   | StrLength
+  | StrGetSlice
   | Char
   | Int
   | String
