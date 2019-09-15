@@ -596,7 +596,6 @@ let parsePrefix boxX tokens =
 
 let parseNextLevelOp level outer tokens =
   match level with
-  | OpLevel.Range -> parseOp OpLevel.Or outer tokens
   | OpLevel.Or -> parseOp OpLevel.And outer tokens
   | OpLevel.And -> parseOp OpLevel.Cmp outer tokens
   | OpLevel.Cmp -> parseOp OpLevel.Pipe outer tokens
@@ -615,8 +614,6 @@ let rec parseOps level boxX expr tokens =
     let expr = AExpr.Bin (op, expr, second, opLoc)
     parseOps level boxX expr tokens
   match level, tokens with
-  | OpLevel.Range, (Token.DotDot, opLoc) :: tokens ->
-    next expr Op.Range opLoc tokens
   | OpLevel.Or, (Token.PipePipe, opLoc) :: tokens ->
     next expr Op.Or opLoc tokens
   | OpLevel.And, (Token.AmpAmp, opLoc) :: tokens ->
@@ -656,7 +653,7 @@ let parseOp level boxX tokens =
   parseOps level boxX first tokens
 
 let parseTerm boxX tokens =
-  parseOp OpLevel.Range boxX tokens
+  parseOp OpLevel.Or boxX tokens
 
 /// tuple = term ( ',' term )*
 let parseTuple boxX tokens =

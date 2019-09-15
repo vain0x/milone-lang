@@ -233,7 +233,6 @@ type TyCon =
   | Int
   | Char
   | Str
-  | Range
   | Obj
   | Fun
   | Tuple
@@ -282,8 +281,6 @@ type OpLevel =
   | Cmp
   | And
   | Or
-  /// `..`
-  | Range
 
 /// Unary operators in AST.
 [<RequireQualifiedAccess>]
@@ -326,8 +323,6 @@ type Op =
   | App
   /// `::` Cons cell constructor
   | Cons
-  /// `..`
-  | Range
   /// `.[ ]`
   | Index
 

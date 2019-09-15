@@ -406,7 +406,7 @@ let inferNav ctx sub mes loc resultTy =
 
   hxError ()
 
-/// `x.[i] : 'y` <== x : 'x, i : int or i : range
+/// `x.[i] : 'y` <== x : 'x, i : int
 /// NOTE: Currently only the `x : string` case can compile, however,
 /// we don't infer that for compatibility.
 let inferIndex ctx l r loc resultTy =
@@ -416,9 +416,6 @@ let inferIndex ctx l r loc resultTy =
   let l, ctx = inferExpr ctx l subTy
   let r, ctx = inferExpr ctx r indexTy
   match substTy ctx subTy, substTy ctx indexTy with
-  | Ty.Con (TyCon.Str, _), Ty.Con (TyCon.Range, _) ->
-    let ctx = unifyTy ctx loc resultTy tyStr
-    hxIndex l r resultTy loc, ctx
   | Ty.Con (TyCon.Str, _), _ ->
     let ctx = unifyTy ctx loc indexTy tyInt
     let ctx = unifyTy ctx loc resultTy tyChar
@@ -503,10 +500,6 @@ let inferOpCons ctx left right loc listTy =
   let right, ctx = inferExpr ctx right listTy
   HExpr.Bin (Op.Cons, left, right, listTy, loc), ctx
 
-let inferOpRange ctx op left right loc ty =
-  let ctx = unifyTy ctx loc ty tyRange
-  inferOpCore ctx op left right loc tyInt ty
-
 let inferBin (ctx: TyCtx) op left right loc ty =
   match op with
   | Op.Add ->
@@ -527,8 +520,6 @@ let inferBin (ctx: TyCtx) op left right loc ty =
     inferOpApp ctx left right loc ty
   | Op.Cons _ ->
     inferOpCons ctx left right loc ty
-  | Op.Range ->
-    inferOpRange ctx op left right loc ty
   | Op.Index ->
     inferIndex ctx left right loc ty
   | Op.And

@@ -227,7 +227,6 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | Ty.Con (TyCon.Ref serial, _) ->
           // FIXME: This occurs when recursive union types defined.
           failwithf "Never: Unknown type serial %d" serial
-        | Ty.Con (TyCon.Range, _)
         | Ty.Con (TyCon.List, _)
         | Ty.Con (TyCon.Fun, _)
         | Ty.Error _ ->
@@ -282,7 +281,6 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
       CTy.Void, ctxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
   | Ty.Con (TyCon.List, _)
   | Ty.Con (TyCon.Fun, _)
-  | Ty.Con (TyCon.Range, _)
   | Ty.Error _ ->
     failwithf "Never %A" ty
 
@@ -322,7 +320,6 @@ let genExprDefault ctx ty =
   | Ty.Con (TyCon.Ref _, _) ->
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
-  | Ty.Con (TyCon.Range, _)
   | Ty.Error _ ->
     failwithf "Never %A" ty
 

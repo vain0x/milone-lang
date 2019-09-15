@@ -88,8 +88,6 @@ let tyStr = Ty.Con (TyCon.Str, [])
 
 let tyObj = Ty.Con (TyCon.Obj, [])
 
-let tyRange = Ty.Con (TyCon.Range, [])
-
 let tyTuple tys =
   Ty.Con (TyCon.Tuple, tys)
 
