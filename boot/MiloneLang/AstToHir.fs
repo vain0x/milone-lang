@@ -121,13 +121,13 @@ let desugarBinOr l r loc =
 let desugarBinPipe l r loc =
   AExpr.Bin (Op.App, r, l, loc)
 
-/// `s.[l .. r]` ==> `String.substring l r x`
+/// `s.[l .. r]` ==> `String.getSlice l r x`
 /// NOTE: Evaluation order does change.
 let tryDesugarIndexRange expr loc =
   match expr with
   | AExpr.Index (s, AExpr.Range ([l; r], _), _) ->
-    let substring = AExpr.Nav (AExpr.Ident ("String", loc), "substring", loc)
-    true, axApp3 substring l r s loc
+    let getSlice = AExpr.Nav (AExpr.Ident ("String", loc), "getSlice", loc)
+    true, axApp3 getSlice l r s loc
 
   | _ ->
     false, expr
