@@ -653,6 +653,10 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     | HExpr.Ref ("String", _, _, _), "length" ->
       HExpr.Ref ("String.length", HValRef.Prim HPrim.StrLength, ty, loc), ctx
 
+    | HExpr.Ref ("String", _, _, _), "substring" ->
+      // NOTE: Actually this functions doesn't exist in the F# standard library.
+      HExpr.Ref ("String.substring", HValRef.Prim HPrim.StrSubstring, ty, loc), ctx
+
     |_ ->
 
     // Keep the nav expression unresolved so that type inference does.
