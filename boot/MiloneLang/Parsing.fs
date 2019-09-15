@@ -355,6 +355,30 @@ let parsePats boxX tokens =
       listRev acc, tokens
   go [] tokens
 
+/// E.g. `i`, `l..r`, `first .. step .. last`.
+/// Doesn't parse `l..` and `..r` for now.
+let parseRange boxX tokens =
+  let rec go acc tokens =
+    match tokens with
+    | (Token.DotDot, _) :: tokens ->
+      let second, tokens = parseTerm boxX tokens
+      go (second :: acc) tokens
+
+    | _ ->
+      acc, tokens
+
+  let loc = nextLoc tokens
+  let acc, tokens =
+    let first, tokens = parseTerm boxX tokens
+    go [first] tokens
+
+  match listRev acc with
+  | [first] ->
+    first, tokens
+
+  | exprs ->
+    AExpr.Range (exprs, loc), tokens
+
 let parseList boxX bracketLoc tokens =
   match parseBindings boxX tokens with
   | exprs, (Token.BracketR, _) :: tokens ->
@@ -551,13 +575,13 @@ let parseAtom boxX tokens: AExpr * (Token * Loc) list =
   | _ ->
     parseError "Expected an atomic expression" tokens
 
-/// suffix = atom ( '.' '[' expr ']' | '.' ident )*
+/// suffix = atom ( '.' '[' range ']' | '.' ident )*
 let parseSuffix boxX tokens =
   let callee, tokens = parseAtom boxX tokens
   let rec go acc tokens =
     match tokens with
     | (Token.Dot, loc) :: (Token.BracketL, _) :: tokens ->
-      match parseExpr boxX tokens with
+      match parseRange boxX tokens with
       | expr, (Token.BracketR, _) :: tokens ->
         go (AExpr.Index (acc, expr, loc)) tokens
       | _, tokens ->

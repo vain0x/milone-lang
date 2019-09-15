@@ -42,6 +42,10 @@ let axTrue loc =
 let axNil loc =
   AExpr.ListLit ([], loc)
 
+let axApp3 f x1 x2 x3 loc =
+  let app x f = AExpr.Bin (Op.App, f, x, loc)
+  f |> app x1 |> app x2 |> app x3
+
 /// `[x; y; ..]`. Desugar to a chain of (::).
 let desugarListLitPat pats loc =
   assert (pats |> listIsEmpty |> not)
@@ -116,6 +120,17 @@ let desugarBinOr l r loc =
 /// NOTE: Evaluation order does change.
 let desugarBinPipe l r loc =
   AExpr.Bin (Op.App, r, l, loc)
+
+/// `s.[l .. r]` ==> `String.substring l r x`
+/// NOTE: Evaluation order does change.
+let tryDesugarIndexRange expr loc =
+  match expr with
+  | AExpr.Index (s, AExpr.Range ([l; r], _), _) ->
+    let substring = AExpr.Nav (AExpr.Ident ("String", loc), "substring", loc)
+    true, axApp3 substring l r s loc
+
+  | _ ->
+    false, expr
 
 /// Analyzes let syntax.
 ///
@@ -277,9 +292,14 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.Nav (l, r, noTy, loc), nameCtx
 
   | AExpr.Index (l, r, loc) ->
-    let l, nameCtx = (l, nameCtx) |> onExpr
-    let r, nameCtx = (r, nameCtx) |> onExpr
-    HExpr.Bin (Op.Index, l, r, noTy, loc), nameCtx
+    match tryDesugarIndexRange expr loc with
+    | true, expr ->
+      (expr, nameCtx) |> onExpr
+
+    | false, _ ->
+      let l, nameCtx = (l, nameCtx) |> onExpr
+      let r, nameCtx = (r, nameCtx) |> onExpr
+      HExpr.Bin (Op.Index, l, r, noTy, loc), nameCtx
 
   | AExpr.Uni (UniOp.Neg, arg, loc) ->
     let expr = desugarUniNeg arg loc
@@ -301,6 +321,9 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr
     HExpr.Bin (op, l, r, noTy, loc), nameCtx
+
+  | AExpr.Range (_, loc) ->
+    HExpr.Error ("Invalid use of range syntax.", loc), nameCtx
 
   | AExpr.TupleLit (items, loc) ->
     let items, nameCtx = (items, nameCtx) |> stMap onExpr

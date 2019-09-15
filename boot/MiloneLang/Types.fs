@@ -205,6 +205,9 @@ type AExpr =
   /// Binary operation, e.g. `x + y`.
   | Bin
     of Op * AExpr * AExpr * Loc
+  /// Range syntax, e.g. `first..last`, `first .. step .. last`.
+  | Range
+    of AExpr list * Loc
   /// Tuple literal, e.g. `()`, `2, "two"`.
   | TupleLit
     of AExpr list * Loc
