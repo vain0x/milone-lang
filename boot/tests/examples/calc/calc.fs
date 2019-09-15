@@ -23,6 +23,9 @@ let strStartsWith (prefix: string) (s: string) =
   let rec go i = i >= prefix.Length || (s.[i] = prefix.[i] && go (i + 1))
   s.Length >= prefix.Length && go 0
 
+let strSlice (l: int) (r: int) (s: string) =
+  String.substring l (r - 1) s
+
 let strConcat (xs: string list) =
   let rec go  (xs: string list) =
     match xs with
@@ -75,7 +78,7 @@ let private readEol (source: string) (acc: Token list, i) =
 let private readInt (source: string) (acc: Token list, i) =
   assert (isDigit source.[i])
   let r = takeWhile isDigit (source, i)
-  let n = source.[i..r - 1] |> int
+  let n = source |> strSlice i r |> int
   TkInt n :: acc, r
 
 let tokenize (source: string): Token list =
