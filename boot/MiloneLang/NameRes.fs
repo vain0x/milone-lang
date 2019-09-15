@@ -655,7 +655,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
     | HExpr.Ref ("String", _, _, _), "substring" ->
       // NOTE: Actually this functions doesn't exist in the F# standard library.
-      HExpr.Ref ("String.substring", HValRef.Prim HPrim.StrSubstring, ty, loc), ctx
+      HExpr.Ref ("String.substring", HValRef.Prim HPrim.StrGetSlice, ty, loc), ctx
 
     |_ ->
 

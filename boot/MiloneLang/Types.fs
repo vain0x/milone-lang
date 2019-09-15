@@ -431,7 +431,7 @@ type HPrim =
   | Unbox
   | Printfn
   | StrLength
-  | StrSubstring
+  | StrGetSlice
   | Char
   | Int
   | String

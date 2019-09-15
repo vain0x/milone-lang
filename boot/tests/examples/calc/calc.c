@@ -494,7 +494,7 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
     tuple_10.t1 = i_5;
     int call_20 = takeWhile_(fun_3, tuple_10);
     int r_4 = call_20;
-    struct String call_21 = str_substring(i_5, (r_4 - 1), source_3);
+    struct String call_21 = str_get_slice(i_5, (r_4 - 1), source_3);
     int call_22 = str_to_int(call_21);
     int n_ = call_22;
     int* payload_ = (int*)malloc(sizeof(int));

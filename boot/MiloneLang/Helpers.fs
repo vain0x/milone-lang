@@ -228,7 +228,7 @@ let primToArity prim =
   | HPrim.Int
   | HPrim.String ->
     1
-  | HPrim.StrSubstring ->
+  | HPrim.StrGetSlice ->
     3
   | HPrim.Printfn ->
     9999
