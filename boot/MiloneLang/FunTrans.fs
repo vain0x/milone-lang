@@ -650,7 +650,7 @@ let unetaCall callee args resultTy loc ctx =
       | HPrim.Int
       | HPrim.String ->
         1
-      | HPrim.StrSlice ->
+      | HPrim.StrSubstring ->
         3
       | HPrim.Printfn ->
         primTy |> tyToArity

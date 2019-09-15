@@ -352,7 +352,7 @@ let inferPrim ctx ident prim loc ty =
     let ctx = unifyTy ctx loc ty (tyFun tyStr tyInt)
     HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
 
-  | HPrim.StrSlice ->
+  | HPrim.StrSubstring ->
     let ctx = unifyTy ctx loc ty (tyFun tyStr (tyFun tyInt (tyFun tyInt tyStr)))
     HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
 

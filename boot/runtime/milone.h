@@ -36,7 +36,7 @@ struct String str_add(struct String left, struct String right) {
   return (struct String){.str = str, .len = len};
 }
 
-struct String str_slice(struct String s, int l, int r) {
+struct String str_substring(struct String s, int l, int r) {
   l = int_clamp(l, 0, s.len);
   r = int_clamp(r + 1, l, s.len);
   int len = r - l;

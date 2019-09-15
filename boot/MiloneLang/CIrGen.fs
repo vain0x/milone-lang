@@ -481,8 +481,8 @@ let genExprCallPrim ctx prim args primTy resultTy =
     let ctx = ctxAddStmt ctx (CStmt.Expr assertCall)
     genExprDefault ctx resultTy
 
-  | HPrim.StrSlice, _, _ ->
-    let callee = CExpr.Ref "str_slice"
+  | HPrim.StrSubstring, _, _ ->
+    let callee = CExpr.Ref "str_substring"
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
 

@@ -432,8 +432,8 @@ type HPrim =
   | Box
   | Unbox
   | Printfn
-  | StrSlice
   | StrLength
+  | StrSubstring
   | Char
   | Int
   | String

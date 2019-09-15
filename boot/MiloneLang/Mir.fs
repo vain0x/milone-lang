@@ -449,7 +449,7 @@ let mirifyExprIndex ctx l r _ loc =
     let rr, ctx = mirifyExpr ctx rr
     let temp, tempSerial, ctx = ctxFreshVar ctx "slice" tyStr loc
     let funTy = tyFun tyStr (tyFun tyInt (tyFun tyInt tyStr))
-    let callPrim = MInit.CallPrim (HPrim.StrSlice, [l; rl; rr], funTy)
+    let callPrim = MInit.CallPrim (HPrim.StrSubstring, [l; rl; rr], funTy)
     let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, callPrim, tyStr, loc))
     temp, ctx
   | _ ->
