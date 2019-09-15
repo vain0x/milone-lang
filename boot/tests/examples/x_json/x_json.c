@@ -89,7 +89,7 @@ end_match_7:;
 }
 
 struct String strSlice_(int l_, int r_, struct String s_) {
-    struct String call_4 = str_substring(l_, (r_ - l_), s_);
+    struct String call_4 = str_substring(l_, (r_ - 1), s_);
     return call_4;
 }
 

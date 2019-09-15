@@ -21,7 +21,7 @@ let isDigit c =
   '0' <= c && c <= '9'
 
 let strSlice (l: int) (r: int) (s: string) =
-  String.substring l (r - l) s
+  String.substring l (r - 1) s
 
 let tokenize (s : string) =
   let rec readInt i =

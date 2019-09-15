@@ -216,7 +216,7 @@ end_match_16:;
 }
 
 struct String strSlice_(int l_1, int r_1, struct String s_2) {
-    struct String call_5 = str_substring(l_1, (r_1 - l_1), s_2);
+    struct String call_5 = str_substring(l_1, (r_1 - 1), s_2);
     return call_5;
 }
 
