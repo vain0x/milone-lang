@@ -24,7 +24,7 @@ let strStartsWith (prefix: string) (s: string) =
   s.Length >= prefix.Length && go 0
 
 let strSlice (l: int) (r: int) (s: string) =
-  String.substring l (r - 1) s
+  String.substring l (r - l) s
 
 let strConcat (xs: string list) =
   let rec go  (xs: string list) =

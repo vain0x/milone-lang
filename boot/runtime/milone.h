@@ -36,16 +36,15 @@ struct String str_add(struct String left, struct String right) {
   return (struct String){.str = str, .len = len};
 }
 
-struct String str_substring(int l, int r, struct String s) {
-  l = int_clamp(l, 0, s.len);
-  r = int_clamp(r + 1, l, s.len);
-  int len = r - l;
+struct String str_substring(int start, int len, struct String s) {
+  start = int_clamp(start, 0, s.len);
+  len = int_clamp(len, 0, s.len - start);
   char* str;
-  if (r == s.len) {
-    str = s.str + l;
+  if (start + len == s.len) {
+    str = s.str + start;
   } else {
     str = (char*)malloc((len + 1) * sizeof(char));
-    strncpy(str, s.str + l, len);
+    strncpy(str, s.str + start, len);
     str[len] = '\0';
   }
   return (struct String){.str = str, .len = len};
