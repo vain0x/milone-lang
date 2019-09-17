@@ -462,7 +462,7 @@ let genExprCallString arg argTy ctx =
   | _ ->
     failwith "Never: Type Error `int`"
 
-let genExprCallPrim ctx prim args primTy resultTy =
+let genExprCallPrim ctx prim args primTy resultTy loc =
   match prim, args, primTy with
   | HPrim.NativeFun (nativeFunIdent, _), _, _ ->
     let args, ctx = genExprList ctx args
@@ -474,6 +474,10 @@ let genExprCallPrim ctx prim args primTy resultTy =
   | HPrim.Assert, _, _ ->
     let callee = CExpr.Ref "milone_assert"
     let args, ctx = genExprList ctx args
+    // Embed the source location information.
+    let args =
+      let y, x = loc
+      List.append args [CExpr.Int y; CExpr.Int x]
     let assertCall = CExpr.Call (callee, args)
     let ctx = ctxAddStmt ctx (CStmt.Expr assertCall)
     genExprDefault ctx resultTy
@@ -603,7 +607,7 @@ let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
   let ctx = ctxAddStmt ctx (CStmt.Let (temp, Some init, unionTy))
   ctx
 
-let genStmtLetVal ctx serial init ty =
+let genStmtLetVal ctx serial init ty loc =
   match init with
   | MInit.UnInit ->
     genInitExprCore ctx serial None ty
@@ -611,7 +615,7 @@ let genStmtLetVal ctx serial init ty =
     let expr, ctx = genExpr ctx expr
     genInitExprCore ctx serial (Some expr) ty
   | MInit.CallPrim (prim, args, calleeTy) ->
-    let expr, ctx = genExprCallPrim ctx prim args calleeTy ty
+    let expr, ctx = genExprCallPrim ctx prim args calleeTy ty loc
     genInitExprCore ctx serial (Some expr) ty
   | MInit.CallProc (callee, args, _) ->
     let expr, ctx = genExprCallProc ctx callee args ty
@@ -650,8 +654,8 @@ let genStmt ctx stmt =
   match stmt with
   | MStmt.Do (expr, _) ->
     genStmtDo ctx expr
-  | MStmt.LetVal (serial, init, ty, _) ->
-    genStmtLetVal ctx serial init ty
+  | MStmt.LetVal (serial, init, ty, loc) ->
+    genStmtLetVal ctx serial init ty loc
   | MStmt.Set (serial, right, _) ->
     genStmtSet ctx serial right
   | MStmt.Return (expr, _) ->

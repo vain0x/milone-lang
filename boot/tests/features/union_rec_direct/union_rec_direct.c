@@ -72,7 +72,7 @@ int main() {
     struct Expr_ variant_4 = (struct Expr_){.tag = Add_, .Add_ = payload_4};
     struct Expr_ expr_1 = variant_4;
     int call_2 = eval_(expr_1);
-    milone_assert((call_2 == 42));
+    milone_assert((call_2 == 42), 18, 2);
     int call_3 = 0;
     return 0;
 }

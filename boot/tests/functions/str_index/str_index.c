@@ -21,10 +21,10 @@ next_2:;
 next_3:;
     exit(1);
 end_match_1:;
-    milone_assert(match_);
+    milone_assert(match_, 2, 2);
     int call_ = 0;
     char call_1 = at_(0, hello_);
-    milone_assert((call_1 == 'h'));
+    milone_assert((call_1 == 'h'), 7, 2);
     int call_2 = 0;
     return 0;
 }

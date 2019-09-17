@@ -54,10 +54,10 @@ next_7:;
 next_8:;
     exit(1);
 end_match_6:;
-    milone_assert(match_1);
+    milone_assert(match_1, 8, 2);
     int call_2 = 0;
     int call_3 = isZeroOrOne_(2);
-    milone_assert((!(call_3)));
+    milone_assert((!(call_3)), 9, 2);
     int call_4 = 0;
     return 0;
 }
@@ -114,7 +114,7 @@ int nestedCase_(int arg_1) {
     list_->head = 0;
     list_->tail = list_1;
     int call_5 = startsWithDoubleBits_(list_);
-    milone_assert(call_5);
+    milone_assert(call_5, 20, 2);
     int call_6 = 0;
     struct IntList* list_4 = (struct IntList*)malloc(sizeof(struct IntList));
     list_4->head = 2;
@@ -123,7 +123,7 @@ int nestedCase_(int arg_1) {
     list_3->head = 1;
     list_3->tail = list_4;
     int call_7 = startsWithDoubleBits_(list_3);
-    milone_assert((!(call_7)));
+    milone_assert((!(call_7)), 21, 2);
     int call_8 = 0;
     return 0;
 }
@@ -172,7 +172,7 @@ int complexCase_(int arg_2) {
     (*(((struct IntIntTuple2*)payload_))) = tuple_;
     struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = payload_};
     int call_9 = performComplexMatching_(variant_);
-    milone_assert(call_9);
+    milone_assert(call_9, 35, 2);
     int call_10 = 0;
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 1;
@@ -181,7 +181,7 @@ int complexCase_(int arg_2) {
     (*(((struct IntIntTuple2*)payload_1))) = tuple_1;
     struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = payload_1};
     int call_11 = performComplexMatching_(variant_1);
-    milone_assert((!(call_11)));
+    milone_assert((!(call_11)), 36, 2);
     int call_12 = 0;
     return 0;
 }

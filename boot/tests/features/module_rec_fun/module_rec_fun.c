@@ -40,13 +40,13 @@ end_match_4:;
 
 int main() {
     int call_2 = odd_(1);
-    milone_assert(call_2);
+    milone_assert(call_2, 7, 2);
     int call_3 = 0;
     int call_4 = even_(2);
-    milone_assert(call_4);
+    milone_assert(call_4, 8, 2);
     int call_5 = 0;
     int call_6 = even_(3);
-    milone_assert((!(call_6)));
+    milone_assert((!(call_6)), 9, 2);
     int call_7 = 0;
     return 0;
 }

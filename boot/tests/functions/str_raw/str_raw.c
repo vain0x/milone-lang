@@ -19,13 +19,13 @@ next_2:;
 next_3:;
     exit(1);
 end_match_1:;
-    milone_assert(match_);
+    milone_assert(match_, 3, 2);
     int call_ = 0;
     return 0;
 }
 
 int testNoEscape_(int arg_1) {
-    milone_assert((str_cmp((struct String){.str = " \\\"\" ", .len = 5}, (struct String){.str = " \\\"\" ", .len = 5}) == 0));
+    milone_assert((str_cmp((struct String){.str = " \\\"\" ", .len = 5}, (struct String){.str = " \\\"\" ", .len = 5}) == 0), 6, 2);
     int call_1 = 0;
     return 0;
 }

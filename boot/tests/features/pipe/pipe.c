@@ -64,17 +64,17 @@ int main() {
     int call_1 = twice_(call_);
     int call_2 = twice_(call_1);
     int n_ = call_2;
-    milone_assert((n_ == 16));
+    milone_assert((n_ == 16), 7, 2);
     int call_3 = 0;
     int call_4 = sub_(100, 98);
     int call_5 = between_(2, 3, call_4);
-    milone_assert(call_5);
+    milone_assert(call_5, 9, 2);
     int call_6 = 0;
     struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
     int call_7 = len_(list_);
-    milone_assert((call_7 != 0));
+    milone_assert((call_7 != 0), 17, 2);
     int call_8 = 0;
     return 0;
 }

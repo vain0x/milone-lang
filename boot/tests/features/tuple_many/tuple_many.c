@@ -78,7 +78,7 @@ next_8:;
 next_9:;
     exit(1);
 end_match_1:;
-    milone_assert(match_);
+    milone_assert(match_, 2, 2);
     int call_ = 0;
     struct IntIntIntIntIntIntIntIntIntIntIntTuple11 tuple_2;
     tuple_2.t0 = 1;

@@ -1338,12 +1338,12 @@ struct Space_ spaceDecompose_(struct Space_ space_4) {
     struct Space_ app_13 = thunk_1.fun(thunk_1.env, 0);
     struct Space_ space_5 = app_13;
     int call_63 = spaceIsEmpty_(space_5);
-    milone_assert((!(call_63)));
+    milone_assert((!(call_63)), 238, 4);
     int call_64 = 0;
     match_26 = space_5;
     goto end_match_88;
 next_89:;
-    milone_assert(0);
+    milone_assert(0, 242, 4);
     int call_65 = 0;
     match_26 = space_4;
     goto end_match_88;
@@ -1592,7 +1592,7 @@ next_102:;
     goto end_match_94;
 next_103:;
     if (!((tuple_35.t1.tag == Ref_))) goto next_104;
-    milone_assert(0);
+    milone_assert(0, 346, 4);
     int call_86 = 0;
     struct Space_Tuple1 tuple_45;
     tuple_45.t0 = spaceEmpty_;
@@ -1930,7 +1930,7 @@ int testSpaceIsEmpty_(struct Space_Space_Tuple2 arg_66, int arg_67) {
     struct Space_ spaceFull_ = arg_66.t0;
     struct Space_ spaceEmpty_ = arg_66.t1;
     int call_140 = spaceIsEmpty_(spaceEmpty_);
-    milone_assert(call_140);
+    milone_assert(call_140, 459, 2);
     int call_141 = 0;
     struct Space_List* list_22 = (struct Space_List*)malloc(sizeof(struct Space_List));
     list_22->head = spaceEmpty_;
@@ -1944,10 +1944,10 @@ int testSpaceIsEmpty_(struct Space_Space_Tuple2 arg_66, int arg_67) {
     list_20->tail = list_21;
     struct Space_ call_143 = spaceUnion_(list_20);
     int call_144 = spaceIsEmpty_(call_143);
-    milone_assert(call_144);
+    milone_assert(call_144, 460, 2);
     int call_145 = 0;
     int call_146 = spaceIsEmpty_(spaceFull_);
-    milone_assert((!(call_146)));
+    milone_assert((!(call_146)), 462, 2);
     int call_147 = 0;
     struct Space_Tuple1 tuple_63;
     tuple_63.t0 = spaceFull_;
@@ -1959,7 +1959,7 @@ int testSpaceIsEmpty_(struct Space_Space_Tuple2 arg_66, int arg_67) {
     struct UnitSpace_Fun1 fun_43 = (struct UnitSpace_Fun1){.fun = fun_23, .env = env_33};
     struct Space_ call_148 = spaceRef_((struct String){.str = "ref", .len = 3}, fun_43);
     int call_149 = spaceIsEmpty_(call_148);
-    milone_assert((!(call_149)));
+    milone_assert((!(call_149)), 463, 2);
     int call_150 = 0;
     struct Space_List* list_24 = (struct Space_List*)malloc(sizeof(struct Space_List));
     list_24->head = spaceFull_;
@@ -1969,11 +1969,11 @@ int testSpaceIsEmpty_(struct Space_Space_Tuple2 arg_66, int arg_67) {
     list_23->tail = list_24;
     struct Space_ call_151 = spaceUnion_(list_23);
     int call_152 = spaceIsEmpty_(call_151);
-    milone_assert((!(call_152)));
+    milone_assert((!(call_152)), 464, 2);
     int call_153 = 0;
     struct Space_ call_154 = spaceCtor_((struct String){.str = "tuple", .len = 5}, NULL);
     int call_155 = spaceIsEmpty_(call_154);
-    milone_assert((!(call_155)));
+    milone_assert((!(call_155)), 466, 2);
     int call_156 = 0;
     struct Space_List* list_27 = (struct Space_List*)malloc(sizeof(struct Space_List));
     list_27->head = spaceFull_;
@@ -1986,7 +1986,7 @@ int testSpaceIsEmpty_(struct Space_Space_Tuple2 arg_66, int arg_67) {
     list_25->tail = list_26;
     struct Space_ call_157 = spaceCtor_((struct String){.str = "tuple", .len = 5}, list_25);
     int call_158 = spaceIsEmpty_(call_157);
-    milone_assert(call_158);
+    milone_assert(call_158, 467, 2);
     int call_159 = 0;
     struct Space_Tuple1 tuple_64;
     tuple_64.t0 = spaceFull_;
@@ -1995,7 +1995,7 @@ int testSpaceIsEmpty_(struct Space_Space_Tuple2 arg_66, int arg_67) {
     struct Ty_ variant_3 = (struct Ty_){.tag = List_, .List_ = payload_3};
     struct Space_ call_160 = tyToSpace_(tuple_64, variant_3);
     int call_161 = spaceIsEmpty_(call_160);
-    milone_assert((!(call_161)));
+    milone_assert((!(call_161)), 469, 2);
     int call_162 = 0;
     struct Space_Tuple1 tuple_65;
     tuple_65.t0 = spaceFull_;
@@ -2007,7 +2007,7 @@ int testSpaceIsEmpty_(struct Space_Space_Tuple2 arg_66, int arg_67) {
     struct Ty_ variant_5 = (struct Ty_){.tag = List_, .List_ = payload_5};
     struct Space_ call_163 = tyToSpace_(tuple_65, variant_5);
     int call_164 = spaceIsEmpty_(call_163);
-    milone_assert((!(call_164)));
+    milone_assert((!(call_164)), 470, 2);
     int call_165 = 0;
     return 0;
 }
@@ -2128,7 +2128,7 @@ int testSpaceToString_(struct Space_Space_Tuple2 arg_69, int arg_70) {
     struct BoolList* call_176 = listMap_2(fun_45, cases_);
     int call_177 = listForAll_1(fun_44, call_176);
     int ok_ = call_177;
-    milone_assert(ok_);
+    milone_assert(ok_, 501, 2);
     int call_178 = 0;
     return 0;
 }

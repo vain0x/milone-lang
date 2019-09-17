@@ -22,7 +22,7 @@ int main() {
     (*(((int*)payload_))) = 1;
     struct NewTypeInt_ variant_ = (struct NewTypeInt_){.tag = NewTypeInt_, .NewTypeInt_ = payload_};
     int inner_ = (*(variant_.NewTypeInt_));
-    milone_assert((inner_ == 1));
+    milone_assert((inner_ == 1), 7, 2);
     int call_ = 0;
     return 0;
 }

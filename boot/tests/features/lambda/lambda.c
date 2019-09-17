@@ -58,14 +58,14 @@ int main() {
     struct IntIntFun1 fun_4 = (struct IntIntFun1){.fun = fun_2, .env = env_2};
     int call_2 = twice_1(fun_4, 40);
     int x_1 = call_2;
-    milone_assert((x_1 == 42));
+    milone_assert((x_1 == 42), 7, 2);
     int call_3 = 0;
     void* box_1 = (void*)malloc(sizeof(int));
     (*(((int*)box_1))) = 0;
     void* env_3 = box_1;
     struct IntIntIntFun2 fun_5 = (struct IntIntIntFun2){.fun = fun_3, .env = env_3};
     int app_2 = fun_5.fun(fun_5.env, 84, 2);
-    milone_assert((app_2 == 42));
+    milone_assert((app_2 == 42), 9, 2);
     int call_4 = 0;
     return 0;
 }

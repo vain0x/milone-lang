@@ -58,7 +58,7 @@ int main() {
     struct UnionB_ variant_ = (struct UnionB_){.tag = T_, .T_ = payload_};
     int match_;
     if (!(((struct UnionX_){.tag = VariantY_}.tag == VariantX_))) goto next_2;
-    milone_assert(0);
+    milone_assert(0, 17, 4);
     int call_ = 0;
     match_ = 0;
     goto end_match_1;

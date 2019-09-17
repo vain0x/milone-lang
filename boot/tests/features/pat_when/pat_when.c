@@ -31,13 +31,13 @@ int main() {
     tuple_.t0 = 1;
     tuple_.t1 = 1;
     int call_ = eq_(tuple_);
-    milone_assert(call_);
+    milone_assert(call_, 8, 2);
     int call_1 = 0;
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 1;
     tuple_1.t1 = 2;
     int call_2 = eq_(tuple_1);
-    milone_assert((!(call_2)));
+    milone_assert((!(call_2)), 9, 2);
     int call_3 = 0;
     return 0;
 }
