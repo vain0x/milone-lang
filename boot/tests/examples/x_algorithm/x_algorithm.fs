@@ -4,7 +4,7 @@ let neg (x : int) =
 let abs (x : int) =
   if x >= 0 then x else neg x
 
-let gcd (x : int) (y : int) =
+let rec gcd (x : int) (y : int) =
   if y = 0 then
     abs x
   else

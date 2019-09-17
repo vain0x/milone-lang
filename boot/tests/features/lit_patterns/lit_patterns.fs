@@ -5,7 +5,6 @@ let main _ =
   match true with
   | false -> assert false
   | true -> ()
-  | _ -> assert false
 
   match 1 with
   | 0 -> assert false

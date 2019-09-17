@@ -7,6 +7,6 @@ let main _ =
     )
   assert (x = 42)
 
-  assert ((fun x y -> x / y) 84 2 = 42)
+  assert ((fun x y -> x / y + 0) 84 2 = 42)
 
   0

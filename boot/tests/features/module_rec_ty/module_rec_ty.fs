@@ -1,3 +1,4 @@
+module rec ModuleRecTy.Program
 
 // Use of type reference defined later.
 type SynonymB = SynonymA

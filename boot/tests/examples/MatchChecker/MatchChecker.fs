@@ -217,10 +217,6 @@ let spaceUnion spaces =
 let rec spaceIsEmpty space =
   let result =
     match space with
-    | Space.Full
-    | Space.Ref _ ->
-      false
-
     | Space.Ctor (_, spaces) ->
       spaces |> listExists spaceIsEmpty
 
@@ -228,7 +224,7 @@ let rec spaceIsEmpty space =
       spaces |> listForAll spaceIsEmpty
 
     | _ ->
-      failwith "NEVER: suppress warning"
+      false
 
   result
 
@@ -289,6 +285,9 @@ let rec spaceExclude first second =
   // Full space excludes anything because wildcard patterns match anything.
   | _, Space.Full ->
     spaceEmpty
+
+  | Space.Full, Space.Ctor _ ->
+    spaceFull
 
   // Matching constructor reduces the space of items.
   | Space.Ctor (tag, firsts), Space.Ctor (secondTag, seconds)
@@ -413,9 +412,6 @@ let tyToSpace ty =
 
       spaceRef "list" thunk
 
-    | _ ->
-      failwith "NEVER"
-
   go ty
 
 /// Generates the space of a pattern.
@@ -441,7 +437,7 @@ let patToSpace pat =
       ]
 
     | _ ->
-      failwith "NEVER"
+      failwith "NEVER: suppress warning"
 
   go pat
 

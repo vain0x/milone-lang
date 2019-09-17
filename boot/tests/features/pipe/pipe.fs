@@ -15,6 +15,6 @@ let main _ =
     | [] -> 0
     | _ -> 1
 
-  assert (1 :: [] |> len <> 0)
+  assert (len [1] <> 0)
 
   0

@@ -3,9 +3,9 @@ let testTrivialCase () =
   | () -> ()
 
 let testListMatching () =
-  match 0 :: [] with
-  | _ :: _ :: [] -> assert false
-  | _ :: [] -> ()
+  match [0] with
+  | _ :: _ :: _ -> assert false
+  | [_] -> ()
   | [] -> assert false
 
 let testMatchArmsMakeScope () =

@@ -38,7 +38,7 @@ int fun_2(void* env_, int arg_) {
 }
 
 int fun_1(int x_3, int y_1) {
-    return (x_3 / y_1);
+    return ((x_3 / y_1) + 0);
 }
 
 int fun_3(void* env_1, int arg_1, int arg_2) {

@@ -12,11 +12,4 @@ let main _ =
     )
     assert (x = 0)
 
-  let case3 =
-    let x = 'A'
-    let x = 1
-    in
-      assert (x = 1)
-    assert (x = 'A')
-
   0

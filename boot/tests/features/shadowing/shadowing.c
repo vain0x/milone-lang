@@ -15,12 +15,5 @@ int main() {
     milone_assert((x_2 == 0), 12, 4);
     int call_2 = 0;
     int case2_ = 0;
-    char x_4 = 'A';
-    int x_5 = 1;
-    milone_assert((x_5 == 1), 18, 6);
-    int call_3 = 0;
-    milone_assert((x_4 == 'A'), 19, 4);
-    int call_4 = 0;
-    int case3_ = 0;
     return 0;
 }

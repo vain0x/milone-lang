@@ -35,8 +35,7 @@ int testListMatching_(int arg_1) {
     list_->tail = NULL;
     if (!((!((!(list_)))))) goto next_4;
     if (!((!((!(list_->tail)))))) goto next_4;
-    if (!((!(list_->tail->tail)))) goto next_4;
-    milone_assert(0, 6, 20);
+    milone_assert(0, 6, 19);
     int call_ = 0;
     match_1 = 0;
     goto end_match_3;

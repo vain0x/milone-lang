@@ -1,3 +1,5 @@
+module rec ModuleRecFun.Program
+
 let rec even n =
   n = 0 || odd (n - 1)
 
