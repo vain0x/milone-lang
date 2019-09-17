@@ -1,16 +1,16 @@
 let main _ =
-  if char 97 <> 'a' then exit 1
-  if char 0 <> '\u0000' then exit 1
+  assert (char 97 = 'a')
+  assert (char 0 = '\u0000')
 
-  if int 0 <> 0 then exit 1
-  if int 'a' - 97 <> 0 then exit 1
-  if int "42" - 42 <> 0 then exit 1
-  if int "-1" + 1 <> 0 then exit 1
+  assert (int 0 = 0)
+  assert (int 'a' - 97 = 0)
+  assert (int "42" - 42 = 0)
+  assert (int "-1" + 1 = 0)
 
-  if string 0 <> "0" then exit 1
-  if string (0 - 97) <> "-97" then exit 1
-  if string 'a' <> "a" then exit 1
-  if string '\u0000' <> "" then exit 1
-  if string "fix" <> "fix" then exit 1
+  assert (string 0 = "0")
+  assert (string (0 - 97) = "-97")
+  assert (string 'a' = "a")
+  assert (string '\u0000' = "")
+  assert (string "fix" = "fix")
 
   0

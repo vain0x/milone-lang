@@ -6,6 +6,6 @@ let eq (t: int * int) =
     false
 
 let main _ =
-  if eq (1, 1) |> not then exit 1
-  if eq (1, 2) then exit 1
+  assert (eq (1, 1))
+  assert (eq (1, 2) |> not)
   0

@@ -15,7 +15,7 @@ let main _ =
 
   match UnionX.VariantY with
   | VariantX -> // Is a variant pattern rather than variable
-    exit 1
+    assert false
   | _ ->
     ()
 

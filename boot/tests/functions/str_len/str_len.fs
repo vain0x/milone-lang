@@ -2,10 +2,10 @@ let main _ =
   let hello = "hello"
   let world = "world"
 
-  if hello.Length <> 5 then exit 1
+  assert (hello.Length = 5)
 
   let message = hello + world
-  if message.Length <> 10 then exit 1
+  assert (message.Length = 10)
 
-  if String.length hello <> 5 then exit 1
+  assert (String.length hello = 5)
   0

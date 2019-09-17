@@ -5,10 +5,8 @@ let main _ =
       let y = x + 1
       y
     )
-  if x <> 42 then
-    exit 1
+  assert (x = 42)
 
-  if (fun x y -> x / y) 84 2 <> 42 then
-    exit 1
+  assert ((fun x y -> x / y) 84 2 = 42)
 
   0

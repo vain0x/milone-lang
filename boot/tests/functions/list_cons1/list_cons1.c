@@ -17,13 +17,16 @@ int main() {
     if (!((!((!(list_)))))) goto next_2;
     int x1_ = list_->head;
     if (!((!(list_->tail)))) goto next_2;
-    match_ = (x1_ - 1);
+    milone_assert((x1_ == 1));
+    int call_ = 0;
+    match_ = 0;
     goto end_match_1;
 next_2:;
-    exit(1);
+    milone_assert(0);
+    int call_1 = 0;
     match_ = 0;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    return match_;
+    return 0;
 }

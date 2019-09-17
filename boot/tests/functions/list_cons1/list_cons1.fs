@@ -1,6 +1,7 @@
 let main _ =
   match 1 :: [] with
   | x1 :: [] ->
-    x1 - 1
+    assert (x1 = 1)
   | _ ->
-    exit 1
+    assert false
+  0
