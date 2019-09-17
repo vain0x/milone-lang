@@ -33,7 +33,7 @@ let main _ =
   let flip (x, y) = y, x
   match (1, "a") |> flip |> flip with
   | 1, "a" -> ()
-  | _ -> exit 1
+  | _ -> assert false
 
   match [1; 2] |> listRev, ["a"; "b"] |> listRev with
   | [2; 1], ["b"; "a"] -> ()

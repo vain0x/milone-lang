@@ -63,18 +63,8 @@ struct IntIntIntFun2 {
 int main() {
     exit(0);
     struct IntIntIntFun2 f_ = ((struct IntIntIntFun2){});
-    int match_;
     int app_ = f_.fun(f_.env, 2, 3);
-    if (!(((app_ != 5) == 1))) goto next_2;
-    exit(1);
-    match_ = 0;
-    goto end_match_1;
-next_2:;
-    if (!(((app_ != 5) == 0))) goto next_3;
-    match_ = 0;
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
+    milone_assert((app_ == 5), 20, 2);
+    int call_1 = 0;
     return 0;
 }

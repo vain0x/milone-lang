@@ -16,7 +16,6 @@ let main _ =
 
   let expr =
     Expr.Add (Expr.Int 11, Expr.Add (Expr.Int 22, Expr.Int 9))
-  if eval expr <> 42 then
-    exit 1
+  assert (eval expr = 42)
 
   0

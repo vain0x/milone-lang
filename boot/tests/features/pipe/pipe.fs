@@ -5,9 +5,9 @@ let between l r (x : int) = l <= x && x < r
 
 let main _ =
   let n = 1 |> inc |> twice |> twice
-  if n <> 16 then exit 1
+  assert (n = 16)
 
-  if (100 |> sub) 98 |> (between 2 3) |> not then exit 2
+  assert ((100 |> sub) 98 |> (between 2 3))
 
   // The fixity of `|>` is between `=` and `::`.
   let len (xs : int list) =
@@ -15,6 +15,6 @@ let main _ =
     | [] -> 0
     | _ -> 1
 
-  if 1 :: [] |> len = 0 then exit 1
+  assert (len [1] <> 0)
 
   0

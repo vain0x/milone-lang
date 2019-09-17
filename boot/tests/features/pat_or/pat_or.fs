@@ -6,8 +6,8 @@ let isZeroOrOne x =
   | _ -> false
 
 let simpleCase () =
-  if not (isZeroOrOne 0 && isZeroOrOne 1) then exit 1
-  if isZeroOrOne 2 then exit 1
+  assert (isZeroOrOne 0 && isZeroOrOne 1)
+  assert (isZeroOrOne 2 |> not)
 
 // Nested case.
 let startsWithDoubleBits xs =
@@ -18,8 +18,8 @@ let startsWithDoubleBits xs =
     false
 
 let nestedCase () =
-  if startsWithDoubleBits [0; 1; 2] |> not then exit 1
-  if startsWithDoubleBits [1; 2] then exit 1
+  assert (startsWithDoubleBits [0; 1; 2])
+  assert (startsWithDoubleBits [1; 2] |> not)
 
 // Complex case.
 type Expr =
@@ -33,8 +33,8 @@ let performComplexMatching expr =
     false
 
 let complexCase () =
-  if performComplexMatching (Add (0, 1)) |> not then exit 1
-  if performComplexMatching (Add (1, 2)) then exit 1
+  assert (performComplexMatching (Add (0, 1)))
+  assert (performComplexMatching (Add (1, 2)) |> not)
 
 let main _ =
   simpleCase ()

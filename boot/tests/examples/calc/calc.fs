@@ -6,11 +6,6 @@ type Token =
   | TkOp
     of char
 
-let assert ok =
-  if not ok then
-    printfn "Assertion failed."
-    exit 1
-
 let charEq (l: char) (r: char) =
   l = r
 

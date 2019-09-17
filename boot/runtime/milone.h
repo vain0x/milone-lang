@@ -67,8 +67,9 @@ struct String str_of_char(char value) {
   return (struct String){.str = str, .len = strlen(str)};
 }
 
-void milone_assert(int cond) {
+void milone_assert(int cond, int y, int x) {
   if (!cond) {
+    fprintf(stderr, "Assertion failed at (%d, %d)\n", y + 1, x + 1);
     exit(1);
   }
 }

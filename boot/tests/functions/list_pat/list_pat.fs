@@ -1,10 +1,10 @@
 let main _ =
   match [1; 2] with
   | [] ->
-    exit 1
+    assert false
   | [x; y] ->
     assert (x = 1 && y = 2)
   | _ ->
-    exit 1
+    assert false
 
   0

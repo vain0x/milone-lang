@@ -24,7 +24,7 @@ int go_(int i_1) {
     if (!(((i_1 < call_2) == 1))) goto next_2;
     struct String call_3 = argGet_(i_1);
     struct String call_4 = str_of_int(i_1);
-    milone_assert((str_cmp(call_3, str_add((struct String){.str = "#", .len = 1}, call_4)) != 0));
+    milone_assert((str_cmp(call_3, str_add((struct String){.str = "#", .len = 1}, call_4)) != 0), 10, 4);
     int call_5 = 0;
     int call_6 = go_((i_1 + 1));
     match_ = 0;

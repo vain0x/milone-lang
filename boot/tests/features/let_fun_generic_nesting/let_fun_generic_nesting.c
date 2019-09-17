@@ -82,16 +82,16 @@ struct String goo_1(struct String x_1) {
 
 int main() {
     int call_6 = id_2(1);
-    milone_assert((call_6 == 1));
+    milone_assert((call_6 == 1), 6, 2);
     int call_7 = 0;
     struct String call_8 = id_1((struct String){.str = "a", .len = 1});
-    milone_assert((str_cmp(call_8, (struct String){.str = "a", .len = 1}) == 0));
+    milone_assert((str_cmp(call_8, (struct String){.str = "a", .len = 1}) == 0), 7, 2);
     int call_9 = 0;
     int call_10 = goo_2(1);
-    milone_assert((call_10 == 1));
+    milone_assert((call_10 == 1), 14, 2);
     int call_11 = 0;
     struct String call_12 = goo_1((struct String){.str = "a", .len = 1});
-    milone_assert((str_cmp(call_12, (struct String){.str = "a", .len = 1}) == 0));
+    milone_assert((str_cmp(call_12, (struct String){.str = "a", .len = 1}) == 0), 15, 2);
     int call_13 = 0;
     return 0;
 }

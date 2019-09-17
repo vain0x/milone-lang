@@ -1,13 +1,10 @@
-let test pred =
-  if not pred then exit 1
-
 let neg (x : int) =
   0 - x
 
 let abs (x : int) =
   if x >= 0 then x else neg x
 
-let gcd (x : int) (y : int) =
+let rec gcd (x : int) (y : int) =
   if y = 0 then
     abs x
   else
@@ -18,16 +15,16 @@ let isPrime (x : int) =
   x >= 2 && go 2
 
 let main _ =
-  test (abs 0 = 0)
-  test (abs 1 = 1)
-  test (abs (neg 1) = 1)
+  assert (abs 0 = 0)
+  assert (abs 1 = 1)
+  assert (abs (neg 1) = 1)
 
-  test (gcd 1 1 = 1)
-  test (gcd 12 18 = 6)
-  test (gcd 4 (neg 6) = 2)
+  assert (gcd 1 1 = 1)
+  assert (gcd 12 18 = 6)
+  assert (gcd 4 (neg 6) = 2)
 
-  test (isPrime 2)
-  test (isPrime 3)
-  test (not (isPrime 4))
-  test (isPrime 1000000007)
+  assert (isPrime 2)
+  assert (isPrime 3)
+  assert (not (isPrime 4))
+  assert (isPrime 1000000007)
   0
