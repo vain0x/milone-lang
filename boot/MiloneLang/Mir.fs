@@ -611,7 +611,7 @@ let mirifyExprInf ctx infOp args ty loc =
     mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ ->
     mirifyExprInfCallClosure ctx callee args ty loc
-  | InfOp.Closure funSerial, [env], _ ->
+  | InfOp.Closure, [HExpr.Ref (_, HValRef.Var funSerial, _, _); env], _ ->
     mirifyExprInfClosure ctx funSerial env ty loc
   | t ->
     failwithf "Never: %A" t

@@ -419,7 +419,6 @@ type InfOp =
   | Nil
   /// Closure constructor.
   | Closure
-    of funSerial:int
 
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]

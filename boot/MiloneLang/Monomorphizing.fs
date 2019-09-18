@@ -300,11 +300,6 @@ let rec monifyExpr (expr, ctx) =
     let r, ctx = (r, ctx) |> monifyExpr
     HExpr.Bin (op, l, r, ty, loc), ctx
 
-  | HExpr.Inf (InfOp.Closure funSerial, args, useSiteTy, loc) ->
-    let funSerial, ctx = ctxProcessVarRef ctx funSerial useSiteTy
-    let args, ctx = (args, ctx) |> stMap monifyExpr
-    HExpr.Inf (InfOp.Closure funSerial, args, useSiteTy, loc), ctx
-
   | HExpr.Inf (infOp, args, ty, loc) ->
     let args, ctx = (args, ctx) |> stMap monifyExpr
     HExpr.Inf (infOp, args, ty, loc), ctx

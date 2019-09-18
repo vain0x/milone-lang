@@ -537,7 +537,8 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
   let argPats = envArgPat :: restArgPats
   let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
   let funLet next = HExpr.LetFun ("fun", funSerial, argPats, body, next, exprToTy next, callLoc)
-  funLet, funSerial, ctx
+  let funRef = HExpr.Ref ("fun", HValRef.Var funSerial, funTy, callLoc)
+  funLet, funRef, ctx
 
 let createEnvBoxExpr args envTy callLoc =
   let tuple = hxTuple args callLoc
@@ -558,12 +559,12 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
     envRefs @ restArgs
   let forwardExpr =
     hxCallProc callee forwardArgs resultTy callLoc
-  let funLet, funSerial, ctx =
+  let funLet, funRef, ctx =
     createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =
-    HExpr.Inf (InfOp.Closure funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
+    HExpr.Inf (InfOp.Closure, [funRef; envBoxExpr], appliedTy argLen funTy, callLoc)
   let expr =
     funLet funObjExpr
   expr, ctx
@@ -596,12 +597,12 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
 
   let forwardExpr =
     hxCallClosure calleeRef forwardArgs resultTy callLoc
-  let funLet, funSerial, ctx =
+  let funLet, funRef, ctx =
     createUnderlyingFunDef funTy arity envPat envTy forwardExpr restArgPats callLoc ctx
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let closureExpr =
-    HExpr.Inf (InfOp.Closure funSerial, [envBoxExpr], appliedTy argLen funTy, callLoc)
+    HExpr.Inf (InfOp.Closure, [funRef; envBoxExpr], appliedTy argLen funTy, callLoc)
   let expr =
     calleeLet (funLet closureExpr)
   expr, ctx
