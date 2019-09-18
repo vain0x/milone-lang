@@ -186,7 +186,7 @@ let ctxGeneralizeFun (ctx: TyCtx) (outerCtx: TyCtx) (bodyCtx: TyCtx) funSerial =
 let hxAbort (ctx: TyCtx) ty loc =
   let funTy = tyFun tyInt ty
   let exitExpr = HExpr.Ref ("exit", HValRef.Prim HPrim.Exit, funTy, loc)
-  let callExpr = HExpr.Bin (Op.App, exitExpr, HExpr.Lit (Lit.Int 1, loc), ty, loc)
+  let callExpr = hxApp exitExpr (HExpr.Lit (Lit.Int 1, loc)) ty loc
   callExpr, ctx
 
 let ctxUnifyVarTy varSerial ty loc ctx =
@@ -387,7 +387,7 @@ let inferNav ctx sub mes loc resultTy =
     | Ty.Con (TyCon.Str, []), "Length" ->
       let ctx = unifyTy ctx loc resultTy tyInt
       let funExpr = HExpr.Ref (mes, HValRef.Prim HPrim.StrLength, tyFun tyStr tyInt, loc)
-      Some (HExpr.Bin (Op.App, funExpr, sub, tyInt, loc), ctx)
+      Some (hxApp funExpr sub tyInt loc, ctx)
     | _ -> None
 
   let hxError () =
@@ -439,7 +439,7 @@ let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
     let ctx = unifyTy ctx loc funTy appTy
     HExpr.Ref (nativeFunIdent, HValRef.Prim (HPrim.NativeFun (nativeFunIdent, arity)), appTy, loc), ctx
   | _ ->
-    HExpr.Bin (Op.App, callee, arg, appTy, loc), ctx
+    hxApp callee arg appTy loc, ctx
 
 let inferOpAppPrintfn ctx ident arg calleeTy loc =
   match arg with
@@ -457,18 +457,18 @@ let inferOpApp ctx callee arg loc appTy =
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
   match callee with
-  | HExpr.Bin (Op.App, HExpr.Ref (_, HValRef.Prim (HPrim.NativeFun _), _, _), firstArg, _, _) ->
+  | HExpr.Inf (InfOp.Bin Op.App, [HExpr.Ref (_, HValRef.Prim (HPrim.NativeFun _), _, _); firstArg], _, _) ->
     inferOpAppNativeFun ctx callee firstArg arg appTy loc
   | HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, calleeTy, loc) ->
     let callee, ctx = inferOpAppPrintfn ctx ident arg calleeTy loc
-    HExpr.Bin (Op.App, callee, arg, appTy, loc), ctx
+    hxApp callee arg appTy loc, ctx
   | _ ->
-    HExpr.Bin (Op.App, callee, arg, appTy, loc), ctx
+    hxApp callee arg appTy loc, ctx
 
 let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
   let left, ctx = inferExpr ctx left operandTy
   let right, ctx = inferExpr ctx right operandTy
-  HExpr.Bin (op, left, right, resultTy, loc), ctx
+  hxBin op left right resultTy loc, ctx
 
 let inferOpAdd (ctx: TyCtx) op left right loc resultTy =
   let _, operandLoc = left |> exprExtract
@@ -498,7 +498,7 @@ let inferOpCons ctx left right loc listTy =
   let ctx = unifyTy ctx loc listTy (tyList itemTy)
   let left, ctx = inferExpr ctx left itemTy
   let right, ctx = inferExpr ctx right listTy
-  HExpr.Bin (Op.Cons, left, right, listTy, loc), ctx
+  hxBin Op.Cons left right listTy loc, ctx
 
 let inferBin (ctx: TyCtx) op left right loc ty =
   match op with
@@ -647,7 +647,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferMatch ctx target arms loc ty
   | HExpr.Nav (receiver, field,  _,loc) ->
     inferNav ctx receiver field loc ty
-  | HExpr.Bin (op, l, r, _, loc) ->
+  | HExpr.Inf (InfOp.Bin op, [l; r], _, loc) ->
     inferBin ctx op l r loc ty
   | HExpr.Inf (InfOp.Nil, [], _, loc) ->
     inferNil ctx loc ty
@@ -665,6 +665,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferExprTyDecl ctx ident oldSerial tyDef loc
   | HExpr.Open (path, loc) ->
     inferExprOpen ctx path ty loc
+  | HExpr.Inf (InfOp.Bin _, _, _, _)
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.Closure _, _, _, _)
   | HExpr.Inf (InfOp.CallProc, _, _, _)

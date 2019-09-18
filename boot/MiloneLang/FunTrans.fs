@@ -278,9 +278,7 @@ let declosureExprApp expr resultTy loc ctx =
   /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
   let rec roll acc callee =
     match callee with
-    | HExpr.Bin (Op.App, callee, arg, _, _) ->
-      roll (arg :: acc) callee
-    | HExpr.Bin (Op.Pipe, arg, callee, _, _) ->
+    | HExpr.Inf (InfOp.Bin Op.App, [callee; arg], _, _) ->
       roll (arg :: acc) callee
     | _ ->
       callee, acc
@@ -343,14 +341,13 @@ let declosureExprTyDecl expr tyDecl ctx =
       ) ctx
     expr, ctx
 
-let declosureExprBin ctx op l r ty loc =
-  let l, ctx = declosureExpr (l, ctx)
-  let r, ctx = declosureExpr (r, ctx)
-  HExpr.Bin (op, l, r, ty, loc), ctx
-
-let declosureExprInf ctx infOp items ty loc =
-  let items, ctx = (items, ctx) |> stMap declosureExpr
-  HExpr.Inf (infOp, items, ty, loc), ctx
+let declosureExprInf ctx expr infOp items ty loc =
+  match infOp with
+  | InfOp.Bin Op.App ->
+    declosureExprApp expr ty loc ctx
+  | _ ->
+    let items, ctx = (items, ctx) |> stMap declosureExpr
+    HExpr.Inf (infOp, items, ty, loc), ctx
 
 let declosureExprMatch target arms ty loc ctx =
   let target, ctx = declosureExpr (target, ctx)
@@ -375,12 +372,8 @@ let declosureExpr (expr, ctx) =
   | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = declosureExpr (subject, ctx)
     HExpr.Nav (subject, message, ty, loc), ctx
-  | HExpr.Bin (Op.App, _, _, ty, loc) ->
-    declosureExprApp expr ty loc ctx
-  | HExpr.Bin (op, l, r, ty, loc) ->
-    declosureExprBin ctx op l r ty loc
   | HExpr.Inf (infOp, items, ty, loc) ->
-    declosureExprInf ctx infOp items ty loc
+    declosureExprInf ctx expr infOp items ty loc
   | HExpr.Let (pat, body, next, ty, loc) ->
     declosureExprLetVal pat body next ty loc ctx
   | HExpr.LetFun (ident, callee, args, body, next, ty, loc) ->
@@ -718,10 +711,6 @@ let unetaExpr (expr, ctx) =
   | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = unetaExpr (subject, ctx)
     HExpr.Nav (subject, message, ty, loc), ctx
-  | HExpr.Bin (op, l, r, ty, loc) ->
-    let l, ctx = (l, ctx) |> unetaExpr
-    let r, ctx = (r, ctx) |> unetaExpr
-    HExpr.Bin (op, l, r, ty, loc), ctx
   | HExpr.Inf (infOp, args, ty, loc) ->
     unetaExprInf infOp args ty loc ctx
   | HExpr.Let (pat, init, next, ty, loc) ->

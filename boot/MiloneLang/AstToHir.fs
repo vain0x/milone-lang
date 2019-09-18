@@ -299,7 +299,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     | false, _ ->
       let l, nameCtx = (l, nameCtx) |> onExpr
       let r, nameCtx = (r, nameCtx) |> onExpr
-      HExpr.Bin (Op.Index, l, r, noTy, loc), nameCtx
+      hxIndex l r noTy loc, nameCtx
 
   | AExpr.Uni (UniOp.Neg, arg, loc) ->
     let expr = desugarUniNeg arg loc
@@ -320,23 +320,24 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   | AExpr.Bin (op, l, r, loc) ->
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr
-    HExpr.Bin (op, l, r, noTy, loc), nameCtx
+    hxBin op l r noTy loc, nameCtx
 
   | AExpr.Range (_, loc) ->
     HExpr.Error ("Invalid use of range syntax.", loc), nameCtx
 
   | AExpr.TupleLit (items, loc) ->
     let items, nameCtx = (items, nameCtx) |> stMap onExpr
-    HExpr.Inf (InfOp.Tuple, items, noTy, loc), nameCtx
+    hxTuple items loc, nameCtx
 
   | AExpr.Anno (body, ty, loc) ->
     let body, nameCtx = (body, nameCtx) |> onExpr
     let ty, nameCtx = (ty, nameCtx) |> onTy
-    HExpr.Inf (InfOp.Anno, [body], ty, loc), nameCtx
+    hxAnno body ty loc, nameCtx
 
   | AExpr.Semi (exprs, loc) ->
+    assert (exprs |> listIsEmpty |> not)
     let exprs, nameCtx = (exprs, nameCtx) |> stMap onExpr
-    HExpr.Inf (InfOp.Semi, exprs, noTy, loc), nameCtx
+    hxSemi exprs loc, nameCtx
 
   | AExpr.Let (pat, body, next, loc) ->
     match desugarLet pat body next loc with

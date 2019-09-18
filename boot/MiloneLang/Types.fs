@@ -405,6 +405,9 @@ type Lit =
 
 [<RequireQualifiedAccess>]
 type InfOp =
+  /// Binary operation.
+  | Bin
+    of Op
   /// Type annotation `x : 'x`.
   | Anno
   /// `x; y`
@@ -457,9 +460,6 @@ type HExpr =
   /// `s.m`
   | Nav
     of subject:HExpr * message:string * Ty * Loc
-  /// Binary operation, e.g. `x + y`.
-  | Bin
-    of Op * HExpr * HExpr * Ty * Loc
   /// Operation with infinite arguments.
   | Inf
     of InfOp * HExpr list * Ty * Loc

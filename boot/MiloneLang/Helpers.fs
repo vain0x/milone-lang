@@ -353,8 +353,14 @@ let hxTrue loc =
 let hxFalse loc =
   HExpr.Lit (litFalse, loc)
 
+let hxBin op l r ty loc =
+  HExpr.Inf (InfOp.Bin op, [l; r], ty, loc)
+
+let hxApp f x ty loc =
+  HExpr.Inf (InfOp.Bin Op.App, [f; x], ty, loc)
+
 let hxIndex l r ty loc =
-  HExpr.Bin (Op.Index, l, r, ty, loc)
+  HExpr.Inf (InfOp.Bin Op.Index, [l; r], ty, loc)
 
 let hxAnno expr ty loc =
   HExpr.Inf (InfOp.Anno, [expr], ty, loc)
@@ -401,8 +407,6 @@ let exprExtract (expr: HExpr): Ty * Loc =
     ty, a
   | HExpr.Nav (_, _, ty, a) ->
     ty, a
-  | HExpr.Bin (_, _, _, ty, a) ->
-    ty, a
   | HExpr.Inf (_, _, ty, a) ->
     ty, a
   | HExpr.Let (_, _, _, ty, a) ->
@@ -432,8 +436,6 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Match (go target, arms, f ty, g a)
     | HExpr.Nav (sub, mes, ty, a) ->
       HExpr.Nav (go sub, mes, f ty, g a)
-    | HExpr.Bin (op, l, r, ty, a) ->
-      HExpr.Bin (op, go l, go r, f ty, g a)
     | HExpr.Inf (infOp, args, resultTy, a) ->
       HExpr.Inf (infOp, List.map go args, f resultTy, g a)
     | HExpr.Let (pat, init, next, ty, a) ->
