@@ -278,7 +278,7 @@ let declosureExprApp expr resultTy loc ctx =
   /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
   let rec roll acc callee =
     match callee with
-    | HExpr.Inf (InfOp.Bin Op.App, [callee; arg], _, _) ->
+    | HExpr.Inf (InfOp.App, [callee; arg], _, _) ->
       roll (arg :: acc) callee
     | _ ->
       callee, acc
@@ -343,7 +343,7 @@ let declosureExprTyDecl expr tyDecl ctx =
 
 let declosureExprInf ctx expr infOp items ty loc =
   match infOp with
-  | InfOp.Bin Op.App ->
+  | InfOp.App ->
     declosureExprApp expr ty loc ctx
   | _ ->
     let items, ctx = (items, ctx) |> stMap declosureExpr
@@ -632,24 +632,7 @@ let unetaCall callee args resultTy loc ctx =
     let args, ctx = (args, ctx) |> stMap unetaExpr
     unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
   | HExpr.Ref (_, HValRef.Prim prim, primTy, calleeLoc), _ ->
-    let arity =
-      match prim with
-      | HPrim.Not
-      | HPrim.Exit
-      | HPrim.Assert
-      | HPrim.Box
-      | HPrim.Unbox
-      | HPrim.StrLength
-      | HPrim.Char
-      | HPrim.Int
-      | HPrim.String ->
-        1
-      | HPrim.StrGetSlice ->
-        3
-      | HPrim.Printfn ->
-        primTy |> tyToArity
-      | HPrim.NativeFun (_, arity) ->
-        arity
+    let arity = prim |> primToArity primTy
     let args, ctx = (args, ctx) |> stMap unetaExpr
     unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
   | _, args ->
@@ -661,7 +644,7 @@ let unetaCall callee args resultTy loc ctx =
   | _ ->
     failwith "Never"
 
-let unetaRef expr valRef calleeLoc (ctx: FunTransCtx) =
+let unetaRef expr valRef refTy calleeLoc (ctx: FunTransCtx) =
   match valRef with
   | HValRef.Var serial ->
     match ctx.Vars |> Map.tryFind serial with
@@ -670,8 +653,11 @@ let unetaRef expr valRef calleeLoc (ctx: FunTransCtx) =
     | _ ->
       expr, ctx
   | HValRef.Prim prim ->
-    let arity = primToArity prim
-    resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
+    let arity = prim |> primToArity refTy
+    if arity = 0 then
+      expr, ctx
+    else
+      resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
 let unetaExprInf infOp args ty loc ctx =
   match infOp, args with
@@ -698,8 +684,8 @@ let unetaExpr (expr, ctx) =
   | HExpr.Open _
   | HExpr.Error _ ->
     expr, ctx
-  | HExpr.Ref (_, valRef, _, calleeLoc) ->
-    unetaRef expr valRef calleeLoc ctx
+  | HExpr.Ref (_, valRef, refTy, calleeLoc) ->
+    unetaRef expr valRef refTy calleeLoc ctx
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> unetaExpr
     let arms, ctx = (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->

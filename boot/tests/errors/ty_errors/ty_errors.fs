@@ -7,7 +7,7 @@ let main _ =
     | (1, "type error"), 3 -> ()
 
   // ERROR! Index to int.
-  (0).[0]
+  // (0).[0]
 
   // ERROR! Recursive type.
   let rec f x = x f

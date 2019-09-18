@@ -53,7 +53,6 @@ next_5:;
     exit(1);
 end_match_4:;
     int deepUnificationError_ = 0;
-    exit(1);
     return 0;
 }
 
@@ -63,12 +62,9 @@ end_match_4:;
 #line 7
 #error 7:7 While unifying 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Int,[])]); Con (Int,[])])' and 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Str,[])]); Con (Int,[])])', failed to unify 'Con (Int,[])' and 'Con (Str,[])'.
 
-#line 10
-#error 10:6 Type: Index not supported
-
 #line 13
-#error 13:17 Couldn't unify 'Meta (42,(12, 12))' and 'Con
-  (Fun,[Con (Fun,[Meta (42,(12, 12)); Meta (40,(12, 16))]); Meta (40,(12, 16))])' due to self recursion.
+#error 13:17 Couldn't unify 'Meta (40,(12, 12))' and 'Con
+  (Fun,[Con (Fun,[Meta (40,(12, 12)); Meta (38,(12, 16))]); Meta (38,(12, 16))])' due to self recursion.
 
 #line 15
 #error 15:3 While unifying 'Con (Int,[])' and 'Con (Tuple,[])', failed to unify 'Con (Int,[])' and 'Con (Tuple,[])'.

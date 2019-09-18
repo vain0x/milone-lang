@@ -216,8 +216,10 @@ let litToTy (lit: Lit): Ty =
 // Primitives (HIR)
 // -----------------------------------------------
 
-let primToArity prim =
+let primToArity ty prim =
   match prim with
+  | HPrim.Nil ->
+    0
   | HPrim.Not
   | HPrim.Exit
   | HPrim.Assert
@@ -228,10 +230,24 @@ let primToArity prim =
   | HPrim.Int
   | HPrim.String ->
     1
+  | HPrim.Add
+  | HPrim.Sub
+  | HPrim.Mul
+  | HPrim.Div
+  | HPrim.Mod
+  | HPrim.Eq
+  | HPrim.Ne
+  | HPrim.Lt
+  | HPrim.Le
+  | HPrim.Gt
+  | HPrim.Ge
+  | HPrim.Cons
+  | HPrim.Index ->
+    2
   | HPrim.StrGetSlice ->
     3
   | HPrim.Printfn ->
-    9999
+    ty |> tyToArity
   | HPrim.NativeFun (_, arity) ->
     arity
 
@@ -353,14 +369,8 @@ let hxTrue loc =
 let hxFalse loc =
   HExpr.Lit (litFalse, loc)
 
-let hxBin op l r ty loc =
-  HExpr.Inf (InfOp.Bin op, [l; r], ty, loc)
-
 let hxApp f x ty loc =
-  HExpr.Inf (InfOp.Bin Op.App, [f; x], ty, loc)
-
-let hxIndex l r ty loc =
-  HExpr.Inf (InfOp.Bin Op.Index, [l; r], ty, loc)
+  HExpr.Inf (InfOp.App, [f; x], ty, loc)
 
 let hxAnno expr ty loc =
   HExpr.Inf (InfOp.Anno, [expr], ty, loc)
@@ -381,7 +391,7 @@ let hxUnit loc =
   hxTuple [] loc
 
 let hxNil itemTy loc =
-  HExpr.Inf (InfOp.Nil, [], tyList itemTy, loc)
+  HExpr.Ref ("[]", HValRef.Prim HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with

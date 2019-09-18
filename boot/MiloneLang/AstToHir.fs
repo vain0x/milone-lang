@@ -46,6 +46,51 @@ let axApp3 f x1 x2 x3 loc =
   let app x f = AExpr.Bin (Op.App, f, x, loc)
   f |> app x1 |> app x2 |> app x3
 
+let opToPrim op =
+  match op with
+  | Op.Add ->
+    HPrim.Add
+
+  | Op.Sub ->
+    HPrim.Sub
+
+  | Op.Mul ->
+    HPrim.Mul
+
+  | Op.Div ->
+    HPrim.Div
+
+  | Op.Mod ->
+    HPrim.Mod
+
+  | Op.Eq ->
+    HPrim.Eq
+
+  | Op.Ne ->
+    HPrim.Ne
+
+  | Op.Lt ->
+    HPrim.Lt
+
+  | Op.Le ->
+    HPrim.Le
+
+  | Op.Gt ->
+    HPrim.Gt
+
+  | Op.Ge ->
+    HPrim.Ge
+
+  | Op.Cons ->
+    HPrim.Cons
+
+  | Op.And
+  | Op.Or
+  | Op.App
+  | Op.Index
+  | Op.Pipe ->
+    failwithf "NEVER: %A" op
+
 /// `[x; y; ..]`. Desugar to a chain of (::).
 let desugarListLitPat pats loc =
   assert (pats |> listIsEmpty |> not)
@@ -299,7 +344,8 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     | false, _ ->
       let l, nameCtx = (l, nameCtx) |> onExpr
       let r, nameCtx = (r, nameCtx) |> onExpr
-      hxIndex l r noTy loc, nameCtx
+      let hxIndex = hxApp (hxApp (HExpr.Ref (".[]", HValRef.Prim HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
+      hxIndex, nameCtx
 
   | AExpr.Uni (UniOp.Neg, arg, loc) ->
     let expr = desugarUniNeg arg loc
@@ -317,10 +363,17 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     let expr = desugarBinPipe l r loc
     (expr, nameCtx) |> onExpr
 
-  | AExpr.Bin (op, l, r, loc) ->
+  | AExpr.Bin (Op.App, l, r, loc) ->
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr
-    hxBin op l r noTy loc, nameCtx
+    hxApp l r noTy loc, nameCtx
+
+  | AExpr.Bin (op, l, r, loc) ->
+    let prim = op |> opToPrim
+    let l, nameCtx = (l, nameCtx) |> onExpr
+    let r, nameCtx = (r, nameCtx) |> onExpr
+    let refExpr = HExpr.Ref ("?op", HValRef.Prim prim, noTy, loc)
+    hxApp (hxApp refExpr l noTy loc) r noTy loc, nameCtx
 
   | AExpr.Range (_, loc) ->
     HExpr.Error ("Invalid use of range syntax.", loc), nameCtx

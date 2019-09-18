@@ -289,7 +289,53 @@ let inferRef (ctx: TyCtx) ident serial loc ty =
   HExpr.Ref (ident, HValRef.Var serial, ty, loc), ctx
 
 let inferPrim ctx ident prim loc ty =
+  let aux primTy ctx =
+    let ctx = unifyTy ctx loc primTy ty
+    HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
+
   match prim with
+  | HPrim.Add ->
+    // FIXME: addTy: int | str
+    let addTy, _, ctx = ctxFreshTyVar "add" loc ctx
+    aux (tyFun addTy (tyFun addTy addTy)) ctx
+
+  | HPrim.Sub ->
+    aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
+
+  | HPrim.Mul ->
+    aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
+
+  | HPrim.Div ->
+    aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
+
+  | HPrim.Mod ->
+    aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
+
+  | HPrim.Eq
+  | HPrim.Ne ->
+    let eqTy, _, ctx = ctxFreshTyVar "eq" loc ctx
+    aux (tyFun eqTy (tyFun eqTy tyBool)) ctx
+
+  | HPrim.Lt
+  | HPrim.Le
+  | HPrim.Gt
+  | HPrim.Ge ->
+    let cmpTy, _, ctx = ctxFreshTyVar "cmp" loc ctx
+    aux (tyFun cmpTy (tyFun cmpTy tyBool)) ctx
+
+  | HPrim.Nil ->
+    let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
+    aux (tyList itemTy) ctx
+
+  | HPrim.Cons ->
+    let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
+    let listTy = tyList itemTy
+    aux (tyFun itemTy (tyFun listTy listTy)) ctx
+
+  | HPrim.Index ->
+    // FIXME: don't unify here
+    aux (tyFun tyStr (tyFun tyInt tyChar)) ctx
+
   | HPrim.Not ->
     let ctx = unifyTy ctx loc (tyFun tyBool tyBool) ty
     HExpr.Ref (ident, HValRef.Prim HPrim.Not, ty, loc), ctx
@@ -406,24 +452,6 @@ let inferNav ctx sub mes loc resultTy =
 
   hxError ()
 
-/// `x.[i] : 'y` <== x : 'x, i : int
-/// NOTE: Currently only the `x : string` case can compile, however,
-/// we don't infer that for compatibility.
-let inferIndex ctx l r loc resultTy =
-  let _, subLoc = l |> exprExtract
-  let subTy, _, ctx = ctxFreshTyVar "sub" subLoc ctx
-  let indexTy, _, ctx = ctxFreshTyVar "index" loc ctx
-  let l, ctx = inferExpr ctx l subTy
-  let r, ctx = inferExpr ctx r indexTy
-  match substTy ctx subTy, substTy ctx indexTy with
-  | Ty.Con (TyCon.Str, _), _ ->
-    let ctx = unifyTy ctx loc indexTy tyInt
-    let ctx = unifyTy ctx loc resultTy tyChar
-    hxIndex l r resultTy loc, ctx
-  | _ ->
-    let ctx = ctxAddErr ctx "Type: Index not supported" loc
-    hxAbort ctx resultTy loc
-
 let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
   match firstArg, arg with
   | HExpr.Lit (Lit.Str nativeFunIdent, _),
@@ -457,75 +485,13 @@ let inferOpApp ctx callee arg loc appTy =
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
   match callee with
-  | HExpr.Inf (InfOp.Bin Op.App, [HExpr.Ref (_, HValRef.Prim (HPrim.NativeFun _), _, _); firstArg], _, _) ->
+  | HExpr.Inf (InfOp.App, [HExpr.Ref (_, HValRef.Prim (HPrim.NativeFun _), _, _); firstArg], _, _) ->
     inferOpAppNativeFun ctx callee firstArg arg appTy loc
   | HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, calleeTy, loc) ->
     let callee, ctx = inferOpAppPrintfn ctx ident arg calleeTy loc
     hxApp callee arg appTy loc, ctx
   | _ ->
     hxApp callee arg appTy loc, ctx
-
-let inferOpCore (ctx: TyCtx) op left right loc operandTy resultTy =
-  let left, ctx = inferExpr ctx left operandTy
-  let right, ctx = inferExpr ctx right operandTy
-  hxBin op left right resultTy loc, ctx
-
-let inferOpAdd (ctx: TyCtx) op left right loc resultTy =
-  let _, operandLoc = left |> exprExtract
-  let operandTy, _, ctx = ctxFreshTyVar "operand" operandLoc ctx
-  let ctx = unifyTy ctx loc operandTy resultTy
-  let expr, ctx = inferOpCore ctx op left right loc operandTy resultTy
-  match substTy ctx operandTy with
-  | Ty.Con ((TyCon.Int | TyCon.Str), _) ->
-    expr, ctx
-  | ty ->
-    let ctx = ctxAddErr ctx (sprintf "Type: No support (+) for %A" ty) loc
-    hxAbort ctx resultTy loc
-
-let inferOpArith (ctx: TyCtx) op left right loc resultTy =
-  let ctx = unifyTy ctx loc resultTy tyInt
-  inferOpCore ctx op left right loc tyInt resultTy
-
-let inferOpCmp (ctx: TyCtx) op left right loc resultTy =
-  let _, operandLoc = left |> exprExtract
-  let operandTy, _, ctx = ctxFreshTyVar "operand" operandLoc ctx
-  let ctx = unifyTy ctx loc resultTy tyBool
-  inferOpCore ctx op left right loc operandTy resultTy
-
-let inferOpCons ctx left right loc listTy =
-  let _, itemLoc = left |> exprExtract
-  let itemTy, _, ctx = ctxFreshTyVar "item" itemLoc ctx
-  let ctx = unifyTy ctx loc listTy (tyList itemTy)
-  let left, ctx = inferExpr ctx left itemTy
-  let right, ctx = inferExpr ctx right listTy
-  hxBin Op.Cons left right listTy loc, ctx
-
-let inferBin (ctx: TyCtx) op left right loc ty =
-  match op with
-  | Op.Add ->
-    inferOpAdd ctx op left right loc ty
-  | Op.Sub
-  | Op.Mul
-  | Op.Div
-  | Op.Mod ->
-    inferOpArith ctx op left right loc ty
-  | Op.Eq
-  | Op.Ne
-  | Op.Lt
-  | Op.Le
-  | Op.Gt
-  | Op.Ge ->
-    inferOpCmp ctx op left right loc ty
-  | Op.App ->
-    inferOpApp ctx left right loc ty
-  | Op.Cons _ ->
-    inferOpCons ctx left right loc ty
-  | Op.Index ->
-    inferIndex ctx left right loc ty
-  | Op.And
-  | Op.Or
-  | Op.Pipe ->
-    failwith "Never: Desugared operators"
 
 let inferTuple (ctx: TyCtx) items loc tupleTy =
   let rec go acc itemTys ctx items =
@@ -647,10 +613,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferMatch ctx target arms loc ty
   | HExpr.Nav (receiver, field,  _,loc) ->
     inferNav ctx receiver field loc ty
-  | HExpr.Inf (InfOp.Bin op, [l; r], _, loc) ->
-    inferBin ctx op l r loc ty
-  | HExpr.Inf (InfOp.Nil, [], _, loc) ->
-    inferNil ctx loc ty
+  | HExpr.Inf (InfOp.App, [callee; arg], _, loc) ->
+    inferOpApp ctx callee arg loc ty
   | HExpr.Inf (InfOp.Tuple, items, _, loc) ->
     inferTuple ctx items loc ty
   | HExpr.Inf (InfOp.Anno, [expr], annoTy, loc) ->
@@ -665,12 +629,11 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferExprTyDecl ctx ident oldSerial tyDef loc
   | HExpr.Open (path, loc) ->
     inferExprOpen ctx path ty loc
-  | HExpr.Inf (InfOp.Bin _, _, _, _)
   | HExpr.Inf (InfOp.Anno, _, _, _)
+  | HExpr.Inf (InfOp.App, _, _, _)
   | HExpr.Inf (InfOp.Closure _, _, _, _)
   | HExpr.Inf (InfOp.CallProc, _, _, _)
-  | HExpr.Inf (InfOp.CallClosure, _, _, _)
-  | HExpr.Inf (InfOp.Nil, _, _, _) ->
+  | HExpr.Inf (InfOp.CallClosure, _, _, _) ->
     failwith "Never"
   | HExpr.Error (error, loc) ->
     let ctx = ctxAddErr ctx error loc

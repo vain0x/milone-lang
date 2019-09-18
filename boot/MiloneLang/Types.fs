@@ -405,9 +405,7 @@ type Lit =
 
 [<RequireQualifiedAccess>]
 type InfOp =
-  /// Binary operation.
-  | Bin
-    of Op
+  | App
   /// Type annotation `x : 'x`.
   | Anno
   /// `x; y`
@@ -418,14 +416,26 @@ type InfOp =
   | CallClosure
   /// Tuple constructor, e.g. `x, y, z`.
   | Tuple
-  /// `[]`
-  | Nil
   /// Closure constructor.
   | Closure
 
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]
 type HPrim =
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Mod
+  | Eq
+  | Ne
+  | Lt
+  | Le
+  | Gt
+  | Ge
+  | Nil
+  | Cons
+  | Index
   | Not
   | Exit
   | Assert

@@ -92,26 +92,6 @@ let ctxIsVariantFun (ctx: MirCtx) serial =
   | _ ->
     false
 
-let mopFrom op =
-  match op with
-  | Op.Add -> MOp.Add
-  | Op.Sub -> MOp.Sub
-  | Op.Mul -> MOp.Mul
-  | Op.Div -> MOp.Div
-  | Op.Mod -> MOp.Mod
-  | Op.Eq -> MOp.Eq
-  | Op.Ne -> MOp.Ne
-  | Op.Lt -> MOp.Lt
-  | Op.Le -> MOp.Le
-  | Op.Gt
-  | Op.Ge
-  | Op.Pipe
-  | Op.And
-  | Op.Or
-  | Op.App
-  | Op.Cons _
-  | Op.Index -> failwith "Never: We don't use > >= && || :: in MIR"
-
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
 let projExpr expr index resultTy loc =
@@ -273,8 +253,13 @@ let mirifyExprRef (ctx: MirCtx) valRef ty loc =
       MExpr.Proc (serial, ty, loc), ctx
     | _ ->
       MExpr.Ref (serial, ty, loc), ctx
-  | HValRef.Prim _ ->
-    failwithf "Never: Primitives must appear as callee."
+
+  | HValRef.Prim prim ->
+    match prim with
+    | HPrim.Nil ->
+      MExpr.Default (ty, loc), ctx
+    | _ ->
+      failwithf "Never: Primitives must appear as callee."
 
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
@@ -502,42 +487,26 @@ let mirifyExprTuple ctx items itemTys loc =
   let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Tuple items, ty, loc))
   MExpr.Ref (tempSerial, ty, loc), ctx
 
-let mirifyExprBin ctx op l r ty loc =
-  match op with
-  | Op.Cons ->
-    mirifyExprOpCons ctx l r ty loc
-  | Op.Index ->
-    mirifyExprIndex ctx l r ty loc
-  | Op.Gt ->
-    mirifyExprBin ctx Op.Lt r l ty loc
-  | Op.Ge ->
-    mirifyExprBin ctx Op.Le r l ty loc
-  | Op.Eq
-  | Op.Ne
-  | Op.Lt
-  | Op.Le ->
-    let op = mopFrom op
-    let l, ctx = mirifyExpr ctx l
-    let r, ctx = mirifyExpr ctx r
-    cmpExpr ctx op l r ty loc
-  | Op.And
-  | Op.Or
-  | Op.Pipe ->
-    failwith "Never: Desugared operators"
-  | Op.App ->
-    failwith "Never: Apps erased in FunTrans."
+let mirifyExprOpArith ctx op l r ty loc =
+  let lTy = exprToTy l
+  let l, ctx = mirifyExpr ctx l
+  let r, ctx = mirifyExpr ctx r
+
+  match lTy with
+  | Ty.Con ((TyCon.Int | TyCon.Char), _) ->
+    opScalarExpr ctx op l r (ty, loc)
+
+  | Ty.Con (TyCon.Str, _) when op = MOp.Add ->
+    strAddExpr ctx op l r (ty, loc)
+
   | _ ->
-    let op = mopFrom op
-    let lTy = exprToTy l
-    let l, ctx = mirifyExpr ctx l
-    let r, ctx = mirifyExpr ctx r
-    match lTy with
-    | Ty.Con ((TyCon.Int | TyCon.Char), _) ->
-      opScalarExpr ctx op l r (ty, loc)
-    | Ty.Con (TyCon.Str, _) when op = MOp.Add ->
-      strAddExpr ctx op l r (ty, loc)
-    | _ ->
-      failwithf "unimpl"
+    eprintfn "Arithmetic operator %A is not implemented (ty = %A)" op ty
+    MExpr.Default (ty, loc), ctx
+
+let mirifyExprOpCmp ctx op l r ty loc =
+  let l, ctx = mirifyExpr ctx l
+  let r, ctx = mirifyExpr ctx r
+  cmpExpr ctx op l r ty loc
 
 let mirifyExprSemi ctx exprs =
   // Discard non-last expressions.
@@ -560,23 +529,54 @@ let mirifyExprInfCallProc ctx callee args ty loc =
       let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
       let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.CallProc (callee, args, calleeTy), ty, loc))
       temp, ctx
-  match args with
-  | [arg] ->
-    match callee with
-    | HExpr.Ref (_, HValRef.Prim HPrim.Not, _, _) ->
+
+  match callee, args with
+  | HExpr.Ref (_, HValRef.Prim prim, _, _), _ ->
+    match prim, args with
+    | HPrim.Add, [l; r] ->
+      mirifyExprOpArith ctx MOp.Add l r ty loc
+    | HPrim.Sub, [l; r] ->
+      mirifyExprOpArith ctx MOp.Sub l r ty loc
+    | HPrim.Mul, [l; r] ->
+      mirifyExprOpArith ctx MOp.Mul l r ty loc
+    | HPrim.Div, [l; r] ->
+      mirifyExprOpArith ctx MOp.Div l r ty loc
+    | HPrim.Mod, [l; r] ->
+      mirifyExprOpArith ctx MOp.Mod l r ty loc
+    | HPrim.Eq, [l; r] ->
+      mirifyExprOpCmp ctx MOp.Eq l r ty loc
+    | HPrim.Ne, [l; r] ->
+      mirifyExprOpCmp ctx MOp.Ne l r ty loc
+    | HPrim.Lt, [l; r] ->
+      mirifyExprOpCmp ctx MOp.Lt l r ty loc
+    | HPrim.Le, [l; r] ->
+      mirifyExprOpCmp ctx MOp.Le l r ty loc
+    | HPrim.Gt, [l; r] ->
+      // NOTE: `l > r` ===> `r < l` (Evaluation order does change.)
+      mirifyExprOpCmp ctx MOp.Lt r l ty loc
+    | HPrim.Ge, [l; r] ->
+      // NOTE: `l > r` ===> `r < l` (Evaluation order does change.)
+      mirifyExprOpCmp ctx MOp.Le r l ty loc
+    | HPrim.Cons, [l; r] ->
+      mirifyExprOpCons ctx l r ty loc
+    | HPrim.Index, [l; r] ->
+      mirifyExprIndex ctx l r ty loc
+    | HPrim.Not, [arg] ->
       mirifyExprCallNot ctx arg ty loc
-    | HExpr.Ref (_, HValRef.Prim HPrim.Exit, _, _) ->
+    | HPrim.Exit, [arg] ->
       mirifyExprCallExit ctx arg ty loc
-    | HExpr.Ref (_, HValRef.Prim HPrim.Box, _, _) ->
+    | HPrim.Box, [arg] ->
       mirifyExprCallBox ctx arg ty loc
-    | HExpr.Ref (_, HValRef.Prim HPrim.Unbox, _, _) ->
+    | HPrim.Unbox, [arg] ->
       mirifyExprCallUnbox ctx arg ty loc
-    | HExpr.Ref (_, HValRef.Prim HPrim.StrLength, _, _) ->
+    | HPrim.StrLength, [arg] ->
       mirifyExprCallStrLength ctx arg ty loc
-    | HExpr.Ref (_, HValRef.Var serial, _, _) when ctxIsVariantFun ctx serial ->
-      mirifyExprCallVariantFun ctx serial arg ty loc
     | _ ->
       core ()
+
+  | HExpr.Ref (_, HValRef.Var serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
+    mirifyExprCallVariantFun ctx serial arg ty loc
+
   | _ ->
     core ()
 
@@ -599,10 +599,6 @@ let mirifyExprInfClosure ctx funSerial env funTy loc =
 
 let mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
-  | InfOp.Bin op, [l; r], _ ->
-    mirifyExprBin ctx op l r ty loc
-  | InfOp.Nil, [], Ty.Con (TyCon.List, [itemTy]) ->
-    MExpr.Default (tyList itemTy, loc), ctx
   | InfOp.Tuple, [], Ty.Con (TyCon.Tuple, []) ->
     MExpr.Default (tyUnit, loc), ctx
   | InfOp.Tuple, _, Ty.Con (TyCon.Tuple, itemTys) ->
