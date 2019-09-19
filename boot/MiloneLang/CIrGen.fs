@@ -20,7 +20,7 @@ type Ctx =
     TyUniqueNames: Map<Ty, string>
     Stmts: CStmt list
     Decls: CDecl list
-    Diags: Diag list
+    Logs: (Log * Loc) list
   }
 
 let tupleField i = sprintf "t%d" i
@@ -58,11 +58,11 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): Ctx =
     TyUniqueNames = tyNames
     Stmts = []
     Decls = []
-    Diags = mirCtx.Diags
+    Logs = mirCtx.Logs
   }
 
 let ctxAddErr (ctx: Ctx) message loc =
-  { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
+  { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
 let ctxNewBlock (ctx: Ctx) =
   { ctx with Stmts = [] }
@@ -712,23 +712,25 @@ let genDecls (ctx: Ctx) decls =
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls
 
-let genDiags (ctx: Ctx) =
-  let rec go (ctx: Ctx) diags =
-    match diags with
+let genLogs (ctx: Ctx) =
+  let rec go (ctx: Ctx) logs =
+    match logs with
     | [] ->
       ctx
-    | Diag.Err (message, (y, x)) :: diags ->
-      let message = sprintf "%d:%d %s" (1 + y) (1 + x) message
-      let ctx = ctxAddDecl ctx (CDecl.ErrDir (message, 1 + y))
-      go ctx diags
-  let diags = ctx.Diags |> List.rev
-  let ctx = go ctx diags
-  let success = diags |> List.isEmpty
+    | (log, loc) :: logs ->
+      let y, _ = loc
+      let msg = log |> logToString loc
+      let ctx = ctxAddDecl ctx (CDecl.ErrDir (msg, 1 + y))
+      go ctx logs
+
+  let logs = ctx.Logs |> List.rev
+  let ctx = go ctx logs
+  let success = logs |> List.isEmpty
   success, ctx
 
 let gen (decls, mirCtx: Mir.MirCtx): CDecl list * bool =
   let ctx = ctxFromMirCtx mirCtx
   let ctx = genDecls ctx decls
-  let success, ctx = genDiags ctx
+  let success, ctx = genLogs ctx
   let decls = ctx.Decls |> List.rev
   decls, success

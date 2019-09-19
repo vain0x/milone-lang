@@ -19,7 +19,7 @@ type MirCtx =
     Tys: Map<int, TyDef>
     LabelSerial: int
     Stmts: MStmt list
-    Diags: Diag list
+    Logs: (Log * Loc) list
   }
 
 let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
@@ -29,7 +29,7 @@ let ctxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
     Tys = tyCtx.Tys
     LabelSerial = 0
     Stmts = []
-    Diags = tyCtx.Diags
+    Logs = tyCtx.Logs
   }
 
 let ctxIsNewTypeVariant (ctx: MirCtx) varSerial =
@@ -46,7 +46,7 @@ let ctxIsNewTypeVariant (ctx: MirCtx) varSerial =
     failwith "Expected variant serial"
 
 let ctxAddErr (ctx: MirCtx) message loc =
-  { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
+  { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
 let ctxNewBlock (ctx: MirCtx) =
   { ctx with Stmts = [] }

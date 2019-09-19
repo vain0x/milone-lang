@@ -4,11 +4,19 @@ module rec MiloneLang.Types
 /// Location = (rowIndex, columnIndex).
 type Loc = int * int
 
-/// Diagnostic; something bad in source code.
 [<RequireQualifiedAccess>]
-type Diag =
-  | Err
-    of string * Loc
+type TyUnifyLog =
+  | SelfRec
+  | Mismatch
+
+[<RequireQualifiedAccess>]
+type Log =
+  | TyUnify
+    of TyUnifyLog * lRootTy:Ty * rRootTy:Ty * lTy:Ty * rTy:Ty
+  | TyConstraintError
+    of TyConstraint
+  | Error
+    of string
 
 /// Words and punctuations in source code.
 [<RequireQualifiedAccess>]
@@ -263,17 +271,17 @@ type TyScheme =
 [<RequireQualifiedAccess>]
 type TyConstraint =
   | Add
-    of Ty * Loc
+    of Ty
   | Eq
-    of Ty * Loc
+    of Ty
   | Cmp
-    of Ty * Loc
+    of Ty
   | Index
-    of lTy:Ty * rTy:Ty * resultTy:Ty * Loc
+    of lTy:Ty * rTy:Ty * resultTy:Ty
   | ToInt
-    of Ty * Loc
+    of Ty
   | ToString
-    of Ty * Loc
+    of Ty
 
 /// Type context.
 [<RequireQualifiedAccess>]

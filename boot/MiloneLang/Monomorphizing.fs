@@ -63,6 +63,7 @@ type Mode =
 type MonoCtx =
   {
     Serial: int
+    Logs: (Log * Loc) list
 
     Vars: Map<int, VarDef>
     Tys: Map<int, TyDef>
@@ -95,24 +96,24 @@ let ctxToTyCtx (monoCtx: MonoCtx): TyContext =
     TyDepths = monoCtx.TyDepths
   }
 
-let ctxWithTyCtx (tyCtx: TyContext) (monoCtx: MonoCtx) =
+let ctxWithTyCtx (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
   { monoCtx with
       Serial = tyCtx.Serial
+      Logs = logAcc
       Tys = tyCtx.Tys
       TyDepths = tyCtx.TyDepths
   }
 
 let bindTy (monoCtx: MonoCtx) tySerial ty: MonoCtx =
-  monoCtx |> ctxWithTyCtx (typingBind (ctxToTyCtx monoCtx) tySerial ty)
+  monoCtx |> ctxWithTyCtx (typingBind (ctxToTyCtx monoCtx) tySerial ty) monoCtx.Logs
 
 let substTy (monoCtx: MonoCtx) ty: Ty =
   typingSubst (ctxToTyCtx monoCtx) ty
 
-let unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) =
+let unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
   let tyCtx = ctxToTyCtx monoCtx
-  let msgs, tyCtx = typingUnify tyCtx lTy rTy
-  msgs |> List.iter (eprintfn "%s")
-  monoCtx |> ctxWithTyCtx tyCtx
+  let logAcc, tyCtx = typingUnify monoCtx.Logs tyCtx lTy rTy loc
+  monoCtx |> ctxWithTyCtx tyCtx logAcc
 
 let substTyExpr ctx expr =
   let subst ty = substTy ctx ty
@@ -252,7 +253,7 @@ let monifyExprLetFun ctx ident callee args body next ty loc =
 
       // Within the context where genericFunTy and useSiteTy are unified
       // resolve all types in args and body.
-      let extendedCtx = unifyTy ctx genericFunTy useSiteTy
+      let extendedCtx = unifyTy ctx genericFunTy useSiteTy loc
       let monoArgs = substTyPats extendedCtx args
       let monoBody = substTyExpr extendedCtx body
       let monoFunSerial, ctx = ctxAddMonomorphizedFun ctx genericFunSerial ident arity useSiteTy loc
@@ -315,6 +316,8 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
   let monoCtx: MonoCtx =
     {
       Serial = tyCtx.Serial
+      Logs = tyCtx.Logs
+
       Vars = tyCtx.Vars
       Tys = tyCtx.Tys
       TyDepths = tyCtx.TyDepths

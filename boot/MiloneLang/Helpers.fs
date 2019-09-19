@@ -569,89 +569,145 @@ let typingSubst (ctx: TyContext) ty: Ty =
 
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
-let typingUnify (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
+let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) loc =
   let lRootTy, rRootTy = lty, rty
-  let rec go lty rty (msgAcc, ctx) =
+
+  let addLog kind lTy rTy logAcc ctx =
+    let lRootTy = typingSubst ctx lRootTy
+    let rRootTy = typingSubst ctx rRootTy
+    (Log.TyUnify (kind, lRootTy, rRootTy, lTy, rTy), loc) :: logAcc, ctx
+
+  let rec go lty rty (logAcc, ctx) =
     let lSubstTy = typingSubst ctx lty
     let rSubstTy = typingSubst ctx rty
     match lSubstTy, rSubstTy with
     | Ty.Meta (l, _), Ty.Meta (r, _) when l = r ->
-      msgAcc, ctx
+      logAcc, ctx
     | Ty.Meta (lSerial, _), _ when tyIsFreeIn rSubstTy lSerial ->
       let ctx = typingBind ctx lSerial rty
-      msgAcc, ctx
+      logAcc, ctx
     | _, Ty.Meta _ ->
-      go rty lty (msgAcc, ctx)
+      go rty lty (logAcc, ctx)
     | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
-      msgAcc, ctx
+      logAcc, ctx
     | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
-      (msgAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
+      (logAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
     | Ty.Error _, _
     | _, Ty.Error _ ->
-      msgAcc, ctx
+      logAcc, ctx
     | Ty.Meta _, _ ->
-      let msg = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
-      msg :: msgAcc, ctx
+      addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
     | Ty.Con _, _ ->
-      let lRootTy = typingSubst ctx lRootTy
-      let rRootTy = typingSubst ctx rRootTy
-      let msg = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
-      msg :: msgAcc, ctx
-  let msgAcc, ctx =
-    go lty rty ([], ctx)
-  List.rev msgAcc, ctx
+      addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
 
-let typingConstrain (ctx: TyContext) (tyConstraint: TyConstraint) =
-  let expectScalar name ty loc ctx =
-    match typingSubst ctx ty with
+  go lty rty (logAcc, ctx)
+
+let typingSubstConstraint (ctx: TyContext) (tyConstraint: TyConstraint) =
+  match tyConstraint with
+  | TyConstraint.Add ty ->
+    TyConstraint.Add (typingSubst ctx ty)
+
+  | TyConstraint.Eq ty ->
+    TyConstraint.Eq (typingSubst ctx ty)
+
+  | TyConstraint.Cmp ty ->
+    TyConstraint.Cmp (typingSubst ctx ty)
+
+  | TyConstraint.Index (lTy, rTy, resultTy) ->
+    let lTy = typingSubst ctx lTy
+    let rTy = typingSubst ctx rTy
+    let resultTy = typingSubst ctx resultTy
+    TyConstraint.Index (lTy, rTy, resultTy)
+
+  | TyConstraint.ToInt ty ->
+    TyConstraint.ToInt (typingSubst ctx ty)
+
+  | TyConstraint.ToString ty ->
+    TyConstraint.ToString (typingSubst ctx ty)
+
+let typingConstrain logAcc (ctx: TyContext) tyConstraint loc =
+  let tyConstraint = typingSubstConstraint ctx tyConstraint
+
+  let expectScalar ty (logAcc, ctx) =
+    match ty with
     | Ty.Error _
     | Ty.Con (TyCon.Int, [])
     | Ty.Con (TyCon.Char, [])
     | Ty.Con (TyCon.Str, []) ->
-      [], ctx
+      logAcc, ctx
 
     | _ ->
-      let y, x = loc
-      let msg = sprintf "Scalar type is expected for %s but %A %d:%d" name ty (y + 1) (x + 1)
-      [msg], ctx
+      (Log.TyConstraintError tyConstraint, loc) :: logAcc, ctx
 
   match tyConstraint with
-  | TyConstraint.Add (ty, _loc) ->
-    match typingSubst ctx ty with
+  | TyConstraint.Add ty ->
+    match ty with
     | Ty.Error _
     | Ty.Con (TyCon.Str, []) ->
-      [], ctx
+      logAcc, ctx
 
     | _ ->
       // Coerce to int by default.
-      typingUnify ctx ty tyInt
+      typingUnify logAcc ctx ty tyInt loc
 
-  | TyConstraint.Eq (ty, loc) ->
-    ctx |> expectScalar "equality" ty loc
+  | TyConstraint.Eq ty ->
+    (logAcc, ctx) |> expectScalar ty
 
-  | TyConstraint.Cmp (ty, loc) ->
-    ctx |> expectScalar "comparison" ty loc
+  | TyConstraint.Cmp ty ->
+    (logAcc, ctx) |> expectScalar ty
 
-  | TyConstraint.Index (lTy, rTy, resultTy, loc) ->
-    let lTy = typingSubst ctx lTy
-    let rTy = typingSubst ctx rTy
-    let resultTy = typingSubst ctx resultTy
+  | TyConstraint.Index (lTy, rTy, resultTy) ->
     match lTy with
     | Ty.Error _ ->
       [], ctx
 
     | Ty.Con (TyCon.Str, []) ->
-      let msg1, ctx = typingUnify ctx rTy tyInt
-      let msg2, ctx = typingUnify ctx resultTy tyChar
-      List.append msg1 msg2, ctx
+      let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
+      let logAcc, ctx = typingUnify logAcc ctx resultTy tyChar loc
+      logAcc, ctx
 
-    | lTy ->
-      let y, x = loc
-      let msg = sprintf "Indexing for non-str type %A is unimplemented yet %d:%d" lTy (y + 1) (x + 1)
-      [msg], ctx
+    | _ ->
+      (Log.TyConstraintError tyConstraint, loc) :: logAcc, ctx
 
-  | TyConstraint.ToInt (ty, loc) ->
-    ctx |> expectScalar "int" ty loc
+  | TyConstraint.ToInt ty ->
+    (logAcc, ctx) |> expectScalar ty
 
-  | TyConstraint.ToString (ty, loc) ->
-    ctx |> expectScalar "string" ty loc
+  | TyConstraint.ToString ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+// -----------------------------------------------
+// Logs
+// -----------------------------------------------
+
+let logToString loc log =
+  let loc =
+    let y, x = loc
+    sprintf "%d:%d" (y + 1) (x + 1)
+
+  match log with
+  | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
+    sprintf "%s Couldn't unify '%A' and '%A' due to self recursion." loc lTy rTy
+
+  | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
+    sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
+
+  | Log.TyConstraintError (TyConstraint.Add ty) ->
+    sprintf "%s No support (+) for '%A' yet" loc ty
+
+  | Log.TyConstraintError (TyConstraint.Eq ty) ->
+    sprintf "%s No support equality for '%A' yet" loc ty
+
+  | Log.TyConstraintError (TyConstraint.Cmp ty) ->
+    sprintf "%s No support comparison for '%A' yet" loc ty
+
+  | Log.TyConstraintError (TyConstraint.Index (lTy, rTy, _)) ->
+    sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
+
+  | Log.TyConstraintError (TyConstraint.ToInt ty) ->
+    sprintf "%s Can't convert to int from '%A'" loc ty
+
+  | Log.TyConstraintError (TyConstraint.ToString ty) ->
+    sprintf "%s Can't convert to string from '%A'" loc ty
+
+  | Log.Error msg ->
+    sprintf "%s %s" loc msg
