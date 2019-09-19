@@ -260,6 +260,21 @@ type Ty =
 type TyScheme =
   | ForAll of int list * Ty
 
+[<RequireQualifiedAccess>]
+type TyConstraint =
+  | Add
+    of Ty * Loc
+  | Eq
+    of Ty * Loc
+  | Cmp
+    of Ty * Loc
+  | Index
+    of lTy:Ty * rTy:Ty * resultTy:Ty * Loc
+  | ToInt
+    of Ty * Loc
+  | ToString
+    of Ty * Loc
+
 /// Type context.
 [<RequireQualifiedAccess>]
 type TyContext =

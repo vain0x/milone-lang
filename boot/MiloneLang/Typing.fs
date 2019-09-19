@@ -23,6 +23,7 @@ type TyCtx =
     TyDepths: Map<int, int>
     LetDepth: int
     UnifyQueue: (Ty * Ty * Loc) list
+    Constraints: TyConstraint list
     Diags: Diag list
   }
 
@@ -81,6 +82,9 @@ let ctxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
 let ctxUnifyLater (ctx: TyCtx) unresolvedTy metaTy loc =
   { ctx with UnifyQueue = (unresolvedTy, metaTy, loc) :: ctx.UnifyQueue }
 
+let ctxAddTyConstraint tyConstraint (ctx: TyCtx) =
+  { ctx with Constraints = tyConstraint :: ctx.Constraints }
+
 let ctxResolveUnifyQueue (ctx: TyCtx) =
   let rec go ctx queue =
     match queue with
@@ -93,6 +97,22 @@ let ctxResolveUnifyQueue (ctx: TyCtx) =
   let queue = ctx.UnifyQueue
   let ctx = { ctx with UnifyQueue = [] }
   go ctx queue
+
+let ctxResolveConstraints (ctx: TyCtx) =
+  let rec go diagss constraints ctx =
+    match constraints with
+    | [] ->
+      diagss, ctx
+
+    | tyConstraint :: constraints ->
+      let diags, ctx = typingConstrain ctx tyConstraint
+      ctx |> go (diags :: diagss) constraints
+
+  let constraints = ctx.Constraints |> listRev
+  let ctx = { ctx with Constraints = [] }
+  let diagss, tyCtx = ctx |> ctxToTyCtx |> go [] constraints
+  eprintfn "%A" (diagss |> List.collect id |> List.rev)
+  ctxWithTyCtx ctx tyCtx
 
 /// Resolves type references in type annotation.
 let ctxResolveTy ctx ty loc =
@@ -295,8 +315,8 @@ let inferPrim ctx ident prim loc ty =
 
   match prim with
   | HPrim.Add ->
-    // FIXME: addTy: int | str
     let addTy, _, ctx = ctxFreshTyVar "add" loc ctx
+    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Add (addTy, loc))
     aux (tyFun addTy (tyFun addTy addTy)) ctx
 
   | HPrim.Sub ->
@@ -314,6 +334,7 @@ let inferPrim ctx ident prim loc ty =
   | HPrim.Eq
   | HPrim.Ne ->
     let eqTy, _, ctx = ctxFreshTyVar "eq" loc ctx
+    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Eq (eqTy, loc))
     aux (tyFun eqTy (tyFun eqTy tyBool)) ctx
 
   | HPrim.Lt
@@ -321,6 +342,7 @@ let inferPrim ctx ident prim loc ty =
   | HPrim.Gt
   | HPrim.Ge ->
     let cmpTy, _, ctx = ctxFreshTyVar "cmp" loc ctx
+    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Cmp (cmpTy, loc))
     aux (tyFun cmpTy (tyFun cmpTy tyBool)) ctx
 
   | HPrim.Nil ->
@@ -333,8 +355,11 @@ let inferPrim ctx ident prim loc ty =
     aux (tyFun itemTy (tyFun listTy listTy)) ctx
 
   | HPrim.Index ->
-    // FIXME: don't unify here
-    aux (tyFun tyStr (tyFun tyInt tyChar)) ctx
+    let lTy, _, ctx = ctxFreshTyVar "l" loc ctx
+    let rTy, _, ctx = ctxFreshTyVar "r" loc ctx
+    let resultTy, _, ctx = ctxFreshTyVar "result" loc ctx
+    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Index (lTy, rTy, resultTy, loc))
+    aux (tyFun lTy (tyFun rTy resultTy)) ctx
 
   | HPrim.Not ->
     let ctx = unifyTy ctx loc (tyFun tyBool tyBool) ty
@@ -370,28 +395,14 @@ let inferPrim ctx ident prim loc ty =
 
   | HPrim.Int ->
     let argTy, _, ctx = ctxFreshTyVar "intArg" loc ctx
+    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.ToInt (argTy, loc))
     let ctx = unifyTy ctx loc (tyFun argTy tyInt) ty
-    let ctx =
-      match substTy ctx argTy with
-      | Ty.Meta _ ->
-        unifyTy ctx loc tyInt argTy
-      | Ty.Con ((TyCon.Int | TyCon.Char | TyCon.Str), _)
-      | Ty.Error _ ->
-        ctx
-      | argTy ->
-        ctxAddErr ctx (sprintf "Expected int or char %A" argTy) loc
     HExpr.Ref (ident, HValRef.Prim HPrim.Int, ty, loc), ctx
 
   | HPrim.String ->
     let argTy, _, ctx = ctxFreshTyVar "stringArg" loc ctx
+    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.ToString (argTy, loc))
     let ctx = unifyTy ctx loc (tyFun argTy tyStr) ty
-    let ctx =
-      match substTy ctx argTy with
-      | Ty.Con ((TyCon.Int | TyCon.Char | TyCon.Str), _)
-      | Ty.Error _ ->
-        ctx
-      | _ ->
-        ctxAddErr ctx (sprintf "FIXME: Not implemented `string` for %A" argTy) loc
     HExpr.Ref (ident, HValRef.Prim HPrim.String, ty, loc), ctx
 
   | HPrim.StrLength ->
@@ -655,6 +666,7 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
       TyDepths = scopeCtx.TyDepths
       LetDepth = 0
       UnifyQueue = []
+      Constraints = []
       Diags = []
     }
 
@@ -709,6 +721,8 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
   let ctx = { ctx with LetDepth = 0 }
 
   let expr, ctx = inferExpr ctx expr tyUnit
+
+  let ctx = ctx |> ctxResolveConstraints
 
   // Substitute all types.
   let expr = substTyExpr ctx expr

@@ -600,3 +600,58 @@ let typingUnify (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
   let msgAcc, ctx =
     go lty rty ([], ctx)
   List.rev msgAcc, ctx
+
+let typingConstrain (ctx: TyContext) (tyConstraint: TyConstraint) =
+  let expectScalar name ty loc ctx =
+    match typingSubst ctx ty with
+    | Ty.Error _
+    | Ty.Con (TyCon.Int, [])
+    | Ty.Con (TyCon.Char, [])
+    | Ty.Con (TyCon.Str, []) ->
+      [], ctx
+
+    | _ ->
+      let y, x = loc
+      let msg = sprintf "Scalar type is expected for %s but %A %d:%d" name ty (y + 1) (x + 1)
+      [msg], ctx
+
+  match tyConstraint with
+  | TyConstraint.Add (ty, _loc) ->
+    match typingSubst ctx ty with
+    | Ty.Error _
+    | Ty.Con (TyCon.Str, []) ->
+      [], ctx
+
+    | _ ->
+      // Coerce to int by default.
+      typingUnify ctx ty tyInt
+
+  | TyConstraint.Eq (ty, loc) ->
+    ctx |> expectScalar "equality" ty loc
+
+  | TyConstraint.Cmp (ty, loc) ->
+    ctx |> expectScalar "comparison" ty loc
+
+  | TyConstraint.Index (lTy, rTy, resultTy, loc) ->
+    let lTy = typingSubst ctx lTy
+    let rTy = typingSubst ctx rTy
+    let resultTy = typingSubst ctx resultTy
+    match lTy with
+    | Ty.Error _ ->
+      [], ctx
+
+    | Ty.Con (TyCon.Str, []) ->
+      let msg1, ctx = typingUnify ctx rTy tyInt
+      let msg2, ctx = typingUnify ctx resultTy tyChar
+      List.append msg1 msg2, ctx
+
+    | lTy ->
+      let y, x = loc
+      let msg = sprintf "Indexing for non-str type %A is unimplemented yet %d:%d" lTy (y + 1) (x + 1)
+      [msg], ctx
+
+  | TyConstraint.ToInt (ty, loc) ->
+    ctx |> expectScalar "int" ty loc
+
+  | TyConstraint.ToString (ty, loc) ->
+    ctx |> expectScalar "string" ty loc
