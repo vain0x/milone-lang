@@ -68,7 +68,7 @@ let charIsPun (c: char): bool =
   ",()[]" |> strContainsChar c
 
 /// `s.[i..].StartsWith(prefix)`
-let strNthStartsWith (i: int) (prefix: string) (s: string): bool =
+let strIsFollowedBy (i: int) (prefix: string) (s: string): bool =
   /// `s.[si..].StartsWith(prefix.[pi..])`
   let rec go pi si =
     pi = prefix.Length || (
@@ -79,8 +79,8 @@ let strNthStartsWith (i: int) (prefix: string) (s: string): bool =
   i + prefix.Length <= s.Length && go 0 i
 
 /// Followed by `"""`?
-let strContainsRawQuotes (i: int) (s: string): bool =
-  strNthStartsWith i "\"\"\"" s
+let strIsFollowedByRawQuotes (i: int) (s: string): bool =
+  strIsFollowedBy i "\"\"\"" s
 
 let scanError (acc: ScanAcc, text: string, i: int) =
   (TokenKind.Error, i, i + 1) :: acc, text, i + 1
@@ -178,9 +178,9 @@ let scanStrLit (acc: ScanAcc, text: string, i: int) =
   (kind, i, endIndex) :: acc, text, endIndex
 
 let scanStrLitRaw (acc: ScanAcc, text: string, i: int) =
-  assert (text |> strContainsRawQuotes i)
+  assert (text |> strIsFollowedByRawQuotes i)
   let rec go i =
-    if text |> strContainsRawQuotes i then
+    if text |> strIsFollowedByRawQuotes i then
       TokenKind.StrLitRaw, i + 3
     else if i + 1 < text.Length then
       go (i + 1)
@@ -193,7 +193,7 @@ let scanStrLitRaw (acc: ScanAcc, text: string, i: int) =
 let scanRoot (text: string) =
   let rec go (acc, text, i) =
     let t = acc, text, i
-    let follow prefix = text |> strNthStartsWith i prefix
+    let follow prefix = text |> strIsFollowedBy i prefix
 
     if i >= text.Length then
       text, acc |> listRev
@@ -210,7 +210,7 @@ let scanRoot (text: string) =
       t |> scanIdent |> go
     else if text.[i] = '\'' then
       t |> scanCharLit |> go
-    else if text |> strContainsRawQuotes i then
+    else if text |> strIsFollowedByRawQuotes i then
       t |> scanStrLitRaw |> go
     else if text.[i] = '"' then
       t |> scanStrLit |> go
@@ -417,7 +417,7 @@ let tokenFromStrLit (text: string) l r: Token =
   Token.Str value
 
 let tokenFromStrLitRaw (text: string) l r =
-  assert (l + 6 <= r && text |> strContainsRawQuotes l && text |> strContainsRawQuotes (r - 3))
+  assert (l + 6 <= r && text |> strIsFollowedByRawQuotes l && text |> strIsFollowedByRawQuotes (r - 3))
   Token.Str (text |> strSlice (l + 3) (r - 3))
 
 let recognizeToken kind (text: string) l r =
