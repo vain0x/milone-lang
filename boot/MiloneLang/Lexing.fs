@@ -62,10 +62,10 @@ let charIsIdent (c: char): bool =
   c = '_' || charIsDigit c || charIsAlpha c
 
 let charIsOp (c: char): bool =
-  "+-*/%=<>^&|:@;.," |> strContainsChar c
+  "+-*/%=<>^&|:@;." |> strContainsChar c
 
 let charIsPun (c: char): bool =
-  "()[]" |> strContainsChar c
+  ",()[]" |> strContainsChar c
 
 /// `s.[i..].StartsWith(prefix)`
 let strNthStartsWith (i: int) (prefix: string) (s: string): bool =
@@ -299,8 +299,6 @@ let tokenFromOp (text: string) l r: Token =
     Token.Colon
   | "::" ->
     Token.ColonColon
-  | "," ->
-    Token.Comma
   | "." ->
     Token.Dot
   | ".." ->
@@ -341,6 +339,8 @@ let tokenFromOp (text: string) l r: Token =
 let tokenFromPun (text: string) (l: int) r =
   assert (r - l = 1)
   match text.[l] with
+  | ',' ->
+    Token.Comma
   | '(' ->
     Token.ParenL
   | ')' ->
