@@ -164,9 +164,9 @@ let parseTyDefUnion boxX tokens =
       go acc tokens
     | (Token.Ident variantIdent, loc) :: (Token.Of, _) :: tokens ->
       let payloadTy, tokens = parseTy boxX tokens
-      go (AVariant.T (variantIdent, Some payloadTy, loc) :: acc) tokens
+      go (AVariant (variantIdent, Some payloadTy, loc) :: acc) tokens
     | (Token.Ident variantIdent, loc) :: tokens ->
-      go (AVariant.T (variantIdent, None, loc) :: acc) tokens
+      go (AVariant (variantIdent, None, loc) :: acc) tokens
     | _ ->
       listRev acc, tokens
   match go [] tokens with
@@ -433,7 +433,7 @@ let parseMatchArm boxX tokens =
       parseExpr boxX tokens
     | _ ->
       parseError "Expected '->'" tokens
-  AArm.T (pat, guard, body, loc), tokens
+  AArm (pat, guard, body, loc), tokens
 
 let parseMatch boxX matchLoc tokens =
   let target, tokens =

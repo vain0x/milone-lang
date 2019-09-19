@@ -151,17 +151,15 @@ type APat =
     of string * APat list * Loc
 
 /// Match arm node in AST.
-[<RequireQualifiedAccess>]
 type AArm =
   /// (pattern, guard, body).
-  | T
+  | AArm
     of APat * AExpr * AExpr * Loc
 
 /// Variant node in AST.
-[<RequireQualifiedAccess>]
 type AVariant =
   /// (identifier, payload-type).
-  | T
+  | AVariant
     of string * ATy option * Loc
 
 /// Let expression in AST.

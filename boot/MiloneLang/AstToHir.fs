@@ -134,8 +134,8 @@ let desugarIf cond body alt loc =
 
   let arms =
     [
-      AArm.T (apTrue loc, axTrue loc, body, loc)
-      AArm.T (apFalse loc, axTrue loc, alt, loc)
+      AArm (apTrue loc, axTrue loc, body, loc)
+      AArm (apFalse loc, axTrue loc, alt, loc)
     ]
 
   AExpr.Match (cond, arms, loc)
@@ -312,7 +312,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.Match (target, arms, loc) ->
     // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
-    let onArm (AArm.T (pat, guard, body, loc), nameCtx) =
+    let onArm (AArm (pat, guard, body, loc), nameCtx) =
       let pat, nameCtx =
         (pat, nameCtx) |> onPat
       let guard, nameCtx =
@@ -413,7 +413,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.TyDef (ident, serial, TyDecl.Synonym (ty, loc), loc), nameCtx
 
   | AExpr.TyUnion (ident, variants, loc) ->
-    let onVariant (AVariant.T (ident, payloadTy, _variantLoc), nameCtx) =
+    let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let hasPayload, payloadTy, nameCtx =
         match payloadTy with
