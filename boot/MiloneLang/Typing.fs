@@ -203,7 +203,7 @@ let ctxGeneralizeFun (ctx: TyCtx) (outerCtx: TyCtx) (bodyCtx: TyCtx) funSerial =
 /// Creates an expression to abort.
 let hxAbort (ctx: TyCtx) ty loc =
   let funTy = tyFun tyInt ty
-  let exitExpr = HExpr.Ref ("exit", HValRef.Prim HPrim.Exit, funTy, loc)
+  let exitExpr = HExpr.Prim (HPrim.Exit, funTy, loc)
   let callExpr = hxApp exitExpr (HExpr.Lit (Lit.Int 1, loc)) ty loc
   callExpr, ctx
 
@@ -304,12 +304,12 @@ let inferPat ctx pat ty =
 
 let inferRef (ctx: TyCtx) ident serial loc ty =
   let ctx = ctx |> ctxUnifyVarTy serial ty loc
-  HExpr.Ref (ident, HValRef.Var serial, ty, loc), ctx
+  HExpr.Ref (ident, serial, ty, loc), ctx
 
-let inferPrim ctx ident prim loc ty =
+let inferPrim ctx prim loc ty =
   let aux primTy ctx =
     let ctx = unifyTy ctx loc primTy ty
-    HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
+    HExpr.Prim (prim, ty, loc), ctx
 
   match prim with
   | HPrim.Add ->
@@ -361,58 +361,58 @@ let inferPrim ctx ident prim loc ty =
 
   | HPrim.Not ->
     let ctx = unifyTy ctx loc (tyFun tyBool tyBool) ty
-    HExpr.Ref (ident, HValRef.Prim HPrim.Not, ty, loc), ctx
+    HExpr.Prim (HPrim.Not, ty, loc), ctx
 
   | HPrim.Exit ->
     let resultTy, _, ctx = ctxFreshTyVar "exit" loc ctx
     let ctx = unifyTy ctx loc (tyFun tyInt resultTy) ty
-    HExpr.Ref (ident, HValRef.Prim HPrim.Exit, ty, loc), ctx
+    HExpr.Prim (HPrim.Exit, ty, loc), ctx
 
   | HPrim.Assert ->
     let ctx = unifyTy ctx loc (tyFun tyBool tyUnit) ty
-    HExpr.Ref (ident, HValRef.Prim HPrim.Assert, ty, loc), ctx
+    HExpr.Prim (HPrim.Assert, ty, loc), ctx
 
   | HPrim.Box ->
     let argTy, _, ctx = ctxFreshTyVar "box" loc ctx
     let ctx = unifyTy ctx loc (tyFun argTy tyObj) ty
-    HExpr.Ref (ident, HValRef.Prim HPrim.Box, ty, loc), ctx
+    HExpr.Prim (HPrim.Box, ty, loc), ctx
 
   | HPrim.Unbox ->
     let resultTy, _, ctx = ctxFreshTyVar "unbox" loc ctx
     let ctx = unifyTy ctx loc (tyFun tyObj resultTy) ty
-    HExpr.Ref (ident, HValRef.Prim HPrim.Unbox, ty, loc), ctx
+    HExpr.Prim (HPrim.Unbox, ty, loc), ctx
 
   | HPrim.Printfn ->
     // The function's type is unified in app expression inference.
-    HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, ty, loc), ctx
+    HExpr.Prim (HPrim.Printfn, ty, loc), ctx
 
   | HPrim.Char ->
     // FIXME: `char` can take non-int values, including chars.
     let ctx = unifyTy ctx loc (tyFun tyInt tyChar) ty
-    HExpr.Ref (ident, HValRef.Prim HPrim.Char, ty, loc), ctx
+    HExpr.Prim (HPrim.Char, ty, loc), ctx
 
   | HPrim.Int ->
     let argTy, _, ctx = ctxFreshTyVar "intArg" loc ctx
     let ctx = ctx |> ctxAddTyConstraint (TyConstraint.ToInt argTy) loc
     let ctx = unifyTy ctx loc (tyFun argTy tyInt) ty
-    HExpr.Ref (ident, HValRef.Prim HPrim.Int, ty, loc), ctx
+    HExpr.Prim (HPrim.Int, ty, loc), ctx
 
   | HPrim.String ->
     let argTy, _, ctx = ctxFreshTyVar "stringArg" loc ctx
     let ctx = ctx |> ctxAddTyConstraint (TyConstraint.ToString argTy) loc
     let ctx = unifyTy ctx loc (tyFun argTy tyStr) ty
-    HExpr.Ref (ident, HValRef.Prim HPrim.String, ty, loc), ctx
+    HExpr.Prim (HPrim.String, ty, loc), ctx
 
   | HPrim.StrLength ->
     let ctx = unifyTy ctx loc ty (tyFun tyStr tyInt)
-    HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
+    HExpr.Prim (prim, ty, loc), ctx
 
   | HPrim.StrGetSlice ->
     let ctx = unifyTy ctx loc ty (tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr)))
-    HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
+    HExpr.Prim (prim, ty, loc), ctx
 
   | HPrim.NativeFun _ ->
-    HExpr.Ref (ident, HValRef.Prim (HPrim.NativeFun ("<NativeFunIdent>", -1)), ty, loc), ctx
+    HExpr.Prim (HPrim.NativeFun ("<NativeFunIdent>", -1), ty, loc), ctx
 
 let inferNil ctx loc listTy =
   let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
@@ -441,7 +441,7 @@ let inferNav ctx sub mes loc resultTy =
     match subTy, mes with
     | Ty.Con (TyCon.Str, []), "Length" ->
       let ctx = unifyTy ctx loc resultTy tyInt
-      let funExpr = HExpr.Ref (mes, HValRef.Prim HPrim.StrLength, tyFun tyStr tyInt, loc)
+      let funExpr = HExpr.Prim (HPrim.StrLength, tyFun tyStr tyInt, loc)
       Some (hxApp funExpr sub tyInt loc, ctx)
     | _ -> None
 
@@ -474,16 +474,16 @@ let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
     let resultTy, _, ctx = ctxFreshTyVar "result" loc ctx
     let funTy, ctx = go resultTy arity ctx
     let ctx = unifyTy ctx loc funTy appTy
-    HExpr.Ref (nativeFunIdent, HValRef.Prim (HPrim.NativeFun (nativeFunIdent, arity)), appTy, loc), ctx
+    HExpr.Prim (HPrim.NativeFun (nativeFunIdent, arity), appTy, loc), ctx
   | _ ->
     hxApp callee arg appTy loc, ctx
 
-let inferOpAppPrintfn ctx ident arg calleeTy loc =
+let inferOpAppPrintfn ctx arg calleeTy loc =
   match arg with
   | HExpr.Lit (Lit.Str format, _) ->
     let funTy = analyzeFormat format
     let ctx = unifyTy ctx loc calleeTy funTy
-    HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, calleeTy, loc), ctx
+    HExpr.Prim (HPrim.Printfn, calleeTy, loc), ctx
   | _ ->
     let ctx = ctxAddErr ctx """First arg of printfn must be string literal, "..".""" loc
     hxAbort ctx calleeTy loc
@@ -494,10 +494,10 @@ let inferOpApp ctx callee arg loc appTy =
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
   match callee with
-  | HExpr.Inf (InfOp.App, [HExpr.Ref (_, HValRef.Prim (HPrim.NativeFun _), _, _); firstArg], _, _) ->
+  | HExpr.Inf (InfOp.App, [HExpr.Prim (HPrim.NativeFun _, _, _); firstArg], _, _) ->
     inferOpAppNativeFun ctx callee firstArg arg appTy loc
-  | HExpr.Ref (ident, HValRef.Prim HPrim.Printfn, calleeTy, loc) ->
-    let callee, ctx = inferOpAppPrintfn ctx ident arg calleeTy loc
+  | HExpr.Prim (HPrim.Printfn, calleeTy, loc) ->
+    let callee, ctx = inferOpAppPrintfn ctx arg calleeTy loc
     hxApp callee arg appTy loc, ctx
   | _ ->
     hxApp callee arg appTy loc, ctx
@@ -614,10 +614,10 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   match expr with
   | HExpr.Lit (lit, loc) ->
     expr, unifyTy ctx loc (litToTy lit) ty
-  | HExpr.Ref (ident, HValRef.Var serial, _, loc) ->
+  | HExpr.Ref (ident, serial, _, loc) ->
     inferRef ctx ident serial loc ty
-  | HExpr.Ref (ident, HValRef.Prim prim, _, loc) ->
-    inferPrim ctx ident prim loc ty
+  | HExpr.Prim (prim, _, loc) ->
+    inferPrim ctx prim loc ty
   | HExpr.Match (target, arms, _, loc) ->
     inferMatch ctx target arms loc ty
   | HExpr.Nav (receiver, field,  _,loc) ->

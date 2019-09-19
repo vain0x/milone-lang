@@ -187,6 +187,7 @@ let hoistExprCore (expr, ctx) =
   | HExpr.Error _
   | HExpr.Lit _
   | HExpr.Ref _
+  | HExpr.Prim _
   | HExpr.Open _ ->
     expr, ctx
 

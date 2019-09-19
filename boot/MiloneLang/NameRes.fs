@@ -258,7 +258,7 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
     // A.B.C (= (A.B).C) case
     failwith "unimpl"
 
-  | HExpr.Ref (_, HValRef.Var serial, _, _) ->
+  | HExpr.Ref (_, serial, _, _) ->
     let ident = scopeCtx |> scopeCtxGetIdent serial
     scopeCtx |> scopeCtxResolveLocalTyIdent ident
 
@@ -616,19 +616,19 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
   | HExpr.Error _
   | HExpr.Open _
   | HExpr.Lit _
-  | HExpr.Ref (_, HValRef.Prim _, _, _) ->
+  | HExpr.Prim _ ->
     expr, ctx
 
-  | HExpr.Ref (_, HValRef.Var serial, ty, loc) ->
+  | HExpr.Ref (_, serial, ty, loc) ->
     let ident = ctx |> scopeCtxGetIdent serial
     match ctx |> scopeCtxResolveLocalVar ident with
     | Some serial ->
-      HExpr.Ref (ident, HValRef.Var serial, ty, loc), ctx
+      HExpr.Ref (ident, serial, ty, loc), ctx
 
     | None ->
       match primFromIdent ident with
       | Some prim ->
-        HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
+        HExpr.Prim (prim, ty, loc), ctx
 
       | None ->
         HExpr.Error ("Undefined variable " + ident, loc), ctx
@@ -651,11 +651,11 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     // FIXME: Patchwork for tests to pass
     match l, r with
     | HExpr.Ref ("String", _, _, _), "length" ->
-      HExpr.Ref ("String.length", HValRef.Prim HPrim.StrLength, ty, loc), ctx
+      HExpr.Prim (HPrim.StrLength, ty, loc), ctx
 
     | HExpr.Ref ("String", _, _, _), "getSlice" ->
       // NOTE: Actually this functions doesn't exist in the F# standard library.
-      HExpr.Ref ("String.getSlice", HValRef.Prim HPrim.StrGetSlice, ty, loc), ctx
+      HExpr.Prim (HPrim.StrGetSlice, ty, loc), ctx
 
     |_ ->
 
@@ -668,7 +668,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     | Some scopeSerial ->
       match ctx |> scopeCtxResolveVar scopeSerial r with
       | Some varSerial ->
-        HExpr.Ref (r, HValRef.Var varSerial, ty, loc), ctx
+        HExpr.Ref (r, varSerial, ty, loc), ctx
 
       | _ ->
         // X.ty patterns don't appear yet, so don't search for types.

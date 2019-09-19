@@ -391,7 +391,7 @@ let hxUnit loc =
   hxTuple [] loc
 
 let hxNil itemTy loc =
-  HExpr.Ref ("[]", HValRef.Prim HPrim.Nil, tyList itemTy, loc)
+  HExpr.Prim (HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
@@ -412,6 +412,8 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HExpr.Lit (lit, a) ->
     litToTy lit, a
   | HExpr.Ref (_, _, ty, a) ->
+    ty, a
+  | HExpr.Prim (_, ty, a) ->
     ty, a
   | HExpr.Match (_, _, ty, a) ->
     ty, a
@@ -439,6 +441,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Lit (lit, g a)
     | HExpr.Ref (ident, serial, ty, a) ->
       HExpr.Ref (ident, serial, f ty, g a)
+    | HExpr.Prim (prim, ty, a) ->
+      HExpr.Prim (prim, f ty, g a)
     | HExpr.Match (target, arms, ty, a) ->
       let arms =
         arms |> List.map (fun (pat, guard, body) ->

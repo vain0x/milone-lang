@@ -276,12 +276,12 @@ let rec monifyExpr (expr, ctx) =
   | HExpr.TyDef _
   | HExpr.Open _
   | HExpr.Lit _
-  | HExpr.Ref (_, HValRef.Prim _, _, _) ->
+  | HExpr.Prim _ ->
     expr, ctx
 
-  | HExpr.Ref (ident, HValRef.Var varSerial, useSiteTy, loc) ->
+  | HExpr.Ref (ident, varSerial, useSiteTy, loc) ->
     let varSerial, ctx = ctxProcessVarRef ctx varSerial useSiteTy
-    HExpr.Ref (ident, HValRef.Var varSerial, useSiteTy, loc), ctx
+    HExpr.Ref (ident, varSerial, useSiteTy, loc), ctx
 
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> monifyExpr

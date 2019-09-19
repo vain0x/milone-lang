@@ -243,23 +243,21 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   | HPat.Anno _ ->
     failwith "Never annotation pattern in MIR-ify stage."
 
-let mirifyExprRef (ctx: MirCtx) valRef ty loc =
-  match valRef with
-  | HValRef.Var serial ->
-    match ctx.Vars |> Map.tryFind serial with
-    | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
-      MExpr.Variant (tySerial, serial, ty, loc), ctx
-    | Some (VarDef.Fun (_, _, _, loc)) ->
-      MExpr.Proc (serial, ty, loc), ctx
-    | _ ->
-      MExpr.Ref (serial, ty, loc), ctx
+let mirifyExprRef (ctx: MirCtx) serial ty loc =
+  match ctx.Vars |> Map.tryFind serial with
+  | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
+    MExpr.Variant (tySerial, serial, ty, loc), ctx
+  | Some (VarDef.Fun (_, _, _, loc)) ->
+    MExpr.Proc (serial, ty, loc), ctx
+  | _ ->
+    MExpr.Ref (serial, ty, loc), ctx
 
-  | HValRef.Prim prim ->
-    match prim with
-    | HPrim.Nil ->
-      MExpr.Default (ty, loc), ctx
-    | _ ->
-      failwithf "Never: Primitives must appear as callee."
+let mirifyExprPrim (ctx: MirCtx) prim ty loc =
+  match prim with
+  | HPrim.Nil ->
+    MExpr.Default (ty, loc), ctx
+  | _ ->
+    failwithf "Never: Primitives must appear as callee."
 
 let mirifyBlock ctx expr =
   let blockCtx = ctxNewBlock ctx
@@ -516,7 +514,7 @@ let mirifyExprSemi ctx exprs =
 let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =
     match callee with
-    | HExpr.Ref (_, HValRef.Prim prim, _, _) ->
+    | HExpr.Prim (prim, _, _) ->
       let primTy = exprToTy callee
       let (args, ctx) = (args, ctx) |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
       let temp, tempSerial, ctx = ctxFreshVar ctx "call" ty loc
@@ -531,7 +529,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
       temp, ctx
 
   match callee, args with
-  | HExpr.Ref (_, HValRef.Prim prim, _, _), _ ->
+  | HExpr.Prim (prim, _, _), _ ->
     match prim, args with
     | HPrim.Add, [l; r] ->
       mirifyExprOpArith ctx MOp.Add l r ty loc
@@ -574,7 +572,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
     | _ ->
       core ()
 
-  | HExpr.Ref (_, HValRef.Var serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
+  | HExpr.Ref (_, serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
     mirifyExprCallVariantFun ctx serial arg ty loc
 
   | _ ->
@@ -609,7 +607,7 @@ let mirifyExprInf ctx infOp args ty loc =
     mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ ->
     mirifyExprInfCallClosure ctx callee args ty loc
-  | InfOp.Closure, [HExpr.Ref (_, HValRef.Var funSerial, _, _); env], _ ->
+  | InfOp.Closure, [HExpr.Ref (_, funSerial, _, _); env], _ ->
     mirifyExprInfClosure ctx funSerial env ty loc
   | t ->
     failwithf "Never: %A" t
@@ -679,6 +677,8 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     MExpr.Lit (lit, loc), ctx
   | HExpr.Ref (_, serial, ty, loc) ->
     mirifyExprRef ctx serial ty loc
+  | HExpr.Prim (prim, ty, loc) ->
+    mirifyExprPrim ctx prim ty loc
   | HExpr.Match (target, arms, ty, loc) ->
     mirifyExprMatch ctx target arms ty loc
   | HExpr.Inf (infOp, args, ty, loc) ->

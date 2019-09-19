@@ -473,13 +473,6 @@ type HPrim =
   | NativeFun
     of string * int
 
-[<RequireQualifiedAccess>]
-type HValRef =
-  | Var
-    of serial:int
-  | Prim
-    of HPrim
-
 /// Expression in AST.
 [<RequireQualifiedAccess>]
 type HExpr =
@@ -487,7 +480,9 @@ type HExpr =
     of Lit * Loc
   /// Variable reference.
   | Ref
-    of ident:string * HValRef * Ty * Loc
+    of ident:string * serial:int * Ty * Loc
+  | Prim
+    of HPrim * Ty * Loc
   | Match
     of target:HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`

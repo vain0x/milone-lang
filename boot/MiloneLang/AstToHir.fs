@@ -297,7 +297,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.Ident (ident, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    HExpr.Ref (ident, HValRef.Var serial, noTy, loc), nameCtx
+    HExpr.Ref (ident, serial, noTy, loc), nameCtx
 
   | AExpr.ListLit ([], loc) ->
     hxNil noTy loc, nameCtx
@@ -344,7 +344,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     | false, _ ->
       let l, nameCtx = (l, nameCtx) |> onExpr
       let r, nameCtx = (r, nameCtx) |> onExpr
-      let hxIndex = hxApp (hxApp (HExpr.Ref (".[]", HValRef.Prim HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
+      let hxIndex = hxApp (hxApp (HExpr.Prim (HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
       hxIndex, nameCtx
 
   | AExpr.Uni (UniOp.Neg, arg, loc) ->
@@ -372,8 +372,8 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     let prim = op |> opToPrim
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr
-    let refExpr = HExpr.Ref ("?op", HValRef.Prim prim, noTy, loc)
-    hxApp (hxApp refExpr l noTy loc) r noTy loc, nameCtx
+    let primExpr = HExpr.Prim (prim, noTy, loc)
+    hxApp (hxApp primExpr l noTy loc) r noTy loc, nameCtx
 
   | AExpr.Range (_, loc) ->
     HExpr.Error ("Invalid use of range syntax.", loc), nameCtx
