@@ -1,51 +1,55 @@
-/// Creates a list of tokens from a text of single file.
-/// Consists of two transformations: scan and recognize.
+/// Splits a source file into a list of tokens.
+///
+/// ## Motivation
+///
+/// This stage is to make the parser simpler.
+///
+/// - The parser wants to know row/column indexes of tokens
+///   because of the indentation-sensitive syntax.
+/// - List of tokens is easier for the parser to look ahead
+///   than that of characters.
+/// - Spaces and comments unnecessary for the parser
+///   (except for the row/column index of tokens).
+///
+/// ### Example
+///
+/// ```fsharp
+/// let main _ =
+///   0
+/// ```
+///
+/// This stage should break the the above code down to the following tokens:
+///
+/// | Y:X   | Token  | Text
+/// |------:|:-------|:-----
+/// |   0:0 | Let    | let
+/// |   0:4 | Ident  | main
+/// |   0:9 | Ident  | _
+/// |  0:11 | Op     | =
+/// |   1:2 | IntLit | 0
 module rec MiloneLang.Lexing
 
 open MiloneLang.Types
-open MiloneLang
 
-// ## Scan
-//
-// Read the source code from start to end
-// to make a mapping from spans to token kinds.
-//
-// ### Motivation
-//
-// There are two reasons why I separated the most simplest phase
-// in the compiler to two paths:
-// 1. Scanning must be written carefully not to access out of range,
-//    which makes things complicated unnecessarily
-//    such as looking ahead for escape sequence analysis.
-// 2. Line number tracking is verbose when it's mixed with
-//    scanning multi-line tokens/spaces.
-//
-// ### Example
-//
-// Given the source code "let main _ = 0", the scanner should
-// build a list of tokens like this:
-//
-//  0.. 3   Ident   (let)
-//  4.. 8   Ident   (main)
-//  9..10   Ident   (_)
-// 11..12   Op      (=)
-// 13..14   IntLit  (0)
+/// (text, index, loc, tokenAcc)
+type TokenizeCtx = string * int * Loc * (Token * Loc) list
 
-/// Kind of token in the scanning phase.
-[<RequireQualifiedAccess>]
-type TokenKind =
-  | Error
-  | Ident
-  | IntLit
-  | CharLit
-  | StrLit
-  | StrLitRaw
-  | Op
-  | Pun
+/// Modifies the location that points to `text.[l]`
+/// to one that points to `text.[r]`.
+let locShift (text: string) (l: int) (r: int) ((y, x): Loc) =
+  assert (0 <= l && l <= r && r <= text.Length)
+  let rec go y x i =
+    if i = r then
+      y, x
+    else if text.[i] = '\n' then
+      go (y + 1) 0 (i + 1)
+    else
+      go y (x + 1) (i + 1)
+  go y x l
 
-/// (kind, start, end)
-/// where indexes are in bytes.
-type ScanAcc = (TokenKind * int * int) list
+// -----------------------------------------------
+// Character helpers
+// -----------------------------------------------
 
 let charNull: char = char 0
 
@@ -67,6 +71,10 @@ let charIsOp (c: char): bool =
 let charIsPun (c: char): bool =
   ",()[]" |> strContainsChar c
 
+// -----------------------------------------------
+// String helpers
+// -----------------------------------------------
+
 /// `s.[i..].StartsWith(prefix)`
 let strIsFollowedBy (i: int) (prefix: string) (s: string): bool =
   /// `s.[si..].StartsWith(prefix.[pi..])`
@@ -82,19 +90,38 @@ let strIsFollowedBy (i: int) (prefix: string) (s: string): bool =
 let strIsFollowedByRawQuotes (i: int) (s: string): bool =
   strIsFollowedBy i "\"\"\"" s
 
-let scanError (acc: ScanAcc, text: string, i: int) =
-  (TokenKind.Error, i, i + 1) :: acc, text, i + 1
+// -----------------------------------------------
+// Scan functions
+// -----------------------------------------------
 
-let scanSpace (acc: ScanAcc, text: string, i: int) =
-  assert (text.[i] |> charIsSpace)
+let scanError (_: string) (i: int) =
+  // FIXME: Skip unrecognizable characters.
+  i + 1
+
+let lookEof (text: string) (i: int) =
+  i >= text.Length
+
+/// Gets if the text is followed by 1+ spaces at the position.
+let lookSpace (text: string) (i: int) =
+  text.[i] |> charIsSpace
+
+/// Finds the end index of the following spaces.
+let scanSpace (text: string) (i: int) =
+  assert (lookSpace text i)
   let rec go i =
     if i < text.Length && text.[i] |> charIsSpace then
       go (i + 1)
     else
       i
-  acc, text, go i
+  go i
 
-let scanLine (acc: ScanAcc, text: string, i: int) =
+let lookComment (text: string) (i: int) =
+  // NOTE: Attributes are also skipped for now.
+  text |> strIsFollowedBy i "//"
+  || text |> strIsFollowedBy i "[<"
+
+let scanLine (text: string) (i: int) =
+  assert (lookComment text i)
   let rec go i =
     if i = text.Length then
       i
@@ -102,141 +129,112 @@ let scanLine (acc: ScanAcc, text: string, i: int) =
       i + 1
     else
       go (i + 1)
-  acc, text, go i
+  go i
 
-let scanPun (acc: ScanAcc, text: string, i: int) =
-  assert (text.[i] |> charIsPun)
-  let endIndex = i + 1
-  (TokenKind.Pun, i, endIndex) :: acc, text, endIndex
+let lookPun (text: string) (i: int) =
+  text.[i] |> charIsPun
 
-let scanOp (acc: ScanAcc, text: string, i: int) =
-  assert (text.[i] |> charIsOp)
+let scanPun (text: string) (i: int) =
+  assert (lookPun text i)
+  i + 1
+
+let lookOp (text: string) (i: int) =
+  text.[i] |> charIsOp
+
+let scanOp (text: string) (i: int) =
+  assert (lookOp text i)
   let rec go i =
     if i < text.Length && text.[i] |> charIsOp then
       go (i + 1)
     else
       i
-  let endIndex = go i
-  (TokenKind.Op, i, endIndex) :: acc, text, endIndex
+  go i
 
-let scanIdent (acc: ScanAcc, text: string, i: int) =
-  assert (text.[i] |> charIsIdent && text.[i] |> charIsDigit |> not)
+let lookIdent (text: string) (i: int) =
+  text.[i] |> charIsIdent
+  && text.[i] |> charIsDigit |> not
+
+let scanIdent (text: string) (i: int) =
+  assert (lookIdent text i)
   let rec go i =
     if i < text.Length && text.[i] |> charIsIdent then
       go (i + 1)
     else
       i
-  let endIndex = go i
-  (TokenKind.Ident, i, endIndex) :: acc, text, endIndex
+  go i
 
-let scanIntLit (acc: ScanAcc, text: string, i: int) =
-  assert (text.[i] |> charIsDigit)
+let lookIntLit (text: string) (i: int) =
+  text.[i] |> charIsDigit
+
+let scanIntLit (text: string) (i: int) =
+  assert (lookIntLit text i)
   let rec go i =
     if i < text.Length && text.[i] |> charIsDigit then
       go (i + 1)
     else
       i
-  let endIndex = go i
-  (TokenKind.IntLit, i, endIndex) :: acc, text, endIndex
+  go i
 
-let scanCharLit (acc: ScanAcc, text: string, i: int) =
-  assert (text.[i] = '\'')
+let lookCharLit (text: string) (i: int) =
+  text.[i] = '\''
+
+let scanCharLit (text: string) (i: int) =
+  assert (lookCharLit text i)
   let rec go i =
     if i + 1 < text.Length && text.[i] = '\\' then
       // Skip escape sequence.
       go (i + 2)
     else if i < text.Length && text.[i] = '\'' then
       // Complete.
-      TokenKind.CharLit, i + 1
+      true, i + 1
     else if i < text.Length && text.[i] <> '\n' then
       // Go ahead.
       go (i + 1)
     else
       // Missed the closing quote.
       assert (i = text.Length || text.[i] = '\n')
-      TokenKind.Error, i
-  let kind, endIndex = go (i + 1)
-  (kind, i, endIndex) :: acc, text, endIndex
+      false, i
+  go (i + 1)
 
-let scanStrLit (acc: ScanAcc, text: string, i: int) =
-  assert (text.[i] = '"')
+let lookStrLit (text: string) (i: int) =
+  text.[i] = '"'
+
+let scanStrLit (text: string) (i: int) =
+  assert (lookStrLit text i)
   let rec go i =
     if i + 1 < text.Length && text.[i] = '\\' then
       // Escape sequence.
       go (i + 2)
     else if i < text.Length && text.[i] = '"' then
       // Success.
-      TokenKind.StrLit, i + 1
+      true, i + 1
     else if i < text.Length && text.[i] <> '\n' then
       // Go ahead.
       go (i + 1)
     else
       // Missed the closing quote.
       assert (i = text.Length || text.[i] = '\n')
-      TokenKind.Error, i
-  let kind, endIndex = go (i + 1)
-  (kind, i, endIndex) :: acc, text, endIndex
+      false, i
+  go (i + 1)
 
-let scanStrLitRaw (acc: ScanAcc, text: string, i: int) =
-  assert (text |> strIsFollowedByRawQuotes i)
+let lookStrLitRaw (text: string) (i: int) =
+  text |> strIsFollowedByRawQuotes i
+
+let scanStrLitRaw (text: string) (i: int) =
+  assert (lookStrLitRaw text i)
   let rec go i =
     if text |> strIsFollowedByRawQuotes i then
-      TokenKind.StrLitRaw, i + 3
+      true, i + 3
     else if i + 1 < text.Length then
       go (i + 1)
     else
       assert (i = text.Length)
-      TokenKind.Error, i
-  let kind, endIndex = go (i + 3)
-  (kind, i, endIndex) :: acc, text, endIndex
+      false, i
+  go (i + 3)
 
-let scanRoot (text: string) =
-  let rec go (acc, text, i) =
-    let t = acc, text, i
-    let follow prefix = text |> strIsFollowedBy i prefix
-
-    if i >= text.Length then
-      text, acc |> listRev
-    else if follow "//" || follow "[<" then
-      // Skip comments. Attributes are also skipped for now.
-      t |> scanLine |> go
-    else if text.[i] |> charIsSpace then
-      t |> scanSpace |> go
-    else if text.[i] |> charIsOp then
-      t |> scanOp |> go
-    else if text.[i] |> charIsDigit then
-      t |> scanIntLit |> go
-    else if text.[i] |> charIsIdent then
-      t |> scanIdent |> go
-    else if text.[i] = '\'' then
-      t |> scanCharLit |> go
-    else if text |> strIsFollowedByRawQuotes i then
-      t |> scanStrLitRaw |> go
-    else if text.[i] = '"' then
-      t |> scanStrLit |> go
-    else if text.[i] |> charIsPun then
-      t |> scanPun |> go
-    else
-      t |> scanError |> go
-  go ([], text, 0)
-
-// ## Recognize
-//
-// Parse text ranges as tokens.
-// Calculate line numbers and column numbers for token ranges.
-
-/// Assume that the l-th byte is at the y-th line and x-th column.
-/// Calculate line/column numbers for the r-th byte
-/// by counting number of line breaks in the range.
-let advanceTextPos (y, x) (text: string) (l: int) (r: int) =
-  let rec go y x i =
-    if i = r then
-      y, x
-    else if text.[i] = '\n' then
-      go (y + 1) 0 (i + 1)
-    else
-      go y (x + 1) (i + 1)
-  go y x l
+// -----------------------------------------------
+// Token helpers
+// -----------------------------------------------
 
 let tokenFromIdent (text: string) l r: Token =
   match text |> strSlice l r with
@@ -420,50 +418,124 @@ let tokenFromStrLitRaw (text: string) l r =
   assert (l + 6 <= r && text |> strIsFollowedByRawQuotes l && text |> strIsFollowedByRawQuotes (r - 3))
   Token.Str (text |> strSlice (l + 3) (r - 3))
 
-let recognizeToken kind (text: string) l r =
-  match kind with
-  | TokenKind.Error ->
-    failwith "Invalid char"
+// -----------------------------------------------
+// Tokenize functions
+// -----------------------------------------------
 
-  | TokenKind.Op ->
-    tokenFromOp text l r
+let tokCtxToTextIndex ((text, i, _, _): TokenizeCtx) =
+  text, i
 
-  | TokenKind.Pun ->
-    tokenFromPun text l r
+/// Moves the cursor to the end index (`r`)
+/// without emitting a token.
+let tokCtxSkip r ((text, i, loc, acc): TokenizeCtx): TokenizeCtx =
+  assert (0 <= i && i <= r && r <= text.Length)
+  let newLoc = loc |> locShift text i r
+  text, r, newLoc, acc
 
-  | TokenKind.IntLit ->
-    tokenFromIntLit text l r
+/// Moves the cursor to the next index (`r`)
+/// and emits a token that spans over the moved range.
+let tokCtxPush kind r ((text, i, loc, acc): TokenizeCtx): TokenizeCtx =
+  assert (0 <= i && i <= r && r <= text.Length)
+  let newAcc = (kind, loc) :: acc
+  let newLoc = loc |> locShift text i r
+  text, r, newLoc, newAcc
 
-  | TokenKind.CharLit ->
-    tokenFromCharLit text l r
+let tokEof ((text, i, _, acc): TokenizeCtx) =
+  assert (lookEof text i)
+  acc |> listRev
 
-  | TokenKind.StrLit ->
-    tokenFromStrLit text l r
+let tokError t =
+  let text, i = t |> tokCtxToTextIndex
+  let r = scanError text i
+  t |> tokCtxSkip r
 
-  | TokenKind.StrLitRaw ->
-    tokenFromStrLitRaw text l r
+let tokComment (t: TokenizeCtx) =
+  let text, i = t |> tokCtxToTextIndex
+  let r = scanLine text i
+  t |> tokCtxSkip r
 
-  | TokenKind.Ident ->
-    tokenFromIdent text l r
+let tokSpace (t: TokenizeCtx) =
+  let text, i = t |> tokCtxToTextIndex
+  let r = scanSpace text i
+  t |> tokCtxSkip r
 
-let recognizeTokens (text, tokens) =
-  /// Assume the previous token ends with last-th byte at (line, column) = (y, x) position.
-  let rec go acc y x last tokens =
-    match tokens with
-    | [] ->
-      acc |> listRev
-    | (kind, l, r) :: tokens ->
-      // Locate l-th byte.
-      let y, x = advanceTextPos (y, x) text last l
+let tokPun t =
+  let text, i = t |> tokCtxToTextIndex
+  let r = scanPun text i
+  let token = tokenFromPun text i r
+  t |> tokCtxPush token r
 
-      // Recognize the token.
-      let token = recognizeToken kind text l r
-      let acc = (token, (y, x)) :: acc
+let tokOp t =
+  let text, i = t |> tokCtxToTextIndex
+  let r = scanOp text i
+  let token = tokenFromOp text i r
+  t |> tokCtxPush token r
 
-      // Locate r-th byte.
-      let y, x = advanceTextPos (y, x) text l r
-      go acc y x r tokens
-  go [] 0 0 0 tokens
+let tokIdent t =
+  let text, i = t |> tokCtxToTextIndex
+  let r = scanIdent text i
+  let token = tokenFromIdent text i r
+  t |> tokCtxPush token r
+
+let tokIntLit t =
+  let text, i = t |> tokCtxToTextIndex
+  let r = scanIntLit text i
+  let token = tokenFromIntLit text i r
+  t |> tokCtxPush token r
+
+let tokCharLit t =
+  let text, i = t |> tokCtxToTextIndex
+  let ok, r = scanCharLit text i
+  let token = if ok then tokenFromCharLit text i r else Token.Error
+  t |> tokCtxPush token r
+
+let tokStrLit t =
+  let text, i = t |> tokCtxToTextIndex
+  let ok, r = scanStrLit text i
+  let token = if ok then tokenFromStrLit text i r else Token.Error
+  t |> tokCtxPush token r
+
+let tokStrLitRaw t =
+  let text, i = t |> tokCtxToTextIndex
+  let ok, r = scanStrLitRaw text i
+  let token = if ok then tokenFromStrLitRaw text i r else Token.Error
+  t |> tokCtxPush token r
 
 let tokenize (text: string): (Token * Loc) list =
-  text |> scanRoot |> recognizeTokens
+  let rec go t =
+    let text, i = t |> tokCtxToTextIndex
+
+    if lookEof text i then
+      t |> tokEof
+
+    else if lookComment text i then
+      t |> tokComment |> go
+
+    else if lookSpace text i then
+      t |> tokSpace |> go
+
+    else if lookOp text i then
+      t |> tokOp |> go
+
+    else if lookIntLit text i then
+      t |> tokIntLit |> go
+
+    else if lookIdent text i then
+      t |> tokIdent |> go
+
+    else if lookCharLit text i then
+      t |> tokCharLit |> go
+
+    else if lookStrLitRaw text i then
+      t |> tokStrLitRaw |> go
+
+    else if lookStrLit text i then
+      t |> tokStrLit |> go
+
+    else if lookPun text i then
+      t |> tokPun |> go
+
+    else
+      t |> tokError |> go
+
+  go (text, 0, (0, 0), [])
