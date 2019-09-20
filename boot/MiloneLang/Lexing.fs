@@ -66,10 +66,12 @@ let charIsIdent (c: char): bool =
   c = '_' || charIsDigit c || charIsAlpha c
 
 let charIsOp (c: char): bool =
-  "+-*/%=<>^&|:@;." |> strContainsChar c
+  c = '+' || c = '-' || c = '*' || c = '/' || c = '%' ||
+  c = '=' || c = '<' || c = '>' || c = '^' || c = '&' ||
+  c = '|' || c = ':' || c = '@' || c = ';' || c = '.'
 
 let charIsPun (c: char): bool =
-  ",()[]" |> strContainsChar c
+  c = ',' || c = '(' || c = ')' || c = '[' || c = ']'
 
 // -----------------------------------------------
 // String helpers

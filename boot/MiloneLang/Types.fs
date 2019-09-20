@@ -436,7 +436,6 @@ type HPat =
   | Or
     of HPat * HPat * Ty * Loc
 
-
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]
 type HPrim =

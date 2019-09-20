@@ -53,10 +53,6 @@ let listTruncate count xs =
 let intMin (x: int) (y: int): int =
   if x > y then y else x
 
-let strContainsChar (c: char) (s: string) =
-  let rec go i = i < s.Length && (s.[i] = c || go (i + 1))
-  go 0
-
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
   if start >= endIndex then
