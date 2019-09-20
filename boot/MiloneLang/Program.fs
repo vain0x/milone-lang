@@ -33,7 +33,11 @@ let toCir verbosity (projectDir: string): CDecl list * bool =
   log "nameRes" nameRes
   let typedAst, tyCtx = Typing.infer (nameRes, scopeCtx)
   log "typed" typedAst
-  let funTransAst, tyCtx = FunTrans.trans (typedAst, tyCtx)
+  let funTransAst, tyCtx =
+    (typedAst, tyCtx)
+    |> MainHoist.hoistMain
+    |> ClosureConversion.declosure
+    |> EtaExpansion.uneta
   log "funTrans" funTransAst
   let hoistedExpr, tyCtx = Hoist.hoist (funTransAst, tyCtx)
   log "hoisted" hoistedExpr
