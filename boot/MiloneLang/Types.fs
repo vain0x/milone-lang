@@ -52,16 +52,6 @@ type Token =
     of string
   | Ident
     of string
-  | Do
-  | Let
-  | Rec
-  | If
-  | Then
-  | Else
-  | Match
-  | With
-  | As
-  | When
   /// `(`
   | ParenL
   /// `)`
@@ -106,16 +96,26 @@ type Token =
   | Semi
   | Star
   | Slash
-  | Private
+  | As
+  | Do
+  | Else
+  | Fun
+  | If
+  | In
   | Internal
-  | Public
+  | Let
+  | Match
   | Module
   | Namespace
-  | Open
-  | Type
   | Of
-  | Fun
-  | In
+  | Open
+  | Private
+  | Public
+  | Rec
+  | Then
+  | Type
+  | When
+  | With
 
 /// Unary operators in AST.
 [<RequireQualifiedAccess>]
