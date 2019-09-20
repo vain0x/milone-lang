@@ -1,8 +1,21 @@
 /// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
-/// Location = (rowIndex, columnIndex).
-type Loc = int * int
+/// Literal of primitive value.
+[<RequireQualifiedAccess>]
+type Lit =
+  | Bool
+    of bool
+  | Int
+    of int
+  | Char
+    of char
+  | Str
+    of string
+
+// -----------------------------------------------
+// Errors
+// -----------------------------------------------
 
 [<RequireQualifiedAccess>]
 type TyUnifyLog =
@@ -17,6 +30,13 @@ type Log =
     of TyConstraint
   | Error
     of string
+
+// -----------------------------------------------
+// Syntax types
+// -----------------------------------------------
+
+/// Location = (rowIndex, columnIndex). 0-indexed.
+type Loc = int * int
 
 /// Words and punctuations in source code.
 [<RequireQualifiedAccess>]
@@ -96,6 +116,63 @@ type Token =
   | Of
   | Fun
   | In
+
+/// Unary operators in AST.
+[<RequireQualifiedAccess>]
+type UniOp =
+  /// `-`
+  | Neg
+
+/// Precedence level of binary operators.
+[<RequireQualifiedAccess>]
+type OpLevel =
+  | Mul
+  | Add
+  | Cons
+  /// `|>`
+  | Pipe
+  /// Comparison.
+  | Cmp
+  | And
+  | Or
+
+/// Binary operators in AST.
+[<RequireQualifiedAccess>]
+type Op =
+  /// `*` Multiplier
+  | Mul
+  /// `/` Divisor
+  | Div
+  /// `%` Modulo
+  | Mod
+  /// `+` Addition
+  | Add
+  /// `-` Subtract
+  | Sub
+  /// `=` Equal
+  | Eq
+  /// `<>` Not Equal
+  | Ne
+  /// `<` Less than
+  | Lt
+  /// `<=` Less than or equal to
+  | Le
+  /// `>` Greater than
+  | Gt
+  /// `>=` Greater than or equal to
+  | Ge
+  /// `|>`
+  | Pipe
+  /// `&&`
+  | And
+  /// `||`
+  | Or
+  /// `f x` Application
+  | App
+  /// `::` Cons cell constructor
+  | Cons
+  /// `.[ ]`
+  | Index
 
 /// Type expression in AST.
 [<RequireQualifiedAccess>]
@@ -235,6 +312,14 @@ type AExpr =
   | Open
     of string list * Loc
 
+// -----------------------------------------------
+// Intermediate representation types
+// -----------------------------------------------
+
+type NameCtx =
+  | NameCtx
+    of Map<int, string> * last: int
+
 /// Type constructors.
 [<RequireQualifiedAccess>]
 type TyCon =
@@ -292,67 +377,6 @@ type TyContext =
     /// where `let-depth` is the number of ancestral `let` expressions.
     TyDepths: Map<int, int>
   }
-
-/// Precedence level of binary operators.
-[<RequireQualifiedAccess>]
-type OpLevel =
-  | Mul
-  | Add
-  | Cons
-  /// `|>`
-  | Pipe
-  /// Comparison.
-  | Cmp
-  | And
-  | Or
-
-/// Unary operators in AST.
-[<RequireQualifiedAccess>]
-type UniOp =
-  /// `-`
-  | Neg
-
-/// Binary operators in AST.
-[<RequireQualifiedAccess>]
-type Op =
-  /// `*` Multiplier
-  | Mul
-  /// `/` Divisor
-  | Div
-  /// `%` Modulo
-  | Mod
-  /// `+` Addition
-  | Add
-  /// `-` Subtract
-  | Sub
-  /// `=` Equal
-  | Eq
-  /// `<>` Not Equal
-  | Ne
-  /// `<` Less than
-  | Lt
-  /// `<=` Less than or equal to
-  | Le
-  /// `>` Greater than
-  | Gt
-  /// `>=` Greater than or equal to
-  | Ge
-  /// `|>`
-  | Pipe
-  /// `&&`
-  | And
-  /// `||`
-  | Or
-  /// `f x` Application
-  | App
-  /// `::` Cons cell constructor
-  | Cons
-  /// `.[ ]`
-  | Index
-
-type NameCtx =
-  | NameCtx
-    of Map<int, string> * last: int
 
 /// Type declaration.
 [<RequireQualifiedAccess>]
@@ -412,33 +436,6 @@ type HPat =
   | Or
     of HPat * HPat * Ty * Loc
 
-/// Literal of primitive value.
-[<RequireQualifiedAccess>]
-type Lit =
-  | Bool
-    of bool
-  | Int
-    of int
-  | Char
-    of char
-  | Str
-    of string
-
-[<RequireQualifiedAccess>]
-type InfOp =
-  | App
-  /// Type annotation `x : 'x`.
-  | Anno
-  /// `x; y`
-  | Semi
-  /// Direct call to procedure or primitive.
-  | CallProc
-  /// Indirect call to closure.
-  | CallClosure
-  /// Tuple constructor, e.g. `x, y, z`.
-  | Tuple
-  /// Closure constructor.
-  | Closure
 
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]
@@ -471,6 +468,22 @@ type HPrim =
   | NativeFun
     of string * int
 
+[<RequireQualifiedAccess>]
+type InfOp =
+  | App
+  /// Type annotation `x : 'x`.
+  | Anno
+  /// `x; y`
+  | Semi
+  /// Direct call to procedure or primitive.
+  | CallProc
+  /// Indirect call to closure.
+  | CallClosure
+  /// Tuple constructor, e.g. `x, y, z`.
+  | Tuple
+  /// Closure constructor.
+  | Closure
+
 /// Expression in AST.
 [<RequireQualifiedAccess>]
 type HExpr =
@@ -500,6 +513,26 @@ type HExpr =
     of ident:string list * Loc
   | Error
     of string * Loc
+
+// -----------------------------------------------
+// MIR types
+// -----------------------------------------------
+
+/// Intermediate language between HIR and MIR for match expressions.
+[<RequireQualifiedAccess>]
+type MatchIR =
+  | PatLabel
+    of string
+  | Pat
+    of HPat * nextLabel:string
+  | GoBody
+    of bodyLabel:string
+  | BodyLabel
+    of bodyLabel:string
+  | Guard
+    of guard:HExpr * nextLabel:string
+  | Body
+    of body:HExpr
 
 /// Unary operator in middle IR.
 /// Or primitive function with single parameter.
@@ -539,22 +572,6 @@ type MOp =
   | StrCmp
   /// Get a char.
   | StrIndex
-
-/// Intermediate language between HIR and MIR for match expressions.
-[<RequireQualifiedAccess>]
-type MatchIR =
-  | PatLabel
-    of string
-  | Pat
-    of HPat * nextLabel:string
-  | GoBody
-    of bodyLabel:string
-  | BodyLabel
-    of bodyLabel:string
-  | Guard
-    of guard:HExpr * nextLabel:string
-  | Body
-    of body:HExpr
 
 /// Procedure declaration in middle IR.
 [<RequireQualifiedAccess>]
@@ -648,6 +665,10 @@ type MStmt =
 type MDecl =
   | Proc
     of MProcDecl * Loc
+
+// -----------------------------------------------
+// CIR types
+// -----------------------------------------------
 
 /// Type in C language.
 [<RequireQualifiedAccess>]
