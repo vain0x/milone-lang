@@ -16,6 +16,26 @@
 /// Calls to functions are also converted to pass corresponding args.
 ///
 /// Note we refer to context-free functions as *procedures* (or proc).
+///
+/// ## Example
+///
+/// From:
+///
+/// ```fsharp
+///   let file = "file.fs"
+///   let line = 2
+///   let get () = file, line
+///   get ()
+/// ```
+///
+/// to:
+///
+/// ```fsharp
+///   let file = "file.fs"
+///   let line = 2
+///   let get file line () = file, line // the body is now closed
+///   get file line
+/// ```
 module rec MiloneLang.ClosureConversion
 
 open MiloneLang.Helpers
