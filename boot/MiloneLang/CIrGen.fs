@@ -701,7 +701,7 @@ let genDecls (ctx: Ctx) decls =
       match args with
       | [] ->
         List.rev acc, ctx
-      | (arg, _, ty, _) :: args ->
+      | (arg, ty, _) :: args ->
         let ident = ctxUniqueName ctx arg
         let cty, ctx = cty ctx ty
         go ((ident, cty) :: acc) ctx args

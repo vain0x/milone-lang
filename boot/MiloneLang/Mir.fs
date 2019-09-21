@@ -626,7 +626,7 @@ let mirifyExprLetFun ctx calleeIdent calleeSerial argPats body next letLoc =
     match argPat with
     | HPat.Ref (_, serial, ty, loc) ->
       // NOTE: Optimize for usual cases to not generate redundant local vars.
-      (serial, 1, ty, loc), ctx
+      (serial, ty, loc), ctx
     | _ ->
       let argTy, argLoc = patExtract argPat
       let arg, argSerial, ctx = ctxFreshVar ctx "arg" argTy argLoc
@@ -634,7 +634,7 @@ let mirifyExprLetFun ctx calleeIdent calleeSerial argPats body next letLoc =
       let ctx =
         if exhaustive then ctx else
         ctxAddErr ctx "Argument pattern must be exhaustive for now" argLoc
-      (argSerial, 1, argTy, argLoc), ctx
+      (argSerial, argTy, argLoc), ctx
 
   let rec defineArgs acc ctx argPats =
     match argPats with

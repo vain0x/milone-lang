@@ -605,7 +605,7 @@ type MOp =
 type MProcDecl =
   {
     Callee: FunSerial
-    Args: (VarSerial * Arity * Ty * Loc) list
+    Args: (VarSerial * Ty * Loc) list
     ResultTy: Ty
     Body: MStmt list
     Main: bool
