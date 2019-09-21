@@ -20,8 +20,8 @@ type TyCtx =
     Vars: Map<int, VarDef>
     /// Type serial to type definition.
     Tys: Map<int, TyDef>
-    TyDepths: Map<int, int>
-    LetDepth: int
+    TyDepths: Map<int, LetDepth>
+    LetDepth: LetDepth
     UnifyQueue: (Ty * Ty * Loc) list
     Constraints: (TyConstraint * Loc) list
     Logs: (Log * Loc) list

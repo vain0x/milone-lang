@@ -39,13 +39,14 @@ type ScopeCtx =
     /// Variable serial to definition map.
     Vars: Map<int, VarDef>
 
-    VarDepths: Map<int, int>
+    /// Variable serial to let-depth map.
+    VarDepths: Map<int, LetDepth>
 
     /// Type serial to definition map.
     Tys: Map<int, TyDef>
 
     /// Type serial to let-depth map.
-    TyDepths: Map<int, int>
+    TyDepths: Map<int, LetDepth>
 
     /// Serial of the current scope.
     LocalSerial: int
@@ -54,7 +55,7 @@ type ScopeCtx =
     Local: Scope
 
     /// Current let-depth, the number of ancestral let-body.
-    LetDepth: int
+    LetDepth: LetDepth
   }
 
 // -----------------------------------------------

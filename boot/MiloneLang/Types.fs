@@ -316,6 +316,14 @@ type AExpr =
 // Intermediate representation types
 // -----------------------------------------------
 
+/// Let-depth, i.e. the number of ancestral let nodes
+/// of the place where the meta type is introduced.
+/// Used for polymorphic type inference.
+/// E.g. in `let x: 'x = ((let y: 'y = a: 'a); b: 'b)`,
+///   `'x`: 0, `'y`: 1, `'a`: 2, `'b`: 1
+/// Only one exception: recursive function have let-depth deeper by 1.
+type LetDepth = int
+
 type NameCtx =
   | NameCtx
     of Map<int, string> * last: int
@@ -372,10 +380,7 @@ type TyContext =
   {
     Serial: int
     Tys: Map<int, TyDef>
-
-    /// type serial -> let-depth,
-    /// where `let-depth` is the number of ancestral `let` expressions.
-    TyDepths: Map<int, int>
+    TyDepths: Map<int, LetDepth>
   }
 
 /// Type declaration.
