@@ -1,6 +1,9 @@
 /// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
+/// Unique serial number as identity.
+type Serial = int
+
 /// Literal of primitive value.
 [<RequireQualifiedAccess>]
 type Lit =
@@ -35,8 +38,13 @@ type Log =
 // Syntax types
 // -----------------------------------------------
 
-/// Location = (rowIndex, columnIndex). 0-indexed.
-type Loc = int * int
+/// 0-indexed.
+type RowIndex = int
+
+/// 0-indexed.
+type ColumnIndex = int
+
+type Loc = RowIndex * ColumnIndex
 
 /// Words and punctuations in source code.
 [<RequireQualifiedAccess>]
@@ -316,6 +324,21 @@ type AExpr =
 // Intermediate representation types
 // -----------------------------------------------
 
+/// Serial number of types.
+type TySerial = Serial
+
+/// Serial number of variable/function/variants.
+type VarSerial = Serial
+
+/// Serial number of functions.
+type FunSerial = Serial
+
+/// Serial number of variants.
+type VariantSerial = Serial
+
+/// Count of parameters or arguments.
+type Arity = int
+
 /// Let-depth, i.e. the number of ancestral let nodes
 /// of the place where the meta type is introduced.
 /// Used for polymorphic type inference.
@@ -326,7 +349,7 @@ type LetDepth = int
 
 type NameCtx =
   | NameCtx
-    of Map<int, string> * last: int
+    of Map<Serial, string> * lastSerial:Serial
 
 /// Type constructors.
 [<RequireQualifiedAccess>]
@@ -341,7 +364,7 @@ type TyCon =
   | List
   /// Type reference, i.e. some union type.
   | Ref
-    of serial:int
+    of Serial
 
 /// Type of expressions.
 [<RequireQualifiedAccess>]
@@ -350,14 +373,14 @@ type Ty =
     of Loc
   /// Type variable, i.e. some binding.
   | Meta
-    of serial:int * Loc
+    of Serial * Loc
   | Con
     of TyCon * Ty list
 
 /// Generalized type.
 [<RequireQualifiedAccess>]
 type TyScheme =
-  | ForAll of int list * Ty
+  | ForAll of TySerial list * Ty
 
 [<RequireQualifiedAccess>]
 type TyConstraint =
@@ -378,9 +401,9 @@ type TyConstraint =
 [<RequireQualifiedAccess>]
 type TyContext =
   {
-    Serial: int
-    Tys: Map<int, TyDef>
-    TyDepths: Map<int, LetDepth>
+    Serial: Serial
+    Tys: Map<TySerial, TyDef>
+    TyDepths: Map<TySerial, LetDepth>
   }
 
 /// Type declaration.
@@ -389,9 +412,9 @@ type TyDecl =
   | Synonym
     of ty:Ty * Loc
   /// Union type.
-  /// Variants: (ident, serial, has-argument, argument type).
+  /// Variants: (ident, serial, has-payload, payload type).
   | Union
-    of ident:string * variants:(string * int * bool * Ty) list * Loc
+    of ident:string * variants:(string * VarSerial * bool * Ty) list * Loc
 
 /// Type definition.
 [<RequireQualifiedAccess>]
@@ -400,7 +423,7 @@ type TyDef =
   | Meta
     of ident:string * Ty * Loc
   | Union
-    of ident:string * variants:int list * Loc
+    of ident:string * VariantSerial list * Loc
 
 /// Variable definition in high-level IR.
 [<RequireQualifiedAccess>]
@@ -408,10 +431,10 @@ type VarDef =
   | Var
     of ident:string * Ty * Loc
   | Fun
-    of ident:string * arity:int * TyScheme * Loc
+    of ident:string * Arity * TyScheme * Loc
   /// Variant constructor.
   | Variant
-    of ident:string * tySerial:int * hasArg:bool * argTy:Ty * Ty * Loc
+    of ident:string * TySerial * hasPayload:bool * payloadTy:Ty * variantTy:Ty * Loc
 
 /// Pattern in AST.
 [<RequireQualifiedAccess>]
@@ -423,7 +446,7 @@ type HPat =
     of itemTy:Ty * Loc
   /// Variable reference pattern or `_`.
   | Ref
-    of ident:string * serial:int * Ty * Loc
+    of ident:string * VarSerial * Ty * Loc
   | Nav
     of HPat * string * Ty * Loc
   | Call
@@ -434,7 +457,7 @@ type HPat =
   | Tuple
     of HPat list * tupleTy:Ty * Loc
   | As
-    of HPat * ident:string * serial:int * Loc
+    of HPat * ident:string * VarSerial * Loc
   /// Type annotation pattern, e.g. `x : int`.
   | Anno
     of HPat * Ty * Loc
@@ -470,7 +493,7 @@ type HPrim =
   | Int
   | String
   | NativeFun
-    of string * int
+    of ident:string * Arity
 
 [<RequireQualifiedAccess>]
 type InfOp =
@@ -495,7 +518,7 @@ type HExpr =
     of Lit * Loc
   /// Variable reference.
   | Ref
-    of ident:string * serial:int * Ty * Loc
+    of ident:string * VarSerial * Ty * Loc
   | Prim
     of HPrim * Ty * Loc
   | Match
@@ -509,10 +532,10 @@ type HExpr =
   | Let
     of pat:HPat * init:HExpr * next:HExpr * Ty * Loc
   | LetFun
-    of ident:string * serial:int * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
+    of ident:string * FunSerial * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
   /// Type declaration.
   | TyDef
-    of ident:string * serial:int * TyDecl * Loc
+    of ident:string * TySerial * TyDecl * Loc
   | Open
     of ident:string list * Loc
   | Error
@@ -548,11 +571,11 @@ type MUniOp =
   | Unbox
   /// Projection. Get an item of tuple.
   | Proj
-    of int
+    of index:int
   /// Get union tag.
   | Tag
   | GetVariant
-    of int
+    of VariantSerial
   | ListIsEmpty
   | ListHead
   | ListTail
@@ -581,9 +604,8 @@ type MOp =
 [<RequireQualifiedAccess>]
 type MProcDecl =
   {
-    Callee: int
-    /// serial, arity, ty, loc
-    Args: (int * int * Ty * Loc) list
+    Callee: FunSerial
+    Args: (VarSerial * Arity * Ty * Loc) list
     ResultTy: Ty
     Body: MStmt list
     Main: bool
@@ -597,12 +619,12 @@ type MExpr =
   | Default
     of Ty * Loc
   | Ref
-    of serial:int * Ty * Loc
+    of VarSerial * Ty * Loc
   /// Procedure
   | Proc
-    of serial:int * Ty * Loc
+    of FunSerial * Ty * Loc
   | Variant
-    of tySerial:int * serial:int * Ty * Loc
+    of TySerial * VariantSerial * Ty * Loc
   | Uni
     of MUniOp * arg:MExpr * resultTy:Ty * Loc
   | Bin
@@ -626,7 +648,7 @@ type MInit =
     of callee:MExpr * args:MExpr list
   /// Construct a closure, packing environment.
   | Closure
-    of subFunSerial:int * envSerial:int
+    of subFunSerial:FunSerial * envSerial:VarSerial
   | Box
     of MExpr
   | Indirect
@@ -636,7 +658,7 @@ type MInit =
   | Tuple
     of items:MExpr list
   | Variant
-    of serial:int * payloadSerial:int
+    of VariantSerial * payloadSerial:VarSerial
 
 /// Statement in middle IR.
 /// Doesn't introduce global things, e.g. functions.
@@ -647,10 +669,10 @@ type MStmt =
     of MExpr * Loc
   /// Declare a local variable.
   | LetVal
-    of serial:int * MInit * Ty * Loc
+    of VarSerial * MInit * Ty * Loc
   /// Set to uninitialized local variable.
   | Set
-    of serial:int * init:MExpr * Loc
+    of VarSerial * init:MExpr * Loc
   | Return
     of MExpr * Loc
   | Label
@@ -730,7 +752,7 @@ type CExpr =
     of fields:(string * CExpr) list * CTy
   /// Projection. Get an item of tuple.
   | Proj
-    of CExpr * int
+    of CExpr * index:int
   | Cast
     of CExpr * CTy
   | Nav

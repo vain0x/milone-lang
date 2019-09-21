@@ -13,10 +13,10 @@ open MiloneLang.Helpers
 [<RequireQualifiedAccess>]
 type Ctx =
   {
-    Vars: Map<int, VarDef>
-    VarUniqueNames: Map<int, string>
+    Vars: Map<VarSerial, VarDef>
+    VarUniqueNames: Map<VarSerial, string>
     TyEnv: Map<Ty, CTy>
-    Tys: Map<int, TyDef>
+    Tys: Map<TySerial, TyDef>
     TyUniqueNames: Map<Ty, string>
     Stmts: CStmt list
     Decls: CDecl list

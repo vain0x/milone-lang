@@ -14,10 +14,10 @@ type TyCtx = Typing.TyCtx
 [<RequireQualifiedAccess>]
 type MirCtx =
   {
-    Serial: int
-    Vars: Map<int, VarDef>
-    Tys: Map<int, TyDef>
-    LabelSerial: int
+    Serial: Serial
+    Vars: Map<VarSerial, VarDef>
+    Tys: Map<TySerial, TyDef>
+    LabelSerial: Serial
     Stmts: MStmt list
     Logs: (Log * Loc) list
   }

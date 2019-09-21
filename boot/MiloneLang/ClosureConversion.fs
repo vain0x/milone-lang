@@ -26,15 +26,15 @@ open MiloneLang.Types
 [<RequireQualifiedAccess>]
 type CcCtx =
   {
-    Serial: int
-    Vars: Map<int, VarDef>
-    Tys: Map<int, TyDef>
+    Serial: Serial
+    Vars: Map<VarSerial, VarDef>
+    Tys: Map<TySerial, TyDef>
 
     /// Known identifiers and their dependencies.
-    Caps: Map<int, (string * int * Ty * Loc) list>
-    Known: Set<int>
-    Refs: Set<int>
-    Locals: Set<int>
+    Caps: Map<FunSerial, (string * VarSerial * Ty * Loc) list>
+    Known: Set<FunSerial>
+    Refs: Set<VarSerial>
+    Locals: Set<VarSerial>
   }
 
 let ctxFromTyCtx (ftCtx: Typing.TyCtx): CcCtx =

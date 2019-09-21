@@ -54,9 +54,9 @@ type CalleeKind =
 [<RequireQualifiedAccess>]
 type EtaCtx =
   {
-    Serial: int
-    Vars: Map<int, VarDef>
-    Tys: Map<int, TyDef>
+    Serial: Serial
+    Vars: Map<VarSerial, VarDef>
+    Tys: Map<TySerial, TyDef>
   }
 
 let ctxFromTyCtx (ftCtx: Typing.TyCtx): EtaCtx =

@@ -14,13 +14,13 @@ type TyCtx =
     /// Next serial number.
     /// We need to identify variables by serial number rather than names
     /// due to scope locality and shadowing.
-    Serial: int
-    NameMap: Map<int, string>
+    Serial: Serial
+    NameMap: Map<Serial, string>
     /// Variable serial to variable definition.
-    Vars: Map<int, VarDef>
+    Vars: Map<VarSerial, VarDef>
     /// Type serial to type definition.
-    Tys: Map<int, TyDef>
-    TyDepths: Map<int, LetDepth>
+    Tys: Map<TySerial, TyDef>
+    TyDepths: Map<TySerial, LetDepth>
     LetDepth: LetDepth
     UnifyQueue: (Ty * Ty * Loc) list
     Constraints: (TyConstraint * Loc) list

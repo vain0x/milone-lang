@@ -9,47 +9,49 @@ open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 
+type ScopeSerial = Serial
+
 [<RequireQualifiedAccess>]
 type Binding =
   /// Value binding.
   | Var
-    of varSerial:int * varIdent:string
+    of VarSerial * varIdent:string
 
   /// Type binding.
   | Ty
-    of tySerial:int * tyIdent:string
+    of TySerial * tyIdent:string
 
   /// Parent scope.
   | Parent
-    of int * Scope
+    of ScopeSerial * Scope
 
 /// (scopeSerial, binding) list.
-type Scope = (int * Binding) list
+type Scope = (ScopeSerial * Binding) list
 
 [<RequireQualifiedAccess>]
 type ScopeCtx =
   {
     /// Last serial number.
     /// We need manage identifiers as integers rather than strings due to shadowing.
-    Serial: int
+    Serial: Serial
 
     /// Serial to ident map.
-    NameMap: Map<int, string>
+    NameMap: Map<Serial, string>
 
     /// Variable serial to definition map.
-    Vars: Map<int, VarDef>
+    Vars: Map<VarSerial, VarDef>
 
     /// Variable serial to let-depth map.
-    VarDepths: Map<int, LetDepth>
+    VarDepths: Map<VarSerial, LetDepth>
 
     /// Type serial to definition map.
-    Tys: Map<int, TyDef>
+    Tys: Map<TySerial, TyDef>
 
     /// Type serial to let-depth map.
-    TyDepths: Map<int, LetDepth>
+    TyDepths: Map<TySerial, LetDepth>
 
     /// Serial of the current scope.
-    LocalSerial: int
+    LocalSerial: ScopeSerial
 
     /// Current scope.
     Local: Scope
@@ -145,7 +147,7 @@ let scopeCtxOnLeaveLetBody (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with LetDepth = scopeCtx.LetDepth - 1 }
 
 /// Starts a new scope.
-let scopeCtxStartScope (scopeCtx: ScopeCtx): int * ScopeCtx =
+let scopeCtxStartScope (scopeCtx: ScopeCtx): ScopeSerial * ScopeCtx =
   let parentSerial, parent = scopeCtx.LocalSerial, scopeCtx.Local
   let localSerial as serial = scopeCtx.Serial + 1
   let scopeCtx =
@@ -185,7 +187,7 @@ let scopeCtxFinishScope parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
       Local = local
   }
 
-let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): int option =
+let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option =
   let rec go current bindings =
     match bindings with
     | [] ->
@@ -209,7 +211,7 @@ let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): int option =
 
   go scopeSerial scopeCtx.Local
 
-let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): int option =
+let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
   let rec go current bindings =
     match bindings with
     | [] ->
