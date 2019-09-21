@@ -127,13 +127,13 @@ let cmpExpr ctx (op: MOp) (l: MExpr) r (ty: Ty) loc =
 let mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MExpr.Lit (lit, loc)
   let eqExpr, ctx = cmpExpr ctx MOp.Eq expr litExpr tyBool loc
-  let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+  let gotoStmt = msGotoUnless eqExpr endLabel loc
   let ctx = ctxAddStmt ctx gotoStmt
   false, ctx
 
 let mirifyPatNil ctx endLabel itemTy expr loc =
   let isEmptyExpr = MExpr.Uni (MUniOp.ListIsEmpty, expr, tyList itemTy, loc)
-  let gotoStmt = MStmt.GotoUnless (isEmptyExpr, endLabel, loc)
+  let gotoStmt = msGotoUnless isEmptyExpr endLabel loc
   let ctx = ctxAddStmt ctx gotoStmt
   false, ctx
 
@@ -141,7 +141,7 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let listTy = tyList itemTy
   let isEmpty = MExpr.Uni (MUniOp.ListIsEmpty, expr, tyBool, loc)
   let nonEmpty = MExpr.Uni (MUniOp.Not, isEmpty, tyBool, loc)
-  let gotoStmt = MStmt.GotoUnless (nonEmpty, endLabel, loc)
+  let gotoStmt = msGotoUnless nonEmpty endLabel loc
   let ctx = ctxAddStmt ctx gotoStmt
   let head = MExpr.Uni (MUniOp.ListHead, expr, itemTy, loc)
   let tail = MExpr.Uni (MUniOp.ListTail, expr, listTy, loc)
@@ -156,7 +156,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
     let lTagExpr = MExpr.Uni (MUniOp.Tag, expr, tyInt, loc)
     let rTagExpr = MExpr.Ref (serial, tyInt, loc)
     let eqExpr = MExpr.Bin (MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
-    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+    let gotoStmt = msGotoUnless eqExpr endLabel loc
     let ctx = ctxAddStmt ctx gotoStmt
     false, ctx
   | _ ->
@@ -179,7 +179,7 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
     let lTagExpr = MExpr.Uni (MUniOp.Tag, expr, tyInt, loc)
     let rTagExpr = MExpr.Ref (serial, tyInt, loc)
     let eqExpr = MExpr.Bin (MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
-    let gotoStmt = MStmt.GotoUnless (eqExpr, endLabel, loc)
+    let gotoStmt = msGotoUnless eqExpr endLabel loc
     let ctx = ctxAddStmt ctx gotoStmt
 
     // Extract content.
@@ -392,7 +392,7 @@ let mirifyExprMatch ctx target arms ty loc =
       let ctx =
         if guard |> hxIsAlwaysTrue then ctx else
         let guard, ctx = mirifyExpr ctx guard
-        ctxAddStmt ctx (MStmt.GotoUnless (guard, nextLabel, loc))
+        ctxAddStmt ctx (msGotoUnless guard nextLabel loc)
       emit ctx rest
     | MatchIR.Body body :: rest ->
       // Enter into the body.
@@ -543,18 +543,8 @@ let mirifyExprInfCallProc ctx callee args ty loc =
       mirifyExprOpArith ctx MOp.Mod l r ty loc
     | HPrim.Eq, [l; r] ->
       mirifyExprOpCmp ctx MOp.Eq l r ty loc
-    | HPrim.Ne, [l; r] ->
-      mirifyExprOpCmp ctx MOp.Ne l r ty loc
     | HPrim.Lt, [l; r] ->
       mirifyExprOpCmp ctx MOp.Lt l r ty loc
-    | HPrim.Le, [l; r] ->
-      mirifyExprOpCmp ctx MOp.Le l r ty loc
-    | HPrim.Gt, [l; r] ->
-      // NOTE: `l > r` ===> `r < l` (Evaluation order does change.)
-      mirifyExprOpCmp ctx MOp.Lt r l ty loc
-    | HPrim.Ge, [l; r] ->
-      // NOTE: `l > r` ===> `r < l` (Evaluation order does change.)
-      mirifyExprOpCmp ctx MOp.Le r l ty loc
     | HPrim.Cons, [l; r] ->
       mirifyExprOpCons ctx l r ty loc
     | HPrim.Index, [l; r] ->

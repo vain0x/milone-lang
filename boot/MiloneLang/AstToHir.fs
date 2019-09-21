@@ -46,6 +46,11 @@ let axApp3 f x1 x2 x3 loc =
   let app x f = AExpr.Bin (Op.App, f, x, loc)
   f |> app x1 |> app x2 |> app x3
 
+/// `not x` ==> `x = false`
+let axNot arg loc =
+  let falseExpr = axFalse loc
+  AExpr.Bin (Op.Eq, arg, falseExpr, loc)
+
 let opToPrim op =
   match op with
   | Op.Add ->
@@ -66,24 +71,16 @@ let opToPrim op =
   | Op.Eq ->
     HPrim.Eq
 
-  | Op.Ne ->
-    HPrim.Ne
-
   | Op.Lt ->
     HPrim.Lt
-
-  | Op.Le ->
-    HPrim.Le
-
-  | Op.Gt ->
-    HPrim.Gt
-
-  | Op.Ge ->
-    HPrim.Ge
 
   | Op.Cons ->
     HPrim.Cons
 
+  | Op.Ne
+  | Op.Le
+  | Op.Gt
+  | Op.Ge
   | Op.And
   | Op.Or
   | Op.App
@@ -152,6 +149,27 @@ let desugarFun pats body loc =
 let desugarUniNeg arg loc =
   let zero = AExpr.Lit (Lit.Int 0, loc)
   AExpr.Bin (Op.Sub, zero, arg, loc)
+
+/// `l <> r` ==> `not (l = r)`
+let desugarBinNe l r loc =
+  let eqExpr = AExpr.Bin (Op.Eq, l, r, loc)
+  axNot eqExpr loc
+
+/// `l <= r` ==> `not (r < l)`
+/// NOTE: Evaluation order does change.
+let desugarBinLe l r loc =
+  let ltExpr = AExpr.Bin (Op.Lt, r, l, loc)
+  axNot ltExpr loc
+
+/// `l > r` ==> `r < l`
+/// NOTE: Evaluation order does change.
+let desugarBinGt l r loc =
+  AExpr.Bin (Op.Lt, r, l, loc)
+
+/// `l >= r` ==> `not (l < r)`
+let desugarBinGe l r loc =
+  let ltExpr = AExpr.Bin (Op.Lt, l, r, loc)
+  axNot ltExpr loc
 
 /// `l && r` ==> `if l then r else false`
 let desugarBinAnd l r loc =
@@ -349,6 +367,22 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.Uni (UniOp.Neg, arg, loc) ->
     let expr = desugarUniNeg arg loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Ne, l, r, loc) ->
+    let expr = desugarBinNe l r loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Le, l, r, loc) ->
+    let expr = desugarBinLe l r loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Gt, l, r, loc) ->
+    let expr = desugarBinGt l r loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Ge, l, r, loc) ->
+    let expr = desugarBinGe l r loc
     (expr, nameCtx) |> onExpr
 
   | AExpr.Bin (Op.And, l, r, loc) ->

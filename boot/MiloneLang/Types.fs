@@ -473,11 +473,7 @@ type HPrim =
   | Div
   | Mod
   | Eq
-  | Ne
   | Lt
-  | Le
-  | Gt
-  | Ge
   | Nil
   | Cons
   | Index
@@ -592,7 +588,7 @@ type MOp =
   | Eq
   | Ne
   | Lt
-  | Le
+  | Ge
   /// Concatenate two strings.
   | StrAdd
   /// Compare two strings.
@@ -679,7 +675,7 @@ type MStmt =
     of string * Loc
   | Goto
     of string * Loc
-  | GotoUnless
+  | GotoIf
     of MExpr * string * Loc
   | Exit
     of MExpr * Loc
@@ -723,7 +719,7 @@ type CBinOp =
   | Mod
   | Add
   | Sub
-  //// Equal
+  /// Equal
   | Eq
   /// Not Equal
   | Ne
@@ -731,6 +727,10 @@ type CBinOp =
   | Lt
   /// Less than or equal to
   | Le
+  /// Greater than
+  | Gt
+  /// Greater than or equal to
+  | Ge
 
 /// Expression in C language.
 [<RequireQualifiedAccess>]
@@ -788,7 +788,7 @@ type CStmt =
     of string
   | Goto
     of string
-  | GotoUnless
+  | GotoIf
     of CExpr * string
   | Return
     of CExpr option

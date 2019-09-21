@@ -297,7 +297,7 @@ let cOpFrom op =
   | MOp.Eq -> CBinOp.Eq
   | MOp.Ne -> CBinOp.Ne
   | MOp.Lt -> CBinOp.Lt
-  | MOp.Le -> CBinOp.Le
+  | MOp.Ge -> CBinOp.Ge
   | MOp.StrAdd
   | MOp.StrCmp
   | MOp.StrIndex -> failwith "Never"
@@ -390,7 +390,7 @@ let genExprList ctx exprs =
   go [] ctx exprs
 
 let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
-  match arg with
+  match arg |> mxSugar with
   | MExpr.Lit (Lit.Int value, _) ->
     CExpr.Int value, ctx
   | MExpr.Lit (Lit.Char value, _) ->
@@ -403,8 +403,6 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), _) ->
-    genExprDefault ctx tyUnit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Proc (serial, ty, loc) ->
@@ -664,9 +662,9 @@ let genStmt ctx stmt =
     ctxAddStmt ctx (CStmt.Label label)
   | MStmt.Goto (label, _) ->
     ctxAddStmt ctx (CStmt.Goto label)
-  | MStmt.GotoUnless (pred, label, _) ->
+  | MStmt.GotoIf (pred, label, _) ->
     let pred, ctx = genExpr ctx pred
-    ctxAddStmt ctx (CStmt.GotoUnless (pred, label))
+    ctxAddStmt ctx (CStmt.GotoIf (pred, label))
   | MStmt.Exit (arg, _) ->
     let arg, ctx = genExpr ctx arg
     ctxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))

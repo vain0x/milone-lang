@@ -329,16 +329,12 @@ let inferPrim ctx prim loc ty =
   | HPrim.Mod ->
     aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
 
-  | HPrim.Eq
-  | HPrim.Ne ->
+  | HPrim.Eq ->
     let eqTy, _, ctx = ctxFreshTyVar "eq" loc ctx
     let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Eq eqTy) loc
     aux (tyFun eqTy (tyFun eqTy tyBool)) ctx
 
-  | HPrim.Lt
-  | HPrim.Le
-  | HPrim.Gt
-  | HPrim.Ge ->
+  | HPrim.Lt ->
     let cmpTy, _, ctx = ctxFreshTyVar "cmp" loc ctx
     let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Cmp cmpTy) loc
     aux (tyFun cmpTy (tyFun cmpTy tyBool)) ctx

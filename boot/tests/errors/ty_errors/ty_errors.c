@@ -25,13 +25,13 @@ struct IntIntTuple2IntTuple2 {
 
 int main() {
     int match_;
-    if (!((0 == 1))) goto next_2;
+    if (1) goto next_2;
     exit(1);
     int app_ = ((struct UnitUnitFun1){}).fun(((struct UnitUnitFun1){}).env, 0);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    if (!((0 == 0))) goto next_3;
+    if (0) goto next_3;
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -44,9 +44,9 @@ end_match_1:;
     struct IntIntTuple2IntTuple2 tuple_;
     tuple_.t0 = tuple_1;
     tuple_.t1 = 3;
-    if (!((tuple_.t0.t0 == 1))) goto next_5;
-    if (!((str_cmp(tuple_.t0.t1, (struct String){.str = "type error", .len = 10}) == 0))) goto next_5;
-    if (!((tuple_.t1 == 3))) goto next_5;
+    if ((tuple_.t0.t0 != 1)) goto next_5;
+    if ((str_cmp(tuple_.t0.t1, (struct String){.str = "type error", .len = 10}) != 0)) goto next_5;
+    if ((tuple_.t1 != 3)) goto next_5;
     match_1 = 0;
     goto end_match_4;
 next_5:;

@@ -236,11 +236,7 @@ let primToArity ty prim =
   | HPrim.Div
   | HPrim.Mod
   | HPrim.Eq
-  | HPrim.Ne
   | HPrim.Lt
-  | HPrim.Le
-  | HPrim.Gt
-  | HPrim.Ge
   | HPrim.Cons
   | HPrim.Index ->
     2
@@ -475,9 +471,7 @@ let exprToTy expr =
 let opIsComparison op =
   match op with
   | MOp.Eq
-  | MOp.Ne
-  | MOp.Lt
-  | MOp.Le ->
+  | MOp.Lt ->
     true
   | _ ->
     false
@@ -485,6 +479,9 @@ let opIsComparison op =
 // -----------------------------------------------
 // Expressions (MIR)
 // -----------------------------------------------
+
+let mxNot expr loc =
+  MExpr.Uni (MUniOp.Not, expr, tyBool, loc)
 
 let mexprExtract expr =
   match expr with
@@ -499,6 +496,85 @@ let mexprExtract expr =
 let mexprToTy expr =
   let ty, _ = mexprExtract expr
   ty
+
+// -----------------------------------------------
+// Statements (MIR)
+// -----------------------------------------------
+
+let msGotoUnless pred label loc =
+  let notPred = mxNot pred loc
+  MStmt.GotoIf (notPred, label, loc)
+
+// -----------------------------------------------
+// Expression sugaring (MIR)
+// -----------------------------------------------
+
+let rec mxSugar expr =
+  let mxSugarUni op l ty loc =
+    match l with
+    // SUGAR: `not true` ==> `false`
+    // SUGAR: `not false` ==> `true`
+    | MExpr.Lit (Lit.Bool value, loc) ->
+      MExpr.Lit (Lit.Bool (not value), loc)
+
+    // SUGAR: `not (not x)` ==> `x`
+    | MExpr.Uni (MUniOp.Not, l, _, _) ->
+      l
+
+    // SUGAR: `not (x = y)` ==> `x <> y`
+    | MExpr.Bin (MOp.Eq, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Ne, l, r, ty, loc)
+
+    // SUGAR: `not (x <> y)` ==> `x = y`
+    | MExpr.Bin (MOp.Ne, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Eq, l, r, ty, loc)
+
+    // SUGAR: `not (x < y)` ==> `x >= y`
+    | MExpr.Bin (MOp.Lt, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Ge, l, r, ty, loc)
+
+    // SUGAR: `not (x >= y)` ==> `x < y`
+    | MExpr.Bin (MOp.Ge, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Lt, l, r, ty, loc)
+
+    | _ ->
+      MExpr.Uni (op, l, ty, loc)
+
+  let mxSugarBin op l r ty loc =
+    match op, l, r with
+    // SUGAR: `x = false` ==> `not x`
+    | MOp.Eq, MExpr.Lit (Lit.Bool false, _), _ ->
+      mxSugarUni MUniOp.Not r ty loc
+
+    | MOp.Eq, _, MExpr.Lit (Lit.Bool false, _) ->
+      mxSugarUni MUniOp.Not l ty loc
+
+    // SUGAR: `x = true` ==> `x`
+    | MOp.Eq, MExpr.Lit (Lit.Bool true, _), _ ->
+      r
+
+    | MOp.Eq, _, MExpr.Lit (Lit.Bool true, _) ->
+      l
+
+    | _ ->
+      MExpr.Bin (op, l, r, ty, loc)
+
+  match expr with
+  // SUGAR: `x: unit` ==> `()`
+  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), loc) ->
+    MExpr.Default (tyUnit, loc)
+
+  | MExpr.Uni (op, l, ty, loc) ->
+    let l = mxSugar l
+    mxSugarUni op l ty loc
+
+  | MExpr.Bin (op, l, r, ty, loc) ->
+    let l = mxSugar l
+    let r = mxSugar r
+    mxSugarBin op l r ty loc
+
+  | _ ->
+    expr
 
 // -----------------------------------------------
 // Print Formats
@@ -635,6 +711,7 @@ let typingConstrain logAcc (ctx: TyContext) tyConstraint loc =
   let expectScalar ty (logAcc, ctx) =
     match ty with
     | Ty.Error _
+    | Ty.Con (TyCon.Bool, [])
     | Ty.Con (TyCon.Int, [])
     | Ty.Con (TyCon.Char, [])
     | Ty.Con (TyCon.Str, []) ->

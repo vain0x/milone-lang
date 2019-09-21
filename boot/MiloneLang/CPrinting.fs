@@ -32,6 +32,8 @@ let opStr op =
   | CBinOp.Ne -> "!="
   | CBinOp.Lt -> "<"
   | CBinOp.Le -> "<="
+  | CBinOp.Gt -> ">"
+  | CBinOp.Ge -> ">="
 
 let cprintTyFunPtr name argTys resultTy acc =
   let acc = cprintTy acc resultTy
@@ -255,10 +257,10 @@ let cprintStmt acc indent stmt: string list =
     acc |> cons label |> cons ":;" |> cons eol
   | CStmt.Goto label ->
     acc |> cons indent |> cons "goto " |> cons label |> cons ";" |> cons eol
-  | CStmt.GotoUnless (pred, label) ->
-    let acc = acc |> cons indent |> cons "if (!("
+  | CStmt.GotoIf (pred, label) ->
+    let acc = acc |> cons indent |> cons "if ("
     let acc = cprintExpr acc pred
-    let acc = acc |> cons ")) goto " |> cons label |> cons ";" |> cons eol
+    let acc = acc |> cons ") goto " |> cons label |> cons ";" |> cons eol
     acc
 
 let rec cprintStmts acc indent stmts: string list =
