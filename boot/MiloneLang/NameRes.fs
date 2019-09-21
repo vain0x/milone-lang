@@ -310,7 +310,10 @@ let scopeCtxResolveTy ty loc scopeCtx =
 // Definitions
 // -----------------------------------------------
 
-let scopeCtxDefineFunUniquely serial arity tyScheme loc (scopeCtx: ScopeCtx): ScopeCtx =
+let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
+  let arity = args |> List.length
+  let tyScheme = TyScheme.ForAll ([], ty)
+
   match scopeCtx.Vars |> Map.tryFind serial with
   | Some (VarDef.Fun _) ->
     scopeCtx
@@ -448,11 +451,9 @@ let collectDecls (expr, ctx) =
 
     | HExpr.LetFun (ident, serial, args, body, next, ty, loc) ->
       let ctx =
-        let arity = args |> List.length
-        let tyScheme = TyScheme.ForAll ([], ty)
         ctx
         |> scopeCtxOnEnterLetBody
-        |> scopeCtxDefineFunUniquely serial arity tyScheme loc
+        |> scopeCtxDefineFunUniquely serial args noTy loc
         |> scopeCtxOnLeaveLetBody
       let next, ctx = (next, ctx) |> goExpr
       HExpr.LetFun (ident, serial, args, body, next, ty, loc), ctx
@@ -712,10 +713,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
     // Define the function itself for recursive referencing.
     // FIXME: Functions are recursive even if `rec` is missing.
-    let ctx =
-      let arity = pats |> List.length
-      let tyScheme = TyScheme.ForAll ([], ty)
-      ctx |> scopeCtxDefineFunUniquely serial arity tyScheme loc
+    let ctx = ctx |> scopeCtxDefineFunUniquely serial pats noTy loc
 
     let pats, body, ctx =
       // Introduce a function body scope.
