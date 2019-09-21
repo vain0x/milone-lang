@@ -187,6 +187,7 @@ let hoistExprCore (expr, ctx) =
   | HExpr.Error _
   | HExpr.Lit _
   | HExpr.Ref _
+  | HExpr.Prim _
   | HExpr.Open _ ->
     expr, ctx
 
@@ -204,11 +205,6 @@ let hoistExprCore (expr, ctx) =
   | HExpr.Nav (l, r, ty, loc) ->
     let l, ctx = hoistExpr (l, ctx)
     HExpr.Nav (l, r, ty, loc), ctx
-
-  | HExpr.Bin (op, l, r, ty, loc) ->
-    let l, ctx = (l, ctx) |> hoistExpr
-    let r, ctx = (r, ctx) |> hoistExpr
-    HExpr.Bin (op, l, r, ty, loc), ctx
 
   | HExpr.Inf (infOp, items, ty, loc) ->
     let items, ctx = (items, ctx) |> stMap hoistExpr

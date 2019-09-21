@@ -55,11 +55,11 @@ struct IntList {
 
 struct IntList* go_2(struct IntList* acc_, struct IntList* xs_1) {
     struct IntList* match_;
-    if (!((!(xs_1)))) goto next_2;
+    if ((!((!(xs_1))))) goto next_2;
     match_ = acc_;
     goto end_match_1;
 next_2:;
-    if (!((!((!(xs_1)))))) goto next_3;
+    if ((!(xs_1))) goto next_3;
     int x_ = xs_1->head;
     struct IntList* xs_2 = xs_1->tail;
     struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
@@ -81,11 +81,11 @@ struct StringList {
 
 struct StringList* go_1(struct StringList* acc_, struct StringList* xs_1) {
     struct StringList* match_1;
-    if (!((!(xs_1)))) goto next_5;
+    if ((!((!(xs_1))))) goto next_5;
     match_1 = acc_;
     goto end_match_4;
 next_5:;
-    if (!((!((!(xs_1)))))) goto next_6;
+    if ((!(xs_1))) goto next_6;
     struct String x_ = xs_1->head;
     struct StringList* xs_2 = xs_1->tail;
     struct StringList* list_1 = (struct StringList*)malloc(sizeof(struct StringList));
@@ -125,11 +125,11 @@ struct IntIntFun1 {
 
 struct IntList* listMap_2(struct IntIntFun1 f_, struct IntList* xs_3) {
     struct IntList* match_2;
-    if (!((!(xs_3)))) goto next_8;
+    if ((!((!(xs_3))))) goto next_8;
     match_2 = NULL;
     goto end_match_7;
 next_8:;
-    if (!((!((!(xs_3)))))) goto next_9;
+    if ((!(xs_3))) goto next_9;
     int x_2 = xs_3->head;
     struct IntList* xs_4 = xs_3->tail;
     int app_ = f_.fun(f_.env, x_2);
@@ -172,11 +172,11 @@ struct StringIntTuple2List {
 
 struct StringIntTuple2List* listMap_1(struct IntStringTuple2StringIntTuple2Fun1 f_, struct IntStringTuple2List* xs_3) {
     struct StringIntTuple2List* match_3;
-    if (!((!(xs_3)))) goto next_11;
+    if ((!((!(xs_3))))) goto next_11;
     match_3 = NULL;
     goto end_match_10;
 next_11:;
-    if (!((!((!(xs_3)))))) goto next_12;
+    if ((!(xs_3))) goto next_12;
     struct IntStringTuple2 x_2 = xs_3->head;
     struct IntStringTuple2List* xs_4 = xs_3->tail;
     struct StringIntTuple2 app_1 = f_.fun(f_.env, x_2);
@@ -268,8 +268,8 @@ int main() {
     tuple_2.t1 = (struct String){.str = "a", .len = 1};
     struct StringIntTuple2 call_15 = flip_1(tuple_2);
     struct IntStringTuple2 call_16 = flip_2(call_15);
-    if (!((call_16.t0 == 1))) goto next_14;
-    if (!((str_cmp(call_16.t1, (struct String){.str = "a", .len = 1}) == 0))) goto next_14;
+    if ((call_16.t0 != 1)) goto next_14;
+    if ((str_cmp(call_16.t1, (struct String){.str = "a", .len = 1}) != 0)) goto next_14;
     match_4 = 0;
     goto end_match_13;
 next_14:;
@@ -297,16 +297,16 @@ end_match_13:;
     struct IntListStringListTuple2 tuple_3;
     tuple_3.t0 = call_18;
     tuple_3.t1 = call_19;
-    if (!((!((!(tuple_3.t0)))))) goto next_17;
-    if (!((tuple_3.t0->head == 2))) goto next_17;
-    if (!((!((!(tuple_3.t0->tail)))))) goto next_17;
-    if (!((tuple_3.t0->tail->head == 1))) goto next_17;
-    if (!((!(tuple_3.t0->tail->tail)))) goto next_17;
-    if (!((!((!(tuple_3.t1)))))) goto next_17;
-    if (!((str_cmp(tuple_3.t1->head, (struct String){.str = "b", .len = 1}) == 0))) goto next_17;
-    if (!((!((!(tuple_3.t1->tail)))))) goto next_17;
-    if (!((str_cmp(tuple_3.t1->tail->head, (struct String){.str = "a", .len = 1}) == 0))) goto next_17;
-    if (!((!(tuple_3.t1->tail->tail)))) goto next_17;
+    if ((!(tuple_3.t0))) goto next_17;
+    if ((tuple_3.t0->head != 2)) goto next_17;
+    if ((!(tuple_3.t0->tail))) goto next_17;
+    if ((tuple_3.t0->tail->head != 1)) goto next_17;
+    if ((!((!(tuple_3.t0->tail->tail))))) goto next_17;
+    if ((!(tuple_3.t1))) goto next_17;
+    if ((str_cmp(tuple_3.t1->head, (struct String){.str = "b", .len = 1}) != 0)) goto next_17;
+    if ((!(tuple_3.t1->tail))) goto next_17;
+    if ((str_cmp(tuple_3.t1->tail->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_17;
+    if ((!((!(tuple_3.t1->tail->tail))))) goto next_17;
     match_5 = 0;
     goto end_match_16;
 next_17:;
@@ -334,13 +334,13 @@ end_match_16:;
     list_12->head = tuple_4;
     list_12->tail = list_13;
     struct StringIntTuple2List* call_21 = listMap_1(fun_5, list_12);
-    if (!((!((!(call_21)))))) goto next_20;
-    if (!((str_cmp(call_21->head.t0, (struct String){.str = "a", .len = 1}) == 0))) goto next_20;
-    if (!((call_21->head.t1 == 1))) goto next_20;
-    if (!((!((!(call_21->tail)))))) goto next_20;
-    if (!((str_cmp(call_21->tail->head.t0, (struct String){.str = "b", .len = 1}) == 0))) goto next_20;
-    if (!((call_21->tail->head.t1 == 2))) goto next_20;
-    if (!((!(call_21->tail->tail)))) goto next_20;
+    if ((!(call_21))) goto next_20;
+    if ((str_cmp(call_21->head.t0, (struct String){.str = "a", .len = 1}) != 0)) goto next_20;
+    if ((call_21->head.t1 != 1)) goto next_20;
+    if ((!(call_21->tail))) goto next_20;
+    if ((str_cmp(call_21->tail->head.t0, (struct String){.str = "b", .len = 1}) != 0)) goto next_20;
+    if ((call_21->tail->head.t1 != 2)) goto next_20;
+    if ((!((!(call_21->tail->tail))))) goto next_20;
     match_6 = 0;
     goto end_match_19;
 next_20:;

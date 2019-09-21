@@ -1,10 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
-
   <ItemGroup>
     <Compile Include="Polyfills.fs" />
     <Compile Include="Types.fs" />
@@ -16,12 +14,13 @@
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
     <Compile Include="Hoist.fs" />
-    <Compile Include="FunTrans.fs" />
+    <Compile Include="MainHoist.fs" />
+    <Compile Include="ClosureConversion.fs" />
+    <Compile Include="EtaExpansion.fs" />
     <Compile Include="Monomorphizing.fs" />
     <Compile Include="Mir.fs" />
     <Compile Include="CIrGen.fs" />
     <Compile Include="CPrinting.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-
 </Project>

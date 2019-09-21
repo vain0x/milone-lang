@@ -216,8 +216,10 @@ let litToTy (lit: Lit): Ty =
 // Primitives (HIR)
 // -----------------------------------------------
 
-let primToArity prim =
+let primToArity ty prim =
   match prim with
+  | HPrim.Nil ->
+    0
   | HPrim.Not
   | HPrim.Exit
   | HPrim.Assert
@@ -228,10 +230,20 @@ let primToArity prim =
   | HPrim.Int
   | HPrim.String ->
     1
+  | HPrim.Add
+  | HPrim.Sub
+  | HPrim.Mul
+  | HPrim.Div
+  | HPrim.Mod
+  | HPrim.Eq
+  | HPrim.Lt
+  | HPrim.Cons
+  | HPrim.Index ->
+    2
   | HPrim.StrGetSlice ->
     3
   | HPrim.Printfn ->
-    9999
+    ty |> tyToArity
   | HPrim.NativeFun (_, arity) ->
     arity
 
@@ -353,8 +365,8 @@ let hxTrue loc =
 let hxFalse loc =
   HExpr.Lit (litFalse, loc)
 
-let hxIndex l r ty loc =
-  HExpr.Bin (Op.Index, l, r, ty, loc)
+let hxApp f x ty loc =
+  HExpr.Inf (InfOp.App, [f; x], ty, loc)
 
 let hxAnno expr ty loc =
   HExpr.Inf (InfOp.Anno, [expr], ty, loc)
@@ -375,7 +387,7 @@ let hxUnit loc =
   hxTuple [] loc
 
 let hxNil itemTy loc =
-  HExpr.Inf (InfOp.Nil, [], tyList itemTy, loc)
+  HExpr.Prim (HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
@@ -397,11 +409,11 @@ let exprExtract (expr: HExpr): Ty * Loc =
     litToTy lit, a
   | HExpr.Ref (_, _, ty, a) ->
     ty, a
+  | HExpr.Prim (_, ty, a) ->
+    ty, a
   | HExpr.Match (_, _, ty, a) ->
     ty, a
   | HExpr.Nav (_, _, ty, a) ->
-    ty, a
-  | HExpr.Bin (_, _, _, ty, a) ->
     ty, a
   | HExpr.Inf (_, _, ty, a) ->
     ty, a
@@ -425,6 +437,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Lit (lit, g a)
     | HExpr.Ref (ident, serial, ty, a) ->
       HExpr.Ref (ident, serial, f ty, g a)
+    | HExpr.Prim (prim, ty, a) ->
+      HExpr.Prim (prim, f ty, g a)
     | HExpr.Match (target, arms, ty, a) ->
       let arms =
         arms |> List.map (fun (pat, guard, body) ->
@@ -432,8 +446,6 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Match (go target, arms, f ty, g a)
     | HExpr.Nav (sub, mes, ty, a) ->
       HExpr.Nav (go sub, mes, f ty, g a)
-    | HExpr.Bin (op, l, r, ty, a) ->
-      HExpr.Bin (op, go l, go r, f ty, g a)
     | HExpr.Inf (infOp, args, resultTy, a) ->
       HExpr.Inf (infOp, List.map go args, f resultTy, g a)
     | HExpr.Let (pat, init, next, ty, a) ->
@@ -459,9 +471,7 @@ let exprToTy expr =
 let opIsComparison op =
   match op with
   | MOp.Eq
-  | MOp.Ne
-  | MOp.Lt
-  | MOp.Le ->
+  | MOp.Lt ->
     true
   | _ ->
     false
@@ -469,6 +479,9 @@ let opIsComparison op =
 // -----------------------------------------------
 // Expressions (MIR)
 // -----------------------------------------------
+
+let mxNot expr loc =
+  MExpr.Uni (MUniOp.Not, expr, tyBool, loc)
 
 let mexprExtract expr =
   match expr with
@@ -483,6 +496,85 @@ let mexprExtract expr =
 let mexprToTy expr =
   let ty, _ = mexprExtract expr
   ty
+
+// -----------------------------------------------
+// Statements (MIR)
+// -----------------------------------------------
+
+let msGotoUnless pred label loc =
+  let notPred = mxNot pred loc
+  MStmt.GotoIf (notPred, label, loc)
+
+// -----------------------------------------------
+// Expression sugaring (MIR)
+// -----------------------------------------------
+
+let rec mxSugar expr =
+  let mxSugarUni op l ty loc =
+    match l with
+    // SUGAR: `not true` ==> `false`
+    // SUGAR: `not false` ==> `true`
+    | MExpr.Lit (Lit.Bool value, loc) ->
+      MExpr.Lit (Lit.Bool (not value), loc)
+
+    // SUGAR: `not (not x)` ==> `x`
+    | MExpr.Uni (MUniOp.Not, l, _, _) ->
+      l
+
+    // SUGAR: `not (x = y)` ==> `x <> y`
+    | MExpr.Bin (MOp.Eq, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Ne, l, r, ty, loc)
+
+    // SUGAR: `not (x <> y)` ==> `x = y`
+    | MExpr.Bin (MOp.Ne, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Eq, l, r, ty, loc)
+
+    // SUGAR: `not (x < y)` ==> `x >= y`
+    | MExpr.Bin (MOp.Lt, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Ge, l, r, ty, loc)
+
+    // SUGAR: `not (x >= y)` ==> `x < y`
+    | MExpr.Bin (MOp.Ge, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Lt, l, r, ty, loc)
+
+    | _ ->
+      MExpr.Uni (op, l, ty, loc)
+
+  let mxSugarBin op l r ty loc =
+    match op, l, r with
+    // SUGAR: `x = false` ==> `not x`
+    | MOp.Eq, MExpr.Lit (Lit.Bool false, _), _ ->
+      mxSugarUni MUniOp.Not r ty loc
+
+    | MOp.Eq, _, MExpr.Lit (Lit.Bool false, _) ->
+      mxSugarUni MUniOp.Not l ty loc
+
+    // SUGAR: `x = true` ==> `x`
+    | MOp.Eq, MExpr.Lit (Lit.Bool true, _), _ ->
+      r
+
+    | MOp.Eq, _, MExpr.Lit (Lit.Bool true, _) ->
+      l
+
+    | _ ->
+      MExpr.Bin (op, l, r, ty, loc)
+
+  match expr with
+  // SUGAR: `x: unit` ==> `()`
+  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), loc) ->
+    MExpr.Default (tyUnit, loc)
+
+  | MExpr.Uni (op, l, ty, loc) ->
+    let l = mxSugar l
+    mxSugarUni op l ty loc
+
+  | MExpr.Bin (op, l, r, ty, loc) ->
+    let l = mxSugar l
+    let r = mxSugar r
+    mxSugarBin op l r ty loc
+
+  | _ ->
+    expr
 
 // -----------------------------------------------
 // Print Formats
@@ -512,9 +604,7 @@ let analyzeFormat (format: string) =
 // -----------------------------------------------
 
 /// Adds type-var/type binding.
-let typingBind (ctx: TyContext) tySerial ty =
-  // FIXME: track location info
-  let noLoc = 0, 0
+let typingBind (ctx: TyContext) tySerial ty loc =
   // FIXME: track identifier
   let noIdent = "unknown"
 
@@ -533,7 +623,7 @@ let typingBind (ctx: TyContext) tySerial ty =
     tySerials |> List.fold (fun tyDepths tySerial -> tyDepths |> Map.add tySerial depth) ctx.TyDepths
 
   { ctx with
-      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, noLoc))
+      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, loc))
       TyDepths = tyDepths
   }
 
@@ -557,34 +647,146 @@ let typingSubst (ctx: TyContext) ty: Ty =
 
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
-let typingUnify (ctx: TyContext) (lty: Ty) (rty: Ty): string list * TyContext =
+let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
   let lRootTy, rRootTy = lty, rty
-  let rec go lty rty (msgAcc, ctx) =
+
+  let addLog kind lTy rTy logAcc ctx =
+    let lRootTy = typingSubst ctx lRootTy
+    let rRootTy = typingSubst ctx rRootTy
+    (Log.TyUnify (kind, lRootTy, rRootTy, lTy, rTy), loc) :: logAcc, ctx
+
+  let rec go lty rty (logAcc, ctx) =
     let lSubstTy = typingSubst ctx lty
     let rSubstTy = typingSubst ctx rty
     match lSubstTy, rSubstTy with
     | Ty.Meta (l, _), Ty.Meta (r, _) when l = r ->
-      msgAcc, ctx
-    | Ty.Meta (lSerial, _), _ when tyIsFreeIn rSubstTy lSerial ->
-      let ctx = typingBind ctx lSerial rty
-      msgAcc, ctx
+      logAcc, ctx
+    | Ty.Meta (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
+      let ctx = typingBind ctx lSerial rty loc
+      logAcc, ctx
     | _, Ty.Meta _ ->
-      go rty lty (msgAcc, ctx)
+      go rty lty (logAcc, ctx)
     | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
-      msgAcc, ctx
+      logAcc, ctx
     | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
-      (msgAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
+      (logAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
     | Ty.Error _, _
     | _, Ty.Error _ ->
-      msgAcc, ctx
+      logAcc, ctx
     | Ty.Meta _, _ ->
-      let msg = sprintf "Couldn't unify '%A' and '%A' due to self recursion." lSubstTy rSubstTy
-      msg :: msgAcc, ctx
+      addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
     | Ty.Con _, _ ->
-      let lRootTy = typingSubst ctx lRootTy
-      let rRootTy = typingSubst ctx rRootTy
-      let msg = sprintf "While unifying '%A' and '%A', failed to unify '%A' and '%A'." lRootTy rRootTy lSubstTy rSubstTy
-      msg :: msgAcc, ctx
-  let msgAcc, ctx =
-    go lty rty ([], ctx)
-  List.rev msgAcc, ctx
+      addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
+
+  go lty rty (logAcc, ctx)
+
+let typingSubstConstraint (ctx: TyContext) (tyConstraint: TyConstraint) =
+  match tyConstraint with
+  | TyConstraint.Add ty ->
+    TyConstraint.Add (typingSubst ctx ty)
+
+  | TyConstraint.Eq ty ->
+    TyConstraint.Eq (typingSubst ctx ty)
+
+  | TyConstraint.Cmp ty ->
+    TyConstraint.Cmp (typingSubst ctx ty)
+
+  | TyConstraint.Index (lTy, rTy, resultTy) ->
+    let lTy = typingSubst ctx lTy
+    let rTy = typingSubst ctx rTy
+    let resultTy = typingSubst ctx resultTy
+    TyConstraint.Index (lTy, rTy, resultTy)
+
+  | TyConstraint.ToInt ty ->
+    TyConstraint.ToInt (typingSubst ctx ty)
+
+  | TyConstraint.ToString ty ->
+    TyConstraint.ToString (typingSubst ctx ty)
+
+let typingConstrain logAcc (ctx: TyContext) tyConstraint loc =
+  let tyConstraint = typingSubstConstraint ctx tyConstraint
+
+  let expectScalar ty (logAcc, ctx) =
+    match ty with
+    | Ty.Error _
+    | Ty.Con (TyCon.Bool, [])
+    | Ty.Con (TyCon.Int, [])
+    | Ty.Con (TyCon.Char, [])
+    | Ty.Con (TyCon.Str, []) ->
+      logAcc, ctx
+
+    | _ ->
+      (Log.TyConstraintError tyConstraint, loc) :: logAcc, ctx
+
+  match tyConstraint with
+  | TyConstraint.Add ty ->
+    match ty with
+    | Ty.Error _
+    | Ty.Con (TyCon.Str, []) ->
+      logAcc, ctx
+
+    | _ ->
+      // Coerce to int by default.
+      typingUnify logAcc ctx ty tyInt loc
+
+  | TyConstraint.Eq ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+  | TyConstraint.Cmp ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+  | TyConstraint.Index (lTy, rTy, resultTy) ->
+    match lTy with
+    | Ty.Error _ ->
+      [], ctx
+
+    | Ty.Con (TyCon.Str, []) ->
+      let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
+      let logAcc, ctx = typingUnify logAcc ctx resultTy tyChar loc
+      logAcc, ctx
+
+    | _ ->
+      (Log.TyConstraintError tyConstraint, loc) :: logAcc, ctx
+
+  | TyConstraint.ToInt ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+  | TyConstraint.ToString ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+// -----------------------------------------------
+// Logs
+// -----------------------------------------------
+
+let logToString loc log =
+  let loc =
+    let y, x = loc
+    sprintf "%d:%d" (y + 1) (x + 1)
+
+  match log with
+  | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
+    sprintf "%s Couldn't unify '%A' and '%A' due to self recursion." loc lTy rTy
+
+  | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
+    sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
+
+  | Log.TyConstraintError (TyConstraint.Add ty) ->
+    sprintf "%s No support (+) for '%A' yet" loc ty
+
+  | Log.TyConstraintError (TyConstraint.Eq ty) ->
+    sprintf "%s No support equality for '%A' yet" loc ty
+
+  | Log.TyConstraintError (TyConstraint.Cmp ty) ->
+    sprintf "%s No support comparison for '%A' yet" loc ty
+
+  | Log.TyConstraintError (TyConstraint.Index (lTy, rTy, _)) ->
+    sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
+
+  | Log.TyConstraintError (TyConstraint.ToInt ty) ->
+    sprintf "%s Can't convert to int from '%A'" loc ty
+
+  | Log.TyConstraintError (TyConstraint.ToString ty) ->
+    sprintf "%s Can't convert to string from '%A'" loc ty
+
+  | Log.Error msg ->
+    sprintf "%s %s" loc msg

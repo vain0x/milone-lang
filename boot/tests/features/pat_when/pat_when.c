@@ -15,7 +15,7 @@ int eq_(struct IntIntTuple2 t_) {
     int match_;
     int x_ = t_.t0;
     int y_ = t_.t1;
-    if (!((x_ == y_))) goto next_2;
+    if ((x_ != y_)) goto next_2;
     match_ = 1;
     goto end_match_1;
 next_2:;

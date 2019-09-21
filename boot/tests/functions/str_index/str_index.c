@@ -11,11 +11,11 @@ char at_(int i_, struct String s_) {
 int main() {
     struct String hello_ = (struct String){.str = "hello", .len = 5};
     int match_;
-    if (!(((hello_.str[0] == 'h') == 1))) goto next_2;
+    if ((hello_.str[0] != 'h')) goto next_2;
     match_ = (hello_.str[4] == 'o');
     goto end_match_1;
 next_2:;
-    if (!(((hello_.str[0] == 'h') == 0))) goto next_3;
+    if ((hello_.str[0] == 'h')) goto next_3;
     match_ = 0;
     goto end_match_1;
 next_3:;

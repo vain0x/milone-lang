@@ -20,11 +20,11 @@ int neg_(int x_) {
 
 int abs_(int x_1) {
     int match_;
-    if (!(((0 <= x_1) == 1))) goto next_2;
+    if ((x_1 < 0)) goto next_2;
     match_ = x_1;
     goto end_match_1;
 next_2:;
-    if (!(((0 <= x_1) == 0))) goto next_3;
+    if ((x_1 >= 0)) goto next_3;
     int call_ = neg_(x_1);
     match_ = call_;
     goto end_match_1;
@@ -36,12 +36,12 @@ end_match_1:;
 
 int gcd_(int x_2, int y_) {
     int match_1;
-    if (!(((y_ == 0) == 1))) goto next_5;
+    if ((y_ != 0)) goto next_5;
     int call_1 = abs_(x_2);
     match_1 = call_1;
     goto end_match_4;
 next_5:;
-    if (!(((y_ == 0) == 0))) goto next_6;
+    if ((y_ == 0)) goto next_6;
     int call_2 = gcd_(y_, (x_2 % y_));
     match_1 = call_2;
     goto end_match_4;
@@ -58,20 +58,20 @@ struct IntTuple1 {
 int go_(struct IntTuple1 arg_, int k_) {
     int x_3 = arg_.t0;
     int match_2;
-    if (!(((x_3 < (k_ * k_)) == 1))) goto next_8;
+    if ((x_3 >= (k_ * k_))) goto next_8;
     match_2 = 1;
     goto end_match_7;
 next_8:;
-    if (!(((x_3 < (k_ * k_)) == 0))) goto next_9;
+    if ((x_3 < (k_ * k_))) goto next_9;
     int match_3;
-    if (!((((x_3 % k_) != 0) == 1))) goto next_11;
+    if (((x_3 % k_) == 0)) goto next_11;
     struct IntTuple1 tuple_;
     tuple_.t0 = x_3;
     int call_3 = go_(tuple_, (k_ + 1));
     match_3 = call_3;
     goto end_match_10;
 next_11:;
-    if (!((((x_3 % k_) != 0) == 0))) goto next_12;
+    if (((x_3 % k_) != 0)) goto next_12;
     match_3 = 0;
     goto end_match_10;
 next_12:;
@@ -87,14 +87,14 @@ end_match_7:;
 
 int isPrime_(int x_3) {
     int match_4;
-    if (!(((2 <= x_3) == 1))) goto next_14;
+    if ((x_3 < 2)) goto next_14;
     struct IntTuple1 tuple_1;
     tuple_1.t0 = x_3;
     int call_4 = go_(tuple_1, 2);
     match_4 = call_4;
     goto end_match_13;
 next_14:;
-    if (!(((2 <= x_3) == 0))) goto next_15;
+    if ((x_3 >= 2)) goto next_15;
     match_4 = 0;
     goto end_match_13;
 next_15:;

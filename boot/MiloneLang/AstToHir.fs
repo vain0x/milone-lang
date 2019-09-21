@@ -46,6 +46,48 @@ let axApp3 f x1 x2 x3 loc =
   let app x f = AExpr.Bin (Op.App, f, x, loc)
   f |> app x1 |> app x2 |> app x3
 
+/// `not x` ==> `x = false`
+let axNot arg loc =
+  let falseExpr = axFalse loc
+  AExpr.Bin (Op.Eq, arg, falseExpr, loc)
+
+let opToPrim op =
+  match op with
+  | Op.Add ->
+    HPrim.Add
+
+  | Op.Sub ->
+    HPrim.Sub
+
+  | Op.Mul ->
+    HPrim.Mul
+
+  | Op.Div ->
+    HPrim.Div
+
+  | Op.Mod ->
+    HPrim.Mod
+
+  | Op.Eq ->
+    HPrim.Eq
+
+  | Op.Lt ->
+    HPrim.Lt
+
+  | Op.Cons ->
+    HPrim.Cons
+
+  | Op.Ne
+  | Op.Le
+  | Op.Gt
+  | Op.Ge
+  | Op.And
+  | Op.Or
+  | Op.App
+  | Op.Index
+  | Op.Pipe ->
+    failwithf "NEVER: %A" op
+
 /// `[x; y; ..]`. Desugar to a chain of (::).
 let desugarListLitPat pats loc =
   assert (pats |> listIsEmpty |> not)
@@ -89,8 +131,8 @@ let desugarIf cond body alt loc =
 
   let arms =
     [
-      AArm.T (apTrue loc, axTrue loc, body, loc)
-      AArm.T (apFalse loc, axTrue loc, alt, loc)
+      AArm (apTrue loc, axTrue loc, body, loc)
+      AArm (apFalse loc, axTrue loc, alt, loc)
     ]
 
   AExpr.Match (cond, arms, loc)
@@ -107,6 +149,27 @@ let desugarFun pats body loc =
 let desugarUniNeg arg loc =
   let zero = AExpr.Lit (Lit.Int 0, loc)
   AExpr.Bin (Op.Sub, zero, arg, loc)
+
+/// `l <> r` ==> `not (l = r)`
+let desugarBinNe l r loc =
+  let eqExpr = AExpr.Bin (Op.Eq, l, r, loc)
+  axNot eqExpr loc
+
+/// `l <= r` ==> `not (r < l)`
+/// NOTE: Evaluation order does change.
+let desugarBinLe l r loc =
+  let ltExpr = AExpr.Bin (Op.Lt, r, l, loc)
+  axNot ltExpr loc
+
+/// `l > r` ==> `r < l`
+/// NOTE: Evaluation order does change.
+let desugarBinGt l r loc =
+  AExpr.Bin (Op.Lt, r, l, loc)
+
+/// `l >= r` ==> `not (l < r)`
+let desugarBinGe l r loc =
+  let ltExpr = AExpr.Bin (Op.Lt, l, r, loc)
+  axNot ltExpr loc
 
 /// `l && r` ==> `if l then r else false`
 let desugarBinAnd l r loc =
@@ -252,7 +315,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.Ident (ident, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    HExpr.Ref (ident, HValRef.Var serial, noTy, loc), nameCtx
+    HExpr.Ref (ident, serial, noTy, loc), nameCtx
 
   | AExpr.ListLit ([], loc) ->
     hxNil noTy loc, nameCtx
@@ -267,7 +330,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.Match (target, arms, loc) ->
     // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
-    let onArm (AArm.T (pat, guard, body, loc), nameCtx) =
+    let onArm (AArm (pat, guard, body, loc), nameCtx) =
       let pat, nameCtx =
         (pat, nameCtx) |> onPat
       let guard, nameCtx =
@@ -299,10 +362,27 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     | false, _ ->
       let l, nameCtx = (l, nameCtx) |> onExpr
       let r, nameCtx = (r, nameCtx) |> onExpr
-      HExpr.Bin (Op.Index, l, r, noTy, loc), nameCtx
+      let hxIndex = hxApp (hxApp (HExpr.Prim (HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
+      hxIndex, nameCtx
 
   | AExpr.Uni (UniOp.Neg, arg, loc) ->
     let expr = desugarUniNeg arg loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Ne, l, r, loc) ->
+    let expr = desugarBinNe l r loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Le, l, r, loc) ->
+    let expr = desugarBinLe l r loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Gt, l, r, loc) ->
+    let expr = desugarBinGt l r loc
+    (expr, nameCtx) |> onExpr
+
+  | AExpr.Bin (Op.Ge, l, r, loc) ->
+    let expr = desugarBinGe l r loc
     (expr, nameCtx) |> onExpr
 
   | AExpr.Bin (Op.And, l, r, loc) ->
@@ -317,26 +397,34 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     let expr = desugarBinPipe l r loc
     (expr, nameCtx) |> onExpr
 
-  | AExpr.Bin (op, l, r, loc) ->
+  | AExpr.Bin (Op.App, l, r, loc) ->
     let l, nameCtx = (l, nameCtx) |> onExpr
     let r, nameCtx = (r, nameCtx) |> onExpr
-    HExpr.Bin (op, l, r, noTy, loc), nameCtx
+    hxApp l r noTy loc, nameCtx
+
+  | AExpr.Bin (op, l, r, loc) ->
+    let prim = op |> opToPrim
+    let l, nameCtx = (l, nameCtx) |> onExpr
+    let r, nameCtx = (r, nameCtx) |> onExpr
+    let primExpr = HExpr.Prim (prim, noTy, loc)
+    hxApp (hxApp primExpr l noTy loc) r noTy loc, nameCtx
 
   | AExpr.Range (_, loc) ->
     HExpr.Error ("Invalid use of range syntax.", loc), nameCtx
 
   | AExpr.TupleLit (items, loc) ->
     let items, nameCtx = (items, nameCtx) |> stMap onExpr
-    HExpr.Inf (InfOp.Tuple, items, noTy, loc), nameCtx
+    hxTuple items loc, nameCtx
 
   | AExpr.Anno (body, ty, loc) ->
     let body, nameCtx = (body, nameCtx) |> onExpr
     let ty, nameCtx = (ty, nameCtx) |> onTy
-    HExpr.Inf (InfOp.Anno, [body], ty, loc), nameCtx
+    hxAnno body ty loc, nameCtx
 
   | AExpr.Semi (exprs, loc) ->
+    assert (exprs |> listIsEmpty |> not)
     let exprs, nameCtx = (exprs, nameCtx) |> stMap onExpr
-    HExpr.Inf (InfOp.Semi, exprs, noTy, loc), nameCtx
+    hxSemi exprs loc, nameCtx
 
   | AExpr.Let (pat, body, next, loc) ->
     match desugarLet pat body next loc with
@@ -359,7 +447,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.TyDef (ident, serial, TyDecl.Synonym (ty, loc), loc), nameCtx
 
   | AExpr.TyUnion (ident, variants, loc) ->
-    let onVariant (AVariant.T (ident, payloadTy, _variantLoc), nameCtx) =
+    let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let hasPayload, payloadTy, nameCtx =
         match payloadTy with

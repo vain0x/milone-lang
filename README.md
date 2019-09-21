@@ -113,13 +113,12 @@ The following transformations are consist of the compilation in the order:
     - For data structure decoupling and desugaring
 - [NameRes](boot/MiloneLang/NameRes.fs) (Name resolution)
 - [Typing](boot/MiloneLang/Typing.fs) (Type inference)
-- [FunTrans](boot/MiloneLang/FunTrans.fs) (Function transformations)
-    - Main hoisting:
-        - Resolve top-level bindings
-    - Declosure (closure conversion):
-        - Resolve use of local variables in functions
-    - Uneta:
-        - Resolve partial applications
+- [MainHoist](boot/MiloneLang/MainHoist.fs)
+    - Resolve top-level bindings
+- [ClosureConversion](boot/MiloneLang/ClosureConversion.fs)
+    - Resolve use of local variables in functions
+- [EtaExpansion](boot/MiloneLang/EtaExpansion.fs)
+    - Resolve partial applications
 - [Hoist](boot/MiloneLang/Hoist.fs)
     - Just a preparation of monomorphization
 - [Monomorphization](boot/MiloneLang/Monomorphization.fs)

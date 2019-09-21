@@ -13,14 +13,14 @@ open MiloneLang.Helpers
 [<RequireQualifiedAccess>]
 type Ctx =
   {
-    Vars: Map<int, VarDef>
-    VarUniqueNames: Map<int, string>
+    Vars: Map<VarSerial, VarDef>
+    VarUniqueNames: Map<VarSerial, string>
     TyEnv: Map<Ty, CTy>
-    Tys: Map<int, TyDef>
+    Tys: Map<TySerial, TyDef>
     TyUniqueNames: Map<Ty, string>
     Stmts: CStmt list
     Decls: CDecl list
-    Diags: Diag list
+    Logs: (Log * Loc) list
   }
 
 let tupleField i = sprintf "t%d" i
@@ -58,11 +58,11 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): Ctx =
     TyUniqueNames = tyNames
     Stmts = []
     Decls = []
-    Diags = mirCtx.Diags
+    Logs = mirCtx.Logs
   }
 
 let ctxAddErr (ctx: Ctx) message loc =
-  { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
+  { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
 let ctxNewBlock (ctx: Ctx) =
   { ctx with Stmts = [] }
@@ -297,7 +297,7 @@ let cOpFrom op =
   | MOp.Eq -> CBinOp.Eq
   | MOp.Ne -> CBinOp.Ne
   | MOp.Lt -> CBinOp.Lt
-  | MOp.Le -> CBinOp.Le
+  | MOp.Ge -> CBinOp.Ge
   | MOp.StrAdd
   | MOp.StrCmp
   | MOp.StrIndex -> failwith "Never"
@@ -390,7 +390,7 @@ let genExprList ctx exprs =
   go [] ctx exprs
 
 let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
-  match arg with
+  match arg |> mxSugar with
   | MExpr.Lit (Lit.Int value, _) ->
     CExpr.Int value, ctx
   | MExpr.Lit (Lit.Char value, _) ->
@@ -403,8 +403,6 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), _) ->
-    genExprDefault ctx tyUnit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Proc (serial, ty, loc) ->
@@ -664,9 +662,9 @@ let genStmt ctx stmt =
     ctxAddStmt ctx (CStmt.Label label)
   | MStmt.Goto (label, _) ->
     ctxAddStmt ctx (CStmt.Goto label)
-  | MStmt.GotoUnless (pred, label, _) ->
+  | MStmt.GotoIf (pred, label, _) ->
     let pred, ctx = genExpr ctx pred
-    ctxAddStmt ctx (CStmt.GotoUnless (pred, label))
+    ctxAddStmt ctx (CStmt.GotoIf (pred, label))
   | MStmt.Exit (arg, _) ->
     let arg, ctx = genExpr ctx arg
     ctxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))
@@ -701,7 +699,7 @@ let genDecls (ctx: Ctx) decls =
       match args with
       | [] ->
         List.rev acc, ctx
-      | (arg, _, ty, _) :: args ->
+      | (arg, ty, _) :: args ->
         let ident = ctxUniqueName ctx arg
         let cty, ctx = cty ctx ty
         go ((ident, cty) :: acc) ctx args
@@ -712,23 +710,25 @@ let genDecls (ctx: Ctx) decls =
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls
 
-let genDiags (ctx: Ctx) =
-  let rec go (ctx: Ctx) diags =
-    match diags with
+let genLogs (ctx: Ctx) =
+  let rec go (ctx: Ctx) logs =
+    match logs with
     | [] ->
       ctx
-    | Diag.Err (message, (y, x)) :: diags ->
-      let message = sprintf "%d:%d %s" (1 + y) (1 + x) message
-      let ctx = ctxAddDecl ctx (CDecl.ErrDir (message, 1 + y))
-      go ctx diags
-  let diags = ctx.Diags |> List.rev
-  let ctx = go ctx diags
-  let success = diags |> List.isEmpty
+    | (log, loc) :: logs ->
+      let y, _ = loc
+      let msg = log |> logToString loc
+      let ctx = ctxAddDecl ctx (CDecl.ErrDir (msg, 1 + y))
+      go ctx logs
+
+  let logs = ctx.Logs |> List.rev
+  let ctx = go ctx logs
+  let success = logs |> List.isEmpty
   success, ctx
 
 let gen (decls, mirCtx: Mir.MirCtx): CDecl list * bool =
   let ctx = ctxFromMirCtx mirCtx
   let ctx = genDecls ctx decls
-  let success, ctx = genDiags ctx
+  let success, ctx = genLogs ctx
   let decls = ctx.Decls |> List.rev
   decls, success

@@ -1,14 +1,50 @@
 /// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
-/// Location = (rowIndex, columnIndex).
-type Loc = int * int
+/// Unique serial number as identity.
+type Serial = int
 
-/// Diagnostic; something bad in source code.
+/// Literal of primitive value.
 [<RequireQualifiedAccess>]
-type Diag =
-  | Err
-    of string * Loc
+type Lit =
+  | Bool
+    of bool
+  | Int
+    of int
+  | Char
+    of char
+  | Str
+    of string
+
+// -----------------------------------------------
+// Errors
+// -----------------------------------------------
+
+[<RequireQualifiedAccess>]
+type TyUnifyLog =
+  | SelfRec
+  | Mismatch
+
+[<RequireQualifiedAccess>]
+type Log =
+  | TyUnify
+    of TyUnifyLog * lRootTy:Ty * rRootTy:Ty * lTy:Ty * rTy:Ty
+  | TyConstraintError
+    of TyConstraint
+  | Error
+    of string
+
+// -----------------------------------------------
+// Syntax types
+// -----------------------------------------------
+
+/// 0-indexed.
+type RowIndex = int
+
+/// 0-indexed.
+type ColumnIndex = int
+
+type Loc = RowIndex * ColumnIndex
 
 /// Words and punctuations in source code.
 [<RequireQualifiedAccess>]
@@ -24,16 +60,6 @@ type Token =
     of string
   | Ident
     of string
-  | Do
-  | Let
-  | Rec
-  | If
-  | Then
-  | Else
-  | Match
-  | With
-  | As
-  | When
   /// `(`
   | ParenL
   /// `)`
@@ -78,16 +104,83 @@ type Token =
   | Semi
   | Star
   | Slash
-  | Private
+  | As
+  | Do
+  | Else
+  | Fun
+  | If
+  | In
   | Internal
-  | Public
+  | Let
+  | Match
   | Module
   | Namespace
-  | Open
-  | Type
   | Of
-  | Fun
-  | In
+  | Open
+  | Private
+  | Public
+  | Rec
+  | Then
+  | Type
+  | When
+  | With
+
+/// Unary operators in AST.
+[<RequireQualifiedAccess>]
+type UniOp =
+  /// `-`
+  | Neg
+
+/// Precedence level of binary operators.
+[<RequireQualifiedAccess>]
+type OpLevel =
+  | Mul
+  | Add
+  | Cons
+  /// `|>`
+  | Pipe
+  /// Comparison.
+  | Cmp
+  | And
+  | Or
+
+/// Binary operators in AST.
+[<RequireQualifiedAccess>]
+type Op =
+  /// `*` Multiplier
+  | Mul
+  /// `/` Divisor
+  | Div
+  /// `%` Modulo
+  | Mod
+  /// `+` Addition
+  | Add
+  /// `-` Subtract
+  | Sub
+  /// `=` Equal
+  | Eq
+  /// `<>` Not Equal
+  | Ne
+  /// `<` Less than
+  | Lt
+  /// `<=` Less than or equal to
+  | Le
+  /// `>` Greater than
+  | Gt
+  /// `>=` Greater than or equal to
+  | Ge
+  /// `|>`
+  | Pipe
+  /// `&&`
+  | And
+  /// `||`
+  | Or
+  /// `f x` Application
+  | App
+  /// `::` Cons cell constructor
+  | Cons
+  /// `.[ ]`
+  | Index
 
 /// Type expression in AST.
 [<RequireQualifiedAccess>]
@@ -143,17 +236,15 @@ type APat =
     of string * APat list * Loc
 
 /// Match arm node in AST.
-[<RequireQualifiedAccess>]
 type AArm =
   /// (pattern, guard, body).
-  | T
+  | AArm
     of APat * AExpr * AExpr * Loc
 
 /// Variant node in AST.
-[<RequireQualifiedAccess>]
 type AVariant =
   /// (identifier, payload-type).
-  | T
+  | AVariant
     of string * ATy option * Loc
 
 /// Let expression in AST.
@@ -229,6 +320,37 @@ type AExpr =
   | Open
     of string list * Loc
 
+// -----------------------------------------------
+// Intermediate representation types
+// -----------------------------------------------
+
+/// Serial number of types.
+type TySerial = Serial
+
+/// Serial number of variable/function/variants.
+type VarSerial = Serial
+
+/// Serial number of functions.
+type FunSerial = Serial
+
+/// Serial number of variants.
+type VariantSerial = Serial
+
+/// Count of parameters or arguments.
+type Arity = int
+
+/// Let-depth, i.e. the number of ancestral let nodes
+/// of the place where the meta type is introduced.
+/// Used for polymorphic type inference.
+/// E.g. in `let x: 'x = ((let y: 'y = a: 'a); b: 'b)`,
+///   `'x`: 0, `'y`: 1, `'a`: 2, `'b`: 1
+/// Only one exception: recursive function have let-depth deeper by 1.
+type LetDepth = int
+
+type NameCtx =
+  | NameCtx
+    of Map<Serial, string> * lastSerial:Serial
+
 /// Type constructors.
 [<RequireQualifiedAccess>]
 type TyCon =
@@ -242,7 +364,7 @@ type TyCon =
   | List
   /// Type reference, i.e. some union type.
   | Ref
-    of serial:int
+    of Serial
 
 /// Type of expressions.
 [<RequireQualifiedAccess>]
@@ -251,87 +373,38 @@ type Ty =
     of Loc
   /// Type variable, i.e. some binding.
   | Meta
-    of serial:int * Loc
+    of Serial * Loc
   | Con
     of TyCon * Ty list
 
 /// Generalized type.
 [<RequireQualifiedAccess>]
 type TyScheme =
-  | ForAll of int list * Ty
+  | ForAll of TySerial list * Ty
+
+[<RequireQualifiedAccess>]
+type TyConstraint =
+  | Add
+    of Ty
+  | Eq
+    of Ty
+  | Cmp
+    of Ty
+  | Index
+    of lTy:Ty * rTy:Ty * resultTy:Ty
+  | ToInt
+    of Ty
+  | ToString
+    of Ty
 
 /// Type context.
 [<RequireQualifiedAccess>]
 type TyContext =
   {
-    Serial: int
-    Tys: Map<int, TyDef>
-
-    /// type serial -> let-depth,
-    /// where `let-depth` is the number of ancestral `let` expressions.
-    TyDepths: Map<int, int>
+    Serial: Serial
+    Tys: Map<TySerial, TyDef>
+    TyDepths: Map<TySerial, LetDepth>
   }
-
-/// Precedence level of binary operators.
-[<RequireQualifiedAccess>]
-type OpLevel =
-  | Mul
-  | Add
-  | Cons
-  /// `|>`
-  | Pipe
-  /// Comparison.
-  | Cmp
-  | And
-  | Or
-
-/// Unary operators in AST.
-[<RequireQualifiedAccess>]
-type UniOp =
-  /// `-`
-  | Neg
-
-/// Binary operators in AST.
-[<RequireQualifiedAccess>]
-type Op =
-  /// `*` Multiplier
-  | Mul
-  /// `/` Divisor
-  | Div
-  /// `%` Modulo
-  | Mod
-  /// `+` Addition
-  | Add
-  /// `-` Subtract
-  | Sub
-  /// `=` Equal
-  | Eq
-  /// `<>` Not Equal
-  | Ne
-  /// `<` Less than
-  | Lt
-  /// `<=` Less than or equal to
-  | Le
-  /// `>` Greater than
-  | Gt
-  /// `>=` Greater than or equal to
-  | Ge
-  /// `|>`
-  | Pipe
-  /// `&&`
-  | And
-  /// `||`
-  | Or
-  /// `f x` Application
-  | App
-  /// `::` Cons cell constructor
-  | Cons
-  /// `.[ ]`
-  | Index
-
-type NameCtx =
-  | NameCtx
-    of Map<int, string> * last: int
 
 /// Type declaration.
 [<RequireQualifiedAccess>]
@@ -339,9 +412,9 @@ type TyDecl =
   | Synonym
     of ty:Ty * Loc
   /// Union type.
-  /// Variants: (ident, serial, has-argument, argument type).
+  /// Variants: (ident, serial, has-payload, payload type).
   | Union
-    of ident:string * variants:(string * int * bool * Ty) list * Loc
+    of ident:string * variants:(string * VarSerial * bool * Ty) list * Loc
 
 /// Type definition.
 [<RequireQualifiedAccess>]
@@ -350,7 +423,7 @@ type TyDef =
   | Meta
     of ident:string * Ty * Loc
   | Union
-    of ident:string * variants:int list * Loc
+    of ident:string * VariantSerial list * Loc
 
 /// Variable definition in high-level IR.
 [<RequireQualifiedAccess>]
@@ -358,10 +431,10 @@ type VarDef =
   | Var
     of ident:string * Ty * Loc
   | Fun
-    of ident:string * arity:int * TyScheme * Loc
+    of ident:string * Arity * TyScheme * Loc
   /// Variant constructor.
   | Variant
-    of ident:string * tySerial:int * hasArg:bool * argTy:Ty * Ty * Loc
+    of ident:string * TySerial * hasPayload:bool * payloadTy:Ty * variantTy:Ty * Loc
 
 /// Pattern in AST.
 [<RequireQualifiedAccess>]
@@ -373,7 +446,7 @@ type HPat =
     of itemTy:Ty * Loc
   /// Variable reference pattern or `_`.
   | Ref
-    of ident:string * serial:int * Ty * Loc
+    of ident:string * VarSerial * Ty * Loc
   | Nav
     of HPat * string * Ty * Loc
   | Call
@@ -384,46 +457,26 @@ type HPat =
   | Tuple
     of HPat list * tupleTy:Ty * Loc
   | As
-    of HPat * ident:string * serial:int * Loc
+    of HPat * ident:string * VarSerial * Loc
   /// Type annotation pattern, e.g. `x : int`.
   | Anno
     of HPat * Ty * Loc
   | Or
     of HPat * HPat * Ty * Loc
 
-/// Literal of primitive value.
-[<RequireQualifiedAccess>]
-type Lit =
-  | Bool
-    of bool
-  | Int
-    of int
-  | Char
-    of char
-  | Str
-    of string
-
-[<RequireQualifiedAccess>]
-type InfOp =
-  /// Type annotation `x : 'x`.
-  | Anno
-  /// `x; y`
-  | Semi
-  /// Direct call to procedure or primitive.
-  | CallProc
-  /// Indirect call to closure.
-  | CallClosure
-  /// Tuple constructor, e.g. `x, y, z`.
-  | Tuple
-  /// `[]`
-  | Nil
-  /// Closure constructor.
-  | Closure
-    of funSerial:int
-
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]
 type HPrim =
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Mod
+  | Eq
+  | Lt
+  | Nil
+  | Cons
+  | Index
   | Not
   | Exit
   | Assert
@@ -436,14 +489,23 @@ type HPrim =
   | Int
   | String
   | NativeFun
-    of string * int
+    of ident:string * Arity
 
 [<RequireQualifiedAccess>]
-type HValRef =
-  | Var
-    of serial:int
-  | Prim
-    of HPrim
+type InfOp =
+  | App
+  /// Type annotation `x : 'x`.
+  | Anno
+  /// `x; y`
+  | Semi
+  /// Direct call to procedure or primitive.
+  | CallProc
+  /// Indirect call to closure.
+  | CallClosure
+  /// Tuple constructor, e.g. `x, y, z`.
+  | Tuple
+  /// Closure constructor.
+  | Closure
 
 /// Expression in AST.
 [<RequireQualifiedAccess>]
@@ -452,68 +514,32 @@ type HExpr =
     of Lit * Loc
   /// Variable reference.
   | Ref
-    of ident:string * HValRef * Ty * Loc
+    of ident:string * VarSerial * Ty * Loc
+  | Prim
+    of HPrim * Ty * Loc
   | Match
     of target:HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`
   | Nav
     of subject:HExpr * message:string * Ty * Loc
-  /// Binary operation, e.g. `x + y`.
-  | Bin
-    of Op * HExpr * HExpr * Ty * Loc
   /// Operation with infinite arguments.
   | Inf
     of InfOp * HExpr list * Ty * Loc
   | Let
     of pat:HPat * init:HExpr * next:HExpr * Ty * Loc
   | LetFun
-    of ident:string * serial:int * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
+    of ident:string * FunSerial * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
   /// Type declaration.
   | TyDef
-    of ident:string * serial:int * TyDecl * Loc
+    of ident:string * TySerial * TyDecl * Loc
   | Open
     of ident:string list * Loc
   | Error
     of string * Loc
 
-/// Unary operator in middle IR.
-/// Or primitive function with single parameter.
-[<RequireQualifiedAccess>]
-type MUniOp =
-  | Not
-  | StrPtr
-  | StrLen
-  | Unbox
-  /// Projection. Get an item of tuple.
-  | Proj
-    of int
-  /// Get union tag.
-  | Tag
-  | GetVariant
-    of int
-  | ListIsEmpty
-  | ListHead
-  | ListTail
-
-/// Binary operator in middle IR.
-/// Or primitive function with two parameters.
-[<RequireQualifiedAccess>]
-type MOp =
-  | Mul
-  | Div
-  | Mod
-  | Add
-  | Sub
-  | Eq
-  | Ne
-  | Lt
-  | Le
-  /// Concatenate two strings.
-  | StrAdd
-  /// Compare two strings.
-  | StrCmp
-  /// Get a char.
-  | StrIndex
+// -----------------------------------------------
+// MIR types
+// -----------------------------------------------
 
 /// Intermediate language between HIR and MIR for match expressions.
 [<RequireQualifiedAccess>]
@@ -531,13 +557,51 @@ type MatchIR =
   | Body
     of body:HExpr
 
+/// Unary operator in middle IR.
+/// Or primitive function with single parameter.
+[<RequireQualifiedAccess>]
+type MUniOp =
+  | Not
+  | StrPtr
+  | StrLen
+  | Unbox
+  /// Projection. Get an item of tuple.
+  | Proj
+    of index:int
+  /// Get union tag.
+  | Tag
+  | GetVariant
+    of VariantSerial
+  | ListIsEmpty
+  | ListHead
+  | ListTail
+
+/// Binary operator in middle IR.
+/// Or primitive function with two parameters.
+[<RequireQualifiedAccess>]
+type MOp =
+  | Mul
+  | Div
+  | Mod
+  | Add
+  | Sub
+  | Eq
+  | Ne
+  | Lt
+  | Ge
+  /// Concatenate two strings.
+  | StrAdd
+  /// Compare two strings.
+  | StrCmp
+  /// Get a char.
+  | StrIndex
+
 /// Procedure declaration in middle IR.
 [<RequireQualifiedAccess>]
 type MProcDecl =
   {
-    Callee: int
-    /// serial, arity, ty, loc
-    Args: (int * int * Ty * Loc) list
+    Callee: FunSerial
+    Args: (VarSerial * Ty * Loc) list
     ResultTy: Ty
     Body: MStmt list
     Main: bool
@@ -551,12 +615,12 @@ type MExpr =
   | Default
     of Ty * Loc
   | Ref
-    of serial:int * Ty * Loc
+    of VarSerial * Ty * Loc
   /// Procedure
   | Proc
-    of serial:int * Ty * Loc
+    of FunSerial * Ty * Loc
   | Variant
-    of tySerial:int * serial:int * Ty * Loc
+    of TySerial * VariantSerial * Ty * Loc
   | Uni
     of MUniOp * arg:MExpr * resultTy:Ty * Loc
   | Bin
@@ -580,7 +644,7 @@ type MInit =
     of callee:MExpr * args:MExpr list
   /// Construct a closure, packing environment.
   | Closure
-    of subFunSerial:int * envSerial:int
+    of subFunSerial:FunSerial * envSerial:VarSerial
   | Box
     of MExpr
   | Indirect
@@ -590,7 +654,7 @@ type MInit =
   | Tuple
     of items:MExpr list
   | Variant
-    of serial:int * payloadSerial:int
+    of VariantSerial * payloadSerial:VarSerial
 
 /// Statement in middle IR.
 /// Doesn't introduce global things, e.g. functions.
@@ -601,17 +665,17 @@ type MStmt =
     of MExpr * Loc
   /// Declare a local variable.
   | LetVal
-    of serial:int * MInit * Ty * Loc
+    of VarSerial * MInit * Ty * Loc
   /// Set to uninitialized local variable.
   | Set
-    of serial:int * init:MExpr * Loc
+    of VarSerial * init:MExpr * Loc
   | Return
     of MExpr * Loc
   | Label
     of string * Loc
   | Goto
     of string * Loc
-  | GotoUnless
+  | GotoIf
     of MExpr * string * Loc
   | Exit
     of MExpr * Loc
@@ -623,6 +687,10 @@ type MStmt =
 type MDecl =
   | Proc
     of MProcDecl * Loc
+
+// -----------------------------------------------
+// CIR types
+// -----------------------------------------------
 
 /// Type in C language.
 [<RequireQualifiedAccess>]
@@ -651,7 +719,7 @@ type CBinOp =
   | Mod
   | Add
   | Sub
-  //// Equal
+  /// Equal
   | Eq
   /// Not Equal
   | Ne
@@ -659,6 +727,10 @@ type CBinOp =
   | Lt
   /// Less than or equal to
   | Le
+  /// Greater than
+  | Gt
+  /// Greater than or equal to
+  | Ge
 
 /// Expression in C language.
 [<RequireQualifiedAccess>]
@@ -680,7 +752,7 @@ type CExpr =
     of fields:(string * CExpr) list * CTy
   /// Projection. Get an item of tuple.
   | Proj
-    of CExpr * int
+    of CExpr * index:int
   | Cast
     of CExpr * CTy
   | Nav
@@ -716,7 +788,7 @@ type CStmt =
     of string
   | Goto
     of string
-  | GotoUnless
+  | GotoIf
     of CExpr * string
   | Return
     of CExpr option

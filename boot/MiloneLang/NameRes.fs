@@ -9,52 +9,55 @@ open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 
+type ScopeSerial = Serial
+
 [<RequireQualifiedAccess>]
 type Binding =
   /// Value binding.
   | Var
-    of varSerial:int * varIdent:string
+    of VarSerial * varIdent:string
 
   /// Type binding.
   | Ty
-    of tySerial:int * tyIdent:string
+    of TySerial * tyIdent:string
 
   /// Parent scope.
   | Parent
-    of int * Scope
+    of ScopeSerial * Scope
 
 /// (scopeSerial, binding) list.
-type Scope = (int * Binding) list
+type Scope = (ScopeSerial * Binding) list
 
 [<RequireQualifiedAccess>]
 type ScopeCtx =
   {
     /// Last serial number.
     /// We need manage identifiers as integers rather than strings due to shadowing.
-    Serial: int
+    Serial: Serial
 
     /// Serial to ident map.
-    NameMap: Map<int, string>
+    NameMap: Map<Serial, string>
 
     /// Variable serial to definition map.
-    Vars: Map<int, VarDef>
+    Vars: Map<VarSerial, VarDef>
 
-    VarDepths: Map<int, int>
+    /// Variable serial to let-depth map.
+    VarDepths: Map<VarSerial, LetDepth>
 
     /// Type serial to definition map.
-    Tys: Map<int, TyDef>
+    Tys: Map<TySerial, TyDef>
 
     /// Type serial to let-depth map.
-    TyDepths: Map<int, int>
+    TyDepths: Map<TySerial, LetDepth>
 
     /// Serial of the current scope.
-    LocalSerial: int
+    LocalSerial: ScopeSerial
 
     /// Current scope.
     Local: Scope
 
     /// Current let-depth, the number of ancestral let-body.
-    LetDepth: int
+    LetDepth: LetDepth
   }
 
 // -----------------------------------------------
@@ -144,7 +147,7 @@ let scopeCtxOnLeaveLetBody (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with LetDepth = scopeCtx.LetDepth - 1 }
 
 /// Starts a new scope.
-let scopeCtxStartScope (scopeCtx: ScopeCtx): int * ScopeCtx =
+let scopeCtxStartScope (scopeCtx: ScopeCtx): ScopeSerial * ScopeCtx =
   let parentSerial, parent = scopeCtx.LocalSerial, scopeCtx.Local
   let localSerial as serial = scopeCtx.Serial + 1
   let scopeCtx =
@@ -184,7 +187,7 @@ let scopeCtxFinishScope parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
       Local = local
   }
 
-let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): int option =
+let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option =
   let rec go current bindings =
     match bindings with
     | [] ->
@@ -208,7 +211,7 @@ let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): int option =
 
   go scopeSerial scopeCtx.Local
 
-let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): int option =
+let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
   let rec go current bindings =
     match bindings with
     | [] ->
@@ -258,7 +261,7 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
     // A.B.C (= (A.B).C) case
     failwith "unimpl"
 
-  | HExpr.Ref (_, HValRef.Var serial, _, _) ->
+  | HExpr.Ref (_, serial, _, _) ->
     let ident = scopeCtx |> scopeCtxGetIdent serial
     scopeCtx |> scopeCtxResolveLocalTyIdent ident
 
@@ -307,7 +310,10 @@ let scopeCtxResolveTy ty loc scopeCtx =
 // Definitions
 // -----------------------------------------------
 
-let scopeCtxDefineFunUniquely serial arity tyScheme loc (scopeCtx: ScopeCtx): ScopeCtx =
+let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
+  let arity = args |> List.length
+  let tyScheme = TyScheme.ForAll ([], ty)
+
   match scopeCtx.Vars |> Map.tryFind serial with
   | Some (VarDef.Fun _) ->
     scopeCtx
@@ -445,11 +451,9 @@ let collectDecls (expr, ctx) =
 
     | HExpr.LetFun (ident, serial, args, body, next, ty, loc) ->
       let ctx =
-        let arity = args |> List.length
-        let tyScheme = TyScheme.ForAll ([], ty)
         ctx
         |> scopeCtxOnEnterLetBody
-        |> scopeCtxDefineFunUniquely serial arity tyScheme loc
+        |> scopeCtxDefineFunUniquely serial args noTy loc
         |> scopeCtxOnLeaveLetBody
       let next, ctx = (next, ctx) |> goExpr
       HExpr.LetFun (ident, serial, args, body, next, ty, loc), ctx
@@ -616,19 +620,19 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
   | HExpr.Error _
   | HExpr.Open _
   | HExpr.Lit _
-  | HExpr.Ref (_, HValRef.Prim _, _, _) ->
+  | HExpr.Prim _ ->
     expr, ctx
 
-  | HExpr.Ref (_, HValRef.Var serial, ty, loc) ->
+  | HExpr.Ref (_, serial, ty, loc) ->
     let ident = ctx |> scopeCtxGetIdent serial
     match ctx |> scopeCtxResolveLocalVar ident with
     | Some serial ->
-      HExpr.Ref (ident, HValRef.Var serial, ty, loc), ctx
+      HExpr.Ref (ident, serial, ty, loc), ctx
 
     | None ->
       match primFromIdent ident with
       | Some prim ->
-        HExpr.Ref (ident, HValRef.Prim prim, ty, loc), ctx
+        HExpr.Prim (prim, ty, loc), ctx
 
       | None ->
         HExpr.Error ("Undefined variable " + ident, loc), ctx
@@ -651,11 +655,11 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     // FIXME: Patchwork for tests to pass
     match l, r with
     | HExpr.Ref ("String", _, _, _), "length" ->
-      HExpr.Ref ("String.length", HValRef.Prim HPrim.StrLength, ty, loc), ctx
+      HExpr.Prim (HPrim.StrLength, ty, loc), ctx
 
     | HExpr.Ref ("String", _, _, _), "getSlice" ->
       // NOTE: Actually this functions doesn't exist in the F# standard library.
-      HExpr.Ref ("String.getSlice", HValRef.Prim HPrim.StrGetSlice, ty, loc), ctx
+      HExpr.Prim (HPrim.StrGetSlice, ty, loc), ctx
 
     |_ ->
 
@@ -668,7 +672,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     | Some scopeSerial ->
       match ctx |> scopeCtxResolveVar scopeSerial r with
       | Some varSerial ->
-        HExpr.Ref (r, HValRef.Var varSerial, ty, loc), ctx
+        HExpr.Ref (r, varSerial, ty, loc), ctx
 
       | _ ->
         // X.ty patterns don't appear yet, so don't search for types.
@@ -677,11 +681,6 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
     | _ ->
       keepUnresolved ()
-
-  | HExpr.Bin (op, l, r, ty, loc) ->
-    let l, ctx = (l, ctx) |> onExpr
-    let r, ctx = (r, ctx) |> onExpr
-    HExpr.Bin (op, l, r, ty, loc), ctx
 
   | HExpr.Inf (op, items, ty, loc) ->
     // Necessary in case of annotation expression.
@@ -714,10 +713,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
     // Define the function itself for recursive referencing.
     // FIXME: Functions are recursive even if `rec` is missing.
-    let ctx =
-      let arity = pats |> List.length
-      let tyScheme = TyScheme.ForAll ([], ty)
-      ctx |> scopeCtxDefineFunUniquely serial arity tyScheme loc
+    let ctx = ctx |> scopeCtxDefineFunUniquely serial pats noTy loc
 
     let pats, body, ctx =
       // Introduce a function body scope.

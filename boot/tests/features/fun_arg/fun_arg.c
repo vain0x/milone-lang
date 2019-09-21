@@ -76,13 +76,13 @@ struct StringTuple1 {
 int der_(struct StringTuple1 arg_8, int n_, struct String f_1) {
     struct String d_ = arg_8.t0;
     int match_;
-    if (!(((n_ == 0) == 1))) goto next_2;
+    if ((n_ != 0)) goto next_2;
     printf("%s\n", f_1.str);
     int call_2 = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
-    if (!(((n_ == 0) == 0))) goto next_3;
+    if ((n_ == 0)) goto next_3;
     struct StringTuple1 tuple_1;
     tuple_1.t0 = d_;
     int call_3 = der_(tuple_1, (n_ - 1), str_add(f_1, d_));
