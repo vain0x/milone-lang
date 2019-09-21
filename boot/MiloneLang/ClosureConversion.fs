@@ -10,11 +10,10 @@
 /// and local variables defined in function bodies.
 /// See `ctxCaps`.
 ///
-/// Capturing function definitions are converted to have an additional arg
+/// Capturing function definitions are converted to take additional args
 /// to receive captured variables.
 ///
-/// Calls to functions are converted to pass an additional arg --
-/// a tuple that consists of the captured variables.
+/// Calls to functions are also converted to pass corresponding args.
 ///
 /// Note we refer to context-free functions as *procedures* (or proc).
 module rec MiloneLang.ClosureConversion
@@ -83,6 +82,7 @@ let ctxAddFun serial caps (ctx: CcCtx) =
       Caps = ctx.Caps |> Map.add serial caps
   }
 
+/// Gets the captured variables of the current function.
 let ctxCaps (ctx: CcCtx) =
   let refs = Set.difference ctx.Refs ctx.Locals
   let refs = Set.difference refs ctx.Known
@@ -96,20 +96,26 @@ let ctxCaps (ctx: CcCtx) =
         None
     )
 
-let capsToTy caps =
-  caps
-  |> List.map (fun (_, _, ty, _) -> ty)
-  |> tyTuple
+/// Updates the function type to take additional arguments
+/// for each captured variable.
+let capsAddToFunTy tTy caps =
+  caps |> List.fold (fun tTy (_, _, sTy, _) -> tyFun sTy tTy) tTy
 
-let buildCapsTuple caps loc =
-  let items = caps |> List.map (fun (ident, serial, ty, loc) ->
-    HExpr.Ref (ident, serial, ty, loc))
-  hxTuple items loc
+/// Updates the arguments of a call to pass captured variables.
+let capsAddToCallArgs args caps =
+  caps |> List.fold (fun args (ident, serial, ty, loc) ->
+    HExpr.Ref (ident, serial, ty, loc) :: args
+  ) args
+
+/// Updates the arguments of a function to take captured variables.
+let capsAddToFunPats args caps =
+  caps |> List.fold (fun args (ident, serial, ty, loc) ->
+    HPat.Ref (ident, serial, ty, loc) :: args
+  ) args
 
 let capsUpdateFunDef funTy arity caps =
-  let capsTy = caps |> capsToTy
-  let funTy = tyFun capsTy funTy
-  let arity = arity + 1
+  let funTy = caps |> capsAddToFunTy funTy
+  let arity = arity + List.length caps
   funTy, arity
 
 let declosurePat (pat, ctx) =
@@ -164,15 +170,12 @@ let declosureCall callee args resultTy loc (ctx: CcCtx) =
   | HExpr.Ref (ident, callee, calleeTy, refLoc) ->
     match ctx.Caps |> Map.tryFind callee with
     | Some (_ :: _ as caps) ->
-      let capsExpr = buildCapsTuple caps loc
-      let capsTy = exprToTy capsExpr
-
-      // Count captured variables as occurrences of reference.
-      let capsExpr, ctx = (capsExpr, ctx) |> declosureExpr
-
       // Add caps arg.
-      let args = capsExpr :: args
-      let calleeTy = tyFun capsTy calleeTy
+      let args = caps |> capsAddToCallArgs args
+      let calleeTy = caps |> capsAddToFunTy calleeTy
+
+      // Count captured variables as occurrences too.
+      let args, ctx = (args, ctx) |> stMap declosureExpr
 
       let callee = HExpr.Ref (ident, callee, calleeTy, refLoc)
       (hxCallProc callee args resultTy loc, ctx) |> Some
@@ -229,24 +232,11 @@ let declosureFunBody callee args body ctx =
   let ctx = ctx |> ctxPopScope baseCtx
   caps, args, body, ctx
 
-let addCapsArg callee caps args body loc ctx =
-  match caps with
-  | [] ->
-    // Static functions are intact.
-    args, body, ctx
-  | _ ->
-    let args =
-      let capsTy = caps |> capsToTy
-      let capsPats = caps |> List.map (fun (ident, serial, ty, loc) -> HPat.Ref (ident, serial, ty, loc))
-      let capsPat = HPat.Tuple (capsPats, capsTy, loc)
-      capsPat :: args
-    args, body, ctx
-
 let declosureExprLetFun ident callee args body next ty loc ctx =
   let caps, args, body, ctx =
     declosureFunBody callee args body ctx
-  let args, body, ctx =
-    addCapsArg callee caps args body loc ctx
+  let args=
+    caps |> capsAddToFunPats args
   let next, ctx =
     declosureExpr (next, ctx)
   HExpr.LetFun (ident, callee, args, body, next, ty, loc), ctx
