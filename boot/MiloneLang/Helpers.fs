@@ -604,9 +604,7 @@ let analyzeFormat (format: string) =
 // -----------------------------------------------
 
 /// Adds type-var/type binding.
-let typingBind (ctx: TyContext) tySerial ty =
-  // FIXME: track location info
-  let noLoc = 0, 0
+let typingBind (ctx: TyContext) tySerial ty loc =
   // FIXME: track identifier
   let noIdent = "unknown"
 
@@ -625,7 +623,7 @@ let typingBind (ctx: TyContext) tySerial ty =
     tySerials |> List.fold (fun tyDepths tySerial -> tyDepths |> Map.add tySerial depth) ctx.TyDepths
 
   { ctx with
-      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, noLoc))
+      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, loc))
       TyDepths = tyDepths
   }
 
@@ -649,7 +647,7 @@ let typingSubst (ctx: TyContext) ty: Ty =
 
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
-let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) loc =
+let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
   let lRootTy, rRootTy = lty, rty
 
   let addLog kind lTy rTy logAcc ctx =
@@ -663,8 +661,8 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) loc =
     match lSubstTy, rSubstTy with
     | Ty.Meta (l, _), Ty.Meta (r, _) when l = r ->
       logAcc, ctx
-    | Ty.Meta (lSerial, _), _ when tyIsFreeIn rSubstTy lSerial ->
-      let ctx = typingBind ctx lSerial rty
+    | Ty.Meta (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
+      let ctx = typingBind ctx lSerial rty loc
       logAcc, ctx
     | _, Ty.Meta _ ->
       go rty lty (logAcc, ctx)

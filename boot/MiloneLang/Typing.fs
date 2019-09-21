@@ -141,8 +141,8 @@ let ctxResolveTy ctx ty loc =
       failwith "Never"
   go (ty, ctx)
 
-let bindTy (ctx: TyCtx) tySerial ty =
-  typingBind (ctxToTyCtx ctx) tySerial ty |> ctxWithTyCtx ctx ctx.Logs
+let bindTy (ctx: TyCtx) tySerial ty loc =
+  typingBind (ctxToTyCtx ctx) tySerial ty loc |> ctxWithTyCtx ctx ctx.Logs
 
 let substTy (ctx: TyCtx) ty: Ty =
   typingSubst (ctxToTyCtx ctx) ty
@@ -176,7 +176,7 @@ let tySchemeInstantiate ctx (tyScheme: TyScheme) loc =
     let ty =
       let extendedCtx =
         mapping |> List.fold
-          (fun ctx (src, target) -> bindTy ctx src (Ty.Meta (target, loc))) ctx
+          (fun ctx (src, target) -> bindTy ctx src (Ty.Meta (target, loc)) loc) ctx
       substTy extendedCtx ty
 
     ty, ctx

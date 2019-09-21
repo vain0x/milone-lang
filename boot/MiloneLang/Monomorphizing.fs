@@ -104,8 +104,8 @@ let ctxWithTyCtx (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
       TyDepths = tyCtx.TyDepths
   }
 
-let bindTy (monoCtx: MonoCtx) tySerial ty: MonoCtx =
-  monoCtx |> ctxWithTyCtx (typingBind (ctxToTyCtx monoCtx) tySerial ty) monoCtx.Logs
+let bindTy (monoCtx: MonoCtx) tySerial ty loc: MonoCtx =
+  monoCtx |> ctxWithTyCtx (typingBind (ctxToTyCtx monoCtx) tySerial ty loc) monoCtx.Logs
 
 let substTy (monoCtx: MonoCtx) ty: Ty =
   typingSubst (ctxToTyCtx monoCtx) ty
