@@ -17,6 +17,7 @@ int simpleCase_(int arg_) {
     match_ = 0;
     goto end_match_1;
 next_2:;
+    int __ = 1;
     milone_assert(0, 5, 4);
     int call_1 = 0;
     match_ = 0;
@@ -38,6 +39,7 @@ int shadowingCase_(int arg_1) {
     tuple_.t0 = x_1;
     tuple_.t1 = 2;
     struct IntIntTuple2 y_ = tuple_;
+    int __1 = y_.t0;
     int x_2 = y_.t1;
     int y1_ = y_.t0;
     int y2_ = y_.t1;

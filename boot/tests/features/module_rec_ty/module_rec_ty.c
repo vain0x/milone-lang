@@ -50,12 +50,14 @@ struct UnionX_ {
 };
 
 int main() {
+    int __1 = 0;
     struct UnionA_List* list_ = (struct UnionA_List*)malloc(sizeof(struct UnionA_List));
     list_->head = (struct UnionA_){.tag = T_1};
     list_->tail = NULL;
     struct UnionA_List** payload_ = (struct UnionA_List**)malloc(sizeof(struct UnionA_List*));
     (*(((struct UnionA_List**)payload_))) = list_;
     struct UnionB_ variant_ = (struct UnionB_){.tag = T_, .T_ = payload_};
+    struct UnionB_ __2 = variant_;
     int match_;
     if (((struct UnionX_){.tag = VariantY_}.tag != VariantX_)) goto next_2;
     milone_assert(0, 18, 4);
@@ -63,6 +65,7 @@ int main() {
     match_ = 0;
     goto end_match_1;
 next_2:;
+    struct UnionX_ __3 = (struct UnionX_){.tag = VariantY_};
     match_ = 0;
     goto end_match_1;
 next_3:;
