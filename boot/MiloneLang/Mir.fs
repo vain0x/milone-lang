@@ -77,12 +77,12 @@ let ctxLetFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let setStmt expr = MStmt.Set (serial, expr, loc)
   refExpr, setStmt, ctx
 
-let ctxFreshLabel (ctx: MirCtx) (ident: string) loc =
+let ctxFreshLabel (ctx: MirCtx) (ident: Ident) loc =
   let serial = ctx.LabelSerial + 1
   let ctx = { ctx with LabelSerial = ctx.LabelSerial + 1 }
-  let ident = sprintf "%s_%d" ident serial
-  let labelStmt = MStmt.Label (ident, loc)
-  labelStmt, ident, ctx
+  let label: Label = sprintf "%s_%d" ident serial
+  let labelStmt = MStmt.Label (label, loc)
+  labelStmt, label, ctx
 
 /// Gets if the serial denotes to a variant function.
 let ctxIsVariantFun (ctx: MirCtx) serial =

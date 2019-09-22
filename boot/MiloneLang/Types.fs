@@ -544,19 +544,21 @@ type HExpr =
 // MIR types
 // -----------------------------------------------
 
+type Label = string
+
 /// Intermediate language between HIR and MIR for match expressions.
 [<RequireQualifiedAccess>]
 type MatchIR =
   | PatLabel
-    of string
+    of Label
   | Pat
-    of HPat * nextLabel:string
+    of HPat * nextLabel:Label
   | GoBody
-    of bodyLabel:string
+    of Label
   | BodyLabel
-    of bodyLabel:string
+    of Label
   | Guard
-    of guard:HExpr * nextLabel:string
+    of guard:HExpr * nextLabel:Label
   | Body
     of body:HExpr
 
@@ -675,11 +677,11 @@ type MStmt =
   | Return
     of MExpr * Loc
   | Label
-    of string * Loc
+    of Label * Loc
   | Goto
-    of string * Loc
+    of Label * Loc
   | GotoIf
-    of MExpr * string * Loc
+    of MExpr * Label * Loc
   | Exit
     of MExpr * Loc
   | Proc
@@ -788,11 +790,11 @@ type CStmt =
   | Set
     of CExpr * CExpr
   | Label
-    of string
+    of Label
   | Goto
-    of string
+    of Label
   | GotoIf
-    of CExpr * string
+    of CExpr * Label
   | Return
     of CExpr option
 
