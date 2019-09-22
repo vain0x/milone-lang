@@ -118,15 +118,12 @@ let ctxResolveConstraints (ctx: TyCtx) =
 let ctxResolveTy ctx ty loc =
   let rec go (ty, ctx) =
     match ty with
-
-    | Ty.Con (TyCon.Ref serial, []) when ctx |> ctxGetIdent serial = "_" ->
-      let tySerial, ctx = ctxFreshTySerial ctx
-      Ty.Meta (tySerial, loc), ctx
-
     | Ty.Error _ ->
       ty, ctx
 
     | Ty.Con (TyCon.Ref tySerial, _) ->
+      assert (ctx |> ctxGetIdent tySerial <> "_")
+
       match ctx |> ctxGetTy tySerial with
       | TyDef.Meta (_, bodyTy, _) ->
         bodyTy, ctx
@@ -137,8 +134,10 @@ let ctxResolveTy ctx ty loc =
     | Ty.Con (tyCon, tys) ->
       let tys, ctx = (tys, ctx) |> stMap go
       Ty.Con (tyCon, tys), ctx
+
     | Ty.Meta _ ->
-      failwith "Never"
+      ty, ctx
+
   go (ty, ctx)
 
 let bindTy (ctx: TyCtx) tySerial ty loc =

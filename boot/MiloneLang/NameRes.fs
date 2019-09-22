@@ -113,6 +113,12 @@ let scopeCtxDefineTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
       TyDepths = scopeCtx.TyDepths |> Map.add tySerial scopeCtx.LetDepth
   }
 
+/// Defines an unbound meta type.
+let scopeCtxDefineFreeTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+  { scopeCtx with
+      TyDepths = scopeCtx.TyDepths |> Map.add tySerial scopeCtx.LetDepth
+  }
+
 /// Adds a variable to a scope.
 let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
   let varIdent = scopeCtx |> scopeCtxGetVar varSerial |> varDefToIdent
@@ -270,41 +276,36 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
 
 /// Resolves type identifiers in a type expression.
 let scopeCtxResolveTy ty loc scopeCtx =
-  let isDiscardPat ty =
-    match ty with
-    | Ty.Con (TyCon.Ref serial, []) ->
-      (scopeCtx |> scopeCtxGetIdent serial) = "_"
-
-    | _ ->
-      false
-
-  let rec go ty =
+  let rec go (ty, scopeCtx) =
     match ty with
     | Ty.Error _ ->
-      ty
+      ty, scopeCtx
 
-    | _ when isDiscardPat ty ->
-      ty
+    | Ty.Con (TyCon.Ref tySerial, [])
+      when (scopeCtx |> scopeCtxGetIdent tySerial) = "_" ->
+      // Handle wildcard type.
+      let scopeCtx = scopeCtx |> scopeCtxDefineFreeTy tySerial
+      Ty.Meta (tySerial, loc), scopeCtx
 
     | Ty.Con (TyCon.Ref serial, tys) ->
       let ident = scopeCtx |> scopeCtxGetIdent serial
-      let tys = tys |> List.map go
+      let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
       match scopeCtx |> scopeCtxResolveLocalTyIdent ident with
       | Some tySerial ->
-        tyRef tySerial tys
+        tyRef tySerial tys, scopeCtx
 
       | None ->
-        tyPrimFromIdent ident tys loc
+        tyPrimFromIdent ident tys loc, scopeCtx
 
     | Ty.Con (tyCon, tys) ->
-      let tys = tys |> List.map go
-      Ty.Con (tyCon, tys)
+      let tys, scopeCtx = (tys, scopeCtx) |> stMap go
+      Ty.Con (tyCon, tys), scopeCtx
 
     | _ ->
-      ty
+      ty, scopeCtx
 
-  go ty
+  go (ty, scopeCtx)
 
 // -----------------------------------------------
 // Definitions
@@ -373,15 +374,15 @@ let scopeCtxDefineTyDef tySerial tyDecl loc ctx =
 
   match tyDef with
   | TyDef.Meta (tyIdent, bodyTy, loc) ->
-    let bodyTy = ctx |> scopeCtxResolveTy bodyTy loc
+    let bodyTy, ctx = ctx |> scopeCtxResolveTy bodyTy loc
     ctx |> scopeCtxDefineTy tySerial (TyDef.Meta (tyIdent, bodyTy, loc))
 
   | TyDef.Union (_, variantSerials, _unionLoc) ->
     let rec go ctx variantSerial =
       match ctx |> scopeCtxGetVar variantSerial with
       | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
-        let payloadTy = ctx |> scopeCtxResolveTy payloadTy loc
-        let variantTy = ctx |> scopeCtxResolveTy variantTy loc
+        let payloadTy, ctx = ctx |> scopeCtxResolveTy payloadTy loc
+        let variantTy, ctx = ctx |> scopeCtxResolveTy variantTy loc
         let varDef = VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc)
         ctx |> scopeCtxDefineVar variantSerial varDef
       | _ ->
@@ -605,7 +606,7 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
     HPat.As (pat, ident, serial, loc), ctx
 
   | HPat.Anno (pat, ty, loc) ->
-    let ty = ctx |> scopeCtxResolveTy ty loc
+    let ty, ctx = ctx |> scopeCtxResolveTy ty loc
     let pat, ctx = (pat, ctx) |> onPat
     HPat.Anno (pat, ty, loc), ctx
 
@@ -684,7 +685,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HExpr.Inf (op, items, ty, loc) ->
     // Necessary in case of annotation expression.
-    let ty = ctx |> scopeCtxResolveTy ty loc
+    let ty, ctx = ctx |> scopeCtxResolveTy ty loc
 
     let items, ctx = (items, ctx) |> stMap onExpr
     HExpr.Inf (op, items, ty, loc), ctx
