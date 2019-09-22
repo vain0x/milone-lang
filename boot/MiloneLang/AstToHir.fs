@@ -257,7 +257,7 @@ let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
 
   | APat.Ident (ident, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    HPat.Ref (ident, serial, noTy, loc), nameCtx
+    HPat.Ref (serial, noTy, loc), nameCtx
 
   | APat.ListLit ([], loc) ->
     patNil noTy loc, nameCtx
@@ -287,7 +287,7 @@ let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   | APat.As (pat, ident, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
     let pat, nameCtx = (pat, nameCtx) |> onPat
-    HPat.As (pat, ident, serial, loc), nameCtx
+    HPat.As (pat, serial, loc), nameCtx
 
   | APat.Anno (pat, ty, loc) ->
     let pat, nameCtx = (pat, nameCtx) |> onPat
@@ -315,7 +315,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
 
   | AExpr.Ident (ident, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    HExpr.Ref (ident, serial, noTy, loc), nameCtx
+    HExpr.Ref (serial, noTy, loc), nameCtx
 
   | AExpr.ListLit ([], loc) ->
     hxNil noTy loc, nameCtx
@@ -434,7 +434,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
       let args, nameCtx = (args, nameCtx) |> stMap onPat
       let body, nameCtx = (body, nameCtx) |> onExpr
       let next, nameCtx = (next, nameCtx) |> onExpr
-      HExpr.LetFun (ident, serial, isMainFun, args, body, next, noTy, loc), nameCtx
+      HExpr.LetFun (serial, isMainFun, args, body, next, noTy, loc), nameCtx
 
     | ALet.LetVal (pat, body, next, loc) ->
       let pat, nameCtx = (pat, nameCtx) |> onPat
@@ -445,7 +445,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   | AExpr.TySynonym (ident, ty, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
     let ty, nameCtx = (ty, nameCtx) |> onTy
-    HExpr.TyDecl (ident, serial, TyDecl.Synonym (ty, loc), loc), nameCtx
+    HExpr.TyDecl (serial, TyDecl.Synonym (ty, loc), loc), nameCtx
 
   | AExpr.TyUnion (ident, variants, loc) ->
     let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
@@ -462,7 +462,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
       nameCtx |> nameCtxAdd ident
     let variants, nameCtx =
       (variants, nameCtx) |> stMap onVariant
-    HExpr.TyDecl (ident, unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx
+    HExpr.TyDecl (unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx
 
   | AExpr.Open (path, loc) ->
     HExpr.Open (path, loc), nameCtx

@@ -83,9 +83,9 @@ let spliceExpr firstExpr secondExpr =
     | HExpr.Let (pat, init, next, ty, loc) ->
       let next = go next
       HExpr.Let (pat, init, next, ty, loc)
-    | HExpr.LetFun (ident, serial, isMainFun, args, body, next, ty, loc) ->
+    | HExpr.LetFun (serial, isMainFun, args, body, next, ty, loc) ->
       let next = go next
-      HExpr.LetFun (ident, serial, isMainFun, args, body, next, ty, loc)
+      HExpr.LetFun (serial, isMainFun, args, body, next, ty, loc)
     | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
       let rec goLast exprs =
         match exprs with

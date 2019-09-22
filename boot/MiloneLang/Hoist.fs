@@ -68,9 +68,9 @@ let hxAccAdd expr exprAcc =
 let hxAccToExpr next exprAcc =
   let withNext next letExpr =
     match letExpr with
-    | HExpr.LetFun (ident, callee, isMainFun, args, body, oldNext, ty, loc) ->
+    | HExpr.LetFun (callee, isMainFun, args, body, oldNext, ty, loc) ->
       assert (oldNext |> hxIsUnitLit)
-      HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc)
+      HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc)
 
     | _ ->
       failwith "Never"
@@ -144,7 +144,7 @@ let hoistExprLocal (expr, ctx) =
 
   expr, ctx
 
-let hoistExprLetFunMain ident callee isMainFun args body next ty loc ctx =
+let hoistExprLetFunMain callee isMainFun args body next ty loc ctx =
   assert isMainFun
 
   let body, ctx = (body, ctx) |> hoistExprLocal
@@ -158,15 +158,15 @@ let hoistExprLetFunMain ident callee isMainFun args body next ty loc ctx =
     // so that they evaluate at the beginning of the program.
     let body, ctx = ctx |> hoistCtxTakeExprs body
 
-    HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc), ctx
+    HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc), ctx
 
   // Append the `main` to other declarations
   // to reconstruct the whole expressions.
   ctx |> hoistCtxTakeDecls mainFunExpr
 
-let hoistExprLetFun ident callee isMainFun args body next ty loc ctx =
+let hoistExprLetFun callee isMainFun args body next ty loc ctx =
   if isMainFun then
-    hoistExprLetFunMain ident callee isMainFun args body next ty loc ctx
+    hoistExprLetFunMain callee isMainFun args body next ty loc ctx
   else
 
   let body, ctx = (body, ctx) |> hoistExprLocal
@@ -175,7 +175,7 @@ let hoistExprLetFun ident callee isMainFun args body next ty loc ctx =
     // Replace the `next` with a placeholder,
     // which is replaced with actual expressions again at the end.
     let next = hxDummy
-    HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc)
+    HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc)
   let ctx =
     ctx |> hoistCtxAddDecl expr
 
@@ -215,8 +215,8 @@ let hoistExprCore (expr, ctx) =
     let next, ctx = (next, ctx) |> hoistExpr
     HExpr.Let (pat, body, next, ty, loc), ctx
 
-  | HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc) ->
-    hoistExprLetFun ident callee isMainFun args body next ty loc ctx
+  | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
+    hoistExprLetFun callee isMainFun args body next ty loc ctx
 
   | HExpr.TyDecl _ ->
     let ctx = ctx |> hoistCtxAddDecl expr

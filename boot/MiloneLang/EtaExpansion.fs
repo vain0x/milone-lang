@@ -83,7 +83,7 @@ let ctxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
         Serial = ctx.Serial + 1
         Vars = ctx.Vars |> Map.add serial (VarDef.Fun (ident, arity, tyScheme, loc))
     }
-  let refExpr = HExpr.Ref (ident, serial, ty, loc)
+  let refExpr = HExpr.Ref ( serial, ty, loc)
   refExpr, serial, ctx
 
 let ctxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
@@ -93,7 +93,7 @@ let ctxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
         Serial = ctx.Serial + 1
         Vars = ctx.Vars |> Map.add serial (VarDef.Var (ident, ty, loc))
     }
-  let refExpr = HExpr.Ref (ident, serial, ty, loc)
+  let refExpr = HExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
 
 let ctxIsFun serial (ctx: EtaCtx) =
@@ -144,7 +144,7 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
     | n, Ty.Con (TyCon.Fun, [argTy; restTy]) ->
       let argRef, argSerial, ctx = ctxFreshVar "arg" argTy callLoc ctx
       let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
-      let restArgPat = HPat.Ref ("arg", argSerial, argTy, callLoc)
+      let restArgPat = HPat.Ref (argSerial, argTy, callLoc)
       restArgPat :: restArgPats, argRef :: restArgs, ctx
     | _ ->
       failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
@@ -159,7 +159,7 @@ let createEnvPatAndTy items callLoc ctx =
     | item :: items ->
       let itemTy, itemLoc = exprExtract item
       let itemRef, itemSerial, ctx = ctxFreshVar "arg" itemTy itemLoc ctx
-      let itemPat = HPat.Ref ("arg", itemSerial, itemTy, itemLoc)
+      let itemPat = HPat.Ref (itemSerial, itemTy, itemLoc)
       let itemPats, argTys, argRefs, ctx = go items ctx
       itemPat :: itemPats, itemTy :: argTys, itemRef :: argRefs, ctx
   let itemPats, itemTys, itemRefs, ctx = go items ctx
@@ -177,12 +177,12 @@ let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
 /// and calls the partial-applied callee with full arguments.
 let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
   let envArgRef, envArgSerial, ctx = ctxFreshVar "env" tyObj callLoc ctx
-  let envArgPat = HPat.Ref ("env", envArgSerial, tyObj, callLoc)
+  let envArgPat = HPat.Ref (envArgSerial, tyObj, callLoc)
   let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
   let argPats = envArgPat :: restArgPats
   let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
-  let funLet next = HExpr.LetFun ("fun", funSerial, false, argPats, body, next, exprToTy next, callLoc)
-  let funRef = HExpr.Ref ("fun", funSerial, funTy, callLoc)
+  let funLet next = HExpr.LetFun (funSerial, false, argPats, body, next, exprToTy next, callLoc)
+  let funRef = HExpr.Ref (funSerial, funTy, callLoc)
   funLet, funRef, ctx
 
 let createEnvBoxExpr args envTy callLoc =
@@ -223,7 +223,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
   // Introduce a variable for memoization.
   let calleeRef, calleeLet, ctx =
     let calleeRef, calleeSerial, ctx = ctxFreshVar "callee" funTy callLoc ctx
-    let calleePat = HPat.Ref ("callee", calleeSerial, funTy, callLoc)
+    let calleePat = HPat.Ref (calleeSerial, funTy, callLoc)
     let calleeLet next = HExpr.Let (calleePat, callee, next, exprToTy next, callLoc)
     calleeRef, calleeLet, ctx
   let envItems = calleeRef :: args
@@ -272,7 +272,7 @@ let unetaCallCore calleeKind callee arity calleeLoc args resultTy callLoc ctx =
 
 let unetaCall callee args resultTy loc ctx =
   match callee, args with
-  | HExpr.Ref (_, serial, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
+  | HExpr.Ref (serial, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
     let arity =
       match (ctx: EtaCtx).Vars |> Map.find serial with
       | VarDef.Fun (_, arity, _, _) ->
@@ -318,11 +318,11 @@ let unetaExprInf infOp args ty loc ctx =
     let args, ctx = (args, ctx) |> stMap unetaExpr
     HExpr.Inf (infOp, args, ty, loc), ctx
 
-let unetaExprLetFun ident callee isMainFun argPats body next ty loc ctx =
+let unetaExprLetFun callee isMainFun argPats body next ty loc ctx =
   let argPats, ctx = (argPats, ctx) |> stMap unetaPat
   let body, ctx = (body, ctx) |> unetaExpr
   let next, ctx = (next, ctx) |> unetaExpr
-  HExpr.LetFun (ident, callee, isMainFun, argPats, body, next, ty, loc), ctx
+  HExpr.LetFun (callee, isMainFun, argPats, body, next, ty, loc), ctx
 
 let unetaPat (pat, ctx) =
   pat, ctx
@@ -334,7 +334,7 @@ let unetaExpr (expr, ctx) =
   | HExpr.Open _
   | HExpr.Error _ ->
     expr, ctx
-  | HExpr.Ref (_, serial, refTy, calleeLoc) ->
+  | HExpr.Ref (serial, refTy, calleeLoc) ->
     unetaRef expr serial refTy calleeLoc ctx
   | HExpr.Prim (prim, primTy, calleeLoc) ->
     unetaPrim expr prim primTy calleeLoc ctx
@@ -356,8 +356,8 @@ let unetaExpr (expr, ctx) =
     let init, ctx = (init, ctx) |> unetaExpr
     let next, ctx = (next, ctx) |> unetaExpr
     HExpr.Let (pat, init, next, ty, loc), ctx
-  | HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc) ->
-    unetaExprLetFun ident callee isMainFun args body next ty loc ctx
+  | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
+    unetaExprLetFun callee isMainFun args body next ty loc ctx
 
 let uneta (expr, tyCtx: Typing.TyCtx) =
   let etaCtx = ctxFromTyCtx tyCtx

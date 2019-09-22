@@ -199,9 +199,9 @@ let ctxFreshExprTy expr ctx =
   let ty = Ty.Meta (tySerial, loc)
   ty, ctx
 
-let inferPatRef (ctx: TyCtx) ident varSerial loc ty =
+let inferPatRef (ctx: TyCtx) varSerial loc ty =
   let ctx = ctx |> ctxUnifyVarTy varSerial ty loc
-  HPat.Ref (ident, varSerial, ty, loc), ctx
+  HPat.Ref (varSerial, ty, loc), ctx
 
 let inferPatNav (ctx: TyCtx) l r loc ty =
   failwithf "invalid use of nav pattern %A" (l, r, loc, ty)
@@ -239,10 +239,10 @@ let inferPatCons ctx l r loc listTy =
   let r, ctx = inferPat ctx r listTy
   HPat.Cons (l, r, itemTy, loc), ctx
 
-let inferPatAs ctx pat ident varSerial loc ty =
+let inferPatAs ctx pat varSerial loc ty =
   let ctx = ctx |> ctxUnifyVarTy varSerial ty loc
   let pat, ctx = inferPat ctx pat ty
-  HPat.As (pat, ident, varSerial, loc), ctx
+  HPat.As (pat, varSerial, loc), ctx
 
 let inferPat ctx pat ty =
   match pat with
@@ -252,8 +252,8 @@ let inferPat ctx pat ty =
     let itemTy, ctx = ctx |> ctxFreshPatTy pat
     let ctx = unifyTy ctx loc ty (tyList itemTy)
     HPat.Nil (itemTy, loc), ctx
-  | HPat.Ref (ident, varSerial, _, loc) ->
-    inferPatRef ctx ident varSerial loc ty
+  | HPat.Ref (varSerial, _, loc) ->
+    inferPatRef ctx varSerial loc ty
   | HPat.Nav (l, r, _, loc) ->
     inferPatNav ctx l r loc ty
   | HPat.Call (callee, args, _, loc) ->
@@ -262,8 +262,8 @@ let inferPat ctx pat ty =
     inferPatCons ctx l r loc ty
   | HPat.Tuple (items, _, loc) ->
     inferPatTuple ctx items loc ty
-  | HPat.As (pat, ident, serial, loc) ->
-    inferPatAs ctx pat ident serial loc ty
+  | HPat.As (pat, serial, loc) ->
+    inferPatAs ctx pat serial loc ty
   | HPat.Anno (pat, annoTy, loc) ->
     let ctx = unifyTy ctx loc ty annoTy
     let pat, ctx = inferPat ctx pat annoTy
@@ -274,9 +274,9 @@ let inferPat ctx pat ty =
     let second, ctx = inferPat ctx second ty
     HPat.Or (first, second, ty, loc), ctx
 
-let inferRef (ctx: TyCtx) ident serial loc ty =
+let inferRef (ctx: TyCtx) serial loc ty =
   let ctx = ctx |> ctxUnifyVarTy serial ty loc
-  HExpr.Ref (ident, serial, ty, loc), ctx
+  HExpr.Ref (serial, ty, loc), ctx
 
 let inferPrim ctx prim loc ty =
   let aux primTy ctx =
@@ -488,7 +488,7 @@ let inferLetVal ctx pat init next ty loc =
   let next, ctx = inferExpr ctx next ty
   HExpr.Let (pat, init, next, ty, loc), ctx
 
-let inferLetFun (ctx: TyCtx) calleeName varSerial isMainFun argPats body next ty loc =
+let inferLetFun (ctx: TyCtx) varSerial isMainFun argPats body next ty loc =
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx bodyTy argPats =
@@ -529,7 +529,7 @@ let inferLetFun (ctx: TyCtx) calleeName varSerial isMainFun argPats body next ty
   let ctx = ctxGeneralizeFun ctx outerLetDepth varSerial
 
   let next, ctx = inferExpr ctx next ty
-  HExpr.LetFun (calleeName, varSerial, isMainFun, argPats, body, next, ty, loc), ctx
+  HExpr.LetFun (varSerial, isMainFun, argPats, body, next, ty, loc), ctx
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
@@ -549,8 +549,8 @@ let inferSemi ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
   hxSemi (List.rev exprs) loc, ctx
 
-let inferExprTyDecl ctx ident tySerial tyDecl loc =
-  HExpr.TyDecl (ident, tySerial, tyDecl, loc), ctx
+let inferExprTyDecl ctx tySerial tyDecl loc =
+  HExpr.TyDecl (tySerial, tyDecl, loc), ctx
 
 let inferExprOpen ctx path ty loc =
   let ctx = unifyTy ctx loc ty tyUnit
@@ -560,8 +560,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   match expr with
   | HExpr.Lit (lit, loc) ->
     expr, unifyTy ctx loc (litToTy lit) ty
-  | HExpr.Ref (ident, serial, _, loc) ->
-    inferRef ctx ident serial loc ty
+  | HExpr.Ref (serial, _, loc) ->
+    inferRef ctx serial loc ty
   | HExpr.Prim (prim, _, loc) ->
     inferPrim ctx prim loc ty
   | HExpr.Match (target, arms, _, loc) ->
@@ -578,10 +578,10 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferSemi ctx loc exprs ty
   | HExpr.Let (pat, body, next, _, loc) ->
     inferLetVal ctx pat body next ty loc
-  | HExpr.LetFun (calleeName, oldSerial, isMainFun, args, body, next, _, loc) ->
-    inferLetFun ctx calleeName oldSerial isMainFun args body next ty loc
-  | HExpr.TyDecl (ident, oldSerial, tyDef, loc) ->
-    inferExprTyDecl ctx ident oldSerial tyDef loc
+  | HExpr.LetFun (oldSerial, isMainFun, args, body, next, _, loc) ->
+    inferLetFun ctx oldSerial isMainFun args body next ty loc
+  | HExpr.TyDecl (oldSerial, tyDef, loc) ->
+    inferExprTyDecl ctx oldSerial tyDef loc
   | HExpr.Open (path, loc) ->
     inferExprOpen ctx path ty loc
   | HExpr.Inf (InfOp.Anno, _, _, _)

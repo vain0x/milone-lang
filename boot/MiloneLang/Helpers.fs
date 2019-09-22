@@ -308,7 +308,7 @@ let rec patExtract (pat: HPat): Ty * Loc =
     litToTy lit, a
   | HPat.Nil (itemTy, a) ->
     tyList itemTy, a
-  | HPat.Ref (_, _, ty, a) ->
+  | HPat.Ref (_, ty, a) ->
     ty, a
   | HPat.Nav (_, _, ty, a) ->
     ty, a
@@ -318,7 +318,7 @@ let rec patExtract (pat: HPat): Ty * Loc =
     tyList itemTy, a
   | HPat.Tuple (_, ty, a) ->
     ty, a
-  | HPat.As (pat, _, _, a) ->
+  | HPat.As (pat, _, a) ->
     let ty, _ = patExtract pat
     ty, a
   | HPat.Anno (_, ty, a) ->
@@ -333,8 +333,8 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Lit (lit, g a)
     | HPat.Nil (itemTy, a) ->
       HPat.Nil (f itemTy, g a)
-    | HPat.Ref (ident, serial, ty, a) ->
-      HPat.Ref (ident, serial, f ty, g a)
+    | HPat.Ref (serial, ty, a) ->
+      HPat.Ref (serial, f ty, g a)
     | HPat.Nav (pat, ident, ty, a) ->
       HPat.Nav (pat, ident, f ty, g a)
     | HPat.Call (callee, args, ty, a) ->
@@ -343,8 +343,8 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Cons (go l, go r, f itemTy, g a)
     | HPat.Tuple (itemPats, ty, a) ->
       HPat.Tuple (List.map go itemPats, f ty, g a)
-    | HPat.As (pat, ident, serial, a) ->
-      HPat.As (go pat, ident, serial, g a)
+    | HPat.As (pat, serial, a) ->
+      HPat.As (go pat, serial, g a)
     | HPat.Anno (pat, ty, a) ->
       HPat.Anno (go pat, f ty, g a)
     | HPat.Or (first, second, ty, a) ->
@@ -385,7 +385,7 @@ let patNormalize pat =
             ))
       gogo itemPats |> List.map
         (fun itemPats -> HPat.Tuple (itemPats, ty, loc))
-    | HPat.As (innerPat, _, _, _) ->
+    | HPat.As (innerPat, _, _) ->
       match go innerPat with
       | [_] ->
         [pat]
@@ -452,7 +452,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HExpr.Lit (lit, a) ->
     litToTy lit, a
-  | HExpr.Ref (_, _, ty, a) ->
+  | HExpr.Ref (_, ty, a) ->
     ty, a
   | HExpr.Prim (_, ty, a) ->
     ty, a
@@ -464,9 +464,9 @@ let exprExtract (expr: HExpr): Ty * Loc =
     ty, a
   | HExpr.Let (_, _, _, ty, a) ->
     ty, a
-  | HExpr.LetFun (_, _, _, _, _, _, ty, a) ->
+  | HExpr.LetFun (_, _, _, _, _, ty, a) ->
     ty, a
-  | HExpr.TyDecl (_, _, _, a) ->
+  | HExpr.TyDecl (_, _, a) ->
     tyUnit, a
   | HExpr.Open (_, a) ->
     tyUnit, a
@@ -480,8 +480,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     match expr with
     | HExpr.Lit (lit, a) ->
       HExpr.Lit (lit, g a)
-    | HExpr.Ref (ident, serial, ty, a) ->
-      HExpr.Ref (ident, serial, f ty, g a)
+    | HExpr.Ref (serial, ty, a) ->
+      HExpr.Ref (serial, f ty, g a)
     | HExpr.Prim (prim, ty, a) ->
       HExpr.Prim (prim, f ty, g a)
     | HExpr.Match (target, arms, ty, a) ->
@@ -495,10 +495,10 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Inf (infOp, List.map go args, f resultTy, g a)
     | HExpr.Let (pat, init, next, ty, a) ->
       HExpr.Let (goPat pat, go init, go next, f ty, g a)
-    | HExpr.LetFun (ident, serial, isMainFun, args, body, next, ty, a) ->
-      HExpr.LetFun (ident, serial, isMainFun, List.map goPat args, go body, go next, f ty, g a)
-    | HExpr.TyDecl (ident, serial, tyDef, a) ->
-      HExpr.TyDecl (ident, serial, tyDef, g a)
+    | HExpr.LetFun (serial, isMainFun, args, body, next, ty, a) ->
+      HExpr.LetFun (serial, isMainFun, List.map goPat args, go body, go next, f ty, g a)
+    | HExpr.TyDecl (serial, tyDef, a) ->
+      HExpr.TyDecl (serial, tyDef, g a)
     | HExpr.Open (path, a) ->
       HExpr.Open (path, g a)
     | HExpr.Error (error, a) ->

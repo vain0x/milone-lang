@@ -219,15 +219,15 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     mirifyPatLit ctx endLabel lit expr loc
   | HPat.Nil (itemTy, loc) ->
     mirifyPatNil ctx endLabel itemTy expr loc
-  | HPat.Ref (_, serial, ty, loc) ->
+  | HPat.Ref (serial, ty, loc) ->
     mirifyPatRef ctx endLabel serial ty loc expr
-  | HPat.Call (HPat.Ref (_, serial, _, _), args, ty, loc) ->
+  | HPat.Call (HPat.Ref (serial, _, _), args, ty, loc) ->
     mirifyPatCall ctx endLabel serial args ty loc expr
   | HPat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | HPat.Tuple (itemPats, Ty.Con (TyCon.Tuple, itemTys), loc) ->
     mirifyPatTuple ctx endLabel itemPats itemTys expr loc
-  | HPat.As (pat, _, serial, loc) ->
+  | HPat.As (pat, serial, loc) ->
     mirifyPatAs ctx endLabel pat serial expr loc
   | HPat.Or _ ->
     failwith "Unimpl nested OR pattern."
@@ -278,7 +278,7 @@ let patsIsCovering pats =
       false
     | HPat.Tuple (itemPats, _, _) ->
       itemPats |> List.forall go
-    | HPat.As (pat, _, _, _) ->
+    | HPat.As (pat, _, _) ->
       go pat
     | HPat.Anno (pat, _, _) ->
       go pat
@@ -559,7 +559,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
     | _ ->
       core ()
 
-  | HExpr.Ref (_, serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
+  | HExpr.Ref (serial, _, _), [arg] when ctxIsVariantFun ctx serial ->
     mirifyExprCallVariantFun ctx serial arg ty loc
 
   | _ ->
@@ -594,7 +594,7 @@ let mirifyExprInf ctx infOp args ty loc =
     mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ ->
     mirifyExprInfCallClosure ctx callee args ty loc
-  | InfOp.Closure, [HExpr.Ref (_, funSerial, _, _); env], _ ->
+  | InfOp.Closure, [HExpr.Ref (funSerial, _, _); env], _ ->
     mirifyExprInfClosure ctx funSerial env ty loc
   | t ->
     failwithf "Never: %A" t
@@ -611,7 +611,7 @@ let mirifyExprLetVal ctx pat init next letLoc =
 let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
   let defineArg ctx argPat =
     match argPat with
-    | HPat.Ref (_, serial, ty, loc) ->
+    | HPat.Ref (serial, ty, loc) ->
       // NOTE: Optimize for usual cases to not generate redundant local vars.
       (serial, ty, loc), ctx
     | _ ->
@@ -662,7 +662,7 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   match expr with
   | HExpr.Lit (lit, loc) ->
     MExpr.Lit (lit, loc), ctx
-  | HExpr.Ref (_, serial, ty, loc) ->
+  | HExpr.Ref (serial, ty, loc) ->
     mirifyExprRef ctx serial ty loc
   | HExpr.Prim (prim, ty, loc) ->
     mirifyExprPrim ctx prim ty loc
@@ -672,9 +672,9 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprInf ctx infOp args ty loc
   | HExpr.Let (pat, body, next, _, loc) ->
     mirifyExprLetVal ctx pat body next loc
-  | HExpr.LetFun (_, serial, isMainFun, args, body, next, _, loc) ->
+  | HExpr.LetFun (serial, isMainFun, args, body, next, _, loc) ->
     mirifyExprLetFun ctx serial isMainFun args body next loc
-  | HExpr.TyDecl (_, tySerial, tyDecl, loc) ->
+  | HExpr.TyDecl (tySerial, tyDecl, loc) ->
     mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.Open (_, loc) ->
     mirifyExprOpen ctx loc

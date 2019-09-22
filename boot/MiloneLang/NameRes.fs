@@ -262,7 +262,7 @@ let scopeCtxResolvePatAsScope pat scopeCtx =
     // A.B.C (= (A.B).C) case
     failwith "unimpl"
 
-  | HPat.Ref (_, serial, _, _) ->
+  | HPat.Ref (serial, _, _) ->
     let ident = scopeCtx |> scopeCtxGetIdent serial
     scopeCtx |> scopeCtxResolveLocalTyIdent ident
 
@@ -276,7 +276,7 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
     // A.B.C (= (A.B).C) case
     failwith "unimpl"
 
-  | HExpr.Ref (_, serial, _, _) ->
+  | HExpr.Ref (serial, _, _) ->
     let ident = scopeCtx |> scopeCtxGetIdent serial
     scopeCtx |> scopeCtxResolveLocalTyIdent ident
 
@@ -420,12 +420,12 @@ let collectDecls (expr, ctx) =
       assert false
       pat, ctx
 
-    | HPat.Ref (_, serial, ty, loc) ->
+    | HPat.Ref (serial, ty, loc) ->
       let ident = ctx |> scopeCtxGetIdent serial
       match ctx |> scopeCtxResolveLocalVar ident with
       | Some varSerial
         when ctx |> scopeCtxIsVariant varSerial ->
-        HPat.Ref (ident, varSerial, ty, loc), ctx
+        HPat.Ref (varSerial, ty, loc), ctx
       | _ ->
         let ctx = ctx |> scopeCtxDefineLocalVar serial (VarDef.Var (ident, ty, loc))
         pat, ctx
@@ -443,11 +443,11 @@ let collectDecls (expr, ctx) =
       let items, ctx = (items, ctx) |> stMap goPat
       HPat.Tuple (items, ty, loc), ctx
 
-    | HPat.As (pat, _, serial, loc) ->
+    | HPat.As (pat, serial, loc) ->
       let ident = ctx |> scopeCtxGetIdent serial
       let ctx = ctx |> scopeCtxDefineLocalVar serial (VarDef.Var (ident, noTy, loc))
       let pat, ctx = (pat, ctx) |> goPat
-      HPat.As (pat, ident, serial, loc), ctx
+      HPat.As (pat, serial, loc), ctx
 
     | HPat.Anno (pat, ty, loc) ->
       let pat, ctx = (pat, ctx) |> goPat
@@ -460,23 +460,23 @@ let collectDecls (expr, ctx) =
       let next, ctx = (next, ctx) |> goExpr
       HExpr.Let (pat, init, next, ty, loc), ctx
 
-    | HExpr.LetFun (ident, serial, _, args, body, next, ty, loc) ->
-      let isMainFun = ident = "main"
+    | HExpr.LetFun (serial, _, args, body, next, ty, loc) ->
+      let isMainFun = ctx |> scopeCtxGetIdent serial = "main"
       let ctx =
         ctx
         |> scopeCtxOnEnterLetBody
         |> scopeCtxDefineFunUniquely serial args noTy loc
         |> scopeCtxOnLeaveLetBody
       let next, ctx = (next, ctx) |> goExpr
-      HExpr.LetFun (ident, serial, isMainFun, args, body, next, ty, loc), ctx
+      HExpr.LetFun (serial, isMainFun, args, body, next, ty, loc), ctx
 
     | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
       let exprs, ctx = (exprs, ctx) |> stMap goExpr
       HExpr.Inf (InfOp.Semi, exprs, ty, loc), ctx
 
-    | HExpr.TyDecl (ident, serial, tyDecl, loc) ->
+    | HExpr.TyDecl (serial, tyDecl, loc) ->
       let ctx = ctx |> scopeCtxDefineTyStart serial tyDecl loc
-      HExpr.TyDecl (ident, serial, tyDecl, loc), ctx
+      HExpr.TyDecl (serial, tyDecl, loc), ctx
 
     | _ ->
       expr, ctx
@@ -554,13 +554,15 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
   | HPat.Nil _ ->
     pat, ctx
 
-  | HPat.Ref (("_" as ident), varSerial, ty, loc) ->
+  | HPat.Ref (varSerial, ty, loc)
+    when ctx |> scopeCtxGetIdent varSerial = "_" ->
     // Handle discard pattern.
-    let varDef = VarDef.Var (ident, ty, loc)
+    let varDef = VarDef.Var ("_", ty, loc)
     let ctx = ctx |> scopeCtxDefineVar varSerial varDef
-    HPat.Ref (ident, varSerial, ty, loc), ctx
+    HPat.Ref (varSerial, ty, loc), ctx
 
-  | HPat.Ref (ident, serial, ty, loc) ->
+  | HPat.Ref (varSerial, ty, loc) ->
+    let ident = ctx |> scopeCtxGetIdent varSerial
     let variantSerial =
       match ctx |> scopeCtxResolveLocalVar ident with
       | Some varSerial ->
@@ -576,12 +578,12 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
 
     match variantSerial with
     | Some variantSerial ->
-      HPat.Ref (ident, variantSerial, ty, loc), ctx
+      HPat.Ref (variantSerial, ty, loc), ctx
 
     | None ->
       let varDef = VarDef.Var (ident, ty, loc)
-      let ctx = ctx |> scopeCtxDefineLocalVar serial varDef
-      HPat.Ref (ident, serial, ty, loc), ctx
+      let ctx = ctx |> scopeCtxDefineLocalVar varSerial varDef
+      HPat.Ref (varSerial, ty, loc), ctx
 
   | HPat.Nav (l, r, ty, loc) ->
     let varSerial =
@@ -594,7 +596,7 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
 
     match varSerial with
     | Some varSerial ->
-      HPat.Ref (r, varSerial, ty, loc), ctx
+      HPat.Ref (varSerial, ty, loc), ctx
 
     | None ->
       let l, ctx = (l, ctx) |> onPat
@@ -614,11 +616,12 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
     let pats, ctx = (pats, ctx) |> stMap onPat
     HPat.Tuple (pats, tupleTy, loc), ctx
 
-  | HPat.As (pat, ident, serial, loc) ->
+  | HPat.As (pat, serial, loc) ->
+    let ident = ctx |> scopeCtxGetIdent serial
     let varDef = VarDef.Var (ident, noTy, loc)
     let ctx = ctx |> scopeCtxDefineLocalVar serial varDef
     let pat, ctx = (pat, ctx) |> onPat
-    HPat.As (pat, ident, serial, loc), ctx
+    HPat.As (pat, serial, loc), ctx
 
   | HPat.Anno (pat, ty, loc) ->
     let ty, ctx = ctx |> scopeCtxResolveTy ty loc
@@ -639,11 +642,11 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
   | HExpr.Prim _ ->
     expr, ctx
 
-  | HExpr.Ref (_, serial, ty, loc) ->
+  | HExpr.Ref (serial, ty, loc) ->
     let ident = ctx |> scopeCtxGetIdent serial
     match ctx |> scopeCtxResolveLocalVar ident with
     | Some serial ->
-      HExpr.Ref (ident, serial, ty, loc), ctx
+      HExpr.Ref (serial, ty, loc), ctx
 
     | None ->
       match primFromIdent ident with
@@ -670,10 +673,12 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
   | HExpr.Nav (l, r, ty, loc) ->
     // FIXME: Patchwork for tests to pass
     match l, r with
-    | HExpr.Ref ("String", _, _, _), "length" ->
+    | HExpr.Ref (serial, _, _), "length"
+      when ctx |> scopeCtxGetIdent serial = "String" ->
       HExpr.Prim (HPrim.StrLength, ty, loc), ctx
 
-    | HExpr.Ref ("String", _, _, _), "getSlice" ->
+    | HExpr.Ref (serial, _, _), "getSlice"
+      when ctx |> scopeCtxGetIdent serial = "String" ->
       // NOTE: Actually this functions doesn't exist in the F# standard library.
       HExpr.Prim (HPrim.StrGetSlice, ty, loc), ctx
 
@@ -688,7 +693,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     | Some scopeSerial ->
       match ctx |> scopeCtxResolveVar scopeSerial r with
       | Some varSerial ->
-        HExpr.Ref (r, varSerial, ty, loc), ctx
+        HExpr.Ref (varSerial, ty, loc), ctx
 
       | _ ->
         // X.ty patterns don't appear yet, so don't search for types.
@@ -721,7 +726,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
     HExpr.Let (pat, body, next, ty, loc), ctx
 
-  | HExpr.LetFun (_, serial, isMainFun, pats, body, next, ty, loc) ->
+  | HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc) ->
     let ident = ctx |> scopeCtxGetIdent serial
 
     let parent, ctx = ctx |> scopeCtxStartScope
@@ -743,9 +748,9 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     let next, ctx = (next, ctx) |> onExpr
     let ctx = ctx |> scopeCtxFinishScope parent
 
-    HExpr.LetFun (ident, serial, isMainFun, pats, body, next, ty, loc), ctx
+    HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc), ctx
 
-  | HExpr.TyDecl (_, serial, tyDecl, loc) ->
+  | HExpr.TyDecl (serial, tyDecl, loc) ->
     let ctx = ctx |> scopeCtxDefineTyFinish serial tyDecl loc
     expr, ctx
 

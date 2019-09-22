@@ -451,7 +451,7 @@ type HPat =
     of itemTy:Ty * Loc
   /// Variable reference pattern or `_`.
   | Ref
-    of Ident * VarSerial * Ty * Loc
+    of VarSerial * Ty * Loc
   | Nav
     of HPat * Ident * Ty * Loc
   | Call
@@ -462,7 +462,7 @@ type HPat =
   | Tuple
     of HPat list * tupleTy:Ty * Loc
   | As
-    of HPat * Ident * VarSerial * Loc
+    of HPat * VarSerial * Loc
   /// Type annotation pattern, e.g. `x : int`.
   | Anno
     of HPat * Ty * Loc
@@ -519,7 +519,7 @@ type HExpr =
     of Lit * Loc
   /// Variable reference.
   | Ref
-    of Ident * VarSerial * Ty * Loc
+    of VarSerial * Ty * Loc
   | Prim
     of HPrim * Ty * Loc
   | Match
@@ -533,10 +533,10 @@ type HExpr =
   | Let
     of pat:HPat * init:HExpr * next:HExpr * Ty * Loc
   | LetFun
-    of Ident * FunSerial * isMainFun:bool * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
+    of FunSerial * isMainFun:bool * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
   /// Type declaration.
   | TyDecl
-    of Ident * TySerial * TyDecl * Loc
+    of TySerial * TyDecl * Loc
   | Open
     of Ident list * Loc
   | Error
