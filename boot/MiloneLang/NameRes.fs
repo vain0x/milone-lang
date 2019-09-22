@@ -99,6 +99,14 @@ let scopeCtxIsVariant varSerial scopeCtx =
   | _ ->
     false
 
+let scopeCtxIsMetaTy tySerial scopeCtx =
+  match scopeCtx |> scopeCtxGetTy tySerial with
+  | TyDef.Meta _ ->
+    true
+
+  | _ ->
+    false
+
 /// Defines a variable, without adding to any scope.
 let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
@@ -292,6 +300,11 @@ let scopeCtxResolveTy ty loc scopeCtx =
       let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
       match scopeCtx |> scopeCtxResolveLocalTyIdent ident with
+      | Some tySerial
+        when scopeCtx |> scopeCtxIsMetaTy tySerial ->
+        // In the case of type synonyms.
+        Ty.Meta (tySerial, loc), scopeCtx
+
       | Some tySerial ->
         tyRef tySerial tys, scopeCtx
 
