@@ -80,8 +80,8 @@ let ctxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
   let ty = Ty.Meta (serial, loc)
   ty, (), ctx
 
-let ctxUnifyLater (ctx: TyCtx) unresolvedTy metaTy loc =
-  { ctx with UnifyQueue = (unresolvedTy, metaTy, loc) :: ctx.UnifyQueue }
+let ctxUnifyLater (ctx: TyCtx) ty metaTy loc =
+  { ctx with UnifyQueue = (ty, metaTy, loc) :: ctx.UnifyQueue }
 
 let ctxAddTyConstraint tyConstraint loc (ctx: TyCtx) =
   { ctx with Constraints = (tyConstraint, loc) :: ctx.Constraints }
@@ -91,9 +91,8 @@ let ctxResolveUnifyQueue (ctx: TyCtx) =
     match queue with
     | [] ->
       ctx
-    | (unresolvedTy, metaTy, loc) :: queue ->
-      let resolvedTy, ctx = ctxResolveTy ctx unresolvedTy loc
-      let ctx = unifyTy ctx loc resolvedTy metaTy
+    | (ty, metaTy, loc) :: queue ->
+      let ctx = unifyTy ctx loc ty metaTy
       go ctx queue
   let queue = ctx.UnifyQueue
   let ctx = { ctx with UnifyQueue = [] }
@@ -113,32 +112,6 @@ let ctxResolveConstraints (ctx: TyCtx) =
   let ctx = { ctx with Constraints = [] }
   let logAcc, tyCtx = ctx |> ctxToTyCtx |> go ctx.Logs constraints
   ctxWithTyCtx ctx logAcc tyCtx
-
-/// Resolves type references in type annotation.
-let ctxResolveTy ctx ty loc =
-  let rec go (ty, ctx) =
-    match ty with
-    | Ty.Error _ ->
-      ty, ctx
-
-    | Ty.Con (TyCon.Ref tySerial, _) ->
-      assert (ctx |> ctxGetIdent tySerial <> "_")
-
-      match ctx |> ctxGetTy tySerial with
-      | TyDef.Meta (_, bodyTy, _) ->
-        bodyTy, ctx
-
-      | _ ->
-        ty, ctx
-
-    | Ty.Con (tyCon, tys) ->
-      let tys, ctx = (tys, ctx) |> stMap go
-      Ty.Con (tyCon, tys), ctx
-
-    | Ty.Meta _ ->
-      ty, ctx
-
-  go (ty, ctx)
 
 let bindTy (ctx: TyCtx) tySerial ty loc =
   typingBind (ctxToTyCtx ctx) tySerial ty loc |> ctxWithTyCtx ctx ctx.Logs
@@ -291,7 +264,6 @@ let inferPat ctx pat ty =
   | HPat.As (pat, ident, serial, loc) ->
     inferPatAs ctx pat ident serial loc ty
   | HPat.Anno (pat, annoTy, loc) ->
-    let annoTy, ctx = ctxResolveTy ctx annoTy loc
     let ctx = unifyTy ctx loc ty annoTy
     let pat, ctx = inferPat ctx pat annoTy
     pat, ctx
@@ -512,7 +484,6 @@ let inferTuple (ctx: TyCtx) items loc tupleTy =
   hxTuple items loc, ctx
 
 let inferAnno ctx expr annoTy ty loc =
-  let annoTy, ctx = ctxResolveTy ctx annoTy loc
   let ctx = unifyTy ctx loc annoTy ty
   inferExpr ctx expr annoTy
 
