@@ -35,15 +35,6 @@ let ctxGetTy tySerial (ctx: TyCtx) =
 let ctxAddErr (ctx: TyCtx) message loc =
   { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
-/// Merges derived context into base context
-/// for when expr of derived context is done.
-/// We rollback environments but keep serials.
-let ctxRollback bCtx dCtx: TyCtx =
-  assert (bCtx.Serial <= dCtx.Serial)
-  { dCtx with
-      LetDepth = bCtx.LetDepth
-  }
-
 let ctxToTyCtx (ctx: TyCtx): TyContext =
   {
     Serial = ctx.Serial
@@ -59,6 +50,7 @@ let ctxWithTyCtx (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
       Logs = logAcc
   }
 
+/// Be carefully. Let depths must be counted the same as name resolution.
 let ctxIncLetDepth (ctx: TyCtx) =
   { ctx with LetDepth = ctx.LetDepth + 1 }
 
@@ -155,13 +147,13 @@ let tySchemeInstantiate ctx (tyScheme: TyScheme) loc =
 let ctxFindVar (ctx: TyCtx) serial =
   ctx.Vars |> Map.find serial
 
-let ctxGeneralizeFun (ctx: TyCtx) (outerCtx: TyCtx) (bodyCtx: TyCtx) funSerial =
+let ctxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
   match ctx.Vars |> Map.find funSerial with
   | VarDef.Fun (ident, arity, TyScheme.ForAll ([], funTy), loc) ->
     let isOwned tySerial =
-      let depth = bodyCtx.TyDepths |> Map.find tySerial
-      depth > outerCtx.LetDepth
-    let funTy = substTy bodyCtx funTy
+      let depth = ctx.TyDepths |> Map.find tySerial
+      depth > outerLetDepth
+    let funTy = substTy ctx funTy
     let funTyScheme = tyGeneralize isOwned funTy
     let varDef = VarDef.Fun (ident, arity, funTyScheme, loc)
     let ctx = { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
@@ -406,7 +398,6 @@ let inferMatch ctx target arms loc resultTy =
       let pat, ctx = inferPat ctx pat targetTy
       let guard, ctx = inferExpr ctx guard tyBool
       let body, ctx = inferExpr ctx body resultTy
-      let ctx = ctxRollback baseCtx ctx
       (pat, guard, body), ctx
     )
 
@@ -492,60 +483,53 @@ let inferAnno ctx expr annoTy ty loc =
 
 let inferLetVal ctx pat init next ty loc =
   let initTy, ctx = ctx |> ctxFreshExprTy init
-  let init, initCtx = inferExpr ctx init initTy
-  let ctx = ctxRollback ctx initCtx
-
-  let pat, nextCtx = inferPat ctx pat initTy
-  let next, nextCtx = inferExpr nextCtx next ty
-  let ctx = ctxRollback ctx nextCtx
-
+  let init, ctx = inferExpr ctx init initTy
+  let pat, ctx = inferPat ctx pat initTy
+  let next, ctx = inferExpr ctx next ty
   HExpr.Let (pat, init, next, ty, loc), ctx
 
-let inferLetFun ctx calleeName varSerial isMainFun argPats body next ty loc =
-  let outerCtx = ctx
-
-  let ctx = ctx |> ctxIncLetDepth
-  let bodyTy, ctx = ctx |> ctxFreshExprTy body
-
+let inferLetFun (ctx: TyCtx) calleeName varSerial isMainFun argPats body next ty loc =
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx bodyTy argPats =
     match argPats with
     | [] ->
       [], bodyTy, ctx
+
     | argPat :: argPats ->
       let argTy, ctx = ctx |> ctxFreshPatTy argPat
       let pat, ctx = inferPat ctx argPat argTy
       let pats, bodyTy, ctx = inferArgs ctx bodyTy argPats
       pat :: pats, tyFun argTy bodyTy, ctx
 
-  let funTy, _, ctx =
-    if isMainFun
-    then tyFun tyUnit tyInt, (), ctx // FIXME: argument type is string[]
-    else ctxFreshTyVar "fun" loc ctx
+  let outerLetDepth = ctx.LetDepth
+  let ctx = ctx |> ctxIncLetDepth
 
-  // Define function itself for recursive call.
-  // FIXME: Functions are recursive by default.
-  let serial, nextCtx =
-    match ctx.Vars |> Map.find varSerial with
-    | VarDef.Fun (_, _, TyScheme.ForAll ([], oldTy), _) ->
-      // In the case the function is predefined.
-      let ctx = unifyTy ctx loc oldTy funTy
-      varSerial, ctx
-    | _ ->
-      failwith "NEVER: It must be a pre-generalized function"
+  let calleeTy, ctx =
+    let calleeTy, _, ctx =
+      if isMainFun
+      then tyFun tyUnit tyInt, (), ctx // FIXME: argument type is string[]
+      else ctxFreshTyVar "fun" loc ctx
 
-  let bodyCtx = nextCtx
-  let argPats, actualFunTy, bodyCtx = inferArgs bodyCtx bodyTy argPats
-  let bodyCtx = unifyTy bodyCtx loc funTy actualFunTy
-  let body, bodyCtx = inferExpr bodyCtx body bodyTy
-  let nextCtx = ctxRollback nextCtx bodyCtx |> ctxDecLetDepth
-  let nextCtx = ctxGeneralizeFun nextCtx outerCtx bodyCtx serial
+    let ctx =
+      match ctx.Vars |> Map.find varSerial with
+      | VarDef.Fun (_, _, TyScheme.ForAll ([], oldTy), _) ->
+        unifyTy ctx loc oldTy calleeTy
+      | _ ->
+        failwith "NEVER: It must be a pre-generalized function"
 
-  let next, nextCtx = inferExpr nextCtx next ty
-  let ctx = ctxRollback ctx nextCtx
+    calleeTy, ctx
 
-  HExpr.LetFun (calleeName, serial, isMainFun, argPats, body, next, ty, loc), ctx
+  let bodyTy, ctx = ctx |> ctxFreshExprTy body
+  let argPats, funTy, ctx = inferArgs ctx bodyTy argPats
+  let ctx = unifyTy ctx loc calleeTy funTy
+
+  let body, ctx = inferExpr ctx body bodyTy
+  let ctx = ctx |> ctxDecLetDepth
+  let ctx = ctxGeneralizeFun ctx outerLetDepth varSerial
+
+  let next, ctx = inferExpr ctx next ty
+  HExpr.LetFun (calleeName, varSerial, isMainFun, argPats, body, next, ty, loc), ctx
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
