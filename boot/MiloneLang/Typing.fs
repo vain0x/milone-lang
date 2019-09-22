@@ -196,6 +196,18 @@ let ctxUnifyVarTy varSerial ty loc ctx =
         failwith "NEVER"
     unifyTy ctx loc refTy ty
 
+let ctxFreshPatTy pat ctx =
+  let _, loc = pat |> patExtract
+  let tySerial, ctx = ctx |> ctxFreshTySerial
+  let ty = Ty.Meta (tySerial, loc)
+  ty, ctx
+
+let ctxFreshExprTy expr ctx =
+  let _, loc = expr |> exprExtract
+  let tySerial, ctx = ctx |> ctxFreshTySerial
+  let ty = Ty.Meta (tySerial, loc)
+  ty, ctx
+
 let inferPatRef (ctx: TyCtx) ident varSerial loc ty =
   let ctx = ctx |> ctxUnifyVarTy varSerial ty loc
   HPat.Ref (ident, varSerial, ty, loc), ctx
@@ -207,10 +219,8 @@ let inferPatCall (ctx: TyCtx) callee args loc ty =
   match args with
   | [payload] ->
     // FIXME: We should verify that callee is a variant pattern.
-    let _, payloadLoc = payload |> patExtract
-    let payloadTy, _, ctx = ctx |> ctxFreshTyVar "arg" payloadLoc
-    let funTy = tyFun payloadTy ty
-    let callee, ctx = inferPat ctx callee funTy
+    let payloadTy, ctx = ctx |> ctxFreshPatTy payload
+    let callee, ctx = inferPat ctx callee (tyFun payloadTy ty)
     let payload, ctx = inferPat ctx payload payloadTy
     HPat.Call (callee, [payload], ty, loc), ctx
 
@@ -223,16 +233,16 @@ let inferPatTuple ctx itemPats loc tupleTy =
     | [] ->
       List.rev accPats, List.rev accTys, ctx
     | itemPat :: itemPats ->
-      let _, itemLoc = itemPat |> patExtract
-      let itemTy, _, ctx = ctxFreshTyVar "item" itemLoc ctx
+      let itemTy, ctx = ctx |> ctxFreshPatTy itemPat
       let itemPat, ctx = inferPat ctx itemPat itemTy
       go (itemPat :: accPats) (itemTy :: accTys) ctx itemPats
+
   let itemPats, itemTys, ctx = go [] [] ctx itemPats
   let ctx = unifyTy ctx loc tupleTy (tyTuple itemTys)
   HPat.Tuple (itemPats, tupleTy, loc), ctx
 
 let inferPatCons ctx l r loc listTy =
-  let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
+  let itemTy, ctx = ctx |> ctxFreshPatTy l
   let ctx = unifyTy ctx loc listTy (tyList itemTy)
   let l, ctx = inferPat ctx l itemTy
   let r, ctx = inferPat ctx r listTy
@@ -248,7 +258,7 @@ let inferPat ctx pat ty =
   | HPat.Lit (lit, loc) ->
     pat, unifyTy ctx loc ty (litToTy lit)
   | HPat.Nil (_, loc) ->
-    let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
+    let itemTy, ctx = ctx |> ctxFreshPatTy pat
     let ctx = unifyTy ctx loc ty (tyList itemTy)
     HPat.Nil (itemTy, loc), ctx
   | HPat.Ref (ident, varSerial, _, loc) ->
@@ -388,7 +398,7 @@ let inferNil ctx loc listTy =
 
 /// match 'a with ( | 'a -> 'b )*
 let inferMatch ctx target arms loc resultTy =
-  let targetTy, _, ctx = ctxFreshTyVar "target" loc ctx
+  let targetTy, ctx = ctx |> ctxFreshExprTy target
   let target, ctx = inferExpr ctx target targetTy
 
   let arms, ctx =
@@ -405,28 +415,24 @@ let inferMatch ctx target arms loc resultTy =
 
 let inferNav ctx sub mes loc resultTy =
   let findTyDynamicMember ctx sub subTy =
+    let subTy = substTy ctx subTy
     match subTy, mes with
     | Ty.Con (TyCon.Str, []), "Length" ->
       let ctx = unifyTy ctx loc resultTy tyInt
       let funExpr = HExpr.Prim (HPrim.StrLength, tyFun tyStr tyInt, loc)
       Some (hxApp funExpr sub tyInt loc, ctx)
-    | _ -> None
+    | _ ->
+      None
 
-  let hxError () =
-    let ctx = ctxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
-    hxAbort ctx resultTy loc
-
-  let _, subLoc = sub |> exprExtract
-  let subTy, _, ctx = ctxFreshTyVar "sub" loc ctx
+  let subTy, ctx = ctx |> ctxFreshExprTy sub
   let sub, ctx = inferExpr ctx sub subTy
-  let subTy = substTy ctx subTy
 
   match findTyDynamicMember ctx sub subTy with
   | Some (expr, ctx) ->
     expr, ctx
   | None ->
-
-  hxError ()
+    let ctx = ctxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
+    hxAbort ctx resultTy loc
 
 let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
   match firstArg, arg with
@@ -456,8 +462,7 @@ let inferOpAppPrintfn ctx arg calleeTy loc =
     hxAbort ctx calleeTy loc
 
 let inferOpApp ctx callee arg loc appTy =
-  let _, argLoc = arg |> exprExtract
-  let argTy, _, ctx = ctxFreshTyVar "arg" argLoc ctx
+  let argTy, ctx = ctx |> ctxFreshExprTy arg
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
   match callee with
@@ -475,8 +480,7 @@ let inferTuple (ctx: TyCtx) items loc tupleTy =
     | [] ->
       List.rev acc, List.rev itemTys, ctx
     | item :: items ->
-      let _, itemLoc = item |> exprExtract
-      let itemTy, _, ctx = ctxFreshTyVar "item" itemLoc ctx
+      let itemTy, ctx = ctx |> ctxFreshExprTy item
       let item, ctx = inferExpr ctx item itemTy
       go (item :: acc) (itemTy :: itemTys) ctx items
   let items, itemTys, ctx = go [] [] ctx items
@@ -488,14 +492,10 @@ let inferAnno ctx expr annoTy ty loc =
   inferExpr ctx expr annoTy
 
 let inferLetVal ctx pat init next ty loc =
-  let _, initLoc = init |> exprExtract
-  let initTy, _, ctx = ctxFreshTyVar "init" initLoc ctx
-  // Type init expression.
+  let initTy, ctx = ctx |> ctxFreshExprTy init
   let init, initCtx = inferExpr ctx init initTy
-  // Remove symbols defined inside `init`.
   let ctx = ctxRollback ctx initCtx
 
-  // Define new variables defined by the pat to the context.
   let pat, nextCtx = inferPat ctx pat initTy
   let next, nextCtx = inferExpr nextCtx next ty
   let ctx = ctxRollback ctx nextCtx
@@ -506,9 +506,7 @@ let inferLetFun ctx calleeName varSerial isMainFun argPats body next ty loc =
   let outerCtx = ctx
 
   let ctx = ctx |> ctxIncLetDepth
-  let bodyTy, _, ctx =
-    let _, bodyLoc = body |> exprExtract
-    ctxFreshTyVar "body" bodyLoc ctx
+  let bodyTy, ctx = ctx |> ctxFreshExprTy body
 
   /// Infers argument patterns,
   /// constructing function's type.
@@ -517,8 +515,7 @@ let inferLetFun ctx calleeName varSerial isMainFun argPats body next ty loc =
     | [] ->
       [], bodyTy, ctx
     | argPat :: argPats ->
-      let _, argLoc = argPat |> patExtract
-      let argTy, _, ctx = ctxFreshTyVar "arg" argLoc ctx
+      let argTy, ctx = ctx |> ctxFreshPatTy argPat
       let pat, ctx = inferPat ctx argPat argTy
       let pats, bodyTy, ctx = inferArgs ctx bodyTy argPats
       pat :: pats, tyFun argTy bodyTy, ctx
