@@ -72,6 +72,30 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
   serial, NameCtx (map, serial)
 
 // -----------------------------------------------
+// Traits (HIR)
+// -----------------------------------------------
+
+let traitMapTys f it =
+  match it with
+  | Trait.Add ty ->
+    Trait.Add (f ty)
+
+  | Trait.Eq ty ->
+    Trait.Eq (f ty)
+
+  | Trait.Cmp ty ->
+    Trait.Cmp (f ty)
+
+  | Trait.Index (lTy, rTy, outputTy) ->
+    Trait.Index (f lTy, f rTy, f outputTy)
+
+  | Trait.ToInt ty ->
+    Trait.ToInt (f ty)
+
+  | Trait.ToString ty ->
+    Trait.ToString (f ty)
+
+// -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
 
@@ -695,31 +719,8 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
 
   go lty rty (logAcc, ctx)
 
-let typingSubstConstraint (ctx: TyContext) (tyConstraint: TyConstraint) =
-  match tyConstraint with
-  | TyConstraint.Add ty ->
-    TyConstraint.Add (typingSubst ctx ty)
-
-  | TyConstraint.Eq ty ->
-    TyConstraint.Eq (typingSubst ctx ty)
-
-  | TyConstraint.Cmp ty ->
-    TyConstraint.Cmp (typingSubst ctx ty)
-
-  | TyConstraint.Index (lTy, rTy, resultTy) ->
-    let lTy = typingSubst ctx lTy
-    let rTy = typingSubst ctx rTy
-    let resultTy = typingSubst ctx resultTy
-    TyConstraint.Index (lTy, rTy, resultTy)
-
-  | TyConstraint.ToInt ty ->
-    TyConstraint.ToInt (typingSubst ctx ty)
-
-  | TyConstraint.ToString ty ->
-    TyConstraint.ToString (typingSubst ctx ty)
-
-let typingConstrain logAcc (ctx: TyContext) tyConstraint loc =
-  let tyConstraint = typingSubstConstraint ctx tyConstraint
+let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
+  let theTrait = theTrait |>  traitMapTys (typingSubst ctx)
 
   let expectScalar ty (logAcc, ctx) =
     match ty with
@@ -731,10 +732,10 @@ let typingConstrain logAcc (ctx: TyContext) tyConstraint loc =
       logAcc, ctx
 
     | _ ->
-      (Log.TyConstraintError tyConstraint, loc) :: logAcc, ctx
+      (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
-  match tyConstraint with
-  | TyConstraint.Add ty ->
+  match theTrait with
+  | Trait.Add ty ->
     match ty with
     | Ty.Error _
     | Ty.Con (TyCon.Str, []) ->
@@ -744,13 +745,13 @@ let typingConstrain logAcc (ctx: TyContext) tyConstraint loc =
       // Coerce to int by default.
       typingUnify logAcc ctx ty tyInt loc
 
-  | TyConstraint.Eq ty ->
+  | Trait.Eq ty ->
     (logAcc, ctx) |> expectScalar ty
 
-  | TyConstraint.Cmp ty ->
+  | Trait.Cmp ty ->
     (logAcc, ctx) |> expectScalar ty
 
-  | TyConstraint.Index (lTy, rTy, resultTy) ->
+  | Trait.Index (lTy, rTy, resultTy) ->
     match lTy with
     | Ty.Error _ ->
       [], ctx
@@ -761,12 +762,12 @@ let typingConstrain logAcc (ctx: TyContext) tyConstraint loc =
       logAcc, ctx
 
     | _ ->
-      (Log.TyConstraintError tyConstraint, loc) :: logAcc, ctx
+      (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
-  | TyConstraint.ToInt ty ->
+  | Trait.ToInt ty ->
     (logAcc, ctx) |> expectScalar ty
 
-  | TyConstraint.ToString ty ->
+  | Trait.ToString ty ->
     (logAcc, ctx) |> expectScalar ty
 
 // -----------------------------------------------
@@ -785,22 +786,22 @@ let logToString loc log =
   | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
     sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
 
-  | Log.TyConstraintError (TyConstraint.Add ty) ->
+  | Log.TyBoundError (Trait.Add ty) ->
     sprintf "%s No support (+) for '%A' yet" loc ty
 
-  | Log.TyConstraintError (TyConstraint.Eq ty) ->
+  | Log.TyBoundError (Trait.Eq ty) ->
     sprintf "%s No support equality for '%A' yet" loc ty
 
-  | Log.TyConstraintError (TyConstraint.Cmp ty) ->
+  | Log.TyBoundError (Trait.Cmp ty) ->
     sprintf "%s No support comparison for '%A' yet" loc ty
 
-  | Log.TyConstraintError (TyConstraint.Index (lTy, rTy, _)) ->
+  | Log.TyBoundError (Trait.Index (lTy, rTy, _)) ->
     sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
 
-  | Log.TyConstraintError (TyConstraint.ToInt ty) ->
+  | Log.TyBoundError (Trait.ToInt ty) ->
     sprintf "%s Can't convert to int from '%A'" loc ty
 
-  | Log.TyConstraintError (TyConstraint.ToString ty) ->
+  | Log.TyBoundError (Trait.ToString ty) ->
     sprintf "%s Can't convert to string from '%A'" loc ty
 
   | Log.Error msg ->

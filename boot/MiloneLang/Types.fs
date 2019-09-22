@@ -32,8 +32,8 @@ type TyUnifyLog =
 type Log =
   | TyUnify
     of TyUnifyLog * lRootTy:Ty * rRootTy:Ty * lTy:Ty * rTy:Ty
-  | TyConstraintError
-    of TyConstraint
+  | TyBoundError
+    of Trait
   | Error
     of string
 
@@ -385,8 +385,10 @@ type Ty =
 type TyScheme =
   | ForAll of TySerial list * Ty
 
+/// Traits: kind of type constraints.
+/// NOTE: `trait` is a reserved word in F#.
 [<RequireQualifiedAccess>]
-type TyConstraint =
+type Trait =
   | Add
     of Ty
   | Eq

@@ -23,7 +23,7 @@ type TyCtx =
     TyDepths: Map<TySerial, LetDepth>
     LetDepth: LetDepth
     UnifyQueue: (Ty * Ty * Loc) list
-    Constraints: (TyConstraint * Loc) list
+    TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list
   }
 
@@ -83,8 +83,8 @@ let ctxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
 let ctxUnifyLater (ctx: TyCtx) ty metaTy loc =
   { ctx with UnifyQueue = (ty, metaTy, loc) :: ctx.UnifyQueue }
 
-let ctxAddTyConstraint tyConstraint loc (ctx: TyCtx) =
-  { ctx with Constraints = (tyConstraint, loc) :: ctx.Constraints }
+let ctxAddTraitBound theTrait loc (ctx: TyCtx) =
+  { ctx with TraitBounds = (theTrait, loc) :: ctx.TraitBounds }
 
 let ctxResolveUnifyQueue (ctx: TyCtx) =
   let rec go ctx queue =
@@ -98,19 +98,19 @@ let ctxResolveUnifyQueue (ctx: TyCtx) =
   let ctx = { ctx with UnifyQueue = [] }
   go ctx queue
 
-let ctxResolveConstraints (ctx: TyCtx) =
-  let rec go logAcc constraints ctx =
-    match constraints with
+let ctxResolveTraitBounds (ctx: TyCtx) =
+  let rec go logAcc traits ctx =
+    match traits with
     | [] ->
       logAcc, ctx
 
-    | (tyConstraint, loc) :: constraints ->
-      let logAcc, ctx = typingConstrain logAcc ctx tyConstraint loc
-      ctx |> go logAcc constraints
+    | (theTrait, loc) :: traits ->
+      let logAcc, ctx = typingResolveTraitBound logAcc ctx theTrait loc
+      ctx |> go logAcc traits
 
-  let constraints = ctx.Constraints |> listRev
-  let ctx = { ctx with Constraints = [] }
-  let logAcc, tyCtx = ctx |> ctxToTyCtx |> go ctx.Logs constraints
+  let traits = ctx.TraitBounds |> listRev
+  let ctx = { ctx with TraitBounds = [] }
+  let logAcc, tyCtx = ctx |> ctxToTyCtx |> go ctx.Logs traits
   ctxWithTyCtx ctx logAcc tyCtx
 
 let bindTy (ctx: TyCtx) tySerial ty loc =
@@ -285,7 +285,7 @@ let inferPrim ctx prim loc ty =
   match prim with
   | HPrim.Add ->
     let addTy, _, ctx = ctxFreshTyVar "add" loc ctx
-    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Add addTy) loc
+    let ctx = ctx |> ctxAddTraitBound (Trait.Add addTy) loc
     aux (tyFun addTy (tyFun addTy addTy)) ctx
 
   | HPrim.Sub ->
@@ -302,12 +302,12 @@ let inferPrim ctx prim loc ty =
 
   | HPrim.Eq ->
     let eqTy, _, ctx = ctxFreshTyVar "eq" loc ctx
-    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Eq eqTy) loc
+    let ctx = ctx |> ctxAddTraitBound (Trait.Eq eqTy) loc
     aux (tyFun eqTy (tyFun eqTy tyBool)) ctx
 
   | HPrim.Lt ->
     let cmpTy, _, ctx = ctxFreshTyVar "cmp" loc ctx
-    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Cmp cmpTy) loc
+    let ctx = ctx |> ctxAddTraitBound (Trait.Cmp cmpTy) loc
     aux (tyFun cmpTy (tyFun cmpTy tyBool)) ctx
 
   | HPrim.Nil ->
@@ -323,7 +323,7 @@ let inferPrim ctx prim loc ty =
     let lTy, _, ctx = ctxFreshTyVar "l" loc ctx
     let rTy, _, ctx = ctxFreshTyVar "r" loc ctx
     let resultTy, _, ctx = ctxFreshTyVar "result" loc ctx
-    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.Index (lTy, rTy, resultTy)) loc
+    let ctx = ctx |> ctxAddTraitBound (Trait.Index (lTy, rTy, resultTy)) loc
     aux (tyFun lTy (tyFun rTy resultTy)) ctx
 
   | HPrim.Not ->
@@ -360,13 +360,13 @@ let inferPrim ctx prim loc ty =
 
   | HPrim.Int ->
     let argTy, _, ctx = ctxFreshTyVar "intArg" loc ctx
-    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.ToInt argTy) loc
+    let ctx = ctx |> ctxAddTraitBound (Trait.ToInt argTy) loc
     let ctx = unifyTy ctx loc (tyFun argTy tyInt) ty
     HExpr.Prim (HPrim.Int, ty, loc), ctx
 
   | HPrim.String ->
     let argTy, _, ctx = ctxFreshTyVar "stringArg" loc ctx
-    let ctx = ctx |> ctxAddTyConstraint (TyConstraint.ToString argTy) loc
+    let ctx = ctx |> ctxAddTraitBound (Trait.ToString argTy) loc
     let ctx = unifyTy ctx loc (tyFun argTy tyStr) ty
     HExpr.Prim (HPrim.String, ty, loc), ctx
 
@@ -630,7 +630,7 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
       TyDepths = scopeCtx.TyDepths
       LetDepth = 0
       UnifyQueue = []
-      Constraints = []
+      TraitBounds = []
       Logs = []
     }
 
@@ -686,7 +686,7 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
 
   let expr, ctx = inferExpr ctx expr tyUnit
 
-  let ctx = ctx |> ctxResolveConstraints
+  let ctx = ctx |> ctxResolveTraitBounds
 
   // Substitute all types.
   let expr = substTyExpr ctx expr
