@@ -219,7 +219,7 @@ let hoistExprCore (expr, ctx) =
   | HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc) ->
     hoistExprLetFun ident callee isMainFun args body next ty loc ctx
 
-  | HExpr.TyDef _ ->
+  | HExpr.TyDecl _ ->
     let ctx = ctx |> hoistCtxAddDecl expr
     hxDummy, ctx
 
@@ -236,7 +236,7 @@ let hoistExpr (expr, ctx) =
 
   | HExpr.Let _
   | HExpr.LetFun _
-  | HExpr.TyDef _ ->
+  | HExpr.TyDecl _ ->
     // Keep top-level except for let bodies.
     (expr, ctx) |> hoistExprCore
 

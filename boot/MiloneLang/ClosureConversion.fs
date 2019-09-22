@@ -309,7 +309,7 @@ let declosureExpr (expr, ctx) =
     declosureExprLetVal pat body next ty loc ctx
   | HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc) ->
     declosureExprLetFun ident callee isMainFun args body next ty loc ctx
-  | HExpr.TyDef (_, _, tyDecl, _) ->
+  | HExpr.TyDecl (_, _, tyDecl, _) ->
     declosureExprTyDecl expr tyDecl ctx
   | HExpr.Error (error, loc) ->
     failwithf "Never: %s at %A" error loc

@@ -273,7 +273,7 @@ let monifyExprLetFun ctx ident callee isMainFun args body next ty loc =
 let rec monifyExpr (expr, ctx) =
   match expr with
   | HExpr.Error _
-  | HExpr.TyDef _
+  | HExpr.TyDecl _
   | HExpr.Open _
   | HExpr.Lit _
   | HExpr.Prim _ ->

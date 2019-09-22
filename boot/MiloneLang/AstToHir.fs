@@ -445,7 +445,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   | AExpr.TySynonym (ident, ty, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
     let ty, nameCtx = (ty, nameCtx) |> onTy
-    HExpr.TyDef (ident, serial, TyDecl.Synonym (ty, loc), loc), nameCtx
+    HExpr.TyDecl (ident, serial, TyDecl.Synonym (ty, loc), loc), nameCtx
 
   | AExpr.TyUnion (ident, variants, loc) ->
     let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
@@ -462,7 +462,7 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
       nameCtx |> nameCtxAdd ident
     let variants, nameCtx =
       (variants, nameCtx) |> stMap onVariant
-    HExpr.TyDef (ident, unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx
+    HExpr.TyDecl (ident, unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx
 
   | AExpr.Open (path, loc) ->
     HExpr.Open (path, loc), nameCtx

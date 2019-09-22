@@ -535,7 +535,7 @@ type HExpr =
   | LetFun
     of Ident * FunSerial * isMainFun:bool * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
   /// Type declaration.
-  | TyDef
+  | TyDecl
     of Ident * TySerial * TyDecl * Loc
   | Open
     of Ident list * Loc

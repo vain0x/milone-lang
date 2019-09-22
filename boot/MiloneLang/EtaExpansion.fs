@@ -330,7 +330,7 @@ let unetaPat (pat, ctx) =
 let unetaExpr (expr, ctx) =
   match expr with
   | HExpr.Lit _
-  | HExpr.TyDef _
+  | HExpr.TyDecl _
   | HExpr.Open _
   | HExpr.Error _ ->
     expr, ctx

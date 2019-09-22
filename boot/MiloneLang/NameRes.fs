@@ -483,9 +483,9 @@ let collectDecls (expr, ctx) =
       let exprs, ctx = (exprs, ctx) |> stMap goExpr
       HExpr.Inf (InfOp.Semi, exprs, ty, loc), ctx
 
-    | HExpr.TyDef (ident, serial, tyDecl, loc) ->
+    | HExpr.TyDecl (ident, serial, tyDecl, loc) ->
       let ctx = ctx |> scopeCtxDefineTyStart serial tyDecl loc
-      HExpr.TyDef (ident, serial, tyDecl, loc), ctx
+      HExpr.TyDecl (ident, serial, tyDecl, loc), ctx
 
     | _ ->
       expr, ctx
@@ -754,7 +754,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
     HExpr.LetFun (ident, serial, isMainFun, pats, body, next, ty, loc), ctx
 
-  | HExpr.TyDef (_, serial, tyDecl, loc) ->
+  | HExpr.TyDecl (_, serial, tyDecl, loc) ->
     let ctx = ctx |> scopeCtxDefineTyFinish serial tyDecl loc
     expr, ctx
 

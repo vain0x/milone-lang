@@ -570,7 +570,7 @@ let inferSemi ctx loc exprs lastTy =
   hxSemi (List.rev exprs) loc, ctx
 
 let inferExprTyDecl ctx ident tySerial tyDecl loc =
-  HExpr.TyDef (ident, tySerial, tyDecl, loc), ctx
+  HExpr.TyDecl (ident, tySerial, tyDecl, loc), ctx
 
 let inferExprOpen ctx path ty loc =
   let ctx = unifyTy ctx loc ty tyUnit
@@ -600,7 +600,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferLetVal ctx pat body next ty loc
   | HExpr.LetFun (calleeName, oldSerial, isMainFun, args, body, next, _, loc) ->
     inferLetFun ctx calleeName oldSerial isMainFun args body next ty loc
-  | HExpr.TyDef (ident, oldSerial, tyDef, loc) ->
+  | HExpr.TyDecl (ident, oldSerial, tyDef, loc) ->
     inferExprTyDecl ctx ident oldSerial tyDef loc
   | HExpr.Open (path, loc) ->
     inferExprOpen ctx path ty loc

@@ -674,7 +674,7 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprLetVal ctx pat body next loc
   | HExpr.LetFun (_, serial, isMainFun, args, body, next, _, loc) ->
     mirifyExprLetFun ctx serial isMainFun args body next loc
-  | HExpr.TyDef (_, tySerial, tyDecl, loc) ->
+  | HExpr.TyDecl (_, tySerial, tyDecl, loc) ->
     mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.Open (_, loc) ->
     mirifyExprOpen ctx loc
