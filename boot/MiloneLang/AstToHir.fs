@@ -430,10 +430,11 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     match desugarLet pat body next loc with
     | ALet.LetFun (ident, args, body, next, loc) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
+      let isMainFun = false // Name resolution should correct this.
       let args, nameCtx = (args, nameCtx) |> stMap onPat
       let body, nameCtx = (body, nameCtx) |> onExpr
       let next, nameCtx = (next, nameCtx) |> onExpr
-      HExpr.LetFun (ident, serial, args, body, next, noTy, loc), nameCtx
+      HExpr.LetFun (ident, serial, isMainFun, args, body, next, noTy, loc), nameCtx
 
     | ALet.LetVal (pat, body, next, loc) ->
       let pat, nameCtx = (pat, nameCtx) |> onPat

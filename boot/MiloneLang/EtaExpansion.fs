@@ -181,7 +181,7 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
   let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
   let argPats = envArgPat :: restArgPats
   let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
-  let funLet next = HExpr.LetFun ("fun", funSerial, argPats, body, next, exprToTy next, callLoc)
+  let funLet next = HExpr.LetFun ("fun", funSerial, false, argPats, body, next, exprToTy next, callLoc)
   let funRef = HExpr.Ref ("fun", funSerial, funTy, callLoc)
   funLet, funRef, ctx
 
@@ -318,11 +318,11 @@ let unetaExprInf infOp args ty loc ctx =
     let args, ctx = (args, ctx) |> stMap unetaExpr
     HExpr.Inf (infOp, args, ty, loc), ctx
 
-let unetaExprLetFun ident callee argPats body next ty loc ctx =
+let unetaExprLetFun ident callee isMainFun argPats body next ty loc ctx =
   let argPats, ctx = (argPats, ctx) |> stMap unetaPat
   let body, ctx = (body, ctx) |> unetaExpr
   let next, ctx = (next, ctx) |> unetaExpr
-  HExpr.LetFun (ident, callee, argPats, body, next, ty, loc), ctx
+  HExpr.LetFun (ident, callee, isMainFun, argPats, body, next, ty, loc), ctx
 
 let unetaPat (pat, ctx) =
   pat, ctx
@@ -356,8 +356,8 @@ let unetaExpr (expr, ctx) =
     let init, ctx = (init, ctx) |> unetaExpr
     let next, ctx = (next, ctx) |> unetaExpr
     HExpr.Let (pat, init, next, ty, loc), ctx
-  | HExpr.LetFun (ident, callee, args, body, next, ty, loc) ->
-    unetaExprLetFun ident callee args body next ty loc ctx
+  | HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc) ->
+    unetaExprLetFun ident callee isMainFun args body next ty loc ctx
 
 let uneta (expr, tyCtx: Typing.TyCtx) =
   let etaCtx = ctxFromTyCtx tyCtx

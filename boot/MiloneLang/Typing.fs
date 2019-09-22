@@ -502,7 +502,7 @@ let inferLetVal ctx pat init next ty loc =
 
   HExpr.Let (pat, init, next, ty, loc), ctx
 
-let inferLetFun ctx calleeName varSerial argPats body next ty loc =
+let inferLetFun ctx calleeName varSerial isMainFun argPats body next ty loc =
   let outerCtx = ctx
 
   let ctx = ctx |> ctxIncLetDepth
@@ -524,7 +524,7 @@ let inferLetFun ctx calleeName varSerial argPats body next ty loc =
       pat :: pats, tyFun argTy bodyTy, ctx
 
   let funTy, _, ctx =
-    if calleeName = "main"
+    if isMainFun
     then tyFun tyUnit tyInt, (), ctx // FIXME: argument type is string[]
     else ctxFreshTyVar "fun" loc ctx
 
@@ -549,7 +549,7 @@ let inferLetFun ctx calleeName varSerial argPats body next ty loc =
   let next, nextCtx = inferExpr nextCtx next ty
   let ctx = ctxRollback ctx nextCtx
 
-  HExpr.LetFun (calleeName, serial, argPats, body, next, ty, loc), ctx
+  HExpr.LetFun (calleeName, serial, isMainFun, argPats, body, next, ty, loc), ctx
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
@@ -598,8 +598,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferSemi ctx loc exprs ty
   | HExpr.Let (pat, body, next, _, loc) ->
     inferLetVal ctx pat body next ty loc
-  | HExpr.LetFun (calleeName, oldSerial, args, body, next, _, loc) ->
-    inferLetFun ctx calleeName oldSerial args body next ty loc
+  | HExpr.LetFun (calleeName, oldSerial, isMainFun, args, body, next, _, loc) ->
+    inferLetFun ctx calleeName oldSerial isMainFun args body next ty loc
   | HExpr.TyDef (ident, oldSerial, tyDef, loc) ->
     inferExprTyDecl ctx ident oldSerial tyDef loc
   | HExpr.Open (path, loc) ->

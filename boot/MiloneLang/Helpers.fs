@@ -419,7 +419,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
     ty, a
   | HExpr.Let (_, _, _, ty, a) ->
     ty, a
-  | HExpr.LetFun (_, _, _, _, _, ty, a) ->
+  | HExpr.LetFun (_, _, _, _, _, _, ty, a) ->
     ty, a
   | HExpr.TyDef (_, _, _, a) ->
     tyUnit, a
@@ -450,8 +450,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
       HExpr.Inf (infOp, List.map go args, f resultTy, g a)
     | HExpr.Let (pat, init, next, ty, a) ->
       HExpr.Let (goPat pat, go init, go next, f ty, g a)
-    | HExpr.LetFun (ident, serial, args, body, next, ty, a) ->
-      HExpr.LetFun (ident, serial, List.map goPat args, go body, go next, f ty, g a)
+    | HExpr.LetFun (ident, serial, isMainFun, args, body, next, ty, a) ->
+      HExpr.LetFun (ident, serial, isMainFun, List.map goPat args, go body, go next, f ty, g a)
     | HExpr.TyDef (ident, serial, tyDef, a) ->
       HExpr.TyDef (ident, serial, tyDef, g a)
     | HExpr.Open (path, a) ->

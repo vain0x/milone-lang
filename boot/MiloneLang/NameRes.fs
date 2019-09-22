@@ -465,14 +465,15 @@ let collectDecls (expr, ctx) =
       let next, ctx = (next, ctx) |> goExpr
       HExpr.Let (pat, init, next, ty, loc), ctx
 
-    | HExpr.LetFun (ident, serial, args, body, next, ty, loc) ->
+    | HExpr.LetFun (ident, serial, _, args, body, next, ty, loc) ->
+      let isMainFun = ident = "main"
       let ctx =
         ctx
         |> scopeCtxOnEnterLetBody
         |> scopeCtxDefineFunUniquely serial args noTy loc
         |> scopeCtxOnLeaveLetBody
       let next, ctx = (next, ctx) |> goExpr
-      HExpr.LetFun (ident, serial, args, body, next, ty, loc), ctx
+      HExpr.LetFun (ident, serial, isMainFun, args, body, next, ty, loc), ctx
 
     | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
       let exprs, ctx = (exprs, ctx) |> stMap goExpr
@@ -725,7 +726,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
     HExpr.Let (pat, body, next, ty, loc), ctx
 
-  | HExpr.LetFun (_, serial, pats, body, next, ty, loc) ->
+  | HExpr.LetFun (_, serial, isMainFun, pats, body, next, ty, loc) ->
     let ident = ctx |> scopeCtxGetIdent serial
 
     let parent, ctx = ctx |> scopeCtxStartScope
@@ -747,7 +748,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     let next, ctx = (next, ctx) |> onExpr
     let ctx = ctx |> scopeCtxFinishScope parent
 
-    HExpr.LetFun (ident, serial, pats, body, next, ty, loc), ctx
+    HExpr.LetFun (ident, serial, isMainFun, pats, body, next, ty, loc), ctx
 
   | HExpr.TyDef (_, serial, tyDecl, loc) ->
     // Unlike the collection stage, here type expressions should resolve.

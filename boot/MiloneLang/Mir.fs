@@ -608,7 +608,7 @@ let mirifyExprLetVal ctx pat init next letLoc =
   let next, ctx = mirifyExpr ctx next
   next, ctx
 
-let mirifyExprLetFun ctx calleeIdent calleeSerial argPats body next letLoc =
+let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
   let defineArg ctx argPat =
     match argPat with
     | HPat.Ref (_, serial, ty, loc) ->
@@ -646,7 +646,7 @@ let mirifyExprLetFun ctx calleeIdent calleeSerial argPats body next letLoc =
   let bodyCtx = ctxNewBlock ctx
   let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
   let ctx = ctxRollBack ctx bodyCtx
-  let procStmt = MStmt.Proc ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body; Main = calleeIdent = "main" }, letLoc)
+  let procStmt = MStmt.Proc ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body; Main = isMainFun }, letLoc)
   let ctx = ctxAddStmt ctx procStmt
 
   let next, ctx = mirifyExpr ctx next
@@ -672,8 +672,8 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprInf ctx infOp args ty loc
   | HExpr.Let (pat, body, next, _, loc) ->
     mirifyExprLetVal ctx pat body next loc
-  | HExpr.LetFun (ident, serial, args, body, next, _, loc) ->
-    mirifyExprLetFun ctx ident serial args body next loc
+  | HExpr.LetFun (_, serial, isMainFun, args, body, next, _, loc) ->
+    mirifyExprLetFun ctx serial isMainFun args body next loc
   | HExpr.TyDef (_, tySerial, tyDecl, loc) ->
     mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.Open (_, loc) ->

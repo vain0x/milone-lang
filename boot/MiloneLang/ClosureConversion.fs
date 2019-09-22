@@ -252,14 +252,14 @@ let declosureFunBody callee args body ctx =
   let ctx = ctx |> ctxPopScope baseCtx
   caps, args, body, ctx
 
-let declosureExprLetFun ident callee args body next ty loc ctx =
+let declosureExprLetFun ident callee isMainFun args body next ty loc ctx =
   let caps, args, body, ctx =
     declosureFunBody callee args body ctx
   let args=
     caps |> capsAddToFunPats args
   let next, ctx =
     declosureExpr (next, ctx)
-  HExpr.LetFun (ident, callee, args, body, next, ty, loc), ctx
+  HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc), ctx
 
 let declosureExprTyDecl expr tyDecl ctx =
   match tyDecl with
@@ -307,8 +307,8 @@ let declosureExpr (expr, ctx) =
     declosureExprInf ctx expr infOp items ty loc
   | HExpr.Let (pat, body, next, ty, loc) ->
     declosureExprLetVal pat body next ty loc ctx
-  | HExpr.LetFun (ident, callee, args, body, next, ty, loc) ->
-    declosureExprLetFun ident callee args body next ty loc ctx
+  | HExpr.LetFun (ident, callee, isMainFun, args, body, next, ty, loc) ->
+    declosureExprLetFun ident callee isMainFun args body next ty loc ctx
   | HExpr.TyDef (_, _, tyDecl, _) ->
     declosureExprTyDecl expr tyDecl ctx
   | HExpr.Error (error, loc) ->
