@@ -673,8 +673,9 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
           let ctx = ctxUnifyLater ctx payloadTy ty loc
 
           // Pre-compute the type of variant.
-          let unionTy = tyRef tySerial []
-          let variantTy = if hasPayload then tyFun ty unionTy else unionTy
+          let variantTy =
+            let unionTy = tyRef tySerial []
+            if hasPayload then tyFun ty unionTy else unionTy
 
           let varDef = VarDef.Variant (ident, tySerial, hasPayload, ty, variantTy, loc)
           (varSerial, varDef), ctx

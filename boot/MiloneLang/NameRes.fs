@@ -361,16 +361,8 @@ let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
     ctx |> scopeCtxDefineLocalTy tySerial (TyDef.Meta (tyIdent, body, loc))
 
   | TyDecl.Union (_, variants, _unionLoc) ->
-    let unionTy = tyRef tySerial []
     let defineVariant ctx (variantIdent, variantSerial, hasPayload, payloadTy) =
-      // E.g. Some: 'T -> 'T option, None: 'T option
-      let variantTy =
-        if hasPayload then
-          tyFun payloadTy unionTy
-        else
-          unionTy
-      let varDef =
-        VarDef.Variant (variantIdent, tySerial, hasPayload, payloadTy, variantTy, loc)
+      let varDef = VarDef.Variant (variantIdent, tySerial, hasPayload, payloadTy, noTy, loc)
       ctx
       |> scopeCtxDefineVar variantSerial varDef
       |> scopeCtxOpenVar tySerial variantSerial
