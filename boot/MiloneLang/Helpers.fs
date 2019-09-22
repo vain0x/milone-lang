@@ -178,6 +178,27 @@ let rec tyToArgList ty =
       n, List.rev acc, tTy
   go 0 [] ty
 
+/// Substitutes meta types in a type as possible.
+let tySubst (substMeta: TySerial -> Ty option) ty =
+  let rec go ty =
+    match ty with
+    | Ty.Error _
+    | Ty.Con (_, []) ->
+      ty
+
+    | Ty.Con (tyCon, tys) ->
+      Ty.Con (tyCon, listMap go tys)
+
+    | Ty.Meta (tySerial, _) ->
+      match substMeta tySerial with
+      | Some ty ->
+        go ty
+
+      | None ->
+        ty
+
+  go ty
+
 // -----------------------------------------------
 // Type definitions (HIR)
 // -----------------------------------------------
@@ -630,20 +651,14 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
 let typingSubst (ctx: TyContext) ty: Ty =
-  let rec go ty =
-    match ty with
-    | Ty.Error _
-    | Ty.Con (_, []) ->
-      ty
-    | Ty.Con (tyCon, tys) ->
-      Ty.Con (tyCon, List.map go tys)
-    | Ty.Meta (tySerial, _) ->
-      match ctx.Tys |> Map.tryFind tySerial with
-      | Some (TyDef.Meta (_, ty, _)) ->
-        go ty
-      | _ ->
-        ty
-  go ty
+  let substMeta tySerial =
+    match ctx.Tys |> Map.tryFind tySerial with
+    | Some (TyDef.Meta (_, ty, _)) ->
+      Some ty
+    | _ ->
+      None
+
+  tySubst substMeta ty
 
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
