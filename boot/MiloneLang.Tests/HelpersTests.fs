@@ -1,6 +1,5 @@
 module MiloneLang.HelpersTests
 
-open MiloneLang
 open MiloneLang.Assets
 open MiloneLang.Helpers
 open Xunit

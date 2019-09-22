@@ -7,7 +7,6 @@
 ///   in the layout similar to this source code.
 module rec MiloneLang.Parsing
 
-open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 

@@ -27,7 +27,6 @@
 /// ```
 module rec MiloneLang.Hoist
 
-open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 

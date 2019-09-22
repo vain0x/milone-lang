@@ -5,7 +5,6 @@
 /// and assign the same serials to the same symbols.
 module rec MiloneLang.NameRes
 
-open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 

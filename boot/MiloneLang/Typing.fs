@@ -5,7 +5,6 @@
 ///     <https://rhysd.hatenablog.com/entry/2017/12/16/002048>
 module rec MiloneLang.Typing
 
-open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
 
