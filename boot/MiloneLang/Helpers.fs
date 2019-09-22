@@ -60,6 +60,31 @@ let cons head tail = head :: tail
 let noLoc = -1, -1
 
 // -----------------------------------------------
+// Int
+// -----------------------------------------------
+
+let intEq (x: int) (y: int) = x = y
+
+// -----------------------------------------------
+// Assoc
+// -----------------------------------------------
+
+let assocFind eq key assoc =
+  let rec go assoc =
+    match assoc with
+    | [] ->
+      None
+
+    | (firstKey, firstValue) :: _
+      when eq key firstKey ->
+      Some firstValue
+
+    | _ :: assoc ->
+      go assoc
+
+  go assoc
+
+// -----------------------------------------------
 // Name context
 // -----------------------------------------------
 
@@ -260,6 +285,91 @@ let litToTy (lit: Lit): Ty =
 // -----------------------------------------------
 // Primitives (HIR)
 // -----------------------------------------------
+
+let primToTySpec prim =
+  let meta id = Ty.Meta (id, noLoc)
+  let mono ty = TySpec (ty, [])
+  let poly ty traits = TySpec (ty, traits)
+
+  match prim with
+  | HPrim.Add ->
+    let addTy = meta 1
+    poly (tyFun addTy (tyFun addTy addTy)) [Trait.Add addTy]
+
+  | HPrim.Sub ->
+    mono (tyFun tyInt (tyFun tyInt tyInt))
+
+  | HPrim.Mul ->
+    mono (tyFun tyInt (tyFun tyInt tyInt))
+
+  | HPrim.Div ->
+    mono (tyFun tyInt (tyFun tyInt tyInt))
+
+  | HPrim.Mod ->
+    mono (tyFun tyInt (tyFun tyInt tyInt))
+
+  | HPrim.Eq ->
+    let eqTy = meta 1
+    poly (tyFun eqTy (tyFun eqTy tyBool)) [Trait.Eq eqTy]
+
+  | HPrim.Lt ->
+    let cmpTy = meta 1
+    poly (tyFun cmpTy (tyFun cmpTy tyBool)) [Trait.Cmp cmpTy]
+
+  | HPrim.Nil ->
+    let itemTy = meta 1
+    poly (tyList itemTy) []
+
+  | HPrim.Cons ->
+    let itemTy = meta 1
+    let listTy = tyList itemTy
+    poly (tyFun itemTy (tyFun listTy listTy)) []
+
+  | HPrim.Index ->
+    let lTy = meta 1
+    let rTy = meta 2
+    let resultTy = meta 3
+    poly (tyFun lTy (tyFun rTy resultTy)) [Trait.Index (lTy, rTy, resultTy)]
+
+  | HPrim.Not ->
+    mono (tyFun tyBool tyBool)
+
+  | HPrim.Exit ->
+    let resultTy = meta 1
+    poly (tyFun tyInt resultTy) []
+
+  | HPrim.Assert ->
+    mono (tyFun tyBool tyUnit)
+
+  | HPrim.Box ->
+    let itemTy = meta 1
+    poly (tyFun itemTy tyObj) []
+
+  | HPrim.Unbox ->
+    let itemTy = meta 1
+    poly (tyFun tyObj itemTy) []
+
+  | HPrim.Char ->
+    // FIXME: `char` can take non-int types.
+    mono (tyFun tyInt tyChar)
+
+  | HPrim.Int ->
+    let toIntTy = meta 1
+    poly (tyFun toIntTy tyInt) [Trait.ToInt toIntTy]
+
+  | HPrim.String ->
+    let toStrTy = meta 1
+    poly (tyFun toStrTy tyStr) [Trait.ToString toStrTy]
+
+  | HPrim.StrLength ->
+    mono (tyFun tyStr tyInt)
+
+  | HPrim.StrGetSlice ->
+    mono (tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr)))
+
+  | HPrim.Printfn
+  | HPrim.NativeFun _ ->
+    poly (meta 1) []
 
 let primToArity ty prim =
   match prim with

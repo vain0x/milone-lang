@@ -385,6 +385,11 @@ type Ty =
 type TyScheme =
   | ForAll of TySerial list * Ty
 
+/// Type specification.
+type TySpec =
+  | TySpec
+    of Ty * Trait list
+
 /// Traits: kind of type constraints.
 /// NOTE: `trait` is a reserved word in F#.
 [<RequireQualifiedAccess>]

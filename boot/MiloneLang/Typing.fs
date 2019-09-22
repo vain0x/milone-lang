@@ -77,6 +77,9 @@ let ctxUnifyLater (ctx: TyCtx) ty metaTy loc =
 let ctxAddTraitBound theTrait loc (ctx: TyCtx) =
   { ctx with TraitBounds = (theTrait, loc) :: ctx.TraitBounds }
 
+let ctxAddTraitBounds traits (ctx: TyCtx) =
+  { ctx with TraitBounds = traits @ ctx.TraitBounds }
+
 let ctxResolveUnifyQueue (ctx: TyCtx) =
   let rec go ctx queue =
     match queue with
@@ -143,6 +146,21 @@ let tySchemeInstantiate ctx (tyScheme: TyScheme) loc =
       substTy extendedCtx ty
 
     ty, ctx
+
+let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
+  // Refresh meta types and generate bindings.
+  let oldTySerials = polyTy |> tyCollectFreeVars
+  let bindings, ctx =
+    (oldTySerials, ctx) |> stMap (fun (oldTySerial, ctx) ->
+      let tySerial, ctx = ctx |> ctxFreshTySerial
+      (oldTySerial, Ty.Meta (tySerial, loc)), ctx
+    )
+
+  // Replace meta types in the type and trait bounds.
+  let substMeta tySerial = bindings |> assocFind intEq tySerial
+  let polyTy = polyTy |> tySubst substMeta
+  let traits = traits |> listMap (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
+  polyTy, traits, ctx
 
 let ctxFindVar (ctx: TyCtx) serial =
   ctx.Vars |> Map.find serial
@@ -279,108 +297,10 @@ let inferRef (ctx: TyCtx) serial loc ty =
   HExpr.Ref (serial, ty, loc), ctx
 
 let inferPrim ctx prim loc ty =
-  let aux primTy ctx =
-    let ctx = unifyTy ctx loc primTy ty
-    HExpr.Prim (prim, ty, loc), ctx
-
-  match prim with
-  | HPrim.Add ->
-    let addTy, _, ctx = ctxFreshTyVar "add" loc ctx
-    let ctx = ctx |> ctxAddTraitBound (Trait.Add addTy) loc
-    aux (tyFun addTy (tyFun addTy addTy)) ctx
-
-  | HPrim.Sub ->
-    aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
-
-  | HPrim.Mul ->
-    aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
-
-  | HPrim.Div ->
-    aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
-
-  | HPrim.Mod ->
-    aux (tyFun tyInt (tyFun tyInt tyInt)) ctx
-
-  | HPrim.Eq ->
-    let eqTy, _, ctx = ctxFreshTyVar "eq" loc ctx
-    let ctx = ctx |> ctxAddTraitBound (Trait.Eq eqTy) loc
-    aux (tyFun eqTy (tyFun eqTy tyBool)) ctx
-
-  | HPrim.Lt ->
-    let cmpTy, _, ctx = ctxFreshTyVar "cmp" loc ctx
-    let ctx = ctx |> ctxAddTraitBound (Trait.Cmp cmpTy) loc
-    aux (tyFun cmpTy (tyFun cmpTy tyBool)) ctx
-
-  | HPrim.Nil ->
-    let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
-    aux (tyList itemTy) ctx
-
-  | HPrim.Cons ->
-    let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
-    let listTy = tyList itemTy
-    aux (tyFun itemTy (tyFun listTy listTy)) ctx
-
-  | HPrim.Index ->
-    let lTy, _, ctx = ctxFreshTyVar "l" loc ctx
-    let rTy, _, ctx = ctxFreshTyVar "r" loc ctx
-    let resultTy, _, ctx = ctxFreshTyVar "result" loc ctx
-    let ctx = ctx |> ctxAddTraitBound (Trait.Index (lTy, rTy, resultTy)) loc
-    aux (tyFun lTy (tyFun rTy resultTy)) ctx
-
-  | HPrim.Not ->
-    let ctx = unifyTy ctx loc (tyFun tyBool tyBool) ty
-    HExpr.Prim (HPrim.Not, ty, loc), ctx
-
-  | HPrim.Exit ->
-    let resultTy, _, ctx = ctxFreshTyVar "exit" loc ctx
-    let ctx = unifyTy ctx loc (tyFun tyInt resultTy) ty
-    HExpr.Prim (HPrim.Exit, ty, loc), ctx
-
-  | HPrim.Assert ->
-    let ctx = unifyTy ctx loc (tyFun tyBool tyUnit) ty
-    HExpr.Prim (HPrim.Assert, ty, loc), ctx
-
-  | HPrim.Box ->
-    let argTy, _, ctx = ctxFreshTyVar "box" loc ctx
-    let ctx = unifyTy ctx loc (tyFun argTy tyObj) ty
-    HExpr.Prim (HPrim.Box, ty, loc), ctx
-
-  | HPrim.Unbox ->
-    let resultTy, _, ctx = ctxFreshTyVar "unbox" loc ctx
-    let ctx = unifyTy ctx loc (tyFun tyObj resultTy) ty
-    HExpr.Prim (HPrim.Unbox, ty, loc), ctx
-
-  | HPrim.Printfn ->
-    // The function's type is unified in app expression inference.
-    HExpr.Prim (HPrim.Printfn, ty, loc), ctx
-
-  | HPrim.Char ->
-    // FIXME: `char` can take non-int values, including chars.
-    let ctx = unifyTy ctx loc (tyFun tyInt tyChar) ty
-    HExpr.Prim (HPrim.Char, ty, loc), ctx
-
-  | HPrim.Int ->
-    let argTy, _, ctx = ctxFreshTyVar "intArg" loc ctx
-    let ctx = ctx |> ctxAddTraitBound (Trait.ToInt argTy) loc
-    let ctx = unifyTy ctx loc (tyFun argTy tyInt) ty
-    HExpr.Prim (HPrim.Int, ty, loc), ctx
-
-  | HPrim.String ->
-    let argTy, _, ctx = ctxFreshTyVar "stringArg" loc ctx
-    let ctx = ctx |> ctxAddTraitBound (Trait.ToString argTy) loc
-    let ctx = unifyTy ctx loc (tyFun argTy tyStr) ty
-    HExpr.Prim (HPrim.String, ty, loc), ctx
-
-  | HPrim.StrLength ->
-    let ctx = unifyTy ctx loc ty (tyFun tyStr tyInt)
-    HExpr.Prim (prim, ty, loc), ctx
-
-  | HPrim.StrGetSlice ->
-    let ctx = unifyTy ctx loc ty (tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr)))
-    HExpr.Prim (prim, ty, loc), ctx
-
-  | HPrim.NativeFun _ ->
-    HExpr.Prim (HPrim.NativeFun ("<NativeFunIdent>", -1), ty, loc), ctx
+  let tySpec = prim |> primToTySpec
+  let primTy, traits, ctx = (tySpec, ctx) |> tySpecInstantiate loc
+  let ctx = unifyTy ctx loc primTy ty |> ctxAddTraitBounds traits
+  HExpr.Prim (prim, primTy, loc), ctx
 
 let inferNil ctx loc listTy =
   let itemTy, _, ctx = ctxFreshTyVar "item" loc ctx
@@ -394,7 +314,6 @@ let inferMatch ctx target arms loc resultTy =
 
   let arms, ctx =
     (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
-      let baseCtx = ctx
       let pat, ctx = inferPat ctx pat targetTy
       let guard, ctx = inferExpr ctx guard tyBool
       let body, ctx = inferExpr ctx body resultTy
