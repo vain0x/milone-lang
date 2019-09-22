@@ -130,6 +130,8 @@ let scopeCtxDefineFreeTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
 /// Adds a variable to a scope.
 let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
   let varIdent = scopeCtx |> scopeCtxGetVar varSerial |> varDefToIdent
+  assert (varIdent <> "_")
+
   { scopeCtx with
       Local = (scopeSerial, Binding.Var (varSerial, varIdent)) :: scopeCtx.Local
   }
@@ -556,6 +558,12 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
   | HPat.Nil _ ->
     pat, ctx
 
+  | HPat.Ref (("_" as ident), varSerial, ty, loc) ->
+    // Handle discard pattern.
+    let varDef = VarDef.Var (ident, ty, loc)
+    let ctx = ctx |> scopeCtxDefineVar varSerial varDef
+    HPat.Ref (ident, varSerial, ty, loc), ctx
+
   | HPat.Ref (ident, serial, ty, loc) ->
     let variantSerial =
       match ctx |> scopeCtxResolveLocalVar ident with
@@ -576,9 +584,7 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
 
     | None ->
       let varDef = VarDef.Var (ident, ty, loc)
-      let ctx =
-        // FIXME: Don't define '_'
-        ctx |> scopeCtxDefineLocalVar serial varDef
+      let ctx = ctx |> scopeCtxDefineLocalVar serial varDef
       HPat.Ref (ident, serial, ty, loc), ctx
 
   | HPat.Nav (l, r, ty, loc) ->
