@@ -14,10 +14,10 @@ open MiloneLang.Helpers
 type Ctx =
   {
     Vars: Map<VarSerial, VarDef>
-    VarUniqueNames: Map<VarSerial, string>
+    VarUniqueNames: Map<VarSerial, Ident>
     TyEnv: Map<Ty, CTy>
     Tys: Map<TySerial, TyDef>
-    TyUniqueNames: Map<Ty, string>
+    TyUniqueNames: Map<Ty, Ident>
     Stmts: CStmt list
     Decls: CDecl list
     Logs: (Log * Loc) list

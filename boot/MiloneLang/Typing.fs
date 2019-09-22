@@ -15,7 +15,7 @@ type TyCtx =
     /// We need to identify variables by serial number rather than names
     /// due to scope locality and shadowing.
     Serial: Serial
-    NameMap: Map<Serial, string>
+    NameMap: Map<Serial, Ident>
     /// Variable serial to variable definition.
     Vars: Map<VarSerial, VarDef>
     /// Type serial to type definition.

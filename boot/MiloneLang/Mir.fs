@@ -61,7 +61,7 @@ let ctxAddStmt (ctx: MirCtx) (stmt: MStmt) =
 let ctxTakeStmts (ctx: MirCtx) =
   ctx.Stmts, { ctx with Stmts = [] }
 
-let ctxFreshVar (ctx: MirCtx) (ident: string) (ty: Ty) loc =
+let ctxFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let serial = ctx.Serial + 1
   let ctx =
     { ctx with
@@ -71,7 +71,7 @@ let ctxFreshVar (ctx: MirCtx) (ident: string) (ty: Ty) loc =
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
 
-let ctxLetFreshVar (ctx: MirCtx) (ident: string) (ty: Ty) loc =
+let ctxLetFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let refExpr, serial, ctx = ctxFreshVar ctx ident ty loc
   let ctx = ctxAddStmt ctx (MStmt.LetVal (serial, MInit.UnInit, ty, loc))
   let setStmt expr = MStmt.Set (serial, expr, loc)

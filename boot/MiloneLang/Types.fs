@@ -4,6 +4,9 @@ module rec MiloneLang.Types
 /// Unique serial number as identity.
 type Serial = int
 
+/// Identifier or name of something.
+type Ident = string
+
 /// Literal of primitive value.
 [<RequireQualifiedAccess>]
 type Lit =
@@ -59,7 +62,7 @@ type Token =
   | Str
     of string
   | Ident
-    of string
+    of Ident
   /// `(`
   | ParenL
   /// `)`
@@ -190,9 +193,9 @@ type ATy =
   | Missing
     of Loc
   | Ident
-    of string * Loc
+    of Ident * Loc
   | Suffix
-    of ATy * string * Loc
+    of ATy * Ident * Loc
   /// Tuple type, e.g. `int * string`.
   | Tuple
     of ATy list * Loc
@@ -210,11 +213,11 @@ type APat =
   | Lit
     of Lit * Loc
   | Ident
-    of string * Loc
+    of Ident * Loc
   | ListLit
     of APat list * Loc
   | Nav
-    of APat * string * Loc
+    of APat * Ident * Loc
   /// Variant deconstruction. e.g. `Some x`.
   | Call
     of APat * APat list * Loc
@@ -224,7 +227,7 @@ type APat =
   | TupleLit
     of APat list * Loc
   | As
-    of APat * string * Loc
+    of APat * Ident * Loc
   /// Type annotation, e.g. `x: int`.
   | Anno
     of APat * ATy * Loc
@@ -233,7 +236,7 @@ type APat =
   /// Function declaration pattern, e.g. `f x y`.
   /// Syntactically distinct from the call pattern.
   | Fun
-    of string * APat list * Loc
+    of Ident * APat list * Loc
 
 /// Match arm node in AST.
 type AArm =
@@ -245,7 +248,7 @@ type AArm =
 type AVariant =
   /// (identifier, payload-type).
   | AVariant
-    of string * ATy option * Loc
+    of Ident * ATy option * Loc
 
 /// Let expression in AST.
 [<RequireQualifiedAccess>]
@@ -253,7 +256,7 @@ type ALet =
   | LetVal
     of APat * AExpr * AExpr * Loc
   | LetFun
-    of ident:string * args:APat list * AExpr * AExpr * Loc
+    of Ident * args:APat list * AExpr * AExpr * Loc
 
 /// Body of type definition in AST.
 [<RequireQualifiedAccess>]
@@ -273,7 +276,7 @@ type AExpr =
   | Lit
     of Lit * Loc
   | Ident
-    of string * Loc
+    of Ident * Loc
   /// List literal, e.g. `[]`, `[2; 3]`.
   | ListLit
     of AExpr list * Loc
@@ -286,7 +289,7 @@ type AExpr =
     of APat list * AExpr * Loc
   /// Navigation expression, e.g. `str.Length`.
   | Nav
-    of AExpr * string * Loc
+    of AExpr * Ident * Loc
   | Index
     of AExpr * AExpr * Loc
   /// Unary operation, e.g. `-x`.
@@ -313,12 +316,12 @@ type AExpr =
     of APat * AExpr * AExpr * Loc
   /// Type synonym definition, e.g. `type UserId = int`.
   | TySynonym
-    of string * ATy * Loc
+    of Ident * ATy * Loc
   /// Discriminated union type definition, e.g. `type Result = | Ok | Err of int`.
   | TyUnion
-    of string * AVariant list * Loc
+    of Ident * AVariant list * Loc
   | Open
-    of string list * Loc
+    of Ident list * Loc
 
 // -----------------------------------------------
 // Intermediate representation types
@@ -349,7 +352,7 @@ type LetDepth = int
 
 type NameCtx =
   | NameCtx
-    of Map<Serial, string> * lastSerial:Serial
+    of Map<Serial, Ident> * lastSerial:Serial
 
 /// Type constructors.
 [<RequireQualifiedAccess>]
@@ -414,27 +417,27 @@ type TyDecl =
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
   | Union
-    of ident:string * variants:(string * VarSerial * bool * Ty) list * Loc
+    of Ident * variants:(Ident * VarSerial * bool * Ty) list * Loc
 
 /// Type definition.
 [<RequireQualifiedAccess>]
 type TyDef =
   /// Bound type variable.
   | Meta
-    of ident:string * Ty * Loc
+    of Ident * Ty * Loc
   | Union
-    of ident:string * VariantSerial list * Loc
+    of Ident * VariantSerial list * Loc
 
 /// Variable definition in high-level IR.
 [<RequireQualifiedAccess>]
 type VarDef =
   | Var
-    of ident:string * Ty * Loc
+    of Ident * Ty * Loc
   | Fun
-    of ident:string * Arity * TyScheme * Loc
+    of Ident * Arity * TyScheme * Loc
   /// Variant constructor.
   | Variant
-    of ident:string * TySerial * hasPayload:bool * payloadTy:Ty * variantTy:Ty * Loc
+    of Ident * TySerial * hasPayload:bool * payloadTy:Ty * variantTy:Ty * Loc
 
 /// Pattern in AST.
 [<RequireQualifiedAccess>]
@@ -446,9 +449,9 @@ type HPat =
     of itemTy:Ty * Loc
   /// Variable reference pattern or `_`.
   | Ref
-    of ident:string * VarSerial * Ty * Loc
+    of Ident * VarSerial * Ty * Loc
   | Nav
-    of HPat * string * Ty * Loc
+    of HPat * Ident * Ty * Loc
   | Call
     of callee:HPat * args:HPat list * Ty * Loc
   /// `::`
@@ -457,7 +460,7 @@ type HPat =
   | Tuple
     of HPat list * tupleTy:Ty * Loc
   | As
-    of HPat * ident:string * VarSerial * Loc
+    of HPat * Ident * VarSerial * Loc
   /// Type annotation pattern, e.g. `x : int`.
   | Anno
     of HPat * Ty * Loc
@@ -489,7 +492,7 @@ type HPrim =
   | Int
   | String
   | NativeFun
-    of ident:string * Arity
+    of Ident * Arity
 
 [<RequireQualifiedAccess>]
 type InfOp =
@@ -514,26 +517,26 @@ type HExpr =
     of Lit * Loc
   /// Variable reference.
   | Ref
-    of ident:string * VarSerial * Ty * Loc
+    of Ident * VarSerial * Ty * Loc
   | Prim
     of HPrim * Ty * Loc
   | Match
     of target:HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`
   | Nav
-    of subject:HExpr * message:string * Ty * Loc
+    of HExpr * Ident * Ty * Loc
   /// Operation with infinite arguments.
   | Inf
     of InfOp * HExpr list * Ty * Loc
   | Let
     of pat:HPat * init:HExpr * next:HExpr * Ty * Loc
   | LetFun
-    of ident:string * FunSerial * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
+    of Ident * FunSerial * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
   /// Type declaration.
   | TyDef
-    of ident:string * TySerial * TyDecl * Loc
+    of Ident * TySerial * TyDecl * Loc
   | Open
-    of ident:string list * Loc
+    of Ident list * Loc
   | Error
     of string * Loc
 
@@ -703,9 +706,9 @@ type CTy =
   | FunPtr
     of CTy list * CTy
   | Struct
-    of ident:string
+    of Ident
   | Enum
-    of ident:string
+    of Ident
 
 [<RequireQualifiedAccess>]
 type CUniOp =
@@ -746,19 +749,19 @@ type CExpr =
   | StrObj
     of string
   | Ref
-    of string
+    of Ident
   /// `(struct T){.x = x, ..}` Initializer.
   | Init
-    of fields:(string * CExpr) list * CTy
+    of fields:(Ident * CExpr) list * CTy
   /// Projection. Get an item of tuple.
   | Proj
     of CExpr * index:int
   | Cast
     of CExpr * CTy
   | Nav
-    of CExpr * field:string
+    of CExpr * Ident
   | Arrow
-    of CExpr * field:string
+    of CExpr * Ident
   /// `a[i]`
   | Index
     of CExpr * CExpr
@@ -777,10 +780,10 @@ type CStmt =
     of CExpr
   /// `T x = a;`
   | Let
-    of ident:string * init:CExpr option * CTy
+    of Ident * init:CExpr option * CTy
   /// `U* x = (U*)malloc(sizeof T);`
   | LetAlloc
-    of ident:string * valPtrTy:CTy * varTy:CTy
+    of Ident * valPtrTy:CTy * varTy:CTy
   /// `x = a;`
   | Set
     of CExpr * CExpr
@@ -800,8 +803,8 @@ type CDecl =
   | ErrDir
     of message:string * line:int
   | Struct
-    of ident:string * fields:(string * CTy) list * variants:(string * CTy) list
+    of Ident * fields:(Ident * CTy) list * variants:(Ident * CTy) list
   | Enum
-    of ident:string * variants:string list
+    of Ident * variants:Ident list
   | Fun
-    of ident:string * args:(string * CTy) list * CTy * body:CStmt list
+    of Ident * args:(Ident * CTy) list * CTy * body:CStmt list

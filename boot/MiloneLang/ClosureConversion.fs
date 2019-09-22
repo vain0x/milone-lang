@@ -50,7 +50,7 @@ type CcCtx =
     Tys: Map<TySerial, TyDef>
 
     /// Known identifiers and their dependencies.
-    Caps: Map<FunSerial, (string * VarSerial * Ty * Loc) list>
+    Caps: Map<FunSerial, (Ident * VarSerial * Ty * Loc) list>
     Known: Set<FunSerial>
     Refs: Set<VarSerial>
     Locals: Set<VarSerial>

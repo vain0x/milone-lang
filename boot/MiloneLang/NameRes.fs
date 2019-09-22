@@ -15,11 +15,11 @@ type ScopeSerial = Serial
 type Binding =
   /// Value binding.
   | Var
-    of VarSerial * varIdent:string
+    of VarSerial * varIdent:Ident
 
   /// Type binding.
   | Ty
-    of TySerial * tyIdent:string
+    of TySerial * tyIdent:Ident
 
   /// Parent scope.
   | Parent
@@ -36,7 +36,7 @@ type ScopeCtx =
     Serial: Serial
 
     /// Serial to ident map.
-    NameMap: Map<Serial, string>
+    NameMap: Map<Serial, Ident>
 
     /// Variable serial to definition map.
     Vars: Map<VarSerial, VarDef>
@@ -80,7 +80,7 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
     LetDepth = 0
   }
 
-let scopeCtxGetIdent serial (scopeCtx: ScopeCtx): string =
+let scopeCtxGetIdent serial (scopeCtx: ScopeCtx): Ident =
   scopeCtx.NameMap |> Map.find serial
 
 let scopeCtxGetVar varSerial (scopeCtx: ScopeCtx) =

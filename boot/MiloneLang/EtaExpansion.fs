@@ -73,7 +73,7 @@ let ctxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: EtaCtx) =
       Tys = ctx.Tys
   }
 
-let ctxFreshFun (ident: string) arity (ty: Ty) loc (ctx: EtaCtx) =
+let ctxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
   let serial = ctx.Serial + 1
   let tyScheme =
     let isOwned _ = true // FIXME: is it okay?
@@ -86,7 +86,7 @@ let ctxFreshFun (ident: string) arity (ty: Ty) loc (ctx: EtaCtx) =
   let refExpr = HExpr.Ref (ident, serial, ty, loc)
   refExpr, serial, ctx
 
-let ctxFreshVar (ident: string) (ty: Ty) loc (ctx: EtaCtx) =
+let ctxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
   let serial = ctx.Serial + 1
   let ctx =
     { ctx with
