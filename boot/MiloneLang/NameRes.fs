@@ -343,11 +343,13 @@ let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx 
     let scopeCtx = scopeCtx |> scopeCtxDefineLocalVar serial varDef
     scopeCtx
 
-/// Adds a type declaration to the context.
-/// At the moment, we can't resolve type expressions correctly
-/// because some type declarations are still unseen.
-/// So keep type expressions unresolved for now and resolve them later.
-let scopeCtxDefineTyDeclUniquely tySerial tyDecl loc ctx =
+/// Defines a type based on a type declaration.
+///
+/// - This is idempotent. Duplicated calls are just ignored.
+/// - You need call `scopeCtxDefineTyFinish` to complete the task.
+/// - This doesn't resolve inner type expressions
+///   because some type declarations are still unseen.
+let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
   let tyIdent = ctx |> scopeCtxGetIdent tySerial
 
   if ctx.Tys |> Map.containsKey tySerial then
@@ -381,10 +383,12 @@ let scopeCtxDefineTyDeclUniquely tySerial tyDecl loc ctx =
       TyDef.Union (tyIdent, variantSerials, loc)
     ctx |> scopeCtxDefineLocalTy tySerial tyDef
 
-/// Upgrades the type declaration to definition.
-/// Resolves type expressions.
-let scopeCtxDefineTyDef tySerial tyDecl loc ctx =
-  let ctx = ctx |> scopeCtxDefineTyDeclUniquely tySerial tyDecl loc
+/// Completes the type definition.
+///
+/// - No need to call `scopeCtxDefineTyStart` first.
+/// - This resolves inner type expressions.
+let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
+  let ctx = ctx |> scopeCtxDefineTyStart tySerial tyDecl loc
   let tyDef = ctx |> scopeCtxGetTy tySerial
 
   match tyDef with
@@ -480,7 +484,7 @@ let collectDecls (expr, ctx) =
       HExpr.Inf (InfOp.Semi, exprs, ty, loc), ctx
 
     | HExpr.TyDef (ident, serial, tyDecl, loc) ->
-      let ctx = ctx |> scopeCtxDefineTyDeclUniquely serial tyDecl loc
+      let ctx = ctx |> scopeCtxDefineTyStart serial tyDecl loc
       HExpr.TyDef (ident, serial, tyDecl, loc), ctx
 
     | _ ->
@@ -751,8 +755,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     HExpr.LetFun (ident, serial, isMainFun, pats, body, next, ty, loc), ctx
 
   | HExpr.TyDef (_, serial, tyDecl, loc) ->
-    // Unlike the collection stage, here type expressions should resolve.
-    let ctx = ctx |> scopeCtxDefineTyDef serial tyDecl loc
+    let ctx = ctx |> scopeCtxDefineTyFinish serial tyDecl loc
     expr, ctx
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
