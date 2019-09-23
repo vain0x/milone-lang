@@ -79,6 +79,10 @@ module rec MiloneLang.Parsing
 open MiloneLang.Types
 open MiloneLang.Helpers
 
+// -----------------------------------------------
+// Tokens
+// -----------------------------------------------
+
 let leadsExpr tokens =
   match tokens with
   | (token, _) :: _ ->
@@ -126,6 +130,10 @@ let private nextInside baseLoc tokens: bool =
   | _ ->
     false
 
+// -----------------------------------------------
+// Errors
+// -----------------------------------------------
+
 let parseErrorCore msg loc tokens errors =
   let near = tokens |> listMap fst |> listTruncate 6
   let msg = sprintf "Parse error %s near %A" msg near
@@ -151,7 +159,7 @@ let parseNewError msg (tokens, errors) =
   parseErrorCore msg loc tokens errors
 
 // -----------------------------------------------
-// Parse Ty
+// Parse types
 // -----------------------------------------------
 
 let parseTyAtom boxX (tokens, errors) =
@@ -269,6 +277,10 @@ let parseTyDeclBody boxX (tokens, errors) =
   | _ ->
     let ty, tokens, errors = parseTy boxX (tokens, errors)
     ATyDecl.Synonym ty, tokens, errors
+
+// -----------------------------------------------
+// Parse patterns
+// -----------------------------------------------
 
 /// `pat ')'`
 let parsePatParenBody baseLoc (tokens, errors) =
@@ -477,6 +489,10 @@ let parsePat boxX (tokens, errors) =
     parsePatError "Expected a pattern" (tokens, errors)
   else
     parsePatOr boxX (tokens, errors)
+
+// -----------------------------------------------
+// Parse expressions
+// -----------------------------------------------
 
 /// `range = term ( '..' term )?`
 let parseRange boxX (tokens, errors) =
