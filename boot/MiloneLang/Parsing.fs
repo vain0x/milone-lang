@@ -419,16 +419,6 @@ let parsePat boxX (tokens, errors) =
   else
     parsePatOr boxX (tokens, errors)
 
-let parsePats boxX (tokens, errors) =
-  let rec go acc (tokens, errors) =
-    if nextInside boxX tokens && leadsPat tokens then
-      let pat, tokens, errors = parsePat boxX (tokens, errors)
-      go (pat :: acc) (tokens, errors)
-    else
-      listRev acc, tokens, errors
-
-  go [] (tokens, errors)
-
 /// `range = term ( '..' term )?`
 let parseRange boxX (tokens, errors) =
   let l, tokens, errors = parseTerm boxX (tokens, errors)
