@@ -60,6 +60,8 @@ let cons head tail = head :: tail
 // Int
 // -----------------------------------------------
 
+let intMax (x: int) (y: int) = if x < y then y else x
+
 let intEq (x: int) (y: int) = x = y
 
 // -----------------------------------------------
@@ -92,8 +94,21 @@ let locX ((_, x): Loc) = x
 
 let locY ((y, _): Loc) = y
 
-let locIsSameColumn ((_, firstX): Loc) ((_, secondX): Loc) =
-  firstX = secondX
+let locIsSameRow first second =
+  locY first = locY second
+
+let locIsSameColumn first second =
+  locX first = locX second
+
+/// Gets if `secondLoc` is inside of the block of `firstLoc`.
+let locInside (firstLoc: Loc) (secondLoc: Loc) =
+  locX firstLoc <= locX secondLoc
+
+let locAddX dx ((y, x): Loc) =
+  y, x + dx
+
+let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
+  intMax firstY secondY, intMax firstX secondX
 
 // -----------------------------------------------
 // Token
@@ -145,6 +160,16 @@ let tokenIsArgFirst (token: Token) =
 
 let tokenIsPatFirst (token: Token) =
   tokenIsExprOrPatFirst token
+
+let tokenIsAccessModifier token =
+  match token with
+  | Token.Private
+  | Token.Internal
+  | Token.Public ->
+    true
+
+  | _ ->
+    false
 
 // -----------------------------------------------
 // Name context
