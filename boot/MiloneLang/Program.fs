@@ -24,14 +24,14 @@ let toCir verbosity (projectDir: string): CDecl list * bool =
       ()
 
   let nameCtx = nameCtxEmpty ()
-  let ast, nameCtx = parseProjectModules projectDir nameCtx
+  let ast, nameCtx, errorListList = parseProjectModules projectDir nameCtx
   // let tokens = Lexing.tokenize source
   // log "tokens" tokens
   // let ast = Parsing.parse tokens
   // log "ast" ast
   let nameRes, scopeCtx = NameRes.nameRes (ast, nameCtx)
   log "nameRes" nameRes
-  let typedAst, tyCtx = Typing.infer (nameRes, scopeCtx)
+  let typedAst, tyCtx = Typing.infer (nameRes, scopeCtx, errorListList)
   log "typed" typedAst
   let funTransAst, tyCtx =
     (typedAst, tyCtx)

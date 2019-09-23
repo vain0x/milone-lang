@@ -56,12 +56,11 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-/// No location information. Should be fixed.
-let noLoc = -1, -1
-
 // -----------------------------------------------
 // Int
 // -----------------------------------------------
+
+let intMax (x: int) (y: int) = if x < y then y else x
 
 let intEq (x: int) (y: int) = x = y
 
@@ -83,6 +82,122 @@ let assocFind eq key assoc =
       go assoc
 
   go assoc
+
+// -----------------------------------------------
+// Location
+// -----------------------------------------------
+
+/// No location information. Should be fixed.
+let noLoc = -1, -1
+
+let locX ((_, x): Loc) = x
+
+let locY ((y, _): Loc) = y
+
+let locIsSameRow first second =
+  locY first = locY second
+
+let locIsSameColumn first second =
+  locX first = locX second
+
+/// Gets if `secondLoc` is inside of the block of `firstLoc`.
+let locInside (firstLoc: Loc) (secondLoc: Loc) =
+  locX firstLoc <= locX secondLoc
+
+let locAddX dx ((y, x): Loc) =
+  y, x + dx
+
+let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
+  intMax firstY secondY, intMax firstX secondX
+
+// -----------------------------------------------
+// Token
+// -----------------------------------------------
+
+/// Gets if a token is in the first set of expressions/patterns,
+/// i.e. whether it can be the first token of an expression or pattern.
+let tokenIsExprOrPatFirst (token: Token) =
+  match token with
+  | Token.Bool _
+  | Token.Int _
+  | Token.Char _
+  | Token.Str _
+  | Token.Ident _
+  | Token.ParenL
+  | Token.BracketL ->
+    true
+
+  | _ ->
+    false
+
+/// Gets if a token is in the first set of expressions.
+let tokenIsExprFirst (token: Token) =
+  match token with
+  | _ when tokenIsExprOrPatFirst token ->
+    true
+
+  | Token.Minus
+  | Token.If
+  | Token.Match
+  | Token.Fun
+  | Token.Do
+  | Token.Let
+  | Token.Type
+  | Token.Open ->
+    true
+
+  | _ ->
+    false
+
+/// In the first set of arguments?
+let tokenIsArgFirst (token: Token) =
+  match token with
+  | Token.Minus ->
+    false
+
+  | _ ->
+    tokenIsExprFirst token
+
+let tokenIsPatFirst (token: Token) =
+  tokenIsExprOrPatFirst token
+
+let tokenIsAccessModifier token =
+  match token with
+  | Token.Private
+  | Token.Internal
+  | Token.Public ->
+    true
+
+  | _ ->
+    false
+
+// -----------------------------------------------
+// OpLevel
+// -----------------------------------------------
+
+let opLevelToNext level =
+  match level with
+  | OpLevel.Or ->
+    OpLevel.And
+
+  | OpLevel.And ->
+    OpLevel.Cmp
+
+  | OpLevel.Cmp ->
+    OpLevel.Pipe
+
+  | OpLevel.Pipe ->
+    OpLevel.Cons
+
+  | OpLevel.Cons ->
+    OpLevel.Add
+
+  | OpLevel.Add ->
+    OpLevel.Mul
+
+  | OpLevel.Mul
+  | OpLevel.Prefix ->
+    OpLevel.Prefix
 
 // -----------------------------------------------
 // Name context

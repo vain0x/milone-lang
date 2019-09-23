@@ -60,7 +60,7 @@ end_match_4:;
 #error 3:5 Undefined variable f
 
 #line 7
-#error 7:7 While unifying 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Int,[])]); Con (Int,[])])' and 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Str,[])]); Con (Int,[])])', failed to unify 'Con (Int,[])' and 'Con (Str,[])'.
+#error 7:24 While unifying 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Int,[])]); Con (Int,[])])' and 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Str,[])]); Con (Int,[])])', failed to unify 'Con (Int,[])' and 'Con (Str,[])'.
 
 #line 13
 #error 13:17 Couldn't unify 'Meta (40,(12, 12))' and 'Con
