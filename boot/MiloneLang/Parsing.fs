@@ -10,53 +10,29 @@ module rec MiloneLang.Parsing
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-/// Gets if next token exists and should lead some construction (expr/pat/ty).
-/// We use this for a kind of prediction.
-/// E.g. if you are looking for an expr and the following token is an integer,
-/// the following tokens should start with an expression,
-/// even if we don't know how many tokens participate that expr.
-let tokenRole tokens: bool * bool =
+let leadsExpr tokens =
   match tokens with
-  | (Token.Bool _, _) :: _
-  | (Token.Int _, _) :: _
-  | (Token.Char _, _) :: _
-  | (Token.Str _, _) :: _
-  | (Token.Ident _, _) :: _
-  | (Token.ParenL, _) :: _
-  | (Token.BracketL, _) :: _ ->
-    // It can be an expr or pat.
-    true, true
-
-  | (Token.If, _) :: _
-  | (Token.Match, _) :: _
-  | (Token.Fun, _) :: _
-  | (Token.Do, _) :: _
-  | (Token.Let, _) :: _
-  | (Token.Type, _) :: _
-  | (Token.Open, _) :: _
-  | (Token.Minus, _) :: _ ->
-    // It is an expr, not pat.
-    true, false
+  | (token, _) :: _ ->
+    tokenIsExprFirst token
 
   | _ ->
-    // Other tokens are read only in specific contexts.
-    false, false
-
-let leadsExpr tokens =
-  let leadsExpr, _ = tokenRole tokens
-  leadsExpr
+    false
 
 let leadsArg tokens =
   match tokens with
-  | (Token.Minus, _) :: _ ->
-    false
+  | (token, _) :: _ ->
+    tokenIsArgFirst token
 
   | _ ->
-    leadsExpr tokens
+    false
 
 let leadsPat tokens =
-  let _, leadsPat = tokenRole tokens
-  leadsPat
+  match tokens with
+  | (token, _) :: _ ->
+    tokenIsPatFirst token
+
+  | _ ->
+    false
 
 /// Location of next token.
 let private nextLoc tokens: Loc =

@@ -96,6 +96,57 @@ let locIsSameColumn ((_, firstX): Loc) ((_, secondX): Loc) =
   firstX = secondX
 
 // -----------------------------------------------
+// Token
+// -----------------------------------------------
+
+/// Gets if a token is in the first set of expressions/patterns,
+/// i.e. whether it can be the first token of an expression or pattern.
+let tokenIsExprOrPatFirst (token: Token) =
+  match token with
+  | Token.Bool _
+  | Token.Int _
+  | Token.Char _
+  | Token.Str _
+  | Token.Ident _
+  | Token.ParenL
+  | Token.BracketL ->
+    true
+
+  | _ ->
+    false
+
+/// Gets if a token is in the first set of expressions.
+let tokenIsExprFirst (token: Token) =
+  match token with
+  | _ when tokenIsExprOrPatFirst token ->
+    true
+
+  | Token.Minus
+  | Token.If
+  | Token.Match
+  | Token.Fun
+  | Token.Do
+  | Token.Let
+  | Token.Type
+  | Token.Open ->
+    true
+
+  | _ ->
+    false
+
+/// In the first set of arguments?
+let tokenIsArgFirst (token: Token) =
+  match token with
+  | Token.Minus ->
+    false
+
+  | _ ->
+    tokenIsExprFirst token
+
+let tokenIsPatFirst (token: Token) =
+  tokenIsExprOrPatFirst token
+
+// -----------------------------------------------
 // Name context
 // -----------------------------------------------
 
