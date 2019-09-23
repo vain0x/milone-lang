@@ -56,9 +56,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-/// No location information. Should be fixed.
-let noLoc = -1, -1
-
 // -----------------------------------------------
 // Int
 // -----------------------------------------------
@@ -83,6 +80,20 @@ let assocFind eq key assoc =
       go assoc
 
   go assoc
+
+// -----------------------------------------------
+// Location
+// -----------------------------------------------
+
+/// No location information. Should be fixed.
+let noLoc = -1, -1
+
+let locX ((_, x): Loc) = x
+
+let locY ((y, _): Loc) = y
+
+let locIsSameColumn ((_, firstX): Loc) ((_, secondX): Loc) =
+  firstX = secondX
 
 // -----------------------------------------------
 // Name context

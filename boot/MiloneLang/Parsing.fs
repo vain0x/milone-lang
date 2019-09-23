@@ -10,13 +10,6 @@ module rec MiloneLang.Parsing
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-let locX ((_, x): Loc) = x
-
-let locY ((y, _): Loc) = y
-
-let locIsSameColumn ((_, firstX): Loc) ((_, secondX): Loc) =
-  firstX = secondX
-
 /// Gets if next token exists and should lead some construction (expr/pat/ty).
 /// We use this for a kind of prediction.
 /// E.g. if you are looking for an expr and the following token is an integer,
