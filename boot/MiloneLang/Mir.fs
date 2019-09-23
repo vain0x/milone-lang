@@ -215,9 +215,11 @@ let mirifyPatAs ctx endLabel pat serial expr loc =
 /// Determines if the pattern covers the whole.
 let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   match pat with
-  | HPat.Ref ("_", _, _, _) ->
-    // Discard result.
+  | HPat.Discard _ ->
+    // Discard the result, which we know is pure.
+    // FIXME: This should be done in optimization?
     true, ctx
+
   | HPat.Lit (lit, loc) ->
     mirifyPatLit ctx endLabel lit expr loc
   | HPat.Nil (itemTy, loc) ->
@@ -270,6 +272,7 @@ let mirifyBlock ctx expr =
 let patsIsCovering pats =
   let rec go pat =
     match pat with
+    | HPat.Discard _
     | HPat.Ref _ ->
       // FIXME: unit-like variant patterns may not be covering
       true

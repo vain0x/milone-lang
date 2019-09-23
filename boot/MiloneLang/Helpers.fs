@@ -533,6 +533,8 @@ let rec patExtract (pat: HPat): Ty * Loc =
     litToTy lit, a
   | HPat.Nil (itemTy, a) ->
     tyList itemTy, a
+  | HPat.Discard (ty, a) ->
+    ty, a
   | HPat.Ref (_, ty, a) ->
     ty, a
   | HPat.Nav (_, _, ty, a) ->
@@ -558,6 +560,8 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Lit (lit, g a)
     | HPat.Nil (itemTy, a) ->
       HPat.Nil (f itemTy, g a)
+    | HPat.Discard (ty, a) ->
+      HPat.Discard (f ty, g a)
     | HPat.Ref (serial, ty, a) ->
       HPat.Ref (serial, f ty, g a)
     | HPat.Nav (pat, ident, ty, a) ->
@@ -582,6 +586,7 @@ let patNormalize pat =
   let rec go pat =
     match pat with
     | HPat.Lit _
+    | HPat.Discard _
     | HPat.Ref _
     | HPat.Nil _ ->
       [pat]

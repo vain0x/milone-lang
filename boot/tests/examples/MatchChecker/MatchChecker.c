@@ -184,7 +184,7 @@ struct IntSpace_Space_Tuple3;
 
 struct Space_ fun_12(void* env_3, int arg_5, struct Space_Space_Tuple2 arg_6);
 
-struct Space_ fun_28(struct Space_List* seconds_, struct Space_List* firsts_, struct String tag_2, struct Space_ spaceEmpty_, struct Space_ spaceFull_, int i_1, struct Space_ __14);
+struct Space_ fun_28(struct Space_List* seconds_, struct Space_List* firsts_, struct String tag_2, struct Space_ spaceEmpty_, struct Space_ spaceFull_, int i_1, struct Space_ arg_51);
 
 struct Space_ListSpace_ListStringSpace_Space_Tuple5;
 
@@ -220,7 +220,7 @@ struct Space_ fun_18(void* env_9, struct Ty_ arg_29);
 
 struct Space_ fun_19(void* env_10, int arg_31);
 
-struct Space_ thunk_2(struct Space_ itemSpace_, int arg_51);
+struct Space_ thunk_2(struct Space_ itemSpace_, int arg_52);
 
 struct Space_ fun_20(void* env_11, int arg_33);
 
@@ -238,19 +238,19 @@ struct Space_ fun_22(void* env_13, struct Pat_ arg_38);
 
 struct Space_ patsToSpace_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, struct Pat_List* pats_);
 
-struct Space_ fun_6(struct Space_ spaceFull_, int arg_52);
+struct Space_ fun_6(struct Space_ spaceFull_, int arg_53);
 
 struct Space_ fun_23(void* env_14, int arg_41);
 
-int testSpaceIsEmpty_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, int arg_53);
+int testSpaceIsEmpty_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, int arg_54);
 
 int fun_24(void* env_15, int arg_43);
 
-int fun_7(struct StringSpace_Tuple2 arg_54);
+int fun_7(struct StringSpace_Tuple2 arg_55);
 
 int fun_25(void* env_16, struct StringSpace_Tuple2 arg_44);
 
-int testSpaceToString_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, int arg_55);
+int testSpaceToString_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, int arg_56);
 
 int fun_26(void* env_17, int arg_45);
 
@@ -258,7 +258,7 @@ struct BoolStringTuple2;
 
 struct Covering_Covering_Tuple2;
 
-int fun_8(struct Space_ spaceEmpty_, struct Space_ spaceFull_, struct StringTy_Pat_ListCovering_Tuple4 arg_56);
+int fun_8(struct Space_ spaceEmpty_, struct Space_ spaceFull_, struct StringTy_Pat_ListCovering_Tuple4 arg_57);
 
 int fun_27(void* env_18, struct StringTy_Pat_ListCovering_Tuple4 arg_46);
 
@@ -1236,7 +1236,7 @@ struct Space_ fun_12(void* env_3, int arg_5, struct Space_Space_Tuple2 arg_6) {
     return call_67;
 }
 
-struct Space_ fun_28(struct Space_List* seconds_, struct Space_List* firsts_, struct String tag_2, struct Space_ spaceEmpty_, struct Space_ spaceFull_, int i_1, struct Space_ __14) {
+struct Space_ fun_28(struct Space_List* seconds_, struct Space_List* firsts_, struct String tag_2, struct Space_ spaceEmpty_, struct Space_ spaceFull_, int i_1, struct Space_ arg_51) {
     struct IntSpace_Space_Tuple3 tuple_4;
     tuple_4.t0 = i_1;
     tuple_4.t1 = spaceEmpty_;
@@ -1540,7 +1540,7 @@ struct Space_ fun_19(void* env_10, int arg_31) {
     return call_113;
 }
 
-struct Space_ thunk_2(struct Space_ itemSpace_, int arg_51) {
+struct Space_ thunk_2(struct Space_ itemSpace_, int arg_52) {
     struct Space_ call_114 = spaceCtor_((struct String){.str = "nil", .len = 3}, NULL);
     struct Space_Tuple1 tuple_10;
     tuple_10.t0 = itemSpace_;
@@ -1698,7 +1698,7 @@ struct Space_ patsToSpace_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, 
     return call_135;
 }
 
-struct Space_ fun_6(struct Space_ spaceFull_, int arg_52) {
+struct Space_ fun_6(struct Space_ spaceFull_, int arg_53) {
     return spaceFull_;
 }
 
@@ -1708,7 +1708,7 @@ struct Space_ fun_23(void* env_14, int arg_41) {
     return call_136;
 }
 
-int testSpaceIsEmpty_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, int arg_53) {
+int testSpaceIsEmpty_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, int arg_54) {
     int call_137 = spaceIsEmpty_(spaceEmpty_);
     milone_assert(call_137, 455, 2);
     int call_138 = 0;
@@ -1791,9 +1791,9 @@ int fun_24(void* env_15, int arg_43) {
     return call_163;
 }
 
-int fun_7(struct StringSpace_Tuple2 arg_54) {
-    struct String expected_ = arg_54.t0;
-    struct Space_ space_10 = arg_54.t1;
+int fun_7(struct StringSpace_Tuple2 arg_55) {
+    struct String expected_ = arg_55.t0;
+    struct Space_ space_10 = arg_55.t1;
     struct String call_164 = spaceToString_(space_10);
     struct String actual_ = call_164;
     int match_33;
@@ -1817,7 +1817,7 @@ int fun_25(void* env_16, struct StringSpace_Tuple2 arg_44) {
     return call_166;
 }
 
-int testSpaceToString_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, int arg_55) {
+int testSpaceToString_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, int arg_56) {
     struct StringSpace_Tuple2 tuple_16;
     tuple_16.t0 = (struct String){.str = "empty", .len = 5};
     tuple_16.t1 = spaceEmpty_;
@@ -1913,11 +1913,11 @@ struct Covering_Covering_Tuple2 {
     struct Covering_ t1;
 };
 
-int fun_8(struct Space_ spaceEmpty_, struct Space_ spaceFull_, struct StringTy_Pat_ListCovering_Tuple4 arg_56) {
-    struct String name_ = arg_56.t0;
-    struct Ty_ ty_2 = arg_56.t1;
-    struct Pat_List* pats_1 = arg_56.t2;
-    struct Covering_ covering_ = arg_56.t3;
+int fun_8(struct Space_ spaceEmpty_, struct Space_ spaceFull_, struct StringTy_Pat_ListCovering_Tuple4 arg_57) {
+    struct String name_ = arg_57.t0;
+    struct Ty_ ty_2 = arg_57.t1;
+    struct Pat_List* pats_1 = arg_57.t2;
+    struct Covering_ covering_ = arg_57.t3;
     struct Space_ call_177 = tyToSpace_(spaceFull_, ty_2);
     struct Space_ tySpace_ = call_177;
     struct Space_ call_178 = patsToSpace_(spaceEmpty_, spaceFull_, pats_1);

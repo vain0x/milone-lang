@@ -63,8 +63,8 @@ end_match_4:;
 #error 7:24 While unifying 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Int,[])]); Con (Int,[])])' and 'Con (Tuple,[Con (Tuple,[Con (Int,[]); Con (Str,[])]); Con (Int,[])])', failed to unify 'Con (Int,[])' and 'Con (Str,[])'.
 
 #line 13
-#error 13:17 Couldn't unify 'Meta (40,(12, 12))' and 'Con
-  (Fun,[Con (Fun,[Meta (40,(12, 12)); Meta (39,(12, 16))]); Meta (39,(12, 16))])' due to self recursion.
+#error 13:17 Couldn't unify 'Meta (39,(12, 12))' and 'Con
+  (Fun,[Con (Fun,[Meta (39,(12, 12)); Meta (38,(12, 16))]); Meta (38,(12, 16))])' due to self recursion.
 
 #line 15
 #error 15:3 While unifying 'Con (Int,[])' and 'Con (Tuple,[])', failed to unify 'Con (Int,[])' and 'Con (Tuple,[])'.

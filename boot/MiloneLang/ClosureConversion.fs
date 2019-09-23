@@ -142,6 +142,7 @@ let declosurePat (pat, ctx) =
   match pat with
   | HPat.Lit _
   | HPat.Nil _
+  | HPat.Discard _
   | HPat.Nav _ ->
     pat, ctx
   | HPat.Ref (serial, _, _) ->
