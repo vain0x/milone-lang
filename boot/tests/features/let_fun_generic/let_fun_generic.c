@@ -238,14 +238,11 @@ struct IntListStringListTuple2 {
 
 int main() {
     int call_10 = id_2(42);
-    int __1 = call_10;
     int call_11 = id_2(1);
-    int __2 = call_11;
     struct StringList* list_4 = (struct StringList*)malloc(sizeof(struct StringList));
     list_4->head = (struct String){.str = "A", .len = 1};
     list_4->tail = NULL;
     struct StringList* call_12 = id_1(list_4);
-    struct StringList* __3 = call_12;
     void* box_ = (void*)malloc(sizeof(int));
     (*(((int*)box_))) = 0;
     void* env_3 = box_;
@@ -265,7 +262,6 @@ int main() {
     list_5->tail = list_6;
     struct IntList* call_13 = listMap_2(fun_4, list_5);
     struct IntList* call_14 = listMap_2(fun_3, call_13);
-    struct IntList* __4 = call_14;
     int match_4;
     struct IntStringTuple2 tuple_2;
     tuple_2.t0 = 1;
@@ -277,7 +273,6 @@ int main() {
     match_4 = 0;
     goto end_match_13;
 next_14:;
-    struct IntStringTuple2 __5 = call_16;
     milone_assert(0, 35, 9);
     int call_17 = 0;
     match_4 = 0;
@@ -315,7 +310,6 @@ end_match_13:;
     match_5 = 0;
     goto end_match_16;
 next_17:;
-    struct IntListStringListTuple2 __6 = tuple_3;
     milone_assert(0, 39, 9);
     int call_20 = 0;
     match_5 = 0;
@@ -350,7 +344,6 @@ end_match_16:;
     match_6 = 0;
     goto end_match_19;
 next_20:;
-    struct StringIntTuple2List* __7 = call_21;
     milone_assert(0, 43, 9);
     int call_22 = 0;
     match_6 = 0;

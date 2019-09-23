@@ -19,7 +19,6 @@ int eq_(struct IntIntTuple2 t_) {
     match_ = 1;
     goto end_match_1;
 next_2:;
-    struct IntIntTuple2 __ = t_;
     match_ = 0;
     goto end_match_1;
 next_3:;

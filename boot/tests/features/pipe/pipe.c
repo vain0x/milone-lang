@@ -52,7 +52,6 @@ int len_(struct IntList* xs_) {
     match_1 = 0;
     goto end_match_4;
 next_5:;
-    struct IntList* __1 = xs_;
     match_1 = 1;
     goto end_match_4;
 next_6:;

@@ -215,6 +215,9 @@ let mirifyPatAs ctx endLabel pat serial expr loc =
 /// Determines if the pattern covers the whole.
 let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   match pat with
+  | HPat.Ref ("_", _, _, _) ->
+    // Discard result.
+    true, ctx
   | HPat.Lit (lit, loc) ->
     mirifyPatLit ctx endLabel lit expr loc
   | HPat.Nil (itemTy, loc) ->

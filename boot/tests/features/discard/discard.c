@@ -23,7 +23,5 @@ int main() {
     struct UnitUnitTuple2 tuple_;
     tuple_.t0 = 0;
     tuple_.t1 = 0;
-    int __1 = tuple_.t0;
-    int __2 = tuple_.t1;
     return 0;
 }

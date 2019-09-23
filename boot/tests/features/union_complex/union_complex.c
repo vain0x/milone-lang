@@ -209,7 +209,6 @@ end_match_4:;
     match_ = 0;
     goto end_match_1;
 next_2:;
-    struct Node_ __1 = variant_6;
     milone_assert(0, 24, 4);
     int call_3 = 0;
     match_ = 0;
