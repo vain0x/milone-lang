@@ -137,6 +137,7 @@ type UniOp =
 /// Precedence level of binary operators.
 [<RequireQualifiedAccess>]
 type OpLevel =
+  | Prefix
   | Mul
   | Add
   | Cons

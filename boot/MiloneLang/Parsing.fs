@@ -825,27 +825,12 @@ let parsePrefix boxX (tokens, errors) =
     parseApp boxX (tokens, errors)
 
 let parseNextLevelOp level boxX (tokens, errors) =
-  match level with
-  | OpLevel.Or ->
-    parseOp OpLevel.And boxX (tokens, errors)
-
-  | OpLevel.And ->
-    parseOp OpLevel.Cmp boxX (tokens, errors)
-
-  | OpLevel.Cmp ->
-    parseOp OpLevel.Pipe boxX (tokens, errors)
-
-  | OpLevel.Pipe ->
-    parseOp OpLevel.Cons boxX (tokens, errors)
-
-  | OpLevel.Cons ->
-    parseOp OpLevel.Add boxX (tokens, errors)
-
-  | OpLevel.Add ->
-    parseOp OpLevel.Mul boxX (tokens, errors)
-
-  | OpLevel.Mul ->
+  match opLevelToNext level with
+  | OpLevel.Prefix ->
     parsePrefix boxX (tokens, errors)
+
+  | nextLevel ->
+    parseOp nextLevel boxX (tokens, errors)
 
 let rec parseOps level boxX first (tokens, errors) =
   let nextL expr op opLoc (tokens, errors) =

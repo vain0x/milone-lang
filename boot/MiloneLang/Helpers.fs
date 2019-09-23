@@ -172,6 +172,34 @@ let tokenIsAccessModifier token =
     false
 
 // -----------------------------------------------
+// OpLevel
+// -----------------------------------------------
+
+let opLevelToNext level =
+  match level with
+  | OpLevel.Or ->
+    OpLevel.And
+
+  | OpLevel.And ->
+    OpLevel.Cmp
+
+  | OpLevel.Cmp ->
+    OpLevel.Pipe
+
+  | OpLevel.Pipe ->
+    OpLevel.Cons
+
+  | OpLevel.Cons ->
+    OpLevel.Add
+
+  | OpLevel.Add ->
+    OpLevel.Mul
+
+  | OpLevel.Mul
+  | OpLevel.Prefix ->
+    OpLevel.Prefix
+
+// -----------------------------------------------
 // Name context
 // -----------------------------------------------
 
