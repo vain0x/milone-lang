@@ -38,7 +38,6 @@ end_match_4:;
     match_ = 0;
     goto end_match_1;
 next_2:;
-    struct IntList* __1 = list_;
     milone_assert(0, 5, 4);
     int call_1 = 0;
     match_ = 0;

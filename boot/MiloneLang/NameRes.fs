@@ -411,6 +411,7 @@ let collectDecls (expr, ctx) =
   let rec goPat (pat, ctx) =
     match pat with
     | HPat.Lit _
+    | HPat.Discard _
     | HPat.Nav _
     | HPat.Nil _ ->
       pat, ctx
@@ -551,15 +552,13 @@ let primFromIdent ident =
 let onPat (pat: HPat, ctx: ScopeCtx) =
   match pat with
   | HPat.Lit _
+  | HPat.Discard _
   | HPat.Nil _ ->
     pat, ctx
 
   | HPat.Ref (varSerial, ty, loc)
     when ctx |> scopeCtxGetIdent varSerial = "_" ->
-    // Handle discard pattern.
-    let varDef = VarDef.Var ("_", ty, loc)
-    let ctx = ctx |> scopeCtxDefineVar varSerial varDef
-    HPat.Ref (varSerial, ty, loc), ctx
+    HPat.Discard (ty, loc), ctx
 
   | HPat.Ref (varSerial, ty, loc) ->
     let ident = ctx |> scopeCtxGetIdent varSerial

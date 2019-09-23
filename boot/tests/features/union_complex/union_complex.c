@@ -20,7 +20,7 @@ struct First_Second_Tuple2;
 
 struct First_Second_Tuple2List;
 
-struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* __2);
+struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* arg_2);
 
 struct First_ListSecond_ListTuple2 fun_(void* env_, struct First_Second_Tuple2List* arg_);
 
@@ -86,7 +86,7 @@ struct First_Second_Tuple2List {
     struct First_Second_Tuple2List* tail;
 };
 
-struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* __2) {
+struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* arg_2) {
     struct First_ListSecond_ListTuple2 tuple_;
     tuple_.t0 = NULL;
     tuple_.t1 = NULL;
@@ -209,7 +209,6 @@ end_match_4:;
     match_ = 0;
     goto end_match_1;
 next_2:;
-    struct Node_ __1 = variant_6;
     milone_assert(0, 24, 4);
     int call_3 = 0;
     match_ = 0;

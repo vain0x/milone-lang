@@ -455,7 +455,10 @@ type HPat =
   /// `[]`
   | Nil
     of itemTy:Ty * Loc
-  /// Variable reference pattern or `_`.
+  /// `_`
+  | Discard
+    of Ty * Loc
+  /// Variable pattern.
   | Ref
     of VarSerial * Ty * Loc
   | Nav
