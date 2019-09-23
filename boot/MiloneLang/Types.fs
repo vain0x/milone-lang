@@ -258,9 +258,9 @@ type ALet =
   | LetFun
     of Ident * args:APat list * AExpr * AExpr * Loc
 
-/// Body of type definition in AST.
+/// Body of type declaration in AST.
 [<RequireQualifiedAccess>]
-type ATyDef =
+type ATyDecl =
   | Synonym
     of ATy
   | Union

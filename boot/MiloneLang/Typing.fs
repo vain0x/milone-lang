@@ -519,7 +519,7 @@ let substTyExpr ctx expr =
   let subst ty = substTy ctx ty
   exprMap subst id expr
 
-let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
+let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCtx =
   let ctx =
     {
       Serial = scopeCtx.Serial
@@ -532,6 +532,20 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx): HExpr * TyCtx =
       TraitBounds = []
       Logs = []
     }
+
+  let rec addErrorListList xss ctx =
+    match xss with
+    | [] ->
+      ctx
+
+    | [] :: xss ->
+      ctx |> addErrorListList xss
+
+    | ((msg, loc) :: errors) :: xss ->
+      ctxAddErr ctx msg loc |> addErrorListList (errors :: xss)
+
+  let ctx =
+    ctx |> addErrorListList errorListList
 
   let ctx =
     let tys, ctx =
