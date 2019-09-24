@@ -19,6 +19,11 @@ type Lit =
   | Str
     of string
 
+/// Tree to generate a string for debugging.
+type DumpTree =
+  | DumpTree
+    of heading:string * body:DumpTree list * next:DumpTree list
+
 // -----------------------------------------------
 // Errors
 // -----------------------------------------------
