@@ -57,7 +57,6 @@ let opToPrim op =
   | Op.And
   | Op.Or
   | Op.App
-  | Op.Index
   | Op.Pipe ->
     failwithf "NEVER: %A" op
 

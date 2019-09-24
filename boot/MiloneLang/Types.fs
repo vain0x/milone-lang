@@ -47,6 +47,7 @@ type RowIndex = int
 /// 0-indexed.
 type ColumnIndex = int
 
+/// Location.
 type Loc = RowIndex * ColumnIndex
 
 /// Words and punctuations in source code.
@@ -183,8 +184,6 @@ type Op =
   | App
   /// `::` Cons cell constructor
   | Cons
-  /// `.[ ]`
-  | Index
 
 /// Type expression in AST.
 [<RequireQualifiedAccess>]
