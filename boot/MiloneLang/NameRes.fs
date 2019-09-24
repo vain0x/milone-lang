@@ -488,67 +488,6 @@ let collectDecls (expr, ctx) =
 // Name Resolution
 // -----------------------------------------------
 
-let tyPrimFromIdent ident tys loc =
-  match ident, tys with
-  | "unit", [] ->
-    tyUnit
-
-  | "bool", [] ->
-    tyBool
-
-  | "int", [] ->
-    tyInt
-
-  | "char", [] ->
-    tyChar
-
-  | "string", [] ->
-    tyStr
-
-  | "obj", [] ->
-    tyObj
-
-  | "list", [itemTy] ->
-    tyList itemTy
-
-  | _ ->
-    Ty.Error loc
-
-let primFromIdent ident =
-  match ident with
-  | "not" ->
-    HPrim.Not |> Some
-
-  | "exit" ->
-    HPrim.Exit |> Some
-
-  | "assert" ->
-    HPrim.Assert |> Some
-
-  | "box" ->
-    HPrim.Box |> Some
-
-  | "unbox" ->
-    HPrim.Unbox |> Some
-
-  | "printfn" ->
-    HPrim.Printfn |> Some
-
-  | "char" ->
-    HPrim.Char |> Some
-
-  | "int" ->
-    HPrim.Int |> Some
-
-  | "string" ->
-    HPrim.String |> Some
-
-  | "__nativeFun" ->
-    HPrim.NativeFun ("<native-fun>", -1) |> Some
-
-  | _ ->
-    None
-
 let onPat (pat: HPat, ctx: ScopeCtx) =
   match pat with
   | HPat.Lit _
@@ -726,8 +665,6 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     HExpr.Let (pat, body, next, ty, loc), ctx
 
   | HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc) ->
-    let ident = ctx |> scopeCtxGetIdent serial
-
     let parent, ctx = ctx |> scopeCtxStartScope
     let ctx = ctx |> scopeCtxOnEnterLetBody
 

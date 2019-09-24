@@ -24,33 +24,6 @@ module rec MiloneLang.AstToHir
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-let apFalse loc =
-  APat.Lit (litFalse, loc)
-
-let apTrue loc =
-  APat.Lit (litTrue, loc)
-
-let axUnit loc =
-  AExpr.TupleLit ([], loc)
-
-let axFalse loc =
-  AExpr.Lit (litFalse, loc)
-
-let axTrue loc =
-  AExpr.Lit (litTrue, loc)
-
-let axNil loc =
-  AExpr.ListLit ([], loc)
-
-let axApp3 f x1 x2 x3 loc =
-  let app x f = AExpr.Bin (Op.App, f, x, loc)
-  f |> app x1 |> app x2 |> app x3
-
-/// `not x` ==> `x = false`
-let axNot arg loc =
-  let falseExpr = axFalse loc
-  AExpr.Bin (Op.Eq, arg, falseExpr, loc)
-
 let opToPrim op =
   match op with
   | Op.Add ->
@@ -84,7 +57,6 @@ let opToPrim op =
   | Op.And
   | Op.Or
   | Op.App
-  | Op.Index
   | Op.Pipe ->
     failwithf "NEVER: %A" op
 
@@ -222,7 +194,6 @@ let desugarLet pat body next loc =
 
 let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
-  | ATy.Error (_, loc)
   | ATy.Missing loc ->
     Ty.Error loc, nameCtx
 
@@ -246,9 +217,6 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
 let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
-  | APat.Error (msg, loc) ->
-    failwithf "Pattern error %s %A" msg loc
-
   | APat.Missing (_, loc) ->
     failwithf "Missing pattern %A" loc
 
@@ -304,9 +272,6 @@ let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
 
 let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with
-  | AExpr.Error (msg, loc) ->
-    HExpr.Error (msg, loc), nameCtx
-
   | AExpr.Missing loc ->
     HExpr.Error ("Missing expression", loc), nameCtx
 

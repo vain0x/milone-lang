@@ -3,9 +3,6 @@ module rec MiloneLang.Helpers
 
 open MiloneLang.Types
 
-let listUnique (xs: 'x list): 'x list =
-  xs |> set |> Set.toList
-
 /// `List.map`, modifying context.
 ///
 /// USAGE:
@@ -54,15 +51,118 @@ let exMap f (xs, acc, ctx) =
       go (y :: ys) xs acc ctx
   go [] xs acc ctx
 
+// -----------------------------------------------
+// List
+// -----------------------------------------------
+
 let cons head tail = head :: tail
+
+let listIsEmpty xs =
+  match xs with
+  | [] ->
+    true
+  | _ ->
+    false
+
+let listRev xs =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      acc
+    | x :: xs ->
+      go (x :: acc) xs
+  go [] xs
+
+let listLength xs =
+  let rec go len xs =
+    match xs with
+    | [] ->
+      len
+    | _ :: xs ->
+      go (len + 1) xs
+  go 0 xs
+
+let listMap f xs =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      listRev acc
+    | x :: xs ->
+      go (f x :: acc) xs
+  go [] xs
+
+let listTruncate count xs =
+  let rec go count xs =
+    match xs with
+    | [] ->
+      []
+
+    | _ when count <= 0 ->
+      []
+
+    | x :: xs ->
+      x :: go (count - 1) xs
+
+  go count xs
+
+let listUnique (xs: 'x list): 'x list =
+  xs |> set |> Set.toList
 
 // -----------------------------------------------
 // Int
 // -----------------------------------------------
 
-let intMax (x: int) (y: int) = if x < y then y else x
+let intMin (x: int) (y: int) =
+  if x > y then y else x
 
-let intEq (x: int) (y: int) = x = y
+let intMax (x: int) (y: int) =
+  if x < y then y else x
+
+let intEq (x: int) (y: int) =
+  x = y
+
+// -----------------------------------------------
+// String
+// -----------------------------------------------
+
+let strSlice (start: int) (endIndex: int) (s: string): string =
+  assert (start <= endIndex && endIndex <= s.Length)
+  if start >= endIndex then
+    ""
+  else
+    s.[start..endIndex - 1]
+
+let strConcat (xs: string list) =
+  /// Get (str, ys) where
+  /// `str` is the concatenation of first `xn` items in `xs`
+  /// `ys` is a list of the other items
+  let rec go xs xn =
+    // assert (xn <= listLength xs)
+    match xs with
+    | [] ->
+      assert (xn = 0)
+      "", []
+    | x :: xs when xn = 1 ->
+      x, xs
+    | x :: y :: xs when xn = 2 ->
+      x + y, xs
+    | xs ->
+      let m = xn / 2
+      let l, xs = go xs m
+      let r, xs = go xs (xn - m)
+      l + r, xs
+  let n = xs |> listLength
+  let s, xs = go xs n
+  assert (xs |> listIsEmpty)
+  s
+
+  // let rec go (xs: string list) =
+  //   match xs with
+  //   | [] ->
+  //     ""
+  //   | x :: xs ->
+  //     x + go xs
+  // go xs
 
 // -----------------------------------------------
 // Assoc
@@ -200,6 +300,41 @@ let opLevelToNext level =
     OpLevel.Prefix
 
 // -----------------------------------------------
+// APat
+// -----------------------------------------------
+
+let apFalse loc =
+  APat.Lit (litFalse, loc)
+
+let apTrue loc =
+  APat.Lit (litTrue, loc)
+
+// -----------------------------------------------
+// AExpr
+// -----------------------------------------------
+
+let axUnit loc =
+  AExpr.TupleLit ([], loc)
+
+let axFalse loc =
+  AExpr.Lit (litFalse, loc)
+
+let axTrue loc =
+  AExpr.Lit (litTrue, loc)
+
+let axNil loc =
+  AExpr.ListLit ([], loc)
+
+let axApp3 f x1 x2 x3 loc =
+  let app x f = AExpr.Bin (Op.App, f, x, loc)
+  f |> app x1 |> app x2 |> app x3
+
+/// `not x` ==> `x = false`
+let axNot arg loc =
+  let falseExpr = axFalse loc
+  AExpr.Bin (Op.Eq, arg, falseExpr, loc)
+
+// -----------------------------------------------
 // Name context
 // -----------------------------------------------
 
@@ -266,6 +401,32 @@ let tyUnit =
 
 let tyRef serial tys =
   Ty.Con (TyCon.Ref serial, tys)
+
+let tyPrimFromIdent ident tys loc =
+  match ident, tys with
+  | "unit", [] ->
+    tyUnit
+
+  | "bool", [] ->
+    tyBool
+
+  | "int", [] ->
+    tyInt
+
+  | "char", [] ->
+    tyChar
+
+  | "string", [] ->
+    tyStr
+
+  | "obj", [] ->
+    tyObj
+
+  | "list", [itemTy] ->
+    tyList itemTy
+
+  | _ ->
+    Ty.Error loc
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
@@ -400,6 +561,41 @@ let litToTy (lit: Lit): Ty =
 // -----------------------------------------------
 // Primitives (HIR)
 // -----------------------------------------------
+
+let primFromIdent ident =
+  match ident with
+  | "not" ->
+    HPrim.Not |> Some
+
+  | "exit" ->
+    HPrim.Exit |> Some
+
+  | "assert" ->
+    HPrim.Assert |> Some
+
+  | "box" ->
+    HPrim.Box |> Some
+
+  | "unbox" ->
+    HPrim.Unbox |> Some
+
+  | "printfn" ->
+    HPrim.Printfn |> Some
+
+  | "char" ->
+    HPrim.Char |> Some
+
+  | "int" ->
+    HPrim.Int |> Some
+
+  | "string" ->
+    HPrim.String |> Some
+
+  | "__nativeFun" ->
+    HPrim.NativeFun ("<native-fun>", -1) |> Some
+
+  | _ ->
+    None
 
 let primToTySpec prim =
   let meta id = Ty.Meta (id, noLoc)

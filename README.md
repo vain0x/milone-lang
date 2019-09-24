@@ -92,14 +92,14 @@ See [the boot/tests/examples directory](./boot/tests/examples) for working codes
 
 ## Internals
 
-See the comments in source files for details. Most of types are defined in the module:
+See the comments in source files for details.
+
+Most of types are defined in the module:
 
 - [Types](boot/MiloneLang/Types.fs)
 
-Functions are defined in:
+and functions are in:
 
-- [Polyfills](boot/MiloneLang/Polyfills.fs)
-    - Abstraction layer to reduce the gap of F# and milone-lang
 - [Helpers](boot/MiloneLang/Helpers.fs)
 
 The following transformations are consist of the compilation in the order:

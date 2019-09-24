@@ -47,6 +47,7 @@ type RowIndex = int
 /// 0-indexed.
 type ColumnIndex = int
 
+/// Location.
 type Loc = RowIndex * ColumnIndex
 
 /// Words and punctuations in source code.
@@ -183,14 +184,10 @@ type Op =
   | App
   /// `::` Cons cell constructor
   | Cons
-  /// `.[ ]`
-  | Index
 
 /// Type expression in AST.
 [<RequireQualifiedAccess>]
 type ATy =
-  | Error
-    of string * Loc
   | Missing
     of Loc
   | Ident
@@ -207,8 +204,6 @@ type ATy =
 /// Pattern in AST.
 [<RequireQualifiedAccess>]
 type APat =
-  | Error
-    of string * Loc
   | Missing
     of Loc
   | Lit
@@ -270,8 +265,6 @@ type ATyDecl =
 /// Expression in AST.
 [<RequireQualifiedAccess>]
 type AExpr =
-  | Error
-    of string * Loc
   | Missing
     of Loc
   | Lit
