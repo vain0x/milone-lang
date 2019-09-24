@@ -726,8 +726,6 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     HExpr.Let (pat, body, next, ty, loc), ctx
 
   | HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc) ->
-    let ident = ctx |> scopeCtxGetIdent serial
-
     let parent, ctx = ctx |> scopeCtxStartScope
     let ctx = ctx |> scopeCtxOnEnterLetBody
 
