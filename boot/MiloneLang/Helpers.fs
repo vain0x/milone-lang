@@ -344,6 +344,163 @@ let axNot arg loc =
   AExpr.Bin (Op.Eq, arg, falseExpr, loc)
 
 // -----------------------------------------------
+// DumpTree (for debugging)
+// -----------------------------------------------
+
+let intToHexWithPadding (len: int) (value: int) =
+  if value < 0 then
+    failwith "intToHexWithPadding: unimplemented negative"
+  else
+
+  assert (len >= 0)
+
+  let rec go acc len (n: int) =
+    if n = 0 && len <= 0 then
+      acc
+    else
+      let d = n % 16
+      let s = "0123456789abcdef" |> strSlice d (d + 1)
+      go (s + acc) (len - 1) (n / 16)
+
+  if value = 0 && len = 0 then
+    "0"
+  else
+    go "" len value
+
+let dumpTreeNew text children =
+  DumpTree (text, children, [])
+
+let dumpTreeNewLeaf text =
+  DumpTree (text, [], [])
+
+let dumpTreeAttachNext next tree =
+  match tree with
+  | DumpTree (text, children, oldNext) ->
+    assert (children |> listIsEmpty |> not)
+    assert (oldNext |> listIsEmpty)
+    DumpTree (text, children, [next])
+
+let dumpTreeFromError (msg: string) (y, x) =
+  let y = string (y + 1)
+  let x = string (x + 1)
+  dumpTreeNew "ERROR" [
+    dumpTreeNewLeaf msg
+    dumpTreeNewLeaf ("(" + y + ":" + x + ")")
+  ]
+
+let dumpTreeToString (node: DumpTree) =
+  let charIsControl (c: char) =
+    let n = int c
+    0 <= n && n < 32 || n = 127
+
+  let charNeedsEscaping (c: char) =
+    charIsControl c || c = '\\' || c = '"' || c = '\''
+
+  let strNeedsEscaping (str: string) =
+    let rec go i = i < str.Length && (charNeedsEscaping str.[i] || go (i + 1))
+    go 0
+
+  let strEscapeCore (i: int) (str: string) =
+    assert (str.[i] |> charNeedsEscaping)
+
+    match str.[i] with
+    | '\u0000' ->
+      i + 1, "\\0"
+
+    | '\t' ->
+      i + 1, "\\t"
+
+    | '\n' ->
+      i + 1, "\\n"
+
+    | '\r' ->
+      i + 1, "\\r"
+
+    | '\'' ->
+      i + 1, "\\\'"
+
+    | '\"' ->
+      i + 1, "\\\""
+
+    | '\\' ->
+      i + 1, "\\\\"
+
+    | c ->
+      let h = c |> int |> intToHexWithPadding 2
+      i + 1, "\\x" + h
+
+  let strEscape (str: string) =
+    if str |> strNeedsEscaping |> not then
+      str
+    else
+
+    let rec go acc i =
+      /// Finds the end index of the maximum non-escaping segment
+      /// that starts at `l`.
+      let rec raw i =
+        if i = str.Length || charNeedsEscaping str.[i] then
+          i
+        else
+          raw (i + 1)
+
+      // Skip the non-escape segment that starts at `i`.
+      let i, acc =
+        let r = raw i
+        r, (str |> strSlice i r) :: acc
+
+      if i = str.Length then
+        acc
+      else
+
+      let i, s = strEscapeCore i str
+      go (s :: acc) i
+
+    go [] 0 |> listRev |> strConcat
+
+  let rec go eol node acc =
+    let rec goChildren eol children acc =
+      match children with
+      | [] ->
+        acc
+
+      | child :: children ->
+        acc
+        |> cons eol |> cons "- " |> go (eol + "  ") child
+        |> goChildren eol children
+
+    let goNext eol next acc =
+      match next with
+      | [] ->
+        acc
+
+      | [next] ->
+        acc |> cons eol |> go eol next
+
+      | _ ->
+        failwith "NEVER: DumpTree.next never empty"
+
+    match node with
+    | DumpTree (text, [], []) ->
+      acc |> cons (strEscape text)
+
+    | DumpTree (text, [DumpTree (childText, [], [])], next) ->
+      acc
+      |> cons (strEscape text)
+      |> cons ": "
+      |> cons (strEscape childText)
+      |> goNext eol next
+
+    | DumpTree (text, children, next) ->
+      acc
+      |> cons (strEscape text)
+      |> cons ":"
+      |> goChildren eol children
+      |> goNext eol next
+
+  let eol = "\n"
+  [] |> go eol node |> listRev |> strConcat
+
+// -----------------------------------------------
 // Name context
 // -----------------------------------------------
 
