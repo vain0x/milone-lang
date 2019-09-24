@@ -2610,4 +2610,1779 @@ else (540, 4)
 [ (543, 23)
 ] (543, 24)
 ) (543, 25)
+AST:
+semi:
+- FIXME: TBD
+- FIXME: TBD
+- FIXME: TBD
+- let:
+  - fun:
+    - locShift
+    - anno:
+      - text
+      - string
+    - anno:
+      - l
+      - int
+    - anno:
+      - r
+      - int
+    - anno:
+      - tuple:
+        - y
+        - x
+      - Loc
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - bin:
+            - 0
+            - l
+          - bin:
+            - l
+            - r
+        - bin:
+          - r
+          - .Length: text
+    - let:
+      - fun:
+        - go
+        - y
+        - x
+        - i
+      - if:
+        - bin:
+          - i
+          - r
+        - tuple:
+          - y
+          - x
+        - if:
+          - bin:
+            - index: text
+            - char 10
+          - bin:
+            - bin:
+              - bin:
+                - go
+                - bin:
+                  - y
+                  - 1
+              - 0
+            - bin:
+              - i
+              - 1
+          - bin:
+            - bin:
+              - bin:
+                - go
+                - y
+              - bin:
+                - x
+                - 1
+            - bin:
+              - i
+              - 1
+      bin:
+      - bin:
+        - bin:
+          - go
+          - y
+        - x
+      - l
+  let:
+  - anno:
+    - charNull
+    - char
+  - bin:
+    - char
+    - 0
+  let:
+  - anno:
+    - fun:
+      - charIsSpace
+      - anno:
+        - c
+        - char
+    - bool
+  - bin:
+    - bin:
+      - bin:
+        - bin:
+          - c
+          - char 32
+        - bin:
+          - c
+          - char 9
+      - bin:
+        - c
+        - char 13
+    - bin:
+      - c
+      - char 10
+  let:
+  - anno:
+    - fun:
+      - charIsDigit
+      - anno:
+        - c
+        - char
+    - bool
+  - bin:
+    - bin:
+      - char 48
+      - c
+    - bin:
+      - c
+      - char 57
+  let:
+  - anno:
+    - fun:
+      - charIsAlpha
+      - anno:
+        - c
+        - char
+    - bool
+  - bin:
+    - bin:
+      - bin:
+        - char 97
+        - c
+      - bin:
+        - c
+        - char 122
+    - bin:
+      - bin:
+        - char 65
+        - c
+      - bin:
+        - c
+        - char 90
+  let:
+  - anno:
+    - fun:
+      - charIsIdent
+      - anno:
+        - c
+        - char
+    - bool
+  - bin:
+    - bin:
+      - bin:
+        - c
+        - char 95
+      - bin:
+        - charIsDigit
+        - c
+    - bin:
+      - charIsAlpha
+      - c
+  let:
+  - anno:
+    - fun:
+      - charIsOp
+      - anno:
+        - c
+        - char
+    - bool
+  - bin:
+    - bin:
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - bin:
+                - bin:
+                  - bin:
+                    - bin:
+                      - bin:
+                        - bin:
+                          - bin:
+                            - bin:
+                              - bin:
+                                - c
+                                - char 43
+                              - bin:
+                                - c
+                                - char 45
+                            - bin:
+                              - c
+                              - char 42
+                          - bin:
+                            - c
+                            - char 47
+                        - bin:
+                          - c
+                          - char 37
+                      - bin:
+                        - c
+                        - char 61
+                    - bin:
+                      - c
+                      - char 60
+                  - bin:
+                    - c
+                    - char 62
+                - bin:
+                  - c
+                  - char 94
+              - bin:
+                - c
+                - char 38
+            - bin:
+              - c
+              - char 124
+          - bin:
+            - c
+            - char 58
+        - bin:
+          - c
+          - char 64
+      - bin:
+        - c
+        - char 59
+    - bin:
+      - c
+      - char 46
+  let:
+  - anno:
+    - fun:
+      - charIsPun
+      - anno:
+        - c
+        - char
+    - bool
+  - bin:
+    - bin:
+      - bin:
+        - bin:
+          - bin:
+            - c
+            - char 44
+          - bin:
+            - c
+            - char 40
+        - bin:
+          - c
+          - char 41
+      - bin:
+        - c
+        - char 91
+    - bin:
+      - c
+      - char 93
+  let:
+  - anno:
+    - fun:
+      - strIsFollowedBy
+      - anno:
+        - i
+        - int
+      - anno:
+        - prefix
+        - string
+      - anno:
+        - s
+        - string
+    - bool
+  - let:
+    - fun:
+      - go
+      - pi
+      - si
+    - bin:
+      - bin:
+        - pi
+        - .Length: prefix
+      - bin:
+        - bin:
+          - bin:
+            - si
+            - .Length: s
+          - bin:
+            - index: prefix
+            - index: s
+        - bin:
+          - bin:
+            - go
+            - bin:
+              - pi
+              - 1
+          - bin:
+            - si
+            - 1
+    bin:
+    - bin:
+      - bin:
+        - i
+        - .Length: prefix
+      - .Length: s
+    - bin:
+      - bin:
+        - go
+        - 0
+      - i
+  let:
+  - anno:
+    - fun:
+      - strIsFollowedByRawQuotes
+      - anno:
+        - i
+        - int
+      - anno:
+        - s
+        - string
+    - bool
+  - bin:
+    - bin:
+      - bin:
+        - strIsFollowedBy
+        - i
+      - \"...\"
+    - s
+  let:
+  - fun:
+    - scanError
+    - anno:
+      - _
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - i
+    - 1
+  let:
+  - fun:
+    - lookEof
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - i
+    - .Length: text
+  let:
+  - fun:
+    - lookSpace
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - index: text
+    - charIsSpace
+  let:
+  - fun:
+    - scanSpace
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookSpace
+          - text
+        - i
+    - let:
+      - fun:
+        - go
+        - i
+      - if:
+        - bin:
+          - bin:
+            - i
+            - .Length: text
+          - bin:
+            - index: text
+            - charIsSpace
+        - bin:
+          - go
+          - bin:
+            - i
+            - 1
+        - i
+      bin:
+      - go
+      - i
+  let:
+  - fun:
+    - lookComment
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - bin:
+      - text
+      - bin:
+        - bin:
+          - strIsFollowedBy
+          - i
+        - \"...\"
+    - bin:
+      - text
+      - bin:
+        - bin:
+          - strIsFollowedBy
+          - i
+        - \"...\"
+  let:
+  - fun:
+    - scanLine
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookComment
+          - text
+        - i
+    - let:
+      - fun:
+        - go
+        - i
+      - if:
+        - bin:
+          - i
+          - .Length: text
+        - i
+        - if:
+          - bin:
+            - index: text
+            - char 10
+          - bin:
+            - i
+            - 1
+          - bin:
+            - go
+            - bin:
+              - i
+              - 1
+      bin:
+      - go
+      - i
+  let:
+  - fun:
+    - lookPun
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - index: text
+    - charIsPun
+  let:
+  - fun:
+    - scanPun
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookPun
+          - text
+        - i
+    - bin:
+      - i
+      - 1
+  let:
+  - fun:
+    - lookOp
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - index: text
+    - charIsOp
+  let:
+  - fun:
+    - scanOp
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookOp
+          - text
+        - i
+    - let:
+      - fun:
+        - go
+        - i
+      - if:
+        - bin:
+          - bin:
+            - i
+            - .Length: text
+          - bin:
+            - index: text
+            - charIsOp
+        - bin:
+          - go
+          - bin:
+            - i
+            - 1
+        - i
+      bin:
+      - go
+      - i
+  let:
+  - fun:
+    - lookIdent
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - bin:
+      - index: text
+      - charIsIdent
+    - bin:
+      - bin:
+        - index: text
+        - charIsDigit
+      - not
+  let:
+  - fun:
+    - scanIdent
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookIdent
+          - text
+        - i
+    - let:
+      - fun:
+        - go
+        - i
+      - if:
+        - bin:
+          - bin:
+            - i
+            - .Length: text
+          - bin:
+            - index: text
+            - charIsIdent
+        - bin:
+          - go
+          - bin:
+            - i
+            - 1
+        - i
+      bin:
+      - go
+      - i
+  let:
+  - fun:
+    - lookIntLit
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - index: text
+    - charIsDigit
+  let:
+  - fun:
+    - scanIntLit
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookIntLit
+          - text
+        - i
+    - let:
+      - fun:
+        - go
+        - i
+      - if:
+        - bin:
+          - bin:
+            - i
+            - .Length: text
+          - bin:
+            - index: text
+            - charIsDigit
+        - bin:
+          - go
+          - bin:
+            - i
+            - 1
+        - i
+      bin:
+      - go
+      - i
+  let:
+  - fun:
+    - lookCharLit
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - index: text
+    - char 39
+  let:
+  - fun:
+    - scanCharLit
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookCharLit
+          - text
+        - i
+    - let:
+      - fun:
+        - go
+        - i
+      - if:
+        - bin:
+          - bin:
+            - bin:
+              - i
+              - 1
+            - .Length: text
+          - bin:
+            - index: text
+            - char 92
+        - bin:
+          - go
+          - bin:
+            - i
+            - 2
+        - if:
+          - bin:
+            - bin:
+              - i
+              - .Length: text
+            - bin:
+              - index: text
+              - char 39
+          - tuple:
+            - true
+            - bin:
+              - i
+              - 1
+          - if:
+            - bin:
+              - bin:
+                - i
+                - .Length: text
+              - bin:
+                - index: text
+                - char 10
+            - bin:
+              - go
+              - bin:
+                - i
+                - 1
+            - semi:
+              - bin:
+                - assert
+                - bin:
+                  - bin:
+                    - i
+                    - .Length: text
+                  - bin:
+                    - index: text
+                    - char 10
+              - tuple:
+                - false
+                - i
+      bin:
+      - go
+      - bin:
+        - i
+        - 1
+  let:
+  - fun:
+    - lookStrLit
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - index: text
+    - char 34
+  let:
+  - fun:
+    - scanStrLit
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookStrLit
+          - text
+        - i
+    - let:
+      - fun:
+        - go
+        - i
+      - if:
+        - bin:
+          - bin:
+            - bin:
+              - i
+              - 1
+            - .Length: text
+          - bin:
+            - index: text
+            - char 92
+        - bin:
+          - go
+          - bin:
+            - i
+            - 2
+        - if:
+          - bin:
+            - bin:
+              - i
+              - .Length: text
+            - bin:
+              - index: text
+              - char 34
+          - tuple:
+            - true
+            - bin:
+              - i
+              - 1
+          - if:
+            - bin:
+              - bin:
+                - i
+                - .Length: text
+              - bin:
+                - index: text
+                - char 10
+            - bin:
+              - go
+              - bin:
+                - i
+                - 1
+            - semi:
+              - bin:
+                - assert
+                - bin:
+                  - bin:
+                    - i
+                    - .Length: text
+                  - bin:
+                    - index: text
+                    - char 10
+              - tuple:
+                - false
+                - i
+      bin:
+      - go
+      - bin:
+        - i
+        - 1
+  let:
+  - fun:
+    - lookStrLitRaw
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - bin:
+    - text
+    - bin:
+      - strIsFollowedByRawQuotes
+      - i
+  let:
+  - fun:
+    - scanStrLitRaw
+    - anno:
+      - text
+      - string
+    - anno:
+      - i
+      - int
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookStrLitRaw
+          - text
+        - i
+    - let:
+      - fun:
+        - go
+        - i
+      - if:
+        - bin:
+          - text
+          - bin:
+            - strIsFollowedByRawQuotes
+            - i
+        - tuple:
+          - true
+          - bin:
+            - i
+            - 3
+        - if:
+          - bin:
+            - bin:
+              - i
+              - 1
+            - .Length: text
+          - bin:
+            - go
+            - bin:
+              - i
+              - 1
+          - semi:
+            - bin:
+              - assert
+              - bin:
+                - i
+                - .Length: text
+            - tuple:
+              - false
+              - i
+      bin:
+      - go
+      - bin:
+        - i
+        - 3
+  let:
+  - anno:
+    - fun:
+      - tokenFromIdent
+      - anno:
+        - text
+        - string
+      - l
+      - r
+    - Token
+  - match:
+    - bin:
+      - text
+      - bin:
+        - bin:
+          - strSlice
+          - l
+        - r
+  let:
+  - anno:
+    - fun:
+      - tokenFromOp
+      - anno:
+        - text
+        - string
+      - l
+      - r
+    - Token
+  - match:
+    - bin:
+      - text
+      - bin:
+        - bin:
+          - strSlice
+          - l
+        - r
+  let:
+  - fun:
+    - tokenFromPun
+    - anno:
+      - text
+      - string
+    - anno:
+      - l
+      - int
+    - r
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - r
+          - l
+        - 1
+    - match:
+      - index: text
+  let:
+  - anno:
+    - fun:
+      - tokenFromIntLit
+      - anno:
+        - text
+        - string
+      - l
+      - r
+    - Token
+  - let:
+    - value
+    - bin:
+      - bin:
+        - text
+        - bin:
+          - bin:
+            - strSlice
+            - l
+          - r
+      - int
+    bin:
+    - .Int: Token
+    - value
+  let:
+  - anno:
+    - fun:
+      - tokenFromCharLit
+      - anno:
+        - text
+        - string
+      - l
+      - r
+    - Token
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - l
+              - 2
+            - r
+          - bin:
+            - index: text
+            - char 39
+        - bin:
+          - index: text
+          - char 39
+    - let:
+      - i
+      - bin:
+        - l
+        - 1
+      let:
+      - value
+      - match:
+        - index: text
+      bin:
+      - .Char: Token
+      - value
+  let:
+  - anno:
+    - fun:
+      - tokenFromStrLit
+      - anno:
+        - text
+        - string
+      - l
+      - r
+    - Token
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - l
+              - 2
+            - r
+          - bin:
+            - index: text
+            - char 34
+        - bin:
+          - index: text
+          - char 34
+    - let:
+      - fun:
+        - go
+        - acc
+        - i
+      - let:
+        - fun:
+          - next
+          - i
+        - if:
+          - bin:
+            - bin:
+              - i
+              - bin:
+                - r
+                - 1
+            - bin:
+              - index: text
+              - char 92
+          - i
+          - bin:
+            - next
+            - bin:
+              - i
+              - 1
+        let:
+        - endIndex
+        - bin:
+          - next
+          - i
+        let:
+        - acc
+        - bin:
+          - bin:
+            - text
+            - bin:
+              - bin:
+                - strSlice
+                - i
+              - endIndex
+          - acc
+        let:
+        - i
+        - endIndex
+        if:
+        - bin:
+          - i
+          - bin:
+            - r
+            - 1
+        - bin:
+          - bin:
+            - acc
+            - listRev
+          - strConcat
+        - semi:
+          - bin:
+            - assert
+            - bin:
+              - index: text
+              - char 92
+          - match:
+            - index: text
+      let:
+      - value
+      - bin:
+        - bin:
+          - go
+          - list
+        - bin:
+          - l
+          - 1
+      bin:
+      - .Str: Token
+      - value
+  let:
+  - fun:
+    - tokenFromStrLitRaw
+    - anno:
+      - text
+      - string
+    - l
+    - r
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - l
+              - 6
+            - r
+          - bin:
+            - text
+            - bin:
+              - strIsFollowedByRawQuotes
+              - l
+        - bin:
+          - text
+          - bin:
+            - strIsFollowedByRawQuotes
+            - bin:
+              - r
+              - 3
+    - bin:
+      - .Str: Token
+      - bin:
+        - text
+        - bin:
+          - bin:
+            - strSlice
+            - bin:
+              - l
+              - 3
+          - bin:
+            - r
+            - 3
+  let:
+  - fun:
+    - tokCtxToTextIndex
+    - anno:
+      - tuple:
+        - text
+        - i
+        - _
+        - _
+      - TokenizeCtx
+  - tuple:
+    - text
+    - i
+  let:
+  - anno:
+    - fun:
+      - tokCtxSkip
+      - r
+      - anno:
+        - tuple:
+          - text
+          - i
+          - loc
+          - acc
+        - TokenizeCtx
+    - TokenizeCtx
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - bin:
+            - 0
+            - i
+          - bin:
+            - i
+            - r
+        - bin:
+          - r
+          - .Length: text
+    - let:
+      - newLoc
+      - bin:
+        - loc
+        - bin:
+          - bin:
+            - bin:
+              - locShift
+              - text
+            - i
+          - r
+      tuple:
+      - text
+      - r
+      - newLoc
+      - acc
+  let:
+  - anno:
+    - fun:
+      - tokCtxPush
+      - kind
+      - r
+      - anno:
+        - tuple:
+          - text
+          - i
+          - loc
+          - acc
+        - TokenizeCtx
+    - TokenizeCtx
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - bin:
+            - 0
+            - i
+          - bin:
+            - i
+            - r
+        - bin:
+          - r
+          - .Length: text
+    - let:
+      - newAcc
+      - bin:
+        - tuple:
+          - kind
+          - loc
+        - acc
+      let:
+      - newLoc
+      - bin:
+        - loc
+        - bin:
+          - bin:
+            - bin:
+              - locShift
+              - text
+            - i
+          - r
+      tuple:
+      - text
+      - r
+      - newLoc
+      - newAcc
+  let:
+  - fun:
+    - tokEof
+    - anno:
+      - tuple:
+        - text
+        - i
+        - _
+        - acc
+      - TokenizeCtx
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - lookEof
+          - text
+        - i
+    - bin:
+      - acc
+      - listRev
+  let:
+  - fun:
+    - tokError
+    - t
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - r
+    - bin:
+      - bin:
+        - scanError
+        - text
+      - i
+    bin:
+    - t
+    - bin:
+      - tokCtxSkip
+      - r
+  let:
+  - fun:
+    - tokComment
+    - anno:
+      - t
+      - TokenizeCtx
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - r
+    - bin:
+      - bin:
+        - scanLine
+        - text
+      - i
+    bin:
+    - t
+    - bin:
+      - tokCtxSkip
+      - r
+  let:
+  - fun:
+    - tokSpace
+    - anno:
+      - t
+      - TokenizeCtx
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - r
+    - bin:
+      - bin:
+        - scanSpace
+        - text
+      - i
+    bin:
+    - t
+    - bin:
+      - tokCtxSkip
+      - r
+  let:
+  - fun:
+    - tokPun
+    - t
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - r
+    - bin:
+      - bin:
+        - scanPun
+        - text
+      - i
+    let:
+    - token
+    - bin:
+      - bin:
+        - bin:
+          - tokenFromPun
+          - text
+        - i
+      - r
+    bin:
+    - t
+    - bin:
+      - bin:
+        - tokCtxPush
+        - token
+      - r
+  let:
+  - fun:
+    - tokOp
+    - t
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - r
+    - bin:
+      - bin:
+        - scanOp
+        - text
+      - i
+    let:
+    - token
+    - bin:
+      - bin:
+        - bin:
+          - tokenFromOp
+          - text
+        - i
+      - r
+    bin:
+    - t
+    - bin:
+      - bin:
+        - tokCtxPush
+        - token
+      - r
+  let:
+  - fun:
+    - tokIdent
+    - t
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - r
+    - bin:
+      - bin:
+        - scanIdent
+        - text
+      - i
+    let:
+    - token
+    - bin:
+      - bin:
+        - bin:
+          - tokenFromIdent
+          - text
+        - i
+      - r
+    bin:
+    - t
+    - bin:
+      - bin:
+        - tokCtxPush
+        - token
+      - r
+  let:
+  - fun:
+    - tokIntLit
+    - t
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - r
+    - bin:
+      - bin:
+        - scanIntLit
+        - text
+      - i
+    let:
+    - token
+    - bin:
+      - bin:
+        - bin:
+          - tokenFromIntLit
+          - text
+        - i
+      - r
+    bin:
+    - t
+    - bin:
+      - bin:
+        - tokCtxPush
+        - token
+      - r
+  let:
+  - fun:
+    - tokCharLit
+    - t
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - tuple:
+      - ok
+      - r
+    - bin:
+      - bin:
+        - scanCharLit
+        - text
+      - i
+    let:
+    - token
+    - if:
+      - ok
+      - bin:
+        - bin:
+          - bin:
+            - tokenFromCharLit
+            - text
+          - i
+        - r
+      - .Error: Token
+    bin:
+    - t
+    - bin:
+      - bin:
+        - tokCtxPush
+        - token
+      - r
+  let:
+  - fun:
+    - tokStrLit
+    - t
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - tuple:
+      - ok
+      - r
+    - bin:
+      - bin:
+        - scanStrLit
+        - text
+      - i
+    let:
+    - token
+    - if:
+      - ok
+      - bin:
+        - bin:
+          - bin:
+            - tokenFromStrLit
+            - text
+          - i
+        - r
+      - .Error: Token
+    bin:
+    - t
+    - bin:
+      - bin:
+        - tokCtxPush
+        - token
+      - r
+  let:
+  - fun:
+    - tokStrLitRaw
+    - t
+  - let:
+    - tuple:
+      - text
+      - i
+    - bin:
+      - t
+      - tokCtxToTextIndex
+    let:
+    - tuple:
+      - ok
+      - r
+    - bin:
+      - bin:
+        - scanStrLitRaw
+        - text
+      - i
+    let:
+    - token
+    - if:
+      - ok
+      - bin:
+        - bin:
+          - bin:
+            - tokenFromStrLitRaw
+            - text
+          - i
+        - r
+      - .Error: Token
+    bin:
+    - t
+    - bin:
+      - bin:
+        - tokCtxPush
+        - token
+      - r
+  let:
+  - anno:
+    - fun:
+      - tokenize
+      - anno:
+        - text
+        - string
+    - list:
+      - tuple:
+        - Token
+        - Loc
+  - let:
+    - fun:
+      - go
+      - t
+    - let:
+      - tuple:
+        - text
+        - i
+      - bin:
+        - t
+        - tokCtxToTextIndex
+      if:
+      - bin:
+        - bin:
+          - lookEof
+          - text
+        - i
+      - bin:
+        - t
+        - tokEof
+      - if:
+        - bin:
+          - bin:
+            - lookComment
+            - text
+          - i
+        - bin:
+          - bin:
+            - t
+            - tokComment
+          - go
+        - if:
+          - bin:
+            - bin:
+              - lookSpace
+              - text
+            - i
+          - bin:
+            - bin:
+              - t
+              - tokSpace
+            - go
+          - if:
+            - bin:
+              - bin:
+                - lookOp
+                - text
+              - i
+            - bin:
+              - bin:
+                - t
+                - tokOp
+              - go
+            - if:
+              - bin:
+                - bin:
+                  - lookIntLit
+                  - text
+                - i
+              - bin:
+                - bin:
+                  - t
+                  - tokIntLit
+                - go
+              - if:
+                - bin:
+                  - bin:
+                    - lookIdent
+                    - text
+                  - i
+                - bin:
+                  - bin:
+                    - t
+                    - tokIdent
+                  - go
+                - if:
+                  - bin:
+                    - bin:
+                      - lookCharLit
+                      - text
+                    - i
+                  - bin:
+                    - bin:
+                      - t
+                      - tokCharLit
+                    - go
+                  - if:
+                    - bin:
+                      - bin:
+                        - lookStrLitRaw
+                        - text
+                      - i
+                    - bin:
+                      - bin:
+                        - t
+                        - tokStrLitRaw
+                      - go
+                    - if:
+                      - bin:
+                        - bin:
+                          - lookStrLit
+                          - text
+                        - i
+                      - bin:
+                        - bin:
+                          - t
+                          - tokStrLit
+                        - go
+                      - if:
+                        - bin:
+                          - bin:
+                            - lookPun
+                            - text
+                          - i
+                        - bin:
+                          - bin:
+                            - t
+                            - tokPun
+                          - go
+                        - bin:
+                          - bin:
+                            - t
+                            - tokError
+                          - go
+    bin:
+    - go
+    - tuple:
+      - text
+      - 0
+      - tuple:
+        - 0
+        - 0
+      - list
+  tuple
 $? = 0

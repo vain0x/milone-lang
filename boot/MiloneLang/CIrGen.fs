@@ -230,7 +230,9 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | Ty.Con (TyCon.List, _)
         | Ty.Con (TyCon.Fun, _)
         | Ty.Error _ ->
-          failwithf "Never %A" ty
+          eprintfn "NEVER error type %A" ty
+          sprintf "/* unknown ty %A */" ty, ctx
+          // failwithf "Never %A" ty
       let ctx = { ctx with TyUniqueNames = ctx.TyUniqueNames |> Map.add ty ident }
       ident, ctx
   go ty ctx
