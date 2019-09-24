@@ -188,8 +188,6 @@ type Op =
 /// Type expression in AST.
 [<RequireQualifiedAccess>]
 type ATy =
-  | Error
-    of string * Loc
   | Missing
     of Loc
   | Ident
@@ -206,8 +204,6 @@ type ATy =
 /// Pattern in AST.
 [<RequireQualifiedAccess>]
 type APat =
-  | Error
-    of string * Loc
   | Missing
     of Loc
   | Lit
@@ -269,8 +265,6 @@ type ATyDecl =
 /// Expression in AST.
 [<RequireQualifiedAccess>]
 type AExpr =
-  | Error
-    of string * Loc
   | Missing
     of Loc
   | Lit

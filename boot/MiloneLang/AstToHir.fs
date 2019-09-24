@@ -194,7 +194,6 @@ let desugarLet pat body next loc =
 
 let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
-  | ATy.Error (_, loc)
   | ATy.Missing loc ->
     Ty.Error loc, nameCtx
 
@@ -218,9 +217,6 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
 let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
-  | APat.Error (msg, loc) ->
-    failwithf "Pattern error %s %A" msg loc
-
   | APat.Missing (_, loc) ->
     failwithf "Missing pattern %A" loc
 
@@ -276,9 +272,6 @@ let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
 
 let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with
-  | AExpr.Error (msg, loc) ->
-    HExpr.Error (msg, loc), nameCtx
-
   | AExpr.Missing loc ->
     HExpr.Error ("Missing expression", loc), nameCtx
 
