@@ -196,7 +196,7 @@ let declosureCall callee args resultTy loc (ctx: CcCtx) =
       let calleeTy = caps |> capsAddToFunTy calleeTy
 
       // Count captured variables as occurrences too.
-      let args, ctx = (args, ctx) |> stMap declosureExpr
+      let ctx = caps |> List.fold (fun ctx (serial, _, _) -> ctx |> ctxAddRef serial) ctx
 
       let callee = HExpr.Ref (callee, calleeTy, refLoc)
       (hxCallProc callee args resultTy loc, ctx) |> Some
