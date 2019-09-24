@@ -3,5 +3,5 @@ let main _ =
   | x1 :: x2 :: [] ->
     assert (x1 = 1 && x2 = 2)
   | _ ->
-    exit 1
+    assert false
   0

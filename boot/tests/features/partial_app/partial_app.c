@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct IntIntFun1;
 
 int twice_(struct IntIntFun1 f_, int x_);
@@ -59,13 +61,13 @@ struct IntIntTuple2 {
 int fun_1(void* env_1, int arg_2, int arg_3) {
     int arg_4 = (*(((struct IntIntTuple2*)env_1))).t0;
     int arg_5 = (*(((struct IntIntTuple2*)env_1))).t1;
-    int call_2 = add4_(arg_4, arg_5, arg_2, arg_3);
-    return call_2;
+    int call_1 = add4_(arg_4, arg_5, arg_2, arg_3);
+    return call_1;
 }
 
 int fun_2(void* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
-    int call_3 = add4_(arg_6, arg_7, arg_8, arg_9);
-    return call_3;
+    int call_2 = add4_(arg_6, arg_7, arg_8, arg_9);
+    return call_2;
 }
 
 struct IntIntIntFun2 {
@@ -86,19 +88,9 @@ int main() {
     void* env_3 = box_;
     struct IntIntFun1 fun_3 = (struct IntIntFun1){.fun = fun_, .env = env_3};
     struct IntIntFun1 dec3_ = fun_3;
-    int match_;
-    int call_1 = twice_(dec3_, 8);
-    if (!(((call_1 != 2) == 1))) goto next_2;
-    exit(1);
-    match_ = 0;
-    goto end_match_1;
-next_2:;
-    if (!(((call_1 != 2) == 0))) goto next_3;
-    match_ = 0;
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
+    int call_3 = twice_(dec3_, 8);
+    milone_assert((call_3 == 2), 8, 2);
+    int call_4 = 0;
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 2;
     tuple_1.t1 = 3;
@@ -107,36 +99,16 @@ end_match_1:;
     void* env_4 = box_1;
     struct IntIntIntFun2 fun_4 = (struct IntIntIntFun2){.fun = fun_1, .env = env_4};
     struct IntIntIntFun2 add2_ = fun_4;
-    int match_1;
     int app_2 = add2_.fun(add2_.env, 5, 7);
-    if (!(((app_2 != (((2 + 3) + 5) + 7)) == 1))) goto next_5;
-    exit(1);
-    match_1 = 0;
-    goto end_match_4;
-next_5:;
-    if (!(((app_2 != (((2 + 3) + 5) + 7)) == 0))) goto next_6;
-    match_1 = 0;
-    goto end_match_4;
-next_6:;
-    exit(1);
-end_match_4:;
+    milone_assert((app_2 == (((2 + 3) + 5) + 7)), 11, 2);
+    int call_5 = 0;
     void* box_2 = (void*)malloc(sizeof(int));
     (*(((int*)box_2))) = 0;
     void* env_5 = box_2;
     struct IntIntIntIntIntFun4 fun_5 = (struct IntIntIntIntIntFun4){.fun = fun_2, .env = env_5};
     struct IntIntIntIntIntFun4 f_1 = fun_5;
-    int match_2;
     int app_3 = f_1.fun(f_1.env, 1, 2, 3, 4);
-    if (!(((app_3 != (((1 + 2) + 3) + 4)) == 1))) goto next_8;
-    exit(1);
-    match_2 = 0;
-    goto end_match_7;
-next_8:;
-    if (!(((app_3 != (((1 + 2) + 3) + 4)) == 0))) goto next_9;
-    match_2 = 0;
-    goto end_match_7;
-next_9:;
-    exit(1);
-end_match_7:;
+    milone_assert((app_3 == (((1 + 2) + 3) + 4)), 14, 2);
+    int call_6 = 0;
     return 0;
 }

@@ -1,3 +1,5 @@
+#include "milone.h"
+
 int f_(int x_);
 
 int main();
@@ -9,7 +11,7 @@ int f_(int x_) {
 int main() {
     int match_;
     int call_ = f_(3);
-    if (!((call_ == 1))) goto next_2;
+    if ((call_ != 1)) goto next_2;
     match_ = 1;
     goto end_match_1;
 next_2:;

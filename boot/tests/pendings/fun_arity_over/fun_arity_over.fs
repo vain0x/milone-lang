@@ -18,6 +18,6 @@ let main _ =
 
     exit 0
 
-  if f 2 3 <> 5 then exit 1
+  assert (f 2 3 = 5)
 
   0

@@ -1,14 +1,16 @@
-int f_(char __);
+#include "milone.h"
 
-int g_(struct String __1);
+int f_(char arg_);
+
+int g_(struct String arg_1);
 
 int main();
 
-int f_(char __) {
+int f_(char arg_) {
     return 0;
 }
 
-int g_(struct String __1) {
+int g_(struct String arg_1) {
     return 0;
 }
 

@@ -1,3 +1,4 @@
+/// Entry point of the compiler.
 module rec MiloneLang.Program
 
 open System
@@ -23,20 +24,24 @@ let toCir verbosity (projectDir: string): CDecl list * bool =
       ()
 
   let nameCtx = nameCtxEmpty ()
-  let ast, nameCtx = parseProjectModules projectDir nameCtx
+  let ast, nameCtx, errorListList = parseProjectModules projectDir nameCtx
   // let tokens = Lexing.tokenize source
   // log "tokens" tokens
   // let ast = Parsing.parse tokens
   // log "ast" ast
-  let desugared = Desugaring.desugar ast
-  log "desugared" ast
-  let nameRes, scopeCtx = NameRes.nameRes (desugared, nameCtx)
+  let nameRes, scopeCtx = NameRes.nameRes (ast, nameCtx)
   log "nameRes" nameRes
-  let typedAst, tyCtx = Typing.infer (nameRes, scopeCtx)
+  let typedAst, tyCtx = Typing.infer (nameRes, scopeCtx, errorListList)
   log "typed" typedAst
-  let funTransAst, tyCtx = FunTrans.trans (typedAst, tyCtx)
+  let funTransAst, tyCtx =
+    (typedAst, tyCtx)
+    |> MainHoist.hoistMain
+    |> ClosureConversion.declosure
+    |> EtaExpansion.uneta
   log "funTrans" funTransAst
-  let monoAst, tyCtx = Monomorphizing.monify (funTransAst, tyCtx)
+  let hoistedExpr, tyCtx = Hoist.hoist (funTransAst, tyCtx)
+  log "hoisted" hoistedExpr
+  let monoAst, tyCtx = Monomorphizing.monify (hoistedExpr, tyCtx)
   log "monoAst" monoAst
   let mir, mirCtx = Mir.mirify (monoAst, tyCtx)
   log "mir" mir

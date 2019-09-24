@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct IntStringUnitFun2;
 
 struct IntStringUnitFun2IntTuple2;
@@ -12,11 +14,9 @@ int printInt_(int value_, struct String label_);
 
 int fun_1(void* env_1, int arg_3, struct String arg_4);
 
+int der_(struct String d_, int n_, struct String f_1);
+
 struct StringTuple1;
-
-int der_(struct StringTuple1 arg_8, int n_, struct String f_1);
-
-struct StringTuple1Tuple1;
 
 int fun_2(void* env_2, int arg_5, struct String arg_6);
 
@@ -67,23 +67,16 @@ int fun_1(void* env_1, int arg_3, struct String arg_4) {
     return 0;
 }
 
-struct StringTuple1 {
-    struct String t0;
-};
-
-int der_(struct StringTuple1 arg_8, int n_, struct String f_1) {
-    struct String d_ = arg_8.t0;
+int der_(struct String d_, int n_, struct String f_1) {
     int match_;
-    if (!(((n_ == 0) == 1))) goto next_2;
+    if ((n_ != 0)) goto next_2;
     printf("%s\n", f_1.str);
-    int call_3 = 0;
+    int call_2 = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
-    if (!(((n_ == 0) == 0))) goto next_3;
-    struct StringTuple1 tuple_1;
-    tuple_1.t0 = d_;
-    int call_4 = der_(tuple_1, (n_ - 1), str_add(f_1, d_));
+    if ((n_ == 0)) goto next_3;
+    int call_3 = der_(d_, (n_ - 1), str_add(f_1, d_));
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -92,13 +85,13 @@ end_match_1:;
     return 0;
 }
 
-struct StringTuple1Tuple1 {
-    struct StringTuple1 t0;
+struct StringTuple1 {
+    struct String t0;
 };
 
 int fun_2(void* env_2, int arg_5, struct String arg_6) {
-    struct StringTuple1 arg_7 = (*(((struct StringTuple1Tuple1*)env_2))).t0;
-    int call_5 = der_(arg_7, arg_5, arg_6);
+    struct String arg_7 = (*(((struct StringTuple1*)env_2))).t0;
+    int call_4 = der_(arg_7, arg_5, arg_6);
     return 0;
 }
 
@@ -107,16 +100,14 @@ int main() {
     (*(((int*)box_1))) = 0;
     void* env_4 = box_1;
     struct IntStringUnitFun2 fun_4 = (struct IntStringUnitFun2){.fun = fun_1, .env = env_4};
-    struct StringUnitFun1 call_2 = bindInt_(fun_4, 42);
-    struct StringUnitFun1 print42_ = call_2;
+    struct StringUnitFun1 call_5 = bindInt_(fun_4, 42);
+    struct StringUnitFun1 print42_ = call_5;
     int app_1 = print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
     struct String d_ = (struct String){.str = "'", .len = 1};
-    struct StringTuple1 tuple_3;
-    tuple_3.t0 = d_;
-    struct StringTuple1Tuple1 tuple_2;
-    tuple_2.t0 = tuple_3;
-    void* box_2 = (void*)malloc(sizeof(struct StringTuple1Tuple1));
-    (*(((struct StringTuple1Tuple1*)box_2))) = tuple_2;
+    struct StringTuple1 tuple_1;
+    tuple_1.t0 = d_;
+    void* box_2 = (void*)malloc(sizeof(struct StringTuple1));
+    (*(((struct StringTuple1*)box_2))) = tuple_1;
     void* env_5 = box_2;
     struct IntStringUnitFun2 fun_5 = (struct IntStringUnitFun2){.fun = fun_2, .env = env_5};
     struct StringUnitFun1 call_6 = bindInt_(fun_5, 2);

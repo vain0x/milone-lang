@@ -1,4 +1,9 @@
-/// Generates CIR from MIR.
+/// Converts MIR to CIR.
+///
+/// CIR is a kind of abstract syntax tree of C.
+///
+/// Maps operations/primitives/types to C operations/functions/types.
+/// Generates type declarations for lists/tuples/etc.
 module rec MiloneLang.CIrGen
 
 open MiloneLang.Types
@@ -8,14 +13,14 @@ open MiloneLang.Helpers
 [<RequireQualifiedAccess>]
 type Ctx =
   {
-    Vars: Map<int, VarDef>
-    VarUniqueNames: Map<int, string>
+    Vars: Map<VarSerial, VarDef>
+    VarUniqueNames: Map<VarSerial, Ident>
     TyEnv: Map<Ty, CTy>
-    Tys: Map<int, TyDef>
-    TyUniqueNames: Map<Ty, string>
+    Tys: Map<TySerial, TyDef>
+    TyUniqueNames: Map<Ty, Ident>
     Stmts: CStmt list
     Decls: CDecl list
-    Diags: Diag list
+    Logs: (Log * Loc) list
   }
 
 let tupleField i = sprintf "t%d" i
@@ -25,7 +30,7 @@ let tagTyIdent tyIdent =
   sprintf "%sTag" tyIdent
 
 let calculateVarUniqueNames vars =
-  let groups = vars |> Map.toList |> Seq.groupBy (fun (_, varDef) -> varDefIdent varDef)
+  let groups = vars |> Map.toList |> Seq.groupBy (fun (_, varDef) -> varDefToIdent varDef)
   groups |> Seq.collect (fun (ident, vars) ->
     vars |> Seq.mapi (fun i (serial, _) ->
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
@@ -34,7 +39,7 @@ let calculateVarUniqueNames vars =
   |> Map.ofSeq
 
 let calculateTyUniqueNames tys =
-  let groups = tys |> Map.toList |> Seq.groupBy (fun (_, tyDef) -> tyDefIdent tyDef)
+  let groups = tys |> Map.toList |> Seq.groupBy (fun (_, tyDef) -> tyDefToIdent tyDef)
   groups |> Seq.collect (fun (ident, tys) ->
     tys |> Seq.mapi (fun i (serial, _) ->
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
@@ -53,11 +58,11 @@ let ctxFromMirCtx (mirCtx: Mir.MirCtx): Ctx =
     TyUniqueNames = tyNames
     Stmts = []
     Decls = []
-    Diags = mirCtx.Diags
+    Logs = mirCtx.Logs
   }
 
 let ctxAddErr (ctx: Ctx) message loc =
-  { ctx with Diags = Diag.Err (message, loc) :: ctx.Diags }
+  { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
 
 let ctxNewBlock (ctx: Ctx) =
   { ctx with Stmts = [] }
@@ -72,32 +77,45 @@ let ctxAddDecl (ctx: Ctx) decl =
   { ctx with Decls = decl :: ctx.Decls }
 
 let ctxAddFunDecl (ctx: Ctx) sTy tTy =
+  // First, register the type name to the map. Without this,
+  // `cty`ing the signature types could generate this function type too.
   let funTy = tyFun sTy tTy
-  let _, argTys, resultTy = rollFunTy funTy
   let ident, ctx = ctxUniqueTyName ctx funTy
   let selfTy = CTy.Struct ident
+  let ctx: Ctx =
+    { ctx with
+        TyEnv = ctx.TyEnv |> Map.add funTy selfTy
+    }
+
+  // Second, `cty`ing signature types.
   let envTy = CTy.Ptr CTy.Void
+  let _, argTys, resultTy = tyToArgList funTy
 
   let makeSignature ctx =
     let argTys, ctx = cirifyTys (argTys, ctx)
     let resultTy, ctx = cty ctx resultTy
     argTys, resultTy, ctx
 
-  // HACK: See AddUnionDecl for details.
+  // `ctx` is discarded not to generate type declarations yet.
+  // Because the this type's fields refer to types indirectly,
+  // we want to emit these declarations later.
   let argTys, resultTy, _ = makeSignature ctx
 
   let fields = ["fun", CTy.FunPtr (envTy :: argTys, resultTy); "env", envTy]
   let ctx: Ctx =
     { ctx with
-        TyEnv = ctx.TyEnv |> Map.add funTy selfTy
         Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
     }
 
-  let _, _, ctx = makeSignature ctx
+  // Finally, emit the declarations referred in the signature types.
+  let argTys2, resultTy2, ctx = makeSignature ctx
+  assert (argTys2 = argTys && resultTy2 = resultTy)
 
   selfTy, ctx
 
 let ctxAddListDecl (ctx: Ctx) itemTy =
+  // See ctxAddFunDecl for the reason of the operation ordering.
+
   let listTy = tyList itemTy
   let ident, ctx = ctxUniqueTyName ctx listTy
   let selfTy = CTy.Ptr (CTy.Struct ident)
@@ -112,6 +130,8 @@ let ctxAddListDecl (ctx: Ctx) itemTy =
   selfTy, ctx
 
 let ctxAddTupleDecl (ctx: Ctx) itemTys =
+  // See ctxAddFunDecl for the reason of the operation ordering.
+
   let rec go acc ctx i itemTys =
     match itemTys with
     | [] ->
@@ -120,26 +140,25 @@ let ctxAddTupleDecl (ctx: Ctx) itemTys =
       let itemTy, ctx = cty ctx itemTy
       let field = tupleField i, itemTy
       go (field :: acc) ctx (i + 1) itemTys
-  let fields, ctx = go [] ctx 0 itemTys
 
   let tupleTy = tyTuple itemTys
   let tupleTyIdent, ctx = ctxUniqueTyName ctx tupleTy
-  let ctx: Ctx =
-    { ctx with
-        TyEnv = ctx.TyEnv |> Map.add tupleTy (CTy.Struct tupleTyIdent)
-        Decls = CDecl.Struct (tupleTyIdent, fields, []) :: ctx.Decls
-    }
-  CTy.Struct tupleTyIdent, ctx
+  let selfTy = CTy.Struct tupleTyIdent
+  let ctx: Ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add tupleTy selfTy }
+
+  let fields, ctx = go [] ctx 0 itemTys
+  let tupleDecl = CDecl.Struct (tupleTyIdent, fields, [])
+  let ctx: Ctx = { ctx with Decls = tupleDecl :: ctx.Decls }
+  selfTy, ctx
 
 let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
-  // Generate identifiers and make types.
+  // See ctxAddFunDecl for the reason of the operation ordering.
+
   let unionTyRef = tyRef tySerial []
   let unionTyIdent, ctx = ctxUniqueTyName ctx unionTyRef
   let unionTy = CTy.Struct unionTyIdent
   let tagTyIdent = tagTyIdent unionTyIdent
   let tagTy = CTy.Enum tagTyIdent
-
-  // Register type name to prevent infinite loop in the case of recursive unions.
   let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add unionTyRef unionTy }
 
   let variants =
@@ -160,19 +179,12 @@ let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
       else
         acc, ctx
     )
-  // HACK: Get rid of the resulting context because it can be invalid
-  // in the case where some payload type contains the discriminated union itself,
-  // to incur C compiler error, use of incomplete type.
-  // E.g. `type ThisUnion = | A of ThisUnion * int`
-  // will generate invalid code
-  // `struct Tuple2 { ThisUnion t0; .. }; struct ThisUnion { .. };`.
   let variants, _ = makeVariants ctx
 
   let tagEnumDecl = CDecl.Enum (tagTyIdent, tags)
   let structDecl = CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
   let ctx = { ctx with Decls = structDecl :: tagEnumDecl :: ctx.Decls }
 
-  // Regenerate payload types.
   let _, ctx = makeVariants ctx
 
   unionTy, ctx
@@ -199,7 +211,7 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
         | Ty.Con (TyCon.Obj, _) -> "Object", ctx
         | Ty.Con (TyCon.Fun, _) ->
-          let arity, argTys, resultTy = rollFunTy ty
+          let arity, argTys, resultTy = tyToArgList ty
           let argTys, ctx = (argTys, ctx) |> stMap (fun (argTy, ctx) -> ctx |> go argTy)
           let resultTy, ctx = ctx |> go resultTy
           sprintf "%s%sFun%d" (argTys |> String.concat "") resultTy arity, ctx
@@ -215,7 +227,6 @@ let ctxUniqueTyName (ctx: Ctx) ty =
         | Ty.Con (TyCon.Ref serial, _) ->
           // FIXME: This occurs when recursive union types defined.
           failwithf "Never: Unknown type serial %d" serial
-        | Ty.Con (TyCon.Range, _)
         | Ty.Con (TyCon.List, _)
         | Ty.Con (TyCon.Fun, _)
         | Ty.Error _ ->
@@ -267,10 +278,9 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
     | Some (TyDef.Meta _) ->
       failwith "Never"
     | None ->
-      CTy.Void, ctxAddErr ctx "Unknown type reference" (0, 0) // FIXME: source location
+      CTy.Void, ctxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
   | Ty.Con (TyCon.List, _)
   | Ty.Con (TyCon.Fun, _)
-  | Ty.Con (TyCon.Range, _)
   | Ty.Error _ ->
     failwithf "Never %A" ty
 
@@ -287,7 +297,7 @@ let cOpFrom op =
   | MOp.Eq -> CBinOp.Eq
   | MOp.Ne -> CBinOp.Ne
   | MOp.Lt -> CBinOp.Lt
-  | MOp.Le -> CBinOp.Le
+  | MOp.Ge -> CBinOp.Ge
   | MOp.StrAdd
   | MOp.StrCmp
   | MOp.StrIndex -> failwith "Never"
@@ -310,7 +320,6 @@ let genExprDefault ctx ty =
   | Ty.Con (TyCon.Ref _, _) ->
     let ty, ctx = cty ctx ty
     CExpr.Cast (CExpr.Default, ty), ctx
-  | Ty.Con (TyCon.Range, _)
   | Ty.Error _ ->
     failwithf "Never %A" ty
 
@@ -381,7 +390,7 @@ let genExprList ctx exprs =
   go [] ctx exprs
 
 let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
-  match arg with
+  match arg |> mxSugar with
   | MExpr.Lit (Lit.Int value, _) ->
     CExpr.Int value, ctx
   | MExpr.Lit (Lit.Char value, _) ->
@@ -394,8 +403,6 @@ let genExpr (ctx: Ctx) (arg: MExpr): CExpr * Ctx =
     CExpr.Int 1, ctx
   | MExpr.Default (ty, _) ->
     genExprDefault ctx ty
-  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), _) ->
-    genExprDefault ctx tyUnit
   | MExpr.Ref (serial, _, _) ->
     CExpr.Ref (ctxUniqueName ctx serial), ctx
   | MExpr.Proc (serial, ty, loc) ->
@@ -415,7 +422,7 @@ let genExprCallPrintfn ctx format args =
       List.rev acc, ctx
     | MExpr.Lit (Lit.Str value, _) :: args ->
       go (CExpr.StrRaw value :: acc) ctx args
-    | arg :: args when mexprTy arg = tyStr ->
+    | arg :: args when mexprToTy arg = tyStr ->
       let arg, ctx = genExpr ctx arg
       let acc = CExpr.Nav (arg, "str") :: acc
       go acc ctx args
@@ -453,7 +460,7 @@ let genExprCallString arg argTy ctx =
   | _ ->
     failwith "Never: Type Error `int`"
 
-let genExprCallPrim ctx prim args primTy resultTy =
+let genExprCallPrim ctx prim args primTy resultTy loc =
   match prim, args, primTy with
   | HPrim.NativeFun (nativeFunIdent, _), _, _ ->
     let args, ctx = genExprList ctx args
@@ -465,12 +472,16 @@ let genExprCallPrim ctx prim args primTy resultTy =
   | HPrim.Assert, _, _ ->
     let callee = CExpr.Ref "milone_assert"
     let args, ctx = genExprList ctx args
+    // Embed the source location information.
+    let args =
+      let y, x = loc
+      List.append args [CExpr.Int y; CExpr.Int x]
     let assertCall = CExpr.Call (callee, args)
     let ctx = ctxAddStmt ctx (CStmt.Expr assertCall)
     genExprDefault ctx resultTy
 
-  | HPrim.StrSlice, _, _ ->
-    let callee = CExpr.Ref "str_slice"
+  | HPrim.StrGetSlice, _, _ ->
+    let callee = CExpr.Ref "str_get_slice"
     let args, ctx = genExprList ctx args
     CExpr.Call (callee, args), ctx
 
@@ -518,7 +529,7 @@ let genInitClosure ctx serial funSerial envSerial ty =
   ctxAddStmt ctx (CStmt.Let (ident, Some initExpr, ty))
 
 let genInitBox ctx serial arg =
-  let argTy, ctx = cty ctx (mexprTy arg)
+  let argTy, ctx = cty ctx (mexprToTy arg)
   let arg, ctx = genExpr ctx arg
 
   // void* p = (void*)malloc(sizeof T);
@@ -594,7 +605,7 @@ let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
   let ctx = ctxAddStmt ctx (CStmt.Let (temp, Some init, unionTy))
   ctx
 
-let genStmtLetVal ctx serial init ty =
+let genStmtLetVal ctx serial init ty loc =
   match init with
   | MInit.UnInit ->
     genInitExprCore ctx serial None ty
@@ -602,7 +613,7 @@ let genStmtLetVal ctx serial init ty =
     let expr, ctx = genExpr ctx expr
     genInitExprCore ctx serial (Some expr) ty
   | MInit.CallPrim (prim, args, calleeTy) ->
-    let expr, ctx = genExprCallPrim ctx prim args calleeTy ty
+    let expr, ctx = genExprCallPrim ctx prim args calleeTy ty loc
     genInitExprCore ctx serial (Some expr) ty
   | MInit.CallProc (callee, args, _) ->
     let expr, ctx = genExprCallProc ctx callee args ty
@@ -641,8 +652,8 @@ let genStmt ctx stmt =
   match stmt with
   | MStmt.Do (expr, _) ->
     genStmtDo ctx expr
-  | MStmt.LetVal (serial, init, ty, _) ->
-    genStmtLetVal ctx serial init ty
+  | MStmt.LetVal (serial, init, ty, loc) ->
+    genStmtLetVal ctx serial init ty loc
   | MStmt.Set (serial, right, _) ->
     genStmtSet ctx serial right
   | MStmt.Return (expr, _) ->
@@ -651,9 +662,9 @@ let genStmt ctx stmt =
     ctxAddStmt ctx (CStmt.Label label)
   | MStmt.Goto (label, _) ->
     ctxAddStmt ctx (CStmt.Goto label)
-  | MStmt.GotoUnless (pred, label, _) ->
+  | MStmt.GotoIf (pred, label, _) ->
     let pred, ctx = genExpr ctx pred
-    ctxAddStmt ctx (CStmt.GotoUnless (pred, label))
+    ctxAddStmt ctx (CStmt.GotoIf (pred, label))
   | MStmt.Exit (arg, _) ->
     let arg, ctx = genExpr ctx arg
     ctxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))
@@ -688,7 +699,7 @@ let genDecls (ctx: Ctx) decls =
       match args with
       | [] ->
         List.rev acc, ctx
-      | (arg, _, ty, _) :: args ->
+      | (arg, ty, _) :: args ->
         let ident = ctxUniqueName ctx arg
         let cty, ctx = cty ctx ty
         go ((ident, cty) :: acc) ctx args
@@ -699,23 +710,25 @@ let genDecls (ctx: Ctx) decls =
     let ctx = ctxAddDecl ctx funDecl
     genDecls ctx decls
 
-let genDiags (ctx: Ctx) =
-  let rec go (ctx: Ctx) diags =
-    match diags with
+let genLogs (ctx: Ctx) =
+  let rec go (ctx: Ctx) logs =
+    match logs with
     | [] ->
       ctx
-    | Diag.Err (message, (y, x)) :: diags ->
-      let message = sprintf "%d:%d %s" (1 + y) (1 + x) message
-      let ctx = ctxAddDecl ctx (CDecl.ErrDir (message, 1 + y))
-      go ctx diags
-  let diags = ctx.Diags |> List.rev
-  let ctx = go ctx diags
-  let success = diags |> List.isEmpty
+    | (log, loc) :: logs ->
+      let y, _ = loc
+      let msg = log |> logToString loc
+      let ctx = ctxAddDecl ctx (CDecl.ErrDir (msg, 1 + y))
+      go ctx logs
+
+  let logs = ctx.Logs |> List.rev
+  let ctx = go ctx logs
+  let success = logs |> List.isEmpty
   success, ctx
 
 let gen (decls, mirCtx: Mir.MirCtx): CDecl list * bool =
   let ctx = ctxFromMirCtx mirCtx
   let ctx = genDecls ctx decls
-  let success, ctx = genDiags ctx
+  let success, ctx = genLogs ctx
   let decls = ctx.Decls |> List.rev
   decls, success

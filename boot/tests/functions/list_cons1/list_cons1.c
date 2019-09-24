@@ -1,3 +1,5 @@
+#include "milone.h"
+
 struct IntList;
 
 int main();
@@ -12,16 +14,19 @@ int main() {
     struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
-    if (!((!((!(list_)))))) goto next_2;
+    if ((!(list_))) goto next_2;
     int x1_ = list_->head;
-    if (!((!(list_->tail)))) goto next_2;
-    match_ = (x1_ - 1);
+    if ((!((!(list_->tail))))) goto next_2;
+    milone_assert((x1_ == 1), 3, 4);
+    int call_ = 0;
+    match_ = 0;
     goto end_match_1;
 next_2:;
-    exit(1);
+    milone_assert(0, 5, 4);
+    int call_1 = 0;
     match_ = 0;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    return match_;
+    return 0;
 }

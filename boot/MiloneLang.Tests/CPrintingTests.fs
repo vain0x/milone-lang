@@ -14,7 +14,7 @@ let testFile category case =
     let dirPath = IO.Path.Combine(testsDir.Value, category, case)
     let content =
       let cir, _ = toCir Verbosity.Silent dirPath
-      CPrinting.cprintRun (fun acc -> CPrinting.cprintDecls acc cir)
+      CPrinting.cprint cir
     do!
       IO.File.WriteAllTextAsync(
         IO.Path.Combine(testsDir.Value, category, case, case + ".c"),

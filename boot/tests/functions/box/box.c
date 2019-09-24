@@ -1,16 +1,18 @@
+#include "milone.h"
+
 int printIntOrStr_(int isInt_, void* value_);
 
 int main();
 
 int printIntOrStr_(int isInt_, void* value_) {
     int match_;
-    if (!((isInt_ == 1))) goto next_2;
+    if ((!(isInt_))) goto next_2;
     printf("%d\n", (*(((int*)value_))));
     int call_ = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
-    if (!((isInt_ == 0))) goto next_3;
+    if (isInt_) goto next_3;
     printf("%s\n", (*(((struct String*)value_))).str);
     int call_1 = 0;
     match_ = 0;

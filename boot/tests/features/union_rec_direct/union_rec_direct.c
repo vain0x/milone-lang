@@ -1,3 +1,5 @@
+#include "milone.h"
+
 enum Expr_Tag;
 
 struct Expr_;
@@ -28,12 +30,12 @@ struct Expr_Expr_Tuple2 {
 
 int eval_(struct Expr_ expr_) {
     int match_;
-    if (!((expr_.tag == Int_))) goto next_2;
+    if ((expr_.tag != Int_)) goto next_2;
     int value_ = (*(expr_.Int_));
     match_ = value_;
     goto end_match_1;
 next_2:;
-    if (!((expr_.tag == Add_))) goto next_3;
+    if ((expr_.tag != Add_)) goto next_3;
     struct Expr_ l_ = (*(expr_.Add_)).t0;
     struct Expr_ r_ = (*(expr_.Add_)).t1;
     int call_ = eval_(l_);
@@ -69,18 +71,8 @@ int main() {
     (*(((struct Expr_Expr_Tuple2*)payload_4))) = tuple_;
     struct Expr_ variant_4 = (struct Expr_){.tag = Add_, .Add_ = payload_4};
     struct Expr_ expr_1 = variant_4;
-    int match_1;
     int call_2 = eval_(expr_1);
-    if (!(((call_2 != 42) == 1))) goto next_5;
-    exit(1);
-    match_1 = 0;
-    goto end_match_4;
-next_5:;
-    if (!(((call_2 != 42) == 0))) goto next_6;
-    match_1 = 0;
-    goto end_match_4;
-next_6:;
-    exit(1);
-end_match_4:;
+    milone_assert((call_2 == 42), 18, 2);
+    int call_3 = 0;
     return 0;
 }

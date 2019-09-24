@@ -4,24 +4,28 @@
 
 ## What
 
-This is a compiler of programming language, code-name **milone-lang**, which is currently a subset of F#.
+**Milone-lang** is a F#-subset programming language.
 
-The goal is **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to make a milone-lang compiler that can compile milone-lang compiler itself.
+The goal is **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**., i.e. to make a milone-lang compiler that can compile milone-lang compiler itself.
 
-This project is my study. Don't use in production. Pull requests and issues are welcome.
+This is a hobby project. Don't use in production. Pull requests and issues are welcome.
 
-## Example
+## (No) Getting Started
 
-I show an example to illustrate what the milone-lang compiler does. It reads a source code like this.
+No releases available due to quality. To use, see the Development section.
 
-```fs
+## How It Works
+
+Currently the target language is C. That is, the milone-lang compiler reads a source code and translates to a C code. For example, assume the following code is given.
+
+```fsharp
 let main _ =
   let rec factorial x =
     if x = 0 then 1 else x * factorial (x - 1)
-  factorial 5 - 120
+  factorial 5 - 120 // exit code
 ```
 
-The compiler converts the code to a C language code like the following.
+Then the output is a C code that looks like the following.
 
 ```c
 int factorial(int x) {
@@ -37,94 +41,108 @@ int main() {
 }
 ```
 
-After that you will use GCC to compile it to a binary.
+*The actual output is available at [factorial.c](./boot/tests/examples/factorial/factorial.c).*
 
-Note that the actual output, [factorial.c](./boot/tests/examples/factorial/factorial.c), is not such a beautiful code.
+The diagram below illustrates how it does self-host finally.
+
+```
+    <milone-lang compiler>.fs
+        |                | Compile with F# compiler
+        |                v
+        | Compile with <milone-lang compiler>.exe
+        v                           ^ an executable on .NET runtime
+    <milone-lang compiler>.c
+        | Compile with C compiler
+        v
+    <milone-lang compiler>.exe
+                 ^ a native executable
+```
 
 ## Project Status
 
-The compiler can compile a single-file CLI application for now.
+Most (~70%) of features required for self-hosting have been implemented. For example, the compiler can tokenize the tokenizer itself.
 
-- Indent-aware parsing
-- Polymorphic type inference (Hindley-Milner)
+See [the self branch](https://github.com/vain0x/milone-lang/tree/self/boot/tests/examples/MiloneLang) for the progress of self-hosting.
+
+## Features
+
+Not all of F# features are supported. Features for functional-style programming are selected to write a compiler easily.
+
+- Compile a CLI application (no libraries)
 - Expressions
     - Literals: `1`, `"str"`, etc.
-    - Basic operations: `+`, `::`, etc.
+    - Operations: `+`, `::`, etc.
     - Function applications: `f x y` and `y |> f x`
     - Function abstractions: `let f x y = ..` and `fun x y -> ..`
-    - Let and match expressions
+    - Pattern matching
 - Functions
+    - Mutually recursion
     - Local variable capturing
     - Partial applications
     - Function objects
 - Types
-    - Built-in types: `unit`, `int`, `char`, `string`, tuples, lists, functions
-    - Discriminated unions (non-recursive and non-generic)
+    - Type inference based on Hindley-Milner algorithm
+    - Primitive types: `int`, `char`, `string`, tuples, lists, functions
+    - Discriminated unions (non-generic ones only)
 - IO
     - `printfn` with `%s`, `%d`
     - Some file IOs
 
-See [boot/tests/examples directory](./boot/tests/examples) for non-trivial, working codes.
+See [the boot/tests/examples directory](./boot/tests/examples) for working codes.
 
-## How
+## Internals
 
-The compiler is written in F# and works on .NET Core for now. As described above, it emits C language source code. Use GCC for an executable.
+See the comments in source files for details.
 
-For self-hosting, I avoid the use of complex mechanism in compiler source code, such as lex/yacc tools and computation expressions.
+Most of types are defined in the module:
 
-### How: Stages
+- [Types](boot/MiloneLang/Types.fs)
 
-- Lexing (lexical analysis)
-    - Inputs: source code string. Output: list of tokens.
-    - Tokenizer is hand-written.
-- Parsing (syntax analysis)
-    - Input: list of tokens. Output: abstract syntax tree (AST).
-    - Parser is hand-written, [recursive descent parser](https://en.wikipedia.org/wiki/Recursive_descent_parser).
-    - Indent-based semicolon insertion is applied on this stage.
-- AstToHir
-    - From AST to high-level intermediate representation (HIR)
-    - Just a data conversion to keep the parser decoupled
-    - Desugar lambda expressions
-- Bundling
-    - Input: source files. Output: abstract syntax tree.
-    - Resolve module dependencies, load source files, parse them, and concatenate them into single HIR.
-- Desugaring
-    - From/to HIR
-    - Remove some syntax sugars
-- Typing (type inference)
-    - From/to HIR
-    - Hindley-Milner (unification-based, polymorphic) type inference
-    - Collect symbol info and types of expression
-- FunTrans
-    - From/to HIR
-    - Convert function definitions and applications
-    - See [lambda lifting](https://en.wikipedia.org/wiki/Lambda_lifting)
-- Monomorphization
-    - From/to AST
-    - Resolve generics by cloning generic definitions for each combination of type parameters
-    - See [Monomorphizing.fs](boot/MiloneLang/Monomorphizing.fs) for details.
-- MIR
-    - From AST to mid-level intermediate representation (MIR)
-    - Convert expressions to imperative statements
-    - Pattern matching is broken down to a list of `if`/`goto`s.
-- CIR
-    - From MIR to CIR
-    - Generate `struct`s, etc.
-- CPrinting
-    - From CIR to C language source code
+and functions are in:
+
+- [Helpers](boot/MiloneLang/Helpers.fs)
+
+The following transformations are consist of the compilation in the order:
+
+- [Lexing](boot/MiloneLang/Lexing.fs) (Tokenization)
+- [Parsing](boot/MiloneLang/Parsing.fs)
+- [Bundling](boot/MiloneLang/Bundling.fs)
+    - Source codes concatenation
+- [AstToHir](boot/MiloneLang/AstToHir.fs)
+    - From abstract syntax tree (AST) to high-level intermediate representation (HIR)
+    - For data structure decoupling and desugaring
+- [NameRes](boot/MiloneLang/NameRes.fs) (Name resolution)
+- [Typing](boot/MiloneLang/Typing.fs) (Type inference)
+- [MainHoist](boot/MiloneLang/MainHoist.fs)
+    - Resolve top-level bindings
+- [ClosureConversion](boot/MiloneLang/ClosureConversion.fs)
+    - Resolve use of local variables in functions
+- [EtaExpansion](boot/MiloneLang/EtaExpansion.fs)
+    - Resolve partial applications
+- [Hoist](boot/MiloneLang/Hoist.fs)
+    - Just a preparation of monomorphization
+- [Monomorphization](boot/MiloneLang/Monomorphization.fs)
+    - Resolve generic functions by code clone
+- [Mir](boot/MiloneLang/Mir.fs)
+    - Resolve pattern matches
+    - Convert to mid-level intermediate representation (MIR)
+- [CIrGen](boot/MiloneLang/CIrGen.fs)
+    - Generate C code
+- [CPrinting](boot/MiloneLang/CPrinting.fs)
+    - C code to string
 
 ## Development
 
 ### Dev: Prerequisites
 
-- Install .NET Core CLI Tools 2.1
-- Install [F# 4.1](http://ionide.io/#requirements)
+- Install .NET Core SDK [2.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/2.1)
+- Install [F#](http://ionide.io/#requirements) 4.1 tools
 
 ### Dev: Tasks
 
-[task](./boot/task) provides a set of testing scripts.
+[task](./boot/task) provides a set of testing scripts. Run in the `boot` directory.
 
-- It is written for `bash` because I'm using Ubuntu desktop for development. It might work on Windows Subsystem Linux.
+- It's written for `bash` because I'm using a Ubuntu desktop for development. It might work on Windows Subsystem Linux or macOs (not tried).
 
 To execute integration tests, run `./task integ-all`.
 
@@ -138,8 +156,8 @@ The `tests` directory contains files for testing.
 
 There are some categories of testing files:
 
-- `features`: Language feature testing
-- `functions`: Primitives testing
-- `errors`: Compile error testing
-- `examples`: Complex, meaningful codes
+- `features`: Testing of language features
+- `functions`: Testing of primitives
+- `errors`: Testing of compile errors
+- `examples`: Complex codes
 - `pendings`: Incomplete test cases

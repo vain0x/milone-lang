@@ -28,14 +28,14 @@ let main _ =
 
     match err1 with
     | Ok ->
-      exit 1
+      assert false
     | Err e ->
-      if e <> "No such file or directory." then exit 2
+      assert (e = "No such file or directory.")
 
   let () =
     match LimitVal 1 with
     | LimitVal x ->
-      if x <> 1 then exit 1
+      assert (x = 1)
     | LimitDiv ->
       exit 2
 
@@ -44,14 +44,14 @@ let main _ =
     | ARCancel ->
       ()
     | _ ->
-      exit 1
+      assert false
 
   let () =
     match ARError (404, "Not Found") with
     | ARError (statusCode, statusText) ->
-      if statusCode <> 404 || statusText <> "Not Found" then exit 1
+      assert (statusCode = 404 && statusText = "Not Found")
     | _ ->
-      exit 1
+      assert false
 
   // Type annotations should work.
   let ok: Status = Ok: Status
@@ -64,7 +64,7 @@ let main _ =
   | Status.Ok ->
     ()
   | Status.Err _ ->
-    exit 1
+    assert false
 
   let okWrapper = OkWrapper.T Ok.Ok
 

@@ -8,7 +8,7 @@ set -eu
 # Output:
 #   tests/examples/hello
 locate() {
-    echo $(find tests/*/$1 -type d)
+    echo $(find tests/*/$1 -type d | head -n 1)
 }
 
 # Converts milone code to C code and compiles it with GCC.
@@ -28,7 +28,7 @@ compile() {
         return 1
     fi
 
-    gcc -std=c11 -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -O1 $c -o $app
+    gcc -std=c11 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -O1 $c -o $app
     if [[ $? != 0 ]]
     then
         echo 'gcc compile error.'
