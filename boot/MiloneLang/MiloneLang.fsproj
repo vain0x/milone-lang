@@ -20,6 +20,7 @@
     <Compile Include="Mir.fs" />
     <Compile Include="CIrGen.fs" />
     <Compile Include="CPrinting.fs" />
+    <Compile Include="Self.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 </Project>

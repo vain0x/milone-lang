@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -eux
+
+OUT=tests/examples/MiloneLang/MiloneLang.out
+
+dotnet run -p MiloneLang -- --self >$OUT
+echo '$?' = $? >>$OUT

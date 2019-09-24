@@ -282,7 +282,8 @@ let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
   | Ty.Con (TyCon.List, _)
   | Ty.Con (TyCon.Fun, _)
   | Ty.Error _ ->
-    failwithf "Never %A" ty
+    eprintfn "Never %A" ty
+    CTy.Void, ctx
 
 let cirifyTys (tys, ctx) =
   stMap (fun (ty, ctx) -> cty ctx ty) (tys, ctx)

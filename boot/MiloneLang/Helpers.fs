@@ -82,6 +82,15 @@ let listLength xs =
       go (len + 1) xs
   go 0 xs
 
+let rec listIter f xs =
+  match xs with
+  | [] ->
+    ()
+
+  | x :: xs ->
+    f x
+    listIter f xs
+
 let listMap f xs =
   let rec go acc xs =
     match xs with

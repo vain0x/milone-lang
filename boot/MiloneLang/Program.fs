@@ -62,6 +62,8 @@ let main args =
     runCompile Verbosity.Verbose projectDir
   | ["-q"; projectDir] ->
     runCompile Verbosity.Silent projectDir
+  | ["--self"] ->
+    Self.doSelf (fun filePath -> System.IO.File.ReadAllText(filePath))
   | _ ->
     eprintfn """USAGE: milone [OPTIONS] <project-dir>
 
