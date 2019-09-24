@@ -8,3 +8,5 @@ let failwith (str: string) =
 let failwithf (str: string) =
   printfn "FATAL ERROR: %s" str
   exit 1
+
+let fst (x, _) = x

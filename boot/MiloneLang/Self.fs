@@ -3,6 +3,7 @@ module rec MiloneLang.Self
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Lexing
+open MiloneLang.Parsing
 
 let tokenToString token =
   match token with
@@ -171,8 +172,11 @@ let tokenToString token =
 let doSelf (fileReadAllText: string -> string) =
   let source = fileReadAllText "MiloneLang/Lexing.fs"
 
-  source
-  |> tokenize
-  |> listIter (fun (token, (y, x)) -> printfn "%s (%d, %d)" (tokenToString token) y x)
+  let tokens = source |> tokenize
+
+  tokens |> listIter (fun (token, (y, x)) -> printfn "%s (%d, %d)" (tokenToString token) y x)
+
+  let _, errors = tokens |> parse
+  errors |> listIter (fun (msg, (y, x)) -> printfn "ERROR %s (%d:%d)" msg (y + 1) (x + 1))
 
   0
