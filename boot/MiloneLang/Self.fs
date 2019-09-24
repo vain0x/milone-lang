@@ -269,7 +269,11 @@ let axDump (expr: AExpr) =
     ]
 
   | AExpr.Match (target, arms, _) ->
-    dumpTreeNew "match" [axDump target] // FIXME: arms
+    let dumpArm (AArm (pat, guard, body, _)) =
+      dumpTreeNew "arm" [apDump pat; axDump guard]
+      |> dumpTreeAttachNext (axDump body)
+
+    dumpTreeNew "match" (axDump target :: (arms |> listMap dumpArm))
 
   | AExpr.Fun (pats, body, _) ->
     dumpTreeNew "fun" (pats |> listMap apDump)
@@ -304,25 +308,33 @@ let axDump (expr: AExpr) =
     |> dumpTreeAttachNext (axDump next)
 
   | AExpr.TySynonym (ident, ty, _) ->
-    dumpTreeNewLeaf "FIXME: TBD"
+    dumpTreeNew "synonym" [dumpTreeNewLeaf ident]
+    |> dumpTreeAttachNext (atDump ty)
 
   | AExpr.TyUnion (ident, variants, _) ->
-    dumpTreeNewLeaf "FIXME: TBD"
+    let dumpVariant (AVariant (ident, _, _)) =
+      dumpTreeNewLeaf ident
+
+    dumpTreeNew "union" (dumpTreeNewLeaf ident :: (variants |> listMap dumpVariant))
 
   | AExpr.Open (path, _) ->
-    dumpTreeNewLeaf "FIXME: TBD"
+    dumpTreeNew "open" (path |> listMap dumpTreeNewLeaf)
 
 let doSelf (fileReadAllText: string -> string) =
-  let source = fileReadAllText "MiloneLang/Lexing.fs"
+  let doFile (filePath: string) =
+    printfn "FILE %s" filePath
 
-  let tokens = source |> tokenize
+    let source = fileReadAllText filePath
+    let tokens = source |> tokenize
 
-  tokens |> listIter (fun (token, (y, x)) -> printfn "%s (%d, %d)" (tokenToString token) y x)
+    tokens |> listIter (fun (token, (y, x)) -> printfn "%s (%d, %d)" (tokenToString token) y x)
 
-  let ast, errors = tokens |> parse
-  printfn "AST:"
-  printfn "%s" (ast |> axDump |> dumpTreeToString)
+    let ast, errors = tokens |> parse
+    printfn "AST:"
+    printfn "%s" (ast |> axDump |> dumpTreeToString)
 
-  errors |> listIter (fun (msg, (y, x)) -> printfn "ERROR %s (%d:%d)" msg (y + 1) (x + 1))
+    errors |> listIter (fun (msg, (y, x)) -> printfn "ERROR %s (%d:%d)" msg (y + 1) (x + 1))
 
+  doFile "MiloneLang/Lexing.fs"
+  doFile "MiloneLang/Parsing.fs"
   0
