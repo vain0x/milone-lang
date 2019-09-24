@@ -200,6 +200,41 @@ let opLevelToNext level =
     OpLevel.Prefix
 
 // -----------------------------------------------
+// APat
+// -----------------------------------------------
+
+let apFalse loc =
+  APat.Lit (litFalse, loc)
+
+let apTrue loc =
+  APat.Lit (litTrue, loc)
+
+// -----------------------------------------------
+// AExpr
+// -----------------------------------------------
+
+let axUnit loc =
+  AExpr.TupleLit ([], loc)
+
+let axFalse loc =
+  AExpr.Lit (litFalse, loc)
+
+let axTrue loc =
+  AExpr.Lit (litTrue, loc)
+
+let axNil loc =
+  AExpr.ListLit ([], loc)
+
+let axApp3 f x1 x2 x3 loc =
+  let app x f = AExpr.Bin (Op.App, f, x, loc)
+  f |> app x1 |> app x2 |> app x3
+
+/// `not x` ==> `x = false`
+let axNot arg loc =
+  let falseExpr = axFalse loc
+  AExpr.Bin (Op.Eq, arg, falseExpr, loc)
+
+// -----------------------------------------------
 // Name context
 // -----------------------------------------------
 
