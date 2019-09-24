@@ -30,6 +30,7 @@
 module rec MiloneLang.Lexing
 
 open MiloneLang.Types
+open MiloneLang.Helpers
 
 /// (text, index, loc, tokenAcc)
 type TokenizeCtx = string * int * Loc * (Token * Loc) list
