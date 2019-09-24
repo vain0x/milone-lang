@@ -267,6 +267,32 @@ let tyUnit =
 let tyRef serial tys =
   Ty.Con (TyCon.Ref serial, tys)
 
+let tyPrimFromIdent ident tys loc =
+  match ident, tys with
+  | "unit", [] ->
+    tyUnit
+
+  | "bool", [] ->
+    tyBool
+
+  | "int", [] ->
+    tyInt
+
+  | "char", [] ->
+    tyChar
+
+  | "string", [] ->
+    tyStr
+
+  | "obj", [] ->
+    tyObj
+
+  | "list", [itemTy] ->
+    tyList itemTy
+
+  | _ ->
+    Ty.Error loc
+
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
@@ -400,6 +426,41 @@ let litToTy (lit: Lit): Ty =
 // -----------------------------------------------
 // Primitives (HIR)
 // -----------------------------------------------
+
+let primFromIdent ident =
+  match ident with
+  | "not" ->
+    HPrim.Not |> Some
+
+  | "exit" ->
+    HPrim.Exit |> Some
+
+  | "assert" ->
+    HPrim.Assert |> Some
+
+  | "box" ->
+    HPrim.Box |> Some
+
+  | "unbox" ->
+    HPrim.Unbox |> Some
+
+  | "printfn" ->
+    HPrim.Printfn |> Some
+
+  | "char" ->
+    HPrim.Char |> Some
+
+  | "int" ->
+    HPrim.Int |> Some
+
+  | "string" ->
+    HPrim.String |> Some
+
+  | "__nativeFun" ->
+    HPrim.NativeFun ("<native-fun>", -1) |> Some
+
+  | _ ->
+    None
 
 let primToTySpec prim =
   let meta id = Ty.Meta (id, noLoc)
