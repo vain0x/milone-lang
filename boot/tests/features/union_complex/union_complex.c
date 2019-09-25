@@ -32,6 +32,14 @@ struct Node_;
 
 struct Node_List;
 
+enum Third_Tag;
+
+struct Third_;
+
+struct IntThird_Tuple2List;
+
+struct IntThird_Tuple2;
+
 int main();
 
 enum First_Tag {
@@ -121,6 +129,28 @@ struct Node_List {
     struct Node_List* tail;
 };
 
+enum Third_Tag {
+    Leaf3_,
+    Node3_,
+};
+
+struct Third_ {
+    enum Third_Tag tag;
+    union {
+        struct IntThird_Tuple2List** Node3_;
+    };
+};
+
+struct IntThird_Tuple2List {
+    struct IntThird_Tuple2 head;
+    struct IntThird_Tuple2List* tail;
+};
+
+struct IntThird_Tuple2 {
+    int t0;
+    struct Third_ t1;
+};
+
 int main() {
     int match_;
     int* payload_ = (int*)malloc(sizeof(int));
@@ -204,12 +234,12 @@ next_8:;
 next_9:;
     exit(1);
 end_match_4:;
-    milone_assert(match_1, 22, 4);
+    milone_assert(match_1, 27, 4);
     int call_2 = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(0, 24, 4);
+    milone_assert(0, 29, 4);
     int call_3 = 0;
     match_ = 0;
     goto end_match_1;
@@ -234,5 +264,25 @@ end_match_1:;
     tuple_1.t1 = variant_8;
     struct First_ first_ = tuple_1.t0;
     struct Second_ second_ = tuple_1.t1;
+    int match_3;
+    struct IntThird_Tuple2 tuple_2;
+    tuple_2.t0 = 0;
+    tuple_2.t1 = (struct Third_){.tag = Leaf3_};
+    struct IntThird_Tuple2List* list_6 = (struct IntThird_Tuple2List*)malloc(sizeof(struct IntThird_Tuple2List));
+    list_6->head = tuple_2;
+    list_6->tail = NULL;
+    if ((!(list_6))) goto next_11;
+    if ((list_6->head.t0 != 0)) goto next_11;
+    if ((list_6->head.t1.tag != Leaf3_)) goto next_11;
+    if ((!((!(list_6->tail))))) goto next_11;
+    match_3 = 0;
+    goto end_match_10;
+next_11:;
+    milone_assert(0, 37, 9);
+    int call_4 = 0;
+    match_3 = 0;
+    goto end_match_10;
+next_12:;
+end_match_10:;
     return 0;
 }
