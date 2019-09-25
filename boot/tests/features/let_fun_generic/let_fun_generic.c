@@ -20,11 +20,11 @@ struct IntIntFun1;
 
 struct IntList* listMap_2(struct IntIntFun1 f_, struct IntList* xs_3);
 
+struct StringIntTuple2;
+
 struct IntStringTuple2StringIntTuple2Fun1;
 
 struct IntStringTuple2;
-
-struct StringIntTuple2;
 
 struct IntStringTuple2List;
 
@@ -145,6 +145,11 @@ end_match_7:;
     return match_2;
 }
 
+struct StringIntTuple2 {
+    struct String t0;
+    int t1;
+};
+
 struct IntStringTuple2StringIntTuple2Fun1 {
     struct StringIntTuple2(*fun)(void*, struct IntStringTuple2);
     void* env;
@@ -153,11 +158,6 @@ struct IntStringTuple2StringIntTuple2Fun1 {
 struct IntStringTuple2 {
     int t0;
     struct String t1;
-};
-
-struct StringIntTuple2 {
-    struct String t0;
-    int t1;
 };
 
 struct IntStringTuple2List {

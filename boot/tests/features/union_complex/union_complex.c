@@ -4,21 +4,19 @@ enum First_Tag;
 
 struct First_;
 
-struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1;
-
-struct First_List;
-
 enum Second_Tag;
 
 struct Second_;
 
-struct Second_List;
-
-struct First_ListSecond_ListTuple2;
-
 struct First_Second_Tuple2;
 
 struct First_Second_Tuple2List;
+
+struct First_List;
+
+struct Second_List;
+
+struct First_ListSecond_ListTuple2;
 
 struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* arg_2);
 
@@ -32,13 +30,15 @@ struct Node_;
 
 struct Node_List;
 
+struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1;
+
 enum Third_Tag;
 
 struct Third_;
 
-struct IntThird_Tuple2List;
-
 struct IntThird_Tuple2;
+
+struct IntThird_Tuple2List;
 
 int main();
 
@@ -53,16 +53,6 @@ struct First_ {
     };
 };
 
-struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 {
-    struct First_ListSecond_ListTuple2(*fun)(void*, struct First_Second_Tuple2List*);
-    void* env;
-};
-
-struct First_List {
-    struct First_ head;
-    struct First_List* tail;
-};
-
 enum Second_Tag {
     Second_,
 };
@@ -74,16 +64,6 @@ struct Second_ {
     };
 };
 
-struct Second_List {
-    struct Second_ head;
-    struct Second_List* tail;
-};
-
-struct First_ListSecond_ListTuple2 {
-    struct First_List* t0;
-    struct Second_List* t1;
-};
-
 struct First_Second_Tuple2 {
     struct First_ t0;
     struct Second_ t1;
@@ -92,6 +72,21 @@ struct First_Second_Tuple2 {
 struct First_Second_Tuple2List {
     struct First_Second_Tuple2 head;
     struct First_Second_Tuple2List* tail;
+};
+
+struct First_List {
+    struct First_ head;
+    struct First_List* tail;
+};
+
+struct Second_List {
+    struct Second_ head;
+    struct Second_List* tail;
+};
+
+struct First_ListSecond_ListTuple2 {
+    struct First_List* t0;
+    struct Second_List* t1;
 };
 
 struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* arg_2) {
@@ -129,6 +124,11 @@ struct Node_List {
     struct Node_List* tail;
 };
 
+struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 {
+    struct First_ListSecond_ListTuple2(*fun)(void*, struct First_Second_Tuple2List*);
+    void* env;
+};
+
 enum Third_Tag {
     Leaf3_,
     Node3_,
@@ -141,14 +141,14 @@ struct Third_ {
     };
 };
 
-struct IntThird_Tuple2List {
-    struct IntThird_Tuple2 head;
-    struct IntThird_Tuple2List* tail;
-};
-
 struct IntThird_Tuple2 {
     int t0;
     struct Third_ t1;
+};
+
+struct IntThird_Tuple2List {
+    struct IntThird_Tuple2 head;
+    struct IntThird_Tuple2List* tail;
 };
 
 int main() {
