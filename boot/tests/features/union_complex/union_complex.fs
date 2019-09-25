@@ -17,6 +17,11 @@ type Second =
   | Second
     of ((First * Second) list -> First list * Second list)
 
+type Third =
+  | Leaf3
+  | Node3
+    of (int * Third) list
+
 let main _ =
   match Node [Node [Leaf 1; Leaf 2]; Node []; Node [Leaf 3]] with
   | Node (Node (Leaf x :: Leaf y :: []) :: Node [] :: Node (Leaf z :: []) :: []) ->
@@ -27,5 +32,9 @@ let main _ =
   let first, second =
     let f (_: (First * Second) list): (First list * Second list) = [], []
     First f, Second f
+
+  match [0, Leaf3] with
+  | [0, Leaf3] -> ()
+  | _ -> assert false
 
   0

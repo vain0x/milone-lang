@@ -6,12 +6,6 @@ enum Space_Tag;
 
 struct Space_;
 
-struct StringSpace_ListTuple2;
-
-struct UnitSpace_Fun1;
-
-struct StringUnitSpace_Fun1Tuple2;
-
 struct Space_List;
 
 struct Space_List* failwith_3(struct String msg_);
@@ -67,8 +61,6 @@ enum Pat_Tag;
 struct Pat_;
 
 struct Pat_List;
-
-struct Pat_Pat_Tuple2;
 
 struct Space_List* go_23(struct Pat_Space_Fun1 f_, struct Space_List* acc_1, struct Pat_List* xs_5);
 
@@ -158,7 +150,13 @@ struct String go_7(struct StringList* xs_23);
 
 struct String strConcat_(struct StringList* xs_22);
 
+struct StringSpace_ListTuple2;
+
 struct Space_ spaceCtor_(struct String tag_, struct Space_List* items_);
+
+struct UnitSpace_Fun1;
+
+struct StringUnitSpace_Fun1Tuple2;
 
 struct Space_ spaceRef_(struct String tag_1, struct UnitSpace_Fun1 thunk_);
 
@@ -230,6 +228,8 @@ struct Space_ tyToSpace_(struct Space_ spaceFull_, struct Ty_ ty_);
 
 struct Space_ fun_21(void* env_12, struct Pat_ arg_35);
 
+struct Pat_Pat_Tuple2;
+
 struct Space_ go_11(struct Space_ spaceEmpty_, struct Space_ spaceFull_, struct Pat_ pat_1);
 
 struct Space_ patToSpace_(struct Space_ spaceEmpty_, struct Space_ spaceFull_, struct Pat_ pat_);
@@ -282,21 +282,6 @@ struct Space_ {
         struct StringUnitSpace_Fun1Tuple2* Ref_;
         struct Space_List** Union_;
     };
-};
-
-struct StringSpace_ListTuple2 {
-    struct String t0;
-    struct Space_List* t1;
-};
-
-struct UnitSpace_Fun1 {
-    struct Space_(*fun)(void*, int);
-    void* env;
-};
-
-struct StringUnitSpace_Fun1Tuple2 {
-    struct String t0;
-    struct UnitSpace_Fun1 t1;
 };
 
 struct Space_List {
@@ -556,11 +541,6 @@ struct Pat_ {
 struct Pat_List {
     struct Pat_ head;
     struct Pat_List* tail;
-};
-
-struct Pat_Pat_Tuple2 {
-    struct Pat_ t0;
-    struct Pat_ t1;
 };
 
 struct Space_List* go_23(struct Pat_Space_Fun1 f_, struct Space_List* acc_1, struct Pat_List* xs_5) {
@@ -1046,6 +1026,11 @@ struct String strConcat_(struct StringList* xs_22) {
     return call_48;
 }
 
+struct StringSpace_ListTuple2 {
+    struct String t0;
+    struct Space_List* t1;
+};
+
 struct Space_ spaceCtor_(struct String tag_, struct Space_List* items_) {
     struct StringSpace_ListTuple2 tuple_2;
     tuple_2.t0 = tag_;
@@ -1055,6 +1040,16 @@ struct Space_ spaceCtor_(struct String tag_, struct Space_List* items_) {
     struct Space_ variant_ = (struct Space_){.tag = Ctor_, .Ctor_ = payload_};
     return variant_;
 }
+
+struct UnitSpace_Fun1 {
+    struct Space_(*fun)(void*, int);
+    void* env;
+};
+
+struct StringUnitSpace_Fun1Tuple2 {
+    struct String t0;
+    struct UnitSpace_Fun1 t1;
+};
 
 struct Space_ spaceRef_(struct String tag_1, struct UnitSpace_Fun1 thunk_) {
     struct StringUnitSpace_Fun1Tuple2 tuple_3;
@@ -1620,6 +1615,11 @@ struct Space_ fun_21(void* env_12, struct Pat_ arg_35) {
     struct Space_ call_124 = go_11(arg_36, arg_37, arg_35);
     return call_124;
 }
+
+struct Pat_Pat_Tuple2 {
+    struct Pat_ t0;
+    struct Pat_ t1;
+};
 
 struct Space_ go_11(struct Space_ spaceEmpty_, struct Space_ spaceFull_, struct Pat_ pat_1) {
     struct Space_ match_32;

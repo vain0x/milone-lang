@@ -4,21 +4,19 @@ enum First_Tag;
 
 struct First_;
 
-struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1;
-
-struct First_List;
-
 enum Second_Tag;
 
 struct Second_;
 
-struct Second_List;
-
-struct First_ListSecond_ListTuple2;
-
 struct First_Second_Tuple2;
 
 struct First_Second_Tuple2List;
+
+struct First_List;
+
+struct Second_List;
+
+struct First_ListSecond_ListTuple2;
 
 struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* arg_2);
 
@@ -31,6 +29,16 @@ enum Node_Tag;
 struct Node_;
 
 struct Node_List;
+
+struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1;
+
+enum Third_Tag;
+
+struct Third_;
+
+struct IntThird_Tuple2;
+
+struct IntThird_Tuple2List;
 
 int main();
 
@@ -45,16 +53,6 @@ struct First_ {
     };
 };
 
-struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 {
-    struct First_ListSecond_ListTuple2(*fun)(void*, struct First_Second_Tuple2List*);
-    void* env;
-};
-
-struct First_List {
-    struct First_ head;
-    struct First_List* tail;
-};
-
 enum Second_Tag {
     Second_,
 };
@@ -66,16 +64,6 @@ struct Second_ {
     };
 };
 
-struct Second_List {
-    struct Second_ head;
-    struct Second_List* tail;
-};
-
-struct First_ListSecond_ListTuple2 {
-    struct First_List* t0;
-    struct Second_List* t1;
-};
-
 struct First_Second_Tuple2 {
     struct First_ t0;
     struct Second_ t1;
@@ -84,6 +72,21 @@ struct First_Second_Tuple2 {
 struct First_Second_Tuple2List {
     struct First_Second_Tuple2 head;
     struct First_Second_Tuple2List* tail;
+};
+
+struct First_List {
+    struct First_ head;
+    struct First_List* tail;
+};
+
+struct Second_List {
+    struct Second_ head;
+    struct Second_List* tail;
+};
+
+struct First_ListSecond_ListTuple2 {
+    struct First_List* t0;
+    struct Second_List* t1;
 };
 
 struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* arg_2) {
@@ -119,6 +122,33 @@ struct Node_ {
 struct Node_List {
     struct Node_ head;
     struct Node_List* tail;
+};
+
+struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 {
+    struct First_ListSecond_ListTuple2(*fun)(void*, struct First_Second_Tuple2List*);
+    void* env;
+};
+
+enum Third_Tag {
+    Leaf3_,
+    Node3_,
+};
+
+struct Third_ {
+    enum Third_Tag tag;
+    union {
+        struct IntThird_Tuple2List** Node3_;
+    };
+};
+
+struct IntThird_Tuple2 {
+    int t0;
+    struct Third_ t1;
+};
+
+struct IntThird_Tuple2List {
+    struct IntThird_Tuple2 head;
+    struct IntThird_Tuple2List* tail;
 };
 
 int main() {
@@ -204,12 +234,12 @@ next_8:;
 next_9:;
     exit(1);
 end_match_4:;
-    milone_assert(match_1, 22, 4);
+    milone_assert(match_1, 27, 4);
     int call_2 = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(0, 24, 4);
+    milone_assert(0, 29, 4);
     int call_3 = 0;
     match_ = 0;
     goto end_match_1;
@@ -234,5 +264,25 @@ end_match_1:;
     tuple_1.t1 = variant_8;
     struct First_ first_ = tuple_1.t0;
     struct Second_ second_ = tuple_1.t1;
+    int match_3;
+    struct IntThird_Tuple2 tuple_2;
+    tuple_2.t0 = 0;
+    tuple_2.t1 = (struct Third_){.tag = Leaf3_};
+    struct IntThird_Tuple2List* list_6 = (struct IntThird_Tuple2List*)malloc(sizeof(struct IntThird_Tuple2List));
+    list_6->head = tuple_2;
+    list_6->tail = NULL;
+    if ((!(list_6))) goto next_11;
+    if ((list_6->head.t0 != 0)) goto next_11;
+    if ((list_6->head.t1.tag != Leaf3_)) goto next_11;
+    if ((!((!(list_6->tail))))) goto next_11;
+    match_3 = 0;
+    goto end_match_10;
+next_11:;
+    milone_assert(0, 37, 9);
+    int call_4 = 0;
+    match_3 = 0;
+    goto end_match_10;
+next_12:;
+end_match_10:;
     return 0;
 }
