@@ -206,6 +206,36 @@ let charIsAlpha (c: char): bool =
 let charNeedsEscaping (c: char) =
   charIsControl c || c = '\\' || c = '"' || c = '\''
 
+let charEscape (c: char) =
+  assert (c |> charNeedsEscaping)
+
+  match c with
+  | '\x00' ->
+    // C-style.
+    "\\0"
+
+  | '\t' ->
+    "\\t"
+
+  | '\n' ->
+    "\\n"
+
+  | '\r' ->
+    "\\r"
+
+  | '\'' ->
+    "\\\'"
+
+  | '\"' ->
+    "\\\""
+
+  | '\\' ->
+    "\\\\"
+
+  | c ->
+    let h = c |> int |> intToHexWithPadding 2
+    "\\x" + h
+
 // -----------------------------------------------
 // String
 // -----------------------------------------------
@@ -253,40 +283,7 @@ let strNeedsEscaping (str: string) =
   let rec go i = i < str.Length && (charNeedsEscaping str.[i] || go (i + 1))
   go 0
 
-let strEscapeCore (i: int) (str: string) =
-  assert (str.[i] |> charNeedsEscaping)
-
-  match str.[i] with
-  | '\x00' ->
-    i + 1, "\\0"
-
-  | '\t' ->
-    i + 1, "\\t"
-
-  | '\n' ->
-    i + 1, "\\n"
-
-  | '\r' ->
-    i + 1, "\\r"
-
-  | '\'' ->
-    i + 1, "\\\'"
-
-  | '\"' ->
-    i + 1, "\\\""
-
-  | '\\' ->
-    i + 1, "\\\\"
-
-  | c ->
-    let h = c |> int |> intToHexWithPadding 2
-    i + 1, "\\x" + h
-
 let strEscape (str: string) =
-  if str |> strNeedsEscaping |> not then
-    str
-  else
-
   let rec go acc i =
     /// Finds the end index of the maximum non-escaping segment
     /// that starts at `l`.
@@ -304,11 +301,13 @@ let strEscape (str: string) =
     if i = str.Length then
       acc
     else
+      let t = str.[i] |> charEscape
+      go (t :: acc) (i + 1)
 
-    let i, s = strEscapeCore i str
-    go (s :: acc) i
-
-  go [] 0 |> listRev |> strConcat
+  if str |> strNeedsEscaping |> not then
+    str
+  else
+    go [] 0 |> listRev |> strConcat
 
 // -----------------------------------------------
 // Location
