@@ -1,4 +1,10 @@
+let testBinarySafe () =
+  assert ("\x00x" < "\x00y")
+
 let main _ =
   let le = "a" < "b"
   let eq = "o" = "o"
-  if le && eq then 0 else 1
+  assert (le && eq)
+
+  testBinarySafe ()
+  0

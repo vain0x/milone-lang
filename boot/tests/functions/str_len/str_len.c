@@ -12,5 +12,7 @@ int main() {
     int call_1 = 0;
     milone_assert((hello_.len == 5), 9, 2);
     int call_2 = 0;
+    milone_assert((5 == 5), 11, 2);
+    int call_3 = 0;
     return 0;
 }

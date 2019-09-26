@@ -4,6 +4,6 @@ let g (_ : string) = ()
 let main _ =
   f '\''
   f '\\'
-  f '\u0000'
+  f '\x00'
   g "\"HELLO\n WORLD\""
   0

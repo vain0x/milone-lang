@@ -118,6 +118,25 @@ let listUnique (xs: 'x list): 'x list =
   xs |> set |> Set.toList
 
 // -----------------------------------------------
+// Assoc
+// -----------------------------------------------
+
+let assocFind eq key assoc =
+  let rec go assoc =
+    match assoc with
+    | [] ->
+      None
+
+    | (firstKey, firstValue) :: _
+      when eq key firstKey ->
+      Some firstValue
+
+    | _ :: assoc ->
+      go assoc
+
+  go assoc
+
+// -----------------------------------------------
 // Int
 // -----------------------------------------------
 
@@ -129,6 +148,102 @@ let intMax (x: int) (y: int) =
 
 let intEq (x: int) (y: int) =
   x = y
+
+let intToHexWithPadding (len: int) (value: int) =
+  if value < 0 then
+    failwith "intToHexWithPadding: unimplemented negative"
+  else
+
+  assert (len >= 0)
+
+  let rec go acc len (n: int) =
+    if n = 0 && len <= 0 then
+      acc
+    else
+      let d = n % 16
+      let s = "0123456789abcdef" |> strSlice d (d + 1)
+      go (s + acc) (len - 1) (n / 16)
+
+  if value = 0 && len = 0 then
+    "0"
+  else
+    go "" len value
+
+let intFromHex (l: int) (r: int) (s: string) =
+  assert (0 <= l && l < r && r <= s.Length)
+
+  let hexDigitToInt (c: char) =
+    if '0' <= c && c <= '9' then
+      charSub c '0'
+    else if 'A' <= c && c <= 'F' then
+      charSub c 'A' + 10
+    else if 'a' <= c && c <= 'f' then
+      charSub c 'a' + 10
+    else
+      assert false
+      0
+
+  let rec go (acc: int) (i: int) =
+    if i = r then
+      acc
+    else
+      let d = hexDigitToInt s.[i]
+      go (acc * 16 + d) (i + 1)
+
+  go 0 l
+
+// -----------------------------------------------
+// Char
+// -----------------------------------------------
+
+let charSub (x: char) (y: char) =
+  int x - int y
+
+let charIsControl (c: char) =
+  let n = int c
+  0 <= n && n < 32 || n = 127
+
+let charIsSpace (c: char): bool =
+  c = ' ' || c = '\t' || c = '\r' || c = '\n'
+
+let charIsDigit (c: char): bool =
+  '0' <= c && c <= '9'
+
+let charIsAlpha (c: char): bool =
+  ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
+
+let charNeedsEscaping (c: char) =
+  charIsControl c || c = '\\' || c = '"' || c = '\''
+
+let charEscape (c: char) =
+  assert (c |> charNeedsEscaping)
+
+  match c with
+  | '\x00' ->
+    // C-style.
+    "\\0"
+
+  | '\t' ->
+    "\\t"
+
+  | '\n' ->
+    "\\n"
+
+  | '\r' ->
+    "\\r"
+
+  | '\'' ->
+    "\\\'"
+
+  | '\"' ->
+    "\\\""
+
+  | '\\' ->
+    "\\\\"
+
+  | c ->
+    let h = c |> int |> intToHexWithPadding 2
+    "\\x" + h
 
 // -----------------------------------------------
 // String
@@ -173,24 +288,35 @@ let strConcat (xs: string list) =
   //     x + go xs
   // go xs
 
-// -----------------------------------------------
-// Assoc
-// -----------------------------------------------
+let strNeedsEscaping (str: string) =
+  let rec go i = i < str.Length && (charNeedsEscaping str.[i] || go (i + 1))
+  go 0
 
-let assocFind eq key assoc =
-  let rec go assoc =
-    match assoc with
-    | [] ->
-      None
+let strEscape (str: string) =
+  let rec go acc i =
+    /// Finds the end index of the maximum non-escaping segment
+    /// that starts at `l`.
+    let rec raw i =
+      if i = str.Length || charNeedsEscaping str.[i] then
+        i
+      else
+        raw (i + 1)
 
-    | (firstKey, firstValue) :: _
-      when eq key firstKey ->
-      Some firstValue
+    // Skip the non-escape segment that starts at `i`.
+    let i, acc =
+      let r = raw i
+      r, (str |> strSlice i r) :: acc
 
-    | _ :: assoc ->
-      go assoc
+    if i = str.Length then
+      acc
+    else
+      let t = str.[i] |> charEscape
+      go (t :: acc) (i + 1)
 
-  go assoc
+  if str |> strNeedsEscaping |> not then
+    str
+  else
+    go [] 0 |> listRev |> strConcat
 
 // -----------------------------------------------
 // Location
@@ -347,26 +473,6 @@ let axNot arg loc =
 // DumpTree (for debugging)
 // -----------------------------------------------
 
-let intToHexWithPadding (len: int) (value: int) =
-  if value < 0 then
-    failwith "intToHexWithPadding: unimplemented negative"
-  else
-
-  assert (len >= 0)
-
-  let rec go acc len (n: int) =
-    if n = 0 && len <= 0 then
-      acc
-    else
-      let d = n % 16
-      let s = "0123456789abcdef" |> strSlice d (d + 1)
-      go (s + acc) (len - 1) (n / 16)
-
-  if value = 0 && len = 0 then
-    "0"
-  else
-    go "" len value
-
 let dumpTreeNew text children =
   DumpTree (text, children, [])
 
@@ -389,74 +495,6 @@ let dumpTreeFromError (msg: string) (y, x) =
   ]
 
 let dumpTreeToString (node: DumpTree) =
-  let charIsControl (c: char) =
-    let n = int c
-    0 <= n && n < 32 || n = 127
-
-  let charNeedsEscaping (c: char) =
-    charIsControl c || c = '\\' || c = '"' || c = '\''
-
-  let strNeedsEscaping (str: string) =
-    let rec go i = i < str.Length && (charNeedsEscaping str.[i] || go (i + 1))
-    go 0
-
-  let strEscapeCore (i: int) (str: string) =
-    assert (str.[i] |> charNeedsEscaping)
-
-    match str.[i] with
-    | '\u0000' ->
-      i + 1, "\\0"
-
-    | '\t' ->
-      i + 1, "\\t"
-
-    | '\n' ->
-      i + 1, "\\n"
-
-    | '\r' ->
-      i + 1, "\\r"
-
-    | '\'' ->
-      i + 1, "\\\'"
-
-    | '\"' ->
-      i + 1, "\\\""
-
-    | '\\' ->
-      i + 1, "\\\\"
-
-    | c ->
-      let h = c |> int |> intToHexWithPadding 2
-      i + 1, "\\x" + h
-
-  let strEscape (str: string) =
-    if str |> strNeedsEscaping |> not then
-      str
-    else
-
-    let rec go acc i =
-      /// Finds the end index of the maximum non-escaping segment
-      /// that starts at `l`.
-      let rec raw i =
-        if i = str.Length || charNeedsEscaping str.[i] then
-          i
-        else
-          raw (i + 1)
-
-      // Skip the non-escape segment that starts at `i`.
-      let i, acc =
-        let r = raw i
-        r, (str |> strSlice i r) :: acc
-
-      if i = str.Length then
-        acc
-      else
-
-      let i, s = strEscapeCore i str
-      go (s :: acc) i
-
-    go [] 0 |> listRev |> strConcat
-
   let rec go eol node acc =
     let rec goChildren eol children acc =
       match children with
@@ -587,6 +625,10 @@ let tyPrimFromIdent ident tys loc =
 
   | "obj", [] ->
     tyObj
+
+  | "option", [itemTy] ->
+    // FIXME: option is just an alias of list for now
+    tyList itemTy
 
   | "list", [itemTy] ->
     tyList itemTy
@@ -757,6 +799,12 @@ let primFromIdent ident =
   | "string" ->
     HPrim.String |> Some
 
+  | "None" ->
+    HPrim.None |> Some
+
+  | "Some" ->
+    HPrim.Some |> Some
+
   | "__nativeFun" ->
     HPrim.NativeFun ("<native-fun>", -1) |> Some
 
@@ -801,6 +849,15 @@ let primToTySpec prim =
     let itemTy = meta 1
     let listTy = tyList itemTy
     poly (tyFun itemTy (tyFun listTy listTy)) []
+
+  | HPrim.None ->
+    let itemTy = meta 1
+    poly (tyList itemTy) []
+
+  | HPrim.Some ->
+    let itemTy = meta 1
+    let listTy = tyList itemTy
+    poly (tyFun itemTy listTy) []
 
   | HPrim.Index ->
     let lTy = meta 1
@@ -850,8 +907,10 @@ let primToTySpec prim =
 
 let primToArity ty prim =
   match prim with
-  | HPrim.Nil ->
+  | HPrim.Nil
+  | HPrim.None ->
     0
+  | HPrim.Some
   | HPrim.Not
   | HPrim.Exit
   | HPrim.Assert
@@ -895,6 +954,10 @@ let rec patExtract (pat: HPat): Ty * Loc =
     litToTy lit, a
   | HPat.Nil (itemTy, a) ->
     tyList itemTy, a
+  | HPat.None (itemTy, a) ->
+    tyList itemTy, a
+  | HPat.Some (itemTy, a) ->
+    tyList itemTy, a
   | HPat.Discard (ty, a) ->
     ty, a
   | HPat.Ref (_, ty, a) ->
@@ -922,6 +985,10 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Lit (lit, g a)
     | HPat.Nil (itemTy, a) ->
       HPat.Nil (f itemTy, g a)
+    | HPat.None (itemTy, a) ->
+      HPat.None (f itemTy, g a)
+    | HPat.Some (itemTy, a) ->
+      HPat.Some (f itemTy, g a)
     | HPat.Discard (ty, a) ->
       HPat.Discard (f ty, g a)
     | HPat.Ref (serial, ty, a) ->
@@ -950,7 +1017,9 @@ let patNormalize pat =
     | HPat.Lit _
     | HPat.Discard _
     | HPat.Ref _
-    | HPat.Nil _ ->
+    | HPat.Nil _
+    | HPat.None _
+    | HPat.Some _ ->
       [pat]
     | HPat.Nav (pat, ident, ty, loc) ->
       go pat |> List.map

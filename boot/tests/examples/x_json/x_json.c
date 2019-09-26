@@ -176,7 +176,7 @@ next_29:;
     goto end_match_31;
 next_32:;
     if (call_10) goto next_33;
-    printf("ERROR: Unknown Token '%c'\n", s_.str[i_1]);
+    printf("ERROR: Unknown Token \'%c\'\n", s_.str[i_1]);
     int call_14 = 0;
     exit(1);
     match_10 = NULL;

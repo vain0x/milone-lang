@@ -1,10 +1,10 @@
 #include "milone.h"
 
-struct UnitLazyList_Fun1;
-
 enum LazyList_Tag;
 
 struct LazyList_;
+
+struct UnitLazyList_Fun1;
 
 struct IntUnitLazyList_Fun1Tuple2;
 
@@ -22,11 +22,6 @@ struct LazyList_ makeTail_(int n_2, int prev_, int arg_3);
 
 int main();
 
-struct UnitLazyList_Fun1 {
-    struct LazyList_(*fun)(void*, int);
-    void* env;
-};
-
 enum LazyList_Tag {
     Nil_,
     Cons_,
@@ -37,6 +32,11 @@ struct LazyList_ {
     union {
         struct IntUnitLazyList_Fun1Tuple2* Cons_;
     };
+};
+
+struct UnitLazyList_Fun1 {
+    struct LazyList_(*fun)(void*, int);
+    void* env;
 };
 
 struct IntUnitLazyList_Fun1Tuple2 {

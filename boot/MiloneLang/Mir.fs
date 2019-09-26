@@ -137,6 +137,9 @@ let mirifyPatNil ctx endLabel itemTy expr loc =
   let ctx = ctxAddStmt ctx gotoStmt
   false, ctx
 
+let mirifyPatNone ctx endLabel itemTy expr loc =
+  mirifyPatNil ctx endLabel itemTy expr loc
+
 let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let listTy = tyList itemTy
   let isEmpty = MExpr.Uni (MUniOp.ListIsEmpty, expr, tyBool, loc)
@@ -148,6 +151,10 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let _, ctx = mirifyPat ctx endLabel l head
   let _, ctx = mirifyPat ctx endLabel r tail
   false, ctx
+
+let mirifyPatSome ctx endLabel item itemTy loc expr =
+  let nilPat = HPat.Nil (itemTy, loc)
+  mirifyPatCons ctx endLabel item nilPat itemTy loc expr
 
 let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
   match ctx.Vars |> Map.find serial with
@@ -185,6 +192,7 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
     // Extract content.
     let _, ctx = mirifyPat ctx endLabel payload extractExpr
     false, ctx
+
   | _ ->
     let letStmt = MStmt.LetVal (serial, MInit.Expr expr, ty, loc)
     true, ctxAddStmt ctx letStmt
@@ -224,16 +232,23 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     mirifyPatLit ctx endLabel lit expr loc
   | HPat.Nil (itemTy, loc) ->
     mirifyPatNil ctx endLabel itemTy expr loc
+  | HPat.None (itemTy, loc) ->
+    mirifyPatNone ctx endLabel itemTy expr loc
   | HPat.Ref (serial, ty, loc) ->
     mirifyPatRef ctx endLabel serial ty loc expr
   | HPat.Call (HPat.Ref (serial, _, _), args, ty, loc) ->
     mirifyPatCall ctx endLabel serial args ty loc expr
+  | HPat.Call (HPat.Some (itemTy, loc), [item], _, _) ->
+    mirifyPatSome ctx endLabel item itemTy loc expr
   | HPat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
   | HPat.Tuple (itemPats, Ty.Con (TyCon.Tuple, itemTys), loc) ->
     mirifyPatTuple ctx endLabel itemPats itemTys expr loc
   | HPat.As (pat, serial, loc) ->
     mirifyPatAs ctx endLabel pat serial expr loc
+  | HPat.Some (_, loc) ->
+    let ctx = ctxAddErr ctx "Some pattern must be used in the form of `Some pat`" loc
+    false, ctx
   | HPat.Or _ ->
     failwith "Unimpl nested OR pattern."
   | HPat.Nav _ ->
@@ -258,6 +273,10 @@ let mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
   | HPrim.Nil ->
     MExpr.Default (ty, loc), ctx
+
+  | HPrim.None ->
+    MExpr.Default (ty, loc), ctx
+
   | _ ->
     failwithf "Never: Primitives must appear as callee."
 
@@ -278,6 +297,8 @@ let patsIsCovering pats =
       true
     | HPat.Lit _
     | HPat.Nil _
+    | HPat.None _
+    | HPat.Some _
     | HPat.Nav _
     | HPat.Cons _
     | HPat.Call _ ->
@@ -446,6 +467,14 @@ let mirifyExprCallStrLength ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
   MExpr.Uni (MUniOp.StrLen, arg, ty, loc), ctx
 
+let mirifyExprCallSome ctx item ty loc =
+  let _, tempSerial, ctx = ctxFreshVar ctx "some" ty loc
+
+  let item, ctx = mirifyExpr ctx item
+  let nil = MExpr.Default (ty, loc)
+  let ctx = ctxAddStmt ctx (MStmt.LetVal (tempSerial, MInit.Cons (item, nil), ty, loc))
+  MExpr.Ref (tempSerial, ty, loc), ctx
+
 /// not a ==> !a
 let mirifyExprCallNot ctx arg ty notLoc =
   let arg, ctx = mirifyExpr ctx arg
@@ -552,6 +581,8 @@ let mirifyExprInfCallProc ctx callee args ty loc =
       mirifyExprOpCons ctx l r ty loc
     | HPrim.Index, [l; r] ->
       mirifyExprIndex ctx l r ty loc
+    | HPrim.Some, [item] ->
+      mirifyExprCallSome ctx item ty loc
     | HPrim.Not, [arg] ->
       mirifyExprCallNot ctx arg ty loc
     | HPrim.Exit, [arg] ->

@@ -9,13 +9,18 @@ module rec MiloneLang.CIrGen
 open MiloneLang.Types
 open MiloneLang.Helpers
 
+[<RequireQualifiedAccess>]
+type TyInstance =
+  | Declared
+  | Defined
+
 /// IR generation context.
 [<RequireQualifiedAccess>]
 type Ctx =
   {
     Vars: Map<VarSerial, VarDef>
     VarUniqueNames: Map<VarSerial, Ident>
-    TyEnv: Map<Ty, CTy>
+    TyEnv: Map<Ty, TyInstance * CTy>
     Tys: Map<TySerial, TyDef>
     TyUniqueNames: Map<Ty, Ident>
     Stmts: CStmt list
@@ -76,118 +81,178 @@ let ctxAddStmt (ctx: Ctx) stmt =
 let ctxAddDecl (ctx: Ctx) decl =
   { ctx with Decls = decl :: ctx.Decls }
 
-let ctxAddFunDecl (ctx: Ctx) sTy tTy =
-  // First, register the type name to the map. Without this,
-  // `cty`ing the signature types could generate this function type too.
+let ctxAddFunIncomplete (ctx: Ctx) sTy tTy =
   let funTy = tyFun sTy tTy
-  let ident, ctx = ctxUniqueTyName ctx funTy
-  let selfTy = CTy.Struct ident
-  let ctx: Ctx =
-    { ctx with
-        TyEnv = ctx.TyEnv |> Map.add funTy selfTy
-    }
+  match ctx.TyEnv |> Map.tryFind funTy with
+  | Some (_, ty) ->
+    ty, ctx
 
-  // Second, `cty`ing signature types.
-  let envTy = CTy.Ptr CTy.Void
-  let _, argTys, resultTy = tyToArgList funTy
+  | None ->
+    let ident, ctx = ctxUniqueTyName ctx funTy
+    let funStructTy = CTy.Struct ident
+    let ctx: Ctx =
+      { ctx with
+          TyEnv = ctx.TyEnv |> Map.add funTy (TyInstance.Declared, funStructTy)
+      }
+    funStructTy, ctx
 
-  let makeSignature ctx =
-    let argTys, ctx = cirifyTys (argTys, ctx)
+let ctxAddFunDecl (ctx: Ctx) sTy tTy =
+  let funTy = tyFun sTy tTy
+  match ctx.TyEnv |> Map.tryFind funTy with
+  | Some (TyInstance.Defined, ty) ->
+    ty, ctx
+
+  | _ ->
+    let ident, ctx = ctxUniqueTyName ctx funTy
+    let selfTy, ctx = ctxAddFunIncomplete ctx sTy tTy
+
+    let envTy = CTy.Ptr CTy.Void
+    let _, argTys, resultTy = tyToArgList funTy
+
+    let argTys, ctx = (argTys, ctx) |> stMap (fun (ty, ctx) -> ctxConvertTyIncomplete ctx ty)
     let resultTy, ctx = cty ctx resultTy
-    argTys, resultTy, ctx
 
-  // `ctx` is discarded not to generate type declarations yet.
-  // Because the this type's fields refer to types indirectly,
-  // we want to emit these declarations later.
-  let argTys, resultTy, _ = makeSignature ctx
+    let fields =
+      [
+        "fun", CTy.FunPtr (envTy :: argTys, resultTy)
+        "env", envTy
+      ]
+    let ctx =
+      { ctx with
+          Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
+          TyEnv = ctx.TyEnv |> Map.add funTy (TyInstance.Defined, selfTy)
+      }
+    selfTy, ctx
 
-  let fields = ["fun", CTy.FunPtr (envTy :: argTys, resultTy); "env", envTy]
-  let ctx: Ctx =
-    { ctx with
-        Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
-    }
+let ctxAddListIncomplete (ctx: Ctx) itemTy =
+  let listTy = tyList itemTy
+  match ctx.TyEnv |> Map.tryFind listTy with
+  | Some (_, ty) ->
+    ty, ctx
 
-  // Finally, emit the declarations referred in the signature types.
-  let argTys2, resultTy2, ctx = makeSignature ctx
-  assert (argTys2 = argTys && resultTy2 = resultTy)
-
-  selfTy, ctx
+  | None ->
+    let ident, ctx = ctxUniqueTyName ctx listTy
+    let selfTy = CTy.Ptr (CTy.Struct ident)
+    let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add listTy (TyInstance.Declared, selfTy) }
+    selfTy, ctx
 
 let ctxAddListDecl (ctx: Ctx) itemTy =
-  // See ctxAddFunDecl for the reason of the operation ordering.
-
   let listTy = tyList itemTy
-  let ident, ctx = ctxUniqueTyName ctx listTy
-  let selfTy = CTy.Ptr (CTy.Struct ident)
-  let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add listTy selfTy }
+  match ctx.TyEnv |> Map.tryFind listTy with
+  | Some (TyInstance.Defined, ty) ->
+    ty, ctx
 
-  let itemTy, ctx = cty ctx itemTy
-  let fields = ["head", itemTy; "tail", selfTy]
-  let ctx: Ctx =
-    { ctx with
-        Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
-    }
-  selfTy, ctx
+  | _ ->
+    let ident, ctx = ctxUniqueTyName ctx listTy
+    let selfTy, ctx = ctxAddListIncomplete ctx itemTy
+
+    let itemTy, ctx = cty ctx itemTy
+    let fields =
+      [
+        "head", itemTy
+        "tail", selfTy
+      ]
+    let ctx: Ctx =
+      { ctx with
+          Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
+          TyEnv = ctx.TyEnv |> Map.add listTy (TyInstance.Defined, selfTy)
+      }
+    selfTy, ctx
+
+let ctxAddTupleIncomplete (ctx: Ctx) itemTys =
+  let tupleTy = tyTuple itemTys
+  match ctx.TyEnv |> Map.tryFind tupleTy with
+  | Some (_, ty) ->
+    ty, ctx
+
+  | None ->
+    let tupleTyIdent, ctx = ctxUniqueTyName ctx tupleTy
+    let selfTy = CTy.Struct tupleTyIdent
+    let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add tupleTy (TyInstance.Declared, selfTy) }
+    selfTy, ctx
 
 let ctxAddTupleDecl (ctx: Ctx) itemTys =
-  // See ctxAddFunDecl for the reason of the operation ordering.
-
-  let rec go acc ctx i itemTys =
-    match itemTys with
-    | [] ->
-      List.rev acc, ctx
-    | itemTy :: itemTys ->
-      let itemTy, ctx = cty ctx itemTy
-      let field = tupleField i, itemTy
-      go (field :: acc) ctx (i + 1) itemTys
-
   let tupleTy = tyTuple itemTys
-  let tupleTyIdent, ctx = ctxUniqueTyName ctx tupleTy
-  let selfTy = CTy.Struct tupleTyIdent
-  let ctx: Ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add tupleTy selfTy }
+  match ctx.TyEnv |> Map.tryFind tupleTy with
+  | Some (TyInstance.Defined, ty) ->
+    ty, ctx
 
-  let fields, ctx = go [] ctx 0 itemTys
-  let tupleDecl = CDecl.Struct (tupleTyIdent, fields, [])
-  let ctx: Ctx = { ctx with Decls = tupleDecl :: ctx.Decls }
-  selfTy, ctx
+  | _ ->
+    let tupleTyIdent, ctx = ctxUniqueTyName ctx tupleTy
+    let selfTy, ctx = ctxAddTupleIncomplete ctx itemTys
 
-let ctxAddUnionDecl (ctx: Ctx) tyIdent tySerial variants =
-  // See ctxAddFunDecl for the reason of the operation ordering.
+    let rec go i itemTys =
+      match itemTys with
+      | [] ->
+        []
 
+      | itemTy :: itemTys ->
+        let field = tupleField i, itemTy
+        field :: go (i + 1) itemTys
+
+    let itemTys, ctx = cirifyTys (itemTys, ctx)
+    let fields = go 0 itemTys
+
+    let tupleDecl = CDecl.Struct (tupleTyIdent, fields, [])
+    let ctx: Ctx =
+      { ctx with
+          Decls = tupleDecl :: ctx.Decls
+          TyEnv = ctx.TyEnv |> Map.add tupleTy (TyInstance.Defined, selfTy)
+      }
+    selfTy, ctx
+
+let ctxAddUnionIncomplete (ctx: Ctx) tySerial =
   let unionTyRef = tyRef tySerial []
-  let unionTyIdent, ctx = ctxUniqueTyName ctx unionTyRef
-  let unionTy = CTy.Struct unionTyIdent
-  let tagTyIdent = tagTyIdent unionTyIdent
-  let tagTy = CTy.Enum tagTyIdent
-  let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add unionTyRef unionTy }
+  match ctx.TyEnv |> Map.tryFind unionTyRef with
+  | Some (_, ty) ->
+    ty, ctx
 
-  let variants =
-    variants |> List.map (fun variantSerial ->
-      match ctx.Vars |> Map.tryFind variantSerial with
-      | Some (VarDef.Variant (ident, _, hasPayload, payloadTy, _, _)) ->
-        ident, variantSerial, hasPayload, payloadTy
-      | _ -> failwith "Never"
-    )
-  let tags =
-    variants |> List.map (fun (_, serial, _, _) ->
-      ctxUniqueName ctx serial)
-  let makeVariants ctx =
-    (variants, ctx) |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
-      if hasPayload then
-        let payloadTy, ctx = cty ctx payloadTy
-        (ctxUniqueName ctx serial, CTy.Ptr payloadTy) :: acc, ctx
-      else
-        acc, ctx
-    )
-  let variants, _ = makeVariants ctx
+  | None ->
+    let unionTyIdent, ctx = ctxUniqueTyName ctx unionTyRef
+    let selfTy = CTy.Struct unionTyIdent
+    let ctx = { ctx with TyEnv = ctx.TyEnv |> Map.add unionTyRef (TyInstance.Declared, selfTy) }
+    selfTy, ctx
 
-  let tagEnumDecl = CDecl.Enum (tagTyIdent, tags)
-  let structDecl = CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
-  let ctx = { ctx with Decls = structDecl :: tagEnumDecl :: ctx.Decls }
+let ctxAddUnionDecl (ctx: Ctx) tySerial variants =
+  let unionTyRef = tyRef tySerial []
+  match ctx.TyEnv |> Map.tryFind unionTyRef with
+  | Some (TyInstance.Defined, ty) ->
+    ty, ctx
 
-  let _, ctx = makeVariants ctx
+  | _ ->
+    let unionTyIdent, ctx = ctxUniqueTyName ctx unionTyRef
+    let selfTy, ctx = ctxAddUnionIncomplete ctx tySerial
 
-  unionTy, ctx
+    let tagTyIdent = tagTyIdent unionTyIdent
+    let tagTy = CTy.Enum tagTyIdent
+
+    let variants =
+      variants |> List.map (fun variantSerial ->
+        match ctx.Vars |> Map.tryFind variantSerial with
+        | Some (VarDef.Variant (ident, _, hasPayload, payloadTy, _, _)) ->
+          ident, variantSerial, hasPayload, payloadTy
+        | _ -> failwith "Never"
+      )
+    let tags =
+      variants |> List.map (fun (_, serial, _, _) ->
+        ctxUniqueName ctx serial)
+    let variants, ctx =
+      (variants, ctx) |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
+        if hasPayload then
+          let payloadTy, ctx = ctxConvertTyIncomplete ctx payloadTy
+          (ctxUniqueName ctx serial, CTy.Ptr payloadTy) :: acc, ctx
+        else
+          acc, ctx
+      )
+
+    let tagEnumDecl = CDecl.Enum (tagTyIdent, tags)
+    let structDecl = CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
+    let ctx =
+      { ctx with
+          Decls = structDecl :: tagEnumDecl :: ctx.Decls
+          TyEnv = ctx.TyEnv |> Map.add unionTyRef (TyInstance.Defined, selfTy)
+      }
+    selfTy, ctx
 
 let ctxUniqueName (ctx: Ctx) serial =
   match ctx.VarUniqueNames |> Map.tryFind serial with
@@ -237,55 +302,79 @@ let ctxUniqueTyName (ctx: Ctx) ty =
       ident, ctx
   go ty ctx
 
-let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
+let ctxConvertTyIncomplete (ctx: Ctx) (ty: Ty): CTy * Ctx =
   match ty with
   | Ty.Con (TyCon.Bool, _)
-  | Ty.Con (TyCon.Int, _) ->
+  | Ty.Con (TyCon.Int, _)
+  | Ty.Con (TyCon.Tuple, []) ->
     CTy.Int, ctx
+
   | Ty.Con (TyCon.Char, _) ->
     CTy.Char, ctx
+
   | Ty.Con (TyCon.Str, _) ->
     CTy.Struct "String", ctx
+
   | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
   | Ty.Con (TyCon.Obj, _) ->
     CTy.Ptr CTy.Void, ctx
+
   | Ty.Con (TyCon.Fun, [sTy; tTy]) ->
-    match ctx.TyEnv |> Map.tryFind ty with
-    | None ->
-      ctxAddFunDecl ctx sTy tTy
-    | Some ty ->
-      ty, ctx
+    ctxAddFunIncomplete ctx sTy tTy
+
   | Ty.Con (TyCon.List, [itemTy]) ->
-    match ctx.TyEnv |> Map.tryFind ty with
-    | None ->
-      ctxAddListDecl ctx itemTy
-    | Some ty ->
-      ty, ctx
-  | Ty.Con (TyCon.Tuple, []) ->
-    CTy.Int, ctx
+    ctxAddListIncomplete ctx itemTy
+
   | Ty.Con (TyCon.Tuple, itemTys) ->
-    match ctx.TyEnv |> Map.tryFind ty with
-    | None ->
-      ctxAddTupleDecl ctx itemTys
-    | Some ty ->
-      ty, ctx
+    ctxAddTupleIncomplete ctx itemTys
+
   | Ty.Con (TyCon.Ref serial, _) ->
     match ctx.Tys |> Map.tryFind serial with
-    | Some (TyDef.Union (tyIdent, variants, _)) ->
-      match ctx.TyEnv |> Map.tryFind ty with
-      | Some ty ->
-        ty, ctx
-      | None ->
-        ctxAddUnionDecl ctx tyIdent serial variants
-    | Some (TyDef.Meta _) ->
-      failwith "Never"
-    | None ->
+    | Some (TyDef.Union _) ->
+      ctxAddUnionIncomplete ctx serial
+
+    | _ ->
       CTy.Void, ctxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
-  | Ty.Con (TyCon.List, _)
-  | Ty.Con (TyCon.Fun, _)
-  | Ty.Error _ ->
-    eprintfn "Never %A" ty
-    CTy.Void, ctx
+
+  | _ ->
+    CTy.Void, ctxAddErr ctx "error type" noLoc // FIXME: source location
+
+let cty (ctx: Ctx) (ty: Ty): CTy * Ctx =
+  match ty with
+  | Ty.Con (TyCon.Bool, _)
+  | Ty.Con (TyCon.Int, _)
+  | Ty.Con (TyCon.Tuple, []) ->
+    CTy.Int, ctx
+
+  | Ty.Con (TyCon.Char, _) ->
+    CTy.Char, ctx
+
+  | Ty.Con (TyCon.Str, _) ->
+    CTy.Struct "String", ctx
+
+  | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
+  | Ty.Con (TyCon.Obj, _) ->
+    CTy.Ptr CTy.Void, ctx
+
+  | Ty.Con (TyCon.Fun, [sTy; tTy]) ->
+    ctxAddFunDecl ctx sTy tTy
+
+  | Ty.Con (TyCon.List, [itemTy]) ->
+    ctxAddListDecl ctx itemTy
+
+  | Ty.Con (TyCon.Tuple, itemTys) ->
+    ctxAddTupleDecl ctx itemTys
+
+  | Ty.Con (TyCon.Ref serial, _) ->
+    match ctx.Tys |> Map.tryFind serial with
+    | Some (TyDef.Union (_, variants, _)) ->
+      ctxAddUnionDecl ctx serial variants
+
+    | _ ->
+      CTy.Void, ctxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
+
+  |  _ ->
+    CTy.Void, ctxAddErr ctx "error type" noLoc // FIXME: source location
 
 let cirifyTys (tys, ctx) =
   stMap (fun (ty, ctx) -> cty ctx ty) (tys, ctx)
@@ -359,6 +448,7 @@ let genExprUniOp ctx op arg ty _ =
   | MUniOp.Tag ->
     CExpr.Nav (arg, "tag"), ctx
   | MUniOp.GetVariant serial ->
+    let _, ctx = cty ctx ty
     CExpr.Uni (CUniOp.Deref, CExpr.Nav (arg, ctxUniqueName ctx serial)), ctx
   | MUniOp.ListIsEmpty ->
     CExpr.Uni (CUniOp.Not, arg), ctx
