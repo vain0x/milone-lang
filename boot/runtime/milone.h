@@ -22,7 +22,8 @@ int int_clamp(int x, int l, int r) {
 }
 
 int str_cmp(struct String left, struct String right) {
-  return strcmp(left.str, right.str);
+  int min_len = int_clamp(left.len, 0, right.len);
+  return memcmp(left.str, right.str, min_len + 1);
 }
 
 struct String str_add(struct String left, struct String right) {
@@ -30,9 +31,9 @@ struct String str_add(struct String left, struct String right) {
     return right.len == 0 ? left : right;
   }
   int len = left.len + right.len;
-  char* str = (char*)malloc((len + 1) * sizeof(char));
-  strcpy(str, left.str);
-  strcpy(str + left.len, right.str);
+  char* str = (char*)calloc(len + 1, sizeof(char));
+  memcpy(str, left.str, left.len);
+  memcpy(str + left.len, right.str, right.len);
   return (struct String){.str = str, .len = len};
 }
 
@@ -44,9 +45,8 @@ struct String str_get_slice(int l, int r, struct String s) {
   if (r == s.len) {
     str = s.str + l;
   } else {
-    str = (char*)malloc((len + 1) * sizeof(char));
-    strncpy(str, s.str + l, len);
-    str[len] = '\0';
+    str = (char*)calloc(len + 1, sizeof(char));
+    memcpy(str, s.str + l, len);
   }
   return (struct String){.str = str, .len = len};
 }
