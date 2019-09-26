@@ -17,10 +17,10 @@ let litToString lit =
     string value
 
   | Lit.Char value ->
-    "char " + string (int value) // FIXME: escape
+    "'" + (if charNeedsEscaping value then charEscape value else string value) + "'"
 
-  | Lit.Str _ ->
-    "\"...\"" // FIXME: escape
+  | Lit.Str value ->
+    "\"" + strEscape value + "\""
 
 let tokenToString token =
   match token with
@@ -36,14 +36,14 @@ let tokenToString token =
   | Token.Int value ->
     string value
 
-  | Token.Char _  ->
-    "'?'" // FIXME: escape
+  | Token.Char value ->
+    litToString (Lit.Char value)
 
-  | Token.Str _ ->
-    "\"?\"" // FIXME: escape
+  | Token.Str value ->
+    litToString (Lit.Str value)
 
   | Token.Ident ident ->
-    "\"" + ident + "\""
+    ident
 
   | Token.ParenL ->
     "("
@@ -217,7 +217,7 @@ let apDump (pat: APat) =
   | APat.ListLit (pats, _) ->
     dumpTreeNew "list" (pats |> listMap apDump)
 
-  | APat.Nav (l, r, loc) ->
+  | APat.Nav (l, r, _) ->
     dumpTreeNew ("." + r) [apDump l]
 
   | APat.Call (calleePat, argPats, _) ->
@@ -241,7 +241,7 @@ let apDump (pat: APat) =
   | APat.Or (l, r, _) ->
     dumpTreeNew "or" [apDump l] |> dumpTreeAttachNext (apDump r)
 
-  | APat.Fun (callee, args, loc) ->
+  | APat.Fun (callee, args, _) ->
     dumpTreeNew "fun" (
       dumpTreeNewLeaf callee
       :: (args |> listMap apDump)

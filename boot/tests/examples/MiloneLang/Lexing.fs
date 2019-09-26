@@ -54,15 +54,6 @@ let locShift (text: string) (l: int) (r: int) ((y, x): Loc) =
 
 let charNull: char = char 0
 
-let charIsSpace (c: char): bool =
-  c = ' ' || c = '\t' || c = '\r' || c = '\n'
-
-let charIsDigit (c: char): bool =
-  '0' <= c && c <= '9'
-
-let charIsAlpha (c: char): bool =
-  ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
-
 let charIsIdent (c: char): bool =
   c = '_' || charIsDigit c || charIsAlpha c
 
@@ -366,8 +357,8 @@ let tokenFromCharLit (text: string) l r: Token =
     match text.[i] with
     | '\\' ->
       match text.[i + 1] with
-      | 'u' ->
-        char 0
+      | 'x' ->
+        charNull
       | 't' ->
         '\t'
       | 'r' ->
@@ -403,8 +394,8 @@ let tokenFromStrLit (text: string) l r: Token =
     else
       assert (text.[i] = '\\')
       match text.[i + 1] with
-      | 'u' ->
-        go ("\u0000" :: acc) (i + 6)
+      | 'x' ->
+        go ("\x00" :: acc) (i + 4)
       | 't' ->
         go ("\t" :: acc) (i + 2)
       | 'r' ->
@@ -486,7 +477,7 @@ let tokIntLit t =
   let token = tokenFromIntLit text i r
   t |> tokCtxPush token r
 
-let tokCharLit (t: TokenizeCtx): TokenizeCtx =
+let tokCharLit t =
   let text, i = t |> tokCtxToTextIndex
   let ok, r = scanCharLit text i
   let token = if ok then tokenFromCharLit text i r else Token.Error
