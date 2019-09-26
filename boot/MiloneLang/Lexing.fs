@@ -395,7 +395,7 @@ let tokenFromStrLit (text: string) l r: Token =
       assert (text.[i] = '\\')
       match text.[i + 1] with
       | 'x' ->
-        go ("\x00" :: acc) (i + 6)
+        go ("\x00" :: acc) (i + 4)
       | 't' ->
         go ("\t" :: acc) (i + 2)
       | 'r' ->
