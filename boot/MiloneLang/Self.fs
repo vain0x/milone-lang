@@ -4,6 +4,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Lexing
 open MiloneLang.Parsing
+open MiloneLang.AstToHir
 
 let litToString lit =
   match lit with
@@ -320,6 +321,52 @@ let axDump (expr: AExpr) =
   | AExpr.Open (path, _) ->
     dumpTreeNew "open" (path |> listMap dumpTreeNewLeaf)
 
+let hxDump (expr: HExpr) =
+  match expr with
+  | HExpr.Lit (lit, _) ->
+    lit |> litToString |> dumpTreeNewLeaf
+  | HExpr.Prim _ ->
+    dumpTreeNewLeaf "prim"
+
+  | HExpr.Ref (serial, _, _) ->
+    dumpTreeNewLeaf (string serial)
+
+  | HExpr.Match (target, _arms, _ty, _loc) ->
+    dumpTreeNew "match" [hxDump target]
+
+  | HExpr.Nav (l, r, _ty, _loc) ->
+    dumpTreeNew ("." + r) [hxDump l]
+
+  | HExpr.Inf (_, items, _ty, _loc) ->
+    dumpTreeNew "inf" (items |> listMap hxDump)
+
+  | HExpr.Let (_pat, body, next, _ty, _loc) ->
+    dumpTreeNew "let-val" [
+      hxDump body
+    ]
+    |> dumpTreeAttachNext (hxDump next)
+
+  | HExpr.LetFun (callee, _, _args, body, next, _ty, _loc) ->
+    dumpTreeNew "let-fun" [
+      dumpTreeNewLeaf (string callee)
+      hxDump body
+    ]
+    |> dumpTreeAttachNext (hxDump next)
+
+  | HExpr.TyDecl (_, TyDecl.Synonym (_ty, _loc), _) ->
+    dumpTreeNew "synonym" []
+
+  | HExpr.TyDecl (_, TyDecl.Union (ident, _, _), _) ->
+    dumpTreeNew "union" [
+      dumpTreeNewLeaf ident
+    ]
+
+  | HExpr.Open (path, _) ->
+    dumpTreeNew "open" (path |> listMap dumpTreeNewLeaf)
+
+  | HExpr.Error (msg, loc) ->
+    dumpTreeFromError msg loc
+
 let doSelf (fileReadAllText: string -> string) =
   let doFile (filePath: string) =
     printfn "FILE %s" filePath
@@ -335,6 +382,12 @@ let doSelf (fileReadAllText: string -> string) =
 
     errors |> listIter (fun (msg, (y, x)) -> printfn "ERROR %s (%d:%d)" msg (y + 1) (x + 1))
 
+    let nameCtx = nameCtxEmpty ()
+    let expr, _ = (ast, nameCtx) |> astToHir
+    printfn "HIR:"
+    printfn "%s" (expr |> hxDump |> dumpTreeToString)
+
   doFile "MiloneLang/Lexing.fs"
   doFile "MiloneLang/Parsing.fs"
+  doFile "MiloneLang/AstToHir.fs"
   0

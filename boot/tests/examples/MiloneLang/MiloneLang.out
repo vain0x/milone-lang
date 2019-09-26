@@ -4709,6 +4709,987 @@ semi:
         - 0
       - list
   tuple
+HIR:
+inf:
+- open:
+  - MiloneLang
+  - Types
+- open:
+  - MiloneLang
+  - Helpers
+- synonym
+- let-fun:
+  - 8
+  - inf:
+    - inf:
+      - 18
+      - match:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - inf:
+                - inf:
+                  - prim
+                  - 19
+                - 0
+            - false
+    - let-fun:
+      - 24
+      - match:
+        - inf:
+          - inf:
+            - prim
+            - 28
+          - 29
+      inf:
+      - inf:
+        - inf:
+          - 41
+          - 42
+        - 43
+      - 44
+  let-val:
+  - inf:
+    - inf:
+      - 46
+      - 0
+  let-fun:
+  - 48
+  - inf:
+    - match:
+      - match:
+        - inf:
+          - inf:
+            - prim
+            - 51
+          - \'_\'
+  let-fun:
+  - 57
+  - inf:
+    - match:
+      - match:
+        - match:
+          - match:
+            - match:
+              - match:
+                - match:
+                  - match:
+                    - match:
+                      - match:
+                        - match:
+                          - match:
+                            - match:
+                              - match:
+                                - inf:
+                                  - inf:
+                                    - prim
+                                    - 60
+                                  - \'+\'
+  let-fun:
+  - 76
+  - inf:
+    - match:
+      - match:
+        - match:
+          - match:
+            - inf:
+              - inf:
+                - prim
+                - 79
+              - \',\'
+  let-fun:
+  - 85
+  - inf:
+    - let-fun:
+      - 92
+      - match:
+        - inf:
+          - inf:
+            - prim
+            - 95
+          - .Length: 96
+      match:
+      - inf:
+        - inf:
+          - prim
+          - inf:
+            - inf:
+              - prim
+              - .Length: 106
+            - inf:
+              - inf:
+                - prim
+                - 107
+              - .Length: 108
+        - false
+  let-fun:
+  - 112
+  - inf:
+    - inf:
+      - inf:
+        - inf:
+          - 117
+          - 118
+        - \"\\\"\\\"\\\"\"
+      - 119
+  let-fun:
+  - 121
+  - inf:
+    - inf:
+      - prim
+      - 126
+    - 1
+  let-fun:
+  - 127
+  - inf:
+    - inf:
+      - prim
+      - inf:
+        - inf:
+          - prim
+          - 132
+        - .Length: 133
+    - false
+  let-fun:
+  - 134
+  - inf:
+    - 139
+    - inf:
+      - inf:
+        - prim
+        - 140
+      - 141
+  let-fun:
+  - 142
+  - inf:
+    - inf:
+      - 147
+      - inf:
+        - inf:
+          - 148
+          - 149
+        - 150
+    - let-fun:
+      - 151
+      - match:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - 153
+            - .Length: 154
+      inf:
+      - 161
+      - 162
+  let-fun:
+  - 163
+  - match:
+    - inf:
+      - inf:
+        - inf:
+          - 168
+          - 169
+        - \"//\"
+      - 170
+  let-fun:
+  - 174
+  - inf:
+    - inf:
+      - 179
+      - inf:
+        - inf:
+          - 180
+          - 181
+        - 182
+    - let-fun:
+      - 183
+      - match:
+        - inf:
+          - inf:
+            - prim
+            - 185
+          - .Length: 186
+      inf:
+      - 193
+      - 194
+  let-fun:
+  - 195
+  - inf:
+    - 200
+    - inf:
+      - inf:
+        - prim
+        - 201
+      - 202
+  let-fun:
+  - 203
+  - inf:
+    - inf:
+      - 208
+      - inf:
+        - inf:
+          - 209
+          - 210
+        - 211
+    - inf:
+      - inf:
+        - prim
+        - 212
+      - 1
+  let-fun:
+  - 213
+  - inf:
+    - 218
+    - inf:
+      - inf:
+        - prim
+        - 219
+      - 220
+  let-fun:
+  - 221
+  - inf:
+    - inf:
+      - 226
+      - inf:
+        - inf:
+          - 227
+          - 228
+        - 229
+    - let-fun:
+      - 230
+      - match:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - 232
+            - .Length: 233
+      inf:
+      - 240
+      - 241
+  let-fun:
+  - 242
+  - match:
+    - inf:
+      - 247
+      - inf:
+        - inf:
+          - prim
+          - 248
+        - 249
+  let-fun:
+  - 254
+  - inf:
+    - inf:
+      - 259
+      - inf:
+        - inf:
+          - 260
+          - 261
+        - 262
+    - let-fun:
+      - 263
+      - match:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - 265
+            - .Length: 266
+      inf:
+      - 273
+      - 274
+  let-fun:
+  - 275
+  - inf:
+    - 280
+    - inf:
+      - inf:
+        - prim
+        - 281
+      - 282
+  let-fun:
+  - 283
+  - inf:
+    - inf:
+      - 288
+      - inf:
+        - inf:
+          - 289
+          - 290
+        - 291
+    - let-fun:
+      - 292
+      - match:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - 294
+            - .Length: 295
+      inf:
+      - 302
+      - 303
+  let-fun:
+  - 304
+  - inf:
+    - inf:
+      - prim
+      - inf:
+        - inf:
+          - prim
+          - 309
+        - 310
+    - \'\\\'\'
+  let-fun:
+  - 311
+  - inf:
+    - inf:
+      - 316
+      - inf:
+        - inf:
+          - 317
+          - 318
+        - 319
+    - let-fun:
+      - 320
+      - match:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - inf:
+                - inf:
+                  - prim
+                  - 322
+                - 1
+            - .Length: 323
+      inf:
+      - 345
+      - inf:
+        - inf:
+          - prim
+          - 346
+        - 1
+  let-fun:
+  - 347
+  - inf:
+    - inf:
+      - prim
+      - inf:
+        - inf:
+          - prim
+          - 352
+        - 353
+    - \'\\\"\'
+  let-fun:
+  - 354
+  - inf:
+    - inf:
+      - 359
+      - inf:
+        - inf:
+          - 360
+          - 361
+        - 362
+    - let-fun:
+      - 363
+      - match:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - inf:
+                - inf:
+                  - prim
+                  - 365
+                - 1
+            - .Length: 366
+      inf:
+      - 388
+      - inf:
+        - inf:
+          - prim
+          - 389
+        - 1
+  let-fun:
+  - 390
+  - inf:
+    - inf:
+      - 395
+      - 396
+    - 397
+  let-fun:
+  - 398
+  - inf:
+    - inf:
+      - 403
+      - inf:
+        - inf:
+          - 404
+          - 405
+        - 406
+    - let-fun:
+      - 407
+      - match:
+        - inf:
+          - inf:
+            - 409
+            - 410
+          - 411
+      inf:
+      - 421
+      - inf:
+        - inf:
+          - prim
+          - 422
+        - 3
+  let-fun:
+  - 423
+  - inf:
+    - match:
+      - inf:
+        - inf:
+          - inf:
+            - 428
+            - 429
+          - 430
+        - 431
+  let-fun:
+  - 458
+  - inf:
+    - match:
+      - inf:
+        - inf:
+          - inf:
+            - 463
+            - 464
+          - 465
+        - 466
+  let-fun:
+  - 492
+  - inf:
+    - inf:
+      - 498
+      - inf:
+        - inf:
+          - prim
+          - inf:
+            - inf:
+              - prim
+              - 499
+            - 500
+        - 1
+    - match:
+      - inf:
+        - inf:
+          - prim
+          - 501
+        - 502
+  let-fun:
+  - 510
+  - inf:
+    - let-val:
+      - inf:
+        - 516
+        - inf:
+          - inf:
+            - inf:
+              - 517
+              - 518
+            - 519
+          - 520
+      inf:
+      - .Int: 521
+      - 522
+  let-fun:
+  - 524
+  - inf:
+    - inf:
+      - inf:
+        - 529
+        - match:
+          - match:
+            - inf:
+              - inf:
+                - prim
+                - inf:
+                  - inf:
+                    - prim
+                    - 530
+                  - inf:
+                    - inf:
+                      - prim
+                      - 531
+                    - 2
+              - false
+      - let-val:
+        - inf:
+          - inf:
+            - prim
+            - 537
+          - 1
+        let-val:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - 539
+            - 540
+        inf:
+        - .Char: 548
+        - 549
+  let-fun:
+  - 551
+  - inf:
+    - inf:
+      - inf:
+        - 556
+        - match:
+          - match:
+            - inf:
+              - inf:
+                - prim
+                - inf:
+                  - inf:
+                    - prim
+                    - 557
+                  - inf:
+                    - inf:
+                      - prim
+                      - 558
+                    - 2
+              - false
+      - let-fun:
+        - 563
+        - let-fun:
+          - 566
+          - match:
+            - match:
+              - inf:
+                - inf:
+                  - prim
+                  - 568
+                - inf:
+                  - inf:
+                    - prim
+                    - 569
+                  - 1
+          let-val:
+          - inf:
+            - 576
+            - 577
+          let-val:
+          - inf:
+            - inf:
+              - prim
+              - inf:
+                - inf:
+                  - inf:
+                    - 579
+                    - 580
+                  - 581
+                - 582
+            - 583
+          let-val: 585
+          match:
+          - inf:
+            - inf:
+              - prim
+              - 586
+            - inf:
+              - inf:
+                - prim
+                - 587
+              - 1
+        let-val:
+        - inf:
+          - inf:
+            - 617
+            - prim
+          - inf:
+            - inf:
+              - prim
+              - 618
+            - 1
+        inf:
+        - .Str: 619
+        - 620
+  let-fun:
+  - 622
+  - inf:
+    - inf:
+      - 627
+      - match:
+        - match:
+          - inf:
+            - inf:
+              - prim
+              - inf:
+                - inf:
+                  - prim
+                  - 628
+                - inf:
+                  - inf:
+                    - prim
+                    - 629
+                  - 6
+            - false
+    - inf:
+      - .Str: 636
+      - inf:
+        - inf:
+          - inf:
+            - 637
+            - inf:
+              - inf:
+                - prim
+                - 638
+              - 3
+          - inf:
+            - inf:
+              - prim
+              - 639
+            - 3
+        - 640
+  let-fun:
+  - 641
+  - inf:
+    - 647
+    - 648
+  let-fun:
+  - 649
+  - inf:
+    - inf:
+      - inf:
+        - 656
+        - match:
+          - match:
+            - inf:
+              - inf:
+                - prim
+                - inf:
+                  - inf:
+                    - prim
+                    - 657
+                  - 0
+              - false
+      - let-val:
+        - inf:
+          - inf:
+            - inf:
+              - inf:
+                - 663
+                - 664
+              - 665
+            - 666
+          - 667
+        inf:
+        - 668
+        - 669
+        - 670
+        - 671
+  let-fun:
+  - 673
+  - inf:
+    - inf:
+      - inf:
+        - 681
+        - match:
+          - match:
+            - inf:
+              - inf:
+                - prim
+                - inf:
+                  - inf:
+                    - prim
+                    - 682
+                  - 0
+              - false
+      - let-val:
+        - inf:
+          - inf:
+            - prim
+            - inf:
+              - 688
+              - 689
+          - 690
+        let-val:
+        - inf:
+          - inf:
+            - inf:
+              - inf:
+                - 692
+                - 693
+              - 694
+            - 695
+          - 696
+        inf:
+        - 697
+        - 698
+        - 699
+        - 700
+  let-fun:
+  - 702
+  - inf:
+    - inf:
+      - 708
+      - inf:
+        - inf:
+          - 709
+          - 710
+        - 711
+    - inf:
+      - 712
+      - 713
+  let-fun:
+  - 714
+  - let-val:
+    - inf:
+      - 718
+      - 719
+    let-val:
+    - inf:
+      - inf:
+        - 721
+        - 722
+      - 723
+    inf:
+    - inf:
+      - 724
+      - 725
+    - 726
+  let-fun:
+  - 727
+  - let-val:
+    - inf:
+      - 732
+      - 733
+    let-val:
+    - inf:
+      - inf:
+        - 735
+        - 736
+      - 737
+    inf:
+    - inf:
+      - 738
+      - 739
+    - 740
+  let-fun:
+  - 741
+  - let-val:
+    - inf:
+      - 746
+      - 747
+    let-val:
+    - inf:
+      - inf:
+        - 749
+        - 750
+      - 751
+    inf:
+    - inf:
+      - 752
+      - 753
+    - 754
+  let-fun:
+  - 755
+  - let-val:
+    - inf:
+      - 759
+      - 760
+    let-val:
+    - inf:
+      - inf:
+        - 762
+        - 763
+      - 764
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 766
+          - 767
+        - 768
+      - 769
+    inf:
+    - inf:
+      - inf:
+        - 770
+        - 771
+      - 772
+    - 773
+  let-fun:
+  - 774
+  - let-val:
+    - inf:
+      - 778
+      - 779
+    let-val:
+    - inf:
+      - inf:
+        - 781
+        - 782
+      - 783
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 785
+          - 786
+        - 787
+      - 788
+    inf:
+    - inf:
+      - inf:
+        - 789
+        - 790
+      - 791
+    - 792
+  let-fun:
+  - 793
+  - let-val:
+    - inf:
+      - 797
+      - 798
+    let-val:
+    - inf:
+      - inf:
+        - 800
+        - 801
+      - 802
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 804
+          - 805
+        - 806
+      - 807
+    inf:
+    - inf:
+      - inf:
+        - 808
+        - 809
+      - 810
+    - 811
+  let-fun:
+  - 812
+  - let-val:
+    - inf:
+      - 816
+      - 817
+    let-val:
+    - inf:
+      - inf:
+        - 819
+        - 820
+      - 821
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 823
+          - 824
+        - 825
+      - 826
+    inf:
+    - inf:
+      - inf:
+        - 827
+        - 828
+      - 829
+    - 830
+  let-fun:
+  - 831
+  - let-val:
+    - inf:
+      - 835
+      - 836
+    let-val:
+    - inf:
+      - inf:
+        - 839
+        - 840
+      - 841
+    let-val:
+    - match: 843
+    inf:
+    - inf:
+      - inf:
+        - 849
+        - 850
+      - 851
+    - 852
+  let-fun:
+  - 853
+  - let-val:
+    - inf:
+      - 857
+      - 858
+    let-val:
+    - inf:
+      - inf:
+        - 861
+        - 862
+      - 863
+    let-val:
+    - match: 865
+    inf:
+    - inf:
+      - inf:
+        - 871
+        - 872
+      - 873
+    - 874
+  let-fun:
+  - 875
+  - let-val:
+    - inf:
+      - 879
+      - 880
+    let-val:
+    - inf:
+      - inf:
+        - 883
+        - 884
+      - 885
+    let-val:
+    - match: 887
+    inf:
+    - inf:
+      - inf:
+        - 893
+        - 894
+      - 895
+    - 896
+  let-fun:
+  - 897
+  - inf:
+    - let-fun:
+      - 900
+      - let-val:
+        - inf:
+          - 904
+          - 905
+        match:
+        - inf:
+          - inf:
+            - 906
+            - 907
+          - 908
+      inf:
+      - 968
+      - inf:
+        - 969
+        - 0
+        - inf:
+          - 0
+          - 0
+        - prim
+  inf
 FILE MiloneLang/Parsing.fs
 module (76, 0)
 rec (76, 7)
@@ -15170,4 +16151,5915 @@ semi:
     - expr
     - errors
   tuple
+HIR:
+inf:
+- open:
+  - MiloneLang
+  - Types
+- open:
+  - MiloneLang
+  - Helpers
+- let-fun:
+  - 1
+  - match: 3
+  let-fun:
+  - 10
+  - match: 12
+  let-fun:
+  - 19
+  - match: 21
+  let-fun:
+  - 28
+  - inf:
+    - match: 30
+  let-fun:
+  - 36
+  - inf:
+    - match: 39
+  let-fun:
+  - 48
+  - let-val:
+    - inf:
+      - inf:
+        - 54
+        - 6
+      - inf:
+        - inf:
+          - 55
+          - 56
+        - 57
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 59
+          - \"Parse error %s near %A\"
+        - 60
+      - 61
+    inf:
+    - inf:
+      - prim
+      - inf:
+        - 62
+        - 63
+    - 64
+  let-fun:
+  - 65
+  - let-val:
+    - inf:
+      - 70
+      - 71
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - inf:
+            - 73
+            - 74
+          - 75
+        - 76
+      - 77
+    inf:
+    - inf:
+      - .Missing: 78
+      - 79
+    - 80
+    - 81
+  let-fun:
+  - 82
+  - let-val:
+    - inf:
+      - 87
+      - 88
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - inf:
+            - 90
+            - 91
+          - 92
+        - 93
+      - 94
+    inf:
+    - inf:
+      - .Missing: 95
+      - 96
+    - 97
+    - 98
+  let-fun:
+  - 99
+  - let-val:
+    - inf:
+      - 104
+      - 105
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - inf:
+            - 107
+            - 108
+          - 109
+        - 110
+      - 111
+    inf:
+    - inf:
+      - .Missing: 112
+      - 113
+    - 114
+    - 115
+  let-fun:
+  - 116
+  - let-val:
+    - inf:
+      - 121
+      - 122
+    inf:
+    - inf:
+      - inf:
+        - inf:
+          - 123
+          - 124
+        - 125
+      - 126
+    - 127
+  let-fun:
+  - 128
+  - match: 132
+  let-fun:
+  - 179
+  - let-fun:
+    - 183
+    - let-val:
+      - inf:
+        - inf:
+          - 188
+          - 189
+        - 190
+      match: 191
+    inf:
+    - 208
+    - inf:
+      - inf:
+        - 209
+        - 210
+      - inf:
+        - 211
+        - 212
+  let-fun:
+  - 213
+  - match: 217
+  let-fun:
+  - 233
+  - let-fun:
+    - 237
+    - match: 241
+    let-val:
+    - inf:
+      - inf:
+        - 265
+        - 266
+      - inf:
+        - 267
+        - 268
+    match: 269
+  let-fun:
+  - 289
+  - let-val:
+    - inf:
+      - inf:
+        - 296
+        - 297
+      - inf:
+        - 298
+        - 299
+    match: 300
+  let-fun:
+  - 321
+  - inf:
+    - inf:
+      - 325
+      - 326
+    - inf:
+      - 327
+      - 328
+  let-fun:
+  - 329
+  - let-fun:
+    - 333
+    - match: 337
+    let-val:
+    - inf:
+      - inf:
+        - 384
+        - prim
+      - inf:
+        - 385
+        - 386
+    inf:
+    - inf:
+      - .Union: 387
+      - 388
+    - 389
+    - 390
+  let-fun:
+  - 391
+  - match: 395
+  let-fun:
+  - 425
+  - let-val:
+    - inf:
+      - inf:
+        - 432
+        - 433
+      - inf:
+        - 434
+        - 435
+    match: 436
+  let-fun:
+  - 451
+  - let-fun:
+    - 456
+    - match: 460
+    let-val:
+    - inf:
+      - inf:
+        - 495
+        - 496
+      - inf:
+        - 497
+        - 498
+    let-val:
+    - inf:
+      - inf:
+        - 502
+        - inf:
+          - inf:
+            - prim
+            - 503
+          - prim
+      - inf:
+        - 504
+        - 505
+    inf:
+    - inf:
+      - .ListLit: 506
+      - inf:
+        - 507
+        - 508
+    - 509
+    - 510
+  let-fun:
+  - 511
+  - match: 515
+  let-fun:
+  - 612
+  - let-val:
+    - inf:
+      - inf:
+        - 619
+        - 620
+      - inf:
+        - 621
+        - 622
+    match: 623
+  let-fun:
+  - 646
+  - let-val:
+    - inf:
+      - inf:
+        - 652
+        - 1
+      - inf:
+        - inf:
+          - 653
+          - 654
+        - 655
+    let-fun:
+    - 656
+    - match:
+      - match:
+        - inf:
+          - inf:
+            - 660
+            - 661
+          - 662
+    inf:
+    - inf:
+      - 681
+      - prim
+    - inf:
+      - 682
+      - 683
+  let-fun:
+  - 684
+  - let-val:
+    - inf:
+      - 689
+      - 690
+    let-val:
+    - inf:
+      - inf:
+        - 694
+        - 695
+      - inf:
+        - 696
+        - 697
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 701
+          - 702
+        - 703
+      - inf:
+        - 704
+        - 705
+    match: 706
+  let-fun:
+  - 717
+  - let-val:
+    - inf:
+      - inf:
+        - 724
+        - 725
+      - inf:
+        - 726
+        - 727
+    match: 728
+  let-fun:
+  - 749
+  - let-val:
+    - inf:
+      - inf:
+        - 756
+        - 757
+      - inf:
+        - 758
+        - 759
+    match: 760
+  let-fun:
+  - 782
+  - let-fun:
+    - 786
+    - match: 790
+    let-val:
+    - inf:
+      - inf:
+        - 814
+        - 815
+      - inf:
+        - 816
+        - 817
+    match: 818
+  let-fun:
+  - 838
+  - let-val:
+    - inf:
+      - inf:
+        - 845
+        - 846
+      - inf:
+        - 847
+        - 848
+    match: 849
+  let-fun:
+  - 876
+  - let-val:
+    - inf:
+      - inf:
+        - 883
+        - 884
+      - inf:
+        - 885
+        - 886
+    match: 887
+  let-fun:
+  - 908
+  - match: 912
+  let-fun:
+  - 961
+  - match:
+    - inf:
+      - 965
+      - match:
+        - inf:
+          - inf:
+            - 966
+            - 967
+          - 968
+  let-fun:
+  - 978
+  - let-val:
+    - inf:
+      - inf:
+        - 985
+        - 986
+      - inf:
+        - 987
+        - 988
+    match: 989
+  let-fun:
+  - 1010
+  - let-val:
+    - inf:
+      - inf:
+        - 1018
+        - 1019
+      - inf:
+        - 1020
+        - 1021
+    let-val:
+    - match: 1024
+    inf:
+    - inf:
+      - .ListLit: 1037
+      - inf:
+        - 1038
+        - 1039
+    - 1040
+    - 1041
+  let-fun:
+  - 1042
+  - let-val:
+    - inf:
+      - inf:
+        - 1047
+        - 1
+      - 1048
+    match: 1049
+  let-fun:
+  - 1065
+  - match: 1069
+  let-fun:
+  - 1103
+  - let-val:
+    - inf:
+      - inf:
+        - 1108
+        - 1
+      - 1109
+    let-val:
+    - inf:
+      - inf:
+        - 1113
+        - 1114
+      - inf:
+        - 1115
+        - 1116
+    let-val:
+    - inf:
+      - inf:
+        - 1120
+        - 1121
+      - inf:
+        - 1122
+        - 1123
+    let-val:
+    - inf:
+      - inf:
+        - 1127
+        - 1128
+      - inf:
+        - 1129
+        - 1130
+    inf:
+    - inf:
+      - .If: 1131
+      - inf:
+        - 1132
+        - 1133
+        - 1134
+        - 1135
+    - 1136
+    - 1137
+  let-fun:
+  - 1138
+  - let-val:
+    - inf:
+      - inf:
+        - 1144
+        - 1
+      - 1145
+    let-val:
+    - inf:
+      - inf:
+        - 1149
+        - 1150
+      - inf:
+        - 1151
+        - 1152
+    let-val:
+    - match: 1156
+    let-val:
+    - match: 1175
+    inf:
+    - inf:
+      - 1188
+      - inf:
+        - 1189
+        - 1190
+        - 1191
+        - 1192
+    - 1193
+    - 1194
+  let-fun:
+  - 1195
+  - let-val:
+    - inf:
+      - inf:
+        - 1202
+        - 1203
+      - inf:
+        - 1204
+        - 1205
+    let-val:
+    - match: 1209
+    let-fun:
+    - 1232
+    - let-val:
+      - inf:
+        - inf:
+          - inf:
+            - 1240
+            - 1241
+          - 1242
+        - inf:
+          - 1243
+          - 1244
+      match: 1245
+    let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 1267
+          - prim
+        - 1268
+      - inf:
+        - 1269
+        - 1270
+    inf:
+    - inf:
+      - .Match: 1271
+      - inf:
+        - 1272
+        - 1273
+        - 1274
+    - 1275
+    - 1276
+  let-fun:
+  - 1277
+  - let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 1285
+          - 1286
+        - 1287
+      - inf:
+        - 1288
+        - 1289
+    let-val:
+    - match: 1293
+    inf:
+    - inf:
+      - .Fun: 1306
+      - inf:
+        - 1307
+        - 1308
+        - 1309
+    - 1310
+    - 1311
+  let-fun:
+  - 1312
+  - let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 1320
+          - 1321
+        - 1322
+      - inf:
+        - 1323
+        - 1324
+    match: 1325
+  let-fun:
+  - 1340
+  - match: 1342
+  let-fun:
+  - 1351
+  - let-val:
+    - inf:
+      - inf:
+        - 1356
+        - 1
+      - 1357
+    let-val:
+    - inf:
+      - 1359
+      - 1360
+    let-val:
+    - inf:
+      - inf:
+        - 1364
+        - 1365
+      - inf:
+        - 1366
+        - 1367
+    let-val:
+    - match: 1371
+    let-val:
+    - match: 1387
+    inf:
+    - inf:
+      - .Let: 1416
+      - inf:
+        - 1417
+        - 1418
+        - 1419
+        - 1420
+    - 1421
+    - 1422
+  let-fun:
+  - 1423
+  - let-val:
+    - inf:
+      - inf:
+        - 1428
+        - 1
+      - 1429
+    let-val:
+    - inf:
+      - 1431
+      - 1432
+    match: 1433
+  let-fun:
+  - 1483
+  - let-fun:
+    - 1487
+    - let-fun:
+      - 1490
+      - match: 1494
+      match: 1522
+    let-val:
+    - inf:
+      - 1541
+      - inf:
+        - 1542
+        - 1543
+    inf:
+    - inf:
+      - .Open: 1544
+      - inf:
+        - 1545
+        - 1546
+    - 1547
+    - 1548
+  let-fun:
+  - 1549
+  - match: 1553
+  let-fun:
+  - 1669
+  - let-val:
+    - inf:
+      - inf:
+        - 1676
+        - 1677
+      - inf:
+        - 1678
+        - 1679
+    let-fun:
+    - 1680
+    - match: 1684
+    inf:
+    - inf:
+      - 1746
+      - 1747
+    - inf:
+      - 1748
+      - 1749
+  let-fun:
+  - 1750
+  - let-val:
+    - inf:
+      - 1755
+      - 1756
+    let-val:
+    - inf:
+      - inf:
+        - 1758
+        - 1
+      - 1759
+    let-val:
+    - inf:
+      - inf:
+        - 1763
+        - 1764
+      - inf:
+        - 1765
+        - 1766
+    let-fun:
+    - 1767
+    - match:
+      - match:
+        - inf:
+          - inf:
+            - 1771
+            - 1772
+          - 1773
+    inf:
+    - inf:
+      - 1794
+      - 1795
+    - inf:
+      - 1796
+      - 1797
+  let-fun:
+  - 1798
+  - match: 1802
+  let-fun:
+  - 1824
+  - match:
+    - inf:
+      - 1829
+      - 1830
+  let-fun:
+  - 1842
+  - let-fun:
+    - 1848
+    - let-val:
+      - inf:
+        - inf:
+          - inf:
+            - 1857
+            - 1858
+          - 1859
+        - inf:
+          - 1860
+          - 1861
+      let-val:
+      - inf:
+        - .Bin: 1863
+        - inf:
+          - 1864
+          - 1865
+          - 1866
+          - 1867
+      inf:
+      - inf:
+        - inf:
+          - inf:
+            - 1868
+            - 1869
+          - 1870
+        - 1871
+      - inf:
+        - 1872
+        - 1873
+    let-fun:
+    - 1874
+    - let-val:
+      - inf:
+        - inf:
+          - inf:
+            - 1883
+            - 1884
+          - 1885
+        - inf:
+          - 1886
+          - 1887
+      let-val:
+      - inf:
+        - .Bin: 1889
+        - inf:
+          - 1890
+          - 1891
+          - 1892
+          - 1893
+      inf:
+      - inf:
+        - inf:
+          - inf:
+            - 1894
+            - 1895
+          - 1896
+        - 1897
+      - inf:
+        - 1898
+        - 1899
+    match:
+    - inf:
+      - 1900
+      - 1901
+  let-fun:
+  - 2056
+  - let-val:
+    - inf:
+      - inf:
+        - inf:
+          - 2064
+          - 2065
+        - 2066
+      - inf:
+        - 2067
+        - 2068
+    inf:
+    - inf:
+      - inf:
+        - inf:
+          - 2069
+          - 2070
+        - 2071
+      - 2072
+    - inf:
+      - 2073
+      - 2074
+  let-fun:
+  - 2075
+  - inf:
+    - inf:
+      - inf:
+        - 2079
+        - .Or: 2080
+      - 2081
+    - inf:
+      - 2082
+      - 2083
+  let-fun:
+  - 2084
+  - let-fun:
+    - 2088
+    - match: 2092
+    let-val:
+    - inf:
+      - inf:
+        - 2116
+        - 2117
+      - inf:
+        - 2118
+        - 2119
+    match: 2120
+  let-fun:
+  - 2140
+  - let-val:
+    - inf:
+      - inf:
+        - 2147
+        - 2148
+      - inf:
+        - 2149
+        - 2150
+    match: 2151
+  let-fun:
+  - 2172
+  - inf:
+    - inf:
+      - 2176
+      - 2177
+    - inf:
+      - 2178
+      - 2179
+  let-fun:
+  - 2180
+  - match: 2184
+  let-fun:
+  - 2220
+  - let-fun:
+    - 2224
+    - match: 2229
+    let-val:
+    - inf:
+      - 2275
+      - 2276
+    match:
+    - inf:
+      - inf:
+        - 2277
+        - 2278
+      - 2279
+  let-fun:
+  - 2286
+  - let-val:
+    - inf:
+      - inf:
+        - 2294
+        - 2295
+      - inf:
+        - 2296
+        - 2297
+    match: 2298
+  let-fun:
+  - 2312
+  - let-val:
+    - inf:
+      - 0
+      - 0
+    match: 2316
+  let-fun:
+  - 2369
+  - inf:
+    - let-val:
+      - inf:
+        - 2377
+        - inf:
+          - 2378
+          - prim
+      let-val:
+      - match: 2380
+      inf:
+      - 2386
+      - 2387
+  inf
+FILE MiloneLang/AstToHir.fs
+module (21, 0)
+rec (21, 7)
+MiloneLang (21, 11)
+. (21, 21)
+AstToHir (21, 22)
+open (23, 0)
+MiloneLang (23, 5)
+. (23, 15)
+Types (23, 16)
+open (24, 0)
+MiloneLang (24, 5)
+. (24, 15)
+Helpers (24, 16)
+let (26, 0)
+opToPrim (26, 4)
+op (26, 13)
+= (26, 16)
+match (27, 2)
+op (27, 8)
+with (27, 11)
+| (28, 2)
+Op (28, 4)
+. (28, 6)
+Add (28, 7)
+-> (28, 11)
+HPrim (29, 4)
+. (29, 9)
+Add (29, 10)
+| (31, 2)
+Op (31, 4)
+. (31, 6)
+Sub (31, 7)
+-> (31, 11)
+HPrim (32, 4)
+. (32, 9)
+Sub (32, 10)
+| (34, 2)
+Op (34, 4)
+. (34, 6)
+Mul (34, 7)
+-> (34, 11)
+HPrim (35, 4)
+. (35, 9)
+Mul (35, 10)
+| (37, 2)
+Op (37, 4)
+. (37, 6)
+Div (37, 7)
+-> (37, 11)
+HPrim (38, 4)
+. (38, 9)
+Div (38, 10)
+| (40, 2)
+Op (40, 4)
+. (40, 6)
+Mod (40, 7)
+-> (40, 11)
+HPrim (41, 4)
+. (41, 9)
+Mod (41, 10)
+| (43, 2)
+Op (43, 4)
+. (43, 6)
+Eq (43, 7)
+-> (43, 10)
+HPrim (44, 4)
+. (44, 9)
+Eq (44, 10)
+| (46, 2)
+Op (46, 4)
+. (46, 6)
+Lt (46, 7)
+-> (46, 10)
+HPrim (47, 4)
+. (47, 9)
+Lt (47, 10)
+| (49, 2)
+Op (49, 4)
+. (49, 6)
+Cons (49, 7)
+-> (49, 12)
+HPrim (50, 4)
+. (50, 9)
+Cons (50, 10)
+| (52, 2)
+Op (52, 4)
+. (52, 6)
+Ne (52, 7)
+| (53, 2)
+Op (53, 4)
+. (53, 6)
+Le (53, 7)
+| (54, 2)
+Op (54, 4)
+. (54, 6)
+Gt (54, 7)
+| (55, 2)
+Op (55, 4)
+. (55, 6)
+Ge (55, 7)
+| (56, 2)
+Op (56, 4)
+. (56, 6)
+And (56, 7)
+| (57, 2)
+Op (57, 4)
+. (57, 6)
+Or (57, 7)
+| (58, 2)
+Op (58, 4)
+. (58, 6)
+App (58, 7)
+| (59, 2)
+Op (59, 4)
+. (59, 6)
+Pipe (59, 7)
+-> (59, 12)
+failwithf (60, 4)
+"NEVER: %A" (60, 14)
+op (60, 26)
+let (63, 0)
+desugarListLitPat (63, 4)
+pats (63, 22)
+loc (63, 27)
+= (63, 31)
+assert (64, 2)
+( (64, 9)
+pats (64, 10)
+|> (64, 15)
+listIsEmpty (64, 18)
+|> (64, 30)
+not (64, 33)
+) (64, 36)
+let (66, 2)
+rec (66, 6)
+go (66, 10)
+pats (66, 13)
+= (66, 18)
+match (67, 4)
+pats (67, 10)
+with (67, 15)
+| (68, 4)
+[ (68, 6)
+] (68, 7)
+-> (68, 9)
+APat (69, 6)
+. (69, 10)
+ListLit (69, 11)
+( (69, 19)
+[ (69, 20)
+] (69, 21)
+, (69, 22)
+loc (69, 24)
+) (69, 27)
+| (71, 4)
+head (71, 6)
+:: (71, 11)
+tail (71, 14)
+-> (71, 19)
+let (72, 6)
+tail (72, 10)
+= (72, 15)
+go (72, 17)
+tail (72, 20)
+APat (73, 6)
+. (73, 10)
+Cons (73, 11)
+( (73, 16)
+head (73, 17)
+, (73, 21)
+tail (73, 23)
+, (73, 27)
+loc (73, 29)
+) (73, 32)
+go (75, 2)
+pats (75, 5)
+let (78, 0)
+desugarListLitExpr (78, 4)
+items (78, 23)
+loc (78, 29)
+= (78, 33)
+assert (79, 2)
+( (79, 9)
+items (79, 10)
+|> (79, 16)
+listIsEmpty (79, 19)
+|> (79, 31)
+not (79, 34)
+) (79, 37)
+let (81, 2)
+rec (81, 6)
+go (81, 10)
+items (81, 13)
+= (81, 19)
+match (82, 4)
+items (82, 10)
+with (82, 16)
+| (83, 4)
+[ (83, 6)
+] (83, 7)
+-> (83, 9)
+AExpr (84, 6)
+. (84, 11)
+ListLit (84, 12)
+( (84, 20)
+[ (84, 21)
+] (84, 22)
+, (84, 23)
+loc (84, 25)
+) (84, 28)
+| (86, 4)
+head (86, 6)
+:: (86, 11)
+tail (86, 14)
+-> (86, 19)
+let (87, 6)
+tail (87, 10)
+= (87, 15)
+go (87, 17)
+tail (87, 20)
+AExpr (88, 6)
+. (88, 11)
+Bin (88, 12)
+( (88, 16)
+Op (88, 17)
+. (88, 19)
+Cons (88, 20)
+, (88, 24)
+head (88, 26)
+, (88, 30)
+tail (88, 32)
+, (88, 36)
+loc (88, 38)
+) (88, 41)
+go (90, 2)
+items (90, 5)
+let (95, 0)
+desugarIf (95, 4)
+cond (95, 14)
+body (95, 19)
+alt (95, 24)
+loc (95, 28)
+= (95, 32)
+let (96, 2)
+alt (96, 6)
+= (96, 10)
+match (97, 4)
+alt (97, 10)
+with (97, 14)
+| (98, 4)
+AExpr (98, 6)
+. (98, 11)
+Missing (98, 12)
+_ (98, 20)
+-> (98, 22)
+axUnit (99, 6)
+loc (99, 13)
+| (100, 4)
+_ (100, 6)
+-> (100, 8)
+alt (101, 6)
+let (103, 2)
+arms (103, 6)
+= (103, 11)
+[ (104, 4)
+AArm (105, 6)
+( (105, 11)
+apTrue (105, 12)
+loc (105, 19)
+, (105, 22)
+axTrue (105, 24)
+loc (105, 31)
+, (105, 34)
+body (105, 36)
+, (105, 40)
+loc (105, 42)
+) (105, 45)
+AArm (106, 6)
+( (106, 11)
+apFalse (106, 12)
+loc (106, 20)
+, (106, 23)
+axTrue (106, 25)
+loc (106, 32)
+, (106, 35)
+alt (106, 37)
+, (106, 40)
+loc (106, 42)
+) (106, 45)
+] (107, 4)
+AExpr (109, 2)
+. (109, 7)
+Match (109, 8)
+( (109, 14)
+cond (109, 15)
+, (109, 19)
+arms (109, 21)
+, (109, 25)
+loc (109, 27)
+) (109, 30)
+let (113, 0)
+desugarFun (113, 4)
+pats (113, 15)
+body (113, 20)
+loc (113, 25)
+= (113, 29)
+let (114, 2)
+ident (114, 6)
+= (114, 12)
+"fun" (114, 14)
+let (115, 2)
+pat (115, 6)
+= (115, 10)
+APat (115, 12)
+. (115, 16)
+Fun (115, 17)
+( (115, 21)
+ident (115, 22)
+, (115, 27)
+pats (115, 29)
+, (115, 33)
+loc (115, 35)
+) (115, 38)
+let (116, 2)
+next (116, 6)
+= (116, 11)
+AExpr (116, 13)
+. (116, 18)
+Ident (116, 19)
+( (116, 25)
+ident (116, 26)
+, (116, 31)
+loc (116, 33)
+) (116, 36)
+AExpr (117, 2)
+. (117, 7)
+Let (117, 8)
+( (117, 12)
+pat (117, 13)
+, (117, 16)
+body (117, 18)
+, (117, 22)
+next (117, 24)
+, (117, 28)
+loc (117, 30)
+) (117, 33)
+let (120, 0)
+desugarUniNeg (120, 4)
+arg (120, 18)
+loc (120, 22)
+= (120, 26)
+let (121, 2)
+zero (121, 6)
+= (121, 11)
+AExpr (121, 13)
+. (121, 18)
+Lit (121, 19)
+( (121, 23)
+Lit (121, 24)
+. (121, 27)
+Int (121, 28)
+0 (121, 32)
+, (121, 33)
+loc (121, 35)
+) (121, 38)
+AExpr (122, 2)
+. (122, 7)
+Bin (122, 8)
+( (122, 12)
+Op (122, 13)
+. (122, 15)
+Sub (122, 16)
+, (122, 19)
+zero (122, 21)
+, (122, 25)
+arg (122, 27)
+, (122, 30)
+loc (122, 32)
+) (122, 35)
+let (125, 0)
+desugarBinNe (125, 4)
+l (125, 17)
+r (125, 19)
+loc (125, 21)
+= (125, 25)
+let (126, 2)
+eqExpr (126, 6)
+= (126, 13)
+AExpr (126, 15)
+. (126, 20)
+Bin (126, 21)
+( (126, 25)
+Op (126, 26)
+. (126, 28)
+Eq (126, 29)
+, (126, 31)
+l (126, 33)
+, (126, 34)
+r (126, 36)
+, (126, 37)
+loc (126, 39)
+) (126, 42)
+axNot (127, 2)
+eqExpr (127, 8)
+loc (127, 15)
+let (131, 0)
+desugarBinLe (131, 4)
+l (131, 17)
+r (131, 19)
+loc (131, 21)
+= (131, 25)
+let (132, 2)
+ltExpr (132, 6)
+= (132, 13)
+AExpr (132, 15)
+. (132, 20)
+Bin (132, 21)
+( (132, 25)
+Op (132, 26)
+. (132, 28)
+Lt (132, 29)
+, (132, 31)
+r (132, 33)
+, (132, 34)
+l (132, 36)
+, (132, 37)
+loc (132, 39)
+) (132, 42)
+axNot (133, 2)
+ltExpr (133, 8)
+loc (133, 15)
+let (137, 0)
+desugarBinGt (137, 4)
+l (137, 17)
+r (137, 19)
+loc (137, 21)
+= (137, 25)
+AExpr (138, 2)
+. (138, 7)
+Bin (138, 8)
+( (138, 12)
+Op (138, 13)
+. (138, 15)
+Lt (138, 16)
+, (138, 18)
+r (138, 20)
+, (138, 21)
+l (138, 23)
+, (138, 24)
+loc (138, 26)
+) (138, 29)
+let (141, 0)
+desugarBinGe (141, 4)
+l (141, 17)
+r (141, 19)
+loc (141, 21)
+= (141, 25)
+let (142, 2)
+ltExpr (142, 6)
+= (142, 13)
+AExpr (142, 15)
+. (142, 20)
+Bin (142, 21)
+( (142, 25)
+Op (142, 26)
+. (142, 28)
+Lt (142, 29)
+, (142, 31)
+l (142, 33)
+, (142, 34)
+r (142, 36)
+, (142, 37)
+loc (142, 39)
+) (142, 42)
+axNot (143, 2)
+ltExpr (143, 8)
+loc (143, 15)
+let (146, 0)
+desugarBinAnd (146, 4)
+l (146, 18)
+r (146, 20)
+loc (146, 22)
+= (146, 26)
+desugarIf (147, 2)
+l (147, 12)
+r (147, 14)
+( (147, 16)
+axFalse (147, 17)
+loc (147, 25)
+) (147, 28)
+loc (147, 30)
+let (150, 0)
+desugarBinOr (150, 4)
+l (150, 17)
+r (150, 19)
+loc (150, 21)
+= (150, 25)
+desugarIf (151, 2)
+l (151, 12)
+( (151, 14)
+axTrue (151, 15)
+loc (151, 22)
+) (151, 25)
+r (151, 27)
+loc (151, 29)
+let (155, 0)
+desugarBinPipe (155, 4)
+l (155, 19)
+r (155, 21)
+loc (155, 23)
+= (155, 27)
+AExpr (156, 2)
+. (156, 7)
+Bin (156, 8)
+( (156, 12)
+Op (156, 13)
+. (156, 15)
+App (156, 16)
+, (156, 19)
+r (156, 21)
+, (156, 22)
+l (156, 24)
+, (156, 25)
+loc (156, 27)
+) (156, 30)
+let (160, 0)
+tryDesugarIndexRange (160, 4)
+expr (160, 25)
+loc (160, 30)
+= (160, 34)
+match (161, 2)
+expr (161, 8)
+with (161, 13)
+| (162, 2)
+AExpr (162, 4)
+. (162, 9)
+Index (162, 10)
+( (162, 16)
+s (162, 17)
+, (162, 18)
+AExpr (162, 20)
+. (162, 25)
+Range (162, 26)
+( (162, 32)
+[ (162, 33)
+l (162, 34)
+; (162, 35)
+r (162, 37)
+] (162, 38)
+, (162, 39)
+_ (162, 41)
+) (162, 42)
+, (162, 43)
+_ (162, 45)
+) (162, 46)
+-> (162, 48)
+let (163, 4)
+getSlice (163, 8)
+= (163, 17)
+AExpr (163, 19)
+. (163, 24)
+Nav (163, 25)
+( (163, 29)
+AExpr (163, 30)
+. (163, 35)
+Ident (163, 36)
+( (163, 42)
+"String" (163, 43)
+, (163, 51)
+loc (163, 53)
+) (163, 56)
+, (163, 57)
+"getSlice" (163, 59)
+, (163, 69)
+loc (163, 71)
+) (163, 74)
+true (164, 4)
+, (164, 8)
+axApp3 (164, 10)
+getSlice (164, 17)
+l (164, 26)
+r (164, 28)
+s (164, 30)
+loc (164, 32)
+| (166, 2)
+_ (166, 4)
+-> (166, 6)
+false (167, 4)
+, (167, 9)
+expr (167, 11)
+let (182, 0)
+desugarLet (182, 4)
+pat (182, 15)
+body (182, 19)
+next (182, 24)
+loc (182, 29)
+= (182, 33)
+match (183, 2)
+pat (183, 8)
+with (183, 12)
+| (184, 2)
+APat (184, 4)
+. (184, 8)
+Anno (184, 9)
+( (184, 14)
+pat (184, 15)
+, (184, 18)
+annoTy (184, 20)
+, (184, 26)
+annoLoc (184, 28)
+) (184, 35)
+-> (184, 37)
+let (185, 4)
+body (185, 8)
+= (185, 13)
+AExpr (185, 15)
+. (185, 20)
+Anno (185, 21)
+( (185, 26)
+body (185, 27)
+, (185, 31)
+annoTy (185, 33)
+, (185, 39)
+annoLoc (185, 41)
+) (185, 48)
+desugarLet (186, 4)
+pat (186, 15)
+body (186, 19)
+next (186, 24)
+loc (186, 29)
+| (188, 2)
+APat (188, 4)
+. (188, 8)
+Fun (188, 9)
+( (188, 13)
+ident (188, 14)
+, (188, 19)
+args (188, 21)
+, (188, 25)
+_ (188, 27)
+) (188, 28)
+-> (188, 30)
+ALet (189, 4)
+. (189, 8)
+LetFun (189, 9)
+( (189, 16)
+ident (189, 17)
+, (189, 22)
+args (189, 24)
+, (189, 28)
+body (189, 30)
+, (189, 34)
+next (189, 36)
+, (189, 40)
+loc (189, 42)
+) (189, 45)
+| (191, 2)
+_ (191, 4)
+-> (191, 6)
+ALet (192, 4)
+. (192, 8)
+LetVal (192, 9)
+( (192, 16)
+pat (192, 17)
+, (192, 20)
+body (192, 22)
+, (192, 26)
+next (192, 28)
+, (192, 32)
+loc (192, 34)
+) (192, 37)
+let (194, 0)
+onTy (194, 4)
+( (194, 9)
+ty (194, 10)
+: (194, 12)
+ATy (194, 14)
+, (194, 17)
+nameCtx (194, 19)
+: (194, 26)
+NameCtx (194, 28)
+) (194, 35)
+: (194, 36)
+Ty (194, 38)
+* (194, 41)
+NameCtx (194, 43)
+= (194, 51)
+match (195, 2)
+ty (195, 8)
+with (195, 11)
+| (196, 2)
+ATy (196, 4)
+. (196, 7)
+Missing (196, 8)
+loc (196, 16)
+-> (196, 20)
+Ty (197, 4)
+. (197, 6)
+Error (197, 7)
+loc (197, 13)
+, (197, 16)
+nameCtx (197, 18)
+| (199, 2)
+ATy (199, 4)
+. (199, 7)
+Ident (199, 8)
+( (199, 14)
+ident (199, 15)
+, (199, 20)
+_ (199, 22)
+) (199, 23)
+-> (199, 25)
+let (200, 4)
+tySerial (200, 8)
+, (200, 16)
+nameCtx (200, 18)
+= (200, 26)
+nameCtx (200, 28)
+|> (200, 36)
+nameCtxAdd (200, 39)
+ident (200, 50)
+tyRef (201, 4)
+tySerial (201, 10)
+[ (201, 19)
+] (201, 20)
+, (201, 21)
+nameCtx (201, 23)
+| (203, 2)
+ATy (203, 4)
+. (203, 7)
+Suffix (203, 8)
+( (203, 15)
+lTy (203, 16)
+, (203, 19)
+ident (203, 21)
+, (203, 26)
+_ (203, 28)
+) (203, 29)
+-> (203, 31)
+let (204, 4)
+lTy (204, 8)
+, (204, 11)
+nameCtx (204, 13)
+= (204, 21)
+( (204, 23)
+lTy (204, 24)
+, (204, 27)
+nameCtx (204, 29)
+) (204, 36)
+|> (204, 38)
+onTy (204, 41)
+let (205, 4)
+tySerial (205, 8)
+, (205, 16)
+nameCtx (205, 18)
+= (205, 26)
+nameCtx (205, 28)
+|> (205, 36)
+nameCtxAdd (205, 39)
+ident (205, 50)
+tyRef (206, 4)
+tySerial (206, 10)
+[ (206, 19)
+lTy (206, 20)
+] (206, 23)
+, (206, 24)
+nameCtx (206, 26)
+| (208, 2)
+ATy (208, 4)
+. (208, 7)
+Tuple (208, 8)
+( (208, 14)
+itemTys (208, 15)
+, (208, 22)
+_ (208, 24)
+) (208, 25)
+-> (208, 27)
+let (209, 4)
+itemTys (209, 8)
+, (209, 15)
+nameCtx (209, 17)
+= (209, 25)
+( (209, 27)
+itemTys (209, 28)
+, (209, 35)
+nameCtx (209, 37)
+) (209, 44)
+|> (209, 46)
+stMap (209, 49)
+onTy (209, 55)
+tyTuple (210, 4)
+itemTys (210, 12)
+, (210, 19)
+nameCtx (210, 21)
+| (212, 2)
+ATy (212, 4)
+. (212, 7)
+Fun (212, 8)
+( (212, 12)
+sTy (212, 13)
+, (212, 16)
+tTy (212, 18)
+, (212, 21)
+_ (212, 23)
+) (212, 24)
+-> (212, 26)
+let (213, 4)
+sTy (213, 8)
+, (213, 11)
+nameCtx (213, 13)
+= (213, 21)
+( (213, 23)
+sTy (213, 24)
+, (213, 27)
+nameCtx (213, 29)
+) (213, 36)
+|> (213, 38)
+onTy (213, 41)
+let (214, 4)
+tTy (214, 8)
+, (214, 11)
+nameCtx (214, 13)
+= (214, 21)
+( (214, 23)
+tTy (214, 24)
+, (214, 27)
+nameCtx (214, 29)
+) (214, 36)
+|> (214, 38)
+onTy (214, 41)
+tyFun (215, 4)
+sTy (215, 10)
+tTy (215, 14)
+, (215, 17)
+nameCtx (215, 19)
+let (217, 0)
+onPat (217, 4)
+( (217, 10)
+pat (217, 11)
+: (217, 14)
+APat (217, 16)
+, (217, 20)
+nameCtx (217, 22)
+: (217, 29)
+NameCtx (217, 31)
+) (217, 38)
+: (217, 39)
+HPat (217, 41)
+* (217, 46)
+NameCtx (217, 48)
+= (217, 56)
+match (218, 2)
+pat (218, 8)
+with (218, 12)
+| (219, 2)
+APat (219, 4)
+. (219, 8)
+Missing (219, 9)
+( (219, 17)
+_ (219, 18)
+, (219, 19)
+loc (219, 21)
+) (219, 24)
+-> (219, 26)
+failwithf (220, 4)
+"Missing pattern %A" (220, 14)
+loc (220, 35)
+| (222, 2)
+APat (222, 4)
+. (222, 8)
+Lit (222, 9)
+( (222, 13)
+lit (222, 14)
+, (222, 17)
+loc (222, 19)
+) (222, 22)
+-> (222, 24)
+HPat (223, 4)
+. (223, 8)
+Lit (223, 9)
+( (223, 13)
+lit (223, 14)
+, (223, 17)
+loc (223, 19)
+) (223, 22)
+, (223, 23)
+nameCtx (223, 25)
+| (225, 2)
+APat (225, 4)
+. (225, 8)
+Ident (225, 9)
+( (225, 15)
+ident (225, 16)
+, (225, 21)
+loc (225, 23)
+) (225, 26)
+-> (225, 28)
+let (226, 4)
+serial (226, 8)
+, (226, 14)
+nameCtx (226, 16)
+= (226, 24)
+nameCtx (226, 26)
+|> (226, 34)
+nameCtxAdd (226, 37)
+ident (226, 48)
+HPat (227, 4)
+. (227, 8)
+Ref (227, 9)
+( (227, 13)
+serial (227, 14)
+, (227, 20)
+noTy (227, 22)
+, (227, 26)
+loc (227, 28)
+) (227, 31)
+, (227, 32)
+nameCtx (227, 34)
+| (229, 2)
+APat (229, 4)
+. (229, 8)
+ListLit (229, 9)
+( (229, 17)
+[ (229, 18)
+] (229, 19)
+, (229, 20)
+loc (229, 22)
+) (229, 25)
+-> (229, 27)
+patNil (230, 4)
+noTy (230, 11)
+loc (230, 16)
+, (230, 19)
+nameCtx (230, 21)
+| (232, 2)
+APat (232, 4)
+. (232, 8)
+ListLit (232, 9)
+( (232, 17)
+pats (232, 18)
+, (232, 22)
+loc (232, 24)
+) (232, 27)
+-> (232, 29)
+let (233, 4)
+pat (233, 8)
+= (233, 12)
+desugarListLitPat (233, 14)
+pats (233, 32)
+loc (233, 37)
+( (234, 4)
+pat (234, 5)
+, (234, 8)
+nameCtx (234, 10)
+) (234, 17)
+|> (234, 19)
+onPat (234, 22)
+| (236, 2)
+APat (236, 4)
+. (236, 8)
+Nav (236, 9)
+( (236, 13)
+l (236, 14)
+, (236, 15)
+r (236, 17)
+, (236, 18)
+loc (236, 20)
+) (236, 23)
+-> (236, 25)
+let (237, 4)
+l (237, 8)
+, (237, 9)
+nameCtx (237, 11)
+= (237, 19)
+( (237, 21)
+l (237, 22)
+, (237, 23)
+nameCtx (237, 25)
+) (237, 32)
+|> (237, 34)
+onPat (237, 37)
+HPat (238, 4)
+. (238, 8)
+Nav (238, 9)
+( (238, 13)
+l (238, 14)
+, (238, 15)
+r (238, 17)
+, (238, 18)
+noTy (238, 20)
+, (238, 24)
+loc (238, 26)
+) (238, 29)
+, (238, 30)
+nameCtx (238, 32)
+| (240, 2)
+APat (240, 4)
+. (240, 8)
+Call (240, 9)
+( (240, 14)
+calleePat (240, 15)
+, (240, 24)
+argPats (240, 26)
+, (240, 33)
+loc (240, 35)
+) (240, 38)
+-> (240, 40)
+let (241, 4)
+calleePat (241, 8)
+, (241, 17)
+nameCtx (241, 19)
+= (241, 27)
+( (241, 29)
+calleePat (241, 30)
+, (241, 39)
+nameCtx (241, 41)
+) (241, 48)
+|> (241, 50)
+onPat (241, 53)
+let (242, 4)
+argPats (242, 8)
+, (242, 15)
+nameCtx (242, 17)
+= (242, 25)
+( (242, 27)
+argPats (242, 28)
+, (242, 35)
+nameCtx (242, 37)
+) (242, 44)
+|> (242, 46)
+stMap (242, 49)
+onPat (242, 55)
+HPat (243, 4)
+. (243, 8)
+Call (243, 9)
+( (243, 14)
+calleePat (243, 15)
+, (243, 24)
+argPats (243, 26)
+, (243, 33)
+noTy (243, 35)
+, (243, 39)
+loc (243, 41)
+) (243, 44)
+, (243, 45)
+nameCtx (243, 47)
+| (245, 2)
+APat (245, 4)
+. (245, 8)
+Cons (245, 9)
+( (245, 14)
+head (245, 15)
+, (245, 19)
+tail (245, 21)
+, (245, 25)
+loc (245, 27)
+) (245, 30)
+-> (245, 32)
+let (246, 4)
+head (246, 8)
+, (246, 12)
+nameCtx (246, 14)
+= (246, 22)
+( (246, 24)
+head (246, 25)
+, (246, 29)
+nameCtx (246, 31)
+) (246, 38)
+|> (246, 40)
+onPat (246, 43)
+let (247, 4)
+tail (247, 8)
+, (247, 12)
+nameCtx (247, 14)
+= (247, 22)
+( (247, 24)
+tail (247, 25)
+, (247, 29)
+nameCtx (247, 31)
+) (247, 38)
+|> (247, 40)
+onPat (247, 43)
+HPat (248, 4)
+. (248, 8)
+Cons (248, 9)
+( (248, 14)
+head (248, 15)
+, (248, 19)
+tail (248, 21)
+, (248, 25)
+noTy (248, 27)
+, (248, 31)
+loc (248, 33)
+) (248, 36)
+, (248, 37)
+nameCtx (248, 39)
+| (250, 2)
+APat (250, 4)
+. (250, 8)
+TupleLit (250, 9)
+( (250, 18)
+pats (250, 19)
+, (250, 23)
+loc (250, 25)
+) (250, 28)
+-> (250, 30)
+let (251, 4)
+pats (251, 8)
+, (251, 12)
+nameCtx (251, 14)
+= (251, 22)
+( (251, 24)
+pats (251, 25)
+, (251, 29)
+nameCtx (251, 31)
+) (251, 38)
+|> (251, 40)
+stMap (251, 43)
+onPat (251, 49)
+HPat (252, 4)
+. (252, 8)
+Tuple (252, 9)
+( (252, 15)
+pats (252, 16)
+, (252, 20)
+noTy (252, 22)
+, (252, 26)
+loc (252, 28)
+) (252, 31)
+, (252, 32)
+nameCtx (252, 34)
+| (254, 2)
+APat (254, 4)
+. (254, 8)
+As (254, 9)
+( (254, 12)
+pat (254, 13)
+, (254, 16)
+ident (254, 18)
+, (254, 23)
+loc (254, 25)
+) (254, 28)
+-> (254, 30)
+let (255, 4)
+serial (255, 8)
+, (255, 14)
+nameCtx (255, 16)
+= (255, 24)
+nameCtx (255, 26)
+|> (255, 34)
+nameCtxAdd (255, 37)
+ident (255, 48)
+let (256, 4)
+pat (256, 8)
+, (256, 11)
+nameCtx (256, 13)
+= (256, 21)
+( (256, 23)
+pat (256, 24)
+, (256, 27)
+nameCtx (256, 29)
+) (256, 36)
+|> (256, 38)
+onPat (256, 41)
+HPat (257, 4)
+. (257, 8)
+As (257, 9)
+( (257, 12)
+pat (257, 13)
+, (257, 16)
+serial (257, 18)
+, (257, 24)
+loc (257, 26)
+) (257, 29)
+, (257, 30)
+nameCtx (257, 32)
+| (259, 2)
+APat (259, 4)
+. (259, 8)
+Anno (259, 9)
+( (259, 14)
+pat (259, 15)
+, (259, 18)
+ty (259, 20)
+, (259, 22)
+loc (259, 24)
+) (259, 27)
+-> (259, 29)
+let (260, 4)
+pat (260, 8)
+, (260, 11)
+nameCtx (260, 13)
+= (260, 21)
+( (260, 23)
+pat (260, 24)
+, (260, 27)
+nameCtx (260, 29)
+) (260, 36)
+|> (260, 38)
+onPat (260, 41)
+let (261, 4)
+ty (261, 8)
+, (261, 10)
+nameCtx (261, 12)
+= (261, 20)
+( (261, 22)
+ty (261, 23)
+, (261, 25)
+nameCtx (261, 27)
+) (261, 34)
+|> (261, 36)
+onTy (261, 39)
+HPat (262, 4)
+. (262, 8)
+Anno (262, 9)
+( (262, 14)
+pat (262, 15)
+, (262, 18)
+ty (262, 20)
+, (262, 22)
+loc (262, 24)
+) (262, 27)
+, (262, 28)
+nameCtx (262, 30)
+| (264, 2)
+APat (264, 4)
+. (264, 8)
+Or (264, 9)
+( (264, 12)
+l (264, 13)
+, (264, 14)
+r (264, 16)
+, (264, 17)
+loc (264, 19)
+) (264, 22)
+-> (264, 24)
+let (265, 4)
+l (265, 8)
+, (265, 9)
+nameCtx (265, 11)
+= (265, 19)
+( (265, 21)
+l (265, 22)
+, (265, 23)
+nameCtx (265, 25)
+) (265, 32)
+|> (265, 34)
+onPat (265, 37)
+let (266, 4)
+r (266, 8)
+, (266, 9)
+nameCtx (266, 11)
+= (266, 19)
+( (266, 21)
+r (266, 22)
+, (266, 23)
+nameCtx (266, 25)
+) (266, 32)
+|> (266, 34)
+onPat (266, 37)
+HPat (267, 4)
+. (267, 8)
+Or (267, 9)
+( (267, 12)
+l (267, 13)
+, (267, 14)
+r (267, 16)
+, (267, 17)
+noTy (267, 19)
+, (267, 23)
+loc (267, 25)
+) (267, 28)
+, (267, 29)
+nameCtx (267, 31)
+| (269, 2)
+APat (269, 4)
+. (269, 8)
+Fun (269, 9)
+( (269, 13)
+_ (269, 14)
+, (269, 15)
+_ (269, 17)
+, (269, 18)
+loc (269, 20)
+) (269, 23)
+-> (269, 25)
+failwithf (270, 4)
+"Invalid occurrence of fun pattern: %A" (270, 14)
+loc (270, 54)
+let (272, 0)
+onExpr (272, 4)
+( (272, 11)
+expr (272, 12)
+: (272, 16)
+AExpr (272, 18)
+, (272, 23)
+nameCtx (272, 25)
+: (272, 32)
+NameCtx (272, 34)
+) (272, 41)
+: (272, 42)
+HExpr (272, 44)
+* (272, 50)
+NameCtx (272, 52)
+= (272, 60)
+match (273, 2)
+expr (273, 8)
+with (273, 13)
+| (274, 2)
+AExpr (274, 4)
+. (274, 9)
+Missing (274, 10)
+loc (274, 18)
+-> (274, 22)
+HExpr (275, 4)
+. (275, 9)
+Error (275, 10)
+( (275, 16)
+"Missing expression" (275, 17)
+, (275, 37)
+loc (275, 39)
+) (275, 42)
+, (275, 43)
+nameCtx (275, 45)
+| (277, 2)
+AExpr (277, 4)
+. (277, 9)
+Lit (277, 10)
+( (277, 14)
+lit (277, 15)
+, (277, 18)
+loc (277, 20)
+) (277, 23)
+-> (277, 25)
+HExpr (278, 4)
+. (278, 9)
+Lit (278, 10)
+( (278, 14)
+lit (278, 15)
+, (278, 18)
+loc (278, 20)
+) (278, 23)
+, (278, 24)
+nameCtx (278, 26)
+| (280, 2)
+AExpr (280, 4)
+. (280, 9)
+Ident (280, 10)
+( (280, 16)
+ident (280, 17)
+, (280, 22)
+loc (280, 24)
+) (280, 27)
+-> (280, 29)
+let (281, 4)
+serial (281, 8)
+, (281, 14)
+nameCtx (281, 16)
+= (281, 24)
+nameCtx (281, 26)
+|> (281, 34)
+nameCtxAdd (281, 37)
+ident (281, 48)
+HExpr (282, 4)
+. (282, 9)
+Ref (282, 10)
+( (282, 14)
+serial (282, 15)
+, (282, 21)
+noTy (282, 23)
+, (282, 27)
+loc (282, 29)
+) (282, 32)
+, (282, 33)
+nameCtx (282, 35)
+| (284, 2)
+AExpr (284, 4)
+. (284, 9)
+ListLit (284, 10)
+( (284, 18)
+[ (284, 19)
+] (284, 20)
+, (284, 21)
+loc (284, 23)
+) (284, 26)
+-> (284, 28)
+hxNil (285, 4)
+noTy (285, 10)
+loc (285, 15)
+, (285, 18)
+nameCtx (285, 20)
+| (287, 2)
+AExpr (287, 4)
+. (287, 9)
+ListLit (287, 10)
+( (287, 18)
+items (287, 19)
+, (287, 24)
+loc (287, 26)
+) (287, 29)
+-> (287, 31)
+let (288, 4)
+expr (288, 8)
+= (288, 13)
+desugarListLitExpr (288, 15)
+items (288, 34)
+loc (288, 40)
+( (289, 4)
+expr (289, 5)
+, (289, 9)
+nameCtx (289, 11)
+) (289, 18)
+|> (289, 20)
+onExpr (289, 23)
+| (291, 2)
+AExpr (291, 4)
+. (291, 9)
+If (291, 10)
+( (291, 13)
+cond (291, 14)
+, (291, 18)
+body (291, 20)
+, (291, 24)
+alt (291, 26)
+, (291, 29)
+loc (291, 31)
+) (291, 34)
+-> (291, 36)
+let (292, 4)
+expr (292, 8)
+= (292, 13)
+desugarIf (292, 15)
+cond (292, 25)
+body (292, 30)
+alt (292, 35)
+loc (292, 39)
+( (293, 4)
+expr (293, 5)
+, (293, 9)
+nameCtx (293, 11)
+) (293, 18)
+|> (293, 20)
+onExpr (293, 23)
+| (295, 2)
+AExpr (295, 4)
+. (295, 9)
+Match (295, 10)
+( (295, 16)
+target (295, 17)
+, (295, 23)
+arms (295, 25)
+, (295, 29)
+loc (295, 31)
+) (295, 34)
+-> (295, 36)
+let (297, 4)
+onArm (297, 8)
+( (297, 14)
+AArm (297, 15)
+( (297, 20)
+pat (297, 21)
+, (297, 24)
+guard (297, 26)
+, (297, 31)
+body (297, 33)
+, (297, 37)
+loc (297, 39)
+) (297, 42)
+, (297, 43)
+nameCtx (297, 45)
+) (297, 52)
+= (297, 54)
+let (298, 6)
+pat (298, 10)
+, (298, 13)
+nameCtx (298, 15)
+= (298, 23)
+( (299, 8)
+pat (299, 9)
+, (299, 12)
+nameCtx (299, 14)
+) (299, 21)
+|> (299, 23)
+onPat (299, 26)
+let (300, 6)
+guard (300, 10)
+, (300, 15)
+nameCtx (300, 17)
+= (300, 25)
+match (301, 8)
+guard (301, 14)
+with (301, 20)
+| (302, 8)
+AExpr (302, 10)
+. (302, 15)
+Missing (302, 16)
+_ (302, 24)
+-> (302, 26)
+hxTrue (303, 10)
+loc (303, 17)
+, (303, 20)
+nameCtx (303, 22)
+| (304, 8)
+_ (304, 10)
+-> (304, 12)
+( (305, 10)
+guard (305, 11)
+, (305, 16)
+nameCtx (305, 18)
+) (305, 25)
+|> (305, 27)
+onExpr (305, 30)
+let (306, 6)
+body (306, 10)
+, (306, 14)
+nameCtx (306, 16)
+= (306, 24)
+( (307, 8)
+body (307, 9)
+, (307, 13)
+nameCtx (307, 15)
+) (307, 22)
+|> (307, 24)
+onExpr (307, 27)
+( (308, 6)
+pat (308, 7)
+, (308, 10)
+guard (308, 12)
+, (308, 17)
+body (308, 19)
+) (308, 23)
+, (308, 24)
+nameCtx (308, 26)
+let (309, 4)
+target (309, 8)
+, (309, 14)
+nameCtx (309, 16)
+= (309, 24)
+( (309, 26)
+target (309, 27)
+, (309, 33)
+nameCtx (309, 35)
+) (309, 42)
+|> (309, 44)
+onExpr (309, 47)
+let (310, 4)
+arms (310, 8)
+, (310, 12)
+nameCtx (310, 14)
+= (310, 22)
+( (310, 24)
+arms (310, 25)
+, (310, 29)
+nameCtx (310, 31)
+) (310, 38)
+|> (310, 40)
+stMap (310, 43)
+onArm (310, 49)
+HExpr (311, 4)
+. (311, 9)
+Match (311, 10)
+( (311, 16)
+target (311, 17)
+, (311, 23)
+arms (311, 25)
+, (311, 29)
+noTy (311, 31)
+, (311, 35)
+loc (311, 37)
+) (311, 40)
+, (311, 41)
+nameCtx (311, 43)
+| (313, 2)
+AExpr (313, 4)
+. (313, 9)
+Fun (313, 10)
+( (313, 14)
+pats (313, 15)
+, (313, 19)
+body (313, 21)
+, (313, 25)
+loc (313, 27)
+) (313, 30)
+-> (313, 32)
+let (314, 4)
+expr (314, 8)
+= (314, 13)
+desugarFun (314, 15)
+pats (314, 26)
+body (314, 31)
+loc (314, 36)
+( (315, 4)
+expr (315, 5)
+, (315, 9)
+nameCtx (315, 11)
+) (315, 18)
+|> (315, 20)
+onExpr (315, 23)
+| (317, 2)
+AExpr (317, 4)
+. (317, 9)
+Nav (317, 10)
+( (317, 14)
+l (317, 15)
+, (317, 16)
+r (317, 18)
+, (317, 19)
+loc (317, 21)
+) (317, 24)
+-> (317, 26)
+let (318, 4)
+l (318, 8)
+, (318, 9)
+nameCtx (318, 11)
+= (318, 19)
+( (318, 21)
+l (318, 22)
+, (318, 23)
+nameCtx (318, 25)
+) (318, 32)
+|> (318, 34)
+onExpr (318, 37)
+HExpr (319, 4)
+. (319, 9)
+Nav (319, 10)
+( (319, 14)
+l (319, 15)
+, (319, 16)
+r (319, 18)
+, (319, 19)
+noTy (319, 21)
+, (319, 25)
+loc (319, 27)
+) (319, 30)
+, (319, 31)
+nameCtx (319, 33)
+| (321, 2)
+AExpr (321, 4)
+. (321, 9)
+Index (321, 10)
+( (321, 16)
+l (321, 17)
+, (321, 18)
+r (321, 20)
+, (321, 21)
+loc (321, 23)
+) (321, 26)
+-> (321, 28)
+match (322, 4)
+tryDesugarIndexRange (322, 10)
+expr (322, 31)
+loc (322, 36)
+with (322, 40)
+| (323, 4)
+true (323, 6)
+, (323, 10)
+expr (323, 12)
+-> (323, 17)
+( (324, 6)
+expr (324, 7)
+, (324, 11)
+nameCtx (324, 13)
+) (324, 20)
+|> (324, 22)
+onExpr (324, 25)
+| (326, 4)
+false (326, 6)
+, (326, 11)
+_ (326, 13)
+-> (326, 15)
+let (327, 6)
+l (327, 10)
+, (327, 11)
+nameCtx (327, 13)
+= (327, 21)
+( (327, 23)
+l (327, 24)
+, (327, 25)
+nameCtx (327, 27)
+) (327, 34)
+|> (327, 36)
+onExpr (327, 39)
+let (328, 6)
+r (328, 10)
+, (328, 11)
+nameCtx (328, 13)
+= (328, 21)
+( (328, 23)
+r (328, 24)
+, (328, 25)
+nameCtx (328, 27)
+) (328, 34)
+|> (328, 36)
+onExpr (328, 39)
+let (329, 6)
+hxIndex (329, 10)
+= (329, 18)
+hxApp (329, 20)
+( (329, 26)
+hxApp (329, 27)
+( (329, 33)
+HExpr (329, 34)
+. (329, 39)
+Prim (329, 40)
+( (329, 45)
+HPrim (329, 46)
+. (329, 51)
+Index (329, 52)
+, (329, 57)
+noTy (329, 59)
+, (329, 63)
+loc (329, 65)
+) (329, 68)
+) (329, 69)
+l (329, 71)
+noTy (329, 73)
+loc (329, 78)
+) (329, 81)
+r (329, 83)
+noTy (329, 85)
+loc (329, 90)
+hxIndex (330, 6)
+, (330, 13)
+nameCtx (330, 15)
+| (332, 2)
+AExpr (332, 4)
+. (332, 9)
+Uni (332, 10)
+( (332, 14)
+UniOp (332, 15)
+. (332, 20)
+Neg (332, 21)
+, (332, 24)
+arg (332, 26)
+, (332, 29)
+loc (332, 31)
+) (332, 34)
+-> (332, 36)
+let (333, 4)
+expr (333, 8)
+= (333, 13)
+desugarUniNeg (333, 15)
+arg (333, 29)
+loc (333, 33)
+( (334, 4)
+expr (334, 5)
+, (334, 9)
+nameCtx (334, 11)
+) (334, 18)
+|> (334, 20)
+onExpr (334, 23)
+| (336, 2)
+AExpr (336, 4)
+. (336, 9)
+Bin (336, 10)
+( (336, 14)
+Op (336, 15)
+. (336, 17)
+Ne (336, 18)
+, (336, 20)
+l (336, 22)
+, (336, 23)
+r (336, 25)
+, (336, 26)
+loc (336, 28)
+) (336, 31)
+-> (336, 33)
+let (337, 4)
+expr (337, 8)
+= (337, 13)
+desugarBinNe (337, 15)
+l (337, 28)
+r (337, 30)
+loc (337, 32)
+( (338, 4)
+expr (338, 5)
+, (338, 9)
+nameCtx (338, 11)
+) (338, 18)
+|> (338, 20)
+onExpr (338, 23)
+| (340, 2)
+AExpr (340, 4)
+. (340, 9)
+Bin (340, 10)
+( (340, 14)
+Op (340, 15)
+. (340, 17)
+Le (340, 18)
+, (340, 20)
+l (340, 22)
+, (340, 23)
+r (340, 25)
+, (340, 26)
+loc (340, 28)
+) (340, 31)
+-> (340, 33)
+let (341, 4)
+expr (341, 8)
+= (341, 13)
+desugarBinLe (341, 15)
+l (341, 28)
+r (341, 30)
+loc (341, 32)
+( (342, 4)
+expr (342, 5)
+, (342, 9)
+nameCtx (342, 11)
+) (342, 18)
+|> (342, 20)
+onExpr (342, 23)
+| (344, 2)
+AExpr (344, 4)
+. (344, 9)
+Bin (344, 10)
+( (344, 14)
+Op (344, 15)
+. (344, 17)
+Gt (344, 18)
+, (344, 20)
+l (344, 22)
+, (344, 23)
+r (344, 25)
+, (344, 26)
+loc (344, 28)
+) (344, 31)
+-> (344, 33)
+let (345, 4)
+expr (345, 8)
+= (345, 13)
+desugarBinGt (345, 15)
+l (345, 28)
+r (345, 30)
+loc (345, 32)
+( (346, 4)
+expr (346, 5)
+, (346, 9)
+nameCtx (346, 11)
+) (346, 18)
+|> (346, 20)
+onExpr (346, 23)
+| (348, 2)
+AExpr (348, 4)
+. (348, 9)
+Bin (348, 10)
+( (348, 14)
+Op (348, 15)
+. (348, 17)
+Ge (348, 18)
+, (348, 20)
+l (348, 22)
+, (348, 23)
+r (348, 25)
+, (348, 26)
+loc (348, 28)
+) (348, 31)
+-> (348, 33)
+let (349, 4)
+expr (349, 8)
+= (349, 13)
+desugarBinGe (349, 15)
+l (349, 28)
+r (349, 30)
+loc (349, 32)
+( (350, 4)
+expr (350, 5)
+, (350, 9)
+nameCtx (350, 11)
+) (350, 18)
+|> (350, 20)
+onExpr (350, 23)
+| (352, 2)
+AExpr (352, 4)
+. (352, 9)
+Bin (352, 10)
+( (352, 14)
+Op (352, 15)
+. (352, 17)
+And (352, 18)
+, (352, 21)
+l (352, 23)
+, (352, 24)
+r (352, 26)
+, (352, 27)
+loc (352, 29)
+) (352, 32)
+-> (352, 34)
+let (353, 4)
+expr (353, 8)
+= (353, 13)
+desugarBinAnd (353, 15)
+l (353, 29)
+r (353, 31)
+loc (353, 33)
+( (354, 4)
+expr (354, 5)
+, (354, 9)
+nameCtx (354, 11)
+) (354, 18)
+|> (354, 20)
+onExpr (354, 23)
+| (356, 2)
+AExpr (356, 4)
+. (356, 9)
+Bin (356, 10)
+( (356, 14)
+Op (356, 15)
+. (356, 17)
+Or (356, 18)
+, (356, 20)
+l (356, 22)
+, (356, 23)
+r (356, 25)
+, (356, 26)
+loc (356, 28)
+) (356, 31)
+-> (356, 33)
+let (357, 4)
+expr (357, 8)
+= (357, 13)
+desugarBinOr (357, 15)
+l (357, 28)
+r (357, 30)
+loc (357, 32)
+( (358, 4)
+expr (358, 5)
+, (358, 9)
+nameCtx (358, 11)
+) (358, 18)
+|> (358, 20)
+onExpr (358, 23)
+| (360, 2)
+AExpr (360, 4)
+. (360, 9)
+Bin (360, 10)
+( (360, 14)
+Op (360, 15)
+. (360, 17)
+Pipe (360, 18)
+, (360, 22)
+l (360, 24)
+, (360, 25)
+r (360, 27)
+, (360, 28)
+loc (360, 30)
+) (360, 33)
+-> (360, 35)
+let (361, 4)
+expr (361, 8)
+= (361, 13)
+desugarBinPipe (361, 15)
+l (361, 30)
+r (361, 32)
+loc (361, 34)
+( (362, 4)
+expr (362, 5)
+, (362, 9)
+nameCtx (362, 11)
+) (362, 18)
+|> (362, 20)
+onExpr (362, 23)
+| (364, 2)
+AExpr (364, 4)
+. (364, 9)
+Bin (364, 10)
+( (364, 14)
+Op (364, 15)
+. (364, 17)
+App (364, 18)
+, (364, 21)
+l (364, 23)
+, (364, 24)
+r (364, 26)
+, (364, 27)
+loc (364, 29)
+) (364, 32)
+-> (364, 34)
+let (365, 4)
+l (365, 8)
+, (365, 9)
+nameCtx (365, 11)
+= (365, 19)
+( (365, 21)
+l (365, 22)
+, (365, 23)
+nameCtx (365, 25)
+) (365, 32)
+|> (365, 34)
+onExpr (365, 37)
+let (366, 4)
+r (366, 8)
+, (366, 9)
+nameCtx (366, 11)
+= (366, 19)
+( (366, 21)
+r (366, 22)
+, (366, 23)
+nameCtx (366, 25)
+) (366, 32)
+|> (366, 34)
+onExpr (366, 37)
+hxApp (367, 4)
+l (367, 10)
+r (367, 12)
+noTy (367, 14)
+loc (367, 19)
+, (367, 22)
+nameCtx (367, 24)
+| (369, 2)
+AExpr (369, 4)
+. (369, 9)
+Bin (369, 10)
+( (369, 14)
+op (369, 15)
+, (369, 17)
+l (369, 19)
+, (369, 20)
+r (369, 22)
+, (369, 23)
+loc (369, 25)
+) (369, 28)
+-> (369, 30)
+let (370, 4)
+prim (370, 8)
+= (370, 13)
+op (370, 15)
+|> (370, 18)
+opToPrim (370, 21)
+let (371, 4)
+l (371, 8)
+, (371, 9)
+nameCtx (371, 11)
+= (371, 19)
+( (371, 21)
+l (371, 22)
+, (371, 23)
+nameCtx (371, 25)
+) (371, 32)
+|> (371, 34)
+onExpr (371, 37)
+let (372, 4)
+r (372, 8)
+, (372, 9)
+nameCtx (372, 11)
+= (372, 19)
+( (372, 21)
+r (372, 22)
+, (372, 23)
+nameCtx (372, 25)
+) (372, 32)
+|> (372, 34)
+onExpr (372, 37)
+let (373, 4)
+primExpr (373, 8)
+= (373, 17)
+HExpr (373, 19)
+. (373, 24)
+Prim (373, 25)
+( (373, 30)
+prim (373, 31)
+, (373, 35)
+noTy (373, 37)
+, (373, 41)
+loc (373, 43)
+) (373, 46)
+hxApp (374, 4)
+( (374, 10)
+hxApp (374, 11)
+primExpr (374, 17)
+l (374, 26)
+noTy (374, 28)
+loc (374, 33)
+) (374, 36)
+r (374, 38)
+noTy (374, 40)
+loc (374, 45)
+, (374, 48)
+nameCtx (374, 50)
+| (376, 2)
+AExpr (376, 4)
+. (376, 9)
+Range (376, 10)
+( (376, 16)
+_ (376, 17)
+, (376, 18)
+loc (376, 20)
+) (376, 23)
+-> (376, 25)
+HExpr (377, 4)
+. (377, 9)
+Error (377, 10)
+( (377, 16)
+"Invalid use of range syntax." (377, 17)
+, (377, 47)
+loc (377, 49)
+) (377, 52)
+, (377, 53)
+nameCtx (377, 55)
+| (379, 2)
+AExpr (379, 4)
+. (379, 9)
+TupleLit (379, 10)
+( (379, 19)
+items (379, 20)
+, (379, 25)
+loc (379, 27)
+) (379, 30)
+-> (379, 32)
+let (380, 4)
+items (380, 8)
+, (380, 13)
+nameCtx (380, 15)
+= (380, 23)
+( (380, 25)
+items (380, 26)
+, (380, 31)
+nameCtx (380, 33)
+) (380, 40)
+|> (380, 42)
+stMap (380, 45)
+onExpr (380, 51)
+hxTuple (381, 4)
+items (381, 12)
+loc (381, 18)
+, (381, 21)
+nameCtx (381, 23)
+| (383, 2)
+AExpr (383, 4)
+. (383, 9)
+Anno (383, 10)
+( (383, 15)
+body (383, 16)
+, (383, 20)
+ty (383, 22)
+, (383, 24)
+loc (383, 26)
+) (383, 29)
+-> (383, 31)
+let (384, 4)
+body (384, 8)
+, (384, 12)
+nameCtx (384, 14)
+= (384, 22)
+( (384, 24)
+body (384, 25)
+, (384, 29)
+nameCtx (384, 31)
+) (384, 38)
+|> (384, 40)
+onExpr (384, 43)
+let (385, 4)
+ty (385, 8)
+, (385, 10)
+nameCtx (385, 12)
+= (385, 20)
+( (385, 22)
+ty (385, 23)
+, (385, 25)
+nameCtx (385, 27)
+) (385, 34)
+|> (385, 36)
+onTy (385, 39)
+hxAnno (386, 4)
+body (386, 11)
+ty (386, 16)
+loc (386, 19)
+, (386, 22)
+nameCtx (386, 24)
+| (388, 2)
+AExpr (388, 4)
+. (388, 9)
+Semi (388, 10)
+( (388, 15)
+exprs (388, 16)
+, (388, 21)
+loc (388, 23)
+) (388, 26)
+-> (388, 28)
+assert (389, 4)
+( (389, 11)
+exprs (389, 12)
+|> (389, 18)
+listIsEmpty (389, 21)
+|> (389, 33)
+not (389, 36)
+) (389, 39)
+let (390, 4)
+exprs (390, 8)
+, (390, 13)
+nameCtx (390, 15)
+= (390, 23)
+( (390, 25)
+exprs (390, 26)
+, (390, 31)
+nameCtx (390, 33)
+) (390, 40)
+|> (390, 42)
+stMap (390, 45)
+onExpr (390, 51)
+hxSemi (391, 4)
+exprs (391, 11)
+loc (391, 17)
+, (391, 20)
+nameCtx (391, 22)
+| (393, 2)
+AExpr (393, 4)
+. (393, 9)
+Let (393, 10)
+( (393, 14)
+pat (393, 15)
+, (393, 18)
+body (393, 20)
+, (393, 24)
+next (393, 26)
+, (393, 30)
+loc (393, 32)
+) (393, 35)
+-> (393, 37)
+match (394, 4)
+desugarLet (394, 10)
+pat (394, 21)
+body (394, 25)
+next (394, 30)
+loc (394, 35)
+with (394, 39)
+| (395, 4)
+ALet (395, 6)
+. (395, 10)
+LetFun (395, 11)
+( (395, 18)
+ident (395, 19)
+, (395, 24)
+args (395, 26)
+, (395, 30)
+body (395, 32)
+, (395, 36)
+next (395, 38)
+, (395, 42)
+loc (395, 44)
+) (395, 47)
+-> (395, 49)
+let (396, 6)
+serial (396, 10)
+, (396, 16)
+nameCtx (396, 18)
+= (396, 26)
+nameCtx (396, 28)
+|> (396, 36)
+nameCtxAdd (396, 39)
+ident (396, 50)
+let (397, 6)
+isMainFun (397, 10)
+= (397, 20)
+false (397, 22)
+let (398, 6)
+args (398, 10)
+, (398, 14)
+nameCtx (398, 16)
+= (398, 24)
+( (398, 26)
+args (398, 27)
+, (398, 31)
+nameCtx (398, 33)
+) (398, 40)
+|> (398, 42)
+stMap (398, 45)
+onPat (398, 51)
+let (399, 6)
+body (399, 10)
+, (399, 14)
+nameCtx (399, 16)
+= (399, 24)
+( (399, 26)
+body (399, 27)
+, (399, 31)
+nameCtx (399, 33)
+) (399, 40)
+|> (399, 42)
+onExpr (399, 45)
+let (400, 6)
+next (400, 10)
+, (400, 14)
+nameCtx (400, 16)
+= (400, 24)
+( (400, 26)
+next (400, 27)
+, (400, 31)
+nameCtx (400, 33)
+) (400, 40)
+|> (400, 42)
+onExpr (400, 45)
+HExpr (401, 6)
+. (401, 11)
+LetFun (401, 12)
+( (401, 19)
+serial (401, 20)
+, (401, 26)
+isMainFun (401, 28)
+, (401, 37)
+args (401, 39)
+, (401, 43)
+body (401, 45)
+, (401, 49)
+next (401, 51)
+, (401, 55)
+noTy (401, 57)
+, (401, 61)
+loc (401, 63)
+) (401, 66)
+, (401, 67)
+nameCtx (401, 69)
+| (403, 4)
+ALet (403, 6)
+. (403, 10)
+LetVal (403, 11)
+( (403, 18)
+pat (403, 19)
+, (403, 22)
+body (403, 24)
+, (403, 28)
+next (403, 30)
+, (403, 34)
+loc (403, 36)
+) (403, 39)
+-> (403, 41)
+let (404, 6)
+pat (404, 10)
+, (404, 13)
+nameCtx (404, 15)
+= (404, 23)
+( (404, 25)
+pat (404, 26)
+, (404, 29)
+nameCtx (404, 31)
+) (404, 38)
+|> (404, 40)
+onPat (404, 43)
+let (405, 6)
+body (405, 10)
+, (405, 14)
+nameCtx (405, 16)
+= (405, 24)
+( (405, 26)
+body (405, 27)
+, (405, 31)
+nameCtx (405, 33)
+) (405, 40)
+|> (405, 42)
+onExpr (405, 45)
+let (406, 6)
+next (406, 10)
+, (406, 14)
+nameCtx (406, 16)
+= (406, 24)
+( (406, 26)
+next (406, 27)
+, (406, 31)
+nameCtx (406, 33)
+) (406, 40)
+|> (406, 42)
+onExpr (406, 45)
+HExpr (407, 6)
+. (407, 11)
+Let (407, 12)
+( (407, 16)
+pat (407, 17)
+, (407, 20)
+body (407, 22)
+, (407, 26)
+next (407, 28)
+, (407, 32)
+noTy (407, 34)
+, (407, 38)
+loc (407, 40)
+) (407, 43)
+, (407, 44)
+nameCtx (407, 46)
+| (409, 2)
+AExpr (409, 4)
+. (409, 9)
+TySynonym (409, 10)
+( (409, 20)
+ident (409, 21)
+, (409, 26)
+ty (409, 28)
+, (409, 30)
+loc (409, 32)
+) (409, 35)
+-> (409, 37)
+let (410, 4)
+serial (410, 8)
+, (410, 14)
+nameCtx (410, 16)
+= (410, 24)
+nameCtx (410, 26)
+|> (410, 34)
+nameCtxAdd (410, 37)
+ident (410, 48)
+let (411, 4)
+ty (411, 8)
+, (411, 10)
+nameCtx (411, 12)
+= (411, 20)
+( (411, 22)
+ty (411, 23)
+, (411, 25)
+nameCtx (411, 27)
+) (411, 34)
+|> (411, 36)
+onTy (411, 39)
+HExpr (412, 4)
+. (412, 9)
+TyDecl (412, 10)
+( (412, 17)
+serial (412, 18)
+, (412, 24)
+TyDecl (412, 26)
+. (412, 32)
+Synonym (412, 33)
+( (412, 41)
+ty (412, 42)
+, (412, 44)
+loc (412, 46)
+) (412, 49)
+, (412, 50)
+loc (412, 52)
+) (412, 55)
+, (412, 56)
+nameCtx (412, 58)
+| (414, 2)
+AExpr (414, 4)
+. (414, 9)
+TyUnion (414, 10)
+( (414, 18)
+ident (414, 19)
+, (414, 24)
+variants (414, 26)
+, (414, 34)
+loc (414, 36)
+) (414, 39)
+-> (414, 41)
+let (415, 4)
+onVariant (415, 8)
+( (415, 18)
+AVariant (415, 19)
+( (415, 28)
+ident (415, 29)
+, (415, 34)
+payloadTy (415, 36)
+, (415, 45)
+_variantLoc (415, 47)
+) (415, 58)
+, (415, 59)
+nameCtx (415, 61)
+) (415, 68)
+= (415, 70)
+let (416, 6)
+serial (416, 10)
+, (416, 16)
+nameCtx (416, 18)
+= (416, 26)
+nameCtx (416, 28)
+|> (416, 36)
+nameCtxAdd (416, 39)
+ident (416, 50)
+let (417, 6)
+hasPayload (417, 10)
+, (417, 20)
+payloadTy (417, 22)
+, (417, 31)
+nameCtx (417, 33)
+= (417, 41)
+match (418, 8)
+payloadTy (418, 14)
+with (418, 24)
+| (419, 8)
+Some (419, 10)
+ty (419, 15)
+-> (419, 18)
+let (420, 10)
+ty (420, 14)
+, (420, 16)
+nameCtx (420, 18)
+= (420, 26)
+( (420, 28)
+ty (420, 29)
+, (420, 31)
+nameCtx (420, 33)
+) (420, 40)
+|> (420, 42)
+onTy (420, 45)
+true (421, 10)
+, (421, 14)
+ty (421, 16)
+, (421, 18)
+nameCtx (421, 20)
+| (422, 8)
+None (422, 10)
+-> (422, 15)
+false (423, 10)
+, (423, 15)
+tyUnit (423, 17)
+, (423, 23)
+nameCtx (423, 25)
+( (424, 6)
+ident (424, 7)
+, (424, 12)
+serial (424, 14)
+, (424, 20)
+hasPayload (424, 22)
+, (424, 32)
+payloadTy (424, 34)
+) (424, 43)
+, (424, 44)
+nameCtx (424, 46)
+let (425, 4)
+unionSerial (425, 8)
+, (425, 19)
+nameCtx (425, 21)
+= (425, 29)
+nameCtx (426, 6)
+|> (426, 14)
+nameCtxAdd (426, 17)
+ident (426, 28)
+let (427, 4)
+variants (427, 8)
+, (427, 16)
+nameCtx (427, 18)
+= (427, 26)
+( (428, 6)
+variants (428, 7)
+, (428, 15)
+nameCtx (428, 17)
+) (428, 24)
+|> (428, 26)
+stMap (428, 29)
+onVariant (428, 35)
+HExpr (429, 4)
+. (429, 9)
+TyDecl (429, 10)
+( (429, 17)
+unionSerial (429, 18)
+, (429, 29)
+TyDecl (429, 31)
+. (429, 37)
+Union (429, 38)
+( (429, 44)
+ident (429, 45)
+, (429, 50)
+variants (429, 52)
+, (429, 60)
+loc (429, 62)
+) (429, 65)
+, (429, 66)
+loc (429, 68)
+) (429, 71)
+, (429, 72)
+nameCtx (429, 74)
+| (431, 2)
+AExpr (431, 4)
+. (431, 9)
+Open (431, 10)
+( (431, 15)
+path (431, 16)
+, (431, 20)
+loc (431, 22)
+) (431, 25)
+-> (431, 27)
+HExpr (432, 4)
+. (432, 9)
+Open (432, 10)
+( (432, 15)
+path (432, 16)
+, (432, 20)
+loc (432, 22)
+) (432, 25)
+, (432, 26)
+nameCtx (432, 28)
+let (434, 0)
+astToHir (434, 4)
+( (434, 13)
+expr (434, 14)
+: (434, 18)
+AExpr (434, 20)
+, (434, 25)
+nameCtx (434, 27)
+: (434, 34)
+NameCtx (434, 36)
+) (434, 43)
+: (434, 44)
+HExpr (434, 46)
+* (434, 52)
+NameCtx (434, 54)
+= (434, 62)
+( (435, 2)
+expr (435, 3)
+, (435, 7)
+nameCtx (435, 9)
+) (435, 16)
+|> (435, 18)
+onExpr (435, 21)
+AST:
+semi:
+- open:
+  - MiloneLang
+  - Types
+- open:
+  - MiloneLang
+  - Helpers
+- let:
+  - fun:
+    - opToPrim
+    - op
+  - match:
+    - op
+    - arm:
+      - .Add: Op
+      - ERROR:
+        - missing
+        - (29:12)
+      .Add: HPrim
+    - arm:
+      - .Sub: Op
+      - ERROR:
+        - missing
+        - (32:12)
+      .Sub: HPrim
+    - arm:
+      - .Mul: Op
+      - ERROR:
+        - missing
+        - (35:12)
+      .Mul: HPrim
+    - arm:
+      - .Div: Op
+      - ERROR:
+        - missing
+        - (38:12)
+      .Div: HPrim
+    - arm:
+      - .Mod: Op
+      - ERROR:
+        - missing
+        - (41:12)
+      .Mod: HPrim
+    - arm:
+      - .Eq: Op
+      - ERROR:
+        - missing
+        - (44:11)
+      .Eq: HPrim
+    - arm:
+      - .Lt: Op
+      - ERROR:
+        - missing
+        - (47:11)
+      .Lt: HPrim
+    - arm:
+      - .Cons: Op
+      - ERROR:
+        - missing
+        - (50:13)
+      .Cons: HPrim
+    - arm:
+      - or:
+        - .Ne: Op
+        or:
+        - .Le: Op
+        or:
+        - .Gt: Op
+        or:
+        - .Ge: Op
+        or:
+        - .And: Op
+        or:
+        - .Or: Op
+        or:
+        - .App: Op
+        .Pipe: Op
+      - ERROR:
+        - missing
+        - (60:13)
+      bin:
+      - bin:
+        - failwithf
+        - \"NEVER: %A\"
+      - op
+  let:
+  - fun:
+    - desugarListLitPat
+    - pats
+    - loc
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - pats
+          - listIsEmpty
+        - not
+    - let:
+      - fun:
+        - go
+        - pats
+      - match:
+        - pats
+        - arm:
+          - list
+          - ERROR:
+            - missing
+            - (69:10)
+          bin:
+          - .ListLit: APat
+          - tuple:
+            - list
+            - loc
+        - arm:
+          - cons: head
+            tail
+          - ERROR:
+            - missing
+            - (72:20)
+          let:
+          - tail
+          - bin:
+            - go
+            - tail
+          bin:
+          - .Cons: APat
+          - tuple:
+            - head
+            - tail
+            - loc
+      bin:
+      - go
+      - pats
+  let:
+  - fun:
+    - desugarListLitExpr
+    - items
+    - loc
+  - semi:
+    - bin:
+      - assert
+      - bin:
+        - bin:
+          - items
+          - listIsEmpty
+        - not
+    - let:
+      - fun:
+        - go
+        - items
+      - match:
+        - items
+        - arm:
+          - list
+          - ERROR:
+            - missing
+            - (84:10)
+          bin:
+          - .ListLit: AExpr
+          - tuple:
+            - list
+            - loc
+        - arm:
+          - cons: head
+            tail
+          - ERROR:
+            - missing
+            - (87:20)
+          let:
+          - tail
+          - bin:
+            - go
+            - tail
+          bin:
+          - .Bin: AExpr
+          - tuple:
+            - .Cons: Op
+            - head
+            - tail
+            - loc
+      bin:
+      - go
+      - items
+  let:
+  - fun:
+    - desugarIf
+    - cond
+    - body
+    - alt
+    - loc
+  - let:
+    - alt
+    - match:
+      - alt
+      - arm:
+        - call:
+          - .Missing: AExpr
+          - _
+        - ERROR:
+          - missing
+          - (99:23)
+        bin:
+        - axUnit
+        - loc
+      - arm:
+        - _
+        - ERROR:
+          - missing
+          - (101:9)
+        alt
+    let:
+    - arms
+    - list:
+      - bin:
+        - AArm
+        - tuple:
+          - bin:
+            - apTrue
+            - loc
+          - bin:
+            - axTrue
+            - loc
+          - body
+          - loc
+      - bin:
+        - AArm
+        - tuple:
+          - bin:
+            - apFalse
+            - loc
+          - bin:
+            - axTrue
+            - loc
+          - alt
+          - loc
+    bin:
+    - .Match: AExpr
+    - tuple:
+      - cond
+      - arms
+      - loc
+  let:
+  - fun:
+    - desugarFun
+    - pats
+    - body
+    - loc
+  - let:
+    - ident
+    - \"fun\"
+    let:
+    - pat
+    - bin:
+      - .Fun: APat
+      - tuple:
+        - ident
+        - pats
+        - loc
+    let:
+    - next
+    - bin:
+      - .Ident: AExpr
+      - tuple:
+        - ident
+        - loc
+    bin:
+    - .Let: AExpr
+    - tuple:
+      - pat
+      - body
+      - next
+      - loc
+  let:
+  - fun:
+    - desugarUniNeg
+    - arg
+    - loc
+  - let:
+    - zero
+    - bin:
+      - .Lit: AExpr
+      - tuple:
+        - bin:
+          - .Int: Lit
+          - 0
+        - loc
+    bin:
+    - .Bin: AExpr
+    - tuple:
+      - .Sub: Op
+      - zero
+      - arg
+      - loc
+  let:
+  - fun:
+    - desugarBinNe
+    - l
+    - r
+    - loc
+  - let:
+    - eqExpr
+    - bin:
+      - .Bin: AExpr
+      - tuple:
+        - .Eq: Op
+        - l
+        - r
+        - loc
+    bin:
+    - bin:
+      - axNot
+      - eqExpr
+    - loc
+  let:
+  - fun:
+    - desugarBinLe
+    - l
+    - r
+    - loc
+  - let:
+    - ltExpr
+    - bin:
+      - .Bin: AExpr
+      - tuple:
+        - .Lt: Op
+        - r
+        - l
+        - loc
+    bin:
+    - bin:
+      - axNot
+      - ltExpr
+    - loc
+  let:
+  - fun:
+    - desugarBinGt
+    - l
+    - r
+    - loc
+  - bin:
+    - .Bin: AExpr
+    - tuple:
+      - .Lt: Op
+      - r
+      - l
+      - loc
+  let:
+  - fun:
+    - desugarBinGe
+    - l
+    - r
+    - loc
+  - let:
+    - ltExpr
+    - bin:
+      - .Bin: AExpr
+      - tuple:
+        - .Lt: Op
+        - l
+        - r
+        - loc
+    bin:
+    - bin:
+      - axNot
+      - ltExpr
+    - loc
+  let:
+  - fun:
+    - desugarBinAnd
+    - l
+    - r
+    - loc
+  - bin:
+    - bin:
+      - bin:
+        - bin:
+          - desugarIf
+          - l
+        - r
+      - bin:
+        - axFalse
+        - loc
+    - loc
+  let:
+  - fun:
+    - desugarBinOr
+    - l
+    - r
+    - loc
+  - bin:
+    - bin:
+      - bin:
+        - bin:
+          - desugarIf
+          - l
+        - bin:
+          - axTrue
+          - loc
+      - r
+    - loc
+  let:
+  - fun:
+    - desugarBinPipe
+    - l
+    - r
+    - loc
+  - bin:
+    - .Bin: AExpr
+    - tuple:
+      - .App: Op
+      - r
+      - l
+      - loc
+  let:
+  - fun:
+    - tryDesugarIndexRange
+    - expr
+    - loc
+  - match:
+    - expr
+    - arm:
+      - call:
+        - .Index: AExpr
+        - tuple:
+          - s
+          - call:
+            - .Range: AExpr
+            - tuple:
+              - list:
+                - l
+                - r
+              - _
+          - _
+      - ERROR:
+        - missing
+        - (163:49)
+      let:
+      - getSlice
+      - bin:
+        - .Nav: AExpr
+        - tuple:
+          - bin:
+            - .Ident: AExpr
+            - tuple:
+              - \"String\"
+              - loc
+          - \"getSlice\"
+          - loc
+      tuple:
+      - true
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - bin:
+                - axApp3
+                - getSlice
+              - l
+            - r
+          - s
+        - loc
+    - arm:
+      - _
+      - ERROR:
+        - missing
+        - (167:7)
+      tuple:
+      - false
+      - expr
+  let:
+  - fun:
+    - desugarLet
+    - pat
+    - body
+    - next
+    - loc
+  - match:
+    - pat
+    - arm:
+      - call:
+        - .Anno: APat
+        - tuple:
+          - pat
+          - annoTy
+          - annoLoc
+      - ERROR:
+        - missing
+        - (185:38)
+      let:
+      - body
+      - bin:
+        - .Anno: AExpr
+        - tuple:
+          - body
+          - annoTy
+          - annoLoc
+      bin:
+      - bin:
+        - bin:
+          - bin:
+            - desugarLet
+            - pat
+          - body
+        - next
+      - loc
+    - arm:
+      - call:
+        - .Fun: APat
+        - tuple:
+          - ident
+          - args
+          - _
+      - ERROR:
+        - missing
+        - (189:31)
+      bin:
+      - .LetFun: ALet
+      - tuple:
+        - ident
+        - args
+        - body
+        - next
+        - loc
+    - arm:
+      - _
+      - ERROR:
+        - missing
+        - (192:7)
+      bin:
+      - .LetVal: ALet
+      - tuple:
+        - pat
+        - body
+        - next
+        - loc
+  let:
+  - anno:
+    - fun:
+      - onTy
+      - tuple:
+        - anno:
+          - ty
+          - ATy
+        - anno:
+          - nameCtx
+          - NameCtx
+    - tuple:
+      - Ty
+      - NameCtx
+  - match:
+    - ty
+    - arm:
+      - call:
+        - .Missing: ATy
+        - loc
+      - ERROR:
+        - missing
+        - (197:21)
+      tuple:
+      - bin:
+        - .Error: Ty
+        - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Ident: ATy
+        - tuple:
+          - ident
+          - _
+      - ERROR:
+        - missing
+        - (200:26)
+      let:
+      - tuple:
+        - tySerial
+        - nameCtx
+      - bin:
+        - nameCtx
+        - bin:
+          - nameCtxAdd
+          - ident
+      tuple:
+      - bin:
+        - bin:
+          - tyRef
+          - tySerial
+        - list
+      - nameCtx
+    - arm:
+      - call:
+        - .Suffix: ATy
+        - tuple:
+          - lTy
+          - ident
+          - _
+      - ERROR:
+        - missing
+        - (204:32)
+      let:
+      - tuple:
+        - lTy
+        - nameCtx
+      - bin:
+        - tuple:
+          - lTy
+          - nameCtx
+        - onTy
+      let:
+      - tuple:
+        - tySerial
+        - nameCtx
+      - bin:
+        - nameCtx
+        - bin:
+          - nameCtxAdd
+          - ident
+      tuple:
+      - bin:
+        - bin:
+          - tyRef
+          - tySerial
+        - list: lTy
+      - nameCtx
+    - arm:
+      - call:
+        - .Tuple: ATy
+        - tuple:
+          - itemTys
+          - _
+      - ERROR:
+        - missing
+        - (209:28)
+      let:
+      - tuple:
+        - itemTys
+        - nameCtx
+      - bin:
+        - tuple:
+          - itemTys
+          - nameCtx
+        - bin:
+          - stMap
+          - onTy
+      tuple:
+      - bin:
+        - tyTuple
+        - itemTys
+      - nameCtx
+    - arm:
+      - call:
+        - .Fun: ATy
+        - tuple:
+          - sTy
+          - tTy
+          - _
+      - ERROR:
+        - missing
+        - (213:27)
+      let:
+      - tuple:
+        - sTy
+        - nameCtx
+      - bin:
+        - tuple:
+          - sTy
+          - nameCtx
+        - onTy
+      let:
+      - tuple:
+        - tTy
+        - nameCtx
+      - bin:
+        - tuple:
+          - tTy
+          - nameCtx
+        - onTy
+      tuple:
+      - bin:
+        - bin:
+          - tyFun
+          - sTy
+        - tTy
+      - nameCtx
+  let:
+  - anno:
+    - fun:
+      - onPat
+      - tuple:
+        - anno:
+          - pat
+          - APat
+        - anno:
+          - nameCtx
+          - NameCtx
+    - tuple:
+      - HPat
+      - NameCtx
+  - match:
+    - pat
+    - arm:
+      - call:
+        - .Missing: APat
+        - tuple:
+          - _
+          - loc
+      - ERROR:
+        - missing
+        - (220:27)
+      bin:
+      - bin:
+        - failwithf
+        - \"Missing pattern %A\"
+      - loc
+    - arm:
+      - call:
+        - .Lit: APat
+        - tuple:
+          - lit
+          - loc
+      - ERROR:
+        - missing
+        - (223:25)
+      tuple:
+      - bin:
+        - .Lit: HPat
+        - tuple:
+          - lit
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Ident: APat
+        - tuple:
+          - ident
+          - loc
+      - ERROR:
+        - missing
+        - (226:29)
+      let:
+      - tuple:
+        - serial
+        - nameCtx
+      - bin:
+        - nameCtx
+        - bin:
+          - nameCtxAdd
+          - ident
+      tuple:
+      - bin:
+        - .Ref: HPat
+        - tuple:
+          - serial
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .ListLit: APat
+        - tuple:
+          - list
+          - loc
+      - ERROR:
+        - missing
+        - (230:28)
+      tuple:
+      - bin:
+        - bin:
+          - patNil
+          - noTy
+        - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .ListLit: APat
+        - tuple:
+          - pats
+          - loc
+      - ERROR:
+        - missing
+        - (233:30)
+      let:
+      - pat
+      - bin:
+        - bin:
+          - desugarListLitPat
+          - pats
+        - loc
+      bin:
+      - tuple:
+        - pat
+        - nameCtx
+      - onPat
+    - arm:
+      - call:
+        - .Nav: APat
+        - tuple:
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (237:26)
+      let:
+      - tuple:
+        - l
+        - nameCtx
+      - bin:
+        - tuple:
+          - l
+          - nameCtx
+        - onPat
+      tuple:
+      - bin:
+        - .Nav: HPat
+        - tuple:
+          - l
+          - r
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Call: APat
+        - tuple:
+          - calleePat
+          - argPats
+          - loc
+      - ERROR:
+        - missing
+        - (241:41)
+      let:
+      - tuple:
+        - calleePat
+        - nameCtx
+      - bin:
+        - tuple:
+          - calleePat
+          - nameCtx
+        - onPat
+      let:
+      - tuple:
+        - argPats
+        - nameCtx
+      - bin:
+        - tuple:
+          - argPats
+          - nameCtx
+        - bin:
+          - stMap
+          - onPat
+      tuple:
+      - bin:
+        - .Call: HPat
+        - tuple:
+          - calleePat
+          - argPats
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Cons: APat
+        - tuple:
+          - head
+          - tail
+          - loc
+      - ERROR:
+        - missing
+        - (246:33)
+      let:
+      - tuple:
+        - head
+        - nameCtx
+      - bin:
+        - tuple:
+          - head
+          - nameCtx
+        - onPat
+      let:
+      - tuple:
+        - tail
+        - nameCtx
+      - bin:
+        - tuple:
+          - tail
+          - nameCtx
+        - onPat
+      tuple:
+      - bin:
+        - .Cons: HPat
+        - tuple:
+          - head
+          - tail
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .TupleLit: APat
+        - tuple:
+          - pats
+          - loc
+      - ERROR:
+        - missing
+        - (251:31)
+      let:
+      - tuple:
+        - pats
+        - nameCtx
+      - bin:
+        - tuple:
+          - pats
+          - nameCtx
+        - bin:
+          - stMap
+          - onPat
+      tuple:
+      - bin:
+        - .Tuple: HPat
+        - tuple:
+          - pats
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .As: APat
+        - tuple:
+          - pat
+          - ident
+          - loc
+      - ERROR:
+        - missing
+        - (255:31)
+      let:
+      - tuple:
+        - serial
+        - nameCtx
+      - bin:
+        - nameCtx
+        - bin:
+          - nameCtxAdd
+          - ident
+      let:
+      - tuple:
+        - pat
+        - nameCtx
+      - bin:
+        - tuple:
+          - pat
+          - nameCtx
+        - onPat
+      tuple:
+      - bin:
+        - .As: HPat
+        - tuple:
+          - pat
+          - serial
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Anno: APat
+        - tuple:
+          - pat
+          - ty
+          - loc
+      - ERROR:
+        - missing
+        - (260:30)
+      let:
+      - tuple:
+        - pat
+        - nameCtx
+      - bin:
+        - tuple:
+          - pat
+          - nameCtx
+        - onPat
+      let:
+      - tuple:
+        - ty
+        - nameCtx
+      - bin:
+        - tuple:
+          - ty
+          - nameCtx
+        - onTy
+      tuple:
+      - bin:
+        - .Anno: HPat
+        - tuple:
+          - pat
+          - ty
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Or: APat
+        - tuple:
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (265:25)
+      let:
+      - tuple:
+        - l
+        - nameCtx
+      - bin:
+        - tuple:
+          - l
+          - nameCtx
+        - onPat
+      let:
+      - tuple:
+        - r
+        - nameCtx
+      - bin:
+        - tuple:
+          - r
+          - nameCtx
+        - onPat
+      tuple:
+      - bin:
+        - .Or: HPat
+        - tuple:
+          - l
+          - r
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Fun: APat
+        - tuple:
+          - _
+          - _
+          - loc
+      - ERROR:
+        - missing
+        - (270:26)
+      bin:
+      - bin:
+        - failwithf
+        - \"Invalid occurrence of fun pattern: %A\"
+      - loc
+  let:
+  - anno:
+    - fun:
+      - onExpr
+      - tuple:
+        - anno:
+          - expr
+          - AExpr
+        - anno:
+          - nameCtx
+          - NameCtx
+    - tuple:
+      - HExpr
+      - NameCtx
+  - match:
+    - expr
+    - arm:
+      - call:
+        - .Missing: AExpr
+        - loc
+      - ERROR:
+        - missing
+        - (275:23)
+      tuple:
+      - bin:
+        - .Error: HExpr
+        - tuple:
+          - \"Missing expression\"
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Lit: AExpr
+        - tuple:
+          - lit
+          - loc
+      - ERROR:
+        - missing
+        - (278:26)
+      tuple:
+      - bin:
+        - .Lit: HExpr
+        - tuple:
+          - lit
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Ident: AExpr
+        - tuple:
+          - ident
+          - loc
+      - ERROR:
+        - missing
+        - (281:30)
+      let:
+      - tuple:
+        - serial
+        - nameCtx
+      - bin:
+        - nameCtx
+        - bin:
+          - nameCtxAdd
+          - ident
+      tuple:
+      - bin:
+        - .Ref: HExpr
+        - tuple:
+          - serial
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .ListLit: AExpr
+        - tuple:
+          - list
+          - loc
+      - ERROR:
+        - missing
+        - (285:29)
+      tuple:
+      - bin:
+        - bin:
+          - hxNil
+          - noTy
+        - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .ListLit: AExpr
+        - tuple:
+          - items
+          - loc
+      - ERROR:
+        - missing
+        - (288:32)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - desugarListLitExpr
+          - items
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .If: AExpr
+        - tuple:
+          - cond
+          - body
+          - alt
+          - loc
+      - ERROR:
+        - missing
+        - (292:37)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - desugarIf
+              - cond
+            - body
+          - alt
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Match: AExpr
+        - tuple:
+          - target
+          - arms
+          - loc
+      - ERROR:
+        - missing
+        - (296:37)
+      let:
+      - fun:
+        - onArm
+        - tuple:
+          - call:
+            - AArm
+            - tuple:
+              - pat
+              - guard
+              - body
+              - loc
+          - nameCtx
+      - let:
+        - tuple:
+          - pat
+          - nameCtx
+        - bin:
+          - tuple:
+            - pat
+            - nameCtx
+          - onPat
+        let:
+        - tuple:
+          - guard
+          - nameCtx
+        - match:
+          - guard
+          - arm:
+            - call:
+              - .Missing: AExpr
+              - _
+            - ERROR:
+              - missing
+              - (303:27)
+            tuple:
+            - bin:
+              - hxTrue
+              - loc
+            - nameCtx
+          - arm:
+            - _
+            - ERROR:
+              - missing
+              - (305:13)
+            bin:
+            - tuple:
+              - guard
+              - nameCtx
+            - onExpr
+        let:
+        - tuple:
+          - body
+          - nameCtx
+        - bin:
+          - tuple:
+            - body
+            - nameCtx
+          - onExpr
+        tuple:
+        - tuple:
+          - pat
+          - guard
+          - body
+        - nameCtx
+      let:
+      - tuple:
+        - target
+        - nameCtx
+      - bin:
+        - tuple:
+          - target
+          - nameCtx
+        - onExpr
+      let:
+      - tuple:
+        - arms
+        - nameCtx
+      - bin:
+        - tuple:
+          - arms
+          - nameCtx
+        - bin:
+          - stMap
+          - onArm
+      tuple:
+      - bin:
+        - .Match: HExpr
+        - tuple:
+          - target
+          - arms
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Fun: AExpr
+        - tuple:
+          - pats
+          - body
+          - loc
+      - ERROR:
+        - missing
+        - (314:33)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - desugarFun
+            - pats
+          - body
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Nav: AExpr
+        - tuple:
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (318:27)
+      let:
+      - tuple:
+        - l
+        - nameCtx
+      - bin:
+        - tuple:
+          - l
+          - nameCtx
+        - onExpr
+      tuple:
+      - bin:
+        - .Nav: HExpr
+        - tuple:
+          - l
+          - r
+          - noTy
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Index: AExpr
+        - tuple:
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (322:29)
+      match:
+      - bin:
+        - bin:
+          - tryDesugarIndexRange
+          - expr
+        - loc
+      - arm:
+        - tuple:
+          - true
+          - expr
+        - ERROR:
+          - missing
+          - (324:18)
+        bin:
+        - tuple:
+          - expr
+          - nameCtx
+        - onExpr
+      - arm:
+        - tuple:
+          - false
+          - _
+        - ERROR:
+          - missing
+          - (327:16)
+        let:
+        - tuple:
+          - l
+          - nameCtx
+        - bin:
+          - tuple:
+            - l
+            - nameCtx
+          - onExpr
+        let:
+        - tuple:
+          - r
+          - nameCtx
+        - bin:
+          - tuple:
+            - r
+            - nameCtx
+          - onExpr
+        let:
+        - hxIndex
+        - bin:
+          - bin:
+            - bin:
+              - bin:
+                - hxApp
+                - bin:
+                  - bin:
+                    - bin:
+                      - bin:
+                        - hxApp
+                        - bin:
+                          - .Prim: HExpr
+                          - tuple:
+                            - .Index: HPrim
+                            - noTy
+                            - loc
+                      - l
+                    - noTy
+                  - loc
+              - r
+            - noTy
+          - loc
+        tuple:
+        - hxIndex
+        - nameCtx
+    - arm:
+      - call:
+        - .Uni: AExpr
+        - tuple:
+          - .Neg: UniOp
+          - arg
+          - loc
+      - ERROR:
+        - missing
+        - (333:37)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - desugarUniNeg
+          - arg
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - .Ne: Op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (337:34)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - desugarBinNe
+            - l
+          - r
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - .Le: Op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (341:34)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - desugarBinLe
+            - l
+          - r
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - .Gt: Op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (345:34)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - desugarBinGt
+            - l
+          - r
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - .Ge: Op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (349:34)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - desugarBinGe
+            - l
+          - r
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - .And: Op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (353:35)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - desugarBinAnd
+            - l
+          - r
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - .Or: Op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (357:34)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - desugarBinOr
+            - l
+          - r
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - .Pipe: Op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (361:36)
+      let:
+      - expr
+      - bin:
+        - bin:
+          - bin:
+            - desugarBinPipe
+            - l
+          - r
+        - loc
+      bin:
+      - tuple:
+        - expr
+        - nameCtx
+      - onExpr
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - .App: Op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (365:35)
+      let:
+      - tuple:
+        - l
+        - nameCtx
+      - bin:
+        - tuple:
+          - l
+          - nameCtx
+        - onExpr
+      let:
+      - tuple:
+        - r
+        - nameCtx
+      - bin:
+        - tuple:
+          - r
+          - nameCtx
+        - onExpr
+      tuple:
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - hxApp
+              - l
+            - r
+          - noTy
+        - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Bin: AExpr
+        - tuple:
+          - op
+          - l
+          - r
+          - loc
+      - ERROR:
+        - missing
+        - (370:31)
+      let:
+      - prim
+      - bin:
+        - op
+        - opToPrim
+      let:
+      - tuple:
+        - l
+        - nameCtx
+      - bin:
+        - tuple:
+          - l
+          - nameCtx
+        - onExpr
+      let:
+      - tuple:
+        - r
+        - nameCtx
+      - bin:
+        - tuple:
+          - r
+          - nameCtx
+        - onExpr
+      let:
+      - primExpr
+      - bin:
+        - .Prim: HExpr
+        - tuple:
+          - prim
+          - noTy
+          - loc
+      tuple:
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - hxApp
+              - bin:
+                - bin:
+                  - bin:
+                    - bin:
+                      - hxApp
+                      - primExpr
+                    - l
+                  - noTy
+                - loc
+            - r
+          - noTy
+        - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Range: AExpr
+        - tuple:
+          - _
+          - loc
+      - ERROR:
+        - missing
+        - (377:26)
+      tuple:
+      - bin:
+        - .Error: HExpr
+        - tuple:
+          - \"Invalid use of range syntax.\"
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .TupleLit: AExpr
+        - tuple:
+          - items
+          - loc
+      - ERROR:
+        - missing
+        - (380:33)
+      let:
+      - tuple:
+        - items
+        - nameCtx
+      - bin:
+        - tuple:
+          - items
+          - nameCtx
+        - bin:
+          - stMap
+          - onExpr
+      tuple:
+      - bin:
+        - bin:
+          - hxTuple
+          - items
+        - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Anno: AExpr
+        - tuple:
+          - body
+          - ty
+          - loc
+      - ERROR:
+        - missing
+        - (384:32)
+      let:
+      - tuple:
+        - body
+        - nameCtx
+      - bin:
+        - tuple:
+          - body
+          - nameCtx
+        - onExpr
+      let:
+      - tuple:
+        - ty
+        - nameCtx
+      - bin:
+        - tuple:
+          - ty
+          - nameCtx
+        - onTy
+      tuple:
+      - bin:
+        - bin:
+          - bin:
+            - hxAnno
+            - body
+          - ty
+        - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Semi: AExpr
+        - tuple:
+          - exprs
+          - loc
+      - ERROR:
+        - missing
+        - (389:29)
+      semi:
+      - bin:
+        - assert
+        - bin:
+          - bin:
+            - exprs
+            - listIsEmpty
+          - not
+      - let:
+        - tuple:
+          - exprs
+          - nameCtx
+        - bin:
+          - tuple:
+            - exprs
+            - nameCtx
+          - bin:
+            - stMap
+            - onExpr
+        tuple:
+        - bin:
+          - bin:
+            - hxSemi
+            - exprs
+          - loc
+        - nameCtx
+    - arm:
+      - call:
+        - .Let: AExpr
+        - tuple:
+          - pat
+          - body
+          - next
+          - loc
+      - ERROR:
+        - missing
+        - (394:38)
+      match:
+      - bin:
+        - bin:
+          - bin:
+            - bin:
+              - desugarLet
+              - pat
+            - body
+          - next
+        - loc
+      - arm:
+        - call:
+          - .LetFun: ALet
+          - tuple:
+            - ident
+            - args
+            - body
+            - next
+            - loc
+        - ERROR:
+          - missing
+          - (396:50)
+        let:
+        - tuple:
+          - serial
+          - nameCtx
+        - bin:
+          - nameCtx
+          - bin:
+            - nameCtxAdd
+            - ident
+        let:
+        - isMainFun
+        - false
+        let:
+        - tuple:
+          - args
+          - nameCtx
+        - bin:
+          - tuple:
+            - args
+            - nameCtx
+          - bin:
+            - stMap
+            - onPat
+        let:
+        - tuple:
+          - body
+          - nameCtx
+        - bin:
+          - tuple:
+            - body
+            - nameCtx
+          - onExpr
+        let:
+        - tuple:
+          - next
+          - nameCtx
+        - bin:
+          - tuple:
+            - next
+            - nameCtx
+          - onExpr
+        tuple:
+        - bin:
+          - .LetFun: HExpr
+          - tuple:
+            - serial
+            - isMainFun
+            - args
+            - body
+            - next
+            - noTy
+            - loc
+        - nameCtx
+      - arm:
+        - call:
+          - .LetVal: ALet
+          - tuple:
+            - pat
+            - body
+            - next
+            - loc
+        - ERROR:
+          - missing
+          - (404:42)
+        let:
+        - tuple:
+          - pat
+          - nameCtx
+        - bin:
+          - tuple:
+            - pat
+            - nameCtx
+          - onPat
+        let:
+        - tuple:
+          - body
+          - nameCtx
+        - bin:
+          - tuple:
+            - body
+            - nameCtx
+          - onExpr
+        let:
+        - tuple:
+          - next
+          - nameCtx
+        - bin:
+          - tuple:
+            - next
+            - nameCtx
+          - onExpr
+        tuple:
+        - bin:
+          - .Let: HExpr
+          - tuple:
+            - pat
+            - body
+            - next
+            - noTy
+            - loc
+        - nameCtx
+    - arm:
+      - call:
+        - .TySynonym: AExpr
+        - tuple:
+          - ident
+          - ty
+          - loc
+      - ERROR:
+        - missing
+        - (410:38)
+      let:
+      - tuple:
+        - serial
+        - nameCtx
+      - bin:
+        - nameCtx
+        - bin:
+          - nameCtxAdd
+          - ident
+      let:
+      - tuple:
+        - ty
+        - nameCtx
+      - bin:
+        - tuple:
+          - ty
+          - nameCtx
+        - onTy
+      tuple:
+      - bin:
+        - .TyDecl: HExpr
+        - tuple:
+          - serial
+          - bin:
+            - .Synonym: TyDecl
+            - tuple:
+              - ty
+              - loc
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .TyUnion: AExpr
+        - tuple:
+          - ident
+          - variants
+          - loc
+      - ERROR:
+        - missing
+        - (415:42)
+      let:
+      - fun:
+        - onVariant
+        - tuple:
+          - call:
+            - AVariant
+            - tuple:
+              - ident
+              - payloadTy
+              - _variantLoc
+          - nameCtx
+      - let:
+        - tuple:
+          - serial
+          - nameCtx
+        - bin:
+          - nameCtx
+          - bin:
+            - nameCtxAdd
+            - ident
+        let:
+        - tuple:
+          - hasPayload
+          - payloadTy
+          - nameCtx
+        - match:
+          - payloadTy
+          - arm:
+            - call:
+              - Some
+              - ty
+            - ERROR:
+              - missing
+              - (420:19)
+            let:
+            - tuple:
+              - ty
+              - nameCtx
+            - bin:
+              - tuple:
+                - ty
+                - nameCtx
+              - onTy
+            tuple:
+            - true
+            - ty
+            - nameCtx
+          - arm:
+            - None
+            - ERROR:
+              - missing
+              - (423:16)
+            tuple:
+            - false
+            - tyUnit
+            - nameCtx
+        tuple:
+        - tuple:
+          - ident
+          - serial
+          - hasPayload
+          - payloadTy
+        - nameCtx
+      let:
+      - tuple:
+        - unionSerial
+        - nameCtx
+      - bin:
+        - nameCtx
+        - bin:
+          - nameCtxAdd
+          - ident
+      let:
+      - tuple:
+        - variants
+        - nameCtx
+      - bin:
+        - tuple:
+          - variants
+          - nameCtx
+        - bin:
+          - stMap
+          - onVariant
+      tuple:
+      - bin:
+        - .TyDecl: HExpr
+        - tuple:
+          - unionSerial
+          - bin:
+            - .Union: TyDecl
+            - tuple:
+              - ident
+              - variants
+              - loc
+          - loc
+      - nameCtx
+    - arm:
+      - call:
+        - .Open: AExpr
+        - tuple:
+          - path
+          - loc
+      - ERROR:
+        - missing
+        - (432:28)
+      tuple:
+      - bin:
+        - .Open: HExpr
+        - tuple:
+          - path
+          - loc
+      - nameCtx
+  let:
+  - anno:
+    - fun:
+      - astToHir
+      - tuple:
+        - anno:
+          - expr
+          - AExpr
+        - anno:
+          - nameCtx
+          - NameCtx
+    - tuple:
+      - HExpr
+      - NameCtx
+  - bin:
+    - tuple:
+      - expr
+      - nameCtx
+    - onExpr
+  tuple
+HIR:
+inf:
+- open:
+  - MiloneLang
+  - Types
+- open:
+  - MiloneLang
+  - Helpers
+- let-fun:
+  - 1
+  - match: 3
+  let-fun:
+  - 30
+  - inf:
+    - inf:
+      - 33
+      - inf:
+        - 34
+        - inf:
+          - 35
+          - 36
+    - let-fun:
+      - 37
+      - match: 39
+      inf:
+      - 51
+      - 52
+  let-fun:
+  - 53
+  - inf:
+    - inf:
+      - 56
+      - inf:
+        - 57
+        - inf:
+          - 58
+          - 59
+    - let-fun:
+      - 60
+      - match: 62
+      inf:
+      - 75
+      - 76
+  let-fun:
+  - 77
+  - let-val:
+    - match: 83
+    let-val:
+    - inf:
+      - inf:
+        - prim
+        - inf:
+          - 91
+          - inf:
+            - inf:
+              - 92
+              - 93
+            - inf:
+              - 94
+              - 95
+            - 96
+            - 97
+      - inf:
+        - inf:
+          - prim
+          - inf:
+            - 98
+            - inf:
+              - inf:
+                - 99
+                - 100
+              - inf:
+                - 101
+                - 102
+              - 103
+              - 104
+        - prim
+    inf:
+    - .Match: 105
+    - inf:
+      - 106
+      - 107
+      - 108
+  let-fun:
+  - 109
+  - let-val: \"fun\"
+    let-val:
+    - inf:
+      - .Fun: 115
+      - inf:
+        - 116
+        - 117
+        - 118
+    let-val:
+    - inf:
+      - .Ident: 120
+      - inf:
+        - 121
+        - 122
+    inf:
+    - .Let: 123
+    - inf:
+      - 124
+      - 125
+      - 126
+      - 127
+  let-fun:
+  - 128
+  - let-val:
+    - inf:
+      - .Lit: 132
+      - inf:
+        - inf:
+          - .Int: 133
+          - 0
+        - 134
+    inf:
+    - .Bin: 135
+    - inf:
+      - .Sub: 136
+      - 137
+      - 138
+      - 139
+  let-fun:
+  - 140
+  - let-val:
+    - inf:
+      - .Bin: 145
+      - inf:
+        - .Eq: 146
+        - 147
+        - 148
+        - 149
+    inf:
+    - inf:
+      - 150
+      - 151
+    - 152
+  let-fun:
+  - 153
+  - let-val:
+    - inf:
+      - .Bin: 158
+      - inf:
+        - .Lt: 159
+        - 160
+        - 161
+        - 162
+    inf:
+    - inf:
+      - 163
+      - 164
+    - 165
+  let-fun:
+  - 166
+  - inf:
+    - .Bin: 170
+    - inf:
+      - .Lt: 171
+      - 172
+      - 173
+      - 174
+  let-fun:
+  - 175
+  - let-val:
+    - inf:
+      - .Bin: 180
+      - inf:
+        - .Lt: 181
+        - 182
+        - 183
+        - 184
+    inf:
+    - inf:
+      - 185
+      - 186
+    - 187
+  let-fun:
+  - 188
+  - inf:
+    - inf:
+      - inf:
+        - inf:
+          - 192
+          - 193
+        - 194
+      - inf:
+        - 195
+        - 196
+    - 197
+  let-fun:
+  - 198
+  - inf:
+    - inf:
+      - inf:
+        - inf:
+          - 202
+          - 203
+        - inf:
+          - 204
+          - 205
+      - 206
+    - 207
+  let-fun:
+  - 208
+  - inf:
+    - .Bin: 212
+    - inf:
+      - .App: 213
+      - 214
+      - 215
+      - 216
+  let-fun:
+  - 217
+  - match: 220
+  let-fun:
+  - 241
+  - match: 246
+  let-fun:
+  - 277
+  - inf:
+    - match: 282
+  let-fun:
+  - 349
+  - inf:
+    - match: 354
+  let-fun:
+  - 532
+  - inf:
+    - match: 537
+  let-fun:
+  - 1081
+  - inf:
+    - inf:
+      - 1086
+      - inf:
+        - 1087
+        - 1088
+  inf
 $? = 0
