@@ -54,15 +54,6 @@ let locShift (text: string) (l: int) (r: int) ((y, x): Loc) =
 
 let charNull: char = char 0
 
-let charIsSpace (c: char): bool =
-  c = ' ' || c = '\t' || c = '\r' || c = '\n'
-
-let charIsDigit (c: char): bool =
-  '0' <= c && c <= '9'
-
-let charIsAlpha (c: char): bool =
-  ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
-
 let charIsIdent (c: char): bool =
   c = '_' || charIsDigit c || charIsAlpha c
 
