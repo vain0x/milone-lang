@@ -395,7 +395,7 @@ let dumpTreeToString (node: DumpTree) =
     assert (str.[i] |> charNeedsEscaping)
 
     match str.[i] with
-    | '\u0000' ->
+    | '\x00' ->
       i + 1, "\\0"
 
     | '\t' ->

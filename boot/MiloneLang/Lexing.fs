@@ -366,7 +366,7 @@ let tokenFromCharLit (text: string) l r: Token =
     match text.[i] with
     | '\\' ->
       match text.[i + 1] with
-      | 'u' ->
+      | 'x' ->
         charNull
       | 't' ->
         '\t'
@@ -403,8 +403,8 @@ let tokenFromStrLit (text: string) l r: Token =
     else
       assert (text.[i] = '\\')
       match text.[i + 1] with
-      | 'u' ->
-        go ("\u0000" :: acc) (i + 6)
+      | 'x' ->
+        go ("\x00" :: acc) (i + 6)
       | 't' ->
         go ("\t" :: acc) (i + 2)
       | 'r' ->

@@ -90,7 +90,7 @@ let cprintExprChar value =
   | '\t' -> "\\t"
   | '\'' -> "\\'"
   | '\\' -> "\\\\"
-  | '\u0000' -> "\\0"
+  | '\x00' -> "\\0"
   | _ -> string value
 
 let cprintExprStrRaw acc (value: string) =
@@ -103,7 +103,7 @@ let cprintExprStrRaw acc (value: string) =
       acc
     else
       match value.[i] with
-      | '\u0000' ->
+      | '\x00' ->
         // FIXME: support
         go (acc |> cons "\\0") (i + 1)
       | '\r' ->

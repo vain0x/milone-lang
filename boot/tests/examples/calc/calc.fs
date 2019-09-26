@@ -75,7 +75,7 @@ let private readInt (source: string) (acc: Token list, i) =
 
 let tokenize (source: string): Token list =
   let at i =
-    if i < source.Length then source.[i] else '\u0000'
+    if i < source.Length then source.[i] else '\x00'
   let rec go (acc, i) =
     if i >= source.Length then
       acc |> tokenListRev

@@ -19,7 +19,7 @@ let intToHexWithPaddingTest () =
 [<Fact>]
 let dumpTreeTestEscape () =
   let toString text = dumpTreeNewLeaf text |> dumpTreeToString
-  " hello \u0000 \u0008 \u001f \u007f \t \n \r \\ \" ' "
+  " hello \x00 \x08 \x1f \x7f \t \n \r \\ \" ' "
   |> toString
   |> is """ hello \0 \x08 \x1f \x7f \t \n \r \\ \" \' """
 
