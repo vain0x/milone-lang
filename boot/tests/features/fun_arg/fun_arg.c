@@ -103,7 +103,7 @@ int main() {
     struct StringUnitFun1 call_5 = bindInt_(fun_4, 42);
     struct StringUnitFun1 print42_ = call_5;
     int app_1 = print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
-    struct String d_ = (struct String){.str = "'", .len = 1};
+    struct String d_ = (struct String){.str = "\'", .len = 1};
     struct StringTuple1 tuple_1;
     tuple_1.t0 = d_;
     void* box_2 = (void*)malloc(sizeof(struct StringTuple1));

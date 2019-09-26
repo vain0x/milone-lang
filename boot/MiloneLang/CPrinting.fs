@@ -84,41 +84,13 @@ let rec cprintParams acc ps: string list =
   go acc ps
 
 let cprintExprChar value =
-  match value with
-  | '\r' -> "\\r"
-  | '\n' -> "\\n"
-  | '\t' -> "\\t"
-  | '\'' -> "\\'"
-  | '\\' -> "\\\\"
-  | '\u0000' -> "\\0"
-  | _ -> string value
+  if value |> charNeedsEscaping then
+    value |> charEscape
+  else
+    string value
 
 let cprintExprStrRaw acc (value: string) =
-  let rec chunk i =
-    if i >= value.Length || value.[i] = '\\'
-    then i
-    else chunk (i + 1)
-  let rec go acc i =
-    if i >= value.Length then
-      acc
-    else
-      match value.[i] with
-      | '\u0000' ->
-        // FIXME: support
-        go (acc |> cons "\\0") (i + 1)
-      | '\r' ->
-        go (acc |> cons "\\r") (i + 1)
-      | '\n' ->
-        go (acc |> cons "\\n") (i + 1)
-      | '\t' ->
-        go (acc |> cons "\\t") (i + 1)
-      | '\"' ->
-        go (acc |> cons "\\\"") (i + 1)
-      | '\\' ->
-        go (acc |> cons "\\\\") (i + 1)
-      | _ ->
-        go (acc |> cons (string value.[i])) (i + 1)
-  go (acc |> cons "\"") 0 |> cons "\""
+  acc |> cons "\"" |> cons (strEscape value) |> cons "\""
 
 let cprintExprStrObj acc (value: string) =
   let acc = acc |> cons "(struct String){.str = "

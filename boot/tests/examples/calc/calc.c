@@ -611,7 +611,7 @@ next_65:;
     match_21 = tuple_13;
     goto end_match_68;
 next_69:;
-    printf("expected ')'\n");
+    printf("expected \')\'\n");
     int call_39 = 0;
     exit(1);
     match_21 = ((struct IntToken_ListTuple2){});
@@ -719,7 +719,7 @@ int eval_(struct String str_) {
     goto end_match_78;
 next_79:;
     struct Token_List* tokens_20 = call_53.t1;
-    printf("ERROR: couldn't parse tokens:\n");
+    printf("ERROR: couldn\'t parse tokens:\n");
     int call_54 = 0;
     int call_55 = tokenListPrint_(tokens_20);
     exit(1);

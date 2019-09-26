@@ -17,9 +17,17 @@ let intToHexWithPaddingTest () =
   0x7fffffff |> hex 8 |> is "7fffffff"
 
 [<Fact>]
+let intFromHexTest () =
+  let parse (s: string) = intFromHex 0 s.Length s
+
+  "0" |> parse |> is 0
+  "19aF" |> parse |> is 0x19af
+  "(0xbeef)" |> intFromHex 3 7 |> is 0xbeef
+
+[<Fact>]
 let dumpTreeTestEscape () =
   let toString text = dumpTreeNewLeaf text |> dumpTreeToString
-  " hello \u0000 \u0008 \u001f \u007f \t \n \r \\ \" ' "
+  " hello \x00 \x08 \x1f \x7f \t \n \r \\ \" ' "
   |> toString
   |> is """ hello \0 \x08 \x1f \x7f \t \n \r \\ \" \' """
 

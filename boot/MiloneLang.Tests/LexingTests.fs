@@ -51,8 +51,8 @@ let tokenizeCharLiteral () =
       value
     | _ ->
       failwithf "Expected char token but %A" token
-  let source = """'a' '\'' '\n' '\u0000'"""
-  let expected = ['a'; '\''; '\n'; '\u0000']
+  let source = """'a' '\'' '\n' '\x00'"""
+  let expected = ['a'; '\''; '\n'; '\x00']
   source
   |> Lexing.tokenize
   |> List.map unwrapChar
