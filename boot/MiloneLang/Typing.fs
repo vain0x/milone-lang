@@ -270,6 +270,14 @@ let inferPat ctx pat ty =
     let itemTy, ctx = ctx |> ctxFreshPatTy pat
     let ctx = unifyTy ctx loc ty (tyList itemTy)
     HPat.Nil (itemTy, loc), ctx
+  | HPat.None (_, loc) ->
+    let itemTy, ctx = ctx |> ctxFreshPatTy pat
+    let ctx = unifyTy ctx loc ty (tyList itemTy)
+    HPat.None (itemTy, loc), ctx
+  | HPat.Some (_, loc) ->
+    let itemTy, ctx = ctx |> ctxFreshPatTy pat
+    let ctx = unifyTy ctx loc ty (tyFun itemTy (tyList itemTy))
+    HPat.Some (itemTy, loc), ctx
   | HPat.Discard (_, loc) ->
     HPat.Discard (ty, loc), ctx
   | HPat.Ref (varSerial, _, loc) ->

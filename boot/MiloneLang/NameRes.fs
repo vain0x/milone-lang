@@ -413,7 +413,9 @@ let collectDecls (expr, ctx) =
     | HPat.Lit _
     | HPat.Discard _
     | HPat.Nav _
-    | HPat.Nil _ ->
+    | HPat.Nil _
+    | HPat.None _
+    | HPat.Some _ ->
       pat, ctx
 
     | HPat.Or _ ->
@@ -492,7 +494,9 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
   match pat with
   | HPat.Lit _
   | HPat.Discard _
-  | HPat.Nil _ ->
+  | HPat.Nil _
+  | HPat.None _
+  | HPat.Some _ ->
     pat, ctx
 
   | HPat.Ref (varSerial, ty, loc)
@@ -519,9 +523,17 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
       HPat.Ref (variantSerial, ty, loc), ctx
 
     | None ->
-      let varDef = VarDef.Var (ident, ty, loc)
-      let ctx = ctx |> scopeCtxDefineLocalVar varSerial varDef
-      HPat.Ref (varSerial, ty, loc), ctx
+      match ident with
+      | "None" ->
+        HPat.None (ty, loc), ctx
+
+      | "Some" ->
+        HPat.Some (ty, loc), ctx
+
+      | _ ->
+        let varDef = VarDef.Var (ident, ty, loc)
+        let ctx = ctx |> scopeCtxDefineLocalVar varSerial varDef
+        HPat.Ref (varSerial, ty, loc), ctx
 
   | HPat.Nav (l, r, ty, loc) ->
     let varSerial =

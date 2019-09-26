@@ -579,6 +579,10 @@ let tyPrimFromIdent ident tys loc =
   | "obj", [] ->
     tyObj
 
+  | "option", [itemTy] ->
+    // FIXME: option is just an alias of list for now
+    tyList itemTy
+
   | "list", [itemTy] ->
     tyList itemTy
 
@@ -748,6 +752,12 @@ let primFromIdent ident =
   | "string" ->
     HPrim.String |> Some
 
+  | "None" ->
+    HPrim.None |> Some
+
+  | "Some" ->
+    HPrim.Some |> Some
+
   | "__nativeFun" ->
     HPrim.NativeFun ("<native-fun>", -1) |> Some
 
@@ -792,6 +802,15 @@ let primToTySpec prim =
     let itemTy = meta 1
     let listTy = tyList itemTy
     poly (tyFun itemTy (tyFun listTy listTy)) []
+
+  | HPrim.None ->
+    let itemTy = meta 1
+    poly (tyList itemTy) []
+
+  | HPrim.Some ->
+    let itemTy = meta 1
+    let listTy = tyList itemTy
+    poly (tyFun itemTy listTy) []
 
   | HPrim.Index ->
     let lTy = meta 1
@@ -841,8 +860,10 @@ let primToTySpec prim =
 
 let primToArity ty prim =
   match prim with
-  | HPrim.Nil ->
+  | HPrim.Nil
+  | HPrim.None ->
     0
+  | HPrim.Some
   | HPrim.Not
   | HPrim.Exit
   | HPrim.Assert
@@ -886,6 +907,10 @@ let rec patExtract (pat: HPat): Ty * Loc =
     litToTy lit, a
   | HPat.Nil (itemTy, a) ->
     tyList itemTy, a
+  | HPat.None (itemTy, a) ->
+    tyList itemTy, a
+  | HPat.Some (itemTy, a) ->
+    tyList itemTy, a
   | HPat.Discard (ty, a) ->
     ty, a
   | HPat.Ref (_, ty, a) ->
@@ -913,6 +938,10 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Lit (lit, g a)
     | HPat.Nil (itemTy, a) ->
       HPat.Nil (f itemTy, g a)
+    | HPat.None (itemTy, a) ->
+      HPat.None (f itemTy, g a)
+    | HPat.Some (itemTy, a) ->
+      HPat.Some (f itemTy, g a)
     | HPat.Discard (ty, a) ->
       HPat.Discard (f ty, g a)
     | HPat.Ref (serial, ty, a) ->
@@ -941,7 +970,9 @@ let patNormalize pat =
     | HPat.Lit _
     | HPat.Discard _
     | HPat.Ref _
-    | HPat.Nil _ ->
+    | HPat.Nil _
+    | HPat.None _
+    | HPat.Some _ ->
       [pat]
     | HPat.Nav (pat, ident, ty, loc) ->
       go pat |> List.map

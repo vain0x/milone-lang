@@ -279,7 +279,7 @@ type AExpr =
   /// List literal, e.g. `[]`, `[2; 3]`.
   | ListLit
     of AExpr list * Loc
-  /// condition, then-clause, else-clause. Else clause is `None` is missing.
+  /// condition, then-clause, else-clause.
   | If
     of AExpr * AExpr * AExpr * Loc
   | Match
@@ -453,6 +453,10 @@ type HPat =
   /// `[]`
   | Nil
     of itemTy:Ty * Loc
+  | None
+    of itemTy:Ty * Loc
+  | Some
+    of itemTy:Ty * Loc
   /// `_`
   | Discard
     of Ty * Loc
@@ -488,6 +492,8 @@ type HPrim =
   | Lt
   | Nil
   | Cons
+  | None
+  | Some
   | Index
   | Not
   | Exit
