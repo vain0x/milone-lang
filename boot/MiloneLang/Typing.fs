@@ -67,7 +67,7 @@ let tyCtxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
   ty, (), ctx
 
 let tyCtxAddTraitBounds traits (ctx: TyCtx) =
-  { ctx with TraitBounds = traits @ ctx.TraitBounds }
+  { ctx with TraitBounds = listAppend traits ctx.TraitBounds }
 
 let tyCtxResolveTraitBounds (ctx: TyCtx) =
   let rec go logAcc traits ctx =
