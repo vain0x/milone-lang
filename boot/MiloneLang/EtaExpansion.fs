@@ -98,9 +98,6 @@ let ctxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
 
 let ctxIsFun serial (ctx: EtaCtx) =
   match ctx.Vars |> Map.tryFind serial with
-  | _ when serial < 0 ->
-    // FIXME: too ugly
-    true
   | Some (VarDef.Fun _) ->
     true
   | Some (VarDef.Variant _) ->
