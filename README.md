@@ -100,6 +100,7 @@ Most of types are defined in the module:
 
 and functions are in:
 
+- [Compatible](boot/MiloneLang/Compatible.fs)
 - [Helpers](boot/MiloneLang/Helpers.fs)
 
 The following transformations are consist of the compilation in the order:
