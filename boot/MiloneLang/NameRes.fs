@@ -490,7 +490,7 @@ let collectDecls (expr, ctx) =
 // Name Resolution
 // -----------------------------------------------
 
-let onPat (pat: HPat, ctx: ScopeCtx) =
+let nameResPat (pat: HPat, ctx: ScopeCtx) =
   match pat with
   | HPat.Lit _
   | HPat.Discard _
@@ -549,42 +549,42 @@ let onPat (pat: HPat, ctx: ScopeCtx) =
       HPat.Ref (varSerial, ty, loc), ctx
 
     | None ->
-      let l, ctx = (l, ctx) |> onPat
+      let l, ctx = (l, ctx) |> nameResPat
       HPat.Nav (l, r, ty, loc), ctx
 
   | HPat.Call (callee, args, ty, loc) ->
-    let callee, ctx = (callee, ctx) |> onPat
-    let args, ctx = (args, ctx) |> stMap onPat
+    let callee, ctx = (callee, ctx) |> nameResPat
+    let args, ctx = (args, ctx) |> stMap nameResPat
     HPat.Call (callee, args, ty, loc), ctx
 
   | HPat.Cons (l, r, itemTy, loc) ->
-    let l, ctx = (l, ctx) |> onPat
-    let r, ctx = (r, ctx) |> onPat
+    let l, ctx = (l, ctx) |> nameResPat
+    let r, ctx = (r, ctx) |> nameResPat
     HPat.Cons (l, r, itemTy, loc), ctx
 
   | HPat.Tuple (pats, tupleTy, loc) ->
-    let pats, ctx = (pats, ctx) |> stMap onPat
+    let pats, ctx = (pats, ctx) |> stMap nameResPat
     HPat.Tuple (pats, tupleTy, loc), ctx
 
   | HPat.As (pat, serial, loc) ->
     let ident = ctx |> scopeCtxGetIdent serial
     let varDef = VarDef.Var (ident, noTy, loc)
     let ctx = ctx |> scopeCtxDefineLocalVar serial varDef
-    let pat, ctx = (pat, ctx) |> onPat
+    let pat, ctx = (pat, ctx) |> nameResPat
     HPat.As (pat, serial, loc), ctx
 
   | HPat.Anno (pat, ty, loc) ->
     let ty, ctx = ctx |> scopeCtxResolveTy ty loc
-    let pat, ctx = (pat, ctx) |> onPat
+    let pat, ctx = (pat, ctx) |> nameResPat
     HPat.Anno (pat, ty, loc), ctx
 
   | HPat.Or (l, r, ty, loc) ->
     // FIXME: Currently variable bindings in OR patterns are not supported correctly.
-    let l, ctx = (l, ctx) |> onPat
-    let r, ctx = (r, ctx) |> onPat
+    let l, ctx = (l, ctx) |> nameResPat
+    let r, ctx = (r, ctx) |> nameResPat
     HPat.Or (l, r, ty, loc), ctx
 
-let onExpr (expr: HExpr, ctx: ScopeCtx) =
+let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with
   | HExpr.Error _
   | HExpr.Open _
@@ -608,13 +608,13 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx =
-      (target, ctx) |> onExpr
+      (target, ctx) |> nameResExpr
     let arms, ctx =
       (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
         let parent, ctx = ctx |> scopeCtxStartScope
-        let pat, ctx = (pat, ctx) |> onPat
-        let guard, ctx = (guard, ctx) |> onExpr
-        let body, ctx = (body, ctx) |> onExpr
+        let pat, ctx = (pat, ctx) |> nameResPat
+        let guard, ctx = (guard, ctx) |> nameResExpr
+        let body, ctx = (body, ctx) |> nameResExpr
         let ctx = ctx |> scopeCtxFinishScope parent
         (pat, guard, body), ctx
       )
@@ -636,7 +636,7 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
 
     // Keep the nav expression unresolved so that type inference does.
     let keepUnresolved () =
-      let l, ctx = (l, ctx) |> onExpr
+      let l, ctx = (l, ctx) |> nameResExpr
       HExpr.Nav (l, r, ty, loc), ctx
 
     match ctx |> scopeCtxResolveExprAsScope l with
@@ -657,20 +657,20 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     // Necessary in case of annotation expression.
     let ty, ctx = ctx |> scopeCtxResolveTy ty loc
 
-    let items, ctx = (items, ctx) |> stMap onExpr
+    let items, ctx = (items, ctx) |> stMap nameResExpr
     HExpr.Inf (op, items, ty, loc), ctx
 
   | HExpr.Let (pat, body, next, ty, loc) ->
     let body, ctx =
       let parent, ctx = ctx |> scopeCtxStartScope
-      let body, ctx = (body, ctx) |> onExpr
+      let body, ctx = (body, ctx) |> nameResExpr
       let ctx = ctx |> scopeCtxFinishScope parent
       body, ctx
 
     let pat, next, ctx =
       let parent, ctx = ctx |> scopeCtxStartScope
-      let pat, ctx = (pat, ctx) |> onPat
-      let next, ctx = (next, ctx) |> onExpr
+      let pat, ctx = (pat, ctx) |> nameResPat
+      let next, ctx = (next, ctx) |> nameResExpr
       let ctx = ctx |> scopeCtxFinishScope parent
       pat, next, ctx
 
@@ -687,13 +687,13 @@ let onExpr (expr: HExpr, ctx: ScopeCtx) =
     let pats, body, ctx =
       // Introduce a function body scope.
       let parent, ctx = ctx |> scopeCtxStartScope
-      let pats, ctx = (pats, ctx) |> stMap onPat
-      let body, ctx = (body, ctx) |> onExpr
+      let pats, ctx = (pats, ctx) |> stMap nameResPat
+      let body, ctx = (body, ctx) |> nameResExpr
       let ctx = ctx |> scopeCtxFinishScope parent
       pats, body, ctx
 
     let ctx = ctx |> scopeCtxOnLeaveLetBody
-    let next, ctx = (next, ctx) |> onExpr
+    let next, ctx = (next, ctx) |> nameResExpr
     let ctx = ctx |> scopeCtxFinishScope parent
 
     HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc), ctx
@@ -706,4 +706,4 @@ let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx
   (expr, scopeCtx)
   |> collectDecls
-  |> onExpr
+  |> nameResExpr
