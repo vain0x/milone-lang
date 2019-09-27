@@ -2,6 +2,7 @@ module MiloneLang.Lexing.LexingTests
 
 open MiloneLang
 open MiloneLang.Assets
+open MiloneLang.Helpers
 open MiloneLang.Types
 open Xunit
 
@@ -18,7 +19,7 @@ let tokenizeMainEmpty () =
       Token.Int 0
     ]
   source
-  |> Lexing.tokenize |> List.map fst
+  |> Lexing.tokenize |> listMap fst
   |> is expected
 
 [<Fact>]
@@ -40,7 +41,7 @@ let main _ =
       Token.Int 1
     ]
   source
-  |> Lexing.tokenize |> List.map fst
+  |> Lexing.tokenize |> listMap fst
   |> is expected
 
 [<Fact>]
@@ -55,7 +56,7 @@ let tokenizeCharLiteral () =
   let expected = ['a'; '\''; '\n'; '\x00']
   source
   |> Lexing.tokenize
-  |> List.map unwrapChar
+  |> listMap unwrapChar
   |> is expected
 
 [<Fact>]

@@ -15,6 +15,12 @@ let mapEmpty _ =
 let mapAdd key value map =
   Map.add key value map
 
+let mapRemove key map =
+  Map.remove key map
+
+let mapFind key map =
+  Map.find key map
+
 let mapTryFind key map =
   Map.tryFind key map
 

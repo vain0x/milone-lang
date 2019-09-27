@@ -5,6 +5,118 @@ open MiloneLang.Helpers
 open Xunit
 
 [<Fact>]
+let listIsEmptyTest () =
+  ([]: int list) |> listIsEmpty |> is true
+  [1] |> listIsEmpty |> is false
+
+[<Fact>]
+let listLengthTest () =
+  ([]: int list) |> listLength |> is 0
+  [1; 2; 3] |> listLength |> is 3
+
+[<Fact>]
+let listRevTest () =
+  ([]: int list) |> listRev |> is []
+  [3; 1; 4; 1] |> listRev |> is [1; 4; 1; 3]
+
+[<Fact>]
+let listMapTest () =
+  [3; 1; 4; 1] |> listMap ((+) 1) |> is [4; 2; 5; 2]
+
+[<Fact>]
+let listMapWithIndexTest () =
+  [3; 1; 4; 1] |> listMapWithIndex (+) |> is [3; 2; 6; 4]
+
+[<Fact>]
+let listFilterTest () =
+  [3; 1; 4; 1]
+  |> listFilter (fun x -> x > 1)
+  |> is [3; 4]
+
+[<Fact>]
+let listChooseTest () =
+  [3; 1; 4; 1]
+  |> listChoose (fun x -> if x > 1 then Some (x * x) else None)
+  |> is [9; 16]
+
+[<Fact>]
+let listCollectTest () =
+  [3; 1; 4; 1]
+  |> listCollect (fun x -> if x > 1 then [x; x] else [x])
+  |> is [3; 3; 1; 4; 4; 1]
+
+[<Fact>]
+let listForAllTest () =
+  ([]: int list) |> listForAll (fun _ -> false) |> is true
+
+  [3; 1; 4; 1]
+  |> listForAll (fun x -> x >= 1)
+  |> is true
+
+  [3; 1; 4; 1]
+  |> listForAll (fun x -> x > 1)
+  |> is false
+
+[<Fact>]
+let listExistsTest () =
+  ([]: int list) |> listExists (fun _ -> true) |> is false
+
+  [3; 1; 4; 1]
+  |> listExists (fun x -> x < 1)
+  |> is false
+
+  [3; 1; 4; 1]
+  |> listExists (fun x -> x = 1)
+  |> is true
+
+[<Fact>]
+let listFoldTest () =
+  ([]: int list) |> listFold (+) 0 |> is 0
+
+  [3; 1; 4; 1]
+  |> listFold (fun s x -> s * 10 + x) 0
+  |> is 3141
+
+[<Fact>]
+let listReduceTest () =
+  [3; 1; 4; 1]
+  |> listReduce (fun s x -> s * 10 + x)
+  |> is 3141
+
+[<Fact>]
+let listLastTest () =
+  [3; 1; 4; 1; 5; 9]
+  |> listLast
+  |> is 9
+
+[<Fact>]
+let listSkipTest () =
+  [3; 1; 4; 1; 5; 9]
+  |> listSkip 4
+  |> is [5; 9]
+
+[<Fact>]
+let listTruncateTest () =
+  [3; 1; 4; 1; 5; 9]
+  |> listTruncate 4
+  |> is [3; 1; 4; 1]
+
+[<Fact>]
+let listAppendTest () =
+  listAppend [3; 1; 4; 1] [5; 9]
+  |> is [3; 1; 4; 1; 5; 9]
+
+[<Fact>]
+let listSortTest () =
+  [3; 2; 1; 3; 2; 3] |> listSort intCmp |> is [1; 2; 2; 3; 3; 3]
+  [3; 1; 4; 1; 5; 9] |> listSort intCmp |> is [1; 1; 3; 4; 5; 9]
+
+[<Fact>]
+let listUniqueTest () =
+  [1; 2; 2; 3; 3; 3] |> listUnique intCmp |> is [1; 2; 3]
+  [3; 1; 4; 1; 5; 9] |> listUnique intCmp |> is [1; 3; 4; 5; 9]
+
+[<Fact>]
 let intToHexWithPaddingTest () =
   let hex len n = intToHexWithPadding len n
 

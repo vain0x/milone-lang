@@ -56,60 +56,60 @@ type CcCtx =
     Locals: Set<VarSerial>
   }
 
-let ctxFromTyCtx (ftCtx: Typing.TyCtx): CcCtx =
+let ccCtxFromTyCtx (ftCtx: Typing.TyCtx): CcCtx =
   {
     Serial = ftCtx.Serial
     Vars = ftCtx.Vars
     Tys = ftCtx.Tys
 
-    Caps = Map.empty
+    Caps = mapEmpty intCmp
     Known = Set.empty
     Refs = Set.empty
     Locals = Set.empty
   }
 
-let ctxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: CcCtx) =
+let ccCtxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: CcCtx) =
   { tyCtx with
       Serial = ctx.Serial
       Vars = ctx.Vars
       Tys = ctx.Tys
   }
 
-let ctxPushScope locals (ctx: CcCtx) =
+let ccCtxPushScope locals (ctx: CcCtx) =
   { ctx with
       Refs = Set.empty
       Locals = locals |> Set.ofList
   }
 
-let ctxPopScope (baseCtx: CcCtx) (derivedCtx: CcCtx) =
+let ccCtxPopScope (baseCtx: CcCtx) (derivedCtx: CcCtx) =
   { derivedCtx with
       Refs = baseCtx.Refs
       Locals = baseCtx.Locals
   }
 
-let ctxAddKnown serial (ctx: CcCtx) =
+let ccCtxAddKnown serial (ctx: CcCtx) =
   { ctx with Known = Set.add serial ctx.Known }
 
-let ctxAddRef serial (ctx: CcCtx) =
+let ccCtxAddRef serial (ctx: CcCtx) =
   { ctx with Refs = Set.add serial ctx.Refs }
 
-let ctxAddLocal serial (ctx: CcCtx) =
+let ccCtxAddLocal serial (ctx: CcCtx) =
   { ctx with Locals = Set.add serial ctx.Locals }
 
-let ctxAddFun serial caps (ctx: CcCtx) =
+let ccCtxAddFun serial caps (ctx: CcCtx) =
   { ctx with
       Known = ctx.Known |> Set.add serial
-      Caps = ctx.Caps |> Map.add serial caps
+      Caps = ctx.Caps |> mapAdd serial caps
   }
 
 /// Gets the captured variables of the current function.
-let ctxCaps (ctx: CcCtx) =
+let ccCtxGetCaps (ctx: CcCtx) =
   let refs = Set.difference ctx.Refs ctx.Locals
   let refs = Set.difference refs ctx.Known
 
-  refs |> Set.toList |> List.choose
+  refs |> Set.toList |> listChoose
     (fun serial ->
-      match ctx.Vars |> Map.find serial with
+      match ctx.Vars |> mapFind serial with
       | VarDef.Var (_, ty, loc) ->
         Some (serial, ty, loc)
       | _ ->
@@ -119,23 +119,23 @@ let ctxCaps (ctx: CcCtx) =
 /// Updates the function type to take additional arguments
 /// for each captured variable.
 let capsAddToFunTy tTy caps =
-  caps |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
+  caps |> listFold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
 
 /// Updates the arguments of a call to pass captured variables.
 let capsAddToCallArgs args caps =
-  caps |> List.fold (fun args (serial, ty, loc) ->
+  caps |> listFold (fun args (serial, ty, loc) ->
     HExpr.Ref (serial, ty, loc) :: args
   ) args
 
 /// Updates the arguments of a function to take captured variables.
 let capsAddToFunPats args caps =
-  caps |> List.fold (fun args (serial, ty, loc) ->
+  caps |> listFold (fun args (serial, ty, loc) ->
     HPat.Ref (serial, ty, loc) :: args
   ) args
 
 let capsUpdateFunDef funTy arity caps =
   let funTy = caps |> capsAddToFunTy funTy
-  let arity = arity + List.length caps
+  let arity = arity + listLength caps
   funTy, arity
 
 let declosurePat (pat, ctx) =
@@ -148,7 +148,7 @@ let declosurePat (pat, ctx) =
   | HPat.Nav _ ->
     pat, ctx
   | HPat.Ref (serial, _, _) ->
-    let ctx = ctx |> ctxAddLocal serial
+    let ctx = ctx |> ccCtxAddLocal serial
     pat, ctx
   | HPat.Cons (l, r, itemTy, loc) ->
     let l, ctx = (l, ctx) |> declosurePat
@@ -162,7 +162,7 @@ let declosurePat (pat, ctx) =
     let args, ctx = (args, ctx) |> stMap declosurePat
     HPat.Call (callee, args, ty, loc), ctx
   | HPat.As (pat, serial, loc) ->
-    let ctx = ctx |> ctxAddLocal serial
+    let ctx = ctx |> ccCtxAddLocal serial
     let pat, ctx = (pat, ctx) |> declosurePat
     HPat.As (pat, serial, loc), ctx
   | HPat.Anno (pat, ty, loc) ->
@@ -174,12 +174,12 @@ let declosurePat (pat, ctx) =
     HPat.Or (first, second, ty, loc), ctx
 
 let declosureExprRefAsCallee serial (expr, ctx) =
-  let ctx = ctx |> ctxAddRef serial
+  let ctx = ctx |> ccCtxAddRef serial
   expr, ctx
 
 let declosureExprRef serial (expr, ctx) =
-  let ctx = ctx |> ctxAddRef serial
-  match ctx.Caps |> Map.tryFind serial with
+  let ctx = ctx |> ccCtxAddRef serial
+  match ctx.Caps |> mapTryFind serial with
   | Some (_ :: _) ->
     let resultTy, loc = exprExtract expr
     match declosureCall expr [] resultTy loc ctx with
@@ -191,14 +191,14 @@ let declosureExprRef serial (expr, ctx) =
 let declosureCall callee args resultTy loc (ctx: CcCtx) =
   match callee with
   | HExpr.Ref (callee, calleeTy, refLoc) ->
-    match ctx.Caps |> Map.tryFind callee with
+    match ctx.Caps |> mapTryFind callee with
     | Some (_ :: _ as caps) ->
       // Add caps arg.
       let args = caps |> capsAddToCallArgs args
       let calleeTy = caps |> capsAddToFunTy calleeTy
 
       // Count captured variables as occurrences too.
-      let ctx = caps |> List.fold (fun ctx (serial, _, _) -> ctx |> ctxAddRef serial) ctx
+      let ctx = caps |> listFold (fun ctx (serial, _, _) -> ctx |> ccCtxAddRef serial) ctx
 
       let callee = HExpr.Ref (callee, calleeTy, refLoc)
       (hxCallProc callee args resultTy loc, ctx) |> Some
@@ -240,19 +240,19 @@ let declosureExprLetVal pat init next ty loc ctx =
 
 let declosureFunBody callee args body ctx =
   let baseCtx = ctx
-  let ctx = ctx |> ctxPushScope []
+  let ctx = ctx |> ccCtxPushScope []
 
   // Traverse for dependency collection.
   let args, ctx = (args, ctx) |> stMap declosurePat
   let _, ctx = (body, ctx) |> declosureExpr
-  let caps = ctx |> ctxCaps
-  let ctx = ctx |> ctxAddFun callee caps
+  let caps = ctx |> ccCtxGetCaps
+  let ctx = ctx |> ccCtxAddFun callee caps
 
   // Traverse again. We can now convert recursive calls correctly.
   let args, ctx = (args, ctx) |> stMap declosurePat
   let body, ctx = (body, ctx) |> declosureExpr
 
-  let ctx = ctx |> ctxPopScope baseCtx
+  let ctx = ctx |> ccCtxPopScope baseCtx
   caps, args, body, ctx
 
 let declosureExprLetFun callee isMainFun args body next ty loc ctx =
@@ -270,8 +270,8 @@ let declosureExprTyDecl expr tyDecl ctx =
     expr, ctx
   | TyDecl.Union (_, variants, _) ->
     let ctx =
-      variants |> List.fold (fun ctx (_, variantSerial, _, _) ->
-        ctx |> ctxAddKnown variantSerial
+      variants |> listFold (fun ctx (_, variantSerial, _, _) ->
+        ctx |> ccCtxAddKnown variantSerial
       ) ctx
     expr, ctx
 
@@ -324,17 +324,17 @@ let declosureUpdateFuns (ctx: CcCtx) =
       vars
 
     | _ ->
-      match vars |> Map.find varSerial with
+      match vars |> mapFind varSerial with
       | VarDef.Fun (ident, arity, TyScheme.ForAll (fvs, funTy), loc) ->
         let funTy, arity = caps |> capsUpdateFunDef funTy arity
         let tyScheme = TyScheme.ForAll (fvs, funTy)
         let varDef = VarDef.Fun (ident, arity, tyScheme, loc)
-        vars |> Map.add varSerial varDef
+        vars |> mapAdd varSerial varDef
 
       | _ ->
         vars
 
-  let vars = ctx.Caps |> Map.fold update ctx.Vars
+  let vars = ctx.Caps |> mapFold update ctx.Vars
   { ctx with Vars = vars }
 
 let declosureUpdateCtx (expr, ctx) =
@@ -342,7 +342,7 @@ let declosureUpdateCtx (expr, ctx) =
   expr, ctx
 
 let declosure (expr, tyCtx: Typing.TyCtx) =
-  let ccCtx = ctxFromTyCtx tyCtx
+  let ccCtx = ccCtxFromTyCtx tyCtx
   let expr, ccCtx = (expr, ccCtx) |> declosureExpr |> declosureUpdateCtx
-  let tyCtx = ccCtx |> ctxFeedbackToTyCtx tyCtx
+  let tyCtx = ccCtx |> ccCtxFeedbackToTyCtx tyCtx
   expr, tyCtx
