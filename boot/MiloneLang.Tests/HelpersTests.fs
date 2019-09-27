@@ -107,6 +107,16 @@ let listAppendTest () =
   |> is [3; 1; 4; 1; 5; 9]
 
 [<Fact>]
+let listSortTest () =
+  [3; 2; 1; 3; 2; 3] |> listSort intCmp |> is [1; 2; 2; 3; 3; 3]
+  [3; 1; 4; 1; 5; 9] |> listSort intCmp |> is [1; 1; 3; 4; 5; 9]
+
+[<Fact>]
+let listUniqueTest () =
+  [1; 2; 2; 3; 3; 3] |> listUnique intCmp |> is [1; 2; 3]
+  [3; 1; 4; 1; 5; 9] |> listUnique intCmp |> is [1; 3; 4; 5; 9]
+
+[<Fact>]
 let intToHexWithPaddingTest () =
   let hex len n = intToHexWithPadding len n
 

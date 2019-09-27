@@ -255,8 +255,61 @@ let listAppend xs ys =
 
   go ys (listRev xs)
 
-let listUnique (xs: 'x list): 'x list =
-  xs |> set |> Set.toList
+let listSortCore unique cmp xs =
+  // `merge (xs, xn) (ys, yn) = (zs, zn), d` where
+  // `zs.[0..zn - 1]` is the merge of `xs.[0..xn - 1]` and `ys.[0..yn - 1]`,
+  // and `d` is the number of duplicated items.
+  let rec merge (xs, xn) (ys, yn) =
+    if xn = 0 then
+      (ys, yn), 0
+    else if yn = 0 then
+      (xs, xn), 0
+    else
+      match xs, ys with
+      | [], _
+      | _, [] ->
+        failwith "NEVER: wrong list length"
+
+      | x :: xs1, y :: ys1 ->
+        let c = cmp x y
+        if c > 0 then
+          let (zs, zn), d = merge (xs, xn) (ys1, yn - 1)
+          assert (zn + d = xn + (yn - 1))
+          (y :: zs, zn + 1), d
+        else if c = 0 && unique then
+          let (zs, zn), d = merge (xs, xn) (ys1, yn - 1)
+          assert (zn + d = xn + (yn - 1))
+          (zs, zn), d + 1
+        else
+          let (zs, zn), d = merge (xs1, xn - 1) (ys, yn)
+          assert (zn + d = (xn - 1) + yn)
+          (x :: zs, zn + 1), d
+
+  // `go (xs, xn) = (zs, zn), xs1, d` where
+  // `zs.[0..xn - 1]` is the sort of `xs.[0..xn - 1]`,
+  // `xs1 = xs.[xn..]`,
+  // and `d` is the number of duplicated items.
+  let rec go (xs, n) =
+    if n <= 1 then
+      (xs, n), listSkip n xs, 0
+    else
+      let m = n / 2
+      let (xs, xn), xs1, d1 = go (xs, m)
+      let (ys, yn), ys1, d2 = go (xs1, n - m)
+      let (zs, zn), d3 = merge (xs, xn) (ys, yn)
+      (zs, zn), ys1, d1 + d2 + d3
+
+  let xn = listLength xs
+  let (zs, zn), ws, d = go (xs, xn)
+  assert (zn + d = xn)
+  assert (ws |> listIsEmpty)
+  listTruncate zn zs
+
+let listSort cmp xs =
+  listSortCore false cmp xs
+
+let listUnique cmp xs =
+  listSortCore true cmp xs
 
 // -----------------------------------------------
 // Assoc
@@ -854,7 +907,7 @@ let tyCollectFreeVars ty =
       let acc = serial :: fvAcc
       go acc tys
 
-  go [] [ty] |> listUnique
+  go [] [ty] |> listUnique intCmp
 
 let rec tyToArity ty =
   match ty with
