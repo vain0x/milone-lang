@@ -37,7 +37,7 @@ let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
   | VarDef.Variant (_, tySerial, _, _, _, _) ->
     match ctx.Tys |> mapFind tySerial with
     | TyDef.Union (_, variantSerials, _) ->
-      variantSerials |> List.length = 1
+      variantSerials |> listLength = 1
 
     | _ ->
       failwith "Expected union serial"
@@ -304,14 +304,14 @@ let patsIsCovering pats =
     | HPat.Call _ ->
       false
     | HPat.Tuple (itemPats, _, _) ->
-      itemPats |> List.forall go
+      itemPats |> listForAll go
     | HPat.As (pat, _, _) ->
       go pat
     | HPat.Anno (pat, _, _) ->
       go pat
     | HPat.Or (first, second, _, _) ->
       go first || go second
-  List.exists go pats
+  listExists go pats
 
 let mirifyExprMatch ctx target arms ty loc =
   let noLabel = "<NEVER>"
@@ -322,7 +322,7 @@ let mirifyExprMatch ctx target arms ty loc =
 
   let isCovering =
     arms
-    |> List.choose
+    |> listChoose
       (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
     |> patsIsCovering
 
@@ -331,7 +331,7 @@ let mirifyExprMatch ctx target arms ty loc =
     match arms with
     | (pat, guard, body) :: arms ->
       let pats = patNormalize pat
-      let disjCount = pats |> List.length
+      let disjCount = pats |> listLength
 
       // No need to jump to body from pattern if no OR patterns.
       let needsJump = disjCount > 1
@@ -508,7 +508,7 @@ let mirifyExprTuple ctx items itemTys loc =
   let rec go acc ctx items =
     match items with
     | [] ->
-      List.rev acc, ctx
+      listRev acc, ctx
     | item :: items ->
       let item, ctx = mirifyExpr ctx item
       go (item :: acc) ctx items
@@ -541,7 +541,7 @@ let mirifyExprOpCmp ctx op l r ty loc =
 let mirifyExprSemi ctx exprs =
   // Discard non-last expressions.
   let exprs, ctx = mirifyExprs ctx exprs
-  List.last exprs, ctx
+  listLast exprs, ctx
 
 let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =
@@ -663,7 +663,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
   let rec defineArgs acc ctx argPats =
     match argPats with
     | [] ->
-      List.rev acc, ctx
+      listRev acc, ctx
     | argPat :: argPats ->
       let arg, ctx = defineArg ctx argPat
       defineArgs (arg :: acc) ctx argPats
@@ -677,7 +677,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
     let ctx = mirCtxAddStmt ctx returnStmt
 
     let stmts, ctx = mirCtxTakeStmts ctx
-    let body = List.rev stmts
+    let body = listRev stmts
     args, blockTy, body, ctx
 
   let bodyCtx = mirCtxNewBlock ctx
@@ -725,7 +725,7 @@ let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =
     match exprs with
     | [] ->
-      List.rev acc, ctx
+      listRev acc, ctx
     | expr :: exprs ->
       let expr, ctx = mirifyExpr ctx expr
       go (expr :: acc) ctx exprs
@@ -744,7 +744,7 @@ let collectDecls (stmts: MStmt list) =
       go decls stmts
     | [] ->
       decls
-  go [] stmts |> List.rev
+  go [] stmts |> listRev
 
 let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = mirCtxFromTyCtx tyCtx
@@ -752,6 +752,6 @@ let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
   // OK: It's safe to discard the expression thanks to main hoisting.
   let _expr, ctx = mirifyExpr ctx expr
 
-  let stmts = ctx.Stmts |> List.rev
+  let stmts = ctx.Stmts |> listRev
   let decls = collectDecls stmts
   decls, ctx

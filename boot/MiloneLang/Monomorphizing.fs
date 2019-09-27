@@ -124,7 +124,7 @@ let monoCtxSubstPatTy ctx pat =
   patMap subst id pat
 
 let monoCtxSubstPatsTy ctx pats =
-  List.map (monoCtxSubstPatTy ctx) pats
+  listMap (monoCtxSubstPatTy ctx) pats
 
 let monoCtxGetMode (ctx: MonoCtx) =
   ctx.Mode
@@ -163,7 +163,7 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
     | _ ->
       varSerial, varDef
 
-  let vars = ctx.Vars |> mapToList |> List.map forceGeneralize |> mapOfList intCmp
+  let vars = ctx.Vars |> mapToList |> listMap forceGeneralize |> mapOfList intCmp
   { ctx with Vars = vars }
 
 let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =

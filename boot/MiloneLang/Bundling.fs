@@ -61,7 +61,7 @@ let findOpenPaths expr =
     | HExpr.Open (path, _) ->
       [path]
     | HExpr.Inf (InfOp.Semi, exprs, _, _) ->
-      exprs |> List.collect go
+      exprs |> listCollect go
     | _ ->
       []
   go expr
@@ -73,7 +73,7 @@ let findOpenModules projectName expr =
       Some moduleName
     | _ ->
       None
-  findOpenPaths expr |> List.choose extractor
+  findOpenPaths expr |> listChoose extractor
 
 /// Insert the second expression to the bottom of the first expression.
 /// This is bad way because of variable capturing issues.
@@ -113,11 +113,11 @@ let parseProjectModules readModuleFile projectName nameCtx =
       let dependencies = findOpenModules projectName moduleHir
       let moduleMap = moduleMap |> mapAdd moduleName moduleHir
       let moduleAcc, moduleMap, nameCtx, errorAcc =
-        List.fold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
+        listFold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
       moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
 
   let moduleAcc, _, nameCtx, errorAcc =
     go ([], mapEmpty strCmp, nameCtx, []) projectName
-  let modules = moduleAcc |> List.rev
+  let modules = moduleAcc |> listRev
 
-  List.reduce spliceExpr modules, nameCtx, errorAcc
+  listReduce spliceExpr modules, nameCtx, errorAcc

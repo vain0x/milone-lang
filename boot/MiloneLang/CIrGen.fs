@@ -227,14 +227,14 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
     let tagTy = CTy.Enum tagTyIdent
 
     let variants =
-      variants |> List.map (fun variantSerial ->
+      variants |> listMap (fun variantSerial ->
         match ctx.Vars |> mapTryFind variantSerial with
         | Some (VarDef.Variant (ident, _, hasPayload, payloadTy, _, _)) ->
           ident, variantSerial, hasPayload, payloadTy
         | _ -> failwith "Never"
       )
     let tags =
-      variants |> List.map (fun (_, serial, _, _) ->
+      variants |> listMap (fun (_, serial, _, _) ->
         cirCtxUniqueName ctx serial)
     let variants, ctx =
       (variants, ctx) |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
@@ -286,7 +286,7 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
         | Ty.Con (TyCon.Tuple, []) ->
           "Unit", ctx
         | Ty.Con (TyCon.Tuple, itemTys) ->
-          let len = itemTys |> List.length
+          let len = itemTys |> listLength
           let itemTys, ctx = (itemTys, ctx) |> stMap (fun (itemTy, ctx) -> ctx |> go itemTy)
           sprintf "%s%s%d" (itemTys |> String.concat "") "Tuple" len, ctx
         | Ty.Con (TyCon.Ref serial, _) ->
@@ -474,7 +474,7 @@ let genExprBin ctx op l r =
 let genExprList ctx exprs =
   let rec go results ctx exprs =
     match exprs with
-    | [] -> List.rev results, ctx
+    | [] -> listRev results, ctx
     | expr :: exprs ->
       let result, ctx = genExpr ctx expr
       go (result :: results) ctx exprs
@@ -510,7 +510,7 @@ let genExprCallPrintfn ctx format args =
   let rec go acc ctx args =
     match args with
     | [] ->
-      List.rev acc, ctx
+      listRev acc, ctx
     | MExpr.Lit (Lit.Str value, _) :: args ->
       go (CExpr.StrRaw value :: acc) ctx args
     | arg :: args when mexprToTy arg = tyStr ->
@@ -566,7 +566,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
     // Embed the source location information.
     let args =
       let y, x = loc
-      List.append args [CExpr.Int y; CExpr.Int x]
+      listAppend args [CExpr.Int y; CExpr.Int x]
     let assertCall = CExpr.Call (callee, args)
     let ctx = cirCtxAddStmt ctx (CStmt.Expr assertCall)
     genExprDefault ctx resultTy
@@ -766,7 +766,7 @@ let genBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx = genStmts (cirCtxNewBlock ctx) stmts
   let stmts = bodyCtx.Stmts
   let ctx = cirCtxRollBack ctx bodyCtx
-  List.rev stmts, ctx
+  listRev stmts, ctx
 
 let genStmts (ctx: CirCtx) (stmts: MStmt list): CirCtx =
   let rec go ctx stmts =
@@ -789,7 +789,7 @@ let genDecls (ctx: CirCtx) decls =
     let rec go acc ctx args =
       match args with
       | [] ->
-        List.rev acc, ctx
+        listRev acc, ctx
       | (arg, ty, _) :: args ->
         let ident = cirCtxUniqueName ctx arg
         let cty, ctx = cirGetCTy ctx ty
@@ -812,14 +812,14 @@ let genLogs (ctx: CirCtx) =
       let ctx = cirCtxAddDecl ctx (CDecl.ErrDir (msg, 1 + y))
       go ctx logs
 
-  let logs = ctx.Logs |> List.rev
+  let logs = ctx.Logs |> listRev
   let ctx = go ctx logs
-  let success = logs |> List.isEmpty
+  let success = logs |> listIsEmpty
   success, ctx
 
 let gen (decls, mirCtx: Mir.MirCtx): CDecl list * bool =
   let ctx = cirCtxFromMirCtx mirCtx
   let ctx = genDecls ctx decls
   let success, ctx = genLogs ctx
-  let decls = ctx.Decls |> List.rev
+  let decls = ctx.Decls |> listRev
   decls, success

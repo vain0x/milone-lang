@@ -107,7 +107,7 @@ let ccCtxGetCaps (ctx: CcCtx) =
   let refs = Set.difference ctx.Refs ctx.Locals
   let refs = Set.difference refs ctx.Known
 
-  refs |> Set.toList |> List.choose
+  refs |> Set.toList |> listChoose
     (fun serial ->
       match ctx.Vars |> mapFind serial with
       | VarDef.Var (_, ty, loc) ->
@@ -119,23 +119,23 @@ let ccCtxGetCaps (ctx: CcCtx) =
 /// Updates the function type to take additional arguments
 /// for each captured variable.
 let capsAddToFunTy tTy caps =
-  caps |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
+  caps |> listFold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
 
 /// Updates the arguments of a call to pass captured variables.
 let capsAddToCallArgs args caps =
-  caps |> List.fold (fun args (serial, ty, loc) ->
+  caps |> listFold (fun args (serial, ty, loc) ->
     HExpr.Ref (serial, ty, loc) :: args
   ) args
 
 /// Updates the arguments of a function to take captured variables.
 let capsAddToFunPats args caps =
-  caps |> List.fold (fun args (serial, ty, loc) ->
+  caps |> listFold (fun args (serial, ty, loc) ->
     HPat.Ref (serial, ty, loc) :: args
   ) args
 
 let capsUpdateFunDef funTy arity caps =
   let funTy = caps |> capsAddToFunTy funTy
-  let arity = arity + List.length caps
+  let arity = arity + listLength caps
   funTy, arity
 
 let declosurePat (pat, ctx) =
@@ -198,7 +198,7 @@ let declosureCall callee args resultTy loc (ctx: CcCtx) =
       let calleeTy = caps |> capsAddToFunTy calleeTy
 
       // Count captured variables as occurrences too.
-      let ctx = caps |> List.fold (fun ctx (serial, _, _) -> ctx |> ccCtxAddRef serial) ctx
+      let ctx = caps |> listFold (fun ctx (serial, _, _) -> ctx |> ccCtxAddRef serial) ctx
 
       let callee = HExpr.Ref (callee, calleeTy, refLoc)
       (hxCallProc callee args resultTy loc, ctx) |> Some
@@ -270,7 +270,7 @@ let declosureExprTyDecl expr tyDecl ctx =
     expr, ctx
   | TyDecl.Union (_, variants, _) ->
     let ctx =
-      variants |> List.fold (fun ctx (_, variantSerial, _, _) ->
+      variants |> listFold (fun ctx (_, variantSerial, _, _) ->
         ctx |> ccCtxAddKnown variantSerial
       ) ctx
     expr, ctx

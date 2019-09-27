@@ -326,7 +326,7 @@ let scopeCtxResolveTy ty loc scopeCtx =
 // -----------------------------------------------
 
 let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
-  let arity = args |> List.length
+  let arity = args |> listLength
   let tyScheme = TyScheme.ForAll ([], ty)
 
   match scopeCtx.Vars |> mapTryFind serial with
@@ -367,10 +367,10 @@ let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
       |> scopeCtxOpenVar tySerial variantSerial
       |> scopeCtxOpenVar ctx.LocalSerial variantSerial
     let ctx =
-      variants |> List.fold defineVariant ctx
+      variants |> listFold defineVariant ctx
 
     let tyDef =
-      let variantSerials = variants |> List.map (fun (_, variantSerial, _, _) -> variantSerial)
+      let variantSerials = variants |> listMap (fun (_, variantSerial, _, _) -> variantSerial)
       TyDef.Union (tyIdent, variantSerials, loc)
     ctx |> scopeCtxDefineLocalTy tySerial tyDef
 
@@ -397,7 +397,7 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
         ctx |> scopeCtxDefineVar variantSerial varDef
       | _ ->
         failwith "NEVER: it must be variant"
-    variantSerials |> List.fold go ctx
+    variantSerials |> listFold go ctx
 
 // -----------------------------------------------
 // Collect declarations

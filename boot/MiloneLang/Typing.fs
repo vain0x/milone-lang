@@ -100,7 +100,7 @@ let tyCtxUnifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
 /// For example, `let f x = (let g = f in g x)` will have too generic type
 /// without this checking (according to TaPL).
 let tyGeneralize isOwned (ty: Ty) =
-  let fvs = tyCollectFreeVars ty |> List.filter isOwned
+  let fvs = tyCollectFreeVars ty |> listFilter isOwned
   TyScheme.ForAll (fvs, ty)
 
 let tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
@@ -118,7 +118,7 @@ let tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
     // Replace bound variables in the type with fresh ones.
     let ty =
       let extendedCtx =
-        mapping |> List.fold
+        mapping |> listFold
           (fun ctx (src, target) -> tyCtxBindTy ctx src (Ty.Meta (target, loc)) loc) ctx
       tyCtxSubstTy extendedCtx ty
 
@@ -217,7 +217,7 @@ let inferPatTuple ctx itemPats loc tupleTy =
   let rec go accPats accTys ctx itemPats =
     match itemPats with
     | [] ->
-      List.rev accPats, List.rev accTys, ctx
+      listRev accPats, listRev accTys, ctx
     | itemPat :: itemPats ->
       let itemTy, ctx = ctx |> tyCtxFreshPatTy itemPat
       let itemPat, ctx = inferPat ctx itemPat itemTy
@@ -374,7 +374,7 @@ let inferTuple (ctx: TyCtx) items loc tupleTy =
   let rec go acc itemTys ctx items =
     match items with
     | [] ->
-      List.rev acc, List.rev itemTys, ctx
+      listRev acc, listRev itemTys, ctx
     | item :: items ->
       let itemTy, ctx = ctx |> tyCtxFreshExprTy item
       let item, ctx = inferExpr ctx item itemTy
@@ -453,7 +453,7 @@ let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
 
 let inferSemi ctx loc exprs lastTy =
   let exprs, ctx = inferExprs ctx exprs lastTy
-  hxSemi (List.rev exprs) loc, ctx
+  hxSemi (listRev exprs) loc, ctx
 
 let inferExprTyDecl ctx tySerial tyDecl loc =
   HExpr.TyDecl (tySerial, tyDecl, loc), ctx

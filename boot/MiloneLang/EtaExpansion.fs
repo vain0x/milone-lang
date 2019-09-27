@@ -107,7 +107,7 @@ let etaCtxIsFun serial (ctx: EtaCtx) =
     false
 
 let listSplitAt i xs =
-  List.truncate i xs, List.skip (min i (List.length xs)) xs
+  listTruncate i xs, listSkip (min i (listLength xs)) xs
 
 let tyAppliedBy n ty =
   match ty with
@@ -258,7 +258,7 @@ let resolvePartialApp calleeKind callee arity args argLen callLoc ctx =
     resolvePartialAppObj callee arity args argLen callLoc ctx
 
 let unetaCallCore calleeKind callee arity calleeLoc args resultTy callLoc ctx =
-  let argLen = List.length args
+  let argLen = listLength args
   if argLen < arity then
     resolvePartialApp calleeKind callee arity args argLen callLoc ctx
   else
