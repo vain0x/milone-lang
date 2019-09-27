@@ -133,10 +133,10 @@ let monoCtxMarkSomethingHappened (ctx: MonoCtx) =
   { ctx with SomethingHappened = true }
 
 let monoCtxFindVarDef (ctx: MonoCtx) serial =
-  ctx.Vars |> Map.find serial
+  ctx.Vars |> mapFind serial
 
 let monoCtxFindGenericFunDef (ctx: MonoCtx) serial =
-  match ctx.Vars |> Map.find serial with
+  match ctx.Vars |> mapFind serial with
   | VarDef.Fun (_, _, TyScheme.ForAll ([], _), _) ->
     None
   | VarDef.Fun (ident, arity, TyScheme.ForAll (_, funTy), loc) ->
@@ -163,7 +163,7 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
     | _ ->
       varSerial, varDef
 
-  let vars = ctx.Vars |> Map.toList |> List.map forceGeneralize |> Map.ofList
+  let vars = ctx.Vars |> mapToList |> List.map forceGeneralize |> mapOfList intCmp
   { ctx with Vars = vars }
 
 let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
@@ -179,16 +179,16 @@ let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy l
         Serial =
           ctx.Serial + 1
         Vars =
-          ctx.Vars |> Map.add monoFunSerial varDef
+          ctx.Vars |> mapAdd monoFunSerial varDef
         GenericFunMonoSerials =
           ctx.GenericFunMonoSerials
-          |> Map.add (genericFunSerial, useSiteTy) monoFunSerial
+          |> mapAdd (genericFunSerial, useSiteTy) monoFunSerial
     }
   let ctx = monoCtxMarkSomethingHappened ctx
   monoFunSerial, ctx
 
 let monoCtxFindMonomorphizedFun (ctx: MonoCtx) funSerial useSiteTy =
-  ctx.GenericFunMonoSerials |> Map.tryFind (funSerial, useSiteTy)
+  ctx.GenericFunMonoSerials |> mapTryFind (funSerial, useSiteTy)
 
 let monoCtxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
   let useSiteTyIsMonomorphic =
@@ -202,25 +202,25 @@ let monoCtxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
     ctx
   else
     let useSiteTys =
-      match ctx.GenericFunUseSiteTys |> Map.tryFind funSerial with
+      match ctx.GenericFunUseSiteTys |> mapTryFind funSerial with
       | None -> []
       | Some useSiteTys -> useSiteTys
     let useSiteTys =
       useSiteTy :: useSiteTys
     let map =
       ctx.GenericFunUseSiteTys
-      |> Map.add funSerial useSiteTys
+      |> mapAdd funSerial useSiteTys
     let ctx = { ctx with GenericFunUseSiteTys = map }
     let ctx = monoCtxMarkSomethingHappened ctx
     ctx
 
 let monoCtxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
-  match ctx.GenericFunUseSiteTys |> Map.tryFind funSerial with
+  match ctx.GenericFunUseSiteTys |> mapTryFind funSerial with
   | None
   | Some [] ->
     [], ctx
   | Some useSiteTys ->
-    let map = ctx.GenericFunUseSiteTys |> Map.remove funSerial
+    let map = ctx.GenericFunUseSiteTys |> mapRemove funSerial
     let ctx = { ctx with GenericFunUseSiteTys = map }
     let ctx = monoCtxMarkSomethingHappened ctx
     useSiteTys, ctx

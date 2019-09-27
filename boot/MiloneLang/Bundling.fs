@@ -111,7 +111,7 @@ let parseProjectModules readModuleFile projectName nameCtx =
       let moduleAst, errors = Parsing.parse tokens
       let moduleHir, nameCtx = AstToHir.astToHir (moduleAst, nameCtx)
       let dependencies = findOpenModules projectName moduleHir
-      let moduleMap = moduleMap |> Map.add moduleName moduleHir
+      let moduleMap = moduleMap |> mapAdd moduleName moduleHir
       let moduleAcc, moduleMap, nameCtx, errorAcc =
         List.fold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
       moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc

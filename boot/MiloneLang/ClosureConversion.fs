@@ -99,7 +99,7 @@ let ccCtxAddLocal serial (ctx: CcCtx) =
 let ccCtxAddFun serial caps (ctx: CcCtx) =
   { ctx with
       Known = ctx.Known |> Set.add serial
-      Caps = ctx.Caps |> Map.add serial caps
+      Caps = ctx.Caps |> mapAdd serial caps
   }
 
 /// Gets the captured variables of the current function.
@@ -109,7 +109,7 @@ let ccCtxGetCaps (ctx: CcCtx) =
 
   refs |> Set.toList |> List.choose
     (fun serial ->
-      match ctx.Vars |> Map.find serial with
+      match ctx.Vars |> mapFind serial with
       | VarDef.Var (_, ty, loc) ->
         Some (serial, ty, loc)
       | _ ->
@@ -179,7 +179,7 @@ let declosureExprRefAsCallee serial (expr, ctx) =
 
 let declosureExprRef serial (expr, ctx) =
   let ctx = ctx |> ccCtxAddRef serial
-  match ctx.Caps |> Map.tryFind serial with
+  match ctx.Caps |> mapTryFind serial with
   | Some (_ :: _) ->
     let resultTy, loc = exprExtract expr
     match declosureCall expr [] resultTy loc ctx with
@@ -191,7 +191,7 @@ let declosureExprRef serial (expr, ctx) =
 let declosureCall callee args resultTy loc (ctx: CcCtx) =
   match callee with
   | HExpr.Ref (callee, calleeTy, refLoc) ->
-    match ctx.Caps |> Map.tryFind callee with
+    match ctx.Caps |> mapTryFind callee with
     | Some (_ :: _ as caps) ->
       // Add caps arg.
       let args = caps |> capsAddToCallArgs args
@@ -324,17 +324,17 @@ let declosureUpdateFuns (ctx: CcCtx) =
       vars
 
     | _ ->
-      match vars |> Map.find varSerial with
+      match vars |> mapFind varSerial with
       | VarDef.Fun (ident, arity, TyScheme.ForAll (fvs, funTy), loc) ->
         let funTy, arity = caps |> capsUpdateFunDef funTy arity
         let tyScheme = TyScheme.ForAll (fvs, funTy)
         let varDef = VarDef.Fun (ident, arity, tyScheme, loc)
-        vars |> Map.add varSerial varDef
+        vars |> mapAdd varSerial varDef
 
       | _ ->
         vars
 
-  let vars = ctx.Caps |> Map.fold update ctx.Vars
+  let vars = ctx.Caps |> mapFold update ctx.Vars
   { ctx with Vars = vars }
 
 let declosureUpdateCtx (expr, ctx) =

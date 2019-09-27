@@ -80,15 +80,15 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
   }
 
 let scopeCtxGetIdent serial (scopeCtx: ScopeCtx): Ident =
-  scopeCtx.NameMap |> Map.find serial
+  scopeCtx.NameMap |> mapFind serial
 
 let scopeCtxGetVar varSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Vars |> Map.containsKey varSerial)
-  scopeCtx.Vars |> Map.find varSerial
+  scopeCtx.Vars |> mapFind varSerial
 
 let scopeCtxGetTy tySerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Tys |> Map.containsKey tySerial)
-  scopeCtx.Tys |> Map.find tySerial
+  scopeCtx.Tys |> mapFind tySerial
 
 let scopeCtxIsVariant varSerial scopeCtx =
   match scopeCtx |> scopeCtxGetVar varSerial with
@@ -109,21 +109,21 @@ let scopeCtxIsMetaTy tySerial scopeCtx =
 /// Defines a variable, without adding to any scope.
 let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      Vars = scopeCtx.Vars |> Map.add varSerial varDef
-      VarDepths = scopeCtx.VarDepths |> Map.add varSerial scopeCtx.LetDepth
+      Vars = scopeCtx.Vars |> mapAdd varSerial varDef
+      VarDepths = scopeCtx.VarDepths |> mapAdd varSerial scopeCtx.LetDepth
   }
 
 /// Defines a type, without adding to any scope.
 let scopeCtxDefineTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      Tys = scopeCtx.Tys |> Map.add tySerial tyDef
-      TyDepths = scopeCtx.TyDepths |> Map.add tySerial scopeCtx.LetDepth
+      Tys = scopeCtx.Tys |> mapAdd tySerial tyDef
+      TyDepths = scopeCtx.TyDepths |> mapAdd tySerial scopeCtx.LetDepth
   }
 
 /// Defines an unbound meta type.
 let scopeCtxDefineFreeTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      TyDepths = scopeCtx.TyDepths |> Map.add tySerial scopeCtx.LetDepth
+      TyDepths = scopeCtx.TyDepths |> mapAdd tySerial scopeCtx.LetDepth
   }
 
 /// Adds a variable to a scope.
@@ -329,7 +329,7 @@ let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx 
   let arity = args |> List.length
   let tyScheme = TyScheme.ForAll ([], ty)
 
-  match scopeCtx.Vars |> Map.tryFind serial with
+  match scopeCtx.Vars |> mapTryFind serial with
   | Some (VarDef.Fun _) ->
     scopeCtx
 

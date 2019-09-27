@@ -33,9 +33,9 @@ let mirCtxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
   }
 
 let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
-  match ctx.Vars |> Map.find varSerial with
+  match ctx.Vars |> mapFind varSerial with
   | VarDef.Variant (_, tySerial, _, _, _, _) ->
-    match ctx.Tys |> Map.find tySerial with
+    match ctx.Tys |> mapFind tySerial with
     | TyDef.Union (_, variantSerials, _) ->
       variantSerials |> List.length = 1
 
@@ -66,7 +66,7 @@ let mirCtxFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> Map.add serial (VarDef.Var (ident, ty, loc))
+        Vars = ctx.Vars |> mapAdd serial (VarDef.Var (ident, ty, loc))
     }
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
@@ -86,7 +86,7 @@ let mirCtxFreshLabel (ctx: MirCtx) (ident: Ident) loc =
 
 /// Gets if the serial denotes to a variant function.
 let mirCtxIsVariantFun (ctx: MirCtx) serial =
-  match ctx.Vars |> Map.tryFind serial with
+  match ctx.Vars |> mapTryFind serial with
   | Some (VarDef.Variant _) ->
     true
   | _ ->
@@ -157,7 +157,7 @@ let mirifyPatSome ctx endLabel item itemTy loc expr =
   mirifyPatCons ctx endLabel item nilPat itemTy loc expr
 
 let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
-  match ctx.Vars |> Map.find serial with
+  match ctx.Vars |> mapFind serial with
   | VarDef.Variant _ ->
     // Compare tags.
     let lTagExpr = MExpr.Uni (MUniOp.Tag, expr, tyInt, loc)
@@ -171,7 +171,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
     true, mirCtxAddStmt ctx letStmt
 
 let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
-  match ctx.Vars |> Map.find serial, args with
+  match ctx.Vars |> mapFind serial, args with
   | VarDef.Variant (_, _, _, payloadTy, _, _), [payload] ->
     let extractExpr = MExpr.Uni (MUniOp.GetVariant serial, expr, payloadTy, loc)
 
@@ -261,7 +261,7 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     failwith "Never annotation pattern in MIR-ify stage."
 
 let mirifyExprRef (ctx: MirCtx) serial ty loc =
-  match ctx.Vars |> Map.tryFind serial with
+  match ctx.Vars |> mapTryFind serial with
   | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
     MExpr.Variant (tySerial, serial, ty, loc), ctx
   | Some (VarDef.Fun (_, _, _, loc)) ->

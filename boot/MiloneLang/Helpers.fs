@@ -554,7 +554,7 @@ let nameCtxEmpty () =
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
-  let map = map |> Map.add serial ident
+  let map = map |> mapAdd serial ident
   serial, NameCtx (map, serial)
 
 // -----------------------------------------------
@@ -1336,12 +1336,12 @@ let typingBind (ctx: TyContext) tySerial ty loc =
     let tySerials = tySerial :: tyCollectFreeVars ty
     let depth =
       tySerials
-      |> List.map (fun tySerial -> ctx.TyDepths |> Map.find tySerial)
+      |> List.map (fun tySerial -> ctx.TyDepths |> mapFind tySerial)
       |> List.min
-    tySerials |> List.fold (fun tyDepths tySerial -> tyDepths |> Map.add tySerial depth) ctx.TyDepths
+    tySerials |> List.fold (fun tyDepths tySerial -> tyDepths |> mapAdd tySerial depth) ctx.TyDepths
 
   { ctx with
-      Tys = ctx.Tys |> Map.add tySerial (TyDef.Meta (noIdent, ty, loc))
+      Tys = ctx.Tys |> mapAdd tySerial (TyDef.Meta (noIdent, ty, loc))
       TyDepths = tyDepths
   }
 
@@ -1349,7 +1349,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 /// with their results.
 let typingSubst (ctx: TyContext) ty: Ty =
   let substMeta tySerial =
-    match ctx.Tys |> Map.tryFind tySerial with
+    match ctx.Tys |> mapTryFind tySerial with
     | Some (TyDef.Meta (_, ty, _)) ->
       Some ty
     | _ ->

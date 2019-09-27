@@ -25,7 +25,7 @@ type TyCtx =
   }
 
 let tyCtxGetTy tySerial (ctx: TyCtx) =
-  ctx.Tys |> Map.find tySerial
+  ctx.Tys |> mapFind tySerial
 
 let tyCtxAddErr (ctx: TyCtx) message loc =
   { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
@@ -57,7 +57,7 @@ let tyCtxFreshTySerial (ctx: TyCtx) =
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        TyDepths = ctx.TyDepths |> Map.add serial ctx.LetDepth
+        TyDepths = ctx.TyDepths |> mapAdd serial ctx.LetDepth
     }
   serial, ctx
 
@@ -140,18 +140,18 @@ let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
   polyTy, traits, ctx
 
 let tyCtxFindVar (ctx: TyCtx) serial =
-  ctx.Vars |> Map.find serial
+  ctx.Vars |> mapFind serial
 
 let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
-  match ctx.Vars |> Map.find funSerial with
+  match ctx.Vars |> mapFind funSerial with
   | VarDef.Fun (ident, arity, TyScheme.ForAll ([], funTy), loc) ->
     let isOwned tySerial =
-      let depth = ctx.TyDepths |> Map.find tySerial
+      let depth = ctx.TyDepths |> mapFind tySerial
       depth > outerLetDepth
     let funTy = tyCtxSubstTy ctx funTy
     let funTyScheme = tyGeneralize isOwned funTy
     let varDef = VarDef.Fun (ident, arity, funTyScheme, loc)
-    let ctx = { ctx with Vars = ctx.Vars |> Map.add funSerial varDef }
+    let ctx = { ctx with Vars = ctx.Vars |> mapAdd funSerial varDef }
     ctx
   | VarDef.Fun _ ->
     failwith "Can't generalize already-generalized function"
@@ -418,7 +418,7 @@ let inferLetFun (ctx: TyCtx) varSerial isMainFun argPats body next ty loc =
       else tyCtxFreshTyVar "fun" loc ctx
 
     let ctx =
-      match ctx.Vars |> Map.find varSerial with
+      match ctx.Vars |> mapFind varSerial with
       | VarDef.Fun (_, _, TyScheme.ForAll ([], oldTy), _) ->
         tyCtxUnifyTy ctx loc oldTy calleeTy
       | _ ->
@@ -535,9 +535,9 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCt
   // Assign type vars to var/fun definitions.
   let ctx =
     let vars, ctx =
-      (Map.toList ctx.Vars, ctx)
+      (mapToList ctx.Vars, ctx)
       |> stMap (fun ((varSerial, varDef), ctx) ->
-        let ctx = { ctx with LetDepth = scopeCtx.VarDepths |> Map.find varSerial }
+        let ctx = { ctx with LetDepth = scopeCtx.VarDepths |> mapFind varSerial }
         match varDef with
         | VarDef.Var (ident, _, loc) ->
           let ty, _, ctx = tyCtxFreshTyVar ident loc ctx
@@ -559,7 +559,7 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCt
           let varDef = VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc)
           (varSerial, varDef), ctx
       )
-    { ctx with Vars = Map.ofList vars }
+    { ctx with Vars = mapOfList intCmp vars }
 
   let ctx = { ctx with LetDepth = 0 }
 
