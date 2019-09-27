@@ -197,14 +197,10 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   | ATy.Missing loc ->
     Ty.Error loc, nameCtx
 
-  | ATy.Ident (ident, _) ->
+  | ATy.App (ident, argTys, _) ->
     let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
-    tyRef tySerial [], nameCtx
-
-  | ATy.App (ident, argTy, _) ->
-    let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
-    let argTy, nameCtx = (argTy, nameCtx) |> onTy
-    tyRef tySerial [argTy], nameCtx
+    let argTys, nameCtx = (argTys, nameCtx) |> stMap onTy
+    tyRef tySerial argTys, nameCtx
 
   | ATy.Suffix (lTy, ident, _) ->
     let lTy, nameCtx = (lTy, nameCtx) |> onTy

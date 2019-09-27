@@ -162,13 +162,10 @@ let parseNewError msg (tokens, errors) =
 // Parse types
 // -----------------------------------------------
 
-let parseTyAtom baseLoc (tokens, errors) =
+/// `'<' ty '>'`
+let parseTyArgs baseLoc (tokens, errors) =
   match tokens with
-  | _ when nextInside baseLoc tokens |> not ->
-    parseTyError "Expected a type atom" (tokens, errors)
-
-  | (Token.Ident ident, loc) :: (Token.Lt, ltLoc) :: tokens
-    when locInside baseLoc ltLoc ->
+  | (Token.Lt, ltLoc) :: tokens when locInside baseLoc ltLoc ->
     let argTy, tokens, errors = parseTy baseLoc (tokens, errors)
 
     let tokens, errors =
@@ -180,10 +177,19 @@ let parseTyAtom baseLoc (tokens, errors) =
         let errors = parseNewError "Expected '>'" (tokens, errors)
         tokens, errors
 
-    ATy.App (ident, argTy, loc), tokens, errors
+    [argTy], tokens, errors
+
+  | _ ->
+    [], tokens, errors
+
+let parseTyAtom baseLoc (tokens, errors) =
+  match tokens with
+  | _ when nextInside baseLoc tokens |> not ->
+    parseTyError "Expected a type atom" (tokens, errors)
 
   | (Token.Ident ident, loc) :: tokens ->
-    ATy.Ident (ident, loc), tokens, errors
+    let argTys, tokens, errors = parseTyArgs baseLoc (tokens, errors)
+    ATy.App (ident, argTys, loc), tokens, errors
 
   | (Token.ParenL, _) :: tokens ->
     let ty, tokens, errors = parseTy baseLoc (tokens, errors)
