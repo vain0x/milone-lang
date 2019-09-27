@@ -70,10 +70,10 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
   {
     Serial = serial
     NameMap = nameMap
-    Vars = Map.empty
-    VarDepths = Map.empty
-    Tys = Map.empty
-    TyDepths = Map.empty
+    Vars = mapEmpty intCmp
+    VarDepths = mapEmpty intCmp
+    Tys = mapEmpty intCmp
+    TyDepths = mapEmpty intCmp
     LocalSerial = localSerial
     Local = []
     LetDepth = 0

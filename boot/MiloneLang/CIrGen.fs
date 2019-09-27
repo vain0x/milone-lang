@@ -58,7 +58,7 @@ let cirCtxFromMirCtx (mirCtx: Mir.MirCtx): CirCtx =
   {
     Vars = mirCtx.Vars
     VarUniqueNames = varNames
-    TyEnv = Map.empty
+    TyEnv = mapEmpty compare // FIXME: Write tyCmp
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []

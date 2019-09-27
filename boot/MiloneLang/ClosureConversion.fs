@@ -62,7 +62,7 @@ let ccCtxFromTyCtx (ftCtx: Typing.TyCtx): CcCtx =
     Vars = ftCtx.Vars
     Tys = ftCtx.Tys
 
-    Caps = Map.empty
+    Caps = mapEmpty intCmp
     Known = Set.empty
     Refs = Set.empty
     Locals = Set.empty

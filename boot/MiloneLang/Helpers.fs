@@ -140,6 +140,14 @@ let intMax (x: int) (y: int) =
 let intEq (x: int) (y: int) =
   x = y
 
+let intCmp (x: int) (y: int) =
+  if y < x then
+    1
+  else if y = x then
+    0
+  else
+    -1
+
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
     failwith "intToHexWithPadding: unimplemented negative"
@@ -239,6 +247,14 @@ let charEscape (c: char) =
 // -----------------------------------------------
 // String
 // -----------------------------------------------
+
+let strCmp (x: string) (y: string) =
+  if y < x then
+    1
+  else if y = x then
+    0
+  else
+    -1
 
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
@@ -534,7 +550,7 @@ let dumpTreeToString (node: DumpTree) =
 // -----------------------------------------------
 
 let nameCtxEmpty () =
-  NameCtx (Map.empty, 0)
+  NameCtx (mapEmpty intCmp, 0)
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1

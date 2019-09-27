@@ -332,8 +332,8 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
       Tys = tyCtx.Tys
       TyDepths = tyCtx.TyDepths
 
-      GenericFunUseSiteTys = Map.empty
-      GenericFunMonoSerials = Map.empty
+      GenericFunUseSiteTys = mapEmpty intCmp
+      GenericFunMonoSerials = mapEmpty compare // FIXME: Write intTyCmp
 
       Mode = Mode.Monify
       SomethingHappened = true

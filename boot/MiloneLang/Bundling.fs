@@ -117,7 +117,7 @@ let parseProjectModules readModuleFile projectName nameCtx =
       moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
 
   let moduleAcc, _, nameCtx, errorAcc =
-    go ([], Map.empty, nameCtx, []) projectName
+    go ([], mapEmpty strCmp, nameCtx, []) projectName
   let modules = moduleAcc |> List.rev
 
   List.reduce spliceExpr modules, nameCtx, errorAcc
