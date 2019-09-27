@@ -166,7 +166,17 @@ let parseNewError msg (tokens, errors) =
 let parseTyArgs baseLoc (tokens, errors) =
   match tokens with
   | (Token.Lt, ltLoc) :: tokens when locInside baseLoc ltLoc ->
+    let rec go acc (tokens, errors) =
+      match tokens with
+      | (Token.Comma, _) :: tokens ->
+        let argTy, tokens, errors = parseTy baseLoc (tokens, errors)
+        go (argTy :: acc) (tokens, errors)
+
+      | _ ->
+        listRev acc, tokens, errors
+
     let argTy, tokens, errors = parseTy baseLoc (tokens, errors)
+    let argTys, tokens, errors = go [argTy] (tokens, errors)
 
     let tokens, errors =
       match tokens with
@@ -177,7 +187,7 @@ let parseTyArgs baseLoc (tokens, errors) =
         let errors = parseNewError "Expected '>'" (tokens, errors)
         tokens, errors
 
-    [argTy], tokens, errors
+    argTys, tokens, errors
 
   | _ ->
     [], tokens, errors

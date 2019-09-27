@@ -624,6 +624,11 @@ let tyPrimFromIdent ident tys loc =
   | "list", [itemTy] ->
     tyList itemTy
 
+  | "Map", [keyTy; _] ->
+    // `Map<K, V>` ===> `assoc:(K * V) list * cmp:(K -> K -> int)`
+    // because Map is not supported yet.
+    tyTuple [tyList (tyTuple tys); tyFun keyTy (tyFun keyTy tyInt)]
+
   | _ ->
     Ty.Error loc
 
