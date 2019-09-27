@@ -14,7 +14,6 @@ type TyCtx =
     /// We need to identify variables by serial number rather than names
     /// due to scope locality and shadowing.
     Serial: Serial
-    NameMap: Map<Serial, Ident>
     /// Variable serial to variable definition.
     Vars: Map<VarSerial, VarDef>
     /// Type serial to type definition.
@@ -24,9 +23,6 @@ type TyCtx =
     TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list
   }
-
-let ctxGetIdent serial (ctx: TyCtx) =
-  ctx.NameMap |> Map.find serial
 
 let ctxGetTy tySerial (ctx: TyCtx) =
   ctx.Tys |> Map.find tySerial
@@ -514,7 +510,6 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCt
   let ctx =
     {
       Serial = scopeCtx.Serial
-      NameMap = scopeCtx.NameMap
       Vars = scopeCtx.Vars
       Tys = scopeCtx.Tys
       TyDepths = scopeCtx.TyDepths
