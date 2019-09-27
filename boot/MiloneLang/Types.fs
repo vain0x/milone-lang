@@ -197,6 +197,8 @@ type ATy =
     of Loc
   | Ident
     of Ident * Loc
+  | App
+    of Ident * ATy * Loc
   | Suffix
     of ATy * Ident * Loc
   /// Tuple type, e.g. `int * string`.

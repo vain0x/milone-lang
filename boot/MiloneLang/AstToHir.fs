@@ -201,6 +201,11 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
     let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
     tyRef tySerial [], nameCtx
 
+  | ATy.App (ident, argTy, _) ->
+    let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
+    let argTy, nameCtx = (argTy, nameCtx) |> onTy
+    tyRef tySerial [argTy], nameCtx
+
   | ATy.Suffix (lTy, ident, _) ->
     let lTy, nameCtx = (lTy, nameCtx) |> onTy
     let tySerial, nameCtx = nameCtx |> nameCtxAdd ident

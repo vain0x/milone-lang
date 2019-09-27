@@ -6,6 +6,8 @@ int g_(int x_1);
 
 struct IntList;
 
+struct StringList;
+
 int main();
 
 int f_(int x_) {
@@ -21,6 +23,11 @@ struct IntList {
     struct IntList* tail;
 };
 
+struct StringList {
+    struct String head;
+    struct StringList* tail;
+};
+
 int main() {
     int call_ = f_(1);
     int call_1 = g_(1);
@@ -29,5 +36,9 @@ int main() {
     list_->head = 1;
     list_->tail = NULL;
     struct IntList* xs_ = list_;
+    struct StringList* list_1 = (struct StringList*)malloc(sizeof(struct StringList));
+    list_1->head = (struct String){.str = "a", .len = 1};
+    list_1->tail = NULL;
+    struct StringList* ys_ = list_1;
     return zero_;
 }

@@ -5,4 +5,6 @@ let main _ =
 
   let xs: _ list = [1]
 
+  let ys: list<string> = ["a"]
+
   zero

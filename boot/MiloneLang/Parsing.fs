@@ -167,6 +167,21 @@ let parseTyAtom baseLoc (tokens, errors) =
   | _ when nextInside baseLoc tokens |> not ->
     parseTyError "Expected a type atom" (tokens, errors)
 
+  | (Token.Ident ident, loc) :: (Token.Lt, ltLoc) :: tokens
+    when locInside baseLoc ltLoc ->
+    let argTy, tokens, errors = parseTy baseLoc (tokens, errors)
+
+    let tokens, errors =
+      match tokens with
+      | (Token.Gt, _) :: tokens ->
+        tokens, errors
+
+      | _ ->
+        let errors = parseNewError "Expected '>'" (tokens, errors)
+        tokens, errors
+
+    ATy.App (ident, argTy, loc), tokens, errors
+
   | (Token.Ident ident, loc) :: tokens ->
     ATy.Ident (ident, loc), tokens, errors
 
