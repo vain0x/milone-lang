@@ -14,20 +14,15 @@ type TyCtx =
     /// We need to identify variables by serial number rather than names
     /// due to scope locality and shadowing.
     Serial: Serial
-    NameMap: Map<Serial, Ident>
     /// Variable serial to variable definition.
     Vars: Map<VarSerial, VarDef>
     /// Type serial to type definition.
     Tys: Map<TySerial, TyDef>
     TyDepths: Map<TySerial, LetDepth>
     LetDepth: LetDepth
-    UnifyQueue: (Ty * Ty * Loc) list
     TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list
   }
-
-let ctxGetIdent serial (ctx: TyCtx) =
-  ctx.NameMap |> Map.find serial
 
 let ctxGetTy tySerial (ctx: TyCtx) =
   ctx.Tys |> Map.find tySerial
@@ -71,26 +66,8 @@ let ctxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
   let ty = Ty.Meta (serial, loc)
   ty, (), ctx
 
-let ctxUnifyLater (ctx: TyCtx) ty metaTy loc =
-  { ctx with UnifyQueue = (ty, metaTy, loc) :: ctx.UnifyQueue }
-
-let ctxAddTraitBound theTrait loc (ctx: TyCtx) =
-  { ctx with TraitBounds = (theTrait, loc) :: ctx.TraitBounds }
-
 let ctxAddTraitBounds traits (ctx: TyCtx) =
   { ctx with TraitBounds = traits @ ctx.TraitBounds }
-
-let ctxResolveUnifyQueue (ctx: TyCtx) =
-  let rec go ctx queue =
-    match queue with
-    | [] ->
-      ctx
-    | (ty, metaTy, loc) :: queue ->
-      let ctx = unifyTy ctx loc ty metaTy
-      go ctx queue
-  let queue = ctx.UnifyQueue
-  let ctx = { ctx with UnifyQueue = [] }
-  go ctx queue
 
 let ctxResolveTraitBounds (ctx: TyCtx) =
   let rec go logAcc traits ctx =
@@ -533,12 +510,10 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCt
   let ctx =
     {
       Serial = scopeCtx.Serial
-      NameMap = scopeCtx.NameMap
       Vars = scopeCtx.Vars
       Tys = scopeCtx.Tys
       TyDepths = scopeCtx.TyDepths
       LetDepth = 0
-      UnifyQueue = []
       TraitBounds = []
       Logs = []
     }
@@ -556,22 +531,6 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCt
 
   let ctx =
     ctx |> addErrorListList errorListList
-
-  let ctx =
-    let tys, ctx =
-      (Map.toList ctx.Tys, ctx)
-      |> stMap (fun ((tySerial, tyDef), ctx) ->
-        match tyDef with
-        | TyDef.Meta (ident, bodyTy, loc) ->
-          // Replace types with type vars and unify later.
-          let ty, _, ctx = ctxFreshTyVar ident loc ctx
-          let ctx = ctxUnifyLater ctx bodyTy ty loc
-          (tySerial, TyDef.Meta (ident, ty, loc)), ctx
-
-        | TyDef.Union _ ->
-          (tySerial, tyDef), ctx
-      )
-    { ctx with Tys = Map.ofList tys }
 
   // Assign type vars to var/fun definitions.
   let ctx =
@@ -592,20 +551,16 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCt
           (varSerial, varDef), ctx
 
         | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, _, loc) ->
-          let ty, _, ctx = ctxFreshTyVar ident loc ctx
-          let ctx = ctxUnifyLater ctx payloadTy ty loc
-
           // Pre-compute the type of variant.
           let variantTy =
             let unionTy = tyRef tySerial []
-            if hasPayload then tyFun ty unionTy else unionTy
+            if hasPayload then tyFun payloadTy unionTy else unionTy
 
-          let varDef = VarDef.Variant (ident, tySerial, hasPayload, ty, variantTy, loc)
+          let varDef = VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc)
           (varSerial, varDef), ctx
       )
     { ctx with Vars = Map.ofList vars }
 
-  let ctx = ctx |> ctxResolveUnifyQueue
   let ctx = { ctx with LetDepth = 0 }
 
   let expr, ctx = inferExpr ctx expr tyUnit
