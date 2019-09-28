@@ -1554,7 +1554,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
     let tySerials = tySerial :: tyCollectFreeVars ty
     let depth =
       tySerials
-      |> List.map (fun tySerial -> ctx |> tyContextGetTyDepths |> mapFind tySerial)
+      |> listMap (fun tySerial -> ctx |> tyContextGetTyDepths |> mapFind tySerial)
       |> listFold intMin intInf
     tySerials |> listFold (fun tyDepths tySerial -> tyDepths |> mapAdd tySerial depth) (ctx |> tyContextGetTyDepths)
 
