@@ -1,0 +1,15 @@
+ExampleCtx:
+  # Serial number.
+  Serial: Serial
+
+  # Variable definitions.
+  Vars: Map<VarSerial, VarDef>
+
+  # Type definitions.
+  Tys: Map<TySerial, TyDef>
+
+AnotherCtx:
+  # Serial Number
+  Serial: Serial
+
+  Stmts: MStmt list
