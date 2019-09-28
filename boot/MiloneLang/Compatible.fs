@@ -24,6 +24,9 @@ let mapFind key map =
 let mapTryFind key map =
   Map.tryFind key map
 
+let mapContainsKey key map =
+  Map.containsKey key map
+
 let mapFold folder state map =
   Map.fold folder state map
 

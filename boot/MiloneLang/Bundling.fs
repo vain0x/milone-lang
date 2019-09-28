@@ -103,7 +103,7 @@ let spliceExpr firstExpr secondExpr =
 
 let parseProjectModules readModuleFile projectName nameCtx =
   let rec go (moduleAcc, moduleMap, nameCtx, errorAcc) moduleName =
-    if moduleMap |> Map.containsKey moduleName then
+    if moduleMap |> mapContainsKey moduleName then
       moduleAcc, moduleMap, nameCtx, errorAcc
     else
       let source = readModuleFile moduleName
