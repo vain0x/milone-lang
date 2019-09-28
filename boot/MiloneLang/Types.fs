@@ -353,6 +353,25 @@ type NameCtx =
   | NameCtx
     of Map<Serial, Ident> * lastSerial:Serial
 
+type ScopeSerial = Serial
+
+[<RequireQualifiedAccess>]
+type Binding =
+  /// Value binding.
+  | Var
+    of VarSerial * varIdent:Ident
+
+  /// Type binding.
+  | Ty
+    of TySerial * tyIdent:Ident
+
+  /// Parent scope.
+  | Parent
+    of ScopeSerial * Scope
+
+/// (scopeSerial, binding) list.
+type Scope = (ScopeSerial * Binding) list
+
 /// Type constructors.
 [<RequireQualifiedAccess>]
 type TyCon =

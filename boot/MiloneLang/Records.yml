@@ -1,15 +1,28 @@
-ExampleCtx:
-  # Serial number.
+ScopeCtx:
+  # Last serial number.
+  # We need manage identifiers as integers rather than strings due to shadowing.
   Serial: Serial
 
-  # Variable definitions.
+  # Serial to ident map.
+  NameMap: Map<Serial, Ident>
+
+  # Variable serial to definition map.
   Vars: Map<VarSerial, VarDef>
 
-  # Type definitions.
+  # Variable serial to let-depth map.
+  VarDepths: Map<VarSerial, LetDepth>
+
+  # Type serial to definition map.
   Tys: Map<TySerial, TyDef>
 
-AnotherCtx:
-  # Serial Number
-  Serial: Serial
+  # Type serial to let-depth map.
+  TyDepths: Map<TySerial, LetDepth>
 
-  Stmts: MStmt list
+  # Serial of the current scope.
+  LocalSerial: ScopeSerial
+
+  # Current scope.
+  Local: Scope
+
+  # Current let-depth, the number of ancestral let-body.
+  LetDepth: LetDepth

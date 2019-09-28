@@ -7,6 +7,7 @@ module rec MiloneLang.Typing
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Records
 
 type TyCtx =
   {
@@ -506,13 +507,13 @@ let tyCtxSubstExprTy ctx expr =
   let subst ty = tyCtxSubstTy ctx ty
   exprMap subst id expr
 
-let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCtx =
+let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
   let ctx =
     {
-      Serial = scopeCtx.Serial
-      Vars = scopeCtx.Vars
-      Tys = scopeCtx.Tys
-      TyDepths = scopeCtx.TyDepths
+      Serial = scopeCtx |> scopeCtxGetSerial
+      Vars = scopeCtx |> scopeCtxGetVars
+      Tys = scopeCtx |> scopeCtxGetTys
+      TyDepths = scopeCtx |> scopeCtxGetTyDepths
       LetDepth = 0
       TraitBounds = []
       Logs = []
@@ -537,7 +538,7 @@ let infer (expr: HExpr, scopeCtx: NameRes.ScopeCtx, errorListList): HExpr * TyCt
     let vars, ctx =
       (mapToList ctx.Vars, ctx)
       |> stMap (fun ((varSerial, varDef), ctx) ->
-        let ctx = { ctx with LetDepth = scopeCtx.VarDepths |> mapFind varSerial }
+        let ctx = { ctx with LetDepth = scopeCtx |> scopeCtxGetVarDepths |> mapFind varSerial }
         match varDef with
         | VarDef.Var (ident, _, loc) ->
           let ty, _, ctx = tyCtxFreshTyVar ident loc ctx
