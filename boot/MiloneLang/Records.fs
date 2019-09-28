@@ -75,3 +75,81 @@ let scopeCtxWithLocal local ((serial, nameMap, vars, varDepths, tys, tyDepths, l
 
 let scopeCtxWithLetDepth letDepth ((serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, _): ScopeCtx): ScopeCtx =
   serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+
+type TyContext =
+  (
+    Serial
+    * Map<TySerial, TyDef>
+    * Map<TySerial, LetDepth>
+  )
+
+let tyContextGetSerial ((serial, _, _): TyContext) =
+  serial
+
+let tyContextGetTys ((_, tys, _): TyContext) =
+  tys
+
+let tyContextGetTyDepths ((_, _, tyDepths): TyContext) =
+  tyDepths
+
+let tyContextWithSerial serial ((_, tys, tyDepths): TyContext): TyContext =
+  serial, tys, tyDepths
+
+let tyContextWithTys tys ((serial, _, tyDepths): TyContext): TyContext =
+  serial, tys, tyDepths
+
+let tyContextWithTyDepths tyDepths ((serial, tys, _): TyContext): TyContext =
+  serial, tys, tyDepths
+
+type TyCtx =
+  (
+    Serial
+    * Map<VarSerial, VarDef>
+    * Map<TySerial, TyDef>
+    * Map<TySerial, LetDepth>
+    * LetDepth
+    * (Trait * Loc) list
+    * (Log * Loc) list
+  )
+
+let tyCtxGetSerial ((serial, _, _, _, _, _, _): TyCtx) =
+  serial
+
+let tyCtxGetVars ((_, vars, _, _, _, _, _): TyCtx) =
+  vars
+
+let tyCtxGetTys ((_, _, tys, _, _, _, _): TyCtx) =
+  tys
+
+let tyCtxGetTyDepths ((_, _, _, tyDepths, _, _, _): TyCtx) =
+  tyDepths
+
+let tyCtxGetLetDepth ((_, _, _, _, letDepth, _, _): TyCtx) =
+  letDepth
+
+let tyCtxGetTraitBounds ((_, _, _, _, _, traitBounds, _): TyCtx) =
+  traitBounds
+
+let tyCtxGetLogs ((_, _, _, _, _, _, logs): TyCtx) =
+  logs
+
+let tyCtxWithSerial serial ((_, vars, tys, tyDepths, letDepth, traitBounds, logs): TyCtx): TyCtx =
+  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+
+let tyCtxWithVars vars ((serial, _, tys, tyDepths, letDepth, traitBounds, logs): TyCtx): TyCtx =
+  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+
+let tyCtxWithTys tys ((serial, vars, _, tyDepths, letDepth, traitBounds, logs): TyCtx): TyCtx =
+  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+
+let tyCtxWithTyDepths tyDepths ((serial, vars, tys, _, letDepth, traitBounds, logs): TyCtx): TyCtx =
+  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+
+let tyCtxWithLetDepth letDepth ((serial, vars, tys, tyDepths, _, traitBounds, logs): TyCtx): TyCtx =
+  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+
+let tyCtxWithTraitBounds traitBounds ((serial, vars, tys, tyDepths, letDepth, _, logs): TyCtx): TyCtx =
+  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+
+let tyCtxWithLogs logs ((serial, vars, tys, tyDepths, letDepth, traitBounds, _): TyCtx): TyCtx =
+  serial, vars, tys, tyDepths, letDepth, traitBounds, logs

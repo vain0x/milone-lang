@@ -51,9 +51,9 @@
 /// NOTE: The algorithm seems inefficient and the finiteness is unproven.
 module rec MiloneLang.Monomorphizing
 
-open MiloneLang
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Records
 
 [<RequireQualifiedAccess>]
 type Mode =
@@ -90,18 +90,18 @@ type MonoCtx =
   }
 
 let monoCtxToTyCtx (monoCtx: MonoCtx): TyContext =
-  {
-    Serial = monoCtx.Serial
-    Tys = monoCtx.Tys
-    TyDepths = monoCtx.TyDepths
-  }
+  (
+    monoCtx.Serial,
+    monoCtx.Tys,
+    monoCtx.TyDepths
+  )
 
 let monoCtxWithTyCtx (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
   { monoCtx with
-      Serial = tyCtx.Serial
+      Serial = tyCtx |> tyContextGetSerial
       Logs = logAcc
-      Tys = tyCtx.Tys
-      TyDepths = tyCtx.TyDepths
+      Tys = tyCtx |> tyContextGetTys
+      TyDepths = tyCtx |> tyContextGetTyDepths
   }
 
 let monoCtxBindTy (monoCtx: MonoCtx) tySerial ty loc: MonoCtx =
@@ -322,15 +322,15 @@ let rec monifyExpr (expr, ctx) =
     let next, ctx = (next, ctx) |> monifyExpr
     monifyExprLetFun ctx callee isMainFun args body next ty loc
 
-let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
+let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let monoCtx: MonoCtx =
     {
-      Serial = tyCtx.Serial
-      Logs = tyCtx.Logs
+      Serial = tyCtx |> tyCtxGetSerial
+      Logs = tyCtx |> tyCtxGetLogs
 
-      Vars = tyCtx.Vars
-      Tys = tyCtx.Tys
-      TyDepths = tyCtx.TyDepths
+      Vars = tyCtx |> tyCtxGetVars
+      Tys = tyCtx |> tyCtxGetTys
+      TyDepths = tyCtx |> tyCtxGetTyDepths
 
       GenericFunUseSiteTys = mapEmpty intCmp
       GenericFunMonoSerials = mapEmpty compare // FIXME: Write intTyCmp
@@ -366,11 +366,9 @@ let monify (expr: HExpr, tyCtx: Typing.TyCtx): HExpr * Typing.TyCtx =
     monifyExpr (expr, monoCtx)
 
   let tyCtx =
-    {
-      tyCtx with
-        Serial = monoCtx.Serial
-        Vars = monoCtx.Vars
-        Tys = monoCtx.Tys
-    }
+    tyCtx
+    |> tyCtxWithSerial monoCtx.Serial
+    |> tyCtxWithVars monoCtx.Vars
+    |> tyCtxWithTys monoCtx.Tys
 
   expr, tyCtx

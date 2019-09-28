@@ -425,15 +425,6 @@ type Trait =
   | ToString
     of Ty
 
-/// Type context.
-[<RequireQualifiedAccess>]
-type TyContext =
-  {
-    Serial: Serial
-    Tys: Map<TySerial, TyDef>
-    TyDepths: Map<TySerial, LetDepth>
-  }
-
 /// Type declaration.
 [<RequireQualifiedAccess>]
 type TyDecl =

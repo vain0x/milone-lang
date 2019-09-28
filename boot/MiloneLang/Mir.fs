@@ -7,8 +7,7 @@ module rec MiloneLang.Mir
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-
-type TyCtx = Typing.TyCtx
+open MiloneLang.Records
 
 /// Middle IR generation context.
 [<RequireQualifiedAccess>]
@@ -22,14 +21,14 @@ type MirCtx =
     Logs: (Log * Loc) list
   }
 
-let mirCtxFromTyCtx (tyCtx: Typing.TyCtx): MirCtx =
+let mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
   {
-    Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
-    Tys = tyCtx.Tys
+    Serial = tyCtx |> tyCtxGetSerial
+    Vars = tyCtx |> tyCtxGetVars
+    Tys = tyCtx |> tyCtxGetTys
     LabelSerial = 0
     Stmts = []
-    Logs = tyCtx.Logs
+    Logs = tyCtx |> tyCtxGetLogs
   }
 
 let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
