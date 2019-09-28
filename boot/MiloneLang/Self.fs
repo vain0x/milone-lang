@@ -192,8 +192,8 @@ let atDump ty =
   | ATy.Missing loc ->
     dumpTreeFromError "missing" loc
 
-  | ATy.Ident (ident, _) ->
-    dumpTreeNewLeaf ident
+  | ATy.App (ident, tys, _) ->
+    dumpTreeNew ident (tys |> listMap atDump)
 
   | ATy.Suffix (lTy, ident, _) ->
     dumpTreeNew ident [atDump lTy]

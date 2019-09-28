@@ -176,8 +176,8 @@ type Op =
 type ATy =
   | Missing
     of Loc
-  | Ident
-    of Ident * Loc
+  | App
+    of Ident * ATy list * Loc
   | Suffix
     of ATy * Ident * Loc
   /// Tuple type, e.g. `int * string`.

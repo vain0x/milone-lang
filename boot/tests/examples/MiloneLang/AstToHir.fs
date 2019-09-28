@@ -197,9 +197,10 @@ let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   | ATy.Missing loc ->
     Ty.Error loc, nameCtx
 
-  | ATy.Ident (ident, _) ->
+  | ATy.App (ident, argTys, _) ->
     let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
-    tyRef tySerial [], nameCtx
+    let argTys, nameCtx = (argTys, nameCtx) |> stMap onTy
+    tyRef tySerial argTys, nameCtx
 
   | ATy.Suffix (lTy, ident, _) ->
     let lTy, nameCtx = (lTy, nameCtx) |> onTy
@@ -413,22 +414,21 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.TyDecl (serial, TyDecl.Synonym (ty, loc), loc), nameCtx
 
   | AExpr.TyUnion (ident, variants, loc) ->
-    // let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
-    //   let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    //   let hasPayload, payloadTy, nameCtx =
-    //     match payloadTy with
-    //     | Some ty ->
-    //       let ty, nameCtx = (ty, nameCtx) |> onTy
-    //       true, ty, nameCtx
-    //     | None ->
-    //       false, tyUnit, nameCtx
-    //   (ident, serial, hasPayload, payloadTy), nameCtx
-    // let unionSerial, nameCtx =
-    //   nameCtx |> nameCtxAdd ident
-    // let variants, nameCtx =
-    //   (variants, nameCtx) |> stMap onVariant
-    // HExpr.TyDecl (unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx
-    HExpr.Error ("", loc), nameCtx
+    let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
+      let serial, nameCtx = nameCtx |> nameCtxAdd ident
+      let hasPayload, payloadTy, nameCtx =
+        match payloadTy with
+        | Some ty ->
+          let ty, nameCtx = (ty, nameCtx) |> onTy
+          true, ty, nameCtx
+        | None ->
+          false, tyUnit, nameCtx
+      (ident, serial, hasPayload, payloadTy), nameCtx
+    let unionSerial, nameCtx =
+      nameCtx |> nameCtxAdd ident
+    let variants, nameCtx =
+      (variants, nameCtx) |> stMap onVariant
+    HExpr.TyDecl (unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx
 
   | AExpr.Open (path, loc) ->
     HExpr.Open (path, loc), nameCtx
