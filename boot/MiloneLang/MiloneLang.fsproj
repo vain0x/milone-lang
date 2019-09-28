@@ -4,9 +4,9 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Compatible.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Records.fs" />
-    <Compile Include="Compatible.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fs" />

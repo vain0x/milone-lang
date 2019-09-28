@@ -65,16 +65,16 @@ type MonoCtx =
     Serial: Serial
     Logs: (Log * Loc) list
 
-    Vars: Map<VarSerial, VarDef>
-    Tys: Map<TySerial, TyDef>
-    TyDepths: Map<TySerial, LetDepth>
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
+    TyDepths: AssocMap<TySerial, LetDepth>
 
     /// Map from
     /// - generic function serial
     ///
     /// to:
     /// - found use-site types
-    GenericFunUseSiteTys: Map<FunSerial, Ty list>
+    GenericFunUseSiteTys: AssocMap<FunSerial, Ty list>
 
     /// Map from pairs:
     /// - generic function's serial
@@ -82,7 +82,7 @@ type MonoCtx =
     ///
     /// to:
     /// - monomorphized function's serial
-    GenericFunMonoSerials: Map<FunSerial * Ty, FunSerial>
+    GenericFunMonoSerials: AssocMap<FunSerial * Ty, FunSerial>
 
     Mode: Mode
     SomethingHappened: bool

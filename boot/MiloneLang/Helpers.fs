@@ -341,6 +341,72 @@ let assocFind eq key assoc =
   go assoc
 
 // -----------------------------------------------
+// AssocMap
+// -----------------------------------------------
+
+let mapEmpty cmp: AssocMap<_, _> =
+  [], cmp
+
+let mapAdd key value (assoc, cmp): AssocMap<_, _> =
+  (key, value) :: assoc, cmp
+
+let mapRemove key (assoc, cmp): AssocMap<_, _> =
+  assoc |> listFilter (fun (k, _) -> cmp k key <> 0), cmp
+
+let mapTryFind key ((assoc, cmp): AssocMap<_, _>) =
+  let rec go assoc =
+    match assoc with
+    | [] ->
+      None
+
+    | (k, v) :: _
+      when cmp k key = 0 ->
+      Some v
+
+    | _ :: assoc ->
+      go assoc
+
+  go assoc
+
+let mapFind key map =
+  match mapTryFind key map with
+  | Some value ->
+    value
+
+  | None ->
+    failwithf "mapFind: missing key (%A)" key
+
+let mapContainsKey key map =
+  match mapTryFind key map with
+  | Some _ ->
+    true
+
+  | None ->
+    false
+
+let mapFold folder state (map: AssocMap<_, _>) =
+  let rec go state assoc =
+    match assoc with
+    | [] ->
+      state
+
+    | (k, v) :: assoc ->
+      go (folder state k v) assoc
+
+  let _, cmp = map
+  go state (mapToList map)
+
+let mapMap f map: AssocMap<_, _> =
+  let _, cmp = map
+  map |> mapToList |> listMap (fun (k, v) -> k, f k v), cmp
+
+let mapToList ((assoc, cmp): AssocMap<_, _>) =
+  listUnique (fun (lk, _) (rk, _) -> cmp lk rk) assoc
+
+let mapOfList cmp assoc: AssocMap<_, _> =
+  listRev assoc, cmp
+
+// -----------------------------------------------
 // Int
 // -----------------------------------------------
 
@@ -856,9 +922,7 @@ let tyPrimFromIdent ident tys loc =
   | "list", [itemTy] ->
     tyList itemTy
 
-  | "Map", [keyTy; _] ->
-    // `Map<K, V>` ===> `assoc:(K * V) list * cmp:(K -> K -> int)`
-    // because Map is not supported yet.
+  | "AssocMap", [keyTy; _] ->
     tyTuple [tyList (tyTuple tys); tyFun keyTy (tyFun keyTy tyInt)]
 
   | _ ->

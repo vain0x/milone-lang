@@ -18,7 +18,7 @@ let mapNewSingleton key value cmp =
   assert (cmp key key = 0)
   [key, value], cmp
 
-let mapEmpty cmp: Map<_, _> =
+let mapEmpty cmp: AssocMap<_, _> =
   [], cmp
 
 let mapAdd key value (map, cmp) =
