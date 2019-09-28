@@ -195,8 +195,8 @@ type Op =
 type ATy =
   | Missing
     of Loc
-  | Ident
-    of Ident * Loc
+  | App
+    of Ident * ATy list * Loc
   | Suffix
     of ATy * Ident * Loc
   /// Tuple type, e.g. `int * string`.
@@ -353,6 +353,25 @@ type NameCtx =
   | NameCtx
     of Map<Serial, Ident> * lastSerial:Serial
 
+type ScopeSerial = Serial
+
+[<RequireQualifiedAccess>]
+type Binding =
+  /// Value binding.
+  | Var
+    of VarSerial * varIdent:Ident
+
+  /// Type binding.
+  | Ty
+    of TySerial * tyIdent:Ident
+
+  /// Parent scope.
+  | Parent
+    of ScopeSerial * Scope
+
+/// (scopeSerial, binding) list.
+type Scope = (ScopeSerial * Binding) list
+
 /// Type constructors.
 [<RequireQualifiedAccess>]
 type TyCon =
@@ -405,15 +424,6 @@ type Trait =
     of Ty
   | ToString
     of Ty
-
-/// Type context.
-[<RequireQualifiedAccess>]
-type TyContext =
-  {
-    Serial: Serial
-    Tys: Map<TySerial, TyDef>
-    TyDepths: Map<TySerial, LetDepth>
-  }
 
 /// Type declaration.
 [<RequireQualifiedAccess>]

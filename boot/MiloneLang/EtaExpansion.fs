@@ -45,6 +45,7 @@ module rec MiloneLang.EtaExpansion
 
 open MiloneLang.Helpers
 open MiloneLang.Types
+open MiloneLang.Records
 
 [<RequireQualifiedAccess>]
 type CalleeKind =
@@ -59,21 +60,20 @@ type EtaCtx =
     Tys: Map<TySerial, TyDef>
   }
 
-let ctxFromTyCtx (ftCtx: Typing.TyCtx): EtaCtx =
+let etaCtxFromTyCtx (ftCtx: TyCtx): EtaCtx =
   {
-    Serial = ftCtx.Serial
-    Vars = ftCtx.Vars
-    Tys = ftCtx.Tys
+    Serial = ftCtx |> tyCtxGetSerial
+    Vars = ftCtx |> tyCtxGetVars
+    Tys = ftCtx |> tyCtxGetTys
   }
 
-let ctxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: EtaCtx) =
-  { tyCtx with
-      Serial = ctx.Serial
-      Vars = ctx.Vars
-      Tys = ctx.Tys
-  }
+let etaCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
+  tyCtx
+  |> tyCtxWithSerial ctx.Serial
+  |> tyCtxWithVars ctx.Vars
+  |> tyCtxWithTys ctx.Tys
 
-let ctxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
+let etaCtxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
   let serial = ctx.Serial + 1
   let tyScheme =
     let isOwned _ = true // FIXME: is it okay?
@@ -81,26 +81,23 @@ let ctxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> Map.add serial (VarDef.Fun (ident, arity, tyScheme, loc))
+        Vars = ctx.Vars |> mapAdd serial (VarDef.Fun (ident, arity, tyScheme, loc))
     }
   let refExpr = HExpr.Ref ( serial, ty, loc)
   refExpr, serial, ctx
 
-let ctxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
+let etaCtxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
   let serial = ctx.Serial + 1
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> Map.add serial (VarDef.Var (ident, ty, loc))
+        Vars = ctx.Vars |> mapAdd serial (VarDef.Var (ident, ty, loc))
     }
   let refExpr = HExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
 
-let ctxIsFun serial (ctx: EtaCtx) =
-  match ctx.Vars |> Map.tryFind serial with
-  | _ when serial < 0 ->
-    // FIXME: too ugly
-    true
+let etaCtxIsFun serial (ctx: EtaCtx) =
+  match ctx.Vars |> mapTryFind serial with
   | Some (VarDef.Fun _) ->
     true
   | Some (VarDef.Variant _) ->
@@ -109,13 +106,13 @@ let ctxIsFun serial (ctx: EtaCtx) =
   | _ ->
     false
 
-let splitAt i xs =
-  List.truncate i xs, List.skip (min i (List.length xs)) xs
+let listSplitAt i xs =
+  listTruncate i xs, listSkip (min i (listLength xs)) xs
 
-let appliedTy n ty =
+let tyAppliedBy n ty =
   match ty with
   | Ty.Con (TyCon.Fun, [_; ty]) when n > 0 ->
-    appliedTy (n - 1) ty
+    tyAppliedBy (n - 1) ty
   | _ ->
     ty
 
@@ -142,13 +139,13 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
     | 0, _ ->
       [], [], ctx
     | n, Ty.Con (TyCon.Fun, [argTy; restTy]) ->
-      let argRef, argSerial, ctx = ctxFreshVar "arg" argTy callLoc ctx
+      let argRef, argSerial, ctx = etaCtxFreshVar "arg" argTy callLoc ctx
       let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
       let restArgPat = HPat.Ref (argSerial, argTy, callLoc)
       restArgPat :: restArgPats, argRef :: restArgs, ctx
     | _ ->
       failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
-  let restTy = callee |> exprToTy |> appliedTy argLen
+  let restTy = callee |> exprToTy |> tyAppliedBy argLen
   go (arity - argLen) restTy ctx
 
 let createEnvPatAndTy items callLoc ctx =
@@ -158,7 +155,7 @@ let createEnvPatAndTy items callLoc ctx =
       [], [], [], ctx
     | item :: items ->
       let itemTy, itemLoc = exprExtract item
-      let itemRef, itemSerial, ctx = ctxFreshVar "arg" itemTy itemLoc ctx
+      let itemRef, itemSerial, ctx = etaCtxFreshVar "arg" itemTy itemLoc ctx
       let itemPat = HPat.Ref (itemSerial, itemTy, itemLoc)
       let itemPats, argTys, argRefs, ctx = go items ctx
       itemPat :: itemPats, itemTy :: argTys, itemRef :: argRefs, ctx
@@ -176,9 +173,9 @@ let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
 /// It takes an environment and rest arguments
 /// and calls the partial-applied callee with full arguments.
 let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
-  let envArgRef, envArgSerial, ctx = ctxFreshVar "env" tyObj callLoc ctx
+  let envArgRef, envArgSerial, ctx = etaCtxFreshVar "env" tyObj callLoc ctx
   let envArgPat = HPat.Ref (envArgSerial, tyObj, callLoc)
-  let _, funSerial, ctx = ctxFreshFun "fun" arity funTy callLoc ctx
+  let _, funSerial, ctx = etaCtxFreshFun "fun" arity funTy callLoc ctx
   let argPats = envArgPat :: restArgPats
   let body = createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
   let funLet next = HExpr.LetFun (funSerial, false, argPats, body, next, exprToTy next, callLoc)
@@ -193,7 +190,7 @@ let createEnvBoxExpr args envTy callLoc =
 /// In the case the callee is a function.
 let resolvePartialAppFun callee arity args argLen callLoc ctx =
   let funTy = exprToTy callee
-  let resultTy = appliedTy arity funTy
+  let resultTy = tyAppliedBy arity funTy
   let envItems = args
 
   let restArgPats, restArgs, ctx =
@@ -201,7 +198,7 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
   let envPat, envTy, envRefs, ctx =
     createEnvPatAndTy envItems callLoc ctx
   let forwardArgs =
-    envRefs @ restArgs
+    listAppend envRefs restArgs
   let forwardExpr =
     hxCallProc callee forwardArgs resultTy callLoc
   let funLet, funRef, ctx =
@@ -209,7 +206,7 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let funObjExpr =
-    HExpr.Inf (InfOp.Closure, [funRef; envBoxExpr], appliedTy argLen funTy, callLoc)
+    HExpr.Inf (InfOp.Closure, [funRef; envBoxExpr], tyAppliedBy argLen funTy, callLoc)
   let expr =
     funLet funObjExpr
   expr, ctx
@@ -218,11 +215,11 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
 /// We need to include it to the environment.
 let resolvePartialAppObj callee arity args argLen callLoc ctx =
   let funTy = exprToTy callee
-  let resultTy = appliedTy arity funTy
+  let resultTy = tyAppliedBy arity funTy
 
   // Introduce a variable for memoization.
   let calleeRef, calleeLet, ctx =
-    let calleeRef, calleeSerial, ctx = ctxFreshVar "callee" funTy callLoc ctx
+    let calleeRef, calleeSerial, ctx = etaCtxFreshVar "callee" funTy callLoc ctx
     let calleePat = HPat.Ref (calleeSerial, funTy, callLoc)
     let calleeLet next = HExpr.Let (calleePat, callee, next, exprToTy next, callLoc)
     calleeRef, calleeLet, ctx
@@ -234,7 +231,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
   let envPat, envTy, envRefs, ctx =
     createEnvPatAndTy envItems callLoc ctx
   let calleeRef, forwardArgs =
-    match envRefs @ restArgs with
+    match listAppend envRefs restArgs with
     | calleeRef :: forwardArgs ->
       calleeRef, forwardArgs
     | _ ->
@@ -247,7 +244,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
   let envBoxExpr =
     createEnvBoxExpr envItems envTy callLoc
   let closureExpr =
-    HExpr.Inf (InfOp.Closure, [funRef; envBoxExpr], appliedTy argLen funTy, callLoc)
+    HExpr.Inf (InfOp.Closure, [funRef; envBoxExpr], tyAppliedBy argLen funTy, callLoc)
   let expr =
     calleeLet (funLet closureExpr)
   expr, ctx
@@ -261,20 +258,20 @@ let resolvePartialApp calleeKind callee arity args argLen callLoc ctx =
     resolvePartialAppObj callee arity args argLen callLoc ctx
 
 let unetaCallCore calleeKind callee arity calleeLoc args resultTy callLoc ctx =
-  let argLen = List.length args
+  let argLen = listLength args
   if argLen < arity then
     resolvePartialApp calleeKind callee arity args argLen callLoc ctx
   else
-    let callArgs, restArgs = splitAt arity args
-    let callResultTy = appliedTy arity (exprToTy callee)
+    let callArgs, restArgs = listSplitAt arity args
+    let callResultTy = tyAppliedBy arity (exprToTy callee)
     let callExpr = hxCallTo calleeKind callee callArgs callResultTy calleeLoc
     hxCallTo CalleeKind.Obj callExpr restArgs resultTy callLoc, ctx
 
 let unetaCall callee args resultTy loc ctx =
   match callee, args with
-  | HExpr.Ref (serial, _, calleeLoc), _ when ctx |> ctxIsFun serial ->
+  | HExpr.Ref (serial, _, calleeLoc), _ when ctx |> etaCtxIsFun serial ->
     let arity =
-      match (ctx: EtaCtx).Vars |> Map.find serial with
+      match (ctx: EtaCtx).Vars |> mapFind serial with
       | VarDef.Fun (_, arity, _, _) ->
         arity
       | VarDef.Variant (_, _, hasPayload, _, _, _) ->
@@ -297,7 +294,7 @@ let unetaCall callee args resultTy loc ctx =
     failwith "Never"
 
 let unetaRef expr serial _refTy calleeLoc (ctx: EtaCtx) =
-  match ctx.Vars |> Map.tryFind serial with
+  match ctx.Vars |> mapTryFind serial with
   | Some (VarDef.Fun (_, arity, _, _)) ->
     resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
   | _ ->
@@ -359,8 +356,8 @@ let unetaExpr (expr, ctx) =
   | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
     unetaExprLetFun callee isMainFun args body next ty loc ctx
 
-let uneta (expr, tyCtx: Typing.TyCtx) =
-  let etaCtx = ctxFromTyCtx tyCtx
+let uneta (expr, tyCtx: TyCtx) =
+  let etaCtx = etaCtxFromTyCtx tyCtx
   let expr, etaCtx = (expr, etaCtx) |> unetaExpr
-  let tyCtx = etaCtx |> ctxFeedbackToTyCtx tyCtx
+  let tyCtx = etaCtx |> etaCtxFeedbackToTyCtx tyCtx
   expr, tyCtx
