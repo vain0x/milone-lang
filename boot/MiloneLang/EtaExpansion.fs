@@ -45,6 +45,7 @@ module rec MiloneLang.EtaExpansion
 
 open MiloneLang.Helpers
 open MiloneLang.Types
+open MiloneLang.Records
 
 [<RequireQualifiedAccess>]
 type CalleeKind =
@@ -59,19 +60,18 @@ type EtaCtx =
     Tys: Map<TySerial, TyDef>
   }
 
-let etaCtxFromTyCtx (ftCtx: Typing.TyCtx): EtaCtx =
+let etaCtxFromTyCtx (ftCtx: TyCtx): EtaCtx =
   {
-    Serial = ftCtx.Serial
-    Vars = ftCtx.Vars
-    Tys = ftCtx.Tys
+    Serial = ftCtx |> tyCtxGetSerial
+    Vars = ftCtx |> tyCtxGetVars
+    Tys = ftCtx |> tyCtxGetTys
   }
 
-let etaCtxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: EtaCtx) =
-  { tyCtx with
-      Serial = ctx.Serial
-      Vars = ctx.Vars
-      Tys = ctx.Tys
-  }
+let etaCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
+  tyCtx
+  |> tyCtxWithSerial ctx.Serial
+  |> tyCtxWithVars ctx.Vars
+  |> tyCtxWithTys ctx.Tys
 
 let etaCtxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
   let serial = ctx.Serial + 1
@@ -356,7 +356,7 @@ let unetaExpr (expr, ctx) =
   | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
     unetaExprLetFun callee isMainFun args body next ty loc ctx
 
-let uneta (expr, tyCtx: Typing.TyCtx) =
+let uneta (expr, tyCtx: TyCtx) =
   let etaCtx = etaCtxFromTyCtx tyCtx
   let expr, etaCtx = (expr, etaCtx) |> unetaExpr
   let tyCtx = etaCtx |> etaCtxFeedbackToTyCtx tyCtx

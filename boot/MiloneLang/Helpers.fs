@@ -2,6 +2,7 @@
 module rec MiloneLang.Helpers
 
 open MiloneLang.Types
+open MiloneLang.Records
 
 /// `List.map`, modifying context.
 ///
@@ -1541,20 +1542,19 @@ let typingBind (ctx: TyContext) tySerial ty loc =
     let tySerials = tySerial :: tyCollectFreeVars ty
     let depth =
       tySerials
-      |> List.map (fun tySerial -> ctx.TyDepths |> mapFind tySerial)
+      |> List.map (fun tySerial -> ctx |> tyContextGetTyDepths |> mapFind tySerial)
       |> listFold intMin intInf
-    tySerials |> listFold (fun tyDepths tySerial -> tyDepths |> mapAdd tySerial depth) ctx.TyDepths
+    tySerials |> listFold (fun tyDepths tySerial -> tyDepths |> mapAdd tySerial depth) (ctx |> tyContextGetTyDepths)
 
-  { ctx with
-      Tys = ctx.Tys |> mapAdd tySerial (TyDef.Meta (noIdent, ty, loc))
-      TyDepths = tyDepths
-  }
+  ctx
+  |> tyContextWithTys (ctx |> tyContextGetTys |> mapAdd tySerial (TyDef.Meta (noIdent, ty, loc)))
+  |> tyContextWithTyDepths tyDepths
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
 let typingSubst (ctx: TyContext) ty: Ty =
   let substMeta tySerial =
-    match ctx.Tys |> mapTryFind tySerial with
+    match ctx |> tyContextGetTys |> mapTryFind tySerial with
     | Some (TyDef.Meta (_, ty, _)) ->
       Some ty
     | _ ->

@@ -40,6 +40,7 @@ module rec MiloneLang.ClosureConversion
 
 open MiloneLang.Helpers
 open MiloneLang.Types
+open MiloneLang.Records
 
 /// Closure conversion context.
 [<RequireQualifiedAccess>]
@@ -56,11 +57,11 @@ type CcCtx =
     Locals: Set<VarSerial>
   }
 
-let ccCtxFromTyCtx (ftCtx: Typing.TyCtx): CcCtx =
+let ccCtxFromTyCtx (ftCtx: TyCtx): CcCtx =
   {
-    Serial = ftCtx.Serial
-    Vars = ftCtx.Vars
-    Tys = ftCtx.Tys
+    Serial = ftCtx |> tyCtxGetSerial
+    Vars = ftCtx |> tyCtxGetVars
+    Tys = ftCtx |> tyCtxGetTys
 
     Caps = mapEmpty intCmp
     Known = Set.empty
@@ -68,12 +69,11 @@ let ccCtxFromTyCtx (ftCtx: Typing.TyCtx): CcCtx =
     Locals = Set.empty
   }
 
-let ccCtxFeedbackToTyCtx (tyCtx: Typing.TyCtx) (ctx: CcCtx) =
-  { tyCtx with
-      Serial = ctx.Serial
-      Vars = ctx.Vars
-      Tys = ctx.Tys
-  }
+let ccCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
+  tyCtx
+  |> tyCtxWithSerial ctx.Serial
+  |> tyCtxWithVars ctx.Vars
+  |> tyCtxWithTys ctx.Tys
 
 let ccCtxPushScope locals (ctx: CcCtx) =
   { ctx with
@@ -341,7 +341,7 @@ let declosureUpdateCtx (expr, ctx) =
   let ctx = ctx |> declosureUpdateFuns
   expr, ctx
 
-let declosure (expr, tyCtx: Typing.TyCtx) =
+let declosure (expr, tyCtx: TyCtx) =
   let ccCtx = ccCtxFromTyCtx tyCtx
   let expr, ccCtx = (expr, ccCtx) |> declosureExpr |> declosureUpdateCtx
   let tyCtx = ccCtx |> ccCtxFeedbackToTyCtx tyCtx
