@@ -556,6 +556,9 @@ let locAddX dx ((y, x): Loc) =
 let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
   intMax firstY secondY, intMax firstX secondX
 
+let locToString ((y, x): Loc) =
+  string (y + 1) + ":" + string (x + 1)
+
 // -----------------------------------------------
 // Token
 // -----------------------------------------------
@@ -1653,9 +1656,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 // -----------------------------------------------
 
 let logToString loc log =
-  let loc =
-    let y, x = loc
-    sprintf "%d:%d" (y + 1) (x + 1)
+  let loc = loc |> locToString
 
   match log with
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
