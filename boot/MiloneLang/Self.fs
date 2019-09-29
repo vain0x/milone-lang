@@ -5,6 +5,7 @@ open MiloneLang.Helpers
 open MiloneLang.Lexing
 open MiloneLang.Parsing
 open MiloneLang.AstToHir
+open MiloneLang.Bundling
 
 let litToString lit =
   match lit with
@@ -371,26 +372,42 @@ let hxDump nameCtx (expr: HExpr) =
     dumpTreeFromError msg loc
 
 let doSelf (fileReadAllText: string -> string) =
-  let doFile (filePath: string) =
-    printfn "FILE %s" filePath
+  // let doFile (filePath: string) =
+  //   printfn "FILE %s" filePath
 
-    let source = fileReadAllText filePath
-    let tokens = source |> tokenize
+  //   let source = fileReadAllText filePath
+  //   let tokens = source |> tokenize
 
-    tokens |> listIter (fun (token, (y, x)) -> printfn "%s (%d, %d)" (tokenToString token) y x)
+  //   tokens |> listIter (fun (token, (y, x)) -> printfn "%s (%d, %d)" (tokenToString token) y x)
 
-    let ast, errors = tokens |> parse
-    printfn "AST:"
-    printfn "%s" (ast |> axDump |> dumpTreeToString)
+  //   let ast, errors = tokens |> parse
+  //   printfn "AST:"
+  //   printfn "%s" (ast |> axDump |> dumpTreeToString)
 
-    errors |> listIter (fun (msg, (y, x)) -> printfn "ERROR %s (%d:%d)" msg (y + 1) (x + 1))
+  //   errors |> listIter (fun (msg, (y, x)) -> printfn "ERROR %s (%d:%d)" msg (y + 1) (x + 1))
 
-    let nameCtx = nameCtxEmpty ()
-    let expr, nameCtx = (ast, nameCtx) |> astToHir
-    printfn "HIR:"
-    printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)
+  //   let nameCtx = nameCtxEmpty ()
+  //   let expr, nameCtx = (ast, nameCtx) |> astToHir
+  //   printfn "HIR:"
+  //   printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)
 
-  doFile "MiloneLang/Lexing.fs"
-  doFile "MiloneLang/Parsing.fs"
-  doFile "MiloneLang/AstToHir.fs"
+  // doFile "MiloneLang/Lexing.fs"
+  // doFile "MiloneLang/Parsing.fs"
+  // doFile "MiloneLang/AstToHir.fs"
+
+  let readModuleFile moduleName =
+    fileReadAllText ("tests/examples/MiloneLang/" + moduleName + ".fs")
+
+  let projectName = "MiloneLang"
+  let nameCtx = nameCtxEmpty ()
+
+  let expr, nameCtx, errorListList = parseProjectModules readModuleFile projectName nameCtx
+
+  printfn "HIR:"
+  printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)
+
+  errorListList |> listIter (fun errors ->
+    errors |> listIter (fun (msg, loc) ->
+      printfn "ERROR %s (%s)" msg (loc |> locToString)
+    ))
   0
