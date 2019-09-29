@@ -359,8 +359,8 @@ let collectDecls (expr, ctx) =
     | HPat.Discard _
     | HPat.Nav _
     | HPat.Nil _
-    | HPat.None _
-    | HPat.Some _ ->
+    | HPat.OptionNone _
+    | HPat.OptionSome _ ->
       pat, ctx
 
     | HPat.Or _ ->
@@ -440,8 +440,8 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HPat.Lit _
   | HPat.Discard _
   | HPat.Nil _
-  | HPat.None _
-  | HPat.Some _ ->
+  | HPat.OptionNone _
+  | HPat.OptionSome _ ->
     pat, ctx
 
   | HPat.Ref (varSerial, ty, loc)
@@ -470,10 +470,10 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
     | None ->
       match ident with
       | "None" ->
-        HPat.None (ty, loc), ctx
+        HPat.OptionNone (ty, loc), ctx
 
       | "Some" ->
-        HPat.Some (ty, loc), ctx
+        HPat.OptionSome (ty, loc), ctx
 
       | _ ->
         let varDef = VarDef.Var (ident, ty, loc)

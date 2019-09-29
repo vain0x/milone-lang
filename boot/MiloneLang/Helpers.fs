@@ -1095,10 +1095,10 @@ let primFromIdent ident =
     HPrim.String |> Some
 
   | "None" ->
-    HPrim.None |> Some
+    HPrim.OptionNone |> Some
 
   | "Some" ->
-    HPrim.Some |> Some
+    HPrim.OptionSome |> Some
 
   | "__nativeFun" ->
     HPrim.NativeFun ("<native-fun>", -1) |> Some
@@ -1145,11 +1145,11 @@ let primToTySpec prim =
     let listTy = tyList itemTy
     poly (tyFun itemTy (tyFun listTy listTy)) []
 
-  | HPrim.None ->
+  | HPrim.OptionNone ->
     let itemTy = meta 1
     poly (tyList itemTy) []
 
-  | HPrim.Some ->
+  | HPrim.OptionSome ->
     let itemTy = meta 1
     let listTy = tyList itemTy
     poly (tyFun itemTy listTy) []
@@ -1203,9 +1203,9 @@ let primToTySpec prim =
 let primToArity ty prim =
   match prim with
   | HPrim.Nil
-  | HPrim.None ->
+  | HPrim.OptionNone ->
     0
-  | HPrim.Some
+  | HPrim.OptionSome
   | HPrim.Not
   | HPrim.Exit
   | HPrim.Assert
@@ -1249,9 +1249,9 @@ let rec patExtract (pat: HPat): Ty * Loc =
     litToTy lit, a
   | HPat.Nil (itemTy, a) ->
     tyList itemTy, a
-  | HPat.None (itemTy, a) ->
+  | HPat.OptionNone (itemTy, a) ->
     tyList itemTy, a
-  | HPat.Some (itemTy, a) ->
+  | HPat.OptionSome (itemTy, a) ->
     tyList itemTy, a
   | HPat.Discard (ty, a) ->
     ty, a
@@ -1280,10 +1280,10 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Lit (lit, g a)
     | HPat.Nil (itemTy, a) ->
       HPat.Nil (f itemTy, g a)
-    | HPat.None (itemTy, a) ->
-      HPat.None (f itemTy, g a)
-    | HPat.Some (itemTy, a) ->
-      HPat.Some (f itemTy, g a)
+    | HPat.OptionNone (itemTy, a) ->
+      HPat.OptionNone (f itemTy, g a)
+    | HPat.OptionSome (itemTy, a) ->
+      HPat.OptionSome (f itemTy, g a)
     | HPat.Discard (ty, a) ->
       HPat.Discard (f ty, g a)
     | HPat.Ref (serial, ty, a) ->
@@ -1313,8 +1313,8 @@ let patNormalize pat =
     | HPat.Discard _
     | HPat.Ref _
     | HPat.Nil _
-    | HPat.None _
-    | HPat.Some _ ->
+    | HPat.OptionNone _
+    | HPat.OptionSome _ ->
       [pat]
     | HPat.Nav (pat, ident, ty, loc) ->
       go pat |> listMap
