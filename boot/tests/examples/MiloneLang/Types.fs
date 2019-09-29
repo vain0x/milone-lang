@@ -332,7 +332,7 @@ type LetDepth = int
 
 type NameCtx =
   | NameCtx
-    of (Serial * Ident) list * lastSerial:Serial
+    of AssocMap<Serial, Ident> * lastSerial:Serial
 
 /// Type constructors.
 [<RequireQualifiedAccess>]

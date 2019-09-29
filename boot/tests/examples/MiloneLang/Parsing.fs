@@ -134,27 +134,28 @@ let private nextInside baseLoc tokens: bool =
 // Errors
 // -----------------------------------------------
 
-let parseErrorCore msg loc tokens errors =
+let parseErrorCore msg loc errors =
+  let msg = "PARSE ERROR: " + msg + " (" + locToString loc + ")"
   (msg, loc) :: errors
 
 let parseTyError msg (tokens, errors) =
   let loc = nextLoc tokens
-  let errors = parseErrorCore msg loc tokens errors
+  let errors = parseErrorCore msg loc errors
   ATy.Missing loc, tokens, errors
 
 let parsePatError msg (tokens, errors) =
   let loc = nextLoc tokens
-  let errors = parseErrorCore msg loc tokens errors
+  let errors = parseErrorCore msg loc errors
   APat.Missing loc, tokens, errors
 
 let parseExprError msg (tokens, errors) =
   let loc = nextLoc tokens
-  let errors = parseErrorCore msg loc tokens errors
+  let errors = parseErrorCore msg loc errors
   AExpr.Missing loc, tokens, errors
 
 let parseNewError msg (tokens, errors) =
   let loc = nextLoc tokens
-  parseErrorCore msg loc tokens errors
+  parseErrorCore msg loc errors
 
 // -----------------------------------------------
 // Parse types

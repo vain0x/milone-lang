@@ -13,26 +13,31 @@ let listIsEmpty xs =
   match xs with
   | [] ->
     true
+
   | _ ->
     false
-
-let listRev xs =
-  let rec go acc xs =
-    match xs with
-    | [] ->
-      acc
-    | x :: xs ->
-      go (x :: acc) xs
-  go [] xs
 
 let listLength xs =
   let rec go len xs =
     match xs with
     | [] ->
       len
+
     | _ :: xs ->
       go (len + 1) xs
+
   go 0 xs
+
+let listRev xs =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      acc
+
+    | x :: xs ->
+      go (x :: acc) xs
+
+  go [] xs
 
 let rec listIter f xs =
   match xs with
@@ -48,25 +53,226 @@ let listMap f xs =
     match xs with
     | [] ->
       listRev acc
+
     | x :: xs ->
       go (f x :: acc) xs
+
   go [] xs
 
-let listTruncate count xs =
+let listMapWithIndex f xs =
+  let rec go acc i xs =
+    match xs with
+    | [] ->
+      listRev acc
+
+    | x :: xs ->
+      go (f i x :: acc) (i + 1) xs
+
+  go [] 0 xs
+
+let listFilter pred xs =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      listRev acc
+
+    | x :: xs ->
+      let acc = if pred x then x :: acc else acc
+      go acc xs
+
+  go [] xs
+
+let listChoose f xs =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      listRev acc
+
+    | x :: xs ->
+      let acc =
+        match f x with
+        | Some y ->
+          y :: acc
+
+        | None ->
+          acc
+
+      go acc xs
+
+  go [] xs
+
+let listCollect f xs =
+  let rec gogo acc ys =
+    match ys with
+    | [] ->
+      acc
+
+    | y :: ys ->
+      gogo (y :: acc) ys
+
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      listRev acc
+
+    | x :: xs ->
+      let acc = gogo acc (f x)
+      go acc xs
+
+  go [] xs
+
+let listForAll pred xs =
+  let rec go xs =
+    match xs with
+    | [] ->
+      true
+
+    | x :: xs ->
+      pred x && go xs
+
+  go xs
+
+let listExists pred xs =
+  let rec go xs =
+    match xs with
+    | [] ->
+      false
+
+    | x :: xs ->
+      pred x || go xs
+
+  go xs
+
+/// USAGE: `items |> listFold (fun state item -> nextState) initialState`
+let listFold folder state xs =
+  let rec go state xs =
+    match xs with
+    | [] ->
+      state
+
+    | x :: xs ->
+      go (folder state x) xs
+
+  go state xs
+
+let listReduce reducer xs =
+  match xs with
+  | [] ->
+    failwith "listReduce: empty"
+
+  | x :: xs ->
+    listFold reducer x xs
+
+let listLast xs =
+  let rec go xs =
+    match xs with
+    | [] ->
+      failwith "listLast: empty"
+
+    | [x] ->
+      x
+
+    | _ :: xs ->
+      go xs
+
+  go xs
+
+let listSkip count xs =
   let rec go count xs =
     match xs with
     | [] ->
       []
 
     | _ when count <= 0 ->
-      []
+      xs
 
-    | x :: xs ->
-      x :: go (count - 1) xs
+    | _ :: xs ->
+      go (count - 1) xs
 
   go count xs
 
-/// `listMap`, modifying context.
+let listTruncate count xs =
+  let rec go acc count xs =
+    match xs with
+    | [] ->
+      listRev acc
+
+    | _ when count <= 0 ->
+      listRev acc
+
+    | x :: xs ->
+      go (x :: acc) (count - 1) xs
+
+  go [] count xs
+
+let listAppend xs ys =
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      acc
+
+    | x :: xs ->
+      go (x :: acc) xs
+
+  go ys (listRev xs)
+
+let listSortCore unique cmp xs =
+  // `merge (xs, xn) (ys, yn) = (zs, zn), d` where
+  // `zs.[0..zn - 1]` is the merge of `xs.[0..xn - 1]` and `ys.[0..yn - 1]`,
+  // and `d` is the number of duplicated items.
+  let rec merge (xs, xn) (ys, yn) =
+    if xn = 0 then
+      (ys, yn), 0
+    else if yn = 0 then
+      (xs, xn), 0
+    else
+      match xs, ys with
+      | [], _
+      | _, [] ->
+        failwith "NEVER: wrong list length"
+
+      | x :: xs1, y :: ys1 ->
+        let c = cmp x y
+        if c > 0 then
+          let (zs, zn), d = merge (xs, xn) (ys1, yn - 1)
+          assert (zn + d = xn + (yn - 1))
+          (y :: zs, zn + 1), d
+        else if c = 0 && unique then
+          let (zs, zn), d = merge (xs, xn) (ys1, yn - 1)
+          assert (zn + d = xn + (yn - 1))
+          (zs, zn), d + 1
+        else
+          let (zs, zn), d = merge (xs1, xn - 1) (ys, yn)
+          assert (zn + d = (xn - 1) + yn)
+          (x :: zs, zn + 1), d
+
+  // `go (xs, xn) = (zs, zn), xs1, d` where
+  // `zs.[0..xn - 1]` is the sort of `xs.[0..xn - 1]`,
+  // `xs1 = xs.[xn..]`,
+  // and `d` is the number of duplicated items.
+  let rec go (xs, n) =
+    if n <= 1 then
+      (xs, n), listSkip n xs, 0
+    else
+      let m = n / 2
+      let (xs, xn), xs1, d1 = go (xs, m)
+      let (ys, yn), ys1, d2 = go (xs1, n - m)
+      let (zs, zn), d3 = merge (xs, xn) (ys, yn)
+      (zs, zn), ys1, d1 + d2 + d3
+
+  let xn = listLength xs
+  let (zs, zn), ws, d = go (xs, xn)
+  assert (zn + d = xn)
+  assert (ws |> listIsEmpty)
+  listTruncate zn zs
+
+let listSort cmp xs =
+  listSortCore false cmp xs
+
+let listUnique cmp xs =
+  listSortCore true cmp xs
+
+/// `List.map`, modifying context.
 ///
 /// USAGE:
 ///   let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
@@ -81,6 +287,72 @@ let stMap f (xs, ctx) =
   go [] (xs, ctx)
 
 // -----------------------------------------------
+// AssocMap
+// -----------------------------------------------
+
+let mapEmpty cmp: AssocMap<_, _> =
+  [], cmp
+
+let mapAdd key value (assoc, cmp): AssocMap<_, _> =
+  (key, value) :: assoc, cmp
+
+let mapRemove key (assoc, cmp): AssocMap<_, _> =
+  assoc |> listFilter (fun (k, _) -> cmp k key <> 0), cmp
+
+let mapTryFind key ((assoc, cmp): AssocMap<_, _>) =
+  let rec go assoc =
+    match assoc with
+    | [] ->
+      None
+
+    | (k, v) :: _
+      when cmp k key = 0 ->
+      Some v
+
+    | _ :: assoc ->
+      go assoc
+
+  go assoc
+
+let mapFind key map =
+  match mapTryFind key map with
+  | Some value ->
+    value
+
+  | None ->
+    failwithf "mapFind: missing key (%A)" key
+
+let mapContainsKey key map =
+  match mapTryFind key map with
+  | Some _ ->
+    true
+
+  | None ->
+    false
+
+let mapFold folder state (map: AssocMap<_, _>) =
+  let rec go state assoc =
+    match assoc with
+    | [] ->
+      state
+
+    | (k, v) :: assoc ->
+      go (folder state k v) assoc
+
+  let _, cmp = map
+  go state (mapToList map)
+
+let mapMap f map: AssocMap<_, _> =
+  let _, cmp = map
+  map |> mapToList |> listMap (fun (k, v) -> k, f k v), cmp
+
+let mapToList ((assoc, cmp): AssocMap<_, _>) =
+  listUnique (fun (lk, _) (rk, _) -> cmp lk rk) assoc
+
+let mapOfList cmp assoc: AssocMap<_, _> =
+  listRev assoc, cmp
+
+// -----------------------------------------------
 // Int
 // -----------------------------------------------
 
@@ -92,6 +364,14 @@ let intMax (x: int) (y: int) =
 
 let intEq (x: int) (y: int) =
   x = y
+
+let intCmp (x: int) (y: int) =
+  if y < x then
+    1
+  else if y = x then
+    0
+  else
+    -1
 
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
@@ -193,6 +473,14 @@ let charEscape (c: char) =
 // String
 // -----------------------------------------------
 
+let strCmp (x: string) (y: string) =
+  if y < x then
+    1
+  else if y = x then
+    0
+  else
+    -1
+
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
   if start >= endIndex then
@@ -288,6 +576,9 @@ let locAddX dx ((y, x): Loc) =
 
 let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
   intMax firstY secondY, intMax firstX secondX
+
+let locToString ((y, x): Loc) =
+  string (y + 1) + ":" + string (x + 1)
 
 // -----------------------------------------------
 // Token
@@ -487,12 +778,15 @@ let dumpTreeToString (node: DumpTree) =
 // -----------------------------------------------
 
 let nameCtxEmpty () =
-  NameCtx ([], 0)
+  NameCtx (mapEmpty intCmp, 0)
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
-  // let map = map |> Map.add serial ident
+  let map = map |> mapAdd serial ident
   serial, NameCtx (map, serial)
+
+let nameCtxFind serial (NameCtx (map, _)) =
+  map |> mapFind serial
 
 // -----------------------------------------------
 // Traits (HIR)

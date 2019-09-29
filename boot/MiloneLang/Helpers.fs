@@ -839,6 +839,9 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
   let map = map |> mapAdd serial ident
   serial, NameCtx (map, serial)
 
+let nameCtxFind serial (NameCtx (map, _)) =
+  map |> mapFind serial
+
 // -----------------------------------------------
 // Traits (HIR)
 // -----------------------------------------------

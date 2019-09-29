@@ -321,37 +321,40 @@ let axDump (expr: AExpr) =
   | AExpr.Open (path, _) ->
     dumpTreeNew "open" (path |> listMap dumpTreeNewLeaf)
 
-let hxDump (expr: HExpr) =
+let hxDump nameCtx (expr: HExpr) =
+  let findIdent serial = nameCtx |> nameCtxFind serial
+
   match expr with
   | HExpr.Lit (lit, _) ->
     lit |> litToString |> dumpTreeNewLeaf
+
   | HExpr.Prim _ ->
     dumpTreeNewLeaf "prim"
 
   | HExpr.Ref (serial, _, _) ->
-    dumpTreeNewLeaf (string serial)
+    dumpTreeNewLeaf (findIdent serial)
 
   | HExpr.Match (target, _arms, _ty, _loc) ->
-    dumpTreeNew "match" [hxDump target]
+    dumpTreeNew "match" [hxDump nameCtx target]
 
   | HExpr.Nav (l, r, _ty, _loc) ->
-    dumpTreeNew ("." + r) [hxDump l]
+    dumpTreeNew ("." + r) [hxDump nameCtx l]
 
   | HExpr.Inf (_, items, _ty, _loc) ->
-    dumpTreeNew "inf" (items |> listMap hxDump)
+    dumpTreeNew "inf" (items |> listMap (hxDump nameCtx))
 
   | HExpr.Let (_pat, body, next, _ty, _loc) ->
     dumpTreeNew "let-val" [
-      hxDump body
+      hxDump nameCtx body
     ]
-    |> dumpTreeAttachNext (hxDump next)
+    |> dumpTreeAttachNext (hxDump nameCtx next)
 
   | HExpr.LetFun (callee, _, _args, body, next, _ty, _loc) ->
     dumpTreeNew "let-fun" [
-      dumpTreeNewLeaf (string callee)
-      hxDump body
+      dumpTreeNewLeaf (findIdent callee)
+      hxDump nameCtx body
     ]
-    |> dumpTreeAttachNext (hxDump next)
+    |> dumpTreeAttachNext (hxDump nameCtx next)
 
   | HExpr.TyDecl (_, TyDecl.Synonym (_ty, _loc), _) ->
     dumpTreeNew "synonym" []
@@ -383,9 +386,9 @@ let doSelf (fileReadAllText: string -> string) =
     errors |> listIter (fun (msg, (y, x)) -> printfn "ERROR %s (%d:%d)" msg (y + 1) (x + 1))
 
     let nameCtx = nameCtxEmpty ()
-    let expr, _ = (ast, nameCtx) |> astToHir
+    let expr, nameCtx = (ast, nameCtx) |> astToHir
     printfn "HIR:"
-    printfn "%s" (expr |> hxDump |> dumpTreeToString)
+    printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)
 
   doFile "MiloneLang/Lexing.fs"
   doFile "MiloneLang/Parsing.fs"
