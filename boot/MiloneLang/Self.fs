@@ -323,8 +323,101 @@ let axDump (expr: AExpr) =
   | AExpr.Open (path, _) ->
     dumpTreeNew "open" (path |> listMap dumpTreeNewLeaf)
 
+let serialToIdent nameCtx serial =
+  (nameCtx |> nameCtxFind serial) + "_" + string serial
+
+let tyConToString nameCtx tyCon =
+  match tyCon with
+  | TyCon.Bool ->
+    "bool"
+
+  | TyCon.Int ->
+    "int"
+
+  | TyCon.Char ->
+    "char"
+
+  | TyCon.Str ->
+    "str"
+
+  | TyCon.Obj ->
+    "obj"
+
+  | TyCon.Fun ->
+    "fun"
+
+  | TyCon.Tuple ->
+    "tuple"
+
+  | TyCon.List ->
+    "list"
+
+  | TyCon.Ref tySerial ->
+    serialToIdent nameCtx tySerial
+
+let tyDump nameCtx (ty: Ty) =
+  match ty with
+  | Ty.Error loc ->
+    dumpTreeFromError "ERROR" loc
+
+  | Ty.Con (tyCon, tys) ->
+    dumpTreeNew (tyConToString nameCtx tyCon) (tys |> listMap (tyDump nameCtx))
+
+  | Ty.Meta (tySerial, _) ->
+    dumpTreeNewLeaf (serialToIdent nameCtx tySerial)
+
+let patDump nameCtx (pat: HPat) =
+  match pat with
+  | HPat.Lit (lit, _) ->
+    lit |> litToString |> dumpTreeNewLeaf
+
+  | HPat.Nil (itemTy, _) ->
+    dumpTreeNew "[]" [tyDump nameCtx itemTy]
+
+  | HPat.OptionNone (itemTy, _) ->
+    dumpTreeNew "None" [tyDump nameCtx itemTy]
+
+  | HPat.OptionSome (itemTy, _) ->
+    dumpTreeNew "Some" [tyDump nameCtx itemTy]
+
+  | HPat.Discard (ty, _) ->
+    dumpTreeNew "[]" [tyDump nameCtx ty]
+
+  | HPat.Ref (varSerial, ty, _) ->
+    dumpTreeNew (serialToIdent nameCtx varSerial) [tyDump nameCtx ty]
+
+  | HPat.Nav (l, r, ty, _) ->
+    dumpTreeNew ("." + r) [patDump nameCtx l; tyDump nameCtx ty]
+
+  | HPat.Call (callee, args, ty, _) ->
+    let callee = callee |> patDump nameCtx
+    let args = args |> listMap (patDump nameCtx)
+    let ty = ty |> tyDump nameCtx
+    dumpTreeNew "call" (callee :: listAppend args [ty])
+
+  | HPat.Cons (l, r, ty, _) ->
+    dumpTreeNew "cons" [patDump nameCtx l; patDump nameCtx r; tyDump nameCtx ty]
+
+  | HPat.Tuple (itemPats, tupleTy, _) ->
+    let itemPats = itemPats |> listMap (patDump nameCtx)
+    let tupleTy = tupleTy |> tyDump nameCtx
+    dumpTreeNew "tuple" (listAppend itemPats [tupleTy])
+
+  | HPat.As (pat, varSerial, _) ->
+    let pat = pat |> patDump nameCtx
+    let ident = serialToIdent nameCtx varSerial
+    dumpTreeNew ("as " + ident) [pat]
+
+  | HPat.Anno (pat, ty, _) ->
+    let pat = pat |> patDump nameCtx
+    let ty = ty |> tyDump nameCtx
+    dumpTreeNew "anno" [pat; ty]
+
+  | HPat.Or (l, r, ty, _) ->
+    dumpTreeNew "|" [patDump nameCtx l; patDump nameCtx r; tyDump nameCtx ty]
+
 let hxDump nameCtx (expr: HExpr) =
-  let showIdent serial = (nameCtx |> nameCtxFind serial) + "_" + string serial
+  let showIdent serial = serialToIdent nameCtx serial
 
   match expr with
   | HExpr.Lit (lit, _) ->
@@ -333,38 +426,58 @@ let hxDump nameCtx (expr: HExpr) =
   | HExpr.Prim _ ->
     dumpTreeNewLeaf "prim"
 
-  | HExpr.Ref (serial, _, _) ->
-    dumpTreeNewLeaf (showIdent serial)
+  | HExpr.Ref (serial, ty, _) ->
+    dumpTreeNew (showIdent serial) [tyDump nameCtx ty]
 
-  | HExpr.Match (target, _arms, _ty, _loc) ->
-    dumpTreeNew "match" [hxDump nameCtx target]
+  | HExpr.Match (target, arms, ty, _loc) ->
+    let onArm (pat, guard, body) =
+      dumpTreeNew "arm" [
+        patDump nameCtx pat
+        hxDump nameCtx guard
+        hxDump nameCtx body
+      ]
+    let target = hxDump nameCtx target
+    let arms = arms |> listMap onArm
+    let ty = ty |> tyDump nameCtx
+    dumpTreeNew "match" (target :: (listAppend arms [ty]))
 
-  | HExpr.Nav (l, r, _ty, _loc) ->
-    dumpTreeNew ("." + r) [hxDump nameCtx l]
+  | HExpr.Nav (l, r, ty, _loc) ->
+    dumpTreeNew ("." + r) [hxDump nameCtx l; tyDump nameCtx ty]
 
-  | HExpr.Inf (_, items, _ty, _loc) ->
-    dumpTreeNew "inf" (items |> listMap (hxDump nameCtx))
+  | HExpr.Inf (_, items, ty, _loc) ->
+    let items = items |> listMap (hxDump nameCtx)
+    let ty = tyDump nameCtx ty
+    dumpTreeNew "inf" (listAppend items [ty])
 
-  | HExpr.Let (_pat, body, next, _ty, _loc) ->
+  | HExpr.Let (pat, body, next, ty, _loc) ->
     dumpTreeNew "let-val" [
+      patDump nameCtx pat
       hxDump nameCtx body
+      tyDump nameCtx ty
     ]
     |> dumpTreeAttachNext (hxDump nameCtx next)
 
-  | HExpr.LetFun (callee, _, _args, body, next, _ty, _loc) ->
-    dumpTreeNew "let-fun" [
-      dumpTreeNewLeaf (showIdent callee)
-      hxDump nameCtx body
-    ]
+  | HExpr.LetFun (callee, _, args, body, next, ty, _loc) ->
+    let callee = dumpTreeNewLeaf (showIdent callee)
+    let args = args |> listMap (patDump nameCtx)
+    let body = body |> hxDump nameCtx
+    let ty = ty |> tyDump nameCtx
+
+    dumpTreeNew "let-fun" (callee :: (listAppend args [body; ty]))
     |> dumpTreeAttachNext (hxDump nameCtx next)
 
-  | HExpr.TyDecl (_, TyDecl.Synonym (_ty, _loc), _) ->
-    dumpTreeNew "synonym" []
-
-  | HExpr.TyDecl (_, TyDecl.Union (ident, _, _), _) ->
-    dumpTreeNew "union" [
-      dumpTreeNewLeaf ident
+  | HExpr.TyDecl (tySerial, TyDecl.Synonym (ty, _loc), _) ->
+    dumpTreeNew "synonym" [
+      dumpTreeNewLeaf (showIdent tySerial)
+      tyDump nameCtx ty
     ]
+
+  | HExpr.TyDecl (tySerial, TyDecl.Union (_, variants, _), _) ->
+    let onVariant (_, varSerial, _, payloadTy) =
+      dumpTreeNew (showIdent varSerial) [tyDump nameCtx payloadTy]
+
+    let variants = variants |> listMap onVariant
+    dumpTreeNew "union" (dumpTreeNewLeaf (showIdent tySerial) :: variants)
 
   | HExpr.Open (path, _) ->
     dumpTreeNew "open" (path |> listMap dumpTreeNewLeaf)
