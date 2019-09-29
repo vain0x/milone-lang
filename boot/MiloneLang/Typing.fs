@@ -234,14 +234,14 @@ let inferPat ctx pat ty =
     let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
     let ctx = tyCtxUnifyTy ctx loc ty (tyList itemTy)
     HPat.Nil (itemTy, loc), ctx
-  | HPat.None (_, loc) ->
+  | HPat.OptionNone (_, loc) ->
     let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
     let ctx = tyCtxUnifyTy ctx loc ty (tyList itemTy)
-    HPat.None (itemTy, loc), ctx
-  | HPat.Some (_, loc) ->
+    HPat.OptionNone (itemTy, loc), ctx
+  | HPat.OptionSome (_, loc) ->
     let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
     let ctx = tyCtxUnifyTy ctx loc ty (tyFun itemTy (tyList itemTy))
-    HPat.Some (itemTy, loc), ctx
+    HPat.OptionSome (itemTy, loc), ctx
   | HPat.Discard (_, loc) ->
     HPat.Discard (ty, loc), ctx
   | HPat.Ref (varSerial, _, loc) ->

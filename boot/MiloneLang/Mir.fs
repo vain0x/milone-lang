@@ -231,13 +231,13 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     mirifyPatLit ctx endLabel lit expr loc
   | HPat.Nil (itemTy, loc) ->
     mirifyPatNil ctx endLabel itemTy expr loc
-  | HPat.None (itemTy, loc) ->
+  | HPat.OptionNone (itemTy, loc) ->
     mirifyPatNone ctx endLabel itemTy expr loc
   | HPat.Ref (serial, ty, loc) ->
     mirifyPatRef ctx endLabel serial ty loc expr
   | HPat.Call (HPat.Ref (serial, _, _), args, ty, loc) ->
     mirifyPatCall ctx endLabel serial args ty loc expr
-  | HPat.Call (HPat.Some (itemTy, loc), [item], _, _) ->
+  | HPat.Call (HPat.OptionSome (itemTy, loc), [item], _, _) ->
     mirifyPatSome ctx endLabel item itemTy loc expr
   | HPat.Cons (l, r, itemTy, loc) ->
     mirifyPatCons ctx endLabel l r itemTy loc expr
@@ -245,7 +245,7 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     mirifyPatTuple ctx endLabel itemPats itemTys expr loc
   | HPat.As (pat, serial, loc) ->
     mirifyPatAs ctx endLabel pat serial expr loc
-  | HPat.Some (_, loc) ->
+  | HPat.OptionSome (_, loc) ->
     let ctx = mirCtxAddErr ctx "Some pattern must be used in the form of `Some pat`" loc
     false, ctx
   | HPat.Or _ ->
@@ -273,7 +273,7 @@ let mirifyExprPrim (ctx: MirCtx) prim ty loc =
   | HPrim.Nil ->
     MExpr.Default (ty, loc), ctx
 
-  | HPrim.None ->
+  | HPrim.OptionNone ->
     MExpr.Default (ty, loc), ctx
 
   | _ ->
@@ -296,8 +296,8 @@ let patsIsCovering pats =
       true
     | HPat.Lit _
     | HPat.Nil _
-    | HPat.None _
-    | HPat.Some _
+    | HPat.OptionNone _
+    | HPat.OptionSome _
     | HPat.Nav _
     | HPat.Cons _
     | HPat.Call _ ->
@@ -580,7 +580,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
       mirifyExprOpCons ctx l r ty loc
     | HPrim.Index, [l; r] ->
       mirifyExprIndex ctx l r ty loc
-    | HPrim.Some, [item] ->
+    | HPrim.OptionSome, [item] ->
       mirifyExprCallSome ctx item ty loc
     | HPrim.Not, [arg] ->
       mirifyExprCallNot ctx arg ty loc

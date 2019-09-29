@@ -463,9 +463,9 @@ type HPat =
   /// `[]`
   | Nil
     of itemTy:Ty * Loc
-  | None
+  | OptionNone
     of itemTy:Ty * Loc
-  | Some
+  | OptionSome
     of itemTy:Ty * Loc
   /// `_`
   | Discard
@@ -502,8 +502,8 @@ type HPrim =
   | Lt
   | Nil
   | Cons
-  | None
-  | Some
+  | OptionNone
+  | OptionSome
   | Index
   | Not
   | Exit

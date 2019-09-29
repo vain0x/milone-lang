@@ -142,8 +142,8 @@ let declosurePat (pat, ctx) =
   match pat with
   | HPat.Lit _
   | HPat.Nil _
-  | HPat.None _
-  | HPat.Some _
+  | HPat.OptionNone _
+  | HPat.OptionSome _
   | HPat.Discard _
   | HPat.Nav _ ->
     pat, ctx
