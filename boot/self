@@ -4,6 +4,7 @@ set -eux
 
 OUT=tests/examples/MiloneLang/MiloneLang.out
 
+dotnet build MiloneLang -c Release
 dotnet run -p MiloneLang -c Release -- --self >$OUT
 echo '$?' = $? >>$OUT
 
