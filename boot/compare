@@ -1,0 +1,4 @@
+#!/bin/bash
+
+code --diff MiloneLang/Helpers.fs tests/examples/MiloneLang/Helpers.fs
+code --diff MiloneLang/Types.fs tests/examples/MiloneLang/Types.fs
