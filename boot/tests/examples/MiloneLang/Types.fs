@@ -1,3 +1,4 @@
+/// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
 /// Unique serial number as identity.
@@ -22,6 +23,24 @@ type Lit =
 type DumpTree =
   | DumpTree
     of heading:string * body:DumpTree list * next:DumpTree list
+
+// -----------------------------------------------
+// Errors
+// -----------------------------------------------
+
+[<RequireQualifiedAccess>]
+type TyUnifyLog =
+  | SelfRec
+  | Mismatch
+
+[<RequireQualifiedAccess>]
+type Log =
+  | TyUnify
+    of TyUnifyLog * lRootTy:Ty * rRootTy:Ty * lTy:Ty * rTy:Ty
+  | TyBoundError
+    of Trait
+  | Error
+    of string
 
 // -----------------------------------------------
 // Syntax types
@@ -230,7 +249,7 @@ type AArm =
 type AVariant =
   /// (identifier, payload-type).
   | AVariant
-    of Ident * ATy list * Loc
+    of Ident * ATy option * Loc
 
 /// Let expression in AST.
 [<RequireQualifiedAccess>]
@@ -260,7 +279,7 @@ type AExpr =
   /// List literal, e.g. `[]`, `[2; 3]`.
   | ListLit
     of AExpr list * Loc
-  /// condition, then-clause, else-clause. Else clause is `None` is missing.
+  /// condition, then-clause, else-clause.
   | If
     of AExpr * AExpr * AExpr * Loc
   | Match
@@ -333,6 +352,25 @@ type LetDepth = int
 type NameCtx =
   | NameCtx
     of AssocMap<Serial, Ident> * lastSerial:Serial
+
+type ScopeSerial = Serial
+
+[<RequireQualifiedAccess>]
+type Binding =
+  /// Value binding.
+  | Var
+    of VarSerial * varIdent:Ident
+
+  /// Type binding.
+  | Ty
+    of TySerial * tyIdent:Ident
+
+  /// Parent scope.
+  | Parent
+    of ScopeSerial * Scope
+
+/// (scopeSerial, binding) list.
+type Scope = (ScopeSerial * Binding) list
 
 /// Type constructors.
 [<RequireQualifiedAccess>]
@@ -425,6 +463,10 @@ type HPat =
   /// `[]`
   | Nil
     of itemTy:Ty * Loc
+  | None
+    of itemTy:Ty * Loc
+  | Some
+    of itemTy:Ty * Loc
   /// `_`
   | Discard
     of Ty * Loc
@@ -460,6 +502,8 @@ type HPrim =
   | Lt
   | Nil
   | Cons
+  | None
+  | Some
   | Index
   | Not
   | Exit

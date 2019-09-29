@@ -6,6 +6,7 @@ open MiloneLang.Lexing
 open MiloneLang.Parsing
 open MiloneLang.AstToHir
 open MiloneLang.Bundling
+open MiloneLang.NameRes
 
 let litToString lit =
   match lit with
@@ -323,7 +324,7 @@ let axDump (expr: AExpr) =
     dumpTreeNew "open" (path |> listMap dumpTreeNewLeaf)
 
 let hxDump nameCtx (expr: HExpr) =
-  let findIdent serial = nameCtx |> nameCtxFind serial
+  let showIdent serial = (nameCtx |> nameCtxFind serial) + "_" + string serial
 
   match expr with
   | HExpr.Lit (lit, _) ->
@@ -333,7 +334,7 @@ let hxDump nameCtx (expr: HExpr) =
     dumpTreeNewLeaf "prim"
 
   | HExpr.Ref (serial, _, _) ->
-    dumpTreeNewLeaf (findIdent serial)
+    dumpTreeNewLeaf (showIdent serial)
 
   | HExpr.Match (target, _arms, _ty, _loc) ->
     dumpTreeNew "match" [hxDump nameCtx target]
@@ -352,7 +353,7 @@ let hxDump nameCtx (expr: HExpr) =
 
   | HExpr.LetFun (callee, _, _args, body, next, _ty, _loc) ->
     dumpTreeNew "let-fun" [
-      dumpTreeNewLeaf (findIdent callee)
+      dumpTreeNewLeaf (showIdent callee)
       hxDump nameCtx body
     ]
     |> dumpTreeAttachNext (hxDump nameCtx next)
@@ -402,6 +403,7 @@ let doSelf (fileReadAllText: string -> string) =
   let nameCtx = nameCtxEmpty ()
 
   let expr, nameCtx, errorListList = parseProjectModules readModuleFile projectName nameCtx
+  let expr, _ = nameRes (expr, nameCtx)
 
   printfn "HIR:"
   printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)

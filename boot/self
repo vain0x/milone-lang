@@ -4,5 +4,7 @@ set -eux
 
 OUT=tests/examples/MiloneLang/MiloneLang.out
 
-dotnet run -p MiloneLang -- --self >$OUT
+dotnet run -p MiloneLang -c Release -- --self >$OUT
 echo '$?' = $? >>$OUT
+
+./task integ MiloneLang

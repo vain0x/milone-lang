@@ -864,8 +864,15 @@ let tyPrimFromIdent ident tys loc =
   | "obj", [] ->
     tyObj
 
+  | "option", [itemTy] ->
+    // FIXME: option is just an alias of list for now
+    tyList itemTy
+
   | "list", [itemTy] ->
     tyList itemTy
+
+  | "AssocMap", [keyTy; _] ->
+    tyTuple [tyList (tyTuple tys); tyFun keyTy (tyFun keyTy tyInt)]
 
   | _ ->
     Ty.Error loc
@@ -905,6 +912,67 @@ let tyIsMonomorphic ty: bool =
 
   go [ty]
 
+/// Gets a list of type variables.
+/// Assume all bound type variables are substituted.
+let tyCollectFreeVars ty =
+  let rec go fvAcc tys =
+    match tys with
+    | [] ->
+      fvAcc
+
+    | Ty.Error _ :: tys
+    | Ty.Con (_, []) :: tys ->
+      go fvAcc tys
+
+    | Ty.Con (_, tys1) :: tys2 ->
+      let acc = go fvAcc tys1
+      let acc = go acc tys2
+      acc
+
+    | Ty.Meta (serial, _) :: tys ->
+      let acc = serial :: fvAcc
+      go acc tys
+
+  go [] [ty] |> listUnique intCmp
+
+let rec tyToArity ty =
+  match ty with
+  | Ty.Con (TyCon.Fun, [_; ty]) ->
+    1 + tyToArity ty
+  | _ ->
+    0
+
+/// Converts nested function type to multi-arguments function type.
+let rec tyToArgList ty =
+  let rec go n acc ty =
+    match ty with
+    | Ty.Con (TyCon.Fun, [sTy; tTy]) ->
+      go (n + 1) (sTy :: acc) tTy
+    | tTy ->
+      n, listRev acc, tTy
+  go 0 [] ty
+
+/// Substitutes meta types in a type as possible.
+let tySubst (substMeta: TySerial -> Ty option) ty =
+  let rec go ty =
+    match ty with
+    | Ty.Error _
+    | Ty.Con (_, []) ->
+      ty
+
+    | Ty.Con (tyCon, tys) ->
+      Ty.Con (tyCon, listMap go tys)
+
+    | Ty.Meta (tySerial, _) ->
+      match substMeta tySerial with
+      | Some ty ->
+        go ty
+
+      | None ->
+        ty
+
+  go ty
+
 // -----------------------------------------------
 // Type definitions (HIR)
 // -----------------------------------------------
@@ -942,6 +1010,47 @@ let litToTy (lit: Lit): Ty =
 // -----------------------------------------------
 // Primitives (HIR)
 // -----------------------------------------------
+
+let primFromIdent ident =
+  match ident with
+  | "not" ->
+    HPrim.Not |> Some
+
+  | "exit" ->
+    HPrim.Exit |> Some
+
+  | "assert" ->
+    HPrim.Assert |> Some
+
+  | "box" ->
+    HPrim.Box |> Some
+
+  | "unbox" ->
+    HPrim.Unbox |> Some
+
+  | "printfn" ->
+    HPrim.Printfn |> Some
+
+  | "char" ->
+    HPrim.Char |> Some
+
+  | "int" ->
+    HPrim.Int |> Some
+
+  | "string" ->
+    HPrim.String |> Some
+
+  | "None" ->
+    HPrim.None |> Some
+
+  | "Some" ->
+    HPrim.Some |> Some
+
+  | "__nativeFun" ->
+    HPrim.NativeFun ("<native-fun>", -1) |> Some
+
+  | _ ->
+    None
 
 let primToTySpec prim =
   let meta id = Ty.Meta (id, noLoc)
@@ -981,6 +1090,15 @@ let primToTySpec prim =
     let itemTy = meta 1
     let listTy = tyList itemTy
     poly (tyFun itemTy (tyFun listTy listTy)) []
+
+  | HPrim.None ->
+    let itemTy = meta 1
+    poly (tyList itemTy) []
+
+  | HPrim.Some ->
+    let itemTy = meta 1
+    let listTy = tyList itemTy
+    poly (tyFun itemTy listTy) []
 
   | HPrim.Index ->
     let lTy = meta 1
@@ -1028,6 +1146,39 @@ let primToTySpec prim =
   | HPrim.NativeFun _ ->
     poly (meta 1) []
 
+let primToArity ty prim =
+  match prim with
+  | HPrim.Nil
+  | HPrim.None ->
+    0
+  | HPrim.Some
+  | HPrim.Not
+  | HPrim.Exit
+  | HPrim.Assert
+  | HPrim.Box
+  | HPrim.Unbox
+  | HPrim.StrLength
+  | HPrim.Char
+  | HPrim.Int
+  | HPrim.String ->
+    1
+  | HPrim.Add
+  | HPrim.Sub
+  | HPrim.Mul
+  | HPrim.Div
+  | HPrim.Mod
+  | HPrim.Eq
+  | HPrim.Lt
+  | HPrim.Cons
+  | HPrim.Index ->
+    2
+  | HPrim.StrGetSlice ->
+    3
+  | HPrim.Printfn ->
+    ty |> tyToArity
+  | HPrim.NativeFun (_, arity) ->
+    arity
+
 // -----------------------------------------------
 // Patterns (HIR)
 // -----------------------------------------------
@@ -1043,6 +1194,10 @@ let rec patExtract (pat: HPat): Ty * Loc =
   | HPat.Lit (lit, a) ->
     litToTy lit, a
   | HPat.Nil (itemTy, a) ->
+    tyList itemTy, a
+  | HPat.None (itemTy, a) ->
+    tyList itemTy, a
+  | HPat.Some (itemTy, a) ->
     tyList itemTy, a
   | HPat.Discard (ty, a) ->
     ty, a
@@ -1071,6 +1226,10 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Lit (lit, g a)
     | HPat.Nil (itemTy, a) ->
       HPat.Nil (f itemTy, g a)
+    | HPat.None (itemTy, a) ->
+      HPat.None (f itemTy, g a)
+    | HPat.Some (itemTy, a) ->
+      HPat.Some (f itemTy, g a)
     | HPat.Discard (ty, a) ->
       HPat.Discard (f ty, g a)
     | HPat.Ref (serial, ty, a) ->
@@ -1091,6 +1250,55 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
       HPat.Or (go first, go second, f ty, g a)
   go pat
 
+/// Converts a pattern in disjunctive normal form.
+/// E.g. `A, [B | C]` → `(A | [B]), (A | [C])`
+let patNormalize pat =
+  let rec go pat =
+    match pat with
+    | HPat.Lit _
+    | HPat.Discard _
+    | HPat.Ref _
+    | HPat.Nil _
+    | HPat.None _
+    | HPat.Some _ ->
+      [pat]
+    | HPat.Nav (pat, ident, ty, loc) ->
+      go pat |> listMap (fun pat -> HPat.Nav (pat, ident, ty, loc))
+    | HPat.Call (callee, [arg], ty, loc) ->
+      go callee |> listCollect (fun callee ->
+        go arg |> listMap (fun arg ->
+          HPat.Call (callee, [arg], ty, loc)
+        ))
+    | HPat.Cons (l, r, ty, loc) ->
+      go l |> listCollect (fun l ->
+        go r |> listMap (fun r ->
+          HPat.Cons (l, r, ty, loc)
+        ))
+    | HPat.Tuple (itemPats, ty, loc) ->
+      let rec gogo itemPats =
+        match itemPats with
+        | [] -> [[]]
+        | itemPat :: itemPats ->
+          let itemPat = go itemPat
+          gogo itemPats |> listCollect (fun itemPats ->
+            itemPat |> listMap (fun itemPat ->
+              itemPat :: itemPats
+            ))
+      gogo itemPats |> listMap (fun itemPats -> HPat.Tuple (itemPats, ty, loc))
+    | HPat.As (innerPat, _, _) ->
+      match go innerPat with
+      | [_] ->
+        [pat]
+      | _ ->
+        failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
+    | HPat.Anno (pat, annoTy, loc) ->
+      go pat |> listMap (fun pat -> HPat.Anno (pat, annoTy, loc))
+    | HPat.Or (first, second, _, _) ->
+      listAppend (go first) (go second)
+    | HPat.Call _ ->
+      failwith "Unimpl"
+  go pat
+
 // -----------------------------------------------
 // Expressions (HIR)
 // -----------------------------------------------
@@ -1108,7 +1316,7 @@ let hxAnno expr ty loc =
   HExpr.Inf (InfOp.Anno, [expr], ty, loc)
 
 let hxSemi items loc =
-  HExpr.Inf (InfOp.Semi, items, noTy, loc)
+  HExpr.Inf (InfOp.Semi, items, exprToTy (listLast items), loc)
 
 let hxCallProc callee args resultTy loc =
   HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)
