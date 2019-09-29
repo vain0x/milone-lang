@@ -351,7 +351,7 @@ type LetDepth = int
 
 type NameCtx =
   | NameCtx
-    of Map<Serial, Ident> * lastSerial:Serial
+    of AssocMap<Serial, Ident> * lastSerial:Serial
 
 type ScopeSerial = Serial
 

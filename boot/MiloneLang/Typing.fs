@@ -559,7 +559,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
 
   let ctx =
     let vars =
-      ctx |> tyCtxGetVars |> Map.map (fun _ varDef ->
+      ctx |> tyCtxGetVars |> mapMap (fun _ varDef ->
         match varDef with
         | VarDef.Var (ident, ty, loc) ->
           let ty = tyCtxSubstTy ctx ty

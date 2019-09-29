@@ -47,11 +47,11 @@ open MiloneLang.Records
 type CcCtx =
   {
     Serial: Serial
-    Vars: Map<VarSerial, VarDef>
-    Tys: Map<TySerial, TyDef>
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
 
     /// Known identifiers and their dependencies.
-    Caps: Map<FunSerial, (VarSerial * Ty * Loc) list>
+    Caps: AssocMap<FunSerial, (VarSerial * Ty * Loc) list>
     Known: Set<FunSerial>
     Refs: Set<VarSerial>
     Locals: Set<VarSerial>

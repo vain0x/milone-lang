@@ -56,8 +56,8 @@ type CalleeKind =
 type EtaCtx =
   {
     Serial: Serial
-    Vars: Map<VarSerial, VarDef>
-    Tys: Map<TySerial, TyDef>
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
   }
 
 let etaCtxFromTyCtx (ftCtx: TyCtx): EtaCtx =

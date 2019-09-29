@@ -12,11 +12,11 @@ open MiloneLang.Types
 type ScopeCtx =
   (
     Serial
-    * Map<Serial, Ident>
-    * Map<VarSerial, VarDef>
-    * Map<VarSerial, LetDepth>
-    * Map<TySerial, TyDef>
-    * Map<TySerial, LetDepth>
+    * AssocMap<Serial, Ident>
+    * AssocMap<VarSerial, VarDef>
+    * AssocMap<VarSerial, LetDepth>
+    * AssocMap<TySerial, TyDef>
+    * AssocMap<TySerial, LetDepth>
     * ScopeSerial
     * Scope
     * LetDepth
@@ -79,8 +79,8 @@ let scopeCtxWithLetDepth letDepth ((serial, nameMap, vars, varDepths, tys, tyDep
 type TyContext =
   (
     Serial
-    * Map<TySerial, TyDef>
-    * Map<TySerial, LetDepth>
+    * AssocMap<TySerial, TyDef>
+    * AssocMap<TySerial, LetDepth>
   )
 
 let tyContextGetSerial ((serial, _, _): TyContext) =
@@ -104,9 +104,9 @@ let tyContextWithTyDepths tyDepths ((serial, tys, _): TyContext): TyContext =
 type TyCtx =
   (
     Serial
-    * Map<VarSerial, VarDef>
-    * Map<TySerial, TyDef>
-    * Map<TySerial, LetDepth>
+    * AssocMap<VarSerial, VarDef>
+    * AssocMap<TySerial, TyDef>
+    * AssocMap<TySerial, LetDepth>
     * LetDepth
     * (Trait * Loc) list
     * (Log * Loc) list

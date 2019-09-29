@@ -14,8 +14,8 @@ open MiloneLang.Records
 type MirCtx =
   {
     Serial: Serial
-    Vars: Map<VarSerial, VarDef>
-    Tys: Map<TySerial, TyDef>
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
     LabelSerial: Serial
     Stmts: MStmt list
     Logs: (Log * Loc) list
