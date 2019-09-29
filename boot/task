@@ -2,6 +2,10 @@
 
 set -eu
 
+now() {
+    date --iso-8601=seconds
+}
+
 # Finds path to test case directory.
 # Sample:
 #   locate hello
@@ -20,6 +24,10 @@ compile() {
     c="$(locate $1)/~$1.c"
     app="$(locate $1)/~$1"
 
+    >&2 echo '+ dotnet build '$(now)
+    dotnet build -c Release MiloneLang >/dev/null
+
+    >&2 echo '+ dotnet run '$(now)
     mkdir -p tmp
     dotnet run -c Release -p MiloneLang -- "$2" $dir >$c
     if [[ $? != 0 ]]
@@ -28,6 +36,7 @@ compile() {
         return 1
     fi
 
+    >&2 echo '+ gcc '$(now)
     gcc -std=c11 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -O1 $c -o $app
     if [[ $? != 0 ]]
     then
@@ -62,10 +71,12 @@ integ() {
     # Run.
     if [[ $comple_exit_code = 0 ]]
     then
+        >&2 echo "+ $app "$(now)
         $app "$@" >>$out
         echo '$? = '$? >>$out
     fi
 
+    >&2 echo '+ diff '$(now)
     # Verify output and exit code.
     if diff -q $out $expected
     then
