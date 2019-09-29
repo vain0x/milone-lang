@@ -5,33 +5,4 @@
 [<AutoOpen>]
 module rec MiloneLang.Compatible
 
-// -----------------------------------------------
-// Map
-// -----------------------------------------------
-
-let mapEmpty _ =
-  Map.empty
-
-let mapAdd key value map =
-  Map.add key value map
-
-let mapRemove key map =
-  Map.remove key map
-
-let mapFind key map =
-  Map.find key map
-
-let mapTryFind key map =
-  Map.tryFind key map
-
-let mapFold folder state map =
-  Map.fold folder state map
-
-let mapMap mapper map =
-  Map.map mapper map
-
-let mapToList map =
-  Map.toList map
-
-let mapOfList _ pairs =
-  Map.ofList pairs
+type AssocMap<'K, 'V> = ('K * 'V) list * ('K -> 'K -> int)

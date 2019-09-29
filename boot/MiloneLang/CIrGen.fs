@@ -18,11 +18,11 @@ type TyInstance =
 [<RequireQualifiedAccess>]
 type CirCtx =
   {
-    Vars: Map<VarSerial, VarDef>
-    VarUniqueNames: Map<VarSerial, Ident>
-    TyEnv: Map<Ty, TyInstance * CTy>
-    Tys: Map<TySerial, TyDef>
-    TyUniqueNames: Map<Ty, Ident>
+    Vars: AssocMap<VarSerial, VarDef>
+    VarUniqueNames: AssocMap<VarSerial, Ident>
+    TyEnv: AssocMap<Ty, TyInstance * CTy>
+    Tys: AssocMap<TySerial, TyDef>
+    TyUniqueNames: AssocMap<Ty, Ident>
     Stmts: CStmt list
     Decls: CDecl list
     Logs: (Log * Loc) list
@@ -41,7 +41,8 @@ let calculateVarUniqueNames vars =
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
       (serial, ident)
   ))
-  |> Map.ofSeq
+  |> Seq.toList
+  |> mapOfList intCmp
 
 let calculateTyUniqueNames tys =
   let groups = tys |> mapToList |> Seq.groupBy (fun (_, tyDef) -> tyDefToIdent tyDef)
@@ -50,7 +51,8 @@ let calculateTyUniqueNames tys =
       let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
       tyRef serial [], ident
   ))
-  |> Map.ofSeq
+  |> Seq.toList
+  |> mapOfList compare
 
 let cirCtxFromMirCtx (mirCtx: Mir.MirCtx): CirCtx =
   let varNames = calculateVarUniqueNames mirCtx.Vars

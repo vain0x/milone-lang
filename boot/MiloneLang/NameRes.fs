@@ -33,11 +33,11 @@ let scopeCtxGetIdent serial (scopeCtx: ScopeCtx): Ident =
   scopeCtx |> scopeCtxGetNameMap |> mapFind serial
 
 let scopeCtxGetVar varSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx |> scopeCtxGetVars |> Map.containsKey varSerial)
+  assert (scopeCtx |> scopeCtxGetVars |> mapContainsKey varSerial)
   scopeCtx |> scopeCtxGetVars |> mapFind varSerial
 
 let scopeCtxGetTy tySerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx |> scopeCtxGetTys |> Map.containsKey tySerial)
+  assert (scopeCtx |> scopeCtxGetTys |> mapContainsKey tySerial)
   scopeCtx |> scopeCtxGetTys |> mapFind tySerial
 
 let scopeCtxIsVariant varSerial scopeCtx =
@@ -296,7 +296,7 @@ let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx 
 let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
   let tyIdent = ctx |> scopeCtxGetIdent tySerial
 
-  if ctx |> scopeCtxGetTys |> Map.containsKey tySerial then
+  if ctx |> scopeCtxGetTys |> mapContainsKey tySerial then
     ctx
   else
 

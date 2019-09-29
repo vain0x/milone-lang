@@ -4,19 +4,19 @@ ScopeCtx:
   Serial: Serial
 
   # Serial to ident map.
-  NameMap: Map<Serial, Ident>
+  NameMap: AssocMap<Serial, Ident>
 
   # Variable serial to definition map.
-  Vars: Map<VarSerial, VarDef>
+  Vars: AssocMap<VarSerial, VarDef>
 
   # Variable serial to let-depth map.
-  VarDepths: Map<VarSerial, LetDepth>
+  VarDepths: AssocMap<VarSerial, LetDepth>
 
   # Type serial to definition map.
-  Tys: Map<TySerial, TyDef>
+  Tys: AssocMap<TySerial, TyDef>
 
   # Type serial to let-depth map.
-  TyDepths: Map<TySerial, LetDepth>
+  TyDepths: AssocMap<TySerial, LetDepth>
 
   # Serial of the current scope.
   LocalSerial: ScopeSerial
@@ -29,8 +29,8 @@ ScopeCtx:
 
 TyContext:
   Serial: Serial
-  Tys: Map<TySerial, TyDef>
-  TyDepths: Map<TySerial, LetDepth>
+  Tys: AssocMap<TySerial, TyDef>
+  TyDepths: AssocMap<TySerial, LetDepth>
 
 TyCtx:
   # Next serial number.
@@ -39,12 +39,12 @@ TyCtx:
   Serial: Serial
 
   # Variable serial to variable definition.
-  Vars: Map<VarSerial, VarDef>
+  Vars: AssocMap<VarSerial, VarDef>
 
   # Type serial to type definition.
-  Tys: Map<TySerial, TyDef>
+  Tys: AssocMap<TySerial, TyDef>
 
-  TyDepths: Map<TySerial, LetDepth>
+  TyDepths: AssocMap<TySerial, LetDepth>
   LetDepth: LetDepth
   TraitBounds: (Trait * Loc) list
   Logs: (Log * Loc) list
