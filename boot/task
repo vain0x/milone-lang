@@ -21,7 +21,7 @@ compile() {
     app="$(locate $1)/~$1"
 
     mkdir -p tmp
-    dotnet run -p MiloneLang -- "$2" $dir >$c
+    dotnet run -c Release -p MiloneLang -- "$2" $dir >$c
     if [[ $? != 0 ]]
     then
         echo 'milone-lang compile error.'
