@@ -49,11 +49,13 @@
 /// let parse () = 0 in
 /// let main _ = 0
 /// ```
-module MiloneLang.Bundling
+module rec MiloneLang.Bundling
 
 open MiloneLang.AstToHir
-open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Lexing
+open MiloneLang.Parsing
+open MiloneLang.Types
 
 let findOpenPaths expr =
   let rec go expr =
@@ -107,9 +109,9 @@ let parseProjectModules readModuleFile projectName nameCtx =
       moduleAcc, moduleMap, nameCtx, errorAcc
     else
       let source = readModuleFile moduleName
-      let tokens = Lexing.tokenize source
-      let moduleAst, errors = Parsing.parse tokens
-      let moduleHir, nameCtx = AstToHir.astToHir (moduleAst, nameCtx)
+      let tokens = tokenize source
+      let moduleAst, errors = parse tokens
+      let moduleHir, nameCtx = astToHir (moduleAst, nameCtx)
       let dependencies = findOpenModules projectName moduleHir
       let moduleMap = moduleMap |> mapAdd moduleName moduleHir
       let moduleAcc, moduleMap, nameCtx, errorAcc =
