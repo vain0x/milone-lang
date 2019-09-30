@@ -838,6 +838,24 @@ let traitMapTys f it =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
+let tyConEq l r =
+  match l, r with
+  | TyCon.Bool, TyCon.Bool
+  | TyCon.Int, TyCon.Int
+  | TyCon.Char, TyCon.Char
+  | TyCon.Str, TyCon.Str
+  | TyCon.Obj, TyCon.Obj
+  | TyCon.Fun, TyCon.Fun
+  | TyCon.Tuple, TyCon.Tuple
+  | TyCon.List, TyCon.List ->
+    true
+
+  | TyCon.Ref l, TyCon.Ref r ->
+    l = r
+
+  | _ ->
+    false
+
 /// Placeholder. No type info in the parsing phase.
 let noTy = Ty.Error noLoc
 
@@ -1630,7 +1648,7 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
       logAcc, ctx
     | _, Ty.Meta _ ->
       go rty lty (logAcc, ctx)
-    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
+    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when tyConEq lTyCon rTyCon ->
       logAcc, ctx
     | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
       (logAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))

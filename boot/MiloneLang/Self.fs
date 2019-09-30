@@ -1,12 +1,14 @@
 module rec MiloneLang.Self
 
 open MiloneLang.Types
+open MiloneLang.Records
 open MiloneLang.Helpers
 open MiloneLang.Lexing
 open MiloneLang.Parsing
 open MiloneLang.AstToHir
 open MiloneLang.Bundling
 open MiloneLang.NameRes
+open MiloneLang.Typing
 
 let litToString lit =
   match lit with
@@ -524,13 +526,13 @@ let doSelf (fileReadAllText: string -> string) =
   let nameCtx = nameCtxEmpty ()
 
   let expr, nameCtx, errorListList = parseProjectModules readModuleFile projectName nameCtx
-  let _expr, _scopeCtx = nameRes (expr, nameCtx)
+  let expr, scopeCtx = nameRes (expr, nameCtx)
+  let expr, tyCtx = infer (expr, scopeCtx, errorListList)
 
   // printfn "HIR:"
   // printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)
 
-  errorListList |> listIter (fun errors ->
-    errors |> listIter (fun (msg, loc) ->
-      printfn "ERROR %s (%s)" msg (loc |> locToString)
-    ))
+  tyCtx |> tyCtxGetLogs |> listIter (fun (log, loc) ->
+    printfn "ERROR %s" (log |> logToString loc)
+  )
   0

@@ -6,3 +6,4 @@ cp MiloneLang/Parsing.fs tests/examples/MiloneLang/Parsing.fs
 cp MiloneLang/AstToHir.fs tests/examples/MiloneLang/AstToHir.fs
 cp MiloneLang/Bundling.fs tests/examples/MiloneLang/Bundling.fs
 cp MiloneLang/NameRes.fs tests/examples/MiloneLang/NameRes.fs
+cp MiloneLang/Typing.fs tests/examples/MiloneLang/Typing.fs

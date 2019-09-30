@@ -870,6 +870,24 @@ let traitMapTys f it =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
+let tyConEq l r =
+  match l, r with
+  | TyCon.Bool, TyCon.Bool
+  | TyCon.Int, TyCon.Int
+  | TyCon.Char, TyCon.Char
+  | TyCon.Str, TyCon.Str
+  | TyCon.Obj, TyCon.Obj
+  | TyCon.Fun, TyCon.Fun
+  | TyCon.Tuple, TyCon.Tuple
+  | TyCon.List, TyCon.List ->
+    true
+
+  | TyCon.Ref l, TyCon.Ref r ->
+    l = r
+
+  | _ ->
+    false
+
 /// Placeholder. No type info in the parsing phase.
 let noTy = Ty.Error noLoc
 
@@ -1461,3 +1479,189 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 let exprToTy expr =
   let ty, _ = exprExtract expr
   ty
+
+
+// -----------------------------------------------
+// Print Formats
+// -----------------------------------------------
+
+let analyzeFormat (format: string) =
+  let rec go i =
+    if i >= format.Length then
+      tyUnit
+    else
+      if i + 1 < format.Length && format.[i] = '%' then
+        match format.[i + 1] with
+        | 's' ->
+          tyFun tyStr (go (i + 2))
+        | 'd' ->
+          tyFun tyInt (go (i + 2))
+        | 'c' ->
+          tyFun  tyChar (go (i + 2))
+        | _ ->
+          go (i + 2)
+      else
+        go (i + 1)
+  tyFun tyStr (go 0)
+
+// -----------------------------------------------
+// Type inference algorithm (HIR)
+// -----------------------------------------------
+
+/// Adds type-var/type binding.
+let typingBind (ctx: TyContext) tySerial ty loc =
+  let intInf = 2147483647
+
+  // FIXME: track identifier
+  let noIdent = "unknown"
+
+  // Don't bind itself.
+  match typingSubst ctx ty with
+  | Ty.Meta (s, _) when s = tySerial -> ctx
+  | _ ->
+
+  // Update depth of all related meta types to the minimum.
+  let tyDepths =
+    let tySerials = tySerial :: tyCollectFreeVars ty
+    let depth =
+      tySerials
+      |> listMap (fun tySerial -> ctx |> tyContextGetTyDepths |> mapFind tySerial)
+      |> listFold intMin intInf
+    tySerials |> listFold (fun tyDepths tySerial -> tyDepths |> mapAdd tySerial depth) (ctx |> tyContextGetTyDepths)
+
+  ctx
+  |> tyContextWithTys (ctx |> tyContextGetTys |> mapAdd tySerial (TyDef.Meta (noIdent, ty, loc)))
+  |> tyContextWithTyDepths tyDepths
+
+/// Substitutes occurrences of already-inferred type vars
+/// with their results.
+let typingSubst (ctx: TyContext) ty: Ty =
+  let substMeta tySerial =
+    match ctx |> tyContextGetTys |> mapTryFind tySerial with
+    | Some (TyDef.Meta (_, ty, _)) ->
+      Some ty
+    | _ ->
+      None
+
+  tySubst substMeta ty
+
+/// Solves type equation `lty = rty` as possible
+/// to add type-var/type bindings.
+let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
+  let lRootTy, rRootTy = lty, rty
+
+  let addLog kind lTy rTy logAcc ctx =
+    let lRootTy = typingSubst ctx lRootTy
+    let rRootTy = typingSubst ctx rRootTy
+    (Log.TyUnify (kind, lRootTy, rRootTy, lTy, rTy), loc) :: logAcc, ctx
+
+  let rec go lty rty (logAcc, ctx) =
+    let lSubstTy = typingSubst ctx lty
+    let rSubstTy = typingSubst ctx rty
+    match lSubstTy, rSubstTy with
+    | Ty.Meta (l, _), Ty.Meta (r, _) when l = r ->
+      logAcc, ctx
+    | Ty.Meta (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
+      let ctx = typingBind ctx lSerial rty loc
+      logAcc, ctx
+    | _, Ty.Meta _ ->
+      go rty lty (logAcc, ctx)
+    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when tyConEq lTyCon rTyCon ->
+      logAcc, ctx
+    | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
+      (logAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
+    | Ty.Error _, _
+    | _, Ty.Error _ ->
+      logAcc, ctx
+    | Ty.Meta _, _ ->
+      addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
+    | Ty.Con _, _ ->
+      addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
+
+  go lty rty (logAcc, ctx)
+
+let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
+  let theTrait = theTrait |>  traitMapTys (typingSubst ctx)
+
+  let expectScalar ty (logAcc, ctx) =
+    match ty with
+    | Ty.Error _
+    | Ty.Con (TyCon.Bool, [])
+    | Ty.Con (TyCon.Int, [])
+    | Ty.Con (TyCon.Char, [])
+    | Ty.Con (TyCon.Str, []) ->
+      logAcc, ctx
+
+    | _ ->
+      (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+
+  match theTrait with
+  | Trait.Add ty ->
+    match ty with
+    | Ty.Error _
+    | Ty.Con (TyCon.Str, []) ->
+      logAcc, ctx
+
+    | _ ->
+      // Coerce to int by default.
+      typingUnify logAcc ctx ty tyInt loc
+
+  | Trait.Eq ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+  | Trait.Cmp ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+  | Trait.Index (lTy, rTy, resultTy) ->
+    match lTy with
+    | Ty.Error _ ->
+      [], ctx
+
+    | Ty.Con (TyCon.Str, []) ->
+      let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
+      let logAcc, ctx = typingUnify logAcc ctx resultTy tyChar loc
+      logAcc, ctx
+
+    | _ ->
+      (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+
+  | Trait.ToInt ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+  | Trait.ToString ty ->
+    (logAcc, ctx) |> expectScalar ty
+
+// -----------------------------------------------
+// Logs
+// -----------------------------------------------
+
+let logToString loc log =
+  let loc = loc |> locToString
+
+  match log with
+  | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
+    sprintf "%s Couldn't unify '%A' and '%A' due to self recursion." loc lTy rTy
+
+  | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
+    sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
+
+  | Log.TyBoundError (Trait.Add ty) ->
+    sprintf "%s No support (+) for '%A' yet" loc ty
+
+  | Log.TyBoundError (Trait.Eq ty) ->
+    sprintf "%s No support equality for '%A' yet" loc ty
+
+  | Log.TyBoundError (Trait.Cmp ty) ->
+    sprintf "%s No support comparison for '%A' yet" loc ty
+
+  | Log.TyBoundError (Trait.Index (lTy, rTy, _)) ->
+    sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
+
+  | Log.TyBoundError (Trait.ToInt ty) ->
+    sprintf "%s Can't convert to int from '%A'" loc ty
+
+  | Log.TyBoundError (Trait.ToString ty) ->
+    sprintf "%s Can't convert to string from '%A'" loc ty
+
+  | Log.Error msg ->
+    sprintf "%s %s" loc msg
