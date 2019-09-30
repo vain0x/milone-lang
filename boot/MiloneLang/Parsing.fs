@@ -649,8 +649,11 @@ let parseFun baseLoc funLoc (tokens, errors) =
 
   AExpr.Fun (pats, body, funLoc), tokens, errors
 
-let parseParenBody baseLoc parenLoc (tokens, errors) =
-  let body, tokens, errors = parseSemi baseLoc parenLoc (tokens, errors)
+let parseParenBody baseLoc _parenLoc (tokens, errors) =
+  // NOTE: Parens should form a layout block but not for now.
+  //  If does, `(` in `xs |> List.map (fun x -> body)` unexpectedly requires
+  //  `body` to be deeper than it. This is one of flaws of the simplified layout rule.
+  let body, tokens, errors = parseExpr baseLoc (tokens, errors)
 
   match tokens with
   | (Token.ParenR, _) :: tokens ->
@@ -1015,6 +1018,7 @@ let rec parseStmts baseLoc (tokens, errors) =
 /// The `mainLoc` is a hint of the semi expression's location.
 /// `stmts = stmt ( ';' stmt )*`
 let parseSemi baseLoc mainLoc (tokens, errors) =
+  let baseLoc = nextLoc tokens |> locMax baseLoc
   let items, tokens, errors = parseStmts baseLoc (tokens, errors)
 
   match items with
