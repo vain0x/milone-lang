@@ -344,67 +344,35 @@ let assocFind eq key assoc =
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty cmp: AssocMap<_, _> =
-  [], cmp
+let mapEmpty _: AssocMap<_, _> =
+  Map.empty
 
-let mapAdd key value (assoc, cmp): AssocMap<_, _> =
-  (key, value) :: assoc, cmp
+let mapAdd key value map: AssocMap<_, _> =
+  Map.add key value map
 
-let mapRemove key (assoc, cmp): AssocMap<_, _> =
-  assoc |> listFilter (fun (k, _) -> cmp k key <> 0), cmp
+let mapRemove key map: AssocMap<_, _> =
+  Map.remove key map
 
-let mapTryFind key ((assoc, cmp): AssocMap<_, _>) =
-  let rec go assoc =
-    match assoc with
-    | [] ->
-      None
-
-    | (k, v) :: _
-      when cmp k key = 0 ->
-      Some v
-
-    | _ :: assoc ->
-      go assoc
-
-  go assoc
+let mapTryFind key (map: AssocMap<_, _>) =
+  Map.tryFind key map
 
 let mapFind key map =
-  match mapTryFind key map with
-  | Some value ->
-    value
-
-  | None ->
-    failwithf "mapFind: missing key (%A)" key
+  Map.find key map
 
 let mapContainsKey key map =
-  match mapTryFind key map with
-  | Some _ ->
-    true
-
-  | None ->
-    false
+  Map.containsKey key map
 
 let mapFold folder state (map: AssocMap<_, _>) =
-  let rec go state assoc =
-    match assoc with
-    | [] ->
-      state
-
-    | (k, v) :: assoc ->
-      go (folder state k v) assoc
-
-  let _, cmp = map
-  go state (mapToList map)
+  Map.fold folder state map
 
 let mapMap f map: AssocMap<_, _> =
-  let _, cmp = map
-  map |> mapToList |> listMap (fun (k, v) -> k, f k v), cmp
+  Map.map f map
 
-let mapToList ((assoc, cmp): AssocMap<_, _>) =
-  listUnique (fun (lk, _) (rk, _) -> cmp lk rk) assoc
+let mapToList (map: AssocMap<_, _>) =
+  Map.toList map
 
-let mapOfList cmp assoc: AssocMap<_, _> =
-  listRev assoc, cmp
+let mapOfList _ assoc: AssocMap<_, _> =
+  Map.ofList assoc
 
 // -----------------------------------------------
 // Int

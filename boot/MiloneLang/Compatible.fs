@@ -5,4 +5,4 @@
 [<AutoOpen>]
 module rec MiloneLang.Compatible
 
-type AssocMap<'K, 'V> = ('K * 'V) list * ('K -> 'K -> int)
+type AssocMap<'K, 'V when 'K : comparison> = Map<'K, 'V>
