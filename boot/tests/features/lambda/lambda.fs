@@ -1,3 +1,10 @@
+let layoutTest () =
+  let apply f x = f x
+  let a =
+    2 |> apply // callee can be deeper than arguments
+      (fun x -> x + 3)
+  assert (a = 5)
+
 let main _ =
   let twice f x = x |> f |> f
   let x =
@@ -9,4 +16,5 @@ let main _ =
 
   assert ((fun x y -> x / y + 0) 84 2 = 42)
 
+  layoutTest ()
   0

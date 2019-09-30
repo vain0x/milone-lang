@@ -63,16 +63,6 @@
 ///   must be on the same column as the first item
 ///   except a semicolon precedes it.
 ///
-/// - APP_LAYOUT:
-///
-///   Argument of functional applications must be strictly deeper than
-///   the first token of the callee.
-///
-///   ```fsharp
-///     f
-///      x  // Minimally indented (1-space)
-///   ```
-///
 /// Note that the implementation doesn't verify the rule completely.
 module rec MiloneLang.Parsing
 
@@ -393,12 +383,11 @@ let parsePatNav baseLoc (tokens, errors) =
   | _ ->
     pat, tokens, errors
 
-let parsePatCallArgs baseLoc calleeLoc (tokens, errors) =
-  // APP_LAYOUT rule
-  let argBaseLoc = locMax baseLoc calleeLoc |> locAddX 1
+let parsePatCallArgs baseLoc (tokens, errors) =
+  let innerBaseLoc = baseLoc |> locAddX 1
 
   let rec go acc (tokens, errors) =
-    if nextInside argBaseLoc tokens && leadsPat tokens then
+    if nextInside innerBaseLoc tokens && leadsPat tokens then
       let expr, tokens, errors = parsePatNav baseLoc (tokens, errors)
       go (expr :: acc) (tokens, errors)
     else
@@ -410,7 +399,7 @@ let parsePatCallArgs baseLoc calleeLoc (tokens, errors) =
 let parsePatCall baseLoc (tokens, errors) =
   let calleeLoc = nextLoc tokens
   let callee, tokens, errors = parsePatNav baseLoc (tokens, errors)
-  let args, tokens, errors = parsePatCallArgs baseLoc calleeLoc (tokens, errors)
+  let args, tokens, errors = parsePatCallArgs baseLoc (tokens, errors)
 
   match args with
   | [] ->
@@ -499,7 +488,7 @@ let parsePatLet baseLoc (tokens, errors) =
   match tokens with
   | (Token.Ident callee, calleeLoc) :: tokens
     when locInside baseLoc calleeLoc && leadsPat tokens ->
-    let args, tokens, errors = parsePatCallArgs baseLoc calleeLoc (tokens, errors)
+    let args, tokens, errors = parsePatCallArgs baseLoc (tokens, errors)
     let pat = APat.Fun (callee, args, calleeLoc)
 
     match tokens with
@@ -637,7 +626,7 @@ let parseMatch matchLoc (tokens, errors) =
 
 /// `fun-expr = 'fun' pat* '->' expr`
 let parseFun baseLoc funLoc (tokens, errors) =
-  let pats, tokens, errors = parsePatCallArgs baseLoc funLoc (tokens, errors)
+  let pats, tokens, errors = parsePatCallArgs baseLoc (tokens, errors)
 
   let body, tokens, errors =
     match tokens with
@@ -834,12 +823,12 @@ let parseSuffix baseLoc (tokens, errors) =
 /// `app = suffix ( suffix )*`
 let parseApp baseLoc (tokens, errors) =
   let calleeLoc = nextLoc tokens
-  let argBaseLoc = calleeLoc |> locAddX 1
+  let innerBaseLoc = baseLoc |> locAddX 1
 
   let callee, tokens, errors = parseSuffix baseLoc (tokens, errors)
 
   let rec go callee (tokens, errors) =
-    if nextInside argBaseLoc tokens && leadsArg tokens then
+    if nextInside innerBaseLoc tokens && leadsArg tokens then
       let arg, tokens, errors = parseSuffix baseLoc (tokens, errors)
       go (AExpr.Bin (Op.App, callee, arg, calleeLoc)) (tokens, errors)
     else
