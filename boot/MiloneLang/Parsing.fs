@@ -995,11 +995,11 @@ let rec parseStmts baseLoc (tokens, errors) =
     match tokens with
     | (Token.Semi, semiLoc) :: tokens
       when locInside alignLoc semiLoc ->
-      let expr, tokens, errors = parseStmt baseLoc (tokens, errors)
+      let expr, tokens, errors = parseStmt alignLoc (tokens, errors)
       go (expr :: acc) alignLoc (tokens, errors)
 
     | _ when locIsSameColumn alignLoc (nextLoc tokens) && leadsExpr tokens ->
-      let expr, tokens, errors = parseStmt baseLoc (tokens, errors)
+      let expr, tokens, errors = parseStmt alignLoc (tokens, errors)
       go (expr :: acc) alignLoc (tokens, errors)
 
     | _ ->
