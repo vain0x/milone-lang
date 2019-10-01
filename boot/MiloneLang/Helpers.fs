@@ -325,7 +325,13 @@ let listUnique cmp xs =
 // Assoc
 // -----------------------------------------------
 
-let assocFind eq key assoc =
+let assocAdd key value assoc =
+  (key, value) :: assoc
+
+let assocRemove eq key assoc =
+  assoc |> listFilter (fun (k, _) -> eq k key |> not)
+
+let assocTryFind eq key assoc =
   let rec go assoc =
     match assoc with
     | [] ->
@@ -340,33 +346,103 @@ let assocFind eq key assoc =
 
   go assoc
 
+let assocMap f assoc =
+  assoc |> listMap (fun (k, v) -> k, f k v)
+
 // -----------------------------------------------
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty cmp: AssocMap<_, _> =
-  [], cmp
+type Hash = int
 
-let mapAdd key value (assoc, cmp): AssocMap<_, _> =
-  (key, value) :: assoc, cmp
+let trieAdd (keyHash: Hash) key value trie =
+  let rec go trie =
+    match trie with
+    | [] ->
+      [keyHash, [key, value]]
 
-let mapRemove key (assoc, cmp): AssocMap<_, _> =
-  assoc |> listFilter (fun (k, _) -> cmp k key <> 0), cmp
+    | (h, assoc) :: trie
+      when h = keyHash ->
+      (keyHash, assocAdd key value assoc) :: trie
 
-let mapTryFind key ((assoc, cmp): AssocMap<_, _>) =
-  let rec go assoc =
-    match assoc with
+    | entry :: trie ->
+      entry :: go trie
+
+  go trie
+
+let trieRemove keyEq (keyHash: Hash) key trie =
+  let rec go trie =
+    match trie with
+    | [] ->
+      []
+
+    | (h, assoc) :: trie
+      when h = keyHash ->
+      (keyHash, assocRemove keyEq key assoc) :: trie
+
+    | entry :: trie ->
+      entry :: go trie
+
+  go trie
+
+let trieFind keyEq (keyHash: Hash) key trie =
+  let rec go trie =
+    match trie with
     | [] ->
       None
 
-    | (k, v) :: _
-      when cmp k key = 0 ->
-      Some v
+    | (h, assoc) :: _
+      when h = keyHash ->
+      assocTryFind keyEq key assoc
 
-    | _ :: assoc ->
-      go assoc
+    | _ :: trie ->
+      go trie
 
-  go assoc
+  go trie
+
+let trieMap f trie =
+  let rec go trie =
+    match trie with
+    | [] ->
+      []
+
+    | (hash, assoc) :: trie ->
+      (hash, assoc |> assocMap f) :: go trie
+
+  go trie
+
+let trieToKeys trie =
+  let rec go acc trie =
+    match trie with
+    | [] ->
+      acc
+
+    | (_, assoc) :: trie ->
+      let rec append acc ys =
+        match ys with
+        | [] ->
+          acc
+
+        | y :: ys ->
+          append (y :: acc) ys
+
+      go (assoc |> listMap fst |> append acc) trie
+
+  go [] trie
+
+let mapEmpty hash cmp: AssocMap<_, _> =
+  [], hash, cmp
+
+let mapAdd key value (trie, hash, cmp): AssocMap<_, _> =
+  let trie = trie |> trieAdd (hash key) key value
+  trie, hash, cmp
+
+let mapRemove key (trie, hash, cmp): AssocMap<_, _> =
+  let trie = trie |> trieRemove (fun l r -> cmp l r = 0) (hash key) key
+  trie, hash, cmp
+
+let mapTryFind key ((trie, hash, cmp): AssocMap<_, _>) =
+  trie |> trieFind (fun l r -> cmp l r = 0) (hash key) key
 
 let mapFind key map =
   match mapTryFind key map with
@@ -385,26 +461,41 @@ let mapContainsKey key map =
     false
 
 let mapFold folder state (map: AssocMap<_, _>) =
-  let rec go state assoc =
+  map |> mapToList |> listFold (fun state (k, v) -> folder state k v) state
+
+let mapMap f (trie, hash, cmp): AssocMap<_, _> =
+  let trie = trieMap f trie
+  trie, hash, cmp
+
+let mapToList (map: AssocMap<_, _>) =
+  let trie, _, cmp = map
+  trie |> trieToKeys |> listUnique cmp |> listMap (fun key -> key, mapFind key map)
+
+let mapOfList hash cmp assoc: AssocMap<_, _> =
+  let rec go trie assoc =
     match assoc with
     | [] ->
-      state
+      trie
 
-    | (k, v) :: assoc ->
-      go (folder state k v) assoc
+    | ((key, _) as kv) :: assoc ->
+      let keyHash = hash key
 
-  let _, cmp = map
-  go state (mapToList map)
+      let rec group acc rest assoc =
+        match assoc with
+        | [] ->
+          acc, rest
 
-let mapMap f map: AssocMap<_, _> =
-  let _, cmp = map
-  map |> mapToList |> listMap (fun (k, v) -> k, f k v), cmp
+        | ((key, _) as kv) :: assoc ->
+          if hash key = keyHash then
+            group (kv :: acc) rest assoc
+          else
+            group acc (kv :: rest) assoc
 
-let mapToList ((assoc, cmp): AssocMap<_, _>) =
-  listUnique (fun (lk, _) (rk, _) -> cmp lk rk) assoc
+      let acc, assoc = group [kv] [] assoc
+      go ((keyHash, acc) :: trie) assoc
 
-let mapOfList cmp assoc: AssocMap<_, _> =
-  listRev assoc, cmp
+  let trie = go [] assoc
+  trie, hash, cmp
 
 // -----------------------------------------------
 // Int
@@ -426,6 +517,9 @@ let intCmp (x: int) (y: int) =
     0
   else
     -1
+
+let intHash (x: int) =
+  x % 128
 
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
@@ -534,6 +628,17 @@ let strCmp (x: string) (y: string) =
     0
   else
     -1
+
+let strHash (x: string) =
+  let step = 1 + x.Length / 128
+
+  let rec go h (i: int) =
+    if i >= x.Length then
+      h
+    else
+      go (h * 31 + int x.[i]) (i + step)
+
+  go 17 0
 
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
@@ -832,7 +937,7 @@ let dumpTreeToString (node: DumpTree) =
 // -----------------------------------------------
 
 let nameCtxEmpty () =
-  NameCtx (mapEmpty intCmp, 0)
+  NameCtx (mapEmpty intHash intCmp, 0)
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
@@ -923,7 +1028,11 @@ let tyPrimFromIdent ident tys loc =
     tyList itemTy
 
   | "AssocMap", [keyTy; _] ->
-    tyTuple [tyList (tyTuple tys); tyFun keyTy (tyFun keyTy tyInt)]
+    let assocTy = tyList (tyTuple tys)
+    let trieTy = tyList (tyTuple [tyInt; assocTy])
+    let hashTy = tyFun keyTy tyInt
+    let cmpTy = tyFun keyTy (tyFun keyTy tyInt)
+    tyTuple [trieTy; hashTy; cmpTy]
 
   | _ ->
     Ty.Error loc

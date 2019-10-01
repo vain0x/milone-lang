@@ -42,7 +42,7 @@ let calculateVarUniqueNames vars =
       (serial, ident)
   ))
   |> Seq.toList
-  |> mapOfList intCmp
+  |> mapOfList intHash intCmp
 
 let calculateTyUniqueNames tys =
   let groups = tys |> mapToList |> Seq.groupBy (fun (_, tyDef) -> tyDefToIdent tyDef)
@@ -52,7 +52,7 @@ let calculateTyUniqueNames tys =
       tyRef serial [], ident
   ))
   |> Seq.toList
-  |> mapOfList compare
+  |> mapOfList hash compare
 
 let cirCtxFromMirCtx (mirCtx: Mir.MirCtx): CirCtx =
   let varNames = calculateVarUniqueNames mirCtx.Vars
@@ -60,7 +60,7 @@ let cirCtxFromMirCtx (mirCtx: Mir.MirCtx): CirCtx =
   {
     Vars = mirCtx.Vars
     VarUniqueNames = varNames
-    TyEnv = mapEmpty compare // FIXME: Write tyCmp
+    TyEnv = mapEmpty hash compare // FIXME: Write tyCmp
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []
