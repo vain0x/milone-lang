@@ -1611,7 +1611,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   // Don't bind itself.
   match typingSubst ctx ty with
   | Ty.Meta (s, _) when s = tySerial -> ctx
-  | _ ->
+  | ty ->
 
   // Update depth of all related meta types to the minimum.
   let tyDepths =
