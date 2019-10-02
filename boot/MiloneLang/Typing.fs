@@ -121,7 +121,7 @@ let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
     )
 
   // Replace meta types in the type and trait bounds.
-  let substMeta tySerial = bindings |> assocTryFind intEq tySerial
+  let substMeta tySerial = bindings |> assocTryFind intCmp tySerial
   let polyTy = polyTy |> tySubst substMeta
   let traits = traits |> listMap (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
   polyTy, traits, ctx
