@@ -118,43 +118,43 @@ let listUniqueTest () =
 
 [<Fact>]
 let mapBasicTest () =
-  let m = mapEmpty strHash strCmp |> mapAdd "a" 1 |> mapAdd "b" 2
+  let m = mapEmpty (strHash, strCmp) |> mapAdd "a" 1 |> mapAdd "b" 2
   m |> mapTryFind "a" |> is (Some 1)
   m |> mapTryFind "b" |> is (Some 2)
   m |> mapTryFind "c" |> is None
 
 [<Fact>]
 let mapAddTest () =
-  let m = mapEmpty strHash strCmp |> mapAdd "a" 1 |> mapAdd "a" 2
+  let m = mapEmpty (strHash, strCmp) |> mapAdd "a" 1 |> mapAdd "a" 2
   m |> mapTryFind "a" |> is (Some 2)
 
 [<Fact>]
 let mapRemoveTest () =
-  let m = mapEmpty strHash strCmp |> mapAdd "a" 1 |> mapAdd "a" 2 |> mapAdd "b" 3 |> mapRemove "a"
+  let m = mapEmpty (strHash, strCmp) |> mapAdd "a" 1 |> mapAdd "a" 2 |> mapAdd "b" 3 |> mapRemove "a"
   m |> mapTryFind "a" |> is None
   m |> mapTryFind "b" |> is (Some 3)
 
 [<Fact>]
 let mapFoldTest () =
-  let m = mapEmpty strHash strCmp |> mapAdd "a" 1 |> mapAdd "c" 3 |> mapAdd "a" 2
+  let m = mapEmpty (strHash, strCmp) |> mapAdd "a" 1 |> mapAdd "c" 3 |> mapAdd "a" 2
   m |> mapFold (fun s k v -> s + "," + (k + ":" + string v)) "" |> is ",a:2,c:3"
 
 [<Fact>]
 let mapMapTest () =
-  mapEmpty strHash strCmp |> mapAdd "a" 1 |> mapAdd "c" 3 |> mapAdd "a" 2
+  mapEmpty (strHash, strCmp) |> mapAdd "a" 1 |> mapAdd "c" 3 |> mapAdd "a" 2
   |> mapMap (fun k v -> k + ":" + string v)
   |> mapToList
   |> is ["a", "a:2"; "c", "c:3"]
 
 [<Fact>]
 let mapToListTest () =
-  mapEmpty strHash strCmp |> mapAdd "a" 1 |> mapAdd "c" 3 |> mapAdd "a" 2 |> mapAdd "b" 0
+  mapEmpty (strHash, strCmp) |> mapAdd "a" 1 |> mapAdd "c" 3 |> mapAdd "a" 2 |> mapAdd "b" 0
   |> mapToList
   |> is ["a", 2; "b", 0; "c", 3]
 
 [<Fact>]
 let mapOfListTest () =
-  mapOfList strHash strCmp ["a", 1; "c", 3; "a", 2; "b", 0]
+  mapOfList (strHash, strCmp) ["a", 1; "c", 3; "a", 2; "b", 0]
   |> mapToList
   |> is ["a", 2; "b", 0; "c", 3]
 

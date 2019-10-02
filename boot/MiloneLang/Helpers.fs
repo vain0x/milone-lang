@@ -466,7 +466,7 @@ let trieToKeys trie =
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty hash cmp: AssocMap<_, _> =
+let mapEmpty (hash, cmp): AssocMap<_, _> =
   [], hash, cmp
 
 let mapAdd key value (trie, hash, cmp): AssocMap<_, _> =
@@ -517,7 +517,7 @@ let mapToList (map: AssocMap<_, _>) =
   // Sort in reversed order and re-reverse it with `go`.
   trie |> trieToKeys |> listUnique (fun l r -> cmp r l) |> go []
 
-let mapOfList hash cmp assoc: AssocMap<_, _> =
+let mapOfList (hash, cmp) assoc: AssocMap<_, _> =
   /// Partition an assoc by hash of key to acc/rest.
   let rec group keyHash acc others assoc =
     match assoc with
@@ -983,7 +983,7 @@ let dumpTreeToString (node: DumpTree) =
 // -----------------------------------------------
 
 let nameCtxEmpty () =
-  NameCtx (mapEmpty intHash intCmp, 0)
+  NameCtx (mapEmpty (intHash, intCmp), 0)
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1

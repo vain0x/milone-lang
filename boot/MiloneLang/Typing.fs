@@ -546,7 +546,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
           let varDef = VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc)
           (varSerial, varDef), ctx
       )
-    ctx |> tyCtxWithVars (mapOfList intHash intCmp vars)
+    ctx |> tyCtxWithVars (mapOfList (intHash, intCmp) vars)
 
   let ctx = ctx |> tyCtxWithLetDepth 0
 

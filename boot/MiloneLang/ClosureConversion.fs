@@ -63,7 +63,7 @@ let ccCtxFromTyCtx (ftCtx: TyCtx): CcCtx =
     Vars = ftCtx |> tyCtxGetVars
     Tys = ftCtx |> tyCtxGetTys
 
-    Caps = mapEmpty intHash intCmp
+    Caps = mapEmpty (intHash, intCmp)
     Known = Set.empty
     Refs = Set.empty
     Locals = Set.empty
