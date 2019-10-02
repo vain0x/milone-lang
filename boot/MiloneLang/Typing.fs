@@ -17,7 +17,7 @@ let tyCtxAddErr (ctx: TyCtx) message loc =
   |> tyCtxWithLogs ((Log.Error message, loc) :: (ctx |> tyCtxGetLogs))
 
 let tyCtxToTyCtx (ctx: TyCtx): TyContext =
-  (
+  TyContext (
     ctx |> tyCtxGetSerial,
     ctx |> tyCtxGetTys,
     ctx |> tyCtxGetTyDepths
@@ -495,7 +495,7 @@ let tyCtxSubstExprTy ctx expr =
 
 let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
   let ctx =
-    (
+    TyCtx (
       scopeCtx |> scopeCtxGetSerial,
       scopeCtx |> scopeCtxGetVars,
       scopeCtx |> scopeCtxGetTys,

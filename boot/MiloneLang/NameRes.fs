@@ -17,7 +17,7 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
   let (NameCtx (nameMap, serial)) = nameCtx
   let (localSerial as serial) = serial + 1
 
-  (
+  ScopeCtx (
     serial,
     nameMap,
     mapEmpty (intHash, intCmp),

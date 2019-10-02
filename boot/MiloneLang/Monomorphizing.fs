@@ -90,7 +90,7 @@ type MonoCtx =
   }
 
 let monoCtxToTyCtx (monoCtx: MonoCtx): TyContext =
-  (
+  TyContext (
     monoCtx.Serial,
     monoCtx.Tys,
     monoCtx.TyDepths

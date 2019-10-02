@@ -236,15 +236,15 @@ let generateRecordDecl ident fields acc =
 
     | (_, ty) :: fields ->
       acc
-      |> cons (if i = 0 then "\n    " else "\n    * ")
+      |> cons (if i = 0 then "\n    of " else "\n      * ")
       |> cons ty
       |> go (i + 1) fields
 
   acc
   |> cons "\ntype " |> cons ident |> cons " ="
-  |> cons "\n  ("
+  |> cons "\n  | " |> cons ident
   |> go 0 fields
-  |> cons "\n  )\n"
+  |> cons "\n"
 
 let generateGetters ident fields acc =
   let rec genPats i j fields acc =
@@ -265,10 +265,9 @@ let generateGetters ident fields acc =
     | (fieldIdent, _) :: otherFields ->
       acc
       |> cons "\nlet " |> cons (toLowerCamel ident) |> cons "Get" |> cons fieldIdent
-      |> cons " (("
+      |> cons " (" |> cons ident |> cons " ("
       |> genPats 0 i fields
-      |> cons "): " |> cons ident
-      |> cons ") =\n  " |> cons (toLowerCamel fieldIdent) |> cons "\n"
+      |> cons ")) =\n  " |> cons (toLowerCamel fieldIdent) |> cons "\n"
       |> genLets (i + 1) otherFields
 
   acc |> genLets 0 fields
@@ -304,11 +303,11 @@ let generateSetters ident fields acc =
       |> cons "\nlet "
       |> cons (toLowerCamel ident) |> cons "With" |> cons fieldIdent
       |> cons " " |> cons (toLowerCamel fieldIdent)
-      |> cons " (("
+      |> cons " (" |> cons ident |> cons " ("
       |> genPats 0 i fields
-      |> cons "): " |> cons ident
-      |> cons "): " |> cons ident
-      |> cons " =\n  " |> genExprs 0 i fields |> cons "\n"
+      |> cons ")): " |> cons ident
+      |> cons " =\n  " |> cons ident
+      |> cons " (" |> genExprs 0 i fields |> cons ")\n"
       |> go (i + 1) otherFields
 
   acc |> go 0 fields
