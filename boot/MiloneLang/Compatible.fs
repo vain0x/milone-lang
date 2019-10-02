@@ -5,4 +5,4 @@
 [<AutoOpen>]
 module rec MiloneLang.Compatible
 
-type AssocMap<'K, 'V> = ('K * 'V) list * ('K -> 'K -> int)
+type AssocMap<'K, 'V> = (int * ('K * 'V) list) list * ('K -> int) * ('K -> 'K -> int)

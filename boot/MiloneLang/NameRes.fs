@@ -20,10 +20,10 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
   (
     serial,
     nameMap,
-    mapEmpty intCmp,
-    mapEmpty intCmp,
-    mapEmpty intCmp,
-    mapEmpty intCmp,
+    mapEmpty (intHash, intCmp),
+    mapEmpty (intHash, intCmp),
+    mapEmpty (intHash, intCmp),
+    mapEmpty (intHash, intCmp),
     localSerial,
     [],
     0

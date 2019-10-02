@@ -163,7 +163,7 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
     | _ ->
       varSerial, varDef
 
-  let vars = ctx.Vars |> mapToList |> listMap forceGeneralize |> mapOfList intCmp
+  let vars = ctx.Vars |> mapToList |> listMap forceGeneralize |> mapOfList (intHash, intCmp)
   { ctx with Vars = vars }
 
 let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
@@ -332,8 +332,8 @@ let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
       Tys = tyCtx |> tyCtxGetTys
       TyDepths = tyCtx |> tyCtxGetTyDepths
 
-      GenericFunUseSiteTys = mapEmpty intCmp
-      GenericFunMonoSerials = mapEmpty compare // FIXME: Write intTyCmp
+      GenericFunUseSiteTys = mapEmpty (intHash, intCmp)
+      GenericFunMonoSerials = mapEmpty (hash, compare) // FIXME: Write intTyCmp
 
       Mode = Mode.Monify
       SomethingHappened = true
