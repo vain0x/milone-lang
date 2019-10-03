@@ -682,7 +682,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
   let bodyCtx = mirCtxNewBlock ctx
   let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
   let ctx = mirCtxRollBack ctx bodyCtx
-  let procStmt = MStmt.Proc ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body; Main = isMainFun }, letLoc)
+  let procStmt = MStmt.Proc (calleeSerial, isMainFun, args, body, resultTy, letLoc)
   let ctx = mirCtxAddStmt ctx procStmt
 
   let next, ctx = mirifyExpr ctx next
@@ -734,8 +734,8 @@ let mirifyExprs ctx exprs =
 let collectDecls (stmts: MStmt list) =
   let rec go decls stmts =
     match stmts with
-    | (MStmt.Proc (procDecl, _) as decl) :: stmts ->
-      let decls = go decls procDecl.Body
+    | (MStmt.Proc (_, _, _, body, _, _) as decl) :: stmts ->
+      let decls = go decls body
       let decls = decl :: decls
       let decls = go decls stmts
       decls

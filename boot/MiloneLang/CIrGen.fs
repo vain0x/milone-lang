@@ -784,11 +784,11 @@ let genDecls (ctx: CirCtx) decls =
   | [] ->
     ctx
 
-  | MStmt.Proc (procDecl, _) :: decls ->
+  | MStmt.Proc (callee, isMainFun, args, body, resultTy, _) :: decls ->
     let ident, args =
-      if procDecl.Main
+      if isMainFun
       then "main", []
-      else cirCtxUniqueName ctx procDecl.Callee, procDecl.Args
+      else cirCtxUniqueName ctx callee, args
     let rec go acc ctx args =
       match args with
       | [] ->
@@ -798,8 +798,8 @@ let genDecls (ctx: CirCtx) decls =
         let cty, ctx = cirGetCTy ctx ty
         go ((ident, cty) :: acc) ctx args
     let args, ctx = go [] ctx args
-    let body, ctx = genBlock ctx procDecl.Body
-    let resultTy, ctx = cirGetCTy ctx procDecl.ResultTy
+    let body, ctx = genBlock ctx body
+    let resultTy, ctx = cirGetCTy ctx resultTy
     let funDecl = CDecl.Fun (ident, args, resultTy, body)
     let ctx = cirCtxAddDecl ctx funDecl
     genDecls ctx decls

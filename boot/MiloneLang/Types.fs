@@ -626,17 +626,6 @@ type MOp =
   /// Get a char.
   | StrIndex
 
-/// Procedure declaration in middle IR.
-[<RequireQualifiedAccess>]
-type MProcDecl =
-  {
-    Callee: FunSerial
-    Args: (VarSerial * Ty * Loc) list
-    ResultTy: Ty
-    Body: MStmt list
-    Main: bool
-  }
-
 /// Expression in middle IR.
 [<RequireQualifiedAccess>]
 type MExpr =
@@ -710,7 +699,7 @@ type MStmt =
   | Exit
     of MExpr * Loc
   | Proc
-    of MProcDecl * Loc
+    of FunSerial * isMain: bool * args:(VarSerial * Ty * Loc) list * body:MStmt list * resultTy:Ty * Loc
 
 // -----------------------------------------------
 // CIR types
