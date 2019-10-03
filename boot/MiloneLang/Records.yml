@@ -48,3 +48,14 @@ TyCtx:
   LetDepth: LetDepth
   TraitBounds: (Trait * Loc) list
   Logs: (Log * Loc) list
+
+CcCtx:
+  Serial: Serial
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+
+  # Known functions and their dependencies.
+  Caps: AssocMap<FunSerial, (VarSerial * Ty * Loc) list>
+  Known: AssocSet<FunSerial>
+  Refs: AssocSet<VarSerial>
+  Locals: AssocSet<VarSerial>
