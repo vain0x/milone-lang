@@ -9,6 +9,8 @@ open MiloneLang.AstToHir
 open MiloneLang.Bundling
 open MiloneLang.NameRes
 open MiloneLang.Typing
+open MiloneLang.MainHoist
+open MiloneLang.ClosureConversion
 
 let litToString lit =
   match lit with
@@ -520,19 +522,37 @@ let doSelf (fileReadAllText: string -> string) =
   // doFile "MiloneLang/AstToHir.fs"
 
   let readModuleFile moduleName =
+    printfn "Load %s" moduleName
     fileReadAllText ("tests/examples/MiloneLang/" + moduleName + ".fs")
 
   let projectName = "MiloneLang"
   let nameCtx = nameCtxEmpty ()
 
   let expr, nameCtx, errorListList = parseProjectModules readModuleFile projectName nameCtx
-  let expr, scopeCtx = nameRes (expr, nameCtx)
-  let expr, tyCtx = infer (expr, scopeCtx, errorListList)
+
+  let tyCtxHasError tyCtx =
+    tyCtx |> tyCtxGetLogs |> listIsEmpty |> not
+
+  let logs =
+    printfn "Name resolution"
+    let expr, scopeCtx = nameRes (expr, nameCtx)
+
+    printfn "Type inference"
+    let expr, tyCtx = infer (expr, scopeCtx, errorListList)
+    if tyCtx |> tyCtxHasError then
+      tyCtx |> tyCtxGetLogs
+    else
+      printfn "Hoist main"
+      let expr, tyCtx = hoistMain (expr, tyCtx)
+
+      printfn "Closure conversion"
+      let expr, tyCtx = declosure (expr, tyCtx)
+      tyCtx |> tyCtxGetLogs
 
   // printfn "HIR:"
   // printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)
 
-  tyCtx |> tyCtxGetLogs |> listIter (fun (log, loc) ->
+  logs |> listIter (fun (log, loc) ->
     printfn "ERROR %s" (log |> logToString loc)
   )
   0

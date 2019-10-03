@@ -10,3 +10,7 @@ cp MiloneLang/AstToHir.fs tests/examples/MiloneLang/AstToHir.fs
 cp MiloneLang/Bundling.fs tests/examples/MiloneLang/Bundling.fs
 cp MiloneLang/NameRes.fs tests/examples/MiloneLang/NameRes.fs
 cp MiloneLang/Typing.fs tests/examples/MiloneLang/Typing.fs
+cp MiloneLang/MainHoist.fs tests/examples/MiloneLang/MainHoist.fs
+cp MiloneLang/ClosureConversion.fs tests/examples/MiloneLang/ClosureConversion.fs
+
+(cd tests/examples/MiloneLang; dotnet build)

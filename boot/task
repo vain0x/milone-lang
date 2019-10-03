@@ -37,7 +37,7 @@ compile() {
     fi
 
     >&2 echo '+ gcc '$(now)
-    gcc -std=c11 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -O1 $c -o $app
+    gcc -std=c11 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -O3 $c -o $app
     if [[ $? != 0 ]]
     then
         echo 'gcc compile error.'

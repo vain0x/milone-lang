@@ -1,1 +1,19 @@
+Load MiloneLang
+Load Polyfills
+Load Lexing
+Load Types
+Load Helpers
+Load Records
+Load Self
+Load Parsing
+Load AstToHir
+Load Bundling
+Load NameRes
+Load Typing
+Load MainHoist
+Load ClosureConversion
+Name resolution
+Type inference
+Hoist main
+Closure conversion
 $? = 0
