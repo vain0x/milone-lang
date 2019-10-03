@@ -64,3 +64,30 @@ EtaCtx:
   Serial: Serial
   Vars: AssocMap<VarSerial, VarDef>
   Tys: AssocMap<TySerial, TyDef>
+
+MonoCtx:
+  Serial: Serial
+  Logs: (Log * Loc) list
+
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+  TyDepths: AssocMap<TySerial, LetDepth>
+
+  # Map from
+  # - generic function serial
+  #
+  # to:
+  # - found use-site types
+  GenericFunUseSiteTys: AssocMap<FunSerial, Ty list>
+
+  # Map from pairs:
+  # - generic function's serial
+  # - monomorphic type
+  #
+  # to:
+  # - monomorphized function's serial
+  GenericFunMonoSerials: AssocMap<FunSerial * Ty, FunSerial>
+
+  Mode: MonoMode
+  SomethingHappened: bool
+  InfiniteLoopDetector: int

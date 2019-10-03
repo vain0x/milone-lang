@@ -226,3 +226,76 @@ let etaCtxWithVars vars (EtaCtx (serial, _, tys)): EtaCtx =
 
 let etaCtxWithTys tys (EtaCtx (serial, vars, _)): EtaCtx =
   EtaCtx (serial, vars, tys)
+
+type MonoCtx =
+  | MonoCtx
+    of Serial
+      * (Log * Loc) list
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<TySerial, LetDepth>
+      * AssocMap<FunSerial, Ty list>
+      * AssocMap<FunSerial * Ty, FunSerial>
+      * MonoMode
+      * bool
+      * int
+
+let monoCtxGetSerial (MonoCtx (serial, _, _, _, _, _, _, _, _, _)) =
+  serial
+
+let monoCtxGetLogs (MonoCtx (_, logs, _, _, _, _, _, _, _, _)) =
+  logs
+
+let monoCtxGetVars (MonoCtx (_, _, vars, _, _, _, _, _, _, _)) =
+  vars
+
+let monoCtxGetTys (MonoCtx (_, _, _, tys, _, _, _, _, _, _)) =
+  tys
+
+let monoCtxGetTyDepths (MonoCtx (_, _, _, _, tyDepths, _, _, _, _, _)) =
+  tyDepths
+
+let monoCtxGetGenericFunUseSiteTys (MonoCtx (_, _, _, _, _, genericFunUseSiteTys, _, _, _, _)) =
+  genericFunUseSiteTys
+
+let monoCtxGetGenericFunMonoSerials (MonoCtx (_, _, _, _, _, _, genericFunMonoSerials, _, _, _)) =
+  genericFunMonoSerials
+
+let monoCtxGetMode (MonoCtx (_, _, _, _, _, _, _, mode, _, _)) =
+  mode
+
+let monoCtxGetSomethingHappened (MonoCtx (_, _, _, _, _, _, _, _, somethingHappened, _)) =
+  somethingHappened
+
+let monoCtxGetInfiniteLoopDetector (MonoCtx (_, _, _, _, _, _, _, _, _, infiniteLoopDetector)) =
+  infiniteLoopDetector
+
+let monoCtxWithSerial serial (MonoCtx (_, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithLogs logs (MonoCtx (serial, _, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithVars vars (MonoCtx (serial, logs, _, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithTys tys (MonoCtx (serial, logs, vars, _, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithTyDepths tyDepths (MonoCtx (serial, logs, vars, tys, _, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithGenericFunUseSiteTys genericFunUseSiteTys (MonoCtx (serial, logs, vars, tys, tyDepths, _, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithGenericFunMonoSerials genericFunMonoSerials (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, _, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithMode mode (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, _, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithSomethingHappened somethingHappened (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, _, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithInfiniteLoopDetector infiniteLoopDetector (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, _)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)

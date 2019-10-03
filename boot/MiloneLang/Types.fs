@@ -565,6 +565,11 @@ type HExpr =
   | Error
     of string * Loc
 
+[<RequireQualifiedAccess>]
+type MonoMode =
+  | Monify
+  | RemoveGenerics
+
 // -----------------------------------------------
 // MIR types
 // -----------------------------------------------
