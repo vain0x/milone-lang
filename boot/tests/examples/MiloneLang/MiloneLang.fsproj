@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Compatible.fs" />
+    <Compile Include="Types.fs" />
+    <Compile Include="Records.fs" />
+    <Compile Include="Helpers.fs" />
+    <Compile Include="Lexing.fs" />
+    <Compile Include="Parsing.fs" />
+    <Compile Include="AstToHir.fs" />
+    <Compile Include="Bundling.fs" />
+    <Compile Include="NameRes.fs" />
+    <Compile Include="Typing.fs" />
+    <!-- <Compile Include="Hoist.fs" /> -->
+    <!-- <Compile Include="MainHoist.fs" /> -->
+    <!-- <Compile Include="ClosureConversion.fs" /> -->
+    <!-- <Compile Include="EtaExpansion.fs" /> -->
+    <!-- <Compile Include="Monomorphizing.fs" /> -->
+    <!-- <Compile Include="Mir.fs" /> -->
+    <!-- <Compile Include="CIrGen.fs" /> -->
+    <!-- <Compile Include="CPrinting.fs" /> -->
+    <Compile Include="Self.fs" />
+    <Compile Include="MiloneLang.fs" />
+  </ItemGroup>
+</Project>

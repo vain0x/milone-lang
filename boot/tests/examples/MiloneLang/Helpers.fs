@@ -325,35 +325,25 @@ let listUnique cmp xs =
 // Assoc
 // -----------------------------------------------
 
-let assocFind eq key assoc =
-  let rec go assoc =
+let assocAdd key value assoc =
+  (key, value) :: assoc
+
+let assocRemove cmp key assoc =
+  let rec go acc assoc =
     match assoc with
     | [] ->
-      None
+      listRev acc
 
-    | (firstKey, firstValue) :: _
-      when eq key firstKey ->
-      Some firstValue
+    | (k, _) :: assoc
+      when cmp k key = 0 ->
+      go acc assoc
 
-    | _ :: assoc ->
-      go assoc
+    | kv :: assoc ->
+      go (kv :: acc) assoc
 
-  go assoc
+  go [] assoc
 
-// -----------------------------------------------
-// AssocMap
-// -----------------------------------------------
-
-let mapEmpty cmp: AssocMap<_, _> =
-  [], cmp
-
-let mapAdd key value (assoc, cmp): AssocMap<_, _> =
-  (key, value) :: assoc, cmp
-
-let mapRemove key (assoc, cmp): AssocMap<_, _> =
-  assoc |> listFilter (fun (k, _) -> cmp k key <> 0), cmp
-
-let mapTryFind key ((assoc, cmp): AssocMap<_, _>) =
+let assocTryFind cmp key assoc =
   let rec go assoc =
     match assoc with
     | [] ->
@@ -367,6 +357,128 @@ let mapTryFind key ((assoc, cmp): AssocMap<_, _>) =
       go assoc
 
   go assoc
+
+let assocFold folder state assoc =
+  let rec go state assoc =
+    match assoc with
+    | [] ->
+      state
+
+    | (k, v) :: assoc ->
+      go (folder state k v) assoc
+
+  go state assoc
+
+let assocMap f assoc =
+  let rec go acc assoc =
+    match assoc with
+    | [] ->
+      listRev acc
+
+    | (k, v) :: assoc ->
+      go ((k, f k v) :: acc) assoc
+
+  go [] assoc
+
+let assocToKeyAcc acc assoc =
+  let rec go acc assoc =
+    match assoc with
+    | [] ->
+      acc
+
+    | (k, _) :: assoc ->
+      go (k :: acc) assoc
+
+  go acc assoc
+
+// -----------------------------------------------
+// HashTrie
+// -----------------------------------------------
+
+let trieAdd (keyHash: int) key value trie =
+  let rec go trie =
+    match trie with
+    | [] ->
+      [keyHash, [key, value]]
+
+    | (h, assoc) :: trie
+      when h = keyHash ->
+      (keyHash, assocAdd key value assoc) :: trie
+
+    | kv :: trie ->
+      kv :: go trie
+
+  go trie
+
+let trieRemove cmp (keyHash: int) key trie =
+  let rec go trie =
+    match trie with
+    | [] ->
+      []
+
+    | (h, assoc) :: trie
+      when h = keyHash ->
+      (keyHash, assocRemove cmp key assoc) :: trie
+
+    | kv :: trie ->
+      kv :: go trie
+
+  go trie
+
+let trieTryFind cmp (keyHash: int) key trie =
+  let rec go trie =
+    match trie with
+    | [] ->
+      None
+
+    | (h, assoc) :: _
+      when h = keyHash ->
+      assocTryFind cmp key assoc
+
+    | _ :: trie ->
+      go trie
+
+  go trie
+
+let trieMap f trie =
+  let rec go trie =
+    match trie with
+    | [] ->
+      []
+
+    | (h, assoc) :: trie ->
+      (h, assocMap f assoc) :: go trie
+
+  go trie
+
+let trieToKeys trie =
+  let rec go acc trie =
+    match trie with
+    | [] ->
+      acc
+
+    | (_, assoc) :: trie ->
+      go (assocToKeyAcc acc assoc) trie
+
+  go [] trie
+
+// -----------------------------------------------
+// AssocMap
+// -----------------------------------------------
+
+let mapEmpty (hash, cmp): AssocMap<_, _> =
+  [], hash, cmp
+
+let mapAdd key value (trie, hash, cmp): AssocMap<_, _> =
+  let trie = trie |> trieAdd (hash key) key value
+  trie, hash, cmp
+
+let mapRemove key (trie, hash, cmp): AssocMap<_, _> =
+  let trie = trie |> trieRemove cmp (hash key) key
+  trie, hash, cmp
+
+let mapTryFind key ((trie, hash, cmp): AssocMap<_, _>) =
+  trie |> trieTryFind cmp (hash key) key
 
 let mapFind key map =
   match mapTryFind key map with
@@ -385,26 +497,124 @@ let mapContainsKey key map =
     false
 
 let mapFold folder state (map: AssocMap<_, _>) =
-  let rec go state assoc =
+  map |> mapToList |> assocFold folder state
+
+let mapMap f (trie, hash, cmp): AssocMap<_, _> =
+  let trie = trieMap f trie
+  trie, hash, cmp
+
+let mapToKeys ((trie, _, cmp): AssocMap<_, _>) =
+  trie |> trieToKeys |> listUnique cmp
+
+let mapToList (map: AssocMap<_, _>) =
+  let trie, _, cmp = map
+
+  let rec go acc keys =
+    match keys with
+    | [] ->
+      acc
+
+    | key :: keys ->
+      go ((key, mapFind key map) :: acc) keys
+
+  // Sort in reversed order and re-reverse it with `go`.
+  trie |> trieToKeys |> listUnique (fun l r -> cmp r l) |> go []
+
+let mapOfKeys (hash, cmp) value keys: AssocMap<_, _> =
+  /// Partition a key list by hash to acc/rest.
+  let rec group keyHash acc others keys =
+    match keys with
+    | [] ->
+      acc, others
+
+    | key :: keys ->
+      if hash key = keyHash then
+        group keyHash ((key, value) :: acc) others keys
+      else
+        group keyHash acc (key :: others) keys
+
+  let rec go trie keys =
+    match keys with
+    | [] ->
+      trie
+
+    | key :: keys ->
+      let h = hash key
+      let acc, keys = group h [(key, value)] [] keys
+      go ((h, acc) :: trie) keys
+
+  let trie = go [] keys
+  trie, hash, cmp
+
+let mapOfList (hash, cmp) assoc: AssocMap<_, _> =
+  /// Partition an assoc by hash of key to acc/rest.
+  let rec group keyHash acc others assoc =
     match assoc with
     | [] ->
-      state
+      acc, others
 
-    | (k, v) :: assoc ->
-      go (folder state k v) assoc
+    | ((key, _) as kv) :: assoc ->
+      if hash key = keyHash then
+        group keyHash (kv :: acc) others assoc
+      else
+        group keyHash acc (kv :: others) assoc
 
-  let _, cmp = map
-  go state (mapToList map)
+  let rec go trie assoc =
+    match assoc with
+    | [] ->
+      trie
 
-let mapMap f map: AssocMap<_, _> =
-  let _, cmp = map
-  map |> mapToList |> listMap (fun (k, v) -> k, f k v), cmp
+    | ((key, _) as kv) :: assoc ->
+      let h = hash key
+      let acc, assoc = group h [kv] [] assoc
+      go ((h, acc) :: trie) assoc
 
-let mapToList ((assoc, cmp): AssocMap<_, _>) =
-  listUnique (fun (lk, _) (rk, _) -> cmp lk rk) assoc
+  let trie = go [] assoc
+  trie, hash, cmp
 
-let mapOfList cmp assoc: AssocMap<_, _> =
-  listRev assoc, cmp
+// -----------------------------------------------
+// AssocSet
+// -----------------------------------------------
+
+let setEmpty funs: AssocSet<_> =
+  mapEmpty funs
+
+let setContains key (set: AssocSet<_>) =
+  set |> mapContainsKey key
+
+let setToList (set: AssocSet<_>) =
+  set |> mapToKeys
+
+let setOfList (hash, cmp) xs: AssocSet<_> =
+  mapOfKeys (hash, cmp) () xs
+
+let setAdd key set: AssocSet<_> =
+  mapAdd key () set
+
+let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> =
+  let rec filter acc assoc =
+    match assoc with
+    | [] ->
+      listRev acc
+
+    | (key, ()) :: assoc
+      when setContains key second ->
+      filter acc assoc
+
+    | kv :: assoc ->
+      filter (kv :: acc) assoc
+
+  let rec go trie =
+    match trie with
+    | [] ->
+      []
+
+    | (h, assoc) :: trie ->
+      let assoc = filter [] assoc
+      (h, assoc) :: go trie
+
+  let trie = go trie
+  trie, hash, cmp
 
 // -----------------------------------------------
 // Int
@@ -426,6 +636,9 @@ let intCmp (x: int) (y: int) =
     0
   else
     -1
+
+let intHash (x: int) =
+  x % 512
 
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
@@ -469,6 +682,9 @@ let intFromHex (l: int) (r: int) (s: string) =
       go (acc * 16 + d) (i + 1)
 
   go 0 l
+
+let hashCombine (first: int) (second: int) =
+  first * 3 + second
 
 // -----------------------------------------------
 // Char
@@ -534,6 +750,17 @@ let strCmp (x: string) (y: string) =
     0
   else
     -1
+
+let strHash (x: string) =
+  let step = 1 + x.Length / 128
+
+  let rec go h (i: int) =
+    if i >= x.Length then
+      h
+    else
+      go (h * 31 + int x.[i]) (i + step)
+
+  go 17 0
 
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
@@ -633,6 +860,12 @@ let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
 
 let locToString ((y, x): Loc) =
   string (y + 1) + ":" + string (x + 1)
+
+let locCmp (firstY, firstX) (secondY, secondX) =
+  if firstY <> secondY then
+    intCmp firstY secondY
+  else
+    intCmp firstX secondX
 
 // -----------------------------------------------
 // Token
@@ -792,7 +1025,7 @@ let dumpTreeToString (node: DumpTree) =
 
       | child :: children ->
         acc
-        |> cons eol |> cons "- " |> go (eol + "  ") child
+        |> cons eol |> cons "- " |> go (eol + " ") child
         |> goChildren eol children
 
     let goNext eol next acc =
@@ -832,7 +1065,7 @@ let dumpTreeToString (node: DumpTree) =
 // -----------------------------------------------
 
 let nameCtxEmpty () =
-  NameCtx (mapEmpty intCmp, 0)
+  NameCtx (mapEmpty (intHash, intCmp), 0)
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
@@ -841,6 +1074,46 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
 
 let nameCtxFind serial (NameCtx (map, _)) =
   map |> mapFind serial
+
+// -----------------------------------------------
+// TyCon
+// -----------------------------------------------
+
+let tyConToInt tyCon =
+  match tyCon with
+  | TyCon.Bool ->
+    1
+
+  | TyCon.Int ->
+    2
+
+  | TyCon.Char ->
+    3
+
+  | TyCon.Str ->
+    4
+
+  | TyCon.Obj ->
+    5
+
+  | TyCon.Fun ->
+    6
+
+  | TyCon.Tuple ->
+    7
+
+  | TyCon.List ->
+    8
+
+  | TyCon.Ref tySerial ->
+    assert (tySerial >= 0)
+    9 + tySerial
+
+let tyConHash tyCon =
+  tyCon |> tyConToInt |> intHash
+
+let tyConCmp first second =
+  intCmp (tyConToInt first) (tyConToInt second)
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -916,6 +1189,80 @@ let tyUnit =
 let tyRef serial tys =
   Ty.Con (TyCon.Ref serial, tys)
 
+let tyAssocMap keyTy valueTy =
+  let assocTy = tyList (tyTuple [keyTy; valueTy])
+  let trieTy = tyList (tyTuple [tyInt; assocTy])
+  let hashTy = tyFun keyTy tyInt
+  let cmpTy = tyFun keyTy (tyFun keyTy tyInt)
+  tyTuple [trieTy; hashTy; cmpTy]
+
+let tyToHash ty =
+  match ty with
+  | Ty.Error (y, x) ->
+    intHash (1 + y + x)
+
+  | Ty.Meta (tySerial, _) ->
+    intHash (2 + tySerial)
+
+  | Ty.Con (tyCon, tys) ->
+    let rec go h tys =
+      match tys with
+      | [] ->
+        h
+
+      | ty :: tys ->
+        go (hashCombine h (tyToHash ty)) tys
+
+    intHash (3 + go (tyConHash tyCon) tys)
+
+let tyCmp first second =
+  match first, second with
+  | Ty.Error first, Ty.Error second ->
+    locCmp first second
+
+  | Ty.Error _, _ ->
+    -1
+
+  | _, Ty.Error _ ->
+    1
+
+  | Ty.Meta (firstSerial, firstLoc), Ty.Meta (secondSerial, secondLoc) ->
+    if firstSerial <> secondSerial then
+      intCmp firstSerial secondSerial
+    else
+      locCmp firstLoc secondLoc
+
+  | Ty.Meta _, _ ->
+    -1
+
+  | _, Ty.Meta _ ->
+    1
+
+  | Ty.Con (firstTyCon, firstTys), Ty.Con (secondTyCon, secondTys) ->
+    let c = tyConCmp firstTyCon secondTyCon
+    if c <> 0 then
+      c
+    else
+      let rec go firstTys secondTys =
+        match firstTys, secondTys with
+        | [], [] ->
+          0
+
+        | [], _ ->
+          -1
+
+        | _, [] ->
+          1
+
+        | firstTy :: firstTys, secondTy :: secondTys ->
+          let c = tyCmp firstTy secondTy
+          if c <> 0 then
+            c
+          else
+            go firstTys secondTys
+
+      go firstTys secondTys
+
 let tyPrimFromIdent ident tys loc =
   match ident, tys with
   | "unit", [] ->
@@ -943,8 +1290,11 @@ let tyPrimFromIdent ident tys loc =
   | "list", [itemTy] ->
     tyList itemTy
 
-  | "AssocMap", [keyTy; _] ->
-    tyTuple [tyList (tyTuple tys); tyFun keyTy (tyFun keyTy tyInt)]
+  | "AssocMap", [keyTy; valueTy] ->
+    tyAssocMap keyTy valueTy
+
+  | "AssocSet", [itemTy] ->
+    tyAssocMap itemTy tyUnit
 
   | _ ->
     Ty.Error loc
@@ -1335,7 +1685,8 @@ let patNormalize pat =
     | HPat.OptionSome _ ->
       [pat]
     | HPat.Nav (pat, ident, ty, loc) ->
-      go pat |> listMap (fun pat -> HPat.Nav (pat, ident, ty, loc))
+      go pat |> listMap
+        (fun pat -> HPat.Nav (pat, ident, ty, loc))
     | HPat.Call (callee, [arg], ty, loc) ->
       go callee |> listCollect (fun callee ->
         go arg |> listMap (fun arg ->
@@ -1356,7 +1707,8 @@ let patNormalize pat =
             itemPat |> listMap (fun itemPat ->
               itemPat :: itemPats
             ))
-      gogo itemPats |> listMap (fun itemPats -> HPat.Tuple (itemPats, ty, loc))
+      gogo itemPats |> listMap
+        (fun itemPats -> HPat.Tuple (itemPats, ty, loc))
     | HPat.As (innerPat, _, _) ->
       match go innerPat with
       | [_] ->
@@ -1364,7 +1716,8 @@ let patNormalize pat =
       | _ ->
         failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
     | HPat.Anno (pat, annoTy, loc) ->
-      go pat |> listMap (fun pat -> HPat.Anno (pat, annoTy, loc))
+      go pat |> listMap
+        (fun pat -> HPat.Anno (pat, annoTy, loc))
     | HPat.Or (first, second, _, _) ->
       listAppend (go first) (go second)
     | HPat.Call _ ->
@@ -1480,6 +1833,117 @@ let exprToTy expr =
   let ty, _ = exprExtract expr
   ty
 
+// -----------------------------------------------
+// Binary Operators (MIR)
+// -----------------------------------------------
+
+let opIsComparison op =
+  match op with
+  | MOp.Eq
+  | MOp.Lt ->
+    true
+  | _ ->
+    false
+
+// -----------------------------------------------
+// Expressions (MIR)
+// -----------------------------------------------
+
+let mxNot expr loc =
+  MExpr.Uni (MUniOp.Not, expr, tyBool, loc)
+
+let mexprExtract expr =
+  match expr with
+  | MExpr.Default (ty, loc) -> ty, loc
+  | MExpr.Lit (lit, loc) -> litToTy lit, loc
+  | MExpr.Ref (_, ty, loc) -> ty, loc
+  | MExpr.Proc (_, ty, loc) -> ty, loc
+  | MExpr.Variant (_, _, ty, loc) -> ty, loc
+  | MExpr.Uni (_, _, ty, loc) -> ty, loc
+  | MExpr.Bin (_, _, _, ty, loc) -> ty, loc
+
+let mexprToTy expr =
+  let ty, _ = mexprExtract expr
+  ty
+
+// -----------------------------------------------
+// Statements (MIR)
+// -----------------------------------------------
+
+let msGotoUnless pred label loc =
+  let notPred = mxNot pred loc
+  MStmt.GotoIf (notPred, label, loc)
+
+// -----------------------------------------------
+// Expression sugaring (MIR)
+// -----------------------------------------------
+
+let rec mxSugar expr =
+  let mxSugarUni op l ty loc =
+    match l with
+    // SUGAR: `not true` ==> `false`
+    // SUGAR: `not false` ==> `true`
+    | MExpr.Lit (Lit.Bool value, loc) ->
+      MExpr.Lit (Lit.Bool (not value), loc)
+
+    // SUGAR: `not (not x)` ==> `x`
+    | MExpr.Uni (MUniOp.Not, l, _, _) ->
+      l
+
+    // SUGAR: `not (x = y)` ==> `x <> y`
+    | MExpr.Bin (MOp.Eq, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Ne, l, r, ty, loc)
+
+    // SUGAR: `not (x <> y)` ==> `x = y`
+    | MExpr.Bin (MOp.Ne, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Eq, l, r, ty, loc)
+
+    // SUGAR: `not (x < y)` ==> `x >= y`
+    | MExpr.Bin (MOp.Lt, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Ge, l, r, ty, loc)
+
+    // SUGAR: `not (x >= y)` ==> `x < y`
+    | MExpr.Bin (MOp.Ge, l, r, ty, loc) ->
+      MExpr.Bin (MOp.Lt, l, r, ty, loc)
+
+    | _ ->
+      MExpr.Uni (op, l, ty, loc)
+
+  let mxSugarBin op l r ty loc =
+    match op, l, r with
+    // SUGAR: `x = false` ==> `not x`
+    | MOp.Eq, MExpr.Lit (Lit.Bool false, _), _ ->
+      mxSugarUni MUniOp.Not r ty loc
+
+    | MOp.Eq, _, MExpr.Lit (Lit.Bool false, _) ->
+      mxSugarUni MUniOp.Not l ty loc
+
+    // SUGAR: `x = true` ==> `x`
+    | MOp.Eq, MExpr.Lit (Lit.Bool true, _), _ ->
+      r
+
+    | MOp.Eq, _, MExpr.Lit (Lit.Bool true, _) ->
+      l
+
+    | _ ->
+      MExpr.Bin (op, l, r, ty, loc)
+
+  match expr with
+  // SUGAR: `x: unit` ==> `()`
+  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), loc) ->
+    MExpr.Default (tyUnit, loc)
+
+  | MExpr.Uni (op, l, ty, loc) ->
+    let l = mxSugar l
+    mxSugarUni op l ty loc
+
+  | MExpr.Bin (op, l, r, ty, loc) ->
+    let l = mxSugar l
+    let r = mxSugar r
+    mxSugarBin op l r ty loc
+
+  | _ ->
+    expr
 
 // -----------------------------------------------
 // Print Formats
@@ -1518,7 +1982,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   // Don't bind itself.
   match typingSubst ctx ty with
   | Ty.Meta (s, _) when s = tySerial -> ctx
-  | _ ->
+  | ty ->
 
   // Update depth of all related meta types to the minimum.
   let tyDepths =

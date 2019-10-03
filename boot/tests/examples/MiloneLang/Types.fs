@@ -564,3 +564,267 @@ type HExpr =
     of Ident list * Loc
   | Error
     of string * Loc
+
+[<RequireQualifiedAccess>]
+type MonoMode =
+  | Monify
+  | RemoveGenerics
+
+// -----------------------------------------------
+// MIR types
+// -----------------------------------------------
+
+type Label = string
+
+/// Intermediate language between HIR and MIR for match expressions.
+[<RequireQualifiedAccess>]
+type MatchIR =
+  | PatLabel
+    of Label
+  | Pat
+    of HPat * nextLabel:Label
+  | GoBody
+    of Label
+  | BodyLabel
+    of Label
+  | Guard
+    of guard:HExpr * nextLabel:Label
+  | Body
+    of body:HExpr
+
+/// Unary operator in middle IR.
+/// Or primitive function with single parameter.
+[<RequireQualifiedAccess>]
+type MUniOp =
+  | Not
+  | StrPtr
+  | StrLen
+  | Unbox
+  /// Projection. Get an item of tuple.
+  | Proj
+    of index:int
+  /// Get union tag.
+  | Tag
+  | GetVariant
+    of VariantSerial
+  | ListIsEmpty
+  | ListHead
+  | ListTail
+
+/// Binary operator in middle IR.
+/// Or primitive function with two parameters.
+[<RequireQualifiedAccess>]
+type MOp =
+  | Mul
+  | Div
+  | Mod
+  | Add
+  | Sub
+  | Eq
+  | Ne
+  | Lt
+  | Ge
+  /// Concatenate two strings.
+  | StrAdd
+  /// Compare two strings.
+  | StrCmp
+  /// Get a char.
+  | StrIndex
+
+/// Expression in middle IR.
+[<RequireQualifiedAccess>]
+type MExpr =
+  | Lit
+    of Lit * Loc
+  | Default
+    of Ty * Loc
+  | Ref
+    of VarSerial * Ty * Loc
+  /// Procedure
+  | Proc
+    of FunSerial * Ty * Loc
+  | Variant
+    of TySerial * VariantSerial * Ty * Loc
+  | Uni
+    of MUniOp * arg:MExpr * resultTy:Ty * Loc
+  | Bin
+    of MOp * left:MExpr * right:MExpr * resultTy:Ty * Loc
+
+/// Variable initializer in mid-level IR.
+[<RequireQualifiedAccess>]
+type MInit =
+  /// Remain uninitialized at first; initialized later by `MStmt.Set`.
+  | UnInit
+  | Expr
+    of MExpr
+  /// Call to primitive.
+  | CallPrim
+    of HPrim * args:MExpr list * primTy:Ty
+  /// Direct call to procedure.
+  | CallProc
+    of callee:MExpr * args:MExpr list * calleeTy:Ty
+  /// Indirect call to closure.
+  | CallClosure
+    of callee:MExpr * args:MExpr list
+  /// Construct a closure, packing environment.
+  | Closure
+    of subFunSerial:FunSerial * envSerial:VarSerial
+  | Box
+    of MExpr
+  | Indirect
+    of MExpr
+  | Cons
+    of head:MExpr * tail:MExpr
+  | Tuple
+    of items:MExpr list
+  | Variant
+    of VariantSerial * payloadSerial:VarSerial
+
+/// Statement in middle IR.
+/// Doesn't introduce global things, e.g. functions.
+[<RequireQualifiedAccess>]
+type MStmt =
+  /// Statement to evaluate an expression, e.g. `f ();`.
+  | Do
+    of MExpr * Loc
+  /// Declare a local variable.
+  | LetVal
+    of VarSerial * MInit * Ty * Loc
+  /// Set to uninitialized local variable.
+  | Set
+    of VarSerial * init:MExpr * Loc
+  | Return
+    of MExpr * Loc
+  | Label
+    of Label * Loc
+  | Goto
+    of Label * Loc
+  | GotoIf
+    of MExpr * Label * Loc
+  | Exit
+    of MExpr * Loc
+  | Proc
+    of FunSerial * isMain: bool * args:(VarSerial * Ty * Loc) list * body:MStmt list * resultTy:Ty * Loc
+
+// -----------------------------------------------
+// CIR types
+// -----------------------------------------------
+
+[<RequireQualifiedAccess>]
+type TyInstance =
+  | Declared
+  | Defined
+
+/// Type in C language.
+[<RequireQualifiedAccess>]
+type CTy =
+  | Void
+  | Int
+  | Char
+  | Ptr
+    of CTy
+  | FunPtr
+    of CTy list * CTy
+  | Struct
+    of Ident
+  | Enum
+    of Ident
+
+[<RequireQualifiedAccess>]
+type CUniOp =
+  | Not
+  | Deref
+
+[<RequireQualifiedAccess>]
+type CBinOp =
+  | Mul
+  | Div
+  | Mod
+  | Add
+  | Sub
+  /// Equal
+  | Eq
+  /// Not Equal
+  | Ne
+  /// Less than
+  | Lt
+  /// Less than or equal to
+  | Le
+  /// Greater than
+  | Gt
+  /// Greater than or equal to
+  | Ge
+
+/// Expression in C language.
+[<RequireQualifiedAccess>]
+type CExpr =
+  /// `{}`
+  | Default
+  | Int
+    of int
+  | Char
+    of char
+  | StrRaw
+    of string
+  | StrObj
+    of string
+  | Ref
+    of Ident
+  /// `(struct T){.x = x, ..}` Initializer.
+  | Init
+    of fields:(Ident * CExpr) list * CTy
+  /// Projection. Get an item of tuple.
+  | Proj
+    of CExpr * index:int
+  | Cast
+    of CExpr * CTy
+  | Nav
+    of CExpr * Ident
+  | Arrow
+    of CExpr * Ident
+  /// `a[i]`
+  | Index
+    of CExpr * CExpr
+  | Call
+    of CExpr * args:CExpr list
+  | Uni
+    of CUniOp * CExpr
+  | Bin
+    of CBinOp * CExpr * CExpr
+
+/// Statement in C language.
+[<RequireQualifiedAccess>]
+type CStmt =
+  /// `x;`
+  | Expr
+    of CExpr
+  /// `T x = a;`
+  | Let
+    of Ident * init:CExpr option * CTy
+  /// `U* x = (U*)malloc(sizeof T);`
+  | LetAlloc
+    of Ident * valPtrTy:CTy * varTy:CTy
+  /// `x = a;`
+  | Set
+    of CExpr * CExpr
+  | Label
+    of Label
+  | Goto
+    of Label
+  | GotoIf
+    of CExpr * Label
+  | Return
+    of CExpr option
+
+/// Top-level definition in C language.
+[<RequireQualifiedAccess>]
+type CDecl =
+  /// `#error` directive to cause compile error manually.
+  | ErrDir
+    of message:string * line:int
+  | Struct
+    of Ident * fields:(Ident * CTy) list * variants:(Ident * CTy) list
+  | Enum
+    of Ident * variants:Ident list
+  | Fun
+    of Ident * args:(Ident * CTy) list * CTy * body:CStmt list

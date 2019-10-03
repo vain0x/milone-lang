@@ -17,7 +17,7 @@ let tyCtxAddErr (ctx: TyCtx) message loc =
   |> tyCtxWithLogs ((Log.Error message, loc) :: (ctx |> tyCtxGetLogs))
 
 let tyCtxToTyCtx (ctx: TyCtx): TyContext =
-  (
+  TyContext (
     ctx |> tyCtxGetSerial,
     ctx |> tyCtxGetTys,
     ctx |> tyCtxGetTyDepths
@@ -120,7 +120,7 @@ let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
     )
 
   // Replace meta types in the type and trait bounds.
-  let substMeta tySerial = bindings |> assocFind intEq tySerial
+  let substMeta tySerial = bindings |> assocTryFind intCmp tySerial
   let polyTy = polyTy |> tySubst substMeta
   let traits = traits |> listMap (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
   polyTy, traits, ctx
@@ -494,7 +494,7 @@ let tyCtxSubstExprTy ctx expr =
 
 let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
   let ctx =
-    (
+    TyCtx (
       scopeCtx |> scopeCtxGetSerial,
       scopeCtx |> scopeCtxGetVars,
       scopeCtx |> scopeCtxGetTys,
@@ -545,7 +545,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
           let varDef = VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc)
           (varSerial, varDef), ctx
       )
-    ctx |> tyCtxWithVars (mapOfList intCmp vars)
+    ctx |> tyCtxWithVars (mapOfList (intHash, intCmp) vars)
 
   let ctx = ctx |> tyCtxWithLetDepth 0
 
