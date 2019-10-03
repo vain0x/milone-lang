@@ -159,6 +159,28 @@ let mapOfListTest () =
   |> is ["a", 2; "b", 0; "c", 3]
 
 [<Fact>]
+let setOfListTest () =
+  let s = setOfList (strHash, strCmp) ["a"; "b"; "c"]
+  s |> setContains "a" |> is true
+  s |> setContains "d" |> is false
+
+[<Fact>]
+let setToListTest () =
+  setOfList (strHash, strCmp) ["a"; "b"; "c"]
+  |> setAdd "a"
+  |> setAdd "d"
+  |> setToList
+  |> is ["a"; "b"; "c"; "d"]
+
+[<Fact>]
+let setDiffTest () =
+  let first = setOfList (strHash, strCmp) ["a"; "b"; "c"; "d"]
+  let second = setOfList (strHash, strCmp) ["a"; "c"; "e"; "f"]
+  setDiff first second
+  |> setToList
+  |> is ["b"; "d"]
+
+[<Fact>]
 let intToHexWithPaddingTest () =
   let hex len n = intToHexWithPadding len n
 

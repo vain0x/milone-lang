@@ -503,6 +503,9 @@ let mapMap f (trie, hash, cmp): AssocMap<_, _> =
   let trie = trieMap f trie
   trie, hash, cmp
 
+let mapToKeys ((trie, _, cmp): AssocMap<_, _>) =
+  trie |> trieToKeys |> listUnique cmp
+
 let mapToList (map: AssocMap<_, _>) =
   let trie, _, cmp = map
 
@@ -516,6 +519,32 @@ let mapToList (map: AssocMap<_, _>) =
 
   // Sort in reversed order and re-reverse it with `go`.
   trie |> trieToKeys |> listUnique (fun l r -> cmp r l) |> go []
+
+let mapOfKeys (hash, cmp) value keys: AssocMap<_, _> =
+  /// Partition a key list by hash to acc/rest.
+  let rec group keyHash acc others keys =
+    match keys with
+    | [] ->
+      acc, others
+
+    | key :: keys ->
+      if hash key = keyHash then
+        group keyHash ((key, value) :: acc) others keys
+      else
+        group keyHash acc (key :: others) keys
+
+  let rec go trie keys =
+    match keys with
+    | [] ->
+      trie
+
+    | key :: keys ->
+      let h = hash key
+      let acc, keys = group h [(key, value)] [] keys
+      go ((h, acc) :: trie) keys
+
+  let trie = go [] keys
+  trie, hash, cmp
 
 let mapOfList (hash, cmp) assoc: AssocMap<_, _> =
   /// Partition an assoc by hash of key to acc/rest.
@@ -541,6 +570,50 @@ let mapOfList (hash, cmp) assoc: AssocMap<_, _> =
       go ((h, acc) :: trie) assoc
 
   let trie = go [] assoc
+  trie, hash, cmp
+
+// -----------------------------------------------
+// AssocSet
+// -----------------------------------------------
+
+let setEmpty funs: AssocSet<_> =
+  mapEmpty funs
+
+let setContains key (set: AssocSet<_>) =
+  set |> mapContainsKey key
+
+let setToList (set: AssocSet<_>) =
+  set |> mapToKeys
+
+let setOfList (hash, cmp) xs: AssocSet<_> =
+  mapOfKeys (hash, cmp) () xs
+
+let setAdd key set: AssocSet<_> =
+  mapAdd key () set
+
+let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> =
+  let rec filter acc assoc =
+    match assoc with
+    | [] ->
+      listRev acc
+
+    | (key, ()) :: assoc
+      when setContains key second ->
+      filter acc assoc
+
+    | kv :: assoc ->
+      filter (kv :: acc) assoc
+
+  let rec go trie =
+    match trie with
+    | [] ->
+      []
+
+    | (h, assoc) :: trie ->
+      let assoc = filter [] assoc
+      (h, assoc) :: go trie
+
+  let trie = go trie
   trie, hash, cmp
 
 // -----------------------------------------------
@@ -1046,6 +1119,13 @@ let tyUnit =
 let tyRef serial tys =
   Ty.Con (TyCon.Ref serial, tys)
 
+let tyAssocMap keyTy valueTy =
+  let assocTy = tyList (tyTuple [keyTy; valueTy])
+  let trieTy = tyList (tyTuple [tyInt; assocTy])
+  let hashTy = tyFun keyTy tyInt
+  let cmpTy = tyFun keyTy (tyFun keyTy tyInt)
+  tyTuple [trieTy; hashTy; cmpTy]
+
 let tyPrimFromIdent ident tys loc =
   match ident, tys with
   | "unit", [] ->
@@ -1073,12 +1153,11 @@ let tyPrimFromIdent ident tys loc =
   | "list", [itemTy] ->
     tyList itemTy
 
-  | "AssocMap", [keyTy; _] ->
-    let assocTy = tyList (tyTuple tys)
-    let trieTy = tyList (tyTuple [tyInt; assocTy])
-    let hashTy = tyFun keyTy tyInt
-    let cmpTy = tyFun keyTy (tyFun keyTy tyInt)
-    tyTuple [trieTy; hashTy; cmpTy]
+  | "AssocMap", [keyTy; valueTy] ->
+    tyAssocMap keyTy valueTy
+
+  | "AssocSet", [itemTy] ->
+    tyAssocMap itemTy tyUnit
 
   | _ ->
     Ty.Error loc

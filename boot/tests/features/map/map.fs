@@ -15,6 +15,7 @@ let mapNewSingleton key value hash cmp: AssocMap<_, _> =
 
 let typeTest () =
   let map = mapNewSingleton 1 "a" intHash intCmp
+  let set = mapNewSingleton 2 () intHash intCmp: AssocSet<_>
   ()
 
 let main _ =

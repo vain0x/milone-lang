@@ -52,9 +52,9 @@ type CcCtx =
 
     /// Known identifiers and their dependencies.
     Caps: AssocMap<FunSerial, (VarSerial * Ty * Loc) list>
-    Known: Set<FunSerial>
-    Refs: Set<VarSerial>
-    Locals: Set<VarSerial>
+    Known: AssocSet<FunSerial>
+    Refs: AssocSet<VarSerial>
+    Locals: AssocSet<VarSerial>
   }
 
 let ccCtxFromTyCtx (ftCtx: TyCtx): CcCtx =
@@ -64,9 +64,9 @@ let ccCtxFromTyCtx (ftCtx: TyCtx): CcCtx =
     Tys = ftCtx |> tyCtxGetTys
 
     Caps = mapEmpty (intHash, intCmp)
-    Known = Set.empty
-    Refs = Set.empty
-    Locals = Set.empty
+    Known = setEmpty (intHash, intCmp)
+    Refs = setEmpty (intHash, intCmp)
+    Locals = setEmpty (intHash, intCmp)
   }
 
 let ccCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
@@ -77,8 +77,8 @@ let ccCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
 
 let ccCtxPushScope locals (ctx: CcCtx) =
   { ctx with
-      Refs = Set.empty
-      Locals = locals |> Set.ofList
+      Refs = setEmpty (intHash, intCmp)
+      Locals = locals |> setOfList (intHash, intCmp)
   }
 
 let ccCtxPopScope (baseCtx: CcCtx) (derivedCtx: CcCtx) =
@@ -88,26 +88,26 @@ let ccCtxPopScope (baseCtx: CcCtx) (derivedCtx: CcCtx) =
   }
 
 let ccCtxAddKnown serial (ctx: CcCtx) =
-  { ctx with Known = Set.add serial ctx.Known }
+  { ctx with Known = setAdd serial ctx.Known }
 
 let ccCtxAddRef serial (ctx: CcCtx) =
-  { ctx with Refs = Set.add serial ctx.Refs }
+  { ctx with Refs = setAdd serial ctx.Refs }
 
 let ccCtxAddLocal serial (ctx: CcCtx) =
-  { ctx with Locals = Set.add serial ctx.Locals }
+  { ctx with Locals = setAdd serial ctx.Locals }
 
 let ccCtxAddFun serial caps (ctx: CcCtx) =
   { ctx with
-      Known = ctx.Known |> Set.add serial
+      Known = ctx.Known |> setAdd serial
       Caps = ctx.Caps |> mapAdd serial caps
   }
 
 /// Gets the captured variables of the current function.
 let ccCtxGetCaps (ctx: CcCtx) =
-  let refs = Set.difference ctx.Refs ctx.Locals
-  let refs = Set.difference refs ctx.Known
+  let refs = setDiff ctx.Refs ctx.Locals
+  let refs = setDiff refs ctx.Known
 
-  refs |> Set.toList |> listChoose
+  refs |> setToList |> listChoose
     (fun serial ->
       match ctx.Vars |> mapFind serial with
       | VarDef.Var (_, ty, loc) ->
