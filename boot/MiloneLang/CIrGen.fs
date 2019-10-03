@@ -783,7 +783,8 @@ let genDecls (ctx: CirCtx) decls =
   match decls with
   | [] ->
     ctx
-  | MDecl.Proc (procDecl, _) :: decls ->
+
+  | MStmt.Proc (procDecl, _) :: decls ->
     let ident, args =
       if procDecl.Main
       then "main", []
@@ -802,6 +803,9 @@ let genDecls (ctx: CirCtx) decls =
     let funDecl = CDecl.Fun (ident, args, resultTy, body)
     let ctx = cirCtxAddDecl ctx funDecl
     genDecls ctx decls
+
+  | _ ->
+    failwith "Top-level statements must be declarations."
 
 let genLogs (ctx: CirCtx) =
   let rec go (ctx: CirCtx) logs =

@@ -712,12 +712,6 @@ type MStmt =
   | Proc
     of MProcDecl * Loc
 
-/// Declaration in middle IR.
-[<RequireQualifiedAccess>]
-type MDecl =
-  | Proc
-    of MProcDecl * Loc
-
 // -----------------------------------------------
 // CIR types
 // -----------------------------------------------

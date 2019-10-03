@@ -734,9 +734,9 @@ let mirifyExprs ctx exprs =
 let collectDecls (stmts: MStmt list) =
   let rec go decls stmts =
     match stmts with
-    | MStmt.Proc (procDecl, loc) :: stmts ->
+    | (MStmt.Proc (procDecl, _) as decl) :: stmts ->
       let decls = go decls procDecl.Body
-      let decls = MDecl.Proc (procDecl, loc) :: decls
+      let decls = decl :: decls
       let decls = go decls stmts
       decls
     | _ :: stmts ->
@@ -745,7 +745,7 @@ let collectDecls (stmts: MStmt list) =
       decls
   go [] stmts |> listRev
 
-let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
+let mirify (expr: HExpr, tyCtx: TyCtx): MStmt list * MirCtx =
   let ctx = mirCtxFromTyCtx tyCtx
 
   // OK: It's safe to discard the expression thanks to main hoisting.
