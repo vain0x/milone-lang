@@ -59,3 +59,8 @@ CcCtx:
   Known: AssocSet<FunSerial>
   Refs: AssocSet<VarSerial>
   Locals: AssocSet<VarSerial>
+
+EtaCtx:
+  Serial: Serial
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
