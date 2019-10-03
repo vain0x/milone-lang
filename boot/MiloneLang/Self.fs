@@ -11,6 +11,10 @@ open MiloneLang.NameRes
 open MiloneLang.Typing
 open MiloneLang.MainHoist
 open MiloneLang.ClosureConversion
+open MiloneLang.EtaExpansion
+open MiloneLang.Hoist
+open MiloneLang.Monomorphizing
+open MiloneLang.Mir
 
 let litToString lit =
   match lit with
@@ -530,24 +534,48 @@ let doSelf (fileReadAllText: string -> string) =
 
   let expr, nameCtx, errorListList = parseProjectModules readModuleFile projectName nameCtx
 
+  printfn "Name resolution"
+  let expr, scopeCtx = nameRes (expr, nameCtx)
+
   let tyCtxHasError tyCtx =
     tyCtx |> tyCtxGetLogs |> listIsEmpty |> not
 
   let logs =
-    printfn "Name resolution"
-    let expr, scopeCtx = nameRes (expr, nameCtx)
-
     printfn "Type inference"
     let expr, tyCtx = infer (expr, scopeCtx, errorListList)
     if tyCtx |> tyCtxHasError then
       tyCtx |> tyCtxGetLogs
     else
-      printfn "Hoist main"
-      let expr, tyCtx = hoistMain (expr, tyCtx)
 
-      printfn "Closure conversion"
-      let expr, tyCtx = declosure (expr, tyCtx)
+    printfn "Hoist main"
+    let expr, tyCtx = hoistMain (expr, tyCtx)
+
+    printfn "Closure conversion"
+    let expr, tyCtx = declosure (expr, tyCtx)
+    if tyCtx |> tyCtxHasError then
       tyCtx |> tyCtxGetLogs
+    else
+
+    printfn "Eta expansion"
+    let expr, tyCtx = uneta (expr, tyCtx)
+    if tyCtx |> tyCtxHasError then
+      tyCtx |> tyCtxGetLogs
+    else
+
+    printfn "Hoist"
+    let expr, tyCtx = hoist (expr, tyCtx)
+
+    printfn "Monomorphization"
+    let expr, tyCtx = monify (expr, tyCtx)
+    if tyCtx |> tyCtxHasError then
+      tyCtx |> tyCtxGetLogs
+    else
+
+    printfn "Mir"
+    let stmts, mirCtx = mirify (expr, tyCtx)
+
+    printfn "stmts %d" (stmts |> listLength)
+    mirCtx |> mirCtxGetLogs
 
   // printfn "HIR:"
   // printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)

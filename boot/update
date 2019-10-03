@@ -12,5 +12,9 @@ cp MiloneLang/NameRes.fs tests/examples/MiloneLang/NameRes.fs
 cp MiloneLang/Typing.fs tests/examples/MiloneLang/Typing.fs
 cp MiloneLang/MainHoist.fs tests/examples/MiloneLang/MainHoist.fs
 cp MiloneLang/ClosureConversion.fs tests/examples/MiloneLang/ClosureConversion.fs
+cp MiloneLang/EtaExpansion.fs tests/examples/MiloneLang/EtaExpansion.fs
+cp MiloneLang/Hoist.fs tests/examples/MiloneLang/Hoist.fs
+cp MiloneLang/Monomorphizing.fs tests/examples/MiloneLang/Monomorphizing.fs
+cp MiloneLang/Mir.fs tests/examples/MiloneLang/Mir.fs
 
 (cd tests/examples/MiloneLang; dotnet build)
