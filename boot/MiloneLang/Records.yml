@@ -48,3 +48,64 @@ TyCtx:
   LetDepth: LetDepth
   TraitBounds: (Trait * Loc) list
   Logs: (Log * Loc) list
+
+CcCtx:
+  Serial: Serial
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+
+  # Known functions and their dependencies.
+  Caps: AssocMap<FunSerial, (VarSerial * Ty * Loc) list>
+  Known: AssocSet<FunSerial>
+  Refs: AssocSet<VarSerial>
+  Locals: AssocSet<VarSerial>
+
+EtaCtx:
+  Serial: Serial
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+
+MonoCtx:
+  Serial: Serial
+  Logs: (Log * Loc) list
+
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+  TyDepths: AssocMap<TySerial, LetDepth>
+
+  # Map from
+  # - generic function serial
+  #
+  # to:
+  # - found use-site types
+  GenericFunUseSiteTys: AssocMap<FunSerial, Ty list>
+
+  # Map from pairs:
+  # - generic function's serial
+  # - monomorphic type
+  #
+  # to:
+  # - monomorphized function's serial
+  GenericFunMonoSerials: AssocMap<FunSerial * Ty, FunSerial>
+
+  Mode: MonoMode
+  SomethingHappened: bool
+  InfiniteLoopDetector: int
+
+MirCtx:
+  Serial: Serial
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+  LabelSerial: Serial
+  Stmts: MStmt list
+  Logs: (Log * Loc) list
+
+CirCtx:
+  Vars: AssocMap<VarSerial, VarDef>
+  VarUniqueNames: AssocMap<VarSerial, Ident>
+  TyEnv: AssocMap<Ty, TyInstance * CTy>
+  Tys: AssocMap<TySerial, TyDef>
+  TyUniqueNames: AssocMap<Ty, Ident>
+  Stmts: CStmt list
+  Decls: CDecl list
+  Logs: (Log * Loc) list

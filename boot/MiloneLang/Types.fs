@@ -565,6 +565,11 @@ type HExpr =
   | Error
     of string * Loc
 
+[<RequireQualifiedAccess>]
+type MonoMode =
+  | Monify
+  | RemoveGenerics
+
 // -----------------------------------------------
 // MIR types
 // -----------------------------------------------
@@ -625,17 +630,6 @@ type MOp =
   | StrCmp
   /// Get a char.
   | StrIndex
-
-/// Procedure declaration in middle IR.
-[<RequireQualifiedAccess>]
-type MProcDecl =
-  {
-    Callee: FunSerial
-    Args: (VarSerial * Ty * Loc) list
-    ResultTy: Ty
-    Body: MStmt list
-    Main: bool
-  }
 
 /// Expression in middle IR.
 [<RequireQualifiedAccess>]
@@ -710,17 +704,16 @@ type MStmt =
   | Exit
     of MExpr * Loc
   | Proc
-    of MProcDecl * Loc
-
-/// Declaration in middle IR.
-[<RequireQualifiedAccess>]
-type MDecl =
-  | Proc
-    of MProcDecl * Loc
+    of FunSerial * isMain: bool * args:(VarSerial * Ty * Loc) list * body:MStmt list * resultTy:Ty * Loc
 
 // -----------------------------------------------
 // CIR types
 // -----------------------------------------------
+
+[<RequireQualifiedAccess>]
+type TyInstance =
+  | Declared
+  | Defined
 
 /// Type in C language.
 [<RequireQualifiedAccess>]

@@ -9,32 +9,20 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
 
-/// Middle IR generation context.
-[<RequireQualifiedAccess>]
-type MirCtx =
-  {
-    Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
-    Tys: AssocMap<TySerial, TyDef>
-    LabelSerial: Serial
-    Stmts: MStmt list
-    Logs: (Log * Loc) list
-  }
-
 let mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
-  {
-    Serial = tyCtx |> tyCtxGetSerial
-    Vars = tyCtx |> tyCtxGetVars
-    Tys = tyCtx |> tyCtxGetTys
-    LabelSerial = 0
-    Stmts = []
-    Logs = tyCtx |> tyCtxGetLogs
-  }
+  MirCtx (
+    tyCtx |> tyCtxGetSerial,
+    tyCtx |> tyCtxGetVars,
+    tyCtx |> tyCtxGetTys,
+    0,
+    [],
+    tyCtx |> tyCtxGetLogs
+  )
 
 let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
-  match ctx.Vars |> mapFind varSerial with
+  match ctx |> mirCtxGetVars |> mapFind varSerial with
   | VarDef.Variant (_, tySerial, _, _, _, _) ->
-    match ctx.Tys |> mapFind tySerial with
+    match ctx |> mirCtxGetTys |> mapFind tySerial with
     | TyDef.Union (_, variantSerials, _) ->
       variantSerials |> listLength = 1
 
@@ -45,28 +33,27 @@ let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
     failwith "Expected variant serial"
 
 let mirCtxAddErr (ctx: MirCtx) message loc =
-  { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
+  ctx |> mirCtxWithLogs ((Log.Error message, loc) :: (ctx |> mirCtxGetLogs))
 
 let mirCtxNewBlock (ctx: MirCtx) =
-  { ctx with Stmts = [] }
+  ctx |> mirCtxWithStmts []
 
 let mirCtxRollBack (bCtx: MirCtx) (dCtx: MirCtx) =
-  { dCtx with Stmts = bCtx.Stmts }
+  dCtx |> mirCtxWithStmts (bCtx |> mirCtxGetStmts)
 
 let mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) =
-  { ctx with Stmts = stmt :: ctx.Stmts }
+  ctx |> mirCtxWithStmts (stmt :: (ctx |> mirCtxGetStmts))
 
 /// Returns statements in reversed order.
 let mirCtxTakeStmts (ctx: MirCtx) =
-  ctx.Stmts, { ctx with Stmts = [] }
+  ctx |> mirCtxGetStmts, ctx |> mirCtxWithStmts []
 
 let mirCtxFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
-  let serial = ctx.Serial + 1
+  let serial = (ctx |> mirCtxGetSerial) + 1
   let ctx =
-    { ctx with
-        Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> mapAdd serial (VarDef.Var (ident, ty, loc))
-    }
+    ctx
+    |> mirCtxWithSerial ((ctx |> mirCtxGetSerial) + 1)
+    |> mirCtxWithVars (ctx |> mirCtxGetVars |> mapAdd serial (VarDef.Var (ident, ty, loc)))
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
 
@@ -77,15 +64,15 @@ let mirCtxLetFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   refExpr, setStmt, ctx
 
 let mirCtxFreshLabel (ctx: MirCtx) (ident: Ident) loc =
-  let serial = ctx.LabelSerial + 1
-  let ctx = { ctx with LabelSerial = ctx.LabelSerial + 1 }
+  let serial = (ctx |> mirCtxGetLabelSerial) + 1
+  let ctx = ctx |> mirCtxWithLabelSerial ((ctx |> mirCtxGetLabelSerial) + 1)
   let label: Label = sprintf "%s_%d" ident serial
   let labelStmt = MStmt.Label (label, loc)
   labelStmt, label, ctx
 
 /// Gets if the serial denotes to a variant function.
 let mirCtxIsVariantFun (ctx: MirCtx) serial =
-  match ctx.Vars |> mapTryFind serial with
+  match ctx |> mirCtxGetVars |> mapTryFind serial with
   | Some (VarDef.Variant _) ->
     true
   | _ ->
@@ -156,7 +143,7 @@ let mirifyPatSome ctx endLabel item itemTy loc expr =
   mirifyPatCons ctx endLabel item nilPat itemTy loc expr
 
 let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
-  match ctx.Vars |> mapFind serial with
+  match ctx |> mirCtxGetVars |> mapFind serial with
   | VarDef.Variant _ ->
     // Compare tags.
     let lTagExpr = MExpr.Uni (MUniOp.Tag, expr, tyInt, loc)
@@ -170,7 +157,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
     true, mirCtxAddStmt ctx letStmt
 
 let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
-  match ctx.Vars |> mapFind serial, args with
+  match ctx |> mirCtxGetVars |> mapFind serial, args with
   | VarDef.Variant (_, _, _, payloadTy, _, _), [payload] ->
     let extractExpr = MExpr.Uni (MUniOp.GetVariant serial, expr, payloadTy, loc)
 
@@ -260,7 +247,7 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
     failwith "Never annotation pattern in MIR-ify stage."
 
 let mirifyExprRef (ctx: MirCtx) serial ty loc =
-  match ctx.Vars |> mapTryFind serial with
+  match ctx |> mirCtxGetVars |> mapTryFind serial with
   | Some (VarDef.Variant (_, tySerial, _, _, _, _)) ->
     MExpr.Variant (tySerial, serial, ty, loc), ctx
   | Some (VarDef.Fun (_, _, _, loc)) ->
@@ -682,7 +669,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
   let bodyCtx = mirCtxNewBlock ctx
   let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
   let ctx = mirCtxRollBack ctx bodyCtx
-  let procStmt = MStmt.Proc ({ Callee = calleeSerial; Args = args; ResultTy = resultTy; Body = body; Main = isMainFun }, letLoc)
+  let procStmt = MStmt.Proc (calleeSerial, isMainFun, args, body, resultTy, letLoc)
   let ctx = mirCtxAddStmt ctx procStmt
 
   let next, ctx = mirifyExpr ctx next
@@ -734,9 +721,9 @@ let mirifyExprs ctx exprs =
 let collectDecls (stmts: MStmt list) =
   let rec go decls stmts =
     match stmts with
-    | MStmt.Proc (procDecl, loc) :: stmts ->
-      let decls = go decls procDecl.Body
-      let decls = MDecl.Proc (procDecl, loc) :: decls
+    | (MStmt.Proc (_, _, _, body, _, _) as decl) :: stmts ->
+      let decls = go decls body
+      let decls = decl :: decls
       let decls = go decls stmts
       decls
     | _ :: stmts ->
@@ -745,12 +732,12 @@ let collectDecls (stmts: MStmt list) =
       decls
   go [] stmts |> listRev
 
-let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
+let mirify (expr: HExpr, tyCtx: TyCtx): MStmt list * MirCtx =
   let ctx = mirCtxFromTyCtx tyCtx
 
   // OK: It's safe to discard the expression thanks to main hoisting.
   let _expr, ctx = mirifyExpr ctx expr
 
-  let stmts = ctx.Stmts |> listRev
+  let stmts = ctx |> mirCtxGetStmts |> listRev
   let decls = collectDecls stmts
   decls, ctx

@@ -6,27 +6,9 @@
 /// Generates type declarations for lists/tuples/etc.
 module rec MiloneLang.CIrGen
 
+open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
-
-[<RequireQualifiedAccess>]
-type TyInstance =
-  | Declared
-  | Defined
-
-/// IR generation context.
-[<RequireQualifiedAccess>]
-type CirCtx =
-  {
-    Vars: AssocMap<VarSerial, VarDef>
-    VarUniqueNames: AssocMap<VarSerial, Ident>
-    TyEnv: AssocMap<Ty, TyInstance * CTy>
-    Tys: AssocMap<TySerial, TyDef>
-    TyUniqueNames: AssocMap<Ty, Ident>
-    Stmts: CStmt list
-    Decls: CDecl list
-    Logs: (Log * Loc) list
-  }
 
 let tupleField i = sprintf "t%d" i
 
@@ -42,7 +24,7 @@ let calculateVarUniqueNames vars =
       (serial, ident)
   ))
   |> Seq.toList
-  |> mapOfList intCmp
+  |> mapOfList (intHash, intCmp)
 
 let calculateTyUniqueNames tys =
   let groups = tys |> mapToList |> Seq.groupBy (fun (_, tyDef) -> tyDefToIdent tyDef)
@@ -52,55 +34,52 @@ let calculateTyUniqueNames tys =
       tyRef serial [], ident
   ))
   |> Seq.toList
-  |> mapOfList compare
+  |> mapOfList (tyToHash, tyCmp)
 
-let cirCtxFromMirCtx (mirCtx: Mir.MirCtx): CirCtx =
-  let varNames = calculateVarUniqueNames mirCtx.Vars
-  let tyNames = calculateTyUniqueNames mirCtx.Tys
-  {
-    Vars = mirCtx.Vars
-    VarUniqueNames = varNames
-    TyEnv = mapEmpty compare // FIXME: Write tyCmp
-    Tys = mirCtx.Tys
-    TyUniqueNames = tyNames
-    Stmts = []
-    Decls = []
-    Logs = mirCtx.Logs
-  }
+let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
+  let varNames = calculateVarUniqueNames (mirCtx |> mirCtxGetVars)
+  let tyNames = calculateTyUniqueNames (mirCtx |> mirCtxGetTys)
+  CirCtx (
+    mirCtx |> mirCtxGetVars,
+    varNames,
+    mapEmpty (tyToHash, tyCmp),
+    mirCtx |> mirCtxGetTys,
+    tyNames,
+    [],
+    [],
+    mirCtx |> mirCtxGetLogs
+  )
 
 let cirCtxAddErr (ctx: CirCtx) message loc =
-  { ctx with Logs = (Log.Error message, loc) :: ctx.Logs }
+  ctx |> cirCtxWithLogs ((Log.Error message, loc) :: (ctx |> cirCtxGetLogs))
 
 let cirCtxNewBlock (ctx: CirCtx) =
-  { ctx with Stmts = [] }
+  ctx |> cirCtxWithStmts []
 
 let cirCtxRollBack (bCtx: CirCtx) (dCtx: CirCtx) =
-  { dCtx with Stmts = bCtx.Stmts }
+  dCtx |> cirCtxWithStmts (bCtx |> cirCtxGetStmts)
 
 let cirCtxAddStmt (ctx: CirCtx) stmt =
-  { ctx with Stmts = stmt :: ctx.Stmts }
+  ctx |> cirCtxWithStmts (stmt :: (ctx |> cirCtxGetStmts))
 
 let cirCtxAddDecl (ctx: CirCtx) decl =
-  { ctx with Decls = decl :: ctx.Decls }
+  ctx |> cirCtxWithDecls (decl :: (ctx |> cirCtxGetDecls))
 
 let cirCtxAddFunIncomplete (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
-  match ctx.TyEnv |> mapTryFind funTy with
+  match ctx |> cirCtxGetTyEnv |> mapTryFind funTy with
   | Some (_, ty) ->
     ty, ctx
 
   | None ->
     let ident, ctx = cirCtxUniqueTyName ctx funTy
     let funStructTy = CTy.Struct ident
-    let ctx: CirCtx =
-      { ctx with
-          TyEnv = ctx.TyEnv |> mapAdd funTy (TyInstance.Declared, funStructTy)
-      }
+    let ctx = ctx |> cirCtxWithTyEnv (ctx |> cirCtxGetTyEnv |> mapAdd funTy (TyInstance.Declared, funStructTy))
     funStructTy, ctx
 
 let cirCtxAddFunDecl (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
-  match ctx.TyEnv |> mapTryFind funTy with
+  match ctx |> cirCtxGetTyEnv |> mapTryFind funTy with
   | Some (TyInstance.Defined, ty) ->
     ty, ctx
 
@@ -120,27 +99,26 @@ let cirCtxAddFunDecl (ctx: CirCtx) sTy tTy =
         "env", envTy
       ]
     let ctx =
-      { ctx with
-          Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
-          TyEnv = ctx.TyEnv |> mapAdd funTy (TyInstance.Defined, selfTy)
-      }
+      ctx
+      |> cirCtxWithDecls (CDecl.Struct (ident, fields, []) :: (ctx |> cirCtxGetDecls))
+      |> cirCtxWithTyEnv (ctx |> cirCtxGetTyEnv |> mapAdd funTy (TyInstance.Defined, selfTy))
     selfTy, ctx
 
 let cirCtxAddListIncomplete (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
-  match ctx.TyEnv |> mapTryFind listTy with
+  match ctx |> cirCtxGetTyEnv |> mapTryFind listTy with
   | Some (_, ty) ->
     ty, ctx
 
   | None ->
     let ident, ctx = cirCtxUniqueTyName ctx listTy
     let selfTy = CTy.Ptr (CTy.Struct ident)
-    let ctx = { ctx with TyEnv = ctx.TyEnv |> mapAdd listTy (TyInstance.Declared, selfTy) }
+    let ctx = ctx |> cirCtxWithTyEnv (ctx |> cirCtxGetTyEnv |> mapAdd listTy (TyInstance.Declared, selfTy))
     selfTy, ctx
 
 let cirCtxAddListDecl (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
-  match ctx.TyEnv |> mapTryFind listTy with
+  match ctx |> cirCtxGetTyEnv |> mapTryFind listTy with
   | Some (TyInstance.Defined, ty) ->
     ty, ctx
 
@@ -155,27 +133,26 @@ let cirCtxAddListDecl (ctx: CirCtx) itemTy =
         "tail", selfTy
       ]
     let ctx: CirCtx =
-      { ctx with
-          Decls = CDecl.Struct (ident, fields, []) :: ctx.Decls
-          TyEnv = ctx.TyEnv |> mapAdd listTy (TyInstance.Defined, selfTy)
-      }
+      ctx
+      |> cirCtxWithDecls (CDecl.Struct (ident, fields, []) :: (ctx |> cirCtxGetDecls))
+      |> cirCtxWithTyEnv (ctx |> cirCtxGetTyEnv |> mapAdd listTy (TyInstance.Defined, selfTy))
     selfTy, ctx
 
 let cirCtxAddTupleIncomplete (ctx: CirCtx) itemTys =
   let tupleTy = tyTuple itemTys
-  match ctx.TyEnv |> mapTryFind tupleTy with
+  match ctx |> cirCtxGetTyEnv |> mapTryFind tupleTy with
   | Some (_, ty) ->
     ty, ctx
 
   | None ->
     let tupleTyIdent, ctx = cirCtxUniqueTyName ctx tupleTy
     let selfTy = CTy.Struct tupleTyIdent
-    let ctx = { ctx with TyEnv = ctx.TyEnv |> mapAdd tupleTy (TyInstance.Declared, selfTy) }
+    let ctx = ctx |> cirCtxWithTyEnv (ctx |> cirCtxGetTyEnv |> mapAdd tupleTy (TyInstance.Declared, selfTy))
     selfTy, ctx
 
 let cirCtxAddTupleDecl (ctx: CirCtx) itemTys =
   let tupleTy = tyTuple itemTys
-  match ctx.TyEnv |> mapTryFind tupleTy with
+  match ctx |> cirCtxGetTyEnv |> mapTryFind tupleTy with
   | Some (TyInstance.Defined, ty) ->
     ty, ctx
 
@@ -197,27 +174,26 @@ let cirCtxAddTupleDecl (ctx: CirCtx) itemTys =
 
     let tupleDecl = CDecl.Struct (tupleTyIdent, fields, [])
     let ctx: CirCtx =
-      { ctx with
-          Decls = tupleDecl :: ctx.Decls
-          TyEnv = ctx.TyEnv |> mapAdd tupleTy (TyInstance.Defined, selfTy)
-      }
+      ctx
+      |> cirCtxWithDecls (tupleDecl :: (ctx |> cirCtxGetDecls))
+      |> cirCtxWithTyEnv (ctx |> cirCtxGetTyEnv |> mapAdd tupleTy (TyInstance.Defined, selfTy))
     selfTy, ctx
 
 let cirCtxAddUnionIncomplete (ctx: CirCtx) tySerial =
   let unionTyRef = tyRef tySerial []
-  match ctx.TyEnv |> mapTryFind unionTyRef with
+  match ctx |> cirCtxGetTyEnv |> mapTryFind unionTyRef with
   | Some (_, ty) ->
     ty, ctx
 
   | None ->
     let unionTyIdent, ctx = cirCtxUniqueTyName ctx unionTyRef
     let selfTy = CTy.Struct unionTyIdent
-    let ctx = { ctx with TyEnv = ctx.TyEnv |> mapAdd unionTyRef (TyInstance.Declared, selfTy) }
+    let ctx = ctx |> cirCtxWithTyEnv (ctx |> cirCtxGetTyEnv |> mapAdd unionTyRef (TyInstance.Declared, selfTy))
     selfTy, ctx
 
 let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
   let unionTyRef = tyRef tySerial []
-  match ctx.TyEnv |> mapTryFind unionTyRef with
+  match ctx |> cirCtxGetTyEnv |> mapTryFind unionTyRef with
   | Some (TyInstance.Defined, ty) ->
     ty, ctx
 
@@ -230,7 +206,7 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
 
     let variants =
       variants |> listMap (fun variantSerial ->
-        match ctx.Vars |> mapTryFind variantSerial with
+        match ctx |> cirCtxGetVars |> mapTryFind variantSerial with
         | Some (VarDef.Variant (ident, _, hasPayload, payloadTy, _, _)) ->
           ident, variantSerial, hasPayload, payloadTy
         | _ -> failwith "Never"
@@ -250,14 +226,13 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
     let tagEnumDecl = CDecl.Enum (tagTyIdent, tags)
     let structDecl = CDecl.Struct (unionTyIdent, ["tag", tagTy], variants)
     let ctx =
-      { ctx with
-          Decls = structDecl :: tagEnumDecl :: ctx.Decls
-          TyEnv = ctx.TyEnv |> mapAdd unionTyRef (TyInstance.Defined, selfTy)
-      }
+      ctx
+      |> cirCtxWithDecls (structDecl :: tagEnumDecl :: (ctx |> cirCtxGetDecls))
+      |> cirCtxWithTyEnv (ctx |> cirCtxGetTyEnv |> mapAdd unionTyRef (TyInstance.Defined, selfTy))
     selfTy, ctx
 
 let cirCtxUniqueName (ctx: CirCtx) serial =
-  match ctx.VarUniqueNames |> mapTryFind serial with
+  match ctx |> cirCtxGetVarUniqueNames |> mapTryFind serial with
   | Some ident ->
     ident
   | None ->
@@ -265,7 +240,7 @@ let cirCtxUniqueName (ctx: CirCtx) serial =
 
 let cirCtxUniqueTyName (ctx: CirCtx) ty =
   let rec go ty (ctx: CirCtx) =
-    match ctx.TyUniqueNames |> mapTryFind ty with
+    match ctx |> cirCtxGetTyUniqueNames |> mapTryFind ty with
     | Some ident ->
       ident, ctx
     | None ->
@@ -299,8 +274,7 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
         | Ty.Error _ ->
           eprintfn "NEVER error type %A" ty
           sprintf "/* unknown ty %A */" ty, ctx
-          // failwithf "Never %A" ty
-      let ctx = { ctx with TyUniqueNames = ctx.TyUniqueNames |> mapAdd ty ident }
+      let ctx = ctx |> cirCtxWithTyUniqueNames (ctx |> cirCtxGetTyUniqueNames |> mapAdd ty ident)
       ident, ctx
   go ty ctx
 
@@ -331,7 +305,7 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
     cirCtxAddTupleIncomplete ctx itemTys
 
   | Ty.Con (TyCon.Ref serial, _) ->
-    match ctx.Tys |> mapTryFind serial with
+    match ctx |> cirCtxGetTys |> mapTryFind serial with
     | Some (TyDef.Union _) ->
       cirCtxAddUnionIncomplete ctx serial
 
@@ -368,7 +342,7 @@ let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
     cirCtxAddTupleDecl ctx itemTys
 
   | Ty.Con (TyCon.Ref serial, _) ->
-    match ctx.Tys |> mapTryFind serial with
+    match ctx |> cirCtxGetTys |> mapTryFind serial with
     | Some (TyDef.Union (_, variants, _)) ->
       cirCtxAddUnionDecl ctx serial variants
 
@@ -768,7 +742,7 @@ let genStmt ctx stmt =
 
 let genBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx = genStmts (cirCtxNewBlock ctx) stmts
-  let stmts = bodyCtx.Stmts
+  let stmts = bodyCtx |> cirCtxGetStmts
   let ctx = cirCtxRollBack ctx bodyCtx
   listRev stmts, ctx
 
@@ -785,11 +759,12 @@ let genDecls (ctx: CirCtx) decls =
   match decls with
   | [] ->
     ctx
-  | MDecl.Proc (procDecl, _) :: decls ->
+
+  | MStmt.Proc (callee, isMainFun, args, body, resultTy, _) :: decls ->
     let ident, args =
-      if procDecl.Main
+      if isMainFun
       then "main", []
-      else cirCtxUniqueName ctx procDecl.Callee, procDecl.Args
+      else cirCtxUniqueName ctx callee, args
     let rec go acc ctx args =
       match args with
       | [] ->
@@ -799,11 +774,14 @@ let genDecls (ctx: CirCtx) decls =
         let cty, ctx = cirGetCTy ctx ty
         go ((ident, cty) :: acc) ctx args
     let args, ctx = go [] ctx args
-    let body, ctx = genBlock ctx procDecl.Body
-    let resultTy, ctx = cirGetCTy ctx procDecl.ResultTy
+    let body, ctx = genBlock ctx body
+    let resultTy, ctx = cirGetCTy ctx resultTy
     let funDecl = CDecl.Fun (ident, args, resultTy, body)
     let ctx = cirCtxAddDecl ctx funDecl
     genDecls ctx decls
+
+  | _ ->
+    failwith "Top-level statements must be declarations."
 
 let genLogs (ctx: CirCtx) =
   let rec go (ctx: CirCtx) logs =
@@ -816,14 +794,14 @@ let genLogs (ctx: CirCtx) =
       let ctx = cirCtxAddDecl ctx (CDecl.ErrDir (msg, 1 + y))
       go ctx logs
 
-  let logs = ctx.Logs |> listRev
+  let logs = ctx |> cirCtxGetLogs |> listRev
   let ctx = go ctx logs
   let success = logs |> listIsEmpty
   success, ctx
 
-let gen (decls, mirCtx: Mir.MirCtx): CDecl list * bool =
+let gen (decls, mirCtx: MirCtx): CDecl list * bool =
   let ctx = cirCtxFromMirCtx mirCtx
   let ctx = genDecls ctx decls
   let success, ctx = genLogs ctx
-  let decls = ctx.Decls |> listRev
+  let decls = ctx |> cirCtxGetDecls |> listRev
   decls, success

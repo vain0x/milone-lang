@@ -52,52 +52,42 @@ type CalleeKind =
   | Fun
   | Obj
 
-[<RequireQualifiedAccess>]
-type EtaCtx =
-  {
-    Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
-    Tys: AssocMap<TySerial, TyDef>
-  }
-
 let etaCtxFromTyCtx (ftCtx: TyCtx): EtaCtx =
-  {
-    Serial = ftCtx |> tyCtxGetSerial
-    Vars = ftCtx |> tyCtxGetVars
-    Tys = ftCtx |> tyCtxGetTys
-  }
+  EtaCtx (
+    ftCtx |> tyCtxGetSerial,
+    ftCtx |> tyCtxGetVars,
+    ftCtx |> tyCtxGetTys
+  )
 
 let etaCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
   tyCtx
-  |> tyCtxWithSerial ctx.Serial
-  |> tyCtxWithVars ctx.Vars
-  |> tyCtxWithTys ctx.Tys
+  |> tyCtxWithSerial (ctx |> etaCtxGetSerial)
+  |> tyCtxWithVars (ctx |> etaCtxGetVars)
+  |> tyCtxWithTys (ctx |> etaCtxGetTys)
 
 let etaCtxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
-  let serial = ctx.Serial + 1
+  let serial = (ctx |> etaCtxGetSerial) + 1
   let tyScheme =
     let isOwned _ = true // FIXME: is it okay?
     Typing.tyGeneralize isOwned ty
   let ctx =
-    { ctx with
-        Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> mapAdd serial (VarDef.Fun (ident, arity, tyScheme, loc))
-    }
+    ctx
+    |> etaCtxWithSerial ((ctx |> etaCtxGetSerial) + 1)
+    |> etaCtxWithVars (ctx |> etaCtxGetVars |> mapAdd serial (VarDef.Fun (ident, arity, tyScheme, loc)))
   let refExpr = HExpr.Ref ( serial, ty, loc)
   refExpr, serial, ctx
 
 let etaCtxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
-  let serial = ctx.Serial + 1
+  let serial = (ctx |> etaCtxGetSerial) + 1
   let ctx =
-    { ctx with
-        Serial = ctx.Serial + 1
-        Vars = ctx.Vars |> mapAdd serial (VarDef.Var (ident, ty, loc))
-    }
+    ctx
+    |> etaCtxWithSerial ((ctx |> etaCtxGetSerial) + 1)
+    |> etaCtxWithVars (ctx |> etaCtxGetVars |> mapAdd serial (VarDef.Var (ident, ty, loc)))
   let refExpr = HExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
 
 let etaCtxIsFun serial (ctx: EtaCtx) =
-  match ctx.Vars |> mapTryFind serial with
+  match ctx |> etaCtxGetVars |> mapTryFind serial with
   | Some (VarDef.Fun _) ->
     true
   | Some (VarDef.Variant _) ->
@@ -271,7 +261,7 @@ let unetaCall callee args resultTy loc ctx =
   match callee, args with
   | HExpr.Ref (serial, _, calleeLoc), _ when ctx |> etaCtxIsFun serial ->
     let arity =
-      match (ctx: EtaCtx).Vars |> mapFind serial with
+      match ctx |> etaCtxGetVars |> mapFind serial with
       | VarDef.Fun (_, arity, _, _) ->
         arity
       | VarDef.Variant (_, _, hasPayload, _, _, _) ->
@@ -294,7 +284,7 @@ let unetaCall callee args resultTy loc ctx =
     failwith "Never"
 
 let unetaRef expr serial _refTy calleeLoc (ctx: EtaCtx) =
-  match ctx.Vars |> mapTryFind serial with
+  match ctx |> etaCtxGetVars |> mapTryFind serial with
   | Some (VarDef.Fun (_, arity, _, _)) ->
     resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
   | _ ->

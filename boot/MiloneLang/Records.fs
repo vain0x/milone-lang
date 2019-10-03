@@ -10,146 +10,396 @@ module rec MiloneLang.Records
 open MiloneLang.Types
 
 type ScopeCtx =
-  (
-    Serial
-    * AssocMap<Serial, Ident>
-    * AssocMap<VarSerial, VarDef>
-    * AssocMap<VarSerial, LetDepth>
-    * AssocMap<TySerial, TyDef>
-    * AssocMap<TySerial, LetDepth>
-    * ScopeSerial
-    * Scope
-    * LetDepth
-  )
+  | ScopeCtx
+    of Serial
+      * AssocMap<Serial, Ident>
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<VarSerial, LetDepth>
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<TySerial, LetDepth>
+      * ScopeSerial
+      * Scope
+      * LetDepth
 
-let scopeCtxGetSerial ((serial, _, _, _, _, _, _, _, _): ScopeCtx) =
+let scopeCtxGetSerial (ScopeCtx (serial, _, _, _, _, _, _, _, _)) =
   serial
 
-let scopeCtxGetNameMap ((_, nameMap, _, _, _, _, _, _, _): ScopeCtx) =
+let scopeCtxGetNameMap (ScopeCtx (_, nameMap, _, _, _, _, _, _, _)) =
   nameMap
 
-let scopeCtxGetVars ((_, _, vars, _, _, _, _, _, _): ScopeCtx) =
+let scopeCtxGetVars (ScopeCtx (_, _, vars, _, _, _, _, _, _)) =
   vars
 
-let scopeCtxGetVarDepths ((_, _, _, varDepths, _, _, _, _, _): ScopeCtx) =
+let scopeCtxGetVarDepths (ScopeCtx (_, _, _, varDepths, _, _, _, _, _)) =
   varDepths
 
-let scopeCtxGetTys ((_, _, _, _, tys, _, _, _, _): ScopeCtx) =
+let scopeCtxGetTys (ScopeCtx (_, _, _, _, tys, _, _, _, _)) =
   tys
 
-let scopeCtxGetTyDepths ((_, _, _, _, _, tyDepths, _, _, _): ScopeCtx) =
+let scopeCtxGetTyDepths (ScopeCtx (_, _, _, _, _, tyDepths, _, _, _)) =
   tyDepths
 
-let scopeCtxGetLocalSerial ((_, _, _, _, _, _, localSerial, _, _): ScopeCtx) =
+let scopeCtxGetLocalSerial (ScopeCtx (_, _, _, _, _, _, localSerial, _, _)) =
   localSerial
 
-let scopeCtxGetLocal ((_, _, _, _, _, _, _, local, _): ScopeCtx) =
+let scopeCtxGetLocal (ScopeCtx (_, _, _, _, _, _, _, local, _)) =
   local
 
-let scopeCtxGetLetDepth ((_, _, _, _, _, _, _, _, letDepth): ScopeCtx) =
+let scopeCtxGetLetDepth (ScopeCtx (_, _, _, _, _, _, _, _, letDepth)) =
   letDepth
 
-let scopeCtxWithSerial serial ((_, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithSerial serial (ScopeCtx (_, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
-let scopeCtxWithNameMap nameMap ((serial, _, vars, varDepths, tys, tyDepths, localSerial, local, letDepth): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithNameMap nameMap (ScopeCtx (serial, _, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
-let scopeCtxWithVars vars ((serial, nameMap, _, varDepths, tys, tyDepths, localSerial, local, letDepth): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithVars vars (ScopeCtx (serial, nameMap, _, varDepths, tys, tyDepths, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
-let scopeCtxWithVarDepths varDepths ((serial, nameMap, vars, _, tys, tyDepths, localSerial, local, letDepth): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithVarDepths varDepths (ScopeCtx (serial, nameMap, vars, _, tys, tyDepths, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
-let scopeCtxWithTys tys ((serial, nameMap, vars, varDepths, _, tyDepths, localSerial, local, letDepth): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithTys tys (ScopeCtx (serial, nameMap, vars, varDepths, _, tyDepths, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
-let scopeCtxWithTyDepths tyDepths ((serial, nameMap, vars, varDepths, tys, _, localSerial, local, letDepth): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithTyDepths tyDepths (ScopeCtx (serial, nameMap, vars, varDepths, tys, _, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
-let scopeCtxWithLocalSerial localSerial ((serial, nameMap, vars, varDepths, tys, tyDepths, _, local, letDepth): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithLocalSerial localSerial (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, _, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
-let scopeCtxWithLocal local ((serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, _, letDepth): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithLocal local (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, _, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
-let scopeCtxWithLetDepth letDepth ((serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, _): ScopeCtx): ScopeCtx =
-  serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth
+let scopeCtxWithLetDepth letDepth (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, _)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, localSerial, local, letDepth)
 
 type TyContext =
-  (
-    Serial
-    * AssocMap<TySerial, TyDef>
-    * AssocMap<TySerial, LetDepth>
-  )
+  | TyContext
+    of Serial
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<TySerial, LetDepth>
 
-let tyContextGetSerial ((serial, _, _): TyContext) =
+let tyContextGetSerial (TyContext (serial, _, _)) =
   serial
 
-let tyContextGetTys ((_, tys, _): TyContext) =
+let tyContextGetTys (TyContext (_, tys, _)) =
   tys
 
-let tyContextGetTyDepths ((_, _, tyDepths): TyContext) =
+let tyContextGetTyDepths (TyContext (_, _, tyDepths)) =
   tyDepths
 
-let tyContextWithSerial serial ((_, tys, tyDepths): TyContext): TyContext =
-  serial, tys, tyDepths
+let tyContextWithSerial serial (TyContext (_, tys, tyDepths)): TyContext =
+  TyContext (serial, tys, tyDepths)
 
-let tyContextWithTys tys ((serial, _, tyDepths): TyContext): TyContext =
-  serial, tys, tyDepths
+let tyContextWithTys tys (TyContext (serial, _, tyDepths)): TyContext =
+  TyContext (serial, tys, tyDepths)
 
-let tyContextWithTyDepths tyDepths ((serial, tys, _): TyContext): TyContext =
-  serial, tys, tyDepths
+let tyContextWithTyDepths tyDepths (TyContext (serial, tys, _)): TyContext =
+  TyContext (serial, tys, tyDepths)
 
 type TyCtx =
-  (
-    Serial
-    * AssocMap<VarSerial, VarDef>
-    * AssocMap<TySerial, TyDef>
-    * AssocMap<TySerial, LetDepth>
-    * LetDepth
-    * (Trait * Loc) list
-    * (Log * Loc) list
-  )
+  | TyCtx
+    of Serial
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<TySerial, LetDepth>
+      * LetDepth
+      * (Trait * Loc) list
+      * (Log * Loc) list
 
-let tyCtxGetSerial ((serial, _, _, _, _, _, _): TyCtx) =
+let tyCtxGetSerial (TyCtx (serial, _, _, _, _, _, _)) =
   serial
 
-let tyCtxGetVars ((_, vars, _, _, _, _, _): TyCtx) =
+let tyCtxGetVars (TyCtx (_, vars, _, _, _, _, _)) =
   vars
 
-let tyCtxGetTys ((_, _, tys, _, _, _, _): TyCtx) =
+let tyCtxGetTys (TyCtx (_, _, tys, _, _, _, _)) =
   tys
 
-let tyCtxGetTyDepths ((_, _, _, tyDepths, _, _, _): TyCtx) =
+let tyCtxGetTyDepths (TyCtx (_, _, _, tyDepths, _, _, _)) =
   tyDepths
 
-let tyCtxGetLetDepth ((_, _, _, _, letDepth, _, _): TyCtx) =
+let tyCtxGetLetDepth (TyCtx (_, _, _, _, letDepth, _, _)) =
   letDepth
 
-let tyCtxGetTraitBounds ((_, _, _, _, _, traitBounds, _): TyCtx) =
+let tyCtxGetTraitBounds (TyCtx (_, _, _, _, _, traitBounds, _)) =
   traitBounds
 
-let tyCtxGetLogs ((_, _, _, _, _, _, logs): TyCtx) =
+let tyCtxGetLogs (TyCtx (_, _, _, _, _, _, logs)) =
   logs
 
-let tyCtxWithSerial serial ((_, vars, tys, tyDepths, letDepth, traitBounds, logs): TyCtx): TyCtx =
-  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+let tyCtxWithSerial serial (TyCtx (_, vars, tys, tyDepths, letDepth, traitBounds, logs)): TyCtx =
+  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
 
-let tyCtxWithVars vars ((serial, _, tys, tyDepths, letDepth, traitBounds, logs): TyCtx): TyCtx =
-  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+let tyCtxWithVars vars (TyCtx (serial, _, tys, tyDepths, letDepth, traitBounds, logs)): TyCtx =
+  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
 
-let tyCtxWithTys tys ((serial, vars, _, tyDepths, letDepth, traitBounds, logs): TyCtx): TyCtx =
-  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+let tyCtxWithTys tys (TyCtx (serial, vars, _, tyDepths, letDepth, traitBounds, logs)): TyCtx =
+  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
 
-let tyCtxWithTyDepths tyDepths ((serial, vars, tys, _, letDepth, traitBounds, logs): TyCtx): TyCtx =
-  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+let tyCtxWithTyDepths tyDepths (TyCtx (serial, vars, tys, _, letDepth, traitBounds, logs)): TyCtx =
+  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
 
-let tyCtxWithLetDepth letDepth ((serial, vars, tys, tyDepths, _, traitBounds, logs): TyCtx): TyCtx =
-  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+let tyCtxWithLetDepth letDepth (TyCtx (serial, vars, tys, tyDepths, _, traitBounds, logs)): TyCtx =
+  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
 
-let tyCtxWithTraitBounds traitBounds ((serial, vars, tys, tyDepths, letDepth, _, logs): TyCtx): TyCtx =
-  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+let tyCtxWithTraitBounds traitBounds (TyCtx (serial, vars, tys, tyDepths, letDepth, _, logs)): TyCtx =
+  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
 
-let tyCtxWithLogs logs ((serial, vars, tys, tyDepths, letDepth, traitBounds, _): TyCtx): TyCtx =
-  serial, vars, tys, tyDepths, letDepth, traitBounds, logs
+let tyCtxWithLogs logs (TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, _)): TyCtx =
+  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
+
+type CcCtx =
+  | CcCtx
+    of Serial
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<FunSerial, (VarSerial * Ty * Loc) list>
+      * AssocSet<FunSerial>
+      * AssocSet<VarSerial>
+      * AssocSet<VarSerial>
+
+let ccCtxGetSerial (CcCtx (serial, _, _, _, _, _, _)) =
+  serial
+
+let ccCtxGetVars (CcCtx (_, vars, _, _, _, _, _)) =
+  vars
+
+let ccCtxGetTys (CcCtx (_, _, tys, _, _, _, _)) =
+  tys
+
+let ccCtxGetCaps (CcCtx (_, _, _, caps, _, _, _)) =
+  caps
+
+let ccCtxGetKnown (CcCtx (_, _, _, _, known, _, _)) =
+  known
+
+let ccCtxGetRefs (CcCtx (_, _, _, _, _, refs, _)) =
+  refs
+
+let ccCtxGetLocals (CcCtx (_, _, _, _, _, _, locals)) =
+  locals
+
+let ccCtxWithSerial serial (CcCtx (_, vars, tys, caps, known, refs, locals)): CcCtx =
+  CcCtx (serial, vars, tys, caps, known, refs, locals)
+
+let ccCtxWithVars vars (CcCtx (serial, _, tys, caps, known, refs, locals)): CcCtx =
+  CcCtx (serial, vars, tys, caps, known, refs, locals)
+
+let ccCtxWithTys tys (CcCtx (serial, vars, _, caps, known, refs, locals)): CcCtx =
+  CcCtx (serial, vars, tys, caps, known, refs, locals)
+
+let ccCtxWithCaps caps (CcCtx (serial, vars, tys, _, known, refs, locals)): CcCtx =
+  CcCtx (serial, vars, tys, caps, known, refs, locals)
+
+let ccCtxWithKnown known (CcCtx (serial, vars, tys, caps, _, refs, locals)): CcCtx =
+  CcCtx (serial, vars, tys, caps, known, refs, locals)
+
+let ccCtxWithRefs refs (CcCtx (serial, vars, tys, caps, known, _, locals)): CcCtx =
+  CcCtx (serial, vars, tys, caps, known, refs, locals)
+
+let ccCtxWithLocals locals (CcCtx (serial, vars, tys, caps, known, refs, _)): CcCtx =
+  CcCtx (serial, vars, tys, caps, known, refs, locals)
+
+type EtaCtx =
+  | EtaCtx
+    of Serial
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+
+let etaCtxGetSerial (EtaCtx (serial, _, _)) =
+  serial
+
+let etaCtxGetVars (EtaCtx (_, vars, _)) =
+  vars
+
+let etaCtxGetTys (EtaCtx (_, _, tys)) =
+  tys
+
+let etaCtxWithSerial serial (EtaCtx (_, vars, tys)): EtaCtx =
+  EtaCtx (serial, vars, tys)
+
+let etaCtxWithVars vars (EtaCtx (serial, _, tys)): EtaCtx =
+  EtaCtx (serial, vars, tys)
+
+let etaCtxWithTys tys (EtaCtx (serial, vars, _)): EtaCtx =
+  EtaCtx (serial, vars, tys)
+
+type MonoCtx =
+  | MonoCtx
+    of Serial
+      * (Log * Loc) list
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<TySerial, LetDepth>
+      * AssocMap<FunSerial, Ty list>
+      * AssocMap<FunSerial * Ty, FunSerial>
+      * MonoMode
+      * bool
+      * int
+
+let monoCtxGetSerial (MonoCtx (serial, _, _, _, _, _, _, _, _, _)) =
+  serial
+
+let monoCtxGetLogs (MonoCtx (_, logs, _, _, _, _, _, _, _, _)) =
+  logs
+
+let monoCtxGetVars (MonoCtx (_, _, vars, _, _, _, _, _, _, _)) =
+  vars
+
+let monoCtxGetTys (MonoCtx (_, _, _, tys, _, _, _, _, _, _)) =
+  tys
+
+let monoCtxGetTyDepths (MonoCtx (_, _, _, _, tyDepths, _, _, _, _, _)) =
+  tyDepths
+
+let monoCtxGetGenericFunUseSiteTys (MonoCtx (_, _, _, _, _, genericFunUseSiteTys, _, _, _, _)) =
+  genericFunUseSiteTys
+
+let monoCtxGetGenericFunMonoSerials (MonoCtx (_, _, _, _, _, _, genericFunMonoSerials, _, _, _)) =
+  genericFunMonoSerials
+
+let monoCtxGetMode (MonoCtx (_, _, _, _, _, _, _, mode, _, _)) =
+  mode
+
+let monoCtxGetSomethingHappened (MonoCtx (_, _, _, _, _, _, _, _, somethingHappened, _)) =
+  somethingHappened
+
+let monoCtxGetInfiniteLoopDetector (MonoCtx (_, _, _, _, _, _, _, _, _, infiniteLoopDetector)) =
+  infiniteLoopDetector
+
+let monoCtxWithSerial serial (MonoCtx (_, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithLogs logs (MonoCtx (serial, _, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithVars vars (MonoCtx (serial, logs, _, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithTys tys (MonoCtx (serial, logs, vars, _, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithTyDepths tyDepths (MonoCtx (serial, logs, vars, tys, _, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithGenericFunUseSiteTys genericFunUseSiteTys (MonoCtx (serial, logs, vars, tys, tyDepths, _, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithGenericFunMonoSerials genericFunMonoSerials (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, _, mode, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithMode mode (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, _, somethingHappened, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithSomethingHappened somethingHappened (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, _, infiniteLoopDetector)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+let monoCtxWithInfiniteLoopDetector infiniteLoopDetector (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, _)): MonoCtx =
+  MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+type MirCtx =
+  | MirCtx
+    of Serial
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * Serial
+      * MStmt list
+      * (Log * Loc) list
+
+let mirCtxGetSerial (MirCtx (serial, _, _, _, _, _)) =
+  serial
+
+let mirCtxGetVars (MirCtx (_, vars, _, _, _, _)) =
+  vars
+
+let mirCtxGetTys (MirCtx (_, _, tys, _, _, _)) =
+  tys
+
+let mirCtxGetLabelSerial (MirCtx (_, _, _, labelSerial, _, _)) =
+  labelSerial
+
+let mirCtxGetStmts (MirCtx (_, _, _, _, stmts, _)) =
+  stmts
+
+let mirCtxGetLogs (MirCtx (_, _, _, _, _, logs)) =
+  logs
+
+let mirCtxWithSerial serial (MirCtx (_, vars, tys, labelSerial, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithVars vars (MirCtx (serial, _, tys, labelSerial, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithTys tys (MirCtx (serial, vars, _, labelSerial, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithLabelSerial labelSerial (MirCtx (serial, vars, tys, _, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithStmts stmts (MirCtx (serial, vars, tys, labelSerial, _, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithLogs logs (MirCtx (serial, vars, tys, labelSerial, stmts, _)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+type CirCtx =
+  | CirCtx
+    of AssocMap<VarSerial, VarDef>
+      * AssocMap<VarSerial, Ident>
+      * AssocMap<Ty, TyInstance * CTy>
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<Ty, Ident>
+      * CStmt list
+      * CDecl list
+      * (Log * Loc) list
+
+let cirCtxGetVars (CirCtx (vars, _, _, _, _, _, _, _)) =
+  vars
+
+let cirCtxGetVarUniqueNames (CirCtx (_, varUniqueNames, _, _, _, _, _, _)) =
+  varUniqueNames
+
+let cirCtxGetTyEnv (CirCtx (_, _, tyEnv, _, _, _, _, _)) =
+  tyEnv
+
+let cirCtxGetTys (CirCtx (_, _, _, tys, _, _, _, _)) =
+  tys
+
+let cirCtxGetTyUniqueNames (CirCtx (_, _, _, _, tyUniqueNames, _, _, _)) =
+  tyUniqueNames
+
+let cirCtxGetStmts (CirCtx (_, _, _, _, _, stmts, _, _)) =
+  stmts
+
+let cirCtxGetDecls (CirCtx (_, _, _, _, _, _, decls, _)) =
+  decls
+
+let cirCtxGetLogs (CirCtx (_, _, _, _, _, _, _, logs)) =
+  logs
+
+let cirCtxWithVars vars (CirCtx (_, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithVarUniqueNames varUniqueNames (CirCtx (vars, _, tyEnv, tys, tyUniqueNames, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithTyEnv tyEnv (CirCtx (vars, varUniqueNames, _, tys, tyUniqueNames, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithTys tys (CirCtx (vars, varUniqueNames, tyEnv, _, tyUniqueNames, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithTyUniqueNames tyUniqueNames (CirCtx (vars, varUniqueNames, tyEnv, tys, _, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithStmts stmts (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, _, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithDecls decls (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, _, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithLogs logs (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, _)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
