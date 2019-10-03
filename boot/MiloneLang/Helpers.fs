@@ -638,7 +638,7 @@ let intCmp (x: int) (y: int) =
     -1
 
 let intHash (x: int) =
-  x % 128
+  x % 512
 
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
