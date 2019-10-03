@@ -99,3 +99,13 @@ MirCtx:
   LabelSerial: Serial
   Stmts: MStmt list
   Logs: (Log * Loc) list
+
+CirCtx:
+  Vars: AssocMap<VarSerial, VarDef>
+  VarUniqueNames: AssocMap<VarSerial, Ident>
+  TyEnv: AssocMap<Ty, TyInstance * CTy>
+  Tys: AssocMap<TySerial, TyDef>
+  TyUniqueNames: AssocMap<Ty, Ident>
+  Stmts: CStmt list
+  Decls: CDecl list
+  Logs: (Log * Loc) list

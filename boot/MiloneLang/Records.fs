@@ -344,3 +344,62 @@ let mirCtxWithStmts stmts (MirCtx (serial, vars, tys, labelSerial, _, logs)): Mi
 
 let mirCtxWithLogs logs (MirCtx (serial, vars, tys, labelSerial, stmts, _)): MirCtx =
   MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+type CirCtx =
+  | CirCtx
+    of AssocMap<VarSerial, VarDef>
+      * AssocMap<VarSerial, Ident>
+      * AssocMap<Ty, TyInstance * CTy>
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<Ty, Ident>
+      * CStmt list
+      * CDecl list
+      * (Log * Loc) list
+
+let cirCtxGetVars (CirCtx (vars, _, _, _, _, _, _, _)) =
+  vars
+
+let cirCtxGetVarUniqueNames (CirCtx (_, varUniqueNames, _, _, _, _, _, _)) =
+  varUniqueNames
+
+let cirCtxGetTyEnv (CirCtx (_, _, tyEnv, _, _, _, _, _)) =
+  tyEnv
+
+let cirCtxGetTys (CirCtx (_, _, _, tys, _, _, _, _)) =
+  tys
+
+let cirCtxGetTyUniqueNames (CirCtx (_, _, _, _, tyUniqueNames, _, _, _)) =
+  tyUniqueNames
+
+let cirCtxGetStmts (CirCtx (_, _, _, _, _, stmts, _, _)) =
+  stmts
+
+let cirCtxGetDecls (CirCtx (_, _, _, _, _, _, decls, _)) =
+  decls
+
+let cirCtxGetLogs (CirCtx (_, _, _, _, _, _, _, logs)) =
+  logs
+
+let cirCtxWithVars vars (CirCtx (_, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithVarUniqueNames varUniqueNames (CirCtx (vars, _, tyEnv, tys, tyUniqueNames, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithTyEnv tyEnv (CirCtx (vars, varUniqueNames, _, tys, tyUniqueNames, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithTys tys (CirCtx (vars, varUniqueNames, tyEnv, _, tyUniqueNames, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithTyUniqueNames tyUniqueNames (CirCtx (vars, varUniqueNames, tyEnv, tys, _, stmts, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithStmts stmts (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, _, decls, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithDecls decls (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, _, logs)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+let cirCtxWithLogs logs (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, _)): CirCtx =
+  CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
