@@ -299,3 +299,48 @@ let monoCtxWithSomethingHappened somethingHappened (MonoCtx (serial, logs, vars,
 
 let monoCtxWithInfiniteLoopDetector infiniteLoopDetector (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, _)): MonoCtx =
   MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
+
+type MirCtx =
+  | MirCtx
+    of Serial
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * Serial
+      * MStmt list
+      * (Log * Loc) list
+
+let mirCtxGetSerial (MirCtx (serial, _, _, _, _, _)) =
+  serial
+
+let mirCtxGetVars (MirCtx (_, vars, _, _, _, _)) =
+  vars
+
+let mirCtxGetTys (MirCtx (_, _, tys, _, _, _)) =
+  tys
+
+let mirCtxGetLabelSerial (MirCtx (_, _, _, labelSerial, _, _)) =
+  labelSerial
+
+let mirCtxGetStmts (MirCtx (_, _, _, _, stmts, _)) =
+  stmts
+
+let mirCtxGetLogs (MirCtx (_, _, _, _, _, logs)) =
+  logs
+
+let mirCtxWithSerial serial (MirCtx (_, vars, tys, labelSerial, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithVars vars (MirCtx (serial, _, tys, labelSerial, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithTys tys (MirCtx (serial, vars, _, labelSerial, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithLabelSerial labelSerial (MirCtx (serial, vars, tys, _, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithStmts stmts (MirCtx (serial, vars, tys, labelSerial, _, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+
+let mirCtxWithLogs logs (MirCtx (serial, vars, tys, labelSerial, stmts, _)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, stmts, logs)

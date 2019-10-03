@@ -6,6 +6,7 @@
 /// Generates type declarations for lists/tuples/etc.
 module rec MiloneLang.CIrGen
 
+open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
 
@@ -54,18 +55,18 @@ let calculateTyUniqueNames tys =
   |> Seq.toList
   |> mapOfList (tyToHash, tyCmp)
 
-let cirCtxFromMirCtx (mirCtx: Mir.MirCtx): CirCtx =
-  let varNames = calculateVarUniqueNames mirCtx.Vars
-  let tyNames = calculateTyUniqueNames mirCtx.Tys
+let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
+  let varNames = calculateVarUniqueNames (mirCtx |> mirCtxGetVars)
+  let tyNames = calculateTyUniqueNames (mirCtx |> mirCtxGetTys)
   {
-    Vars = mirCtx.Vars
+    Vars = mirCtx |> mirCtxGetVars
     VarUniqueNames = varNames
     TyEnv = mapEmpty (tyToHash, tyCmp)
-    Tys = mirCtx.Tys
+    Tys = mirCtx |> mirCtxGetTys
     TyUniqueNames = tyNames
     Stmts = []
     Decls = []
-    Logs = mirCtx.Logs
+    Logs = mirCtx |> mirCtxGetLogs
   }
 
 let cirCtxAddErr (ctx: CirCtx) message loc =
@@ -823,7 +824,7 @@ let genLogs (ctx: CirCtx) =
   let success = logs |> listIsEmpty
   success, ctx
 
-let gen (decls, mirCtx: Mir.MirCtx): CDecl list * bool =
+let gen (decls, mirCtx: MirCtx): CDecl list * bool =
   let ctx = cirCtxFromMirCtx mirCtx
   let ctx = genDecls ctx decls
   let success, ctx = genLogs ctx

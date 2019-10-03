@@ -91,3 +91,11 @@ MonoCtx:
   Mode: MonoMode
   SomethingHappened: bool
   InfiniteLoopDetector: int
+
+MirCtx:
+  Serial: Serial
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+  LabelSerial: Serial
+  Stmts: MStmt list
+  Logs: (Log * Loc) list
