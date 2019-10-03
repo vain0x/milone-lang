@@ -683,6 +683,9 @@ let intFromHex (l: int) (r: int) (s: string) =
 
   go 0 l
 
+let hashCombine (first: int) (second: int) =
+  first * 3 + second
+
 // -----------------------------------------------
 // Char
 // -----------------------------------------------
@@ -857,6 +860,12 @@ let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
 
 let locToString ((y, x): Loc) =
   string (y + 1) + ":" + string (x + 1)
+
+let locCmp (firstY, firstX) (secondY, secondX) =
+  if firstY <> secondY then
+    intCmp firstY secondY
+  else
+    intCmp firstX secondX
 
 // -----------------------------------------------
 // Token
@@ -1064,6 +1073,46 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
   serial, NameCtx (map, serial)
 
 // -----------------------------------------------
+// TyCon
+// -----------------------------------------------
+
+let tyConToInt tyCon =
+  match tyCon with
+  | TyCon.Bool ->
+    1
+
+  | TyCon.Int ->
+    2
+
+  | TyCon.Char ->
+    3
+
+  | TyCon.Str ->
+    4
+
+  | TyCon.Obj ->
+    5
+
+  | TyCon.Fun ->
+    6
+
+  | TyCon.Tuple ->
+    7
+
+  | TyCon.List ->
+    8
+
+  | TyCon.Ref tySerial ->
+    assert (tySerial >= 0)
+    9 + tySerial
+
+let tyConHash tyCon =
+  tyCon |> tyConToInt |> intHash
+
+let tyConCmp first second =
+  intCmp (tyConToInt first) (tyConToInt second)
+
+// -----------------------------------------------
 // Traits (HIR)
 // -----------------------------------------------
 
@@ -1125,6 +1174,73 @@ let tyAssocMap keyTy valueTy =
   let hashTy = tyFun keyTy tyInt
   let cmpTy = tyFun keyTy (tyFun keyTy tyInt)
   tyTuple [trieTy; hashTy; cmpTy]
+
+let tyToHash ty =
+  match ty with
+  | Ty.Error (y, x) ->
+    intHash (1 + y + x)
+
+  | Ty.Meta (tySerial, _) ->
+    intHash (2 + tySerial)
+
+  | Ty.Con (tyCon, tys) ->
+    let rec go h tys =
+      match tys with
+      | [] ->
+        h
+
+      | ty :: tys ->
+        go (hashCombine h (tyToHash ty)) tys
+
+    intHash (3 + go (tyConHash tyCon) tys)
+
+let tyCmp first second =
+  match first, second with
+  | Ty.Error first, Ty.Error second ->
+    locCmp first second
+
+  | Ty.Error _, _ ->
+    -1
+
+  | _, Ty.Error _ ->
+    1
+
+  | Ty.Meta (firstSerial, firstLoc), Ty.Meta (secondSerial, secondLoc) ->
+    if firstSerial <> secondSerial then
+      intCmp firstSerial secondSerial
+    else
+      locCmp firstLoc secondLoc
+
+  | Ty.Meta _, _ ->
+    -1
+
+  | _, Ty.Meta _ ->
+    1
+
+  | Ty.Con (firstTyCon, firstTys), Ty.Con (secondTyCon, secondTys) ->
+    let c = tyConCmp firstTyCon secondTyCon
+    if c <> 0 then
+      c
+    else
+      let rec go firstTys secondTys =
+        match firstTys, secondTys with
+        | [], [] ->
+          0
+
+        | [], _ ->
+          -1
+
+        | _, [] ->
+          1
+
+        | firstTy :: firstTys, secondTy :: secondTys ->
+          let c = tyCmp firstTy secondTy
+          if c <> 0 then
+            c
+          else
+            go firstTys secondTys
+
+      go firstTys secondTys
 
 let tyPrimFromIdent ident tys loc =
   match ident, tys with

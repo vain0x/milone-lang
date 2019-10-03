@@ -52,7 +52,7 @@ let calculateTyUniqueNames tys =
       tyRef serial [], ident
   ))
   |> Seq.toList
-  |> mapOfList (hash, compare)
+  |> mapOfList (tyToHash, tyCmp)
 
 let cirCtxFromMirCtx (mirCtx: Mir.MirCtx): CirCtx =
   let varNames = calculateVarUniqueNames mirCtx.Vars
@@ -60,7 +60,7 @@ let cirCtxFromMirCtx (mirCtx: Mir.MirCtx): CirCtx =
   {
     Vars = mirCtx.Vars
     VarUniqueNames = varNames
-    TyEnv = mapEmpty (hash, compare) // FIXME: Write tyCmp
+    TyEnv = mapEmpty (tyToHash, tyCmp)
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []

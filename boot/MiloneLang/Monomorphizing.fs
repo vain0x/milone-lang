@@ -89,6 +89,15 @@ type MonoCtx =
     InfiniteLoopDetector: int
   }
 
+let intTyToHash (value, ty) =
+  intHash (value + tyToHash ty)
+
+let intTyCmp (firstValue, firstTy) (secondValue, secondTy) =
+  if firstValue <> secondValue then
+    intCmp firstValue secondValue
+  else
+    tyCmp firstTy secondTy
+
 let monoCtxToTyCtx (monoCtx: MonoCtx): TyContext =
   TyContext (
     monoCtx.Serial,
@@ -333,7 +342,7 @@ let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
       TyDepths = tyCtx |> tyCtxGetTyDepths
 
       GenericFunUseSiteTys = mapEmpty (intHash, intCmp)
-      GenericFunMonoSerials = mapEmpty (hash, compare) // FIXME: Write intTyCmp
+      GenericFunMonoSerials = mapEmpty (intTyToHash, intTyCmp)
 
       Mode = Mode.Monify
       SomethingHappened = true
