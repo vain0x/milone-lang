@@ -297,9 +297,18 @@ let unetaPrim expr prim primTy calleeLoc (ctx: EtaCtx) =
   else
     resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
-let unetaExprInf infOp args ty loc ctx =
-  match infOp, args with
-  | InfOp.CallProc, callee :: args ->
+let unetaExprInf expr infOp args ty loc ctx =
+  match infOp with
+  | InfOp.App ->
+    /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
+    let rec roll acc callee =
+      match callee with
+      | HExpr.Inf (InfOp.App, [callee; arg], _, _) ->
+        roll (arg :: acc) callee
+      | _ ->
+        callee, acc
+
+    let callee, args = roll [] expr
     unetaCall callee args ty loc ctx
   | _ ->
     let args, ctx = (args, ctx) |> stMap unetaExpr
@@ -337,7 +346,7 @@ let unetaExpr (expr, ctx) =
     let subject, ctx = unetaExpr (subject, ctx)
     HExpr.Nav (subject, message, ty, loc), ctx
   | HExpr.Inf (infOp, args, ty, loc) ->
-    unetaExprInf infOp args ty loc ctx
+    unetaExprInf expr infOp args ty loc ctx
   | HExpr.Let (pat, init, next, ty, loc) ->
     let pat, ctx = (pat, ctx) |> unetaPat
     let init, ctx = (init, ctx) |> unetaExpr
