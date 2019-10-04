@@ -206,15 +206,10 @@ let declosureFunBody callee args body ctx =
   let baseCtx = ctx
   let ctx = ctx |> ccCtxPushScope []
 
-  // Traverse for dependency collection.
-  let args, ctx = (args, ctx) |> stMap declosurePat
-  let _, ctx = (body, ctx) |> declosureExpr
-  let caps = ctx |> ccCtxGetCurrentCaps
-  let ctx = ctx |> ccCtxAddFun callee caps
-
-  // Traverse again. We can now convert recursive calls correctly.
   let args, ctx = (args, ctx) |> stMap declosurePat
   let body, ctx = (body, ctx) |> declosureExpr
+  let caps = ctx |> ccCtxGetCurrentCaps
+  let ctx = ctx |> ccCtxAddFun callee caps
 
   let ctx = ctx |> ccCtxPopScope baseCtx
   caps, args, body, ctx
@@ -307,6 +302,15 @@ let declosureUpdateCtx (expr, ctx) =
 
 let declosure (expr, tyCtx: TyCtx) =
   let ccCtx = ccCtxFromTyCtx tyCtx
+
+  // Traverse for dependency collection.
+  // Transformed expression can be incorrect
+  // because captured variable list can be missing
+  // when to transform a function call before definition.
+  let _, ccCtx = (expr, ccCtx) |> declosureExpr
+
+  // Traverse again to transform function references/applications.
   let expr, ccCtx = (expr, ccCtx) |> declosureExpr |> declosureUpdateCtx
+
   let tyCtx = ccCtx |> ccCtxFeedbackToTyCtx tyCtx
   expr, tyCtx
