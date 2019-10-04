@@ -165,36 +165,18 @@ let declosurePat (pat, ctx) =
 
 let declosureExprRef serial refTy refLoc (expr, ctx) =
   let ctx = ctx |> ccCtxAddRef serial
-  declosureCall expr serial refTy refLoc ctx
 
-/// Converts a called ref to an app expression that takes the captured variables.
-let declosureCall callee calleeSerial calleeTy calleeLoc ctx =
-  match ctx |> ccCtxGetCaps |> mapTryFind calleeSerial with
+  // Convert to applied by captured variables if any.
+  match ctx |> ccCtxGetCaps |> mapTryFind serial with
   | Some (_ :: _ as caps) ->
-    // Build a callee partially applied.
-    let callee = caps |> capsAddToApp calleeSerial calleeTy calleeLoc
+    // Apply captured variables.
+    let app = caps |> capsAddToApp serial refTy refLoc
 
-    // Count captured variables as occurrences too.
+    // Count captured variables as occurrences too. (FIXME: This should be repeated for a fix point.)
     let ctx = caps |> listFold (fun ctx (serial, _, _) -> ctx |> ccCtxAddRef serial) ctx
-    callee, ctx
+    app, ctx
   | _ ->
-    callee, ctx
-
-let declosureExprApp callee arg resultTy loc ctx =
-  let callee, arg, ctx =
-    match callee with
-    | HExpr.Ref (calleeSerial, calleeTy, calleeLoc) ->
-      let ctx = ctx |> ccCtxAddRef calleeSerial
-      let arg, ctx = (arg, ctx) |> declosureExpr
-      let callee, ctx = declosureCall callee calleeSerial calleeTy calleeLoc ctx
-      callee, arg, ctx
-
-    | _ ->
-      let callee, ctx = (callee, ctx) |> declosureExpr
-      let arg, ctx = (arg, ctx) |> declosureExpr
-      callee, arg, ctx
-
-  hxApp callee arg resultTy loc, ctx
+    expr, ctx
 
 let declosureExprLetVal pat init next ty loc ctx =
   let pat, ctx = declosurePat (pat, ctx)
@@ -235,12 +217,8 @@ let declosureExprTyDecl expr tyDecl ctx =
     expr, ctx
 
 let declosureExprInf ctx infOp items ty loc =
-  match infOp, items with
-  | InfOp.App, [callee; arg] ->
-    declosureExprApp callee arg ty loc ctx
-  | _ ->
-    let items, ctx = (items, ctx) |> stMap declosureExpr
-    HExpr.Inf (infOp, items, ty, loc), ctx
+  let items, ctx = (items, ctx) |> stMap declosureExpr
+  HExpr.Inf (infOp, items, ty, loc), ctx
 
 let declosureExprMatch target arms ty loc ctx =
   let target, ctx = declosureExpr (target, ctx)
