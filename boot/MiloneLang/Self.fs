@@ -13,7 +13,7 @@ open MiloneLang.MainHoist
 open MiloneLang.ClosureConversion
 open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
-// open MiloneLang.Monomorphizing
+open MiloneLang.Monomorphizing
 // open MiloneLang.Mir
 
 let litToString lit =
@@ -564,10 +564,10 @@ let doSelf (fileReadAllText: string -> string) =
 
     printfn "Hoist"
     let expr, tyCtx = hoist (expr, tyCtx)
-    tyCtx |> tyCtxGetLogs
 
-    // printfn "Monomorphization"
-    // let expr, tyCtx = monify (expr, tyCtx)
+    printfn "Monomorphization"
+    let expr, tyCtx = monify (expr, tyCtx)
+    tyCtx |> tyCtxGetLogs
     // if tyCtx |> tyCtxHasError then
     //   tyCtx |> tyCtxGetLogs
     // else

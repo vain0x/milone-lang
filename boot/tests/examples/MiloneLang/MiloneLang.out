@@ -14,10 +14,12 @@ Load MainHoist
 Load ClosureConversion
 Load EtaExpansion
 Load Hoist
+Load Monomorphizing
 Name resolution
 Type inference
 Hoist main
 Closure conversion
 Eta expansion
 Hoist
+Monomorphization
 $? = 0
