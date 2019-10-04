@@ -154,7 +154,7 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
   ctx |> monoCtxWithVars vars
 
 let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
-  assert (monoCtxFindMonomorphizedFun ctx genericFunSerial useSiteTy |> Option.isNone)
+  assert (monoCtxFindMonomorphizedFun ctx genericFunSerial useSiteTy |> optionIsNone)
 
   let varDef =
     let monoTyScheme = TyScheme.ForAll ([], useSiteTy)
@@ -179,7 +179,7 @@ let monoCtxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
   let useSiteTyIsMonomorphic =
     useSiteTy |> tyIsMonomorphic
   let notMonomorphizedYet =
-    monoCtxFindMonomorphizedFun ctx funSerial useSiteTy |> Option.isNone
+    monoCtxFindMonomorphizedFun ctx funSerial useSiteTy |> optionIsNone
   let canMark =
     useSiteTyIsMonomorphic && notMonomorphizedYet
 
@@ -281,11 +281,12 @@ let rec monifyExpr (expr, ctx) =
 
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> monifyExpr
-    let arms, ctx = (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
-      let pat, ctx = (pat, ctx) |> monifyPat
-      let guard, ctx = (guard, ctx) |> monifyExpr
-      let body, ctx = (body, ctx) |> monifyExpr
-      (pat, guard, body), ctx)
+    let arms, ctx =
+      (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
+        let pat, ctx = (pat, ctx) |> monifyPat
+        let guard, ctx = (guard, ctx) |> monifyExpr
+        let body, ctx = (body, ctx) |> monifyExpr
+        (pat, guard, body), ctx)
     HExpr.Match (target, arms, ty, loc), ctx
 
   | HExpr.Nav (subject, message, ty, loc) ->

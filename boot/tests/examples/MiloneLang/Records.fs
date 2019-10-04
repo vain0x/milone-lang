@@ -151,57 +151,67 @@ let tyCtxWithTraitBounds traitBounds (TyCtx (serial, vars, tys, tyDepths, letDep
 let tyCtxWithLogs logs (TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, _)): TyCtx =
   TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
 
+type KnownCtx =
+  | KnownCtx
+    of AssocSet<FunSerial>
+      * AssocSet<VarSerial>
+      * AssocSet<VarSerial>
+
+let knownCtxGetKnown (KnownCtx (known, _, _)) =
+  known
+
+let knownCtxGetLocals (KnownCtx (_, locals, _)) =
+  locals
+
+let knownCtxGetRefs (KnownCtx (_, _, refs)) =
+  refs
+
+let knownCtxWithKnown known (KnownCtx (_, locals, refs)): KnownCtx =
+  KnownCtx (known, locals, refs)
+
+let knownCtxWithLocals locals (KnownCtx (known, _, refs)): KnownCtx =
+  KnownCtx (known, locals, refs)
+
+let knownCtxWithRefs refs (KnownCtx (known, locals, _)): KnownCtx =
+  KnownCtx (known, locals, refs)
+
 type CcCtx =
   | CcCtx
     of Serial
       * AssocMap<VarSerial, VarDef>
       * AssocMap<TySerial, TyDef>
-      * AssocMap<FunSerial, (VarSerial * Ty * Loc) list>
-      * AssocSet<FunSerial>
-      * AssocSet<VarSerial>
-      * AssocSet<VarSerial>
+      * KnownCtx
+      * AssocMap<FunSerial, KnownCtx>
 
-let ccCtxGetSerial (CcCtx (serial, _, _, _, _, _, _)) =
+let ccCtxGetSerial (CcCtx (serial, _, _, _, _)) =
   serial
 
-let ccCtxGetVars (CcCtx (_, vars, _, _, _, _, _)) =
+let ccCtxGetVars (CcCtx (_, vars, _, _, _)) =
   vars
 
-let ccCtxGetTys (CcCtx (_, _, tys, _, _, _, _)) =
+let ccCtxGetTys (CcCtx (_, _, tys, _, _)) =
   tys
 
-let ccCtxGetCaps (CcCtx (_, _, _, caps, _, _, _)) =
-  caps
+let ccCtxGetCurrent (CcCtx (_, _, _, current, _)) =
+  current
 
-let ccCtxGetKnown (CcCtx (_, _, _, _, known, _, _)) =
-  known
+let ccCtxGetFuns (CcCtx (_, _, _, _, funs)) =
+  funs
 
-let ccCtxGetRefs (CcCtx (_, _, _, _, _, refs, _)) =
-  refs
+let ccCtxWithSerial serial (CcCtx (_, vars, tys, current, funs)): CcCtx =
+  CcCtx (serial, vars, tys, current, funs)
 
-let ccCtxGetLocals (CcCtx (_, _, _, _, _, _, locals)) =
-  locals
+let ccCtxWithVars vars (CcCtx (serial, _, tys, current, funs)): CcCtx =
+  CcCtx (serial, vars, tys, current, funs)
 
-let ccCtxWithSerial serial (CcCtx (_, vars, tys, caps, known, refs, locals)): CcCtx =
-  CcCtx (serial, vars, tys, caps, known, refs, locals)
+let ccCtxWithTys tys (CcCtx (serial, vars, _, current, funs)): CcCtx =
+  CcCtx (serial, vars, tys, current, funs)
 
-let ccCtxWithVars vars (CcCtx (serial, _, tys, caps, known, refs, locals)): CcCtx =
-  CcCtx (serial, vars, tys, caps, known, refs, locals)
+let ccCtxWithCurrent current (CcCtx (serial, vars, tys, _, funs)): CcCtx =
+  CcCtx (serial, vars, tys, current, funs)
 
-let ccCtxWithTys tys (CcCtx (serial, vars, _, caps, known, refs, locals)): CcCtx =
-  CcCtx (serial, vars, tys, caps, known, refs, locals)
-
-let ccCtxWithCaps caps (CcCtx (serial, vars, tys, _, known, refs, locals)): CcCtx =
-  CcCtx (serial, vars, tys, caps, known, refs, locals)
-
-let ccCtxWithKnown known (CcCtx (serial, vars, tys, caps, _, refs, locals)): CcCtx =
-  CcCtx (serial, vars, tys, caps, known, refs, locals)
-
-let ccCtxWithRefs refs (CcCtx (serial, vars, tys, caps, known, _, locals)): CcCtx =
-  CcCtx (serial, vars, tys, caps, known, refs, locals)
-
-let ccCtxWithLocals locals (CcCtx (serial, vars, tys, caps, known, refs, _)): CcCtx =
-  CcCtx (serial, vars, tys, caps, known, refs, locals)
+let ccCtxWithFuns funs (CcCtx (serial, vars, tys, current, _)): CcCtx =
+  CcCtx (serial, vars, tys, current, funs)
 
 type EtaCtx =
   | EtaCtx

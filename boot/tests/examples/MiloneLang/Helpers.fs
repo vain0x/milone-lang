@@ -53,6 +53,18 @@ let exMap f (xs, acc, ctx) =
   go [] xs acc ctx
 
 // -----------------------------------------------
+// Option
+// -----------------------------------------------
+
+let optionIsNone option =
+  match option with
+  | None ->
+    true
+
+  | Some _ ->
+    false
+
+// -----------------------------------------------
 // List
 // -----------------------------------------------
 
@@ -616,6 +628,9 @@ let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> 
   let trie = go trie
   trie, hash, cmp
 
+let setFold folder state (set: AssocSet<_>) =
+  set |> setToList |> listFold folder state
+
 // -----------------------------------------------
 // Int
 // -----------------------------------------------
@@ -1025,7 +1040,7 @@ let dumpTreeToString (node: DumpTree) =
 
       | child :: children ->
         acc
-        |> cons eol |> cons "- " |> go (eol + " ") child
+        |> cons eol |> cons "- " |> go (eol + "  ") child
         |> goChildren eol children
 
     let goNext eol next acc =
@@ -1836,6 +1851,14 @@ let exprToTy expr =
 // -----------------------------------------------
 // Binary Operators (MIR)
 // -----------------------------------------------
+
+let mOpIsAdd op =
+  match op with
+  | MOp.Add ->
+    true
+
+  | _ ->
+    false
 
 let opIsComparison op =
   match op with

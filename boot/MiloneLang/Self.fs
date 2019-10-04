@@ -13,8 +13,8 @@ open MiloneLang.MainHoist
 open MiloneLang.ClosureConversion
 open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
-open MiloneLang.Monomorphizing
-open MiloneLang.Mir
+// open MiloneLang.Monomorphizing
+// open MiloneLang.Mir
 
 let litToString lit =
   match lit with
@@ -564,18 +564,19 @@ let doSelf (fileReadAllText: string -> string) =
 
     printfn "Hoist"
     let expr, tyCtx = hoist (expr, tyCtx)
+    tyCtx |> tyCtxGetLogs
 
-    printfn "Monomorphization"
-    let expr, tyCtx = monify (expr, tyCtx)
-    if tyCtx |> tyCtxHasError then
-      tyCtx |> tyCtxGetLogs
-    else
+    // printfn "Monomorphization"
+    // let expr, tyCtx = monify (expr, tyCtx)
+    // if tyCtx |> tyCtxHasError then
+    //   tyCtx |> tyCtxGetLogs
+    // else
 
-    printfn "Mir"
-    let stmts, mirCtx = mirify (expr, tyCtx)
+    // printfn "Mir"
+    // let stmts, mirCtx = mirify (expr, tyCtx)
 
-    printfn "stmts %d" (stmts |> listLength)
-    mirCtx |> mirCtxGetLogs
+    // printfn "stmts %d" (stmts |> listLength)
+    // mirCtx |> mirCtxGetLogs
 
   // printfn "HIR:"
   // printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)

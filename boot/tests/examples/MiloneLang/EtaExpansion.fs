@@ -45,6 +45,7 @@ module rec MiloneLang.EtaExpansion
 
 open MiloneLang.Helpers
 open MiloneLang.Types
+open MiloneLang.Typing
 open MiloneLang.Records
 
 [<RequireQualifiedAccess>]
@@ -69,7 +70,7 @@ let etaCtxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
   let serial = (ctx |> etaCtxGetSerial) + 1
   let tyScheme =
     let isOwned (_: Serial) = true // FIXME: is it okay?
-    Typing.tyGeneralize isOwned ty
+    tyGeneralize isOwned ty
   let ctx =
     ctx
     |> etaCtxWithSerial ((ctx |> etaCtxGetSerial) + 1)
@@ -297,9 +298,18 @@ let unetaPrim expr prim primTy calleeLoc (ctx: EtaCtx) =
   else
     resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
-let unetaExprInf infOp args ty loc ctx =
-  match infOp, args with
-  | InfOp.CallProc, callee :: args ->
+let unetaExprInf expr infOp args ty loc ctx =
+  match infOp with
+  | InfOp.App ->
+    /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
+    let rec roll acc callee =
+      match callee with
+      | HExpr.Inf (InfOp.App, [callee; arg], _, _) ->
+        roll (arg :: acc) callee
+      | _ ->
+        callee, acc
+
+    let callee, args = roll [] expr
     unetaCall callee args ty loc ctx
   | _ ->
     let args, ctx = (args, ctx) |> stMap unetaExpr
@@ -327,17 +337,18 @@ let unetaExpr (expr, ctx) =
     unetaPrim expr prim primTy calleeLoc ctx
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> unetaExpr
-    let arms, ctx = (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
-      let pat, ctx = (pat, ctx) |> unetaPat
-      let guard, ctx = (guard, ctx) |> unetaExpr
-      let body, ctx = (body, ctx) |> unetaExpr
-      (pat, guard, body), ctx)
+    let arms, ctx =
+      (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
+        let pat, ctx = (pat, ctx) |> unetaPat
+        let guard, ctx = (guard, ctx) |> unetaExpr
+        let body, ctx = (body, ctx) |> unetaExpr
+        (pat, guard, body), ctx)
     HExpr.Match (target, arms, ty, loc), ctx
   | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = unetaExpr (subject, ctx)
     HExpr.Nav (subject, message, ty, loc), ctx
   | HExpr.Inf (infOp, args, ty, loc) ->
-    unetaExprInf infOp args ty loc ctx
+    unetaExprInf expr infOp args ty loc ctx
   | HExpr.Let (pat, init, next, ty, loc) ->
     let pat, ctx = (pat, ctx) |> unetaPat
     let init, ctx = (init, ctx) |> unetaExpr
