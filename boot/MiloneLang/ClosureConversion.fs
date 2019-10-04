@@ -128,9 +128,14 @@ let ccCtxAddRef varSerial (ctx: CcCtx) =
 
 /// Called on leave function declaration to store the current known context.
 let ccCtxLeaveFunDecl funSerial (ctx: CcCtx) =
-  ctx
-  |> ccCtxAddKnown funSerial
-  |> ccCtxWithFuns (ctx |> ccCtxGetFuns |> mapAdd funSerial (ctx |> ccCtxGetCurrent))
+  let ctx = ctx |> ccCtxAddKnown funSerial
+
+  // Update only first traversal.
+  let funs = ctx |> ccCtxGetFuns
+  if funs |> mapContainsKey funSerial then
+    ctx
+  else
+    ctx |> ccCtxWithFuns (funs |> mapAdd funSerial (ctx |> ccCtxGetCurrent))
 
 /// Gets a list of captured variable serials for a function.
 let ccCtxGetFunCapturedSerials funSerial (ctx: CcCtx) =
@@ -156,6 +161,51 @@ let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
   |> ccCtxGetFunCapturedSerials funSerial
   |> setToList
   |> chooseVars
+
+/// Extends the list of references to include transitive references.
+/// E.g. a function `f` uses `g` and `g` uses `h` (and `h` uses etc.),
+///      we think `f` also uses `h`.
+let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
+  let emptySet = setEmpty (intHash, intCmp)
+
+  let rec closureRefs refs ccCtx (modified, visited, acc) =
+    match refs with
+    | [] ->
+      modified, visited, acc
+
+    | varSerial :: refs
+      when visited |> setContains varSerial ->
+      (modified, visited, acc) |> closureRefs refs ccCtx
+
+    | varSerial :: refs ->
+      let visited = visited |> setAdd varSerial
+      let modified = modified || (acc |> setContains varSerial |> not)
+      let acc = acc |> setAdd varSerial
+      let otherRefs = ccCtx |> ccCtxGetFunCapturedSerials varSerial |> setToList
+      (modified, visited, acc)
+      |> closureRefs otherRefs ccCtx
+      |> closureRefs refs ccCtx
+
+  let closureKnownCtx (modified, ccCtx) varSerial knownCtx =
+    let refs = knownCtx |> knownCtxGetRefs
+    match (false, emptySet, refs) |> closureRefs (refs |> setToList) ccCtx with
+    | true, _, refs ->
+      let knownCtx = knownCtx |> knownCtxWithRefs refs
+      true, ccCtx |> ccCtxWithFuns (ccCtx |> ccCtxGetFuns |> mapAdd varSerial knownCtx)
+
+    | false, _, _ ->
+      modified, ccCtx
+
+  let rec closureFuns (modified, ccCtx) =
+    if not modified then
+      ccCtx
+    else
+      ccCtx
+      |> ccCtxGetFuns
+      |> mapFold closureKnownCtx (false, ccCtx)
+      |> closureFuns
+
+  closureFuns (true, ctx)
 
 // -----------------------------------------------
 // Caps
@@ -198,16 +248,10 @@ let capsUpdateFunDef funTy arity (caps: Caps) =
 /// If a function `f` captures `x` and `y`,
 /// each reference of `f` are replaced with an application `f x y`.
 let declosureFunRef refVarSerial refTy refLoc ctx =
-  let ctx =
-    ctx
-    |> ccCtxGetFunCapturedSerials refVarSerial
-    |> setFold (fun ctx capVarSerial -> ctx |> ccCtxAddRef capVarSerial) ctx
-
   let refExpr =
     ctx
     |> ccCtxGetFunCaps refVarSerial
     |> capsMakeApp refVarSerial refTy refLoc
-
   refExpr, ctx
 
 let declosureFunDecl callee isMainFun args body next ty loc ctx =
@@ -339,13 +383,16 @@ let declosureUpdateFuns (ctx: CcCtx) =
 let declosure (expr, tyCtx: TyCtx) =
   let ccCtx = ccCtxFromTyCtx tyCtx
 
-  // Traverse for dependency collection.
-  // Transformed expression can be incorrect
-  // because captured variable list can be missing
-  // when to transform a function call before definition.
+  // Traverse for reference collection.
+  // NOTE: Converted expression is possibly incorrect
+  //       because the set of captured variables is incomplete
+  //       when to process a function reference before definition.
   let _, ccCtx = (expr, ccCtx) |> declosureExpr
 
-  // Traverse again to transform function references/applications.
+  // Resolve transitive references.
+  let ccCtx = ccCtx |> ccCtxClosureRefs
+
+  // Traverse again to transform function references.
   let expr, ccCtx = (expr, ccCtx) |> declosureExpr
 
   let tyCtx = ccCtx |> declosureUpdateFuns |> ccCtxFeedbackToTyCtx tyCtx
