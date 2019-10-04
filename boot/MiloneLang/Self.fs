@@ -14,7 +14,7 @@ open MiloneLang.ClosureConversion
 open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
 open MiloneLang.Monomorphizing
-// open MiloneLang.Mir
+open MiloneLang.Mir
 
 let litToString lit =
   match lit with
@@ -567,16 +567,15 @@ let doSelf (fileReadAllText: string -> string) =
 
     printfn "Monomorphization"
     let expr, tyCtx = monify (expr, tyCtx)
-    tyCtx |> tyCtxGetLogs
-    // if tyCtx |> tyCtxHasError then
-    //   tyCtx |> tyCtxGetLogs
-    // else
+    if tyCtx |> tyCtxHasError then
+      tyCtx |> tyCtxGetLogs
+    else
 
-    // printfn "Mir"
-    // let stmts, mirCtx = mirify (expr, tyCtx)
+    printfn "Mir"
+    let stmts, mirCtx = mirify (expr, tyCtx)
 
-    // printfn "stmts %d" (stmts |> listLength)
-    // mirCtx |> mirCtxGetLogs
+    printfn "stmts %d" (stmts |> listLength)
+    mirCtx |> mirCtxGetLogs
 
   // printfn "HIR:"
   // printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)
