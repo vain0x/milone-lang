@@ -616,6 +616,9 @@ let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> 
   let trie = go trie
   trie, hash, cmp
 
+let setFold folder state (set: AssocSet<_>) =
+  set |> setToList |> listFold folder state
+
 // -----------------------------------------------
 // Int
 // -----------------------------------------------
