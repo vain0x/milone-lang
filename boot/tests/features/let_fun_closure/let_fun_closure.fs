@@ -18,8 +18,21 @@ let recursiveCase () =
 
   assert (go 0)
 
+let mutuallyRecursiveCase () =
+  assert (f1 () = 1)
+
+let f1 () = f2 ()
+let f2 () = f3 ()
+let f3 () = f4 ()
+let f4 () = f5 ()
+let f5 () = f6 ()
+let f6 () = f7 ()
+let f7 () = a
+let a = 1
+
 let main _ =
   basicCase ()
   transitiveCase ()
   recursiveCase ()
+  mutuallyRecursiveCase ()
   0
