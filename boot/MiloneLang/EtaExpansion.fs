@@ -45,6 +45,7 @@ module rec MiloneLang.EtaExpansion
 
 open MiloneLang.Helpers
 open MiloneLang.Types
+open MiloneLang.Typing
 open MiloneLang.Records
 
 [<RequireQualifiedAccess>]
@@ -68,8 +69,8 @@ let etaCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
 let etaCtxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
   let serial = (ctx |> etaCtxGetSerial) + 1
   let tyScheme =
-    let isOwned _ = true // FIXME: is it okay?
-    Typing.tyGeneralize isOwned ty
+    let isOwned (_: Serial) = true // FIXME: is it okay?
+    tyGeneralize isOwned ty
   let ctx =
     ctx
     |> etaCtxWithSerial ((ctx |> etaCtxGetSerial) + 1)
@@ -336,11 +337,12 @@ let unetaExpr (expr, ctx) =
     unetaPrim expr prim primTy calleeLoc ctx
   | HExpr.Match (target, arms, ty, loc) ->
     let target, ctx = (target, ctx) |> unetaExpr
-    let arms, ctx = (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
-      let pat, ctx = (pat, ctx) |> unetaPat
-      let guard, ctx = (guard, ctx) |> unetaExpr
-      let body, ctx = (body, ctx) |> unetaExpr
-      (pat, guard, body), ctx)
+    let arms, ctx =
+      (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
+        let pat, ctx = (pat, ctx) |> unetaPat
+        let guard, ctx = (guard, ctx) |> unetaExpr
+        let body, ctx = (body, ctx) |> unetaExpr
+        (pat, guard, body), ctx)
     HExpr.Match (target, arms, ty, loc), ctx
   | HExpr.Nav (subject, message, ty, loc) ->
     let subject, ctx = unetaExpr (subject, ctx)

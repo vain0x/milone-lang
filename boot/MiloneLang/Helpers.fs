@@ -53,6 +53,18 @@ let exMap f (xs, acc, ctx) =
   go [] xs acc ctx
 
 // -----------------------------------------------
+// Option
+// -----------------------------------------------
+
+let optionIsNone option =
+  match option with
+  | None ->
+    true
+
+  | Some _ ->
+    false
+
+// -----------------------------------------------
 // List
 // -----------------------------------------------
 
@@ -1818,6 +1830,14 @@ let exprToTy expr =
 // -----------------------------------------------
 // Binary Operators (MIR)
 // -----------------------------------------------
+
+let mOpIsAdd op =
+  match op with
+  | MOp.Add ->
+    true
+
+  | _ ->
+    false
 
 let opIsComparison op =
   match op with

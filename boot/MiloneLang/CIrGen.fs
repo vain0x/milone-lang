@@ -272,7 +272,9 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
         | Ty.Con (TyCon.List, _)
         | Ty.Con (TyCon.Fun, _)
         | Ty.Error _ ->
-          failwithf "Never %A" ty
+          // FIXME: error
+          printfn "#error NEVER error type %A" ty
+          sprintf "/* unknown ty %A */" ty, ctx
       let ctx = ctx |> cirCtxWithTyUniqueNames (ctx |> cirCtxGetTyUniqueNames |> mapAdd ty ident)
       ident, ctx
   go ty ctx
