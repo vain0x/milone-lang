@@ -341,7 +341,7 @@ let cprintHeader acc =
   acc |> cons header |> cons eol |> cons eol
 
 let cprintRun (printer: string list -> string list): string =
-  printer [] |> listRev |> String.concat ""
+  printer [] |> listRev |> strConcat
 
 let cprint (decls: CDecl list): string =
   cprintRun (fun acc -> cprintDecls (cprintHeader acc) decls)

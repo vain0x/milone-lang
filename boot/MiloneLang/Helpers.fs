@@ -64,6 +64,14 @@ let optionIsNone option =
   | Some _ ->
     false
 
+let optionDefaultValue alt option =
+  match option with
+  | Some x ->
+    x
+
+  | None ->
+    alt
+
 // -----------------------------------------------
 // List
 // -----------------------------------------------
@@ -1131,6 +1139,9 @@ let tyConHash tyCon =
 let tyConCmp first second =
   intCmp (tyConToInt first) (tyConToInt second)
 
+let tyConEq first second =
+  tyConCmp first second = 0
+
 // -----------------------------------------------
 // Traits (HIR)
 // -----------------------------------------------
@@ -1278,6 +1289,9 @@ let tyCmp first second =
             go firstTys secondTys
 
       go firstTys secondTys
+
+let tyEq first second =
+  tyCmp first second = 0
 
 let tyPrimFromIdent ident tys loc =
   match ident, tys with
