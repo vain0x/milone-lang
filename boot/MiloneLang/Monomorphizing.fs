@@ -276,38 +276,50 @@ let rec monifyExpr (expr, ctx) =
     expr, ctx
 
   | HExpr.Ref (varSerial, useSiteTy, loc) ->
-    let varSerial, ctx = monoCtxProcessVarRef ctx varSerial useSiteTy
-    HExpr.Ref (varSerial, useSiteTy, loc), ctx
+    let doArm () =
+      let varSerial, ctx = monoCtxProcessVarRef ctx varSerial useSiteTy
+      HExpr.Ref (varSerial, useSiteTy, loc), ctx
+    doArm ()
 
   | HExpr.Match (target, arms, ty, loc) ->
-    let target, ctx = (target, ctx) |> monifyExpr
-    let arms, ctx =
-      (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
-        let pat, ctx = (pat, ctx) |> monifyPat
-        let guard, ctx = (guard, ctx) |> monifyExpr
-        let body, ctx = (body, ctx) |> monifyExpr
-        (pat, guard, body), ctx)
-    HExpr.Match (target, arms, ty, loc), ctx
+    let doArm () =
+      let target, ctx = (target, ctx) |> monifyExpr
+      let arms, ctx =
+        (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
+          let pat, ctx = (pat, ctx) |> monifyPat
+          let guard, ctx = (guard, ctx) |> monifyExpr
+          let body, ctx = (body, ctx) |> monifyExpr
+          (pat, guard, body), ctx)
+      HExpr.Match (target, arms, ty, loc), ctx
+    doArm ()
 
   | HExpr.Nav (subject, message, ty, loc) ->
-    let subject, ctx = monifyExpr (subject, ctx)
-    HExpr.Nav (subject, message, ty, loc), ctx
+    let doArm () =
+      let subject, ctx = monifyExpr (subject, ctx)
+      HExpr.Nav (subject, message, ty, loc), ctx
+    doArm ()
 
   | HExpr.Inf (infOp, args, ty, loc) ->
-    let args, ctx = (args, ctx) |> stMap monifyExpr
-    HExpr.Inf (infOp, args, ty, loc), ctx
+    let doArm () =
+      let args, ctx = (args, ctx) |> stMap monifyExpr
+      HExpr.Inf (infOp, args, ty, loc), ctx
+    doArm ()
 
   | HExpr.Let (pat, init, next, ty, loc) ->
-    let pat, ctx = (pat, ctx) |> monifyPat
-    let init, ctx = (init, ctx) |> monifyExpr
-    let next, ctx = (next, ctx) |> monifyExpr
-    HExpr.Let (pat, init, next, ty, loc), ctx
+    let doArm () =
+      let pat, ctx = (pat, ctx) |> monifyPat
+      let init, ctx = (init, ctx) |> monifyExpr
+      let next, ctx = (next, ctx) |> monifyExpr
+      HExpr.Let (pat, init, next, ty, loc), ctx
+    doArm ()
 
   | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
-    let args, ctx = (args, ctx) |> stMap monifyPat
-    let body, ctx = (body, ctx) |> monifyExpr
-    let next, ctx = (next, ctx) |> monifyExpr
-    monifyExprLetFun ctx callee isMainFun args body next ty loc
+    let doArm () =
+      let args, ctx = (args, ctx) |> stMap monifyPat
+      let body, ctx = (body, ctx) |> monifyExpr
+      let next, ctx = (next, ctx) |> monifyExpr
+      monifyExprLetFun ctx callee isMainFun args body next ty loc
+    doArm ()
 
 let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let monoCtx = monoCtxFromTyCtx tyCtx |> monoCtxForceGeneralizeFuns

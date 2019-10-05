@@ -192,36 +192,46 @@ let hoistExprCore (expr, ctx) =
     expr, ctx
 
   | HExpr.Match (target, arms, ty, loc) ->
-    let go ((pat, guard, body), ctx) =
-      let pat, ctx = hoistPat (pat, ctx)
-      let guard, ctx = hoistExpr (guard, ctx)
-      let body, ctx = hoistExpr (body, ctx)
-      (pat, guard, body), ctx
+    let doArm () =
+      let go ((pat, guard, body), ctx) =
+        let pat, ctx = hoistPat (pat, ctx)
+        let guard, ctx = hoistExpr (guard, ctx)
+        let body, ctx = hoistExpr (body, ctx)
+        (pat, guard, body), ctx
 
-    let target, ctx = hoistExpr (target, ctx)
-    let arms, ctx = (arms, ctx) |> stMap go
-    HExpr.Match (target, arms, ty, loc), ctx
+      let target, ctx = hoistExpr (target, ctx)
+      let arms, ctx = (arms, ctx) |> stMap go
+      HExpr.Match (target, arms, ty, loc), ctx
+    doArm ()
 
   | HExpr.Nav (l, r, ty, loc) ->
-    let l, ctx = hoistExpr (l, ctx)
-    HExpr.Nav (l, r, ty, loc), ctx
+    let doArm () =
+      let l, ctx = hoistExpr (l, ctx)
+      HExpr.Nav (l, r, ty, loc), ctx
+    doArm ()
 
   | HExpr.Inf (infOp, items, ty, loc) ->
-    let items, ctx = (items, ctx) |> stMap hoistExpr
-    HExpr.Inf (infOp, items, ty, loc), ctx
+    let doArm () =
+      let items, ctx = (items, ctx) |> stMap hoistExpr
+      HExpr.Inf (infOp, items, ty, loc), ctx
+    doArm ()
 
   | HExpr.Let (pat, body, next, ty, loc) ->
-    let pat, ctx = (pat, ctx) |> hoistPat
-    let body, ctx = (body, ctx) |> hoistExprLocal
-    let next, ctx = (next, ctx) |> hoistExpr
-    HExpr.Let (pat, body, next, ty, loc), ctx
+    let doArm () =
+      let pat, ctx = (pat, ctx) |> hoistPat
+      let body, ctx = (body, ctx) |> hoistExprLocal
+      let next, ctx = (next, ctx) |> hoistExpr
+      HExpr.Let (pat, body, next, ty, loc), ctx
+    doArm ()
 
   | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
     hoistExprLetFun callee isMainFun args body next ty loc ctx
 
   | HExpr.TyDecl _ ->
-    let ctx = ctx |> hoistCtxAddDecl expr
-    hxDummy, ctx
+    let doArm () =
+      let ctx = ctx |> hoistCtxAddDecl expr
+      hxDummy, ctx
+    doArm ()
 
 let hoistExpr (expr, ctx) =
   if ctx |> hoistCtxIsTopLevel |> not then
