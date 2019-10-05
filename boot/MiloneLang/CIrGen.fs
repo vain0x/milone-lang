@@ -10,35 +10,43 @@ open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-let tupleField i = sprintf "t%d" i
+let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
+  let rename (ident: string) (index: int) =
+    if index = 0 then
+      ident + "_"
+    else
+      ident + "_" + string index
+
+  // Group serials by ident.
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      acc
+
+    | (serial, def) :: xs ->
+      let ident = toIdent def
+      let serials = acc |> mapTryFind ident |> optionDefaultValue []
+      let acc = acc |> mapAdd ident (serial :: serials)
+      go acc xs
+
+  let serialsMap = go (mapEmpty (strHash, strCmp)) (defMap |> mapToList)
+
+  let addIdent ident (identMap, index) serial =
+    identMap |> mapAdd (toKey serial) (rename ident index), index + 1
+  let addIdents identMap ident serials =
+    serials |> listRev |> listFold (addIdent ident) (identMap, 0) |> fst
+  serialsMap |> mapFold addIdents (mapEmpty mapFuns)
+
+let tupleField (i: int) =
+  "t" + string i
 
 /// Calculates tag type's name of union type.
-let tagTyIdent tyIdent =
-  sprintf "%sTag" tyIdent
-
-let calculateVarUniqueNames vars =
-  let groups = vars |> mapToList |> Seq.groupBy (fun (_, varDef) -> varDefToIdent varDef)
-  groups |> Seq.collect (fun (ident, vars) ->
-    vars |> Seq.mapi (fun i (serial, _) ->
-      let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
-      (serial, ident)
-  ))
-  |> Seq.toList
-  |> mapOfList (intHash, intCmp)
-
-let calculateTyUniqueNames tys =
-  let groups = tys |> mapToList |> Seq.groupBy (fun (_, tyDef) -> tyDefToIdent tyDef)
-  groups |> Seq.collect (fun (ident, tys) ->
-    tys |> Seq.mapi (fun i (serial, _) ->
-      let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
-      tyRef serial [], ident
-  ))
-  |> Seq.toList
-  |> mapOfList (tyToHash, tyCmp)
+let tagTyIdent (tyIdent: string) =
+  tyIdent + "Tag"
 
 let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
-  let varNames = calculateVarUniqueNames (mirCtx |> mirCtxGetVars)
-  let tyNames = calculateTyUniqueNames (mirCtx |> mirCtxGetTys)
+  let varNames = mirCtx |> mirCtxGetVars |> renameIdents varDefToIdent id (intHash, intCmp)
+  let tyNames = mirCtx |> mirCtxGetTys |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) (tyToHash, tyCmp)
   CirCtx (
     mirCtx |> mirCtxGetVars,
     varNames,
@@ -240,43 +248,62 @@ let cirCtxUniqueName (ctx: CirCtx) serial =
 
 let cirCtxUniqueTyName (ctx: CirCtx) ty =
   let rec go ty (ctx: CirCtx) =
+    let tyToUniqueName ty =
+      match ty with
+      | Ty.Con (TyCon.Bool, _) ->
+        "Bool", ctx
+
+      | Ty.Con (TyCon.Int, _) ->
+        "Int", ctx
+
+      | Ty.Con (TyCon.Char, _) ->
+        "Char", ctx
+
+      | Ty.Con (TyCon.Str, _) ->
+        "String", ctx
+
+      | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
+      | Ty.Con (TyCon.Obj, _) ->
+        "Object", ctx
+
+      | Ty.Con (TyCon.Fun, _) ->
+        let arity, argTys, resultTy = tyToArgList ty
+        let argTys, ctx = (argTys, ctx) |> stMap (fun (argTy, ctx) -> ctx |> go argTy)
+        let resultTy, ctx = ctx |> go resultTy
+        let funTy = (argTys |> strConcat) + resultTy + "Fun" + string arity
+        funTy, ctx
+
+      | Ty.Con (TyCon.List, [itemTy]) ->
+        let itemTy, ctx = ctx |> go itemTy
+        let listTy = itemTy + "List"
+        listTy, ctx
+
+      | Ty.Con (TyCon.Tuple, []) ->
+        "Unit", ctx
+
+      | Ty.Con (TyCon.Tuple, itemTys) ->
+        let len = itemTys |> listLength
+        let itemTys, ctx = (itemTys, ctx) |> stMap (fun (itemTy, ctx) -> ctx |> go itemTy)
+        let tupleTy = (itemTys |> strConcat) + "Tuple" + string len
+        tupleTy, ctx
+
+      | Ty.Con (TyCon.Ref _, _)
+      | Ty.Con (TyCon.List, _)
+      | Ty.Con (TyCon.Fun, _)
+      | Ty.Error _ ->
+        // FIXME: collect error
+        failwithf "/* unknown ty %A */" ty
+
+    // Memoization.
     match ctx |> cirCtxGetTyUniqueNames |> mapTryFind ty with
     | Some ident ->
       ident, ctx
+
     | None ->
-      let ident, ctx =
-        match ty with
-        | Ty.Con (TyCon.Bool, _) -> "Bool", ctx
-        | Ty.Con (TyCon.Int, _) -> "Int", ctx
-        | Ty.Con (TyCon.Char, _) -> "Char", ctx
-        | Ty.Con (TyCon.Str, _) -> "String", ctx
-        | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
-        | Ty.Con (TyCon.Obj, _) -> "Object", ctx
-        | Ty.Con (TyCon.Fun, _) ->
-          let arity, argTys, resultTy = tyToArgList ty
-          let argTys, ctx = (argTys, ctx) |> stMap (fun (argTy, ctx) -> ctx |> go argTy)
-          let resultTy, ctx = ctx |> go resultTy
-          sprintf "%s%sFun%d" (argTys |> String.concat "") resultTy arity, ctx
-        | Ty.Con (TyCon.List, [itemTy]) ->
-          let itemTy, ctx = ctx |> go itemTy
-          sprintf "%sList" itemTy, ctx
-        | Ty.Con (TyCon.Tuple, []) ->
-          "Unit", ctx
-        | Ty.Con (TyCon.Tuple, itemTys) ->
-          let len = itemTys |> listLength
-          let itemTys, ctx = (itemTys, ctx) |> stMap (fun (itemTy, ctx) -> ctx |> go itemTy)
-          sprintf "%s%s%d" (itemTys |> String.concat "") "Tuple" len, ctx
-        | Ty.Con (TyCon.Ref serial, _) ->
-          // FIXME: This occurs when recursive union types defined.
-          failwithf "Never: Unknown type serial %d" serial
-        | Ty.Con (TyCon.List, _)
-        | Ty.Con (TyCon.Fun, _)
-        | Ty.Error _ ->
-          // FIXME: error
-          printfn "#error NEVER error type %A" ty
-          sprintf "/* unknown ty %A */" ty, ctx
+      let ident, ctx = tyToUniqueName ty
       let ctx = ctx |> cirCtxWithTyUniqueNames (ctx |> cirCtxGetTyUniqueNames |> mapAdd ty ident)
       ident, ctx
+
   go ty ctx
 
 let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
@@ -492,7 +519,7 @@ let genExprCallPrintfn ctx format args =
       listRev acc, ctx
     | MExpr.Lit (Lit.Str value, _) :: args ->
       go (CExpr.StrRaw value :: acc) ctx args
-    | arg :: args when mexprToTy arg = tyStr ->
+    | arg :: args when tyEq (mexprToTy arg) tyStr ->
       let arg, ctx = genExpr ctx arg
       let acc = CExpr.Nav (arg, "str") :: acc
       go acc ctx args

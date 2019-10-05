@@ -64,6 +64,14 @@ let optionIsNone option =
   | Some _ ->
     false
 
+let optionDefaultValue alt option =
+  match option with
+  | Some x ->
+    x
+
+  | None ->
+    alt
+
 // -----------------------------------------------
 // List
 // -----------------------------------------------
@@ -1127,6 +1135,9 @@ let tyConHash tyCon =
 let tyConCmp first second =
   intCmp (tyConToInt first) (tyConToInt second)
 
+let tyConEq first second =
+  tyConCmp first second = 0
+
 // -----------------------------------------------
 // Traits (HIR)
 // -----------------------------------------------
@@ -1256,6 +1267,9 @@ let tyCmp first second =
             go firstTys secondTys
 
       go firstTys secondTys
+
+let tyEq first second =
+  tyCmp first second = 0
 
 let tyPrimFromIdent ident tys loc =
   match ident, tys with
@@ -2032,7 +2046,7 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
       logAcc, ctx
     | _, Ty.Meta _ ->
       go rty lty (logAcc, ctx)
-    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when lTyCon = rTyCon ->
+    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when tyConEq lTyCon rTyCon ->
       logAcc, ctx
     | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
       (logAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
