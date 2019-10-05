@@ -352,7 +352,7 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
 // to create variables/types pre-definitions
 // so that mutually recursive references resolve correctly.
 
-let collectDecls (expr, ctx) =
+let nameResCollectDecls (expr, ctx) =
   let rec goPat (pat, ctx) =
     match pat with
     | HPat.Lit _
@@ -650,5 +650,5 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx
   (expr, scopeCtx)
-  |> collectDecls
+  |> nameResCollectDecls
   |> nameResExpr

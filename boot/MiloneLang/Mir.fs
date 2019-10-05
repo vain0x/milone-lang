@@ -66,7 +66,7 @@ let mirCtxLetFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
 let mirCtxFreshLabel (ctx: MirCtx) (ident: Ident) loc =
   let serial = (ctx |> mirCtxGetLabelSerial) + 1
   let ctx = ctx |> mirCtxWithLabelSerial ((ctx |> mirCtxGetLabelSerial) + 1)
-  let label: Label = sprintf "%s_%d" ident serial
+  let label: Label = ident + "_" + string serial
   let labelStmt = MStmt.Label (label, loc)
   labelStmt, label, ctx
 
@@ -108,7 +108,7 @@ let mxCmp ctx (op: MOp) (l: MExpr) r (ty: Ty) loc =
   | Ty.Con (TyCon.Str, _) ->
     mxStrCmp ctx op l r (ty, loc)
   | _ ->
-    failwith "unimpl"
+    failwithf "unimpl %A" (op, l, ty)
 
 let mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MExpr.Lit (lit, loc)
@@ -365,7 +365,7 @@ let mirifyExprMatch ctx target arms ty loc =
   /// 2. Remove trivial guards.
   let rec fixUp acc nextLabel instructionsRev =
     match instructionsRev with
-    | MatchIR.PatLabel patLabel as instruction :: rest ->
+    | (MatchIR.PatLabel patLabel as instruction) :: rest ->
       // The leading instructions refers to this label as next one.
       fixUp (instruction :: acc) patLabel rest
     | MatchIR.Pat (pat, _) :: rest ->
@@ -512,11 +512,12 @@ let mirifyExprOpArith ctx op l r ty loc =
   | Ty.Con ((TyCon.Int | TyCon.Char), _) ->
     mxBinOpScalar ctx op l r (ty, loc)
 
-  | Ty.Con (TyCon.Str, _) when op = MOp.Add ->
+  | Ty.Con (TyCon.Str, _) when op |> mOpIsAdd ->
     mxStrAdd ctx op l r (ty, loc)
 
   | _ ->
-    eprintfn "Arithmetic operator %A is not implemented (ty = %A)" op ty
+    // FIXME: error
+    printfn "#error invalid type of arithmetic operator"
     MExpr.Default (ty, loc), ctx
 
 let mirifyExprOpCmp ctx op l r ty loc =
@@ -718,7 +719,7 @@ let mirifyExprs ctx exprs =
   go [] ctx exprs
 
 /// Collect all declaration contained by the statements.
-let collectDecls (stmts: MStmt list) =
+let mirifyCollectDecls (stmts: MStmt list) =
   let rec go decls stmts =
     match stmts with
     | (MStmt.Proc (_, _, _, body, _, _) as decl) :: stmts ->
@@ -739,5 +740,5 @@ let mirify (expr: HExpr, tyCtx: TyCtx): MStmt list * MirCtx =
   let _expr, ctx = mirifyExpr ctx expr
 
   let stmts = ctx |> mirCtxGetStmts |> listRev
-  let decls = collectDecls stmts
+  let decls = mirifyCollectDecls stmts
   decls, ctx

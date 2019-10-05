@@ -252,7 +252,7 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
 
 /// Applies the changes of function types.
 let ccCtxUpdateFunDefs (ctx: CcCtx) =
-  let update vars varSerial _ =
+  let update vars varSerial (_: KnownCtx) =
     match ctx |> ccCtxGetFunCaps varSerial with
     | [] ->
       vars
