@@ -37,11 +37,11 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
     serials |> listRev |> listFold (addIdent ident) (identMap, 0) |> fst
   serialsMap |> mapFold addIdents (mapEmpty mapFuns)
 
-let tupleField i =
+let tupleField (i: int) =
   "t" + string i
 
 /// Calculates tag type's name of union type.
-let tagTyIdent tyIdent =
+let tagTyIdent (tyIdent: string) =
   tyIdent + "Tag"
 
 let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
