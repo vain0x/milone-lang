@@ -37,6 +37,8 @@ compile() {
     fi
 
     >&2 echo '+ gcc '$(now)
+    # Extend the stack size to prevent stack overflow (512 MB)
+    ulimit -s 536870912
     gcc -std=c11 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -O3 $c -o $app
     if [[ $? != 0 ]]
     then
