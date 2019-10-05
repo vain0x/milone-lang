@@ -16,5 +16,7 @@ cp MiloneLang/EtaExpansion.fs tests/examples/MiloneLang/EtaExpansion.fs
 cp MiloneLang/Hoist.fs tests/examples/MiloneLang/Hoist.fs
 cp MiloneLang/Monomorphizing.fs tests/examples/MiloneLang/Monomorphizing.fs
 cp MiloneLang/Mir.fs tests/examples/MiloneLang/Mir.fs
+cp MiloneLang/CIrGen.fs tests/examples/MiloneLang/CIrGen.fs
+cp MiloneLang/CPrinting.fs tests/examples/MiloneLang/CPrinting.fs
 
 (cd tests/examples/MiloneLang; dotnet build)

@@ -15,6 +15,8 @@ open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
 open MiloneLang.Monomorphizing
 open MiloneLang.Mir
+open MiloneLang.CIrGen
+open MiloneLang.CPrinting
 
 let litToString lit =
   match lit with
@@ -526,7 +528,6 @@ let doSelf (fileReadAllText: string -> string) =
   // doFile "MiloneLang/AstToHir.fs"
 
   let readModuleFile moduleName =
-    printfn "Load %s" moduleName
     fileReadAllText ("tests/examples/MiloneLang/" + moduleName + ".fs")
 
   let projectName = "MiloneLang"
@@ -534,53 +535,68 @@ let doSelf (fileReadAllText: string -> string) =
 
   let expr, nameCtx, errorListList = parseProjectModules readModuleFile projectName nameCtx
 
-  printfn "Name resolution"
+  printfn "// Name resolution"
   let expr, scopeCtx = nameRes (expr, nameCtx)
 
   let tyCtxHasError tyCtx =
     tyCtx |> tyCtxGetLogs |> listIsEmpty |> not
 
   let logs =
-    printfn "Type inference"
+    printfn "// Type inference"
     let expr, tyCtx = infer (expr, scopeCtx, errorListList)
     if tyCtx |> tyCtxHasError then
       tyCtx |> tyCtxGetLogs
     else
 
-    printfn "Hoist main"
+    printfn "// Hoist main"
     let expr, tyCtx = hoistMain (expr, tyCtx)
 
-    printfn "Closure conversion"
+    printfn "// Closure conversion"
     let expr, tyCtx = declosure (expr, tyCtx)
     if tyCtx |> tyCtxHasError then
       tyCtx |> tyCtxGetLogs
     else
 
-    printfn "Eta expansion"
+    printfn "// Eta expansion"
     let expr, tyCtx = uneta (expr, tyCtx)
     if tyCtx |> tyCtxHasError then
       tyCtx |> tyCtxGetLogs
     else
 
-    printfn "Hoist"
+    printfn "// Hoist"
     let expr, tyCtx = hoist (expr, tyCtx)
 
-    printfn "Monomorphization"
+    printfn "// Monomorphization"
     let expr, tyCtx = monify (expr, tyCtx)
     if tyCtx |> tyCtxHasError then
       tyCtx |> tyCtxGetLogs
     else
 
-    printfn "Mir"
+    printfn "// Mir"
     let stmts, mirCtx = mirify (expr, tyCtx)
 
-    printfn "stmts %d" (stmts |> listLength)
-    mirCtx |> mirCtxGetLogs
+    let logs = mirCtx |> mirCtxGetLogs
+
+    if mirCtx |> mirCtxGetLogs |> listIsEmpty |> not then
+      logs
+    else
+
+    let cir, success = gen (stmts, mirCtx)
+    if not success then
+      printfn "%s" "compile error"
+
+    printfn "// cir %d" (cir |> listLength)
+
+    printfn "// C print"
+    let code = cprint cir
+    printfn "%s" code
+
+    logs
 
   // printfn "HIR:"
   // printfn "%s" (expr |> hxDump nameCtx |> dumpTreeToString)
 
   logs |> listIter (fun (log, loc) ->
-    printfn "ERROR %s" (log |> logToString loc)
+    printfn "#error ERROR %s" (log |> logToString loc)
   )
   0

@@ -20,8 +20,8 @@
     <Compile Include="Hoist.fs" />
     <Compile Include="Monomorphizing.fs" />
     <Compile Include="Mir.fs" />
-    <!-- <Compile Include="CIrGen.fs" /> -->
-    <!-- <Compile Include="CPrinting.fs" /> -->
+    <Compile Include="CIrGen.fs" />
+    <Compile Include="CPrinting.fs" />
     <Compile Include="Self.fs" />
     <Compile Include="MiloneLang.fs" />
   </ItemGroup>

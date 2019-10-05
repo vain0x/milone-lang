@@ -1092,7 +1092,6 @@ let nameCtxEmpty () =
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
-  printfn "// %d %s" serial ident
   let map = map |> mapAdd serial ident
   serial, NameCtx (map, serial)
 
