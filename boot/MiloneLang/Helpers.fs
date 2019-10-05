@@ -1170,24 +1170,6 @@ let traitMapTys f it =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
-let tyConEq l r =
-  match l, r with
-  | TyCon.Bool, TyCon.Bool
-  | TyCon.Int, TyCon.Int
-  | TyCon.Char, TyCon.Char
-  | TyCon.Str, TyCon.Str
-  | TyCon.Obj, TyCon.Obj
-  | TyCon.Fun, TyCon.Fun
-  | TyCon.Tuple, TyCon.Tuple
-  | TyCon.List, TyCon.List ->
-    true
-
-  | TyCon.Ref l, TyCon.Ref r ->
-    l = r
-
-  | _ ->
-    false
-
 /// Placeholder. No type info in the parsing phase.
 let noTy = Ty.Error noLoc
 
