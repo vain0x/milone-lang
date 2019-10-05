@@ -49,7 +49,7 @@ type HoistMode =
 // exprs are non-declaration top-level expressions.
 type HoistContext = HoistMode * HExprAcc * HExprAcc
 
-let hxDummy () = hxUnit (0, 0)
+let hxDummy = hxUnit noLoc
 
 // -----------------------------------------------
 // HExprAcc
@@ -85,11 +85,11 @@ let hxAccToExpr next exprAcc =
       expr |> withNext next |> go exprAcc
 
     | HExprAcc.Semi (exprs, exprAcc) ->
-      hxSemi ((next :: exprs) |> listRev) (0, 0) |> go exprAcc
+      hxSemi ((next :: exprs) |> listRev) noLoc |> go exprAcc
 
   go exprAcc next
 
-let hoistCtxEmpty (): HoistContext =
+let hoistCtxEmpty: HoistContext =
   HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty
 
 let hoistCtxIsEmpty ctx =
@@ -175,7 +175,7 @@ let hoistExprLetFun callee isMainFun args body next ty loc ctx =
   let expr =
     // Replace the `next` with a placeholder,
     // which is replaced with actual expressions again at the end.
-    let next = hxDummy ()
+    let next = hxDummy
     HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc)
   let ctx =
     ctx |> hoistCtxAddDecl expr
@@ -221,7 +221,7 @@ let hoistExprCore (expr, ctx) =
 
   | HExpr.TyDecl _ ->
     let ctx = ctx |> hoistCtxAddDecl expr
-    hxDummy (), ctx
+    hxDummy, ctx
 
 let hoistExpr (expr, ctx) =
   if ctx |> hoistCtxIsTopLevel |> not then
@@ -244,10 +244,10 @@ let hoistExpr (expr, ctx) =
     // It's a top-level non-declaration expression.
     let expr, ctx = (expr, ctx) |> hoistExprLocal
     let ctx = ctx |> hoistCtxAddExpr expr
-    hxDummy (), ctx
+    hxDummy, ctx
 
 let hoist (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
-  let expr, hoistCtx = (expr, hoistCtxEmpty ()) |> hoistExpr
+  let expr, hoistCtx = (expr, hoistCtxEmpty) |> hoistExpr
   assert (hoistCtx |> hoistCtxIsEmpty)
 
   expr, tyCtx
