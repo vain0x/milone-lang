@@ -105,7 +105,8 @@ let tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
     // Replace bound variables in the type with fresh ones.
     let ty =
       let extendedCtx =
-        mapping |> listFold (fun ctx (src, target) -> tyCtxBindTy ctx src (Ty.Meta (target, loc)) loc) ctx
+        mapping |> listFold
+          (fun ctx (src, target) -> tyCtxBindTy ctx src (Ty.Meta (target, loc)) loc) ctx
       tyCtxSubstTy extendedCtx ty
 
     ty, ctx

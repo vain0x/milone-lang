@@ -64,6 +64,14 @@ let optionIsNone option =
   | Some _ ->
     false
 
+let optionDefaultValue alt option =
+  match option with
+  | Some x ->
+    x
+
+  | None ->
+    alt
+
 // -----------------------------------------------
 // List
 // -----------------------------------------------
@@ -1131,6 +1139,9 @@ let tyConHash tyCon =
 let tyConCmp first second =
   intCmp (tyConToInt first) (tyConToInt second)
 
+let tyConEq first second =
+  tyConCmp first second = 0
+
 // -----------------------------------------------
 // Traits (HIR)
 // -----------------------------------------------
@@ -1158,24 +1169,6 @@ let traitMapTys f it =
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
-
-let tyConEq l r =
-  match l, r with
-  | TyCon.Bool, TyCon.Bool
-  | TyCon.Int, TyCon.Int
-  | TyCon.Char, TyCon.Char
-  | TyCon.Str, TyCon.Str
-  | TyCon.Obj, TyCon.Obj
-  | TyCon.Fun, TyCon.Fun
-  | TyCon.Tuple, TyCon.Tuple
-  | TyCon.List, TyCon.List ->
-    true
-
-  | TyCon.Ref l, TyCon.Ref r ->
-    l = r
-
-  | _ ->
-    false
 
 /// Placeholder. No type info in the parsing phase.
 let noTy = Ty.Error noLoc
@@ -1278,6 +1271,9 @@ let tyCmp first second =
             go firstTys secondTys
 
       go firstTys secondTys
+
+let tyEq first second =
+  tyCmp first second = 0
 
 let tyPrimFromIdent ident tys loc =
   match ident, tys with
