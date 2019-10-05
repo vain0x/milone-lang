@@ -499,7 +499,7 @@ let genExprCallPrintfn ctx format args =
       listRev acc, ctx
     | MExpr.Lit (Lit.Str value, _) :: args ->
       go (CExpr.StrRaw value :: acc) ctx args
-    | arg :: args when mexprToTy arg = tyStr ->
+    | arg :: args when tyEq (mexprToTy arg) tyStr ->
       let arg, ctx = genExpr ctx arg
       let acc = CExpr.Nav (arg, "str") :: acc
       go acc ctx args

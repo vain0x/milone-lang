@@ -1265,6 +1265,9 @@ let tyCmp first second =
 
       go firstTys secondTys
 
+let tyEq first second =
+  tyCmp first second = 0
+
 let tyPrimFromIdent ident tys loc =
   match ident, tys with
   | "unit", [] ->
