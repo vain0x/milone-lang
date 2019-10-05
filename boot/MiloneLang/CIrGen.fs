@@ -10,35 +10,42 @@ open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
 
+let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
+  let rename (ident: string) (index: int) =
+    if index = 0 then
+      ident + "_"
+    else
+      ident + "_" + string index
+
+  // Group serials by ident.
+  let rec go acc xs =
+    match xs with
+    | [] ->
+      acc
+
+    | (serial, def) :: xs ->
+      let ident = toIdent def
+      let serials = acc |> mapTryFind ident |> optionDefaultValue []
+      let acc = acc |> mapAdd ident (serial :: serials)
+      go acc xs
+
+  let serialsMap = go (mapEmpty (strHash, strCmp)) (defMap |> mapToList)
+
+  let addIdent ident (identMap, index) serial =
+    identMap |> mapAdd (toKey serial) (rename ident index), index + 1
+  let addIdents identMap ident serials =
+    serials |> listRev |> listFold (addIdent ident) (identMap, 0) |> fst
+  serialsMap |> mapFold addIdents (mapEmpty mapFuns)
+
 let tupleField i = sprintf "t%d" i
 
 /// Calculates tag type's name of union type.
 let tagTyIdent tyIdent =
   sprintf "%sTag" tyIdent
 
-let calculateVarUniqueNames vars =
-  let groups = vars |> mapToList |> Seq.groupBy (fun (_, varDef) -> varDefToIdent varDef)
-  groups |> Seq.collect (fun (ident, vars) ->
-    vars |> Seq.mapi (fun i (serial, _) ->
-      let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
-      (serial, ident)
-  ))
-  |> Seq.toList
-  |> mapOfList (intHash, intCmp)
-
-let calculateTyUniqueNames tys =
-  let groups = tys |> mapToList |> Seq.groupBy (fun (_, tyDef) -> tyDefToIdent tyDef)
-  groups |> Seq.collect (fun (ident, tys) ->
-    tys |> Seq.mapi (fun i (serial, _) ->
-      let ident = if i = 0 then sprintf "%s_" ident else sprintf "%s_%d" ident i
-      tyRef serial [], ident
-  ))
-  |> Seq.toList
-  |> mapOfList (tyToHash, tyCmp)
-
 let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
-  let varNames = calculateVarUniqueNames (mirCtx |> mirCtxGetVars)
-  let tyNames = calculateTyUniqueNames (mirCtx |> mirCtxGetTys)
+  let varNames = mirCtx |> mirCtxGetVars |> renameIdents varDefToIdent id (intHash, intCmp)
+  let tyNames = mirCtx |> mirCtxGetTys |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) (tyToHash, tyCmp)
   CirCtx (
     mirCtx |> mirCtxGetVars,
     varNames,

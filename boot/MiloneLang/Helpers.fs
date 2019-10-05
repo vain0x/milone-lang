@@ -64,6 +64,14 @@ let optionIsNone option =
   | Some _ ->
     false
 
+let optionDefaultValue alt option =
+  match option with
+  | Some x ->
+    x
+
+  | None ->
+    alt
+
 // -----------------------------------------------
 // List
 // -----------------------------------------------
