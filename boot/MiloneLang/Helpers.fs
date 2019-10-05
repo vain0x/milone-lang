@@ -1040,7 +1040,7 @@ let dumpTreeToString (node: DumpTree) =
 
       | child :: children ->
         acc
-        |> cons eol |> cons "- " |> go (eol + " ") child
+        |> cons eol |> cons "- " |> go (eol + "  ") child
         |> goChildren eol children
 
     let goNext eol next acc =
