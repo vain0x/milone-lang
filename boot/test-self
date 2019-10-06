@@ -11,6 +11,9 @@ GEN3_C='./~milone_gen3.c'
 
 gcc $CFLAGS $GEN2_C -o milone
 
+# Test gen2.
+./integration-all ./milone -q
+
 # Build gen3.
 ./milone -q MiloneLang >$GEN3_C
 
