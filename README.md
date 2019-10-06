@@ -130,18 +130,14 @@ The following transformations are consist of the compilation in the order:
 
 ## Development
 
+Work in the `boot` directory.
+
+Scripts are written for `bash` because I use a Ubuntu desktop for development. These scripts might work on Windows Subsystem Linux or macOS (not tried).
+
 ### Dev: Prerequisites
 
 - Install .NET Core SDK [2.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/2.1)
 - Install [F#](http://ionide.io/#requirements) 4.1 tools
-
-### Dev: Tasks
-
-[task](./boot/task) provides a set of testing scripts. Run in the `boot` directory.
-
-- It's written for `bash` because I'm using a Ubuntu desktop for development. It might work on Windows Subsystem Linux or macOs (not tried).
-
-To execute integration tests, run `./task integ-all`.
 
 ### Dev: Testing
 
