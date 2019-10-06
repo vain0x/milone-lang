@@ -574,4 +574,16 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
       )
     ctx |> tyCtxWithVars vars
 
+  let ctx =
+    let tys =
+      ctx |> tyCtxGetTys |> mapFilter (fun _ tyDef ->
+        match tyDef with
+        | TyDef.Meta _ ->
+          false
+
+        | _ ->
+          true
+      )
+    ctx |> tyCtxWithTys tys
+
   expr, ctx

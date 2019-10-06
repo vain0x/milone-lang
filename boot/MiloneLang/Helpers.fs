@@ -403,6 +403,18 @@ let assocMap f assoc =
 
   go [] assoc
 
+let assocFilter pred assoc =
+  let rec go acc assoc =
+    match assoc with
+    | [] ->
+      listRev acc
+
+    | ((k, v) as kv) :: assoc ->
+      let acc = if pred k v then (kv :: acc) else acc
+      go acc assoc
+
+  go [] assoc
+
 let assocToKeyAcc acc assoc =
   let rec go acc assoc =
     match assoc with
@@ -474,6 +486,17 @@ let trieMap f trie =
 
   go trie
 
+let tireFilter pred trie =
+  let rec go trie =
+    match trie with
+    | [] ->
+      []
+
+    | (h, assoc) :: trie ->
+      (h, assocFilter pred assoc) :: go trie
+
+  go trie
+
 let trieToKeys trie =
   let rec go acc trie =
     match trie with
@@ -524,6 +547,10 @@ let mapFold folder state (map: AssocMap<_, _>) =
 
 let mapMap f (trie, hash, cmp): AssocMap<_, _> =
   let trie = trieMap f trie
+  trie, hash, cmp
+
+let mapFilter pred (trie, hash, cmp): AssocMap<_, _> =
+  let trie = tireFilter pred trie
   trie, hash, cmp
 
 let mapToKeys ((trie, _, cmp): AssocMap<_, _>) =
