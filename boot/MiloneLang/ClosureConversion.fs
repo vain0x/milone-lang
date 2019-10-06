@@ -384,44 +384,56 @@ let declosureExpr (expr, ctx) =
     expr, ctx
 
   | HExpr.Ref (serial, refTy, refLoc) ->
-    let ctx = ctx |> ccCtxAddRef serial
-    declosureFunRef serial refTy refLoc ctx
+    let doArm () =
+      let ctx = ctx |> ccCtxAddRef serial
+      declosureFunRef serial refTy refLoc ctx
+    doArm ()
 
   | HExpr.Match (target, arms, ty, loc) ->
-    let target, ctx = declosureExpr (target, ctx)
-    let go ((pat, guard, body), ctx) =
-      let pat, ctx = declosurePat (pat, ctx)
-      let guard, ctx = declosureExpr (guard, ctx)
-      let body, ctx = declosureExpr (body, ctx)
-      (pat, guard, body), ctx
-    let arms, ctx = (arms, ctx) |> stMap go
-    HExpr.Match (target, arms, ty, loc), ctx
+    let doArm () =
+      let target, ctx = declosureExpr (target, ctx)
+      let go ((pat, guard, body), ctx) =
+        let pat, ctx = declosurePat (pat, ctx)
+        let guard, ctx = declosureExpr (guard, ctx)
+        let body, ctx = declosureExpr (body, ctx)
+        (pat, guard, body), ctx
+      let arms, ctx = (arms, ctx) |> stMap go
+      HExpr.Match (target, arms, ty, loc), ctx
+    doArm ()
 
   | HExpr.Nav (l, r, ty, loc) ->
-    let l, ctx = declosureExpr (l, ctx)
-    HExpr.Nav (l, r, ty, loc), ctx
+    let doArm () =
+      let l, ctx = declosureExpr (l, ctx)
+      HExpr.Nav (l, r, ty, loc), ctx
+    doArm ()
 
   | HExpr.Inf (infOp, items, ty, loc) ->
-    let items, ctx = (items, ctx) |> stMap declosureExpr
-    HExpr.Inf (infOp, items, ty, loc), ctx
+    let doArm () =
+      let items, ctx = (items, ctx) |> stMap declosureExpr
+      HExpr.Inf (infOp, items, ty, loc), ctx
+    doArm ()
 
   | HExpr.Let (pat, body, next, ty, loc) ->
-    let pat, ctx = declosurePat (pat, ctx)
-    let body, ctx = declosureExpr (body, ctx)
-    let next, ctx = declosureExpr (next, ctx)
-    HExpr.Let (pat, body, next, ty, loc), ctx
+    let doArm () =
+      let pat, ctx = declosurePat (pat, ctx)
+      let body, ctx = declosureExpr (body, ctx)
+      let next, ctx = declosureExpr (next, ctx)
+      HExpr.Let (pat, body, next, ty, loc), ctx
+    doArm ()
 
   | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
     declosureFunDecl callee isMainFun args body next ty loc ctx
 
   | HExpr.TyDecl (_, tyDecl, _) ->
-    match tyDecl with
-    | TyDecl.Synonym _ ->
-      expr, ctx
+    let doArm () =
+      match tyDecl with
+      | TyDecl.Synonym _ ->
+        expr, ctx
 
-    | TyDecl.Union (_, variants, _) ->
-      let ctx = variants |> listFold declosureVariantDecl ctx
-      expr, ctx
+      | TyDecl.Union (_, variants, _) ->
+        let ctx = variants |> listFold declosureVariantDecl ctx
+        expr, ctx
+    doArm ()
 
   | HExpr.Error (error, loc) ->
     failwithf "Never: %s at %A" error loc

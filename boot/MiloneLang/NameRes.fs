@@ -538,114 +538,128 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
     expr, ctx
 
   | HExpr.Ref (serial, ty, loc) ->
-    let ident = ctx |> scopeCtxGetIdent serial
-    match ctx |> scopeCtxResolveLocalVar ident with
-    | Some serial ->
-      HExpr.Ref (serial, ty, loc), ctx
-
-    | None ->
-      match primFromIdent ident with
-      | Some prim ->
-        HExpr.Prim (prim, ty, loc), ctx
+    let doArm () =
+      let ident = ctx |> scopeCtxGetIdent serial
+      match ctx |> scopeCtxResolveLocalVar ident with
+      | Some serial ->
+        HExpr.Ref (serial, ty, loc), ctx
 
       | None ->
-        HExpr.Error ("Undefined variable " + ident, loc), ctx
+        match primFromIdent ident with
+        | Some prim ->
+          HExpr.Prim (prim, ty, loc), ctx
+
+        | None ->
+          HExpr.Error ("Undefined variable " + ident, loc), ctx
+    doArm ()
 
   | HExpr.Match (target, arms, ty, loc) ->
-    let target, ctx =
-      (target, ctx) |> nameResExpr
-    let arms, ctx =
-      (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
-        let parent, ctx = ctx |> scopeCtxStartScope
-        let pat, ctx = (pat, ctx) |> nameResPat
-        let guard, ctx = (guard, ctx) |> nameResExpr
-        let body, ctx = (body, ctx) |> nameResExpr
-        let ctx = ctx |> scopeCtxFinishScope parent
-        (pat, guard, body), ctx
-      )
-    HExpr.Match (target, arms, ty, loc), ctx
+    let doArm () =
+      let target, ctx =
+        (target, ctx) |> nameResExpr
+      let arms, ctx =
+        (arms, ctx) |> stMap (fun ((pat, guard, body), ctx) ->
+          let parent, ctx = ctx |> scopeCtxStartScope
+          let pat, ctx = (pat, ctx) |> nameResPat
+          let guard, ctx = (guard, ctx) |> nameResExpr
+          let body, ctx = (body, ctx) |> nameResExpr
+          let ctx = ctx |> scopeCtxFinishScope parent
+          (pat, guard, body), ctx
+        )
+      HExpr.Match (target, arms, ty, loc), ctx
+    doArm ()
 
   | HExpr.Nav (l, r, ty, loc) ->
-    // FIXME: Patchwork for tests to pass
-    match l, r with
-    | HExpr.Ref (serial, _, _), "length"
-      when ctx |> scopeCtxGetIdent serial = "String" ->
-      HExpr.Prim (HPrim.StrLength, ty, loc), ctx
+    let doArm () =
+      // FIXME: Patchwork for tests to pass
+      match l, r with
+      | HExpr.Ref (serial, _, _), "length"
+        when ctx |> scopeCtxGetIdent serial = "String" ->
+        HExpr.Prim (HPrim.StrLength, ty, loc), ctx
 
-    | HExpr.Ref (serial, _, _), "getSlice"
-      when ctx |> scopeCtxGetIdent serial = "String" ->
-      // NOTE: Actually this functions doesn't exist in the F# standard library.
-      HExpr.Prim (HPrim.StrGetSlice, ty, loc), ctx
-
-    |_ ->
-
-    // Keep the nav expression unresolved so that type inference does.
-    let keepUnresolved () =
-      let l, ctx = (l, ctx) |> nameResExpr
-      HExpr.Nav (l, r, ty, loc), ctx
-
-    match ctx |> scopeCtxResolveExprAsScope l with
-    | Some scopeSerial ->
-      match ctx |> scopeCtxResolveVar scopeSerial r with
-      | Some varSerial ->
-        HExpr.Ref (varSerial, ty, loc), ctx
+      | HExpr.Ref (serial, _, _), "getSlice"
+        when ctx |> scopeCtxGetIdent serial = "String" ->
+        // NOTE: Actually this functions doesn't exist in the F# standard library.
+        HExpr.Prim (HPrim.StrGetSlice, ty, loc), ctx
 
       | _ ->
-        // X.ty patterns don't appear yet, so don't search for types.
 
+      // Keep the nav expression unresolved so that type inference does.
+      let keepUnresolved () =
+        let l, ctx = (l, ctx) |> nameResExpr
+        HExpr.Nav (l, r, ty, loc), ctx
+
+      match ctx |> scopeCtxResolveExprAsScope l with
+      | Some scopeSerial ->
+        match ctx |> scopeCtxResolveVar scopeSerial r with
+        | Some varSerial ->
+          HExpr.Ref (varSerial, ty, loc), ctx
+
+        | _ ->
+          // X.ty patterns don't appear yet, so don't search for types.
+
+          keepUnresolved ()
+
+      | _ ->
         keepUnresolved ()
-
-    | _ ->
-      keepUnresolved ()
+    doArm ()
 
   | HExpr.Inf (op, items, ty, loc) ->
-    // Necessary in case of annotation expression.
-    let ty, ctx = ctx |> scopeCtxResolveTy ty loc
+    let doArm () =
+      // Necessary in case of annotation expression.
+      let ty, ctx = ctx |> scopeCtxResolveTy ty loc
 
-    let items, ctx = (items, ctx) |> stMap nameResExpr
-    HExpr.Inf (op, items, ty, loc), ctx
+      let items, ctx = (items, ctx) |> stMap nameResExpr
+      HExpr.Inf (op, items, ty, loc), ctx
+    doArm ()
 
   | HExpr.Let (pat, body, next, ty, loc) ->
-    let body, ctx =
-      let parent, ctx = ctx |> scopeCtxStartScope
-      let body, ctx = (body, ctx) |> nameResExpr
-      let ctx = ctx |> scopeCtxFinishScope parent
-      body, ctx
+    let doArm () =
+      let body, ctx =
+        let parent, ctx = ctx |> scopeCtxStartScope
+        let body, ctx = (body, ctx) |> nameResExpr
+        let ctx = ctx |> scopeCtxFinishScope parent
+        body, ctx
 
-    let pat, next, ctx =
-      let parent, ctx = ctx |> scopeCtxStartScope
-      let pat, ctx = (pat, ctx) |> nameResPat
-      let next, ctx = (next, ctx) |> nameResExpr
-      let ctx = ctx |> scopeCtxFinishScope parent
-      pat, next, ctx
+      let pat, next, ctx =
+        let parent, ctx = ctx |> scopeCtxStartScope
+        let pat, ctx = (pat, ctx) |> nameResPat
+        let next, ctx = (next, ctx) |> nameResExpr
+        let ctx = ctx |> scopeCtxFinishScope parent
+        pat, next, ctx
 
-    HExpr.Let (pat, body, next, ty, loc), ctx
+      HExpr.Let (pat, body, next, ty, loc), ctx
+    doArm ()
 
   | HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc) ->
-    let parent, ctx = ctx |> scopeCtxStartScope
-    let ctx = ctx |> scopeCtxOnEnterLetBody
-
-    // Define the function itself for recursive referencing.
-    // FIXME: Functions are recursive even if `rec` is missing.
-    let ctx = ctx |> scopeCtxDefineFunUniquely serial pats noTy loc
-
-    let pats, body, ctx =
-      // Introduce a function body scope.
+    let doArm () =
       let parent, ctx = ctx |> scopeCtxStartScope
-      let pats, ctx = (pats, ctx) |> stMap nameResPat
-      let body, ctx = (body, ctx) |> nameResExpr
+      let ctx = ctx |> scopeCtxOnEnterLetBody
+
+      // Define the function itself for recursive referencing.
+      // FIXME: Functions are recursive even if `rec` is missing.
+      let ctx = ctx |> scopeCtxDefineFunUniquely serial pats noTy loc
+
+      let pats, body, ctx =
+        // Introduce a function body scope.
+        let parent, ctx = ctx |> scopeCtxStartScope
+        let pats, ctx = (pats, ctx) |> stMap nameResPat
+        let body, ctx = (body, ctx) |> nameResExpr
+        let ctx = ctx |> scopeCtxFinishScope parent
+        pats, body, ctx
+
+      let ctx = ctx |> scopeCtxOnLeaveLetBody
+      let next, ctx = (next, ctx) |> nameResExpr
       let ctx = ctx |> scopeCtxFinishScope parent
-      pats, body, ctx
 
-    let ctx = ctx |> scopeCtxOnLeaveLetBody
-    let next, ctx = (next, ctx) |> nameResExpr
-    let ctx = ctx |> scopeCtxFinishScope parent
-
-    HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc), ctx
+      HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc), ctx
+    doArm ()
 
   | HExpr.TyDecl (serial, tyDecl, loc) ->
-    let ctx = ctx |> scopeCtxDefineTyFinish serial tyDecl loc
-    expr, ctx
+    let doArm () =
+      let ctx = ctx |> scopeCtxDefineTyFinish serial tyDecl loc
+      expr, ctx
+    doArm ()
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx

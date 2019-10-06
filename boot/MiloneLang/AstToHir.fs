@@ -192,31 +192,31 @@ let desugarLet pat body next loc =
   | _ ->
     ALet.LetVal (pat, body, next, loc)
 
-let onTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
+let astToHirTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | ATy.Missing loc ->
     Ty.Error loc, nameCtx
 
   | ATy.App (ident, argTys, _) ->
     let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
-    let argTys, nameCtx = (argTys, nameCtx) |> stMap onTy
+    let argTys, nameCtx = (argTys, nameCtx) |> stMap astToHirTy
     tyRef tySerial argTys, nameCtx
 
   | ATy.Suffix (lTy, ident, _) ->
-    let lTy, nameCtx = (lTy, nameCtx) |> onTy
+    let lTy, nameCtx = (lTy, nameCtx) |> astToHirTy
     let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
     tyRef tySerial [lTy], nameCtx
 
   | ATy.Tuple (itemTys, _) ->
-    let itemTys, nameCtx = (itemTys, nameCtx) |> stMap onTy
+    let itemTys, nameCtx = (itemTys, nameCtx) |> stMap astToHirTy
     tyTuple itemTys, nameCtx
 
   | ATy.Fun (sTy, tTy, _) ->
-    let sTy, nameCtx = (sTy, nameCtx) |> onTy
-    let tTy, nameCtx = (tTy, nameCtx) |> onTy
+    let sTy, nameCtx = (sTy, nameCtx) |> astToHirTy
+    let tTy, nameCtx = (tTy, nameCtx) |> astToHirTy
     tyFun sTy tTy, nameCtx
 
-let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
+let astToHirPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
   | APat.Missing (_, loc) ->
     failwithf "Missing pattern %A" loc
@@ -233,45 +233,45 @@ let onPat (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
 
   | APat.ListLit (pats, loc) ->
     let pat = desugarListLitPat pats loc
-    (pat, nameCtx) |> onPat
+    (pat, nameCtx) |> astToHirPat
 
   | APat.Nav (l, r, loc) ->
-    let l, nameCtx = (l, nameCtx) |> onPat
+    let l, nameCtx = (l, nameCtx) |> astToHirPat
     HPat.Nav (l, r, noTy, loc), nameCtx
 
   | APat.Call (calleePat, argPats, loc) ->
-    let calleePat, nameCtx = (calleePat, nameCtx) |> onPat
-    let argPats, nameCtx = (argPats, nameCtx) |> stMap onPat
+    let calleePat, nameCtx = (calleePat, nameCtx) |> astToHirPat
+    let argPats, nameCtx = (argPats, nameCtx) |> stMap astToHirPat
     HPat.Call (calleePat, argPats, noTy, loc), nameCtx
 
   | APat.Cons (head, tail, loc) ->
-    let head, nameCtx = (head, nameCtx) |> onPat
-    let tail, nameCtx = (tail, nameCtx) |> onPat
+    let head, nameCtx = (head, nameCtx) |> astToHirPat
+    let tail, nameCtx = (tail, nameCtx) |> astToHirPat
     HPat.Cons (head, tail, noTy, loc), nameCtx
 
   | APat.TupleLit (pats, loc) ->
-    let pats, nameCtx = (pats, nameCtx) |> stMap onPat
+    let pats, nameCtx = (pats, nameCtx) |> stMap astToHirPat
     HPat.Tuple (pats, noTy, loc), nameCtx
 
   | APat.As (pat, ident, loc) ->
     let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    let pat, nameCtx = (pat, nameCtx) |> onPat
+    let pat, nameCtx = (pat, nameCtx) |> astToHirPat
     HPat.As (pat, serial, loc), nameCtx
 
   | APat.Anno (pat, ty, loc) ->
-    let pat, nameCtx = (pat, nameCtx) |> onPat
-    let ty, nameCtx = (ty, nameCtx) |> onTy
+    let pat, nameCtx = (pat, nameCtx) |> astToHirPat
+    let ty, nameCtx = (ty, nameCtx) |> astToHirTy
     HPat.Anno (pat, ty, loc), nameCtx
 
   | APat.Or (l, r, loc) ->
-    let l, nameCtx = (l, nameCtx) |> onPat
-    let r, nameCtx = (r, nameCtx) |> onPat
+    let l, nameCtx = (l, nameCtx) |> astToHirPat
+    let r, nameCtx = (r, nameCtx) |> astToHirPat
     HPat.Or (l, r, noTy, loc), nameCtx
 
   | APat.Fun (_, _, loc) ->
     failwithf "Invalid occurrence of fun pattern: %A" loc
 
-let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
+let astToHirExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with
   | AExpr.Missing loc ->
     HExpr.Error ("Missing expression", loc), nameCtx
@@ -280,158 +280,207 @@ let onExpr (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
     HExpr.Lit (lit, loc), nameCtx
 
   | AExpr.Ident (ident, loc) ->
-    let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    HExpr.Ref (serial, noTy, loc), nameCtx
+    // NOTE: Work in a local function to reduce the size of stack frames of `astToHirExpr`.
+    let doArm () =
+      let serial, nameCtx = nameCtx |> nameCtxAdd ident
+      HExpr.Ref (serial, noTy, loc), nameCtx
+    doArm ()
 
   | AExpr.ListLit ([], loc) ->
     hxNil noTy loc, nameCtx
 
   | AExpr.ListLit (items, loc) ->
-    let expr = desugarListLitExpr items loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarListLitExpr items loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.If (cond, body, alt, loc) ->
-    let expr = desugarIf cond body alt loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarIf cond body alt loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Match (target, arms, loc) ->
-    // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
-    let onArm (AArm (pat, guard, body, loc), nameCtx) =
-      let pat, nameCtx =
-        (pat, nameCtx) |> onPat
-      let guard, nameCtx =
-        match guard with
-        | AExpr.Missing _ ->
-          hxTrue loc, nameCtx
-        | _ ->
-          (guard, nameCtx) |> onExpr
-      let body, nameCtx =
-        (body, nameCtx) |> onExpr
-      (pat, guard, body), nameCtx
-    let target, nameCtx = (target, nameCtx) |> onExpr
-    let arms, nameCtx = (arms, nameCtx) |> stMap onArm
-    HExpr.Match (target, arms, noTy, loc), nameCtx
+    let doArm () =
+      // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
+      let onArm (AArm (pat, guard, body, loc), nameCtx) =
+        let pat, nameCtx =
+          (pat, nameCtx) |> astToHirPat
+        let guard, nameCtx =
+          match guard with
+          | AExpr.Missing _ ->
+            hxTrue loc, nameCtx
+          | _ ->
+            (guard, nameCtx) |> astToHirExpr
+        let body, nameCtx =
+          (body, nameCtx) |> astToHirExpr
+        (pat, guard, body), nameCtx
+      let target, nameCtx = (target, nameCtx) |> astToHirExpr
+      let arms, nameCtx = (arms, nameCtx) |> stMap onArm
+      HExpr.Match (target, arms, noTy, loc), nameCtx
+    doArm ()
 
   | AExpr.Fun (pats, body, loc) ->
-    let expr = desugarFun pats body loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarFun pats body loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Nav (l, r, loc) ->
-    let l, nameCtx = (l, nameCtx) |> onExpr
-    HExpr.Nav (l, r, noTy, loc), nameCtx
+    let doArm () =
+      let l, nameCtx = (l, nameCtx) |> astToHirExpr
+      HExpr.Nav (l, r, noTy, loc), nameCtx
+    doArm ()
 
   | AExpr.Index (l, r, loc) ->
-    match tryDesugarIndexRange expr loc with
-    | true, expr ->
-      (expr, nameCtx) |> onExpr
+    let doArm () =
+      match tryDesugarIndexRange expr loc with
+      | true, expr ->
+        (expr, nameCtx) |> astToHirExpr
 
-    | false, _ ->
-      let l, nameCtx = (l, nameCtx) |> onExpr
-      let r, nameCtx = (r, nameCtx) |> onExpr
-      let hxIndex = hxApp (hxApp (HExpr.Prim (HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
-      hxIndex, nameCtx
+      | false, _ ->
+        let l, nameCtx = (l, nameCtx) |> astToHirExpr
+        let r, nameCtx = (r, nameCtx) |> astToHirExpr
+        let hxIndex = hxApp (hxApp (HExpr.Prim (HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
+        hxIndex, nameCtx
+    doArm ()
 
   | AExpr.Uni (UniOp.Neg, arg, loc) ->
-    let expr = desugarUniNeg arg loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarUniNeg arg loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Bin (Op.Ne, l, r, loc) ->
-    let expr = desugarBinNe l r loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarBinNe l r loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Bin (Op.Le, l, r, loc) ->
-    let expr = desugarBinLe l r loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarBinLe l r loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Bin (Op.Gt, l, r, loc) ->
-    let expr = desugarBinGt l r loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarBinGt l r loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Bin (Op.Ge, l, r, loc) ->
-    let expr = desugarBinGe l r loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarBinGe l r loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Bin (Op.And, l, r, loc) ->
-    let expr = desugarBinAnd l r loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarBinAnd l r loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Bin (Op.Or, l, r, loc) ->
-    let expr = desugarBinOr l r loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarBinOr l r loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Bin (Op.Pipe, l, r, loc) ->
-    let expr = desugarBinPipe l r loc
-    (expr, nameCtx) |> onExpr
+    let doArm () =
+      let expr = desugarBinPipe l r loc
+      (expr, nameCtx) |> astToHirExpr
+    doArm ()
 
   | AExpr.Bin (Op.App, l, r, loc) ->
-    let l, nameCtx = (l, nameCtx) |> onExpr
-    let r, nameCtx = (r, nameCtx) |> onExpr
-    hxApp l r noTy loc, nameCtx
+    let doArm () =
+      let l, nameCtx = (l, nameCtx) |> astToHirExpr
+      let r, nameCtx = (r, nameCtx) |> astToHirExpr
+      hxApp l r noTy loc, nameCtx
+    doArm ()
 
   | AExpr.Bin (op, l, r, loc) ->
-    let prim = op |> opToPrim
-    let l, nameCtx = (l, nameCtx) |> onExpr
-    let r, nameCtx = (r, nameCtx) |> onExpr
-    let primExpr = HExpr.Prim (prim, noTy, loc)
-    hxApp (hxApp primExpr l noTy loc) r noTy loc, nameCtx
+    let doArm () =
+      let prim = op |> opToPrim
+      let l, nameCtx = (l, nameCtx) |> astToHirExpr
+      let r, nameCtx = (r, nameCtx) |> astToHirExpr
+      let primExpr = HExpr.Prim (prim, noTy, loc)
+      hxApp (hxApp primExpr l noTy loc) r noTy loc, nameCtx
+    doArm ()
 
   | AExpr.Range (_, loc) ->
     HExpr.Error ("Invalid use of range syntax.", loc), nameCtx
 
   | AExpr.TupleLit (items, loc) ->
-    let items, nameCtx = (items, nameCtx) |> stMap onExpr
-    hxTuple items loc, nameCtx
+    let doArm () =
+      let items, nameCtx = (items, nameCtx) |> stMap astToHirExpr
+      hxTuple items loc, nameCtx
+    doArm ()
 
   | AExpr.Anno (body, ty, loc) ->
-    let body, nameCtx = (body, nameCtx) |> onExpr
-    let ty, nameCtx = (ty, nameCtx) |> onTy
-    hxAnno body ty loc, nameCtx
+    let doArm () =
+      let body, nameCtx = (body, nameCtx) |> astToHirExpr
+      let ty, nameCtx = (ty, nameCtx) |> astToHirTy
+      hxAnno body ty loc, nameCtx
+    doArm ()
 
   | AExpr.Semi (exprs, loc) ->
-    assert (exprs |> listIsEmpty |> not)
-    let exprs, nameCtx = (exprs, nameCtx) |> stMap onExpr
-    hxSemi exprs loc, nameCtx
+    let doArm () =
+      assert (exprs |> listIsEmpty |> not)
+      let exprs, nameCtx = (exprs, nameCtx) |> stMap astToHirExpr
+      hxSemi exprs loc, nameCtx
+    doArm ()
 
   | AExpr.Let (pat, body, next, loc) ->
-    match desugarLet pat body next loc with
-    | ALet.LetFun (ident, args, body, next, loc) ->
-      let serial, nameCtx = nameCtx |> nameCtxAdd ident
-      let isMainFun = false // Name resolution should correct this.
-      let args, nameCtx = (args, nameCtx) |> stMap onPat
-      let body, nameCtx = (body, nameCtx) |> onExpr
-      let next, nameCtx = (next, nameCtx) |> onExpr
-      HExpr.LetFun (serial, isMainFun, args, body, next, noTy, loc), nameCtx
+    let doArm () =
+      match desugarLet pat body next loc with
+      | ALet.LetFun (ident, args, body, next, loc) ->
+        let serial, nameCtx = nameCtx |> nameCtxAdd ident
+        let isMainFun = false // Name resolution should correct this.
+        let args, nameCtx = (args, nameCtx) |> stMap astToHirPat
+        let body, nameCtx = (body, nameCtx) |> astToHirExpr
+        let next, nameCtx = (next, nameCtx) |> astToHirExpr
+        HExpr.LetFun (serial, isMainFun, args, body, next, noTy, loc), nameCtx
 
-    | ALet.LetVal (pat, body, next, loc) ->
-      let pat, nameCtx = (pat, nameCtx) |> onPat
-      let body, nameCtx = (body, nameCtx) |> onExpr
-      let next, nameCtx = (next, nameCtx) |> onExpr
-      HExpr.Let (pat, body, next, noTy, loc), nameCtx
+      | ALet.LetVal (pat, body, next, loc) ->
+        let pat, nameCtx = (pat, nameCtx) |> astToHirPat
+        let body, nameCtx = (body, nameCtx) |> astToHirExpr
+        let next, nameCtx = (next, nameCtx) |> astToHirExpr
+        HExpr.Let (pat, body, next, noTy, loc), nameCtx
+    doArm ()
 
   | AExpr.TySynonym (ident, ty, loc) ->
-    let serial, nameCtx = nameCtx |> nameCtxAdd ident
-    let ty, nameCtx = (ty, nameCtx) |> onTy
-    HExpr.TyDecl (serial, TyDecl.Synonym (ty, loc), loc), nameCtx
+    let doArm () =
+      let serial, nameCtx = nameCtx |> nameCtxAdd ident
+      let ty, nameCtx = (ty, nameCtx) |> astToHirTy
+      HExpr.TyDecl (serial, TyDecl.Synonym (ty, loc), loc), nameCtx
+    doArm ()
 
   | AExpr.TyUnion (ident, variants, loc) ->
-    let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
-      let serial, nameCtx = nameCtx |> nameCtxAdd ident
-      let hasPayload, payloadTy, nameCtx =
-        match payloadTy with
-        | Some ty ->
-          let ty, nameCtx = (ty, nameCtx) |> onTy
-          true, ty, nameCtx
-        | None ->
-          false, tyUnit, nameCtx
-      (ident, serial, hasPayload, payloadTy), nameCtx
-    let unionSerial, nameCtx =
-      nameCtx |> nameCtxAdd ident
-    let variants, nameCtx =
-      (variants, nameCtx) |> stMap onVariant
-    HExpr.TyDecl (unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx
+    let doArm () =
+      let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
+        let serial, nameCtx = nameCtx |> nameCtxAdd ident
+        let hasPayload, payloadTy, nameCtx =
+          match payloadTy with
+          | Some ty ->
+            let ty, nameCtx = (ty, nameCtx) |> astToHirTy
+            true, ty, nameCtx
+          | None ->
+            false, tyUnit, nameCtx
+        (ident, serial, hasPayload, payloadTy), nameCtx
+      let unionSerial, nameCtx =
+        nameCtx |> nameCtxAdd ident
+      let variants, nameCtx =
+        (variants, nameCtx) |> stMap onVariant
+      HExpr.TyDecl (unionSerial, TyDecl.Union (ident, variants, loc), loc), nameCtx
+    doArm ()
 
   | AExpr.Open (path, loc) ->
-    HExpr.Open (path, loc), nameCtx
+    let doArm () =
+      HExpr.Open (path, loc), nameCtx
+    doArm ()
 
 let astToHir (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
-  (expr, nameCtx) |> onExpr
+  (expr, nameCtx) |> astToHirExpr

@@ -667,12 +667,15 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
     let body = listRev stmts
     args, blockTy, body, ctx
 
-  let bodyCtx = mirCtxNewBlock ctx
-  let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
-  let ctx = mirCtxRollBack ctx bodyCtx
-  let procStmt = MStmt.Proc (calleeSerial, isMainFun, args, body, resultTy, letLoc)
-  let ctx = mirCtxAddStmt ctx procStmt
+  let core () =
+    let bodyCtx = mirCtxNewBlock ctx
+    let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
+    let ctx = mirCtxRollBack ctx bodyCtx
+    let procStmt = MStmt.Proc (calleeSerial, isMainFun, args, body, resultTy, letLoc)
+    let ctx = mirCtxAddStmt ctx procStmt
+    ctx
 
+  let ctx = core ()
   let next, ctx = mirifyExpr ctx next
   next, ctx
 
@@ -681,6 +684,19 @@ let mirifyExprTyDecl ctx _tySerial _tyDecl loc =
 
 let mirifyExprOpen ctx loc =
   MExpr.Default (tyUnit, loc), ctx
+
+let mirifyDecl ctx expr =
+  match expr with
+  | HExpr.Let (pat, body, next, _, loc) ->
+    mirifyExprLetVal ctx pat body next loc
+  | HExpr.LetFun (serial, isMainFun, args, body, next, _, loc) ->
+    mirifyExprLetFun ctx serial isMainFun args body next loc
+  | HExpr.TyDecl (tySerial, tyDecl, loc) ->
+    mirifyExprTyDecl ctx tySerial tyDecl loc
+  | HExpr.Open (_, loc) ->
+    mirifyExprOpen ctx loc
+  | _ ->
+    failwith "NEVER"
 
 let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   match expr with
@@ -694,19 +710,18 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
     mirifyExprMatch ctx target arms ty loc
   | HExpr.Inf (infOp, args, ty, loc) ->
     mirifyExprInf ctx infOp args ty loc
-  | HExpr.Let (pat, body, next, _, loc) ->
-    mirifyExprLetVal ctx pat body next loc
-  | HExpr.LetFun (serial, isMainFun, args, body, next, _, loc) ->
-    mirifyExprLetFun ctx serial isMainFun args body next loc
-  | HExpr.TyDecl (tySerial, tyDecl, loc) ->
-    mirifyExprTyDecl ctx tySerial tyDecl loc
-  | HExpr.Open (_, loc) ->
-    mirifyExprOpen ctx loc
+  | HExpr.Let _
+  | HExpr.LetFun _
+  | HExpr.TyDecl _
+  | HExpr.Open _ ->
+    mirifyDecl ctx expr
   | HExpr.Nav _ ->
     failwith "Never"
   | HExpr.Error (error, loc) ->
-    let ctx = mirCtxAddErr ctx error loc
-    MExpr.Default (tyObj, loc), ctx
+    let doArm () =
+      let ctx = mirCtxAddErr ctx error loc
+      MExpr.Default (tyObj, loc), ctx
+    doArm ()
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =
@@ -723,10 +738,12 @@ let mirifyCollectDecls (stmts: MStmt list) =
   let rec go decls stmts =
     match stmts with
     | (MStmt.Proc (_, _, _, body, _, _) as decl) :: stmts ->
-      let decls = go decls body
-      let decls = decl :: decls
-      let decls = go decls stmts
-      decls
+      let doArm () =
+        let decls = go decls body
+        let decls = decl :: decls
+        let decls = go decls stmts
+        decls
+      doArm ()
     | _ :: stmts ->
       go decls stmts
     | [] ->

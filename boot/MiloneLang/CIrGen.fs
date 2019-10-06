@@ -745,14 +745,8 @@ let genStmtReturn ctx expr =
   let expr, ctx = genExpr ctx expr
   cirCtxAddStmt ctx (CStmt.Return (Some expr))
 
-let genStmt ctx stmt =
+let genStmtJump ctx stmt =
   match stmt with
-  | MStmt.Do (expr, _) ->
-    genStmtDo ctx expr
-  | MStmt.LetVal (serial, init, ty, loc) ->
-    genStmtLetVal ctx serial init ty loc
-  | MStmt.Set (serial, right, _) ->
-    genStmtSet ctx serial right
   | MStmt.Return (expr, _) ->
     genStmtReturn ctx expr
   | MStmt.Label (label, _) ->
@@ -763,8 +757,27 @@ let genStmt ctx stmt =
     let pred, ctx = genExpr ctx pred
     cirCtxAddStmt ctx (CStmt.GotoIf (pred, label))
   | MStmt.Exit (arg, _) ->
-    let arg, ctx = genExpr ctx arg
-    cirCtxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))
+    let doArm () =
+      let arg, ctx = genExpr ctx arg
+      cirCtxAddStmt ctx (CStmt.Expr (CExpr.Call (CExpr.Ref "exit", [arg])))
+    doArm ()
+  | _ ->
+    failwith "NEVER"
+
+let genStmt ctx stmt =
+  match stmt with
+  | MStmt.Do (expr, _) ->
+    genStmtDo ctx expr
+  | MStmt.LetVal (serial, init, ty, loc) ->
+    genStmtLetVal ctx serial init ty loc
+  | MStmt.Set (serial, right, _) ->
+    genStmtSet ctx serial right
+  | MStmt.Return _
+  | MStmt.Label _
+  | MStmt.Goto _
+  | MStmt.GotoIf _
+  | MStmt.Exit _ ->
+    genStmtJump ctx stmt
   | MStmt.Proc _ ->
     ctx
 

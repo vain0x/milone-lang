@@ -479,7 +479,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
     inferExprOpen ctx path ty loc
   | HExpr.Inf (InfOp.Anno, _, _, _)
   | HExpr.Inf (InfOp.App, _, _, _)
-  | HExpr.Inf (InfOp.Closure _, _, _, _)
+  | HExpr.Inf (InfOp.Closure, _, _, _)
   | HExpr.Inf (InfOp.CallProc, _, _, _)
   | HExpr.Inf (InfOp.CallClosure, _, _, _) ->
     failwith "Never"
@@ -573,5 +573,17 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
           VarDef.Variant (ident, tySerial, hasPayload, payloadTy, ty, loc)
       )
     ctx |> tyCtxWithVars vars
+
+  let ctx =
+    let tys =
+      ctx |> tyCtxGetTys |> mapFilter (fun _ tyDef ->
+        match tyDef with
+        | TyDef.Meta _ ->
+          false
+
+        | _ ->
+          true
+      )
+    ctx |> tyCtxWithTys tys
 
   expr, ctx
