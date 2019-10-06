@@ -9,6 +9,6 @@ branches:
   except:
   - /^w-.*$/
 before_script:
-  - (cd ./boot && ./task restore)
+  - (cd ./boot && ./ci restore)
 script:
-  - (cd ./boot && ./task test)
+  - (cd ./boot && ./ci test)

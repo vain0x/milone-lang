@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -eux
+
+CFLAGS='-std=c11 -I runtime -Wall -Wno-unused-qariable -Wno-unused-but-set-qariable -Wno-unused-label -O3'
+GEN2_C='./~milone_gen2.c'
+GEN3_C='./~milone_gen3.c'
+
+# Build gen2.
+./milone_netcore -q MiloneLang >$GEN2_C
+
+gcc $CFLAGS $GEN2_C -o milone
+
+# Build gen3.
+./milone -q MiloneLang >$GEN3_C
+
+# Check if the gen2 and gen3 are equal.
+if diff -q $GEN2_C $GEN3_C
+then
+    echo '✔ ok'
+else
+    echo '✘ FAILED'
+    exit 1
+fi
