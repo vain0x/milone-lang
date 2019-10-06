@@ -1,0 +1,15 @@
+#!/bin/bash
+# Perform integration test for all cases.
+# USAGE: integration-all milone verbosity
+
+set -u
+
+MILONE=${1:-'./milone_netcore'}
+VERBOSITY=${2:-'-q'}
+
+ERR=$(find tests/*/* -type d -exec ./integration-test {} $MILONE $VERBOSITY \;)
+if [[ ! -z $ERR ]]
+then
+    echo '✘ Some test failed: '$ERR >&2
+    exit 1
+fi

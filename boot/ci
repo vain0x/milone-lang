@@ -1,0 +1,21 @@
+#!/bin/bash
+# Tasks for continuous integration (CI).
+
+set -eux
+
+VERB=$1
+
+if [[ $VERB = restore ]]
+then
+    dotnet restore
+    exit 0
+fi
+
+if [[ $VERB = test ]]
+then
+    ./test && ./test-self
+    exit 0
+fi
+
+echo 'USAGE: ci (restore|test)' >&2
+exit 1

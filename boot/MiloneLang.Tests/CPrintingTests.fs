@@ -3,6 +3,7 @@ module MiloneLang.CPrintingTests
 open System
 open System.IO
 open MiloneLang.Assets
+open MiloneLang.Cli
 open MiloneLang.Program
 open Xunit
 
@@ -12,9 +13,7 @@ let eol = """
 let testFile category case =
   async {
     let dirPath = IO.Path.Combine(testsDir.Value, category, case)
-    let content =
-      let cir, _ = toCir Verbosity.Silent dirPath
-      CPrinting.cprint cir
+    let content, _ = build readFile Quiet dirPath
     do!
       IO.File.WriteAllTextAsync(
         IO.Path.Combine(testsDir.Value, category, case, case + ".c"),

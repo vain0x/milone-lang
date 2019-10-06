@@ -1,7 +1,4 @@
-/// ## Compatibility layer
-///
-/// Because milone-lang doesn't implement `Map` correctly,
-/// we need to use different map functions between milone-lang and F#.
+/// Defines milone-lang primitives for F#.
 [<AutoOpen>]
 module rec MiloneLang.Compatible
 

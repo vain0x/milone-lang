@@ -1,3 +1,0 @@
-#!/bin/bash
-
-dotnet watch --project MiloneLang.Tests -- test

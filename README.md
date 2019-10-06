@@ -2,17 +2,19 @@
 
 [![Build Status](https://travis-ci.org/vain0x/milone-lang.svg?branch=master)](https://travis-ci.org/vain0x/milone-lang)
 
+Self-hosting is **achieved**.
+
 ## What
 
 **Milone-lang** is a F#-subset programming language.
 
-The goal is **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**., i.e. to make a milone-lang compiler that can compile milone-lang compiler itself.
+The goal is **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself.
 
 This is a hobby project. Don't use in production. Pull requests and issues are welcome.
 
 ## (No) Getting Started
 
-No releases available due to quality. To use, see the Development section.
+No releases available yet. To try, see the Development section below.
 
 ## How It Works
 
@@ -58,12 +60,6 @@ The diagram below illustrates how it does self-host finally.
                  ^ a native executable
 ```
 
-## Project Status
-
-Most (~70%) of features required for self-hosting have been implemented. For example, the compiler can tokenize the tokenizer itself.
-
-See [the self branch](https://github.com/vain0x/milone-lang/tree/self/boot/tests/examples/MiloneLang) for the progress of self-hosting.
-
 ## Features
 
 Not all of F# features are supported. Features for functional-style programming are selected to write a compiler easily.
@@ -72,8 +68,8 @@ Not all of F# features are supported. Features for functional-style programming 
 - Expressions
     - Literals: `1`, `"str"`, etc.
     - Operations: `+`, `::`, etc.
-    - Function applications: `f x y` and `y |> f x`
-    - Function abstractions: `let f x y = ..` and `fun x y -> ..`
+    - Function calls: `f x y` and `y |> f x`
+    - Function definitions: `let f x y = ..` and `fun x y -> ..`
     - Pattern matching
 - Functions
     - Mutually recursion
@@ -81,8 +77,8 @@ Not all of F# features are supported. Features for functional-style programming 
     - Partial applications
     - Function objects
 - Types
-    - Type inference based on Hindley-Milner algorithm
-    - Primitive types: `int`, `char`, `string`, tuples, lists, functions
+    - Polymorphic type inference
+    - Primitive types: `int`, `string`, tuples, lists, functions, etc.
     - Discriminated unions (non-generic ones only)
 - IO
     - `printfn` with `%s`, `%d`
@@ -153,7 +149,9 @@ The `tests` directory contains files for testing.
 
 `dotnet test` performs unit testing. All `tests/*/X/X.fs` files are compiled to matching `tests/*/X/X.c`. The outputs have verified before commit, so it's OK if none of them changed. If an output is changed, you need to perform integration testing to verify.
 
-`./task integ-all` performs integration testing. Each `tests/*/X/X.fs` file is compiled to an executable using GCC and executed. It is verified by matching the stdout and exit code with `tests/*/X/X.out`.
+`./test` performs integration testing. Each `tests/*/X/X.fs` file is compiled to an executable using GCC and executed. It is verified by matching the stdout and exit code with `tests/*/X/X.out`.
+
+`./test-self` performs self-compile checking. The milone-lang compiler (on .NET) compiles the compiler itself (obtaining first C code) and the output compiler also compiles the compiler itself (obtaining second C code). It's okay if the generated two C codes are same.
 
 There are some categories of testing files:
 
