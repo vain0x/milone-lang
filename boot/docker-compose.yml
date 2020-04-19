@@ -5,11 +5,11 @@ services:
     build: "."
     entrypoint: ["./ci", "test"]
     volumes:
-      - ".:/usr/local/bin/milone-lang"
-      - "app_core_bin:/usr/local/bin/milone-lang/MiloneLang/bin"
-      - "app_core_obj:/usr/local/bin/milone-lang/MiloneLang/obj"
-      - "app_tests_bin:/usr/local/bin/milone-lang/MiloneLang.Tests/bin"
-      - "app_tests_obj:/usr/local/bin/milone-lang/MiloneLang.Tests/obj"
+      - ".:/mnt/milone-lang/boot"
+      - "app_core_bin:/mnt/milone-lang/boot/MiloneLang/bin"
+      - "app_core_obj:/mnt/milone-lang/boot/MiloneLang/obj"
+      - "app_tests_bin:/mnt/milone-lang/boot/MiloneLang.Tests/bin"
+      - "app_tests_obj:/mnt/milone-lang/boot/MiloneLang.Tests/obj"
 
 volumes:
   app_core_bin:
