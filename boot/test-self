@@ -2,7 +2,7 @@
 
 set -eux
 
-CFLAGS='-std=c11 -I runtime -Wall -Wno-unused-qariable -Wno-unused-but-set-qariable -Wno-unused-label -O3'
+CFLAGS='-std=c11 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -O3'
 GEN2_C='./~milone_gen2.c'
 GEN3_C='./~milone_gen3.c'
 
