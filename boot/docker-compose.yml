@@ -1,5 +1,7 @@
 version: "3"
 
+# sudo docker build -t vain0x/milone-lang .
+# sudo docker run --rm -v $PWD:/usr/local/bin/milone-lang vain0x/milone-lang ./ci test
 services:
   app:
     build: "."
