@@ -58,6 +58,15 @@ let scopeCtxIsMetaTy tySerial scopeCtx =
 
 /// Defines a variable, without adding to any scope.
 let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
+  // Merge into current definition.
+  let varDef =
+    match scopeCtx |> scopeCtxGetVars |> mapTryFind varSerial, varDef with
+    | Some (VarDef.Var (_, StorageModifier.Static, _, _)),
+      VarDef.Var (ident, _, ty, loc) ->
+      VarDef.Var (ident, StorageModifier.Static, ty, loc)
+    | _ ->
+      varDef
+
   scopeCtx
   |> scopeCtxWithVars (scopeCtx |> scopeCtxGetVars |> mapAdd varSerial varDef)
   |> scopeCtxWithVarDepths (scopeCtx |> scopeCtxGetVarDepths |> mapAdd varSerial (scopeCtx |> scopeCtxGetLetDepth))
@@ -375,7 +384,7 @@ let nameResCollectDecls (expr, ctx) =
         when ctx |> scopeCtxIsVariant varSerial ->
         HPat.Ref (varSerial, ty, loc), ctx
       | _ ->
-        let ctx = ctx |> scopeCtxDefineLocalVar serial (VarDef.Var (ident, ty, loc))
+        let ctx = ctx |> scopeCtxDefineLocalVar serial (VarDef.Var (ident, StorageModifier.Static, ty, loc))
         pat, ctx
 
     | HPat.Call (callee, args, ty, loc) ->
@@ -393,7 +402,7 @@ let nameResCollectDecls (expr, ctx) =
 
     | HPat.As (pat, serial, loc) ->
       let ident = ctx |> scopeCtxGetIdent serial
-      let ctx = ctx |> scopeCtxDefineLocalVar serial (VarDef.Var (ident, noTy, loc))
+      let ctx = ctx |> scopeCtxDefineLocalVar serial (VarDef.Var (ident, StorageModifier.Static, noTy, loc))
       let pat, ctx = (pat, ctx) |> goPat
       HPat.As (pat, serial, loc), ctx
 
@@ -476,7 +485,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
         HPat.OptionSome (ty, loc), ctx
 
       | _ ->
-        let varDef = VarDef.Var (ident, ty, loc)
+        let varDef = VarDef.Var (ident, StorageModifier.Auto, ty, loc)
         let ctx = ctx |> scopeCtxDefineLocalVar varSerial varDef
         HPat.Ref (varSerial, ty, loc), ctx
 
@@ -513,7 +522,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
 
   | HPat.As (pat, serial, loc) ->
     let ident = ctx |> scopeCtxGetIdent serial
-    let varDef = VarDef.Var (ident, noTy, loc)
+    let varDef = VarDef.Var (ident, StorageModifier.Auto, noTy, loc)
     let ctx = ctx |> scopeCtxDefineLocalVar serial varDef
     let pat, ctx = (pat, ctx) |> nameResPat
     HPat.As (pat, serial, loc), ctx

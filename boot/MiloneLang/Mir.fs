@@ -53,7 +53,7 @@ let mirCtxFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let ctx =
     ctx
     |> mirCtxWithSerial ((ctx |> mirCtxGetSerial) + 1)
-    |> mirCtxWithVars (ctx |> mirCtxGetVars |> mapAdd serial (VarDef.Var (ident, ty, loc)))
+    |> mirCtxWithVars (ctx |> mirCtxGetVars |> mapAdd serial (VarDef.Var (ident, StorageModifier.Auto, ty, loc)))
   let refExpr = MExpr.Ref (serial, ty, loc)
   refExpr, serial, ctx
 

@@ -58,6 +58,14 @@ let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
     mirCtx |> mirCtxGetLogs
   )
 
+let cirCtxGetVarStorageModifier (ctx: CirCtx) varSerial =
+  match ctx |> cirCtxGetVars |> mapTryFind varSerial with
+  | Some (VarDef.Var (_, storageModifier, _, _)) ->
+    storageModifier
+
+  | _ ->
+    StorageModifier.Static
+
 let cirCtxAddErr (ctx: CirCtx) message loc =
   ctx |> cirCtxWithLogs ((Log.Error message, loc) :: (ctx |> cirCtxGetLogs))
 
@@ -609,13 +617,34 @@ let genExprCallClosure ctx callee args =
   let envArg = CExpr.Nav (callee, "env")
   CExpr.Call (funPtr, envArg :: args), ctx
 
+let cirCtxAddLetStmt ctx ident expr cty storageModifier =
+  match storageModifier with
+  | StorageModifier.Static ->
+    let ctx = cirCtxAddDecl ctx (CDecl.StaticVar (ident, cty))
+    match expr with
+    | Some expr ->
+      cirCtxAddStmt ctx (CStmt.Set (CExpr.Ref ident, expr))
+    | _ ->
+      ctx
+  | StorageModifier.Auto ->
+    cirCtxAddStmt ctx (CStmt.Let (ident, expr, cty))
+
+let cirCtxAddLetAllocStmt ctx ident valPtrTy varTy storageModifier =
+  match storageModifier with
+  | StorageModifier.Static ->
+    failwith "NEVER: let-alloc is used only for temporary variables"
+  | StorageModifier.Auto ->
+    cirCtxAddStmt ctx (CStmt.LetAlloc (ident, valPtrTy, varTy))
+
 let genInitExprCore ctx serial expr ty =
   let ident = cirCtxUniqueName ctx serial
+  let storageModifier = cirCtxGetVarStorageModifier ctx serial
   let cty, ctx = cirGetCTy ctx ty
-  cirCtxAddStmt ctx (CStmt.Let (ident, expr, cty))
+  cirCtxAddLetStmt ctx ident expr cty storageModifier
 
 let genInitClosure ctx serial funSerial envSerial ty =
   let ident = cirCtxUniqueName ctx serial
+  let storageModifier = cirCtxGetVarStorageModifier ctx serial
   let ty, ctx = cirGetCTy ctx ty
   let fields =
     [
@@ -623,7 +652,7 @@ let genInitClosure ctx serial funSerial envSerial ty =
       "env", CExpr.Ref (cirCtxUniqueName ctx envSerial)
     ]
   let initExpr = CExpr.Init (fields, ty)
-  cirCtxAddStmt ctx (CStmt.Let (ident, Some initExpr, ty))
+  cirCtxAddLetStmt ctx ident (Some initExpr) ty storageModifier
 
 let genInitBox ctx serial arg =
   let argTy, ctx = cirGetCTy ctx (mexprToTy arg)
@@ -631,7 +660,8 @@ let genInitBox ctx serial arg =
 
   // void* p = (void*)malloc(sizeof T);
   let temp = cirCtxUniqueName ctx serial
-  let ctx = cirCtxAddStmt ctx (CStmt.LetAlloc (temp, CTy.Ptr argTy, CTy.Ptr CTy.Void))
+  let storageModifier = cirCtxGetVarStorageModifier ctx serial
+  let ctx = cirCtxAddLetAllocStmt ctx temp (CTy.Ptr argTy) (CTy.Ptr CTy.Void) storageModifier
 
   // *(T*)p = t;
   let left = CExpr.Uni (CUniOp.Deref, CExpr.Cast (CExpr.Ref temp, CTy.Ptr argTy))
@@ -641,13 +671,14 @@ let genInitBox ctx serial arg =
 
 let genInitIndirect ctx serial payload ty =
   let varName = cirCtxUniqueName ctx serial
+  let storageModifier = cirCtxGetVarStorageModifier ctx serial
   let payloadTy, ctx = cirGetCTy ctx ty
   let ptrTy = CTy.Ptr payloadTy
 
   let payload, ctx = genExpr ctx payload
 
   // T* p = (T*)malloc(sizeof T);
-  let ctx = cirCtxAddStmt ctx (CStmt.LetAlloc (varName, ptrTy, ptrTy))
+  let ctx = cirCtxAddLetAllocStmt ctx varName ptrTy ptrTy storageModifier
 
   // *(T*)p = t;
   let left = CExpr.Uni (CUniOp.Deref, CExpr.Cast (CExpr.Ref varName, ptrTy))
@@ -657,8 +688,9 @@ let genInitIndirect ctx serial payload ty =
 
 let genInitCons ctx serial head tail listTy =
   let temp = cirCtxUniqueName ctx serial
+  let storageModifier = cirCtxGetVarStorageModifier ctx serial
   let listTy, ctx = cirGetCTy ctx listTy
-  let ctx = cirCtxAddStmt ctx (CStmt.LetAlloc (temp, listTy, listTy))
+  let ctx = cirCtxAddLetAllocStmt ctx temp listTy listTy storageModifier
 
   // head
   let head, ctx = genExpr ctx head
@@ -674,8 +706,9 @@ let genInitCons ctx serial head tail listTy =
 
 let genInitTuple ctx serial items tupleTy =
   let ident = cirCtxUniqueName ctx serial
+  let storageModifier = cirCtxGetVarStorageModifier ctx serial
   let tupleTy, ctx = cirGetCTy ctx tupleTy
-  let ctx = cirCtxAddStmt ctx (CStmt.Let (ident, None, tupleTy))
+  let ctx = cirCtxAddLetStmt ctx ident None tupleTy storageModifier
   let rec go ctx i items =
     match items with
     | [] ->
@@ -690,6 +723,7 @@ let genInitTuple ctx serial items tupleTy =
 
 let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
   let temp = cirCtxUniqueName ctx varSerial
+  let storageModifier = cirCtxGetVarStorageModifier ctx varSerial
   let unionTy, ctx = cirGetCTy ctx unionTy
   let variantName = cirCtxUniqueName ctx variantSerial
   let payloadExpr = CExpr.Ref (cirCtxUniqueName ctx payloadSerial)
@@ -699,7 +733,7 @@ let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
       variantName, payloadExpr
     ]
   let init = CExpr.Init (fields, unionTy)
-  let ctx = cirCtxAddStmt ctx (CStmt.Let (temp, Some init, unionTy))
+  let ctx = cirCtxAddLetStmt ctx temp (Some init) unionTy storageModifier
   ctx
 
 let genStmtLetVal ctx serial init ty loc =

@@ -286,6 +286,8 @@ let cprintDecl acc decl =
     let acc = go acc variants
     let acc = acc |> cons "};" |> cons eol
     acc
+  | CDecl.StaticVar (ident, _) ->
+    acc |> cons "// static " |> cons ident |> cons ";" |> cons eol
   | CDecl.Fun (ident, args, resultTy, body) ->
     let acc = cprintTyWithName acc ident resultTy
     let acc = acc |> cons "("
@@ -306,6 +308,10 @@ let cprintDeclForward acc decl =
   | CDecl.Enum (tyIdent, _) ->
     let acc = acc |> cons "enum " |> cons tyIdent |> cons ";" |> cons eol |> cons eol
     acc
+  | CDecl.StaticVar (ident, ty) ->
+    let acc = acc |> cons "static "
+    let acc = cprintTyWithName acc ident ty
+    acc |> cons ";" |> cons eol |> cons eol
   | CDecl.Fun (ident, args, resultTy, _) ->
     let acc = cprintTyWithName acc ident resultTy
     let acc = acc |> cons "("

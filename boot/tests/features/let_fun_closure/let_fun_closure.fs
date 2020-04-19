@@ -18,6 +18,7 @@ let recursiveCase () =
 
   assert (go 0)
 
+// deprecated: static variables don't get captured now.
 let mutuallyRecursiveCase () =
   assert (f1 () = 1)
 

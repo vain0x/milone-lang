@@ -193,7 +193,7 @@ let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
   let chooseVars varSerials =
     varSerials |> listChoose (fun varSerial ->
       match ctx |> ccCtxGetVars |> mapTryFind varSerial with
-      | Some (VarDef.Var (_, ty, loc)) ->
+      | Some (VarDef.Var (_, StorageModifier.Auto, ty, loc)) ->
         Some (varSerial, ty, loc)
 
       | _ ->

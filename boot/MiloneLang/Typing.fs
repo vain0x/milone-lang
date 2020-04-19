@@ -161,7 +161,7 @@ let tyCtxUnifyVarTy varSerial ty loc ctx =
   | varDef ->
     let refTy =
       match varDef with
-      | VarDef.Var (_, ty, _) ->
+      | VarDef.Var (_, _, ty, _) ->
         ty
       | VarDef.Variant (_, _, _, _, ty, _) ->
         ty
@@ -526,9 +526,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
       |> stMap (fun ((varSerial, varDef), ctx) ->
         let ctx = ctx |> tyCtxWithLetDepth (scopeCtx |> scopeCtxGetVarDepths |> mapFind varSerial)
         match varDef with
-        | VarDef.Var (ident, _, loc) ->
+        | VarDef.Var (ident, storageModifier, _, loc) ->
           let ty, _, ctx = tyCtxFreshTyVar ident loc ctx
-          let varDef = VarDef.Var (ident, ty, loc)
+          let varDef = VarDef.Var (ident, storageModifier, ty, loc)
           (varSerial, varDef), ctx
 
         | VarDef.Fun (ident, arity, _, loc) ->
@@ -561,9 +561,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
     let vars =
       ctx |> tyCtxGetVars |> mapMap (fun _ varDef ->
         match varDef with
-        | VarDef.Var (ident, ty, loc) ->
+        | VarDef.Var (ident, storageModifier, ty, loc) ->
           let ty = tyCtxSubstTy ctx ty
-          VarDef.Var (ident, ty, loc)
+          VarDef.Var (ident, storageModifier, ty, loc)
         | VarDef.Fun (ident, arity, TyScheme.ForAll (args, ty), loc) ->
           let ty = tyCtxSubstTy ctx ty
           VarDef.Fun (ident, arity, TyScheme.ForAll (args, ty), loc)

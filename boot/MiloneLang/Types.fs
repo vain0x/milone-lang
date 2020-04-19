@@ -349,6 +349,11 @@ type Arity = int
 /// Only one exception: recursive function have let-depth deeper by 1.
 type LetDepth = int
 
+[<RequireQualifiedAccess>]
+type StorageModifier =
+  | Auto
+  | Static
+
 type NameCtx =
   | NameCtx
     of AssocMap<Serial, Ident> * lastSerial:Serial
@@ -448,7 +453,7 @@ type TyDef =
 [<RequireQualifiedAccess>]
 type VarDef =
   | Var
-    of Ident * Ty * Loc
+    of Ident * StorageModifier * Ty * Loc
   | Fun
     of Ident * Arity * TyScheme * Loc
   /// Variant constructor.
@@ -826,5 +831,7 @@ type CDecl =
     of Ident * fields:(Ident * CTy) list * variants:(Ident * CTy) list
   | Enum
     of Ident * variants:Ident list
+  | StaticVar
+    of Ident * CTy
   | Fun
     of Ident * args:(Ident * CTy) list * CTy * body:CStmt list
