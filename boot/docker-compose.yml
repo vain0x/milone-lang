@@ -1,10 +1,18 @@
 version: "3"
 
-# sudo docker build -t vain0x/milone-lang .
-# sudo docker run --rm -v $PWD:/usr/local/bin/milone-lang vain0x/milone-lang ./ci test
 services:
   app:
     build: "."
     entrypoint: ["./ci", "test"]
     volumes:
       - ".:/usr/local/bin/milone-lang"
+      - "app_core_bin:/usr/local/bin/milone-lang/MiloneLang/bin"
+      - "app_core_obj:/usr/local/bin/milone-lang/MiloneLang/obj"
+      - "app_tests_bin:/usr/local/bin/milone-lang/MiloneLang.Tests/bin"
+      - "app_tests_obj:/usr/local/bin/milone-lang/MiloneLang.Tests/obj"
+
+volumes:
+  app_core_bin:
+  app_core_obj:
+  app_tests_bin:
+  app_tests_obj:
