@@ -5,4 +5,16 @@ services:
     build: "."
     entrypoint: ["./ci", "test"]
     volumes:
-      - ".:/usr/local/bin/milone-lang"
+      - ".:/mnt/milone-lang/boot"
+
+      # These mounts prevent the docker from sync-ing.
+      - "app_core_bin:/mnt/milone-lang/boot/MiloneLang/bin"
+      - "app_core_obj:/mnt/milone-lang/boot/MiloneLang/obj"
+      - "app_tests_bin:/mnt/milone-lang/boot/MiloneLang.Tests/bin"
+      - "app_tests_obj:/mnt/milone-lang/boot/MiloneLang.Tests/obj"
+
+volumes:
+  app_core_bin:
+  app_core_obj:
+  app_tests_bin:
+  app_tests_obj:
