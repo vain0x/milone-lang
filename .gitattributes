@@ -1,4 +1,6 @@
 * text=auto
 
 *.milone    linguist-language=fsharp
-*.c         linguist-detectable=false
+*.c         linguist-detectable=false 
+
+boot/tests/**/*.c     linguist-generated
