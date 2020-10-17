@@ -166,7 +166,7 @@ let cliParse readFile (projectDir: string) =
     | [] -> code
 
     | (msg, loc) :: errors ->
-        printfn "ERROR: %A %s" loc msg
+        printfn "ERROR: %s %s" (locToString loc) msg
         go1 1 errors
 
   let projectDir = projectDir |> pathStrTrimEndPathSep
@@ -179,7 +179,7 @@ let cliParse readFile (projectDir: string) =
     printfn "\n-------------\nParsing %s...\n--------------" moduleName
     let ast, errors = parse tokens
     go1 0 errors |> ignore
-    printfn "%A" ast
+    printfn "%s" (objToString ast)
     ast, errors
 
   parseProjectModules readModuleFile parseWithLogging projectName (nameCtxEmpty ()) |> ignore
