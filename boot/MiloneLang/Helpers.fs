@@ -11,11 +11,11 @@ open MiloneLang.Records
 let stMap f (xs, ctx) =
   let rec go acc (xs, ctx) =
     match xs with
-    | [] ->
-      listRev acc, ctx
+    | [] -> listRev acc, ctx
     | x :: xs ->
-      let y, ctx = f (x, ctx)
-      go (y :: acc) (xs, ctx)
+        let y, ctx = f (x, ctx)
+        go (y :: acc) (xs, ctx)
+
   go [] (xs, ctx)
 
 /// `List.bind`, modifying context.
@@ -25,31 +25,30 @@ let stMap f (xs, ctx) =
 let stFlatMap f (xs, ctx) =
   let rec go acc xs ctx =
     match xs with
-    | [] ->
-      listRev acc, ctx
+    | [] -> listRev acc, ctx
     | x :: xs ->
-      let acc, ctx = f (x, acc, ctx)
-      go acc xs ctx
+        let acc, ctx = f (x, acc, ctx)
+        go acc xs ctx
+
   go [] xs ctx
 
 /// `Option.map`, modifying context.
 let stOptionMap f (x, ctx) =
   match x with
   | Some x ->
-    let x, ctx = f (x, ctx)
-    Some x, ctx
-  | None ->
-    None, ctx
+      let x, ctx = f (x, ctx)
+      Some x, ctx
+  | None -> None, ctx
 
 /// Maps over a list, collecting things, mutating context.
 let exMap f (xs, acc, ctx) =
   let rec go ys xs acc ctx =
     match xs with
-    | [] ->
-      listRev ys, acc, ctx
+    | [] -> listRev ys, acc, ctx
     | x :: xs ->
-      let y, acc, ctx = f (x, acc, ctx)
-      go (y :: ys) xs acc ctx
+        let y, acc, ctx = f (x, acc, ctx)
+        go (y :: ys) xs acc ctx
+
   go [] xs acc ctx
 
 // -----------------------------------------------
@@ -58,19 +57,15 @@ let exMap f (xs, acc, ctx) =
 
 let optionIsNone option =
   match option with
-  | None ->
-    true
+  | None -> true
 
-  | Some _ ->
-    false
+  | Some _ -> false
 
 let optionDefaultValue alt option =
   match option with
-  | Some x ->
-    x
+  | Some x -> x
 
-  | None ->
-    alt
+  | None -> alt
 
 // -----------------------------------------------
 // List
@@ -80,135 +75,113 @@ let cons head tail = head :: tail
 
 let listIsEmpty xs =
   match xs with
-  | [] ->
-    true
+  | [] -> true
 
-  | _ ->
-    false
+  | _ -> false
 
 let listLength xs =
   let rec go len xs =
     match xs with
-    | [] ->
-      len
+    | [] -> len
 
-    | _ :: xs ->
-      go (len + 1) xs
+    | _ :: xs -> go (len + 1) xs
 
   go 0 xs
 
 let listRev xs =
   let rec go acc xs =
     match xs with
-    | [] ->
-      acc
+    | [] -> acc
 
-    | x :: xs ->
-      go (x :: acc) xs
+    | x :: xs -> go (x :: acc) xs
 
   go [] xs
 
 let rec listIter f xs =
   match xs with
-  | [] ->
-    ()
+  | [] -> ()
 
   | x :: xs ->
-    f x
-    listIter f xs
+      f x
+      listIter f xs
 
 let listMap f xs =
   let rec go acc xs =
     match xs with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
-    | x :: xs ->
-      go (f x :: acc) xs
+    | x :: xs -> go (f x :: acc) xs
 
   go [] xs
 
 let listMapWithIndex f xs =
   let rec go acc i xs =
     match xs with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
-    | x :: xs ->
-      go (f i x :: acc) (i + 1) xs
+    | x :: xs -> go (f i x :: acc) (i + 1) xs
 
   go [] 0 xs
 
 let listFilter pred xs =
   let rec go acc xs =
     match xs with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
     | x :: xs ->
-      let acc = if pred x then x :: acc else acc
-      go acc xs
+        let acc = if pred x then x :: acc else acc
+        go acc xs
 
   go [] xs
 
 let listChoose f xs =
   let rec go acc xs =
     match xs with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
     | x :: xs ->
-      let acc =
-        match f x with
-        | Some y ->
-          y :: acc
+        let acc =
+          match f x with
+          | Some y -> y :: acc
 
-        | None ->
-          acc
+          | None -> acc
 
-      go acc xs
+        go acc xs
 
   go [] xs
 
 let listCollect f xs =
   let rec gogo acc ys =
     match ys with
-    | [] ->
-      acc
+    | [] -> acc
 
-    | y :: ys ->
-      gogo (y :: acc) ys
+    | y :: ys -> gogo (y :: acc) ys
 
   let rec go acc xs =
     match xs with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
     | x :: xs ->
-      let acc = gogo acc (f x)
-      go acc xs
+        let acc = gogo acc (f x)
+        go acc xs
 
   go [] xs
 
 let listForAll pred xs =
   let rec go xs =
     match xs with
-    | [] ->
-      true
+    | [] -> true
 
-    | x :: xs ->
-      pred x && go xs
+    | x :: xs -> pred x && go xs
 
   go xs
 
 let listExists pred xs =
   let rec go xs =
     match xs with
-    | [] ->
-      false
+    | [] -> false
 
-    | x :: xs ->
-      pred x || go xs
+    | x :: xs -> pred x || go xs
 
   go xs
 
@@ -216,83 +189,66 @@ let listExists pred xs =
 let listFold folder state xs =
   let rec go state xs =
     match xs with
-    | [] ->
-      state
+    | [] -> state
 
-    | x :: xs ->
-      go (folder state x) xs
+    | x :: xs -> go (folder state x) xs
 
   go state xs
 
 let listReduce reducer xs =
   match xs with
-  | [] ->
-    failwith "listReduce: empty"
+  | [] -> failwith "listReduce: empty"
 
-  | x :: xs ->
-    listFold reducer x xs
+  | x :: xs -> listFold reducer x xs
 
 let listLast xs =
   let rec go xs =
     match xs with
-    | [] ->
-      failwith "listLast: empty"
+    | [] -> failwith "listLast: empty"
 
-    | [x] ->
-      x
+    | [ x ] -> x
 
-    | _ :: xs ->
-      go xs
+    | _ :: xs -> go xs
 
   go xs
 
 let listSkip count xs =
   let rec go count xs =
     match xs with
-    | [] ->
-      []
+    | [] -> []
 
-    | _ when count <= 0 ->
-      xs
+    | _ when count <= 0 -> xs
 
-    | _ :: xs ->
-      go (count - 1) xs
+    | _ :: xs -> go (count - 1) xs
 
   go count xs
 
 let listTruncate count xs =
   let rec go acc count xs =
     match xs with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
-    | _ when count <= 0 ->
-      listRev acc
+    | _ when count <= 0 -> listRev acc
 
-    | x :: xs ->
-      go (x :: acc) (count - 1) xs
+    | x :: xs -> go (x :: acc) (count - 1) xs
 
   go [] count xs
 
 let listAppend xs ys =
   let rec go acc xs =
     match xs with
-    | [] ->
-      acc
+    | [] -> acc
 
-    | x :: xs ->
-      go (x :: acc) xs
+    | x :: xs -> go (x :: acc) xs
 
   go ys (listRev xs)
 
 let listSortCore unique cmp xs =
   let rec appendRev acc xs =
     match xs with
-    | [] ->
-      acc
+    | [] -> acc
 
-    | x :: xs ->
-      appendRev (x :: acc) xs
+    | x :: xs -> appendRev (x :: acc) xs
 
   // `merge (xs, xn) (ys, yn) = (zs, zn), d` where
   // `zs.[0..zn - 1]` is the merge of `xs.[0..xn - 1]` and `ys.[0..yn - 1]`,
@@ -306,17 +262,15 @@ let listSortCore unique cmp xs =
     else
       match xs, ys with
       | [], _
-      | _, [] ->
-        failwith "NEVER: wrong list length"
+      | _, [] -> failwith "NEVER: wrong list length"
 
       | x :: xs1, y :: ys1 ->
-        let c = cmp x y
-        if c > 0 then
-          merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
-        else if c = 0 && unique then
-          merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
-        else
-          merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
+          let c = cmp x y
+          if c > 0
+          then merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
+          else if c = 0 && unique
+          then merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
+          else merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
 
   // `go (xs, xn) = (zs, zn), xs1, d` where
   // `zs.[0..xn - 1]` is the sort of `xs.[0..xn - 1]`,
@@ -338,91 +292,73 @@ let listSortCore unique cmp xs =
   assert (ws |> listIsEmpty)
   listTruncate zn zs
 
-let listSort cmp xs =
-  listSortCore false cmp xs
+let listSort cmp xs = listSortCore false cmp xs
 
-let listUnique cmp xs =
-  listSortCore true cmp xs
+let listUnique cmp xs = listSortCore true cmp xs
 
 // -----------------------------------------------
 // Assoc
 // -----------------------------------------------
 
-let assocAdd key value assoc =
-  (key, value) :: assoc
+let assocAdd key value assoc = (key, value) :: assoc
 
 let assocRemove cmp key assoc =
   let rec go acc assoc =
     match assoc with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
-    | (k, _) :: assoc
-      when cmp k key = 0 ->
-      go acc assoc
+    | (k, _) :: assoc when cmp k key = 0 -> go acc assoc
 
-    | kv :: assoc ->
-      go (kv :: acc) assoc
+    | kv :: assoc -> go (kv :: acc) assoc
 
   go [] assoc
 
 let assocTryFind cmp key assoc =
   let rec go assoc =
     match assoc with
-    | [] ->
-      None
+    | [] -> None
 
-    | (k, v) :: _
-      when cmp k key = 0 ->
-      Some v
+    | (k, v) :: _ when cmp k key = 0 -> Some v
 
-    | _ :: assoc ->
-      go assoc
+    | _ :: assoc -> go assoc
 
   go assoc
 
 let assocFold folder state assoc =
   let rec go state assoc =
     match assoc with
-    | [] ->
-      state
+    | [] -> state
 
-    | (k, v) :: assoc ->
-      go (folder state k v) assoc
+    | (k, v) :: assoc -> go (folder state k v) assoc
 
   go state assoc
 
 let assocMap f assoc =
   let rec go acc assoc =
     match assoc with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
-    | (k, v) :: assoc ->
-      go ((k, f k v) :: acc) assoc
+    | (k, v) :: assoc -> go ((k, f k v) :: acc) assoc
 
   go [] assoc
 
 let assocFilter pred assoc =
   let rec go acc assoc =
     match assoc with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
     | ((k, v) as kv) :: assoc ->
-      let acc = if pred k v then (kv :: acc) else acc
-      go acc assoc
+        let acc = if pred k v then (kv :: acc) else acc
+        go acc assoc
 
   go [] assoc
 
 let assocToKeyAcc acc assoc =
   let rec go acc assoc =
     match assoc with
-    | [] ->
-      acc
+    | [] -> acc
 
-    | (k, _) :: assoc ->
-      go (k :: acc) assoc
+    | (k, _) :: assoc -> go (k :: acc) assoc
 
   go acc assoc
 
@@ -433,78 +369,60 @@ let assocToKeyAcc acc assoc =
 let trieAdd (keyHash: int) key value trie =
   let rec go trie =
     match trie with
-    | [] ->
-      [keyHash, [key, value]]
+    | [] -> [ keyHash, [ key, value ] ]
 
-    | (h, assoc) :: trie
-      when h = keyHash ->
-      (keyHash, assocAdd key value assoc) :: trie
+    | (h, assoc) :: trie when h = keyHash -> (keyHash, assocAdd key value assoc) :: trie
 
-    | kv :: trie ->
-      kv :: go trie
+    | kv :: trie -> kv :: go trie
 
   go trie
 
 let trieRemove cmp (keyHash: int) key trie =
   let rec go trie =
     match trie with
-    | [] ->
-      []
+    | [] -> []
 
-    | (h, assoc) :: trie
-      when h = keyHash ->
-      (keyHash, assocRemove cmp key assoc) :: trie
+    | (h, assoc) :: trie when h = keyHash -> (keyHash, assocRemove cmp key assoc) :: trie
 
-    | kv :: trie ->
-      kv :: go trie
+    | kv :: trie -> kv :: go trie
 
   go trie
 
 let trieTryFind cmp (keyHash: int) key trie =
   let rec go trie =
     match trie with
-    | [] ->
-      None
+    | [] -> None
 
-    | (h, assoc) :: _
-      when h = keyHash ->
-      assocTryFind cmp key assoc
+    | (h, assoc) :: _ when h = keyHash -> assocTryFind cmp key assoc
 
-    | _ :: trie ->
-      go trie
+    | _ :: trie -> go trie
 
   go trie
 
 let trieMap f trie =
   let rec go trie =
     match trie with
-    | [] ->
-      []
+    | [] -> []
 
-    | (h, assoc) :: trie ->
-      (h, assocMap f assoc) :: go trie
+    | (h, assoc) :: trie -> (h, assocMap f assoc) :: go trie
 
   go trie
 
 let tireFilter pred trie =
   let rec go trie =
     match trie with
-    | [] ->
-      []
+    | [] -> []
 
-    | (h, assoc) :: trie ->
-      (h, assocFilter pred assoc) :: go trie
+    | (h, assoc) :: trie -> (h, assocFilter pred assoc) :: go trie
 
   go trie
 
 let trieToKeys trie =
   let rec go acc trie =
     match trie with
-    | [] ->
-      acc
+    | [] -> acc
 
-    | (_, assoc) :: trie ->
-      go (assocToKeyAcc acc assoc) trie
+    | (_, assoc) :: trie -> go (assocToKeyAcc acc assoc) trie
 
   go [] trie
 
@@ -512,8 +430,7 @@ let trieToKeys trie =
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty (hash, cmp): AssocMap<_, _> =
-  [], hash, cmp
+let mapEmpty (hash, cmp): AssocMap<_, _> = [], hash, cmp
 
 let mapAdd key value (trie, hash, cmp): AssocMap<_, _> =
   let trie = trie |> trieAdd (hash key) key value
@@ -523,24 +440,19 @@ let mapRemove key (trie, hash, cmp): AssocMap<_, _> =
   let trie = trie |> trieRemove cmp (hash key) key
   trie, hash, cmp
 
-let mapTryFind key ((trie, hash, cmp): AssocMap<_, _>) =
-  trie |> trieTryFind cmp (hash key) key
+let mapTryFind key ((trie, hash, cmp): AssocMap<_, _>) = trie |> trieTryFind cmp (hash key) key
 
 let mapFind key map =
   match mapTryFind key map with
-  | Some value ->
-    value
+  | Some value -> value
 
-  | None ->
-    failwithf "mapFind: missing key (%A)" key
+  | None -> failwithf "mapFind: missing key (%A)" key
 
 let mapContainsKey key map =
   match mapTryFind key map with
-  | Some _ ->
-    true
+  | Some _ -> true
 
-  | None ->
-    false
+  | None -> false
 
 let mapFold folder state (map: AssocMap<_, _>) =
   map |> mapToList |> assocFold folder state
@@ -553,45 +465,42 @@ let mapFilter pred (trie, hash, cmp): AssocMap<_, _> =
   let trie = tireFilter pred trie
   trie, hash, cmp
 
-let mapToKeys ((trie, _, cmp): AssocMap<_, _>) =
-  trie |> trieToKeys |> listUnique cmp
+let mapToKeys ((trie, _, cmp): AssocMap<_, _>) = trie |> trieToKeys |> listUnique cmp
 
 let mapToList (map: AssocMap<_, _>) =
   let trie, _, cmp = map
 
   let rec go acc keys =
     match keys with
-    | [] ->
-      acc
+    | [] -> acc
 
-    | key :: keys ->
-      go ((key, mapFind key map) :: acc) keys
+    | key :: keys -> go ((key, mapFind key map) :: acc) keys
 
   // Sort in reversed order and re-reverse it with `go`.
-  trie |> trieToKeys |> listUnique (fun l r -> cmp r l) |> go []
+  trie
+  |> trieToKeys
+  |> listUnique (fun l r -> cmp r l)
+  |> go []
 
 let mapOfKeys (hash, cmp) value keys: AssocMap<_, _> =
   /// Partition a key list by hash to acc/rest.
   let rec group keyHash acc others keys =
     match keys with
-    | [] ->
-      acc, others
+    | [] -> acc, others
 
     | key :: keys ->
-      if hash key = keyHash then
-        group keyHash ((key, value) :: acc) others keys
-      else
-        group keyHash acc (key :: others) keys
+        if hash key = keyHash
+        then group keyHash ((key, value) :: acc) others keys
+        else group keyHash acc (key :: others) keys
 
   let rec go trie keys =
     match keys with
-    | [] ->
-      trie
+    | [] -> trie
 
     | key :: keys ->
-      let h = hash key
-      let acc, keys = group h [(key, value)] [] keys
-      go ((h, acc) :: trie) keys
+        let h = hash key
+        let acc, keys = group h [ (key, value) ] [] keys
+        go ((h, acc) :: trie) keys
 
   let trie = go [] keys
   trie, hash, cmp
@@ -600,24 +509,19 @@ let mapOfList (hash, cmp) assoc: AssocMap<_, _> =
   /// Partition an assoc by hash of key to acc/rest.
   let rec group keyHash acc others assoc =
     match assoc with
-    | [] ->
-      acc, others
+    | [] -> acc, others
 
     | ((key, _) as kv) :: assoc ->
-      if hash key = keyHash then
-        group keyHash (kv :: acc) others assoc
-      else
-        group keyHash acc (kv :: others) assoc
+        if hash key = keyHash then group keyHash (kv :: acc) others assoc else group keyHash acc (kv :: others) assoc
 
   let rec go trie assoc =
     match assoc with
-    | [] ->
-      trie
+    | [] -> trie
 
     | ((key, _) as kv) :: assoc ->
-      let h = hash key
-      let acc, assoc = group h [kv] [] assoc
-      go ((h, acc) :: trie) assoc
+        let h = hash key
+        let acc, assoc = group h [ kv ] [] assoc
+        go ((h, acc) :: trie) assoc
 
   let trie = go [] assoc
   trie, hash, cmp
@@ -626,42 +530,32 @@ let mapOfList (hash, cmp) assoc: AssocMap<_, _> =
 // AssocSet
 // -----------------------------------------------
 
-let setEmpty funs: AssocSet<_> =
-  mapEmpty funs
+let setEmpty funs: AssocSet<_> = mapEmpty funs
 
-let setContains key (set: AssocSet<_>) =
-  set |> mapContainsKey key
+let setContains key (set: AssocSet<_>) = set |> mapContainsKey key
 
-let setToList (set: AssocSet<_>) =
-  set |> mapToKeys
+let setToList (set: AssocSet<_>) = set |> mapToKeys
 
-let setOfList (hash, cmp) xs: AssocSet<_> =
-  mapOfKeys (hash, cmp) () xs
+let setOfList (hash, cmp) xs: AssocSet<_> = mapOfKeys (hash, cmp) () xs
 
-let setAdd key set: AssocSet<_> =
-  mapAdd key () set
+let setAdd key set: AssocSet<_> = mapAdd key () set
 
 let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> =
   let rec filter acc assoc =
     match assoc with
-    | [] ->
-      listRev acc
+    | [] -> listRev acc
 
-    | (key, ()) :: assoc
-      when setContains key second ->
-      filter acc assoc
+    | (key, ()) :: assoc when setContains key second -> filter acc assoc
 
-    | kv :: assoc ->
-      filter (kv :: acc) assoc
+    | kv :: assoc -> filter (kv :: acc) assoc
 
   let rec go trie =
     match trie with
-    | [] ->
-      []
+    | [] -> []
 
     | (h, assoc) :: trie ->
-      let assoc = filter [] assoc
-      (h, assoc) :: go trie
+        let assoc = filter [] assoc
+        (h, assoc) :: go trie
 
   let trie = go trie
   trie, hash, cmp
@@ -673,45 +567,35 @@ let setFold folder state (set: AssocSet<_>) =
 // Int
 // -----------------------------------------------
 
-let intMin (x: int) (y: int) =
-  if x > y then y else x
+let intMin (x: int) (y: int) = if x > y then y else x
 
-let intMax (x: int) (y: int) =
-  if x < y then y else x
+let intMax (x: int) (y: int) = if x < y then y else x
 
-let intEq (x: int) (y: int) =
-  x = y
+let intEq (x: int) (y: int) = x = y
 
 let intCmp (x: int) (y: int) =
-  if y < x then
-    1
-  else if y = x then
-    0
-  else
-    -1
+  if y < x then 1
+  else if y = x then 0
+  else -1
 
-let intHash (x: int) =
-  x % 512
+let intHash (x: int) = x % 512
 
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
     failwith "intToHexWithPadding: unimplemented negative"
   else
 
-  assert (len >= 0)
+    assert (len >= 0)
 
-  let rec go acc len (n: int) =
-    if n = 0 && len <= 0 then
-      acc
-    else
-      let d = n % 16
-      let s = "0123456789abcdef" |> strSlice d (d + 1)
-      go (s + acc) (len - 1) (n / 16)
+    let rec go acc len (n: int) =
+      if n = 0 && len <= 0 then
+        acc
+      else
+        let d = n % 16
+        let s = "0123456789abcdef" |> strSlice d (d + 1)
+        go (s + acc) (len - 1) (n / 16)
 
-  if value = 0 && len = 0 then
-    "0"
-  else
-    go "" len value
+    if value = 0 && len = 0 then "0" else go "" len value
 
 let intFromHex (l: int) (r: int) (s: string) =
   assert (0 <= l && l < r && r <= s.Length)
@@ -736,15 +620,13 @@ let intFromHex (l: int) (r: int) (s: string) =
 
   go 0 l
 
-let hashCombine (first: int) (second: int) =
-  first * 3 + second
+let hashCombine (first: int) (second: int) = first * 3 + second
 
 // -----------------------------------------------
 // Char
 // -----------------------------------------------
 
-let charSub (x: char) (y: char) =
-  int x - int y
+let charSub (x: char) (y: char) = int x - int y
 
 let charIsControl (c: char) =
   let n = int c
@@ -753,8 +635,7 @@ let charIsControl (c: char) =
 let charIsSpace (c: char): bool =
   c = ' ' || c = '\t' || c = '\r' || c = '\n'
 
-let charIsDigit (c: char): bool =
-  '0' <= c && c <= '9'
+let charIsDigit (c: char): bool = '0' <= c && c <= '9'
 
 let charIsAlpha (c: char): bool =
   ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
@@ -767,60 +648,45 @@ let charEscape (c: char) =
 
   match c with
   | '\x00' ->
-    // C-style.
-    "\\0"
+      // C-style.
+      "\\0"
 
-  | '\t' ->
-    "\\t"
+  | '\t' -> "\\t"
 
-  | '\n' ->
-    "\\n"
+  | '\n' -> "\\n"
 
-  | '\r' ->
-    "\\r"
+  | '\r' -> "\\r"
 
-  | '\'' ->
-    "\\\'"
+  | '\'' -> "\\\'"
 
-  | '\"' ->
-    "\\\""
+  | '\"' -> "\\\""
 
-  | '\\' ->
-    "\\\\"
+  | '\\' -> "\\\\"
 
   | c ->
-    let h = c |> int |> intToHexWithPadding 2
-    "\\x" + h
+      let h = c |> int |> intToHexWithPadding 2
+      "\\x" + h
 
 // -----------------------------------------------
 // String
 // -----------------------------------------------
 
 let strCmp (x: string) (y: string) =
-  if y < x then
-    1
-  else if y = x then
-    0
-  else
-    -1
+  if y < x then 1
+  else if y = x then 0
+  else -1
 
 let strHash (x: string) =
   let step = 1 + x.Length / 128
 
   let rec go h (i: int) =
-    if i >= x.Length then
-      h
-    else
-      go (h * 31 + int x.[i]) (i + step)
+    if i >= x.Length then h else go (h * 31 + int x.[i]) (i + step)
 
   go 17 0
 
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
-  if start >= endIndex then
-    ""
-  else
-    s.[start..endIndex - 1]
+  if start >= endIndex then "" else s.[start..endIndex - 1]
 
 let strConcat (xs: string list) =
   /// Get (str, ys) where
@@ -830,32 +696,34 @@ let strConcat (xs: string list) =
     // assert (xn <= listLength xs)
     match xs with
     | [] ->
-      assert (xn = 0)
-      "", []
-    | x :: xs when xn = 1 ->
-      x, xs
-    | x :: y :: xs when xn = 2 ->
-      x + y, xs
+        assert (xn = 0)
+        "", []
+    | x :: xs when xn = 1 -> x, xs
+    | x :: y :: xs when xn = 2 -> x + y, xs
     | xs ->
-      let m = xn / 2
-      let l, xs = go xs m
-      let r, xs = go xs (xn - m)
-      l + r, xs
+        let m = xn / 2
+        let l, xs = go xs m
+        let r, xs = go xs (xn - m)
+        l + r, xs
+
   let n = xs |> listLength
   let s, xs = go xs n
   assert (xs |> listIsEmpty)
   s
 
-  // let rec go (xs: string list) =
-  //   match xs with
-  //   | [] ->
-  //     ""
-  //   | x :: xs ->
-  //     x + go xs
-  // go xs
+// let rec go (xs: string list) =
+//   match xs with
+//   | [] ->
+//     ""
+//   | x :: xs ->
+//     x + go xs
+// go xs
 
 let strNeedsEscaping (str: string) =
-  let rec go i = i < str.Length && (charNeedsEscaping str.[i] || go (i + 1))
+  let rec go i =
+    i < str.Length
+    && (charNeedsEscaping str.[i] || go (i + 1))
+
   go 0
 
 let strEscape (str: string) =
@@ -863,10 +731,9 @@ let strEscape (str: string) =
     /// Finds the end index of the maximum non-escaping segment
     /// that starts at `l`.
     let rec raw i =
-      if i = str.Length || charNeedsEscaping str.[i] then
-        i
-      else
-        raw (i + 1)
+      if i = str.Length || charNeedsEscaping str.[i]
+      then i
+      else raw (i + 1)
 
     // Skip the non-escape segment that starts at `i`.
     let i, acc =
@@ -879,10 +746,7 @@ let strEscape (str: string) =
       let t = str.[i] |> charEscape
       go (t :: acc) (i + 1)
 
-  if str |> strNeedsEscaping |> not then
-    str
-  else
-    go [] 0 |> listRev |> strConcat
+  if str |> strNeedsEscaping |> not then str else go [] 0 |> listRev |> strConcat
 
 // -----------------------------------------------
 // Location
@@ -895,30 +759,22 @@ let locX ((_, x): Loc) = x
 
 let locY ((y, _): Loc) = y
 
-let locIsSameRow first second =
-  locY first = locY second
+let locIsSameRow first second = locY first = locY second
 
-let locIsSameColumn first second =
-  locX first = locX second
+let locIsSameColumn first second = locX first = locX second
 
 /// Gets if `secondLoc` is inside of the block of `firstLoc`.
-let locInside (firstLoc: Loc) (secondLoc: Loc) =
-  locX firstLoc <= locX secondLoc
+let locInside (firstLoc: Loc) (secondLoc: Loc) = locX firstLoc <= locX secondLoc
 
-let locAddX dx ((y, x): Loc) =
-  y, x + dx
+let locAddX dx ((y, x): Loc) = y, x + dx
 
 let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
   intMax firstY secondY, intMax firstX secondX
 
-let locToString ((y, x): Loc) =
-  string (y + 1) + ":" + string (x + 1)
+let locToString ((y, x): Loc) = string (y + 1) + ":" + string (x + 1)
 
 let locCmp (firstY, firstX) (secondY, secondX) =
-  if firstY <> secondY then
-    intCmp firstY secondY
-  else
-    intCmp firstX secondX
+  if firstY <> secondY then intCmp firstY secondY else intCmp firstX secondX
 
 // -----------------------------------------------
 // Token
@@ -934,17 +790,14 @@ let tokenIsExprOrPatFirst (token: Token) =
   | Token.Str _
   | Token.Ident _
   | Token.ParenL
-  | Token.BracketL ->
-    true
+  | Token.BracketL -> true
 
-  | _ ->
-    false
+  | _ -> false
 
 /// Gets if a token is in the first set of expressions.
 let tokenIsExprFirst (token: Token) =
   match token with
-  | _ when tokenIsExprOrPatFirst token ->
-    true
+  | _ when tokenIsExprOrPatFirst token -> true
 
   | Token.Minus
   | Token.If
@@ -953,33 +806,26 @@ let tokenIsExprFirst (token: Token) =
   | Token.Do
   | Token.Let
   | Token.Type
-  | Token.Open ->
-    true
+  | Token.Open -> true
 
-  | _ ->
-    false
+  | _ -> false
 
 /// In the first set of arguments?
 let tokenIsArgFirst (token: Token) =
   match token with
-  | Token.Minus ->
-    false
+  | Token.Minus -> false
 
-  | _ ->
-    tokenIsExprFirst token
+  | _ -> tokenIsExprFirst token
 
-let tokenIsPatFirst (token: Token) =
-  tokenIsExprOrPatFirst token
+let tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
 
 let tokenIsAccessModifier token =
   match token with
   | Token.Private
   | Token.Internal
-  | Token.Public ->
-    true
+  | Token.Public -> true
 
-  | _ ->
-    false
+  | _ -> false
 
 // -----------------------------------------------
 // OpLevel
@@ -987,128 +833,110 @@ let tokenIsAccessModifier token =
 
 let opLevelToNext level =
   match level with
-  | OpLevel.Or ->
-    OpLevel.And
+  | OpLevel.Or -> OpLevel.And
 
-  | OpLevel.And ->
-    OpLevel.Cmp
+  | OpLevel.And -> OpLevel.Cmp
 
-  | OpLevel.Cmp ->
-    OpLevel.Pipe
+  | OpLevel.Cmp -> OpLevel.Pipe
 
-  | OpLevel.Pipe ->
-    OpLevel.Cons
+  | OpLevel.Pipe -> OpLevel.Cons
 
-  | OpLevel.Cons ->
-    OpLevel.Add
+  | OpLevel.Cons -> OpLevel.Add
 
-  | OpLevel.Add ->
-    OpLevel.Mul
+  | OpLevel.Add -> OpLevel.Mul
 
   | OpLevel.Mul
-  | OpLevel.Prefix ->
-    OpLevel.Prefix
+  | OpLevel.Prefix -> OpLevel.Prefix
 
 // -----------------------------------------------
 // APat
 // -----------------------------------------------
 
-let apFalse loc =
-  APat.Lit (litFalse, loc)
+let apFalse loc = APat.Lit(litFalse, loc)
 
-let apTrue loc =
-  APat.Lit (litTrue, loc)
+let apTrue loc = APat.Lit(litTrue, loc)
 
 // -----------------------------------------------
 // AExpr
 // -----------------------------------------------
 
-let axUnit loc =
-  AExpr.TupleLit ([], loc)
+let axUnit loc = AExpr.TupleLit([], loc)
 
-let axFalse loc =
-  AExpr.Lit (litFalse, loc)
+let axFalse loc = AExpr.Lit(litFalse, loc)
 
-let axTrue loc =
-  AExpr.Lit (litTrue, loc)
+let axTrue loc = AExpr.Lit(litTrue, loc)
 
-let axNil loc =
-  AExpr.ListLit ([], loc)
+let axNil loc = AExpr.ListLit([], loc)
 
 let axApp3 f x1 x2 x3 loc =
-  let app x f = AExpr.Bin (Op.App, f, x, loc)
+  let app x f = AExpr.Bin(Op.App, f, x, loc)
   f |> app x1 |> app x2 |> app x3
 
 /// `not x` ==> `x = false`
 let axNot arg loc =
   let falseExpr = axFalse loc
-  AExpr.Bin (Op.Eq, arg, falseExpr, loc)
+  AExpr.Bin(Op.Eq, arg, falseExpr, loc)
 
 // -----------------------------------------------
 // DumpTree (for debugging)
 // -----------------------------------------------
 
-let dumpTreeNew text children =
-  DumpTree (text, children, [])
+let dumpTreeNew text children = DumpTree(text, children, [])
 
-let dumpTreeNewLeaf text =
-  DumpTree (text, [], [])
+let dumpTreeNewLeaf text = DumpTree(text, [], [])
 
 let dumpTreeAttachNext next tree =
   match tree with
   | DumpTree (text, children, oldNext) ->
-    assert (children |> listIsEmpty |> not)
-    assert (oldNext |> listIsEmpty)
-    DumpTree (text, children, [next])
+      assert (children |> listIsEmpty |> not)
+      assert (oldNext |> listIsEmpty)
+      DumpTree(text, children, [ next ])
 
 let dumpTreeFromError (msg: string) (y, x) =
   let y = string (y + 1)
   let x = string (x + 1)
-  dumpTreeNew "ERROR" [
-    dumpTreeNewLeaf msg
-    dumpTreeNewLeaf ("(" + y + ":" + x + ")")
-  ]
+  dumpTreeNew
+    "ERROR"
+    [ dumpTreeNewLeaf msg
+      dumpTreeNewLeaf ("(" + y + ":" + x + ")") ]
 
 let dumpTreeToString (node: DumpTree) =
   let rec go eol node acc =
     let rec goChildren eol children acc =
       match children with
-      | [] ->
-        acc
+      | [] -> acc
 
       | child :: children ->
-        acc
-        |> cons eol |> cons "- " |> go (eol + "  ") child
-        |> goChildren eol children
+          acc
+          |> cons eol
+          |> cons "- "
+          |> go (eol + "  ") child
+          |> goChildren eol children
 
     let goNext eol next acc =
       match next with
-      | [] ->
-        acc
+      | [] -> acc
 
-      | [next] ->
-        acc |> cons eol |> go eol next
+      | [ next ] -> acc |> cons eol |> go eol next
 
-      | _ ->
-        failwith "NEVER: DumpTree.next never empty"
+      | _ -> failwith "NEVER: DumpTree.next never empty"
 
     match node with
-    | DumpTree (text, [], []) ->
-      acc |> cons (strEscape text)
+    | DumpTree (text, [], []) -> acc |> cons (strEscape text)
 
-    | DumpTree (text, [DumpTree (childText, [], [])], next) ->
-      acc
-      |> cons (strEscape text)
-      |> cons ": "
-      |> cons (strEscape childText)
-      |> goNext eol next
+    | DumpTree (text, [ DumpTree (childText, [], []) ], next) ->
+        acc
+        |> cons (strEscape text)
+        |> cons ": "
+        |> cons (strEscape childText)
+        |> goNext eol next
 
     | DumpTree (text, children, next) ->
-      acc
-      |> cons (strEscape text)
-      |> cons ":"
-      |> goChildren eol children
-      |> goNext eol next
+        acc
+        |> cons (strEscape text)
+        |> cons ":"
+        |> goChildren eol children
+        |> goNext eol next
 
   let eol = "\n"
   [] |> go eol node |> listRev |> strConcat
@@ -1117,13 +945,12 @@ let dumpTreeToString (node: DumpTree) =
 // Name context
 // -----------------------------------------------
 
-let nameCtxEmpty () =
-  NameCtx (mapEmpty (intHash, intCmp), 0)
+let nameCtxEmpty () = NameCtx(mapEmpty (intHash, intCmp), 0)
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
   let map = map |> mapAdd serial ident
-  serial, NameCtx (map, serial)
+  serial, NameCtx(map, serial)
 
 // -----------------------------------------------
 // TyCon
@@ -1131,42 +958,32 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
 
 let tyConToInt tyCon =
   match tyCon with
-  | TyCon.Bool ->
-    1
+  | TyCon.Bool -> 1
 
-  | TyCon.Int ->
-    2
+  | TyCon.Int -> 2
 
-  | TyCon.Char ->
-    3
+  | TyCon.Char -> 3
 
-  | TyCon.Str ->
-    4
+  | TyCon.Str -> 4
 
-  | TyCon.Obj ->
-    5
+  | TyCon.Obj -> 5
 
-  | TyCon.Fun ->
-    6
+  | TyCon.Fun -> 6
 
-  | TyCon.Tuple ->
-    7
+  | TyCon.Tuple -> 7
 
-  | TyCon.List ->
-    8
+  | TyCon.List -> 8
 
   | TyCon.Ref tySerial ->
-    assert (tySerial >= 0)
-    9 + tySerial
+      assert (tySerial >= 0)
+      9 + tySerial
 
-let tyConHash tyCon =
-  tyCon |> tyConToInt |> intHash
+let tyConHash tyCon = tyCon |> tyConToInt |> intHash
 
 let tyConCmp first second =
   intCmp (tyConToInt first) (tyConToInt second)
 
-let tyConEq first second =
-  tyConCmp first second = 0
+let tyConEq first second = tyConCmp first second = 0
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -1174,23 +991,17 @@ let tyConEq first second =
 
 let traitMapTys f it =
   match it with
-  | Trait.Add ty ->
-    Trait.Add (f ty)
+  | Trait.Add ty -> Trait.Add(f ty)
 
-  | Trait.Eq ty ->
-    Trait.Eq (f ty)
+  | Trait.Eq ty -> Trait.Eq(f ty)
 
-  | Trait.Cmp ty ->
-    Trait.Cmp (f ty)
+  | Trait.Cmp ty -> Trait.Cmp(f ty)
 
-  | Trait.Index (lTy, rTy, outputTy) ->
-    Trait.Index (f lTy, f rTy, f outputTy)
+  | Trait.Index (lTy, rTy, outputTy) -> Trait.Index(f lTy, f rTy, f outputTy)
 
-  | Trait.ToInt ty ->
-    Trait.ToInt (f ty)
+  | Trait.ToInt ty -> Trait.ToInt(f ty)
 
-  | Trait.ToString ty ->
-    Trait.ToString (f ty)
+  | Trait.ToString ty -> Trait.ToString(f ty)
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -1199,157 +1010,121 @@ let traitMapTys f it =
 /// Placeholder. No type info in the parsing phase.
 let noTy = Ty.Error noLoc
 
-let tyBool = Ty.Con (TyCon.Bool, [])
+let tyBool = Ty.Con(TyCon.Bool, [])
 
-let tyInt = Ty.Con (TyCon.Int, [])
+let tyInt = Ty.Con(TyCon.Int, [])
 
-let tyChar = Ty.Con (TyCon.Char, [])
+let tyChar = Ty.Con(TyCon.Char, [])
 
-let tyStr = Ty.Con (TyCon.Str, [])
+let tyStr = Ty.Con(TyCon.Str, [])
 
-let tyObj = Ty.Con (TyCon.Obj, [])
+let tyObj = Ty.Con(TyCon.Obj, [])
 
-let tyTuple tys =
-  Ty.Con (TyCon.Tuple, tys)
+let tyTuple tys = Ty.Con(TyCon.Tuple, tys)
 
-let tyList ty =
-  Ty.Con (TyCon.List, [ty])
+let tyList ty = Ty.Con(TyCon.List, [ ty ])
 
 let tyFun sourceTy targetTy =
-  Ty.Con (TyCon.Fun, [sourceTy; targetTy])
+  Ty.Con(TyCon.Fun, [ sourceTy; targetTy ])
 
-let tyUnit =
-  tyTuple []
+let tyUnit = tyTuple []
 
-let tyRef serial tys =
-  Ty.Con (TyCon.Ref serial, tys)
+let tyRef serial tys = Ty.Con(TyCon.Ref serial, tys)
 
 let tyAssocMap keyTy valueTy =
-  let assocTy = tyList (tyTuple [keyTy; valueTy])
-  let trieTy = tyList (tyTuple [tyInt; assocTy])
+  let assocTy = tyList (tyTuple [ keyTy; valueTy ])
+  let trieTy = tyList (tyTuple [ tyInt; assocTy ])
   let hashTy = tyFun keyTy tyInt
   let cmpTy = tyFun keyTy (tyFun keyTy tyInt)
-  tyTuple [trieTy; hashTy; cmpTy]
+  tyTuple [ trieTy; hashTy; cmpTy ]
 
 let tyToHash ty =
   match ty with
-  | Ty.Error (y, x) ->
-    intHash (1 + y + x)
+  | Ty.Error (y, x) -> intHash (1 + y + x)
 
-  | Ty.Meta (tySerial, _) ->
-    intHash (2 + tySerial)
+  | Ty.Meta (tySerial, _) -> intHash (2 + tySerial)
 
   | Ty.Con (tyCon, tys) ->
-    let rec go h tys =
-      match tys with
-      | [] ->
-        h
+      let rec go h tys =
+        match tys with
+        | [] -> h
 
-      | ty :: tys ->
-        go (hashCombine h (tyToHash ty)) tys
+        | ty :: tys -> go (hashCombine h (tyToHash ty)) tys
 
-    intHash (3 + go (tyConHash tyCon) tys)
+      intHash (3 + go (tyConHash tyCon) tys)
 
 let tyCmp first second =
   match first, second with
-  | Ty.Error first, Ty.Error second ->
-    locCmp first second
+  | Ty.Error first, Ty.Error second -> locCmp first second
 
-  | Ty.Error _, _ ->
-    -1
+  | Ty.Error _, _ -> -1
 
-  | _, Ty.Error _ ->
-    1
+  | _, Ty.Error _ -> 1
 
   | Ty.Meta (firstSerial, firstLoc), Ty.Meta (secondSerial, secondLoc) ->
-    if firstSerial <> secondSerial then
-      intCmp firstSerial secondSerial
-    else
-      locCmp firstLoc secondLoc
+      if firstSerial <> secondSerial then intCmp firstSerial secondSerial else locCmp firstLoc secondLoc
 
-  | Ty.Meta _, _ ->
-    -1
+  | Ty.Meta _, _ -> -1
 
-  | _, Ty.Meta _ ->
-    1
+  | _, Ty.Meta _ -> 1
 
   | Ty.Con (firstTyCon, firstTys), Ty.Con (secondTyCon, secondTys) ->
-    let c = tyConCmp firstTyCon secondTyCon
-    if c <> 0 then
-      c
-    else
-      let rec go firstTys secondTys =
-        match firstTys, secondTys with
-        | [], [] ->
-          0
+      let c = tyConCmp firstTyCon secondTyCon
+      if c <> 0 then
+        c
+      else
+        let rec go firstTys secondTys =
+          match firstTys, secondTys with
+          | [], [] -> 0
 
-        | [], _ ->
-          -1
+          | [], _ -> -1
 
-        | _, [] ->
-          1
+          | _, [] -> 1
 
-        | firstTy :: firstTys, secondTy :: secondTys ->
-          let c = tyCmp firstTy secondTy
-          if c <> 0 then
-            c
-          else
-            go firstTys secondTys
+          | firstTy :: firstTys, secondTy :: secondTys ->
+              let c = tyCmp firstTy secondTy
+              if c <> 0 then c else go firstTys secondTys
 
-      go firstTys secondTys
+        go firstTys secondTys
 
-let tyEq first second =
-  tyCmp first second = 0
+let tyEq first second = tyCmp first second = 0
 
 let tyPrimFromIdent ident tys loc =
   match ident, tys with
-  | "unit", [] ->
-    tyUnit
+  | "unit", [] -> tyUnit
 
-  | "bool", [] ->
-    tyBool
+  | "bool", [] -> tyBool
 
-  | "int", [] ->
-    tyInt
+  | "int", [] -> tyInt
 
-  | "char", [] ->
-    tyChar
+  | "char", [] -> tyChar
 
-  | "string", [] ->
-    tyStr
+  | "string", [] -> tyStr
 
-  | "obj", [] ->
-    tyObj
+  | "obj", [] -> tyObj
 
-  | "option", [itemTy] ->
-    // FIXME: option is just an alias of list for now
-    tyList itemTy
+  | "option", [ itemTy ] ->
+      // FIXME: option is just an alias of list for now
+      tyList itemTy
 
-  | "list", [itemTy] ->
-    tyList itemTy
+  | "list", [ itemTy ] -> tyList itemTy
 
-  | "AssocMap", [keyTy; valueTy] ->
-    tyAssocMap keyTy valueTy
+  | "AssocMap", [ keyTy; valueTy ] -> tyAssocMap keyTy valueTy
 
-  | "AssocSet", [itemTy] ->
-    tyAssocMap itemTy tyUnit
+  | "AssocSet", [ itemTy ] -> tyAssocMap itemTy tyUnit
 
-  | _ ->
-    Ty.Error loc
+  | _ -> Ty.Error loc
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
     match ty with
     | Ty.Error _
-    | Ty.Con (_, []) ->
-      true
+    | Ty.Con (_, []) -> true
 
-    | Ty.Con (tyCon, ty :: tys) ->
-      go ty && go (Ty.Con (tyCon, tys))
+    | Ty.Con (tyCon, ty :: tys) -> go ty && go (Ty.Con(tyCon, tys))
 
-    | Ty.Meta (s, _) ->
-      s <> tySerial
+    | Ty.Meta (s, _) -> s <> tySerial
 
   go ty
 
@@ -1358,58 +1133,49 @@ let tyIsFreeIn ty tySerial: bool =
 let tyIsMonomorphic ty: bool =
   let rec go tys =
     match tys with
-    | [] ->
-      true
+    | [] -> true
 
-    | Ty.Meta _ :: _ ->
-      false
+    | Ty.Meta _ :: _ -> false
 
-    | Ty.Error _ :: tys ->
-      go tys
+    | Ty.Error _ :: tys -> go tys
 
-    | Ty.Con (_, tys1) :: tys2 ->
-      go tys1 && go tys2
+    | Ty.Con (_, tys1) :: tys2 -> go tys1 && go tys2
 
-  go [ty]
+  go [ ty ]
 
 /// Gets a list of type variables.
 /// Assume all bound type variables are substituted.
 let tyCollectFreeVars ty =
   let rec go fvAcc tys =
     match tys with
-    | [] ->
-      fvAcc
+    | [] -> fvAcc
 
     | Ty.Error _ :: tys
-    | Ty.Con (_, []) :: tys ->
-      go fvAcc tys
+    | Ty.Con (_, []) :: tys -> go fvAcc tys
 
     | Ty.Con (_, tys1) :: tys2 ->
-      let acc = go fvAcc tys1
-      let acc = go acc tys2
-      acc
+        let acc = go fvAcc tys1
+        let acc = go acc tys2
+        acc
 
     | Ty.Meta (serial, _) :: tys ->
-      let acc = serial :: fvAcc
-      go acc tys
+        let acc = serial :: fvAcc
+        go acc tys
 
-  go [] [ty] |> listUnique intCmp
+  go [] [ ty ] |> listUnique intCmp
 
 let rec tyToArity ty =
   match ty with
-  | Ty.Con (TyCon.Fun, [_; ty]) ->
-    1 + tyToArity ty
-  | _ ->
-    0
+  | Ty.Con (TyCon.Fun, [ _; ty ]) -> 1 + tyToArity ty
+  | _ -> 0
 
 /// Converts nested function type to multi-arguments function type.
 let rec tyToArgList ty =
   let rec go n acc ty =
     match ty with
-    | Ty.Con (TyCon.Fun, [sTy; tTy]) ->
-      go (n + 1) (sTy :: acc) tTy
-    | tTy ->
-      n, listRev acc, tTy
+    | Ty.Con (TyCon.Fun, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
+    | tTy -> n, listRev acc, tTy
+
   go 0 [] ty
 
 /// Substitutes meta types in a type as possible.
@@ -1417,19 +1183,15 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
     match ty with
     | Ty.Error _
-    | Ty.Con (_, []) ->
-      ty
+    | Ty.Con (_, []) -> ty
 
-    | Ty.Con (tyCon, tys) ->
-      Ty.Con (tyCon, listMap go tys)
+    | Ty.Con (tyCon, tys) -> Ty.Con(tyCon, listMap go tys)
 
     | Ty.Meta (tySerial, _) ->
-      match substMeta tySerial with
-      | Some ty ->
-        go ty
+        match substMeta tySerial with
+        | Some ty -> go ty
 
-      | None ->
-        ty
+        | None -> ty
 
   go ty
 
@@ -1473,144 +1235,121 @@ let litToTy (lit: Lit): Ty =
 
 let primFromIdent ident =
   match ident with
-  | "not" ->
-    HPrim.Not |> Some
+  | "not" -> HPrim.Not |> Some
 
-  | "exit" ->
-    HPrim.Exit |> Some
+  | "exit" -> HPrim.Exit |> Some
 
-  | "assert" ->
-    HPrim.Assert |> Some
+  | "assert" -> HPrim.Assert |> Some
 
-  | "box" ->
-    HPrim.Box |> Some
+  | "box" -> HPrim.Box |> Some
 
-  | "unbox" ->
-    HPrim.Unbox |> Some
+  | "unbox" -> HPrim.Unbox |> Some
 
-  | "printfn" ->
-    HPrim.Printfn |> Some
+  | "printfn" -> HPrim.Printfn |> Some
 
-  | "char" ->
-    HPrim.Char |> Some
+  | "char" -> HPrim.Char |> Some
 
-  | "int" ->
-    HPrim.Int |> Some
+  | "int" -> HPrim.Int |> Some
 
-  | "string" ->
-    HPrim.String |> Some
+  | "string" -> HPrim.String |> Some
 
-  | "None" ->
-    HPrim.OptionNone |> Some
+  | "None" -> HPrim.OptionNone |> Some
 
-  | "Some" ->
-    HPrim.OptionSome |> Some
+  | "Some" -> HPrim.OptionSome |> Some
 
-  | "__nativeFun" ->
-    HPrim.NativeFun ("<native-fun>", -1) |> Some
+  | "__nativeFun" -> HPrim.NativeFun("<native-fun>", -1) |> Some
 
-  | _ ->
-    None
+  | _ -> None
 
 let primToTySpec prim =
-  let meta id = Ty.Meta (id, noLoc)
-  let mono ty = TySpec (ty, [])
-  let poly ty traits = TySpec (ty, traits)
+  let meta id = Ty.Meta(id, noLoc)
+  let mono ty = TySpec(ty, [])
+  let poly ty traits = TySpec(ty, traits)
 
   match prim with
   | HPrim.Add ->
-    let addTy = meta 1
-    poly (tyFun addTy (tyFun addTy addTy)) [Trait.Add addTy]
+      let addTy = meta 1
+      poly (tyFun addTy (tyFun addTy addTy)) [ Trait.Add addTy ]
 
-  | HPrim.Sub ->
-    mono (tyFun tyInt (tyFun tyInt tyInt))
+  | HPrim.Sub -> mono (tyFun tyInt (tyFun tyInt tyInt))
 
-  | HPrim.Mul ->
-    mono (tyFun tyInt (tyFun tyInt tyInt))
+  | HPrim.Mul -> mono (tyFun tyInt (tyFun tyInt tyInt))
 
-  | HPrim.Div ->
-    mono (tyFun tyInt (tyFun tyInt tyInt))
+  | HPrim.Div -> mono (tyFun tyInt (tyFun tyInt tyInt))
 
-  | HPrim.Mod ->
-    mono (tyFun tyInt (tyFun tyInt tyInt))
+  | HPrim.Mod -> mono (tyFun tyInt (tyFun tyInt tyInt))
 
   | HPrim.Eq ->
-    let eqTy = meta 1
-    poly (tyFun eqTy (tyFun eqTy tyBool)) [Trait.Eq eqTy]
+      let eqTy = meta 1
+      poly (tyFun eqTy (tyFun eqTy tyBool)) [ Trait.Eq eqTy ]
 
   | HPrim.Lt ->
-    let cmpTy = meta 1
-    poly (tyFun cmpTy (tyFun cmpTy tyBool)) [Trait.Cmp cmpTy]
+      let cmpTy = meta 1
+      poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ Trait.Cmp cmpTy ]
 
   | HPrim.Nil ->
-    let itemTy = meta 1
-    poly (tyList itemTy) []
+      let itemTy = meta 1
+      poly (tyList itemTy) []
 
   | HPrim.Cons ->
-    let itemTy = meta 1
-    let listTy = tyList itemTy
-    poly (tyFun itemTy (tyFun listTy listTy)) []
+      let itemTy = meta 1
+      let listTy = tyList itemTy
+      poly (tyFun itemTy (tyFun listTy listTy)) []
 
   | HPrim.OptionNone ->
-    let itemTy = meta 1
-    poly (tyList itemTy) []
+      let itemTy = meta 1
+      poly (tyList itemTy) []
 
   | HPrim.OptionSome ->
-    let itemTy = meta 1
-    let listTy = tyList itemTy
-    poly (tyFun itemTy listTy) []
+      let itemTy = meta 1
+      let listTy = tyList itemTy
+      poly (tyFun itemTy listTy) []
 
   | HPrim.Index ->
-    let lTy = meta 1
-    let rTy = meta 2
-    let resultTy = meta 3
-    poly (tyFun lTy (tyFun rTy resultTy)) [Trait.Index (lTy, rTy, resultTy)]
+      let lTy = meta 1
+      let rTy = meta 2
+      let resultTy = meta 3
+      poly (tyFun lTy (tyFun rTy resultTy)) [ Trait.Index(lTy, rTy, resultTy) ]
 
-  | HPrim.Not ->
-    mono (tyFun tyBool tyBool)
+  | HPrim.Not -> mono (tyFun tyBool tyBool)
 
   | HPrim.Exit ->
-    let resultTy = meta 1
-    poly (tyFun tyInt resultTy) []
+      let resultTy = meta 1
+      poly (tyFun tyInt resultTy) []
 
-  | HPrim.Assert ->
-    mono (tyFun tyBool tyUnit)
+  | HPrim.Assert -> mono (tyFun tyBool tyUnit)
 
   | HPrim.Box ->
-    let itemTy = meta 1
-    poly (tyFun itemTy tyObj) []
+      let itemTy = meta 1
+      poly (tyFun itemTy tyObj) []
 
   | HPrim.Unbox ->
-    let itemTy = meta 1
-    poly (tyFun tyObj itemTy) []
+      let itemTy = meta 1
+      poly (tyFun tyObj itemTy) []
 
   | HPrim.Char ->
-    // FIXME: `char` can take non-int types.
-    mono (tyFun tyInt tyChar)
+      // FIXME: `char` can take non-int types.
+      mono (tyFun tyInt tyChar)
 
   | HPrim.Int ->
-    let toIntTy = meta 1
-    poly (tyFun toIntTy tyInt) [Trait.ToInt toIntTy]
+      let toIntTy = meta 1
+      poly (tyFun toIntTy tyInt) [ Trait.ToInt toIntTy ]
 
   | HPrim.String ->
-    let toStrTy = meta 1
-    poly (tyFun toStrTy tyStr) [Trait.ToString toStrTy]
+      let toStrTy = meta 1
+      poly (tyFun toStrTy tyStr) [ Trait.ToString toStrTy ]
 
-  | HPrim.StrLength ->
-    mono (tyFun tyStr tyInt)
+  | HPrim.StrLength -> mono (tyFun tyStr tyInt)
 
-  | HPrim.StrGetSlice ->
-    mono (tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr)))
+  | HPrim.StrGetSlice -> mono (tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr)))
 
   | HPrim.Printfn
-  | HPrim.NativeFun _ ->
-    poly (meta 1) []
+  | HPrim.NativeFun _ -> poly (meta 1) []
 
 let primToArity ty prim =
   match prim with
   | HPrim.Nil
-  | HPrim.OptionNone ->
-    0
+  | HPrim.OptionNone -> 0
   | HPrim.OptionSome
   | HPrim.Not
   | HPrim.Exit
@@ -1620,8 +1359,7 @@ let primToArity ty prim =
   | HPrim.StrLength
   | HPrim.Char
   | HPrim.Int
-  | HPrim.String ->
-    1
+  | HPrim.String -> 1
   | HPrim.Add
   | HPrim.Sub
   | HPrim.Mul
@@ -1630,84 +1368,54 @@ let primToArity ty prim =
   | HPrim.Eq
   | HPrim.Lt
   | HPrim.Cons
-  | HPrim.Index ->
-    2
-  | HPrim.StrGetSlice ->
-    3
-  | HPrim.Printfn ->
-    ty |> tyToArity
-  | HPrim.NativeFun (_, arity) ->
-    arity
+  | HPrim.Index -> 2
+  | HPrim.StrGetSlice -> 3
+  | HPrim.Printfn -> ty |> tyToArity
+  | HPrim.NativeFun (_, arity) -> arity
 
 // -----------------------------------------------
 // Patterns (HIR)
 // -----------------------------------------------
 
-let patUnit loc =
-  HPat.Tuple ([], tyUnit, loc)
+let patUnit loc = HPat.Tuple([], tyUnit, loc)
 
-let patNil itemTy loc =
-  HPat.Nil (itemTy, loc)
+let patNil itemTy loc = HPat.Nil(itemTy, loc)
 
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
-  | HPat.Lit (lit, a) ->
-    litToTy lit, a
-  | HPat.Nil (itemTy, a) ->
-    tyList itemTy, a
-  | HPat.OptionNone (itemTy, a) ->
-    tyList itemTy, a
-  | HPat.OptionSome (itemTy, a) ->
-    tyList itemTy, a
-  | HPat.Discard (ty, a) ->
-    ty, a
-  | HPat.Ref (_, ty, a) ->
-    ty, a
-  | HPat.Nav (_, _, ty, a) ->
-    ty, a
-  | HPat.Call (_, _, ty, a) ->
-    ty, a
-  | HPat.Cons (_, _, itemTy, a) ->
-    tyList itemTy, a
-  | HPat.Tuple (_, ty, a) ->
-    ty, a
+  | HPat.Lit (lit, a) -> litToTy lit, a
+  | HPat.Nil (itemTy, a) -> tyList itemTy, a
+  | HPat.OptionNone (itemTy, a) -> tyList itemTy, a
+  | HPat.OptionSome (itemTy, a) -> tyList itemTy, a
+  | HPat.Discard (ty, a) -> ty, a
+  | HPat.Ref (_, ty, a) -> ty, a
+  | HPat.Nav (_, _, ty, a) -> ty, a
+  | HPat.Call (_, _, ty, a) -> ty, a
+  | HPat.Cons (_, _, itemTy, a) -> tyList itemTy, a
+  | HPat.Tuple (_, ty, a) -> ty, a
   | HPat.As (pat, _, a) ->
-    let ty, _ = patExtract pat
-    ty, a
-  | HPat.Anno (_, ty, a) ->
-    ty, a
-  | HPat.Or (_, _, ty, a) ->
-    ty, a
+      let ty, _ = patExtract pat
+      ty, a
+  | HPat.Anno (_, ty, a) -> ty, a
+  | HPat.Or (_, _, ty, a) -> ty, a
 
 let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
   let rec go pat =
     match pat with
-    | HPat.Lit (lit, a) ->
-      HPat.Lit (lit, g a)
-    | HPat.Nil (itemTy, a) ->
-      HPat.Nil (f itemTy, g a)
-    | HPat.OptionNone (itemTy, a) ->
-      HPat.OptionNone (f itemTy, g a)
-    | HPat.OptionSome (itemTy, a) ->
-      HPat.OptionSome (f itemTy, g a)
-    | HPat.Discard (ty, a) ->
-      HPat.Discard (f ty, g a)
-    | HPat.Ref (serial, ty, a) ->
-      HPat.Ref (serial, f ty, g a)
-    | HPat.Nav (pat, ident, ty, a) ->
-      HPat.Nav (pat, ident, f ty, g a)
-    | HPat.Call (callee, args, ty, a) ->
-      HPat.Call (go callee, listMap go args, f ty, g a)
-    | HPat.Cons (l, r, itemTy, a) ->
-      HPat.Cons (go l, go r, f itemTy, g a)
-    | HPat.Tuple (itemPats, ty, a) ->
-      HPat.Tuple (listMap go itemPats, f ty, g a)
-    | HPat.As (pat, serial, a) ->
-      HPat.As (go pat, serial, g a)
-    | HPat.Anno (pat, ty, a) ->
-      HPat.Anno (go pat, f ty, g a)
-    | HPat.Or (first, second, ty, a) ->
-      HPat.Or (go first, go second, f ty, g a)
+    | HPat.Lit (lit, a) -> HPat.Lit(lit, g a)
+    | HPat.Nil (itemTy, a) -> HPat.Nil(f itemTy, g a)
+    | HPat.OptionNone (itemTy, a) -> HPat.OptionNone(f itemTy, g a)
+    | HPat.OptionSome (itemTy, a) -> HPat.OptionSome(f itemTy, g a)
+    | HPat.Discard (ty, a) -> HPat.Discard(f ty, g a)
+    | HPat.Ref (serial, ty, a) -> HPat.Ref(serial, f ty, g a)
+    | HPat.Nav (pat, ident, ty, a) -> HPat.Nav(pat, ident, f ty, g a)
+    | HPat.Call (callee, args, ty, a) -> HPat.Call(go callee, listMap go args, f ty, g a)
+    | HPat.Cons (l, r, itemTy, a) -> HPat.Cons(go l, go r, f itemTy, g a)
+    | HPat.Tuple (itemPats, ty, a) -> HPat.Tuple(listMap go itemPats, f ty, g a)
+    | HPat.As (pat, serial, a) -> HPat.As(go pat, serial, g a)
+    | HPat.Anno (pat, ty, a) -> HPat.Anno(go pat, f ty, g a)
+    | HPat.Or (first, second, ty, a) -> HPat.Or(go first, go second, f ty, g a)
+
   go pat
 
 /// Converts a pattern in disjunctive normal form.
@@ -1720,151 +1428,121 @@ let patNormalize pat =
     | HPat.Ref _
     | HPat.Nil _
     | HPat.OptionNone _
-    | HPat.OptionSome _ ->
-      [pat]
+    | HPat.OptionSome _ -> [ pat ]
     | HPat.Nav (pat, ident, ty, loc) ->
-      go pat |> listMap
-        (fun pat -> HPat.Nav (pat, ident, ty, loc))
-    | HPat.Call (callee, [arg], ty, loc) ->
-      go callee |> listCollect (fun callee ->
-        go arg |> listMap (fun arg ->
-          HPat.Call (callee, [arg], ty, loc)
-        ))
+        go pat
+        |> listMap (fun pat -> HPat.Nav(pat, ident, ty, loc))
+    | HPat.Call (callee, [ arg ], ty, loc) ->
+        go callee
+        |> listCollect (fun callee ->
+             go arg
+             |> listMap (fun arg -> HPat.Call(callee, [ arg ], ty, loc)))
     | HPat.Cons (l, r, ty, loc) ->
-      go l |> listCollect (fun l ->
-        go r |> listMap (fun r ->
-          HPat.Cons (l, r, ty, loc)
-        ))
+        go l
+        |> listCollect (fun l ->
+             go r
+             |> listMap (fun r -> HPat.Cons(l, r, ty, loc)))
     | HPat.Tuple (itemPats, ty, loc) ->
-      let rec gogo itemPats =
-        match itemPats with
-        | [] -> [[]]
-        | itemPat :: itemPats ->
-          let itemPat = go itemPat
-          gogo itemPats |> listCollect (fun itemPats ->
-            itemPat |> listMap (fun itemPat ->
-              itemPat :: itemPats
-            ))
-      gogo itemPats |> listMap
-        (fun itemPats -> HPat.Tuple (itemPats, ty, loc))
+        let rec gogo itemPats =
+          match itemPats with
+          | [] -> [ [] ]
+          | itemPat :: itemPats ->
+              let itemPat = go itemPat
+              gogo itemPats
+              |> listCollect (fun itemPats ->
+                   itemPat
+                   |> listMap (fun itemPat -> itemPat :: itemPats))
+
+        gogo itemPats
+        |> listMap (fun itemPats -> HPat.Tuple(itemPats, ty, loc))
     | HPat.As (innerPat, _, _) ->
-      match go innerPat with
-      | [_] ->
-        [pat]
-      | _ ->
-        failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
+        match go innerPat with
+        | [ _ ] -> [ pat ]
+        | _ -> failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
     | HPat.Anno (pat, annoTy, loc) ->
-      go pat |> listMap
-        (fun pat -> HPat.Anno (pat, annoTy, loc))
-    | HPat.Or (first, second, _, _) ->
-      listAppend (go first) (go second)
-    | HPat.Call _ ->
-      failwith "Unimpl"
+        go pat
+        |> listMap (fun pat -> HPat.Anno(pat, annoTy, loc))
+    | HPat.Or (first, second, _, _) -> listAppend (go first) (go second)
+    | HPat.Call _ -> failwith "Unimpl"
+
   go pat
 
 // -----------------------------------------------
 // Expressions (HIR)
 // -----------------------------------------------
 
-let hxTrue loc =
-  HExpr.Lit (litTrue, loc)
+let hxTrue loc = HExpr.Lit(litTrue, loc)
 
-let hxFalse loc =
-  HExpr.Lit (litFalse, loc)
+let hxFalse loc = HExpr.Lit(litFalse, loc)
 
-let hxApp f x ty loc =
-  HExpr.Inf (InfOp.App, [f; x], ty, loc)
+let hxApp f x ty loc = HExpr.Inf(InfOp.App, [ f; x ], ty, loc)
 
-let hxAnno expr ty loc =
-  HExpr.Inf (InfOp.Anno, [expr], ty, loc)
+let hxAnno expr ty loc = HExpr.Inf(InfOp.Anno, [ expr ], ty, loc)
 
 let hxSemi items loc =
-  HExpr.Inf (InfOp.Semi, items, exprToTy (listLast items), loc)
+  HExpr.Inf(InfOp.Semi, items, exprToTy (listLast items), loc)
 
 let hxCallProc callee args resultTy loc =
-  HExpr.Inf (InfOp.CallProc, callee :: args, resultTy, loc)
+  HExpr.Inf(InfOp.CallProc, callee :: args, resultTy, loc)
 
 let hxCallClosure callee args resultTy loc =
-  HExpr.Inf (InfOp.CallClosure, callee :: args, resultTy, loc)
+  HExpr.Inf(InfOp.CallClosure, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HExpr.Inf (InfOp.Tuple, items, tyTuple (listMap exprToTy items), loc)
+  HExpr.Inf(InfOp.Tuple, items, tyTuple (listMap exprToTy items), loc)
 
-let hxUnit loc =
-  hxTuple [] loc
+let hxUnit loc = hxTuple [] loc
 
 let hxNil itemTy loc =
-  HExpr.Prim (HPrim.Nil, tyList itemTy, loc)
+  HExpr.Prim(HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
-  | HExpr.Inf (InfOp.Tuple, [], _, _) ->
-    true
-  | _ ->
-    false
+  | HExpr.Inf (InfOp.Tuple, [], _, _) -> true
+  | _ -> false
 
 let hxIsAlwaysTrue expr =
   match expr with
-  | HExpr.Lit (Lit.Bool true, _) ->
-    true
-  | _ ->
-    false
+  | HExpr.Lit (Lit.Bool true, _) -> true
+  | _ -> false
 
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
-  | HExpr.Lit (lit, a) ->
-    litToTy lit, a
-  | HExpr.Ref (_, ty, a) ->
-    ty, a
-  | HExpr.Prim (_, ty, a) ->
-    ty, a
-  | HExpr.Match (_, _, ty, a) ->
-    ty, a
-  | HExpr.Nav (_, _, ty, a) ->
-    ty, a
-  | HExpr.Inf (_, _, ty, a) ->
-    ty, a
-  | HExpr.Let (_, _, _, ty, a) ->
-    ty, a
-  | HExpr.LetFun (_, _, _, _, _, ty, a) ->
-    ty, a
-  | HExpr.TyDecl (_, _, a) ->
-    tyUnit, a
-  | HExpr.Open (_, a) ->
-    tyUnit, a
-  | HExpr.Error (_, a) ->
-    Ty.Error a, a
+  | HExpr.Lit (lit, a) -> litToTy lit, a
+  | HExpr.Ref (_, ty, a) -> ty, a
+  | HExpr.Prim (_, ty, a) -> ty, a
+  | HExpr.Match (_, _, ty, a) -> ty, a
+  | HExpr.Nav (_, _, ty, a) -> ty, a
+  | HExpr.Inf (_, _, ty, a) -> ty, a
+  | HExpr.Let (_, _, _, ty, a) -> ty, a
+  | HExpr.LetFun (_, _, _, _, _, ty, a) -> ty, a
+  | HExpr.TyDecl (_, _, a) -> tyUnit, a
+  | HExpr.Open (_, a) -> tyUnit, a
+  | HExpr.Error (_, a) -> Ty.Error a, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
-  let goPat pat =
-    patMap f g pat
+  let goPat pat = patMap f g pat
+
   let rec go expr =
     match expr with
-    | HExpr.Lit (lit, a) ->
-      HExpr.Lit (lit, g a)
-    | HExpr.Ref (serial, ty, a) ->
-      HExpr.Ref (serial, f ty, g a)
-    | HExpr.Prim (prim, ty, a) ->
-      HExpr.Prim (prim, f ty, g a)
+    | HExpr.Lit (lit, a) -> HExpr.Lit(lit, g a)
+    | HExpr.Ref (serial, ty, a) -> HExpr.Ref(serial, f ty, g a)
+    | HExpr.Prim (prim, ty, a) -> HExpr.Prim(prim, f ty, g a)
     | HExpr.Match (target, arms, ty, a) ->
-      let arms =
-        arms |> listMap (fun (pat, guard, body) ->
-          goPat pat, go guard, go body)
-      HExpr.Match (go target, arms, f ty, g a)
-    | HExpr.Nav (sub, mes, ty, a) ->
-      HExpr.Nav (go sub, mes, f ty, g a)
-    | HExpr.Inf (infOp, args, resultTy, a) ->
-      HExpr.Inf (infOp, listMap go args, f resultTy, g a)
-    | HExpr.Let (pat, init, next, ty, a) ->
-      HExpr.Let (goPat pat, go init, go next, f ty, g a)
+        let arms =
+          arms
+          |> listMap (fun (pat, guard, body) -> goPat pat, go guard, go body)
+
+        HExpr.Match(go target, arms, f ty, g a)
+    | HExpr.Nav (sub, mes, ty, a) -> HExpr.Nav(go sub, mes, f ty, g a)
+    | HExpr.Inf (infOp, args, resultTy, a) -> HExpr.Inf(infOp, listMap go args, f resultTy, g a)
+    | HExpr.Let (pat, init, next, ty, a) -> HExpr.Let(goPat pat, go init, go next, f ty, g a)
     | HExpr.LetFun (serial, isMainFun, args, body, next, ty, a) ->
-      HExpr.LetFun (serial, isMainFun, listMap goPat args, go body, go next, f ty, g a)
-    | HExpr.TyDecl (serial, tyDef, a) ->
-      HExpr.TyDecl (serial, tyDef, g a)
-    | HExpr.Open (path, a) ->
-      HExpr.Open (path, g a)
-    | HExpr.Error (error, a) ->
-      HExpr.Error (error, g a)
+        HExpr.LetFun(serial, isMainFun, listMap goPat args, go body, go next, f ty, g a)
+    | HExpr.TyDecl (serial, tyDef, a) -> HExpr.TyDecl(serial, tyDef, g a)
+    | HExpr.Open (path, a) -> HExpr.Open(path, g a)
+    | HExpr.Error (error, a) -> HExpr.Error(error, g a)
+
   go expr
 
 let exprToTy expr =
@@ -1877,26 +1555,21 @@ let exprToTy expr =
 
 let mOpIsAdd op =
   match op with
-  | MOp.Add ->
-    true
+  | MOp.Add -> true
 
-  | _ ->
-    false
+  | _ -> false
 
 let opIsComparison op =
   match op with
   | MOp.Eq
-  | MOp.Lt ->
-    true
-  | _ ->
-    false
+  | MOp.Lt -> true
+  | _ -> false
 
 // -----------------------------------------------
 // Expressions (MIR)
 // -----------------------------------------------
 
-let mxNot expr loc =
-  MExpr.Uni (MUniOp.Not, expr, tyBool, loc)
+let mxNot expr loc = MExpr.Uni(MUniOp.Not, expr, tyBool, loc)
 
 let mexprExtract expr =
   match expr with
@@ -1918,7 +1591,7 @@ let mexprToTy expr =
 
 let msGotoUnless pred label loc =
   let notPred = mxNot pred loc
-  MStmt.GotoIf (notPred, label, loc)
+  MStmt.GotoIf(notPred, label, loc)
 
 // -----------------------------------------------
 // Expression sugaring (MIR)
@@ -1929,67 +1602,53 @@ let rec mxSugar expr =
     match l with
     // SUGAR: `not true` ==> `false`
     // SUGAR: `not false` ==> `true`
-    | MExpr.Lit (Lit.Bool value, loc) ->
-      MExpr.Lit (Lit.Bool (not value), loc)
+    | MExpr.Lit (Lit.Bool value, loc) -> MExpr.Lit(Lit.Bool(not value), loc)
 
     // SUGAR: `not (not x)` ==> `x`
-    | MExpr.Uni (MUniOp.Not, l, _, _) ->
-      l
+    | MExpr.Uni (MUniOp.Not, l, _, _) -> l
 
     // SUGAR: `not (x = y)` ==> `x <> y`
-    | MExpr.Bin (MOp.Eq, l, r, ty, loc) ->
-      MExpr.Bin (MOp.Ne, l, r, ty, loc)
+    | MExpr.Bin (MOp.Eq, l, r, ty, loc) -> MExpr.Bin(MOp.Ne, l, r, ty, loc)
 
     // SUGAR: `not (x <> y)` ==> `x = y`
-    | MExpr.Bin (MOp.Ne, l, r, ty, loc) ->
-      MExpr.Bin (MOp.Eq, l, r, ty, loc)
+    | MExpr.Bin (MOp.Ne, l, r, ty, loc) -> MExpr.Bin(MOp.Eq, l, r, ty, loc)
 
     // SUGAR: `not (x < y)` ==> `x >= y`
-    | MExpr.Bin (MOp.Lt, l, r, ty, loc) ->
-      MExpr.Bin (MOp.Ge, l, r, ty, loc)
+    | MExpr.Bin (MOp.Lt, l, r, ty, loc) -> MExpr.Bin(MOp.Ge, l, r, ty, loc)
 
     // SUGAR: `not (x >= y)` ==> `x < y`
-    | MExpr.Bin (MOp.Ge, l, r, ty, loc) ->
-      MExpr.Bin (MOp.Lt, l, r, ty, loc)
+    | MExpr.Bin (MOp.Ge, l, r, ty, loc) -> MExpr.Bin(MOp.Lt, l, r, ty, loc)
 
-    | _ ->
-      MExpr.Uni (op, l, ty, loc)
+    | _ -> MExpr.Uni(op, l, ty, loc)
 
   let mxSugarBin op l r ty loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
-    | MOp.Eq, MExpr.Lit (Lit.Bool false, _), _ ->
-      mxSugarUni MUniOp.Not r ty loc
+    | MOp.Eq, MExpr.Lit (Lit.Bool false, _), _ -> mxSugarUni MUniOp.Not r ty loc
 
-    | MOp.Eq, _, MExpr.Lit (Lit.Bool false, _) ->
-      mxSugarUni MUniOp.Not l ty loc
+    | MOp.Eq, _, MExpr.Lit (Lit.Bool false, _) -> mxSugarUni MUniOp.Not l ty loc
 
     // SUGAR: `x = true` ==> `x`
-    | MOp.Eq, MExpr.Lit (Lit.Bool true, _), _ ->
-      r
+    | MOp.Eq, MExpr.Lit (Lit.Bool true, _), _ -> r
 
-    | MOp.Eq, _, MExpr.Lit (Lit.Bool true, _) ->
-      l
+    | MOp.Eq, _, MExpr.Lit (Lit.Bool true, _) -> l
 
-    | _ ->
-      MExpr.Bin (op, l, r, ty, loc)
+    | _ -> MExpr.Bin(op, l, r, ty, loc)
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), loc) ->
-    MExpr.Default (tyUnit, loc)
+  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), loc) -> MExpr.Default(tyUnit, loc)
 
   | MExpr.Uni (op, l, ty, loc) ->
-    let l = mxSugar l
-    mxSugarUni op l ty loc
+      let l = mxSugar l
+      mxSugarUni op l ty loc
 
   | MExpr.Bin (op, l, r, ty, loc) ->
-    let l = mxSugar l
-    let r = mxSugar r
-    mxSugarBin op l r ty loc
+      let l = mxSugar l
+      let r = mxSugar r
+      mxSugarBin op l r ty loc
 
-  | _ ->
-    expr
+  | _ -> expr
 
 // -----------------------------------------------
 // Print Formats
@@ -1999,19 +1658,15 @@ let analyzeFormat (format: string) =
   let rec go i =
     if i >= format.Length then
       tyUnit
+    else if i + 1 < format.Length && format.[i] = '%' then
+      match format.[i + 1] with
+      | 's' -> tyFun tyStr (go (i + 2))
+      | 'd' -> tyFun tyInt (go (i + 2))
+      | 'c' -> tyFun tyChar (go (i + 2))
+      | _ -> go (i + 2)
     else
-      if i + 1 < format.Length && format.[i] = '%' then
-        match format.[i + 1] with
-        | 's' ->
-          tyFun tyStr (go (i + 2))
-        | 'd' ->
-          tyFun tyInt (go (i + 2))
-        | 'c' ->
-          tyFun  tyChar (go (i + 2))
-        | _ ->
-          go (i + 2)
-      else
-        go (i + 1)
+      go (i + 1)
+
   tyFun tyStr (go 0)
 
 // -----------------------------------------------
@@ -2030,28 +1685,32 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   | Ty.Meta (s, _) when s = tySerial -> ctx
   | ty ->
 
-  // Update depth of all related meta types to the minimum.
-  let tyDepths =
-    let tySerials = tySerial :: tyCollectFreeVars ty
-    let depth =
-      tySerials
-      |> listMap (fun tySerial -> ctx |> tyContextGetTyDepths |> mapFind tySerial)
-      |> listFold intMin intInf
-    tySerials |> listFold (fun tyDepths tySerial -> tyDepths |> mapAdd tySerial depth) (ctx |> tyContextGetTyDepths)
+      // Update depth of all related meta types to the minimum.
+      let tyDepths =
+        let tySerials = tySerial :: tyCollectFreeVars ty
 
-  ctx
-  |> tyContextWithTys (ctx |> tyContextGetTys |> mapAdd tySerial (TyDef.Meta (noIdent, ty, loc)))
-  |> tyContextWithTyDepths tyDepths
+        let depth =
+          tySerials
+          |> listMap (fun tySerial -> ctx |> tyContextGetTyDepths |> mapFind tySerial)
+          |> listFold intMin intInf
+
+        tySerials
+        |> listFold (fun tyDepths tySerial -> tyDepths |> mapAdd tySerial depth) (ctx |> tyContextGetTyDepths)
+
+      ctx
+      |> tyContextWithTys
+           (ctx
+            |> tyContextGetTys
+            |> mapAdd tySerial (TyDef.Meta(noIdent, ty, loc)))
+      |> tyContextWithTyDepths tyDepths
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
 let typingSubst (ctx: TyContext) ty: Ty =
   let substMeta tySerial =
     match ctx |> tyContextGetTys |> mapTryFind tySerial with
-    | Some (TyDef.Meta (_, ty, _)) ->
-      Some ty
-    | _ ->
-      None
+    | Some (TyDef.Meta (_, ty, _)) -> Some ty
+    | _ -> None
 
   tySubst substMeta ty
 
@@ -2063,35 +1722,34 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
   let addLog kind lTy rTy logAcc ctx =
     let lRootTy = typingSubst ctx lRootTy
     let rRootTy = typingSubst ctx rRootTy
-    (Log.TyUnify (kind, lRootTy, rRootTy, lTy, rTy), loc) :: logAcc, ctx
+    (Log.TyUnify(kind, lRootTy, rRootTy, lTy, rTy), loc)
+    :: logAcc,
+    ctx
 
   let rec go lty rty (logAcc, ctx) =
     let lSubstTy = typingSubst ctx lty
     let rSubstTy = typingSubst ctx rty
     match lSubstTy, rSubstTy with
-    | Ty.Meta (l, _), Ty.Meta (r, _) when l = r ->
-      logAcc, ctx
+    | Ty.Meta (l, _), Ty.Meta (r, _) when l = r -> logAcc, ctx
     | Ty.Meta (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
-      let ctx = typingBind ctx lSerial rty loc
-      logAcc, ctx
-    | _, Ty.Meta _ ->
-      go rty lty (logAcc, ctx)
-    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when tyConEq lTyCon rTyCon ->
-      logAcc, ctx
+        let ctx = typingBind ctx lSerial rty loc
+        logAcc, ctx
+    | _, Ty.Meta _ -> go rty lty (logAcc, ctx)
+    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when tyConEq lTyCon rTyCon -> logAcc, ctx
     | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
-      (logAcc, ctx) |> go lTy rTy |> go (Ty.Con (lTyCon, lTys)) (Ty.Con (rTyCon, rTys))
+        (logAcc, ctx)
+        |> go lTy rTy
+        |> go (Ty.Con(lTyCon, lTys)) (Ty.Con(rTyCon, rTys))
     | Ty.Error _, _
-    | _, Ty.Error _ ->
-      logAcc, ctx
-    | Ty.Meta _, _ ->
-      addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
-    | Ty.Con _, _ ->
-      addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
+    | _, Ty.Error _ -> logAcc, ctx
+    | Ty.Meta _, _ -> addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
+    | Ty.Con _, _ -> addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
 
   go lty rty (logAcc, ctx)
 
 let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
-  let theTrait = theTrait |>  traitMapTys (typingSubst ctx)
+  let theTrait =
+    theTrait |> traitMapTys (typingSubst ctx)
 
   let expectScalar ty (logAcc, ctx) =
     match ty with
@@ -2099,47 +1757,41 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
     | Ty.Con (TyCon.Bool, [])
     | Ty.Con (TyCon.Int, [])
     | Ty.Con (TyCon.Char, [])
-    | Ty.Con (TyCon.Str, []) ->
-      logAcc, ctx
+    | Ty.Con (TyCon.Str, []) -> logAcc, ctx
 
-    | _ ->
-      (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+    | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   match theTrait with
   | Trait.Add ty ->
-    match ty with
-    | Ty.Error _
-    | Ty.Con (TyCon.Str, []) ->
-      logAcc, ctx
+      match ty with
+      | Ty.Error _
+      | Ty.Con (TyCon.Str, []) -> logAcc, ctx
 
-    | _ ->
-      // Coerce to int by default.
-      typingUnify logAcc ctx ty tyInt loc
+      | _ ->
+          // Coerce to int by default.
+          typingUnify logAcc ctx ty tyInt loc
 
-  | Trait.Eq ty ->
-    (logAcc, ctx) |> expectScalar ty
+  | Trait.Eq ty -> (logAcc, ctx) |> expectScalar ty
 
-  | Trait.Cmp ty ->
-    (logAcc, ctx) |> expectScalar ty
+  | Trait.Cmp ty -> (logAcc, ctx) |> expectScalar ty
 
   | Trait.Index (lTy, rTy, resultTy) ->
-    match lTy with
-    | Ty.Error _ ->
-      [], ctx
+      match lTy with
+      | Ty.Error _ -> [], ctx
 
-    | Ty.Con (TyCon.Str, []) ->
-      let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
-      let logAcc, ctx = typingUnify logAcc ctx resultTy tyChar loc
-      logAcc, ctx
+      | Ty.Con (TyCon.Str, []) ->
+          let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
 
-    | _ ->
-      (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+          let logAcc, ctx =
+            typingUnify logAcc ctx resultTy tyChar loc
 
-  | Trait.ToInt ty ->
-    (logAcc, ctx) |> expectScalar ty
+          logAcc, ctx
 
-  | Trait.ToString ty ->
-    (logAcc, ctx) |> expectScalar ty
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+
+  | Trait.ToInt ty -> (logAcc, ctx) |> expectScalar ty
+
+  | Trait.ToString ty -> (logAcc, ctx) |> expectScalar ty
 
 // -----------------------------------------------
 // Logs
@@ -2150,28 +1802,22 @@ let logToString loc log =
 
   match log with
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
-    sprintf "%s Couldn't unify '%A' and '%A' due to self recursion." loc lTy rTy
+      sprintf "%s Couldn't unify '%A' and '%A' due to self recursion." loc lTy rTy
 
   | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
-    sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
+      sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
 
-  | Log.TyBoundError (Trait.Add ty) ->
-    sprintf "%s No support (+) for '%A' yet" loc ty
+  | Log.TyBoundError (Trait.Add ty) -> sprintf "%s No support (+) for '%A' yet" loc ty
 
-  | Log.TyBoundError (Trait.Eq ty) ->
-    sprintf "%s No support equality for '%A' yet" loc ty
+  | Log.TyBoundError (Trait.Eq ty) -> sprintf "%s No support equality for '%A' yet" loc ty
 
-  | Log.TyBoundError (Trait.Cmp ty) ->
-    sprintf "%s No support comparison for '%A' yet" loc ty
+  | Log.TyBoundError (Trait.Cmp ty) -> sprintf "%s No support comparison for '%A' yet" loc ty
 
   | Log.TyBoundError (Trait.Index (lTy, rTy, _)) ->
-    sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
+      sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
 
-  | Log.TyBoundError (Trait.ToInt ty) ->
-    sprintf "%s Can't convert to int from '%A'" loc ty
+  | Log.TyBoundError (Trait.ToInt ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
 
-  | Log.TyBoundError (Trait.ToString ty) ->
-    sprintf "%s Can't convert to string from '%A'" loc ty
+  | Log.TyBoundError (Trait.ToString ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
 
-  | Log.Error msg ->
-    sprintf "%s %s" loc msg
+  | Log.Error msg -> sprintf "%s %s" loc msg

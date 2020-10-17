@@ -12,13 +12,12 @@ let eol = """
 
 let testFile category case =
   async {
-    let dirPath = IO.Path.Combine(testsDir.Value, category, case)
+    let dirPath =
+      IO.Path.Combine(testsDir.Value, category, case)
+
     let content, _ = build readFile Quiet dirPath
-    do!
-      IO.File.WriteAllTextAsync(
-        IO.Path.Combine(testsDir.Value, category, case, case + ".c"),
-        content
-      ) |> Async.AwaitTask
+    do! IO.File.WriteAllTextAsync(IO.Path.Combine(testsDir.Value, category, case, case + ".c"), content)
+        |> Async.AwaitTask
   }
 
 let collectTestTargets () =
@@ -29,10 +28,9 @@ let collectTestTargets () =
       let categoryDir = Path.Combine(testsDir.Value, category)
       for case in IO.Directory.GetDirectories(categoryDir) do
         let case = Path.GetFileName(case)
-        yield [|category :> obj; case :> obj|]
+        yield [| category :> obj; case :> obj |]
   }
 
 [<Theory>]
 [<MemberData("collectTestTargets")>]
-let integrationTests (category: string) (case: string) =
-  testFile category case
+let integrationTests (category: string) (case: string) = testFile category case

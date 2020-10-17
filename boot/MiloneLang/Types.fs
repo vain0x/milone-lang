@@ -10,19 +10,13 @@ type Ident = string
 /// Literal of primitive value.
 [<RequireQualifiedAccess>]
 type Lit =
-  | Bool
-    of bool
-  | Int
-    of int
-  | Char
-    of char
-  | Str
-    of string
+  | Bool of bool
+  | Int of int
+  | Char of char
+  | Str of string
 
 /// Tree to generate a string for debugging.
-type DumpTree =
-  | DumpTree
-    of heading:string * body:DumpTree list * next:DumpTree list
+type DumpTree = DumpTree of heading: string * body: DumpTree list * next: DumpTree list
 
 // -----------------------------------------------
 // Errors
@@ -35,12 +29,9 @@ type TyUnifyLog =
 
 [<RequireQualifiedAccess>]
 type Log =
-  | TyUnify
-    of TyUnifyLog * lRootTy:Ty * rRootTy:Ty * lTy:Ty * rTy:Ty
-  | TyBoundError
-    of Trait
-  | Error
-    of string
+  | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
+  | TyBoundError of Trait
+  | Error of string
 
 // -----------------------------------------------
 // Syntax types
@@ -59,16 +50,11 @@ type Loc = RowIndex * ColumnIndex
 [<RequireQualifiedAccess>]
 type Token =
   | Error
-  | Bool
-    of bool
-  | Int
-    of int
-  | Char
-    of char
-  | Str
-    of string
-  | Ident
-    of Ident
+  | Bool of bool
+  | Int of int
+  | Char of char
+  | Str of string
+  | Ident of Ident
   /// `(`
   | ParenL
   /// `)`
@@ -193,134 +179,92 @@ type Op =
 /// Type expression in AST.
 [<RequireQualifiedAccess>]
 type ATy =
-  | Missing
-    of Loc
-  | App
-    of Ident * ATy list * Loc
-  | Suffix
-    of ATy * Ident * Loc
+  | Missing of Loc
+  | App of Ident * ATy list * Loc
+  | Suffix of ATy * Ident * Loc
   /// Tuple type, e.g. `int * string`.
-  | Tuple
-    of ATy list * Loc
+  | Tuple of ATy list * Loc
   /// Function type, e.g. `int -> string`.
-  | Fun
-    of ATy * ATy * Loc
+  | Fun of ATy * ATy * Loc
 
 /// Pattern in AST.
 [<RequireQualifiedAccess>]
 type APat =
-  | Missing
-    of Loc
-  | Lit
-    of Lit * Loc
-  | Ident
-    of Ident * Loc
-  | ListLit
-    of APat list * Loc
-  | Nav
-    of APat * Ident * Loc
+  | Missing of Loc
+  | Lit of Lit * Loc
+  | Ident of Ident * Loc
+  | ListLit of APat list * Loc
+  | Nav of APat * Ident * Loc
   /// Variant deconstruction. e.g. `Some x`.
-  | Call
-    of APat * APat list * Loc
+  | Call of APat * APat list * Loc
   /// `::`
-  | Cons
-    of APat * APat * Loc
-  | TupleLit
-    of APat list * Loc
-  | As
-    of APat * Ident * Loc
+  | Cons of APat * APat * Loc
+  | TupleLit of APat list * Loc
+  | As of APat * Ident * Loc
   /// Type annotation, e.g. `x: int`.
-  | Anno
-    of APat * ATy * Loc
-  | Or
-    of APat * APat * Loc
+  | Anno of APat * ATy * Loc
+  | Or of APat * APat * Loc
   /// Function declaration pattern, e.g. `f x y`.
   /// Syntactically distinct from the call pattern.
-  | Fun
-    of Ident * APat list * Loc
+  | Fun of Ident * APat list * Loc
 
 /// Match arm node in AST.
 type AArm =
   /// (pattern, guard, body).
-  | AArm
-    of APat * AExpr * AExpr * Loc
+  | AArm of APat * AExpr * AExpr * Loc
 
 /// Variant node in AST.
 type AVariant =
   /// (identifier, payload-type).
-  | AVariant
-    of Ident * ATy option * Loc
+  | AVariant of Ident * ATy option * Loc
 
 /// Let expression in AST.
 [<RequireQualifiedAccess>]
 type ALet =
-  | LetVal
-    of APat * AExpr * AExpr * Loc
-  | LetFun
-    of Ident * args:APat list * AExpr * AExpr * Loc
+  | LetVal of APat * AExpr * AExpr * Loc
+  | LetFun of Ident * args: APat list * AExpr * AExpr * Loc
 
 /// Body of type declaration in AST.
 [<RequireQualifiedAccess>]
 type ATyDecl =
-  | Synonym
-    of ATy
-  | Union
-    of AVariant list
+  | Synonym of ATy
+  | Union of AVariant list
 
 /// Expression in AST.
 [<RequireQualifiedAccess>]
 type AExpr =
-  | Missing
-    of Loc
-  | Lit
-    of Lit * Loc
-  | Ident
-    of Ident * Loc
+  | Missing of Loc
+  | Lit of Lit * Loc
+  | Ident of Ident * Loc
   /// List literal, e.g. `[]`, `[2; 3]`.
-  | ListLit
-    of AExpr list * Loc
+  | ListLit of AExpr list * Loc
   /// condition, then-clause, else-clause.
-  | If
-    of AExpr * AExpr * AExpr * Loc
-  | Match
-    of AExpr * AArm list * Loc
-  | Fun
-    of APat list * AExpr * Loc
+  | If of AExpr * AExpr * AExpr * Loc
+  | Match of AExpr * AArm list * Loc
+  | Fun of APat list * AExpr * Loc
   /// Navigation expression, e.g. `str.Length`.
-  | Nav
-    of AExpr * Ident * Loc
-  | Index
-    of AExpr * AExpr * Loc
+  | Nav of AExpr * Ident * Loc
+  | Index of AExpr * AExpr * Loc
   /// Unary operation, e.g. `-x`.
   /// Currently `-` is the only unary operation.
-  | Uni
-    of UniOp * AExpr * Loc
+  | Uni of UniOp * AExpr * Loc
   /// Binary operation, e.g. `x + y`.
-  | Bin
-    of Op * AExpr * AExpr * Loc
+  | Bin of Op * AExpr * AExpr * Loc
   /// Range syntax, e.g. `first..last`, `first .. step .. last`.
-  | Range
-    of AExpr list * Loc
+  | Range of AExpr list * Loc
   /// Tuple literal, e.g. `()`, `2, "two"`.
-  | TupleLit
-    of AExpr list * Loc
+  | TupleLit of AExpr list * Loc
   /// Type annotation.
-  | Anno
-    of AExpr * ATy * Loc
+  | Anno of AExpr * ATy * Loc
   /// Semicolon-separated expressions.
-  | Semi
-    of AExpr list * Loc
+  | Semi of AExpr list * Loc
   /// (pattern, initializer, next). Let-in expression.
-  | Let
-    of APat * AExpr * AExpr * Loc
+  | Let of APat * AExpr * AExpr * Loc
   /// Type synonym definition, e.g. `type UserId = int`.
-  | TySynonym
-    of Ident * ATy * Loc
+  | TySynonym of Ident * ATy * Loc
   /// Discriminated union type definition, e.g. `type Result = | Ok | Err of int`.
-  | TyUnion
-    of Ident * AVariant list * Loc
-  | Open
-    of Ident list * Loc
+  | TyUnion of Ident * AVariant list * Loc
+  | Open of Ident list * Loc
 
 // -----------------------------------------------
 // Intermediate representation types
@@ -354,25 +298,20 @@ type StorageModifier =
   | Auto
   | Static
 
-type NameCtx =
-  | NameCtx
-    of AssocMap<Serial, Ident> * lastSerial:Serial
+type NameCtx = NameCtx of AssocMap<Serial, Ident> * lastSerial: Serial
 
 type ScopeSerial = Serial
 
 [<RequireQualifiedAccess>]
 type Binding =
   /// Value binding.
-  | Var
-    of VarSerial * varIdent:Ident
+  | Var of VarSerial * varIdent: Ident
 
   /// Type binding.
-  | Ty
-    of TySerial * tyIdent:Ident
+  | Ty of TySerial * tyIdent: Ident
 
   /// Parent scope.
-  | Parent
-    of ScopeSerial * Scope
+  | Parent of ScopeSerial * Scope
 
 /// (scopeSerial, binding) list.
 type Scope = (ScopeSerial * Binding) list
@@ -389,111 +328,78 @@ type TyCon =
   | Tuple
   | List
   /// Type reference, i.e. some union type.
-  | Ref
-    of Serial
+  | Ref of Serial
 
 /// Type of expressions.
 [<RequireQualifiedAccess>]
 type Ty =
-  | Error
-    of Loc
+  | Error of Loc
   /// Type variable, i.e. some binding.
-  | Meta
-    of Serial * Loc
-  | Con
-    of TyCon * Ty list
+  | Meta of Serial * Loc
+  | Con of TyCon * Ty list
 
 /// Generalized type.
 [<RequireQualifiedAccess>]
-type TyScheme =
-  | ForAll of TySerial list * Ty
+type TyScheme = ForAll of TySerial list * Ty
 
 /// Type specification.
-type TySpec =
-  | TySpec
-    of Ty * Trait list
+type TySpec = TySpec of Ty * Trait list
 
 /// Traits: kind of type constraints.
 /// NOTE: `trait` is a reserved word in F#.
 [<RequireQualifiedAccess>]
 type Trait =
-  | Add
-    of Ty
-  | Eq
-    of Ty
-  | Cmp
-    of Ty
-  | Index
-    of lTy:Ty * rTy:Ty * resultTy:Ty
-  | ToInt
-    of Ty
-  | ToString
-    of Ty
+  | Add of Ty
+  | Eq of Ty
+  | Cmp of Ty
+  | Index of lTy: Ty * rTy: Ty * resultTy: Ty
+  | ToInt of Ty
+  | ToString of Ty
 
 /// Type declaration.
 [<RequireQualifiedAccess>]
 type TyDecl =
-  | Synonym
-    of ty:Ty * Loc
+  | Synonym of ty: Ty * Loc
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
-  | Union
-    of Ident * variants:(Ident * VarSerial * bool * Ty) list * Loc
+  | Union of Ident * variants: (Ident * VarSerial * bool * Ty) list * Loc
 
 /// Type definition.
 [<RequireQualifiedAccess>]
 type TyDef =
   /// Bound type variable.
-  | Meta
-    of Ident * Ty * Loc
-  | Union
-    of Ident * VariantSerial list * Loc
+  | Meta of Ident * Ty * Loc
+  | Union of Ident * VariantSerial list * Loc
 
 /// Variable definition in high-level IR.
 [<RequireQualifiedAccess>]
 type VarDef =
-  | Var
-    of Ident * StorageModifier * Ty * Loc
-  | Fun
-    of Ident * Arity * TyScheme * Loc
+  | Var of Ident * StorageModifier * Ty * Loc
+  | Fun of Ident * Arity * TyScheme * Loc
   /// Variant constructor.
-  | Variant
-    of Ident * TySerial * hasPayload:bool * payloadTy:Ty * variantTy:Ty * Loc
+  | Variant of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
 
 /// Pattern in AST.
 [<RequireQualifiedAccess>]
 type HPat =
-  | Lit
-    of Lit * Loc
+  | Lit of Lit * Loc
   /// `[]`
-  | Nil
-    of itemTy:Ty * Loc
-  | OptionNone
-    of itemTy:Ty * Loc
-  | OptionSome
-    of itemTy:Ty * Loc
+  | Nil of itemTy: Ty * Loc
+  | OptionNone of itemTy: Ty * Loc
+  | OptionSome of itemTy: Ty * Loc
   /// `_`
-  | Discard
-    of Ty * Loc
+  | Discard of Ty * Loc
   /// Variable pattern.
-  | Ref
-    of VarSerial * Ty * Loc
-  | Nav
-    of HPat * Ident * Ty * Loc
-  | Call
-    of callee:HPat * args:HPat list * Ty * Loc
+  | Ref of VarSerial * Ty * Loc
+  | Nav of HPat * Ident * Ty * Loc
+  | Call of callee: HPat * args: HPat list * Ty * Loc
   /// `::`
-  | Cons
-    of HPat * HPat * itemTy:Ty * Loc
-  | Tuple
-    of HPat list * tupleTy:Ty * Loc
-  | As
-    of HPat * VarSerial * Loc
+  | Cons of HPat * HPat * itemTy: Ty * Loc
+  | Tuple of HPat list * tupleTy: Ty * Loc
+  | As of HPat * VarSerial * Loc
   /// Type annotation pattern, e.g. `x : int`.
-  | Anno
-    of HPat * Ty * Loc
-  | Or
-    of HPat * HPat * Ty * Loc
+  | Anno of HPat * Ty * Loc
+  | Or of HPat * HPat * Ty * Loc
 
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]
@@ -521,8 +427,7 @@ type HPrim =
   | Char
   | Int
   | String
-  | NativeFun
-    of Ident * Arity
+  | NativeFun of Ident * Arity
 
 [<RequireQualifiedAccess>]
 type InfOp =
@@ -543,32 +448,21 @@ type InfOp =
 /// Expression in AST.
 [<RequireQualifiedAccess>]
 type HExpr =
-  | Lit
-    of Lit * Loc
+  | Lit of Lit * Loc
   /// Variable reference.
-  | Ref
-    of VarSerial * Ty * Loc
-  | Prim
-    of HPrim * Ty * Loc
-  | Match
-    of target:HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
+  | Ref of VarSerial * Ty * Loc
+  | Prim of HPrim * Ty * Loc
+  | Match of target: HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`
-  | Nav
-    of HExpr * Ident * Ty * Loc
+  | Nav of HExpr * Ident * Ty * Loc
   /// Operation with infinite arguments.
-  | Inf
-    of InfOp * HExpr list * Ty * Loc
-  | Let
-    of pat:HPat * init:HExpr * next:HExpr * Ty * Loc
-  | LetFun
-    of FunSerial * isMainFun:bool * args:HPat list * body:HExpr * next:HExpr * Ty * Loc
+  | Inf of InfOp * HExpr list * Ty * Loc
+  | Let of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
+  | LetFun of FunSerial * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
   /// Type declaration.
-  | TyDecl
-    of TySerial * TyDecl * Loc
-  | Open
-    of Ident list * Loc
-  | Error
-    of string * Loc
+  | TyDecl of TySerial * TyDecl * Loc
+  | Open of Ident list * Loc
+  | Error of string * Loc
 
 [<RequireQualifiedAccess>]
 type MonoMode =
@@ -584,18 +478,12 @@ type Label = string
 /// Intermediate language between HIR and MIR for match expressions.
 [<RequireQualifiedAccess>]
 type MatchIR =
-  | PatLabel
-    of Label
-  | Pat
-    of HPat * nextLabel:Label
-  | GoBody
-    of Label
-  | BodyLabel
-    of Label
-  | Guard
-    of guard:HExpr * nextLabel:Label
-  | Body
-    of body:HExpr
+  | PatLabel of Label
+  | Pat of HPat * nextLabel: Label
+  | GoBody of Label
+  | BodyLabel of Label
+  | Guard of guard: HExpr * nextLabel: Label
+  | Body of body: HExpr
 
 /// Unary operator in middle IR.
 /// Or primitive function with single parameter.
@@ -606,12 +494,10 @@ type MUniOp =
   | StrLen
   | Unbox
   /// Projection. Get an item of tuple.
-  | Proj
-    of index:int
+  | Proj of index: int
   /// Get union tag.
   | Tag
-  | GetVariant
-    of VariantSerial
+  | GetVariant of VariantSerial
   | ListIsEmpty
   | ListHead
   | ListTail
@@ -639,77 +525,51 @@ type MOp =
 /// Expression in middle IR.
 [<RequireQualifiedAccess>]
 type MExpr =
-  | Lit
-    of Lit * Loc
-  | Default
-    of Ty * Loc
-  | Ref
-    of VarSerial * Ty * Loc
+  | Lit of Lit * Loc
+  | Default of Ty * Loc
+  | Ref of VarSerial * Ty * Loc
   /// Procedure
-  | Proc
-    of FunSerial * Ty * Loc
-  | Variant
-    of TySerial * VariantSerial * Ty * Loc
-  | Uni
-    of MUniOp * arg:MExpr * resultTy:Ty * Loc
-  | Bin
-    of MOp * left:MExpr * right:MExpr * resultTy:Ty * Loc
+  | Proc of FunSerial * Ty * Loc
+  | Variant of TySerial * VariantSerial * Ty * Loc
+  | Uni of MUniOp * arg: MExpr * resultTy: Ty * Loc
+  | Bin of MOp * left: MExpr * right: MExpr * resultTy: Ty * Loc
 
 /// Variable initializer in mid-level IR.
 [<RequireQualifiedAccess>]
 type MInit =
   /// Remain uninitialized at first; initialized later by `MStmt.Set`.
   | UnInit
-  | Expr
-    of MExpr
+  | Expr of MExpr
   /// Call to primitive.
-  | CallPrim
-    of HPrim * args:MExpr list * primTy:Ty
+  | CallPrim of HPrim * args: MExpr list * primTy: Ty
   /// Direct call to procedure.
-  | CallProc
-    of callee:MExpr * args:MExpr list * calleeTy:Ty
+  | CallProc of callee: MExpr * args: MExpr list * calleeTy: Ty
   /// Indirect call to closure.
-  | CallClosure
-    of callee:MExpr * args:MExpr list
+  | CallClosure of callee: MExpr * args: MExpr list
   /// Construct a closure, packing environment.
-  | Closure
-    of subFunSerial:FunSerial * envSerial:VarSerial
-  | Box
-    of MExpr
-  | Indirect
-    of MExpr
-  | Cons
-    of head:MExpr * tail:MExpr
-  | Tuple
-    of items:MExpr list
-  | Variant
-    of VariantSerial * payloadSerial:VarSerial
+  | Closure of subFunSerial: FunSerial * envSerial: VarSerial
+  | Box of MExpr
+  | Indirect of MExpr
+  | Cons of head: MExpr * tail: MExpr
+  | Tuple of items: MExpr list
+  | Variant of VariantSerial * payloadSerial: VarSerial
 
 /// Statement in middle IR.
 /// Doesn't introduce global things, e.g. functions.
 [<RequireQualifiedAccess>]
 type MStmt =
   /// Statement to evaluate an expression, e.g. `f ();`.
-  | Do
-    of MExpr * Loc
+  | Do of MExpr * Loc
   /// Declare a local variable.
-  | LetVal
-    of VarSerial * MInit * Ty * Loc
+  | LetVal of VarSerial * MInit * Ty * Loc
   /// Set to uninitialized local variable.
-  | Set
-    of VarSerial * init:MExpr * Loc
-  | Return
-    of MExpr * Loc
-  | Label
-    of Label * Loc
-  | Goto
-    of Label * Loc
-  | GotoIf
-    of MExpr * Label * Loc
-  | Exit
-    of MExpr * Loc
-  | Proc
-    of FunSerial * isMain: bool * args:(VarSerial * Ty * Loc) list * body:MStmt list * resultTy:Ty * Loc
+  | Set of VarSerial * init: MExpr * Loc
+  | Return of MExpr * Loc
+  | Label of Label * Loc
+  | Goto of Label * Loc
+  | GotoIf of MExpr * Label * Loc
+  | Exit of MExpr * Loc
+  | Proc of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
 
 // -----------------------------------------------
 // CIR types
@@ -726,14 +586,10 @@ type CTy =
   | Void
   | Int
   | Char
-  | Ptr
-    of CTy
-  | FunPtr
-    of CTy list * CTy
-  | Struct
-    of Ident
-  | Enum
-    of Ident
+  | Ptr of CTy
+  | FunPtr of CTy list * CTy
+  | Struct of Ident
+  | Enum of Ident
 
 [<RequireQualifiedAccess>]
 type CUniOp =
@@ -765,73 +621,46 @@ type CBinOp =
 type CExpr =
   /// `{}`
   | Default
-  | Int
-    of int
-  | Char
-    of char
-  | StrRaw
-    of string
-  | StrObj
-    of string
-  | Ref
-    of Ident
+  | Int of int
+  | Char of char
+  | StrRaw of string
+  | StrObj of string
+  | Ref of Ident
   /// `(struct T){.x = x, ..}` Initializer.
-  | Init
-    of fields:(Ident * CExpr) list * CTy
+  | Init of fields: (Ident * CExpr) list * CTy
   /// Projection. Get an item of tuple.
-  | Proj
-    of CExpr * index:int
-  | Cast
-    of CExpr * CTy
-  | Nav
-    of CExpr * Ident
-  | Arrow
-    of CExpr * Ident
+  | Proj of CExpr * index: int
+  | Cast of CExpr * CTy
+  | Nav of CExpr * Ident
+  | Arrow of CExpr * Ident
   /// `a[i]`
-  | Index
-    of CExpr * CExpr
-  | Call
-    of CExpr * args:CExpr list
-  | Uni
-    of CUniOp * CExpr
-  | Bin
-    of CBinOp * CExpr * CExpr
+  | Index of CExpr * CExpr
+  | Call of CExpr * args: CExpr list
+  | Uni of CUniOp * CExpr
+  | Bin of CBinOp * CExpr * CExpr
 
 /// Statement in C language.
 [<RequireQualifiedAccess>]
 type CStmt =
   /// `x;`
-  | Expr
-    of CExpr
+  | Expr of CExpr
   /// `T x = a;`
-  | Let
-    of Ident * init:CExpr option * CTy
+  | Let of Ident * init: CExpr option * CTy
   /// `U* x = (U*)malloc(sizeof T);`
-  | LetAlloc
-    of Ident * valPtrTy:CTy * varTy:CTy
+  | LetAlloc of Ident * valPtrTy: CTy * varTy: CTy
   /// `x = a;`
-  | Set
-    of CExpr * CExpr
-  | Label
-    of Label
-  | Goto
-    of Label
-  | GotoIf
-    of CExpr * Label
-  | Return
-    of CExpr option
+  | Set of CExpr * CExpr
+  | Label of Label
+  | Goto of Label
+  | GotoIf of CExpr * Label
+  | Return of CExpr option
 
 /// Top-level definition in C language.
 [<RequireQualifiedAccess>]
 type CDecl =
   /// `#error` directive to cause compile error manually.
-  | ErrDir
-    of message:string * line:int
-  | Struct
-    of Ident * fields:(Ident * CTy) list * variants:(Ident * CTy) list
-  | Enum
-    of Ident * variants:Ident list
-  | StaticVar
-    of Ident * CTy
-  | Fun
-    of Ident * args:(Ident * CTy) list * CTy * body:CStmt list
+  | ErrDir of message: string * line: int
+  | Struct of Ident * fields: (Ident * CTy) list * variants: (Ident * CTy) list
+  | Enum of Ident * variants: Ident list
+  | StaticVar of Ident * CTy
+  | Fun of Ident * args: (Ident * CTy) list * CTy * body: CStmt list

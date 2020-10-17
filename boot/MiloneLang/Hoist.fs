@@ -35,10 +35,8 @@ open MiloneLang.Records
 [<RequireQualifiedAccess>]
 type HExprAcc =
   | Empty
-  | Let
-    of HExpr * HExprAcc
-  | Semi
-    of HExpr list * HExprAcc
+  | Let of HExpr * HExprAcc
+  | Semi of HExpr list * HExprAcc
 
 [<RequireQualifiedAccess>]
 type HoistMode =
@@ -57,35 +55,30 @@ let hxDummy = hxUnit noLoc
 
 let hxAccAdd expr exprAcc =
   match expr, exprAcc with
-  | HExpr.LetFun _, _ ->
-    HExprAcc.Let (expr, exprAcc)
+  | HExpr.LetFun _, _ -> HExprAcc.Let(expr, exprAcc)
 
-  | _, HExprAcc.Semi (acc, parentAcc) ->
-    HExprAcc.Semi (expr :: acc, parentAcc)
+  | _, HExprAcc.Semi (acc, parentAcc) -> HExprAcc.Semi(expr :: acc, parentAcc)
 
-  | _ ->
-    HExprAcc.Semi ([expr], exprAcc)
+  | _ -> HExprAcc.Semi([ expr ], exprAcc)
 
 let hxAccToExpr next exprAcc =
   let withNext next letExpr =
     match letExpr with
     | HExpr.LetFun (callee, isMainFun, args, body, oldNext, ty, loc) ->
-      assert (oldNext |> hxIsUnitLit)
-      HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc)
+        assert (oldNext |> hxIsUnitLit)
+        HExpr.LetFun(callee, isMainFun, args, body, next, ty, loc)
 
-    | _ ->
-      failwith "Never"
+    | _ -> failwith "Never"
 
   let rec go exprAcc next =
     match exprAcc with
-    | HExprAcc.Empty ->
-      next
+    | HExprAcc.Empty -> next
 
-    | HExprAcc.Let (expr, exprAcc) ->
-      expr |> withNext next |> go exprAcc
+    | HExprAcc.Let (expr, exprAcc) -> expr |> withNext next |> go exprAcc
 
     | HExprAcc.Semi (exprs, exprAcc) ->
-      hxSemi ((next :: exprs) |> listRev) noLoc |> go exprAcc
+        hxSemi ((next :: exprs) |> listRev) noLoc
+        |> go exprAcc
 
   go exprAcc next
 
@@ -94,19 +87,15 @@ let hoistCtxEmpty: HoistContext =
 
 let hoistCtxIsEmpty ctx =
   match ctx with
-  | HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty ->
-    true
+  | HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty -> true
 
-  | _ ->
-    false
+  | _ -> false
 
 let hoistCtxIsTopLevel (mode, _, _) =
   match mode with
-  | HoistMode.TopLevel ->
-    true
+  | HoistMode.TopLevel -> true
 
-  | HoistMode.Local ->
-    false
+  | HoistMode.Local -> false
 
 let hoistCtxAddDecl expr (mode, decls, exprs) =
   let decls = decls |> hxAccAdd expr
@@ -159,7 +148,7 @@ let hoistExprLetFunMain callee isMainFun args body next ty loc ctx =
     // so that they evaluate at the beginning of the program.
     let body, ctx = ctx |> hoistCtxTakeExprs body
 
-    HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc), ctx
+    HExpr.LetFun(callee, isMainFun, args, body, next, ty, loc), ctx
 
   // Append the `main` to other declarations
   // to reconstruct the whole expressions.
@@ -170,17 +159,17 @@ let hoistExprLetFun callee isMainFun args body next ty loc ctx =
     hoistExprLetFunMain callee isMainFun args body next ty loc ctx
   else
 
-  let body, ctx = (body, ctx) |> hoistExprLocal
+    let body, ctx = (body, ctx) |> hoistExprLocal
 
-  let expr =
-    // Replace the `next` with a placeholder,
-    // which is replaced with actual expressions again at the end.
-    let next = hxDummy
-    HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc)
-  let ctx =
-    ctx |> hoistCtxAddDecl expr
+    let expr =
+      // Replace the `next` with a placeholder,
+      // which is replaced with actual expressions again at the end.
+      let next = hxDummy
+      HExpr.LetFun(callee, isMainFun, args, body, next, ty, loc)
 
-  (next, ctx) |> hoistExpr
+    let ctx = ctx |> hoistCtxAddDecl expr
+
+    (next, ctx) |> hoistExpr
 
 let hoistExprCore (expr, ctx) =
   match expr with
@@ -188,73 +177,77 @@ let hoistExprCore (expr, ctx) =
   | HExpr.Lit _
   | HExpr.Ref _
   | HExpr.Prim _
-  | HExpr.Open _ ->
-    expr, ctx
+  | HExpr.Open _ -> expr, ctx
 
   | HExpr.Match (target, arms, ty, loc) ->
-    let doArm () =
-      let go ((pat, guard, body), ctx) =
-        let pat, ctx = hoistPat (pat, ctx)
-        let guard, ctx = hoistExpr (guard, ctx)
-        let body, ctx = hoistExpr (body, ctx)
-        (pat, guard, body), ctx
+      let doArm () =
+        let go ((pat, guard, body), ctx) =
+          let pat, ctx = hoistPat (pat, ctx)
+          let guard, ctx = hoistExpr (guard, ctx)
+          let body, ctx = hoistExpr (body, ctx)
+          (pat, guard, body), ctx
 
-      let target, ctx = hoistExpr (target, ctx)
-      let arms, ctx = (arms, ctx) |> stMap go
-      HExpr.Match (target, arms, ty, loc), ctx
-    doArm ()
+        let target, ctx = hoistExpr (target, ctx)
+        let arms, ctx = (arms, ctx) |> stMap go
+        HExpr.Match(target, arms, ty, loc), ctx
+
+      doArm ()
 
   | HExpr.Nav (l, r, ty, loc) ->
-    let doArm () =
-      let l, ctx = hoistExpr (l, ctx)
-      HExpr.Nav (l, r, ty, loc), ctx
-    doArm ()
+      let doArm () =
+        let l, ctx = hoistExpr (l, ctx)
+        HExpr.Nav(l, r, ty, loc), ctx
+
+      doArm ()
 
   | HExpr.Inf (infOp, items, ty, loc) ->
-    let doArm () =
-      let items, ctx = (items, ctx) |> stMap hoistExpr
-      HExpr.Inf (infOp, items, ty, loc), ctx
-    doArm ()
+      let doArm () =
+        let items, ctx = (items, ctx) |> stMap hoistExpr
+        HExpr.Inf(infOp, items, ty, loc), ctx
+
+      doArm ()
 
   | HExpr.Let (pat, body, next, ty, loc) ->
-    let doArm () =
-      let pat, ctx = (pat, ctx) |> hoistPat
-      let body, ctx = (body, ctx) |> hoistExprLocal
-      let next, ctx = (next, ctx) |> hoistExpr
-      HExpr.Let (pat, body, next, ty, loc), ctx
-    doArm ()
+      let doArm () =
+        let pat, ctx = (pat, ctx) |> hoistPat
+        let body, ctx = (body, ctx) |> hoistExprLocal
+        let next, ctx = (next, ctx) |> hoistExpr
+        HExpr.Let(pat, body, next, ty, loc), ctx
+
+      doArm ()
 
   | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
-    hoistExprLetFun callee isMainFun args body next ty loc ctx
+      hoistExprLetFun callee isMainFun args body next ty loc ctx
 
   | HExpr.TyDecl _ ->
-    let doArm () =
-      let ctx = ctx |> hoistCtxAddDecl expr
-      hxDummy, ctx
-    doArm ()
+      let doArm () =
+        let ctx = ctx |> hoistCtxAddDecl expr
+        hxDummy, ctx
+
+      doArm ()
 
 let hoistExpr (expr, ctx) =
   if ctx |> hoistCtxIsTopLevel |> not then
     (expr, ctx) |> hoistExprCore
   else
 
-  // At the top-level. Check if inner expressions are also top-level or not.
-  match expr with
-  | HExpr.Inf (InfOp.Semi, items, ty, loc) ->
-    let items, ctx = (items, ctx) |> stMap hoistExpr
-    HExpr.Inf (InfOp.Semi, items, ty, loc), ctx
+    // At the top-level. Check if inner expressions are also top-level or not.
+    match expr with
+    | HExpr.Inf (InfOp.Semi, items, ty, loc) ->
+        let items, ctx = (items, ctx) |> stMap hoistExpr
+        HExpr.Inf(InfOp.Semi, items, ty, loc), ctx
 
-  | HExpr.Let _
-  | HExpr.LetFun _
-  | HExpr.TyDecl _ ->
-    // Keep top-level except for let bodies.
-    (expr, ctx) |> hoistExprCore
+    | HExpr.Let _
+    | HExpr.LetFun _
+    | HExpr.TyDecl _ ->
+        // Keep top-level except for let bodies.
+        (expr, ctx) |> hoistExprCore
 
-  | _ ->
-    // It's a top-level non-declaration expression.
-    let expr, ctx = (expr, ctx) |> hoistExprLocal
-    let ctx = ctx |> hoistCtxAddExpr expr
-    hxDummy, ctx
+    | _ ->
+        // It's a top-level non-declaration expression.
+        let expr, ctx = (expr, ctx) |> hoistExprLocal
+        let ctx = ctx |> hoistCtxAddExpr expr
+        hxDummy, ctx
 
 let hoist (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let expr, hoistCtx = (expr, hoistCtxEmpty) |> hoistExpr

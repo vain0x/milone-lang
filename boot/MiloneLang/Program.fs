@@ -4,8 +4,7 @@ module rec MiloneLang.Program
 open System
 open MiloneLang.Cli
 
-let readFile (filePath: string) =
-  System.IO.File.ReadAllText(filePath)
+let readFile (filePath: string) = System.IO.File.ReadAllText(filePath)
 
 [<EntryPoint>]
 let main args =

@@ -60,21 +60,18 @@ open MiloneLang.Types
 let findOpenPaths expr =
   let rec go expr =
     match expr with
-    | HExpr.Open (path, _) ->
-      [path]
-    | HExpr.Inf (InfOp.Semi, exprs, _, _) ->
-      exprs |> listCollect go
-    | _ ->
-      []
+    | HExpr.Open (path, _) -> [ path ]
+    | HExpr.Inf (InfOp.Semi, exprs, _, _) -> exprs |> listCollect go
+    | _ -> []
+
   go expr
 
 let findOpenModules projectName expr =
   let extractor path =
     match path with
-    | prefix :: moduleName :: _ when prefix = projectName ->
-      Some moduleName
-    | _ ->
-      None
+    | prefix :: moduleName :: _ when prefix = projectName -> Some moduleName
+    | _ -> None
+
   findOpenPaths expr |> listChoose extractor
 
 /// Insert the second expression to the bottom of the first expression.
@@ -83,24 +80,22 @@ let spliceExpr firstExpr secondExpr =
   let rec go expr =
     match expr with
     | HExpr.Let (pat, init, next, ty, loc) ->
-      let next = go next
-      HExpr.Let (pat, init, next, ty, loc)
+        let next = go next
+        HExpr.Let(pat, init, next, ty, loc)
     | HExpr.LetFun (serial, isMainFun, args, body, next, ty, loc) ->
-      let next = go next
-      HExpr.LetFun (serial, isMainFun, args, body, next, ty, loc)
+        let next = go next
+        HExpr.LetFun(serial, isMainFun, args, body, next, ty, loc)
     | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
-      let rec goLast exprs =
-        match exprs with
-        | [] ->
-          [secondExpr]
-        | [lastExpr] ->
-          [go lastExpr]
-        | x :: xs ->
-          x :: goLast xs
-      let exprs = goLast exprs
-      HExpr.Inf (InfOp.Semi, exprs, ty, loc)
-    | _ ->
-      hxSemi [expr; secondExpr] noLoc
+        let rec goLast exprs =
+          match exprs with
+          | [] -> [ secondExpr ]
+          | [ lastExpr ] -> [ go lastExpr ]
+          | x :: xs -> x :: goLast xs
+
+        let exprs = goLast exprs
+        HExpr.Inf(InfOp.Semi, exprs, ty, loc)
+    | _ -> hxSemi [ expr; secondExpr ] noLoc
+
   go firstExpr
 
 let parseProjectModules readModuleFile projectName nameCtx =
@@ -114,12 +109,15 @@ let parseProjectModules readModuleFile projectName nameCtx =
       let moduleHir, nameCtx = astToHir (moduleAst, nameCtx)
       let dependencies = findOpenModules projectName moduleHir
       let moduleMap = moduleMap |> mapAdd moduleName moduleHir
+
       let moduleAcc, moduleMap, nameCtx, errorAcc =
         listFold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
+
       moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
 
   let moduleAcc, _, nameCtx, errorAcc =
     go ([], mapEmpty (strHash, strCmp), nameCtx, []) projectName
+
   let modules = moduleAcc |> listRev
 
   listReduce spliceExpr modules, nameCtx, errorAcc
