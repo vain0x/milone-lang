@@ -270,7 +270,9 @@ let parseTyDeclBody baseLoc (tokens, errors) =
   match tokens with
   | (Token.Pipe, _) :: _ -> parseTyDeclUnion baseLoc (tokens, errors)
 
-  | (Token.Ident _, _) :: (Token.Of, _) :: _ -> parseTyDeclUnion baseLoc (tokens, errors)
+  | (Token.Ident _, _) :: (Token.Of, _) :: _ ->
+    let tokens = (Token.Pipe, noLoc) :: tokens
+    parseTyDeclUnion baseLoc (tokens, errors)
 
   | _ ->
       let ty, tokens, errors = parseTy baseLoc (tokens, errors)
