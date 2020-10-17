@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -eu
+
+echo -e 'Content-Length: 30\n\n{"method":"initialize"}                  Content-Length: 30\n\n{"method":"exit"}                 ' | dotnet run

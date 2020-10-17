@@ -6,6 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="JsonValue.fs" />
+    <Compile Include="JsonSerialization.fs" />
+    <Compile Include="JsonRpcReaderForStdIn.fs" />
+    <Compile Include="JsonRpcReaderForAbstractStream.fs" />
+    <Compile Include="JsonRpcWriter.fs" />
+    <Compile Include="LspServer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
