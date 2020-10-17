@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "esModuleInterop": true,
+        "lib": [
+            "ES2017"
+        ],
+        "module": "CommonJS",
+        "outDir": "target",
+        "preserveWatchOutput": true,
+        "rootDir": "src",
+        "sourceMap": true,
+        "strict": true,
+        "target": "ES2017"
+    }
+}

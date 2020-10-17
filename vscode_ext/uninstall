@@ -1,0 +1,5 @@
+#!/bin/bash
+# Uninstall the extension from locally-installed VSCode.
+# (Works to uninstall either one installed via package manager or locally built.)
+
+code --uninstall-extension vain0x.milone-lang

@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "extensionHost",
+            "request": "launch",
+            "name": "Launch Extension Host",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "env": {
+                "MILONE_LSP_BIN": "${workspaceFolder}/TODO"
+            },
+            "preLaunchTask": "vscode_ext_build"
+        }
+    ],
+    "compounds": []
+}
