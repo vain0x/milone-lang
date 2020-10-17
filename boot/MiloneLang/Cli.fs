@@ -107,7 +107,11 @@ let build readFile verbosity (projectDir: string): string * bool =
     readFile (projectDir + "/" + moduleName + ".fs")
 
   let expr, nameCtx, errorListList =
-    parseProjectModules readModuleFile projectName (nameCtxEmpty ())
+    let parseTokens (moduleName: string) tokens =
+      log ("Parsing " + moduleName)
+      parse tokens
+
+    parseProjectModules readModuleFile parseTokens projectName (nameCtxEmpty ())
 
   log "Name resolution"
   let expr, scopeCtx = nameRes (expr, nameCtx)
@@ -155,6 +159,32 @@ let build readFile verbosity (projectDir: string): string * bool =
             let output = cprint cir
             output, success
 
+let cliParse readFile (projectDir: string) =
+  // print errors
+  let rec go1 code errors =
+    match errors with
+    | [] -> code
+
+    | (msg, loc) :: errors ->
+        printfn "ERROR: %A %s" loc msg
+        go1 1 errors
+
+  let projectDir = projectDir |> pathStrTrimEndPathSep
+  let projectName = projectDir |> pathStrToStem
+
+  let readModuleFile moduleName =
+    readFile (projectDir + "/" + moduleName + ".fs")
+
+  let parseWithLogging moduleName tokens =
+    printfn "\n-------------\nParsing %s...\n--------------" moduleName
+    let ast, errors = parse tokens
+    go1 0 errors |> ignore
+    printfn "%A" ast
+    ast, errors
+
+  parseProjectModules readModuleFile parseWithLogging projectName (nameCtxEmpty ()) |> ignore
+  0
+
 let cliCompile readFile verbosity projectDir =
   let output, success = build readFile verbosity projectDir
   let exitCode = if success then 0 else 1
@@ -164,6 +194,8 @@ let cliCompile readFile verbosity projectDir =
 
 let cli readFile args =
   match args with
+  | [ "parse"; projectDir ] -> cliParse readFile projectDir
+
   | [ "-v"; projectDir ] -> cliCompile readFile Verbose projectDir
 
   | [ "-q"; projectDir ] -> cliCompile readFile Quiet projectDir

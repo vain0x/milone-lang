@@ -98,14 +98,14 @@ let spliceExpr firstExpr secondExpr =
 
   go firstExpr
 
-let parseProjectModules readModuleFile projectName nameCtx =
+let parseProjectModules readModuleFile parse projectName nameCtx =
   let rec go (moduleAcc, moduleMap, nameCtx, errorAcc) moduleName =
     if moduleMap |> mapContainsKey moduleName then
       moduleAcc, moduleMap, nameCtx, errorAcc
     else
       let source = readModuleFile moduleName
       let tokens = tokenize source
-      let moduleAst, errors = parse tokens
+      let moduleAst, errors = parse moduleName tokens
       let moduleHir, nameCtx = astToHir (moduleAst, nameCtx)
       let dependencies = findOpenModules projectName moduleHir
       let moduleMap = moduleMap |> mapAdd moduleName moduleHir
