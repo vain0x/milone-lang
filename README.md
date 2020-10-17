@@ -136,7 +136,7 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 
 ### Dev: Prerequisites
 
-- Install .NET Core SDK [2.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/2.1)
+- Install .NET Core SDK [3.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 - Install [F#](http://ionide.io/#requirements) 4.1 tools
 
 ### Dev: Testing
