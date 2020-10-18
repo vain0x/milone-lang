@@ -46,9 +46,6 @@ type ColumnIndex = int
 /// Position in a file.
 type Pos = RowIndex * ColumnIndex
 
-/// Location.
-type Loc = RowIndex * ColumnIndex
-
 /// Words and punctuations in source code.
 [<RequireQualifiedAccess>]
 type Token =
@@ -272,6 +269,12 @@ type AExpr =
 // -----------------------------------------------
 // Intermediate representation types
 // -----------------------------------------------
+
+/// Something to identify documents (source files).
+type DocId = string
+
+/// Location.
+type Loc = DocId * RowIndex * ColumnIndex
 
 /// Serial number of types.
 type TySerial = Serial
