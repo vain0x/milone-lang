@@ -52,100 +52,100 @@ let opToPrim op =
   | Op.Pipe -> failwithf "NEVER: %A" op
 
 /// `[x; y; ..]`. Desugar to a chain of (::).
-let desugarListLitPat pats loc =
+let desugarListLitPat pats pos =
   assert (pats |> listIsEmpty |> not)
 
   let rec go pats =
     match pats with
-    | [] -> APat.ListLit([], loc)
+    | [] -> APat.ListLit([], pos)
 
     | head :: tail ->
         let tail = go tail
-        APat.Cons(head, tail, loc)
+        APat.Cons(head, tail, pos)
 
   go pats
 
 /// `[x; y; ..]` ==> `x :: y :: .. :: []`
-let desugarListLitExpr items loc =
+let desugarListLitExpr items pos =
   assert (items |> listIsEmpty |> not)
 
   let rec go items =
     match items with
-    | [] -> AExpr.ListLit([], loc)
+    | [] -> AExpr.ListLit([], pos)
 
     | head :: tail ->
         let tail = go tail
-        AExpr.Bin(Op.Cons, head, tail, loc)
+        AExpr.Bin(Op.Cons, head, tail, pos)
 
   go items
 
 /// Desugar `if` to `match`.
 /// `if cond then body else alt` ==>
 /// `match cond with | true -> body | false -> alt`.
-let desugarIf cond body alt loc =
+let desugarIf cond body alt pos =
   let alt =
     match alt with
-    | AExpr.Missing _ -> axUnit loc
+    | AExpr.Missing _ -> axUnit pos
     | _ -> alt
 
   let arms =
-    [ AArm(apTrue loc, axTrue loc, body, loc)
-      AArm(apFalse loc, axTrue loc, alt, loc) ]
+    [ AArm(apTrue pos, axTrue pos, body, pos)
+      AArm(apFalse pos, axTrue pos, alt, pos) ]
 
-  AExpr.Match(cond, arms, loc)
+  AExpr.Match(cond, arms, pos)
 
 /// Desugar to let expression.
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
-let desugarFun pats body loc =
+let desugarFun pats body pos =
   let ident = "fun"
-  let pat = APat.Fun(ident, pats, loc)
-  let next = AExpr.Ident(ident, loc)
-  AExpr.Let(pat, body, next, loc)
+  let pat = APat.Fun(ident, pats, pos)
+  let next = AExpr.Ident(ident, pos)
+  AExpr.Let(pat, body, next, pos)
 
 /// Desugar `-x` to `0 - x`.
-let desugarUniNeg arg loc =
-  let zero = AExpr.Lit(Lit.Int 0, loc)
-  AExpr.Bin(Op.Sub, zero, arg, loc)
+let desugarUniNeg arg pos =
+  let zero = AExpr.Lit(Lit.Int 0, pos)
+  AExpr.Bin(Op.Sub, zero, arg, pos)
 
 /// `l <> r` ==> `not (l = r)`
-let desugarBinNe l r loc =
-  let eqExpr = AExpr.Bin(Op.Eq, l, r, loc)
-  axNot eqExpr loc
+let desugarBinNe l r pos =
+  let eqExpr = AExpr.Bin(Op.Eq, l, r, pos)
+  axNot eqExpr pos
 
 /// `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.
-let desugarBinLe l r loc =
-  let ltExpr = AExpr.Bin(Op.Lt, r, l, loc)
-  axNot ltExpr loc
+let desugarBinLe l r pos =
+  let ltExpr = AExpr.Bin(Op.Lt, r, l, pos)
+  axNot ltExpr pos
 
 /// `l > r` ==> `r < l`
 /// NOTE: Evaluation order does change.
-let desugarBinGt l r loc = AExpr.Bin(Op.Lt, r, l, loc)
+let desugarBinGt l r pos = AExpr.Bin(Op.Lt, r, l, pos)
 
 /// `l >= r` ==> `not (l < r)`
-let desugarBinGe l r loc =
-  let ltExpr = AExpr.Bin(Op.Lt, l, r, loc)
-  axNot ltExpr loc
+let desugarBinGe l r pos =
+  let ltExpr = AExpr.Bin(Op.Lt, l, r, pos)
+  axNot ltExpr pos
 
 /// `l && r` ==> `if l then r else false`
-let desugarBinAnd l r loc = desugarIf l r (axFalse loc) loc
+let desugarBinAnd l r pos = desugarIf l r (axFalse pos) pos
 
 /// `l || r` ==> `if l then true else r`
-let desugarBinOr l r loc = desugarIf l (axTrue loc) r loc
+let desugarBinOr l r pos = desugarIf l (axTrue pos) r pos
 
 /// `x |> f` ==> `f x`
 /// NOTE: Evaluation order does change.
-let desugarBinPipe l r loc = AExpr.Bin(Op.App, r, l, loc)
+let desugarBinPipe l r pos = AExpr.Bin(Op.App, r, l, pos)
 
 /// `s.[l .. r]` ==> `String.getSlice l r x`
 /// NOTE: Evaluation order does change.
-let tryDesugarIndexRange expr loc =
+let tryDesugarIndexRange expr pos =
   match expr with
   | AExpr.Index (s, AExpr.Range ([ l; r ], _), _) ->
       let getSlice =
-        AExpr.Nav(AExpr.Ident("String", loc), "getSlice", loc)
+        AExpr.Nav(AExpr.Ident("String", pos), "getSlice", pos)
 
-      true, axApp3 getSlice l r s loc
+      true, axApp3 getSlice l r s pos
 
   | _ -> false, expr
 
@@ -162,15 +162,15 @@ let tryDesugarIndexRange expr loc =
 /// Let to let-val:
 /// `let pat = body` ==>
 ///   `let-val pat = body`
-let desugarLet pat body next loc =
+let desugarLet pat body next pos =
   match pat with
   | APat.Anno (pat, annoTy, annoLoc) ->
       let body = AExpr.Anno(body, annoTy, annoLoc)
-      desugarLet pat body next loc
+      desugarLet pat body next pos
 
-  | APat.Fun (ident, args, _) -> ALet.LetFun(ident, args, body, next, loc)
+  | APat.Fun (ident, args, _) -> ALet.LetFun(ident, args, body, next, pos)
 
-  | _ -> ALet.LetVal(pat, body, next, loc)
+  | _ -> ALet.LetVal(pat, body, next, pos)
 
 let astToHirTy (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
