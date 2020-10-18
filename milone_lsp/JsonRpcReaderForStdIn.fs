@@ -16,11 +16,11 @@ let jsonRpcReaderForStdIn () =
       let len =
         reader.BaseStream.Read(buf, bufLen, buf.Length - bufLen)
 
-      // printfn "read: %d (%d -> %d)" len bufLen (bufLen + len)
+      // eprintfn "read: %d (%d -> %d)" len bufLen (bufLen + len)
       if len <> 0 then bufLen <- bufLen + len else closed <- true
 
   let shrink len =
-    // printfn "consume: %d (%d -> %d)" len bufLen (bufLen - len)
+    // eprintfn "consume: %d (%d -> %d)" len bufLen (bufLen - len)
     System.Array.Copy(buf, len, buf, 0, bufLen - len)
     bufLen <- bufLen - len
 

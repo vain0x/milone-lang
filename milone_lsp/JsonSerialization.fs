@@ -43,24 +43,26 @@ type private JsonValueFormatter() =
           reader.ReadNext()
           JNull
 
-      | JsonToken.String ->
-          formatterResolver.GetFormatter<string>().Deserialize(&reader, formatterResolver)
-          |> JString
+      | JsonToken.String -> reader.ReadString() |> JString
 
-      | JsonToken.Number ->
-          formatterResolver.GetFormatter<float>().Deserialize(&reader, formatterResolver)
-          |> JNumber
+      | JsonToken.Number -> reader.ReadDouble() |> JNumber
 
-      | JsonToken.False
       | JsonToken.True ->
-          formatterResolver.GetFormatter<bool>().Deserialize(&reader, formatterResolver)
-          |> JBoolean
+          reader.ReadNext()
+          JBoolean true
+
+      | JsonToken.False ->
+          reader.ReadNext()
+          JBoolean false
 
       | JsonToken.BeginArray ->
           let mutable array = ResizeArray()
-          let mutable running = true
 
+          // eprintfn "JsonValue de: begin array"
           reader.ReadNext() // Skip '['.
+
+          let mutable running =
+            reader.GetCurrentJsonToken() <> JsonToken.EndArray
 
           while running do
             let item =
@@ -69,20 +71,25 @@ type private JsonValueFormatter() =
             array.Add(item)
 
             if reader.ReadIsValueSeparator() then
+              // eprintfn "JsonValue de: array continue"
               () // Skip ',' and continue.
             else
               running <- false // Break.
 
+          // eprintfn "JsonValue de: end array"
           reader.ReadIsEndArrayWithVerify() // Skip ']'.
 
           JArray(List.ofSeq array)
 
       | JsonToken.BeginObject ->
           let mutable array = ResizeArray()
-          let mutable running = true
 
           // eprintfn "JsonValue de: begin object"
           reader.ReadNext() // Skip '{'.
+
+          let mutable running =
+            reader.GetCurrentJsonToken()
+            <> JsonToken.EndObject
 
           while running do
             let key = reader.ReadString()
@@ -98,7 +105,7 @@ type private JsonValueFormatter() =
             array.Add((key, value))
 
             if reader.ReadIsValueSeparator() then
-              // eprintfn "JsonValue de: ',', continue"
+              // eprintfn "JsonValue de: object continue"
               () // Skip ',' and continue.
             else
               running <- false // Break.

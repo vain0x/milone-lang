@@ -30,7 +30,7 @@ const getMiloneHome = (logger: Logger): string | null => {
   return path.join(homedir(), ".milone")
 }
 
-const getMiloneLsp = (home: string, logger: Logger): string | null => {
+const getLspCommand = (home: string, logger: Logger): string | null => {
   const config = workspace.getConfiguration("milone-lang")
 
   const enabled = config.get<boolean>("lsp-enabled", true)
@@ -39,18 +39,18 @@ const getMiloneLsp = (home: string, logger: Logger): string | null => {
     return null
   }
 
-  const lspBin = config.get("lsp-bin") as string | undefined
-  if (lspBin) {
-    return lspBin
+  const command = config.get("lsp-command") as string | undefined
+  if (command) {
+    return command
   }
-  logger.info("Config 'milone-lang.lsp-bin' is unset or empty.")
+  logger.info("Config 'milone-lang.lsp-command' is unset or empty.")
 
-  if (process.env.MILONE_LSP_BIN) {
-    return process.env.MILONE_LSP_BIN
+  if (process.env.MILONE_LSP_COMMAND) {
+    return process.env.MILONE_LSP_COMMAND
   }
-  logger.info("Environment variable 'MILONE_LSP_BIN' is unset or empty.")
+  logger.info("Environment variable 'MILONE_LSP_COMMAND' is unset or empty.")
 
-  return path.join(home, "bin/milone_lsp")
+  return path.join(home, "bin/MiloneLsp")
 }
 
 const startLspSession = (_context: ExtensionContext, logger: Logger) => {
@@ -60,17 +60,14 @@ const startLspSession = (_context: ExtensionContext, logger: Logger) => {
   }
   logger.info("miloneHome =", miloneHome)
 
-  const miloneLsp = getMiloneLsp(miloneHome, logger)
-  if (miloneLsp == null) {
+  const lspCommand = getLspCommand(miloneHome, logger)
+  if (lspCommand == null) {
     return
   }
-  logger.info("miloneLsp =", miloneLsp)
+  logger.info("lspCommand =", lspCommand)
 
   const serverOptions: ServerOptions = {
-    command: miloneLsp,
-    args: [
-      "start",
-    ],
+    command: lspCommand,
   }
 
   const clientOptions: LanguageClientOptions = {
@@ -86,7 +83,7 @@ const startLspSession = (_context: ExtensionContext, logger: Logger) => {
 
   // Start LSP client, which spawns server instance.
   client = new LanguageClient(
-    "milone",
+    "milone-lang",
     "Milone Language",
     serverOptions,
     clientOptions,

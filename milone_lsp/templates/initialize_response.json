@@ -7,11 +7,11 @@
                 "openClose": true,
                 "change": 1
             },
-            "definitionProvider": true,
-            "documentHighlightProvider": true,
-            "hoverProvider": true,
-            "referencesProvider": true,
-            "renameProvider": true
+            "definitionProvider": false,
+            "documentHighlightProvider": false,
+            "hoverProvider": false,
+            "referencesProvider": false,
+            "renameProvider": false
         },
         "serverInfo": {
             "name": "milone_lsp",

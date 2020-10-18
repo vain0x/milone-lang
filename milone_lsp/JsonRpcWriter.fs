@@ -5,26 +5,29 @@ open MiloneLsp.JsonSerialization
 
 /// Writes a string (that represents a body of single message)
 /// to STDOUT in the format of JSON-RPC.
-let private jsonRpcWriteString: string ->unit =
+let private jsonRpcWriteString: string -> unit =
   let buf = System.Console.OpenStandardOutput()
   let writer = new System.IO.BinaryWriter(buf)
 
   fun msg ->
+    eprintfn "write %s" msg
     let bytes = System.Text.Encoding.UTF8.GetBytes(msg)
 
-    writer.Write(sprintf "Content-Length: %d\n\n" bytes.Length)
+    writer.Write(System.Text.Encoding.UTF8.GetBytes(sprintf "Content-Length: %d\r\n\r\n" bytes.Length))
     writer.Write(bytes)
     writer.Flush()
 
 /// Writes a JSON-RPC message using template file.
 let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list): unit =
-  eprintfn "template '%s' values=%A" name values
+  // eprintfn "template '%s' values=%A" name values
 
   let templateText =
-    System.IO.File.ReadAllText
-      (System.IO.Path.Combine(System.Environment.CurrentDirectory, "templates", sprintf "%s.json" name))
+    let dir =
+      System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
 
-  eprintfn "    '%s'" templateText
+    System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "..", "..", "..", "templates", sprintf "%s.json" name))
+
+  // eprintfn "    '%s'" templateText
 
   let text =
     // Replace plceholders.
@@ -34,8 +37,8 @@ let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list):
       |> ignore
     let text = buf.ToString()
 
-    eprintfn "    -> '%s'" text
-    eprintfn "    -> %A" (jsonDeserializeString text)
+    // eprintfn "    -> '%s'" text
+    // eprintfn "    -> %A" (jsonDeserializeString text)
 
     // Format.
     jsonDisplay (jsonDeserializeString text) + "\n"

@@ -34,11 +34,11 @@ let private readHeader (host: JsonRpcReaderHost) (state: State): ExitCode =
       | State None -> failwith "ERROR: Body started before content length specified"
 
       | State (Some len) ->
-          eprintfn "begin body (len = %d)" len
+          // eprintfn "begin body (len = %d)" len
           readBody host len
 
   | Some line ->
-      eprintfn "header: %s" line
+      // eprintfn "header: %s" line
 
       let line = line.Trim()
       if line.StartsWith("Content-Length:") then
@@ -46,7 +46,7 @@ let private readHeader (host: JsonRpcReaderHost) (state: State): ExitCode =
           let n = "Content-Length:".Length
           line.[n..].Trim() |> int
 
-        eprintfn "received Content-Length: %d" len
+        // eprintfn "received Content-Length: %d" len
         let state = State(Some len)
         readHeader host state
 
@@ -59,7 +59,7 @@ let readBody host (len: int): ExitCode =
   | None -> failwith "ERROR: unexpected EOF in the middle of body"
 
   | Some body ->
-      eprintfn "body.length = %d" body.Length
+      // eprintfn "body.length = %d" body.Length
 
       let jsonValue = jsonDeserializeBytes body
 

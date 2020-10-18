@@ -35,24 +35,54 @@ let expectNumber jsonValue: float =
   | _ -> failwithf "Expected a number but: %s" (jsonDisplay jsonValue)
 
 let lspServer () =
-  let mutable exitCode = 1
   let freshMsgId () = freshMsgId () |> jInt
 
+  let mutable exitCode = 1
+
   fun (jsonValue: JsonValue) ->
-    let getMsgId () = jsonValue |> entry "id" |> expectNumber
+    eprintfn "received %A" jsonValue
+    let getMsgId () = jsonValue |> entry "id"
 
     match jsonValue |> entry "method" |> expectString with
     | "initialize" ->
-        jsonRpcWriteWithTemplate "initialize_response" [ "MSG_ID", freshMsgId () ]
+        jsonRpcWriteWithTemplate "initialize_response" [ "MSG_ID", getMsgId () ]
         None
 
     | "shutdown" ->
         exitCode <- 0
-        jsonRpcWriteWithTemplate "shutdown_response" [ "MSG_ID", freshMsgId () ]
+        jsonRpcWriteWithTemplate "shutdown_response" [ "MSG_ID", getMsgId () ]
         None
 
     | "exit" -> Some exitCode
 
-    | _ ->
-        eprintfn "received %A" jsonValue
+    | "textDocument/didOpen" ->
+        let uri =
+          jsonValue
+          |> entry "params"
+          |> entry "textDocument"
+          |> entry "uri"
+
+        let pos row column =
+          [ "line", jInt row
+            "character", jInt column ]
+          |> Map.ofList
+          |> JObject
+
+        let range start endPos =
+          [ "start", start; "end", endPos ]
+          |> Map.ofList
+          |> JObject
+
+        let paramsValue =
+          [ "uri", uri
+            "diagnostics",
+            JArray [ JObject
+                       (Map.ofList [ "range", range (pos 0 0) (pos 0 2)
+                                     "message", JString "hi!" ]) ] ]
+          |> Map.ofList
+          |> JObject
+
+        jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
         None
+
+    | _ -> None
