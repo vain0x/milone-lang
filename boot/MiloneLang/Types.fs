@@ -43,6 +43,9 @@ type RowIndex = int
 /// 0-indexed.
 type ColumnIndex = int
 
+/// Position in a file.
+type Pos = RowIndex * ColumnIndex
+
 /// Location.
 type Loc = RowIndex * ColumnIndex
 

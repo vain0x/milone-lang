@@ -749,6 +749,34 @@ let strEscape (str: string) =
   if str |> strNeedsEscaping |> not then str else go [] 0 |> listRev |> strConcat
 
 // -----------------------------------------------
+// Position
+// -----------------------------------------------
+
+/// No position information. Should be fixed.
+let noPos = -1, -1
+
+let posX ((_, x): Pos) = x
+
+let posY ((y, _): Pos) = y
+
+let posIsSameRow first second = posY first = posY second
+
+let posIsSameColumn first second = posX first = posX second
+
+/// Gets if `secondPos` is inside of the block of `firstPos`.
+let posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX secondPos
+
+let posAddX dx ((y, x): Pos) = y, x + dx
+
+let posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
+  intMax firstY secondY, intMax firstX secondX
+
+let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
+
+let posCmp (firstY, firstX) (secondY, secondX) =
+  if firstY <> secondY then intCmp firstY secondY else intCmp firstX secondX
+
+// -----------------------------------------------
 // Location
 // -----------------------------------------------
 
