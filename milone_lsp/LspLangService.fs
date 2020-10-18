@@ -24,9 +24,9 @@ let dirIsExcluded (dir: string) =
 // Document store
 // ---------------------------------------------
 
-type TokenizeResult = (Token * Loc) list
+type TokenizeResult = (Token * Pos) list
 
-type ParseResult = AExpr * (string * Loc) list
+type ParseResult = AExpr * (string * Pos) list
 
 type DocData =
   { Uri: string
@@ -105,7 +105,7 @@ let parseWithCaching (docData: DocData): ParseResult =
       docData.Ok <- docData.Ok && ok
       result
 
-let validateDoc (uri: string): (string * Loc) list =
+let validateDoc (uri: string): (string * Pos) list =
   match findDoc uri with
   | Some docData ->
       let _, errors = parseWithCaching docData
@@ -118,12 +118,14 @@ type ProjectInfo =
     ProjectName: string
     EntryFile: string }
 
-let validateWorkspace (rootUriOpt: string option): (string * string * Loc) list =
+// (uri, msg, pos) list
+let validateWorkspace (rootUriOpt: string option): (string * string * Pos) list =
   match rootUriOpt with
   | None -> []
   | Some rootUri ->
       try
         let projects: ResizeArray<ProjectInfo> = ResizeArray()
+        let workspaceErrors = ResizeArray()
 
         let rootDir = System.Uri(rootUri).LocalPath
         eprintfn "rootDir = '%s'" rootDir
@@ -163,20 +165,45 @@ let validateWorkspace (rootUriOpt: string option): (string * string * Loc) list 
 
         // Process each project.
         for project in projects do
-          let { ProjectDir = projectDir; ProjectName = projectName; EntryFile = entryFile } = project
+          let { ProjectDir = projectDir; ProjectName = projectName } = project
+
+          let modulePaths = System.Collections.Generic.Dictionary()
+          modulePaths.Add(projectName, project.EntryFile)
+
+          let toFilePath moduleName ext =
+            System.IO.Path.Combine(projectDir, moduleName + ext)
+
+          let toUri moduleName ext = "file://" + toFilePath moduleName ext
+
+          // Get contents of module from document in editor or file, if any.
+          let tryReadModule moduleName ext =
+            match docs.TryGetValue(toUri moduleName ext) with
+            | true, docData -> Ok docData.Text
+
+            | false, _ ->
+                match tryReadFile (toFilePath moduleName ext) with
+                | Ok it -> Ok it
+                | Error error -> Error error
 
           // Bundle.
           let expr, nameCtx, errorListList =
             let readModuleFile moduleName =
               eprintfn "readModuleFile '%s'" moduleName
-              match tryReadFile (System.IO.Path.Combine(projectDir, moduleName + ".milone")) with
-              | Ok it -> it
-              | Error _ ->
-                  match tryReadFile (System.IO.Path.Combine(projectDir, moduleName + ".fs")) with
-                  | Ok it -> it
-                  | Error _ ->
-                      eprintfn "Module '%s' is missing in '%s'." moduleName projectDir
-                      ""
+
+              let contents, ext =
+                match tryReadModule moduleName ".milone" with
+                | Ok it -> it, ".milone"
+                | Error _ ->
+                    match tryReadModule moduleName ".fs" with
+                    | Ok it -> it, ".fs"
+                    | Error _ ->
+                        eprintfn "Module '%s' is missing in '%s'." moduleName projectDir
+                        "", ".milone"
+
+              if modulePaths.ContainsKey(moduleName) |> not
+              then modulePaths.Add(moduleName, toFilePath moduleName ext)
+
+              contents
 
             let parseModule (moduleName: string) tokens =
               eprintfn "parse: '%s'" moduleName
@@ -198,10 +225,26 @@ let validateWorkspace (rootUriOpt: string option): (string * string * Loc) list 
           let errors =
             tyCtx
             |> MiloneLang.Records.tyCtxGetLogs
-            |> List.map (fun (log, loc) -> MiloneLang.Helpers.logToString loc log, loc)
+            |> List.map (fun (log, loc) ->
+                 let moduleName, row, column = loc
 
-          eprintfn "validateWorkspace: errors = %A" errors
-        []
+                 let uri =
+                   match modulePaths.TryGetValue(toUri moduleName ".milone") with
+                   | true, it -> it
+                   | false, _ ->
+                       match modulePaths.TryGetValue(toUri moduleName ".fs") with
+                       | true, it -> it
+                       | false, _ -> toUri moduleName ".milone"
+
+                 let pos = row, column
+
+                 let msg = MiloneLang.Helpers.logToString loc log
+                 uri, msg, pos)
+
+          workspaceErrors.AddRange(errors)
+
+        eprintfn "validateWorkspace: errors = %A" workspaceErrors
+        List.ofSeq workspaceErrors
       with err ->
         eprintfn "validateWorkspace: exn %A" err
         []

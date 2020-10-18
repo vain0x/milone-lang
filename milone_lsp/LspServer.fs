@@ -103,8 +103,8 @@ let lspServer (): JsonValue -> int option =
 
     for uri, errors in docErrors do
       let errors =
-        [ for _uri, msg, loc in errors do
-            let row, column = loc
+        [ for _, msg, pos in errors do
+            let row, column = pos
             yield msg, row, column, row, column ]
 
       doPublishDiagnostics uri errors
