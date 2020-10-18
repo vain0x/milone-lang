@@ -66,49 +66,29 @@ let jToNumber jsonValue: float =
 
 let jToInt jsonValue: int = jsonValue |> jToNumber |> int
 
-type DocData =
-  { Uri: string
-    Version: int
-    Text: string }
-
 let lspServer (): JsonValue -> int option =
   let freshMsgId () = freshMsgId () |> jOfInt
 
   let mutable exitCode = 1
 
-  let docs =
-    System.Collections.Generic.Dictionary<string, DocData>()
+  let validateDoc (uri: string): unit =
+    let errors = LspLangService.validateDoc uri
 
-  let findDoc (uri: string): DocData option =
-    match docs.TryGetValue(uri) with
-    | true, docData -> Some docData
-    | false, _ -> None
+    let diagnostics =
+      errors
+      |> List.map (fun (msg, loc) ->
+           let row, column = loc
+           let start = jOfPos row column
 
-  let openDoc (uri: string) (version: int) (text: string) =
-    let docData: DocData =
-      { Uri = uri
-        Version = version
-        Text = text }
+           jOfObj [ "range", jOfRange start start
+                    "message", JString msg ])
+      |> JArray
 
-    eprintfn "INFO: Document opened uri:'%s' v:%d len:%d" uri version text.Length
-    docs.Add(uri, docData)
+    let paramsValue =
+      jOfObj [ "uri", JString uri
+               "diagnostics", diagnostics ]
 
-  let changeDoc (uri: string) (version: int) (text: string): unit =
-    match findDoc uri with
-    | Some docData ->
-        let docData =
-          { docData with
-              Version = version
-              Text = text }
-
-        eprintfn "INFO: Document changed uri:'%s' v:%d len:%d" uri version text.Length
-        docs.[uri] <- docData
-
-    | None -> openDoc uri version text
-
-  let closeDoc (uri: string): unit =
-    eprintfn "INFO: Document closed uri:'%s'" uri
-    docs.Remove(uri) |> ignore
+    jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
 
   fun jsonValue ->
     eprintfn "received %A" jsonValue
@@ -136,18 +116,8 @@ let lspServer (): JsonValue -> int option =
 
           jToString uri, jToInt version, jToString text
 
-        openDoc uri version text
-
-        // let paramsValue =
-        //   [ "uri", uri
-        //     "diagnostics",
-        //     JArray [ JObject
-        //                (Map.ofList [ "range", range (pos 0 0) (pos 0 2)
-        //                              "message", JString "hi!" ]) ] ]
-        //   |> Map.ofList
-        //   |> JObject
-
-        // jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
+        LspLangService.openDoc uri version text
+        validateDoc uri
         None
 
     | "textDocument/didChange" ->
@@ -166,7 +136,8 @@ let lspServer (): JsonValue -> int option =
           |> jFind "text"
           |> jToString
 
-        changeDoc uri version text
+        LspLangService.changeDoc uri version text
+        validateDoc uri
         None
 
     | "textDocument/didClose" ->
@@ -175,7 +146,7 @@ let lspServer (): JsonValue -> int option =
           |> jFind3 "params" "textDocument" "uri"
           |> jToString
 
-        closeDoc uri
+        LspLangService.closeDoc uri
         None
 
     | _ -> None
