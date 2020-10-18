@@ -165,8 +165,8 @@ let cliParse readFile (projectDir: string) =
     match errors with
     | [] -> code
 
-    | (msg, loc) :: errors ->
-        printfn "ERROR: %s %s" (locToString loc) msg
+    | (msg, pos) :: errors ->
+        printfn "ERROR: %s %s" (posToString pos) msg
         go1 1 errors
 
   let projectDir = projectDir |> pathStrTrimEndPathSep
