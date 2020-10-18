@@ -605,7 +605,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       let args, ctx = genExprList ctx args
       // Embed the source location information.
       let args =
-        let y, x = loc
+        let _, y, x = loc
         listAppend args [ CExpr.Int y; CExpr.Int x ]
 
       let assertCall = CExpr.Call(callee, args)
@@ -899,7 +899,7 @@ let genLogs (ctx: CirCtx) =
     match logs with
     | [] -> ctx
     | (log, loc) :: logs ->
-        let y, _ = loc
+        let _, y, _ = loc
         let msg = log |> logToString loc
 
         let ctx =

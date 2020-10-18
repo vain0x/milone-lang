@@ -749,31 +749,46 @@ let strEscape (str: string) =
   if str |> strNeedsEscaping |> not then str else go [] 0 |> listRev |> strConcat
 
 // -----------------------------------------------
+// Position
+// -----------------------------------------------
+
+/// No position information. Should be fixed.
+let noPos = -1, -1
+
+let posX ((_, x): Pos) = x
+
+let posY ((y, _): Pos) = y
+
+let posIsSameRow first second = posY first = posY second
+
+let posIsSameColumn first second = posX first = posX second
+
+/// Gets if `secondPos` is inside of the block of `firstPos`.
+let posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX secondPos
+
+let posAddX dx ((y, x): Pos) = y, x + dx
+
+let posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
+  intMax firstY secondY, intMax firstX secondX
+
+let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
+
+let posCmp (firstY, firstX) (secondY, secondX) =
+  if firstY <> secondY then intCmp firstY secondY else intCmp firstX secondX
+
+// -----------------------------------------------
 // Location
 // -----------------------------------------------
 
 /// No location information. Should be fixed.
-let noLoc = -1, -1
+let noLoc = "<noLoc>", -1, -1
 
-let locX ((_, x): Loc) = x
+let locToString ((docId, y, x): Loc) = docId + ":" + string (y + 1) + ":" + string (x + 1)
 
-let locY ((y, _): Loc) = y
+let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
+  let c = strCmp firstDoc secondDoc
+  if c <> 0 then c else
 
-let locIsSameRow first second = locY first = locY second
-
-let locIsSameColumn first second = locX first = locX second
-
-/// Gets if `secondLoc` is inside of the block of `firstLoc`.
-let locInside (firstLoc: Loc) (secondLoc: Loc) = locX firstLoc <= locX secondLoc
-
-let locAddX dx ((y, x): Loc) = y, x + dx
-
-let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
-  intMax firstY secondY, intMax firstX secondX
-
-let locToString ((y, x): Loc) = string (y + 1) + ":" + string (x + 1)
-
-let locCmp (firstY, firstX) (secondY, secondX) =
   if firstY <> secondY then intCmp firstY secondY else intCmp firstX secondX
 
 // -----------------------------------------------
@@ -1040,7 +1055,7 @@ let tyAssocMap keyTy valueTy =
 
 let tyToHash ty =
   match ty with
-  | Ty.Error (y, x) -> intHash (1 + y + x)
+  | Ty.Error (docId, y, x) -> 1 |> hashCombine (strHash docId) |> hashCombine y |> hashCombine x
 
   | Ty.Meta (tySerial, _) -> intHash (2 + tySerial)
 

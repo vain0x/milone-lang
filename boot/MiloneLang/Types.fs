@@ -43,8 +43,8 @@ type RowIndex = int
 /// 0-indexed.
 type ColumnIndex = int
 
-/// Location.
-type Loc = RowIndex * ColumnIndex
+/// Position in a file.
+type Pos = RowIndex * ColumnIndex
 
 /// Words and punctuations in source code.
 [<RequireQualifiedAccess>]
@@ -179,50 +179,50 @@ type Op =
 /// Type expression in AST.
 [<RequireQualifiedAccess>]
 type ATy =
-  | Missing of Loc
-  | App of Ident * ATy list * Loc
-  | Suffix of ATy * Ident * Loc
+  | Missing of Pos
+  | App of Ident * ATy list * Pos
+  | Suffix of ATy * Ident * Pos
   /// Tuple type, e.g. `int * string`.
-  | Tuple of ATy list * Loc
+  | Tuple of ATy list * Pos
   /// Function type, e.g. `int -> string`.
-  | Fun of ATy * ATy * Loc
+  | Fun of ATy * ATy * Pos
 
 /// Pattern in AST.
 [<RequireQualifiedAccess>]
 type APat =
-  | Missing of Loc
-  | Lit of Lit * Loc
-  | Ident of Ident * Loc
-  | ListLit of APat list * Loc
-  | Nav of APat * Ident * Loc
+  | Missing of Pos
+  | Lit of Lit * Pos
+  | Ident of Ident * Pos
+  | ListLit of APat list * Pos
+  | Nav of APat * Ident * Pos
   /// Variant deconstruction. e.g. `Some x`.
-  | Call of APat * APat list * Loc
+  | Call of APat * APat list * Pos
   /// `::`
-  | Cons of APat * APat * Loc
-  | TupleLit of APat list * Loc
-  | As of APat * Ident * Loc
+  | Cons of APat * APat * Pos
+  | TupleLit of APat list * Pos
+  | As of APat * Ident * Pos
   /// Type annotation, e.g. `x: int`.
-  | Anno of APat * ATy * Loc
-  | Or of APat * APat * Loc
+  | Anno of APat * ATy * Pos
+  | Or of APat * APat * Pos
   /// Function declaration pattern, e.g. `f x y`.
   /// Syntactically distinct from the call pattern.
-  | Fun of Ident * APat list * Loc
+  | Fun of Ident * APat list * Pos
 
 /// Match arm node in AST.
 type AArm =
   /// (pattern, guard, body).
-  | AArm of APat * AExpr * AExpr * Loc
+  | AArm of APat * AExpr * AExpr * Pos
 
 /// Variant node in AST.
 type AVariant =
   /// (identifier, payload-type).
-  | AVariant of Ident * ATy option * Loc
+  | AVariant of Ident * ATy option * Pos
 
 /// Let expression in AST.
 [<RequireQualifiedAccess>]
 type ALet =
-  | LetVal of APat * AExpr * AExpr * Loc
-  | LetFun of Ident * args: APat list * AExpr * AExpr * Loc
+  | LetVal of APat * AExpr * AExpr * Pos
+  | LetFun of Ident * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
 [<RequireQualifiedAccess>]
@@ -233,42 +233,48 @@ type ATyDecl =
 /// Expression in AST.
 [<RequireQualifiedAccess>]
 type AExpr =
-  | Missing of Loc
-  | Lit of Lit * Loc
-  | Ident of Ident * Loc
+  | Missing of Pos
+  | Lit of Lit * Pos
+  | Ident of Ident * Pos
   /// List literal, e.g. `[]`, `[2; 3]`.
-  | ListLit of AExpr list * Loc
+  | ListLit of AExpr list * Pos
   /// condition, then-clause, else-clause.
-  | If of AExpr * AExpr * AExpr * Loc
-  | Match of AExpr * AArm list * Loc
-  | Fun of APat list * AExpr * Loc
+  | If of AExpr * AExpr * AExpr * Pos
+  | Match of AExpr * AArm list * Pos
+  | Fun of APat list * AExpr * Pos
   /// Navigation expression, e.g. `str.Length`.
-  | Nav of AExpr * Ident * Loc
-  | Index of AExpr * AExpr * Loc
+  | Nav of AExpr * Ident * Pos
+  | Index of AExpr * AExpr * Pos
   /// Unary operation, e.g. `-x`.
   /// Currently `-` is the only unary operation.
-  | Uni of UniOp * AExpr * Loc
+  | Uni of UniOp * AExpr * Pos
   /// Binary operation, e.g. `x + y`.
-  | Bin of Op * AExpr * AExpr * Loc
+  | Bin of Op * AExpr * AExpr * Pos
   /// Range syntax, e.g. `first..last`, `first .. step .. last`.
-  | Range of AExpr list * Loc
+  | Range of AExpr list * Pos
   /// Tuple literal, e.g. `()`, `2, "two"`.
-  | TupleLit of AExpr list * Loc
+  | TupleLit of AExpr list * Pos
   /// Type annotation.
-  | Anno of AExpr * ATy * Loc
+  | Anno of AExpr * ATy * Pos
   /// Semicolon-separated expressions.
-  | Semi of AExpr list * Loc
+  | Semi of AExpr list * Pos
   /// (pattern, initializer, next). Let-in expression.
-  | Let of APat * AExpr * AExpr * Loc
+  | Let of APat * AExpr * AExpr * Pos
   /// Type synonym definition, e.g. `type UserId = int`.
-  | TySynonym of Ident * ATy * Loc
+  | TySynonym of Ident * ATy * Pos
   /// Discriminated union type definition, e.g. `type Result = | Ok | Err of int`.
-  | TyUnion of Ident * AVariant list * Loc
-  | Open of Ident list * Loc
+  | TyUnion of Ident * AVariant list * Pos
+  | Open of Ident list * Pos
 
 // -----------------------------------------------
 // Intermediate representation types
 // -----------------------------------------------
+
+/// Something to identify documents (source files).
+type DocId = string
+
+/// Location.
+type Loc = DocId * RowIndex * ColumnIndex
 
 /// Serial number of types.
 type TySerial = Serial
