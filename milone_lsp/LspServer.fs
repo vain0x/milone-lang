@@ -70,17 +70,16 @@ let lspServer (): JsonValue -> int option =
   let freshMsgId () = freshMsgId () |> jOfInt
 
   let mutable exitCode = 1
+  let mutable rootUriOpt: string option = None
 
-  let validateDoc (uri: string): unit =
-    let errors = LspLangService.validateDoc uri
-
+  let doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
     let diagnostics =
       errors
-      |> List.map (fun (msg, loc) ->
-           let row, column = loc
-           let start = jOfPos row column
+      |> List.map (fun (msg, r1, c1, r2, c2) ->
+           let start = jOfPos r1 c1
+           let endPos = jOfPos r2 c2
 
-           jOfObj [ "range", jOfRange start start
+           jOfObj [ "range", jOfRange start endPos
                     "message", JString msg ])
       |> JArray
 
@@ -90,12 +89,41 @@ let lspServer (): JsonValue -> int option =
 
     jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
 
+  let validateDoc (uri: string): unit =
+    let errors =
+      LspLangService.validateDoc uri
+      |> List.map (fun (msg, (row, column)) -> msg, row, column, row, column)
+
+    doPublishDiagnostics uri errors
+
+  let validateWorkspace (): unit =
+    let docErrors =
+      LspLangService.validateWorkspace rootUriOpt
+      |> Seq.groupBy (fun (uri, _, _) -> uri)
+
+    for uri, errors in docErrors do
+      let errors =
+        [ for _uri, msg, loc in errors do
+            let row, column = loc
+            yield msg, row, column, row, column ]
+
+      doPublishDiagnostics uri errors
+
   fun jsonValue ->
     eprintfn "received %A" jsonValue
     let getMsgId () = jsonValue |> jFind "id"
 
     match jsonValue |> jFind "method" |> jToString with
     | "initialize" ->
+        rootUriOpt <-
+          try
+            jsonValue
+            |> jFind2 "params" "rootUri"
+            |> jToString
+            |> Some
+          with _ -> None
+        eprintfn "rootUriOpt = %A" rootUriOpt
+
         jsonRpcWriteWithTemplate "initialize_response" [ "MSG_ID", getMsgId () ]
         None
 
@@ -118,6 +146,7 @@ let lspServer (): JsonValue -> int option =
 
         LspLangService.openDoc uri version text
         validateDoc uri
+        validateWorkspace ()
         None
 
     | "textDocument/didChange" ->
@@ -138,6 +167,7 @@ let lspServer (): JsonValue -> int option =
 
         LspLangService.changeDoc uri version text
         validateDoc uri
+        validateWorkspace ()
         None
 
     | "textDocument/didClose" ->
