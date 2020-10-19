@@ -32,11 +32,11 @@ int main() {
     int call_ = f_(1);
     int call_1 = g_(1);
     int zero_ = (call_ - call_1);
-    struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
     struct IntList* xs_ = list_;
-    struct StringList* list_1 = (struct StringList*)malloc(sizeof(struct StringList));
+    struct StringList* list_1 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
     list_1->head = (struct String){.str = "a", .len = 1};
     list_1->tail = NULL;
     struct StringList* ys_ = list_1;

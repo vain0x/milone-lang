@@ -7,3 +7,5 @@ type AssocMap<'K, 'V> = (int * ('K * 'V) list) list * ('K -> int) * ('K -> 'K ->
 type AssocSet<'K> = AssocMap<'K, unit>
 
 let objToString (value: _) = string (value :> obj)
+
+let inRegion (f: unit -> int): int = f ()

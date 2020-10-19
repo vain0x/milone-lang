@@ -86,6 +86,8 @@ Not all of F# features are supported. Features for functional-style programming 
 
 See [the boot/tests/examples directory](./boot/tests/examples) for working codes.
 
+- [notes.md](notes.md): notes on future works.
+
 ## Internals
 
 See the comments in source files for details.

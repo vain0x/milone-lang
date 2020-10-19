@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -eu
+
+MILONE_INCLUDE="$PWD/runtime"
+DIR="$PWD/scripts/region_primitive_checks"
+
+./milone_netcore -q "$DIR" >"$DIR/region_primitive_checks.c"
+
+(
+    cd "$DIR"
+    gcc -std=c11 -I "$MILONE_INCLUDE" -g -fsanitize=leak region_primitive_checks.c
+    ./a.out
+)

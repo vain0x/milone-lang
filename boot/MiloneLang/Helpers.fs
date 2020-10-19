@@ -1272,6 +1272,8 @@ let primFromIdent ident =
 
   | "Some" -> HPrim.OptionSome |> Some
 
+  | "inRegion" -> HPrim.InRegion |> Some
+
   | "__nativeFun" -> HPrim.NativeFun("<native-fun>", -1) |> Some
 
   | _ -> None
@@ -1358,6 +1360,8 @@ let primToTySpec prim =
 
   | HPrim.StrGetSlice -> mono (tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr)))
 
+  | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
+
   | HPrim.Printfn
   | HPrim.NativeFun _ -> poly (meta 1) []
 
@@ -1374,7 +1378,8 @@ let primToArity ty prim =
   | HPrim.StrLength
   | HPrim.Char
   | HPrim.Int
-  | HPrim.String -> 1
+  | HPrim.String
+  | HPrim.InRegion -> 1
   | HPrim.Add
   | HPrim.Sub
   | HPrim.Mul

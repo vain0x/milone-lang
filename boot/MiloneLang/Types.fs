@@ -433,6 +433,7 @@ type HPrim =
   | Char
   | Int
   | String
+  | InRegion
   | NativeFun of Ident * Arity
 
 [<RequireQualifiedAccess>]

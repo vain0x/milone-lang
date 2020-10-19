@@ -17,7 +17,7 @@ struct IntList {
 
 int basicSomeCase_(int arg_) {
     int match_;
-    struct IntList* some_ = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* some_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     some_->head = 1;
     some_->tail = NULL;
     if ((!((!(some_))))) goto next_2;
