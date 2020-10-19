@@ -630,6 +630,24 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
 
   | _ -> failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
 
+let genExprCallPrimInRegion ctx serial arg ty _loc =
+  let arg, ctx = genExpr ctx arg
+
+  // Enter, call, leave. The result of call is set to the initialized variable.
+  let ctx =
+    cirCtxAddStmt ctx (CStmt.Expr(CExpr.Call(CExpr.Ref "milone_enter_region", [])))
+
+  let ctx =
+    // t <- f ()
+    let unitLit, ctx = genExprDefault ctx tyUnit
+    let result, ctx = genExprCallClosureCore ctx arg [unitLit]
+    genInitExprCore ctx serial (Some result) ty
+
+  let ctx =
+    cirCtxAddStmt ctx (CStmt.Expr(CExpr.Call(CExpr.Ref "milone_leave_region", [])))
+
+  ctx
+
 let genExprCallProc ctx callee args ty =
   match callee, args with
   | _ ->
@@ -637,12 +655,15 @@ let genExprCallProc ctx callee args ty =
       let args, ctx = genExprList ctx args
       CExpr.Call(callee, args), ctx
 
-let genExprCallClosure ctx callee args =
-  let callee, ctx = genExpr ctx callee
-  let args, ctx = genExprList ctx args
+let genExprCallClosureCore ctx callee args =
   let funPtr = CExpr.Nav(callee, "fun")
   let envArg = CExpr.Nav(callee, "env")
   CExpr.Call(funPtr, envArg :: args), ctx
+
+let genExprCallClosure ctx callee args =
+  let callee, ctx = genExpr ctx callee
+  let args, ctx = genExprList ctx args
+  genExprCallClosureCore ctx callee args
 
 let cirCtxAddLetStmt ctx ident expr cty storageModifier =
   match storageModifier with
@@ -793,6 +814,9 @@ let genStmtLetVal ctx serial init ty loc =
   | MInit.Expr expr ->
       let expr, ctx = genExpr ctx expr
       genInitExprCore ctx serial (Some expr) ty
+
+  | MInit.CallPrim (HPrim.InRegion, [ arg ], _) -> genExprCallPrimInRegion ctx serial arg ty loc
+
   | MInit.CallPrim (prim, args, calleeTy) ->
       let expr, ctx =
         genExprCallPrim ctx prim args calleeTy ty loc

@@ -9,6 +9,14 @@ struct String {
   int len;
 };
 
+void milone_enter_region(void) {
+  // TODO: impl
+}
+
+void milone_leave_region(void) {
+  // TODO: impl
+}
+
 void *milone_mem_alloc(int count, size_t size) {
   return calloc(count, size);
 }
