@@ -97,13 +97,9 @@ let lspServer (): JsonValue -> int option =
     doPublishDiagnostics uri errors
 
   let validateWorkspace (): unit =
-    let docErrors =
-      LspLangService.validateWorkspace rootUriOpt
-      |> Seq.groupBy (fun (uri, _, _) -> uri)
-
-    for uri, errors in docErrors do
+    for uri, errors in LspLangService.validateWorkspace rootUriOpt do
       let errors =
-        [ for _, msg, pos in errors do
+        [ for msg, pos in errors do
             let row, column = pos
             yield msg, row, column, row, column ]
 
@@ -179,4 +175,6 @@ let lspServer (): JsonValue -> int option =
         LspLangService.closeDoc uri
         None
 
-    | _ -> None
+    | methodName ->
+        eprintfn "unknown method '%s'" methodName
+        None
