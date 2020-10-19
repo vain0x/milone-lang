@@ -24,10 +24,10 @@ end_match_1:;
 }
 
 int main() {
-    void* box_ = (void*)malloc(sizeof(int));
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 2;
     int call_2 = printIntOrStr_(1, box_);
-    void* box_1 = (void*)malloc(sizeof(struct String));
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_1))) = (struct String){.str = "Fizz", .len = 4};
     int call_3 = printIntOrStr_(0, box_1);
     return 0;

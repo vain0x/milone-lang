@@ -104,22 +104,22 @@ end_match_9:;
 }
 
 int nestedCase_(int arg_1) {
-    struct IntList* list_2 = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_2 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_2->head = 2;
     list_2->tail = NULL;
-    struct IntList* list_1 = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_1->head = 1;
     list_1->tail = list_2;
-    struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 0;
     list_->tail = list_1;
     int call_5 = startsWithDoubleBits_(list_);
     milone_assert(call_5, 20, 2);
     int call_6 = 0;
-    struct IntList* list_4 = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_4 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_4->head = 2;
     list_4->tail = NULL;
-    struct IntList* list_3 = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_3 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_3->head = 1;
     list_3->tail = list_4;
     int call_7 = startsWithDoubleBits_(list_3);
@@ -168,7 +168,7 @@ int complexCase_(int arg_2) {
     struct IntIntTuple2 tuple_;
     tuple_.t0 = 0;
     tuple_.t1 = 1;
-    struct IntIntTuple2* payload_ = (struct IntIntTuple2*)malloc(sizeof(struct IntIntTuple2));
+    struct IntIntTuple2* payload_ = (struct IntIntTuple2*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
     (*(((struct IntIntTuple2*)payload_))) = tuple_;
     struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = payload_};
     int call_9 = performComplexMatching_(variant_);
@@ -177,7 +177,7 @@ int complexCase_(int arg_2) {
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 1;
     tuple_1.t1 = 2;
-    struct IntIntTuple2* payload_1 = (struct IntIntTuple2*)malloc(sizeof(struct IntIntTuple2));
+    struct IntIntTuple2* payload_1 = (struct IntIntTuple2*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
     (*(((struct IntIntTuple2*)payload_1))) = tuple_1;
     struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = payload_1};
     int call_11 = performComplexMatching_(variant_1);

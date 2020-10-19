@@ -70,7 +70,7 @@ int main() {
     int call_5 = between_(2, 3, call_4);
     milone_assert(call_5, 9, 2);
     int call_6 = 0;
-    struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
     int call_7 = len_(list_);

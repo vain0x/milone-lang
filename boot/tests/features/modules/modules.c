@@ -25,7 +25,7 @@ struct Val_ {
 
 int main() {
     int match_;
-    int* payload_ = (int*)malloc(sizeof(int));
+    int* payload_ = (int*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)payload_))) = 0;
     struct Val_ variant_ = (struct Val_){.tag = Int_, .Int_ = payload_};
     int x_ = (*(variant_.Int_));

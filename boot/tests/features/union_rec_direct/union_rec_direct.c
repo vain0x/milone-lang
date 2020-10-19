@@ -49,25 +49,25 @@ end_match_1:;
 }
 
 int main() {
-    int* payload_ = (int*)malloc(sizeof(int));
+    int* payload_ = (int*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)payload_))) = 11;
     struct Expr_ variant_ = (struct Expr_){.tag = Int_, .Int_ = payload_};
-    int* payload_1 = (int*)malloc(sizeof(int));
+    int* payload_1 = (int*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)payload_1))) = 22;
     struct Expr_ variant_1 = (struct Expr_){.tag = Int_, .Int_ = payload_1};
-    int* payload_2 = (int*)malloc(sizeof(int));
+    int* payload_2 = (int*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)payload_2))) = 9;
     struct Expr_ variant_2 = (struct Expr_){.tag = Int_, .Int_ = payload_2};
     struct Expr_Expr_Tuple2 tuple_1;
     tuple_1.t0 = variant_1;
     tuple_1.t1 = variant_2;
-    struct Expr_Expr_Tuple2* payload_3 = (struct Expr_Expr_Tuple2*)malloc(sizeof(struct Expr_Expr_Tuple2));
+    struct Expr_Expr_Tuple2* payload_3 = (struct Expr_Expr_Tuple2*)milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
     (*(((struct Expr_Expr_Tuple2*)payload_3))) = tuple_1;
     struct Expr_ variant_3 = (struct Expr_){.tag = Add_, .Add_ = payload_3};
     struct Expr_Expr_Tuple2 tuple_;
     tuple_.t0 = variant_;
     tuple_.t1 = variant_3;
-    struct Expr_Expr_Tuple2* payload_4 = (struct Expr_Expr_Tuple2*)malloc(sizeof(struct Expr_Expr_Tuple2));
+    struct Expr_Expr_Tuple2* payload_4 = (struct Expr_Expr_Tuple2*)milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
     (*(((struct Expr_Expr_Tuple2*)payload_4))) = tuple_;
     struct Expr_ variant_4 = (struct Expr_){.tag = Add_, .Add_ = payload_4};
     struct Expr_ expr_1 = variant_4;

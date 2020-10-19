@@ -118,13 +118,13 @@ struct IntIntStringTuple2ListTuple2ListIntIntFun1IntIntIntFun2Tuple3 mapNewSingl
     struct IntStringTuple2 tuple_2;
     tuple_2.t0 = key_;
     tuple_2.t1 = value_;
-    struct IntStringTuple2List* list_1 = (struct IntStringTuple2List*)malloc(sizeof(struct IntStringTuple2List));
+    struct IntStringTuple2List* list_1 = (struct IntStringTuple2List*)milone_mem_alloc(1, sizeof(struct IntStringTuple2List));
     list_1->head = tuple_2;
     list_1->tail = NULL;
     struct IntIntStringTuple2ListTuple2 tuple_1;
     tuple_1.t0 = app_1;
     tuple_1.t1 = list_1;
-    struct IntIntStringTuple2ListTuple2List* list_ = (struct IntIntStringTuple2ListTuple2List*)malloc(sizeof(struct IntIntStringTuple2ListTuple2List));
+    struct IntIntStringTuple2ListTuple2List* list_ = (struct IntIntStringTuple2ListTuple2List*)milone_mem_alloc(1, sizeof(struct IntIntStringTuple2ListTuple2List));
     list_->head = tuple_1;
     list_->tail = NULL;
     struct IntIntStringTuple2ListTuple2ListIntIntFun1IntIntIntFun2Tuple3 tuple_;
@@ -168,13 +168,13 @@ struct IntIntUnitTuple2ListTuple2ListIntIntFun1IntIntIntFun2Tuple3 mapNewSinglet
     struct IntUnitTuple2 tuple_5;
     tuple_5.t0 = key_;
     tuple_5.t1 = 0;
-    struct IntUnitTuple2List* list_3 = (struct IntUnitTuple2List*)malloc(sizeof(struct IntUnitTuple2List));
+    struct IntUnitTuple2List* list_3 = (struct IntUnitTuple2List*)milone_mem_alloc(1, sizeof(struct IntUnitTuple2List));
     list_3->head = tuple_5;
     list_3->tail = NULL;
     struct IntIntUnitTuple2ListTuple2 tuple_4;
     tuple_4.t0 = app_3;
     tuple_4.t1 = list_3;
-    struct IntIntUnitTuple2ListTuple2List* list_2 = (struct IntIntUnitTuple2ListTuple2List*)malloc(sizeof(struct IntIntUnitTuple2ListTuple2List));
+    struct IntIntUnitTuple2ListTuple2List* list_2 = (struct IntIntUnitTuple2ListTuple2List*)milone_mem_alloc(1, sizeof(struct IntIntUnitTuple2ListTuple2List));
     list_2->head = tuple_4;
     list_2->tail = NULL;
     struct IntIntUnitTuple2ListTuple2ListIntIntFun1IntIntIntFun2Tuple3 tuple_3;
@@ -205,21 +205,21 @@ int fun_3(void* env_3, int arg_4, int arg_5) {
 }
 
 int typeTest_(int arg_6) {
-    void* box_ = (void*)malloc(sizeof(int));
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
     void* env_4 = box_;
     struct IntIntFun1 fun_4 = (struct IntIntFun1){.fun = fun_, .env = env_4};
-    void* box_1 = (void*)malloc(sizeof(int));
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
     void* env_5 = box_1;
     struct IntIntIntFun2 fun_5 = (struct IntIntIntFun2){.fun = fun_1, .env = env_5};
     struct IntIntStringTuple2ListTuple2ListIntIntFun1IntIntIntFun2Tuple3 call_6 = mapNewSingleton_2(1, (struct String){.str = "a", .len = 1}, fun_4, fun_5);
     struct IntIntStringTuple2ListTuple2ListIntIntFun1IntIntIntFun2Tuple3 map_ = call_6;
-    void* box_2 = (void*)malloc(sizeof(int));
+    void* box_2 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_2))) = 0;
     void* env_6 = box_2;
     struct IntIntFun1 fun_6 = (struct IntIntFun1){.fun = fun_2, .env = env_6};
-    void* box_3 = (void*)malloc(sizeof(int));
+    void* box_3 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_3))) = 0;
     void* env_7 = box_3;
     struct IntIntIntFun2 fun_7 = (struct IntIntIntFun2){.fun = fun_3, .env = env_7};

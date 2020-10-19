@@ -44,7 +44,7 @@ int fun_3(void* env_, int arg_) {
 }
 
 int layoutTest_(int arg_4) {
-    void* box_ = (void*)malloc(sizeof(int));
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
     void* env_3 = box_;
     struct IntIntFun1 fun_6 = (struct IntIntFun1){.fun = fun_3, .env = env_3};
@@ -86,7 +86,7 @@ struct IntIntIntFun2 {
 };
 
 int main() {
-    void* box_1 = (void*)malloc(sizeof(int));
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
     void* env_4 = box_1;
     struct IntIntFun1 fun_7 = (struct IntIntFun1){.fun = fun_4, .env = env_4};
@@ -94,7 +94,7 @@ int main() {
     int x_3 = call_5;
     milone_assert((x_3 == 42), 14, 2);
     int call_6 = 0;
-    void* box_2 = (void*)malloc(sizeof(int));
+    void* box_2 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_2))) = 0;
     void* env_5 = box_2;
     struct IntIntIntFun2 fun_8 = (struct IntIntIntFun2){.fun = fun_5, .env = env_5};

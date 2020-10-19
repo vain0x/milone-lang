@@ -9,6 +9,10 @@ struct String {
   int len;
 };
 
+void *milone_mem_alloc(int count, size_t size) {
+  return calloc(count, size);
+}
+
 int int_cmp(int l, int r) {
   if (l == r) return 0;
   if (l < r) return -1;
@@ -31,7 +35,7 @@ struct String str_add(struct String left, struct String right) {
     return right.len == 0 ? left : right;
   }
   int len = left.len + right.len;
-  char* str = (char*)calloc(len + 1, sizeof(char));
+  char* str = (char*)milone_mem_alloc(len + 1, sizeof(char));
   memcpy(str, left.str, left.len);
   memcpy(str + left.len, right.str, right.len);
   return (struct String){.str = str, .len = len};
@@ -45,7 +49,7 @@ struct String str_get_slice(int l, int r, struct String s) {
   if (r == s.len) {
     str = s.str + l;
   } else {
-    str = (char*)calloc(len + 1, sizeof(char));
+    str = (char*)milone_mem_alloc(len + 1, sizeof(char));
     memcpy(str, s.str + l, len);
   }
   return (struct String){.str = str, .len = len};
@@ -56,13 +60,13 @@ int str_to_int(struct String s) {
 }
 
 struct String str_of_int(int value) {
-  char* str = (char *)calloc(20, sizeof(char));
+  char* str = (char *)milone_mem_alloc(20, sizeof(char));
   sprintf(str, "%d", value);
   return (struct String){.str = str, .len = strlen(str)};
 }
 
 struct String str_of_char(char value) {
-  char* str = (char *)calloc(2, sizeof(char));
+  char* str = (char *)milone_mem_alloc(2, sizeof(char));
   str[0] = value;
   return (struct String){.str = str, .len = strlen(str)};
 }
@@ -90,7 +94,7 @@ struct String file_read_all_text(struct String file_name) {
   }
   fseek(fp, 0, SEEK_SET);
 
-  char *content = (char *)calloc((size_t)size + 1, sizeof(char));
+  char *content = (char *)milone_mem_alloc((size_t)size + 1, sizeof(char));
   size_t read_size = fread(content, 1, (size_t)size, fp);
   if (read_size != (size_t)size) {
     fclose(fp);
