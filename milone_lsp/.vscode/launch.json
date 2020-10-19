@@ -12,6 +12,11 @@
             "env": {
                 "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/netcoreapp3.1/MiloneLsp"
             },
+            "windows": {
+                "env": {
+                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/netcoreapp3.1/MiloneLsp.exe"
+                }
+            },
             "preLaunchTask": "vscode_ext_build"
         }
     ],
