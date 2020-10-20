@@ -305,7 +305,6 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
   | AExpr.ListLit (items, pos) ->
       let doArm () =
         let expr = desugarListLitExpr items pos
-        let loc = toLoc docId pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
@@ -313,7 +312,6 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
   | AExpr.If (cond, body, alt, pos) ->
       let doArm () =
         let expr = desugarIf cond body alt pos
-        let loc = toLoc docId pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
