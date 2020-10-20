@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
+// null-terminated string
 struct String {
   char* str;
   int len;
@@ -97,6 +99,7 @@ struct String str_add(struct String left, struct String right) {
   char* str = (char*)milone_mem_alloc(len + 1, sizeof(char));
   memcpy(str, left.str, left.len);
   memcpy(str + left.len, right.str, right.len);
+  assert(str[len] == '\0');
   return (struct String){.str = str, .len = len};
 }
 
@@ -111,6 +114,7 @@ struct String str_get_slice(int l, int r, struct String s) {
     str = (char*)milone_mem_alloc(len + 1, sizeof(char));
     memcpy(str, s.str + l, len);
   }
+  assert(str[len] == '\0');
   return (struct String){.str = str, .len = len};
 }
 
@@ -176,6 +180,38 @@ int file_write_all_text(struct String file_name, struct String content) {
 
   fclose(fp);
   return 0;
+}
+
+long milone_get_time_millis() {
+#ifdef __timespec_defined // C11 feature
+  struct timespec t;
+  timespec_get(&t, TIME_UTC);
+  return t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L);
+#else
+  time_t t;
+  time(&t);
+  return t * 1000L;
+#endif
+}
+
+void *milone_profile_init(int _unit) {
+  long *t = (long *)milone_mem_alloc(1, sizeof(long));
+  *t = milone_get_time_millis();
+  return t;
+}
+
+int milone_profile_log(struct String msg, void *current) {
+  long t = milone_get_time_millis();
+  long *s = (long *)current;
+
+  long millis = t - *s;
+  if (millis < 0) {
+    millis = 0;
+  }
+
+  fprintf(stderr, "profile: %4d.%03d %s\n", (int)(millis / 1000), (int)(millis % 1000), msg.str);
+  *s = t;
+  return 0; // can't be void due to restriction of __nativeFun
 }
 
 static int s_argc;

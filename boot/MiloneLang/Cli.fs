@@ -21,6 +21,7 @@ open MiloneLang.CPrinting
 
 type Verbosity =
   | Verbose
+  | Profile of Profiler
   | Quiet
 
 let helpText = """USAGE: milone [OPTIONS] <project-dir>
@@ -41,8 +42,9 @@ ARGS
         where the source files are located
 
 OPTIONS
-    -q  No debug logs
-    -v  Verbose debug logs"""
+    -q              No debug logs
+    -v              Verbose debug logs
+       --profile    Print logs with time interval"""
 
 let strTrimEnd (s: string) =
   let rec go i =
@@ -94,6 +96,8 @@ let build readFile verbosity (projectDir: string): string * bool =
     | Verbose ->
         // FIXME: to stderr
         printfn "// %s" msg
+
+    | Profile profiler -> profileLog msg profiler
 
     | Quiet -> ()
 
@@ -182,7 +186,8 @@ let cliParse readFile (projectDir: string) =
     printfn "%s" (objToString ast)
     ast, errors
 
-  parseProjectModules readModuleFile parseWithLogging projectName (nameCtxEmpty ()) |> ignore
+  parseProjectModules readModuleFile parseWithLogging projectName (nameCtxEmpty ())
+  |> ignore
   0
 
 let cliCompile readFile verbosity projectDir =
@@ -197,6 +202,10 @@ let cli readFile args =
   | [ "parse"; projectDir ] -> cliParse readFile projectDir
 
   | [ "-v"; projectDir ] -> cliCompile readFile Verbose projectDir
+
+  | [ "--profile"; projectDir ] ->
+      let profile = Profile(profileInit ())
+      cliCompile readFile profile projectDir
 
   | [ "-q"; projectDir ] -> cliCompile readFile Quiet projectDir
 
