@@ -2,7 +2,18 @@
 
 ### FFI
 
-FFI is absolute necessary to use milone-lang in somewhat practical purpose.
+FFI is absolutely necessary to use milone-lang in somewhat practical purpose.
+
+Open design spaces:
+
+- syntax to declare native functions (statically linked, dynamically linked)
+- C-compatible data types (void, int8_t, pointers, etc)
+- design of safe wrappers (APIs to indirectly use "unsafe" features without risk of problems)
+
+Links:
+
+- [External Functions - F# | Microsoft Docs](https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/functions/external-functions)
+- [fsharp/nativeptr.fs · dotnet/fsharp](https://github.com/dotnet/fsharp/blob/ec5bad3a391357e03ff2286a264f0e4faf7d840d/src/fsharp/FSharp.Core/nativeptr.fs)
 
 ### Memory management
 
@@ -11,21 +22,20 @@ FFI is absolute necessary to use milone-lang in somewhat practical purpose.
 Unlike F#, milone-lang doesn't support GC.
 Compiler is short-running application, so it doesn't need to free anything.
 
-Memory management is necessary for some of "long-running" applications such as web servers.
+Memory management is necessary for some of long-running programs such as web servers.
 
-As an experiment, milone-lang now supports `inRegion` primitive.
-It takes a function (`() -> int`), called "region", calls it and propagates to return the result.
-After that, *all memory allocated while running the region are freed*.
+As an experiment, milone-lang now supports `inRegion` primitive that takes a "region", a function (`() -> int`).
+`inRegion` calls the region and returns the result, and then, *all memory allocated while running the region are freed*.
 
-Deallocation by `inRegion` is safe and sound *since milone-lang doesn't support mutation of objects*,
-so no objects outside of the region can't point to these memory getting freed.
+Deallocation by `inRegion` is safe and sound since *milone-lang doesn't support mutation of objects*,
+so that no objects outside of the region point to these memory getting freed.
 
-Using this `inRegion`, at least in theory, you can now write long-running programs in milone-lang like this:
+Using `inRegion`, at least in theory, I can now write long-running programs in milone-lang like this:
 
 ```fs
 let work () =
     // Do something here, say, read and write to files.
-    // Any memory allocated in this anonymous function
+    // Any memory allocated in this function
     // are freed after the end of calling (`inRegion` does).
     0
 
@@ -42,6 +52,7 @@ let main _ =
 I want to support `inRegion` returning any object other than int, especially one including references.
 This should be done by deeply cloning the result value of the region: the copy is allocated outside of the region.
 
-(Note that it's possible to make a "back" reference, a pointer from outside of the region to inside of that,
-once milone-lang supports C-FFI (native functions and pointers).
-I don't count this a problem, as it's easy to produce memory-specific errors using C-FFI also in other "safe" languages.)
+- Making "back" references via C FFI (once supported) is not a problem since using C FFI incorrectly causes some memory errors in other "safe" languages too.
+- By deeply cloning objects that need allocation, outside of region eventually runs into out of memory.
+    - free copies manually? (`let x = inRegion f in doSomething x; free x`)
+    - prevent copies from escaping and free them at the end of scope? (`let x: inref<T> = inRegion f in doSomething x`)
