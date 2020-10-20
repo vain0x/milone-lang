@@ -322,6 +322,9 @@ type Binding =
 /// (scopeSerial, binding) list.
 type Scope = (ScopeSerial * Binding) list
 
+/// Namespace of non-local symbols.
+type NameTree = NameTree of AssocMap<Serial, Serial list>
+
 /// Type constructors.
 [<RequireQualifiedAccess>]
 type TyCon =

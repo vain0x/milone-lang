@@ -1001,6 +1001,34 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
   serial, NameCtx(map, serial)
 
 // -----------------------------------------------
+// NameTree
+// -----------------------------------------------
+
+// FIXME: this emits code that doesn't compile due to use of incomplete type
+//   > error: invalid use of undefined type ‘struct UnitNameTree_Fun1’
+//   >        struct NameTree_ app_193 = nameTreeEmpty_.fun(nameTreeEmpty_.env, 0);
+// let nameTreeEmpty: unit -> NameTree =
+//   let it = NameTree(mapEmpty (intHash, intCmp))
+//   fun () -> it
+
+let nameTreeEmpty (): NameTree = NameTree(mapEmpty (intHash, intCmp))
+
+let nameTreeTryFind (key: Serial) (NameTree map): Serial list =
+  match map |> mapTryFind key with
+  | Some values -> values
+
+  | None -> []
+
+let nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
+  let map =
+    match map |> mapTryFind key with
+    | Some values -> map |> mapAdd key (value :: values)
+
+    | None -> map |> mapAdd key [ value ]
+
+  NameTree map
+
+// -----------------------------------------------
 // TyCon
 // -----------------------------------------------
 

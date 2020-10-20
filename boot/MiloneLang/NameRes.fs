@@ -24,6 +24,7 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
      mapEmpty (intHash, intCmp),
      mapEmpty (intHash, intCmp),
      mapEmpty (intHash, intCmp),
+     nameTreeEmpty (),
      localSerial,
      [],
      0)
@@ -96,6 +97,14 @@ let scopeCtxDefineFreeTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
        (scopeCtx
         |> scopeCtxGetTyDepths
         |> mapAdd tySerial (scopeCtx |> scopeCtxGetLetDepth))
+
+/// Adds a variable to a namespace.
+let scopeCtxAddVarToNs tySerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+  scopeCtx
+  |> scopeCtxWithVarNs
+       (scopeCtx
+        |> scopeCtxGetVarNs
+        |> nameTreeAdd tySerial varSerial)
 
 /// Adds a variable to a scope.
 let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
@@ -187,6 +196,7 @@ let scopeCtxFinishScope parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
   |> scopeCtxWithLocal local
 
 let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option =
+  // Finds from local scope. (This function is now used only when current = local serial.)
   let rec go current bindings =
     match bindings with
     | [] -> None
@@ -202,7 +212,14 @@ let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option 
 
     | _ :: bindings -> go current bindings
 
-  go scopeSerial (scopeCtx |> scopeCtxGetLocal)
+  if scopeSerial = (scopeCtx |> scopeCtxGetLocalSerial) then
+    go scopeSerial (scopeCtx |> scopeCtxGetLocal)
+  else
+    // Find from namespace.
+    scopeCtx
+    |> scopeCtxGetVarNs
+    |> nameTreeTryFind scopeSerial
+    |> listTryFind (fun varSerial -> (scopeCtx |> scopeCtxGetIdent varSerial) = ident)
 
 let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
   let rec go current bindings =
@@ -336,6 +353,7 @@ let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
 
           ctx
           |> scopeCtxDefineVar variantSerial varDef
+          |> scopeCtxAddVarToNs tySerial variantSerial
           |> scopeCtxOpenVar tySerial variantSerial
           |> scopeCtxOpenVar (ctx |> scopeCtxGetLocalSerial) variantSerial
 
