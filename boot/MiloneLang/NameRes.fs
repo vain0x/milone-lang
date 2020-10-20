@@ -614,9 +614,6 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         // FIXME: Patchwork for tests to pass
         match l, r with
-        | HExpr.Ref (serial, _, _), "length" when ctx |> scopeCtxGetIdent serial = "String" ->
-            HExpr.Prim(HPrim.StrLength, ty, loc), ctx
-
         | HExpr.Ref (serial, _, _), "getSlice" when ctx |> scopeCtxGetIdent serial = "String" ->
             // NOTE: Actually this functions doesn't exist in the F# standard library.
             HExpr.Prim(HPrim.StrGetSlice, ty, loc), ctx
