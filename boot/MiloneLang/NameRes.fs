@@ -188,10 +188,8 @@ let scopeCtxFinishScope parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
         // Discard the local bindings.
         go bindings
 
-    | binding :: bindings ->
-        // Keep non-local bindings such as variants.
-        let parent, bindings = go bindings
-        parent, binding :: bindings
+    | _ ->
+        failwith "NEVER: Non-local symbols no longer exist in scope chain."
 
   let localSerial, local = go (scopeCtx |> scopeCtxGetLocal)
 
