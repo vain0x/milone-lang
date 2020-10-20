@@ -32,12 +32,12 @@ module rec MiloneLang.Lexing
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-/// (text, index, loc, tokenAcc)
-type TokenizeCtx = string * int * Loc * (Token * Loc) list
+/// (text, index, pos, tokenAcc)
+type TokenizeCtx = string * int * Pos * (Token * Pos) list
 
-/// Modifies the location that points to `text.[l]`
+/// Modifies the position that points to `text.[l]`
 /// to one that points to `text.[r]`.
-let locShift (text: string) (l: int) (r: int) ((y, x): Loc) =
+let posShift (text: string) (l: int) (r: int) ((y, x): Pos) =
   assert (0 <= l && l <= r && r <= text.Length)
 
   let rec go y x i =
@@ -380,18 +380,18 @@ let tokCtxToTextIndex ((text, i, _, _): TokenizeCtx) = text, i
 
 /// Moves the cursor to the end index (`r`)
 /// without emitting a token.
-let tokCtxSkip r ((text, i, loc, acc): TokenizeCtx): TokenizeCtx =
+let tokCtxSkip r ((text, i, pos, acc): TokenizeCtx): TokenizeCtx =
   assert (0 <= i && i <= r && r <= text.Length)
-  let newLoc = loc |> locShift text i r
-  text, r, newLoc, acc
+  let newPos = pos |> posShift text i r
+  text, r, newPos, acc
 
 /// Moves the cursor to the next index (`r`)
 /// and emits a token that spans over the moved range.
-let tokCtxPush kind r ((text, i, loc, acc): TokenizeCtx): TokenizeCtx =
+let tokCtxPush kind r ((text, i, pos, acc): TokenizeCtx): TokenizeCtx =
   assert (0 <= i && i <= r && r <= text.Length)
-  let newAcc = (kind, loc) :: acc
-  let newLoc = loc |> locShift text i r
-  text, r, newLoc, newAcc
+  let newAcc = (kind, pos) :: acc
+  let newPos = pos |> posShift text i r
+  text, r, newPos, newAcc
 
 let tokEof ((text, i, _, acc): TokenizeCtx) =
   assert (lookEof text i)
@@ -463,7 +463,7 @@ let tokStrLitRaw t =
 
   t |> tokCtxPush token r
 
-let tokenize (text: string): (Token * Loc) list =
+let tokenize (text: string): (Token * Pos) list =
   let rec go t =
     let text, i = t |> tokCtxToTextIndex
 

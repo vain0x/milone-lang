@@ -1,0 +1,89 @@
+{
+  "name": "milone-lang",
+  "version": "0.1.0",
+  "description": "milone-lang support for VSCode",
+  "author": "vain0x <vainzerox@gmail.com>",
+  "license": "Apache2.0",
+  "activationEvents": [
+    "onLanguage:milone"
+  ],
+  "engines": {
+    "vscode": "^1.45.1"
+  },
+  "keywords": [],
+  "main": "dist/extension.js",
+  "repository": "https://github.com/vain0x/milone-lang",
+  "scripts": {
+    "tsc-build": "tsc -b",
+    "tsc-watch": "tsc --watch",
+    "webpack-build": "webpack --mode development",
+    "webpack-watch": "webpack --mode development --watch",
+    "webpack-prod": "webpack --mode production",
+    "vsce-package": "vsce package --out milone-lang.vsix"
+  },
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Settings for milone-lang",
+      "properties": {
+        "milone-lang.home": {
+          "type": "string",
+          "description": "Absolute path to the installation directory of milone-lang processor. Defaults to $HOME/.milone"
+        },
+        "milone-lang.lsp-enabled": {
+          "type": "boolean",
+          "description": "If true or unset, activate the LSP server.",
+          "default": true
+        },
+        "milone-lang.lsp-command": {
+          "type": "string",
+          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.milone/bin/MiloneLsp'."
+        },
+        "milone-lang.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "[debug] Verbosity of trace logging of LSP session",
+          "scope": "window"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "milone",
+        "extensions": [
+          ".milone"
+        ],
+        "aliases": [
+          "milone-lang",
+          "Milone Language"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "milone",
+        "scopeName": "source.milone",
+        "path": "./syntaxes/milone.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^6.1.3",
+    "vscode-languageserver-protocol": "^3.15.3"
+  },
+  "devDependencies": {
+    "@types/node": "^14.11.10",
+    "@types/vscode": "^1.50.0",
+    "ts-loader": "^8.0.5",
+    "typescript": "^4.0.3",
+    "vsce": "^1.81.1",
+    "webpack": "^5.1.3",
+    "webpack-cli": "^4.0.0"
+  }
+}

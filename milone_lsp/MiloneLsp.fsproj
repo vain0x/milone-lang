@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="JsonValue.fs" />
+    <Compile Include="JsonSerialization.fs" />
+    <Compile Include="JsonRpcReaderForStdIn.fs" />
+    <Compile Include="JsonRpcReaderForAbstractStream.fs" />
+    <Compile Include="JsonRpcWriter.fs" />
+    <Compile Include="../boot/MiloneLang/Compatible.fs" />
+    <Compile Include="../boot/MiloneLang/Types.fs" />
+    <Compile Include="../boot/MiloneLang/Records.fs" />
+    <Compile Include="../boot/MiloneLang/Helpers.fs" />
+    <Compile Include="../boot/MiloneLang/Lexing.fs" />
+    <Compile Include="../boot/MiloneLang/Parsing.fs" />
+    <Compile Include="../boot/MiloneLang/AstToHir.fs" />
+    <Compile Include="../boot/MiloneLang/Bundling.fs" />
+    <Compile Include="../boot/MiloneLang/NameRes.fs" />
+    <Compile Include="../boot/MiloneLang/Typing.fs" />
+    <Compile Include="LspLangService.fs" />
+    <Compile Include="LspServer.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Utf8Json" Version="1.3.7" />
+    <PackageReference Include="Utf8Json.FsharpExtensions" Version="0.1.0" />
+  </ItemGroup>
+
+</Project>

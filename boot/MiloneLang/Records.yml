@@ -18,6 +18,9 @@ ScopeCtx:
   # Type serial to let-depth map.
   TyDepths: AssocMap<TySerial, LetDepth>
 
+  # Namespace tree of vars.
+  VarNs: NameTree
+
   # Serial of the current scope.
   LocalSerial: ScopeSerial
 

@@ -11,10 +11,10 @@ struct IntList {
 
 int main() {
     int match_;
-    struct IntList* list_1 = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_1->head = 2;
     list_1->tail = NULL;
-    struct IntList* list_ = (struct IntList*)malloc(sizeof(struct IntList));
+    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
     list_->tail = list_1;
     if ((!((!(list_))))) goto next_2;

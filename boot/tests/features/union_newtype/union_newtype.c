@@ -18,7 +18,7 @@ struct NewTypeInt_ {
 };
 
 int main() {
-    int* payload_ = (int*)malloc(sizeof(int));
+    int* payload_ = (int*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)payload_))) = 1;
     struct NewTypeInt_ variant_ = (struct NewTypeInt_){.tag = NewTypeInt_, .NewTypeInt_ = payload_};
     int inner_ = (*(variant_.NewTypeInt_));

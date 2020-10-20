@@ -212,6 +212,29 @@ let listLast xs =
 
   go xs
 
+let listTryFind pred xs =
+  let rec go xs =
+    match xs with
+    | [] -> None
+
+    | x :: _ when pred x -> Some x
+
+    | _ :: xs -> go xs
+
+  go xs
+
+let listTryPick f xs =
+  let rec go xs =
+    match xs with
+    | [] -> None
+
+    | x :: xs ->
+        match f x with
+        | Some x -> Some x
+        | None -> go xs
+
+  go xs
+
 let listSkip count xs =
   let rec go count xs =
     match xs with
@@ -749,32 +772,57 @@ let strEscape (str: string) =
   if str |> strNeedsEscaping |> not then str else go [] 0 |> listRev |> strConcat
 
 // -----------------------------------------------
+// Position
+// -----------------------------------------------
+
+/// No position information. Should be fixed.
+let noPos = -1, -1
+
+let posX ((_, x): Pos) = x
+
+let posY ((y, _): Pos) = y
+
+let posIsSameRow first second = posY first = posY second
+
+let posIsSameColumn first second = posX first = posX second
+
+/// Gets if `secondPos` is inside of the block of `firstPos`.
+let posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX secondPos
+
+let posAddX dx ((y, x): Pos) = y, x + dx
+
+let posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
+  intMax firstY secondY, intMax firstX secondX
+
+let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
+
+let posCmp (firstY, firstX) (secondY, secondX) =
+  if firstY <> secondY then intCmp firstY secondY else intCmp firstX secondX
+
+// -----------------------------------------------
 // Location
 // -----------------------------------------------
 
 /// No location information. Should be fixed.
-let noLoc = -1, -1
+let noLoc = "<noLoc>", -1, -1
 
-let locX ((_, x): Loc) = x
+let locToString ((docId, y, x): Loc) =
+  docId
+  + ":"
+  + string (y + 1)
+  + ":"
+  + string (x + 1)
 
-let locY ((y, _): Loc) = y
+let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
+  let c = strCmp firstDoc secondDoc
+  if c <> 0 then
+    c
+  else
 
-let locIsSameRow first second = locY first = locY second
-
-let locIsSameColumn first second = locX first = locX second
-
-/// Gets if `secondLoc` is inside of the block of `firstLoc`.
-let locInside (firstLoc: Loc) (secondLoc: Loc) = locX firstLoc <= locX secondLoc
-
-let locAddX dx ((y, x): Loc) = y, x + dx
-
-let locMax ((firstY, firstX): Loc) ((secondY, secondX): Loc) =
-  intMax firstY secondY, intMax firstX secondX
-
-let locToString ((y, x): Loc) = string (y + 1) + ":" + string (x + 1)
-
-let locCmp (firstY, firstX) (secondY, secondX) =
-  if firstY <> secondY then intCmp firstY secondY else intCmp firstX secondX
+  if firstY <> secondY then
+    intCmp firstY secondY
+  else
+    intCmp firstX secondX
 
 // -----------------------------------------------
 // Token
@@ -953,6 +1001,34 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
   serial, NameCtx(map, serial)
 
 // -----------------------------------------------
+// NameTree
+// -----------------------------------------------
+
+// FIXME: this emits code that doesn't compile due to use of incomplete type
+//   > error: invalid use of undefined type ‘struct UnitNameTree_Fun1’
+//   >        struct NameTree_ app_193 = nameTreeEmpty_.fun(nameTreeEmpty_.env, 0);
+// let nameTreeEmpty: unit -> NameTree =
+//   let it = NameTree(mapEmpty (intHash, intCmp))
+//   fun () -> it
+
+let nameTreeEmpty (): NameTree = NameTree(mapEmpty (intHash, intCmp))
+
+let nameTreeTryFind (key: Serial) (NameTree map): Serial list =
+  match map |> mapTryFind key with
+  | Some values -> values
+
+  | None -> []
+
+let nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
+  let map =
+    match map |> mapTryFind key with
+    | Some values -> map |> mapAdd key (value :: values)
+
+    | None -> map |> mapAdd key [ value ]
+
+  NameTree map
+
+// -----------------------------------------------
 // TyCon
 // -----------------------------------------------
 
@@ -1040,7 +1116,11 @@ let tyAssocMap keyTy valueTy =
 
 let tyToHash ty =
   match ty with
-  | Ty.Error (y, x) -> intHash (1 + y + x)
+  | Ty.Error (docId, y, x) ->
+      1
+      |> hashCombine (strHash docId)
+      |> hashCombine y
+      |> hashCombine x
 
   | Ty.Meta (tySerial, _) -> intHash (2 + tySerial)
 
@@ -1257,6 +1337,8 @@ let primFromIdent ident =
 
   | "Some" -> HPrim.OptionSome |> Some
 
+  | "inRegion" -> HPrim.InRegion |> Some
+
   | "__nativeFun" -> HPrim.NativeFun("<native-fun>", -1) |> Some
 
   | _ -> None
@@ -1343,6 +1425,8 @@ let primToTySpec prim =
 
   | HPrim.StrGetSlice -> mono (tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr)))
 
+  | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
+
   | HPrim.Printfn
   | HPrim.NativeFun _ -> poly (meta 1) []
 
@@ -1359,7 +1443,8 @@ let primToArity ty prim =
   | HPrim.StrLength
   | HPrim.Char
   | HPrim.Int
-  | HPrim.String -> 1
+  | HPrim.String
+  | HPrim.InRegion -> 1
   | HPrim.Add
   | HPrim.Sub
   | HPrim.Mul

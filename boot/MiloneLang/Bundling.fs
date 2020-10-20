@@ -104,11 +104,20 @@ let parseProjectModules readModuleFile parse projectName nameCtx =
       moduleAcc, moduleMap, nameCtx, errorAcc
     else
       let source = readModuleFile moduleName
+      // FIXME: provide unique ID?
+      let docId: DocId = moduleName
       let tokens = tokenize source
       let moduleAst, errors = parse moduleName tokens
-      let moduleHir, nameCtx = astToHir (moduleAst, nameCtx)
+      let moduleHir, nameCtx = astToHir docId (moduleAst, nameCtx)
       let dependencies = findOpenModules projectName moduleHir
       let moduleMap = moduleMap |> mapAdd moduleName moduleHir
+
+      let errors: (string * Loc) list =
+        errors
+        |> listMap (fun (msg: string, pos: Pos) ->
+             let row, column = pos
+             let loc = docId, row, column
+             msg, loc)
 
       let moduleAcc, moduleMap, nameCtx, errorAcc =
         listFold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies

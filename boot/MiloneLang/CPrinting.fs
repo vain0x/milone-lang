@@ -232,7 +232,10 @@ let cprintStmt acc indent stmt: string list =
       let acc = cprintTyWithName acc name varTy
       let acc = acc |> cons " = ("
       let acc = cprintTy acc varTy
-      let acc = acc |> cons ")malloc(sizeof("
+
+      let acc =
+        acc |> cons ")milone_mem_alloc(1, sizeof("
+
       let acc = cprintTy acc valTy
       let acc = acc |> cons "));" |> cons eol
       acc

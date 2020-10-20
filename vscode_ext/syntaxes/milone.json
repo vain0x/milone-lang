@@ -1,0 +1,155 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "version": "0.1.0",
+    "name": "milone",
+    "scopeName": "source.milone",
+    "patterns": [
+        {
+            "comment": "Single-line documentation comment",
+            "name": "comment.line.documentation.milone",
+            "begin": "///",
+            "end": "$"
+        },
+        {
+            "comment": "Single-line non-documentation comment",
+            "name": "comment.line.double-slash.milone",
+            "begin": "//",
+            "end": "$"
+        },
+        {
+            "comment": "Hexadecimal literal",
+            "name": "constant.numeric.hexadecimal.milone",
+            "match": "\\b0x[_0-9A-Fa-f]*\\b"
+        },
+        {
+            "comment": "Decimal literal",
+            "name": "constant.numeric.float.milone",
+            "match": "\\b-?[0-9][_0-9]*(\\.[_0-9]*)?([eE][-+]?[_0-9]*)?\\b"
+        },
+        {
+            "comment": "Char literal",
+            "name": "string.quoted.single.milone",
+            "match": "'([^'\\\\]|\\\\(x[0-9A-Fa-f]{2}|.))'"
+        },
+        {
+            "comment": "Single-line string literal",
+            "name": "string.quoted.double.milone",
+            "begin": "\"",
+            "end": "\"",
+            "patterns": [
+                {
+                    "include": "#escape_sequence"
+                }
+            ]
+        },
+        {
+            "comment": "Multi-line string literal",
+            "name": "string.quoted.triple.milone",
+            "begin": "\"\"\"",
+            "end": "\"\"\"",
+            "patterns": [
+                {
+                    "include": "#escape_sequence"
+                }
+            ]
+        },
+        {
+            "comment": "Attributes",
+            "name": "meta.embedded.milone",
+            "begin": "^\\[<",
+            "end": ">\\]",
+            "patterns": []
+        },
+        {
+            "comment": "Boolean literals",
+            "name": "constant.language.boolean.milone",
+            "match": "\\b(false|true)\\b"
+        },
+        {
+            "comment": "Wildcard or discard",
+            "name": "variable.language.wildcard.milone",
+            "match": "\\b_[0-9A-Za-z_]*\\b"
+        },
+        {
+            "comment": "Unsupported keywords",
+            "name": "invalid.deprecated.milone",
+            "match": "\\b(abstract|and|async|atomic|base|begin|break|checked|class|component|const|constraint|constructor|continue|default|delegate|done|downcast|downto|eager|elif|end|event|exception|extern|external|finally|fixed|for|function|functor|global|include|inherit|inline|interface|lazy|member|method|mixin|mutable|mut|new|null|object|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|using|val|virtual|void|volatile|while|yield)\\b|!=|!|#|$|%%|`|\\(\\*|\\(\\|\\*\\*|:=|:>|:\\?|:\\?>|<-|\\|\\|+>|<\\|+|<@|==|\\?|@|\\[\\||\\{|\\}|~"
+        },
+        {
+            "comment": "Control keywords",
+            "name": "keyword.control.milone",
+            "match": "\\b(else|if|match|then|when|with)\\b"
+        },
+        {
+            "comment": "Visibility keywords",
+            "name": "storage.modifier.visibility.milone",
+            "match": "\\b(internal|private|public)\\b"
+        },
+        {
+            "comment": "Other keywords",
+            "name": "keyword.milone",
+            "match": "\\b(as|do|fun|in|let|module|namespace|of|open|rec|type)\\b"
+        },
+        {
+            "comment": "Built-in types",
+            "name": "entity.name.type.milone",
+            "match": "\\b(bool|char|float|int|list|obj|string|unit|AssocMap|AssocSet)\\b"
+        },
+        {
+            "comment": "Built-in functions",
+            "name": "entity.name.function.milone",
+            "match": "\\b(assert|char|failwithf?|id|ignore|int|not|printfn|sprintf|string)\\b"
+        },
+        {
+            "comment": "Built-in values",
+            "name": "constant.language.milone",
+            "match": "\\b(None|Some)\\b"
+        },
+        {
+            "comment": "Equality operators",
+            "name": "keyword.operator.comparison.milone",
+            "match": "=|<>"
+        },
+        {
+            "comment": "Arithmetic operators",
+            "name": "keyword.operator.arithmetic.milone",
+            "match": "\\+|-|\\*|/|%|&&&|\\|\\|\\||\\^\\^\\^|<<<|>>>"
+        },
+        {
+            "comment": "Unsupported functional composition operators",
+            "name": "invalid.deprecated.milone",
+            "match": "<<|>>"
+        },
+        {
+            "comment": "Logical operators (this rule should be after arithmetic operators to avoid conflict)",
+            "name": "keyword.operator.logical.milone",
+            "match": "&&|\\|\\|"
+        },
+        {
+            "comment": "Comparison operators (this rule should be after arithmetic operators to avoid conflict)",
+            "name": "keyword.operator.comparison.milone",
+            "match": "<=|>=|<|>"
+        },
+        {
+            "comment": "Other sigils",
+            "name": "keyword.operator.other.milone",
+            "match": "\\.\\.|\\.|,|::|:|;|->|\\|>|&|\\|"
+        },
+        {
+            "comment": "Potential namespaces guess (front of dot)",
+            "match": "\\b([A-Z]\\w+)(?=\\.(?!\\.|\\[))",
+            "captures": {
+                "1": {
+                    "name": "entity.name.class.milone"
+                }
+            }
+        }
+    ],
+    "repository": {
+        "escape_sequence": {
+            "comment": "Escape sequences",
+            "name": "constant.character.escape.milone",
+            "match": "\\\\(x[0-9A-Fa-f]{2}|.)"
+        }
+    }
+}

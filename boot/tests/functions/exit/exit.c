@@ -17,7 +17,7 @@ int main() {
     exit(2);
     printf("%s\n", ((struct String){}).str);
     int call_ = 0;
-    void* box_ = (void*)malloc(sizeof(int));
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 1;
     exit((*(((int*)box_))));
     exit(0);

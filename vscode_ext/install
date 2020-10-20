@@ -1,0 +1,15 @@
+#!/bin/bash
+# Build the extension from source and install it to local VSCode.
+
+set -eu
+
+# Remove the old output.
+test -f milone-lang.vsix && rm milone-lang.vsix
+
+# Build.
+npm run vsce-package
+npm run webpack-prod
+
+# Install to the local VSCode.
+./uninstall || :
+code --install-extension milone-lang.vsix

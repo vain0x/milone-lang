@@ -3,4 +3,7 @@
 *.milone    linguist-language=fsharp
 *.c         linguist-detectable=false
 
-boot/tests/**/*.c     linguist-generated
+# <https://github.com/github/linguist#generated-code>
+boot/MiloneLang/Records.fs      linguist-generated
+boot/scripts/**/*.c             linguist-generated
+boot/tests/**/*.c               linguist-generated
