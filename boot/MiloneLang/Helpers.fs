@@ -212,6 +212,17 @@ let listLast xs =
 
   go xs
 
+let listTryFind pred xs =
+  let rec go xs =
+    match xs with
+    | [] -> None
+
+    | x :: _ when pred x -> Some x
+
+    | _ :: xs -> go xs
+
+  go xs
+
 let listSkip count xs =
   let rec go count xs =
     match xs with
