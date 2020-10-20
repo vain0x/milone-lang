@@ -107,7 +107,9 @@ let scopeCtxAddVarToNs tySerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
         |> nameTreeAdd tySerial varSerial)
 
 /// Adds a variable to a scope.
-let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+let scopeCtxOpenVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+  let scopeSerial = scopeCtx |> scopeCtxGetLocalSerial
+
   let varIdent =
     scopeCtx
     |> scopeCtxGetVar varSerial
@@ -121,7 +123,9 @@ let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
         :: (scopeCtx |> scopeCtxGetLocal))
 
 /// Adds a type to a scope.
-let scopeCtxOpenTy scopeSerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+let scopeCtxOpenTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+  let scopeSerial = scopeCtx |> scopeCtxGetLocalSerial
+
   let tyIdent =
     scopeCtx |> scopeCtxGetTy tySerial |> tyDefToIdent
 
@@ -134,13 +138,13 @@ let scopeCtxOpenTy scopeSerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
 let scopeCtxDefineLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
   |> scopeCtxDefineVar varSerial varDef
-  |> scopeCtxOpenVar (scopeCtx |> scopeCtxGetLocalSerial) varSerial
+  |> scopeCtxOpenVar varSerial
 
 /// Defines a type in the local scope.
 let scopeCtxDefineLocalTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
   |> scopeCtxDefineTy tySerial tyDef
-  |> scopeCtxOpenTy (scopeCtx |> scopeCtxGetLocalSerial) tySerial
+  |> scopeCtxOpenTy tySerial
 
 /// Called on enter the body of let expressions.
 let scopeCtxOnEnterLetBody (scopeCtx: ScopeCtx): ScopeCtx =
@@ -354,7 +358,7 @@ let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
           ctx
           |> scopeCtxDefineVar variantSerial varDef
           |> scopeCtxAddVarToNs tySerial variantSerial
-          |> scopeCtxOpenVar (ctx |> scopeCtxGetLocalSerial) variantSerial
+          |> scopeCtxOpenVar variantSerial
 
         let ctx = variants |> listFold defineVariant ctx
 
