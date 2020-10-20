@@ -354,7 +354,6 @@ let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
           ctx
           |> scopeCtxDefineVar variantSerial varDef
           |> scopeCtxAddVarToNs tySerial variantSerial
-          |> scopeCtxOpenVar tySerial variantSerial
           |> scopeCtxOpenVar (ctx |> scopeCtxGetLocalSerial) variantSerial
 
         let ctx = variants |> listFold defineVariant ctx
