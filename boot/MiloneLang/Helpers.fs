@@ -783,13 +783,23 @@ let posCmp (firstY, firstX) (secondY, secondX) =
 /// No location information. Should be fixed.
 let noLoc = "<noLoc>", -1, -1
 
-let locToString ((docId, y, x): Loc) = docId + ":" + string (y + 1) + ":" + string (x + 1)
+let locToString ((docId, y, x): Loc) =
+  docId
+  + ":"
+  + string (y + 1)
+  + ":"
+  + string (x + 1)
 
 let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
   let c = strCmp firstDoc secondDoc
-  if c <> 0 then c else
+  if c <> 0 then
+    c
+  else
 
-  if firstY <> secondY then intCmp firstY secondY else intCmp firstX secondX
+  if firstY <> secondY then
+    intCmp firstY secondY
+  else
+    intCmp firstX secondX
 
 // -----------------------------------------------
 // Token
@@ -1055,7 +1065,11 @@ let tyAssocMap keyTy valueTy =
 
 let tyToHash ty =
   match ty with
-  | Ty.Error (docId, y, x) -> 1 |> hashCombine (strHash docId) |> hashCombine y |> hashCombine x
+  | Ty.Error (docId, y, x) ->
+      1
+      |> hashCombine (strHash docId)
+      |> hashCombine y
+      |> hashCombine x
 
   | Ty.Meta (tySerial, _) -> intHash (2 + tySerial)
 
