@@ -1,0 +1,21 @@
+{
+    "jsonrpc": "2.0",
+    "id": "${MSG_ID}",
+    "result": {
+        "capabilities": {
+            "textDocumentSync": {
+                "openClose": true,
+                "change": 1
+            },
+            "definitionProvider": false,
+            "documentHighlightProvider": false,
+            "hoverProvider": false,
+            "referencesProvider": false,
+            "renameProvider": false
+        },
+        "serverInfo": {
+            "name": "milone_lsp",
+            "version": "0.1.0"
+        }
+    }
+}

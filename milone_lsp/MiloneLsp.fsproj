@@ -6,6 +6,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="JsonValue.fs" />
+    <Compile Include="JsonSerialization.fs" />
+    <Compile Include="JsonRpcReaderForStdIn.fs" />
+    <Compile Include="JsonRpcReaderForAbstractStream.fs" />
+    <Compile Include="JsonRpcWriter.fs" />
+    <Compile Include="../boot/MiloneLang/Compatible.fs" />
+    <Compile Include="../boot/MiloneLang/Types.fs" />
+    <Compile Include="../boot/MiloneLang/Records.fs" />
+    <Compile Include="../boot/MiloneLang/Helpers.fs" />
+    <Compile Include="../boot/MiloneLang/Lexing.fs" />
+    <Compile Include="../boot/MiloneLang/Parsing.fs" />
+    <Compile Include="../boot/MiloneLang/AstToHir.fs" />
+    <Compile Include="../boot/MiloneLang/Bundling.fs" />
+    <Compile Include="../boot/MiloneLang/NameRes.fs" />
+    <Compile Include="../boot/MiloneLang/Typing.fs" />
+    <Compile Include="LspLangService.fs" />
+    <Compile Include="LspServer.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

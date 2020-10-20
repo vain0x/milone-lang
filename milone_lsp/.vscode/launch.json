@@ -7,10 +7,15 @@
             "name": "Launch Extension Host",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode_ext"
             ],
             "env": {
-                "MILONE_LSP_BIN": "${workspaceFolder}/TODO"
+                "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/netcoreapp3.1/MiloneLsp"
+            },
+            "windows": {
+                "env": {
+                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/netcoreapp3.1/MiloneLsp.exe"
+                }
             },
             "preLaunchTask": "vscode_ext_build"
         }

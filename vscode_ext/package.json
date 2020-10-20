@@ -32,12 +32,12 @@
         },
         "milone-lang.lsp-enabled": {
           "type": "boolean",
-          "description": "Defaults to false because LSP is not available yet. ~If true or unset, activate the LSP server.~",
-          "default": false
+          "description": "If true or unset, activate the LSP server.",
+          "default": true
         },
-        "milone-lang.lsp-bin": {
+        "milone-lang.lsp-command": {
           "type": "string",
-          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.milone/bin/milone-lsp'."
+          "description": "[debug] Absolute path to the LSP server binary to be used. Defaults to '$HOME/.milone/bin/MiloneLsp'."
         },
         "milone-lang.trace.server": {
           "type": "string",

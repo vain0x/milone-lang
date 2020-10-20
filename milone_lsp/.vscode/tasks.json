@@ -4,7 +4,12 @@
         {
             "label": "milone_lsp_build",
             "type": "shell",
-            "command": ":",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "--no-restore",
+                "--nologo"
+            ],
             "group": "build"
         },
         {
@@ -18,6 +23,9 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/../vscode_ext"
             },
             "dependsOn": "milone_lsp_build"
         }
