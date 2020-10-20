@@ -223,6 +223,18 @@ let listTryFind pred xs =
 
   go xs
 
+let listTryPick f xs =
+  let rec go xs =
+    match xs with
+    | [] -> None
+
+    | x :: xs ->
+        match f x with
+        | Some x -> Some x
+        | None -> go xs
+
+  go xs
+
 let listSkip count xs =
   let rec go count xs =
     match xs with
