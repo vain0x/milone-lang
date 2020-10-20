@@ -9,6 +9,12 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
 
+let scopeMapEmpty () = mapEmpty (strHash, strCmp)
+
+let scopeChainEmpty (): ScopeChain = [ scopeMapEmpty () ]
+
+let scopeEmpty (): Scope = scopeChainEmpty (), scopeChainEmpty ()
+
 // -----------------------------------------------
 // ScopeCtx
 // -----------------------------------------------
@@ -24,8 +30,9 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
      mapEmpty (intHash, intCmp),
      mapEmpty (intHash, intCmp),
      mapEmpty (intHash, intCmp),
+     nameTreeEmpty (),
      localSerial,
-     [],
+     scopeEmpty (),
      0)
 
 let scopeCtxGetIdent serial (scopeCtx: ScopeCtx): Ident =
@@ -97,8 +104,16 @@ let scopeCtxDefineFreeTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
         |> scopeCtxGetTyDepths
         |> mapAdd tySerial (scopeCtx |> scopeCtxGetLetDepth))
 
+/// Adds a variable to a namespace.
+let scopeCtxAddVarToNs tySerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+  scopeCtx
+  |> scopeCtxWithVarNs
+       (scopeCtx
+        |> scopeCtxGetVarNs
+        |> nameTreeAdd tySerial varSerial)
+
 /// Adds a variable to a scope.
-let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+let scopeCtxOpenVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
   let varIdent =
     scopeCtx
     |> scopeCtxGetVar varSerial
@@ -106,32 +121,50 @@ let scopeCtxOpenVar scopeSerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
 
   assert (varIdent <> "_")
 
-  scopeCtx
-  |> scopeCtxWithLocal
-       ((scopeSerial, Binding.Var(varSerial, varIdent))
-        :: (scopeCtx |> scopeCtxGetLocal))
+  let scope: Scope =
+    match scopeCtx |> scopeCtxGetLocal with
+    | map :: varScopes, tyScopes ->
+        let varScopes =
+          (map |> mapAdd varIdent (varSerial, varIdent))
+          :: varScopes
+
+        varScopes, tyScopes
+
+    | _ -> failwith "NEVER: Scope can't be empty."
+
+  scopeCtx |> scopeCtxWithLocal scope
 
 /// Adds a type to a scope.
-let scopeCtxOpenTy scopeSerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+let scopeCtxOpenTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+  let scopeSerial = scopeCtx |> scopeCtxGetLocalSerial
+
   let tyIdent =
     scopeCtx |> scopeCtxGetTy tySerial |> tyDefToIdent
 
-  scopeCtx
-  |> scopeCtxWithLocal
-       ((scopeSerial, Binding.Ty(tySerial, tyIdent))
-        :: (scopeCtx |> scopeCtxGetLocal))
+  let scope: Scope =
+    match scopeCtx |> scopeCtxGetLocal with
+    | varScopes, map :: tyScopes ->
+        let tyScopes =
+          (map |> mapAdd tyIdent (tySerial, tyIdent))
+          :: tyScopes
+
+        varScopes, tyScopes
+
+    | _ -> failwith "NEVER: Scope can't be empty."
+
+  scopeCtx |> scopeCtxWithLocal scope
 
 /// Defines a variable in the local scope.
 let scopeCtxDefineLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
   |> scopeCtxDefineVar varSerial varDef
-  |> scopeCtxOpenVar (scopeCtx |> scopeCtxGetLocalSerial) varSerial
+  |> scopeCtxOpenVar varSerial
 
 /// Defines a type in the local scope.
 let scopeCtxDefineLocalTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
   |> scopeCtxDefineTy tySerial tyDef
-  |> scopeCtxOpenTy (scopeCtx |> scopeCtxGetLocalSerial) tySerial
+  |> scopeCtxOpenTy tySerial
 
 /// Called on enter the body of let expressions.
 let scopeCtxOnEnterLetBody (scopeCtx: ScopeCtx): ScopeCtx =
@@ -147,80 +180,50 @@ let scopeCtxStartScope (scopeCtx: ScopeCtx): ScopeSerial * ScopeCtx =
   let parentSerial, parent =
     scopeCtx |> scopeCtxGetLocalSerial, scopeCtx |> scopeCtxGetLocal
 
-  let (localSerial as serial) = (scopeCtx |> scopeCtxGetSerial) + 1
-
   let scopeCtx =
+    let varScopes, tyScopes = scopeCtx |> scopeCtxGetLocal
     scopeCtx
-    |> scopeCtxWithSerial serial
-    |> scopeCtxWithLocalSerial localSerial
-    |> scopeCtxWithLocal
-         ((localSerial, Binding.Parent(parentSerial, parent))
-          :: (scopeCtx |> scopeCtxGetLocal))
+    |> scopeCtxWithLocal (scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes)
 
   parentSerial, scopeCtx
 
-let scopeCtxFinishScope parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
-  let rec go bindings =
-    match bindings with
-    | [] ->
-        assert false
-        scopeCtx |> scopeCtxGetLocalSerial, []
+let scopeCtxFinishScope _parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
+  match scopeCtx |> scopeCtxGetLocal with
+  | [], _
+  | _, [] -> failwith "NEVER: Scope can't be empty."
 
-    | (scope, Binding.Parent (parent, bindings)) :: _ ->
-        assert (scope = (scopeCtx |> scopeCtxGetLocalSerial)
-                && parent = parentSerial)
-        parent, bindings
-
-    | (scope, _) :: bindings when scope = (scopeCtx |> scopeCtxGetLocalSerial) ->
-        // Discard the local bindings.
-        go bindings
-
-    | binding :: bindings ->
-        // Keep non-local bindings such as variants.
-        let parent, bindings = go bindings
-        parent, binding :: bindings
-
-  let localSerial, local = go (scopeCtx |> scopeCtxGetLocal)
-
-  scopeCtx
-  |> scopeCtxWithLocalSerial localSerial
-  |> scopeCtxWithLocal local
+  | _ :: varScopes, _ :: tyScopes ->
+      scopeCtx
+      |> scopeCtxWithLocal (varScopes, tyScopes)
 
 let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option =
-  let rec go current bindings =
-    match bindings with
-    | [] -> None
+  if scopeSerial = (scopeCtx |> scopeCtxGetLocalSerial) then
+    // Find from local scope.
+    let varScopes, _ = scopeCtx |> scopeCtxGetLocal
+    match varScopes
+          |> listTryPick (fun map -> map |> mapTryFind ident) with
+    | Some (varSerial, _) -> Some varSerial
+    | None -> None
 
-    | (bindingScope, Binding.Var (varSerial, varIdent)) :: _ when bindingScope = current && varIdent = ident ->
-        Some varSerial
-
-    | (bindingScope, Binding.Parent (parentSerial, parentBindings)) :: bindings when bindingScope = current ->
-        match go parentSerial parentBindings with
-        | Some serial -> Some serial
-
-        | None -> go current bindings
-
-    | _ :: bindings -> go current bindings
-
-  go scopeSerial (scopeCtx |> scopeCtxGetLocal)
+  else
+    // Find from namespace.
+    scopeCtx
+    |> scopeCtxGetVarNs
+    |> nameTreeTryFind scopeSerial
+    |> listTryFind (fun varSerial -> (scopeCtx |> scopeCtxGetIdent varSerial) = ident)
 
 let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
-  let rec go current bindings =
-    match bindings with
-    | [] -> None
+  if scopeSerial = (scopeCtx |> scopeCtxGetLocalSerial) then
+    // Find from local scope.
+    let _, tyScopes = scopeCtx |> scopeCtxGetLocal
+    match tyScopes
+          |> listTryPick (fun map -> map |> mapTryFind ident) with
+    | Some (tySerial, _) -> Some tySerial
+    | None -> None
 
-    | (bindingScope, Binding.Ty (tySerial, tyIdent)) :: _ when bindingScope = current && tyIdent = ident ->
-        Some tySerial
-
-    | (bindingScope, Binding.Parent (parentSerial, parentBindings)) :: bindings when bindingScope = current ->
-        match go parentSerial parentBindings with
-        | Some serial -> Some serial
-
-        | None -> go current bindings
-
-    | _ :: bindings -> go current bindings
-
-  go scopeSerial (scopeCtx |> scopeCtxGetLocal)
+  else
+    // Find from namespace.
+    failwith "NEVER: Not used."
 
 let scopeCtxResolveLocalVar ident (scopeCtx: ScopeCtx) =
   scopeCtx
@@ -336,8 +339,8 @@ let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
 
           ctx
           |> scopeCtxDefineVar variantSerial varDef
-          |> scopeCtxOpenVar tySerial variantSerial
-          |> scopeCtxOpenVar (ctx |> scopeCtxGetLocalSerial) variantSerial
+          |> scopeCtxAddVarToNs tySerial variantSerial
+          |> scopeCtxOpenVar variantSerial
 
         let ctx = variants |> listFold defineVariant ctx
 

@@ -316,11 +316,14 @@ type Binding =
   /// Type binding.
   | Ty of TySerial * tyIdent: Ident
 
-  /// Parent scope.
-  | Parent of ScopeSerial * Scope
+/// Stack of local scopes.
+type ScopeChain = AssocMap<string, Serial * Ident> list
 
-/// (scopeSerial, binding) list.
-type Scope = (ScopeSerial * Binding) list
+/// Scope chains, vars and types.
+type Scope = ScopeChain * ScopeChain
+
+/// Namespace of non-local symbols.
+type NameTree = NameTree of AssocMap<Serial, Serial list>
 
 /// Type constructors.
 [<RequireQualifiedAccess>]
