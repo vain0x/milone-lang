@@ -388,7 +388,7 @@ type VarDef =
   /// Variant constructor.
   | Variant of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
 
-/// Pattern in AST.
+/// Pattern in high-level IR.
 [<RequireQualifiedAccess>]
 type HPat =
   | Lit of Lit * Loc
@@ -455,7 +455,7 @@ type InfOp =
   /// Closure constructor.
   | Closure
 
-/// Expression in AST.
+/// Expression in HIR.
 [<RequireQualifiedAccess>]
 type HExpr =
   | Lit of Lit * Loc
