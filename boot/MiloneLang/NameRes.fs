@@ -474,6 +474,10 @@ let nameResCollectDecls (expr, ctx) =
 
         HExpr.TyDecl(serial, vis, tyDecl, loc), ctx
 
+    | HExpr.Module (ident, body, loc) ->
+        let body, ctx = (body, ctx) |> goExpr
+        HExpr.Module(ident, body, loc), ctx
+
     | _ -> expr, ctx
 
   goExpr (expr, ctx)
@@ -706,6 +710,10 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         expr, ctx
 
       doArm ()
+
+  | HExpr.Module (_, body, _) ->
+      // FIXME: not implemeted yet
+      (body, ctx) |> nameResExpr
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx

@@ -226,6 +226,8 @@ let hoistExprCore (expr, ctx) =
 
       doArm ()
 
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name reso"
+
 let hoistExpr (expr, ctx) =
   if ctx |> hoistCtxIsTopLevel |> not then
     (expr, ctx) |> hoistExprCore
@@ -251,6 +253,7 @@ let hoistExpr (expr, ctx) =
 
 let hoist (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let expr, hoistCtx = (expr, hoistCtxEmpty) |> hoistExpr
+
   assert (hoistCtx |> hoistCtxIsEmpty)
 
   expr, tyCtx

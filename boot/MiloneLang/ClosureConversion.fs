@@ -463,6 +463,7 @@ let declosureExpr (expr, ctx) =
       doArm ()
 
   | HExpr.Error (error, loc) -> failwithf "Never: %s at %A" error loc
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
 
 let declosure (expr, tyCtx: TyCtx) =
   let ccCtx = ccCtxFromTyCtx tyCtx

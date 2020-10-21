@@ -504,6 +504,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   | HExpr.Inf (InfOp.Closure, _, _, _)
   | HExpr.Inf (InfOp.CallProc, _, _, _)
   | HExpr.Inf (InfOp.CallClosure, _, _, _) -> failwith "Never"
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
   | HExpr.Error (error, loc) ->
       let ctx = tyCtxAddErr ctx error loc
       hxAbort ctx ty loc

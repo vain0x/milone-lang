@@ -367,6 +367,7 @@ let unetaExpr (expr, ctx) =
       HExpr.Let(vis, pat, init, next, ty, loc), ctx
   | HExpr.LetFun (callee, vis, isMainFun, args, body, next, ty, loc) ->
       unetaExprLetFun callee vis isMainFun args body next ty loc ctx
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
 
 let uneta (expr, tyCtx: TyCtx) =
   let etaCtx = etaCtxFromTyCtx tyCtx

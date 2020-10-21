@@ -549,6 +549,7 @@ let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
   match root with
   | ARoot.Expr expr -> astToHirExpr docId (expr, nameCtx)
 
-  | ARoot.Module (_, expr, _) ->
-      // TODO: insert HExpr.Module
-      astToHirExpr docId (expr, nameCtx)
+  | ARoot.Module (ident, body, pos) ->
+      let body, nameCtx = astToHirExpr docId (body, nameCtx)
+      let loc = toLoc docId pos
+      HExpr.Module(ident, body, loc), nameCtx

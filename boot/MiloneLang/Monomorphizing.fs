@@ -354,6 +354,8 @@ let rec monifyExpr (expr, ctx) =
 
       doArm ()
 
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
+
 let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let monoCtx =
     monoCtxFromTyCtx tyCtx

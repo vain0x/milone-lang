@@ -762,6 +762,7 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
         MExpr.Default(tyObj, loc), ctx
 
       doArm ()
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =
