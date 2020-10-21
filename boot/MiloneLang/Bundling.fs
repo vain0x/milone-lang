@@ -79,12 +79,12 @@ let findOpenModules projectName expr =
 let spliceExpr firstExpr secondExpr =
   let rec go expr =
     match expr with
-    | HExpr.Let (pat, init, next, ty, loc) ->
+    | HExpr.Let (vis, pat, init, next, ty, loc) ->
         let next = go next
-        HExpr.Let(pat, init, next, ty, loc)
-    | HExpr.LetFun (serial, isMainFun, args, body, next, ty, loc) ->
+        HExpr.Let(vis, pat, init, next, ty, loc)
+    | HExpr.LetFun (serial, vis, isMainFun, args, body, next, ty, loc) ->
         let next = go next
-        HExpr.LetFun(serial, isMainFun, args, body, next, ty, loc)
+        HExpr.LetFun(serial, vis, isMainFun, args, body, next, ty, loc)
     | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
         let rec goLast exprs =
           match exprs with

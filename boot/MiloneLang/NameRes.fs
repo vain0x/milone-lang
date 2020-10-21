@@ -447,12 +447,12 @@ let nameResCollectDecls (expr, ctx) =
 
   let rec goExpr (expr, ctx) =
     match expr with
-    | HExpr.Let (pat, init, next, ty, loc) ->
+    | HExpr.Let (vis, pat, init, next, ty, loc) ->
         let pat, ctx = (pat, ctx) |> goPat
         let next, ctx = (next, ctx) |> goExpr
-        HExpr.Let(pat, init, next, ty, loc), ctx
+        HExpr.Let(vis, pat, init, next, ty, loc), ctx
 
-    | HExpr.LetFun (serial, _, args, body, next, ty, loc) ->
+    | HExpr.LetFun (serial, vis, _, args, body, next, ty, loc) ->
         let isMainFun = ctx |> scopeCtxGetIdent serial = "main"
 
         let ctx =
@@ -462,17 +462,17 @@ let nameResCollectDecls (expr, ctx) =
           |> scopeCtxOnLeaveLetBody
 
         let next, ctx = (next, ctx) |> goExpr
-        HExpr.LetFun(serial, isMainFun, args, body, next, ty, loc), ctx
+        HExpr.LetFun(serial, vis, isMainFun, args, body, next, ty, loc), ctx
 
     | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
         let exprs, ctx = (exprs, ctx) |> stMap goExpr
         HExpr.Inf(InfOp.Semi, exprs, ty, loc), ctx
 
-    | HExpr.TyDecl (serial, tyDecl, loc) ->
+    | HExpr.TyDecl (serial, vis, tyDecl, loc) ->
         let ctx =
           ctx |> scopeCtxDefineTyStart serial tyDecl loc
 
-        HExpr.TyDecl(serial, tyDecl, loc), ctx
+        HExpr.TyDecl(serial, vis, tyDecl, loc), ctx
 
     | _ -> expr, ctx
 
@@ -652,7 +652,7 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HExpr.Let (pat, body, next, ty, loc) ->
+  | HExpr.Let (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
           let parent, ctx = ctx |> scopeCtxStartScope
@@ -667,11 +667,11 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           let ctx = ctx |> scopeCtxFinishScope parent
           pat, next, ctx
 
-        HExpr.Let(pat, body, next, ty, loc), ctx
+        HExpr.Let(vis, pat, body, next, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.LetFun (serial, isMainFun, pats, body, next, ty, loc) ->
+  | HExpr.LetFun (serial, vis, isMainFun, pats, body, next, ty, loc) ->
       let doArm () =
         let parent, ctx = ctx |> scopeCtxStartScope
         let ctx = ctx |> scopeCtxOnEnterLetBody
@@ -694,11 +694,11 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let next, ctx = (next, ctx) |> nameResExpr
         let ctx = ctx |> scopeCtxFinishScope parent
 
-        HExpr.LetFun(serial, isMainFun, pats, body, next, ty, loc), ctx
+        HExpr.LetFun(serial, vis, isMainFun, pats, body, next, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.TyDecl (serial, tyDecl, loc) ->
+  | HExpr.TyDecl (serial, _, tyDecl, loc) ->
       let doArm () =
         let ctx =
           ctx |> scopeCtxDefineTyFinish serial tyDecl loc

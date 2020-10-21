@@ -15,6 +15,11 @@ type Lit =
   | Char of char
   | Str of string
 
+/// Visibility.
+type Vis =
+  | PrivateVis
+  | PublicVis
+
 /// Tree to generate a string for debugging.
 type DumpTree = DumpTree of heading: string * body: DumpTree list * next: DumpTree list
 
@@ -221,8 +226,8 @@ type AVariant =
 /// Let expression in AST.
 [<RequireQualifiedAccess>]
 type ALet =
-  | LetVal of APat * AExpr * AExpr * Pos
-  | LetFun of Ident * args: APat list * AExpr * AExpr * Pos
+  | LetVal of Vis * APat * AExpr * AExpr * Pos
+  | LetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
 [<RequireQualifiedAccess>]
@@ -259,11 +264,11 @@ type AExpr =
   /// Semicolon-separated expressions.
   | Semi of AExpr list * Pos
   /// (pattern, initializer, next). Let-in expression.
-  | Let of APat * AExpr * AExpr * Pos
+  | Let of Vis * APat * AExpr * AExpr * Pos
   /// Type synonym definition, e.g. `type UserId = int`.
-  | TySynonym of Ident * ATy * Pos
+  | TySynonym of Vis * Ident * ATy * Pos
   /// Discriminated union type definition, e.g. `type Result = | Ok | Err of int`.
-  | TyUnion of Ident * AVariant list * Pos
+  | TyUnion of Vis * Ident * AVariant list * Pos
   | Open of Ident list * Pos
 
 // -----------------------------------------------
@@ -459,10 +464,10 @@ type HExpr =
   | Nav of HExpr * Ident * Ty * Loc
   /// Operation with infinite arguments.
   | Inf of InfOp * HExpr list * Ty * Loc
-  | Let of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | LetFun of FunSerial * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | Let of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
+  | LetFun of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
   /// Type declaration.
-  | TyDecl of TySerial * TyDecl * Loc
+  | TyDecl of TySerial * Vis * TyDecl * Loc
   | Open of Ident list * Loc
   | Error of string * Loc
 

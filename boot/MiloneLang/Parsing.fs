@@ -271,8 +271,8 @@ let parseTyDeclBody basePos (tokens, errors) =
   | (Token.Pipe, _) :: _ -> parseTyDeclUnion basePos (tokens, errors)
 
   | (Token.Ident _, _) :: (Token.Of, _) :: _ ->
-    let tokens = (Token.Pipe, noPos) :: tokens
-    parseTyDeclUnion basePos (tokens, errors)
+      let tokens = (Token.Pipe, noPos) :: tokens
+      parseTyDeclUnion basePos (tokens, errors)
 
   | _ ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
@@ -607,18 +607,22 @@ let parseParenBody basePos _parenPos (tokens, errors) =
 
       body, tokens, errors
 
-let parseAccessModifier tokens =
-  match tokens with
-  | (t, _) :: tokens when t |> tokenIsAccessModifier ->
-      // FIXME: Support access modifiers.
-      tokens
+let parseVis tokens =
+  let outerTokens = tokens
 
-  | _ -> tokens
+  match tokens with
+  | (t, _) :: tokens ->
+      match tokenAsVis t with
+      | Some vis -> vis, tokens
+
+      | None -> PublicVis, outerTokens
+
+  | [] -> PublicVis, tokens
 
 let parseLet letPos (tokens, errors) =
   let innerBasePos = letPos |> posAddX 1
 
-  let tokens = parseAccessModifier tokens
+  let vis, tokens = parseVis tokens
 
   let pat, tokens, errors =
     parsePatLet innerBasePos (tokens, errors)
@@ -639,12 +643,12 @@ let parseLet letPos (tokens, errors) =
 
     | tokens -> AExpr.TupleLit([], letPos), tokens, errors
 
-  AExpr.Let(pat, body, next, letPos), tokens, errors
+  AExpr.Let(vis, pat, body, next, letPos), tokens, errors
 
 let parseTyDecl typePos (tokens, errors) =
   let basePos = typePos |> posAddX 1
 
-  let tokens = parseAccessModifier tokens
+  let vis, tokens = parseVis tokens
 
   match tokens with
   | (Token.Ident tyIdent, _) :: tokens ->
@@ -654,9 +658,9 @@ let parseTyDecl typePos (tokens, errors) =
 
           let expr =
             match tyDecl with
-            | ATyDecl.Synonym ty -> AExpr.TySynonym(tyIdent, ty, typePos)
+            | ATyDecl.Synonym ty -> AExpr.TySynonym(vis, tyIdent, ty, typePos)
 
-            | ATyDecl.Union variants -> AExpr.TyUnion(tyIdent, variants, typePos)
+            | ATyDecl.Union variants -> AExpr.TyUnion(vis, tyIdent, variants, typePos)
 
           expr, tokens, errors
 
@@ -664,7 +668,7 @@ let parseTyDecl typePos (tokens, errors) =
           let ty, tokens, errors =
             parseTyError "Expected '='" (tokens, errors)
 
-          AExpr.TySynonym(tyIdent, ty, typePos), tokens, errors
+          AExpr.TySynonym(vis, tyIdent, ty, typePos), tokens, errors
 
   | _ -> parseExprError "Expected identifier" (tokens, errors)
 
