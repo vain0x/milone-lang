@@ -271,6 +271,12 @@ type AExpr =
   | TyUnion of Vis * Ident * AVariant list * Pos
   | Open of Ident list * Pos
 
+/// Root of AST, a result of parsing single source file.
+[<RequireQualifiedAccess>]
+type ARoot =
+  | Expr of AExpr
+  | Module of Ident * AExpr * Pos
+
 // -----------------------------------------------
 // Intermediate representation types
 // -----------------------------------------------

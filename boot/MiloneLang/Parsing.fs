@@ -934,22 +934,36 @@ let parseSemi basePos mainPos (tokens, errors) =
 
 /// `top-level = ( 'module' 'rec'? path module-body / module-body )?`
 let parseTopLevel (tokens, errors) =
-  let topPos = 0, 0
 
   match tokens with
-  | [] -> AExpr.TupleLit([], topPos), tokens, errors
+  | [] ->
+      let pos = 0, 0
+      ARoot.Expr(AExpr.TupleLit([], pos)), tokens, errors
 
-  | (Token.Module, modulePos) :: (Token.Rec, _) :: (Token.Ident _, _) :: (Token.Dot, _) :: (Token.Ident _, _) :: tokens ->
-      parseSemi modulePos modulePos (tokens, errors)
+  | (Token.Module, modulePos) :: (Token.Rec, _) :: (Token.Ident _, _) :: (Token.Dot, _) :: (Token.Ident ident, _) :: tokens ->
+      let expr, tokens, errors =
+        parseSemi modulePos modulePos (tokens, errors)
 
-  | (Token.Module, modulePos) :: (Token.Rec, _) :: (Token.Ident _, _) :: tokens ->
-      parseSemi modulePos modulePos (tokens, errors)
+      ARoot.Module(ident, expr, modulePos), tokens, errors
 
-  | (Token.Module, modulePos) :: (Token.Ident _, _) :: tokens -> parseSemi modulePos modulePos (tokens, errors)
+  | (Token.Module, modulePos) :: (Token.Rec, _) :: (Token.Ident ident, _) :: tokens ->
+      let expr, tokens, errors =
+        parseSemi modulePos modulePos (tokens, errors)
 
-  | _ -> parseSemi topPos topPos (tokens, errors)
+      ARoot.Module(ident, expr, modulePos), tokens, errors
 
-let parse (tokens: (Token * Pos) list): AExpr * (string * Pos) list =
+  | (Token.Module, modulePos) :: (Token.Ident ident, _) :: tokens ->
+      let expr, tokens, errors =
+        parseSemi modulePos modulePos (tokens, errors)
+
+      ARoot.Module(ident, expr, modulePos), tokens, errors
+
+  | _ ->
+      let pos = 0, 0
+      let expr, tokens, errors = parseSemi pos pos (tokens, errors)
+      ARoot.Expr expr, tokens, errors
+
+let parse (tokens: (Token * Pos) list): ARoot * (string * Pos) list =
   let expr, tokens, errors = parseTopLevel (tokens, [])
 
   let errors =

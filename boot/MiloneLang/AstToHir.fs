@@ -545,4 +545,10 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-let astToHir (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx = (expr, nameCtx) |> astToHirExpr docId
+let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
+  match root with
+  | ARoot.Expr expr -> astToHirExpr docId (expr, nameCtx)
+
+  | ARoot.Module (_, expr, _) ->
+      // TODO: insert HExpr.Module
+      astToHirExpr docId (expr, nameCtx)

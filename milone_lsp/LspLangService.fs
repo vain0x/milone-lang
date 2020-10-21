@@ -40,7 +40,7 @@ module MutMultimap =
 
 type TokenizeResult = (Token * Pos) list
 
-type ParseResult = AExpr * (string * Pos) list
+type ParseResult = ARoot * (string * Pos) list
 
 [<NoEquality>]
 [<NoComparison>]
