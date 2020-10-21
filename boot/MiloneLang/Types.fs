@@ -308,14 +308,6 @@ type NameCtx = NameCtx of AssocMap<Serial, Ident> * lastSerial: Serial
 
 type ScopeSerial = Serial
 
-[<RequireQualifiedAccess>]
-type Binding =
-  /// Value binding.
-  | Var of VarSerial * varIdent: Ident
-
-  /// Type binding.
-  | Ty of TySerial * tyIdent: Ident
-
 /// Stack of local scopes.
 type ScopeChain = AssocMap<string, Serial * Ident> list
 
