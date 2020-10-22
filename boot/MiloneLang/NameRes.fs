@@ -594,7 +594,6 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
 let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with
   | HExpr.Error _
-  | HExpr.Open _
   | HExpr.Lit _
   | HExpr.Prim _ -> expr, ctx
 
@@ -721,6 +720,23 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           ctx |> scopeCtxDefineTyFinish serial tyDecl loc
 
         expr, ctx
+
+      doArm ()
+
+  | HExpr.Open (path, _) ->
+      let doArm () =
+        // FIXME: resolve module-name based on path
+        match ctx |> scopeCtxResolveLocalTyIdent (path |> listLast) with
+        | Some moduleSerial ->
+            let ctx =
+              ctx
+              |> scopeCtxGetVarNs
+              |> nameTreeTryFind moduleSerial
+              |> listFold (fun ctx varSerial -> ctx |> scopeCtxOpenVar varSerial) ctx
+
+            expr, ctx
+
+        | None -> expr, ctx
 
       doArm ()
 
