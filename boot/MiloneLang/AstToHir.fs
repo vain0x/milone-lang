@@ -551,5 +551,6 @@ let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
 
   | ARoot.Module (ident, body, pos) ->
       let body, nameCtx = astToHirExpr docId (body, nameCtx)
+      let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let loc = toLoc docId pos
-      HExpr.Module(ident, body, loc), nameCtx
+      HExpr.Module(serial, body, loc), nameCtx
