@@ -750,16 +750,19 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           |> scopeCtxDefineTy serial (TyDef.Module(ident, loc))
           |> scopeCtxOpenTy serial
 
+        let parent, ctx = ctx |> scopeCtxStartScope
+
         let body, ctx =
           (body, ctx)
           |> nameResCollectDecls (Some serial)
           |> nameResExpr
 
-        // FIXME: not correctly implemented yet.
-        assert (next |> hxIsUnitLit)
+        let ctx = ctx |> scopeCtxFinishScope parent
+
+        let next, ctx = (next, ctx) |> nameResExpr
 
         // Module no longer needed.
-        body, ctx
+        Bundling.spliceExpr body next, ctx
 
       doArm ()
 

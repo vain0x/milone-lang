@@ -96,8 +96,7 @@ let spliceExpr firstExpr secondExpr =
         let exprs = goLast exprs
         HExpr.Inf(InfOp.Semi, exprs, ty, loc)
     | HExpr.Module (ident, body, next, loc) ->
-        // FIXME: the correct output is `module = body in go next`, however, it prevents tests from passing because secondExpr can't see functions defined in body of the module.
-        let body = go body
+        let next = go next
         HExpr.Module(ident, body, next, loc)
     | _ -> hxSemi [ expr; secondExpr ] noLoc
 
