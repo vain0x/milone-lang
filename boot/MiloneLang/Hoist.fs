@@ -226,7 +226,7 @@ let hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HExpr.Module _ -> failwith "NEVER: module is resolved in name reso"
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
 
 let hoistExpr (expr, ctx) =
   if ctx |> hoistCtxIsTopLevel |> not then
