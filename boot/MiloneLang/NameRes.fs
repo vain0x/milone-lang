@@ -31,6 +31,7 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
      mapEmpty (intHash, intCmp),
      mapEmpty (intHash, intCmp),
      nameTreeEmpty (),
+     nameTreeEmpty (),
      localSerial,
      scopeEmpty (),
      0)
@@ -111,6 +112,14 @@ let scopeCtxAddVarToNs tySerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
        (scopeCtx
         |> scopeCtxGetVarNs
         |> nameTreeAdd tySerial varSerial)
+
+/// Adds a type to a namespace.
+let scopeCtxAddTyToNs parentTySerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+  scopeCtx
+  |> scopeCtxWithTyNs
+       (scopeCtx
+        |> scopeCtxGetTyNs
+        |> nameTreeAdd parentTySerial tySerial)
 
 /// Adds a variable to a scope.
 let scopeCtxOpenVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
@@ -324,6 +333,12 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
 
     | _ -> ctx
 
+  let addTyToModule tySerial ctx =
+    match moduleSerialOpt, vis with
+    | Some moduleSerial, PublicVis -> ctx |> scopeCtxAddTyToNs moduleSerial tySerial
+
+    | _ -> ctx
+
   let tyIdent = ctx |> scopeCtxGetIdent tySerial
 
   if ctx |> scopeCtxGetTys |> mapContainsKey tySerial then
@@ -355,7 +370,9 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
 
           TyDef.Union(tyIdent, variantSerials, loc)
 
-        ctx |> scopeCtxDefineLocalTy tySerial tyDef
+        ctx
+        |> scopeCtxDefineLocalTy tySerial tyDef
+        |> addTyToModule tySerial
 
 /// Completes the type definition.
 ///

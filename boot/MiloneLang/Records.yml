@@ -21,6 +21,8 @@ ScopeCtx:
   # Namespace tree of vars.
   VarNs: NameTree
 
+  TyNs: NameTree
+
   # Serial of the current scope.
   LocalSerial: ScopeSerial
 
