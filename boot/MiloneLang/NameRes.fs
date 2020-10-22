@@ -384,6 +384,8 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
 
       variantSerials |> listFold go ctx
 
+  | TyDef.Module _ -> failwith "NEVER: no use case"
+
 // -----------------------------------------------
 // Collect declarations
 // -----------------------------------------------
@@ -392,8 +394,14 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
 // to create variables/types pre-definitions
 // so that mutually recursive references resolve correctly.
 
-let nameResCollectDecls (expr, ctx) =
-  let rec goPat (pat, ctx) =
+let nameResCollectDecls moduleSerialOpt (expr, ctx) =
+  let addVarToModule vis varSerial ctx =
+    match moduleSerialOpt, vis with
+    | Some moduleSerial, PublicVis -> ctx |> scopeCtxAddVarToNs moduleSerial varSerial
+
+    | _ -> ctx
+
+  let rec goPat vis (pat, ctx) =
     match pat with
     | HPat.Lit _
     | HPat.Discard _
@@ -415,20 +423,21 @@ let nameResCollectDecls (expr, ctx) =
             let ctx =
               ctx
               |> scopeCtxDefineLocalVar serial (VarDef.Var(ident, StorageModifier.Static, ty, loc))
+              |> addVarToModule vis serial
 
             pat, ctx
 
     | HPat.Call (callee, args, ty, loc) ->
-        let args, ctx = (args, ctx) |> stMap goPat
+        let args, ctx = (args, ctx) |> stMap (goPat vis)
         HPat.Call(callee, args, ty, loc), ctx
 
     | HPat.Cons (l, r, ty, loc) ->
-        let l, ctx = (l, ctx) |> goPat
-        let r, ctx = (r, ctx) |> goPat
+        let l, ctx = (l, ctx) |> goPat vis
+        let r, ctx = (r, ctx) |> goPat vis
         HPat.Cons(l, r, ty, loc), ctx
 
     | HPat.Tuple (items, ty, loc) ->
-        let items, ctx = (items, ctx) |> stMap goPat
+        let items, ctx = (items, ctx) |> stMap (goPat vis)
         HPat.Tuple(items, ty, loc), ctx
 
     | HPat.As (pat, serial, loc) ->
@@ -438,17 +447,17 @@ let nameResCollectDecls (expr, ctx) =
           ctx
           |> scopeCtxDefineLocalVar serial (VarDef.Var(ident, StorageModifier.Static, noTy, loc))
 
-        let pat, ctx = (pat, ctx) |> goPat
+        let pat, ctx = (pat, ctx) |> goPat vis
         HPat.As(pat, serial, loc), ctx
 
     | HPat.Anno (pat, ty, loc) ->
-        let pat, ctx = (pat, ctx) |> goPat
+        let pat, ctx = (pat, ctx) |> goPat vis
         HPat.Anno(pat, ty, loc), ctx
 
   let rec goExpr (expr, ctx) =
     match expr with
     | HExpr.Let (vis, pat, init, next, ty, loc) ->
-        let pat, ctx = (pat, ctx) |> goPat
+        let pat, ctx = (pat, ctx) |> goPat vis
         let next, ctx = (next, ctx) |> goExpr
         HExpr.Let(vis, pat, init, next, ty, loc), ctx
 
@@ -460,6 +469,7 @@ let nameResCollectDecls (expr, ctx) =
           |> scopeCtxOnEnterLetBody
           |> scopeCtxDefineFunUniquely serial args noTy loc
           |> scopeCtxOnLeaveLetBody
+          |> addVarToModule vis serial
 
         let next, ctx = (next, ctx) |> goExpr
         HExpr.LetFun(serial, vis, isMainFun, args, body, next, ty, loc), ctx
@@ -711,12 +721,24 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HExpr.Module (_, body, _) ->
-      // FIXME: not implemeted yet
-      (body, ctx) |> nameResExpr
+  | HExpr.Module (serial, body, loc) ->
+      // FIXME: not correctly implemented yet
+      let doArm () =
+        let ident = ctx |> scopeCtxGetIdent serial
+
+        let ctx =
+          ctx
+          |> scopeCtxDefineTy serial (TyDef.Module(ident, loc))
+          |> scopeCtxOpenTy serial
+
+        (body, ctx)
+        |> nameResCollectDecls (Some serial)
+        |> nameResExpr
+
+      doArm ()
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx
   (expr, scopeCtx)
-  |> nameResCollectDecls
+  |> nameResCollectDecls None
   |> nameResExpr

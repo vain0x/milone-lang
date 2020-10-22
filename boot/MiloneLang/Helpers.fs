@@ -1283,6 +1283,7 @@ let tyDefToIdent tyDef =
   match tyDef with
   | TyDef.Meta (ident, _, _) -> ident
   | TyDef.Union (ident, _, _) -> ident
+  | TyDef.Module (ident, _) -> ident
 
 // -----------------------------------------------
 // Variable definitions (HIR)

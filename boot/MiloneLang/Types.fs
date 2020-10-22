@@ -382,6 +382,7 @@ type TyDef =
   /// Bound type variable.
   | Meta of Ident * Ty * Loc
   | Union of Ident * VariantSerial list * Loc
+  | Module of Ident * Loc
 
 /// Variable definition in high-level IR.
 [<RequireQualifiedAccess>]
