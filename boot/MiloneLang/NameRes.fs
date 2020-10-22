@@ -320,7 +320,13 @@ let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx 
 /// - You need call `scopeCtxDefineTyFinish` to complete the task.
 /// - This doesn't resolve inner type expressions
 ///   because some type declarations are still unseen.
-let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
+let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
+  let addVarToModule varSerial ctx =
+    match moduleSerialOpt, vis with
+    | Some moduleSerial, PublicVis -> ctx |> scopeCtxAddVarToNs moduleSerial varSerial
+
+    | _ -> ctx
+
   let tyIdent = ctx |> scopeCtxGetIdent tySerial
 
   if ctx |> scopeCtxGetTys |> mapContainsKey tySerial then
@@ -341,6 +347,7 @@ let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
           |> scopeCtxDefineVar variantSerial varDef
           |> scopeCtxAddVarToNs tySerial variantSerial
           |> scopeCtxOpenVar variantSerial
+          |> addVarToModule variantSerial
 
         let ctx = variants |> listFold defineVariant ctx
 
@@ -359,7 +366,9 @@ let scopeCtxDefineTyStart tySerial tyDecl loc ctx =
 /// - This resolves inner type expressions.
 let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
   let ctx =
-    ctx |> scopeCtxDefineTyStart tySerial tyDecl loc
+    // Pass in PrivateVis because if this type is not pre-declared here, it's local to function.
+    ctx
+    |> scopeCtxDefineTyStart None tySerial PrivateVis tyDecl loc
 
   let tyDef = ctx |> scopeCtxGetTy tySerial
 
@@ -480,13 +489,14 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
 
     | HExpr.TyDecl (serial, vis, tyDecl, loc) ->
         let ctx =
-          ctx |> scopeCtxDefineTyStart serial tyDecl loc
+          ctx
+          |> scopeCtxDefineTyStart moduleSerialOpt serial vis tyDecl loc
 
         HExpr.TyDecl(serial, vis, tyDecl, loc), ctx
 
-    | HExpr.Module (ident, body, loc) ->
-        let body, ctx = (body, ctx) |> goExpr
-        HExpr.Module(ident, body, loc), ctx
+    // | HExpr.Module (ident, body, loc) ->
+    //     let body, ctx = (body, ctx) |> goExpr
+    //     HExpr.Module(ident, body, loc), ctx
 
     | _ -> expr, ctx
 
@@ -739,6 +749,11 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx
-  (expr, scopeCtx)
-  |> nameResCollectDecls None
-  |> nameResExpr
+
+  match expr with
+  | HExpr.Module _ -> (expr, scopeCtx) |> nameResExpr
+
+  | _ ->
+      (expr, scopeCtx)
+      |> nameResCollectDecls None
+      |> nameResExpr
