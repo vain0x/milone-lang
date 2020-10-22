@@ -726,7 +726,8 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HExpr.Open (path, _) ->
       let doArm () =
         // FIXME: resolve module-name based on path
-        match ctx |> scopeCtxResolveLocalTyIdent (path |> listLast) with
+        match ctx
+              |> scopeCtxResolveLocalTyIdent (path |> listLast) with
         | Some moduleSerial ->
             let ctx =
               ctx
@@ -740,8 +741,7 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HExpr.Module (serial, body, loc) ->
-      // FIXME: not correctly implemented yet
+  | HExpr.Module (serial, body, next, loc) ->
       let doArm () =
         let ident = ctx |> scopeCtxGetIdent serial
 
@@ -750,9 +750,16 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           |> scopeCtxDefineTy serial (TyDef.Module(ident, loc))
           |> scopeCtxOpenTy serial
 
-        (body, ctx)
-        |> nameResCollectDecls (Some serial)
-        |> nameResExpr
+        let body, ctx =
+          (body, ctx)
+          |> nameResCollectDecls (Some serial)
+          |> nameResExpr
+
+        // FIXME: not correctly implemented yet.
+        assert (next |> hxIsUnitLit)
+
+        // Module no longer needed.
+        body, ctx
 
       doArm ()
 

@@ -476,7 +476,7 @@ type HExpr =
   /// Type declaration.
   | TyDecl of TySerial * Vis * TyDecl * Loc
   | Open of Ident list * Loc
-  | Module of Serial * HExpr * Loc
+  | Module of Serial * body: HExpr * next: HExpr * Loc
   | Error of string * Loc
 
 [<RequireQualifiedAccess>]
