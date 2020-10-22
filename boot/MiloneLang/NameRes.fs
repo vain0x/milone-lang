@@ -136,8 +136,6 @@ let scopeCtxOpenVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Adds a type to a scope.
 let scopeCtxOpenTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
-  let scopeSerial = scopeCtx |> scopeCtxGetLocalSerial
-
   let tyIdent =
     scopeCtx |> scopeCtxGetTy tySerial |> tyDefToIdent
 
@@ -177,8 +175,7 @@ let scopeCtxOnLeaveLetBody (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Starts a new scope.
 let scopeCtxStartScope (scopeCtx: ScopeCtx): ScopeSerial * ScopeCtx =
-  let parentSerial, parent =
-    scopeCtx |> scopeCtxGetLocalSerial, scopeCtx |> scopeCtxGetLocal
+  let parentSerial = scopeCtx |> scopeCtxGetLocalSerial
 
   let scopeCtx =
     let varScopes, tyScopes = scopeCtx |> scopeCtxGetLocal
@@ -493,10 +490,6 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
           |> scopeCtxDefineTyStart moduleSerialOpt serial vis tyDecl loc
 
         HExpr.TyDecl(serial, vis, tyDecl, loc), ctx
-
-    // | HExpr.Module (ident, body, loc) ->
-    //     let body, ctx = (body, ctx) |> goExpr
-    //     HExpr.Module(ident, body, loc), ctx
 
     | _ -> expr, ctx
 
