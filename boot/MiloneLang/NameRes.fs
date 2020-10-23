@@ -746,11 +746,19 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         match ctx
               |> scopeCtxResolveLocalTyIdent (path |> listLast) with
         | Some moduleSerial ->
+            // Import vars.
             let ctx =
               ctx
               |> scopeCtxGetVarNs
               |> nameTreeTryFind moduleSerial
               |> listFold (fun ctx varSerial -> ctx |> scopeCtxOpenVar varSerial) ctx
+
+            // Import tys.
+            let ctx =
+              ctx
+              |> scopeCtxGetTyNs
+              |> nameTreeTryFind moduleSerial
+              |> listFold (fun ctx tySerial -> ctx |> scopeCtxOpenTy tySerial) ctx
 
             expr, ctx
 
