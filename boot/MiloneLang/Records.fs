@@ -433,7 +433,7 @@ type CliHost =
     of string list
       * (unit -> Profiler)
       * (string -> Profiler -> unit)
-      * (string -> string)
+      * (string -> string option)
 
 let cliHostGetArgs (CliHost (args, _, _, _)) =
   args

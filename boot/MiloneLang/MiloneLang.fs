@@ -1,7 +1,10 @@
 /// Entry point of the milone-lang compiler.
 module rec MiloneLang.EntryPoint
 
-open MiloneLang.Polyfills
+// HACK: "Polyfills" module is automatically loaded by the bunlder and opened in name resolution.
+// open MiloneLang.Polyfills
+
+open MiloneLang.Records
 open MiloneLang.Cli
 
 let argCount (): int = (__nativeFun "arg_count" 1) ()
@@ -18,6 +21,8 @@ let profileLog (msg: string) (Profiler state): unit =
   ((__nativeFun "milone_profile_log" 2) msg state: int)
   |> ignore
 
+let fileExists (filePath: string): bool = (__nativeFun "file_exists" 1) filePath
+
 let fileReadAllText (filePath: string): string =
   (__nativeFun "file_read_all_text" 1) filePath
 
@@ -27,11 +32,14 @@ let argList () =
 
   go [] (argCount ())
 
+let readFile filePath =
+  if fileExists filePath then fileReadAllText filePath |> Some else None
+
 [<EntryPoint>]
 let main _ =
   let args = argList ()
 
   let host =
-    CliHost(args, profileInit, profileLog, fileReadAllText)
+    CliHost(args, profileInit, profileLog, readFile)
 
   cli host

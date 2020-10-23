@@ -161,6 +161,23 @@ let scopeCtxOpenTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
 
   scopeCtx |> scopeCtxWithLocal scope
 
+let scopeCtxOpenModule moduleSerial scopeCtx =
+  // Import vars.
+  let scopeCtx =
+    scopeCtx
+    |> scopeCtxGetVarNs
+    |> nameTreeTryFind moduleSerial
+    |> listFold (fun ctx varSerial -> ctx |> scopeCtxOpenVar varSerial) scopeCtx
+
+  // Import tys.
+  let scopeCtx =
+    scopeCtx
+    |> scopeCtxGetTyNs
+    |> nameTreeTryFind moduleSerial
+    |> listFold (fun ctx tySerial -> ctx |> scopeCtxOpenTy tySerial) scopeCtx
+
+  scopeCtx
+
 /// Defines a variable in the local scope.
 let scopeCtxDefineLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
@@ -746,19 +763,7 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         match ctx
               |> scopeCtxResolveLocalTyIdent (path |> listLast) with
         | Some moduleSerial ->
-            // Import vars.
-            let ctx =
-              ctx
-              |> scopeCtxGetVarNs
-              |> nameTreeTryFind moduleSerial
-              |> listFold (fun ctx varSerial -> ctx |> scopeCtxOpenVar varSerial) ctx
-
-            // Import tys.
-            let ctx =
-              ctx
-              |> scopeCtxGetTyNs
-              |> nameTreeTryFind moduleSerial
-              |> listFold (fun ctx tySerial -> ctx |> scopeCtxOpenTy tySerial) ctx
+            let ctx = ctx |> scopeCtxOpenModule moduleSerial
 
             expr, ctx
 
@@ -783,6 +788,10 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           |> nameResExpr
 
         let ctx = ctx |> scopeCtxFinishScope parent
+
+        // HACK: Polyfills is auto-open.
+        let ctx =
+          if ident = "Polyfills" then ctx |> scopeCtxOpenModule serial else ctx
 
         let next, ctx = (next, ctx) |> nameResExpr
 

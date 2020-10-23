@@ -128,4 +128,4 @@ CliHost:
   ProfileLog: (string -> Profiler -> unit)
 
   # Reads all contents of a file as string.
-  FileReadAllText: (string -> string)
+  FileReadAllText: (string -> string option)

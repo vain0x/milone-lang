@@ -209,8 +209,7 @@ let cli (host: CliHost) =
   | [ "-v"; projectDir ] -> cliCompile host Verbose projectDir
 
   | [ "--profile"; projectDir ] ->
-      let profile =
-        Profile(cliHostGetProfileInit host ())
+      let profile = Profile(cliHostGetProfileInit host ())
 
       cliCompile host profile projectDir
 

@@ -141,6 +141,18 @@ void milone_assert(int cond, int y, int x) {
   }
 }
 
+int file_exists(struct String file_name) {
+  int ok = 0;
+
+  FILE *fp = fopen(file_name.str, "r");
+  if (fp) {
+    ok = 1;
+    fclose(fp);
+  }
+
+  return ok;
+}
+
 struct String file_read_all_text(struct String file_name) {
   FILE *fp = fopen(file_name.str, "r");
   if (!fp) {
