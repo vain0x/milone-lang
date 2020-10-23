@@ -30,4 +30,8 @@ let argList () =
 [<EntryPoint>]
 let main _ =
   let args = argList ()
-  cli fileReadAllText args
+
+  let host =
+    CliHost(args, profileInit, profileLog, fileReadAllText)
+
+  cli host

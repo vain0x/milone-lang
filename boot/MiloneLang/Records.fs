@@ -427,3 +427,34 @@ let cirCtxWithDecls decls (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNam
 
 let cirCtxWithLogs logs (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, _)): CirCtx =
   CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+type CliHost =
+  | CliHost
+    of string list
+      * (unit -> Profiler)
+      * (string -> Profiler -> unit)
+      * (string -> string)
+
+let cliHostGetArgs (CliHost (args, _, _, _)) =
+  args
+
+let cliHostGetProfileInit (CliHost (_, profileInit, _, _)) =
+  profileInit
+
+let cliHostGetProfileLog (CliHost (_, _, profileLog, _)) =
+  profileLog
+
+let cliHostGetFileReadAllText (CliHost (_, _, _, fileReadAllText)) =
+  fileReadAllText
+
+let cliHostWithArgs args (CliHost (_, profileInit, profileLog, fileReadAllText)): CliHost =
+  CliHost (args, profileInit, profileLog, fileReadAllText)
+
+let cliHostWithProfileInit profileInit (CliHost (args, _, profileLog, fileReadAllText)): CliHost =
+  CliHost (args, profileInit, profileLog, fileReadAllText)
+
+let cliHostWithProfileLog profileLog (CliHost (args, profileInit, _, fileReadAllText)): CliHost =
+  CliHost (args, profileInit, profileLog, fileReadAllText)
+
+let cliHostWithFileReadAllText fileReadAllText (CliHost (args, profileInit, profileLog, _)): CliHost =
+  CliHost (args, profileInit, profileLog, fileReadAllText)

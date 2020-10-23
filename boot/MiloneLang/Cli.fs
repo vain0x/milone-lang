@@ -90,14 +90,17 @@ let printLogs logs =
   |> listIter (fun (log, loc) -> printfn "#error %s" (log |> logToString loc))
   "", false
 
-let build readFile verbosity (projectDir: string): string * bool =
+let build host verbosity (projectDir: string): string * bool =
+  let profileLog = host |> cliHostGetProfileLog
+  let readFile = host |> cliHostGetFileReadAllText
+
   let log msg =
     match verbosity with
     | Verbose ->
         // FIXME: to stderr
         printfn "// %s" msg
 
-    | Profile profiler -> profileLog msg profiler
+    | Profile profiler -> profiler |> profileLog msg
 
     | Quiet -> ()
 
@@ -163,7 +166,9 @@ let build readFile verbosity (projectDir: string): string * bool =
             let output = cprint cir
             output, success
 
-let cliParse readFile (projectDir: string) =
+let cliParse host (projectDir: string) =
+  let readFile = host |> cliHostGetFileReadAllText
+
   // print errors
   let rec go1 code errors =
     match errors with
@@ -190,24 +195,26 @@ let cliParse readFile (projectDir: string) =
   |> ignore
   0
 
-let cliCompile readFile verbosity projectDir =
-  let output, success = build readFile verbosity projectDir
+let cliCompile host verbosity projectDir =
+  let output, success = build host verbosity projectDir
   let exitCode = if success then 0 else 1
 
   printfn "%s" (output |> strTrimEnd)
   exitCode
 
-let cli readFile args =
-  match args with
-  | [ "parse"; projectDir ] -> cliParse readFile projectDir
+let cli (host: CliHost) =
+  match host |> cliHostGetArgs with
+  | [ "parse"; projectDir ] -> cliParse host projectDir
 
-  | [ "-v"; projectDir ] -> cliCompile readFile Verbose projectDir
+  | [ "-v"; projectDir ] -> cliCompile host Verbose projectDir
 
   | [ "--profile"; projectDir ] ->
-      let profile = Profile(profileInit ())
-      cliCompile readFile profile projectDir
+      let profile =
+        Profile(cliHostGetProfileInit host ())
 
-  | [ "-q"; projectDir ] -> cliCompile readFile Quiet projectDir
+      cliCompile host profile projectDir
+
+  | [ "-q"; projectDir ] -> cliCompile host Quiet projectDir
 
   | _ ->
       // FIXME: to stderr
