@@ -16,7 +16,7 @@ let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
   match ctx |> mirCtxGetVars |> mapFind varSerial with
   | VarDef.Variant (_, tySerial, _, _, _, _) ->
       match ctx |> mirCtxGetTys |> mapFind tySerial with
-      | TyDef.Union (_, variantSerials, _) -> variantSerials |> listLength = 1
+      | UnionTyDef (_, variantSerials, _) -> variantSerials |> listLength = 1
 
       | _ -> failwith "Expected union serial"
 

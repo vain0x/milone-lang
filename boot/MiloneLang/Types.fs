@@ -375,12 +375,11 @@ type TyDecl =
   | UnionTyDecl of Ident * variants: (Ident * VarSerial * bool * Ty) list * Loc
 
 /// Type definition.
-[<RequireQualifiedAccess>]
 type TyDef =
   /// Bound type variable.
-  | Meta of Ident * Ty * Loc
-  | Union of Ident * VariantSerial list * Loc
-  | Module of Ident * Loc
+  | MetaTyDef of Ident * Ty * Loc
+  | UnionTyDef of Ident * VariantSerial list * Loc
+  | ModuleTyDef of Ident * Loc
 
 /// Variable definition in high-level IR.
 [<RequireQualifiedAccess>]

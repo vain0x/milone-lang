@@ -59,7 +59,7 @@ let scopeCtxIsVariant varSerial scopeCtx =
 
 let scopeCtxIsMetaTy tySerial scopeCtx =
   match scopeCtx |> scopeCtxGetTy tySerial with
-  | TyDef.Meta _ -> true
+  | MetaTyDef _ -> true
 
   | _ -> false
 
@@ -365,7 +365,7 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
     match tyDecl with
     | TySynonymDecl (body, _synonymLoc) ->
         ctx
-        |> scopeCtxDefineLocalTy tySerial (TyDef.Meta(tyIdent, body, loc))
+        |> scopeCtxDefineLocalTy tySerial (MetaTyDef(tyIdent, body, loc))
         |> addTyToModule tySerial
 
     | UnionTyDecl (_, variants, _unionLoc) ->
@@ -386,7 +386,7 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
             variants
             |> listMap (fun (_, variantSerial, _, _) -> variantSerial)
 
-          TyDef.Union(tyIdent, variantSerials, loc)
+          UnionTyDef(tyIdent, variantSerials, loc)
 
         ctx
         |> scopeCtxDefineLocalTy tySerial tyDef
@@ -405,12 +405,12 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
   let tyDef = ctx |> scopeCtxGetTy tySerial
 
   match tyDef with
-  | TyDef.Meta (tyIdent, bodyTy, loc) ->
+  | MetaTyDef (tyIdent, bodyTy, loc) ->
       let bodyTy, ctx = ctx |> scopeCtxResolveTy bodyTy loc
       ctx
-      |> scopeCtxDefineTy tySerial (TyDef.Meta(tyIdent, bodyTy, loc))
+      |> scopeCtxDefineTy tySerial (MetaTyDef(tyIdent, bodyTy, loc))
 
-  | TyDef.Union (_, variantSerials, _unionLoc) ->
+  | UnionTyDef (_, variantSerials, _unionLoc) ->
       let rec go ctx variantSerial =
         match ctx |> scopeCtxGetVar variantSerial with
         | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
@@ -425,7 +425,7 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
 
       variantSerials |> listFold go ctx
 
-  | TyDef.Module _ -> failwith "NEVER: no use case"
+  | ModuleTyDef _ -> failwith "NEVER: no use case"
 
 // -----------------------------------------------
 // Collect declarations
@@ -778,7 +778,7 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let ctx =
           ctx
-          |> scopeCtxDefineTy serial (TyDef.Module(ident, loc))
+          |> scopeCtxDefineTy serial (ModuleTyDef(ident, loc))
           |> scopeCtxOpenTy serial
 
         let parent, ctx = ctx |> scopeCtxStartScope

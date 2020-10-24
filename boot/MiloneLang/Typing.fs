@@ -613,7 +613,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
       |> tyCtxGetTys
       |> mapFilter (fun _ tyDef ->
            match tyDef with
-           | TyDef.Meta _ -> false
+           | MetaTyDef _ -> false
 
            | _ -> true)
 

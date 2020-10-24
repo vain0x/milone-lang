@@ -1282,9 +1282,9 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 
 let tyDefToIdent tyDef =
   match tyDef with
-  | TyDef.Meta (ident, _, _) -> ident
-  | TyDef.Union (ident, _, _) -> ident
-  | TyDef.Module (ident, _) -> ident
+  | MetaTyDef (ident, _, _) -> ident
+  | UnionTyDef (ident, _, _) -> ident
+  | ModuleTyDef (ident, _) -> ident
 
 // -----------------------------------------------
 // Variable definitions (HIR)
@@ -1790,7 +1790,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
       |> tyContextWithTys
            (ctx
             |> tyContextGetTys
-            |> mapAdd tySerial (TyDef.Meta(noIdent, ty, loc)))
+            |> mapAdd tySerial (MetaTyDef(noIdent, ty, loc)))
       |> tyContextWithTyDepths tyDepths
 
 /// Substitutes occurrences of already-inferred type vars
@@ -1798,7 +1798,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 let typingSubst (ctx: TyContext) ty: Ty =
   let substMeta tySerial =
     match ctx |> tyContextGetTys |> mapTryFind tySerial with
-    | Some (TyDef.Meta (_, ty, _)) -> Some ty
+    | Some (MetaTyDef (_, ty, _)) -> Some ty
     | _ -> None
 
   tySubst substMeta ty

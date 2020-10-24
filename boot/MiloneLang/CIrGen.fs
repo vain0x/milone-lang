@@ -409,7 +409,7 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (RefTyCtor serial, _) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
-      | Some (TyDef.Union _) -> cirCtxAddUnionIncomplete ctx serial
+      | Some (UnionTyDef _) -> cirCtxAddUnionIncomplete ctx serial
 
       | _ -> CVoidTy, cirCtxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
 
@@ -436,7 +436,7 @@ let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (RefTyCtor serial, _) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
-      | Some (TyDef.Union (_, variants, _)) -> cirCtxAddUnionDecl ctx serial variants
+      | Some (UnionTyDef (_, variants, _)) -> cirCtxAddUnionDecl ctx serial variants
 
       | _ -> CVoidTy, cirCtxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
 
