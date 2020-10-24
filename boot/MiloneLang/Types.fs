@@ -382,12 +382,11 @@ type TyDef =
   | ModuleTyDef of Ident * Loc
 
 /// Variable definition in high-level IR.
-[<RequireQualifiedAccess>]
 type VarDef =
-  | Var of Ident * StorageModifier * Ty * Loc
-  | Fun of Ident * Arity * TyScheme * Loc
+  | VarDef of Ident * StorageModifier * Ty * Loc
+  | FunDef of Ident * Arity * TyScheme * Loc
   /// Variant constructor.
-  | Variant of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
+  | VariantDef of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
 
 /// Pattern in high-level IR.
 [<RequireQualifiedAccess>]

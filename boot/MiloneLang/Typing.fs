@@ -145,7 +145,7 @@ let tyCtxFindVar (ctx: TyCtx) serial = ctx |> tyCtxGetVars |> mapFind serial
 
 let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
   match ctx |> tyCtxGetVars |> mapFind funSerial with
-  | VarDef.Fun (ident, arity, TyScheme ([], funTy), loc) ->
+  | FunDef (ident, arity, TyScheme ([], funTy), loc) ->
       let isOwned tySerial =
         let depth =
           ctx |> tyCtxGetTyDepths |> mapFind tySerial
@@ -156,14 +156,14 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
       let funTyScheme = tyGeneralize isOwned funTy
 
       let varDef =
-        VarDef.Fun(ident, arity, funTyScheme, loc)
+        FunDef(ident, arity, funTyScheme, loc)
 
       let ctx =
         ctx
         |> tyCtxWithVars (ctx |> tyCtxGetVars |> mapAdd funSerial varDef)
 
       ctx
-  | VarDef.Fun _ -> failwith "Can't generalize already-generalized function"
+  | FunDef _ -> failwith "Can't generalize already-generalized function"
   | _ -> failwith "Expected function"
 
 /// Creates an expression to abort.
@@ -178,16 +178,16 @@ let hxAbort (ctx: TyCtx) ty loc =
 
 let tyCtxUnifyVarTy varSerial ty loc ctx =
   match tyCtxFindVar ctx varSerial with
-  | VarDef.Fun (_, _, tyScheme, _) ->
+  | FunDef (_, _, tyScheme, _) ->
       let refTy, ctx = tyCtxInstantiate ctx tyScheme loc
       tyCtxUnifyTy ctx loc refTy ty
 
   | varDef ->
       let refTy =
         match varDef with
-        | VarDef.Var (_, _, ty, _) -> ty
-        | VarDef.Variant (_, _, _, _, ty, _) -> ty
-        | VarDef.Fun _ -> failwith "NEVER"
+        | VarDef (_, _, ty, _) -> ty
+        | VariantDef (_, _, _, _, ty, _) -> ty
+        | FunDef _ -> failwith "NEVER"
 
       tyCtxUnifyTy ctx loc refTy ty
 
@@ -440,7 +440,7 @@ let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next ty loc =
 
     let ctx =
       match ctx |> tyCtxGetVars |> mapFind varSerial with
-      | VarDef.Fun (_, _, TyScheme ([], oldTy), _) -> tyCtxUnifyTy ctx loc oldTy calleeTy
+      | FunDef (_, _, TyScheme ([], oldTy), _) -> tyCtxUnifyTy ctx loc oldTy calleeTy
       | _ -> failwith "NEVER: It must be a pre-generalized function"
 
     calleeTy, ctx
@@ -551,28 +551,28 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
                    |> mapFind varSerial)
 
            match varDef with
-           | VarDef.Var (ident, storageModifier, _, loc) ->
+           | VarDef (ident, storageModifier, _, loc) ->
                let ty, _, ctx = tyCtxFreshTyVar ident loc ctx
 
                let varDef =
-                 VarDef.Var(ident, storageModifier, ty, loc)
+                 VarDef(ident, storageModifier, ty, loc)
 
                (varSerial, varDef), ctx
 
-           | VarDef.Fun (ident, arity, _, loc) ->
+           | FunDef (ident, arity, _, loc) ->
                let ty, _, ctx = tyCtxFreshTyVar ident loc ctx
                let tyScheme = TyScheme([], ty)
-               let varDef = VarDef.Fun(ident, arity, tyScheme, loc)
+               let varDef = FunDef(ident, arity, tyScheme, loc)
                (varSerial, varDef), ctx
 
-           | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, _, loc) ->
+           | VariantDef (ident, tySerial, hasPayload, payloadTy, _, loc) ->
                // Pre-compute the type of variant.
                let variantTy =
                  let unionTy = tyRef tySerial []
                  if hasPayload then tyFun payloadTy unionTy else unionTy
 
                let varDef =
-                 VarDef.Variant(ident, tySerial, hasPayload, payloadTy, variantTy, loc)
+                 VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc)
 
                (varSerial, varDef), ctx)
 
@@ -594,16 +594,16 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
       |> tyCtxGetVars
       |> mapMap (fun _ varDef ->
            match varDef with
-           | VarDef.Var (ident, storageModifier, ty, loc) ->
+           | VarDef (ident, storageModifier, ty, loc) ->
                let ty = tyCtxSubstTy ctx ty
-               VarDef.Var(ident, storageModifier, ty, loc)
-           | VarDef.Fun (ident, arity, TyScheme (args, ty), loc) ->
+               VarDef(ident, storageModifier, ty, loc)
+           | FunDef (ident, arity, TyScheme (args, ty), loc) ->
                let ty = tyCtxSubstTy ctx ty
-               VarDef.Fun(ident, arity, TyScheme(args, ty), loc)
-           | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, ty, loc) ->
+               FunDef(ident, arity, TyScheme(args, ty), loc)
+           | VariantDef (ident, tySerial, hasPayload, payloadTy, ty, loc) ->
                let payloadTy = tyCtxSubstTy ctx payloadTy
                let ty = tyCtxSubstTy ctx ty
-               VarDef.Variant(ident, tySerial, hasPayload, payloadTy, ty, loc))
+               VariantDef(ident, tySerial, hasPayload, payloadTy, ty, loc))
 
     ctx |> tyCtxWithVars vars
 

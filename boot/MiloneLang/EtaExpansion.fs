@@ -75,7 +75,7 @@ let etaCtxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
     |> etaCtxWithVars
          (ctx
           |> etaCtxGetVars
-          |> mapAdd serial (VarDef.Fun(ident, arity, tyScheme, loc)))
+          |> mapAdd serial (FunDef(ident, arity, tyScheme, loc)))
 
   let refExpr = HExpr.Ref(serial, ty, loc)
   refExpr, serial, ctx
@@ -89,15 +89,15 @@ let etaCtxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
     |> etaCtxWithVars
          (ctx
           |> etaCtxGetVars
-          |> mapAdd serial (VarDef.Var(ident, AutoSM, ty, loc)))
+          |> mapAdd serial (VarDef(ident, AutoSM, ty, loc)))
 
   let refExpr = HExpr.Ref(serial, ty, loc)
   refExpr, serial, ctx
 
 let etaCtxIsFun serial (ctx: EtaCtx) =
   match ctx |> etaCtxGetVars |> mapTryFind serial with
-  | Some (VarDef.Fun _) -> true
-  | Some (VarDef.Variant _) ->
+  | Some (FunDef _) -> true
+  | Some (VariantDef _) ->
       // FIXME: not a function
       true
   | _ -> false
@@ -284,8 +284,8 @@ let unetaCall callee args resultTy loc ctx =
   | HExpr.Ref (serial, _, calleeLoc), _ when ctx |> etaCtxIsFun serial ->
       let arity =
         match ctx |> etaCtxGetVars |> mapFind serial with
-        | VarDef.Fun (_, arity, _, _) -> arity
-        | VarDef.Variant (_, _, hasPayload, _, _, _) -> if hasPayload then 1 else 0
+        | FunDef (_, arity, _, _) -> arity
+        | VariantDef (_, _, hasPayload, _, _, _) -> if hasPayload then 1 else 0
         | _ -> 1
 
       let args, ctx = (args, ctx) |> stMap unetaExpr
@@ -304,7 +304,7 @@ let unetaCall callee args resultTy loc ctx =
 
 let unetaRef expr serial _refTy calleeLoc (ctx: EtaCtx) =
   match ctx |> etaCtxGetVars |> mapTryFind serial with
-  | Some (VarDef.Fun (_, arity, _, _)) -> resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
+  | Some (FunDef (_, arity, _, _)) -> resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
   | _ -> expr, ctx
 
 let unetaPrim expr prim primTy calleeLoc (ctx: EtaCtx) =

@@ -72,7 +72,7 @@ let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
 
 let cirCtxGetVarStorageModifier (ctx: CirCtx) varSerial =
   match ctx |> cirCtxGetVars |> mapTryFind varSerial with
-  | Some (VarDef.Var (_, storageModifier, _, _)) -> storageModifier
+  | Some (VarDef (_, storageModifier, _, _)) -> storageModifier
 
   | _ -> StaticSM
 
@@ -271,7 +271,7 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
         variants
         |> listMap (fun variantSerial ->
              match ctx |> cirCtxGetVars |> mapTryFind variantSerial with
-             | Some (VarDef.Variant (ident, _, hasPayload, payloadTy, _, _)) ->
+             | Some (VariantDef (ident, _, hasPayload, payloadTy, _, _)) ->
                  ident, variantSerial, hasPayload, payloadTy
              | _ -> failwith "Never")
 

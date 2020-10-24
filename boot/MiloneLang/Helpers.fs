@@ -1292,9 +1292,9 @@ let tyDefToIdent tyDef =
 
 let varDefToIdent varDef =
   match varDef with
-  | VarDef.Var (ident, _, _, _) -> ident
-  | VarDef.Fun (ident, _, _, _) -> ident
-  | VarDef.Variant (ident, _, _, _, _, _) -> ident
+  | VarDef (ident, _, _, _) -> ident
+  | FunDef (ident, _, _, _) -> ident
+  | VariantDef (ident, _, _, _, _, _) -> ident
 
 // -----------------------------------------------
 // Literals

@@ -199,7 +199,7 @@ let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
     varSerials
     |> listChoose (fun varSerial ->
          match ctx |> ccCtxGetVars |> mapTryFind varSerial with
-         | Some (VarDef.Var (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
+         | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
 
          | _ -> None)
 
@@ -268,10 +268,10 @@ let ccCtxUpdateFunDefs (ctx: CcCtx) =
 
     | caps ->
         match vars |> mapFind varSerial with
-        | VarDef.Fun (ident, arity, TyScheme (fvs, funTy), loc) ->
+        | FunDef (ident, arity, TyScheme (fvs, funTy), loc) ->
             let funTy, arity = caps |> capsUpdateFunDef funTy arity
             let tyScheme = TyScheme(fvs, funTy)
-            let varDef = VarDef.Fun(ident, arity, tyScheme, loc)
+            let varDef = FunDef(ident, arity, tyScheme, loc)
             vars |> mapAdd varSerial varDef
 
         | _ -> vars

@@ -14,7 +14,7 @@ let mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
 
 let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
   match ctx |> mirCtxGetVars |> mapFind varSerial with
-  | VarDef.Variant (_, tySerial, _, _, _, _) ->
+  | VariantDef (_, tySerial, _, _, _, _) ->
       match ctx |> mirCtxGetTys |> mapFind tySerial with
       | UnionTyDef (_, variantSerials, _) -> variantSerials |> listLength = 1
 
@@ -48,7 +48,7 @@ let mirCtxFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
     |> mirCtxWithVars
          (ctx
           |> mirCtxGetVars
-          |> mapAdd serial (VarDef.Var(ident, AutoSM, ty, loc)))
+          |> mapAdd serial (VarDef(ident, AutoSM, ty, loc)))
 
   let refExpr = MRefExpr(serial, ty, loc)
   refExpr, serial, ctx
@@ -76,7 +76,7 @@ let mirCtxFreshLabel (ctx: MirCtx) (ident: Ident) loc =
 /// Gets if the serial denotes to a variant function.
 let mirCtxIsVariantFun (ctx: MirCtx) serial =
   match ctx |> mirCtxGetVars |> mapTryFind serial with
-  | Some (VarDef.Variant _) -> true
+  | Some (VariantDef _) -> true
   | _ -> false
 
 /// Wraps an expression with projection operation.
@@ -159,7 +159,7 @@ let mirifyPatSome ctx endLabel item itemTy loc expr =
 
 let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
   match ctx |> mirCtxGetVars |> mapFind serial with
-  | VarDef.Variant _ ->
+  | VariantDef _ ->
       // Compare tags.
       let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
       let rTagExpr = MRefExpr(serial, tyInt, loc)
@@ -178,7 +178,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
 
 let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
   match ctx |> mirCtxGetVars |> mapFind serial, args with
-  | VarDef.Variant (_, _, _, payloadTy, _, _), [ payload ] ->
+  | VariantDef (_, _, _, payloadTy, _, _), [ payload ] ->
       let extractExpr =
         MUnaryExpr(MGetVariantUnary serial, expr, payloadTy, loc)
 
@@ -266,8 +266,8 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
 
 let mirifyExprRef (ctx: MirCtx) serial ty loc =
   match ctx |> mirCtxGetVars |> mapTryFind serial with
-  | Some (VarDef.Variant (_, tySerial, _, _, _, _)) -> MVariantExpr(tySerial, serial, ty, loc), ctx
-  | Some (VarDef.Fun (_, _, _, loc)) -> MProcExpr(serial, ty, loc), ctx
+  | Some (VariantDef (_, tySerial, _, _, _, _)) -> MVariantExpr(tySerial, serial, ty, loc), ctx
+  | Some (FunDef (_, _, _, loc)) -> MProcExpr(serial, ty, loc), ctx
   | _ -> MRefExpr(serial, ty, loc), ctx
 
 let mirifyExprPrim (ctx: MirCtx) prim ty loc =

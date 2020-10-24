@@ -53,7 +53,7 @@ let scopeCtxGetTy tySerial (scopeCtx: ScopeCtx) =
 
 let scopeCtxIsVariant varSerial scopeCtx =
   match scopeCtx |> scopeCtxGetVar varSerial with
-  | VarDef.Variant _ -> true
+  | VariantDef _ -> true
 
   | _ -> false
 
@@ -71,8 +71,8 @@ let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
           |> scopeCtxGetVars
           |> mapTryFind varSerial,
           varDef with
-    | Some (VarDef.Var (_, StaticSM, _, _)), VarDef.Var (ident, _, ty, loc) ->
-        VarDef.Var(ident, StaticSM, ty, loc)
+    | Some (VarDef (_, StaticSM, _, _)), VarDef (ident, _, ty, loc) ->
+        VarDef(ident, StaticSM, ty, loc)
     | _ -> varDef
 
   scopeCtx
@@ -324,13 +324,13 @@ let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx 
   let tyScheme = TyScheme([], ty)
 
   match scopeCtx |> scopeCtxGetVars |> mapTryFind serial with
-  | Some (VarDef.Fun _) -> scopeCtx
+  | Some (FunDef _) -> scopeCtx
 
   | Some _ -> failwith "NEVER"
 
   | None ->
       let ident = scopeCtx |> scopeCtxGetIdent serial
-      let varDef = VarDef.Fun(ident, arity, tyScheme, loc)
+      let varDef = FunDef(ident, arity, tyScheme, loc)
 
       let scopeCtx =
         scopeCtx |> scopeCtxDefineLocalVar serial varDef
@@ -371,7 +371,7 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
     | UnionTyDecl (_, variants, _unionLoc) ->
         let defineVariant ctx (variantIdent, variantSerial, hasPayload, payloadTy) =
           let varDef =
-            VarDef.Variant(variantIdent, tySerial, hasPayload, payloadTy, noTy, loc)
+            VariantDef(variantIdent, tySerial, hasPayload, payloadTy, noTy, loc)
 
           ctx
           |> scopeCtxDefineVar variantSerial varDef
@@ -413,12 +413,12 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
   | UnionTyDef (_, variantSerials, _unionLoc) ->
       let rec go ctx variantSerial =
         match ctx |> scopeCtxGetVar variantSerial with
-        | VarDef.Variant (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
+        | VariantDef (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
             let payloadTy, ctx = ctx |> scopeCtxResolveTy payloadTy loc
             let variantTy, ctx = ctx |> scopeCtxResolveTy variantTy loc
 
             let varDef =
-              VarDef.Variant(ident, tySerial, hasPayload, payloadTy, variantTy, loc)
+              VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc)
 
             ctx |> scopeCtxDefineVar variantSerial varDef
         | _ -> failwith "NEVER: it must be variant"
@@ -463,7 +463,7 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
         | _ ->
             let ctx =
               ctx
-              |> scopeCtxDefineLocalVar serial (VarDef.Var(ident, StaticSM, ty, loc))
+              |> scopeCtxDefineLocalVar serial (VarDef(ident, StaticSM, ty, loc))
               |> addVarToModule vis serial
 
             pat, ctx
@@ -486,7 +486,7 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
 
         let ctx =
           ctx
-          |> scopeCtxDefineLocalVar serial (VarDef.Var(ident, StaticSM, noTy, loc))
+          |> scopeCtxDefineLocalVar serial (VarDef(ident, StaticSM, noTy, loc))
 
         let pat, ctx = (pat, ctx) |> goPat vis
         HPat.As(pat, serial, loc), ctx
@@ -551,7 +551,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
         match ctx |> scopeCtxResolveLocalVar ident with
         | Some varSerial ->
             match ctx |> scopeCtxGetVar varSerial with
-            | VarDef.Variant _ -> Some varSerial
+            | VariantDef _ -> Some varSerial
 
             | _ -> None
 
@@ -568,7 +568,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
 
           | _ ->
               let varDef =
-                VarDef.Var(ident, AutoSM, ty, loc)
+                VarDef(ident, AutoSM, ty, loc)
 
               let ctx =
                 ctx |> scopeCtxDefineLocalVar varSerial varDef
@@ -607,7 +607,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
       let ident = ctx |> scopeCtxGetIdent serial
 
       let varDef =
-        VarDef.Var(ident, AutoSM, noTy, loc)
+        VarDef(ident, AutoSM, noTy, loc)
 
       let ctx =
         ctx |> scopeCtxDefineLocalVar serial varDef
