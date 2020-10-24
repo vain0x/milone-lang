@@ -155,8 +155,7 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
       let funTy = tyCtxSubstTy ctx funTy
       let funTyScheme = tyGeneralize isOwned funTy
 
-      let varDef =
-        FunDef(ident, arity, funTyScheme, loc)
+      let varDef = FunDef(ident, arity, funTyScheme, loc)
 
       let ctx =
         ctx
@@ -554,8 +553,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
            | VarDef (ident, storageModifier, _, loc) ->
                let ty, _, ctx = tyCtxFreshTyVar ident loc ctx
 
-               let varDef =
-                 VarDef(ident, storageModifier, ty, loc)
+               let varDef = VarDef(ident, storageModifier, ty, loc)
 
                (varSerial, varDef), ctx
 

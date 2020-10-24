@@ -94,7 +94,9 @@ let mxBinOpScalar ctx op l r (ty, loc) = MBinaryExpr(op, l, r, ty, loc), ctx
 
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mxStrCmp ctx op l r (ty, loc) =
-  let strCmpExpr = MBinaryExpr(MStrCmpBinary, l, r, tyInt, loc)
+  let strCmpExpr =
+    MBinaryExpr(MStrCmpBinary, l, r, tyInt, loc)
+
   let zeroExpr = MLitExpr(IntLit 0, loc)
 
   let opExpr =
@@ -115,7 +117,10 @@ let mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
 
 let mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MLitExpr(lit, loc)
-  let eqExpr, ctx = mxCmp ctx MEqualBinary expr litExpr tyBool loc
+
+  let eqExpr, ctx =
+    mxCmp ctx MEqualBinary expr litExpr tyBool loc
+
   let gotoStmt = msGotoUnless eqExpr endLabel loc
   let ctx = mirCtxAddStmt ctx gotoStmt
   false, ctx
@@ -436,8 +441,7 @@ let mirifyExprMatch ctx target arms ty loc =
         if isCovering then
           ctx
         else
-          let abortStmt =
-            MExitStmt(MLitExpr(IntLit 1, loc), loc)
+          let abortStmt = MExitStmt(MLitExpr(IntLit 1, loc), loc)
 
           let ctx = mirCtxAddStmt ctx abortStmt
           ctx

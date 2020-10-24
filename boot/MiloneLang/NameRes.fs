@@ -71,8 +71,7 @@ let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
           |> scopeCtxGetVars
           |> mapTryFind varSerial,
           varDef with
-    | Some (VarDef (_, StaticSM, _, _)), VarDef (ident, _, ty, loc) ->
-        VarDef(ident, StaticSM, ty, loc)
+    | Some (VarDef (_, StaticSM, _, _)), VarDef (ident, _, ty, loc) -> VarDef(ident, StaticSM, ty, loc)
     | _ -> varDef
 
   scopeCtx
@@ -567,8 +566,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
           | "Some" -> HSomePat(ty, loc), ctx
 
           | _ ->
-              let varDef =
-                VarDef(ident, AutoSM, ty, loc)
+              let varDef = VarDef(ident, AutoSM, ty, loc)
 
               let ctx =
                 ctx |> scopeCtxDefineLocalVar varSerial varDef
@@ -606,8 +604,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HAsPat (pat, serial, loc) ->
       let ident = ctx |> scopeCtxGetIdent serial
 
-      let varDef =
-        VarDef(ident, AutoSM, noTy, loc)
+      let varDef = VarDef(ident, AutoSM, noTy, loc)
 
       let ctx =
         ctx |> scopeCtxDefineLocalVar serial varDef

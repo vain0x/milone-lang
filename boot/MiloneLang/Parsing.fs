@@ -799,8 +799,7 @@ let parseNextBp bp basePos (tokens, errors) =
 
 let rec parseOps bp basePos first (tokens, errors) =
   let nextL expr op opPos (tokens, errors) =
-    let second, tokens, errors =
-      parseNextBp bp basePos (tokens, errors)
+    let second, tokens, errors = parseNextBp bp basePos (tokens, errors)
 
     let expr = ABinaryExpr(op, expr, second, opPos)
     parseOps bp basePos expr (tokens, errors)
@@ -845,13 +844,11 @@ let rec parseOps bp basePos first (tokens, errors) =
 
 /// E.g. `add = mul ( ('+'|'-') mul )*`
 let parseOp bp basePos (tokens, errors) =
-  let first, tokens, errors =
-    parseNextBp bp basePos (tokens, errors)
+  let first, tokens, errors = parseNextBp bp basePos (tokens, errors)
 
   parseOps bp basePos first (tokens, errors)
 
-let parseTupleItem basePos (tokens, errors) =
-  parseOp OrBp basePos (tokens, errors)
+let parseTupleItem basePos (tokens, errors) = parseOp OrBp basePos (tokens, errors)
 
 /// `tuple = item ( ',' item )*`
 let parseTuple basePos (tokens, errors) =

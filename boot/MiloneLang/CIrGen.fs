@@ -271,8 +271,7 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
         variants
         |> listMap (fun variantSerial ->
              match ctx |> cirCtxGetVars |> mapTryFind variantSerial with
-             | Some (VariantDef (ident, _, hasPayload, payloadTy, _, _)) ->
-                 ident, variantSerial, hasPayload, payloadTy
+             | Some (VariantDef (ident, _, hasPayload, payloadTy, _, _)) -> ident, variantSerial, hasPayload, payloadTy
              | _ -> failwith "Never")
 
       let tags =
@@ -610,8 +609,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
 
       let assertCall = CCallExpr(callee, args)
 
-      let ctx =
-        cirCtxAddStmt ctx (CExprStmt assertCall)
+      let ctx = cirCtxAddStmt ctx (CExprStmt assertCall)
 
       genExprDefault ctx resultTy
 

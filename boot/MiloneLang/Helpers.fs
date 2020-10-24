@@ -1101,8 +1101,7 @@ let tyTuple tys = AppTy(TupleTyCtor, tys)
 
 let tyList ty = AppTy(ListTyCtor, [ ty ])
 
-let tyFun sourceTy targetTy =
-  AppTy(FunTyCtor, [ sourceTy; targetTy ])
+let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
 let tyUnit = tyTuple []
 
@@ -1526,9 +1525,7 @@ let patNormalize pat =
              |> listMap (fun arg -> HCallPat(callee, [ arg ], ty, loc)))
     | HConsPat (l, r, ty, loc) ->
         go l
-        |> listCollect (fun l ->
-             go r
-             |> listMap (fun r -> HConsPat(l, r, ty, loc)))
+        |> listCollect (fun l -> go r |> listMap (fun r -> HConsPat(l, r, ty, loc)))
     | HTuplePat (itemPats, ty, loc) ->
         let rec gogo itemPats =
           match itemPats with
@@ -1580,8 +1577,7 @@ let hxTuple items loc =
 
 let hxUnit loc = hxTuple [] loc
 
-let hxNil itemTy loc =
-  HPrimExpr(HPrim.Nil, tyList itemTy, loc)
+let hxNil itemTy loc = HPrimExpr(HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
