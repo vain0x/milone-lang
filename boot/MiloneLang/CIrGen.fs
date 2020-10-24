@@ -136,7 +136,7 @@ let cirCtxAddFunDecl (ctx: CirCtx) sTy tTy =
       let ctx =
         ctx
         |> cirCtxWithDecls
-             (CDecl.Struct(ident, fields, [])
+             (CStructDecl(ident, fields, [])
               :: (ctx |> cirCtxGetDecls))
         |> cirCtxWithTyEnv
              (ctx
@@ -178,7 +178,7 @@ let cirCtxAddListDecl (ctx: CirCtx) itemTy =
       let ctx: CirCtx =
         ctx
         |> cirCtxWithDecls
-             (CDecl.Struct(ident, fields, [])
+             (CStructDecl(ident, fields, [])
               :: (ctx |> cirCtxGetDecls))
         |> cirCtxWithTyEnv
              (ctx
@@ -225,7 +225,7 @@ let cirCtxAddTupleDecl (ctx: CirCtx) itemTys =
       let itemTys, ctx = cirCtxGetCTys (itemTys, ctx)
       let fields = go 0 itemTys
 
-      let tupleDecl = CDecl.Struct(tupleTyIdent, fields, [])
+      let tupleDecl = CStructDecl(tupleTyIdent, fields, [])
 
       let ctx: CirCtx =
         ctx
@@ -290,10 +290,10 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
              else
                acc, ctx)
 
-      let tagEnumDecl = CDecl.Enum(tagTyIdent, tags)
+      let tagEnumDecl = CEnumDecl(tagTyIdent, tags)
 
       let structDecl =
-        CDecl.Struct(unionTyIdent, [ "tag", tagTy ], variants)
+        CStructDecl(unionTyIdent, [ "tag", tagTy ], variants)
 
       let ctx =
         ctx
@@ -672,7 +672,7 @@ let cirCtxAddLetStmt ctx ident expr cty storageModifier =
   match storageModifier with
   | StorageModifier.Static ->
       let ctx =
-        cirCtxAddDecl ctx (CDecl.StaticVar(ident, cty))
+        cirCtxAddDecl ctx (CStaticVarDecl(ident, cty))
 
       match expr with
       | Some expr -> cirCtxAddStmt ctx (CSetStmt(CRefExpr ident, expr))
@@ -915,7 +915,7 @@ let genDecls (ctx: CirCtx) decls =
       let args, ctx = go [] ctx args
       let body, ctx = genBlock ctx body
       let resultTy, ctx = cirGetCTy ctx resultTy
-      let funDecl = CDecl.Fun(ident, args, resultTy, body)
+      let funDecl = CFunDecl(ident, args, resultTy, body)
       let ctx = cirCtxAddDecl ctx funDecl
       genDecls ctx decls
 
@@ -930,7 +930,7 @@ let genLogs (ctx: CirCtx) =
         let msg = log |> logToString loc
 
         let ctx =
-          cirCtxAddDecl ctx (CDecl.ErrDir(msg, 1 + y))
+          cirCtxAddDecl ctx (CErrorDecl(msg, 1 + y))
 
         go ctx logs
 

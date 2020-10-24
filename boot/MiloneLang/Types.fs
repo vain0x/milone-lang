@@ -682,11 +682,10 @@ type CStmt =
   | CReturnStmt of CExpr option
 
 /// Top-level definition in C language.
-[<RequireQualifiedAccess>]
 type CDecl =
   /// `#error` directive to cause compile error manually.
-  | ErrDir of message: string * line: int
-  | Struct of Ident * fields: (Ident * CTy) list * variants: (Ident * CTy) list
-  | Enum of Ident * variants: Ident list
-  | StaticVar of Ident * CTy
-  | Fun of Ident * args: (Ident * CTy) list * CTy * body: CStmt list
+  | CErrorDecl of message: string * line: int
+  | CStructDecl of Ident * fields: (Ident * CTy) list * variants: (Ident * CTy) list
+  | CEnumDecl of Ident * variants: Ident list
+  | CStaticVarDecl of Ident * CTy
+  | CFunDecl of Ident * args: (Ident * CTy) list * CTy * body: CStmt list

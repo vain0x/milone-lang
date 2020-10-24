@@ -274,7 +274,7 @@ let rec cprintStmts acc indent stmts: string list =
 
 let cprintDecl acc decl =
   match decl with
-  | CDecl.ErrDir (message, line) ->
+  | CErrorDecl (message, line) ->
       let acc =
         acc
         |> cons "#line "
@@ -285,7 +285,7 @@ let cprintDecl acc decl =
         acc |> cons "#error " |> cons message |> cons eol
 
       acc
-  | CDecl.Struct (ident, fields, variants) ->
+  | CStructDecl (ident, fields, variants) ->
       let cprintFields indent acc fields =
         let rec go acc fields =
           match fields with
@@ -318,7 +318,7 @@ let cprintDecl acc decl =
 
       let acc = acc |> cons "};" |> cons eol
       acc
-  | CDecl.Enum (tyIdent, variants) ->
+  | CEnumDecl (tyIdent, variants) ->
       let acc =
         acc
         |> cons "enum "
@@ -340,13 +340,13 @@ let cprintDecl acc decl =
       let acc = go acc variants
       let acc = acc |> cons "};" |> cons eol
       acc
-  | CDecl.StaticVar (ident, _) ->
+  | CStaticVarDecl (ident, _) ->
       acc
       |> cons "// static "
       |> cons ident
       |> cons ";"
       |> cons eol
-  | CDecl.Fun (ident, args, resultTy, body) ->
+  | CFunDecl (ident, args, resultTy, body) ->
       let acc = cprintTyWithName acc ident resultTy
       let acc = acc |> cons "("
       let acc = cprintParams acc args
@@ -358,8 +358,8 @@ let cprintDecl acc decl =
 /// Prints forward declaration.
 let cprintDeclForward acc decl =
   match decl with
-  | CDecl.ErrDir _ -> acc
-  | CDecl.Struct (ident, _, _) ->
+  | CErrorDecl _ -> acc
+  | CStructDecl (ident, _, _) ->
       let acc =
         acc
         |> cons "struct "
@@ -369,7 +369,7 @@ let cprintDeclForward acc decl =
         |> cons eol
 
       acc
-  | CDecl.Enum (tyIdent, _) ->
+  | CEnumDecl (tyIdent, _) ->
       let acc =
         acc
         |> cons "enum "
@@ -379,11 +379,11 @@ let cprintDeclForward acc decl =
         |> cons eol
 
       acc
-  | CDecl.StaticVar (ident, ty) ->
+  | CStaticVarDecl (ident, ty) ->
       let acc = acc |> cons "static "
       let acc = cprintTyWithName acc ident ty
       acc |> cons ";" |> cons eol |> cons eol
-  | CDecl.Fun (ident, args, resultTy, _) ->
+  | CFunDecl (ident, args, resultTy, _) ->
       let acc = cprintTyWithName acc ident resultTy
       let acc = acc |> cons "("
       let acc = cprintParams acc args
