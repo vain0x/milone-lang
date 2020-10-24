@@ -549,16 +549,15 @@ type MBinary =
   | MStrIndexBinary
 
 /// Expression in middle IR.
-[<RequireQualifiedAccess>]
 type MExpr =
-  | Lit of Lit * Loc
-  | Default of Ty * Loc
-  | Ref of VarSerial * Ty * Loc
+  | MLitExpr of Lit * Loc
+  | MDefaultExpr of Ty * Loc
+  | MRefExpr of VarSerial * Ty * Loc
   /// Procedure
-  | Proc of FunSerial * Ty * Loc
-  | Variant of TySerial * VariantSerial * Ty * Loc
-  | Uni of MUnary * arg: MExpr * resultTy: Ty * Loc
-  | Bin of MBinary * left: MExpr * right: MExpr * resultTy: Ty * Loc
+  | MProcExpr of FunSerial * Ty * Loc
+  | MVariantExpr of TySerial * VariantSerial * Ty * Loc
+  | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
+  | MBinaryExpr of MBinary * left: MExpr * right: MExpr * resultTy: Ty * Loc
 
 /// Variable initializer in mid-level IR.
 [<RequireQualifiedAccess>]

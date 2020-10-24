@@ -541,24 +541,24 @@ let genExprList ctx exprs =
 
 let genExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   match arg |> mxSugar with
-  | MExpr.Lit (IntLit value, _) -> CIntExpr value, ctx
-  | MExpr.Lit (CharLit value, _) -> CCharExpr value, ctx
-  | MExpr.Lit (StrLit value, _) -> CStrObjExpr value, ctx
-  | MExpr.Lit (BoolLit false, _) -> CIntExpr 0, ctx
-  | MExpr.Lit (BoolLit true, _) -> CIntExpr 1, ctx
-  | MExpr.Default (ty, _) -> genExprDefault ctx ty
-  | MExpr.Ref (serial, _, _) -> CRefExpr(cirCtxUniqueName ctx serial), ctx
-  | MExpr.Proc (serial, ty, loc) -> genExprProc ctx serial ty loc
-  | MExpr.Variant (_, serial, ty, _) -> genExprVariant ctx serial ty
-  | MExpr.Uni (op, arg, ty, loc) -> genExprUniOp ctx op arg ty loc
-  | MExpr.Bin (op, l, r, _, _) -> genExprBin ctx op l r
+  | MLitExpr (IntLit value, _) -> CIntExpr value, ctx
+  | MLitExpr (CharLit value, _) -> CCharExpr value, ctx
+  | MLitExpr (StrLit value, _) -> CStrObjExpr value, ctx
+  | MLitExpr (BoolLit false, _) -> CIntExpr 0, ctx
+  | MLitExpr (BoolLit true, _) -> CIntExpr 1, ctx
+  | MDefaultExpr (ty, _) -> genExprDefault ctx ty
+  | MRefExpr (serial, _, _) -> CRefExpr(cirCtxUniqueName ctx serial), ctx
+  | MProcExpr (serial, ty, loc) -> genExprProc ctx serial ty loc
+  | MVariantExpr (_, serial, ty, _) -> genExprVariant ctx serial ty
+  | MUnaryExpr (op, arg, ty, loc) -> genExprUniOp ctx op arg ty loc
+  | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
 let genExprCallPrintfn ctx format args =
   // Insert implicit cast from str to str ptr.
   let rec go acc ctx args =
     match args with
     | [] -> listRev acc, ctx
-    | MExpr.Lit (StrLit value, _) :: args -> go (CStrRawExpr value :: acc) ctx args
+    | MLitExpr (StrLit value, _) :: args -> go (CStrRawExpr value :: acc) ctx args
     | arg :: args when tyEq (mexprToTy arg) tyStr ->
         let arg, ctx = genExpr ctx arg
         let acc = CNavExpr(arg, "str") :: acc
@@ -598,7 +598,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       let args, ctx = genExprList ctx args
       CCallExpr(CRefExpr nativeFunIdent, args), ctx
 
-  | HPrim.Printfn, (MExpr.Lit (StrLit format, _)) :: args, _ -> genExprCallPrintfn ctx format args
+  | HPrim.Printfn, (MLitExpr (StrLit format, _)) :: args, _ -> genExprCallPrintfn ctx format args
 
   | HPrim.Assert, _, _ ->
       let callee = CRefExpr "milone_assert"
