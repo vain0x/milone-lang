@@ -21,3 +21,5 @@ let ignore _ = ()
 let id x = x
 
 let fst (x, _) = x
+
+type Profiler = Profiler of obj

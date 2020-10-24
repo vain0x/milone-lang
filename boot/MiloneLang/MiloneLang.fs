@@ -11,8 +11,6 @@ let argCount (): int = (__nativeFun "arg_count" 1) ()
 
 let argGet (i: int): string = (__nativeFun "arg_get" 1) i
 
-type Profiler = Profiler of obj
-
 let profileInit (): Profiler =
   let state: obj = (__nativeFun "milone_profile_init" 1) 0
   Profiler state
