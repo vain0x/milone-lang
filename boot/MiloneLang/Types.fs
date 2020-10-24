@@ -619,10 +619,10 @@ type CTy =
   | Struct of Ident
   | Enum of Ident
 
-[<RequireQualifiedAccess>]
-type CUniOp =
-  | Not
-  | Deref
+/// Unary operators.
+type CUnary =
+  | CNotUnary
+  | CDerefUnary
 
 [<RequireQualifiedAccess>]
 type CBinOp =
@@ -664,7 +664,7 @@ type CExpr =
   /// `a[i]`
   | Index of CExpr * CExpr
   | Call of CExpr * args: CExpr list
-  | Uni of CUniOp * CExpr
+  | Uni of CUnary * CExpr
   | Bin of CBinOp * CExpr * CExpr
 
 /// Statement in C language.

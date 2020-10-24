@@ -181,8 +181,8 @@ let rec cprintExpr acc expr: string list =
 
       let acc =
         match op with
-        | CUniOp.Not -> acc |> cons "!"
-        | CUniOp.Deref -> acc |> cons "*"
+        | CNotUnary -> acc |> cons "!"
+        | CDerefUnary -> acc |> cons "*"
 
       let acc = acc |> cons "("
       let acc = cprintExpr acc arg
