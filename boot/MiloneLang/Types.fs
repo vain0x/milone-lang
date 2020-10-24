@@ -359,14 +359,13 @@ type TySpec = TySpec of Ty * Trait list
 
 /// Traits: kind of type constraints.
 /// NOTE: `trait` is a reserved word in F#.
-[<RequireQualifiedAccess>]
 type Trait =
-  | Add of Ty
-  | Eq of Ty
-  | Cmp of Ty
-  | Index of lTy: Ty * rTy: Ty * resultTy: Ty
-  | ToInt of Ty
-  | ToString of Ty
+  | AddTrait of Ty
+  | EqTrait of Ty
+  | CmpTrait of Ty
+  | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
+  | ToIntTrait of Ty
+  | ToStringTrait of Ty
 
 /// Type declaration.
 [<RequireQualifiedAccess>]

@@ -1068,17 +1068,17 @@ let tyCtorEq first second = tyCtorCmp first second = 0
 
 let traitMapTys f it =
   match it with
-  | Trait.Add ty -> Trait.Add(f ty)
+  | AddTrait ty -> AddTrait(f ty)
 
-  | Trait.Eq ty -> Trait.Eq(f ty)
+  | EqTrait ty -> EqTrait(f ty)
 
-  | Trait.Cmp ty -> Trait.Cmp(f ty)
+  | CmpTrait ty -> CmpTrait(f ty)
 
-  | Trait.Index (lTy, rTy, outputTy) -> Trait.Index(f lTy, f rTy, f outputTy)
+  | IndexTrait (lTy, rTy, outputTy) -> IndexTrait(f lTy, f rTy, f outputTy)
 
-  | Trait.ToInt ty -> Trait.ToInt(f ty)
+  | ToIntTrait ty -> ToIntTrait(f ty)
 
-  | Trait.ToString ty -> Trait.ToString(f ty)
+  | ToStringTrait ty -> ToStringTrait(f ty)
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -1353,7 +1353,7 @@ let primToTySpec prim =
   match prim with
   | HPrim.Add ->
       let addTy = meta 1
-      poly (tyFun addTy (tyFun addTy addTy)) [ Trait.Add addTy ]
+      poly (tyFun addTy (tyFun addTy addTy)) [ AddTrait addTy ]
 
   | HPrim.Sub -> mono (tyFun tyInt (tyFun tyInt tyInt))
 
@@ -1365,11 +1365,11 @@ let primToTySpec prim =
 
   | HPrim.Eq ->
       let eqTy = meta 1
-      poly (tyFun eqTy (tyFun eqTy tyBool)) [ Trait.Eq eqTy ]
+      poly (tyFun eqTy (tyFun eqTy tyBool)) [ EqTrait eqTy ]
 
   | HPrim.Lt ->
       let cmpTy = meta 1
-      poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ Trait.Cmp cmpTy ]
+      poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ CmpTrait cmpTy ]
 
   | HPrim.Nil ->
       let itemTy = meta 1
@@ -1393,7 +1393,7 @@ let primToTySpec prim =
       let lTy = meta 1
       let rTy = meta 2
       let resultTy = meta 3
-      poly (tyFun lTy (tyFun rTy resultTy)) [ Trait.Index(lTy, rTy, resultTy) ]
+      poly (tyFun lTy (tyFun rTy resultTy)) [ IndexTrait(lTy, rTy, resultTy) ]
 
   | HPrim.Not -> mono (tyFun tyBool tyBool)
 
@@ -1417,11 +1417,11 @@ let primToTySpec prim =
 
   | HPrim.Int ->
       let toIntTy = meta 1
-      poly (tyFun toIntTy tyInt) [ Trait.ToInt toIntTy ]
+      poly (tyFun toIntTy tyInt) [ ToIntTrait toIntTy ]
 
   | HPrim.String ->
       let toStrTy = meta 1
-      poly (tyFun toStrTy tyStr) [ Trait.ToString toStrTy ]
+      poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
 
   | HPrim.StrLength -> mono (tyFun tyStr tyInt)
 
@@ -1851,7 +1851,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
     | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   match theTrait with
-  | Trait.Add ty ->
+  | AddTrait ty ->
       match ty with
       | ErrorTy _
       | AppTy (StrTyCtor, []) -> logAcc, ctx
@@ -1860,11 +1860,11 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
 
-  | Trait.Eq ty -> (logAcc, ctx) |> expectScalar ty
+  | EqTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | Trait.Cmp ty -> (logAcc, ctx) |> expectScalar ty
+  | CmpTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | Trait.Index (lTy, rTy, resultTy) ->
+  | IndexTrait (lTy, rTy, resultTy) ->
       match lTy with
       | ErrorTy _ -> [], ctx
 
@@ -1878,9 +1878,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
-  | Trait.ToInt ty -> (logAcc, ctx) |> expectScalar ty
+  | ToIntTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | Trait.ToString ty -> (logAcc, ctx) |> expectScalar ty
+  | ToStringTrait ty -> (logAcc, ctx) |> expectScalar ty
 
 // -----------------------------------------------
 // Logs
@@ -1896,17 +1896,17 @@ let logToString loc log =
   | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
       sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
 
-  | Log.TyBoundError (Trait.Add ty) -> sprintf "%s No support (+) for '%A' yet" loc ty
+  | Log.TyBoundError (AddTrait ty) -> sprintf "%s No support (+) for '%A' yet" loc ty
 
-  | Log.TyBoundError (Trait.Eq ty) -> sprintf "%s No support equality for '%A' yet" loc ty
+  | Log.TyBoundError (EqTrait ty) -> sprintf "%s No support equality for '%A' yet" loc ty
 
-  | Log.TyBoundError (Trait.Cmp ty) -> sprintf "%s No support comparison for '%A' yet" loc ty
+  | Log.TyBoundError (CmpTrait ty) -> sprintf "%s No support comparison for '%A' yet" loc ty
 
-  | Log.TyBoundError (Trait.Index (lTy, rTy, _)) ->
+  | Log.TyBoundError (IndexTrait (lTy, rTy, _)) ->
       sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
 
-  | Log.TyBoundError (Trait.ToInt ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
+  | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
 
-  | Log.TyBoundError (Trait.ToString ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
+  | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
 
   | Log.Error msg -> sprintf "%s %s" loc msg
