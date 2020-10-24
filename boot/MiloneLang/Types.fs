@@ -314,10 +314,9 @@ type Arity = int
 /// Only one exception: recursive function have let-depth deeper by 1.
 type LetDepth = int
 
-[<RequireQualifiedAccess>]
 type StorageModifier =
-  | Auto
-  | Static
+  | AutoSM
+  | StaticSM
 
 type NameCtx = NameCtx of AssocMap<Serial, Ident> * lastSerial: Serial
 

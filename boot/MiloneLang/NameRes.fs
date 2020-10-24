@@ -71,8 +71,8 @@ let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
           |> scopeCtxGetVars
           |> mapTryFind varSerial,
           varDef with
-    | Some (VarDef.Var (_, StorageModifier.Static, _, _)), VarDef.Var (ident, _, ty, loc) ->
-        VarDef.Var(ident, StorageModifier.Static, ty, loc)
+    | Some (VarDef.Var (_, StaticSM, _, _)), VarDef.Var (ident, _, ty, loc) ->
+        VarDef.Var(ident, StaticSM, ty, loc)
     | _ -> varDef
 
   scopeCtx
@@ -463,7 +463,7 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
         | _ ->
             let ctx =
               ctx
-              |> scopeCtxDefineLocalVar serial (VarDef.Var(ident, StorageModifier.Static, ty, loc))
+              |> scopeCtxDefineLocalVar serial (VarDef.Var(ident, StaticSM, ty, loc))
               |> addVarToModule vis serial
 
             pat, ctx
@@ -486,7 +486,7 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
 
         let ctx =
           ctx
-          |> scopeCtxDefineLocalVar serial (VarDef.Var(ident, StorageModifier.Static, noTy, loc))
+          |> scopeCtxDefineLocalVar serial (VarDef.Var(ident, StaticSM, noTy, loc))
 
         let pat, ctx = (pat, ctx) |> goPat vis
         HPat.As(pat, serial, loc), ctx
@@ -568,7 +568,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
 
           | _ ->
               let varDef =
-                VarDef.Var(ident, StorageModifier.Auto, ty, loc)
+                VarDef.Var(ident, AutoSM, ty, loc)
 
               let ctx =
                 ctx |> scopeCtxDefineLocalVar varSerial varDef
@@ -607,7 +607,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
       let ident = ctx |> scopeCtxGetIdent serial
 
       let varDef =
-        VarDef.Var(ident, StorageModifier.Auto, noTy, loc)
+        VarDef.Var(ident, AutoSM, noTy, loc)
 
       let ctx =
         ctx |> scopeCtxDefineLocalVar serial varDef

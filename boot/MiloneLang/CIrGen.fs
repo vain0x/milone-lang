@@ -74,7 +74,7 @@ let cirCtxGetVarStorageModifier (ctx: CirCtx) varSerial =
   match ctx |> cirCtxGetVars |> mapTryFind varSerial with
   | Some (VarDef.Var (_, storageModifier, _, _)) -> storageModifier
 
-  | _ -> StorageModifier.Static
+  | _ -> StaticSM
 
 let cirCtxAddErr (ctx: CirCtx) message loc =
   ctx
@@ -670,19 +670,19 @@ let genExprCallClosure ctx callee args =
 
 let cirCtxAddLetStmt ctx ident expr cty storageModifier =
   match storageModifier with
-  | StorageModifier.Static ->
+  | StaticSM ->
       let ctx =
         cirCtxAddDecl ctx (CStaticVarDecl(ident, cty))
 
       match expr with
       | Some expr -> cirCtxAddStmt ctx (CSetStmt(CRefExpr ident, expr))
       | _ -> ctx
-  | StorageModifier.Auto -> cirCtxAddStmt ctx (CLetStmt(ident, expr, cty))
+  | AutoSM -> cirCtxAddStmt ctx (CLetStmt(ident, expr, cty))
 
 let cirCtxAddLetAllocStmt ctx ident valPtrTy varTy storageModifier =
   match storageModifier with
-  | StorageModifier.Static -> failwith "NEVER: let-alloc is used only for temporary variables"
-  | StorageModifier.Auto -> cirCtxAddStmt ctx (CLetAllocStmt(ident, valPtrTy, varTy))
+  | StaticSM -> failwith "NEVER: let-alloc is used only for temporary variables"
+  | AutoSM -> cirCtxAddStmt ctx (CLetAllocStmt(ident, valPtrTy, varTy))
 
 let genInitExprCore ctx serial expr ty =
   let ident = cirCtxUniqueName ctx serial

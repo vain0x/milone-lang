@@ -89,7 +89,7 @@ let etaCtxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
     |> etaCtxWithVars
          (ctx
           |> etaCtxGetVars
-          |> mapAdd serial (VarDef.Var(ident, StorageModifier.Auto, ty, loc)))
+          |> mapAdd serial (VarDef.Var(ident, AutoSM, ty, loc)))
 
   let refExpr = HExpr.Ref(serial, ty, loc)
   refExpr, serial, ctx
