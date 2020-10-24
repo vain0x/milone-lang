@@ -258,11 +258,11 @@ let scopeCtxResolveLocalTyIdent ident (scopeCtx: ScopeCtx) =
 
 let scopeCtxResolvePatAsScope pat scopeCtx =
   match pat with
-  | HPat.Nav _ ->
+  | HNavPat _ ->
       // A.B.C (= (A.B).C) case
       failwith "unimpl"
 
-  | HPat.Ref (serial, _, _) ->
+  | HRefPat (serial, _, _) ->
       let ident = scopeCtx |> scopeCtxGetIdent serial
       scopeCtx |> scopeCtxResolveLocalTyIdent ident
 
@@ -444,22 +444,22 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
 
   let rec goPat vis (pat, ctx) =
     match pat with
-    | HPat.Lit _
-    | HPat.Discard _
-    | HPat.Nav _
-    | HPat.Nil _
-    | HPat.OptionNone _
-    | HPat.OptionSome _ -> pat, ctx
+    | HLitPat _
+    | HDiscardPat _
+    | HNavPat _
+    | HNilPat _
+    | HNonePat _
+    | HSomePat _ -> pat, ctx
 
-    | HPat.Or _ ->
+    | HOrPat _ ->
         // NOTE: OR patterns doesn't appear because not entering `match` arms.
         assert false
         pat, ctx
 
-    | HPat.Ref (serial, ty, loc) ->
+    | HRefPat (serial, ty, loc) ->
         let ident = ctx |> scopeCtxGetIdent serial
         match ctx |> scopeCtxResolveLocalVar ident with
-        | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HPat.Ref(varSerial, ty, loc), ctx
+        | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HRefPat(varSerial, ty, loc), ctx
         | _ ->
             let ctx =
               ctx
@@ -468,20 +468,20 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
 
             pat, ctx
 
-    | HPat.Call (callee, args, ty, loc) ->
+    | HCallPat (callee, args, ty, loc) ->
         let args, ctx = (args, ctx) |> stMap (goPat vis)
-        HPat.Call(callee, args, ty, loc), ctx
+        HCallPat(callee, args, ty, loc), ctx
 
-    | HPat.Cons (l, r, ty, loc) ->
+    | HConsPat (l, r, ty, loc) ->
         let l, ctx = (l, ctx) |> goPat vis
         let r, ctx = (r, ctx) |> goPat vis
-        HPat.Cons(l, r, ty, loc), ctx
+        HConsPat(l, r, ty, loc), ctx
 
-    | HPat.Tuple (items, ty, loc) ->
+    | HTuplePat (items, ty, loc) ->
         let items, ctx = (items, ctx) |> stMap (goPat vis)
-        HPat.Tuple(items, ty, loc), ctx
+        HTuplePat(items, ty, loc), ctx
 
-    | HPat.As (pat, serial, loc) ->
+    | HAsPat (pat, serial, loc) ->
         let ident = ctx |> scopeCtxGetIdent serial
 
         let ctx =
@@ -489,11 +489,11 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
           |> scopeCtxDefineLocalVar serial (VarDef(ident, StaticSM, noTy, loc))
 
         let pat, ctx = (pat, ctx) |> goPat vis
-        HPat.As(pat, serial, loc), ctx
+        HAsPat(pat, serial, loc), ctx
 
-    | HPat.Anno (pat, ty, loc) ->
+    | HAnnoPat (pat, ty, loc) ->
         let pat, ctx = (pat, ctx) |> goPat vis
-        HPat.Anno(pat, ty, loc), ctx
+        HAnnoPat(pat, ty, loc), ctx
 
   let rec goExpr (expr, ctx) =
     match expr with
@@ -536,15 +536,15 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
 
 let nameResPat (pat: HPat, ctx: ScopeCtx) =
   match pat with
-  | HPat.Lit _
-  | HPat.Discard _
-  | HPat.Nil _
-  | HPat.OptionNone _
-  | HPat.OptionSome _ -> pat, ctx
+  | HLitPat _
+  | HDiscardPat _
+  | HNilPat _
+  | HNonePat _
+  | HSomePat _ -> pat, ctx
 
-  | HPat.Ref (varSerial, ty, loc) when ctx |> scopeCtxGetIdent varSerial = "_" -> HPat.Discard(ty, loc), ctx
+  | HRefPat (varSerial, ty, loc) when ctx |> scopeCtxGetIdent varSerial = "_" -> HDiscardPat(ty, loc), ctx
 
-  | HPat.Ref (varSerial, ty, loc) ->
+  | HRefPat (varSerial, ty, loc) ->
       let ident = ctx |> scopeCtxGetIdent varSerial
 
       let variantSerial =
@@ -558,13 +558,13 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
         | None -> None
 
       match variantSerial with
-      | Some variantSerial -> HPat.Ref(variantSerial, ty, loc), ctx
+      | Some variantSerial -> HRefPat(variantSerial, ty, loc), ctx
 
       | None ->
           match ident with
-          | "None" -> HPat.OptionNone(ty, loc), ctx
+          | "None" -> HNonePat(ty, loc), ctx
 
-          | "Some" -> HPat.OptionSome(ty, loc), ctx
+          | "Some" -> HSomePat(ty, loc), ctx
 
           | _ ->
               let varDef =
@@ -573,9 +573,9 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
               let ctx =
                 ctx |> scopeCtxDefineLocalVar varSerial varDef
 
-              HPat.Ref(varSerial, ty, loc), ctx
+              HRefPat(varSerial, ty, loc), ctx
 
-  | HPat.Nav (l, r, ty, loc) ->
+  | HNavPat (l, r, ty, loc) ->
       let varSerial =
         match ctx |> scopeCtxResolvePatAsScope l with
         | Some scopeSerial -> ctx |> scopeCtxResolveVar scopeSerial r
@@ -583,27 +583,27 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
         | None -> None
 
       match varSerial with
-      | Some varSerial -> HPat.Ref(varSerial, ty, loc), ctx
+      | Some varSerial -> HRefPat(varSerial, ty, loc), ctx
 
       | None ->
           let l, ctx = (l, ctx) |> nameResPat
-          HPat.Nav(l, r, ty, loc), ctx
+          HNavPat(l, r, ty, loc), ctx
 
-  | HPat.Call (callee, args, ty, loc) ->
+  | HCallPat (callee, args, ty, loc) ->
       let callee, ctx = (callee, ctx) |> nameResPat
       let args, ctx = (args, ctx) |> stMap nameResPat
-      HPat.Call(callee, args, ty, loc), ctx
+      HCallPat(callee, args, ty, loc), ctx
 
-  | HPat.Cons (l, r, itemTy, loc) ->
+  | HConsPat (l, r, itemTy, loc) ->
       let l, ctx = (l, ctx) |> nameResPat
       let r, ctx = (r, ctx) |> nameResPat
-      HPat.Cons(l, r, itemTy, loc), ctx
+      HConsPat(l, r, itemTy, loc), ctx
 
-  | HPat.Tuple (pats, tupleTy, loc) ->
+  | HTuplePat (pats, tupleTy, loc) ->
       let pats, ctx = (pats, ctx) |> stMap nameResPat
-      HPat.Tuple(pats, tupleTy, loc), ctx
+      HTuplePat(pats, tupleTy, loc), ctx
 
-  | HPat.As (pat, serial, loc) ->
+  | HAsPat (pat, serial, loc) ->
       let ident = ctx |> scopeCtxGetIdent serial
 
       let varDef =
@@ -613,18 +613,18 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
         ctx |> scopeCtxDefineLocalVar serial varDef
 
       let pat, ctx = (pat, ctx) |> nameResPat
-      HPat.As(pat, serial, loc), ctx
+      HAsPat(pat, serial, loc), ctx
 
-  | HPat.Anno (pat, ty, loc) ->
+  | HAnnoPat (pat, ty, loc) ->
       let ty, ctx = ctx |> scopeCtxResolveTy ty loc
       let pat, ctx = (pat, ctx) |> nameResPat
-      HPat.Anno(pat, ty, loc), ctx
+      HAnnoPat(pat, ty, loc), ctx
 
-  | HPat.Or (l, r, ty, loc) ->
+  | HOrPat (l, r, ty, loc) ->
       // FIXME: Currently variable bindings in OR patterns are not supported correctly.
       let l, ctx = (l, ctx) |> nameResPat
       let r, ctx = (r, ctx) |> nameResPat
-      HPat.Or(l, r, ty, loc), ctx
+      HOrPat(l, r, ty, loc), ctx
 
 let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with

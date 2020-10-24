@@ -310,7 +310,7 @@ let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
 /// Updates the argument patterns to take captured variables.
 let capsAddToFunPats args (caps: Caps) =
   caps
-  |> listFold (fun args (serial, ty, loc) -> HPat.Ref(serial, ty, loc) :: args) args
+  |> listFold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
 
 let capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
@@ -356,44 +356,44 @@ let declosureVariantDecl ctx variant =
 
 let declosurePat (pat, ctx) =
   match pat with
-  | HPat.Lit _
-  | HPat.Nil _
-  | HPat.OptionNone _
-  | HPat.OptionSome _
-  | HPat.Discard _
-  | HPat.Nav _ -> pat, ctx
+  | HLitPat _
+  | HNilPat _
+  | HNonePat _
+  | HSomePat _
+  | HDiscardPat _
+  | HNavPat _ -> pat, ctx
 
-  | HPat.Ref (serial, _, _) ->
+  | HRefPat (serial, _, _) ->
       let ctx = ctx |> ccCtxAddLocal serial
       pat, ctx
 
-  | HPat.Cons (l, r, itemTy, loc) ->
+  | HConsPat (l, r, itemTy, loc) ->
       let l, ctx = (l, ctx) |> declosurePat
       let r, ctx = (r, ctx) |> declosurePat
-      HPat.Cons(l, r, itemTy, loc), ctx
+      HConsPat(l, r, itemTy, loc), ctx
 
-  | HPat.Tuple (items, ty, loc) ->
+  | HTuplePat (items, ty, loc) ->
       let items, ctx = (items, ctx) |> stMap declosurePat
-      HPat.Tuple(items, ty, loc), ctx
+      HTuplePat(items, ty, loc), ctx
 
-  | HPat.Call (callee, args, ty, loc) ->
+  | HCallPat (callee, args, ty, loc) ->
       let callee, ctx = (callee, ctx) |> declosurePat
       let args, ctx = (args, ctx) |> stMap declosurePat
-      HPat.Call(callee, args, ty, loc), ctx
+      HCallPat(callee, args, ty, loc), ctx
 
-  | HPat.As (pat, serial, loc) ->
+  | HAsPat (pat, serial, loc) ->
       let ctx = ctx |> ccCtxAddLocal serial
       let pat, ctx = (pat, ctx) |> declosurePat
-      HPat.As(pat, serial, loc), ctx
+      HAsPat(pat, serial, loc), ctx
 
-  | HPat.Anno (pat, ty, loc) ->
+  | HAnnoPat (pat, ty, loc) ->
       let pat, ctx = (pat, ctx) |> declosurePat
-      HPat.Anno(pat, ty, loc), ctx
+      HAnnoPat(pat, ty, loc), ctx
 
-  | HPat.Or (first, second, ty, loc) ->
+  | HOrPat (first, second, ty, loc) ->
       let first, ctx = (first, ctx) |> declosurePat
       let second, ctx = (second, ctx) |> declosurePat
-      HPat.Or(first, second, ty, loc), ctx
+      HOrPat(first, second, ty, loc), ctx
 
 let declosureExpr (expr, ctx) =
   match expr with

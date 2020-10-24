@@ -129,7 +129,7 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
     | n, AppTy (FunTyCtor, [ argTy; restTy ]) ->
         let argRef, argSerial, ctx = etaCtxFreshVar "arg" argTy callLoc ctx
         let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
-        let restArgPat = HPat.Ref(argSerial, argTy, callLoc)
+        let restArgPat = HRefPat(argSerial, argTy, callLoc)
         restArgPat :: restArgPats, argRef :: restArgs, ctx
     | _ -> failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
 
@@ -143,13 +143,13 @@ let createEnvPatAndTy items callLoc ctx =
     | item :: items ->
         let itemTy, itemLoc = exprExtract item
         let itemRef, itemSerial, ctx = etaCtxFreshVar "arg" itemTy itemLoc ctx
-        let itemPat = HPat.Ref(itemSerial, itemTy, itemLoc)
+        let itemPat = HRefPat(itemSerial, itemTy, itemLoc)
         let itemPats, argTys, argRefs, ctx = go items ctx
         itemPat :: itemPats, itemTy :: argTys, itemRef :: argRefs, ctx
 
   let itemPats, itemTys, itemRefs, ctx = go items ctx
   let envTy = tyTuple itemTys
-  let envPat = HPat.Tuple(itemPats, envTy, callLoc)
+  let envPat = HTuplePat(itemPats, envTy, callLoc)
   envPat, envTy, itemRefs, ctx
 
 let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
@@ -166,7 +166,7 @@ let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
 /// and calls the partial-applied callee with full arguments.
 let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
   let envArgRef, envArgSerial, ctx = etaCtxFreshVar "env" tyObj callLoc ctx
-  let envArgPat = HPat.Ref(envArgSerial, tyObj, callLoc)
+  let envArgPat = HRefPat(envArgSerial, tyObj, callLoc)
 
   let _, funSerial, ctx =
     etaCtxFreshFun "fun" arity funTy callLoc ctx
@@ -227,7 +227,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
     let calleeRef, calleeSerial, ctx =
       etaCtxFreshVar "callee" funTy callLoc ctx
 
-    let calleePat = HPat.Ref(calleeSerial, funTy, callLoc)
+    let calleePat = HRefPat(calleeSerial, funTy, callLoc)
 
     let calleeLet next =
       HExpr.Let(PrivateVis, calleePat, callee, next, exprToTy next, callLoc)

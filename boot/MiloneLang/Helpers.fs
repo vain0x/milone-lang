@@ -1464,44 +1464,44 @@ let primToArity ty prim =
 // Patterns (HIR)
 // -----------------------------------------------
 
-let patUnit loc = HPat.Tuple([], tyUnit, loc)
+let patUnit loc = HTuplePat([], tyUnit, loc)
 
-let patNil itemTy loc = HPat.Nil(itemTy, loc)
+let patNil itemTy loc = HNilPat(itemTy, loc)
 
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
-  | HPat.Lit (lit, a) -> litToTy lit, a
-  | HPat.Nil (itemTy, a) -> tyList itemTy, a
-  | HPat.OptionNone (itemTy, a) -> tyList itemTy, a
-  | HPat.OptionSome (itemTy, a) -> tyList itemTy, a
-  | HPat.Discard (ty, a) -> ty, a
-  | HPat.Ref (_, ty, a) -> ty, a
-  | HPat.Nav (_, _, ty, a) -> ty, a
-  | HPat.Call (_, _, ty, a) -> ty, a
-  | HPat.Cons (_, _, itemTy, a) -> tyList itemTy, a
-  | HPat.Tuple (_, ty, a) -> ty, a
-  | HPat.As (pat, _, a) ->
+  | HLitPat (lit, a) -> litToTy lit, a
+  | HNilPat (itemTy, a) -> tyList itemTy, a
+  | HNonePat (itemTy, a) -> tyList itemTy, a
+  | HSomePat (itemTy, a) -> tyList itemTy, a
+  | HDiscardPat (ty, a) -> ty, a
+  | HRefPat (_, ty, a) -> ty, a
+  | HNavPat (_, _, ty, a) -> ty, a
+  | HCallPat (_, _, ty, a) -> ty, a
+  | HConsPat (_, _, itemTy, a) -> tyList itemTy, a
+  | HTuplePat (_, ty, a) -> ty, a
+  | HAsPat (pat, _, a) ->
       let ty, _ = patExtract pat
       ty, a
-  | HPat.Anno (_, ty, a) -> ty, a
-  | HPat.Or (_, _, ty, a) -> ty, a
+  | HAnnoPat (_, ty, a) -> ty, a
+  | HOrPat (_, _, ty, a) -> ty, a
 
 let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
   let rec go pat =
     match pat with
-    | HPat.Lit (lit, a) -> HPat.Lit(lit, g a)
-    | HPat.Nil (itemTy, a) -> HPat.Nil(f itemTy, g a)
-    | HPat.OptionNone (itemTy, a) -> HPat.OptionNone(f itemTy, g a)
-    | HPat.OptionSome (itemTy, a) -> HPat.OptionSome(f itemTy, g a)
-    | HPat.Discard (ty, a) -> HPat.Discard(f ty, g a)
-    | HPat.Ref (serial, ty, a) -> HPat.Ref(serial, f ty, g a)
-    | HPat.Nav (pat, ident, ty, a) -> HPat.Nav(go pat, ident, f ty, g a)
-    | HPat.Call (callee, args, ty, a) -> HPat.Call(go callee, listMap go args, f ty, g a)
-    | HPat.Cons (l, r, itemTy, a) -> HPat.Cons(go l, go r, f itemTy, g a)
-    | HPat.Tuple (itemPats, ty, a) -> HPat.Tuple(listMap go itemPats, f ty, g a)
-    | HPat.As (pat, serial, a) -> HPat.As(go pat, serial, g a)
-    | HPat.Anno (pat, ty, a) -> HPat.Anno(go pat, f ty, g a)
-    | HPat.Or (first, second, ty, a) -> HPat.Or(go first, go second, f ty, g a)
+    | HLitPat (lit, a) -> HLitPat(lit, g a)
+    | HNilPat (itemTy, a) -> HNilPat(f itemTy, g a)
+    | HNonePat (itemTy, a) -> HNonePat(f itemTy, g a)
+    | HSomePat (itemTy, a) -> HSomePat(f itemTy, g a)
+    | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
+    | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
+    | HNavPat (pat, ident, ty, a) -> HNavPat(go pat, ident, f ty, g a)
+    | HCallPat (callee, args, ty, a) -> HCallPat(go callee, listMap go args, f ty, g a)
+    | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
+    | HTuplePat (itemPats, ty, a) -> HTuplePat(listMap go itemPats, f ty, g a)
+    | HAsPat (pat, serial, a) -> HAsPat(go pat, serial, g a)
+    | HAnnoPat (pat, ty, a) -> HAnnoPat(go pat, f ty, g a)
+    | HOrPat (first, second, ty, a) -> HOrPat(go first, go second, f ty, g a)
 
   go pat
 
@@ -1510,26 +1510,26 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
 let patNormalize pat =
   let rec go pat =
     match pat with
-    | HPat.Lit _
-    | HPat.Discard _
-    | HPat.Ref _
-    | HPat.Nil _
-    | HPat.OptionNone _
-    | HPat.OptionSome _ -> [ pat ]
-    | HPat.Nav (pat, ident, ty, loc) ->
+    | HLitPat _
+    | HDiscardPat _
+    | HRefPat _
+    | HNilPat _
+    | HNonePat _
+    | HSomePat _ -> [ pat ]
+    | HNavPat (pat, ident, ty, loc) ->
         go pat
-        |> listMap (fun pat -> HPat.Nav(pat, ident, ty, loc))
-    | HPat.Call (callee, [ arg ], ty, loc) ->
+        |> listMap (fun pat -> HNavPat(pat, ident, ty, loc))
+    | HCallPat (callee, [ arg ], ty, loc) ->
         go callee
         |> listCollect (fun callee ->
              go arg
-             |> listMap (fun arg -> HPat.Call(callee, [ arg ], ty, loc)))
-    | HPat.Cons (l, r, ty, loc) ->
+             |> listMap (fun arg -> HCallPat(callee, [ arg ], ty, loc)))
+    | HConsPat (l, r, ty, loc) ->
         go l
         |> listCollect (fun l ->
              go r
-             |> listMap (fun r -> HPat.Cons(l, r, ty, loc)))
-    | HPat.Tuple (itemPats, ty, loc) ->
+             |> listMap (fun r -> HConsPat(l, r, ty, loc)))
+    | HTuplePat (itemPats, ty, loc) ->
         let rec gogo itemPats =
           match itemPats with
           | [] -> [ [] ]
@@ -1541,16 +1541,16 @@ let patNormalize pat =
                    |> listMap (fun itemPat -> itemPat :: itemPats))
 
         gogo itemPats
-        |> listMap (fun itemPats -> HPat.Tuple(itemPats, ty, loc))
-    | HPat.As (innerPat, _, _) ->
+        |> listMap (fun itemPats -> HTuplePat(itemPats, ty, loc))
+    | HAsPat (innerPat, _, _) ->
         match go innerPat with
         | [ _ ] -> [ pat ]
         | _ -> failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
-    | HPat.Anno (pat, annoTy, loc) ->
+    | HAnnoPat (pat, annoTy, loc) ->
         go pat
-        |> listMap (fun pat -> HPat.Anno(pat, annoTy, loc))
-    | HPat.Or (first, second, _, _) -> listAppend (go first) (go second)
-    | HPat.Call _ -> failwith "Unimpl"
+        |> listMap (fun pat -> HAnnoPat(pat, annoTy, loc))
+    | HOrPat (first, second, _, _) -> listAppend (go first) (go second)
+    | HCallPat _ -> failwith "Unimpl"
 
   go pat
 

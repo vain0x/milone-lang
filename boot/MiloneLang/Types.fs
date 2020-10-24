@@ -389,26 +389,25 @@ type VarDef =
   | VariantDef of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
 
 /// Pattern in high-level IR.
-[<RequireQualifiedAccess>]
 type HPat =
-  | Lit of Lit * Loc
+  | HLitPat of Lit * Loc
   /// `[]`
-  | Nil of itemTy: Ty * Loc
-  | OptionNone of itemTy: Ty * Loc
-  | OptionSome of itemTy: Ty * Loc
+  | HNilPat of itemTy: Ty * Loc
+  | HNonePat of itemTy: Ty * Loc
+  | HSomePat of itemTy: Ty * Loc
   /// `_`
-  | Discard of Ty * Loc
+  | HDiscardPat of Ty * Loc
   /// Variable pattern.
-  | Ref of VarSerial * Ty * Loc
-  | Nav of HPat * Ident * Ty * Loc
-  | Call of callee: HPat * args: HPat list * Ty * Loc
+  | HRefPat of VarSerial * Ty * Loc
+  | HNavPat of HPat * Ident * Ty * Loc
+  | HCallPat of callee: HPat * args: HPat list * Ty * Loc
   /// `::`
-  | Cons of HPat * HPat * itemTy: Ty * Loc
-  | Tuple of HPat list * tupleTy: Ty * Loc
-  | As of HPat * VarSerial * Loc
+  | HConsPat of HPat * HPat * itemTy: Ty * Loc
+  | HTuplePat of HPat list * tupleTy: Ty * Loc
+  | HAsPat of HPat * VarSerial * Loc
   /// Type annotation pattern, e.g. `x : int`.
-  | Anno of HPat * Ty * Loc
-  | Or of HPat * HPat * Ty * Loc
+  | HAnnoPat of HPat * Ty * Loc
+  | HOrPat of HPat * HPat * Ty * Loc
 
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]

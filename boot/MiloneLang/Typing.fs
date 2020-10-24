@@ -205,7 +205,7 @@ let tyCtxFreshExprTy expr ctx =
 
 let inferPatRef (ctx: TyCtx) varSerial loc ty =
   let ctx = ctx |> tyCtxUnifyVarTy varSerial ty loc
-  HPat.Ref(varSerial, ty, loc), ctx
+  HRefPat(varSerial, ty, loc), ctx
 
 let inferPatNav (ctx: TyCtx) l r loc ty =
   failwithf "invalid use of nav pattern %A" (l, r, loc, ty)
@@ -217,7 +217,7 @@ let inferPatCall (ctx: TyCtx) callee args loc ty =
       let payloadTy, ctx = ctx |> tyCtxFreshPatTy payload
       let callee, ctx = inferPat ctx callee (tyFun payloadTy ty)
       let payload, ctx = inferPat ctx payload payloadTy
-      HPat.Call(callee, [ payload ], ty, loc), ctx
+      HCallPat(callee, [ payload ], ty, loc), ctx
 
   | _ -> failwith "invalid use of call pattern"
 
@@ -235,7 +235,7 @@ let inferPatTuple ctx itemPats loc tupleTy =
   let ctx =
     tyCtxUnifyTy ctx loc tupleTy (tyTuple itemTys)
 
-  HPat.Tuple(itemPats, tupleTy, loc), ctx
+  HTuplePat(itemPats, tupleTy, loc), ctx
 
 let inferPatCons ctx l r loc listTy =
   let itemTy, ctx = ctx |> tyCtxFreshPatTy l
@@ -245,47 +245,47 @@ let inferPatCons ctx l r loc listTy =
 
   let l, ctx = inferPat ctx l itemTy
   let r, ctx = inferPat ctx r listTy
-  HPat.Cons(l, r, itemTy, loc), ctx
+  HConsPat(l, r, itemTy, loc), ctx
 
 let inferPatAs ctx pat varSerial loc ty =
   let ctx = ctx |> tyCtxUnifyVarTy varSerial ty loc
   let pat, ctx = inferPat ctx pat ty
-  HPat.As(pat, varSerial, loc), ctx
+  HAsPat(pat, varSerial, loc), ctx
 
 let inferPat ctx pat ty =
   match pat with
-  | HPat.Lit (lit, loc) -> pat, tyCtxUnifyTy ctx loc ty (litToTy lit)
-  | HPat.Nil (_, loc) ->
+  | HLitPat (lit, loc) -> pat, tyCtxUnifyTy ctx loc ty (litToTy lit)
+  | HNilPat (_, loc) ->
       let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
       let ctx = tyCtxUnifyTy ctx loc ty (tyList itemTy)
-      HPat.Nil(itemTy, loc), ctx
-  | HPat.OptionNone (_, loc) ->
+      HNilPat(itemTy, loc), ctx
+  | HNonePat (_, loc) ->
       let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
       let ctx = tyCtxUnifyTy ctx loc ty (tyList itemTy)
-      HPat.OptionNone(itemTy, loc), ctx
-  | HPat.OptionSome (_, loc) ->
+      HNonePat(itemTy, loc), ctx
+  | HSomePat (_, loc) ->
       let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
 
       let ctx =
         tyCtxUnifyTy ctx loc ty (tyFun itemTy (tyList itemTy))
 
-      HPat.OptionSome(itemTy, loc), ctx
-  | HPat.Discard (_, loc) -> HPat.Discard(ty, loc), ctx
-  | HPat.Ref (varSerial, _, loc) -> inferPatRef ctx varSerial loc ty
-  | HPat.Nav (l, r, _, loc) -> inferPatNav ctx l r loc ty
-  | HPat.Call (callee, args, _, loc) -> inferPatCall ctx callee args loc ty
-  | HPat.Cons (l, r, _, loc) -> inferPatCons ctx l r loc ty
-  | HPat.Tuple (items, _, loc) -> inferPatTuple ctx items loc ty
-  | HPat.As (pat, serial, loc) -> inferPatAs ctx pat serial loc ty
-  | HPat.Anno (pat, annoTy, loc) ->
+      HSomePat(itemTy, loc), ctx
+  | HDiscardPat (_, loc) -> HDiscardPat(ty, loc), ctx
+  | HRefPat (varSerial, _, loc) -> inferPatRef ctx varSerial loc ty
+  | HNavPat (l, r, _, loc) -> inferPatNav ctx l r loc ty
+  | HCallPat (callee, args, _, loc) -> inferPatCall ctx callee args loc ty
+  | HConsPat (l, r, _, loc) -> inferPatCons ctx l r loc ty
+  | HTuplePat (items, _, loc) -> inferPatTuple ctx items loc ty
+  | HAsPat (pat, serial, loc) -> inferPatAs ctx pat serial loc ty
+  | HAnnoPat (pat, annoTy, loc) ->
       let ctx = tyCtxUnifyTy ctx loc ty annoTy
       let pat, ctx = inferPat ctx pat annoTy
       pat, ctx
-  | HPat.Or (first, second, _, loc) ->
+  | HOrPat (first, second, _, loc) ->
       // FIXME: Error if two patterns introduce different bindings.
       let first, ctx = inferPat ctx first ty
       let second, ctx = inferPat ctx second ty
-      HPat.Or(first, second, ty, loc), ctx
+      HOrPat(first, second, ty, loc), ctx
 
 let inferRef (ctx: TyCtx) serial loc ty =
   let ctx = ctx |> tyCtxUnifyVarTy serial ty loc

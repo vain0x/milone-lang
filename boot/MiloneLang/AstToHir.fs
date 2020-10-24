@@ -213,12 +213,12 @@ let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
 
   | ALitPat (lit, pos) ->
       let loc = toLoc docId pos
-      HPat.Lit(lit, loc), nameCtx
+      HLitPat(lit, loc), nameCtx
 
   | AIdentPat (ident, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let loc = toLoc docId pos
-      HPat.Ref(serial, noTy, loc), nameCtx
+      HRefPat(serial, noTy, loc), nameCtx
 
   | AListPat ([], pos) ->
       let loc = toLoc docId pos
@@ -231,7 +231,7 @@ let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   | ANavPat (l, r, pos) ->
       let l, nameCtx = (l, nameCtx) |> astToHirPat docId
       let loc = toLoc docId pos
-      HPat.Nav(l, r, noTy, loc), nameCtx
+      HNavPat(l, r, noTy, loc), nameCtx
 
   | AAppPat (calleePat, argPats, pos) ->
       let calleePat, nameCtx =
@@ -241,20 +241,20 @@ let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
         (argPats, nameCtx) |> stMap (astToHirPat docId)
 
       let loc = toLoc docId pos
-      HPat.Call(calleePat, argPats, noTy, loc), nameCtx
+      HCallPat(calleePat, argPats, noTy, loc), nameCtx
 
   | AConsPat (head, tail, pos) ->
       let head, nameCtx = (head, nameCtx) |> astToHirPat docId
       let tail, nameCtx = (tail, nameCtx) |> astToHirPat docId
       let loc = toLoc docId pos
-      HPat.Cons(head, tail, noTy, loc), nameCtx
+      HConsPat(head, tail, noTy, loc), nameCtx
 
   | ATuplePat (pats, pos) ->
       let pats, nameCtx =
         (pats, nameCtx) |> stMap (astToHirPat docId)
 
       let loc = toLoc docId pos
-      HPat.Tuple(pats, noTy, loc), nameCtx
+      HTuplePat(pats, noTy, loc), nameCtx
 
   | AAsPat (pat, ident, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
@@ -262,19 +262,19 @@ let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
       let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
 
       let loc = toLoc docId pos
-      HPat.As(pat, serial, loc), nameCtx
+      HAsPat(pat, serial, loc), nameCtx
 
   | AAnnoPat (pat, ty, pos) ->
       let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
       let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
       let loc = toLoc docId pos
-      HPat.Anno(pat, ty, loc), nameCtx
+      HAnnoPat(pat, ty, loc), nameCtx
 
   | AOrPat (l, r, pos) ->
       let l, nameCtx = (l, nameCtx) |> astToHirPat docId
       let r, nameCtx = (r, nameCtx) |> astToHirPat docId
       let loc = toLoc docId pos
-      HPat.Or(l, r, noTy, loc), nameCtx
+      HOrPat(l, r, noTy, loc), nameCtx
 
   | AFunDeclPat (_, _, pos) -> failwithf "Invalid occurrence of fun pattern: %s" (posToString pos)
 

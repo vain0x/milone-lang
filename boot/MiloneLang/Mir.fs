@@ -154,7 +154,7 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
   false, ctx
 
 let mirifyPatSome ctx endLabel item itemTy loc expr =
-  let nilPat = HPat.Nil(itemTy, loc)
+  let nilPat = HNilPat(itemTy, loc)
   mirifyPatCons ctx endLabel item nilPat itemTy loc expr
 
 let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
@@ -239,30 +239,30 @@ let mirifyPatAs ctx endLabel pat serial expr loc =
 /// Determines if the pattern covers the whole.
 let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   match pat with
-  | HPat.Discard _ ->
+  | HDiscardPat _ ->
       // Discard the result, which we know is pure.
       // FIXME: This should be done in optimization?
       true, ctx
 
-  | HPat.Lit (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
-  | HPat.Nil (itemTy, loc) -> mirifyPatNil ctx endLabel itemTy expr loc
-  | HPat.OptionNone (itemTy, loc) -> mirifyPatNone ctx endLabel itemTy expr loc
-  | HPat.Ref (serial, ty, loc) -> mirifyPatRef ctx endLabel serial ty loc expr
-  | HPat.Call (HPat.Ref (serial, _, _), args, ty, loc) -> mirifyPatCall ctx endLabel serial args ty loc expr
-  | HPat.Call (HPat.OptionSome (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
-  | HPat.Cons (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
-  | HPat.Tuple (itemPats, AppTy (TupleTyCtor, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
-  | HPat.As (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
-  | HPat.OptionSome (_, loc) ->
+  | HLitPat (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
+  | HNilPat (itemTy, loc) -> mirifyPatNil ctx endLabel itemTy expr loc
+  | HNonePat (itemTy, loc) -> mirifyPatNone ctx endLabel itemTy expr loc
+  | HRefPat (serial, ty, loc) -> mirifyPatRef ctx endLabel serial ty loc expr
+  | HCallPat (HRefPat (serial, _, _), args, ty, loc) -> mirifyPatCall ctx endLabel serial args ty loc expr
+  | HCallPat (HSomePat (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
+  | HConsPat (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
+  | HTuplePat (itemPats, AppTy (TupleTyCtor, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
+  | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
+  | HSomePat (_, loc) ->
       let ctx =
         mirCtxAddErr ctx "Some pattern must be used in the form of `Some pat`" loc
 
       false, ctx
-  | HPat.Or _ -> failwith "Unimpl nested OR pattern."
-  | HPat.Nav _ -> failwith "Never: Nav pattern in mirify"
-  | HPat.Call _ -> failwith "Never: Call pattern incorrect."
-  | HPat.Tuple _ -> failwith "Never: Tuple pattern must be of tuple type."
-  | HPat.Anno _ -> failwith "Never annotation pattern in MIR-ify stage."
+  | HOrPat _ -> failwith "Unimpl nested OR pattern."
+  | HNavPat _ -> failwith "Never: Nav pattern in mirify"
+  | HCallPat _ -> failwith "Never: Call pattern incorrect."
+  | HTuplePat _ -> failwith "Never: Tuple pattern must be of tuple type."
+  | HAnnoPat _ -> failwith "Never annotation pattern in MIR-ify stage."
 
 let mirifyExprRef (ctx: MirCtx) serial ty loc =
   match ctx |> mirCtxGetVars |> mapTryFind serial with
@@ -289,21 +289,21 @@ let mirifyBlock ctx expr =
 let patsIsCovering pats =
   let rec go pat =
     match pat with
-    | HPat.Discard _
-    | HPat.Ref _ ->
+    | HDiscardPat _
+    | HRefPat _ ->
         // FIXME: unit-like variant patterns may not be covering
         true
-    | HPat.Lit _
-    | HPat.Nil _
-    | HPat.OptionNone _
-    | HPat.OptionSome _
-    | HPat.Nav _
-    | HPat.Cons _
-    | HPat.Call _ -> false
-    | HPat.Tuple (itemPats, _, _) -> itemPats |> listForAll go
-    | HPat.As (pat, _, _) -> go pat
-    | HPat.Anno (pat, _, _) -> go pat
-    | HPat.Or (first, second, _, _) -> go first || go second
+    | HLitPat _
+    | HNilPat _
+    | HNonePat _
+    | HSomePat _
+    | HNavPat _
+    | HConsPat _
+    | HCallPat _ -> false
+    | HTuplePat (itemPats, _, _) -> itemPats |> listForAll go
+    | HAsPat (pat, _, _) -> go pat
+    | HAnnoPat (pat, _, _) -> go pat
+    | HOrPat (first, second, _, _) -> go first || go second
 
   listExists go pats
 
@@ -682,7 +682,7 @@ let mirifyExprLetVal ctx pat init next letLoc =
 let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
   let defineArg ctx argPat =
     match argPat with
-    | HPat.Ref (serial, ty, loc) ->
+    | HRefPat (serial, ty, loc) ->
         // NOTE: Optimize for usual cases to not generate redundant local vars.
         (serial, ty, loc), ctx
     | _ ->
