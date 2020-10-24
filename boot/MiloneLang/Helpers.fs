@@ -901,9 +901,9 @@ let bpNext bp =
 // APat
 // -----------------------------------------------
 
-let apFalse loc = APat.Lit(litFalse, loc)
+let apFalse loc = ALitPat(litFalse, loc)
 
-let apTrue loc = APat.Lit(litTrue, loc)
+let apTrue loc = ALitPat(litTrue, loc)
 
 // -----------------------------------------------
 // AExpr

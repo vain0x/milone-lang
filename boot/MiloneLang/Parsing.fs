@@ -130,7 +130,7 @@ let parseTyError msg (tokens, errors) =
 let parsePatError msg (tokens, errors) =
   let pos = nextPos tokens
   let errors = parseErrorCore msg pos errors
-  APat.Missing pos, tokens, errors
+  AMissingPat pos, tokens, errors
 
 let parseExprError msg (tokens, errors) =
   let pos = nextPos tokens
@@ -314,32 +314,32 @@ let parsePatListBody basePos bracketPos (tokens, errors) =
 
   let itemPat, tokens, errors = parsePat basePos (tokens, errors)
   let itemPats, tokens, errors = go [ itemPat ] (tokens, errors)
-  APat.ListLit(itemPats, bracketPos), tokens, errors
+  AListPat(itemPats, bracketPos), tokens, errors
 
 let parsePatAtom basePos (tokens, errors) =
   match tokens with
   | _ when not (nextInside basePos tokens && leadsPat tokens) ->
       parsePatError "Expected a pattern atom" (tokens, errors)
 
-  | (IntToken value, pos) :: tokens -> APat.Lit(IntLit value, pos), tokens, errors
+  | (IntToken value, pos) :: tokens -> ALitPat(IntLit value, pos), tokens, errors
 
-  | (CharToken value, pos) :: tokens -> APat.Lit(CharLit value, pos), tokens, errors
+  | (CharToken value, pos) :: tokens -> ALitPat(CharLit value, pos), tokens, errors
 
-  | (StrToken value, pos) :: tokens -> APat.Lit(StrLit value, pos), tokens, errors
+  | (StrToken value, pos) :: tokens -> ALitPat(StrLit value, pos), tokens, errors
 
-  | (IdentToken ident, pos) :: tokens -> APat.Ident(ident, pos), tokens, errors
+  | (IdentToken ident, pos) :: tokens -> AIdentPat(ident, pos), tokens, errors
 
-  | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> APat.TupleLit([], pos), tokens, errors
+  | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATuplePat([], pos), tokens, errors
 
   | (LeftParenToken, _) :: tokens -> parsePatParenBody basePos (tokens, errors)
 
-  | (LeftBracketToken, pos) :: (RightBracketToken, _) :: tokens -> APat.ListLit([], pos), tokens, errors
+  | (LeftBracketToken, pos) :: (RightBracketToken, _) :: tokens -> AListPat([], pos), tokens, errors
 
   | (LeftBracketToken, pos) :: tokens -> parsePatListBody basePos pos (tokens, errors)
 
-  | (FalseToken, pos) :: tokens -> APat.Lit(BoolLit false, pos), tokens, errors
+  | (FalseToken, pos) :: tokens -> ALitPat(BoolLit false, pos), tokens, errors
 
-  | (TrueToken, pos) :: tokens -> APat.Lit(BoolLit true, pos), tokens, errors
+  | (TrueToken, pos) :: tokens -> ALitPat(BoolLit true, pos), tokens, errors
 
   | _ -> parsePatError "NEVER: The token must be a pat" (tokens, errors)
 
@@ -348,7 +348,7 @@ let parsePatNav basePos (tokens, errors) =
   let pat, tokens, errors = parsePatAtom basePos (tokens, errors)
 
   match tokens with
-  | (DotToken, pos) :: (IdentToken ident, _) :: tokens -> APat.Nav(pat, ident, pos), tokens, errors
+  | (DotToken, pos) :: (IdentToken ident, _) :: tokens -> ANavPat(pat, ident, pos), tokens, errors
 
   | (DotToken, _) :: tokens -> parsePatError "Expected identifier" (tokens, errors)
 
@@ -377,7 +377,7 @@ let parsePatCall basePos (tokens, errors) =
   match args with
   | [] -> callee, tokens, errors
 
-  | _ -> APat.Call(callee, args, calleePos), tokens, errors
+  | _ -> AAppPat(callee, args, calleePos), tokens, errors
 
 /// `pat-cons = pat-call ( '::' pat-cons )?`
 let parsePatCons basePos (tokens, errors) =
@@ -386,7 +386,7 @@ let parsePatCons basePos (tokens, errors) =
   match tokens with
   | (ColonColonToken, pos) :: tokens ->
       let tail, tokens, errors = parsePatCons basePos (tokens, errors)
-      APat.Cons(head, tail, pos), tokens, errors
+      AConsPat(head, tail, pos), tokens, errors
 
   | _ -> head, tokens, errors
 
@@ -399,7 +399,7 @@ let parsePatAnno basePos (tokens, errors) =
       let ty, tokens, errors =
         parseTy (nextPos tokens) (tokens, errors)
 
-      APat.Anno(pat, ty, pos), tokens, errors
+      AAnnoPat(pat, ty, pos), tokens, errors
 
   | _ -> pat, tokens, errors
 
@@ -418,7 +418,7 @@ let parsePatTuple basePos (tokens, errors) =
   match tokens with
   | (CommaToken, pos) :: _ ->
       let itemPats, tokens, errors = go [] (tokens, errors)
-      APat.TupleLit(itemPat :: itemPats, pos), tokens, errors
+      ATuplePat(itemPat :: itemPats, pos), tokens, errors
 
   | _ -> itemPat, tokens, errors
 
@@ -428,7 +428,7 @@ let parsePatAs basePos (tokens, errors) =
   let pat, tokens, errors = parsePatTuple basePos (tokens, errors)
 
   match tokens with
-  | (AsToken, pos) :: (IdentToken ident, _) :: tokens -> APat.As(pat, ident, pos), tokens, errors
+  | (AsToken, pos) :: (IdentToken ident, _) :: tokens -> AAsPat(pat, ident, pos), tokens, errors
 
   | (AsToken, _) :: tokens ->
       let errors =
@@ -445,7 +445,7 @@ let parsePatOr basePos (tokens, errors) =
   match tokens with
   | (PipeToken, pos) :: tokens ->
       let rPat, tokens, errors = parsePatOr basePos (tokens, errors)
-      APat.Or(lPat, rPat, pos), tokens, errors
+      AOrPat(lPat, rPat, pos), tokens, errors
 
   | _ -> lPat, tokens, errors
 
@@ -458,12 +458,12 @@ let parsePatLet basePos (tokens, errors) =
       let args, tokens, errors =
         parsePatCallArgs basePos (tokens, errors)
 
-      let pat = APat.Fun(callee, args, calleePos)
+      let pat = AFunDeclPat(callee, args, calleePos)
 
       match tokens with
       | (ColonToken, pos) :: tokens ->
           let ty, tokens, errors = parseTy basePos (tokens, errors)
-          APat.Anno(pat, ty, pos), tokens, errors
+          AAnnoPat(pat, ty, pos), tokens, errors
 
       | _ -> pat, tokens, errors
 

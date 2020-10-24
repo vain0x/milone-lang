@@ -62,11 +62,11 @@ let desugarListLitPat pats pos =
 
   let rec go pats =
     match pats with
-    | [] -> APat.ListLit([], pos)
+    | [] -> AListPat([], pos)
 
     | head :: tail ->
         let tail = go tail
-        APat.Cons(head, tail, pos)
+        AConsPat(head, tail, pos)
 
   go pats
 
@@ -103,7 +103,7 @@ let desugarIf cond body alt pos =
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
 let desugarFun pats body pos =
   let ident = "fun"
-  let pat = APat.Fun(ident, pats, pos)
+  let pat = AFunDeclPat(ident, pats, pos)
   let next = AExpr.Ident(ident, pos)
   AExpr.Let(PrivateVis, pat, body, next, pos)
 
@@ -169,11 +169,11 @@ let tryDesugarIndexRange expr pos =
 ///   `let-val pat = body`
 let desugarLet vis pat body next pos =
   match pat with
-  | APat.Anno (pat, annoTy, annoLoc) ->
+  | AAnnoPat (pat, annoTy, annoLoc) ->
       let body = AExpr.Anno(body, annoTy, annoLoc)
       desugarLet vis pat body next pos
 
-  | APat.Fun (ident, args, _) -> ALet.LetFun(vis, ident, args, body, next, pos)
+  | AFunDeclPat (ident, args, _) -> ALet.LetFun(vis, ident, args, body, next, pos)
 
   | _ -> ALet.LetVal(vis, pat, body, next, pos)
 
@@ -209,31 +209,31 @@ let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
 let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
-  | APat.Missing pos -> failwithf "Missing pattern %s" (posToString pos)
+  | AMissingPat pos -> failwithf "Missing pattern %s" (posToString pos)
 
-  | APat.Lit (lit, pos) ->
+  | ALitPat (lit, pos) ->
       let loc = toLoc docId pos
       HPat.Lit(lit, loc), nameCtx
 
-  | APat.Ident (ident, pos) ->
+  | AIdentPat (ident, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let loc = toLoc docId pos
       HPat.Ref(serial, noTy, loc), nameCtx
 
-  | APat.ListLit ([], pos) ->
+  | AListPat ([], pos) ->
       let loc = toLoc docId pos
       patNil noTy loc, nameCtx
 
-  | APat.ListLit (pats, pos) ->
+  | AListPat (pats, pos) ->
       let pat = desugarListLitPat pats pos
       (pat, nameCtx) |> astToHirPat docId
 
-  | APat.Nav (l, r, pos) ->
+  | ANavPat (l, r, pos) ->
       let l, nameCtx = (l, nameCtx) |> astToHirPat docId
       let loc = toLoc docId pos
       HPat.Nav(l, r, noTy, loc), nameCtx
 
-  | APat.Call (calleePat, argPats, pos) ->
+  | AAppPat (calleePat, argPats, pos) ->
       let calleePat, nameCtx =
         (calleePat, nameCtx) |> astToHirPat docId
 
@@ -243,20 +243,20 @@ let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
       let loc = toLoc docId pos
       HPat.Call(calleePat, argPats, noTy, loc), nameCtx
 
-  | APat.Cons (head, tail, pos) ->
+  | AConsPat (head, tail, pos) ->
       let head, nameCtx = (head, nameCtx) |> astToHirPat docId
       let tail, nameCtx = (tail, nameCtx) |> astToHirPat docId
       let loc = toLoc docId pos
       HPat.Cons(head, tail, noTy, loc), nameCtx
 
-  | APat.TupleLit (pats, pos) ->
+  | ATuplePat (pats, pos) ->
       let pats, nameCtx =
         (pats, nameCtx) |> stMap (astToHirPat docId)
 
       let loc = toLoc docId pos
       HPat.Tuple(pats, noTy, loc), nameCtx
 
-  | APat.As (pat, ident, pos) ->
+  | AAsPat (pat, ident, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
 
       let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
@@ -264,19 +264,19 @@ let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
       let loc = toLoc docId pos
       HPat.As(pat, serial, loc), nameCtx
 
-  | APat.Anno (pat, ty, pos) ->
+  | AAnnoPat (pat, ty, pos) ->
       let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
       let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
       let loc = toLoc docId pos
       HPat.Anno(pat, ty, loc), nameCtx
 
-  | APat.Or (l, r, pos) ->
+  | AOrPat (l, r, pos) ->
       let l, nameCtx = (l, nameCtx) |> astToHirPat docId
       let r, nameCtx = (r, nameCtx) |> astToHirPat docId
       let loc = toLoc docId pos
       HPat.Or(l, r, noTy, loc), nameCtx
 
-  | APat.Fun (_, _, pos) -> failwithf "Invalid occurrence of fun pattern: %s" (posToString pos)
+  | AFunDeclPat (_, _, pos) -> failwithf "Invalid occurrence of fun pattern: %s" (posToString pos)
 
 let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with

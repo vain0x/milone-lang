@@ -202,25 +202,24 @@ type ATy =
   | AFunTy of ATy * ATy * Pos
 
 /// Pattern in AST.
-[<RequireQualifiedAccess>]
 type APat =
-  | Missing of Pos
-  | Lit of Lit * Pos
-  | Ident of Ident * Pos
-  | ListLit of APat list * Pos
-  | Nav of APat * Ident * Pos
+  | AMissingPat of Pos
+  | ALitPat of Lit * Pos
+  | AIdentPat of Ident * Pos
+  | AListPat of APat list * Pos
+  | ANavPat of APat * Ident * Pos
   /// Variant deconstruction. e.g. `Some x`.
-  | Call of APat * APat list * Pos
+  | AAppPat of APat * APat list * Pos
   /// `::`
-  | Cons of APat * APat * Pos
-  | TupleLit of APat list * Pos
-  | As of APat * Ident * Pos
+  | AConsPat of APat * APat * Pos
+  | ATuplePat of APat list * Pos
+  | AAsPat of APat * Ident * Pos
   /// Type annotation, e.g. `x: int`.
-  | Anno of APat * ATy * Pos
-  | Or of APat * APat * Pos
+  | AAnnoPat of APat * ATy * Pos
+  | AOrPat of APat * APat * Pos
   /// Function declaration pattern, e.g. `f x y`.
   /// Syntactically distinct from the call pattern.
-  | Fun of Ident * APat list * Pos
+  | AFunDeclPat of Ident * APat list * Pos
 
 /// Match arm node in AST.
 type AArm =
