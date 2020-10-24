@@ -179,11 +179,11 @@ let desugarLet vis pat body next pos =
 
 let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
-  | ATy.Missing pos ->
+  | AMissingTy pos ->
       let loc = toLoc docId pos
       Ty.Error loc, nameCtx
 
-  | ATy.App (ident, argTys, _) ->
+  | AAppTy (ident, argTys, _) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
 
       let argTys, nameCtx =
@@ -191,18 +191,18 @@ let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
       tyRef tySerial argTys, nameCtx
 
-  | ATy.Suffix (lTy, ident, _) ->
+  | ASuffixTy (lTy, ident, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> astToHirTy docId
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
       tyRef tySerial [ lTy ], nameCtx
 
-  | ATy.Tuple (itemTys, _) ->
+  | ATupleTy (itemTys, _) ->
       let itemTys, nameCtx =
         (itemTys, nameCtx) |> stMap (astToHirTy docId)
 
       tyTuple itemTys, nameCtx
 
-  | ATy.Fun (sTy, tTy, _) ->
+  | AFunTy (sTy, tTy, _) ->
       let sTy, nameCtx = (sTy, nameCtx) |> astToHirTy docId
       let tTy, nameCtx = (tTy, nameCtx) |> astToHirTy docId
       tyFun sTy tTy, nameCtx

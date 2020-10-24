@@ -192,15 +192,14 @@ type Binary =
   | ConsBinary
 
 /// Type expression in AST.
-[<RequireQualifiedAccess>]
 type ATy =
-  | Missing of Pos
-  | App of Ident * ATy list * Pos
-  | Suffix of ATy * Ident * Pos
+  | AMissingTy of Pos
+  | AAppTy of Ident * ATy list * Pos
+  | ASuffixTy of ATy * Ident * Pos
   /// Tuple type, e.g. `int * string`.
-  | Tuple of ATy list * Pos
+  | ATupleTy of ATy list * Pos
   /// Function type, e.g. `int -> string`.
-  | Fun of ATy * ATy * Pos
+  | AFunTy of ATy * ATy * Pos
 
 /// Pattern in AST.
 [<RequireQualifiedAccess>]

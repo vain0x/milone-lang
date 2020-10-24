@@ -125,7 +125,7 @@ let parseErrorCore msg pos errors =
 let parseTyError msg (tokens, errors) =
   let pos = nextPos tokens
   let errors = parseErrorCore msg pos errors
-  ATy.Missing pos, tokens, errors
+  AMissingTy pos, tokens, errors
 
 let parsePatError msg (tokens, errors) =
   let pos = nextPos tokens
@@ -180,7 +180,7 @@ let parseTyAtom basePos (tokens, errors) =
 
   | (IdentToken ident, pos) :: tokens ->
       let argTys, tokens, errors = parseTyArgs basePos (tokens, errors)
-      ATy.App(ident, argTys, pos), tokens, errors
+      AAppTy(ident, argTys, pos), tokens, errors
 
   | (LeftParenToken, _) :: tokens ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
@@ -201,7 +201,7 @@ let parseTySuffix basePos (tokens, errors) =
   let rec go (ty, tokens, errors) =
     let inside = nextInside basePos tokens
     match tokens with
-    | (IdentToken ident, pos) :: tokens when inside -> go (ATy.Suffix(ty, ident, pos), tokens, errors)
+    | (IdentToken ident, pos) :: tokens when inside -> go (ASuffixTy(ty, ident, pos), tokens, errors)
 
     | _ -> ty, tokens, errors
 
@@ -230,7 +230,7 @@ let parseTyTuple basePos (tokens, errors) =
   match tokens with
   | (StarToken, opPos) :: _ ->
       let itemTys, tokens, errors = go [] (tokens, errors)
-      ATy.Tuple(itemTy :: itemTys, opPos), tokens, errors
+      ATupleTy(itemTy :: itemTys, opPos), tokens, errors
 
   | _ -> itemTy, tokens, errors
 
@@ -242,7 +242,7 @@ let parseTyFun basePos (tokens, errors) =
   match tokens with
   | (ArrowToken, opPos) :: tokens ->
       let tTy, tokens, errors = parseTyFun basePos (tokens, errors)
-      ATy.Fun(sTy, tTy, opPos), tokens, errors
+      AFunTy(sTy, tTy, opPos), tokens, errors
 
   | _ -> sTy, tokens, errors
 
