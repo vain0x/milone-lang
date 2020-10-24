@@ -515,20 +515,19 @@ type MatchIR =
 
 /// Unary operator in middle IR.
 /// Or primitive function with single parameter.
-[<RequireQualifiedAccess>]
-type MUniOp =
-  | Not
-  | StrPtr
-  | StrLen
-  | Unbox
+type MUnary =
+  | MNotUnary
+  | MStrPtrUnary
+  | MStrLenUnary
+  | MUnboxUnary
   /// Projection. Get an item of tuple.
-  | Proj of index: int
+  | MProjUnary of index: int
   /// Get union tag.
-  | Tag
-  | GetVariant of VariantSerial
-  | ListIsEmpty
-  | ListHead
-  | ListTail
+  | MTagUnary
+  | MGetVariantUnary of VariantSerial
+  | MListIsEmptyUnary
+  | MListHeadUnary
+  | MListTailUnary
 
 /// Binary operator in middle IR.
 /// Or primitive function with two parameters.
@@ -559,7 +558,7 @@ type MExpr =
   /// Procedure
   | Proc of FunSerial * Ty * Loc
   | Variant of TySerial * VariantSerial * Ty * Loc
-  | Uni of MUniOp * arg: MExpr * resultTy: Ty * Loc
+  | Uni of MUnary * arg: MExpr * resultTy: Ty * Loc
   | Bin of MOp * left: MExpr * right: MExpr * resultTy: Ty * Loc
 
 /// Variable initializer in mid-level IR.

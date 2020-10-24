@@ -82,7 +82,7 @@ let mirCtxIsVariantFun (ctx: MirCtx) serial =
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
 let mxProj expr index resultTy loc =
-  MExpr.Uni(MUniOp.Proj index, expr, resultTy, loc)
+  MExpr.Uni(MProjUnary index, expr, resultTy, loc)
 
 let mxStrAdd ctx _op l r (_, loc) =
   MExpr.Bin(MOp.StrAdd, l, r, tyStr, loc), ctx
@@ -122,7 +122,7 @@ let mirifyPatLit ctx endLabel lit expr loc =
 
 let mirifyPatNil ctx endLabel itemTy expr loc =
   let isEmptyExpr =
-    MExpr.Uni(MUniOp.ListIsEmpty, expr, tyList itemTy, loc)
+    MExpr.Uni(MListIsEmptyUnary, expr, tyList itemTy, loc)
 
   let gotoStmt = msGotoUnless isEmptyExpr endLabel loc
   let ctx = mirCtxAddStmt ctx gotoStmt
@@ -135,19 +135,19 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let listTy = tyList itemTy
 
   let isEmpty =
-    MExpr.Uni(MUniOp.ListIsEmpty, expr, tyBool, loc)
+    MExpr.Uni(MListIsEmptyUnary, expr, tyBool, loc)
 
   let nonEmpty =
-    MExpr.Uni(MUniOp.Not, isEmpty, tyBool, loc)
+    MExpr.Uni(MNotUnary, isEmpty, tyBool, loc)
 
   let gotoStmt = msGotoUnless nonEmpty endLabel loc
   let ctx = mirCtxAddStmt ctx gotoStmt
 
   let head =
-    MExpr.Uni(MUniOp.ListHead, expr, itemTy, loc)
+    MExpr.Uni(MListHeadUnary, expr, itemTy, loc)
 
   let tail =
-    MExpr.Uni(MUniOp.ListTail, expr, listTy, loc)
+    MExpr.Uni(MListTailUnary, expr, listTy, loc)
 
   let _, ctx = mirifyPat ctx endLabel l head
   let _, ctx = mirifyPat ctx endLabel r tail
@@ -161,7 +161,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
   match ctx |> mirCtxGetVars |> mapFind serial with
   | VarDef.Variant _ ->
       // Compare tags.
-      let lTagExpr = MExpr.Uni(MUniOp.Tag, expr, tyInt, loc)
+      let lTagExpr = MExpr.Uni(MTagUnary, expr, tyInt, loc)
       let rTagExpr = MExpr.Ref(serial, tyInt, loc)
 
       let eqExpr =
@@ -180,7 +180,7 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
   match ctx |> mirCtxGetVars |> mapFind serial, args with
   | VarDef.Variant (_, _, _, payloadTy, _, _), [ payload ] ->
       let extractExpr =
-        MExpr.Uni(MUniOp.GetVariant serial, expr, payloadTy, loc)
+        MExpr.Uni(MGetVariantUnary serial, expr, payloadTy, loc)
 
       // Special treatment for new-type variants
       // so that we can deconstruct it with irrefutable patterns
@@ -190,7 +190,7 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
       else
 
         // Compare tags.
-        let lTagExpr = MExpr.Uni(MUniOp.Tag, expr, tyInt, loc)
+        let lTagExpr = MExpr.Uni(MTagUnary, expr, tyInt, loc)
         let rTagExpr = MExpr.Ref(serial, tyInt, loc)
 
         let eqExpr =
@@ -473,11 +473,11 @@ let mirifyExprCallBox ctx arg _ loc =
 
 let mirifyExprCallUnbox ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  MExpr.Uni(MUniOp.Unbox, arg, ty, loc), ctx
+  MExpr.Uni(MUnboxUnary, arg, ty, loc), ctx
 
 let mirifyExprCallStrLength ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  MExpr.Uni(MUniOp.StrLen, arg, ty, loc), ctx
+  MExpr.Uni(MStrLenUnary, arg, ty, loc), ctx
 
 let mirifyExprCallSome ctx item ty loc =
   let _, tempSerial, ctx = mirCtxFreshVar ctx "some" ty loc
@@ -493,7 +493,7 @@ let mirifyExprCallSome ctx item ty loc =
 /// not a ==> !a
 let mirifyExprCallNot ctx arg ty notLoc =
   let arg, ctx = mirifyExpr ctx arg
-  MExpr.Uni(MUniOp.Not, arg, ty, notLoc), ctx
+  MExpr.Uni(MNotUnary, arg, ty, notLoc), ctx
 
 let mirifyExprCallVariantFun (ctx: MirCtx) serial payload ty loc =
   // Put payload on the heap.

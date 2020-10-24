@@ -1658,7 +1658,7 @@ let opIsComparison op =
 // Expressions (MIR)
 // -----------------------------------------------
 
-let mxNot expr loc = MExpr.Uni(MUniOp.Not, expr, tyBool, loc)
+let mxNot expr loc = MExpr.Uni(MNotUnary, expr, tyBool, loc)
 
 let mexprExtract expr =
   match expr with
@@ -1694,7 +1694,7 @@ let rec mxSugar expr =
     | MExpr.Lit (BoolLit value, loc) -> MExpr.Lit(BoolLit(not value), loc)
 
     // SUGAR: `not (not x)` ==> `x`
-    | MExpr.Uni (MUniOp.Not, l, _, _) -> l
+    | MExpr.Uni (MNotUnary, l, _, _) -> l
 
     // SUGAR: `not (x = y)` ==> `x <> y`
     | MExpr.Bin (MOp.Eq, l, r, ty, loc) -> MExpr.Bin(MOp.Ne, l, r, ty, loc)
@@ -1713,9 +1713,9 @@ let rec mxSugar expr =
   let mxSugarBin op l r ty loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
-    | MOp.Eq, MExpr.Lit (BoolLit false, _), _ -> mxSugarUni MUniOp.Not r ty loc
+    | MOp.Eq, MExpr.Lit (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
 
-    | MOp.Eq, _, MExpr.Lit (BoolLit false, _) -> mxSugarUni MUniOp.Not l ty loc
+    | MOp.Eq, _, MExpr.Lit (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
 
     // SUGAR: `x = true` ==> `x`
     | MOp.Eq, MExpr.Lit (BoolLit true, _), _ -> r

@@ -496,24 +496,24 @@ let genExprBinAsCall ctx ident l r =
 let genExprUniOp ctx op arg ty _ =
   let arg, ctx = genExpr ctx arg
   match op with
-  | MUniOp.Not -> CUnaryExpr(CNotUnary, arg), ctx
-  | MUniOp.StrPtr -> CNavExpr(arg, "str"), ctx
-  | MUniOp.StrLen -> CNavExpr(arg, "len"), ctx
-  | MUniOp.Unbox ->
+  | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
+  | MStrPtrUnary -> CNavExpr(arg, "str"), ctx
+  | MStrLenUnary -> CNavExpr(arg, "len"), ctx
+  | MUnboxUnary ->
       let valTy, ctx = cirGetCTy ctx ty
 
       let deref =
         CUnaryExpr(CDerefUnary, CCastExpr(arg, CPtrTy valTy))
 
       deref, ctx
-  | MUniOp.Proj index -> CProjExpr(arg, index), ctx
-  | MUniOp.Tag -> CNavExpr(arg, "tag"), ctx
-  | MUniOp.GetVariant serial ->
+  | MProjUnary index -> CProjExpr(arg, index), ctx
+  | MTagUnary -> CNavExpr(arg, "tag"), ctx
+  | MGetVariantUnary serial ->
       let _, ctx = cirGetCTy ctx ty
       CUnaryExpr(CDerefUnary, CNavExpr(arg, cirCtxUniqueName ctx serial)), ctx
-  | MUniOp.ListIsEmpty -> CUnaryExpr(CNotUnary, arg), ctx
-  | MUniOp.ListHead -> CArrowExpr(arg, "head"), ctx
-  | MUniOp.ListTail -> CArrowExpr(arg, "tail"), ctx
+  | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
+  | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
+  | MListTailUnary -> CArrowExpr(arg, "tail"), ctx
 
 let genExprBin ctx op l r =
   match op with
