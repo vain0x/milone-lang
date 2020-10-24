@@ -285,31 +285,31 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
 let scopeCtxResolveTy ty loc scopeCtx =
   let rec go (ty, scopeCtx) =
     match ty with
-    | Ty.Error _ -> ty, scopeCtx
+    | ErrorTy _ -> ty, scopeCtx
 
-    | Ty.Con (RefTyCtor tySerial, []) when (scopeCtx |> scopeCtxGetIdent tySerial) = "_" ->
+    | AppTy (RefTyCtor tySerial, []) when (scopeCtx |> scopeCtxGetIdent tySerial) = "_" ->
         // Handle wildcard type.
         let scopeCtx =
           scopeCtx |> scopeCtxDefineFreeTy tySerial
 
-        Ty.Meta(tySerial, loc), scopeCtx
+        MetaTy(tySerial, loc), scopeCtx
 
-    | Ty.Con (RefTyCtor serial, tys) ->
+    | AppTy (RefTyCtor serial, tys) ->
         let ident = scopeCtx |> scopeCtxGetIdent serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
         match scopeCtx |> scopeCtxResolveLocalTyIdent ident with
         | Some tySerial when scopeCtx |> scopeCtxIsMetaTy tySerial ->
             // In the case of type synonyms.
-            Ty.Meta(tySerial, loc), scopeCtx
+            MetaTy(tySerial, loc), scopeCtx
 
         | Some tySerial -> tyRef tySerial tys, scopeCtx
 
         | None -> tyPrimFromIdent ident tys loc, scopeCtx
 
-    | Ty.Con (tyCon, tys) ->
+    | AppTy (tyCon, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
-        Ty.Con(tyCon, tys), scopeCtx
+        AppTy(tyCon, tys), scopeCtx
 
     | _ -> ty, scopeCtx
 

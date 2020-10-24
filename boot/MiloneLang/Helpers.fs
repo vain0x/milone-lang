@@ -1085,28 +1085,28 @@ let traitMapTys f it =
 // -----------------------------------------------
 
 /// Placeholder. No type info in the parsing phase.
-let noTy = Ty.Error noLoc
+let noTy = ErrorTy noLoc
 
-let tyBool = Ty.Con(BoolTyCtor, [])
+let tyBool = AppTy(BoolTyCtor, [])
 
-let tyInt = Ty.Con(IntTyCtor, [])
+let tyInt = AppTy(IntTyCtor, [])
 
-let tyChar = Ty.Con(CharTyCtor, [])
+let tyChar = AppTy(CharTyCtor, [])
 
-let tyStr = Ty.Con(StrTyCtor, [])
+let tyStr = AppTy(StrTyCtor, [])
 
-let tyObj = Ty.Con(ObjTyCtor, [])
+let tyObj = AppTy(ObjTyCtor, [])
 
-let tyTuple tys = Ty.Con(TupleTyCtor, tys)
+let tyTuple tys = AppTy(TupleTyCtor, tys)
 
-let tyList ty = Ty.Con(ListTyCtor, [ ty ])
+let tyList ty = AppTy(ListTyCtor, [ ty ])
 
 let tyFun sourceTy targetTy =
-  Ty.Con(FunTyCtor, [ sourceTy; targetTy ])
+  AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
 let tyUnit = tyTuple []
 
-let tyRef serial tys = Ty.Con(RefTyCtor serial, tys)
+let tyRef serial tys = AppTy(RefTyCtor serial, tys)
 
 let tyAssocMap keyTy valueTy =
   let assocTy = tyList (tyTuple [ keyTy; valueTy ])
@@ -1117,15 +1117,15 @@ let tyAssocMap keyTy valueTy =
 
 let tyToHash ty =
   match ty with
-  | Ty.Error (docId, y, x) ->
+  | ErrorTy (docId, y, x) ->
       1
       |> hashCombine (strHash docId)
       |> hashCombine y
       |> hashCombine x
 
-  | Ty.Meta (tySerial, _) -> intHash (2 + tySerial)
+  | MetaTy (tySerial, _) -> intHash (2 + tySerial)
 
-  | Ty.Con (tyCon, tys) ->
+  | AppTy (tyCon, tys) ->
       let rec go h tys =
         match tys with
         | [] -> h
@@ -1136,20 +1136,20 @@ let tyToHash ty =
 
 let tyCmp first second =
   match first, second with
-  | Ty.Error first, Ty.Error second -> locCmp first second
+  | ErrorTy first, ErrorTy second -> locCmp first second
 
-  | Ty.Error _, _ -> -1
+  | ErrorTy _, _ -> -1
 
-  | _, Ty.Error _ -> 1
+  | _, ErrorTy _ -> 1
 
-  | Ty.Meta (firstSerial, firstLoc), Ty.Meta (secondSerial, secondLoc) ->
+  | MetaTy (firstSerial, firstLoc), MetaTy (secondSerial, secondLoc) ->
       if firstSerial <> secondSerial then intCmp firstSerial secondSerial else locCmp firstLoc secondLoc
 
-  | Ty.Meta _, _ -> -1
+  | MetaTy _, _ -> -1
 
-  | _, Ty.Meta _ -> 1
+  | _, MetaTy _ -> 1
 
-  | Ty.Con (firstTyCon, firstTys), Ty.Con (secondTyCon, secondTys) ->
+  | AppTy (firstTyCon, firstTys), AppTy (secondTyCon, secondTys) ->
       let c = tyConCmp firstTyCon secondTyCon
       if c <> 0 then
         c
@@ -1194,18 +1194,18 @@ let tyPrimFromIdent ident tys loc =
 
   | "AssocSet", [ itemTy ] -> tyAssocMap itemTy tyUnit
 
-  | _ -> Ty.Error loc
+  | _ -> ErrorTy loc
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
     match ty with
-    | Ty.Error _
-    | Ty.Con (_, []) -> true
+    | ErrorTy _
+    | AppTy (_, []) -> true
 
-    | Ty.Con (tyCon, ty :: tys) -> go ty && go (Ty.Con(tyCon, tys))
+    | AppTy (tyCon, ty :: tys) -> go ty && go (AppTy(tyCon, tys))
 
-    | Ty.Meta (s, _) -> s <> tySerial
+    | MetaTy (s, _) -> s <> tySerial
 
   go ty
 
@@ -1216,11 +1216,11 @@ let tyIsMonomorphic ty: bool =
     match tys with
     | [] -> true
 
-    | Ty.Meta _ :: _ -> false
+    | MetaTy _ :: _ -> false
 
-    | Ty.Error _ :: tys -> go tys
+    | ErrorTy _ :: tys -> go tys
 
-    | Ty.Con (_, tys1) :: tys2 -> go tys1 && go tys2
+    | AppTy (_, tys1) :: tys2 -> go tys1 && go tys2
 
   go [ ty ]
 
@@ -1231,15 +1231,15 @@ let tyCollectFreeVars ty =
     match tys with
     | [] -> fvAcc
 
-    | Ty.Error _ :: tys
-    | Ty.Con (_, []) :: tys -> go fvAcc tys
+    | ErrorTy _ :: tys
+    | AppTy (_, []) :: tys -> go fvAcc tys
 
-    | Ty.Con (_, tys1) :: tys2 ->
+    | AppTy (_, tys1) :: tys2 ->
         let acc = go fvAcc tys1
         let acc = go acc tys2
         acc
 
-    | Ty.Meta (serial, _) :: tys ->
+    | MetaTy (serial, _) :: tys ->
         let acc = serial :: fvAcc
         go acc tys
 
@@ -1247,14 +1247,14 @@ let tyCollectFreeVars ty =
 
 let rec tyToArity ty =
   match ty with
-  | Ty.Con (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty
+  | AppTy (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty
   | _ -> 0
 
 /// Converts nested function type to multi-arguments function type.
 let rec tyToArgList ty =
   let rec go n acc ty =
     match ty with
-    | Ty.Con (FunTyCtor, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
+    | AppTy (FunTyCtor, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
     | tTy -> n, listRev acc, tTy
 
   go 0 [] ty
@@ -1263,12 +1263,12 @@ let rec tyToArgList ty =
 let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
     match ty with
-    | Ty.Error _
-    | Ty.Con (_, []) -> ty
+    | ErrorTy _
+    | AppTy (_, []) -> ty
 
-    | Ty.Con (tyCon, tys) -> Ty.Con(tyCon, listMap go tys)
+    | AppTy (tyCon, tys) -> AppTy(tyCon, listMap go tys)
 
-    | Ty.Meta (tySerial, _) ->
+    | MetaTy (tySerial, _) ->
         match substMeta tySerial with
         | Some ty -> go ty
 
@@ -1346,7 +1346,7 @@ let primFromIdent ident =
   | _ -> None
 
 let primToTySpec prim =
-  let meta id = Ty.Meta(id, noLoc)
+  let meta id = MetaTy(id, noLoc)
   let mono ty = TySpec(ty, [])
   let poly ty traits = TySpec(ty, traits)
 
@@ -1606,7 +1606,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HExpr.TyDecl (_, _, _, a) -> tyUnit, a
   | HExpr.Open (_, a) -> tyUnit, a
   | HExpr.Module (_, _, _, a) -> tyUnit, a
-  | HExpr.Error (_, a) -> Ty.Error a, a
+  | HExpr.Error (_, a) -> ErrorTy a, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat = patMap f g pat
@@ -1726,7 +1726,7 @@ let rec mxSugar expr =
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MRefExpr (_, Ty.Con (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
+  | MRefExpr (_, AppTy (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
 
   | MUnaryExpr (op, l, ty, loc) ->
       let l = mxSugar l
@@ -1771,7 +1771,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 
   // Don't bind itself.
   match typingSubst ctx ty with
-  | Ty.Meta (s, _) when s = tySerial -> ctx
+  | MetaTy (s, _) when s = tySerial -> ctx
   | ty ->
 
       // Update depth of all related meta types to the minimum.
@@ -1819,20 +1819,20 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
     let lSubstTy = typingSubst ctx lty
     let rSubstTy = typingSubst ctx rty
     match lSubstTy, rSubstTy with
-    | Ty.Meta (l, _), Ty.Meta (r, _) when l = r -> logAcc, ctx
-    | Ty.Meta (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
+    | MetaTy (l, _), MetaTy (r, _) when l = r -> logAcc, ctx
+    | MetaTy (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
         let ctx = typingBind ctx lSerial rty loc
         logAcc, ctx
-    | _, Ty.Meta _ -> go rty lty (logAcc, ctx)
-    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when tyConEq lTyCon rTyCon -> logAcc, ctx
-    | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
+    | _, MetaTy _ -> go rty lty (logAcc, ctx)
+    | AppTy (lTyCon, []), AppTy (rTyCon, []) when tyConEq lTyCon rTyCon -> logAcc, ctx
+    | AppTy (lTyCon, lTy :: lTys), AppTy (rTyCon, rTy :: rTys) ->
         (logAcc, ctx)
         |> go lTy rTy
-        |> go (Ty.Con(lTyCon, lTys)) (Ty.Con(rTyCon, rTys))
-    | Ty.Error _, _
-    | _, Ty.Error _ -> logAcc, ctx
-    | Ty.Meta _, _ -> addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
-    | Ty.Con _, _ -> addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
+        |> go (AppTy(lTyCon, lTys)) (AppTy(rTyCon, rTys))
+    | ErrorTy _, _
+    | _, ErrorTy _ -> logAcc, ctx
+    | MetaTy _, _ -> addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
+    | AppTy _, _ -> addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
 
   go lty rty (logAcc, ctx)
 
@@ -1842,19 +1842,19 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   let expectScalar ty (logAcc, ctx) =
     match ty with
-    | Ty.Error _
-    | Ty.Con (BoolTyCtor, [])
-    | Ty.Con (IntTyCtor, [])
-    | Ty.Con (CharTyCtor, [])
-    | Ty.Con (StrTyCtor, []) -> logAcc, ctx
+    | ErrorTy _
+    | AppTy (BoolTyCtor, [])
+    | AppTy (IntTyCtor, [])
+    | AppTy (CharTyCtor, [])
+    | AppTy (StrTyCtor, []) -> logAcc, ctx
 
     | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   match theTrait with
   | Trait.Add ty ->
       match ty with
-      | Ty.Error _
-      | Ty.Con (StrTyCtor, []) -> logAcc, ctx
+      | ErrorTy _
+      | AppTy (StrTyCtor, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
@@ -1866,9 +1866,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | Trait.Index (lTy, rTy, resultTy) ->
       match lTy with
-      | Ty.Error _ -> [], ctx
+      | ErrorTy _ -> [], ctx
 
-      | Ty.Con (StrTyCtor, []) ->
+      | AppTy (StrTyCtor, []) ->
           let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
 
           let logAcc, ctx =

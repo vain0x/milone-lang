@@ -106,11 +106,11 @@ let mxStrCmp ctx op l r (ty, loc) =
 let mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   assert (opIsComparison op)
   match mexprToTy l with
-  | Ty.Con ((BoolTyCtor
-            | IntTyCtor
-            | CharTyCtor),
-            _) -> mxBinOpScalar ctx op l r (ty, loc)
-  | Ty.Con (StrTyCtor, _) -> mxStrCmp ctx op l r (ty, loc)
+  | AppTy ((BoolTyCtor
+           | IntTyCtor
+           | CharTyCtor),
+           _) -> mxBinOpScalar ctx op l r (ty, loc)
+  | AppTy (StrTyCtor, _) -> mxStrCmp ctx op l r (ty, loc)
   | _ -> failwithf "unimpl %A" (op, l, ty)
 
 let mirifyPatLit ctx endLabel lit expr loc =
@@ -251,7 +251,7 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   | HPat.Call (HPat.Ref (serial, _, _), args, ty, loc) -> mirifyPatCall ctx endLabel serial args ty loc expr
   | HPat.Call (HPat.OptionSome (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
   | HPat.Cons (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
-  | HPat.Tuple (itemPats, Ty.Con (TupleTyCtor, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
+  | HPat.Tuple (itemPats, AppTy (TupleTyCtor, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
   | HPat.As (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
   | HPat.OptionSome (_, loc) ->
       let ctx =
@@ -451,7 +451,7 @@ let mirifyExprMatch ctx target arms ty loc =
 
 let mirifyExprIndex ctx l r _ loc =
   match exprToTy l, exprToTy r with
-  | Ty.Con (StrTyCtor, _), Ty.Con (IntTyCtor, _) ->
+  | AppTy (StrTyCtor, _), AppTy (IntTyCtor, _) ->
       let l, ctx = mirifyExpr ctx l
       let r, ctx = mirifyExpr ctx r
       MBinaryExpr(MStrIndexBinary, l, r, tyChar, loc), ctx
@@ -551,11 +551,11 @@ let mirifyExprOpArith ctx op l r ty loc =
   let r, ctx = mirifyExpr ctx r
 
   match lTy with
-  | Ty.Con ((IntTyCtor
-            | CharTyCtor),
-            _) -> mxBinOpScalar ctx op l r (ty, loc)
+  | AppTy ((IntTyCtor
+           | CharTyCtor),
+           _) -> mxBinOpScalar ctx op l r (ty, loc)
 
-  | Ty.Con (StrTyCtor, _) when op |> mOpIsAdd -> mxStrAdd ctx op l r (ty, loc)
+  | AppTy (StrTyCtor, _) when op |> mOpIsAdd -> mxStrAdd ctx op l r (ty, loc)
 
   | _ ->
       // FIXME: error
@@ -659,8 +659,8 @@ let mirifyExprInfClosure ctx funSerial env funTy loc =
 
 let mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
-  | InfOp.Tuple, [], Ty.Con (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
-  | InfOp.Tuple, _, Ty.Con (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
+  | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
+  | InfOp.Tuple, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
   | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc

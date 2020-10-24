@@ -181,7 +181,7 @@ let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
       let loc = toLoc docId pos
-      Ty.Error loc, nameCtx
+      ErrorTy loc, nameCtx
 
   | AAppTy (ident, argTys, _) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ident

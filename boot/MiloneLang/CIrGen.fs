@@ -319,18 +319,18 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
   let rec go ty (ctx: CirCtx) =
     let tyToUniqueName ty =
       match ty with
-      | Ty.Con (BoolTyCtor, _) -> "Bool", ctx
+      | AppTy (BoolTyCtor, _) -> "Bool", ctx
 
-      | Ty.Con (IntTyCtor, _) -> "Int", ctx
+      | AppTy (IntTyCtor, _) -> "Int", ctx
 
-      | Ty.Con (CharTyCtor, _) -> "Char", ctx
+      | AppTy (CharTyCtor, _) -> "Char", ctx
 
-      | Ty.Con (StrTyCtor, _) -> "String", ctx
+      | AppTy (StrTyCtor, _) -> "String", ctx
 
-      | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
-      | Ty.Con (ObjTyCtor, _) -> "Object", ctx
+      | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
+      | AppTy (ObjTyCtor, _) -> "Object", ctx
 
-      | Ty.Con (FunTyCtor, _) ->
+      | AppTy (FunTyCtor, _) ->
           let arity, argTys, resultTy = tyToArgList ty
 
           let argTys, ctx =
@@ -347,14 +347,14 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
 
           funTy, ctx
 
-      | Ty.Con (ListTyCtor, [ itemTy ]) ->
+      | AppTy (ListTyCtor, [ itemTy ]) ->
           let itemTy, ctx = ctx |> go itemTy
           let listTy = itemTy + "List"
           listTy, ctx
 
-      | Ty.Con (TupleTyCtor, []) -> "Unit", ctx
+      | AppTy (TupleTyCtor, []) -> "Unit", ctx
 
-      | Ty.Con (TupleTyCtor, itemTys) ->
+      | AppTy (TupleTyCtor, itemTys) ->
           let len = itemTys |> listLength
 
           let itemTys, ctx =
@@ -366,10 +366,10 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
 
           tupleTy, ctx
 
-      | Ty.Con (RefTyCtor _, _)
-      | Ty.Con (ListTyCtor, _)
-      | Ty.Con (FunTyCtor, _)
-      | Ty.Error _ ->
+      | AppTy (RefTyCtor _, _)
+      | AppTy (ListTyCtor, _)
+      | AppTy (FunTyCtor, _)
+      | ErrorTy _ ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
 
@@ -390,24 +390,24 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
 
 let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
-  | Ty.Con (BoolTyCtor, _)
-  | Ty.Con (IntTyCtor, _)
-  | Ty.Con (TupleTyCtor, []) -> CIntTy, ctx
+  | AppTy (BoolTyCtor, _)
+  | AppTy (IntTyCtor, _)
+  | AppTy (TupleTyCtor, []) -> CIntTy, ctx
 
-  | Ty.Con (CharTyCtor, _) -> CCharTy, ctx
+  | AppTy (CharTyCtor, _) -> CCharTy, ctx
 
-  | Ty.Con (StrTyCtor, _) -> CStructTy "String", ctx
+  | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
 
-  | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
-  | Ty.Con (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
+  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
+  | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
 
-  | Ty.Con (FunTyCtor, [ sTy; tTy ]) -> cirCtxAddFunIncomplete ctx sTy tTy
+  | AppTy (FunTyCtor, [ sTy; tTy ]) -> cirCtxAddFunIncomplete ctx sTy tTy
 
-  | Ty.Con (ListTyCtor, [ itemTy ]) -> cirCtxAddListIncomplete ctx itemTy
+  | AppTy (ListTyCtor, [ itemTy ]) -> cirCtxAddListIncomplete ctx itemTy
 
-  | Ty.Con (TupleTyCtor, itemTys) -> cirCtxAddTupleIncomplete ctx itemTys
+  | AppTy (TupleTyCtor, itemTys) -> cirCtxAddTupleIncomplete ctx itemTys
 
-  | Ty.Con (RefTyCtor serial, _) ->
+  | AppTy (RefTyCtor serial, _) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
       | Some (TyDef.Union _) -> cirCtxAddUnionIncomplete ctx serial
 
@@ -417,24 +417,24 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
 let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
-  | Ty.Con (BoolTyCtor, _)
-  | Ty.Con (IntTyCtor, _)
-  | Ty.Con (TupleTyCtor, []) -> CIntTy, ctx
+  | AppTy (BoolTyCtor, _)
+  | AppTy (IntTyCtor, _)
+  | AppTy (TupleTyCtor, []) -> CIntTy, ctx
 
-  | Ty.Con (CharTyCtor, _) -> CCharTy, ctx
+  | AppTy (CharTyCtor, _) -> CCharTy, ctx
 
-  | Ty.Con (StrTyCtor, _) -> CStructTy "String", ctx
+  | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
 
-  | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
-  | Ty.Con (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
+  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
+  | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
 
-  | Ty.Con (FunTyCtor, [ sTy; tTy ]) -> cirCtxAddFunDecl ctx sTy tTy
+  | AppTy (FunTyCtor, [ sTy; tTy ]) -> cirCtxAddFunDecl ctx sTy tTy
 
-  | Ty.Con (ListTyCtor, [ itemTy ]) -> cirCtxAddListDecl ctx itemTy
+  | AppTy (ListTyCtor, [ itemTy ]) -> cirCtxAddListDecl ctx itemTy
 
-  | Ty.Con (TupleTyCtor, itemTys) -> cirCtxAddTupleDecl ctx itemTys
+  | AppTy (TupleTyCtor, itemTys) -> cirCtxAddTupleDecl ctx itemTys
 
-  | Ty.Con (RefTyCtor serial, _) ->
+  | AppTy (RefTyCtor serial, _) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
       | Some (TyDef.Union (_, variants, _)) -> cirCtxAddUnionDecl ctx serial variants
 
@@ -463,20 +463,20 @@ let cOpFrom op =
 /// `0`, `NULL`, or `(T) {}`
 let genExprDefault ctx ty =
   match ty with
-  | Ty.Con (TupleTyCtor, [])
-  | Ty.Con (BoolTyCtor, _)
-  | Ty.Con (IntTyCtor, _) -> CIntExpr 0, ctx
-  | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
-  | Ty.Con (CharTyCtor, _)
-  | Ty.Con (ObjTyCtor, _)
-  | Ty.Con (ListTyCtor, _) -> CRefExpr "NULL", ctx
-  | Ty.Con (StrTyCtor, _)
-  | Ty.Con (FunTyCtor, _)
-  | Ty.Con (TupleTyCtor, _)
-  | Ty.Con (RefTyCtor _, _) ->
+  | AppTy (TupleTyCtor, [])
+  | AppTy (BoolTyCtor, _)
+  | AppTy (IntTyCtor, _) -> CIntExpr 0, ctx
+  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
+  | AppTy (CharTyCtor, _)
+  | AppTy (ObjTyCtor, _)
+  | AppTy (ListTyCtor, _) -> CRefExpr "NULL", ctx
+  | AppTy (StrTyCtor, _)
+  | AppTy (FunTyCtor, _)
+  | AppTy (TupleTyCtor, _)
+  | AppTy (RefTyCtor _, _) ->
       let ty, ctx = cirGetCTy ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
-  | Ty.Error _ -> failwithf "Never %A" ty
+  | ErrorTy _ -> failwithf "Never %A" ty
 
 let genExprProc ctx serial _ty _loc =
   let ident = cirCtxUniqueName ctx serial
@@ -579,17 +579,17 @@ let genExprCallPrintfn ctx format args =
 let genExprCallInt arg argTy ctx =
   let arg, ctx = genExpr ctx arg
   match argTy with
-  | Ty.Con (IntTyCtor, _) -> arg, ctx
-  | Ty.Con (CharTyCtor, _) -> CCastExpr(arg, CIntTy), ctx
-  | Ty.Con (StrTyCtor, _) -> CCallExpr(CRefExpr "str_to_int", [ arg ]), ctx
+  | AppTy (IntTyCtor, _) -> arg, ctx
+  | AppTy (CharTyCtor, _) -> CCastExpr(arg, CIntTy), ctx
+  | AppTy (StrTyCtor, _) -> CCallExpr(CRefExpr "str_to_int", [ arg ]), ctx
   | _ -> failwith "Never: Type Error `int`"
 
 let genExprCallString arg argTy ctx =
   let arg, ctx = genExpr ctx arg
   match argTy with
-  | Ty.Con (IntTyCtor, _) -> CCallExpr(CRefExpr "str_of_int", [ arg ]), ctx
-  | Ty.Con (CharTyCtor, _) -> CCallExpr(CRefExpr "str_of_char", [ arg ]), ctx
-  | Ty.Con (StrTyCtor, _) -> arg, ctx
+  | AppTy (IntTyCtor, _) -> CCallExpr(CRefExpr "str_of_int", [ arg ]), ctx
+  | AppTy (CharTyCtor, _) -> CCallExpr(CRefExpr "str_of_char", [ arg ]), ctx
+  | AppTy (StrTyCtor, _) -> arg, ctx
   | _ -> failwith "Never: Type Error `int`"
 
 let genExprCallPrim ctx prim args primTy resultTy loc =
@@ -624,9 +624,9 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       let arg, ctx = genExpr ctx arg
       CCastExpr(arg, CCharTy), ctx
 
-  | HPrim.Int, [ arg ], Ty.Con (FunTyCtor, [ argTy; _ ]) -> genExprCallInt arg argTy ctx
+  | HPrim.Int, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> genExprCallInt arg argTy ctx
 
-  | HPrim.String, [ arg ], Ty.Con (FunTyCtor, [ argTy; _ ]) -> genExprCallString arg argTy ctx
+  | HPrim.String, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> genExprCallString arg argTy ctx
 
   | _ -> failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
 

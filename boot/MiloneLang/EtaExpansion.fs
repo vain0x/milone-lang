@@ -107,7 +107,7 @@ let listSplitAt i xs =
 
 let tyAppliedBy n ty =
   match ty with
-  | Ty.Con (FunTyCtor, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
+  | AppTy (FunTyCtor, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
   | _ -> ty
 
 /// E.g. given init = `id x` and args `x, y` then we should return `(id x) y`.
@@ -126,7 +126,7 @@ let createRestArgsAndPats callee arity argLen callLoc ctx =
   let rec go n restTy ctx =
     match n, restTy with
     | 0, _ -> [], [], ctx
-    | n, Ty.Con (FunTyCtor, [ argTy; restTy ]) ->
+    | n, AppTy (FunTyCtor, [ argTy; restTy ]) ->
         let argRef, argSerial, ctx = etaCtxFreshVar "arg" argTy callLoc ctx
         let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
         let restArgPat = HPat.Ref(argSerial, argTy, callLoc)

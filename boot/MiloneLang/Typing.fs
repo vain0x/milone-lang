@@ -49,7 +49,7 @@ let tyCtxFreshTySerial (ctx: TyCtx) =
 
 let tyCtxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
   let serial, ctx = tyCtxFreshTySerial ctx
-  let ty = Ty.Meta(serial, loc)
+  let ty = MetaTy(serial, loc)
   ty, (), ctx
 
 let tyCtxAddTraitBounds traits (ctx: TyCtx) =
@@ -115,7 +115,7 @@ let tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
       let ty =
         let extendedCtx =
           mapping
-          |> listFold (fun ctx (src, target) -> tyCtxBindTy ctx src (Ty.Meta(target, loc)) loc) ctx
+          |> listFold (fun ctx (src, target) -> tyCtxBindTy ctx src (MetaTy(target, loc)) loc) ctx
 
         tyCtxSubstTy extendedCtx ty
 
@@ -129,7 +129,7 @@ let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
     (oldTySerials, ctx)
     |> stMap (fun (oldTySerial, ctx) ->
          let tySerial, ctx = ctx |> tyCtxFreshTySerial
-         (oldTySerial, Ty.Meta(tySerial, loc)), ctx)
+         (oldTySerial, MetaTy(tySerial, loc)), ctx)
 
   // Replace meta types in the type and trait bounds.
   let substMeta tySerial = bindings |> assocTryFind intCmp tySerial
@@ -194,13 +194,13 @@ let tyCtxUnifyVarTy varSerial ty loc ctx =
 let tyCtxFreshPatTy pat ctx =
   let _, loc = pat |> patExtract
   let tySerial, ctx = ctx |> tyCtxFreshTySerial
-  let ty = Ty.Meta(tySerial, loc)
+  let ty = MetaTy(tySerial, loc)
   ty, ctx
 
 let tyCtxFreshExprTy expr ctx =
   let _, loc = expr |> exprExtract
   let tySerial, ctx = ctx |> tyCtxFreshTySerial
-  let ty = Ty.Meta(tySerial, loc)
+  let ty = MetaTy(tySerial, loc)
   ty, ctx
 
 let inferPatRef (ctx: TyCtx) varSerial loc ty =
@@ -328,7 +328,7 @@ let inferNav ctx sub mes loc resultTy =
   let findTyDynamicMember ctx sub subTy =
     let subTy = tyCtxSubstTy ctx subTy
     match subTy, mes with
-    | Ty.Con (StrTyCtor, []), "Length" ->
+    | AppTy (StrTyCtor, []), "Length" ->
         let ctx = tyCtxUnifyTy ctx loc resultTy tyInt
 
         let funExpr =

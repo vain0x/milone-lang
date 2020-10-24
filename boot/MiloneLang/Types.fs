@@ -345,12 +345,11 @@ type TyCtor =
   | RefTyCtor of Serial
 
 /// Type of expressions.
-[<RequireQualifiedAccess>]
 type Ty =
-  | Error of Loc
+  | ErrorTy of Loc
   /// Type variable, i.e. some binding.
-  | Meta of Serial * Loc
-  | Con of TyCtor * Ty list
+  | MetaTy of Serial * Loc
+  | AppTy of TyCtor * Ty list
 
 /// Generalized type.
 [<RequireQualifiedAccess>]
