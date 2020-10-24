@@ -100,7 +100,7 @@ let cirCtxAddFunIncomplete (ctx: CirCtx) sTy tTy =
 
   | None ->
       let ident, ctx = cirCtxUniqueTyName ctx funTy
-      let funStructTy = CTy.Struct ident
+      let funStructTy = CStructTy ident
 
       let ctx =
         ctx
@@ -120,7 +120,7 @@ let cirCtxAddFunDecl (ctx: CirCtx) sTy tTy =
       let ident, ctx = cirCtxUniqueTyName ctx funTy
       let selfTy, ctx = cirCtxAddFunIncomplete ctx sTy tTy
 
-      let envTy = CTy.Ptr CTy.Void
+      let envTy = CPtrTy CVoidTy
       let _, argTys, resultTy = tyToArgList funTy
 
       let argTys, ctx =
@@ -130,7 +130,7 @@ let cirCtxAddFunDecl (ctx: CirCtx) sTy tTy =
       let resultTy, ctx = cirGetCTy ctx resultTy
 
       let fields =
-        [ "fun", CTy.FunPtr(envTy :: argTys, resultTy)
+        [ "fun", CFunPtrTy(envTy :: argTys, resultTy)
           "env", envTy ]
 
       let ctx =
@@ -152,7 +152,7 @@ let cirCtxAddListIncomplete (ctx: CirCtx) itemTy =
 
   | None ->
       let ident, ctx = cirCtxUniqueTyName ctx listTy
-      let selfTy = CTy.Ptr(CTy.Struct ident)
+      let selfTy = CPtrTy(CStructTy ident)
 
       let ctx =
         ctx
@@ -194,7 +194,7 @@ let cirCtxAddTupleIncomplete (ctx: CirCtx) itemTys =
 
   | None ->
       let tupleTyIdent, ctx = cirCtxUniqueTyName ctx tupleTy
-      let selfTy = CTy.Struct tupleTyIdent
+      let selfTy = CStructTy tupleTyIdent
 
       let ctx =
         ctx
@@ -244,7 +244,7 @@ let cirCtxAddUnionIncomplete (ctx: CirCtx) tySerial =
 
   | None ->
       let unionTyIdent, ctx = cirCtxUniqueTyName ctx unionTyRef
-      let selfTy = CTy.Struct unionTyIdent
+      let selfTy = CStructTy unionTyIdent
 
       let ctx =
         ctx
@@ -265,7 +265,7 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
       let selfTy, ctx = cirCtxAddUnionIncomplete ctx tySerial
 
       let tagTyIdent = tagTyIdent unionTyIdent
-      let tagTy = CTy.Enum tagTyIdent
+      let tagTy = CEnumTy tagTyIdent
 
       let variants =
         variants
@@ -284,7 +284,7 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
         |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
              if hasPayload then
                let payloadTy, ctx = cirCtxConvertTyIncomplete ctx payloadTy
-               (cirCtxUniqueName ctx serial, CTy.Ptr payloadTy)
+               (cirCtxUniqueName ctx serial, CPtrTy payloadTy)
                :: acc,
                ctx
              else
@@ -392,14 +392,14 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
   | Ty.Con (TyCon.Bool, _)
   | Ty.Con (TyCon.Int, _)
-  | Ty.Con (TyCon.Tuple, []) -> CTy.Int, ctx
+  | Ty.Con (TyCon.Tuple, []) -> CIntTy, ctx
 
-  | Ty.Con (TyCon.Char, _) -> CTy.Char, ctx
+  | Ty.Con (TyCon.Char, _) -> CCharTy, ctx
 
-  | Ty.Con (TyCon.Str, _) -> CTy.Struct "String", ctx
+  | Ty.Con (TyCon.Str, _) -> CStructTy "String", ctx
 
   | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
-  | Ty.Con (TyCon.Obj, _) -> CTy.Ptr CTy.Void, ctx
+  | Ty.Con (TyCon.Obj, _) -> CPtrTy CVoidTy, ctx
 
   | Ty.Con (TyCon.Fun, [ sTy; tTy ]) -> cirCtxAddFunIncomplete ctx sTy tTy
 
@@ -411,22 +411,22 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
       match ctx |> cirCtxGetTys |> mapTryFind serial with
       | Some (TyDef.Union _) -> cirCtxAddUnionIncomplete ctx serial
 
-      | _ -> CTy.Void, cirCtxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
+      | _ -> CVoidTy, cirCtxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
 
-  | _ -> CTy.Void, cirCtxAddErr ctx "error type" noLoc // FIXME: source location
+  | _ -> CVoidTy, cirCtxAddErr ctx "error type" noLoc // FIXME: source location
 
 let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
   | Ty.Con (TyCon.Bool, _)
   | Ty.Con (TyCon.Int, _)
-  | Ty.Con (TyCon.Tuple, []) -> CTy.Int, ctx
+  | Ty.Con (TyCon.Tuple, []) -> CIntTy, ctx
 
-  | Ty.Con (TyCon.Char, _) -> CTy.Char, ctx
+  | Ty.Con (TyCon.Char, _) -> CCharTy, ctx
 
-  | Ty.Con (TyCon.Str, _) -> CTy.Struct "String", ctx
+  | Ty.Con (TyCon.Str, _) -> CStructTy "String", ctx
 
   | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
-  | Ty.Con (TyCon.Obj, _) -> CTy.Ptr CTy.Void, ctx
+  | Ty.Con (TyCon.Obj, _) -> CPtrTy CVoidTy, ctx
 
   | Ty.Con (TyCon.Fun, [ sTy; tTy ]) -> cirCtxAddFunDecl ctx sTy tTy
 
@@ -438,9 +438,9 @@ let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
       match ctx |> cirCtxGetTys |> mapTryFind serial with
       | Some (TyDef.Union (_, variants, _)) -> cirCtxAddUnionDecl ctx serial variants
 
-      | _ -> CTy.Void, cirCtxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
+      | _ -> CVoidTy, cirCtxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
 
-  | _ -> CTy.Void, cirCtxAddErr ctx "error type" noLoc // FIXME: source location
+  | _ -> CVoidTy, cirCtxAddErr ctx "error type" noLoc // FIXME: source location
 
 let cirCtxGetCTys (tys, ctx) =
   stMap (fun (ty, ctx) -> cirGetCTy ctx ty) (tys, ctx)
@@ -503,7 +503,7 @@ let genExprUniOp ctx op arg ty _ =
       let valTy, ctx = cirGetCTy ctx ty
 
       let deref =
-        CUnaryExpr(CDerefUnary, CCastExpr(arg, CTy.Ptr valTy))
+        CUnaryExpr(CDerefUnary, CCastExpr(arg, CPtrTy valTy))
 
       deref, ctx
   | MUniOp.Proj index -> CProjExpr(arg, index), ctx
@@ -580,7 +580,7 @@ let genExprCallInt arg argTy ctx =
   let arg, ctx = genExpr ctx arg
   match argTy with
   | Ty.Con (TyCon.Int, _) -> arg, ctx
-  | Ty.Con (TyCon.Char, _) -> CCastExpr(arg, CTy.Int), ctx
+  | Ty.Con (TyCon.Char, _) -> CCastExpr(arg, CIntTy), ctx
   | Ty.Con (TyCon.Str, _) -> CCallExpr(CRefExpr "str_to_int", [ arg ]), ctx
   | _ -> failwith "Never: Type Error `int`"
 
@@ -622,7 +622,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
 
   | HPrim.Char, [ arg ], _ ->
       let arg, ctx = genExpr ctx arg
-      CCastExpr(arg, CTy.Char), ctx
+      CCastExpr(arg, CCharTy), ctx
 
   | HPrim.Int, [ arg ], Ty.Con (TyCon.Fun, [ argTy; _ ]) -> genExprCallInt arg argTy ctx
 
@@ -711,11 +711,11 @@ let genInitBox ctx serial arg =
   let storageModifier = cirCtxGetVarStorageModifier ctx serial
 
   let ctx =
-    cirCtxAddLetAllocStmt ctx temp (CTy.Ptr argTy) (CTy.Ptr CTy.Void) storageModifier
+    cirCtxAddLetAllocStmt ctx temp (CPtrTy argTy) (CPtrTy CVoidTy) storageModifier
 
   // *(T*)p = t;
   let left =
-    CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CTy.Ptr argTy))
+    CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CPtrTy argTy))
 
   let ctx = cirCtxAddStmt ctx (CSetStmt(left, arg))
 
@@ -725,7 +725,7 @@ let genInitIndirect ctx serial payload ty =
   let varName = cirCtxUniqueName ctx serial
   let storageModifier = cirCtxGetVarStorageModifier ctx serial
   let payloadTy, ctx = cirGetCTy ctx ty
-  let ptrTy = CTy.Ptr payloadTy
+  let ptrTy = CPtrTy payloadTy
 
   let payload, ctx = genExpr ctx payload
 

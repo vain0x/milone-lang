@@ -609,15 +609,14 @@ type TyInstance =
   | Defined
 
 /// Type in C language.
-[<RequireQualifiedAccess>]
 type CTy =
-  | Void
-  | Int
-  | Char
-  | Ptr of CTy
-  | FunPtr of CTy list * CTy
-  | Struct of Ident
-  | Enum of Ident
+  | CVoidTy
+  | CIntTy
+  | CCharTy
+  | CPtrTy of CTy
+  | CFunPtrTy of CTy list * CTy
+  | CStructTy of Ident
+  | CEnumTy of Ident
 
 /// Unary operators.
 type CUnary =

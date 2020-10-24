@@ -53,20 +53,20 @@ let cprintTyFunPtr name argTys resultTy acc =
 
 let rec cprintTy acc ty: string list =
   match ty with
-  | CTy.Void -> acc |> cons "void"
-  | CTy.Int -> acc |> cons "int"
-  | CTy.Char -> acc |> cons "char"
-  | CTy.Ptr ty ->
+  | CVoidTy -> acc |> cons "void"
+  | CIntTy -> acc |> cons "int"
+  | CCharTy -> acc |> cons "char"
+  | CPtrTy ty ->
       let acc = cprintTy acc ty
       acc |> cons "*"
-  | CTy.FunPtr (argTys, resultTy) -> cprintTyFunPtr "" argTys resultTy acc
-  | CTy.Struct ident -> acc |> cons "struct " |> cons ident
-  | CTy.Enum ident -> acc |> cons "enum " |> cons ident
+  | CFunPtrTy (argTys, resultTy) -> cprintTyFunPtr "" argTys resultTy acc
+  | CStructTy ident -> acc |> cons "struct " |> cons ident
+  | CEnumTy ident -> acc |> cons "enum " |> cons ident
 
 /// `T x` or `T (*x)(..)`
 let cprintTyWithName acc name ty =
   match ty with
-  | CTy.FunPtr (argTys, resultTy) -> cprintTyFunPtr name argTys resultTy acc
+  | CFunPtrTy (argTys, resultTy) -> cprintTyFunPtr name argTys resultTy acc
   | _ -> cprintTy acc ty |> cons " " |> cons name
 
 let rec cprintParams acc ps: string list =
@@ -225,7 +225,7 @@ let cprintStmt acc indent stmt: string list =
   | CLetAllocStmt (name, valPtrTy, varTy) ->
       let valTy =
         match valPtrTy with
-        | CTy.Ptr ty -> ty
+        | CPtrTy ty -> ty
         | _ -> failwithf "Never: Expected pointer type but %A" valPtrTy
 
       let acc = acc |> cons indent
