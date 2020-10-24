@@ -1,8 +1,14 @@
 /// Infers the type of expressions.
 ///
-/// The algorithm is based on rank-based Hindley-Milner type inference.
-/// This article is very helpful (written in Japanese):
-///     <https://rhysd.hatenablog.com/entry/2017/12/16/002048>
+/// The algorithm is based on Didier Rémy's rank-based Hindley-Milner type inference:
+///   - [eq-theory-on-types.pdf](http://gallium.inria.fr/~remy/ftp/eq-theory-on-types.pdf)
+///
+/// This web article (written in English) is very helpful:
+///   - [Efficient and Insightful Generalization](http://okmij.org/ftp/ML/generalization.html)
+///
+/// and this one (written in Japanese) too:
+///   - [OCaml でも採用されているレベルベースの多相型型推論とは](https://rhysd.hatenablog.com/entry/2017/12/16/002048)
+
 module rec MiloneLang.Typing
 
 open MiloneLang.Types

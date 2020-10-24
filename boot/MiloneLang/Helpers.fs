@@ -1760,8 +1760,6 @@ let analyzeFormat (format: string) =
 
 /// Adds type-var/type binding.
 let typingBind (ctx: TyContext) tySerial ty loc =
-  let intInf = 2147483647
-
   // FIXME: track identifier
   let noIdent = "unknown"
 
@@ -1770,17 +1768,23 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   | MetaTy (s, _) when s = tySerial -> ctx
   | ty ->
 
-      // Update depth of all related meta types to the minimum.
+      // Reduce depth of meta tys in the referent ty to the meta ty's depth at most.
       let tyDepths =
-        let tySerials = tySerial :: tyCollectFreeVars ty
-
         let depth =
-          tySerials
-          |> listMap (fun tySerial -> ctx |> tyContextGetTyDepths |> mapFind tySerial)
-          |> listFold intMin intInf
+          ctx |> tyContextGetTyDepths |> mapFind tySerial
 
-        tySerials
-        |> listFold (fun tyDepths tySerial -> tyDepths |> mapAdd tySerial depth) (ctx |> tyContextGetTyDepths)
+        ty
+        |> tyCollectFreeVars
+        |> listFold (fun tyDepths tySerial ->
+             let currentDepth =
+               ctx |> tyContextGetTyDepths |> mapFind tySerial
+
+             if currentDepth <= depth then
+               // Already non-deep enough.
+               tyDepths
+             else
+               // Prevent this meta ty from getting generalized until depth of the bound meta ty.
+               tyDepths |> mapAdd tySerial depth) (ctx |> tyContextGetTyDepths)
 
       ctx
       |> tyContextWithTys
