@@ -1203,7 +1203,9 @@ let tyPrimFromIdent ident tys loc =
 
   | "AssocSet", [ itemTy ] -> tyAssocMap itemTy tyUnit
 
-  | _ -> ErrorTy loc
+  | _ ->
+      printfn "#error tyPrimFromIdent ident=%s loc=%s" ident (locToString loc)
+      ErrorTy loc
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
