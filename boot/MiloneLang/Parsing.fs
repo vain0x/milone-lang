@@ -776,7 +776,7 @@ let parseApp basePos (tokens, errors) =
   let rec go callee (tokens, errors) =
     if nextInside innerBasePos tokens && leadsArg tokens then
       let arg, tokens, errors = parseSuffix basePos (tokens, errors)
-      go (AExpr.Bin(Op.App, callee, arg, calleePos)) (tokens, errors)
+      go (AExpr.Bin(AppBinary, callee, arg, calleePos)) (tokens, errors)
     else
       callee, tokens, errors
 
@@ -811,35 +811,35 @@ let rec parseOps bp basePos first (tokens, errors) =
     parseOps bp basePos expr (tokens, errors)
 
   match bp, tokens with
-  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL first Op.Or opPos (tokens, errors)
+  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL first LogOrBinary opPos (tokens, errors)
 
-  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first Op.And opPos (tokens, errors)
+  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first LogAndBinary opPos (tokens, errors)
 
-  | CmpBp, (EqToken, opPos) :: tokens -> nextL first Op.Eq opPos (tokens, errors)
+  | CmpBp, (EqToken, opPos) :: tokens -> nextL first EqualBinary opPos (tokens, errors)
 
-  | CmpBp, (LeftRightToken, opPos) :: tokens -> nextL first Op.Ne opPos (tokens, errors)
+  | CmpBp, (LeftRightToken, opPos) :: tokens -> nextL first NotEqualBinary opPos (tokens, errors)
 
-  | CmpBp, (LeftAngleToken, opPos) :: tokens -> nextL first Op.Lt opPos (tokens, errors)
+  | CmpBp, (LeftAngleToken, opPos) :: tokens -> nextL first LessBinary opPos (tokens, errors)
 
-  | CmpBp, (LeftEqToken, opPos) :: tokens -> nextL first Op.Le opPos (tokens, errors)
+  | CmpBp, (LeftEqToken, opPos) :: tokens -> nextL first LessEqualBinary opPos (tokens, errors)
 
-  | CmpBp, (RightAngleToken, opPos) :: tokens -> nextL first Op.Gt opPos (tokens, errors)
+  | CmpBp, (RightAngleToken, opPos) :: tokens -> nextL first GreaterBinary opPos (tokens, errors)
 
-  | CmpBp, (RightEqToken, opPos) :: tokens -> nextL first Op.Ge opPos (tokens, errors)
+  | CmpBp, (RightEqToken, opPos) :: tokens -> nextL first GreaterEqualBinary opPos (tokens, errors)
 
-  | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL first Op.Pipe opPos (tokens, errors)
+  | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL first PipeBinary opPos (tokens, errors)
 
-  | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR first Op.Cons opPos (tokens, errors)
+  | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR first ConsBinary opPos (tokens, errors)
 
-  | AddBp, (PlusToken, opPos) :: tokens -> nextL first Op.Add opPos (tokens, errors)
+  | AddBp, (PlusToken, opPos) :: tokens -> nextL first AddBinary opPos (tokens, errors)
 
-  | AddBp, (MinusToken, opPos) :: tokens -> nextL first Op.Sub opPos (tokens, errors)
+  | AddBp, (MinusToken, opPos) :: tokens -> nextL first SubBinary opPos (tokens, errors)
 
-  | MulBp, (StarToken, opPos) :: tokens -> nextL first Op.Mul opPos (tokens, errors)
+  | MulBp, (StarToken, opPos) :: tokens -> nextL first MulBinary opPos (tokens, errors)
 
-  | MulBp, (SlashToken, opPos) :: tokens -> nextL first Op.Div opPos (tokens, errors)
+  | MulBp, (SlashToken, opPos) :: tokens -> nextL first DivBinary opPos (tokens, errors)
 
-  | MulBp, (PercentToken, opPos) :: tokens -> nextL first Op.Mod opPos (tokens, errors)
+  | MulBp, (PercentToken, opPos) :: tokens -> nextL first ModBinary opPos (tokens, errors)
 
   | _ -> first, tokens, errors
 

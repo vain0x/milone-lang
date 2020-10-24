@@ -25,7 +25,7 @@
 /// |   0:0 | Let    | let
 /// |   0:4 | Ident  | main
 /// |   0:9 | Ident  | _
-/// |  0:11 | Op     | =
+/// |  0:11 | Binary | =
 /// |   1:2 | IntLit | 0
 module rec MiloneLang.Lexing
 

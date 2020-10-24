@@ -157,40 +157,39 @@ type Bp =
   | OrBp
 
 /// Binary operators in AST.
-[<RequireQualifiedAccess>]
-type Op =
+type Binary =
   /// `*` Multiplier
-  | Mul
+  | MulBinary
   /// `/` Divisor
-  | Div
+  | DivBinary
   /// `%` Modulo
-  | Mod
+  | ModBinary
   /// `+` Addition
-  | Add
+  | AddBinary
   /// `-` Subtract
-  | Sub
+  | SubBinary
   /// `=` Equal
-  | Eq
+  | EqualBinary
   /// `<>` Not Equal
-  | Ne
+  | NotEqualBinary
   /// `<` Less than
-  | Lt
+  | LessBinary
   /// `<=` Less than or equal to
-  | Le
+  | LessEqualBinary
   /// `>` Greater than
-  | Gt
+  | GreaterBinary
   /// `>=` Greater than or equal to
-  | Ge
+  | GreaterEqualBinary
   /// `|>`
-  | Pipe
+  | PipeBinary
   /// `&&`
-  | And
+  | LogAndBinary
   /// `||`
-  | Or
+  | LogOrBinary
   /// `f x` Application
-  | App
+  | AppBinary
   /// `::` Cons cell constructor
-  | Cons
+  | ConsBinary
 
 /// Type expression in AST.
 [<RequireQualifiedAccess>]
@@ -265,7 +264,7 @@ type AExpr =
   /// Currently `-` is the only unary operation.
   | Uni of Unary * AExpr * Pos
   /// Binary operation, e.g. `x + y`.
-  | Bin of Op * AExpr * AExpr * Pos
+  | Bin of Binary * AExpr * AExpr * Pos
   /// Range syntax, e.g. `first..last`, `first .. step .. last`.
   | Range of AExpr list * Pos
   /// Tuple literal, e.g. `()`, `2, "two"`.

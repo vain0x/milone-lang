@@ -31,30 +31,30 @@ let toLoc (doc: DocId) (pos: Pos): Loc =
 
 let opToPrim op =
   match op with
-  | Op.Add -> HPrim.Add
+  | AddBinary -> HPrim.Add
 
-  | Op.Sub -> HPrim.Sub
+  | SubBinary -> HPrim.Sub
 
-  | Op.Mul -> HPrim.Mul
+  | MulBinary -> HPrim.Mul
 
-  | Op.Div -> HPrim.Div
+  | DivBinary -> HPrim.Div
 
-  | Op.Mod -> HPrim.Mod
+  | ModBinary -> HPrim.Mod
 
-  | Op.Eq -> HPrim.Eq
+  | EqualBinary -> HPrim.Eq
 
-  | Op.Lt -> HPrim.Lt
+  | LessBinary -> HPrim.Lt
 
-  | Op.Cons -> HPrim.Cons
+  | ConsBinary -> HPrim.Cons
 
-  | Op.Ne
-  | Op.Le
-  | Op.Gt
-  | Op.Ge
-  | Op.And
-  | Op.Or
-  | Op.App
-  | Op.Pipe -> failwithf "NEVER: %A" op
+  | NotEqualBinary
+  | LessEqualBinary
+  | GreaterBinary
+  | GreaterEqualBinary
+  | LogAndBinary
+  | LogOrBinary
+  | AppBinary
+  | PipeBinary -> failwithf "NEVER: %A" op
 
 /// `[x; y; ..]`. Desugar to a chain of (::).
 let desugarListLitPat pats pos =
@@ -80,7 +80,7 @@ let desugarListLitExpr items pos =
 
     | head :: tail ->
         let tail = go tail
-        AExpr.Bin(Op.Cons, head, tail, pos)
+        AExpr.Bin(ConsBinary, head, tail, pos)
 
   go items
 
@@ -110,26 +110,26 @@ let desugarFun pats body pos =
 /// Desugar `-x` to `0 - x`.
 let desugarUniNeg arg pos =
   let zero = AExpr.Lit(IntLit 0, pos)
-  AExpr.Bin(Op.Sub, zero, arg, pos)
+  AExpr.Bin(SubBinary, zero, arg, pos)
 
 /// `l <> r` ==> `not (l = r)`
 let desugarBinNe l r pos =
-  let eqExpr = AExpr.Bin(Op.Eq, l, r, pos)
+  let eqExpr = AExpr.Bin(EqualBinary, l, r, pos)
   axNot eqExpr pos
 
 /// `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.
 let desugarBinLe l r pos =
-  let ltExpr = AExpr.Bin(Op.Lt, r, l, pos)
+  let ltExpr = AExpr.Bin(LessBinary, r, l, pos)
   axNot ltExpr pos
 
 /// `l > r` ==> `r < l`
 /// NOTE: Evaluation order does change.
-let desugarBinGt l r pos = AExpr.Bin(Op.Lt, r, l, pos)
+let desugarBinGt l r pos = AExpr.Bin(LessBinary, r, l, pos)
 
 /// `l >= r` ==> `not (l < r)`
 let desugarBinGe l r pos =
-  let ltExpr = AExpr.Bin(Op.Lt, l, r, pos)
+  let ltExpr = AExpr.Bin(LessBinary, l, r, pos)
   axNot ltExpr pos
 
 /// `l && r` ==> `if l then r else false`
@@ -140,7 +140,7 @@ let desugarBinOr l r pos = desugarIf l (axTrue pos) r pos
 
 /// `x |> f` ==> `f x`
 /// NOTE: Evaluation order does change.
-let desugarBinPipe l r pos = AExpr.Bin(Op.App, r, l, pos)
+let desugarBinPipe l r pos = AExpr.Bin(AppBinary, r, l, pos)
 
 /// `s.[l .. r]` ==> `String.getSlice l r x`
 /// NOTE: Evaluation order does change.
@@ -379,56 +379,56 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-  | AExpr.Bin (Op.Ne, l, r, pos) ->
+  | AExpr.Bin (NotEqualBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinNe l r pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
 
-  | AExpr.Bin (Op.Le, l, r, pos) ->
+  | AExpr.Bin (LessEqualBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinLe l r pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
 
-  | AExpr.Bin (Op.Gt, l, r, pos) ->
+  | AExpr.Bin (GreaterBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinGt l r pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
 
-  | AExpr.Bin (Op.Ge, l, r, pos) ->
+  | AExpr.Bin (GreaterEqualBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinGe l r pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
 
-  | AExpr.Bin (Op.And, l, r, pos) ->
+  | AExpr.Bin (LogAndBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinAnd l r pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
 
-  | AExpr.Bin (Op.Or, l, r, pos) ->
+  | AExpr.Bin (LogOrBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinOr l r pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
 
-  | AExpr.Bin (Op.Pipe, l, r, pos) ->
+  | AExpr.Bin (PipeBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinPipe l r pos
         (expr, nameCtx) |> astToHirExpr docId
 
       doArm ()
 
-  | AExpr.Bin (Op.App, l, r, pos) ->
+  | AExpr.Bin (AppBinary, l, r, pos) ->
       let doArm () =
         let l, nameCtx = (l, nameCtx) |> astToHirExpr docId
         let r, nameCtx = (r, nameCtx) |> astToHirExpr docId

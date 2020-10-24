@@ -918,13 +918,13 @@ let axTrue loc = AExpr.Lit(litTrue, loc)
 let axNil loc = AExpr.ListLit([], loc)
 
 let axApp3 f x1 x2 x3 loc =
-  let app x f = AExpr.Bin(Op.App, f, x, loc)
+  let app x f = AExpr.Bin(AppBinary, f, x, loc)
   f |> app x1 |> app x2 |> app x3
 
 /// `not x` ==> `x = false`
 let axNot arg loc =
   let falseExpr = axFalse loc
-  AExpr.Bin(Op.Eq, arg, falseExpr, loc)
+  AExpr.Bin(EqualBinary, arg, falseExpr, loc)
 
 // -----------------------------------------------
 // DumpTree (for debugging)
