@@ -942,30 +942,30 @@ let parseTopLevel (tokens, errors) =
   match tokens with
   | [] ->
       let pos = 0, 0
-      ARoot.Expr(ATupleExpr([], pos)), tokens, errors
+      AExprRoot(ATupleExpr([], pos)), tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, _) :: tokens ->
       let expr, tokens, errors =
         parseSemi modulePos modulePos (tokens, errors)
 
-      ARoot.Module(ident, expr, modulePos), tokens, errors
+      AModuleRoot(ident, expr, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken ident, _) :: tokens ->
       let expr, tokens, errors =
         parseSemi modulePos modulePos (tokens, errors)
 
-      ARoot.Module(ident, expr, modulePos), tokens, errors
+      AModuleRoot(ident, expr, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (IdentToken ident, _) :: tokens ->
       let expr, tokens, errors =
         parseSemi modulePos modulePos (tokens, errors)
 
-      ARoot.Module(ident, expr, modulePos), tokens, errors
+      AModuleRoot(ident, expr, modulePos), tokens, errors
 
   | _ ->
       let pos = 0, 0
       let expr, tokens, errors = parseSemi pos pos (tokens, errors)
-      ARoot.Expr expr, tokens, errors
+      AExprRoot expr, tokens, errors
 
 let parse (tokens: (Token * Pos) list): ARoot * (string * Pos) list =
   let expr, tokens, errors = parseTopLevel (tokens, [])

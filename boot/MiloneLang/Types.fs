@@ -277,10 +277,9 @@ type AExpr =
   | AOpenExpr of Ident list * Pos
 
 /// Root of AST, a result of parsing single source file.
-[<RequireQualifiedAccess>]
 type ARoot =
-  | Expr of AExpr
-  | Module of Ident * AExpr * Pos
+  | AExprRoot of AExpr
+  | AModuleRoot of Ident * AExpr * Pos
 
 // -----------------------------------------------
 // Intermediate representation types

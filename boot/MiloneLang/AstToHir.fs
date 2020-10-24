@@ -547,9 +547,9 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
 let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
   match root with
-  | ARoot.Expr expr -> astToHirExpr docId (expr, nameCtx)
+  | AExprRoot expr -> astToHirExpr docId (expr, nameCtx)
 
-  | ARoot.Module (ident, body, pos) ->
+  | AModuleRoot (ident, body, pos) ->
       let body, nameCtx = astToHirExpr docId (body, nameCtx)
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let loc = toLoc docId pos
