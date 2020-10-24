@@ -173,9 +173,9 @@ let desugarLet vis pat body next pos =
       let body = AExpr.Anno(body, annoTy, annoLoc)
       desugarLet vis pat body next pos
 
-  | AFunDeclPat (ident, args, _) -> ALet.LetFun(vis, ident, args, body, next, pos)
+  | AFunDeclPat (ident, args, _) -> ALetFun(vis, ident, args, body, next, pos)
 
-  | _ -> ALet.LetVal(vis, pat, body, next, pos)
+  | _ -> ALetVal(vis, pat, body, next, pos)
 
 let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
@@ -487,7 +487,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
   | AExpr.Let (vis, pat, body, next, pos) ->
       let doArm () =
         match desugarLet vis pat body next pos with
-        | ALet.LetFun (vis, ident, args, body, next, pos) ->
+        | ALetFun (vis, ident, args, body, next, pos) ->
             let serial, nameCtx = nameCtx |> nameCtxAdd ident
             let isMainFun = false // Name resolution should correct this.
 
@@ -499,7 +499,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
             let loc = toLoc docId pos
             HExpr.LetFun(serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
 
-        | ALet.LetVal (vis, pat, body, next, pos) ->
+        | ALetVal (vis, pat, body, next, pos) ->
             let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
             let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
             let next, nameCtx = (next, nameCtx) |> astToHirExpr docId

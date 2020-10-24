@@ -232,10 +232,9 @@ type AVariant =
   | AVariant of Ident * ATy option * Pos
 
 /// Let expression in AST.
-[<RequireQualifiedAccess>]
 type ALet =
-  | LetVal of Vis * APat * AExpr * AExpr * Pos
-  | LetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
+  | ALetVal of Vis * APat * AExpr * AExpr * Pos
+  | ALetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
 [<RequireQualifiedAccess>]
