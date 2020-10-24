@@ -571,7 +571,7 @@ let genExprCallPrintfn ctx format args =
   let format = CStrRawExpr(format + "\n")
 
   let expr =
-    CStmt.Expr(CCallExpr(CRefExpr "printf", format :: args))
+    CExprStmt(CCallExpr(CRefExpr "printf", format :: args))
 
   let ctx = cirCtxAddStmt ctx expr
   genExprDefault ctx tyUnit
@@ -611,7 +611,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       let assertCall = CCallExpr(callee, args)
 
       let ctx =
-        cirCtxAddStmt ctx (CStmt.Expr assertCall)
+        cirCtxAddStmt ctx (CExprStmt assertCall)
 
       genExprDefault ctx resultTy
 
@@ -635,7 +635,7 @@ let genExprCallPrimInRegion ctx serial arg ty _loc =
 
   // Enter, call, leave. The result of call is set to the initialized variable.
   let ctx =
-    cirCtxAddStmt ctx (CStmt.Expr(CCallExpr(CRefExpr "milone_enter_region", [])))
+    cirCtxAddStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_enter_region", [])))
 
   let ctx =
     // t <- f ()
@@ -647,7 +647,7 @@ let genExprCallPrimInRegion ctx serial arg ty _loc =
     genInitExprCore ctx serial (Some result) ty
 
   let ctx =
-    cirCtxAddStmt ctx (CStmt.Expr(CCallExpr(CRefExpr "milone_leave_region", [])))
+    cirCtxAddStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
 
   ctx
 
@@ -675,14 +675,14 @@ let cirCtxAddLetStmt ctx ident expr cty storageModifier =
         cirCtxAddDecl ctx (CDecl.StaticVar(ident, cty))
 
       match expr with
-      | Some expr -> cirCtxAddStmt ctx (CStmt.Set(CRefExpr ident, expr))
+      | Some expr -> cirCtxAddStmt ctx (CSetStmt(CRefExpr ident, expr))
       | _ -> ctx
-  | StorageModifier.Auto -> cirCtxAddStmt ctx (CStmt.Let(ident, expr, cty))
+  | StorageModifier.Auto -> cirCtxAddStmt ctx (CLetStmt(ident, expr, cty))
 
 let cirCtxAddLetAllocStmt ctx ident valPtrTy varTy storageModifier =
   match storageModifier with
   | StorageModifier.Static -> failwith "NEVER: let-alloc is used only for temporary variables"
-  | StorageModifier.Auto -> cirCtxAddStmt ctx (CStmt.LetAlloc(ident, valPtrTy, varTy))
+  | StorageModifier.Auto -> cirCtxAddStmt ctx (CLetAllocStmt(ident, valPtrTy, varTy))
 
 let genInitExprCore ctx serial expr ty =
   let ident = cirCtxUniqueName ctx serial
@@ -717,7 +717,7 @@ let genInitBox ctx serial arg =
   let left =
     CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CTy.Ptr argTy))
 
-  let ctx = cirCtxAddStmt ctx (CStmt.Set(left, arg))
+  let ctx = cirCtxAddStmt ctx (CSetStmt(left, arg))
 
   ctx
 
@@ -738,7 +738,7 @@ let genInitIndirect ctx serial payload ty =
     CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr varName, ptrTy))
 
   let ctx =
-    cirCtxAddStmt ctx (CStmt.Set(left, payload))
+    cirCtxAddStmt ctx (CSetStmt(left, payload))
 
   ctx
 
@@ -754,7 +754,7 @@ let genInitCons ctx serial head tail listTy =
   let head, ctx = genExpr ctx head
 
   let stmt =
-    CStmt.Set(CArrowExpr(CRefExpr temp, "head"), head)
+    CSetStmt(CArrowExpr(CRefExpr temp, "head"), head)
 
   let ctx = cirCtxAddStmt ctx stmt
 
@@ -762,7 +762,7 @@ let genInitCons ctx serial head tail listTy =
   let tail, ctx = genExpr ctx tail
 
   let stmt =
-    CStmt.Set(CArrowExpr(CRefExpr temp, "tail"), tail)
+    CSetStmt(CArrowExpr(CRefExpr temp, "tail"), tail)
 
   let ctx = cirCtxAddStmt ctx stmt
 
@@ -782,7 +782,7 @@ let genInitTuple ctx serial items tupleTy =
     | item :: items ->
         let left = CNavExpr(CRefExpr ident, tupleField i)
         let item, ctx = genExpr ctx item
-        let stmt = CStmt.Set(left, item)
+        let stmt = CSetStmt(left, item)
         let ctx = cirCtxAddStmt ctx stmt
         go ctx (i + 1) items
 
@@ -840,30 +840,30 @@ let genStmtLetVal ctx serial init ty loc =
 
 let genStmtDo ctx expr =
   let expr, ctx = genExpr ctx expr
-  cirCtxAddStmt ctx (CStmt.Expr expr)
+  cirCtxAddStmt ctx (CExprStmt expr)
 
 let genStmtSet ctx serial right =
   let right, ctx = genExpr ctx right
   let ident = cirCtxUniqueName ctx serial
   let left = CRefExpr(ident)
-  cirCtxAddStmt ctx (CStmt.Set(left, right))
+  cirCtxAddStmt ctx (CSetStmt(left, right))
 
 let genStmtReturn ctx expr =
   let expr, ctx = genExpr ctx expr
-  cirCtxAddStmt ctx (CStmt.Return(Some expr))
+  cirCtxAddStmt ctx (CReturnStmt(Some expr))
 
 let genStmtJump ctx stmt =
   match stmt with
   | MStmt.Return (expr, _) -> genStmtReturn ctx expr
-  | MStmt.Label (label, _) -> cirCtxAddStmt ctx (CStmt.Label label)
-  | MStmt.Goto (label, _) -> cirCtxAddStmt ctx (CStmt.Goto label)
+  | MStmt.Label (label, _) -> cirCtxAddStmt ctx (CLabelStmt label)
+  | MStmt.Goto (label, _) -> cirCtxAddStmt ctx (CGotoStmt label)
   | MStmt.GotoIf (pred, label, _) ->
       let pred, ctx = genExpr ctx pred
-      cirCtxAddStmt ctx (CStmt.GotoIf(pred, label))
+      cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
   | MStmt.Exit (arg, _) ->
       let doArm () =
         let arg, ctx = genExpr ctx arg
-        cirCtxAddStmt ctx (CStmt.Expr(CCallExpr(CRefExpr "exit", [ arg ])))
+        cirCtxAddStmt ctx (CExprStmt(CCallExpr(CRefExpr "exit", [ arg ])))
 
       doArm ()
   | _ -> failwith "NEVER"

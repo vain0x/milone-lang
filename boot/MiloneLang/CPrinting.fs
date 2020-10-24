@@ -201,16 +201,16 @@ let rec cprintExpr acc expr: string list =
 
 let cprintStmt acc indent stmt: string list =
   match stmt with
-  | CStmt.Return None -> acc |> cons indent |> cons "return;" |> cons eol
-  | CStmt.Return (Some expr) ->
+  | CReturnStmt None -> acc |> cons indent |> cons "return;" |> cons eol
+  | CReturnStmt (Some expr) ->
       let acc = acc |> cons indent |> cons "return "
       let acc = cprintExpr acc expr
       acc |> cons ";" |> cons eol
-  | CStmt.Expr expr ->
+  | CExprStmt expr ->
       let acc = acc |> cons indent
       let acc = cprintExpr acc expr
       acc |> cons ";" |> cons eol
-  | CStmt.Let (name, init, ty) ->
+  | CLetStmt (name, init, ty) ->
       let acc = acc |> cons indent
       let acc = cprintTyWithName acc name ty
 
@@ -222,7 +222,7 @@ let cprintStmt acc indent stmt: string list =
         | None -> acc
 
       acc |> cons ";" |> cons eol
-  | CStmt.LetAlloc (name, valPtrTy, varTy) ->
+  | CLetAllocStmt (name, valPtrTy, varTy) ->
       let valTy =
         match valPtrTy with
         | CTy.Ptr ty -> ty
@@ -239,20 +239,20 @@ let cprintStmt acc indent stmt: string list =
       let acc = cprintTy acc valTy
       let acc = acc |> cons "));" |> cons eol
       acc
-  | CStmt.Set (l, r) ->
+  | CSetStmt (l, r) ->
       let acc = acc |> cons indent
       let acc = cprintExpr acc l |> cons " = "
       let acc = cprintExpr acc r |> cons ";" |> cons eol
       acc
-  | CStmt.Label label -> acc |> cons label |> cons ":;" |> cons eol
-  | CStmt.Goto label ->
+  | CLabelStmt label -> acc |> cons label |> cons ":;" |> cons eol
+  | CGotoStmt label ->
       acc
       |> cons indent
       |> cons "goto "
       |> cons label
       |> cons ";"
       |> cons eol
-  | CStmt.GotoIf (pred, label) ->
+  | CGotoIfStmt (pred, label) ->
       let acc = acc |> cons indent |> cons "if ("
       let acc = cprintExpr acc pred
 

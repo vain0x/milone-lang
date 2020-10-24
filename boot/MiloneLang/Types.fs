@@ -667,20 +667,19 @@ type CExpr =
   | CBinaryExpr of CBinary * CExpr * CExpr
 
 /// Statement in C language.
-[<RequireQualifiedAccess>]
 type CStmt =
   /// `x;`
-  | Expr of CExpr
+  | CExprStmt of CExpr
   /// `T x = a;`
-  | Let of Ident * init: CExpr option * CTy
+  | CLetStmt of Ident * init: CExpr option * CTy
   /// `U* x = (U*)malloc(sizeof T);`
-  | LetAlloc of Ident * valPtrTy: CTy * varTy: CTy
+  | CLetAllocStmt of Ident * valPtrTy: CTy * varTy: CTy
   /// `x = a;`
-  | Set of CExpr * CExpr
-  | Label of Label
-  | Goto of Label
-  | GotoIf of CExpr * Label
-  | Return of CExpr option
+  | CSetStmt of CExpr * CExpr
+  | CLabelStmt of Label
+  | CGotoStmt of Label
+  | CGotoIfStmt of CExpr * Label
+  | CReturnStmt of CExpr option
 
 /// Top-level definition in C language.
 [<RequireQualifiedAccess>]
