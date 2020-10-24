@@ -1030,28 +1030,28 @@ let nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
   NameTree map
 
 // -----------------------------------------------
-// TyCon
+// TyCtor
 // -----------------------------------------------
 
 let tyConToInt tyCon =
   match tyCon with
-  | TyCon.Bool -> 1
+  | BoolTyCtor -> 1
 
-  | TyCon.Int -> 2
+  | IntTyCtor -> 2
 
-  | TyCon.Char -> 3
+  | CharTyCtor -> 3
 
-  | TyCon.Str -> 4
+  | StrTyCtor -> 4
 
-  | TyCon.Obj -> 5
+  | ObjTyCtor -> 5
 
-  | TyCon.Fun -> 6
+  | FunTyCtor -> 6
 
-  | TyCon.Tuple -> 7
+  | TupleTyCtor -> 7
 
-  | TyCon.List -> 8
+  | ListTyCtor -> 8
 
-  | TyCon.Ref tySerial ->
+  | RefTyCtor tySerial ->
       assert (tySerial >= 0)
       9 + tySerial
 
@@ -1087,26 +1087,26 @@ let traitMapTys f it =
 /// Placeholder. No type info in the parsing phase.
 let noTy = Ty.Error noLoc
 
-let tyBool = Ty.Con(TyCon.Bool, [])
+let tyBool = Ty.Con(BoolTyCtor, [])
 
-let tyInt = Ty.Con(TyCon.Int, [])
+let tyInt = Ty.Con(IntTyCtor, [])
 
-let tyChar = Ty.Con(TyCon.Char, [])
+let tyChar = Ty.Con(CharTyCtor, [])
 
-let tyStr = Ty.Con(TyCon.Str, [])
+let tyStr = Ty.Con(StrTyCtor, [])
 
-let tyObj = Ty.Con(TyCon.Obj, [])
+let tyObj = Ty.Con(ObjTyCtor, [])
 
-let tyTuple tys = Ty.Con(TyCon.Tuple, tys)
+let tyTuple tys = Ty.Con(TupleTyCtor, tys)
 
-let tyList ty = Ty.Con(TyCon.List, [ ty ])
+let tyList ty = Ty.Con(ListTyCtor, [ ty ])
 
 let tyFun sourceTy targetTy =
-  Ty.Con(TyCon.Fun, [ sourceTy; targetTy ])
+  Ty.Con(FunTyCtor, [ sourceTy; targetTy ])
 
 let tyUnit = tyTuple []
 
-let tyRef serial tys = Ty.Con(TyCon.Ref serial, tys)
+let tyRef serial tys = Ty.Con(RefTyCtor serial, tys)
 
 let tyAssocMap keyTy valueTy =
   let assocTy = tyList (tyTuple [ keyTy; valueTy ])
@@ -1247,14 +1247,14 @@ let tyCollectFreeVars ty =
 
 let rec tyToArity ty =
   match ty with
-  | Ty.Con (TyCon.Fun, [ _; ty ]) -> 1 + tyToArity ty
+  | Ty.Con (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty
   | _ -> 0
 
 /// Converts nested function type to multi-arguments function type.
 let rec tyToArgList ty =
   let rec go n acc ty =
     match ty with
-    | Ty.Con (TyCon.Fun, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
+    | Ty.Con (FunTyCtor, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
     | tTy -> n, listRev acc, tTy
 
   go 0 [] ty
@@ -1726,7 +1726,7 @@ let rec mxSugar expr =
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MRefExpr (_, Ty.Con (TyCon.Tuple, []), loc) -> MDefaultExpr(tyUnit, loc)
+  | MRefExpr (_, Ty.Con (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
 
   | MUnaryExpr (op, l, ty, loc) ->
       let l = mxSugar l
@@ -1843,10 +1843,10 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   let expectScalar ty (logAcc, ctx) =
     match ty with
     | Ty.Error _
-    | Ty.Con (TyCon.Bool, [])
-    | Ty.Con (TyCon.Int, [])
-    | Ty.Con (TyCon.Char, [])
-    | Ty.Con (TyCon.Str, []) -> logAcc, ctx
+    | Ty.Con (BoolTyCtor, [])
+    | Ty.Con (IntTyCtor, [])
+    | Ty.Con (CharTyCtor, [])
+    | Ty.Con (StrTyCtor, []) -> logAcc, ctx
 
     | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
@@ -1854,7 +1854,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   | Trait.Add ty ->
       match ty with
       | Ty.Error _
-      | Ty.Con (TyCon.Str, []) -> logAcc, ctx
+      | Ty.Con (StrTyCtor, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
@@ -1868,7 +1868,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       match lTy with
       | Ty.Error _ -> [], ctx
 
-      | Ty.Con (TyCon.Str, []) ->
+      | Ty.Con (StrTyCtor, []) ->
           let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
 
           let logAcc, ctx =

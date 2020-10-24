@@ -332,18 +332,17 @@ type Scope = ScopeChain * ScopeChain
 type NameTree = NameTree of AssocMap<Serial, Serial list>
 
 /// Type constructors.
-[<RequireQualifiedAccess>]
-type TyCon =
-  | Bool
-  | Int
-  | Char
-  | Str
-  | Obj
-  | Fun
-  | Tuple
-  | List
+type TyCtor =
+  | BoolTyCtor
+  | IntTyCtor
+  | CharTyCtor
+  | StrTyCtor
+  | ObjTyCtor
+  | FunTyCtor
+  | TupleTyCtor
+  | ListTyCtor
   /// Type reference, i.e. some union type.
-  | Ref of Serial
+  | RefTyCtor of Serial
 
 /// Type of expressions.
 [<RequireQualifiedAccess>]
@@ -351,7 +350,7 @@ type Ty =
   | Error of Loc
   /// Type variable, i.e. some binding.
   | Meta of Serial * Loc
-  | Con of TyCon * Ty list
+  | Con of TyCtor * Ty list
 
 /// Generalized type.
 [<RequireQualifiedAccess>]

@@ -328,7 +328,7 @@ let inferNav ctx sub mes loc resultTy =
   let findTyDynamicMember ctx sub subTy =
     let subTy = tyCtxSubstTy ctx subTy
     match subTy, mes with
-    | Ty.Con (TyCon.Str, []), "Length" ->
+    | Ty.Con (StrTyCtor, []), "Length" ->
         let ctx = tyCtxUnifyTy ctx loc resultTy tyInt
 
         let funExpr =

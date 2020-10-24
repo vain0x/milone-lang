@@ -287,14 +287,14 @@ let scopeCtxResolveTy ty loc scopeCtx =
     match ty with
     | Ty.Error _ -> ty, scopeCtx
 
-    | Ty.Con (TyCon.Ref tySerial, []) when (scopeCtx |> scopeCtxGetIdent tySerial) = "_" ->
+    | Ty.Con (RefTyCtor tySerial, []) when (scopeCtx |> scopeCtxGetIdent tySerial) = "_" ->
         // Handle wildcard type.
         let scopeCtx =
           scopeCtx |> scopeCtxDefineFreeTy tySerial
 
         Ty.Meta(tySerial, loc), scopeCtx
 
-    | Ty.Con (TyCon.Ref serial, tys) ->
+    | Ty.Con (RefTyCtor serial, tys) ->
         let ident = scopeCtx |> scopeCtxGetIdent serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
