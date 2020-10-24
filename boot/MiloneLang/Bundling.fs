@@ -60,9 +60,9 @@ open MiloneLang.Types
 let findOpenPaths expr =
   let rec go expr =
     match expr with
-    | HExpr.Open (path, _) -> [ path ]
-    | HExpr.Inf (InfOp.Semi, exprs, _, _) -> exprs |> listCollect go
-    | HExpr.Module (_, body, _, _) -> go body
+    | HOpenExpr (path, _) -> [ path ]
+    | HInfExpr (InfOp.Semi, exprs, _, _) -> exprs |> listCollect go
+    | HModuleExpr (_, body, _, _) -> go body
     | _ -> []
 
   go expr
@@ -80,13 +80,13 @@ let findOpenModules projectName expr =
 let spliceExpr firstExpr secondExpr =
   let rec go expr =
     match expr with
-    | HExpr.Let (vis, pat, init, next, ty, loc) ->
+    | HLetValExpr (vis, pat, init, next, ty, loc) ->
         let next = go next
-        HExpr.Let(vis, pat, init, next, ty, loc)
-    | HExpr.LetFun (serial, vis, isMainFun, args, body, next, ty, loc) ->
+        HLetValExpr(vis, pat, init, next, ty, loc)
+    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, loc) ->
         let next = go next
-        HExpr.LetFun(serial, vis, isMainFun, args, body, next, ty, loc)
-    | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
+        HLetFunExpr(serial, vis, isMainFun, args, body, next, ty, loc)
+    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
         let rec goLast exprs =
           match exprs with
           | [] -> [ secondExpr ]
@@ -94,10 +94,10 @@ let spliceExpr firstExpr secondExpr =
           | x :: xs -> x :: goLast xs
 
         let exprs = goLast exprs
-        HExpr.Inf(InfOp.Semi, exprs, ty, loc)
-    | HExpr.Module (ident, body, next, loc) ->
+        HInfExpr(InfOp.Semi, exprs, ty, loc)
+    | HModuleExpr (ident, body, next, loc) ->
         let next = go next
-        HExpr.Module(ident, body, next, loc)
+        HModuleExpr(ident, body, next, loc)
     | _ -> hxSemi [ expr; secondExpr ] noLoc
 
   go firstExpr

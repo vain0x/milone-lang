@@ -271,11 +271,11 @@ let scopeCtxResolvePatAsScope pat scopeCtx =
 /// Resolves an expressions as scope: type, module or namespace.
 let scopeCtxResolveExprAsScope expr scopeCtx =
   match expr with
-  | HExpr.Nav _ ->
+  | HNavExpr _ ->
       // A.B.C (= (A.B).C) case
       failwith "unimpl"
 
-  | HExpr.Ref (serial, _, _) ->
+  | HRefExpr (serial, _, _) ->
       let ident = scopeCtx |> scopeCtxGetIdent serial
       scopeCtx |> scopeCtxResolveLocalTyIdent ident
 
@@ -497,12 +497,12 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
 
   let rec goExpr (expr, ctx) =
     match expr with
-    | HExpr.Let (vis, pat, init, next, ty, loc) ->
+    | HLetValExpr (vis, pat, init, next, ty, loc) ->
         let pat, ctx = (pat, ctx) |> goPat vis
         let next, ctx = (next, ctx) |> goExpr
-        HExpr.Let(vis, pat, init, next, ty, loc), ctx
+        HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
-    | HExpr.LetFun (serial, vis, _, args, body, next, ty, loc) ->
+    | HLetFunExpr (serial, vis, _, args, body, next, ty, loc) ->
         let isMainFun = ctx |> scopeCtxGetIdent serial = "main"
 
         let ctx =
@@ -513,18 +513,18 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
           |> addVarToModule vis serial
 
         let next, ctx = (next, ctx) |> goExpr
-        HExpr.LetFun(serial, vis, isMainFun, args, body, next, ty, loc), ctx
+        HLetFunExpr(serial, vis, isMainFun, args, body, next, ty, loc), ctx
 
-    | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
+    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
         let exprs, ctx = (exprs, ctx) |> stMap goExpr
-        HExpr.Inf(InfOp.Semi, exprs, ty, loc), ctx
+        HInfExpr(InfOp.Semi, exprs, ty, loc), ctx
 
-    | HExpr.TyDecl (serial, vis, tyDecl, loc) ->
+    | HTyDeclExpr (serial, vis, tyDecl, loc) ->
         let ctx =
           ctx
           |> scopeCtxDefineTyStart moduleSerialOpt serial vis tyDecl loc
 
-        HExpr.TyDecl(serial, vis, tyDecl, loc), ctx
+        HTyDeclExpr(serial, vis, tyDecl, loc), ctx
 
     | _ -> expr, ctx
 
@@ -628,25 +628,25 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
 
 let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with
-  | HExpr.Error _
-  | HExpr.Lit _
-  | HExpr.Prim _ -> expr, ctx
+  | HErrorExpr _
+  | HLitExpr _
+  | HPrimExpr _ -> expr, ctx
 
-  | HExpr.Ref (serial, ty, loc) ->
+  | HRefExpr (serial, ty, loc) ->
       let doArm () =
         let ident = ctx |> scopeCtxGetIdent serial
         match ctx |> scopeCtxResolveLocalVar ident with
-        | Some serial -> HExpr.Ref(serial, ty, loc), ctx
+        | Some serial -> HRefExpr(serial, ty, loc), ctx
 
         | None ->
             match primFromIdent ident with
-            | Some prim -> HExpr.Prim(prim, ty, loc), ctx
+            | Some prim -> HPrimExpr(prim, ty, loc), ctx
 
-            | None -> HExpr.Error("Undefined variable " + ident, loc), ctx
+            | None -> HErrorExpr("Undefined variable " + ident, loc), ctx
 
       doArm ()
 
-  | HExpr.Match (target, arms, ty, loc) ->
+  | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let target, ctx = (target, ctx) |> nameResExpr
 
@@ -660,29 +660,29 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                let ctx = ctx |> scopeCtxFinishScope parent
                (pat, guard, body), ctx)
 
-        HExpr.Match(target, arms, ty, loc), ctx
+        HMatchExpr(target, arms, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.Nav (l, r, ty, loc) ->
+  | HNavExpr (l, r, ty, loc) ->
       let doArm () =
         // FIXME: Patchwork for tests to pass
         match l, r with
-        | HExpr.Ref (serial, _, _), "getSlice" when ctx |> scopeCtxGetIdent serial = "String" ->
+        | HRefExpr (serial, _, _), "getSlice" when ctx |> scopeCtxGetIdent serial = "String" ->
             // NOTE: Actually this functions doesn't exist in the F# standard library.
-            HExpr.Prim(HPrim.StrGetSlice, ty, loc), ctx
+            HPrimExpr(HPrim.StrGetSlice, ty, loc), ctx
 
         | _ ->
 
             // Keep the nav expression unresolved so that type inference does.
             let keepUnresolved () =
               let l, ctx = (l, ctx) |> nameResExpr
-              HExpr.Nav(l, r, ty, loc), ctx
+              HNavExpr(l, r, ty, loc), ctx
 
             match ctx |> scopeCtxResolveExprAsScope l with
             | Some scopeSerial ->
                 match ctx |> scopeCtxResolveVar scopeSerial r with
-                | Some varSerial -> HExpr.Ref(varSerial, ty, loc), ctx
+                | Some varSerial -> HRefExpr(varSerial, ty, loc), ctx
 
                 | _ ->
                     // X.ty patterns don't appear yet, so don't search for types.
@@ -693,17 +693,17 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HExpr.Inf (op, items, ty, loc) ->
+  | HInfExpr (op, items, ty, loc) ->
       let doArm () =
         // Necessary in case of annotation expression.
         let ty, ctx = ctx |> scopeCtxResolveTy ty loc
 
         let items, ctx = (items, ctx) |> stMap nameResExpr
-        HExpr.Inf(op, items, ty, loc), ctx
+        HInfExpr(op, items, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.Let (vis, pat, body, next, ty, loc) ->
+  | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
           let parent, ctx = ctx |> scopeCtxStartScope
@@ -718,11 +718,11 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           let ctx = ctx |> scopeCtxFinishScope parent
           pat, next, ctx
 
-        HExpr.Let(vis, pat, body, next, ty, loc), ctx
+        HLetValExpr(vis, pat, body, next, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.LetFun (serial, vis, isMainFun, pats, body, next, ty, loc) ->
+  | HLetFunExpr (serial, vis, isMainFun, pats, body, next, ty, loc) ->
       let doArm () =
         let parent, ctx = ctx |> scopeCtxStartScope
         let ctx = ctx |> scopeCtxOnEnterLetBody
@@ -745,11 +745,11 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let next, ctx = (next, ctx) |> nameResExpr
         let ctx = ctx |> scopeCtxFinishScope parent
 
-        HExpr.LetFun(serial, vis, isMainFun, pats, body, next, ty, loc), ctx
+        HLetFunExpr(serial, vis, isMainFun, pats, body, next, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.TyDecl (serial, _, tyDecl, loc) ->
+  | HTyDeclExpr (serial, _, tyDecl, loc) ->
       let doArm () =
         let ctx =
           ctx |> scopeCtxDefineTyFinish serial tyDecl loc
@@ -758,7 +758,7 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HExpr.Open (path, _) ->
+  | HOpenExpr (path, _) ->
       let doArm () =
         // FIXME: resolve module-name based on path
         match ctx
@@ -772,7 +772,7 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HExpr.Module (serial, body, next, loc) ->
+  | HModuleExpr (serial, body, next, loc) ->
       let doArm () =
         let ident = ctx |> scopeCtxGetIdent serial
 
@@ -805,7 +805,7 @@ let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx
 
   match expr with
-  | HExpr.Module _ -> (expr, scopeCtx) |> nameResExpr
+  | HModuleExpr _ -> (expr, scopeCtx) |> nameResExpr
 
   | _ ->
       (expr, scopeCtx)

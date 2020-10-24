@@ -26,21 +26,21 @@ open MiloneLang.Records
 let hoistMainExpr expr =
   let rec go expr =
     match expr with
-    | HExpr.LetFun (serial, vis, true, args, body, next, ty, loc) ->
+    | HLetFunExpr (serial, vis, true, args, body, next, ty, loc) ->
         let makeMain rest =
-          HExpr.LetFun(serial, vis, true, args, hxSemi [ rest; body ] loc, next, ty, loc)
+          HLetFunExpr(serial, vis, true, args, hxSemi [ rest; body ] loc, next, ty, loc)
 
         next, makeMain
 
-    | HExpr.Let (vis, pat, init, next, ty, loc) ->
+    | HLetValExpr (vis, pat, init, next, ty, loc) ->
         let next, f = go next
-        HExpr.Let(vis, pat, init, next, ty, loc), f
+        HLetValExpr(vis, pat, init, next, ty, loc), f
 
-    | HExpr.LetFun (serial, vis, false, args, body, next, ty, loc) ->
+    | HLetFunExpr (serial, vis, false, args, body, next, ty, loc) ->
         let next, f = go next
-        HExpr.LetFun(serial, vis, false, args, body, next, ty, loc), f
+        HLetFunExpr(serial, vis, false, args, body, next, ty, loc), f
 
-    | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
+    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
         let rec goLast exprs =
           match exprs with
           | [] -> [], id
@@ -52,7 +52,7 @@ let hoistMainExpr expr =
               expr :: exprs, f
 
         let exprs, f = goLast exprs
-        HExpr.Inf(InfOp.Semi, exprs, ty, loc), f
+        HInfExpr(InfOp.Semi, exprs, ty, loc), f
     | _ -> expr, id
 
   let expr, makeMain = go expr

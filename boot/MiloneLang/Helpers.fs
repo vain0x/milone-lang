@@ -1558,79 +1558,79 @@ let patNormalize pat =
 // Expressions (HIR)
 // -----------------------------------------------
 
-let hxTrue loc = HExpr.Lit(litTrue, loc)
+let hxTrue loc = HLitExpr(litTrue, loc)
 
-let hxFalse loc = HExpr.Lit(litFalse, loc)
+let hxFalse loc = HLitExpr(litFalse, loc)
 
-let hxApp f x ty loc = HExpr.Inf(InfOp.App, [ f; x ], ty, loc)
+let hxApp f x ty loc = HInfExpr(InfOp.App, [ f; x ], ty, loc)
 
-let hxAnno expr ty loc = HExpr.Inf(InfOp.Anno, [ expr ], ty, loc)
+let hxAnno expr ty loc = HInfExpr(InfOp.Anno, [ expr ], ty, loc)
 
 let hxSemi items loc =
-  HExpr.Inf(InfOp.Semi, items, exprToTy (listLast items), loc)
+  HInfExpr(InfOp.Semi, items, exprToTy (listLast items), loc)
 
 let hxCallProc callee args resultTy loc =
-  HExpr.Inf(InfOp.CallProc, callee :: args, resultTy, loc)
+  HInfExpr(InfOp.CallProc, callee :: args, resultTy, loc)
 
 let hxCallClosure callee args resultTy loc =
-  HExpr.Inf(InfOp.CallClosure, callee :: args, resultTy, loc)
+  HInfExpr(InfOp.CallClosure, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HExpr.Inf(InfOp.Tuple, items, tyTuple (listMap exprToTy items), loc)
+  HInfExpr(InfOp.Tuple, items, tyTuple (listMap exprToTy items), loc)
 
 let hxUnit loc = hxTuple [] loc
 
 let hxNil itemTy loc =
-  HExpr.Prim(HPrim.Nil, tyList itemTy, loc)
+  HPrimExpr(HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
-  | HExpr.Inf (InfOp.Tuple, [], _, _) -> true
+  | HInfExpr (InfOp.Tuple, [], _, _) -> true
   | _ -> false
 
 let hxIsAlwaysTrue expr =
   match expr with
-  | HExpr.Lit (BoolLit true, _) -> true
+  | HLitExpr (BoolLit true, _) -> true
   | _ -> false
 
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
-  | HExpr.Lit (lit, a) -> litToTy lit, a
-  | HExpr.Ref (_, ty, a) -> ty, a
-  | HExpr.Prim (_, ty, a) -> ty, a
-  | HExpr.Match (_, _, ty, a) -> ty, a
-  | HExpr.Nav (_, _, ty, a) -> ty, a
-  | HExpr.Inf (_, _, ty, a) -> ty, a
-  | HExpr.Let (_, _, _, _, ty, a) -> ty, a
-  | HExpr.LetFun (_, _, _, _, _, _, ty, a) -> ty, a
-  | HExpr.TyDecl (_, _, _, a) -> tyUnit, a
-  | HExpr.Open (_, a) -> tyUnit, a
-  | HExpr.Module (_, _, _, a) -> tyUnit, a
-  | HExpr.Error (_, a) -> ErrorTy a, a
+  | HLitExpr (lit, a) -> litToTy lit, a
+  | HRefExpr (_, ty, a) -> ty, a
+  | HPrimExpr (_, ty, a) -> ty, a
+  | HMatchExpr (_, _, ty, a) -> ty, a
+  | HNavExpr (_, _, ty, a) -> ty, a
+  | HInfExpr (_, _, ty, a) -> ty, a
+  | HLetValExpr (_, _, _, _, ty, a) -> ty, a
+  | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
+  | HTyDeclExpr (_, _, _, a) -> tyUnit, a
+  | HOpenExpr (_, a) -> tyUnit, a
+  | HModuleExpr (_, _, _, a) -> tyUnit, a
+  | HErrorExpr (_, a) -> ErrorTy a, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat = patMap f g pat
 
   let rec go expr =
     match expr with
-    | HExpr.Lit (lit, a) -> HExpr.Lit(lit, g a)
-    | HExpr.Ref (serial, ty, a) -> HExpr.Ref(serial, f ty, g a)
-    | HExpr.Prim (prim, ty, a) -> HExpr.Prim(prim, f ty, g a)
-    | HExpr.Match (target, arms, ty, a) ->
+    | HLitExpr (lit, a) -> HLitExpr(lit, g a)
+    | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
+    | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
+    | HMatchExpr (target, arms, ty, a) ->
         let arms =
           arms
           |> listMap (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-        HExpr.Match(go target, arms, f ty, g a)
-    | HExpr.Nav (sub, mes, ty, a) -> HExpr.Nav(go sub, mes, f ty, g a)
-    | HExpr.Inf (infOp, args, resultTy, a) -> HExpr.Inf(infOp, listMap go args, f resultTy, g a)
-    | HExpr.Let (vis, pat, init, next, ty, a) -> HExpr.Let(vis, goPat pat, go init, go next, f ty, g a)
-    | HExpr.LetFun (serial, vis, isMainFun, args, body, next, ty, a) ->
-        HExpr.LetFun(serial, vis, isMainFun, listMap goPat args, go body, go next, f ty, g a)
-    | HExpr.TyDecl (serial, vis, tyDef, a) -> HExpr.TyDecl(serial, vis, tyDef, g a)
-    | HExpr.Open (path, a) -> HExpr.Open(path, g a)
-    | HExpr.Module (ident, body, next, a) -> HExpr.Module(ident, go body, go next, g a)
-    | HExpr.Error (error, a) -> HExpr.Error(error, g a)
+        HMatchExpr(go target, arms, f ty, g a)
+    | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
+    | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, listMap go args, f resultTy, g a)
+    | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
+    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, a) ->
+        HLetFunExpr(serial, vis, isMainFun, listMap goPat args, go body, go next, f ty, g a)
+    | HTyDeclExpr (serial, vis, tyDef, a) -> HTyDeclExpr(serial, vis, tyDef, g a)
+    | HOpenExpr (path, a) -> HOpenExpr(path, g a)
+    | HModuleExpr (ident, body, next, a) -> HModuleExpr(ident, go body, go next, g a)
+    | HErrorExpr (error, a) -> HErrorExpr(error, g a)
 
   go expr
 

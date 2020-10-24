@@ -254,7 +254,7 @@ let monifyExprLetFun ctx callee vis isMainFun args body next ty loc =
   let genericFunSerial = callee
 
   let letGenericFunExpr =
-    HExpr.LetFun(callee, vis, isMainFun, args, body, next, ty, loc)
+    HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc)
 
   let rec go next arity genericFunTy useSiteTys ctx =
     match useSiteTys with
@@ -276,7 +276,7 @@ let monifyExprLetFun ctx callee vis isMainFun args body next ty loc =
               monoCtxAddMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
 
             let next =
-              HExpr.LetFun(monoFunSerial, vis, isMainFun, monoArgs, monoBody, next, ty, loc)
+              HLetFunExpr(monoFunSerial, vis, isMainFun, monoArgs, monoBody, next, ty, loc)
 
             go next arity genericFunTy useSiteTys ctx
 
@@ -291,22 +291,22 @@ let monifyExprLetFun ctx callee vis isMainFun args body next ty loc =
 
 let rec monifyExpr (expr, ctx) =
   match expr with
-  | HExpr.Error _
-  | HExpr.TyDecl _
-  | HExpr.Open _
-  | HExpr.Lit _
-  | HExpr.Prim _ -> expr, ctx
+  | HErrorExpr _
+  | HTyDeclExpr _
+  | HOpenExpr _
+  | HLitExpr _
+  | HPrimExpr _ -> expr, ctx
 
-  | HExpr.Ref (varSerial, useSiteTy, loc) ->
+  | HRefExpr (varSerial, useSiteTy, loc) ->
       let doArm () =
         let varSerial, ctx =
           monoCtxProcessVarRef ctx varSerial useSiteTy
 
-        HExpr.Ref(varSerial, useSiteTy, loc), ctx
+        HRefExpr(varSerial, useSiteTy, loc), ctx
 
       doArm ()
 
-  | HExpr.Match (target, arms, ty, loc) ->
+  | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let target, ctx = (target, ctx) |> monifyExpr
 
@@ -318,34 +318,34 @@ let rec monifyExpr (expr, ctx) =
                let body, ctx = (body, ctx) |> monifyExpr
                (pat, guard, body), ctx)
 
-        HExpr.Match(target, arms, ty, loc), ctx
+        HMatchExpr(target, arms, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.Nav (subject, message, ty, loc) ->
+  | HNavExpr (subject, message, ty, loc) ->
       let doArm () =
         let subject, ctx = monifyExpr (subject, ctx)
-        HExpr.Nav(subject, message, ty, loc), ctx
+        HNavExpr(subject, message, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.Inf (infOp, args, ty, loc) ->
+  | HInfExpr (infOp, args, ty, loc) ->
       let doArm () =
         let args, ctx = (args, ctx) |> stMap monifyExpr
-        HExpr.Inf(infOp, args, ty, loc), ctx
+        HInfExpr(infOp, args, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.Let (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (vis, pat, init, next, ty, loc) ->
       let doArm () =
         let pat, ctx = (pat, ctx) |> monifyPat
         let init, ctx = (init, ctx) |> monifyExpr
         let next, ctx = (next, ctx) |> monifyExpr
-        HExpr.Let(vis, pat, init, next, ty, loc), ctx
+        HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.LetFun (callee, vis, isMainFun, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       let doArm () =
         let args, ctx = (args, ctx) |> stMap monifyPat
         let body, ctx = (body, ctx) |> monifyExpr
@@ -354,7 +354,7 @@ let rec monifyExpr (expr, ctx) =
 
       doArm ()
 
-  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
+  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let monoCtx =

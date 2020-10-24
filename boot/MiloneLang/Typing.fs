@@ -169,10 +169,10 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
 /// Creates an expression to abort.
 let hxAbort (ctx: TyCtx) ty loc =
   let funTy = tyFun tyInt ty
-  let exitExpr = HExpr.Prim(HPrim.Exit, funTy, loc)
+  let exitExpr = HPrimExpr(HPrim.Exit, funTy, loc)
 
   let callExpr =
-    hxApp exitExpr (HExpr.Lit(IntLit 1, loc)) ty loc
+    hxApp exitExpr (HLitExpr(IntLit 1, loc)) ty loc
 
   callExpr, ctx
 
@@ -289,7 +289,7 @@ let inferPat ctx pat ty =
 
 let inferRef (ctx: TyCtx) serial loc ty =
   let ctx = ctx |> tyCtxUnifyVarTy serial ty loc
-  HExpr.Ref(serial, ty, loc), ctx
+  HRefExpr(serial, ty, loc), ctx
 
 let inferPrim ctx prim loc ty =
   let tySpec = prim |> primToTySpec
@@ -299,7 +299,7 @@ let inferPrim ctx prim loc ty =
     tyCtxUnifyTy ctx loc primTy ty
     |> tyCtxAddTraitBounds traits
 
-  HExpr.Prim(prim, primTy, loc), ctx
+  HPrimExpr(prim, primTy, loc), ctx
 
 let inferNil ctx loc listTy =
   let itemTy, _, ctx = tyCtxFreshTyVar "item" loc ctx
@@ -322,7 +322,7 @@ let inferMatch ctx target arms loc resultTy =
          let body, ctx = inferExpr ctx body resultTy
          (pat, guard, body), ctx)
 
-  HExpr.Match(target, arms, resultTy, loc), ctx
+  HMatchExpr(target, arms, resultTy, loc), ctx
 
 let inferNav ctx sub mes loc resultTy =
   let findTyDynamicMember ctx sub subTy =
@@ -332,7 +332,7 @@ let inferNav ctx sub mes loc resultTy =
         let ctx = tyCtxUnifyTy ctx loc resultTy tyInt
 
         let funExpr =
-          HExpr.Prim(HPrim.StrLength, tyFun tyStr tyInt, loc)
+          HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
 
         Some(hxApp funExpr sub tyInt loc, ctx)
     | _ -> None
@@ -350,7 +350,7 @@ let inferNav ctx sub mes loc resultTy =
 
 let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
   match firstArg, arg with
-  | HExpr.Lit (StrLit nativeFunIdent, _), HExpr.Lit (IntLit arity, _) ->
+  | HLitExpr (StrLit nativeFunIdent, _), HLitExpr (IntLit arity, _) ->
       let rec go ty arity ctx =
         if arity = 0 then
           ty, ctx
@@ -361,15 +361,15 @@ let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
       let resultTy, _, ctx = tyCtxFreshTyVar "result" loc ctx
       let funTy, ctx = go resultTy arity ctx
       let ctx = tyCtxUnifyTy ctx loc funTy appTy
-      HExpr.Prim(HPrim.NativeFun(nativeFunIdent, arity), appTy, loc), ctx
+      HPrimExpr(HPrim.NativeFun(nativeFunIdent, arity), appTy, loc), ctx
   | _ -> hxApp callee arg appTy loc, ctx
 
 let inferOpAppPrintfn ctx arg calleeTy loc =
   match arg with
-  | HExpr.Lit (StrLit format, _) ->
+  | HLitExpr (StrLit format, _) ->
       let funTy = analyzeFormat format
       let ctx = tyCtxUnifyTy ctx loc calleeTy funTy
-      HExpr.Prim(HPrim.Printfn, calleeTy, loc), ctx
+      HPrimExpr(HPrim.Printfn, calleeTy, loc), ctx
   | _ ->
       let ctx =
         tyCtxAddErr ctx """First arg of printfn must be string literal, "..".""" loc
@@ -381,9 +381,9 @@ let inferOpApp ctx callee arg loc appTy =
   let arg, ctx = inferExpr ctx arg argTy
   let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
   match callee with
-  | HExpr.Inf (InfOp.App, [ HExpr.Prim (HPrim.NativeFun _, _, _); firstArg ], _, _) ->
+  | HInfExpr (InfOp.App, [ HPrimExpr (HPrim.NativeFun _, _, _); firstArg ], _, _) ->
       inferOpAppNativeFun ctx callee firstArg arg appTy loc
-  | HExpr.Prim (HPrim.Printfn, calleeTy, loc) ->
+  | HPrimExpr (HPrim.Printfn, calleeTy, loc) ->
       let callee, ctx = inferOpAppPrintfn ctx arg calleeTy loc
       hxApp callee arg appTy loc, ctx
   | _ -> hxApp callee arg appTy loc, ctx
@@ -413,7 +413,7 @@ let inferLetVal ctx vis pat init next ty loc =
   let init, ctx = inferExpr ctx init initTy
   let pat, ctx = inferPat ctx pat initTy
   let next, ctx = inferExpr ctx next ty
-  HExpr.Let(vis, pat, init, next, ty, loc), ctx
+  HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
 let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next ty loc =
   /// Infers argument patterns,
@@ -456,7 +456,7 @@ let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next ty loc =
     tyCtxGeneralizeFun ctx outerLetDepth varSerial
 
   let next, ctx = inferExpr ctx next ty
-  HExpr.LetFun(varSerial, vis, isMainFun, argPats, body, next, ty, loc), ctx
+  HLetFunExpr(varSerial, vis, isMainFun, argPats, body, next, ty, loc), ctx
 
 /// Returns in reversed order.
 let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
@@ -477,35 +477,35 @@ let inferSemi ctx loc exprs lastTy =
   hxSemi (listRev exprs) loc, ctx
 
 let inferExprTyDecl ctx tySerial vis tyDecl loc =
-  HExpr.TyDecl(tySerial, vis, tyDecl, loc), ctx
+  HTyDeclExpr(tySerial, vis, tyDecl, loc), ctx
 
 let inferExprOpen ctx path ty loc =
   let ctx = tyCtxUnifyTy ctx loc ty tyUnit
-  HExpr.Open(path, loc), ctx
+  HOpenExpr(path, loc), ctx
 
 let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   match expr with
-  | HExpr.Lit (lit, loc) -> expr, tyCtxUnifyTy ctx loc (litToTy lit) ty
-  | HExpr.Ref (serial, _, loc) -> inferRef ctx serial loc ty
-  | HExpr.Prim (prim, _, loc) -> inferPrim ctx prim loc ty
-  | HExpr.Match (target, arms, _, loc) -> inferMatch ctx target arms loc ty
-  | HExpr.Nav (receiver, field, _, loc) -> inferNav ctx receiver field loc ty
-  | HExpr.Inf (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx callee arg loc ty
-  | HExpr.Inf (InfOp.Tuple, items, _, loc) -> inferTuple ctx items loc ty
-  | HExpr.Inf (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnno ctx expr annoTy ty loc
-  | HExpr.Inf (InfOp.Semi, exprs, _, loc) -> inferSemi ctx loc exprs ty
-  | HExpr.Let (vis, pat, body, next, _, loc) -> inferLetVal ctx vis pat body next ty loc
-  | HExpr.LetFun (oldSerial, vis, isMainFun, args, body, next, _, loc) ->
+  | HLitExpr (lit, loc) -> expr, tyCtxUnifyTy ctx loc (litToTy lit) ty
+  | HRefExpr (serial, _, loc) -> inferRef ctx serial loc ty
+  | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc ty
+  | HMatchExpr (target, arms, _, loc) -> inferMatch ctx target arms loc ty
+  | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc ty
+  | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx callee arg loc ty
+  | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTuple ctx items loc ty
+  | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnno ctx expr annoTy ty loc
+  | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemi ctx loc exprs ty
+  | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetVal ctx vis pat body next ty loc
+  | HLetFunExpr (oldSerial, vis, isMainFun, args, body, next, _, loc) ->
       inferLetFun ctx oldSerial vis isMainFun args body next ty loc
-  | HExpr.TyDecl (oldSerial, vis, tyDef, loc) -> inferExprTyDecl ctx oldSerial vis tyDef loc
-  | HExpr.Open (path, loc) -> inferExprOpen ctx path ty loc
-  | HExpr.Inf (InfOp.Anno, _, _, _)
-  | HExpr.Inf (InfOp.App, _, _, _)
-  | HExpr.Inf (InfOp.Closure, _, _, _)
-  | HExpr.Inf (InfOp.CallProc, _, _, _)
-  | HExpr.Inf (InfOp.CallClosure, _, _, _) -> failwith "Never"
-  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
-  | HExpr.Error (error, loc) ->
+  | HTyDeclExpr (oldSerial, vis, tyDef, loc) -> inferExprTyDecl ctx oldSerial vis tyDef loc
+  | HOpenExpr (path, loc) -> inferExprOpen ctx path ty loc
+  | HInfExpr (InfOp.Anno, _, _, _)
+  | HInfExpr (InfOp.App, _, _, _)
+  | HInfExpr (InfOp.Closure, _, _, _)
+  | HInfExpr (InfOp.CallProc, _, _, _)
+  | HInfExpr (InfOp.CallClosure, _, _, _) -> failwith "Never"
+  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HErrorExpr (error, loc) ->
       let ctx = tyCtxAddErr ctx error loc
       hxAbort ctx ty loc
 

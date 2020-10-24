@@ -455,24 +455,23 @@ type InfOp =
   | Closure
 
 /// Expression in HIR.
-[<RequireQualifiedAccess>]
 type HExpr =
-  | Lit of Lit * Loc
+  | HLitExpr of Lit * Loc
   /// Variable reference.
-  | Ref of VarSerial * Ty * Loc
-  | Prim of HPrim * Ty * Loc
-  | Match of target: HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
+  | HRefExpr of VarSerial * Ty * Loc
+  | HPrimExpr of HPrim * Ty * Loc
+  | HMatchExpr of target: HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`
-  | Nav of HExpr * Ident * Ty * Loc
+  | HNavExpr of HExpr * Ident * Ty * Loc
   /// Operation with infinite arguments.
-  | Inf of InfOp * HExpr list * Ty * Loc
-  | Let of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | LetFun of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | HInfExpr of InfOp * HExpr list * Ty * Loc
+  | HLetValExpr of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
   /// Type declaration.
-  | TyDecl of TySerial * Vis * TyDecl * Loc
-  | Open of Ident list * Loc
-  | Module of Serial * body: HExpr * next: HExpr * Loc
-  | Error of string * Loc
+  | HTyDeclExpr of TySerial * Vis * TyDecl * Loc
+  | HOpenExpr of Ident list * Loc
+  | HModuleExpr of Serial * body: HExpr * next: HExpr * Loc
+  | HErrorExpr of string * Loc
 
 [<RequireQualifiedAccess>]
 type MonoMode =

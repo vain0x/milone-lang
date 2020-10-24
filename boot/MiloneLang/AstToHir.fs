@@ -282,11 +282,11 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
   match expr with
   | AMissingExpr pos ->
       let loc = toLoc docId pos
-      HExpr.Error("Missing expression", loc), nameCtx
+      HErrorExpr("Missing expression", loc), nameCtx
 
   | ALitExpr (lit, pos) ->
       let loc = toLoc docId pos
-      HExpr.Lit(lit, loc), nameCtx
+      HLitExpr(lit, loc), nameCtx
 
   | AIdentExpr (ident, pos) ->
       let loc = toLoc docId pos
@@ -294,7 +294,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
       // NOTE: Work in a local function to reduce the size of stack frames of `astToHirExpr`.
       let doArm () =
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
-        HExpr.Ref(serial, noTy, loc), nameCtx
+        HRefExpr(serial, noTy, loc), nameCtx
 
       doArm ()
 
@@ -335,7 +335,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let target, nameCtx = (target, nameCtx) |> astToHirExpr docId
         let arms, nameCtx = (arms, nameCtx) |> stMap onArm
         let loc = toLoc docId pos
-        HExpr.Match(target, arms, noTy, loc), nameCtx
+        HMatchExpr(target, arms, noTy, loc), nameCtx
 
       doArm ()
 
@@ -350,7 +350,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
       let doArm () =
         let l, nameCtx = (l, nameCtx) |> astToHirExpr docId
         let loc = toLoc docId pos
-        HExpr.Nav(l, r, noTy, loc), nameCtx
+        HNavExpr(l, r, noTy, loc), nameCtx
 
       doArm ()
 
@@ -366,7 +366,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
             let loc = toLoc docId pos
 
             let hxIndex =
-              hxApp (hxApp (HExpr.Prim(HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
+              hxApp (hxApp (HPrimExpr(HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
 
             hxIndex, nameCtx
 
@@ -443,14 +443,14 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let l, nameCtx = (l, nameCtx) |> astToHirExpr docId
         let r, nameCtx = (r, nameCtx) |> astToHirExpr docId
         let loc = toLoc docId pos
-        let primExpr = HExpr.Prim(prim, noTy, loc)
+        let primExpr = HPrimExpr(prim, noTy, loc)
         hxApp (hxApp primExpr l noTy loc) r noTy loc, nameCtx
 
       doArm ()
 
   | ARangeExpr (_, pos) ->
       let loc = toLoc docId pos
-      HExpr.Error("Invalid use of range syntax.", loc), nameCtx
+      HErrorExpr("Invalid use of range syntax.", loc), nameCtx
 
   | ATupleExpr (items, pos) ->
       let doArm () =
@@ -497,14 +497,14 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
             let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
             let next, nameCtx = (next, nameCtx) |> astToHirExpr docId
             let loc = toLoc docId pos
-            HExpr.LetFun(serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
+            HLetFunExpr(serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
 
         | ALetVal (vis, pat, body, next, pos) ->
             let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
             let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
             let next, nameCtx = (next, nameCtx) |> astToHirExpr docId
             let loc = toLoc docId pos
-            HExpr.Let(vis, pat, body, next, noTy, loc), nameCtx
+            HLetValExpr(vis, pat, body, next, noTy, loc), nameCtx
 
       doArm ()
 
@@ -513,7 +513,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
         let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
         let loc = toLoc docId pos
-        HExpr.TyDecl(serial, vis, TySynonymDecl(ty, loc), loc), nameCtx
+        HTyDeclExpr(serial, vis, TySynonymDecl(ty, loc), loc), nameCtx
 
       doArm ()
 
@@ -534,14 +534,14 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let unionSerial, nameCtx = nameCtx |> nameCtxAdd ident
         let variants, nameCtx = (variants, nameCtx) |> stMap onVariant
         let loc = toLoc docId pos
-        HExpr.TyDecl(unionSerial, vis, UnionTyDecl(ident, variants, loc), loc), nameCtx
+        HTyDeclExpr(unionSerial, vis, UnionTyDecl(ident, variants, loc), loc), nameCtx
 
       doArm ()
 
   | AOpenExpr (path, pos) ->
       let doArm () =
         let loc = toLoc docId pos
-        HExpr.Open(path, loc), nameCtx
+        HOpenExpr(path, loc), nameCtx
 
       doArm ()
 
@@ -554,4 +554,4 @@ let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let loc = toLoc docId pos
       let next = hxUnit loc
-      HExpr.Module(serial, body, next, loc), nameCtx
+      HModuleExpr(serial, body, next, loc), nameCtx

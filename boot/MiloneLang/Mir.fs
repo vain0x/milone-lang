@@ -575,7 +575,7 @@ let mirifyExprSemi ctx exprs =
 let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =
     match callee with
-    | HExpr.Prim (prim, _, _) ->
+    | HPrimExpr (prim, _, _) ->
         let primTy = exprToTy callee
 
         let (args, ctx) =
@@ -604,7 +604,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
         temp, ctx
 
   match callee, args with
-  | HExpr.Prim (prim, _, _), _ ->
+  | HPrimExpr (prim, _, _), _ ->
       match prim, args with
       | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx MAddBinary l r ty loc
       | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx MSubBinary l r ty loc
@@ -623,7 +623,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
       | HPrim.StrLength, [ arg ] -> mirifyExprCallStrLength ctx arg ty loc
       | _ -> core ()
 
-  | HExpr.Ref (serial, _, _), [ arg ] when mirCtxIsVariantFun ctx serial ->
+  | HRefExpr (serial, _, _), [ arg ] when mirCtxIsVariantFun ctx serial ->
       mirifyExprCallVariantFun ctx serial arg ty loc
 
   | _ -> core ()
@@ -664,7 +664,7 @@ let mirifyExprInf ctx infOp args ty loc =
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
   | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
-  | InfOp.Closure, [ HExpr.Ref (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
+  | InfOp.Closure, [ HRefExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
   | t -> failwithf "Never: %A" t
 
 let mirifyExprLetVal ctx pat init next letLoc =
@@ -737,32 +737,32 @@ let mirifyExprOpen ctx loc = MDefaultExpr(tyUnit, loc), ctx
 
 let mirifyDecl ctx expr =
   match expr with
-  | HExpr.Let (_vis, pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc
-  | HExpr.LetFun (serial, _vis, isMainFun, args, body, next, _, loc) ->
+  | HLetValExpr (_vis, pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc
+  | HLetFunExpr (serial, _vis, isMainFun, args, body, next, _, loc) ->
       mirifyExprLetFun ctx serial isMainFun args body next loc
-  | HExpr.TyDecl (tySerial, _vis, tyDecl, loc) -> mirifyExprTyDecl ctx tySerial tyDecl loc
-  | HExpr.Open (_, loc) -> mirifyExprOpen ctx loc
+  | HTyDeclExpr (tySerial, _vis, tyDecl, loc) -> mirifyExprTyDecl ctx tySerial tyDecl loc
+  | HOpenExpr (_, loc) -> mirifyExprOpen ctx loc
   | _ -> failwith "NEVER"
 
 let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   match expr with
-  | HExpr.Lit (lit, loc) -> MLitExpr(lit, loc), ctx
-  | HExpr.Ref (serial, ty, loc) -> mirifyExprRef ctx serial ty loc
-  | HExpr.Prim (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
-  | HExpr.Match (target, arms, ty, loc) -> mirifyExprMatch ctx target arms ty loc
-  | HExpr.Inf (infOp, args, ty, loc) -> mirifyExprInf ctx infOp args ty loc
-  | HExpr.Let _
-  | HExpr.LetFun _
-  | HExpr.TyDecl _
-  | HExpr.Open _ -> mirifyDecl ctx expr
-  | HExpr.Nav _ -> failwith "Never"
-  | HExpr.Error (error, loc) ->
+  | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
+  | HRefExpr (serial, ty, loc) -> mirifyExprRef ctx serial ty loc
+  | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
+  | HMatchExpr (target, arms, ty, loc) -> mirifyExprMatch ctx target arms ty loc
+  | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx infOp args ty loc
+  | HLetValExpr _
+  | HLetFunExpr _
+  | HTyDeclExpr _
+  | HOpenExpr _ -> mirifyDecl ctx expr
+  | HNavExpr _ -> failwith "Never"
+  | HErrorExpr (error, loc) ->
       let doArm () =
         let ctx = mirCtxAddErr ctx error loc
         MDefaultExpr(tyObj, loc), ctx
 
       doArm ()
-  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
+  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =
