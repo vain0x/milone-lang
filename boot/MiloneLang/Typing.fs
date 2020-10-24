@@ -172,29 +172,31 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
   | _ -> failwith "Expected function"
 
 /// Creates an expression to abort.
-let hxAbort (ctx: TyCtx) ty loc =
+let hxAbort (ctx: TyCtx) loc =
+  let ty, (), ctx = ctx |> tyCtxFreshTyVar "abort" loc
   let funTy = tyFun tyInt ty
   let exitExpr = HPrimExpr(HPrim.Exit, funTy, loc)
 
   let callExpr =
     hxApp exitExpr (HLitExpr(IntLit 1, loc)) ty loc
 
-  callExpr, ctx
+  callExpr, ty, ctx
 
-let tyCtxUnifyVarTy varSerial ty loc ctx =
-  match tyCtxFindVar ctx varSerial with
-  | FunDef (_, _, tyScheme, _) ->
-      let refTy, ctx = tyCtxInstantiate ctx tyScheme loc
-      tyCtxUnifyTy ctx loc refTy ty
+let tyCtxUnifyVarTy varSerial tyOpt loc ctx =
+  let varTy, ctx =
+    match tyCtxFindVar ctx varSerial with
+    | VarDef (_, _, ty, _) -> ty, ctx
+    | VariantDef (_, _, _, _, ty, _) -> ty, ctx
+    | FunDef (_, _, tyScheme, _) -> tyCtxInstantiate ctx tyScheme loc
 
-  | varDef ->
-      let refTy =
-        match varDef with
-        | VarDef (_, _, ty, _) -> ty
-        | VariantDef (_, _, _, _, ty, _) -> ty
-        | FunDef _ -> failwith "NEVER"
+  match tyOpt with
+  | Some ty ->
+      let ctx = tyCtxUnifyTy ctx loc varTy ty
+      varTy, ctx
 
-      tyCtxUnifyTy ctx loc refTy ty
+  | None -> varTy, ctx
+
+
 
 let tyCtxFreshPatTy pat ctx =
   let _, loc = pat |> patExtract
@@ -208,152 +210,178 @@ let tyCtxFreshExprTy expr ctx =
   let ty = MetaTy(tySerial, loc)
   ty, ctx
 
-let inferPatRef (ctx: TyCtx) varSerial loc ty =
-  let ctx = ctx |> tyCtxUnifyVarTy varSerial ty loc
-  HRefPat(varSerial, ty, loc), ctx
+let inferPatNil ctx pat loc =
+  let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
+  let ty = tyList itemTy
+  HNilPat(itemTy, loc), ty, ctx
 
-let inferPatNav (ctx: TyCtx) l r loc ty =
-  failwithf "invalid use of nav pattern %A" (l, r, loc, ty)
+let inferPatNone ctx pat loc =
+  let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
+  let ty = tyList itemTy
+  HNonePat(itemTy, loc), ty, ctx
 
-let inferPatCall (ctx: TyCtx) callee args loc ty =
+let inferPatSome ctx pat loc =
+  let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
+  let ty = tyFun itemTy (tyList itemTy)
+  HSomePat(itemTy, loc), ty, ctx
+
+let inferPatDiscard ctx pat loc =
+  let ty, ctx = ctx |> tyCtxFreshPatTy pat
+  HDiscardPat(ty, loc), ty, ctx
+
+let inferPatRef (ctx: TyCtx) varSerial loc =
+  let ty, ctx =
+    ctx |> tyCtxUnifyVarTy varSerial None loc
+
+  HRefPat(varSerial, ty, loc), ty, ctx
+
+let inferPatCall (ctx: TyCtx) pat callee args loc =
   match args with
   | [ payload ] ->
-      // FIXME: We should verify that callee is a variant pattern.
-      let payloadTy, ctx = ctx |> tyCtxFreshPatTy payload
-      let callee, ctx = inferPat ctx callee (tyFun payloadTy ty)
-      let payload, ctx = inferPat ctx payload payloadTy
-      HCallPat(callee, [ payload ], ty, loc), ctx
+      let resultTy, ctx = ctx |> tyCtxFreshPatTy pat
+
+      let callee, calleeTy, ctx = inferPat ctx callee
+      let payload, payloadTy, ctx = inferPat ctx payload
+
+      let ctx =
+        tyCtxUnifyTy ctx loc calleeTy (tyFun payloadTy resultTy)
+
+      HCallPat(callee, [ payload ], resultTy, loc), resultTy, ctx
 
   | _ -> failwith "invalid use of call pattern"
 
-let inferPatTuple ctx itemPats loc tupleTy =
+let inferPatTuple ctx itemPats loc =
   let rec go accPats accTys ctx itemPats =
     match itemPats with
     | [] -> listRev accPats, listRev accTys, ctx
     | itemPat :: itemPats ->
-        let itemTy, ctx = ctx |> tyCtxFreshPatTy itemPat
-        let itemPat, ctx = inferPat ctx itemPat itemTy
+        let itemPat, itemTy, ctx = inferPat ctx itemPat
         go (itemPat :: accPats) (itemTy :: accTys) ctx itemPats
 
   let itemPats, itemTys, ctx = go [] [] ctx itemPats
 
-  let ctx =
-    tyCtxUnifyTy ctx loc tupleTy (tyTuple itemTys)
+  let tupleTy = tyTuple itemTys
+  HTuplePat(itemPats, tupleTy, loc), tupleTy, ctx
 
-  HTuplePat(itemPats, tupleTy, loc), ctx
+let inferPatCons ctx l r loc =
+  let l, lTy, ctx = inferPat ctx l
+  let r, rTy, ctx = inferPat ctx r
 
-let inferPatCons ctx l r loc listTy =
-  let itemTy, ctx = ctx |> tyCtxFreshPatTy l
+  let itemTy = lTy
+  let listTy = tyList itemTy
+  let ctx = tyCtxUnifyTy ctx loc rTy listTy
 
-  let ctx =
-    tyCtxUnifyTy ctx loc listTy (tyList itemTy)
+  HConsPat(l, r, itemTy, loc), listTy, ctx
 
-  let l, ctx = inferPat ctx l itemTy
-  let r, ctx = inferPat ctx r listTy
-  HConsPat(l, r, itemTy, loc), ctx
+let inferPatAs ctx body varSerial loc =
+  let body, bodyTy, ctx = inferPat ctx body
 
-let inferPatAs ctx pat varSerial loc ty =
-  let ctx = ctx |> tyCtxUnifyVarTy varSerial ty loc
-  let pat, ctx = inferPat ctx pat ty
-  HAsPat(pat, varSerial, loc), ctx
+  let _, ctx =
+    ctx |> tyCtxUnifyVarTy varSerial (Some bodyTy) loc
 
-let inferPat ctx pat ty =
+
+  HAsPat(body, varSerial, loc), bodyTy, ctx
+
+let inferPatAnno ctx body annoTy loc =
+  let body, bodyTy, ctx = inferPat ctx body
+  let ctx = tyCtxUnifyTy ctx loc bodyTy annoTy
+  body, annoTy, ctx
+
+let inferPatOr ctx first second loc =
+  // FIXME: Error if two patterns introduce different bindings.
+  let first, firstTy, ctx = inferPat ctx first
+  let second, secondTy, ctx = inferPat ctx second
+
+  let ctx = tyCtxUnifyTy ctx loc firstTy secondTy
+
+  let ty = firstTy
+  HOrPat(first, second, ty, loc), ty, ctx
+
+let inferPat ctx pat: HPat * Ty * TyCtx =
   match pat with
-  | HLitPat (lit, loc) -> pat, tyCtxUnifyTy ctx loc ty (litToTy lit)
-  | HNilPat (_, loc) ->
-      let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
-      let ctx = tyCtxUnifyTy ctx loc ty (tyList itemTy)
-      HNilPat(itemTy, loc), ctx
-  | HNonePat (_, loc) ->
-      let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
-      let ctx = tyCtxUnifyTy ctx loc ty (tyList itemTy)
-      HNonePat(itemTy, loc), ctx
-  | HSomePat (_, loc) ->
-      let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
+  | HLitPat (lit, _) -> pat, litToTy lit, ctx
+  | HNilPat (_, loc) -> inferPatNil ctx pat loc
+  | HNonePat (_, loc) -> inferPatNone ctx pat loc
+  | HSomePat (_, loc) -> inferPatSome ctx pat loc
+  | HDiscardPat (_, loc) -> inferPatDiscard ctx pat loc
+  | HRefPat (varSerial, _, loc) -> inferPatRef ctx varSerial loc
+  | HCallPat (callee, args, _, loc) -> inferPatCall ctx pat callee args loc
+  | HConsPat (l, r, _, loc) -> inferPatCons ctx l r loc
+  | HTuplePat (items, _, loc) -> inferPatTuple ctx items loc
+  | HAsPat (body, serial, loc) -> inferPatAs ctx body serial loc
+  | HAnnoPat (body, annoTy, loc) -> inferPatAnno ctx body annoTy loc
+  | HOrPat (first, second, _, loc) -> inferPatOr ctx first second loc
+  | HNavPat _ -> failwithf "invalid use of nav pattern %A" pat
 
-      let ctx =
-        tyCtxUnifyTy ctx loc ty (tyFun itemTy (tyList itemTy))
+let inferRef (ctx: TyCtx) varSerial loc =
+  let ty, ctx =
+    ctx |> tyCtxUnifyVarTy varSerial None loc
 
-      HSomePat(itemTy, loc), ctx
-  | HDiscardPat (_, loc) -> HDiscardPat(ty, loc), ctx
-  | HRefPat (varSerial, _, loc) -> inferPatRef ctx varSerial loc ty
-  | HNavPat (l, r, _, loc) -> inferPatNav ctx l r loc ty
-  | HCallPat (callee, args, _, loc) -> inferPatCall ctx callee args loc ty
-  | HConsPat (l, r, _, loc) -> inferPatCons ctx l r loc ty
-  | HTuplePat (items, _, loc) -> inferPatTuple ctx items loc ty
-  | HAsPat (pat, serial, loc) -> inferPatAs ctx pat serial loc ty
-  | HAnnoPat (pat, annoTy, loc) ->
-      let ctx = tyCtxUnifyTy ctx loc ty annoTy
-      let pat, ctx = inferPat ctx pat annoTy
-      pat, ctx
-  | HOrPat (first, second, _, loc) ->
-      // FIXME: Error if two patterns introduce different bindings.
-      let first, ctx = inferPat ctx first ty
-      let second, ctx = inferPat ctx second ty
-      HOrPat(first, second, ty, loc), ctx
+  HRefExpr(varSerial, ty, loc), ty, ctx
 
-let inferRef (ctx: TyCtx) serial loc ty =
-  let ctx = ctx |> tyCtxUnifyVarTy serial ty loc
-  HRefExpr(serial, ty, loc), ctx
-
-let inferPrim ctx prim loc ty =
+let inferPrim ctx prim loc =
   let tySpec = prim |> primToTySpec
   let primTy, traits, ctx = (tySpec, ctx) |> tySpecInstantiate loc
+  let ctx = ctx |> tyCtxAddTraitBounds traits
+  HPrimExpr(prim, primTy, loc), primTy, ctx
 
-  let ctx =
-    tyCtxUnifyTy ctx loc primTy ty
-    |> tyCtxAddTraitBounds traits
-
-  HPrimExpr(prim, primTy, loc), ctx
-
-let inferNil ctx loc listTy =
-  let itemTy, _, ctx = tyCtxFreshTyVar "item" loc ctx
-
-  let ctx =
-    tyCtxUnifyTy ctx loc listTy (tyList itemTy)
-
-  hxNil itemTy loc, ctx
+// expr: nil expr itself
+let inferNil ctx expr loc =
+  let itemTy, ctx = tyCtxFreshExprTy expr ctx
+  hxNil itemTy loc, tyList itemTy, ctx
 
 /// match 'a with ( | 'a -> 'b )*
-let inferMatch ctx target arms loc resultTy =
-  let targetTy, ctx = ctx |> tyCtxFreshExprTy target
-  let target, ctx = inferExpr ctx target targetTy
+// expr: match expr itself
+let inferMatch ctx expr cond arms loc =
+  let targetTy, ctx = tyCtxFreshExprTy expr ctx
+
+  let cond, condTy, ctx = inferExpr ctx cond
 
   let arms, ctx =
     (arms, ctx)
     |> stMap (fun ((pat, guard, body), ctx) ->
-         let pat, ctx = inferPat ctx pat targetTy
-         let guard, ctx = inferExpr ctx guard tyBool
-         let body, ctx = inferExpr ctx body resultTy
+         let pat, patTy, ctx = inferPat ctx pat
+
+         let ctx =
+           tyCtxUnifyTy ctx (patToLoc pat) patTy condTy
+
+         let guard, guardTy, ctx = inferExpr ctx guard
+
+         let ctx =
+           tyCtxUnifyTy ctx (exprToLoc guard) guardTy tyBool
+
+         let body, bodyTy, ctx = inferExpr ctx body
+
+         let ctx =
+           tyCtxUnifyTy ctx (exprToLoc body) targetTy bodyTy
+
          (pat, guard, body), ctx)
 
-  HMatchExpr(target, arms, resultTy, loc), ctx
+  HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
-let inferNav ctx sub mes loc resultTy =
+let inferNav ctx sub mes loc =
   let findTyDynamicMember ctx sub subTy =
     let subTy = tyCtxSubstTy ctx subTy
     match subTy, mes with
     | AppTy (StrTyCtor, []), "Length" ->
-        let ctx = tyCtxUnifyTy ctx loc resultTy tyInt
-
         let funExpr =
           HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
 
-        Some(hxApp funExpr sub tyInt loc, ctx)
+        Some(hxApp funExpr sub tyInt loc, tyInt, ctx)
     | _ -> None
 
-  let subTy, ctx = ctx |> tyCtxFreshExprTy sub
-  let sub, ctx = inferExpr ctx sub subTy
+  let sub, subTy, ctx = inferExpr ctx sub
 
   match findTyDynamicMember ctx sub subTy with
-  | Some (expr, ctx) -> expr, ctx
+  | Some (expr, ty, ctx) -> expr, ty, ctx
   | None ->
       let ctx =
         tyCtxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
 
-      hxAbort ctx resultTy loc
+      hxAbort ctx loc
 
-let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
+// expr: app expr itself
+let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
   match firstArg, arg with
   | HLitExpr (StrLit nativeFunIdent, _), HLitExpr (IntLit arity, _) ->
       let rec go ty arity ctx =
@@ -363,75 +391,85 @@ let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
           let argTy, _, ctx = tyCtxFreshTyVar "arg" loc ctx
           go (tyFun argTy ty) (arity - 1) ctx
 
-      let resultTy, _, ctx = tyCtxFreshTyVar "result" loc ctx
+      let resultTy, ctx = ctx |> tyCtxFreshExprTy expr
       let funTy, ctx = go resultTy arity ctx
-      let ctx = tyCtxUnifyTy ctx loc funTy appTy
-      HPrimExpr(HPrim.NativeFun(nativeFunIdent, arity), appTy, loc), ctx
-  | _ -> hxApp callee arg appTy loc, ctx
 
-let inferOpAppPrintfn ctx arg calleeTy loc =
+      let ctx =
+        tyCtxUnifyTy ctx loc funTy targetTy
+
+      HPrimExpr(HPrim.NativeFun(nativeFunIdent, arity), funTy, loc), funTy, ctx
+  | _ -> hxApp callee arg targetTy loc, targetTy, ctx
+
+let inferOpAppPrintfn ctx arg loc =
   match arg with
   | HLitExpr (StrLit format, _) ->
       let funTy = analyzeFormat format
-      let ctx = tyCtxUnifyTy ctx loc calleeTy funTy
-      HPrimExpr(HPrim.Printfn, calleeTy, loc), ctx
+      HPrimExpr(HPrim.Printfn, funTy, loc), funTy, ctx
   | _ ->
       let ctx =
         tyCtxAddErr ctx """First arg of printfn must be string literal, "..".""" loc
 
-      hxAbort ctx calleeTy loc
+      hxAbort ctx loc
 
-let inferOpApp ctx callee arg loc appTy =
-  let argTy, ctx = ctx |> tyCtxFreshExprTy arg
-  let arg, ctx = inferExpr ctx arg argTy
-  let callee, ctx = inferExpr ctx callee (tyFun argTy appTy)
+let inferOpApp ctx expr callee arg loc =
+  let targetTy, ctx = ctx |> tyCtxFreshExprTy expr
+  let arg, argTy, ctx = inferExpr ctx arg
+  let callee, calleeTy, ctx = inferExpr ctx callee
+
+  let ctx =
+    tyCtxUnifyTy ctx loc calleeTy (tyFun argTy targetTy)
+
   match callee with
   | HInfExpr (InfOp.App, [ HPrimExpr (HPrim.NativeFun _, _, _); firstArg ], _, _) ->
-      inferOpAppNativeFun ctx callee firstArg arg appTy loc
-  | HPrimExpr (HPrim.Printfn, calleeTy, loc) ->
-      let callee, ctx = inferOpAppPrintfn ctx arg calleeTy loc
-      hxApp callee arg appTy loc, ctx
-  | _ -> hxApp callee arg appTy loc, ctx
+      inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc
+  | HPrimExpr (HPrim.Printfn, _, loc) ->
+      let callee, calleeTy, ctx = inferOpAppPrintfn ctx arg loc
 
-let inferTuple (ctx: TyCtx) items loc tupleTy =
+      let ctx =
+        tyCtxUnifyTy ctx loc calleeTy (tyFun tyStr targetTy)
+
+      hxApp callee arg targetTy loc, targetTy, ctx
+  | _ -> hxApp callee arg targetTy loc, targetTy, ctx
+
+let inferTuple (ctx: TyCtx) items loc =
   let rec go acc itemTys ctx items =
     match items with
     | [] -> listRev acc, listRev itemTys, ctx
     | item :: items ->
-        let itemTy, ctx = ctx |> tyCtxFreshExprTy item
-        let item, ctx = inferExpr ctx item itemTy
+        let item, itemTy, ctx = inferExpr ctx item
         go (item :: acc) (itemTy :: itemTys) ctx items
 
   let items, itemTys, ctx = go [] [] ctx items
 
-  let ctx =
-    tyCtxUnifyTy ctx loc tupleTy (tyTuple itemTys)
+  hxTuple items loc, tyTuple itemTys, ctx
 
-  hxTuple items loc, ctx
+let inferAnno ctx body annoTy loc =
+  let body, bodyTy, ctx = inferExpr ctx body
 
-let inferAnno ctx expr annoTy ty loc =
-  let ctx = tyCtxUnifyTy ctx loc annoTy ty
-  inferExpr ctx expr annoTy
+  let ctx = tyCtxUnifyTy ctx loc bodyTy annoTy
 
-let inferLetVal ctx vis pat init next ty loc =
-  let initTy, ctx = ctx |> tyCtxFreshExprTy init
-  let init, ctx = inferExpr ctx init initTy
-  let pat, ctx = inferPat ctx pat initTy
-  let next, ctx = inferExpr ctx next ty
-  HLetValExpr(vis, pat, init, next, ty, loc), ctx
+  body, annoTy, ctx
 
-let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next ty loc =
+let inferLetVal ctx vis pat init next loc =
+  let init, initTy, ctx = inferExpr ctx init
+  let pat, patTy, ctx = inferPat ctx pat
+
+  let ctx = tyCtxUnifyTy ctx loc initTy patTy
+
+  let next, nextTy, ctx = inferExpr ctx next
+  HLetValExpr(vis, pat, init, next, nextTy, loc), nextTy, ctx
+
+let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next loc =
   /// Infers argument patterns,
   /// constructing function's type.
-  let rec inferArgs ctx bodyTy argPats =
+  let rec inferArgs ctx funTy argPats =
     match argPats with
-    | [] -> [], bodyTy, ctx
+    | [] -> [], funTy, ctx
 
     | argPat :: argPats ->
-        let argTy, ctx = ctx |> tyCtxFreshPatTy argPat
-        let pat, ctx = inferPat ctx argPat argTy
-        let pats, bodyTy, ctx = inferArgs ctx bodyTy argPats
-        pat :: pats, tyFun argTy bodyTy, ctx
+        let argPat, argTy, ctx = inferPat ctx argPat
+        let argPats, funTy, ctx = inferArgs ctx funTy argPats
+        argPat :: argPats, tyFun argTy funTy, ctx
 
   let outerLetDepth = ctx |> tyCtxGetLetDepth
   let ctx = ctx |> tyCtxIncLetDepth
@@ -450,60 +488,59 @@ let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next ty loc =
 
     calleeTy, ctx
 
-  let bodyTy, ctx = ctx |> tyCtxFreshExprTy body
-  let argPats, funTy, ctx = inferArgs ctx bodyTy argPats
+  let provisionalResultTy, ctx = ctx |> tyCtxFreshExprTy body
+
+  let argPats, funTy, ctx =
+    inferArgs ctx provisionalResultTy argPats
+
   let ctx = tyCtxUnifyTy ctx loc calleeTy funTy
 
-  let body, ctx = inferExpr ctx body bodyTy
+  let body, bodyTy, ctx = inferExpr ctx body
+
+  let ctx =
+    tyCtxUnifyTy ctx loc bodyTy provisionalResultTy
+
   let ctx = ctx |> tyCtxDecLetDepth
 
   let ctx =
     tyCtxGeneralizeFun ctx outerLetDepth varSerial
 
-  let next, ctx = inferExpr ctx next ty
-  HLetFunExpr(varSerial, vis, isMainFun, argPats, body, next, ty, loc), ctx
+  let next, nextTy, ctx = inferExpr ctx next
+  HLetFunExpr(varSerial, vis, isMainFun, argPats, body, next, nextTy, loc), nextTy, ctx
 
 /// Returns in reversed order.
-let inferExprs ctx exprs lastTy: HExpr list * TyCtx =
-  let rec go acc ctx exprs =
+let inferExprs ctx exprs loc: HExpr list * Ty * TyCtx =
+  let rec go acc (prevTy, prevLoc) ctx exprs =
     match exprs with
-    | [] -> acc, ctx
-    | [ expr ] ->
-        let expr, ctx = inferExpr ctx expr lastTy
-        expr :: acc, ctx
+    | [] -> acc, prevTy, ctx
     | expr :: exprs ->
-        let expr, ctx = inferExpr ctx expr tyUnit
-        go (expr :: acc) ctx exprs
+        let ctx = tyCtxUnifyTy ctx prevLoc prevTy tyUnit
 
-  go [] ctx exprs
+        let expr, ty, ctx = inferExpr ctx expr
+        go (expr :: acc) (ty, exprToLoc expr) ctx exprs
 
-let inferSemi ctx loc exprs lastTy =
-  let exprs, ctx = inferExprs ctx exprs lastTy
-  hxSemi (listRev exprs) loc, ctx
+  go [] (tyUnit, loc) ctx exprs
 
-let inferExprTyDecl ctx tySerial vis tyDecl loc =
-  HTyDeclExpr(tySerial, vis, tyDecl, loc), ctx
+let inferSemi ctx exprs loc =
+  let exprs, ty, ctx = inferExprs ctx exprs loc
+  hxSemi (listRev exprs) loc, ty, ctx
 
-let inferExprOpen ctx path ty loc =
-  let ctx = tyCtxUnifyTy ctx loc ty tyUnit
-  HOpenExpr(path, loc), ctx
-
-let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
+let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
   match expr with
-  | HLitExpr (lit, loc) -> expr, tyCtxUnifyTy ctx loc (litToTy lit) ty
-  | HRefExpr (serial, _, loc) -> inferRef ctx serial loc ty
-  | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc ty
-  | HMatchExpr (target, arms, _, loc) -> inferMatch ctx target arms loc ty
-  | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc ty
-  | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx callee arg loc ty
-  | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTuple ctx items loc ty
-  | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnno ctx expr annoTy ty loc
-  | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemi ctx loc exprs ty
-  | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetVal ctx vis pat body next ty loc
+  | HLitExpr (lit, _) -> expr, litToTy lit, ctx
+  | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
+  | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
+  | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expr cond arms loc
+  | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc
+  | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx expr callee arg loc
+  | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTuple ctx items loc
+  | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnno ctx expr annoTy loc
+  | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemi ctx exprs loc
+  | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetVal ctx vis pat body next loc
   | HLetFunExpr (oldSerial, vis, isMainFun, args, body, next, _, loc) ->
-      inferLetFun ctx oldSerial vis isMainFun args body next ty loc
-  | HTyDeclExpr (oldSerial, vis, tyDef, loc) -> inferExprTyDecl ctx oldSerial vis tyDef loc
-  | HOpenExpr (path, loc) -> inferExprOpen ctx path ty loc
+      inferLetFun ctx oldSerial vis isMainFun args body next loc
+  | HTyDeclExpr _
+  | HOpenExpr _ -> expr, tyUnit, ctx
   | HInfExpr (InfOp.Anno, _, _, _)
   | HInfExpr (InfOp.App, _, _, _)
   | HInfExpr (InfOp.Closure, _, _, _)
@@ -512,7 +549,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr) ty: HExpr * TyCtx =
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
   | HErrorExpr (error, loc) ->
       let ctx = tyCtxAddErr ctx error loc
-      hxAbort ctx ty loc
+      hxAbort ctx loc
 
 /// Replaces type vars embedded in exprs
 /// with inference results.
@@ -585,7 +622,13 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
 
   let ctx = ctx |> tyCtxWithLetDepth 0
 
-  let expr, ctx = inferExpr ctx expr tyUnit
+  let expr, ctx =
+    let expr, topLevelTy, ctx = inferExpr ctx expr
+
+    let ctx =
+      tyCtxUnifyTy ctx (exprToLoc expr) topLevelTy tyUnit
+
+    expr, ctx
 
   let ctx = ctx |> tyCtxResolveTraitBounds
 
