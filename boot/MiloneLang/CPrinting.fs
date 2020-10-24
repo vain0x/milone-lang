@@ -22,17 +22,17 @@ let join sep f (xs, acc) =
 
 let opStr op =
   match op with
-  | CBinOp.Add -> "+"
-  | CBinOp.Sub -> "-"
-  | CBinOp.Mul -> "*"
-  | CBinOp.Div -> "/"
-  | CBinOp.Mod -> "%"
-  | CBinOp.Eq -> "=="
-  | CBinOp.Ne -> "!="
-  | CBinOp.Lt -> "<"
-  | CBinOp.Le -> "<="
-  | CBinOp.Gt -> ">"
-  | CBinOp.Ge -> ">="
+  | CAddBinary -> "+"
+  | CSubBinary -> "-"
+  | CMulBinary -> "*"
+  | CDivBinary -> "/"
+  | CModBinary -> "%"
+  | CEqualBinary -> "=="
+  | CNotEqualBinary -> "!="
+  | CLessBinary -> "<"
+  | CLessEqualBinary -> "<="
+  | CGreaterBinary -> ">"
+  | CGreaterEqualBinary -> ">="
 
 let cprintTyFunPtr name argTys resultTy acc =
   let acc = cprintTy acc resultTy

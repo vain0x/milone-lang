@@ -624,25 +624,25 @@ type CUnary =
   | CNotUnary
   | CDerefUnary
 
-[<RequireQualifiedAccess>]
-type CBinOp =
-  | Mul
-  | Div
-  | Mod
-  | Add
-  | Sub
+/// Binary operators in C langauge.
+type CBinary =
+  | CMulBinary
+  | CDivBinary
+  | CModBinary
+  | CAddBinary
+  | CSubBinary
   /// Equal
-  | Eq
+  | CEqualBinary
   /// Not Equal
-  | Ne
+  | CNotEqualBinary
   /// Less than
-  | Lt
+  | CLessBinary
   /// Less than or equal to
-  | Le
+  | CLessEqualBinary
   /// Greater than
-  | Gt
+  | CGreaterBinary
   /// Greater than or equal to
-  | Ge
+  | CGreaterEqualBinary
 
 /// Expression in C language.
 [<RequireQualifiedAccess>]
@@ -665,7 +665,7 @@ type CExpr =
   | Index of CExpr * CExpr
   | Call of CExpr * args: CExpr list
   | Uni of CUnary * CExpr
-  | Bin of CBinOp * CExpr * CExpr
+  | Bin of CBinary * CExpr * CExpr
 
 /// Statement in C language.
 [<RequireQualifiedAccess>]

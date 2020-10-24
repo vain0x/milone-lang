@@ -447,15 +447,15 @@ let cirCtxGetCTys (tys, ctx) =
 
 let cOpFrom op =
   match op with
-  | MOp.Mul -> CBinOp.Mul
-  | MOp.Div -> CBinOp.Div
-  | MOp.Mod -> CBinOp.Mod
-  | MOp.Add -> CBinOp.Add
-  | MOp.Sub -> CBinOp.Sub
-  | MOp.Eq -> CBinOp.Eq
-  | MOp.Ne -> CBinOp.Ne
-  | MOp.Lt -> CBinOp.Lt
-  | MOp.Ge -> CBinOp.Ge
+  | MOp.Mul -> CMulBinary
+  | MOp.Div -> CDivBinary
+  | MOp.Mod -> CModBinary
+  | MOp.Add -> CAddBinary
+  | MOp.Sub -> CSubBinary
+  | MOp.Eq -> CEqualBinary
+  | MOp.Ne -> CNotEqualBinary
+  | MOp.Lt -> CLessBinary
+  | MOp.Ge -> CGreaterEqualBinary
   | MOp.StrAdd
   | MOp.StrCmp
   | MOp.StrIndex -> failwith "Never"
