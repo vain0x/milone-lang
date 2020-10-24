@@ -595,7 +595,7 @@ let parseFun basePos funPos (tokens, errors) =
   AFunExpr(pats, body, funPos), tokens, errors
 
 let parseParenBody basePos _parenPos (tokens, errors) =
-  // NOTE: Parens should form a layout bposk but not for now.
+  // NOTE: Parens should form a layout block but not for now.
   //  If does, `(` in `xs |> List.map (fun x -> body)` unexpectedly requires
   //  `body` to be deeper than it. This is one of flaws of the simplified layout rule.
   let body, tokens, errors = parseExpr basePos (tokens, errors)
@@ -922,8 +922,8 @@ let rec parseStmts basePos (tokens, errors) =
 /// Parses a sequence of expressions separated by `;`s
 /// or aligned on the same column.
 /// Contents must be deeper than or equal to `basePos`,
-/// which is typically the posation of `let`/`type`/`module`/etc.
-/// The `mainPos` is a hint of the semi expression's posation.
+/// which is typically the pos of `let`/`type`/`module`/etc.
+/// The `mainPos` is a hint of the semi expression's pos.
 /// `stmts = stmt ( ';' stmt )*`
 let parseSemi basePos mainPos (tokens, errors) =
   let basePos = nextPos tokens |> posMax basePos
@@ -936,7 +936,7 @@ let parseSemi basePos mainPos (tokens, errors) =
 
   | _ -> ASemiExpr(items, mainPos), tokens, errors
 
-/// `top-bp = ( 'module' 'rec'? path module-body / module-body )?`
+/// `top-level = ( 'module' 'rec'? path module-body / module-body )?`
 let parseTopLevel (tokens, errors) =
 
   match tokens with

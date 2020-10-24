@@ -1,7 +1,7 @@
 /// Entry point of the milone-lang compiler.
 module rec MiloneLang.EntryPoint
 
-// HACK: "Polyfills" module is automatically loaded by the bunlder and opened in name resolution.
+// HACK: "Polyfills" module is automatically loaded by the bundler and opened in name resolution.
 // open MiloneLang.Polyfills
 
 open MiloneLang.Records

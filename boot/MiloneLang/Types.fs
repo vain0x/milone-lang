@@ -598,7 +598,7 @@ type CUnary =
   | CNotUnary
   | CDerefUnary
 
-/// Binary operators in C langauge.
+/// Binary operators in C language.
 type CBinary =
   | CMulBinary
   | CDivBinary
