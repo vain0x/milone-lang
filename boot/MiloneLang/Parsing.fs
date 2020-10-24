@@ -787,7 +787,7 @@ let parsePrefix basePos (tokens, errors) =
   match tokens with
   | (MinusToken, pos) :: tokens ->
       let arg, tokens, errors = parseApp basePos (tokens, errors)
-      AExpr.Uni(UniOp.Neg, arg, pos), tokens, errors
+      AExpr.Uni(NegUnary, arg, pos), tokens, errors
 
   | _ -> parseApp basePos (tokens, errors)
 

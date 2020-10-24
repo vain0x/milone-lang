@@ -372,7 +372,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-  | AExpr.Uni (UniOp.Neg, arg, pos) ->
+  | AExpr.Uni (NegUnary, arg, pos) ->
       let doArm () =
         let expr = desugarUniNeg arg pos
         (expr, nameCtx) |> astToHirExpr docId

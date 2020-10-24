@@ -139,10 +139,9 @@ type Token =
   | WithToken
 
 /// Unary operators in AST.
-[<RequireQualifiedAccess>]
-type UniOp =
+type Unary =
   /// `-`
-  | Neg
+  | NegUnary
 
 /// Precedence level of binary operators.
 [<RequireQualifiedAccess>]
@@ -265,7 +264,7 @@ type AExpr =
   | Index of AExpr * AExpr * Pos
   /// Unary operation, e.g. `-x`.
   /// Currently `-` is the only unary operation.
-  | Uni of UniOp * AExpr * Pos
+  | Uni of Unary * AExpr * Pos
   /// Binary operation, e.g. `x + y`.
   | Bin of Op * AExpr * AExpr * Pos
   /// Range syntax, e.g. `first..last`, `first .. step .. last`.
