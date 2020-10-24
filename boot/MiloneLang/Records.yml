@@ -109,7 +109,7 @@ MirCtx:
 CirCtx:
   Vars: AssocMap<VarSerial, VarDef>
   VarUniqueNames: AssocMap<VarSerial, Ident>
-  TyEnv: AssocMap<Ty, TyInstance * CTy>
+  TyEnv: AssocMap<Ty, CTyInstance * CTy>
   Tys: AssocMap<TySerial, TyDef>
   TyUniqueNames: AssocMap<Ty, Ident>
   Stmts: CStmt list

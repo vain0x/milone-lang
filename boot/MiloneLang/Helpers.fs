@@ -832,13 +832,14 @@ let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
 /// i.e. whether it can be the first token of an expression or pattern.
 let tokenIsExprOrPatFirst (token: Token) =
   match token with
-  | Token.Bool _
-  | Token.Int _
-  | Token.Char _
-  | Token.Str _
-  | Token.Ident _
-  | Token.ParenL
-  | Token.BracketL -> true
+  | IntToken _
+  | CharToken _
+  | StrToken _
+  | IdentToken _
+  | LeftParenToken
+  | LeftBracketToken
+  | FalseToken
+  | TrueToken -> true
 
   | _ -> false
 
@@ -847,21 +848,21 @@ let tokenIsExprFirst (token: Token) =
   match token with
   | _ when tokenIsExprOrPatFirst token -> true
 
-  | Token.Minus
-  | Token.If
-  | Token.Match
-  | Token.Fun
-  | Token.Do
-  | Token.Let
-  | Token.Type
-  | Token.Open -> true
+  | MinusToken
+  | IfToken
+  | MatchToken
+  | FunToken
+  | DoToken
+  | LetToken
+  | TypeToken
+  | OpenToken -> true
 
   | _ -> false
 
 /// In the first set of arguments?
 let tokenIsArgFirst (token: Token) =
   match token with
-  | Token.Minus -> false
+  | MinusToken -> false
 
   | _ -> tokenIsExprFirst token
 
@@ -869,61 +870,61 @@ let tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
 
 let tokenAsVis token =
   match token with
-  | Token.Private -> Some PrivateVis
-  | Token.Internal
-  | Token.Public -> Some PublicVis
+  | PrivateToken -> Some PrivateVis
+  | InternalToken
+  | PublicToken -> Some PublicVis
 
   | _ -> None
 
 // -----------------------------------------------
-// OpLevel
+// Bp
 // -----------------------------------------------
 
-let opLevelToNext level =
-  match level with
-  | OpLevel.Or -> OpLevel.And
+let bpNext bp =
+  match bp with
+  | OrBp -> AndBp
 
-  | OpLevel.And -> OpLevel.Cmp
+  | AndBp -> CmpBp
 
-  | OpLevel.Cmp -> OpLevel.Pipe
+  | CmpBp -> PipeBp
 
-  | OpLevel.Pipe -> OpLevel.Cons
+  | PipeBp -> ConsBp
 
-  | OpLevel.Cons -> OpLevel.Add
+  | ConsBp -> AddBp
 
-  | OpLevel.Add -> OpLevel.Mul
+  | AddBp -> MulBp
 
-  | OpLevel.Mul
-  | OpLevel.Prefix -> OpLevel.Prefix
+  | MulBp
+  | PrefixBp -> PrefixBp
 
 // -----------------------------------------------
 // APat
 // -----------------------------------------------
 
-let apFalse loc = APat.Lit(litFalse, loc)
+let apFalse loc = ALitPat(litFalse, loc)
 
-let apTrue loc = APat.Lit(litTrue, loc)
+let apTrue loc = ALitPat(litTrue, loc)
 
 // -----------------------------------------------
 // AExpr
 // -----------------------------------------------
 
-let axUnit loc = AExpr.TupleLit([], loc)
+let axUnit loc = ATupleExpr([], loc)
 
-let axFalse loc = AExpr.Lit(litFalse, loc)
+let axFalse loc = ALitExpr(litFalse, loc)
 
-let axTrue loc = AExpr.Lit(litTrue, loc)
+let axTrue loc = ALitExpr(litTrue, loc)
 
-let axNil loc = AExpr.ListLit([], loc)
+let axNil loc = AListExpr([], loc)
 
 let axApp3 f x1 x2 x3 loc =
-  let app x f = AExpr.Bin(Op.App, f, x, loc)
+  let app x f = ABinaryExpr(AppBinary, f, x, loc)
   f |> app x1 |> app x2 |> app x3
 
 /// `not x` ==> `x = false`
 let axNot arg loc =
   let falseExpr = axFalse loc
-  AExpr.Bin(Op.Eq, arg, falseExpr, loc)
+  ABinaryExpr(EqualBinary, arg, falseExpr, loc)
 
 // -----------------------------------------------
 // DumpTree (for debugging)
@@ -1029,37 +1030,37 @@ let nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
   NameTree map
 
 // -----------------------------------------------
-// TyCon
+// TyCtor
 // -----------------------------------------------
 
-let tyConToInt tyCon =
-  match tyCon with
-  | TyCon.Bool -> 1
+let tyCtorToInt tyCtor =
+  match tyCtor with
+  | BoolTyCtor -> 1
 
-  | TyCon.Int -> 2
+  | IntTyCtor -> 2
 
-  | TyCon.Char -> 3
+  | CharTyCtor -> 3
 
-  | TyCon.Str -> 4
+  | StrTyCtor -> 4
 
-  | TyCon.Obj -> 5
+  | ObjTyCtor -> 5
 
-  | TyCon.Fun -> 6
+  | FunTyCtor -> 6
 
-  | TyCon.Tuple -> 7
+  | TupleTyCtor -> 7
 
-  | TyCon.List -> 8
+  | ListTyCtor -> 8
 
-  | TyCon.Ref tySerial ->
+  | RefTyCtor tySerial ->
       assert (tySerial >= 0)
       9 + tySerial
 
-let tyConHash tyCon = tyCon |> tyConToInt |> intHash
+let tyCtorHash tyCtor = tyCtor |> tyCtorToInt |> intHash
 
-let tyConCmp first second =
-  intCmp (tyConToInt first) (tyConToInt second)
+let tyCtorCmp first second =
+  intCmp (tyCtorToInt first) (tyCtorToInt second)
 
-let tyConEq first second = tyConCmp first second = 0
+let tyCtorEq first second = tyCtorCmp first second = 0
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -1067,45 +1068,45 @@ let tyConEq first second = tyConCmp first second = 0
 
 let traitMapTys f it =
   match it with
-  | Trait.Add ty -> Trait.Add(f ty)
+  | AddTrait ty -> AddTrait(f ty)
 
-  | Trait.Eq ty -> Trait.Eq(f ty)
+  | EqTrait ty -> EqTrait(f ty)
 
-  | Trait.Cmp ty -> Trait.Cmp(f ty)
+  | CmpTrait ty -> CmpTrait(f ty)
 
-  | Trait.Index (lTy, rTy, outputTy) -> Trait.Index(f lTy, f rTy, f outputTy)
+  | IndexTrait (lTy, rTy, outputTy) -> IndexTrait(f lTy, f rTy, f outputTy)
 
-  | Trait.ToInt ty -> Trait.ToInt(f ty)
+  | ToIntTrait ty -> ToIntTrait(f ty)
 
-  | Trait.ToString ty -> Trait.ToString(f ty)
+  | ToStringTrait ty -> ToStringTrait(f ty)
 
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
 
 /// Placeholder. No type info in the parsing phase.
-let noTy = Ty.Error noLoc
+let noTy = ErrorTy noLoc
 
-let tyBool = Ty.Con(TyCon.Bool, [])
+let tyBool = AppTy(BoolTyCtor, [])
 
-let tyInt = Ty.Con(TyCon.Int, [])
+let tyInt = AppTy(IntTyCtor, [])
 
-let tyChar = Ty.Con(TyCon.Char, [])
+let tyChar = AppTy(CharTyCtor, [])
 
-let tyStr = Ty.Con(TyCon.Str, [])
+let tyStr = AppTy(StrTyCtor, [])
 
-let tyObj = Ty.Con(TyCon.Obj, [])
+let tyObj = AppTy(ObjTyCtor, [])
 
-let tyTuple tys = Ty.Con(TyCon.Tuple, tys)
+let tyTuple tys = AppTy(TupleTyCtor, tys)
 
-let tyList ty = Ty.Con(TyCon.List, [ ty ])
+let tyList ty = AppTy(ListTyCtor, [ ty ])
 
 let tyFun sourceTy targetTy =
-  Ty.Con(TyCon.Fun, [ sourceTy; targetTy ])
+  AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
 let tyUnit = tyTuple []
 
-let tyRef serial tys = Ty.Con(TyCon.Ref serial, tys)
+let tyRef serial tys = AppTy(RefTyCtor serial, tys)
 
 let tyAssocMap keyTy valueTy =
   let assocTy = tyList (tyTuple [ keyTy; valueTy ])
@@ -1116,40 +1117,40 @@ let tyAssocMap keyTy valueTy =
 
 let tyToHash ty =
   match ty with
-  | Ty.Error (docId, y, x) ->
+  | ErrorTy (docId, y, x) ->
       1
       |> hashCombine (strHash docId)
       |> hashCombine y
       |> hashCombine x
 
-  | Ty.Meta (tySerial, _) -> intHash (2 + tySerial)
+  | MetaTy (tySerial, _) -> intHash (2 + tySerial)
 
-  | Ty.Con (tyCon, tys) ->
+  | AppTy (tyCtor, tys) ->
       let rec go h tys =
         match tys with
         | [] -> h
 
         | ty :: tys -> go (hashCombine h (tyToHash ty)) tys
 
-      intHash (3 + go (tyConHash tyCon) tys)
+      intHash (3 + go (tyCtorHash tyCtor) tys)
 
 let tyCmp first second =
   match first, second with
-  | Ty.Error first, Ty.Error second -> locCmp first second
+  | ErrorTy first, ErrorTy second -> locCmp first second
 
-  | Ty.Error _, _ -> -1
+  | ErrorTy _, _ -> -1
 
-  | _, Ty.Error _ -> 1
+  | _, ErrorTy _ -> 1
 
-  | Ty.Meta (firstSerial, firstLoc), Ty.Meta (secondSerial, secondLoc) ->
+  | MetaTy (firstSerial, firstLoc), MetaTy (secondSerial, secondLoc) ->
       if firstSerial <> secondSerial then intCmp firstSerial secondSerial else locCmp firstLoc secondLoc
 
-  | Ty.Meta _, _ -> -1
+  | MetaTy _, _ -> -1
 
-  | _, Ty.Meta _ -> 1
+  | _, MetaTy _ -> 1
 
-  | Ty.Con (firstTyCon, firstTys), Ty.Con (secondTyCon, secondTys) ->
-      let c = tyConCmp firstTyCon secondTyCon
+  | AppTy (firstTyCtor, firstTys), AppTy (secondTyCtor, secondTys) ->
+      let c = tyCtorCmp firstTyCtor secondTyCtor
       if c <> 0 then
         c
       else
@@ -1193,18 +1194,18 @@ let tyPrimFromIdent ident tys loc =
 
   | "AssocSet", [ itemTy ] -> tyAssocMap itemTy tyUnit
 
-  | _ -> Ty.Error loc
+  | _ -> ErrorTy loc
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
     match ty with
-    | Ty.Error _
-    | Ty.Con (_, []) -> true
+    | ErrorTy _
+    | AppTy (_, []) -> true
 
-    | Ty.Con (tyCon, ty :: tys) -> go ty && go (Ty.Con(tyCon, tys))
+    | AppTy (tyCtor, ty :: tys) -> go ty && go (AppTy(tyCtor, tys))
 
-    | Ty.Meta (s, _) -> s <> tySerial
+    | MetaTy (s, _) -> s <> tySerial
 
   go ty
 
@@ -1215,11 +1216,11 @@ let tyIsMonomorphic ty: bool =
     match tys with
     | [] -> true
 
-    | Ty.Meta _ :: _ -> false
+    | MetaTy _ :: _ -> false
 
-    | Ty.Error _ :: tys -> go tys
+    | ErrorTy _ :: tys -> go tys
 
-    | Ty.Con (_, tys1) :: tys2 -> go tys1 && go tys2
+    | AppTy (_, tys1) :: tys2 -> go tys1 && go tys2
 
   go [ ty ]
 
@@ -1230,15 +1231,15 @@ let tyCollectFreeVars ty =
     match tys with
     | [] -> fvAcc
 
-    | Ty.Error _ :: tys
-    | Ty.Con (_, []) :: tys -> go fvAcc tys
+    | ErrorTy _ :: tys
+    | AppTy (_, []) :: tys -> go fvAcc tys
 
-    | Ty.Con (_, tys1) :: tys2 ->
+    | AppTy (_, tys1) :: tys2 ->
         let acc = go fvAcc tys1
         let acc = go acc tys2
         acc
 
-    | Ty.Meta (serial, _) :: tys ->
+    | MetaTy (serial, _) :: tys ->
         let acc = serial :: fvAcc
         go acc tys
 
@@ -1246,14 +1247,14 @@ let tyCollectFreeVars ty =
 
 let rec tyToArity ty =
   match ty with
-  | Ty.Con (TyCon.Fun, [ _; ty ]) -> 1 + tyToArity ty
+  | AppTy (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty
   | _ -> 0
 
 /// Converts nested function type to multi-arguments function type.
 let rec tyToArgList ty =
   let rec go n acc ty =
     match ty with
-    | Ty.Con (TyCon.Fun, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
+    | AppTy (FunTyCtor, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
     | tTy -> n, listRev acc, tTy
 
   go 0 [] ty
@@ -1262,12 +1263,12 @@ let rec tyToArgList ty =
 let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
     match ty with
-    | Ty.Error _
-    | Ty.Con (_, []) -> ty
+    | ErrorTy _
+    | AppTy (_, []) -> ty
 
-    | Ty.Con (tyCon, tys) -> Ty.Con(tyCon, listMap go tys)
+    | AppTy (tyCtor, tys) -> AppTy(tyCtor, listMap go tys)
 
-    | Ty.Meta (tySerial, _) ->
+    | MetaTy (tySerial, _) ->
         match substMeta tySerial with
         | Some ty -> go ty
 
@@ -1281,9 +1282,9 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 
 let tyDefToIdent tyDef =
   match tyDef with
-  | TyDef.Meta (ident, _, _) -> ident
-  | TyDef.Union (ident, _, _) -> ident
-  | TyDef.Module (ident, _) -> ident
+  | MetaTyDef (ident, _, _) -> ident
+  | UnionTyDef (ident, _, _) -> ident
+  | ModuleTyDef (ident, _) -> ident
 
 // -----------------------------------------------
 // Variable definitions (HIR)
@@ -1291,24 +1292,24 @@ let tyDefToIdent tyDef =
 
 let varDefToIdent varDef =
   match varDef with
-  | VarDef.Var (ident, _, _, _) -> ident
-  | VarDef.Fun (ident, _, _, _) -> ident
-  | VarDef.Variant (ident, _, _, _, _, _) -> ident
+  | VarDef (ident, _, _, _) -> ident
+  | FunDef (ident, _, _, _) -> ident
+  | VariantDef (ident, _, _, _, _, _) -> ident
 
 // -----------------------------------------------
 // Literals
 // -----------------------------------------------
 
-let litTrue = Lit.Bool true
+let litTrue = BoolLit true
 
-let litFalse = Lit.Bool false
+let litFalse = BoolLit false
 
 let litToTy (lit: Lit): Ty =
   match lit with
-  | Lit.Bool _ -> tyBool
-  | Lit.Int _ -> tyInt
-  | Lit.Char _ -> tyChar
-  | Lit.Str _ -> tyStr
+  | BoolLit _ -> tyBool
+  | IntLit _ -> tyInt
+  | CharLit _ -> tyChar
+  | StrLit _ -> tyStr
 
 // -----------------------------------------------
 // Primitives (HIR)
@@ -1345,14 +1346,14 @@ let primFromIdent ident =
   | _ -> None
 
 let primToTySpec prim =
-  let meta id = Ty.Meta(id, noLoc)
+  let meta id = MetaTy(id, noLoc)
   let mono ty = TySpec(ty, [])
   let poly ty traits = TySpec(ty, traits)
 
   match prim with
   | HPrim.Add ->
       let addTy = meta 1
-      poly (tyFun addTy (tyFun addTy addTy)) [ Trait.Add addTy ]
+      poly (tyFun addTy (tyFun addTy addTy)) [ AddTrait addTy ]
 
   | HPrim.Sub -> mono (tyFun tyInt (tyFun tyInt tyInt))
 
@@ -1364,11 +1365,11 @@ let primToTySpec prim =
 
   | HPrim.Eq ->
       let eqTy = meta 1
-      poly (tyFun eqTy (tyFun eqTy tyBool)) [ Trait.Eq eqTy ]
+      poly (tyFun eqTy (tyFun eqTy tyBool)) [ EqTrait eqTy ]
 
   | HPrim.Lt ->
       let cmpTy = meta 1
-      poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ Trait.Cmp cmpTy ]
+      poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ CmpTrait cmpTy ]
 
   | HPrim.Nil ->
       let itemTy = meta 1
@@ -1392,7 +1393,7 @@ let primToTySpec prim =
       let lTy = meta 1
       let rTy = meta 2
       let resultTy = meta 3
-      poly (tyFun lTy (tyFun rTy resultTy)) [ Trait.Index(lTy, rTy, resultTy) ]
+      poly (tyFun lTy (tyFun rTy resultTy)) [ IndexTrait(lTy, rTy, resultTy) ]
 
   | HPrim.Not -> mono (tyFun tyBool tyBool)
 
@@ -1416,11 +1417,11 @@ let primToTySpec prim =
 
   | HPrim.Int ->
       let toIntTy = meta 1
-      poly (tyFun toIntTy tyInt) [ Trait.ToInt toIntTy ]
+      poly (tyFun toIntTy tyInt) [ ToIntTrait toIntTy ]
 
   | HPrim.String ->
       let toStrTy = meta 1
-      poly (tyFun toStrTy tyStr) [ Trait.ToString toStrTy ]
+      poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
 
   | HPrim.StrLength -> mono (tyFun tyStr tyInt)
 
@@ -1463,44 +1464,44 @@ let primToArity ty prim =
 // Patterns (HIR)
 // -----------------------------------------------
 
-let patUnit loc = HPat.Tuple([], tyUnit, loc)
+let patUnit loc = HTuplePat([], tyUnit, loc)
 
-let patNil itemTy loc = HPat.Nil(itemTy, loc)
+let patNil itemTy loc = HNilPat(itemTy, loc)
 
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
-  | HPat.Lit (lit, a) -> litToTy lit, a
-  | HPat.Nil (itemTy, a) -> tyList itemTy, a
-  | HPat.OptionNone (itemTy, a) -> tyList itemTy, a
-  | HPat.OptionSome (itemTy, a) -> tyList itemTy, a
-  | HPat.Discard (ty, a) -> ty, a
-  | HPat.Ref (_, ty, a) -> ty, a
-  | HPat.Nav (_, _, ty, a) -> ty, a
-  | HPat.Call (_, _, ty, a) -> ty, a
-  | HPat.Cons (_, _, itemTy, a) -> tyList itemTy, a
-  | HPat.Tuple (_, ty, a) -> ty, a
-  | HPat.As (pat, _, a) ->
+  | HLitPat (lit, a) -> litToTy lit, a
+  | HNilPat (itemTy, a) -> tyList itemTy, a
+  | HNonePat (itemTy, a) -> tyList itemTy, a
+  | HSomePat (itemTy, a) -> tyList itemTy, a
+  | HDiscardPat (ty, a) -> ty, a
+  | HRefPat (_, ty, a) -> ty, a
+  | HNavPat (_, _, ty, a) -> ty, a
+  | HCallPat (_, _, ty, a) -> ty, a
+  | HConsPat (_, _, itemTy, a) -> tyList itemTy, a
+  | HTuplePat (_, ty, a) -> ty, a
+  | HAsPat (pat, _, a) ->
       let ty, _ = patExtract pat
       ty, a
-  | HPat.Anno (_, ty, a) -> ty, a
-  | HPat.Or (_, _, ty, a) -> ty, a
+  | HAnnoPat (_, ty, a) -> ty, a
+  | HOrPat (_, _, ty, a) -> ty, a
 
 let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
   let rec go pat =
     match pat with
-    | HPat.Lit (lit, a) -> HPat.Lit(lit, g a)
-    | HPat.Nil (itemTy, a) -> HPat.Nil(f itemTy, g a)
-    | HPat.OptionNone (itemTy, a) -> HPat.OptionNone(f itemTy, g a)
-    | HPat.OptionSome (itemTy, a) -> HPat.OptionSome(f itemTy, g a)
-    | HPat.Discard (ty, a) -> HPat.Discard(f ty, g a)
-    | HPat.Ref (serial, ty, a) -> HPat.Ref(serial, f ty, g a)
-    | HPat.Nav (pat, ident, ty, a) -> HPat.Nav(go pat, ident, f ty, g a)
-    | HPat.Call (callee, args, ty, a) -> HPat.Call(go callee, listMap go args, f ty, g a)
-    | HPat.Cons (l, r, itemTy, a) -> HPat.Cons(go l, go r, f itemTy, g a)
-    | HPat.Tuple (itemPats, ty, a) -> HPat.Tuple(listMap go itemPats, f ty, g a)
-    | HPat.As (pat, serial, a) -> HPat.As(go pat, serial, g a)
-    | HPat.Anno (pat, ty, a) -> HPat.Anno(go pat, f ty, g a)
-    | HPat.Or (first, second, ty, a) -> HPat.Or(go first, go second, f ty, g a)
+    | HLitPat (lit, a) -> HLitPat(lit, g a)
+    | HNilPat (itemTy, a) -> HNilPat(f itemTy, g a)
+    | HNonePat (itemTy, a) -> HNonePat(f itemTy, g a)
+    | HSomePat (itemTy, a) -> HSomePat(f itemTy, g a)
+    | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
+    | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
+    | HNavPat (pat, ident, ty, a) -> HNavPat(go pat, ident, f ty, g a)
+    | HCallPat (callee, args, ty, a) -> HCallPat(go callee, listMap go args, f ty, g a)
+    | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
+    | HTuplePat (itemPats, ty, a) -> HTuplePat(listMap go itemPats, f ty, g a)
+    | HAsPat (pat, serial, a) -> HAsPat(go pat, serial, g a)
+    | HAnnoPat (pat, ty, a) -> HAnnoPat(go pat, f ty, g a)
+    | HOrPat (first, second, ty, a) -> HOrPat(go first, go second, f ty, g a)
 
   go pat
 
@@ -1509,26 +1510,26 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
 let patNormalize pat =
   let rec go pat =
     match pat with
-    | HPat.Lit _
-    | HPat.Discard _
-    | HPat.Ref _
-    | HPat.Nil _
-    | HPat.OptionNone _
-    | HPat.OptionSome _ -> [ pat ]
-    | HPat.Nav (pat, ident, ty, loc) ->
+    | HLitPat _
+    | HDiscardPat _
+    | HRefPat _
+    | HNilPat _
+    | HNonePat _
+    | HSomePat _ -> [ pat ]
+    | HNavPat (pat, ident, ty, loc) ->
         go pat
-        |> listMap (fun pat -> HPat.Nav(pat, ident, ty, loc))
-    | HPat.Call (callee, [ arg ], ty, loc) ->
+        |> listMap (fun pat -> HNavPat(pat, ident, ty, loc))
+    | HCallPat (callee, [ arg ], ty, loc) ->
         go callee
         |> listCollect (fun callee ->
              go arg
-             |> listMap (fun arg -> HPat.Call(callee, [ arg ], ty, loc)))
-    | HPat.Cons (l, r, ty, loc) ->
+             |> listMap (fun arg -> HCallPat(callee, [ arg ], ty, loc)))
+    | HConsPat (l, r, ty, loc) ->
         go l
         |> listCollect (fun l ->
              go r
-             |> listMap (fun r -> HPat.Cons(l, r, ty, loc)))
-    | HPat.Tuple (itemPats, ty, loc) ->
+             |> listMap (fun r -> HConsPat(l, r, ty, loc)))
+    | HTuplePat (itemPats, ty, loc) ->
         let rec gogo itemPats =
           match itemPats with
           | [] -> [ [] ]
@@ -1540,16 +1541,16 @@ let patNormalize pat =
                    |> listMap (fun itemPat -> itemPat :: itemPats))
 
         gogo itemPats
-        |> listMap (fun itemPats -> HPat.Tuple(itemPats, ty, loc))
-    | HPat.As (innerPat, _, _) ->
+        |> listMap (fun itemPats -> HTuplePat(itemPats, ty, loc))
+    | HAsPat (innerPat, _, _) ->
         match go innerPat with
         | [ _ ] -> [ pat ]
         | _ -> failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
-    | HPat.Anno (pat, annoTy, loc) ->
+    | HAnnoPat (pat, annoTy, loc) ->
         go pat
-        |> listMap (fun pat -> HPat.Anno(pat, annoTy, loc))
-    | HPat.Or (first, second, _, _) -> listAppend (go first) (go second)
-    | HPat.Call _ -> failwith "Unimpl"
+        |> listMap (fun pat -> HAnnoPat(pat, annoTy, loc))
+    | HOrPat (first, second, _, _) -> listAppend (go first) (go second)
+    | HCallPat _ -> failwith "Unimpl"
 
   go pat
 
@@ -1557,79 +1558,79 @@ let patNormalize pat =
 // Expressions (HIR)
 // -----------------------------------------------
 
-let hxTrue loc = HExpr.Lit(litTrue, loc)
+let hxTrue loc = HLitExpr(litTrue, loc)
 
-let hxFalse loc = HExpr.Lit(litFalse, loc)
+let hxFalse loc = HLitExpr(litFalse, loc)
 
-let hxApp f x ty loc = HExpr.Inf(InfOp.App, [ f; x ], ty, loc)
+let hxApp f x ty loc = HInfExpr(InfOp.App, [ f; x ], ty, loc)
 
-let hxAnno expr ty loc = HExpr.Inf(InfOp.Anno, [ expr ], ty, loc)
+let hxAnno expr ty loc = HInfExpr(InfOp.Anno, [ expr ], ty, loc)
 
 let hxSemi items loc =
-  HExpr.Inf(InfOp.Semi, items, exprToTy (listLast items), loc)
+  HInfExpr(InfOp.Semi, items, exprToTy (listLast items), loc)
 
 let hxCallProc callee args resultTy loc =
-  HExpr.Inf(InfOp.CallProc, callee :: args, resultTy, loc)
+  HInfExpr(InfOp.CallProc, callee :: args, resultTy, loc)
 
 let hxCallClosure callee args resultTy loc =
-  HExpr.Inf(InfOp.CallClosure, callee :: args, resultTy, loc)
+  HInfExpr(InfOp.CallClosure, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HExpr.Inf(InfOp.Tuple, items, tyTuple (listMap exprToTy items), loc)
+  HInfExpr(InfOp.Tuple, items, tyTuple (listMap exprToTy items), loc)
 
 let hxUnit loc = hxTuple [] loc
 
 let hxNil itemTy loc =
-  HExpr.Prim(HPrim.Nil, tyList itemTy, loc)
+  HPrimExpr(HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
-  | HExpr.Inf (InfOp.Tuple, [], _, _) -> true
+  | HInfExpr (InfOp.Tuple, [], _, _) -> true
   | _ -> false
 
 let hxIsAlwaysTrue expr =
   match expr with
-  | HExpr.Lit (Lit.Bool true, _) -> true
+  | HLitExpr (BoolLit true, _) -> true
   | _ -> false
 
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
-  | HExpr.Lit (lit, a) -> litToTy lit, a
-  | HExpr.Ref (_, ty, a) -> ty, a
-  | HExpr.Prim (_, ty, a) -> ty, a
-  | HExpr.Match (_, _, ty, a) -> ty, a
-  | HExpr.Nav (_, _, ty, a) -> ty, a
-  | HExpr.Inf (_, _, ty, a) -> ty, a
-  | HExpr.Let (_, _, _, _, ty, a) -> ty, a
-  | HExpr.LetFun (_, _, _, _, _, _, ty, a) -> ty, a
-  | HExpr.TyDecl (_, _, _, a) -> tyUnit, a
-  | HExpr.Open (_, a) -> tyUnit, a
-  | HExpr.Module (_, _, _, a) -> tyUnit, a
-  | HExpr.Error (_, a) -> Ty.Error a, a
+  | HLitExpr (lit, a) -> litToTy lit, a
+  | HRefExpr (_, ty, a) -> ty, a
+  | HPrimExpr (_, ty, a) -> ty, a
+  | HMatchExpr (_, _, ty, a) -> ty, a
+  | HNavExpr (_, _, ty, a) -> ty, a
+  | HInfExpr (_, _, ty, a) -> ty, a
+  | HLetValExpr (_, _, _, _, ty, a) -> ty, a
+  | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
+  | HTyDeclExpr (_, _, _, a) -> tyUnit, a
+  | HOpenExpr (_, a) -> tyUnit, a
+  | HModuleExpr (_, _, _, a) -> tyUnit, a
+  | HErrorExpr (_, a) -> ErrorTy a, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat = patMap f g pat
 
   let rec go expr =
     match expr with
-    | HExpr.Lit (lit, a) -> HExpr.Lit(lit, g a)
-    | HExpr.Ref (serial, ty, a) -> HExpr.Ref(serial, f ty, g a)
-    | HExpr.Prim (prim, ty, a) -> HExpr.Prim(prim, f ty, g a)
-    | HExpr.Match (target, arms, ty, a) ->
+    | HLitExpr (lit, a) -> HLitExpr(lit, g a)
+    | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
+    | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
+    | HMatchExpr (target, arms, ty, a) ->
         let arms =
           arms
           |> listMap (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-        HExpr.Match(go target, arms, f ty, g a)
-    | HExpr.Nav (sub, mes, ty, a) -> HExpr.Nav(go sub, mes, f ty, g a)
-    | HExpr.Inf (infOp, args, resultTy, a) -> HExpr.Inf(infOp, listMap go args, f resultTy, g a)
-    | HExpr.Let (vis, pat, init, next, ty, a) -> HExpr.Let(vis, goPat pat, go init, go next, f ty, g a)
-    | HExpr.LetFun (serial, vis, isMainFun, args, body, next, ty, a) ->
-        HExpr.LetFun(serial, vis, isMainFun, listMap goPat args, go body, go next, f ty, g a)
-    | HExpr.TyDecl (serial, vis, tyDef, a) -> HExpr.TyDecl(serial, vis, tyDef, g a)
-    | HExpr.Open (path, a) -> HExpr.Open(path, g a)
-    | HExpr.Module (ident, body, next, a) -> HExpr.Module(ident, go body, go next, g a)
-    | HExpr.Error (error, a) -> HExpr.Error(error, g a)
+        HMatchExpr(go target, arms, f ty, g a)
+    | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
+    | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, listMap go args, f resultTy, g a)
+    | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
+    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, a) ->
+        HLetFunExpr(serial, vis, isMainFun, listMap goPat args, go body, go next, f ty, g a)
+    | HTyDeclExpr (serial, vis, tyDef, a) -> HTyDeclExpr(serial, vis, tyDef, g a)
+    | HOpenExpr (path, a) -> HOpenExpr(path, g a)
+    | HModuleExpr (ident, body, next, a) -> HModuleExpr(ident, go body, go next, g a)
+    | HErrorExpr (error, a) -> HErrorExpr(error, g a)
 
   go expr
 
@@ -1643,31 +1644,31 @@ let exprToTy expr =
 
 let mOpIsAdd op =
   match op with
-  | MOp.Add -> true
+  | MAddBinary -> true
 
   | _ -> false
 
 let opIsComparison op =
   match op with
-  | MOp.Eq
-  | MOp.Lt -> true
+  | MEqualBinary
+  | MLessBinary -> true
   | _ -> false
 
 // -----------------------------------------------
 // Expressions (MIR)
 // -----------------------------------------------
 
-let mxNot expr loc = MExpr.Uni(MUniOp.Not, expr, tyBool, loc)
+let mxNot expr loc = MUnaryExpr(MNotUnary, expr, tyBool, loc)
 
 let mexprExtract expr =
   match expr with
-  | MExpr.Default (ty, loc) -> ty, loc
-  | MExpr.Lit (lit, loc) -> litToTy lit, loc
-  | MExpr.Ref (_, ty, loc) -> ty, loc
-  | MExpr.Proc (_, ty, loc) -> ty, loc
-  | MExpr.Variant (_, _, ty, loc) -> ty, loc
-  | MExpr.Uni (_, _, ty, loc) -> ty, loc
-  | MExpr.Bin (_, _, _, ty, loc) -> ty, loc
+  | MDefaultExpr (ty, loc) -> ty, loc
+  | MLitExpr (lit, loc) -> litToTy lit, loc
+  | MRefExpr (_, ty, loc) -> ty, loc
+  | MProcExpr (_, ty, loc) -> ty, loc
+  | MVariantExpr (_, _, ty, loc) -> ty, loc
+  | MUnaryExpr (_, _, ty, loc) -> ty, loc
+  | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
 
 let mexprToTy expr =
   let ty, _ = mexprExtract expr
@@ -1679,7 +1680,7 @@ let mexprToTy expr =
 
 let msGotoUnless pred label loc =
   let notPred = mxNot pred loc
-  MStmt.GotoIf(notPred, label, loc)
+  MGotoIfStmt(notPred, label, loc)
 
 // -----------------------------------------------
 // Expression sugaring (MIR)
@@ -1690,48 +1691,48 @@ let rec mxSugar expr =
     match l with
     // SUGAR: `not true` ==> `false`
     // SUGAR: `not false` ==> `true`
-    | MExpr.Lit (Lit.Bool value, loc) -> MExpr.Lit(Lit.Bool(not value), loc)
+    | MLitExpr (BoolLit value, loc) -> MLitExpr(BoolLit(not value), loc)
 
     // SUGAR: `not (not x)` ==> `x`
-    | MExpr.Uni (MUniOp.Not, l, _, _) -> l
+    | MUnaryExpr (MNotUnary, l, _, _) -> l
 
     // SUGAR: `not (x = y)` ==> `x <> y`
-    | MExpr.Bin (MOp.Eq, l, r, ty, loc) -> MExpr.Bin(MOp.Ne, l, r, ty, loc)
+    | MBinaryExpr (MEqualBinary, l, r, ty, loc) -> MBinaryExpr(MNotEqualBinary, l, r, ty, loc)
 
     // SUGAR: `not (x <> y)` ==> `x = y`
-    | MExpr.Bin (MOp.Ne, l, r, ty, loc) -> MExpr.Bin(MOp.Eq, l, r, ty, loc)
+    | MBinaryExpr (MNotEqualBinary, l, r, ty, loc) -> MBinaryExpr(MEqualBinary, l, r, ty, loc)
 
     // SUGAR: `not (x < y)` ==> `x >= y`
-    | MExpr.Bin (MOp.Lt, l, r, ty, loc) -> MExpr.Bin(MOp.Ge, l, r, ty, loc)
+    | MBinaryExpr (MLessBinary, l, r, ty, loc) -> MBinaryExpr(MGreaterEqualBinary, l, r, ty, loc)
 
     // SUGAR: `not (x >= y)` ==> `x < y`
-    | MExpr.Bin (MOp.Ge, l, r, ty, loc) -> MExpr.Bin(MOp.Lt, l, r, ty, loc)
+    | MBinaryExpr (MGreaterEqualBinary, l, r, ty, loc) -> MBinaryExpr(MLessBinary, l, r, ty, loc)
 
-    | _ -> MExpr.Uni(op, l, ty, loc)
+    | _ -> MUnaryExpr(op, l, ty, loc)
 
   let mxSugarBin op l r ty loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
-    | MOp.Eq, MExpr.Lit (Lit.Bool false, _), _ -> mxSugarUni MUniOp.Not r ty loc
+    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
 
-    | MOp.Eq, _, MExpr.Lit (Lit.Bool false, _) -> mxSugarUni MUniOp.Not l ty loc
+    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
 
     // SUGAR: `x = true` ==> `x`
-    | MOp.Eq, MExpr.Lit (Lit.Bool true, _), _ -> r
+    | MEqualBinary, MLitExpr (BoolLit true, _), _ -> r
 
-    | MOp.Eq, _, MExpr.Lit (Lit.Bool true, _) -> l
+    | MEqualBinary, _, MLitExpr (BoolLit true, _) -> l
 
-    | _ -> MExpr.Bin(op, l, r, ty, loc)
+    | _ -> MBinaryExpr(op, l, r, ty, loc)
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MExpr.Ref (_, Ty.Con (TyCon.Tuple, []), loc) -> MExpr.Default(tyUnit, loc)
+  | MRefExpr (_, AppTy (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
 
-  | MExpr.Uni (op, l, ty, loc) ->
+  | MUnaryExpr (op, l, ty, loc) ->
       let l = mxSugar l
       mxSugarUni op l ty loc
 
-  | MExpr.Bin (op, l, r, ty, loc) ->
+  | MBinaryExpr (op, l, r, ty, loc) ->
       let l = mxSugar l
       let r = mxSugar r
       mxSugarBin op l r ty loc
@@ -1770,7 +1771,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 
   // Don't bind itself.
   match typingSubst ctx ty with
-  | Ty.Meta (s, _) when s = tySerial -> ctx
+  | MetaTy (s, _) when s = tySerial -> ctx
   | ty ->
 
       // Update depth of all related meta types to the minimum.
@@ -1789,7 +1790,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
       |> tyContextWithTys
            (ctx
             |> tyContextGetTys
-            |> mapAdd tySerial (TyDef.Meta(noIdent, ty, loc)))
+            |> mapAdd tySerial (MetaTyDef(noIdent, ty, loc)))
       |> tyContextWithTyDepths tyDepths
 
 /// Substitutes occurrences of already-inferred type vars
@@ -1797,7 +1798,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 let typingSubst (ctx: TyContext) ty: Ty =
   let substMeta tySerial =
     match ctx |> tyContextGetTys |> mapTryFind tySerial with
-    | Some (TyDef.Meta (_, ty, _)) -> Some ty
+    | Some (MetaTyDef (_, ty, _)) -> Some ty
     | _ -> None
 
   tySubst substMeta ty
@@ -1818,20 +1819,20 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
     let lSubstTy = typingSubst ctx lty
     let rSubstTy = typingSubst ctx rty
     match lSubstTy, rSubstTy with
-    | Ty.Meta (l, _), Ty.Meta (r, _) when l = r -> logAcc, ctx
-    | Ty.Meta (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
+    | MetaTy (l, _), MetaTy (r, _) when l = r -> logAcc, ctx
+    | MetaTy (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
         let ctx = typingBind ctx lSerial rty loc
         logAcc, ctx
-    | _, Ty.Meta _ -> go rty lty (logAcc, ctx)
-    | Ty.Con (lTyCon, []), Ty.Con (rTyCon, []) when tyConEq lTyCon rTyCon -> logAcc, ctx
-    | Ty.Con (lTyCon, lTy :: lTys), Ty.Con (rTyCon, rTy :: rTys) ->
+    | _, MetaTy _ -> go rty lty (logAcc, ctx)
+    | AppTy (lTyCtor, []), AppTy (rTyCtor, []) when tyCtorEq lTyCtor rTyCtor -> logAcc, ctx
+    | AppTy (lTyCtor, lTy :: lTys), AppTy (rTyCtor, rTy :: rTys) ->
         (logAcc, ctx)
         |> go lTy rTy
-        |> go (Ty.Con(lTyCon, lTys)) (Ty.Con(rTyCon, rTys))
-    | Ty.Error _, _
-    | _, Ty.Error _ -> logAcc, ctx
-    | Ty.Meta _, _ -> addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
-    | Ty.Con _, _ -> addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
+        |> go (AppTy(lTyCtor, lTys)) (AppTy(rTyCtor, rTys))
+    | ErrorTy _, _
+    | _, ErrorTy _ -> logAcc, ctx
+    | MetaTy _, _ -> addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
+    | AppTy _, _ -> addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
 
   go lty rty (logAcc, ctx)
 
@@ -1841,33 +1842,33 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   let expectScalar ty (logAcc, ctx) =
     match ty with
-    | Ty.Error _
-    | Ty.Con (TyCon.Bool, [])
-    | Ty.Con (TyCon.Int, [])
-    | Ty.Con (TyCon.Char, [])
-    | Ty.Con (TyCon.Str, []) -> logAcc, ctx
+    | ErrorTy _
+    | AppTy (BoolTyCtor, [])
+    | AppTy (IntTyCtor, [])
+    | AppTy (CharTyCtor, [])
+    | AppTy (StrTyCtor, []) -> logAcc, ctx
 
     | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   match theTrait with
-  | Trait.Add ty ->
+  | AddTrait ty ->
       match ty with
-      | Ty.Error _
-      | Ty.Con (TyCon.Str, []) -> logAcc, ctx
+      | ErrorTy _
+      | AppTy (StrTyCtor, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
 
-  | Trait.Eq ty -> (logAcc, ctx) |> expectScalar ty
+  | EqTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | Trait.Cmp ty -> (logAcc, ctx) |> expectScalar ty
+  | CmpTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | Trait.Index (lTy, rTy, resultTy) ->
+  | IndexTrait (lTy, rTy, resultTy) ->
       match lTy with
-      | Ty.Error _ -> [], ctx
+      | ErrorTy _ -> [], ctx
 
-      | Ty.Con (TyCon.Str, []) ->
+      | AppTy (StrTyCtor, []) ->
           let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
 
           let logAcc, ctx =
@@ -1877,9 +1878,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
-  | Trait.ToInt ty -> (logAcc, ctx) |> expectScalar ty
+  | ToIntTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | Trait.ToString ty -> (logAcc, ctx) |> expectScalar ty
+  | ToStringTrait ty -> (logAcc, ctx) |> expectScalar ty
 
 // -----------------------------------------------
 // Logs
@@ -1895,17 +1896,17 @@ let logToString loc log =
   | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
       sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
 
-  | Log.TyBoundError (Trait.Add ty) -> sprintf "%s No support (+) for '%A' yet" loc ty
+  | Log.TyBoundError (AddTrait ty) -> sprintf "%s No support (+) for '%A' yet" loc ty
 
-  | Log.TyBoundError (Trait.Eq ty) -> sprintf "%s No support equality for '%A' yet" loc ty
+  | Log.TyBoundError (EqTrait ty) -> sprintf "%s No support equality for '%A' yet" loc ty
 
-  | Log.TyBoundError (Trait.Cmp ty) -> sprintf "%s No support comparison for '%A' yet" loc ty
+  | Log.TyBoundError (CmpTrait ty) -> sprintf "%s No support comparison for '%A' yet" loc ty
 
-  | Log.TyBoundError (Trait.Index (lTy, rTy, _)) ->
+  | Log.TyBoundError (IndexTrait (lTy, rTy, _)) ->
       sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
 
-  | Log.TyBoundError (Trait.ToInt ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
+  | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
 
-  | Log.TyBoundError (Trait.ToString ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
+  | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
 
   | Log.Error msg -> sprintf "%s %s" loc msg

@@ -11,12 +11,12 @@ let tokenizeMainEmpty () =
   let source = """let main () = 0"""
 
   let expected =
-    [ Token.Let
-      Token.Ident "main"
-      Token.ParenL
-      Token.ParenR
-      Token.Eq
-      Token.Int 0 ]
+    [ LetToken
+      IdentToken "main"
+      LeftParenToken
+      RightParenToken
+      EqToken
+      IntToken 0 ]
 
   source
   |> Lexing.tokenize
@@ -33,13 +33,13 @@ let main _ =
 // EOF"""
 
   let expected =
-    [ Token.Let
-      Token.Ident "main"
-      Token.Ident "_"
-      Token.Eq
-      Token.Int 1
-      Token.Minus
-      Token.Int 1 ]
+    [ LetToken
+      IdentToken "main"
+      IdentToken "_"
+      EqToken
+      IntToken 1
+      MinusToken
+      IntToken 1 ]
 
   source
   |> Lexing.tokenize
@@ -50,7 +50,7 @@ let main _ =
 let tokenizeCharLiteral () =
   let unwrapChar (token, _) =
     match token with
-    | Token.Char value -> value
+    | CharToken value -> value
     | _ -> failwithf "Expected char token but %A" token
 
   let source = """'a' '\'' '\n' '\x00'"""
@@ -65,7 +65,7 @@ let tokenizeStrLiteral () =
   let source = "\"HELLO!\\n\\\"NEW\\\"\\nWORLD!\""
 
   let expected =
-    [ Token.Str "HELLO!\n\"NEW\"\nWORLD!", (0, 0) ]
+    [ StrToken "HELLO!\n\"NEW\"\nWORLD!", (0, 0) ]
 
   source |> Lexing.tokenize |> is expected
 
@@ -77,12 +77,12 @@ let main () =
 """
 
   let expected =
-    [ Token.Let, (1, 0)
-      Token.Ident "main", (1, 4)
-      Token.ParenL, (1, 9)
-      Token.ParenR, (1, 10)
-      Token.Eq, (1, 12)
-      Token.Ident "f", (2, 2)
-      Token.Int 1, (2, 4) ]
+    [ LetToken, (1, 0)
+      IdentToken "main", (1, 4)
+      LeftParenToken, (1, 9)
+      RightParenToken, (1, 10)
+      EqToken, (1, 12)
+      IdentToken "f", (2, 2)
+      IntToken 1, (2, 4) ]
 
   source |> Lexing.tokenize |> is expected

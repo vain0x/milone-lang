@@ -14,9 +14,9 @@ let mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
 
 let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
   match ctx |> mirCtxGetVars |> mapFind varSerial with
-  | VarDef.Variant (_, tySerial, _, _, _, _) ->
+  | VariantDef (_, tySerial, _, _, _, _) ->
       match ctx |> mirCtxGetTys |> mapFind tySerial with
-      | TyDef.Union (_, variantSerials, _) -> variantSerials |> listLength = 1
+      | UnionTyDef (_, variantSerials, _) -> variantSerials |> listLength = 1
 
       | _ -> failwith "Expected union serial"
 
@@ -48,18 +48,18 @@ let mirCtxFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
     |> mirCtxWithVars
          (ctx
           |> mirCtxGetVars
-          |> mapAdd serial (VarDef.Var(ident, StorageModifier.Auto, ty, loc)))
+          |> mapAdd serial (VarDef(ident, AutoSM, ty, loc)))
 
-  let refExpr = MExpr.Ref(serial, ty, loc)
+  let refExpr = MRefExpr(serial, ty, loc)
   refExpr, serial, ctx
 
 let mirCtxLetFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let refExpr, serial, ctx = mirCtxFreshVar ctx ident ty loc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(serial, MInit.UnInit, ty, loc))
+    mirCtxAddStmt ctx (MLetValStmt(serial, MUninitInit, ty, loc))
 
-  let setStmt expr = MStmt.Set(serial, expr, loc)
+  let setStmt expr = MSetStmt(serial, expr, loc)
   refExpr, setStmt, ctx
 
 let mirCtxFreshLabel (ctx: MirCtx) (ident: Ident) loc =
@@ -70,59 +70,59 @@ let mirCtxFreshLabel (ctx: MirCtx) (ident: Ident) loc =
     |> mirCtxWithLabelSerial ((ctx |> mirCtxGetLabelSerial) + 1)
 
   let label: Label = ident + "_" + string serial
-  let labelStmt = MStmt.Label(label, loc)
+  let labelStmt = MLabelStmt(label, loc)
   labelStmt, label, ctx
 
 /// Gets if the serial denotes to a variant function.
 let mirCtxIsVariantFun (ctx: MirCtx) serial =
   match ctx |> mirCtxGetVars |> mapTryFind serial with
-  | Some (VarDef.Variant _) -> true
+  | Some (VariantDef _) -> true
   | _ -> false
 
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
 let mxProj expr index resultTy loc =
-  MExpr.Uni(MUniOp.Proj index, expr, resultTy, loc)
+  MUnaryExpr(MProjUnary index, expr, resultTy, loc)
 
 let mxStrAdd ctx _op l r (_, loc) =
-  MExpr.Bin(MOp.StrAdd, l, r, tyStr, loc), ctx
+  MBinaryExpr(MStrAddBinary, l, r, tyStr, loc), ctx
 
 /// x op y ==> `x op y` if `x : {scalar}`
 /// where scalar types are int, char, etc.
 /// C language supports all operators.
-let mxBinOpScalar ctx op l r (ty, loc) = MExpr.Bin(op, l, r, ty, loc), ctx
+let mxBinOpScalar ctx op l r (ty, loc) = MBinaryExpr(op, l, r, ty, loc), ctx
 
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mxStrCmp ctx op l r (ty, loc) =
-  let strCmpExpr = MExpr.Bin(MOp.StrCmp, l, r, tyInt, loc)
-  let zeroExpr = MExpr.Lit(Lit.Int 0, loc)
+  let strCmpExpr = MBinaryExpr(MStrCmpBinary, l, r, tyInt, loc)
+  let zeroExpr = MLitExpr(IntLit 0, loc)
 
   let opExpr =
-    MExpr.Bin(op, strCmpExpr, zeroExpr, ty, loc)
+    MBinaryExpr(op, strCmpExpr, zeroExpr, ty, loc)
 
   opExpr, ctx
 
 /// Generates a comparison expression.
-let mxCmp ctx (op: MOp) (l: MExpr) r (ty: Ty) loc =
+let mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   assert (opIsComparison op)
   match mexprToTy l with
-  | Ty.Con ((TyCon.Bool
-            | TyCon.Int
-            | TyCon.Char),
-            _) -> mxBinOpScalar ctx op l r (ty, loc)
-  | Ty.Con (TyCon.Str, _) -> mxStrCmp ctx op l r (ty, loc)
+  | AppTy ((BoolTyCtor
+           | IntTyCtor
+           | CharTyCtor),
+           _) -> mxBinOpScalar ctx op l r (ty, loc)
+  | AppTy (StrTyCtor, _) -> mxStrCmp ctx op l r (ty, loc)
   | _ -> failwithf "unimpl %A" (op, l, ty)
 
 let mirifyPatLit ctx endLabel lit expr loc =
-  let litExpr = MExpr.Lit(lit, loc)
-  let eqExpr, ctx = mxCmp ctx MOp.Eq expr litExpr tyBool loc
+  let litExpr = MLitExpr(lit, loc)
+  let eqExpr, ctx = mxCmp ctx MEqualBinary expr litExpr tyBool loc
   let gotoStmt = msGotoUnless eqExpr endLabel loc
   let ctx = mirCtxAddStmt ctx gotoStmt
   false, ctx
 
 let mirifyPatNil ctx endLabel itemTy expr loc =
   let isEmptyExpr =
-    MExpr.Uni(MUniOp.ListIsEmpty, expr, tyList itemTy, loc)
+    MUnaryExpr(MListIsEmptyUnary, expr, tyList itemTy, loc)
 
   let gotoStmt = msGotoUnless isEmptyExpr endLabel loc
   let ctx = mirCtxAddStmt ctx gotoStmt
@@ -135,52 +135,52 @@ let mirifyPatCons ctx endLabel l r itemTy loc expr =
   let listTy = tyList itemTy
 
   let isEmpty =
-    MExpr.Uni(MUniOp.ListIsEmpty, expr, tyBool, loc)
+    MUnaryExpr(MListIsEmptyUnary, expr, tyBool, loc)
 
   let nonEmpty =
-    MExpr.Uni(MUniOp.Not, isEmpty, tyBool, loc)
+    MUnaryExpr(MNotUnary, isEmpty, tyBool, loc)
 
   let gotoStmt = msGotoUnless nonEmpty endLabel loc
   let ctx = mirCtxAddStmt ctx gotoStmt
 
   let head =
-    MExpr.Uni(MUniOp.ListHead, expr, itemTy, loc)
+    MUnaryExpr(MListHeadUnary, expr, itemTy, loc)
 
   let tail =
-    MExpr.Uni(MUniOp.ListTail, expr, listTy, loc)
+    MUnaryExpr(MListTailUnary, expr, listTy, loc)
 
   let _, ctx = mirifyPat ctx endLabel l head
   let _, ctx = mirifyPat ctx endLabel r tail
   false, ctx
 
 let mirifyPatSome ctx endLabel item itemTy loc expr =
-  let nilPat = HPat.Nil(itemTy, loc)
+  let nilPat = HNilPat(itemTy, loc)
   mirifyPatCons ctx endLabel item nilPat itemTy loc expr
 
 let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
   match ctx |> mirCtxGetVars |> mapFind serial with
-  | VarDef.Variant _ ->
+  | VariantDef _ ->
       // Compare tags.
-      let lTagExpr = MExpr.Uni(MUniOp.Tag, expr, tyInt, loc)
-      let rTagExpr = MExpr.Ref(serial, tyInt, loc)
+      let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
+      let rTagExpr = MRefExpr(serial, tyInt, loc)
 
       let eqExpr =
-        MExpr.Bin(MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
+        MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
 
       let gotoStmt = msGotoUnless eqExpr endLabel loc
       let ctx = mirCtxAddStmt ctx gotoStmt
       false, ctx
   | _ ->
       let letStmt =
-        MStmt.LetVal(serial, MInit.Expr expr, ty, loc)
+        MLetValStmt(serial, MExprInit expr, ty, loc)
 
       true, mirCtxAddStmt ctx letStmt
 
 let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
   match ctx |> mirCtxGetVars |> mapFind serial, args with
-  | VarDef.Variant (_, _, _, payloadTy, _, _), [ payload ] ->
+  | VariantDef (_, _, _, payloadTy, _, _), [ payload ] ->
       let extractExpr =
-        MExpr.Uni(MUniOp.GetVariant serial, expr, payloadTy, loc)
+        MUnaryExpr(MGetVariantUnary serial, expr, payloadTy, loc)
 
       // Special treatment for new-type variants
       // so that we can deconstruct it with irrefutable patterns
@@ -190,11 +190,11 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
       else
 
         // Compare tags.
-        let lTagExpr = MExpr.Uni(MUniOp.Tag, expr, tyInt, loc)
-        let rTagExpr = MExpr.Ref(serial, tyInt, loc)
+        let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
+        let rTagExpr = MRefExpr(serial, tyInt, loc)
 
         let eqExpr =
-          MExpr.Bin(MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
+          MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
 
         let gotoStmt = msGotoUnless eqExpr endLabel loc
         let ctx = mirCtxAddStmt ctx gotoStmt
@@ -207,7 +207,7 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
 
   | _ ->
       let letStmt =
-        MStmt.LetVal(serial, MInit.Expr expr, ty, loc)
+        MLetValStmt(serial, MExprInit expr, ty, loc)
 
       true, mirCtxAddStmt ctx letStmt
 
@@ -227,9 +227,9 @@ let mirifyPatAs ctx endLabel pat serial expr loc =
   let ty, _ = patExtract pat
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(serial, MInit.Expr expr, ty, loc))
+    mirCtxAddStmt ctx (MLetValStmt(serial, MExprInit expr, ty, loc))
 
-  let expr = MExpr.Ref(serial, ty, loc)
+  let expr = MRefExpr(serial, ty, loc)
   let covers, ctx = mirifyPat ctx endLabel pat expr
   covers, ctx
 
@@ -239,42 +239,42 @@ let mirifyPatAs ctx endLabel pat serial expr loc =
 /// Determines if the pattern covers the whole.
 let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   match pat with
-  | HPat.Discard _ ->
+  | HDiscardPat _ ->
       // Discard the result, which we know is pure.
       // FIXME: This should be done in optimization?
       true, ctx
 
-  | HPat.Lit (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
-  | HPat.Nil (itemTy, loc) -> mirifyPatNil ctx endLabel itemTy expr loc
-  | HPat.OptionNone (itemTy, loc) -> mirifyPatNone ctx endLabel itemTy expr loc
-  | HPat.Ref (serial, ty, loc) -> mirifyPatRef ctx endLabel serial ty loc expr
-  | HPat.Call (HPat.Ref (serial, _, _), args, ty, loc) -> mirifyPatCall ctx endLabel serial args ty loc expr
-  | HPat.Call (HPat.OptionSome (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
-  | HPat.Cons (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
-  | HPat.Tuple (itemPats, Ty.Con (TyCon.Tuple, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
-  | HPat.As (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
-  | HPat.OptionSome (_, loc) ->
+  | HLitPat (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
+  | HNilPat (itemTy, loc) -> mirifyPatNil ctx endLabel itemTy expr loc
+  | HNonePat (itemTy, loc) -> mirifyPatNone ctx endLabel itemTy expr loc
+  | HRefPat (serial, ty, loc) -> mirifyPatRef ctx endLabel serial ty loc expr
+  | HCallPat (HRefPat (serial, _, _), args, ty, loc) -> mirifyPatCall ctx endLabel serial args ty loc expr
+  | HCallPat (HSomePat (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
+  | HConsPat (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
+  | HTuplePat (itemPats, AppTy (TupleTyCtor, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
+  | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
+  | HSomePat (_, loc) ->
       let ctx =
         mirCtxAddErr ctx "Some pattern must be used in the form of `Some pat`" loc
 
       false, ctx
-  | HPat.Or _ -> failwith "Unimpl nested OR pattern."
-  | HPat.Nav _ -> failwith "Never: Nav pattern in mirify"
-  | HPat.Call _ -> failwith "Never: Call pattern incorrect."
-  | HPat.Tuple _ -> failwith "Never: Tuple pattern must be of tuple type."
-  | HPat.Anno _ -> failwith "Never annotation pattern in MIR-ify stage."
+  | HOrPat _ -> failwith "Unimpl nested OR pattern."
+  | HNavPat _ -> failwith "Never: Nav pattern in mirify"
+  | HCallPat _ -> failwith "Never: Call pattern incorrect."
+  | HTuplePat _ -> failwith "Never: Tuple pattern must be of tuple type."
+  | HAnnoPat _ -> failwith "Never annotation pattern in MIR-ify stage."
 
 let mirifyExprRef (ctx: MirCtx) serial ty loc =
   match ctx |> mirCtxGetVars |> mapTryFind serial with
-  | Some (VarDef.Variant (_, tySerial, _, _, _, _)) -> MExpr.Variant(tySerial, serial, ty, loc), ctx
-  | Some (VarDef.Fun (_, _, _, loc)) -> MExpr.Proc(serial, ty, loc), ctx
-  | _ -> MExpr.Ref(serial, ty, loc), ctx
+  | Some (VariantDef (_, tySerial, _, _, _, _)) -> MVariantExpr(tySerial, serial, ty, loc), ctx
+  | Some (FunDef (_, _, _, loc)) -> MProcExpr(serial, ty, loc), ctx
+  | _ -> MRefExpr(serial, ty, loc), ctx
 
 let mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
-  | HPrim.Nil -> MExpr.Default(ty, loc), ctx
+  | HPrim.Nil -> MDefaultExpr(ty, loc), ctx
 
-  | HPrim.OptionNone -> MExpr.Default(ty, loc), ctx
+  | HPrim.OptionNone -> MDefaultExpr(ty, loc), ctx
 
   | _ -> failwithf "Never: Primitives must appear as callee."
 
@@ -289,21 +289,21 @@ let mirifyBlock ctx expr =
 let patsIsCovering pats =
   let rec go pat =
     match pat with
-    | HPat.Discard _
-    | HPat.Ref _ ->
+    | HDiscardPat _
+    | HRefPat _ ->
         // FIXME: unit-like variant patterns may not be covering
         true
-    | HPat.Lit _
-    | HPat.Nil _
-    | HPat.OptionNone _
-    | HPat.OptionSome _
-    | HPat.Nav _
-    | HPat.Cons _
-    | HPat.Call _ -> false
-    | HPat.Tuple (itemPats, _, _) -> itemPats |> listForAll go
-    | HPat.As (pat, _, _) -> go pat
-    | HPat.Anno (pat, _, _) -> go pat
-    | HPat.Or (first, second, _, _) -> go first || go second
+    | HLitPat _
+    | HNilPat _
+    | HNonePat _
+    | HSomePat _
+    | HNavPat _
+    | HConsPat _
+    | HCallPat _ -> false
+    | HTuplePat (itemPats, _, _) -> itemPats |> listForAll go
+    | HAsPat (pat, _, _) -> go pat
+    | HAnnoPat (pat, _, _) -> go pat
+    | HOrPat (first, second, _, _) -> go first || go second
 
   listExists go pats
 
@@ -395,7 +395,7 @@ let mirifyExprMatch ctx target arms ty loc =
     match instructions with
     | MatchIR.PatLabel patLabel :: rest ->
         let ctx =
-          mirCtxAddStmt ctx (MStmt.Label(patLabel, loc))
+          mirCtxAddStmt ctx (MLabelStmt(patLabel, loc))
 
         emit ctx rest
     | MatchIR.Pat (pat, nextLabel) :: rest ->
@@ -404,12 +404,12 @@ let mirifyExprMatch ctx target arms ty loc =
         emit ctx rest
     | MatchIR.GoBody bodyLabel :: rest ->
         let ctx =
-          mirCtxAddStmt ctx (MStmt.Goto(bodyLabel, loc))
+          mirCtxAddStmt ctx (MGotoStmt(bodyLabel, loc))
 
         emit ctx rest
     | MatchIR.BodyLabel bodyLabel :: rest ->
         let ctx =
-          mirCtxAddStmt ctx (MStmt.Label(bodyLabel, loc))
+          mirCtxAddStmt ctx (MLabelStmt(bodyLabel, loc))
 
         emit ctx rest
     | MatchIR.Guard (guard, nextLabel) :: rest ->
@@ -428,7 +428,7 @@ let mirifyExprMatch ctx target arms ty loc =
         let ctx = mirCtxAddStmt ctx (tempSet body)
 
         let ctx =
-          mirCtxAddStmt ctx (MStmt.Goto(endLabel, loc))
+          mirCtxAddStmt ctx (MGotoStmt(endLabel, loc))
 
         emit ctx rest
     | [] ->
@@ -437,7 +437,7 @@ let mirifyExprMatch ctx target arms ty loc =
           ctx
         else
           let abortStmt =
-            MStmt.Exit(MExpr.Lit(Lit.Int 1, loc), loc)
+            MExitStmt(MLitExpr(IntLit 1, loc), loc)
 
           let ctx = mirCtxAddStmt ctx abortStmt
           ctx
@@ -451,49 +451,49 @@ let mirifyExprMatch ctx target arms ty loc =
 
 let mirifyExprIndex ctx l r _ loc =
   match exprToTy l, exprToTy r with
-  | Ty.Con (TyCon.Str, _), Ty.Con (TyCon.Int, _) ->
+  | AppTy (StrTyCtor, _), AppTy (IntTyCtor, _) ->
       let l, ctx = mirifyExpr ctx l
       let r, ctx = mirifyExpr ctx r
-      MExpr.Bin(MOp.StrIndex, l, r, tyChar, loc), ctx
+      MBinaryExpr(MStrIndexBinary, l, r, tyChar, loc), ctx
   | _ -> failwith "unimpl non-string indexing"
 
 let mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  let ctx = mirCtxAddStmt ctx (MStmt.Exit(arg, loc))
-  MExpr.Default(ty, loc), ctx
+  let ctx = mirCtxAddStmt ctx (MExitStmt(arg, loc))
+  MDefaultExpr(ty, loc), ctx
 
 let mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
   let temp, tempSerial, ctx = mirCtxFreshVar ctx "box" tyObj loc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Box arg, tyObj, loc))
+    mirCtxAddStmt ctx (MLetValStmt(tempSerial, MBoxInit arg, tyObj, loc))
 
   temp, ctx
 
 let mirifyExprCallUnbox ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  MExpr.Uni(MUniOp.Unbox, arg, ty, loc), ctx
+  MUnaryExpr(MUnboxUnary, arg, ty, loc), ctx
 
 let mirifyExprCallStrLength ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  MExpr.Uni(MUniOp.StrLen, arg, ty, loc), ctx
+  MUnaryExpr(MStrLenUnary, arg, ty, loc), ctx
 
 let mirifyExprCallSome ctx item ty loc =
   let _, tempSerial, ctx = mirCtxFreshVar ctx "some" ty loc
 
   let item, ctx = mirifyExpr ctx item
-  let nil = MExpr.Default(ty, loc)
+  let nil = MDefaultExpr(ty, loc)
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Cons(item, nil), ty, loc))
+    mirCtxAddStmt ctx (MLetValStmt(tempSerial, MConsInit(item, nil), ty, loc))
 
-  MExpr.Ref(tempSerial, ty, loc), ctx
+  MRefExpr(tempSerial, ty, loc), ctx
 
 /// not a ==> !a
 let mirifyExprCallNot ctx arg ty notLoc =
   let arg, ctx = mirifyExpr ctx arg
-  MExpr.Uni(MUniOp.Not, arg, ty, notLoc), ctx
+  MUnaryExpr(MNotUnary, arg, ty, notLoc), ctx
 
 let mirifyExprCallVariantFun (ctx: MirCtx) serial payload ty loc =
   // Put payload on the heap.
@@ -503,16 +503,16 @@ let mirifyExprCallVariantFun (ctx: MirCtx) serial payload ty loc =
   let _, payloadSerial, ctx =
     mirCtxFreshVar ctx "payload" payloadTy loc
 
-  let payloadInit = MInit.Indirect payload
+  let payloadInit = MIndirectInit payload
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(payloadSerial, payloadInit, payloadTy, loc))
+    mirCtxAddStmt ctx (MLetValStmt(payloadSerial, payloadInit, payloadTy, loc))
 
   let temp, tempSerial, ctx = mirCtxFreshVar ctx "variant" ty loc
-  let init = MInit.Variant(serial, payloadSerial)
+  let init = MVariantInit(serial, payloadSerial)
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, init, ty, loc))
+    mirCtxAddStmt ctx (MLetValStmt(tempSerial, init, ty, loc))
 
   temp, ctx
 
@@ -523,9 +523,9 @@ let mirifyExprOpCons ctx l r listTy loc =
   let r, ctx = mirifyExpr ctx r
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Cons(l, r), listTy, loc))
+    mirCtxAddStmt ctx (MLetValStmt(tempSerial, MConsInit(l, r), listTy, loc))
 
-  MExpr.Ref(tempSerial, listTy, loc), ctx
+  MRefExpr(tempSerial, listTy, loc), ctx
 
 let mirifyExprTuple ctx items itemTys loc =
   let ty = tyTuple itemTys
@@ -541,9 +541,9 @@ let mirifyExprTuple ctx items itemTys loc =
   let items, ctx = go [] ctx items
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Tuple items, ty, loc))
+    mirCtxAddStmt ctx (MLetValStmt(tempSerial, MTupleInit items, ty, loc))
 
-  MExpr.Ref(tempSerial, ty, loc), ctx
+  MRefExpr(tempSerial, ty, loc), ctx
 
 let mirifyExprOpArith ctx op l r ty loc =
   let lTy = exprToTy l
@@ -551,16 +551,16 @@ let mirifyExprOpArith ctx op l r ty loc =
   let r, ctx = mirifyExpr ctx r
 
   match lTy with
-  | Ty.Con ((TyCon.Int
-            | TyCon.Char),
-            _) -> mxBinOpScalar ctx op l r (ty, loc)
+  | AppTy ((IntTyCtor
+           | CharTyCtor),
+           _) -> mxBinOpScalar ctx op l r (ty, loc)
 
-  | Ty.Con (TyCon.Str, _) when op |> mOpIsAdd -> mxStrAdd ctx op l r (ty, loc)
+  | AppTy (StrTyCtor, _) when op |> mOpIsAdd -> mxStrAdd ctx op l r (ty, loc)
 
   | _ ->
       // FIXME: error
       printfn "#error invalid type of arithmetic operator"
-      MExpr.Default(ty, loc), ctx
+      MDefaultExpr(ty, loc), ctx
 
 let mirifyExprOpCmp ctx op l r ty loc =
   let l, ctx = mirifyExpr ctx l
@@ -575,7 +575,7 @@ let mirifyExprSemi ctx exprs =
 let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =
     match callee with
-    | HExpr.Prim (prim, _, _) ->
+    | HPrimExpr (prim, _, _) ->
         let primTy = exprToTy callee
 
         let (args, ctx) =
@@ -585,7 +585,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
         let temp, tempSerial, ctx = mirCtxFreshVar ctx "call" ty loc
 
         let ctx =
-          mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.CallPrim(prim, args, primTy), ty, loc))
+          mirCtxAddStmt ctx (MLetValStmt(tempSerial, MCallPrimInit(prim, args, primTy), ty, loc))
 
         temp, ctx
     | _ ->
@@ -599,20 +599,20 @@ let mirifyExprInfCallProc ctx callee args ty loc =
         let temp, tempSerial, ctx = mirCtxFreshVar ctx "call" ty loc
 
         let ctx =
-          mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.CallProc(callee, args, calleeTy), ty, loc))
+          mirCtxAddStmt ctx (MLetValStmt(tempSerial, MCallProcInit(callee, args, calleeTy), ty, loc))
 
         temp, ctx
 
   match callee, args with
-  | HExpr.Prim (prim, _, _), _ ->
+  | HPrimExpr (prim, _, _), _ ->
       match prim, args with
-      | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx MOp.Add l r ty loc
-      | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx MOp.Sub l r ty loc
-      | HPrim.Mul, [ l; r ] -> mirifyExprOpArith ctx MOp.Mul l r ty loc
-      | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx MOp.Div l r ty loc
-      | HPrim.Mod, [ l; r ] -> mirifyExprOpArith ctx MOp.Mod l r ty loc
-      | HPrim.Eq, [ l; r ] -> mirifyExprOpCmp ctx MOp.Eq l r ty loc
-      | HPrim.Lt, [ l; r ] -> mirifyExprOpCmp ctx MOp.Lt l r ty loc
+      | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx MAddBinary l r ty loc
+      | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx MSubBinary l r ty loc
+      | HPrim.Mul, [ l; r ] -> mirifyExprOpArith ctx MMulBinary l r ty loc
+      | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx MDivBinary l r ty loc
+      | HPrim.Mod, [ l; r ] -> mirifyExprOpArith ctx MModBinary l r ty loc
+      | HPrim.Eq, [ l; r ] -> mirifyExprOpCmp ctx MEqualBinary l r ty loc
+      | HPrim.Lt, [ l; r ] -> mirifyExprOpCmp ctx MLessBinary l r ty loc
       | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc
       | HPrim.Index, [ l; r ] -> mirifyExprIndex ctx l r ty loc
       | HPrim.OptionSome, [ item ] -> mirifyExprCallSome ctx item ty loc
@@ -623,7 +623,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
       | HPrim.StrLength, [ arg ] -> mirifyExprCallStrLength ctx arg ty loc
       | _ -> core ()
 
-  | HExpr.Ref (serial, _, _), [ arg ] when mirCtxIsVariantFun ctx serial ->
+  | HRefExpr (serial, _, _), [ arg ] when mirCtxIsVariantFun ctx serial ->
       mirifyExprCallVariantFun ctx serial arg ty loc
 
   | _ -> core ()
@@ -638,7 +638,7 @@ let mirifyExprInfCallClosure ctx callee args resultTy loc =
   let tempRef, tempSerial, ctx = mirCtxFreshVar ctx "app" resultTy loc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.CallClosure(callee, args), resultTy, loc))
+    mirCtxAddStmt ctx (MLetValStmt(tempSerial, MCallClosureInit(callee, args), resultTy, loc))
 
   tempRef, ctx
 
@@ -648,23 +648,23 @@ let mirifyExprInfClosure ctx funSerial env funTy loc =
   let _, envSerial, ctx = mirCtxFreshVar ctx "env" envTy envLoc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(envSerial, MInit.Expr env, envTy, envLoc))
+    mirCtxAddStmt ctx (MLetValStmt(envSerial, MExprInit env, envTy, envLoc))
 
   let tempRef, tempSerial, ctx = mirCtxFreshVar ctx "fun" funTy loc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Closure(funSerial, envSerial), funTy, loc))
+    mirCtxAddStmt ctx (MLetValStmt(tempSerial, MClosureInit(funSerial, envSerial), funTy, loc))
 
   tempRef, ctx
 
 let mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
-  | InfOp.Tuple, [], Ty.Con (TyCon.Tuple, []) -> MExpr.Default(tyUnit, loc), ctx
-  | InfOp.Tuple, _, Ty.Con (TyCon.Tuple, itemTys) -> mirifyExprTuple ctx args itemTys loc
+  | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
+  | InfOp.Tuple, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
   | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
-  | InfOp.Closure, [ HExpr.Ref (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
+  | InfOp.Closure, [ HRefExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
   | t -> failwithf "Never: %A" t
 
 let mirifyExprLetVal ctx pat init next letLoc =
@@ -682,7 +682,7 @@ let mirifyExprLetVal ctx pat init next letLoc =
 let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
   let defineArg ctx argPat =
     match argPat with
-    | HPat.Ref (serial, ty, loc) ->
+    | HRefPat (serial, ty, loc) ->
         // NOTE: Optimize for usual cases to not generate redundant local vars.
         (serial, ty, loc), ctx
     | _ ->
@@ -709,7 +709,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
 
     let args, ctx = defineArgs [] ctx argPats
     let lastExpr, ctx = mirifyExpr ctx body
-    let returnStmt = MStmt.Return(lastExpr, blockLoc)
+    let returnStmt = MReturnStmt(lastExpr, blockLoc)
     let ctx = mirCtxAddStmt ctx returnStmt
 
     let stmts, ctx = mirCtxTakeStmts ctx
@@ -722,7 +722,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
     let ctx = mirCtxRollBack ctx bodyCtx
 
     let procStmt =
-      MStmt.Proc(calleeSerial, isMainFun, args, body, resultTy, letLoc)
+      MProcStmt(calleeSerial, isMainFun, args, body, resultTy, letLoc)
 
     let ctx = mirCtxAddStmt ctx procStmt
     ctx
@@ -731,38 +731,38 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
   let next, ctx = mirifyExpr ctx next
   next, ctx
 
-let mirifyExprTyDecl ctx _tySerial _tyDecl loc = MExpr.Default(tyUnit, loc), ctx
+let mirifyExprTyDecl ctx _tySerial _tyDecl loc = MDefaultExpr(tyUnit, loc), ctx
 
-let mirifyExprOpen ctx loc = MExpr.Default(tyUnit, loc), ctx
+let mirifyExprOpen ctx loc = MDefaultExpr(tyUnit, loc), ctx
 
 let mirifyDecl ctx expr =
   match expr with
-  | HExpr.Let (_vis, pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc
-  | HExpr.LetFun (serial, _vis, isMainFun, args, body, next, _, loc) ->
+  | HLetValExpr (_vis, pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc
+  | HLetFunExpr (serial, _vis, isMainFun, args, body, next, _, loc) ->
       mirifyExprLetFun ctx serial isMainFun args body next loc
-  | HExpr.TyDecl (tySerial, _vis, tyDecl, loc) -> mirifyExprTyDecl ctx tySerial tyDecl loc
-  | HExpr.Open (_, loc) -> mirifyExprOpen ctx loc
+  | HTyDeclExpr (tySerial, _vis, tyDecl, loc) -> mirifyExprTyDecl ctx tySerial tyDecl loc
+  | HOpenExpr (_, loc) -> mirifyExprOpen ctx loc
   | _ -> failwith "NEVER"
 
 let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   match expr with
-  | HExpr.Lit (lit, loc) -> MExpr.Lit(lit, loc), ctx
-  | HExpr.Ref (serial, ty, loc) -> mirifyExprRef ctx serial ty loc
-  | HExpr.Prim (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
-  | HExpr.Match (target, arms, ty, loc) -> mirifyExprMatch ctx target arms ty loc
-  | HExpr.Inf (infOp, args, ty, loc) -> mirifyExprInf ctx infOp args ty loc
-  | HExpr.Let _
-  | HExpr.LetFun _
-  | HExpr.TyDecl _
-  | HExpr.Open _ -> mirifyDecl ctx expr
-  | HExpr.Nav _ -> failwith "Never"
-  | HExpr.Error (error, loc) ->
+  | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
+  | HRefExpr (serial, ty, loc) -> mirifyExprRef ctx serial ty loc
+  | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
+  | HMatchExpr (target, arms, ty, loc) -> mirifyExprMatch ctx target arms ty loc
+  | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx infOp args ty loc
+  | HLetValExpr _
+  | HLetFunExpr _
+  | HTyDeclExpr _
+  | HOpenExpr _ -> mirifyDecl ctx expr
+  | HNavExpr _ -> failwith "Never"
+  | HErrorExpr (error, loc) ->
       let doArm () =
         let ctx = mirCtxAddErr ctx error loc
-        MExpr.Default(tyObj, loc), ctx
+        MDefaultExpr(tyObj, loc), ctx
 
       doArm ()
-  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
+  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =
@@ -778,7 +778,7 @@ let mirifyExprs ctx exprs =
 let mirifyCollectDecls (stmts: MStmt list) =
   let rec go decls stmts =
     match stmts with
-    | (MStmt.Proc (_, _, _, body, _, _) as decl) :: stmts ->
+    | (MProcStmt (_, _, _, body, _, _) as decl) :: stmts ->
         let doArm () =
           let decls = go decls body
           let decls = decl :: decls

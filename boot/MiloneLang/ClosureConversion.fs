@@ -199,7 +199,7 @@ let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
     varSerials
     |> listChoose (fun varSerial ->
          match ctx |> ccCtxGetVars |> mapTryFind varSerial with
-         | Some (VarDef.Var (_, StorageModifier.Auto, ty, loc)) -> Some(varSerial, ty, loc)
+         | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
 
          | _ -> None)
 
@@ -268,10 +268,10 @@ let ccCtxUpdateFunDefs (ctx: CcCtx) =
 
     | caps ->
         match vars |> mapFind varSerial with
-        | VarDef.Fun (ident, arity, TyScheme.ForAll (fvs, funTy), loc) ->
+        | FunDef (ident, arity, TyScheme (fvs, funTy), loc) ->
             let funTy, arity = caps |> capsUpdateFunDef funTy arity
-            let tyScheme = TyScheme.ForAll(fvs, funTy)
-            let varDef = VarDef.Fun(ident, arity, tyScheme, loc)
+            let tyScheme = TyScheme(fvs, funTy)
+            let varDef = FunDef(ident, arity, tyScheme, loc)
             vars |> mapAdd varSerial varDef
 
         | _ -> vars
@@ -296,13 +296,13 @@ let capsAddToFunTy tTy (caps: Caps) =
 let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
   let callee =
     let calleeTy = caps |> capsAddToFunTy calleeTy
-    HExpr.Ref(calleeSerial, calleeTy, calleeLoc)
+    HRefExpr(calleeSerial, calleeTy, calleeLoc)
 
   let app, _ =
     caps
     |> listRev
     |> listFold (fun (callee, calleeTy) (serial, ty, loc) ->
-         let arg = HExpr.Ref(serial, ty, loc)
+         let arg = HRefExpr(serial, ty, loc)
          hxApp callee arg calleeTy loc, tyFun ty calleeTy) (callee, calleeTy)
 
   app
@@ -310,7 +310,7 @@ let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
 /// Updates the argument patterns to take captured variables.
 let capsAddToFunPats args (caps: Caps) =
   caps
-  |> listFold (fun args (serial, ty, loc) -> HPat.Ref(serial, ty, loc) :: args) args
+  |> listFold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
 
 let capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
@@ -348,7 +348,7 @@ let declosureFunDecl callee vis isMainFun args body next ty loc ctx =
     |> capsAddToFunPats args
 
   let next, ctx = (next, ctx) |> declosureExpr
-  HExpr.LetFun(callee, vis, isMainFun, args, body, next, ty, loc), ctx
+  HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc), ctx
 
 let declosureVariantDecl ctx variant =
   let (_, variantSerial, _, _) = variant
@@ -356,59 +356,59 @@ let declosureVariantDecl ctx variant =
 
 let declosurePat (pat, ctx) =
   match pat with
-  | HPat.Lit _
-  | HPat.Nil _
-  | HPat.OptionNone _
-  | HPat.OptionSome _
-  | HPat.Discard _
-  | HPat.Nav _ -> pat, ctx
+  | HLitPat _
+  | HNilPat _
+  | HNonePat _
+  | HSomePat _
+  | HDiscardPat _
+  | HNavPat _ -> pat, ctx
 
-  | HPat.Ref (serial, _, _) ->
+  | HRefPat (serial, _, _) ->
       let ctx = ctx |> ccCtxAddLocal serial
       pat, ctx
 
-  | HPat.Cons (l, r, itemTy, loc) ->
+  | HConsPat (l, r, itemTy, loc) ->
       let l, ctx = (l, ctx) |> declosurePat
       let r, ctx = (r, ctx) |> declosurePat
-      HPat.Cons(l, r, itemTy, loc), ctx
+      HConsPat(l, r, itemTy, loc), ctx
 
-  | HPat.Tuple (items, ty, loc) ->
+  | HTuplePat (items, ty, loc) ->
       let items, ctx = (items, ctx) |> stMap declosurePat
-      HPat.Tuple(items, ty, loc), ctx
+      HTuplePat(items, ty, loc), ctx
 
-  | HPat.Call (callee, args, ty, loc) ->
+  | HCallPat (callee, args, ty, loc) ->
       let callee, ctx = (callee, ctx) |> declosurePat
       let args, ctx = (args, ctx) |> stMap declosurePat
-      HPat.Call(callee, args, ty, loc), ctx
+      HCallPat(callee, args, ty, loc), ctx
 
-  | HPat.As (pat, serial, loc) ->
+  | HAsPat (pat, serial, loc) ->
       let ctx = ctx |> ccCtxAddLocal serial
       let pat, ctx = (pat, ctx) |> declosurePat
-      HPat.As(pat, serial, loc), ctx
+      HAsPat(pat, serial, loc), ctx
 
-  | HPat.Anno (pat, ty, loc) ->
+  | HAnnoPat (pat, ty, loc) ->
       let pat, ctx = (pat, ctx) |> declosurePat
-      HPat.Anno(pat, ty, loc), ctx
+      HAnnoPat(pat, ty, loc), ctx
 
-  | HPat.Or (first, second, ty, loc) ->
+  | HOrPat (first, second, ty, loc) ->
       let first, ctx = (first, ctx) |> declosurePat
       let second, ctx = (second, ctx) |> declosurePat
-      HPat.Or(first, second, ty, loc), ctx
+      HOrPat(first, second, ty, loc), ctx
 
 let declosureExpr (expr, ctx) =
   match expr with
-  | HExpr.Lit _
-  | HExpr.Prim _
-  | HExpr.Open _ -> expr, ctx
+  | HLitExpr _
+  | HPrimExpr _
+  | HOpenExpr _ -> expr, ctx
 
-  | HExpr.Ref (serial, refTy, refLoc) ->
+  | HRefExpr (serial, refTy, refLoc) ->
       let doArm () =
         let ctx = ctx |> ccCtxAddRef serial
         declosureFunRef serial refTy refLoc ctx
 
       doArm ()
 
-  | HExpr.Match (target, arms, ty, loc) ->
+  | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let target, ctx = declosureExpr (target, ctx)
 
@@ -419,42 +419,42 @@ let declosureExpr (expr, ctx) =
           (pat, guard, body), ctx
 
         let arms, ctx = (arms, ctx) |> stMap go
-        HExpr.Match(target, arms, ty, loc), ctx
+        HMatchExpr(target, arms, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.Nav (l, r, ty, loc) ->
+  | HNavExpr (l, r, ty, loc) ->
       let doArm () =
         let l, ctx = declosureExpr (l, ctx)
-        HExpr.Nav(l, r, ty, loc), ctx
+        HNavExpr(l, r, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.Inf (infOp, items, ty, loc) ->
+  | HInfExpr (infOp, items, ty, loc) ->
       let doArm () =
         let items, ctx = (items, ctx) |> stMap declosureExpr
-        HExpr.Inf(infOp, items, ty, loc), ctx
+        HInfExpr(infOp, items, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.Let (vis, pat, body, next, ty, loc) ->
+  | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let pat, ctx = declosurePat (pat, ctx)
         let body, ctx = declosureExpr (body, ctx)
         let next, ctx = declosureExpr (next, ctx)
-        HExpr.Let(vis, pat, body, next, ty, loc), ctx
+        HLetValExpr(vis, pat, body, next, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.LetFun (callee, vis, isMainFun, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       declosureFunDecl callee vis isMainFun args body next ty loc ctx
 
-  | HExpr.TyDecl (_, _, tyDecl, _) ->
+  | HTyDeclExpr (_, _, tyDecl, _) ->
       let doArm () =
         match tyDecl with
-        | TyDecl.Synonym _ -> expr, ctx
+        | TySynonymDecl _ -> expr, ctx
 
-        | TyDecl.Union (_, variants, _) ->
+        | UnionTyDecl (_, variants, _) ->
             let ctx =
               variants |> listFold declosureVariantDecl ctx
 
@@ -462,8 +462,8 @@ let declosureExpr (expr, ctx) =
 
       doArm ()
 
-  | HExpr.Error (error, loc) -> failwithf "Never: %s at %A" error loc
-  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
+  | HErrorExpr (error, loc) -> failwithf "Never: %s at %A" error loc
+  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let declosure (expr, tyCtx: TyCtx) =
   let ccCtx = ccCtxFromTyCtx tyCtx
