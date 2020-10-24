@@ -307,9 +307,9 @@ let scopeCtxResolveTy ty loc scopeCtx =
 
         | None -> tyPrimFromIdent ident tys loc, scopeCtx
 
-    | AppTy (tyCon, tys) ->
+    | AppTy (tyCtor, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
-        AppTy(tyCon, tys), scopeCtx
+        AppTy(tyCtor, tys), scopeCtx
 
     | _ -> ty, scopeCtx
 

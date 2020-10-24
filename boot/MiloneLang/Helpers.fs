@@ -1033,8 +1033,8 @@ let nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
 // TyCtor
 // -----------------------------------------------
 
-let tyConToInt tyCon =
-  match tyCon with
+let tyCtorToInt tyCtor =
+  match tyCtor with
   | BoolTyCtor -> 1
 
   | IntTyCtor -> 2
@@ -1055,12 +1055,12 @@ let tyConToInt tyCon =
       assert (tySerial >= 0)
       9 + tySerial
 
-let tyConHash tyCon = tyCon |> tyConToInt |> intHash
+let tyCtorHash tyCtor = tyCtor |> tyCtorToInt |> intHash
 
-let tyConCmp first second =
-  intCmp (tyConToInt first) (tyConToInt second)
+let tyCtorCmp first second =
+  intCmp (tyCtorToInt first) (tyCtorToInt second)
 
-let tyConEq first second = tyConCmp first second = 0
+let tyCtorEq first second = tyCtorCmp first second = 0
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -1125,14 +1125,14 @@ let tyToHash ty =
 
   | MetaTy (tySerial, _) -> intHash (2 + tySerial)
 
-  | AppTy (tyCon, tys) ->
+  | AppTy (tyCtor, tys) ->
       let rec go h tys =
         match tys with
         | [] -> h
 
         | ty :: tys -> go (hashCombine h (tyToHash ty)) tys
 
-      intHash (3 + go (tyConHash tyCon) tys)
+      intHash (3 + go (tyCtorHash tyCtor) tys)
 
 let tyCmp first second =
   match first, second with
@@ -1149,8 +1149,8 @@ let tyCmp first second =
 
   | _, MetaTy _ -> 1
 
-  | AppTy (firstTyCon, firstTys), AppTy (secondTyCon, secondTys) ->
-      let c = tyConCmp firstTyCon secondTyCon
+  | AppTy (firstTyCtor, firstTys), AppTy (secondTyCtor, secondTys) ->
+      let c = tyCtorCmp firstTyCtor secondTyCtor
       if c <> 0 then
         c
       else
@@ -1203,7 +1203,7 @@ let tyIsFreeIn ty tySerial: bool =
     | ErrorTy _
     | AppTy (_, []) -> true
 
-    | AppTy (tyCon, ty :: tys) -> go ty && go (AppTy(tyCon, tys))
+    | AppTy (tyCtor, ty :: tys) -> go ty && go (AppTy(tyCtor, tys))
 
     | MetaTy (s, _) -> s <> tySerial
 
@@ -1266,7 +1266,7 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
     | ErrorTy _
     | AppTy (_, []) -> ty
 
-    | AppTy (tyCon, tys) -> AppTy(tyCon, listMap go tys)
+    | AppTy (tyCtor, tys) -> AppTy(tyCtor, listMap go tys)
 
     | MetaTy (tySerial, _) ->
         match substMeta tySerial with
@@ -1824,11 +1824,11 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
         let ctx = typingBind ctx lSerial rty loc
         logAcc, ctx
     | _, MetaTy _ -> go rty lty (logAcc, ctx)
-    | AppTy (lTyCon, []), AppTy (rTyCon, []) when tyConEq lTyCon rTyCon -> logAcc, ctx
-    | AppTy (lTyCon, lTy :: lTys), AppTy (rTyCon, rTy :: rTys) ->
+    | AppTy (lTyCtor, []), AppTy (rTyCtor, []) when tyCtorEq lTyCtor rTyCtor -> logAcc, ctx
+    | AppTy (lTyCtor, lTy :: lTys), AppTy (rTyCtor, rTy :: rTys) ->
         (logAcc, ctx)
         |> go lTy rTy
-        |> go (AppTy(lTyCon, lTys)) (AppTy(rTyCon, rTys))
+        |> go (AppTy(lTyCtor, lTys)) (AppTy(rTyCtor, rTys))
     | ErrorTy _, _
     | _, ErrorTy _ -> logAcc, ctx
     | MetaTy _, _ -> addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
