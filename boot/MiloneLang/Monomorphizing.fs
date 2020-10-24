@@ -115,8 +115,8 @@ let monoCtxFindVarDef (ctx: MonoCtx) serial = ctx |> monoCtxGetVars |> mapFind s
 
 let monoCtxFindGenericFunDef (ctx: MonoCtx) serial =
   match ctx |> monoCtxGetVars |> mapFind serial with
-  | VarDef.Fun (_, _, TyScheme.ForAll ([], _), _) -> None
-  | VarDef.Fun (ident, arity, TyScheme.ForAll (_, funTy), loc) -> Some(ident, arity, funTy, loc)
+  | VarDef.Fun (_, _, TyScheme ([], _), _) -> None
+  | VarDef.Fun (ident, arity, TyScheme (_, funTy), loc) -> Some(ident, arity, funTy, loc)
   | _ -> None
 
 let monoCtxGetGenericFunIdent funSerial (ctx: MonoCtx) =
@@ -129,9 +129,9 @@ let monoCtxGetGenericFunIdent funSerial (ctx: MonoCtx) =
 let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
   let forceGeneralize (varSerial, varDef) =
     match varDef with
-    | VarDef.Fun (ident, arity, TyScheme.ForAll (_, ty), loc) ->
+    | VarDef.Fun (ident, arity, TyScheme (_, ty), loc) ->
         let fvs = ty |> tyCollectFreeVars
-        varSerial, VarDef.Fun(ident, arity, TyScheme.ForAll(fvs, ty), loc)
+        varSerial, VarDef.Fun(ident, arity, TyScheme(fvs, ty), loc)
 
     | _ -> varSerial, varDef
 
@@ -149,7 +149,7 @@ let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy l
           |> optionIsNone)
 
   let varDef =
-    let monoTyScheme = TyScheme.ForAll([], useSiteTy)
+    let monoTyScheme = TyScheme([], useSiteTy)
 
     let ident =
       ctx |> monoCtxGetGenericFunIdent genericFunSerial
@@ -236,7 +236,7 @@ let monoCtxProcessVarRef ctx varSerial useSiteTy =
   match monoCtxFindVarDef ctx varSerial with
   | VarDef.Var _
   | VarDef.Variant _
-  | VarDef.Fun (_, _, TyScheme.ForAll ([], _), _) -> varSerial, ctx
+  | VarDef.Fun (_, _, TyScheme ([], _), _) -> varSerial, ctx
 
   | VarDef.Fun _ ->
       match monoCtxFindMonomorphizedFun ctx varSerial useSiteTy with

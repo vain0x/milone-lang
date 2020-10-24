@@ -268,9 +268,9 @@ let ccCtxUpdateFunDefs (ctx: CcCtx) =
 
     | caps ->
         match vars |> mapFind varSerial with
-        | VarDef.Fun (ident, arity, TyScheme.ForAll (fvs, funTy), loc) ->
+        | VarDef.Fun (ident, arity, TyScheme (fvs, funTy), loc) ->
             let funTy, arity = caps |> capsUpdateFunDef funTy arity
-            let tyScheme = TyScheme.ForAll(fvs, funTy)
+            let tyScheme = TyScheme(fvs, funTy)
             let varDef = VarDef.Fun(ident, arity, tyScheme, loc)
             vars |> mapAdd varSerial varDef
 

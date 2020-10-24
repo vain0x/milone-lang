@@ -321,7 +321,7 @@ let scopeCtxResolveTy ty loc scopeCtx =
 
 let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
   let arity = args |> listLength
-  let tyScheme = TyScheme.ForAll([], ty)
+  let tyScheme = TyScheme([], ty)
 
   match scopeCtx |> scopeCtxGetVars |> mapTryFind serial with
   | Some (VarDef.Fun _) -> scopeCtx

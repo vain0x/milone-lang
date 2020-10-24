@@ -352,8 +352,7 @@ type Ty =
   | AppTy of TyCtor * Ty list
 
 /// Generalized type.
-[<RequireQualifiedAccess>]
-type TyScheme = ForAll of TySerial list * Ty
+type TyScheme = TyScheme of TySerial list * Ty
 
 /// Type specification.
 type TySpec = TySpec of Ty * Trait list
