@@ -465,55 +465,55 @@ let genExprDefault ctx ty =
   match ty with
   | Ty.Con (TyCon.Tuple, [])
   | Ty.Con (TyCon.Bool, _)
-  | Ty.Con (TyCon.Int, _) -> CExpr.Int 0, ctx
+  | Ty.Con (TyCon.Int, _) -> CIntExpr 0, ctx
   | Ty.Meta _ // FIXME: Unresolved type variables are `obj` for now.
   | Ty.Con (TyCon.Char, _)
   | Ty.Con (TyCon.Obj, _)
-  | Ty.Con (TyCon.List, _) -> CExpr.Ref "NULL", ctx
+  | Ty.Con (TyCon.List, _) -> CRefExpr "NULL", ctx
   | Ty.Con (TyCon.Str, _)
   | Ty.Con (TyCon.Fun, _)
   | Ty.Con (TyCon.Tuple, _)
   | Ty.Con (TyCon.Ref _, _) ->
       let ty, ctx = cirGetCTy ctx ty
-      CExpr.Cast(CExpr.Default, ty), ctx
+      CCastExpr(CDefaultExpr, ty), ctx
   | Ty.Error _ -> failwithf "Never %A" ty
 
 let genExprProc ctx serial _ty _loc =
   let ident = cirCtxUniqueName ctx serial
-  CExpr.Ref ident, ctx
+  CRefExpr ident, ctx
 
 let genExprVariant ctx serial ty =
   let ty, ctx = cirGetCTy ctx ty
-  let tag = CExpr.Ref(cirCtxUniqueName ctx serial)
-  CExpr.Init([ "tag", tag ], ty), ctx
+  let tag = CRefExpr(cirCtxUniqueName ctx serial)
+  CInitExpr([ "tag", tag ], ty), ctx
 
 let genExprBinAsCall ctx ident l r =
   let l, ctx = genExpr ctx l
   let r, ctx = genExpr ctx r
-  let callExpr = CExpr.Call(CExpr.Ref ident, [ l; r ])
+  let callExpr = CCallExpr(CRefExpr ident, [ l; r ])
   callExpr, ctx
 
 let genExprUniOp ctx op arg ty _ =
   let arg, ctx = genExpr ctx arg
   match op with
-  | MUniOp.Not -> CExpr.Uni(CNotUnary, arg), ctx
-  | MUniOp.StrPtr -> CExpr.Nav(arg, "str"), ctx
-  | MUniOp.StrLen -> CExpr.Nav(arg, "len"), ctx
+  | MUniOp.Not -> CUnaryExpr(CNotUnary, arg), ctx
+  | MUniOp.StrPtr -> CNavExpr(arg, "str"), ctx
+  | MUniOp.StrLen -> CNavExpr(arg, "len"), ctx
   | MUniOp.Unbox ->
       let valTy, ctx = cirGetCTy ctx ty
 
       let deref =
-        CExpr.Uni(CDerefUnary, CExpr.Cast(arg, CTy.Ptr valTy))
+        CUnaryExpr(CDerefUnary, CCastExpr(arg, CTy.Ptr valTy))
 
       deref, ctx
-  | MUniOp.Proj index -> CExpr.Proj(arg, index), ctx
-  | MUniOp.Tag -> CExpr.Nav(arg, "tag"), ctx
+  | MUniOp.Proj index -> CProjExpr(arg, index), ctx
+  | MUniOp.Tag -> CNavExpr(arg, "tag"), ctx
   | MUniOp.GetVariant serial ->
       let _, ctx = cirGetCTy ctx ty
-      CExpr.Uni(CDerefUnary, CExpr.Nav(arg, cirCtxUniqueName ctx serial)), ctx
-  | MUniOp.ListIsEmpty -> CExpr.Uni(CNotUnary, arg), ctx
-  | MUniOp.ListHead -> CExpr.Arrow(arg, "head"), ctx
-  | MUniOp.ListTail -> CExpr.Arrow(arg, "tail"), ctx
+      CUnaryExpr(CDerefUnary, CNavExpr(arg, cirCtxUniqueName ctx serial)), ctx
+  | MUniOp.ListIsEmpty -> CUnaryExpr(CNotUnary, arg), ctx
+  | MUniOp.ListHead -> CArrowExpr(arg, "head"), ctx
+  | MUniOp.ListTail -> CArrowExpr(arg, "tail"), ctx
 
 let genExprBin ctx op l r =
   match op with
@@ -522,11 +522,11 @@ let genExprBin ctx op l r =
   | MOp.StrIndex ->
       let l, ctx = genExpr ctx l
       let r, ctx = genExpr ctx r
-      CExpr.Index(CExpr.Nav(l, "str"), r), ctx
+      CIndexExpr(CNavExpr(l, "str"), r), ctx
   | _ ->
       let l, ctx = genExpr ctx l
       let r, ctx = genExpr ctx r
-      let opExpr = CExpr.Bin(cOpFrom op, l, r)
+      let opExpr = CBinaryExpr(cOpFrom op, l, r)
       opExpr, ctx
 
 let genExprList ctx exprs =
@@ -541,13 +541,13 @@ let genExprList ctx exprs =
 
 let genExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   match arg |> mxSugar with
-  | MExpr.Lit (IntLit value, _) -> CExpr.Int value, ctx
-  | MExpr.Lit (CharLit value, _) -> CExpr.Char value, ctx
-  | MExpr.Lit (StrLit value, _) -> CExpr.StrObj value, ctx
-  | MExpr.Lit (BoolLit false, _) -> CExpr.Int 0, ctx
-  | MExpr.Lit (BoolLit true, _) -> CExpr.Int 1, ctx
+  | MExpr.Lit (IntLit value, _) -> CIntExpr value, ctx
+  | MExpr.Lit (CharLit value, _) -> CCharExpr value, ctx
+  | MExpr.Lit (StrLit value, _) -> CStrObjExpr value, ctx
+  | MExpr.Lit (BoolLit false, _) -> CIntExpr 0, ctx
+  | MExpr.Lit (BoolLit true, _) -> CIntExpr 1, ctx
   | MExpr.Default (ty, _) -> genExprDefault ctx ty
-  | MExpr.Ref (serial, _, _) -> CExpr.Ref(cirCtxUniqueName ctx serial), ctx
+  | MExpr.Ref (serial, _, _) -> CRefExpr(cirCtxUniqueName ctx serial), ctx
   | MExpr.Proc (serial, ty, loc) -> genExprProc ctx serial ty loc
   | MExpr.Variant (_, serial, ty, _) -> genExprVariant ctx serial ty
   | MExpr.Uni (op, arg, ty, loc) -> genExprUniOp ctx op arg ty loc
@@ -558,20 +558,20 @@ let genExprCallPrintfn ctx format args =
   let rec go acc ctx args =
     match args with
     | [] -> listRev acc, ctx
-    | MExpr.Lit (StrLit value, _) :: args -> go (CExpr.StrRaw value :: acc) ctx args
+    | MExpr.Lit (StrLit value, _) :: args -> go (CStrRawExpr value :: acc) ctx args
     | arg :: args when tyEq (mexprToTy arg) tyStr ->
         let arg, ctx = genExpr ctx arg
-        let acc = CExpr.Nav(arg, "str") :: acc
+        let acc = CNavExpr(arg, "str") :: acc
         go acc ctx args
     | arg :: args ->
         let arg, ctx = genExpr ctx arg
         go (arg :: acc) ctx args
 
   let args, ctx = go [] ctx args
-  let format = CExpr.StrRaw(format + "\n")
+  let format = CStrRawExpr(format + "\n")
 
   let expr =
-    CStmt.Expr(CExpr.Call(CExpr.Ref "printf", format :: args))
+    CStmt.Expr(CCallExpr(CRefExpr "printf", format :: args))
 
   let ctx = cirCtxAddStmt ctx expr
   genExprDefault ctx tyUnit
@@ -580,15 +580,15 @@ let genExprCallInt arg argTy ctx =
   let arg, ctx = genExpr ctx arg
   match argTy with
   | Ty.Con (TyCon.Int, _) -> arg, ctx
-  | Ty.Con (TyCon.Char, _) -> CExpr.Cast(arg, CTy.Int), ctx
-  | Ty.Con (TyCon.Str, _) -> CExpr.Call(CExpr.Ref "str_to_int", [ arg ]), ctx
+  | Ty.Con (TyCon.Char, _) -> CCastExpr(arg, CTy.Int), ctx
+  | Ty.Con (TyCon.Str, _) -> CCallExpr(CRefExpr "str_to_int", [ arg ]), ctx
   | _ -> failwith "Never: Type Error `int`"
 
 let genExprCallString arg argTy ctx =
   let arg, ctx = genExpr ctx arg
   match argTy with
-  | Ty.Con (TyCon.Int, _) -> CExpr.Call(CExpr.Ref "str_of_int", [ arg ]), ctx
-  | Ty.Con (TyCon.Char, _) -> CExpr.Call(CExpr.Ref "str_of_char", [ arg ]), ctx
+  | Ty.Con (TyCon.Int, _) -> CCallExpr(CRefExpr "str_of_int", [ arg ]), ctx
+  | Ty.Con (TyCon.Char, _) -> CCallExpr(CRefExpr "str_of_char", [ arg ]), ctx
   | Ty.Con (TyCon.Str, _) -> arg, ctx
   | _ -> failwith "Never: Type Error `int`"
 
@@ -596,19 +596,19 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
   match prim, args, primTy with
   | HPrim.NativeFun (nativeFunIdent, _), _, _ ->
       let args, ctx = genExprList ctx args
-      CExpr.Call(CExpr.Ref nativeFunIdent, args), ctx
+      CCallExpr(CRefExpr nativeFunIdent, args), ctx
 
   | HPrim.Printfn, (MExpr.Lit (StrLit format, _)) :: args, _ -> genExprCallPrintfn ctx format args
 
   | HPrim.Assert, _, _ ->
-      let callee = CExpr.Ref "milone_assert"
+      let callee = CRefExpr "milone_assert"
       let args, ctx = genExprList ctx args
       // Embed the source location information.
       let args =
         let _, y, x = loc
-        listAppend args [ CExpr.Int y; CExpr.Int x ]
+        listAppend args [ CIntExpr y; CIntExpr x ]
 
-      let assertCall = CExpr.Call(callee, args)
+      let assertCall = CCallExpr(callee, args)
 
       let ctx =
         cirCtxAddStmt ctx (CStmt.Expr assertCall)
@@ -616,13 +616,13 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       genExprDefault ctx resultTy
 
   | HPrim.StrGetSlice, _, _ ->
-      let callee = CExpr.Ref "str_get_slice"
+      let callee = CRefExpr "str_get_slice"
       let args, ctx = genExprList ctx args
-      CExpr.Call(callee, args), ctx
+      CCallExpr(callee, args), ctx
 
   | HPrim.Char, [ arg ], _ ->
       let arg, ctx = genExpr ctx arg
-      CExpr.Cast(arg, CTy.Char), ctx
+      CCastExpr(arg, CTy.Char), ctx
 
   | HPrim.Int, [ arg ], Ty.Con (TyCon.Fun, [ argTy; _ ]) -> genExprCallInt arg argTy ctx
 
@@ -635,7 +635,7 @@ let genExprCallPrimInRegion ctx serial arg ty _loc =
 
   // Enter, call, leave. The result of call is set to the initialized variable.
   let ctx =
-    cirCtxAddStmt ctx (CStmt.Expr(CExpr.Call(CExpr.Ref "milone_enter_region", [])))
+    cirCtxAddStmt ctx (CStmt.Expr(CCallExpr(CRefExpr "milone_enter_region", [])))
 
   let ctx =
     // t <- f ()
@@ -647,7 +647,7 @@ let genExprCallPrimInRegion ctx serial arg ty _loc =
     genInitExprCore ctx serial (Some result) ty
 
   let ctx =
-    cirCtxAddStmt ctx (CStmt.Expr(CExpr.Call(CExpr.Ref "milone_leave_region", [])))
+    cirCtxAddStmt ctx (CStmt.Expr(CCallExpr(CRefExpr "milone_leave_region", [])))
 
   ctx
 
@@ -656,12 +656,12 @@ let genExprCallProc ctx callee args ty =
   | _ ->
       let callee, ctx = genExpr ctx callee
       let args, ctx = genExprList ctx args
-      CExpr.Call(callee, args), ctx
+      CCallExpr(callee, args), ctx
 
 let genExprCallClosureCore ctx callee args =
-  let funPtr = CExpr.Nav(callee, "fun")
-  let envArg = CExpr.Nav(callee, "env")
-  CExpr.Call(funPtr, envArg :: args), ctx
+  let funPtr = CNavExpr(callee, "fun")
+  let envArg = CNavExpr(callee, "env")
+  CCallExpr(funPtr, envArg :: args), ctx
 
 let genExprCallClosure ctx callee args =
   let callee, ctx = genExpr ctx callee
@@ -675,7 +675,7 @@ let cirCtxAddLetStmt ctx ident expr cty storageModifier =
         cirCtxAddDecl ctx (CDecl.StaticVar(ident, cty))
 
       match expr with
-      | Some expr -> cirCtxAddStmt ctx (CStmt.Set(CExpr.Ref ident, expr))
+      | Some expr -> cirCtxAddStmt ctx (CStmt.Set(CRefExpr ident, expr))
       | _ -> ctx
   | StorageModifier.Auto -> cirCtxAddStmt ctx (CStmt.Let(ident, expr, cty))
 
@@ -696,10 +696,10 @@ let genInitClosure ctx serial funSerial envSerial ty =
   let ty, ctx = cirGetCTy ctx ty
 
   let fields =
-    [ "fun", CExpr.Ref(cirCtxUniqueName ctx funSerial)
-      "env", CExpr.Ref(cirCtxUniqueName ctx envSerial) ]
+    [ "fun", CRefExpr(cirCtxUniqueName ctx funSerial)
+      "env", CRefExpr(cirCtxUniqueName ctx envSerial) ]
 
-  let initExpr = CExpr.Init(fields, ty)
+  let initExpr = CInitExpr(fields, ty)
   cirCtxAddLetStmt ctx ident (Some initExpr) ty storageModifier
 
 let genInitBox ctx serial arg =
@@ -715,7 +715,7 @@ let genInitBox ctx serial arg =
 
   // *(T*)p = t;
   let left =
-    CExpr.Uni(CDerefUnary, CExpr.Cast(CExpr.Ref temp, CTy.Ptr argTy))
+    CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CTy.Ptr argTy))
 
   let ctx = cirCtxAddStmt ctx (CStmt.Set(left, arg))
 
@@ -735,7 +735,7 @@ let genInitIndirect ctx serial payload ty =
 
   // *(T*)p = t;
   let left =
-    CExpr.Uni(CDerefUnary, CExpr.Cast(CExpr.Ref varName, ptrTy))
+    CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr varName, ptrTy))
 
   let ctx =
     cirCtxAddStmt ctx (CStmt.Set(left, payload))
@@ -754,7 +754,7 @@ let genInitCons ctx serial head tail listTy =
   let head, ctx = genExpr ctx head
 
   let stmt =
-    CStmt.Set(CExpr.Arrow(CExpr.Ref temp, "head"), head)
+    CStmt.Set(CArrowExpr(CRefExpr temp, "head"), head)
 
   let ctx = cirCtxAddStmt ctx stmt
 
@@ -762,7 +762,7 @@ let genInitCons ctx serial head tail listTy =
   let tail, ctx = genExpr ctx tail
 
   let stmt =
-    CStmt.Set(CExpr.Arrow(CExpr.Ref temp, "tail"), tail)
+    CStmt.Set(CArrowExpr(CRefExpr temp, "tail"), tail)
 
   let ctx = cirCtxAddStmt ctx stmt
 
@@ -780,7 +780,7 @@ let genInitTuple ctx serial items tupleTy =
     match items with
     | [] -> ctx
     | item :: items ->
-        let left = CExpr.Nav(CExpr.Ref ident, tupleField i)
+        let left = CNavExpr(CRefExpr ident, tupleField i)
         let item, ctx = genExpr ctx item
         let stmt = CStmt.Set(left, item)
         let ctx = cirCtxAddStmt ctx stmt
@@ -798,13 +798,13 @@ let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
   let variantName = cirCtxUniqueName ctx variantSerial
 
   let payloadExpr =
-    CExpr.Ref(cirCtxUniqueName ctx payloadSerial)
+    CRefExpr(cirCtxUniqueName ctx payloadSerial)
 
   let fields =
-    [ "tag", CExpr.Ref(cirCtxUniqueName ctx variantSerial)
+    [ "tag", CRefExpr(cirCtxUniqueName ctx variantSerial)
       variantName, payloadExpr ]
 
-  let init = CExpr.Init(fields, unionTy)
+  let init = CInitExpr(fields, unionTy)
 
   let ctx =
     cirCtxAddLetStmt ctx temp (Some init) unionTy storageModifier
@@ -845,7 +845,7 @@ let genStmtDo ctx expr =
 let genStmtSet ctx serial right =
   let right, ctx = genExpr ctx right
   let ident = cirCtxUniqueName ctx serial
-  let left = CExpr.Ref(ident)
+  let left = CRefExpr(ident)
   cirCtxAddStmt ctx (CStmt.Set(left, right))
 
 let genStmtReturn ctx expr =
@@ -863,7 +863,7 @@ let genStmtJump ctx stmt =
   | MStmt.Exit (arg, _) ->
       let doArm () =
         let arg, ctx = genExpr ctx arg
-        cirCtxAddStmt ctx (CStmt.Expr(CExpr.Call(CExpr.Ref "exit", [ arg ])))
+        cirCtxAddStmt ctx (CStmt.Expr(CCallExpr(CRefExpr "exit", [ arg ])))
 
       doArm ()
   | _ -> failwith "NEVER"

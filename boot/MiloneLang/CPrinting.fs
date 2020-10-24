@@ -134,49 +134,49 @@ let rec cprintExpr acc expr: string list =
         cprintExprList acc 1 separator exprs
 
   match expr with
-  | CExpr.Default -> acc |> cons "{}"
-  | CExpr.Int value -> acc |> cons (string value)
-  | CExpr.Char value ->
+  | CDefaultExpr -> acc |> cons "{}"
+  | CIntExpr value -> acc |> cons (string value)
+  | CCharExpr value ->
       acc
       |> cons "'"
       |> cons (cprintExprChar value)
       |> cons "'"
-  | CExpr.StrObj value -> cprintExprStrObj acc value
-  | CExpr.StrRaw value -> cprintExprStrRaw acc value
-  | CExpr.Init (fields, ty) -> cprintExprInit acc fields ty
-  | CExpr.Nav (CExpr.StrObj value, "len") -> acc |> cons (string value.Length)
-  | CExpr.Ref (value) -> acc |> cons value
-  | CExpr.Proj (left, index) ->
+  | CStrObjExpr value -> cprintExprStrObj acc value
+  | CStrRawExpr value -> cprintExprStrRaw acc value
+  | CInitExpr (fields, ty) -> cprintExprInit acc fields ty
+  | CNavExpr (CStrObjExpr value, "len") -> acc |> cons (string value.Length)
+  | CRefExpr (value) -> acc |> cons value
+  | CProjExpr (left, index) ->
       let acc = cprintExpr acc left
       acc |> cons ".t" |> cons (string index)
-  | CExpr.Cast (expr, ty) ->
+  | CCastExpr (expr, ty) ->
       let acc = acc |> cons "(("
       let acc = cprintTy acc ty
       let acc = acc |> cons ")"
       let acc = cprintExpr acc expr
       let acc = acc |> cons ")"
       acc
-  | CExpr.Nav (expr, field) ->
+  | CNavExpr (expr, field) ->
       let acc = cprintExpr acc expr
       let acc = acc |> cons "." |> cons field
       acc
-  | CExpr.Arrow (expr, field) ->
+  | CArrowExpr (expr, field) ->
       let acc = cprintExpr acc expr
       let acc = acc |> cons "->" |> cons field
       acc
-  | CExpr.Index (l, r) ->
+  | CIndexExpr (l, r) ->
       let acc = cprintExpr acc l
       let acc = acc |> cons "["
       let acc = cprintExpr acc r
       let acc = acc |> cons "]"
       acc
-  | CExpr.Call (callee, args) ->
+  | CCallExpr (callee, args) ->
       let acc = cprintExpr acc callee
       let acc = acc |> cons "("
       let acc = cprintExprList acc 0 ", " args
       let acc = acc |> cons ")"
       acc
-  | CExpr.Uni (op, arg) ->
+  | CUnaryExpr (op, arg) ->
       let acc = acc |> cons "("
 
       let acc =
@@ -188,7 +188,7 @@ let rec cprintExpr acc expr: string list =
       let acc = cprintExpr acc arg
       let acc = acc |> cons "))"
       acc
-  | CExpr.Bin (op, first, second) ->
+  | CBinaryExpr (op, first, second) ->
       let acc = acc |> cons "("
       let acc = cprintExpr acc first
 

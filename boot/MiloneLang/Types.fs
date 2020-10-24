@@ -645,27 +645,26 @@ type CBinary =
   | CGreaterEqualBinary
 
 /// Expression in C language.
-[<RequireQualifiedAccess>]
 type CExpr =
   /// `{}`
-  | Default
-  | Int of int
-  | Char of char
-  | StrRaw of string
-  | StrObj of string
-  | Ref of Ident
+  | CDefaultExpr
+  | CIntExpr of int
+  | CCharExpr of char
+  | CStrRawExpr of string
+  | CStrObjExpr of string
+  | CRefExpr of Ident
   /// `(struct T){.x = x, ..}` Initializer.
-  | Init of fields: (Ident * CExpr) list * CTy
+  | CInitExpr of fields: (Ident * CExpr) list * CTy
   /// Projection. Get an item of tuple.
-  | Proj of CExpr * index: int
-  | Cast of CExpr * CTy
-  | Nav of CExpr * Ident
-  | Arrow of CExpr * Ident
+  | CProjExpr of CExpr * index: int
+  | CCastExpr of CExpr * CTy
+  | CNavExpr of CExpr * Ident
+  | CArrowExpr of CExpr * Ident
   /// `a[i]`
-  | Index of CExpr * CExpr
-  | Call of CExpr * args: CExpr list
-  | Uni of CUnary * CExpr
-  | Bin of CBinary * CExpr * CExpr
+  | CIndexExpr of CExpr * CExpr
+  | CCallExpr of CExpr * args: CExpr list
+  | CUnaryExpr of CUnary * CExpr
+  | CBinaryExpr of CBinary * CExpr * CExpr
 
 /// Statement in C language.
 [<RequireQualifiedAccess>]
