@@ -242,40 +242,39 @@ type ATyDecl =
   | AUnionTyDecl of AVariant list
 
 /// Expression in AST.
-[<RequireQualifiedAccess>]
 type AExpr =
-  | Missing of Pos
-  | Lit of Lit * Pos
-  | Ident of Ident * Pos
+  | AMissingExpr of Pos
+  | ALitExpr of Lit * Pos
+  | AIdentExpr of Ident * Pos
   /// List literal, e.g. `[]`, `[2; 3]`.
-  | ListLit of AExpr list * Pos
+  | AListExpr of AExpr list * Pos
   /// condition, then-clause, else-clause.
-  | If of AExpr * AExpr * AExpr * Pos
-  | Match of AExpr * AArm list * Pos
-  | Fun of APat list * AExpr * Pos
+  | AIfExpr of AExpr * AExpr * AExpr * Pos
+  | AMatchExpr of AExpr * AArm list * Pos
+  | AFunExpr of APat list * AExpr * Pos
   /// Navigation expression, e.g. `str.Length`.
-  | Nav of AExpr * Ident * Pos
-  | Index of AExpr * AExpr * Pos
+  | ANavExpr of AExpr * Ident * Pos
+  | AIndexExpr of AExpr * AExpr * Pos
   /// Unary operation, e.g. `-x`.
   /// Currently `-` is the only unary operation.
-  | Uni of Unary * AExpr * Pos
+  | AUnaryExpr of Unary * AExpr * Pos
   /// Binary operation, e.g. `x + y`.
-  | Bin of Binary * AExpr * AExpr * Pos
+  | ABinaryExpr of Binary * AExpr * AExpr * Pos
   /// Range syntax, e.g. `first..last`, `first .. step .. last`.
-  | Range of AExpr list * Pos
+  | ARangeExpr of AExpr list * Pos
   /// Tuple literal, e.g. `()`, `2, "two"`.
-  | TupleLit of AExpr list * Pos
+  | ATupleExpr of AExpr list * Pos
   /// Type annotation.
-  | Anno of AExpr * ATy * Pos
+  | AAnnoExpr of AExpr * ATy * Pos
   /// Semicolon-separated expressions.
-  | Semi of AExpr list * Pos
+  | ASemiExpr of AExpr list * Pos
   /// (pattern, initializer, next). Let-in expression.
-  | Let of Vis * APat * AExpr * AExpr * Pos
+  | ALetExpr of Vis * APat * AExpr * AExpr * Pos
   /// Type synonym definition, e.g. `type UserId = int`.
-  | TySynonym of Vis * Ident * ATy * Pos
+  | ATySynonymExpr of Vis * Ident * ATy * Pos
   /// Discriminated union type definition, e.g. `type Result = | Ok | Err of int`.
-  | TyUnion of Vis * Ident * AVariant list * Pos
-  | Open of Ident list * Pos
+  | AUnionTyExpr of Vis * Ident * AVariant list * Pos
+  | AOpenExpr of Ident list * Pos
 
 /// Root of AST, a result of parsing single source file.
 [<RequireQualifiedAccess>]

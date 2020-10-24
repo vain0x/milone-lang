@@ -135,7 +135,7 @@ let parsePatError msg (tokens, errors) =
 let parseExprError msg (tokens, errors) =
   let pos = nextPos tokens
   let errors = parseErrorCore msg pos errors
-  AExpr.Missing pos, tokens, errors
+  AMissingExpr pos, tokens, errors
 
 let parseNewError msg (tokens, errors) =
   let pos = nextPos tokens
@@ -486,7 +486,7 @@ let parseRange basePos (tokens, errors) =
   match tokens with
   | (DotDotToken, pos) :: tokens ->
       let r, tokens, errors = parseExpr basePos (tokens, errors)
-      AExpr.Range([ l; r ], pos), tokens, errors
+      ARangeExpr([ l; r ], pos), tokens, errors
 
   | _ -> l, tokens, errors
 
@@ -503,7 +503,7 @@ let parseList basePos bracketPos (tokens, errors) =
 
         tokens, errors
 
-  AExpr.ListLit(items, bracketPos), tokens, errors
+  AListExpr(items, bracketPos), tokens, errors
 
 let parseThenClause basePos (tokens, errors) =
   let innerBasePos = basePos |> posAddX 1
@@ -522,7 +522,7 @@ let parseElseClause basePos (tokens, errors) =
 
   | (ElseToken, elsePos) :: tokens when posInside basePos elsePos -> parseSemi basePos elsePos (tokens, errors)
 
-  | _ -> AExpr.Missing basePos, tokens, errors
+  | _ -> AMissingExpr basePos, tokens, errors
 
 let parseIf ifPos (tokens, errors) =
   let innerBasePos = ifPos |> posAddX 1
@@ -530,7 +530,7 @@ let parseIf ifPos (tokens, errors) =
   let cond, tokens, errors = parseExpr innerBasePos (tokens, errors)
   let body, tokens, errors = parseThenClause ifPos (tokens, errors)
   let alt, tokens, errors = parseElseClause ifPos (tokens, errors)
-  AExpr.If(cond, body, alt, ifPos), tokens, errors
+  AIfExpr(cond, body, alt, ifPos), tokens, errors
 
 /// `pat ( 'when' expr )? -> expr`
 let parseMatchArm matchPos armPos (tokens, errors) =
@@ -543,7 +543,7 @@ let parseMatchArm matchPos armPos (tokens, errors) =
     | (WhenToken, _) :: tokens -> parseExpr innerBasePos (tokens, errors)
 
     | _ ->
-        let guard = AExpr.Missing(nextPos tokens)
+        let guard = AMissingExpr(nextPos tokens)
         guard, tokens, errors
 
   let body, tokens, errors =
@@ -579,7 +579,7 @@ let parseMatch matchPos (tokens, errors) =
     | _ -> listRev (arm :: acc), tokens, errors
 
   let arms, tokens, errors = go [] armPos (tokens, errors)
-  AExpr.Match(target, arms, matchPos), tokens, errors
+  AMatchExpr(target, arms, matchPos), tokens, errors
 
 /// `fun-expr = 'fun' pat* '->' expr`
 let parseFun basePos funPos (tokens, errors) =
@@ -592,7 +592,7 @@ let parseFun basePos funPos (tokens, errors) =
 
     | _ -> parseExprError "Missing '->'" (tokens, errors)
 
-  AExpr.Fun(pats, body, funPos), tokens, errors
+  AFunExpr(pats, body, funPos), tokens, errors
 
 let parseParenBody basePos _parenPos (tokens, errors) =
   // NOTE: Parens should form a layout bposk but not for now.
@@ -643,9 +643,9 @@ let parseLet letPos (tokens, errors) =
         // Implicit `in` clause must be on the same column as `let`.
         parseSemi letPos (nextPos tokens) (tokens, errors)
 
-    | tokens -> AExpr.TupleLit([], letPos), tokens, errors
+    | tokens -> ATupleExpr([], letPos), tokens, errors
 
-  AExpr.Let(vis, pat, body, next, letPos), tokens, errors
+  ALetExpr(vis, pat, body, next, letPos), tokens, errors
 
 let parseTyDecl typePos (tokens, errors) =
   let basePos = typePos |> posAddX 1
@@ -660,9 +660,9 @@ let parseTyDecl typePos (tokens, errors) =
 
           let expr =
             match tyDecl with
-            | ATySynonymDecl ty -> AExpr.TySynonym(vis, tyIdent, ty, typePos)
+            | ATySynonymDecl ty -> ATySynonymExpr(vis, tyIdent, ty, typePos)
 
-            | AUnionTyDecl variants -> AExpr.TyUnion(vis, tyIdent, variants, typePos)
+            | AUnionTyDecl variants -> AUnionTyExpr(vis, tyIdent, variants, typePos)
 
           expr, tokens, errors
 
@@ -670,7 +670,7 @@ let parseTyDecl typePos (tokens, errors) =
           let ty, tokens, errors =
             parseTyError "Expected '='" (tokens, errors)
 
-          AExpr.TySynonym(vis, tyIdent, ty, typePos), tokens, errors
+          ATySynonymExpr(vis, tyIdent, ty, typePos), tokens, errors
 
   | _ -> parseExprError "Expected identifier" (tokens, errors)
 
@@ -699,25 +699,25 @@ let parseOpen openPos (tokens, errors) =
         [], tokens, errors
 
   let path, tokens, errors = parsePath (tokens, errors)
-  AExpr.Open(path, openPos), tokens, errors
+  AOpenExpr(path, openPos), tokens, errors
 
 let parseAtom basePos (tokens, errors) =
   match tokens with
   | _ when not (nextInside basePos tokens) -> parseExprError "Expected an expression" (tokens, errors)
 
-  | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> AExpr.TupleLit([], pos), tokens, errors
+  | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATupleExpr([], pos), tokens, errors
 
-  | (FalseToken, pos) :: tokens -> AExpr.Lit(BoolLit false, pos), tokens, errors
+  | (FalseToken, pos) :: tokens -> ALitExpr(BoolLit false, pos), tokens, errors
 
-  | (TrueToken, pos) :: tokens -> AExpr.Lit(BoolLit true, pos), tokens, errors
+  | (TrueToken, pos) :: tokens -> ALitExpr(BoolLit true, pos), tokens, errors
 
-  | (IntToken value, pos) :: tokens -> AExpr.Lit(IntLit value, pos), tokens, errors
+  | (IntToken value, pos) :: tokens -> ALitExpr(IntLit value, pos), tokens, errors
 
-  | (CharToken value, pos) :: tokens -> AExpr.Lit(CharLit value, pos), tokens, errors
+  | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
 
-  | (StrToken value, pos) :: tokens -> AExpr.Lit(StrLit value, pos), tokens, errors
+  | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
 
-  | (IdentToken ident, pos) :: tokens -> AExpr.Ident(ident, pos), tokens, errors
+  | (IdentToken ident, pos) :: tokens -> AIdentExpr(ident, pos), tokens, errors
 
   | (LeftParenToken, parenPos) :: tokens -> parseParenBody basePos parenPos (tokens, errors)
 
@@ -752,9 +752,9 @@ let parseSuffix basePos (tokens, errors) =
 
               tokens, errors
 
-        go (AExpr.Index(acc, r, pos)) (tokens, errors)
+        go (AIndexExpr(acc, r, pos)) (tokens, errors)
 
-    | (DotToken, pos) :: (IdentToken r, _) :: tokens -> go (AExpr.Nav(acc, r, pos)) (tokens, errors)
+    | (DotToken, pos) :: (IdentToken r, _) :: tokens -> go (ANavExpr(acc, r, pos)) (tokens, errors)
 
     | (DotToken, _) :: tokens ->
         let errors =
@@ -776,7 +776,7 @@ let parseApp basePos (tokens, errors) =
   let rec go callee (tokens, errors) =
     if nextInside innerBasePos tokens && leadsArg tokens then
       let arg, tokens, errors = parseSuffix basePos (tokens, errors)
-      go (AExpr.Bin(AppBinary, callee, arg, calleePos)) (tokens, errors)
+      go (ABinaryExpr(AppBinary, callee, arg, calleePos)) (tokens, errors)
     else
       callee, tokens, errors
 
@@ -787,7 +787,7 @@ let parsePrefix basePos (tokens, errors) =
   match tokens with
   | (MinusToken, pos) :: tokens ->
       let arg, tokens, errors = parseApp basePos (tokens, errors)
-      AExpr.Uni(NegUnary, arg, pos), tokens, errors
+      AUnaryExpr(NegUnary, arg, pos), tokens, errors
 
   | _ -> parseApp basePos (tokens, errors)
 
@@ -802,12 +802,12 @@ let rec parseOps bp basePos first (tokens, errors) =
     let second, tokens, errors =
       parseNextBp bp basePos (tokens, errors)
 
-    let expr = AExpr.Bin(op, expr, second, opPos)
+    let expr = ABinaryExpr(op, expr, second, opPos)
     parseOps bp basePos expr (tokens, errors)
 
   let nextR expr op opPos (tokens, errors) =
     let second, tokens, errors = parseOp bp basePos (tokens, errors)
-    let expr = AExpr.Bin(op, expr, second, opPos)
+    let expr = ABinaryExpr(op, expr, second, opPos)
     parseOps bp basePos expr (tokens, errors)
 
   match bp, tokens with
@@ -868,7 +868,7 @@ let parseTuple basePos (tokens, errors) =
   match tokens with
   | (CommaToken, pos) :: _ ->
       let items, tokens, errors = go [] (tokens, errors)
-      AExpr.TupleLit(item :: items, pos), tokens, errors
+      ATupleExpr(item :: items, pos), tokens, errors
 
   | _ -> item, tokens, errors
 
@@ -879,7 +879,7 @@ let parseAnno basePos (tokens, errors) =
   match tokens with
   | (ColonToken, pos) :: tokens ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
-      AExpr.Anno(body, ty, pos), tokens, errors
+      AAnnoExpr(body, ty, pos), tokens, errors
 
   | _ -> body, tokens, errors
 
@@ -934,7 +934,7 @@ let parseSemi basePos mainPos (tokens, errors) =
 
   | [ item ] -> item, tokens, errors
 
-  | _ -> AExpr.Semi(items, mainPos), tokens, errors
+  | _ -> ASemiExpr(items, mainPos), tokens, errors
 
 /// `top-bp = ( 'module' 'rec'? path module-body / module-body )?`
 let parseTopLevel (tokens, errors) =
@@ -942,7 +942,7 @@ let parseTopLevel (tokens, errors) =
   match tokens with
   | [] ->
       let pos = 0, 0
-      ARoot.Expr(AExpr.TupleLit([], pos)), tokens, errors
+      ARoot.Expr(ATupleExpr([], pos)), tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, _) :: tokens ->
       let expr, tokens, errors =
