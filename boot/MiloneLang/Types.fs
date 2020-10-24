@@ -560,24 +560,23 @@ type MExpr =
   | MBinaryExpr of MBinary * left: MExpr * right: MExpr * resultTy: Ty * Loc
 
 /// Variable initializer in mid-level IR.
-[<RequireQualifiedAccess>]
 type MInit =
   /// Remain uninitialized at first; initialized later by `MStmt.Set`.
-  | UnInit
-  | Expr of MExpr
+  | MUninitInit
+  | MExprInit of MExpr
   /// Call to primitive.
-  | CallPrim of HPrim * args: MExpr list * primTy: Ty
+  | MCallPrimInit of HPrim * args: MExpr list * primTy: Ty
   /// Direct call to procedure.
-  | CallProc of callee: MExpr * args: MExpr list * calleeTy: Ty
+  | MCallProcInit of callee: MExpr * args: MExpr list * calleeTy: Ty
   /// Indirect call to closure.
-  | CallClosure of callee: MExpr * args: MExpr list
+  | MCallClosureInit of callee: MExpr * args: MExpr list
   /// Construct a closure, packing environment.
-  | Closure of subFunSerial: FunSerial * envSerial: VarSerial
-  | Box of MExpr
-  | Indirect of MExpr
-  | Cons of head: MExpr * tail: MExpr
-  | Tuple of items: MExpr list
-  | Variant of VariantSerial * payloadSerial: VarSerial
+  | MClosureInit of subFunSerial: FunSerial * envSerial: VarSerial
+  | MBoxInit of MExpr
+  | MIndirectInit of MExpr
+  | MConsInit of head: MExpr * tail: MExpr
+  | MTupleInit of items: MExpr list
+  | MVariantInit of VariantSerial * payloadSerial: VarSerial
 
 /// Statement in middle IR.
 /// Doesn't introduce global things, e.g. functions.

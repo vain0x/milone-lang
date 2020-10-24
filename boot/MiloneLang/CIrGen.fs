@@ -813,30 +813,30 @@ let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
 
 let genStmtLetVal ctx serial init ty loc =
   match init with
-  | MInit.UnInit -> genInitExprCore ctx serial None ty
-  | MInit.Expr expr ->
+  | MUninitInit -> genInitExprCore ctx serial None ty
+  | MExprInit expr ->
       let expr, ctx = genExpr ctx expr
       genInitExprCore ctx serial (Some expr) ty
 
-  | MInit.CallPrim (HPrim.InRegion, [ arg ], _) -> genExprCallPrimInRegion ctx serial arg ty loc
+  | MCallPrimInit (HPrim.InRegion, [ arg ], _) -> genExprCallPrimInRegion ctx serial arg ty loc
 
-  | MInit.CallPrim (prim, args, calleeTy) ->
+  | MCallPrimInit (prim, args, calleeTy) ->
       let expr, ctx =
         genExprCallPrim ctx prim args calleeTy ty loc
 
       genInitExprCore ctx serial (Some expr) ty
-  | MInit.CallProc (callee, args, _) ->
+  | MCallProcInit (callee, args, _) ->
       let expr, ctx = genExprCallProc ctx callee args ty
       genInitExprCore ctx serial (Some expr) ty
-  | MInit.CallClosure (callee, args) ->
+  | MCallClosureInit (callee, args) ->
       let expr, ctx = genExprCallClosure ctx callee args
       genInitExprCore ctx serial (Some expr) ty
-  | MInit.Closure (funSerial, envSerial) -> genInitClosure ctx serial funSerial envSerial ty
-  | MInit.Box arg -> genInitBox ctx serial arg
-  | MInit.Indirect payload -> genInitIndirect ctx serial payload ty
-  | MInit.Cons (head, tail) -> genInitCons ctx serial head tail ty
-  | MInit.Tuple items -> genInitTuple ctx serial items ty
-  | MInit.Variant (variantSerial, payloadSerial) -> genInitVariant ctx serial variantSerial payloadSerial ty
+  | MClosureInit (funSerial, envSerial) -> genInitClosure ctx serial funSerial envSerial ty
+  | MBoxInit arg -> genInitBox ctx serial arg
+  | MIndirectInit payload -> genInitIndirect ctx serial payload ty
+  | MConsInit (head, tail) -> genInitCons ctx serial head tail ty
+  | MTupleInit items -> genInitTuple ctx serial items ty
+  | MVariantInit (variantSerial, payloadSerial) -> genInitVariant ctx serial variantSerial payloadSerial ty
 
 let genStmtDo ctx expr =
   let expr, ctx = genExpr ctx expr

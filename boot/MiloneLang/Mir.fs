@@ -57,7 +57,7 @@ let mirCtxLetFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let refExpr, serial, ctx = mirCtxFreshVar ctx ident ty loc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(serial, MInit.UnInit, ty, loc))
+    mirCtxAddStmt ctx (MStmt.LetVal(serial, MUninitInit, ty, loc))
 
   let setStmt expr = MStmt.Set(serial, expr, loc)
   refExpr, setStmt, ctx
@@ -172,7 +172,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
       false, ctx
   | _ ->
       let letStmt =
-        MStmt.LetVal(serial, MInit.Expr expr, ty, loc)
+        MStmt.LetVal(serial, MExprInit expr, ty, loc)
 
       true, mirCtxAddStmt ctx letStmt
 
@@ -207,7 +207,7 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
 
   | _ ->
       let letStmt =
-        MStmt.LetVal(serial, MInit.Expr expr, ty, loc)
+        MStmt.LetVal(serial, MExprInit expr, ty, loc)
 
       true, mirCtxAddStmt ctx letStmt
 
@@ -227,7 +227,7 @@ let mirifyPatAs ctx endLabel pat serial expr loc =
   let ty, _ = patExtract pat
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(serial, MInit.Expr expr, ty, loc))
+    mirCtxAddStmt ctx (MStmt.LetVal(serial, MExprInit expr, ty, loc))
 
   let expr = MRefExpr(serial, ty, loc)
   let covers, ctx = mirifyPat ctx endLabel pat expr
@@ -467,7 +467,7 @@ let mirifyExprCallBox ctx arg _ loc =
   let temp, tempSerial, ctx = mirCtxFreshVar ctx "box" tyObj loc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Box arg, tyObj, loc))
+    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MBoxInit arg, tyObj, loc))
 
   temp, ctx
 
@@ -486,7 +486,7 @@ let mirifyExprCallSome ctx item ty loc =
   let nil = MDefaultExpr(ty, loc)
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Cons(item, nil), ty, loc))
+    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MConsInit(item, nil), ty, loc))
 
   MRefExpr(tempSerial, ty, loc), ctx
 
@@ -503,13 +503,13 @@ let mirifyExprCallVariantFun (ctx: MirCtx) serial payload ty loc =
   let _, payloadSerial, ctx =
     mirCtxFreshVar ctx "payload" payloadTy loc
 
-  let payloadInit = MInit.Indirect payload
+  let payloadInit = MIndirectInit payload
 
   let ctx =
     mirCtxAddStmt ctx (MStmt.LetVal(payloadSerial, payloadInit, payloadTy, loc))
 
   let temp, tempSerial, ctx = mirCtxFreshVar ctx "variant" ty loc
-  let init = MInit.Variant(serial, payloadSerial)
+  let init = MVariantInit(serial, payloadSerial)
 
   let ctx =
     mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, init, ty, loc))
@@ -523,7 +523,7 @@ let mirifyExprOpCons ctx l r listTy loc =
   let r, ctx = mirifyExpr ctx r
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Cons(l, r), listTy, loc))
+    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MConsInit(l, r), listTy, loc))
 
   MRefExpr(tempSerial, listTy, loc), ctx
 
@@ -541,7 +541,7 @@ let mirifyExprTuple ctx items itemTys loc =
   let items, ctx = go [] ctx items
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Tuple items, ty, loc))
+    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MTupleInit items, ty, loc))
 
   MRefExpr(tempSerial, ty, loc), ctx
 
@@ -585,7 +585,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
         let temp, tempSerial, ctx = mirCtxFreshVar ctx "call" ty loc
 
         let ctx =
-          mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.CallPrim(prim, args, primTy), ty, loc))
+          mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MCallPrimInit(prim, args, primTy), ty, loc))
 
         temp, ctx
     | _ ->
@@ -599,7 +599,7 @@ let mirifyExprInfCallProc ctx callee args ty loc =
         let temp, tempSerial, ctx = mirCtxFreshVar ctx "call" ty loc
 
         let ctx =
-          mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.CallProc(callee, args, calleeTy), ty, loc))
+          mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MCallProcInit(callee, args, calleeTy), ty, loc))
 
         temp, ctx
 
@@ -638,7 +638,7 @@ let mirifyExprInfCallClosure ctx callee args resultTy loc =
   let tempRef, tempSerial, ctx = mirCtxFreshVar ctx "app" resultTy loc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.CallClosure(callee, args), resultTy, loc))
+    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MCallClosureInit(callee, args), resultTy, loc))
 
   tempRef, ctx
 
@@ -648,12 +648,12 @@ let mirifyExprInfClosure ctx funSerial env funTy loc =
   let _, envSerial, ctx = mirCtxFreshVar ctx "env" envTy envLoc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(envSerial, MInit.Expr env, envTy, envLoc))
+    mirCtxAddStmt ctx (MStmt.LetVal(envSerial, MExprInit env, envTy, envLoc))
 
   let tempRef, tempSerial, ctx = mirCtxFreshVar ctx "fun" funTy loc
 
   let ctx =
-    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MInit.Closure(funSerial, envSerial), funTy, loc))
+    mirCtxAddStmt ctx (MStmt.LetVal(tempSerial, MClosureInit(funSerial, envSerial), funTy, loc))
 
   tempRef, ctx
 
