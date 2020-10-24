@@ -603,10 +603,9 @@ type MStmt =
 // CIR types
 // -----------------------------------------------
 
-[<RequireQualifiedAccess>]
-type TyInstance =
-  | Declared
-  | Defined
+type CTyInstance =
+  | CTyDeclared
+  | CTyDefined
 
 /// Type in C language.
 type CTy =

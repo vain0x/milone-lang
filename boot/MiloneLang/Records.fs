@@ -373,7 +373,7 @@ type CirCtx =
   | CirCtx
     of AssocMap<VarSerial, VarDef>
       * AssocMap<VarSerial, Ident>
-      * AssocMap<Ty, TyInstance * CTy>
+      * AssocMap<Ty, CTyInstance * CTy>
       * AssocMap<TySerial, TyDef>
       * AssocMap<Ty, Ident>
       * CStmt list
