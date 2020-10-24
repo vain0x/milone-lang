@@ -143,19 +143,18 @@ type Unary =
   /// `-`
   | NegUnary
 
-/// Precedence level of binary operators.
-[<RequireQualifiedAccess>]
-type OpLevel =
-  | Prefix
-  | Mul
-  | Add
-  | Cons
+/// Binding power of operators.
+type Bp =
+  | PrefixBp
+  | MulBp
+  | AddBp
+  | ConsBp
   /// `|>`
-  | Pipe
+  | PipeBp
   /// Comparison.
-  | Cmp
-  | And
-  | Or
+  | CmpBp
+  | AndBp
+  | OrBp
 
 /// Binary operators in AST.
 [<RequireQualifiedAccess>]

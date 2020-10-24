@@ -877,25 +877,25 @@ let tokenAsVis token =
   | _ -> None
 
 // -----------------------------------------------
-// OpLevel
+// Bp
 // -----------------------------------------------
 
-let opLevelToNext level =
-  match level with
-  | OpLevel.Or -> OpLevel.And
+let bpNext bp =
+  match bp with
+  | OrBp -> AndBp
 
-  | OpLevel.And -> OpLevel.Cmp
+  | AndBp -> CmpBp
 
-  | OpLevel.Cmp -> OpLevel.Pipe
+  | CmpBp -> PipeBp
 
-  | OpLevel.Pipe -> OpLevel.Cons
+  | PipeBp -> ConsBp
 
-  | OpLevel.Cons -> OpLevel.Add
+  | ConsBp -> AddBp
 
-  | OpLevel.Add -> OpLevel.Mul
+  | AddBp -> MulBp
 
-  | OpLevel.Mul
-  | OpLevel.Prefix -> OpLevel.Prefix
+  | MulBp
+  | PrefixBp -> PrefixBp
 
 // -----------------------------------------------
 // APat

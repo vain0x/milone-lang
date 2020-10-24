@@ -791,67 +791,67 @@ let parsePrefix basePos (tokens, errors) =
 
   | _ -> parseApp basePos (tokens, errors)
 
-let parseNextLevelOp level basePos (tokens, errors) =
-  match opLevelToNext level with
-  | OpLevel.Prefix -> parsePrefix basePos (tokens, errors)
+let parseNextBp bp basePos (tokens, errors) =
+  match bpNext bp with
+  | PrefixBp -> parsePrefix basePos (tokens, errors)
 
-  | nextLevel -> parseOp nextLevel basePos (tokens, errors)
+  | nextBp -> parseOp nextBp basePos (tokens, errors)
 
-let rec parseOps level basePos first (tokens, errors) =
+let rec parseOps bp basePos first (tokens, errors) =
   let nextL expr op opPos (tokens, errors) =
     let second, tokens, errors =
-      parseNextLevelOp level basePos (tokens, errors)
+      parseNextBp bp basePos (tokens, errors)
 
     let expr = AExpr.Bin(op, expr, second, opPos)
-    parseOps level basePos expr (tokens, errors)
+    parseOps bp basePos expr (tokens, errors)
 
   let nextR expr op opPos (tokens, errors) =
-    let second, tokens, errors = parseOp level basePos (tokens, errors)
+    let second, tokens, errors = parseOp bp basePos (tokens, errors)
     let expr = AExpr.Bin(op, expr, second, opPos)
-    parseOps level basePos expr (tokens, errors)
+    parseOps bp basePos expr (tokens, errors)
 
-  match level, tokens with
-  | OpLevel.Or, (PipePipeToken, opPos) :: tokens -> nextL first Op.Or opPos (tokens, errors)
+  match bp, tokens with
+  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL first Op.Or opPos (tokens, errors)
 
-  | OpLevel.And, (AmpAmpToken, opPos) :: tokens -> nextL first Op.And opPos (tokens, errors)
+  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first Op.And opPos (tokens, errors)
 
-  | OpLevel.Cmp, (EqToken, opPos) :: tokens -> nextL first Op.Eq opPos (tokens, errors)
+  | CmpBp, (EqToken, opPos) :: tokens -> nextL first Op.Eq opPos (tokens, errors)
 
-  | OpLevel.Cmp, (LeftRightToken, opPos) :: tokens -> nextL first Op.Ne opPos (tokens, errors)
+  | CmpBp, (LeftRightToken, opPos) :: tokens -> nextL first Op.Ne opPos (tokens, errors)
 
-  | OpLevel.Cmp, (LeftAngleToken, opPos) :: tokens -> nextL first Op.Lt opPos (tokens, errors)
+  | CmpBp, (LeftAngleToken, opPos) :: tokens -> nextL first Op.Lt opPos (tokens, errors)
 
-  | OpLevel.Cmp, (LeftEqToken, opPos) :: tokens -> nextL first Op.Le opPos (tokens, errors)
+  | CmpBp, (LeftEqToken, opPos) :: tokens -> nextL first Op.Le opPos (tokens, errors)
 
-  | OpLevel.Cmp, (RightAngleToken, opPos) :: tokens -> nextL first Op.Gt opPos (tokens, errors)
+  | CmpBp, (RightAngleToken, opPos) :: tokens -> nextL first Op.Gt opPos (tokens, errors)
 
-  | OpLevel.Cmp, (RightEqToken, opPos) :: tokens -> nextL first Op.Ge opPos (tokens, errors)
+  | CmpBp, (RightEqToken, opPos) :: tokens -> nextL first Op.Ge opPos (tokens, errors)
 
-  | OpLevel.Pipe, (PipeRightToken, opPos) :: tokens -> nextL first Op.Pipe opPos (tokens, errors)
+  | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL first Op.Pipe opPos (tokens, errors)
 
-  | OpLevel.Cons, (ColonColonToken, opPos) :: tokens -> nextR first Op.Cons opPos (tokens, errors)
+  | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR first Op.Cons opPos (tokens, errors)
 
-  | OpLevel.Add, (PlusToken, opPos) :: tokens -> nextL first Op.Add opPos (tokens, errors)
+  | AddBp, (PlusToken, opPos) :: tokens -> nextL first Op.Add opPos (tokens, errors)
 
-  | OpLevel.Add, (MinusToken, opPos) :: tokens -> nextL first Op.Sub opPos (tokens, errors)
+  | AddBp, (MinusToken, opPos) :: tokens -> nextL first Op.Sub opPos (tokens, errors)
 
-  | OpLevel.Mul, (StarToken, opPos) :: tokens -> nextL first Op.Mul opPos (tokens, errors)
+  | MulBp, (StarToken, opPos) :: tokens -> nextL first Op.Mul opPos (tokens, errors)
 
-  | OpLevel.Mul, (SlashToken, opPos) :: tokens -> nextL first Op.Div opPos (tokens, errors)
+  | MulBp, (SlashToken, opPos) :: tokens -> nextL first Op.Div opPos (tokens, errors)
 
-  | OpLevel.Mul, (PercentToken, opPos) :: tokens -> nextL first Op.Mod opPos (tokens, errors)
+  | MulBp, (PercentToken, opPos) :: tokens -> nextL first Op.Mod opPos (tokens, errors)
 
   | _ -> first, tokens, errors
 
 /// E.g. `add = mul ( ('+'|'-') mul )*`
-let parseOp level basePos (tokens, errors) =
+let parseOp bp basePos (tokens, errors) =
   let first, tokens, errors =
-    parseNextLevelOp level basePos (tokens, errors)
+    parseNextBp bp basePos (tokens, errors)
 
-  parseOps level basePos first (tokens, errors)
+  parseOps bp basePos first (tokens, errors)
 
 let parseTupleItem basePos (tokens, errors) =
-  parseOp OpLevel.Or basePos (tokens, errors)
+  parseOp OrBp basePos (tokens, errors)
 
 /// `tuple = item ( ',' item )*`
 let parseTuple basePos (tokens, errors) =
@@ -936,7 +936,7 @@ let parseSemi basePos mainPos (tokens, errors) =
 
   | _ -> AExpr.Semi(items, mainPos), tokens, errors
 
-/// `top-level = ( 'module' 'rec'? path module-body / module-body )?`
+/// `top-bp = ( 'module' 'rec'? path module-body / module-body )?`
 let parseTopLevel (tokens, errors) =
 
   match tokens with
