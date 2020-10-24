@@ -237,10 +237,9 @@ type ALet =
   | ALetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
-[<RequireQualifiedAccess>]
 type ATyDecl =
-  | Synonym of ATy
-  | Union of AVariant list
+  | ATySynonymDecl of ATy
+  | AUnionTyDecl of AVariant list
 
 /// Expression in AST.
 [<RequireQualifiedAccess>]

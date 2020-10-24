@@ -262,7 +262,7 @@ let parseTyDeclUnion basePos (tokens, errors) =
     | _ -> listRev acc, tokens, errors
 
   let variants, tokens, errors = go [] (tokens, errors)
-  ATyDecl.Union variants, tokens, errors
+  AUnionTyDecl variants, tokens, errors
 
 /// Parses after `type .. =`.
 /// NOTE: Unlike F#, it can't parse `type A = A` as definition of discriminated union.
@@ -276,7 +276,7 @@ let parseTyDeclBody basePos (tokens, errors) =
 
   | _ ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
-      ATyDecl.Synonym ty, tokens, errors
+      ATySynonymDecl ty, tokens, errors
 
 // -----------------------------------------------
 // Parse patterns
@@ -660,9 +660,9 @@ let parseTyDecl typePos (tokens, errors) =
 
           let expr =
             match tyDecl with
-            | ATyDecl.Synonym ty -> AExpr.TySynonym(vis, tyIdent, ty, typePos)
+            | ATySynonymDecl ty -> AExpr.TySynonym(vis, tyIdent, ty, typePos)
 
-            | ATyDecl.Union variants -> AExpr.TyUnion(vis, tyIdent, variants, typePos)
+            | AUnionTyDecl variants -> AExpr.TyUnion(vis, tyIdent, variants, typePos)
 
           expr, tokens, errors
 
