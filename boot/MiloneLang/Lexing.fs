@@ -247,69 +247,69 @@ let scanStrLitRaw (text: string) (i: int) =
 
 let tokenFromIdent (text: string) l r: Token =
   match text |> strSlice l r with
-  | "true" -> Token.Bool true
-  | "false" -> Token.Bool false
-  | "do" -> Token.Do
-  | "let" -> Token.Let
-  | "if" -> Token.If
-  | "then" -> Token.Then
-  | "else" -> Token.Else
-  | "match" -> Token.Match
-  | "with" -> Token.With
-  | "as" -> Token.As
-  | "when" -> Token.When
-  | "rec" -> Token.Rec
-  | "private" -> Token.Private
-  | "internal" -> Token.Internal
-  | "public" -> Token.Public
-  | "module" -> Token.Module
-  | "namespace" -> Token.Namespace
-  | "open" -> Token.Open
-  | "type" -> Token.Type
-  | "of" -> Token.Of
-  | "fun" -> Token.Fun
-  | "in" -> Token.In
-  | s -> Token.Ident s
+  | "true" -> BoolToken true
+  | "false" -> BoolToken false
+  | "do" -> DoToken
+  | "let" -> LetToken
+  | "if" -> IfToken
+  | "then" -> ThenToken
+  | "else" -> ElseToken
+  | "match" -> MatchToken
+  | "with" -> WithToken
+  | "as" -> AsToken
+  | "when" -> WhenToken
+  | "rec" -> RecToken
+  | "private" -> PrivateToken
+  | "internal" -> InternalToken
+  | "public" -> PublicToken
+  | "module" -> ModuleToken
+  | "namespace" -> NamespaceToken
+  | "open" -> OpenToken
+  | "type" -> TypeToken
+  | "of" -> OfToken
+  | "fun" -> FunToken
+  | "in" -> InToken
+  | s -> IdentToken s
 
 let tokenFromOp (text: string) l r: Token =
   match text |> strSlice l r with
-  | "&" -> Token.Amp
-  | "&&" -> Token.AmpAmp
-  | "->" -> Token.Arrow
-  | ":" -> Token.Colon
-  | "::" -> Token.ColonColon
-  | "." -> Token.Dot
-  | ".." -> Token.DotDot
-  | "=" -> Token.Eq
-  | ">" -> Token.Gt
-  | ">=" -> Token.GtEq
-  | "<" -> Token.Lt
-  | "<=" -> Token.LtEq
-  | "<>" -> Token.LtGt
-  | "-" -> Token.Minus
-  | "%" -> Token.Percent
-  | "|" -> Token.Pipe
-  | "|>" -> Token.PipeGt
-  | "||" -> Token.PipePipe
-  | "+" -> Token.Plus
-  | ";" -> Token.Semi
-  | "*" -> Token.Star
-  | "/" -> Token.Slash
-  | _ -> Token.Error
+  | "&" -> AmpToken
+  | "&&" -> AmpAmpToken
+  | "->" -> ArrowToken
+  | ":" -> ColonToken
+  | "::" -> ColonColonToken
+  | "." -> DotToken
+  | ".." -> DotDotToken
+  | "=" -> EqToken
+  | ">" -> RightAngleToken
+  | ">=" -> RightEqToken
+  | "<" -> LeftAngleToken
+  | "<=" -> LeftEqToken
+  | "<>" -> LeftRightToken
+  | "-" -> MinusToken
+  | "%" -> PercentToken
+  | "|" -> PipeToken
+  | "|>" -> PipeRightToken
+  | "||" -> PipePipeToken
+  | "+" -> PlusToken
+  | ";" -> SemiToken
+  | "*" -> StarToken
+  | "/" -> SlashToken
+  | _ -> ErrorToken
 
 let tokenFromPun (text: string) (l: int) r =
   assert (r - l = 1)
   match text.[l] with
-  | ',' -> Token.Comma
-  | '(' -> Token.ParenL
-  | ')' -> Token.ParenR
-  | '[' -> Token.BracketL
-  | ']' -> Token.BracketR
+  | ',' -> CommaToken
+  | '(' -> LeftParenToken
+  | ')' -> RightParenToken
+  | '[' -> LeftBracketToken
+  | ']' -> RightBracketToken
   | _ -> failwith "NEVER! charIsPun is broken"
 
 let tokenFromIntLit (text: string) l r: Token =
   let value = text |> strSlice l r |> int
-  Token.Int value
+  IntToken value
 
 let tokenFromCharLit (text: string) l r: Token =
   assert (l
@@ -332,7 +332,7 @@ let tokenFromCharLit (text: string) l r: Token =
         | c -> c
     | c -> c
 
-  Token.Char value
+  CharToken value
 
 let tokenFromStrLit (text: string) l r: Token =
   assert (l + 2 <= r && text.[l] = '"' && text.[r - 1] = '"')
@@ -362,7 +362,7 @@ let tokenFromStrLit (text: string) l r: Token =
 
   let value = go [] (l + 1)
 
-  Token.Str value
+  StrToken value
 
 let tokenFromStrLitRaw (text: string) l r =
   assert (l
@@ -370,7 +370,7 @@ let tokenFromStrLitRaw (text: string) l r =
           <= r
           && text |> strIsFollowedByRawQuotes l
           && text |> strIsFollowedByRawQuotes (r - 3))
-  Token.Str(text |> strSlice (l + 3) (r - 3))
+  StrToken(text |> strSlice (l + 3) (r - 3))
 
 // -----------------------------------------------
 // Tokenize functions
@@ -441,7 +441,7 @@ let tokCharLit t =
   let ok, r = scanCharLit text i
 
   let token =
-    if ok then tokenFromCharLit text i r else Token.Error
+    if ok then tokenFromCharLit text i r else ErrorToken
 
   t |> tokCtxPush token r
 
@@ -450,7 +450,7 @@ let tokStrLit t =
   let ok, r = scanStrLit text i
 
   let token =
-    if ok then tokenFromStrLit text i r else Token.Error
+    if ok then tokenFromStrLit text i r else ErrorToken
 
   t |> tokCtxPush token r
 
@@ -459,7 +459,7 @@ let tokStrLitRaw t =
   let ok, r = scanStrLitRaw text i
 
   let token =
-    if ok then tokenFromStrLitRaw text i r else Token.Error
+    if ok then tokenFromStrLitRaw text i r else ErrorToken
 
   t |> tokCtxPush token r
 

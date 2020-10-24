@@ -51,78 +51,91 @@ type ColumnIndex = int
 type Pos = RowIndex * ColumnIndex
 
 /// Words and punctuations in source code.
-[<RequireQualifiedAccess>]
 type Token =
-  | Error
-  | Bool of bool
-  | Int of int
-  | Char of char
-  | Str of string
-  | Ident of Ident
+  | ErrorToken
+  | BoolToken of bool
+  | IntToken of int
+  | CharToken of char
+  | StrToken of string
+  | IdentToken of Ident
+
+  // punctuations:
   /// `(`
-  | ParenL
+  | LeftParenToken
   /// `)`
-  | ParenR
+  | RightParenToken
   /// `[`
-  | BracketL
+  | LeftBracketToken
   /// `]`
-  | BracketR
-  /// `&`
-  | Amp
-  /// `&&`
-  | AmpAmp
-  /// `->`
-  | Arrow
-  | Colon
-  | ColonColon
-  | Comma
-  | Dot
-  | DotDot
-  /// `=`
-  | Eq
-  /// `>`
-  | Gt
-  /// `>=`
-  | GtEq
+  | RightBracketToken
   /// `<`
-  | Lt
+  | LeftAngleToken
+  /// `>`
+  | RightAngleToken
+  /// `&`
+  | AmpToken
+  /// `&&`
+  | AmpAmpToken
+  /// `->`
+  | ArrowToken
+  /// `:`
+  | ColonToken
+  /// `::`
+  | ColonColonToken
+  /// `,`
+  | CommaToken
+  /// `.`
+  | DotToken
+  /// `..`
+  | DotDotToken
+  /// `=`
+  | EqToken
+  /// `>=`
+  | RightEqToken
   /// `<=`
-  | LtEq
+  | LeftEqToken
   /// `<>`
-  | LtGt
-  | Minus
-  | Percent
+  | LeftRightToken
+  /// `-`
+  | MinusToken
+  /// `%`
+  | PercentToken
   /// `|`
-  | Pipe
+  | PipeToken
   /// `|>`
-  | PipeGt
+  | PipeRightToken
   /// `||`
-  | PipePipe
-  | Plus
+  | PipePipeToken
+  /// `+`
+  | PlusToken
   /// `;`
-  | Semi
-  | Star
-  | Slash
-  | As
-  | Do
-  | Else
-  | Fun
-  | If
-  | In
-  | Internal
-  | Let
-  | Match
-  | Module
-  | Namespace
-  | Of
-  | Open
-  | Private
-  | Public
-  | Rec
-  | Then
-  | Type
-  | When
-  | With
+  | SemiToken
+  /// `/`
+  | SlashToken
+  /// `*`
+  | StarToken
+
+  // keywords:
+  | AsToken
+  | DoToken
+  | ElseToken
+  | FunToken
+  | IfToken
+  | InToken
+  | InternalToken
+  | LetToken
+  | MatchToken
+  | ModuleToken
+  | NamespaceToken
+  | OfToken
+  | OpenToken
+  | PrivateToken
+  | PublicToken
+  | RecToken
+  | ThenToken
+  | TypeToken
+  | WhenToken
+  | WithToken
 
 /// Unary operators in AST.
 [<RequireQualifiedAccess>]

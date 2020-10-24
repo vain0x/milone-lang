@@ -832,13 +832,13 @@ let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
 /// i.e. whether it can be the first token of an expression or pattern.
 let tokenIsExprOrPatFirst (token: Token) =
   match token with
-  | Token.Bool _
-  | Token.Int _
-  | Token.Char _
-  | Token.Str _
-  | Token.Ident _
-  | Token.ParenL
-  | Token.BracketL -> true
+  | BoolToken _
+  | IntToken _
+  | CharToken _
+  | StrToken _
+  | IdentToken _
+  | LeftParenToken
+  | LeftBracketToken -> true
 
   | _ -> false
 
@@ -847,21 +847,21 @@ let tokenIsExprFirst (token: Token) =
   match token with
   | _ when tokenIsExprOrPatFirst token -> true
 
-  | Token.Minus
-  | Token.If
-  | Token.Match
-  | Token.Fun
-  | Token.Do
-  | Token.Let
-  | Token.Type
-  | Token.Open -> true
+  | MinusToken
+  | IfToken
+  | MatchToken
+  | FunToken
+  | DoToken
+  | LetToken
+  | TypeToken
+  | OpenToken -> true
 
   | _ -> false
 
 /// In the first set of arguments?
 let tokenIsArgFirst (token: Token) =
   match token with
-  | Token.Minus -> false
+  | MinusToken -> false
 
   | _ -> tokenIsExprFirst token
 
@@ -869,9 +869,9 @@ let tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
 
 let tokenAsVis token =
   match token with
-  | Token.Private -> Some PrivateVis
-  | Token.Internal
-  | Token.Public -> Some PublicVis
+  | PrivateToken -> Some PrivateVis
+  | InternalToken
+  | PublicToken -> Some PublicVis
 
   | _ -> None
 
