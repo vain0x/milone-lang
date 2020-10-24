@@ -561,7 +561,7 @@ type MExpr =
 
 /// Variable initializer in mid-level IR.
 type MInit =
-  /// Remain uninitialized at first; initialized later by `MStmt.Set`.
+  /// Remain uninitialized at first; initialized later by `MSetStmt`.
   | MUninitInit
   | MExprInit of MExpr
   /// Call to primitive.
@@ -580,20 +580,19 @@ type MInit =
 
 /// Statement in middle IR.
 /// Doesn't introduce global things, e.g. functions.
-[<RequireQualifiedAccess>]
 type MStmt =
   /// Statement to evaluate an expression, e.g. `f ();`.
-  | Do of MExpr * Loc
+  | MDoStmt of MExpr * Loc
   /// Declare a local variable.
-  | LetVal of VarSerial * MInit * Ty * Loc
+  | MLetValStmt of VarSerial * MInit * Ty * Loc
   /// Set to uninitialized local variable.
-  | Set of VarSerial * init: MExpr * Loc
-  | Return of MExpr * Loc
-  | Label of Label * Loc
-  | Goto of Label * Loc
-  | GotoIf of MExpr * Label * Loc
-  | Exit of MExpr * Loc
-  | Proc of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
+  | MSetStmt of VarSerial * init: MExpr * Loc
+  | MReturnStmt of MExpr * Loc
+  | MLabelStmt of Label * Loc
+  | MGotoStmt of Label * Loc
+  | MGotoIfStmt of MExpr * Label * Loc
+  | MExitStmt of MExpr * Loc
+  | MProcStmt of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
 
 // -----------------------------------------------
 // CIR types

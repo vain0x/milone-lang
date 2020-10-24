@@ -854,13 +854,13 @@ let genStmtReturn ctx expr =
 
 let genStmtJump ctx stmt =
   match stmt with
-  | MStmt.Return (expr, _) -> genStmtReturn ctx expr
-  | MStmt.Label (label, _) -> cirCtxAddStmt ctx (CLabelStmt label)
-  | MStmt.Goto (label, _) -> cirCtxAddStmt ctx (CGotoStmt label)
-  | MStmt.GotoIf (pred, label, _) ->
+  | MReturnStmt (expr, _) -> genStmtReturn ctx expr
+  | MLabelStmt (label, _) -> cirCtxAddStmt ctx (CLabelStmt label)
+  | MGotoStmt (label, _) -> cirCtxAddStmt ctx (CGotoStmt label)
+  | MGotoIfStmt (pred, label, _) ->
       let pred, ctx = genExpr ctx pred
       cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
-  | MStmt.Exit (arg, _) ->
+  | MExitStmt (arg, _) ->
       let doArm () =
         let arg, ctx = genExpr ctx arg
         cirCtxAddStmt ctx (CExprStmt(CCallExpr(CRefExpr "exit", [ arg ])))
@@ -870,15 +870,15 @@ let genStmtJump ctx stmt =
 
 let genStmt ctx stmt =
   match stmt with
-  | MStmt.Do (expr, _) -> genStmtDo ctx expr
-  | MStmt.LetVal (serial, init, ty, loc) -> genStmtLetVal ctx serial init ty loc
-  | MStmt.Set (serial, right, _) -> genStmtSet ctx serial right
-  | MStmt.Return _
-  | MStmt.Label _
-  | MStmt.Goto _
-  | MStmt.GotoIf _
-  | MStmt.Exit _ -> genStmtJump ctx stmt
-  | MStmt.Proc _ -> ctx
+  | MDoStmt (expr, _) -> genStmtDo ctx expr
+  | MLetValStmt (serial, init, ty, loc) -> genStmtLetVal ctx serial init ty loc
+  | MSetStmt (serial, right, _) -> genStmtSet ctx serial right
+  | MReturnStmt _
+  | MLabelStmt _
+  | MGotoStmt _
+  | MGotoIfStmt _
+  | MExitStmt _ -> genStmtJump ctx stmt
+  | MProcStmt _ -> ctx
 
 let genBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx = genStmts (cirCtxNewBlock ctx) stmts
@@ -900,7 +900,7 @@ let genDecls (ctx: CirCtx) decls =
   match decls with
   | [] -> ctx
 
-  | MStmt.Proc (callee, isMainFun, args, body, resultTy, _) :: decls ->
+  | MProcStmt (callee, isMainFun, args, body, resultTy, _) :: decls ->
       let ident, args =
         if isMainFun then "main", [] else cirCtxUniqueName ctx callee, args
 
