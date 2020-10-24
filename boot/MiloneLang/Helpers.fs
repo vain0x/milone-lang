@@ -832,13 +832,14 @@ let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
 /// i.e. whether it can be the first token of an expression or pattern.
 let tokenIsExprOrPatFirst (token: Token) =
   match token with
-  | BoolToken _
   | IntToken _
   | CharToken _
   | StrToken _
   | IdentToken _
   | LeftParenToken
-  | LeftBracketToken -> true
+  | LeftBracketToken
+  | FalseToken
+  | TrueToken -> true
 
   | _ -> false
 

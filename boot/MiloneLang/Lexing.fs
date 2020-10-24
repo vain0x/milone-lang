@@ -247,8 +247,8 @@ let scanStrLitRaw (text: string) (i: int) =
 
 let tokenFromIdent (text: string) l r: Token =
   match text |> strSlice l r with
-  | "true" -> BoolToken true
-  | "false" -> BoolToken false
+  | "true" -> TrueToken
+  | "false" -> FalseToken
   | "do" -> DoToken
   | "let" -> LetToken
   | "if" -> IfToken

@@ -53,7 +53,6 @@ type Pos = RowIndex * ColumnIndex
 /// Words and punctuations in source code.
 type Token =
   | ErrorToken
-  | BoolToken of bool
   | IntToken of int
   | CharToken of char
   | StrToken of string
@@ -119,6 +118,7 @@ type Token =
   | AsToken
   | DoToken
   | ElseToken
+  | FalseToken
   | FunToken
   | IfToken
   | InToken
@@ -133,6 +133,7 @@ type Token =
   | PublicToken
   | RecToken
   | ThenToken
+  | TrueToken
   | TypeToken
   | WhenToken
   | WithToken
