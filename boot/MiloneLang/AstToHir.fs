@@ -109,7 +109,7 @@ let desugarFun pats body pos =
 
 /// Desugar `-x` to `0 - x`.
 let desugarUniNeg arg pos =
-  let zero = AExpr.Lit(Lit.Int 0, pos)
+  let zero = AExpr.Lit(IntLit 0, pos)
   AExpr.Bin(Op.Sub, zero, arg, pos)
 
 /// `l <> r` ==> `not (l = r)`

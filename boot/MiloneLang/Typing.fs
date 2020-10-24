@@ -172,7 +172,7 @@ let hxAbort (ctx: TyCtx) ty loc =
   let exitExpr = HExpr.Prim(HPrim.Exit, funTy, loc)
 
   let callExpr =
-    hxApp exitExpr (HExpr.Lit(Lit.Int 1, loc)) ty loc
+    hxApp exitExpr (HExpr.Lit(IntLit 1, loc)) ty loc
 
   callExpr, ctx
 
@@ -350,7 +350,7 @@ let inferNav ctx sub mes loc resultTy =
 
 let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
   match firstArg, arg with
-  | HExpr.Lit (Lit.Str nativeFunIdent, _), HExpr.Lit (Lit.Int arity, _) ->
+  | HExpr.Lit (StrLit nativeFunIdent, _), HExpr.Lit (IntLit arity, _) ->
       let rec go ty arity ctx =
         if arity = 0 then
           ty, ctx
@@ -366,7 +366,7 @@ let inferOpAppNativeFun ctx callee firstArg arg appTy loc =
 
 let inferOpAppPrintfn ctx arg calleeTy loc =
   match arg with
-  | HExpr.Lit (Lit.Str format, _) ->
+  | HExpr.Lit (StrLit format, _) ->
       let funTy = analyzeFormat format
       let ctx = tyCtxUnifyTy ctx loc calleeTy funTy
       HExpr.Prim(HPrim.Printfn, calleeTy, loc), ctx

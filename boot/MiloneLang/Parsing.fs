@@ -321,13 +321,13 @@ let parsePatAtom basePos (tokens, errors) =
   | _ when not (nextInside basePos tokens && leadsPat tokens) ->
       parsePatError "Expected a pattern atom" (tokens, errors)
 
-  | (Token.Bool value, pos) :: tokens -> APat.Lit(Lit.Bool value, pos), tokens, errors
+  | (Token.Bool value, pos) :: tokens -> APat.Lit(BoolLit value, pos), tokens, errors
 
-  | (Token.Int value, pos) :: tokens -> APat.Lit(Lit.Int value, pos), tokens, errors
+  | (Token.Int value, pos) :: tokens -> APat.Lit(IntLit value, pos), tokens, errors
 
-  | (Token.Char value, pos) :: tokens -> APat.Lit(Lit.Char value, pos), tokens, errors
+  | (Token.Char value, pos) :: tokens -> APat.Lit(CharLit value, pos), tokens, errors
 
-  | (Token.Str value, pos) :: tokens -> APat.Lit(Lit.Str value, pos), tokens, errors
+  | (Token.Str value, pos) :: tokens -> APat.Lit(StrLit value, pos), tokens, errors
 
   | (Token.Ident ident, pos) :: tokens -> APat.Ident(ident, pos), tokens, errors
 
@@ -705,13 +705,13 @@ let parseAtom basePos (tokens, errors) =
 
   | (Token.ParenL, pos) :: (Token.ParenR, _) :: tokens -> AExpr.TupleLit([], pos), tokens, errors
 
-  | (Token.Bool value, pos) :: tokens -> AExpr.Lit(Lit.Bool value, pos), tokens, errors
+  | (Token.Bool value, pos) :: tokens -> AExpr.Lit(BoolLit value, pos), tokens, errors
 
-  | (Token.Int value, pos) :: tokens -> AExpr.Lit(Lit.Int value, pos), tokens, errors
+  | (Token.Int value, pos) :: tokens -> AExpr.Lit(IntLit value, pos), tokens, errors
 
-  | (Token.Char value, pos) :: tokens -> AExpr.Lit(Lit.Char value, pos), tokens, errors
+  | (Token.Char value, pos) :: tokens -> AExpr.Lit(CharLit value, pos), tokens, errors
 
-  | (Token.Str value, pos) :: tokens -> AExpr.Lit(Lit.Str value, pos), tokens, errors
+  | (Token.Str value, pos) :: tokens -> AExpr.Lit(StrLit value, pos), tokens, errors
 
   | (Token.Ident ident, pos) :: tokens -> AExpr.Ident(ident, pos), tokens, errors
 

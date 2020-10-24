@@ -1299,16 +1299,16 @@ let varDefToIdent varDef =
 // Literals
 // -----------------------------------------------
 
-let litTrue = Lit.Bool true
+let litTrue = BoolLit true
 
-let litFalse = Lit.Bool false
+let litFalse = BoolLit false
 
 let litToTy (lit: Lit): Ty =
   match lit with
-  | Lit.Bool _ -> tyBool
-  | Lit.Int _ -> tyInt
-  | Lit.Char _ -> tyChar
-  | Lit.Str _ -> tyStr
+  | BoolLit _ -> tyBool
+  | IntLit _ -> tyInt
+  | CharLit _ -> tyChar
+  | StrLit _ -> tyStr
 
 // -----------------------------------------------
 // Primitives (HIR)
@@ -1589,7 +1589,7 @@ let hxIsUnitLit expr =
 
 let hxIsAlwaysTrue expr =
   match expr with
-  | HExpr.Lit (Lit.Bool true, _) -> true
+  | HExpr.Lit (BoolLit true, _) -> true
   | _ -> false
 
 let exprExtract (expr: HExpr): Ty * Loc =
@@ -1690,7 +1690,7 @@ let rec mxSugar expr =
     match l with
     // SUGAR: `not true` ==> `false`
     // SUGAR: `not false` ==> `true`
-    | MExpr.Lit (Lit.Bool value, loc) -> MExpr.Lit(Lit.Bool(not value), loc)
+    | MExpr.Lit (BoolLit value, loc) -> MExpr.Lit(BoolLit(not value), loc)
 
     // SUGAR: `not (not x)` ==> `x`
     | MExpr.Uni (MUniOp.Not, l, _, _) -> l
@@ -1712,14 +1712,14 @@ let rec mxSugar expr =
   let mxSugarBin op l r ty loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
-    | MOp.Eq, MExpr.Lit (Lit.Bool false, _), _ -> mxSugarUni MUniOp.Not r ty loc
+    | MOp.Eq, MExpr.Lit (BoolLit false, _), _ -> mxSugarUni MUniOp.Not r ty loc
 
-    | MOp.Eq, _, MExpr.Lit (Lit.Bool false, _) -> mxSugarUni MUniOp.Not l ty loc
+    | MOp.Eq, _, MExpr.Lit (BoolLit false, _) -> mxSugarUni MUniOp.Not l ty loc
 
     // SUGAR: `x = true` ==> `x`
-    | MOp.Eq, MExpr.Lit (Lit.Bool true, _), _ -> r
+    | MOp.Eq, MExpr.Lit (BoolLit true, _), _ -> r
 
-    | MOp.Eq, _, MExpr.Lit (Lit.Bool true, _) -> l
+    | MOp.Eq, _, MExpr.Lit (BoolLit true, _) -> l
 
     | _ -> MExpr.Bin(op, l, r, ty, loc)
 

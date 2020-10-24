@@ -541,11 +541,11 @@ let genExprList ctx exprs =
 
 let genExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   match arg |> mxSugar with
-  | MExpr.Lit (Lit.Int value, _) -> CExpr.Int value, ctx
-  | MExpr.Lit (Lit.Char value, _) -> CExpr.Char value, ctx
-  | MExpr.Lit (Lit.Str value, _) -> CExpr.StrObj value, ctx
-  | MExpr.Lit (Lit.Bool false, _) -> CExpr.Int 0, ctx
-  | MExpr.Lit (Lit.Bool true, _) -> CExpr.Int 1, ctx
+  | MExpr.Lit (IntLit value, _) -> CExpr.Int value, ctx
+  | MExpr.Lit (CharLit value, _) -> CExpr.Char value, ctx
+  | MExpr.Lit (StrLit value, _) -> CExpr.StrObj value, ctx
+  | MExpr.Lit (BoolLit false, _) -> CExpr.Int 0, ctx
+  | MExpr.Lit (BoolLit true, _) -> CExpr.Int 1, ctx
   | MExpr.Default (ty, _) -> genExprDefault ctx ty
   | MExpr.Ref (serial, _, _) -> CExpr.Ref(cirCtxUniqueName ctx serial), ctx
   | MExpr.Proc (serial, ty, loc) -> genExprProc ctx serial ty loc
@@ -558,7 +558,7 @@ let genExprCallPrintfn ctx format args =
   let rec go acc ctx args =
     match args with
     | [] -> listRev acc, ctx
-    | MExpr.Lit (Lit.Str value, _) :: args -> go (CExpr.StrRaw value :: acc) ctx args
+    | MExpr.Lit (StrLit value, _) :: args -> go (CExpr.StrRaw value :: acc) ctx args
     | arg :: args when tyEq (mexprToTy arg) tyStr ->
         let arg, ctx = genExpr ctx arg
         let acc = CExpr.Nav(arg, "str") :: acc
@@ -598,7 +598,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       let args, ctx = genExprList ctx args
       CExpr.Call(CExpr.Ref nativeFunIdent, args), ctx
 
-  | HPrim.Printfn, (MExpr.Lit (Lit.Str format, _)) :: args, _ -> genExprCallPrintfn ctx format args
+  | HPrim.Printfn, (MExpr.Lit (StrLit format, _)) :: args, _ -> genExprCallPrintfn ctx format args
 
   | HPrim.Assert, _, _ ->
       let callee = CExpr.Ref "milone_assert"
@@ -640,7 +640,10 @@ let genExprCallPrimInRegion ctx serial arg ty _loc =
   let ctx =
     // t <- f ()
     let unitLit, ctx = genExprDefault ctx tyUnit
-    let result, ctx = genExprCallClosureCore ctx arg [unitLit]
+
+    let result, ctx =
+      genExprCallClosureCore ctx arg [ unitLit ]
+
     genInitExprCore ctx serial (Some result) ty
 
   let ctx =

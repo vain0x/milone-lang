@@ -95,7 +95,7 @@ let mxBinOpScalar ctx op l r (ty, loc) = MExpr.Bin(op, l, r, ty, loc), ctx
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mxStrCmp ctx op l r (ty, loc) =
   let strCmpExpr = MExpr.Bin(MOp.StrCmp, l, r, tyInt, loc)
-  let zeroExpr = MExpr.Lit(Lit.Int 0, loc)
+  let zeroExpr = MExpr.Lit(IntLit 0, loc)
 
   let opExpr =
     MExpr.Bin(op, strCmpExpr, zeroExpr, ty, loc)
@@ -437,7 +437,7 @@ let mirifyExprMatch ctx target arms ty loc =
           ctx
         else
           let abortStmt =
-            MStmt.Exit(MExpr.Lit(Lit.Int 1, loc), loc)
+            MStmt.Exit(MExpr.Lit(IntLit 1, loc), loc)
 
           let ctx = mirCtxAddStmt ctx abortStmt
           ctx

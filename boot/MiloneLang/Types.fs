@@ -8,12 +8,11 @@ type Serial = int
 type Ident = string
 
 /// Literal of primitive value.
-[<RequireQualifiedAccess>]
 type Lit =
-  | Bool of bool
-  | Int of int
-  | Char of char
-  | Str of string
+  | BoolLit of bool
+  | IntLit of int
+  | CharLit of char
+  | StrLit of string
 
 /// Visibility.
 type Vis =
