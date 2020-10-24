@@ -21,6 +21,8 @@ ScopeCtx:
   # Namespace tree of vars.
   VarNs: NameTree
 
+  TyNs: NameTree
+
   # Serial of the current scope.
   LocalSerial: ScopeSerial
 
@@ -113,3 +115,17 @@ CirCtx:
   Stmts: CStmt list
   Decls: CDecl list
   Logs: (Log * Loc) list
+
+# Abstraction layer of CLI program.
+CliHost:
+  # Command line args.
+  Args: string list
+
+  # Creates a profiler.
+  ProfileInit: (unit -> Profiler)
+
+  # Prints a message to stderr for profiling.
+  ProfileLog: (string -> Profiler -> unit)
+
+  # Reads all contents of a file as string.
+  FileReadAllText: (string -> string option)

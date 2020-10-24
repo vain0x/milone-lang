@@ -62,6 +62,7 @@ let findOpenPaths expr =
     match expr with
     | HExpr.Open (path, _) -> [ path ]
     | HExpr.Inf (InfOp.Semi, exprs, _, _) -> exprs |> listCollect go
+    | HExpr.Module (_, body, _, _) -> go body
     | _ -> []
 
   go expr
@@ -79,12 +80,12 @@ let findOpenModules projectName expr =
 let spliceExpr firstExpr secondExpr =
   let rec go expr =
     match expr with
-    | HExpr.Let (pat, init, next, ty, loc) ->
+    | HExpr.Let (vis, pat, init, next, ty, loc) ->
         let next = go next
-        HExpr.Let(pat, init, next, ty, loc)
-    | HExpr.LetFun (serial, isMainFun, args, body, next, ty, loc) ->
+        HExpr.Let(vis, pat, init, next, ty, loc)
+    | HExpr.LetFun (serial, vis, isMainFun, args, body, next, ty, loc) ->
         let next = go next
-        HExpr.LetFun(serial, isMainFun, args, body, next, ty, loc)
+        HExpr.LetFun(serial, vis, isMainFun, args, body, next, ty, loc)
     | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
         let rec goLast exprs =
           match exprs with
@@ -94,39 +95,61 @@ let spliceExpr firstExpr secondExpr =
 
         let exprs = goLast exprs
         HExpr.Inf(InfOp.Semi, exprs, ty, loc)
+    | HExpr.Module (ident, body, next, loc) ->
+        let next = go next
+        HExpr.Module(ident, body, next, loc)
     | _ -> hxSemi [ expr; secondExpr ] noLoc
 
   go firstExpr
 
 let parseProjectModules readModuleFile parse projectName nameCtx =
+  let addModule go (moduleAcc, moduleMap, nameCtx, errorAcc) moduleName source =
+    // FIXME: provide unique ID?
+    let docId: DocId = moduleName
+    let tokens = tokenize source
+    let moduleAst, errors = parse moduleName tokens
+    let moduleHir, nameCtx = astToHir docId (moduleAst, nameCtx)
+    let dependencies = findOpenModules projectName moduleHir
+    let moduleMap = moduleMap |> mapAdd moduleName moduleHir
+
+    let errors: (string * Loc) list =
+      errors
+      |> listMap (fun (msg: string, pos: Pos) ->
+           let row, column = pos
+           let loc = docId, row, column
+           msg, loc)
+
+    let moduleAcc, moduleMap, nameCtx, errorAcc =
+      listFold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
+
+    moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
+
   let rec go (moduleAcc, moduleMap, nameCtx, errorAcc) moduleName =
     if moduleMap |> mapContainsKey moduleName then
       moduleAcc, moduleMap, nameCtx, errorAcc
     else
-      let source = readModuleFile moduleName
-      // FIXME: provide unique ID?
-      let docId: DocId = moduleName
-      let tokens = tokenize source
-      let moduleAst, errors = parse moduleName tokens
-      let moduleHir, nameCtx = astToHir docId (moduleAst, nameCtx)
-      let dependencies = findOpenModules projectName moduleHir
-      let moduleMap = moduleMap |> mapAdd moduleName moduleHir
+      let source =
+        match readModuleFile moduleName with
+        | Some it -> it
+        | None -> failwithf "File missing for module '%s'" moduleName
 
-      let errors: (string * Loc) list =
-        errors
-        |> listMap (fun (msg: string, pos: Pos) ->
-             let row, column = pos
-             let loc = docId, row, column
-             msg, loc)
+      addModule go (moduleAcc, moduleMap, nameCtx, errorAcc) moduleName source
 
-      let moduleAcc, moduleMap, nameCtx, errorAcc =
-        listFold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
+  // Initial state.
+  let ctx =
+    ([], mapEmpty (strHash, strCmp), nameCtx, [])
 
-      moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
+  // Add polyfills module to the project if exists.
+  let ctx =
+    match readModuleFile "Polyfills" with
+    | Some source -> addModule (fun _ _ -> failwith "Polyfills don't have open.") ctx "Polyfills" source
 
-  let moduleAcc, _, nameCtx, errorAcc =
-    go ([], mapEmpty (strHash, strCmp), nameCtx, []) projectName
+    | None -> ctx
 
+  // Start dependency resolution from entry-point module.
+  let ctx = go ctx projectName
+
+  // Finish.
+  let moduleAcc, _, nameCtx, errorAcc = ctx
   let modules = moduleAcc |> listRev
-
   listReduce spliceExpr modules, nameCtx, errorAcc

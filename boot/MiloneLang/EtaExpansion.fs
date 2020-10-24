@@ -159,7 +159,7 @@ let createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
   let unboxExpr =
     hxCallProc unboxRef [ envArgRef ] envTy callLoc
 
-  HExpr.Let(envPat, unboxExpr, next, exprToTy next, callLoc)
+  HExpr.Let(PrivateVis, envPat, unboxExpr, next, exprToTy next, callLoc)
 
 /// Creates a let expression to define an underlying function.
 /// It takes an environment and rest arguments
@@ -177,7 +177,7 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
     createEnvDeconstructLetExpr envPat envTy envArgRef forwardCall callLoc
 
   let funLet next =
-    HExpr.LetFun(funSerial, false, argPats, body, next, exprToTy next, callLoc)
+    HExpr.LetFun(funSerial, PrivateVis, false, argPats, body, next, exprToTy next, callLoc)
 
   let funRef = HExpr.Ref(funSerial, funTy, callLoc)
   funLet, funRef, ctx
@@ -230,7 +230,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
     let calleePat = HPat.Ref(calleeSerial, funTy, callLoc)
 
     let calleeLet next =
-      HExpr.Let(calleePat, callee, next, exprToTy next, callLoc)
+      HExpr.Let(PrivateVis, calleePat, callee, next, exprToTy next, callLoc)
 
     calleeRef, calleeLet, ctx
 
@@ -328,11 +328,11 @@ let unetaExprInf expr infOp args ty loc ctx =
       let args, ctx = (args, ctx) |> stMap unetaExpr
       HExpr.Inf(infOp, args, ty, loc), ctx
 
-let unetaExprLetFun callee isMainFun argPats body next ty loc ctx =
+let unetaExprLetFun callee vis isMainFun argPats body next ty loc ctx =
   let argPats, ctx = (argPats, ctx) |> stMap unetaPat
   let body, ctx = (body, ctx) |> unetaExpr
   let next, ctx = (next, ctx) |> unetaExpr
-  HExpr.LetFun(callee, isMainFun, argPats, body, next, ty, loc), ctx
+  HExpr.LetFun(callee, vis, isMainFun, argPats, body, next, ty, loc), ctx
 
 let unetaPat (pat, ctx) = pat, ctx
 
@@ -360,13 +360,14 @@ let unetaExpr (expr, ctx) =
       let subject, ctx = unetaExpr (subject, ctx)
       HExpr.Nav(subject, message, ty, loc), ctx
   | HExpr.Inf (infOp, args, ty, loc) -> unetaExprInf expr infOp args ty loc ctx
-  | HExpr.Let (pat, init, next, ty, loc) ->
+  | HExpr.Let (vis, pat, init, next, ty, loc) ->
       let pat, ctx = (pat, ctx) |> unetaPat
       let init, ctx = (init, ctx) |> unetaExpr
       let next, ctx = (next, ctx) |> unetaExpr
-      HExpr.Let(pat, init, next, ty, loc), ctx
-  | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
-      unetaExprLetFun callee isMainFun args body next ty loc ctx
+      HExpr.Let(vis, pat, init, next, ty, loc), ctx
+  | HExpr.LetFun (callee, vis, isMainFun, args, body, next, ty, loc) ->
+      unetaExprLetFun callee vis isMainFun args body next ty loc ctx
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
 
 let uneta (expr, tyCtx: TyCtx) =
   let etaCtx = etaCtxFromTyCtx tyCtx

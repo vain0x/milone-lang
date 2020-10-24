@@ -26,19 +26,19 @@ open MiloneLang.Records
 let hoistMainExpr expr =
   let rec go expr =
     match expr with
-    | HExpr.LetFun (serial, true, args, body, next, ty, loc) ->
+    | HExpr.LetFun (serial, vis, true, args, body, next, ty, loc) ->
         let makeMain rest =
-          HExpr.LetFun(serial, true, args, hxSemi [ rest; body ] loc, next, ty, loc)
+          HExpr.LetFun(serial, vis, true, args, hxSemi [ rest; body ] loc, next, ty, loc)
 
         next, makeMain
 
-    | HExpr.Let (pat, init, next, ty, loc) ->
+    | HExpr.Let (vis, pat, init, next, ty, loc) ->
         let next, f = go next
-        HExpr.Let(pat, init, next, ty, loc), f
+        HExpr.Let(vis, pat, init, next, ty, loc), f
 
-    | HExpr.LetFun (serial, false, args, body, next, ty, loc) ->
+    | HExpr.LetFun (serial, vis, false, args, body, next, ty, loc) ->
         let next, f = go next
-        HExpr.LetFun(serial, false, args, body, next, ty, loc), f
+        HExpr.LetFun(serial, vis, false, args, body, next, ty, loc), f
 
     | HExpr.Inf (InfOp.Semi, exprs, ty, loc) ->
         let rec goLast exprs =

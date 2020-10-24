@@ -867,13 +867,13 @@ let tokenIsArgFirst (token: Token) =
 
 let tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
 
-let tokenIsAccessModifier token =
+let tokenAsVis token =
   match token with
-  | Token.Private
+  | Token.Private -> Some PrivateVis
   | Token.Internal
-  | Token.Public -> true
+  | Token.Public -> Some PublicVis
 
-  | _ -> false
+  | _ -> None
 
 // -----------------------------------------------
 // OpLevel
@@ -1283,6 +1283,7 @@ let tyDefToIdent tyDef =
   match tyDef with
   | TyDef.Meta (ident, _, _) -> ident
   | TyDef.Union (ident, _, _) -> ident
+  | TyDef.Module (ident, _) -> ident
 
 // -----------------------------------------------
 // Variable definitions (HIR)
@@ -1493,7 +1494,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HPat.OptionSome (itemTy, a) -> HPat.OptionSome(f itemTy, g a)
     | HPat.Discard (ty, a) -> HPat.Discard(f ty, g a)
     | HPat.Ref (serial, ty, a) -> HPat.Ref(serial, f ty, g a)
-    | HPat.Nav (pat, ident, ty, a) -> HPat.Nav(pat, ident, f ty, g a)
+    | HPat.Nav (pat, ident, ty, a) -> HPat.Nav(go pat, ident, f ty, g a)
     | HPat.Call (callee, args, ty, a) -> HPat.Call(go callee, listMap go args, f ty, g a)
     | HPat.Cons (l, r, itemTy, a) -> HPat.Cons(go l, go r, f itemTy, g a)
     | HPat.Tuple (itemPats, ty, a) -> HPat.Tuple(listMap go itemPats, f ty, g a)
@@ -1599,10 +1600,11 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HExpr.Match (_, _, ty, a) -> ty, a
   | HExpr.Nav (_, _, ty, a) -> ty, a
   | HExpr.Inf (_, _, ty, a) -> ty, a
-  | HExpr.Let (_, _, _, ty, a) -> ty, a
-  | HExpr.LetFun (_, _, _, _, _, ty, a) -> ty, a
-  | HExpr.TyDecl (_, _, a) -> tyUnit, a
+  | HExpr.Let (_, _, _, _, ty, a) -> ty, a
+  | HExpr.LetFun (_, _, _, _, _, _, ty, a) -> ty, a
+  | HExpr.TyDecl (_, _, _, a) -> tyUnit, a
   | HExpr.Open (_, a) -> tyUnit, a
+  | HExpr.Module (_, _, _, a) -> tyUnit, a
   | HExpr.Error (_, a) -> Ty.Error a, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
@@ -1621,11 +1623,12 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
         HExpr.Match(go target, arms, f ty, g a)
     | HExpr.Nav (sub, mes, ty, a) -> HExpr.Nav(go sub, mes, f ty, g a)
     | HExpr.Inf (infOp, args, resultTy, a) -> HExpr.Inf(infOp, listMap go args, f resultTy, g a)
-    | HExpr.Let (pat, init, next, ty, a) -> HExpr.Let(goPat pat, go init, go next, f ty, g a)
-    | HExpr.LetFun (serial, isMainFun, args, body, next, ty, a) ->
-        HExpr.LetFun(serial, isMainFun, listMap goPat args, go body, go next, f ty, g a)
-    | HExpr.TyDecl (serial, tyDef, a) -> HExpr.TyDecl(serial, tyDef, g a)
+    | HExpr.Let (vis, pat, init, next, ty, a) -> HExpr.Let(vis, goPat pat, go init, go next, f ty, g a)
+    | HExpr.LetFun (serial, vis, isMainFun, args, body, next, ty, a) ->
+        HExpr.LetFun(serial, vis, isMainFun, listMap goPat args, go body, go next, f ty, g a)
+    | HExpr.TyDecl (serial, vis, tyDef, a) -> HExpr.TyDecl(serial, vis, tyDef, g a)
     | HExpr.Open (path, a) -> HExpr.Open(path, g a)
+    | HExpr.Module (ident, body, next, a) -> HExpr.Module(ident, go body, go next, g a)
     | HExpr.Error (error, a) -> HExpr.Error(error, g a)
 
   go expr

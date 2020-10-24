@@ -737,10 +737,10 @@ let mirifyExprOpen ctx loc = MExpr.Default(tyUnit, loc), ctx
 
 let mirifyDecl ctx expr =
   match expr with
-  | HExpr.Let (pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc
-  | HExpr.LetFun (serial, isMainFun, args, body, next, _, loc) ->
+  | HExpr.Let (_vis, pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc
+  | HExpr.LetFun (serial, _vis, isMainFun, args, body, next, _, loc) ->
       mirifyExprLetFun ctx serial isMainFun args body next loc
-  | HExpr.TyDecl (tySerial, tyDecl, loc) -> mirifyExprTyDecl ctx tySerial tyDecl loc
+  | HExpr.TyDecl (tySerial, _vis, tyDecl, loc) -> mirifyExprTyDecl ctx tySerial tyDecl loc
   | HExpr.Open (_, loc) -> mirifyExprOpen ctx loc
   | _ -> failwith "NEVER"
 
@@ -762,6 +762,7 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
         MExpr.Default(tyObj, loc), ctx
 
       doArm ()
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
 
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =

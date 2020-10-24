@@ -105,7 +105,7 @@ let desugarFun pats body pos =
   let ident = "fun"
   let pat = APat.Fun(ident, pats, pos)
   let next = AExpr.Ident(ident, pos)
-  AExpr.Let(pat, body, next, pos)
+  AExpr.Let(PrivateVis, pat, body, next, pos)
 
 /// Desugar `-x` to `0 - x`.
 let desugarUniNeg arg pos =
@@ -167,15 +167,15 @@ let tryDesugarIndexRange expr pos =
 /// Let to let-val:
 /// `let pat = body` ==>
 ///   `let-val pat = body`
-let desugarLet pat body next pos =
+let desugarLet vis pat body next pos =
   match pat with
   | APat.Anno (pat, annoTy, annoLoc) ->
       let body = AExpr.Anno(body, annoTy, annoLoc)
-      desugarLet pat body next pos
+      desugarLet vis pat body next pos
 
-  | APat.Fun (ident, args, _) -> ALet.LetFun(ident, args, body, next, pos)
+  | APat.Fun (ident, args, _) -> ALet.LetFun(vis, ident, args, body, next, pos)
 
-  | _ -> ALet.LetVal(pat, body, next, pos)
+  | _ -> ALet.LetVal(vis, pat, body, next, pos)
 
 let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
@@ -484,10 +484,10 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-  | AExpr.Let (pat, body, next, pos) ->
+  | AExpr.Let (vis, pat, body, next, pos) ->
       let doArm () =
-        match desugarLet pat body next pos with
-        | ALet.LetFun (ident, args, body, next, pos) ->
+        match desugarLet vis pat body next pos with
+        | ALet.LetFun (vis, ident, args, body, next, pos) ->
             let serial, nameCtx = nameCtx |> nameCtxAdd ident
             let isMainFun = false // Name resolution should correct this.
 
@@ -497,27 +497,27 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
             let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
             let next, nameCtx = (next, nameCtx) |> astToHirExpr docId
             let loc = toLoc docId pos
-            HExpr.LetFun(serial, isMainFun, args, body, next, noTy, loc), nameCtx
+            HExpr.LetFun(serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
 
-        | ALet.LetVal (pat, body, next, pos) ->
+        | ALet.LetVal (vis, pat, body, next, pos) ->
             let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
             let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
             let next, nameCtx = (next, nameCtx) |> astToHirExpr docId
             let loc = toLoc docId pos
-            HExpr.Let(pat, body, next, noTy, loc), nameCtx
+            HExpr.Let(vis, pat, body, next, noTy, loc), nameCtx
 
       doArm ()
 
-  | AExpr.TySynonym (ident, ty, pos) ->
+  | AExpr.TySynonym (vis, ident, ty, pos) ->
       let doArm () =
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
         let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
         let loc = toLoc docId pos
-        HExpr.TyDecl(serial, TyDecl.Synonym(ty, loc), loc), nameCtx
+        HExpr.TyDecl(serial, vis, TyDecl.Synonym(ty, loc), loc), nameCtx
 
       doArm ()
 
-  | AExpr.TyUnion (ident, variants, pos) ->
+  | AExpr.TyUnion (vis, ident, variants, pos) ->
       let doArm () =
         let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
           let serial, nameCtx = nameCtx |> nameCtxAdd ident
@@ -534,7 +534,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let unionSerial, nameCtx = nameCtx |> nameCtxAdd ident
         let variants, nameCtx = (variants, nameCtx) |> stMap onVariant
         let loc = toLoc docId pos
-        HExpr.TyDecl(unionSerial, TyDecl.Union(ident, variants, loc), loc), nameCtx
+        HExpr.TyDecl(unionSerial, vis, TyDecl.Union(ident, variants, loc), loc), nameCtx
 
       doArm ()
 
@@ -545,4 +545,13 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-let astToHir (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx = (expr, nameCtx) |> astToHirExpr docId
+let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
+  match root with
+  | ARoot.Expr expr -> astToHirExpr docId (expr, nameCtx)
+
+  | ARoot.Module (ident, body, pos) ->
+      let body, nameCtx = astToHirExpr docId (body, nameCtx)
+      let serial, nameCtx = nameCtx |> nameCtxAdd ident
+      let loc = toLoc docId pos
+      let next = hxUnit loc
+      HExpr.Module(serial, body, next, loc), nameCtx

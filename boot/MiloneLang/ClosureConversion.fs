@@ -331,7 +331,7 @@ let declosureFunRef refVarSerial refTy refLoc ctx =
 
   refExpr, ctx
 
-let declosureFunDecl callee isMainFun args body next ty loc ctx =
+let declosureFunDecl callee vis isMainFun args body next ty loc ctx =
   let args, body, ctx =
     let baseCtx = ctx
     let ctx = ctx |> ccCtxEnterFunDecl
@@ -348,7 +348,7 @@ let declosureFunDecl callee isMainFun args body next ty loc ctx =
     |> capsAddToFunPats args
 
   let next, ctx = (next, ctx) |> declosureExpr
-  HExpr.LetFun(callee, isMainFun, args, body, next, ty, loc), ctx
+  HExpr.LetFun(callee, vis, isMainFun, args, body, next, ty, loc), ctx
 
 let declosureVariantDecl ctx variant =
   let (_, variantSerial, _, _) = variant
@@ -437,19 +437,19 @@ let declosureExpr (expr, ctx) =
 
       doArm ()
 
-  | HExpr.Let (pat, body, next, ty, loc) ->
+  | HExpr.Let (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let pat, ctx = declosurePat (pat, ctx)
         let body, ctx = declosureExpr (body, ctx)
         let next, ctx = declosureExpr (next, ctx)
-        HExpr.Let(pat, body, next, ty, loc), ctx
+        HExpr.Let(vis, pat, body, next, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
-      declosureFunDecl callee isMainFun args body next ty loc ctx
+  | HExpr.LetFun (callee, vis, isMainFun, args, body, next, ty, loc) ->
+      declosureFunDecl callee vis isMainFun args body next ty loc ctx
 
-  | HExpr.TyDecl (_, tyDecl, _) ->
+  | HExpr.TyDecl (_, _, tyDecl, _) ->
       let doArm () =
         match tyDecl with
         | TyDecl.Synonym _ -> expr, ctx
@@ -463,6 +463,7 @@ let declosureExpr (expr, ctx) =
       doArm ()
 
   | HExpr.Error (error, loc) -> failwithf "Never: %s at %A" error loc
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
 
 let declosure (expr, tyCtx: TyCtx) =
   let ccCtx = ccCtxFromTyCtx tyCtx

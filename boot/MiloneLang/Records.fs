@@ -18,69 +18,76 @@ type ScopeCtx =
       * AssocMap<TySerial, TyDef>
       * AssocMap<TySerial, LetDepth>
       * NameTree
+      * NameTree
       * ScopeSerial
       * Scope
       * LetDepth
 
-let scopeCtxGetSerial (ScopeCtx (serial, _, _, _, _, _, _, _, _, _)) =
+let scopeCtxGetSerial (ScopeCtx (serial, _, _, _, _, _, _, _, _, _, _)) =
   serial
 
-let scopeCtxGetNameMap (ScopeCtx (_, nameMap, _, _, _, _, _, _, _, _)) =
+let scopeCtxGetNameMap (ScopeCtx (_, nameMap, _, _, _, _, _, _, _, _, _)) =
   nameMap
 
-let scopeCtxGetVars (ScopeCtx (_, _, vars, _, _, _, _, _, _, _)) =
+let scopeCtxGetVars (ScopeCtx (_, _, vars, _, _, _, _, _, _, _, _)) =
   vars
 
-let scopeCtxGetVarDepths (ScopeCtx (_, _, _, varDepths, _, _, _, _, _, _)) =
+let scopeCtxGetVarDepths (ScopeCtx (_, _, _, varDepths, _, _, _, _, _, _, _)) =
   varDepths
 
-let scopeCtxGetTys (ScopeCtx (_, _, _, _, tys, _, _, _, _, _)) =
+let scopeCtxGetTys (ScopeCtx (_, _, _, _, tys, _, _, _, _, _, _)) =
   tys
 
-let scopeCtxGetTyDepths (ScopeCtx (_, _, _, _, _, tyDepths, _, _, _, _)) =
+let scopeCtxGetTyDepths (ScopeCtx (_, _, _, _, _, tyDepths, _, _, _, _, _)) =
   tyDepths
 
-let scopeCtxGetVarNs (ScopeCtx (_, _, _, _, _, _, varNs, _, _, _)) =
+let scopeCtxGetVarNs (ScopeCtx (_, _, _, _, _, _, varNs, _, _, _, _)) =
   varNs
 
-let scopeCtxGetLocalSerial (ScopeCtx (_, _, _, _, _, _, _, localSerial, _, _)) =
+let scopeCtxGetTyNs (ScopeCtx (_, _, _, _, _, _, _, tyNs, _, _, _)) =
+  tyNs
+
+let scopeCtxGetLocalSerial (ScopeCtx (_, _, _, _, _, _, _, _, localSerial, _, _)) =
   localSerial
 
-let scopeCtxGetLocal (ScopeCtx (_, _, _, _, _, _, _, _, local, _)) =
+let scopeCtxGetLocal (ScopeCtx (_, _, _, _, _, _, _, _, _, local, _)) =
   local
 
-let scopeCtxGetLetDepth (ScopeCtx (_, _, _, _, _, _, _, _, _, letDepth)) =
+let scopeCtxGetLetDepth (ScopeCtx (_, _, _, _, _, _, _, _, _, _, letDepth)) =
   letDepth
 
-let scopeCtxWithSerial serial (ScopeCtx (_, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithSerial serial (ScopeCtx (_, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithNameMap nameMap (ScopeCtx (serial, _, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithNameMap nameMap (ScopeCtx (serial, _, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithVars vars (ScopeCtx (serial, nameMap, _, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithVars vars (ScopeCtx (serial, nameMap, _, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithVarDepths varDepths (ScopeCtx (serial, nameMap, vars, _, tys, tyDepths, varNs, localSerial, local, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithVarDepths varDepths (ScopeCtx (serial, nameMap, vars, _, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithTys tys (ScopeCtx (serial, nameMap, vars, varDepths, _, tyDepths, varNs, localSerial, local, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithTys tys (ScopeCtx (serial, nameMap, vars, varDepths, _, tyDepths, varNs, tyNs, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithTyDepths tyDepths (ScopeCtx (serial, nameMap, vars, varDepths, tys, _, varNs, localSerial, local, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithTyDepths tyDepths (ScopeCtx (serial, nameMap, vars, varDepths, tys, _, varNs, tyNs, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithVarNs varNs (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, _, localSerial, local, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithVarNs varNs (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, _, tyNs, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithLocalSerial localSerial (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, _, local, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithTyNs tyNs (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, _, localSerial, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithLocal local (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, _, letDepth)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithLocalSerial localSerial (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, _, local, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-let scopeCtxWithLetDepth letDepth (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, _)): ScopeCtx =
-  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, localSerial, local, letDepth)
+let scopeCtxWithLocal local (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, _, letDepth)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
+
+let scopeCtxWithLetDepth letDepth (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, _)): ScopeCtx =
+  ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
 type TyContext =
   | TyContext
@@ -420,3 +427,34 @@ let cirCtxWithDecls decls (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNam
 
 let cirCtxWithLogs logs (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, _)): CirCtx =
   CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames, stmts, decls, logs)
+
+type CliHost =
+  | CliHost
+    of string list
+      * (unit -> Profiler)
+      * (string -> Profiler -> unit)
+      * (string -> string option)
+
+let cliHostGetArgs (CliHost (args, _, _, _)) =
+  args
+
+let cliHostGetProfileInit (CliHost (_, profileInit, _, _)) =
+  profileInit
+
+let cliHostGetProfileLog (CliHost (_, _, profileLog, _)) =
+  profileLog
+
+let cliHostGetFileReadAllText (CliHost (_, _, _, fileReadAllText)) =
+  fileReadAllText
+
+let cliHostWithArgs args (CliHost (_, profileInit, profileLog, fileReadAllText)): CliHost =
+  CliHost (args, profileInit, profileLog, fileReadAllText)
+
+let cliHostWithProfileInit profileInit (CliHost (args, _, profileLog, fileReadAllText)): CliHost =
+  CliHost (args, profileInit, profileLog, fileReadAllText)
+
+let cliHostWithProfileLog profileLog (CliHost (args, profileInit, _, fileReadAllText)): CliHost =
+  CliHost (args, profileInit, profileLog, fileReadAllText)
+
+let cliHostWithFileReadAllText fileReadAllText (CliHost (args, profileInit, profileLog, _)): CliHost =
+  CliHost (args, profileInit, profileLog, fileReadAllText)

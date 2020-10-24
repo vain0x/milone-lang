@@ -250,11 +250,11 @@ let monoCtxProcessVarRef ctx varSerial useSiteTy =
 
 let monifyPat (pat, ctx) = pat, ctx
 
-let monifyExprLetFun ctx callee isMainFun args body next ty loc =
+let monifyExprLetFun ctx callee vis isMainFun args body next ty loc =
   let genericFunSerial = callee
 
   let letGenericFunExpr =
-    HExpr.LetFun(callee, isMainFun, args, body, next, ty, loc)
+    HExpr.LetFun(callee, vis, isMainFun, args, body, next, ty, loc)
 
   let rec go next arity genericFunTy useSiteTys ctx =
     match useSiteTys with
@@ -276,7 +276,7 @@ let monifyExprLetFun ctx callee isMainFun args body next ty loc =
               monoCtxAddMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
 
             let next =
-              HExpr.LetFun(monoFunSerial, isMainFun, monoArgs, monoBody, next, ty, loc)
+              HExpr.LetFun(monoFunSerial, vis, isMainFun, monoArgs, monoBody, next, ty, loc)
 
             go next arity genericFunTy useSiteTys ctx
 
@@ -336,23 +336,25 @@ let rec monifyExpr (expr, ctx) =
 
       doArm ()
 
-  | HExpr.Let (pat, init, next, ty, loc) ->
+  | HExpr.Let (vis, pat, init, next, ty, loc) ->
       let doArm () =
         let pat, ctx = (pat, ctx) |> monifyPat
         let init, ctx = (init, ctx) |> monifyExpr
         let next, ctx = (next, ctx) |> monifyExpr
-        HExpr.Let(pat, init, next, ty, loc), ctx
+        HExpr.Let(vis, pat, init, next, ty, loc), ctx
 
       doArm ()
 
-  | HExpr.LetFun (callee, isMainFun, args, body, next, ty, loc) ->
+  | HExpr.LetFun (callee, vis, isMainFun, args, body, next, ty, loc) ->
       let doArm () =
         let args, ctx = (args, ctx) |> stMap monifyPat
         let body, ctx = (body, ctx) |> monifyExpr
         let next, ctx = (next, ctx) |> monifyExpr
-        monifyExprLetFun ctx callee isMainFun args body next ty loc
+        monifyExprLetFun ctx callee vis isMainFun args body next ty loc
 
       doArm ()
+
+  | HExpr.Module _ -> failwith "NEVER: module is resolved in name res"
 
 let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let monoCtx =
