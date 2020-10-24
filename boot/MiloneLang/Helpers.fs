@@ -1516,6 +1516,10 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
 
   go pat
 
+let patToLoc pat =
+  let _, loc = patExtract pat
+  loc
+
 /// Converts a pattern in disjunctive normal form.
 /// E.g. `A, [B | C]` → `(A | [B]), (A | [C])`
 let patNormalize pat =
@@ -1645,6 +1649,10 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 let exprToTy expr =
   let ty, _ = exprExtract expr
   ty
+
+let exprToLoc expr =
+  let _, loc = exprExtract expr
+  loc
 
 // -----------------------------------------------
 // Binary Operators (MIR)
