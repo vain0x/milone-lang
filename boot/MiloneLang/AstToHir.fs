@@ -513,7 +513,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
         let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
         let loc = toLoc docId pos
-        HExpr.TyDecl(serial, vis, TyDecl.Synonym(ty, loc), loc), nameCtx
+        HExpr.TyDecl(serial, vis, TySynonymDecl(ty, loc), loc), nameCtx
 
       doArm ()
 
@@ -534,7 +534,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let unionSerial, nameCtx = nameCtx |> nameCtxAdd ident
         let variants, nameCtx = (variants, nameCtx) |> stMap onVariant
         let loc = toLoc docId pos
-        HExpr.TyDecl(unionSerial, vis, TyDecl.Union(ident, variants, loc), loc), nameCtx
+        HExpr.TyDecl(unionSerial, vis, UnionTyDecl(ident, variants, loc), loc), nameCtx
 
       doArm ()
 

@@ -452,9 +452,9 @@ let declosureExpr (expr, ctx) =
   | HExpr.TyDecl (_, _, tyDecl, _) ->
       let doArm () =
         match tyDecl with
-        | TyDecl.Synonym _ -> expr, ctx
+        | TySynonymDecl _ -> expr, ctx
 
-        | TyDecl.Union (_, variants, _) ->
+        | UnionTyDecl (_, variants, _) ->
             let ctx =
               variants |> listFold declosureVariantDecl ctx
 

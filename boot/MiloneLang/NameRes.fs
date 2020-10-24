@@ -363,12 +363,12 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
   else
 
     match tyDecl with
-    | TyDecl.Synonym (body, _synonymLoc) ->
+    | TySynonymDecl (body, _synonymLoc) ->
         ctx
         |> scopeCtxDefineLocalTy tySerial (TyDef.Meta(tyIdent, body, loc))
         |> addTyToModule tySerial
 
-    | TyDecl.Union (_, variants, _unionLoc) ->
+    | UnionTyDecl (_, variants, _unionLoc) ->
         let defineVariant ctx (variantIdent, variantSerial, hasPayload, payloadTy) =
           let varDef =
             VarDef.Variant(variantIdent, tySerial, hasPayload, payloadTy, noTy, loc)

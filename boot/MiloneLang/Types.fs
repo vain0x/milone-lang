@@ -368,12 +368,11 @@ type Trait =
   | ToStringTrait of Ty
 
 /// Type declaration.
-[<RequireQualifiedAccess>]
 type TyDecl =
-  | Synonym of ty: Ty * Loc
+  | TySynonymDecl of ty: Ty * Loc
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
-  | Union of Ident * variants: (Ident * VarSerial * bool * Ty) list * Loc
+  | UnionTyDecl of Ident * variants: (Ident * VarSerial * bool * Ty) list * Loc
 
 /// Type definition.
 [<RequireQualifiedAccess>]
