@@ -531,23 +531,22 @@ type MUnary =
 
 /// Binary operator in middle IR.
 /// Or primitive function with two parameters.
-[<RequireQualifiedAccess>]
-type MOp =
-  | Mul
-  | Div
-  | Mod
-  | Add
-  | Sub
-  | Eq
-  | Ne
-  | Lt
-  | Ge
+type MBinary =
+  | MMulBinary
+  | MDivBinary
+  | MModBinary
+  | MAddBinary
+  | MSubBinary
+  | MEqualBinary
+  | MNotEqualBinary
+  | MLessBinary
+  | MGreaterEqualBinary
   /// Concatenate two strings.
-  | StrAdd
+  | MStrAddBinary
   /// Compare two strings.
-  | StrCmp
+  | MStrCmpBinary
   /// Get a char.
-  | StrIndex
+  | MStrIndexBinary
 
 /// Expression in middle IR.
 [<RequireQualifiedAccess>]
@@ -559,7 +558,7 @@ type MExpr =
   | Proc of FunSerial * Ty * Loc
   | Variant of TySerial * VariantSerial * Ty * Loc
   | Uni of MUnary * arg: MExpr * resultTy: Ty * Loc
-  | Bin of MOp * left: MExpr * right: MExpr * resultTy: Ty * Loc
+  | Bin of MBinary * left: MExpr * right: MExpr * resultTy: Ty * Loc
 
 /// Variable initializer in mid-level IR.
 [<RequireQualifiedAccess>]

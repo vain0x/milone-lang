@@ -85,7 +85,7 @@ let mxProj expr index resultTy loc =
   MExpr.Uni(MProjUnary index, expr, resultTy, loc)
 
 let mxStrAdd ctx _op l r (_, loc) =
-  MExpr.Bin(MOp.StrAdd, l, r, tyStr, loc), ctx
+  MExpr.Bin(MStrAddBinary, l, r, tyStr, loc), ctx
 
 /// x op y ==> `x op y` if `x : {scalar}`
 /// where scalar types are int, char, etc.
@@ -94,7 +94,7 @@ let mxBinOpScalar ctx op l r (ty, loc) = MExpr.Bin(op, l, r, ty, loc), ctx
 
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
 let mxStrCmp ctx op l r (ty, loc) =
-  let strCmpExpr = MExpr.Bin(MOp.StrCmp, l, r, tyInt, loc)
+  let strCmpExpr = MExpr.Bin(MStrCmpBinary, l, r, tyInt, loc)
   let zeroExpr = MExpr.Lit(IntLit 0, loc)
 
   let opExpr =
@@ -103,7 +103,7 @@ let mxStrCmp ctx op l r (ty, loc) =
   opExpr, ctx
 
 /// Generates a comparison expression.
-let mxCmp ctx (op: MOp) (l: MExpr) r (ty: Ty) loc =
+let mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   assert (opIsComparison op)
   match mexprToTy l with
   | Ty.Con ((TyCon.Bool
@@ -115,7 +115,7 @@ let mxCmp ctx (op: MOp) (l: MExpr) r (ty: Ty) loc =
 
 let mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MExpr.Lit(lit, loc)
-  let eqExpr, ctx = mxCmp ctx MOp.Eq expr litExpr tyBool loc
+  let eqExpr, ctx = mxCmp ctx MEqualBinary expr litExpr tyBool loc
   let gotoStmt = msGotoUnless eqExpr endLabel loc
   let ctx = mirCtxAddStmt ctx gotoStmt
   false, ctx
@@ -165,7 +165,7 @@ let mirifyPatRef (ctx: MirCtx) endLabel serial ty loc expr =
       let rTagExpr = MExpr.Ref(serial, tyInt, loc)
 
       let eqExpr =
-        MExpr.Bin(MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
+        MExpr.Bin(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
 
       let gotoStmt = msGotoUnless eqExpr endLabel loc
       let ctx = mirCtxAddStmt ctx gotoStmt
@@ -194,7 +194,7 @@ let mirifyPatCall (ctx: MirCtx) endLabel serial args ty loc expr =
         let rTagExpr = MExpr.Ref(serial, tyInt, loc)
 
         let eqExpr =
-          MExpr.Bin(MOp.Eq, lTagExpr, rTagExpr, tyBool, loc)
+          MExpr.Bin(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
 
         let gotoStmt = msGotoUnless eqExpr endLabel loc
         let ctx = mirCtxAddStmt ctx gotoStmt
@@ -454,7 +454,7 @@ let mirifyExprIndex ctx l r _ loc =
   | Ty.Con (TyCon.Str, _), Ty.Con (TyCon.Int, _) ->
       let l, ctx = mirifyExpr ctx l
       let r, ctx = mirifyExpr ctx r
-      MExpr.Bin(MOp.StrIndex, l, r, tyChar, loc), ctx
+      MExpr.Bin(MStrIndexBinary, l, r, tyChar, loc), ctx
   | _ -> failwith "unimpl non-string indexing"
 
 let mirifyExprCallExit ctx arg ty loc =
@@ -606,13 +606,13 @@ let mirifyExprInfCallProc ctx callee args ty loc =
   match callee, args with
   | HExpr.Prim (prim, _, _), _ ->
       match prim, args with
-      | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx MOp.Add l r ty loc
-      | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx MOp.Sub l r ty loc
-      | HPrim.Mul, [ l; r ] -> mirifyExprOpArith ctx MOp.Mul l r ty loc
-      | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx MOp.Div l r ty loc
-      | HPrim.Mod, [ l; r ] -> mirifyExprOpArith ctx MOp.Mod l r ty loc
-      | HPrim.Eq, [ l; r ] -> mirifyExprOpCmp ctx MOp.Eq l r ty loc
-      | HPrim.Lt, [ l; r ] -> mirifyExprOpCmp ctx MOp.Lt l r ty loc
+      | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx MAddBinary l r ty loc
+      | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx MSubBinary l r ty loc
+      | HPrim.Mul, [ l; r ] -> mirifyExprOpArith ctx MMulBinary l r ty loc
+      | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx MDivBinary l r ty loc
+      | HPrim.Mod, [ l; r ] -> mirifyExprOpArith ctx MModBinary l r ty loc
+      | HPrim.Eq, [ l; r ] -> mirifyExprOpCmp ctx MEqualBinary l r ty loc
+      | HPrim.Lt, [ l; r ] -> mirifyExprOpCmp ctx MLessBinary l r ty loc
       | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc
       | HPrim.Index, [ l; r ] -> mirifyExprIndex ctx l r ty loc
       | HPrim.OptionSome, [ item ] -> mirifyExprCallSome ctx item ty loc

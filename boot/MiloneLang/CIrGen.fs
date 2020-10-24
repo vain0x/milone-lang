@@ -447,18 +447,18 @@ let cirCtxGetCTys (tys, ctx) =
 
 let cOpFrom op =
   match op with
-  | MOp.Mul -> CMulBinary
-  | MOp.Div -> CDivBinary
-  | MOp.Mod -> CModBinary
-  | MOp.Add -> CAddBinary
-  | MOp.Sub -> CSubBinary
-  | MOp.Eq -> CEqualBinary
-  | MOp.Ne -> CNotEqualBinary
-  | MOp.Lt -> CLessBinary
-  | MOp.Ge -> CGreaterEqualBinary
-  | MOp.StrAdd
-  | MOp.StrCmp
-  | MOp.StrIndex -> failwith "Never"
+  | MMulBinary -> CMulBinary
+  | MDivBinary -> CDivBinary
+  | MModBinary -> CModBinary
+  | MAddBinary -> CAddBinary
+  | MSubBinary -> CSubBinary
+  | MEqualBinary -> CEqualBinary
+  | MNotEqualBinary -> CNotEqualBinary
+  | MLessBinary -> CLessBinary
+  | MGreaterEqualBinary -> CGreaterEqualBinary
+  | MStrAddBinary
+  | MStrCmpBinary
+  | MStrIndexBinary -> failwith "Never"
 
 /// `0`, `NULL`, or `(T) {}`
 let genExprDefault ctx ty =
@@ -517,9 +517,9 @@ let genExprUniOp ctx op arg ty _ =
 
 let genExprBin ctx op l r =
   match op with
-  | MOp.StrAdd -> genExprBinAsCall ctx "str_add" l r
-  | MOp.StrCmp -> genExprBinAsCall ctx "str_cmp" l r
-  | MOp.StrIndex ->
+  | MStrAddBinary -> genExprBinAsCall ctx "str_add" l r
+  | MStrCmpBinary -> genExprBinAsCall ctx "str_cmp" l r
+  | MStrIndexBinary ->
       let l, ctx = genExpr ctx l
       let r, ctx = genExpr ctx r
       CIndexExpr(CNavExpr(l, "str"), r), ctx

@@ -1644,14 +1644,14 @@ let exprToTy expr =
 
 let mOpIsAdd op =
   match op with
-  | MOp.Add -> true
+  | MAddBinary -> true
 
   | _ -> false
 
 let opIsComparison op =
   match op with
-  | MOp.Eq
-  | MOp.Lt -> true
+  | MEqualBinary
+  | MLessBinary -> true
   | _ -> false
 
 // -----------------------------------------------
@@ -1697,30 +1697,30 @@ let rec mxSugar expr =
     | MExpr.Uni (MNotUnary, l, _, _) -> l
 
     // SUGAR: `not (x = y)` ==> `x <> y`
-    | MExpr.Bin (MOp.Eq, l, r, ty, loc) -> MExpr.Bin(MOp.Ne, l, r, ty, loc)
+    | MExpr.Bin (MEqualBinary, l, r, ty, loc) -> MExpr.Bin(MNotEqualBinary, l, r, ty, loc)
 
     // SUGAR: `not (x <> y)` ==> `x = y`
-    | MExpr.Bin (MOp.Ne, l, r, ty, loc) -> MExpr.Bin(MOp.Eq, l, r, ty, loc)
+    | MExpr.Bin (MNotEqualBinary, l, r, ty, loc) -> MExpr.Bin(MEqualBinary, l, r, ty, loc)
 
     // SUGAR: `not (x < y)` ==> `x >= y`
-    | MExpr.Bin (MOp.Lt, l, r, ty, loc) -> MExpr.Bin(MOp.Ge, l, r, ty, loc)
+    | MExpr.Bin (MLessBinary, l, r, ty, loc) -> MExpr.Bin(MGreaterEqualBinary, l, r, ty, loc)
 
     // SUGAR: `not (x >= y)` ==> `x < y`
-    | MExpr.Bin (MOp.Ge, l, r, ty, loc) -> MExpr.Bin(MOp.Lt, l, r, ty, loc)
+    | MExpr.Bin (MGreaterEqualBinary, l, r, ty, loc) -> MExpr.Bin(MLessBinary, l, r, ty, loc)
 
     | _ -> MExpr.Uni(op, l, ty, loc)
 
   let mxSugarBin op l r ty loc =
     match op, l, r with
     // SUGAR: `x = false` ==> `not x`
-    | MOp.Eq, MExpr.Lit (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
+    | MEqualBinary, MExpr.Lit (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
 
-    | MOp.Eq, _, MExpr.Lit (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
+    | MEqualBinary, _, MExpr.Lit (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
 
     // SUGAR: `x = true` ==> `x`
-    | MOp.Eq, MExpr.Lit (BoolLit true, _), _ -> r
+    | MEqualBinary, MExpr.Lit (BoolLit true, _), _ -> r
 
-    | MOp.Eq, _, MExpr.Lit (BoolLit true, _) -> l
+    | MEqualBinary, _, MExpr.Lit (BoolLit true, _) -> l
 
     | _ -> MExpr.Bin(op, l, r, ty, loc)
 
