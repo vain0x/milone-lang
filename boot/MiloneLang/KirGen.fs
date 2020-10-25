@@ -13,22 +13,125 @@ open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
 
-type kgx = KirGenCtx
+type private kgx = KirGenCtx
+
+type private Hole = KTerm -> kgx -> KNode * kgx
 
 let private isVariantFun varSerial ctx = false
+
+let private isNewtypeVariant varSerial ctx =
+  match ctx |> mirCtxGetVars |> mapFind varSerial with
+  | VariantDef (_, tySerial, _, _, _, _) ->
+      match ctx |> mirCtxGetTys |> mapFind tySerial with
+      | UnionTyDef (_, variantSerials, _) -> variantSerials |> listLength = 1
+
+      | _ -> failwith "Expected union serial"
+
+  | _ -> failwith "Expected variant serial"
 
 // -----------------------------------------------
 // Pattern matching resolution
 // -----------------------------------------------
 
-// TODO
+// From:
+//
+// ```
+//   h(match cond with
+//     | p1 when g1 -> b1
+//     ...
+//     | pN when gN -> bN)
+// ```
+//
+// To:
+//
+// ```
+//   let c = cond
+//   let a1 () =
+//       if pattern-match(c, p1)
+//       then (if g1 then g b1 else a2 ())
+//       else a2 ()
+//   ...
+//   and aN () =
+//       ...
+//       else abort () // exhaust
+//   and f t = h t
+//   in a1 ()
+// ```
+
+type pmx = kgx
+
+type PTerm =
+  | PLitTerm of Lit * Loc
+  | PTagTerm of VariantSerial * Ty * Loc
+  | PNilTerm of itemTy: Ty * Loc
+  | PNoneTerm of itemTy: Ty * Loc
+
+type PNode =
+  | PResolveNode of Loc
+  | PRejectNode of Loc
+  | PEqualNode of PTerm * resolve: PNode * reject: PNode * Loc
+  | PLetNode of VarSerial * Ty * resolve: PNode * Loc
+
+let private findVarDef _ = failwith ""
+
+let private kgRefPat pat varSerial ty loc resolve reject ctx =
+  match findVarDef varSerial with
+  | VarDef _ -> PLetNode(varSerial, ty, resolve (), loc)
+
+  | VariantDef _ -> PEqualNode(PTagTerm(varSerial, ty, loc), resolve (), reject (), loc)
+
+  | FunDef _ -> failwithf "NEVER: fun can't appear as pattern. %A" pat
+
+let private kgTuplePat pat itemPats tupleTy loc resolve reject ctx = failwith ""
+
+let private kgCallPat pat callee args ty loc pass fail ctx =
+  match callee with
+  | HRefPat (serial, _, _) -> failwith ""
+
+  | HSomePat (itemTy, _) ->
+      match args with
+      | [ itemPat ] -> failwith ""
+
+      | _ -> failwithf "NEVER: bad arity. %A" pat
+
+  | _ -> failwithf "NEVER: illegal call pat. %A" pat
+
+let private kgPat (pat: HPat) resolve reject ctx: PNode =
+  match pat with
+  | HDiscardPat _ -> resolve ()
+
+  | HLitPat (lit, loc) -> PEqualNode(PLitTerm(lit, loc), resolve (), reject (), loc)
+
+  | HNilPat (itemTy, loc) -> PEqualNode(PNilTerm(itemTy, loc), resolve (), reject (), loc)
+
+  | HNonePat (itemTy, loc) -> PEqualNode(PNoneTerm(itemTy, loc), resolve (), reject (), loc)
+
+  | HRefPat (varSerial, ty, loc) -> kgRefPat pat varSerial ty loc resolve reject ctx
+
+  | HCallPat (callee, args, ty, loc) -> kgCallPat pat callee args ty loc resolve reject ctx
+
+  | HConsPat (l, r, itemTy, loc) -> failwith ""
+
+  | HTuplePat (itemPats, tupleTy, loc) -> kgTuplePat pat itemPats tupleTy loc resolve reject ctx
+
+  | HAsPat (bodyPat, varSerial, loc) -> failwith ""
+
+  | HSomePat _ ->
+      // let ctx =
+      //   mirCtxAddErr ctx "Some pattern must be used in the form of `Some pat`" loc
+      // false, ctx
+      failwith "error"
+
+  | HOrPat _ -> failwith "Unimpl nested OR pattern."
+  | HNavPat _ -> failwithf "NEVER: Nav pattern is resolved in type inference. %A" pat
+  | HAnnoPat _ -> failwithf "NEVER: Anno pattern is resolved in type inference. %A" pat
 
 // -----------------------------------------------
 // Primitive dispatch
 // -----------------------------------------------
 
 // prim expr, not appear as callee
-let private kgPrimExpr expr prim ty loc ret ctx: KNode * kgx =
+let private kgPrimExpr expr prim ty loc hole ctx: KNode * kgx =
   match prim with
   | HPrim.Nil ->
       let itemTy =
@@ -37,7 +140,7 @@ let private kgPrimExpr expr prim ty loc ret ctx: KNode * kgx =
 
         | _ -> failwithf "NEVER: []'s type must be a list. %A" expr
 
-      ret (KNilTerm(itemTy, loc)) ctx
+      hole (KNilTerm(itemTy, loc)) ctx
 
   | HPrim.OptionNone ->
       let itemTy =
@@ -46,11 +149,11 @@ let private kgPrimExpr expr prim ty loc ret ctx: KNode * kgx =
 
         | _ -> failwithf "NEVER: None's type must be a list. %A" expr
 
-      ret (KNoneTerm(itemTy, loc)) ctx
+      hole (KNoneTerm(itemTy, loc)) ctx
 
   | _ -> failwithf "NEVER: Prim must appear in form of call(prim, args...). %A" expr
 
-let private kgCallAddExpr expr primTy args ty primLoc ret ctx =
+let private kgCallAddExpr expr primTy args ty primLoc hole ctx =
   match args with
   | [ l; r ] ->
       match exprToTy l with
@@ -68,88 +171,88 @@ let private kgCallAddExpr expr primTy args ty primLoc ret ctx =
 
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallSubExpr expr primTy args ty primLoc ret ctx =
+let private kgCallSubExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallMulExpr expr primTy args ty primLoc ret ctx =
+let private kgCallMulExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallDivExpr expr primTy args ty primLoc ret ctx =
+let private kgCallDivExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallModExpr expr primTy args ty primLoc ret ctx =
+let private kgCallModExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallEqExpr expr primTy args ty primLoc ret ctx =
+let private kgCallEqExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallLtExpr expr primTy args ty primLoc ret ctx =
+let private kgCallLtExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallConsExpr expr primTy args ty primLoc ret ctx =
+let private kgCallConsExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallIndexExpr expr primTy args ty primLoc ret ctx =
+let private kgCallIndexExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallSomeExpr expr primTy args ty primLoc ret ctx =
+let private kgCallSomeExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallNotExpr expr primTy args ty primLoc ret ctx =
+let private kgCallNotExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallExitExpr expr primTy args ty primLoc ret ctx =
+let private kgCallExitExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallBoxExpr expr primTy args ty primLoc ret ctx =
+let private kgCallBoxExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallUnboxExpr expr primTy args ty primLoc ret ctx =
+let private kgCallUnboxExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
-let private kgCallStrLengthExpr expr primTy args ty primLoc ret ctx =
+let private kgCallStrLengthExpr expr primTy args ty primLoc hole ctx =
   match args with
   | _ -> failwithf "NEVER: bad arity %A" expr
 
 // call to other prim listed above.
 // just generate a call expression.
 // do further more in downstream.
-let private kgCallOtherPrimExpr expr prim args ty loc ret ctx = failwith ""
+let private kgCallOtherPrimExpr expr prim args ty loc hole ctx = failwith ""
 
-let private kgCallVariantExpr expr varSerial variantTy variantLoc args ty loc ret ctx = failwith ""
+let private kgCallVariantExpr expr varSerial variantTy variantLoc args ty loc hole ctx = failwith ""
 
 // call to something non-prim, non-variant. typically a function.
-let private kgCallOtherExpr expr callee args ty loc ret ctx = failwith ""
+let private kgCallOtherExpr expr callee args ty loc hole ctx = failwith ""
 
-let private kgSemiExpr expr args ty loc ret ctx =
-  let rec go args ret ctx =
+let private kgSemiExpr expr args ty loc hole ctx =
+  let rec go args hole ctx =
     match args with
-    | [ last ] -> kgExpr last ret ctx
+    | [ last ] -> kgExpr last hole ctx
 
     | arg :: args ->
         // Generate arg and the result is discarded with `_`. And then continue to loop.
-        kgExpr arg (fun _ ctx -> ctx |> go args ret) ctx
+        kgExpr arg (fun _ ctx -> go args hole ctx) ctx
 
     | [] -> failwithf "NEVER: semi can't be empty %A" expr
 
-  go args ret ctx
+  go args hole ctx
 
-let private kgInfExpr expr infOp args ty loc ret ctx: KNode * kgx =
+let private kgInfExpr expr infOp args ty loc hole ctx: KNode * kgx =
   match infOp with
-  | InfOp.Semi -> kgSemiExpr expr args ty loc ret ctx
+  | InfOp.Semi -> kgSemiExpr expr args ty loc hole ctx
 
   | InfOp.CallProc ->
       let callee, args =
@@ -160,27 +263,27 @@ let private kgInfExpr expr infOp args ty loc ret ctx: KNode * kgx =
       match callee with
       | HPrimExpr (prim, primTy, primLoc) ->
           match prim with
-          | HPrim.Add -> kgCallAddExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Sub -> kgCallSubExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Mul -> kgCallMulExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Div -> kgCallDivExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Mod -> kgCallModExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Eq -> kgCallEqExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Lt -> kgCallLtExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Cons -> kgCallConsExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Index -> kgCallIndexExpr expr primTy args ty primLoc ret ctx
-          | HPrim.OptionSome -> kgCallSomeExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Not -> kgCallNotExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Exit -> kgCallExitExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Box -> kgCallBoxExpr expr primTy args ty primLoc ret ctx
-          | HPrim.Unbox -> kgCallUnboxExpr expr primTy args ty primLoc ret ctx
-          | HPrim.StrLength -> kgCallStrLengthExpr expr primTy args ty primLoc ret ctx
-          | _ -> kgCallOtherPrimExpr expr primTy args ty primLoc ret ctx
+          | HPrim.Add -> kgCallAddExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Sub -> kgCallSubExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Mul -> kgCallMulExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Div -> kgCallDivExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Mod -> kgCallModExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Eq -> kgCallEqExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Lt -> kgCallLtExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Cons -> kgCallConsExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Index -> kgCallIndexExpr expr primTy args ty primLoc hole ctx
+          | HPrim.OptionSome -> kgCallSomeExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Not -> kgCallNotExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Exit -> kgCallExitExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Box -> kgCallBoxExpr expr primTy args ty primLoc hole ctx
+          | HPrim.Unbox -> kgCallUnboxExpr expr primTy args ty primLoc hole ctx
+          | HPrim.StrLength -> kgCallStrLengthExpr expr primTy args ty primLoc hole ctx
+          | _ -> kgCallOtherPrimExpr expr primTy args ty primLoc hole ctx
 
       | HRefExpr (varSerial, refTy, refLoc) when ctx |> isVariantFun varSerial ->
-          kgCallVariantExpr expr varSerial refTy args ty refLoc loc ret ctx
+          kgCallVariantExpr expr varSerial refTy args ty refLoc loc hole ctx
 
-      | _ -> kgCallOtherExpr expr callee args ty loc ret ctx
+      | _ -> kgCallOtherExpr expr callee args ty loc hole ctx
 
   | InfOp.CallClosure ->
       match args with
@@ -191,7 +294,7 @@ let private kgInfExpr expr infOp args ty loc ret ctx: KNode * kgx =
 
   | InfOp.Tuple ->
       match args, ty with
-      | [], _ -> ret (KUnitTerm loc) ctx
+      | [], _ -> hole (KUnitTerm loc) ctx
 
       | _, AppTy (TupleTyCtor, itemTys) ->
           // mirifyExprTuple ctx args itemTys loc
@@ -214,38 +317,145 @@ let private kgInfExpr expr infOp args ty loc ret ctx: KNode * kgx =
 // match, let-val, let-fun
 // -----------------------------------------------
 
-let private kgMatchExpr expr cond arms targetTy loc ret ctx: KNode * kgx = failwith ""
+let private newVar ty loc ctx = failwith ""
 
-let private kgLetValExpr expr pat init next nextTy loc ret ctx: KNode * kgx = failwith ""
+let private newFun ty loc ctx = failwith ""
 
-let private kgLetFunExpr expr funSerial isMainFun args body next nextTy loc ret ctx: KNode * kgx = failwith ""
+let private newFunSerial loc ctx = failwith ""
+
+let private addFun funSerial funDef funBinding ctx = failwith ""
+
+let private kgAbort loc ctx =
+  let code = KLitTerm(IntLit 1, loc)
+  KPrimNode(KExitPrim, [ code ], [], [], loc), ctx
+
+let private kgIfNode _ = failwith ""
+
+let private kgEvalPTerm (term: PTerm) hole: KTerm =
+  match term with
+  | PLitTerm (lit, loc) -> KLitTerm(lit, loc) |> hole
+
+  | PTagTerm (variantSerial, ty, loc) ->
+      // KSelectNode ()
+      failwith ""
+
+  | PNilTerm (itemTy, loc) -> KNilTerm(itemTy, loc) |> hole
+
+  | PNoneTerm (itemTy, loc) -> KNoneTerm(itemTy, loc) |> hole
+
+let private kgEvalPNode (term: KTerm) (node: PNode) resolve reject ctx: KNode * kgx =
+  match node with
+  | PResolveNode _ -> resolve ()
+
+  | PRejectNode _ -> reject ()
+
+  | PEqualNode (expected, resolve, reject, loc) ->
+      // if term == expected, then resolve, else reject
+      failwith ""
+
+  | PLetNode (varSerial, ty, cont, loc) ->
+      let next, ctx =
+        kgEvalPNode (KVarTerm(varSerial, ty, loc)) cont resolve reject ctx
+
+      failwith ""
+
+// `match cond with (| pat when guard -> body)*`
+let private kgMatchExpr expr cond arms targetTy loc hole ctx: KNode * kgx =
+  // Fun to call to leave the match expr.
+  let targetFunSerial, ctx = newFunSerial loc ctx
+
+  let leaveMatch target loc =
+    KJumpNode(targetFunSerial, [ target ], loc)
+
+  // Creates a fun for each arm to perform pattern-matching on it;
+  // returns a node to evaluate the match that consists of these arms.
+  let rec go cond arms ctx: KNode * kgx =
+    match arms with
+    | [] ->
+        // Non-exhaustive error.
+        kgAbort loc ctx
+
+    | (pat, guard, body) :: arms ->
+        let loc = patToLoc pat
+        let rest, ctx = go cond arms ctx
+
+        let armFunSerial, ctx = ctx |> newFunSerial loc
+
+        let armFunDef =
+          let armFunTy = tyFun tyUnit tyUnit
+          FunDef("arm", 1, TyScheme([], armFunTy), loc)
+
+        // Compute pattern-matching.
+        let body, ctx =
+          let pNode =
+            kgPat pat (fun () -> PResolveNode loc) (fun () -> PRejectNode loc) ctx
+
+          let onSuccess () =
+            // TODO: check guard. use rest if false
+            kgExpr body (fun body ctx -> leaveMatch body loc, ctx) ctx
+
+          let onFailure () = rest, ctx
+
+          kgEvalPNode cond pNode onSuccess onFailure ctx
+
+        let binding = KFunBinding(armFunSerial, [], body, loc)
+
+        let ctx =
+          ctx |> addFun armFunSerial armFunDef binding
+
+        KJumpNode(armFunSerial, [ KUnitTerm loc ], loc), ctx
+
+  let node, ctx =
+    ctx
+    |> kgExpr cond (fun cond ctx -> go cond arms ctx)
+
+  // Create target fun.
+  let ctx =
+    let targetVarSerial = newVar targetTy loc ctx
+
+    let body, ctx =
+      hole (KVarTerm(targetVarSerial, targetTy, loc)) ctx
+
+    let binding =
+      KFunBinding(targetFunSerial, [ targetVarSerial ], body, loc)
+
+    let funDef =
+      FunDef("match_next", 1, TyScheme([], tyFun targetTy tyUnit), loc)
+
+    ctx |> addFun targetFunSerial funDef binding
+
+  node, ctx
+
+let private kgLetValExpr expr pat init next nextTy loc hole ctx: KNode * kgx = failwith ""
+
+let private kgLetFunExpr expr funSerial isMainFun args body next nextTy loc hole ctx: KNode * kgx = failwith ""
 
 // -----------------------------------------------
 // kgExpr
 // -----------------------------------------------
 
-let private kgExpr (expr: HExpr) (ret: KTerm -> kgx -> KNode * kgx) (ctx: kgx): KNode * kgx =
+let private kgExpr (expr: HExpr) (hole: Hole) (ctx: kgx): KNode * kgx =
   match expr with
-  | HLitExpr (lit, loc) -> ret (KLitTerm(lit, loc)) ctx
+  | HLitExpr (lit, loc) -> hole (KLitTerm(lit, loc)) ctx
 
-  | HRefExpr (varSerial, ty, loc) -> ret (KVarTerm(varSerial, ty, loc)) ctx
+  | HRefExpr (varSerial, ty, loc) -> hole (KVarTerm(varSerial, ty, loc)) ctx
 
-  | HPrimExpr (prim, ty, loc) -> kgPrimExpr expr prim ty loc ret ctx
+  | HPrimExpr (prim, ty, loc) -> kgPrimExpr expr prim ty loc hole ctx
 
-  | HMatchExpr (cond, arms, ty, loc) -> kgMatchExpr expr cond arms ty loc ret ctx
+  | HMatchExpr (cond, arms, ty, loc) -> kgMatchExpr expr cond arms ty loc hole ctx
 
-  | HInfExpr (infOp, args, ty, loc) -> kgInfExpr expr infOp args ty loc ret ctx
+  | HInfExpr (infOp, args, ty, loc) -> kgInfExpr expr infOp args ty loc hole ctx
 
-  | HLetValExpr (_vis, pat, init, next, nextTy, loc) -> kgLetValExpr expr pat init next nextTy loc ret ctx
+  | HLetValExpr (_vis, pat, init, next, nextTy, loc) -> kgLetValExpr expr pat init next nextTy loc hole ctx
 
   | HLetFunExpr (funSerial, _vis, isMainFun, args, body, next, nextTy, loc) ->
-      kgLetFunExpr expr funSerial isMainFun args body next nextTy loc ret ctx
+      kgLetFunExpr expr funSerial isMainFun args body next nextTy loc hole ctx
 
   | HTyDeclExpr _
   | HOpenExpr _ ->
       let justUnit () =
         let loc = exprToLoc expr
-        ret (KUnitTerm loc) ctx
+        hole (KUnitTerm loc) ctx
 
       justUnit ()
 
