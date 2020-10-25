@@ -110,12 +110,12 @@ let build host verbosity (projectDir: string): string * bool =
   log ("Begin compiling project=" + projectName)
 
   let readModuleFile moduleName =
-    log ("Open module " + moduleName)
+    // log ("Open module " + moduleName)
     readFile (projectDir + "/" + moduleName + ".fs")
 
   let expr, nameCtx, errorListList =
-    let parseTokens (moduleName: string) tokens =
-      log ("Parsing " + moduleName)
+    let parseTokens (_moduleName: string) tokens =
+      // log ("Parsing " + moduleName)
       parse tokens
 
     parseProjectModules readModuleFile parseTokens projectName (nameCtxEmpty ())
