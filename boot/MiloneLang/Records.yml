@@ -98,6 +98,12 @@ MonoCtx:
   SomethingHappened: bool
   InfiniteLoopDetector: int
 
+KirGenCtx:
+  Serial: Serial
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+  Logs: (Log * Loc) list
+
 MirCtx:
   Serial: Serial
   Vars: AssocMap<VarSerial, VarDef>

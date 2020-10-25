@@ -545,10 +545,11 @@ type KPath =
 /// Term (expression) in KIR.
 type KTerm =
   | KLitTerm of Lit * Loc
-  | KVarTerm of VarSerial * Loc
-  | KLabelTerm of VarSerial * Loc
+  | KVarTerm of VarSerial * Ty * Loc
+  | KLabelTerm of VarSerial * Ty * Loc
   | KNilTerm of itemTy: Ty * Loc
   | KNoneTerm of itemTy: Ty * Loc
+  | KUnitTerm of Loc
 
 /// Node (statement) in KIR.
 type KNode =

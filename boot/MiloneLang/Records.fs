@@ -324,6 +324,37 @@ let monoCtxWithSomethingHappened somethingHappened (MonoCtx (serial, logs, vars,
 let monoCtxWithInfiniteLoopDetector infiniteLoopDetector (MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, _)): MonoCtx =
   MonoCtx (serial, logs, vars, tys, tyDepths, genericFunUseSiteTys, genericFunMonoSerials, mode, somethingHappened, infiniteLoopDetector)
 
+type KirGenCtx =
+  | KirGenCtx
+    of Serial
+      * AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * (Log * Loc) list
+
+let kirGenCtxGetSerial (KirGenCtx (serial, _, _, _)) =
+  serial
+
+let kirGenCtxGetVars (KirGenCtx (_, vars, _, _)) =
+  vars
+
+let kirGenCtxGetTys (KirGenCtx (_, _, tys, _)) =
+  tys
+
+let kirGenCtxGetLogs (KirGenCtx (_, _, _, logs)) =
+  logs
+
+let kirGenCtxWithSerial serial (KirGenCtx (_, vars, tys, logs)): KirGenCtx =
+  KirGenCtx (serial, vars, tys, logs)
+
+let kirGenCtxWithVars vars (KirGenCtx (serial, _, tys, logs)): KirGenCtx =
+  KirGenCtx (serial, vars, tys, logs)
+
+let kirGenCtxWithTys tys (KirGenCtx (serial, vars, _, logs)): KirGenCtx =
+  KirGenCtx (serial, vars, tys, logs)
+
+let kirGenCtxWithLogs logs (KirGenCtx (serial, vars, tys, _)): KirGenCtx =
+  KirGenCtx (serial, vars, tys, logs)
+
 type MirCtx =
   | MirCtx
     of Serial
