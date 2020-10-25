@@ -479,6 +479,98 @@ type MonoMode =
   | RemoveGenerics
 
 // -----------------------------------------------
+// KIR types
+// -----------------------------------------------
+
+// KIR is continuation passing style (CPS) intermediate representation.
+
+/// Primitive in KIR.
+type KPrim =
+  // Arithmetic:
+  | KAddPrim
+  | KSubPrim
+  | KMulPrim
+  | KDivPrim
+  | KModPrim
+
+  // Comparison:
+  | KEqualPrim
+  | KLessPrim
+
+  // Bool:
+  | KNotPrim
+
+  // String:
+  | KIndexPrim
+  | KStrLengthPrim
+  | KStrGetSlicePrim
+
+  // List, option:
+  | KConsPrim
+  | KSomePrim
+
+  // Tuple:
+  | KTuplePrim
+
+  // Function, closure:
+  | KClosurePrim
+  | KCallProcPrim
+  | KCallClosurePrim
+
+  // obj:
+  | KBoxPrim
+  | KUnboxPrim
+
+  // Others:
+  | KExitPrim
+  | KAssertPrim
+  | KCharPrim
+  | KIntPrim
+  | KStringPrim
+  | KPrintfnPrim
+  | KInRegionPrim
+  | KNativeFunPrim of Ident * Arity
+
+/// Represents an access path to content of data (tuple or union).
+type KPath =
+  /// N'th field of tuple.
+  | KFieldPath of int * Loc
+
+  /// Tag of union.
+  | KTagPath of Loc
+
+  /// Payload of union.
+  | KPayloadPath of VarSerial * Loc
+
+/// Term (expression) in KIR.
+type KTerm =
+  | KLitTerm of Lit * Loc
+  | KVarTerm of VarSerial * Loc
+  | KLabelTerm of VarSerial * Loc
+  | KNilTerm of itemTy: Ty * Loc
+  | KNoneTerm of itemTy: Ty * Loc
+
+/// Node (statement) in KIR.
+type KNode =
+  /// Jump to label.
+  | KJumpNode of VarSerial * args: KTerm list * Loc
+
+  /// Switch to label based on the value of `cond`.
+  | KSwitchNode of cond: KTerm * arms: (KTerm * KNode) list * Loc
+
+  /// Select contents of data (tuple or union).
+  | KSelectNode of KTerm * path: KPath * result: VarSerial * cont: KNode * Loc
+
+  /// Execution of primitive.
+  /// Do something using args, binds values to results, and then jump to one of continuations (if continue).
+  | KPrimNode of KPrim * args: KTerm list * results: VarSerial list * conts: KNode list * Loc
+
+type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * body: KNode * Loc
+
+/// Root node of KIR.
+type KRoot = KRoot of KFunBinding list * KNode
+
+// -----------------------------------------------
 // MIR types
 // -----------------------------------------------
 
