@@ -107,7 +107,7 @@ let build host verbosity (projectDir: string): string * bool =
   let projectDir = projectDir |> pathStrTrimEndPathSep
 
   let projectName = projectDir |> pathStrToStem
-  log ("Project name = " + projectName)
+  log ("Begin compiling project=" + projectName)
 
   let readModuleFile moduleName =
     log ("Open module " + moduleName)
@@ -164,6 +164,8 @@ let build host verbosity (projectDir: string): string * bool =
             let cir, success = gen (stmts, mirCtx)
 
             let output = cprint cir
+
+            log "Finished"
             output, success
 
 let cliParse host (projectDir: string) =

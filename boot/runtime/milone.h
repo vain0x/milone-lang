@@ -206,23 +206,47 @@ long milone_get_time_millis() {
 #endif
 }
 
+struct Profiler {
+  long epoch;
+  long heap_size;
+};
+
 void *milone_profile_init(int _unit) {
-  long *t = (long *)milone_mem_alloc(1, sizeof(long));
-  *t = milone_get_time_millis();
-  return t;
+  struct Profiler* p = (struct Profiler *)milone_mem_alloc(1, sizeof(struct Profiler));
+  p->epoch = milone_get_time_millis();
+  p->heap_size = s_heap_size;
+  return p;
 }
 
-int milone_profile_log(struct String msg, void *current) {
-  long t = milone_get_time_millis();
-  long *s = (long *)current;
+int milone_profile_log(struct String msg, void *profiler) {
+  struct Profiler *p = (struct Profiler *)profiler;
 
-  long millis = t - *s;
+  long t = milone_get_time_millis();
+  long s = p->epoch;
+
+  long millis = t - s;
   if (millis < 0) {
     millis = 0;
   }
 
-  fprintf(stderr, "profile: %4d.%03d %s\n", (int)(millis / 1000), (int)(millis % 1000), msg.str);
-  *s = t;
+  long sec = millis / 1000;
+  millis %= 1000;
+
+  long bytes = s_heap_size - p->heap_size;
+  if (bytes < 0) {
+    bytes = 0;
+  }
+
+  long kilo = bytes / 1000;
+  bytes %= 1000;
+
+  long mega = kilo / 1000;
+  kilo %= 1000;
+
+  fprintf(stderr, "profile: time=%4d.%03d mem=%5d,%03d,%03d\n%s\n", (int)sec, (int)millis, (int)mega, (int)kilo, (int)bytes, msg.str);
+
+  p->epoch = t;
+  p->heap_size = s_heap_size;
   return 0; // can't be void due to restriction of __nativeFun
 }
 
