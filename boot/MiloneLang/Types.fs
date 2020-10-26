@@ -503,9 +503,9 @@ type KPrim =
   | KNotPrim
 
   // String:
-  | KIndexPrim
   | KStrAddPrim
   | KStrComparePrim
+  | KStrIndexPrim
   | KStrLengthPrim
   | KStrGetSlicePrim
 

@@ -146,7 +146,7 @@ let private kmPrimNot itself args results conts loc ctx =
   | [ arg ], [ result ], [ cont ] -> ctx |> setUnaryK MNotUnary arg result cont loc
   | _ -> unreachable itself
 
-let private kmPrimIndex itself args results conts loc ctx =
+let private kmPrimStrIndex itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
       ctx
@@ -299,9 +299,9 @@ let private kmPrimNode itself prim args results conts loc ctx: MirCtx =
   | KEqualPrim -> kmPrimEqual itself args results conts loc ctx
   | KLessPrim -> kmPrimLess itself args results conts loc ctx
   | KNotPrim -> kmPrimNot itself args results conts loc ctx
-  | KIndexPrim -> kmPrimIndex itself args results conts loc ctx
   | KStrAddPrim -> kmPrimStrAdd itself args results conts loc ctx
   | KStrComparePrim -> kmPrimStrCompare itself args results conts loc ctx
+  | KStrIndexPrim -> kmPrimStrIndex itself args results conts loc ctx
   | KStrLengthPrim -> kmPrimStrLength itself args results conts loc ctx
   | KStrGetSlicePrim -> other HPrim.StrGetSlice
   | KConsPrim -> kmPrimCons itself args results conts loc ctx
