@@ -488,14 +488,14 @@ type MonoMode =
 type KPrim =
   | KMovePrim
 
-  // Arithmetic:
+  // Scalar arithmetic:
   | KAddPrim
   | KSubPrim
   | KMulPrim
   | KDivPrim
   | KModPrim
 
-  // Comparison:
+  // Scalar comparison:
   | KEqualPrim
   | KLessPrim
 
@@ -504,6 +504,8 @@ type KPrim =
 
   // String:
   | KIndexPrim
+  | KStrAddPrim
+  | KStrComparePrim
   | KStrLengthPrim
   | KStrGetSlicePrim
 

@@ -154,6 +154,22 @@ let private kmPrimIndex itself args results conts loc ctx =
 
   | _ -> unreachable itself
 
+let private kmPrimStrAdd itself args results conts loc ctx =
+  match args, results, conts with
+  | [ l; r ], [ result ], [ cont ] ->
+      ctx
+      |> setBinaryK MStrAddBinary l r result cont loc
+
+  | _ -> unreachable itself
+
+let private kmPrimStrCompare itself args results conts loc ctx =
+  match args, results, conts with
+  | [ l; r ], [ result ], [ cont ] ->
+      ctx
+      |> setBinaryK MStrCmpBinary l r result cont loc
+
+  | _ -> unreachable itself
+
 let private kmPrimStrLength itself args results conts loc ctx =
   match args, results, conts with
   | [ arg ], [ result ], [ cont ] -> ctx |> setUnaryK MStrLenUnary arg result cont loc
@@ -284,6 +300,8 @@ let private kmPrimNode itself prim args results conts loc ctx: MirCtx =
   | KLessPrim -> kmPrimLess itself args results conts loc ctx
   | KNotPrim -> kmPrimNot itself args results conts loc ctx
   | KIndexPrim -> kmPrimIndex itself args results conts loc ctx
+  | KStrAddPrim -> kmPrimStrAdd itself args results conts loc ctx
+  | KStrComparePrim -> kmPrimStrCompare itself args results conts loc ctx
   | KStrLengthPrim -> kmPrimStrLength itself args results conts loc ctx
   | KStrGetSlicePrim -> other HPrim.StrGetSlice
   | KConsPrim -> kmPrimCons itself args results conts loc ctx
