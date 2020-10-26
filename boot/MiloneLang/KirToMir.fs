@@ -217,6 +217,24 @@ let private kmPrimTuple itself args results conts loc ctx =
 
   | _ -> unreachable itself
 
+let private kmPrimVariant itself args results conts loc ctx =
+  match args, results, conts with
+  | [ KVariantTerm (variantSerial, _, _); payload ], [ result ], [ cont ] ->
+      let payload = kmTerm payload
+
+      // Set payload to temporary var since MVariantInit requires a serial, not expr.
+      let payloadVarSerial, ctx =
+        let ty, loc = mexprExtract payload
+        ctx |> newVar "payload" ty loc
+
+      let resultTy = ctx |> findVarTy result
+
+      ctx
+      |> addStmt (MLetValStmt(result, MVariantInit(variantSerial, payloadVarSerial), resultTy, loc))
+      |> kmNode cont
+
+  | _ -> unreachable itself
+
 let private kmPrimClosure itself args results conts loc ctx =
   match args, results, conts with
   | [ KVarTerm (funSerial, AppTy (FunTyCtor, [ _; closureTy ]), _); KVarTerm (envSerial, _, _) ], [ result ], [ cont ] ->
@@ -307,6 +325,7 @@ let private kmPrimNode itself prim args results conts loc ctx: MirCtx =
   | KConsPrim -> kmPrimCons itself args results conts loc ctx
   | KSomePrim -> kmPrimSome itself args results conts loc ctx
   | KTuplePrim -> kmPrimTuple itself args results conts loc ctx
+  | KVariantPrim -> kmPrimVariant itself args results conts loc ctx
   | KClosurePrim -> kmPrimClosure itself args results conts loc ctx
   | KCallProcPrim -> kmPrimCallProc itself args results conts loc ctx
   | KCallClosurePrim -> kmPrimCallClosure itself args results conts loc ctx
@@ -330,6 +349,8 @@ let private kmTerm (term: KTerm): MExpr =
   | KLitTerm (lit, loc) -> MLitExpr(lit, loc)
 
   | KVarTerm (varSerial, ty, loc)
+  | KFunTerm (varSerial, ty, loc)
+  | KVariantTerm (varSerial, ty, loc)
   | KLabelTerm (varSerial, ty, loc) -> MRefExpr(varSerial, ty, loc)
 
   | KNilTerm (itemTy, loc) -> MDefaultExpr(tyList itemTy, loc)

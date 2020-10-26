@@ -142,6 +142,54 @@ let private basicPrimNode2 hint prim l r ty loc hole ctx =
             KPrimNode(prim, [ l; r ], [ result ], [ cont ], loc), ctx))
 
 // -----------------------------------------------
+// Call non-primitive, semi
+// -----------------------------------------------
+
+let private kgSemiExpr itself args hole ctx =
+  let rec go args hole ctx =
+    match args with
+    | [ last ] -> kgExpr last hole ctx
+
+    | arg :: args ->
+        // Generate arg and the result is discarded with `_`. And then continue to loop.
+        kgExpr arg (fun _ ctx -> go args hole ctx) ctx
+
+    | [] -> failwithf "NEVER: semi can't be empty %A" itself
+
+  go args hole ctx
+
+// call to something non-prim, non-variant. typically a function.
+let private kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx =
+  ctx
+  |> kgExprList args (fun args ctx ->
+       let result, ctx = ctx |> newVar "call" ty loc
+       let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+       KPrimNode(KCallProcPrim, KFunTerm(funSerial, funTy, funLoc) :: args, [ result ], [ cont ], loc), ctx)
+
+let private kgCallVariantExpr variantSerial variantTy variantLoc args ty loc hole ctx =
+  let variantIdent =
+    ctx |> findVarDef variantSerial |> varDefToIdent
+
+  let variantTerm =
+    KVariantTerm(variantSerial, variantTy, variantLoc)
+
+  ctx
+  |> kgExprList args (fun args ctx ->
+       let result, ctx = ctx |> newVar variantIdent ty loc
+       let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+       KPrimNode(KVariantPrim, variantTerm :: args, [ result ], [ cont ], loc), ctx)
+
+// call to something non-prim, non-variant, non-fun. i.e. a closure.
+let private kgCallClosureExpr expr callee args ty loc hole ctx =
+  ctx
+  |> kgExpr callee (fun callee ctx ->
+       ctx
+       |> kgExprList args (fun args ctx ->
+            let result, ctx = ctx |> newVar "call" ty loc
+            let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+            KPrimNode(KCallClosurePrim, callee :: args, [ result ], [ cont ], loc), ctx))
+
+// -----------------------------------------------
 // Primitive dispatch
 // -----------------------------------------------
 
@@ -197,27 +245,9 @@ let private kgCallOtherPrimExpr hint prim args ty loc hole ctx =
        let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
        KPrimNode(prim, args, [ result ], [ cont ], loc), ctx)
 
-let private kgCallVariantExpr expr varSerial variantTy variantLoc args ty loc hole ctx = failwith ""
-
-// call to something non-prim, non-variant. typically a function.
-let private kgCallOtherExpr expr callee args ty loc hole ctx = failwith ""
-
-let private kgSemiExpr itself args ty loc hole ctx =
-  let rec go args hole ctx =
-    match args with
-    | [ last ] -> kgExpr last hole ctx
-
-    | arg :: args ->
-        // Generate arg and the result is discarded with `_`. And then continue to loop.
-        kgExpr arg (fun _ ctx -> go args hole ctx) ctx
-
-    | [] -> failwithf "NEVER: semi can't be empty %A" itself
-
-  go args hole ctx
-
 let private kgInfExpr itself infOp args ty loc hole ctx: KNode * kgx =
   match infOp with
-  | InfOp.Semi -> kgSemiExpr itself args ty loc hole ctx
+  | InfOp.Semi -> kgSemiExpr itself args hole ctx
 
   | InfOp.CallProc ->
       let callee, args =
@@ -257,16 +287,17 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * kgx =
           | HPrim.InRegion -> other "in_region" KInRegionPrim
           | HPrim.NativeFun (ident, arity) -> other ident (KNativeFunPrim(ident, arity))
 
-      | HRefExpr (varSerial, refTy, refLoc) when ctx |> isVariantFun varSerial ->
-          kgCallVariantExpr itself varSerial refTy args ty refLoc loc hole ctx
+      | HRefExpr (varSerial, refTy, refLoc) ->
+          match ctx |> findVarDef varSerial with
+          | VarDef _ -> failwithf "NEVER: CallClosure should be used. %A" itself
+          | FunDef _ -> kgCallFunExpr varSerial refTy refLoc args ty loc hole ctx
+          | VariantDef _ -> kgCallVariantExpr varSerial refTy refLoc args ty loc hole ctx
 
-      | _ -> kgCallOtherExpr itself callee args ty loc hole ctx
+      | _ -> failwithf "NEVER: CallClosure should be used. %A" itself
 
   | InfOp.CallClosure ->
       match args with
-      | callee :: args -> failwith ""
-      // mirifyExprInfCallClosure ctx callee args ty loc
-
+      | callee :: args -> kgCallClosureExpr itself callee args ty loc hole ctx
       | [] -> failwithf "NEVER: CallClosure args must begin with callee. %A" itself
 
   | InfOp.Tuple ->

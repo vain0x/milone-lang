@@ -516,6 +516,9 @@ type KPrim =
   // Tuple:
   | KTuplePrim
 
+  // Union:
+  | KVariantPrim
+
   // Function, closure:
   | KClosurePrim
   | KCallProcPrim
@@ -550,6 +553,8 @@ type KPath =
 type KTerm =
   | KLitTerm of Lit * Loc
   | KVarTerm of VarSerial * Ty * Loc
+  | KFunTerm of FunSerial * Ty * Loc
+  | KVariantTerm of VariantSerial * Ty * Loc
   | KLabelTerm of VarSerial * Ty * Loc
   | KNilTerm of itemTy: Ty * Loc
   | KNoneTerm of itemTy: Ty * Loc
