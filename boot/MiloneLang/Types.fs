@@ -542,7 +542,7 @@ type KPath =
   | KTagPath of Loc
 
   /// Payload of union.
-  | KPayloadPath of VarSerial * Loc
+  | KPayloadPath of VariantSerial * Loc
 
 /// Term (expression) in KIR.
 type KTerm =
@@ -559,7 +559,7 @@ type KNode =
   | KJumpNode of VarSerial * args: KTerm list * Loc
 
   /// Switch to label based on the value of `cond`.
-  | KSwitchNode of cond: KTerm * arms: (KTerm * KNode) list * Loc
+  // | KSwitchNode of cond: KTerm * arms: (KTerm * KNode) list * Loc
 
   /// Select contents of data (tuple or union).
   | KSelectNode of KTerm * path: KPath * result: VarSerial * cont: KNode * Loc
