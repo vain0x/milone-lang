@@ -8,8 +8,7 @@ open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
 
-let private unreachable value =
-  failwithf "NEVER: %A" value
+let private unreachable value = failwithf "NEVER: %A" value
 
 /// Reconstructs fun type from type of args and result.
 let rec private restoreCalleeTy args ty =
@@ -81,7 +80,7 @@ let private setBinaryM (binary: MBinary) (l: MExpr) r result loc ctx =
 ///
 /// Used for basic 1-arity operations.
 let private setUnaryK (unary: MUnary) (term: KTerm) result cont loc ctx =
-  let arg = kmTerm term ctx
+  let arg = kmTerm term
   let resultTy = findVarTy result ctx
 
   ctx
@@ -92,8 +91,8 @@ let private setUnaryK (unary: MUnary) (term: KTerm) result cont loc ctx =
 ///
 /// Used for basic 2-arity operations.
 let private setBinaryK (binary: MBinary) (l: KTerm) r result cont loc ctx =
-  let l = kmTerm l ctx
-  let r = kmTerm r ctx
+  let l = kmTerm l
+  let r = kmTerm r
 
   ctx
   |> setBinaryM binary l r result loc
@@ -163,8 +162,8 @@ let private kmPrimStrLength itself args results conts loc ctx =
 let private kmPrimCons itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
-      let l = kmTerm l ctx
-      let r = kmTerm r ctx
+      let l = kmTerm l
+      let r = kmTerm r
 
       let listTy = mexprToTy r
 
@@ -177,7 +176,7 @@ let private kmPrimCons itself args results conts loc ctx =
 let private kmPrimSome itself args results conts loc ctx =
   match args, results, conts with
   | [ item ], [ result ], [ cont ] ->
-      let item = kmTerm item ctx
+      let item = kmTerm item
 
       let itemTy = mexprToTy item
       let listTy = tyList itemTy
@@ -192,9 +191,7 @@ let private kmPrimSome itself args results conts loc ctx =
 let private kmPrimTuple itself args results conts loc ctx =
   match args, results, conts with
   | args, [ result ], [ cont ] ->
-      let items =
-        args |> listMap (fun arg -> kmTerm arg ctx)
-
+      let items = args |> listMap kmTerm
       let itemTys = items |> listMap mexprToTy
       let tupleTy = tyTuple itemTys
 
@@ -214,8 +211,7 @@ let private kmPrimClosure itself args results conts loc ctx =
   | _ -> unreachable itself
 
 let private kmPrimCallProc itself args results conts loc ctx =
-  let args =
-    args |> listMap (fun arg -> kmTerm arg ctx)
+  let args = args |> listMap kmTerm
 
   match args, results, conts with
   | callee :: args, [ result ], [ cont ] ->
@@ -229,8 +225,7 @@ let private kmPrimCallProc itself args results conts loc ctx =
   | _ -> unreachable itself
 
 let private kmPrimCallClosure itself args results conts loc ctx =
-  let args =
-    args |> listMap (fun arg -> kmTerm arg ctx)
+  let args = args |> listMap kmTerm
 
   match args, results, conts with
   | callee :: args, [ result ], [ cont ] ->
@@ -245,7 +240,7 @@ let private kmPrimCallClosure itself args results conts loc ctx =
 let private kmPrimBox itself args results conts loc ctx =
   match args, results, conts with
   | [ arg ], [ result ], [ cont ] ->
-      let arg = kmTerm arg ctx
+      let arg = kmTerm arg
 
       ctx
       |> addStmt (MLetValStmt(result, MBoxInit arg, tyObj, loc))
@@ -263,8 +258,7 @@ let private kmPrimUnbox itself args results conts loc ctx =
 let private kmPrimOther itself prim args results conts loc ctx =
   match results, conts with
   | [ result ], [ cont ] ->
-      let args =
-        args |> listMap (fun arg -> kmTerm arg ctx)
+      let args = args |> listMap kmTerm
 
       let resultTy = findVarTy result ctx
       let primTy = restoreCalleeTy args resultTy
@@ -313,7 +307,7 @@ let private kmPrimNode itself prim args results conts loc ctx: MirCtx =
 // kmTerm, kmNode
 // -----------------------------------------------
 
-let private kmTerm (term: KTerm) _ctx: MExpr =
+let private kmTerm (term: KTerm): MExpr =
   match term with
   | KLitTerm (lit, loc) -> MLitExpr(lit, loc)
 
@@ -332,8 +326,7 @@ let private kmNode (node: KNode) ctx: MirCtx =
       let funTy = ctx |> findFunTy funSerial
       let callee = MRefExpr(funSerial, funTy, loc)
 
-      let args =
-        args |> listMap (fun term -> kmTerm term ctx)
+      let args = args |> listMap kmTerm
 
       let result, ctx = ctx |> newVar "unit" tyUnit loc
 
@@ -343,7 +336,7 @@ let private kmNode (node: KNode) ctx: MirCtx =
       |> addStmt (MLetValStmt(result, init, tyUnit, loc))
 
   | KSelectNode (term, path, result, cont, loc) ->
-      let term = kmTerm term ctx
+      let term = kmTerm term
 
       let doUnary unary ctx =
         let expr = MUnaryExpr(unary, term, noTy, loc)
