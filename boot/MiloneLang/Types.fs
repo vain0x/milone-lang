@@ -556,6 +556,10 @@ type KTerm =
   | KVarTerm of VarSerial * Ty * Loc
   | KFunTerm of FunSerial * Ty * Loc
   | KVariantTerm of VariantSerial * Ty * Loc
+
+  /// Tag of variant. An integer ID of the variant in union.
+  | KTagTerm of VariantSerial * Ty * Loc
+
   | KLabelTerm of VarSerial * Ty * Loc
   | KNilTerm of itemTy: Ty * Loc
   | KNoneTerm of itemTy: Ty * Loc
