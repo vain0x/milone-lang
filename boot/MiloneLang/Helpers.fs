@@ -212,6 +212,11 @@ let listLast xs =
 
   go xs
 
+let listItem i xs =
+  match listSkip i xs with
+  | item :: _ -> item
+  | _ -> failwith "listItem: out of range"
+
 let listTryFind pred xs =
   let rec go xs =
     match xs with
