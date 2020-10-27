@@ -540,6 +540,9 @@ type KPrim =
 
 /// Represents an access path to content of data (tuple or union).
 type KPath =
+  /// The value itself.
+  | KSelfPath
+
   /// N'th field of tuple.
   | KFieldPath of int * Loc
 

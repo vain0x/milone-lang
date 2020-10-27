@@ -384,10 +384,12 @@ let private kmNode (node: KNode) ctx: MirCtx =
 
       let ctx =
         match path with
+        | KSelfPath ->
+            ctx
+            |> addStmt (MLetValStmt(result, MExprInit(term), noTy, loc))
+
         | KFieldPath (i, _) -> doUnary (MProjUnary i) ctx
-
         | KTagPath _ -> doUnary MTagUnary ctx
-
         | KPayloadPath (variantSerial, _) -> doUnary (MGetVariantUnary variantSerial) ctx
 
       kmNode cont ctx
