@@ -639,6 +639,7 @@ type MExpr =
   /// Procedure
   | MProcExpr of FunSerial * Ty * Loc
   | MVariantExpr of TySerial * VariantSerial * Ty * Loc
+  | MTagExpr of VariantSerial * Ty * Loc
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * left: MExpr * right: MExpr * resultTy: Ty * Loc
 

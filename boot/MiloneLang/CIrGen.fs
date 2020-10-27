@@ -549,6 +549,7 @@ let genExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MRefExpr (serial, _, _) -> CRefExpr(cirCtxUniqueName ctx serial), ctx
   | MProcExpr (serial, ty, loc) -> genExprProc ctx serial ty loc
   | MVariantExpr (_, serial, ty, _) -> genExprVariant ctx serial ty
+  | MTagExpr (variantSerial, _, _) -> CRefExpr(cirCtxUniqueName ctx variantSerial), ctx
   | MUnaryExpr (op, arg, ty, loc) -> genExprUniOp ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
