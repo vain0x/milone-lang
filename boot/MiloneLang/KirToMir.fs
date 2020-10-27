@@ -102,10 +102,6 @@ let private setBinaryK (binary: MBinary) (l: KTerm) r result cont loc ctx =
 // Primitive
 // -----------------------------------------------
 
-let private kmPrimMove itself args results conts loc ctx =
-  match args, results, conts with
-  | _ -> unreachable itself
-
 let private kmPrimAdd itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] -> ctx |> setBinaryK MAddBinary l r result cont loc
@@ -308,7 +304,6 @@ let private kmPrimNode itself prim args results conts loc ctx: MirCtx =
     kmPrimOther itself prim args results conts loc ctx
 
   match prim with
-  | KMovePrim -> kmPrimMove itself args results conts loc ctx
   | KAddPrim -> kmPrimAdd itself args results conts loc ctx
   | KSubPrim -> kmPrimSub itself args results conts loc ctx
   | KMulPrim -> kmPrimMul itself args results conts loc ctx

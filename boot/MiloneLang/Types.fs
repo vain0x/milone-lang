@@ -486,8 +486,6 @@ type MonoMode =
 
 /// Primitive in KIR.
 type KPrim =
-  | KMovePrim
-
   // Scalar arithmetic:
   | KAddPrim
   | KSubPrim
