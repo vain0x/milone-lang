@@ -541,6 +541,9 @@ type KPath =
   /// The value itself.
   | KSelfPath
 
+  | KHeadPath of Loc
+  | KTailPath of Loc
+
   /// N'th field of tuple.
   | KFieldPath of int * Loc
 

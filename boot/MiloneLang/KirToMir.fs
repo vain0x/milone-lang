@@ -385,6 +385,8 @@ let private kmNode (node: KNode) ctx: MirCtx =
             ctx
             |> addStmt (MLetValStmt(result, MExprInit(term), noTy, loc))
 
+        | KHeadPath _ -> doUnary MListHeadUnary ctx
+        | KTailPath _ -> doUnary MListTailUnary ctx
         | KFieldPath (i, _) -> doUnary (MProjUnary i) ctx
         | KTagPath _ -> doUnary MTagUnary ctx
         | KPayloadPath (variantSerial, _) -> doUnary (MGetVariantUnary variantSerial) ctx
