@@ -303,6 +303,8 @@ type FunSerial = Serial
 /// Serial number of variants.
 type VariantSerial = Serial
 
+type JointSerial = Serial
+
 /// Count of parameters or arguments.
 type Arity = int
 
@@ -485,8 +487,11 @@ type MonoMode =
 // KIR is continuation passing style (CPS) intermediate representation.
 
 /// Primitive in KIR.
+///
+/// Number of args/results/conts depends on the kind of prim.
+/// Prim signature is written as `N/M/K` denoting to use N args, M results, K conts.
 type KPrim =
-  // Scalar arithmetic:
+  // Scalar arithmetic: 2/1/1.
   | KAddPrim
   | KSubPrim
   | KMulPrim
@@ -494,46 +499,87 @@ type KPrim =
   | KModPrim
 
   // Scalar comparison:
+  /// 2/0/2. The first cont is used if two args equal; or the second otherwise.
   | KEqualPrim
+
+  /// 2/0/2. The first cont is used if the first arg is less than the second; or the second otherwise.
   | KLessPrim
 
   // Bool:
+  /// 1/1/1.
   | KNotPrim
 
   // String:
+  /// 2/1/1.
   | KStrAddPrim
+
+  /// 2/1/1.
   | KStrComparePrim
+
+  /// 2/1/1.
   | KStrIndexPrim
+
+  /// 1/1/1.
   | KStrLengthPrim
+
+  /// 2/1/1.
   | KStrGetSlicePrim
 
   // List, option:
+  /// 2/1/1.
   | KConsPrim
+
+  /// 1/1/1.
   | KSomePrim
 
   // Tuple:
+  /// N/1/1, where N is number of fields.
   | KTuplePrim
 
   // Union:
+  /// 1/1/1.
   | KVariantPrim
 
   // Function, closure:
+  /// 2/1/1.
   | KClosurePrim
+
+  /// (1+A)/1/1, where A is arity.
   | KCallProcPrim
+
+  /// (1+A)/1/1, where A is arity.
   | KCallClosurePrim
 
   // obj:
+  /// 1/1/1.
   | KBoxPrim
+
+  /// 1/1/1.
   | KUnboxPrim
 
   // Others:
+  /// 1/0/0.
   | KExitPrim
+
+  /// 1/0/1.
   | KAssertPrim
+
+  /// 1/1/1.
   | KCharPrim
+
+  /// 1/1/1.
   | KIntPrim
+
+  /// 1/1/1.
   | KStringPrim
+
+  /// (1+A)/0/1, where A is arity.
   | KPrintfnPrim
+
+  /// 1/1/1.
   | KInRegionPrim
+
+  /// A/1/1, where A is arity.
   | KNativeFunPrim of Ident * Arity
 
 /// Represents an access path to content of data (tuple or union).
@@ -570,23 +616,43 @@ type KTerm =
 
 /// Node (statement) in KIR.
 type KNode =
-  /// Jump to label.
+  /// Jump to joint.
   | KJumpNode of VarSerial * args: KTerm list * Loc
 
-  /// Switch to label based on the value of `cond`.
+  /// Return from the current fun.
+  | KReturnNode of VarSerial * args: KTerm list * Loc
+
+  /// Switch to joint based on the value of `cond`.
   // | KSwitchNode of cond: KTerm * arms: (KTerm * KNode) list * Loc
 
-  /// Select contents of data (tuple or union).
+  /// Assign some part of data to var.
+  ///
+  /// `path` indicates which part of data is extracted.
+  /// For example, if term=`[2; 3]` and path=`KHeadPath` then 2 is set to result.
+  ///
+  /// Note that simple assignment (`let x = a`) is a selection with path=`KSelfPath`.
   | KSelectNode of KTerm * path: KPath * result: VarSerial * cont: KNode * Loc
 
   /// Execution of primitive.
   /// Do something using args, binds values to results, and then jump to one of continuations (if continue).
   | KPrimNode of KPrim * args: KTerm list * results: VarSerial list * conts: KNode list * Loc
 
-type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * body: KNode * Loc
+/// Declaration of a joint.
+///
+/// Joint is a function-like thing that can be called inside of single fun (i.e. not escaping) and never returns once called.
+///
+/// Since joint doesn't escape from the parent fun, it may use local vars.
+///
+/// After compiled to C language, a joint is represented as a *label* of block in C language. Calling a joint is a *goto* with some assignments to local vars.
+type KJointBinding = KJointBinding of jointSerial: JointSerial * args: VarSerial list * body: KNode * Loc
+
+/// Definition of a fun, as a set of joints.
+///
+/// The first joint is the *entry point*, called at first when this fun is called.
+type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * joints: KJointBinding list * Loc
 
 /// Root node of KIR.
-type KRoot = KRoot of KFunBinding list * KNode
+type KRoot = KRoot of KFunBinding list
 
 // -----------------------------------------------
 // MIR types

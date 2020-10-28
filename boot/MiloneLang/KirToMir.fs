@@ -20,15 +20,22 @@ let rec private restoreCalleeTy args ty =
       restoreCalleeTy args (tyFun argTy ty)
 
 // -----------------------------------------------
-// MirCtx
+// KirToMirCtx
 // -----------------------------------------------
 
-let private mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
-  MirCtx(tyCtx |> tyCtxGetSerial, tyCtx |> tyCtxGetVars, tyCtx |> tyCtxGetTys, 0, [], tyCtx |> tyCtxGetLogs)
+let private jointMapEmpty () = mapEmpty (intHash, intCmp)
+
+let private ofKirGenCtx (kirGenCtx: KirGenCtx): KirToMirCtx =
+  let (KirGenCtx (serial, vars, tys, logs, mainFunSerial, _, _)) = kirGenCtx
+  KirToMirCtx(serial, vars, tys, mainFunSerial, 0, jointMapEmpty (), [], logs)
+
+let private toMirCtx (ctx: KirToMirCtx): MirCtx =
+  let (KirToMirCtx (serial, vars, tys, _, labelSerial, _, _, logs)) = ctx
+  MirCtx(serial, vars, tys, labelSerial, [], logs)
 
 let private freshSerial ctx =
-  let serial = (ctx |> mirCtxGetSerial) + 1
-  let ctx = ctx |> mirCtxWithSerial serial
+  let serial = (ctx |> kirToMirCtxGetSerial) + 1
+  let ctx = ctx |> kirToMirCtxWithSerial serial
   serial, ctx
 
 let private newVar hint ty loc ctx =
@@ -37,33 +44,33 @@ let private newVar hint ty loc ctx =
   let ctx =
     let vars =
       ctx
-      |> mirCtxGetVars
+      |> kirToMirCtxGetVars
       |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc))
 
-    ctx |> mirCtxWithVars vars
+    ctx |> kirToMirCtxWithVars vars
 
   varSerial, ctx
 
 let private findVarDef varSerial ctx =
-  ctx |> mirCtxGetVars |> mapFind varSerial
+  ctx |> kirToMirCtxGetVars |> mapFind varSerial
 
 let private findVarTy varSerial ctx =
-  match ctx |> mirCtxGetVars |> mapTryFind varSerial with
+  match ctx |> kirToMirCtxGetVars |> mapTryFind varSerial with
   | Some (VarDef (_, _, ty, _)) -> ty
   | _ -> failwithf "Expected var. %A" varSerial
 
 let private findFunTy funSerial ctx =
-  match ctx |> mirCtxGetVars |> mapTryFind funSerial with
+  match ctx |> kirToMirCtxGetVars |> mapTryFind funSerial with
   | Some (FunDef (_, _, TyScheme (_, ty), _)) -> ty
   | _ -> failwithf "Expected fun. %A" funSerial
+
+let private addStmt stmt ctx =
+  ctx
+  |> kirToMirCtxWithStmts (stmt :: (ctx |> kirToMirCtxGetStmts))
 
 // -----------------------------------------------
 // Emission helpers
 // -----------------------------------------------
-
-let private addStmt stmt ctx =
-  ctx
-  |> mirCtxWithStmts (stmt :: (ctx |> mirCtxGetStmts))
 
 /// Adds a statement to bind binary operation to variable.
 ///
@@ -299,7 +306,7 @@ let private kmPrimOther itself prim args results conts loc ctx =
 
   | _ -> unreachable itself
 
-let private kmPrimNode itself prim args results conts loc ctx: MirCtx =
+let private kmPrimNode itself prim args results conts loc ctx: KirToMirCtx =
   let other prim =
     kmPrimOther itself prim args results conts loc ctx
 
@@ -356,20 +363,37 @@ let private kmTerm (term: KTerm): MExpr =
 
   | KUnitTerm loc -> MDefaultExpr(tyUnit, loc)
 
-let private kmNode (node: KNode) ctx: MirCtx =
+let private kmNode (node: KNode) ctx: KirToMirCtx =
   match node with
-  | KJumpNode (funSerial, args, loc) ->
-      let funTy = ctx |> findFunTy funSerial
-      let callee = MRefExpr(funSerial, funTy, loc)
+  | KJumpNode (jointSerial, args, loc) ->
+      let label, argSerials =
+        ctx
+        |> kirToMirCtxGetJointMap
+        |> mapFind jointSerial
 
-      let args = args |> listMap kmTerm
+      let rec go argSerials args ctx =
+        match argSerials, args with
+        | [], [] -> ctx
 
-      let result, ctx = ctx |> newVar "unit" tyUnit loc
+        | varSerial :: argSerials, arg :: args ->
+            ctx
+            |> addStmt (MSetStmt(varSerial, kmTerm arg, loc))
+            |> go argSerials args
 
-      // TODO: use goto
-      let init = MCallProcInit(callee, args, noTy)
+        | _ -> failwithf "NEVER: bad arity. %A" node
+
       ctx
-      |> addStmt (MLetValStmt(result, init, tyUnit, loc))
+      |> go argSerials args
+      |> addStmt (MGotoStmt(label, loc))
+
+  | KReturnNode (_funSerial, args, loc) ->
+      let arg =
+        match args with
+        | [] -> MDefaultExpr(tyUnit, loc)
+        | [ arg ] -> kmTerm arg
+        | _ -> unreachable node
+
+      ctx |> addStmt (MReturnStmt(arg, loc))
 
   | KSelectNode (term, path, result, cont, loc) ->
       let term = kmTerm term
@@ -396,7 +420,27 @@ let private kmNode (node: KNode) ctx: MirCtx =
   | KPrimNode (prim, args, results, conts, loc) -> kmPrimNode node prim args results conts loc ctx
 
 let private kmFunBinding binding ctx =
-  let (KFunBinding (funSerial, args, body, loc)) = binding
+  let genBody jointMap processBody ctx =
+    let parentJointMap = ctx |> kirToMirCtxGetJointMap
+    let parentStmts = ctx |> kirToMirCtxGetStmts
+
+    let ctx =
+      ctx
+      |> kirToMirCtxWithJointMap jointMap
+      |> kirToMirCtxWithStmts []
+
+    let ctx = processBody ctx
+
+    let stmts = ctx |> kirToMirCtxGetStmts
+
+    let ctx =
+      ctx
+      |> kirToMirCtxWithJointMap parentJointMap
+      |> kirToMirCtxWithStmts parentStmts
+
+    stmts, ctx
+
+  let (KFunBinding (funSerial, args, joints, loc)) = binding
 
   let isMainFun =
     match findVarDef funSerial ctx with
@@ -418,25 +462,40 @@ let private kmFunBinding binding ctx =
     go args funTy
 
   let body, ctx =
-    let parentStmts = ctx |> mirCtxGetStmts
-    let ctx = ctx |> mirCtxWithStmts []
-    let ctx = kmNode body ctx
-    let stmts = ctx |> mirCtxGetStmts
-    let ctx = ctx |> mirCtxWithStmts parentStmts
-    stmts, ctx
+    let jointMap =
+      joints
+      |> listMapWithIndex (fun i joint ->
+           let (KJointBinding (jointSerial, args, _, _)) = joint
+           let label = "L" + string i
+           jointSerial, (label, args))
+      |> mapOfList (intHash, intCmp)
+
+    let rec go joints ctx =
+      match joints with
+      | [] -> ctx
+
+      | KJointBinding (jointSerial, _args, body, loc) :: joints ->
+          let label, _ = jointMap |> mapFind jointSerial
+
+          ctx
+          |> addStmt (MLabelStmt(label, loc))
+          |> kmNode body
+          |> go joints
+
+    ctx |> genBody jointMap (go joints)
 
   ctx
   |> addStmt (MProcStmt(funSerial, isMainFun, args, body, resultTy, loc))
 
-let kirToMir (root: KRoot, tyCtx: TyCtx): MStmt list * MirCtx =
-  let ctx = mirCtxFromTyCtx tyCtx
-
-  let (KRoot (funBindings, _node)) = root
+let kirToMir (root: KRoot, kirGenCtx: KirGenCtx): MStmt list * MirCtx =
+  let ctx = ofKirGenCtx kirGenCtx
 
   let ctx =
+    let (KRoot funBindings) = root
+
     funBindings
     |> listFold (fun ctx binding -> kmFunBinding binding ctx) ctx
 
-  let stmts = ctx |> mirCtxGetStmts
-  let ctx = ctx |> mirCtxWithStmts []
-  stmts, ctx
+  let stmts = ctx |> kirToMirCtxGetStmts
+  let mirCtx = ctx |> toMirCtx
+  stmts, mirCtx

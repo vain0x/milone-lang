@@ -103,6 +103,19 @@ KirGenCtx:
   Vars: AssocMap<VarSerial, VarDef>
   Tys: AssocMap<TySerial, TyDef>
   Logs: (Log * Loc) list
+  MainFunSerial: FunSerial option
+  Joints: KJointBinding list
+  Funs: KFunBinding list
+
+KirToMirCtx:
+  Serial: Serial
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+  MainFunSerial: FunSerial option
+  LabelSerial: Serial
+  JointMap: AssocMap<JointSerial, Label * VarSerial list>
+  Stmts: MStmt list
+  Logs: (Log * Loc) list
 
 MirCtx:
   Serial: Serial

@@ -1660,6 +1660,27 @@ let exprToLoc expr =
   loc
 
 // -----------------------------------------------
+// Term (KIR)
+// -----------------------------------------------
+
+let kTermToTy (term: KTerm): Ty =
+  match term with
+  | KLitTerm (lit, _) -> litToTy lit
+
+  | KVarTerm (_, ty, _)
+  | KFunTerm (_, ty, _)
+  | KVariantTerm (_, ty, _) -> ty
+
+  | KTagTerm _ -> tyInt
+
+  | KLabelTerm (_, ty, _) -> ty
+
+  | KNilTerm (itemTy, _)
+  | KNoneTerm (itemTy, _) -> tyList itemTy
+
+  | KUnitTerm _ -> tyUnit
+
+// -----------------------------------------------
 // Binary Operators (MIR)
 // -----------------------------------------------
 
