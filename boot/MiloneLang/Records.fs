@@ -376,6 +376,23 @@ let kirGenCtxWithJoints joints (KirGenCtx (serial, vars, tys, logs, mainFunSeria
 let kirGenCtxWithFuns funs (KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, _)): KirGenCtx =
   KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, funs)
 
+type KirPropagateCtx =
+  | KirPropagateCtx
+    of AssocMap<VarSerial, KVarDef>
+      * AssocMap<VarSerial, int>
+
+let kirPropagateCtxGetVarDefs (KirPropagateCtx (varDefs, _)) =
+  varDefs
+
+let kirPropagateCtxGetVarUses (KirPropagateCtx (_, varUses)) =
+  varUses
+
+let kirPropagateCtxWithVarDefs varDefs (KirPropagateCtx (_, varUses)): KirPropagateCtx =
+  KirPropagateCtx (varDefs, varUses)
+
+let kirPropagateCtxWithVarUses varUses (KirPropagateCtx (varDefs, _)): KirPropagateCtx =
+  KirPropagateCtx (varDefs, varUses)
+
 type KirToMirCtx =
   | KirToMirCtx
     of Serial

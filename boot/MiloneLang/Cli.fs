@@ -17,6 +17,7 @@ open MiloneLang.Hoist
 open MiloneLang.Monomorphizing
 open MiloneLang.Mir
 open MiloneLang.KirGen
+open MiloneLang.KirPropagate
 open MiloneLang.KirToMir
 open MiloneLang.KirDump
 open MiloneLang.CIrGen
@@ -263,6 +264,8 @@ let buildWithKir host verbosity (projectDir: string): string * bool =
         else
           log "KirGen"
           let kRoot, kirGenCtx = kirGen (expr, tyCtx)
+
+          let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
 
           log "KirDump"
 

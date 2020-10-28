@@ -654,6 +654,10 @@ type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * 
 /// Root node of KIR.
 type KRoot = KRoot of KFunBinding list
 
+type KVarDef =
+  | KLitVarDef of Lit
+  | KSelectVarDef of KTerm * KPath
+
 // -----------------------------------------------
 // MIR types
 // -----------------------------------------------
