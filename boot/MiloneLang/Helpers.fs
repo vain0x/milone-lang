@@ -601,6 +601,14 @@ let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> 
 let setFold folder state (set: AssocSet<_>) =
   set |> setToList |> listFold folder state
 
+// TODO: make it more efficient
+let setExists pred (set: AssocSet<_>) = set |> setToList |> listExists pred
+
+// TODO: make it more efficient
+let setUnion first second =
+  first
+  |> setFold (fun set item -> set |> setAdd item) second
+
 // -----------------------------------------------
 // Int
 // -----------------------------------------------
