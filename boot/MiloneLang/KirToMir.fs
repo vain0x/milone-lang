@@ -464,7 +464,7 @@ let private kmFunBinding binding ctx =
   let body, ctx =
     let jointMap =
       joints
-      |> listMapWithIndex (fun i joint ->
+      |> listMapWithIndex (fun (i: int) joint ->
            let (KJointBinding (jointSerial, args, _, _)) = joint
            let label = "L" + string i
            jointSerial, (label, args))

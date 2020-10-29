@@ -236,7 +236,7 @@ let private kdPrimNode indent prim args results conts ctx =
     | _ ->
         tsConstStmt indent ("[" + resultList + "]") (kdPrim prim + argList)
         + (conts
-           |> listMapWithIndex (fun i cont ->
+           |> listMapWithIndex (fun (i: int) cont ->
                 (indent
                  + "// "
                  + (kdPrim prim + ".cont#" + string i)
