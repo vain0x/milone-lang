@@ -213,52 +213,40 @@ let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
 ///      we think `f` also uses `h`.
 let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
   let emptySet = setEmpty (intHash, intCmp)
+  let emptyMap () = mapEmpty (intHash, intCmp)
 
-  let rec closureRefs refs ccCtx (modified, visited, acc) =
-    match refs with
-    | [] -> modified, visited, acc
+  let setUnion first second =
+    second
+    |> setFold (fun set item -> set |> setAdd item) first
 
-    | varSerial :: refs when visited |> setContains varSerial -> (modified, visited, acc) |> closureRefs refs ccCtx
+  let rec dfs captureMap visited varSerial =
+    let visited = visited |> setAdd varSerial
+    match captureMap |> mapTryFind varSerial with
+    | Some captures -> setUnion visited captures
+    | None ->
+        ctx
+        |> ccCtxGetFunCapturedSerials varSerial
+        |> setFold (dfs captureMap) visited
 
-    | varSerial :: refs ->
-        let visited = visited |> setAdd varSerial
+  let _, funs =
+    ctx
+    |> ccCtxGetFuns
+    |> mapFold (fun (captureMap, funs) funSerial knownCtx ->
+         let visited =
+           knownCtx
+           |> knownCtxGetRefs
+           |> setFold (dfs captureMap) emptySet
 
-        let modified =
-          modified || (acc |> setContains varSerial |> not)
+         let knownCtx = knownCtx |> knownCtxWithRefs visited
+         let funs = funs |> mapAdd funSerial knownCtx
 
-        let acc = acc |> setAdd varSerial
+         let captureMap =
+           captureMap
+           |> mapAdd funSerial (knownCtx |> knownCtxToCapturedSerials)
 
-        let otherRefs =
-          ccCtx
-          |> ccCtxGetFunCapturedSerials varSerial
-          |> setToList
+         captureMap, funs) (emptyMap (), emptyMap ())
 
-        (modified, visited, acc)
-        |> closureRefs otherRefs ccCtx
-        |> closureRefs refs ccCtx
-
-  let closureKnownCtx (modified, ccCtx) varSerial knownCtx =
-    let refs = knownCtx |> knownCtxGetRefs
-    match (false, emptySet, refs)
-          |> closureRefs (refs |> setToList) ccCtx with
-    | true, _, refs ->
-        let knownCtx = knownCtx |> knownCtxWithRefs refs
-        true,
-        ccCtx
-        |> ccCtxWithFuns (ccCtx |> ccCtxGetFuns |> mapAdd varSerial knownCtx)
-
-    | false, _, _ -> modified, ccCtx
-
-  let rec closureFuns (modified, ccCtx) =
-    if not modified then
-      ccCtx
-    else
-      ccCtx
-      |> ccCtxGetFuns
-      |> mapFold closureKnownCtx (false, ccCtx)
-      |> closureFuns
-
-  closureFuns (true, ctx)
+  ctx |> ccCtxWithFuns funs
 
 /// Applies the changes of function types.
 let ccCtxUpdateFunDefs (ctx: CcCtx) =
