@@ -228,7 +228,7 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
         |> ccCtxGetFunCapturedSerials varSerial
         |> setFold (dfs captureMap) visited
 
-  let _, funs =
+  let go captureMap =
     ctx
     |> ccCtxGetFuns
     |> mapFold (fun (captureMap, funs) funSerial knownCtx ->
@@ -244,7 +244,11 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
            captureMap
            |> mapAdd funSerial (knownCtx |> knownCtxToCapturedSerials)
 
-         captureMap, funs) (emptyMap (), emptyMap ())
+         captureMap, funs) (captureMap, emptyMap ())
+
+  // Perform DFS twice. See lambdaCase in let_fun_closure_lambda.fs.
+  let captureMap, _ = go (emptyMap ())
+  let _, funs = go captureMap
 
   ctx |> ccCtxWithFuns funs
 

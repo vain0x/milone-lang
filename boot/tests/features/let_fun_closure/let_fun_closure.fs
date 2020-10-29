@@ -18,6 +18,15 @@ let recursiveCase () =
 
   assert (go 0)
 
+let lambdaCase () =
+  let lx = 7
+
+  let lf () =
+    let lg () = lx
+    (fun () -> lg ()) ()
+
+  assert (lf () = lx)
+
 // deprecated: static variables don't get captured now.
 let mutuallyRecursiveCase () =
   assert (f1 () = 1)
@@ -35,5 +44,6 @@ let main _ =
   basicCase ()
   transitiveCase ()
   recursiveCase ()
+  lambdaCase ()
   mutuallyRecursiveCase ()
   0
