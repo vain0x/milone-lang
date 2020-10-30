@@ -161,7 +161,14 @@ let ccCtxAddRef varSerial (ctx: CcCtx) =
 
 /// Called on leave function declaration to store the current known context.
 let ccCtxStoreFunKnownCtx funSerial (ctx: CcCtx) =
-  let ctx = ctx |> ccCtxAddKnown funSerial
+  let ctx =
+    if ctx
+       |> ccCtxGetCurrent
+       |> knownCtxToCapturedSerials
+       |> setIsEmpty then
+      ctx |> ccCtxAddKnown funSerial
+    else
+      ctx
 
   // Don't update in the second traversal for transformation.
   let funs = ctx |> ccCtxGetFuns
