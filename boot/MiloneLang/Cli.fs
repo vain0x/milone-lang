@@ -129,14 +129,14 @@ let build host verbosity (projectDir: string): string * bool =
     tyCtx |> tyCtxGetLogs |> printLogs
   else
 
-    log "Hoist main"
-    let expr, tyCtx = hoistMain (expr, tyCtx)
-
     log "Closure conversion"
     let expr, tyCtx = declosure (expr, tyCtx)
     if tyCtx |> tyCtxHasError then
       tyCtx |> tyCtxGetLogs |> printLogs
     else
+
+      log "Hoist main"
+      let expr, tyCtx = hoistMain (expr, tyCtx)
 
       log "Eta expansion"
       let expr, tyCtx = uneta (expr, tyCtx)

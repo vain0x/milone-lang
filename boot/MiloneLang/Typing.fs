@@ -563,6 +563,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
       (scopeCtx |> scopeCtxGetSerial,
        scopeCtx |> scopeCtxGetVars,
        scopeCtx |> scopeCtxGetTys,
+       scopeCtx |> scopeCtxGetVarDepths,
        scopeCtx |> scopeCtxGetTyDepths,
        0,
        [],
