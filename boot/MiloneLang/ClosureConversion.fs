@@ -226,7 +226,8 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
     | None ->
         ctx
         |> ccCtxGetFunCapturedSerials varSerial
-        |> setFold (dfs captureMap) visited
+        |> setFold (fun visited varSerial ->
+             if visited |> setContains varSerial then visited else dfs captureMap visited varSerial) visited
 
   let go captureMap =
     ctx
