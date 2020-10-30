@@ -27,6 +27,27 @@ let lambdaCase () =
 
   assert (lf () = lx)
 
+let escapeCase () =
+  // In this case, the call graph forms a cycle:
+  //    xf1 -> xf2 -> xf3 -> xf4 -> xf1 -> ...
+  // Closure conversion should be aware of that,
+  // even if xf4 transitively captures x2 and xf1 transitively calls xf4,
+  // xf1 doesn't capture x2.
+
+  let rec xf1 (x1: int) =
+    let xf2 (x2: int) =
+      let xf3 (x3: int) =
+        let xf4 () =
+          xf1 (x1 + x2 + x3)
+
+        if x3 = 3 then xf4 () else x3
+
+      if x2 = 2 then xf3 3 else x2
+
+    if x1 = 1 then xf2 2 else x1
+
+  assert (xf1 1 = 1 + 2 + 3)
+
 // deprecated: static variables don't get captured now.
 let mutuallyRecursiveCase () =
   assert (f1 () = 1)
@@ -45,5 +66,6 @@ let main _ =
   transitiveCase ()
   recursiveCase ()
   lambdaCase ()
+  escapeCase()
   mutuallyRecursiveCase ()
   0
