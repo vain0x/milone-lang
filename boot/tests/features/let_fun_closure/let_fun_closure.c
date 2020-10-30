@@ -30,13 +30,15 @@ int lf_(int lx_, int arg_7);
 
 int lambdaCase_(int arg_8);
 
-int xf3_(int x2_, int x1_, int arg_9);
+int xf4_(int x3_, int x2_, int x1_, int arg_9);
+
+int xf3_(int x2_, int x1_, int x3_);
 
 int xf2_(int x1_, int x2_);
 
-int xf1_(int x2_, int x1_);
+int xf1_(int x1_);
 
-int escapeCase_(int x2_, int x1_, int arg_10);
+int escapeCase_(int arg_10);
 
 int mutuallyRecursiveCase_(int arg_11);
 
@@ -160,21 +162,20 @@ int lambdaCase_(int arg_8) {
     return 0;
 }
 
-int xf3_(int x2_, int x1_, int arg_9) {
-    int x3_ = 3;
-    int call_14 = xf1_(x2_, ((x1_ + x2_) + x3_));
+int xf4_(int x3_, int x2_, int x1_, int arg_9) {
+    int call_14 = xf1_(((x1_ + x2_) + x3_));
     return call_14;
 }
 
-int xf2_(int x1_, int x2_) {
+int xf3_(int x2_, int x1_, int x3_) {
     int match_1;
-    if ((x2_ != 2)) goto next_5;
-    int call_15 = xf3_(x2_, x1_, 0);
+    if ((x3_ != 3)) goto next_5;
+    int call_15 = xf4_(x3_, x2_, x1_, 0);
     match_1 = call_15;
     goto end_match_4;
 next_5:;
-    if ((x2_ == 2)) goto next_6;
-    match_1 = x2_;
+    if ((x3_ == 3)) goto next_6;
+    match_1 = x3_;
     goto end_match_4;
 next_6:;
     exit(1);
@@ -182,15 +183,15 @@ end_match_4:;
     return match_1;
 }
 
-int xf1_(int x2_, int x1_) {
+int xf2_(int x1_, int x2_) {
     int match_2;
-    if ((x1_ != 1)) goto next_8;
-    int call_16 = xf2_(x1_, 2);
+    if ((x2_ != 2)) goto next_8;
+    int call_16 = xf3_(x2_, x1_, 3);
     match_2 = call_16;
     goto end_match_7;
 next_8:;
-    if ((x1_ == 1)) goto next_9;
-    match_2 = x1_;
+    if ((x2_ == 2)) goto next_9;
+    match_2 = x2_;
     goto end_match_7;
 next_9:;
     exit(1);
@@ -198,48 +199,64 @@ end_match_7:;
     return match_2;
 }
 
-int escapeCase_(int x2_, int x1_, int arg_10) {
-    int call_17 = xf1_(x2_, 1);
-    milone_assert((call_17 == ((1 + 2) + 3)), 46, 2);
-    int call_18 = 0;
+int xf1_(int x1_) {
+    int match_3;
+    if ((x1_ != 1)) goto next_11;
+    int call_17 = xf2_(x1_, 2);
+    match_3 = call_17;
+    goto end_match_10;
+next_11:;
+    if ((x1_ == 1)) goto next_12;
+    match_3 = x1_;
+    goto end_match_10;
+next_12:;
+    exit(1);
+end_match_10:;
+    return match_3;
+}
+
+int escapeCase_(int arg_10) {
+    int call_18 = xf1_(1);
+    milone_assert((call_18 == ((1 + 2) + 3)), 48, 2);
+    int call_19 = 0;
     return 0;
 }
 
 int mutuallyRecursiveCase_(int arg_11) {
-    int call_19 = f1_(0);
-    milone_assert((call_19 == 1), 50, 2);
-    int call_20 = 0;
+    int call_20 = f1_(0);
+    milone_assert((call_20 == 1), 52, 2);
+    int call_21 = 0;
     return 0;
 }
 
 int f1_(int arg_12) {
-    int call_21 = f2_(0);
-    return call_21;
-}
-
-int f2_(int arg_13) {
-    int call_22 = f3_(0);
+    int call_22 = f2_(0);
     return call_22;
 }
 
-int f3_(int arg_14) {
-    int call_23 = f4_(0);
+int f2_(int arg_13) {
+    int call_23 = f3_(0);
     return call_23;
 }
 
-int f4_(int arg_15) {
-    int call_24 = f5_(0);
+int f3_(int arg_14) {
+    int call_24 = f4_(0);
     return call_24;
 }
 
-int f5_(int arg_16) {
-    int call_25 = f6_(0);
+int f4_(int arg_15) {
+    int call_25 = f5_(0);
     return call_25;
 }
 
-int f6_(int arg_17) {
-    int call_26 = f7_(0);
+int f5_(int arg_16) {
+    int call_26 = f6_(0);
     return call_26;
+}
+
+int f6_(int arg_17) {
+    int call_27 = f7_(0);
+    return call_27;
 }
 
 int f7_(int arg_18) {
@@ -250,11 +267,11 @@ int f7_(int arg_18) {
 
 int main() {
     a_ = 1;
-    int call_27 = basicCase_(0);
-    int call_28 = transitiveCase_(0);
-    int call_29 = recursiveCase_(0);
-    int call_30 = lambdaCase_(0);
-    int call_31 = escapeCase_(x2_, x1_, 0);
-    int call_32 = mutuallyRecursiveCase_(0);
+    int call_28 = basicCase_(0);
+    int call_29 = transitiveCase_(0);
+    int call_30 = recursiveCase_(0);
+    int call_31 = lambdaCase_(0);
+    int call_32 = escapeCase_(0);
+    int call_33 = mutuallyRecursiveCase_(0);
     return 0;
 }

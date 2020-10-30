@@ -84,6 +84,10 @@ open MiloneLang.Records
 /// Don't forget the case of empty.
 type Caps = (VarSerial * Ty * Loc) list
 
+let private setUnion first second =
+  second
+  |> setFold (fun set item -> set |> setAdd item) first
+
 // -----------------------------------------------
 // KnownCtx
 // -----------------------------------------------
@@ -99,7 +103,7 @@ let knownCtxEnterFunDecl (ctx: KnownCtx) =
 let knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
   ctx
   |> knownCtxWithRefs (baseCtx |> knownCtxGetRefs)
-  |> knownCtxWithLocals (baseCtx |> knownCtxGetLocals)
+  |> knownCtxWithLocals (setUnion (baseCtx |> knownCtxGetLocals) (ctx |> knownCtxGetLocals))
 
 let knownCtxAddKnown serial (ctx: KnownCtx) =
   ctx
@@ -222,10 +226,6 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
   let emptySet = setEmpty (intHash, intCmp)
   let emptyMap () = mapEmpty (intHash, intCmp)
 
-  let setUnion first second =
-    second
-    |> setFold (fun set item -> set |> setAdd item) first
-
   let rec dfs captureMap visited varSerial =
     let visited = visited |> setAdd varSerial
     match captureMap |> mapTryFind varSerial with
@@ -236,7 +236,7 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
         |> setFold (fun visited varSerial ->
              if visited |> setContains varSerial then visited else dfs captureMap visited varSerial) visited
 
-  let go captureMap =
+  let _, funs =
     ctx
     |> ccCtxGetFuns
     |> mapFold (fun (captureMap, funs) funSerial knownCtx ->
@@ -252,11 +252,7 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
            captureMap
            |> mapAdd funSerial (knownCtx |> knownCtxToCapturedSerials)
 
-         captureMap, funs) (captureMap, emptyMap ())
-
-  // Perform DFS twice. See lambdaCase in let_fun_closure_lambda.fs.
-  let captureMap, _ = go (emptyMap ())
-  let _, funs = go captureMap
+         captureMap, funs) (emptyMap (), emptyMap ())
 
   ctx |> ccCtxWithFuns funs
 
