@@ -226,33 +226,68 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
   let emptySet = setEmpty (intHash, intCmp)
   let emptyMap () = mapEmpty (intHash, intCmp)
 
-  let rec dfs captureMap visited varSerial =
-    let visited = visited |> setAdd varSerial
-    match captureMap |> mapTryFind varSerial with
-    | Some captures -> setUnion visited captures
-    | None ->
-        ctx
-        |> ccCtxGetFunCapturedSerials varSerial
-        |> setFold (fun visited varSerial ->
-             if visited |> setContains varSerial then visited else dfs captureMap visited varSerial) visited
+  /// Builds captureMap, a mapping from fun -> captured vars.
+  let rec captureDfs (captureMap, funs) funSerial knownCtx =
+    /// Makes fun-captures relation transitive.
+    let rec transitiveDfs (captureMap, funs, visited) varSerial =
+      let visited = visited |> setAdd varSerial
+
+      let captureMap, funs, captures =
+        match captureMap |> mapTryFind varSerial with
+        | Some captures ->
+            // Here, captureMap's result is (if any) correct inductively.
+            captureMap, funs, captures
+
+        | None ->
+            // If the var is a fun that captures something,
+            // it's time to build the entry of captureMap for that.
+            match ctx |> ccCtxGetFuns |> mapTryFind varSerial with
+            | Some knownCtx -> captureDfs (captureMap, funs) varSerial knownCtx
+            | None -> captureMap, funs, emptySet
+
+      // Mark transitively captured vars as visited at once.
+      let visited = setUnion visited captures
+
+      // Continue to DFS to visit directly immediately vars.
+      ctx
+      |> ccCtxGetFunCapturedSerials varSerial
+      |> setFold (fun (captureMap, funs, visited) varSerial ->
+           if visited |> setContains varSerial
+           then captureMap, funs, visited
+           else transitiveDfs (captureMap, funs, visited) varSerial) (captureMap, funs, visited)
+
+    let captureMap =
+      captureMap
+      |> mapAdd funSerial (knownCtx |> knownCtxToCapturedSerials)
+
+    // Continue to DFS.
+    let captureMap, funs, visited =
+      knownCtx
+      |> knownCtxGetRefs
+      |> setFold (fun (captureMap, funs, visited) varSerial ->
+           if visited |> setContains varSerial
+           then captureMap, funs, visited
+           else transitiveDfs (captureMap, funs, visited) varSerial) (captureMap, funs, emptySet)
+
+    // Correct knownCtx is finally obtained, set it to context.
+    let knownCtx = knownCtx |> knownCtxWithRefs visited
+    let captures = knownCtx |> knownCtxToCapturedSerials
+    let funs = funs |> mapAdd funSerial knownCtx
+    let captureMap = captureMap |> mapAdd funSerial captures
+
+    captureMap, funs, captures
 
   let _, funs =
     ctx
     |> ccCtxGetFuns
     |> mapFold (fun (captureMap, funs) funSerial knownCtx ->
-         let visited =
-           knownCtx
-           |> knownCtxGetRefs
-           |> setFold (dfs captureMap) emptySet
+         if captureMap |> mapContainsKey funSerial then
+           captureMap, funs
+         else
+           let captureMap, funs, _ =
+             captureDfs (captureMap, funs) funSerial knownCtx
 
-         let knownCtx = knownCtx |> knownCtxWithRefs visited
-         let funs = funs |> mapAdd funSerial knownCtx
-
-         let captureMap =
-           captureMap
-           |> mapAdd funSerial (knownCtx |> knownCtxToCapturedSerials)
-
-         captureMap, funs) (emptyMap (), emptyMap ())
+           captureMap, funs) (emptyMap (), emptyMap ())
 
   ctx |> ccCtxWithFuns funs
 
@@ -330,7 +365,9 @@ let declosureFunRef refVarSerial refTy refLoc ctx =
 let declosureFunDecl callee vis isMainFun args body next ty loc ctx =
   let args, body, ctx =
     let baseCtx = ctx
-    let ctx = ctx |> ccCtxEnterFunDecl
+
+    let ctx =
+      ctx |> ccCtxEnterFunDecl |> ccCtxAddLocal callee
 
     let args, ctx = (args, ctx) |> stMap declosurePat
     let body, ctx = (body, ctx) |> declosureExpr

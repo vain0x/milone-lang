@@ -390,7 +390,8 @@ let assocToKeyAcc acc assoc =
 // -----------------------------------------------
 
 let trieIsEmpty trie =
-  trie |> listForAll (fun (_, assoc) -> assoc |> listIsEmpty)
+  trie
+  |> listForAll (fun (_, assoc) -> assoc |> listIsEmpty)
 
 let trieAdd (keyHash: int) key value trie =
   let rec go trie =
