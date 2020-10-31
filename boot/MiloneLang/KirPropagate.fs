@@ -81,6 +81,19 @@ let private kpNode (node: KNode) ctx: KNode * ctx =
       let args, ctx = ctx |> kpUseTerms args
       KPrimNode(prim, args, results, conts, loc), ctx
 
+  | KJointNode (joints, cont, loc) ->
+      let joints, ctx =
+        (joints, ctx)
+        |> stMap (fun (jointBinding, ctx) ->
+             let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
+
+             let body, ctx = ctx |> kpNode body
+
+             KJointBinding(jointSerial, args, body, loc), ctx)
+
+      let cont, ctx = ctx |> kpNode cont
+      KJointNode(joints, cont, loc), ctx
+
 let kirPropagate (root: KRoot, kirGenCtx: KirGenCtx): KRoot * KirGenCtx =
   let (KRoot (funBindings)) = root
 

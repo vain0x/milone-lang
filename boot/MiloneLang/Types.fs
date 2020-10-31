@@ -617,7 +617,7 @@ type KTerm =
 /// Node (statement) in KIR.
 type KNode =
   /// Jump to joint.
-  | KJumpNode of VarSerial * args: KTerm list * Loc
+  | KJumpNode of JointSerial * args: KTerm list * Loc
 
   /// Return from the current fun.
   | KReturnNode of VarSerial * args: KTerm list * Loc
@@ -637,6 +637,9 @@ type KNode =
   /// Do something using args, binds values to results, and then jump to one of continuations (if continue).
   | KPrimNode of KPrim * args: KTerm list * results: VarSerial list * conts: KNode list * Loc
 
+  /// Declaration of mutually recursive joints.
+  | KJointNode of KJointBinding list * cont: KNode * Loc
+
 /// Declaration of a joint.
 ///
 /// Joint is a function-like thing that can be called inside of single fun (i.e. not escaping) and never returns once called.
@@ -648,7 +651,7 @@ type KJointBinding = KJointBinding of jointSerial: JointSerial * args: VarSerial
 
 /// Definition of a fun, as a set of joints.
 ///
-/// The first joint is the *entry point*, called at first when this fun is called.
+/// The first joint is the *entry point*, which is called (jumped into) when the fun is called.
 type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * joints: KJointBinding list * Loc
 
 /// Root node of KIR.

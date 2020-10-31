@@ -227,6 +227,14 @@ let private selectTy ty path ctx =
       | VariantDef (_, _, _, payloadTy, _, _) -> payloadTy
       | _ -> unreachable (ty, path)
 
+let private collectJoints f ctx =
+  let parentJoints = ctx |> kirGenCtxGetJoints
+  let ctx = ctx |> kirGenCtxWithJoints []
+  let result, ctx = f ctx
+  let joints = ctx |> kirGenCtxGetJoints |> listRev
+  let ctx = ctx |> kirGenCtxWithJoints parentJoints
+  result, joints, ctx
+
 // -----------------------------------------------
 // Emission helpers
 // -----------------------------------------------
@@ -510,12 +518,12 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
 
         KJumpNode(jointSerial, [], loc), ctx
 
-  let node, ctx =
+  let createArmJoints ctx =
     ctx
     |> kgExpr cond (fun cond ctx -> go cond arms ctx)
 
   // Create a joint to be called after the match expr.
-  let ctx =
+  let createTargetJoint ctx =
     let targetVarSerial, ctx = newVar "match_target" targetTy loc ctx
 
     let funDef =
@@ -530,7 +538,14 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
     |> addFunDef targetFunSerial funDef
     |> addJointBinding binding
 
-  node, ctx
+  let entryPoint, joints, ctx =
+    ctx
+    |> collectJoints (fun ctx ->
+         let entryPoint, ctx = createArmJoints ctx
+         let ctx = createTargetJoint ctx
+         entryPoint, ctx)
+
+  KJointNode(joints, entryPoint, loc), ctx
 
 // -----------------------------------------------
 // let-val, let-fun
@@ -556,14 +571,6 @@ let private kgLetValExpr pat init next loc hole ctx: KNode * KirGenCtx =
            kgEvalPNode init (kgPat pat ctx) success failure ctx)
 
 let private kgLetFunExpr funSerial isMainFun argPats body next loc hole ctx: KNode * KirGenCtx =
-  let takeJoints f ctx =
-    let parentJoints = ctx |> kirGenCtxGetJoints
-    let ctx = ctx |> kirGenCtxWithJoints []
-    let result, ctx = f ctx
-    let joints = ctx |> kirGenCtxGetJoints |> listRev
-    let ctx = ctx |> kirGenCtxWithJoints parentJoints
-    result, joints, ctx
-
   let failure = abortNode loc
 
   // Remember main fun.
@@ -610,7 +617,7 @@ let private kgLetFunExpr funSerial isMainFun argPats body next loc hole ctx: KNo
       |> kgExpr body (fun body ctx -> returnNode body, ctx)
 
     ctx
-    |> takeJoints (fun ctx ->
+    |> collectJoints (fun ctx ->
          let argVars, hole, ctx = ctx |> go argPats bodyHole
          let body, ctx = hole ctx
          (argVars, body), ctx)

@@ -323,6 +323,14 @@ let private kdNode indent node ctx =
 
   | KPrimNode (prim, args, results, conts, _) -> kdPrimNode indent prim args results conts ctx
 
+  | KJointNode ([], cont, _) -> kdNode indent cont ctx
+
+  | KJointNode (joints, cont, _) ->
+      kdNode indent cont ctx
+      + (joints
+         |> listMap (fun joint -> kdJointBinding indent false joint ctx)
+         |> strConcat)
+
 let private kdJointBinding indent isEntryPoint jointBinding ctx =
   let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
 

@@ -419,6 +419,8 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
   | KPrimNode (prim, args, results, conts, loc) -> kmPrimNode node prim args results conts loc ctx
 
+  | KJointNode _ -> failwith "TODO: implement"
+
 let private kmFunBinding binding ctx =
   let genBody jointMap processBody ctx =
     let parentJointMap = ctx |> kirToMirCtxGetJointMap
