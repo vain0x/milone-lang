@@ -49,22 +49,19 @@ TyCtx:
   # Type serial to type definition.
   Tys: AssocMap<TySerial, TyDef>
 
-  VarDepths: AssocMap<VarSerial, LetDepth>
   TyDepths: AssocMap<TySerial, LetDepth>
   LetDepth: LetDepth
   TraitBounds: (Trait * Loc) list
   Logs: (Log * Loc) list
 
 KnownCtx:
-  LetDepth: LetDepth
   Known: AssocSet<FunSerial>
-  VarUses: AssocSet<VarSerial>
-  FunUses: AssocSet<VarSerial>
+  Locals: AssocSet<VarSerial>
+  Refs: AssocSet<VarSerial>
 
 CcCtx:
   Serial: Serial
   Vars: AssocMap<VarSerial, VarDef>
-  VarDepths: AssocMap<VarSerial, LetDepth>
   Tys: AssocMap<TySerial, TyDef>
   Current: KnownCtx
   Funs: AssocMap<FunSerial, KnownCtx>

@@ -389,10 +389,6 @@ let assocToKeyAcc acc assoc =
 // HashTrie
 // -----------------------------------------------
 
-let trieIsEmpty trie =
-  trie
-  |> listForAll (fun (_, assoc) -> assoc |> listIsEmpty)
-
 let trieAdd (keyHash: int) key value trie =
   let rec go trie =
     match trie with
@@ -568,10 +564,6 @@ let mapOfList (hash, cmp) assoc: AssocMap<_, _> =
 // -----------------------------------------------
 
 let setEmpty funs: AssocSet<_> = mapEmpty funs
-
-let setIsEmpty set =
-  let trie, _, _ = set
-  trie |> trieIsEmpty
 
 let setContains key (set: AssocSet<_>) = set |> mapContainsKey key
 
