@@ -40,21 +40,25 @@ int xf1_(int x1_);
 
 int escapeCase_(int arg_10);
 
-int mutuallyRecursiveCase_(int arg_11);
+int zf2_1(int x_5);
 
-int f1_(int arg_12);
+int innerFunCase_(int arg_11);
 
-int f2_(int arg_13);
+int mutuallyRecursiveCase_(int arg_12);
 
-int f3_(int arg_14);
+int f1_(int arg_13);
 
-int f4_(int arg_15);
+int f2_(int arg_14);
 
-int f5_(int arg_16);
+int f3_(int arg_15);
 
-int f6_(int arg_17);
+int f4_(int arg_16);
 
-int f7_(int arg_18);
+int f5_(int arg_17);
+
+int f6_(int arg_18);
+
+int f7_(int arg_19);
 
 static int a_;
 
@@ -222,44 +226,56 @@ int escapeCase_(int arg_10) {
     return 0;
 }
 
-int mutuallyRecursiveCase_(int arg_11) {
-    int call_20 = f1_(0);
-    milone_assert((call_20 == 1), 52, 2);
-    int call_21 = 0;
+int zf2_1(int x_5) {
+    int call_20 = zf22_(x_5, x_4, 0);
+    return call_20;
+}
+
+int innerFunCase_(int arg_11) {
+    int call_21 = zf2_1(1);
+    milone_assert((call_21 == 1), 59, 2);
+    int call_22 = 0;
     return 0;
 }
 
-int f1_(int arg_12) {
-    int call_22 = f2_(0);
-    return call_22;
+int mutuallyRecursiveCase_(int arg_12) {
+    int call_23 = f1_(0);
+    milone_assert((call_23 == 1), 63, 2);
+    int call_24 = 0;
+    return 0;
 }
 
-int f2_(int arg_13) {
-    int call_23 = f3_(0);
-    return call_23;
-}
-
-int f3_(int arg_14) {
-    int call_24 = f4_(0);
-    return call_24;
-}
-
-int f4_(int arg_15) {
-    int call_25 = f5_(0);
+int f1_(int arg_13) {
+    int call_25 = f2_(0);
     return call_25;
 }
 
-int f5_(int arg_16) {
-    int call_26 = f6_(0);
+int f2_(int arg_14) {
+    int call_26 = f3_(0);
     return call_26;
 }
 
-int f6_(int arg_17) {
-    int call_27 = f7_(0);
+int f3_(int arg_15) {
+    int call_27 = f4_(0);
     return call_27;
 }
 
-int f7_(int arg_18) {
+int f4_(int arg_16) {
+    int call_28 = f5_(0);
+    return call_28;
+}
+
+int f5_(int arg_17) {
+    int call_29 = f6_(0);
+    return call_29;
+}
+
+int f6_(int arg_18) {
+    int call_30 = f7_(0);
+    return call_30;
+}
+
+int f7_(int arg_19) {
     return a_;
 }
 
@@ -267,11 +283,12 @@ int f7_(int arg_18) {
 
 int main() {
     a_ = 1;
-    int call_28 = basicCase_(0);
-    int call_29 = transitiveCase_(0);
-    int call_30 = recursiveCase_(0);
-    int call_31 = lambdaCase_(0);
-    int call_32 = escapeCase_(0);
-    int call_33 = mutuallyRecursiveCase_(0);
+    int call_31 = basicCase_(0);
+    int call_32 = transitiveCase_(0);
+    int call_33 = recursiveCase_(0);
+    int call_34 = lambdaCase_(0);
+    int call_35 = escapeCase_(0);
+    int call_36 = innerFunCase_(0);
+    int call_37 = mutuallyRecursiveCase_(0);
     return 0;
 }

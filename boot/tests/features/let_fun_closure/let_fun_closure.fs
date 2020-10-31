@@ -48,6 +48,17 @@ let escapeCase () =
 
   assert (xf1 1 = 1 + 2 + 3)
 
+let innerFunCase () =
+  let zf1 x =
+    let zf11 () = x
+    zf11 ()
+
+  let zf2 x =
+    let zf22 () = zf1 x
+    zf22 ()
+
+  assert (zf2 1 = 1)
+
 // deprecated: static variables don't get captured now.
 let mutuallyRecursiveCase () =
   assert (f1 () = 1)
@@ -67,5 +78,6 @@ let main _ =
   recursiveCase ()
   lambdaCase ()
   escapeCase()
+  innerFunCase ()
   mutuallyRecursiveCase ()
   0
