@@ -448,17 +448,18 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
   | KSelectNode (term, path, result, cont, loc) ->
       let term = kmTerm term
+      let resultTy () = findVarTy result ctx
 
       let doUnary unary ctx =
-        let expr = MUnaryExpr(unary, term, noTy, loc)
+        let expr = MUnaryExpr(unary, term, resultTy (), loc)
         ctx
-        |> addStmt (MLetValStmt(result, MExprInit(expr), noTy, loc))
+        |> addStmt (MLetValStmt(result, MExprInit(expr), resultTy (), loc))
 
       let ctx =
         match path with
         | KSelfPath ->
             ctx
-            |> addStmt (MLetValStmt(result, MExprInit(term), noTy, loc))
+            |> addStmt (MLetValStmt(result, MExprInit(term), resultTy (), loc))
 
         | KHeadPath _ -> doUnary MListHeadUnary ctx
         | KTailPath _ -> doUnary MListTailUnary ctx
