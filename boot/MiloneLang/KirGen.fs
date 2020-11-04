@@ -376,6 +376,42 @@ let private kgCallExitExpr itself args primLoc ctx =
 
   | _ -> unreachable itself
 
+let private kgCallComparisonPrimExpr itself hint prim args ty primLoc hole ctx =
+  match args with
+  | [ l; r ] ->
+      ctx
+      |> kgExpr l (fun l ctx ->
+           ctx
+           |> kgExpr r (fun r ctx ->
+                // Create a joint.
+                let jointSerial, jointBinding, ctx =
+                  let jointSerial, ctx = ctx |> freshSerial
+
+                  let ctx =
+                    ctx
+                    |> addFunDef jointSerial (FunDef(hint, 1, TyScheme([], tyFun tyBool tyUnit), primLoc))
+
+                  let cond, ctx = ctx |> newVar hint tyBool primLoc
+
+                  let cont, ctx =
+                    hole (KVarTerm(cond, tyBool, primLoc)) ctx
+
+                  let binding =
+                    KJointBinding(jointSerial, [ cond ], cont, primLoc)
+
+                  jointSerial, binding, ctx
+
+                let jumpToJoint cond =
+                  KJumpNode(jointSerial, [ KLitTerm(BoolLit cond, primLoc) ], primLoc)
+
+                KJointNode
+                  ([ jointBinding ],
+                   KPrimNode(prim, [ l; r ], [], [ jumpToJoint true; jumpToJoint false ], primLoc),
+                   primLoc),
+                ctx))
+
+  | _ -> unreachable itself
+
 /// Converts call to regular (not special) prim.
 let private kgCallRegularPrimExpr hint prim args ty loc hole ctx =
   ctx
@@ -653,6 +689,9 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
       match callee with
       | HPrimExpr (prim, primTy, primLoc) ->
+          let comparison hint prim =
+            kgCallComparisonPrimExpr itself hint prim args ty primLoc hole ctx
+
           let regular hint prim =
             kgCallRegularPrimExpr hint prim args ty primLoc hole ctx
 
@@ -662,8 +701,8 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.Mul -> regular "mul" KMulPrim
           | HPrim.Div -> regular "div" KDivPrim
           | HPrim.Mod -> regular "mod" KModPrim
-          | HPrim.Eq -> regular "equal" KEqualPrim
-          | HPrim.Lt -> regular "less" KLessPrim
+          | HPrim.Eq -> comparison "equal" KEqualPrim
+          | HPrim.Lt -> comparison "less" KLessPrim
           | HPrim.Nil -> unreachable itself
           | HPrim.Cons -> regular "cons" KConsPrim
           | HPrim.OptionNone -> unreachable itself

@@ -754,6 +754,10 @@ type MStmt =
   | MLabelStmt of Label * Loc
   | MGotoStmt of Label * Loc
   | MGotoIfStmt of MExpr * Label * Loc
+
+  // Only for KIR (comparison prim).
+  | MIfStmt of MExpr * MStmt list * MStmt list * Loc
+
   | MExitStmt of MExpr * Loc
   | MProcStmt of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
 
@@ -835,6 +839,7 @@ type CStmt =
   | CLabelStmt of Label
   | CGotoStmt of Label
   | CGotoIfStmt of CExpr * Label
+  | CIfStmt of CExpr * CStmt list * CStmt list
   | CReturnStmt of CExpr option
 
 /// Top-level definition in C language.

@@ -265,6 +265,23 @@ let cprintStmt acc indent stmt: string list =
 
       acc
 
+  | CIfStmt (cond, thenCl, elseCl) ->
+    let acc = acc |> cons indent |> cons "if ("
+    let acc = cprintExpr acc cond
+
+    let acc =
+      acc
+      |> cons ") {"
+      |> cons eol
+
+    let acc = cprintStmts acc ("    " + indent) thenCl
+
+    let acc = acc |> cons indent |> cons "} else {" |> cons eol
+
+    let acc = cprintStmts acc ("    " + indent) elseCl
+
+    acc |> cons indent |> cons "}" |> cons eol
+
 let rec cprintStmts acc indent stmts: string list =
   match stmts with
   | [] -> acc

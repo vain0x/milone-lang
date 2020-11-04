@@ -159,12 +159,30 @@ let private kmPrimMod itself args results conts loc ctx =
 
 let private kmPrimEqual itself args results conts loc ctx =
   match args, results, conts with
-  | [ l; r ], [ result ], [ cont ] -> ctx |> setBinaryK MEqualBinary l r result cont loc
+  | [ l; r ], [], [ thenCl; elseCl ] ->
+      let equalExpr =
+        MBinaryExpr(MEqualBinary, kmTerm l, kmTerm r, tyBool, loc)
+
+      let thenCl, ctx = ctx |> collectStmts (kmNode thenCl)
+      let elseCl, ctx = ctx |> collectStmts (kmNode elseCl)
+
+      ctx
+      |> addStmt (MIfStmt(equalExpr, thenCl, elseCl, loc))
+
   | _ -> unreachable itself
 
 let private kmPrimLess itself args results conts loc ctx =
   match args, results, conts with
-  | [ l; r ], [ result ], [ cont ] -> ctx |> setBinaryK MLessBinary l r result cont loc
+  | [ l; r ], [], [ thenCl; elseCl ] ->
+      let equalExpr =
+        MBinaryExpr(MLessBinary, kmTerm l, kmTerm r, tyBool, loc)
+
+      let thenCl, ctx = ctx |> collectStmts (kmNode thenCl)
+      let elseCl, ctx = ctx |> collectStmts (kmNode elseCl)
+
+      ctx
+      |> addStmt (MIfStmt(equalExpr, thenCl, elseCl, loc))
+
   | _ -> unreachable itself
 
 let private kmPrimNot itself args results conts loc ctx =

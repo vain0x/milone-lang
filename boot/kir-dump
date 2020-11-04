@@ -7,5 +7,5 @@ then
     mv -f kir_dump.generated.ts kir_dump.generated.ts.orig
 fi
 
-./milone_netcore --kir-dump $(find tests/*/* -type d) >kir_dump.generated.ts
-./milone_netcore --kir-c $(find tests/*/* -type d) >kir_dump.generated.c
+./milone_netcore --kir-dump $(find tests/*/* -type d) >kir_dump.generated.ts || echo '$?='$?
+./milone_netcore --kir-c $(find tests/*/* -type d) >kir_dump.generated.c || echo '$?='$?

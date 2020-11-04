@@ -859,6 +859,7 @@ let genStmtJump ctx stmt =
   | MGotoIfStmt (pred, label, _) ->
       let pred, ctx = genExpr ctx pred
       cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
+
   | MExitStmt (arg, _) ->
       let doArm () =
         let arg, ctx = genExpr ctx arg
@@ -877,6 +878,13 @@ let genStmt ctx stmt =
   | MGotoStmt _
   | MGotoIfStmt _
   | MExitStmt _ -> genStmtJump ctx stmt
+
+  | MIfStmt (cond, thenCl, elseCl, _) ->
+    let cond, ctx = genExpr ctx cond
+    let thenCl, ctx = genBlock ctx thenCl
+    let elseCl, ctx = genBlock ctx elseCl
+    cirCtxAddStmt ctx (CIfStmt(cond, thenCl, elseCl))
+
   | MProcStmt _ -> ctx
 
 let genBlock (ctx: CirCtx) (stmts: MStmt list) =
