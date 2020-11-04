@@ -209,7 +209,7 @@ let cliCompile host verbosity projectDir =
   exitCode
 
 // experimental: use kir
-let buildWithKir host verbosity (projectDir: string): string * bool =
+let buildWithKir host verbosity mode (projectDir: string): string * bool =
   let profileLog = host |> cliHostGetProfileLog
   let readFile = host |> cliHostGetFileReadAllText
 
@@ -267,12 +267,21 @@ let buildWithKir host verbosity (projectDir: string): string * bool =
 
           let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
 
-          log "KirDump"
+          if mode then
+            log "KirDump"
 
-          let output =
-            kirDump projectName "" (kRoot, kirGenCtx)
+            let output =
+              kirDump projectName "" (kRoot, kirGenCtx)
 
-          output, true
+            output, true
+          else
+            log "KirToMir"
+            let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
+
+            log "Cir generation"
+            let cir, success = gen (stmts, mirCtx)
+            let cOutput = cprint cir
+            cOutput, success
 
 // log "KirToMir"
 // let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
@@ -288,9 +297,21 @@ let buildWithKir host verbosity (projectDir: string): string * bool =
 //   log "Finished"
 //   output, success
 
-let cliCompileWithKir host verbosity projectDir =
+let cliCompileWithKirToDump host verbosity projectDir =
   printfn "/*"
-  let output, success = buildWithKir host verbosity projectDir
+  let output, success = buildWithKir host verbosity true projectDir
+
+  if success then
+    printfn "*/"
+    printfn "%s" (output |> strTrimEnd)
+    0
+  else
+    printfn "\n%s\n*/" output
+    1
+
+let cliCompileWithKirToClang host verbosity projectDir =
+  printfn "/*"
+  let output, success = buildWithKir host verbosity false projectDir
 
   if success then
     printfn "*/"
@@ -321,7 +342,20 @@ let cli (host: CliHost) =
       |> listFold (fun success projectDir ->
            printfn "// -------------------------------\n// %s\n{\n" projectDir
 
-           let code = cliCompileWithKir host Quiet projectDir
+           let code = cliCompileWithKirToDump host Quiet projectDir
+
+           printfn "\n// exit = %d\n}\n" code
+
+           code + success) 0
+
+  | "--kir-c" :: projectDirs ->
+      printfn "// Generated using KIR.\n"
+
+      projectDirs
+      |> listFold (fun success projectDir ->
+           printfn "// -------------------------------\n// %s\n{\n" projectDir
+
+           let code = cliCompileWithKirToClang host Quiet projectDir
 
            printfn "\n// exit = %d\n}\n" code
 

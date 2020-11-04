@@ -8,3 +8,4 @@ then
 fi
 
 ./milone_netcore --kir-dump $(find tests/*/* -type d) >kir_dump.generated.ts
+./milone_netcore --kir-c $(find tests/*/* -type d) >kir_dump.generated.c
