@@ -607,7 +607,7 @@ type KTerm =
   | KVariantTerm of VariantSerial * Ty * Loc
 
   /// Tag of variant. An integer ID of the variant in union.
-  | KTagTerm of VariantSerial * Ty * Loc
+  | KTagTerm of VariantSerial * Loc
 
   | KLabelTerm of VarSerial * Ty * Loc
   | KNilTerm of itemTy: Ty * Loc
@@ -720,7 +720,7 @@ type MExpr =
   /// Procedure
   | MProcExpr of FunSerial * Ty * Loc
   | MVariantExpr of TySerial * VariantSerial * Ty * Loc
-  | MTagExpr of VariantSerial * Ty * Loc
+  | MTagExpr of VariantSerial * Loc
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * left: MExpr * right: MExpr * resultTy: Ty * Loc
 

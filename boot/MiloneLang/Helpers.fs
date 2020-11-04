@@ -1717,7 +1717,7 @@ let mexprExtract expr =
   | MRefExpr (_, ty, loc) -> ty, loc
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc
-  | MTagExpr (_, ty, loc) -> ty, loc
+  | MTagExpr (_, loc) -> tyInt, loc
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
 

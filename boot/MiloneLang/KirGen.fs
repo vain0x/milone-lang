@@ -57,7 +57,7 @@ let private isNewtypeVariant varSerial ctx =
 
 type private PTerm =
   | PLitTerm of Lit * Loc
-  | PTagTerm of VariantSerial * Ty * Loc
+  | PTagTerm of VariantSerial * Loc
   | PNilTerm of itemTy: Ty * Loc
   | PNoneTerm of itemTy: Ty * Loc
 
@@ -82,7 +82,7 @@ let private kgRefPat itself varSerial ty loc ctx =
   match findVarDef varSerial ctx with
   | VarDef _ -> PLetNode(varSerial, PDiscardNode, loc)
 
-  | VariantDef _ -> PEqualNode(PTagTerm(varSerial, ty, loc), PDiscardNode, loc)
+  | VariantDef _ -> PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc)
 
   | FunDef _ -> failwithf "NEVER: fun can't appear as pattern. %A" itself
 
@@ -100,7 +100,7 @@ let private kgCallPat itself callee args ty loc ctx =
       match findVarDef varSerial ctx, args with
       | VariantDef _, [ payloadPat ] ->
           PConjNode
-            ([ PEqualNode(PTagTerm(varSerial, ty, loc), PDiscardNode, loc)
+            ([ PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc)
                PSelectNode(KPayloadPath(varSerial, loc), kgPat payloadPat ctx, loc) ],
              loc)
 
@@ -391,7 +391,7 @@ let private kgCallRegularPrimExpr hint prim args ty loc hole ctx =
 let private kgEvalPTerm (term: PTerm): KTerm =
   match term with
   | PLitTerm (lit, loc) -> KLitTerm(lit, loc)
-  | PTagTerm (variantSerial, ty, loc) -> KTagTerm(variantSerial, ty, loc)
+  | PTagTerm (variantSerial, loc) -> KTagTerm(variantSerial, loc)
   | PNilTerm (itemTy, loc) -> KNilTerm(itemTy, loc)
   | PNoneTerm (itemTy, loc) -> KNoneTerm(itemTy, loc)
 

@@ -122,7 +122,7 @@ let private kdTerm term ctx =
   | KVariantTerm (varSerial, _, _)
   | KLabelTerm (varSerial, _, _) -> getVarName varSerial ctx
 
-  | KTagTerm (variantSerial, _, _) -> getVarName variantSerial ctx + ".tag"
+  | KTagTerm (variantSerial, _) -> getVarName variantSerial ctx + ".tag"
 
   | KNilTerm _ -> "[]"
   | KNoneTerm _ -> "None"
