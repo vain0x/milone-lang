@@ -313,6 +313,14 @@ let private kmPrimUnbox itself args results conts loc ctx =
   | [ arg ], [ result ], [ cont ] -> setUnaryK MUnboxUnary arg result cont loc ctx
   | _ -> unreachable itself
 
+let kmPrimExit itself args results conts loc ctx =
+  match args, results, conts with
+  | [ arg ], [], [] ->
+      let arg = arg |> kmTerm
+      ctx |> addStmt (MExitStmt(arg, loc))
+
+  | _ -> unreachable itself
+
 /// Converts a prim node which doesn't require special handling in this conversion
 /// to simple call.
 let private kmPrimOther itself prim args results conts loc ctx =
@@ -356,7 +364,7 @@ let private kmPrimNode itself prim args results conts loc ctx: KirToMirCtx =
   | KCallClosurePrim -> kmPrimCallClosure itself args results conts loc ctx
   | KBoxPrim -> kmPrimBox itself args results conts loc ctx
   | KUnboxPrim -> kmPrimUnbox itself args results conts loc ctx
-  | KExitPrim -> other HPrim.Exit
+  | KExitPrim -> kmPrimExit itself args results conts loc ctx
   | KAssertPrim -> other HPrim.Assert
   | KCharPrim -> other HPrim.Char
   | KIntPrim -> other HPrim.Int
