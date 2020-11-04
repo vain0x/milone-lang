@@ -26,7 +26,7 @@ int fun_1(void* env_, int arg_);
 
 struct UnitIntFun1;
 
-int lf_(int arg_7);
+int lf_(int lx_, int arg_7);
 
 int lambdaCase_(int arg_8);
 
@@ -133,7 +133,7 @@ struct UnitIntFun1 {
     void* env;
 };
 
-int lf_(int arg_7) {
+int lf_(int lx_, int arg_7) {
     struct IntTuple1 tuple_;
     tuple_.t0 = lx_;
     void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
@@ -146,7 +146,7 @@ int lf_(int arg_7) {
 
 int lambdaCase_(int arg_8) {
     int lx_ = 7;
-    int call_12 = lf_(0);
+    int call_12 = lf_(lx_, 0);
     milone_assert((call_12 == lx_), 27, 2);
     int call_13 = 0;
     return 0;
