@@ -649,10 +649,8 @@ type KNode =
 /// After compiled to C language, a joint is represented as a *label* of block in C language. Calling a joint is a *goto* with some assignments to local vars.
 type KJointBinding = KJointBinding of jointSerial: JointSerial * args: VarSerial list * body: KNode * Loc
 
-/// Definition of a fun, as a set of joints.
-///
-/// The first joint is the *entry point*, which is called (jumped into) when the fun is called.
-type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * joints: KJointBinding list * Loc
+/// Definition of a fun.
+type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * body: KNode * Loc
 
 /// Root node of KIR.
 type KRoot = KRoot of KFunBinding list

@@ -626,8 +626,11 @@ let private kgLetFunExpr funSerial isMainFun argPats body next loc hole ctx: KNo
     let joints =
       KJointBinding(funSerial, [], body, loc) :: joints
 
+    let body =
+      KJointNode(joints, KJumpNode(funSerial, [], loc), loc)
+
     ctx
-    |> addFunBinding (KFunBinding(funSerial, argVars, joints, loc))
+    |> addFunBinding (KFunBinding(funSerial, argVars, body, loc))
 
   ctx |> kgExpr next hole
 

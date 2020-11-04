@@ -442,7 +442,7 @@ let private kmFunBinding binding ctx =
 
     stmts, ctx
 
-  let (KFunBinding (funSerial, args, joints, loc)) = binding
+  let (KFunBinding (funSerial, args, body, loc)) = binding
 
   let isMainFun =
     match findVarDef funSerial ctx with
@@ -464,27 +464,27 @@ let private kmFunBinding binding ctx =
     go args funTy
 
   let body, ctx =
-    let jointMap =
-      joints
-      |> listMapWithIndex (fun (i: int) joint ->
-           let (KJointBinding (jointSerial, args, _, _)) = joint
-           let label = "L" + string i
-           jointSerial, (label, args))
-      |> mapOfList (intHash, intCmp)
+    let jointMap = mapEmpty (intHash, intCmp)
+    //   joints
+    //   |> listMapWithIndex (fun (i: int) joint ->
+    //        let (KJointBinding (jointSerial, args, _, _)) = joint
+    //        let label = "L" + string i
+    //        jointSerial, (label, args))
+    //   |> mapOfList (intHash, intCmp)
 
-    let rec go joints ctx =
-      match joints with
-      | [] -> ctx
+    // let rec go joints ctx =
+    //   match joints with
+    //   | [] -> ctx
 
-      | KJointBinding (jointSerial, _args, body, loc) :: joints ->
-          let label, _ = jointMap |> mapFind jointSerial
+    //   | KJointBinding (jointSerial, _args, body, loc) :: joints ->
+    //       let label, _ = jointMap |> mapFind jointSerial
 
-          ctx
-          |> addStmt (MLabelStmt(label, loc))
-          |> kmNode body
-          |> go joints
+    //       ctx
+    //       |> addStmt (MLabelStmt(label, loc))
+    //       |> kmNode body
+    //       |> go joints
 
-    ctx |> genBody jointMap (go joints)
+    ctx |> genBody jointMap (kmNode body)
 
   ctx
   |> addStmt (MProcStmt(funSerial, isMainFun, args, body, resultTy, loc))

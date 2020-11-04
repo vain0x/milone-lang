@@ -102,17 +102,10 @@ let kirPropagate (root: KRoot, kirGenCtx: KirGenCtx): KRoot * KirGenCtx =
   let funBindings, _ =
     (funBindings, ctx)
     |> stMap (fun (funBinding, ctx) ->
-         let (KFunBinding (funSerial, args, joints, loc)) = funBinding
+         let (KFunBinding (funSerial, args, body, loc)) = funBinding
 
-         let joints, ctx =
-           (joints, ctx)
-           |> stMap (fun (jointBinding, ctx) ->
-                let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
+         let body, ctx = ctx |> kpNode body
 
-                let body, ctx = ctx |> kpNode body
-
-                KJointBinding(jointSerial, args, body, loc), ctx)
-
-         KFunBinding(funSerial, args, joints, loc), ctx)
+         KFunBinding(funSerial, args, body, loc), ctx)
 
   KRoot(funBindings), kirGenCtx

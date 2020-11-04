@@ -348,7 +348,7 @@ let private kdJointBinding indent isEntryPoint jointBinding ctx =
     + (indent + "}\n")
 
 let private kdFunBinding indent funBinding ctx =
-  let (KFunBinding (funSerial, args, joints, loc)) = funBinding
+  let (KFunBinding (funSerial, args, body, loc)) = funBinding
 
   let isEntryPoint i = i = 0
 
@@ -360,9 +360,7 @@ let private kdFunBinding indent funBinding ctx =
      + " = "
      + kdArgsAsParamList args ctx
      + " => {\n")
-  + (joints
-     |> listMapWithIndex (fun i joint -> kdJointBinding (deeper indent) (isEntryPoint i) joint ctx)
-     |> strConcat)
+  + kdNode (deeper indent) body ctx
   + ("}\n")
 
 let kirHeader () = """
