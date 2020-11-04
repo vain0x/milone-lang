@@ -353,11 +353,11 @@ let cli (host: CliHost) =
 
       projectDirs
       |> listFold (fun success projectDir ->
-           printfn "// -------------------------------\n// %s\n{\n" projectDir
+           printfn "// -------------------------------\n// %s\n" projectDir
 
            let code = cliCompileWithKirToClang host Quiet projectDir
 
-           printfn "\n// exit = %d\n}\n" code
+           printfn "\n// exit = %d\n" code
 
            code + success) 0
 
