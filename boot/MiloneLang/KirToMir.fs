@@ -355,7 +355,7 @@ let private kmTerm (term: KTerm): MExpr =
   | KVariantTerm (varSerial, ty, loc)
   | KLabelTerm (varSerial, ty, loc) -> MRefExpr(varSerial, ty, loc)
 
-  | KTagTerm (varSerial, loc) -> failwith ""
+  | KTagTerm (variantSerial, loc) -> MTagExpr(variantSerial, loc)
 
   | KNilTerm (itemTy, loc) -> MDefaultExpr(tyList itemTy, loc)
 
