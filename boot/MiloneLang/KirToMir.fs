@@ -27,10 +27,10 @@ let private jointMapEmpty () = mapEmpty (intHash, intCmp)
 
 let private ofKirGenCtx (kirGenCtx: KirGenCtx): KirToMirCtx =
   let (KirGenCtx (serial, vars, tys, logs, mainFunSerial, _, _)) = kirGenCtx
-  KirToMirCtx(serial, vars, tys, mainFunSerial, 0, jointMapEmpty (), [], logs)
+  KirToMirCtx(serial, vars, tys, mainFunSerial, 0, jointMapEmpty (), [], 0, [], logs)
 
 let private toMirCtx (ctx: KirToMirCtx): MirCtx =
-  let (KirToMirCtx (serial, vars, tys, _, labelSerial, _, _, logs)) = ctx
+  let (KirToMirCtx (serial, vars, tys, _, labelSerial, _, _, _, _, logs)) = ctx
   MirCtx(serial, vars, tys, labelSerial, [], logs)
 
 let private freshSerial ctx =
@@ -67,6 +67,29 @@ let private findFunTy funSerial ctx =
 let private addStmt stmt ctx =
   ctx
   |> kirToMirCtxWithStmts (stmt :: (ctx |> kirToMirCtxGetStmts))
+
+let private collectStmts processBody ctx =
+  let parentStmts = ctx |> kirToMirCtxGetStmts
+
+  let ctx = ctx |> kirToMirCtxWithStmts []
+
+  let ctx = processBody ctx
+  let stmts = ctx |> kirToMirCtxGetStmts
+
+  let ctx = ctx |> kirToMirCtxWithStmts parentStmts
+
+  stmts, ctx
+
+let private addLabelWith label loc processBody ctx =
+  ctx
+  |> collectStmts (fun ctx ->
+       let stmts, ctx =
+         ctx
+         |> addStmt (MLabelStmt(label, loc))
+         |> processBody
+
+       ctx
+       |> kirToMirCtxWithLabels (stmts :: (ctx |> kirToMirCtxGetLabels)))
 
 // -----------------------------------------------
 // Emission helpers
@@ -419,28 +442,54 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
   | KPrimNode (prim, args, results, conts, loc) -> kmPrimNode node prim args results conts loc ctx
 
-  | KJointNode _ -> failwith "TODO: implement"
+  | KJointNode (joints, cont, _) ->
+      let rec go joints jointMap labelCount ctx =
+        match joints with
+        | [] -> jointMap, labelCount, ctx
+
+        | KJointBinding (jointSerial, args, body, _) :: joints ->
+            let labelCount = labelCount + 1
+            let label = "L" + string labelCount
+
+            let jointMap =
+              jointMap |> mapAdd jointSerial (label, args)
+
+            let ctx = ctx |> kmNode body
+
+            go joints jointMap labelCount ctx
+
+      let ctx =
+        let jointMap = kirToMirCtxGetJointMap ctx
+        let labelCount = kirToMirCtxGetLabelCount ctx
+        let jointMap, labelCount, ctx = go joints jointMap labelCount ctx
+        ctx
+        |> kirToMirCtxWithJointMap jointMap
+        |> kirToMirCtxWithLabelCount labelCount
+
+      ctx |> kmNode cont
 
 let private kmFunBinding binding ctx =
-  let genBody jointMap processBody ctx =
+  let genFunBody processBody ctx =
     let parentJointMap = ctx |> kirToMirCtxGetJointMap
-    let parentStmts = ctx |> kirToMirCtxGetStmts
+    let parentLabels = ctx |> kirToMirCtxGetLabels
+    let parentLabelCount = ctx |> kirToMirCtxGetLabelCount
 
     let ctx =
       ctx
-      |> kirToMirCtxWithJointMap jointMap
-      |> kirToMirCtxWithStmts []
+      |> kirToMirCtxWithJointMap (mapEmpty (intHash, intCmp))
+      |> kirToMirCtxWithLabels []
+      |> kirToMirCtxWithLabelCount 0
 
-    let ctx = processBody ctx
-
-    let stmts = ctx |> kirToMirCtxGetStmts
+    let stmts, ctx = ctx |> collectStmts processBody
+    let labels = ctx |> kirToMirCtxGetLabels
 
     let ctx =
       ctx
       |> kirToMirCtxWithJointMap parentJointMap
-      |> kirToMirCtxWithStmts parentStmts
+      |> kirToMirCtxWithLabels parentLabels
+      |> kirToMirCtxWithLabelCount parentLabelCount
 
-    stmts, ctx
+    stmts, labels, ctx
 
   let (KFunBinding (funSerial, args, body, loc)) = binding
 
@@ -464,27 +513,8 @@ let private kmFunBinding binding ctx =
     go args funTy
 
   let body, ctx =
-    let jointMap = mapEmpty (intHash, intCmp)
-    //   joints
-    //   |> listMapWithIndex (fun (i: int) joint ->
-    //        let (KJointBinding (jointSerial, args, _, _)) = joint
-    //        let label = "L" + string i
-    //        jointSerial, (label, args))
-    //   |> mapOfList (intHash, intCmp)
-
-    // let rec go joints ctx =
-    //   match joints with
-    //   | [] -> ctx
-
-    //   | KJointBinding (jointSerial, _args, body, loc) :: joints ->
-    //       let label, _ = jointMap |> mapFind jointSerial
-
-    //       ctx
-    //       |> addStmt (MLabelStmt(label, loc))
-    //       |> kmNode body
-    //       |> go joints
-
-    ctx |> genBody jointMap (kmNode body)
+    let stmts, labels, ctx = ctx |> genFunBody (kmNode body)
+    listRev (listCollect id (stmts :: labels)), ctx
 
   ctx
   |> addStmt (MProcStmt(funSerial, isMainFun, args, body, resultTy, loc))

@@ -401,56 +401,70 @@ type KirToMirCtx =
       * FunSerial option
       * Serial
       * AssocMap<JointSerial, Label * VarSerial list>
+      * MStmt list list
+      * int
       * MStmt list
       * (Log * Loc) list
 
-let kirToMirCtxGetSerial (KirToMirCtx (serial, _, _, _, _, _, _, _)) =
+let kirToMirCtxGetSerial (KirToMirCtx (serial, _, _, _, _, _, _, _, _, _)) =
   serial
 
-let kirToMirCtxGetVars (KirToMirCtx (_, vars, _, _, _, _, _, _)) =
+let kirToMirCtxGetVars (KirToMirCtx (_, vars, _, _, _, _, _, _, _, _)) =
   vars
 
-let kirToMirCtxGetTys (KirToMirCtx (_, _, tys, _, _, _, _, _)) =
+let kirToMirCtxGetTys (KirToMirCtx (_, _, tys, _, _, _, _, _, _, _)) =
   tys
 
-let kirToMirCtxGetMainFunSerial (KirToMirCtx (_, _, _, mainFunSerial, _, _, _, _)) =
+let kirToMirCtxGetMainFunSerial (KirToMirCtx (_, _, _, mainFunSerial, _, _, _, _, _, _)) =
   mainFunSerial
 
-let kirToMirCtxGetLabelSerial (KirToMirCtx (_, _, _, _, labelSerial, _, _, _)) =
+let kirToMirCtxGetLabelSerial (KirToMirCtx (_, _, _, _, labelSerial, _, _, _, _, _)) =
   labelSerial
 
-let kirToMirCtxGetJointMap (KirToMirCtx (_, _, _, _, _, jointMap, _, _)) =
+let kirToMirCtxGetJointMap (KirToMirCtx (_, _, _, _, _, jointMap, _, _, _, _)) =
   jointMap
 
-let kirToMirCtxGetStmts (KirToMirCtx (_, _, _, _, _, _, stmts, _)) =
+let kirToMirCtxGetLabels (KirToMirCtx (_, _, _, _, _, _, labels, _, _, _)) =
+  labels
+
+let kirToMirCtxGetLabelCount (KirToMirCtx (_, _, _, _, _, _, _, labelCount, _, _)) =
+  labelCount
+
+let kirToMirCtxGetStmts (KirToMirCtx (_, _, _, _, _, _, _, _, stmts, _)) =
   stmts
 
-let kirToMirCtxGetLogs (KirToMirCtx (_, _, _, _, _, _, _, logs)) =
+let kirToMirCtxGetLogs (KirToMirCtx (_, _, _, _, _, _, _, _, _, logs)) =
   logs
 
-let kirToMirCtxWithSerial serial (KirToMirCtx (_, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)): KirToMirCtx =
-  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)
+let kirToMirCtxWithSerial serial (KirToMirCtx (_, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
 
-let kirToMirCtxWithVars vars (KirToMirCtx (serial, _, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)): KirToMirCtx =
-  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)
+let kirToMirCtxWithVars vars (KirToMirCtx (serial, _, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
 
-let kirToMirCtxWithTys tys (KirToMirCtx (serial, vars, _, mainFunSerial, labelSerial, jointMap, stmts, logs)): KirToMirCtx =
-  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)
+let kirToMirCtxWithTys tys (KirToMirCtx (serial, vars, _, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
 
-let kirToMirCtxWithMainFunSerial mainFunSerial (KirToMirCtx (serial, vars, tys, _, labelSerial, jointMap, stmts, logs)): KirToMirCtx =
-  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)
+let kirToMirCtxWithMainFunSerial mainFunSerial (KirToMirCtx (serial, vars, tys, _, labelSerial, jointMap, labels, labelCount, stmts, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
 
-let kirToMirCtxWithLabelSerial labelSerial (KirToMirCtx (serial, vars, tys, mainFunSerial, _, jointMap, stmts, logs)): KirToMirCtx =
-  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)
+let kirToMirCtxWithLabelSerial labelSerial (KirToMirCtx (serial, vars, tys, mainFunSerial, _, jointMap, labels, labelCount, stmts, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
 
-let kirToMirCtxWithJointMap jointMap (KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, _, stmts, logs)): KirToMirCtx =
-  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)
+let kirToMirCtxWithJointMap jointMap (KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, _, labels, labelCount, stmts, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
 
-let kirToMirCtxWithStmts stmts (KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, _, logs)): KirToMirCtx =
-  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)
+let kirToMirCtxWithLabels labels (KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, _, labelCount, stmts, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
 
-let kirToMirCtxWithLogs logs (KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, _)): KirToMirCtx =
-  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, stmts, logs)
+let kirToMirCtxWithLabelCount labelCount (KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, _, stmts, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
+
+let kirToMirCtxWithStmts stmts (KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, _, logs)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
+
+let kirToMirCtxWithLogs logs (KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, _)): KirToMirCtx =
+  KirToMirCtx (serial, vars, tys, mainFunSerial, labelSerial, jointMap, labels, labelCount, stmts, logs)
 
 type MirCtx =
   | MirCtx
