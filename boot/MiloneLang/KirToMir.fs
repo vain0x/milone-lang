@@ -281,7 +281,7 @@ let private kmPrimVariant itself args results conts loc ctx =
 
 let private kmPrimClosure itself args results conts loc ctx =
   match args, results, conts with
-  | [ KVarTerm (funSerial, AppTy (FunTyCtor, [ _; closureTy ]), _); KVarTerm (envSerial, _, _) ], [ result ], [ cont ] ->
+  | [ KFunTerm (funSerial, AppTy (FunTyCtor, [ _; closureTy ]), _); KVarTerm (envSerial, _, _) ], [ result ], [ cont ] ->
       ctx
       |> addStmt (MLetValStmt(result, MClosureInit(funSerial, envSerial), closureTy, loc))
       |> kmNode cont
