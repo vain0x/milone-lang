@@ -81,15 +81,15 @@ let private collectStmts processBody ctx =
   stmts, ctx
 
 let private addLabelWith label loc processBody ctx =
-  ctx
-  |> collectStmts (fun ctx ->
-       let stmts, ctx =
+  let stmts, ctx =
+    ctx
+    |> collectStmts (fun ctx ->
          ctx
          |> addStmt (MLabelStmt(label, loc))
-         |> processBody
+         |> processBody)
 
-       ctx
-       |> kirToMirCtxWithLabels (stmts :: (ctx |> kirToMirCtxGetLabels)))
+  ctx
+  |> kirToMirCtxWithLabels (stmts :: (ctx |> kirToMirCtxGetLabels))
 
 // -----------------------------------------------
 // Emission helpers
@@ -416,9 +416,11 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
   match node with
   | KJumpNode (jointSerial, args, loc) ->
       let label, argSerials =
-        ctx
-        |> kirToMirCtxGetJointMap
-        |> mapFind jointSerial
+        match ctx
+              |> kirToMirCtxGetJointMap
+              |> mapTryFind jointSerial with
+        | Some it -> it
+        | None -> failwithf "NEVER: %A" node
 
       let rec go argSerials args ctx =
         match argSerials, args with
@@ -469,28 +471,39 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
   | KPrimNode (prim, args, results, conts, loc) -> kmPrimNode node prim args results conts loc ctx
 
   | KJointNode (joints, cont, _) ->
-      let rec go joints jointMap labelCount ctx =
-        match joints with
-        | [] -> jointMap, labelCount, ctx
+      let folder (jointMap, labelCount, ctx) joint =
+        let (KJointBinding (jointSerial, args, _, _)) = joint
+        let labelCount = labelCount + 1
+        let label = "L" + string labelCount
 
-        | KJointBinding (jointSerial, args, body, _) :: joints ->
-            let labelCount = labelCount + 1
-            let label = "L" + string labelCount
+        let jointMap =
+          jointMap |> mapAdd jointSerial (label, args)
 
-            let jointMap =
-              jointMap |> mapAdd jointSerial (label, args)
-
-            let ctx = ctx |> kmNode body
-
-            go joints jointMap labelCount ctx
+        jointMap, labelCount, ctx
 
       let ctx =
-        let jointMap = kirToMirCtxGetJointMap ctx
-        let labelCount = kirToMirCtxGetLabelCount ctx
-        let jointMap, labelCount, ctx = go joints jointMap labelCount ctx
+        let jointMap = ctx |> kirToMirCtxGetJointMap
+        let labelCount = ctx |> kirToMirCtxGetLabelCount
+
+        let jointMap, labelCount, ctx =
+          joints
+          |> listFold folder (jointMap, labelCount, ctx)
+
         ctx
         |> kirToMirCtxWithJointMap jointMap
         |> kirToMirCtxWithLabelCount labelCount
+
+      let ctx =
+        joints
+        |> listFold (fun ctx joint ->
+             let (KJointBinding (jointSerial, _, body, loc)) = joint
+
+             let label, _ =
+               ctx
+               |> kirToMirCtxGetJointMap
+               |> mapFind jointSerial
+
+             ctx |> addLabelWith label loc (kmNode body)) ctx
 
       ctx |> kmNode cont
 
