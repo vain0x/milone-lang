@@ -473,7 +473,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
   | KPrimNode (prim, args, results, conts, loc) -> kmPrimNode node prim args results conts loc ctx
 
-  | KJointNode (joints, cont, _) ->
+  | KJointNode (joints, cont, jointLoc) ->
       let folder (jointMap, labelCount, ctx) joint =
         let (KJointBinding (jointSerial, args, _, _)) = joint
         let labelCount = labelCount + 1
@@ -481,6 +481,14 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
         let jointMap =
           jointMap |> mapAdd jointSerial (label, args)
+
+        // Declaration of args as local vars.
+        let ctx =
+          args
+          |> listFold (fun ctx arg ->
+               let argTy = ctx |> findVarTy arg
+               ctx
+               |> addStmt (MLetValStmt(arg, MUninitInit, argTy, jointLoc))) ctx
 
         jointMap, labelCount, ctx
 
