@@ -499,19 +499,21 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
 
   // Creates a joint for each arm to perform pattern-matching on it
   // and returns a node to evaluate the sub-match that consists of these arms.
-  let rec go cond arms ctx: KNode * KirGenCtx =
+  let rec go acc cond arms ctx: KJointBinding list * KNode * KirGenCtx =
     match arms with
     | [] ->
         // Non-exhaustive error.
-        abortNode loc, ctx
+        acc, abortNode loc, ctx
 
     | (HDiscardPat _, guard, body) :: _ when hxIsAlwaysTrue guard ->
-        ctx
-        |> kgExpr body (fun body ctx -> leaveMatch body, ctx)
+        let cont, ctx =
+          ctx
+          |> kgExpr body (fun body ctx -> leaveMatch body, ctx)
+        acc, cont, ctx
 
     | (pat, guard, body) :: arms ->
         let loc = patToLoc pat
-        let rest, ctx = go cond arms ctx
+        let acc, rest, ctx = go acc cond arms ctx
 
         let jointSerial, ctx = ctx |> freshSerial
 
@@ -550,13 +552,19 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
         let ctx =
           ctx
           |> addFunDef jointSerial jointDef
-          |> addJointBinding binding
 
-        KJumpNode(jointSerial, [], loc), ctx
+        binding :: acc, KJumpNode(jointSerial, [], loc), ctx
 
   let createArmJoints ctx =
     ctx
-    |> kgExpr cond (fun cond ctx -> go cond arms ctx)
+    |> kgExpr cond (fun cond ctx ->
+      let joints, cont, ctx =
+        go [] cond arms ctx
+
+      let ctx = ctx |> kirGenCtxWithJoints (listAppend (listRev joints) (ctx |> kirGenCtxGetJoints))
+
+      cont, ctx
+    )
 
   // Create a joint to be called after the match expr.
   let createTargetJoint ctx =
@@ -660,7 +668,8 @@ let private kgLetFunExpr funSerial isMainFun argPats body next loc hole ctx: KNo
 
   let ctx =
     let joints =
-      KJointBinding(funSerial, [], body, loc) :: joints
+      KJointBinding(funSerial, [], body, loc)
+      :: listRev joints
 
     let body =
       KJointNode(joints, KJumpNode(funSerial, [], loc), loc)

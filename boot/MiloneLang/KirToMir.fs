@@ -74,7 +74,7 @@ let private collectStmts processBody ctx =
   let ctx = ctx |> kirToMirCtxWithStmts []
 
   let ctx = processBody ctx
-  let stmts = ctx |> kirToMirCtxGetStmts
+  let stmts = ctx |> kirToMirCtxGetStmts |> listRev
 
   let ctx = ctx |> kirToMirCtxWithStmts parentStmts
 
@@ -451,7 +451,9 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
       let resultTy () = findVarTy result ctx
 
       let doUnary unary ctx =
-        let expr = MUnaryExpr(unary, term, resultTy (), loc)
+        let expr =
+          MUnaryExpr(unary, term, resultTy (), loc)
+
         ctx
         |> addStmt (MLetValStmt(result, MExprInit(expr), resultTy (), loc))
 
@@ -494,6 +496,8 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
         |> kirToMirCtxWithJointMap jointMap
         |> kirToMirCtxWithLabelCount labelCount
 
+      let ctx = ctx |> kmNode cont
+
       let ctx =
         joints
         |> listFold (fun ctx joint ->
@@ -506,7 +510,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
              ctx |> addLabelWith label loc (kmNode body)) ctx
 
-      ctx |> kmNode cont
+      ctx
 
 let private kmFunBinding binding ctx =
   let genFunBody processBody ctx =
@@ -554,7 +558,7 @@ let private kmFunBinding binding ctx =
 
   let body, ctx =
     let stmts, labels, ctx = ctx |> genFunBody (kmNode body)
-    listRev (listCollect id (stmts :: labels)), ctx
+    listCollect id (stmts :: listRev labels), ctx
 
   ctx
   |> addStmt (MProcStmt(funSerial, isMainFun, args, body, resultTy, loc))
@@ -568,6 +572,6 @@ let kirToMir (root: KRoot, kirGenCtx: KirGenCtx): MStmt list * MirCtx =
     funBindings
     |> listFold (fun ctx binding -> kmFunBinding binding ctx) ctx
 
-  let stmts = ctx |> kirToMirCtxGetStmts
+  let stmts = ctx |> kirToMirCtxGetStmts |> listRev
   let mirCtx = ctx |> toMirCtx
   stmts, mirCtx
