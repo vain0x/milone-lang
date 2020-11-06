@@ -401,10 +401,11 @@ let private kmTerm (term: KTerm): MExpr =
 
   | KVarTerm (varSerial, ty, loc)
   | KFunTerm (varSerial, ty, loc)
-  | KVariantTerm (varSerial, ty, loc)
   | KLabelTerm (varSerial, ty, loc) -> MRefExpr(varSerial, ty, loc)
 
   | KTagTerm (variantSerial, loc) -> MTagExpr(variantSerial, loc)
+
+  | KVariantTerm (variantSerial, ty, loc) -> MVariantExpr(-1, variantSerial, ty, loc)
 
   | KNilTerm (itemTy, loc) -> MDefaultExpr(tyList itemTy, loc)
 
