@@ -309,6 +309,13 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
+  | ARecordExpr (_, pos) ->
+      let doArm () =
+        printfn "/* %s */" (objToString expr)
+        hxUnit (toLoc docId pos), nameCtx
+
+      doArm ()
+
   | AIfExpr (cond, body, alt, pos) ->
       let doArm () =
         let expr = desugarIf cond body alt pos
@@ -535,6 +542,13 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let variants, nameCtx = (variants, nameCtx) |> stMap onVariant
         let loc = toLoc docId pos
         HTyDeclExpr(unionSerial, vis, UnionTyDecl(ident, variants, loc), loc), nameCtx
+
+      doArm ()
+
+  | ARecordTyExpr (_, _, _, pos) ->
+      let doArm () =
+        printfn "/* %s */" (objToString expr)
+        hxUnit (toLoc docId pos), nameCtx
 
       doArm ()
 

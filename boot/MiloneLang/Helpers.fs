@@ -861,6 +861,7 @@ let tokenIsExprOrPatFirst (token: Token) =
   | IdentToken _
   | LeftParenToken
   | LeftBracketToken
+  | LeftBraceToken
   | FalseToken
   | TrueToken -> true
 

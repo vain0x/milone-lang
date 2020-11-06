@@ -240,10 +240,13 @@ type ALet =
   | ALetVal of Vis * APat * AExpr * AExpr * Pos
   | ALetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
 
+type AFieldDecl = Ident * ATy * Pos
+
 /// Body of type declaration in AST.
 type ATyDecl =
   | ATySynonymDecl of ATy
   | AUnionTyDecl of AVariant list
+  | ARecordTyDecl of AFieldDecl list
 
 /// Expression in AST.
 type AExpr =
@@ -252,6 +255,8 @@ type AExpr =
   | AIdentExpr of Ident * Pos
   /// List literal, e.g. `[]`, `[2; 3]`.
   | AListExpr of AExpr list * Pos
+  /// Record literal, e.g. `{}`, `{ X = 1; Y = 2 }`.
+  | ARecordExpr of (Ident * AExpr * Pos) list * Pos
   /// condition, then-clause, else-clause.
   | AIfExpr of AExpr * AExpr * AExpr * Pos
   | AMatchExpr of AExpr * AArm list * Pos
@@ -278,6 +283,7 @@ type AExpr =
   | ATySynonymExpr of Vis * Ident * ATy * Pos
   /// Discriminated union type definition, e.g. `type Result = | Ok | Err of int`.
   | AUnionTyExpr of Vis * Ident * AVariant list * Pos
+  | ARecordTyExpr of Vis * Ident * AFieldDecl list * Pos
   | AOpenExpr of Ident list * Pos
 
 /// Root of AST, a result of parsing single source file.
