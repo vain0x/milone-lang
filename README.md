@@ -1,7 +1,5 @@
 # MILONE-LANG
 
-[![Build Status](https://travis-ci.org/vain0x/milone-lang.svg?branch=master)](https://travis-ci.org/vain0x/milone-lang)
-
 Self-hosting is **achieved** at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
 
 ## What
