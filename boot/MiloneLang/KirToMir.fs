@@ -267,13 +267,13 @@ let private kmPrimVariant itself args results conts loc ctx =
       let payload = kmTerm payload
 
       // Set payload to temporary var since MVariantInit requires a serial, not expr.
-      let payloadVarSerial, ctx =
-        let ty, loc = mexprExtract payload
-        ctx |> newVar "payload" ty loc
+      let payloadTy, loc = mexprExtract payload
+      let payloadVarSerial, ctx = ctx |> newVar "payload" payloadTy loc
 
       let resultTy = ctx |> findVarTy result
 
       ctx
+      |> addStmt (MLetValStmt(payloadVarSerial, MExprInit payload, payloadTy, loc))
       |> addStmt (MLetValStmt(result, MVariantInit(variantSerial, payloadVarSerial), resultTy, loc))
       |> kmNode cont
 
