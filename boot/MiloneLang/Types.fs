@@ -67,6 +67,10 @@ type Token =
   | LeftBracketToken
   /// `]`
   | RightBracketToken
+  /// `{`
+  | LeftBraceToken
+  /// `}`
+  | RightBraceToken
   /// `<`
   | LeftAngleToken
   /// `>`
