@@ -549,6 +549,7 @@ let genExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MRefExpr (serial, _, _) -> CRefExpr(cirCtxUniqueName ctx serial), ctx
   | MProcExpr (serial, ty, loc) -> genExprProc ctx serial ty loc
   | MVariantExpr (_, serial, ty, _) -> genExprVariant ctx serial ty
+  | MTagExpr (variantSerial, _) -> CRefExpr(cirCtxUniqueName ctx variantSerial), ctx
   | MUnaryExpr (op, arg, ty, loc) -> genExprUniOp ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
@@ -858,6 +859,7 @@ let genStmtJump ctx stmt =
   | MGotoIfStmt (pred, label, _) ->
       let pred, ctx = genExpr ctx pred
       cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
+
   | MExitStmt (arg, _) ->
       let doArm () =
         let arg, ctx = genExpr ctx arg
@@ -876,6 +878,13 @@ let genStmt ctx stmt =
   | MGotoStmt _
   | MGotoIfStmt _
   | MExitStmt _ -> genStmtJump ctx stmt
+
+  | MIfStmt (cond, thenCl, elseCl, _) ->
+    let cond, ctx = genExpr ctx cond
+    let thenCl, ctx = genBlock ctx thenCl
+    let elseCl, ctx = genBlock ctx elseCl
+    cirCtxAddStmt ctx (CIfStmt(cond, thenCl, elseCl))
+
   | MProcStmt _ -> ctx
 
 let genBlock (ctx: CirCtx) (stmts: MStmt list) =

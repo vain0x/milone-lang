@@ -16,6 +16,10 @@ open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
 open MiloneLang.Monomorphizing
 open MiloneLang.Mir
+open MiloneLang.KirGen
+open MiloneLang.KirPropagate
+open MiloneLang.KirToMir
+open MiloneLang.KirDump
 open MiloneLang.CIrGen
 open MiloneLang.CPrinting
 
@@ -204,6 +208,119 @@ let cliCompile host verbosity projectDir =
   printfn "%s" (output |> strTrimEnd)
   exitCode
 
+// experimental: use kir
+let buildWithKir host verbosity mode (projectDir: string): string * bool =
+  let profileLog = host |> cliHostGetProfileLog
+  let readFile = host |> cliHostGetFileReadAllText
+
+  let readModuleFile moduleName =
+    readFile (projectDir + "/" + moduleName + ".fs")
+
+  let parseTokens (_moduleName: string) tokens = parse tokens
+
+  let log msg =
+    match verbosity with
+    | Profile profiler -> profiler |> profileLog msg
+
+    | Verbose
+    | Quiet -> ()
+
+  let projectDir = projectDir |> pathStrTrimEndPathSep
+
+  let projectName = projectDir |> pathStrToStem
+  log ("Begin compiling project=" + projectName)
+
+  let expr, nameCtx, errorListList =
+    parseProjectModules readModuleFile parseTokens projectName (nameCtxEmpty ())
+
+  log "Name resolution"
+  let expr, scopeCtx = nameRes (expr, nameCtx)
+
+  log "Type inference"
+  let expr, tyCtx = infer (expr, scopeCtx, errorListList)
+  if tyCtx |> tyCtxHasError then
+    tyCtx |> tyCtxGetLogs |> printLogs
+  else
+    log "Hoist main"
+    let expr, tyCtx = hoistMain (expr, tyCtx)
+
+    log "Closure conversion"
+    let expr, tyCtx = declosure (expr, tyCtx)
+    if tyCtx |> tyCtxHasError then
+      tyCtx |> tyCtxGetLogs |> printLogs
+    else
+      log "Eta expansion"
+      let expr, tyCtx = uneta (expr, tyCtx)
+      if tyCtx |> tyCtxHasError then
+        tyCtx |> tyCtxGetLogs |> printLogs
+      else
+        log "Hoist"
+        let expr, tyCtx = hoist (expr, tyCtx)
+
+        log "Monomorphization"
+        let expr, tyCtx = monify (expr, tyCtx)
+        if tyCtx |> tyCtxHasError then
+          tyCtx |> tyCtxGetLogs |> printLogs
+        else
+          log "KirGen"
+          let kRoot, kirGenCtx = kirGen (expr, tyCtx)
+
+          let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
+
+          if mode then
+            log "KirDump"
+
+            let output =
+              kirDump projectName "" (kRoot, kirGenCtx)
+
+            output, true
+          else
+            log "KirToMir"
+            let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
+
+            log "Cir generation"
+            let cir, success = gen (stmts, mirCtx)
+            let cOutput = cprint cir
+            cOutput, success
+
+// log "KirToMir"
+// let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
+
+// if mirCtx |> mirCtxGetLogs |> listIsEmpty |> not then
+//   mirCtx |> mirCtxGetLogs |> printLogs
+// else
+//   log "Cir generation"
+//   let cir, success = gen (stmts, mirCtx)
+
+//   let output = cprint cir
+
+//   log "Finished"
+//   output, success
+
+let cliCompileWithKirToDump host verbosity projectDir =
+  printfn "/*"
+  let output, success = buildWithKir host verbosity true projectDir
+
+  if success then
+    printfn "*/"
+    printfn "%s" (output |> strTrimEnd)
+    0
+  else
+    printfn "\n%s\n*/" output
+    1
+
+let cliCompileWithKirToClang host verbosity projectDir =
+  printfn "/*"
+  let output, success = buildWithKir host verbosity false projectDir
+
+  if success then
+    printfn "*/"
+    printfn "%s" (output |> strTrimEnd)
+    0
+  else
+    printfn "\n%s\n*/" output
+    1
+
 let cli (host: CliHost) =
   match host |> cliHostGetArgs with
   | [ "parse"; projectDir ] -> cliParse host projectDir
@@ -216,6 +333,33 @@ let cli (host: CliHost) =
       cliCompile host profile projectDir
 
   | [ "-q"; projectDir ] -> cliCompile host Quiet projectDir
+
+  // experimental feature
+  | "--kir-dump" :: projectDirs ->
+      printfn "// Common code.\n%s\n" (kirHeader ())
+
+      projectDirs
+      |> listFold (fun success projectDir ->
+           printfn "// -------------------------------\n// %s\n{\n" projectDir
+
+           let code = cliCompileWithKirToDump host Quiet projectDir
+
+           printfn "\n// exit = %d\n}\n" code
+
+           code + success) 0
+
+  | "--kir-c" :: projectDirs ->
+      printfn "// Generated using KIR.\n"
+
+      projectDirs
+      |> listFold (fun success projectDir ->
+           printfn "// -------------------------------\n// %s\n" projectDir
+
+           let code = cliCompileWithKirToClang host Quiet projectDir
+
+           printfn "\n// exit = %d\n" code
+
+           code + success) 0
 
   | _ ->
       // FIXME: to stderr

@@ -168,8 +168,10 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
   let envArgRef, envArgSerial, ctx = etaCtxFreshVar "env" tyObj callLoc ctx
   let envArgPat = HRefPat(envArgSerial, tyObj, callLoc)
 
+  let underlyingFunTy = tyFun envTy funTy
+
   let _, funSerial, ctx =
-    etaCtxFreshFun "fun" arity funTy callLoc ctx
+    etaCtxFreshFun "fun" arity underlyingFunTy callLoc ctx
 
   let argPats = envArgPat :: restArgPats
 
@@ -179,7 +181,7 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
   let funLet next =
     HLetFunExpr(funSerial, PrivateVis, false, argPats, body, next, exprToTy next, callLoc)
 
-  let funRef = HRefExpr(funSerial, funTy, callLoc)
+  let funRef = HRefExpr(funSerial, underlyingFunTy, callLoc)
   funLet, funRef, ctx
 
 let createEnvBoxExpr args envTy callLoc =

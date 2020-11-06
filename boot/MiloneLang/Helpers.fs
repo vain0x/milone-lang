@@ -212,6 +212,11 @@ let listLast xs =
 
   go xs
 
+let listItem i xs =
+  match listSkip i xs with
+  | item :: _ -> item
+  | _ -> failwith "listItem: out of range"
+
 let listTryFind pred xs =
   let rec go xs =
     match xs with
@@ -595,6 +600,14 @@ let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> 
 
 let setFold folder state (set: AssocSet<_>) =
   set |> setToList |> listFold folder state
+
+// TODO: make it more efficient
+let setExists pred (set: AssocSet<_>) = set |> setToList |> listExists pred
+
+// TODO: make it more efficient
+let setUnion first second =
+  first
+  |> setFold (fun set item -> set |> setAdd item) second
 
 // -----------------------------------------------
 // Int
@@ -1655,6 +1668,27 @@ let exprToLoc expr =
   loc
 
 // -----------------------------------------------
+// Term (KIR)
+// -----------------------------------------------
+
+let kTermToTy (term: KTerm): Ty =
+  match term with
+  | KLitTerm (lit, _) -> litToTy lit
+
+  | KVarTerm (_, ty, _)
+  | KFunTerm (_, ty, _)
+  | KVariantTerm (_, ty, _) -> ty
+
+  | KTagTerm _ -> tyInt
+
+  | KLabelTerm (_, ty, _) -> ty
+
+  | KNilTerm (itemTy, _)
+  | KNoneTerm (itemTy, _) -> tyList itemTy
+
+  | KUnitTerm _ -> tyUnit
+
+// -----------------------------------------------
 // Binary Operators (MIR)
 // -----------------------------------------------
 
@@ -1683,6 +1717,7 @@ let mexprExtract expr =
   | MRefExpr (_, ty, loc) -> ty, loc
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc
+  | MTagExpr (_, loc) -> tyInt, loc
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
 
