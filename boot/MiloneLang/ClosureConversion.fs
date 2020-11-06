@@ -408,6 +408,8 @@ let declosureExpr (expr, ctx) =
 
       doArm ()
 
+  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
+
   | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let target, ctx = declosureExpr (target, ctx)
@@ -452,7 +454,8 @@ let declosureExpr (expr, ctx) =
   | HTyDeclExpr (_, _, tyDecl, _) ->
       let doArm () =
         match tyDecl with
-        | TySynonymDecl _ -> expr, ctx
+        | TySynonymDecl _
+        | RecordTyDecl _ -> expr, ctx
 
         | UnionTyDecl (_, variants, _) ->
             let ctx =

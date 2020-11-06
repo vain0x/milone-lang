@@ -763,6 +763,8 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
 
   | HPrimExpr (prim, ty, loc) -> kgPrimExpr expr prim ty loc hole ctx
 
+  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
+
   | HMatchExpr (cond, arms, ty, loc) -> kgMatchExpr cond arms ty loc hole ctx
 
   | HInfExpr (infOp, args, ty, loc) -> kgInfExpr expr infOp args ty loc hole ctx

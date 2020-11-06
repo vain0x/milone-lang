@@ -179,6 +179,8 @@ let hoistExprCore (expr, ctx) =
   | HPrimExpr _
   | HOpenExpr _ -> expr, ctx
 
+  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
+
   | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let go ((pat, guard, body), ctx) =

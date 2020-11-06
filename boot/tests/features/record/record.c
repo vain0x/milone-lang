@@ -3,6 +3,8 @@
 int main();
 
 int main() {
-    int _pt_ = 0;
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
+    (*(((int*)box_))) = 0;
+    struct Point_ _pt_ = (*(((struct Point_*)box_)));
     return 0;
 }

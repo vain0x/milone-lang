@@ -181,7 +181,9 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
   let funLet next =
     HLetFunExpr(funSerial, PrivateVis, false, argPats, body, next, exprToTy next, callLoc)
 
-  let funRef = HRefExpr(funSerial, underlyingFunTy, callLoc)
+  let funRef =
+    HRefExpr(funSerial, underlyingFunTy, callLoc)
+
   funLet, funRef, ctx
 
 let createEnvBoxExpr args envTy callLoc =
@@ -346,6 +348,7 @@ let unetaExpr (expr, ctx) =
   | HErrorExpr _ -> expr, ctx
   | HRefExpr (serial, refTy, calleeLoc) -> unetaRef expr serial refTy calleeLoc ctx
   | HPrimExpr (prim, primTy, calleeLoc) -> unetaPrim expr prim primTy calleeLoc ctx
+  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
   | HMatchExpr (target, arms, ty, loc) ->
       let target, ctx = (target, ctx) |> unetaExpr
 

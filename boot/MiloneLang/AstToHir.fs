@@ -309,10 +309,17 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-  | ARecordExpr (_, pos) ->
+  | ARecordExpr (fields, pos) ->
+      let onField ((fieldIdent, init, fieldPos), nameCtx) =
+        let init, nameCtx = (init, nameCtx) |> astToHirExpr docId
+        let fieldLoc = toLoc docId fieldPos
+
+        (fieldIdent, init, fieldLoc), nameCtx
+
       let doArm () =
-        printfn "/* %s */" (objToString expr)
-        hxUnit (toLoc docId pos), nameCtx
+        let fields, nameCtx = (fields, nameCtx) |> stMap onField
+        let loc = toLoc docId pos
+        HRecordExpr(fields, noTy, loc), nameCtx
 
       doArm ()
 
@@ -545,10 +552,21 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-  | ARecordTyExpr (_, _, _, pos) ->
+  | ARecordTyExpr (vis, tyIdent, fieldDecls, pos) ->
+      let onFieldDecl ((fieldIdent, ty, fieldPos), nameCtx) =
+        let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
+        let fieldLoc = toLoc docId fieldPos
+
+        (fieldIdent, ty, fieldLoc), nameCtx
+
       let doArm () =
-        printfn "/* %s */" (objToString expr)
-        hxUnit (toLoc docId pos), nameCtx
+        let tySerial, nameCtx = nameCtx |> nameCtxAdd tyIdent
+
+        let fields, nameCtx =
+          (fieldDecls, nameCtx) |> stMap onFieldDecl
+
+        let loc = toLoc docId pos
+        HTyDeclExpr(tySerial, vis, RecordTyDecl(tyIdent, fields, loc), loc), nameCtx
 
       doArm ()
 

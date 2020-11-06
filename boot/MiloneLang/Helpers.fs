@@ -1309,6 +1309,7 @@ let tyDefToIdent tyDef =
   match tyDef with
   | MetaTyDef (ident, _, _) -> ident
   | UnionTyDef (ident, _, _) -> ident
+  | RecordTyDef (ident, _, _) -> ident
   | ModuleTyDef (ident, _) -> ident
 
 // -----------------------------------------------
@@ -1624,6 +1625,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HLitExpr (lit, a) -> litToTy lit, a
   | HRefExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
+  | HRecordExpr (_, ty, a) -> ty, a
   | HMatchExpr (_, _, ty, a) -> ty, a
   | HNavExpr (_, _, ty, a) -> ty, a
   | HInfExpr (_, _, ty, a) -> ty, a
@@ -1642,6 +1644,14 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HLitExpr (lit, a) -> HLitExpr(lit, g a)
     | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
+
+    | HRecordExpr (fields, ty, a) ->
+        let fields =
+          fields
+          |> listMap (fun (ident, init, a) -> ident, go init, g a)
+
+        HRecordExpr(fields, f ty, g a)
+
     | HMatchExpr (target, arms, ty, a) ->
         let arms =
           arms

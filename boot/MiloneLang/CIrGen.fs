@@ -307,6 +307,29 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
 
       selfTy, ctx
 
+let cirCtxAddRecordTyIncomplete ctx tySerial =
+  let recordTyRef = tyRef tySerial []
+
+  match ctx |> cirCtxGetTyEnv |> mapTryFind recordTyRef with
+  | Some (_, ty) -> ty, ctx
+
+  | None ->
+      let recordTyIdent, ctx = cirCtxUniqueTyName ctx recordTyRef
+      let selfTy = CStructTy recordTyIdent
+
+      // TODO: Generate type declaration.
+
+      selfTy, ctx
+
+let cirCtxAddRecordTyDecl ctx tySerial _fields =
+  let recordTyRef = tyRef tySerial []
+  let recordTyIdent, ctx = cirCtxUniqueTyName ctx recordTyRef
+  let selfTy = CStructTy recordTyIdent
+
+  // TODO: Generate type definition.
+
+  selfTy, ctx
+
 let cirCtxUniqueName (ctx: CirCtx) serial =
   match ctx
         |> cirCtxGetVarUniqueNames
@@ -410,6 +433,8 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
       match ctx |> cirCtxGetTys |> mapTryFind serial with
       | Some (UnionTyDef _) -> cirCtxAddUnionIncomplete ctx serial
 
+      | Some (RecordTyDef _) -> cirCtxAddRecordTyIncomplete ctx serial
+
       | _ -> CVoidTy, cirCtxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
 
   | _ -> CVoidTy, cirCtxAddErr ctx "error type" noLoc // FIXME: source location
@@ -436,6 +461,8 @@ let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (RefTyCtor serial, _) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> cirCtxAddUnionDecl ctx serial variants
+
+      | Some (RecordTyDef (_, fields, _)) -> cirCtxAddRecordTyDecl ctx serial fields
 
       | _ -> CVoidTy, cirCtxAddErr ctx "Unknown type reference" noLoc // FIXME: source location
 
@@ -880,10 +907,10 @@ let genStmt ctx stmt =
   | MExitStmt _ -> genStmtJump ctx stmt
 
   | MIfStmt (cond, thenCl, elseCl, _) ->
-    let cond, ctx = genExpr ctx cond
-    let thenCl, ctx = genBlock ctx thenCl
-    let elseCl, ctx = genBlock ctx elseCl
-    cirCtxAddStmt ctx (CIfStmt(cond, thenCl, elseCl))
+      let cond, ctx = genExpr ctx cond
+      let thenCl, ctx = genBlock ctx thenCl
+      let elseCl, ctx = genBlock ctx elseCl
+      cirCtxAddStmt ctx (CIfStmt(cond, thenCl, elseCl))
 
   | MProcStmt _ -> ctx
 

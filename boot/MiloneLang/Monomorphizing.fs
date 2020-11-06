@@ -306,6 +306,8 @@ let rec monifyExpr (expr, ctx) =
 
       doArm ()
 
+  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
+
   | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let target, ctx = (target, ctx) |> monifyExpr

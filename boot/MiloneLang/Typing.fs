@@ -394,8 +394,7 @@ let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
       let resultTy, ctx = ctx |> tyCtxFreshExprTy expr
       let funTy, ctx = go resultTy arity ctx
 
-      let ctx =
-        tyCtxUnifyTy ctx loc funTy targetTy
+      let ctx = tyCtxUnifyTy ctx loc funTy targetTy
 
       HPrimExpr(HPrim.NativeFun(nativeFunIdent, arity), funTy, loc), funTy, ctx
   | _ -> hxApp callee arg targetTy loc, targetTy, ctx
@@ -530,6 +529,11 @@ let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
+
+  | HRecordExpr (_, _, loc) ->
+      printfn "/* unimplemented. %A */" expr
+      hxUnit loc, tyUnit, ctx
+
   | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx expr callee arg loc

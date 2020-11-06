@@ -385,12 +385,14 @@ type TyDecl =
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
   | UnionTyDecl of Ident * variants: (Ident * VarSerial * bool * Ty) list * Loc
+  | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * Loc
 
 /// Type definition.
 type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ident * Ty * Loc
   | UnionTyDef of Ident * VariantSerial list * Loc
+  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
   | ModuleTyDef of Ident * Loc
 
 /// Variable definition in high-level IR.
@@ -472,6 +474,7 @@ type HExpr =
   /// Variable reference.
   | HRefExpr of VarSerial * Ty * Loc
   | HPrimExpr of HPrim * Ty * Loc
+  | HRecordExpr of (Ident * HExpr * Loc) list * Ty * Loc
   | HMatchExpr of target: HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`
   | HNavExpr of HExpr * Ident * Ty * Loc
