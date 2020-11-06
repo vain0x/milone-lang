@@ -82,7 +82,7 @@ let private kgRefPat itself varSerial ty loc ctx =
   match findVarDef varSerial ctx with
   | VarDef _ -> PLetNode(varSerial, PDiscardNode, loc)
 
-  | VariantDef _ -> PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc)
+  | VariantDef _ -> PSelectNode(KTagPath loc, PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc), loc)
 
   | FunDef _ -> failwithf "NEVER: fun can't appear as pattern. %A" itself
 
@@ -100,7 +100,7 @@ let private kgCallPat itself callee args ty loc ctx =
       match findVarDef varSerial ctx, args with
       | VariantDef _, [ payloadPat ] ->
           PConjNode
-            ([ PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc)
+            ([ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc), loc)
                PSelectNode(KPayloadPath(varSerial, loc), kgPat payloadPat ctx, loc) ],
              loc)
 
@@ -509,6 +509,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
         let cont, ctx =
           ctx
           |> kgExpr body (fun body ctx -> leaveMatch body, ctx)
+
         acc, cont, ctx
 
     | (pat, guard, body) :: arms ->
@@ -549,22 +550,20 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
         let binding =
           KJointBinding(jointSerial, [], body, loc)
 
-        let ctx =
-          ctx
-          |> addFunDef jointSerial jointDef
+        let ctx = ctx |> addFunDef jointSerial jointDef
 
         binding :: acc, KJumpNode(jointSerial, [], loc), ctx
 
   let createArmJoints ctx =
     ctx
     |> kgExpr cond (fun cond ctx ->
-      let joints, cont, ctx =
-        go [] cond arms ctx
+         let joints, cont, ctx = go [] cond arms ctx
 
-      let ctx = ctx |> kirGenCtxWithJoints (listAppend (listRev joints) (ctx |> kirGenCtxGetJoints))
+         let ctx =
+           ctx
+           |> kirGenCtxWithJoints (listAppend (listRev joints) (ctx |> kirGenCtxGetJoints))
 
-      cont, ctx
-    )
+         cont, ctx)
 
   // Create a joint to be called after the match expr.
   let createTargetJoint ctx =
