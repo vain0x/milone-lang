@@ -17,6 +17,10 @@ open MiloneLang.Records
 
 let tyCtxGetTy tySerial (ctx: TyCtx) = ctx |> tyCtxGetTys |> mapFind tySerial
 
+let private addLog (ctx: TyCtx) log loc =
+  ctx
+  |> tyCtxWithLogs ((log, loc) :: (ctx |> tyCtxGetLogs))
+
 let tyCtxAddErr (ctx: TyCtx) message loc =
   ctx
   |> tyCtxWithLogs ((Log.Error message, loc) :: (ctx |> tyCtxGetLogs))
@@ -209,8 +213,6 @@ let tyCtxUnifyVarTy varSerial tyOpt loc ctx =
 
   | None -> varTy, ctx
 
-
-
 let tyCtxFreshPatTy pat ctx =
   let _, loc = pat |> patExtract
   let tySerial, ctx = ctx |> tyCtxFreshTySerial
@@ -222,6 +224,20 @@ let tyCtxFreshExprTy expr ctx =
   let tySerial, ctx = ctx |> tyCtxFreshTySerial
   let ty = MetaTy(tySerial, loc)
   ty, ctx
+
+/// Tries to get ty annotation from pat.
+let private patToAnnoTy pat =
+  match pat with
+  | HAnnoPat (_, ty, _) -> Some ty
+
+  | HAsPat (pat, _, _) -> patToAnnoTy pat
+
+  | HOrPat (l, r, _, _) ->
+      match patToAnnoTy l with
+      | None -> patToAnnoTy r
+      | it -> it
+
+  | _ -> None
 
 let inferPatNil ctx pat loc =
   let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
@@ -292,7 +308,6 @@ let inferPatAs ctx body varSerial loc =
   let _, ctx =
     ctx |> tyCtxUnifyVarTy varSerial (Some bodyTy) loc
 
-
   HAsPat(body, varSerial, loc), bodyTy, ctx
 
 let inferPatAnno ctx body annoTy loc =
@@ -343,59 +358,107 @@ let inferNil ctx expr loc =
   let itemTy, ctx = tyCtxFreshExprTy expr ctx
   hxNil itemTy loc, tyList itemTy, ctx
 
-let inferRecord ctx itself baseOpt fields loc =
-  let baseOpt, recordTy, ctx =
+let inferRecord ctx expectOpt baseOpt fields loc =
+
+  // First, infer base if exists.
+  let baseOpt, baseTyOpt, ctx =
     match baseOpt with
-    | None ->
-        let recordTy, ctx = tyCtxFreshExprTy itself ctx
-        None, recordTy, ctx
+    | None -> None, None, ctx
 
     | Some baseExpr ->
-        let baseExpr, recordTy, ctx = inferExpr ctx baseExpr
-        Some baseExpr, recordTy, ctx
+        let baseExpr, recordTy, ctx = inferExpr ctx expectOpt baseExpr
+        Some baseExpr, Some recordTy, ctx
 
-  let fields, ctx =
-    (fields, ctx)
-    |> stMap (fun ((ident, init, loc), ctx) ->
-         let init, ty, ctx = inferExpr ctx init
-         (ident, init, ty, loc), ctx)
+  // Determine the record type by base expr or expectation.
+  let recordTyInfoOpt =
+    let asRecordTy tyOpt =
+      match tyOpt |> optionMap (tyCtxSubstTy ctx) with
+      | Some ((AppTy (RefTyCtor tySerial, [])) as recordTy) ->
+          match ctx |> tyCtxGetTy tySerial with
+          | RecordTyDef (recordIdent, fieldDefs, _) -> Some(recordTy, recordIdent, fieldDefs)
+          | _ -> None
 
-  let ctx =
-    let fields =
-      fields
-      |> listMap (fun (ident, _, ty, loc) -> ident, ty, loc)
+      | _ -> None
 
-    let isExhaustive = baseOpt |> optionIsNone
+    match baseTyOpt |> asRecordTy with
+    | ((Some _) as it) -> it
+    | _ -> expectOpt |> asRecordTy
 
-    tyCtxAddTraitBounds [ (RecordTrait(recordTy, fields, isExhaustive), loc) ] ctx
+  match recordTyInfoOpt with
+  | None ->
+      let ctx =
+        tyCtxAddErr ctx "Can't infer type of record." loc
 
-  let fields =
-    fields
-    |> listMap (fun (ident, init, _, loc) -> ident, init, loc)
+      hxAbort ctx loc
 
-  match baseOpt with
-  | None -> HRecordExpr(None, fields, recordTy, loc), recordTy, ctx
+  | Some (recordTy, recordIdent, fieldDefs) ->
+      let addRedundantErr fieldIdent loc ctx =
+        addLog ctx (Log.RedundantFieldError(recordIdent, fieldIdent)) loc
 
-  | Some baseExpr ->
-      // Assign to a temporary var so that TyElaborating can reuse the expr safely.
-      // (This kind of modification is not business of typing, though.)
-      // { base with fields... } ==> let t = base in { t with fields... }
-      let varSerial, ctx = tyCtxFreshVar ctx "base" recordTy loc
+      let addIncompleteErr fieldIdents ctx =
+        addLog ctx (Log.MissingFieldsError(recordIdent, fieldIdents)) loc
 
-      let varPat = HRefPat(varSerial, recordTy, loc)
-      let varExpr = HRefExpr(varSerial, recordTy, loc)
+      // Infer field initializers and whether each of them is member of the record type.
+      // Whenever a field appears, remove it from the set of fields
+      // so that second occurrence of it is marked as redundant.
+      let fields, (fieldDefs, ctx) =
+        let fieldDefs =
+          fieldDefs
+          |> listMap (fun (ident, ty, _) -> ident, ty)
+          |> mapOfList (strHash, strCmp)
 
-      let recordExpr =
-        HRecordExpr(Some varExpr, fields, recordTy, loc)
+        (fields, (fieldDefs, ctx))
+        |> stMap (fun (field, (fieldDefs, ctx)) ->
+             let ident, init, loc = field
 
-      HLetValExpr(PrivateVis, varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
+             match fieldDefs |> mapRemove ident with
+             | None, _ ->
+                 let ctx = ctx |> addRedundantErr ident loc
+                 let init, _, ctx = inferExpr ctx None init
+                 (ident, init, loc), (fieldDefs, ctx)
+
+             | Some defTy, fieldDefs ->
+                 let init, initTy, ctx = inferExpr ctx (Some defTy) init
+                 let ctx = tyCtxUnifyTy ctx loc initTy defTy
+                 (ident, init, loc), (fieldDefs, ctx))
+
+      // Unless base expr is specified, set of field initializers must be complete.
+      let ctx =
+        if baseOpt
+           |> optionIsNone
+           && fieldDefs |> mapIsEmpty |> not then
+          let fields =
+            fieldDefs
+            |> mapToList
+            |> listMap (fun (ident, _) -> ident)
+
+          ctx |> addIncompleteErr fields
+        else
+          ctx
+
+      match baseOpt with
+      | None -> HRecordExpr(None, fields, recordTy, loc), recordTy, ctx
+
+      | Some baseExpr ->
+          // Assign to a temporary var so that TyElaborating can reuse the expr safely.
+          // (This kind of modification is not business of typing, though.)
+          // { base with fields... } ==> let t = base in { t with fields... }
+          let varSerial, ctx = tyCtxFreshVar ctx "base" recordTy loc
+
+          let varPat = HRefPat(varSerial, recordTy, loc)
+          let varExpr = HRefExpr(varSerial, recordTy, loc)
+
+          let recordExpr =
+            HRecordExpr(Some varExpr, fields, recordTy, loc)
+
+          HLetValExpr(PrivateVis, varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
 
 /// match 'a with ( | 'a -> 'b )*
 // expr: match expr itself
-let inferMatch ctx expr cond arms loc =
+let inferMatch ctx expectOpt expr cond arms loc =
   let targetTy, ctx = tyCtxFreshExprTy expr ctx
 
-  let cond, condTy, ctx = inferExpr ctx cond
+  let cond, condTy, ctx = inferExpr ctx None cond
 
   let arms, ctx =
     (arms, ctx)
@@ -405,12 +468,12 @@ let inferMatch ctx expr cond arms loc =
          let ctx =
            tyCtxUnifyTy ctx (patToLoc pat) patTy condTy
 
-         let guard, guardTy, ctx = inferExpr ctx guard
+         let guard, guardTy, ctx = inferExpr ctx None guard
 
          let ctx =
            tyCtxUnifyTy ctx (exprToLoc guard) guardTy tyBool
 
-         let body, bodyTy, ctx = inferExpr ctx body
+         let body, bodyTy, ctx = inferExpr ctx expectOpt body
 
          let ctx =
            tyCtxUnifyTy ctx (exprToLoc body) targetTy bodyTy
@@ -420,7 +483,13 @@ let inferMatch ctx expr cond arms loc =
   HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
 let inferNav ctx sub mes loc =
-  let sub, subTy, ctx = inferExpr ctx sub
+  let fail ctx =
+    let ctx =
+      tyCtxAddErr ctx "Expected to have field: '%s'." loc
+
+    hxAbort ctx loc
+
+  let sub, subTy, ctx = inferExpr ctx None sub
 
   let subTy = tyCtxSubstTy ctx subTy
   match subTy, mes with
@@ -430,14 +499,22 @@ let inferNav ctx sub mes loc =
 
       hxApp funExpr sub tyInt loc, tyInt, ctx
 
-  | _ ->
-      let fieldTy, (), ctx = tyCtxFreshTyVar mes loc ctx
+  | AppTy (RefTyCtor tySerial, []), _ ->
+      let fieldTyOpt =
+        let ident = mes
+        match ctx |> tyCtxGetTy tySerial with
+        | RecordTyDef (_, fieldDefs, _) ->
+            match fieldDefs
+                  |> listTryFind (fun (theIdent, _, _) -> theIdent = ident) with
+            | Some (_, fieldTy, _) -> Some fieldTy
+            | None -> None
+        | _ -> None
 
-      let ctx =
-        ctx
-        |> tyCtxAddTraitBounds [ (FieldTrait(subTy, mes, fieldTy), loc) ]
+      match fieldTyOpt with
+      | Some fieldTy -> HNavExpr(sub, mes, fieldTy, loc), fieldTy, ctx
+      | None -> fail ctx
 
-      HNavExpr(sub, mes, fieldTy, loc), fieldTy, ctx
+  | _ -> fail ctx
 
 // expr: app expr itself
 let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
@@ -471,8 +548,8 @@ let inferOpAppPrintfn ctx arg loc =
 
 let inferOpApp ctx expr callee arg loc =
   let targetTy, ctx = ctx |> tyCtxFreshExprTy expr
-  let arg, argTy, ctx = inferExpr ctx arg
-  let callee, calleeTy, ctx = inferExpr ctx callee
+  let arg, argTy, ctx = inferExpr ctx None arg
+  let callee, calleeTy, ctx = inferExpr ctx None callee
 
   let ctx =
     tyCtxUnifyTy ctx loc calleeTy (tyFun argTy targetTy)
@@ -494,7 +571,7 @@ let inferTuple (ctx: TyCtx) items loc =
     match items with
     | [] -> listRev acc, listRev itemTys, ctx
     | item :: items ->
-        let item, itemTy, ctx = inferExpr ctx item
+        let item, itemTy, ctx = inferExpr ctx None item
         go (item :: acc) (itemTy :: itemTys) ctx items
 
   let items, itemTys, ctx = go [] [] ctx items
@@ -502,22 +579,25 @@ let inferTuple (ctx: TyCtx) items loc =
   hxTuple items loc, tyTuple itemTys, ctx
 
 let inferAnno ctx body annoTy loc =
-  let body, bodyTy, ctx = inferExpr ctx body
+  let body, bodyTy, ctx = inferExpr ctx (Some annoTy) body
 
   let ctx = tyCtxUnifyTy ctx loc bodyTy annoTy
 
   body, annoTy, ctx
 
-let inferLetVal ctx vis pat init next loc =
-  let init, initTy, ctx = inferExpr ctx init
+let inferLetVal ctx expectOpt vis pat init next loc =
+  let init, initTy, ctx =
+    let expectOpt = patToAnnoTy pat
+    inferExpr ctx expectOpt init
+
   let pat, patTy, ctx = inferPat ctx pat
 
   let ctx = tyCtxUnifyTy ctx loc initTy patTy
 
-  let next, nextTy, ctx = inferExpr ctx next
+  let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetValExpr(vis, pat, init, next, nextTy, loc), nextTy, ctx
 
-let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next loc =
+let inferLetFun (ctx: TyCtx) expectOpt varSerial vis isMainFun argPats body next loc =
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx funTy argPats =
@@ -553,7 +633,7 @@ let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next loc =
 
   let ctx = tyCtxUnifyTy ctx loc calleeTy funTy
 
-  let body, bodyTy, ctx = inferExpr ctx body
+  let body, bodyTy, ctx = inferExpr ctx None body
 
   let ctx =
     tyCtxUnifyTy ctx loc bodyTy provisionalResultTy
@@ -563,41 +643,44 @@ let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next loc =
   let ctx =
     tyCtxGeneralizeFun ctx outerLetDepth varSerial
 
-  let next, nextTy, ctx = inferExpr ctx next
+  let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetFunExpr(varSerial, vis, isMainFun, argPats, body, next, nextTy, loc), nextTy, ctx
 
 /// Returns in reversed order.
-let inferExprs ctx exprs loc: HExpr list * Ty * TyCtx =
+let inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
   let rec go acc (prevTy, prevLoc) ctx exprs =
     match exprs with
     | [] -> acc, prevTy, ctx
     | expr :: exprs ->
         let ctx = tyCtxUnifyTy ctx prevLoc prevTy tyUnit
 
-        let expr, ty, ctx = inferExpr ctx expr
+        let expectOpt =
+          if listIsEmpty exprs then expectOpt else None
+
+        let expr, ty, ctx = inferExpr ctx expectOpt expr
         go (expr :: acc) (ty, exprToLoc expr) ctx exprs
 
   go [] (tyUnit, loc) ctx exprs
 
-let inferSemi ctx exprs loc =
-  let exprs, ty, ctx = inferExprs ctx exprs loc
+let inferSemi ctx expectOpt exprs loc =
+  let exprs, ty, ctx = inferExprs ctx expectOpt exprs loc
   hxSemi (listRev exprs) loc, ty, ctx
 
-let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
+let inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
   match expr with
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
-  | HRecordExpr (baseOpt, fields, _, loc) -> inferRecord ctx expr baseOpt fields loc
-  | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expr cond arms loc
+  | HRecordExpr (baseOpt, fields, _, loc) -> inferRecord ctx expectOpt baseOpt fields loc
+  | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expectOpt expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx expr callee arg loc
   | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTuple ctx items loc
   | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnno ctx expr annoTy loc
-  | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemi ctx exprs loc
-  | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetVal ctx vis pat body next loc
+  | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemi ctx expectOpt exprs loc
+  | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetVal ctx expectOpt vis pat body next loc
   | HLetFunExpr (oldSerial, vis, isMainFun, args, body, next, _, loc) ->
-      inferLetFun ctx oldSerial vis isMainFun args body next loc
+      inferLetFun ctx expectOpt oldSerial vis isMainFun args body next loc
   | HTyDeclExpr _
   | HOpenExpr _ -> expr, tyUnit, ctx
   | HInfExpr (InfOp.Anno, _, _, _)
@@ -683,7 +766,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
   let ctx = ctx |> tyCtxWithLetDepth 0
 
   let expr, ctx =
-    let expr, topLevelTy, ctx = inferExpr ctx expr
+    let expr, topLevelTy, ctx = inferExpr ctx None expr
 
     let ctx =
       tyCtxUnifyTy ctx (exprToLoc expr) topLevelTy tyUnit
@@ -718,11 +801,21 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
     let tys =
       ctx
       |> tyCtxGetTys
-      |> mapFilter (fun _ tyDef ->
+      |> mapToList
+      |> listChoose (fun kv ->
+           let tySerial, tyDef = kv
            match tyDef with
-           | MetaTyDef _ -> false
+           | MetaTyDef _ -> None
+           | RecordTyDef (ident, fields, loc) ->
+               let fields =
+                 fields
+                 |> listMap (fun (ident, ty, loc) ->
+                      let ty = tyCtxSubstTy ctx ty
+                      ident, ty, loc)
 
-           | _ -> true)
+               Some(tySerial, RecordTyDef(ident, fields, loc))
+           | _ -> Some kv)
+      |> mapOfList (intHash, intCmp)
 
     ctx |> tyCtxWithTys tys
 
