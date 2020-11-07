@@ -359,14 +359,6 @@ let inferNil ctx expr loc =
   hxNil itemTy loc, tyList itemTy, ctx
 
 let inferRecord ctx expectOpt baseOpt fields loc =
-  let asRecordTy tyOpt =
-    match tyOpt |> optionMap (tyCtxSubstTy ctx) with
-    | Some ((AppTy (RefTyCtor tySerial, [])) as recordTy) ->
-        match ctx |> tyCtxGetTy tySerial with
-        | RecordTyDef (recordIdent, fieldDefs, _) -> Some(recordTy, recordIdent, fieldDefs)
-        | _ -> None
-
-    | _ -> None
 
   // First, infer base if exists.
   let baseOpt, baseTyOpt, ctx =
@@ -379,6 +371,15 @@ let inferRecord ctx expectOpt baseOpt fields loc =
 
   // Determine the record type by base expr or expectation.
   let recordTyInfoOpt =
+    let asRecordTy tyOpt =
+      match tyOpt |> optionMap (tyCtxSubstTy ctx) with
+      | Some ((AppTy (RefTyCtor tySerial, [])) as recordTy) ->
+          match ctx |> tyCtxGetTy tySerial with
+          | RecordTyDef (recordIdent, fieldDefs, _) -> Some(recordTy, recordIdent, fieldDefs)
+          | _ -> None
+
+      | _ -> None
+
     match baseTyOpt |> asRecordTy with
     | ((Some _) as it) -> it
     | _ -> expectOpt |> asRecordTy
