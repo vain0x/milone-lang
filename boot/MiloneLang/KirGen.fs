@@ -745,6 +745,8 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
   | InfOp.Tuple -> kgTupleExpr args ty loc hole ctx
 
+  | InfOp.TupleItem _ -> failwithf "unimplemented. %A" itself
+
   | InfOp.Closure ->
       match args with
       | [ HRefExpr (funSerial, funTy, funLoc); env ] -> kgClosureExpr funSerial funTy funLoc env ty loc hole ctx

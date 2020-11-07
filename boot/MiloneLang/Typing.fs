@@ -382,25 +382,24 @@ let inferMatch ctx expr cond arms loc =
   HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
 let inferNav ctx sub mes loc =
-  let findTyDynamicMember ctx sub subTy =
-    let subTy = tyCtxSubstTy ctx subTy
-    match subTy, mes with
-    | AppTy (StrTyCtor, []), "Length" ->
-        let funExpr =
-          HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
-
-        Some(hxApp funExpr sub tyInt loc, tyInt, ctx)
-    | _ -> None
-
   let sub, subTy, ctx = inferExpr ctx sub
 
-  match findTyDynamicMember ctx sub subTy with
-  | Some (expr, ty, ctx) -> expr, ty, ctx
-  | None ->
-      let ctx =
-        tyCtxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
+  let subTy = tyCtxSubstTy ctx subTy
+  match subTy, mes with
+  | AppTy (StrTyCtor, []), "Length" ->
+      let funExpr =
+        HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
 
-      hxAbort ctx loc
+      hxApp funExpr sub tyInt loc, tyInt, ctx
+
+  | _ ->
+      let fieldTy, (), ctx = tyCtxFreshTyVar mes loc ctx
+
+      let ctx =
+        ctx
+        |> tyCtxAddTraitBounds [ (FieldTrait(subTy, mes, fieldTy), loc) ]
+
+      HNavExpr(sub, mes, fieldTy, loc), fieldTy, ctx
 
 // expr: app expr itself
 let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
@@ -567,7 +566,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
   | HInfExpr (InfOp.App, _, _, _)
   | HInfExpr (InfOp.Closure, _, _, _)
   | HInfExpr (InfOp.CallProc, _, _, _)
-  | HInfExpr (InfOp.CallClosure, _, _, _) -> failwith "Never"
+  | HInfExpr (InfOp.CallClosure, _, _, _)
+  | HInfExpr (InfOp.TupleItem _, _, _, _) -> failwith "Never"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
   | HErrorExpr (error, loc) ->
       let ctx = tyCtxAddErr ctx error loc

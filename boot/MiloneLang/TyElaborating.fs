@@ -50,8 +50,8 @@ let private teExpr ctx expr =
                     |> tyElaborationCtxGetRecordMap
                     |> mapTryFind tySerial with
               | Some (_, fieldMap) -> fieldMap
-              | _ -> failwithf "NEVER: Expected a record. %A" expr
-          | _ -> failwithf "NEVER: Expected a record. %A" expr
+              | _ -> failwithf "NEVER: %A" expr
+          | _ -> failwithf "NEVER: %A" expr
 
         let fields =
           fields
@@ -62,6 +62,28 @@ let private teExpr ctx expr =
           |> listMap (fun (_, init) -> init)
 
         hxTuple fields loc
+
+      doArm ()
+
+  | HNavExpr (l, r, ty, loc) ->
+      let doArm () =
+        // record.field ==> tuple.index
+        let index =
+          match exprToTy l with
+          | AppTy (RefTyCtor tySerial, []) ->
+              let _, fieldMap =
+                ctx
+                |> tyElaborationCtxGetRecordMap
+                |> mapFind tySerial
+
+              let index, _ = fieldMap |> mapFind r
+              index
+
+          | _ -> failwithf "NEVER: %A" expr
+
+        let l = l |> teExpr ctx
+        let ty = ty |> teTy ctx
+        HInfExpr(InfOp.TupleItem index, [ l ], ty, loc)
 
       doArm ()
 
@@ -85,14 +107,6 @@ let private teExpr ctx expr =
         let arms = arms |> listMap go
         let ty = ty |> teTy ctx
         HMatchExpr(target, arms, ty, loc)
-
-      doArm ()
-
-  | HNavExpr (l, r, ty, loc) ->
-      let doArm () =
-        let l = l |> teExpr ctx
-        let ty = ty |> teTy ctx
-        HNavExpr(l, r, ty, loc)
 
       doArm ()
 

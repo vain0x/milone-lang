@@ -380,7 +380,12 @@ type Trait =
   | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
   | ToIntTrait of Ty
   | ToStringTrait of Ty
+
+  /// A record type with the set of fields exhaustively.
   | RecordTrait of Ty * fields: (Ident * Ty * Loc) list
+
+  /// A record type with a field.
+  | FieldTrait of recordTy: Ty * Ident * fieldTy: Ty
 
 /// Type declaration.
 type TyDecl =
@@ -470,6 +475,8 @@ type InfOp =
   | Tuple
   /// Closure constructor.
   | Closure
+  /// Get an item of tuple.
+  | TupleItem of index: int
 
 /// Expression in HIR.
 type HExpr =
