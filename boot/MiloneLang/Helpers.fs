@@ -2009,8 +2009,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
               let logAcc =
                 let fields =
+                  // FIXME: Without type ascription, self compilation fails.
                   fieldDefs
-                  |> mapFold (fun acc ident _ -> ident :: acc) []
+                  |> mapFold (fun (acc: string list) (ident: string) (_: Ty) -> ident :: acc) []
 
                 if not isExhaustive || fields |> listIsEmpty then
                   logAcc
