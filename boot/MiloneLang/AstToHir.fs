@@ -309,7 +309,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-  | ARecordExpr (fields, pos) ->
+  | ARecordExpr (baseOpt, fields, pos) ->
       let onField ((fieldIdent, init, fieldPos), nameCtx) =
         let init, nameCtx = (init, nameCtx) |> astToHirExpr docId
         let fieldLoc = toLoc docId fieldPos
@@ -317,9 +317,13 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         (fieldIdent, init, fieldLoc), nameCtx
 
       let doArm () =
+        let baseOpt, nameCtx =
+          (baseOpt, nameCtx)
+          |> stOptionMap (astToHirExpr docId)
+
         let fields, nameCtx = (fields, nameCtx) |> stMap onField
         let loc = toLoc docId pos
-        HRecordExpr(fields, noTy, loc), nameCtx
+        HRecordExpr(baseOpt, fields, noTy, loc), nameCtx
 
       doArm ()
 

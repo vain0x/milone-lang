@@ -5,6 +5,11 @@ open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
 
+let private hxIsRef expr =
+  match expr with
+  | HRefExpr _ -> true
+  | _ -> false
+
 let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
   let vars = tyCtx |> tyCtxGetVars
   let tys = tyCtx |> tyCtxGetTys
@@ -41,27 +46,60 @@ let private tePat ctx pat = pat |> patMap (teTy ctx) id
 
 let private teExpr ctx expr =
   match expr with
-  | HRecordExpr (fields, ty, loc) ->
+  | HRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =
-        let fieldMap =
+        let tupleTy, fieldMap =
           match ty with
           | AppTy (RefTyCtor tySerial, []) ->
               match ctx
                     |> tyElaborationCtxGetRecordMap
                     |> mapTryFind tySerial with
-              | Some (_, fieldMap) -> fieldMap
+              | Some (tupleTy, fieldMap) -> tupleTy, fieldMap
               | _ -> failwithf "NEVER: %A" expr
           | _ -> failwithf "NEVER: %A" expr
+
+        let baseOpt =
+          // Base expr is guaranteed to be a ref thanks to modification in Typing.
+          assert (baseOpt |> optionAll hxIsRef)
+
+          baseOpt |> optionMap (teExpr ctx)
 
         let fields =
           fields
           |> listMap (fun (ident, init, _) ->
+               let init = init |> teExpr ctx
                let index, _ = fieldMap |> mapFind ident
                index, init)
           |> listSort (fun (l, _) (r, _) -> intCmp l r)
-          |> listMap (fun (_, init) -> init)
 
-        hxTuple fields loc
+        match baseOpt with
+        | Some baseExpr ->
+            let itemTys =
+              match tupleTy with
+              | AppTy (_, fieldTys) -> fieldTys
+              | _ -> failwithf "NEVER: %A" expr
+
+            let itemExpr index =
+              let itemTy = itemTys |> listItem index
+              HInfExpr(InfOp.TupleItem index, [ baseExpr ], itemTy, loc)
+
+            let n = itemTys |> listLength
+
+            let rec go i fields =
+              match fields with
+              | [] when i = n -> []
+
+              | (index, init) :: fields when index = i -> init :: go (i + 1) fields
+
+              | _ -> itemExpr i :: go (i + 1) fields
+
+            hxTuple (go 0 fields) loc
+
+        | None ->
+            let fields =
+              fields |> listMap (fun (_, init) -> init)
+
+            hxTuple fields loc
 
       doArm ()
 

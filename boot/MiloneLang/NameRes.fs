@@ -659,15 +659,18 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HRecordExpr (fields, ty, loc) ->
+  | HRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =
+        let baseOpt, ctx =
+          (baseOpt, ctx) |> stOptionMap nameResExpr
+
         let fields, ctx =
           (fields, ctx)
           |> stMap (fun ((ident, init, loc), ctx) ->
                let init, ctx = (init, ctx) |> nameResExpr
                (ident, init, loc), ctx)
 
-        HRecordExpr(fields, ty, loc), ctx
+        HRecordExpr(baseOpt, fields, ty, loc), ctx
 
       doArm ()
 

@@ -40,6 +40,19 @@ let tyCtxDecLetDepth (ctx: TyCtx) =
   ctx
   |> tyCtxWithLetDepth ((ctx |> tyCtxGetLetDepth) - 1)
 
+let tyCtxFreshVar (ctx: TyCtx) hint ty loc =
+  let varSerial = (ctx |> tyCtxGetSerial) + 1
+
+  let ctx =
+    ctx
+    |> tyCtxWithSerial ((ctx |> tyCtxGetSerial) + 1)
+    |> tyCtxWithVars
+         (ctx
+          |> tyCtxGetVars
+          |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc)))
+
+  varSerial, ctx
+
 let tyCtxFreshTySerial (ctx: TyCtx) =
   let serial = (ctx |> tyCtxGetSerial) + 1
 
@@ -330,8 +343,16 @@ let inferNil ctx expr loc =
   let itemTy, ctx = tyCtxFreshExprTy expr ctx
   hxNil itemTy loc, tyList itemTy, ctx
 
-let inferRecord ctx itself fields loc =
-  let recordTy, ctx = tyCtxFreshExprTy itself ctx
+let inferRecord ctx itself baseOpt fields loc =
+  let baseOpt, recordTy, ctx =
+    match baseOpt with
+    | None ->
+        let recordTy, ctx = tyCtxFreshExprTy itself ctx
+        None, recordTy, ctx
+
+    | Some baseExpr ->
+        let baseExpr, recordTy, ctx = inferExpr ctx baseExpr
+        Some baseExpr, recordTy, ctx
 
   let fields, ctx =
     (fields, ctx)
@@ -344,13 +365,30 @@ let inferRecord ctx itself fields loc =
       fields
       |> listMap (fun (ident, _, ty, loc) -> ident, ty, loc)
 
-    tyCtxAddTraitBounds [ (RecordTrait(recordTy, fields), loc) ] ctx
+    let isExhaustive = baseOpt |> optionIsNone
+
+    tyCtxAddTraitBounds [ (RecordTrait(recordTy, fields, isExhaustive), loc) ] ctx
 
   let fields =
     fields
     |> listMap (fun (ident, init, _, loc) -> ident, init, loc)
 
-  HRecordExpr(fields, recordTy, loc), recordTy, ctx
+  match baseOpt with
+  | None -> HRecordExpr(None, fields, recordTy, loc), recordTy, ctx
+
+  | Some baseExpr ->
+      // Assign to a temporary var so that TyElaborating can reuse the expr safely.
+      // (This kind of modification is not business of typing, though.)
+      // { base with fields... } ==> let t = base in { t with fields... }
+      let varSerial, ctx = tyCtxFreshVar ctx "base" recordTy loc
+
+      let varPat = HRefPat(varSerial, recordTy, loc)
+      let varExpr = HRefExpr(varSerial, recordTy, loc)
+
+      let recordExpr =
+        HRecordExpr(Some varExpr, fields, recordTy, loc)
+
+      HLetValExpr(PrivateVis, varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
 
 /// match 'a with ( | 'a -> 'b )*
 // expr: match expr itself
@@ -550,7 +588,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
-  | HRecordExpr (fields, _, loc) -> inferRecord ctx expr fields loc
+  | HRecordExpr (baseOpt, fields, _, loc) -> inferRecord ctx expr baseOpt fields loc
   | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx expr callee arg loc

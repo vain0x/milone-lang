@@ -258,7 +258,7 @@ type AExpr =
   /// List literal, e.g. `[]`, `[2; 3]`.
   | AListExpr of AExpr list * Pos
   /// Record literal, e.g. `{}`, `{ X = 1; Y = 2 }`.
-  | ARecordExpr of (Ident * AExpr * Pos) list * Pos
+  | ARecordExpr of AExpr option * (Ident * AExpr * Pos) list * Pos
   /// condition, then-clause, else-clause.
   | AIfExpr of AExpr * AExpr * AExpr * Pos
   | AMatchExpr of AExpr * AArm list * Pos
@@ -382,7 +382,7 @@ type Trait =
   | ToStringTrait of Ty
 
   /// A record type with the set of fields exhaustively.
-  | RecordTrait of Ty * fields: (Ident * Ty * Loc) list
+  | RecordTrait of Ty * fields: (Ident * Ty * Loc) list * isExhaustive: bool
 
   /// A record type with a field.
   | FieldTrait of recordTy: Ty * Ident * fieldTy: Ty
@@ -484,7 +484,7 @@ type HExpr =
   /// Variable reference.
   | HRefExpr of VarSerial * Ty * Loc
   | HPrimExpr of HPrim * Ty * Loc
-  | HRecordExpr of (Ident * HExpr * Loc) list * Ty * Loc
+  | HRecordExpr of HExpr option * (Ident * HExpr * Loc) list * Ty * Loc
   | HMatchExpr of target: HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
   /// `s.m`
   | HNavExpr of HExpr * Ident * Ty * Loc

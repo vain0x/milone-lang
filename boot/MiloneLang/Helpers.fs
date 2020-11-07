@@ -67,6 +67,16 @@ let optionDefaultValue alt option =
 
   | None -> alt
 
+let optionMap f option =
+  match option with
+  | Some x -> x |> f |> Some
+  | None -> None
+
+let optionAll pred option =
+  match option with
+  | Some x -> pred x
+  | None -> true
+
 // -----------------------------------------------
 // List
 // -----------------------------------------------
@@ -1110,12 +1120,12 @@ let traitMapTys f it =
 
   | ToStringTrait ty -> ToStringTrait(f ty)
 
-  | RecordTrait (ty, fields) ->
+  | RecordTrait (ty, fields, isExhaustive) ->
       let fields =
         fields
         |> listMap (fun (ident, ty, loc) -> ident, f ty, loc)
 
-      RecordTrait(f ty, fields)
+      RecordTrait(f ty, fields, isExhaustive)
 
   | FieldTrait (ty, fieldIdent, fieldTy) -> FieldTrait(f ty, fieldIdent, f fieldTy)
 
@@ -1640,7 +1650,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HLitExpr (lit, a) -> litToTy lit, a
   | HRefExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
-  | HRecordExpr (_, ty, a) -> ty, a
+  | HRecordExpr (_, _, ty, a) -> ty, a
   | HMatchExpr (_, _, ty, a) -> ty, a
   | HNavExpr (_, _, ty, a) -> ty, a
   | HInfExpr (_, _, ty, a) -> ty, a
@@ -1660,12 +1670,14 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
 
-    | HRecordExpr (fields, ty, a) ->
+    | HRecordExpr (baseOpt, fields, ty, a) ->
+        let baseOpt = baseOpt |> optionMap go
+
         let fields =
           fields
           |> listMap (fun (ident, init, a) -> ident, go init, g a)
 
-        HRecordExpr(fields, f ty, g a)
+        HRecordExpr(baseOpt, fields, f ty, g a)
 
     | HMatchExpr (target, arms, ty, a) ->
         let arms =
@@ -1966,7 +1978,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | ToStringTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | RecordTrait (ty, fields) ->
+  | RecordTrait (ty, fields, isExhaustive) ->
       match ty with
       | AppTy (RefTyCtor tySerial, []) ->
           match ctx |> tyContextGetTys |> mapTryFind tySerial with
@@ -2000,7 +2012,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
                   fieldDefs
                   |> mapFold (fun acc ident _ -> ident :: acc) []
 
-                if fields |> listIsEmpty then
+                if not isExhaustive || fields |> listIsEmpty then
                   logAcc
                 else
                   (Log.MissingFieldsError(recordIdent, fields), loc)
@@ -2012,14 +2024,14 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
       | _ -> fail ()
 
-    | FieldTrait (ty, ident, fieldTy) ->
+  | FieldTrait (ty, ident, fieldTy) ->
       match ty with
       | AppTy (RefTyCtor tySerial, []) ->
           match ctx |> tyContextGetTys |> mapTryFind tySerial with
           | Some (RecordTyDef (_, fieldDefs, _)) ->
-              match fieldDefs |> listTryFind (fun (theIdent, _, _) -> theIdent = ident) with
-              | Some (_, defTy, _) ->
-                typingUnify logAcc ctx fieldTy defTy loc
+              match fieldDefs
+                    |> listTryFind (fun (theIdent, _, _) -> theIdent = ident) with
+              | Some (_, defTy, _) -> typingUnify logAcc ctx fieldTy defTy loc
 
               | None -> fail ()
 
@@ -2054,7 +2066,7 @@ let logToString loc log =
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
 
-  | Log.TyBoundError (RecordTrait (ty, fields)) ->
+  | Log.TyBoundError (RecordTrait (ty, fields, _)) ->
       let fields =
         fields
         |> listMapWithIndex (fun i (ident, _, _) -> (if i = 0 then "" else "', '") + ident)

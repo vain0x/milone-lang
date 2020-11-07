@@ -566,7 +566,27 @@ let parseRecordExpr bracePos (tokens, errors) =
 
     | _ -> listRev acc, tokens, errors
 
-  let fields, tokens, errors = go [] (nextPos tokens) (tokens, errors)
+  let baseOpt, (fields, tokens, errors) =
+    match tokens with
+    | (RightBraceToken, _) :: _ -> None, ([], tokens, errors)
+
+    | (IdentToken _, _) :: (EqToken, _) :: _ -> None, go [] (nextPos tokens) (tokens, errors)
+
+    | _ ->
+        let baseExpr, tokens, errors =
+          parseExpr (nextPos tokens) (tokens, errors)
+
+        let tokens, errors =
+          match tokens with
+          | (WithToken, _) :: tokens -> tokens, errors
+
+          | _ ->
+              let errors =
+                parseErrorCore "Expected 'with' keyword." (nextPos tokens) errors
+
+              tokens, errors
+
+        Some baseExpr, go [] (nextPos tokens) (tokens, errors)
 
   let tokens, errors =
     match tokens with
@@ -578,7 +598,7 @@ let parseRecordExpr bracePos (tokens, errors) =
 
         tokens, errors
 
-  ARecordExpr(fields, bracePos), tokens, errors
+  ARecordExpr(baseOpt, fields, bracePos), tokens, errors
 
 let parseThenClause basePos (tokens, errors) =
   let innerBasePos = basePos |> posAddX 1
