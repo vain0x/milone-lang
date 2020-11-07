@@ -78,6 +78,7 @@ Not all of F# features are supported. Features for functional-style programming 
     - Polymorphic type inference
     - Primitive types: `int`, `string`, tuples, lists, functions, etc.
     - Discriminated unions (non-generic ones only)
+    - Records (non-generic, non-recursive ones only)
 - IO
     - `printfn` with `%s`, `%d`
     - Some file IOs
@@ -112,6 +113,8 @@ The following transformations are consist of the compilation in the order:
 - [Typing](boot/MiloneLang/Typing.fs) (Type inference)
 - [MainHoist](boot/MiloneLang/MainHoist.fs)
     - Resolve top-level bindings
+- [TyElaboration](boot/MiloneLang/TyElaborating.fs)
+    - Convert records to tuples
 - [ClosureConversion](boot/MiloneLang/ClosureConversion.fs)
     - Resolve use of local variables in functions
 - [EtaExpansion](boot/MiloneLang/EtaExpansion.fs)
