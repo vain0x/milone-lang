@@ -209,8 +209,6 @@ let tyCtxUnifyVarTy varSerial tyOpt loc ctx =
 
   | None -> varTy, ctx
 
-
-
 let tyCtxFreshPatTy pat ctx =
   let _, loc = pat |> patExtract
   let tySerial, ctx = ctx |> tyCtxFreshTySerial
@@ -292,7 +290,6 @@ let inferPatAs ctx body varSerial loc =
   let _, ctx =
     ctx |> tyCtxUnifyVarTy varSerial (Some bodyTy) loc
 
-
   HAsPat(body, varSerial, loc), bodyTy, ctx
 
 let inferPatAnno ctx body annoTy loc =
@@ -344,6 +341,7 @@ let inferNil ctx expr loc =
   hxNil itemTy loc, tyList itemTy, ctx
 
 let inferRecord ctx itself baseOpt fields loc =
+  // TODO: inherit expectation
   let baseOpt, recordTy, ctx =
     match baseOpt with
     | None ->
@@ -351,13 +349,14 @@ let inferRecord ctx itself baseOpt fields loc =
         None, recordTy, ctx
 
     | Some baseExpr ->
-        let baseExpr, recordTy, ctx = inferExpr ctx baseExpr
+        let baseExpr, recordTy, ctx = inferExpr ctx None baseExpr
         Some baseExpr, recordTy, ctx
 
   let fields, ctx =
     (fields, ctx)
     |> stMap (fun ((ident, init, loc), ctx) ->
-         let init, ty, ctx = inferExpr ctx init
+         // TODO: pass in field type as expectation
+         let init, ty, ctx = inferExpr ctx None init
          (ident, init, ty, loc), ctx)
 
   let ctx =
@@ -395,7 +394,7 @@ let inferRecord ctx itself baseOpt fields loc =
 let inferMatch ctx expr cond arms loc =
   let targetTy, ctx = tyCtxFreshExprTy expr ctx
 
-  let cond, condTy, ctx = inferExpr ctx cond
+  let cond, condTy, ctx = inferExpr ctx None cond
 
   let arms, ctx =
     (arms, ctx)
@@ -405,12 +404,12 @@ let inferMatch ctx expr cond arms loc =
          let ctx =
            tyCtxUnifyTy ctx (patToLoc pat) patTy condTy
 
-         let guard, guardTy, ctx = inferExpr ctx guard
+         let guard, guardTy, ctx = inferExpr ctx None guard
 
          let ctx =
            tyCtxUnifyTy ctx (exprToLoc guard) guardTy tyBool
 
-         let body, bodyTy, ctx = inferExpr ctx body
+         let body, bodyTy, ctx = inferExpr ctx None body
 
          let ctx =
            tyCtxUnifyTy ctx (exprToLoc body) targetTy bodyTy
@@ -420,7 +419,7 @@ let inferMatch ctx expr cond arms loc =
   HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
 let inferNav ctx sub mes loc =
-  let sub, subTy, ctx = inferExpr ctx sub
+  let sub, subTy, ctx = inferExpr ctx None sub
 
   let subTy = tyCtxSubstTy ctx subTy
   match subTy, mes with
@@ -471,8 +470,8 @@ let inferOpAppPrintfn ctx arg loc =
 
 let inferOpApp ctx expr callee arg loc =
   let targetTy, ctx = ctx |> tyCtxFreshExprTy expr
-  let arg, argTy, ctx = inferExpr ctx arg
-  let callee, calleeTy, ctx = inferExpr ctx callee
+  let arg, argTy, ctx = inferExpr ctx None arg
+  let callee, calleeTy, ctx = inferExpr ctx None callee
 
   let ctx =
     tyCtxUnifyTy ctx loc calleeTy (tyFun argTy targetTy)
@@ -494,7 +493,7 @@ let inferTuple (ctx: TyCtx) items loc =
     match items with
     | [] -> listRev acc, listRev itemTys, ctx
     | item :: items ->
-        let item, itemTy, ctx = inferExpr ctx item
+        let item, itemTy, ctx = inferExpr ctx None item
         go (item :: acc) (itemTy :: itemTys) ctx items
 
   let items, itemTys, ctx = go [] [] ctx items
@@ -502,19 +501,21 @@ let inferTuple (ctx: TyCtx) items loc =
   hxTuple items loc, tyTuple itemTys, ctx
 
 let inferAnno ctx body annoTy loc =
-  let body, bodyTy, ctx = inferExpr ctx body
+  let body, bodyTy, ctx = inferExpr ctx (Some annoTy) body
 
   let ctx = tyCtxUnifyTy ctx loc bodyTy annoTy
 
   body, annoTy, ctx
 
 let inferLetVal ctx vis pat init next loc =
-  let init, initTy, ctx = inferExpr ctx init
+  // TODO: extract expected ty from pat
+  let init, initTy, ctx = inferExpr ctx None init
   let pat, patTy, ctx = inferPat ctx pat
 
   let ctx = tyCtxUnifyTy ctx loc initTy patTy
 
-  let next, nextTy, ctx = inferExpr ctx next
+  // TODO: inherit expectation
+  let next, nextTy, ctx = inferExpr ctx None next
   HLetValExpr(vis, pat, init, next, nextTy, loc), nextTy, ctx
 
 let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next loc =
@@ -553,7 +554,7 @@ let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next loc =
 
   let ctx = tyCtxUnifyTy ctx loc calleeTy funTy
 
-  let body, bodyTy, ctx = inferExpr ctx body
+  let body, bodyTy, ctx = inferExpr ctx None body
 
   let ctx =
     tyCtxUnifyTy ctx loc bodyTy provisionalResultTy
@@ -563,7 +564,8 @@ let inferLetFun (ctx: TyCtx) varSerial vis isMainFun argPats body next loc =
   let ctx =
     tyCtxGeneralizeFun ctx outerLetDepth varSerial
 
-  let next, nextTy, ctx = inferExpr ctx next
+  // TODO: inherit expectation
+  let next, nextTy, ctx = inferExpr ctx None next
   HLetFunExpr(varSerial, vis, isMainFun, argPats, body, next, nextTy, loc), nextTy, ctx
 
 /// Returns in reversed order.
@@ -574,7 +576,8 @@ let inferExprs ctx exprs loc: HExpr list * Ty * TyCtx =
     | expr :: exprs ->
         let ctx = tyCtxUnifyTy ctx prevLoc prevTy tyUnit
 
-        let expr, ty, ctx = inferExpr ctx expr
+        // TODO: inherit expectation
+        let expr, ty, ctx = inferExpr ctx None expr
         go (expr :: acc) (ty, exprToLoc expr) ctx exprs
 
   go [] (tyUnit, loc) ctx exprs
@@ -583,7 +586,7 @@ let inferSemi ctx exprs loc =
   let exprs, ty, ctx = inferExprs ctx exprs loc
   hxSemi (listRev exprs) loc, ty, ctx
 
-let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
+let inferExpr (ctx: TyCtx) (_expectedTyOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
   match expr with
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
@@ -683,7 +686,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
   let ctx = ctx |> tyCtxWithLetDepth 0
 
   let expr, ctx =
-    let expr, topLevelTy, ctx = inferExpr ctx expr
+    let expr, topLevelTy, ctx = inferExpr ctx None expr
 
     let ctx =
       tyCtxUnifyTy ctx (exprToLoc expr) topLevelTy tyUnit
