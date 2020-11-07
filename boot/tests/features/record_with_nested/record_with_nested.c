@@ -6,8 +6,6 @@ struct StringIntIntIntIntTuple3Tuple3;
 
 struct StringIntIntIntIntTuple3Tuple3 newPerson_(int arg_);
 
-struct StringIntObjectTuple3;
-
 int main();
 
 struct IntIntIntTuple3 {
@@ -34,20 +32,14 @@ struct StringIntIntIntIntTuple3Tuple3 newPerson_(int arg_) {
     return tuple_;
 }
 
-struct StringIntObjectTuple3 {
-    struct String t0;
-    int t1;
-    void* t2;
-};
-
 int main() {
-    struct StringIntObjectTuple3 call_ = newPerson_(0);
-    struct StringIntObjectTuple3 base_ = call_;
-    struct StringIntObjectTuple3 tuple_2;
+    struct StringIntIntIntIntTuple3Tuple3 call_ = newPerson_(0);
+    struct StringIntIntIntIntTuple3Tuple3 base_ = call_;
+    struct StringIntIntIntIntTuple3Tuple3 tuple_2;
     tuple_2.t0 = (struct String){.str = "John Doe", .len = 8};
     tuple_2.t1 = base_.t1;
     tuple_2.t2 = base_.t2;
-    struct StringIntObjectTuple3 john_ = tuple_2;
+    struct StringIntIntIntIntTuple3Tuple3 john_ = tuple_2;
     struct String name_ = john_.t0;
     milone_assert((name_.len == 8), 21, 2);
     int call_1 = 0;

@@ -801,11 +801,21 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
     let tys =
       ctx
       |> tyCtxGetTys
-      |> mapFilter (fun _ tyDef ->
+      |> mapToList
+      |> listChoose (fun kv ->
+           let tySerial, tyDef = kv
            match tyDef with
-           | MetaTyDef _ -> false
+           | MetaTyDef _ -> None
+           | RecordTyDef (ident, fields, loc) ->
+               let fields =
+                 fields
+                 |> listMap (fun (ident, ty, loc) ->
+                      let ty = tyCtxSubstTy ctx ty
+                      ident, ty, loc)
 
-           | _ -> true)
+               Some(tySerial, RecordTyDef(ident, fields, loc))
+           | _ -> Some kv)
+      |> mapOfList (intHash, intCmp)
 
     ctx |> tyCtxWithTys tys
 
