@@ -11,6 +11,7 @@ open MiloneLang.Bundling
 open MiloneLang.NameRes
 open MiloneLang.Typing
 open MiloneLang.MainHoist
+open MiloneLang.TyElaborating
 open MiloneLang.ClosureConversion
 open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
@@ -136,6 +137,9 @@ let build host verbosity (projectDir: string): string * bool =
     log "Hoist main"
     let expr, tyCtx = hoistMain (expr, tyCtx)
 
+    log "TyElaboration"
+    let expr, tyCtx = tyElaborate (expr, tyCtx)
+
     log "Closure conversion"
     let expr, tyCtx = declosure (expr, tyCtx)
     if tyCtx |> tyCtxHasError then
@@ -244,6 +248,9 @@ let buildWithKir host verbosity mode (projectDir: string): string * bool =
     log "Hoist main"
     let expr, tyCtx = hoistMain (expr, tyCtx)
 
+    log "TyElaboration"
+    let expr, tyCtx = tyElaborate (expr, tyCtx)
+
     log "Closure conversion"
     let expr, tyCtx = declosure (expr, tyCtx)
     if tyCtx |> tyCtxHasError then
@@ -299,7 +306,9 @@ let buildWithKir host verbosity mode (projectDir: string): string * bool =
 
 let cliCompileWithKirToDump host verbosity projectDir =
   printfn "/*"
-  let output, success = buildWithKir host verbosity true projectDir
+
+  let output, success =
+    buildWithKir host verbosity true projectDir
 
   if success then
     printfn "*/"
@@ -311,7 +320,9 @@ let cliCompileWithKirToDump host verbosity projectDir =
 
 let cliCompileWithKirToClang host verbosity projectDir =
   printfn "/*"
-  let output, success = buildWithKir host verbosity false projectDir
+
+  let output, success =
+    buildWithKir host verbosity false projectDir
 
   if success then
     printfn "*/"
@@ -342,7 +353,8 @@ let cli (host: CliHost) =
       |> listFold (fun success projectDir ->
            printfn "// -------------------------------\n// %s\n{\n" projectDir
 
-           let code = cliCompileWithKirToDump host Quiet projectDir
+           let code =
+             cliCompileWithKirToDump host Quiet projectDir
 
            printfn "\n// exit = %d\n}\n" code
 
@@ -355,7 +367,8 @@ let cli (host: CliHost) =
       |> listFold (fun success projectDir ->
            printfn "// -------------------------------\n// %s\n" projectDir
 
-           let code = cliCompileWithKirToClang host Quiet projectDir
+           let code =
+             cliCompileWithKirToClang host Quiet projectDir
 
            printfn "\n// exit = %d\n" code
 

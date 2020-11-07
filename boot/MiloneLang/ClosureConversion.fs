@@ -408,13 +408,6 @@ let declosureExpr (expr, ctx) =
 
       doArm ()
 
-  | HRecordExpr _ ->
-      let doArm () =
-        printfn "/* unimplemented. %A */" expr
-        hxUnit (exprToLoc expr), ctx
-
-      doArm ()
-
   | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let target, ctx = declosureExpr (target, ctx)
@@ -471,6 +464,7 @@ let declosureExpr (expr, ctx) =
       doArm ()
 
   | HErrorExpr (error, loc) -> failwithf "Never: %s at %A" error loc
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let declosure (expr, tyCtx: TyCtx) =

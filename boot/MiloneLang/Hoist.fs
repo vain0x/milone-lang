@@ -179,8 +179,6 @@ let hoistExprCore (expr, ctx) =
   | HPrimExpr _
   | HOpenExpr _ -> expr, ctx
 
-  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
-
   | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let go ((pat, guard, body), ctx) =
@@ -228,6 +226,7 @@ let hoistExprCore (expr, ctx) =
 
       doArm ()
 
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let hoistExpr (expr, ctx) =

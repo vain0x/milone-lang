@@ -753,7 +753,6 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
   | HRefExpr (serial, ty, loc) -> mirifyExprRef ctx serial ty loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
-  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
   | HMatchExpr (target, arms, ty, loc) -> mirifyExprMatch ctx target arms ty loc
   | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx infOp args ty loc
   | HLetValExpr _
@@ -767,6 +766,8 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
         MDefaultExpr(tyObj, loc), ctx
 
       doArm ()
+
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let mirifyExprs ctx exprs =

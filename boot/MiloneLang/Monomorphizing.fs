@@ -306,8 +306,6 @@ let rec monifyExpr (expr, ctx) =
 
       doArm ()
 
-  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
-
   | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let target, ctx = (target, ctx) |> monifyExpr
@@ -356,6 +354,7 @@ let rec monifyExpr (expr, ctx) =
 
       doArm ()
 
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =

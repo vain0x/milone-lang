@@ -348,7 +348,6 @@ let unetaExpr (expr, ctx) =
   | HErrorExpr _ -> expr, ctx
   | HRefExpr (serial, refTy, calleeLoc) -> unetaRef expr serial refTy calleeLoc ctx
   | HPrimExpr (prim, primTy, calleeLoc) -> unetaPrim expr prim primTy calleeLoc ctx
-  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
   | HMatchExpr (target, arms, ty, loc) ->
       let target, ctx = (target, ctx) |> unetaExpr
 
@@ -372,6 +371,7 @@ let unetaExpr (expr, ctx) =
       HLetValExpr(vis, pat, init, next, ty, loc), ctx
   | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       unetaExprLetFun callee vis isMainFun args body next ty loc ctx
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let uneta (expr, tyCtx: TyCtx) =
