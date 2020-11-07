@@ -391,6 +391,13 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
         |> scopeCtxDefineLocalTy tySerial tyDef
         |> addTyToModule tySerial
 
+    | RecordTyDecl (ident, fields, loc) ->
+        let tyDef = RecordTyDef(ident, fields, loc)
+
+        ctx
+        |> scopeCtxDefineLocalTy tySerial tyDef
+        |> addTyToModule tySerial
+
 /// Completes the type definition.
 ///
 /// - No need to call `scopeCtxDefineTyStart` first.
@@ -410,7 +417,7 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
       |> scopeCtxDefineTy tySerial (MetaTyDef(tyIdent, bodyTy, loc))
 
   | UnionTyDef (_, variantSerials, _unionLoc) ->
-      let rec go ctx variantSerial =
+      let go ctx variantSerial =
         match ctx |> scopeCtxGetVar variantSerial with
         | VariantDef (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
             let payloadTy, ctx = ctx |> scopeCtxResolveTy payloadTy loc
@@ -423,6 +430,15 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
         | _ -> failwith "NEVER: it must be variant"
 
       variantSerials |> listFold go ctx
+
+  | RecordTyDef (ident, fields, loc) ->
+      let resolveField ((ident, ty, loc), ctx) =
+        let ty, ctx = ctx |> scopeCtxResolveTy ty loc
+        (ident, ty, loc), ctx
+
+      let fields, ctx = (fields, ctx) |> stMap resolveField
+      ctx
+      |> scopeCtxDefineTy tySerial (RecordTyDef(ident, fields, loc))
 
   | ModuleTyDef _ -> failwith "NEVER: no use case"
 
@@ -640,6 +656,21 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
             | Some prim -> HPrimExpr(prim, ty, loc), ctx
 
             | None -> HErrorExpr("Undefined variable " + ident, loc), ctx
+
+      doArm ()
+
+  | HRecordExpr (baseOpt, fields, ty, loc) ->
+      let doArm () =
+        let baseOpt, ctx =
+          (baseOpt, ctx) |> stOptionMap nameResExpr
+
+        let fields, ctx =
+          (fields, ctx)
+          |> stMap (fun ((ident, init, loc), ctx) ->
+               let init, ctx = (init, ctx) |> nameResExpr
+               (ident, init, loc), ctx)
+
+        HRecordExpr(baseOpt, fields, ty, loc), ctx
 
       doArm ()
 

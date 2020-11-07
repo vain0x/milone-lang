@@ -181,7 +181,9 @@ let createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats call
   let funLet next =
     HLetFunExpr(funSerial, PrivateVis, false, argPats, body, next, exprToTy next, callLoc)
 
-  let funRef = HRefExpr(funSerial, underlyingFunTy, callLoc)
+  let funRef =
+    HRefExpr(funSerial, underlyingFunTy, callLoc)
+
   funLet, funRef, ctx
 
 let createEnvBoxExpr args envTy callLoc =
@@ -369,6 +371,7 @@ let unetaExpr (expr, ctx) =
       HLetValExpr(vis, pat, init, next, ty, loc), ctx
   | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       unetaExprLetFun callee vis isMainFun args body next ty loc ctx
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let uneta (expr, tyCtx: TyCtx) =

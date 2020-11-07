@@ -40,6 +40,19 @@ let tyCtxDecLetDepth (ctx: TyCtx) =
   ctx
   |> tyCtxWithLetDepth ((ctx |> tyCtxGetLetDepth) - 1)
 
+let tyCtxFreshVar (ctx: TyCtx) hint ty loc =
+  let varSerial = (ctx |> tyCtxGetSerial) + 1
+
+  let ctx =
+    ctx
+    |> tyCtxWithSerial ((ctx |> tyCtxGetSerial) + 1)
+    |> tyCtxWithVars
+         (ctx
+          |> tyCtxGetVars
+          |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc)))
+
+  varSerial, ctx
+
 let tyCtxFreshTySerial (ctx: TyCtx) =
   let serial = (ctx |> tyCtxGetSerial) + 1
 
@@ -330,6 +343,53 @@ let inferNil ctx expr loc =
   let itemTy, ctx = tyCtxFreshExprTy expr ctx
   hxNil itemTy loc, tyList itemTy, ctx
 
+let inferRecord ctx itself baseOpt fields loc =
+  let baseOpt, recordTy, ctx =
+    match baseOpt with
+    | None ->
+        let recordTy, ctx = tyCtxFreshExprTy itself ctx
+        None, recordTy, ctx
+
+    | Some baseExpr ->
+        let baseExpr, recordTy, ctx = inferExpr ctx baseExpr
+        Some baseExpr, recordTy, ctx
+
+  let fields, ctx =
+    (fields, ctx)
+    |> stMap (fun ((ident, init, loc), ctx) ->
+         let init, ty, ctx = inferExpr ctx init
+         (ident, init, ty, loc), ctx)
+
+  let ctx =
+    let fields =
+      fields
+      |> listMap (fun (ident, _, ty, loc) -> ident, ty, loc)
+
+    let isExhaustive = baseOpt |> optionIsNone
+
+    tyCtxAddTraitBounds [ (RecordTrait(recordTy, fields, isExhaustive), loc) ] ctx
+
+  let fields =
+    fields
+    |> listMap (fun (ident, init, _, loc) -> ident, init, loc)
+
+  match baseOpt with
+  | None -> HRecordExpr(None, fields, recordTy, loc), recordTy, ctx
+
+  | Some baseExpr ->
+      // Assign to a temporary var so that TyElaborating can reuse the expr safely.
+      // (This kind of modification is not business of typing, though.)
+      // { base with fields... } ==> let t = base in { t with fields... }
+      let varSerial, ctx = tyCtxFreshVar ctx "base" recordTy loc
+
+      let varPat = HRefPat(varSerial, recordTy, loc)
+      let varExpr = HRefExpr(varSerial, recordTy, loc)
+
+      let recordExpr =
+        HRecordExpr(Some varExpr, fields, recordTy, loc)
+
+      HLetValExpr(PrivateVis, varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
+
 /// match 'a with ( | 'a -> 'b )*
 // expr: match expr itself
 let inferMatch ctx expr cond arms loc =
@@ -360,25 +420,24 @@ let inferMatch ctx expr cond arms loc =
   HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
 let inferNav ctx sub mes loc =
-  let findTyDynamicMember ctx sub subTy =
-    let subTy = tyCtxSubstTy ctx subTy
-    match subTy, mes with
-    | AppTy (StrTyCtor, []), "Length" ->
-        let funExpr =
-          HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
-
-        Some(hxApp funExpr sub tyInt loc, tyInt, ctx)
-    | _ -> None
-
   let sub, subTy, ctx = inferExpr ctx sub
 
-  match findTyDynamicMember ctx sub subTy with
-  | Some (expr, ty, ctx) -> expr, ty, ctx
-  | None ->
-      let ctx =
-        tyCtxAddErr ctx (sprintf "Unknown nav %A.%s" sub mes) loc
+  let subTy = tyCtxSubstTy ctx subTy
+  match subTy, mes with
+  | AppTy (StrTyCtor, []), "Length" ->
+      let funExpr =
+        HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
 
-      hxAbort ctx loc
+      hxApp funExpr sub tyInt loc, tyInt, ctx
+
+  | _ ->
+      let fieldTy, (), ctx = tyCtxFreshTyVar mes loc ctx
+
+      let ctx =
+        ctx
+        |> tyCtxAddTraitBounds [ (FieldTrait(subTy, mes, fieldTy), loc) ]
+
+      HNavExpr(sub, mes, fieldTy, loc), fieldTy, ctx
 
 // expr: app expr itself
 let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
@@ -394,8 +453,7 @@ let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
       let resultTy, ctx = ctx |> tyCtxFreshExprTy expr
       let funTy, ctx = go resultTy arity ctx
 
-      let ctx =
-        tyCtxUnifyTy ctx loc funTy targetTy
+      let ctx = tyCtxUnifyTy ctx loc funTy targetTy
 
       HPrimExpr(HPrim.NativeFun(nativeFunIdent, arity), funTy, loc), funTy, ctx
   | _ -> hxApp callee arg targetTy loc, targetTy, ctx
@@ -530,6 +588,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
+  | HRecordExpr (baseOpt, fields, _, loc) -> inferRecord ctx expr baseOpt fields loc
   | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx expr callee arg loc
@@ -545,7 +604,8 @@ let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
   | HInfExpr (InfOp.App, _, _, _)
   | HInfExpr (InfOp.Closure, _, _, _)
   | HInfExpr (InfOp.CallProc, _, _, _)
-  | HInfExpr (InfOp.CallClosure, _, _, _) -> failwith "Never"
+  | HInfExpr (InfOp.CallClosure, _, _, _)
+  | HInfExpr (InfOp.TupleItem _, _, _, _) -> failwith "Never"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
   | HErrorExpr (error, loc) ->
       let ctx = tyCtxAddErr ctx error loc

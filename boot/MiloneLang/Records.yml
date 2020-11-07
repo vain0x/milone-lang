@@ -54,6 +54,11 @@ TyCtx:
   TraitBounds: (Trait * Loc) list
   Logs: (Log * Loc) list
 
+TyElaborationCtx:
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+  RecordMap: AssocMap<TySerial, (Ty * AssocMap<Ident, int * Ty>)>
+
 KnownCtx:
   Known: AssocSet<FunSerial>
   Locals: AssocSet<VarSerial>

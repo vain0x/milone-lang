@@ -218,7 +218,7 @@ let monoCtxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
   | None
   | Some [] -> [], ctx
   | Some useSiteTys ->
-      let map =
+      let _, map =
         ctx
         |> monoCtxGetGenericFunUseSiteTys
         |> mapRemove funSerial
@@ -354,6 +354,7 @@ let rec monifyExpr (expr, ctx) =
 
       doArm ()
 
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =

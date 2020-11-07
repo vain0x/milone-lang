@@ -549,6 +549,10 @@ let mirifyExprTuple ctx items itemTys loc =
 
   MRefExpr(tempSerial, ty, loc), ctx
 
+let mirifyExprTupleItem ctx index tuple itemTy loc =
+  let tuple, ctx = mirifyExpr ctx tuple
+  MUnaryExpr(MProjUnary index, tuple, itemTy, loc), ctx
+
 let mirifyExprOpArith ctx op l r ty loc =
   let lTy = exprToTy l
   let l, ctx = mirifyExpr ctx l
@@ -665,6 +669,7 @@ let mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
   | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
   | InfOp.Tuple, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
+  | InfOp.TupleItem index, [ tuple ], itemTy -> mirifyExprTupleItem ctx index tuple itemTy loc
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
   | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
@@ -759,13 +764,15 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   | HLetFunExpr _
   | HTyDeclExpr _
   | HOpenExpr _ -> mirifyDecl ctx expr
-  | HNavExpr _ -> failwith "Never"
   | HErrorExpr (error, loc) ->
       let doArm () =
         let ctx = mirCtxAddErr ctx error loc
         MDefaultExpr(tyObj, loc), ctx
 
       doArm ()
+
+  | HNavExpr _ -> failwith "NEVER: nav expr is resolved in NameRes, Typing, or TyElaborating"
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let mirifyExprs ctx exprs =

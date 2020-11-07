@@ -226,6 +226,7 @@ let hoistExprCore (expr, ctx) =
 
       doArm ()
 
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let hoistExpr (expr, ctx) =

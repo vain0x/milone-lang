@@ -79,6 +79,8 @@ let charIsPun (c: char): bool =
   || c = ')'
   || c = '['
   || c = ']'
+  || c = '{'
+  || c = '}'
 
 // -----------------------------------------------
 // String helpers
@@ -305,6 +307,8 @@ let tokenFromPun (text: string) (l: int) r =
   | ')' -> RightParenToken
   | '[' -> LeftBracketToken
   | ']' -> RightBracketToken
+  | '{' -> LeftBraceToken
+  | '}' -> RightBraceToken
   | _ -> failwith "NEVER! charIsPun is broken"
 
 let tokenFromIntLit (text: string) l r: Token =

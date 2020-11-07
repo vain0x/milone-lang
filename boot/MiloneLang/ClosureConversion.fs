@@ -452,7 +452,8 @@ let declosureExpr (expr, ctx) =
   | HTyDeclExpr (_, _, tyDecl, _) ->
       let doArm () =
         match tyDecl with
-        | TySynonymDecl _ -> expr, ctx
+        | TySynonymDecl _
+        | RecordTyDecl _ -> expr, ctx
 
         | UnionTyDecl (_, variants, _) ->
             let ctx =
@@ -463,6 +464,7 @@ let declosureExpr (expr, ctx) =
       doArm ()
 
   | HErrorExpr (error, loc) -> failwithf "Never: %s at %A" error loc
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let declosure (expr, tyCtx: TyCtx) =

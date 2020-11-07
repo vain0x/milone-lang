@@ -67,6 +67,16 @@ let optionDefaultValue alt option =
 
   | None -> alt
 
+let optionMap f option =
+  match option with
+  | Some x -> x |> f |> Some
+  | None -> None
+
+let optionAll pred option =
+  match option with
+  | Some x -> pred x
+  | None -> true
+
 // -----------------------------------------------
 // List
 // -----------------------------------------------
@@ -333,9 +343,11 @@ let assocAdd key value assoc = (key, value) :: assoc
 let assocRemove cmp key assoc =
   let rec go acc assoc =
     match assoc with
-    | [] -> listRev acc
+    | [] -> None, listRev acc
 
-    | (k, _) :: assoc when cmp k key = 0 -> go acc assoc
+    | (k, v) :: assoc when cmp k key = 0 ->
+        let _, assoc = go acc assoc
+        Some v, assoc
 
     | kv :: assoc -> go (kv :: acc) assoc
 
@@ -408,11 +420,15 @@ let trieAdd (keyHash: int) key value trie =
 let trieRemove cmp (keyHash: int) key trie =
   let rec go trie =
     match trie with
-    | [] -> []
+    | [] -> None, []
 
-    | (h, assoc) :: trie when h = keyHash -> (keyHash, assocRemove cmp key assoc) :: trie
+    | (h, assoc) :: trie when h = keyHash ->
+        let removed, assoc = assocRemove cmp key assoc
+        removed, (keyHash, assoc) :: trie
 
-    | kv :: trie -> kv :: go trie
+    | kv :: trie ->
+        let removed, trie = go trie
+        removed, kv :: trie
 
   go trie
 
@@ -468,11 +484,11 @@ let mapAdd key value (trie, hash, cmp): AssocMap<_, _> =
 
   trie, hash, cmp
 
-let mapRemove key (trie, hash, cmp): AssocMap<_, _> =
-  let trie =
+let mapRemove key (trie, hash, cmp): _ option * AssocMap<_, _> =
+  let removed, trie =
     trie |> trieRemove cmp (mapKeyHash hash key) key
 
-  trie, hash, cmp
+  removed, (trie, hash, cmp)
 
 let mapTryFind key ((trie, hash, cmp): AssocMap<_, _>) =
   trie |> trieTryFind cmp (mapKeyHash hash key) key
@@ -861,6 +877,7 @@ let tokenIsExprOrPatFirst (token: Token) =
   | IdentToken _
   | LeftParenToken
   | LeftBracketToken
+  | LeftBraceToken
   | FalseToken
   | TrueToken -> true
 
@@ -1103,6 +1120,15 @@ let traitMapTys f it =
 
   | ToStringTrait ty -> ToStringTrait(f ty)
 
+  | RecordTrait (ty, fields, isExhaustive) ->
+      let fields =
+        fields
+        |> listMap (fun (ident, ty, loc) -> ident, f ty, loc)
+
+      RecordTrait(f ty, fields, isExhaustive)
+
+  | FieldTrait (ty, fieldIdent, fieldTy) -> FieldTrait(f ty, fieldIdent, f fieldTy)
+
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
@@ -1308,6 +1334,7 @@ let tyDefToIdent tyDef =
   match tyDef with
   | MetaTyDef (ident, _, _) -> ident
   | UnionTyDef (ident, _, _) -> ident
+  | RecordTyDef (ident, _, _) -> ident
   | ModuleTyDef (ident, _) -> ident
 
 // -----------------------------------------------
@@ -1623,6 +1650,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HLitExpr (lit, a) -> litToTy lit, a
   | HRefExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
+  | HRecordExpr (_, _, ty, a) -> ty, a
   | HMatchExpr (_, _, ty, a) -> ty, a
   | HNavExpr (_, _, ty, a) -> ty, a
   | HInfExpr (_, _, ty, a) -> ty, a
@@ -1641,6 +1669,16 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HLitExpr (lit, a) -> HLitExpr(lit, g a)
     | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
+
+    | HRecordExpr (baseOpt, fields, ty, a) ->
+        let baseOpt = baseOpt |> optionMap go
+
+        let fields =
+          fields
+          |> listMap (fun (ident, init, a) -> ident, go init, g a)
+
+        HRecordExpr(baseOpt, fields, f ty, g a)
+
     | HMatchExpr (target, arms, ty, a) ->
         let arms =
           arms
@@ -1895,6 +1933,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   let theTrait =
     theTrait |> traitMapTys (typingSubst ctx)
 
+  let fail () =
+    (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+
   let expectScalar ty (logAcc, ctx) =
     match ty with
     | ErrorTy _
@@ -1937,6 +1978,68 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | ToStringTrait ty -> (logAcc, ctx) |> expectScalar ty
 
+  | RecordTrait (ty, fields, isExhaustive) ->
+      match ty with
+      | AppTy (RefTyCtor tySerial, []) ->
+          match ctx |> tyContextGetTys |> mapTryFind tySerial with
+          | Some (RecordTyDef (recordIdent, fieldDefs, _)) ->
+              let folder (fieldDefs, logAcc, redundant, ctx) field =
+                let ident, initTy, loc = field
+                match fieldDefs |> mapRemove ident with
+                | None, _ -> fieldDefs, logAcc, (ident, loc) :: redundant, ctx
+
+                | Some defTy, fieldDefs ->
+                    let logAcc, ctx = typingUnify logAcc ctx initTy defTy loc
+                    fieldDefs, logAcc, redundant, ctx
+
+              let fieldDefs, logAcc, redundant, ctx =
+                let fieldDefs =
+                  fieldDefs
+                  |> listMap (fun (ident, ty, _) -> ident, ty)
+                  |> mapOfList (strHash, strCmp)
+
+                fields
+                |> listFold folder (fieldDefs, logAcc, [], ctx)
+
+              let logAcc =
+                redundant
+                |> listFold (fun logAcc (fieldIdent, loc) ->
+                     (Log.RedundantFieldError(recordIdent, fieldIdent), loc)
+                     :: logAcc) logAcc
+
+              let logAcc =
+                let fields =
+                  // FIXME: Without type ascription, self compilation fails.
+                  fieldDefs
+                  |> mapFold (fun (acc: string list) (ident: string) (_: Ty) -> ident :: acc) []
+
+                if not isExhaustive || fields |> listIsEmpty then
+                  logAcc
+                else
+                  (Log.MissingFieldsError(recordIdent, fields), loc)
+                  :: logAcc
+
+              logAcc, ctx
+
+          | _ -> fail ()
+
+      | _ -> fail ()
+
+  | FieldTrait (ty, ident, fieldTy) ->
+      match ty with
+      | AppTy (RefTyCtor tySerial, []) ->
+          match ctx |> tyContextGetTys |> mapTryFind tySerial with
+          | Some (RecordTyDef (_, fieldDefs, _)) ->
+              match fieldDefs
+                    |> listTryFind (fun (theIdent, _, _) -> theIdent = ident) with
+              | Some (_, defTy, _) -> typingUnify logAcc ctx fieldTy defTy loc
+
+              | None -> fail ()
+
+          | _ -> fail ()
+
+      | _ -> fail ()
+
 // -----------------------------------------------
 // Logs
 // -----------------------------------------------
@@ -1963,5 +2066,27 @@ let logToString loc log =
   | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
+
+  | Log.TyBoundError (RecordTrait (ty, fields, _)) ->
+      let fields =
+        fields
+        |> listMapWithIndex (fun i (ident, _, _) -> (if i = 0 then "" else "', '") + ident)
+        |> strConcat
+
+      sprintf "%s Type '%A' is expected to be a record with fields: '%s'." loc ty fields
+
+  | Log.TyBoundError (FieldTrait (ty, fieldName, _)) ->
+      sprintf "%s Type '%A' is expected to be a record with a field: '%s'." loc ty fieldName
+
+  | Log.RedundantFieldError (recordIdent, fieldIdent) ->
+      sprintf "%s The field '%s' is redundant for record '%s'." loc fieldIdent recordIdent
+
+  | Log.MissingFieldsError (recordIdent, fieldIdents) ->
+      let fields =
+        fieldIdents
+        |> listMapWithIndex (fun i ident -> (if i = 0 then "" else "', '") + ident)
+        |> strConcat
+
+      sprintf "%s Record '%s' must have fields: '%s'." loc recordIdent fields
 
   | Log.Error msg -> sprintf "%s %s" loc msg

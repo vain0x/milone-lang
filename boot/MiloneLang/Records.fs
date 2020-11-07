@@ -165,6 +165,30 @@ let tyCtxWithTraitBounds traitBounds (TyCtx (serial, vars, tys, tyDepths, letDep
 let tyCtxWithLogs logs (TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, _)): TyCtx =
   TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
 
+type TyElaborationCtx =
+  | TyElaborationCtx
+    of AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * AssocMap<TySerial, (Ty * AssocMap<Ident, int * Ty>)>
+
+let tyElaborationCtxGetVars (TyElaborationCtx (vars, _, _)) =
+  vars
+
+let tyElaborationCtxGetTys (TyElaborationCtx (_, tys, _)) =
+  tys
+
+let tyElaborationCtxGetRecordMap (TyElaborationCtx (_, _, recordMap)) =
+  recordMap
+
+let tyElaborationCtxWithVars vars (TyElaborationCtx (_, tys, recordMap)): TyElaborationCtx =
+  TyElaborationCtx (vars, tys, recordMap)
+
+let tyElaborationCtxWithTys tys (TyElaborationCtx (vars, _, recordMap)): TyElaborationCtx =
+  TyElaborationCtx (vars, tys, recordMap)
+
+let tyElaborationCtxWithRecordMap recordMap (TyElaborationCtx (vars, tys, _)): TyElaborationCtx =
+  TyElaborationCtx (vars, tys, recordMap)
+
 type KnownCtx =
   | KnownCtx
     of AssocSet<FunSerial>

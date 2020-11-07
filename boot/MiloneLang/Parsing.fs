@@ -264,6 +264,44 @@ let parseTyDeclUnion basePos (tokens, errors) =
   let variants, tokens, errors = go [] (tokens, errors)
   AUnionTyDecl variants, tokens, errors
 
+/// Parses the body of record type declaration.
+let parseTyDeclRecord basePos (tokens, errors) =
+  let rec go acc alignPos (tokens, errors) =
+    match tokens with
+    | (RightBraceToken, _) :: _ -> listRev acc, tokens, errors
+
+    | (SemiToken, _) :: tokens -> go acc (nextPos tokens) (tokens, errors)
+
+    | (IdentToken ident, fieldPos) :: (ColonToken, _) :: tokens when fieldPos |> posIsSameColumn alignPos ->
+        let ty, tokens, errors =
+          parseTy (fieldPos |> posAddX 1) (tokens, errors)
+
+        go ((ident, ty, fieldPos) :: acc) alignPos (tokens, errors)
+
+    | (_, pos) :: tokens when pos |> posInside basePos ->
+        let errors =
+          parseErrorCore "Expected a field declaration." pos errors
+
+        go acc alignPos (tokens, errors)
+
+    | _ -> listRev acc, tokens, errors
+
+  let fields, tokens, errors =
+    let alignPos = nextPos tokens
+    go [] alignPos (tokens, errors)
+
+  let tokens, errors =
+    match tokens with
+    | (RightBraceToken, _) :: tokens -> tokens, errors
+
+    | _ ->
+        let errors =
+          parseErrorCore "Expected a '}'." (nextPos tokens) errors
+
+        tokens, errors
+
+  ARecordTyDecl fields, tokens, errors
+
 /// Parses after `type .. =`.
 /// NOTE: Unlike F#, it can't parse `type A = A` as definition of discriminated union.
 let parseTyDeclBody basePos (tokens, errors) =
@@ -273,6 +311,8 @@ let parseTyDeclBody basePos (tokens, errors) =
   | (IdentToken _, _) :: (OfToken, _) :: _ ->
       let tokens = (PipeToken, noPos) :: tokens
       parseTyDeclUnion basePos (tokens, errors)
+
+  | (LeftBraceToken, _) :: tokens -> parseTyDeclRecord basePos (tokens, errors)
 
   | _ ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
@@ -505,6 +545,61 @@ let parseList basePos bracketPos (tokens, errors) =
 
   AListExpr(items, bracketPos), tokens, errors
 
+let parseRecordExpr bracePos (tokens, errors) =
+  let rec go acc alignPos (tokens, errors) =
+    match tokens with
+    | (RightBraceToken, _) :: _ -> listRev acc, tokens, errors
+
+    | (SemiToken, _) :: tokens -> go acc (nextPos tokens) (tokens, errors)
+
+    | (IdentToken ident, fieldPos) :: (EqToken, _) :: tokens when fieldPos |> posIsSameColumn alignPos ->
+        let init, tokens, errors =
+          parseExpr (fieldPos |> posAddX 1) (tokens, errors)
+
+        go ((ident, init, fieldPos) :: acc) alignPos (tokens, errors)
+
+    | (_, pos) :: tokens when pos |> posInside alignPos ->
+        let errors =
+          parseErrorCore "Expected 'field = expr'." pos errors
+
+        go acc alignPos (tokens, errors)
+
+    | _ -> listRev acc, tokens, errors
+
+  let baseOpt, (fields, tokens, errors) =
+    match tokens with
+    | (RightBraceToken, _) :: _ -> None, ([], tokens, errors)
+
+    | (IdentToken _, _) :: (EqToken, _) :: _ -> None, go [] (nextPos tokens) (tokens, errors)
+
+    | _ ->
+        let baseExpr, tokens, errors =
+          parseExpr (nextPos tokens) (tokens, errors)
+
+        let tokens, errors =
+          match tokens with
+          | (WithToken, _) :: tokens -> tokens, errors
+
+          | _ ->
+              let errors =
+                parseErrorCore "Expected 'with' keyword." (nextPos tokens) errors
+
+              tokens, errors
+
+        Some baseExpr, go [] (nextPos tokens) (tokens, errors)
+
+  let tokens, errors =
+    match tokens with
+    | (RightBraceToken, _) :: tokens -> tokens, errors
+
+    | _ ->
+        let errors =
+          parseErrorCore "Expected a '}'." (nextPos tokens) errors
+
+        tokens, errors
+
+  ARecordExpr(baseOpt, fields, bracePos), tokens, errors
+
 let parseThenClause basePos (tokens, errors) =
   let innerBasePos = basePos |> posAddX 1
 
@@ -664,6 +759,8 @@ let parseTyDecl typePos (tokens, errors) =
 
             | AUnionTyDecl variants -> AUnionTyExpr(vis, tyIdent, variants, typePos)
 
+            | ARecordTyDecl fields -> ARecordTyExpr(vis, tyIdent, fields, typePos)
+
           expr, tokens, errors
 
       | _ ->
@@ -722,6 +819,8 @@ let parseAtom basePos (tokens, errors) =
   | (LeftParenToken, parenPos) :: tokens -> parseParenBody basePos parenPos (tokens, errors)
 
   | (LeftBracketToken, bracketPos) :: tokens -> parseList basePos bracketPos (tokens, errors)
+
+  | (LeftBraceToken, bracePos) :: tokens -> parseRecordExpr bracePos (tokens, errors)
 
   | (IfToken, pos) :: tokens -> parseIf pos (tokens, errors)
 
