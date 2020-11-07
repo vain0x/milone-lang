@@ -169,7 +169,7 @@ type TyElaborationCtx =
   | TyElaborationCtx
     of AssocMap<VarSerial, VarDef>
       * AssocMap<TySerial, TyDef>
-      * AssocMap<TySerial, Ty * AssocMap<Ident, int * Ty>>
+      * AssocMap<TySerial, (Ty * AssocMap<Ident, int * Ty>)>
 
 let tyElaborationCtxGetVars (TyElaborationCtx (vars, _, _)) =
   vars
