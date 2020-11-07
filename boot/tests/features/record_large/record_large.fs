@@ -8,12 +8,14 @@ type GitCommitOptions =
     Fixup: string option }
 // and more...
 
+let defaultOptions (): GitCommitOptions =
+  { All = false
+    Patch = false
+    ReuseMessage = None
+    ReeditMessage = None
+    Fixup = None }
+
 let main _ =
-  let _options =
-    { All = false
-      Patch = false
-      ReuseMessage = None
-      ReeditMessage = None
-      Fixup = None }
+  let _options = defaultOptions ()
 
   0

@@ -149,15 +149,19 @@ let mapAddTest () =
 
 [<Fact>]
 let mapRemoveTest () =
-  let m =
+  let removed, m =
     mapEmpty (strHash, strCmp)
     |> mapAdd "a" 1
     |> mapAdd "a" 2
     |> mapAdd "b" 3
     |> mapRemove "a"
 
+  removed |> is (Some 2)
   m |> mapTryFind "a" |> is None
   m |> mapTryFind "b" |> is (Some 3)
+
+  let removed, _ = m |> mapRemove "c"
+  removed |> is None
 
 [<Fact>]
 let mapFoldTest () =

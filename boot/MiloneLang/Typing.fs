@@ -330,6 +330,28 @@ let inferNil ctx expr loc =
   let itemTy, ctx = tyCtxFreshExprTy expr ctx
   hxNil itemTy loc, tyList itemTy, ctx
 
+let inferRecord ctx itself fields loc =
+  let recordTy, ctx = tyCtxFreshExprTy itself ctx
+
+  let fields, ctx =
+    (fields, ctx)
+    |> stMap (fun ((ident, init, loc), ctx) ->
+         let init, ty, ctx = inferExpr ctx init
+         (ident, init, ty, loc), ctx)
+
+  let ctx =
+    let fields =
+      fields
+      |> listMap (fun (ident, _, ty, loc) -> ident, ty, loc)
+
+    tyCtxAddTraitBounds [ (RecordTrait(recordTy, fields), loc) ] ctx
+
+  let fields =
+    fields
+    |> listMap (fun (ident, init, _, loc) -> ident, init, loc)
+
+  HRecordExpr(fields, recordTy, loc), recordTy, ctx
+
 /// match 'a with ( | 'a -> 'b )*
 // expr: match expr itself
 let inferMatch ctx expr cond arms loc =
@@ -529,11 +551,7 @@ let inferExpr (ctx: TyCtx) (expr: HExpr): HExpr * Ty * TyCtx =
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
-
-  | HRecordExpr (_, _, loc) ->
-      printfn "/* unimplemented. %A */" expr
-      hxUnit loc, tyUnit, ctx
-
+  | HRecordExpr (fields, _, loc) -> inferRecord ctx expr fields loc
   | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx expr callee arg loc

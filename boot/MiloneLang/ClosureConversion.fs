@@ -408,7 +408,12 @@ let declosureExpr (expr, ctx) =
 
       doArm ()
 
-  | HRecordExpr _ -> failwithf "unimplemented. %A" expr
+  | HRecordExpr _ ->
+      let doArm () =
+        printfn "/* unimplemented. %A */" expr
+        hxUnit (exprToLoc expr), ctx
+
+      doArm ()
 
   | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =

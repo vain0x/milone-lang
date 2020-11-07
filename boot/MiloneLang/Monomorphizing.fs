@@ -218,7 +218,7 @@ let monoCtxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
   | None
   | Some [] -> [], ctx
   | Some useSiteTys ->
-      let map =
+      let _, map =
         ctx
         |> monoCtxGetGenericFunUseSiteTys
         |> mapRemove funSerial

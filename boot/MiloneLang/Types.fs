@@ -35,6 +35,8 @@ type TyUnifyLog =
 type Log =
   | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
   | TyBoundError of Trait
+  | RedundantFieldError of ty: Ident * field: Ident
+  | MissingFieldsError of ty: Ident * fields: Ident list
   | Error of string
 
 // -----------------------------------------------
@@ -378,6 +380,7 @@ type Trait =
   | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
   | ToIntTrait of Ty
   | ToStringTrait of Ty
+  | RecordTrait of Ty * fields: (Ident * Ty * Loc) list
 
 /// Type declaration.
 type TyDecl =
