@@ -406,6 +406,19 @@ let assocToKeyAcc acc assoc =
 // HashTrie
 // -----------------------------------------------
 
+let trieIsEmpty trie =
+  let rec go trie =
+    match trie with
+    | (_, []) :: trie ->
+      go trie
+
+    | (_, _ :: _) :: _ ->
+      false
+
+    | [] -> true
+
+  go trie
+
 let trieAdd (keyHash: int) key value trie =
   let rec go trie =
     match trie with
@@ -477,6 +490,9 @@ let trieToKeys trie =
 let mapEmpty (hash, cmp): AssocMap<_, _> = [], hash, cmp
 
 let mapKeyHash hash key = hash key % 512
+
+let mapIsEmpty ((trie, _, _): AssocMap<_, _>) =
+  trie |> trieIsEmpty
 
 let mapAdd key value (trie, hash, cmp): AssocMap<_, _> =
   let trie =
@@ -1119,13 +1135,6 @@ let traitMapTys f it =
   | ToIntTrait ty -> ToIntTrait(f ty)
 
   | ToStringTrait ty -> ToStringTrait(f ty)
-
-  | RecordTrait (ty, fields, isExhaustive) ->
-      let fields =
-        fields
-        |> listMap (fun (ident, ty, loc) -> ident, f ty, loc)
-
-      RecordTrait(f ty, fields, isExhaustive)
 
   | FieldTrait (ty, fieldIdent, fieldTy) -> FieldTrait(f ty, fieldIdent, f fieldTy)
 
@@ -1978,53 +1987,6 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | ToStringTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | RecordTrait (ty, fields, isExhaustive) ->
-      match ty with
-      | AppTy (RefTyCtor tySerial, []) ->
-          match ctx |> tyContextGetTys |> mapTryFind tySerial with
-          | Some (RecordTyDef (recordIdent, fieldDefs, _)) ->
-              let folder (fieldDefs, logAcc, redundant, ctx) field =
-                let ident, initTy, loc = field
-                match fieldDefs |> mapRemove ident with
-                | None, _ -> fieldDefs, logAcc, (ident, loc) :: redundant, ctx
-
-                | Some defTy, fieldDefs ->
-                    let logAcc, ctx = typingUnify logAcc ctx initTy defTy loc
-                    fieldDefs, logAcc, redundant, ctx
-
-              let fieldDefs, logAcc, redundant, ctx =
-                let fieldDefs =
-                  fieldDefs
-                  |> listMap (fun (ident, ty, _) -> ident, ty)
-                  |> mapOfList (strHash, strCmp)
-
-                fields
-                |> listFold folder (fieldDefs, logAcc, [], ctx)
-
-              let logAcc =
-                redundant
-                |> listFold (fun logAcc (fieldIdent, loc) ->
-                     (Log.RedundantFieldError(recordIdent, fieldIdent), loc)
-                     :: logAcc) logAcc
-
-              let logAcc =
-                let fields =
-                  // FIXME: Without type ascription, self compilation fails.
-                  fieldDefs
-                  |> mapFold (fun (acc: string list) (ident: string) (_: Ty) -> ident :: acc) []
-
-                if not isExhaustive || fields |> listIsEmpty then
-                  logAcc
-                else
-                  (Log.MissingFieldsError(recordIdent, fields), loc)
-                  :: logAcc
-
-              logAcc, ctx
-
-          | _ -> fail ()
-
-      | _ -> fail ()
-
   | FieldTrait (ty, ident, fieldTy) ->
       match ty with
       | AppTy (RefTyCtor tySerial, []) ->
@@ -2066,14 +2028,6 @@ let logToString loc log =
   | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
-
-  | Log.TyBoundError (RecordTrait (ty, fields, _)) ->
-      let fields =
-        fields
-        |> listMapWithIndex (fun i (ident, _, _) -> (if i = 0 then "" else "', '") + ident)
-        |> strConcat
-
-      sprintf "%s Type '%A' is expected to be a record with fields: '%s'." loc ty fields
 
   | Log.TyBoundError (FieldTrait (ty, fieldName, _)) ->
       sprintf "%s Type '%A' is expected to be a record with a field: '%s'." loc ty fieldName

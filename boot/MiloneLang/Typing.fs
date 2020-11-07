@@ -17,6 +17,10 @@ open MiloneLang.Records
 
 let tyCtxGetTy tySerial (ctx: TyCtx) = ctx |> tyCtxGetTys |> mapFind tySerial
 
+let private addLog (ctx: TyCtx) log loc =
+  ctx
+  |> tyCtxWithLogs ((log, loc) :: (ctx |> tyCtxGetLogs))
+
 let tyCtxAddErr (ctx: TyCtx) message loc =
   ctx
   |> tyCtxWithLogs ((Log.Error message, loc) :: (ctx |> tyCtxGetLogs))
@@ -354,56 +358,99 @@ let inferNil ctx expr loc =
   let itemTy, ctx = tyCtxFreshExprTy expr ctx
   hxNil itemTy loc, tyList itemTy, ctx
 
-let inferRecord ctx itself expectOpt baseOpt fields loc =
-  printfn "/* expectOpt = %A */" expectOpt
+let inferRecord ctx expectOpt baseOpt fields loc =
+  let asRecordTy tyOpt =
+    match tyOpt |> optionMap (tyCtxSubstTy ctx) with
+    | Some ((AppTy (RefTyCtor tySerial, [])) as recordTy) ->
+        match ctx |> tyCtxGetTy tySerial with
+        | RecordTyDef (recordIdent, fieldDefs, _) -> Some(recordTy, recordIdent, fieldDefs)
+        | _ -> None
 
-  // TODO: inherit expectation
-  let baseOpt, recordTy, ctx =
+    | _ -> None
+
+  // First, infer base if exists.
+  let baseOpt, baseTyOpt, ctx =
     match baseOpt with
-    | None ->
-        let recordTy, ctx = tyCtxFreshExprTy itself ctx
-        None, recordTy, ctx
+    | None -> None, None, ctx
 
     | Some baseExpr ->
-        let baseExpr, recordTy, ctx = inferExpr ctx None baseExpr
-        Some baseExpr, recordTy, ctx
+        let baseExpr, recordTy, ctx = inferExpr ctx expectOpt baseExpr
+        Some baseExpr, Some recordTy, ctx
 
-  let fields, ctx =
-    (fields, ctx)
-    |> stMap (fun ((ident, init, loc), ctx) ->
-         // TODO: pass in field type as expectation
-         let init, ty, ctx = inferExpr ctx None init
-         (ident, init, ty, loc), ctx)
+  // Determine the record type by base expr or expectation.
+  let recordTyInfoOpt =
+    match baseTyOpt |> asRecordTy with
+    | ((Some _) as it) -> it
+    | _ -> expectOpt |> asRecordTy
 
-  let ctx =
-    let fields =
-      fields
-      |> listMap (fun (ident, _, ty, loc) -> ident, ty, loc)
+  match recordTyInfoOpt with
+  | None ->
+      let ctx =
+        tyCtxAddErr ctx "Can't infer type of record." loc
 
-    let isExhaustive = baseOpt |> optionIsNone
+      hxAbort ctx loc
 
-    tyCtxAddTraitBounds [ (RecordTrait(recordTy, fields, isExhaustive), loc) ] ctx
+  | Some (recordTy, recordIdent, fieldDefs) ->
+      let addRedundantErr fieldIdent loc ctx =
+        addLog ctx (Log.RedundantFieldError(recordIdent, fieldIdent)) loc
 
-  let fields =
-    fields
-    |> listMap (fun (ident, init, _, loc) -> ident, init, loc)
+      let addIncompleteErr fieldIdents ctx =
+        addLog ctx (Log.MissingFieldsError(recordIdent, fieldIdents)) loc
 
-  match baseOpt with
-  | None -> HRecordExpr(None, fields, recordTy, loc), recordTy, ctx
+      // Infer field initializers and whether each of them is member of the record type.
+      // Whenever a field appears, remove it from the set of fields
+      // so that second occurrence of it is marked as redundant.
+      let fields, (fieldDefs, ctx) =
+        let fieldDefs =
+          fieldDefs
+          |> listMap (fun (ident, ty, _) -> ident, ty)
+          |> mapOfList (strHash, strCmp)
 
-  | Some baseExpr ->
-      // Assign to a temporary var so that TyElaborating can reuse the expr safely.
-      // (This kind of modification is not business of typing, though.)
-      // { base with fields... } ==> let t = base in { t with fields... }
-      let varSerial, ctx = tyCtxFreshVar ctx "base" recordTy loc
+        (fields, (fieldDefs, ctx))
+        |> stMap (fun (field, (fieldDefs, ctx)) ->
+             let ident, init, loc = field
 
-      let varPat = HRefPat(varSerial, recordTy, loc)
-      let varExpr = HRefExpr(varSerial, recordTy, loc)
+             match fieldDefs |> mapRemove ident with
+             | None, _ ->
+                 let ctx = ctx |> addRedundantErr ident loc
+                 let init, _, ctx = inferExpr ctx None init
+                 (ident, init, loc), (fieldDefs, ctx)
 
-      let recordExpr =
-        HRecordExpr(Some varExpr, fields, recordTy, loc)
+             | Some defTy, fieldDefs ->
+                 let init, initTy, ctx = inferExpr ctx (Some defTy) init
+                 let ctx = tyCtxUnifyTy ctx loc initTy defTy
+                 (ident, init, loc), (fieldDefs, ctx))
 
-      HLetValExpr(PrivateVis, varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
+      // Unless base expr is specified, set of field initializers must be complete.
+      let ctx =
+        if baseOpt
+           |> optionIsNone
+           && fieldDefs |> mapIsEmpty |> not then
+          let fields =
+            fieldDefs
+            |> mapToList
+            |> listMap (fun (ident, _) -> ident)
+
+          ctx |> addIncompleteErr fields
+        else
+          ctx
+
+      match baseOpt with
+      | None -> HRecordExpr(None, fields, recordTy, loc), recordTy, ctx
+
+      | Some baseExpr ->
+          // Assign to a temporary var so that TyElaborating can reuse the expr safely.
+          // (This kind of modification is not business of typing, though.)
+          // { base with fields... } ==> let t = base in { t with fields... }
+          let varSerial, ctx = tyCtxFreshVar ctx "base" recordTy loc
+
+          let varPat = HRefPat(varSerial, recordTy, loc)
+          let varExpr = HRefExpr(varSerial, recordTy, loc)
+
+          let recordExpr =
+            HRecordExpr(Some varExpr, fields, recordTy, loc)
+
+          HLetValExpr(PrivateVis, varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
 
 /// match 'a with ( | 'a -> 'b )*
 // expr: match expr itself
@@ -609,7 +656,7 @@ let inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * Ty
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
-  | HRecordExpr (baseOpt, fields, _, loc) -> inferRecord ctx expr expectOpt baseOpt fields loc
+  | HRecordExpr (baseOpt, fields, _, loc) -> inferRecord ctx expectOpt baseOpt fields loc
   | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expectOpt expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNav ctx receiver field loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferOpApp ctx expr callee arg loc
