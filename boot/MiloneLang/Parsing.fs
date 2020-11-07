@@ -276,7 +276,7 @@ let parseTyDeclRecord basePos (tokens, errors) =
         let ty, tokens, errors =
           parseTy (fieldPos |> posAddX 1) (tokens, errors)
 
-        go (AFieldDecl(ident, ty, fieldPos) :: acc) alignPos (tokens, errors)
+        go ((ident, ty, fieldPos) :: acc) alignPos (tokens, errors)
 
     | (_, pos) :: tokens when pos |> posInside basePos ->
         let errors =
