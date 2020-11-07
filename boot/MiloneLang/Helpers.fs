@@ -409,11 +409,9 @@ let assocToKeyAcc acc assoc =
 let trieIsEmpty trie =
   let rec go trie =
     match trie with
-    | (_, []) :: trie ->
-      go trie
+    | (_, []) :: trie -> go trie
 
-    | (_, _ :: _) :: _ ->
-      false
+    | (_, _ :: _) :: _ -> false
 
     | [] -> true
 
@@ -491,8 +489,7 @@ let mapEmpty (hash, cmp): AssocMap<_, _> = [], hash, cmp
 
 let mapKeyHash hash key = hash key % 512
 
-let mapIsEmpty ((trie, _, _): AssocMap<_, _>) =
-  trie |> trieIsEmpty
+let mapIsEmpty ((trie, _, _): AssocMap<_, _>) = trie |> trieIsEmpty
 
 let mapAdd key value (trie, hash, cmp): AssocMap<_, _> =
   let trie =
@@ -1135,8 +1132,6 @@ let traitMapTys f it =
   | ToIntTrait ty -> ToIntTrait(f ty)
 
   | ToStringTrait ty -> ToStringTrait(f ty)
-
-  | FieldTrait (ty, fieldIdent, fieldTy) -> FieldTrait(f ty, fieldIdent, f fieldTy)
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -1942,9 +1937,6 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   let theTrait =
     theTrait |> traitMapTys (typingSubst ctx)
 
-  let fail () =
-    (Log.TyBoundError theTrait, loc) :: logAcc, ctx
-
   let expectScalar ty (logAcc, ctx) =
     match ty with
     | ErrorTy _
@@ -1987,21 +1979,6 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | ToStringTrait ty -> (logAcc, ctx) |> expectScalar ty
 
-  | FieldTrait (ty, ident, fieldTy) ->
-      match ty with
-      | AppTy (RefTyCtor tySerial, []) ->
-          match ctx |> tyContextGetTys |> mapTryFind tySerial with
-          | Some (RecordTyDef (_, fieldDefs, _)) ->
-              match fieldDefs
-                    |> listTryFind (fun (theIdent, _, _) -> theIdent = ident) with
-              | Some (_, defTy, _) -> typingUnify logAcc ctx fieldTy defTy loc
-
-              | None -> fail ()
-
-          | _ -> fail ()
-
-      | _ -> fail ()
-
 // -----------------------------------------------
 // Logs
 // -----------------------------------------------
@@ -2028,9 +2005,6 @@ let logToString loc log =
   | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
-
-  | Log.TyBoundError (FieldTrait (ty, fieldName, _)) ->
-      sprintf "%s Type '%A' is expected to be a record with a field: '%s'." loc ty fieldName
 
   | Log.RedundantFieldError (recordIdent, fieldIdent) ->
       sprintf "%s The field '%s' is redundant for record '%s'." loc fieldIdent recordIdent

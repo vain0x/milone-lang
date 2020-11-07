@@ -381,9 +381,6 @@ type Trait =
   | ToIntTrait of Ty
   | ToStringTrait of Ty
 
-  /// A record type with a field.
-  | FieldTrait of recordTy: Ty * Ident * fieldTy: Ty
-
 /// Type declaration.
 type TyDecl =
   | TySynonymDecl of ty: Ty * Loc

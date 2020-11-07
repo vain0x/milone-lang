@@ -483,6 +483,12 @@ let inferMatch ctx expectOpt expr cond arms loc =
   HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
 let inferNav ctx sub mes loc =
+  let fail ctx =
+    let ctx =
+      tyCtxAddErr ctx "Expected to have field: '%s'." loc
+
+    hxAbort ctx loc
+
   let sub, subTy, ctx = inferExpr ctx None sub
 
   let subTy = tyCtxSubstTy ctx subTy
@@ -493,14 +499,22 @@ let inferNav ctx sub mes loc =
 
       hxApp funExpr sub tyInt loc, tyInt, ctx
 
-  | _ ->
-      let fieldTy, (), ctx = tyCtxFreshTyVar mes loc ctx
+  | AppTy (RefTyCtor tySerial, []), _ ->
+      let fieldTyOpt =
+        let ident = mes
+        match ctx |> tyCtxGetTy tySerial with
+        | RecordTyDef (_, fieldDefs, _) ->
+            match fieldDefs
+                  |> listTryFind (fun (theIdent, _, _) -> theIdent = ident) with
+            | Some (_, fieldTy, _) -> Some fieldTy
+            | None -> None
+        | _ -> None
 
-      let ctx =
-        ctx
-        |> tyCtxAddTraitBounds [ (FieldTrait(subTy, mes, fieldTy), loc) ]
+      match fieldTyOpt with
+      | Some fieldTy -> HNavExpr(sub, mes, fieldTy, loc), fieldTy, ctx
+      | None -> fail ctx
 
-      HNavExpr(sub, mes, fieldTy, loc), fieldTy, ctx
+  | _ -> fail ctx
 
 // expr: app expr itself
 let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
