@@ -626,7 +626,7 @@ let genExprCallUInt arg argTy ctx =
   | AppTy (IntTyCtor, _)
   | AppTy (CharTyCtor, _) -> CCastExpr(arg, CUInt32Ty), ctx
   | AppTy (StrTyCtor, _) -> CCallExpr(CRefExpr "str_to_uint", [ arg ]), ctx
-  | _ -> failwith "Never: Type Error `int`"
+  | _ -> failwith "Never: Type Error `uint`"
 
 let genExprCallString arg argTy ctx =
   let arg, ctx = genExpr ctx arg
@@ -635,7 +635,7 @@ let genExprCallString arg argTy ctx =
   | AppTy (UIntTyCtor, _) -> CCallExpr(CRefExpr "str_of_uint", [ arg ]), ctx
   | AppTy (CharTyCtor, _) -> CCallExpr(CRefExpr "str_of_char", [ arg ]), ctx
   | AppTy (StrTyCtor, _) -> arg, ctx
-  | _ -> failwith "Never: Type Error `int`"
+  | _ -> failwith "Never: Type Error `string`"
 
 let genExprCallPrim ctx prim args primTy resultTy loc =
   match prim, args, primTy with
