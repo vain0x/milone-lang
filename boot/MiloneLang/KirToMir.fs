@@ -386,6 +386,7 @@ let private kmPrimNode itself prim args results conts loc ctx: KirToMirCtx =
   | KAssertPrim -> other HPrim.Assert
   | KCharPrim -> other HPrim.Char
   | KIntPrim -> other HPrim.Int
+  | KUIntPrim -> other HPrim.UInt
   | KStringPrim -> other HPrim.String
   | KPrintfnPrim -> other HPrim.Printfn
   | KInRegionPrim -> other HPrim.InRegion

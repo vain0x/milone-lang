@@ -358,6 +358,7 @@ let private kgCallAddExpr itself _primTy args ty loc hole ctx =
   | [ l; r ] ->
       match ty with
       | AppTy ((IntTyCtor
+               | UIntTyCtor
                | CharTyCtor),
                _) -> basicPrimNode2 "add" KAddPrim l r ty loc hole ctx
 
@@ -726,6 +727,7 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.StrGetSlice -> regular "str_get_slice" KStrGetSlicePrim
           | HPrim.Char -> regular "char" KCharPrim
           | HPrim.Int -> regular "int" KIntPrim
+          | HPrim.UInt -> regular "uint" KUIntPrim
           | HPrim.String -> regular "string" KStringPrim
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
           | HPrim.NativeFun (ident, arity) -> regular ident (KNativeFunPrim(ident, arity))

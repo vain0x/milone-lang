@@ -349,6 +349,7 @@ type NameTree = NameTree of AssocMap<Serial, Serial list>
 type TyCtor =
   | BoolTyCtor
   | IntTyCtor
+  | UIntTyCtor
   | CharTyCtor
   | StrTyCtor
   | ObjTyCtor
@@ -375,6 +376,7 @@ type TySpec = TySpec of Ty * Trait list
 /// NOTE: `trait` is a reserved word in F#.
 type Trait =
   | AddTrait of Ty
+  | ScalarTrait of Ty
   | EqTrait of Ty
   | CmpTrait of Ty
   | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
@@ -450,6 +452,7 @@ type HPrim =
   | StrGetSlice
   | Char
   | Int
+  | UInt
   | String
   | InRegion
   | NativeFun of Ident * Arity
@@ -586,6 +589,9 @@ type KPrim =
 
   /// 1/1/1.
   | KIntPrim
+
+  /// 1/1/1.
+  | KUIntPrim
 
   /// 1/1/1.
   | KStringPrim
@@ -790,6 +796,7 @@ type CTyInstance =
 type CTy =
   | CVoidTy
   | CIntTy
+  | CUInt32Ty
   | CCharTy
   | CPtrTy of CTy
   | CFunPtrTy of CTy list * CTy

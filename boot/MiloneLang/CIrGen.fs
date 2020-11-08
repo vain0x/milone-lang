@@ -345,6 +345,8 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
 
       | AppTy (IntTyCtor, _) -> "Int", ctx
 
+      | AppTy (UIntTyCtor, _) -> "UInt", ctx
+
       | AppTy (CharTyCtor, _) -> "Char", ctx
 
       | AppTy (StrTyCtor, _) -> "String", ctx
@@ -416,6 +418,8 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (IntTyCtor, _)
   | AppTy (TupleTyCtor, []) -> CIntTy, ctx
 
+  | AppTy (UIntTyCtor, _) -> CUInt32Ty, ctx
+
   | AppTy (CharTyCtor, _) -> CCharTy, ctx
 
   | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
@@ -444,6 +448,8 @@ let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (BoolTyCtor, _)
   | AppTy (IntTyCtor, _)
   | AppTy (TupleTyCtor, []) -> CIntTy, ctx
+
+  | AppTy (UIntTyCtor, []) -> CUInt32Ty, ctx
 
   | AppTy (CharTyCtor, _) -> CCharTy, ctx
 
@@ -491,7 +497,8 @@ let genExprDefault ctx ty =
   match ty with
   | AppTy (TupleTyCtor, [])
   | AppTy (BoolTyCtor, _)
-  | AppTy (IntTyCtor, _) -> CIntExpr 0, ctx
+  | AppTy (IntTyCtor, _)
+  | AppTy (UIntTyCtor, _) -> CIntExpr 0, ctx
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (CharTyCtor, _)
   | AppTy (ObjTyCtor, _)
@@ -607,14 +614,25 @@ let genExprCallInt arg argTy ctx =
   let arg, ctx = genExpr ctx arg
   match argTy with
   | AppTy (IntTyCtor, _) -> arg, ctx
+  | AppTy (UIntTyCtor, _)
   | AppTy (CharTyCtor, _) -> CCastExpr(arg, CIntTy), ctx
   | AppTy (StrTyCtor, _) -> CCallExpr(CRefExpr "str_to_int", [ arg ]), ctx
+  | _ -> failwith "Never: Type Error `int`"
+
+let genExprCallUInt arg argTy ctx =
+  let arg, ctx = genExpr ctx arg
+  match argTy with
+  | AppTy (UIntTyCtor, _) -> arg, ctx
+  | AppTy (IntTyCtor, _)
+  | AppTy (CharTyCtor, _) -> CCastExpr(arg, CUInt32Ty), ctx
+  | AppTy (StrTyCtor, _) -> CCallExpr(CRefExpr "str_to_uint", [ arg ]), ctx
   | _ -> failwith "Never: Type Error `int`"
 
 let genExprCallString arg argTy ctx =
   let arg, ctx = genExpr ctx arg
   match argTy with
   | AppTy (IntTyCtor, _) -> CCallExpr(CRefExpr "str_of_int", [ arg ]), ctx
+  | AppTy (UIntTyCtor, _) -> CCallExpr(CRefExpr "str_of_uint", [ arg ]), ctx
   | AppTy (CharTyCtor, _) -> CCallExpr(CRefExpr "str_of_char", [ arg ]), ctx
   | AppTy (StrTyCtor, _) -> arg, ctx
   | _ -> failwith "Never: Type Error `int`"
@@ -651,6 +669,8 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       CCastExpr(arg, CCharTy), ctx
 
   | HPrim.Int, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> genExprCallInt arg argTy ctx
+
+  | HPrim.UInt, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> genExprCallUInt arg argTy ctx
 
   | HPrim.String, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> genExprCallString arg argTy ctx
 

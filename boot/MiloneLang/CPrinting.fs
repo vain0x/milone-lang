@@ -55,6 +55,7 @@ let rec cprintTy acc ty: string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
   | CIntTy -> acc |> cons "int"
+  | CUInt32Ty -> acc |> cons "uint32_t"
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty ->
       let acc = cprintTy acc ty

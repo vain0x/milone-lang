@@ -110,6 +110,7 @@ let mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   match mexprToTy l with
   | AppTy ((BoolTyCtor
            | IntTyCtor
+           | UIntTyCtor
            | CharTyCtor),
            _) -> mxBinOpScalar ctx op l r (ty, loc)
   | AppTy (StrTyCtor, _) -> mxStrCmp ctx op l r (ty, loc)
@@ -560,6 +561,7 @@ let mirifyExprOpArith ctx op l r ty loc =
 
   match lTy with
   | AppTy ((IntTyCtor
+           | UIntTyCtor
            | CharTyCtor),
            _) -> mxBinOpScalar ctx op l r (ty, loc)
 

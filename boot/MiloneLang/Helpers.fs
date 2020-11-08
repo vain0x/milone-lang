@@ -1092,6 +1092,8 @@ let tyCtorToInt tyCtor =
 
   | IntTyCtor -> 2
 
+  | UIntTyCtor -> 9
+
   | CharTyCtor -> 3
 
   | StrTyCtor -> 4
@@ -1106,7 +1108,7 @@ let tyCtorToInt tyCtor =
 
   | RefTyCtor tySerial ->
       assert (tySerial >= 0)
-      9 + tySerial
+      10 + tySerial
 
 let tyCtorHash tyCtor = tyCtor |> tyCtorToInt |> intHash
 
@@ -1122,6 +1124,8 @@ let tyCtorEq first second = tyCtorCmp first second = 0
 let traitMapTys f it =
   match it with
   | AddTrait ty -> AddTrait(f ty)
+
+  | ScalarTrait ty -> ScalarTrait(f ty)
 
   | EqTrait ty -> EqTrait(f ty)
 
@@ -1143,6 +1147,8 @@ let noTy = ErrorTy noLoc
 let tyBool = AppTy(BoolTyCtor, [])
 
 let tyInt = AppTy(IntTyCtor, [])
+
+let tyUInt = AppTy(UIntTyCtor, [])
 
 let tyChar = AppTy(CharTyCtor, [])
 
@@ -1229,6 +1235,8 @@ let tyPrimFromIdent ident tys loc =
   | "bool", [] -> tyBool
 
   | "int", [] -> tyInt
+
+  | "uint", [] -> tyUInt
 
   | "char", [] -> tyChar
 
@@ -1388,6 +1396,8 @@ let primFromIdent ident =
 
   | "int" -> HPrim.Int |> Some
 
+  | "uint" -> HPrim.UInt |> Some
+
   | "string" -> HPrim.String |> Some
 
   | "None" -> HPrim.OptionNone |> Some
@@ -1405,18 +1415,19 @@ let primToTySpec prim =
   let mono ty = TySpec(ty, [])
   let poly ty traits = TySpec(ty, traits)
 
+  let scalarBinary () =
+    let ty = meta 1
+    poly (tyFun ty (tyFun ty ty)) [ ScalarTrait ty ]
+
   match prim with
   | HPrim.Add ->
       let addTy = meta 1
       poly (tyFun addTy (tyFun addTy addTy)) [ AddTrait addTy ]
 
-  | HPrim.Sub -> mono (tyFun tyInt (tyFun tyInt tyInt))
-
-  | HPrim.Mul -> mono (tyFun tyInt (tyFun tyInt tyInt))
-
-  | HPrim.Div -> mono (tyFun tyInt (tyFun tyInt tyInt))
-
-  | HPrim.Mod -> mono (tyFun tyInt (tyFun tyInt tyInt))
+  | HPrim.Sub
+  | HPrim.Mul
+  | HPrim.Div
+  | HPrim.Mod -> scalarBinary ()
 
   | HPrim.Eq ->
       let eqTy = meta 1
@@ -1474,6 +1485,10 @@ let primToTySpec prim =
       let toIntTy = meta 1
       poly (tyFun toIntTy tyInt) [ ToIntTrait toIntTy ]
 
+  | HPrim.UInt ->
+      let toUIntTy = meta 1
+      poly (tyFun toUIntTy tyUInt) [ ToIntTrait toUIntTy ]
+
   | HPrim.String ->
       let toStrTy = meta 1
       poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
@@ -1500,6 +1515,7 @@ let primToArity ty prim =
   | HPrim.StrLength
   | HPrim.Char
   | HPrim.Int
+  | HPrim.UInt
   | HPrim.String
   | HPrim.InRegion -> 1
   | HPrim.Add
@@ -1942,6 +1958,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
     | ErrorTy _
     | AppTy (BoolTyCtor, [])
     | AppTy (IntTyCtor, [])
+    | AppTy (UIntTyCtor, [])
     | AppTy (CharTyCtor, [])
     | AppTy (StrTyCtor, []) -> logAcc, ctx
 
@@ -1951,7 +1968,18 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   | AddTrait ty ->
       match ty with
       | ErrorTy _
+      | AppTy (UIntTyCtor, [])
       | AppTy (StrTyCtor, []) -> logAcc, ctx
+
+      | _ ->
+          // Coerce to int by default.
+          typingUnify logAcc ctx ty tyInt loc
+
+  | ScalarTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor, [])
+      | AppTy (UIntTyCtor, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
@@ -1994,6 +2022,8 @@ let logToString loc log =
       sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
 
   | Log.TyBoundError (AddTrait ty) -> sprintf "%s No support (+) for '%A' yet" loc ty
+
+  | Log.TyBoundError (ScalarTrait ty) -> sprintf "%s Expected scalar type (such as int) but was '%A'" loc ty
 
   | Log.TyBoundError (EqTrait ty) -> sprintf "%s No support equality for '%A' yet" loc ty
 

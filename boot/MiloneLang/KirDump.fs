@@ -49,6 +49,7 @@ let private tyCtorToDebugString tyCtor ctx =
   match tyCtor with
   | BoolTyCtor -> "bool"
   | IntTyCtor -> "int"
+  | UIntTyCtor -> "uint"
   | CharTyCtor -> "char"
   | StrTyCtor -> "string"
   | ObjTyCtor -> "obj"
@@ -178,6 +179,7 @@ let private kdPrim prim =
   | KAssertPrim -> "Assert"
   | KCharPrim -> "Char"
   | KIntPrim -> "Int"
+  | KUIntPrim -> "UInt"
   | KStringPrim -> "String"
   | KPrintfnPrim -> "Printfn"
   | KInRegionPrim -> "InRegion"
