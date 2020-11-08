@@ -1117,6 +1117,19 @@ let tyCtorCmp first second =
 
 let tyCtorEq first second = tyCtorCmp first second = 0
 
+let tyCtorDisplay getTyIdent tyCtor =
+  match tyCtor with
+  | BoolTyCtor -> "bool"
+  | IntTyCtor -> "int"
+  | UIntTyCtor -> "uint"
+  | CharTyCtor -> "char"
+  | StrTyCtor -> "string"
+  | ObjTyCtor -> "obj"
+  | FunTyCtor -> "fun"
+  | TupleTyCtor -> "tuple"
+  | ListTyCtor -> "list"
+  | RefTyCtor tySerial -> getTyIdent tySerial
+
 // -----------------------------------------------
 // Traits (HIR)
 // -----------------------------------------------

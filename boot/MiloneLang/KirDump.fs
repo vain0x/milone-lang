@@ -46,17 +46,8 @@ let private tsConstStmt indent pat init =
 // -----------------------------------------------
 
 let private tyCtorToDebugString tyCtor ctx =
-  match tyCtor with
-  | BoolTyCtor -> "bool"
-  | IntTyCtor -> "int"
-  | UIntTyCtor -> "uint"
-  | CharTyCtor -> "char"
-  | StrTyCtor -> "string"
-  | ObjTyCtor -> "obj"
-  | FunTyCtor -> "fun"
-  | TupleTyCtor -> "tuple"
-  | ListTyCtor -> "list"
-  | RefTyCtor tySerial -> getTyName tySerial ctx
+  tyCtor
+  |> tyCtorDisplay (fun tySerial -> getTyName tySerial ctx)
 
 let private tyToDebugString ty ctx =
   match ty with
