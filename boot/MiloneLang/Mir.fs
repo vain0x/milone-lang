@@ -9,8 +9,36 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
 
+/// Checks whether an expr (body of fun) contains tail-rec call.
+let private containsTailRec expr =
+  match expr with
+  | HInfExpr (InfOp.CallTailRec, _, _, _) -> true
+
+  | HInfExpr (InfOp.Semi, items, _, _) -> items |> listLast |> containsTailRec
+
+  | HLitExpr _
+  | HRefExpr _
+  | HPrimExpr _
+  | HNavExpr _
+  | HInfExpr _
+  | HOpenExpr _
+  | HTyDeclExpr _ -> false
+
+  | HMatchExpr (_, arms, _, _) ->
+      arms
+      |> listExists (fun (_, _, body) -> body |> containsTailRec)
+
+
+  | HLetValExpr (_, _, _, next, _, _) -> next |> containsTailRec
+
+  | HLetFunExpr (_, _, _, _, _, next, _, _) -> next |> containsTailRec
+
+  | HErrorExpr _ -> failwithf "NEVER: %A" expr
+  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
+  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+
 let mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
-  MirCtx(tyCtx |> tyCtxGetSerial, tyCtx |> tyCtxGetVars, tyCtx |> tyCtxGetTys, 0, [], tyCtx |> tyCtxGetLogs)
+  MirCtx(tyCtx |> tyCtxGetSerial, tyCtx |> tyCtxGetVars, tyCtx |> tyCtxGetTys, 0, None, [], tyCtx |> tyCtxGetLogs)
 
 let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
   match ctx |> mirCtxGetVars |> mapFind varSerial with
@@ -30,6 +58,10 @@ let mirCtxNewBlock (ctx: MirCtx) = ctx |> mirCtxWithStmts []
 
 let mirCtxRollBack (bCtx: MirCtx) (dCtx: MirCtx) =
   dCtx |> mirCtxWithStmts (bCtx |> mirCtxGetStmts)
+
+let mirCtxPrependStmt ctx stmt =
+  ctx
+  |> mirCtxWithStmts (listAppend (ctx |> mirCtxGetStmts) [stmt])
 
 let mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) =
   ctx
@@ -652,6 +684,50 @@ let mirifyExprInfCallClosure ctx callee args resultTy loc =
 
   tempRef, ctx
 
+let mirifyExprInfCallTailRec ctx _callee args ty loc =
+  // It's guaranteed that callee points to the current fun,
+  // but it's serial can now be wrong due to monomorphization.
+
+  let label, argSerials =
+    match ctx |> mirCtxGetCurrentFun with
+    | Some it -> it
+    | None -> failwithf "NEVER: current fun must exists. %A" loc
+
+  // Evaluate args and assign to temp vars.
+  let tempExprs, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) ->
+         let ty, loc = exprExtract arg
+         let tempVarExpr, tempVarSerial, ctx = mirCtxFreshVar ctx "arg" ty loc
+
+         let arg, ctx = mirifyExpr ctx arg
+
+         let ctx =
+           mirCtxAddStmt ctx (MLetValStmt(tempVarSerial, MExprInit arg, ty, loc))
+
+         tempVarExpr, ctx)
+
+  // Update args.
+  let ctx =
+    let rec go ctx argSerials tempExprs =
+      match argSerials, tempExprs with
+      | [], [] -> ctx
+
+      | argSerial :: argSerials, tempExpr :: tempExprs ->
+          let ctx =
+            mirCtxAddStmt ctx (MSetStmt(argSerial, tempExpr, loc))
+
+          go ctx argSerials tempExprs
+
+      | _ -> failwithf "NEVER: Arity mismatch. %A" loc
+
+    go ctx argSerials tempExprs
+
+  let ctx =
+    mirCtxAddStmt ctx (MGotoStmt(label, loc))
+
+  MDefaultExpr(ty, loc), ctx
+
 let mirifyExprInfClosure ctx funSerial env funTy loc =
   let envTy, envLoc = exprExtract env
   let env, ctx = mirifyExpr ctx env
@@ -674,6 +750,7 @@ let mirifyExprInf ctx infOp args ty loc =
   | InfOp.TupleItem index, [ tuple ], itemTy -> mirifyExprTupleItem ctx index tuple itemTy loc
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
   | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
+  | InfOp.CallTailRec, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
   | InfOp.Closure, [ HRefExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
   | t -> failwithf "Never: %A" t
@@ -691,6 +768,23 @@ let mirifyExprLetVal ctx pat init next letLoc =
   next, ctx
 
 let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
+  let prepareTailRec ctx args =
+    let parentFun = ctx |> mirCtxGetCurrentFun
+
+    let currentFun, ctx =
+      if body |> containsTailRec then
+        let labelStmt, label, ctx = mirCtxFreshLabel ctx "tailrec" letLoc
+        let ctx = mirCtxPrependStmt ctx labelStmt
+        let argSerials = args |> listMap (fun (it, _, _) -> it)
+        Some(label, argSerials), ctx
+      else
+        None, ctx
+
+    let ctx = ctx |> mirCtxWithCurrentFun currentFun
+    parentFun, ctx
+
+  let cleanUpTailRec ctx parentFun = ctx |> mirCtxWithCurrentFun parentFun
+
   let defineArg ctx argPat =
     match argPat with
     | HRefPat (serial, ty, loc) ->
@@ -719,10 +813,12 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
     let blockTy, blockLoc = exprExtract body
 
     let args, ctx = defineArgs [] ctx argPats
+    let parentFun, ctx = prepareTailRec ctx args
     let lastExpr, ctx = mirifyExpr ctx body
     let returnStmt = MReturnStmt(lastExpr, blockLoc)
     let ctx = mirCtxAddStmt ctx returnStmt
 
+    let ctx = cleanUpTailRec ctx parentFun
     let stmts, ctx = mirCtxTakeStmts ctx
     let body = listRev stmts
     args, blockTy, body, ctx

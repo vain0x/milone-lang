@@ -18,7 +18,7 @@ struct IntIntTuple2;
 
 struct LazyList_ fun_(void* env_, int arg_);
 
-struct LazyList_ makeTail_(int n_2, int prev_, int arg_3);
+struct LazyList_ makeTail_(int n_2, int prev_, int arg_5);
 
 int main();
 
@@ -55,38 +55,43 @@ struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
 }
 
 int go_(int n_1, struct LazyList_ xs_1) {
+tailrec_1:;
     int match_;
-    if ((0 >= n_1)) goto next_2;
+    if ((0 >= n_1)) goto next_3;
     int match_1;
-    if ((xs_1.tag != Nil_)) goto next_5;
+    if ((xs_1.tag != Nil_)) goto next_6;
     match_1 = 0;
-    goto end_match_4;
-next_5:;
-    if ((xs_1.tag != Cons_)) goto next_6;
+    goto end_match_5;
+next_6:;
+    if ((xs_1.tag != Cons_)) goto next_7;
     int head_1 = (*(xs_1.Cons_)).t0;
     struct UnitLazyList_Fun1 tail_1 = (*(xs_1.Cons_)).t1;
     printf("%d\n", head_1);
     int call_ = 0;
+    int arg_3 = (n_1 - 1);
     struct LazyList_ app_ = tail_1.fun(tail_1.env, 0);
-    int call_1 = go_((n_1 - 1), app_);
+    struct LazyList_ arg_4 = app_;
+    n_1 = arg_3;
+    xs_1 = arg_4;
+    goto tailrec_1;
     match_1 = 0;
-    goto end_match_4;
-next_6:;
-end_match_4:;
+    goto end_match_5;
+next_7:;
+end_match_5:;
     match_ = 0;
-    goto end_match_1;
-next_2:;
-    if ((0 < n_1)) goto next_3;
-    match_ = 0;
-    goto end_match_1;
+    goto end_match_2;
 next_3:;
+    if ((0 < n_1)) goto next_4;
+    match_ = 0;
+    goto end_match_2;
+next_4:;
     exit(1);
-end_match_1:;
+end_match_2:;
     return 0;
 }
 
 int lazyListPrint_(int n_, struct LazyList_ xs_) {
-    int call_2 = go_(n_, xs_);
+    int call_1 = go_(n_, xs_);
     return 0;
 }
 
@@ -98,11 +103,11 @@ struct IntIntTuple2 {
 struct LazyList_ fun_(void* env_, int arg_) {
     int arg_1 = (*(((struct IntIntTuple2*)env_))).t0;
     int arg_2 = (*(((struct IntIntTuple2*)env_))).t1;
-    struct LazyList_ call_3 = makeTail_(arg_1, arg_2, 0);
-    return call_3;
+    struct LazyList_ call_2 = makeTail_(arg_1, arg_2, 0);
+    return call_2;
 }
 
-struct LazyList_ makeTail_(int n_2, int prev_, int arg_3) {
+struct LazyList_ makeTail_(int n_2, int prev_, int arg_5) {
     int head_2 = (n_2 * prev_);
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = (n_2 + 1);
@@ -111,13 +116,13 @@ struct LazyList_ makeTail_(int n_2, int prev_, int arg_3) {
     (*(((struct IntIntTuple2*)box_))) = tuple_1;
     void* env_1 = box_;
     struct UnitLazyList_Fun1 fun_1 = (struct UnitLazyList_Fun1){.fun = fun_, .env = env_1};
-    struct LazyList_ call_4 = cons_(fun_1, head_2);
-    return call_4;
+    struct LazyList_ call_3 = cons_(fun_1, head_2);
+    return call_3;
 }
 
 int main() {
-    struct LazyList_ call_5 = makeTail_(1, 1, 0);
-    struct LazyList_ fact_ = call_5;
-    int call_6 = lazyListPrint_(5, fact_);
+    struct LazyList_ call_4 = makeTail_(1, 1, 0);
+    struct LazyList_ fact_ = call_4;
+    int call_5 = lazyListPrint_(5, fact_);
     return 0;
 }

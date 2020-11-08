@@ -468,6 +468,8 @@ type InfOp =
   | CallProc
   /// Indirect call to closure.
   | CallClosure
+  /// Direct call to current procedure at the end of function (i.e. tail-call).
+  | CallTailRec
   /// Tuple constructor, e.g. `x, y, z`.
   | Tuple
   /// Closure constructor.

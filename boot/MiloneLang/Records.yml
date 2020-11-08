@@ -76,6 +76,12 @@ EtaCtx:
   Vars: AssocMap<VarSerial, VarDef>
   Tys: AssocMap<TySerial, TyDef>
 
+TailRecCtx:
+  Vars: AssocMap<VarSerial, VarDef>
+  Tys: AssocMap<TySerial, TyDef>
+  CurrentFun: FunSerial option
+  TailRecFuns: AssocSet<VarSerial>
+
 MonoCtx:
   Serial: Serial
   Logs: (Log * Loc) list
@@ -133,6 +139,11 @@ MirCtx:
   Vars: AssocMap<VarSerial, VarDef>
   Tys: AssocMap<TySerial, TyDef>
   LabelSerial: Serial
+
+  # (label, parameters), where the label is the entrypoint of current fun.
+  # For tail-rec (tail-call) optimization.
+  CurrentFun: (Label * VarSerial list) option
+
   Stmts: MStmt list
   Logs: (Log * Loc) list
 

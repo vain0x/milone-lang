@@ -687,6 +687,7 @@ let inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * Ty
   | HInfExpr (InfOp.App, _, _, _)
   | HInfExpr (InfOp.Closure, _, _, _)
   | HInfExpr (InfOp.CallProc, _, _, _)
+  | HInfExpr (InfOp.CallTailRec, _, _, _)
   | HInfExpr (InfOp.CallClosure, _, _, _)
   | HInfExpr (InfOp.TupleItem _, _, _, _) -> failwith "Never"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"

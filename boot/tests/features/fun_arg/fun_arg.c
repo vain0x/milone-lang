@@ -68,20 +68,27 @@ int fun_1(void* env_1, int arg_3, struct String arg_4) {
 }
 
 int der_(struct String d_, int n_, struct String f_1) {
+tailrec_1:;
     int match_;
-    if ((n_ != 0)) goto next_2;
+    if ((n_ != 0)) goto next_3;
     printf("%s\n", f_1.str);
     int call_2 = 0;
     match_ = 0;
-    goto end_match_1;
-next_2:;
-    if ((n_ == 0)) goto next_3;
-    int call_3 = der_(d_, (n_ - 1), str_add(f_1, d_));
-    match_ = 0;
-    goto end_match_1;
+    goto end_match_2;
 next_3:;
+    if ((n_ == 0)) goto next_4;
+    struct String arg_8 = d_;
+    int arg_9 = (n_ - 1);
+    struct String arg_10 = str_add(f_1, d_);
+    d_ = arg_8;
+    n_ = arg_9;
+    f_1 = arg_10;
+    goto tailrec_1;
+    match_ = 0;
+    goto end_match_2;
+next_4:;
     exit(1);
-end_match_1:;
+end_match_2:;
     return 0;
 }
 
@@ -91,7 +98,7 @@ struct StringTuple1 {
 
 int fun_2(void* env_2, int arg_5, struct String arg_6) {
     struct String arg_7 = (*(((struct StringTuple1*)env_2))).t0;
-    int call_4 = der_(arg_7, arg_5, arg_6);
+    int call_3 = der_(arg_7, arg_5, arg_6);
     return 0;
 }
 
@@ -100,8 +107,8 @@ int main() {
     (*(((int*)box_1))) = 0;
     void* env_4 = box_1;
     struct IntStringUnitFun2 fun_4 = (struct IntStringUnitFun2){.fun = fun_1, .env = env_4};
-    struct StringUnitFun1 call_5 = bindInt_(fun_4, 42);
-    struct StringUnitFun1 print42_ = call_5;
+    struct StringUnitFun1 call_4 = bindInt_(fun_4, 42);
+    struct StringUnitFun1 print42_ = call_4;
     int app_1 = print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
     struct String d_ = (struct String){.str = "\'", .len = 1};
     struct StringTuple1 tuple_1;
@@ -110,8 +117,8 @@ int main() {
     (*(((struct StringTuple1*)box_2))) = tuple_1;
     void* env_5 = box_2;
     struct IntStringUnitFun2 fun_5 = (struct IntStringUnitFun2){.fun = fun_2, .env = env_5};
-    struct StringUnitFun1 call_6 = bindInt_(fun_5, 2);
-    struct StringUnitFun1 der2_ = call_6;
+    struct StringUnitFun1 call_5 = bindInt_(fun_5, 2);
+    struct StringUnitFun1 der2_ = call_5;
     int app_2 = der2_.fun(der2_.env, (struct String){.str = "f", .len = 1});
     return 0;
 }

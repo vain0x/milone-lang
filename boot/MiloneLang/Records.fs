@@ -275,6 +275,37 @@ let etaCtxWithVars vars (EtaCtx (serial, _, tys)): EtaCtx =
 let etaCtxWithTys tys (EtaCtx (serial, vars, _)): EtaCtx =
   EtaCtx (serial, vars, tys)
 
+type TailRecCtx =
+  | TailRecCtx
+    of AssocMap<VarSerial, VarDef>
+      * AssocMap<TySerial, TyDef>
+      * FunSerial option
+      * AssocSet<VarSerial>
+
+let tailRecCtxGetVars (TailRecCtx (vars, _, _, _)) =
+  vars
+
+let tailRecCtxGetTys (TailRecCtx (_, tys, _, _)) =
+  tys
+
+let tailRecCtxGetCurrentFun (TailRecCtx (_, _, currentFun, _)) =
+  currentFun
+
+let tailRecCtxGetTailRecFuns (TailRecCtx (_, _, _, tailRecFuns)) =
+  tailRecFuns
+
+let tailRecCtxWithVars vars (TailRecCtx (_, tys, currentFun, tailRecFuns)): TailRecCtx =
+  TailRecCtx (vars, tys, currentFun, tailRecFuns)
+
+let tailRecCtxWithTys tys (TailRecCtx (vars, _, currentFun, tailRecFuns)): TailRecCtx =
+  TailRecCtx (vars, tys, currentFun, tailRecFuns)
+
+let tailRecCtxWithCurrentFun currentFun (TailRecCtx (vars, tys, _, tailRecFuns)): TailRecCtx =
+  TailRecCtx (vars, tys, currentFun, tailRecFuns)
+
+let tailRecCtxWithTailRecFuns tailRecFuns (TailRecCtx (vars, tys, currentFun, _)): TailRecCtx =
+  TailRecCtx (vars, tys, currentFun, tailRecFuns)
+
 type MonoCtx =
   | MonoCtx
     of Serial
@@ -496,44 +527,51 @@ type MirCtx =
       * AssocMap<VarSerial, VarDef>
       * AssocMap<TySerial, TyDef>
       * Serial
+      * (Label * VarSerial list) option
       * MStmt list
       * (Log * Loc) list
 
-let mirCtxGetSerial (MirCtx (serial, _, _, _, _, _)) =
+let mirCtxGetSerial (MirCtx (serial, _, _, _, _, _, _)) =
   serial
 
-let mirCtxGetVars (MirCtx (_, vars, _, _, _, _)) =
+let mirCtxGetVars (MirCtx (_, vars, _, _, _, _, _)) =
   vars
 
-let mirCtxGetTys (MirCtx (_, _, tys, _, _, _)) =
+let mirCtxGetTys (MirCtx (_, _, tys, _, _, _, _)) =
   tys
 
-let mirCtxGetLabelSerial (MirCtx (_, _, _, labelSerial, _, _)) =
+let mirCtxGetLabelSerial (MirCtx (_, _, _, labelSerial, _, _, _)) =
   labelSerial
 
-let mirCtxGetStmts (MirCtx (_, _, _, _, stmts, _)) =
+let mirCtxGetCurrentFun (MirCtx (_, _, _, _, currentFun, _, _)) =
+  currentFun
+
+let mirCtxGetStmts (MirCtx (_, _, _, _, _, stmts, _)) =
   stmts
 
-let mirCtxGetLogs (MirCtx (_, _, _, _, _, logs)) =
+let mirCtxGetLogs (MirCtx (_, _, _, _, _, _, logs)) =
   logs
 
-let mirCtxWithSerial serial (MirCtx (_, vars, tys, labelSerial, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+let mirCtxWithSerial serial (MirCtx (_, vars, tys, labelSerial, currentFun, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
 
-let mirCtxWithVars vars (MirCtx (serial, _, tys, labelSerial, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+let mirCtxWithVars vars (MirCtx (serial, _, tys, labelSerial, currentFun, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
 
-let mirCtxWithTys tys (MirCtx (serial, vars, _, labelSerial, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+let mirCtxWithTys tys (MirCtx (serial, vars, _, labelSerial, currentFun, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
 
-let mirCtxWithLabelSerial labelSerial (MirCtx (serial, vars, tys, _, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+let mirCtxWithLabelSerial labelSerial (MirCtx (serial, vars, tys, _, currentFun, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
 
-let mirCtxWithStmts stmts (MirCtx (serial, vars, tys, labelSerial, _, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+let mirCtxWithCurrentFun currentFun (MirCtx (serial, vars, tys, labelSerial, _, stmts, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
 
-let mirCtxWithLogs logs (MirCtx (serial, vars, tys, labelSerial, stmts, _)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, stmts, logs)
+let mirCtxWithStmts stmts (MirCtx (serial, vars, tys, labelSerial, currentFun, _, logs)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
+
+let mirCtxWithLogs logs (MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, _)): MirCtx =
+  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
 
 type CirCtx =
   | CirCtx

@@ -15,6 +15,7 @@ open MiloneLang.TyElaborating
 open MiloneLang.ClosureConversion
 open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
+open MiloneLang.TailRecOptimizing
 open MiloneLang.Monomorphizing
 open MiloneLang.Mir
 open MiloneLang.KirGen
@@ -155,6 +156,9 @@ let build host verbosity (projectDir: string): string * bool =
         log "Hoist"
         let expr, tyCtx = hoist (expr, tyCtx)
 
+        log "TailRecOptimizing"
+        let expr, tyCtx = tailRecOptimize (expr, tyCtx)
+
         log "Monomorphization"
         let expr, tyCtx = monify (expr, tyCtx)
         if tyCtx |> tyCtxHasError then
@@ -263,6 +267,9 @@ let buildWithKir host verbosity mode (projectDir: string): string * bool =
       else
         log "Hoist"
         let expr, tyCtx = hoist (expr, tyCtx)
+
+        log "TailRecOptimizing"
+        let expr, tyCtx = tailRecOptimize (expr, tyCtx)
 
         log "Monomorphization"
         let expr, tyCtx = monify (expr, tyCtx)

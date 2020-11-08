@@ -31,7 +31,7 @@ let private ofKirGenCtx (kirGenCtx: KirGenCtx): KirToMirCtx =
 
 let private toMirCtx (ctx: KirToMirCtx): MirCtx =
   let (KirToMirCtx (serial, vars, tys, _, labelSerial, _, _, _, _, logs)) = ctx
-  MirCtx(serial, vars, tys, labelSerial, [], logs)
+  MirCtx(serial, vars, tys, labelSerial, None, [], logs)
 
 let private freshSerial ctx =
   let serial = (ctx |> kirToMirCtxGetSerial) + 1

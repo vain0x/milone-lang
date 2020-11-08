@@ -745,6 +745,8 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
       | callee :: args -> kgCallClosureExpr callee args ty loc hole ctx
       | [] -> failwithf "NEVER: CallClosure args must begin with callee. %A" itself
 
+  | InfOp.CallTailRec -> failwith "unimplemented"
+
   | InfOp.Tuple -> kgTupleExpr args ty loc hole ctx
 
   | InfOp.TupleItem _ -> failwithf "unimplemented. %A" itself

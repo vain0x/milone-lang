@@ -16,48 +16,56 @@ struct IntList {
 };
 
 struct IntList* go_(struct IntList* acc_, struct IntList* xs_1) {
+tailrec_1:;
     struct IntList* match_;
-    if ((!((!(xs_1))))) goto next_2;
+    if ((!((!(xs_1))))) goto next_3;
     match_ = acc_;
-    goto end_match_1;
-next_2:;
-    if ((!(xs_1))) goto next_3;
+    goto end_match_2;
+next_3:;
+    if ((!(xs_1))) goto next_4;
     int x_ = xs_1->head;
     struct IntList* xs_2 = xs_1->tail;
     struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = x_;
     list_->tail = acc_;
-    struct IntList* call_ = go_(list_, xs_2);
-    match_ = call_;
-    goto end_match_1;
-next_3:;
+    struct IntList* arg_ = list_;
+    struct IntList* arg_1 = xs_2;
+    acc_ = arg_;
+    xs_1 = arg_1;
+    goto tailrec_1;
+    match_ = NULL;
+    goto end_match_2;
+next_4:;
     exit(1);
-end_match_1:;
+end_match_2:;
     return match_;
 }
 
 struct IntList* rev_(struct IntList* xs_) {
-    struct IntList* call_1 = go_(NULL, xs_);
-    return call_1;
+    struct IntList* call_ = go_(NULL, xs_);
+    return call_;
 }
 
 int printList_(struct IntList* xs_3) {
+tailrec_5:;
     int match_1;
-    if ((!((!(xs_3))))) goto next_5;
+    if ((!((!(xs_3))))) goto next_7;
     match_1 = 0;
-    goto end_match_4;
-next_5:;
-    if ((!(xs_3))) goto next_6;
+    goto end_match_6;
+next_7:;
+    if ((!(xs_3))) goto next_8;
     int x_1 = xs_3->head;
     struct IntList* xs_4 = xs_3->tail;
     printf("%d\n", x_1);
-    int call_2 = 0;
-    int call_3 = printList_(xs_4);
+    int call_1 = 0;
+    struct IntList* arg_2 = xs_4;
+    xs_3 = arg_2;
+    goto tailrec_5;
     match_1 = 0;
-    goto end_match_4;
-next_6:;
+    goto end_match_6;
+next_8:;
     exit(1);
-end_match_4:;
+end_match_6:;
     return 0;
 }
 
@@ -73,11 +81,11 @@ int main() {
     list_1->tail = list_2;
     struct IntList* xs_5 = list_1;
     printf("xs:\n");
-    int call_4 = 0;
-    int call_5 = printList_(xs_5);
+    int call_2 = 0;
+    int call_3 = printList_(xs_5);
     printf("rev xs:\n");
-    int call_6 = 0;
-    struct IntList* call_7 = rev_(xs_5);
-    int call_8 = printList_(call_7);
+    int call_4 = 0;
+    struct IntList* call_5 = rev_(xs_5);
+    int call_6 = printList_(call_5);
     return 0;
 }
