@@ -1370,40 +1370,31 @@ let tyDisplay getTyIdent ty =
   let tyEq4 ty1 ty2 ty3 ty4 =
     [ ty2; ty3; ty4 ] |> listForAll (tyEq ty1)
 
-  let rec go (bp: int) ty =
-    // Converts ty to string by wrapping it if necessary.
-    let paren (innerBp: int) ty =
-      if bp <= innerBp then go innerBp ty else "(" + go 0 ty + ")"
+  let rec go (outerBp: int) ty =
+    let paren (bp: int) s =
+      if bp >= outerBp then s else "(" + s + ")"
 
     match ty with
     | ErrorTy loc -> "{error}@" + locToString loc
 
     | MetaTy (tySerial, loc) ->
         match getTyIdent tySerial with
-        | Some ident -> ident
+        | Some ident -> "{" + ident + "}@" + logToString loc
         | None -> "{?" + string tySerial + "}@" + locToString loc
 
-    | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 11 sTy + " -> " + paren 10 tTy
-
-    | AppTy (TupleTyCtor, []) -> "unit"
-
-    | AppTy (TupleTyCtor, itemTys) ->
-        "("
-        + (itemTys |> listMap (go 0) |> strJoin " * ")
-        + ")"
-
-    | AppTy (ListTyCtor, [ itemTy ]) -> paren 20 itemTy + " list"
+    | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
 
     // AssocMap
     | AppTy (TupleTyCtor,
              [
                // trie
-               AppTy (TupleTyCtor,
-                      [
-                        // hash
-                        AppTy (UIntTyCtor, _);
-                        // assoc
-                        AppTy (ListTyCtor, [ AppTy (TupleTyCtor, [ keyTy1; valueTy ]) ]) ]);
+               AppTy (ListTyCtor,
+                      [ AppTy (TupleTyCtor,
+                               [
+                                 // hash
+                                 AppTy (UIntTyCtor, _);
+                                 // assoc
+                                 AppTy (ListTyCtor, [ AppTy (TupleTyCtor, [ keyTy1; valueTy ]) ]) ]) ]);
                // hash fun
                AppTy (FunTyCtor, [ keyTy2; AppTy (UIntTyCtor, _) ]);
                // compare fun
@@ -1420,6 +1411,15 @@ let tyDisplay getTyIdent ty =
             + ", "
             + go 0 valueTy
             + ">"
+
+    | AppTy (TupleTyCtor, []) -> "unit"
+
+    | AppTy (TupleTyCtor, itemTys) ->
+        "("
+        + (itemTys |> listMap (go 20) |> strJoin " * ")
+        + ")"
+
+    | AppTy (ListTyCtor, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
     | AppTy (RefTyCtor tySerial, args) ->
         let tyCtor =
