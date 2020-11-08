@@ -55,7 +55,8 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
 
-let intTyToHash (value, ty) = intHash (value + tyToHash ty)
+let intTyToHash (value, ty) =
+  intHash value |> hashCombine (tyToHash ty)
 
 let intTyCmp (firstValue, firstTy) (secondValue, secondTy) =
   if firstValue <> secondValue then intCmp firstValue secondValue else tyCmp firstTy secondTy

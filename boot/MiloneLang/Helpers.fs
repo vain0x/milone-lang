@@ -417,7 +417,7 @@ let trieIsEmpty trie =
 
   go trie
 
-let trieAdd (keyHash: int) key value trie =
+let trieAdd (keyHash: uint) key value trie =
   let rec go trie =
     match trie with
     | [] -> [ keyHash, [ key, value ] ]
@@ -428,7 +428,7 @@ let trieAdd (keyHash: int) key value trie =
 
   go trie
 
-let trieRemove cmp (keyHash: int) key trie =
+let trieRemove cmp (keyHash: uint) key trie =
   let rec go trie =
     match trie with
     | [] -> None, []
@@ -443,7 +443,7 @@ let trieRemove cmp (keyHash: int) key trie =
 
   go trie
 
-let trieTryFind cmp (keyHash: int) key trie =
+let trieTryFind cmp (keyHash: uint) key trie =
   let rec go trie =
     match trie with
     | [] -> None
@@ -487,7 +487,7 @@ let trieToKeys trie =
 
 let mapEmpty (hash, cmp): AssocMap<_, _> = [], hash, cmp
 
-let mapKeyHash hash key = hash key % 512
+let mapKeyHash hash key = hash key % uint 512
 
 let mapIsEmpty ((trie, _, _): AssocMap<_, _>) = trie |> trieIsEmpty
 
@@ -653,7 +653,7 @@ let intCmp (x: int) (y: int) =
   else if y = x then 0
   else -1
 
-let intHash (x: int) = x
+let intHash (x: int): uint = uint x
 
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
@@ -695,7 +695,7 @@ let intFromHex (l: int) (r: int) (s: string) =
 
   go 0 l
 
-let hashCombine (first: int) (second: int) = first * 3 + second
+let hashCombine (first: uint) (second: uint): uint = first * uint 31 + second
 
 // -----------------------------------------------
 // Char
@@ -751,13 +751,13 @@ let strCmp (x: string) (y: string) =
   else if y = x then 0
   else -1
 
-let strHash (x: string) =
+let strHash (x: string): uint =
   let step = 1 + x.Length / 128
 
-  let rec go h (i: int) =
-    if i >= x.Length then h else go (h * 31 + int x.[i]) (i + step)
+  let rec go (h: uint) (i: int) =
+    if i >= x.Length then h else go (h * uint 31 + uint x.[i]) (i + step)
 
-  go 17 0
+  go (uint 17) 0
 
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
@@ -1168,20 +1168,20 @@ let tyRef serial tys = AppTy(RefTyCtor serial, tys)
 
 let tyAssocMap keyTy valueTy =
   let assocTy = tyList (tyTuple [ keyTy; valueTy ])
-  let trieTy = tyList (tyTuple [ tyInt; assocTy ])
-  let hashTy = tyFun keyTy tyInt
+  let trieTy = tyList (tyTuple [ tyUInt; assocTy ])
+  let hashTy = tyFun keyTy tyUInt
   let cmpTy = tyFun keyTy (tyFun keyTy tyInt)
   tyTuple [ trieTy; hashTy; cmpTy ]
 
-let tyToHash ty =
+let tyToHash ty: uint =
   match ty with
   | ErrorTy (docId, y, x) ->
-      1
+      intHash 1
       |> hashCombine (strHash docId)
-      |> hashCombine y
-      |> hashCombine x
+      |> hashCombine (intHash y)
+      |> hashCombine (intHash x)
 
-  | MetaTy (tySerial, _) -> intHash (2 + tySerial)
+  | MetaTy (tySerial, _) -> intHash 2 |> hashCombine (intHash tySerial)
 
   | AppTy (tyCtor, tys) ->
       let rec go h tys =
@@ -1190,7 +1190,8 @@ let tyToHash ty =
 
         | ty :: tys -> go (hashCombine h (tyToHash ty)) tys
 
-      intHash (3 + go (tyCtorHash tyCtor) tys)
+      intHash 3
+      |> hashCombine (go (tyCtorHash tyCtor) tys)
 
 let tyCmp first second =
   match first, second with

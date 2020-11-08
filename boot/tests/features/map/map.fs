@@ -7,7 +7,7 @@ let intCmp (x: int) (y: int) =
     -1
 
 let intHash (x: int) =
-  x % 128
+  uint x % uint 128
 
 let mapNewSingleton key value hash cmp: AssocMap<_, _> =
   assert (cmp key key = 0)
