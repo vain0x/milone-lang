@@ -485,7 +485,7 @@ let inferMatch ctx expectOpt expr cond arms loc =
 let inferNav ctx sub mes loc =
   let fail ctx =
     let ctx =
-      tyCtxAddErr ctx "Expected to have field: '%s'." loc
+      tyCtxAddErr ctx ("Expected to have field: '" + mes + "'.") loc
 
     hxAbort ctx loc
 

@@ -794,6 +794,17 @@ let strConcat (xs: string list) =
 //     x + go xs
 // go xs
 
+/// Concatenates a list of strings with separators.
+let strJoin (sep: string) (xs: string list) =
+  match xs with
+  | [] -> ""
+
+  | x :: xs ->
+      x
+      + (xs
+         |> listCollect (fun x -> [ sep; x ])
+         |> strConcat)
+
 let strNeedsEscaping (str: string) =
   let rec go i =
     i < str.Length
@@ -1351,6 +1362,88 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
         | None -> ty
 
   go ty
+
+/// Converts a type to human readable string.
+///
+/// getTyIdent: serial -> ident option. Gets ident of type by serial.
+let tyDisplay getTyIdent ty =
+  let tyEq4 ty1 ty2 ty3 ty4 =
+    [ ty2; ty3; ty4 ] |> listForAll (tyEq ty1)
+
+  let rec go (bp: int) ty =
+    // Converts ty to string by wrapping it if necessary.
+    let paren (innerBp: int) ty =
+      if bp <= innerBp then go innerBp ty else "(" + go 0 ty + ")"
+
+    match ty with
+    | ErrorTy loc -> "{error}@" + locToString loc
+
+    | MetaTy (tySerial, loc) ->
+        match getTyIdent tySerial with
+        | Some ident -> ident
+        | None -> "{?" + string tySerial + "}@" + locToString loc
+
+    | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 11 sTy + " -> " + paren 10 tTy
+
+    | AppTy (TupleTyCtor, []) -> "unit"
+
+    | AppTy (TupleTyCtor, itemTys) ->
+        "("
+        + (itemTys |> listMap (go 0) |> strJoin " * ")
+        + ")"
+
+    | AppTy (ListTyCtor, [ itemTy ]) -> paren 20 itemTy + " list"
+
+    // AssocMap
+    | AppTy (TupleTyCtor,
+             [
+               // trie
+               AppTy (TupleTyCtor,
+                      [
+                        // hash
+                        AppTy (UIntTyCtor, _);
+                        // assoc
+                        AppTy (ListTyCtor, [ AppTy (TupleTyCtor, [ keyTy1; valueTy ]) ]) ]);
+               // hash fun
+               AppTy (FunTyCtor, [ keyTy2; AppTy (UIntTyCtor, _) ]);
+               // compare fun
+               AppTy (FunTyCtor, [ keyTy3; AppTy (FunTyCtor, [ keyTy4; AppTy (IntTyCtor, _) ]) ]) ]) when tyEq4
+                                                                                                            keyTy1
+                                                                                                            keyTy2
+                                                                                                            keyTy3
+                                                                                                            keyTy4 ->
+        match valueTy with
+        | AppTy (TupleTyCtor, []) -> "AssocSet<" + go 0 keyTy1 + ">"
+        | _ ->
+            "AssocMap<"
+            + go 0 keyTy1
+            + ", "
+            + go 0 valueTy
+            + ">"
+
+    | AppTy (RefTyCtor tySerial, args) ->
+        let tyCtor =
+          match tySerial |> getTyIdent with
+          | Some ident -> ident
+          | None -> "?" + string tySerial
+
+        match args with
+        | [] -> tyCtor
+        | _ ->
+            let args = args |> listMap (go 0) |> strJoin ", "
+            tyCtor + "<" + args + ">"
+
+    | AppTy (tyCtor, args) ->
+        let tyCtor =
+          tyCtorDisplay (fun _ -> failwith "NEVER") tyCtor
+
+        match args with
+        | [] -> tyCtor
+        | _ ->
+            let args = args |> listMap (go 0) |> strJoin ", "
+            tyCtor + "<" + args + ">"
+
+  go 0 ty
 
 // -----------------------------------------------
 // Type definitions (HIR)
@@ -2025,40 +2118,43 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 // Logs
 // -----------------------------------------------
 
-let logToString loc log =
+let logToString tyDisplay loc log =
   let loc = loc |> locToString
 
   match log with
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
-      sprintf "%s Couldn't unify '%A' and '%A' due to self recursion." loc lTy rTy
+      sprintf "%s Recursive type occurred while unifying '%s' to '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
 
   | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
-      sprintf "%s While unifying '%A' and '%A', failed to unify '%A' and '%A'." loc lRootTy rRootTy lTy rTy
+      sprintf
+        "%s Type mismatch: '%s' <> '%s'. Occurred while unifying '%s' to '%s'."
+        loc
+        (tyDisplay lTy)
+        (tyDisplay rTy)
+        (tyDisplay lRootTy)
+        (tyDisplay rRootTy)
 
-  | Log.TyBoundError (AddTrait ty) -> sprintf "%s No support (+) for '%A' yet" loc ty
+  | Log.TyBoundError (AddTrait ty) -> sprintf "%s No support (+) for '%s' yet" loc (tyDisplay ty)
 
-  | Log.TyBoundError (ScalarTrait ty) -> sprintf "%s Expected scalar type (such as int) but was '%A'" loc ty
+  | Log.TyBoundError (ScalarTrait ty) -> sprintf "%s Expected scalar type (such as int) but was '%s'" loc (tyDisplay ty)
 
-  | Log.TyBoundError (EqTrait ty) -> sprintf "%s No support equality for '%A' yet" loc ty
+  | Log.TyBoundError (EqTrait ty) -> sprintf "%s No support equality for '%s' yet" loc (tyDisplay ty)
 
-  | Log.TyBoundError (CmpTrait ty) -> sprintf "%s No support comparison for '%A' yet" loc ty
+  | Log.TyBoundError (CmpTrait ty) -> sprintf "%s No support comparison for '%s' yet" loc (tyDisplay ty)
 
   | Log.TyBoundError (IndexTrait (lTy, rTy, _)) ->
-      sprintf "%s No support indexing operation (l = '%A', r = '%A')" loc lTy rTy
+      sprintf "%s No support indexing operation: lhs = '%s', rhs = '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
 
-  | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to int from '%A'" loc ty
+  | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to int from '%s'" loc (tyDisplay ty)
 
-  | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%A'" loc ty
+  | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%s'" loc (tyDisplay ty)
 
   | Log.RedundantFieldError (recordIdent, fieldIdent) ->
       sprintf "%s The field '%s' is redundant for record '%s'." loc fieldIdent recordIdent
 
   | Log.MissingFieldsError (recordIdent, fieldIdents) ->
-      let fields =
-        fieldIdents
-        |> listMapWithIndex (fun i ident -> (if i = 0 then "" else "', '") + ident)
-        |> strConcat
+      let fields = fieldIdents |> strJoin ", "
 
       sprintf "%s Record '%s' must have fields: '%s'." loc recordIdent fields
 
-  | Log.Error msg -> sprintf "%s %s" loc msg
+  | Log.Error msg -> loc + " " + msg

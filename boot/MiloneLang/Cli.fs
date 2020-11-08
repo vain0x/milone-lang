@@ -91,9 +91,18 @@ let pathStrToStem (s: string) =
 let tyCtxHasError tyCtx =
   tyCtx |> tyCtxGetLogs |> listIsEmpty |> not
 
-let printLogs logs =
+let printLogs tyCtx logs =
+  let tyDisplayFn ty =
+    let getTyIdent tySerial =
+      tyCtx
+      |> tyCtxGetTys
+      |> mapTryFind tySerial
+      |> optionMap tyDefToIdent
+
+    tyDisplay getTyIdent ty
+
   logs
-  |> listIter (fun (log, loc) -> printfn "#error %s" (log |> logToString loc))
+  |> listIter (fun (log, loc) -> printfn "#error %s" (log |> logToString tyDisplayFn loc))
   "", false
 
 let build host verbosity (projectDir: string): string * bool =
@@ -132,7 +141,7 @@ let build host verbosity (projectDir: string): string * bool =
   log "Type inference"
   let expr, tyCtx = infer (expr, scopeCtx, errorListList)
   if tyCtx |> tyCtxHasError then
-    tyCtx |> tyCtxGetLogs |> printLogs
+    tyCtx |> tyCtxGetLogs |> printLogs tyCtx
   else
 
     log "Hoist main"
@@ -144,13 +153,13 @@ let build host verbosity (projectDir: string): string * bool =
     log "Closure conversion"
     let expr, tyCtx = declosure (expr, tyCtx)
     if tyCtx |> tyCtxHasError then
-      tyCtx |> tyCtxGetLogs |> printLogs
+      tyCtx |> tyCtxGetLogs |> printLogs tyCtx
     else
 
       log "Eta expansion"
       let expr, tyCtx = uneta (expr, tyCtx)
       if tyCtx |> tyCtxHasError then
-        tyCtx |> tyCtxGetLogs |> printLogs
+        tyCtx |> tyCtxGetLogs |> printLogs tyCtx
       else
 
         log "Hoist"
@@ -162,14 +171,14 @@ let build host verbosity (projectDir: string): string * bool =
         log "Monomorphization"
         let expr, tyCtx = monify (expr, tyCtx)
         if tyCtx |> tyCtxHasError then
-          tyCtx |> tyCtxGetLogs |> printLogs
+          tyCtx |> tyCtxGetLogs |> printLogs tyCtx
         else
 
           log "Mir generation"
           let stmts, mirCtx = mirify (expr, tyCtx)
 
           if mirCtx |> mirCtxGetLogs |> listIsEmpty |> not then
-            mirCtx |> mirCtxGetLogs |> printLogs
+            mirCtx |> mirCtxGetLogs |> printLogs tyCtx
           else
 
             log "Cir generation"
@@ -247,7 +256,7 @@ let buildWithKir host verbosity mode (projectDir: string): string * bool =
   log "Type inference"
   let expr, tyCtx = infer (expr, scopeCtx, errorListList)
   if tyCtx |> tyCtxHasError then
-    tyCtx |> tyCtxGetLogs |> printLogs
+    tyCtx |> tyCtxGetLogs |> printLogs tyCtx
   else
     log "Hoist main"
     let expr, tyCtx = hoistMain (expr, tyCtx)
@@ -258,12 +267,12 @@ let buildWithKir host verbosity mode (projectDir: string): string * bool =
     log "Closure conversion"
     let expr, tyCtx = declosure (expr, tyCtx)
     if tyCtx |> tyCtxHasError then
-      tyCtx |> tyCtxGetLogs |> printLogs
+      tyCtx |> tyCtxGetLogs |> printLogs tyCtx
     else
       log "Eta expansion"
       let expr, tyCtx = uneta (expr, tyCtx)
       if tyCtx |> tyCtxHasError then
-        tyCtx |> tyCtxGetLogs |> printLogs
+        tyCtx |> tyCtxGetLogs |> printLogs tyCtx
       else
         log "Hoist"
         let expr, tyCtx = hoist (expr, tyCtx)
@@ -274,7 +283,7 @@ let buildWithKir host verbosity mode (projectDir: string): string * bool =
         log "Monomorphization"
         let expr, tyCtx = monify (expr, tyCtx)
         if tyCtx |> tyCtxHasError then
-          tyCtx |> tyCtxGetLogs |> printLogs
+          tyCtx |> tyCtxGetLogs |> printLogs tyCtx
         else
           log "KirGen"
           let kRoot, kirGenCtx = kirGen (expr, tyCtx)

@@ -976,12 +976,21 @@ let genDecls (ctx: CirCtx) decls =
   | _ -> failwith "Top-level statements must be declarations."
 
 let genLogs (ctx: CirCtx) =
+  let tyDisplayFn ty =
+    let getTyIdent tySerial =
+      ctx
+      |> cirCtxGetTys
+      |> mapTryFind tySerial
+      |> optionMap tyDefToIdent
+
+    tyDisplay getTyIdent ty
+
   let rec go (ctx: CirCtx) logs =
     match logs with
     | [] -> ctx
     | (log, loc) :: logs ->
         let _, y, _ = loc
-        let msg = log |> logToString loc
+        let msg = log |> logToString tyDisplayFn loc
 
         let ctx =
           cirCtxAddDecl ctx (CErrorDecl(msg, 1 + y))
