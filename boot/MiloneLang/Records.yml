@@ -162,6 +162,9 @@ CliHost:
   # Command line args.
   Args: string list
 
+  # Path to milone home (installation directory).
+  MiloneHome: string
+
   # Creates a profiler.
   ProfileInit: (unit -> Profiler)
 

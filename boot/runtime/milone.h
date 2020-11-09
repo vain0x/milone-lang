@@ -230,6 +230,15 @@ int file_write_all_text(struct String file_name, struct String content) {
   return 0;
 }
 
+struct String milone_get_env(struct String name) {
+  char const* value = getenv(name.str);
+  if (value == NULL) {
+    return (struct String){.str = "", .len = 0};
+  }
+
+  return str_of_raw_parts(value, strlen(value));
+}
+
 long milone_get_time_millis() {
 #ifdef __timespec_defined // C11 feature
   struct timespec t;

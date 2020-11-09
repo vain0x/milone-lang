@@ -15,7 +15,9 @@ let testFile category case =
     let dirPath =
       IO.Path.Combine(testsDir.Value, category, case)
 
-    let host = dotnetCliHost []
+    let host =
+      let miloneHome = IO.Path.Combine(testsDir.Value, "../..")
+      dotnetCliHost [] miloneHome
 
     let content, _ = build host Quiet dirPath
     do! IO.File.WriteAllTextAsync(IO.Path.Combine(testsDir.Value, category, case, case + ".c"), content)

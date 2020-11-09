@@ -1379,7 +1379,7 @@ let tyDisplay getTyIdent ty =
 
     | MetaTy (tySerial, loc) ->
         match getTyIdent tySerial with
-        | Some ident -> "{" + ident + "}@" + logToString loc
+        | Some ident -> "{" + ident + "}@" + locToString loc
         | None -> "{?" + string tySerial + "}@" + locToString loc
 
     | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)

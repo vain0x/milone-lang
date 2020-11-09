@@ -57,6 +57,23 @@ open MiloneLang.Lexing
 open MiloneLang.Parsing
 open MiloneLang.Types
 
+let private openKindToInt openKind =
+  match openKind with
+  | CoreModule -> 1
+  | ProjectModule -> 2
+
+let private openKindHash openKind = intHash (openKindToInt openKind)
+
+let private openKindCmp l r = (openKindToInt l) - (openKindToInt r)
+
+let private keyHash (openKind, moduleName) =
+  intHash (openKindToInt openKind)
+  |> hashCombine (strHash moduleName)
+
+let private keyCmp (l1, l2) (r1, r2) =
+  let c = openKindCmp l1 r1
+  if c <> 0 then c else strCmp l2 r2
+
 let findOpenPaths expr =
   let rec go expr =
     match expr with
@@ -70,7 +87,8 @@ let findOpenPaths expr =
 let findOpenModules projectName expr =
   let extractor path =
     match path with
-    | prefix :: moduleName :: _ when prefix = projectName -> Some moduleName
+    | prefix :: moduleName :: _ when prefix = projectName -> Some(ProjectModule, moduleName)
+    | [ "MiloneCore"; moduleName ] -> Some(CoreModule, moduleName)
     | _ -> None
 
   findOpenPaths expr |> listChoose extractor
@@ -102,15 +120,18 @@ let spliceExpr firstExpr secondExpr =
 
   go firstExpr
 
-let parseProjectModules readModuleFile parse projectName nameCtx =
-  let addModule go (moduleAcc, moduleMap, nameCtx, errorAcc) moduleName source =
+let parseProjectModules readCoreFile readModuleFile parse projectName nameCtx =
+  let addModule go (moduleAcc, moduleMap, nameCtx, errorAcc) (openKind, moduleName) source =
     // FIXME: provide unique ID?
     let docId: DocId = moduleName
     let tokens = tokenize source
     let moduleAst, errors = parse moduleName tokens
     let moduleHir, nameCtx = astToHir docId (moduleAst, nameCtx)
     let dependencies = findOpenModules projectName moduleHir
-    let moduleMap = moduleMap |> mapAdd moduleName moduleHir
+
+    let moduleMap =
+      moduleMap
+      |> mapAdd (openKind, moduleName) moduleHir
 
     let errors: (string * Loc) list =
       errors
@@ -124,30 +145,35 @@ let parseProjectModules readModuleFile parse projectName nameCtx =
 
     moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
 
-  let rec go (moduleAcc, moduleMap, nameCtx, errorAcc) moduleName =
-    if moduleMap |> mapContainsKey moduleName then
+  let rec go (moduleAcc, moduleMap, nameCtx, errorAcc) (openKind, moduleName) =
+    if moduleMap |> mapContainsKey (openKind, moduleName) then
       moduleAcc, moduleMap, nameCtx, errorAcc
     else
       let source =
-        match readModuleFile moduleName with
-        | Some it -> it
-        | None -> failwithf "File missing for module '%s'" moduleName
+        match openKind with
+        | CoreModule -> readCoreFile moduleName
 
-      addModule go (moduleAcc, moduleMap, nameCtx, errorAcc) moduleName source
+        | ProjectModule ->
+            match readModuleFile moduleName with
+            | Some it -> it
+            | None -> failwithf "File missing for module '%s'" moduleName
+
+      addModule go (moduleAcc, moduleMap, nameCtx, errorAcc) (openKind, moduleName) source
 
   // Initial state.
   let ctx =
-    ([], mapEmpty (strHash, strCmp), nameCtx, [])
+    ([], mapEmpty (keyHash, keyCmp), nameCtx, [])
 
   // Add polyfills module to the project if exists.
   let ctx =
     match readModuleFile "Polyfills" with
-    | Some source -> addModule (fun _ _ -> failwith "Polyfills don't have open.") ctx "Polyfills" source
+    | Some source ->
+        addModule (fun _ _ -> failwith "Polyfills don't have open.") ctx (ProjectModule, "Polyfills") source
 
     | None -> ctx
 
   // Start dependency resolution from entry-point module.
-  let ctx = go ctx projectName
+  let ctx = go ctx (ProjectModule, projectName)
 
   // Finish.
   let moduleAcc, _, nameCtx, errorAcc = ctx

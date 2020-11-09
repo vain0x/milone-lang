@@ -24,6 +24,8 @@ let fileExists (filePath: string): bool = (__nativeFun "file_exists" 1) filePath
 let fileReadAllText (filePath: string): string =
   (__nativeFun "file_read_all_text" 1) filePath
 
+let getEnv (name: string): string = (__nativeFun "milone_get_env" 1) name
+
 let argList () =
   let rec go acc i =
     if i = 0 then acc else go (argGet (i - 1) :: acc) (i - 1)
@@ -37,7 +39,9 @@ let readFile filePath =
 let main _ =
   let args = argList ()
 
+  let miloneHome = getEnv "MILONE_HOME"
+
   let host =
-    CliHost(args, profileInit, profileLog, readFile)
+    CliHost(args, miloneHome, profileInit, profileLog, readFile)
 
   cli host

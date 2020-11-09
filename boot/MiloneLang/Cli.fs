@@ -124,6 +124,12 @@ let build host verbosity (projectDir: string): string * bool =
   let projectName = projectDir |> pathStrToStem
   log ("Begin compiling project=" + projectName)
 
+  let readCoreFile moduleName =
+    let miloneHome = host |> cliHostGetMiloneHome
+    match readFile (miloneHome + "/libcore/" + moduleName + ".fs") with
+    | Some it -> it
+    | None -> failwithf "Missing file: $MILONE_HOME/libcore/%s.fs" moduleName
+
   let readModuleFile moduleName =
     // log ("Open module " + moduleName)
     readFile (projectDir + "/" + moduleName + ".fs")
@@ -133,7 +139,7 @@ let build host verbosity (projectDir: string): string * bool =
       // log ("Parsing " + moduleName)
       parse tokens
 
-    parseProjectModules readModuleFile parseTokens projectName (nameCtxEmpty ())
+    parseProjectModules readCoreFile readModuleFile parseTokens projectName (nameCtxEmpty ())
 
   log "Name resolution"
   let expr, scopeCtx = nameRes (expr, nameCtx)
@@ -204,6 +210,12 @@ let cliParse host (projectDir: string) =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
+  let readCoreFile moduleName =
+    let miloneHome = host |> cliHostGetMiloneHome
+    match readFile (miloneHome + "/libcore/" + moduleName + ".fs") with
+    | Some it -> it
+    | None -> failwithf "Missing file: $MILONE_HOME/libcore/%s.fs" moduleName
+
   let readModuleFile moduleName =
     readFile (projectDir + "/" + moduleName + ".fs")
 
@@ -214,7 +226,7 @@ let cliParse host (projectDir: string) =
     printfn "%s" (objToString ast)
     ast, errors
 
-  parseProjectModules readModuleFile parseWithLogging projectName (nameCtxEmpty ())
+  parseProjectModules readCoreFile readModuleFile parseWithLogging projectName (nameCtxEmpty ())
   |> ignore
   0
 
@@ -229,6 +241,12 @@ let cliCompile host verbosity projectDir =
 let buildWithKir host verbosity mode (projectDir: string): string * bool =
   let profileLog = host |> cliHostGetProfileLog
   let readFile = host |> cliHostGetFileReadAllText
+
+  let readCoreFile moduleName =
+    let miloneHome = host |> cliHostGetMiloneHome
+    match readFile (miloneHome + "/" + moduleName + ".fs") with
+    | Some it -> it
+    | None -> failwithf "Missing file: $MILONE_HOME/libcore/%s.fs" moduleName
 
   let readModuleFile moduleName =
     readFile (projectDir + "/" + moduleName + ".fs")
@@ -248,7 +266,7 @@ let buildWithKir host verbosity mode (projectDir: string): string * bool =
   log ("Begin compiling project=" + projectName)
 
   let expr, nameCtx, errorListList =
-    parseProjectModules readModuleFile parseTokens projectName (nameCtxEmpty ())
+    parseProjectModules readCoreFile readModuleFile parseTokens projectName (nameCtxEmpty ())
 
   log "Name resolution"
   let expr, scopeCtx = nameRes (expr, nameCtx)

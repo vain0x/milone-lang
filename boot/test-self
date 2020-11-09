@@ -15,7 +15,7 @@ gcc $CFLAGS $GEN2_C -o milone
 ./integration-all ./milone -q
 
 # Build gen3.
-./milone --profile MiloneLang >$GEN3_C
+MILONE_HOME=$PWD/.. ./milone --profile MiloneLang >$GEN3_C
 
 # Check if the gen2 and gen3 are equal.
 if diff -q $GEN2_C $GEN3_C

@@ -635,30 +635,37 @@ let cirCtxWithLogs logs (CirCtx (vars, varUniqueNames, tyEnv, tys, tyUniqueNames
 type CliHost =
   | CliHost
     of string list
+      * string
       * (unit -> Profiler)
       * (string -> Profiler -> unit)
       * (string -> string option)
 
-let cliHostGetArgs (CliHost (args, _, _, _)) =
+let cliHostGetArgs (CliHost (args, _, _, _, _)) =
   args
 
-let cliHostGetProfileInit (CliHost (_, profileInit, _, _)) =
+let cliHostGetMiloneHome (CliHost (_, miloneHome, _, _, _)) =
+  miloneHome
+
+let cliHostGetProfileInit (CliHost (_, _, profileInit, _, _)) =
   profileInit
 
-let cliHostGetProfileLog (CliHost (_, _, profileLog, _)) =
+let cliHostGetProfileLog (CliHost (_, _, _, profileLog, _)) =
   profileLog
 
-let cliHostGetFileReadAllText (CliHost (_, _, _, fileReadAllText)) =
+let cliHostGetFileReadAllText (CliHost (_, _, _, _, fileReadAllText)) =
   fileReadAllText
 
-let cliHostWithArgs args (CliHost (_, profileInit, profileLog, fileReadAllText)): CliHost =
-  CliHost (args, profileInit, profileLog, fileReadAllText)
+let cliHostWithArgs args (CliHost (_, miloneHome, profileInit, profileLog, fileReadAllText)): CliHost =
+  CliHost (args, miloneHome, profileInit, profileLog, fileReadAllText)
 
-let cliHostWithProfileInit profileInit (CliHost (args, _, profileLog, fileReadAllText)): CliHost =
-  CliHost (args, profileInit, profileLog, fileReadAllText)
+let cliHostWithMiloneHome miloneHome (CliHost (args, _, profileInit, profileLog, fileReadAllText)): CliHost =
+  CliHost (args, miloneHome, profileInit, profileLog, fileReadAllText)
 
-let cliHostWithProfileLog profileLog (CliHost (args, profileInit, _, fileReadAllText)): CliHost =
-  CliHost (args, profileInit, profileLog, fileReadAllText)
+let cliHostWithProfileInit profileInit (CliHost (args, miloneHome, _, profileLog, fileReadAllText)): CliHost =
+  CliHost (args, miloneHome, profileInit, profileLog, fileReadAllText)
 
-let cliHostWithFileReadAllText fileReadAllText (CliHost (args, profileInit, profileLog, _)): CliHost =
-  CliHost (args, profileInit, profileLog, fileReadAllText)
+let cliHostWithProfileLog profileLog (CliHost (args, miloneHome, profileInit, _, fileReadAllText)): CliHost =
+  CliHost (args, miloneHome, profileInit, profileLog, fileReadAllText)
+
+let cliHostWithFileReadAllText fileReadAllText (CliHost (args, miloneHome, profileInit, profileLog, _)): CliHost =
+  CliHost (args, miloneHome, profileInit, profileLog, fileReadAllText)

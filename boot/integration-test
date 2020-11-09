@@ -45,7 +45,7 @@ then
     echo "+ $MILONE_CMD" >&2
 fi
 
-$MILONE_CMD >$TEST_C
+MILONE_HOME=$PWD/.. $MILONE_CMD >$TEST_C
 if [[ $? != 0 ]]
 then
     echo 'milone-lang compile error.' >$TEST_OUTA
