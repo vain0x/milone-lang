@@ -32,4 +32,4 @@ let main _ =
       let h = h + (inRegion (fun () -> stress i))
       go h (i - 1)
 
-  inRegion (fun () -> go 0 10 % 100)
+  inRegion (fun () -> (go 0 10 % 100) - 84)
