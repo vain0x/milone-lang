@@ -1,9 +1,10 @@
+.fake
+.ionide
 .vscode/ipch
 boot/milone
-symbolCache.*
-~*
 
 
 
 a.out
+~*
 *.generated.*
