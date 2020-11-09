@@ -88,6 +88,41 @@ let pathStrToStem (s: string) =
 
       go s.Length
 
+// -----------------------------------------------
+// Read module files
+// -----------------------------------------------
+
+let private readCoreFile host moduleName =
+  let miloneHome = host |> cliHostGetMiloneHome
+  let readFile = host |> cliHostGetFileReadAllText
+
+  match readFile (miloneHome + "/libcore/" + moduleName + ".fs") with
+  | Some it -> it
+  | None ->
+      printfn "Missing file: home=%s module=%s" miloneHome moduleName
+      failwithf "File not found"
+
+let private readModuleFile host projectDir moduleName =
+  let readFile = host |> cliHostGetFileReadAllText
+
+  readFile (projectDir + "/" + moduleName + ".fs")
+
+// -----------------------------------------------
+// Write output and logs
+// -----------------------------------------------
+
+let private writeLog host verbosity msg =
+  let profileLog = host |> cliHostGetProfileLog
+
+  match verbosity with
+  | Verbose ->
+      // FIXME: to stderr
+      printfn "// %s" msg
+
+  | Profile profiler -> profiler |> profileLog msg
+
+  | Quiet -> ()
+
 let tyCtxHasError tyCtx =
   tyCtx |> tyCtxGetLogs |> listIsEmpty |> not
 
@@ -103,273 +138,237 @@ let printLogs tyCtx logs =
 
   logs
   |> listIter (fun (log, loc) -> printfn "#error %s" (log |> logToString tyDisplayFn loc))
-  "", false
 
-let build host verbosity (projectDir: string): string * bool =
-  let profileLog = host |> cliHostGetProfileLog
-  let readFile = host |> cliHostGetFileReadAllText
+// -----------------------------------------------
+// Processes
+// -----------------------------------------------
 
-  let log msg =
-    match verbosity with
-    | Verbose ->
-        // FIXME: to stderr
-        printfn "// %s" msg
-
-    | Profile profiler -> profiler |> profileLog msg
-
-    | Quiet -> ()
-
+/// Loads source codes from files, performs tokenization and parsing,
+/// and transforms them into high-level intermediate representation (HIR).
+let syntacticallyAnalyze host v (projectDir: string) =
   let projectDir = projectDir |> pathStrTrimEndPathSep
-
   let projectName = projectDir |> pathStrToStem
-  log ("Begin compiling project=" + projectName)
 
-  let readCoreFile moduleName =
-    let miloneHome = host |> cliHostGetMiloneHome
-    match readFile (miloneHome + "/libcore/" + moduleName + ".fs") with
-    | Some it -> it
-    | None -> failwithf "Missing file: $MILONE_HOME/libcore/%s.fs" moduleName
+  writeLog
+    host
+    v
+    ("Lexing, Parsing and Bundling project="
+     + projectName)
 
-  let readModuleFile moduleName =
-    // log ("Open module " + moduleName)
-    readFile (projectDir + "/" + moduleName + ".fs")
+  let parseTokens (_moduleName: string) tokens =
+    // log ("Parsing " + moduleName)
+    parse tokens
 
-  let expr, nameCtx, errorListList =
-    let parseTokens (_moduleName: string) tokens =
-      // log ("Parsing " + moduleName)
-      parse tokens
+  parseProjectModules (readCoreFile host) (readModuleFile host projectDir) parseTokens projectName (nameCtxEmpty ())
 
-    parseProjectModules readCoreFile readModuleFile parseTokens projectName (nameCtxEmpty ())
-
-  log "Name resolution"
+/// Analyzes HIR to validate program and collect information.
+let semanticallyAnalyze host v (expr, nameCtx, errorListList) =
+  writeLog host v "NameRes"
   let expr, scopeCtx = nameRes (expr, nameCtx)
 
-  log "Type inference"
-  let expr, tyCtx = infer (expr, scopeCtx, errorListList)
+  writeLog host v "Typing"
+  infer (expr, scopeCtx, errorListList)
+
+/// Transforms HIR. The result can be converted to KIR or MIR.
+let transformHir host v (expr, tyCtx) =
+  writeLog host v "MainHoist"
+  let expr, tyCtx = hoistMain (expr, tyCtx)
+
+  writeLog host v "TyElaborating"
+  let expr, tyCtx = tyElaborate (expr, tyCtx)
+
+  writeLog host v "ClosureConversion"
+  let expr, tyCtx = declosure (expr, tyCtx)
+
+  writeLog host v "EtaExpansion"
+  let expr, tyCtx = uneta (expr, tyCtx)
+
+  writeLog host v "Hoist"
+  let expr, tyCtx = hoist (expr, tyCtx)
+
+  writeLog host v "TailRecOptimizing"
+  let expr, tyCtx = tailRecOptimize (expr, tyCtx)
+
+  writeLog host v "Monomorphizing"
+  monify (expr, tyCtx)
+
+/// Generates C language codes from transformed HIR,
+/// using mid-level intermediate representation (MIR).
+let codeGenHirViaMir host v (expr, tyCtx) =
+  writeLog host v "Mir"
+  let stmts, mirCtx = mirify (expr, tyCtx)
+
+  if mirCtx |> mirCtxGetLogs |> listIsEmpty |> not then
+    mirCtx |> mirCtxGetLogs |> printLogs tyCtx
+    "", false
+  else
+    writeLog host v "CIrGen"
+    let cir, success = gen (stmts, mirCtx)
+    let output = cprint cir
+
+    writeLog host v "Finish"
+    output, success
+
+/// EXPERIMENTAL.
+let dumpHirAsKir host v (expr, tyCtx) =
+  writeLog host v "KirGen"
+  let kRoot, kirGenCtx = kirGen (expr, tyCtx)
+
+  writeLog host v "KirPropagate"
+  let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
+
+  writeLog host v "KirDump"
+  let result = kirDump "" "" (kRoot, kirGenCtx)
+
+  writeLog host v "Finish"
+  result, true
+
+/// EXPERIMENTAL.
+let codeGenHirViaKir host v (expr, tyCtx) =
+  writeLog host v "KirGen"
+  let kRoot, kirGenCtx = kirGen (expr, tyCtx)
+
+  writeLog host v "KirPropagate"
+  let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
+
+  writeLog host v "KirToMir"
+  let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
+
+  writeLog host v "Cir generation"
+  let cir, success = gen (stmts, mirCtx)
+  let cOutput = cprint cir
+
+  writeLog host v "Finish"
+  cOutput, success
+
+let compile host v projectDir: string * bool =
+  let syntax = syntacticallyAnalyze host v projectDir
+
+  let expr, tyCtx =
+    semanticallyAnalyze host v syntax
+    |> transformHir host v
+
   if tyCtx |> tyCtxHasError then
     tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+    "", false
   else
+    codeGenHirViaMir host v (expr, tyCtx)
 
-    log "Hoist main"
-    let expr, tyCtx = hoistMain (expr, tyCtx)
+// -----------------------------------------------
+// Actions
+// -----------------------------------------------
 
-    log "TyElaboration"
-    let expr, tyCtx = tyElaborate (expr, tyCtx)
-
-    log "Closure conversion"
-    let expr, tyCtx = declosure (expr, tyCtx)
-    if tyCtx |> tyCtxHasError then
-      tyCtx |> tyCtxGetLogs |> printLogs tyCtx
-    else
-
-      log "Eta expansion"
-      let expr, tyCtx = uneta (expr, tyCtx)
-      if tyCtx |> tyCtxHasError then
-        tyCtx |> tyCtxGetLogs |> printLogs tyCtx
-      else
-
-        log "Hoist"
-        let expr, tyCtx = hoist (expr, tyCtx)
-
-        log "TailRecOptimizing"
-        let expr, tyCtx = tailRecOptimize (expr, tyCtx)
-
-        log "Monomorphization"
-        let expr, tyCtx = monify (expr, tyCtx)
-        if tyCtx |> tyCtxHasError then
-          tyCtx |> tyCtxGetLogs |> printLogs tyCtx
-        else
-
-          log "Mir generation"
-          let stmts, mirCtx = mirify (expr, tyCtx)
-
-          if mirCtx |> mirCtxGetLogs |> listIsEmpty |> not then
-            mirCtx |> mirCtxGetLogs |> printLogs tyCtx
-          else
-
-            log "Cir generation"
-            let cir, success = gen (stmts, mirCtx)
-
-            let output = cprint cir
-
-            log "Finished"
-            output, success
-
-let cliParse host (projectDir: string) =
-  let readFile = host |> cliHostGetFileReadAllText
-
-  // print errors
-  let rec go1 code errors =
-    match errors with
-    | [] -> code
-
-    | (msg, pos) :: errors ->
-        printfn "ERROR: %s %s" (posToString pos) msg
-        go1 1 errors
-
+let cliParse host verbosity (projectDir: string) =
+  let v = verbosity
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
-  let readCoreFile moduleName =
-    let miloneHome = host |> cliHostGetMiloneHome
-    match readFile (miloneHome + "/libcore/" + moduleName + ".fs") with
-    | Some it -> it
-    | None -> failwithf "Missing file: $MILONE_HOME/libcore/%s.fs" moduleName
-
-  let readModuleFile moduleName =
-    readFile (projectDir + "/" + moduleName + ".fs")
-
   let parseWithLogging moduleName tokens =
-    printfn "\n-------------\nParsing %s...\n--------------" moduleName
+    writeLog
+      host
+      v
+      ("\n-------------\nParsing %s...\n--------------"
+       + moduleName)
     let ast, errors = parse tokens
-    go1 0 errors |> ignore
-    printfn "%s" (objToString ast)
+
+    if errors |> listIsEmpty |> not then
+      printfn "In %s" moduleName
+
+      errors
+      |> listIter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
+
+    match verbosity with
+    | Verbose -> printfn "%s" (objToString ast)
+    | _ -> ()
+
     ast, errors
 
-  parseProjectModules readCoreFile readModuleFile parseWithLogging projectName (nameCtxEmpty ())
+  parseProjectModules
+    (readCoreFile host)
+    (readModuleFile host projectDir)
+    parseWithLogging
+    projectName
+    (nameCtxEmpty ())
   |> ignore
   0
 
 let cliCompile host verbosity projectDir =
-  let output, success = build host verbosity projectDir
+  let output, success = compile host verbosity projectDir
   let exitCode = if success then 0 else 1
 
   printfn "%s" (output |> strTrimEnd)
   exitCode
 
-// experimental: use kir
-let buildWithKir host verbosity mode (projectDir: string): string * bool =
-  let profileLog = host |> cliHostGetProfileLog
-  let readFile = host |> cliHostGetFileReadAllText
+let cliKirDump host projectDirs =
+  let v = Quiet
+  printfn "// Common code.\n%s\n" (kirHeader ())
 
-  let readCoreFile moduleName =
-    let miloneHome = host |> cliHostGetMiloneHome
-    match readFile (miloneHome + "/" + moduleName + ".fs") with
-    | Some it -> it
-    | None -> failwithf "Missing file: $MILONE_HOME/libcore/%s.fs" moduleName
+  projectDirs
+  |> listFold (fun code projectDir ->
+       printfn "// -------------------------------\n// %s\n{\n" projectDir
+       printfn "/*"
 
-  let readModuleFile moduleName =
-    readFile (projectDir + "/" + moduleName + ".fs")
+       let output, success =
+         let syntax = syntacticallyAnalyze host v projectDir
 
-  let parseTokens (_moduleName: string) tokens = parse tokens
+         let expr, tyCtx =
+           semanticallyAnalyze host v syntax
+           |> transformHir host v
 
-  let log msg =
-    match verbosity with
-    | Profile profiler -> profiler |> profileLog msg
+         if tyCtx |> tyCtxHasError then
+           tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+           "", false
+         else
+           dumpHirAsKir host v (expr, tyCtx)
 
-    | Verbose
-    | Quiet -> ()
+       let code =
+         if success then
+           printfn "*/"
+           printfn "%s" (output |> strTrimEnd)
+           code
+         else
+           printfn "\n%s\n*/" output
+           1
 
-  let projectDir = projectDir |> pathStrTrimEndPathSep
+       printfn "\n// exit = %d\n}\n" code
+       code) 0
 
-  let projectName = projectDir |> pathStrToStem
-  log ("Begin compiling project=" + projectName)
+let cliCompileViaKir host projectDirs =
+  let v = Quiet
+  printfn "// Generated using KIR.\n"
 
-  let expr, nameCtx, errorListList =
-    parseProjectModules readCoreFile readModuleFile parseTokens projectName (nameCtxEmpty ())
+  projectDirs
+  |> listFold (fun code projectDir ->
+       printfn "// -------------------------------\n// %s\n" projectDir
+       printfn "/*"
 
-  log "Name resolution"
-  let expr, scopeCtx = nameRes (expr, nameCtx)
+       let output, success =
+         let syntax = syntacticallyAnalyze host v projectDir
 
-  log "Type inference"
-  let expr, tyCtx = infer (expr, scopeCtx, errorListList)
-  if tyCtx |> tyCtxHasError then
-    tyCtx |> tyCtxGetLogs |> printLogs tyCtx
-  else
-    log "Hoist main"
-    let expr, tyCtx = hoistMain (expr, tyCtx)
+         let expr, tyCtx =
+           semanticallyAnalyze host v syntax
+           |> transformHir host v
 
-    log "TyElaboration"
-    let expr, tyCtx = tyElaborate (expr, tyCtx)
+         if tyCtx |> tyCtxHasError then
+           tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+           "", false
+         else
+           codeGenHirViaKir host v (expr, tyCtx)
 
-    log "Closure conversion"
-    let expr, tyCtx = declosure (expr, tyCtx)
-    if tyCtx |> tyCtxHasError then
-      tyCtx |> tyCtxGetLogs |> printLogs tyCtx
-    else
-      log "Eta expansion"
-      let expr, tyCtx = uneta (expr, tyCtx)
-      if tyCtx |> tyCtxHasError then
-        tyCtx |> tyCtxGetLogs |> printLogs tyCtx
-      else
-        log "Hoist"
-        let expr, tyCtx = hoist (expr, tyCtx)
+       let code =
+         if success then
+           printfn "*/"
+           printfn "%s" (output |> strTrimEnd)
+           code
+         else
+           printfn "\n%s\n*/" output
+           1
 
-        log "TailRecOptimizing"
-        let expr, tyCtx = tailRecOptimize (expr, tyCtx)
-
-        log "Monomorphization"
-        let expr, tyCtx = monify (expr, tyCtx)
-        if tyCtx |> tyCtxHasError then
-          tyCtx |> tyCtxGetLogs |> printLogs tyCtx
-        else
-          log "KirGen"
-          let kRoot, kirGenCtx = kirGen (expr, tyCtx)
-
-          let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
-
-          if mode then
-            log "KirDump"
-
-            let output =
-              kirDump projectName "" (kRoot, kirGenCtx)
-
-            output, true
-          else
-            log "KirToMir"
-            let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
-
-            log "Cir generation"
-            let cir, success = gen (stmts, mirCtx)
-            let cOutput = cprint cir
-            cOutput, success
-
-// log "KirToMir"
-// let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
-
-// if mirCtx |> mirCtxGetLogs |> listIsEmpty |> not then
-//   mirCtx |> mirCtxGetLogs |> printLogs
-// else
-//   log "Cir generation"
-//   let cir, success = gen (stmts, mirCtx)
-
-//   let output = cprint cir
-
-//   log "Finished"
-//   output, success
-
-let cliCompileWithKirToDump host verbosity projectDir =
-  printfn "/*"
-
-  let output, success =
-    buildWithKir host verbosity true projectDir
-
-  if success then
-    printfn "*/"
-    printfn "%s" (output |> strTrimEnd)
-    0
-  else
-    printfn "\n%s\n*/" output
-    1
-
-let cliCompileWithKirToClang host verbosity projectDir =
-  printfn "/*"
-
-  let output, success =
-    buildWithKir host verbosity false projectDir
-
-  if success then
-    printfn "*/"
-    printfn "%s" (output |> strTrimEnd)
-    0
-  else
-    printfn "\n%s\n*/" output
-    1
+       printfn "\n// exit = %d\n" code
+       code) 0
 
 let cli (host: CliHost) =
   match host |> cliHostGetArgs with
-  | [ "parse"; projectDir ] -> cliParse host projectDir
-
   | [ "-v"; projectDir ] -> cliCompile host Verbose projectDir
 
   | [ "--profile"; projectDir ] ->
@@ -379,34 +378,15 @@ let cli (host: CliHost) =
 
   | [ "-q"; projectDir ] -> cliCompile host Quiet projectDir
 
+  // for debugging
+  | [ "parse"; "-v"; projectDir ] -> cliParse host Verbose projectDir
+
+  | [ "parse"; "-q"; projectDir ] -> cliParse host Quiet projectDir
+
   // experimental feature
-  | "--kir-dump" :: projectDirs ->
-      printfn "// Common code.\n%s\n" (kirHeader ())
+  | "--kir-dump" :: projectDirs -> cliKirDump host projectDirs
 
-      projectDirs
-      |> listFold (fun success projectDir ->
-           printfn "// -------------------------------\n// %s\n{\n" projectDir
-
-           let code =
-             cliCompileWithKirToDump host Quiet projectDir
-
-           printfn "\n// exit = %d\n}\n" code
-
-           code + success) 0
-
-  | "--kir-c" :: projectDirs ->
-      printfn "// Generated using KIR.\n"
-
-      projectDirs
-      |> listFold (fun success projectDir ->
-           printfn "// -------------------------------\n// %s\n" projectDir
-
-           let code =
-             cliCompileWithKirToClang host Quiet projectDir
-
-           printfn "\n// exit = %d\n" code
-
-           code + success) 0
+  | "--kir-c" :: projectDirs -> cliCompileViaKir host projectDirs
 
   | _ ->
       // FIXME: to stderr
