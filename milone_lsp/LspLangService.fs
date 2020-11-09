@@ -352,24 +352,30 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
   // Bundle.
   let expr, nameCtx, errorListList =
+    let readCoreFile moduleName =
+      eprintfn "readCoreFile: unimplemented"
+      ""
+
     let readModuleFile moduleName =
       eprintfn "readModuleFile '%s'" moduleName
 
-      let contents, ext =
+      let source =
         match tryReadModule moduleName ".milone" with
-        | Some it -> it, ".milone"
+        | Some it -> Some(it, ".milone")
         | None ->
             match tryReadModule moduleName ".fs" with
-            | Some it -> it, ".fs"
-            | None ->
-                eprintfn "Module '%s' is missing in '%s'." moduleName projectDir
-                "", ".milone"
+            | Some it -> Some(it, ".fs")
+            | None -> None
 
-      // Remember URI to create error location later.
-      if moduleUris.ContainsKey(moduleName) |> not
-      then moduleUris.Add(moduleName, toUri moduleName ext)
+      match source with
+      | Some (source, ext) ->
+          // Remember URI to create error location later.
+          if moduleUris.ContainsKey(moduleName) |> not
+          then moduleUris.Add(moduleName, toUri moduleName ext)
 
-      contents
+          Some source
+
+      | None -> None
 
     let parseModule (moduleName: string) tokens =
       eprintfn "parse: '%s'" moduleName
@@ -377,7 +383,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
     let nameCtx = MiloneLang.Helpers.nameCtxEmpty ()
 
-    MiloneLang.Bundling.parseProjectModules readModuleFile parseModule projectName nameCtx
+    MiloneLang.Bundling.parseProjectModules readCoreFile readModuleFile parseModule projectName nameCtx
 
   // Name resolution.
   let expr, scopeCtx =
@@ -389,6 +395,15 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
   // Collect errors.
   let errors =
+    let tyDisplayFn ty =
+      let getTyIdent tySerial =
+        tyCtx
+        |> MiloneLang.Records.tyCtxGetTys
+        |> MiloneLang.Helpers.mapTryFind tySerial
+        |> Option.map MiloneLang.Helpers.tyDefToIdent
+
+      ty |> MiloneLang.Helpers.tyDisplay getTyIdent
+
     [ for log, loc in tyCtx |> MiloneLang.Records.tyCtxGetLogs do
         let moduleName, row, column = loc
 
@@ -399,7 +414,9 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
         let pos = row, column
 
-        let msg = MiloneLang.Helpers.logToString loc log
+        let msg =
+          MiloneLang.Helpers.logToString tyDisplayFn loc log
+
         yield uri, msg, pos ]
 
   let moduleUris = List.ofSeq moduleUris.Values
