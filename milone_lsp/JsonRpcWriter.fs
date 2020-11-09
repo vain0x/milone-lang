@@ -30,7 +30,7 @@ let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list):
   // eprintfn "    '%s'" templateText
 
   let text =
-    // Replace plceholders.
+    // Replace placeholders.
     let mutable buf = System.Text.StringBuilder(templateText)
     for key, value in values do
       buf.Replace(sprintf "\"${%s}\"" key, jsonDisplay value)

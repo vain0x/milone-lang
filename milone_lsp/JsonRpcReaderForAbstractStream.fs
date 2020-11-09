@@ -1,6 +1,6 @@
 module rec MiloneLsp.JsonRpcReaderForAbstractStream
 
-// (Not compilant with JSON-RPC for now.)
+// (Not compliant with JSON-RPC for now.)
 
 open System.IO
 open MiloneLsp.JsonValue

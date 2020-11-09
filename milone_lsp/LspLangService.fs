@@ -435,7 +435,7 @@ let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
   | Ok projects ->
       try
         // Collect list of errors per file.
-        // Note we need to report absense of errors for docs opened in editor
+        // Note we need to report absence of errors for docs opened in editor
         // so that the editor clears outdated diagnostics.
         let mutable map = MutMultimap.empty ()
 
