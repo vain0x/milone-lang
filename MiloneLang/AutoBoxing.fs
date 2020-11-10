@@ -7,6 +7,19 @@ open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
 
+type private AbCtx =
+  { Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef> }
+
+let private ofTyCtx (tyCtx: TyCtx): AbCtx =
+  { Vars = tyCtx |> tyCtxGetVars
+    Tys = tyCtx |> tyCtxGetTys }
+
+let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
+  tyCtx
+  |> tyCtxWithVars ctx.Vars
+  |> tyCtxWithTys ctx.Tys
+
 /// ### Boxing of Records
 ///
 /// Records are all boxed because they tend to be too large to clone.
@@ -35,8 +48,8 @@ open MiloneLang.Records
 ///   record: obj
 /// ```
 
-let private isRecordTySerial ctx tySerial =
-  match ctx |> tyCtxGetTys |> mapTryFind tySerial with
+let private isRecordTySerial (ctx: AbCtx) tySerial =
+  match ctx.Tys |> mapTryFind tySerial with
   | Some (RecordTyDef _) -> true
   | _ -> false
 
@@ -173,11 +186,10 @@ let private abExpr ctx expr =
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
-  let ctx = tyCtx
+  let ctx = ofTyCtx tyCtx
 
   let vars =
-    ctx
-    |> tyCtxGetVars
+    ctx.Vars
     |> mapMap (fun _ varDef ->
          match varDef with
          | VarDef (ident, sm, ty, loc) ->
@@ -194,8 +206,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
              VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc))
 
   let tys =
-    ctx
-    |> tyCtxGetTys
+    ctx.Tys
     |> mapMap (fun _ tyDef ->
          match tyDef with
          | RecordTyDef (ident, fields, loc) ->
@@ -209,9 +220,9 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
          | _ -> tyDef)
 
-  let ctx =
-    ctx |> tyCtxWithVars vars |> tyCtxWithTys tys
+  let ctx = { ctx with Vars = vars; Tys = tys }
 
   let expr = expr |> abExpr ctx
 
-  expr, ctx
+  let tyCtx = ctx |> toTyCtx tyCtx
+  expr, tyCtx
