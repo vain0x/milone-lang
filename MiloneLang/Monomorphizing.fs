@@ -148,7 +148,7 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
 
 let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
   assert (monoCtxFindMonomorphizedFun ctx genericFunSerial useSiteTy
-          |> optionIsNone)
+          |> Option.isNone)
 
   let varDef =
     let monoTyScheme = TyScheme([], useSiteTy)
@@ -185,7 +185,7 @@ let monoCtxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
 
   let notMonomorphizedYet =
     monoCtxFindMonomorphizedFun ctx funSerial useSiteTy
-    |> optionIsNone
+    |> Option.isNone
 
   let canMark =
     useSiteTyIsMonomorphic && notMonomorphizedYet

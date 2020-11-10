@@ -451,7 +451,7 @@ let inferRecord ctx expectOpt baseOpt fields loc =
       // Unless base expr is specified, set of field initializers must be complete.
       let ctx =
         if baseOpt
-           |> optionIsNone
+           |> Option.isNone
            && fieldDefs |> mapIsEmpty |> not then
           let fields =
             fieldDefs

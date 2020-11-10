@@ -55,8 +55,6 @@ let exMap f (xs, acc, ctx) =
 // Option
 // -----------------------------------------------
 
-let optionIsNone option = Option.isNone option
-
 let optionDefaultValue alt option = Option.defaultValue alt option
 
 let optionMap f option = Option.map f option
