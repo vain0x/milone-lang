@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\boot\MiloneLang\MiloneLang.fsproj" />
+    <ProjectReference Include="..\MiloneLang\MiloneLang.fsproj" />
   </ItemGroup>
 
 </Project>

@@ -93,47 +93,45 @@ See the comments in source files for details.
 
 Most of types are defined in the module:
 
-- [Types](boot/MiloneLang/Types.fs)
+- [Types](MiloneLang/Types.fs)
 
 and functions are in:
 
-- [Compatible](boot/MiloneLang/Compatible.fs)
-- [Helpers](boot/MiloneLang/Helpers.fs)
+- [Compatible](MiloneLang/Compatible.fs)
+- [Helpers](MiloneLang/Helpers.fs)
 
 The following transformations are consist of the compilation in the order:
 
-- [Lexing](boot/MiloneLang/Lexing.fs) (Tokenization)
-- [Parsing](boot/MiloneLang/Parsing.fs)
-- [Bundling](boot/MiloneLang/Bundling.fs)
+- [Lexing](MiloneLang/Lexing.fs) (Tokenization)
+- [Parsing](MiloneLang/Parsing.fs)
+- [Bundling](MiloneLang/Bundling.fs)
     - Source codes concatenation
-- [AstToHir](boot/MiloneLang/AstToHir.fs)
+- [AstToHir](MiloneLang/AstToHir.fs)
     - From abstract syntax tree (AST) to high-level intermediate representation (HIR)
     - For data structure decoupling and desugaring
-- [NameRes](boot/MiloneLang/NameRes.fs) (Name resolution)
-- [Typing](boot/MiloneLang/Typing.fs) (Type inference)
-- [MainHoist](boot/MiloneLang/MainHoist.fs)
+- [NameRes](MiloneLang/NameRes.fs) (Name resolution)
+- [Typing](MiloneLang/Typing.fs) (Type inference)
+- [MainHoist](MiloneLang/MainHoist.fs)
     - Resolve top-level bindings
-- [TyElaboration](boot/MiloneLang/TyElaborating.fs)
+- [TyElaboration](MiloneLang/TyElaborating.fs)
     - Convert records to tuples
-- [ClosureConversion](boot/MiloneLang/ClosureConversion.fs)
+- [ClosureConversion](MiloneLang/ClosureConversion.fs)
     - Resolve use of local variables in functions
-- [EtaExpansion](boot/MiloneLang/EtaExpansion.fs)
+- [EtaExpansion](MiloneLang/EtaExpansion.fs)
     - Resolve partial applications
-- [Hoist](boot/MiloneLang/Hoist.fs)
+- [Hoist](MiloneLang/Hoist.fs)
     - Just a preparation of monomorphization
-- [Monomorphization](boot/MiloneLang/Monomorphization.fs)
+- [Monomorphization](MiloneLang/Monomorphization.fs)
     - Resolve generic functions by code clone
-- [Mir](boot/MiloneLang/Mir.fs)
+- [Mir](MiloneLang/Mir.fs)
     - Resolve pattern matches
     - Convert to mid-level intermediate representation (MIR)
-- [CIrGen](boot/MiloneLang/CIrGen.fs)
+- [CIrGen](MiloneLang/CIrGen.fs)
     - Generate C code
-- [CPrinting](boot/MiloneLang/CPrinting.fs)
+- [CPrinting](MiloneLang/CPrinting.fs)
     - C code to string
 
 ## Development
-
-Work in the `boot` directory.
 
 Scripts are written for `bash` because I use a Ubuntu desktop for development. These scripts might work on Windows Subsystem Linux or macOS (not tried).
 

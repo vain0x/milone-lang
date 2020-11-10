@@ -9,7 +9,7 @@ VERBOSITY=${2:-'-q'}
 
 if test $MILONE = './milone-netcore'
 then
-    dotnet build --nologo --no-restore boot/MiloneLang
+    dotnet build --nologo --no-restore MiloneLang
 fi
 
 ERR=$(find tests/*/* -type d | xargs -I{} ./integration-test {} "$MILONE" "$VERBOSITY")

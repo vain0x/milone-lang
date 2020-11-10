@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "boot", "boot", "{8745793A-BA52-4026-A8DA-75CEC3C7D106}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiloneLang", "boot\MiloneLang\MiloneLang.fsproj", "{AC64C44D-611F-474A-AEA4-B9A32D2E5817}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiloneLang", "MiloneLang\MiloneLang.fsproj", "{AC64C44D-611F-474A-AEA4-B9A32D2E5817}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiloneLsp", "milone_lsp\MiloneLsp.fsproj", "{F098528D-9A38-43DE-8767-F468801B00D7}"
 EndProject

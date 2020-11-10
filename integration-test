@@ -13,7 +13,7 @@ fi
 CFLAGS='-std=c11 -O2 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label'
 
 NAME=$(basename "$1")
-MILONE=${2:-'boot/MiloneLang/bin/Debug/netcoreapp3.1/MiloneLang'}
+MILONE=${2:-'MiloneLang/bin/Debug/netcoreapp3.1/MiloneLang'}
 VERBOSITY=${3:-'-q'}
 
 DIR=$(find tests -type d | grep -e "\\b$NAME$" | head -n 1)
