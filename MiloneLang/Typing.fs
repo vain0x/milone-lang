@@ -531,7 +531,7 @@ let inferNav ctx sub mes loc =
         match ctx |> tyCtxGetTy tySerial with
         | RecordTyDef (_, fieldDefs, _) ->
             match fieldDefs
-                  |> listTryFind (fun (theIdent, _, _) -> theIdent = ident) with
+                  |> List.tryFind (fun (theIdent, _, _) -> theIdent = ident) with
             | Some (_, fieldTy, _) -> Some fieldTy
             | None -> None
         | _ -> None

@@ -232,7 +232,7 @@ let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option 
     scopeCtx
     |> scopeCtxGetVarNs
     |> nameTreeTryFind scopeSerial
-    |> listTryFind (fun varSerial -> (scopeCtx |> scopeCtxGetIdent varSerial) = ident)
+    |> List.tryFind (fun varSerial -> (scopeCtx |> scopeCtxGetIdent varSerial) = ident)
 
 let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
   if scopeSerial = (scopeCtx |> scopeCtxGetLocalSerial) then
