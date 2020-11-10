@@ -12,7 +12,7 @@
     <Compile Include="LexingTests.fs" />
     <Compile Include="CIrGenTests.fs" />
     <Compile Include="CPrintingTests.fs" />
-    <Watch Include="../tests/**/*.fs" />
+    <Watch Include="../boot/tests/**/*.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MiloneLang\MiloneLang.fsproj" />
+    <ProjectReference Include="..\boot\MiloneLang\MiloneLang.fsproj" />
   </ItemGroup>
 
 </Project>
