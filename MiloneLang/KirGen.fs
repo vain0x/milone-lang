@@ -20,7 +20,7 @@ let private isNewtypeVariant varSerial ctx =
   match ctx |> mirCtxGetVars |> mapFind varSerial with
   | VariantDef (_, tySerial, _, _, _, _) ->
       match ctx |> mirCtxGetTys |> mapFind tySerial with
-      | UnionTyDef (_, variantSerials, _) -> variantSerials |> listLength = 1
+      | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
 
       | _ -> failwith "Expected union serial"
 
@@ -89,7 +89,7 @@ let private kgRefPat itself varSerial ty loc ctx =
 let private kgTuplePat itemPats loc ctx =
   let conts =
     itemPats
-    |> listMapWithIndex (fun i itemPat -> PSelectNode(KFieldPath(i, loc), kgPat itemPat ctx, loc))
+    |> List.mapi (fun i itemPat -> PSelectNode(KFieldPath(i, loc), kgPat itemPat ctx, loc))
 
   PConjNode(conts, loc)
 
@@ -219,7 +219,7 @@ let private selectTy ty path ctx =
 
   | KFieldPath (i, _) ->
       match ty with
-      | AppTy (TupleTyCtor, itemTys) -> itemTys |> listItem i
+      | AppTy (TupleTyCtor, itemTys) -> itemTys |> List.item i
       | _ -> unreachable (ty, path)
 
   | KTagPath _ -> tyInt
@@ -233,7 +233,7 @@ let private collectJoints f ctx =
   let parentJoints = ctx |> kirGenCtxGetJoints
   let ctx = ctx |> kirGenCtxWithJoints []
   let result, ctx = f ctx
-  let joints = ctx |> kirGenCtxGetJoints |> listRev
+  let joints = ctx |> kirGenCtxGetJoints |> List.rev
   let ctx = ctx |> kirGenCtxWithJoints parentJoints
   result, joints, ctx
 
@@ -548,7 +548,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
                 let rest, ctx = go pats ctx
                 kgEvalPNode cond (kgPat pat ctx) successNode rest ctx
 
-          go (patNormalize pat |> listRev) ctx
+          go (patNormalize pat |> List.rev) ctx
 
         let binding =
           KJointBinding(jointSerial, [], body, loc)
@@ -564,7 +564,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
 
          let ctx =
            ctx
-           |> kirGenCtxWithJoints (listAppend (listRev joints) (ctx |> kirGenCtxGetJoints))
+           |> kirGenCtxWithJoints (List.append (List.rev joints) (ctx |> kirGenCtxGetJoints))
 
          cont, ctx)
 
@@ -671,7 +671,7 @@ let private kgLetFunExpr funSerial isMainFun argPats body next loc hole ctx: KNo
   let ctx =
     let joints =
       KJointBinding(funSerial, [], body, loc)
-      :: listRev joints
+      :: List.rev joints
 
     let body =
       KJointNode(joints, KJumpNode(funSerial, [], loc), loc)
@@ -816,5 +816,5 @@ let kirGen (expr: HExpr, tyCtx: TyCtx): KRoot * KirGenCtx =
     ctxOfTyCtx tyCtx
     |> kgExpr expr (fun _ ctx -> abortNode noLoc, ctx)
 
-  let funBindings = kirGenCtxGetFuns ctx |> listRev
+  let funBindings = kirGenCtxGetFuns ctx |> List.rev
   KRoot(funBindings), ctx

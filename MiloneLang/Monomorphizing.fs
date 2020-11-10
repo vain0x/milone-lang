@@ -54,6 +54,7 @@ module rec MiloneLang.Monomorphizing
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
+open MiloneLang.TySystem
 
 let intTyToHash (value, ty) =
   intHash value |> hashCombine (tyToHash ty)
@@ -108,7 +109,7 @@ let monoCtxSubstPatTy ctx pat =
   let subst ty = monoCtxSubstTy ctx ty
   patMap subst id pat
 
-let monoCtxSubstPatsTy ctx pats = listMap (monoCtxSubstPatTy ctx) pats
+let monoCtxSubstPatsTy ctx pats = List.map (monoCtxSubstPatTy ctx) pats
 
 let monoCtxMarkSomethingHappened (ctx: MonoCtx) = ctx |> monoCtxWithSomethingHappened true
 
@@ -140,14 +141,14 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
     ctx
     |> monoCtxGetVars
     |> mapToList
-    |> listMap forceGeneralize
+    |> List.map forceGeneralize
     |> mapOfList (intHash, intCmp)
 
   ctx |> monoCtxWithVars vars
 
 let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
   assert (monoCtxFindMonomorphizedFun ctx genericFunSerial useSiteTy
-          |> optionIsNone)
+          |> Option.isNone)
 
   let varDef =
     let monoTyScheme = TyScheme([], useSiteTy)
@@ -184,7 +185,7 @@ let monoCtxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
 
   let notMonomorphizedYet =
     monoCtxFindMonomorphizedFun ctx funSerial useSiteTy
-    |> optionIsNone
+    |> Option.isNone
 
   let canMark =
     useSiteTyIsMonomorphic && notMonomorphizedYet

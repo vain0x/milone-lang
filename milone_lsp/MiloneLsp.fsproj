@@ -15,6 +15,7 @@
     <Compile Include="../MiloneLang/Types.fs" />
     <Compile Include="../MiloneLang/Records.fs" />
     <Compile Include="../MiloneLang/Helpers.fs" />
+    <Compile Include="../MiloneLang/TySystem.fs" />
     <Compile Include="../MiloneLang/Lexing.fs" />
     <Compile Include="../MiloneLang/Parsing.fs" />
     <Compile Include="../MiloneLang/AstToHir.fs" />

@@ -9,6 +9,7 @@ module rec MiloneLang.CIrGen
 open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.TySystem
 
 let private ctVoidPtr = CPtrTy CVoidTy
 
@@ -25,7 +26,7 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
         let ident = toIdent def
 
         let serials =
-          acc |> mapTryFind ident |> optionDefaultValue []
+          acc |> mapTryFind ident |> Option.defaultValue []
 
         let acc = acc |> mapAdd ident (serial :: serials)
         go acc xs
@@ -40,8 +41,8 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
 
   let addIdents identMap ident serials =
     serials
-    |> listRev
-    |> listFold (addIdent ident) (identMap, 0)
+    |> List.rev
+    |> List.fold (addIdent ident) (identMap, 0)
     |> fst
 
   serialsMap |> mapFold addIdents (mapEmpty mapFuns)
@@ -271,14 +272,14 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
 
       let variants =
         variants
-        |> listMap (fun variantSerial ->
+        |> List.map (fun variantSerial ->
              match ctx |> cirCtxGetVars |> mapTryFind variantSerial with
              | Some (VariantDef (ident, _, hasPayload, payloadTy, _, _)) -> ident, variantSerial, hasPayload, payloadTy
              | _ -> failwith "Never")
 
       let tags =
         variants
-        |> listMap (fun (_, serial, _, _) -> cirCtxUniqueName ctx serial)
+        |> List.map (fun (_, serial, _, _) -> cirCtxUniqueName ctx serial)
 
       let variants, ctx =
         (variants, ctx)
@@ -382,7 +383,7 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
       | AppTy (TupleTyCtor, []) -> "Unit", ctx
 
       | AppTy (TupleTyCtor, itemTys) ->
-          let len = itemTys |> listLength
+          let len = itemTys |> List.length
 
           let itemTys, ctx =
             (itemTys, ctx)
@@ -568,7 +569,7 @@ let genExprBin ctx op l r =
 let genExprList ctx exprs =
   let rec go results ctx exprs =
     match exprs with
-    | [] -> listRev results, ctx
+    | [] -> List.rev results, ctx
     | expr :: exprs ->
         let result, ctx = genExpr ctx expr
         go (result :: results) ctx exprs
@@ -594,7 +595,7 @@ let genExprCallPrintfn ctx format args =
   // Insert implicit cast from str to str ptr.
   let rec go acc ctx args =
     match args with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | MLitExpr (StrLit value, _) :: args -> go (CStrRawExpr value :: acc) ctx args
     | arg :: args when tyEq (mexprToTy arg) tyStr ->
         let arg, ctx = genExpr ctx arg
@@ -654,7 +655,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       // Embed the source location information.
       let args =
         let _, y, x = loc
-        listAppend args [ CIntExpr y; CIntExpr x ]
+        List.append args [ CIntExpr y; CIntExpr x ]
 
       let assertCall = CCallExpr(callee, args)
 
@@ -918,7 +919,7 @@ let genBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx = genStmts (cirCtxNewBlock ctx) stmts
   let stmts = bodyCtx |> cirCtxGetStmts
   let ctx = cirCtxRollBack ctx bodyCtx
-  listRev stmts, ctx
+  List.rev stmts, ctx
 
 let genStmts (ctx: CirCtx) (stmts: MStmt list): CirCtx =
   let rec go ctx stmts =
@@ -940,7 +941,7 @@ let genDecls (ctx: CirCtx) decls =
 
       let rec go acc ctx args =
         match args with
-        | [] -> listRev acc, ctx
+        | [] -> List.rev acc, ctx
         | (arg, ty, _) :: args ->
             let ident = cirCtxUniqueName ctx arg
             let cty, ctx = cirGetCTy ctx ty
@@ -961,7 +962,7 @@ let genLogs (ctx: CirCtx) =
       ctx
       |> cirCtxGetTys
       |> mapTryFind tySerial
-      |> optionMap tyDefToIdent
+      |> Option.map tyDefToIdent
 
     tyDisplay getTyIdent ty
 
@@ -977,14 +978,14 @@ let genLogs (ctx: CirCtx) =
 
         go ctx logs
 
-  let logs = ctx |> cirCtxGetLogs |> listRev
+  let logs = ctx |> cirCtxGetLogs |> List.rev
   let ctx = go ctx logs
-  let success = logs |> listIsEmpty
+  let success = logs |> List.isEmpty
   success, ctx
 
 let gen (decls, mirCtx: MirCtx): CDecl list * bool =
   let ctx = cirCtxFromMirCtx mirCtx
   let ctx = genDecls ctx decls
   let success, ctx = genLogs ctx
-  let decls = ctx |> cirCtxGetDecls |> listRev
+  let decls = ctx |> cirCtxGetDecls |> List.rev
   decls, success

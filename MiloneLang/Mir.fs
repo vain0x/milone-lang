@@ -14,7 +14,7 @@ let private containsTailRec expr =
   match expr with
   | HInfExpr (InfOp.CallTailRec, _, _, _) -> true
 
-  | HInfExpr (InfOp.Semi, items, _, _) -> items |> listLast |> containsTailRec
+  | HInfExpr (InfOp.Semi, items, _, _) -> items |> List.last |> containsTailRec
 
   | HLitExpr _
   | HRefExpr _
@@ -26,7 +26,7 @@ let private containsTailRec expr =
 
   | HMatchExpr (_, arms, _, _) ->
       arms
-      |> listExists (fun (_, _, body) -> body |> containsTailRec)
+      |> List.exists (fun (_, _, body) -> body |> containsTailRec)
 
 
   | HLetValExpr (_, _, _, next, _, _) -> next |> containsTailRec
@@ -44,7 +44,7 @@ let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
   match ctx |> mirCtxGetVars |> mapFind varSerial with
   | VariantDef (_, tySerial, _, _, _, _) ->
       match ctx |> mirCtxGetTys |> mapFind tySerial with
-      | UnionTyDef (_, variantSerials, _) -> variantSerials |> listLength = 1
+      | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
 
       | _ -> failwith "Expected union serial"
 
@@ -61,7 +61,7 @@ let mirCtxRollBack (bCtx: MirCtx) (dCtx: MirCtx) =
 
 let mirCtxPrependStmt ctx stmt =
   ctx
-  |> mirCtxWithStmts (listAppend (ctx |> mirCtxGetStmts) [ stmt ])
+  |> mirCtxWithStmts (List.append (ctx |> mirCtxGetStmts) [ stmt ])
 
 let mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) =
   ctx
@@ -343,13 +343,13 @@ let patsIsCovering pats =
     | HNavPat _
     | HConsPat _
     | HCallPat _ -> false
-    | HTuplePat (itemPats, _, _) -> itemPats |> listForAll go
+    | HTuplePat (itemPats, _, _) -> itemPats |> List.forall go
     | HBoxPat (itemPat, _) -> go itemPat
     | HAsPat (pat, _, _) -> go pat
     | HAnnoPat (pat, _, _) -> go pat
     | HOrPat (first, second, _, _) -> go first || go second
 
-  listExists go pats
+  List.exists go pats
 
 let mirifyExprMatch ctx target arms ty loc =
   let noLabel = "<NEVER>"
@@ -360,7 +360,7 @@ let mirifyExprMatch ctx target arms ty loc =
 
   let isCovering =
     arms
-    |> listChoose (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
+    |> List.choose (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
     |> patsIsCovering
 
   /// By walking over arms, calculates what kind of MIR instructions to emit.
@@ -368,7 +368,7 @@ let mirifyExprMatch ctx target arms ty loc =
     match arms with
     | (pat, guard, body) :: arms ->
         let pats = patNormalize pat
-        let disjCount = pats |> listLength
+        let disjCount = pats |> List.length
 
         // No need to jump to body from pattern if no OR patterns.
         let needsJump = disjCount > 1
@@ -571,7 +571,7 @@ let mirifyExprTuple ctx items itemTys loc =
 
   let rec go acc ctx items =
     match items with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | item :: items ->
         let item, ctx = mirifyExpr ctx item
         go (item :: acc) ctx items
@@ -613,7 +613,7 @@ let mirifyExprOpCmp ctx op l r ty loc =
 let mirifyExprSemi ctx exprs =
   // Discard non-last expressions.
   let exprs, ctx = mirifyExprs ctx exprs
-  listLast exprs, ctx
+  List.last exprs, ctx
 
 let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =
@@ -776,7 +776,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
       if body |> containsTailRec then
         let labelStmt, label, ctx = mirCtxFreshLabel ctx "tailrec" letLoc
         let ctx = mirCtxPrependStmt ctx labelStmt
-        let argSerials = args |> listMap (fun (it, _, _) -> it)
+        let argSerials = args |> List.map (fun (it, _, _) -> it)
         Some(label, argSerials), ctx
       else
         None, ctx
@@ -805,7 +805,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
 
   let rec defineArgs acc ctx argPats =
     match argPats with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | argPat :: argPats ->
         let arg, ctx = defineArg ctx argPat
         defineArgs (arg :: acc) ctx argPats
@@ -821,7 +821,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
 
     let ctx = cleanUpTailRec ctx parentFun
     let stmts, ctx = mirCtxTakeStmts ctx
-    let body = listRev stmts
+    let body = List.rev stmts
     args, blockTy, body, ctx
 
   let core () =
@@ -877,7 +877,7 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =
     match exprs with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | expr :: exprs ->
         let expr, ctx = mirifyExpr ctx expr
         go (expr :: acc) ctx exprs
@@ -899,7 +899,7 @@ let mirifyCollectDecls (stmts: MStmt list) =
     | _ :: stmts -> go decls stmts
     | [] -> decls
 
-  go [] stmts |> listRev
+  go [] stmts |> List.rev
 
 let mirify (expr: HExpr, tyCtx: TyCtx): MStmt list * MirCtx =
   let ctx = mirCtxFromTyCtx tyCtx
@@ -907,6 +907,6 @@ let mirify (expr: HExpr, tyCtx: TyCtx): MStmt list * MirCtx =
   // OK: It's safe to discard the expression thanks to main hoisting.
   let _expr, ctx = mirifyExpr ctx expr
 
-  let stmts = ctx |> mirCtxGetStmts |> listRev
+  let stmts = ctx |> mirCtxGetStmts |> List.rev
   let decls = mirifyCollectDecls stmts
   decls, ctx

@@ -166,14 +166,14 @@ let scopeCtxOpenModule moduleSerial scopeCtx =
     scopeCtx
     |> scopeCtxGetVarNs
     |> nameTreeTryFind moduleSerial
-    |> listFold (fun ctx varSerial -> ctx |> scopeCtxOpenVar varSerial) scopeCtx
+    |> List.fold (fun ctx varSerial -> ctx |> scopeCtxOpenVar varSerial) scopeCtx
 
   // Import tys.
   let scopeCtx =
     scopeCtx
     |> scopeCtxGetTyNs
     |> nameTreeTryFind moduleSerial
-    |> listFold (fun ctx tySerial -> ctx |> scopeCtxOpenTy tySerial) scopeCtx
+    |> List.fold (fun ctx tySerial -> ctx |> scopeCtxOpenTy tySerial) scopeCtx
 
   scopeCtx
 
@@ -223,7 +223,7 @@ let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option 
     // Find from local scope.
     let varScopes, _ = scopeCtx |> scopeCtxGetLocal
     match varScopes
-          |> listTryPick (fun map -> map |> mapTryFind ident) with
+          |> List.tryPick (fun map -> map |> mapTryFind ident) with
     | Some (varSerial, _) -> Some varSerial
     | None -> None
 
@@ -232,14 +232,14 @@ let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option 
     scopeCtx
     |> scopeCtxGetVarNs
     |> nameTreeTryFind scopeSerial
-    |> listTryFind (fun varSerial -> (scopeCtx |> scopeCtxGetIdent varSerial) = ident)
+    |> List.tryFind (fun varSerial -> (scopeCtx |> scopeCtxGetIdent varSerial) = ident)
 
 let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
   if scopeSerial = (scopeCtx |> scopeCtxGetLocalSerial) then
     // Find from local scope.
     let _, tyScopes = scopeCtx |> scopeCtxGetLocal
     match tyScopes
-          |> listTryPick (fun map -> map |> mapTryFind ident) with
+          |> List.tryPick (fun map -> map |> mapTryFind ident) with
     | Some (tySerial, _) -> Some tySerial
     | None -> None
 
@@ -319,7 +319,7 @@ let scopeCtxResolveTy ty loc scopeCtx =
 // -----------------------------------------------
 
 let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
-  let arity = args |> listLength
+  let arity = args |> List.length
   let tyScheme = TyScheme([], ty)
 
   match scopeCtx |> scopeCtxGetVars |> mapTryFind serial with
@@ -378,12 +378,12 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
           |> scopeCtxOpenVar variantSerial
           |> addVarToModule variantSerial
 
-        let ctx = variants |> listFold defineVariant ctx
+        let ctx = variants |> List.fold defineVariant ctx
 
         let tyDef =
           let variantSerials =
             variants
-            |> listMap (fun (_, variantSerial, _, _) -> variantSerial)
+            |> List.map (fun (_, variantSerial, _, _) -> variantSerial)
 
           UnionTyDef(tyIdent, variantSerials, loc)
 
@@ -429,7 +429,7 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
             ctx |> scopeCtxDefineVar variantSerial varDef
         | _ -> failwith "NEVER: it must be variant"
 
-      variantSerials |> listFold go ctx
+      variantSerials |> List.fold go ctx
 
   | RecordTyDef (ident, fields, loc) ->
       let resolveField ((ident, ty, loc), ctx) =
@@ -794,7 +794,7 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         // FIXME: resolve module-name based on path
         match ctx
-              |> scopeCtxResolveLocalTyIdent (path |> listLast) with
+              |> scopeCtxResolveLocalTyIdent (path |> List.last) with
         | Some moduleSerial ->
             let ctx = ctx |> scopeCtxOpenModule moduleSerial
 

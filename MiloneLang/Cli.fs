@@ -4,6 +4,7 @@ module rec MiloneLang.Cli
 open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
+open MiloneLang.TySystem
 open MiloneLang.Lexing
 open MiloneLang.Parsing
 open MiloneLang.AstToHir
@@ -125,7 +126,7 @@ let private writeLog host verbosity msg =
   | Quiet -> ()
 
 let tyCtxHasError tyCtx =
-  tyCtx |> tyCtxGetLogs |> listIsEmpty |> not
+  tyCtx |> tyCtxGetLogs |> List.isEmpty |> not
 
 let printLogs tyCtx logs =
   let tyDisplayFn ty =
@@ -133,12 +134,12 @@ let printLogs tyCtx logs =
       tyCtx
       |> tyCtxGetTys
       |> mapTryFind tySerial
-      |> optionMap tyDefToIdent
+      |> Option.map tyDefToIdent
 
     tyDisplay getTyIdent ty
 
   logs
-  |> listIter (fun (log, loc) -> printfn "#error %s" (log |> logToString tyDisplayFn loc))
+  |> List.iter (fun (log, loc) -> printfn "#error %s" (log |> logToString tyDisplayFn loc))
 
 // -----------------------------------------------
 // Processes
@@ -202,7 +203,7 @@ let codeGenHirViaMir host v (expr, tyCtx) =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (expr, tyCtx)
 
-  if mirCtx |> mirCtxGetLogs |> listIsEmpty |> not then
+  if mirCtx |> mirCtxGetLogs |> List.isEmpty |> not then
     mirCtx |> mirCtxGetLogs |> printLogs tyCtx
     "", false
   else
@@ -274,11 +275,11 @@ let cliParse host verbosity (projectDir: string) =
        + moduleName)
     let ast, errors = parse tokens
 
-    if errors |> listIsEmpty |> not then
+    if errors |> List.isEmpty |> not then
       printfn "In %s" moduleName
 
       errors
-      |> listIter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
+      |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
 
     match verbosity with
     | Verbose -> printfn "%s" (objToString ast)
@@ -307,7 +308,7 @@ let cliKirDump host projectDirs =
   printfn "// Common code.\n%s\n" (kirHeader ())
 
   projectDirs
-  |> listFold (fun code projectDir ->
+  |> List.fold (fun code projectDir ->
        printfn "// -------------------------------\n// %s\n{\n" projectDir
        printfn "/*"
 
@@ -340,7 +341,7 @@ let cliCompileViaKir host projectDirs =
   printfn "// Generated using KIR.\n"
 
   projectDirs
-  |> listFold (fun code projectDir ->
+  |> List.fold (fun code projectDir ->
        printfn "// -------------------------------\n// %s\n" projectDir
        printfn "/*"
 

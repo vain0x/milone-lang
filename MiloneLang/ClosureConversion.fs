@@ -197,7 +197,7 @@ let ccCtxGetFunCapturedSerials funSerial (ctx: CcCtx) =
 let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
   let chooseVars varSerials =
     varSerials
-    |> listChoose (fun varSerial ->
+    |> List.choose (fun varSerial ->
          match ctx |> ccCtxGetVars |> mapTryFind varSerial with
          | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
 
@@ -290,7 +290,7 @@ let ccCtxUpdateFunDefs (ctx: CcCtx) =
 /// Updates the function type to take captured variables.
 let capsAddToFunTy tTy (caps: Caps) =
   caps
-  |> listFold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
+  |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
 
 /// Updates the callee to take captured variables as arguments.
 let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
@@ -300,8 +300,8 @@ let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
 
   let app, _ =
     caps
-    |> listRev
-    |> listFold (fun (callee, calleeTy) (serial, ty, loc) ->
+    |> List.rev
+    |> List.fold (fun (callee, calleeTy) (serial, ty, loc) ->
          let arg = HRefExpr(serial, ty, loc)
          hxApp callee arg calleeTy loc, tyFun ty calleeTy) (callee, calleeTy)
 
@@ -310,11 +310,11 @@ let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
 /// Updates the argument patterns to take captured variables.
 let capsAddToFunPats args (caps: Caps) =
   caps
-  |> listFold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
+  |> List.fold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
 
 let capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
-  let arity = arity + listLength caps
+  let arity = arity + List.length caps
   funTy, arity
 
 // -----------------------------------------------
@@ -461,7 +461,7 @@ let declosureExpr (expr, ctx) =
 
         | UnionTyDecl (_, variants, _) ->
             let ctx =
-              variants |> listFold declosureVariantDecl ctx
+              variants |> List.fold declosureVariantDecl ctx
 
             expr, ctx
 

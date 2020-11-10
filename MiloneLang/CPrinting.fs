@@ -433,7 +433,7 @@ let cprintHeader acc =
   let header = "#include \"milone.h\""
   acc |> cons header |> cons eol |> cons eol
 
-let cprintRun (printer: string list -> string list): string = printer [] |> listRev |> strConcat
+let cprintRun (printer: string list -> string list): string = printer [] |> List.rev |> strConcat
 
 let cprint (decls: CDecl list): string =
   cprintRun (fun acc -> cprintDecls (cprintHeader acc) decls)

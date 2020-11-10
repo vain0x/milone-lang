@@ -8,6 +8,7 @@ module rec MiloneLang.KirDump
 open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
+open MiloneLang.TySystem
 
 let private deeper indent = indent + "    "
 
@@ -74,7 +75,7 @@ let private tyToDebugString ty ctx =
           "["
           + strConcat
               (args
-               |> listMapWithIndex (fun i ty ->
+               |> List.mapi (fun i ty ->
                     (if i = 0 then "" else ", ")
                     + tyToDebugString ty ctx))
           + "]"
@@ -88,7 +89,7 @@ let private tyToDebugString ty ctx =
           + "<"
           + strConcat
               (args
-               |> listMapWithIndex (fun i ty ->
+               |> List.mapi (fun i ty ->
                     (if i = 0 then "" else ", ")
                     + tyToDebugString ty ctx))
           + ">"
@@ -123,7 +124,7 @@ let private kdTerm term ctx =
 let private kdArgsAsParamList args ctx =
   "("
   + (args
-     |> listMapWithIndex (fun i arg ->
+     |> List.mapi (fun i arg ->
           (if i = 0 then "" else ", ")
           + getVarName arg ctx
           + ": "
@@ -134,7 +135,7 @@ let private kdArgsAsParamList args ctx =
 let private kdTermsAsArgList args ctx =
   "("
   + (args
-     |> listMapWithIndex (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
+     |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
      |> strConcat)
   + ")"
 
@@ -214,7 +215,7 @@ let private kdPrimNode indent prim args results conts ctx =
 
     let resultList =
       results
-      |> listMapWithIndex (fun i result ->
+      |> List.mapi (fun i result ->
            (if i = 0 then "" else ", ")
            + getVarName result ctx)
       |> strConcat
@@ -229,7 +230,7 @@ let private kdPrimNode indent prim args results conts ctx =
     | _ ->
         tsConstStmt indent ("[" + resultList + "]") (kdPrim prim + argList)
         + (conts
-           |> listMapWithIndex (fun (i: int) cont ->
+           |> List.mapi (fun (i: int) cont ->
                 (indent
                  + "// "
                  + (kdPrim prim + ".cont#" + string i)
@@ -266,7 +267,7 @@ let private kdPrimNode indent prim args results conts ctx =
       basic
         ("["
          + (args
-            |> listMapWithIndex (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
+            |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
             |> strConcat)
          + "]")
         result
@@ -321,7 +322,7 @@ let private kdNode indent node ctx =
   | KJointNode (joints, cont, _) ->
       kdNode indent cont ctx
       + (joints
-         |> listMap (fun joint -> kdJointBinding indent false joint ctx)
+         |> List.map (fun joint -> kdJointBinding indent false joint ctx)
          |> strConcat)
 
 let private kdJointBinding indent isEntryPoint jointBinding ctx =
@@ -383,5 +384,5 @@ let kirDump hint indent (kRoot: KRoot, ctx: KirGenCtx): string =
   + hint
   + "\n"
   + (funBindings
-     |> listMap (fun funBinding -> kdFunBinding indent funBinding ctx)
+     |> List.map (fun funBinding -> kdFunBinding indent funBinding ctx)
      |> strConcat)

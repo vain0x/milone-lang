@@ -354,7 +354,7 @@ let tokenFromStrLit (text: string) l r: Token =
 
     // Take an escape sequence or halt.
     if i = r - 1 then
-      acc |> listRev |> strConcat
+      acc |> List.rev |> strConcat
     else
       assert (text.[i] = '\\')
       match text.[i + 1] with
@@ -399,7 +399,7 @@ let tokCtxPush kind r ((text, i, pos, acc): TokenizeCtx): TokenizeCtx =
 
 let tokEof ((text, i, _, acc): TokenizeCtx) =
   assert (lookEof text i)
-  acc |> listRev
+  acc |> List.rev
 
 let tokError t =
   let text, i = t |> tokCtxToTextIndex

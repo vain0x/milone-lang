@@ -43,10 +43,11 @@
 /// ```
 module rec MiloneLang.EtaExpansion
 
-open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Typing
+open MiloneLang.Helpers
 open MiloneLang.Records
+open MiloneLang.TySystem
+open MiloneLang.Typing
 
 [<RequireQualifiedAccess>]
 type CalleeKind =
@@ -103,7 +104,7 @@ let etaCtxIsFun serial (ctx: EtaCtx) =
   | _ -> false
 
 let listSplitAt i xs =
-  listTruncate i xs, listSkip (intMin i (listLength xs)) xs
+  List.truncate i xs, List.skip (intMin i (List.length xs)) xs
 
 let tyAppliedBy n ty =
   match ty with
@@ -204,7 +205,7 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
     createRestArgsAndPats callee arity argLen callLoc ctx
 
   let envPat, envTy, envRefs, ctx = createEnvPatAndTy envItems callLoc ctx
-  let forwardArgs = listAppend envRefs restArgs
+  let forwardArgs = List.append envRefs restArgs
 
   let forwardExpr =
     hxCallProc callee forwardArgs resultTy callLoc
@@ -246,7 +247,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
   let envPat, envTy, envRefs, ctx = createEnvPatAndTy envItems callLoc ctx
 
   let calleeRef, forwardArgs =
-    match listAppend envRefs restArgs with
+    match List.append envRefs restArgs with
     | calleeRef :: forwardArgs -> calleeRef, forwardArgs
     | _ -> failwith "Never"
 
@@ -271,7 +272,7 @@ let resolvePartialApp calleeKind callee arity args argLen callLoc ctx =
   | CalleeKind.Obj -> resolvePartialAppObj callee arity args argLen callLoc ctx
 
 let unetaCallCore calleeKind callee arity calleeLoc args resultTy callLoc ctx =
-  let argLen = listLength args
+  let argLen = List.length args
   if argLen < arity then
     resolvePartialApp calleeKind callee arity args argLen callLoc ctx
   else

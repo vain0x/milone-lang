@@ -6,107 +6,107 @@ open Xunit
 
 [<Fact>]
 let listIsEmptyTest () =
-  ([]: int list) |> listIsEmpty |> is true
-  [ 1 ] |> listIsEmpty |> is false
+  ([]: int list) |> List.isEmpty |> is true
+  [ 1 ] |> List.isEmpty |> is false
 
 [<Fact>]
 let listLengthTest () =
-  ([]: int list) |> listLength |> is 0
-  [ 1; 2; 3 ] |> listLength |> is 3
+  ([]: int list) |> List.length |> is 0
+  [ 1; 2; 3 ] |> List.length |> is 3
 
 [<Fact>]
 let listRevTest () =
-  ([]: int list) |> listRev |> is []
-  [ 3; 1; 4; 1 ] |> listRev |> is [ 1; 4; 1; 3 ]
+  ([]: int list) |> List.rev |> is []
+  [ 3; 1; 4; 1 ] |> List.rev |> is [ 1; 4; 1; 3 ]
 
 [<Fact>]
 let listMapTest () =
   [ 3; 1; 4; 1 ]
-  |> listMap ((+) 1)
+  |> List.map ((+) 1)
   |> is [ 4; 2; 5; 2 ]
 
 [<Fact>]
 let listMapWithIndexTest () =
   [ 3; 1; 4; 1 ]
-  |> listMapWithIndex (+)
+  |> List.mapi (+)
   |> is [ 3; 2; 6; 4 ]
 
 [<Fact>]
 let listFilterTest () =
   [ 3; 1; 4; 1 ]
-  |> listFilter (fun x -> x > 1)
+  |> List.filter (fun x -> x > 1)
   |> is [ 3; 4 ]
 
 [<Fact>]
 let listChooseTest () =
   [ 3; 1; 4; 1 ]
-  |> listChoose (fun x -> if x > 1 then Some(x * x) else None)
+  |> List.choose (fun x -> if x > 1 then Some(x * x) else None)
   |> is [ 9; 16 ]
 
 [<Fact>]
 let listCollectTest () =
   [ 3; 1; 4; 1 ]
-  |> listCollect (fun x -> if x > 1 then [ x; x ] else [ x ])
+  |> List.collect (fun x -> if x > 1 then [ x; x ] else [ x ])
   |> is [ 3; 3; 1; 4; 4; 1 ]
 
 [<Fact>]
 let listForAllTest () =
   ([]: int list)
-  |> listForAll (fun _ -> false)
+  |> List.forall (fun _ -> false)
   |> is true
 
   [ 3; 1; 4; 1 ]
-  |> listForAll (fun x -> x >= 1)
+  |> List.forall (fun x -> x >= 1)
   |> is true
 
   [ 3; 1; 4; 1 ]
-  |> listForAll (fun x -> x > 1)
+  |> List.forall (fun x -> x > 1)
   |> is false
 
 [<Fact>]
 let listExistsTest () =
   ([]: int list)
-  |> listExists (fun _ -> true)
+  |> List.exists (fun _ -> true)
   |> is false
 
   [ 3; 1; 4; 1 ]
-  |> listExists (fun x -> x < 1)
+  |> List.exists (fun x -> x < 1)
   |> is false
 
   [ 3; 1; 4; 1 ]
-  |> listExists (fun x -> x = 1)
+  |> List.exists (fun x -> x = 1)
   |> is true
 
 [<Fact>]
 let listFoldTest () =
-  ([]: int list) |> listFold (+) 0 |> is 0
+  ([]: int list) |> List.fold (+) 0 |> is 0
 
   [ 3; 1; 4; 1 ]
-  |> listFold (fun s x -> s * 10 + x) 0
+  |> List.fold (fun s x -> s * 10 + x) 0
   |> is 3141
 
 [<Fact>]
 let listReduceTest () =
   [ 3; 1; 4; 1 ]
-  |> listReduce (fun s x -> s * 10 + x)
+  |> List.reduce (fun s x -> s * 10 + x)
   |> is 3141
 
 [<Fact>]
-let listLastTest () = [ 3; 1; 4; 1; 5; 9 ] |> listLast |> is 9
+let listLastTest () = [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
 
 [<Fact>]
 let listSkipTest () =
-  [ 3; 1; 4; 1; 5; 9 ] |> listSkip 4 |> is [ 5; 9 ]
+  [ 3; 1; 4; 1; 5; 9 ] |> List.skip 4 |> is [ 5; 9 ]
 
 [<Fact>]
 let listTruncateTest () =
   [ 3; 1; 4; 1; 5; 9 ]
-  |> listTruncate 4
+  |> List.truncate 4
   |> is [ 3; 1; 4; 1 ]
 
 [<Fact>]
 let listAppendTest () =
-  listAppend [ 3; 1; 4; 1 ] [ 5; 9 ]
+  List.append [ 3; 1; 4; 1 ] [ 5; 9 ]
   |> is [ 3; 1; 4; 1; 5; 9 ]
 
 [<Fact>]

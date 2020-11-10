@@ -78,7 +78,7 @@ let findOpenPaths expr =
   let rec go expr =
     match expr with
     | HOpenExpr (path, _) -> [ path ]
-    | HInfExpr (InfOp.Semi, exprs, _, _) -> exprs |> listCollect go
+    | HInfExpr (InfOp.Semi, exprs, _, _) -> exprs |> List.collect go
     | HModuleExpr (_, body, _, _) -> go body
     | _ -> []
 
@@ -91,7 +91,7 @@ let findOpenModules projectName expr =
     | [ "MiloneCore"; moduleName ] -> Some(CoreModule, moduleName)
     | _ -> None
 
-  findOpenPaths expr |> listChoose extractor
+  findOpenPaths expr |> List.choose extractor
 
 /// Insert the second expression to the bottom of the first expression.
 /// This is bad way because of variable capturing issues.
@@ -135,13 +135,13 @@ let parseProjectModules readCoreFile readModuleFile parse projectName nameCtx =
 
     let errors: (string * Loc) list =
       errors
-      |> listMap (fun (msg: string, pos: Pos) ->
+      |> List.map (fun (msg: string, pos: Pos) ->
            let row, column = pos
            let loc = docId, row, column
            msg, loc)
 
     let moduleAcc, moduleMap, nameCtx, errorAcc =
-      listFold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
+      List.fold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
 
     moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
 
@@ -177,5 +177,5 @@ let parseProjectModules readCoreFile readModuleFile parse projectName nameCtx =
 
   // Finish.
   let moduleAcc, _, nameCtx, errorAcc = ctx
-  let modules = moduleAcc |> listRev
-  listReduce spliceExpr modules, nameCtx, errorAcc
+  let modules = moduleAcc |> List.rev
+  List.reduce spliceExpr modules, nameCtx, errorAcc

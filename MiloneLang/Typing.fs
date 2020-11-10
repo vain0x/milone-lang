@@ -14,6 +14,7 @@ module rec MiloneLang.Typing
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
+open MiloneLang.TySystem
 
 let tyCtxGetTy tySerial (ctx: TyCtx) = ctx |> tyCtxGetTys |> mapFind tySerial
 
@@ -77,7 +78,7 @@ let tyCtxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
 
 let tyCtxAddTraitBounds traits (ctx: TyCtx) =
   ctx
-  |> tyCtxWithTraitBounds (listAppend traits (ctx |> tyCtxGetTraitBounds))
+  |> tyCtxWithTraitBounds (List.append traits (ctx |> tyCtxGetTraitBounds))
 
 let tyCtxResolveTraitBounds (ctx: TyCtx) =
   let rec go logAcc traits ctx =
@@ -90,7 +91,7 @@ let tyCtxResolveTraitBounds (ctx: TyCtx) =
 
         ctx |> go logAcc traits
 
-  let traits = ctx |> tyCtxGetTraitBounds |> listRev
+  let traits = ctx |> tyCtxGetTraitBounds |> List.rev
   let ctx = ctx |> tyCtxWithTraitBounds []
 
   let logAcc, tyCtx =
@@ -119,7 +120,7 @@ let tyCtxUnifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
 /// without this checking (according to TaPL).
 let tyGeneralize isOwned (ty: Ty) =
   let fvs =
-    tyCollectFreeVars ty |> listFilter isOwned
+    tyCollectFreeVars ty |> List.filter isOwned
 
   TyScheme(fvs, ty)
 
@@ -138,7 +139,7 @@ let tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
       let ty =
         let extendedCtx =
           mapping
-          |> listFold (fun ctx (src, target) -> tyCtxBindTy ctx src (MetaTy(target, loc)) loc) ctx
+          |> List.fold (fun ctx (src, target) -> tyCtxBindTy ctx src (MetaTy(target, loc)) loc) ctx
 
         tyCtxSubstTy extendedCtx ty
 
@@ -160,7 +161,7 @@ let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
 
   let traits =
     traits
-    |> listMap (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
+    |> List.map (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
 
   polyTy, traits, ctx
 
@@ -191,7 +192,7 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
         ctx
         |> tyCtxWithTyDepths
              (fvs
-              |> listFold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx |> tyCtxGetTyDepths))
+              |> List.fold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx |> tyCtxGetTyDepths))
 
       ctx
   | FunDef _ -> failwith "Can't generalize already-generalized function"
@@ -306,7 +307,7 @@ let inferPatCall (ctx: TyCtx) pat callee args loc =
 let inferPatTuple ctx itemPats loc =
   let rec go accPats accTys ctx itemPats =
     match itemPats with
-    | [] -> listRev accPats, listRev accTys, ctx
+    | [] -> List.rev accPats, List.rev accTys, ctx
     | itemPat :: itemPats ->
         let itemPat, itemTy, ctx = inferPat ctx itemPat
         go (itemPat :: accPats) (itemTy :: accTys) ctx itemPats
@@ -397,7 +398,7 @@ let inferRecord ctx expectOpt baseOpt fields loc =
   // Determine the record type by base expr or expectation.
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
-      match tyOpt |> optionMap (tyCtxSubstTy ctx) with
+      match tyOpt |> Option.map (tyCtxSubstTy ctx) with
       | Some ((AppTy (RefTyCtor tySerial, [])) as recordTy) ->
           match ctx |> tyCtxGetTy tySerial with
           | RecordTyDef (recordIdent, fieldDefs, _) -> Some(recordTy, recordIdent, fieldDefs)
@@ -429,7 +430,7 @@ let inferRecord ctx expectOpt baseOpt fields loc =
       let fields, (fieldDefs, ctx) =
         let fieldDefs =
           fieldDefs
-          |> listMap (fun (ident, ty, _) -> ident, ty)
+          |> List.map (fun (ident, ty, _) -> ident, ty)
           |> mapOfList (strHash, strCmp)
 
         (fields, (fieldDefs, ctx))
@@ -450,12 +451,12 @@ let inferRecord ctx expectOpt baseOpt fields loc =
       // Unless base expr is specified, set of field initializers must be complete.
       let ctx =
         if baseOpt
-           |> optionIsNone
+           |> Option.isNone
            && fieldDefs |> mapIsEmpty |> not then
           let fields =
             fieldDefs
             |> mapToList
-            |> listMap (fun (ident, _) -> ident)
+            |> List.map (fun (ident, _) -> ident)
 
           ctx |> addIncompleteErr fields
         else
@@ -530,7 +531,7 @@ let inferNav ctx sub mes loc =
         match ctx |> tyCtxGetTy tySerial with
         | RecordTyDef (_, fieldDefs, _) ->
             match fieldDefs
-                  |> listTryFind (fun (theIdent, _, _) -> theIdent = ident) with
+                  |> List.tryFind (fun (theIdent, _, _) -> theIdent = ident) with
             | Some (_, fieldTy, _) -> Some fieldTy
             | None -> None
         | _ -> None
@@ -594,7 +595,7 @@ let inferOpApp ctx expr callee arg loc =
 let inferTuple (ctx: TyCtx) items loc =
   let rec go acc itemTys ctx items =
     match items with
-    | [] -> listRev acc, listRev itemTys, ctx
+    | [] -> List.rev acc, List.rev itemTys, ctx
     | item :: items ->
         let item, itemTy, ctx = inferExpr ctx None item
         go (item :: acc) (itemTy :: itemTys) ctx items
@@ -680,7 +681,7 @@ let inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
         let ctx = tyCtxUnifyTy ctx prevLoc prevTy tyUnit
 
         let expectOpt =
-          if listIsEmpty exprs then expectOpt else None
+          if List.isEmpty exprs then expectOpt else None
 
         let expr, ty, ctx = inferExpr ctx expectOpt expr
         go (expr :: acc) (ty, exprToLoc expr) ctx exprs
@@ -689,7 +690,7 @@ let inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
 
 let inferSemi ctx expectOpt exprs loc =
   let exprs, ty, ctx = inferExprs ctx expectOpt exprs loc
-  hxSemi (listRev exprs) loc, ty, ctx
+  hxSemi (List.rev exprs) loc, ty, ctx
 
 let inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
   match expr with
@@ -829,14 +830,14 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
       ctx
       |> tyCtxGetTys
       |> mapToList
-      |> listChoose (fun kv ->
+      |> List.choose (fun kv ->
            let tySerial, tyDef = kv
            match tyDef with
            | MetaTyDef _ -> None
            | RecordTyDef (ident, fields, loc) ->
                let fields =
                  fields
-                 |> listMap (fun (ident, ty, loc) ->
+                 |> List.map (fun (ident, ty, loc) ->
                       let ty = substOrDegenerate ty
                       ident, ty, loc)
 

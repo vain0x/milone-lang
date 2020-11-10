@@ -74,7 +74,7 @@ let private collectStmts processBody ctx =
   let ctx = ctx |> kirToMirCtxWithStmts []
 
   let ctx = processBody ctx
-  let stmts = ctx |> kirToMirCtxGetStmts |> listRev
+  let stmts = ctx |> kirToMirCtxGetStmts |> List.rev
 
   let ctx = ctx |> kirToMirCtxWithStmts parentStmts
 
@@ -251,8 +251,8 @@ let private kmPrimSome itself args results conts loc ctx =
 let private kmPrimTuple itself args results conts loc ctx =
   match args, results, conts with
   | args, [ result ], [ cont ] ->
-      let items = args |> listMap kmTerm
-      let itemTys = items |> listMap mexprToTy
+      let items = args |> List.map kmTerm
+      let itemTys = items |> List.map mexprToTy
       let tupleTy = tyTuple itemTys
 
       ctx
@@ -283,7 +283,7 @@ let private kmPrimClosure itself args results conts loc ctx =
   | _ -> unreachable itself
 
 let private kmPrimCallProc itself args results conts loc ctx =
-  let args = args |> listMap kmTerm
+  let args = args |> List.map kmTerm
 
   match args, results, conts with
   | callee :: args, [ result ], [ cont ] ->
@@ -297,7 +297,7 @@ let private kmPrimCallProc itself args results conts loc ctx =
   | _ -> unreachable itself
 
 let private kmPrimCallClosure itself args results conts loc ctx =
-  let args = args |> listMap kmTerm
+  let args = args |> List.map kmTerm
 
   match args, results, conts with
   | callee :: args, [ result ], [ cont ] ->
@@ -338,7 +338,7 @@ let kmPrimExit itself args results conts loc ctx =
 let private kmPrimOther itself prim args results conts loc ctx =
   match results, conts with
   | [ result ], [ cont ] ->
-      let args = args |> listMap kmTerm
+      let args = args |> List.map kmTerm
 
       let resultTy = findVarTy result ctx
       let primTy = restoreCalleeTy args resultTy
@@ -481,7 +481,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
         // Declaration of args as local vars.
         let ctx =
           args
-          |> listFold (fun ctx arg ->
+          |> List.fold (fun ctx arg ->
                let argTy = ctx |> findVarTy arg
                ctx
                |> addStmt (MLetValStmt(arg, MUninitInit, argTy, jointLoc))) ctx
@@ -494,7 +494,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
         let jointMap, labelCount, ctx =
           joints
-          |> listFold folder (jointMap, labelCount, ctx)
+          |> List.fold folder (jointMap, labelCount, ctx)
 
         ctx
         |> kirToMirCtxWithJointMap jointMap
@@ -504,7 +504,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
       let ctx =
         joints
-        |> listFold (fun ctx joint ->
+        |> List.fold (fun ctx joint ->
              let (KJointBinding (jointSerial, _, body, loc)) = joint
 
              let label, _ =
@@ -562,7 +562,7 @@ let private kmFunBinding binding ctx =
 
   let body, ctx =
     let stmts, labels, ctx = ctx |> genFunBody (kmNode body)
-    listCollect id (stmts :: listRev labels), ctx
+    List.collect id (stmts :: List.rev labels), ctx
 
   ctx
   |> addStmt (MProcStmt(funSerial, isMainFun, args, body, resultTy, loc))
@@ -574,8 +574,8 @@ let kirToMir (root: KRoot, kirGenCtx: KirGenCtx): MStmt list * MirCtx =
     let (KRoot funBindings) = root
 
     funBindings
-    |> listFold (fun ctx binding -> kmFunBinding binding ctx) ctx
+    |> List.fold (fun ctx binding -> kmFunBinding binding ctx) ctx
 
-  let stmts = ctx |> kirToMirCtxGetStmts |> listRev
+  let stmts = ctx |> kirToMirCtxGetStmts |> List.rev
   let mirCtx = ctx |> toMirCtx
   stmts, mirCtx
