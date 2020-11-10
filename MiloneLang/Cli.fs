@@ -139,7 +139,7 @@ let printLogs tyCtx logs =
     tyDisplay getTyIdent ty
 
   logs
-  |> listIter (fun (log, loc) -> printfn "#error %s" (log |> logToString tyDisplayFn loc))
+  |> List.iter (fun (log, loc) -> printfn "#error %s" (log |> logToString tyDisplayFn loc))
 
 // -----------------------------------------------
 // Processes
@@ -279,7 +279,7 @@ let cliParse host verbosity (projectDir: string) =
       printfn "In %s" moduleName
 
       errors
-      |> listIter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
+      |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
 
     match verbosity with
     | Verbose -> printfn "%s" (objToString ast)
