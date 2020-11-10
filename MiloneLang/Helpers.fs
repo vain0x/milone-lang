@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listReduce reducer xs = List.reduce reducer xs
-
 let listLast xs = List.last xs
 
 let listItem i xs = List.item i xs

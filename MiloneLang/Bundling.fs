@@ -178,4 +178,4 @@ let parseProjectModules readCoreFile readModuleFile parse projectName nameCtx =
   // Finish.
   let moduleAcc, _, nameCtx, errorAcc = ctx
   let modules = moduleAcc |> List.rev
-  listReduce spliceExpr modules, nameCtx, errorAcc
+  List.reduce spliceExpr modules, nameCtx, errorAcc

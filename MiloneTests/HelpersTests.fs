@@ -88,7 +88,7 @@ let listFoldTest () =
 [<Fact>]
 let listReduceTest () =
   [ 3; 1; 4; 1 ]
-  |> listReduce (fun s x -> s * 10 + x)
+  |> List.reduce (fun s x -> s * 10 + x)
   |> is 3141
 
 [<Fact>]
