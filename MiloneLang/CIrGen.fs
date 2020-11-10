@@ -26,7 +26,7 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
         let ident = toIdent def
 
         let serials =
-          acc |> mapTryFind ident |> optionDefaultValue []
+          acc |> mapTryFind ident |> Option.defaultValue []
 
         let acc = acc |> mapAdd ident (serial :: serials)
         go acc xs
