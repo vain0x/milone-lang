@@ -223,7 +223,7 @@ let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option 
     // Find from local scope.
     let varScopes, _ = scopeCtx |> scopeCtxGetLocal
     match varScopes
-          |> listTryPick (fun map -> map |> mapTryFind ident) with
+          |> List.tryPick (fun map -> map |> mapTryFind ident) with
     | Some (varSerial, _) -> Some varSerial
     | None -> None
 
@@ -239,7 +239,7 @@ let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial opti
     // Find from local scope.
     let _, tyScopes = scopeCtx |> scopeCtxGetLocal
     match tyScopes
-          |> listTryPick (fun map -> map |> mapTryFind ident) with
+          |> List.tryPick (fun map -> map |> mapTryFind ident) with
     | Some (tySerial, _) -> Some tySerial
     | None -> None
 
