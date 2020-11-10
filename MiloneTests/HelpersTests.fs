@@ -101,7 +101,7 @@ let listSkipTest () =
 [<Fact>]
 let listTruncateTest () =
   [ 3; 1; 4; 1; 5; 9 ]
-  |> listTruncate 4
+  |> List.truncate 4
   |> is [ 3; 1; 4; 1 ]
 
 [<Fact>]

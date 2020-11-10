@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listTruncate count xs = List.truncate count xs
-
 let listAppend xs ys = List.append xs ys
 
 let listSortCore unique cmp xs =
@@ -108,7 +106,7 @@ let listSortCore unique cmp xs =
   let (zs, zn), ws, d = go (xs, xn)
   assert (zn + d = xn)
   assert (ws |> List.isEmpty)
-  listTruncate zn zs
+  List.truncate zn zs
 
 let listSort cmp xs = listSortCore false cmp xs
 

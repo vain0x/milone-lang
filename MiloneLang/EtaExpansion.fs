@@ -104,7 +104,7 @@ let etaCtxIsFun serial (ctx: EtaCtx) =
   | _ -> false
 
 let listSplitAt i xs =
-  listTruncate i xs, List.skip (intMin i (List.length xs)) xs
+  List.truncate i xs, List.skip (intMin i (List.length xs)) xs
 
 let tyAppliedBy n ty =
   match ty with
