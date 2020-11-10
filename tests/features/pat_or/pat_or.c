@@ -135,7 +135,7 @@ enum Expr_Tag {
 struct Expr_ {
     enum Expr_Tag tag;
     union {
-        struct IntIntTuple2* Add_;
+        void* Add_;
     };
 };
 
@@ -146,12 +146,12 @@ struct IntIntTuple2 {
 
 int performComplexMatching_(struct Expr_ expr_) {
     int match_3;
-    if (((*(expr_.Add_)).t0 != 0)) goto next_18;
-    if (((*(expr_.Add_)).t1 != 0)) goto next_18;
+    if (((*(((struct IntIntTuple2*)expr_.Add_))).t0 != 0)) goto next_18;
+    if (((*(((struct IntIntTuple2*)expr_.Add_))).t1 != 0)) goto next_18;
     goto match_body_17;
 next_18:;
-    if (((*(expr_.Add_)).t0 != 0)) goto next_19;
-    if (((*(expr_.Add_)).t1 != 1)) goto next_19;
+    if (((*(((struct IntIntTuple2*)expr_.Add_))).t0 != 0)) goto next_19;
+    if (((*(((struct IntIntTuple2*)expr_.Add_))).t1 != 1)) goto next_19;
     goto match_body_17;
 match_body_17:;
     match_3 = 1;
@@ -168,18 +168,18 @@ int complexCase_(int arg_2) {
     struct IntIntTuple2 tuple_;
     tuple_.t0 = 0;
     tuple_.t1 = 1;
-    struct IntIntTuple2* payload_ = (struct IntIntTuple2*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
-    (*(((struct IntIntTuple2*)payload_))) = tuple_;
-    struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = payload_};
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
+    (*(((struct IntIntTuple2*)box_))) = tuple_;
+    struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = box_};
     int call_9 = performComplexMatching_(variant_);
     milone_assert(call_9, 35, 2);
     int call_10 = 0;
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 1;
     tuple_1.t1 = 2;
-    struct IntIntTuple2* payload_1 = (struct IntIntTuple2*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
-    (*(((struct IntIntTuple2*)payload_1))) = tuple_1;
-    struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = payload_1};
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
+    (*(((struct IntIntTuple2*)box_1))) = tuple_1;
+    struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = box_1};
     int call_11 = performComplexMatching_(variant_1);
     milone_assert((!(call_11)), 36, 2);
     int call_12 = 0;

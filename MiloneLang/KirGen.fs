@@ -148,6 +148,8 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 
   | HTuplePat (itemPats, _, loc) -> kgTuplePat itemPats loc ctx
 
+  | HBoxPat _ -> failwithf "unimplemented. %A" pat
+
   | HAsPat (bodyPat, varSerial, loc) -> kgAsPat bodyPat varSerial loc ctx
 
   | HSomePat _ -> failwithf "TODO: match of fun type should be type error. %A" pat

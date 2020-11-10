@@ -4,7 +4,7 @@ struct StringList;
 
 struct BoolBoolStringListStringListStringListTuple5;
 
-struct BoolBoolStringListStringListStringListTuple5 defaultOptions_(int arg_);
+void* defaultOptions_(int arg_);
 
 int main();
 
@@ -21,18 +21,20 @@ struct BoolBoolStringListStringListStringListTuple5 {
     struct StringList* t4;
 };
 
-struct BoolBoolStringListStringListStringListTuple5 defaultOptions_(int arg_) {
+void* defaultOptions_(int arg_) {
     struct BoolBoolStringListStringListStringListTuple5 tuple_;
     tuple_.t0 = 0;
     tuple_.t1 = 0;
     tuple_.t2 = NULL;
     tuple_.t3 = NULL;
     tuple_.t4 = NULL;
-    return tuple_;
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct BoolBoolStringListStringListStringListTuple5));
+    (*(((struct BoolBoolStringListStringListStringListTuple5*)box_))) = tuple_;
+    return box_;
 }
 
 int main() {
-    struct BoolBoolStringListStringListStringListTuple5 call_ = defaultOptions_(0);
-    struct BoolBoolStringListStringListStringListTuple5 _options_ = call_;
+    void* call_ = defaultOptions_(0);
+    void* _options_ = call_;
     return 0;
 }

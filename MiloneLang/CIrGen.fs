@@ -10,6 +10,8 @@ open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
 
+let private ctVoidPtr = CPtrTy CVoidTy
+
 let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then ident + "_" else ident + "_" + string index
@@ -280,12 +282,13 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
 
       let variants, ctx =
         (variants, ctx)
-        |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
+        |> stFlatMap (fun ((_, serial, hasPayload, _payloadTy), acc, ctx) ->
              if hasPayload then
-               let payloadTy, ctx = cirCtxConvertTyIncomplete ctx payloadTy
-               (cirCtxUniqueName ctx serial, CPtrTy payloadTy)
-               :: acc,
-               ctx
+               //  let payloadTy, ctx = cirCtxConvertTyIncomplete ctx payloadTy
+               //  (cirCtxUniqueName ctx serial, payloadTy)
+               //  :: acc,
+               //  ctx
+               (cirCtxUniqueName ctx serial, ctVoidPtr) :: acc, ctx
              else
                acc, ctx)
 
@@ -543,7 +546,7 @@ let genExprUniOp ctx op arg ty _ =
   | MTagUnary -> CNavExpr(arg, "tag"), ctx
   | MGetVariantUnary serial ->
       let _, ctx = cirGetCTy ctx ty
-      CUnaryExpr(CDerefUnary, CNavExpr(arg, cirCtxUniqueName ctx serial)), ctx
+      CNavExpr(arg, cirCtxUniqueName ctx serial), ctx
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
   | MListTailUnary -> CArrowExpr(arg, "tail"), ctx
@@ -767,27 +770,6 @@ let genInitBox ctx serial arg =
 
   ctx
 
-let genInitIndirect ctx serial payload ty =
-  let varName = cirCtxUniqueName ctx serial
-  let storageModifier = cirCtxGetVarStorageModifier ctx serial
-  let payloadTy, ctx = cirGetCTy ctx ty
-  let ptrTy = CPtrTy payloadTy
-
-  let payload, ctx = genExpr ctx payload
-
-  // T* p = (T*)malloc(sizeof T);
-  let ctx =
-    cirCtxAddLetAllocStmt ctx varName ptrTy ptrTy storageModifier
-
-  // *(T*)p = t;
-  let left =
-    CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr varName, ptrTy))
-
-  let ctx =
-    cirCtxAddStmt ctx (CSetStmt(left, payload))
-
-  ctx
-
 let genInitCons ctx serial head tail listTy =
   let temp = cirCtxUniqueName ctx serial
   let storageModifier = cirCtxGetVarStorageModifier ctx serial
@@ -834,7 +816,7 @@ let genInitTuple ctx serial items tupleTy =
 
   go ctx 0 items
 
-let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
+let genInitVariant ctx varSerial variantSerial payload unionTy =
   let temp = cirCtxUniqueName ctx varSerial
 
   let storageModifier =
@@ -843,8 +825,7 @@ let genInitVariant ctx varSerial variantSerial payloadSerial unionTy =
   let unionTy, ctx = cirGetCTy ctx unionTy
   let variantName = cirCtxUniqueName ctx variantSerial
 
-  let payloadExpr =
-    CRefExpr(cirCtxUniqueName ctx payloadSerial)
+  let payloadExpr, ctx = genExpr ctx payload
 
   let fields =
     [ "tag", CRefExpr(cirCtxUniqueName ctx variantSerial)
@@ -879,10 +860,9 @@ let genStmtLetVal ctx serial init ty loc =
       genInitExprCore ctx serial (Some expr) ty
   | MClosureInit (funSerial, envSerial) -> genInitClosure ctx serial funSerial envSerial ty
   | MBoxInit arg -> genInitBox ctx serial arg
-  | MIndirectInit payload -> genInitIndirect ctx serial payload ty
   | MConsInit (head, tail) -> genInitCons ctx serial head tail ty
   | MTupleInit items -> genInitTuple ctx serial items ty
-  | MVariantInit (variantSerial, payloadSerial) -> genInitVariant ctx serial variantSerial payloadSerial ty
+  | MVariantInit (variantSerial, payload) -> genInitVariant ctx serial variantSerial payload ty
 
 let genStmtDo ctx expr =
   let expr, ctx = genExpr ctx expr

@@ -1658,6 +1658,7 @@ let rec patExtract (pat: HPat): Ty * Loc =
   | HCallPat (_, _, ty, a) -> ty, a
   | HConsPat (_, _, itemTy, a) -> tyList itemTy, a
   | HTuplePat (_, ty, a) -> ty, a
+  | HBoxPat (_, a) -> tyObj, a
   | HAsPat (pat, _, a) ->
       let ty, _ = patExtract pat
       ty, a
@@ -1677,6 +1678,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HCallPat (callee, args, ty, a) -> HCallPat(go callee, listMap go args, f ty, g a)
     | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
     | HTuplePat (itemPats, ty, a) -> HTuplePat(listMap go itemPats, f ty, g a)
+    | HBoxPat (itemPat, a) -> HBoxPat(go itemPat, g a)
     | HAsPat (pat, serial, a) -> HAsPat(go pat, serial, g a)
     | HAnnoPat (pat, ty, a) -> HAnnoPat(go pat, f ty, g a)
     | HOrPat (first, second, ty, a) -> HOrPat(go first, go second, f ty, g a)
@@ -1722,6 +1724,10 @@ let patNormalize pat =
 
         gogo itemPats
         |> listMap (fun itemPats -> HTuplePat(itemPats, ty, loc))
+
+    | HBoxPat(itemPat, loc) ->
+        go itemPat |> listMap (fun itemPat -> HBoxPat (itemPat, loc))
+
     | HAsPat (innerPat, _, _) ->
         match go innerPat with
         | [ _ ] -> [ pat ]

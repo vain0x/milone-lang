@@ -49,7 +49,7 @@ enum First_Tag {
 struct First_ {
     enum First_Tag tag;
     union {
-        struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1* First_;
+        void* First_;
     };
 };
 
@@ -60,7 +60,7 @@ enum Second_Tag {
 struct Second_ {
     enum Second_Tag tag;
     union {
-        struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1* Second_;
+        void* Second_;
     };
 };
 
@@ -114,8 +114,8 @@ enum Node_Tag {
 struct Node_ {
     enum Node_Tag tag;
     union {
-        int* Leaf_;
-        struct Node_List** Node_;
+        void* Leaf_;
+        void* Node_;
     };
 };
 
@@ -137,7 +137,7 @@ enum Third_Tag {
 struct Third_ {
     enum Third_Tag tag;
     union {
-        struct IntThird_Tuple2List** Node3_;
+        void* Node3_;
     };
 };
 
@@ -153,33 +153,33 @@ struct IntThird_Tuple2List {
 
 int main() {
     int match_;
-    int* payload_ = (int*)milone_mem_alloc(1, sizeof(int));
-    (*(((int*)payload_))) = 1;
-    struct Node_ variant_ = (struct Node_){.tag = Leaf_, .Leaf_ = payload_};
-    int* payload_1 = (int*)milone_mem_alloc(1, sizeof(int));
-    (*(((int*)payload_1))) = 2;
-    struct Node_ variant_1 = (struct Node_){.tag = Leaf_, .Leaf_ = payload_1};
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
+    (*(((int*)box_))) = 1;
+    struct Node_ variant_ = (struct Node_){.tag = Leaf_, .Leaf_ = box_};
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(int));
+    (*(((int*)box_1))) = 2;
+    struct Node_ variant_1 = (struct Node_){.tag = Leaf_, .Leaf_ = box_1};
     struct Node_List* list_2 = (struct Node_List*)milone_mem_alloc(1, sizeof(struct Node_List));
     list_2->head = variant_1;
     list_2->tail = NULL;
     struct Node_List* list_1 = (struct Node_List*)milone_mem_alloc(1, sizeof(struct Node_List));
     list_1->head = variant_;
     list_1->tail = list_2;
-    struct Node_List** payload_2 = (struct Node_List**)milone_mem_alloc(1, sizeof(struct Node_List*));
-    (*(((struct Node_List**)payload_2))) = list_1;
-    struct Node_ variant_2 = (struct Node_){.tag = Node_, .Node_ = payload_2};
-    struct Node_List** payload_3 = (struct Node_List**)milone_mem_alloc(1, sizeof(struct Node_List*));
-    (*(((struct Node_List**)payload_3))) = NULL;
-    struct Node_ variant_3 = (struct Node_){.tag = Node_, .Node_ = payload_3};
-    int* payload_4 = (int*)milone_mem_alloc(1, sizeof(int));
-    (*(((int*)payload_4))) = 3;
-    struct Node_ variant_4 = (struct Node_){.tag = Leaf_, .Leaf_ = payload_4};
+    void* box_2 = (void*)milone_mem_alloc(1, sizeof(struct Node_List*));
+    (*(((struct Node_List**)box_2))) = list_1;
+    struct Node_ variant_2 = (struct Node_){.tag = Node_, .Node_ = box_2};
+    void* box_3 = (void*)milone_mem_alloc(1, sizeof(struct Node_List*));
+    (*(((struct Node_List**)box_3))) = NULL;
+    struct Node_ variant_3 = (struct Node_){.tag = Node_, .Node_ = box_3};
+    void* box_4 = (void*)milone_mem_alloc(1, sizeof(int));
+    (*(((int*)box_4))) = 3;
+    struct Node_ variant_4 = (struct Node_){.tag = Leaf_, .Leaf_ = box_4};
     struct Node_List* list_5 = (struct Node_List*)milone_mem_alloc(1, sizeof(struct Node_List));
     list_5->head = variant_4;
     list_5->tail = NULL;
-    struct Node_List** payload_5 = (struct Node_List**)milone_mem_alloc(1, sizeof(struct Node_List*));
-    (*(((struct Node_List**)payload_5))) = list_5;
-    struct Node_ variant_5 = (struct Node_){.tag = Node_, .Node_ = payload_5};
+    void* box_5 = (void*)milone_mem_alloc(1, sizeof(struct Node_List*));
+    (*(((struct Node_List**)box_5))) = list_5;
+    struct Node_ variant_5 = (struct Node_){.tag = Node_, .Node_ = box_5};
     struct Node_List* list_4 = (struct Node_List*)milone_mem_alloc(1, sizeof(struct Node_List));
     list_4->head = variant_5;
     list_4->tail = NULL;
@@ -189,29 +189,29 @@ int main() {
     struct Node_List* list_ = (struct Node_List*)milone_mem_alloc(1, sizeof(struct Node_List));
     list_->head = variant_2;
     list_->tail = list_3;
-    struct Node_List** payload_6 = (struct Node_List**)milone_mem_alloc(1, sizeof(struct Node_List*));
-    (*(((struct Node_List**)payload_6))) = list_;
-    struct Node_ variant_6 = (struct Node_){.tag = Node_, .Node_ = payload_6};
+    void* box_6 = (void*)milone_mem_alloc(1, sizeof(struct Node_List*));
+    (*(((struct Node_List**)box_6))) = list_;
+    struct Node_ variant_6 = (struct Node_){.tag = Node_, .Node_ = box_6};
     if ((variant_6.tag != Node_)) goto next_2;
-    if ((!((*(variant_6.Node_))))) goto next_2;
-    if (((*(variant_6.Node_))->head.tag != Node_)) goto next_2;
-    if ((!((*((*(variant_6.Node_))->head.Node_))))) goto next_2;
-    if (((*((*(variant_6.Node_))->head.Node_))->head.tag != Leaf_)) goto next_2;
-    int x_ = (*((*((*(variant_6.Node_))->head.Node_))->head.Leaf_));
-    if ((!((*((*(variant_6.Node_))->head.Node_))->tail))) goto next_2;
-    if (((*((*(variant_6.Node_))->head.Node_))->tail->head.tag != Leaf_)) goto next_2;
-    int y_ = (*((*((*(variant_6.Node_))->head.Node_))->tail->head.Leaf_));
-    if ((!((!((*((*(variant_6.Node_))->head.Node_))->tail->tail))))) goto next_2;
-    if ((!((*(variant_6.Node_))->tail))) goto next_2;
-    if (((*(variant_6.Node_))->tail->head.tag != Node_)) goto next_2;
-    if ((!((!((*((*(variant_6.Node_))->tail->head.Node_))))))) goto next_2;
-    if ((!((*(variant_6.Node_))->tail->tail))) goto next_2;
-    if (((*(variant_6.Node_))->tail->tail->head.tag != Node_)) goto next_2;
-    if ((!((*((*(variant_6.Node_))->tail->tail->head.Node_))))) goto next_2;
-    if (((*((*(variant_6.Node_))->tail->tail->head.Node_))->head.tag != Leaf_)) goto next_2;
-    int z_ = (*((*((*(variant_6.Node_))->tail->tail->head.Node_))->head.Leaf_));
-    if ((!((!((*((*(variant_6.Node_))->tail->tail->head.Node_))->tail))))) goto next_2;
-    if ((!((!((*(variant_6.Node_))->tail->tail->tail))))) goto next_2;
+    if ((!((*(((struct Node_List**)variant_6.Node_)))))) goto next_2;
+    if (((*(((struct Node_List**)variant_6.Node_)))->head.tag != Node_)) goto next_2;
+    if ((!((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->head.Node_)))))) goto next_2;
+    if (((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->head.Node_)))->head.tag != Leaf_)) goto next_2;
+    int x_ = (*(((int*)(*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->head.Node_)))->head.Leaf_)));
+    if ((!((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->head.Node_)))->tail))) goto next_2;
+    if (((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->head.Node_)))->tail->head.tag != Leaf_)) goto next_2;
+    int y_ = (*(((int*)(*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->head.Node_)))->tail->head.Leaf_)));
+    if ((!((!((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->head.Node_)))->tail->tail))))) goto next_2;
+    if ((!((*(((struct Node_List**)variant_6.Node_)))->tail))) goto next_2;
+    if (((*(((struct Node_List**)variant_6.Node_)))->tail->head.tag != Node_)) goto next_2;
+    if ((!((!((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->tail->head.Node_)))))))) goto next_2;
+    if ((!((*(((struct Node_List**)variant_6.Node_)))->tail->tail))) goto next_2;
+    if (((*(((struct Node_List**)variant_6.Node_)))->tail->tail->head.tag != Node_)) goto next_2;
+    if ((!((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->tail->tail->head.Node_)))))) goto next_2;
+    if (((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->tail->tail->head.Node_)))->head.tag != Leaf_)) goto next_2;
+    int z_ = (*(((int*)(*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->tail->tail->head.Node_)))->head.Leaf_)));
+    if ((!((!((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->tail->tail->head.Node_)))->tail))))) goto next_2;
+    if ((!((!((*(((struct Node_List**)variant_6.Node_)))->tail->tail->tail))))) goto next_2;
     int match_1;
     int match_2;
     if ((x_ != 1)) goto next_6;
@@ -245,20 +245,20 @@ next_2:;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_))) = 0;
-    void* env_2 = box_;
+    void* box_7 = (void*)milone_mem_alloc(1, sizeof(int));
+    (*(((int*)box_7))) = 0;
+    void* env_2 = box_7;
     struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 fun_2 = (struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1){.fun = fun_, .env = env_2};
-    struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1* payload_7 = (struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)milone_mem_alloc(1, sizeof(struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1));
-    (*(((struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)payload_7))) = fun_2;
-    struct First_ variant_7 = (struct First_){.tag = First_, .First_ = payload_7};
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_1))) = 0;
-    void* env_3 = box_1;
+    void* box_8 = (void*)milone_mem_alloc(1, sizeof(struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1));
+    (*(((struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)box_8))) = fun_2;
+    struct First_ variant_7 = (struct First_){.tag = First_, .First_ = box_8};
+    void* box_9 = (void*)milone_mem_alloc(1, sizeof(int));
+    (*(((int*)box_9))) = 0;
+    void* env_3 = box_9;
     struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 fun_3 = (struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1){.fun = fun_1, .env = env_3};
-    struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1* payload_8 = (struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)milone_mem_alloc(1, sizeof(struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1));
-    (*(((struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)payload_8))) = fun_3;
-    struct Second_ variant_8 = (struct Second_){.tag = Second_, .Second_ = payload_8};
+    void* box_10 = (void*)milone_mem_alloc(1, sizeof(struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1));
+    (*(((struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)box_10))) = fun_3;
+    struct Second_ variant_8 = (struct Second_){.tag = Second_, .Second_ = box_10};
     struct First_Second_Tuple2 tuple_1;
     tuple_1.t0 = variant_7;
     tuple_1.t1 = variant_8;

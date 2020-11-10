@@ -23,7 +23,7 @@ enum Answer_Tag {
 struct Answer_ {
     enum Answer_Tag tag;
     union {
-        int* Answer_;
+        void* Answer_;
     };
 };
 
@@ -34,9 +34,9 @@ int main() {
     int call_1 = getAnswer_(0);
     milone_assert((call_1 == 42), 11, 2);
     int call_2 = 0;
-    int* payload_ = (int*)milone_mem_alloc(1, sizeof(int));
-    (*(((int*)payload_))) = 42;
-    struct Answer_ variant_ = (struct Answer_){.tag = Answer_, .Answer_ = payload_};
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
+    (*(((int*)box_))) = 42;
+    struct Answer_ variant_ = (struct Answer_){.tag = Answer_, .Answer_ = box_};
     struct Answer_ myAnswer_ = variant_;
     return 0;
 }

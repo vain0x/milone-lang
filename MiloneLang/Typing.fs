@@ -185,13 +185,13 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
         |> tyCtxWithVars (ctx |> tyCtxGetVars |> mapAdd funSerial varDef)
 
       // Mark generalized meta tys (universally quantified vars),
-      // by increasing their depth to infinite.
+      // by increasing their depth to infinite (10^9).
       let ctx =
         let (TyScheme (fvs, _)) = funTyScheme
         ctx
         |> tyCtxWithTyDepths
              (fvs
-              |> listFold (fun tyDepths fv -> tyDepths |> mapAdd fv 0x7fffffff) (ctx |> tyCtxGetTyDepths))
+              |> listFold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx |> tyCtxGetTyDepths))
 
       ctx
   | FunDef _ -> failwith "Can't generalize already-generalized function"
@@ -208,7 +208,7 @@ let private tyCtxSubstOrDegenerate ctx ty =
         let depth =
           ctx |> tyCtxGetTyDepths |> mapFind tySerial
         // Degenerate unless quantified.
-        if depth <> 0x7fffffff then Some tyUnit else None
+        if depth < 1000000000 then Some tyUnit else None
 
   tySubst substMeta ty
 
@@ -363,7 +363,8 @@ let inferPat ctx pat: HPat * Ty * TyCtx =
   | HAsPat (body, serial, loc) -> inferPatAs ctx body serial loc
   | HAnnoPat (body, annoTy, loc) -> inferPatAnno ctx body annoTy loc
   | HOrPat (first, second, _, loc) -> inferPatOr ctx first second loc
-  | HNavPat _ -> failwithf "invalid use of nav pattern %A" pat
+  | HNavPat _ -> failwithf "NEVER: HNavPat is resolved in NameRes. %A" pat
+  | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
 let inferRef (ctx: TyCtx) varSerial loc =
   let ty, ctx =

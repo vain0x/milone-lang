@@ -17,8 +17,10 @@ struct IntTuple1 {
 int letWithTypeAnnotationCase_(int n_) {
     struct IntTuple1 tuple_;
     tuple_.t0 = n_;
-    struct IntTuple1 w_ = tuple_;
-    milone_assert((w_.t0 == n_), 10, 2);
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
+    (*(((struct IntTuple1*)box_))) = tuple_;
+    void* w_ = box_;
+    milone_assert(((*(((struct IntTuple1*)w_))).t0 == n_), 10, 2);
     int call_ = 0;
     return 0;
 }
@@ -26,26 +28,30 @@ int letWithTypeAnnotationCase_(int n_) {
 int typeAnnotationExprCase_(int n_1) {
     struct IntTuple1 tuple_1;
     tuple_1.t0 = n_1;
-    milone_assert((tuple_1.t0 == n_1), 13, 2);
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
+    (*(((struct IntTuple1*)box_1))) = tuple_1;
+    milone_assert(((*(((struct IntTuple1*)box_1))).t0 == n_1), 13, 2);
     int call_1 = 0;
     return 0;
 }
 
 int matchExprCase_(int n_2) {
-    struct IntTuple1 match_;
+    void* match_;
     if ((n_2 != 5)) goto next_2;
     struct IntTuple1 tuple_2;
     tuple_2.t0 = 0;
-    match_ = tuple_2;
+    void* box_2 = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
+    (*(((struct IntTuple1*)box_2))) = tuple_2;
+    match_ = box_2;
     goto end_match_1;
 next_2:;
     exit(1);
-    match_ = ((struct IntTuple1){});
+    match_ = NULL;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    struct IntTuple1 t_ = match_;
-    milone_assert((t_.t0 == 0), 21, 2);
+    void* t_ = match_;
+    milone_assert(((*(((struct IntTuple1*)t_))).t0 == 0), 21, 2);
     int call_2 = 0;
     return 0;
 }

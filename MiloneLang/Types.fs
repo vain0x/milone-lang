@@ -433,6 +433,17 @@ type HPat =
   /// `::`
   | HConsPat of HPat * HPat * itemTy: Ty * Loc
   | HTuplePat of HPat list * tupleTy: Ty * Loc
+
+  /// Used to dereference a box inside of pattern matching.
+  ///
+  /// To match a value `v: obj` with box pattern `box p: T`,
+  /// match `unbox v: T` with `p: T`.
+  ///
+  /// This is only generated internally in AutoBoxing.
+  /// Not a part of F# nor milone-lang syntax.
+  /// Unlike `:? T`, unboxing is unchecked.
+  | HBoxPat of HPat * Loc
+
   | HAsPat of HPat * VarSerial * Loc
   /// Type annotation pattern, e.g. `x : int`.
   | HAnnoPat of HPat * Ty * Loc
@@ -772,10 +783,9 @@ type MInit =
   /// Construct a closure, packing environment.
   | MClosureInit of subFunSerial: FunSerial * envSerial: VarSerial
   | MBoxInit of MExpr
-  | MIndirectInit of MExpr
   | MConsInit of head: MExpr * tail: MExpr
   | MTupleInit of items: MExpr list
-  | MVariantInit of VariantSerial * payloadSerial: VarSerial
+  | MVariantInit of VariantSerial * payload: MExpr
 
 /// Statement in middle IR.
 /// Doesn't introduce global things, e.g. functions.
