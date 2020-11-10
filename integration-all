@@ -12,7 +12,7 @@ then
     dotnet build --nologo --no-restore boot/MiloneLang
 fi
 
-ERR=$(find boot/tests/*/* -type d | xargs -I{} ./integration-test {} "$MILONE" "$VERBOSITY")
+ERR=$(find tests/*/* -type d | xargs -I{} ./integration-test {} "$MILONE" "$VERBOSITY")
 if test ! -z "$ERR"
 then
     echo '✘ Some test failed: '$ERR >&2

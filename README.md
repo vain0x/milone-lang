@@ -41,7 +41,7 @@ int main() {
 }
 ```
 
-*The actual output is available at [factorial.c](./boot/tests/examples/factorial/factorial.c).*
+*The actual output is available at [factorial.c](./tests/examples/factorial/factorial.c).*
 
 The diagram below illustrates how it does self-host finally.
 
@@ -83,7 +83,7 @@ Not all of F# features are supported. Features for functional-style programming 
     - `printfn` with `%s`, `%d`
     - Some file IOs
 
-See [the boot/tests/examples directory](./boot/tests/examples) for working codes.
+See [the tests/examples directory](./tests/examples) for working codes.
 
 - [notes.md](notes.md): notes on future works.
 

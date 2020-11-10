@@ -16,7 +16,7 @@ let testFile category case =
       IO.Path.Combine(testsDir.Value, category, case)
 
     let host =
-      let miloneHome = IO.Path.Combine(testsDir.Value, "../..")
+      let miloneHome = IO.Path.Combine(testsDir.Value, "..")
       dotnetCliHost [] miloneHome
 
     let content, _ = compile host Quiet dirPath

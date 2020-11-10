@@ -5,10 +5,10 @@ let fileWriteAllText (fileName: string) (content: string): unit =
   (__nativeFun "file_write_all_text" 2) fileName content
 
 let main _ =
-  let content = fileReadAllText "boot/tests/functions/io_file/input.txt"
+  let content = fileReadAllText "tests/functions/io_file/input.txt"
   assert (content = "hello\n")
 
   let content = content + "world\n"
-  fileWriteAllText "boot/tests/functions/io_file/output.txt" content
+  fileWriteAllText "tests/functions/io_file/output.txt" content
 
   0

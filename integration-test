@@ -16,10 +16,10 @@ NAME=$(basename "$1")
 MILONE=${2:-'boot/MiloneLang/bin/Debug/netcoreapp3.1/MiloneLang'}
 VERBOSITY=${3:-'-q'}
 
-DIR=$(find 'boot/tests' -type d | grep -e "\\b$NAME$" | head -n 1)
+DIR=$(find tests -type d | grep -e "\\b$NAME$" | head -n 1)
 TEST_SRC="$DIR/$NAME.fs"
 TEST_OUTX="$DIR/$NAME.out"
-TEST_C="$DIR/$NAME.c"
+TEST_C="$DIR/$NAME.generated.c"
 TEST_EXE="$DIR/$NAME.generated.exe"
 TEST_OUTA="$DIR/$NAME.generated.out"
 

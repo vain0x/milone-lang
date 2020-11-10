@@ -11,7 +11,7 @@ let testsDir =
     (
      let rec go (dir: string) =
        if File.Exists(Path.Combine(dir, "milone_lang.sln"))
-       then Path.Combine(dir, "boot/tests")
+       then Path.Combine(dir, "tests")
        else Path.GetDirectoryName(dir) |> go
 
      go Environment.CurrentDirectory)
