@@ -1,11 +1,21 @@
 /// ## Auto Boxing
 ///
-/// Provide implicit indirection by inserting allocate/dereference operations.
+/// Provides implicit indirection by inserting allocate/dereference operations.
 module rec MiloneLang.AutoBoxing
 
 open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
+
+let private hxBox itemExpr itemTy loc =
+  hxApp (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) itemExpr tyObj loc
+
+let private hxUnbox boxExpr itemTy loc =
+  hxApp (HPrimExpr(HPrim.Unbox, tyFun tyObj itemTy, loc)) boxExpr itemTy loc
+
+// -----------------------------------------------
+// Context
+// -----------------------------------------------
 
 type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
@@ -19,6 +29,46 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
   tyCtx
   |> tyCtxWithVars ctx.Vars
   |> tyCtxWithTys ctx.Tys
+
+let private isVariantFun (ctx: AbCtx) varSerial =
+  match ctx.Vars |> mapTryFind varSerial with
+  | Some (VariantDef (_, _, hasPayload, _, _, _)) -> hasPayload
+  | _ -> false
+
+/// ### Boxing of Payloads
+///
+/// Payload of variants are all boxed so that they can be recursive.
+///
+/// (Ideally, we should measure size of them and suppress auto-boxing for small variants.)
+///
+/// ```fsharp
+///   // Variant creation. K is a variant that has payload.
+///   K payload
+///   // =>
+///   K (box payload)
+///
+///   // Variant decomposition. x is a variable defined in the pattern.
+///   K payloadPat
+///   // =>
+///   K (box payloadPat)  // using box pattern to unbox the payload
+/// ```
+
+let private postProcessVariantCallPat ctx calleePat argPats =
+  match calleePat, argPats with
+  | HRefPat (varSerial, _, loc), [ payloadPat ] when varSerial |> isVariantFun ctx ->
+      // FIXME: ty is now wrong. ty is previously T -> U where U: union, T: payload, but now obj -> U.
+      Some(HBoxPat(payloadPat, loc))
+
+  | _ -> None
+
+let private postProcessVariantFunAppExpr ctx infOp items =
+  match infOp, items with
+  | InfOp.App, [ (HRefExpr (varSerial, _, _)) as callee; payload ] when varSerial |> isVariantFun ctx ->
+      // FIXME: ty is now wrong for the same reason as call-variant pattern.
+      let ty, loc = exprExtract payload
+      Some(callee, hxBox payload ty loc)
+
+  | _ -> None
 
 /// ### Boxing of Records
 ///
@@ -61,12 +111,6 @@ let private isRecordTy ctx ty =
 let private eraseRecordTy ctx tySerial =
   if tySerial |> isRecordTySerial ctx then Some tyObj else None
 
-let private hxBox itemExpr itemTy loc =
-  hxApp (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) itemExpr tyObj loc
-
-let private hxUnbox boxExpr itemTy loc =
-  hxApp (HPrimExpr(HPrim.Unbox, tyFun tyObj itemTy, loc)) boxExpr itemTy loc
-
 let private postProcessRecordExpr baseOpt fields recordTy loc =
   let baseOpt =
     baseOpt
@@ -100,7 +144,48 @@ let private abTy ctx ty =
   | MetaTy _
   | ErrorTy _ -> ty
 
-let private abPat ctx pat = pat |> patMap (abTy ctx) id
+let private abPat ctx pat =
+  match pat with
+  | HLitPat _
+  | HNilPat _
+  | HNonePat _
+  | HSomePat _
+  | HDiscardPat _
+  | HRefPat _ -> pat |> patMap (abTy ctx) id
+
+  | HCallPat (calleePat, argPats, ty, loc) ->
+      let calleePat = calleePat |> abPat ctx
+      let argPats = argPats |> listMap (abPat ctx)
+      let ty = ty |> abTy ctx
+
+      match postProcessVariantCallPat ctx calleePat argPats with
+      | Some payloadPat -> HCallPat(calleePat, [ payloadPat ], ty, loc)
+      | None -> HCallPat(calleePat, argPats, ty, loc)
+
+  | HConsPat (l, r, itemTy, loc) ->
+      let l = l |> abPat ctx
+      let r = r |> abPat ctx
+      let itemTy = itemTy |> abTy ctx
+      HConsPat(l, r, itemTy, loc)
+
+  | HTuplePat (itemPats, tupleTy, loc) ->
+      let itemPats = itemPats |> listMap (abPat ctx)
+      let tupleTy = tupleTy |> abTy ctx
+      HTuplePat(itemPats, tupleTy, loc)
+
+  | HAsPat (bodyPat, varSerial, loc) ->
+      let bodyPat = bodyPat |> abPat ctx
+      HAsPat(bodyPat, varSerial, loc)
+
+  | HOrPat (l, r, ty, loc) ->
+      let l = l |> abPat ctx
+      let r = r |> abPat ctx
+      let ty = ty |> abTy ctx
+      HOrPat(l, r, ty, loc)
+
+  | HBoxPat _ -> failwithf "NEVER: HBoxPat is only generated in AutoBoxing. %A" pat
+  | HNavPat _ -> failwithf "NEVER: HNavPat is resolved in NameRes. %A" pat
+  | HAnnoPat _ -> failwithf "NEVER: HAnnoPat is resolved in Typing. %A" pat
 
 let private abExpr ctx expr =
   match expr with
@@ -131,6 +216,17 @@ let private abExpr ctx expr =
 
       doArm ()
 
+  | HInfExpr (infOp, items, ty, loc) ->
+      let doArm () =
+        let items = items |> listMap (abExpr ctx)
+        let ty = ty |> abTy ctx
+
+        match postProcessVariantFunAppExpr ctx infOp items with
+        | Some (callee, payload) -> hxApp callee payload ty loc
+        | None -> HInfExpr(infOp, items, ty, loc)
+
+      doArm ()
+
   | HLitExpr _
   | HOpenExpr _
   | HTyDeclExpr _ -> expr
@@ -151,14 +247,6 @@ let private abExpr ctx expr =
         let arms = arms |> listMap go
         let ty = ty |> abTy ctx
         HMatchExpr(target, arms, ty, loc)
-
-      doArm ()
-
-  | HInfExpr (infOp, items, ty, loc) ->
-      let doArm () =
-        let items = items |> listMap (abExpr ctx)
-        let ty = ty |> abTy ctx
-        HInfExpr(infOp, items, ty, loc)
 
       doArm ()
 

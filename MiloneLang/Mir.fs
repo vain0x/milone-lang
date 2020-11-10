@@ -61,7 +61,7 @@ let mirCtxRollBack (bCtx: MirCtx) (dCtx: MirCtx) =
 
 let mirCtxPrependStmt ctx stmt =
   ctx
-  |> mirCtxWithStmts (listAppend (ctx |> mirCtxGetStmts) [stmt])
+  |> mirCtxWithStmts (listAppend (ctx |> mirCtxGetStmts) [ stmt ])
 
 let mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) =
   ctx
@@ -261,6 +261,10 @@ let mirifyPatTuple ctx endLabel itemPats itemTys expr loc =
 
   go true ctx 0 itemPats itemTys
 
+let mirifyPatBox ctx endLabel itemPat expr loc =
+  let ty, _ = patExtract itemPat
+  mirifyPat ctx endLabel itemPat (MUnaryExpr(MUnboxUnary, expr, ty, loc))
+
 let mirifyPatAs ctx endLabel pat serial expr loc =
   let ty, _ = patExtract pat
 
@@ -290,6 +294,7 @@ let mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
   | HCallPat (HSomePat (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
   | HConsPat (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
   | HTuplePat (itemPats, AppTy (TupleTyCtor, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
+  | HBoxPat (itemPat, loc) -> mirifyPatBox ctx endLabel itemPat expr loc
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
   | HSomePat (_, loc) ->
       let ctx =
@@ -339,6 +344,7 @@ let patsIsCovering pats =
     | HConsPat _
     | HCallPat _ -> false
     | HTuplePat (itemPats, _, _) -> itemPats |> listForAll go
+    | HBoxPat (itemPat, _) -> go itemPat
     | HAsPat (pat, _, _) -> go pat
     | HAnnoPat (pat, _, _) -> go pat
     | HOrPat (first, second, _, _) -> go first || go second
@@ -533,20 +539,15 @@ let mirifyExprCallNot ctx arg ty notLoc =
   MUnaryExpr(MNotUnary, arg, ty, notLoc), ctx
 
 let mirifyExprCallVariantFun (ctx: MirCtx) serial payload ty loc =
-  // Put payload on the heap.
   let payload, ctx = mirifyExpr ctx payload
   let payloadTy = mexprToTy payload
 
-  let _, payloadSerial, ctx =
+  // FIXME: Generate a serial to reduce diff. Remove this later.
+  let _, _payloadSerial, ctx =
     mirCtxFreshVar ctx "payload" payloadTy loc
 
-  let payloadInit = MIndirectInit payload
-
-  let ctx =
-    mirCtxAddStmt ctx (MLetValStmt(payloadSerial, payloadInit, payloadTy, loc))
-
   let temp, tempSerial, ctx = mirCtxFreshVar ctx "variant" ty loc
-  let init = MVariantInit(serial, payloadSerial)
+  let init = MVariantInit(serial, payload)
 
   let ctx =
     mirCtxAddStmt ctx (MLetValStmt(tempSerial, init, ty, loc))

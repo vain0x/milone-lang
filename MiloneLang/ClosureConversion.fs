@@ -381,6 +381,10 @@ let declosurePat (pat, ctx) =
       let args, ctx = (args, ctx) |> stMap declosurePat
       HCallPat(callee, args, ty, loc), ctx
 
+  | HBoxPat (itemPat, loc) ->
+      let itemPat, ctx = (itemPat, ctx) |> declosurePat
+      HBoxPat(itemPat, loc), ctx
+
   | HAsPat (pat, serial, loc) ->
       let ctx = ctx |> ccCtxAddLocal serial
       let pat, ctx = (pat, ctx) |> declosurePat

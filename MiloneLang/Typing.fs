@@ -363,7 +363,8 @@ let inferPat ctx pat: HPat * Ty * TyCtx =
   | HAsPat (body, serial, loc) -> inferPatAs ctx body serial loc
   | HAnnoPat (body, annoTy, loc) -> inferPatAnno ctx body annoTy loc
   | HOrPat (first, second, _, loc) -> inferPatOr ctx first second loc
-  | HNavPat _ -> failwithf "invalid use of nav pattern %A" pat
+  | HNavPat _ -> failwithf "NEVER: HNavPat is resolved in NameRes. %A" pat
+  | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
 let inferRef (ctx: TyCtx) varSerial loc =
   let ty, ctx =

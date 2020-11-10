@@ -510,6 +510,8 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
         let pat, ctx = (pat, ctx) |> goPat vis
         HAnnoPat(pat, ty, loc), ctx
 
+    | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
+
   let rec goExpr (expr, ctx) =
     match expr with
     | HLetValExpr (vis, pat, init, next, ty, loc) ->
@@ -638,6 +640,8 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
       let l, ctx = (l, ctx) |> nameResPat
       let r, ctx = (r, ctx) |> nameResPat
       HOrPat(l, r, ty, loc), ctx
+
+  | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
 let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with
