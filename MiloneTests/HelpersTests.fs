@@ -66,15 +66,15 @@ let listForAllTest () =
 [<Fact>]
 let listExistsTest () =
   ([]: int list)
-  |> listExists (fun _ -> true)
+  |> List.exists (fun _ -> true)
   |> is false
 
   [ 3; 1; 4; 1 ]
-  |> listExists (fun x -> x < 1)
+  |> List.exists (fun x -> x < 1)
   |> is false
 
   [ 3; 1; 4; 1 ]
-  |> listExists (fun x -> x = 1)
+  |> List.exists (fun x -> x = 1)
   |> is true
 
 [<Fact>]

@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listExists pred xs = List.exists pred xs
-
 /// USAGE: `items |> listFold (fun state item -> nextState) initialState`
 let listFold folder state xs = List.fold folder state xs
 
@@ -428,7 +426,7 @@ let setFold folder state (set: AssocSet<_>) =
   set |> setToList |> listFold folder state
 
 // TODO: make it more efficient
-let setExists pred (set: AssocSet<_>) = set |> setToList |> listExists pred
+let setExists pred (set: AssocSet<_>) = set |> setToList |> List.exists pred
 
 // TODO: make it more efficient
 let setUnion first second =

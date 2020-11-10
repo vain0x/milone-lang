@@ -26,7 +26,7 @@ let private containsTailRec expr =
 
   | HMatchExpr (_, arms, _, _) ->
       arms
-      |> listExists (fun (_, _, body) -> body |> containsTailRec)
+      |> List.exists (fun (_, _, body) -> body |> containsTailRec)
 
 
   | HLetValExpr (_, _, _, next, _, _) -> next |> containsTailRec
@@ -349,7 +349,7 @@ let patsIsCovering pats =
     | HAnnoPat (pat, _, _) -> go pat
     | HOrPat (first, second, _, _) -> go first || go second
 
-  listExists go pats
+  List.exists go pats
 
 let mirifyExprMatch ctx target arms ty loc =
   let noLabel = "<NEVER>"
