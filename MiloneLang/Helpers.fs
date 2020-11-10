@@ -52,16 +52,6 @@ let exMap f (xs, acc, ctx) =
   go [] xs acc ctx
 
 // -----------------------------------------------
-// Option
-// -----------------------------------------------
-
-let optionDefaultValue alt option = Option.defaultValue alt option
-
-let optionMap f option = Option.map f option
-
-let optionAll pred option = Option.forall pred option
-
-// -----------------------------------------------
 // List
 // -----------------------------------------------
 
@@ -1351,7 +1341,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
 
     | HRecordExpr (baseOpt, fields, ty, a) ->
-        let baseOpt = baseOpt |> optionMap go
+        let baseOpt = baseOpt |> Option.map go
 
         let fields =
           fields

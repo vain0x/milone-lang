@@ -398,7 +398,7 @@ let inferRecord ctx expectOpt baseOpt fields loc =
   // Determine the record type by base expr or expectation.
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
-      match tyOpt |> optionMap (tyCtxSubstTy ctx) with
+      match tyOpt |> Option.map (tyCtxSubstTy ctx) with
       | Some ((AppTy (RefTyCtor tySerial, [])) as recordTy) ->
           match ctx |> tyCtxGetTy tySerial with
           | RecordTyDef (recordIdent, fieldDefs, _) -> Some(recordTy, recordIdent, fieldDefs)

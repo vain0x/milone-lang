@@ -61,9 +61,9 @@ let private teExpr ctx expr =
         // Base expr is guaranteed to be a cheap expr thanks to modification in Typing,
         // so we can freely clone this.
         let baseOpt =
-          assert (baseOpt |> optionAll hxIsUnboxingRef)
+          assert (baseOpt |> Option.forall hxIsUnboxingRef)
 
-          baseOpt |> optionMap (teExpr ctx)
+          baseOpt |> Option.map (teExpr ctx)
 
         let fields =
           fields

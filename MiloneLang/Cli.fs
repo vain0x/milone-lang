@@ -134,7 +134,7 @@ let printLogs tyCtx logs =
       tyCtx
       |> tyCtxGetTys
       |> mapTryFind tySerial
-      |> optionMap tyDefToIdent
+      |> Option.map tyDefToIdent
 
     tyDisplay getTyIdent ty
 

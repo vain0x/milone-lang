@@ -962,7 +962,7 @@ let genLogs (ctx: CirCtx) =
       ctx
       |> cirCtxGetTys
       |> mapTryFind tySerial
-      |> optionMap tyDefToIdent
+      |> Option.map tyDefToIdent
 
     tyDisplay getTyIdent ty
 

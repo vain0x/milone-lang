@@ -115,7 +115,7 @@ let private eraseRecordTy ctx tySerial =
 let private postProcessRecordExpr baseOpt fields recordTy loc =
   let baseOpt =
     baseOpt
-    |> optionMap (fun expr -> hxUnbox expr recordTy loc)
+    |> Option.map (fun expr -> hxUnbox expr recordTy loc)
 
   let recordExpr =
     HRecordExpr(baseOpt, fields, recordTy, loc)
@@ -194,7 +194,7 @@ let private abExpr ctx expr =
       let doArm () =
         assert (ty |> isRecordTy ctx)
 
-        let baseOpt = baseOpt |> optionMap (abExpr ctx)
+        let baseOpt = baseOpt |> Option.map (abExpr ctx)
 
         let fields =
           fields
