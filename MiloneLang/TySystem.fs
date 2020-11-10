@@ -221,7 +221,7 @@ let rec tyToArgList ty =
   let rec go n acc ty =
     match ty with
     | AppTy (FunTyCtor, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
-    | tTy -> n, listRev acc, tTy
+    | tTy -> n, List.rev acc, tTy
 
   go 0 [] ty
 

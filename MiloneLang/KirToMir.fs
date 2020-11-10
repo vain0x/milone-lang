@@ -74,7 +74,7 @@ let private collectStmts processBody ctx =
   let ctx = ctx |> kirToMirCtxWithStmts []
 
   let ctx = processBody ctx
-  let stmts = ctx |> kirToMirCtxGetStmts |> listRev
+  let stmts = ctx |> kirToMirCtxGetStmts |> List.rev
 
   let ctx = ctx |> kirToMirCtxWithStmts parentStmts
 
@@ -562,7 +562,7 @@ let private kmFunBinding binding ctx =
 
   let body, ctx =
     let stmts, labels, ctx = ctx |> genFunBody (kmNode body)
-    listCollect id (stmts :: listRev labels), ctx
+    listCollect id (stmts :: List.rev labels), ctx
 
   ctx
   |> addStmt (MProcStmt(funSerial, isMainFun, args, body, resultTy, loc))
@@ -576,6 +576,6 @@ let kirToMir (root: KRoot, kirGenCtx: KirGenCtx): MStmt list * MirCtx =
     funBindings
     |> listFold (fun ctx binding -> kmFunBinding binding ctx) ctx
 
-  let stmts = ctx |> kirToMirCtxGetStmts |> listRev
+  let stmts = ctx |> kirToMirCtxGetStmts |> List.rev
   let mirCtx = ctx |> toMirCtx
   stmts, mirCtx

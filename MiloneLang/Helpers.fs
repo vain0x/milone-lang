@@ -11,7 +11,7 @@ open MiloneLang.Records
 let stMap f (xs, ctx) =
   let rec go acc (xs, ctx) =
     match xs with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | x :: xs ->
         let y, ctx = f (x, ctx)
         go (y :: acc) (xs, ctx)
@@ -25,7 +25,7 @@ let stMap f (xs, ctx) =
 let stFlatMap f (xs, ctx) =
   let rec go acc xs ctx =
     match xs with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | x :: xs ->
         let acc, ctx = f (x, acc, ctx)
         go acc xs ctx
@@ -44,7 +44,7 @@ let stOptionMap f (x, ctx) =
 let exMap f (xs, acc, ctx) =
   let rec go ys xs acc ctx =
     match xs with
-    | [] -> listRev ys, acc, ctx
+    | [] -> List.rev ys, acc, ctx
     | x :: xs ->
         let y, acc, ctx = f (x, acc, ctx)
         go (y :: ys) xs acc ctx
@@ -56,8 +56,6 @@ let exMap f (xs, acc, ctx) =
 // -----------------------------------------------
 
 let cons head tail = head :: tail
-
-let listRev xs = List.rev xs
 
 let listIter f xs = List.iter f xs
 
@@ -156,7 +154,7 @@ let assocAdd key value assoc = (key, value) :: assoc
 let assocRemove cmp key assoc =
   let rec go acc assoc =
     match assoc with
-    | [] -> None, listRev acc
+    | [] -> None, List.rev acc
 
     | (k, v) :: assoc when cmp k key = 0 ->
         let _, assoc = go acc assoc
@@ -189,7 +187,7 @@ let assocFold folder state assoc =
 let assocMap f assoc =
   let rec go acc assoc =
     match assoc with
-    | [] -> listRev acc
+    | [] -> List.rev acc
 
     | (k, v) :: assoc -> go ((k, f k v) :: acc) assoc
 
@@ -198,7 +196,7 @@ let assocMap f assoc =
 let assocFilter pred assoc =
   let rec go acc assoc =
     match assoc with
-    | [] -> listRev acc
+    | [] -> List.rev acc
 
     | ((k, v) as kv) :: assoc ->
         let acc = if pred k v then (kv :: acc) else acc
@@ -423,7 +421,7 @@ let setAdd key set: AssocSet<_> = mapAdd key () set
 let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> =
   let rec filter acc assoc =
     match assoc with
-    | [] -> listRev acc
+    | [] -> List.rev acc
 
     | (key, ()) :: assoc when setContains key second -> filter acc assoc
 
@@ -645,7 +643,7 @@ let strEscape (str: string) =
       let t = str.[i] |> charEscape
       go (t :: acc) (i + 1)
 
-  if str |> strNeedsEscaping |> not then str else go [] 0 |> listRev |> strConcat
+  if str |> strNeedsEscaping |> not then str else go [] 0 |> List.rev |> strConcat
 
 // -----------------------------------------------
 // Position
@@ -865,7 +863,7 @@ let dumpTreeToString (node: DumpTree) =
         |> goNext eol next
 
   let eol = "\n"
-  [] |> go eol node |> listRev |> strConcat
+  [] |> go eol node |> List.rev |> strConcat
 
 // -----------------------------------------------
 // Name context

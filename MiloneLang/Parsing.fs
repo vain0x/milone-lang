@@ -155,7 +155,7 @@ let parseTyArgs basePos (tokens, errors) =
             let argTy, tokens, errors = parseTy basePos (tokens, errors)
             go (argTy :: acc) (tokens, errors)
 
-        | _ -> listRev acc, tokens, errors
+        | _ -> List.rev acc, tokens, errors
 
       let argTy, tokens, errors = parseTy basePos (tokens, errors)
       let argTys, tokens, errors = go [ argTy ] (tokens, errors)
@@ -223,7 +223,7 @@ let parseTyTuple basePos (tokens, errors) =
         let itemTy, tokens, errors = parseTyPrefix basePos (tokens, errors)
         go (itemTy :: acc) (tokens, errors)
 
-    | _ -> listRev acc, tokens, errors
+    | _ -> List.rev acc, tokens, errors
 
   let itemTy, tokens, errors = parseTyPrefix basePos (tokens, errors)
 
@@ -259,7 +259,7 @@ let parseTyDeclUnion basePos (tokens, errors) =
     | (PipeToken, _) :: (IdentToken variantIdent, pos) :: tokens ->
         go (AVariant(variantIdent, None, pos) :: acc) (tokens, errors)
 
-    | _ -> listRev acc, tokens, errors
+    | _ -> List.rev acc, tokens, errors
 
   let variants, tokens, errors = go [] (tokens, errors)
   AUnionTyDecl variants, tokens, errors
@@ -268,7 +268,7 @@ let parseTyDeclUnion basePos (tokens, errors) =
 let parseTyDeclRecord basePos (tokens, errors) =
   let rec go acc alignPos (tokens, errors) =
     match tokens with
-    | (RightBraceToken, _) :: _ -> listRev acc, tokens, errors
+    | (RightBraceToken, _) :: _ -> List.rev acc, tokens, errors
 
     | (SemiToken, _) :: tokens -> go acc (nextPos tokens) (tokens, errors)
 
@@ -284,7 +284,7 @@ let parseTyDeclRecord basePos (tokens, errors) =
 
         go acc alignPos (tokens, errors)
 
-    | _ -> listRev acc, tokens, errors
+    | _ -> List.rev acc, tokens, errors
 
   let fields, tokens, errors =
     let alignPos = nextPos tokens
@@ -339,7 +339,7 @@ let parsePatParenBody basePos (tokens, errors) =
 let parsePatListBody basePos bracketPos (tokens, errors) =
   let rec go patAcc (tokens, errors) =
     match tokens with
-    | (RightBracketToken, _) :: tokens -> listRev patAcc, tokens, errors
+    | (RightBracketToken, _) :: tokens -> List.rev patAcc, tokens, errors
 
     // FIXME: Semicolon is required for now.
     | (SemiToken, _) :: tokens ->
@@ -350,7 +350,7 @@ let parsePatListBody basePos bracketPos (tokens, errors) =
         let errors =
           parseNewError "Expected ';' or ']'" (tokens, errors)
 
-        listRev patAcc, tokens, errors
+        List.rev patAcc, tokens, errors
 
   let itemPat, tokens, errors = parsePat basePos (tokens, errors)
   let itemPats, tokens, errors = go [ itemPat ] (tokens, errors)
@@ -402,7 +402,7 @@ let parsePatCallArgs basePos (tokens, errors) =
       let expr, tokens, errors = parsePatNav basePos (tokens, errors)
       go (expr :: acc) (tokens, errors)
     else
-      listRev acc, tokens, errors
+      List.rev acc, tokens, errors
 
   go [] (tokens, errors)
 
@@ -451,7 +451,7 @@ let parsePatTuple basePos (tokens, errors) =
         let second, tokens, errors = parsePatAnno basePos (tokens, errors)
         go (second :: acc) (tokens, errors)
 
-    | _ -> listRev acc, tokens, errors
+    | _ -> List.rev acc, tokens, errors
 
   let itemPat, tokens, errors = parsePatAnno basePos (tokens, errors)
 
@@ -548,7 +548,7 @@ let parseList basePos bracketPos (tokens, errors) =
 let parseRecordExpr bracePos (tokens, errors) =
   let rec go acc alignPos (tokens, errors) =
     match tokens with
-    | (RightBraceToken, _) :: _ -> listRev acc, tokens, errors
+    | (RightBraceToken, _) :: _ -> List.rev acc, tokens, errors
 
     | (SemiToken, _) :: tokens -> go acc (nextPos tokens) (tokens, errors)
 
@@ -564,7 +564,7 @@ let parseRecordExpr bracePos (tokens, errors) =
 
         go acc alignPos (tokens, errors)
 
-    | _ -> listRev acc, tokens, errors
+    | _ -> List.rev acc, tokens, errors
 
   let baseOpt, (fields, tokens, errors) =
     match tokens with
@@ -671,7 +671,7 @@ let parseMatch matchPos (tokens, errors) =
     match tokens with
     | (PipeToken, pipePos) :: tokens when posInside matchPos pipePos -> go (arm :: acc) pipePos (tokens, errors)
 
-    | _ -> listRev (arm :: acc), tokens, errors
+    | _ -> List.rev (arm :: acc), tokens, errors
 
   let arms, tokens, errors = go [] armPos (tokens, errors)
   AMatchExpr(target, arms, matchPos), tokens, errors
@@ -782,9 +782,9 @@ let parseOpen openPos (tokens, errors) =
           let errors =
             parseNewError "Expected identifier" (tokens, errors)
 
-          listRev acc, tokens, errors
+          List.rev acc, tokens, errors
 
-      | _ -> listRev acc, tokens, errors
+      | _ -> List.rev acc, tokens, errors
 
     match tokens with
     | (IdentToken ident, _) :: tokens -> go [ ident ] (tokens, errors)
@@ -957,7 +957,7 @@ let parseTuple basePos (tokens, errors) =
         let second, tokens, errors = parseTupleItem basePos (tokens, errors)
         go (second :: acc) (tokens, errors)
 
-    | tokens -> listRev acc, tokens, errors
+    | tokens -> List.rev acc, tokens, errors
 
   let item, tokens, errors = parseTupleItem basePos (tokens, errors)
 
@@ -1010,7 +1010,7 @@ let rec parseStmts basePos (tokens, errors) =
         let expr, tokens, errors = parseStmt alignPos (tokens, errors)
         go (expr :: acc) alignPos (tokens, errors)
 
-    | _ -> listRev acc, tokens, errors
+    | _ -> List.rev acc, tokens, errors
 
   let alignPos = nextPos tokens
   if posInside basePos alignPos then go [] alignPos (tokens, errors) else [], tokens, errors

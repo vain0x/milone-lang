@@ -91,7 +91,7 @@ let tyCtxResolveTraitBounds (ctx: TyCtx) =
 
         ctx |> go logAcc traits
 
-  let traits = ctx |> tyCtxGetTraitBounds |> listRev
+  let traits = ctx |> tyCtxGetTraitBounds |> List.rev
   let ctx = ctx |> tyCtxWithTraitBounds []
 
   let logAcc, tyCtx =
@@ -307,7 +307,7 @@ let inferPatCall (ctx: TyCtx) pat callee args loc =
 let inferPatTuple ctx itemPats loc =
   let rec go accPats accTys ctx itemPats =
     match itemPats with
-    | [] -> listRev accPats, listRev accTys, ctx
+    | [] -> List.rev accPats, List.rev accTys, ctx
     | itemPat :: itemPats ->
         let itemPat, itemTy, ctx = inferPat ctx itemPat
         go (itemPat :: accPats) (itemTy :: accTys) ctx itemPats
@@ -595,7 +595,7 @@ let inferOpApp ctx expr callee arg loc =
 let inferTuple (ctx: TyCtx) items loc =
   let rec go acc itemTys ctx items =
     match items with
-    | [] -> listRev acc, listRev itemTys, ctx
+    | [] -> List.rev acc, List.rev itemTys, ctx
     | item :: items ->
         let item, itemTy, ctx = inferExpr ctx None item
         go (item :: acc) (itemTy :: itemTys) ctx items
@@ -690,7 +690,7 @@ let inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
 
 let inferSemi ctx expectOpt exprs loc =
   let exprs, ty, ctx = inferExprs ctx expectOpt exprs loc
-  hxSemi (listRev exprs) loc, ty, ctx
+  hxSemi (List.rev exprs) loc, ty, ctx
 
 let inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
   match expr with

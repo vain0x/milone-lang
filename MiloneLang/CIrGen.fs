@@ -41,7 +41,7 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
 
   let addIdents identMap ident serials =
     serials
-    |> listRev
+    |> List.rev
     |> listFold (addIdent ident) (identMap, 0)
     |> fst
 
@@ -569,7 +569,7 @@ let genExprBin ctx op l r =
 let genExprList ctx exprs =
   let rec go results ctx exprs =
     match exprs with
-    | [] -> listRev results, ctx
+    | [] -> List.rev results, ctx
     | expr :: exprs ->
         let result, ctx = genExpr ctx expr
         go (result :: results) ctx exprs
@@ -595,7 +595,7 @@ let genExprCallPrintfn ctx format args =
   // Insert implicit cast from str to str ptr.
   let rec go acc ctx args =
     match args with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | MLitExpr (StrLit value, _) :: args -> go (CStrRawExpr value :: acc) ctx args
     | arg :: args when tyEq (mexprToTy arg) tyStr ->
         let arg, ctx = genExpr ctx arg
@@ -919,7 +919,7 @@ let genBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx = genStmts (cirCtxNewBlock ctx) stmts
   let stmts = bodyCtx |> cirCtxGetStmts
   let ctx = cirCtxRollBack ctx bodyCtx
-  listRev stmts, ctx
+  List.rev stmts, ctx
 
 let genStmts (ctx: CirCtx) (stmts: MStmt list): CirCtx =
   let rec go ctx stmts =
@@ -941,7 +941,7 @@ let genDecls (ctx: CirCtx) decls =
 
       let rec go acc ctx args =
         match args with
-        | [] -> listRev acc, ctx
+        | [] -> List.rev acc, ctx
         | (arg, ty, _) :: args ->
             let ident = cirCtxUniqueName ctx arg
             let cty, ctx = cirGetCTy ctx ty
@@ -978,7 +978,7 @@ let genLogs (ctx: CirCtx) =
 
         go ctx logs
 
-  let logs = ctx |> cirCtxGetLogs |> listRev
+  let logs = ctx |> cirCtxGetLogs |> List.rev
   let ctx = go ctx logs
   let success = logs |> List.isEmpty
   success, ctx
@@ -987,5 +987,5 @@ let gen (decls, mirCtx: MirCtx): CDecl list * bool =
   let ctx = cirCtxFromMirCtx mirCtx
   let ctx = genDecls ctx decls
   let success, ctx = genLogs ctx
-  let decls = ctx |> cirCtxGetDecls |> listRev
+  let decls = ctx |> cirCtxGetDecls |> List.rev
   decls, success

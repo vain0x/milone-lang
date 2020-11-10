@@ -300,7 +300,7 @@ let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
 
   let app, _ =
     caps
-    |> listRev
+    |> List.rev
     |> listFold (fun (callee, calleeTy) (serial, ty, loc) ->
          let arg = HRefExpr(serial, ty, loc)
          hxApp callee arg calleeTy loc, tyFun ty calleeTy) (callee, calleeTy)

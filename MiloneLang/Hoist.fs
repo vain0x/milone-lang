@@ -77,7 +77,7 @@ let hxAccToExpr next exprAcc =
     | HExprAcc.Let (expr, exprAcc) -> expr |> withNext next |> go exprAcc
 
     | HExprAcc.Semi (exprs, exprAcc) ->
-        hxSemi ((next :: exprs) |> listRev) noLoc
+        hxSemi ((next :: exprs) |> List.rev) noLoc
         |> go exprAcc
 
   go exprAcc next

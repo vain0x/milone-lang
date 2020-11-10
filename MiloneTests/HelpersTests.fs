@@ -16,8 +16,8 @@ let listLengthTest () =
 
 [<Fact>]
 let listRevTest () =
-  ([]: int list) |> listRev |> is []
-  [ 3; 1; 4; 1 ] |> listRev |> is [ 1; 4; 1; 3 ]
+  ([]: int list) |> List.rev |> is []
+  [ 3; 1; 4; 1 ] |> List.rev |> is [ 1; 4; 1; 3 ]
 
 [<Fact>]
 let listMapTest () =

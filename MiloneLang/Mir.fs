@@ -571,7 +571,7 @@ let mirifyExprTuple ctx items itemTys loc =
 
   let rec go acc ctx items =
     match items with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | item :: items ->
         let item, ctx = mirifyExpr ctx item
         go (item :: acc) ctx items
@@ -805,7 +805,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
 
   let rec defineArgs acc ctx argPats =
     match argPats with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | argPat :: argPats ->
         let arg, ctx = defineArg ctx argPat
         defineArgs (arg :: acc) ctx argPats
@@ -821,7 +821,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
 
     let ctx = cleanUpTailRec ctx parentFun
     let stmts, ctx = mirCtxTakeStmts ctx
-    let body = listRev stmts
+    let body = List.rev stmts
     args, blockTy, body, ctx
 
   let core () =
@@ -877,7 +877,7 @@ let mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
 let mirifyExprs ctx exprs =
   let rec go acc ctx exprs =
     match exprs with
-    | [] -> listRev acc, ctx
+    | [] -> List.rev acc, ctx
     | expr :: exprs ->
         let expr, ctx = mirifyExpr ctx expr
         go (expr :: acc) ctx exprs
@@ -899,7 +899,7 @@ let mirifyCollectDecls (stmts: MStmt list) =
     | _ :: stmts -> go decls stmts
     | [] -> decls
 
-  go [] stmts |> listRev
+  go [] stmts |> List.rev
 
 let mirify (expr: HExpr, tyCtx: TyCtx): MStmt list * MirCtx =
   let ctx = mirCtxFromTyCtx tyCtx
@@ -907,6 +907,6 @@ let mirify (expr: HExpr, tyCtx: TyCtx): MStmt list * MirCtx =
   // OK: It's safe to discard the expression thanks to main hoisting.
   let _expr, ctx = mirifyExpr ctx expr
 
-  let stmts = ctx |> mirCtxGetStmts |> listRev
+  let stmts = ctx |> mirCtxGetStmts |> List.rev
   let decls = mirifyCollectDecls stmts
   decls, ctx
