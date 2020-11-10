@@ -20,7 +20,7 @@ let tokenizeMainEmpty () =
 
   source
   |> Lexing.tokenize
-  |> listMap fst
+  |> List.map fst
   |> is expected
 
 [<Fact>]
@@ -43,7 +43,7 @@ let main _ =
 
   source
   |> Lexing.tokenize
-  |> listMap fst
+  |> List.map fst
   |> is expected
 
 [<Fact>]
@@ -57,7 +57,7 @@ let tokenizeCharLiteral () =
   let expected = [ 'a'; '\''; '\n'; '\x00' ]
   source
   |> Lexing.tokenize
-  |> listMap unwrapChar
+  |> List.map unwrapChar
   |> is expected
 
 [<Fact>]

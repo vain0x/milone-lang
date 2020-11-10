@@ -272,14 +272,14 @@ let cirCtxAddUnionDecl (ctx: CirCtx) tySerial variants =
 
       let variants =
         variants
-        |> listMap (fun variantSerial ->
+        |> List.map (fun variantSerial ->
              match ctx |> cirCtxGetVars |> mapTryFind variantSerial with
              | Some (VariantDef (ident, _, hasPayload, payloadTy, _, _)) -> ident, variantSerial, hasPayload, payloadTy
              | _ -> failwith "Never")
 
       let tags =
         variants
-        |> listMap (fun (_, serial, _, _) -> cirCtxUniqueName ctx serial)
+        |> List.map (fun (_, serial, _, _) -> cirCtxUniqueName ctx serial)
 
       let variants, ctx =
         (variants, ctx)

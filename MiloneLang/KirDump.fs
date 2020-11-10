@@ -322,7 +322,7 @@ let private kdNode indent node ctx =
   | KJointNode (joints, cont, _) ->
       kdNode indent cont ctx
       + (joints
-         |> listMap (fun joint -> kdJointBinding indent false joint ctx)
+         |> List.map (fun joint -> kdJointBinding indent false joint ctx)
          |> strConcat)
 
 let private kdJointBinding indent isEntryPoint jointBinding ctx =
@@ -384,5 +384,5 @@ let kirDump hint indent (kRoot: KRoot, ctx: KirGenCtx): string =
   + hint
   + "\n"
   + (funBindings
-     |> listMap (fun funBinding -> kdFunBinding indent funBinding ctx)
+     |> List.map (fun funBinding -> kdFunBinding indent funBinding ctx)
      |> strConcat)

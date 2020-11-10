@@ -232,7 +232,7 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
     | ErrorTy _
     | AppTy (_, []) -> ty
 
-    | AppTy (tyCtor, tys) -> AppTy(tyCtor, listMap go tys)
+    | AppTy (tyCtor, tys) -> AppTy(tyCtor, List.map go tys)
 
     | MetaTy (tySerial, _) ->
         match substMeta tySerial with
@@ -295,7 +295,7 @@ let tyDisplay getTyIdent ty =
 
     | AppTy (TupleTyCtor, itemTys) ->
         "("
-        + (itemTys |> listMap (go 20) |> strJoin " * ")
+        + (itemTys |> List.map (go 20) |> strJoin " * ")
         + ")"
 
     | AppTy (ListTyCtor, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
@@ -309,7 +309,7 @@ let tyDisplay getTyIdent ty =
         match args with
         | [] -> tyCtor
         | _ ->
-            let args = args |> listMap (go 0) |> strJoin ", "
+            let args = args |> List.map (go 0) |> strJoin ", "
             tyCtor + "<" + args + ">"
 
     | AppTy (tyCtor, args) ->
@@ -319,7 +319,7 @@ let tyDisplay getTyIdent ty =
         match args with
         | [] -> tyCtor
         | _ ->
-            let args = args |> listMap (go 0) |> strJoin ", "
+            let args = args |> List.map (go 0) |> strJoin ", "
             tyCtor + "<" + args + ">"
 
   go 0 ty

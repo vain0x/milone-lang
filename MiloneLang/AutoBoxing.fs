@@ -139,7 +139,7 @@ let private abTy ctx ty =
       | None -> ty
 
   | AppTy (tyCtor, tyArgs) ->
-      let tyArgs = tyArgs |> listMap (abTy ctx)
+      let tyArgs = tyArgs |> List.map (abTy ctx)
       AppTy(tyCtor, tyArgs)
 
   | MetaTy _
@@ -156,7 +156,7 @@ let private abPat ctx pat =
 
   | HCallPat (calleePat, argPats, ty, loc) ->
       let calleePat = calleePat |> abPat ctx
-      let argPats = argPats |> listMap (abPat ctx)
+      let argPats = argPats |> List.map (abPat ctx)
       let ty = ty |> abTy ctx
 
       match postProcessVariantCallPat ctx calleePat argPats with
@@ -170,7 +170,7 @@ let private abPat ctx pat =
       HConsPat(l, r, itemTy, loc)
 
   | HTuplePat (itemPats, tupleTy, loc) ->
-      let itemPats = itemPats |> listMap (abPat ctx)
+      let itemPats = itemPats |> List.map (abPat ctx)
       let tupleTy = tupleTy |> abTy ctx
       HTuplePat(itemPats, tupleTy, loc)
 
@@ -198,7 +198,7 @@ let private abExpr ctx expr =
 
         let fields =
           fields
-          |> listMap (fun (ident, init, loc) ->
+          |> List.map (fun (ident, init, loc) ->
                let init = init |> abExpr ctx
                ident, init, loc)
 
@@ -219,7 +219,7 @@ let private abExpr ctx expr =
 
   | HInfExpr (infOp, items, ty, loc) ->
       let doArm () =
-        let items = items |> listMap (abExpr ctx)
+        let items = items |> List.map (abExpr ctx)
         let ty = ty |> abTy ctx
 
         match postProcessVariantFunAppExpr ctx infOp items with
@@ -245,7 +245,7 @@ let private abExpr ctx expr =
           let body = body |> abExpr ctx
           pat, guard, body
 
-        let arms = arms |> listMap go
+        let arms = arms |> List.map go
         let ty = ty |> abTy ctx
         HMatchExpr(target, arms, ty, loc)
 
@@ -263,7 +263,7 @@ let private abExpr ctx expr =
 
   | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       let doArm () =
-        let args = args |> listMap (abPat ctx)
+        let args = args |> List.map (abPat ctx)
         let body = body |> abExpr ctx
         let next = next |> abExpr ctx
         let ty = ty |> abTy ctx
@@ -301,7 +301,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
          | RecordTyDef (ident, fields, loc) ->
              let fields =
                fields
-               |> listMap (fun (ident, ty, loc) ->
+               |> List.map (fun (ident, ty, loc) ->
                     let ty = ty |> abTy ctx
                     ident, ty, loc)
 

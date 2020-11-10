@@ -57,10 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listIter f xs = List.iter f xs
-
-let listMap f xs = List.map f xs
-
 let listMapWithIndex f xs = List.mapi f xs
 
 let listFilter pred xs = List.filter pred xs
@@ -1205,9 +1201,9 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
     | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
     | HNavPat (pat, ident, ty, a) -> HNavPat(go pat, ident, f ty, g a)
-    | HCallPat (callee, args, ty, a) -> HCallPat(go callee, listMap go args, f ty, g a)
+    | HCallPat (callee, args, ty, a) -> HCallPat(go callee, List.map go args, f ty, g a)
     | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
-    | HTuplePat (itemPats, ty, a) -> HTuplePat(listMap go itemPats, f ty, g a)
+    | HTuplePat (itemPats, ty, a) -> HTuplePat(List.map go itemPats, f ty, g a)
     | HBoxPat (itemPat, a) -> HBoxPat(go itemPat, g a)
     | HAsPat (pat, serial, a) -> HAsPat(go pat, serial, g a)
     | HAnnoPat (pat, ty, a) -> HAnnoPat(go pat, f ty, g a)
@@ -1232,15 +1228,17 @@ let patNormalize pat =
     | HSomePat _ -> [ pat ]
     | HNavPat (pat, ident, ty, loc) ->
         go pat
-        |> listMap (fun pat -> HNavPat(pat, ident, ty, loc))
+        |> List.map (fun pat -> HNavPat(pat, ident, ty, loc))
     | HCallPat (callee, [ arg ], ty, loc) ->
         go callee
         |> listCollect (fun callee ->
              go arg
-             |> listMap (fun arg -> HCallPat(callee, [ arg ], ty, loc)))
+             |> List.map (fun arg -> HCallPat(callee, [ arg ], ty, loc)))
     | HConsPat (l, r, ty, loc) ->
         go l
-        |> listCollect (fun l -> go r |> listMap (fun r -> HConsPat(l, r, ty, loc)))
+        |> listCollect (fun l ->
+             go r
+             |> List.map (fun r -> HConsPat(l, r, ty, loc)))
     | HTuplePat (itemPats, ty, loc) ->
         let rec gogo itemPats =
           match itemPats with
@@ -1250,14 +1248,14 @@ let patNormalize pat =
               gogo itemPats
               |> listCollect (fun itemPats ->
                    itemPat
-                   |> listMap (fun itemPat -> itemPat :: itemPats))
+                   |> List.map (fun itemPat -> itemPat :: itemPats))
 
         gogo itemPats
-        |> listMap (fun itemPats -> HTuplePat(itemPats, ty, loc))
+        |> List.map (fun itemPats -> HTuplePat(itemPats, ty, loc))
 
     | HBoxPat (itemPat, loc) ->
         go itemPat
-        |> listMap (fun itemPat -> HBoxPat(itemPat, loc))
+        |> List.map (fun itemPat -> HBoxPat(itemPat, loc))
 
     | HAsPat (innerPat, _, _) ->
         match go innerPat with
@@ -1265,7 +1263,7 @@ let patNormalize pat =
         | _ -> failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
     | HAnnoPat (pat, annoTy, loc) ->
         go pat
-        |> listMap (fun pat -> HAnnoPat(pat, annoTy, loc))
+        |> List.map (fun pat -> HAnnoPat(pat, annoTy, loc))
     | HOrPat (first, second, _, _) -> listAppend (go first) (go second)
     | HCallPat _ -> failwith "Unimpl"
 
@@ -1293,7 +1291,7 @@ let hxCallClosure callee args resultTy loc =
   HInfExpr(InfOp.CallClosure, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HInfExpr(InfOp.Tuple, items, tyTuple (listMap exprToTy items), loc)
+  HInfExpr(InfOp.Tuple, items, tyTuple (List.map exprToTy items), loc)
 
 let hxUnit loc = hxTuple [] loc
 
@@ -1339,21 +1337,21 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 
         let fields =
           fields
-          |> listMap (fun (ident, init, a) -> ident, go init, g a)
+          |> List.map (fun (ident, init, a) -> ident, go init, g a)
 
         HRecordExpr(baseOpt, fields, f ty, g a)
 
     | HMatchExpr (target, arms, ty, a) ->
         let arms =
           arms
-          |> listMap (fun (pat, guard, body) -> goPat pat, go guard, go body)
+          |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
         HMatchExpr(go target, arms, f ty, g a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
-    | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, listMap go args, f resultTy, g a)
+    | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, List.map go args, f resultTy, g a)
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
     | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, a) ->
-        HLetFunExpr(serial, vis, isMainFun, listMap goPat args, go body, go next, f ty, g a)
+        HLetFunExpr(serial, vis, isMainFun, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyDef, a) -> HTyDeclExpr(serial, vis, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
     | HModuleExpr (ident, body, next, a) -> HModuleExpr(ident, go body, go next, g a)

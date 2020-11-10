@@ -36,7 +36,7 @@ let private teTy ctx ty =
   | AppTy (_, []) -> ty
 
   | AppTy (tyCtor, tyArgs) ->
-      let tyArgs = tyArgs |> listMap (teTy ctx)
+      let tyArgs = tyArgs |> List.map (teTy ctx)
       AppTy(tyCtor, tyArgs)
 
   | MetaTy _
@@ -67,7 +67,7 @@ let private teExpr ctx expr =
 
         let fields =
           fields
-          |> listMap (fun (ident, init, _) ->
+          |> List.map (fun (ident, init, _) ->
                let init = init |> teExpr ctx
                let index, _ = fieldMap |> mapFind ident
                index, init)
@@ -98,7 +98,7 @@ let private teExpr ctx expr =
 
         | None ->
             let fields =
-              fields |> listMap (fun (_, init) -> init)
+              fields |> List.map (fun (_, init) -> init)
 
             hxTuple fields loc
 
@@ -143,7 +143,7 @@ let private teExpr ctx expr =
           let body = body |> teExpr ctx
           pat, guard, body
 
-        let arms = arms |> listMap go
+        let arms = arms |> List.map go
         let ty = ty |> teTy ctx
         HMatchExpr(target, arms, ty, loc)
 
@@ -151,7 +151,7 @@ let private teExpr ctx expr =
 
   | HInfExpr (infOp, items, ty, loc) ->
       let doArm () =
-        let items = items |> listMap (teExpr ctx)
+        let items = items |> List.map (teExpr ctx)
         let ty = ty |> teTy ctx
         HInfExpr(infOp, items, ty, loc)
 
@@ -169,7 +169,7 @@ let private teExpr ctx expr =
 
   | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       let doArm () =
-        let args = args |> listMap (tePat ctx)
+        let args = args |> List.map (tePat ctx)
         let body = body |> teExpr ctx
         let next = next |> teExpr ctx
         let ty = ty |> teTy ctx
@@ -193,7 +193,7 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
          | RecordTyDef (_, fields, _) ->
              let tupleTy =
                fields
-               |> listMap (fun (_, ty, _) -> ty)
+               |> List.map (fun (_, ty, _) -> ty)
                |> tyTuple
 
              let fieldMap =

@@ -161,7 +161,7 @@ let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
 
   let traits =
     traits
-    |> listMap (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
+    |> List.map (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
 
   polyTy, traits, ctx
 
@@ -430,7 +430,7 @@ let inferRecord ctx expectOpt baseOpt fields loc =
       let fields, (fieldDefs, ctx) =
         let fieldDefs =
           fieldDefs
-          |> listMap (fun (ident, ty, _) -> ident, ty)
+          |> List.map (fun (ident, ty, _) -> ident, ty)
           |> mapOfList (strHash, strCmp)
 
         (fields, (fieldDefs, ctx))
@@ -456,7 +456,7 @@ let inferRecord ctx expectOpt baseOpt fields loc =
           let fields =
             fieldDefs
             |> mapToList
-            |> listMap (fun (ident, _) -> ident)
+            |> List.map (fun (ident, _) -> ident)
 
           ctx |> addIncompleteErr fields
         else
@@ -837,7 +837,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
            | RecordTyDef (ident, fields, loc) ->
                let fields =
                  fields
-                 |> listMap (fun (ident, ty, loc) ->
+                 |> List.map (fun (ident, ty, loc) ->
                       let ty = substOrDegenerate ty
                       ident, ty, loc)
 

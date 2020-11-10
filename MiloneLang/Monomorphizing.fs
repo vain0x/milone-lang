@@ -109,7 +109,7 @@ let monoCtxSubstPatTy ctx pat =
   let subst ty = monoCtxSubstTy ctx ty
   patMap subst id pat
 
-let monoCtxSubstPatsTy ctx pats = listMap (monoCtxSubstPatTy ctx) pats
+let monoCtxSubstPatsTy ctx pats = List.map (monoCtxSubstPatTy ctx) pats
 
 let monoCtxMarkSomethingHappened (ctx: MonoCtx) = ctx |> monoCtxWithSomethingHappened true
 
@@ -141,7 +141,7 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
     ctx
     |> monoCtxGetVars
     |> mapToList
-    |> listMap forceGeneralize
+    |> List.map forceGeneralize
     |> mapOfList (intHash, intCmp)
 
   ctx |> monoCtxWithVars vars

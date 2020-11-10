@@ -22,7 +22,7 @@ let listRevTest () =
 [<Fact>]
 let listMapTest () =
   [ 3; 1; 4; 1 ]
-  |> listMap ((+) 1)
+  |> List.map ((+) 1)
   |> is [ 4; 2; 5; 2 ]
 
 [<Fact>]

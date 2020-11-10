@@ -251,8 +251,8 @@ let private kmPrimSome itself args results conts loc ctx =
 let private kmPrimTuple itself args results conts loc ctx =
   match args, results, conts with
   | args, [ result ], [ cont ] ->
-      let items = args |> listMap kmTerm
-      let itemTys = items |> listMap mexprToTy
+      let items = args |> List.map kmTerm
+      let itemTys = items |> List.map mexprToTy
       let tupleTy = tyTuple itemTys
 
       ctx
@@ -283,7 +283,7 @@ let private kmPrimClosure itself args results conts loc ctx =
   | _ -> unreachable itself
 
 let private kmPrimCallProc itself args results conts loc ctx =
-  let args = args |> listMap kmTerm
+  let args = args |> List.map kmTerm
 
   match args, results, conts with
   | callee :: args, [ result ], [ cont ] ->
@@ -297,7 +297,7 @@ let private kmPrimCallProc itself args results conts loc ctx =
   | _ -> unreachable itself
 
 let private kmPrimCallClosure itself args results conts loc ctx =
-  let args = args |> listMap kmTerm
+  let args = args |> List.map kmTerm
 
   match args, results, conts with
   | callee :: args, [ result ], [ cont ] ->
@@ -338,7 +338,7 @@ let kmPrimExit itself args results conts loc ctx =
 let private kmPrimOther itself prim args results conts loc ctx =
   match results, conts with
   | [ result ], [ cont ] ->
-      let args = args |> listMap kmTerm
+      let args = args |> List.map kmTerm
 
       let resultTy = findVarTy result ctx
       let primTy = restoreCalleeTy args resultTy

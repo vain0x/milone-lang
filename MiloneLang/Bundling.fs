@@ -135,7 +135,7 @@ let parseProjectModules readCoreFile readModuleFile parse projectName nameCtx =
 
     let errors: (string * Loc) list =
       errors
-      |> listMap (fun (msg: string, pos: Pos) ->
+      |> List.map (fun (msg: string, pos: Pos) ->
            let row, column = pos
            let loc = docId, row, column
            msg, loc)

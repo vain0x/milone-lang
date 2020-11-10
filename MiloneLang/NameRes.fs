@@ -383,7 +383,7 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
         let tyDef =
           let variantSerials =
             variants
-            |> listMap (fun (_, variantSerial, _, _) -> variantSerial)
+            |> List.map (fun (_, variantSerial, _, _) -> variantSerial)
 
           UnionTyDef(tyIdent, variantSerials, loc)
 

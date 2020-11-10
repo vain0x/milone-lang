@@ -776,7 +776,7 @@ let mirifyExprLetFun ctx calleeSerial isMainFun argPats body next letLoc =
       if body |> containsTailRec then
         let labelStmt, label, ctx = mirCtxFreshLabel ctx "tailrec" letLoc
         let ctx = mirCtxPrependStmt ctx labelStmt
-        let argSerials = args |> listMap (fun (it, _, _) -> it)
+        let argSerials = args |> List.map (fun (it, _, _) -> it)
         Some(label, argSerials), ctx
       else
         None, ctx
