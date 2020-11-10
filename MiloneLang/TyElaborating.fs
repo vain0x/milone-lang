@@ -84,7 +84,7 @@ let private teExpr ctx expr =
               let itemTy = itemTys |> listItem index
               HInfExpr(InfOp.TupleItem index, [ baseExpr ], itemTy, loc)
 
-            let n = itemTys |> listLength
+            let n = itemTys |> List.length
 
             let rec go i fields =
               match fields with

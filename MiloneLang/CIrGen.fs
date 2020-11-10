@@ -383,7 +383,7 @@ let cirCtxUniqueTyName (ctx: CirCtx) ty =
       | AppTy (TupleTyCtor, []) -> "Unit", ctx
 
       | AppTy (TupleTyCtor, itemTys) ->
-          let len = itemTys |> listLength
+          let len = itemTys |> List.length
 
           let itemTys, ctx =
             (itemTys, ctx)

@@ -314,7 +314,7 @@ let capsAddToFunPats args (caps: Caps) =
 
 let capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
-  let arity = arity + listLength caps
+  let arity = arity + List.length caps
   funTy, arity
 
 // -----------------------------------------------

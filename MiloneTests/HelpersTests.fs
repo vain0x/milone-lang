@@ -11,8 +11,8 @@ let listIsEmptyTest () =
 
 [<Fact>]
 let listLengthTest () =
-  ([]: int list) |> listLength |> is 0
-  [ 1; 2; 3 ] |> listLength |> is 3
+  ([]: int list) |> List.length |> is 0
+  [ 1; 2; 3 ] |> List.length |> is 3
 
 [<Fact>]
 let listRevTest () =

@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listLength xs = List.length xs
-
 let listRev xs = List.rev xs
 
 let listIter f xs = List.iter f xs
@@ -139,7 +137,7 @@ let listSortCore unique cmp xs =
       let (zs, zn), d3 = merge ([], 0) 0 (xs, xn) (ys, yn)
       (zs, zn), ys1, d1 + d2 + d3
 
-  let xn = listLength xs
+  let xn = List.length xs
   let (zs, zn), ws, d = go (xs, xn)
   assert (zn + d = xn)
   assert (ws |> List.isEmpty)
@@ -583,7 +581,7 @@ let strConcat (xs: string list) =
   /// `str` is the concatenation of first `xn` items in `xs`
   /// `ys` is a list of the other items
   let rec go xs xn =
-    // assert (xn <= listLength xs)
+    // assert (xn <= List.length xs)
     match xs with
     | [] ->
         assert (xn = 0)
@@ -596,7 +594,7 @@ let strConcat (xs: string list) =
         let r, xs = go xs (xn - m)
         l + r, xs
 
-  let n = xs |> listLength
+  let n = xs |> List.length
   let s, xs = go xs n
   assert (xs |> List.isEmpty)
   s

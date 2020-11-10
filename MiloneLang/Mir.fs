@@ -44,7 +44,7 @@ let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
   match ctx |> mirCtxGetVars |> mapFind varSerial with
   | VariantDef (_, tySerial, _, _, _, _) ->
       match ctx |> mirCtxGetTys |> mapFind tySerial with
-      | UnionTyDef (_, variantSerials, _) -> variantSerials |> listLength = 1
+      | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
 
       | _ -> failwith "Expected union serial"
 
@@ -368,7 +368,7 @@ let mirifyExprMatch ctx target arms ty loc =
     match arms with
     | (pat, guard, body) :: arms ->
         let pats = patNormalize pat
-        let disjCount = pats |> listLength
+        let disjCount = pats |> List.length
 
         // No need to jump to body from pattern if no OR patterns.
         let needsJump = disjCount > 1
