@@ -59,7 +59,7 @@ let opToPrim op =
 
 /// `[x; y; ..]`. Desugar to a chain of (::).
 let desugarListLitPat pats pos =
-  assert (pats |> listIsEmpty |> not)
+  assert (pats |> List.isEmpty |> not)
 
   let rec go pats =
     match pats with
@@ -73,7 +73,7 @@ let desugarListLitPat pats pos =
 
 /// `[x; y; ..]` ==> `x :: y :: .. :: []`
 let desugarListLitExpr items pos =
-  assert (items |> listIsEmpty |> not)
+  assert (items |> List.isEmpty |> not)
 
   let rec go items =
     match items with
@@ -493,7 +493,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
   | ASemiExpr (exprs, pos) ->
       let doArm () =
-        assert (exprs |> listIsEmpty |> not)
+        assert (exprs |> List.isEmpty |> not)
 
         let exprs, nameCtx =
           (exprs, nameCtx) |> stMap (astToHirExpr docId)

@@ -6,8 +6,8 @@ open Xunit
 
 [<Fact>]
 let listIsEmptyTest () =
-  ([]: int list) |> listIsEmpty |> is true
-  [ 1 ] |> listIsEmpty |> is false
+  ([]: int list) |> List.isEmpty |> is true
+  [ 1 ] |> List.isEmpty |> is false
 
 [<Fact>]
 let listLengthTest () =

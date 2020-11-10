@@ -126,7 +126,7 @@ let private writeLog host verbosity msg =
   | Quiet -> ()
 
 let tyCtxHasError tyCtx =
-  tyCtx |> tyCtxGetLogs |> listIsEmpty |> not
+  tyCtx |> tyCtxGetLogs |> List.isEmpty |> not
 
 let printLogs tyCtx logs =
   let tyDisplayFn ty =
@@ -203,7 +203,7 @@ let codeGenHirViaMir host v (expr, tyCtx) =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (expr, tyCtx)
 
-  if mirCtx |> mirCtxGetLogs |> listIsEmpty |> not then
+  if mirCtx |> mirCtxGetLogs |> List.isEmpty |> not then
     mirCtx |> mirCtxGetLogs |> printLogs tyCtx
     "", false
   else
@@ -275,7 +275,7 @@ let cliParse host verbosity (projectDir: string) =
        + moduleName)
     let ast, errors = parse tokens
 
-    if errors |> listIsEmpty |> not then
+    if errors |> List.isEmpty |> not then
       printfn "In %s" moduleName
 
       errors

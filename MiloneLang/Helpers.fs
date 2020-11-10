@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listIsEmpty xs = List.isEmpty xs
-
 let listLength xs = List.length xs
 
 let listRev xs = List.rev xs
@@ -144,7 +142,7 @@ let listSortCore unique cmp xs =
   let xn = listLength xs
   let (zs, zn), ws, d = go (xs, xn)
   assert (zn + d = xn)
-  assert (ws |> listIsEmpty)
+  assert (ws |> List.isEmpty)
   listTruncate zn zs
 
 let listSort cmp xs = listSortCore false cmp xs
@@ -600,7 +598,7 @@ let strConcat (xs: string list) =
 
   let n = xs |> listLength
   let s, xs = go xs n
-  assert (xs |> listIsEmpty)
+  assert (xs |> List.isEmpty)
   s
 
 // let rec go (xs: string list) =
@@ -818,8 +816,8 @@ let dumpTreeNewLeaf text = DumpTree(text, [], [])
 let dumpTreeAttachNext next tree =
   match tree with
   | DumpTree (text, children, oldNext) ->
-      assert (children |> listIsEmpty |> not)
-      assert (oldNext |> listIsEmpty)
+      assert (children |> List.isEmpty |> not)
+      assert (oldNext |> List.isEmpty)
       DumpTree(text, children, [ next ])
 
 let dumpTreeFromError (msg: string) (y, x) =

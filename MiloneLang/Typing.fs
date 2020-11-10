@@ -681,7 +681,7 @@ let inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
         let ctx = tyCtxUnifyTy ctx prevLoc prevTy tyUnit
 
         let expectOpt =
-          if listIsEmpty exprs then expectOpt else None
+          if List.isEmpty exprs then expectOpt else None
 
         let expr, ty, ctx = inferExpr ctx expectOpt expr
         go (expr :: acc) (ty, exprToLoc expr) ctx exprs

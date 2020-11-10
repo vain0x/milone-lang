@@ -980,7 +980,7 @@ let genLogs (ctx: CirCtx) =
 
   let logs = ctx |> cirCtxGetLogs |> listRev
   let ctx = go ctx logs
-  let success = logs |> listIsEmpty
+  let success = logs |> List.isEmpty
   success, ctx
 
 let gen (decls, mirCtx: MirCtx): CDecl list * bool =
