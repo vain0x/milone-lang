@@ -75,7 +75,7 @@ let private tyToDebugString ty ctx =
           "["
           + strConcat
               (args
-               |> listMapWithIndex (fun i ty ->
+               |> List.mapi (fun i ty ->
                     (if i = 0 then "" else ", ")
                     + tyToDebugString ty ctx))
           + "]"
@@ -89,7 +89,7 @@ let private tyToDebugString ty ctx =
           + "<"
           + strConcat
               (args
-               |> listMapWithIndex (fun i ty ->
+               |> List.mapi (fun i ty ->
                     (if i = 0 then "" else ", ")
                     + tyToDebugString ty ctx))
           + ">"
@@ -124,7 +124,7 @@ let private kdTerm term ctx =
 let private kdArgsAsParamList args ctx =
   "("
   + (args
-     |> listMapWithIndex (fun i arg ->
+     |> List.mapi (fun i arg ->
           (if i = 0 then "" else ", ")
           + getVarName arg ctx
           + ": "
@@ -135,7 +135,7 @@ let private kdArgsAsParamList args ctx =
 let private kdTermsAsArgList args ctx =
   "("
   + (args
-     |> listMapWithIndex (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
+     |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
      |> strConcat)
   + ")"
 
@@ -215,7 +215,7 @@ let private kdPrimNode indent prim args results conts ctx =
 
     let resultList =
       results
-      |> listMapWithIndex (fun i result ->
+      |> List.mapi (fun i result ->
            (if i = 0 then "" else ", ")
            + getVarName result ctx)
       |> strConcat
@@ -230,7 +230,7 @@ let private kdPrimNode indent prim args results conts ctx =
     | _ ->
         tsConstStmt indent ("[" + resultList + "]") (kdPrim prim + argList)
         + (conts
-           |> listMapWithIndex (fun (i: int) cont ->
+           |> List.mapi (fun (i: int) cont ->
                 (indent
                  + "// "
                  + (kdPrim prim + ".cont#" + string i)
@@ -267,7 +267,7 @@ let private kdPrimNode indent prim args results conts ctx =
       basic
         ("["
          + (args
-            |> listMapWithIndex (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
+            |> List.mapi (fun i arg -> (if i = 0 then "" else ", ") + kdTerm arg ctx)
             |> strConcat)
          + "]")
         result

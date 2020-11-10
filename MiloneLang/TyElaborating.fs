@@ -198,7 +198,7 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
 
              let fieldMap =
                fields
-               |> listMapWithIndex (fun i (ident, ty, _) -> ident, (i, ty))
+               |> List.mapi (fun i (ident, ty, _) -> ident, (i, ty))
                |> mapOfList (strHash, strCmp)
 
              (tySerial, (tupleTy, fieldMap)) :: acc

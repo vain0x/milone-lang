@@ -89,7 +89,7 @@ let private kgRefPat itself varSerial ty loc ctx =
 let private kgTuplePat itemPats loc ctx =
   let conts =
     itemPats
-    |> listMapWithIndex (fun i itemPat -> PSelectNode(KFieldPath(i, loc), kgPat itemPat ctx, loc))
+    |> List.mapi (fun i itemPat -> PSelectNode(KFieldPath(i, loc), kgPat itemPat ctx, loc))
 
   PConjNode(conts, loc)
 

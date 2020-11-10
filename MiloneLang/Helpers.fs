@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listMapWithIndex f xs = List.mapi f xs
-
 let listFilter pred xs = List.filter pred xs
 
 let listChoose f xs = List.choose f xs

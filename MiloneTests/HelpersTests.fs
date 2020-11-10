@@ -28,7 +28,7 @@ let listMapTest () =
 [<Fact>]
 let listMapWithIndexTest () =
   [ 3; 1; 4; 1 ]
-  |> listMapWithIndex (+)
+  |> List.mapi (+)
   |> is [ 3; 2; 6; 4 ]
 
 [<Fact>]
