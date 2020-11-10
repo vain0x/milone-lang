@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listForAll pred xs = List.forall pred xs
-
 let listExists pred xs = List.exists pred xs
 
 /// USAGE: `items |> listFold (fun state item -> nextState) initialState`

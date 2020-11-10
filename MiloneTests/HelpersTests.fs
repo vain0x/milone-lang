@@ -52,15 +52,15 @@ let listCollectTest () =
 [<Fact>]
 let listForAllTest () =
   ([]: int list)
-  |> listForAll (fun _ -> false)
+  |> List.forall (fun _ -> false)
   |> is true
 
   [ 3; 1; 4; 1 ]
-  |> listForAll (fun x -> x >= 1)
+  |> List.forall (fun x -> x >= 1)
   |> is true
 
   [ 3; 1; 4; 1 ]
-  |> listForAll (fun x -> x > 1)
+  |> List.forall (fun x -> x > 1)
   |> is false
 
 [<Fact>]

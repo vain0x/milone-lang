@@ -343,7 +343,7 @@ let patsIsCovering pats =
     | HNavPat _
     | HConsPat _
     | HCallPat _ -> false
-    | HTuplePat (itemPats, _, _) -> itemPats |> listForAll go
+    | HTuplePat (itemPats, _, _) -> itemPats |> List.forall go
     | HBoxPat (itemPat, _) -> go itemPat
     | HAsPat (pat, _, _) -> go pat
     | HAnnoPat (pat, _, _) -> go pat

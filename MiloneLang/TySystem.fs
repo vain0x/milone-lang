@@ -247,7 +247,7 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 /// getTyIdent: serial -> ident option. Gets ident of type by serial.
 let tyDisplay getTyIdent ty =
   let tyEq4 ty1 ty2 ty3 ty4 =
-    [ ty2; ty3; ty4 ] |> listForAll (tyEq ty1)
+    [ ty2; ty3; ty4 ] |> List.forall (tyEq ty1)
 
   let rec go (outerBp: int) ty =
     let paren (bp: int) s =
