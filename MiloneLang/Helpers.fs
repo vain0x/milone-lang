@@ -55,27 +55,13 @@ let exMap f (xs, acc, ctx) =
 // Option
 // -----------------------------------------------
 
-let optionIsNone option =
-  match option with
-  | None -> true
+let optionIsNone option = Option.isNone option
 
-  | Some _ -> false
+let optionDefaultValue alt option = Option.defaultValue alt option
 
-let optionDefaultValue alt option =
-  match option with
-  | Some x -> x
+let optionMap f option = Option.map f option
 
-  | None -> alt
-
-let optionMap f option =
-  match option with
-  | Some x -> x |> f |> Some
-  | None -> None
-
-let optionAll pred option =
-  match option with
-  | Some x -> pred x
-  | None -> true
+let optionAll pred option = Option.forall pred option
 
 // -----------------------------------------------
 // List

@@ -4,6 +4,9 @@ module rec MiloneLang.EntryPoint
 // HACK: "Polyfills" module is automatically loaded by the bundler and opened in name resolution.
 // open MiloneLang.Polyfills
 
+// See libcore for implementations.
+open MiloneCore.Option
+
 open MiloneLang.Records
 open MiloneLang.Cli
 
