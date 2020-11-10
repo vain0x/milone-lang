@@ -360,7 +360,7 @@ let mirifyExprMatch ctx target arms ty loc =
 
   let isCovering =
     arms
-    |> listChoose (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
+    |> List.choose (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
     |> patsIsCovering
 
   /// By walking over arms, calculates what kind of MIR instructions to emit.

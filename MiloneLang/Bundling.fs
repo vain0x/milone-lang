@@ -91,7 +91,7 @@ let findOpenModules projectName expr =
     | [ "MiloneCore"; moduleName ] -> Some(CoreModule, moduleName)
     | _ -> None
 
-  findOpenPaths expr |> listChoose extractor
+  findOpenPaths expr |> List.choose extractor
 
 /// Insert the second expression to the bottom of the first expression.
 /// This is bad way because of variable capturing issues.

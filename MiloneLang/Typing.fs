@@ -830,7 +830,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
       ctx
       |> tyCtxGetTys
       |> mapToList
-      |> listChoose (fun kv ->
+      |> List.choose (fun kv ->
            let tySerial, tyDef = kv
            match tyDef with
            | MetaTyDef _ -> None

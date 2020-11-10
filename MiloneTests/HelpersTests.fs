@@ -40,7 +40,7 @@ let listFilterTest () =
 [<Fact>]
 let listChooseTest () =
   [ 3; 1; 4; 1 ]
-  |> listChoose (fun x -> if x > 1 then Some(x * x) else None)
+  |> List.choose (fun x -> if x > 1 then Some(x * x) else None)
   |> is [ 9; 16 ]
 
 [<Fact>]
