@@ -9,6 +9,10 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiloneLang", "boot\MiloneLa
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiloneLsp", "milone_lsp\MiloneLsp.fsproj", "{F098528D-9A38-43DE-8767-F468801B00D7}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{D8B35243-8A02-4696-9CE5-A6DE5D137107}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "RecordGen", "scripts\RecordGen\RecordGen.fsproj", "{652C8095-EBF0-4189-A194-211B3052254B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,8 +50,21 @@ Global
 		{F098528D-9A38-43DE-8767-F468801B00D7}.Release|x64.Build.0 = Release|Any CPU
 		{F098528D-9A38-43DE-8767-F468801B00D7}.Release|x86.ActiveCfg = Release|Any CPU
 		{F098528D-9A38-43DE-8767-F468801B00D7}.Release|x86.Build.0 = Release|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Debug|x64.Build.0 = Debug|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Debug|x86.Build.0 = Debug|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Release|x64.ActiveCfg = Release|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Release|x64.Build.0 = Release|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Release|x86.ActiveCfg = Release|Any CPU
+		{652C8095-EBF0-4189-A194-211B3052254B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AC64C44D-611F-474A-AEA4-B9A32D2E5817} = {8745793A-BA52-4026-A8DA-75CEC3C7D106}
+		{652C8095-EBF0-4189-A194-211B3052254B} = {D8B35243-8A02-4696-9CE5-A6DE5D137107}
 	EndGlobalSection
 EndGlobal

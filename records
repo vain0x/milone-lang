@@ -1,6 +1,6 @@
 #!/bin/bash
-# See `boot/scripts/RecordGen` and `boot/MiloneLang/Records.yml`.
+# See `scripts/RecordGen` and `boot/MiloneLang/Records.yml`.
 
 set -eu
 
-cat boot/MiloneLang/Records.yml | dotnet run -p boot/scripts/RecordGen >boot/MiloneLang/Records.fs
+cat boot/MiloneLang/Records.yml | dotnet run -p scripts/RecordGen >boot/MiloneLang/Records.fs

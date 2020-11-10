@@ -3,12 +3,14 @@
 set -eu
 
 MILONE_INCLUDE="$PWD/boot/runtime"
-DIR="$PWD/boot/scripts/region_primitive_checks"
+DIR="$PWD/scripts/region_primitive_checks"
+OUT_C="$DIR/region_primitive_checks.c"
 
-./milone-netcore -q "$DIR" >"$DIR/region_primitive_checks.c"
+./milone-netcore -q "$DIR" >$OUT_C
 
 (
     cd "$DIR"
-    gcc -std=c11 -I "$MILONE_INCLUDE" -g -fsanitize=undefined,address,leak region_primitive_checks.c
+    gcc -std=c11 -I "$MILONE_INCLUDE" -g -fsanitize=undefined,address,leak "$OUT_C"
     ./a.out || echo '$?='$?
+    echo OK
 )
