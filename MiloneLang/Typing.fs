@@ -139,7 +139,7 @@ let tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
       let ty =
         let extendedCtx =
           mapping
-          |> listFold (fun ctx (src, target) -> tyCtxBindTy ctx src (MetaTy(target, loc)) loc) ctx
+          |> List.fold (fun ctx (src, target) -> tyCtxBindTy ctx src (MetaTy(target, loc)) loc) ctx
 
         tyCtxSubstTy extendedCtx ty
 
@@ -192,7 +192,7 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
         ctx
         |> tyCtxWithTyDepths
              (fvs
-              |> listFold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx |> tyCtxGetTyDepths))
+              |> List.fold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx |> tyCtxGetTyDepths))
 
       ctx
   | FunDef _ -> failwith "Can't generalize already-generalized function"

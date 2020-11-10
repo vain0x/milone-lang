@@ -57,9 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-/// USAGE: `items |> listFold (fun state item -> nextState) initialState`
-let listFold folder state xs = List.fold folder state xs
-
 let listReduce reducer xs = List.reduce reducer xs
 
 let listLast xs = List.last xs
@@ -423,7 +420,7 @@ let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> 
   trie, hash, cmp
 
 let setFold folder state (set: AssocSet<_>) =
-  set |> setToList |> listFold folder state
+  set |> setToList |> List.fold folder state
 
 // TODO: make it more efficient
 let setExists pred (set: AssocSet<_>) = set |> setToList |> List.exists pred

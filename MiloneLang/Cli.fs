@@ -308,7 +308,7 @@ let cliKirDump host projectDirs =
   printfn "// Common code.\n%s\n" (kirHeader ())
 
   projectDirs
-  |> listFold (fun code projectDir ->
+  |> List.fold (fun code projectDir ->
        printfn "// -------------------------------\n// %s\n{\n" projectDir
        printfn "/*"
 
@@ -341,7 +341,7 @@ let cliCompileViaKir host projectDirs =
   printfn "// Generated using KIR.\n"
 
   projectDirs
-  |> listFold (fun code projectDir ->
+  |> List.fold (fun code projectDir ->
        printfn "// -------------------------------\n// %s\n" projectDir
        printfn "/*"
 

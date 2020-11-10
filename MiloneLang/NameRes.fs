@@ -166,14 +166,14 @@ let scopeCtxOpenModule moduleSerial scopeCtx =
     scopeCtx
     |> scopeCtxGetVarNs
     |> nameTreeTryFind moduleSerial
-    |> listFold (fun ctx varSerial -> ctx |> scopeCtxOpenVar varSerial) scopeCtx
+    |> List.fold (fun ctx varSerial -> ctx |> scopeCtxOpenVar varSerial) scopeCtx
 
   // Import tys.
   let scopeCtx =
     scopeCtx
     |> scopeCtxGetTyNs
     |> nameTreeTryFind moduleSerial
-    |> listFold (fun ctx tySerial -> ctx |> scopeCtxOpenTy tySerial) scopeCtx
+    |> List.fold (fun ctx tySerial -> ctx |> scopeCtxOpenTy tySerial) scopeCtx
 
   scopeCtx
 
@@ -378,7 +378,7 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
           |> scopeCtxOpenVar variantSerial
           |> addVarToModule variantSerial
 
-        let ctx = variants |> listFold defineVariant ctx
+        let ctx = variants |> List.fold defineVariant ctx
 
         let tyDef =
           let variantSerials =
@@ -429,7 +429,7 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
             ctx |> scopeCtxDefineVar variantSerial varDef
         | _ -> failwith "NEVER: it must be variant"
 
-      variantSerials |> listFold go ctx
+      variantSerials |> List.fold go ctx
 
   | RecordTyDef (ident, fields, loc) ->
       let resolveField ((ident, ty, loc), ctx) =

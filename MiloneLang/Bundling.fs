@@ -141,7 +141,7 @@ let parseProjectModules readCoreFile readModuleFile parse projectName nameCtx =
            msg, loc)
 
     let moduleAcc, moduleMap, nameCtx, errorAcc =
-      listFold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
+      List.fold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
 
     moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
 

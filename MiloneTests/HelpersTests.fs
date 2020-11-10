@@ -79,10 +79,10 @@ let listExistsTest () =
 
 [<Fact>]
 let listFoldTest () =
-  ([]: int list) |> listFold (+) 0 |> is 0
+  ([]: int list) |> List.fold (+) 0 |> is 0
 
   [ 3; 1; 4; 1 ]
-  |> listFold (fun s x -> s * 10 + x) 0
+  |> List.fold (fun s x -> s * 10 + x) 0
   |> is 3141
 
 [<Fact>]

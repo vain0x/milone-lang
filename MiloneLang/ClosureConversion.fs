@@ -290,7 +290,7 @@ let ccCtxUpdateFunDefs (ctx: CcCtx) =
 /// Updates the function type to take captured variables.
 let capsAddToFunTy tTy (caps: Caps) =
   caps
-  |> listFold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
+  |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
 
 /// Updates the callee to take captured variables as arguments.
 let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
@@ -301,7 +301,7 @@ let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
   let app, _ =
     caps
     |> List.rev
-    |> listFold (fun (callee, calleeTy) (serial, ty, loc) ->
+    |> List.fold (fun (callee, calleeTy) (serial, ty, loc) ->
          let arg = HRefExpr(serial, ty, loc)
          hxApp callee arg calleeTy loc, tyFun ty calleeTy) (callee, calleeTy)
 
@@ -310,7 +310,7 @@ let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
 /// Updates the argument patterns to take captured variables.
 let capsAddToFunPats args (caps: Caps) =
   caps
-  |> listFold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
+  |> List.fold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
 
 let capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
@@ -461,7 +461,7 @@ let declosureExpr (expr, ctx) =
 
         | UnionTyDecl (_, variants, _) ->
             let ctx =
-              variants |> listFold declosureVariantDecl ctx
+              variants |> List.fold declosureVariantDecl ctx
 
             expr, ctx
 

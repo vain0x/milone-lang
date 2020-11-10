@@ -42,7 +42,7 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
   let addIdents identMap ident serials =
     serials
     |> List.rev
-    |> listFold (addIdent ident) (identMap, 0)
+    |> List.fold (addIdent ident) (identMap, 0)
     |> fst
 
   serialsMap |> mapFold addIdents (mapEmpty mapFuns)

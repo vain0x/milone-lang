@@ -481,7 +481,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
         // Declaration of args as local vars.
         let ctx =
           args
-          |> listFold (fun ctx arg ->
+          |> List.fold (fun ctx arg ->
                let argTy = ctx |> findVarTy arg
                ctx
                |> addStmt (MLetValStmt(arg, MUninitInit, argTy, jointLoc))) ctx
@@ -494,7 +494,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
         let jointMap, labelCount, ctx =
           joints
-          |> listFold folder (jointMap, labelCount, ctx)
+          |> List.fold folder (jointMap, labelCount, ctx)
 
         ctx
         |> kirToMirCtxWithJointMap jointMap
@@ -504,7 +504,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
       let ctx =
         joints
-        |> listFold (fun ctx joint ->
+        |> List.fold (fun ctx joint ->
              let (KJointBinding (jointSerial, _, body, loc)) = joint
 
              let label, _ =
@@ -574,7 +574,7 @@ let kirToMir (root: KRoot, kirGenCtx: KirGenCtx): MStmt list * MirCtx =
     let (KRoot funBindings) = root
 
     funBindings
-    |> listFold (fun ctx binding -> kmFunBinding binding ctx) ctx
+    |> List.fold (fun ctx binding -> kmFunBinding binding ctx) ctx
 
   let stmts = ctx |> kirToMirCtxGetStmts |> List.rev
   let mirCtx = ctx |> toMirCtx

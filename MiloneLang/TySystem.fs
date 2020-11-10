@@ -345,7 +345,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 
         ty
         |> tyCollectFreeVars
-        |> listFold (fun tyDepths tySerial ->
+        |> List.fold (fun tyDepths tySerial ->
              let currentDepth =
                ctx |> tyContextGetTyDepths |> mapFind tySerial
 
