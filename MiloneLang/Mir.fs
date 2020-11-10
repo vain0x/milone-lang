@@ -14,7 +14,7 @@ let private containsTailRec expr =
   match expr with
   | HInfExpr (InfOp.CallTailRec, _, _, _) -> true
 
-  | HInfExpr (InfOp.Semi, items, _, _) -> items |> listLast |> containsTailRec
+  | HInfExpr (InfOp.Semi, items, _, _) -> items |> List.last |> containsTailRec
 
   | HLitExpr _
   | HRefExpr _
@@ -613,7 +613,7 @@ let mirifyExprOpCmp ctx op l r ty loc =
 let mirifyExprSemi ctx exprs =
   // Discard non-last expressions.
   let exprs, ctx = mirifyExprs ctx exprs
-  listLast exprs, ctx
+  List.last exprs, ctx
 
 let mirifyExprInfCallProc ctx callee args ty loc =
   let core () =

@@ -794,7 +794,7 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         // FIXME: resolve module-name based on path
         match ctx
-              |> scopeCtxResolveLocalTyIdent (path |> listLast) with
+              |> scopeCtxResolveLocalTyIdent (path |> List.last) with
         | Some moduleSerial ->
             let ctx = ctx |> scopeCtxOpenModule moduleSerial
 

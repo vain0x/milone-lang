@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listLast xs = List.last xs
-
 let listItem i xs = List.item i xs
 
 let listTryFind pred xs = List.tryFind pred xs
@@ -1265,7 +1263,7 @@ let hxApp f x ty loc = HInfExpr(InfOp.App, [ f; x ], ty, loc)
 let hxAnno expr ty loc = HInfExpr(InfOp.Anno, [ expr ], ty, loc)
 
 let hxSemi items loc =
-  HInfExpr(InfOp.Semi, items, exprToTy (listLast items), loc)
+  HInfExpr(InfOp.Semi, items, exprToTy (List.last items), loc)
 
 let hxCallProc callee args resultTy loc =
   HInfExpr(InfOp.CallProc, callee :: args, resultTy, loc)

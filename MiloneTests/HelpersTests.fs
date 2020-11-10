@@ -92,7 +92,7 @@ let listReduceTest () =
   |> is 3141
 
 [<Fact>]
-let listLastTest () = [ 3; 1; 4; 1; 5; 9 ] |> listLast |> is 9
+let listLastTest () = [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
 
 [<Fact>]
 let listSkipTest () =
