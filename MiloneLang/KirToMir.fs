@@ -562,7 +562,7 @@ let private kmFunBinding binding ctx =
 
   let body, ctx =
     let stmts, labels, ctx = ctx |> genFunBody (kmNode body)
-    listCollect id (stmts :: List.rev labels), ctx
+    List.collect id (stmts :: List.rev labels), ctx
 
   ctx
   |> addStmt (MProcStmt(funSerial, isMainFun, args, body, resultTy, loc))

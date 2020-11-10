@@ -46,7 +46,7 @@ let listChooseTest () =
 [<Fact>]
 let listCollectTest () =
   [ 3; 1; 4; 1 ]
-  |> listCollect (fun x -> if x > 1 then [ x; x ] else [ x ])
+  |> List.collect (fun x -> if x > 1 then [ x; x ] else [ x ])
   |> is [ 3; 3; 1; 4; 4; 1 ]
 
 [<Fact>]

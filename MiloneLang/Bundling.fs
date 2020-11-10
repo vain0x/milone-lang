@@ -78,7 +78,7 @@ let findOpenPaths expr =
   let rec go expr =
     match expr with
     | HOpenExpr (path, _) -> [ path ]
-    | HInfExpr (InfOp.Semi, exprs, _, _) -> exprs |> listCollect go
+    | HInfExpr (InfOp.Semi, exprs, _, _) -> exprs |> List.collect go
     | HModuleExpr (_, body, _, _) -> go body
     | _ -> []
 

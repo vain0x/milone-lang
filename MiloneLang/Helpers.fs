@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listCollect f xs = List.collect f xs
-
 let listForAll pred xs = List.forall pred xs
 
 let listExists pred xs = List.exists pred xs
@@ -603,7 +601,7 @@ let strJoin (sep: string) (xs: string list) =
   | x :: xs ->
       x
       + (xs
-         |> listCollect (fun x -> [ sep; x ])
+         |> List.collect (fun x -> [ sep; x ])
          |> strConcat)
 
 let strNeedsEscaping (str: string) =
@@ -1225,12 +1223,12 @@ let patNormalize pat =
         |> List.map (fun pat -> HNavPat(pat, ident, ty, loc))
     | HCallPat (callee, [ arg ], ty, loc) ->
         go callee
-        |> listCollect (fun callee ->
+        |> List.collect (fun callee ->
              go arg
              |> List.map (fun arg -> HCallPat(callee, [ arg ], ty, loc)))
     | HConsPat (l, r, ty, loc) ->
         go l
-        |> listCollect (fun l ->
+        |> List.collect (fun l ->
              go r
              |> List.map (fun r -> HConsPat(l, r, ty, loc)))
     | HTuplePat (itemPats, ty, loc) ->
@@ -1240,7 +1238,7 @@ let patNormalize pat =
           | itemPat :: itemPats ->
               let itemPat = go itemPat
               gogo itemPats
-              |> listCollect (fun itemPats ->
+              |> List.collect (fun itemPats ->
                    itemPat
                    |> List.map (fun itemPat -> itemPat :: itemPats))
 
