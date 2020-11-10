@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listAppend xs ys = List.append xs ys
-
 let listSortCore unique cmp xs =
   let rec appendRev acc xs =
     match xs with
@@ -1235,7 +1233,7 @@ let patNormalize pat =
     | HAnnoPat (pat, annoTy, loc) ->
         go pat
         |> List.map (fun pat -> HAnnoPat(pat, annoTy, loc))
-    | HOrPat (first, second, _, _) -> listAppend (go first) (go second)
+    | HOrPat (first, second, _, _) -> List.append (go first) (go second)
     | HCallPat _ -> failwith "Unimpl"
 
   go pat

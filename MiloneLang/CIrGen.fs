@@ -655,7 +655,7 @@ let genExprCallPrim ctx prim args primTy resultTy loc =
       // Embed the source location information.
       let args =
         let _, y, x = loc
-        listAppend args [ CIntExpr y; CIntExpr x ]
+        List.append args [ CIntExpr y; CIntExpr x ]
 
       let assertCall = CCallExpr(callee, args)
 

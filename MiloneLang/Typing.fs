@@ -78,7 +78,7 @@ let tyCtxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
 
 let tyCtxAddTraitBounds traits (ctx: TyCtx) =
   ctx
-  |> tyCtxWithTraitBounds (listAppend traits (ctx |> tyCtxGetTraitBounds))
+  |> tyCtxWithTraitBounds (List.append traits (ctx |> tyCtxGetTraitBounds))
 
 let tyCtxResolveTraitBounds (ctx: TyCtx) =
   let rec go logAcc traits ctx =

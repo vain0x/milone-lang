@@ -205,7 +205,7 @@ let resolvePartialAppFun callee arity args argLen callLoc ctx =
     createRestArgsAndPats callee arity argLen callLoc ctx
 
   let envPat, envTy, envRefs, ctx = createEnvPatAndTy envItems callLoc ctx
-  let forwardArgs = listAppend envRefs restArgs
+  let forwardArgs = List.append envRefs restArgs
 
   let forwardExpr =
     hxCallProc callee forwardArgs resultTy callLoc
@@ -247,7 +247,7 @@ let resolvePartialAppObj callee arity args argLen callLoc ctx =
   let envPat, envTy, envRefs, ctx = createEnvPatAndTy envItems callLoc ctx
 
   let calleeRef, forwardArgs =
-    match listAppend envRefs restArgs with
+    match List.append envRefs restArgs with
     | calleeRef :: forwardArgs -> calleeRef, forwardArgs
     | _ -> failwith "Never"
 

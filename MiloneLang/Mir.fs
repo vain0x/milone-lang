@@ -61,7 +61,7 @@ let mirCtxRollBack (bCtx: MirCtx) (dCtx: MirCtx) =
 
 let mirCtxPrependStmt ctx stmt =
   ctx
-  |> mirCtxWithStmts (listAppend (ctx |> mirCtxGetStmts) [ stmt ])
+  |> mirCtxWithStmts (List.append (ctx |> mirCtxGetStmts) [ stmt ])
 
 let mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) =
   ctx

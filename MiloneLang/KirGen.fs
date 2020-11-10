@@ -564,7 +564,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
 
          let ctx =
            ctx
-           |> kirGenCtxWithJoints (listAppend (List.rev joints) (ctx |> kirGenCtxGetJoints))
+           |> kirGenCtxWithJoints (List.append (List.rev joints) (ctx |> kirGenCtxGetJoints))
 
          cont, ctx)
 

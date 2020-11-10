@@ -106,7 +106,7 @@ let listTruncateTest () =
 
 [<Fact>]
 let listAppendTest () =
-  listAppend [ 3; 1; 4; 1 ] [ 5; 9 ]
+  List.append [ 3; 1; 4; 1 ] [ 5; 9 ]
   |> is [ 3; 1; 4; 1; 5; 9 ]
 
 [<Fact>]
