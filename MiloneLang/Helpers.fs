@@ -69,203 +69,46 @@ let optionAll pred option = Option.forall pred option
 
 let cons head tail = head :: tail
 
-let listIsEmpty xs =
-  match xs with
-  | [] -> true
+let listIsEmpty xs = List.isEmpty xs
 
-  | _ -> false
+let listLength xs = List.length xs
 
-let listLength xs =
-  let rec go len xs =
-    match xs with
-    | [] -> len
+let listRev xs = List.rev xs
 
-    | _ :: xs -> go (len + 1) xs
+let listIter f xs = List.iter f xs
 
-  go 0 xs
+let listMap f xs = List.map f xs
 
-let listRev xs =
-  let rec go acc xs =
-    match xs with
-    | [] -> acc
+let listMapWithIndex f xs = List.mapi f xs
 
-    | x :: xs -> go (x :: acc) xs
+let listFilter pred xs = List.filter pred xs
 
-  go [] xs
+let listChoose f xs = List.choose f xs
 
-let rec listIter f xs =
-  match xs with
-  | [] -> ()
+let listCollect f xs = List.collect f xs
 
-  | x :: xs ->
-      f x
-      listIter f xs
+let listForAll pred xs = List.forall pred xs
 
-let listMap f xs =
-  let rec go acc xs =
-    match xs with
-    | [] -> listRev acc
-
-    | x :: xs -> go (f x :: acc) xs
-
-  go [] xs
-
-let listMapWithIndex f xs =
-  let rec go acc i xs =
-    match xs with
-    | [] -> listRev acc
-
-    | x :: xs -> go (f i x :: acc) (i + 1) xs
-
-  go [] 0 xs
-
-let listFilter pred xs =
-  let rec go acc xs =
-    match xs with
-    | [] -> listRev acc
-
-    | x :: xs ->
-        let acc = if pred x then x :: acc else acc
-        go acc xs
-
-  go [] xs
-
-let listChoose f xs =
-  let rec go acc xs =
-    match xs with
-    | [] -> listRev acc
-
-    | x :: xs ->
-        let acc =
-          match f x with
-          | Some y -> y :: acc
-
-          | None -> acc
-
-        go acc xs
-
-  go [] xs
-
-let listCollect f xs =
-  let rec gogo acc ys =
-    match ys with
-    | [] -> acc
-
-    | y :: ys -> gogo (y :: acc) ys
-
-  let rec go acc xs =
-    match xs with
-    | [] -> listRev acc
-
-    | x :: xs ->
-        let acc = gogo acc (f x)
-        go acc xs
-
-  go [] xs
-
-let listForAll pred xs =
-  let rec go xs =
-    match xs with
-    | [] -> true
-
-    | x :: xs -> pred x && go xs
-
-  go xs
-
-let listExists pred xs =
-  let rec go xs =
-    match xs with
-    | [] -> false
-
-    | x :: xs -> pred x || go xs
-
-  go xs
+let listExists pred xs = List.exists pred xs
 
 /// USAGE: `items |> listFold (fun state item -> nextState) initialState`
-let listFold folder state xs =
-  let rec go state xs =
-    match xs with
-    | [] -> state
+let listFold folder state xs = List.fold folder state xs
 
-    | x :: xs -> go (folder state x) xs
+let listReduce reducer xs = List.reduce reducer xs
 
-  go state xs
+let listLast xs = List.last xs
 
-let listReduce reducer xs =
-  match xs with
-  | [] -> failwith "listReduce: empty"
+let listItem i xs = List.item i xs
 
-  | x :: xs -> listFold reducer x xs
+let listTryFind pred xs = List.tryFind pred xs
 
-let listLast xs =
-  let rec go xs =
-    match xs with
-    | [] -> failwith "listLast: empty"
+let listTryPick f xs = List.tryPick f xs
 
-    | [ x ] -> x
+let listSkip count xs = List.skip count xs
 
-    | _ :: xs -> go xs
+let listTruncate count xs = List.truncate count xs
 
-  go xs
-
-let listItem i xs =
-  match listSkip i xs with
-  | item :: _ -> item
-  | _ -> failwith "listItem: out of range"
-
-let listTryFind pred xs =
-  let rec go xs =
-    match xs with
-    | [] -> None
-
-    | x :: _ when pred x -> Some x
-
-    | _ :: xs -> go xs
-
-  go xs
-
-let listTryPick f xs =
-  let rec go xs =
-    match xs with
-    | [] -> None
-
-    | x :: xs ->
-        match f x with
-        | Some x -> Some x
-        | None -> go xs
-
-  go xs
-
-let listSkip count xs =
-  let rec go count xs =
-    match xs with
-    | [] -> []
-
-    | _ when count <= 0 -> xs
-
-    | _ :: xs -> go (count - 1) xs
-
-  go count xs
-
-let listTruncate count xs =
-  let rec go acc count xs =
-    match xs with
-    | [] -> listRev acc
-
-    | _ when count <= 0 -> listRev acc
-
-    | x :: xs -> go (x :: acc) (count - 1) xs
-
-  go [] count xs
-
-let listAppend xs ys =
-  let rec go acc xs =
-    match xs with
-    | [] -> acc
-
-    | x :: xs -> go (x :: acc) xs
-
-  go ys (listRev xs)
+let listAppend xs ys = List.append xs ys
 
 let listSortCore unique cmp xs =
   let rec appendRev acc xs =

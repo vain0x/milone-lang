@@ -5,6 +5,7 @@ module rec MiloneLang.EntryPoint
 // open MiloneLang.Polyfills
 
 // See libcore for implementations.
+open MiloneCore.List
 open MiloneCore.Option
 
 open MiloneLang.Records
