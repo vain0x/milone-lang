@@ -244,14 +244,13 @@ let codeGenHirViaKir host v (expr, tyCtx) =
 let compile host v projectDir: string * bool =
   let syntax = syntacticallyAnalyze host v projectDir
 
-  let expr, tyCtx =
-    semanticallyAnalyze host v syntax
-    |> transformHir host v
+  let expr, tyCtx = semanticallyAnalyze host v syntax
 
   if tyCtx |> tyCtxHasError then
     tyCtx |> tyCtxGetLogs |> printLogs tyCtx
     "", false
   else
+    let expr, tyCtx = transformHir host v (expr, tyCtx)
     codeGenHirViaMir host v (expr, tyCtx)
 
 // -----------------------------------------------
@@ -311,14 +310,13 @@ let cliKirDump host projectDirs =
        let output, success =
          let syntax = syntacticallyAnalyze host v projectDir
 
-         let expr, tyCtx =
-           semanticallyAnalyze host v syntax
-           |> transformHir host v
+         let expr, tyCtx = semanticallyAnalyze host v syntax
 
          if tyCtx |> tyCtxHasError then
            tyCtx |> tyCtxGetLogs |> printLogs tyCtx
            "", false
          else
+           let expr, tyCtx = transformHir host v (expr, tyCtx)
            dumpHirAsKir host v (expr, tyCtx)
 
        let code =
@@ -353,6 +351,7 @@ let cliCompileViaKir host projectDirs =
            tyCtx |> tyCtxGetLogs |> printLogs tyCtx
            "", false
          else
+           let expr, tyCtx = transformHir host v (expr, tyCtx)
            codeGenHirViaKir host v (expr, tyCtx)
 
        let code =

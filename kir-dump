@@ -2,7 +2,7 @@
 
 set -eu
 
-TEST_DIRS=$(find boot/tests/*/* -type d)
+TEST_DIRS=$(find tests/*/* -type d)
 
 ./milone-netcore --kir-dump $TEST_DIRS >kir_dump_tmp.generated.ts || echo '$?='$?
 ./milone-netcore --kir-c $TEST_DIRS >kir_dump_tmp.generated.c || echo '$?='$?

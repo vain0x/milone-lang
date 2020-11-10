@@ -10,6 +10,8 @@ let testsDir =
   lazy
     (
      let rec go (dir: string) =
-       if IO.Path.GetFileName(dir) = "boot" then IO.Path.Combine(dir, "tests") else IO.Path.GetDirectoryName(dir) |> go
+       if File.Exists(Path.Combine(dir, "milone_lang.sln"))
+       then Path.Combine(dir, "tests")
+       else Path.GetDirectoryName(dir) |> go
 
      go Environment.CurrentDirectory)
