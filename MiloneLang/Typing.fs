@@ -184,9 +184,33 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
         ctx
         |> tyCtxWithVars (ctx |> tyCtxGetVars |> mapAdd funSerial varDef)
 
+      // Mark generalized meta tys (universally quantified vars),
+      // by increasing their depth to infinite.
+      let ctx =
+        let (TyScheme (fvs, _)) = funTyScheme
+        ctx
+        |> tyCtxWithTyDepths
+             (fvs
+              |> listFold (fun tyDepths fv -> tyDepths |> mapAdd fv 0x7fffffff) (ctx |> tyCtxGetTyDepths))
+
       ctx
   | FunDef _ -> failwith "Can't generalize already-generalized function"
   | _ -> failwith "Expected function"
+
+/// Substitutes bound meta tys in a ty.
+/// Unbound meta tys are degenerated, i.e. replaced with unit.
+let private tyCtxSubstOrDegenerate ctx ty =
+  let substMeta tySerial =
+    match ctx |> tyCtxGetTys |> mapTryFind tySerial with
+    | Some (MetaTyDef (_, ty, _)) -> Some ty
+
+    | _ ->
+        let depth =
+          ctx |> tyCtxGetTyDepths |> mapFind tySerial
+        // Degenerate unless quantified.
+        if depth <> 0x7fffffff then Some tyUnit else None
+
+  tySubst substMeta ty
 
 /// Creates an expression to abort.
 let hxAbort (ctx: TyCtx) loc =
@@ -776,8 +800,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
 
   let ctx = ctx |> tyCtxResolveTraitBounds
 
-  // Substitute all types.
-  let expr = tyCtxSubstExprTy ctx expr
+  // Substitute all types. Unbound types are degenerated here.
+  let substOrDegenerate = tyCtxSubstOrDegenerate ctx
+  let expr = exprMap substOrDegenerate id expr
 
   let ctx =
     let vars =
@@ -786,14 +811,14 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
       |> mapMap (fun _ varDef ->
            match varDef with
            | VarDef (ident, storageModifier, ty, loc) ->
-               let ty = tyCtxSubstTy ctx ty
+               let ty = substOrDegenerate ty
                VarDef(ident, storageModifier, ty, loc)
            | FunDef (ident, arity, TyScheme (args, ty), loc) ->
-               let ty = tyCtxSubstTy ctx ty
+               let ty = substOrDegenerate ty
                FunDef(ident, arity, TyScheme(args, ty), loc)
            | VariantDef (ident, tySerial, hasPayload, payloadTy, ty, loc) ->
-               let payloadTy = tyCtxSubstTy ctx payloadTy
-               let ty = tyCtxSubstTy ctx ty
+               let payloadTy = substOrDegenerate payloadTy
+               let ty = substOrDegenerate ty
                VariantDef(ident, tySerial, hasPayload, payloadTy, ty, loc))
 
     ctx |> tyCtxWithVars vars
@@ -811,7 +836,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
                let fields =
                  fields
                  |> listMap (fun (ident, ty, loc) ->
-                      let ty = tyCtxSubstTy ctx ty
+                      let ty = substOrDegenerate ty
                       ident, ty, loc)
 
                Some(tySerial, RecordTyDef(ident, fields, loc))
