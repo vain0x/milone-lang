@@ -96,7 +96,7 @@ let listLastTest () = [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
 
 [<Fact>]
 let listSkipTest () =
-  [ 3; 1; 4; 1; 5; 9 ] |> listSkip 4 |> is [ 5; 9 ]
+  [ 3; 1; 4; 1; 5; 9 ] |> List.skip 4 |> is [ 5; 9 ]
 
 [<Fact>]
 let listTruncateTest () =

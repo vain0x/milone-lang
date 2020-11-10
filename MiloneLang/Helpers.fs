@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listSkip count xs = List.skip count xs
-
 let listTruncate count xs = List.truncate count xs
 
 let listAppend xs ys = List.append xs ys
@@ -98,7 +96,7 @@ let listSortCore unique cmp xs =
   // and `d` is the number of duplicated items.
   let rec go (xs, n) =
     if n <= 1 then
-      (xs, n), listSkip n xs, 0
+      (xs, n), List.skip n xs, 0
     else
       let m = n / 2
       let (xs, xn), xs1, d1 = go (xs, m)
