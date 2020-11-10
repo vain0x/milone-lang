@@ -120,7 +120,7 @@ let tyCtxUnifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
 /// without this checking (according to TaPL).
 let tyGeneralize isOwned (ty: Ty) =
   let fvs =
-    tyCollectFreeVars ty |> listFilter isOwned
+    tyCollectFreeVars ty |> List.filter isOwned
 
   TyScheme(fvs, ty)
 

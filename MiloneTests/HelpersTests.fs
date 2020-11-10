@@ -34,7 +34,7 @@ let listMapWithIndexTest () =
 [<Fact>]
 let listFilterTest () =
   [ 3; 1; 4; 1 ]
-  |> listFilter (fun x -> x > 1)
+  |> List.filter (fun x -> x > 1)
   |> is [ 3; 4 ]
 
 [<Fact>]
