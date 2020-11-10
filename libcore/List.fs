@@ -183,7 +183,7 @@ let last (xs: _ list) =
 let item (i: int) (xs: _ list) =
   match skip i xs with
   | x :: _ -> x
-  | _ -> failwith "listItem: out of range"
+  | _ -> failwith "List.item: out of range"
 
 let tryFind (pred: _ -> bool) (xs: _ list): _ option =
   let rec listTryFindLoop xs =

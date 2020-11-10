@@ -81,7 +81,7 @@ let private teExpr ctx expr =
               | _ -> failwithf "NEVER: %A" expr
 
             let itemExpr index =
-              let itemTy = itemTys |> listItem index
+              let itemTy = itemTys |> List.item index
               HInfExpr(InfOp.TupleItem index, [ baseExpr ], itemTy, loc)
 
             let n = itemTys |> List.length

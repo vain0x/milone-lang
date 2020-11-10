@@ -219,7 +219,7 @@ let private selectTy ty path ctx =
 
   | KFieldPath (i, _) ->
       match ty with
-      | AppTy (TupleTyCtor, itemTys) -> itemTys |> listItem i
+      | AppTy (TupleTyCtor, itemTys) -> itemTys |> List.item i
       | _ -> unreachable (ty, path)
 
   | KTagPath _ -> tyInt

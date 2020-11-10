@@ -57,8 +57,6 @@ let exMap f (xs, acc, ctx) =
 
 let cons head tail = head :: tail
 
-let listItem i xs = List.item i xs
-
 let listTryFind pred xs = List.tryFind pred xs
 
 let listTryPick f xs = List.tryPick f xs
