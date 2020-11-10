@@ -7,6 +7,7 @@ open MiloneLang.Helpers
 open MiloneLang.Lexing
 open MiloneLang.Parsing
 open MiloneLang.AstToHir
+open MiloneLang.AutoBoxing
 open MiloneLang.Bundling
 open MiloneLang.NameRes
 open MiloneLang.Typing
@@ -173,6 +174,9 @@ let semanticallyAnalyze host v (expr, nameCtx, errorListList) =
 let transformHir host v (expr, tyCtx) =
   writeLog host v "MainHoist"
   let expr, tyCtx = hoistMain (expr, tyCtx)
+
+  writeLog host v "AutoBoxing"
+  let expr, tyCtx = autoBox (expr, tyCtx)
 
   writeLog host v "TyElaborating"
   let expr, tyCtx = tyElaborate (expr, tyCtx)

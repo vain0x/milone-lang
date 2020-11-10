@@ -5,9 +5,9 @@ open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
 
-let private hxIsRef expr =
+let private hxIsUnboxingRef expr =
   match expr with
-  | HRefExpr _ -> true
+  | HInfExpr (InfOp.App, [ HPrimExpr (HPrim.Unbox, _, _); HRefExpr _ ], _, _) -> true
   | _ -> false
 
 let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
@@ -58,9 +58,10 @@ let private teExpr ctx expr =
               | _ -> failwithf "NEVER: %A" expr
           | _ -> failwithf "NEVER: %A" expr
 
+        // Base expr is guaranteed to be a cheap expr thanks to modification in Typing,
+        // so we can freely clone this.
         let baseOpt =
-          // Base expr is guaranteed to be a ref thanks to modification in Typing.
-          assert (baseOpt |> optionAll hxIsRef)
+          assert (baseOpt |> optionAll hxIsUnboxingRef)
 
           baseOpt |> optionMap (teExpr ctx)
 

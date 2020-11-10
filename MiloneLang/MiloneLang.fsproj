@@ -16,6 +16,7 @@
     <Compile Include="Typing.fs" />
     <Compile Include="Hoist.fs" />
     <Compile Include="MainHoist.fs" />
+    <Compile Include="AutoBoxing.fs" />
     <Compile Include="TyElaborating.fs" />
     <Compile Include="ClosureConversion.fs" />
     <Compile Include="EtaExpansion.fs" />

@@ -185,13 +185,13 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
         |> tyCtxWithVars (ctx |> tyCtxGetVars |> mapAdd funSerial varDef)
 
       // Mark generalized meta tys (universally quantified vars),
-      // by increasing their depth to infinite.
+      // by increasing their depth to infinite (10^9).
       let ctx =
         let (TyScheme (fvs, _)) = funTyScheme
         ctx
         |> tyCtxWithTyDepths
              (fvs
-              |> listFold (fun tyDepths fv -> tyDepths |> mapAdd fv 0x7fffffff) (ctx |> tyCtxGetTyDepths))
+              |> listFold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx |> tyCtxGetTyDepths))
 
       ctx
   | FunDef _ -> failwith "Can't generalize already-generalized function"
@@ -208,7 +208,7 @@ let private tyCtxSubstOrDegenerate ctx ty =
         let depth =
           ctx |> tyCtxGetTyDepths |> mapFind tySerial
         // Degenerate unless quantified.
-        if depth <> 0x7fffffff then Some tyUnit else None
+        if depth < 1000000000 then Some tyUnit else None
 
   tySubst substMeta ty
 
