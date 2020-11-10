@@ -8,6 +8,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="Records.fs" />
     <Compile Include="Helpers.fs" />
+    <Compile Include="TySystem.fs" />
     <Compile Include="Lexing.fs" />
     <Compile Include="Parsing.fs" />
     <Compile Include="AstToHir.fs" />

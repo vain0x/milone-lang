@@ -43,10 +43,11 @@
 /// ```
 module rec MiloneLang.EtaExpansion
 
-open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Typing
+open MiloneLang.Helpers
 open MiloneLang.Records
+open MiloneLang.TySystem
+open MiloneLang.Typing
 
 [<RequireQualifiedAccess>]
 type CalleeKind =

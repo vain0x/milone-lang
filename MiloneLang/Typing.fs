@@ -14,6 +14,7 @@ module rec MiloneLang.Typing
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
+open MiloneLang.TySystem
 
 let tyCtxGetTy tySerial (ctx: TyCtx) = ctx |> tyCtxGetTys |> mapFind tySerial
 

@@ -402,7 +402,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
         |> MiloneLang.Helpers.mapTryFind tySerial
         |> Option.map MiloneLang.Helpers.tyDefToIdent
 
-      ty |> MiloneLang.Helpers.tyDisplay getTyIdent
+      ty |> MiloneLang.TySystem.tyDisplay getTyIdent
 
     [ for log, loc in tyCtx |> MiloneLang.Records.tyCtxGetLogs do
         let moduleName, row, column = loc

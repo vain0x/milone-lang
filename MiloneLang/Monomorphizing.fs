@@ -54,6 +54,7 @@ module rec MiloneLang.Monomorphizing
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
+open MiloneLang.TySystem
 
 let intTyToHash (value, ty) =
   intHash value |> hashCombine (tyToHash ty)

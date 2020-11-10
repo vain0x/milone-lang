@@ -9,6 +9,7 @@ module rec MiloneLang.CIrGen
 open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.TySystem
 
 let private ctVoidPtr = CPtrTy CVoidTy
 

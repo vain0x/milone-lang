@@ -6,6 +6,7 @@ module rec MiloneLang.AutoBoxing
 open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
+open MiloneLang.TySystem
 
 let private hxBox itemExpr itemTy loc =
   hxApp (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) itemExpr tyObj loc
