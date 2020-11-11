@@ -1,13 +1,14 @@
 /// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
-/// Unique serial number as identity.
+/// Unique serial number to identify something
+/// such as variables, nominal types, etc.
 type Serial = int
 
-/// Identifier or name of something.
+/// Identifier. Name of something.
 type Ident = string
 
-/// Literal of primitive value.
+/// Literal of primitive, non-generic value.
 type Lit =
   | BoolLit of bool
   | IntLit of int
@@ -54,18 +55,20 @@ type OpenKind =
 // Syntax types
 // -----------------------------------------------
 
-/// 0-indexed.
+/// 0-indexed. Row number.
 type RowIndex = int
 
-/// 0-indexed.
+/// 0-indexed. Column number.
 type ColumnIndex = int
 
-/// Position in a file.
+/// Position. Coordinate in a file.
 type Pos = RowIndex * ColumnIndex
 
 /// Words and punctuations in source code.
 type Token =
+  /// Illegal bytes, etc.
   | ErrorToken
+
   | IntToken of int
   | CharToken of char
   | StrToken of string
@@ -155,12 +158,12 @@ type Token =
   | WhenToken
   | WithToken
 
-/// Unary operators in AST.
+/// Unary operator.
 type Unary =
-  /// `-`
+  /// `-` Negation
   | NegUnary
 
-/// Binding power of operators.
+/// Binding power.
 type Bp =
   | PrefixBp
   | MulBp
@@ -173,91 +176,128 @@ type Bp =
   | AndBp
   | OrBp
 
-/// Binary operators in AST.
+/// Binary operator.
 type Binary =
-  /// `*` Multiplier
+  /// `*` Multiplication
   | MulBinary
-  /// `/` Divisor
+  /// `/` Division
   | DivBinary
   /// `%` Modulo
   | ModBinary
   /// `+` Addition
   | AddBinary
-  /// `-` Subtract
+  /// `-` Subtraction
   | SubBinary
-  /// `=` Equal
+  /// `=`
   | EqualBinary
-  /// `<>` Not Equal
+  /// `<>`
   | NotEqualBinary
-  /// `<` Less than
+  /// `<`
   | LessBinary
-  /// `<=` Less than or equal to
+  /// `<=`
   | LessEqualBinary
-  /// `>` Greater than
+  /// `>`
   | GreaterBinary
-  /// `>=` Greater than or equal to
+  /// `>=`
   | GreaterEqualBinary
   /// `|>`
   | PipeBinary
-  /// `&&`
+  /// `&&` Logical and
   | LogAndBinary
-  /// `||`
+  /// `||` Logical or
   | LogOrBinary
-  /// `f x` Application
+  /// `f x` Functional application
   | AppBinary
-  /// `::` Cons cell constructor
+  /// `::` Construction
   | ConsBinary
 
 /// Type expression in AST.
 type ATy =
   | AMissingTy of Pos
+
+  /// Type application, e.g. `AssocMap<K, V>`.
   | AAppTy of Ident * ATy list * Pos
+
+  /// Type suffix, e.g. `T list`.
   | ASuffixTy of ATy * Ident * Pos
+
   /// Tuple type, e.g. `int * string`.
   | ATupleTy of ATy list * Pos
+
   /// Function type, e.g. `int -> string`.
   | AFunTy of ATy * ATy * Pos
 
 /// Pattern in AST.
 type APat =
   | AMissingPat of Pos
+
   | ALitPat of Lit * Pos
+
+  /// Pattern that is non-keyword identifier.
+  /// Variable (`x`), wildcard (`_`) or variant (`None`).
   | AIdentPat of Ident * Pos
+
+  /// E.g. `[x; y; z]`.
   | AListPat of APat list * Pos
+
+  /// Navigation, e.g. `Foo.Bar`.
   | ANavPat of APat * Ident * Pos
-  /// Variant deconstruction. e.g. `Some x`.
+
+  /// Application. e.g. `Some x`.
+  ///
+  /// Used only for variant destruction.
+  /// AFunDeclPat is used for `let`.
   | AAppPat of APat * APat list * Pos
+
   /// `::`
   | AConsPat of APat * APat * Pos
+
+  /// E.g. `x, y, z`.
   | ATuplePat of APat list * Pos
+
+  /// E.g. `(Some x) as opt`.
   | AAsPat of APat * Ident * Pos
+
   /// Type annotation, e.g. `x: int`.
   | AAnnoPat of APat * ATy * Pos
+
+  /// E.g. `l | r`
   | AOrPat of APat * APat * Pos
+
   /// Function declaration pattern, e.g. `f x y`.
-  /// Syntactically distinct from the call pattern.
+  /// Syntactically distinct from the app pattern for technically reason.
   | AFunDeclPat of Ident * APat list * Pos
 
-/// Match arm node in AST.
+/// Arm of match expression in AST.
+///
+/// `| pat when guard -> body`
 type AArm =
   /// (pattern, guard, body).
   | AArm of APat * AExpr * AExpr * Pos
 
-/// Variant node in AST.
+/// Declaration of variant in AST.
+///
+/// E.g. `| Card of Suit * Rank` (with `of`)
+/// or `| Joker` (without `of`).
 type AVariant =
   /// (identifier, payload-type).
   | AVariant of Ident * ATy option * Pos
+
+/// Field declaration in AST.
+///
+/// E.g. `Name: string`.
+type AFieldDecl = Ident * ATy * Pos
 
 /// Let expression in AST.
 type ALet =
   | ALetVal of Vis * APat * AExpr * AExpr * Pos
   | ALetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
 
-type AFieldDecl = Ident * ATy * Pos
-
 /// Body of type declaration in AST.
 type ATyDecl =
+  /// E.g. `type Serial = int`.
   | ATySynonymDecl of ATy
+
   | AUnionTyDecl of AVariant list
   | ARecordTyDecl of AFieldDecl list
 
@@ -265,38 +305,65 @@ type ATyDecl =
 type AExpr =
   | AMissingExpr of Pos
   | ALitExpr of Lit * Pos
+
+  /// E.g. `x`.
   | AIdentExpr of Ident * Pos
+
   /// List literal, e.g. `[]`, `[2; 3]`.
   | AListExpr of AExpr list * Pos
+
   /// Record literal, e.g. `{}`, `{ X = 1; Y = 2 }`.
   | ARecordExpr of AExpr option * (Ident * AExpr * Pos) list * Pos
-  /// condition, then-clause, else-clause.
-  | AIfExpr of AExpr * AExpr * AExpr * Pos
-  | AMatchExpr of AExpr * AArm list * Pos
+
+  /// `if cond then body else alt`. alt is filled with `()` if omit.
+  | AIfExpr of cond: AExpr * body: AExpr * alt: AExpr * Pos
+
+  /// `match cond with (| pat when guard -> body)*`
+  | AMatchExpr of cond: AExpr * arms: AArm list * Pos
+
+  /// `fun pat1 pat2 ... -> body`
   | AFunExpr of APat list * AExpr * Pos
-  /// Navigation expression, e.g. `str.Length`.
+
+  /// Navigation, e.g. `str.Length`.
   | ANavExpr of AExpr * Ident * Pos
+
+  /// E.g. `str.[i]`.
   | AIndexExpr of AExpr * AExpr * Pos
+
   /// Unary operation, e.g. `-x`.
   /// Currently `-` is the only unary operation.
   | AUnaryExpr of Unary * AExpr * Pos
-  /// Binary operation, e.g. `x + y`.
+
+  /// Binary operation, e.g. `x + y`, `f x`.
   | ABinaryExpr of Binary * AExpr * AExpr * Pos
-  /// Range syntax, e.g. `first..last`, `first .. step .. last`.
+
+  /// Range syntax, e.g. `first..last`.
+  ///
+  /// This could be first .. step .. last` but not supported yet.
   | ARangeExpr of AExpr list * Pos
-  /// Tuple literal, e.g. `()`, `2, "two"`.
+
+  /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
   | ATupleExpr of AExpr list * Pos
-  /// Type annotation.
+
+  /// Type annotation, e.g. `None: int option`.
   | AAnnoExpr of AExpr * ATy * Pos
+
   /// Semicolon-separated expressions.
   | ASemiExpr of AExpr list * Pos
+
   /// (pattern, initializer, next). Let-in expression.
   | ALetExpr of Vis * APat * AExpr * AExpr * Pos
-  /// Type synonym definition, e.g. `type UserId = int`.
+
+  /// Type synonym declaration, e.g. `type UserId = int`.
   | ATySynonymExpr of Vis * Ident * ATy * Pos
-  /// Discriminated union type definition, e.g. `type Result = | Ok | Err of int`.
+
+  /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
   | AUnionTyExpr of Vis * Ident * AVariant list * Pos
+
+  /// Record type declaration, e.g. `type Pos = { X: int; Y: int }`.
   | ARecordTyExpr of Vis * Ident * AFieldDecl list * Pos
+
+  /// Open statement, e.g. `open System.IO`.
   | AOpenExpr of Ident list * Pos
 
 /// Root of AST, a result of parsing single source file.
@@ -308,7 +375,8 @@ type ARoot =
 // Intermediate representation types
 // -----------------------------------------------
 
-/// Something to identify documents (source files).
+/// Identity of documents.
+/// Document can be a source file, an editor tab, or something else.
 type DocId = string
 
 /// Location.
@@ -317,18 +385,16 @@ type Loc = DocId * RowIndex * ColumnIndex
 /// Serial number of types.
 type TySerial = Serial
 
-/// Serial number of variable/function/variants.
+/// Serial number of nominal values: variables, functions, or variants.
 type VarSerial = Serial
 
-/// Serial number of functions.
+/// Serial number of functions. This is essentially a "subtype" of VarSerial.
 type FunSerial = Serial
 
-/// Serial number of variants.
+/// Serial number of variants. This is essentially as "subtype" of VarSerial.
 type VariantSerial = Serial
 
-type JointSerial = Serial
-
-/// Count of parameters or arguments.
+/// Number of parameters.
 type Arity = int
 
 /// Let-depth, i.e. the number of ancestral let nodes
@@ -339,12 +405,17 @@ type Arity = int
 /// Only one exception: recursive function have let-depth deeper by 1.
 type LetDepth = int
 
+/// Where variable is stored.
 type StorageModifier =
+  /// On stack.
   | AutoSM
+
+  /// On static storage.
   | StaticSM
 
 type NameCtx = NameCtx of AssocMap<Serial, Ident> * lastSerial: Serial
 
+// FIXME: Not used?
 type ScopeSerial = Serial
 
 /// Stack of local scopes.
@@ -353,10 +424,10 @@ type ScopeChain = AssocMap<string, Serial * Ident> list
 /// Scope chains, vars and types.
 type Scope = ScopeChain * ScopeChain
 
-/// Namespace of non-local symbols.
+/// Namespace membership.
 type NameTree = NameTree of AssocMap<Serial, Serial list>
 
-/// Type constructors.
+/// Type constructor.
 type TyCtor =
   | BoolTyCtor
   | IntTyCtor
@@ -364,74 +435,112 @@ type TyCtor =
   | CharTyCtor
   | StrTyCtor
   | ObjTyCtor
+
+  /// Ty args must be `[s; t]`.
   | FunTyCtor
+
   | TupleTyCtor
+
+  /// Ty args must be `[t]`.
   | ListTyCtor
-  /// Type reference, i.e. some union type.
-  | RefTyCtor of Serial
+
+  /// Nominal type. Union or record.
+  | RefTyCtor of TySerial
 
 /// Type of expressions.
 type Ty =
   | ErrorTy of Loc
-  /// Type variable, i.e. some binding.
+
+  /// Type variable to be bound or quantified..
   | MetaTy of Serial * Loc
+
+  /// Type application.
   | AppTy of TyCtor * Ty list
 
-/// Generalized type.
+/// Potentially polymorphic type.
 type TyScheme = TyScheme of TySerial list * Ty
 
 /// Type specification.
 type TySpec = TySpec of Ty * Trait list
 
-/// Traits: kind of type constraints.
-/// NOTE: `trait` is a reserved word in F#.
+/// Trait, a constraint about types.
+// NOTE: `trait` is a reserved word in F#.
 type Trait =
+  /// The type supports `+`.
   | AddTrait of Ty
+
+  /// The type is scalar.
   | ScalarTrait of Ty
+
+  /// The type supports `=`.
   | EqTrait of Ty
+
+  /// The type supports `<`.
   | CmpTrait of Ty
+
+  /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
   | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
+
+  /// Type can be applied to `int`/`uint` function.
   | ToIntTrait of Ty
+
+  /// Type can be applied to `string` function.
   | ToStringTrait of Ty
 
 /// Type declaration.
 type TyDecl =
   | TySynonymDecl of ty: Ty * Loc
+
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
   | UnionTyDecl of Ident * variants: (Ident * VarSerial * bool * Ty) list * Loc
+
   | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * Loc
 
 /// Type definition.
 type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ident * Ty * Loc
+
   | UnionTyDef of Ident * VariantSerial list * Loc
+
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+
+  //// Module is a type so that it can be used as namespace.
   | ModuleTyDef of Ident * Loc
 
-/// Variable definition in high-level IR.
+/// Definition of named value in high-level IR.
 type VarDef =
   | VarDef of Ident * StorageModifier * Ty * Loc
   | FunDef of Ident * Arity * TyScheme * Loc
-  /// Variant constructor.
   | VariantDef of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
 
 /// Pattern in high-level IR.
 type HPat =
   | HLitPat of Lit * Loc
+
   /// `[]`
   | HNilPat of itemTy: Ty * Loc
+
   | HNonePat of itemTy: Ty * Loc
   | HSomePat of itemTy: Ty * Loc
+
   /// `_`
   | HDiscardPat of Ty * Loc
-  /// Variable pattern.
+
+  /// Variable or variant pattern.
   | HRefPat of VarSerial * Ty * Loc
+
+  /// Navigation, e.g. `Result.Ok _`.
   | HNavPat of HPat * Ident * Ty * Loc
+
+  /// Variant decomposition, e.g. `Some x`.
   | HCallPat of callee: HPat * args: HPat list * Ty * Loc
+
   /// `::`
   | HConsPat of HPat * HPat * itemTy: Ty * Loc
+
+  /// e.g. `x, y, z`
   | HTuplePat of HPat list * tupleTy: Ty * Loc
 
   /// Used to dereference a box inside of pattern matching.
@@ -445,8 +554,11 @@ type HPat =
   | HBoxPat of HPat * Loc
 
   | HAsPat of HPat * VarSerial * Loc
-  /// Type annotation pattern, e.g. `x : int`.
+
+  /// Type annotation, e.g. `x: int`.
   | HAnnoPat of HPat * Ty * Loc
+
+  /// Disjunction.
   | HOrPat of HPat * HPat * Ty * Loc
 
 /// Primitive in high-level IR.
@@ -482,37 +594,54 @@ type HPrim =
 [<RequireQualifiedAccess>]
 type InfOp =
   | App
+
   /// Type annotation `x : 'x`.
   | Anno
+
   /// `x; y`
   | Semi
+
   /// Direct call to procedure or primitive.
   | CallProc
+
   /// Indirect call to closure.
   | CallClosure
+
   /// Direct call to current procedure at the end of function (i.e. tail-call).
   | CallTailRec
+
   /// Tuple constructor, e.g. `x, y, z`.
   | Tuple
+
   /// Closure constructor.
   | Closure
+
   /// Get an item of tuple.
   | TupleItem of index: int
 
 /// Expression in HIR.
 type HExpr =
   | HLitExpr of Lit * Loc
-  /// Variable reference.
+
+  /// Use of named value: variable, function or variant.
   | HRefExpr of VarSerial * Ty * Loc
+
   | HPrimExpr of HPrim * Ty * Loc
-  | HRecordExpr of HExpr option * (Ident * HExpr * Loc) list * Ty * Loc
-  | HMatchExpr of target: HExpr * (HPat * HExpr * HExpr) list * Ty * Loc
-  /// `s.m`
+
+  | HRecordExpr of HExpr option * fields: (Ident * HExpr * Loc) list * Ty * Loc
+
+  /// arms: (pat, guard, body). Guard is `true` if omit.
+  | HMatchExpr of target: HExpr * arms: (HPat * HExpr * HExpr) list * Ty * Loc
+
+  /// E.g. `List.isEmpty`, `str.Length`
   | HNavExpr of HExpr * Ident * Ty * Loc
-  /// Operation with infinite arguments.
+
+  /// Some built-in operation.
   | HInfExpr of InfOp * HExpr list * Ty * Loc
+
   | HLetValExpr of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
   | HLetFunExpr of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+
   /// Type declaration.
   | HTyDeclExpr of TySerial * Vis * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
@@ -529,6 +658,8 @@ type MonoMode =
 // -----------------------------------------------
 
 // KIR is continuation passing style (CPS) intermediate representation.
+
+type JointSerial = Serial
 
 /// Primitive in KIR.
 ///
@@ -722,24 +853,37 @@ type MatchIR =
   | Guard of guard: HExpr * nextLabel: Label
   | Body of body: HExpr
 
-/// Unary operator in middle IR.
-/// Or primitive function with single parameter.
+/// Built-in 1-arity operation in middle IR.
 type MUnary =
   | MNotUnary
+
+  /// Gets raw ptr of string.
   | MStrPtrUnary
+
+  /// Gets length of string.
   | MStrLenUnary
+
+  /// Downcast.
   | MUnboxUnary
-  /// Projection. Get an item of tuple.
+
+  /// Projection. Gets an item of tuple.
   | MProjUnary of index: int
-  /// Get union tag.
+
+  /// Gets variant tag of union value.
   | MTagUnary
+
+  /// Gets payload of union value, unchecked.
   | MGetVariantUnary of VariantSerial
+
   | MListIsEmptyUnary
+
+  /// Gets head of list, unchecked.
   | MListHeadUnary
+
+  /// Gets tail of list, unchecked.
   | MListTailUnary
 
-/// Binary operator in middle IR.
-/// Or primitive function with two parameters.
+/// Built-in 2-arity operation in middle IR.
 type MBinary =
   | MMulBinary
   | MDivBinary
@@ -750,52 +894,69 @@ type MBinary =
   | MNotEqualBinary
   | MLessBinary
   | MGreaterEqualBinary
-  /// Concatenate two strings.
   | MStrAddBinary
-  /// Compare two strings.
   | MStrCmpBinary
-  /// Get a char.
+
+  /// `s.[i]`
   | MStrIndexBinary
 
 /// Expression in middle IR.
 type MExpr =
   | MLitExpr of Lit * Loc
+
+  /// Default value of the type.
   | MDefaultExpr of Ty * Loc
+
+  /// Variable.
   | MRefExpr of VarSerial * Ty * Loc
-  /// Procedure
+
+  /// Procedure.
   | MProcExpr of FunSerial * Ty * Loc
+
+  /// Variant constant.
   | MVariantExpr of TySerial * VariantSerial * Ty * Loc
+
+  /// Variant tag value.
   | MTagExpr of VariantSerial * Loc
+
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
-  | MBinaryExpr of MBinary * left: MExpr * right: MExpr * resultTy: Ty * Loc
+  | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
 
 /// Variable initializer in mid-level IR.
 type MInit =
   /// Remain uninitialized at first; initialized later by `MSetStmt`.
   | MUninitInit
+
   | MExprInit of MExpr
+
   /// Call to primitive.
   | MCallPrimInit of HPrim * args: MExpr list * primTy: Ty
+
   /// Direct call to procedure.
   | MCallProcInit of callee: MExpr * args: MExpr list * calleeTy: Ty
+
   /// Indirect call to closure.
   | MCallClosureInit of callee: MExpr * args: MExpr list
+
   /// Construct a closure, packing environment.
   | MClosureInit of subFunSerial: FunSerial * envSerial: VarSerial
+
   | MBoxInit of MExpr
   | MConsInit of head: MExpr * tail: MExpr
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
 
 /// Statement in middle IR.
-/// Doesn't introduce global things, e.g. functions.
 type MStmt =
-  /// Statement to evaluate an expression, e.g. `f ();`.
+  /// Statement to evaluate an expression, e.g. `do f ()`.
   | MDoStmt of MExpr * Loc
+
   /// Declare a local variable.
   | MLetValStmt of VarSerial * MInit * Ty * Loc
+
   /// Set to uninitialized local variable.
   | MSetStmt of VarSerial * init: MExpr * Loc
+
   | MReturnStmt of MExpr * Loc
   | MLabelStmt of Label * Loc
   | MGotoStmt of Label * Loc
@@ -822,13 +983,16 @@ type CTy =
   | CUInt32Ty
   | CCharTy
   | CPtrTy of CTy
-  | CFunPtrTy of CTy list * CTy
+  | CFunPtrTy of argTys: CTy list * resultTy: CTy
   | CStructTy of Ident
   | CEnumTy of Ident
 
-/// Unary operators.
+/// Unary operators in C language.
 type CUnary =
+  /// `!p`
   | CNotUnary
+
+  /// `*p`
   | CDerefUnary
 
 /// Binary operators in C language.
@@ -838,37 +1002,48 @@ type CBinary =
   | CModBinary
   | CAddBinary
   | CSubBinary
-  /// Equal
   | CEqualBinary
-  /// Not Equal
   | CNotEqualBinary
-  /// Less than
   | CLessBinary
-  /// Less than or equal to
   | CLessEqualBinary
-  /// Greater than
   | CGreaterBinary
-  /// Greater than or equal to
   | CGreaterEqualBinary
 
 /// Expression in C language.
 type CExpr =
-  /// `{}`
+  /// `(struct K){}`
   | CDefaultExpr
+
   | CIntExpr of int
   | CCharExpr of char
+
+  /// E.g. `"hi"`
   | CStrRawExpr of string
+
+  /// E.g. `(struct String){.str = "hi", .len = 2}`
   | CStrObjExpr of string
+
+  /// Variable.
   | CRefExpr of Ident
+
   /// `(struct T){.x = x, ..}` Initializer.
   | CInitExpr of fields: (Ident * CExpr) list * CTy
-  /// Projection. Get an item of tuple.
+
+  /// Projection. Field access of tuple.
   | CProjExpr of CExpr * index: int
+
+  /// `(T)x`
   | CCastExpr of CExpr * CTy
+
+  /// `a.x`
   | CNavExpr of CExpr * Ident
+
+  /// `p->x`
   | CArrowExpr of CExpr * Ident
+
   /// `a[i]`
   | CIndexExpr of CExpr * CExpr
+
   | CCallExpr of CExpr * args: CExpr list
   | CUnaryExpr of CUnary * CExpr
   | CBinaryExpr of CBinary * CExpr * CExpr
@@ -877,12 +1052,16 @@ type CExpr =
 type CStmt =
   /// `x;`
   | CExprStmt of CExpr
+
   /// `T x = a;`
   | CLetStmt of Ident * init: CExpr option * CTy
+
   /// `U* x = (U*)malloc(sizeof T);`
   | CLetAllocStmt of Ident * valPtrTy: CTy * varTy: CTy
+
   /// `x = a;`
   | CSetStmt of CExpr * CExpr
+
   | CLabelStmt of Label
   | CGotoStmt of Label
   | CGotoIfStmt of CExpr * Label
@@ -893,7 +1072,23 @@ type CStmt =
 type CDecl =
   /// `#error` directive to cause compile error manually.
   | CErrorDecl of message: string * line: int
+
+  /// Definition of struct type including anonymous union.
+  /// ```c
+  /// struct K {
+  ///   fields...;
+  ///
+  ///   union {  // Omit if no variants.
+  ///     variants...;
+  ///   };
+  /// };
+  /// ```
   | CStructDecl of Ident * fields: (Ident * CTy) list * variants: (Ident * CTy) list
+
+  /// Definition of enum type.
   | CEnumDecl of Ident * variants: Ident list
+
+  /// Definition of global var.
   | CStaticVarDecl of Ident * CTy
-  | CFunDecl of Ident * args: (Ident * CTy) list * CTy * body: CStmt list
+
+  | CFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list
