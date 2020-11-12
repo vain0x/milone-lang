@@ -339,7 +339,7 @@ type AExpr =
 
   /// Range syntax, e.g. `first..last`.
   ///
-  /// This could be first .. step .. last` but not supported yet.
+  /// This could be `first .. step .. last` but not supported yet.
   | ARangeExpr of AExpr list * Pos
 
   /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
