@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eu
+
+TEST_DIRS=$(find tests/*/* -type d)
+
+./milone-netcore --monomorphize-tys $TEST_DIRS >m_tmp.generated.txt || echo '$?='$?
+
+mv -bf m_tmp.generated.txt monomorphize_tys.generated.txt

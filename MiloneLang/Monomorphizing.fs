@@ -358,6 +358,235 @@ let rec monifyExpr (expr, ctx) =
   | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
+// -----------------------------------------------
+// Type monomorphization
+// -----------------------------------------------
+
+// Used in MIR. This code doesn't need to be here.
+
+/// Monomorphized type.
+type MonoTy =
+  | UnitMonoTy
+  | BoolMonoTy
+  | IntMonoTy
+  | UIntMonoTy
+  | CharMonoTy
+  | StrMonoTy
+  | ObjMonoTy
+  | RefMonoTy of TySerial
+
+  // hotfix
+  | UnexpectedMonoTy of TySerial * Loc
+
+let private monoTyToTag ty =
+  match ty with
+  | UnitMonoTy -> 0
+  | BoolMonoTy -> 1
+  | IntMonoTy -> 2
+  | UIntMonoTy -> 3
+  | CharMonoTy -> 4
+  | StrMonoTy -> 5
+  | ObjMonoTy -> 6
+  | RefMonoTy tySerial -> 100 + tySerial
+  | UnexpectedMonoTy (tySerial, _) -> 0x8000 + tySerial
+
+let monoTyHash ty = intHash (monoTyToTag ty)
+
+let monoTyCmp l r = intCmp (monoTyToTag l) (monoTyToTag r)
+
+type MonoTySerial = Serial
+
+type MonoTyCtx =
+  { LastSerial: int
+    MonoTyDefs: AssocMap<MonoTySerial, MonoTyDef>
+
+    // Mapping from type arguments to its monomorphization instance.
+    // E.g. int * string: (int, string) -> RefMonoTy IntStringPair.Serial
+    //      where struct IntStringPair(int,string)
+    TupleMemo: AssocMap<Ty list, MonoTy>
+    FunMemo: AssocMap<Ty * Ty, MonoTy>
+    ListMemo: AssocMap<Ty, MonoTy> }
+
+let monoTyCtxOfTyCtx _tyCtx: MonoTyCtx =
+  { LastSerial = 0
+    MonoTyDefs = mapEmpty (intHash, intCmp)
+    TupleMemo = mapEmpty (listHash tyHash, listCmp tyCmp)
+    FunMemo = mapEmpty (pairHash tyHash tyHash, pairCmp tyCmp tyCmp)
+    ListMemo = mapEmpty (tyHash, tyCmp) }
+
+let private freshMonoTySerial (ctx: MonoTyCtx): int * MonoTyCtx =
+  let serial = ctx.LastSerial + 1
+  serial, { ctx with LastSerial = serial }
+
+let private addMonoTyDef monoTySerial def (ctx: MonoTyCtx) =
+  let ctx =
+    { ctx with
+        MonoTyDefs = ctx.MonoTyDefs |> mapAdd monoTySerial def }
+
+  RefMonoTy monoTySerial, ctx
+
+//   | ListMonoTy itemTy ->
+//       let itemTy, ctx = (itemTy, ctx) |> touchMonoTy
+
+//       match ctx.MonoLists |> mapTryFind itemTy with
+//       | Some ty -> ty, ctx
+//       | None ->
+//           let ty = ListMonoTy itemTy
+
+//           let ctx =
+//             { ctx with
+//                 MonoLists = ctx.MonoLists |> mapAdd itemTy ty }
+
+//           ty, ctx
+
+//   | FunMonoTy (sTy, tTy) ->
+//       let sTy, ctx = (sTy, ctx) |> touchMonoTy
+//       let tTy, ctx = (tTy, ctx) |> touchMonoTy
+
+//       match ctx.MonoFuns |> mapTryFind (sTy, tTy) with
+//       | Some ty -> ty, ctx
+//       | None ->
+//           let ty = FunMonoTy(sTy, tTy)
+
+//           let ctx =
+//             { ctx with
+//                 MonoFuns = ctx.MonoFuns |> mapAdd (sTy, tTy) ty }
+
+//           ty, ctx
+
+type MonoTyDef =
+  | TupleMonoTyDef of Ident * fields: MonoTy list
+  | EnumMonoTyDef of Ident * variantIdents: string list
+  | SumMonoTyDef of Ident * tag: MonoTySerial * payloadTy: MonoTy
+
+let mtTy (ty, ctx) =
+  // FIXME: It seems a bug that meta ty still exists after monomorphization...
+  // if ty |> tyIsMonomorphic |> not then printfn "MetaTy: %A" ty
+
+  match ty with
+  | ErrorTy loc ->
+      // eprintfn "ErrorTy: %A" loc
+      UnexpectedMonoTy(0, loc), ctx
+
+  | MetaTy (tySerial, loc) ->
+      // eprintfn "MetaTy: %d %A" tySerial loc
+      UnexpectedMonoTy(tySerial, loc), ctx
+
+  | AppTy (tyCtor, tyArgs) ->
+      match tyCtor with
+      | BoolTyCtor -> BoolMonoTy, ctx
+      | IntTyCtor -> IntMonoTy, ctx
+      | UIntTyCtor -> UIntMonoTy, ctx
+      | CharTyCtor -> CharMonoTy, ctx
+      | StrTyCtor -> StrMonoTy, ctx
+      | ObjTyCtor -> ObjMonoTy, ctx
+
+      | RefTyCtor tySerial ->
+          // generics is unimplemented
+          assert (List.isEmpty tyArgs)
+          RefMonoTy tySerial, ctx
+
+      | TupleTyCtor when List.isEmpty tyArgs -> UnitMonoTy, ctx
+
+      | TupleTyCtor ->
+          match ctx.TupleMemo |> mapTryFind tyArgs with
+          | Some ty -> ty, ctx
+
+          | None ->
+              let tySerial, ctx = ctx |> freshMonoTySerial
+
+              // Update the memo first to avoid infinite recursion.
+              let refTy = RefMonoTy tySerial
+
+              let ctx =
+                { ctx with
+                    TupleMemo = ctx.TupleMemo |> mapAdd tyArgs refTy }
+
+              let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
+
+              ctx
+              |> addMonoTyDef tySerial (TupleMonoTyDef("t" + string (List.length tyArgs), tyArgs))
+
+      | FunTyCtor -> RefMonoTy 0, ctx
+      // match tyArgs with
+      // | [ sTy; tTy ] -> touchMonoTy (FunMonoTy(sTy, tTy), ctx)
+      // | _ -> failwithf "NEVER: %A" ty
+
+      | ListTyCtor -> RefMonoTy 0, ctx
+//     match tyArgs with
+//     | [ itemTy ] -> touchMonoTy (ListMonoTy itemTy, ctx)
+//     | _ -> failwithf "NEVER: %A" ty
+
+let mtPat _pat ctx = ctx
+
+let mtExpr expr ctx =
+  match expr with
+  | HErrorExpr _
+  | HTyDeclExpr _
+  | HOpenExpr _
+  | HLitExpr _ -> ctx
+
+  | HPrimExpr (_, ty, _) ->
+      let _, ctx = (ty, ctx) |> mtTy
+      ctx
+
+  | HRefExpr (_, ty, _) ->
+      let _, ctx = (ty, ctx) |> mtTy
+      ctx
+
+  | HRecordExpr (baseOpt, fields, _, _) ->
+      let ctx =
+        match baseOpt with
+        | Some baseExpr -> ctx |> mtExpr baseExpr
+        | None -> ctx
+
+      fields
+      |> List.fold (fun ctx (_, init, _) -> ctx |> mtExpr init) ctx
+
+  | HMatchExpr (cond, arms, ty, _) ->
+      let ctx = ctx |> mtExpr cond
+
+      let ctx =
+        arms
+        |> List.fold (fun ctx (pat, guard, body) -> ctx |> mtPat pat |> mtExpr guard |> mtExpr body) ctx
+
+      let _, ctx = mtTy (ty, ctx)
+      ctx
+
+  | HInfExpr (_, args, ty, _) ->
+      let ctx =
+        args
+        |> List.fold (fun ctx arg -> mtExpr arg ctx) ctx
+
+      let _, ctx = (ty, ctx) |> mtTy
+      ctx
+
+  | HLetValExpr (_, pat, init, next, ty, _) ->
+      let ctx = ctx |> mtExpr init |> mtPat pat
+      let _, ctx = (ty, ctx) |> mtTy
+      ctx |> mtExpr next
+
+  | HLetFunExpr (_, _, _, args, body, next, ty, _) ->
+      let ctx =
+        args
+        |> List.fold (fun ctx arg -> mtPat arg ctx) ctx
+        |> mtExpr body
+
+      let _, ctx = (ty, ctx) |> mtTy
+      ctx |> mtExpr next
+
+  | HNavExpr _ -> failwithf "NEVER: HNavExpr is resolved in NameRes or Typing. %A" expr
+  | HModuleExpr _ -> failwithf "NEVER: HModuleExpr is resolved in NameRes. %A" expr
+
+let monomorphizeTys (expr, tyCtx) =
+  let ctx = monoTyCtxOfTyCtx tyCtx
+
+  ctx |> mtExpr expr
+
+// -----------------------------------------------
+// interface
+// -----------------------------------------------
+
 let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let monoCtx =
     monoCtxFromTyCtx tyCtx

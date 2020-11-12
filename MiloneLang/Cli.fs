@@ -296,6 +296,46 @@ let cliParse host verbosity (projectDir: string) =
   |> ignore
   0
 
+let cliMonomorphizeTys host projectDirs =
+  let v = Quiet
+  printfn "// Type monomorphization experiment.\n"
+
+  projectDirs
+  |> List.fold (fun code projectDir ->
+       printfn "// -------------------------------\n// %s\n" projectDir
+       printfn "/*"
+
+       let output, success =
+         let syntax = syntacticallyAnalyze host v projectDir
+
+         let expr, tyCtx = semanticallyAnalyze host v syntax
+
+         if tyCtx |> tyCtxHasError then
+           tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+           "", false
+         else
+           let expr, tyCtx = transformHir host v (expr, tyCtx)
+
+           let ctx =
+             Monomorphizing.monomorphizeTys (expr, tyCtx)
+
+           ctx.MonoTyDefs
+           |> mapFold (fun () tySerial tyDef -> printfn "%d: %A" tySerial tyDef) ()
+
+           "", true
+
+       let code =
+         if success then
+           printfn "*/"
+           printfn "%s" (output |> strTrimEnd)
+           code
+         else
+           printfn "\n%s\n*/" output
+           1
+
+       printfn "\n// exit = %d\n" code
+       code) 0
+
 let cliCompile host verbosity projectDir =
   let output, success = compile host verbosity projectDir
   let exitCode = if success then 0 else 1
@@ -384,6 +424,8 @@ let cli (host: CliHost) =
   | [ "parse"; "-v"; projectDir ] -> cliParse host Verbose projectDir
 
   | [ "parse"; "-q"; projectDir ] -> cliParse host Quiet projectDir
+
+  | "--monomorphize-tys" :: projectDirs -> cliMonomorphizeTys host projectDirs
 
   // experimental feature
   | "--kir-dump" :: projectDirs -> cliKirDump host projectDirs
