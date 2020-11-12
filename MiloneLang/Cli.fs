@@ -348,9 +348,7 @@ let cliCompileViaKir host projectDirs =
        let output, success =
          let syntax = syntacticallyAnalyze host v projectDir
 
-         let expr, tyCtx =
-           semanticallyAnalyze host v syntax
-           |> transformHir host v
+         let expr, tyCtx = semanticallyAnalyze host v syntax
 
          if tyCtx |> tyCtxHasError then
            tyCtx |> tyCtxGetLogs |> printLogs tyCtx
