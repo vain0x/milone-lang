@@ -83,23 +83,14 @@ let traitMapTys f it =
 
 let tyHash ty: uint =
   match ty with
-  | ErrorTy (docId, y, x) ->
-      intHash 1
-      |> hashCombine (strHash docId)
-      |> hashCombine (intHash y)
-      |> hashCombine (intHash x)
+  | ErrorTy _ -> intHash 1
 
   | MetaTy (tySerial, _) -> intHash 2 |> hashCombine (intHash tySerial)
 
   | AppTy (tyCtor, tys) ->
-      let rec go h tys =
-        match tys with
-        | [] -> h
-
-        | ty :: tys -> go (hashCombine h (tyHash ty)) tys
-
       intHash 3
-      |> hashCombine (go (tyCtorHash tyCtor) tys)
+      |> hashCombine (tyCtorHash tyCtor)
+      |> hashCombine (listHash tyHash tys)
 
 let tyCmp first second =
   match first, second with
@@ -118,22 +109,7 @@ let tyCmp first second =
 
   | AppTy (firstTyCtor, firstTys), AppTy (secondTyCtor, secondTys) ->
       let c = tyCtorCmp firstTyCtor secondTyCtor
-      if c <> 0 then
-        c
-      else
-        let rec go firstTys secondTys =
-          match firstTys, secondTys with
-          | [], [] -> 0
-
-          | [], _ -> -1
-
-          | _, [] -> 1
-
-          | firstTy :: firstTys, secondTy :: secondTys ->
-              let c = tyCmp firstTy secondTy
-              if c <> 0 then c else go firstTys secondTys
-
-        go firstTys secondTys
+      if c <> 0 then c else listCmp tyCmp firstTys secondTys
 
 let tyEq first second = tyCmp first second = 0
 
