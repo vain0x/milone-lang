@@ -81,7 +81,7 @@ let traitMapTys f it =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
-let tyToHash ty: uint =
+let tyHash ty: uint =
   match ty with
   | ErrorTy (docId, y, x) ->
       intHash 1
@@ -96,7 +96,7 @@ let tyToHash ty: uint =
         match tys with
         | [] -> h
 
-        | ty :: tys -> go (hashCombine h (tyToHash ty)) tys
+        | ty :: tys -> go (hashCombine h (tyHash ty)) tys
 
       intHash 3
       |> hashCombine (go (tyCtorHash tyCtor) tys)

@@ -61,12 +61,12 @@ let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
   let tyNames =
     mirCtx
     |> mirCtxGetTys
-    |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) (tyToHash, tyCmp)
+    |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) (tyHash, tyCmp)
 
   CirCtx
     (mirCtx |> mirCtxGetVars,
      varNames,
-     mapEmpty (tyToHash, tyCmp),
+     mapEmpty (tyHash, tyCmp),
      mirCtx |> mirCtxGetTys,
      tyNames,
      [],
