@@ -52,10 +52,36 @@ let exMap f (xs, acc, ctx) =
   go [] xs acc ctx
 
 // -----------------------------------------------
+// Pair
+// -----------------------------------------------
+
+let pairHash hash1 hash2 (x1, x2) = hashCombine (hash1 x1) (hash2 x2)
+
+let pairCmp cmp1 cmp2 (l1, l2) (r1, r2) =
+  let c = cmp1 l1 r1
+  if c <> 0 then c else cmp2 l2 r2
+
+// -----------------------------------------------
 // List
 // -----------------------------------------------
 
 let cons head tail = head :: tail
+
+let listHash hash xs =
+  xs
+  |> List.fold (fun h x -> hashCombine h (hash x)) (intHash 31)
+
+let listCmp cmp ls rs =
+  let rec go ls rs =
+    match ls, rs with
+    | [], [] -> 0
+    | [], _ -> -1
+    | _, [] -> 1
+    | l :: ls, r :: rs ->
+        let c = cmp l r
+        if c <> 0 then c else go ls rs
+
+  go ls rs
 
 let listSortCore unique cmp xs =
   let rec appendRev acc xs =
