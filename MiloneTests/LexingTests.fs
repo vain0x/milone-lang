@@ -70,6 +70,21 @@ let tokenizeStrLiteral () =
   source |> Lexing.tokenize |> is expected
 
 [<Fact>]
+let tokenizeTyVarIdent () =
+  let source =
+    """type option<'T> = Some of 'T | None"""
+
+  let expected = [ "T", (0, 12); "T", (0, 26) ]
+
+  source
+  |> Lexing.tokenize
+  |> List.choose (fun (token, pos) ->
+       match token with
+       | TyVarToken text -> Some(text, pos)
+       | _ -> None)
+  |> is expected
+
+[<Fact>]
 let tokenizeComplex () =
   let source = """
 let main () =

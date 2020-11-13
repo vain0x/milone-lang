@@ -74,6 +74,9 @@ type Token =
   | StrToken of string
   | IdentToken of Ident
 
+  /// `'T` etc.
+  | TyVarToken of Ident
+
   // punctuations:
   /// `(`
   | LeftParenToken
