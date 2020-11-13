@@ -28,6 +28,7 @@ let tyCtxAddErr (ctx: TyCtx) message loc =
 
 let tyCtxToTyCtx (ctx: TyCtx): TyContext =
   { Serial = ctx |> tyCtxGetSerial
+    LetDepth = ctx |> tyCtxGetLetDepth
     Tys = ctx |> tyCtxGetTys
     TyDepths = ctx |> tyCtxGetTyDepths }
 

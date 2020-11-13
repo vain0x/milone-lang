@@ -307,6 +307,7 @@ let tyDisplay getTyIdent ty =
 /// Type inference context.
 type TyContext =
   { Serial: Serial
+    LetDepth: LetDepth
     Tys: AssocMap<TySerial, TyDef>
     TyDepths: AssocMap<TySerial, LetDepth> }
 
