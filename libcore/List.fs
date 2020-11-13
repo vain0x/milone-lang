@@ -207,3 +207,15 @@ let tryPick (f: _ -> _ option) (xs: _ list): _ option =
         | None -> listTryPickLoop xs
 
   listTryPickLoop xs
+
+let zip (xs: _ list) (ys: _ list): (_ * _) list =
+  let rec listZipLoop acc xs ys =
+    match xs, ys with
+    | [], [] -> rev acc
+
+    | x :: xs, y :: ys -> listZipLoop ((x, y) :: acc) xs ys
+
+    | [], _
+    | _, [] -> failwith "List.zip: Length mismatch."
+
+  listZipLoop [] xs ys
