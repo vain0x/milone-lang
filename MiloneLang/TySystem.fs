@@ -359,6 +359,25 @@ let typingSubst (ctx: TyContext) ty: Ty =
 
   tySubst substMeta ty
 
+type private MetaTyUnifyResult =
+  | DidExpand of Ty
+  | DidBind of TyContext
+  | DidRecurse
+
+let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
+  match ctx.Tys |> mapTryFind tySerial with
+  | Some (MetaTyDef (_, ty, _)) -> DidExpand ty
+
+  | _ ->
+      match typingSubst ctx otherTy with
+      | MetaTy (otherSerial, _) when otherSerial = tySerial -> DidBind ctx
+
+      | otherTy when tyIsFreeIn otherTy tySerial |> not ->
+          // ^ Occurrence check.
+          DidRecurse
+
+      | otherTy -> DidBind(typingBind ctx tySerial otherTy loc)
+
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
 let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
@@ -371,24 +390,37 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
     :: logAcc,
     ctx
 
-  let rec go lty rty (logAcc, ctx) =
-    let lSubstTy = typingSubst ctx lty
-    let rSubstTy = typingSubst ctx rty
-    match lSubstTy, rSubstTy with
-    | MetaTy (l, _), MetaTy (r, _) when l = r -> logAcc, ctx
-    | MetaTy (lSerial, loc), _ when tyIsFreeIn rSubstTy lSerial ->
-        let ctx = typingBind ctx lSerial rty loc
-        logAcc, ctx
-    | _, MetaTy _ -> go rty lty (logAcc, ctx)
-    | AppTy (lTyCtor, []), AppTy (rTyCtor, []) when tyCtorEq lTyCtor rTyCtor -> logAcc, ctx
-    | AppTy (lTyCtor, lTy :: lTys), AppTy (rTyCtor, rTy :: rTys) ->
-        (logAcc, ctx)
-        |> go lTy rTy
-        |> go (AppTy(lTyCtor, lTys)) (AppTy(rTyCtor, rTys))
+  let rec go lTy rTy (logAcc, ctx) =
+    match lTy, rTy with
     | ErrorTy _, _
     | _, ErrorTy _ -> logAcc, ctx
-    | MetaTy _, _ -> addLog TyUnifyLog.SelfRec lSubstTy rSubstTy logAcc ctx
-    | AppTy _, _ -> addLog TyUnifyLog.Mismatch lSubstTy rSubstTy logAcc ctx
+
+    | MetaTy (l, _), MetaTy (r, _) when l = r -> logAcc, ctx
+
+    | MetaTy (lSerial, loc), _ ->
+        match unifyMetaTy lSerial rTy loc ctx with
+        | DidExpand ty -> go ty rTy (logAcc, ctx)
+        | DidBind ctx -> logAcc, ctx
+        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
+
+    | _, MetaTy (rSerial, loc) ->
+        match unifyMetaTy rSerial lTy loc ctx with
+        | DidExpand ty -> go lTy ty (logAcc, ctx)
+        | DidBind ctx -> logAcc, ctx
+        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
+
+    | AppTy (lTyCtor, lTyArgs), AppTy (rTyCtor, rTyArgs) when tyCtorEq lTyCtor rTyCtor ->
+        let rec gogo lTyArgs rTyArgs (logAcc, ctx) =
+          match lTyArgs, rTyArgs with
+          | [], [] -> logAcc, ctx
+
+          | l :: lTyArgs, r :: rTyArgs -> (logAcc, ctx) |> go l r |> gogo lTyArgs rTyArgs
+
+          | _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
+
+        gogo lTyArgs rTyArgs (logAcc, ctx)
+
+    | AppTy _, _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
 
   go lty rty (logAcc, ctx)
 
