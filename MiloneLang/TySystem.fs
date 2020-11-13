@@ -301,6 +301,20 @@ let tyDisplay getTyIdent ty =
   go 0 ty
 
 // -----------------------------------------------
+// Type inference context
+// -----------------------------------------------
+
+/// Type inference context.
+type TyContext =
+  { Serial: Serial
+    Tys: AssocMap<TySerial, TyDef>
+    TyDepths: AssocMap<TySerial, LetDepth> }
+
+let private addTyDef tySerial tyDef (ctx: TyContext) =
+  { ctx with
+      Tys = ctx.Tys |> mapAdd tySerial tyDef }
+
+// -----------------------------------------------
 // Type inference algorithm
 // -----------------------------------------------
 
@@ -313,37 +327,33 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   match typingSubst ctx ty with
   | MetaTy (s, _) when s = tySerial -> ctx
   | ty ->
-
       // Reduce depth of meta tys in the referent ty to the meta ty's depth at most.
       let tyDepths =
-        let depth =
-          ctx |> tyContextGetTyDepths |> mapFind tySerial
+        let depth = ctx.TyDepths |> mapFind tySerial
 
         ty
         |> tyCollectFreeVars
         |> List.fold (fun tyDepths tySerial ->
-             let currentDepth =
-               ctx |> tyContextGetTyDepths |> mapFind tySerial
+             let currentDepth = ctx.TyDepths |> mapFind tySerial
 
              if currentDepth <= depth then
                // Already non-deep enough.
                tyDepths
              else
                // Prevent this meta ty from getting generalized until depth of the bound meta ty.
-               tyDepths |> mapAdd tySerial depth) (ctx |> tyContextGetTyDepths)
+               tyDepths |> mapAdd tySerial depth) ctx.TyDepths
 
-      ctx
-      |> tyContextWithTys
-           (ctx
-            |> tyContextGetTys
-            |> mapAdd tySerial (MetaTyDef(noIdent, ty, loc)))
-      |> tyContextWithTyDepths tyDepths
+      let ctx =
+        ctx
+        |> addTyDef tySerial (MetaTyDef(noIdent, ty, loc))
+
+      { ctx with TyDepths = tyDepths }
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
 let typingSubst (ctx: TyContext) ty: Ty =
   let substMeta tySerial =
-    match ctx |> tyContextGetTys |> mapTryFind tySerial with
+    match ctx.Tys |> mapTryFind tySerial with
     | Some (MetaTyDef (_, ty, _)) -> Some ty
     | _ -> None
 

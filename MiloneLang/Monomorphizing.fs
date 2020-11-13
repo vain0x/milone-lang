@@ -77,14 +77,16 @@ let monoCtxFromTyCtx (tyCtx: TyCtx): MonoCtx =
      0)
 
 let monoCtxToTyCtx (monoCtx: MonoCtx): TyContext =
-  TyContext(monoCtx |> monoCtxGetSerial, monoCtx |> monoCtxGetTys, monoCtx |> monoCtxGetTyDepths)
+  { Serial = monoCtx |> monoCtxGetSerial
+    Tys = monoCtx |> monoCtxGetTys
+    TyDepths = monoCtx |> monoCtxGetTyDepths }
 
 let monoCtxWithTyCtx (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
   monoCtx
-  |> monoCtxWithSerial (tyCtx |> tyContextGetSerial)
-  |> monoCtxWithLogs (logAcc)
-  |> monoCtxWithTys (tyCtx |> tyContextGetTys)
-  |> monoCtxWithTyDepths (tyCtx |> tyContextGetTyDepths)
+  |> monoCtxWithSerial tyCtx.Serial
+  |> monoCtxWithLogs logAcc
+  |> monoCtxWithTys tyCtx.Tys
+  |> monoCtxWithTyDepths tyCtx.TyDepths
 
 let monoCtxBindTy (monoCtx: MonoCtx) tySerial ty loc: MonoCtx =
   monoCtx

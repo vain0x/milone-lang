@@ -32,11 +32,6 @@ ScopeCtx:
   # Current let-depth, the number of ancestral let-body.
   LetDepth: LetDepth
 
-TyContext:
-  Serial: Serial
-  Tys: AssocMap<TySerial, TyDef>
-  TyDepths: AssocMap<TySerial, LetDepth>
-
 TyCtx:
   # Next serial number.
   # We need to identify variables by serial number rather than names

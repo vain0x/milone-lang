@@ -27,13 +27,15 @@ let tyCtxAddErr (ctx: TyCtx) message loc =
   |> tyCtxWithLogs ((Log.Error message, loc) :: (ctx |> tyCtxGetLogs))
 
 let tyCtxToTyCtx (ctx: TyCtx): TyContext =
-  TyContext(ctx |> tyCtxGetSerial, ctx |> tyCtxGetTys, ctx |> tyCtxGetTyDepths)
+  { Serial = ctx |> tyCtxGetSerial
+    Tys = ctx |> tyCtxGetTys
+    TyDepths = ctx |> tyCtxGetTyDepths }
 
 let tyCtxWithTyCtx (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
   ctx
-  |> tyCtxWithSerial (tyCtx |> tyContextGetSerial)
-  |> tyCtxWithTys (tyCtx |> tyContextGetTys)
-  |> tyCtxWithTyDepths (tyCtx |> tyContextGetTyDepths)
+  |> tyCtxWithSerial tyCtx.Serial
+  |> tyCtxWithTys tyCtx.Tys
+  |> tyCtxWithTyDepths tyCtx.TyDepths
   |> tyCtxWithLogs logAcc
 
 /// Be carefully. Let depths must be counted the same as name resolution.

@@ -89,30 +89,6 @@ let scopeCtxWithLocal local (ScopeCtx (serial, nameMap, vars, varDepths, tys, ty
 let scopeCtxWithLetDepth letDepth (ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, _)): ScopeCtx =
   ScopeCtx (serial, nameMap, vars, varDepths, tys, tyDepths, varNs, tyNs, localSerial, local, letDepth)
 
-type TyContext =
-  | TyContext
-    of Serial
-      * AssocMap<TySerial, TyDef>
-      * AssocMap<TySerial, LetDepth>
-
-let tyContextGetSerial (TyContext (serial, _, _)) =
-  serial
-
-let tyContextGetTys (TyContext (_, tys, _)) =
-  tys
-
-let tyContextGetTyDepths (TyContext (_, _, tyDepths)) =
-  tyDepths
-
-let tyContextWithSerial serial (TyContext (_, tys, tyDepths)): TyContext =
-  TyContext (serial, tys, tyDepths)
-
-let tyContextWithTys tys (TyContext (serial, _, tyDepths)): TyContext =
-  TyContext (serial, tys, tyDepths)
-
-let tyContextWithTyDepths tyDepths (TyContext (serial, tys, _)): TyContext =
-  TyContext (serial, tys, tyDepths)
-
 type TyCtx =
   | TyCtx
     of Serial
