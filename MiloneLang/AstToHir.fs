@@ -192,6 +192,12 @@ let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
       tyRef tySerial argTys, nameCtx
 
+  | AVarTy (ident, pos) ->
+      printfn "/* AVarTy '%s %s */" ident (posToString pos)
+
+      let tySerial, nameCtx = nameCtx |> nameCtxAdd "int"
+      tyRef tySerial [], nameCtx
+
   | ASuffixTy (lTy, ident, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> astToHirTy docId
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
@@ -527,8 +533,10 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-  | ATySynonymExpr (vis, ident, ty, pos) ->
+  | ATySynonymExpr (vis, ident, tyArgs, ty, pos) ->
       let doArm () =
+        printfn "/* %s<%s> */" ident (objToString tyArgs)
+
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
         let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
         let loc = toLoc docId pos

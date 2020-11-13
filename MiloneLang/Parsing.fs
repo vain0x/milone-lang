@@ -182,6 +182,8 @@ let parseTyAtom basePos (tokens, errors) =
       let argTys, tokens, errors = parseTyArgs basePos (tokens, errors)
       AAppTy(ident, argTys, pos), tokens, errors
 
+  | (TyVarToken name, pos) :: tokens -> AVarTy(name, pos), tokens, errors
+
   | (LeftParenToken, _) :: tokens ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
 
@@ -748,6 +750,32 @@ let parseTyDecl typePos (tokens, errors) =
   let vis, tokens = parseVis tokens
 
   match tokens with
+  | (IdentToken tyIdent, _) :: (LeftAngleToken, _) :: tokens ->
+      let rec go acc tokens =
+        match tokens with
+        | (TyVarToken ident, _) :: tokens ->
+            let acc = ident :: acc
+
+            match tokens with
+            | (CommaToken, _) :: tokens -> go acc tokens
+
+            | (RightAngleToken, _) :: tokens -> List.rev acc, None, tokens
+
+            | _ -> List.rev acc, Some "Expected '>'.", tokens
+
+        | _ -> List.rev acc, Some "Expected type variable.", tokens
+
+      match go [] tokens with
+      | _, Some msg, tokens -> parseExprError msg (tokens, errors)
+
+      | tyArgs, None, tokens ->
+          let ty, tokens, errors =
+            match tokens with
+            | (EqToken, _) :: tokens -> parseTy basePos (tokens, errors)
+            | _ -> parseTyError "Expected '='." (tokens, errors)
+
+          ATySynonymExpr(vis, tyIdent, tyArgs, ty, typePos), tokens, errors
+
   | (IdentToken tyIdent, _) :: tokens ->
       match tokens with
       | (EqToken, _) :: tokens ->
@@ -755,7 +783,7 @@ let parseTyDecl typePos (tokens, errors) =
 
           let expr =
             match tyDecl with
-            | ATySynonymDecl ty -> ATySynonymExpr(vis, tyIdent, ty, typePos)
+            | ATySynonymDecl ty -> ATySynonymExpr(vis, tyIdent, [], ty, typePos)
 
             | AUnionTyDecl variants -> AUnionTyExpr(vis, tyIdent, variants, typePos)
 
@@ -767,7 +795,7 @@ let parseTyDecl typePos (tokens, errors) =
           let ty, tokens, errors =
             parseTyError "Expected '='" (tokens, errors)
 
-          ATySynonymExpr(vis, tyIdent, ty, typePos), tokens, errors
+          ATySynonymExpr(vis, tyIdent, [], ty, typePos), tokens, errors
 
   | _ -> parseExprError "Expected identifier" (tokens, errors)
 

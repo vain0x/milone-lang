@@ -218,8 +218,11 @@ type Binary =
 type ATy =
   | AMissingTy of Pos
 
-  /// Type application, e.g. `AssocMap<K, V>`.
+  /// Type application, e.g. `int` or `AssocMap<K, V>`.
   | AAppTy of Ident * ATy list * Pos
+
+  /// Type variable, e.g. `'T`.
+  | AVarTy of Ident * Pos
 
   /// Type suffix, e.g. `T list`.
   | ASuffixTy of ATy * Ident * Pos
@@ -358,7 +361,7 @@ type AExpr =
   | ALetExpr of Vis * APat * AExpr * AExpr * Pos
 
   /// Type synonym declaration, e.g. `type UserId = int`.
-  | ATySynonymExpr of Vis * Ident * ATy * Pos
+  | ATySynonymExpr of Vis * Ident * tyArgs: Ident list * ATy * Pos
 
   /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
   | AUnionTyExpr of Vis * Ident * AVariant list * Pos
