@@ -9,7 +9,7 @@ open MiloneLang.TreeMap
 
 type AssocMap<'K, 'V> = TreeMap<'K, 'V>
 
-type AssocSet<'K> = AssocMap<'K, unit>
+type AssocSet<'K> = TreeMap<'K, unit>
 
 // -----------------------------------------------
 // Vocabulary

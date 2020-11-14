@@ -32,7 +32,7 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
         go acc xs
 
   let serialsMap =
-    go (mapEmpty (strHash, strCmp)) (defMap |> mapToList)
+    go (mapEmpty strCmp) (defMap |> mapToList)
 
   let addIdent ident (identMap, index) serial =
     identMap
@@ -56,17 +56,17 @@ let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
   let varNames =
     mirCtx
     |> mirCtxGetVars
-    |> renameIdents varDefToIdent id (intHash, intCmp)
+    |> renameIdents varDefToIdent id intCmp
 
   let tyNames =
     mirCtx
     |> mirCtxGetTys
-    |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) (tyHash, tyCmp)
+    |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) tyCmp
 
   CirCtx
     (mirCtx |> mirCtxGetVars,
      varNames,
-     mapEmpty (tyHash, tyCmp),
+     mapEmpty tyCmp,
      mirCtx |> mirCtxGetTys,
      tyNames,
      [],

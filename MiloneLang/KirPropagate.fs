@@ -7,7 +7,7 @@ open MiloneLang.Helpers
 type ctx = KirPropagateCtx
 
 let private ctxEmpty () =
-  KirPropagateCtx(mapEmpty (intHash, intCmp), mapEmpty (intHash, intCmp))
+  KirPropagateCtx(mapEmpty intCmp, mapEmpty intCmp)
 
 let private findKVarDef varSerial ctx =
   ctx

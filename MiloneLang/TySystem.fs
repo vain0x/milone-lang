@@ -37,8 +37,6 @@ let tyCtorToInt tyCtor =
       assert (tySerial >= 0)
       10 + tySerial
 
-let tyCtorHash tyCtor = tyCtor |> tyCtorToInt |> intHash
-
 let tyCtorCmp first second =
   intCmp (tyCtorToInt first) (tyCtorToInt second)
 
@@ -80,17 +78,6 @@ let traitMapTys f it =
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
-
-let tyHash ty: uint =
-  match ty with
-  | ErrorTy _ -> intHash 1
-
-  | MetaTy (tySerial, _) -> intHash 2 |> hashCombine (intHash tySerial)
-
-  | AppTy (tyCtor, tys) ->
-      intHash 3
-      |> hashCombine (tyCtorHash tyCtor)
-      |> hashCombine (listHash tyHash tys)
 
 let tyCmp first second =
   match first, second with
@@ -208,38 +195,6 @@ let tyDisplay getTyIdent ty =
         | None -> "{?" + string tySerial + "}@" + locToString loc
 
     | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
-
-    // AssocMap.
-    //
-    // AssocMap is now not built-in to language,
-    // but this simplification is still good to have for debugging.
-    // (Ideally we want simplification using type synonyms.)
-    | AppTy (TupleTyCtor,
-             [
-               // trie
-               AppTy (ListTyCtor,
-                      [ AppTy (TupleTyCtor,
-                               [
-                                 // hash
-                                 AppTy (UIntTyCtor, _);
-                                 // assoc
-                                 AppTy (ListTyCtor, [ AppTy (TupleTyCtor, [ keyTy1; valueTy ]) ]) ]) ]);
-               // hash fun
-               AppTy (FunTyCtor, [ keyTy2; AppTy (UIntTyCtor, _) ]);
-               // compare fun
-               AppTy (FunTyCtor, [ keyTy3; AppTy (FunTyCtor, [ keyTy4; AppTy (IntTyCtor, _) ]) ]) ]) when tyEq4
-                                                                                                            keyTy1
-                                                                                                            keyTy2
-                                                                                                            keyTy3
-                                                                                                            keyTy4 ->
-        match valueTy with
-        | AppTy (TupleTyCtor, []) -> "AssocSet<" + go 0 keyTy1 + ">"
-        | _ ->
-            "AssocMap<"
-            + go 0 keyTy1
-            + ", "
-            + go 0 valueTy
-            + ">"
 
     | AppTy (TupleTyCtor, []) -> "unit"
 

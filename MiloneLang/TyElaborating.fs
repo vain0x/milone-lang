@@ -13,7 +13,7 @@ let private hxIsUnboxingRef expr =
 let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
   let vars = tyCtx |> tyCtxGetVars
   let tys = tyCtx |> tyCtxGetTys
-  TyElaborationCtx(vars, tys, mapEmpty (intHash, intCmp))
+  TyElaborationCtx(vars, tys, mapEmpty intCmp)
 
 let private toTyCtx tyCtx (ctx: TyElaborationCtx): TyCtx =
   let (TyCtx (serial, _, _, tyDepths, letDepth, traitBounds, logs)) = tyCtx
@@ -199,12 +199,12 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
              let fieldMap =
                fields
                |> List.mapi (fun i (ident, ty, _) -> ident, (i, ty))
-               |> mapOfList (strHash, strCmp)
+               |> mapOfList strCmp
 
              (tySerial, (tupleTy, fieldMap)) :: acc
 
          | _ -> acc) []
-    |> mapOfList (intHash, intCmp)
+    |> mapOfList intCmp
 
   let vars =
     ctx

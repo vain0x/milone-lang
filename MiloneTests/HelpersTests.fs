@@ -92,7 +92,8 @@ let listReduceTest () =
   |> is 3141
 
 [<Fact>]
-let listLastTest () = [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
+let listLastTest () =
+  [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
 
 [<Fact>]
 let listSkipTest () =
@@ -130,9 +131,7 @@ let listUniqueTest () =
 [<Fact>]
 let mapBasicTest () =
   let m =
-    mapEmpty (strHash, strCmp)
-    |> mapAdd "a" 1
-    |> mapAdd "b" 2
+    mapEmpty strCmp |> mapAdd "a" 1 |> mapAdd "b" 2
 
   m |> mapTryFind "a" |> is (Some 1)
   m |> mapTryFind "b" |> is (Some 2)
@@ -141,16 +140,14 @@ let mapBasicTest () =
 [<Fact>]
 let mapAddTest () =
   let m =
-    mapEmpty (strHash, strCmp)
-    |> mapAdd "a" 1
-    |> mapAdd "a" 2
+    mapEmpty strCmp |> mapAdd "a" 1 |> mapAdd "a" 2
 
   m |> mapTryFind "a" |> is (Some 2)
 
 [<Fact>]
 let mapRemoveTest () =
   let removed, m =
-    mapEmpty (strHash, strCmp)
+    mapEmpty strCmp
     |> mapAdd "a" 1
     |> mapAdd "a" 2
     |> mapAdd "b" 3
@@ -166,7 +163,7 @@ let mapRemoveTest () =
 [<Fact>]
 let mapFoldTest () =
   let m =
-    mapEmpty (strHash, strCmp)
+    mapEmpty strCmp
     |> mapAdd "a" 1
     |> mapAdd "c" 3
     |> mapAdd "a" 2
@@ -177,7 +174,7 @@ let mapFoldTest () =
 
 [<Fact>]
 let mapMapTest () =
-  mapEmpty (strHash, strCmp)
+  mapEmpty strCmp
   |> mapAdd "a" 1
   |> mapAdd "c" 3
   |> mapAdd "a" 2
@@ -187,7 +184,7 @@ let mapMapTest () =
 
 [<Fact>]
 let mapToListTest () =
-  mapEmpty (strHash, strCmp)
+  mapEmpty strCmp
   |> mapAdd "a" 1
   |> mapAdd "c" 3
   |> mapAdd "a" 2
@@ -197,21 +194,20 @@ let mapToListTest () =
 
 [<Fact>]
 let mapOfListTest () =
-  mapOfList (strHash, strCmp) [ "a", 1; "c", 3; "a", 2; "b", 0 ]
+  mapOfList strCmp [ "a", 1; "c", 3; "a", 2; "b", 0 ]
   |> mapToList
   |> is [ "a", 2; "b", 0; "c", 3 ]
 
 [<Fact>]
 let setOfListTest () =
-  let s =
-    setOfList (strHash, strCmp) [ "a"; "b"; "c" ]
+  let s = setOfList strCmp [ "a"; "b"; "c" ]
 
   s |> setContains "a" |> is true
   s |> setContains "d" |> is false
 
 [<Fact>]
 let setToListTest () =
-  setOfList (strHash, strCmp) [ "a"; "b"; "c" ]
+  setOfList strCmp [ "a"; "b"; "c" ]
   |> setAdd "a"
   |> setAdd "d"
   |> setToList
@@ -219,11 +215,9 @@ let setToListTest () =
 
 [<Fact>]
 let setDiffTest () =
-  let first =
-    setOfList (strHash, strCmp) [ "a"; "b"; "c"; "d" ]
+  let first = setOfList strCmp [ "a"; "b"; "c"; "d" ]
 
-  let second =
-    setOfList (strHash, strCmp) [ "a"; "c"; "e"; "f" ]
+  let second = setOfList strCmp [ "a"; "c"; "e"; "f" ]
 
   setDiff first second
   |> setToList

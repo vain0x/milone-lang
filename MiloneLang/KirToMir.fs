@@ -23,7 +23,7 @@ let rec private restoreCalleeTy args ty =
 // KirToMirCtx
 // -----------------------------------------------
 
-let private jointMapEmpty () = mapEmpty (intHash, intCmp)
+let private jointMapEmpty () = mapEmpty intCmp
 
 let private ofKirGenCtx (kirGenCtx: KirGenCtx): KirToMirCtx =
   let (KirGenCtx (serial, vars, tys, logs, mainFunSerial, _, _)) = kirGenCtx
@@ -524,7 +524,7 @@ let private kmFunBinding binding ctx =
 
     let ctx =
       ctx
-      |> kirToMirCtxWithJointMap (mapEmpty (intHash, intCmp))
+      |> kirToMirCtxWithJointMap (mapEmpty intCmp)
       |> kirToMirCtxWithLabels []
       |> kirToMirCtxWithLabelCount 0
 

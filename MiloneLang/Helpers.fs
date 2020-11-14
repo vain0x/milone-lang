@@ -55,8 +55,6 @@ let exMap f (xs, acc, ctx) =
 // Pair
 // -----------------------------------------------
 
-let pairHash hash1 hash2 (x1, x2) = hashCombine (hash1 x1) (hash2 x2)
-
 let pairCmp cmp1 cmp2 (l1, l2) (r1, r2) =
   let c = cmp1 l1 r1
   if c <> 0 then c else cmp2 l2 r2
@@ -66,10 +64,6 @@ let pairCmp cmp1 cmp2 (l1, l2) (r1, r2) =
 // -----------------------------------------------
 
 let cons head tail = head :: tail
-
-let listHash hash xs =
-  xs
-  |> List.fold (fun h x -> hashCombine h (hash x)) (intHash 31)
 
 let listCmp cmp ls rs =
   let rec go ls rs =
@@ -155,9 +149,7 @@ let assocTryFind cmp key assoc =
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty (_hash, cmp): AssocMap<_, _> = TreeMap.empty cmp
-
-let mapKeyHash hash key = hash key % uint 512
+let mapEmpty cmp: AssocMap<_, _> = TreeMap.empty cmp
 
 let mapIsEmpty (map: AssocMap<_, _>) = TreeMap.isEmpty map
 
@@ -189,12 +181,12 @@ let mapToKeys (map: AssocMap<_, _>) = TreeMap.toList map |> List.map fst
 
 let mapToList (map: AssocMap<_, _>) = TreeMap.toList map
 
-let mapOfKeys (_hash, cmp) value keys: AssocMap<_, _> =
+let mapOfKeys cmp value keys: AssocMap<_, _> =
   keys
   |> List.map (fun key -> key, value)
   |> TreeMap.ofList cmp
 
-let mapOfList (_hash, cmp) assoc: AssocMap<_, _> = TreeMap.ofList cmp assoc
+let mapOfList cmp assoc: AssocMap<_, _> = TreeMap.ofList cmp assoc
 
 // -----------------------------------------------
 // AssocSet
@@ -206,7 +198,7 @@ let setContains key (set: AssocSet<_>) = set |> mapContainsKey key
 
 let setToList (set: AssocSet<_>) = set |> mapToKeys
 
-let setOfList (hash, cmp) xs: AssocSet<_> = mapOfKeys (hash, cmp) () xs
+let setOfList cmp xs: AssocSet<_> = mapOfKeys cmp () xs
 
 let setAdd key set: AssocSet<_> = mapAdd key () set
 
@@ -239,8 +231,6 @@ let intCmp (x: int) (y: int) =
   if y < x then 1
   else if y = x then 0
   else -1
-
-let intHash (x: int): uint = uint x
 
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
@@ -281,8 +271,6 @@ let intFromHex (l: int) (r: int) (s: string) =
       go (acc * 16 + d) (i + 1)
 
   go 0 l
-
-let hashCombine (first: uint) (second: uint): uint = first * uint 31 + second
 
 // -----------------------------------------------
 // Char
@@ -337,14 +325,6 @@ let strCmp (x: string) (y: string) =
   if y < x then 1
   else if y = x then 0
   else -1
-
-let strHash (x: string): uint =
-  let step = 1 + x.Length / 128
-
-  let rec go (h: uint) (i: int) =
-    if i >= x.Length then h else go (h * uint 31 + uint x.[i]) (i + step)
-
-  go (uint 17) 0
 
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
@@ -645,7 +625,7 @@ let dumpTreeToString (node: DumpTree) =
 // Name context
 // -----------------------------------------------
 
-let nameCtxEmpty () = NameCtx(mapEmpty (intHash, intCmp), 0)
+let nameCtxEmpty () = NameCtx(mapEmpty intCmp, 0)
 
 let nameCtxAdd ident (NameCtx (map, serial)) =
   let serial = serial + 1
@@ -663,7 +643,7 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
 //   let it = NameTree(mapEmpty (intHash, intCmp))
 //   fun () -> it
 
-let nameTreeEmpty (): NameTree = NameTree(mapEmpty (intHash, intCmp))
+let nameTreeEmpty (): NameTree = NameTree(mapEmpty intCmp)
 
 let nameTreeTryFind (key: Serial) (NameTree map): Serial list =
   match map |> mapTryFind key with
@@ -708,13 +688,6 @@ let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
 let tyUnit = tyTuple []
 
 let tyRef serial tys = AppTy(RefTyCtor serial, tys)
-
-let tyAssocMap keyTy valueTy =
-  let assocTy = tyList (tyTuple [ keyTy; valueTy ])
-  let trieTy = tyList (tyTuple [ tyUInt; assocTy ])
-  let hashTy = tyFun keyTy tyUInt
-  let cmpTy = tyFun keyTy (tyFun keyTy tyInt)
-  tyTuple [ trieTy; hashTy; cmpTy ]
 
 let tyPrimFromIdent ident tys loc =
   match ident, tys with

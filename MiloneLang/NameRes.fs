@@ -9,7 +9,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
 
-let scopeMapEmpty () = mapEmpty (strHash, strCmp)
+let scopeMapEmpty () = mapEmpty strCmp
 
 let scopeChainEmpty (): ScopeChain = [ scopeMapEmpty () ]
 
@@ -26,10 +26,10 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
   ScopeCtx
     (serial,
      nameMap,
-     mapEmpty (intHash, intCmp),
-     mapEmpty (intHash, intCmp),
-     mapEmpty (intHash, intCmp),
-     mapEmpty (intHash, intCmp),
+     mapEmpty intCmp,
+     mapEmpty intCmp,
+     mapEmpty intCmp,
+     mapEmpty intCmp,
      nameTreeEmpty (),
      nameTreeEmpty (),
      localSerial,
