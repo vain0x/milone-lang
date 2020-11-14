@@ -295,6 +295,79 @@ int milone_profile_log(struct String msg, void *profiler) {
   return 0; // can't be void due to restriction of __nativeFun
 }
 
+// -----------------------------------------------
+// For competitive programming
+// -----------------------------------------------
+
+int scan_int(int _dummy) {
+  int value;
+  int _n = scanf("%d", &value);
+  return value;
+}
+
+char scan_char(int _dummy) {
+  char value;
+  int _n = scanf("%c", &value);
+  return value;
+}
+
+struct String scan_str(int capacity) {
+  if (capacity <= 0) {
+    fprintf(stderr, "scan_str(%d)", capacity);
+    exit(1);
+  }
+
+  char *str = calloc(capacity, sizeof(char));
+  if (str == NULL) {
+    fprintf(stderr, "scan_str(%d) out of memory", capacity);
+    exit(1);
+  }
+
+  char fmt[16] = {};
+  sprintf(fmt, "%%%ds", capacity);
+  assert(fmt[15] == 0);
+
+  int _n = scanf(fmt, str);
+
+  int len = strlen(str);
+  assert(len < capacity);
+  return (struct String){.str = str, .len = len};
+}
+
+int print_int(int value) {
+  return printf("%d", value);
+}
+
+int print_char(char c) {
+  return printf("%c", c);
+}
+
+int print_str(struct String str) {
+  return printf("%s", str.str);
+}
+
+void *int_array_new(int len) {
+  void *p = calloc(len, sizeof(int));
+  // fprintf(stderr, "int_array_new(len=%d) = %p\n", len, p);
+  return p;
+}
+
+int int_array_get(void *array, int index) {
+  int value = ((int *)array)[index];
+  // fprintf(stderr, "int_array_get(%p, index=%d) = %d\n", array, index, value);
+  return value;
+}
+
+void *int_array_set(void *array, int index, int value) {
+  // fprintf(stderr, "int_array_set(%p, index=%d, value=%d)\n", array, index, value);
+  ((int *)array)[index] = value;
+  return array;
+}
+
+// -----------------------------------------------
+// Command-line Arguments
+// -----------------------------------------------
+
 static int s_argc;
 static char **s_argv;
 
@@ -311,6 +384,10 @@ struct String arg_get(int index) {
   int len = strlen(str);
   return (struct String){.str = str, .len = len};
 }
+
+// -----------------------------------------------
+// Runtime Entrypoint
+// -----------------------------------------------
 
 int main(int argc, char** argv) {
   s_argc = argc - 1;
