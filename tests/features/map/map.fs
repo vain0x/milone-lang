@@ -1,7 +1,7 @@
 module rec map.Program
 
 // Previously AssocMap/AssocSet were built-in synonyms defined in the compiler
-// but currently they are defined in user code.
+// but currently they are defined as TreeMap.
 // This test can be removed?
 
 type AssocMap<'K, 'V> = (uint * ('K * 'V) list) list * ('K -> uint) * ('K -> 'K -> int)

@@ -16,7 +16,7 @@ type private IsTail =
 
 let private ofTyCtx tyCtx =
   let (TyCtx (_, vars, tys, _, _, _, _)) = tyCtx
-  TailRecCtx(vars, tys, None, setEmpty (intHash, intCmp))
+  TailRecCtx(vars, tys, None, setEmpty intCmp)
 
 let private isCurrentFun funSerial ctx =
   match ctx |> tailRecCtxGetCurrentFun with

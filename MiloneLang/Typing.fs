@@ -436,7 +436,7 @@ let inferRecord ctx expectOpt baseOpt fields loc =
         let fieldDefs =
           fieldDefs
           |> List.map (fun (ident, ty, _) -> ident, ty)
-          |> mapOfList (strHash, strCmp)
+          |> mapOfList strCmp
 
         (fields, (fieldDefs, ctx))
         |> stMap (fun (field, (fieldDefs, ctx)) ->
@@ -793,7 +793,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                (varSerial, varDef), ctx)
 
     ctx
-    |> tyCtxWithVars (mapOfList (intHash, intCmp) vars)
+    |> tyCtxWithVars (mapOfList intCmp vars)
 
   let ctx = ctx |> tyCtxWithLetDepth 0
 
@@ -858,7 +858,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                Some(tySerial, RecordTyDef(ident, fields, loc))
 
            | _ -> Some kv)
-      |> mapOfList (intHash, intCmp)
+      |> mapOfList intCmp
 
     ctx |> tyCtxWithTys tys
 

@@ -32,7 +32,7 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
         go acc xs
 
   let serialsMap =
-    go (mapEmpty (strHash, strCmp)) (defMap |> mapToList)
+    go (mapEmpty strCmp) (defMap |> mapToList)
 
   let addIdent ident (identMap, index) serial =
     identMap
@@ -56,17 +56,17 @@ let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
   let varNames =
     mirCtx
     |> mirCtxGetVars
-    |> renameIdents varDefToIdent id (intHash, intCmp)
+    |> renameIdents varDefToIdent id intCmp
 
   let tyNames =
     mirCtx
     |> mirCtxGetTys
-    |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) (tyHash, tyCmp)
+    |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) tyCmp
 
   CirCtx
     (mirCtx |> mirCtxGetVars,
      varNames,
-     mapEmpty (tyHash, tyCmp),
+     mapEmpty tyCmp,
      mirCtx |> mirCtxGetTys,
      tyNames,
      [],
@@ -440,8 +440,10 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (RefTyCtor serial, useTyArgs) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-        let ty = tyExpandSynonym useTyArgs defTySerials bodyTy
-        cirCtxConvertTyIncomplete ctx ty
+          let ty =
+            tyExpandSynonym useTyArgs defTySerials bodyTy
+
+          cirCtxConvertTyIncomplete ctx ty
 
       | Some (UnionTyDef _) -> cirCtxAddUnionIncomplete ctx serial
 
@@ -470,13 +472,31 @@ let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (ListTyCtor, [ itemTy ]) -> cirCtxAddListDecl ctx itemTy
 
-  | AppTy (TupleTyCtor, itemTys) -> cirCtxAddTupleDecl ctx itemTys
+  | AppTy (TupleTyCtor, itemTys) ->
+      // HOTFIX: Remove Undefined MetaTy. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
+      let itemTys =
+        itemTys
+        |> List.map (fun ty ->
+             let substMeta tySerial =
+               match ctx |> cirCtxGetTys |> mapTryFind tySerial with
+               | Some (MetaTyDef (_, ty, _)) -> Some ty
+               | Some (UniversalTyDef _)
+               | None -> Some tyObj
+               | _ -> None
+
+             ty
+             |> tySubst substMeta
+             |> tyExpandSynonyms (fun tySerial -> ctx |> cirCtxGetTys |> mapTryFind tySerial))
+
+      cirCtxAddTupleDecl ctx itemTys
 
   | AppTy (RefTyCtor serial, useTyArgs) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-        let ty = tyExpandSynonym useTyArgs defTySerials bodyTy
-        cirGetCTy ctx ty
+          let ty =
+            tyExpandSynonym useTyArgs defTySerials bodyTy
+
+          cirGetCTy ctx ty
 
       | Some (UnionTyDef (_, variants, _)) -> cirCtxAddUnionDecl ctx serial variants
 

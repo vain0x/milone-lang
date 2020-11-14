@@ -89,12 +89,12 @@ type Caps = (VarSerial * Ty * Loc) list
 // -----------------------------------------------
 
 let knownCtxEmpty (): KnownCtx =
-  KnownCtx(setEmpty (intHash, intCmp), setEmpty (intHash, intCmp), setEmpty (intHash, intCmp))
+  KnownCtx(setEmpty intCmp, setEmpty intCmp, setEmpty intCmp)
 
 let knownCtxEnterFunDecl (ctx: KnownCtx) =
   ctx
-  |> knownCtxWithRefs (setEmpty (intHash, intCmp))
-  |> knownCtxWithLocals (setEmpty (intHash, intCmp))
+  |> knownCtxWithRefs (setEmpty intCmp)
+  |> knownCtxWithLocals (setEmpty intCmp)
 
 let knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
   ctx
@@ -133,7 +133,7 @@ let ccCtxFromTyCtx (ftCtx: TyCtx): CcCtx =
      ftCtx |> tyCtxGetTys,
 
      knownCtxEmpty (),
-     mapEmpty (intHash, intCmp))
+     mapEmpty intCmp)
 
 let ccCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
   tyCtx
@@ -190,7 +190,7 @@ let ccCtxGetFunCapturedSerials funSerial (ctx: CcCtx) =
   match ctx |> ccCtxGetFuns |> mapTryFind funSerial with
   | Some knownCtx -> knownCtx |> knownCtxToCapturedSerials
 
-  | None -> setEmpty (intHash, intCmp)
+  | None -> setEmpty intCmp
 
 /// Gets a list of captured variables for a function.
 /// Doesn't include referenced functions.
@@ -212,7 +212,7 @@ let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
 /// E.g. a function `f` uses `g` and `g` uses `h` (and `h` uses etc.),
 ///      we think `f` also uses `h`.
 let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
-  let emptySet = setEmpty (intHash, intCmp)
+  let emptySet = setEmpty intCmp
 
   let rec closureRefs refs ccCtx (modified, visited, acc) =
     match refs with

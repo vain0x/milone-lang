@@ -56,8 +56,6 @@ open MiloneLang.Helpers
 open MiloneLang.Records
 open MiloneLang.TySystem
 
-let intTyToHash (value, ty) = intHash value |> hashCombine (tyHash ty)
-
 let intTyCmp (firstValue, firstTy) (secondValue, secondTy) =
   if firstValue <> secondValue then intCmp firstValue secondValue else tyCmp firstTy secondTy
 
@@ -70,8 +68,8 @@ let monoCtxFromTyCtx (tyCtx: TyCtx): MonoCtx =
      tyCtx |> tyCtxGetTys,
      tyCtx |> tyCtxGetTyDepths,
 
-     mapEmpty (intHash, intCmp),
-     mapEmpty (intTyToHash, intTyCmp),
+     mapEmpty intCmp,
+     mapEmpty intTyCmp,
      MonoMode.Monify,
      true,
      0)
@@ -146,7 +144,7 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
     |> monoCtxGetVars
     |> mapToList
     |> List.map forceGeneralize
-    |> mapOfList (intHash, intCmp)
+    |> mapOfList intCmp
 
   ctx |> monoCtxWithVars vars
 
