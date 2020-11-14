@@ -4,11 +4,9 @@ module rec Competitive.Helpers
 // Native functions
 // -----------------------------------------------
 
-let scanInt (): int =
-  (__nativeFun "scan_int" 1) 0
+let scanInt (): int = (__nativeFun "scan_int" 1) 0
 
-let rawIntArrayNew (len: int): obj =
-  (__nativeFun "int_array_new" 1) len
+let rawIntArrayNew (len: int): obj = (__nativeFun "int_array_new" 1) len
 
 let rawIntArrayGet (array: obj) (index: int): int =
   (__nativeFun "int_array_get" 2) array index
@@ -16,8 +14,7 @@ let rawIntArrayGet (array: obj) (index: int): int =
 let rawIntArraySet (array: obj) (index: int) (value: int): obj =
   (__nativeFun "int_array_set" 3) array index value
 
-let rawMemoryCopy (dest: obj) (src: obj) (size: int): obj =
-  (__nativeFun "memcpy" 3) dest src size
+let rawMemoryCopy (dest: obj) (src: obj) (size: int): obj = (__nativeFun "memcpy" 3) dest src size
 
 // -----------------------------------------------
 // Polyfills
@@ -27,54 +24,42 @@ let ignore _ = ()
 
 let listIsEmpty xs =
   match xs with
-  | [] ->
-    true
+  | [] -> true
 
-  | _ ->
-    false
+  | _ -> false
 
 let listLength xs =
   let rec go len xs =
     match xs with
-    | [] ->
-      len
+    | [] -> len
 
-    | _ :: xs ->
-      go (len + 1) xs
+    | _ :: xs -> go (len + 1) xs
 
   go 0 xs
 
 let listRev xs =
   let rec go acc xs =
     match xs with
-    | [] ->
-      acc
+    | [] -> acc
 
-    | x :: xs ->
-      go (x :: acc) xs
+    | x :: xs -> go (x :: acc) xs
 
   go [] xs
 
 let listEq itemEq xs ys =
   let rec go xs ys =
     match xs, ys with
-    | [], [] ->
-      true
+    | [], [] -> true
 
-    | x :: xs, y :: ys ->
-      itemEq x y && go xs ys
+    | x :: xs, y :: ys -> itemEq x y && go xs ys
 
-    | _ ->
-      false
+    | _ -> false
 
   go xs ys
 
 let listReplicate item len =
   let rec go acc i =
-    if i = len then
-      acc
-    else
-      go (item :: acc) (i + 1)
+    if i = len then acc else go (item :: acc) (i + 1)
 
   go [] 0
 
@@ -82,10 +67,7 @@ let listInit len gen =
   assert (len >= 0)
 
   let rec go acc i =
-    if i = len then
-      listRev acc
-    else
-      go (gen i :: acc) (i + 1)
+    if i = len then listRev acc else go (gen i :: acc) (i + 1)
 
   go [] 0
 
@@ -97,17 +79,16 @@ let strConcat (xs: string list) =
     // assert (xn <= listLength xs)
     match xs with
     | [] ->
-      assert (xn = 0)
-      "", []
-    | x :: xs when xn = 1 ->
-      x, xs
-    | x :: y :: xs when xn = 2 ->
-      x + y, xs
+        assert (xn = 0)
+        "", []
+    | x :: xs when xn = 1 -> x, xs
+    | x :: y :: xs when xn = 2 -> x + y, xs
     | xs ->
-      let m = xn / 2
-      let l, xs = go xs m
-      let r, xs = go xs (xn - m)
-      l + r, xs
+        let m = xn / 2
+        let l, xs = go xs m
+        let r, xs = go xs (xn - m)
+        l + r, xs
+
   let n = xs |> listLength
   let s, xs = go xs n
   assert (xs |> listIsEmpty)
@@ -115,17 +96,13 @@ let strConcat (xs: string list) =
 
 let unitObj = box ()
 
-let intEq (first: int) (second: int) =
-  first = second
+let intEq (first: int) (second: int) = first = second
 
-let intMin (first: int) (second: int) =
-  if second < first then second else first
+let intMin (first: int) (second: int) = if second < first then second else first
 
-let intMax (first: int) (second: int) =
-  if first < second then second else first
+let intMax (first: int) (second: int) = if first < second then second else first
 
-let strEq (first: string) (second: string) =
-  first = second
+let strEq (first: string) (second: string) = first = second
 
 let failwith msg =
   printfn "ERROR %s" msg
@@ -135,15 +112,13 @@ let failwith msg =
 // Standard IO
 // -----------------------------------------------
 
-let scanIntList len =
-  listInit len (fun _ -> scanInt ())
+let scanIntList len = listInit len (fun _ -> scanInt ())
 
 // -----------------------------------------------
 // Types
 // -----------------------------------------------
 
-type TypeTag =
-  | TypeTag
+type TypeTag = | TypeTag
 
 let typeToDefault (defaultValue, _, _, _, _, _typeTag) = defaultValue
 
@@ -155,14 +130,14 @@ let typeToArrayGet (_, _, _, arrayGet, _, _typeTag) = arrayGet
 
 let typeToArraySet (_, _, _, _, arraySet, _typeTag) = arraySet
 
-let typeInt = 0, 4, rawIntArrayNew, rawIntArrayGet, rawIntArraySet, TypeTag
+let typeInt =
+  0, 4, rawIntArrayNew, rawIntArrayGet, rawIntArraySet, TypeTag
 
 // -----------------------------------------------
 // Vectors
 // -----------------------------------------------
 
-type VectorTag =
-  | VectorTag
+type VectorTag = | VectorTag
 
 let vectorToLength (_, _, len, _, _vectorTag) = len
 
@@ -186,7 +161,8 @@ let vectorSet (index: int) value self =
   self |> vectorCheckIndex index
 
   let itemTy, array, _, _, _vectorTag = self
-  (itemTy |> typeToArraySet) array index value |> ignore
+  (itemTy |> typeToArraySet) array index value
+  |> ignore
 
 let rec vectorPush value self =
   let itemTy, array, len, capacity, _vectorTag = self
@@ -195,7 +171,8 @@ let rec vectorPush value self =
     let newArray = (itemTy |> typeToArrayNew) (newCapacity)
     let copySize = (itemTy |> typeToSize) * len
     rawMemoryCopy newArray array copySize |> ignore
-    (itemTy, newArray, len, newCapacity, VectorTag) |> vectorPush value
+    (itemTy, newArray, len, newCapacity, VectorTag)
+    |> vectorPush value
   else
     self |> vectorSet len value
     itemTy, array, len + 1, capacity, VectorTag
@@ -203,23 +180,26 @@ let rec vectorPush value self =
 let vectorOfList ty xs =
   let len = xs |> listLength
   let v = vectorNew ty len
+
   let rec go i xs =
     match xs with
-    | [] ->
-      assert (i = len)
+    | [] -> assert (i = len)
     | x :: xs ->
-      v |> vectorSet i x
-      go (i + 1) xs
+        v |> vectorSet i x
+        go (i + 1) xs
+
   go 0 xs
   v
 
 let scanIntVector len =
   let v = vectorNew typeInt len
+
   let rec go i =
     if i < len then
       let value = scanInt ()
       v |> vectorSet i value
       go (i + 1)
+
   go 0
   v
 
@@ -234,7 +214,7 @@ let vectorTest () =
   refCase ()
 
   let vectorOfListTest () =
-    let v = vectorOfList typeInt [1; 2; 3]
+    let v = vectorOfList typeInt [ 1; 2; 3 ]
     assert (v |> vectorToLength = 3)
     assert (v |> vectorGet 0 = 1)
     assert (v |> vectorGet 1 = 2)

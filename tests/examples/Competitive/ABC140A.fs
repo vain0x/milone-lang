@@ -3,8 +3,7 @@ module rec Competitive.ABC140A
 
 open Competitive.Helpers
 
-let abc140aSolve n =
-  n * n * n
+let abc140aSolve n = n * n * n
 
 let abc140aTest () =
   assert (abc140aSolve 2 = 8)

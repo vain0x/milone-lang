@@ -19,12 +19,14 @@ let abc140eSolve n perm =
     perm
     |> segTreeInsert 0 (n + 1)
     |> segTreePush (n + 2)
+
   assert (segTreeToLength perm = n + 2)
 
   // segment trees for processed items
   let prev =
     listReplicate 0 (n + 2)
     |> segTreeOfList (segItemTypeNew 0 intMax)
+
   let next =
     listReplicate (n + 1) (n + 2)
     |> segTreeOfList (segItemTypeNew (n + 1) intMin)
@@ -35,12 +37,15 @@ let abc140eSolve n perm =
       if i = n + 2 then
         pos
       else
-        let pos = pos |> segTreeSet (perm |> segTreeGet i) i
+        let pos =
+          pos |> segTreeSet (perm |> segTreeGet i) i
+
         go pos (i + 1)
 
     let pos =
       listReplicate 0 (n + 3)
       |> segTreeOfList segItemTypeInt
+
     go pos 0
 
   let rec go sum prev next p =
@@ -71,7 +76,7 @@ let abc140eSolve n perm =
   go 0 prev next n
 
 let abc140eTest () =
-  let solve p expected  =
+  let solve p expected =
     let n = p |> listLength
     let actual = abc140eSolve n p
 
@@ -81,9 +86,9 @@ let abc140eTest () =
       printfn "actual=%d expected=%d" actual expected
       false
 
-  assert (solve [2; 3; 1] 5)
-  assert (solve [1; 2; 3; 4; 5] 30)
-  assert (solve [8; 2; 7; 3; 4; 5; 6; 1] 136)
+  assert (solve [ 2; 3; 1 ] 5)
+  assert (solve [ 1; 2; 3; 4; 5 ] 30)
+  assert (solve [ 8; 2; 7; 3; 4; 5; 6; 1 ] 136)
 
 let abc140eMain () =
   let n = scanInt ()

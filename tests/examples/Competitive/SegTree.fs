@@ -25,8 +25,7 @@ let intervalCovers (first: Interval) (second: Interval) =
 // Traits
 // -----------------------------------------------
 
-type SegItemTypeTag =
-  | SegItemTypeTag
+type SegItemTypeTag = | SegItemTypeTag
 
 let segItemTypeToAppend (append, _, _, (_: SegItemTypeTag)) = append
 
@@ -41,10 +40,18 @@ let segItemTypeNew emptyItem append =
   let emptyNode = segNodeNewEmpty emptyItem
 
   // Type unification.
-  assert ([append emptyItem emptyItem; emptyItem] |> listIsEmpty |> not)
+  assert ([ append emptyItem emptyItem
+            emptyItem ]
+          |> listIsEmpty
+          |> not)
 
-  let itemTy = append, emptyNode, box (emptyNode, emptyNode), SegItemTypeTag
-  assert ([itemTy |> segItemTypeToAppend; append] |> listIsEmpty |> not)
+  let itemTy =
+    append, emptyNode, box (emptyNode, emptyNode), SegItemTypeTag
+
+  assert ([ itemTy |> segItemTypeToAppend
+            append ]
+          |> listIsEmpty
+          |> not)
 
   itemTy
 
@@ -52,11 +59,9 @@ let segItemTypeNew emptyItem append =
 // Nodes
 // -----------------------------------------------
 
-type SegNodeTag =
-  | SegNodeTag
+type SegNodeTag = | SegNodeTag
 
-let segNodeNewEmpty emptyItem =
-  emptyItem, 0, (-1), unitObj, SegNodeTag
+let segNodeNewEmpty emptyItem = emptyItem, 0, (-1), unitObj, SegNodeTag
 
 let segNodeNewLeaf itemTy item =
   let noChildren = itemTy |> segItemTypeToNoChildren
@@ -68,20 +73,19 @@ let segNodeNew itemTy left right =
     let rightItem, rightLen, rightHeight, _, (_: SegNodeTag) = right
     assert (leftLen >= 1 && rightLen >= 1)
 
-    let item = (itemTy |> segItemTypeToAppend) leftItem rightItem
+    let item =
+      (itemTy |> segItemTypeToAppend) leftItem rightItem
+
     let len = leftLen + rightLen
     let height = 1 + intMax leftHeight rightHeight
     item, len, height, box (left, right), SegNodeTag
 
   match left |> segNodeToLength, right |> segNodeToLength with
-  | 0, 0 ->
-    itemTy |> segItemTypeToEmptyNode
+  | 0, 0 -> itemTy |> segItemTypeToEmptyNode
 
-  | 0, _ ->
-    right
+  | 0, _ -> right
 
-  | _, 0 ->
-    left
+  | _, 0 -> left
 
   // | 1, 1 ->
   //   doNew ()
@@ -94,8 +98,7 @@ let segNodeNew itemTy left right =
   //   let item, _, _, _, (_: SegNodeTag) = right
   //   left |> segNodeInsert itemTy (len - 1) item
 
-  | _ ->
-    doNew ()
+  | _ -> doNew ()
 
 let segNodeToItem node =
   let item, _, _, _, (_: SegNodeTag) = node
@@ -116,12 +119,11 @@ let segNodeToChildren node =
   let left, right = unbox children
 
   // HACK: Unify the item type of children.
-  assert ([node; left; right] |> listIsEmpty |> not)
+  assert ([ node; left; right ] |> listIsEmpty |> not)
 
   left, right
 
-let segNodeIsEmpty node =
-  segNodeToLength node = 0
+let segNodeIsEmpty node = segNodeToLength node = 0
 
 let segNodeWithLeft itemTy newLeft node =
   assert (segNodeToLength node >= 1)
@@ -151,15 +153,15 @@ let segNodeMakeBalanced itemTy node =
       node
     else
 
-    let _, right = node |> segNodeToChildren
-    if (right |> segNodeToLength) < 2 then
-      node
-    else
+      let _, right = node |> segNodeToChildren
+      if (right |> segNodeToLength) < 2 then
+        node
+      else
 
-    let x, _ = right |> segNodeToChildren
-    let u = node |> segNodeWithRight itemTy x
-    let t = right |> segNodeWithLeft itemTy u
-    t
+        let x, _ = right |> segNodeToChildren
+        let u = node |> segNodeWithRight itemTy x
+        let t = right |> segNodeWithLeft itemTy u
+        t
 
   // from:
   //         T
@@ -178,31 +180,35 @@ let segNodeMakeBalanced itemTy node =
       node
     else
 
-    let left, _ = node |> segNodeToChildren
-    if (left |> segNodeToLength) < 2 then
-      node
-    else
+      let left, _ = node |> segNodeToChildren
+      if (left |> segNodeToLength) < 2 then
+        node
+      else
 
-    let _, y = left |> segNodeToChildren
-    let u = node |> segNodeWithLeft itemTy y
-    let t = left |> segNodeWithRight itemTy u
-    t
+        let _, y = left |> segNodeToChildren
+        let u = node |> segNodeWithLeft itemTy y
+        let t = left |> segNodeWithRight itemTy u
+        t
 
   let doubleLeft node =
     if (node |> segNodeToLength) < 2 then
       node
     else
 
-    let _, right = node |> segNodeToChildren
-    node |> segNodeWithRight itemTy (right |> rotateRight) |> rotateLeft
+      let _, right = node |> segNodeToChildren
+      node
+      |> segNodeWithRight itemTy (right |> rotateRight)
+      |> rotateLeft
 
   let doubleRight node =
     if (node |> segNodeToLength) < 2 then
       node
     else
 
-    let left, _ = node |> segNodeToChildren
-    node |> segNodeWithLeft itemTy (left |> rotateLeft) |> rotateRight
+      let left, _ = node |> segNodeToChildren
+      node
+      |> segNodeWithLeft itemTy (left |> rotateLeft)
+      |> rotateRight
 
   let toBalance node =
     if (node |> segNodeToLength) < 2 then
@@ -220,24 +226,18 @@ let segNodeMakeBalanced itemTy node =
     node
   else
 
-  let left, right = node |> segNodeToChildren
-  if selfBalance >= 2 then
-    if (right |> toBalance) < 0 then
-      node |> doubleLeft
-    else
-      node |> rotateLeft
-  else
-    if (left |> toBalance) > 0 then
-      node |> doubleRight
-    else
-      node |> rotateRight
+    let left, right = node |> segNodeToChildren
+    if selfBalance >= 2
+    then if (right |> toBalance) < 0 then node |> doubleLeft else node |> rotateLeft
+    else if (left |> toBalance) > 0
+    then node |> doubleRight
+    else node |> rotateRight
 
 // -----------------------------------------------
 // Trees
 // -----------------------------------------------
 
-type SegTreeTag =
-  | SegTreeTag
+type SegTreeTag = | SegTreeTag
 
 let segTreeNew itemTy =
   let emptyNode = itemTy |> segItemTypeToEmptyNode
@@ -247,14 +247,11 @@ let segTreeToRoot self =
   let _, node, (_: SegTreeTag) = self
   node
 
-let segTreeToLength self =
-  self |> segTreeToRoot |> segNodeToLength
+let segTreeToLength self = self |> segTreeToRoot |> segNodeToLength
 
-let segTreeToHeight self =
-  self |> segTreeToRoot |> segNodeToHeight
+let segTreeToHeight self = self |> segTreeToRoot |> segNodeToHeight
 
-let segTreeIsEmpty self =
-  self |> segTreeToRoot |> segNodeIsEmpty
+let segTreeIsEmpty self = self |> segTreeToRoot |> segNodeIsEmpty
 
 /// Gets an item at the index.
 /// Error if out of range.
@@ -270,12 +267,9 @@ let segTreeGet index self =
       item
     else
 
-    let left, right = node |> segNodeToChildren
-    let leftLen = segNodeToLength left
-    if index < leftLen then
-      go index left
-    else
-      go (index - leftLen) right
+      let left, right = node |> segNodeToChildren
+      let leftLen = segNodeToLength left
+      if index < leftLen then go index left else go (index - leftLen) right
 
   self |> segTreeToRoot |> go index
 
@@ -307,8 +301,8 @@ let segTreeSum (ql: int) (qr: int) self =
     itemTy |> segItemTypeToEmptyItem
   else
 
-  let e = 0, len
-  root |> go e q
+    let e = 0, len
+    root |> go e q
 
 /// Replaces an item at the index.
 /// Error if out of range.
@@ -326,12 +320,13 @@ let segTreeSet index newItem self =
       newItem, len, height, children, SegNodeTag
     else
 
-    let left, right = node |> segNodeToChildren
-    let leftLen = segNodeToLength left
-    if index < leftLen then
-      node |> segNodeWithLeft itemTy (left |> go index)
-    else
-      node |> segNodeWithRight itemTy (right |> go (index - leftLen))
+      let left, right = node |> segNodeToChildren
+      let leftLen = segNodeToLength left
+      if index < leftLen then
+        node |> segNodeWithLeft itemTy (left |> go index)
+      else
+        node
+        |> segNodeWithRight itemTy (right |> go (index - leftLen))
 
   let root = root |> go index
   itemTy, root, SegTreeTag
@@ -349,12 +344,14 @@ let segTreeInsert index newItem self =
     else if len = 1 then
       let oldLeaf = segNodeNewLeaf itemTy oldItem
       let newLeaf = segNodeNewLeaf itemTy newItem
+
       let left, right =
         if index = 0 then
           newLeaf, oldLeaf
         else
           assert (index = 1)
           oldLeaf, newLeaf
+
       segNodeNew itemTy left right
     else
       let left, right = node |> segNodeToChildren
@@ -373,7 +370,8 @@ let segTreeInsert index newItem self =
           assert (segNodeToLength right = rightLen + 1)
           left, right
 
-      segNodeNew itemTy left right |> segNodeMakeBalanced itemTy
+      segNodeNew itemTy left right
+      |> segNodeMakeBalanced itemTy
 
   let root = root |> go index
   itemTy, root, SegTreeTag
@@ -398,15 +396,14 @@ let segTreeRemove index self =
 
       let node =
         if index < leftLen then
-          if leftLen < 2 then
-            right
-          else
-            node |> segNodeWithLeft itemTy (left |> go index)
+          if leftLen < 2
+          then right
+          else node |> segNodeWithLeft itemTy (left |> go index)
+        else if rightLen < 2 then
+          left
         else
-          if rightLen < 2 then
-            left
-          else
-            node |> segNodeWithRight itemTy (right |> go (index - leftLen))
+          node
+          |> segNodeWithRight itemTy (right |> go (index - leftLen))
 
       node |> segNodeMakeBalanced itemTy
 
@@ -427,11 +424,9 @@ let segTreePop self =
 let segTreeOfList itemTy xs =
   let rec go t xs =
     match xs with
-    | [] ->
-      t
+    | [] -> t
 
-    | x :: xs ->
-      go (t |> segTreePush x) xs
+    | x :: xs -> go (t |> segTreePush x) xs
 
   go (segTreeNew itemTy) xs
 
@@ -460,17 +455,21 @@ let segTreeTest () =
   let segItemTypeStr = segItemTypeNew "" strAdd
 
   let testPushPop () =
-    let v = segTreeNew segItemTypeInt |> segTreePush 1 |> segTreePush 2
-    assert (v |> segTreeToList |> listEq intEq [1; 2])
+    let v =
+      segTreeNew segItemTypeInt
+      |> segTreePush 1
+      |> segTreePush 2
+
+    assert (v |> segTreeToList |> listEq intEq [ 1; 2 ])
 
     let v = v |> segTreePush 3
-    assert (v |> segTreeToList |> listEq intEq [1; 2; 3])
+    assert (v |> segTreeToList |> listEq intEq [ 1; 2; 3 ])
 
     let v = v |> segTreePop
-    assert (v |> segTreeToList |> listEq intEq [1; 2])
+    assert (v |> segTreeToList |> listEq intEq [ 1; 2 ])
 
     let v = v |> segTreePop
-    assert (v |> segTreeToList |> listEq intEq [1])
+    assert (v |> segTreeToList |> listEq intEq [ 1 ])
 
     let v = v |> segTreePop
     assert (v |> segTreeToList |> listEq intEq [])
@@ -478,29 +477,34 @@ let segTreeTest () =
   testPushPop ()
 
   let testSet () =
-    let v = segTreeOfList segItemTypeInt [1; 2; 3] |> segTreeSet 1 22
-    assert (v |> segTreeToList |> listEq intEq [1; 22; 3])
+    let v =
+      segTreeOfList segItemTypeInt [ 1; 2; 3 ]
+      |> segTreeSet 1 22
+
+    assert (v |> segTreeToList |> listEq intEq [ 1; 22; 3 ])
 
     let v = v |> segTreeSet 0 11 |> segTreeSet 2 33
-    assert (v |> segTreeToList |> listEq intEq [11; 22; 33])
+    assert (v |> segTreeToList |> listEq intEq [ 11; 22; 33 ])
 
   testSet ()
 
   let testSum () =
-    let v = segTreeOfList segItemTypeInt [3; 1; 4; 1; 5; 9]
+    let v =
+      segTreeOfList segItemTypeInt [ 3; 1; 4; 1; 5; 9 ]
+
     assert (v |> segTreeSum 0 6 = 3 + 1 + 4 + 1 + 5 + 9)
     assert (v |> segTreeSum 2 4 = 4 + 1)
 
   testSum ()
 
   let testSumMore () =
-    let xs = [3; 1; 4; 1; 5; 9]
+    let xs = [ 3; 1; 4; 1; 5; 9 ]
     let v = segTreeOfList segItemTypeInt xs
     let n = xs |> listLength
+
     let rec go l r =
       if r = n then
-        if l < n then
-          go (l + 1) (l + 1)
+        if l < n then go (l + 1) (l + 1)
       else
         let expected =
           let rec sum (acc: int) i xs =
@@ -509,26 +513,34 @@ let segTreeTest () =
             else
               match xs with
               | x :: xs ->
-                let acc = if i < l then acc else acc + x
-                sum acc (i + 1) xs
-              | _ ->
-                failwith "NEVER"
+                  let acc = if i < l then acc else acc + x
+                  sum acc (i + 1) xs
+              | _ -> failwith "NEVER"
+
           sum 0 0 xs
+
         let actual = v |> segTreeSum l r
         assert (actual = expected)
         go l (r + 1)
+
     go 0 0
 
   testSumMore ()
 
   let testBalance () =
-    let v = segTreeOfList segItemTypeInt (listReplicate 1 1000)
+    let v =
+      segTreeOfList segItemTypeInt (listReplicate 1 1000)
+
     assert (segTreeToHeight v < 100)
 
   testBalance ()
 
   let testPolymorphic () =
-    let v = segTreeNew segItemTypeStr |> segTreePush "a" |> segTreePush "b"
-    assert (v |> segTreeToList |> listEq strEq ["a"; "b"])
+    let v =
+      segTreeNew segItemTypeStr
+      |> segTreePush "a"
+      |> segTreePush "b"
+
+    assert (v |> segTreeToList |> listEq strEq [ "a"; "b" ])
 
   testPolymorphic ()
