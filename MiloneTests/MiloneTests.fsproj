@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Compile Include="Assets.fs" />
+    <Compile Include="TreeMapTests.fs" />
     <Compile Include="HelpersTests.fs" />
     <Compile Include="LexingTests.fs" />
     <Compile Include="CIrGenTests.fs" />
