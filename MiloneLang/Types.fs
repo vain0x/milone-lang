@@ -495,7 +495,7 @@ type Trait =
 
 /// Type declaration.
 type TyDecl =
-  | TySynonymDecl of ty: Ty * Loc
+  | TySynonymDecl of Ty * Loc
 
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
@@ -507,6 +507,11 @@ type TyDecl =
 type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ident * Ty * Loc
+
+  | UniversalTyDef of Ident * TySerial * Loc
+
+  /// Used only for generic type synonyms. Non-generic synonyms are elaborated into MetaTy in NameRes.
+  | SynonymTyDef of Ident * TySerial list * Ty * Loc
 
   | UnionTyDef of Ident * VariantSerial list * Loc
 
@@ -649,7 +654,7 @@ type HExpr =
   | HLetFunExpr of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
   /// Type declaration.
-  | HTyDeclExpr of TySerial * Vis * TyDecl * Loc
+  | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
   | HModuleExpr of Serial * body: HExpr * next: HExpr * Loc
   | HErrorExpr of string * Loc

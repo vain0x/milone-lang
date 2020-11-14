@@ -379,6 +379,53 @@ let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
 
       | otherTy -> DidBind(typingBind ctx tySerial otherTy loc)
 
+type private SynonymUnifyResult =
+  | SynonymDidExpand of Ty * Ty * TyContext
+  | NotSynonym
+
+let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
+  match ctx.Tys |> mapTryFind tySerial with
+  | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+      // Checked in NameRes.
+      assert (List.length defTySerials = List.length useTyArgs)
+
+      let instantiatedTy, ctx =
+        let assignment, ctx =
+          defTySerials
+          |> List.fold (fun (assignment, ctx: TyContext) defTySerial ->
+               let newTySerial = ctx.Serial + 1
+
+               let assignment =
+                 (defTySerial, (MetaTy(newTySerial, loc)))
+                 :: assignment
+
+               let ctx =
+                 let tyDepths =
+                   ctx.TyDepths |> mapAdd newTySerial ctx.LetDepth
+
+                 { ctx with
+                     Serial = newTySerial
+                     TyDepths = tyDepths }
+
+               assignment, ctx) ([], ctx)
+
+        let substMeta tySerial =
+          assignment |> assocTryFind intCmp tySerial
+
+        tySubst substMeta bodyTy, ctx
+
+      let expandedTy =
+        let assignment = List.zip defTySerials useTyArgs
+
+        let substMeta tySerial =
+          assignment |> assocTryFind intCmp tySerial
+
+        tySubst substMeta bodyTy
+
+      SynonymDidExpand(expandedTy, instantiatedTy, ctx)
+
+  | _ -> NotSynonym
+
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
 let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
@@ -420,6 +467,16 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
           | _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
 
         gogo lTyArgs rTyArgs (logAcc, ctx)
+
+    | AppTy (RefTyCtor tySerial, tyArgs), _ ->
+        match unifySynonymTy tySerial tyArgs loc ctx with
+        | SynonymDidExpand (ty1, ty2, ctx) -> (logAcc, ctx) |> go ty1 ty2 |> go ty1 rTy
+        | NotSynonym -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
+
+    | _, AppTy (RefTyCtor tySerial, tyArgs) ->
+        match unifySynonymTy tySerial tyArgs loc ctx with
+        | SynonymDidExpand (ty1, ty2, ctx) -> (logAcc, ctx) |> go ty1 ty2 |> go ty1 lTy
+        | NotSynonym -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
 
     | AppTy _, _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
 

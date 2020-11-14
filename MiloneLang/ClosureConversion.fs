@@ -453,7 +453,7 @@ let declosureExpr (expr, ctx) =
   | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       declosureFunDecl callee vis isMainFun args body next ty loc ctx
 
-  | HTyDeclExpr (_, _, tyDecl, _) ->
+  | HTyDeclExpr (_, _, _, tyDecl, _) ->
       let doArm () =
         match tyDecl with
         | TySynonymDecl _

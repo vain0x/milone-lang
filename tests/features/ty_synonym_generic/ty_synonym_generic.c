@@ -2,7 +2,7 @@
 
 struct IntList;
 
-struct IntList* newStack_(int arg_);
+struct IntList* newStack_1(int arg_);
 
 int main();
 
@@ -11,12 +11,12 @@ struct IntList {
     struct IntList* tail;
 };
 
-struct IntList* newStack_(int arg_) {
+struct IntList* newStack_1(int arg_) {
     return NULL;
 }
 
 int main() {
-    struct IntList* call_ = newStack_(0);
+    struct IntList* call_ = newStack_1(0);
     struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
     list_->tail = call_;

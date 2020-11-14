@@ -973,6 +973,8 @@ let rec tyToArity ty =
 let tyDefToIdent tyDef =
   match tyDef with
   | MetaTyDef (ident, _, _) -> ident
+  | UniversalTyDef (ident, _, _) -> ident
+  | SynonymTyDef (ident, _, _, _) -> ident
   | UnionTyDef (ident, _, _) -> ident
   | RecordTyDef (ident, _, _) -> ident
   | ModuleTyDef (ident, _) -> ident
@@ -1313,7 +1315,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HInfExpr (_, _, ty, a) -> ty, a
   | HLetValExpr (_, _, _, _, ty, a) -> ty, a
   | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
-  | HTyDeclExpr (_, _, _, a) -> tyUnit, a
+  | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
   | HModuleExpr (_, _, _, a) -> tyUnit, a
   | HErrorExpr (_, a) -> ErrorTy a, a
@@ -1347,7 +1349,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
     | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, a) ->
         HLetFunExpr(serial, vis, isMainFun, List.map goPat args, go body, go next, f ty, g a)
-    | HTyDeclExpr (serial, vis, tyDef, a) -> HTyDeclExpr(serial, vis, tyDef, g a)
+    | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
     | HModuleExpr (ident, body, next, a) -> HModuleExpr(ident, go body, go next, g a)
     | HErrorExpr (error, a) -> HErrorExpr(error, g a)
