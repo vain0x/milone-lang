@@ -214,25 +214,6 @@ let setDiff (first: AssocSet<_>) (second: AssocSet<_>): AssocSet<_> =
   first
   |> mapFilter (fun k () -> second |> setContains k |> not)
 
-// let rec filter acc assoc =
-//   match assoc with
-//   | [] -> List.rev acc
-
-//   | (key, ()) :: assoc when setContains key second -> filter acc assoc
-
-//   | kv :: assoc -> filter (kv :: acc) assoc
-
-// let rec go trie =
-//   match trie with
-//   | [] -> []
-
-//   | (h, assoc) :: trie ->
-//       let assoc = filter [] assoc
-//       (h, assoc) :: go trie
-
-// let trie = go trie
-// trie, hash, cmp
-
 let setFold folder state (set: AssocSet<_>) =
   set |> setToList |> List.fold folder state
 
