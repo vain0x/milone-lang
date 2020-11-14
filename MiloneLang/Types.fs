@@ -1,6 +1,18 @@
 /// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
+// -----------------------------------------------
+// Collections
+// -----------------------------------------------
+
+type AssocMap<'K, 'V> = (uint * ('K * 'V) list) list * ('K -> uint) * ('K -> 'K -> int)
+
+type AssocSet<'K> = AssocMap<'K, unit>
+
+// -----------------------------------------------
+// Vocabulary
+// -----------------------------------------------
+
 /// Unique serial number to identify something
 /// such as variables, nominal types, etc.
 type Serial = int
@@ -73,6 +85,9 @@ type Token =
   | CharToken of char
   | StrToken of string
   | IdentToken of Ident
+
+  /// `'T` etc.
+  | TyVarToken of Ident
 
   // punctuations:
   /// `(`
@@ -215,8 +230,11 @@ type Binary =
 type ATy =
   | AMissingTy of Pos
 
-  /// Type application, e.g. `AssocMap<K, V>`.
+  /// Type application, e.g. `int` or `AssocMap<K, V>`.
   | AAppTy of Ident * ATy list * Pos
+
+  /// Type variable, e.g. `'T`.
+  | AVarTy of Ident * Pos
 
   /// Type suffix, e.g. `T list`.
   | ASuffixTy of ATy * Ident * Pos
@@ -355,7 +373,7 @@ type AExpr =
   | ALetExpr of Vis * APat * AExpr * AExpr * Pos
 
   /// Type synonym declaration, e.g. `type UserId = int`.
-  | ATySynonymExpr of Vis * Ident * ATy * Pos
+  | ATySynonymExpr of Vis * Ident * tyArgs: Ident list * ATy * Pos
 
   /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
   | AUnionTyExpr of Vis * Ident * AVariant list * Pos
@@ -489,7 +507,7 @@ type Trait =
 
 /// Type declaration.
 type TyDecl =
-  | TySynonymDecl of ty: Ty * Loc
+  | TySynonymDecl of Ty * Loc
 
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
@@ -501,6 +519,10 @@ type TyDecl =
 type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ident * Ty * Loc
+
+  | UniversalTyDef of Ident * TySerial * Loc
+
+  | SynonymTyDef of Ident * TySerial list * Ty * Loc
 
   | UnionTyDef of Ident * VariantSerial list * Loc
 
@@ -643,7 +665,7 @@ type HExpr =
   | HLetFunExpr of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
   /// Type declaration.
-  | HTyDeclExpr of TySerial * Vis * TyDecl * Loc
+  | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
   | HModuleExpr of Serial * body: HExpr * next: HExpr * Loc
   | HErrorExpr of string * Loc

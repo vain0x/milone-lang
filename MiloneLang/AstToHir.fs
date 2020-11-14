@@ -192,6 +192,10 @@ let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
       tyRef tySerial argTys, nameCtx
 
+  | AVarTy (ident, _) ->
+      let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + ident)
+      tyRef tySerial [], nameCtx
+
   | ASuffixTy (lTy, ident, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> astToHirTy docId
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
@@ -527,12 +531,17 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
 
       doArm ()
 
-  | ATySynonymExpr (vis, ident, ty, pos) ->
+  | ATySynonymExpr (vis, ident, tyArgs, ty, pos) ->
       let doArm () =
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
         let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
+
+        let tyArgs, nameCtx =
+          (tyArgs, nameCtx)
+          |> stMap (fun (ident, nameCtx) -> nameCtx |> nameCtxAdd ("'" + ident))
+
         let loc = toLoc docId pos
-        HTyDeclExpr(serial, vis, TySynonymDecl(ty, loc), loc), nameCtx
+        HTyDeclExpr(serial, vis, tyArgs, TySynonymDecl(ty, loc), loc), nameCtx
 
       doArm ()
 
@@ -553,7 +562,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
         let unionSerial, nameCtx = nameCtx |> nameCtxAdd ident
         let variants, nameCtx = (variants, nameCtx) |> stMap onVariant
         let loc = toLoc docId pos
-        HTyDeclExpr(unionSerial, vis, UnionTyDecl(ident, variants, loc), loc), nameCtx
+        HTyDeclExpr(unionSerial, vis, [], UnionTyDecl(ident, variants, loc), loc), nameCtx
 
       doArm ()
 
@@ -571,7 +580,7 @@ let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx
           (fieldDecls, nameCtx) |> stMap onFieldDecl
 
         let loc = toLoc docId pos
-        HTyDeclExpr(tySerial, vis, RecordTyDecl(tyIdent, fields, loc), loc), nameCtx
+        HTyDeclExpr(tySerial, vis, [], RecordTyDecl(tyIdent, fields, loc), loc), nameCtx
 
       doArm ()
 

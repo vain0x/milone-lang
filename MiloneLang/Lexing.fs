@@ -442,12 +442,21 @@ let tokIntLit t =
 
 let tokCharLit t =
   let text, i = t |> tokCtxToTextIndex
-  let ok, r = scanCharLit text i
 
-  let token =
-    if ok then tokenFromCharLit text i r else ErrorToken
+  // 'T
+  // FIXME: super rough
+  if i
+     + 2 < text.Length
+     && text.[i + 1] |> charIsAlpha
+     && text.[i + 2] <> '\'' then
+    t |> tokCtxPush (TyVarToken text.[i + 1..i + 1]) (i + 2)
+  else
+    let ok, r = scanCharLit text i
 
-  t |> tokCtxPush token r
+    let token =
+      if ok then tokenFromCharLit text i r else ErrorToken
+
+    t |> tokCtxPush token r
 
 let tokStrLit t =
   let text, i = t |> tokCtxToTextIndex

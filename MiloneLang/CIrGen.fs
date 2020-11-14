@@ -437,8 +437,12 @@ let cirCtxConvertTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (TupleTyCtor, itemTys) -> cirCtxAddTupleIncomplete ctx itemTys
 
-  | AppTy (RefTyCtor serial, _) ->
+  | AppTy (RefTyCtor serial, useTyArgs) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
+      | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+        let ty = tyExpandSynonym useTyArgs defTySerials bodyTy
+        cirCtxConvertTyIncomplete ctx ty
+
       | Some (UnionTyDef _) -> cirCtxAddUnionIncomplete ctx serial
 
       | Some (RecordTyDef _) -> cirCtxAddRecordTyIncomplete ctx serial
@@ -468,8 +472,12 @@ let cirGetCTy (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (TupleTyCtor, itemTys) -> cirCtxAddTupleDecl ctx itemTys
 
-  | AppTy (RefTyCtor serial, _) ->
+  | AppTy (RefTyCtor serial, useTyArgs) ->
       match ctx |> cirCtxGetTys |> mapTryFind serial with
+      | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+        let ty = tyExpandSynonym useTyArgs defTySerials bodyTy
+        cirGetCTy ctx ty
+
       | Some (UnionTyDef (_, variants, _)) -> cirCtxAddUnionDecl ctx serial variants
 
       | Some (RecordTyDef (_, fields, _)) -> cirCtxAddRecordTyDecl ctx serial fields

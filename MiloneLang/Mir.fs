@@ -848,7 +848,7 @@ let mirifyDecl ctx expr =
   | HLetValExpr (_vis, pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc
   | HLetFunExpr (serial, _vis, isMainFun, args, body, next, _, loc) ->
       mirifyExprLetFun ctx serial isMainFun args body next loc
-  | HTyDeclExpr (tySerial, _vis, tyDecl, loc) -> mirifyExprTyDecl ctx tySerial tyDecl loc
+  | HTyDeclExpr (tySerial, _vis, _, tyDecl, loc) -> mirifyExprTyDecl ctx tySerial tyDecl loc
   | HOpenExpr (_, loc) -> mirifyExprOpen ctx loc
   | _ -> failwith "NEVER"
 

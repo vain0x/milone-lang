@@ -114,7 +114,7 @@ struct UIntIntStringTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 {
 
 struct UIntIntStringTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 mapNewSingleton_2(int key_, struct String value_, struct IntUIntFun1 hash_, struct IntIntIntFun2 cmp_) {
     int app_ = cmp_.fun(cmp_.env, key_, key_);
-    milone_assert((app_ == 0), 12, 2);
+    milone_assert((app_ == 0), 18, 2);
     int call_2 = 0;
     uint32_t app_1 = hash_.fun(hash_.env, key_);
     struct IntStringTuple2 tuple_2;
@@ -164,7 +164,7 @@ struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 {
 
 struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 mapNewSingleton_1(int key_, int value_, struct IntUIntFun1 hash_, struct IntIntIntFun2 cmp_) {
     int app_2 = cmp_.fun(cmp_.env, key_, key_);
-    milone_assert((app_2 == 0), 12, 2);
+    milone_assert((app_2 == 0), 18, 2);
     int call_3 = 0;
     uint32_t app_3 = hash_.fun(hash_.env, key_);
     struct IntUnitTuple2 tuple_5;

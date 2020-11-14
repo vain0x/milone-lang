@@ -113,36 +113,6 @@ let tyCmp first second =
 
 let tyEq first second = tyCmp first second = 0
 
-let tyPrimFromIdent ident tys loc =
-  match ident, tys with
-  | "unit", [] -> tyUnit
-
-  | "bool", [] -> tyBool
-
-  | "int", [] -> tyInt
-
-  | "uint", [] -> tyUInt
-
-  | "char", [] -> tyChar
-
-  | "string", [] -> tyStr
-
-  | "obj", [] -> tyObj
-
-  | "option", [ itemTy ] ->
-      // FIXME: option is just an alias of list for now
-      tyList itemTy
-
-  | "list", [ itemTy ] -> tyList itemTy
-
-  | "AssocMap", [ keyTy; valueTy ] -> tyAssocMap keyTy valueTy
-
-  | "AssocSet", [ itemTy ] -> tyAssocMap itemTy tyUnit
-
-  | _ ->
-      printfn "#error tyPrimFromIdent ident=%s loc=%s" ident (locToString loc)
-      ErrorTy loc
-
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
@@ -239,7 +209,11 @@ let tyDisplay getTyIdent ty =
 
     | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
 
-    // AssocMap
+    // AssocMap.
+    //
+    // AssocMap is now not built-in to language,
+    // but this simplification is still good to have for debugging.
+    // (Ideally we want simplification using type synonyms.)
     | AppTy (TupleTyCtor,
              [
                // trie
@@ -307,6 +281,7 @@ let tyDisplay getTyIdent ty =
 /// Type inference context.
 type TyContext =
   { Serial: Serial
+    LetDepth: LetDepth
     Tys: AssocMap<TySerial, TyDef>
     TyDepths: AssocMap<TySerial, LetDepth> }
 
@@ -359,6 +334,35 @@ let typingSubst (ctx: TyContext) ty: Ty =
 
   tySubst substMeta ty
 
+let tyExpandSynonym useTyArgs defTySerials bodyTy =
+  // Checked in NameRes.
+  assert (List.length defTySerials = List.length useTyArgs)
+
+  // Expand synonym.
+  let assignment = List.zip defTySerials useTyArgs
+
+  let substMeta tySerial =
+    assignment |> assocTryFind intCmp tySerial
+
+  tySubst substMeta bodyTy
+
+let typingExpandSynonyms (ctx: TyContext) ty =
+  let rec go ty =
+    match ty with
+    | AppTy (RefTyCtor tySerial, useTyArgs) ->
+        match ctx.Tys |> mapTryFind tySerial with
+        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+            tyExpandSynonym useTyArgs defTySerials bodyTy
+            |> go
+
+        | _ -> AppTy(RefTyCtor tySerial, useTyArgs)
+
+    | AppTy (tyCtor, tyArgs) -> AppTy(tyCtor, tyArgs |> List.map go)
+
+    | _ -> ty
+
+  go ty
+
 type private MetaTyUnifyResult =
   | DidExpand of Ty
   | DidBind of TyContext
@@ -377,6 +381,57 @@ let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
           DidRecurse
 
       | otherTy -> DidBind(typingBind ctx tySerial otherTy loc)
+
+let private isSynonym (ctx: TyContext) tySerial =
+  match ctx.Tys |> mapTryFind tySerial with
+  | Some (SynonymTyDef _) -> true
+  | _ -> false
+
+let private asSynonym (ctx: TyContext) tySerial =
+  match ctx.Tys |> mapTryFind tySerial with
+  | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
+  | _ -> failwith "Expected synonym. Check with isSynonym first."
+
+let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
+  let defTySerials, bodyTy = asSynonym ctx tySerial
+
+  // Checked in NameRes.
+  assert (List.length defTySerials = List.length useTyArgs)
+
+  let instantiatedTy, ctx =
+    let assignment, ctx =
+      defTySerials
+      |> List.fold (fun (assignment, ctx: TyContext) defTySerial ->
+           let newTySerial = ctx.Serial + 1
+
+           let assignment =
+             (defTySerial, (MetaTy(newTySerial, loc)))
+             :: assignment
+
+           let ctx =
+             let tyDepths =
+               ctx.TyDepths |> mapAdd newTySerial ctx.LetDepth
+
+             { ctx with
+                 Serial = newTySerial
+                 TyDepths = tyDepths }
+
+           assignment, ctx) ([], ctx)
+
+    let substMeta tySerial =
+      assignment |> assocTryFind intCmp tySerial
+
+    tySubst substMeta bodyTy, ctx
+
+  let expandedTy =
+    let assignment = List.zip defTySerials useTyArgs
+
+    let substMeta tySerial =
+      assignment |> assocTryFind intCmp tySerial
+
+    tySubst substMeta bodyTy
+
+  expandedTy, instantiatedTy, ctx
 
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
@@ -420,13 +475,22 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
 
         gogo lTyArgs rTyArgs (logAcc, ctx)
 
+    | AppTy (RefTyCtor tySerial, tyArgs), _ when tySerial |> isSynonym ctx ->
+        let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
+        (logAcc, ctx) |> go ty1 ty2 |> go ty1 rTy
+
+    | _, AppTy (RefTyCtor tySerial, tyArgs) when tySerial |> isSynonym ctx ->
+        let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
+        (logAcc, ctx) |> go ty1 ty2 |> go ty1 lTy
+
     | AppTy _, _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
 
   go lty rty (logAcc, ctx)
 
 let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   let theTrait =
-    theTrait |> traitMapTys (typingSubst ctx)
+    theTrait
+    |> traitMapTys (fun ty -> ty |> typingSubst ctx |> typingExpandSynonyms ctx)
 
   let expectScalar ty (logAcc, ctx) =
     match ty with

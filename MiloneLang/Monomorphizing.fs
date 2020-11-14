@@ -79,7 +79,10 @@ let monoCtxFromTyCtx (tyCtx: TyCtx): MonoCtx =
 let monoCtxToTyCtx (monoCtx: MonoCtx): TyContext =
   { Serial = monoCtx |> monoCtxGetSerial
     Tys = monoCtx |> monoCtxGetTys
-    TyDepths = monoCtx |> monoCtxGetTyDepths }
+    TyDepths = monoCtx |> monoCtxGetTyDepths
+
+    // This doesn't matter here since we don't generalize.
+    LetDepth = 0 }
 
 let monoCtxWithTyCtx (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
   monoCtx

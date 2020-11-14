@@ -2,10 +2,6 @@
 [<AutoOpen>]
 module rec MiloneLang.Compatible
 
-type AssocMap<'K, 'V> = (uint * ('K * 'V) list) list * ('K -> uint) * ('K -> 'K -> int)
-
-type AssocSet<'K> = AssocMap<'K, unit>
-
 let objToString (value: _) = string (value :> obj)
 
 let inRegion (f: unit -> int): int = f ()

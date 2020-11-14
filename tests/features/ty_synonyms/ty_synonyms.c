@@ -1,14 +1,44 @@
 #include "milone.h"
 
+struct IntList;
+
+int baseCase_(int arg_);
+
+int yodaCase_(int exitCode_);
+
 int proj_2(int cond_, int body_, int alt_);
 
 struct String proj_1(int cond_, struct String body_, struct String alt_);
 
-int polymorphicFunTest_(int arg_);
-
-struct IntList;
+int polymorphicFunCase_(int arg_1);
 
 int main();
+
+struct IntList {
+    int head;
+    struct IntList* tail;
+};
+
+int baseCase_(int arg_) {
+    int success_ = 0;
+    int failure_ = 1;
+    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    list_1->head = failure_;
+    list_1->tail = NULL;
+    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    list_->head = success_;
+    list_->tail = list_1;
+    struct IntList* codes_ = list_;
+    milone_assert((success_ == 0), 13, 2);
+    int call_ = 0;
+    return 0;
+}
+
+int yodaCase_(int exitCode_) {
+    milone_assert((0 == exitCode_), 16, 36);
+    int call_1 = 0;
+    return 0;
+}
 
 int proj_2(int cond_, int body_, int alt_) {
     int match_;
@@ -40,33 +70,19 @@ end_match_4:;
     return match_1;
 }
 
-int polymorphicFunTest_(int arg_) {
-    int call_ = proj_2(1, 1, 0);
-    milone_assert((call_ == 1), 9, 2);
-    int call_1 = 0;
-    struct String call_2 = proj_1(0, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
-    milone_assert((str_cmp(call_2, (struct String){.str = "F", .len = 1}) == 0), 10, 2);
+int polymorphicFunCase_(int arg_1) {
+    int call_2 = proj_2(1, 1, 0);
+    milone_assert((call_2 == 1), 21, 2);
     int call_3 = 0;
+    struct String call_4 = proj_1(0, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
+    milone_assert((str_cmp(call_4, (struct String){.str = "F", .len = 1}) == 0), 22, 2);
+    int call_5 = 0;
     return 0;
 }
 
-struct IntList {
-    int head;
-    struct IntList* tail;
-};
-
 int main() {
-    int success_ = 0;
-    int failure_ = 1;
-    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
-    list_1->head = failure_;
-    list_1->tail = NULL;
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
-    list_->head = success_;
-    list_->tail = list_1;
-    struct IntList* codes_ = list_;
-    milone_assert((success_ == 0), 16, 2);
-    int call_4 = 0;
-    int call_5 = polymorphicFunTest_(0);
+    int call_6 = baseCase_(0);
+    int call_7 = yodaCase_(0);
+    int call_8 = polymorphicFunCase_(0);
     return 0;
 }

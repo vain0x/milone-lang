@@ -57,12 +57,6 @@ let scopeCtxIsVariant varSerial scopeCtx =
 
   | _ -> false
 
-let scopeCtxIsMetaTy tySerial scopeCtx =
-  match scopeCtx |> scopeCtxGetTy tySerial with
-  | MetaTyDef _ -> true
-
-  | _ -> false
-
 /// Defines a variable, without adding to any scope.
 let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
@@ -298,11 +292,14 @@ let scopeCtxResolveTy ty loc scopeCtx =
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
         match scopeCtx |> scopeCtxResolveLocalTyIdent ident with
-        | Some tySerial when scopeCtx |> scopeCtxIsMetaTy tySerial ->
-            // In the case of type synonyms.
-            MetaTy(tySerial, loc), scopeCtx
+        | Some tySerial ->
+            match scopeCtx |> scopeCtxGetTys |> mapTryFind tySerial with
+            | Some (UniversalTyDef (_, tySerial, _)) -> MetaTy(tySerial, loc), scopeCtx
 
-        | Some tySerial -> tyRef tySerial tys, scopeCtx
+            | Some (SynonymTyDef (ident, defTyArgs, _, _)) when List.length defTyArgs <> List.length tys ->
+                failwithf "synonym arity mismatch: %A" (tySerial, tys, ident, defTyArgs, loc)
+
+            | _ -> tyRef tySerial tys, scopeCtx
 
         | None -> tyPrimFromIdent ident tys loc, scopeCtx
 
@@ -342,7 +339,7 @@ let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx 
 /// - You need call `scopeCtxDefineTyFinish` to complete the task.
 /// - This doesn't resolve inner type expressions
 ///   because some type declarations are still unseen.
-let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
+let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
   let addVarToModule varSerial ctx =
     match moduleSerialOpt, vis with
     | Some moduleSerial, PublicVis -> ctx |> scopeCtxAddVarToNs moduleSerial varSerial
@@ -362,9 +359,9 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
   else
 
     match tyDecl with
-    | TySynonymDecl (body, _synonymLoc) ->
+    | TySynonymDecl (body, _) ->
         ctx
-        |> scopeCtxDefineLocalTy tySerial (MetaTyDef(tyIdent, body, loc))
+        |> scopeCtxDefineLocalTy tySerial (SynonymTyDef(tyIdent, tyArgs, body, loc))
         |> addTyToModule tySerial
 
     | UnionTyDecl (_, variants, _unionLoc) ->
@@ -402,11 +399,11 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyDecl loc ctx =
 ///
 /// - No need to call `scopeCtxDefineTyStart` first.
 /// - This resolves inner type expressions.
-let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
+let scopeCtxDefineTyFinish tySerial tyArgs tyDecl loc ctx =
   let ctx =
     // Pass in PrivateVis because if this type is not pre-declared here, it's local to function.
     ctx
-    |> scopeCtxDefineTyStart None tySerial PrivateVis tyDecl loc
+    |> scopeCtxDefineTyStart None tySerial PrivateVis tyArgs tyDecl loc
 
   let tyDef = ctx |> scopeCtxGetTy tySerial
 
@@ -415,6 +412,24 @@ let scopeCtxDefineTyFinish tySerial tyDecl loc ctx =
       let bodyTy, ctx = ctx |> scopeCtxResolveTy bodyTy loc
       ctx
       |> scopeCtxDefineTy tySerial (MetaTyDef(tyIdent, bodyTy, loc))
+
+  | UniversalTyDef _ -> ctx
+
+  | SynonymTyDef (tyIdent, tyArgs, bodyTy, loc) ->
+      let parent, ctx = ctx |> scopeCtxStartScope
+
+      let ctx =
+        tyArgs
+        |> List.fold (fun ctx tyArg ->
+             let ident = ctx |> scopeCtxGetIdent tyArg
+             ctx
+             |> scopeCtxDefineLocalTy tyArg (UniversalTyDef(ident, tyArg, loc))) ctx
+
+      let bodyTy, ctx = ctx |> scopeCtxResolveTy bodyTy loc
+      let ctx = ctx |> scopeCtxFinishScope parent
+
+      ctx
+      |> scopeCtxDefineTy tySerial (SynonymTyDef(tyIdent, tyArgs, bodyTy, loc))
 
   | UnionTyDef (_, variantSerials, _unionLoc) ->
       let go ctx variantSerial =
@@ -536,12 +551,12 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
         let exprs, ctx = (exprs, ctx) |> stMap goExpr
         HInfExpr(InfOp.Semi, exprs, ty, loc), ctx
 
-    | HTyDeclExpr (serial, vis, tyDecl, loc) ->
+    | HTyDeclExpr (serial, vis, tyArgs, tyDecl, loc) ->
         let ctx =
           ctx
-          |> scopeCtxDefineTyStart moduleSerialOpt serial vis tyDecl loc
+          |> scopeCtxDefineTyStart moduleSerialOpt serial vis tyArgs tyDecl loc
 
-        HTyDeclExpr(serial, vis, tyDecl, loc), ctx
+        HTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
 
     | _ -> expr, ctx
 
@@ -781,10 +796,11 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HTyDeclExpr (serial, _, tyDecl, loc) ->
+  | HTyDeclExpr (serial, _, tyArgs, tyDecl, loc) ->
       let doArm () =
         let ctx =
-          ctx |> scopeCtxDefineTyFinish serial tyDecl loc
+          ctx
+          |> scopeCtxDefineTyFinish serial tyArgs tyDecl loc
 
         expr, ctx
 
