@@ -32,27 +32,35 @@ type Verbosity =
   | Profile of Profiler
   | Quiet
 
-let helpText = """USAGE: milone [OPTIONS] <project-dir>
+let helpText = """milone-lang compiler
+
+USAGE:
+    milone [SUBCOMMAND] OPTIONS...
 
 EXAMPLE
-    milone -q /path/to/foo
+    milone compile ./MiloneLang
 
-DESCRIPTION
-    Compile the specified project
-    and write compiled C-language code to standard output
-    or compile error messages to standard error.
+SUBCOMMANDS
+    milone compile <PROJECT-DIR>
+        Compiles a milone-lang project to C.
 
-    Note that `Foo.fs` is the entry point of the project
-    that is located at `/path/to/Foo`.
+        If success, writes generated C codes to STDOUT
+        and exits with zero.
 
-ARGS
-    project-dir
-        where the source files are located
+        If error, exits with non-zero code.
+        Errors are written to STDOUT. (FIXME: use STDERR)
 
 OPTIONS
-    -q              No debug logs
-    -v              Verbose debug logs
-       --profile    Print logs with time interval"""
+    -h, --help      Print this text.
+    -V, --version   Print version of the compiler.
+
+GLOBAL OPTIONS
+    -v, --verbose   Enable verbose logging for debug
+        --profile   Enable profile logging
+    -q, --quiet     Disable logging
+
+LINKS
+    <https://github.com/vain0x/milone-lang>"""
 
 let strTrimEnd (s: string) =
   let rec go i =
@@ -408,28 +416,120 @@ let cliCompileViaKir host projectDirs =
        printfn "\n// exit = %d\n" code
        code) 0
 
+// -----------------------------------------------
+// args
+// -----------------------------------------------
+
+/// Parses CLI args for a flag.
+///
+/// `picker state arg` should return `Some state` if arg is consumed. None otherwise.
+///
+/// Returns final state and args not consumed.
+let private parseFlag picker state args =
+  // acc: args not consumed in reversed order
+  let rec go acc state args =
+    match args with
+    | []
+    | "--" :: _ -> state, List.append (List.rev acc) args
+
+    | arg :: args ->
+        match picker state arg with
+        | Some state -> go acc state args
+
+        | None -> go (arg :: acc) state args
+
+  go [] state args
+
+let private containsHelpFlag args =
+  let ok, _ =
+    parseFlag (fun _ arg ->
+      match arg with
+      | "-h"
+      | "--help" -> Some true
+      | _ -> None) false args
+
+  ok
+
+let private parseVerbosity host args =
+  parseFlag (fun (_: Verbosity) arg ->
+    match arg with
+    | "-v" -> Some Verbose
+    | "-q" -> Some Quiet
+    | "--profile" -> Some(Profile(cliHostGetProfileInit host ()))
+    | _ -> None) Quiet args
+
+type private CliCmd =
+  | HelpCmd
+  | VersionCmd
+  | CompileCmd
+  | ParseCmd
+  | KirDumpCmd
+  | BadCmd of string
+
+let private parseArgs args =
+  match args with
+  | []
+  | "help" :: _ -> HelpCmd, []
+  | _ when args |> containsHelpFlag -> HelpCmd, []
+
+  | "version" :: _
+  | "-V" :: _
+  | "--version" :: _ -> VersionCmd, []
+
+  // for backward
+  | "-v" :: _
+  | "-q" :: _
+  | "--profile" :: _ -> CompileCmd, args
+
+  | arg :: args ->
+      match arg with
+      | "build"
+      | "compile" -> CompileCmd, args
+
+      // for debug
+      | "parse" -> ParseCmd, args
+      | "kir-dump" -> KirDumpCmd, args
+      | "kir-c" -> CompileCmd, "--kir" :: args
+
+      | _ -> BadCmd arg, []
+
 let cli (host: CliHost) =
-  match host |> cliHostGetArgs with
-  | [ "-v"; projectDir ] -> cliCompile host Verbose projectDir
-
-  | [ "--profile"; projectDir ] ->
-      let profile = Profile(cliHostGetProfileInit host ())
-
-      cliCompile host profile projectDir
-
-  | [ "-q"; projectDir ] -> cliCompile host Quiet projectDir
-
-  // for debugging
-  | [ "parse"; "-v"; projectDir ] -> cliParse host Verbose projectDir
-
-  | [ "parse"; "-q"; projectDir ] -> cliParse host Quiet projectDir
-
-  // experimental feature
-  | "--kir-dump" :: projectDirs -> cliKirDump host projectDirs
-
-  | "--kir-c" :: projectDirs -> cliCompileViaKir host projectDirs
-
-  | _ ->
-      // FIXME: to stderr
+  match host |> cliHostGetArgs |> parseArgs with
+  | HelpCmd, _ ->
       printfn "%s" helpText
+      0
+
+  | VersionCmd, _ ->
+      printfn "0.1.0"
+      0
+
+  | CompileCmd, args ->
+      let verbosity, args = parseVerbosity host args
+
+      let useKir, args =
+        parseFlag (fun _ arg -> if arg = "--kir" then Some true else None) false args
+
+      match useKir, args with
+      | true, _ -> cliCompileViaKir host args
+
+      | false, projectDir :: _ -> cliCompile host verbosity projectDir
+
+      | false, [] ->
+          printfn "ERROR: Expected project dir."
+          1
+
+  | ParseCmd, args ->
+      let verbosity, args = parseVerbosity host args
+
+      match args with
+      | projectDir :: _ -> cliParse host verbosity projectDir
+
+      | [] ->
+          printfn "ERROR: Expected project dir."
+          1
+
+  | KirDumpCmd, projectDirs -> cliKirDump host projectDirs
+
+  | BadCmd subcommand, _ ->
+      printfn "ERROR: Unknown subcommand '%s'." subcommand
       1
