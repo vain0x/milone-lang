@@ -1,11 +1,13 @@
 /// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
+open MiloneLang.TreeMap
+
 // -----------------------------------------------
 // Collections
 // -----------------------------------------------
 
-type AssocMap<'K, 'V> = (uint * ('K * 'V) list) list * ('K -> uint) * ('K -> 'K -> int)
+type AssocMap<'K, 'V> = TreeMap<'K, 'V>
 
 type AssocSet<'K> = AssocMap<'K, unit>
 

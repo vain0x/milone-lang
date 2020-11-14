@@ -140,21 +140,6 @@ let listUnique cmp xs = listSortCore true cmp xs
 // Assoc
 // -----------------------------------------------
 
-let assocAdd key value assoc = (key, value) :: assoc
-
-let assocRemove cmp key assoc =
-  let rec go acc assoc =
-    match assoc with
-    | [] -> None, List.rev acc
-
-    | (k, v) :: assoc when cmp k key = 0 ->
-        let _, assoc = go acc assoc
-        Some v, assoc
-
-    | kv :: assoc -> go (kv :: acc) assoc
-
-  go [] assoc
-
 let assocTryFind cmp key assoc =
   let rec go assoc =
     match assoc with
@@ -166,147 +151,21 @@ let assocTryFind cmp key assoc =
 
   go assoc
 
-let assocFold folder state assoc =
-  let rec go state assoc =
-    match assoc with
-    | [] -> state
-
-    | (k, v) :: assoc -> go (folder state k v) assoc
-
-  go state assoc
-
-let assocMap f assoc =
-  let rec go acc assoc =
-    match assoc with
-    | [] -> List.rev acc
-
-    | (k, v) :: assoc -> go ((k, f k v) :: acc) assoc
-
-  go [] assoc
-
-let assocFilter pred assoc =
-  let rec go acc assoc =
-    match assoc with
-    | [] -> List.rev acc
-
-    | ((k, v) as kv) :: assoc ->
-        let acc = if pred k v then (kv :: acc) else acc
-        go acc assoc
-
-  go [] assoc
-
-let assocToKeyAcc acc assoc =
-  let rec go acc assoc =
-    match assoc with
-    | [] -> acc
-
-    | (k, _) :: assoc -> go (k :: acc) assoc
-
-  go acc assoc
-
-// -----------------------------------------------
-// HashTrie
-// -----------------------------------------------
-
-let trieIsEmpty trie =
-  let rec go trie =
-    match trie with
-    | (_, []) :: trie -> go trie
-
-    | (_, _ :: _) :: _ -> false
-
-    | [] -> true
-
-  go trie
-
-let trieAdd (keyHash: uint) key value trie =
-  let rec go trie =
-    match trie with
-    | [] -> [ keyHash, [ key, value ] ]
-
-    | (h, assoc) :: trie when h = keyHash -> (keyHash, assocAdd key value assoc) :: trie
-
-    | kv :: trie -> kv :: go trie
-
-  go trie
-
-let trieRemove cmp (keyHash: uint) key trie =
-  let rec go trie =
-    match trie with
-    | [] -> None, []
-
-    | (h, assoc) :: trie when h = keyHash ->
-        let removed, assoc = assocRemove cmp key assoc
-        removed, (keyHash, assoc) :: trie
-
-    | kv :: trie ->
-        let removed, trie = go trie
-        removed, kv :: trie
-
-  go trie
-
-let trieTryFind cmp (keyHash: uint) key trie =
-  let rec go trie =
-    match trie with
-    | [] -> None
-
-    | (h, assoc) :: _ when h = keyHash -> assocTryFind cmp key assoc
-
-    | _ :: trie -> go trie
-
-  go trie
-
-let trieMap f trie =
-  let rec go trie =
-    match trie with
-    | [] -> []
-
-    | (h, assoc) :: trie -> (h, assocMap f assoc) :: go trie
-
-  go trie
-
-let tireFilter pred trie =
-  let rec go trie =
-    match trie with
-    | [] -> []
-
-    | (h, assoc) :: trie -> (h, assocFilter pred assoc) :: go trie
-
-  go trie
-
-let trieToKeys trie =
-  let rec go acc trie =
-    match trie with
-    | [] -> acc
-
-    | (_, assoc) :: trie -> go (assocToKeyAcc acc assoc) trie
-
-  go [] trie
-
 // -----------------------------------------------
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty (hash, cmp): AssocMap<_, _> = [], hash, cmp
+let mapEmpty (_hash, cmp): AssocMap<_, _> = TreeMap.empty cmp
 
 let mapKeyHash hash key = hash key % uint 512
 
-let mapIsEmpty ((trie, _, _): AssocMap<_, _>) = trie |> trieIsEmpty
+let mapIsEmpty (map: AssocMap<_, _>) = TreeMap.isEmpty map
 
-let mapAdd key value (trie, hash, cmp): AssocMap<_, _> =
-  let trie =
-    trie |> trieAdd (mapKeyHash hash key) key value
+let mapAdd key value (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.add key value map
 
-  trie, hash, cmp
+let mapRemove key (map: AssocMap<_, _>): _ option * AssocMap<_, _> = TreeMap.remove key map
 
-let mapRemove key (trie, hash, cmp): _ option * AssocMap<_, _> =
-  let removed, trie =
-    trie |> trieRemove cmp (mapKeyHash hash key) key
-
-  removed, (trie, hash, cmp)
-
-let mapTryFind key ((trie, hash, cmp): AssocMap<_, _>) =
-  trie |> trieTryFind cmp (mapKeyHash hash key) key
+let mapTryFind key (map: AssocMap<_, _>): _ option = TreeMap.tryFind key map
 
 let mapFind key map =
   match mapTryFind key map with
@@ -320,80 +179,22 @@ let mapContainsKey key map =
 
   | None -> false
 
-let mapFold folder state (map: AssocMap<_, _>) =
-  map |> mapToList |> assocFold folder state
+let mapFold folder state (map: AssocMap<_, _>) = TreeMap.fold folder state map
 
-let mapMap f (trie, hash, cmp): AssocMap<_, _> =
-  let trie = trieMap f trie
-  trie, hash, cmp
+let mapMap f (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.map f map
 
-let mapFilter pred (trie, hash, cmp): AssocMap<_, _> =
-  let trie = tireFilter pred trie
-  trie, hash, cmp
+let mapFilter pred (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.filter pred map
 
-let mapToKeys ((trie, _, cmp): AssocMap<_, _>) = trie |> trieToKeys |> listUnique cmp
+let mapToKeys (map: AssocMap<_, _>) = TreeMap.toList map |> List.map fst
 
-let mapToList (map: AssocMap<_, _>) =
-  let trie, _, cmp = map
+let mapToList (map: AssocMap<_, _>) = TreeMap.toList map
 
-  let rec go acc keys =
-    match keys with
-    | [] -> acc
+let mapOfKeys (_hash, cmp) value keys: AssocMap<_, _> =
+  keys
+  |> List.map (fun key -> key, value)
+  |> TreeMap.ofList cmp
 
-    | key :: keys -> go ((key, mapFind key map) :: acc) keys
-
-  // Sort in reversed order and re-reverse it with `go`.
-  trie
-  |> trieToKeys
-  |> listUnique (fun l r -> cmp r l)
-  |> go []
-
-let mapOfKeys (hash, cmp) value keys: AssocMap<_, _> =
-  /// Partition a key list by hash to acc/rest.
-  let rec group keyHash acc others keys =
-    match keys with
-    | [] -> acc, others
-
-    | key :: keys ->
-        if mapKeyHash hash key = keyHash
-        then group keyHash ((key, value) :: acc) others keys
-        else group keyHash acc (key :: others) keys
-
-  let rec go trie keys =
-    match keys with
-    | [] -> trie
-
-    | key :: keys ->
-        let h = mapKeyHash hash key
-        let acc, keys = group h [ (key, value) ] [] keys
-        go ((h, acc) :: trie) keys
-
-  let trie = go [] keys
-  trie, hash, cmp
-
-let mapOfList (hash, cmp) assoc: AssocMap<_, _> =
-  /// Partition an assoc by hash of key to acc/rest.
-  let rec group keyHash acc others assoc =
-    match assoc with
-    | [] -> acc, others
-
-    | ((key, _) as kv) :: assoc ->
-        if mapKeyHash hash key = keyHash then
-          group keyHash (kv :: acc) others assoc
-        else
-          group keyHash acc (kv :: others) assoc
-
-  let rec go trie assoc =
-    match assoc with
-    | [] -> trie
-
-    | ((key, _) as kv) :: assoc ->
-        let h = mapKeyHash hash key
-        let acc, assoc = group h [ kv ] [] assoc
-        go ((h, acc) :: trie) assoc
-
-  let trie = go [] assoc
-  trie, hash, cmp
+let mapOfList (_hash, cmp) assoc: AssocMap<_, _> = TreeMap.ofList cmp assoc
 
 // -----------------------------------------------
 // AssocSet
@@ -409,25 +210,28 @@ let setOfList (hash, cmp) xs: AssocSet<_> = mapOfKeys (hash, cmp) () xs
 
 let setAdd key set: AssocSet<_> = mapAdd key () set
 
-let setDiff ((trie, hash, cmp): AssocSet<_>) (second: AssocSet<_>): AssocSet<_> =
-  let rec filter acc assoc =
-    match assoc with
-    | [] -> List.rev acc
+let setDiff (first: AssocSet<_>) (second: AssocSet<_>): AssocSet<_> =
+  first
+  |> mapFilter (fun k () -> second |> setContains k |> not)
 
-    | (key, ()) :: assoc when setContains key second -> filter acc assoc
+// let rec filter acc assoc =
+//   match assoc with
+//   | [] -> List.rev acc
 
-    | kv :: assoc -> filter (kv :: acc) assoc
+//   | (key, ()) :: assoc when setContains key second -> filter acc assoc
 
-  let rec go trie =
-    match trie with
-    | [] -> []
+//   | kv :: assoc -> filter (kv :: acc) assoc
 
-    | (h, assoc) :: trie ->
-        let assoc = filter [] assoc
-        (h, assoc) :: go trie
+// let rec go trie =
+//   match trie with
+//   | [] -> []
 
-  let trie = go trie
-  trie, hash, cmp
+//   | (h, assoc) :: trie ->
+//       let assoc = filter [] assoc
+//       (h, assoc) :: go trie
+
+// let trie = go trie
+// trie, hash, cmp
 
 let setFold folder state (set: AssocSet<_>) =
   set |> setToList |> List.fold folder state
