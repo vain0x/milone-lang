@@ -113,36 +113,6 @@ let tyCmp first second =
 
 let tyEq first second = tyCmp first second = 0
 
-let tyPrimFromIdent ident tys loc =
-  match ident, tys with
-  | "unit", [] -> tyUnit
-
-  | "bool", [] -> tyBool
-
-  | "int", [] -> tyInt
-
-  | "uint", [] -> tyUInt
-
-  | "char", [] -> tyChar
-
-  | "string", [] -> tyStr
-
-  | "obj", [] -> tyObj
-
-  | "option", [ itemTy ] ->
-      // FIXME: option is just an alias of list for now
-      tyList itemTy
-
-  | "list", [ itemTy ] -> tyList itemTy
-
-  | "AssocMap", [ keyTy; valueTy ] -> tyAssocMap keyTy valueTy
-
-  | "AssocSet", [ itemTy ] -> tyAssocMap itemTy tyUnit
-
-  | _ ->
-      printfn "#error tyPrimFromIdent ident=%s loc=%s" ident (locToString loc)
-      ErrorTy loc
-
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
@@ -239,7 +209,11 @@ let tyDisplay getTyIdent ty =
 
     | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
 
-    // AssocMap
+    // AssocMap.
+    //
+    // AssocMap is now not built-in to language,
+    // but this simplification is still good to have for debugging.
+    // (Ideally we want simplification using type synonyms.)
     | AppTy (TupleTyCtor,
              [
                // trie

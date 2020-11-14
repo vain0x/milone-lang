@@ -953,10 +953,6 @@ let tyPrimFromIdent ident tys loc =
 
   | "list", [ itemTy ] -> tyList itemTy
 
-  | "AssocMap", [ keyTy; valueTy ] -> tyAssocMap keyTy valueTy
-
-  | "AssocSet", [ itemTy ] -> tyAssocMap itemTy tyUnit
-
   | _ ->
       printfn "#error tyPrimFromIdent ident=%s loc=%s" ident (locToString loc)
       ErrorTy loc

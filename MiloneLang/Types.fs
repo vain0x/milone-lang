@@ -1,6 +1,18 @@
 /// Defines the types used in multiple modules.
 module rec MiloneLang.Types
 
+// -----------------------------------------------
+// Collections
+// -----------------------------------------------
+
+type AssocMap<'K, 'V> = (uint * ('K * 'V) list) list * ('K -> uint) * ('K -> 'K -> int)
+
+type AssocSet<'K> = AssocMap<'K, unit>
+
+// -----------------------------------------------
+// Vocabulary
+// -----------------------------------------------
+
 /// Unique serial number to identify something
 /// such as variables, nominal types, etc.
 type Serial = int
