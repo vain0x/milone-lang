@@ -351,7 +351,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
         | None -> None
 
   // Bundle.
-  let expr, nameCtx, errorListList =
+  let expr, nameCtx, errors =
     let readCoreFile moduleName =
       eprintfn "readCoreFile: unimplemented"
       ""
@@ -381,9 +381,30 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
       eprintfn "parse: '%s'" moduleName
       MiloneLang.Parsing.parse tokens
 
-    let nameCtx = MiloneLang.Helpers.nameCtxEmpty ()
+    let bundleHost: MiloneLang.Bundling.BundleHost =
+      { FetchModule =
+          fun p m ->
+            if p = projectName then
+              match readModuleFile m with
+              | Some contents ->
+                  let ast, errors = contents |> MiloneLang.Lexing.tokenize |> parseModule m
 
-    MiloneLang.Bundling.parseProjectModules readCoreFile readModuleFile parseModule projectName nameCtx
+                  let docId = m
+
+                  Some(docId, ast, errors)
+
+              | None -> None
+
+            else
+              // FIXME: load MiloneCore from libcore
+              None }
+
+    match MiloneLang.Bundling.bundleProgram bundleHost projectName with
+    | Some it -> it
+    | None ->
+      let expr = MiloneLang.Helpers.hxUnit ("", 0, 0)
+      let nameCtx = MiloneLang.Helpers.nameCtxEmpty ()
+      expr, nameCtx, []
 
   // Name resolution.
   let expr, scopeCtx =
@@ -391,7 +412,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
   // Type inference.
   let _expr, tyCtx =
-    MiloneLang.Typing.infer (expr, scopeCtx, errorListList)
+    MiloneLang.Typing.infer (expr, scopeCtx, errors)
 
   // Collect errors.
   let errors =

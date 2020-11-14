@@ -1,24 +1,34 @@
-/// Merges modules into single expression.
+/// ## Module Bundling
 ///
-/// ## Algorithm
+/// Resolves dependencies and merges modules into single HIR expression.
 ///
-/// At first a module that is an entry point is given.
+/// ### `open` statement
 ///
-/// Whenever a module is given, open and parse the file
-/// and collect `open` declarations. For each `open`,
-/// we find the corresponding source file and load it first.
+/// In F#, a project file (.fsproj) describes the member modules, their ordering
+/// and external project/package references.
 ///
-/// Sort the loaded modules in the topological order
-/// (i.e. opened modules first, opening modules last)
-/// and merge them.
+/// In milone-lang, `open` statements work as dependency for now.
+/// When a module X has a statement `open P.M`,
+/// where P is project name and M is module name,
+/// such module `P.M` is also a member of the project,
+/// and `P.M` should be earlier than X in the project.
 ///
-/// FIXME: Currently, this stage breaks the privacy of modules.
-///   Some definitions in upstream modules may become visible
-///   to down stream modules without explicit `open`s.
+/// `open` doesn't specify where the project `P` come from.
+/// Instead, this module just uses a function `FetchModule`,
+/// provided by the caller, to load a module.
+/// See `Cli.fs` for its implementation.
+///
+/// ### Dependency Resolution Algorithm
+///
+/// Dependency resolution is just a topological sort.
+///
+/// Starting from a module that is specified by the user,
+/// recursively loads modules based on `open` statements
+/// as described above.
 ///
 /// ## Example
 ///
-/// If the following module file is given:
+/// Assume we want to compile this module.
 ///
 /// ```fsharp
 /// open MiloneLang.Parsing
@@ -26,7 +36,11 @@
 /// let main _ = 0
 /// ```
 ///
-/// and then find the `Parsing.fs`.
+/// Since this opens `MiloneLang.Parsing`,
+/// the bundler finds `Parsing.fs` (some where),
+/// load, tokenize, and parse.
+///
+/// Assume `Parsing` has another open statement.
 ///
 /// ```fsharp
 /// // Parsing.fs
@@ -35,66 +49,45 @@
 /// let parse () = 0
 /// ```
 ///
-/// Similarly, find the `Lexing.fs` because of the `open` declaration.
+/// Bundler finds `Lexing.fs` and parse.
 ///
 /// ```fsharp
 /// // Lexing.fs
 /// let tokenize () = 0
 /// ```
 ///
-/// Finally merge them in the order.
+/// Finally these modules are merged in the order.
 ///
 /// ```fsharp
-/// let tokenize () = 0 in
-/// let parse () = 0 in
-/// let main _ = 0
+/// let tokenize () = 0 // from Lexing.fs
+/// let parse () = 0 // from Parsing.fs
+/// let main _ = 0 // from entrypoint module
 /// ```
 module rec MiloneLang.Bundling
 
 open MiloneLang.AstToHir
 open MiloneLang.Helpers
-open MiloneLang.Lexing
-open MiloneLang.Parsing
 open MiloneLang.Types
 
-let private openKindToInt openKind =
-  match openKind with
-  | CoreModule -> 1
-  | ProjectModule -> 2
-
-let private openKindHash openKind = intHash (openKindToInt openKind)
-
-let private openKindCmp l r = (openKindToInt l) - (openKindToInt r)
-
-let private keyHash (openKind, moduleName) =
-  intHash (openKindToInt openKind)
-  |> hashCombine (strHash moduleName)
-
-let private keyCmp (l1, l2) (r1, r2) =
-  let c = openKindCmp l1 r1
-  if c <> 0 then c else strCmp l2 r2
-
-let findOpenPaths expr =
+let private findOpenPaths expr =
   let rec go expr =
     match expr with
-    | HOpenExpr (path, _) -> [ path ]
+    | HOpenExpr (path, loc) -> [ path, loc ]
     | HInfExpr (InfOp.Semi, exprs, _, _) -> exprs |> List.collect go
     | HModuleExpr (_, body, _, _) -> go body
     | _ -> []
 
   go expr
 
-let findOpenModules projectName expr =
-  let extractor path =
-    match path with
-    | prefix :: moduleName :: _ when prefix = projectName -> Some(ProjectModule, moduleName)
-    | [ "MiloneCore"; moduleName ] -> Some(CoreModule, moduleName)
-    | _ -> None
-
-  findOpenPaths expr |> List.choose extractor
+let private findOpenModules expr =
+  findOpenPaths expr
+  |> List.choose (fun (path, loc) ->
+       match path with
+       | projectName :: moduleName :: _ -> Some(projectName, moduleName, loc)
+       | _ -> None)
 
 /// Insert the second expression to the bottom of the first expression.
-/// This is bad way because of variable capturing issues.
+/// This is bad way because of variable capturing issues and program size/depth issue.
 let spliceExpr firstExpr secondExpr =
   let rec go expr =
     match expr with
@@ -120,62 +113,137 @@ let spliceExpr firstExpr secondExpr =
 
   go firstExpr
 
-let parseProjectModules readCoreFile readModuleFile parse projectName nameCtx =
-  let addModule go (moduleAcc, moduleMap, nameCtx, errorAcc) (openKind, moduleName) source =
-    // FIXME: provide unique ID?
-    let docId: DocId = moduleName
-    let tokens = tokenize source
-    let moduleAst, errors = parse moduleName tokens
-    let moduleHir, nameCtx = astToHir docId (moduleAst, nameCtx)
-    let dependencies = findOpenModules projectName moduleHir
+// -----------------------------------------------
+// BundleCtx
+// -----------------------------------------------
 
-    let moduleMap =
-      moduleMap
-      |> mapAdd (openKind, moduleName) moduleHir
+type BundleHost =
+  {
+    /// Requests the host to load a module.
+    ///
+    /// The host should locate the module and retrieve its source code, tokenize and parse if exists.
+    FetchModule: string -> string -> (DocId * ARoot * (string * Pos) list) option }
 
-    let errors: (string * Loc) list =
-      errors
-      |> List.map (fun (msg: string, pos: Pos) ->
-           let row, column = pos
-           let loc = docId, row, column
-           msg, loc)
+type private BundleCtx =
+  { NameCtx: NameCtx
 
-    let moduleAcc, moduleMap, nameCtx, errorAcc =
-      List.fold go (moduleAcc, moduleMap, nameCtx, errorAcc) dependencies
+    /// Modules to be opened.
+    ModuleQueue: (string * string) list
 
-    moduleHir :: moduleAcc, moduleMap, nameCtx, errors :: errorAcc
+    /// Processed module.
+    ModuleAcc: HExpr list
 
-  let rec go (moduleAcc, moduleMap, nameCtx, errorAcc) (openKind, moduleName) =
-    if moduleMap |> mapContainsKey (openKind, moduleName) then
-      moduleAcc, moduleMap, nameCtx, errorAcc
+    /// Errors occurred while processing.
+    ErrorAcc: (string * Loc) list
+
+    /// Set of modules already fetched.
+    FetchMemo: AssocSet<string * string>
+
+    Host: BundleHost }
+
+let private newCtx host: BundleCtx =
+  { NameCtx = nameCtxEmpty ()
+    ModuleQueue = []
+    ModuleAcc = []
+    ErrorAcc = []
+    FetchMemo = setEmpty (pairHash strHash strHash, pairCmp strCmp strCmp)
+    Host = host }
+
+let private addError msg loc (ctx: BundleCtx) =
+  { ctx with
+      ErrorAcc = (msg, loc) :: ctx.ErrorAcc }
+
+// -----------------------------------------------
+// Routines
+// -----------------------------------------------
+
+/// Returns (true, _, _) if already fetched.
+let private fetchModuleWithMemo projectName moduleName (ctx: BundleCtx) =
+  if ctx.FetchMemo
+     |> setContains (projectName, moduleName) then
+    true, None, ctx
+  else
+    let ctx =
+      { ctx with
+          FetchMemo = ctx.FetchMemo |> setAdd (projectName, moduleName) }
+
+    let result =
+      let host = ctx.Host // FIXME: A.B.C is unimplemented
+      host.FetchModule projectName moduleName
+
+    false, result, ctx
+
+let private doLoadModule docId ast errors (ctx: BundleCtx) =
+  let expr, ctx =
+    let expr, nameCtx = astToHir docId (ast, ctx.NameCtx)
+
+    let errorAcc =
+      List.append
+        ctx.ErrorAcc
+        (errors
+         |> List.map (fun (msg, (y, x)) -> msg, (docId, y, x)))
+
+    let ctx =
+      { ctx with
+          NameCtx = nameCtx
+          ErrorAcc = errorAcc }
+
+    expr, ctx
+
+  // Open dependent modules if no error.
+  let ctx =
+    if errors |> List.isEmpty then
+      expr
+      |> findOpenModules
+      |> List.fold (fun ctx (projectName, moduleName, loc) ->
+           let docId, _, _ = loc
+           ctx |> requireModule docId projectName moduleName) ctx
     else
-      let source =
-        match openKind with
-        | CoreModule -> readCoreFile moduleName
+      ctx
 
-        | ProjectModule ->
-            match readModuleFile moduleName with
-            | Some it -> it
-            | None -> failwithf "File missing for module '%s'" moduleName
+  // Append this module after dependent ones.
+  { ctx with
+      ModuleAcc = expr :: ctx.ModuleAcc }
 
-      addModule go (moduleAcc, moduleMap, nameCtx, errorAcc) (openKind, moduleName) source
+/// Requires a module to load.
+let private requireModule docId projectName moduleName (ctx: BundleCtx) =
+  match ctx |> fetchModuleWithMemo projectName moduleName with
+  | true, _, _ -> ctx
 
-  // Initial state.
+  | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
+
+  | false, None, ctx ->
+      let msg =
+        "Module not found: "
+        + projectName
+        + "."
+        + moduleName
+
+      ctx |> addError msg (docId, 0, 0)
+
+/// Returns None if no module is load.
+let bundleProgram (host: BundleHost) (projectName: string): (HExpr * NameCtx * (string * Loc) list) option =
+  let ctx = newCtx host
+
+  // HACK: Load "./Polyfills" module in the project if exists.
   let ctx =
-    ([], mapEmpty (keyHash, keyCmp), nameCtx, [])
+    match ctx |> fetchModuleWithMemo projectName "Polyfills" with
+    | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
 
-  // Add polyfills module to the project if exists.
-  let ctx =
-    match readModuleFile "Polyfills" with
-    | Some source ->
-        addModule (fun _ _ -> failwith "Polyfills don't have open.") ctx (ProjectModule, "Polyfills") source
+    | _ -> ctx
 
-    | None -> ctx
+  // Load entrypoint module of the project.
+  match ctx |> fetchModuleWithMemo projectName projectName with
+  | false, Some (docId, ast, errors), ctx ->
+      let ctx = ctx |> doLoadModule docId ast errors
 
-  // Start dependency resolution from entry-point module.
-  let ctx = go ctx (ProjectModule, projectName)
+      let expr =
+        ctx.ModuleAcc
+        |> List.rev
+        |> List.reduce spliceExpr
 
-  // Finish.
-  let moduleAcc, _, nameCtx, errorAcc = ctx
-  let modules = moduleAcc |> List.rev
-  List.reduce spliceExpr modules, nameCtx, errorAcc
+      Some(expr, ctx.NameCtx, ctx.ErrorAcc)
+
+  | _ ->
+      // If failed to load entrypoint, we don't have any DocId or Loc, so we can't report any errors.
+      None

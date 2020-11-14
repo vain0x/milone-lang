@@ -125,6 +125,17 @@ let private writeLog host verbosity msg =
 
   | Quiet -> ()
 
+let syntaxHasError syntax =
+  let _, _, errors = syntax
+  errors |> List.isEmpty |> not
+
+let printSyntaxErrors syntax =
+  let _, _, errors = syntax
+
+  errors
+  |> listSort (fun (_, l) (_, r) -> locCmp l r)
+  |> List.iter (fun (msg, loc) -> printfn "#error %s %s" (locToString loc) msg)
+
 let tyCtxHasError tyCtx =
   tyCtx |> tyCtxGetLogs |> List.isEmpty |> not
 
@@ -139,6 +150,7 @@ let printLogs tyCtx logs =
     tyDisplay getTyIdent ty
 
   logs
+  |> listSort (fun (_, l) (_, r) -> locCmp l r)
   |> List.iter (fun (log, loc) -> printfn "#error %s" (log |> logToString tyDisplayFn loc))
 
 // -----------------------------------------------
@@ -151,25 +163,38 @@ let syntacticallyAnalyze host v (projectDir: string) =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
-  writeLog
-    host
-    v
-    ("Lexing, Parsing and Bundling project="
-     + projectName)
+  writeLog host v ("Bundling project=" + projectName)
 
-  let parseTokens (_moduleName: string) tokens =
-    // log ("Parsing " + moduleName)
-    parse tokens
+  let bundleHost: BundleHost =
+    { FetchModule =
+        fun p m ->
+          // FIXME: unique id?
+          let docId = m
 
-  parseProjectModules (readCoreFile host) (readModuleFile host projectDir) parseTokens projectName (nameCtxEmpty ())
+          if p = "MiloneCore" then
+            let ast, errors = readCoreFile host m |> tokenize |> parse
+            Some(docId, ast, errors)
+          else if p = projectName then
+            match readModuleFile host projectDir m with
+            | Some contents ->
+                let ast, errors = contents |> tokenize |> parse
+                Some(docId, ast, errors)
+
+            | None -> None
+          else
+            None }
+
+  match bundleProgram bundleHost projectName with
+  | Some syntax -> syntax
+  | None -> failwithf "No entrypoint module: %s" projectName
 
 /// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze host v (expr, nameCtx, errorListList) =
+let semanticallyAnalyze host v (expr, nameCtx, errors) =
   writeLog host v "NameRes"
   let expr, scopeCtx = nameRes (expr, nameCtx)
 
   writeLog host v "Typing"
-  infer (expr, scopeCtx, errorListList)
+  infer (expr, scopeCtx, errors)
 
 /// Transforms HIR. The result can be converted to KIR or MIR.
 let transformHir host v (expr, tyCtx) =
@@ -248,15 +273,17 @@ let codeGenHirViaKir host v (expr, tyCtx) =
 
 let compile host v projectDir: string * bool =
   let syntax = syntacticallyAnalyze host v projectDir
-
-  let expr, tyCtx = semanticallyAnalyze host v syntax
-
-  if tyCtx |> tyCtxHasError then
-    tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+  if syntax |> syntaxHasError then
+    printSyntaxErrors syntax
     "", false
   else
-    let expr, tyCtx = transformHir host v (expr, tyCtx)
-    codeGenHirViaMir host v (expr, tyCtx)
+    let expr, tyCtx = semanticallyAnalyze host v syntax
+    if tyCtx |> tyCtxHasError then
+      tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+      "", false
+    else
+      let expr, tyCtx = transformHir host v (expr, tyCtx)
+      codeGenHirViaMir host v (expr, tyCtx)
 
 // -----------------------------------------------
 // Actions
@@ -267,13 +294,13 @@ let cliParse host verbosity (projectDir: string) =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
-  let parseWithLogging moduleName tokens =
+  let parseWithLogging moduleName contents =
     writeLog
       host
       v
       ("\n-------------\nParsing %s...\n--------------"
        + moduleName)
-    let ast, errors = parse tokens
+    let ast, errors = contents |> tokenize |> parse
 
     if errors |> List.isEmpty |> not then
       printfn "In %s" moduleName
@@ -287,13 +314,25 @@ let cliParse host verbosity (projectDir: string) =
 
     ast, errors
 
-  parseProjectModules
-    (readCoreFile host)
-    (readModuleFile host projectDir)
-    parseWithLogging
-    projectName
-    (nameCtxEmpty ())
-  |> ignore
+  let bundleHost: BundleHost =
+    { FetchModule =
+        fun p m ->
+          let docId = m
+
+          if p = "MiloneCore" then
+            let ast, errors = parseWithLogging m (readCoreFile host m)
+            Some(docId, ast, errors)
+          else if p = projectName then
+            match readModuleFile host projectDir m with
+            | Some contents ->
+                let ast, errors = parseWithLogging m contents
+                Some(docId, ast, errors)
+
+            | None -> None
+          else
+            None }
+
+  bundleProgram bundleHost projectName |> ignore
   0
 
 let cliCompile host verbosity projectDir =

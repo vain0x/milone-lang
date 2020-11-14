@@ -732,7 +732,7 @@ let tyCtxSubstExprTy ctx expr =
   let subst ty = tyCtxSubstTy ctx ty
   exprMap subst id expr
 
-let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
+let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     TyCtx
       (scopeCtx |> scopeCtxGetSerial,
@@ -753,7 +753,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
         tyCtxAddErr ctx msg loc
         |> addErrorListList (errors :: xss)
 
-  let ctx = ctx |> addErrorListList errorListList
+  let ctx = ctx |> addErrorListList [errors]
 
   // Assign type vars to var/fun definitions.
   let ctx =
