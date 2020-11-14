@@ -510,7 +510,6 @@ type TyDef =
 
   | UniversalTyDef of Ident * TySerial * Loc
 
-  /// Used only for generic type synonyms. Non-generic synonyms are elaborated into MetaTy in NameRes.
   | SynonymTyDef of Ident * TySerial list * Ty * Loc
 
   | UnionTyDef of Ident * VariantSerial list * Loc

@@ -57,12 +57,6 @@ let scopeCtxIsVariant varSerial scopeCtx =
 
   | _ -> false
 
-let scopeCtxIsMetaTy tySerial scopeCtx =
-  match scopeCtx |> scopeCtxGetTy tySerial with
-  | MetaTyDef _ -> true
-
-  | _ -> false
-
 /// Defines a variable, without adding to any scope.
 let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
@@ -298,10 +292,6 @@ let scopeCtxResolveTy ty loc scopeCtx =
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
         match scopeCtx |> scopeCtxResolveLocalTyIdent ident with
-        | Some tySerial when scopeCtx |> scopeCtxIsMetaTy tySerial ->
-            // In the case of type synonyms.
-            MetaTy(tySerial, loc), scopeCtx
-
         | Some tySerial ->
             match scopeCtx |> scopeCtxGetTys |> mapTryFind tySerial with
             | Some (UniversalTyDef (_, tySerial, _)) -> MetaTy(tySerial, loc), scopeCtx
@@ -369,11 +359,6 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
   else
 
     match tyDecl with
-    | TySynonymDecl (body, _) when List.isEmpty tyArgs ->
-        ctx
-        |> scopeCtxDefineLocalTy tySerial (MetaTyDef(tyIdent, body, loc))
-        |> addTyToModule tySerial
-
     | TySynonymDecl (body, _) ->
         ctx
         |> scopeCtxDefineLocalTy tySerial (SynonymTyDef(tyIdent, tyArgs, body, loc))

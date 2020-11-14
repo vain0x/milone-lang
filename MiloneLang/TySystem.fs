@@ -360,6 +360,35 @@ let typingSubst (ctx: TyContext) ty: Ty =
 
   tySubst substMeta ty
 
+let tyExpandSynonym useTyArgs defTySerials bodyTy =
+  // Checked in NameRes.
+  assert (List.length defTySerials = List.length useTyArgs)
+
+  // Expand synonym.
+  let assignment = List.zip defTySerials useTyArgs
+
+  let substMeta tySerial =
+    assignment |> assocTryFind intCmp tySerial
+
+  tySubst substMeta bodyTy
+
+let typingExpandSynonyms (ctx: TyContext) ty =
+  let rec go ty =
+    match ty with
+    | AppTy (RefTyCtor tySerial, useTyArgs) ->
+        match ctx.Tys |> mapTryFind tySerial with
+        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+            tyExpandSynonym useTyArgs defTySerials bodyTy
+            |> go
+
+        | _ -> AppTy(RefTyCtor tySerial, useTyArgs)
+
+    | AppTy (tyCtor, tyArgs) -> AppTy(tyCtor, tyArgs |> List.map go)
+
+    | _ -> ty
+
+  go ty
+
 type private MetaTyUnifyResult =
   | DidExpand of Ty
   | DidBind of TyContext
@@ -484,7 +513,8 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
 
 let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   let theTrait =
-    theTrait |> traitMapTys (typingSubst ctx)
+    theTrait
+    |> traitMapTys (fun ty -> ty |> typingSubst ctx |> typingExpandSynonyms ctx)
 
   let expectScalar ty (logAcc, ctx) =
     match ty with

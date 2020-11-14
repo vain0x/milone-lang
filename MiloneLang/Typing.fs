@@ -208,6 +208,8 @@ let private tyCtxSubstOrDegenerate ctx ty =
     match ctx |> tyCtxGetTys |> mapTryFind tySerial with
     | Some (MetaTyDef (_, ty, _)) -> Some ty
 
+    | Some (UniversalTyDef _) -> None
+
     | _ ->
         let depth =
           ctx |> tyCtxGetTyDepths |> mapFind tySerial
@@ -806,7 +808,11 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
   let ctx = ctx |> tyCtxResolveTraitBounds
 
   // Substitute all types. Unbound types are degenerated here.
-  let substOrDegenerate = tyCtxSubstOrDegenerate ctx
+  let substOrDegenerate ty =
+    ty
+    |> tyCtxSubstOrDegenerate ctx
+    |> typingExpandSynonyms (tyCtxToTyCtx ctx)
+
   let expr = exprMap substOrDegenerate id expr
 
   let ctx =
@@ -837,6 +843,11 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
            let tySerial, tyDef = kv
            match tyDef with
            | MetaTyDef _ -> None
+
+           | SynonymTyDef (ident, tyArgs, bodyTy, loc) ->
+               let bodyTy = bodyTy |> substOrDegenerate
+               Some(tySerial, SynonymTyDef(ident, tyArgs, bodyTy, loc))
+
            | RecordTyDef (ident, fields, loc) ->
                let fields =
                  fields
@@ -845,6 +856,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errorListList): HExpr * TyCtx =
                       ident, ty, loc)
 
                Some(tySerial, RecordTyDef(ident, fields, loc))
+
            | _ -> Some kv)
       |> mapOfList (intHash, intCmp)
 
