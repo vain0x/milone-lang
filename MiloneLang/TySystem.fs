@@ -346,6 +346,23 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
 
   tySubst substMeta bodyTy
 
+let tyExpandSynonyms expand ty =
+  let rec go ty =
+    match ty with
+    | AppTy (RefTyCtor tySerial, useTyArgs) ->
+        match expand tySerial with
+        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+            tyExpandSynonym useTyArgs defTySerials bodyTy
+            |> go
+
+        | _ -> AppTy(RefTyCtor tySerial, useTyArgs)
+
+    | AppTy (tyCtor, tyArgs) -> AppTy(tyCtor, tyArgs |> List.map go)
+
+    | _ -> ty
+
+  go ty
+
 let typingExpandSynonyms (ctx: TyContext) ty =
   let rec go ty =
     match ty with
