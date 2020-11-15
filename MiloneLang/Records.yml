@@ -1,15 +1,3 @@
-KirToMirCtx:
-  Serial: Serial
-  Vars: AssocMap<VarSerial, VarDef>
-  Tys: AssocMap<TySerial, TyDef>
-  MainFunSerial: FunSerial option
-  LabelSerial: Serial
-  JointMap: AssocMap<JointSerial, Label * VarSerial list>
-  Labels: MStmt list list
-  LabelCount: int
-  Stmts: MStmt list
-  Logs: (Log * Loc) list
-
 MirCtx:
   Serial: Serial
   Vars: AssocMap<VarSerial, VarDef>

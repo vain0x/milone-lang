@@ -162,6 +162,7 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 // KirGenCtx
 // -----------------------------------------------
 
+[<RequireQualifiedAccess>]
 type KirGenCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
