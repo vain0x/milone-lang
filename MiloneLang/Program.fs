@@ -2,7 +2,6 @@
 module rec MiloneLang.Program
 
 open MiloneLang.Cli
-open MiloneLang.Records
 
 let readFile (filePath: string) =
   try
@@ -11,8 +10,12 @@ let readFile (filePath: string) =
     else None
   with _ -> None
 
-let dotnetCliHost args miloneHome =
-  CliHost(args, miloneHome, profileInit, profileLog, readFile)
+let dotnetCliHost args miloneHome: CliHost =
+  { Args = args
+    MiloneHome = miloneHome
+    ProfileInit = profileInit
+    ProfileLog = profileLog
+    FileReadAllText = readFile }
 
 [<EntryPoint>]
 let main args =

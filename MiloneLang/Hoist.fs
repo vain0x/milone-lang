@@ -29,7 +29,6 @@ module rec MiloneLang.Hoist
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.Records
 
 /// Accumulation of expression stack.
 [<RequireQualifiedAccess>]
@@ -252,7 +251,7 @@ let hoistExpr (expr, ctx) =
         let ctx = ctx |> hoistCtxAddExpr expr
         hxDummy, ctx
 
-let hoist (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
+let hoist (expr: HExpr, tyCtx) =
   let expr, hoistCtx = (expr, hoistCtxEmpty) |> hoistExpr
 
   assert (hoistCtx |> hoistCtxIsEmpty)

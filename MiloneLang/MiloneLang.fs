@@ -8,7 +8,6 @@ module rec MiloneLang.EntryPoint
 open MiloneCore.List
 open MiloneCore.Option
 
-open MiloneLang.Records
 open MiloneLang.Cli
 
 let argCount (): int = (__nativeFun "arg_count" 1) ()
@@ -45,7 +44,11 @@ let main _ =
 
   let miloneHome = getEnv "MILONE_HOME"
 
-  let host =
-    CliHost(args, miloneHome, profileInit, profileLog, readFile)
+  let host: CliHost =
+    { Args = args
+      MiloneHome = miloneHome
+      ProfileInit = profileInit
+      ProfileLog = profileLog
+      FileReadAllText = readFile }
 
   cli host

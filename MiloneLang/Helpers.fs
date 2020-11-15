@@ -2,7 +2,6 @@
 module rec MiloneLang.Helpers
 
 open MiloneLang.Types
-open MiloneLang.Records
 
 /// `List.map`, modifying context.
 ///

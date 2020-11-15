@@ -78,7 +78,7 @@ module rec MiloneLang.ClosureConversion
 
 open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Records
+open MiloneLang.Typing
 
 /// List of captured variables.
 /// Don't forget the case of empty.
@@ -88,117 +88,122 @@ type Caps = (VarSerial * Ty * Loc) list
 // KnownCtx
 // -----------------------------------------------
 
-let knownCtxEmpty (): KnownCtx =
-  KnownCtx(setEmpty intCmp, setEmpty intCmp, setEmpty intCmp)
+[<RequireQualifiedAccess>]
+type private KnownCtx =
+  { Known: AssocSet<FunSerial>
+    Locals: AssocSet<VarSerial>
+    Refs: AssocSet<VarSerial> }
 
-let knownCtxEnterFunDecl (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithRefs (setEmpty intCmp)
-  |> knownCtxWithLocals (setEmpty intCmp)
+let private knownCtxEmpty (): KnownCtx =
+  { Known = setEmpty intCmp
+    Locals = setEmpty intCmp
+    Refs = setEmpty intCmp }
 
-let knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithRefs (baseCtx |> knownCtxGetRefs)
-  |> knownCtxWithLocals (baseCtx |> knownCtxGetLocals)
+let private knownCtxEnterFunDecl (ctx: KnownCtx) =
+  { ctx with
+      Refs = setEmpty intCmp
+      Locals = setEmpty intCmp }
 
-let knownCtxAddKnown serial (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithKnown (ctx |> knownCtxGetKnown |> setAdd serial)
+let private knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
+  { ctx with
+      Refs = baseCtx.Refs
+      Locals = baseCtx.Locals }
 
-let knownCtxAddLocal serial (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithLocals (ctx |> knownCtxGetLocals |> setAdd serial)
+let private knownCtxAddKnown serial (ctx: KnownCtx) =
+  { ctx with
+      Known = ctx.Known |> setAdd serial }
 
-let knownCtxAddRef serial (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithRefs (ctx |> knownCtxGetRefs |> setAdd serial)
+let private knownCtxAddLocal serial (ctx: KnownCtx) =
+  { ctx with
+      Locals = ctx.Locals |> setAdd serial }
+
+let private knownCtxAddRef serial (ctx: KnownCtx) =
+  { ctx with
+      Refs = ctx.Refs |> setAdd serial }
 
 /// Returns serials referenced in the current context but not known nor locals
 /// including function serials.
-let knownCtxToCapturedSerials (ctx: KnownCtx): AssocSet<VarSerial> =
-  let refs =
-    setDiff (ctx |> knownCtxGetRefs) (ctx |> knownCtxGetLocals)
-
-  let refs = setDiff refs (ctx |> knownCtxGetKnown)
+let private knownCtxToCapturedSerials (ctx: KnownCtx): AssocSet<VarSerial> =
+  let refs = setDiff ctx.Refs ctx.Locals
+  let refs = setDiff refs ctx.Known
   refs
 
 // -----------------------------------------------
 // CcCtx (ClosureConversionContext)
 // -----------------------------------------------
 
-let ccCtxFromTyCtx (ftCtx: TyCtx): CcCtx =
-  CcCtx
-    (ftCtx |> tyCtxGetSerial,
-     ftCtx |> tyCtxGetVars,
-     ftCtx |> tyCtxGetTys,
+type private CcCtx =
+  { Serial: Serial
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
+    Current: KnownCtx
+    Funs: AssocMap<FunSerial, KnownCtx> }
 
-     knownCtxEmpty (),
-     mapEmpty intCmp)
+let private ccCtxFromTyCtx (tyCtx: TyCtx): CcCtx =
+  { Serial = tyCtx.Serial
+    Vars = tyCtx.Vars
+    Tys = tyCtx.Tys
 
-let ccCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
-  tyCtx
-  |> tyCtxWithSerial (ctx |> ccCtxGetSerial)
-  |> tyCtxWithVars (ctx |> ccCtxGetVars)
-  |> tyCtxWithTys (ctx |> ccCtxGetTys)
+    Current = knownCtxEmpty ()
+    Funs = mapEmpty intCmp }
 
-let ccCtxAddKnown funSerial (ctx: CcCtx) =
-  ctx
-  |> ccCtxWithCurrent
-       (ctx
-        |> ccCtxGetCurrent
-        |> knownCtxAddKnown funSerial)
+let private ccCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
+  { tyCtx with
+      Serial = ctx.Serial
+      Vars = ctx.Vars
+      Tys = ctx.Tys }
 
-let ccCtxAddLocal varSerial (ctx: CcCtx) =
-  ctx
-  |> ccCtxWithCurrent
-       (ctx
-        |> ccCtxGetCurrent
-        |> knownCtxAddLocal varSerial)
+let private ccCtxAddKnown funSerial (ctx: CcCtx) =
+  { ctx with
+      Current = ctx.Current |> knownCtxAddKnown funSerial }
 
-let ccCtxAddRef varSerial (ctx: CcCtx) =
-  ctx
-  |> ccCtxWithCurrent (ctx |> ccCtxGetCurrent |> knownCtxAddRef varSerial)
+let private ccCtxAddLocal varSerial (ctx: CcCtx) =
+  { ctx with
+      Current = ctx.Current |> knownCtxAddLocal varSerial }
+
+let private ccCtxAddRef varSerial (ctx: CcCtx) =
+  { ctx with
+      Current = ctx.Current |> knownCtxAddRef varSerial }
 
 /// Called on leave function declaration to store the current known context.
-let ccCtxStoreFunKnownCtx funSerial (ctx: CcCtx) =
+let private ccCtxStoreFunKnownCtx funSerial (ctx: CcCtx) =
   let ctx = ctx |> ccCtxAddKnown funSerial
 
   // Don't update in the second traversal for transformation.
-  let funs = ctx |> ccCtxGetFuns
+  let funs = ctx.Funs
   if funs |> mapContainsKey funSerial then
     ctx
   else
-    ctx
-    |> ccCtxWithFuns (funs |> mapAdd funSerial (ctx |> ccCtxGetCurrent))
+    { ctx with
+        Funs = funs |> mapAdd funSerial ctx.Current }
 
-let ccCtxEnterFunDecl (ctx: CcCtx) =
-  ctx
-  |> ccCtxWithCurrent (ctx |> ccCtxGetCurrent |> knownCtxEnterFunDecl)
+let private ccCtxEnterFunDecl (ctx: CcCtx) =
+  { ctx with
+      Current = ctx.Current |> knownCtxEnterFunDecl }
 
-let ccCtxLeaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
+let private ccCtxLeaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
   let ctx = ctx |> ccCtxStoreFunKnownCtx funSerial
 
-  ctx
-  |> ccCtxWithCurrent
-       (ctx
-        |> ccCtxGetCurrent
-        |> knownCtxLeaveFunDecl (baseCtx |> ccCtxGetCurrent))
+  { ctx with
+      Current =
+        ctx.Current
+        |> knownCtxLeaveFunDecl baseCtx.Current }
 
 /// Gets a list of captured variable serials for a function
 /// including referenced functions.
-let ccCtxGetFunCapturedSerials funSerial (ctx: CcCtx) =
-  match ctx |> ccCtxGetFuns |> mapTryFind funSerial with
+let private ccCtxGetFunCapturedSerials funSerial (ctx: CcCtx) =
+  match ctx.Funs |> mapTryFind funSerial with
   | Some knownCtx -> knownCtx |> knownCtxToCapturedSerials
 
   | None -> setEmpty intCmp
 
 /// Gets a list of captured variables for a function.
 /// Doesn't include referenced functions.
-let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
+let private ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
   let chooseVars varSerials =
     varSerials
     |> List.choose (fun varSerial ->
-         match ctx |> ccCtxGetVars |> mapTryFind varSerial with
+         match ctx.Vars |> mapTryFind varSerial with
          | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
 
          | _ -> None)
@@ -211,7 +216,7 @@ let ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
 /// Extends the set of references to be transitive.
 /// E.g. a function `f` uses `g` and `g` uses `h` (and `h` uses etc.),
 ///      we think `f` also uses `h`.
-let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
+let private ccCtxClosureRefs (ctx: CcCtx): CcCtx =
   let emptySet = setEmpty intCmp
 
   let rec closureRefs refs ccCtx (modified, visited, acc) =
@@ -237,31 +242,30 @@ let ccCtxClosureRefs (ctx: CcCtx): CcCtx =
         |> closureRefs otherRefs ccCtx
         |> closureRefs refs ccCtx
 
-  let closureKnownCtx (modified, ccCtx) varSerial knownCtx =
-    let refs = knownCtx |> knownCtxGetRefs
+  let closureKnownCtx (modified, ccCtx) varSerial (knownCtx: KnownCtx) =
+    let refs = knownCtx.Refs
     match (false, emptySet, refs)
           |> closureRefs (refs |> setToList) ccCtx with
     | true, _, refs ->
-        let knownCtx = knownCtx |> knownCtxWithRefs refs
+        let knownCtx = { knownCtx with Refs = refs }
         true,
-        ccCtx
-        |> ccCtxWithFuns (ccCtx |> ccCtxGetFuns |> mapAdd varSerial knownCtx)
+        { ccCtx with
+            Funs = ccCtx.Funs |> mapAdd varSerial knownCtx }
 
     | false, _, _ -> modified, ccCtx
 
-  let rec closureFuns (modified, ccCtx) =
+  let rec closureFuns (modified, ccCtx: CcCtx) =
     if not modified then
       ccCtx
     else
-      ccCtx
-      |> ccCtxGetFuns
+      ccCtx.Funs
       |> mapFold closureKnownCtx (false, ccCtx)
       |> closureFuns
 
   closureFuns (true, ctx)
 
 /// Applies the changes of function types.
-let ccCtxUpdateFunDefs (ctx: CcCtx) =
+let private ccCtxUpdateFunDefs (ctx: CcCtx) =
   let update vars varSerial (_: KnownCtx) =
     match ctx |> ccCtxGetFunCaps varSerial with
     | [] -> vars
@@ -276,12 +280,9 @@ let ccCtxUpdateFunDefs (ctx: CcCtx) =
 
         | _ -> vars
 
-  let vars =
-    ctx
-    |> ccCtxGetFuns
-    |> mapFold update (ctx |> ccCtxGetVars)
+  let vars = ctx.Funs |> mapFold update ctx.Vars
 
-  ctx |> ccCtxWithVars vars
+  { ctx with Vars = vars }
 
 // -----------------------------------------------
 // Caps
@@ -321,7 +322,7 @@ let capsUpdateFunDef funTy arity (caps: Caps) =
 // Closure conversion routines
 // -----------------------------------------------
 
-let declosureFunRef refVarSerial refTy refLoc ctx =
+let private declosureFunRef refVarSerial refTy refLoc ctx =
   // NOTE: No need to check whether it's a function
   //       because non-function caps are empty.
   let refExpr =
@@ -331,7 +332,7 @@ let declosureFunRef refVarSerial refTy refLoc ctx =
 
   refExpr, ctx
 
-let declosureFunDecl callee vis isMainFun args body next ty loc ctx =
+let private declosureFunDecl callee vis isMainFun args body next ty loc ctx =
   let args, body, ctx =
     let baseCtx = ctx
     let ctx = ctx |> ccCtxEnterFunDecl
@@ -350,11 +351,11 @@ let declosureFunDecl callee vis isMainFun args body next ty loc ctx =
   let next, ctx = (next, ctx) |> declosureExpr
   HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc), ctx
 
-let declosureVariantDecl ctx variant =
+let private declosureVariantDecl ctx variant =
   let (_, variantSerial, _, _) = variant
   ctx |> ccCtxAddKnown variantSerial
 
-let declosurePat (pat, ctx) =
+let private declosurePat (pat, ctx) =
   match pat with
   | HLitPat _
   | HNilPat _
@@ -399,7 +400,7 @@ let declosurePat (pat, ctx) =
       let second, ctx = (second, ctx) |> declosurePat
       HOrPat(first, second, ty, loc), ctx
 
-let declosureExpr (expr, ctx) =
+let private declosureExpr (expr, ctx) =
   match expr with
   | HLitExpr _
   | HPrimExpr _

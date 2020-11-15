@@ -11,20 +11,10 @@
 module rec MiloneLang.KirGen
 
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Helpers
+open MiloneLang.Typing
 
 let private unreachable value = failwithf "NEVER: %A" value
-
-let private isNewtypeVariant varSerial ctx =
-  match ctx |> mirCtxGetVars |> mapFind varSerial with
-  | VariantDef (_, tySerial, _, _, _, _) ->
-      match ctx |> mirCtxGetTys |> mapFind tySerial with
-      | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
-
-      | _ -> failwith "Expected union serial"
-
-  | _ -> failwith "Expected variant serial"
 
 // -----------------------------------------------
 // Pattern matching resolution
@@ -161,49 +151,62 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 // KirGenCtx
 // -----------------------------------------------
 
-let private ctxOfTyCtx tyCtx =
-  KirGenCtx(tyCtxGetSerial tyCtx, tyCtxGetVars tyCtx, tyCtxGetTys tyCtx, tyCtxGetLogs tyCtx, None, [], [])
+[<RequireQualifiedAccess>]
+type KirGenCtx =
+  { Serial: Serial
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
+    Logs: (Log * Loc) list
+    MainFunSerial: FunSerial option
+    Joints: KJointBinding list
+    Funs: KFunBinding list }
 
-let private ctxUpdateTyCtx tyCtx ctx =
-  tyCtx
-  |> tyCtxWithSerial (ctx |> kirGenCtxGetSerial)
-  |> tyCtxWithVars (ctx |> kirGenCtxGetVars)
+let private ctxOfTyCtx (tyCtx: TyCtx): KirGenCtx =
+  { Serial = tyCtx.Serial
+    Vars = tyCtx.Vars
+    Tys = tyCtx.Tys
+    Logs = tyCtx.Logs
+    MainFunSerial = None
+    Joints = []
+    Funs = [] }
+
+let private ctxUpdateTyCtx (tyCtx: TyCtx) (ctx: KirGenCtx) =
+  { tyCtx with
+      Serial = ctx.Serial
+      Vars = ctx.Vars }
 
 let private freshSerial (ctx: KirGenCtx): Serial * KirGenCtx =
-  let serial = (ctx |> kirGenCtxGetSerial) + 1
-  let ctx = ctx |> kirGenCtxWithSerial serial
+  let serial = ctx.Serial + 1
+  let ctx = { ctx with Serial = serial }
   serial, ctx
 
-let private newVar hint ty loc ctx =
+let private newVar hint ty loc (ctx: KirGenCtx) =
   let varSerial, ctx = ctx |> freshSerial
 
   let ctx =
-    let vars =
-      ctx
-      |> kirGenCtxGetVars
-      |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc))
-
-    ctx |> kirGenCtxWithVars vars
+    { ctx with
+        Vars =
+          ctx.Vars
+          |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc)) }
 
   varSerial, ctx
 
-let private addFunDef funSerial funDef ctx =
-  ctx
-  |> kirGenCtxWithVars (ctx |> kirGenCtxGetVars |> mapAdd funSerial funDef)
+let private addFunDef funSerial funDef (ctx: KirGenCtx) =
+  { ctx with
+      Vars = ctx.Vars |> mapAdd funSerial funDef }
 
-let private addJointBinding jointBinding ctx =
-  ctx
-  |> kirGenCtxWithJoints (jointBinding :: (ctx |> kirGenCtxGetJoints))
+let private addJointBinding jointBinding (ctx: KirGenCtx) =
+  { ctx with
+      Joints = jointBinding :: ctx.Joints }
 
-let private addFunBinding funBinding ctx =
-  ctx
-  |> kirGenCtxWithFuns (funBinding :: (ctx |> kirGenCtxGetFuns))
+let private addFunBinding funBinding (ctx: KirGenCtx) =
+  { ctx with
+      Funs = funBinding :: ctx.Funs }
 
-let private findVarDef varSerial ctx =
-  ctx |> kirGenCtxGetVars |> mapFind varSerial
+let private findVarDef varSerial (ctx: KirGenCtx) = ctx.Vars |> mapFind varSerial
 
-let private findVarTy varSerial ctx =
-  match ctx |> kirGenCtxGetVars |> mapFind varSerial with
+let private findVarTy varSerial (ctx: KirGenCtx) =
+  match ctx.Vars |> mapFind varSerial with
   | VarDef (_, _, ty, _) -> ty
   | _ -> failwithf "NEVER: %A" varSerial
 
@@ -229,12 +232,12 @@ let private selectTy ty path ctx =
       | VariantDef (_, _, _, payloadTy, _, _) -> payloadTy
       | _ -> unreachable (ty, path)
 
-let private collectJoints f ctx =
-  let parentJoints = ctx |> kirGenCtxGetJoints
-  let ctx = ctx |> kirGenCtxWithJoints []
+let private collectJoints (f: KirGenCtx -> _ * KirGenCtx) (ctx: KirGenCtx) =
+  let parentJoints = ctx.Joints
+  let ctx = { ctx with Joints = [] }
   let result, ctx = f ctx
-  let joints = ctx |> kirGenCtxGetJoints |> List.rev
-  let ctx = ctx |> kirGenCtxWithJoints parentJoints
+  let joints = ctx.Joints |> List.rev
+  let ctx = { ctx with Joints = parentJoints }
   result, joints, ctx
 
 // -----------------------------------------------
@@ -563,8 +566,8 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
          let joints, cont, ctx = go [] cond arms ctx
 
          let ctx =
-           ctx
-           |> kirGenCtxWithJoints (List.append (List.rev joints) (ctx |> kirGenCtxGetJoints))
+           { ctx with
+               Joints = List.append (List.rev joints) ctx.Joints }
 
          cont, ctx)
 
@@ -616,14 +619,16 @@ let private kgLetValExpr pat init next loc hole ctx: KNode * KirGenCtx =
            let failure = abortNode loc
            kgEvalPNode init (kgPat pat ctx) success failure ctx)
 
-let private kgLetFunExpr funSerial isMainFun argPats body next loc hole ctx: KNode * KirGenCtx =
+let private kgLetFunExpr funSerial isMainFun argPats body next loc hole (ctx: KirGenCtx): KNode * KirGenCtx =
   let failure = abortNode loc
 
   // Remember main fun.
   let ctx =
-    if isMainFun
-    then ctx |> kirGenCtxWithMainFunSerial (Some funSerial)
-    else ctx
+    if isMainFun then
+      { ctx with
+          MainFunSerial = Some funSerial }
+    else
+      ctx
 
   // Process arg pats and body.
   let (argVars, body), joints, ctx =
@@ -816,5 +821,5 @@ let kirGen (expr: HExpr, tyCtx: TyCtx): KRoot * KirGenCtx =
     ctxOfTyCtx tyCtx
     |> kgExpr expr (fun _ ctx -> abortNode noLoc, ctx)
 
-  let funBindings = kirGenCtxGetFuns ctx |> List.rev
+  let funBindings = ctx.Funs |> List.rev
   KRoot(funBindings), ctx

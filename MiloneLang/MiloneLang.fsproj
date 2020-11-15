@@ -7,7 +7,6 @@
     <Compile Include="Compatible.fs" />
     <Compile Include="TreeMap.fs" />
     <Compile Include="Types.fs" />
-    <Compile Include="Records.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="TySystem.fs" />
     <Compile Include="Lexing.fs" />
@@ -26,9 +25,9 @@
     <Compile Include="Monomorphizing.fs" />
     <Compile Include="KirGen.fs" />
     <Compile Include="KirPropagate.fs" />
+    <Compile Include="Mir.fs" />
     <Compile Include="KirToMir.fs" />
     <Compile Include="KirDump.fs" />
-    <Compile Include="Mir.fs" />
     <Compile Include="CIrGen.fs" />
     <Compile Include="CPrinting.fs" />
     <Compile Include="Cli.fs" />

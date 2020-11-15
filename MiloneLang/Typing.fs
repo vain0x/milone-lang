@@ -13,64 +13,74 @@ module rec MiloneLang.Typing
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.Records
 open MiloneLang.TySystem
+open MiloneLang.NameRes
 
-let tyCtxGetTy tySerial (ctx: TyCtx) = ctx |> tyCtxGetTys |> mapFind tySerial
+type TyCtx =
+  {
+    /// Next serial number.
+    /// We need to identify variables by serial number rather than names
+    /// due to scope locality and shadowing.
+    Serial: Serial
+
+    /// Variable serial to variable definition.
+    Vars: AssocMap<VarSerial, VarDef>
+
+    /// Type serial to type definition.
+    Tys: AssocMap<TySerial, TyDef>
+
+    TyDepths: AssocMap<TySerial, LetDepth>
+    LetDepth: LetDepth
+    TraitBounds: (Trait * Loc) list
+    Logs: (Log * Loc) list }
+
+let tyCtxGetTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
 let private addLog (ctx: TyCtx) log loc =
-  ctx
-  |> tyCtxWithLogs ((log, loc) :: (ctx |> tyCtxGetLogs))
+  { ctx with
+      Logs = (log, loc) :: ctx.Logs }
 
 let tyCtxAddErr (ctx: TyCtx) message loc =
-  ctx
-  |> tyCtxWithLogs ((Log.Error message, loc) :: (ctx |> tyCtxGetLogs))
+  { ctx with
+      Logs = (Log.Error message, loc) :: ctx.Logs }
 
 let tyCtxToTyCtx (ctx: TyCtx): TyContext =
-  { Serial = ctx |> tyCtxGetSerial
-    LetDepth = ctx |> tyCtxGetLetDepth
-    Tys = ctx |> tyCtxGetTys
-    TyDepths = ctx |> tyCtxGetTyDepths }
+  { Serial = ctx.Serial
+    LetDepth = ctx.LetDepth
+    Tys = ctx.Tys
+    TyDepths = ctx.TyDepths }
 
 let tyCtxWithTyCtx (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
-  ctx
-  |> tyCtxWithSerial tyCtx.Serial
-  |> tyCtxWithTys tyCtx.Tys
-  |> tyCtxWithTyDepths tyCtx.TyDepths
-  |> tyCtxWithLogs logAcc
+  { ctx with
+      Serial = tyCtx.Serial
+      Tys = tyCtx.Tys
+      TyDepths = tyCtx.TyDepths
+      Logs = logAcc }
 
 /// Be carefully. Let depths must be counted the same as name resolution.
-let tyCtxIncLetDepth (ctx: TyCtx) =
-  ctx
-  |> tyCtxWithLetDepth ((ctx |> tyCtxGetLetDepth) + 1)
+let tyCtxIncLetDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth + 1 }
 
-let tyCtxDecLetDepth (ctx: TyCtx) =
-  ctx
-  |> tyCtxWithLetDepth ((ctx |> tyCtxGetLetDepth) - 1)
+let tyCtxDecLetDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth - 1 }
 
 let tyCtxFreshVar (ctx: TyCtx) hint ty loc =
-  let varSerial = (ctx |> tyCtxGetSerial) + 1
+  let varSerial = ctx.Serial + 1
 
   let ctx =
-    ctx
-    |> tyCtxWithSerial ((ctx |> tyCtxGetSerial) + 1)
-    |> tyCtxWithVars
-         (ctx
-          |> tyCtxGetVars
-          |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc)))
+    { ctx with
+        Serial = ctx.Serial + 1
+        Vars =
+          ctx.Vars
+          |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc)) }
 
   varSerial, ctx
 
 let tyCtxFreshTySerial (ctx: TyCtx) =
-  let serial = (ctx |> tyCtxGetSerial) + 1
+  let serial = ctx.Serial + 1
 
   let ctx =
-    ctx
-    |> tyCtxWithSerial ((ctx |> tyCtxGetSerial) + 1)
-    |> tyCtxWithTyDepths
-         (ctx
-          |> tyCtxGetTyDepths
-          |> mapAdd serial (ctx |> tyCtxGetLetDepth))
+    { ctx with
+        Serial = ctx.Serial + 1
+        TyDepths = ctx.TyDepths |> mapAdd serial ctx.LetDepth }
 
   serial, ctx
 
@@ -80,8 +90,8 @@ let tyCtxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
   ty, (), ctx
 
 let tyCtxAddTraitBounds traits (ctx: TyCtx) =
-  ctx
-  |> tyCtxWithTraitBounds (List.append traits (ctx |> tyCtxGetTraitBounds))
+  { ctx with
+      TraitBounds = List.append traits ctx.TraitBounds }
 
 let tyCtxResolveTraitBounds (ctx: TyCtx) =
   let rec go logAcc traits ctx =
@@ -94,25 +104,23 @@ let tyCtxResolveTraitBounds (ctx: TyCtx) =
 
         ctx |> go logAcc traits
 
-  let traits = ctx |> tyCtxGetTraitBounds |> List.rev
-  let ctx = ctx |> tyCtxWithTraitBounds []
+  let traits = ctx.TraitBounds |> List.rev
+  let ctx = { ctx with TraitBounds = [] }
 
   let logAcc, tyCtx =
-    ctx
-    |> tyCtxToTyCtx
-    |> go (ctx |> tyCtxGetLogs) traits
+    ctx |> tyCtxToTyCtx |> go ctx.Logs traits
 
   tyCtxWithTyCtx ctx logAcc tyCtx
 
 let tyCtxBindTy (ctx: TyCtx) tySerial ty loc =
   typingBind (tyCtxToTyCtx ctx) tySerial ty loc
-  |> tyCtxWithTyCtx ctx (ctx |> tyCtxGetLogs)
+  |> tyCtxWithTyCtx ctx ctx.Logs
 
 let tyCtxSubstTy (ctx: TyCtx) ty: Ty = typingSubst (tyCtxToTyCtx ctx) ty
 
 let tyCtxUnifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
   let logAcc, tyCtx =
-    typingUnify (ctx |> tyCtxGetLogs) (tyCtxToTyCtx ctx) lty rty loc
+    typingUnify ctx.Logs (tyCtxToTyCtx ctx) lty rty loc
 
   tyCtxWithTyCtx ctx logAcc tyCtx
 
@@ -168,14 +176,13 @@ let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
 
   polyTy, traits, ctx
 
-let tyCtxFindVar (ctx: TyCtx) serial = ctx |> tyCtxGetVars |> mapFind serial
+let tyCtxFindVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
 let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
-  match ctx |> tyCtxGetVars |> mapFind funSerial with
+  match ctx.Vars |> mapFind funSerial with
   | FunDef (ident, arity, TyScheme ([], funTy), loc) ->
       let isOwned tySerial =
-        let depth =
-          ctx |> tyCtxGetTyDepths |> mapFind tySerial
+        let depth = ctx.TyDepths |> mapFind tySerial
 
         depth > outerLetDepth
 
@@ -185,17 +192,17 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
       let varDef = FunDef(ident, arity, funTyScheme, loc)
 
       let ctx =
-        ctx
-        |> tyCtxWithVars (ctx |> tyCtxGetVars |> mapAdd funSerial varDef)
+        { ctx with
+            Vars = ctx.Vars |> mapAdd funSerial varDef }
 
       // Mark generalized meta tys (universally quantified vars),
       // by increasing their depth to infinite (10^9).
       let ctx =
         let (TyScheme (fvs, _)) = funTyScheme
-        ctx
-        |> tyCtxWithTyDepths
-             (fvs
-              |> List.fold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx |> tyCtxGetTyDepths))
+        { ctx with
+            TyDepths =
+              fvs
+              |> List.fold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx.TyDepths) }
 
       ctx
   | FunDef _ -> failwith "Can't generalize already-generalized function"
@@ -203,16 +210,15 @@ let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
 
 /// Substitutes bound meta tys in a ty.
 /// Unbound meta tys are degenerated, i.e. replaced with unit.
-let private tyCtxSubstOrDegenerate ctx ty =
+let private tyCtxSubstOrDegenerate (ctx: TyCtx) ty =
   let substMeta tySerial =
-    match ctx |> tyCtxGetTys |> mapTryFind tySerial with
+    match ctx.Tys |> mapTryFind tySerial with
     | Some (MetaTyDef (_, ty, _)) -> Some ty
 
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-        let depth =
-          ctx |> tyCtxGetTyDepths |> mapFind tySerial
+        let depth = ctx.TyDepths |> mapFind tySerial
         // Degenerate unless quantified.
         if depth < 1000000000 then Some tyUnit else None
 
@@ -640,7 +646,7 @@ let inferLetFun (ctx: TyCtx) expectOpt varSerial vis isMainFun argPats body next
         let argPats, funTy, ctx = inferArgs ctx funTy argPats
         argPat :: argPats, tyFun argTy funTy, ctx
 
-  let outerLetDepth = ctx |> tyCtxGetLetDepth
+  let outerLetDepth = ctx.LetDepth
   let ctx = ctx |> tyCtxIncLetDepth
 
   let calleeTy, ctx =
@@ -651,7 +657,7 @@ let inferLetFun (ctx: TyCtx) expectOpt varSerial vis isMainFun argPats body next
         tyCtxFreshTyVar "fun" loc ctx
 
     let ctx =
-      match ctx |> tyCtxGetVars |> mapFind varSerial with
+      match ctx.Vars |> mapFind varSerial with
       | FunDef (_, _, TyScheme ([], oldTy), _) -> tyCtxUnifyTy ctx loc oldTy calleeTy
       | _ -> failwith "NEVER: It must be a pre-generalized function"
 
@@ -733,15 +739,14 @@ let tyCtxSubstExprTy ctx expr =
   exprMap subst id expr
 
 let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
-  let ctx =
-    TyCtx
-      (scopeCtx |> scopeCtxGetSerial,
-       scopeCtx |> scopeCtxGetVars,
-       scopeCtx |> scopeCtxGetTys,
-       scopeCtx |> scopeCtxGetTyDepths,
-       0,
-       [],
-       [])
+  let ctx: TyCtx =
+    { Serial = scopeCtx.Serial
+      Vars = scopeCtx.Vars
+      Tys = scopeCtx.Tys
+      TyDepths = scopeCtx.TyDepths
+      LetDepth = 0
+      TraitBounds = []
+      Logs = [] }
 
   let rec addErrorListList xss ctx =
     match xss with
@@ -753,19 +758,16 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
         tyCtxAddErr ctx msg loc
         |> addErrorListList (errors :: xss)
 
-  let ctx = ctx |> addErrorListList [errors]
+  let ctx = ctx |> addErrorListList [ errors ]
 
   // Assign type vars to var/fun definitions.
   let ctx =
     let vars, ctx =
-      (mapToList (ctx |> tyCtxGetVars), ctx)
-      |> stMap (fun ((varSerial, varDef), ctx) ->
+      (mapToList (ctx.Vars), ctx)
+      |> stMap (fun ((varSerial, varDef), ctx: TyCtx) ->
            let ctx =
-             ctx
-             |> tyCtxWithLetDepth
-                  (scopeCtx
-                   |> scopeCtxGetVarDepths
-                   |> mapFind varSerial)
+             { ctx with
+                 LetDepth = scopeCtx.VarDepths |> mapFind varSerial }
 
            match varDef with
            | VarDef (ident, storageModifier, _, loc) ->
@@ -792,10 +794,10 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
                (varSerial, varDef), ctx)
 
-    ctx
-    |> tyCtxWithVars (mapOfList intCmp vars)
+    { ctx with
+        Vars = mapOfList intCmp vars }
 
-  let ctx = ctx |> tyCtxWithLetDepth 0
+  let ctx = { ctx with LetDepth = 0 }
 
   let expr, ctx =
     let expr, topLevelTy, ctx = inferExpr ctx None expr
@@ -817,8 +819,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
   let ctx =
     let vars =
-      ctx
-      |> tyCtxGetVars
+      ctx.Vars
       |> mapMap (fun _ varDef ->
            match varDef with
            | VarDef (ident, storageModifier, ty, loc) ->
@@ -832,12 +833,11 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                let ty = substOrDegenerate ty
                VariantDef(ident, tySerial, hasPayload, payloadTy, ty, loc))
 
-    ctx |> tyCtxWithVars vars
+    { ctx with Vars = vars }
 
   let ctx =
     let tys =
-      ctx
-      |> tyCtxGetTys
+      ctx.Tys
       |> mapToList
       |> List.choose (fun kv ->
            let tySerial, tyDef = kv
@@ -860,6 +860,6 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
            | _ -> Some kv)
       |> mapOfList intCmp
 
-    ctx |> tyCtxWithTys tys
+    { ctx with Tys = tys }
 
   expr, ctx

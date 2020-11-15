@@ -5,8 +5,9 @@
 module rec MiloneLang.KirToMir
 
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Helpers
+open MiloneLang.KirGen
+open MiloneLang.Mir
 
 let private unreachable value = failwithf "NEVER: %A" value
 
@@ -25,17 +26,44 @@ let rec private restoreCalleeTy args ty =
 
 let private jointMapEmpty () = mapEmpty intCmp
 
+[<RequireQualifiedAccess>]
+type private KirToMirCtx =
+  { Serial: Serial
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
+    MainFunSerial: FunSerial option
+    LabelSerial: Serial
+    JointMap: AssocMap<JointSerial, Label * VarSerial list>
+    Labels: MStmt list list
+    LabelCount: int
+    Stmts: MStmt list
+    Logs: (Log * Loc) list }
+
 let private ofKirGenCtx (kirGenCtx: KirGenCtx): KirToMirCtx =
-  let (KirGenCtx (serial, vars, tys, logs, mainFunSerial, _, _)) = kirGenCtx
-  KirToMirCtx(serial, vars, tys, mainFunSerial, 0, jointMapEmpty (), [], 0, [], logs)
+  { Serial = kirGenCtx.Serial
+    Vars = kirGenCtx.Vars
+    Tys = kirGenCtx.Tys
+    MainFunSerial = kirGenCtx.MainFunSerial
+    LabelSerial = 0
+    JointMap = jointMapEmpty ()
+    Labels = []
+    LabelCount = 0
+    Stmts = []
+    Logs = kirGenCtx.Logs }
 
 let private toMirCtx (ctx: KirToMirCtx): MirCtx =
-  let (KirToMirCtx (serial, vars, tys, _, labelSerial, _, _, _, _, logs)) = ctx
-  MirCtx(serial, vars, tys, labelSerial, None, [], logs)
+  {
+    Serial = ctx.Serial
+    Vars = ctx.Vars
+    Tys = ctx.Tys
+    LabelSerial = ctx.LabelSerial
+    CurrentFun = None
+    Stmts = []
+    Logs = ctx.Logs }
 
-let private freshSerial ctx =
-  let serial = (ctx |> kirToMirCtxGetSerial) + 1
-  let ctx = ctx |> kirToMirCtxWithSerial serial
+let private freshSerial (ctx: KirToMirCtx) =
+  let serial = ctx.Serial + 1
+  let ctx = { ctx with Serial = serial }
   serial, ctx
 
 let private newVar hint ty loc ctx =
@@ -43,40 +71,36 @@ let private newVar hint ty loc ctx =
 
   let ctx =
     let vars =
-      ctx
-      |> kirToMirCtxGetVars
+      ctx.Vars
       |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc))
 
-    ctx |> kirToMirCtxWithVars vars
+    { ctx with Vars = vars }
 
   varSerial, ctx
 
-let private findVarDef varSerial ctx =
-  ctx |> kirToMirCtxGetVars |> mapFind varSerial
+let private findVarDef varSerial (ctx: KirToMirCtx) = ctx.Vars |> mapFind varSerial
 
-let private findVarTy varSerial ctx =
-  match ctx |> kirToMirCtxGetVars |> mapTryFind varSerial with
+let private findVarTy varSerial (ctx: KirToMirCtx) =
+  match ctx.Vars |> mapTryFind varSerial with
   | Some (VarDef (_, _, ty, _)) -> ty
   | _ -> failwithf "Expected var. %A" varSerial
 
-let private findFunTy funSerial ctx =
-  match ctx |> kirToMirCtxGetVars |> mapTryFind funSerial with
+let private findFunTy funSerial (ctx: KirToMirCtx) =
+  match ctx.Vars |> mapTryFind funSerial with
   | Some (FunDef (_, _, TyScheme (_, ty), _)) -> ty
   | _ -> failwithf "Expected fun. %A" funSerial
 
-let private addStmt stmt ctx =
-  ctx
-  |> kirToMirCtxWithStmts (stmt :: (ctx |> kirToMirCtxGetStmts))
+let private addStmt stmt (ctx: KirToMirCtx) = { ctx with Stmts = stmt :: ctx.Stmts }
 
-let private collectStmts processBody ctx =
-  let parentStmts = ctx |> kirToMirCtxGetStmts
+let private collectStmts (processBody: _ -> KirToMirCtx) (ctx: KirToMirCtx) =
+  let parentStmts = ctx.Stmts
 
-  let ctx = ctx |> kirToMirCtxWithStmts []
+  let ctx = { ctx with Stmts = [] }
 
   let ctx = processBody ctx
-  let stmts = ctx |> kirToMirCtxGetStmts |> List.rev
+  let stmts = ctx.Stmts |> List.rev
 
-  let ctx = ctx |> kirToMirCtxWithStmts parentStmts
+  let ctx = { ctx with Stmts = parentStmts }
 
   stmts, ctx
 
@@ -88,8 +112,8 @@ let private addLabelWith label loc processBody ctx =
          |> addStmt (MLabelStmt(label, loc))
          |> processBody)
 
-  ctx
-  |> kirToMirCtxWithLabels (stmts :: (ctx |> kirToMirCtxGetLabels))
+  { ctx with
+      Labels = stmts :: ctx.Labels }
 
 // -----------------------------------------------
 // Emission helpers
@@ -325,7 +349,7 @@ let private kmPrimUnbox itself args results conts loc ctx =
   | [ arg ], [ result ], [ cont ] -> setUnaryK MUnboxUnary arg result cont loc ctx
   | _ -> unreachable itself
 
-let kmPrimExit itself args results conts loc ctx =
+let private kmPrimExit itself args results conts loc ctx =
   match args, results, conts with
   | [ arg ], [], [] ->
       let arg = arg |> kmTerm
@@ -412,9 +436,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
   match node with
   | KJumpNode (jointSerial, args, loc) ->
       let label, argSerials =
-        match ctx
-              |> kirToMirCtxGetJointMap
-              |> mapTryFind jointSerial with
+        match ctx.JointMap |> mapTryFind jointSerial with
         | Some it -> it
         | None -> failwithf "NEVER: %A" node
 
@@ -489,53 +511,50 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
         jointMap, labelCount, ctx
 
       let ctx =
-        let jointMap = ctx |> kirToMirCtxGetJointMap
-        let labelCount = ctx |> kirToMirCtxGetLabelCount
+        let jointMap = ctx.JointMap
+        let labelCount = ctx.LabelCount
 
         let jointMap, labelCount, ctx =
           joints
           |> List.fold folder (jointMap, labelCount, ctx)
 
-        ctx
-        |> kirToMirCtxWithJointMap jointMap
-        |> kirToMirCtxWithLabelCount labelCount
+        { ctx with
+            JointMap = jointMap
+            LabelCount = labelCount }
 
       let ctx = ctx |> kmNode cont
 
       let ctx =
         joints
-        |> List.fold (fun ctx joint ->
+        |> List.fold (fun (ctx: KirToMirCtx) joint ->
              let (KJointBinding (jointSerial, _, body, loc)) = joint
 
-             let label, _ =
-               ctx
-               |> kirToMirCtxGetJointMap
-               |> mapFind jointSerial
+             let label, _ = ctx.JointMap |> mapFind jointSerial
 
              ctx |> addLabelWith label loc (kmNode body)) ctx
 
       ctx
 
-let private kmFunBinding binding ctx =
-  let genFunBody processBody ctx =
-    let parentJointMap = ctx |> kirToMirCtxGetJointMap
-    let parentLabels = ctx |> kirToMirCtxGetLabels
-    let parentLabelCount = ctx |> kirToMirCtxGetLabelCount
+let private kmFunBinding binding (ctx: KirToMirCtx) =
+  let genFunBody (processBody: _ -> KirToMirCtx) (ctx: KirToMirCtx) =
+    let parentJointMap = ctx.JointMap
+    let parentLabels = ctx.Labels
+    let parentLabelCount = ctx.LabelCount
 
     let ctx =
-      ctx
-      |> kirToMirCtxWithJointMap (mapEmpty intCmp)
-      |> kirToMirCtxWithLabels []
-      |> kirToMirCtxWithLabelCount 0
+      { ctx with
+          JointMap = (mapEmpty intCmp)
+          Labels = []
+          LabelCount = 0 }
 
     let stmts, ctx = ctx |> collectStmts processBody
-    let labels = ctx |> kirToMirCtxGetLabels
+    let labels = ctx.Labels
 
     let ctx =
-      ctx
-      |> kirToMirCtxWithJointMap parentJointMap
-      |> kirToMirCtxWithLabels parentLabels
-      |> kirToMirCtxWithLabelCount parentLabelCount
+      { ctx with
+          JointMap = parentJointMap
+          Labels = parentLabels
+          LabelCount = parentLabelCount }
 
     stmts, labels, ctx
 
@@ -576,6 +595,6 @@ let kirToMir (root: KRoot, kirGenCtx: KirGenCtx): MStmt list * MirCtx =
     funBindings
     |> List.fold (fun ctx binding -> kmFunBinding binding ctx) ctx
 
-  let stmts = ctx |> kirToMirCtxGetStmts |> List.rev
+  let stmts = ctx.Stmts |> List.rev
   let mirCtx = ctx |> toMirCtx
   stmts, mirCtx

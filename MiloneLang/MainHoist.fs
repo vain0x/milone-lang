@@ -21,7 +21,6 @@ module rec MiloneLang.MainHoist
 
 open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Records
 
 let hoistMainExpr expr =
   let rec go expr =
@@ -58,6 +57,6 @@ let hoistMainExpr expr =
   let expr, makeMain = go expr
   makeMain expr
 
-let hoistMain (expr, tyCtx: TyCtx) =
+let hoistMain (expr, tyCtx) =
   let expr = expr |> hoistMainExpr
   expr, tyCtx
