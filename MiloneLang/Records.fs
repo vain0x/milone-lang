@@ -33,44 +33,6 @@ let knownCtxWithLocals locals (KnownCtx (known, _, refs)): KnownCtx =
 let knownCtxWithRefs refs (KnownCtx (known, locals, _)): KnownCtx =
   KnownCtx (known, locals, refs)
 
-type CcCtx =
-  | CcCtx
-    of Serial
-      * AssocMap<VarSerial, VarDef>
-      * AssocMap<TySerial, TyDef>
-      * KnownCtx
-      * AssocMap<FunSerial, KnownCtx>
-
-let ccCtxGetSerial (CcCtx (serial, _, _, _, _)) =
-  serial
-
-let ccCtxGetVars (CcCtx (_, vars, _, _, _)) =
-  vars
-
-let ccCtxGetTys (CcCtx (_, _, tys, _, _)) =
-  tys
-
-let ccCtxGetCurrent (CcCtx (_, _, _, current, _)) =
-  current
-
-let ccCtxGetFuns (CcCtx (_, _, _, _, funs)) =
-  funs
-
-let ccCtxWithSerial serial (CcCtx (_, vars, tys, current, funs)): CcCtx =
-  CcCtx (serial, vars, tys, current, funs)
-
-let ccCtxWithVars vars (CcCtx (serial, _, tys, current, funs)): CcCtx =
-  CcCtx (serial, vars, tys, current, funs)
-
-let ccCtxWithTys tys (CcCtx (serial, vars, _, current, funs)): CcCtx =
-  CcCtx (serial, vars, tys, current, funs)
-
-let ccCtxWithCurrent current (CcCtx (serial, vars, tys, _, funs)): CcCtx =
-  CcCtx (serial, vars, tys, current, funs)
-
-let ccCtxWithFuns funs (CcCtx (serial, vars, tys, current, _)): CcCtx =
-  CcCtx (serial, vars, tys, current, funs)
-
 type EtaCtx =
   | EtaCtx
     of Serial

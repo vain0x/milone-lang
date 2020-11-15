@@ -3,13 +3,6 @@ KnownCtx:
   Locals: AssocSet<VarSerial>
   Refs: AssocSet<VarSerial>
 
-CcCtx:
-  Serial: Serial
-  Vars: AssocMap<VarSerial, VarDef>
-  Tys: AssocMap<TySerial, TyDef>
-  Current: KnownCtx
-  Funs: AssocMap<FunSerial, KnownCtx>
-
 EtaCtx:
   Serial: Serial
   Vars: AssocMap<VarSerial, VarDef>
