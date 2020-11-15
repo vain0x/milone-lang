@@ -9,30 +9,6 @@ module rec MiloneLang.Records
 
 open MiloneLang.Types
 
-type EtaCtx =
-  | EtaCtx
-    of Serial
-      * AssocMap<VarSerial, VarDef>
-      * AssocMap<TySerial, TyDef>
-
-let etaCtxGetSerial (EtaCtx (serial, _, _)) =
-  serial
-
-let etaCtxGetVars (EtaCtx (_, vars, _)) =
-  vars
-
-let etaCtxGetTys (EtaCtx (_, _, tys)) =
-  tys
-
-let etaCtxWithSerial serial (EtaCtx (_, vars, tys)): EtaCtx =
-  EtaCtx (serial, vars, tys)
-
-let etaCtxWithVars vars (EtaCtx (serial, _, tys)): EtaCtx =
-  EtaCtx (serial, vars, tys)
-
-let etaCtxWithTys tys (EtaCtx (serial, vars, _)): EtaCtx =
-  EtaCtx (serial, vars, tys)
-
 type MonoCtx =
   | MonoCtx
     of Serial
