@@ -9,58 +9,6 @@ module rec MiloneLang.Records
 
 open MiloneLang.Types
 
-type MirCtx =
-  | MirCtx
-    of Serial
-      * AssocMap<VarSerial, VarDef>
-      * AssocMap<TySerial, TyDef>
-      * Serial
-      * (Label * VarSerial list) option
-      * MStmt list
-      * (Log * Loc) list
-
-let mirCtxGetSerial (MirCtx (serial, _, _, _, _, _, _)) =
-  serial
-
-let mirCtxGetVars (MirCtx (_, vars, _, _, _, _, _)) =
-  vars
-
-let mirCtxGetTys (MirCtx (_, _, tys, _, _, _, _)) =
-  tys
-
-let mirCtxGetLabelSerial (MirCtx (_, _, _, labelSerial, _, _, _)) =
-  labelSerial
-
-let mirCtxGetCurrentFun (MirCtx (_, _, _, _, currentFun, _, _)) =
-  currentFun
-
-let mirCtxGetStmts (MirCtx (_, _, _, _, _, stmts, _)) =
-  stmts
-
-let mirCtxGetLogs (MirCtx (_, _, _, _, _, _, logs)) =
-  logs
-
-let mirCtxWithSerial serial (MirCtx (_, vars, tys, labelSerial, currentFun, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
-
-let mirCtxWithVars vars (MirCtx (serial, _, tys, labelSerial, currentFun, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
-
-let mirCtxWithTys tys (MirCtx (serial, vars, _, labelSerial, currentFun, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
-
-let mirCtxWithLabelSerial labelSerial (MirCtx (serial, vars, tys, _, currentFun, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
-
-let mirCtxWithCurrentFun currentFun (MirCtx (serial, vars, tys, labelSerial, _, stmts, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
-
-let mirCtxWithStmts stmts (MirCtx (serial, vars, tys, labelSerial, currentFun, _, logs)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
-
-let mirCtxWithLogs logs (MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, _)): MirCtx =
-  MirCtx (serial, vars, tys, labelSerial, currentFun, stmts, logs)
-
 type CirCtx =
   | CirCtx
     of AssocMap<VarSerial, VarDef>

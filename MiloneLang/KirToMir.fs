@@ -8,6 +8,7 @@ open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
 open MiloneLang.KirGen
+open MiloneLang.Mir
 
 let private unreachable value = failwithf "NEVER: %A" value
 
@@ -52,7 +53,14 @@ let private ofKirGenCtx (kirGenCtx: KirGenCtx): KirToMirCtx =
     Logs = kirGenCtx.Logs }
 
 let private toMirCtx (ctx: KirToMirCtx): MirCtx =
-  MirCtx(ctx.Serial, ctx.Vars, ctx.Tys, ctx.LabelSerial, None, [], ctx.Logs)
+  {
+    Serial = ctx.Serial
+    Vars = ctx.Vars
+    Tys = ctx.Tys
+    LabelSerial = ctx.LabelSerial
+    CurrentFun = None
+    Stmts = []
+    Logs = ctx.Logs }
 
 let private freshSerial (ctx: KirToMirCtx) =
   let serial = ctx.Serial + 1

@@ -234,8 +234,8 @@ let codeGenHirViaMir host v (expr, tyCtx) =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (expr, tyCtx)
 
-  if mirCtx |> mirCtxGetLogs |> List.isEmpty |> not then
-    mirCtx |> mirCtxGetLogs |> printLogs tyCtx
+  if mirCtx.Logs |> List.isEmpty |> not then
+    mirCtx.Logs |> printLogs tyCtx
     "", false
   else
     writeLog host v "CIrGen"

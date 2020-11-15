@@ -10,6 +10,7 @@ open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem
+open MiloneLang.Mir
 
 let private ctVoidPtr = CPtrTy CVoidTy
 
@@ -54,24 +55,14 @@ let tagTyIdent (tyIdent: string) = tyIdent + "Tag"
 
 let cirCtxFromMirCtx (mirCtx: MirCtx): CirCtx =
   let varNames =
-    mirCtx
-    |> mirCtxGetVars
+    mirCtx.Vars
     |> renameIdents varDefToIdent id intCmp
 
   let tyNames =
-    mirCtx
-    |> mirCtxGetTys
+    mirCtx.Tys
     |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) tyCmp
 
-  CirCtx
-    (mirCtx |> mirCtxGetVars,
-     varNames,
-     mapEmpty tyCmp,
-     mirCtx |> mirCtxGetTys,
-     tyNames,
-     [],
-     [],
-     mirCtx |> mirCtxGetLogs)
+  CirCtx(mirCtx.Vars, varNames, mapEmpty tyCmp, mirCtx.Tys, tyNames, [], [], mirCtx.Logs)
 
 let cirCtxGetVarStorageModifier (ctx: CirCtx) varSerial =
   match ctx |> cirCtxGetVars |> mapTryFind varSerial with

@@ -17,16 +17,6 @@ open MiloneLang.Typing
 
 let private unreachable value = failwithf "NEVER: %A" value
 
-let private isNewtypeVariant varSerial ctx =
-  match ctx |> mirCtxGetVars |> mapFind varSerial with
-  | VariantDef (_, tySerial, _, _, _, _) ->
-      match ctx |> mirCtxGetTys |> mapFind tySerial with
-      | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
-
-      | _ -> failwith "Expected union serial"
-
-  | _ -> failwith "Expected variant serial"
-
 // -----------------------------------------------
 // Pattern matching resolution
 // -----------------------------------------------

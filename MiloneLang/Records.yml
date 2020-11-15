@@ -1,16 +1,3 @@
-MirCtx:
-  Serial: Serial
-  Vars: AssocMap<VarSerial, VarDef>
-  Tys: AssocMap<TySerial, TyDef>
-  LabelSerial: Serial
-
-  # (label, parameters), where the label is the entrypoint of current fun.
-  # For tail-rec (tail-call) optimization.
-  CurrentFun: (Label * VarSerial list) option
-
-  Stmts: MStmt list
-  Logs: (Log * Loc) list
-
 CirCtx:
   Vars: AssocMap<VarSerial, VarDef>
   VarUniqueNames: AssocMap<VarSerial, Ident>
