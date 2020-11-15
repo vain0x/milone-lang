@@ -251,30 +251,6 @@ let etaCtxWithVars vars (EtaCtx (serial, _, tys)): EtaCtx =
 let etaCtxWithTys tys (EtaCtx (serial, vars, _)): EtaCtx =
   EtaCtx (serial, vars, tys)
 
-type TailRecCtx =
-  | TailRecCtx
-    of AssocMap<VarSerial, VarDef>
-      * AssocMap<TySerial, TyDef>
-      * FunSerial option
-
-let tailRecCtxGetVars (TailRecCtx (vars, _, _)) =
-  vars
-
-let tailRecCtxGetTys (TailRecCtx (_, tys, _)) =
-  tys
-
-let tailRecCtxGetCurrentFun (TailRecCtx (_, _, currentFun)) =
-  currentFun
-
-let tailRecCtxWithVars vars (TailRecCtx (_, tys, currentFun)): TailRecCtx =
-  TailRecCtx (vars, tys, currentFun)
-
-let tailRecCtxWithTys tys (TailRecCtx (vars, _, currentFun)): TailRecCtx =
-  TailRecCtx (vars, tys, currentFun)
-
-let tailRecCtxWithCurrentFun currentFun (TailRecCtx (vars, tys, _)): TailRecCtx =
-  TailRecCtx (vars, tys, currentFun)
-
 type MonoCtx =
   | MonoCtx
     of Serial

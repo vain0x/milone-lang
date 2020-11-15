@@ -71,11 +71,6 @@ EtaCtx:
   Vars: AssocMap<VarSerial, VarDef>
   Tys: AssocMap<TySerial, TyDef>
 
-TailRecCtx:
-  Vars: AssocMap<VarSerial, VarDef>
-  Tys: AssocMap<TySerial, TyDef>
-  CurrentFun: FunSerial option
-
 MonoCtx:
   Serial: Serial
   Logs: (Log * Loc) list

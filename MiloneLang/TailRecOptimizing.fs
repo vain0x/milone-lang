@@ -14,26 +14,29 @@ type private IsTail =
 // Helpers
 // -----------------------------------------------
 
-let private ofTyCtx tyCtx =
-  let (TyCtx (_, vars, tys, _, _, _, _)) = tyCtx
-  TailRecCtx(vars, tys, None)
+type private TailRecCtx =
+  { Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
+    CurrentFun: FunSerial option }
 
-let private isCurrentFun funSerial ctx =
-  match ctx |> tailRecCtxGetCurrentFun with
+let private ofTyCtx tyCtx: TailRecCtx =
+  let (TyCtx (_, vars, tys, _, _, _, _)) = tyCtx
+  { Vars = vars
+    Tys = tys
+    CurrentFun = None }
+
+let private isCurrentFun funSerial (ctx: TailRecCtx) =
+  match ctx.CurrentFun with
   | Some it -> it = funSerial
   | None -> false
 
-let private withCurrentFun funSerial (f: TailRecCtx -> HExpr * TailRecCtx) ctx =
-  let parentFun = ctx |> tailRecCtxGetCurrentFun
-
-  let ctx =
-    ctx |> tailRecCtxWithCurrentFun (Some funSerial)
+let private withCurrentFun funSerial (f: TailRecCtx -> HExpr * TailRecCtx) (ctx: TailRecCtx) =
+  let parentFun = ctx.CurrentFun
+  let ctx = { ctx with CurrentFun = Some funSerial }
 
   let result, ctx = f ctx
 
-  let ctx =
-    ctx |> tailRecCtxWithCurrentFun parentFun
-
+  let ctx = { ctx with CurrentFun = parentFun }
   result, ctx
 
 let private troInfExpr isTail infOp items ty loc ctx =
