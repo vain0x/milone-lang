@@ -5,26 +5,23 @@ open MiloneLang.Records
 open MiloneLang.Helpers
 open MiloneLang.KirGen
 
-type ctx = KirPropagateCtx
+type private KirPropagateCtx =
+  { VarDefs: AssocMap<VarSerial, KVarDef>
+    VarUses: AssocMap<VarSerial, int> }
 
-let private ctxEmpty () =
-  KirPropagateCtx(mapEmpty intCmp, mapEmpty intCmp)
+let private ctxEmpty (): KirPropagateCtx =
+  { VarDefs = mapEmpty intCmp
+    VarUses = mapEmpty intCmp }
 
-let private findKVarDef varSerial ctx =
-  ctx
-  |> kirPropagateCtxGetVarDefs
-  |> mapTryFind varSerial
+let private findKVarDef varSerial (ctx: KirPropagateCtx) = ctx.VarDefs |> mapTryFind varSerial
 
-let private kpDefVar varSerial varDef ctx =
+let private kpDefVar varSerial varDef (ctx: KirPropagateCtx) =
   // printfn "// kp: [TRACE] def #%d := %s" varSerial (objToString varDef)
 
-  ctx
-  |> kirPropagateCtxWithVarDefs
-       (ctx
-        |> kirPropagateCtxGetVarDefs
-        |> mapAdd varSerial varDef)
+  { ctx with
+      VarDefs = ctx.VarDefs |> mapAdd varSerial varDef }
 
-let private kpUseTerm term ctx =
+let private kpUseTerm term (ctx: KirPropagateCtx) =
   match term with
   | KVarTerm (varSerial, _, loc) ->
       match ctx |> findKVarDef varSerial with
@@ -46,7 +43,7 @@ let private kpUseTerms terms ctx =
   (terms, ctx)
   |> stMap (fun (term, ctx) -> kpUseTerm term ctx)
 
-let private kpNode (node: KNode) ctx: KNode * ctx =
+let private kpNode (node: KNode) ctx: KNode * KirPropagateCtx =
   match node with
   | KJumpNode (jointSerial, args, loc) ->
       let args, ctx = ctx |> kpUseTerms args

@@ -1,7 +1,3 @@
-KirPropagateCtx:
-  VarDefs: AssocMap<VarSerial, KVarDef>
-  VarUses: AssocMap<VarSerial, int>
-
 KirToMirCtx:
   Serial: Serial
   Vars: AssocMap<VarSerial, VarDef>

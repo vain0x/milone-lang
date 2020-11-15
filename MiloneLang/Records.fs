@@ -9,23 +9,6 @@ module rec MiloneLang.Records
 
 open MiloneLang.Types
 
-type KirPropagateCtx =
-  | KirPropagateCtx
-    of AssocMap<VarSerial, KVarDef>
-      * AssocMap<VarSerial, int>
-
-let kirPropagateCtxGetVarDefs (KirPropagateCtx (varDefs, _)) =
-  varDefs
-
-let kirPropagateCtxGetVarUses (KirPropagateCtx (_, varUses)) =
-  varUses
-
-let kirPropagateCtxWithVarDefs varDefs (KirPropagateCtx (_, varUses)): KirPropagateCtx =
-  KirPropagateCtx (varDefs, varUses)
-
-let kirPropagateCtxWithVarUses varUses (KirPropagateCtx (varDefs, _)): KirPropagateCtx =
-  KirPropagateCtx (varDefs, varUses)
-
 type KirToMirCtx =
   | KirToMirCtx
     of Serial
