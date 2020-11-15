@@ -225,9 +225,9 @@ let private requireModule docId projectName moduleName (ctx: BundleCtx) =
 let bundleProgram (host: BundleHost) (projectName: string): (HExpr * NameCtx * (string * Loc) list) option =
   let ctx = newCtx host
 
-  // HACK: Load "./Polyfills" module in the project if exists.
+  // HACK: Load "./MiloneOnly" module in the project if exists.
   let ctx =
-    match ctx |> fetchModuleWithMemo projectName "Polyfills" with
+    match ctx |> fetchModuleWithMemo projectName "MiloneOnly" with
     | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
 
     | _ -> ctx

@@ -4,7 +4,7 @@
 module rec MiloneCore.List
 
 // For failwith.
-open MiloneCore.Polyfills
+open MiloneCore.MiloneOnly
 
 // Make sure every function is tail-recursive.
 // Inner functions have verbose name for readability of output code.

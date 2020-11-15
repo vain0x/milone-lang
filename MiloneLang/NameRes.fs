@@ -848,9 +848,9 @@ let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let ctx = ctx |> scopeCtxFinishScope parent
 
-        // HACK: Polyfills is auto-open.
+        // HACK: MiloneOnly is auto-open.
         let ctx =
-          if ident = "Polyfills" then ctx |> scopeCtxOpenModule serial else ctx
+          if ident = "MiloneOnly" then ctx |> scopeCtxOpenModule serial else ctx
 
         let next, ctx = (next, ctx) |> nameResExpr
 

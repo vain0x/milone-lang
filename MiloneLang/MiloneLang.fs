@@ -1,8 +1,8 @@
 /// Entry point of the milone-lang compiler.
 module rec MiloneLang.EntryPoint
 
-// HACK: "Polyfills" module is automatically loaded by the bundler and opened in name resolution.
-// open MiloneLang.Polyfills
+// HACK: "MiloneOnly" module is automatically loaded in Bundling and opened in NameRes.
+// open MiloneLang.MiloneOnly
 
 // See libcore for implementations.
 open MiloneCore.List

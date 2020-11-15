@@ -97,7 +97,7 @@ Most of types are defined in the module:
 
 and functions are in:
 
-- [Compatible](MiloneLang/Compatible.fs)
+- [FSharpOnly](MiloneLang/FSharpOnly.fs)
 - [Helpers](MiloneLang/Helpers.fs)
 
 The following transformations are consist of the compilation in the order:
