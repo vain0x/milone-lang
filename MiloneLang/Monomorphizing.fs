@@ -57,81 +57,107 @@ open MiloneLang.Records
 open MiloneLang.TySystem
 open MiloneLang.Typing
 
-let intTyCmp (firstValue, firstTy) (secondValue, secondTy) =
+let private intTyCmp (firstValue, firstTy) (secondValue, secondTy) =
   if firstValue <> secondValue then intCmp firstValue secondValue else tyCmp firstTy secondTy
 
-let monoCtxFromTyCtx (tyCtx: TyCtx): MonoCtx =
-  MonoCtx
-    (tyCtx.Serial,
-     tyCtx.Logs,
+type private MonoCtx =
+  { Serial: Serial
+    Logs: (Log * Loc) list
 
-     tyCtx.Vars,
-     tyCtx.Tys,
-     tyCtx.TyDepths,
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
+    TyDepths: AssocMap<TySerial, LetDepth>
 
-     mapEmpty intCmp,
-     mapEmpty intTyCmp,
-     MonoMode.Monify,
-     true,
-     0)
+    /// Map from
+    /// - generic function serial
+    ///
+    /// to:
+    /// - found use-site types
+    GenericFunUseSiteTys: AssocMap<FunSerial, Ty list>
 
-let monoCtxToTyCtx (monoCtx: MonoCtx): TyContext =
-  { Serial = monoCtx |> monoCtxGetSerial
-    Tys = monoCtx |> monoCtxGetTys
-    TyDepths = monoCtx |> monoCtxGetTyDepths
+    /// Map from pairs:
+    /// - generic function's serial
+    /// - monomorphic type
+    ///
+    /// to:
+    /// - monomorphized function's serial
+    GenericFunMonoSerials: AssocMap<FunSerial * Ty, FunSerial>
+
+    Mode: MonoMode
+    SomethingHappened: bool
+    InfiniteLoopDetector: int }
+
+let private monoCtxFromTyCtx (tyCtx: TyCtx): MonoCtx =
+  { Serial = tyCtx.Serial
+    Logs = tyCtx.Logs
+
+    Vars = tyCtx.Vars
+    Tys = tyCtx.Tys
+    TyDepths = tyCtx.TyDepths
+
+    GenericFunUseSiteTys = mapEmpty intCmp
+    GenericFunMonoSerials = mapEmpty intTyCmp
+    Mode = MonoMode.Monify
+    SomethingHappened = true
+    InfiniteLoopDetector = 0 }
+
+let private monoCtxToTyCtx (monoCtx: MonoCtx): TyContext =
+  { Serial = monoCtx.Serial
+    Tys = monoCtx.Tys
+    TyDepths = monoCtx.TyDepths
 
     // This doesn't matter here since we don't generalize.
     LetDepth = 0 }
 
-let monoCtxWithTyCtx (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
+let private monoCtxWithTyCtx (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
+  { monoCtx with
+      Serial = tyCtx.Serial
+      Logs = logAcc
+      Tys = tyCtx.Tys
+      TyDepths = tyCtx.TyDepths }
+
+let private monoCtxBindTy (monoCtx: MonoCtx) tySerial ty loc: MonoCtx =
   monoCtx
-  |> monoCtxWithSerial tyCtx.Serial
-  |> monoCtxWithLogs logAcc
-  |> monoCtxWithTys tyCtx.Tys
-  |> monoCtxWithTyDepths tyCtx.TyDepths
+  |> monoCtxWithTyCtx (typingBind (monoCtxToTyCtx monoCtx) tySerial ty loc) monoCtx.Logs
 
-let monoCtxBindTy (monoCtx: MonoCtx) tySerial ty loc: MonoCtx =
-  monoCtx
-  |> monoCtxWithTyCtx (typingBind (monoCtxToTyCtx monoCtx) tySerial ty loc) (monoCtx |> monoCtxGetLogs)
+let private monoCtxSubstTy (monoCtx: MonoCtx) ty: Ty = typingSubst (monoCtxToTyCtx monoCtx) ty
 
-let monoCtxSubstTy (monoCtx: MonoCtx) ty: Ty = typingSubst (monoCtxToTyCtx monoCtx) ty
-
-let monoCtxUnifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
+let private monoCtxUnifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
   let tyCtx = monoCtxToTyCtx monoCtx
 
   let logAcc, tyCtx =
-    typingUnify (monoCtx |> monoCtxGetLogs) tyCtx lTy rTy loc
+    typingUnify monoCtx.Logs tyCtx lTy rTy loc
 
   monoCtx |> monoCtxWithTyCtx tyCtx logAcc
 
-let monoCtxSubstTyExpr ctx expr =
+let private monoCtxSubstTyExpr ctx expr =
   let subst ty = monoCtxSubstTy ctx ty
   exprMap subst id expr
 
-let monoCtxSubstPatTy ctx pat =
+let private monoCtxSubstPatTy ctx pat =
   let subst ty = monoCtxSubstTy ctx ty
   patMap subst id pat
 
-let monoCtxSubstPatsTy ctx pats = List.map (monoCtxSubstPatTy ctx) pats
+let private monoCtxSubstPatsTy ctx pats = List.map (monoCtxSubstPatTy ctx) pats
 
-let monoCtxMarkSomethingHappened (ctx: MonoCtx) = ctx |> monoCtxWithSomethingHappened true
+let private monoCtxMarkSomethingHappened (ctx: MonoCtx) = { ctx with SomethingHappened = true }
 
-let monoCtxFindVarDef (ctx: MonoCtx) serial = ctx |> monoCtxGetVars |> mapFind serial
+let private monoCtxFindVarDef (ctx: MonoCtx) serial = ctx.Vars |> mapFind serial
 
-let monoCtxFindGenericFunDef (ctx: MonoCtx) serial =
-  match ctx |> monoCtxGetVars |> mapFind serial with
+let private monoCtxFindGenericFunDef (ctx: MonoCtx) serial =
+  match ctx.Vars |> mapFind serial with
   | FunDef (_, _, TyScheme ([], _), _) -> None
   | FunDef (ident, arity, TyScheme (_, funTy), loc) -> Some(ident, arity, funTy, loc)
   | _ -> None
 
-let monoCtxGetGenericFunIdent funSerial (ctx: MonoCtx) =
+let private monoCtxGetGenericFunIdent funSerial (ctx: MonoCtx) =
   match monoCtxFindGenericFunDef ctx funSerial with
   | Some (ident, _, _, _) -> ident
 
   | None -> failwith "NEVER"
 
 /// Generalizes all functions that has type variables.
-let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
+let private monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
   let forceGeneralize (varSerial, varDef) =
     match varDef with
     | FunDef (ident, arity, TyScheme (_, ty), loc) ->
@@ -141,15 +167,14 @@ let monoCtxForceGeneralizeFuns (ctx: MonoCtx) =
     | _ -> varSerial, varDef
 
   let vars =
-    ctx
-    |> monoCtxGetVars
+    ctx.Vars
     |> mapToList
     |> List.map forceGeneralize
     |> mapOfList intCmp
 
-  ctx |> monoCtxWithVars vars
+  { ctx with Vars = vars }
 
-let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
+let private monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy loc =
   assert (monoCtxFindMonomorphizedFun ctx genericFunSerial useSiteTy
           |> Option.isNone)
 
@@ -161,29 +186,24 @@ let monoCtxAddMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy l
 
     FunDef(ident, arity, monoTyScheme, loc)
 
-  let monoFunSerial = (ctx |> monoCtxGetSerial) + 1
+  let monoFunSerial = ctx.Serial + 1
 
   let ctx =
-    ctx
-    |> monoCtxWithSerial ((ctx |> monoCtxGetSerial) + 1)
-    |> monoCtxWithVars
-         (ctx
-          |> monoCtxGetVars
-          |> mapAdd monoFunSerial varDef)
-    |> monoCtxWithGenericFunMonoSerials
-         (ctx
-          |> monoCtxGetGenericFunMonoSerials
-          |> mapAdd (genericFunSerial, useSiteTy) monoFunSerial)
+    { ctx with
+        Serial = ctx.Serial + 1
+        Vars = ctx.Vars |> mapAdd monoFunSerial varDef
+        GenericFunMonoSerials =
+          ctx.GenericFunMonoSerials
+          |> mapAdd (genericFunSerial, useSiteTy) monoFunSerial }
 
   let ctx = monoCtxMarkSomethingHappened ctx
   monoFunSerial, ctx
 
-let monoCtxFindMonomorphizedFun (ctx: MonoCtx) funSerial useSiteTy =
-  ctx
-  |> monoCtxGetGenericFunMonoSerials
+let private monoCtxFindMonomorphizedFun (ctx: MonoCtx) funSerial useSiteTy =
+  ctx.GenericFunMonoSerials
   |> mapTryFind (funSerial, useSiteTy)
 
-let monoCtxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
+let private monoCtxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
   let useSiteTyIsMonomorphic = useSiteTy |> tyIsMonomorphic
 
   let notMonomorphizedYet =
@@ -197,39 +217,30 @@ let monoCtxMarkUseOfGenericFun (ctx: MonoCtx) funSerial useSiteTy =
     ctx
   else
     let useSiteTys =
-      match ctx
-            |> monoCtxGetGenericFunUseSiteTys
-            |> mapTryFind funSerial with
+      match ctx.GenericFunUseSiteTys |> mapTryFind funSerial with
       | None -> []
       | Some useSiteTys -> useSiteTys
 
     let useSiteTys = useSiteTy :: useSiteTys
 
-    let map =
-      ctx
-      |> monoCtxGetGenericFunUseSiteTys
-      |> mapAdd funSerial useSiteTys
-
     let ctx =
-      ctx |> monoCtxWithGenericFunUseSiteTys map
+      { ctx with
+          GenericFunUseSiteTys =
+            ctx.GenericFunUseSiteTys
+            |> mapAdd funSerial useSiteTys }
 
     let ctx = monoCtxMarkSomethingHappened ctx
     ctx
 
-let monoCtxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
-  match ctx
-        |> monoCtxGetGenericFunUseSiteTys
-        |> mapTryFind funSerial with
+let private monoCtxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
+  match ctx.GenericFunUseSiteTys |> mapTryFind funSerial with
   | None
   | Some [] -> [], ctx
   | Some useSiteTys ->
       let _, map =
-        ctx
-        |> monoCtxGetGenericFunUseSiteTys
-        |> mapRemove funSerial
+        ctx.GenericFunUseSiteTys |> mapRemove funSerial
 
-      let ctx =
-        ctx |> monoCtxWithGenericFunUseSiteTys map
+      let ctx = { ctx with GenericFunUseSiteTys = map }
 
       let ctx = monoCtxMarkSomethingHappened ctx
       useSiteTys, ctx
@@ -237,7 +248,7 @@ let monoCtxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
 /// Replaces the variable serial to monomorphized function serial if possible.
 /// Or marks an use of generic function if possible.
 /// Does nothing if the serial is NOT a generic function.
-let monoCtxProcessVarRef ctx varSerial useSiteTy =
+let private monoCtxProcessVarRef ctx varSerial useSiteTy =
   match monoCtxFindVarDef ctx varSerial with
   | VarDef _
   | VariantDef _
@@ -253,9 +264,9 @@ let monoCtxProcessVarRef ctx varSerial useSiteTy =
 
           varSerial, ctx
 
-let monifyPat (pat, ctx) = pat, ctx
+let private monifyPat (pat, ctx) = pat, ctx
 
-let monifyExprLetFun ctx callee vis isMainFun args body next ty loc =
+let private monifyExprLetFun (ctx: MonoCtx) callee vis isMainFun args body next ty loc =
   let genericFunSerial = callee
 
   let letGenericFunExpr =
@@ -285,7 +296,7 @@ let monifyExprLetFun ctx callee vis isMainFun args body next ty loc =
 
             go next arity genericFunTy useSiteTys ctx
 
-  match monoCtxFindGenericFunDef ctx genericFunSerial, monoCtxGetMode ctx with
+  match monoCtxFindGenericFunDef ctx genericFunSerial, ctx.Mode with
   | None, _ -> letGenericFunExpr, ctx
   | Some _, MonoMode.RemoveGenerics -> next, ctx
   | Some (_, arity, genericFunTy, _), _ ->
@@ -294,7 +305,7 @@ let monifyExprLetFun ctx callee vis isMainFun args body next ty loc =
 
       go letGenericFunExpr arity genericFunTy useSiteTys ctx
 
-let rec monifyExpr (expr, ctx) =
+let private monifyExpr (expr, ctx) =
   match expr with
   | HErrorExpr _
   | HTyDeclExpr _
@@ -368,16 +379,16 @@ let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
     |> monoCtxForceGeneralizeFuns
 
   // Monomorphization.
-  let rec go (expr, ctx) =
-    if ctx |> monoCtxGetSomethingHappened |> not then
+  let rec go (expr, ctx: MonoCtx) =
+    if not ctx.SomethingHappened then
       expr, ctx
-    else if (ctx |> monoCtxGetInfiniteLoopDetector) > 1000000 then
+    else if ctx.InfiniteLoopDetector > 1000000 then
       failwith "Infinite loop in monomorphization"
     else
       let ctx =
-        ctx
-        |> monoCtxWithSomethingHappened false
-        |> monoCtxWithInfiniteLoopDetector ((ctx |> monoCtxGetInfiniteLoopDetector) + 1)
+        { ctx with
+            SomethingHappened = false
+            InfiniteLoopDetector = ctx.InfiniteLoopDetector + 1 }
 
       (expr, ctx) |> monifyExpr |> go
 
@@ -387,14 +398,15 @@ let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   // WARNING: Bad kind of code reuse.
   let expr, monoCtx =
     let monoCtx =
-      monoCtx |> monoCtxWithMode MonoMode.RemoveGenerics
+      { monoCtx with
+          Mode = MonoMode.RemoveGenerics }
 
     monifyExpr (expr, monoCtx)
 
   let tyCtx =
     { tyCtx with
-        Serial = monoCtx |> monoCtxGetSerial
-        Vars = monoCtx |> monoCtxGetVars
-        Tys = monoCtx |> monoCtxGetTys }
+        Serial = monoCtx.Serial
+        Vars = monoCtx.Vars
+        Tys = monoCtx.Tys }
 
   expr, tyCtx
