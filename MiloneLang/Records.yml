@@ -1,37 +1,3 @@
-ScopeCtx:
-  # Last serial number.
-  # We need manage identifiers as integers rather than strings due to shadowing.
-  Serial: Serial
-
-  # Serial to ident map.
-  NameMap: AssocMap<Serial, Ident>
-
-  # Variable serial to definition map.
-  Vars: AssocMap<VarSerial, VarDef>
-
-  # Variable serial to let-depth map.
-  VarDepths: AssocMap<VarSerial, LetDepth>
-
-  # Type serial to definition map.
-  Tys: AssocMap<TySerial, TyDef>
-
-  # Type serial to let-depth map.
-  TyDepths: AssocMap<TySerial, LetDepth>
-
-  # Namespace tree of vars.
-  VarNs: NameTree
-
-  TyNs: NameTree
-
-  # Serial of the current scope.
-  LocalSerial: ScopeSerial
-
-  # Current scope.
-  Local: Scope
-
-  # Current let-depth, the number of ancestral let-body.
-  LetDepth: LetDepth
-
 TyCtx:
   # Next serial number.
   # We need to identify variables by serial number rather than names

@@ -15,6 +15,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
 open MiloneLang.TySystem
+open MiloneLang.NameRes
 
 let tyCtxGetTy tySerial (ctx: TyCtx) = ctx |> tyCtxGetTys |> mapFind tySerial
 
@@ -734,14 +735,7 @@ let tyCtxSubstExprTy ctx expr =
 
 let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
-    TyCtx
-      (scopeCtx |> scopeCtxGetSerial,
-       scopeCtx |> scopeCtxGetVars,
-       scopeCtx |> scopeCtxGetTys,
-       scopeCtx |> scopeCtxGetTyDepths,
-       0,
-       [],
-       [])
+    TyCtx(scopeCtx.Serial, scopeCtx.Vars, scopeCtx.Tys, scopeCtx.TyDepths, 0, [], [])
 
   let rec addErrorListList xss ctx =
     match xss with
@@ -753,7 +747,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
         tyCtxAddErr ctx msg loc
         |> addErrorListList (errors :: xss)
 
-  let ctx = ctx |> addErrorListList [errors]
+  let ctx = ctx |> addErrorListList [ errors ]
 
   // Assign type vars to var/fun definitions.
   let ctx =
@@ -762,10 +756,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       |> stMap (fun ((varSerial, varDef), ctx) ->
            let ctx =
              ctx
-             |> tyCtxWithLetDepth
-                  (scopeCtx
-                   |> scopeCtxGetVarDepths
-                   |> mapFind varSerial)
+             |> tyCtxWithLetDepth (scopeCtx.VarDepths |> mapFind varSerial)
 
            match varDef with
            | VarDef (ident, storageModifier, _, loc) ->
@@ -792,8 +783,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
                (varSerial, varDef), ctx)
 
-    ctx
-    |> tyCtxWithVars (mapOfList intCmp vars)
+    ctx |> tyCtxWithVars (mapOfList intCmp vars)
 
   let ctx = ctx |> tyCtxWithLetDepth 0
 
