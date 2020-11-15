@@ -344,7 +344,7 @@ let private mirifyBlock ctx expr =
   stmts, expr, ctx
 
 /// Gets if the target must match with any of the patterns.
-let patsIsCovering pats =
+let private patsIsCovering pats =
   let rec go pat =
     match pat with
     | HDiscardPat _

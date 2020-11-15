@@ -12,7 +12,7 @@ open MiloneLang.Mir
 let private unreachable value = failwithf "NEVER: %A" value
 
 /// Reconstructs fun type from type of args and result.
-let rec private restoreCalleeTy args ty =
+let private restoreCalleeTy args ty =
   match args with
   | [] -> ty
 
@@ -52,8 +52,7 @@ let private ofKirGenCtx (kirGenCtx: KirGenCtx): KirToMirCtx =
     Logs = kirGenCtx.Logs }
 
 let private toMirCtx (ctx: KirToMirCtx): MirCtx =
-  {
-    Serial = ctx.Serial
+  { Serial = ctx.Serial
     Vars = ctx.Vars
     Tys = ctx.Tys
     LabelSerial = ctx.LabelSerial

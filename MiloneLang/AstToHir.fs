@@ -26,11 +26,11 @@ open MiloneLang.Helpers
 open MiloneLang.TySystem
 
 /// Convert pos to loc.
-let toLoc (doc: DocId) (pos: Pos): Loc =
+let private toLoc (doc: DocId) (pos: Pos): Loc =
   let row, column = pos
   doc, row, column
 
-let opToPrim op =
+let private opToPrim op =
   match op with
   | AddBinary -> HPrim.Add
 
@@ -58,7 +58,7 @@ let opToPrim op =
   | PipeBinary -> failwithf "NEVER: %A" op
 
 /// `[x; y; ..]`. Desugar to a chain of (::).
-let desugarListLitPat pats pos =
+let private desugarListLitPat pats pos =
   assert (pats |> List.isEmpty |> not)
 
   let rec go pats =
@@ -72,7 +72,7 @@ let desugarListLitPat pats pos =
   go pats
 
 /// `[x; y; ..]` ==> `x :: y :: .. :: []`
-let desugarListLitExpr items pos =
+let private desugarListLitExpr items pos =
   assert (items |> List.isEmpty |> not)
 
   let rec go items =
@@ -88,7 +88,7 @@ let desugarListLitExpr items pos =
 /// Desugar `if` to `match`.
 /// `if cond then body else alt` ==>
 /// `match cond with | true -> body | false -> alt`.
-let desugarIf cond body alt pos =
+let private desugarIf cond body alt pos =
   let alt =
     match alt with
     | AMissingExpr _ -> axUnit pos
@@ -102,50 +102,50 @@ let desugarIf cond body alt pos =
 
 /// Desugar to let expression.
 /// `fun x y .. -> z` ==> `let f x y .. = z in f`
-let desugarFun pats body pos =
+let private desugarFun pats body pos =
   let ident = "fun"
   let pat = AFunDeclPat(ident, pats, pos)
   let next = AIdentExpr(ident, pos)
   ALetExpr(PrivateVis, pat, body, next, pos)
 
 /// Desugar `-x` to `0 - x`.
-let desugarUniNeg arg pos =
+let private desugarUniNeg arg pos =
   let zero = ALitExpr(IntLit 0, pos)
   ABinaryExpr(SubBinary, zero, arg, pos)
 
 /// `l <> r` ==> `not (l = r)`
-let desugarBinNe l r pos =
+let private desugarBinNe l r pos =
   let eqExpr = ABinaryExpr(EqualBinary, l, r, pos)
   axNot eqExpr pos
 
 /// `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.
-let desugarBinLe l r pos =
+let private desugarBinLe l r pos =
   let ltExpr = ABinaryExpr(LessBinary, r, l, pos)
   axNot ltExpr pos
 
 /// `l > r` ==> `r < l`
 /// NOTE: Evaluation order does change.
-let desugarBinGt l r pos = ABinaryExpr(LessBinary, r, l, pos)
+let private desugarBinGt l r pos = ABinaryExpr(LessBinary, r, l, pos)
 
 /// `l >= r` ==> `not (l < r)`
-let desugarBinGe l r pos =
+let private desugarBinGe l r pos =
   let ltExpr = ABinaryExpr(LessBinary, l, r, pos)
   axNot ltExpr pos
 
 /// `l && r` ==> `if l then r else false`
-let desugarBinAnd l r pos = desugarIf l r (axFalse pos) pos
+let private desugarBinAnd l r pos = desugarIf l r (axFalse pos) pos
 
 /// `l || r` ==> `if l then true else r`
-let desugarBinOr l r pos = desugarIf l (axTrue pos) r pos
+let private desugarBinOr l r pos = desugarIf l (axTrue pos) r pos
 
 /// `x |> f` ==> `f x`
 /// NOTE: Evaluation order does change.
-let desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
+let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 
 /// `s.[l .. r]` ==> `String.getSlice l r x`
 /// NOTE: Evaluation order does change.
-let tryDesugarIndexRange expr pos =
+let private tryDesugarIndexRange expr pos =
   match expr with
   | AIndexExpr (s, ARangeExpr ([ l; r ], _), _) ->
       let getSlice =
@@ -168,7 +168,7 @@ let tryDesugarIndexRange expr pos =
 /// Let to let-val:
 /// `let pat = body` ==>
 ///   `let-val pat = body`
-let desugarLet vis pat body next pos =
+let private desugarLet vis pat body next pos =
   match pat with
   | AAnnoPat (pat, annoTy, annoLoc) ->
       let body = AAnnoExpr(body, annoTy, annoLoc)
@@ -178,7 +178,7 @@ let desugarLet vis pat body next pos =
 
   | _ -> ALetVal(vis, pat, body, next, pos)
 
-let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
+let private astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
       let loc = toLoc docId pos
@@ -212,7 +212,7 @@ let astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
       let tTy, nameCtx = (tTy, nameCtx) |> astToHirTy docId
       tyFun sTy tTy, nameCtx
 
-let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
+let private astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
   | AMissingPat pos -> failwithf "Missing pattern %s" (posToString pos)
 
@@ -283,7 +283,7 @@ let astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
 
   | AFunDeclPat (_, _, pos) -> failwithf "Invalid occurrence of fun pattern: %s" (posToString pos)
 
-let astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
+let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with
   | AMissingExpr pos ->
       let loc = toLoc docId pos

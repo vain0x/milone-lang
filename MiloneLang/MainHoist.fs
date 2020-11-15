@@ -22,7 +22,7 @@ module rec MiloneLang.MainHoist
 open MiloneLang.Helpers
 open MiloneLang.Types
 
-let hoistMainExpr expr =
+let private hoistMainExpr expr =
   let rec go expr =
     match expr with
     | HLetFunExpr (serial, vis, true, args, body, next, ty, loc) ->

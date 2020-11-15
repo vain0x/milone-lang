@@ -12,7 +12,7 @@ open MiloneLang.Helpers
 // TyCtor
 // -----------------------------------------------
 
-let tyCtorToInt tyCtor =
+let private tyCtorToInt tyCtor =
   match tyCtor with
   | BoolTyCtor -> 1
 

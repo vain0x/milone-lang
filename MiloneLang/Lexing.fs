@@ -37,7 +37,7 @@ type TokenizeCtx = string * int * Pos * (Token * Pos) list
 
 /// Modifies the position that points to `text.[l]`
 /// to one that points to `text.[r]`.
-let posShift (text: string) (l: int) (r: int) ((y, x): Pos) =
+let private posShift (text: string) (l: int) (r: int) ((y, x): Pos) =
   assert (0 <= l && l <= r && r <= text.Length)
 
   let rec go y x i =
@@ -51,12 +51,12 @@ let posShift (text: string) (l: int) (r: int) ((y, x): Pos) =
 // Character helpers
 // -----------------------------------------------
 
-let charNull: char = char 0
+let private charNull: char = char 0
 
-let charIsIdent (c: char): bool =
+let private charIsIdent (c: char): bool =
   c = '_' || charIsDigit c || charIsAlpha c
 
-let charIsOp (c: char): bool =
+let private charIsOp (c: char): bool =
   c = '+'
   || c = '-'
   || c = '*'
@@ -73,7 +73,7 @@ let charIsOp (c: char): bool =
   || c = ';'
   || c = '.'
 
-let charIsPun (c: char): bool =
+let private charIsPun (c: char): bool =
   c = ','
   || c = '('
   || c = ')'
@@ -87,7 +87,7 @@ let charIsPun (c: char): bool =
 // -----------------------------------------------
 
 /// `s.[i..].StartsWith(prefix)`
-let strIsFollowedBy (i: int) (prefix: string) (s: string): bool =
+let private strIsFollowedBy (i: int) (prefix: string) (s: string): bool =
   /// `s.[si..].StartsWith(prefix.[pi..])`
   let rec go pi si =
     pi = prefix.Length
@@ -98,23 +98,23 @@ let strIsFollowedBy (i: int) (prefix: string) (s: string): bool =
   i + prefix.Length <= s.Length && go 0 i
 
 /// Followed by `"""`?
-let strIsFollowedByRawQuotes (i: int) (s: string): bool = strIsFollowedBy i "\"\"\"" s
+let private strIsFollowedByRawQuotes (i: int) (s: string): bool = strIsFollowedBy i "\"\"\"" s
 
 // -----------------------------------------------
 // Scan functions
 // -----------------------------------------------
 
-let scanError (_: string) (i: int) =
+let private scanError (_: string) (i: int) =
   // FIXME: Skip unrecognizable characters.
   i + 1
 
-let lookEof (text: string) (i: int) = i >= text.Length
+let private lookEof (text: string) (i: int) = i >= text.Length
 
 /// Gets if the text is followed by 1+ spaces at the position.
-let lookSpace (text: string) (i: int) = text.[i] |> charIsSpace
+let private lookSpace (text: string) (i: int) = text.[i] |> charIsSpace
 
 /// Finds the end index of the following spaces.
-let scanSpace (text: string) (i: int) =
+let private scanSpace (text: string) (i: int) =
   assert (lookSpace text i)
 
   let rec go i =
@@ -124,13 +124,13 @@ let scanSpace (text: string) (i: int) =
 
   go i
 
-let lookComment (text: string) (i: int) =
+let private lookComment (text: string) (i: int) =
   // NOTE: Attributes are also skipped for now.
   text
   |> strIsFollowedBy i "//"
   || text |> strIsFollowedBy i "[<"
 
-let scanLine (text: string) (i: int) =
+let private scanLine (text: string) (i: int) =
   assert (lookComment text i)
 
   let rec go i =
@@ -140,15 +140,15 @@ let scanLine (text: string) (i: int) =
 
   go i
 
-let lookPun (text: string) (i: int) = text.[i] |> charIsPun
+let private lookPun (text: string) (i: int) = text.[i] |> charIsPun
 
-let scanPun (text: string) (i: int) =
+let private scanPun (text: string) (i: int) =
   assert (lookPun text i)
   i + 1
 
-let lookOp (text: string) (i: int) = text.[i] |> charIsOp
+let private lookOp (text: string) (i: int) = text.[i] |> charIsOp
 
-let scanOp (text: string) (i: int) =
+let private scanOp (text: string) (i: int) =
   assert (lookOp text i)
 
   let rec go i =
@@ -156,12 +156,12 @@ let scanOp (text: string) (i: int) =
 
   go i
 
-let lookIdent (text: string) (i: int) =
+let private lookIdent (text: string) (i: int) =
   text.[i]
   |> charIsIdent
   && text.[i] |> charIsDigit |> not
 
-let scanIdent (text: string) (i: int) =
+let private scanIdent (text: string) (i: int) =
   assert (lookIdent text i)
 
   let rec go i =
@@ -171,9 +171,9 @@ let scanIdent (text: string) (i: int) =
 
   go i
 
-let lookIntLit (text: string) (i: int) = text.[i] |> charIsDigit
+let private lookIntLit (text: string) (i: int) = text.[i] |> charIsDigit
 
-let scanIntLit (text: string) (i: int) =
+let private scanIntLit (text: string) (i: int) =
   assert (lookIntLit text i)
 
   let rec go i =
@@ -183,9 +183,9 @@ let scanIntLit (text: string) (i: int) =
 
   go i
 
-let lookCharLit (text: string) (i: int) = text.[i] = '\''
+let private lookCharLit (text: string) (i: int) = text.[i] = '\''
 
-let scanCharLit (text: string) (i: int) =
+let private scanCharLit (text: string) (i: int) =
   assert (lookCharLit text i)
 
   let rec go i =
@@ -205,9 +205,9 @@ let scanCharLit (text: string) (i: int) =
 
   go (i + 1)
 
-let lookStrLit (text: string) (i: int) = text.[i] = '"'
+let private lookStrLit (text: string) (i: int) = text.[i] = '"'
 
-let scanStrLit (text: string) (i: int) =
+let private scanStrLit (text: string) (i: int) =
   assert (lookStrLit text i)
 
   let rec go i =
@@ -227,9 +227,9 @@ let scanStrLit (text: string) (i: int) =
 
   go (i + 1)
 
-let lookStrLitRaw (text: string) (i: int) = text |> strIsFollowedByRawQuotes i
+let private lookStrLitRaw (text: string) (i: int) = text |> strIsFollowedByRawQuotes i
 
-let scanStrLitRaw (text: string) (i: int) =
+let private scanStrLitRaw (text: string) (i: int) =
   assert (lookStrLitRaw text i)
 
   let rec go i =
@@ -247,7 +247,7 @@ let scanStrLitRaw (text: string) (i: int) =
 // Token helpers
 // -----------------------------------------------
 
-let tokenFromIdent (text: string) l r: Token =
+let private tokenFromIdent (text: string) l r: Token =
   match text |> strSlice l r with
   | "true" -> TrueToken
   | "false" -> FalseToken
@@ -273,7 +273,7 @@ let tokenFromIdent (text: string) l r: Token =
   | "in" -> InToken
   | s -> IdentToken s
 
-let tokenFromOp (text: string) l r: Token =
+let private tokenFromOp (text: string) l r: Token =
   match text |> strSlice l r with
   | "&" -> AmpToken
   | "&&" -> AmpAmpToken
@@ -299,7 +299,7 @@ let tokenFromOp (text: string) l r: Token =
   | "/" -> SlashToken
   | _ -> ErrorToken
 
-let tokenFromPun (text: string) (l: int) r =
+let private tokenFromPun (text: string) (l: int) r =
   assert (r - l = 1)
   match text.[l] with
   | ',' -> CommaToken
@@ -311,11 +311,11 @@ let tokenFromPun (text: string) (l: int) r =
   | '}' -> RightBraceToken
   | _ -> failwith "NEVER! charIsPun is broken"
 
-let tokenFromIntLit (text: string) l r: Token =
+let private tokenFromIntLit (text: string) l r: Token =
   let value = text |> strSlice l r |> int
   IntToken value
 
-let tokenFromCharLit (text: string) l r: Token =
+let private tokenFromCharLit (text: string) l r: Token =
   assert (l
           + 2
           <= r
@@ -338,7 +338,7 @@ let tokenFromCharLit (text: string) l r: Token =
 
   CharToken value
 
-let tokenFromStrLit (text: string) l r: Token =
+let private tokenFromStrLit (text: string) l r: Token =
   assert (l + 2 <= r && text.[l] = '"' && text.[r - 1] = '"')
 
   // Process a string as alternation of unescaped parts and escape sequences.
@@ -368,7 +368,7 @@ let tokenFromStrLit (text: string) l r: Token =
 
   StrToken value
 
-let tokenFromStrLitRaw (text: string) l r =
+let private tokenFromStrLitRaw (text: string) l r =
   assert (l
           + 6
           <= r
@@ -380,67 +380,67 @@ let tokenFromStrLitRaw (text: string) l r =
 // Tokenize functions
 // -----------------------------------------------
 
-let tokCtxToTextIndex ((text, i, _, _): TokenizeCtx) = text, i
+let private tokCtxToTextIndex ((text, i, _, _): TokenizeCtx) = text, i
 
 /// Moves the cursor to the end index (`r`)
 /// without emitting a token.
-let tokCtxSkip r ((text, i, pos, acc): TokenizeCtx): TokenizeCtx =
+let private tokCtxSkip r ((text, i, pos, acc): TokenizeCtx): TokenizeCtx =
   assert (0 <= i && i <= r && r <= text.Length)
   let newPos = pos |> posShift text i r
   text, r, newPos, acc
 
 /// Moves the cursor to the next index (`r`)
 /// and emits a token that spans over the moved range.
-let tokCtxPush kind r ((text, i, pos, acc): TokenizeCtx): TokenizeCtx =
+let private tokCtxPush kind r ((text, i, pos, acc): TokenizeCtx): TokenizeCtx =
   assert (0 <= i && i <= r && r <= text.Length)
   let newAcc = (kind, pos) :: acc
   let newPos = pos |> posShift text i r
   text, r, newPos, newAcc
 
-let tokEof ((text, i, _, acc): TokenizeCtx) =
+let private tokEof ((text, i, _, acc): TokenizeCtx) =
   assert (lookEof text i)
   acc |> List.rev
 
-let tokError t =
+let private tokError t =
   let text, i = t |> tokCtxToTextIndex
   let r = scanError text i
   t |> tokCtxSkip r
 
-let tokComment (t: TokenizeCtx) =
+let private tokComment (t: TokenizeCtx) =
   let text, i = t |> tokCtxToTextIndex
   let r = scanLine text i
   t |> tokCtxSkip r
 
-let tokSpace (t: TokenizeCtx) =
+let private tokSpace (t: TokenizeCtx) =
   let text, i = t |> tokCtxToTextIndex
   let r = scanSpace text i
   t |> tokCtxSkip r
 
-let tokPun t =
+let private tokPun t =
   let text, i = t |> tokCtxToTextIndex
   let r = scanPun text i
   let token = tokenFromPun text i r
   t |> tokCtxPush token r
 
-let tokOp t =
+let private tokOp t =
   let text, i = t |> tokCtxToTextIndex
   let r = scanOp text i
   let token = tokenFromOp text i r
   t |> tokCtxPush token r
 
-let tokIdent t =
+let private tokIdent t =
   let text, i = t |> tokCtxToTextIndex
   let r = scanIdent text i
   let token = tokenFromIdent text i r
   t |> tokCtxPush token r
 
-let tokIntLit t =
+let private tokIntLit t =
   let text, i = t |> tokCtxToTextIndex
   let r = scanIntLit text i
   let token = tokenFromIntLit text i r
   t |> tokCtxPush token r
 
-let tokCharLit t =
+let private tokCharLit t =
   let text, i = t |> tokCtxToTextIndex
 
   // 'T
@@ -449,7 +449,8 @@ let tokCharLit t =
      + 2 < text.Length
      && text.[i + 1] |> charIsAlpha
      && text.[i + 2] <> '\'' then
-    t |> tokCtxPush (TyVarToken text.[i + 1..i + 1]) (i + 2)
+    t
+    |> tokCtxPush (TyVarToken text.[i + 1..i + 1]) (i + 2)
   else
     let ok, r = scanCharLit text i
 
@@ -458,7 +459,7 @@ let tokCharLit t =
 
     t |> tokCtxPush token r
 
-let tokStrLit t =
+let private tokStrLit t =
   let text, i = t |> tokCtxToTextIndex
   let ok, r = scanStrLit text i
 
@@ -467,7 +468,7 @@ let tokStrLit t =
 
   t |> tokCtxPush token r
 
-let tokStrLitRaw t =
+let private tokStrLitRaw t =
   let text, i = t |> tokCtxToTextIndex
   let ok, r = scanStrLitRaw text i
 

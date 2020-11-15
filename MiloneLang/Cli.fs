@@ -31,7 +31,7 @@ type Verbosity =
   | Profile of Profiler
   | Quiet
 
-let helpText = """milone-lang compiler
+let private helpText = """milone-lang compiler
 
 USAGE:
     milone [SUBCOMMAND] OPTIONS...
@@ -61,21 +61,21 @@ GLOBAL OPTIONS
 LINKS
     <https://github.com/vain0x/milone-lang>"""
 
-let strTrimEnd (s: string) =
+let private strTrimEnd (s: string) =
   let rec go i =
     if i = 0 || not (charIsSpace s.[i - 1]) then s |> strSlice 0 i else go (i - 1)
 
   go s.Length
 
-let charIsPathSep (c: char) = c = '/' || c = '\\'
+let private charIsPathSep (c: char) = c = '/' || c = '\\'
 
-let pathStrTrimEndPathSep (s: string) =
+let private pathStrTrimEndPathSep (s: string) =
   if s.Length >= 1 && charIsPathSep s.[s.Length - 1]
   then s |> strSlice 0 (s.Length - 1)
   else s
 
 /// Gets the final component splitting by path separators.
-let pathStrToFileName (s: string) =
+let private pathStrToFileName (s: string) =
   let rec go i =
     if i = 0 then s
     else if charIsPathSep s.[i - 1] then s |> strSlice i s.Length
@@ -84,7 +84,7 @@ let pathStrToFileName (s: string) =
   go s.Length
 
 /// Gets the file name without extension.
-let pathStrToStem (s: string) =
+let private pathStrToStem (s: string) =
   match s |> pathStrToFileName with
   | "."
   | ".." -> s
@@ -150,20 +150,20 @@ let private writeLog (host: CliHost) verbosity msg =
 
   | Quiet -> ()
 
-let syntaxHasError syntax =
+let private syntaxHasError syntax =
   let _, _, errors = syntax
   errors |> List.isEmpty |> not
 
-let printSyntaxErrors syntax =
+let private printSyntaxErrors syntax =
   let _, _, errors = syntax
 
   errors
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
   |> List.iter (fun (msg, loc) -> printfn "#error %s %s" (locToString loc) msg)
 
-let tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
+let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
-let printLogs (tyCtx: TyCtx) logs =
+let private printLogs (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
     let getTyIdent tySerial =
       tyCtx.Tys

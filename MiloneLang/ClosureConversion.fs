@@ -289,12 +289,12 @@ let private ccCtxUpdateFunDefs (ctx: CcCtx) =
 // -----------------------------------------------
 
 /// Updates the function type to take captured variables.
-let capsAddToFunTy tTy (caps: Caps) =
+let private capsAddToFunTy tTy (caps: Caps) =
   caps
   |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
 
 /// Updates the callee to take captured variables as arguments.
-let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
+let private capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
   let callee =
     let calleeTy = caps |> capsAddToFunTy calleeTy
     HRefExpr(calleeSerial, calleeTy, calleeLoc)
@@ -309,11 +309,11 @@ let capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
   app
 
 /// Updates the argument patterns to take captured variables.
-let capsAddToFunPats args (caps: Caps) =
+let private capsAddToFunPats args (caps: Caps) =
   caps
   |> List.fold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
 
-let capsUpdateFunDef funTy arity (caps: Caps) =
+let private capsUpdateFunDef funTy arity (caps: Caps) =
   let funTy = caps |> capsAddToFunTy funTy
   let arity = arity + List.length caps
   funTy, arity

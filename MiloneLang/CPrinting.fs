@@ -5,10 +5,10 @@ module rec MiloneLang.CPrinting
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-let eol = """
+let private eol = """
 """
 
-let join sep f (xs, acc) =
+let private join sep f (xs, acc) =
   let rec go acc xs =
     match xs with
     | [] -> acc
@@ -20,7 +20,7 @@ let join sep f (xs, acc) =
 
   go acc xs
 
-let opStr op =
+let private opStr op =
   match op with
   | CAddBinary -> "+"
   | CSubBinary -> "-"
@@ -34,7 +34,7 @@ let opStr op =
   | CGreaterBinary -> ">"
   | CGreaterEqualBinary -> ">="
 
-let cprintTyFunPtr name argTys resultTy acc =
+let private cprintTyFunPtr name argTys resultTy acc =
   let acc = cprintTy acc resultTy
 
   let acc =
@@ -51,7 +51,7 @@ let cprintTyFunPtr name argTys resultTy acc =
   let acc = go acc argTys
   acc |> cons ")"
 
-let rec cprintTy acc ty: string list =
+let private cprintTy acc ty: string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
   | CIntTy -> acc |> cons "int"
@@ -65,12 +65,12 @@ let rec cprintTy acc ty: string list =
   | CEnumTy ident -> acc |> cons "enum " |> cons ident
 
 /// `T x` or `T (*x)(..)`
-let cprintTyWithName acc name ty =
+let private cprintTyWithName acc name ty =
   match ty with
   | CFunPtrTy (argTys, resultTy) -> cprintTyFunPtr name argTys resultTy acc
   | _ -> cprintTy acc ty |> cons " " |> cons name
 
-let rec cprintParams acc ps: string list =
+let private cprintParams acc ps: string list =
   let rec go acc ps =
     match ps with
     | [] -> acc
@@ -85,16 +85,16 @@ let rec cprintParams acc ps: string list =
 
   go acc ps
 
-let cprintExprChar value =
+let private cprintExprChar value =
   if value |> charNeedsEscaping then value |> charEscape else string value
 
-let cprintExprStrRaw acc (value: string) =
+let private cprintExprStrRaw acc (value: string) =
   acc
   |> cons "\""
   |> cons (strEscape value)
   |> cons "\""
 
-let cprintExprStrObj acc (value: string) =
+let private cprintExprStrObj acc (value: string) =
   let acc = acc |> cons "(struct String){.str = "
   let acc = cprintExprStrRaw acc value
 
@@ -106,7 +106,7 @@ let cprintExprStrObj acc (value: string) =
 
   acc
 
-let cprintExprInit acc fields ty =
+let private cprintExprInit acc fields ty =
   let acc = acc |> cons "("
   let acc = cprintTy acc ty
   let acc = acc |> cons "){"
@@ -123,7 +123,7 @@ let cprintExprInit acc fields ty =
   let acc = acc |> cons "}"
   acc
 
-let rec cprintExpr acc expr: string list =
+let private cprintExpr acc expr: string list =
   let rec cprintExprList acc index separator exprs =
     match exprs with
     | [] -> acc
@@ -200,7 +200,7 @@ let rec cprintExpr acc expr: string list =
       let acc = acc |> cons ")"
       acc
 
-let cprintStmt acc indent stmt: string list =
+let private cprintStmt acc indent stmt: string list =
   match stmt with
   | CReturnStmt None -> acc |> cons indent |> cons "return;" |> cons eol
   | CReturnStmt (Some expr) ->
@@ -281,14 +281,14 @@ let cprintStmt acc indent stmt: string list =
 
       acc |> cons indent |> cons "}" |> cons eol
 
-let rec cprintStmts acc indent stmts: string list =
+let private cprintStmts acc indent stmts: string list =
   match stmts with
   | [] -> acc
   | stmt :: stmts ->
       let acc = cprintStmt acc indent stmt
       cprintStmts acc indent stmts
 
-let cprintDecl acc decl =
+let private cprintDecl acc decl =
   match decl with
   | CErrorDecl (message, line) ->
       let acc =
@@ -372,7 +372,7 @@ let cprintDecl acc decl =
       acc
 
 /// Prints forward declaration.
-let cprintDeclForward acc decl =
+let private cprintDeclForward acc decl =
   match decl with
   | CErrorDecl _ -> acc
   | CStructDecl (ident, _, _) ->
@@ -406,7 +406,7 @@ let cprintDeclForward acc decl =
       let acc = acc |> cons ");" |> cons eol |> cons eol
       acc
 
-let rec cprintDeclForwards acc decls =
+let private cprintDeclForwards acc decls =
   let rec go acc decls =
     match decls with
     | [] -> acc
@@ -416,7 +416,7 @@ let rec cprintDeclForwards acc decls =
 
   go acc decls
 
-let rec cprintDecls acc decls =
+let private cprintDecls acc decls =
   let acc = cprintDeclForwards acc decls
 
   let rec go acc decls =
@@ -429,7 +429,7 @@ let rec cprintDecls acc decls =
 
   go acc decls
 
-let cprintHeader acc =
+let private cprintHeader acc =
   let header = "#include \"milone.h\""
   acc |> cons header |> cons eol |> cons eol
 

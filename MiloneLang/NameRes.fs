@@ -9,11 +9,11 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Bundling
 
-let scopeMapEmpty () = mapEmpty strCmp
+let private scopeMapEmpty () = mapEmpty strCmp
 
-let scopeChainEmpty (): ScopeChain = [ scopeMapEmpty () ]
+let private scopeChainEmpty (): ScopeChain = [ scopeMapEmpty () ]
 
-let scopeEmpty (): Scope = scopeChainEmpty (), scopeChainEmpty ()
+let private scopeEmpty (): Scope = scopeChainEmpty (), scopeChainEmpty ()
 
 // -----------------------------------------------
 // ScopeCtx
@@ -54,7 +54,7 @@ type ScopeCtx =
     /// Current let-depth, the number of ancestral let-body.
     LetDepth: LetDepth }
 
-let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
+let private scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
   let (NameCtx (nameMap, serial)) = nameCtx
   let (localSerial as serial) = serial + 1
 
@@ -70,24 +70,24 @@ let scopeCtxFromNameCtx (nameCtx: NameCtx): ScopeCtx =
     Local = scopeEmpty ()
     LetDepth = 0 }
 
-let scopeCtxGetIdent serial (scopeCtx: ScopeCtx): Ident = scopeCtx.NameMap |> mapFind serial
+let private scopeCtxGetIdent serial (scopeCtx: ScopeCtx): Ident = scopeCtx.NameMap |> mapFind serial
 
-let scopeCtxGetVar varSerial (scopeCtx: ScopeCtx) =
+let private scopeCtxGetVar varSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Vars |> mapContainsKey varSerial)
   scopeCtx.Vars |> mapFind varSerial
 
-let scopeCtxGetTy tySerial (scopeCtx: ScopeCtx) =
+let private scopeCtxGetTy tySerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Tys |> mapContainsKey tySerial)
   scopeCtx.Tys |> mapFind tySerial
 
-let scopeCtxIsVariant varSerial scopeCtx =
+let private scopeCtxIsVariant varSerial scopeCtx =
   match scopeCtx |> scopeCtxGetVar varSerial with
   | VariantDef _ -> true
 
   | _ -> false
 
 /// Defines a variable, without adding to any scope.
-let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
   let varDef =
     match scopeCtx.Vars |> mapTryFind varSerial, varDef with
@@ -101,7 +101,7 @@ let scopeCtxDefineVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
         |> mapAdd varSerial scopeCtx.LetDepth }
 
 /// Defines a type, without adding to any scope.
-let scopeCtxDefineTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxDefineTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       Tys = scopeCtx.Tys |> mapAdd tySerial tyDef
       TyDepths =
@@ -109,26 +109,26 @@ let scopeCtxDefineTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
         |> mapAdd tySerial scopeCtx.LetDepth }
 
 /// Defines an unbound meta type.
-let scopeCtxDefineFreeTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxDefineFreeTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       TyDepths =
         scopeCtx.TyDepths
         |> mapAdd tySerial scopeCtx.LetDepth }
 
 /// Adds a variable to a namespace.
-let scopeCtxAddVarToNs tySerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxAddVarToNs tySerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       VarNs = scopeCtx.VarNs |> nameTreeAdd tySerial varSerial }
 
 /// Adds a type to a namespace.
-let scopeCtxAddTyToNs parentTySerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxAddTyToNs parentTySerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       TyNs =
         scopeCtx.TyNs
         |> nameTreeAdd parentTySerial tySerial }
 
 /// Adds a variable to a scope.
-let scopeCtxOpenVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxOpenVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
   let varIdent =
     scopeCtx
     |> scopeCtxGetVar varSerial
@@ -150,7 +150,7 @@ let scopeCtxOpenVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with Local = scope }
 
 /// Adds a type to a scope.
-let scopeCtxOpenTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxOpenTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
   let tyIdent =
     scopeCtx |> scopeCtxGetTy tySerial |> tyDefToIdent
 
@@ -167,7 +167,7 @@ let scopeCtxOpenTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
 
   { scopeCtx with Local = scope }
 
-let scopeCtxOpenModule moduleSerial (scopeCtx: ScopeCtx) =
+let private scopeCtxOpenModule moduleSerial (scopeCtx: ScopeCtx) =
   // Import vars.
   let scopeCtx =
     scopeCtx.VarNs
@@ -183,28 +183,28 @@ let scopeCtxOpenModule moduleSerial (scopeCtx: ScopeCtx) =
   scopeCtx
 
 /// Defines a variable in the local scope.
-let scopeCtxDefineLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxDefineLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
   |> scopeCtxDefineVar varSerial varDef
   |> scopeCtxOpenVar varSerial
 
 /// Defines a type in the local scope.
-let scopeCtxDefineLocalTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxDefineLocalTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
   |> scopeCtxDefineTy tySerial tyDef
   |> scopeCtxOpenTy tySerial
 
 /// Called on enter the body of let expressions.
-let scopeCtxOnEnterLetBody (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxOnEnterLetBody (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       LetDepth = scopeCtx.LetDepth + 1 }
 
-let scopeCtxOnLeaveLetBody (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxOnLeaveLetBody (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       LetDepth = scopeCtx.LetDepth - 1 }
 
 /// Starts a new scope.
-let scopeCtxStartScope (scopeCtx: ScopeCtx): ScopeSerial * ScopeCtx =
+let private scopeCtxStartScope (scopeCtx: ScopeCtx): ScopeSerial * ScopeCtx =
   let parentSerial = scopeCtx.LocalSerial
 
   let scopeCtx =
@@ -214,7 +214,7 @@ let scopeCtxStartScope (scopeCtx: ScopeCtx): ScopeSerial * ScopeCtx =
 
   parentSerial, scopeCtx
 
-let scopeCtxFinishScope _parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxFinishScope _parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
   match scopeCtx.Local with
   | [], _
   | _, [] -> failwith "NEVER: Scope can't be empty."
@@ -223,7 +223,7 @@ let scopeCtxFinishScope _parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
       { scopeCtx with
           Local = varScopes, tyScopes }
 
-let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option =
+let private scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option =
   if scopeSerial = scopeCtx.LocalSerial then
     // Find from local scope.
     let varScopes, _ = scopeCtx.Local
@@ -238,7 +238,7 @@ let scopeCtxResolveVar scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option 
     |> nameTreeTryFind scopeSerial
     |> List.tryFind (fun varSerial -> (scopeCtx |> scopeCtxGetIdent varSerial) = ident)
 
-let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
+let private scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
   if scopeSerial = scopeCtx.LocalSerial then
     // Find from local scope.
     let _, tyScopes = scopeCtx.Local
@@ -251,15 +251,15 @@ let scopeCtxResolveTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial opti
     // Find from namespace.
     failwith "NEVER: Not used."
 
-let scopeCtxResolveLocalVar ident (scopeCtx: ScopeCtx) =
+let private scopeCtxResolveLocalVar ident (scopeCtx: ScopeCtx) =
   scopeCtx
   |> scopeCtxResolveVar scopeCtx.LocalSerial ident
 
-let scopeCtxResolveLocalTyIdent ident (scopeCtx: ScopeCtx) =
+let private scopeCtxResolveLocalTyIdent ident (scopeCtx: ScopeCtx) =
   scopeCtx
   |> scopeCtxResolveTyIdent scopeCtx.LocalSerial ident
 
-let scopeCtxResolvePatAsScope pat scopeCtx =
+let private scopeCtxResolvePatAsScope pat scopeCtx =
   match pat with
   | HNavPat _ ->
       // A.B.C (= (A.B).C) case
@@ -272,7 +272,7 @@ let scopeCtxResolvePatAsScope pat scopeCtx =
   | _ -> None
 
 /// Resolves an expressions as scope: type, module or namespace.
-let scopeCtxResolveExprAsScope expr scopeCtx =
+let private scopeCtxResolveExprAsScope expr scopeCtx =
   match expr with
   | HNavExpr _ ->
       // A.B.C (= (A.B).C) case
@@ -285,7 +285,7 @@ let scopeCtxResolveExprAsScope expr scopeCtx =
   | _ -> None
 
 /// Resolves type identifiers in a type expression.
-let scopeCtxResolveTy ty loc scopeCtx =
+let private scopeCtxResolveTy ty loc scopeCtx =
   let rec go (ty, scopeCtx) =
     match ty with
     | ErrorTy _ -> ty, scopeCtx
@@ -325,7 +325,7 @@ let scopeCtxResolveTy ty loc scopeCtx =
 // Definitions
 // -----------------------------------------------
 
-let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
+let private scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
   let arity = args |> List.length
   let tyScheme = TyScheme([], ty)
 
@@ -349,7 +349,7 @@ let scopeCtxDefineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx 
 /// - You need call `scopeCtxDefineTyFinish` to complete the task.
 /// - This doesn't resolve inner type expressions
 ///   because some type declarations are still unseen.
-let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
+let private scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
   let addVarToModule varSerial ctx =
     match moduleSerialOpt, vis with
     | Some moduleSerial, PublicVis -> ctx |> scopeCtxAddVarToNs moduleSerial varSerial
@@ -409,7 +409,7 @@ let scopeCtxDefineTyStart moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
 ///
 /// - No need to call `scopeCtxDefineTyStart` first.
 /// - This resolves inner type expressions.
-let scopeCtxDefineTyFinish tySerial tyArgs tyDecl loc ctx =
+let private scopeCtxDefineTyFinish tySerial tyArgs tyDecl loc ctx =
   let ctx =
     // Pass in PrivateVis because if this type is not pre-declared here, it's local to function.
     ctx
@@ -475,7 +475,7 @@ let scopeCtxDefineTyFinish tySerial tyArgs tyDecl loc ctx =
 // to create variables/types pre-definitions
 // so that mutually recursive references resolve correctly.
 
-let nameResCollectDecls moduleSerialOpt (expr, ctx) =
+let private nameResCollectDecls moduleSerialOpt (expr, ctx) =
   let addVarToModule vis varSerial ctx =
     match moduleSerialOpt, vis with
     | Some moduleSerial, PublicVis -> ctx |> scopeCtxAddVarToNs moduleSerial varSerial
@@ -576,7 +576,7 @@ let nameResCollectDecls moduleSerialOpt (expr, ctx) =
 // Name Resolution
 // -----------------------------------------------
 
-let nameResPat (pat: HPat, ctx: ScopeCtx) =
+let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   match pat with
   | HLitPat _
   | HDiscardPat _
@@ -668,7 +668,7 @@ let nameResPat (pat: HPat, ctx: ScopeCtx) =
 
   | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
-let nameResExpr (expr: HExpr, ctx: ScopeCtx) =
+let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with
   | HErrorExpr _
   | HLitExpr _

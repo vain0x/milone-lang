@@ -13,7 +13,7 @@ open MiloneLang.Mir
 
 let private ctVoidPtr = CPtrTy CVoidTy
 
-let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
+let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then ident + "_" else ident + "_" + string index
 
@@ -47,10 +47,10 @@ let renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
 
   serialsMap |> mapFold addIdents (mapEmpty mapFuns)
 
-let tupleField (i: int) = "t" + string i
+let private tupleField (i: int) = "t" + string i
 
 /// Calculates tag type's name of union type.
-let tagTyIdent (tyIdent: string) = tyIdent + "Tag"
+let private tagTyIdent (tyIdent: string) = tyIdent + "Tag"
 
 [<RequireQualifiedAccess>]
 type private CirCtx =

@@ -3,7 +3,7 @@ module rec MiloneLang.Program
 
 open MiloneLang.Cli
 
-let readFile (filePath: string) =
+let private readFile (filePath: string) =
   try
     if System.IO.File.Exists(filePath)
     then System.IO.File.ReadAllText(filePath) |> Some

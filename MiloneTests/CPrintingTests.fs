@@ -7,10 +7,7 @@ open MiloneLang.Cli
 open MiloneLang.Program
 open Xunit
 
-let eol = """
-"""
-
-let testFile category case =
+let private testFile category case =
   async {
     let dirPath =
       IO.Path.Combine(testsDir.Value, category, case)
@@ -24,7 +21,7 @@ let testFile category case =
         |> Async.AwaitTask
   }
 
-let collectTestTargets () =
+let private collectTestTargets () =
   seq {
     for category in IO.Directory.GetDirectories(testsDir.Value) do
       // features, examples, etc.

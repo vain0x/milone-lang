@@ -12,7 +12,7 @@ open MiloneLang.KirGen
 
 let private deeper indent = indent + "    "
 
-let private getVarName varSerial (ctx :KirGenCtx)=
+let private getVarName varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapTryFind varSerial with
   | None -> "UNDEFINED_VAR_" + string varSerial
   | Some varDef -> varDefToIdent varDef + "_" + string varSerial

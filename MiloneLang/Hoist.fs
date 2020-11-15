@@ -46,13 +46,13 @@ type HoistMode =
 // exprs are non-declaration top-level expressions.
 type HoistContext = HoistMode * HExprAcc * HExprAcc
 
-let hxDummy = hxUnit noLoc
+let private hxDummy = hxUnit noLoc
 
 // -----------------------------------------------
 // HExprAcc
 // -----------------------------------------------
 
-let hxAccAdd expr exprAcc =
+let private hxAccAdd expr exprAcc =
   match expr, exprAcc with
   | HLetFunExpr _, _ -> HExprAcc.Let(expr, exprAcc)
 
@@ -60,7 +60,7 @@ let hxAccAdd expr exprAcc =
 
   | _ -> HExprAcc.Semi([ expr ], exprAcc)
 
-let hxAccToExpr next exprAcc =
+let private hxAccToExpr next exprAcc =
   let withNext next letExpr =
     match letExpr with
     | HLetFunExpr (callee, vis, isMainFun, args, body, oldNext, ty, loc) ->
@@ -81,35 +81,35 @@ let hxAccToExpr next exprAcc =
 
   go exprAcc next
 
-let hoistCtxEmpty: HoistContext =
+let private hoistCtxEmpty: HoistContext =
   HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty
 
-let hoistCtxIsEmpty ctx =
+let private hoistCtxIsEmpty ctx =
   match ctx with
   | HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty -> true
 
   | _ -> false
 
-let hoistCtxIsTopLevel (mode, _, _) =
+let private hoistCtxIsTopLevel (mode, _, _) =
   match mode with
   | HoistMode.TopLevel -> true
 
   | HoistMode.Local -> false
 
-let hoistCtxAddDecl expr (mode, decls, exprs) =
+let private hoistCtxAddDecl expr (mode, decls, exprs) =
   let decls = decls |> hxAccAdd expr
   mode, decls, exprs
 
-let hoistCtxAddExpr expr (mode, decls, exprs) =
+let private hoistCtxAddExpr expr (mode, decls, exprs) =
   let exprs = exprs |> hxAccAdd expr
   mode, decls, exprs
 
-let hoistCtxTakeDecls next (mode, decls, exprs) =
+let private hoistCtxTakeDecls next (mode, decls, exprs) =
   let expr = decls |> hxAccToExpr next
   let ctx = mode, HExprAcc.Empty, exprs
   expr, ctx
 
-let hoistCtxTakeExprs next (mode, decls, exprs) =
+let private hoistCtxTakeExprs next (mode, decls, exprs) =
   let expr = exprs |> hxAccToExpr next
   let ctx = mode, decls, HExprAcc.Empty
   expr, ctx
@@ -118,9 +118,9 @@ let hoistCtxTakeExprs next (mode, decls, exprs) =
 // Hoist routine
 // -----------------------------------------------
 
-let hoistPat t = t
+let private hoistPat t = t
 
-let hoistExprLocal (expr, ctx) =
+let private hoistExprLocal (expr, ctx) =
   // Enter the local.
   let mode, decls, exprs = ctx
   let ctx = HoistMode.Local, decls, exprs
@@ -133,7 +133,7 @@ let hoistExprLocal (expr, ctx) =
 
   expr, ctx
 
-let hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx =
+let private hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx =
   assert isMainFun
 
   let body, ctx = (body, ctx) |> hoistExprLocal
@@ -153,7 +153,7 @@ let hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx =
   // to reconstruct the whole expressions.
   ctx |> hoistCtxTakeDecls mainFunExpr
 
-let hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
+let private hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
   if isMainFun then
     hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx
   else
@@ -170,7 +170,7 @@ let hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
 
     (next, ctx) |> hoistExpr
 
-let hoistExprCore (expr, ctx) =
+let private hoistExprCore (expr, ctx) =
   match expr with
   | HErrorExpr _
   | HLitExpr _
@@ -228,7 +228,7 @@ let hoistExprCore (expr, ctx) =
   | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
-let hoistExpr (expr, ctx) =
+let private hoistExpr (expr, ctx) =
   if ctx |> hoistCtxIsTopLevel |> not then
     (expr, ctx) |> hoistExprCore
   else

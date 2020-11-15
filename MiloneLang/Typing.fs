@@ -34,23 +34,23 @@ type TyCtx =
     TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list }
 
-let tyCtxGetTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
+let private tyCtxGetTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
 let private addLog (ctx: TyCtx) log loc =
   { ctx with
       Logs = (log, loc) :: ctx.Logs }
 
-let tyCtxAddErr (ctx: TyCtx) message loc =
+let private tyCtxAddErr (ctx: TyCtx) message loc =
   { ctx with
       Logs = (Log.Error message, loc) :: ctx.Logs }
 
-let tyCtxToTyCtx (ctx: TyCtx): TyContext =
+let private tyCtxToTyCtx (ctx: TyCtx): TyContext =
   { Serial = ctx.Serial
     LetDepth = ctx.LetDepth
     Tys = ctx.Tys
     TyDepths = ctx.TyDepths }
 
-let tyCtxWithTyCtx (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
+let private tyCtxWithTyCtx (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
   { ctx with
       Serial = tyCtx.Serial
       Tys = tyCtx.Tys
@@ -58,11 +58,11 @@ let tyCtxWithTyCtx (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
       Logs = logAcc }
 
 /// Be carefully. Let depths must be counted the same as name resolution.
-let tyCtxIncLetDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth + 1 }
+let private tyCtxIncLetDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth + 1 }
 
-let tyCtxDecLetDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth - 1 }
+let private tyCtxDecLetDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth - 1 }
 
-let tyCtxFreshVar (ctx: TyCtx) hint ty loc =
+let private tyCtxFreshVar (ctx: TyCtx) hint ty loc =
   let varSerial = ctx.Serial + 1
 
   let ctx =
@@ -74,7 +74,7 @@ let tyCtxFreshVar (ctx: TyCtx) hint ty loc =
 
   varSerial, ctx
 
-let tyCtxFreshTySerial (ctx: TyCtx) =
+let private tyCtxFreshTySerial (ctx: TyCtx) =
   let serial = ctx.Serial + 1
 
   let ctx =
@@ -84,16 +84,16 @@ let tyCtxFreshTySerial (ctx: TyCtx) =
 
   serial, ctx
 
-let tyCtxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
+let private tyCtxFreshTyVar ident loc (ctx: TyCtx): Ty * unit * TyCtx =
   let serial, ctx = tyCtxFreshTySerial ctx
   let ty = MetaTy(serial, loc)
   ty, (), ctx
 
-let tyCtxAddTraitBounds traits (ctx: TyCtx) =
+let private tyCtxAddTraitBounds traits (ctx: TyCtx) =
   { ctx with
       TraitBounds = List.append traits ctx.TraitBounds }
 
-let tyCtxResolveTraitBounds (ctx: TyCtx) =
+let private tyCtxResolveTraitBounds (ctx: TyCtx) =
   let rec go logAcc traits ctx =
     match traits with
     | [] -> logAcc, ctx
@@ -112,13 +112,13 @@ let tyCtxResolveTraitBounds (ctx: TyCtx) =
 
   tyCtxWithTyCtx ctx logAcc tyCtx
 
-let tyCtxBindTy (ctx: TyCtx) tySerial ty loc =
+let private tyCtxBindTy (ctx: TyCtx) tySerial ty loc =
   typingBind (tyCtxToTyCtx ctx) tySerial ty loc
   |> tyCtxWithTyCtx ctx ctx.Logs
 
-let tyCtxSubstTy (ctx: TyCtx) ty: Ty = typingSubst (tyCtxToTyCtx ctx) ty
+let private tyCtxSubstTy (ctx: TyCtx) ty: Ty = typingSubst (tyCtxToTyCtx ctx) ty
 
-let tyCtxUnifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
+let private tyCtxUnifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
   let logAcc, tyCtx =
     typingUnify ctx.Logs (tyCtxToTyCtx ctx) lty rty loc
 
@@ -135,7 +135,7 @@ let tyGeneralize isOwned (ty: Ty) =
 
   TyScheme(fvs, ty)
 
-let tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
+let private tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
   match tyScheme with
   | TyScheme ([], ty) -> ty, ctx
   | TyScheme (fvs, ty) ->
@@ -156,7 +156,7 @@ let tyCtxInstantiate ctx (tyScheme: TyScheme) loc =
 
       ty, ctx
 
-let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
+let private tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
   // Refresh meta types and generate bindings.
   let oldTySerials = polyTy |> tyCollectFreeVars
 
@@ -176,9 +176,9 @@ let tySpecInstantiate loc (TySpec (polyTy, traits), ctx) =
 
   polyTy, traits, ctx
 
-let tyCtxFindVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
+let private tyCtxFindVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
-let tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
+let private tyCtxGeneralizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
   match ctx.Vars |> mapFind funSerial with
   | FunDef (ident, arity, TyScheme ([], funTy), loc) ->
       let isOwned tySerial =
@@ -225,7 +225,7 @@ let private tyCtxSubstOrDegenerate (ctx: TyCtx) ty =
   tySubst substMeta ty
 
 /// Creates an expression to abort.
-let hxAbort (ctx: TyCtx) loc =
+let private hxAbort (ctx: TyCtx) loc =
   let ty, (), ctx = ctx |> tyCtxFreshTyVar "abort" loc
   let funTy = tyFun tyInt ty
   let exitExpr = HPrimExpr(HPrim.Exit, funTy, loc)
@@ -235,7 +235,7 @@ let hxAbort (ctx: TyCtx) loc =
 
   callExpr, ty, ctx
 
-let tyCtxUnifyVarTy varSerial tyOpt loc ctx =
+let private tyCtxUnifyVarTy varSerial tyOpt loc ctx =
   let varTy, ctx =
     match tyCtxFindVar ctx varSerial with
     | VarDef (_, _, ty, _) -> ty, ctx
@@ -249,13 +249,13 @@ let tyCtxUnifyVarTy varSerial tyOpt loc ctx =
 
   | None -> varTy, ctx
 
-let tyCtxFreshPatTy pat ctx =
+let private tyCtxFreshPatTy pat ctx =
   let _, loc = pat |> patExtract
   let tySerial, ctx = ctx |> tyCtxFreshTySerial
   let ty = MetaTy(tySerial, loc)
   ty, ctx
 
-let tyCtxFreshExprTy expr ctx =
+let private tyCtxFreshExprTy expr ctx =
   let _, loc = expr |> exprExtract
   let tySerial, ctx = ctx |> tyCtxFreshTySerial
   let ty = MetaTy(tySerial, loc)
@@ -275,32 +275,32 @@ let private patToAnnoTy pat =
 
   | _ -> None
 
-let inferPatNil ctx pat loc =
+let private inferPatNil ctx pat loc =
   let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
   let ty = tyList itemTy
   HNilPat(itemTy, loc), ty, ctx
 
-let inferPatNone ctx pat loc =
+let private inferPatNone ctx pat loc =
   let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
   let ty = tyList itemTy
   HNonePat(itemTy, loc), ty, ctx
 
-let inferPatSome ctx pat loc =
+let private inferPatSome ctx pat loc =
   let itemTy, ctx = ctx |> tyCtxFreshPatTy pat
   let ty = tyFun itemTy (tyList itemTy)
   HSomePat(itemTy, loc), ty, ctx
 
-let inferPatDiscard ctx pat loc =
+let private inferPatDiscard ctx pat loc =
   let ty, ctx = ctx |> tyCtxFreshPatTy pat
   HDiscardPat(ty, loc), ty, ctx
 
-let inferPatRef (ctx: TyCtx) varSerial loc =
+let private inferPatRef (ctx: TyCtx) varSerial loc =
   let ty, ctx =
     ctx |> tyCtxUnifyVarTy varSerial None loc
 
   HRefPat(varSerial, ty, loc), ty, ctx
 
-let inferPatCall (ctx: TyCtx) pat callee args loc =
+let private inferPatCall (ctx: TyCtx) pat callee args loc =
   match args with
   | [ payload ] ->
       let resultTy, ctx = ctx |> tyCtxFreshPatTy pat
@@ -315,7 +315,7 @@ let inferPatCall (ctx: TyCtx) pat callee args loc =
 
   | _ -> failwith "invalid use of call pattern"
 
-let inferPatTuple ctx itemPats loc =
+let private inferPatTuple ctx itemPats loc =
   let rec go accPats accTys ctx itemPats =
     match itemPats with
     | [] -> List.rev accPats, List.rev accTys, ctx
@@ -328,7 +328,7 @@ let inferPatTuple ctx itemPats loc =
   let tupleTy = tyTuple itemTys
   HTuplePat(itemPats, tupleTy, loc), tupleTy, ctx
 
-let inferPatCons ctx l r loc =
+let private inferPatCons ctx l r loc =
   let l, lTy, ctx = inferPat ctx l
   let r, rTy, ctx = inferPat ctx r
 
@@ -338,7 +338,7 @@ let inferPatCons ctx l r loc =
 
   HConsPat(l, r, itemTy, loc), listTy, ctx
 
-let inferPatAs ctx body varSerial loc =
+let private inferPatAs ctx body varSerial loc =
   let body, bodyTy, ctx = inferPat ctx body
 
   let _, ctx =
@@ -346,12 +346,12 @@ let inferPatAs ctx body varSerial loc =
 
   HAsPat(body, varSerial, loc), bodyTy, ctx
 
-let inferPatAnno ctx body annoTy loc =
+let private inferPatAnno ctx body annoTy loc =
   let body, bodyTy, ctx = inferPat ctx body
   let ctx = tyCtxUnifyTy ctx loc bodyTy annoTy
   body, annoTy, ctx
 
-let inferPatOr ctx first second loc =
+let private inferPatOr ctx first second loc =
   // FIXME: Error if two patterns introduce different bindings.
   let first, firstTy, ctx = inferPat ctx first
   let second, secondTy, ctx = inferPat ctx second
@@ -361,7 +361,7 @@ let inferPatOr ctx first second loc =
   let ty = firstTy
   HOrPat(first, second, ty, loc), ty, ctx
 
-let inferPat ctx pat: HPat * Ty * TyCtx =
+let private inferPat ctx pat: HPat * Ty * TyCtx =
   match pat with
   | HLitPat (lit, _) -> pat, litToTy lit, ctx
   | HNilPat (_, loc) -> inferPatNil ctx pat loc
@@ -378,24 +378,24 @@ let inferPat ctx pat: HPat * Ty * TyCtx =
   | HNavPat _ -> failwithf "NEVER: HNavPat is resolved in NameRes. %A" pat
   | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
-let inferRef (ctx: TyCtx) varSerial loc =
+let private inferRef (ctx: TyCtx) varSerial loc =
   let ty, ctx =
     ctx |> tyCtxUnifyVarTy varSerial None loc
 
   HRefExpr(varSerial, ty, loc), ty, ctx
 
-let inferPrim ctx prim loc =
+let private inferPrim ctx prim loc =
   let tySpec = prim |> primToTySpec
   let primTy, traits, ctx = (tySpec, ctx) |> tySpecInstantiate loc
   let ctx = ctx |> tyCtxAddTraitBounds traits
   HPrimExpr(prim, primTy, loc), primTy, ctx
 
 // expr: nil expr itself
-let inferNil ctx expr loc =
+let private inferNil ctx expr loc =
   let itemTy, ctx = tyCtxFreshExprTy expr ctx
   hxNil itemTy loc, tyList itemTy, ctx
 
-let inferRecord ctx expectOpt baseOpt fields loc =
+let private inferRecord ctx expectOpt baseOpt fields loc =
 
   // First, infer base if exists.
   let baseOpt, baseTyOpt, ctx =
@@ -492,7 +492,7 @@ let inferRecord ctx expectOpt baseOpt fields loc =
 
 /// match 'a with ( | 'a -> 'b )*
 // expr: match expr itself
-let inferMatch ctx expectOpt expr cond arms loc =
+let private inferMatch ctx expectOpt expr cond arms loc =
   let targetTy, ctx = tyCtxFreshExprTy expr ctx
 
   let cond, condTy, ctx = inferExpr ctx None cond
@@ -519,7 +519,7 @@ let inferMatch ctx expectOpt expr cond arms loc =
 
   HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
-let inferNav ctx sub mes loc =
+let private inferNav ctx sub mes loc =
   let fail ctx =
     let ctx =
       tyCtxAddErr ctx ("Expected to have field: '" + mes + "'.") loc
@@ -554,7 +554,7 @@ let inferNav ctx sub mes loc =
   | _ -> fail ctx
 
 // expr: app expr itself
-let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
+let private inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
   match firstArg, arg with
   | HLitExpr (StrLit nativeFunIdent, _), HLitExpr (IntLit arity, _) ->
       let rec go ty arity ctx =
@@ -572,7 +572,7 @@ let inferOpAppNativeFun ctx expr callee firstArg arg targetTy loc =
       HPrimExpr(HPrim.NativeFun(nativeFunIdent, arity), funTy, loc), funTy, ctx
   | _ -> hxApp callee arg targetTy loc, targetTy, ctx
 
-let inferOpAppPrintfn ctx arg loc =
+let private inferOpAppPrintfn ctx arg loc =
   match arg with
   | HLitExpr (StrLit format, _) ->
       let funTy = analyzeFormat format
@@ -583,7 +583,7 @@ let inferOpAppPrintfn ctx arg loc =
 
       hxAbort ctx loc
 
-let inferOpApp ctx expr callee arg loc =
+let private inferOpApp ctx expr callee arg loc =
   let targetTy, ctx = ctx |> tyCtxFreshExprTy expr
   let arg, argTy, ctx = inferExpr ctx None arg
   let callee, calleeTy, ctx = inferExpr ctx None callee
@@ -603,7 +603,7 @@ let inferOpApp ctx expr callee arg loc =
       hxApp callee arg targetTy loc, targetTy, ctx
   | _ -> hxApp callee arg targetTy loc, targetTy, ctx
 
-let inferTuple (ctx: TyCtx) items loc =
+let private inferTuple (ctx: TyCtx) items loc =
   let rec go acc itemTys ctx items =
     match items with
     | [] -> List.rev acc, List.rev itemTys, ctx
@@ -615,14 +615,14 @@ let inferTuple (ctx: TyCtx) items loc =
 
   hxTuple items loc, tyTuple itemTys, ctx
 
-let inferAnno ctx body annoTy loc =
+let private inferAnno ctx body annoTy loc =
   let body, bodyTy, ctx = inferExpr ctx (Some annoTy) body
 
   let ctx = tyCtxUnifyTy ctx loc bodyTy annoTy
 
   body, annoTy, ctx
 
-let inferLetVal ctx expectOpt vis pat init next loc =
+let private inferLetVal ctx expectOpt vis pat init next loc =
   let init, initTy, ctx =
     let expectOpt = patToAnnoTy pat
     inferExpr ctx expectOpt init
@@ -634,7 +634,7 @@ let inferLetVal ctx expectOpt vis pat init next loc =
   let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetValExpr(vis, pat, init, next, nextTy, loc), nextTy, ctx
 
-let inferLetFun (ctx: TyCtx) expectOpt varSerial vis isMainFun argPats body next loc =
+let private inferLetFun (ctx: TyCtx) expectOpt varSerial vis isMainFun argPats body next loc =
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx funTy argPats =
@@ -684,7 +684,7 @@ let inferLetFun (ctx: TyCtx) expectOpt varSerial vis isMainFun argPats body next
   HLetFunExpr(varSerial, vis, isMainFun, argPats, body, next, nextTy, loc), nextTy, ctx
 
 /// Returns in reversed order.
-let inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
+let private inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
   let rec go acc (prevTy, prevLoc) ctx exprs =
     match exprs with
     | [] -> acc, prevTy, ctx
@@ -699,11 +699,11 @@ let inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
 
   go [] (tyUnit, loc) ctx exprs
 
-let inferSemi ctx expectOpt exprs loc =
+let private inferSemi ctx expectOpt exprs loc =
   let exprs, ty, ctx = inferExprs ctx expectOpt exprs loc
   hxSemi (List.rev exprs) loc, ty, ctx
 
-let inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
+let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
   match expr with
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
@@ -734,7 +734,7 @@ let inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * Ty
 
 /// Replaces type vars embedded in exprs
 /// with inference results.
-let tyCtxSubstExprTy ctx expr =
+let private tyCtxSubstExprTy ctx expr =
   let subst ty = tyCtxSubstTy ctx ty
   exprMap subst id expr
 
