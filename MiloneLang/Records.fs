@@ -9,30 +9,6 @@ module rec MiloneLang.Records
 
 open MiloneLang.Types
 
-type TyElaborationCtx =
-  | TyElaborationCtx
-    of AssocMap<VarSerial, VarDef>
-      * AssocMap<TySerial, TyDef>
-      * AssocMap<TySerial, (Ty * AssocMap<Ident, int * Ty>)>
-
-let tyElaborationCtxGetVars (TyElaborationCtx (vars, _, _)) =
-  vars
-
-let tyElaborationCtxGetTys (TyElaborationCtx (_, tys, _)) =
-  tys
-
-let tyElaborationCtxGetRecordMap (TyElaborationCtx (_, _, recordMap)) =
-  recordMap
-
-let tyElaborationCtxWithVars vars (TyElaborationCtx (_, tys, recordMap)): TyElaborationCtx =
-  TyElaborationCtx (vars, tys, recordMap)
-
-let tyElaborationCtxWithTys tys (TyElaborationCtx (vars, _, recordMap)): TyElaborationCtx =
-  TyElaborationCtx (vars, tys, recordMap)
-
-let tyElaborationCtxWithRecordMap recordMap (TyElaborationCtx (vars, tys, _)): TyElaborationCtx =
-  TyElaborationCtx (vars, tys, recordMap)
-
 type KnownCtx =
   | KnownCtx
     of AssocSet<FunSerial>

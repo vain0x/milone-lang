@@ -11,23 +11,29 @@ let private hxIsUnboxingRef expr =
   | HInfExpr (InfOp.App, [ HPrimExpr (HPrim.Unbox, _, _); HRefExpr _ ], _, _) -> true
   | _ -> false
 
+type private TyElaborationCtx =
+  { Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
+    RecordMap: AssocMap<TySerial, (Ty * AssocMap<Ident, int * Ty>)> }
+
 let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
-  TyElaborationCtx(tyCtx.Vars, tyCtx.Tys, mapEmpty intCmp)
+  { Vars = tyCtx.Vars
+    Tys = tyCtx.Tys
+    RecordMap = mapEmpty intCmp }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
-  let (TyElaborationCtx (vars, tys, _)) = ctx
-  { tyCtx with Vars = vars; Tys = tys }
+  { tyCtx with
+      Vars = ctx.Vars
+      Tys = ctx.Tys }
 
 // -----------------------------------------------
 // Control
 // -----------------------------------------------
 
-let private teTy ctx ty =
+let private teTy (ctx: TyElaborationCtx) ty =
   match ty with
   | AppTy (RefTyCtor tySerial, []) ->
-      match ctx
-            |> tyElaborationCtxGetRecordMap
-            |> mapTryFind tySerial with
+      match ctx.RecordMap |> mapTryFind tySerial with
       | Some (tupleTy, _) -> tupleTy
       | _ -> ty
 
@@ -42,16 +48,14 @@ let private teTy ctx ty =
 
 let private tePat ctx pat = pat |> patMap (teTy ctx) id
 
-let private teExpr ctx expr =
+let private teExpr (ctx: TyElaborationCtx) expr =
   match expr with
   | HRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =
         let tupleTy, fieldMap =
           match ty with
           | AppTy (RefTyCtor tySerial, []) ->
-              match ctx
-                    |> tyElaborationCtxGetRecordMap
-                    |> mapTryFind tySerial with
+              match ctx.RecordMap |> mapTryFind tySerial with
               | Some (tupleTy, fieldMap) -> tupleTy, fieldMap
               | _ -> failwithf "NEVER: %A" expr
           | _ -> failwithf "NEVER: %A" expr
@@ -108,10 +112,7 @@ let private teExpr ctx expr =
         let index =
           match exprToTy l with
           | AppTy (RefTyCtor tySerial, []) ->
-              let _, fieldMap =
-                ctx
-                |> tyElaborationCtxGetRecordMap
-                |> mapFind tySerial
+              let _, fieldMap = ctx.RecordMap |> mapFind tySerial
 
               let index, _ = fieldMap |> mapFind r
               index
@@ -184,8 +185,7 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
   // record -> tuple mapping
   // recursion is not supported
   let recordMap =
-    ctx
-    |> tyElaborationCtxGetTys
+    ctx.Tys
     |> mapFold (fun acc tySerial tyDef ->
          match tyDef with
          | RecordTyDef (_, fields, _) ->
@@ -205,8 +205,7 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
     |> mapOfList intCmp
 
   let vars =
-    ctx
-    |> tyElaborationCtxGetVars
+    ctx.Vars
     |> mapMap (fun _ varDef ->
          match varDef with
          | VarDef (ident, sm, ty, loc) ->
@@ -222,9 +221,9 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
              VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc))
 
   let ctx =
-    ctx
-    |> tyElaborationCtxWithVars vars
-    |> tyElaborationCtxWithRecordMap recordMap
+    { ctx with
+        Vars = vars
+        RecordMap = recordMap }
 
   let expr = expr |> teExpr ctx
   let tyCtx = ctx |> toTyCtx tyCtx
