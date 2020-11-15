@@ -13,6 +13,7 @@ module rec MiloneLang.KirGen
 open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
+open MiloneLang.Typing
 
 let private unreachable value = failwithf "NEVER: %A" value
 
@@ -161,13 +162,13 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 // KirGenCtx
 // -----------------------------------------------
 
-let private ctxOfTyCtx tyCtx =
-  KirGenCtx(tyCtxGetSerial tyCtx, tyCtxGetVars tyCtx, tyCtxGetTys tyCtx, tyCtxGetLogs tyCtx, None, [], [])
+let private ctxOfTyCtx (tyCtx: TyCtx) =
+  KirGenCtx(tyCtx.Serial, tyCtx.Vars, tyCtx.Tys, tyCtx.Logs, None, [], [])
 
-let private ctxUpdateTyCtx tyCtx ctx =
-  tyCtx
-  |> tyCtxWithSerial (ctx |> kirGenCtxGetSerial)
-  |> tyCtxWithVars (ctx |> kirGenCtxGetVars)
+let private ctxUpdateTyCtx (tyCtx: TyCtx) ctx =
+  { tyCtx with
+      Serial = ctx |> kirGenCtxGetSerial
+      Vars = ctx |> kirGenCtxGetVars }
 
 let private freshSerial (ctx: KirGenCtx): Serial * KirGenCtx =
   let serial = (ctx |> kirGenCtxGetSerial) + 1

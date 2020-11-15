@@ -1,20 +1,3 @@
-TyCtx:
-  # Next serial number.
-  # We need to identify variables by serial number rather than names
-  # due to scope locality and shadowing.
-  Serial: Serial
-
-  # Variable serial to variable definition.
-  Vars: AssocMap<VarSerial, VarDef>
-
-  # Type serial to type definition.
-  Tys: AssocMap<TySerial, TyDef>
-
-  TyDepths: AssocMap<TySerial, LetDepth>
-  LetDepth: LetDepth
-  TraitBounds: (Trait * Loc) list
-  Logs: (Log * Loc) list
-
 TyElaborationCtx:
   Vars: AssocMap<VarSerial, VarDef>
   Tys: AssocMap<TySerial, TyDef>

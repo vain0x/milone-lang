@@ -7,6 +7,7 @@ open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.TySystem
+open MiloneLang.Typing
 
 let private hxBox itemExpr itemTy loc =
   hxApp (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) itemExpr tyObj loc
@@ -22,14 +23,12 @@ type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef> }
 
-let private ofTyCtx (tyCtx: TyCtx): AbCtx =
-  { Vars = tyCtx |> tyCtxGetVars
-    Tys = tyCtx |> tyCtxGetTys }
+let private ofTyCtx (tyCtx: TyCtx): AbCtx = { Vars = tyCtx.Vars; Tys = tyCtx.Tys }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
-  tyCtx
-  |> tyCtxWithVars ctx.Vars
-  |> tyCtxWithTys ctx.Tys
+  { tyCtx with
+      Vars = ctx.Vars
+      Tys = ctx.Tys }
 
 let private isVariantFun (ctx: AbCtx) varSerial =
   match ctx.Vars |> mapTryFind varSerial with

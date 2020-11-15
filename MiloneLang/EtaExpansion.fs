@@ -55,13 +55,13 @@ type CalleeKind =
   | Obj
 
 let etaCtxFromTyCtx (ftCtx: TyCtx): EtaCtx =
-  EtaCtx(ftCtx |> tyCtxGetSerial, ftCtx |> tyCtxGetVars, ftCtx |> tyCtxGetTys)
+  EtaCtx(ftCtx.Serial, ftCtx.Vars, ftCtx.Tys)
 
 let etaCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
-  tyCtx
-  |> tyCtxWithSerial (ctx |> etaCtxGetSerial)
-  |> tyCtxWithVars (ctx |> etaCtxGetVars)
-  |> tyCtxWithTys (ctx |> etaCtxGetTys)
+  { tyCtx with
+      Serial = ctx |> etaCtxGetSerial
+      Vars = ctx |> etaCtxGetVars
+      Tys = ctx |> etaCtxGetTys }
 
 let etaCtxFreshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
   let serial = (ctx |> etaCtxGetSerial) + 1

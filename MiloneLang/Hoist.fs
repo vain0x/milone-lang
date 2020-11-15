@@ -252,7 +252,7 @@ let hoistExpr (expr, ctx) =
         let ctx = ctx |> hoistCtxAddExpr expr
         hxDummy, ctx
 
-let hoist (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
+let hoist (expr: HExpr, tyCtx) =
   let expr, hoistCtx = (expr, hoistCtxEmpty) |> hoistExpr
 
   assert (hoistCtx |> hoistCtxIsEmpty)

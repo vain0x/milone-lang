@@ -144,14 +144,12 @@ let printSyntaxErrors syntax =
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
   |> List.iter (fun (msg, loc) -> printfn "#error %s %s" (locToString loc) msg)
 
-let tyCtxHasError tyCtx =
-  tyCtx |> tyCtxGetLogs |> List.isEmpty |> not
+let tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
-let printLogs tyCtx logs =
+let printLogs (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
     let getTyIdent tySerial =
-      tyCtx
-      |> tyCtxGetTys
+      tyCtx.Tys
       |> mapTryFind tySerial
       |> Option.map tyDefToIdent
 
@@ -287,7 +285,7 @@ let compile host v projectDir: string * bool =
   else
     let expr, tyCtx = semanticallyAnalyze host v syntax
     if tyCtx |> tyCtxHasError then
-      tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+      tyCtx.Logs |> printLogs tyCtx
       "", false
     else
       let expr, tyCtx = transformHir host v (expr, tyCtx)
@@ -365,7 +363,7 @@ let cliKirDump host projectDirs =
          let expr, tyCtx = semanticallyAnalyze host v syntax
 
          if tyCtx |> tyCtxHasError then
-           tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+           tyCtx.Logs |> printLogs tyCtx
            "", false
          else
            let expr, tyCtx = transformHir host v (expr, tyCtx)
@@ -398,7 +396,7 @@ let cliCompileViaKir host projectDirs =
          let expr, tyCtx = semanticallyAnalyze host v syntax
 
          if tyCtx |> tyCtxHasError then
-           tyCtx |> tyCtxGetLogs |> printLogs tyCtx
+           tyCtx.Logs |> printLogs tyCtx
            "", false
          else
            let expr, tyCtx = transformHir host v (expr, tyCtx)

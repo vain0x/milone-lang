@@ -8,6 +8,7 @@ module rec MiloneLang.NameRes
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
+open MiloneLang.Bundling
 
 let scopeMapEmpty () = mapEmpty strCmp
 

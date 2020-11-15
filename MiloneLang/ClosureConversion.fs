@@ -79,6 +79,7 @@ module rec MiloneLang.ClosureConversion
 open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
+open MiloneLang.Typing
 
 /// List of captured variables.
 /// Don't forget the case of empty.
@@ -126,20 +127,20 @@ let knownCtxToCapturedSerials (ctx: KnownCtx): AssocSet<VarSerial> =
 // CcCtx (ClosureConversionContext)
 // -----------------------------------------------
 
-let ccCtxFromTyCtx (ftCtx: TyCtx): CcCtx =
+let ccCtxFromTyCtx (tyCtx: TyCtx): CcCtx =
   CcCtx
-    (ftCtx |> tyCtxGetSerial,
-     ftCtx |> tyCtxGetVars,
-     ftCtx |> tyCtxGetTys,
+    (tyCtx.Serial,
+     tyCtx.Vars,
+     tyCtx.Tys,
 
      knownCtxEmpty (),
      mapEmpty intCmp)
 
 let ccCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
-  tyCtx
-  |> tyCtxWithSerial (ctx |> ccCtxGetSerial)
-  |> tyCtxWithVars (ctx |> ccCtxGetVars)
-  |> tyCtxWithTys (ctx |> ccCtxGetTys)
+  { tyCtx with
+      Serial = ctx |> ccCtxGetSerial
+      Vars = ctx |> ccCtxGetVars
+      Tys = ctx |> ccCtxGetTys }
 
 let ccCtxAddKnown funSerial (ctx: CcCtx) =
   ctx

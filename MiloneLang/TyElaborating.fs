@@ -4,6 +4,7 @@ module rec MiloneLang.TyElaborating
 open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
+open MiloneLang.Typing
 
 let private hxIsUnboxingRef expr =
   match expr with
@@ -11,14 +12,11 @@ let private hxIsUnboxingRef expr =
   | _ -> false
 
 let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
-  let vars = tyCtx |> tyCtxGetVars
-  let tys = tyCtx |> tyCtxGetTys
-  TyElaborationCtx(vars, tys, mapEmpty intCmp)
+  TyElaborationCtx(tyCtx.Vars, tyCtx.Tys, mapEmpty intCmp)
 
-let private toTyCtx tyCtx (ctx: TyElaborationCtx): TyCtx =
-  let (TyCtx (serial, _, _, tyDepths, letDepth, traitBounds, logs)) = tyCtx
+let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
   let (TyElaborationCtx (vars, tys, _)) = ctx
-  TyCtx(serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
+  { tyCtx with Vars = vars; Tys = tys }
 
 // -----------------------------------------------
 // Control

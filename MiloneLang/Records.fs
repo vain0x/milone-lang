@@ -9,58 +9,6 @@ module rec MiloneLang.Records
 
 open MiloneLang.Types
 
-type TyCtx =
-  | TyCtx
-    of Serial
-      * AssocMap<VarSerial, VarDef>
-      * AssocMap<TySerial, TyDef>
-      * AssocMap<TySerial, LetDepth>
-      * LetDepth
-      * (Trait * Loc) list
-      * (Log * Loc) list
-
-let tyCtxGetSerial (TyCtx (serial, _, _, _, _, _, _)) =
-  serial
-
-let tyCtxGetVars (TyCtx (_, vars, _, _, _, _, _)) =
-  vars
-
-let tyCtxGetTys (TyCtx (_, _, tys, _, _, _, _)) =
-  tys
-
-let tyCtxGetTyDepths (TyCtx (_, _, _, tyDepths, _, _, _)) =
-  tyDepths
-
-let tyCtxGetLetDepth (TyCtx (_, _, _, _, letDepth, _, _)) =
-  letDepth
-
-let tyCtxGetTraitBounds (TyCtx (_, _, _, _, _, traitBounds, _)) =
-  traitBounds
-
-let tyCtxGetLogs (TyCtx (_, _, _, _, _, _, logs)) =
-  logs
-
-let tyCtxWithSerial serial (TyCtx (_, vars, tys, tyDepths, letDepth, traitBounds, logs)): TyCtx =
-  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
-
-let tyCtxWithVars vars (TyCtx (serial, _, tys, tyDepths, letDepth, traitBounds, logs)): TyCtx =
-  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
-
-let tyCtxWithTys tys (TyCtx (serial, vars, _, tyDepths, letDepth, traitBounds, logs)): TyCtx =
-  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
-
-let tyCtxWithTyDepths tyDepths (TyCtx (serial, vars, tys, _, letDepth, traitBounds, logs)): TyCtx =
-  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
-
-let tyCtxWithLetDepth letDepth (TyCtx (serial, vars, tys, tyDepths, _, traitBounds, logs)): TyCtx =
-  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
-
-let tyCtxWithTraitBounds traitBounds (TyCtx (serial, vars, tys, tyDepths, letDepth, _, logs)): TyCtx =
-  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
-
-let tyCtxWithLogs logs (TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, _)): TyCtx =
-  TyCtx (serial, vars, tys, tyDepths, letDepth, traitBounds, logs)
-
 type TyElaborationCtx =
   | TyElaborationCtx
     of AssocMap<VarSerial, VarDef>

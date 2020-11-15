@@ -5,6 +5,7 @@ module rec MiloneLang.TailRecOptimizing
 open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Records
+open MiloneLang.Typing
 
 type private IsTail =
   | IsTail
@@ -19,10 +20,9 @@ type private TailRecCtx =
     Tys: AssocMap<TySerial, TyDef>
     CurrentFun: FunSerial option }
 
-let private ofTyCtx tyCtx: TailRecCtx =
-  let (TyCtx (_, vars, tys, _, _, _, _)) = tyCtx
-  { Vars = vars
-    Tys = tys
+let private ofTyCtx (tyCtx: TyCtx): TailRecCtx =
+  { Vars = tyCtx.Vars
+    Tys = tyCtx.Tys
     CurrentFun = None }
 
 let private isCurrentFun funSerial (ctx: TailRecCtx) =

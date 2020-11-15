@@ -8,6 +8,7 @@ module rec MiloneLang.Mir
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
+open MiloneLang.Typing
 
 /// Checks whether an expr (body of fun) contains tail-rec call.
 let private containsTailRec expr =
@@ -38,7 +39,7 @@ let private containsTailRec expr =
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
-  MirCtx(tyCtx |> tyCtxGetSerial, tyCtx |> tyCtxGetVars, tyCtx |> tyCtxGetTys, 0, None, [], tyCtx |> tyCtxGetLogs)
+  MirCtx(tyCtx.Serial, tyCtx.Vars, tyCtx.Tys, 0, None, [], tyCtx.Logs)
 
 let mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
   match ctx |> mirCtxGetVars |> mapFind varSerial with

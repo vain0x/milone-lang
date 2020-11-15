@@ -55,18 +55,19 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Records
 open MiloneLang.TySystem
+open MiloneLang.Typing
 
 let intTyCmp (firstValue, firstTy) (secondValue, secondTy) =
   if firstValue <> secondValue then intCmp firstValue secondValue else tyCmp firstTy secondTy
 
 let monoCtxFromTyCtx (tyCtx: TyCtx): MonoCtx =
   MonoCtx
-    (tyCtx |> tyCtxGetSerial,
-     tyCtx |> tyCtxGetLogs,
+    (tyCtx.Serial,
+     tyCtx.Logs,
 
-     tyCtx |> tyCtxGetVars,
-     tyCtx |> tyCtxGetTys,
-     tyCtx |> tyCtxGetTyDepths,
+     tyCtx.Vars,
+     tyCtx.Tys,
+     tyCtx.TyDepths,
 
      mapEmpty intCmp,
      mapEmpty intTyCmp,
@@ -391,9 +392,9 @@ let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
     monifyExpr (expr, monoCtx)
 
   let tyCtx =
-    tyCtx
-    |> tyCtxWithSerial (monoCtx |> monoCtxGetSerial)
-    |> tyCtxWithVars (monoCtx |> monoCtxGetVars)
-    |> tyCtxWithTys (monoCtx |> monoCtxGetTys)
+    { tyCtx with
+        Serial = monoCtx |> monoCtxGetSerial
+        Vars = monoCtx |> monoCtxGetVars
+        Tys = monoCtx |> monoCtxGetTys }
 
   expr, tyCtx

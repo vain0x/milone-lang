@@ -58,6 +58,6 @@ let hoistMainExpr expr =
   let expr, makeMain = go expr
   makeMain expr
 
-let hoistMain (expr, tyCtx: TyCtx) =
+let hoistMain (expr, tyCtx) =
   let expr = expr |> hoistMainExpr
   expr, tyCtx

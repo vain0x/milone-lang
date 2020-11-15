@@ -387,7 +387,10 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
             if p = projectName then
               match readModuleFile m with
               | Some contents ->
-                  let ast, errors = contents |> MiloneLang.Lexing.tokenize |> parseModule m
+                  let ast, errors =
+                    contents
+                    |> MiloneLang.Lexing.tokenize
+                    |> parseModule m
 
                   let docId = m
 
@@ -402,9 +405,9 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
     match MiloneLang.Bundling.bundleProgram bundleHost projectName with
     | Some it -> it
     | None ->
-      let expr = MiloneLang.Helpers.hxUnit ("", 0, 0)
-      let nameCtx = MiloneLang.Helpers.nameCtxEmpty ()
-      expr, nameCtx, []
+        let expr = MiloneLang.Helpers.hxUnit ("", 0, 0)
+        let nameCtx = MiloneLang.Helpers.nameCtxEmpty ()
+        expr, nameCtx, []
 
   // Name resolution.
   let expr, scopeCtx =
@@ -418,14 +421,13 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
   let errors =
     let tyDisplayFn ty =
       let getTyIdent tySerial =
-        tyCtx
-        |> MiloneLang.Records.tyCtxGetTys
+        tyCtx.Tys
         |> MiloneLang.Helpers.mapTryFind tySerial
         |> Option.map MiloneLang.Helpers.tyDefToIdent
 
       ty |> MiloneLang.TySystem.tyDisplay getTyIdent
 
-    [ for log, loc in tyCtx |> MiloneLang.Records.tyCtxGetLogs do
+    [ for log, loc in tyCtx.Logs do
         let moduleName, row, column = loc
 
         let uri =
