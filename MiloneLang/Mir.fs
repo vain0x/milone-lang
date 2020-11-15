@@ -7,7 +7,6 @@ module rec MiloneLang.Mir
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.Records
 open MiloneLang.Typing
 
 /// Checks whether an expr (body of fun) contains tail-rec call.

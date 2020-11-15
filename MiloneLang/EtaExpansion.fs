@@ -45,7 +45,6 @@ module rec MiloneLang.EtaExpansion
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.Records
 open MiloneLang.TySystem
 open MiloneLang.Typing
 

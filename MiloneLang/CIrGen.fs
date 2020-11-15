@@ -6,7 +6,6 @@
 /// Generates type declarations for lists/tuples/etc.
 module rec MiloneLang.CIrGen
 
-open MiloneLang.Records
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem

@@ -3,7 +3,6 @@ module rec MiloneLang.TyElaborating
 
 open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Typing
 
 let private hxIsUnboxingRef expr =

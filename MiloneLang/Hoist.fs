@@ -29,7 +29,6 @@ module rec MiloneLang.Hoist
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.Records
 
 /// Accumulation of expression stack.
 [<RequireQualifiedAccess>]

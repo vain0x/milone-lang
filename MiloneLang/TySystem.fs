@@ -6,7 +6,6 @@
 module rec MiloneLang.TySystem
 
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Helpers
 
 // -----------------------------------------------

@@ -2,7 +2,6 @@
 module rec MiloneLang.Cli
 
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.Lexing

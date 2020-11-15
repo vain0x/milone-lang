@@ -1,6 +1,0 @@
-#!/bin/bash
-# See `scripts/RecordGen` and `MiloneLang/Records.yml`.
-
-set -eu
-
-cat MiloneLang/Records.yml | dotnet run -p scripts/RecordGen >MiloneLang/Records.fs

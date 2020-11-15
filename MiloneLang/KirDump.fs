@@ -6,7 +6,6 @@
 module rec MiloneLang.KirDump
 
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.KirGen

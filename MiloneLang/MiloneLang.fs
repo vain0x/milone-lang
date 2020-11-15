@@ -8,7 +8,6 @@ module rec MiloneLang.EntryPoint
 open MiloneCore.List
 open MiloneCore.Option
 
-open MiloneLang.Records
 open MiloneLang.Cli
 
 let argCount (): int = (__nativeFun "arg_count" 1) ()

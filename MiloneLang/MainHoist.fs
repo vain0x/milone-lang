@@ -21,7 +21,6 @@ module rec MiloneLang.MainHoist
 
 open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Records
 
 let hoistMainExpr expr =
   let rec go expr =

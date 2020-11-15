@@ -5,7 +5,6 @@ module rec MiloneLang.AutoBoxing
 
 open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.TySystem
 open MiloneLang.Typing
 

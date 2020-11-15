@@ -4,7 +4,6 @@ module rec MiloneLang.TailRecOptimizing
 
 open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Typing
 
 type private IsTail =

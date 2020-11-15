@@ -5,7 +5,6 @@
 module rec MiloneLang.KirToMir
 
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Helpers
 open MiloneLang.KirGen
 open MiloneLang.Mir

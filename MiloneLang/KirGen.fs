@@ -11,7 +11,6 @@
 module rec MiloneLang.KirGen
 
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Helpers
 open MiloneLang.Typing
 

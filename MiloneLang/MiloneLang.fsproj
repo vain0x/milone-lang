@@ -7,7 +7,6 @@
     <Compile Include="Compatible.fs" />
     <Compile Include="TreeMap.fs" />
     <Compile Include="Types.fs" />
-    <Compile Include="Records.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="TySystem.fs" />
     <Compile Include="Lexing.fs" />

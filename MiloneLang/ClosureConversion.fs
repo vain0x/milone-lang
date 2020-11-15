@@ -78,7 +78,6 @@ module rec MiloneLang.ClosureConversion
 
 open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Records
 open MiloneLang.Typing
 
 /// List of captured variables.

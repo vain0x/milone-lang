@@ -2,7 +2,6 @@
 module rec MiloneLang.Program
 
 open MiloneLang.Cli
-open MiloneLang.Records
 
 let readFile (filePath: string) =
   try
