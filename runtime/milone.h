@@ -240,15 +240,9 @@ struct String milone_get_env(struct String name) {
 }
 
 long milone_get_time_millis() {
-#ifdef __timespec_defined // C11 feature
   struct timespec t;
   timespec_get(&t, TIME_UTC);
   return t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L);
-#else
-  time_t t;
-  time(&t);
-  return t * 1000L;
-#endif
 }
 
 struct Profiler {
