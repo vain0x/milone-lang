@@ -9,58 +9,6 @@ module rec MiloneLang.Records
 
 open MiloneLang.Types
 
-type KirGenCtx =
-  | KirGenCtx
-    of Serial
-      * AssocMap<VarSerial, VarDef>
-      * AssocMap<TySerial, TyDef>
-      * (Log * Loc) list
-      * FunSerial option
-      * KJointBinding list
-      * KFunBinding list
-
-let kirGenCtxGetSerial (KirGenCtx (serial, _, _, _, _, _, _)) =
-  serial
-
-let kirGenCtxGetVars (KirGenCtx (_, vars, _, _, _, _, _)) =
-  vars
-
-let kirGenCtxGetTys (KirGenCtx (_, _, tys, _, _, _, _)) =
-  tys
-
-let kirGenCtxGetLogs (KirGenCtx (_, _, _, logs, _, _, _)) =
-  logs
-
-let kirGenCtxGetMainFunSerial (KirGenCtx (_, _, _, _, mainFunSerial, _, _)) =
-  mainFunSerial
-
-let kirGenCtxGetJoints (KirGenCtx (_, _, _, _, _, joints, _)) =
-  joints
-
-let kirGenCtxGetFuns (KirGenCtx (_, _, _, _, _, _, funs)) =
-  funs
-
-let kirGenCtxWithSerial serial (KirGenCtx (_, vars, tys, logs, mainFunSerial, joints, funs)): KirGenCtx =
-  KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, funs)
-
-let kirGenCtxWithVars vars (KirGenCtx (serial, _, tys, logs, mainFunSerial, joints, funs)): KirGenCtx =
-  KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, funs)
-
-let kirGenCtxWithTys tys (KirGenCtx (serial, vars, _, logs, mainFunSerial, joints, funs)): KirGenCtx =
-  KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, funs)
-
-let kirGenCtxWithLogs logs (KirGenCtx (serial, vars, tys, _, mainFunSerial, joints, funs)): KirGenCtx =
-  KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, funs)
-
-let kirGenCtxWithMainFunSerial mainFunSerial (KirGenCtx (serial, vars, tys, logs, _, joints, funs)): KirGenCtx =
-  KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, funs)
-
-let kirGenCtxWithJoints joints (KirGenCtx (serial, vars, tys, logs, mainFunSerial, _, funs)): KirGenCtx =
-  KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, funs)
-
-let kirGenCtxWithFuns funs (KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, _)): KirGenCtx =
-  KirGenCtx (serial, vars, tys, logs, mainFunSerial, joints, funs)
-
 type KirPropagateCtx =
   | KirPropagateCtx
     of AssocMap<VarSerial, KVarDef>

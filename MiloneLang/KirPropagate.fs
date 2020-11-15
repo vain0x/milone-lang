@@ -3,6 +3,7 @@ module rec MiloneLang.KirPropagate
 open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
+open MiloneLang.KirGen
 
 type ctx = KirPropagateCtx
 

@@ -7,6 +7,7 @@ module rec MiloneLang.KirToMir
 open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
+open MiloneLang.KirGen
 
 let private unreachable value = failwithf "NEVER: %A" value
 
@@ -26,8 +27,17 @@ let rec private restoreCalleeTy args ty =
 let private jointMapEmpty () = mapEmpty intCmp
 
 let private ofKirGenCtx (kirGenCtx: KirGenCtx): KirToMirCtx =
-  let (KirGenCtx (serial, vars, tys, logs, mainFunSerial, _, _)) = kirGenCtx
-  KirToMirCtx(serial, vars, tys, mainFunSerial, 0, jointMapEmpty (), [], 0, [], logs)
+  KirToMirCtx
+    (kirGenCtx.Serial,
+     kirGenCtx.Vars,
+     kirGenCtx.Tys,
+     kirGenCtx.MainFunSerial,
+     0,
+     jointMapEmpty (),
+     [],
+     0,
+     [],
+     kirGenCtx.Logs)
 
 let private toMirCtx (ctx: KirToMirCtx): MirCtx =
   let (KirToMirCtx (serial, vars, tys, _, labelSerial, _, _, _, _, logs)) = ctx

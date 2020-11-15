@@ -9,16 +9,17 @@ open MiloneLang.Types
 open MiloneLang.Records
 open MiloneLang.Helpers
 open MiloneLang.TySystem
+open MiloneLang.KirGen
 
 let private deeper indent = indent + "    "
 
-let private getVarName varSerial ctx =
-  match ctx |> kirGenCtxGetVars |> mapTryFind varSerial with
+let private getVarName varSerial (ctx :KirGenCtx)=
+  match ctx.Vars |> mapTryFind varSerial with
   | None -> "UNDEFINED_VAR_" + string varSerial
   | Some varDef -> varDefToIdent varDef + "_" + string varSerial
 
-let private getTyName tySerial ctx =
-  match ctx |> kirGenCtxGetTys |> mapTryFind tySerial with
+let private getTyName tySerial (ctx: KirGenCtx) =
+  match ctx.Tys |> mapTryFind tySerial with
   | None -> "UNDEFINED_TY_" + string tySerial
   | Some tyDef -> tyDefToIdent tyDef
 
@@ -94,8 +95,8 @@ let private tyToDebugString ty ctx =
                     + tyToDebugString ty ctx))
           + ">"
 
-let private kdVarAsTy varSerial ctx =
-  match ctx |> kirGenCtxGetVars |> mapTryFind varSerial with
+let private kdVarAsTy varSerial (ctx: KirGenCtx) =
+  match ctx.Vars |> mapTryFind varSerial with
   | None -> "/* ?" + string varSerial + " */ unknown"
 
   | Some (VarDef (_, _, ty, _))

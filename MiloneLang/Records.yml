@@ -1,12 +1,3 @@
-KirGenCtx:
-  Serial: Serial
-  Vars: AssocMap<VarSerial, VarDef>
-  Tys: AssocMap<TySerial, TyDef>
-  Logs: (Log * Loc) list
-  MainFunSerial: FunSerial option
-  Joints: KJointBinding list
-  Funs: KFunBinding list
-
 KirPropagateCtx:
   VarDefs: AssocMap<VarSerial, KVarDef>
   VarUses: AssocMap<VarSerial, int>
