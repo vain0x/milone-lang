@@ -9,30 +9,6 @@ module rec MiloneLang.Records
 
 open MiloneLang.Types
 
-type KnownCtx =
-  | KnownCtx
-    of AssocSet<FunSerial>
-      * AssocSet<VarSerial>
-      * AssocSet<VarSerial>
-
-let knownCtxGetKnown (KnownCtx (known, _, _)) =
-  known
-
-let knownCtxGetLocals (KnownCtx (_, locals, _)) =
-  locals
-
-let knownCtxGetRefs (KnownCtx (_, _, refs)) =
-  refs
-
-let knownCtxWithKnown known (KnownCtx (_, locals, refs)): KnownCtx =
-  KnownCtx (known, locals, refs)
-
-let knownCtxWithLocals locals (KnownCtx (known, _, refs)): KnownCtx =
-  KnownCtx (known, locals, refs)
-
-let knownCtxWithRefs refs (KnownCtx (known, locals, _)): KnownCtx =
-  KnownCtx (known, locals, refs)
-
 type EtaCtx =
   | EtaCtx
     of Serial

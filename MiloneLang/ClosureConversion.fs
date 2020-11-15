@@ -89,38 +89,44 @@ type Caps = (VarSerial * Ty * Loc) list
 // KnownCtx
 // -----------------------------------------------
 
-let knownCtxEmpty (): KnownCtx =
-  KnownCtx(setEmpty intCmp, setEmpty intCmp, setEmpty intCmp)
+[<RequireQualifiedAccess>]
+type private KnownCtx =
+  { Known: AssocSet<FunSerial>
+    Locals: AssocSet<VarSerial>
+    Refs: AssocSet<VarSerial> }
 
-let knownCtxEnterFunDecl (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithRefs (setEmpty intCmp)
-  |> knownCtxWithLocals (setEmpty intCmp)
+let private knownCtxEmpty (): KnownCtx =
+  { Known = setEmpty intCmp
+    Locals = setEmpty intCmp
+    Refs = setEmpty intCmp }
 
-let knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithRefs (baseCtx |> knownCtxGetRefs)
-  |> knownCtxWithLocals (baseCtx |> knownCtxGetLocals)
+let private knownCtxEnterFunDecl (ctx: KnownCtx) =
+  { ctx with
+      Refs = setEmpty intCmp
+      Locals = setEmpty intCmp }
 
-let knownCtxAddKnown serial (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithKnown (ctx |> knownCtxGetKnown |> setAdd serial)
+let private knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
+  { ctx with
+      Refs = baseCtx.Refs
+      Locals = baseCtx.Locals }
 
-let knownCtxAddLocal serial (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithLocals (ctx |> knownCtxGetLocals |> setAdd serial)
+let private knownCtxAddKnown serial (ctx: KnownCtx) =
+  { ctx with
+      Known = ctx.Known |> setAdd serial }
 
-let knownCtxAddRef serial (ctx: KnownCtx) =
-  ctx
-  |> knownCtxWithRefs (ctx |> knownCtxGetRefs |> setAdd serial)
+let private knownCtxAddLocal serial (ctx: KnownCtx) =
+  { ctx with
+      Locals = ctx.Locals |> setAdd serial }
+
+let private knownCtxAddRef serial (ctx: KnownCtx) =
+  { ctx with
+      Refs = ctx.Refs |> setAdd serial }
 
 /// Returns serials referenced in the current context but not known nor locals
 /// including function serials.
-let knownCtxToCapturedSerials (ctx: KnownCtx): AssocSet<VarSerial> =
-  let refs =
-    setDiff (ctx |> knownCtxGetRefs) (ctx |> knownCtxGetLocals)
-
-  let refs = setDiff refs (ctx |> knownCtxGetKnown)
+let private knownCtxToCapturedSerials (ctx: KnownCtx): AssocSet<VarSerial> =
+  let refs = setDiff ctx.Refs ctx.Locals
+  let refs = setDiff refs ctx.Known
   refs
 
 // -----------------------------------------------
@@ -237,12 +243,12 @@ let private ccCtxClosureRefs (ctx: CcCtx): CcCtx =
         |> closureRefs otherRefs ccCtx
         |> closureRefs refs ccCtx
 
-  let closureKnownCtx (modified, ccCtx) varSerial knownCtx =
-    let refs = knownCtx |> knownCtxGetRefs
+  let closureKnownCtx (modified, ccCtx) varSerial (knownCtx: KnownCtx) =
+    let refs = knownCtx.Refs
     match (false, emptySet, refs)
           |> closureRefs (refs |> setToList) ccCtx with
     | true, _, refs ->
-        let knownCtx = knownCtx |> knownCtxWithRefs refs
+        let knownCtx = { knownCtx with Refs = refs }
         true,
         { ccCtx with
             Funs = ccCtx.Funs |> mapAdd varSerial knownCtx }
