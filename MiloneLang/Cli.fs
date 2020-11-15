@@ -98,13 +98,31 @@ let pathStrToStem (s: string) =
 
       go s.Length
 
+/// Abstraction layer of CLI program.
+type CliHost =
+  {
+    /// Command line args.
+    Args: string list
+
+    /// Path to milone home (installation directory).
+    MiloneHome: string
+
+    /// Creates a profiler.
+    ProfileInit: (unit -> Profiler)
+
+    /// Prints a message to stderr for profiling.
+    ProfileLog: (string -> Profiler -> unit)
+
+    /// Reads all contents of a file as string.
+    FileReadAllText: (string -> string option) }
+
 // -----------------------------------------------
 // Read module files
 // -----------------------------------------------
 
-let private readCoreFile host moduleName =
-  let miloneHome = host |> cliHostGetMiloneHome
-  let readFile = host |> cliHostGetFileReadAllText
+let private readCoreFile (host: CliHost) moduleName =
+  let miloneHome = host.MiloneHome
+  let readFile = host.FileReadAllText
 
   match readFile (miloneHome + "/libcore/" + moduleName + ".fs") with
   | Some it -> it
@@ -112,8 +130,8 @@ let private readCoreFile host moduleName =
       printfn "Missing file: home=%s module=%s" miloneHome moduleName
       failwithf "File not found"
 
-let private readModuleFile host projectDir moduleName =
-  let readFile = host |> cliHostGetFileReadAllText
+let private readModuleFile (host: CliHost) projectDir moduleName =
+  let readFile = host.FileReadAllText
 
   readFile (projectDir + "/" + moduleName + ".fs")
 
@@ -121,8 +139,8 @@ let private readModuleFile host projectDir moduleName =
 // Write output and logs
 // -----------------------------------------------
 
-let private writeLog host verbosity msg =
-  let profileLog = host |> cliHostGetProfileLog
+let private writeLog (host: CliHost) verbosity msg =
+  let profileLog = host.ProfileLog
 
   match verbosity with
   | Verbose ->
@@ -165,7 +183,7 @@ let printLogs (tyCtx: TyCtx) logs =
 
 /// Loads source codes from files, performs tokenization and parsing,
 /// and transforms them into high-level intermediate representation (HIR).
-let syntacticallyAnalyze host v (projectDir: string) =
+let syntacticallyAnalyze (host: CliHost) v (projectDir: string) =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
@@ -195,7 +213,7 @@ let syntacticallyAnalyze host v (projectDir: string) =
   | None -> failwithf "No entrypoint module: %s" projectName
 
 /// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze host v (expr, nameCtx, errors) =
+let semanticallyAnalyze (host: CliHost) v (expr, nameCtx, errors) =
   writeLog host v "NameRes"
   let expr, scopeCtx = nameRes (expr, nameCtx)
 
@@ -203,7 +221,7 @@ let semanticallyAnalyze host v (expr, nameCtx, errors) =
   infer (expr, scopeCtx, errors)
 
 /// Transforms HIR. The result can be converted to KIR or MIR.
-let transformHir host v (expr, tyCtx) =
+let transformHir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "MainHoist"
   let expr, tyCtx = hoistMain (expr, tyCtx)
 
@@ -230,7 +248,7 @@ let transformHir host v (expr, tyCtx) =
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir host v (expr, tyCtx) =
+let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (expr, tyCtx)
 
@@ -246,7 +264,7 @@ let codeGenHirViaMir host v (expr, tyCtx) =
     output, success
 
 /// EXPERIMENTAL.
-let dumpHirAsKir host v (expr, tyCtx) =
+let dumpHirAsKir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "KirGen"
   let kRoot, kirGenCtx = kirGen (expr, tyCtx)
 
@@ -260,7 +278,7 @@ let dumpHirAsKir host v (expr, tyCtx) =
   result, true
 
 /// EXPERIMENTAL.
-let codeGenHirViaKir host v (expr, tyCtx) =
+let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "KirGen"
   let kRoot, kirGenCtx = kirGen (expr, tyCtx)
 
@@ -277,7 +295,7 @@ let codeGenHirViaKir host v (expr, tyCtx) =
   writeLog host v "Finish"
   cOutput, success
 
-let compile host v projectDir: string * bool =
+let compile (host: CliHost) v projectDir: string * bool =
   let syntax = syntacticallyAnalyze host v projectDir
   if syntax |> syntaxHasError then
     printSyntaxErrors syntax
@@ -295,7 +313,7 @@ let compile host v projectDir: string * bool =
 // Actions
 // -----------------------------------------------
 
-let cliParse host verbosity (projectDir: string) =
+let cliParse (host: CliHost) verbosity (projectDir: string) =
   let v = verbosity
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
@@ -341,14 +359,14 @@ let cliParse host verbosity (projectDir: string) =
   bundleProgram bundleHost projectName |> ignore
   0
 
-let cliCompile host verbosity projectDir =
+let cliCompile (host: CliHost) verbosity projectDir =
   let output, success = compile host verbosity projectDir
   let exitCode = if success then 0 else 1
 
   printfn "%s" (output |> strTrimEnd)
   exitCode
 
-let cliKirDump host projectDirs =
+let cliKirDump (host: CliHost) projectDirs =
   let v = Quiet
   printfn "// Common code.\n%s\n" (kirHeader ())
 
@@ -381,7 +399,7 @@ let cliKirDump host projectDirs =
        printfn "\n// exit = %d\n}\n" code
        code) 0
 
-let cliCompileViaKir host projectDirs =
+let cliCompileViaKir (host: CliHost) projectDirs =
   let v = Quiet
   printfn "// Generated using KIR.\n"
 
@@ -448,12 +466,12 @@ let private containsHelpFlag args =
 
   ok
 
-let private parseVerbosity host args =
+let private parseVerbosity (host: CliHost) args =
   parseFlag (fun (_: Verbosity) arg ->
     match arg with
     | "-v" -> Some Verbose
     | "-q" -> Some Quiet
-    | "--profile" -> Some(Profile(cliHostGetProfileInit host ()))
+    | "--profile" -> Some(Profile(host.ProfileInit()))
     | _ -> None) Quiet args
 
 type private CliCmd =
@@ -492,7 +510,7 @@ let private parseArgs args =
       | _ -> BadCmd arg, []
 
 let cli (host: CliHost) =
-  match host |> cliHostGetArgs |> parseArgs with
+  match host.Args |> parseArgs with
   | HelpCmd, _ ->
       printfn "%s" helpText
       0

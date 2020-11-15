@@ -11,8 +11,12 @@ let readFile (filePath: string) =
     else None
   with _ -> None
 
-let dotnetCliHost args miloneHome =
-  CliHost(args, miloneHome, profileInit, profileLog, readFile)
+let dotnetCliHost args miloneHome: CliHost =
+  { Args = args
+    MiloneHome = miloneHome
+    ProfileInit = profileInit
+    ProfileLog = profileLog
+    FileReadAllText = readFile }
 
 [<EntryPoint>]
 let main args =

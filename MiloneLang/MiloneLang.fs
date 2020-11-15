@@ -45,7 +45,11 @@ let main _ =
 
   let miloneHome = getEnv "MILONE_HOME"
 
-  let host =
-    CliHost(args, miloneHome, profileInit, profileLog, readFile)
+  let host: CliHost =
+    { Args = args
+      MiloneHome = miloneHome
+      ProfileInit = profileInit
+      ProfileLog = profileLog
+      FileReadAllText = readFile }
 
   cli host
