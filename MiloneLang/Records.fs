@@ -256,31 +256,24 @@ type TailRecCtx =
     of AssocMap<VarSerial, VarDef>
       * AssocMap<TySerial, TyDef>
       * FunSerial option
-      * AssocSet<VarSerial>
 
-let tailRecCtxGetVars (TailRecCtx (vars, _, _, _)) =
+let tailRecCtxGetVars (TailRecCtx (vars, _, _)) =
   vars
 
-let tailRecCtxGetTys (TailRecCtx (_, tys, _, _)) =
+let tailRecCtxGetTys (TailRecCtx (_, tys, _)) =
   tys
 
-let tailRecCtxGetCurrentFun (TailRecCtx (_, _, currentFun, _)) =
+let tailRecCtxGetCurrentFun (TailRecCtx (_, _, currentFun)) =
   currentFun
 
-let tailRecCtxGetTailRecFuns (TailRecCtx (_, _, _, tailRecFuns)) =
-  tailRecFuns
+let tailRecCtxWithVars vars (TailRecCtx (_, tys, currentFun)): TailRecCtx =
+  TailRecCtx (vars, tys, currentFun)
 
-let tailRecCtxWithVars vars (TailRecCtx (_, tys, currentFun, tailRecFuns)): TailRecCtx =
-  TailRecCtx (vars, tys, currentFun, tailRecFuns)
+let tailRecCtxWithTys tys (TailRecCtx (vars, _, currentFun)): TailRecCtx =
+  TailRecCtx (vars, tys, currentFun)
 
-let tailRecCtxWithTys tys (TailRecCtx (vars, _, currentFun, tailRecFuns)): TailRecCtx =
-  TailRecCtx (vars, tys, currentFun, tailRecFuns)
-
-let tailRecCtxWithCurrentFun currentFun (TailRecCtx (vars, tys, _, tailRecFuns)): TailRecCtx =
-  TailRecCtx (vars, tys, currentFun, tailRecFuns)
-
-let tailRecCtxWithTailRecFuns tailRecFuns (TailRecCtx (vars, tys, currentFun, _)): TailRecCtx =
-  TailRecCtx (vars, tys, currentFun, tailRecFuns)
+let tailRecCtxWithCurrentFun currentFun (TailRecCtx (vars, tys, _)): TailRecCtx =
+  TailRecCtx (vars, tys, currentFun)
 
 type MonoCtx =
   | MonoCtx

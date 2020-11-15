@@ -75,7 +75,6 @@ TailRecCtx:
   Vars: AssocMap<VarSerial, VarDef>
   Tys: AssocMap<TySerial, TyDef>
   CurrentFun: FunSerial option
-  TailRecFuns: AssocSet<VarSerial>
 
 MonoCtx:
   Serial: Serial
