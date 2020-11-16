@@ -288,7 +288,6 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
              FunDef(ident, arity, TyScheme(tyArgs, ty), loc)
 
          | VariantDef (ident, tySerial, hasPayload, _payloadTy, variantTy, loc) ->
-            //  let payloadTy = payloadTy |> abTy ctx
              let payloadTy = tyObj
              let variantTy = variantTy |> abTy ctx
              VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc))

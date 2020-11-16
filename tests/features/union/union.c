@@ -14,14 +14,6 @@ struct ApiResponse_;
 
 struct IntStringTuple2;
 
-enum Ok_Tag;
-
-struct Ok_;
-
-enum OkWrapper_Tag;
-
-struct OkWrapper_;
-
 int main();
 
 enum Status_Tag {
@@ -65,25 +57,6 @@ struct ApiResponse_ {
 struct IntStringTuple2 {
     int t0;
     struct String t1;
-};
-
-enum Ok_Tag {
-    Ok_,
-};
-
-struct Ok_ {
-    enum Ok_Tag tag;
-};
-
-enum OkWrapper_Tag {
-    T_,
-};
-
-struct OkWrapper_ {
-    enum OkWrapper_Tag tag;
-    union {
-        void* T_;
-    };
 };
 
 int main() {
@@ -172,7 +145,7 @@ next_11:;
 next_12:;
 end_match_10:;
     struct Status_ ok_1 = (struct Status_){.tag = Ok_1};
-    struct Ok_ okOk_ = (struct Ok_){.tag = Ok_};
+    void* okOk_ = 0;
     struct Status_ statusOk_ = (struct Status_){.tag = Ok_1};
     int match_5;
     if (((struct Status_){.tag = Ok_1}.tag != Ok_1)) goto next_17;
@@ -186,9 +159,8 @@ next_17:;
     goto end_match_16;
 next_18:;
 end_match_16:;
-    void* box_4 = (void*)milone_mem_alloc(1, sizeof(struct Ok_));
-    (*(((struct Ok_*)box_4))) = (struct Ok_){.tag = Ok_};
-    struct OkWrapper_ variant_4 = (struct OkWrapper_){.tag = T_, .T_ = box_4};
-    struct OkWrapper_ okWrapper_ = variant_4;
+    void* box_4 = (void*)milone_mem_alloc(1, sizeof(int));
+    (*(((int*)box_4))) = 0;
+    void* okWrapper_ = box_4;
     return 0;
 }
