@@ -287,8 +287,9 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
              let ty = ty |> abTy ctx
              FunDef(ident, arity, TyScheme(tyArgs, ty), loc)
 
-         | VariantDef (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
-             let payloadTy = payloadTy |> abTy ctx
+         | VariantDef (ident, tySerial, hasPayload, _payloadTy, variantTy, loc) ->
+            //  let payloadTy = payloadTy |> abTy ctx
+             let payloadTy = tyObj
              let variantTy = variantTy |> abTy ctx
              VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc))
 
@@ -296,6 +297,10 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
     ctx.Tys
     |> mapMap (fun _ tyDef ->
          match tyDef with
+         | SynonymTyDef (ident, tyArgs, bodyTy, loc) ->
+             let bodyTy = bodyTy |> abTy ctx
+             SynonymTyDef(ident, tyArgs, bodyTy, loc)
+
          | RecordTyDef (ident, fields, loc) ->
              let fields =
                fields
