@@ -961,9 +961,6 @@ type MInit =
 
 /// Statement in middle IR.
 type MStmt =
-  /// Statement to evaluate an expression, e.g. `do f ()`.
-  | MDoStmt of MExpr * Loc
-
   /// Declare a local variable.
   | MLetValStmt of VarSerial * MInit * Ty * Loc
 
@@ -980,8 +977,6 @@ type MStmt =
 
   | MExitStmt of MExpr * Loc
   | MProcStmt of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
-
-
 
 // -----------------------------------------------
 // CIR types

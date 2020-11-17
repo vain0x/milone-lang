@@ -869,10 +869,6 @@ let private genStmtLetVal ctx serial init ty loc =
   | MTupleInit items -> genInitTuple ctx serial items ty
   | MVariantInit (variantSerial, payload) -> genInitVariant ctx serial variantSerial payload ty
 
-let private genStmtDo ctx expr =
-  let expr, ctx = genExpr ctx expr
-  cirCtxAddStmt ctx (CExprStmt expr)
-
 let private genStmtSet ctx serial right =
   let right, ctx = genExpr ctx right
   let ident = cirCtxUniqueName ctx serial
@@ -902,7 +898,6 @@ let private genStmtJump ctx stmt =
 
 let private genStmt ctx stmt =
   match stmt with
-  | MDoStmt (expr, _) -> genStmtDo ctx expr
   | MLetValStmt (serial, init, ty, loc) -> genStmtLetVal ctx serial init ty loc
   | MSetStmt (serial, right, _) -> genStmtSet ctx serial right
   | MReturnStmt _
