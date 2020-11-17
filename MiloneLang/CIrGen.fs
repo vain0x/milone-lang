@@ -912,8 +912,6 @@ let private genStmt ctx stmt =
       let elseCl, ctx = genBlock ctx elseCl
       cirCtxAddStmt ctx (CIfStmt(cond, thenCl, elseCl))
 
-  | MProcStmt _ -> ctx
-
 let private genBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx: CirCtx = genStmts (cirCtxNewBlock ctx) stmts
   let stmts = bodyCtx.Stmts
@@ -934,7 +932,7 @@ let private genDecls (ctx: CirCtx) decls =
   match decls with
   | [] -> ctx
 
-  | MProcStmt (callee, isMainFun, args, body, resultTy, _) :: decls ->
+  | MProcDecl (callee, isMainFun, args, body, resultTy, _) :: decls ->
       let ident, args =
         if isMainFun then "main", [] else cirCtxUniqueName ctx callee, args
 
@@ -952,8 +950,6 @@ let private genDecls (ctx: CirCtx) decls =
       let funDecl = CFunDecl(ident, args, resultTy, body)
       let ctx = cirCtxAddDecl ctx funDecl
       genDecls ctx decls
-
-  | _ -> failwith "Top-level statements must be declarations."
 
 let private genLogs (ctx: CirCtx) =
   let tyDisplayFn ty =

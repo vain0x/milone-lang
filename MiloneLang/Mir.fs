@@ -49,6 +49,7 @@ type MirCtx =
     CurrentFun: (Label * VarSerial list) option
 
     Stmts: MStmt list
+    Decls: MDecl list
     Logs: (Log * Loc) list }
 
 let private mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
@@ -58,6 +59,7 @@ let private mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
     LabelSerial = 0
     CurrentFun = None
     Stmts = []
+    Decls = []
     Logs = tyCtx.Logs }
 
 let private mirCtxIsNewTypeVariant (ctx: MirCtx) varSerial =
@@ -86,6 +88,11 @@ let private mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) = { ctx with Stmts = stmt 
 
 /// Returns statements in reversed order.
 let private mirCtxTakeStmts (ctx: MirCtx) = ctx.Stmts, { ctx with Stmts = [] }
+
+let private addDecl (ctx: MirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
+
+let private takeDecls (ctx: MirCtx) =
+  List.rev ctx.Decls, { ctx with Decls = [] }
 
 let private mirCtxFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let serial = (ctx.Serial) + 1
@@ -837,10 +844,9 @@ let private mirifyExprLetFun (ctx: MirCtx) calleeSerial isMainFun argPats body n
     let args, resultTy, body, bodyCtx = mirifyFunBody bodyCtx argPats body
     let ctx = mirCtxRollBack ctx bodyCtx
 
-    let procStmt =
-      MProcStmt(calleeSerial, isMainFun, args, body, resultTy, letLoc)
+    let ctx =
+      addDecl ctx (MProcDecl(calleeSerial, isMainFun, args, body, resultTy, letLoc))
 
-    let ctx = mirCtxAddStmt ctx procStmt
     ctx
 
   let ctx = core ()
@@ -892,29 +898,10 @@ let private mirifyExprs ctx exprs =
 
   go [] ctx exprs
 
-/// Collect all declaration contained by the statements.
-let private mirifyCollectDecls (stmts: MStmt list) =
-  let rec go decls stmts =
-    match stmts with
-    | (MProcStmt (_, _, _, body, _, _) as decl) :: stmts ->
-        let doArm () =
-          let decls = go decls body
-          let decls = decl :: decls
-          let decls = go decls stmts
-          decls
-
-        doArm ()
-    | _ :: stmts -> go decls stmts
-    | [] -> decls
-
-  go [] stmts |> List.rev
-
-let mirify (expr: HExpr, tyCtx: TyCtx): MStmt list * MirCtx =
+let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = mirCtxFromTyCtx tyCtx
 
   // OK: It's safe to discard the expression thanks to main hoisting.
   let _expr, ctx = mirifyExpr ctx expr
 
-  let stmts = ctx.Stmts |> List.rev
-  let decls = mirifyCollectDecls stmts
-  decls, ctx
+  takeDecls ctx

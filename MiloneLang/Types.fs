@@ -976,7 +976,8 @@ type MStmt =
   | MIfStmt of MExpr * MStmt list * MStmt list * Loc
 
   | MExitStmt of MExpr * Loc
-  | MProcStmt of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
+
+type MDecl = MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
 
 // -----------------------------------------------
 // CIR types
