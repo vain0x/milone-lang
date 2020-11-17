@@ -15,25 +15,6 @@ open MiloneLang.Types
 open MiloneLang.TySystem
 open MiloneLang.Typing
 
-let private boolCmp l r =
-  (if l then 1 else 0) - (if r then 1 else 0)
-
-let private litCmp l r =
-  match l, r with
-  | BoolLit l, BoolLit r -> boolCmp l r
-  | BoolLit _, _ -> -1
-  | _, BoolLit _ -> 1
-
-  | IntLit l, IntLit r -> intCmp l r
-  | IntLit _, _ -> -1
-  | _, IntLit _ -> 1
-
-  | CharLit l, CharLit r -> int l - int r
-  | CharLit _, _ -> -1
-  | _, CharLit _ -> 1
-
-  | StrLit l, StrLit r -> strCmp l r
-
 /// ## Intermediate representation (PIR)
 ///
 /// PIR is intermediate representation for pattern matching compilation.
@@ -363,7 +344,7 @@ let private doCompile (conds: (PPath * PTy) list) (clauses: PClause list): bool 
 
       go clauses
 
-  | (cond, PUnknownTy _) :: conds ->
+  | (cond, PUnknownTy) :: conds ->
       let clauses = matchOnUnknownTy cond clauses
       doCompile conds clauses
 
@@ -412,7 +393,7 @@ let private doCompile (conds: (PPath * PTy) list) (clauses: PClause list): bool 
       let body = PMatchListTerm(cond, nilBody, consBody)
       exhaust, body
 
-  | (cond, PLitTy _) :: conds ->
+  | (cond, PLitTy) :: conds ->
       let caseMap, defaultClauses = matchOnLitTy cond clauses
 
       // See the guard above.
@@ -637,8 +618,6 @@ let private hxTail arg =
 
 // targetTy: type of match expression
 let private toHx (ctx: PcCtx) cond guards bodies targetTy loc (term: PTerm): HExpr =
-  let condTy, condLoc = exprExtract cond
-
   let useCond path =
     let rec goCond path expr =
       match path with
@@ -684,7 +663,7 @@ let private toHx (ctx: PcCtx) cond guards bodies targetTy loc (term: PTerm): HEx
         let arms =
           let guard = hxTrue loc
           [ HLitPat(BoolLit true, loc), guard, go body
-            HDiscardPat(tyBool, loc), guard, go alt ]
+            HLitPat(BoolLit false, loc), guard, go alt ]
 
         HMatchExpr(cond, arms, targetTy, loc)
 
@@ -694,7 +673,7 @@ let private toHx (ctx: PcCtx) cond guards bodies targetTy loc (term: PTerm): HEx
         let arms =
           let guard = hxTrue loc
           [ HLitPat(BoolLit true, loc), guard, go body
-            HDiscardPat(tyBool, loc), guard, go alt ]
+            HLitPat(BoolLit false, loc), guard, go alt ]
 
         HMatchExpr(cond, arms, targetTy, loc)
 

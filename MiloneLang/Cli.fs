@@ -386,10 +386,11 @@ let cliPatternCompile (host: CliHost) v projectDirs =
            tyCtx.Logs |> printLogs tyCtx
            "", false
          else
-           try
-             patternCompile (expr, tyCtx) |> ignore
-           with e -> printfn "error: %A" e.Message
-           "", true
+          //  try
+          //    patternCompile (expr, tyCtx) |> ignore
+          //  with e -> printfn "error: %A" e.Message
+          //  "", true
+          failwith "unsupported"
 
        let code =
          if success then
