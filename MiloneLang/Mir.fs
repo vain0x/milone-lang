@@ -336,13 +336,6 @@ let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
 
   | _ -> failwithf "Never: Primitives must appear as callee."
 
-let private mirifyBlock ctx expr =
-  let blockCtx = mirCtxNewBlock ctx
-  let expr, blockCtx = mirifyExpr blockCtx expr
-  let stmts, blockCtx = mirCtxTakeStmts blockCtx
-  let ctx = mirCtxRollBack ctx blockCtx
-  stmts, expr, ctx
-
 /// Gets if the target must match with any of the patterns.
 let private patsIsCovering pats =
   let rec go pat =
