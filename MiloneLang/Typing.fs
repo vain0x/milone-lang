@@ -536,7 +536,12 @@ let private inferMatch ctx expectOpt expr cond arms loc =
 
          (pat, guard, body), ctx)
 
-  HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
+  // HACK: Assign cond to temporary variable.
+  let varSerial, ctx = tyCtxFreshVar ctx "cond" condTy loc
+  let condPat = HRefPat(varSerial, condTy, loc)
+  let condVar = HRefExpr(varSerial, condTy, loc)
+
+  HLetValExpr(PrivateVis, condPat, cond, HMatchExpr(condVar, arms, targetTy, loc), targetTy, loc), targetTy, ctx
 
 let private inferNav ctx sub mes loc =
   let fail ctx =
@@ -747,6 +752,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HInfExpr (InfOp.CallProc, _, _, _)
   | HInfExpr (InfOp.CallTailRec, _, _, _)
   | HInfExpr (InfOp.CallClosure, _, _, _)
+  | HInfExpr (InfOp.ListHead, _, _, _)
+  | HInfExpr (InfOp.ListTail, _, _, _)
   | HInfExpr (InfOp.TupleItem _, _, _, _) -> failwith "Never"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
   | HErrorExpr (error, loc) ->

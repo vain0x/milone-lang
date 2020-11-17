@@ -627,6 +627,9 @@ type InfOp =
   /// Get an item of tuple.
   | TupleItem of index: int
 
+  | ListHead
+  | ListTail
+
 /// Expression in HIR.
 type HExpr =
   | HLitExpr of Lit * Loc

@@ -771,6 +771,9 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
       | _ -> failwithf "NEVER: bad use of Closure prim. %A" itself
 
+  | InfOp.ListHead
+  | InfOp.ListTail -> failwith "unimplemented"
+
   | InfOp.App -> failwithf "NEVER: InfOp.App is resolved in uneta. %A" itself
   | InfOp.Anno -> failwithf "NEVER: InfOp.Anno is resolved in type inference: %A" itself
 

@@ -152,10 +152,11 @@ type private PTerm =
 
   | PMatchOptionTerm of cond: PCond * noneCl: PTerm * someCl: PTerm
 
-  /// Flat pattern matching on union type.
-  ///
-  /// All variants must be of the same type.
-  | PMatchUnionTerm of cond: PCond * clauses: (VariantSerial * PTerm) list
+/// Flat pattern matching on union type.
+///
+/// All variants must be of the same type.
+// switch on tag?
+// | PMatchUnionTerm of cond: PCond * clauses: (VariantSerial * PTerm) list
 
 type private ClauseIndex = int
 
@@ -514,6 +515,227 @@ let private pcPat (ctx: PcCtx) pat: PPat * VarSerial option =
   | HBoxPat _ -> failwith "NEVER: HBoxPat is generated in AutoBoxing"
   | HAnnoPat _ -> failwith "NEVER: HAnnoPat is resolved in Typing."
 
+let private patCanCompile (ctx: PcCtx) pat =
+  match pat with
+  | HNonePat _
+  | HSomePat _ -> false
+
+  | HLitPat _
+  | HNilPat _
+  | HDiscardPat _ -> true
+
+  | HRefPat (varSerial, _, _) ->
+      match ctx.Vars |> mapTryFind varSerial with
+      | Some (VarDef _) -> true
+      | _ -> false
+
+  | HConsPat (l, r, _, _) ->
+      let l = l |> patCanCompile ctx
+      let r = r |> patCanCompile ctx
+      l && r
+
+  | HTuplePat (itemPats, _, _) -> itemPats |> List.forall (patCanCompile ctx)
+
+  | HCallPat (callee, args, _, _) -> false
+
+  | HAsPat (bodyPat, _, _) -> patCanCompile ctx bodyPat
+
+  | HOrPat _
+  | HNavPat _
+  | HBoxPat _
+  | HAnnoPat _ -> false
+
+// -----------------------------------------------
+// PIR analysis
+// -----------------------------------------------
+
+type private Counter<'T> = AssocMap<'T, int>
+
+let private counterEmpty cmp: Counter<_> = mapEmpty cmp
+
+let private counterInc key counter =
+  counter
+  |> mapAdd key (counter |> mapTryFind key |> Option.defaultValue 0)
+
+/// Counts how many times each guard/body appears in a term.
+///
+/// To avoid code duplication,
+/// guards/bodies appearing more than once are extracted to function.
+let private checkClauseUsage state term =
+  let rec go term state =
+    match term with
+    | PAbortTerm
+    | PCondTerm _ -> state
+
+    | PBodyTerm clauseIndex ->
+        let state =
+          let guardUse, bodyUse = state
+          let bodyUse = bodyUse |> counterInc clauseIndex
+          guardUse, bodyUse
+
+        state
+
+    | PGuardTerm (clauseIndex, body, alt) ->
+        let state =
+          let guardUse, bodyUse = state
+          let guardUse = guardUse |> counterInc clauseIndex
+          guardUse, bodyUse
+
+        state |> go body |> go alt
+
+    | PLetTerm (_, _, next) -> state |> go next
+
+    | PIfTerm (_, body, alt) -> state |> go body |> go alt
+
+    | PSwitchTerm (_, cases, alt) ->
+        cases
+        |> List.fold (fun state (_, body) -> state |> go body) state
+        |> go alt
+
+    | PMatchListTerm (_, nilCl, consCl) -> state |> go nilCl |> go consCl
+
+    | PMatchOptionTerm (_, noneCl, someCl) -> state |> go noneCl |> go someCl
+
+  go state term
+
+// -----------------------------------------------
+// Conversion from PIR to HIR
+// -----------------------------------------------
+
+let private listTyToItemTy ty =
+  match ty with
+  | AppTy (ListTyCtor, [ itemTy ]) -> itemTy
+  | _ -> failwith "NEVER: type error"
+
+/// Creates an expression to abort.
+let private hxAbort resultTy loc =
+  let exitExpr =
+    HPrimExpr(HPrim.Exit, tyFun tyInt resultTy, loc)
+
+  let codeExpr = HLitExpr(IntLit 1, loc)
+  hxApp exitExpr codeExpr resultTy loc
+
+let private hxTupleItem index arg =
+  let itemTy, loc =
+    match arg |> exprExtract with
+    | AppTy (TupleTyCtor, itemTys), loc ->
+        let itemTy = itemTys |> List.item index
+        itemTy, loc
+
+    | _ -> failwith "NEVER: type error"
+
+  HInfExpr(InfOp.TupleItem index, [ arg ], itemTy, loc)
+
+let private hxHead arg =
+  let listTy, loc = arg |> exprExtract
+  let itemTy = listTyToItemTy listTy
+  HInfExpr(InfOp.ListHead, [ arg ], itemTy, loc)
+
+let private hxTail arg =
+  let listTy, loc = arg |> exprExtract
+  HInfExpr(InfOp.ListTail, [ arg ], listTy, loc)
+
+// targetTy: type of match expression
+let private toHx (ctx: PcCtx) cond guards bodies targetTy loc (term: PTerm): HExpr =
+  let condTy, condLoc = exprExtract cond
+
+  let useCond path =
+    let rec goCond path expr =
+      match path with
+      | PSelfPath -> expr
+
+      | PHeadPath subpath -> expr |> goCond subpath |> hxHead
+
+      | PTailPath subpath -> expr |> goCond subpath |> hxTail
+
+      | PItemPath (index, subpath) -> expr |> goCond subpath |> hxTupleItem index
+
+      | PSomeContentPath _
+      | PVariantTagPath _
+      | PVariantPayloadPath _ -> failwith "unimplemented"
+
+    goCond path cond
+
+  let rec go term =
+    match term with
+    | PAbortTerm -> hxAbort targetTy loc
+
+    | PCondTerm (varSerial, path) -> failwith "unimplemented"
+
+    | PBodyTerm clauseIndex -> bodies |> mapFind clauseIndex
+
+    | PLetTerm (varSerial, init, next) ->
+        let pat =
+          let varTy, varLoc =
+            match ctx.Vars |> mapTryFind varSerial with
+            | Some (VarDef (_, _, ty, loc)) -> ty, loc
+            | _ -> failwith "Expected variable."
+
+          HRefPat(varSerial, varTy, varLoc)
+
+        let init = useCond init
+        let next = go next
+
+        HLetValExpr(PrivateVis, pat, init, next, targetTy, loc)
+
+    | PGuardTerm (clauseIndex, body, alt) ->
+        let cond = guards |> mapFind clauseIndex
+
+        let arms =
+          let guard = hxTrue loc
+          [ HLitPat(BoolLit true, loc), guard, go body
+            HDiscardPat(tyBool, loc), guard, go alt ]
+
+        HMatchExpr(cond, arms, targetTy, loc)
+
+    | PIfTerm (cond, body, alt) ->
+        let cond = useCond cond
+
+        let arms =
+          let guard = hxTrue loc
+          [ HLitPat(BoolLit true, loc), guard, go body
+            HDiscardPat(tyBool, loc), guard, go alt ]
+
+        HMatchExpr(cond, arms, targetTy, loc)
+
+    | PSwitchTerm (cond, cases, alt) ->
+        let cond = useCond cond
+        let condTy = exprToTy cond
+
+        let arms =
+          let guard = hxTrue loc
+
+          let arms =
+            cases
+            |> List.map (fun (pConst, body) ->
+                 let pat =
+                   match pConst with
+                   | PLitConst lit -> HLitPat(lit, loc)
+                   | PVariantTagConst _ -> failwith "unimplemented"
+
+                 pat, guard, go body)
+
+          List.append arms [ HDiscardPat(condTy, loc), guard, go alt ]
+
+        HMatchExpr(cond, arms, targetTy, loc)
+
+    | PMatchListTerm (cond, nilCl, consCl) ->
+        let cond = useCond cond
+
+        let arms =
+          let listTy = cond |> exprToTy
+          let itemTy = listTy |> listTyToItemTy
+          let guard = hxTrue loc
+
+          [ HNilPat(itemTy, loc), guard, go nilCl
+            HDiscardPat(listTy, loc), guard, go consCl ]
+
+        HMatchExpr(cond, arms, targetTy, loc)
+
+    | PMatchOptionTerm (cond, noneCl, someCl: PTerm) -> failwith ""
+
+  go term
+
 // -----------------------------------------------
 // Control
 // -----------------------------------------------
@@ -523,26 +745,58 @@ let private pcExpr (expr, ctx: PcCtx) =
 
   match expr with
   | HMatchExpr (cond, arms, ty, loc) ->
-      printfn "\nmatch expr: %s\n" (objToString ("match:", cond, arms, ty, loc))
-
-      let condTy = cond |> exprToTy |> pcTy ctx
-
-      let clauses: PClause list =
+      let isSupported =
         arms
-        |> List.mapi (fun (ci: ClauseIndex) (pat, guard, _body) ->
-             let isGuarded = guard |> hxIsAlwaysTrue |> not
+        |> List.forall (fun (pat, _, _) -> pat |> patCanCompile ctx)
 
-             pat
-             |> patNormalize
-             |> List.map (fun pat ->
-                  let pat = pat |> pcPat ctx
-                  ci, [ pat ], isGuarded, id))
-        |> List.collect id
+      if not isSupported then
+        let cond, ctx = (cond, ctx) |> pcExpr
 
-      let exhaustive, term = doCompile [ PSelfPath, condTy ] clauses
-      printfn "\nmatch result: %s\n" (objToString (exhaustive, term))
+        let arms, ctx =
+          (arms, ctx)
+          |> stMap (fun ((pat, guard, body), ctx) ->
+               let guard, ctx = (guard, ctx) |> pcExpr
+               let body, ctx = (body, ctx) |> pcExpr
+               (pat, guard, body), ctx)
 
-      expr, ctx
+        HMatchExpr(cond, arms, ty, loc), ctx
+      else
+        // printfn "\nmatch expr: %s\n" (objToString ("match:", cond, arms, ty, loc))
+        let condTy = cond |> exprToTy |> pcTy ctx
+
+        let clauses: PClause list =
+          arms
+          |> List.mapi (fun (ci: ClauseIndex) (pat, guard, _body) ->
+               let isGuarded = guard |> hxIsAlwaysTrue |> not
+
+               pat
+               |> patNormalize
+               |> List.map (fun pat ->
+                    let pat = pat |> pcPat ctx
+                    ci, [ pat ], isGuarded, id))
+          |> List.collect id
+
+        let _exhaustive, term = doCompile [ PSelfPath, condTy ] clauses
+        // printfn "\nmatch result: %s\n" (objToString (exhaustive, term))
+
+        let matchExpr =
+          let _, guards =
+            arms
+            |> List.fold (fun (i, guards) (_, guard, _) ->
+                 let guards =
+                   if guard |> hxIsAlwaysTrue then guards else guards |> mapAdd i guard
+
+                 i + 1, guards) (0, mapEmpty intCmp)
+
+          let _, bodies =
+            arms
+            |> List.fold (fun (i, bodies) (_, _, body) ->
+                 let bodies = bodies |> mapAdd i body
+                 i + 1, bodies) (0, mapEmpty intCmp)
+
+          toHx ctx cond guards bodies ty loc term
+
+        matchExpr, ctx
 
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       // unimplemented

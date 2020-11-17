@@ -11,6 +11,7 @@ open MiloneLang.AutoBoxing
 open MiloneLang.Bundling
 open MiloneLang.NameRes
 open MiloneLang.Typing
+open MiloneLang.PatternCompile
 open MiloneLang.MainHoist
 open MiloneLang.TyElaborating
 open MiloneLang.ClosureConversion
@@ -221,6 +222,9 @@ let semanticallyAnalyze (host: CliHost) v (expr, nameCtx, errors) =
 
 /// Transforms HIR. The result can be converted to KIR or MIR.
 let transformHir (host: CliHost) v (expr, tyCtx) =
+  writeLog host v "PatternCompile"
+  let expr, tyCtx = patternCompile (expr, tyCtx)
+
   writeLog host v "MainHoist"
   let expr, tyCtx = hoistMain (expr, tyCtx)
 
@@ -382,10 +386,10 @@ let cliPatternCompile (host: CliHost) v projectDirs =
            tyCtx.Logs |> printLogs tyCtx
            "", false
          else
-          try
-            PatternCompile.patternCompile (expr, tyCtx) |> ignore
-          with e -> printfn "error: %A" e.Message
-          "", true
+           try
+             patternCompile (expr, tyCtx) |> ignore
+           with e -> printfn "error: %A" e.Message
+           "", true
 
        let code =
          if success then
@@ -555,7 +559,8 @@ let cli (host: CliHost) =
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
-      let usePatternCompile, args = parseFlag (fun _ arg -> if arg = "--pattern" then Some true else None) false args
+      let usePatternCompile, args =
+        parseFlag (fun _ arg -> if arg = "--pattern" then Some true else None) false args
 
       let useKir, args =
         parseFlag (fun _ arg -> if arg = "--kir" then Some true else None) false args

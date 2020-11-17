@@ -791,6 +791,16 @@ let private mirifyExprOpCons ctx l r listTy loc =
 
   MRefExpr(tempSerial, listTy, loc), ctx
 
+let private mirExprListHead ctx arg ty loc =
+  let arg, ctx = mirifyExpr ctx arg
+
+  MUnaryExpr (MListHeadUnary, arg, ty, loc), ctx
+
+let private mirExprListTail ctx arg ty loc =
+  let arg, ctx = mirifyExpr ctx arg
+
+  MUnaryExpr (MListTailUnary, arg, ty, loc), ctx
+
 let private mirifyExprTuple ctx items itemTys loc =
   let ty = tyTuple itemTys
   let _, tempSerial, ctx = mirCtxFreshVar ctx "tuple" ty loc
@@ -973,6 +983,8 @@ let private mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
   | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
   | InfOp.Tuple, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
+  | InfOp.ListHead, [ arg ], _ -> mirExprListHead ctx arg ty loc
+  | InfOp.ListTail, [ arg ], _ -> mirExprListTail ctx arg ty loc
   | InfOp.TupleItem index, [ tuple ], itemTy -> mirifyExprTupleItem ctx index tuple itemTy loc
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
   | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
