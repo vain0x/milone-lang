@@ -367,6 +367,38 @@ let cliCompile (host: CliHost) verbosity projectDir =
   printfn "%s" (output |> strTrimEnd)
   exitCode
 
+let cliPatternCompile (host: CliHost) v projectDirs =
+  projectDirs
+  |> List.fold (fun code projectDir ->
+       printfn "// -------------------------------\n// %s\n{\n" projectDir
+       printfn "/*"
+
+       let output, success =
+         let syntax = syntacticallyAnalyze host v projectDir
+
+         let expr, tyCtx = semanticallyAnalyze host v syntax
+
+         if tyCtx |> tyCtxHasError then
+           tyCtx.Logs |> printLogs tyCtx
+           "", false
+         else
+          try
+            PatternCompile.patternCompile (expr, tyCtx) |> ignore
+          with e -> printfn "error: %A" e.Message
+          "", true
+
+       let code =
+         if success then
+           printfn "*/"
+           printfn "%s" (output |> strTrimEnd)
+           code
+         else
+           printfn "\n%s\n*/" output
+           1
+
+       printfn "\n// exit = %d\n}\n" code
+       code) 0
+
 let cliKirDump (host: CliHost) projectDirs =
   let v = Quiet
   printfn "// Common code.\n%s\n" (kirHeader ())
@@ -523,11 +555,15 @@ let cli (host: CliHost) =
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
+      let usePatternCompile, args = parseFlag (fun _ arg -> if arg = "--pattern" then Some true else None) false args
+
       let useKir, args =
         parseFlag (fun _ arg -> if arg = "--kir" then Some true else None) false args
 
       match useKir, args with
       | true, _ -> cliCompileViaKir host args
+
+      | _, projectDirs when usePatternCompile -> cliPatternCompile host verbosity projectDirs
 
       | false, projectDir :: _ -> cliCompile host verbosity projectDir
 
