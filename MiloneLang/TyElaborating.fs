@@ -81,6 +81,13 @@ let private buildRecordMap (ctx: TyElaborationCtx) =
   |> mapFold (fun acc tySerial tyDef ->
        match tyDef with
        | RecordTyDef (_, fields, _) ->
+           let fields =
+             fields
+             |> List.map (fun (ident, ty, loc) ->
+                  // This affects newtype variants only.
+                  let ty = ty |> teTy ctx
+                  ident, ty, loc)
+
            let tupleTy =
              fields
              |> List.map (fun (_, ty, _) -> ty)
