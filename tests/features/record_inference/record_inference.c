@@ -36,21 +36,27 @@ int typeAnnotationExprCase_(int n_1) {
 }
 
 int matchExprCase_(int n_2) {
-    void* match_;
-    if ((n_2 != 5)) goto next_2;
+    void* switch_;
+    switch (n_2) {
+       case 5:
+          goto clause_2;
+
+       default:
+          goto clause_3;
+    }
+clause_2:;
     struct IntTuple1 tuple_2;
     tuple_2.t0 = 0;
     void* box_2 = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_2))) = tuple_2;
-    match_ = box_2;
-    goto end_match_1;
-next_2:;
+    switch_ = box_2;
+    goto switch_next_1;
+clause_3:;
     exit(1);
-    match_ = NULL;
-    goto end_match_1;
-next_3:;
-end_match_1:;
-    void* t_ = match_;
+    switch_ = NULL;
+    goto switch_next_1;
+switch_next_1:;
+    void* t_ = switch_;
     milone_assert(((*(((struct IntTuple1*)t_))).t0 == 0), 21, 2);
     int call_2 = 0;
     return 0;

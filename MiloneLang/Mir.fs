@@ -80,11 +80,21 @@ let private mirCtxAddErr (ctx: MirCtx) message loc =
 
 let private mirCtxNewBlock (ctx: MirCtx) = { ctx with Stmts = [] }
 
-let private mirCtxRollBack (bCtx: MirCtx) (dCtx: MirCtx) = { dCtx with Stmts = bCtx.Stmts }
+let private mirCtxRollBack (parentCtx: MirCtx) (ctx: MirCtx) = { ctx with Stmts = parentCtx.Stmts }
 
 let private mirCtxPrependStmt (ctx: MirCtx) stmt =
   { ctx with
       Stmts = List.append ctx.Stmts [ stmt ] }
+
+let private addStmtListList (ctx: MirCtx) (stmtListList: MStmt list list) =
+  let stmts =
+    stmtListList
+    |> List.rev
+    |> List.fold (fun stmts stmtList ->
+         stmtList
+         |> List.fold (fun stmts stmt -> stmt :: stmts) stmts) ctx.Stmts
+
+  { ctx with Stmts = stmts }
 
 let private mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) = { ctx with Stmts = stmt :: ctx.Stmts }
 
@@ -361,12 +371,14 @@ let private mirifyExprMatchAsIfStmt ctx target arms ty loc =
 
       let target, ctx = mirifyExpr ctx target
 
-      let ctx = mirCtxAddStmt ctx (msGotoUnless target elseLabel loc)
+      let ctx =
+        mirCtxAddStmt ctx (msGotoUnless target elseLabel loc)
 
       let body, ctx = mirifyExpr ctx body
       let ctx = mirCtxAddStmt ctx (tempSet body)
 
-      let ctx = addTerminator ctx (MGotoTerminator endLabel) loc
+      let ctx =
+        addTerminator ctx (MGotoTerminator endLabel) loc
 
       let ctx = mirCtxAddStmt ctx elseLabelStmt
       let alt, ctx = mirifyExpr ctx alt
@@ -375,6 +387,120 @@ let private mirifyExprMatchAsIfStmt ctx target arms ty loc =
       Some(temp, ctx)
 
   | _ -> None
+
+let private matchExprCanCompileToSwitch cond arms =
+  let tyIsLit ty =
+    match ty with
+    | AppTy (IntTyCtor, [])
+    | AppTy (CharTyCtor, []) -> true
+    | _ -> false
+
+  let rec go pat =
+    match pat with
+    | HLitPat _
+    | HRefPat _
+    | HDiscardPat _ -> true
+
+    | HAsPat (bodyPat, _, _) -> go bodyPat
+    | HOrPat (l, r, _, _) -> go l && go r
+
+    | _ -> false
+
+  tyIsLit (exprToTy cond)
+  && arms
+  |> List.forall (fun (pat, guard, _) -> go pat && hxIsAlwaysTrue guard)
+
+/// Converts a match expression to switch statement.
+// TODO: Support more cases
+let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
+  // (caseLits, isDefault, bindings)
+  let rec go pat =
+    match pat with
+    | HLitPat (lit, _) -> [ lit ], false, []
+
+    | HRefPat (varSerial, _, loc) -> [], true, [ varSerial, loc ]
+
+    | HDiscardPat _ -> [], true, []
+
+    | HAsPat (bodyPat, varSerial, loc) ->
+        let cases, isDefault, bindings = go bodyPat
+        let bindings = (varSerial, loc) :: bindings
+        cases, isDefault, bindings
+
+    | HOrPat (l, r, _, _) ->
+        let lCases, lIsDefault, lBindings = go l
+        let rCases, rIsDefault, rBindings = go r
+
+        let cases = List.append rCases lCases // reverse order
+        let isDefault = lIsDefault || rIsDefault
+        let bindings = List.append rBindings lBindings
+        cases, isDefault, bindings
+
+    | _ -> failwithf "NEVER: %A" pat
+
+  let temp, tempSet, ctx = mirCtxLetFreshVar ctx "switch" ty loc
+  let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "switch_next" loc
+
+  let condTy = exprToTy cond
+  let cond, ctx = mirifyExpr ctx cond
+
+  let exhaust, clauses, blocks, ctx =
+    arms
+    |> List.fold (fun (hasDefault, clauses, blocks, ctx) (pat, _, body) ->
+         if hasDefault then
+           true, clauses, blocks, ctx
+         else
+           let _, clauseLoc = patExtract pat
+           let clauseLabelStmt, clauseLabel, ctx = mirCtxFreshLabel ctx "clause" clauseLoc
+
+           let cases, isDefault, bindings = go pat
+
+           let clause: MSwitchClause =
+             { Cases = cases
+               IsDefault = isDefault
+               Terminator = MGotoTerminator clauseLabel }
+
+           // Generate body.
+           let parentCtx, ctx = ctx, mirCtxNewBlock ctx
+
+           let block, ctx =
+             let ctx = mirCtxAddStmt ctx clauseLabelStmt
+
+             // Bindings: just assign cond to var.
+             let ctx =
+               bindings
+               |> List.fold (fun ctx (varSerial, loc) ->
+                    mirCtxAddStmt ctx (MLetValStmt(varSerial, MExprInit cond, condTy, loc))) ctx
+
+             // Evaluates body and assign to temp var.
+             let body, ctx = mirifyExpr ctx body
+             let ctx = mirCtxAddStmt ctx (tempSet body)
+
+             let ctx =
+               addTerminator ctx (MGotoTerminator nextLabel) loc
+
+             takeStmts ctx
+
+           let ctx = mirCtxRollBack parentCtx ctx
+
+           hasDefault || isDefault, clause :: clauses, block :: blocks, ctx) (false, [], [], ctx)
+
+  let clauses =
+    if exhaust then
+      clauses
+    else
+      { Cases = []
+        IsDefault = true
+        Terminator = mtAbort loc }
+      :: clauses
+
+  let ctx =
+    addTerminator ctx (MSwitchTerminator(cond, List.rev clauses)) loc
+
+  let ctx = addStmtListList ctx blocks
+  let ctx = mirCtxAddStmt ctx nextLabelStmt
+
+  temp, ctx
 
 /// Gets if the target must match with any of the patterns.
 let private patsIsCovering pats =
@@ -525,14 +651,7 @@ let private mirifyExprMatchFull ctx target arms ty loc =
         emit ctx rest
     | [] ->
         // Abort if exhaust.
-        if isCovering then
-          ctx
-        else
-          let abortStmt =
-            MTerminatorStmt(MExitTerminator(MLitExpr(IntLit 1, loc)), loc)
-
-          let ctx = mirCtxAddStmt ctx abortStmt
-          ctx
+        if isCovering then ctx else addTerminator ctx (mtAbort loc) loc
 
   let instructionsRev, ctx = goArms ctx [] true arms
   let instructions = fixUp [] endLabel instructionsRev
@@ -544,7 +663,10 @@ let private mirifyExprMatchFull ctx target arms ty loc =
 let private mirifyExprMatch ctx target arms ty loc =
   match mirifyExprMatchAsIfStmt ctx target arms ty loc with
   | Some (result, ctx) -> result, ctx
-  | None -> mirifyExprMatchFull ctx target arms ty loc
+  | None ->
+      if matchExprCanCompileToSwitch target arms
+      then mirifyExprMatchAsSwitchStmt ctx target arms ty loc
+      else mirifyExprMatchFull ctx target arms ty loc
 
 let private mirifyExprIndex ctx l r _ loc =
   match exprToTy l, exprToTy r with

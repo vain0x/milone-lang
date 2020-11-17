@@ -19,33 +19,35 @@ int complexCase_(int arg_2);
 int main();
 
 int isZeroOrOne_(int x_) {
-    int match_;
-    if ((x_ != 0)) goto next_3;
-    goto match_body_2;
-next_3:;
-    if ((x_ != 1)) goto next_4;
-    goto match_body_2;
-match_body_2:;
-    match_ = 1;
-    goto end_match_1;
-next_4:;
-    match_ = 0;
-    goto end_match_1;
-next_5:;
-end_match_1:;
-    return match_;
+    int switch_;
+    switch (x_) {
+       case 1:
+       case 0:
+          goto clause_2;
+
+       default:
+          goto clause_3;
+    }
+clause_2:;
+    switch_ = 1;
+    goto switch_next_1;
+clause_3:;
+    switch_ = 0;
+    goto switch_next_1;
+switch_next_1:;
+    return switch_;
 }
 
 int simpleCase_(int arg_) {
     int if_;
     int call_ = isZeroOrOne_(0);
-    if ((!(call_))) goto else_6;
+    if ((!(call_))) goto else_4;
     int call_1 = isZeroOrOne_(1);
     if_ = call_1;
-    goto end_if_7;
-else_6:;
+    goto end_if_5;
+else_4:;
     if_ = 0;
-end_if_7:;
+end_if_5:;
     milone_assert(if_, 8, 2);
     int call_2 = 0;
     int call_3 = isZeroOrOne_(2);
@@ -60,39 +62,39 @@ struct IntList {
 };
 
 int startsWithDoubleBits_(struct IntList* xs_) {
-    int match_1;
+    int match_;
+    if ((!(xs_))) goto next_8;
+    if ((xs_->head != 0)) goto next_8;
+    if ((!(xs_->tail))) goto next_8;
+    if ((xs_->tail->head != 0)) goto next_8;
+    goto match_body_7;
+next_8:;
+    if ((!(xs_))) goto next_9;
+    if ((xs_->head != 0)) goto next_9;
+    if ((!(xs_->tail))) goto next_9;
+    if ((xs_->tail->head != 1)) goto next_9;
+    goto match_body_7;
+next_9:;
     if ((!(xs_))) goto next_10;
-    if ((xs_->head != 0)) goto next_10;
+    if ((xs_->head != 1)) goto next_10;
     if ((!(xs_->tail))) goto next_10;
     if ((xs_->tail->head != 0)) goto next_10;
-    goto match_body_9;
+    goto match_body_7;
 next_10:;
     if ((!(xs_))) goto next_11;
-    if ((xs_->head != 0)) goto next_11;
+    if ((xs_->head != 1)) goto next_11;
     if ((!(xs_->tail))) goto next_11;
     if ((xs_->tail->head != 1)) goto next_11;
-    goto match_body_9;
+    goto match_body_7;
+match_body_7:;
+    match_ = 1;
+    goto end_match_6;
 next_11:;
-    if ((!(xs_))) goto next_12;
-    if ((xs_->head != 1)) goto next_12;
-    if ((!(xs_->tail))) goto next_12;
-    if ((xs_->tail->head != 0)) goto next_12;
-    goto match_body_9;
+    match_ = 0;
+    goto end_match_6;
 next_12:;
-    if ((!(xs_))) goto next_13;
-    if ((xs_->head != 1)) goto next_13;
-    if ((!(xs_->tail))) goto next_13;
-    if ((xs_->tail->head != 1)) goto next_13;
-    goto match_body_9;
-match_body_9:;
-    match_1 = 1;
-    goto end_match_8;
-next_13:;
-    match_1 = 0;
-    goto end_match_8;
-next_14:;
-end_match_8:;
-    return match_1;
+end_match_6:;
+    return match_;
 }
 
 int nestedCase_(int arg_1) {
@@ -126,23 +128,23 @@ struct IntIntTuple2 {
 };
 
 int performComplexMatching_(void* expr_) {
-    int match_2;
-    if (((*(((struct IntIntTuple2*)expr_))).t0 != 0)) goto next_17;
-    if (((*(((struct IntIntTuple2*)expr_))).t1 != 0)) goto next_17;
-    goto match_body_16;
+    int match_1;
+    if (((*(((struct IntIntTuple2*)expr_))).t0 != 0)) goto next_15;
+    if (((*(((struct IntIntTuple2*)expr_))).t1 != 0)) goto next_15;
+    goto match_body_14;
+next_15:;
+    if (((*(((struct IntIntTuple2*)expr_))).t0 != 0)) goto next_16;
+    if (((*(((struct IntIntTuple2*)expr_))).t1 != 1)) goto next_16;
+    goto match_body_14;
+match_body_14:;
+    match_1 = 1;
+    goto end_match_13;
+next_16:;
+    match_1 = 0;
+    goto end_match_13;
 next_17:;
-    if (((*(((struct IntIntTuple2*)expr_))).t0 != 0)) goto next_18;
-    if (((*(((struct IntIntTuple2*)expr_))).t1 != 1)) goto next_18;
-    goto match_body_16;
-match_body_16:;
-    match_2 = 1;
-    goto end_match_15;
-next_18:;
-    match_2 = 0;
-    goto end_match_15;
-next_19:;
-end_match_15:;
-    return match_2;
+end_match_13:;
+    return match_1;
 }
 
 int complexCase_(int arg_2) {

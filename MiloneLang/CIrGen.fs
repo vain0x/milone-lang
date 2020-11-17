@@ -888,6 +888,19 @@ let private genTerminatorStmt ctx stmt =
       let pred, ctx = genExpr ctx pred
       cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
 
+  | MSwitchTerminator (cond, clauses) ->
+      let cond, ctx = genExpr ctx cond
+
+      let clauses, ctx =
+        (clauses, ctx)
+        |> stMap (fun (clause: MSwitchClause, ctx) ->
+             let stmts, ctx =
+               genBlock ctx [ MTerminatorStmt(clause.Terminator, noLoc) ]
+
+             (clause.Cases, clause.IsDefault, stmts), ctx)
+
+      cirCtxAddStmt ctx (CSwitchStmt(cond, clauses))
+
   | MExitTerminator arg ->
       let doArm () =
         let arg, ctx = genExpr ctx arg

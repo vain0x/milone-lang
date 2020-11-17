@@ -8,6 +8,8 @@ open MiloneLang.Helpers
 let private eol = """
 """
 
+let private deeper (indent: string) = "   " + indent
+
 let private join sep f (xs, acc) =
   let rec go acc xs =
     match xs with
@@ -105,6 +107,18 @@ let private cprintExprStrObj acc (value: string) =
     |> cons "}"
 
   acc
+
+let private cpLit lit acc =
+  match lit with
+  | BoolLit false -> acc |> cons "0"
+  | BoolLit true -> acc |> cons "1"
+  | IntLit value -> acc |> cons (string value)
+  | CharLit value ->
+      acc
+      |> cons "'"
+      |> cons (cprintExprChar value)
+      |> cons "'"
+  | StrLit _ -> failwith "unsupported"
 
 let private cprintExprInit acc fields ty =
   let acc = acc |> cons "("
@@ -278,6 +292,41 @@ let private cprintStmt acc indent stmt: string list =
         acc |> cons indent |> cons "} else {" |> cons eol
 
       let acc = cprintStmts acc ("    " + indent) elseCl
+
+      acc |> cons indent |> cons "}" |> cons eol
+
+  | CSwitchStmt (cond, clauses) ->
+      let acc = acc |> cons indent |> cons "switch ("
+      let acc = cprintExpr acc cond
+      let acc = acc |> cons ") {" |> cons eol
+
+      let _, acc =
+        clauses
+        |> List.fold (fun (i, acc) (cases, isDefault, body) ->
+             let acc = if i = 0 then acc else acc |> cons eol
+
+             let acc =
+               cases
+               |> List.fold (fun acc lit ->
+                    acc
+                    |> cons (deeper indent)
+                    |> cons "case "
+                    |> cpLit lit
+                    |> cons ":"
+                    |> cons eol) acc
+
+             let acc =
+               if isDefault then
+                 acc
+                 |> cons (deeper indent)
+                 |> cons "default:"
+                 |> cons eol
+               else acc
+
+             let acc =
+               cprintStmts acc (deeper (deeper indent)) body
+
+             i + 1, acc) (0, acc)
 
       acc |> cons indent |> cons "}" |> cons eol
 

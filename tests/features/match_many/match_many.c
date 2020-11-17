@@ -99,13 +99,17 @@ end_match_7:;
 int testNestedMatchesParseCorrectly_(int arg_3) {
     int match_3;
     if (1) goto next_14;
-    int match_4;
+    int switch_;
+    switch (1) {
+       default:
+          goto clause_17;
+    }
+clause_17:;
     milone_assert(0, 25, 6);
     int call_5 = 0;
-    match_4 = 0;
-    goto end_match_16;
-next_17:;
-end_match_16:;
+    switch_ = 0;
+    goto switch_next_16;
+switch_next_16:;
     match_3 = 0;
     goto end_match_13;
 next_14:;

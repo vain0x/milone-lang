@@ -959,11 +959,17 @@ type MInit =
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
 
+type MSwitchClause =
+  { Cases: Lit list
+    IsDefault: bool
+    Terminator: MTerminator }
+
 type MTerminator =
   | MExitTerminator of exitCode: MExpr
   | MReturnTerminator of result: MExpr
   | MGotoTerminator of Label
   | MGotoIfTerminator of cond: MExpr * Label
+  | MSwitchTerminator of cond: MExpr * MSwitchClause list
 
 /// Statement in middle IR.
 type MStmt =
@@ -1082,6 +1088,10 @@ type CStmt =
   | CGotoStmt of Label
   | CGotoIfStmt of CExpr * Label
   | CIfStmt of CExpr * CStmt list * CStmt list
+
+  /// clause: (caseLiterals, isDefault, body).
+  | CSwitchStmt of cond: CExpr * clauses: (Lit list * bool * CStmt list) list
+
   | CReturnStmt of CExpr option
 
 /// Top-level definition in C language.
