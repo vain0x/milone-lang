@@ -14,13 +14,7 @@ struct ObjectList;
 
 struct UnitObjectListTuple2;
 
-enum MyUnit_Tag;
-
-struct MyUnit_;
-
-struct MyUnit_List;
-
-struct MyUnit_MyUnit_ListTuple2;
+struct ObjectObjectListTuple2;
 
 int usedInRecordTypeCase_(int arg_2);
 
@@ -85,22 +79,9 @@ struct UnitObjectListTuple2 {
     struct ObjectList* t1;
 };
 
-enum MyUnit_Tag {
-    MyUnit_,
-};
-
-struct MyUnit_ {
-    enum MyUnit_Tag tag;
-};
-
-struct MyUnit_List {
-    struct MyUnit_ head;
-    struct MyUnit_List* tail;
-};
-
-struct MyUnit_MyUnit_ListTuple2 {
-    struct MyUnit_ t0;
-    struct MyUnit_List* t1;
+struct ObjectObjectListTuple2 {
+    void* t0;
+    struct ObjectList* t1;
 };
 
 int usedInRecordTypeCase_(int arg_2) {
@@ -114,8 +95,8 @@ int usedInRecordTypeCase_(int arg_2) {
     (*(((struct UnitObjectListTuple2*)box_1))) = tuple_;
     void* record_ = box_1;
     int match_2;
-    if ((!((*(((struct MyUnit_MyUnit_ListTuple2*)record_))).t1))) goto next_7;
-    if ((!((!((*(((struct MyUnit_MyUnit_ListTuple2*)record_))).t1->tail))))) goto next_7;
+    if ((!((*(((struct ObjectObjectListTuple2*)record_))).t1))) goto next_7;
+    if ((!((!((*(((struct ObjectObjectListTuple2*)record_))).t1->tail))))) goto next_7;
     match_2 = 0;
     goto end_match_6;
 next_7:;

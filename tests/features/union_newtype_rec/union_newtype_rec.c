@@ -55,7 +55,7 @@ end_match_1:;
     if ((!((*(((struct IntObjectListTuple2*)second_))).t1))) goto next_5;
     int value_ = (*(((struct IntObjectListTuple2*)(*(((struct IntObjectListTuple2*)second_))).t1->head))).t0;
     if ((!((!((*(((struct IntObjectListTuple2*)second_))).t1->tail))))) goto next_5;
-    milone_assert((value_ == 1), 17, 44);
+    milone_assert((value_ == 0), 17, 44);
     int call_2 = 0;
     match_1 = 0;
     goto end_match_4;
