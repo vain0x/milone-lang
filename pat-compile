@@ -2,7 +2,7 @@
 
 set -eu
 
-TEST_DIRS=$(find tests/*/* -type d | grep 'match')
+TEST_DIRS=$(find tests/*/* -type d | grep -v -E '(bin|obj)(/|$)')
 
 ./milone-netcore compile --pattern $TEST_DIRS >pat_compile_tmp.generated.txt || echo '$?='$?
 
