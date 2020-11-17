@@ -888,7 +888,7 @@ let private genStmtJump ctx stmt =
       let pred, ctx = genExpr ctx pred
       cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
 
-  | MExitStmt (arg, _) ->
+  | MTerminatorStmt (MExitTerminator arg, _) ->
       let doArm () =
         let arg, ctx = genExpr ctx arg
         cirCtxAddStmt ctx (CExprStmt(CCallExpr(CRefExpr "exit", [ arg ])))
@@ -904,7 +904,7 @@ let private genStmt ctx stmt =
   | MLabelStmt _
   | MGotoStmt _
   | MGotoIfStmt _
-  | MExitStmt _ -> genStmtJump ctx stmt
+  | MTerminatorStmt _ -> genStmtJump ctx stmt
 
   | MIfStmt (cond, thenCl, elseCl, _) ->
       let cond, ctx = genExpr ctx cond

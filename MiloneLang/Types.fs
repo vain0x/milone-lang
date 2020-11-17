@@ -959,6 +959,8 @@ type MInit =
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
 
+type MTerminator = MExitTerminator of exitCode: MExpr
+
 /// Statement in middle IR.
 type MStmt =
   /// Declare a local variable.
@@ -975,7 +977,7 @@ type MStmt =
   // Only for KIR (comparison prim).
   | MIfStmt of MExpr * MStmt list * MStmt list * Loc
 
-  | MExitStmt of MExpr * Loc
+  | MTerminatorStmt of MTerminator * Loc
 
 type MDecl = MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
 

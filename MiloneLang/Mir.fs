@@ -495,7 +495,8 @@ let private mirifyExprMatch ctx target arms ty loc =
         if isCovering then
           ctx
         else
-          let abortStmt = MExitStmt(MLitExpr(IntLit 1, loc), loc)
+          let abortStmt =
+            MTerminatorStmt(MExitTerminator(MLitExpr(IntLit 1, loc)), loc)
 
           let ctx = mirCtxAddStmt ctx abortStmt
           ctx
@@ -517,7 +518,7 @@ let private mirifyExprIndex ctx l r _ loc =
 
 let private mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  let ctx = mirCtxAddStmt ctx (MExitStmt(arg, loc))
+  let ctx = mirCtxAddStmt ctx (MTerminatorStmt(MExitTerminator arg, loc))
   MDefaultExpr(ty, loc), ctx
 
 let private mirifyExprCallBox ctx arg _ loc =

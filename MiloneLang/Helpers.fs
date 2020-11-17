@@ -1204,7 +1204,7 @@ let mexprToTy expr =
 
 let msGotoUnless pred label loc =
   let notPred = mxNot pred loc
-  MGotoIfStmt(notPred, label, loc)
+  MTerminatorStmt (MGotoIfTerminator(notPred, label), loc)
 
 // -----------------------------------------------
 // Expression sugaring (MIR)
