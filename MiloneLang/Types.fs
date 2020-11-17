@@ -980,7 +980,9 @@ type MStmt =
 
   | MTerminatorStmt of MTerminator * Loc
 
-type MDecl = MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
+type MBlock = { Stmts: MStmt list }
+
+type MDecl = MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
 
 // -----------------------------------------------
 // CIR types

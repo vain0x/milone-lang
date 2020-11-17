@@ -914,6 +914,12 @@ let private genBlock (ctx: CirCtx) (stmts: MStmt list) =
   let ctx = cirCtxRollBack ctx bodyCtx
   List.rev stmts, ctx
 
+let private genBlocks (ctx: CirCtx) (blocks: MBlock list) =
+  match blocks with
+  | [ block ] -> genBlock ctx block.Stmts
+
+  | _ -> failwith "unimplemented"
+
 let private genStmts (ctx: CirCtx) (stmts: MStmt list): CirCtx =
   let rec go ctx stmts =
     match stmts with
@@ -941,7 +947,7 @@ let private genDecls (ctx: CirCtx) decls =
             go ((ident, cty) :: acc) ctx args
 
       let args, ctx = go [] ctx args
-      let body, ctx = genBlock ctx body
+      let body, ctx = genBlocks ctx body
       let resultTy, ctx = cirGetCTy ctx resultTy
       let funDecl = CFunDecl(ident, args, resultTy, body)
       let ctx = cirCtxAddDecl ctx funDecl

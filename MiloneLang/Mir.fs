@@ -49,6 +49,7 @@ type MirCtx =
     CurrentFun: (Label * VarSerial list) option
 
     Stmts: MStmt list
+    Blocks: MBlock list
     Decls: MDecl list
     Logs: (Log * Loc) list }
 
@@ -59,6 +60,7 @@ let private mirCtxFromTyCtx (tyCtx: TyCtx): MirCtx =
     LabelSerial = 0
     CurrentFun = None
     Stmts = []
+    Blocks = []
     Decls = []
     Logs = tyCtx.Logs }
 
@@ -843,7 +845,12 @@ let private mirifyExprLetFun (ctx: MirCtx) calleeSerial isMainFun argPats body n
       addTerminator ctx (MReturnTerminator lastExpr) blockLoc
 
     let ctx = cleanUpTailRec ctx parentFun
-    let body, ctx = takeStmts ctx
+
+    let body, ctx =
+      let stmts, ctx = takeStmts ctx
+      let block: MBlock = { Stmts = stmts }
+      [ block ], ctx
+
     args, blockTy, body, ctx
 
   let core () =
