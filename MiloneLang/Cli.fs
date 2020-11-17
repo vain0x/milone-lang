@@ -21,7 +21,7 @@ open MiloneLang.Monomorphizing
 open MiloneLang.Mir
 open MiloneLang.KirGen
 open MiloneLang.KirPropagate
-open MiloneLang.KirToMir
+// open MiloneLang.KirToMir
 open MiloneLang.KirDump
 open MiloneLang.CIrGen
 open MiloneLang.CPrinting
@@ -284,15 +284,17 @@ let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "KirPropagate"
   let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
 
-  writeLog host v "KirToMir"
-  let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
+  failwith "compile with KIR is suspended"
 
-  writeLog host v "Cir generation"
-  let cir, success = gen (stmts, mirCtx)
-  let cOutput = cprint cir
+  // writeLog host v "KirToMir"
+  // let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
 
-  writeLog host v "Finish"
-  cOutput, success
+  // writeLog host v "Cir generation"
+  // let cir, success = gen (stmts, mirCtx)
+  // let cOutput = cprint cir
+
+  // writeLog host v "Finish"
+  // cOutput, success
 
 let compile (host: CliHost) v projectDir: string * bool =
   let syntax = syntacticallyAnalyze host v projectDir
