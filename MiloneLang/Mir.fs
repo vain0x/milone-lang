@@ -489,10 +489,12 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
     if exhaust then
       clauses
     else
-      { Cases = []
-        IsDefault = true
-        Terminator = mtAbort loc }
-      :: clauses
+      let clause: MSwitchClause =
+        { Cases = []
+          IsDefault = true
+          Terminator = mtAbort loc }
+
+      clause :: clauses
 
   let ctx =
     addTerminator ctx (MSwitchTerminator(cond, List.rev clauses)) loc
