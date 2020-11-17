@@ -879,32 +879,28 @@ let private genStmtReturn ctx expr =
   let expr, ctx = genExpr ctx expr
   cirCtxAddStmt ctx (CReturnStmt(Some expr))
 
-let private genStmtJump ctx stmt =
+let private genTerminatorStmt ctx stmt =
   match stmt with
-  | MReturnStmt (expr, _) -> genStmtReturn ctx expr
-  | MLabelStmt (label, _) -> cirCtxAddStmt ctx (CLabelStmt label)
-  | MGotoStmt (label, _) -> cirCtxAddStmt ctx (CGotoStmt label)
-  | MGotoIfStmt (pred, label, _) ->
+  | MReturnTerminator expr -> genStmtReturn ctx expr
+  | MGotoTerminator label -> cirCtxAddStmt ctx (CGotoStmt label)
+
+  | MGotoIfTerminator (pred, label) ->
       let pred, ctx = genExpr ctx pred
       cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
 
-  | MTerminatorStmt (MExitTerminator arg, _) ->
+  | MExitTerminator arg ->
       let doArm () =
         let arg, ctx = genExpr ctx arg
         cirCtxAddStmt ctx (CExprStmt(CCallExpr(CRefExpr "exit", [ arg ])))
 
       doArm ()
-  | _ -> failwith "NEVER"
 
 let private genStmt ctx stmt =
   match stmt with
   | MLetValStmt (serial, init, ty, loc) -> genStmtLetVal ctx serial init ty loc
   | MSetStmt (serial, right, _) -> genStmtSet ctx serial right
-  | MReturnStmt _
-  | MLabelStmt _
-  | MGotoStmt _
-  | MGotoIfStmt _
-  | MTerminatorStmt _ -> genStmtJump ctx stmt
+  | MLabelStmt (label, _) -> cirCtxAddStmt ctx (CLabelStmt label)
+  | MTerminatorStmt (terminator, _loc) -> genTerminatorStmt ctx terminator
 
   | MIfStmt (cond, thenCl, elseCl, _) ->
       let cond, ctx = genExpr ctx cond

@@ -959,7 +959,11 @@ type MInit =
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
 
-type MTerminator = MExitTerminator of exitCode: MExpr
+type MTerminator =
+  | MExitTerminator of exitCode: MExpr
+  | MReturnTerminator of result: MExpr
+  | MGotoTerminator of Label
+  | MGotoIfTerminator of cond: MExpr * Label
 
 /// Statement in middle IR.
 type MStmt =
@@ -969,10 +973,7 @@ type MStmt =
   /// Set to uninitialized local variable.
   | MSetStmt of VarSerial * init: MExpr * Loc
 
-  | MReturnStmt of MExpr * Loc
   | MLabelStmt of Label * Loc
-  | MGotoStmt of Label * Loc
-  | MGotoIfStmt of MExpr * Label * Loc
 
   // Only for KIR (comparison prim).
   | MIfStmt of MExpr * MStmt list * MStmt list * Loc

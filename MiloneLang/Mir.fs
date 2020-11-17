@@ -86,6 +86,9 @@ let private mirCtxPrependStmt (ctx: MirCtx) stmt =
 
 let private mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) = { ctx with Stmts = stmt :: ctx.Stmts }
 
+let private addTerminator (ctx: MirCtx) terminator loc =
+  mirCtxAddStmt ctx (MTerminatorStmt(terminator, loc))
+
 let private takeStmts (ctx: MirCtx) =
   List.rev ctx.Stmts, { ctx with Stmts = [] }
 
@@ -463,7 +466,7 @@ let private mirifyExprMatch ctx target arms ty loc =
         emit ctx rest
     | MatchIR.GoBody bodyLabel :: rest ->
         let ctx =
-          mirCtxAddStmt ctx (MGotoStmt(bodyLabel, loc))
+          addTerminator ctx (MGotoTerminator bodyLabel) loc
 
         emit ctx rest
     | MatchIR.BodyLabel bodyLabel :: rest ->
@@ -487,7 +490,7 @@ let private mirifyExprMatch ctx target arms ty loc =
         let ctx = mirCtxAddStmt ctx (tempSet body)
 
         let ctx =
-          mirCtxAddStmt ctx (MGotoStmt(endLabel, loc))
+          addTerminator ctx (MGotoTerminator endLabel) loc
 
         emit ctx rest
     | [] ->
@@ -518,7 +521,10 @@ let private mirifyExprIndex ctx l r _ loc =
 
 let private mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
-  let ctx = mirCtxAddStmt ctx (MTerminatorStmt(MExitTerminator arg, loc))
+
+  let ctx =
+    mirCtxAddStmt ctx (MTerminatorStmt(MExitTerminator arg, loc))
+
   MDefaultExpr(ty, loc), ctx
 
 let private mirifyExprCallBox ctx arg _ loc =
@@ -741,7 +747,7 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args ty loc =
     go ctx argSerials tempExprs
 
   let ctx =
-    mirCtxAddStmt ctx (MGotoStmt(label, loc))
+    addTerminator ctx (MGotoTerminator label) loc
 
   MDefaultExpr(ty, loc), ctx
 
@@ -832,8 +838,9 @@ let private mirifyExprLetFun (ctx: MirCtx) calleeSerial isMainFun argPats body n
     let args, ctx = defineArgs [] ctx argPats
     let parentFun, ctx = prepareTailRec ctx args
     let lastExpr, ctx = mirifyExpr ctx body
-    let returnStmt = MReturnStmt(lastExpr, blockLoc)
-    let ctx = mirCtxAddStmt ctx returnStmt
+
+    let ctx =
+      addTerminator ctx (MReturnTerminator lastExpr) blockLoc
 
     let ctx = cleanUpTailRec ctx parentFun
     let body, ctx = takeStmts ctx
