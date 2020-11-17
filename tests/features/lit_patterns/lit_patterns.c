@@ -21,54 +21,70 @@ next_4:;
 next_5:;
     exit(1);
 end_match_3:;
-    int match_2;
-    if ((1 != 0)) goto next_7;
+    int switch_;
+    switch (1) {
+       case 0:
+          goto clause_7;
+
+       case 1:
+          goto clause_8;
+
+       default:
+          goto clause_9;
+    }
+clause_7:;
     milone_assert(0, 9, 9);
     int call_1 = 0;
-    match_2 = 0;
-    goto end_match_6;
-next_7:;
-    if ((1 != 1)) goto next_8;
-    match_2 = 0;
-    goto end_match_6;
-next_8:;
+    switch_ = 0;
+    goto switch_next_6;
+clause_8:;
+    switch_ = 0;
+    goto switch_next_6;
+clause_9:;
     milone_assert(0, 11, 9);
     int call_2 = 0;
-    match_2 = 0;
-    goto end_match_6;
-next_9:;
-end_match_6:;
-    int match_3;
-    if (('a' != 'A')) goto next_11;
+    switch_ = 0;
+    goto switch_next_6;
+switch_next_6:;
+    int switch_1;
+    switch ('a') {
+       case 'A':
+          goto clause_11;
+
+       case 'a':
+          goto clause_12;
+
+       default:
+          goto clause_13;
+    }
+clause_11:;
     milone_assert(0, 14, 11);
     int call_3 = 0;
-    match_3 = 0;
-    goto end_match_10;
-next_11:;
-    if (('a' != 'a')) goto next_12;
-    match_3 = 0;
-    goto end_match_10;
-next_12:;
+    switch_1 = 0;
+    goto switch_next_10;
+clause_12:;
+    switch_1 = 0;
+    goto switch_next_10;
+clause_13:;
     milone_assert(0, 16, 9);
     int call_4 = 0;
-    match_3 = 0;
-    goto end_match_10;
-next_13:;
-end_match_10:;
-    int match_4;
+    switch_1 = 0;
+    goto switch_next_10;
+switch_next_10:;
+    int match_2;
     if ((str_cmp((struct String){.str = "a", .len = 1}, (struct String){.str = "an", .len = 2}) != 0)) goto next_15;
     milone_assert(0, 19, 12);
     int call_5 = 0;
-    match_4 = 0;
+    match_2 = 0;
     goto end_match_14;
 next_15:;
     if ((str_cmp((struct String){.str = "a", .len = 1}, (struct String){.str = "a", .len = 1}) != 0)) goto next_16;
-    match_4 = 0;
+    match_2 = 0;
     goto end_match_14;
 next_16:;
     milone_assert(0, 21, 9);
     int call_6 = 0;
-    match_4 = 0;
+    match_2 = 0;
     goto end_match_14;
 next_17:;
 end_match_14:;

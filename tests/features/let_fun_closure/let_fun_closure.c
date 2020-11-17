@@ -106,24 +106,26 @@ int inc_1(int step_2, int x_3) {
 
 int go_(int step_2, int n_) {
 tailrec_1:;
-    int match_;
-    if ((n_ < 10)) goto next_3;
-    match_ = 1;
-    goto end_match_2;
-next_3:;
-    if ((n_ >= 10)) goto next_4;
+    int if_;
+    if ((n_ >= 10)) {
+        goto then_3;
+    } else {
+        goto else_4;
+    }
+then_3:;
+    if_ = 1;
+    goto if_next_2;
+else_4:;
     int arg_4 = step_2;
     int call_6 = inc_1(step_2, n_);
     int arg_5 = call_6;
     step_2 = arg_4;
     n_ = arg_5;
     goto tailrec_1;
-    match_ = 0;
-    goto end_match_2;
-next_4:;
-    exit(1);
-end_match_2:;
-    return match_;
+    if_ = 0;
+    goto if_next_2;
+if_next_2:;
+    return if_;
 }
 
 int recursiveCase_(int arg_6) {
@@ -183,51 +185,57 @@ int xf4_(int x3_, int x2_, int x1_, int arg_11) {
 }
 
 int xf3_(int x2_, int x1_, int x3_) {
-    int match_1;
-    if ((x3_ != 3)) goto next_6;
+    int if_1;
+    if ((x3_ == 3)) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
     int call_14 = xf4_(x3_, x2_, x1_, 0);
-    match_1 = call_14;
-    goto end_match_5;
-next_6:;
-    if ((x3_ == 3)) goto next_7;
-    match_1 = x3_;
-    goto end_match_5;
-next_7:;
-    exit(1);
-end_match_5:;
-    return match_1;
+    if_1 = call_14;
+    goto if_next_5;
+else_7:;
+    if_1 = x3_;
+    goto if_next_5;
+if_next_5:;
+    return if_1;
 }
 
 int xf2_(int x1_, int x2_) {
-    int match_2;
-    if ((x2_ != 2)) goto next_9;
+    int if_2;
+    if ((x2_ == 2)) {
+        goto then_9;
+    } else {
+        goto else_10;
+    }
+then_9:;
     int call_15 = xf3_(x2_, x1_, 3);
-    match_2 = call_15;
-    goto end_match_8;
-next_9:;
-    if ((x2_ == 2)) goto next_10;
-    match_2 = x2_;
-    goto end_match_8;
-next_10:;
-    exit(1);
-end_match_8:;
-    return match_2;
+    if_2 = call_15;
+    goto if_next_8;
+else_10:;
+    if_2 = x2_;
+    goto if_next_8;
+if_next_8:;
+    return if_2;
 }
 
 int xf1_(int x1_) {
-    int match_3;
-    if ((x1_ != 1)) goto next_12;
+    int if_3;
+    if ((x1_ == 1)) {
+        goto then_12;
+    } else {
+        goto else_13;
+    }
+then_12:;
     int call_16 = xf2_(x1_, 2);
-    match_3 = call_16;
-    goto end_match_11;
-next_12:;
-    if ((x1_ == 1)) goto next_13;
-    match_3 = x1_;
-    goto end_match_11;
-next_13:;
-    exit(1);
-end_match_11:;
-    return match_3;
+    if_3 = call_16;
+    goto if_next_11;
+else_13:;
+    if_3 = x1_;
+    goto if_next_11;
+if_next_11:;
+    return if_3;
 }
 
 int escapeCase_(int arg_12) {

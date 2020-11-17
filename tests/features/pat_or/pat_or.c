@@ -19,38 +19,42 @@ int complexCase_(int arg_2);
 int main();
 
 int isZeroOrOne_(int x_) {
-    int match_;
-    if ((x_ != 0)) goto next_3;
-    goto match_body_2;
-next_3:;
-    if ((x_ != 1)) goto next_4;
-    goto match_body_2;
-match_body_2:;
-    match_ = 1;
-    goto end_match_1;
-next_4:;
-    match_ = 0;
-    goto end_match_1;
-next_5:;
-end_match_1:;
-    return match_;
+    int switch_;
+    switch (x_) {
+       case 1:
+       case 0:
+          goto clause_2;
+
+       default:
+          goto clause_3;
+    }
+clause_2:;
+    switch_ = 1;
+    goto switch_next_1;
+clause_3:;
+    switch_ = 0;
+    goto switch_next_1;
+switch_next_1:;
+    return switch_;
 }
 
 int simpleCase_(int arg_) {
-    int match_1;
+    int if_;
     int call_ = isZeroOrOne_(0);
-    if ((!(call_))) goto next_7;
+    if (call_) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
     int call_1 = isZeroOrOne_(1);
-    match_1 = call_1;
-    goto end_match_6;
-next_7:;
-    if (call_) goto next_8;
-    match_1 = 0;
-    goto end_match_6;
-next_8:;
-    exit(1);
-end_match_6:;
-    milone_assert(match_1, 8, 2);
+    if_ = call_1;
+    goto if_next_4;
+else_6:;
+    if_ = 0;
+    goto if_next_4;
+if_next_4:;
+    milone_assert(if_, 8, 2);
     int call_2 = 0;
     int call_3 = isZeroOrOne_(2);
     milone_assert((!(call_3)), 9, 2);
@@ -64,39 +68,39 @@ struct IntList {
 };
 
 int startsWithDoubleBits_(struct IntList* xs_) {
-    int match_2;
+    int match_;
+    if ((!(xs_))) goto next_9;
+    if ((xs_->head != 0)) goto next_9;
+    if ((!(xs_->tail))) goto next_9;
+    if ((xs_->tail->head != 0)) goto next_9;
+    goto match_body_8;
+next_9:;
+    if ((!(xs_))) goto next_10;
+    if ((xs_->head != 0)) goto next_10;
+    if ((!(xs_->tail))) goto next_10;
+    if ((xs_->tail->head != 1)) goto next_10;
+    goto match_body_8;
+next_10:;
     if ((!(xs_))) goto next_11;
-    if ((xs_->head != 0)) goto next_11;
+    if ((xs_->head != 1)) goto next_11;
     if ((!(xs_->tail))) goto next_11;
     if ((xs_->tail->head != 0)) goto next_11;
-    goto match_body_10;
+    goto match_body_8;
 next_11:;
     if ((!(xs_))) goto next_12;
-    if ((xs_->head != 0)) goto next_12;
+    if ((xs_->head != 1)) goto next_12;
     if ((!(xs_->tail))) goto next_12;
     if ((xs_->tail->head != 1)) goto next_12;
-    goto match_body_10;
+    goto match_body_8;
+match_body_8:;
+    match_ = 1;
+    goto end_match_7;
 next_12:;
-    if ((!(xs_))) goto next_13;
-    if ((xs_->head != 1)) goto next_13;
-    if ((!(xs_->tail))) goto next_13;
-    if ((xs_->tail->head != 0)) goto next_13;
-    goto match_body_10;
+    match_ = 0;
+    goto end_match_7;
 next_13:;
-    if ((!(xs_))) goto next_14;
-    if ((xs_->head != 1)) goto next_14;
-    if ((!(xs_->tail))) goto next_14;
-    if ((xs_->tail->head != 1)) goto next_14;
-    goto match_body_10;
-match_body_10:;
-    match_2 = 1;
-    goto end_match_9;
-next_14:;
-    match_2 = 0;
-    goto end_match_9;
-next_15:;
-end_match_9:;
-    return match_2;
+end_match_7:;
+    return match_;
 }
 
 int nestedCase_(int arg_1) {
@@ -130,23 +134,23 @@ struct IntIntTuple2 {
 };
 
 int performComplexMatching_(void* expr_) {
-    int match_3;
-    if (((*(((struct IntIntTuple2*)expr_))).t0 != 0)) goto next_18;
-    if (((*(((struct IntIntTuple2*)expr_))).t1 != 0)) goto next_18;
-    goto match_body_17;
+    int match_1;
+    if (((*(((struct IntIntTuple2*)expr_))).t0 != 0)) goto next_16;
+    if (((*(((struct IntIntTuple2*)expr_))).t1 != 0)) goto next_16;
+    goto match_body_15;
+next_16:;
+    if (((*(((struct IntIntTuple2*)expr_))).t0 != 0)) goto next_17;
+    if (((*(((struct IntIntTuple2*)expr_))).t1 != 1)) goto next_17;
+    goto match_body_15;
+match_body_15:;
+    match_1 = 1;
+    goto end_match_14;
+next_17:;
+    match_1 = 0;
+    goto end_match_14;
 next_18:;
-    if (((*(((struct IntIntTuple2*)expr_))).t0 != 0)) goto next_19;
-    if (((*(((struct IntIntTuple2*)expr_))).t1 != 1)) goto next_19;
-    goto match_body_17;
-match_body_17:;
-    match_3 = 1;
-    goto end_match_16;
-next_19:;
-    match_3 = 0;
-    goto end_match_16;
-next_20:;
-end_match_16:;
-    return match_3;
+end_match_14:;
+    return match_1;
 }
 
 int complexCase_(int arg_2) {

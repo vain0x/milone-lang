@@ -8,14 +8,23 @@ int main();
 
 int go_(struct String s_, int i_, int d_) {
 tailrec_1:;
-    int match_;
-    if ((i_ < s_.len)) goto next_3;
-    match_ = (d_ == 0);
-    goto end_match_2;
-next_3:;
-    if ((i_ >= s_.len)) goto next_4;
-    int match_1;
-    if ((s_.str[i_] != '(')) goto next_6;
+    int if_;
+    if ((i_ >= s_.len)) {
+        goto then_3;
+    } else {
+        goto else_4;
+    }
+then_3:;
+    if_ = (d_ == 0);
+    goto if_next_2;
+else_4:;
+    int if_1;
+    if ((s_.str[i_] == '(')) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
     struct String arg_ = s_;
     int arg_1 = (i_ + 1);
     int arg_2 = (d_ + 1);
@@ -23,16 +32,19 @@ next_3:;
     i_ = arg_1;
     d_ = arg_2;
     goto tailrec_1;
-    match_1 = 0;
-    goto end_match_5;
-next_6:;
-    if ((s_.str[i_] == '(')) goto next_7;
-    int match_2;
-    if ((0 < d_)) goto next_9;
-    match_2 = 0;
-    goto end_match_8;
-next_9:;
-    if ((0 >= d_)) goto next_10;
+    if_1 = 0;
+    goto if_next_5;
+else_7:;
+    int if_2;
+    if ((0 >= d_)) {
+        goto then_9;
+    } else {
+        goto else_10;
+    }
+then_9:;
+    if_2 = 0;
+    goto if_next_8;
+else_10:;
     struct String arg_3 = s_;
     int arg_4 = (i_ + 1);
     int arg_5 = (d_ - 1);
@@ -40,38 +52,34 @@ next_9:;
     i_ = arg_4;
     d_ = arg_5;
     goto tailrec_1;
-    match_2 = 0;
-    goto end_match_8;
-next_10:;
-    exit(1);
-end_match_8:;
-    match_1 = match_2;
-    goto end_match_5;
-next_7:;
-    exit(1);
-end_match_5:;
-    match_ = match_1;
-    goto end_match_2;
-next_4:;
-    exit(1);
-end_match_2:;
-    return match_;
+    if_2 = 0;
+    goto if_next_8;
+if_next_8:;
+    if_1 = if_2;
+    goto if_next_5;
+if_next_5:;
+    if_ = if_1;
+    goto if_next_2;
+if_next_2:;
+    return if_;
 }
 
 struct String parse_(struct String s_1) {
-    struct String match_3;
+    struct String if_3;
     int call_ = go_(s_1, 0, 0);
-    if ((!(call_))) goto next_12;
-    match_3 = (struct String){.str = "Accept", .len = 6};
-    goto end_match_11;
-next_12:;
-    if (call_) goto next_13;
-    match_3 = (struct String){.str = "Reject", .len = 6};
-    goto end_match_11;
-next_13:;
-    exit(1);
-end_match_11:;
-    return match_3;
+    if (call_) {
+        goto then_12;
+    } else {
+        goto else_13;
+    }
+then_12:;
+    if_3 = (struct String){.str = "Accept", .len = 6};
+    goto if_next_11;
+else_13:;
+    if_3 = (struct String){.str = "Reject", .len = 6};
+    goto if_next_11;
+if_next_11:;
+    return if_3;
 }
 
 int main() {

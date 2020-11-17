@@ -1030,13 +1030,14 @@ let patNormalize pat =
         go itemPat
         |> List.map (fun itemPat -> HBoxPat(itemPat, loc))
 
-    | HAsPat (innerPat, _, _) ->
-        match go innerPat with
-        | [ _ ] -> [ pat ]
-        | _ -> failwith "Unimpl: Can't use AS patterns conjunction with OR patterns"
+    | HAsPat (bodyPat, varSerial, loc) ->
+        go bodyPat
+        |> List.map (fun bodyPat -> HAsPat(bodyPat, varSerial, loc))
+
     | HAnnoPat (pat, annoTy, loc) ->
         go pat
         |> List.map (fun pat -> HAnnoPat(pat, annoTy, loc))
+
     | HOrPat (first, second, _, _) -> List.append (go first) (go second)
     | HCallPat _ -> failwith "Unimpl"
 
@@ -1202,9 +1203,12 @@ let mexprToTy expr =
 // Statements (MIR)
 // -----------------------------------------------
 
+let mtAbort loc =
+  MExitTerminator(MLitExpr(IntLit 1, loc))
+
 let msGotoUnless pred label loc =
   let notPred = mxNot pred loc
-  MGotoIfStmt(notPred, label, loc)
+  MTerminatorStmt(MGotoIfTerminator(notPred, label), loc)
 
 // -----------------------------------------------
 // Expression sugaring (MIR)

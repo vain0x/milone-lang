@@ -5,19 +5,21 @@ int factorial_(int x_);
 int main();
 
 int factorial_(int x_) {
-    int match_;
-    if ((x_ != 0)) goto next_2;
-    match_ = 1;
-    goto end_match_1;
-next_2:;
-    if ((x_ == 0)) goto next_3;
+    int if_;
+    if ((x_ == 0)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
+    if_ = 1;
+    goto if_next_1;
+else_3:;
     int call_ = factorial_((x_ - 1));
-    match_ = (x_ * call_);
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
-    return match_;
+    if_ = (x_ * call_);
+    goto if_next_1;
+if_next_1:;
+    return if_;
 }
 
 int main() {

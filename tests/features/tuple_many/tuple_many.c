@@ -45,40 +45,46 @@ int main() {
     int y_ = tuple_.t1;
     int z_ = tuple_.t2.t0;
     int w_ = tuple_.t2.t1;
-    int match_;
-    int match_1;
-    int match_2;
-    if ((x_ != 1)) goto next_4;
-    match_2 = (y_ == 2);
-    goto end_match_3;
-next_4:;
-    if ((x_ == 1)) goto next_5;
-    match_2 = 0;
-    goto end_match_3;
-next_5:;
-    exit(1);
-end_match_3:;
-    if ((!(match_2))) goto next_6;
-    match_1 = (z_ == 3);
-    goto end_match_2;
-next_6:;
-    if (match_2) goto next_7;
-    match_1 = 0;
-    goto end_match_2;
-next_7:;
-    exit(1);
-end_match_2:;
-    if ((!(match_1))) goto next_8;
-    match_ = (w_ == 4);
-    goto end_match_1;
-next_8:;
-    if (match_1) goto next_9;
-    match_ = 0;
-    goto end_match_1;
-next_9:;
-    exit(1);
-end_match_1:;
-    milone_assert(match_, 2, 2);
+    int if_;
+    int if_1;
+    int if_2;
+    if ((x_ == 1)) {
+        goto then_4;
+    } else {
+        goto else_5;
+    }
+then_4:;
+    if_2 = (y_ == 2);
+    goto if_next_3;
+else_5:;
+    if_2 = 0;
+    goto if_next_3;
+if_next_3:;
+    if (if_2) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
+    if_1 = (z_ == 3);
+    goto if_next_2;
+else_7:;
+    if_1 = 0;
+    goto if_next_2;
+if_next_2:;
+    if (if_1) {
+        goto then_8;
+    } else {
+        goto else_9;
+    }
+then_8:;
+    if_ = (w_ == 4);
+    goto if_next_1;
+else_9:;
+    if_ = 0;
+    goto if_next_1;
+if_next_1:;
+    milone_assert(if_, 2, 2);
     int call_ = 0;
     struct IntIntIntIntIntIntIntIntIntIntIntTuple11 tuple_2;
     tuple_2.t0 = 1;

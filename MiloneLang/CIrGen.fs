@@ -869,10 +869,6 @@ let private genStmtLetVal ctx serial init ty loc =
   | MTupleInit items -> genInitTuple ctx serial items ty
   | MVariantInit (variantSerial, payload) -> genInitVariant ctx serial variantSerial payload ty
 
-let private genStmtDo ctx expr =
-  let expr, ctx = genExpr ctx expr
-  cirCtxAddStmt ctx (CExprStmt expr)
-
 let private genStmtSet ctx serial right =
   let right, ctx = genExpr ctx right
   let ident = cirCtxUniqueName ctx serial
@@ -883,33 +879,51 @@ let private genStmtReturn ctx expr =
   let expr, ctx = genExpr ctx expr
   cirCtxAddStmt ctx (CReturnStmt(Some expr))
 
-let private genStmtJump ctx stmt =
+// FIXME: Without the result type annotation, invalid code is generated for some reason.
+let private genTerminatorAsBlock ctx terminator: CStmt list * CirCtx =
+  genBlock ctx [ MTerminatorStmt(terminator, noLoc) ]
+
+let private genTerminatorStmt ctx stmt =
   match stmt with
-  | MReturnStmt (expr, _) -> genStmtReturn ctx expr
-  | MLabelStmt (label, _) -> cirCtxAddStmt ctx (CLabelStmt label)
-  | MGotoStmt (label, _) -> cirCtxAddStmt ctx (CGotoStmt label)
-  | MGotoIfStmt (pred, label, _) ->
+  | MReturnTerminator expr -> genStmtReturn ctx expr
+  | MGotoTerminator label -> cirCtxAddStmt ctx (CGotoStmt label)
+
+  | MGotoIfTerminator (pred, label) ->
       let pred, ctx = genExpr ctx pred
       cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
 
-  | MExitStmt (arg, _) ->
+  | MIfTerminator (cond, thenCl, elseCl) ->
+      let cond, ctx = genExpr ctx cond
+      let thenCl, ctx = genTerminatorAsBlock ctx thenCl
+      let elseCl, ctx = genTerminatorAsBlock ctx elseCl
+      cirCtxAddStmt ctx (CIfStmt(cond, thenCl, elseCl))
+
+  | MSwitchTerminator (cond, clauses) ->
+      let cond, ctx = genExpr ctx cond
+
+      let clauses, ctx =
+        (clauses, ctx)
+        |> stMap (fun (clause: MSwitchClause, ctx) ->
+             let stmts, ctx =
+               genTerminatorAsBlock ctx clause.Terminator
+
+             (clause.Cases, clause.IsDefault, stmts), ctx)
+
+      cirCtxAddStmt ctx (CSwitchStmt(cond, clauses))
+
+  | MExitTerminator arg ->
       let doArm () =
         let arg, ctx = genExpr ctx arg
         cirCtxAddStmt ctx (CExprStmt(CCallExpr(CRefExpr "exit", [ arg ])))
 
       doArm ()
-  | _ -> failwith "NEVER"
 
 let private genStmt ctx stmt =
   match stmt with
-  | MDoStmt (expr, _) -> genStmtDo ctx expr
   | MLetValStmt (serial, init, ty, loc) -> genStmtLetVal ctx serial init ty loc
   | MSetStmt (serial, right, _) -> genStmtSet ctx serial right
-  | MReturnStmt _
-  | MLabelStmt _
-  | MGotoStmt _
-  | MGotoIfStmt _
-  | MExitStmt _ -> genStmtJump ctx stmt
+  | MLabelStmt (label, _) -> cirCtxAddStmt ctx (CLabelStmt label)
+  | MTerminatorStmt (terminator, _loc) -> genTerminatorStmt ctx terminator
 
   | MIfStmt (cond, thenCl, elseCl, _) ->
       let cond, ctx = genExpr ctx cond
@@ -917,13 +931,17 @@ let private genStmt ctx stmt =
       let elseCl, ctx = genBlock ctx elseCl
       cirCtxAddStmt ctx (CIfStmt(cond, thenCl, elseCl))
 
-  | MProcStmt _ -> ctx
-
 let private genBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx: CirCtx = genStmts (cirCtxNewBlock ctx) stmts
   let stmts = bodyCtx.Stmts
   let ctx = cirCtxRollBack ctx bodyCtx
   List.rev stmts, ctx
+
+let private genBlocks (ctx: CirCtx) (blocks: MBlock list) =
+  match blocks with
+  | [ block ] -> genBlock ctx block.Stmts
+
+  | _ -> failwith "unimplemented"
 
 let private genStmts (ctx: CirCtx) (stmts: MStmt list): CirCtx =
   let rec go ctx stmts =
@@ -939,7 +957,7 @@ let private genDecls (ctx: CirCtx) decls =
   match decls with
   | [] -> ctx
 
-  | MProcStmt (callee, isMainFun, args, body, resultTy, _) :: decls ->
+  | MProcDecl (callee, isMainFun, args, body, resultTy, _) :: decls ->
       let ident, args =
         if isMainFun then "main", [] else cirCtxUniqueName ctx callee, args
 
@@ -952,13 +970,11 @@ let private genDecls (ctx: CirCtx) decls =
             go ((ident, cty) :: acc) ctx args
 
       let args, ctx = go [] ctx args
-      let body, ctx = genBlock ctx body
+      let body, ctx = genBlocks ctx body
       let resultTy, ctx = cirGetCTy ctx resultTy
       let funDecl = CFunDecl(ident, args, resultTy, body)
       let ctx = cirCtxAddDecl ctx funDecl
       genDecls ctx decls
-
-  | _ -> failwith "Top-level statements must be declarations."
 
 let private genLogs (ctx: CirCtx) =
   let tyDisplayFn ty =

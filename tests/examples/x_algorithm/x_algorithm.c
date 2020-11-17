@@ -17,89 +17,99 @@ int neg_(int x_) {
 }
 
 int abs_(int x_1) {
-    int match_;
-    if ((x_1 < 0)) goto next_2;
-    match_ = x_1;
-    goto end_match_1;
-next_2:;
-    if ((x_1 >= 0)) goto next_3;
+    int if_;
+    if ((x_1 >= 0)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
+    if_ = x_1;
+    goto if_next_1;
+else_3:;
     int call_ = neg_(x_1);
-    match_ = call_;
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
-    return match_;
+    if_ = call_;
+    goto if_next_1;
+if_next_1:;
+    return if_;
 }
 
 int gcd_(int x_2, int y_) {
 tailrec_4:;
-    int match_1;
-    if ((y_ != 0)) goto next_6;
+    int if_1;
+    if ((y_ == 0)) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
     int call_1 = abs_(x_2);
-    match_1 = call_1;
-    goto end_match_5;
-next_6:;
-    if ((y_ == 0)) goto next_7;
+    if_1 = call_1;
+    goto if_next_5;
+else_7:;
     int arg_ = y_;
     int arg_1 = (x_2 % y_);
     x_2 = arg_;
     y_ = arg_1;
     goto tailrec_4;
-    match_1 = 0;
-    goto end_match_5;
-next_7:;
-    exit(1);
-end_match_5:;
-    return match_1;
+    if_1 = 0;
+    goto if_next_5;
+if_next_5:;
+    return if_1;
 }
 
 int go_(int x_3, int k_) {
 tailrec_8:;
-    int match_2;
-    if ((x_3 >= (k_ * k_))) goto next_10;
-    match_2 = 1;
-    goto end_match_9;
-next_10:;
-    if ((x_3 < (k_ * k_))) goto next_11;
-    int match_3;
-    if (((x_3 % k_) == 0)) goto next_13;
+    int if_2;
+    if ((x_3 < (k_ * k_))) {
+        goto then_10;
+    } else {
+        goto else_11;
+    }
+then_10:;
+    if_2 = 1;
+    goto if_next_9;
+else_11:;
+    int if_3;
+    if (((x_3 % k_) != 0)) {
+        goto then_13;
+    } else {
+        goto else_14;
+    }
+then_13:;
     int arg_2 = x_3;
     int arg_3 = (k_ + 1);
     x_3 = arg_2;
     k_ = arg_3;
     goto tailrec_8;
-    match_3 = 0;
-    goto end_match_12;
-next_13:;
-    if (((x_3 % k_) != 0)) goto next_14;
-    match_3 = 0;
-    goto end_match_12;
-next_14:;
-    exit(1);
-end_match_12:;
-    match_2 = match_3;
-    goto end_match_9;
-next_11:;
-    exit(1);
-end_match_9:;
-    return match_2;
+    if_3 = 0;
+    goto if_next_12;
+else_14:;
+    if_3 = 0;
+    goto if_next_12;
+if_next_12:;
+    if_2 = if_3;
+    goto if_next_9;
+if_next_9:;
+    return if_2;
 }
 
 int isPrime_(int x_3) {
-    int match_4;
-    if ((x_3 < 2)) goto next_16;
+    int if_4;
+    if ((x_3 >= 2)) {
+        goto then_16;
+    } else {
+        goto else_17;
+    }
+then_16:;
     int call_2 = go_(x_3, 2);
-    match_4 = call_2;
-    goto end_match_15;
-next_16:;
-    if ((x_3 >= 2)) goto next_17;
-    match_4 = 0;
-    goto end_match_15;
-next_17:;
-    exit(1);
-end_match_15:;
-    return match_4;
+    if_4 = call_2;
+    goto if_next_15;
+else_17:;
+    if_4 = 0;
+    goto if_next_15;
+if_next_15:;
+    return if_4;
 }
 
 int main() {

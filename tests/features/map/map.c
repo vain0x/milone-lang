@@ -45,29 +45,33 @@ int typeTest_(int arg_6);
 int main();
 
 int intCmp_(int x_, int y_) {
-    int match_;
-    if ((y_ >= x_)) goto next_2;
-    match_ = 1;
-    goto end_match_1;
-next_2:;
-    if ((y_ < x_)) goto next_3;
-    int match_1;
-    if ((y_ != x_)) goto next_5;
-    match_1 = 0;
-    goto end_match_4;
-next_5:;
-    if ((y_ == x_)) goto next_6;
-    match_1 = (0 - 1);
-    goto end_match_4;
-next_6:;
-    exit(1);
-end_match_4:;
-    match_ = match_1;
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
-    return match_;
+    int if_;
+    if ((y_ < x_)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
+    if_ = 1;
+    goto if_next_1;
+else_3:;
+    int if_1;
+    if ((y_ == x_)) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
+    if_1 = 0;
+    goto if_next_4;
+else_6:;
+    if_1 = (0 - 1);
+    goto if_next_4;
+if_next_4:;
+    if_ = if_1;
+    goto if_next_1;
+if_next_1:;
+    return if_;
 }
 
 uint32_t intHash_(int x_1) {

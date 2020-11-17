@@ -56,14 +56,19 @@ struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
 
 int go_(int n_1, struct LazyList_ xs_1) {
 tailrec_1:;
+    int if_;
+    if ((0 < n_1)) {
+        goto then_3;
+    } else {
+        goto else_7;
+    }
+then_3:;
     int match_;
-    if ((0 >= n_1)) goto next_3;
-    int match_1;
-    if ((xs_1.tag != Nil_)) goto next_6;
-    match_1 = 0;
-    goto end_match_5;
-next_6:;
-    if ((xs_1.tag != Cons_)) goto next_7;
+    if ((xs_1.tag != Nil_)) goto next_5;
+    match_ = 0;
+    goto end_match_4;
+next_5:;
+    if ((xs_1.tag != Cons_)) goto next_6;
     int head_1 = (*(((struct IntUnitLazyList_Fun1Tuple2*)xs_1.Cons_))).t0;
     struct UnitLazyList_Fun1 tail_1 = (*(((struct IntUnitLazyList_Fun1Tuple2*)xs_1.Cons_))).t1;
     printf("%d\n", head_1);
@@ -74,19 +79,16 @@ next_6:;
     n_1 = arg_3;
     xs_1 = arg_4;
     goto tailrec_1;
-    match_1 = 0;
-    goto end_match_5;
-next_7:;
-end_match_5:;
     match_ = 0;
-    goto end_match_2;
-next_3:;
-    if ((0 < n_1)) goto next_4;
-    match_ = 0;
-    goto end_match_2;
-next_4:;
-    exit(1);
-end_match_2:;
+    goto end_match_4;
+next_6:;
+end_match_4:;
+    if_ = 0;
+    goto if_next_2;
+else_7:;
+    if_ = 0;
+    goto if_next_2;
+if_next_2:;
     return 0;
 }
 

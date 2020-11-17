@@ -26,7 +26,7 @@
     <Compile Include="KirGen.fs" />
     <Compile Include="KirPropagate.fs" />
     <Compile Include="Mir.fs" />
-    <Compile Include="KirToMir.fs" />
+    <!-- <Compile Include="KirToMir.fs" /> -->
     <Compile Include="KirDump.fs" />
     <Compile Include="CIrGen.fs" />
     <Compile Include="CPrinting.fs" />

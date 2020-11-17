@@ -28,18 +28,20 @@ next_2:;
     if ((!(list_->tail))) goto next_3;
     int y_ = list_->tail->head;
     if ((!((!(list_->tail->tail))))) goto next_3;
-    int match_1;
-    if ((x_ != 1)) goto next_6;
-    match_1 = (y_ == 2);
-    goto end_match_5;
-next_6:;
-    if ((x_ == 1)) goto next_7;
-    match_1 = 0;
-    goto end_match_5;
-next_7:;
-    exit(1);
-end_match_5:;
-    milone_assert(match_1, 5, 4);
+    int if_;
+    if ((x_ == 1)) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
+    if_ = (y_ == 2);
+    goto if_next_5;
+else_7:;
+    if_ = 0;
+    goto if_next_5;
+if_next_5:;
+    milone_assert(if_, 5, 4);
     int call_1 = 0;
     match_ = 0;
     goto end_match_1;

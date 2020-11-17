@@ -6,21 +6,28 @@ int main();
 
 int go_(int len_, struct String source_, int i_) {
 tailrec_1:;
-    int match_;
-    if ((i_ >= len_)) goto next_3;
-    int match_1;
-    if ((source_.str[i_] != 'o')) goto next_6;
+    int if_;
+    if ((i_ < len_)) {
+        goto then_3;
+    } else {
+        goto else_7;
+    }
+then_3:;
+    int if_1;
+    if ((source_.str[i_] == 'o')) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
     printf("%d\n", i_);
     int call_ = 0;
-    match_1 = 0;
-    goto end_match_5;
-next_6:;
-    if ((source_.str[i_] == 'o')) goto next_7;
-    match_1 = 0;
-    goto end_match_5;
-next_7:;
-    exit(1);
-end_match_5:;
+    if_1 = 0;
+    goto if_next_4;
+else_6:;
+    if_1 = 0;
+    goto if_next_4;
+if_next_4:;
     int arg_ = len_;
     struct String arg_1 = source_;
     int arg_2 = (i_ + 1);
@@ -28,15 +35,12 @@ end_match_5:;
     source_ = arg_1;
     i_ = arg_2;
     goto tailrec_1;
-    match_ = 0;
-    goto end_match_2;
-next_3:;
-    if ((i_ < len_)) goto next_4;
-    match_ = 0;
-    goto end_match_2;
-next_4:;
-    exit(1);
-end_match_2:;
+    if_ = 0;
+    goto if_next_2;
+else_7:;
+    if_ = 0;
+    goto if_next_2;
+if_next_2:;
     return 0;
 }
 

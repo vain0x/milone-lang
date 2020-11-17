@@ -21,12 +21,16 @@ struct IntList {
 
 struct IntList* go_(struct IntList* acc_, int i_) {
 tailrec_1:;
-    struct IntList* match_;
-    if ((i_ < 0)) goto next_3;
-    match_ = acc_;
-    goto end_match_2;
-next_3:;
-    if ((i_ >= 0)) goto next_4;
+    struct IntList* if_;
+    if ((i_ >= 0)) {
+        goto then_3;
+    } else {
+        goto else_4;
+    }
+then_3:;
+    if_ = acc_;
+    goto if_next_2;
+else_4:;
     struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = i_;
     list_->tail = acc_;
@@ -35,12 +39,10 @@ next_3:;
     acc_ = arg_1;
     i_ = arg_2;
     goto tailrec_1;
-    match_ = NULL;
-    goto end_match_2;
-next_4:;
-    exit(1);
-end_match_2:;
-    return match_;
+    if_ = NULL;
+    goto if_next_2;
+if_next_2:;
+    return if_;
 }
 
 int fun_(int arg_3) {

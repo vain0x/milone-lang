@@ -959,29 +959,37 @@ type MInit =
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
 
+type MSwitchClause =
+  { Cases: Lit list
+    IsDefault: bool
+    Terminator: MTerminator }
+
+type MTerminator =
+  | MExitTerminator of exitCode: MExpr
+  | MReturnTerminator of result: MExpr
+  | MGotoTerminator of Label
+  | MGotoIfTerminator of cond: MExpr * Label
+  | MIfTerminator of cond: MExpr * thenCl: MTerminator * elseCl: MTerminator
+  | MSwitchTerminator of cond: MExpr * MSwitchClause list
+
 /// Statement in middle IR.
 type MStmt =
-  /// Statement to evaluate an expression, e.g. `do f ()`.
-  | MDoStmt of MExpr * Loc
-
   /// Declare a local variable.
   | MLetValStmt of VarSerial * MInit * Ty * Loc
 
   /// Set to uninitialized local variable.
   | MSetStmt of VarSerial * init: MExpr * Loc
 
-  | MReturnStmt of MExpr * Loc
   | MLabelStmt of Label * Loc
-  | MGotoStmt of Label * Loc
-  | MGotoIfStmt of MExpr * Label * Loc
 
   // Only for KIR (comparison prim).
   | MIfStmt of MExpr * MStmt list * MStmt list * Loc
 
-  | MExitStmt of MExpr * Loc
-  | MProcStmt of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MStmt list * resultTy: Ty * Loc
+  | MTerminatorStmt of MTerminator * Loc
 
+type MBlock = { Stmts: MStmt list }
 
+type MDecl = MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
 
 // -----------------------------------------------
 // CIR types
@@ -1081,6 +1089,10 @@ type CStmt =
   | CGotoStmt of Label
   | CGotoIfStmt of CExpr * Label
   | CIfStmt of CExpr * CStmt list * CStmt list
+
+  /// clause: (caseLiterals, isDefault, body).
+  | CSwitchStmt of cond: CExpr * clauses: (Lit list * bool * CStmt list) list
+
   | CReturnStmt of CExpr option
 
 /// Top-level definition in C language.

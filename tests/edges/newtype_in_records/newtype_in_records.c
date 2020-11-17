@@ -13,18 +13,20 @@ int between_(void* day_, void* range_);
 int main();
 
 void* newDay_(int value_) {
-    int match_;
-    if ((value_ < 1)) goto next_2;
-    match_ = (31 >= value_);
-    goto end_match_1;
-next_2:;
-    if ((value_ >= 1)) goto next_3;
-    match_ = 0;
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
-    milone_assert(match_, 10, 2);
+    int if_;
+    if ((value_ >= 1)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
+    if_ = (31 >= value_);
+    goto if_next_1;
+else_3:;
+    if_ = 0;
+    goto if_next_1;
+if_next_1:;
+    milone_assert(if_, 10, 2);
     int call_ = 0;
     void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = value_;
@@ -55,22 +57,24 @@ void* newDayRange_(void* start_, void* endDay_) {
 }
 
 int between_(void* day_, void* range_) {
-    int match_1;
+    int if_1;
     int call_4 = dayToInt_(day_);
     int call_5 = dayToInt_((*(((struct ObjectObjectTuple2*)range_))).t0);
-    if ((call_4 < call_5)) goto next_5;
+    if ((call_4 >= call_5)) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
     int call_6 = dayToInt_((*(((struct ObjectObjectTuple2*)range_))).t1);
     int call_7 = dayToInt_(day_);
-    match_1 = (call_6 >= call_7);
-    goto end_match_4;
-next_5:;
-    if ((call_4 >= call_5)) goto next_6;
-    match_1 = 0;
-    goto end_match_4;
-next_6:;
-    exit(1);
-end_match_4:;
-    return match_1;
+    if_1 = (call_6 >= call_7);
+    goto if_next_4;
+else_6:;
+    if_1 = 0;
+    goto if_next_4;
+if_next_4:;
+    return if_1;
 }
 
 int main() {
