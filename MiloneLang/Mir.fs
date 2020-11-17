@@ -86,8 +86,8 @@ let private mirCtxPrependStmt (ctx: MirCtx) stmt =
 
 let private mirCtxAddStmt (ctx: MirCtx) (stmt: MStmt) = { ctx with Stmts = stmt :: ctx.Stmts }
 
-/// Returns statements in reversed order.
-let private mirCtxTakeStmts (ctx: MirCtx) = ctx.Stmts, { ctx with Stmts = [] }
+let private takeStmts (ctx: MirCtx) =
+  List.rev ctx.Stmts, { ctx with Stmts = [] }
 
 let private addDecl (ctx: MirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
 
@@ -835,8 +835,7 @@ let private mirifyExprLetFun (ctx: MirCtx) calleeSerial isMainFun argPats body n
     let ctx = mirCtxAddStmt ctx returnStmt
 
     let ctx = cleanUpTailRec ctx parentFun
-    let stmts, ctx = mirCtxTakeStmts ctx
-    let body = List.rev stmts
+    let body, ctx = takeStmts ctx
     args, blockTy, body, ctx
 
   let core () =
