@@ -217,6 +217,13 @@ let setUnion first second =
   |> setFold (fun set item -> set |> setAdd item) second
 
 // -----------------------------------------------
+// Bool
+// -----------------------------------------------
+
+let boolCmp l r =
+  (if l then 1 else 0) - (if r then 1 else 0)
+
+// -----------------------------------------------
 // Int
 // -----------------------------------------------
 
@@ -756,6 +763,22 @@ let litToTy (lit: Lit): Ty =
   | IntLit _ -> tyInt
   | CharLit _ -> tyChar
   | StrLit _ -> tyStr
+
+let litCmp l r =
+  match l, r with
+  | BoolLit l, BoolLit r -> boolCmp l r
+  | BoolLit _, _ -> -1
+  | _, BoolLit _ -> 1
+
+  | IntLit l, IntLit r -> intCmp l r
+  | IntLit _, _ -> -1
+  | _, IntLit _ -> 1
+
+  | CharLit l, CharLit r -> int l - int r
+  | CharLit _, _ -> -1
+  | _, CharLit _ -> 1
+
+  | StrLit l, StrLit r -> strCmp l r
 
 // -----------------------------------------------
 // Primitives (HIR)
