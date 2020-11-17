@@ -8,18 +8,14 @@ int main();
 
 int testEol_(int arg_) {
     struct String eol_ = (struct String){.str = "\n", .len = 1};
-    int match_;
-    if ((str_cmp(eol_, (struct String){.str = "\n", .len = 1}) != 0)) goto next_2;
-    match_ = 1;
-    goto end_match_1;
-next_2:;
-    if ((str_cmp(eol_, (struct String){.str = "\n", .len = 1}) == 0)) goto next_3;
-    match_ = (str_cmp(eol_, (struct String){.str = "\r\n", .len = 2}) == 0);
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
-    milone_assert(match_, 3, 2);
+    int if_;
+    if ((str_cmp(eol_, (struct String){.str = "\n", .len = 1}) != 0)) goto else_1;
+    if_ = 1;
+    goto end_if_2;
+else_1:;
+    if_ = (str_cmp(eol_, (struct String){.str = "\r\n", .len = 2}) == 0);
+end_if_2:;
+    milone_assert(if_, 3, 2);
     int call_ = 0;
     return 0;
 }

@@ -69,14 +69,13 @@ int fun_1(void* env_1, int arg_3, struct String arg_4) {
 
 int der_(struct String d_, int n_, struct String f_1) {
 tailrec_1:;
-    int match_;
-    if ((n_ != 0)) goto next_3;
+    int if_;
+    if ((n_ != 0)) goto else_2;
     printf("%s\n", f_1.str);
     int call_2 = 0;
-    match_ = 0;
-    goto end_match_2;
-next_3:;
-    if ((n_ == 0)) goto next_4;
+    if_ = 0;
+    goto end_if_3;
+else_2:;
     struct String arg_8 = d_;
     int arg_9 = (n_ - 1);
     struct String arg_10 = str_add(f_1, d_);
@@ -84,11 +83,8 @@ next_3:;
     n_ = arg_9;
     f_1 = arg_10;
     goto tailrec_1;
-    match_ = 0;
-    goto end_match_2;
-next_4:;
-    exit(1);
-end_match_2:;
+    if_ = 0;
+end_if_3:;
     return 0;
 }
 

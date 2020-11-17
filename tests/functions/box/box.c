@@ -5,21 +5,17 @@ int printIntOrStr_(int isInt_, void* value_);
 int main();
 
 int printIntOrStr_(int isInt_, void* value_) {
-    int match_;
-    if ((!(isInt_))) goto next_2;
+    int if_;
+    if ((!(isInt_))) goto else_1;
     printf("%d\n", (*(((int*)value_))));
     int call_ = 0;
-    match_ = 0;
-    goto end_match_1;
-next_2:;
-    if (isInt_) goto next_3;
+    if_ = 0;
+    goto end_if_2;
+else_1:;
     printf("%s\n", (*(((struct String*)value_))).str);
     int call_1 = 0;
-    match_ = 0;
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
+    if_ = 0;
+end_if_2:;
     return 0;
 }
 

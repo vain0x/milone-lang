@@ -41,33 +41,25 @@ int yodaCase_(int exitCode_) {
 }
 
 int proj_2(int cond_, int body_, int alt_) {
-    int match_;
-    if ((!(cond_))) goto next_2;
-    match_ = body_;
-    goto end_match_1;
-next_2:;
-    if (cond_) goto next_3;
-    match_ = alt_;
-    goto end_match_1;
-next_3:;
-    exit(1);
-end_match_1:;
-    return match_;
+    int if_;
+    if ((!(cond_))) goto else_1;
+    if_ = body_;
+    goto end_if_2;
+else_1:;
+    if_ = alt_;
+end_if_2:;
+    return if_;
 }
 
 struct String proj_1(int cond_, struct String body_, struct String alt_) {
-    struct String match_1;
-    if ((!(cond_))) goto next_5;
-    match_1 = body_;
-    goto end_match_4;
-next_5:;
-    if (cond_) goto next_6;
-    match_1 = alt_;
-    goto end_match_4;
-next_6:;
-    exit(1);
-end_match_4:;
-    return match_1;
+    struct String if_1;
+    if ((!(cond_))) goto else_3;
+    if_1 = body_;
+    goto end_if_4;
+else_3:;
+    if_1 = alt_;
+end_if_4:;
+    return if_1;
 }
 
 int polymorphicFunCase_(int arg_1) {

@@ -75,19 +75,15 @@ int testMatchArmsMakeScope_(int arg_2) {
     goto end_match_7;
 next_8:;
     if ((tuple_.t0 != 2)) goto next_9;
-    int match_3;
-    if ((x_ == 2)) goto next_12;
+    int if_;
+    if ((x_ == 2)) goto else_11;
     milone_assert(0, 16, 19);
     int call_3 = 0;
-    match_3 = 0;
-    goto end_match_11;
-next_12:;
-    if ((x_ != 2)) goto next_13;
-    match_3 = 0;
-    goto end_match_11;
-next_13:;
-    exit(1);
-end_match_11:;
+    if_ = 0;
+    goto end_if_12;
+else_11:;
+    if_ = 0;
+end_if_12:;
     match_2 = 0;
     goto end_match_7;
 next_9:;
@@ -101,22 +97,22 @@ end_match_7:;
 }
 
 int testNestedMatchesParseCorrectly_(int arg_3) {
+    int match_3;
+    if (1) goto next_14;
     int match_4;
-    if (1) goto next_15;
-    int match_5;
     milone_assert(0, 25, 6);
     int call_5 = 0;
-    match_5 = 0;
-    goto end_match_17;
-next_18:;
-end_match_17:;
     match_4 = 0;
-    goto end_match_14;
+    goto end_match_16;
+next_17:;
+end_match_16:;
+    match_3 = 0;
+    goto end_match_13;
+next_14:;
+    match_3 = 0;
+    goto end_match_13;
 next_15:;
-    match_4 = 0;
-    goto end_match_14;
-next_16:;
-end_match_14:;
+end_match_13:;
     return 0;
 }
 
