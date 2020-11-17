@@ -57,7 +57,12 @@ struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
 int go_(int n_1, struct LazyList_ xs_1) {
 tailrec_1:;
     int if_;
-    if ((0 >= n_1)) goto else_2;
+    if ((0 < n_1)) {
+        goto then_3;
+    } else {
+        goto else_7;
+    }
+then_3:;
     int match_;
     if ((xs_1.tag != Nil_)) goto next_5;
     match_ = 0;
@@ -79,10 +84,11 @@ next_5:;
 next_6:;
 end_match_4:;
     if_ = 0;
-    goto end_if_3;
-else_2:;
+    goto if_next_2;
+else_7:;
     if_ = 0;
-end_if_3:;
+    goto if_next_2;
+if_next_2:;
     return 0;
 }
 

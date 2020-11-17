@@ -6,16 +6,22 @@ int main();
 
 int printIntOrStr_(int isInt_, void* value_) {
     int if_;
-    if ((!(isInt_))) goto else_1;
+    if (isInt_) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     printf("%d\n", (*(((int*)value_))));
     int call_ = 0;
     if_ = 0;
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     printf("%s\n", (*(((struct String*)value_))).str);
     int call_1 = 0;
     if_ = 0;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     return 0;
 }
 

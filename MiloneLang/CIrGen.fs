@@ -879,6 +879,10 @@ let private genStmtReturn ctx expr =
   let expr, ctx = genExpr ctx expr
   cirCtxAddStmt ctx (CReturnStmt(Some expr))
 
+// FIXME: Without the result type annotation, invalid code is generated for some reason.
+let private genTerminatorAsBlock ctx terminator: CStmt list * CirCtx =
+  genBlock ctx [ MTerminatorStmt(terminator, noLoc) ]
+
 let private genTerminatorStmt ctx stmt =
   match stmt with
   | MReturnTerminator expr -> genStmtReturn ctx expr
@@ -888,6 +892,12 @@ let private genTerminatorStmt ctx stmt =
       let pred, ctx = genExpr ctx pred
       cirCtxAddStmt ctx (CGotoIfStmt(pred, label))
 
+  | MIfTerminator (cond, thenCl, elseCl) ->
+      let cond, ctx = genExpr ctx cond
+      let thenCl, ctx = genTerminatorAsBlock ctx thenCl
+      let elseCl, ctx = genTerminatorAsBlock ctx elseCl
+      cirCtxAddStmt ctx (CIfStmt(cond, thenCl, elseCl))
+
   | MSwitchTerminator (cond, clauses) ->
       let cond, ctx = genExpr ctx cond
 
@@ -895,7 +905,7 @@ let private genTerminatorStmt ctx stmt =
         (clauses, ctx)
         |> stMap (fun (clause: MSwitchClause, ctx) ->
              let stmts, ctx =
-               genBlock ctx [ MTerminatorStmt(clause.Terminator, noLoc) ]
+               genTerminatorAsBlock ctx clause.Terminator
 
              (clause.Cases, clause.IsDefault, stmts), ctx)
 

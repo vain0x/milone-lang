@@ -42,23 +42,35 @@ int yodaCase_(int exitCode_) {
 
 int proj_2(int cond_, int body_, int alt_) {
     int if_;
-    if ((!(cond_))) goto else_1;
+    if (cond_) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     if_ = body_;
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     if_ = alt_;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 
 struct String proj_1(int cond_, struct String body_, struct String alt_) {
     struct String if_1;
-    if ((!(cond_))) goto else_3;
+    if (cond_) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
     if_1 = body_;
-    goto end_if_4;
-else_3:;
+    goto if_next_4;
+else_6:;
     if_1 = alt_;
-end_if_4:;
+    goto if_next_4;
+if_next_4:;
     return if_1;
 }
 

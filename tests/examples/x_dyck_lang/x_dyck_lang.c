@@ -9,12 +9,22 @@ int main();
 int go_(struct String s_, int i_, int d_) {
 tailrec_1:;
     int if_;
-    if ((i_ < s_.len)) goto else_2;
+    if ((i_ >= s_.len)) {
+        goto then_3;
+    } else {
+        goto else_4;
+    }
+then_3:;
     if_ = (d_ == 0);
-    goto end_if_3;
-else_2:;
+    goto if_next_2;
+else_4:;
     int if_1;
-    if ((s_.str[i_] != '(')) goto else_4;
+    if ((s_.str[i_] == '(')) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
     struct String arg_ = s_;
     int arg_1 = (i_ + 1);
     int arg_2 = (d_ + 1);
@@ -23,13 +33,18 @@ else_2:;
     d_ = arg_2;
     goto tailrec_1;
     if_1 = 0;
-    goto end_if_5;
-else_4:;
+    goto if_next_5;
+else_7:;
     int if_2;
-    if ((0 < d_)) goto else_6;
+    if ((0 >= d_)) {
+        goto then_9;
+    } else {
+        goto else_10;
+    }
+then_9:;
     if_2 = 0;
-    goto end_if_7;
-else_6:;
+    goto if_next_8;
+else_10:;
     struct String arg_3 = s_;
     int arg_4 = (i_ + 1);
     int arg_5 = (d_ - 1);
@@ -38,23 +53,32 @@ else_6:;
     d_ = arg_5;
     goto tailrec_1;
     if_2 = 0;
-end_if_7:;
+    goto if_next_8;
+if_next_8:;
     if_1 = if_2;
-end_if_5:;
+    goto if_next_5;
+if_next_5:;
     if_ = if_1;
-end_if_3:;
+    goto if_next_2;
+if_next_2:;
     return if_;
 }
 
 struct String parse_(struct String s_1) {
     struct String if_3;
     int call_ = go_(s_1, 0, 0);
-    if ((!(call_))) goto else_8;
+    if (call_) {
+        goto then_12;
+    } else {
+        goto else_13;
+    }
+then_12:;
     if_3 = (struct String){.str = "Accept", .len = 6};
-    goto end_if_9;
-else_8:;
+    goto if_next_11;
+else_13:;
     if_3 = (struct String){.str = "Reject", .len = 6};
-end_if_9:;
+    goto if_next_11;
+if_next_11:;
     return if_3;
 }
 

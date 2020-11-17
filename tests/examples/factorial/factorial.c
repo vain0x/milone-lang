@@ -6,13 +6,19 @@ int main();
 
 int factorial_(int x_) {
     int if_;
-    if ((x_ != 0)) goto else_1;
+    if ((x_ == 0)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     if_ = 1;
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     int call_ = factorial_((x_ - 1));
     if_ = (x_ * call_);
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 

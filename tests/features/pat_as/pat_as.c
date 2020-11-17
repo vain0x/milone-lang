@@ -49,18 +49,30 @@ int shadowingCase_(int arg_1) {
     int y2_ = y_.t1;
     int if_;
     int if_1;
-    if ((x_2 != 2)) goto else_8;
+    if ((x_2 == 2)) {
+        goto then_8;
+    } else {
+        goto else_9;
+    }
+then_8:;
     if_1 = (y1_ == 1);
-    goto end_if_9;
-else_8:;
+    goto if_next_7;
+else_9:;
     if_1 = 0;
-end_if_9:;
-    if ((!(if_1))) goto else_6;
+    goto if_next_7;
+if_next_7:;
+    if (if_1) {
+        goto then_10;
+    } else {
+        goto else_11;
+    }
+then_10:;
     if_ = (y2_ == 2);
-    goto end_if_7;
-else_6:;
+    goto if_next_6;
+else_11:;
     if_ = 0;
-end_if_7:;
+    goto if_next_6;
+if_next_6:;
     milone_assert(if_, 12, 4);
     int call_2 = 0;
     match_ = 0;

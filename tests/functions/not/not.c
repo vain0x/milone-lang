@@ -12,14 +12,20 @@ int not_(int arg_) {
 
 int main() {
     int if_;
-    if (0) goto else_1;
+    if (1) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     printf("not false\n");
     int call_1 = 0;
     if_ = 0;
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     if_ = 0;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     int call_2 = not_(0);
     return 0;
 }

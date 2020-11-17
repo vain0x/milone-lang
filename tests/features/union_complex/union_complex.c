@@ -177,18 +177,30 @@ int main() {
     if ((!((!((*(((struct Node_List**)variant_6.Node_)))->tail->tail->tail))))) goto next_2;
     int if_;
     int if_1;
-    if ((x_ != 1)) goto else_6;
+    if ((x_ == 1)) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
     if_1 = (y_ == 2);
-    goto end_if_7;
-else_6:;
+    goto if_next_5;
+else_7:;
     if_1 = 0;
-end_if_7:;
-    if ((!(if_1))) goto else_4;
+    goto if_next_5;
+if_next_5:;
+    if (if_1) {
+        goto then_8;
+    } else {
+        goto else_9;
+    }
+then_8:;
     if_ = (z_ == 3);
-    goto end_if_5;
-else_4:;
+    goto if_next_4;
+else_9:;
     if_ = 0;
-end_if_5:;
+    goto if_next_4;
+if_next_4:;
     milone_assert(if_, 27, 4);
     int call_2 = 0;
     match_ = 0;
@@ -224,18 +236,18 @@ end_match_1:;
     struct IntThird_Tuple2List* list_6 = (struct IntThird_Tuple2List*)milone_mem_alloc(1, sizeof(struct IntThird_Tuple2List));
     list_6->head = tuple_2;
     list_6->tail = NULL;
-    if ((!(list_6))) goto next_9;
-    if ((list_6->head.t0 != 0)) goto next_9;
-    if ((list_6->head.t1.tag != Leaf3_)) goto next_9;
-    if ((!((!(list_6->tail))))) goto next_9;
+    if ((!(list_6))) goto next_11;
+    if ((list_6->head.t0 != 0)) goto next_11;
+    if ((list_6->head.t1.tag != Leaf3_)) goto next_11;
+    if ((!((!(list_6->tail))))) goto next_11;
     match_1 = 0;
-    goto end_match_8;
-next_9:;
+    goto end_match_10;
+next_11:;
     milone_assert(0, 37, 9);
     int call_4 = 0;
     match_1 = 0;
-    goto end_match_8;
-next_10:;
-end_match_8:;
+    goto end_match_10;
+next_12:;
+end_match_10:;
     return 0;
 }

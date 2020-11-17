@@ -360,30 +360,54 @@ let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
 
 /// Tries to *sugar* a match expression to if expression
 /// when `match p with true -> body | false -> alt`.
-let private mirifyExprMatchAsIfStmt ctx target arms ty loc =
-  match exprToTy target, arms with
+let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
+  match exprToTy cond, arms with
   | AppTy (BoolTyCtor, []),
     [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body;
       HLitPat (BoolLit false, _), HLitExpr (BoolLit true, _), alt ] ->
       let temp, tempSet, ctx = mirCtxLetFreshVar ctx "if" ty loc
+      let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "if_next" loc
+
+      let cond, ctx = mirifyExpr ctx cond
+
+      // Then clause.
+      let thenLabelStmt, thenLabel, ctx = mirCtxFreshLabel ctx "then" loc
+      let parentCtx, ctx = ctx, mirCtxNewBlock ctx
+
+      let thenCl, ctx =
+        let ctx = mirCtxAddStmt ctx thenLabelStmt
+        let body, ctx = mirifyExpr ctx body
+        let ctx = mirCtxAddStmt ctx (tempSet body)
+
+        let ctx =
+          addTerminator ctx (MGotoTerminator nextLabel) loc
+
+        takeStmts ctx
+
+      let ctx = mirCtxRollBack parentCtx ctx
+
+      // Else clause.
       let elseLabelStmt, elseLabel, ctx = mirCtxFreshLabel ctx "else" loc
-      let endLabelStmt, endLabel, ctx = mirCtxFreshLabel ctx "end_if" loc
+      let parentCtx, ctx = ctx, mirCtxNewBlock ctx
 
-      let target, ctx = mirifyExpr ctx target
+      let elseCl, ctx =
+        let ctx = mirCtxAddStmt ctx elseLabelStmt
+        let alt, ctx = mirifyExpr ctx alt
+        let ctx = mirCtxAddStmt ctx (tempSet alt)
 
+        let ctx =
+          addTerminator ctx (MGotoTerminator nextLabel) loc
+
+        takeStmts ctx
+
+      let ctx = mirCtxRollBack parentCtx ctx
+
+      // Emit: `if` for jump, labels for contents, next label.
       let ctx =
-        mirCtxAddStmt ctx (msGotoUnless target elseLabel loc)
+        addTerminator ctx (MIfTerminator(cond, MGotoTerminator thenLabel, MGotoTerminator elseLabel)) loc
 
-      let body, ctx = mirifyExpr ctx body
-      let ctx = mirCtxAddStmt ctx (tempSet body)
-
-      let ctx =
-        addTerminator ctx (MGotoTerminator endLabel) loc
-
-      let ctx = mirCtxAddStmt ctx elseLabelStmt
-      let alt, ctx = mirifyExpr ctx alt
-      let ctx = mirCtxAddStmt ctx (tempSet alt)
-      let ctx = mirCtxAddStmt ctx endLabelStmt
+      let ctx = addStmtListList ctx [ elseCl; thenCl ]
+      let ctx = mirCtxAddStmt ctx nextLabelStmt
       Some(temp, ctx)
 
   | _ -> None

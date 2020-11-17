@@ -14,12 +14,18 @@ int main() {
     int le_ = (str_cmp((struct String){.str = "a", .len = 1}, (struct String){.str = "b", .len = 1}) < 0);
     int eq_ = (str_cmp((struct String){.str = "o", .len = 1}, (struct String){.str = "o", .len = 1}) == 0);
     int if_;
-    if ((!(le_))) goto else_1;
+    if (le_) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     if_ = eq_;
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     if_ = 0;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     milone_assert(if_, 6, 2);
     int call_1 = 0;
     int call_2 = testBinarySafe_(0);

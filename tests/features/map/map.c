@@ -46,19 +46,31 @@ int main();
 
 int intCmp_(int x_, int y_) {
     int if_;
-    if ((y_ >= x_)) goto else_1;
+    if ((y_ < x_)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     if_ = 1;
-    goto end_if_2;
-else_1:;
-    int if_1;
-    if ((y_ != x_)) goto else_3;
-    if_1 = 0;
-    goto end_if_4;
+    goto if_next_1;
 else_3:;
+    int if_1;
+    if ((y_ == x_)) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
+    if_1 = 0;
+    goto if_next_4;
+else_6:;
     if_1 = (0 - 1);
-end_if_4:;
+    goto if_next_4;
+if_next_4:;
     if_ = if_1;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 

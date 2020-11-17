@@ -28,12 +28,18 @@ int sub_(int x_2, int y_) {
 
 int between_(int l_, int r_, int x_3) {
     int if_;
-    if ((x_3 < l_)) goto else_1;
+    if ((x_3 >= l_)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     if_ = (x_3 < r_);
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     if_ = 0;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 
@@ -44,14 +50,14 @@ struct IntList {
 
 int len_(struct IntList* xs_) {
     int match_;
-    if ((!((!(xs_))))) goto next_4;
+    if ((!((!(xs_))))) goto next_5;
     match_ = 0;
-    goto end_match_3;
-next_4:;
-    match_ = 1;
-    goto end_match_3;
+    goto end_match_4;
 next_5:;
-end_match_3:;
+    match_ = 1;
+    goto end_match_4;
+next_6:;
+end_match_4:;
     return match_;
 }
 

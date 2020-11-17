@@ -18,67 +18,97 @@ int neg_(int x_) {
 
 int abs_(int x_1) {
     int if_;
-    if ((x_1 < 0)) goto else_1;
+    if ((x_1 >= 0)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     if_ = x_1;
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     int call_ = neg_(x_1);
     if_ = call_;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 
 int gcd_(int x_2, int y_) {
-tailrec_3:;
+tailrec_4:;
     int if_1;
-    if ((y_ != 0)) goto else_4;
+    if ((y_ == 0)) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
     int call_1 = abs_(x_2);
     if_1 = call_1;
-    goto end_if_5;
-else_4:;
+    goto if_next_5;
+else_7:;
     int arg_ = y_;
     int arg_1 = (x_2 % y_);
     x_2 = arg_;
     y_ = arg_1;
-    goto tailrec_3;
+    goto tailrec_4;
     if_1 = 0;
-end_if_5:;
+    goto if_next_5;
+if_next_5:;
     return if_1;
 }
 
 int go_(int x_3, int k_) {
-tailrec_6:;
+tailrec_8:;
     int if_2;
-    if ((x_3 >= (k_ * k_))) goto else_7;
+    if ((x_3 < (k_ * k_))) {
+        goto then_10;
+    } else {
+        goto else_11;
+    }
+then_10:;
     if_2 = 1;
-    goto end_if_8;
-else_7:;
+    goto if_next_9;
+else_11:;
     int if_3;
-    if (((x_3 % k_) == 0)) goto else_9;
+    if (((x_3 % k_) != 0)) {
+        goto then_13;
+    } else {
+        goto else_14;
+    }
+then_13:;
     int arg_2 = x_3;
     int arg_3 = (k_ + 1);
     x_3 = arg_2;
     k_ = arg_3;
-    goto tailrec_6;
+    goto tailrec_8;
     if_3 = 0;
-    goto end_if_10;
-else_9:;
+    goto if_next_12;
+else_14:;
     if_3 = 0;
-end_if_10:;
+    goto if_next_12;
+if_next_12:;
     if_2 = if_3;
-end_if_8:;
+    goto if_next_9;
+if_next_9:;
     return if_2;
 }
 
 int isPrime_(int x_3) {
     int if_4;
-    if ((x_3 < 2)) goto else_11;
+    if ((x_3 >= 2)) {
+        goto then_16;
+    } else {
+        goto else_17;
+    }
+then_16:;
     int call_2 = go_(x_3, 2);
     if_4 = call_2;
-    goto end_if_12;
-else_11:;
+    goto if_next_15;
+else_17:;
     if_4 = 0;
-end_if_12:;
+    goto if_next_15;
+if_next_15:;
     return if_4;
 }
 

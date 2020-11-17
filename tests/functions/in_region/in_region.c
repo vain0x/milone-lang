@@ -22,10 +22,15 @@ struct IntList {
 struct IntList* go_(struct IntList* acc_, int i_) {
 tailrec_1:;
     struct IntList* if_;
-    if ((i_ < 0)) goto else_2;
+    if ((i_ >= 0)) {
+        goto then_3;
+    } else {
+        goto else_4;
+    }
+then_3:;
     if_ = acc_;
-    goto end_if_3;
-else_2:;
+    goto if_next_2;
+else_4:;
     struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = i_;
     list_->tail = acc_;
@@ -35,7 +40,8 @@ else_2:;
     i_ = arg_2;
     goto tailrec_1;
     if_ = NULL;
-end_if_3:;
+    goto if_next_2;
+if_next_2:;
     return if_;
 }
 

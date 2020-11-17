@@ -107,10 +107,15 @@ int inc_1(int step_2, int x_3) {
 int go_(int step_2, int n_) {
 tailrec_1:;
     int if_;
-    if ((n_ < 10)) goto else_2;
+    if ((n_ >= 10)) {
+        goto then_3;
+    } else {
+        goto else_4;
+    }
+then_3:;
     if_ = 1;
-    goto end_if_3;
-else_2:;
+    goto if_next_2;
+else_4:;
     int arg_4 = step_2;
     int call_6 = inc_1(step_2, n_);
     int arg_5 = call_6;
@@ -118,7 +123,8 @@ else_2:;
     n_ = arg_5;
     goto tailrec_1;
     if_ = 0;
-end_if_3:;
+    goto if_next_2;
+if_next_2:;
     return if_;
 }
 
@@ -180,37 +186,55 @@ int xf4_(int x3_, int x2_, int x1_, int arg_11) {
 
 int xf3_(int x2_, int x1_, int x3_) {
     int if_1;
-    if ((x3_ != 3)) goto else_4;
+    if ((x3_ == 3)) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
     int call_14 = xf4_(x3_, x2_, x1_, 0);
     if_1 = call_14;
-    goto end_if_5;
-else_4:;
+    goto if_next_5;
+else_7:;
     if_1 = x3_;
-end_if_5:;
+    goto if_next_5;
+if_next_5:;
     return if_1;
 }
 
 int xf2_(int x1_, int x2_) {
     int if_2;
-    if ((x2_ != 2)) goto else_6;
+    if ((x2_ == 2)) {
+        goto then_9;
+    } else {
+        goto else_10;
+    }
+then_9:;
     int call_15 = xf3_(x2_, x1_, 3);
     if_2 = call_15;
-    goto end_if_7;
-else_6:;
+    goto if_next_8;
+else_10:;
     if_2 = x2_;
-end_if_7:;
+    goto if_next_8;
+if_next_8:;
     return if_2;
 }
 
 int xf1_(int x1_) {
     int if_3;
-    if ((x1_ != 1)) goto else_8;
+    if ((x1_ == 1)) {
+        goto then_12;
+    } else {
+        goto else_13;
+    }
+then_12:;
     int call_16 = xf2_(x1_, 2);
     if_3 = call_16;
-    goto end_if_9;
-else_8:;
+    goto if_next_11;
+else_13:;
     if_3 = x1_;
-end_if_9:;
+    goto if_next_11;
+if_next_11:;
     return if_3;
 }
 

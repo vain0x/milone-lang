@@ -14,12 +14,18 @@ int main();
 
 void* newDay_(int value_) {
     int if_;
-    if ((value_ < 1)) goto else_1;
+    if ((value_ >= 1)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     if_ = (31 >= value_);
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     if_ = 0;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     milone_assert(if_, 10, 2);
     int call_ = 0;
     void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
@@ -54,14 +60,20 @@ int between_(void* day_, void* range_) {
     int if_1;
     int call_4 = dayToInt_(day_);
     int call_5 = dayToInt_((*(((struct ObjectObjectTuple2*)range_))).t0);
-    if ((call_4 < call_5)) goto else_3;
+    if ((call_4 >= call_5)) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
     int call_6 = dayToInt_((*(((struct ObjectObjectTuple2*)range_))).t1);
     int call_7 = dayToInt_(day_);
     if_1 = (call_6 >= call_7);
-    goto end_if_4;
-else_3:;
+    goto if_next_4;
+else_6:;
     if_1 = 0;
-end_if_4:;
+    goto if_next_4;
+if_next_4:;
     return if_1;
 }
 

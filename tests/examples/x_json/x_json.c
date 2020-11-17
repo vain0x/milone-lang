@@ -79,76 +79,121 @@ end_match_6:;
 
 int isDigit_(char c_) {
     int if_;
-    if ((c_ < '0')) goto else_9;
+    if ((c_ >= '0')) {
+        goto then_10;
+    } else {
+        goto else_11;
+    }
+then_10:;
     if_ = ('9' >= c_);
-    goto end_if_10;
-else_9:;
+    goto if_next_9;
+else_11:;
     if_ = 0;
-end_if_10:;
+    goto if_next_9;
+if_next_9:;
     return if_;
 }
 
 int readInt_(struct String s_, int i_) {
-tailrec_11:;
+tailrec_12:;
     int if_1;
     int if_2;
-    if ((i_ < s_.len)) goto else_14;
+    if ((i_ >= s_.len)) {
+        goto then_15;
+    } else {
+        goto else_16;
+    }
+then_15:;
     if_2 = 1;
-    goto end_if_15;
-else_14:;
+    goto if_next_14;
+else_16:;
     int call_2 = isDigit_(s_.str[i_]);
     if_2 = (!(call_2));
-end_if_15:;
-    if ((!(if_2))) goto else_12;
+    goto if_next_14;
+if_next_14:;
+    if (if_2) {
+        goto then_17;
+    } else {
+        goto else_18;
+    }
+then_17:;
     if_1 = i_;
-    goto end_if_13;
-else_12:;
+    goto if_next_13;
+else_18:;
     struct String arg_3 = s_;
     int arg_4 = (i_ + 1);
     s_ = arg_3;
     i_ = arg_4;
-    goto tailrec_11;
+    goto tailrec_12;
     if_1 = 0;
-end_if_13:;
+    goto if_next_13;
+if_next_13:;
     return if_1;
 }
 
 struct StringList* go_1(struct String s_, struct StringList* acc_1, int i_1) {
-tailrec_16:;
+tailrec_19:;
     struct StringList* if_3;
-    if ((i_1 < s_.len)) goto else_17;
+    if ((i_1 >= s_.len)) {
+        goto then_21;
+    } else {
+        goto else_22;
+    }
+then_21:;
     struct StringList* call_3 = listRev_(acc_1);
     if_3 = call_3;
-    goto end_if_18;
-else_17:;
+    goto if_next_20;
+else_22:;
     struct StringList* if_4;
-    if ((s_.str[i_1] != ' ')) goto else_19;
+    if ((s_.str[i_1] == ' ')) {
+        goto then_24;
+    } else {
+        goto else_25;
+    }
+then_24:;
     struct String arg_5 = s_;
     struct StringList* arg_6 = acc_1;
     int arg_7 = (i_1 + 1);
     s_ = arg_5;
     acc_1 = arg_6;
     i_1 = arg_7;
-    goto tailrec_16;
+    goto tailrec_19;
     if_4 = NULL;
-    goto end_if_20;
-else_19:;
+    goto if_next_23;
+else_25:;
     struct StringList* if_5;
     int if_6;
     int if_7;
-    if ((s_.str[i_1] != '[')) goto else_25;
+    if ((s_.str[i_1] == '[')) {
+        goto then_29;
+    } else {
+        goto else_30;
+    }
+then_29:;
     if_7 = 1;
-    goto end_if_26;
-else_25:;
+    goto if_next_28;
+else_30:;
     if_7 = (s_.str[i_1] == ']');
-end_if_26:;
-    if ((!(if_7))) goto else_23;
+    goto if_next_28;
+if_next_28:;
+    if (if_7) {
+        goto then_31;
+    } else {
+        goto else_32;
+    }
+then_31:;
     if_6 = 1;
-    goto end_if_24;
-else_23:;
+    goto if_next_27;
+else_32:;
     if_6 = (s_.str[i_1] == ',');
-end_if_24:;
-    if ((!(if_6))) goto else_21;
+    goto if_next_27;
+if_next_27:;
+    if (if_6) {
+        goto then_33;
+    } else {
+        goto else_34;
+    }
+then_33:;
     struct String call_4 = str_get_slice(i_1, i_1, s_);
     struct StringList* list_1 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
     list_1->head = str_add((struct String){.str = "punct ", .len = 6}, call_4);
@@ -160,13 +205,18 @@ end_if_24:;
     s_ = arg_8;
     acc_1 = arg_9;
     i_1 = arg_10;
-    goto tailrec_16;
+    goto tailrec_19;
     if_5 = NULL;
-    goto end_if_22;
-else_21:;
+    goto if_next_26;
+else_34:;
     struct StringList* if_8;
     int call_5 = isDigit_(s_.str[i_1]);
-    if ((!(call_5))) goto else_27;
+    if (call_5) {
+        goto then_36;
+    } else {
+        goto else_37;
+    }
+then_36:;
     int call_6 = readInt_(s_, i_1);
     int r_ = call_6;
     struct String call_7 = str_get_slice(i_1, (r_ - 1), s_);
@@ -180,21 +230,25 @@ else_21:;
     s_ = arg_11;
     acc_1 = arg_12;
     i_1 = arg_13;
-    goto tailrec_16;
+    goto tailrec_19;
     if_8 = NULL;
-    goto end_if_28;
-else_27:;
+    goto if_next_35;
+else_37:;
     printf("ERROR: Unknown Token \'%c\'\n", s_.str[i_1]);
     int call_8 = 0;
     exit(1);
     if_8 = NULL;
-end_if_28:;
+    goto if_next_35;
+if_next_35:;
     if_5 = if_8;
-end_if_22:;
+    goto if_next_26;
+if_next_26:;
     if_4 = if_5;
-end_if_20:;
+    goto if_next_23;
+if_next_23:;
     if_3 = if_4;
-end_if_18:;
+    goto if_next_20;
+if_next_20:;
     return if_3;
 }
 

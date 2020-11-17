@@ -48,24 +48,42 @@ int main() {
     int if_;
     int if_1;
     int if_2;
-    if ((x_ != 1)) goto else_5;
+    if ((x_ == 1)) {
+        goto then_4;
+    } else {
+        goto else_5;
+    }
+then_4:;
     if_2 = (y_ == 2);
-    goto end_if_6;
+    goto if_next_3;
 else_5:;
     if_2 = 0;
-end_if_6:;
-    if ((!(if_2))) goto else_3;
+    goto if_next_3;
+if_next_3:;
+    if (if_2) {
+        goto then_6;
+    } else {
+        goto else_7;
+    }
+then_6:;
     if_1 = (z_ == 3);
-    goto end_if_4;
-else_3:;
+    goto if_next_2;
+else_7:;
     if_1 = 0;
-end_if_4:;
-    if ((!(if_1))) goto else_1;
+    goto if_next_2;
+if_next_2:;
+    if (if_1) {
+        goto then_8;
+    } else {
+        goto else_9;
+    }
+then_8:;
     if_ = (w_ == 4);
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_9:;
     if_ = 0;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     milone_assert(if_, 2, 2);
     int call_ = 0;
     struct IntIntIntIntIntIntIntIntIntIntIntTuple11 tuple_2;

@@ -8,25 +8,37 @@ int main();
 
 int even_(int n_) {
     int if_;
-    if ((n_ != 0)) goto else_1;
+    if ((n_ == 0)) {
+        goto then_2;
+    } else {
+        goto else_3;
+    }
+then_2:;
     if_ = 1;
-    goto end_if_2;
-else_1:;
+    goto if_next_1;
+else_3:;
     int call_ = odd_((n_ - 1));
     if_ = call_;
-end_if_2:;
+    goto if_next_1;
+if_next_1:;
     return if_;
 }
 
 int odd_(int n_1) {
     int if_1;
-    if ((n_1 == 0)) goto else_3;
+    if ((n_1 != 0)) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
     int call_1 = even_((n_1 - 1));
     if_1 = call_1;
-    goto end_if_4;
-else_3:;
+    goto if_next_4;
+else_6:;
     if_1 = 0;
-end_if_4:;
+    goto if_next_4;
+if_next_4:;
     return if_1;
 }
 
