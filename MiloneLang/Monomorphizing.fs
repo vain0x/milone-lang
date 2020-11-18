@@ -310,6 +310,7 @@ let private monifyExpr (expr, ctx) =
   | HTyDeclExpr _
   | HOpenExpr _
   | HLitExpr _
+  | HVariantExpr _
   | HPrimExpr _ -> expr, ctx
 
   | HRefExpr (varSerial, useSiteTy, loc) ->

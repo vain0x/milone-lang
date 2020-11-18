@@ -682,6 +682,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         let ident = ctx |> scopeCtxGetIdent serial
         match ctx |> scopeCtxResolveLocalVar ident with
+        | Some serial when ctx |> scopeCtxIsVariant serial -> HVariantExpr(serial, ty, loc), ctx
+
         | Some serial -> HRefExpr(serial, ty, loc), ctx
 
         | None ->
@@ -743,6 +745,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
             match ctx |> scopeCtxResolveExprAsScope l with
             | Some scopeSerial ->
                 match ctx |> scopeCtxResolveVar scopeSerial r with
+                | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HVariantExpr(varSerial, ty, loc), ctx
+
                 | Some varSerial -> HRefExpr(varSerial, ty, loc), ctx
 
                 | _ ->
@@ -862,6 +866,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         Bundling.spliceExpr body next, ctx
 
       doArm ()
+
+  | _ -> failwithf "NEVER: HVariantExpr is generated in NameRes. %A" expr
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx

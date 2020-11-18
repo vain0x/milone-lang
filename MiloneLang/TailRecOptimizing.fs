@@ -73,6 +73,7 @@ let private troExpr isTail (expr, ctx) =
   match expr with
   | HLitExpr _
   | HRefExpr _
+  | HVariantExpr _
   | HPrimExpr _
   | HOpenExpr _
   | HTyDeclExpr _ -> expr, ctx

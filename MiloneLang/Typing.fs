@@ -391,6 +391,12 @@ let private inferRef (ctx: TyCtx) varSerial loc =
 
   HRefExpr(varSerial, ty, loc), ty, ctx
 
+let private inferVariant (ctx: TyCtx) variantSerial loc =
+  let ty, ctx =
+    ctx |> tyCtxUnifyVarTy variantSerial None loc
+
+  HVariantExpr(variantSerial, ty, loc), ty, ctx
+
 let private inferPrim ctx prim loc =
   let tySpec = prim |> primToTySpec
   let primTy, traits, ctx = (tySpec, ctx) |> tySpecInstantiate loc
@@ -714,6 +720,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   match expr with
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
+  | HVariantExpr (serial, _, loc) -> inferVariant ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
   | HRecordExpr (baseOpt, fields, _, loc) -> inferRecord ctx expectOpt baseOpt fields loc
   | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expectOpt expr cond arms loc

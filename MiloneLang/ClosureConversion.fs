@@ -404,6 +404,7 @@ let private declosurePat (pat, ctx) =
 let private declosureExpr (expr, ctx) =
   match expr with
   | HLitExpr _
+  | HVariantExpr _
   | HPrimExpr _
   | HOpenExpr _ -> expr, ctx
 

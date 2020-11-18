@@ -18,6 +18,7 @@ let private containsTailRec expr =
 
   | HLitExpr _
   | HRefExpr _
+  | HVariantExpr _
   | HPrimExpr _
   | HNavExpr _
   | HInfExpr _
@@ -141,12 +142,6 @@ let private mirCtxFreshLabel (ctx: MirCtx) (ident: Ident) loc =
   let label: Label = ident + "_" + string serial
   let labelStmt = MLabelStmt(label, loc)
   labelStmt, label, ctx
-
-/// Gets if the serial denotes to a variant function.
-let private mirCtxIsVariantFun (ctx: MirCtx) serial =
-  match ctx.Vars |> mapTryFind serial with
-  | Some (VariantDef _) -> true
-  | _ -> false
 
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
@@ -338,11 +333,16 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * M
   | HTuplePat _ -> failwith "Never: Tuple pattern must be of tuple type."
   | HAnnoPat _ -> failwith "Never annotation pattern in MIR-ify stage."
 
-let private mirifyExprRef (ctx: MirCtx) serial ty loc =
+let private mirifyExprRef (ctx: MirCtx) itself serial ty loc =
   match ctx.Vars |> mapTryFind serial with
-  | Some (VariantDef (_, tySerial, _, _, _, _)) -> MVariantExpr(tySerial, serial, ty, loc), ctx
+  | Some (VariantDef _) -> failwithf "NEVER: Illegal HRefExpr. %A" itself
   | Some (FunDef (_, _, _, loc)) -> MProcExpr(serial, ty, loc), ctx
   | _ -> MRefExpr(serial, ty, loc), ctx
+
+let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
+  match ctx.Vars |> mapTryFind serial with
+  | Some (VariantDef (_, tySerial, _, _, _, _)) -> MVariantExpr(tySerial, serial, ty, loc), ctx
+  | _ -> failwithf "NEVER: Illegal HVariantExpr. %A" itself
 
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
@@ -881,8 +881,7 @@ let private mirifyExprInfCallProc ctx callee args ty loc =
       | HPrim.StrLength, [ arg ] -> mirifyExprCallStrLength ctx arg ty loc
       | _ -> core ()
 
-  | HRefExpr (serial, _, _), [ arg ] when mirCtxIsVariantFun ctx serial ->
-      mirifyExprCallVariantFun ctx serial arg ty loc
+  | HVariantExpr (serial, _, _), [ arg ] -> mirifyExprCallVariantFun ctx serial arg ty loc
 
   | _ -> core ()
 
@@ -1074,7 +1073,8 @@ let private mirifyDecl ctx expr =
 let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   match expr with
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
-  | HRefExpr (serial, ty, loc) -> mirifyExprRef ctx serial ty loc
+  | HRefExpr (serial, ty, loc) -> mirifyExprRef ctx expr serial ty loc
+  | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx expr serial ty loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
   | HMatchExpr (target, arms, ty, loc) -> mirifyExprMatch ctx target arms ty loc
   | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx infOp args ty loc

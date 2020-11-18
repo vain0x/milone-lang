@@ -62,7 +62,7 @@ let private postProcessVariantCallPat ctx calleePat argPats =
 
 let private postProcessVariantFunAppExpr ctx infOp items =
   match infOp, items with
-  | InfOp.App, [ (HRefExpr (varSerial, _, _)) as callee; payload ] when varSerial |> isVariantFun ctx ->
+  | InfOp.App, [ (HVariantExpr _) as callee; payload ] ->
       // FIXME: ty is now wrong for the same reason as call-variant pattern.
       let ty, loc = exprExtract payload
       Some(callee, hxBox payload ty loc)
@@ -232,6 +232,7 @@ let private abExpr ctx expr =
   | HTyDeclExpr _ -> expr
 
   | HRefExpr _
+  | HVariantExpr _
   | HPrimExpr _ -> expr |> exprMap (abTy ctx) id
 
   | HMatchExpr (target, arms, ty, loc) ->

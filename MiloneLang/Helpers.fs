@@ -1090,6 +1090,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HLitExpr (lit, a) -> litToTy lit, a
   | HRefExpr (_, ty, a) -> ty, a
+  | HVariantExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
   | HRecordExpr (_, _, ty, a) -> ty, a
   | HMatchExpr (_, _, ty, a) -> ty, a
@@ -1109,6 +1110,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     match expr with
     | HLitExpr (lit, a) -> HLitExpr(lit, g a)
     | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
+    | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, g a)
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
 
     | HRecordExpr (baseOpt, fields, ty, a) ->

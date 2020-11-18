@@ -639,8 +639,10 @@ type InfOp =
 type HExpr =
   | HLitExpr of Lit * Loc
 
-  /// Use of named value: variable, function or variant.
+  /// Use of named value: variable or function.
   | HRefExpr of VarSerial * Ty * Loc
+
+  | HVariantExpr of VariantSerial * Ty * Loc
 
   | HPrimExpr of HPrim * Ty * Loc
 

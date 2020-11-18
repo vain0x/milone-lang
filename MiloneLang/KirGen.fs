@@ -281,6 +281,9 @@ let private kgRefExpr varSerial ty loc hole ctx =
 
   hole term ctx
 
+let private kgVariantExpr variantSerial ty loc hole ctx =
+  ctx |> hole (KVariantTerm(variantSerial, ty, loc))
+
 let private kgSemiExpr itself args hole ctx =
   let rec go args hole ctx =
     match args with
@@ -751,7 +754,10 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           match ctx |> findVarDef varSerial with
           | VarDef _ -> failwithf "NEVER: CallClosure should be used. %A" itself
           | FunDef _ -> kgCallFunExpr varSerial refTy refLoc args ty loc hole ctx
-          | VariantDef _ -> kgCallVariantExpr varSerial refTy refLoc args ty loc hole ctx
+          | VariantDef _ -> failwithf "NEVER: Variants must appear as HVariantExpr. %A" itself
+
+      | HVariantExpr (variantSerial, variantTy, variantLoc) ->
+          kgCallVariantExpr variantSerial variantTy variantLoc args ty loc hole ctx
 
       | _ -> failwithf "NEVER: CallClosure should be used. %A" itself
 
@@ -781,6 +787,8 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
   | HLitExpr (lit, loc) -> hole (KLitTerm(lit, loc)) ctx
 
   | HRefExpr (varSerial, ty, loc) -> kgRefExpr varSerial ty loc hole ctx
+
+  | HVariantExpr (variantSerial, ty, loc) -> kgVariantExpr variantSerial ty loc hole ctx
 
   | HPrimExpr (prim, ty, loc) -> kgPrimExpr expr prim ty loc hole ctx
 

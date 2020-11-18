@@ -300,6 +300,13 @@ let private unetaCall callee args resultTy loc (ctx: EtaCtx) =
 
       let args, ctx = (args, ctx) |> stMap unetaExpr
       unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+
+  | HVariantExpr (_, variantTy, calleeLoc), _ ->
+      assert (tyIsFun variantTy)
+      let arity = 1
+      let args, ctx = (args, ctx) |> stMap unetaExpr
+      unetaCallCore CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
+
   | HPrimExpr (prim, primTy, calleeLoc), _ ->
       let arity = prim |> primToArity primTy
       let args, ctx = (args, ctx) |> stMap unetaExpr
@@ -316,6 +323,15 @@ let private unetaRef expr serial _refTy calleeLoc (ctx: EtaCtx) =
   match ctx.Vars |> mapTryFind serial with
   | Some (FunDef (_, arity, _, _)) -> resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
   | _ -> expr, ctx
+
+// This is used only when variant is not applied syntactically.
+// Value-carrying variant is transformed as partial app.
+let private unetaVariant expr variantTy loc (ctx: EtaCtx) =
+  if tyIsFun variantTy then
+    let arity = 1
+    resolvePartialApp CalleeKind.Fun expr arity [] 0 loc ctx
+  else
+    expr, ctx
 
 let private unetaPrim expr prim primTy calleeLoc (ctx: EtaCtx) =
   let arity = prim |> primToArity primTy
@@ -353,6 +369,7 @@ let private unetaExpr (expr, ctx) =
   | HOpenExpr _
   | HErrorExpr _ -> expr, ctx
   | HRefExpr (serial, refTy, calleeLoc) -> unetaRef expr serial refTy calleeLoc ctx
+  | HVariantExpr (_, ty, loc) -> unetaVariant expr ty loc ctx
   | HPrimExpr (prim, primTy, calleeLoc) -> unetaPrim expr prim primTy calleeLoc ctx
   | HMatchExpr (target, arms, ty, loc) ->
       let target, ctx = (target, ctx) |> unetaExpr
