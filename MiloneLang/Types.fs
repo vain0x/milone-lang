@@ -424,18 +424,6 @@ type StorageModifier =
 
 type NameCtx = NameCtx of AssocMap<Serial, Ident> * lastSerial: Serial
 
-// FIXME: Not used?
-type ScopeSerial = Serial
-
-/// Stack of local scopes.
-type ScopeChain = AssocMap<string, Serial * Ident> list
-
-/// Scope chains, vars and types.
-type Scope = ScopeChain * ScopeChain
-
-/// Namespace membership.
-type NameTree = NameTree of AssocMap<Serial, Serial list>
-
 /// Type constructor.
 type TyCtor =
   | BoolTyCtor

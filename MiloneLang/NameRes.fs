@@ -9,6 +9,50 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Bundling
 
+// -----------------------------------------------
+// NameTree
+// -----------------------------------------------
+
+/// Namespace membership.
+type NameTree = NameTree of AssocMap<Serial, Serial list>
+
+// FIXME: this emits code that doesn't compile due to use of incomplete type
+//   > error: invalid use of undefined type ‘struct UnitNameTree_Fun1’
+//   >        struct NameTree_ app_193 = nameTreeEmpty_.fun(nameTreeEmpty_.env, 0);
+// let nameTreeEmpty: unit -> NameTree =
+//   let it = NameTree(mapEmpty (intHash, intCmp))
+//   fun () -> it
+
+let private nameTreeEmpty (): NameTree = NameTree(mapEmpty intCmp)
+
+let private nameTreeTryFind (key: Serial) (NameTree map): Serial list =
+  match map |> mapTryFind key with
+  | Some values -> values
+
+  | None -> []
+
+let private nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
+  let map =
+    match map |> mapTryFind key with
+    | Some values -> map |> mapAdd key (value :: values)
+
+    | None -> map |> mapAdd key [ value ]
+
+  NameTree map
+
+// --------------------------------------------
+// Scopes
+// --------------------------------------------
+
+// FIXME: Not used?
+type private ScopeSerial = Serial
+
+/// Stack of local scopes.
+type private ScopeChain = AssocMap<string, Serial * Ident> list
+
+/// Scope chains, vars and types.
+type private Scope = ScopeChain * ScopeChain
+
 let private scopeMapEmpty () = mapEmpty strCmp
 
 let private scopeChainEmpty (): ScopeChain = [ scopeMapEmpty () ]
