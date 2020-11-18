@@ -2,6 +2,10 @@
 
 struct IntList;
 
+int basicCase_1(struct IntList* xs_);
+
+int complicatedCase_(struct IntList* xs_1);
+
 int main();
 
 struct IntList {
@@ -9,48 +13,76 @@ struct IntList {
     struct IntList* tail;
 };
 
-int main() {
-    int match_;
-    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
-    list_1->head = 2;
-    list_1->tail = NULL;
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
-    list_->head = 1;
-    list_->tail = list_1;
-    if ((!((!(list_))))) goto next_2;
-    milone_assert(0, 3, 4);
-    int call_ = 0;
-    match_ = 0;
-    goto end_match_1;
-next_2:;
-    if ((!(list_))) goto next_3;
-    int x_ = list_->head;
-    if ((!(list_->tail))) goto next_3;
-    int y_ = list_->tail->head;
-    if ((!((!(list_->tail->tail))))) goto next_3;
+int basicCase_1(struct IntList* xs_) {
     int if_;
-    if ((x_ == 1)) {
-        goto then_6;
+    if ((!(xs_))) {
+        goto nil_cl_2;
     } else {
-        goto else_7;
+        goto cons_cl_3;
     }
-then_6:;
-    if_ = (y_ == 2);
-    goto if_next_5;
-else_7:;
+nil_cl_2:;
+    milone_assert(0, 2, 10);
+    int call_ = 0;
     if_ = 0;
-    goto if_next_5;
-if_next_5:;
-    milone_assert(if_, 5, 4);
+    goto if_next_1;
+cons_cl_3:;
+    if_ = 0;
+    goto if_next_1;
+if_next_1:;
+    return 0;
+}
+
+int complicatedCase_(struct IntList* xs_1) {
+    int match_;
+    if ((!((!(xs_1))))) goto next_5;
+    milone_assert(0, 7, 10);
     int call_1 = 0;
     match_ = 0;
-    goto end_match_1;
-next_3:;
-    milone_assert(0, 7, 4);
+    goto end_match_4;
+next_5:;
+    if ((!(xs_1))) goto next_6;
+    int x_ = xs_1->head;
+    if ((!(xs_1->tail))) goto next_6;
+    int y_ = xs_1->tail->head;
+    if ((!((!(xs_1->tail->tail))))) goto next_6;
+    int if_1;
+    if ((x_ == 1)) {
+        goto then_9;
+    } else {
+        goto else_10;
+    }
+then_9:;
+    if_1 = (y_ == 2);
+    goto if_next_8;
+else_10:;
+    if_1 = 0;
+    goto if_next_8;
+if_next_8:;
+    milone_assert(if_1, 8, 14);
     int call_2 = 0;
     match_ = 0;
-    goto end_match_1;
-next_4:;
-end_match_1:;
+    goto end_match_4;
+next_6:;
+    milone_assert(0, 9, 9);
+    int call_3 = 0;
+    match_ = 0;
+    goto end_match_4;
+next_7:;
+end_match_4:;
+    return 0;
+}
+
+int main() {
+    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    list_->head = 1;
+    list_->tail = NULL;
+    int call_4 = basicCase_1(list_);
+    struct IntList* list_2 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    list_2->head = 2;
+    list_2->tail = NULL;
+    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    list_1->head = 1;
+    list_1->tail = list_2;
+    int call_5 = complicatedCase_(list_1);
     return 0;
 }

@@ -443,16 +443,20 @@ struct StringList {
 };
 
 int listIsEmpty_1(struct StringList* xs_) {
-    int match_;
-    if ((!((!(xs_))))) goto next_2;
-    match_ = 1;
-    goto end_match_1;
-next_2:;
-    match_ = 0;
-    goto end_match_1;
-next_3:;
-end_match_1:;
-    return match_;
+    int if_;
+    if ((!(xs_))) {
+        goto nil_cl_2;
+    } else {
+        goto cons_cl_3;
+    }
+nil_cl_2:;
+    if_ = 1;
+    goto if_next_1;
+cons_cl_3:;
+    if_ = 0;
+    goto if_next_1;
+if_next_1:;
+    return if_;
 }
 
 struct StringStringStringFun2 {
@@ -466,16 +470,20 @@ struct StringStringStringFun2List {
 };
 
 int listIsEmpty_4(struct StringStringStringFun2List* xs_) {
-    int match_1;
-    if ((!((!(xs_))))) goto next_5;
-    match_1 = 1;
-    goto end_match_4;
-next_5:;
-    match_1 = 0;
-    goto end_match_4;
-next_6:;
-end_match_4:;
-    return match_1;
+    int if_1;
+    if ((!(xs_))) {
+        goto nil_cl_5;
+    } else {
+        goto cons_cl_6;
+    }
+nil_cl_5:;
+    if_1 = 1;
+    goto if_next_4;
+cons_cl_6:;
+    if_1 = 0;
+    goto if_next_4;
+if_next_4:;
+    return if_1;
 }
 
 struct IntList {
@@ -484,16 +492,20 @@ struct IntList {
 };
 
 int listIsEmpty_3(struct IntList* xs_) {
-    int match_2;
-    if ((!((!(xs_))))) goto next_8;
-    match_2 = 1;
-    goto end_match_7;
-next_8:;
-    match_2 = 0;
-    goto end_match_7;
-next_9:;
-end_match_7:;
-    return match_2;
+    int if_2;
+    if ((!(xs_))) {
+        goto nil_cl_8;
+    } else {
+        goto cons_cl_9;
+    }
+nil_cl_8:;
+    if_2 = 1;
+    goto if_next_7;
+cons_cl_9:;
+    if_2 = 0;
+    goto if_next_7;
+if_next_7:;
+    return if_2;
 }
 
 struct IntIntIntFun2 {
@@ -507,16 +519,20 @@ struct IntIntIntFun2List {
 };
 
 int listIsEmpty_2(struct IntIntIntFun2List* xs_) {
-    int match_3;
-    if ((!((!(xs_))))) goto next_11;
-    match_3 = 1;
-    goto end_match_10;
-next_11:;
-    match_3 = 0;
-    goto end_match_10;
-next_12:;
-end_match_10:;
-    return match_3;
+    int if_3;
+    if ((!(xs_))) {
+        goto nil_cl_11;
+    } else {
+        goto cons_cl_12;
+    }
+nil_cl_11:;
+    if_3 = 1;
+    goto if_next_10;
+cons_cl_12:;
+    if_3 = 0;
+    goto if_next_10;
+if_next_10:;
+    return if_3;
 }
 
 struct IntIntIntObjectObjectTuple5 {
@@ -533,16 +549,20 @@ struct IntIntIntObjectObjectTuple5List {
 };
 
 int listIsEmpty_5(struct IntIntIntObjectObjectTuple5List* xs_) {
-    int match_4;
-    if ((!((!(xs_))))) goto next_14;
-    match_4 = 1;
-    goto end_match_13;
-next_14:;
-    match_4 = 0;
-    goto end_match_13;
-next_15:;
-end_match_13:;
-    return match_4;
+    int if_4;
+    if ((!(xs_))) {
+        goto nil_cl_14;
+    } else {
+        goto cons_cl_15;
+    }
+nil_cl_14:;
+    if_4 = 1;
+    goto if_next_13;
+cons_cl_15:;
+    if_4 = 0;
+    goto if_next_13;
+if_next_13:;
+    return if_4;
 }
 
 struct StringIntIntObjectObjectTuple5 {
@@ -559,23 +579,27 @@ struct StringIntIntObjectObjectTuple5List {
 };
 
 int listIsEmpty_6(struct StringIntIntObjectObjectTuple5List* xs_) {
-    int match_5;
-    if ((!((!(xs_))))) goto next_17;
-    match_5 = 1;
-    goto end_match_16;
-next_17:;
-    match_5 = 0;
-    goto end_match_16;
-next_18:;
-end_match_16:;
-    return match_5;
+    int if_5;
+    if ((!(xs_))) {
+        goto nil_cl_17;
+    } else {
+        goto cons_cl_18;
+    }
+nil_cl_17:;
+    if_5 = 1;
+    goto if_next_16;
+cons_cl_18:;
+    if_5 = 0;
+    goto if_next_16;
+if_next_16:;
+    return if_5;
 }
 
 int go_34(int len_1, struct StringList* xs_2) {
 tailrec_19:;
-    int match_6;
+    int match_;
     if ((!((!(xs_2))))) goto next_21;
-    match_6 = len_1;
+    match_ = len_1;
     goto end_match_20;
 next_21:;
     if ((!(xs_2))) goto next_22;
@@ -585,19 +609,19 @@ next_21:;
     len_1 = arg_37;
     xs_2 = arg_38;
     goto tailrec_19;
-    match_6 = 0;
+    match_ = 0;
     goto end_match_20;
 next_22:;
     exit(1);
 end_match_20:;
-    return match_6;
+    return match_;
 }
 
 int go_33(int len_1, struct IntList* xs_2) {
 tailrec_23:;
-    int match_7;
+    int match_1;
     if ((!((!(xs_2))))) goto next_25;
-    match_7 = len_1;
+    match_1 = len_1;
     goto end_match_24;
 next_25:;
     if ((!(xs_2))) goto next_26;
@@ -607,12 +631,12 @@ next_25:;
     len_1 = arg_39;
     xs_2 = arg_40;
     goto tailrec_23;
-    match_7 = 0;
+    match_1 = 0;
     goto end_match_24;
 next_26:;
     exit(1);
 end_match_24:;
-    return match_7;
+    return match_1;
 }
 
 int listLength_2(struct StringList* xs_1) {
@@ -627,9 +651,9 @@ int listLength_1(struct IntList* xs_1) {
 
 struct IntList* go_39(struct IntList* acc_, struct IntList* xs_5) {
 tailrec_27:;
-    struct IntList* match_8;
+    struct IntList* match_2;
     if ((!((!(xs_5))))) goto next_29;
-    match_8 = acc_;
+    match_2 = acc_;
     goto end_match_28;
 next_29:;
     if ((!(xs_5))) goto next_30;
@@ -643,19 +667,19 @@ next_29:;
     acc_ = arg_41;
     xs_5 = arg_42;
     goto tailrec_27;
-    match_8 = NULL;
+    match_2 = NULL;
     goto end_match_28;
 next_30:;
     exit(1);
 end_match_28:;
-    return match_8;
+    return match_2;
 }
 
 struct StringList* go_38(struct StringList* acc_, struct StringList* xs_5) {
 tailrec_31:;
-    struct StringList* match_9;
+    struct StringList* match_3;
     if ((!((!(xs_5))))) goto next_33;
-    match_9 = acc_;
+    match_3 = acc_;
     goto end_match_32;
 next_33:;
     if ((!(xs_5))) goto next_34;
@@ -669,12 +693,12 @@ next_33:;
     acc_ = arg_43;
     xs_5 = arg_44;
     goto tailrec_31;
-    match_9 = NULL;
+    match_3 = NULL;
     goto end_match_32;
 next_34:;
     exit(1);
 end_match_32:;
-    return match_9;
+    return match_3;
 }
 
 struct IntList* listRev_2(struct IntList* xs_4) {
@@ -699,13 +723,13 @@ struct IntListIntListTuple2 {
 
 int go_32(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1) {
 tailrec_35:;
-    int match_10;
+    int match_4;
     struct IntListIntListTuple2 tuple_;
     tuple_.t0 = xs_8;
     tuple_.t1 = ys_1;
     if ((!((!(tuple_.t0))))) goto next_37;
     if ((!((!(tuple_.t1))))) goto next_37;
-    match_10 = 1;
+    match_4 = 1;
     goto end_match_36;
 next_37:;
     if ((!(tuple_.t0))) goto next_38;
@@ -714,7 +738,7 @@ next_37:;
     if ((!(tuple_.t1))) goto next_38;
     int y_ = tuple_.t1->head;
     struct IntList* ys_2 = tuple_.t1->tail;
-    int if_;
+    int if_6;
     int app_ = itemEq_.fun(itemEq_.env, x_1, y_);
     if (app_) {
         goto then_41;
@@ -729,20 +753,20 @@ then_41:;
     xs_8 = arg_46;
     ys_1 = arg_47;
     goto tailrec_35;
-    if_ = 0;
+    if_6 = 0;
     goto if_next_40;
 else_42:;
-    if_ = 0;
+    if_6 = 0;
     goto if_next_40;
 if_next_40:;
-    match_10 = if_;
+    match_4 = if_6;
     goto end_match_36;
 next_38:;
-    match_10 = 0;
+    match_4 = 0;
     goto end_match_36;
 next_39:;
 end_match_36:;
-    return match_10;
+    return match_4;
 }
 
 struct StringStringBoolFun2 {
@@ -757,13 +781,13 @@ struct StringListStringListTuple2 {
 
 int go_31(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1) {
 tailrec_43:;
-    int match_11;
+    int match_5;
     struct StringListStringListTuple2 tuple_1;
     tuple_1.t0 = xs_8;
     tuple_1.t1 = ys_1;
     if ((!((!(tuple_1.t0))))) goto next_45;
     if ((!((!(tuple_1.t1))))) goto next_45;
-    match_11 = 1;
+    match_5 = 1;
     goto end_match_44;
 next_45:;
     if ((!(tuple_1.t0))) goto next_46;
@@ -772,7 +796,7 @@ next_45:;
     if ((!(tuple_1.t1))) goto next_46;
     struct String y_ = tuple_1.t1->head;
     struct StringList* ys_2 = tuple_1.t1->tail;
-    int if_1;
+    int if_7;
     int app_1 = itemEq_.fun(itemEq_.env, x_1, y_);
     if (app_1) {
         goto then_49;
@@ -787,20 +811,20 @@ then_49:;
     xs_8 = arg_49;
     ys_1 = arg_50;
     goto tailrec_43;
-    if_1 = 0;
+    if_7 = 0;
     goto if_next_48;
 else_50:;
-    if_1 = 0;
+    if_7 = 0;
     goto if_next_48;
 if_next_48:;
-    match_11 = if_1;
+    match_5 = if_7;
     goto end_match_44;
 next_46:;
-    match_11 = 0;
+    match_5 = 0;
     goto end_match_44;
 next_47:;
 end_match_44:;
-    return match_11;
+    return match_5;
 }
 
 int listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList* xs_7, struct IntList* ys_) {
@@ -815,14 +839,14 @@ int listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList* xs_7, struc
 
 struct IntList* go_30(int len_2, int item_, struct IntList* acc_1, int i_) {
 tailrec_51:;
-    struct IntList* if_2;
+    struct IntList* if_8;
     if ((i_ == len_2)) {
         goto then_53;
     } else {
         goto else_54;
     }
 then_53:;
-    if_2 = acc_1;
+    if_8 = acc_1;
     goto if_next_52;
 else_54:;
     int arg_51 = len_2;
@@ -837,10 +861,10 @@ else_54:;
     acc_1 = arg_53;
     i_ = arg_54;
     goto tailrec_51;
-    if_2 = NULL;
+    if_8 = NULL;
     goto if_next_52;
 if_next_52:;
-    return if_2;
+    return if_8;
 }
 
 struct IntList* listReplicate_1(int item_, int len_2) {
@@ -855,7 +879,7 @@ struct IntIntFun1 {
 
 struct IntList* go_29(struct IntIntFun1 gen_, int len_3, struct IntList* acc_2, int i_1) {
 tailrec_55:;
-    struct IntList* if_3;
+    struct IntList* if_9;
     if ((i_1 == len_3)) {
         goto then_57;
     } else {
@@ -863,7 +887,7 @@ tailrec_55:;
     }
 then_57:;
     struct IntList* call_12 = listRev_2(acc_2);
-    if_3 = call_12;
+    if_9 = call_12;
     goto if_next_56;
 else_58:;
     struct IntIntFun1 arg_55 = gen_;
@@ -879,10 +903,10 @@ else_58:;
     acc_2 = arg_57;
     i_1 = arg_58;
     goto tailrec_55;
-    if_3 = NULL;
+    if_9 = NULL;
     goto if_next_56;
 if_next_56:;
-    return if_3;
+    return if_9;
 }
 
 struct IntList* listInit_1(int len_3, struct IntIntFun1 gen_) {
@@ -898,14 +922,14 @@ struct StringStringListTuple2 {
 };
 
 struct StringStringListTuple2 go_5(struct StringList* xs_11, int xn_) {
-    struct StringStringListTuple2 match_12;
+    struct StringStringListTuple2 match_6;
     if ((!((!(xs_11))))) goto next_60;
     milone_assert((xn_ == 0), 81, 8);
     int call_15 = 0;
     struct StringStringListTuple2 tuple_2;
     tuple_2.t0 = (struct String){.str = "", .len = 0};
     tuple_2.t1 = NULL;
-    match_12 = tuple_2;
+    match_6 = tuple_2;
     goto end_match_59;
 next_60:;
     if ((!(xs_11))) goto next_61;
@@ -915,7 +939,7 @@ next_60:;
     struct StringStringListTuple2 tuple_3;
     tuple_3.t0 = x_2;
     tuple_3.t1 = xs_12;
-    match_12 = tuple_3;
+    match_6 = tuple_3;
     goto end_match_59;
 next_61:;
     if ((!(xs_11))) goto next_62;
@@ -927,7 +951,7 @@ next_61:;
     struct StringStringListTuple2 tuple_4;
     tuple_4.t0 = str_add(x_3, y_1);
     tuple_4.t1 = xs_13;
-    match_12 = tuple_4;
+    match_6 = tuple_4;
     goto end_match_59;
 next_62:;
     struct StringList* xs_14 = xs_11;
@@ -941,11 +965,11 @@ next_62:;
     struct StringStringListTuple2 tuple_5;
     tuple_5.t0 = str_add(l_, r_);
     tuple_5.t1 = xs_16;
-    match_12 = tuple_5;
+    match_6 = tuple_5;
     goto end_match_59;
 next_63:;
 end_match_59:;
-    return match_12;
+    return match_6;
 }
 
 struct String strConcat_(struct StringList* xs_10) {
@@ -965,37 +989,37 @@ int intEq_(int first_, int second_) {
 }
 
 int intMin_(int first_1, int second_1) {
-    int if_4;
+    int if_10;
     if ((second_1 < first_1)) {
         goto then_65;
     } else {
         goto else_66;
     }
 then_65:;
-    if_4 = second_1;
+    if_10 = second_1;
     goto if_next_64;
 else_66:;
-    if_4 = first_1;
+    if_10 = first_1;
     goto if_next_64;
 if_next_64:;
-    return if_4;
+    return if_10;
 }
 
 int intMax_(int first_2, int second_2) {
-    int if_5;
+    int if_11;
     if ((first_2 < second_2)) {
         goto then_68;
     } else {
         goto else_69;
     }
 then_68:;
-    if_5 = second_2;
+    if_11 = second_2;
     goto if_next_67;
 else_69:;
-    if_5 = first_2;
+    if_11 = first_2;
     goto if_next_67;
 if_next_67:;
-    return if_5;
+    return if_11;
 }
 
 int strEq_(struct String first_3, struct String second_3) {
@@ -1115,21 +1139,21 @@ struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6Obje
 int vectorCheckIndex_1(int index_2, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 self_) {
     int call_30 = vectorToLength_1(self_);
     int len_7 = call_30;
-    int if_6;
-    int if_7;
+    int if_12;
+    int if_13;
     if ((index_2 < 0)) {
         goto then_72;
     } else {
         goto else_73;
     }
 then_72:;
-    if_7 = 1;
+    if_13 = 1;
     goto if_next_71;
 else_73:;
-    if_7 = (index_2 >= len_7);
+    if_13 = (index_2 >= len_7);
     goto if_next_71;
 if_next_71:;
-    if (if_7) {
+    if (if_13) {
         goto then_74;
     } else {
         goto else_75;
@@ -1138,10 +1162,10 @@ then_74:;
     printf("ERROR: Out of range (len = %d, index = %d)\n", len_7, index_2);
     int call_31 = 0;
     exit(1);
-    if_6 = 0;
+    if_12 = 0;
     goto if_next_70;
 else_75:;
-    if_6 = 0;
+    if_12 = 0;
     goto if_next_70;
 if_next_70:;
     return 0;
@@ -1170,11 +1194,11 @@ int vectorSet_1(int index_4, int value_1, struct IntIntIntObjectFun1ObjectIntInt
 
 int go_28(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 v_, int len_9, int i_2, struct IntList* xs_19) {
 tailrec_76:;
-    int match_13;
+    int match_7;
     if ((!((!(xs_19))))) goto next_78;
     milone_assert((i_2 == len_9), 185, 12);
     int call_37 = 0;
-    match_13 = 0;
+    match_7 = 0;
     goto end_match_77;
 next_78:;
     if ((!(xs_19))) goto next_79;
@@ -1190,7 +1214,7 @@ next_78:;
     i_2 = arg_66;
     xs_19 = arg_67;
     goto tailrec_76;
-    match_13 = 0;
+    match_7 = 0;
     goto end_match_77;
 next_79:;
     exit(1);
@@ -1209,7 +1233,7 @@ struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6Obje
 
 int go_7(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 v_1, int len_10, int i_3) {
 tailrec_80:;
-    int if_8;
+    int if_14;
     if ((i_3 < len_10)) {
         goto then_82;
     } else {
@@ -1226,10 +1250,10 @@ then_82:;
     len_10 = arg_69;
     i_3 = arg_70;
     goto tailrec_80;
-    if_8 = 0;
+    if_14 = 0;
     goto if_next_81;
 else_83:;
-    if_8 = 0;
+    if_14 = 0;
     goto if_next_81;
 if_next_81:;
     return 0;
@@ -1301,20 +1325,20 @@ int intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_
     int xr_ = first_4.t1;
     int yl_ = second_4.t0;
     int yr_ = second_4.t1;
-    int if_9;
+    int if_15;
     if ((yl_ >= xr_)) {
         goto then_85;
     } else {
         goto else_86;
     }
 then_85:;
-    if_9 = 1;
+    if_15 = 1;
     goto if_next_84;
 else_86:;
-    if_9 = (xl_ >= yr_);
+    if_15 = (xl_ >= yr_);
     goto if_next_84;
 if_next_84:;
-    return if_9;
+    return if_15;
 }
 
 int intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5) {
@@ -1322,20 +1346,20 @@ int intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5) {
     int xr_1 = first_5.t1;
     int yl_1 = second_5.t0;
     int yr_1 = second_5.t1;
-    int if_10;
+    int if_16;
     if ((yl_1 >= xl_1)) {
         goto then_88;
     } else {
         goto else_89;
     }
 then_88:;
-    if_10 = (xr_1 >= yr_1);
+    if_16 = (xr_1 >= yr_1);
     goto if_next_87;
 else_89:;
-    if_10 = 0;
+    if_16 = 0;
     goto if_next_87;
 if_next_87:;
-    return if_10;
+    return if_16;
 }
 
 struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 {
@@ -1523,20 +1547,20 @@ struct IntIntIntObjectObjectTuple5 doNew_1(struct IntIntIntObjectObjectTuple5 ri
     int rightItem_ = right_.t0;
     int rightLen_ = right_.t1;
     int rightHeight_ = right_.t2;
-    int if_11;
+    int if_17;
     if ((leftLen_ >= 1)) {
         goto then_91;
     } else {
         goto else_92;
     }
 then_91:;
-    if_11 = (rightLen_ >= 1);
+    if_17 = (rightLen_ >= 1);
     goto if_next_90;
 else_92:;
-    if_11 = 0;
+    if_17 = 0;
     goto if_next_90;
 if_next_90:;
-    milone_assert(if_11, 73, 4);
+    milone_assert(if_17, 73, 4);
     int call_81 = 0;
     struct IntIntIntFun2 call_82 = segItemTypeToAppend_1(itemTy_7);
     int app_8 = call_82.fun(call_82.env, leftItem_, rightItem_);
@@ -1565,20 +1589,20 @@ struct StringIntIntObjectObjectTuple5 doNew_2(struct StringIntIntObjectObjectTup
     struct String rightItem_ = right_.t0;
     int rightLen_ = right_.t1;
     int rightHeight_ = right_.t2;
-    int if_12;
+    int if_18;
     if ((leftLen_ >= 1)) {
         goto then_94;
     } else {
         goto else_95;
     }
 then_94:;
-    if_12 = (rightLen_ >= 1);
+    if_18 = (rightLen_ >= 1);
     goto if_next_93;
 else_95:;
-    if_12 = 0;
+    if_18 = 0;
     goto if_next_93;
 if_next_93:;
-    milone_assert(if_12, 73, 4);
+    milone_assert(if_18, 73, 4);
     int call_84 = 0;
     struct StringStringStringFun2 call_85 = segItemTypeToAppend_2(itemTy_7);
     struct String app_9 = call_85.fun(call_85.env, leftItem_, rightItem_);
@@ -1601,7 +1625,7 @@ if_next_93:;
 }
 
 struct IntIntIntObjectObjectTuple5 segNodeNew_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_7, struct IntIntIntObjectObjectTuple5 left_, struct IntIntIntObjectObjectTuple5 right_) {
-    struct IntIntIntObjectObjectTuple5 match_14;
+    struct IntIntIntObjectObjectTuple5 match_8;
     int call_87 = segNodeToLength_1(left_);
     int call_88 = segNodeToLength_1(right_);
     struct IntIntTuple2 tuple_19;
@@ -1610,27 +1634,27 @@ struct IntIntIntObjectObjectTuple5 segNodeNew_1(struct IntIntIntFun2IntIntIntObj
     if ((tuple_19.t0 != 0)) goto next_97;
     if ((tuple_19.t1 != 0)) goto next_97;
     struct IntIntIntObjectObjectTuple5 call_89 = segItemTypeToEmptyNode_2(itemTy_7);
-    match_14 = call_89;
+    match_8 = call_89;
     goto end_match_96;
 next_97:;
     if ((tuple_19.t0 != 0)) goto next_98;
-    match_14 = right_;
+    match_8 = right_;
     goto end_match_96;
 next_98:;
     if ((tuple_19.t1 != 0)) goto next_99;
-    match_14 = left_;
+    match_8 = left_;
     goto end_match_96;
 next_99:;
     struct IntIntIntObjectObjectTuple5 call_90 = doNew_1(right_, left_, itemTy_7, 0);
-    match_14 = call_90;
+    match_8 = call_90;
     goto end_match_96;
 next_100:;
 end_match_96:;
-    return match_14;
+    return match_8;
 }
 
 struct StringIntIntObjectObjectTuple5 segNodeNew_2(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_7, struct StringIntIntObjectObjectTuple5 left_, struct StringIntIntObjectObjectTuple5 right_) {
-    struct StringIntIntObjectObjectTuple5 match_15;
+    struct StringIntIntObjectObjectTuple5 match_9;
     int call_91 = segNodeToLength_2(left_);
     int call_92 = segNodeToLength_2(right_);
     struct IntIntTuple2 tuple_20;
@@ -1639,23 +1663,23 @@ struct StringIntIntObjectObjectTuple5 segNodeNew_2(struct StringStringStringFun2
     if ((tuple_20.t0 != 0)) goto next_102;
     if ((tuple_20.t1 != 0)) goto next_102;
     struct StringIntIntObjectObjectTuple5 call_93 = segItemTypeToEmptyNode_1(itemTy_7);
-    match_15 = call_93;
+    match_9 = call_93;
     goto end_match_101;
 next_102:;
     if ((tuple_20.t0 != 0)) goto next_103;
-    match_15 = right_;
+    match_9 = right_;
     goto end_match_101;
 next_103:;
     if ((tuple_20.t1 != 0)) goto next_104;
-    match_15 = left_;
+    match_9 = left_;
     goto end_match_101;
 next_104:;
     struct StringIntIntObjectObjectTuple5 call_94 = doNew_2(right_, left_, itemTy_7, 0);
-    match_15 = call_94;
+    match_9 = call_94;
     goto end_match_101;
 next_105:;
 end_match_101:;
-    return match_15;
+    return match_9;
 }
 
 int segNodeToItem_1(struct IntIntIntObjectObjectTuple5 node_) {
@@ -1779,7 +1803,7 @@ struct StringIntIntObjectObjectTuple5 segNodeWithRight_2(struct StringStringStri
 }
 
 struct IntIntIntObjectObjectTuple5 rotateLeft_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct IntIntIntObjectObjectTuple5 node_8) {
-    struct IntIntIntObjectObjectTuple5 if_13;
+    struct IntIntIntObjectObjectTuple5 if_19;
     int call_118 = segNodeToLength_1(node_8);
     if ((call_118 < 2)) {
         goto then_107;
@@ -1787,12 +1811,12 @@ struct IntIntIntObjectObjectTuple5 rotateLeft_1(struct IntIntIntFun2IntIntIntObj
         goto else_108;
     }
 then_107:;
-    if_13 = node_8;
+    if_19 = node_8;
     goto if_next_106;
 else_108:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_119 = segNodeToChildren_1(node_8);
     struct IntIntIntObjectObjectTuple5 right_3 = call_119.t1;
-    struct IntIntIntObjectObjectTuple5 if_14;
+    struct IntIntIntObjectObjectTuple5 if_20;
     int call_120 = segNodeToLength_1(right_3);
     if ((call_120 < 2)) {
         goto then_110;
@@ -1800,7 +1824,7 @@ else_108:;
         goto else_111;
     }
 then_110:;
-    if_14 = node_8;
+    if_20 = node_8;
     goto if_next_109;
 else_111:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_121 = segNodeToChildren_1(right_3);
@@ -1809,17 +1833,17 @@ else_111:;
     struct IntIntIntObjectObjectTuple5 u_ = call_122;
     struct IntIntIntObjectObjectTuple5 call_123 = segNodeWithLeft_1(itemTy_10, u_, right_3);
     struct IntIntIntObjectObjectTuple5 t_ = call_123;
-    if_14 = t_;
+    if_20 = t_;
     goto if_next_109;
 if_next_109:;
-    if_13 = if_14;
+    if_19 = if_20;
     goto if_next_106;
 if_next_106:;
-    return if_13;
+    return if_19;
 }
 
 struct StringIntIntObjectObjectTuple5 rotateLeft_2(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct StringIntIntObjectObjectTuple5 node_8) {
-    struct StringIntIntObjectObjectTuple5 if_15;
+    struct StringIntIntObjectObjectTuple5 if_21;
     int call_124 = segNodeToLength_2(node_8);
     if ((call_124 < 2)) {
         goto then_113;
@@ -1827,12 +1851,12 @@ struct StringIntIntObjectObjectTuple5 rotateLeft_2(struct StringStringStringFun2
         goto else_114;
     }
 then_113:;
-    if_15 = node_8;
+    if_21 = node_8;
     goto if_next_112;
 else_114:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_125 = segNodeToChildren_2(node_8);
     struct StringIntIntObjectObjectTuple5 right_3 = call_125.t1;
-    struct StringIntIntObjectObjectTuple5 if_16;
+    struct StringIntIntObjectObjectTuple5 if_22;
     int call_126 = segNodeToLength_2(right_3);
     if ((call_126 < 2)) {
         goto then_116;
@@ -1840,7 +1864,7 @@ else_114:;
         goto else_117;
     }
 then_116:;
-    if_16 = node_8;
+    if_22 = node_8;
     goto if_next_115;
 else_117:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_127 = segNodeToChildren_2(right_3);
@@ -1849,17 +1873,17 @@ else_117:;
     struct StringIntIntObjectObjectTuple5 u_ = call_128;
     struct StringIntIntObjectObjectTuple5 call_129 = segNodeWithLeft_2(itemTy_10, u_, right_3);
     struct StringIntIntObjectObjectTuple5 t_ = call_129;
-    if_16 = t_;
+    if_22 = t_;
     goto if_next_115;
 if_next_115:;
-    if_15 = if_16;
+    if_21 = if_22;
     goto if_next_112;
 if_next_112:;
-    return if_15;
+    return if_21;
 }
 
 struct IntIntIntObjectObjectTuple5 rotateRight_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct IntIntIntObjectObjectTuple5 node_9) {
-    struct IntIntIntObjectObjectTuple5 if_17;
+    struct IntIntIntObjectObjectTuple5 if_23;
     int call_130 = segNodeToLength_1(node_9);
     if ((call_130 < 2)) {
         goto then_119;
@@ -1867,12 +1891,12 @@ struct IntIntIntObjectObjectTuple5 rotateRight_1(struct IntIntIntFun2IntIntIntOb
         goto else_120;
     }
 then_119:;
-    if_17 = node_9;
+    if_23 = node_9;
     goto if_next_118;
 else_120:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_131 = segNodeToChildren_1(node_9);
     struct IntIntIntObjectObjectTuple5 left_3 = call_131.t0;
-    struct IntIntIntObjectObjectTuple5 if_18;
+    struct IntIntIntObjectObjectTuple5 if_24;
     int call_132 = segNodeToLength_1(left_3);
     if ((call_132 < 2)) {
         goto then_122;
@@ -1880,7 +1904,7 @@ else_120:;
         goto else_123;
     }
 then_122:;
-    if_18 = node_9;
+    if_24 = node_9;
     goto if_next_121;
 else_123:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_133 = segNodeToChildren_1(left_3);
@@ -1889,17 +1913,17 @@ else_123:;
     struct IntIntIntObjectObjectTuple5 u_1 = call_134;
     struct IntIntIntObjectObjectTuple5 call_135 = segNodeWithRight_1(itemTy_10, u_1, left_3);
     struct IntIntIntObjectObjectTuple5 t_1 = call_135;
-    if_18 = t_1;
+    if_24 = t_1;
     goto if_next_121;
 if_next_121:;
-    if_17 = if_18;
+    if_23 = if_24;
     goto if_next_118;
 if_next_118:;
-    return if_17;
+    return if_23;
 }
 
 struct StringIntIntObjectObjectTuple5 rotateRight_2(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct StringIntIntObjectObjectTuple5 node_9) {
-    struct StringIntIntObjectObjectTuple5 if_19;
+    struct StringIntIntObjectObjectTuple5 if_25;
     int call_136 = segNodeToLength_2(node_9);
     if ((call_136 < 2)) {
         goto then_125;
@@ -1907,12 +1931,12 @@ struct StringIntIntObjectObjectTuple5 rotateRight_2(struct StringStringStringFun
         goto else_126;
     }
 then_125:;
-    if_19 = node_9;
+    if_25 = node_9;
     goto if_next_124;
 else_126:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_137 = segNodeToChildren_2(node_9);
     struct StringIntIntObjectObjectTuple5 left_3 = call_137.t0;
-    struct StringIntIntObjectObjectTuple5 if_20;
+    struct StringIntIntObjectObjectTuple5 if_26;
     int call_138 = segNodeToLength_2(left_3);
     if ((call_138 < 2)) {
         goto then_128;
@@ -1920,7 +1944,7 @@ else_126:;
         goto else_129;
     }
 then_128:;
-    if_20 = node_9;
+    if_26 = node_9;
     goto if_next_127;
 else_129:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_139 = segNodeToChildren_2(left_3);
@@ -1929,17 +1953,17 @@ else_129:;
     struct StringIntIntObjectObjectTuple5 u_1 = call_140;
     struct StringIntIntObjectObjectTuple5 call_141 = segNodeWithRight_2(itemTy_10, u_1, left_3);
     struct StringIntIntObjectObjectTuple5 t_1 = call_141;
-    if_20 = t_1;
+    if_26 = t_1;
     goto if_next_127;
 if_next_127:;
-    if_19 = if_20;
+    if_25 = if_26;
     goto if_next_124;
 if_next_124:;
-    return if_19;
+    return if_25;
 }
 
 struct IntIntIntObjectObjectTuple5 doubleLeft_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct IntIntIntObjectObjectTuple5 node_10) {
-    struct IntIntIntObjectObjectTuple5 if_21;
+    struct IntIntIntObjectObjectTuple5 if_27;
     int call_142 = segNodeToLength_1(node_10);
     if ((call_142 < 2)) {
         goto then_131;
@@ -1947,7 +1971,7 @@ struct IntIntIntObjectObjectTuple5 doubleLeft_1(struct IntIntIntFun2IntIntIntObj
         goto else_132;
     }
 then_131:;
-    if_21 = node_10;
+    if_27 = node_10;
     goto if_next_130;
 else_132:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_143 = segNodeToChildren_1(node_10);
@@ -1955,14 +1979,14 @@ else_132:;
     struct IntIntIntObjectObjectTuple5 call_144 = rotateRight_1(itemTy_10, right_4);
     struct IntIntIntObjectObjectTuple5 call_145 = segNodeWithRight_1(itemTy_10, call_144, node_10);
     struct IntIntIntObjectObjectTuple5 call_146 = rotateLeft_1(itemTy_10, call_145);
-    if_21 = call_146;
+    if_27 = call_146;
     goto if_next_130;
 if_next_130:;
-    return if_21;
+    return if_27;
 }
 
 struct StringIntIntObjectObjectTuple5 doubleLeft_2(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct StringIntIntObjectObjectTuple5 node_10) {
-    struct StringIntIntObjectObjectTuple5 if_22;
+    struct StringIntIntObjectObjectTuple5 if_28;
     int call_147 = segNodeToLength_2(node_10);
     if ((call_147 < 2)) {
         goto then_134;
@@ -1970,7 +1994,7 @@ struct StringIntIntObjectObjectTuple5 doubleLeft_2(struct StringStringStringFun2
         goto else_135;
     }
 then_134:;
-    if_22 = node_10;
+    if_28 = node_10;
     goto if_next_133;
 else_135:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_148 = segNodeToChildren_2(node_10);
@@ -1978,14 +2002,14 @@ else_135:;
     struct StringIntIntObjectObjectTuple5 call_149 = rotateRight_2(itemTy_10, right_4);
     struct StringIntIntObjectObjectTuple5 call_150 = segNodeWithRight_2(itemTy_10, call_149, node_10);
     struct StringIntIntObjectObjectTuple5 call_151 = rotateLeft_2(itemTy_10, call_150);
-    if_22 = call_151;
+    if_28 = call_151;
     goto if_next_133;
 if_next_133:;
-    return if_22;
+    return if_28;
 }
 
 struct IntIntIntObjectObjectTuple5 doubleRight_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct IntIntIntObjectObjectTuple5 node_11) {
-    struct IntIntIntObjectObjectTuple5 if_23;
+    struct IntIntIntObjectObjectTuple5 if_29;
     int call_152 = segNodeToLength_1(node_11);
     if ((call_152 < 2)) {
         goto then_137;
@@ -1993,7 +2017,7 @@ struct IntIntIntObjectObjectTuple5 doubleRight_1(struct IntIntIntFun2IntIntIntOb
         goto else_138;
     }
 then_137:;
-    if_23 = node_11;
+    if_29 = node_11;
     goto if_next_136;
 else_138:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_153 = segNodeToChildren_1(node_11);
@@ -2001,14 +2025,14 @@ else_138:;
     struct IntIntIntObjectObjectTuple5 call_154 = rotateLeft_1(itemTy_10, left_4);
     struct IntIntIntObjectObjectTuple5 call_155 = segNodeWithLeft_1(itemTy_10, call_154, node_11);
     struct IntIntIntObjectObjectTuple5 call_156 = rotateRight_1(itemTy_10, call_155);
-    if_23 = call_156;
+    if_29 = call_156;
     goto if_next_136;
 if_next_136:;
-    return if_23;
+    return if_29;
 }
 
 struct StringIntIntObjectObjectTuple5 doubleRight_2(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct StringIntIntObjectObjectTuple5 node_11) {
-    struct StringIntIntObjectObjectTuple5 if_24;
+    struct StringIntIntObjectObjectTuple5 if_30;
     int call_157 = segNodeToLength_2(node_11);
     if ((call_157 < 2)) {
         goto then_140;
@@ -2016,7 +2040,7 @@ struct StringIntIntObjectObjectTuple5 doubleRight_2(struct StringStringStringFun
         goto else_141;
     }
 then_140:;
-    if_24 = node_11;
+    if_30 = node_11;
     goto if_next_139;
 else_141:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_158 = segNodeToChildren_2(node_11);
@@ -2024,14 +2048,14 @@ else_141:;
     struct StringIntIntObjectObjectTuple5 call_159 = rotateLeft_2(itemTy_10, left_4);
     struct StringIntIntObjectObjectTuple5 call_160 = segNodeWithLeft_2(itemTy_10, call_159, node_11);
     struct StringIntIntObjectObjectTuple5 call_161 = rotateRight_2(itemTy_10, call_160);
-    if_24 = call_161;
+    if_30 = call_161;
     goto if_next_139;
 if_next_139:;
-    return if_24;
+    return if_30;
 }
 
 int toBalance_1(struct IntIntIntObjectObjectTuple5 node_12) {
-    int if_25;
+    int if_31;
     int call_162 = segNodeToLength_1(node_12);
     if ((call_162 < 2)) {
         goto then_143;
@@ -2039,7 +2063,7 @@ int toBalance_1(struct IntIntIntObjectObjectTuple5 node_12) {
         goto else_144;
     }
 then_143:;
-    if_25 = 0;
+    if_31 = 0;
     goto if_next_142;
 else_144:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_163 = segNodeToChildren_1(node_12);
@@ -2047,14 +2071,14 @@ else_144:;
     struct IntIntIntObjectObjectTuple5 right_5 = call_163.t1;
     int call_164 = segNodeToHeight_1(right_5);
     int call_165 = segNodeToHeight_1(left_5);
-    if_25 = (call_164 - call_165);
+    if_31 = (call_164 - call_165);
     goto if_next_142;
 if_next_142:;
-    return if_25;
+    return if_31;
 }
 
 int toBalance_2(struct StringIntIntObjectObjectTuple5 node_12) {
-    int if_26;
+    int if_32;
     int call_166 = segNodeToLength_2(node_12);
     if ((call_166 < 2)) {
         goto then_146;
@@ -2062,7 +2086,7 @@ int toBalance_2(struct StringIntIntObjectObjectTuple5 node_12) {
         goto else_147;
     }
 then_146:;
-    if_26 = 0;
+    if_32 = 0;
     goto if_next_145;
 else_147:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_167 = segNodeToChildren_2(node_12);
@@ -2070,39 +2094,39 @@ else_147:;
     struct StringIntIntObjectObjectTuple5 right_5 = call_167.t1;
     int call_168 = segNodeToHeight_2(right_5);
     int call_169 = segNodeToHeight_2(left_5);
-    if_26 = (call_168 - call_169);
+    if_32 = (call_168 - call_169);
     goto if_next_145;
 if_next_145:;
-    return if_26;
+    return if_32;
 }
 
 struct IntIntIntObjectObjectTuple5 segNodeMakeBalanced_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct IntIntIntObjectObjectTuple5 node_7) {
     int call_170 = toBalance_1(node_7);
     int selfBalance_ = call_170;
-    struct IntIntIntObjectObjectTuple5 if_27;
-    int if_28;
+    struct IntIntIntObjectObjectTuple5 if_33;
+    int if_34;
     if ((selfBalance_ >= (0 - 1))) {
         goto then_150;
     } else {
         goto else_151;
     }
 then_150:;
-    if_28 = (1 >= selfBalance_);
+    if_34 = (1 >= selfBalance_);
     goto if_next_149;
 else_151:;
-    if_28 = 0;
+    if_34 = 0;
     goto if_next_149;
 if_next_149:;
-    if (if_28) {
+    if (if_34) {
         goto then_152;
     } else {
         goto else_153;
     }
 then_152:;
-    if_27 = node_7;
+    if_33 = node_7;
     goto if_next_148;
 else_153:;
-    struct IntIntIntObjectObjectTuple5 if_29;
+    struct IntIntIntObjectObjectTuple5 if_35;
     int call_171 = segNodeToLength_1(node_7);
     if ((call_171 < 2)) {
         goto then_155;
@@ -2110,20 +2134,20 @@ else_153:;
         goto else_156;
     }
 then_155:;
-    if_29 = node_7;
+    if_35 = node_7;
     goto if_next_154;
 else_156:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_172 = segNodeToChildren_1(node_7);
     struct IntIntIntObjectObjectTuple5 left_6 = call_172.t0;
     struct IntIntIntObjectObjectTuple5 right_6 = call_172.t1;
-    struct IntIntIntObjectObjectTuple5 if_30;
+    struct IntIntIntObjectObjectTuple5 if_36;
     if ((selfBalance_ >= 2)) {
         goto then_158;
     } else {
         goto else_162;
     }
 then_158:;
-    struct IntIntIntObjectObjectTuple5 if_31;
+    struct IntIntIntObjectObjectTuple5 if_37;
     int call_173 = toBalance_1(right_6);
     if ((call_173 < 0)) {
         goto then_160;
@@ -2132,17 +2156,17 @@ then_158:;
     }
 then_160:;
     struct IntIntIntObjectObjectTuple5 call_174 = doubleLeft_1(itemTy_10, node_7);
-    if_31 = call_174;
+    if_37 = call_174;
     goto if_next_159;
 else_161:;
     struct IntIntIntObjectObjectTuple5 call_175 = rotateLeft_1(itemTy_10, node_7);
-    if_31 = call_175;
+    if_37 = call_175;
     goto if_next_159;
 if_next_159:;
-    if_30 = if_31;
+    if_36 = if_37;
     goto if_next_157;
 else_162:;
-    struct IntIntIntObjectObjectTuple5 if_32;
+    struct IntIntIntObjectObjectTuple5 if_38;
     int call_176 = toBalance_1(left_6);
     if ((0 < call_176)) {
         goto then_164;
@@ -2151,52 +2175,52 @@ else_162:;
     }
 then_164:;
     struct IntIntIntObjectObjectTuple5 call_177 = doubleRight_1(itemTy_10, node_7);
-    if_32 = call_177;
+    if_38 = call_177;
     goto if_next_163;
 else_165:;
     struct IntIntIntObjectObjectTuple5 call_178 = rotateRight_1(itemTy_10, node_7);
-    if_32 = call_178;
+    if_38 = call_178;
     goto if_next_163;
 if_next_163:;
-    if_30 = if_32;
+    if_36 = if_38;
     goto if_next_157;
 if_next_157:;
-    if_29 = if_30;
+    if_35 = if_36;
     goto if_next_154;
 if_next_154:;
-    if_27 = if_29;
+    if_33 = if_35;
     goto if_next_148;
 if_next_148:;
-    return if_27;
+    return if_33;
 }
 
 struct StringIntIntObjectObjectTuple5 segNodeMakeBalanced_2(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_10, struct StringIntIntObjectObjectTuple5 node_7) {
     int call_179 = toBalance_2(node_7);
     int selfBalance_ = call_179;
-    struct StringIntIntObjectObjectTuple5 if_33;
-    int if_34;
+    struct StringIntIntObjectObjectTuple5 if_39;
+    int if_40;
     if ((selfBalance_ >= (0 - 1))) {
         goto then_168;
     } else {
         goto else_169;
     }
 then_168:;
-    if_34 = (1 >= selfBalance_);
+    if_40 = (1 >= selfBalance_);
     goto if_next_167;
 else_169:;
-    if_34 = 0;
+    if_40 = 0;
     goto if_next_167;
 if_next_167:;
-    if (if_34) {
+    if (if_40) {
         goto then_170;
     } else {
         goto else_171;
     }
 then_170:;
-    if_33 = node_7;
+    if_39 = node_7;
     goto if_next_166;
 else_171:;
-    struct StringIntIntObjectObjectTuple5 if_35;
+    struct StringIntIntObjectObjectTuple5 if_41;
     int call_180 = segNodeToLength_2(node_7);
     if ((call_180 < 2)) {
         goto then_173;
@@ -2204,20 +2228,20 @@ else_171:;
         goto else_174;
     }
 then_173:;
-    if_35 = node_7;
+    if_41 = node_7;
     goto if_next_172;
 else_174:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_181 = segNodeToChildren_2(node_7);
     struct StringIntIntObjectObjectTuple5 left_6 = call_181.t0;
     struct StringIntIntObjectObjectTuple5 right_6 = call_181.t1;
-    struct StringIntIntObjectObjectTuple5 if_36;
+    struct StringIntIntObjectObjectTuple5 if_42;
     if ((selfBalance_ >= 2)) {
         goto then_176;
     } else {
         goto else_180;
     }
 then_176:;
-    struct StringIntIntObjectObjectTuple5 if_37;
+    struct StringIntIntObjectObjectTuple5 if_43;
     int call_182 = toBalance_2(right_6);
     if ((call_182 < 0)) {
         goto then_178;
@@ -2226,17 +2250,17 @@ then_176:;
     }
 then_178:;
     struct StringIntIntObjectObjectTuple5 call_183 = doubleLeft_2(itemTy_10, node_7);
-    if_37 = call_183;
+    if_43 = call_183;
     goto if_next_177;
 else_179:;
     struct StringIntIntObjectObjectTuple5 call_184 = rotateLeft_2(itemTy_10, node_7);
-    if_37 = call_184;
+    if_43 = call_184;
     goto if_next_177;
 if_next_177:;
-    if_36 = if_37;
+    if_42 = if_43;
     goto if_next_175;
 else_180:;
-    struct StringIntIntObjectObjectTuple5 if_38;
+    struct StringIntIntObjectObjectTuple5 if_44;
     int call_185 = toBalance_2(left_6);
     if ((0 < call_185)) {
         goto then_182;
@@ -2245,23 +2269,23 @@ else_180:;
     }
 then_182:;
     struct StringIntIntObjectObjectTuple5 call_186 = doubleRight_2(itemTy_10, node_7);
-    if_38 = call_186;
+    if_44 = call_186;
     goto if_next_181;
 else_183:;
     struct StringIntIntObjectObjectTuple5 call_187 = rotateRight_2(itemTy_10, node_7);
-    if_38 = call_187;
+    if_44 = call_187;
     goto if_next_181;
 if_next_181:;
-    if_36 = if_38;
+    if_42 = if_44;
     goto if_next_175;
 if_next_175:;
-    if_35 = if_36;
+    if_41 = if_42;
     goto if_next_172;
 if_next_172:;
-    if_33 = if_35;
+    if_39 = if_41;
     goto if_next_166;
 if_next_166:;
-    return if_33;
+    return if_39;
 }
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 {
@@ -2328,21 +2352,21 @@ int go_27(int index_6, struct IntIntIntObjectObjectTuple5 node_14) {
 tailrec_184:;
     int item_4 = node_14.t0;
     int len_14 = node_14.t1;
-    int if_39;
-    int if_40;
+    int if_45;
+    int if_46;
     if ((index_6 < 0)) {
         goto then_187;
     } else {
         goto else_188;
     }
 then_187:;
-    if_40 = 1;
+    if_46 = 1;
     goto if_next_186;
 else_188:;
-    if_40 = (index_6 >= len_14);
+    if_46 = (index_6 >= len_14);
     goto if_next_186;
 if_next_186:;
-    if (if_40) {
+    if (if_46) {
         goto then_189;
     } else {
         goto else_190;
@@ -2351,22 +2375,22 @@ then_189:;
     printf("ERROR: segNodeGet out of range (index = %d, len = %d)\n", index_6, len_14);
     int call_196 = 0;
     exit(1);
-    if_39 = 0;
+    if_45 = 0;
     goto if_next_185;
 else_190:;
-    if_39 = 0;
+    if_45 = 0;
     goto if_next_185;
 if_next_185:;
     milone_assert((len_14 != 0), 264, 4);
     int call_197 = 0;
-    int if_41;
+    int if_47;
     if ((len_14 == 1)) {
         goto then_192;
     } else {
         goto else_193;
     }
 then_192:;
-    if_41 = item_4;
+    if_47 = item_4;
     goto if_next_191;
 else_193:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_198 = segNodeToChildren_1(node_14);
@@ -2374,7 +2398,7 @@ else_193:;
     struct IntIntIntObjectObjectTuple5 right_7 = call_198.t1;
     int call_199 = segNodeToLength_1(left_7);
     int leftLen_1 = call_199;
-    int if_42;
+    int if_48;
     if ((index_6 < leftLen_1)) {
         goto then_195;
     } else {
@@ -2386,7 +2410,7 @@ then_195:;
     index_6 = arg_82;
     node_14 = arg_83;
     goto tailrec_184;
-    if_42 = 0;
+    if_48 = 0;
     goto if_next_194;
 else_196:;
     int arg_84 = (index_6 - leftLen_1);
@@ -2394,34 +2418,34 @@ else_196:;
     index_6 = arg_84;
     node_14 = arg_85;
     goto tailrec_184;
-    if_42 = 0;
+    if_48 = 0;
     goto if_next_194;
 if_next_194:;
-    if_41 = if_42;
+    if_47 = if_48;
     goto if_next_191;
 if_next_191:;
-    return if_41;
+    return if_47;
 }
 
 struct String go_37(int index_6, struct StringIntIntObjectObjectTuple5 node_14) {
 tailrec_197:;
     struct String item_4 = node_14.t0;
     int len_14 = node_14.t1;
-    int if_43;
-    int if_44;
+    int if_49;
+    int if_50;
     if ((index_6 < 0)) {
         goto then_200;
     } else {
         goto else_201;
     }
 then_200:;
-    if_44 = 1;
+    if_50 = 1;
     goto if_next_199;
 else_201:;
-    if_44 = (index_6 >= len_14);
+    if_50 = (index_6 >= len_14);
     goto if_next_199;
 if_next_199:;
-    if (if_44) {
+    if (if_50) {
         goto then_202;
     } else {
         goto else_203;
@@ -2430,22 +2454,22 @@ then_202:;
     printf("ERROR: segNodeGet out of range (index = %d, len = %d)\n", index_6, len_14);
     int call_200 = 0;
     exit(1);
-    if_43 = 0;
+    if_49 = 0;
     goto if_next_198;
 else_203:;
-    if_43 = 0;
+    if_49 = 0;
     goto if_next_198;
 if_next_198:;
     milone_assert((len_14 != 0), 264, 4);
     int call_201 = 0;
-    struct String if_45;
+    struct String if_51;
     if ((len_14 == 1)) {
         goto then_205;
     } else {
         goto else_206;
     }
 then_205:;
-    if_45 = item_4;
+    if_51 = item_4;
     goto if_next_204;
 else_206:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_202 = segNodeToChildren_2(node_14);
@@ -2453,7 +2477,7 @@ else_206:;
     struct StringIntIntObjectObjectTuple5 right_7 = call_202.t1;
     int call_203 = segNodeToLength_2(left_7);
     int leftLen_1 = call_203;
-    struct String if_46;
+    struct String if_52;
     if ((index_6 < leftLen_1)) {
         goto then_208;
     } else {
@@ -2465,7 +2489,7 @@ then_208:;
     index_6 = arg_86;
     node_14 = arg_87;
     goto tailrec_197;
-    if_46 = ((struct String){});
+    if_52 = ((struct String){});
     goto if_next_207;
 else_209:;
     int arg_88 = (index_6 - leftLen_1);
@@ -2473,13 +2497,13 @@ else_209:;
     index_6 = arg_88;
     node_14 = arg_89;
     goto tailrec_197;
-    if_46 = ((struct String){});
+    if_52 = ((struct String){});
     goto if_next_207;
 if_next_207:;
-    if_45 = if_46;
+    if_51 = if_52;
     goto if_next_204;
 if_next_204:;
-    return if_45;
+    return if_51;
 }
 
 int segTreeGet_1(int index_5, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_8) {
@@ -2495,7 +2519,7 @@ struct String segTreeGet_2(int index_5, struct StringStringStringFun2StringIntIn
 }
 
 int go_26(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_12, struct IntIntTuple2 e_, struct IntIntTuple2 q_, struct IntIntIntObjectObjectTuple5 node_15) {
-    int if_47;
+    int if_53;
     int call_208 = intervalIsDisjoint_(q_, e_);
     if (call_208) {
         goto then_211;
@@ -2504,10 +2528,10 @@ int go_26(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 item
     }
 then_211:;
     int call_209 = segItemTypeToEmptyItem_1(itemTy_12);
-    if_47 = call_209;
+    if_53 = call_209;
     goto if_next_210;
 else_212:;
-    int if_48;
+    int if_54;
     int call_210 = intervalCovers_(q_, e_);
     if (call_210) {
         goto then_214;
@@ -2516,7 +2540,7 @@ else_212:;
     }
 then_214:;
     int call_211 = segNodeToItem_1(node_15);
-    if_48 = call_211;
+    if_54 = call_211;
     goto if_next_213;
 else_215:;
     int call_212 = segNodeIsEmpty_1(node_15);
@@ -2541,13 +2565,13 @@ else_215:;
     int vr_ = call_217;
     struct IntIntIntFun2 call_218 = segItemTypeToAppend_1(itemTy_12);
     int app_10 = call_218.fun(call_218.env, vl_, vr_);
-    if_48 = app_10;
+    if_54 = app_10;
     goto if_next_213;
 if_next_213:;
-    if_47 = if_48;
+    if_53 = if_54;
     goto if_next_210;
 if_next_210:;
-    return if_47;
+    return if_53;
 }
 
 int segTreeSum_1(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_9) {
@@ -2559,7 +2583,7 @@ int segTreeSum_1(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectObjectTupl
     tuple_27.t0 = ql_;
     tuple_27.t1 = qr_;
     struct IntIntTuple2 q_1 = tuple_27;
-    int if_49;
+    int if_55;
     struct IntIntTuple2 tuple_28;
     tuple_28.t0 = 0;
     tuple_28.t1 = len_15;
@@ -2571,7 +2595,7 @@ int segTreeSum_1(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectObjectTupl
     }
 then_217:;
     int call_221 = segItemTypeToEmptyItem_1(itemTy_12);
-    if_49 = call_221;
+    if_55 = call_221;
     goto if_next_216;
 else_218:;
     struct IntIntTuple2 tuple_29;
@@ -2579,31 +2603,31 @@ else_218:;
     tuple_29.t1 = len_15;
     struct IntIntTuple2 e_1 = tuple_29;
     int call_222 = go_26(itemTy_12, e_1, q_1, root_);
-    if_49 = call_222;
+    if_55 = call_222;
     goto if_next_216;
 if_next_216:;
-    return if_49;
+    return if_55;
 }
 
 struct IntIntIntObjectObjectTuple5 go_25(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_13, int newItem_, int index_8, struct IntIntIntObjectObjectTuple5 node_16) {
     int len_16 = node_16.t1;
     int height_2 = node_16.t2;
     void* children_1 = node_16.t3;
-    int if_50;
-    int if_51;
+    int if_56;
+    int if_57;
     if ((index_8 < 0)) {
         goto then_221;
     } else {
         goto else_222;
     }
 then_221:;
-    if_51 = 1;
+    if_57 = 1;
     goto if_next_220;
 else_222:;
-    if_51 = (index_8 >= len_16);
+    if_57 = (index_8 >= len_16);
     goto if_next_220;
 if_next_220:;
-    if (if_51) {
+    if (if_57) {
         goto then_223;
     } else {
         goto else_224;
@@ -2612,15 +2636,15 @@ then_223:;
     printf("ERROR: segNodeSet out of range (index = %d, len = %d)\n", index_8, len_16);
     int call_223 = 0;
     exit(1);
-    if_50 = 0;
+    if_56 = 0;
     goto if_next_219;
 else_224:;
-    if_50 = 0;
+    if_56 = 0;
     goto if_next_219;
 if_next_219:;
     milone_assert((len_16 != 0), 317, 4);
     int call_224 = 0;
-    struct IntIntIntObjectObjectTuple5 if_52;
+    struct IntIntIntObjectObjectTuple5 if_58;
     if ((len_16 == 1)) {
         goto then_226;
     } else {
@@ -2633,7 +2657,7 @@ then_226:;
     tuple_30.t2 = height_2;
     tuple_30.t3 = children_1;
     tuple_30.t4 = 0;
-    if_52 = tuple_30;
+    if_58 = tuple_30;
     goto if_next_225;
 else_227:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_225 = segNodeToChildren_1(node_16);
@@ -2641,7 +2665,7 @@ else_227:;
     struct IntIntIntObjectObjectTuple5 right_8 = call_225.t1;
     int call_226 = segNodeToLength_1(left_8);
     int leftLen_2 = call_226;
-    struct IntIntIntObjectObjectTuple5 if_53;
+    struct IntIntIntObjectObjectTuple5 if_59;
     if ((index_8 < leftLen_2)) {
         goto then_229;
     } else {
@@ -2650,18 +2674,18 @@ else_227:;
 then_229:;
     struct IntIntIntObjectObjectTuple5 call_227 = go_25(itemTy_13, newItem_, index_8, left_8);
     struct IntIntIntObjectObjectTuple5 call_228 = segNodeWithLeft_1(itemTy_13, call_227, node_16);
-    if_53 = call_228;
+    if_59 = call_228;
     goto if_next_228;
 else_230:;
     struct IntIntIntObjectObjectTuple5 call_229 = go_25(itemTy_13, newItem_, (index_8 - leftLen_2), right_8);
     struct IntIntIntObjectObjectTuple5 call_230 = segNodeWithRight_1(itemTy_13, call_229, node_16);
-    if_53 = call_230;
+    if_59 = call_230;
     goto if_next_228;
 if_next_228:;
-    if_52 = if_53;
+    if_58 = if_59;
     goto if_next_225;
 if_next_225:;
-    return if_52;
+    return if_58;
 }
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeSet_1(int index_7, int newItem_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_10) {
@@ -2681,7 +2705,7 @@ struct IntIntIntObjectObjectTuple5 go_24(struct IntIntIntFun2IntIntIntObjectObje
     int len_17 = node_17.t1;
     milone_assert((len_17 >= index_10), 339, 4);
     int call_232 = 0;
-    struct IntIntIntObjectObjectTuple5 if_54;
+    struct IntIntIntObjectObjectTuple5 if_60;
     if ((len_17 == 0)) {
         goto then_232;
     } else {
@@ -2689,10 +2713,10 @@ struct IntIntIntObjectObjectTuple5 go_24(struct IntIntIntFun2IntIntIntObjectObje
     }
 then_232:;
     struct IntIntIntObjectObjectTuple5 call_233 = segNodeNewLeaf_1(itemTy_14, newItem_1);
-    if_54 = call_233;
+    if_60 = call_233;
     goto if_next_231;
 else_233:;
-    struct IntIntIntObjectObjectTuple5 if_55;
+    struct IntIntIntObjectObjectTuple5 if_61;
     if ((len_17 == 1)) {
         goto then_235;
     } else {
@@ -2703,7 +2727,7 @@ then_235:;
     struct IntIntIntObjectObjectTuple5 oldLeaf_ = call_234;
     struct IntIntIntObjectObjectTuple5 call_235 = segNodeNewLeaf_1(itemTy_14, newItem_1);
     struct IntIntIntObjectObjectTuple5 newLeaf_ = call_235;
-    struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 if_56;
+    struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 if_62;
     if ((index_10 == 0)) {
         goto then_237;
     } else {
@@ -2713,7 +2737,7 @@ then_237:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 tuple_32;
     tuple_32.t0 = newLeaf_;
     tuple_32.t1 = oldLeaf_;
-    if_56 = tuple_32;
+    if_62 = tuple_32;
     goto if_next_236;
 else_238:;
     milone_assert((index_10 == 1), 351, 10);
@@ -2721,13 +2745,13 @@ else_238:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 tuple_33;
     tuple_33.t0 = oldLeaf_;
     tuple_33.t1 = newLeaf_;
-    if_56 = tuple_33;
+    if_62 = tuple_33;
     goto if_next_236;
 if_next_236:;
-    struct IntIntIntObjectObjectTuple5 left_9 = if_56.t0;
-    struct IntIntIntObjectObjectTuple5 right_9 = if_56.t1;
+    struct IntIntIntObjectObjectTuple5 left_9 = if_62.t0;
+    struct IntIntIntObjectObjectTuple5 right_9 = if_62.t1;
     struct IntIntIntObjectObjectTuple5 call_237 = segNodeNew_1(itemTy_14, left_9, right_9);
-    if_55 = call_237;
+    if_61 = call_237;
     goto if_next_234;
 else_239:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_238 = segNodeToChildren_1(node_17);
@@ -2739,7 +2763,7 @@ else_239:;
     int rightLen_1 = call_240;
     milone_assert(((leftLen_3 + rightLen_1) == len_17), 360, 6);
     int call_241 = 0;
-    struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 if_57;
+    struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 if_63;
     if ((index_10 < leftLen_3)) {
         goto then_241;
     } else {
@@ -2754,7 +2778,7 @@ then_241:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 tuple_34;
     tuple_34.t0 = left_12;
     tuple_34.t1 = right_10;
-    if_57 = tuple_34;
+    if_63 = tuple_34;
     goto if_next_240;
 else_242:;
     struct IntIntIntObjectObjectTuple5 call_245 = go_24(itemTy_14, newItem_1, (index_10 - leftLen_3), right_10);
@@ -2765,20 +2789,20 @@ else_242:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 tuple_35;
     tuple_35.t0 = left_10;
     tuple_35.t1 = right_12;
-    if_57 = tuple_35;
+    if_63 = tuple_35;
     goto if_next_240;
 if_next_240:;
-    struct IntIntIntObjectObjectTuple5 left_11 = if_57.t0;
-    struct IntIntIntObjectObjectTuple5 right_11 = if_57.t1;
+    struct IntIntIntObjectObjectTuple5 left_11 = if_63.t0;
+    struct IntIntIntObjectObjectTuple5 right_11 = if_63.t1;
     struct IntIntIntObjectObjectTuple5 call_248 = segNodeNew_1(itemTy_14, left_11, right_11);
     struct IntIntIntObjectObjectTuple5 call_249 = segNodeMakeBalanced_1(itemTy_14, call_248);
-    if_55 = call_249;
+    if_61 = call_249;
     goto if_next_234;
 if_next_234:;
-    if_54 = if_55;
+    if_60 = if_61;
     goto if_next_231;
 if_next_231:;
-    return if_54;
+    return if_60;
 }
 
 struct StringIntIntObjectObjectTuple5 go_36(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, struct String newItem_1, int index_10, struct StringIntIntObjectObjectTuple5 node_17) {
@@ -2786,7 +2810,7 @@ struct StringIntIntObjectObjectTuple5 go_36(struct StringStringStringFun2StringI
     int len_17 = node_17.t1;
     milone_assert((len_17 >= index_10), 339, 4);
     int call_250 = 0;
-    struct StringIntIntObjectObjectTuple5 if_58;
+    struct StringIntIntObjectObjectTuple5 if_64;
     if ((len_17 == 0)) {
         goto then_244;
     } else {
@@ -2794,10 +2818,10 @@ struct StringIntIntObjectObjectTuple5 go_36(struct StringStringStringFun2StringI
     }
 then_244:;
     struct StringIntIntObjectObjectTuple5 call_251 = segNodeNewLeaf_2(itemTy_14, newItem_1);
-    if_58 = call_251;
+    if_64 = call_251;
     goto if_next_243;
 else_245:;
-    struct StringIntIntObjectObjectTuple5 if_59;
+    struct StringIntIntObjectObjectTuple5 if_65;
     if ((len_17 == 1)) {
         goto then_247;
     } else {
@@ -2808,7 +2832,7 @@ then_247:;
     struct StringIntIntObjectObjectTuple5 oldLeaf_ = call_252;
     struct StringIntIntObjectObjectTuple5 call_253 = segNodeNewLeaf_2(itemTy_14, newItem_1);
     struct StringIntIntObjectObjectTuple5 newLeaf_ = call_253;
-    struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 if_60;
+    struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 if_66;
     if ((index_10 == 0)) {
         goto then_249;
     } else {
@@ -2818,7 +2842,7 @@ then_249:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 tuple_36;
     tuple_36.t0 = newLeaf_;
     tuple_36.t1 = oldLeaf_;
-    if_60 = tuple_36;
+    if_66 = tuple_36;
     goto if_next_248;
 else_250:;
     milone_assert((index_10 == 1), 351, 10);
@@ -2826,13 +2850,13 @@ else_250:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 tuple_37;
     tuple_37.t0 = oldLeaf_;
     tuple_37.t1 = newLeaf_;
-    if_60 = tuple_37;
+    if_66 = tuple_37;
     goto if_next_248;
 if_next_248:;
-    struct StringIntIntObjectObjectTuple5 left_9 = if_60.t0;
-    struct StringIntIntObjectObjectTuple5 right_9 = if_60.t1;
+    struct StringIntIntObjectObjectTuple5 left_9 = if_66.t0;
+    struct StringIntIntObjectObjectTuple5 right_9 = if_66.t1;
     struct StringIntIntObjectObjectTuple5 call_255 = segNodeNew_2(itemTy_14, left_9, right_9);
-    if_59 = call_255;
+    if_65 = call_255;
     goto if_next_246;
 else_251:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 call_256 = segNodeToChildren_2(node_17);
@@ -2844,7 +2868,7 @@ else_251:;
     int rightLen_1 = call_258;
     milone_assert(((leftLen_3 + rightLen_1) == len_17), 360, 6);
     int call_259 = 0;
-    struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 if_61;
+    struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 if_67;
     if ((index_10 < leftLen_3)) {
         goto then_253;
     } else {
@@ -2859,7 +2883,7 @@ then_253:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 tuple_38;
     tuple_38.t0 = left_12;
     tuple_38.t1 = right_10;
-    if_61 = tuple_38;
+    if_67 = tuple_38;
     goto if_next_252;
 else_254:;
     struct StringIntIntObjectObjectTuple5 call_263 = go_36(itemTy_14, newItem_1, (index_10 - leftLen_3), right_10);
@@ -2870,20 +2894,20 @@ else_254:;
     struct StringIntIntObjectObjectTuple5StringIntIntObjectObjectTuple5Tuple2 tuple_39;
     tuple_39.t0 = left_10;
     tuple_39.t1 = right_12;
-    if_61 = tuple_39;
+    if_67 = tuple_39;
     goto if_next_252;
 if_next_252:;
-    struct StringIntIntObjectObjectTuple5 left_11 = if_61.t0;
-    struct StringIntIntObjectObjectTuple5 right_11 = if_61.t1;
+    struct StringIntIntObjectObjectTuple5 left_11 = if_67.t0;
+    struct StringIntIntObjectObjectTuple5 right_11 = if_67.t1;
     struct StringIntIntObjectObjectTuple5 call_266 = segNodeNew_2(itemTy_14, left_11, right_11);
     struct StringIntIntObjectObjectTuple5 call_267 = segNodeMakeBalanced_2(itemTy_14, call_266);
-    if_59 = call_267;
+    if_65 = call_267;
     goto if_next_246;
 if_next_246:;
-    if_58 = if_59;
+    if_64 = if_65;
     goto if_next_243;
 if_next_243:;
-    return if_58;
+    return if_64;
 }
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeInsert_1(int index_9, int newItem_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_11) {
@@ -2916,7 +2940,7 @@ struct IntIntIntObjectObjectTuple5 go_35(struct IntIntIntFun2IntIntIntObjectObje
     int call_270 = 0;
     milone_assert((len_18 != 0), 386, 4);
     int call_271 = 0;
-    struct IntIntIntObjectObjectTuple5 if_62;
+    struct IntIntIntObjectObjectTuple5 if_68;
     if ((len_18 == 1)) {
         goto then_256;
     } else {
@@ -2924,7 +2948,7 @@ struct IntIntIntObjectObjectTuple5 go_35(struct IntIntIntFun2IntIntIntObjectObje
     }
 then_256:;
     struct IntIntIntObjectObjectTuple5 call_272 = segItemTypeToEmptyNode_2(itemTy_15);
-    if_62 = call_272;
+    if_68 = call_272;
     goto if_next_255;
 else_257:;
     struct IntIntIntObjectObjectTuple5IntIntIntObjectObjectTuple5Tuple2 call_273 = segNodeToChildren_1(node_18);
@@ -2936,55 +2960,55 @@ else_257:;
     int rightLen_2 = call_275;
     milone_assert(((leftLen_4 + rightLen_2) == len_18), 394, 6);
     int call_276 = 0;
-    struct IntIntIntObjectObjectTuple5 if_63;
+    struct IntIntIntObjectObjectTuple5 if_69;
     if ((index_12 < leftLen_4)) {
         goto then_259;
     } else {
         goto else_263;
     }
 then_259:;
-    struct IntIntIntObjectObjectTuple5 if_64;
+    struct IntIntIntObjectObjectTuple5 if_70;
     if ((leftLen_4 < 2)) {
         goto then_261;
     } else {
         goto else_262;
     }
 then_261:;
-    if_64 = right_13;
+    if_70 = right_13;
     goto if_next_260;
 else_262:;
     struct IntIntIntObjectObjectTuple5 call_277 = go_35(itemTy_15, index_12, left_13);
     struct IntIntIntObjectObjectTuple5 call_278 = segNodeWithLeft_1(itemTy_15, call_277, node_18);
-    if_64 = call_278;
+    if_70 = call_278;
     goto if_next_260;
 if_next_260:;
-    if_63 = if_64;
+    if_69 = if_70;
     goto if_next_258;
 else_263:;
-    struct IntIntIntObjectObjectTuple5 if_65;
+    struct IntIntIntObjectObjectTuple5 if_71;
     if ((rightLen_2 < 2)) {
         goto then_265;
     } else {
         goto else_266;
     }
 then_265:;
-    if_65 = left_13;
+    if_71 = left_13;
     goto if_next_264;
 else_266:;
     struct IntIntIntObjectObjectTuple5 call_279 = go_35(itemTy_15, (index_12 - leftLen_4), right_13);
     struct IntIntIntObjectObjectTuple5 call_280 = segNodeWithRight_1(itemTy_15, call_279, node_18);
-    if_65 = call_280;
+    if_71 = call_280;
     goto if_next_264;
 if_next_264:;
-    if_63 = if_65;
+    if_69 = if_71;
     goto if_next_258;
 if_next_258:;
-    struct IntIntIntObjectObjectTuple5 node_19 = if_63;
+    struct IntIntIntObjectObjectTuple5 node_19 = if_69;
     struct IntIntIntObjectObjectTuple5 call_281 = segNodeMakeBalanced_1(itemTy_15, node_19);
-    if_62 = call_281;
+    if_68 = call_281;
     goto if_next_255;
 if_next_255:;
-    return if_62;
+    return if_68;
 }
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeRemove_1(int index_11, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_12) {
@@ -3022,9 +3046,9 @@ struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObject
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_23(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 t_2, struct IntList* xs_22) {
 tailrec_267:;
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 match_16;
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 match_10;
     if ((!((!(xs_22))))) goto next_269;
-    match_16 = t_2;
+    match_10 = t_2;
     goto end_match_268;
 next_269:;
     if ((!(xs_22))) goto next_270;
@@ -3036,12 +3060,12 @@ next_269:;
     t_2 = arg_90;
     xs_22 = arg_91;
     goto tailrec_267;
-    match_16 = ((struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3){});
+    match_10 = ((struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3){});
     goto end_match_268;
 next_270:;
     exit(1);
 end_match_268:;
-    return match_16;
+    return match_10;
 }
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeOfList_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_16, struct IntList* xs_21) {
@@ -3052,7 +3076,7 @@ struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObject
 
 struct IntList* go_22(int len_19, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_4, struct IntList* acc_3, int i_4) {
 tailrec_271:;
-    struct IntList* if_66;
+    struct IntList* if_72;
     if ((i_4 == len_19)) {
         goto then_273;
     } else {
@@ -3060,7 +3084,7 @@ tailrec_271:;
     }
 then_273:;
     struct IntList* call_292 = listRev_2(acc_3);
-    if_66 = call_292;
+    if_72 = call_292;
     goto if_next_272;
 else_274:;
     int call_293 = segTreeGet_1(i_4, v_4);
@@ -3077,15 +3101,15 @@ else_274:;
     acc_3 = arg_94;
     i_4 = arg_95;
     goto tailrec_271;
-    if_66 = NULL;
+    if_72 = NULL;
     goto if_next_272;
 if_next_272:;
-    return if_66;
+    return if_72;
 }
 
 struct StringList* go_21(int len_19, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 v_4, struct StringList* acc_3, int i_4) {
 tailrec_275:;
-    struct StringList* if_67;
+    struct StringList* if_73;
     if ((i_4 == len_19)) {
         goto then_277;
     } else {
@@ -3093,7 +3117,7 @@ tailrec_275:;
     }
 then_277:;
     struct StringList* call_294 = listRev_1(acc_3);
-    if_67 = call_294;
+    if_73 = call_294;
     goto if_next_276;
 else_278:;
     struct String call_295 = segTreeGet_2(i_4, v_4);
@@ -3110,10 +3134,10 @@ else_278:;
     acc_3 = arg_98;
     i_4 = arg_99;
     goto tailrec_275;
-    if_67 = NULL;
+    if_73 = NULL;
     goto if_next_276;
 if_next_276:;
-    return if_67;
+    return if_73;
 }
 
 struct IntList* segTreeToList_2(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_4) {
@@ -3348,34 +3372,34 @@ int testSum_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 s
 
 int sum_(int r_1, int l_1, int acc_4, int i_5, struct IntList* xs_25) {
 tailrec_279:;
-    int if_68;
+    int if_74;
     if ((i_5 == r_1)) {
         goto then_281;
     } else {
         goto else_282;
     }
 then_281:;
-    if_68 = acc_4;
+    if_74 = acc_4;
     goto if_next_280;
 else_282:;
-    int match_17;
+    int match_11;
     if ((!(xs_25))) goto next_284;
     int x_10 = xs_25->head;
     struct IntList* xs_26 = xs_25->tail;
-    int if_69;
+    int if_75;
     if ((i_5 < l_1)) {
         goto then_287;
     } else {
         goto else_288;
     }
 then_287:;
-    if_69 = acc_4;
+    if_75 = acc_4;
     goto if_next_286;
 else_288:;
-    if_69 = (acc_4 + x_10);
+    if_75 = (acc_4 + x_10);
     goto if_next_286;
 if_next_286:;
-    int acc_5 = if_69;
+    int acc_5 = if_75;
     int arg_103 = r_1;
     int arg_104 = l_1;
     int arg_105 = acc_5;
@@ -3387,30 +3411,30 @@ if_next_286:;
     i_5 = arg_106;
     xs_25 = arg_107;
     goto tailrec_279;
-    match_17 = 0;
+    match_11 = 0;
     goto end_match_283;
 next_284:;
     int call_346 = failwith_1((struct String){.str = "NEVER", .len = 5});
-    match_17 = call_346;
+    match_11 = call_346;
     goto end_match_283;
 next_285:;
 end_match_283:;
-    if_68 = match_17;
+    if_74 = match_11;
     goto if_next_280;
 if_next_280:;
-    return if_68;
+    return if_74;
 }
 
 int go_15(int n_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_13, struct IntList* xs_24, int l_1, int r_1) {
 tailrec_289:;
-    int if_70;
+    int if_76;
     if ((r_1 == n_1)) {
         goto then_291;
     } else {
         goto else_295;
     }
 then_291:;
-    int if_71;
+    int if_77;
     if ((l_1 < n_1)) {
         goto then_293;
     } else {
@@ -3428,13 +3452,13 @@ then_293:;
     l_1 = arg_111;
     r_1 = arg_112;
     goto tailrec_289;
-    if_71 = 0;
+    if_77 = 0;
     goto if_next_292;
 else_294:;
-    if_71 = 0;
+    if_77 = 0;
     goto if_next_292;
 if_next_292:;
-    if_70 = 0;
+    if_76 = 0;
     goto if_next_290;
 else_295:;
     int call_347 = sum_(r_1, l_1, 0, 0, xs_24);
@@ -3454,7 +3478,7 @@ else_295:;
     l_1 = arg_116;
     r_1 = arg_117;
     goto tailrec_289;
-    if_70 = 0;
+    if_76 = 0;
     goto if_next_290;
 if_next_290:;
     return 0;
@@ -3582,22 +3606,22 @@ int fun_17(void* env_14, int arg_27, int arg_28) {
 
 int go_16(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 c_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 b_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 a_1, int n_4, int sum_1, int i_6) {
 tailrec_296:;
-    int if_72;
+    int if_78;
     if ((i_6 == n_4)) {
         goto then_298;
     } else {
         goto else_299;
     }
 then_298:;
-    if_72 = sum_1;
+    if_78 = sum_1;
     goto if_next_297;
 else_299:;
     int call_380 = segTreeGet_1(i_6, a_1);
     int ai_ = call_380;
     int call_381 = segTreeGet_1((ai_ - 1), b_1);
     int eat_ = call_381;
-    int if_73;
-    int if_74;
+    int if_79;
+    int if_80;
     if (((i_6 + 1) < n_4)) {
         goto then_302;
     } else {
@@ -3605,26 +3629,26 @@ else_299:;
     }
 then_302:;
     int call_382 = segTreeGet_1((i_6 + 1), a_1);
-    if_74 = (call_382 == (ai_ + 1));
+    if_80 = (call_382 == (ai_ + 1));
     goto if_next_301;
 else_303:;
-    if_74 = 0;
+    if_80 = 0;
     goto if_next_301;
 if_next_301:;
-    if (if_74) {
+    if (if_80) {
         goto then_304;
     } else {
         goto else_305;
     }
 then_304:;
     int call_383 = segTreeGet_1((ai_ - 1), c_1);
-    if_73 = call_383;
+    if_79 = call_383;
     goto if_next_300;
 else_305:;
-    if_73 = 0;
+    if_79 = 0;
     goto if_next_300;
 if_next_300:;
-    int bonus_ = if_73;
+    int bonus_ = if_79;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 arg_126 = c_1;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 arg_127 = b_1;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 arg_128 = a_1;
@@ -3638,10 +3662,10 @@ if_next_300:;
     sum_1 = arg_130;
     i_6 = arg_131;
     goto tailrec_296;
-    if_72 = 0;
+    if_78 = 0;
     goto if_next_297;
 if_next_297:;
-    return if_72;
+    return if_78;
 }
 
 int abc140bSolve_(int n_4, struct IntList* a_, struct IntList* b_, struct IntList* c_) {
@@ -3820,14 +3844,14 @@ int fun_20(void* env_17, int arg_33, int arg_34) {
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_20(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 perm_2, int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_1, int i_7) {
 tailrec_306:;
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 if_75;
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 if_81;
     if ((i_7 == (n_7 + 2))) {
         goto then_308;
     } else {
         goto else_309;
     }
 then_308:;
-    if_75 = pos_1;
+    if_81 = pos_1;
     goto if_next_307;
 else_309:;
     int call_413 = segTreeGet_1(i_7, perm_2);
@@ -3842,22 +3866,22 @@ else_309:;
     pos_1 = arg_141;
     i_7 = arg_142;
     goto tailrec_306;
-    if_75 = ((struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3){});
+    if_81 = ((struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3){});
     goto if_next_307;
 if_next_307:;
-    return if_75;
+    return if_81;
 }
 
 int go_19(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_, int n_7, int sum_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 prev_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 next_1, int p_) {
 tailrec_310:;
-    int if_76;
+    int if_82;
     if ((p_ < 1)) {
         goto then_312;
     } else {
         goto else_313;
     }
 then_312:;
-    if_76 = sum_2;
+    if_82 = sum_2;
     goto if_next_311;
 else_313:;
     int call_415 = segTreeGet_1(p_, pos_);
@@ -3866,39 +3890,39 @@ else_313:;
     int x_11 = call_416;
     int call_417 = segTreeSum_1(0, x_11, prev_1);
     int w_ = call_417;
-    int if_77;
+    int if_83;
     if ((x_11 >= w_)) {
         goto then_315;
     } else {
         goto else_316;
     }
 then_315:;
-    if_77 = (x_11 < i_8);
+    if_83 = (x_11 < i_8);
     goto if_next_314;
 else_316:;
-    if_77 = 0;
+    if_83 = 0;
     goto if_next_314;
 if_next_314:;
-    milone_assert(if_77, 58, 6);
+    milone_assert(if_83, 58, 6);
     int call_418 = 0;
     int call_419 = segTreeSum_1((i_8 + 1), (n_7 + 2), next_1);
     int y_5 = call_419;
     int call_420 = segTreeSum_1((y_5 + 1), (n_7 + 2), next_1);
     int z_ = call_420;
-    int if_78;
+    int if_84;
     if ((i_8 < y_5)) {
         goto then_318;
     } else {
         goto else_319;
     }
 then_318:;
-    if_78 = (z_ >= y_5);
+    if_84 = (z_ >= y_5);
     goto if_next_317;
 else_319:;
-    if_78 = 0;
+    if_84 = 0;
     goto if_next_317;
 if_next_317:;
-    milone_assert(if_78, 62, 6);
+    milone_assert(if_84, 62, 6);
     int call_421 = 0;
     int count_ = (((x_11 - w_) * (y_5 - i_8)) + ((i_8 - x_11) * (z_ - y_5)));
     int sum_3 = (sum_2 + (count_ * p_));
@@ -3919,10 +3943,10 @@ if_next_317:;
     next_1 = arg_147;
     p_ = arg_148;
     goto tailrec_310;
-    if_76 = 0;
+    if_82 = 0;
     goto if_next_311;
 if_next_311:;
-    return if_76;
+    return if_82;
 }
 
 int abc140eSolve_(int n_7, struct IntList* perm_) {
@@ -3970,22 +3994,22 @@ int solve_(struct IntList* p_1, int expected_1) {
     int n_8 = call_440;
     int call_441 = abc140eSolve_(n_8, p_1);
     int actual_1 = call_441;
-    int if_79;
+    int if_85;
     if ((actual_1 == expected_1)) {
         goto then_321;
     } else {
         goto else_322;
     }
 then_321:;
-    if_79 = 1;
+    if_85 = 1;
     goto if_next_320;
 else_322:;
     printf("actual=%d expected=%d\n", actual_1, expected_1);
     int call_442 = 0;
-    if_79 = 0;
+    if_85 = 0;
     goto if_next_320;
 if_next_320:;
-    return if_79;
+    return if_85;
 }
 
 int abc140eTest_(int arg_149) {

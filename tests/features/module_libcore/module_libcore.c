@@ -14,16 +14,20 @@ struct IntList {
 };
 
 int isEmpty_1(struct IntList* xs_1) {
-    int match_;
-    if ((!((!(xs_1))))) goto next_2;
-    match_ = 1;
-    goto end_match_1;
-next_2:;
-    match_ = 0;
-    goto end_match_1;
-next_3:;
-end_match_1:;
-    return match_;
+    int if_;
+    if ((!(xs_1))) {
+        goto nil_cl_2;
+    } else {
+        goto cons_cl_3;
+    }
+nil_cl_2:;
+    if_ = 1;
+    goto if_next_1;
+cons_cl_3:;
+    if_ = 0;
+    goto if_next_1;
+if_next_1:;
+    return if_;
 }
 
 int assertNotEmpty_1(struct IntList* xs_) {

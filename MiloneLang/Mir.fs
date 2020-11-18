@@ -410,6 +410,57 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
       let ctx = mirCtxAddStmt ctx nextLabelStmt
       Some(temp, ctx)
 
+  | AppTy (ListTyCtor, _),
+    [ HNilPat _, HLitExpr (BoolLit true, _), nilCl; HDiscardPat _, HLitExpr (BoolLit true, _), consCl ] ->
+      let temp, tempSet, ctx = mirCtxLetFreshVar ctx "if" ty loc
+      let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "if_next" loc
+
+      let cond, ctx = mirifyExpr ctx cond
+
+      // Nil case.
+      let thenLabelStmt, thenLabel, ctx = mirCtxFreshLabel ctx "nil_cl" loc
+      let parentCtx, ctx = ctx, mirCtxNewBlock ctx
+
+      let thenCl, ctx =
+        let ctx = mirCtxAddStmt ctx thenLabelStmt
+        let body, ctx = mirifyExpr ctx nilCl
+        let ctx = mirCtxAddStmt ctx (tempSet body)
+
+        let ctx =
+          addTerminator ctx (MGotoTerminator nextLabel) loc
+
+        takeStmts ctx
+
+      let ctx = mirCtxRollBack parentCtx ctx
+
+      // Cons case.
+      let elseLabelStmt, elseLabel, ctx = mirCtxFreshLabel ctx "cons_cl" loc
+      let parentCtx, ctx = ctx, mirCtxNewBlock ctx
+
+      let elseCl, ctx =
+        let ctx = mirCtxAddStmt ctx elseLabelStmt
+        let alt, ctx = mirifyExpr ctx consCl
+        let ctx = mirCtxAddStmt ctx (tempSet alt)
+
+        let ctx =
+          addTerminator ctx (MGotoTerminator nextLabel) loc
+
+        takeStmts ctx
+
+      let ctx = mirCtxRollBack parentCtx ctx
+
+      // Emit: `if` for jump, labels for contents, next label.
+      let ctx =
+        let isNil =
+          let ty, loc = mexprExtract cond
+          MUnaryExpr(MListIsEmptyUnary, cond, ty, loc)
+
+        addTerminator ctx (MIfTerminator(isNil, MGotoTerminator thenLabel, MGotoTerminator elseLabel)) loc
+
+      let ctx = addStmtListList ctx [ elseCl; thenCl ]
+      let ctx = mirCtxAddStmt ctx nextLabelStmt
+      Some(temp, ctx)
+
   | _ -> None
 
 let private matchExprCanCompileToSwitch cond arms =

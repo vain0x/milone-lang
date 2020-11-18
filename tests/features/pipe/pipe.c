@@ -49,16 +49,20 @@ struct IntList {
 };
 
 int len_(struct IntList* xs_) {
-    int match_;
-    if ((!((!(xs_))))) goto next_5;
-    match_ = 0;
-    goto end_match_4;
-next_5:;
-    match_ = 1;
-    goto end_match_4;
-next_6:;
-end_match_4:;
-    return match_;
+    int if_1;
+    if ((!(xs_))) {
+        goto nil_cl_5;
+    } else {
+        goto cons_cl_6;
+    }
+nil_cl_5:;
+    if_1 = 0;
+    goto if_next_4;
+cons_cl_6:;
+    if_1 = 1;
+    goto if_next_4;
+if_next_4:;
+    return if_1;
 }
 
 int main() {
