@@ -222,7 +222,7 @@ let private rewriteNewtypeTy (ctx: TyElaborationCtx) tySerial =
 
   | _ -> None
 
-let private rewriteNewtypeRefPat (ctx: TyElaborationCtx) varSerial loc =
+let private rewriteNewtypeVariantPat (ctx: TyElaborationCtx) varSerial loc =
   match ctx.Vars |> mapTryFind varSerial with
   | Some (VariantDef (_, tySerial, hasPayload, _, _, _)) ->
       match ctx.Tys |> mapTryFind tySerial with
@@ -237,7 +237,7 @@ let private rewriteNewtypeRefPat (ctx: TyElaborationCtx) varSerial loc =
 
 let private rewriteNewtypeCallPat (ctx: TyElaborationCtx) callee args =
   match callee, args with
-  | HRefPat (varSerial, _, _), [ payloadPat ] ->
+  | HVariantPat (varSerial, _, _), [ payloadPat ] ->
       match ctx.Vars |> mapTryFind varSerial with
       | Some (VariantDef (_, tySerial, _, _, _, _)) ->
           match ctx.Tys |> mapTryFind tySerial with
@@ -300,10 +300,14 @@ let private tePat ctx pat =
   match pat with
   | HRefPat (varSerial, ty, loc) ->
       let ty = ty |> teTy ctx
+      HRefPat(varSerial, ty, loc)
 
-      match rewriteNewtypeRefPat ctx varSerial loc with
+  | HVariantPat (variantSerial, ty, loc) ->
+      let ty = ty |> teTy ctx
+
+      match rewriteNewtypeVariantPat ctx variantSerial loc with
       | Some pat -> pat
-      | None -> HRefPat(varSerial, ty, loc)
+      | None -> HVariantPat(variantSerial, ty, loc)
 
   | HCallPat (callee, args, ty, loc) ->
       match rewriteNewtypeCallPat ctx callee args with

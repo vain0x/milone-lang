@@ -499,7 +499,8 @@ let private nameResCollectDecls moduleSerialOpt (expr, ctx) =
     | HRefPat (serial, ty, loc) ->
         let ident = ctx |> scopeCtxGetIdent serial
         match ctx |> scopeCtxResolveLocalVar ident with
-        | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HRefPat(varSerial, ty, loc), ctx
+        | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HVariantPat(varSerial, ty, loc), ctx
+
         | _ ->
             let ctx =
               ctx
@@ -535,6 +536,7 @@ let private nameResCollectDecls moduleSerialOpt (expr, ctx) =
         let pat, ctx = (pat, ctx) |> goPat vis
         HAnnoPat(pat, ty, loc), ctx
 
+    | HVariantPat _ -> failwithf "NEVER: HVariantPat is generated in NameRes. %A" pat
     | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
   let rec goExpr (expr, ctx) =
@@ -600,7 +602,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
         | None -> None
 
       match variantSerial with
-      | Some variantSerial -> HRefPat(variantSerial, ty, loc), ctx
+      | Some variantSerial -> HVariantPat(variantSerial, ty, loc), ctx
 
       | None ->
           match ident with
@@ -624,6 +626,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
         | None -> None
 
       match varSerial with
+      | Some varSerial when scopeCtxIsVariant varSerial ctx -> HVariantPat(varSerial, ty, loc), ctx
       | Some varSerial -> HRefPat(varSerial, ty, loc), ctx
 
       | None ->
@@ -666,6 +669,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       let r, ctx = (r, ctx) |> nameResPat
       HOrPat(l, r, ty, loc), ctx
 
+  | HVariantPat _ -> failwithf "NEVER: HVariantPat is generated in NameRes. %A" pat
   | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
 let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =

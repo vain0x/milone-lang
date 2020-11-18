@@ -54,7 +54,7 @@ let private isVariantFun (ctx: AbCtx) varSerial =
 
 let private postProcessVariantCallPat ctx calleePat argPats =
   match calleePat, argPats with
-  | HRefPat (varSerial, _, loc), [ payloadPat ] when varSerial |> isVariantFun ctx ->
+  | HVariantPat (_, variantTy, loc), [ payloadPat ] when tyIsFun variantTy ->
       // FIXME: ty is now wrong. ty is previously T -> U where U: union, T: payload, but now obj -> U.
       Some(HBoxPat(payloadPat, loc))
 
@@ -150,7 +150,8 @@ let private abPat ctx pat =
   | HNonePat _
   | HSomePat _
   | HDiscardPat _
-  | HRefPat _ -> pat |> patMap (abTy ctx) id
+  | HRefPat _
+  | HVariantPat _ -> pat |> patMap (abTy ctx) id
 
   | HCallPat (calleePat, argPats, ty, loc) ->
       let calleePat = calleePat |> abPat ctx

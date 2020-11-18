@@ -300,6 +300,12 @@ let private inferPatRef (ctx: TyCtx) varSerial loc =
 
   HRefPat(varSerial, ty, loc), ty, ctx
 
+let private inferPatVariant (ctx: TyCtx) variantSerial loc =
+  let ty, ctx =
+    ctx |> tyCtxUnifyVarTy variantSerial None loc
+
+  HVariantPat(variantSerial, ty, loc), ty, ctx
+
 let private inferPatCall (ctx: TyCtx) pat callee args loc =
   match args with
   | [ payload ] ->
@@ -369,6 +375,7 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
   | HSomePat (_, loc) -> inferPatSome ctx pat loc
   | HDiscardPat (_, loc) -> inferPatDiscard ctx pat loc
   | HRefPat (varSerial, _, loc) -> inferPatRef ctx varSerial loc
+  | HVariantPat (variantSerial, _, loc) -> inferPatVariant ctx variantSerial loc
   | HCallPat (callee, args, _, loc) -> inferPatCall ctx pat callee args loc
   | HConsPat (l, r, _, loc) -> inferPatCons ctx l r loc
   | HTuplePat (items, _, loc) -> inferPatTuple ctx items loc

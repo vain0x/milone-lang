@@ -362,6 +362,7 @@ let private declosurePat (pat, ctx) =
   | HNonePat _
   | HSomePat _
   | HDiscardPat _
+  | HVariantPat _
   | HNavPat _ -> pat, ctx
 
   | HRefPat (serial, _, _) ->

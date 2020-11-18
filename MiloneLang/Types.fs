@@ -541,8 +541,11 @@ type HPat =
   /// `_`
   | HDiscardPat of Ty * Loc
 
-  /// Variable or variant pattern.
+  /// Variable pattern.
   | HRefPat of VarSerial * Ty * Loc
+
+  /// Variant pattern.
+  | HVariantPat of VariantSerial * Ty * Loc
 
   /// Navigation, e.g. `Result.Ok _`.
   | HNavPat of HPat * Ident * Ty * Loc

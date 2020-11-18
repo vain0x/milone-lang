@@ -953,6 +953,7 @@ let rec patExtract (pat: HPat): Ty * Loc =
   | HSomePat (itemTy, a) -> tyList itemTy, a
   | HDiscardPat (ty, a) -> ty, a
   | HRefPat (_, ty, a) -> ty, a
+  | HVariantPat (_, ty, a) -> ty, a
   | HNavPat (_, _, ty, a) -> ty, a
   | HCallPat (_, _, ty, a) -> ty, a
   | HConsPat (_, _, itemTy, a) -> tyList itemTy, a
@@ -973,6 +974,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HSomePat (itemTy, a) -> HSomePat(f itemTy, g a)
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
     | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
+    | HVariantPat (variantSerial, ty, a) -> HVariantPat(variantSerial, f ty, g a)
     | HNavPat (pat, ident, ty, a) -> HNavPat(go pat, ident, f ty, g a)
     | HCallPat (callee, args, ty, a) -> HCallPat(go callee, List.map go args, f ty, g a)
     | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
@@ -983,6 +985,8 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HOrPat (first, second, ty, a) -> HOrPat(go first, go second, f ty, g a)
 
   go pat
+
+let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat =
   let _, loc = patExtract pat
@@ -996,6 +1000,7 @@ let patNormalize pat =
     | HLitPat _
     | HDiscardPat _
     | HRefPat _
+    | HVariantPat _
     | HNilPat _
     | HNonePat _
     | HSomePat _ -> [ pat ]

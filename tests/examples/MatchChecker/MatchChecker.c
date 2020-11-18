@@ -1534,6 +1534,7 @@ next_121:;
     match_23 = ((struct Space_){});
     goto end_match_111;
 next_122:;
+    exit(1);
 end_match_111:;
     return match_23;
 }
@@ -1715,6 +1716,7 @@ next_136:;
     match_25 = call_99;
     goto end_match_134;
 next_137:;
+    exit(1);
 end_match_134:;
     return match_25;
 }

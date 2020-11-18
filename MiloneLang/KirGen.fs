@@ -76,6 +76,12 @@ let private kgRefPat itself varSerial ty loc ctx =
 
   | FunDef _ -> failwithf "NEVER: fun can't appear as pattern. %A" itself
 
+let private kgVariantPat itself variantSerial ty loc ctx =
+  match findVarDef variantSerial ctx with
+  | VariantDef _ -> PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
+
+  | _ -> failwithf "NEVER: Expected variant. %A" itself
+
 let private kgTuplePat itemPats loc ctx =
   let conts =
     itemPats
@@ -84,14 +90,14 @@ let private kgTuplePat itemPats loc ctx =
   PConjNode(conts, loc)
 
 // decomposition of variant
-let private kgCallPat itself callee args ty loc ctx =
+let private kgCallPat itself callee args _ty loc ctx =
   match callee with
-  | HRefPat (varSerial, _, _) ->
-      match findVarDef varSerial ctx, args with
-      | VariantDef _, [ payloadPat ] ->
+  | HVariantPat (variantSerial, _, _) ->
+      match args with
+      | [ payloadPat ] ->
           PConjNode
-            ([ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc), loc)
-               PSelectNode(KPayloadPath(varSerial, loc), kgPat payloadPat ctx, loc) ],
+            ([ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
+               PSelectNode(KPayloadPath(variantSerial, loc), kgPat payloadPat ctx, loc) ],
              loc)
 
       | _ -> failwithf "NEVER: illegal call pat. %A" itself
@@ -131,6 +137,8 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
   | HNonePat (itemTy, loc) -> PEqualNode(PNoneTerm(itemTy, loc), PDiscardNode, loc)
 
   | HRefPat (varSerial, ty, loc) -> kgRefPat pat varSerial ty loc ctx
+
+  | HVariantPat (variantSerial, ty, loc) -> kgVariantPat pat variantSerial ty loc ctx
 
   | HCallPat (callee, args, ty, loc) -> kgCallPat pat callee args ty loc ctx
 
