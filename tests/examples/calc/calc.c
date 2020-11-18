@@ -316,21 +316,21 @@ struct CharBoolFun1 {
 int go_5(struct String source_, struct CharBoolFun1 pred_, int r_1) {
 tailrec_32:;
     int if_6;
-    int if_7;
     if ((r_1 < source_.len)) {
-        goto then_35;
+        goto then_34;
     } else {
-        goto else_36;
+        goto else_35;
     }
-then_35:;
+then_34:;
     int app_ = pred_.fun(pred_.env, source_.str[r_1]);
-    if_7 = app_;
-    goto if_next_34;
-else_36:;
-    if_7 = 0;
-    goto if_next_34;
-if_next_34:;
-    if (if_7) {
+    if_6 = app_;
+    goto if_next_33;
+else_35:;
+    if_6 = 0;
+    goto if_next_33;
+if_next_33:;
+    int if_7;
+    if (if_6) {
         goto then_37;
     } else {
         goto else_38;
@@ -343,13 +343,13 @@ then_37:;
     pred_ = arg_14;
     r_1 = arg_15;
     goto tailrec_32;
-    if_6 = 0;
-    goto if_next_33;
+    if_7 = 0;
+    goto if_next_36;
 else_38:;
-    if_6 = r_1;
-    goto if_next_33;
-if_next_33:;
-    return if_6;
+    if_7 = r_1;
+    goto if_next_36;
+if_next_36:;
+    return if_7;
 }
 
 struct StringIntTuple2 {
@@ -420,45 +420,45 @@ if_next_39:;
     milone_assert(if_8, 62, 2);
     int call_10 = 0;
     int if_9;
-    int if_10;
-    int if_11;
     if (((i_4 + 1) < source_2.len)) {
-        goto then_45;
+        goto then_43;
     } else {
-        goto else_46;
+        goto else_44;
     }
-then_45:;
-    if_11 = (source_2.str[i_4] == '\r');
-    goto if_next_44;
-else_46:;
-    if_11 = 0;
-    goto if_next_44;
-if_next_44:;
-    if (if_11) {
-        goto then_47;
+then_43:;
+    if_9 = (source_2.str[i_4] == '\r');
+    goto if_next_42;
+else_44:;
+    if_9 = 0;
+    goto if_next_42;
+if_next_42:;
+    int if_10;
+    if (if_9) {
+        goto then_46;
     } else {
-        goto else_48;
+        goto else_47;
     }
-then_47:;
+then_46:;
     if_10 = (source_2.str[(i_4 + 1)] == '\n');
-    goto if_next_43;
-else_48:;
+    goto if_next_45;
+else_47:;
     if_10 = 0;
-    goto if_next_43;
-if_next_43:;
+    goto if_next_45;
+if_next_45:;
+    int if_11;
     if (if_10) {
         goto then_49;
     } else {
         goto else_50;
     }
 then_49:;
-    if_9 = (i_4 + 2);
-    goto if_next_42;
+    if_11 = (i_4 + 2);
+    goto if_next_48;
 else_50:;
-    if_9 = (i_4 + 1);
-    goto if_next_42;
-if_next_42:;
-    int r_3 = if_9;
+    if_11 = (i_4 + 1);
+    goto if_next_48;
+if_next_48:;
+    int r_3 = if_11;
     struct Token_ListIntTuple2 tuple_3;
     tuple_3.t0 = acc_3;
     tuple_3.t1 = r_3;
@@ -584,8 +584,8 @@ clause_61:;
     goto switch_next_58;
 clause_62:;
     char c_2 = source_4.str[i_7];
-    struct Token_List* if_14;
     int call_21 = isDigit_(c_2);
+    struct Token_List* if_14;
     if (call_21) {
         goto then_64;
     } else {

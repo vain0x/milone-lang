@@ -20,8 +20,8 @@ struct String argGet_(int i_) {
 
 int go_(int i_1) {
 tailrec_1:;
-    int if_;
     int call_2 = argCount_(0);
+    int if_;
     if ((i_1 < call_2)) {
         goto then_3;
     } else {

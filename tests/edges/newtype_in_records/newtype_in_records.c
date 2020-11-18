@@ -57,9 +57,9 @@ void* newDayRange_(void* start_, void* endDay_) {
 }
 
 int between_(void* day_, void* range_) {
-    int if_1;
     int call_4 = dayToInt_(day_);
     int call_5 = dayToInt_((*(((struct ObjectObjectTuple2*)range_))).t0);
+    int if_1;
     if ((call_4 >= call_5)) {
         goto then_5;
     } else {

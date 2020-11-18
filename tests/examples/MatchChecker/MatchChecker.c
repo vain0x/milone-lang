@@ -834,8 +834,8 @@ next_47:;
     if ((!(xs_11))) goto next_48;
     struct Space_ x_5 = xs_11->head;
     struct Space_List* xs_12 = xs_11->tail;
-    int if_;
     int app_7 = p_.fun(p_.env, x_5);
+    int if_;
     if (app_7) {
         goto then_50;
     } else {
@@ -876,8 +876,8 @@ next_54:;
     if ((!(xs_11))) goto next_55;
     struct Space_Space_Tuple2 x_5 = xs_11->head;
     struct Space_Space_Tuple2List* xs_12 = xs_11->tail;
-    int if_1;
     int app_8 = p_.fun(p_.env, x_5);
+    int if_1;
     if (app_8) {
         goto then_57;
     } else {
@@ -918,8 +918,8 @@ next_61:;
     if ((!(xs_11))) goto next_62;
     int x_5 = xs_11->head;
     struct BoolList* xs_12 = xs_11->tail;
-    int if_2;
     int app_9 = p_.fun(p_.env, x_5);
+    int if_2;
     if (app_9) {
         goto then_64;
     } else {
@@ -970,8 +970,8 @@ next_68:;
     if ((!(xs_14))) goto next_69;
     struct Space_ x_6 = xs_14->head;
     struct Space_List* xs_15 = xs_14->tail;
-    int if_3;
     int app_10 = p_1.fun(p_1.env, x_6);
+    int if_3;
     if (app_10) {
         goto then_71;
     } else {
@@ -2026,8 +2026,8 @@ int fun_8(struct StringTy_Pat_ListCovering_Tuple4 arg_97) {
     struct Space_ tySpace_ = call_154;
     struct Space_ call_155 = patsToSpace_(pats_1);
     struct Space_ patSpace_ = call_155;
-    struct Covering_ if_7;
     int call_156 = spaceCovers_(tySpace_, patSpace_);
+    struct Covering_ if_7;
     if (call_156) {
         goto then_149;
     } else {

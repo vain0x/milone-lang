@@ -46,45 +46,45 @@ int main() {
     int z_ = tuple_.t2.t0;
     int w_ = tuple_.t2.t1;
     int if_;
-    int if_1;
-    int if_2;
     if ((x_ == 1)) {
-        goto then_4;
+        goto then_2;
     } else {
-        goto else_5;
+        goto else_3;
     }
-then_4:;
-    if_2 = (y_ == 2);
-    goto if_next_3;
-else_5:;
-    if_2 = 0;
-    goto if_next_3;
-if_next_3:;
-    if (if_2) {
-        goto then_6;
+then_2:;
+    if_ = (y_ == 2);
+    goto if_next_1;
+else_3:;
+    if_ = 0;
+    goto if_next_1;
+if_next_1:;
+    int if_1;
+    if (if_) {
+        goto then_5;
     } else {
-        goto else_7;
+        goto else_6;
     }
-then_6:;
+then_5:;
     if_1 = (z_ == 3);
-    goto if_next_2;
-else_7:;
+    goto if_next_4;
+else_6:;
     if_1 = 0;
-    goto if_next_2;
-if_next_2:;
+    goto if_next_4;
+if_next_4:;
+    int if_2;
     if (if_1) {
         goto then_8;
     } else {
         goto else_9;
     }
 then_8:;
-    if_ = (w_ == 4);
-    goto if_next_1;
+    if_2 = (w_ == 4);
+    goto if_next_7;
 else_9:;
-    if_ = 0;
-    goto if_next_1;
-if_next_1:;
-    milone_assert(if_, 2, 2);
+    if_2 = 0;
+    goto if_next_7;
+if_next_7:;
+    milone_assert(if_2, 2, 2);
     int call_ = 0;
     struct IntIntIntIntIntIntIntIntIntIntIntTuple11 tuple_2;
     tuple_2.t0 = 1;

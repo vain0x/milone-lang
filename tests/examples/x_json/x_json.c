@@ -97,38 +97,38 @@ if_next_9:;
 int readInt_(struct String s_, int i_) {
 tailrec_12:;
     int if_1;
-    int if_2;
     if ((i_ >= s_.len)) {
-        goto then_15;
+        goto then_14;
     } else {
-        goto else_16;
+        goto else_15;
     }
-then_15:;
-    if_2 = 1;
-    goto if_next_14;
-else_16:;
+then_14:;
+    if_1 = 1;
+    goto if_next_13;
+else_15:;
     int call_2 = isDigit_(s_.str[i_]);
-    if_2 = (!(call_2));
-    goto if_next_14;
-if_next_14:;
-    if (if_2) {
+    if_1 = (!(call_2));
+    goto if_next_13;
+if_next_13:;
+    int if_2;
+    if (if_1) {
         goto then_17;
     } else {
         goto else_18;
     }
 then_17:;
-    if_1 = i_;
-    goto if_next_13;
+    if_2 = i_;
+    goto if_next_16;
 else_18:;
     struct String arg_3 = s_;
     int arg_4 = (i_ + 1);
     s_ = arg_3;
     i_ = arg_4;
     goto tailrec_12;
-    if_1 = 0;
-    goto if_next_13;
-if_next_13:;
-    return if_1;
+    if_2 = 0;
+    goto if_next_16;
+if_next_16:;
+    return if_2;
 }
 
 struct StringList* go_1(struct String s_, struct StringList* acc_1, int i_1) {
@@ -161,33 +161,33 @@ then_24:;
     if_4 = NULL;
     goto if_next_23;
 else_25:;
-    struct StringList* if_5;
-    int if_6;
-    int if_7;
+    int if_5;
     if ((s_.str[i_1] == '[')) {
-        goto then_29;
+        goto then_27;
     } else {
-        goto else_30;
+        goto else_28;
     }
-then_29:;
-    if_7 = 1;
-    goto if_next_28;
-else_30:;
-    if_7 = (s_.str[i_1] == ']');
-    goto if_next_28;
-if_next_28:;
-    if (if_7) {
-        goto then_31;
+then_27:;
+    if_5 = 1;
+    goto if_next_26;
+else_28:;
+    if_5 = (s_.str[i_1] == ']');
+    goto if_next_26;
+if_next_26:;
+    int if_6;
+    if (if_5) {
+        goto then_30;
     } else {
-        goto else_32;
+        goto else_31;
     }
-then_31:;
+then_30:;
     if_6 = 1;
-    goto if_next_27;
-else_32:;
+    goto if_next_29;
+else_31:;
     if_6 = (s_.str[i_1] == ',');
-    goto if_next_27;
-if_next_27:;
+    goto if_next_29;
+if_next_29:;
+    struct StringList* if_7;
     if (if_6) {
         goto then_33;
     } else {
@@ -206,11 +206,11 @@ then_33:;
     acc_1 = arg_9;
     i_1 = arg_10;
     goto tailrec_19;
-    if_5 = NULL;
-    goto if_next_26;
+    if_7 = NULL;
+    goto if_next_32;
 else_34:;
-    struct StringList* if_8;
     int call_5 = isDigit_(s_.str[i_1]);
+    struct StringList* if_8;
     if (call_5) {
         goto then_36;
     } else {
@@ -240,10 +240,10 @@ else_37:;
     if_8 = NULL;
     goto if_next_35;
 if_next_35:;
-    if_5 = if_8;
-    goto if_next_26;
-if_next_26:;
-    if_4 = if_5;
+    if_7 = if_8;
+    goto if_next_32;
+if_next_32:;
+    if_4 = if_7;
     goto if_next_23;
 if_next_23:;
     if_3 = if_4;

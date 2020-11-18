@@ -176,32 +176,32 @@ int main() {
     if ((!((!((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->tail->tail->head.Node_)))->tail))))) goto next_2;
     if ((!((!((*(((struct Node_List**)variant_6.Node_)))->tail->tail->tail))))) goto next_2;
     int if_;
-    int if_1;
     if ((x_ == 1)) {
-        goto then_6;
+        goto then_5;
     } else {
-        goto else_7;
+        goto else_6;
     }
-then_6:;
-    if_1 = (y_ == 2);
-    goto if_next_5;
-else_7:;
-    if_1 = 0;
-    goto if_next_5;
-if_next_5:;
-    if (if_1) {
+then_5:;
+    if_ = (y_ == 2);
+    goto if_next_4;
+else_6:;
+    if_ = 0;
+    goto if_next_4;
+if_next_4:;
+    int if_1;
+    if (if_) {
         goto then_8;
     } else {
         goto else_9;
     }
 then_8:;
-    if_ = (z_ == 3);
-    goto if_next_4;
+    if_1 = (z_ == 3);
+    goto if_next_7;
 else_9:;
-    if_ = 0;
-    goto if_next_4;
-if_next_4:;
-    milone_assert(if_, 27, 4);
+    if_1 = 0;
+    goto if_next_7;
+if_next_7:;
+    milone_assert(if_1, 27, 4);
     int call_2 = 0;
     match_ = 0;
     goto end_match_1;

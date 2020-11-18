@@ -39,8 +39,8 @@ switch_next_1:;
 }
 
 int simpleCase_(int arg_) {
-    int if_;
     int call_ = isZeroOrOne_(0);
+    int if_;
     if (call_) {
         goto then_5;
     } else {

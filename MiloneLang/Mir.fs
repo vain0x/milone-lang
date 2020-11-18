@@ -358,6 +358,50 @@ let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
 
   | _ -> failwithf "Never: Primitives must appear as callee."
 
+let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
+  let temp, tempSet, ctx = mirCtxLetFreshVar ctx "if" targetTy loc
+  let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "if_next" loc
+
+  // Then clause.
+  let thenLabelStmt, thenLabel, ctx = mirCtxFreshLabel ctx thenHint loc
+  let parentCtx, ctx = ctx, mirCtxNewBlock ctx
+
+  let body, ctx =
+    let ctx = mirCtxAddStmt ctx thenLabelStmt
+    let body, ctx = mirifyExpr ctx body
+    let ctx = mirCtxAddStmt ctx (tempSet body)
+
+    let ctx =
+      addTerminator ctx (MGotoTerminator nextLabel) loc
+
+    takeStmts ctx
+
+  let ctx = mirCtxRollBack parentCtx ctx
+
+  // Else clause. (Almost same as then clause.)
+  let elseLabelStmt, elseLabel, ctx = mirCtxFreshLabel ctx altHint loc
+  let parentCtx, ctx = ctx, mirCtxNewBlock ctx
+
+  let alt, ctx =
+    let ctx = mirCtxAddStmt ctx elseLabelStmt
+    let alt, ctx = mirifyExpr ctx alt
+    let ctx = mirCtxAddStmt ctx (tempSet alt)
+
+    let ctx =
+      addTerminator ctx (MGotoTerminator nextLabel) loc
+
+    takeStmts ctx
+
+  let ctx = mirCtxRollBack parentCtx ctx
+
+  // End of if.
+  let ctx =
+    addTerminator ctx (MIfTerminator(cond, MGotoTerminator thenLabel, MGotoTerminator elseLabel)) loc
+
+  let ctx = addStmtListList ctx [ alt; body ]
+  let ctx = mirCtxAddStmt ctx nextLabelStmt
+  temp, ctx
+
 /// Tries to *sugar* a match expression to if expression
 /// when `match p with true -> body | false -> alt`.
 let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
@@ -365,101 +409,21 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
   | AppTy (BoolTyCtor, []),
     [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body;
       HLitPat (BoolLit false, _), HLitExpr (BoolLit true, _), alt ] ->
-      let temp, tempSet, ctx = mirCtxLetFreshVar ctx "if" ty loc
-      let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "if_next" loc
-
       let cond, ctx = mirifyExpr ctx cond
 
-      // Then clause.
-      let thenLabelStmt, thenLabel, ctx = mirCtxFreshLabel ctx "then" loc
-      let parentCtx, ctx = ctx, mirCtxNewBlock ctx
-
-      let thenCl, ctx =
-        let ctx = mirCtxAddStmt ctx thenLabelStmt
-        let body, ctx = mirifyExpr ctx body
-        let ctx = mirCtxAddStmt ctx (tempSet body)
-
-        let ctx =
-          addTerminator ctx (MGotoTerminator nextLabel) loc
-
-        takeStmts ctx
-
-      let ctx = mirCtxRollBack parentCtx ctx
-
-      // Else clause.
-      let elseLabelStmt, elseLabel, ctx = mirCtxFreshLabel ctx "else" loc
-      let parentCtx, ctx = ctx, mirCtxNewBlock ctx
-
-      let elseCl, ctx =
-        let ctx = mirCtxAddStmt ctx elseLabelStmt
-        let alt, ctx = mirifyExpr ctx alt
-        let ctx = mirCtxAddStmt ctx (tempSet alt)
-
-        let ctx =
-          addTerminator ctx (MGotoTerminator nextLabel) loc
-
-        takeStmts ctx
-
-      let ctx = mirCtxRollBack parentCtx ctx
-
-      // Emit: `if` for jump, labels for contents, next label.
-      let ctx =
-        addTerminator ctx (MIfTerminator(cond, MGotoTerminator thenLabel, MGotoTerminator elseLabel)) loc
-
-      let ctx = addStmtListList ctx [ elseCl; thenCl ]
-      let ctx = mirCtxAddStmt ctx nextLabelStmt
-      Some(temp, ctx)
+      doEmitIfStmt ctx cond "then" body "else" alt ty loc
+      |> Some
 
   | AppTy (ListTyCtor, _),
     [ HNilPat _, HLitExpr (BoolLit true, _), nilCl; HDiscardPat _, HLitExpr (BoolLit true, _), consCl ] ->
-      let temp, tempSet, ctx = mirCtxLetFreshVar ctx "if" ty loc
-      let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "if_next" loc
-
       let cond, ctx = mirifyExpr ctx cond
 
-      // Nil case.
-      let thenLabelStmt, thenLabel, ctx = mirCtxFreshLabel ctx "nil_cl" loc
-      let parentCtx, ctx = ctx, mirCtxNewBlock ctx
+      let isNil =
+        let ty, loc = mexprExtract cond
+        MUnaryExpr(MListIsEmptyUnary, cond, ty, loc)
 
-      let thenCl, ctx =
-        let ctx = mirCtxAddStmt ctx thenLabelStmt
-        let body, ctx = mirifyExpr ctx nilCl
-        let ctx = mirCtxAddStmt ctx (tempSet body)
-
-        let ctx =
-          addTerminator ctx (MGotoTerminator nextLabel) loc
-
-        takeStmts ctx
-
-      let ctx = mirCtxRollBack parentCtx ctx
-
-      // Cons case.
-      let elseLabelStmt, elseLabel, ctx = mirCtxFreshLabel ctx "cons_cl" loc
-      let parentCtx, ctx = ctx, mirCtxNewBlock ctx
-
-      let elseCl, ctx =
-        let ctx = mirCtxAddStmt ctx elseLabelStmt
-        let alt, ctx = mirifyExpr ctx consCl
-        let ctx = mirCtxAddStmt ctx (tempSet alt)
-
-        let ctx =
-          addTerminator ctx (MGotoTerminator nextLabel) loc
-
-        takeStmts ctx
-
-      let ctx = mirCtxRollBack parentCtx ctx
-
-      // Emit: `if` for jump, labels for contents, next label.
-      let ctx =
-        let isNil =
-          let ty, loc = mexprExtract cond
-          MUnaryExpr(MListIsEmptyUnary, cond, ty, loc)
-
-        addTerminator ctx (MIfTerminator(isNil, MGotoTerminator thenLabel, MGotoTerminator elseLabel)) loc
-
-      let ctx = addStmtListList ctx [ elseCl; thenCl ]
-      let ctx = mirCtxAddStmt ctx nextLabelStmt
-      Some(temp, ctx)
+      doEmitIfStmt ctx isNil "nil_cl" nilCl "cons_cl" consCl ty loc
+      |> Some
 
   | _ -> None
 

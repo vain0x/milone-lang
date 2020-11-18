@@ -65,8 +65,8 @@ if_next_2:;
 }
 
 struct String parse_(struct String s_1) {
-    struct String if_3;
     int call_ = go_(s_1, 0, 0);
+    struct String if_3;
     if (call_) {
         goto then_12;
     } else {
