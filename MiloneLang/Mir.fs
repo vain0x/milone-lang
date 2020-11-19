@@ -420,22 +420,37 @@ let private matchExprCanCompileToSwitch cond arms =
   let tyIsLit ty =
     match ty with
     | AppTy (IntTyCtor, [])
-    | AppTy (CharTyCtor, []) -> true
+    | AppTy (CharTyCtor, [])
+    | AppTy (RefTyCtor _, _) -> true
+
     | _ -> false
 
-  let rec go pat =
+  let rec patIsSimpleAtomic pat =
     match pat with
     | HLitPat _
     | HVariantPat _
     | HDiscardPat _ -> true
 
-    | HOrPat (l, r, _, _) -> go l && go r
+    | HBoxPat (bodyPat, _) -> patIsSimpleAtomic bodyPat
+
+    | _ -> false
+
+  /// Pattern is simple, i.e. flat, non-binding and disjunctive-normalized.
+  let rec patIsSimple pat =
+    match pat with
+    | HLitPat _
+    | HVariantPat _
+    | HDiscardPat _ -> true
+
+    | HCallPat (HVariantPat _, [ payload ], _, _) -> patIsSimpleAtomic payload
+
+    | HOrPat (l, r, _, _) -> patIsSimple l && patIsSimple r
 
     | _ -> false
 
   tyIsLit (exprToTy cond)
   && arms
-  |> List.forall (fun (pat, guard, _) -> go pat && hxIsAlwaysTrue guard)
+  |> List.forall (fun (pat, guard, _) -> patIsSimple pat && hxIsAlwaysTrue guard)
 
 /// Converts a match expression to switch statement.
 // TODO: Support more cases
@@ -443,9 +458,13 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
   // (caseLits, isDefault)
   let rec go pat =
     match pat with
-    | HLitPat (lit, _) -> [ lit ], false
+    | HLitPat (lit, _) -> [ MLitConst lit ], false
 
     | HDiscardPat _ -> [], true
+
+    | HVariantPat (variantSerial, _, _) -> [ MTagConst variantSerial ], false
+
+    | HCallPat (HVariantPat (variantSerial, _, _), _, _, _) -> [ MTagConst variantSerial ], false
 
     | HOrPat (l, r, _, _) ->
         let lCases, lIsDefault = go l
@@ -460,7 +479,13 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
   let temp, tempSet, ctx = mirCtxLetFreshVar ctx "switch" ty loc
   let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "switch_next" loc
 
-  let cond, ctx = mirifyExpr ctx cond
+  let cond, ctx =
+    let condTy, condLoc = exprExtract cond
+    let cond, ctx = mirifyExpr ctx cond
+
+    match condTy with
+    | AppTy (RefTyCtor _, _) -> MUnaryExpr(MTagUnary, cond, tyInt, condLoc), ctx
+    | _ -> cond, ctx
 
   let exhaust, clauses, blocks, ctx =
     arms

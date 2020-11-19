@@ -103,18 +103,24 @@ next_5:;
 next_6:;
     exit(1);
 end_match_4:;
-    int match_2;
-    if (((struct ApiResponse_){.tag = ARCancel_}.tag != ARCancel_)) goto next_8;
-    match_2 = 0;
-    goto end_match_7;
-next_8:;
+    int switch_;
+    switch ((struct ApiResponse_){.tag = ARCancel_}.tag) {
+       case ARCancel_:
+          goto clause_8;
+
+       default:
+          goto clause_9;
+    }
+clause_8:;
+    switch_ = 0;
+    goto switch_next_7;
+clause_9:;
     milone_assert(0, 46, 6);
     int call_3 = 0;
-    match_2 = 0;
-    goto end_match_7;
-next_9:;
-end_match_7:;
-    int match_3;
+    switch_ = 0;
+    goto switch_next_7;
+switch_next_7:;
+    int match_2;
     struct IntStringTuple2 tuple_;
     tuple_.t0 = 404;
     tuple_.t1 = (struct String){.str = "Not Found", .len = 9};
@@ -139,31 +145,38 @@ else_15:;
 if_next_13:;
     milone_assert(if_, 51, 6);
     int call_4 = 0;
-    match_3 = 0;
+    match_2 = 0;
     goto end_match_10;
 next_11:;
     milone_assert(0, 53, 6);
     int call_5 = 0;
-    match_3 = 0;
+    match_2 = 0;
     goto end_match_10;
 next_12:;
 end_match_10:;
     struct Status_ ok_1 = (struct Status_){.tag = Ok_1};
     void* okOk_ = 0;
     struct Status_ statusOk_ = (struct Status_){.tag = Ok_1};
-    int match_4;
-    if (((struct Status_){.tag = Ok_1}.tag != Ok_1)) goto next_17;
-    match_4 = 0;
-    goto end_match_16;
-next_17:;
-    if (((struct Status_){.tag = Ok_1}.tag != Err_)) goto next_18;
+    int switch_1;
+    switch ((struct Status_){.tag = Ok_1}.tag) {
+       case Ok_1:
+          goto clause_17;
+
+       case Err_:
+          goto clause_18;
+
+       default:
+          exit(1);
+    }
+clause_17:;
+    switch_1 = 0;
+    goto switch_next_16;
+clause_18:;
     milone_assert(0, 66, 4);
     int call_6 = 0;
-    match_4 = 0;
-    goto end_match_16;
-next_18:;
-    exit(1);
-end_match_16:;
+    switch_1 = 0;
+    goto switch_next_16;
+switch_next_16:;
     void* box_4 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_4))) = 0;
     void* okWrapper_ = box_4;
