@@ -404,6 +404,17 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
       |> Some
 
   | AppTy (ListTyCtor, _),
+    [ HNonePat _, HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
+      let cond, ctx = mirifyExpr ctx cond
+
+      let isNone =
+        let ty, loc = mexprExtract cond
+        MUnaryExpr(MListIsEmptyUnary, cond, ty, loc)
+
+      doEmitIfStmt ctx isNone "none_cl" noneCl "some_cl" someCl ty loc
+      |> Some
+
+  | AppTy (ListTyCtor, _),
     [ HNilPat _, HLitExpr (BoolLit true, _), nilCl; HDiscardPat _, HLitExpr (BoolLit true, _), consCl ] ->
       let cond, ctx = mirifyExpr ctx cond
 
@@ -453,7 +464,6 @@ let private matchExprCanCompileToSwitch cond arms =
   |> List.forall (fun (pat, guard, _) -> patIsSimple pat && hxIsAlwaysTrue guard)
 
 /// Converts a match expression to switch statement.
-// TODO: Support more cases
 let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
   // (caseLits, isDefault)
   let rec go pat =
