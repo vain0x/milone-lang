@@ -78,6 +78,11 @@ let traitMapTys f it =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
+let tyIsFun ty =
+  match ty with
+  | AppTy (FunTyCtor, _) -> true
+  | _ -> false
+
 let tyCmp first second =
   match first, second with
   | ErrorTy first, ErrorTy second -> locCmp first second

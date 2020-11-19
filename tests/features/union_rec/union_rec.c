@@ -82,6 +82,7 @@ next_5:;
     match_ = 0;
     goto end_match_4;
 next_6:;
+    exit(1);
 end_match_4:;
     if_ = 0;
     goto if_next_2;

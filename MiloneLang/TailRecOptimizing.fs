@@ -42,7 +42,7 @@ let private troInfExpr isTail infOp items ty loc ctx =
   let items, ctx = (items, ctx) |> stMap (troExpr NotTail)
 
   match infOp, items, isTail with
-  | InfOp.CallProc, HRefExpr (funSerial, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
+  | InfOp.CallProc, HFunExpr (funSerial, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
       HInfExpr(InfOp.CallTailRec, items, ty, loc), ctx
 
   | InfOp.Semi, _, IsTail ->
@@ -73,6 +73,8 @@ let private troExpr isTail (expr, ctx) =
   match expr with
   | HLitExpr _
   | HRefExpr _
+  | HFunExpr _
+  | HVariantExpr _
   | HPrimExpr _
   | HOpenExpr _
   | HTyDeclExpr _ -> expr, ctx

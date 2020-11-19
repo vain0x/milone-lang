@@ -175,6 +175,8 @@ let private hoistExprCore (expr, ctx) =
   | HErrorExpr _
   | HLitExpr _
   | HRefExpr _
+  | HFunExpr _
+  | HVariantExpr _
   | HPrimExpr _
   | HOpenExpr _ -> expr, ctx
 

@@ -300,6 +300,12 @@ let private inferPatRef (ctx: TyCtx) varSerial loc =
 
   HRefPat(varSerial, ty, loc), ty, ctx
 
+let private inferPatVariant (ctx: TyCtx) variantSerial loc =
+  let ty, ctx =
+    ctx |> tyCtxUnifyVarTy variantSerial None loc
+
+  HVariantPat(variantSerial, ty, loc), ty, ctx
+
 let private inferPatCall (ctx: TyCtx) pat callee args loc =
   match args with
   | [ payload ] ->
@@ -369,6 +375,7 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
   | HSomePat (_, loc) -> inferPatSome ctx pat loc
   | HDiscardPat (_, loc) -> inferPatDiscard ctx pat loc
   | HRefPat (varSerial, _, loc) -> inferPatRef ctx varSerial loc
+  | HVariantPat (variantSerial, _, loc) -> inferPatVariant ctx variantSerial loc
   | HCallPat (callee, args, _, loc) -> inferPatCall ctx pat callee args loc
   | HConsPat (l, r, _, loc) -> inferPatCons ctx l r loc
   | HTuplePat (items, _, loc) -> inferPatTuple ctx items loc
@@ -383,6 +390,18 @@ let private inferRef (ctx: TyCtx) varSerial loc =
     ctx |> tyCtxUnifyVarTy varSerial None loc
 
   HRefExpr(varSerial, ty, loc), ty, ctx
+
+let private inferFun (ctx: TyCtx) varSerial loc =
+  let ty, ctx =
+    ctx |> tyCtxUnifyVarTy varSerial None loc
+
+  HFunExpr(varSerial, ty, loc), ty, ctx
+
+let private inferVariant (ctx: TyCtx) variantSerial loc =
+  let ty, ctx =
+    ctx |> tyCtxUnifyVarTy variantSerial None loc
+
+  HVariantExpr(variantSerial, ty, loc), ty, ctx
 
 let private inferPrim ctx prim loc =
   let tySpec = prim |> primToTySpec
@@ -707,6 +726,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   match expr with
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
   | HRefExpr (serial, _, loc) -> inferRef ctx serial loc
+  | HFunExpr (serial, _, loc) -> inferFun ctx serial loc
+  | HVariantExpr (serial, _, loc) -> inferVariant ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrim ctx prim loc
   | HRecordExpr (baseOpt, fields, _, loc) -> inferRecord ctx expectOpt baseOpt fields loc
   | HMatchExpr (cond, arms, _, loc) -> inferMatch ctx expectOpt expr cond arms loc

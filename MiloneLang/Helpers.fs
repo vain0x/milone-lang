@@ -639,34 +639,6 @@ let nameCtxAdd ident (NameCtx (map, serial)) =
   serial, NameCtx(map, serial)
 
 // -----------------------------------------------
-// NameTree
-// -----------------------------------------------
-
-// FIXME: this emits code that doesn't compile due to use of incomplete type
-//   > error: invalid use of undefined type ‘struct UnitNameTree_Fun1’
-//   >        struct NameTree_ app_193 = nameTreeEmpty_.fun(nameTreeEmpty_.env, 0);
-// let nameTreeEmpty: unit -> NameTree =
-//   let it = NameTree(mapEmpty (intHash, intCmp))
-//   fun () -> it
-
-let nameTreeEmpty (): NameTree = NameTree(mapEmpty intCmp)
-
-let nameTreeTryFind (key: Serial) (NameTree map): Serial list =
-  match map |> mapTryFind key with
-  | Some values -> values
-
-  | None -> []
-
-let nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
-  let map =
-    match map |> mapTryFind key with
-    | Some values -> map |> mapAdd key (value :: values)
-
-    | None -> map |> mapAdd key [ value ]
-
-  NameTree map
-
-// -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
 
@@ -953,6 +925,7 @@ let rec patExtract (pat: HPat): Ty * Loc =
   | HSomePat (itemTy, a) -> tyList itemTy, a
   | HDiscardPat (ty, a) -> ty, a
   | HRefPat (_, ty, a) -> ty, a
+  | HVariantPat (_, ty, a) -> ty, a
   | HNavPat (_, _, ty, a) -> ty, a
   | HCallPat (_, _, ty, a) -> ty, a
   | HConsPat (_, _, itemTy, a) -> tyList itemTy, a
@@ -973,6 +946,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HSomePat (itemTy, a) -> HSomePat(f itemTy, g a)
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
     | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
+    | HVariantPat (variantSerial, ty, a) -> HVariantPat(variantSerial, f ty, g a)
     | HNavPat (pat, ident, ty, a) -> HNavPat(go pat, ident, f ty, g a)
     | HCallPat (callee, args, ty, a) -> HCallPat(go callee, List.map go args, f ty, g a)
     | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
@@ -983,6 +957,8 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HOrPat (first, second, ty, a) -> HOrPat(go first, go second, f ty, g a)
 
   go pat
+
+let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat =
   let _, loc = patExtract pat
@@ -996,6 +972,7 @@ let patNormalize pat =
     | HLitPat _
     | HDiscardPat _
     | HRefPat _
+    | HVariantPat _
     | HNilPat _
     | HNonePat _
     | HSomePat _ -> [ pat ]
@@ -1085,6 +1062,8 @@ let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HLitExpr (lit, a) -> litToTy lit, a
   | HRefExpr (_, ty, a) -> ty, a
+  | HFunExpr (_, ty, a) -> ty, a
+  | HVariantExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
   | HRecordExpr (_, _, ty, a) -> ty, a
   | HMatchExpr (_, _, ty, a) -> ty, a
@@ -1104,6 +1083,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     match expr with
     | HLitExpr (lit, a) -> HLitExpr(lit, g a)
     | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
+    | HFunExpr (serial, ty, a) -> HFunExpr(serial, f ty, g a)
+    | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, g a)
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
 
     | HRecordExpr (baseOpt, fields, ty, a) ->

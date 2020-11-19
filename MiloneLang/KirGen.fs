@@ -76,6 +76,12 @@ let private kgRefPat itself varSerial ty loc ctx =
 
   | FunDef _ -> failwithf "NEVER: fun can't appear as pattern. %A" itself
 
+let private kgVariantPat itself variantSerial ty loc ctx =
+  match findVarDef variantSerial ctx with
+  | VariantDef _ -> PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
+
+  | _ -> failwithf "NEVER: Expected variant. %A" itself
+
 let private kgTuplePat itemPats loc ctx =
   let conts =
     itemPats
@@ -84,14 +90,14 @@ let private kgTuplePat itemPats loc ctx =
   PConjNode(conts, loc)
 
 // decomposition of variant
-let private kgCallPat itself callee args ty loc ctx =
+let private kgCallPat itself callee args _ty loc ctx =
   match callee with
-  | HRefPat (varSerial, _, _) ->
-      match findVarDef varSerial ctx, args with
-      | VariantDef _, [ payloadPat ] ->
+  | HVariantPat (variantSerial, _, _) ->
+      match args with
+      | [ payloadPat ] ->
           PConjNode
-            ([ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc), loc)
-               PSelectNode(KPayloadPath(varSerial, loc), kgPat payloadPat ctx, loc) ],
+            ([ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
+               PSelectNode(KPayloadPath(variantSerial, loc), kgPat payloadPat ctx, loc) ],
              loc)
 
       | _ -> failwithf "NEVER: illegal call pat. %A" itself
@@ -131,6 +137,8 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
   | HNonePat (itemTy, loc) -> PEqualNode(PNoneTerm(itemTy, loc), PDiscardNode, loc)
 
   | HRefPat (varSerial, ty, loc) -> kgRefPat pat varSerial ty loc ctx
+
+  | HVariantPat (variantSerial, ty, loc) -> kgVariantPat pat variantSerial ty loc ctx
 
   | HCallPat (callee, args, ty, loc) -> kgCallPat pat callee args ty loc ctx
 
@@ -265,13 +273,13 @@ let private basicPrimNode2 hint prim l r ty loc hole ctx =
 // -----------------------------------------------
 
 let private kgRefExpr varSerial ty loc hole ctx =
-  let term =
-    match ctx |> findVarDef varSerial with
-    | VarDef _ -> KVarTerm(varSerial, ty, loc)
-    | FunDef _ -> KFunTerm(varSerial, ty, loc)
-    | VariantDef _ -> KVariantTerm(varSerial, ty, loc)
+  ctx |> hole (KVarTerm(varSerial, ty, loc))
 
-  hole term ctx
+let private kgFunExpr funSerial ty loc hole ctx =
+  ctx |> hole (KFunTerm(funSerial, ty, loc))
+
+let private kgVariantExpr variantSerial ty loc hole ctx =
+  ctx |> hole (KVariantTerm(variantSerial, ty, loc))
 
 let private kgSemiExpr itself args hole ctx =
   let rec go args hole ctx =
@@ -739,11 +747,10 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
           | HPrim.NativeFun (ident, arity) -> regular ident (KNativeFunPrim(ident, arity))
 
-      | HRefExpr (varSerial, refTy, refLoc) ->
-          match ctx |> findVarDef varSerial with
-          | VarDef _ -> failwithf "NEVER: CallClosure should be used. %A" itself
-          | FunDef _ -> kgCallFunExpr varSerial refTy refLoc args ty loc hole ctx
-          | VariantDef _ -> kgCallVariantExpr varSerial refTy refLoc args ty loc hole ctx
+      | HFunExpr (funSerial, funTy, funLoc) -> kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx
+
+      | HVariantExpr (variantSerial, variantTy, variantLoc) ->
+          kgCallVariantExpr variantSerial variantTy variantLoc args ty loc hole ctx
 
       | _ -> failwithf "NEVER: CallClosure should be used. %A" itself
 
@@ -760,7 +767,7 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
   | InfOp.Closure ->
       match args with
-      | [ HRefExpr (funSerial, funTy, funLoc); env ] -> kgClosureExpr funSerial funTy funLoc env ty loc hole ctx
+      | [ HFunExpr (funSerial, funTy, funLoc); env ] -> kgClosureExpr funSerial funTy funLoc env ty loc hole ctx
 
       | _ -> failwithf "NEVER: bad use of Closure prim. %A" itself
 
@@ -773,6 +780,10 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
   | HLitExpr (lit, loc) -> hole (KLitTerm(lit, loc)) ctx
 
   | HRefExpr (varSerial, ty, loc) -> kgRefExpr varSerial ty loc hole ctx
+
+  | HFunExpr (varSerial, ty, loc) -> kgFunExpr varSerial ty loc hole ctx
+
+  | HVariantExpr (variantSerial, ty, loc) -> kgVariantExpr variantSerial ty loc hole ctx
 
   | HPrimExpr (prim, ty, loc) -> kgPrimExpr expr prim ty loc hole ctx
 

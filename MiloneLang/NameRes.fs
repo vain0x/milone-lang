@@ -9,6 +9,50 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Bundling
 
+// -----------------------------------------------
+// NameTree
+// -----------------------------------------------
+
+/// Namespace membership.
+type NameTree = NameTree of AssocMap<Serial, Serial list>
+
+// FIXME: this emits code that doesn't compile due to use of incomplete type
+//   > error: invalid use of undefined type ‘struct UnitNameTree_Fun1’
+//   >        struct NameTree_ app_193 = nameTreeEmpty_.fun(nameTreeEmpty_.env, 0);
+// let nameTreeEmpty: unit -> NameTree =
+//   let it = NameTree(mapEmpty (intHash, intCmp))
+//   fun () -> it
+
+let private nameTreeEmpty (): NameTree = NameTree(mapEmpty intCmp)
+
+let private nameTreeTryFind (key: Serial) (NameTree map): Serial list =
+  match map |> mapTryFind key with
+  | Some values -> values
+
+  | None -> []
+
+let private nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
+  let map =
+    match map |> mapTryFind key with
+    | Some values -> map |> mapAdd key (value :: values)
+
+    | None -> map |> mapAdd key [ value ]
+
+  NameTree map
+
+// --------------------------------------------
+// Scopes
+// --------------------------------------------
+
+// FIXME: Not used?
+type private ScopeSerial = Serial
+
+/// Stack of local scopes.
+type private ScopeChain = AssocMap<string, Serial * Ident> list
+
+/// Scope chains, vars and types.
+type private Scope = ScopeChain * ScopeChain
+
 let private scopeMapEmpty () = mapEmpty strCmp
 
 let private scopeChainEmpty (): ScopeChain = [ scopeMapEmpty () ]
@@ -79,6 +123,12 @@ let private scopeCtxGetVar varSerial (scopeCtx: ScopeCtx) =
 let private scopeCtxGetTy tySerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Tys |> mapContainsKey tySerial)
   scopeCtx.Tys |> mapFind tySerial
+
+let private scopeCtxIsFun varSerial scopeCtx =
+  match scopeCtx |> scopeCtxGetVar varSerial with
+  | FunDef _ -> true
+
+  | _ -> false
 
 let private scopeCtxIsVariant varSerial scopeCtx =
   match scopeCtx |> scopeCtxGetVar varSerial with
@@ -499,7 +549,8 @@ let private nameResCollectDecls moduleSerialOpt (expr, ctx) =
     | HRefPat (serial, ty, loc) ->
         let ident = ctx |> scopeCtxGetIdent serial
         match ctx |> scopeCtxResolveLocalVar ident with
-        | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HRefPat(varSerial, ty, loc), ctx
+        | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HVariantPat(varSerial, ty, loc), ctx
+
         | _ ->
             let ctx =
               ctx
@@ -535,6 +586,7 @@ let private nameResCollectDecls moduleSerialOpt (expr, ctx) =
         let pat, ctx = (pat, ctx) |> goPat vis
         HAnnoPat(pat, ty, loc), ctx
 
+    | HVariantPat _ -> failwithf "NEVER: HVariantPat is generated in NameRes. %A" pat
     | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
   let rec goExpr (expr, ctx) =
@@ -600,7 +652,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
         | None -> None
 
       match variantSerial with
-      | Some variantSerial -> HRefPat(variantSerial, ty, loc), ctx
+      | Some variantSerial -> HVariantPat(variantSerial, ty, loc), ctx
 
       | None ->
           match ident with
@@ -624,6 +676,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
         | None -> None
 
       match varSerial with
+      | Some varSerial when scopeCtxIsVariant varSerial ctx -> HVariantPat(varSerial, ty, loc), ctx
       | Some varSerial -> HRefPat(varSerial, ty, loc), ctx
 
       | None ->
@@ -666,6 +719,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       let r, ctx = (r, ctx) |> nameResPat
       HOrPat(l, r, ty, loc), ctx
 
+  | HVariantPat _ -> failwithf "NEVER: HVariantPat is generated in NameRes. %A" pat
   | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
 let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
@@ -678,6 +732,10 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         let ident = ctx |> scopeCtxGetIdent serial
         match ctx |> scopeCtxResolveLocalVar ident with
+        | Some serial when ctx |> scopeCtxIsFun serial -> HFunExpr(serial, ty, loc), ctx
+
+        | Some serial when ctx |> scopeCtxIsVariant serial -> HVariantExpr(serial, ty, loc), ctx
+
         | Some serial -> HRefExpr(serial, ty, loc), ctx
 
         | None ->
@@ -739,6 +797,10 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
             match ctx |> scopeCtxResolveExprAsScope l with
             | Some scopeSerial ->
                 match ctx |> scopeCtxResolveVar scopeSerial r with
+                | Some varSerial when ctx |> scopeCtxIsFun varSerial -> HFunExpr(varSerial, ty, loc), ctx
+
+                | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HVariantExpr(varSerial, ty, loc), ctx
+
                 | Some varSerial -> HRefExpr(varSerial, ty, loc), ctx
 
                 | _ ->
@@ -858,6 +920,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         Bundling.spliceExpr body next, ctx
 
       doArm ()
+
+  | _ -> failwithf "NEVER: HVariantExpr is generated in NameRes. %A" expr
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = scopeCtxFromNameCtx nameCtx

@@ -424,18 +424,6 @@ type StorageModifier =
 
 type NameCtx = NameCtx of AssocMap<Serial, Ident> * lastSerial: Serial
 
-// FIXME: Not used?
-type ScopeSerial = Serial
-
-/// Stack of local scopes.
-type ScopeChain = AssocMap<string, Serial * Ident> list
-
-/// Scope chains, vars and types.
-type Scope = ScopeChain * ScopeChain
-
-/// Namespace membership.
-type NameTree = NameTree of AssocMap<Serial, Serial list>
-
 /// Type constructor.
 type TyCtor =
   | BoolTyCtor
@@ -541,8 +529,11 @@ type HPat =
   /// `_`
   | HDiscardPat of Ty * Loc
 
-  /// Variable or variant pattern.
+  /// Variable pattern.
   | HRefPat of VarSerial * Ty * Loc
+
+  /// Variant pattern.
+  | HVariantPat of VariantSerial * Ty * Loc
 
   /// Navigation, e.g. `Result.Ok _`.
   | HNavPat of HPat * Ident * Ty * Loc
@@ -636,8 +627,14 @@ type InfOp =
 type HExpr =
   | HLitExpr of Lit * Loc
 
-  /// Use of named value: variable, function or variant.
+  /// Name of variable.
   | HRefExpr of VarSerial * Ty * Loc
+
+  /// Name of function.
+  | HFunExpr of FunSerial * Ty * Loc
+
+  /// Name of variant.
+  | HVariantExpr of VariantSerial * Ty * Loc
 
   | HPrimExpr of HPrim * Ty * Loc
 
