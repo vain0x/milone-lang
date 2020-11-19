@@ -404,6 +404,17 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
       |> Some
 
   | AppTy (ListTyCtor, _),
+    [ HNonePat _, HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
+      let cond, ctx = mirifyExpr ctx cond
+
+      let isNone =
+        let ty, loc = mexprExtract cond
+        MUnaryExpr(MListIsEmptyUnary, cond, ty, loc)
+
+      doEmitIfStmt ctx isNone "none_cl" noneCl "some_cl" someCl ty loc
+      |> Some
+
+  | AppTy (ListTyCtor, _),
     [ HNilPat _, HLitExpr (BoolLit true, _), nilCl; HDiscardPat _, HLitExpr (BoolLit true, _), consCl ] ->
       let cond, ctx = mirifyExpr ctx cond
 
@@ -420,58 +431,71 @@ let private matchExprCanCompileToSwitch cond arms =
   let tyIsLit ty =
     match ty with
     | AppTy (IntTyCtor, [])
-    | AppTy (CharTyCtor, []) -> true
+    | AppTy (CharTyCtor, [])
+    | AppTy (RefTyCtor _, _) -> true
+
     | _ -> false
 
-  let rec go pat =
+  let rec patIsSimpleAtomic pat =
     match pat with
     | HLitPat _
-    | HRefPat _
     | HVariantPat _
     | HDiscardPat _ -> true
 
-    | HAsPat (bodyPat, _, _) -> go bodyPat
-    | HOrPat (l, r, _, _) -> go l && go r
+    | HBoxPat (bodyPat, _) -> patIsSimpleAtomic bodyPat
+
+    | _ -> false
+
+  /// Pattern is simple, i.e. flat, non-binding and disjunctive-normalized.
+  let rec patIsSimple pat =
+    match pat with
+    | HLitPat _
+    | HVariantPat _
+    | HDiscardPat _ -> true
+
+    | HCallPat (HVariantPat _, [ payload ], _, _) -> patIsSimpleAtomic payload
+
+    | HOrPat (l, r, _, _) -> patIsSimple l && patIsSimple r
 
     | _ -> false
 
   tyIsLit (exprToTy cond)
   && arms
-  |> List.forall (fun (pat, guard, _) -> go pat && hxIsAlwaysTrue guard)
+  |> List.forall (fun (pat, guard, _) -> patIsSimple pat && hxIsAlwaysTrue guard)
 
 /// Converts a match expression to switch statement.
-// TODO: Support more cases
 let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
-  // (caseLits, isDefault, bindings)
+  // (caseLits, isDefault)
   let rec go pat =
     match pat with
-    | HLitPat (lit, _) -> [ lit ], false, []
+    | HLitPat (lit, _) -> [ MLitConst lit ], false
 
-    | HRefPat (varSerial, _, loc) -> [], true, [ varSerial, loc ]
+    | HDiscardPat _ -> [], true
 
-    | HDiscardPat _ -> [], true, []
+    | HVariantPat (variantSerial, _, _) -> [ MTagConst variantSerial ], false
 
-    | HAsPat (bodyPat, varSerial, loc) ->
-        let cases, isDefault, bindings = go bodyPat
-        let bindings = (varSerial, loc) :: bindings
-        cases, isDefault, bindings
+    | HCallPat (HVariantPat (variantSerial, _, _), _, _, _) -> [ MTagConst variantSerial ], false
 
     | HOrPat (l, r, _, _) ->
-        let lCases, lIsDefault, lBindings = go l
-        let rCases, rIsDefault, rBindings = go r
+        let lCases, lIsDefault = go l
+        let rCases, rIsDefault = go r
 
         let cases = List.append rCases lCases // reverse order
         let isDefault = lIsDefault || rIsDefault
-        let bindings = List.append rBindings lBindings
-        cases, isDefault, bindings
+        cases, isDefault
 
     | _ -> failwithf "NEVER: %A" pat
 
   let temp, tempSet, ctx = mirCtxLetFreshVar ctx "switch" ty loc
   let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "switch_next" loc
 
-  let condTy = exprToTy cond
-  let cond, ctx = mirifyExpr ctx cond
+  let cond, ctx =
+    let condTy, condLoc = exprExtract cond
+    let cond, ctx = mirifyExpr ctx cond
+
+    match condTy with
+    | AppTy (RefTyCtor _, _) -> MUnaryExpr(MTagUnary, cond, tyInt, condLoc), ctx
+    | _ -> cond, ctx
 
   let exhaust, clauses, blocks, ctx =
     arms
@@ -482,7 +506,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
            let _, clauseLoc = patExtract pat
            let clauseLabelStmt, clauseLabel, ctx = mirCtxFreshLabel ctx "clause" clauseLoc
 
-           let cases, isDefault, bindings = go pat
+           let cases, isDefault = go pat
 
            let clause: MSwitchClause =
              { Cases = cases
@@ -494,14 +518,6 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
 
            let block, ctx =
              let ctx = mirCtxAddStmt ctx clauseLabelStmt
-
-             // Bindings: just assign cond to var.
-             let ctx =
-               bindings
-               |> List.fold (fun ctx (varSerial, loc) ->
-                    mirCtxAddStmt ctx (MLetValStmt(varSerial, MExprInit cond, condTy, loc))) ctx
-
-             // Evaluates body and assign to temp var.
              let body, ctx = mirifyExpr ctx body
              let ctx = mirCtxAddStmt ctx (tempSet body)
 

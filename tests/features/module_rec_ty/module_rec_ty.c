@@ -28,16 +28,22 @@ int main() {
     list_->tail = NULL;
     void* box_ = (void*)milone_mem_alloc(1, sizeof(struct ObjectList*));
     (*(((struct ObjectList**)box_))) = list_;
-    int match_;
-    if (((struct UnionX_){.tag = VariantY_}.tag != VariantX_)) goto next_2;
+    int switch_;
+    switch ((struct UnionX_){.tag = VariantY_}.tag) {
+       case VariantX_:
+          goto clause_2;
+
+       default:
+          goto clause_3;
+    }
+clause_2:;
     milone_assert(0, 18, 4);
     int call_ = 0;
-    match_ = 0;
-    goto end_match_1;
-next_2:;
-    match_ = 0;
-    goto end_match_1;
-next_3:;
-end_match_1:;
+    switch_ = 0;
+    goto switch_next_1;
+clause_3:;
+    switch_ = 0;
+    goto switch_next_1;
+switch_next_1:;
     return 0;
 }

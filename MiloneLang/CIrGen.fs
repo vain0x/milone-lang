@@ -500,6 +500,22 @@ let private cOpFrom op =
   | MStrCmpBinary
   | MStrIndexBinary -> failwith "Never"
 
+let private genLit lit =
+  match lit with
+  | IntLit value -> CIntExpr value
+  | CharLit value -> CCharExpr value
+  | StrLit value -> CStrObjExpr value
+  | BoolLit false -> CIntExpr 0
+  | BoolLit true -> CIntExpr 1
+
+let private genTag ctx variantSerial =
+  CRefExpr(cirCtxUniqueName ctx variantSerial)
+
+let private genConst ctx mConst =
+  match mConst with
+  | MLitConst lit -> genLit lit
+  | MTagConst variantSerial -> genTag ctx variantSerial
+
 /// `0`, `NULL`, or `(T) {}`
 let private genExprDefault ctx ty =
   match ty with
@@ -582,16 +598,12 @@ let private genExprList ctx exprs =
 
 let private genExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   match arg |> mxSugar with
-  | MLitExpr (IntLit value, _) -> CIntExpr value, ctx
-  | MLitExpr (CharLit value, _) -> CCharExpr value, ctx
-  | MLitExpr (StrLit value, _) -> CStrObjExpr value, ctx
-  | MLitExpr (BoolLit false, _) -> CIntExpr 0, ctx
-  | MLitExpr (BoolLit true, _) -> CIntExpr 1, ctx
+  | MLitExpr (lit, _) -> genLit lit, ctx
   | MDefaultExpr (ty, _) -> genExprDefault ctx ty
   | MRefExpr (serial, _, _) -> CRefExpr(cirCtxUniqueName ctx serial), ctx
   | MProcExpr (serial, ty, loc) -> genExprProc ctx serial ty loc
   | MVariantExpr (_, serial, ty, _) -> genExprVariant ctx serial ty
-  | MTagExpr (variantSerial, _) -> CRefExpr(cirCtxUniqueName ctx variantSerial), ctx
+  | MTagExpr (variantSerial, _) -> genTag ctx variantSerial, ctx
   | MUnaryExpr (op, arg, ty, loc) -> genExprUniOp ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
@@ -904,10 +916,14 @@ let private genTerminatorStmt ctx stmt =
       let clauses, ctx =
         (clauses, ctx)
         |> stMap (fun (clause: MSwitchClause, ctx) ->
+             let cases =
+               clause.Cases
+               |> List.map (fun cond -> genConst ctx cond)
+
              let stmts, ctx =
                genTerminatorAsBlock ctx clause.Terminator
 
-             (clause.Cases, clause.IsDefault, stmts), ctx)
+             (cases, clause.IsDefault, stmts), ctx)
 
       cirCtxAddStmt ctx (CSwitchStmt(cond, clauses))
 

@@ -956,8 +956,12 @@ type MInit =
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
 
+type MConst =
+  | MLitConst of Lit
+  | MTagConst of VariantSerial
+
 type MSwitchClause =
-  { Cases: Lit list
+  { Cases: MConst list
     IsDefault: bool
     Terminator: MTerminator }
 
@@ -1088,7 +1092,7 @@ type CStmt =
   | CIfStmt of CExpr * CStmt list * CStmt list
 
   /// clause: (caseLiterals, isDefault, body).
-  | CSwitchStmt of cond: CExpr * clauses: (Lit list * bool * CStmt list) list
+  | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt list) list
 
   | CReturnStmt of CExpr option
 

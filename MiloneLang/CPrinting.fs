@@ -214,6 +214,8 @@ let private cprintExpr acc expr: string list =
       let acc = acc |> cons ")"
       acc
 
+let private cpExpr expr acc = cprintExpr acc expr
+
 let private cprintStmt acc indent stmt: string list =
   match stmt with
   | CReturnStmt None -> acc |> cons indent |> cons "return;" |> cons eol
@@ -311,7 +313,7 @@ let private cprintStmt acc indent stmt: string list =
                     acc
                     |> cons (deeper indent)
                     |> cons "case "
-                    |> cpLit lit
+                    |> cpExpr lit
                     |> cons ":"
                     |> cons eol) acc
 
