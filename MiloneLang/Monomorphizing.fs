@@ -247,13 +247,11 @@ let private monoCtxTakeMarkedGenericFunUseSiteTys (ctx: MonoCtx) funSerial =
 /// Replaces the variable serial to monomorphized function serial if possible.
 /// Or marks an use of generic function if possible.
 /// Does nothing if the serial is NOT a generic function.
-let private monoCtxProcessVarRef ctx varSerial useSiteTy =
+let private monoCtxProcessFunExpr ctx varSerial useSiteTy =
   match monoCtxFindVarDef ctx varSerial with
-  | VarDef _
-  | VariantDef _
   | FunDef (_, _, TyScheme ([], _), _) -> varSerial, ctx
 
-  | FunDef _ ->
+  | _ ->
       match monoCtxFindMonomorphizedFun ctx varSerial useSiteTy with
       | Some monoFunSerial -> monoFunSerial, ctx
 
@@ -310,15 +308,16 @@ let private monifyExpr (expr, ctx) =
   | HTyDeclExpr _
   | HOpenExpr _
   | HLitExpr _
+  | HRefExpr _
   | HVariantExpr _
   | HPrimExpr _ -> expr, ctx
 
-  | HRefExpr (varSerial, useSiteTy, loc) ->
+  | HFunExpr (varSerial, useSiteTy, loc) ->
       let doArm () =
         let varSerial, ctx =
-          monoCtxProcessVarRef ctx varSerial useSiteTy
+          monoCtxProcessFunExpr ctx varSerial useSiteTy
 
-        HRefExpr(varSerial, useSiteTy, loc), ctx
+        HFunExpr(varSerial, useSiteTy, loc), ctx
 
       doArm ()
 

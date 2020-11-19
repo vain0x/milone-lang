@@ -18,6 +18,7 @@ let private containsTailRec expr =
 
   | HLitExpr _
   | HRefExpr _
+  | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _
   | HNavExpr _
@@ -332,12 +333,6 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * M
   | HCallPat _ -> failwithf "Never: Call pattern incorrect. %A" pat
   | HTuplePat _ -> failwith "Never: Tuple pattern must be of tuple type."
   | HAnnoPat _ -> failwith "Never annotation pattern in MIR-ify stage."
-
-let private mirifyExprRef (ctx: MirCtx) itself serial ty loc =
-  match ctx.Vars |> mapTryFind serial with
-  | Some (VariantDef _) -> failwithf "NEVER: Illegal HRefExpr. %A" itself
-  | Some (FunDef (_, _, _, loc)) -> MProcExpr(serial, ty, loc), ctx
-  | _ -> MRefExpr(serial, ty, loc), ctx
 
 let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
   match ctx.Vars |> mapTryFind serial with
@@ -967,7 +962,7 @@ let private mirifyExprInf ctx infOp args ty loc =
   | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallTailRec, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
-  | InfOp.Closure, [ HRefExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
+  | InfOp.Closure, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
   | t -> failwithf "Never: %A" t
 
 let private mirifyExprLetVal ctx pat init next letLoc =
@@ -1073,7 +1068,8 @@ let private mirifyDecl ctx expr =
 let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   match expr with
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
-  | HRefExpr (serial, ty, loc) -> mirifyExprRef ctx expr serial ty loc
+  | HRefExpr (serial, ty, loc) -> MRefExpr(serial, ty, loc), ctx
+  | HFunExpr (serial, ty, loc) -> MProcExpr(serial, ty, loc), ctx
   | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx expr serial ty loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
   | HMatchExpr (target, arms, ty, loc) -> mirifyExprMatch ctx target arms ty loc

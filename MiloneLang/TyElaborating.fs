@@ -355,10 +355,6 @@ let private tePat ctx pat =
 
 let private teExpr (ctx: TyElaborationCtx) expr =
   match expr with
-  | HRefExpr (varSerial, ty, loc) ->
-      let ty = ty |> teTy ctx
-      HRefExpr(varSerial, ty, loc)
-
   | HVariantExpr (varSerial, ty, loc) ->
       match rewriteNewtypeVariantExpr ctx varSerial loc with
       | Some expr -> expr
@@ -394,6 +390,8 @@ let private teExpr (ctx: TyElaborationCtx) expr =
   | HOpenExpr _
   | HTyDeclExpr _ -> expr
 
+  | HRefExpr _
+  | HFunExpr _
   | HPrimExpr _ -> expr |> exprMap (teTy ctx) id
 
   | HMatchExpr (target, arms, ty, loc) ->

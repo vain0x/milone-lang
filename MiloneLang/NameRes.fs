@@ -124,6 +124,12 @@ let private scopeCtxGetTy tySerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Tys |> mapContainsKey tySerial)
   scopeCtx.Tys |> mapFind tySerial
 
+let private scopeCtxIsFun varSerial scopeCtx =
+  match scopeCtx |> scopeCtxGetVar varSerial with
+  | FunDef _ -> true
+
+  | _ -> false
+
 let private scopeCtxIsVariant varSerial scopeCtx =
   match scopeCtx |> scopeCtxGetVar varSerial with
   | VariantDef _ -> true
@@ -726,6 +732,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         let ident = ctx |> scopeCtxGetIdent serial
         match ctx |> scopeCtxResolveLocalVar ident with
+        | Some serial when ctx |> scopeCtxIsFun serial -> HFunExpr(serial, ty, loc), ctx
+
         | Some serial when ctx |> scopeCtxIsVariant serial -> HVariantExpr(serial, ty, loc), ctx
 
         | Some serial -> HRefExpr(serial, ty, loc), ctx
@@ -789,6 +797,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
             match ctx |> scopeCtxResolveExprAsScope l with
             | Some scopeSerial ->
                 match ctx |> scopeCtxResolveVar scopeSerial r with
+                | Some varSerial when ctx |> scopeCtxIsFun varSerial -> HFunExpr(varSerial, ty, loc), ctx
+
                 | Some varSerial when ctx |> scopeCtxIsVariant varSerial -> HVariantExpr(varSerial, ty, loc), ctx
 
                 | Some varSerial -> HRefExpr(varSerial, ty, loc), ctx

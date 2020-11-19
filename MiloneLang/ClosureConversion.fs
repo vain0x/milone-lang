@@ -297,7 +297,7 @@ let private capsAddToFunTy tTy (caps: Caps) =
 let private capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
   let callee =
     let calleeTy = caps |> capsAddToFunTy calleeTy
-    HRefExpr(calleeSerial, calleeTy, calleeLoc)
+    HFunExpr(calleeSerial, calleeTy, calleeLoc)
 
   let app, _ =
     caps
@@ -322,7 +322,7 @@ let private capsUpdateFunDef funTy arity (caps: Caps) =
 // Closure conversion routines
 // -----------------------------------------------
 
-let private declosureFunRef refVarSerial refTy refLoc ctx =
+let private declosureFunExpr refVarSerial refTy refLoc ctx =
   // NOTE: No need to check whether it's a function
   //       because non-function caps are empty.
   let refExpr =
@@ -408,10 +408,17 @@ let private declosureExpr (expr, ctx) =
   | HPrimExpr _
   | HOpenExpr _ -> expr, ctx
 
-  | HRefExpr (serial, refTy, refLoc) ->
+  | HRefExpr (serial, ty, loc) ->
       let doArm () =
         let ctx = ctx |> ccCtxAddRef serial
-        declosureFunRef serial refTy refLoc ctx
+        HRefExpr(serial, ty, loc), ctx
+
+      doArm ()
+
+  | HFunExpr (serial, refTy, refLoc) ->
+      let doArm () =
+        let ctx = ctx |> ccCtxAddRef serial
+        declosureFunExpr serial refTy refLoc ctx
 
       doArm ()
 

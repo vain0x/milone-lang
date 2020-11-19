@@ -232,6 +232,7 @@ let private abExpr ctx expr =
   | HTyDeclExpr _ -> expr
 
   | HRefExpr _
+  | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _ -> expr |> exprMap (abTy ctx) id
 
