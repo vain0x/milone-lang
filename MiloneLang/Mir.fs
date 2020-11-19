@@ -426,11 +426,9 @@ let private matchExprCanCompileToSwitch cond arms =
   let rec go pat =
     match pat with
     | HLitPat _
-    | HRefPat _
     | HVariantPat _
     | HDiscardPat _ -> true
 
-    | HAsPat (bodyPat, _, _) -> go bodyPat
     | HOrPat (l, r, _, _) -> go l && go r
 
     | _ -> false
@@ -442,35 +440,26 @@ let private matchExprCanCompileToSwitch cond arms =
 /// Converts a match expression to switch statement.
 // TODO: Support more cases
 let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
-  // (caseLits, isDefault, bindings)
+  // (caseLits, isDefault)
   let rec go pat =
     match pat with
-    | HLitPat (lit, _) -> [ lit ], false, []
+    | HLitPat (lit, _) -> [ lit ], false
 
-    | HRefPat (varSerial, _, loc) -> [], true, [ varSerial, loc ]
-
-    | HDiscardPat _ -> [], true, []
-
-    | HAsPat (bodyPat, varSerial, loc) ->
-        let cases, isDefault, bindings = go bodyPat
-        let bindings = (varSerial, loc) :: bindings
-        cases, isDefault, bindings
+    | HDiscardPat _ -> [], true
 
     | HOrPat (l, r, _, _) ->
-        let lCases, lIsDefault, lBindings = go l
-        let rCases, rIsDefault, rBindings = go r
+        let lCases, lIsDefault = go l
+        let rCases, rIsDefault = go r
 
         let cases = List.append rCases lCases // reverse order
         let isDefault = lIsDefault || rIsDefault
-        let bindings = List.append rBindings lBindings
-        cases, isDefault, bindings
+        cases, isDefault
 
     | _ -> failwithf "NEVER: %A" pat
 
   let temp, tempSet, ctx = mirCtxLetFreshVar ctx "switch" ty loc
   let nextLabelStmt, nextLabel, ctx = mirCtxFreshLabel ctx "switch_next" loc
 
-  let condTy = exprToTy cond
   let cond, ctx = mirifyExpr ctx cond
 
   let exhaust, clauses, blocks, ctx =
@@ -482,7 +471,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
            let _, clauseLoc = patExtract pat
            let clauseLabelStmt, clauseLabel, ctx = mirCtxFreshLabel ctx "clause" clauseLoc
 
-           let cases, isDefault, bindings = go pat
+           let cases, isDefault = go pat
 
            let clause: MSwitchClause =
              { Cases = cases
@@ -494,14 +483,6 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
 
            let block, ctx =
              let ctx = mirCtxAddStmt ctx clauseLabelStmt
-
-             // Bindings: just assign cond to var.
-             let ctx =
-               bindings
-               |> List.fold (fun ctx (varSerial, loc) ->
-                    mirCtxAddStmt ctx (MLetValStmt(varSerial, MExprInit cond, condTy, loc))) ctx
-
-             // Evaluates body and assign to temp var.
              let body, ctx = mirifyExpr ctx body
              let ctx = mirCtxAddStmt ctx (tempSet body)
 
