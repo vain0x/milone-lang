@@ -5,7 +5,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.SyntaxTokenize
-open MiloneLang.Parsing
+open MiloneLang.SyntaxParse
 open MiloneLang.AstToHir
 open MiloneLang.AutoBoxing
 open MiloneLang.Bundling
@@ -180,7 +180,7 @@ let private printLogs (tyCtx: TyCtx) logs =
 // Processes
 // -----------------------------------------------
 
-/// Loads source codes from files, performs tokenization and parsing,
+/// Loads source codes from files, performs tokenization and SyntaxParse,
 /// and transforms them into high-level intermediate representation (HIR).
 let syntacticallyAnalyze (host: CliHost) v (projectDir: string) =
   let projectDir = projectDir |> pathStrTrimEndPathSep
@@ -286,15 +286,15 @@ let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
 
   failwith "compile with KIR is suspended"
 
-  // writeLog host v "KirToMir"
-  // let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
+// writeLog host v "KirToMir"
+// let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
 
-  // writeLog host v "Cir generation"
-  // let cir, success = gen (stmts, mirCtx)
-  // let cOutput = cprint cir
+// writeLog host v "Cir generation"
+// let cir, success = gen (stmts, mirCtx)
+// let cOutput = cprint cir
 
-  // writeLog host v "Finish"
-  // cOutput, success
+// writeLog host v "Finish"
+// cOutput, success
 
 let compile (host: CliHost) v projectDir: string * bool =
   let syntax = syntacticallyAnalyze host v projectDir
@@ -323,7 +323,7 @@ let cliParse (host: CliHost) verbosity (projectDir: string) =
     writeLog
       host
       v
-      ("\n-------------\nParsing %s...\n--------------"
+      ("\n-------------\nSyntaxParse %s...\n--------------"
        + moduleName)
     let ast, errors = contents |> tokenize |> parse
 

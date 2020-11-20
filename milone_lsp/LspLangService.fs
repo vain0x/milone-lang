@@ -302,7 +302,7 @@ let parseWithCaching (text: string) (analysisCache: AnalysisCache): ParseResult 
 
   | None ->
       let tokens = tokenizeWithCaching text analysisCache
-      let result = MiloneLang.Parsing.parse tokens
+      let result = MiloneLang.SyntaxParse.parse tokens
 
       let ok =
         let _, errors = result
@@ -379,7 +379,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
     let parseModule (moduleName: string) tokens =
       eprintfn "parse: '%s'" moduleName
-      MiloneLang.Parsing.parse tokens
+      MiloneLang.SyntaxParse.parse tokens
 
     let bundleHost: MiloneLang.Bundling.BundleHost =
       { FetchModule =

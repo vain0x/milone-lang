@@ -10,7 +10,7 @@
     <Compile Include="Helpers.fs" />
     <Compile Include="TySystem.fs" />
     <Compile Include="SyntaxTokenize.fs" />
-    <Compile Include="Parsing.fs" />
+    <Compile Include="SyntaxParse.fs" />
     <Compile Include="AstToHir.fs" />
     <Compile Include="Bundling.fs" />
     <Compile Include="NameRes.fs" />

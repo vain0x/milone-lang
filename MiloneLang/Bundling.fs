@@ -31,19 +31,19 @@
 /// Assume we want to compile this module.
 ///
 /// ```fsharp
-/// open MiloneLang.Parsing
+/// open MiloneLang.SyntaxParse
 ///
 /// let main _ = 0
 /// ```
 ///
-/// Since this opens `MiloneLang.Parsing`,
-/// the bundler finds `Parsing.fs` (some where),
+/// Since this opens `MiloneLang.SyntaxParse`,
+/// the bundler finds `SyntaxParse.fs` (some where),
 /// load, tokenize, and parse.
 ///
-/// Assume `Parsing` has another open statement.
+/// Assume `SyntaxParse` has another open statement.
 ///
 /// ```fsharp
-/// // Parsing.fs
+/// // SyntaxParse.fs
 /// open MiloneLang.SyntaxTokenize
 ///
 /// let parse () = 0
@@ -60,7 +60,7 @@
 ///
 /// ```fsharp
 /// let tokenize () = 0 // from Lexing.fs
-/// let parse () = 0 // from Parsing.fs
+/// let parse () = 0 // from SyntaxParse.fs
 /// let main _ = 0 // from entrypoint module
 /// ```
 module rec MiloneLang.Bundling
@@ -227,7 +227,8 @@ let bundleProgram (host: BundleHost) (projectName: string): (HExpr * NameCtx * (
 
   // HACK: Load "./MiloneOnly" module in the project if exists.
   let ctx =
-    match ctx |> fetchModuleWithMemo projectName "MiloneOnly" with
+    match ctx
+          |> fetchModuleWithMemo projectName "MiloneOnly" with
     | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
 
     | _ -> ctx

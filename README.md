@@ -103,7 +103,7 @@ and functions are in:
 The following transformations are consist of the compilation in the order:
 
 - [SyntaxTokenize](MiloneLang/SyntaxTokenize.fs)
-- [Parsing](MiloneLang/Parsing.fs)
+- [SyntaxParse](MiloneLang/SyntaxParse.fs)
 - [Bundling](MiloneLang/Bundling.fs)
     - Source codes concatenation
 - [AstToHir](MiloneLang/AstToHir.fs)

@@ -64,7 +64,7 @@
 ///   except a semicolon precedes it.
 ///
 /// Note that the implementation doesn't verify the rule completely.
-module rec MiloneLang.Parsing
+module rec MiloneLang.SyntaxParse
 
 open MiloneLang.Types
 open MiloneLang.Helpers
