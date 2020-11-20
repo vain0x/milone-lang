@@ -460,11 +460,9 @@ let private pcPat (ctx: PcCtx) pat: PPat * VarSerial option =
 
   | HDiscardPat _ -> WildcardPat, None
 
-  | HRefPat (varSerial, _, _) ->
-      match ctx.Vars |> mapTryFind varSerial with
-      | Some (VarDef _) -> WildcardPat, Some varSerial
-      | Some (VariantDef _) -> todo ()
-      | _ -> failwithf "NEVER: Fun pattern? %A" pat
+  | HRefPat (varSerial, _, _) -> WildcardPat, Some varSerial
+
+  | HVariantPat _ -> todo ()
 
   | HConsPat (l, r, _, _) ->
       let l = l |> pcPat ctx
@@ -503,12 +501,10 @@ let private patCanCompile (ctx: PcCtx) pat =
 
   | HLitPat _
   | HNilPat _
-  | HDiscardPat _ -> true
+  | HDiscardPat _
+  | HRefPat _  -> true
 
-  | HRefPat (varSerial, _, _) ->
-      match ctx.Vars |> mapTryFind varSerial with
-      | Some (VarDef _) -> true
-      | _ -> false
+  | HVariantPat _ -> false
 
   | HConsPat (l, r, _, _) ->
       let l = l |> patCanCompile ctx
@@ -800,6 +796,8 @@ let private pcExpr (expr, ctx: PcCtx) =
   | HLitExpr _
   | HPrimExpr _
   | HRefExpr _
+  | HFunExpr _
+  | HVariantExpr _
   | HTyDeclExpr _
   | HOpenExpr _ -> expr, ctx
 
