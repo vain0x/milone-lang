@@ -72,6 +72,10 @@ type Token =
   /// Illegal bytes, etc.
   | ErrorToken
 
+  | BlankToken
+  | NewlinesToken
+  | CommentToken
+
   | IntToken of int
   | CharToken of char
   | StrToken of string

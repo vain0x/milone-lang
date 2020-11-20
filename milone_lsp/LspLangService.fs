@@ -292,7 +292,7 @@ let tokenizeWithCaching (text: string) (analysisCache: AnalysisCache): TokenizeR
   | Some it -> it
 
   | None ->
-      let result = MiloneLang.Lexing.tokenize text
+      let result = MiloneLang.SyntaxTokenize.tokenize text
       analysisCache.TokenizeResultOpt <- Some result
       result
 
@@ -389,7 +389,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
               | Some contents ->
                   let ast, errors =
                     contents
-                    |> MiloneLang.Lexing.tokenize
+                    |> MiloneLang.SyntaxTokenize.tokenize
                     |> parseModule m
 
                   let docId = m

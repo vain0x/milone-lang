@@ -102,7 +102,7 @@ and functions are in:
 
 The following transformations are consist of the compilation in the order:
 
-- [Lexing](MiloneLang/Lexing.fs) (Tokenization)
+- [SyntaxTokenize](MiloneLang/SyntaxTokenize.fs)
 - [Parsing](MiloneLang/Parsing.fs)
 - [Bundling](MiloneLang/Bundling.fs)
     - Source codes concatenation

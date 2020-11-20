@@ -1,9 +1,10 @@
-module MiloneLang.Lexing.LexingTests
+module MiloneLang.SyntaxTokenize.SyntaxTokenizeTests
 
 open MiloneLang
 open MiloneLang.Assets
 open MiloneLang.Helpers
 open MiloneLang.Types
+open MiloneLang.SyntaxTokenize
 open Xunit
 
 [<Fact>]
@@ -18,10 +19,7 @@ let tokenizeMainEmpty () =
       EqToken
       IntToken 0 ]
 
-  source
-  |> Lexing.tokenize
-  |> List.map fst
-  |> is expected
+  source |> tokenize |> List.map fst |> is expected
 
 [<Fact>]
 let tokenizeLineComment () =
@@ -41,10 +39,7 @@ let main _ =
       MinusToken
       IntToken 1 ]
 
-  source
-  |> Lexing.tokenize
-  |> List.map fst
-  |> is expected
+  source |> tokenize |> List.map fst |> is expected
 
 [<Fact>]
 let tokenizeCharLiteral () =
@@ -56,7 +51,7 @@ let tokenizeCharLiteral () =
   let source = """'a' '\'' '\n' '\x00'"""
   let expected = [ 'a'; '\''; '\n'; '\x00' ]
   source
-  |> Lexing.tokenize
+  |> tokenize
   |> List.map unwrapChar
   |> is expected
 
@@ -67,7 +62,7 @@ let tokenizeStrLiteral () =
   let expected =
     [ StrToken "HELLO!\n\"NEW\"\nWORLD!", (0, 0) ]
 
-  source |> Lexing.tokenize |> is expected
+  source |> tokenize |> is expected
 
 [<Fact>]
 let tokenizeTyVarIdent () =
@@ -77,7 +72,7 @@ let tokenizeTyVarIdent () =
   let expected = [ "T", (0, 12); "T", (0, 26) ]
 
   source
-  |> Lexing.tokenize
+  |> tokenize
   |> List.choose (fun (token, pos) ->
        match token with
        | TyVarToken text -> Some(text, pos)
@@ -100,4 +95,4 @@ let main () =
       IdentToken "f", (2, 2)
       IntToken 1, (2, 4) ]
 
-  source |> Lexing.tokenize |> is expected
+  source |> tokenize |> is expected

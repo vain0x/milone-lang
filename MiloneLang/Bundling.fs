@@ -44,15 +44,15 @@
 ///
 /// ```fsharp
 /// // Parsing.fs
-/// open MiloneLang.Lexing
+/// open MiloneLang.SyntaxTokenize
 ///
 /// let parse () = 0
 /// ```
 ///
-/// Bundler finds `Lexing.fs` and parse.
+/// Bundler finds `SyntaxTokenize.fs` and parse.
 ///
 /// ```fsharp
-/// // Lexing.fs
+/// // SyntaxTokenize.fs
 /// let tokenize () = 0
 /// ```
 ///

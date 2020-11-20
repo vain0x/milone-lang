@@ -4,7 +4,7 @@ module rec MiloneLang.Cli
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem
-open MiloneLang.Lexing
+open MiloneLang.SyntaxTokenize
 open MiloneLang.Parsing
 open MiloneLang.AstToHir
 open MiloneLang.AutoBoxing
