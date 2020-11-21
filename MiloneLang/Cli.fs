@@ -26,12 +26,6 @@ open MiloneLang.KirDump
 open MiloneLang.CIrGen
 open MiloneLang.CPrinting
 
-[<NoEquality; NoComparison>]
-type Verbosity =
-  | Verbose
-  | Profile of Profiler
-  | Quiet
-
 let private helpText = """milone-lang compiler
 
 USAGE:
@@ -61,6 +55,39 @@ GLOBAL OPTIONS
 
 LINKS
     <https://github.com/vain0x/milone-lang>"""
+
+// -----------------------------------------------
+// Interface (1)
+// -----------------------------------------------
+
+[<NoEquality; NoComparison>]
+type Verbosity =
+  | Verbose
+  | Profile of Profiler
+  | Quiet
+
+/// Abstraction layer of CLI program.
+[<NoEquality; NoComparison>]
+type CliHost =
+  {
+    /// Command line args.
+    Args: string list
+
+    /// Path to milone home (installation directory).
+    MiloneHome: string
+
+    /// Creates a profiler.
+    ProfileInit: (unit -> Profiler)
+
+    /// Prints a message to stderr for profiling.
+    ProfileLog: (string -> Profiler -> unit)
+
+    /// Reads all contents of a file as string.
+    FileReadAllText: (string -> string option) }
+
+// -----------------------------------------------
+// Helpers
+// -----------------------------------------------
 
 let private strTrimEnd (s: string) =
   let rec go i =
@@ -97,25 +124,6 @@ let private pathStrToStem (s: string) =
         else go (i - 1)
 
       go s.Length
-
-/// Abstraction layer of CLI program.
-[<NoEquality; NoComparison>]
-type CliHost =
-  {
-    /// Command line args.
-    Args: string list
-
-    /// Path to milone home (installation directory).
-    MiloneHome: string
-
-    /// Creates a profiler.
-    ProfileInit: (unit -> Profiler)
-
-    /// Prints a message to stderr for profiling.
-    ProfileLog: (string -> Profiler -> unit)
-
-    /// Reads all contents of a file as string.
-    FileReadAllText: (string -> string option) }
 
 // -----------------------------------------------
 // Read module files
@@ -436,7 +444,7 @@ let cliCompileViaKir (host: CliHost) projectDirs =
        code) 0
 
 // -----------------------------------------------
-// args
+// Arg parsing
 // -----------------------------------------------
 
 /// Parses CLI args for a flag.
@@ -512,6 +520,10 @@ let private parseArgs args =
       | "kir-c" -> CompileCmd, "--kir" :: args
 
       | _ -> BadCmd arg, []
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
 
 let cli (host: CliHost) =
   match host.Args |> parseArgs with
