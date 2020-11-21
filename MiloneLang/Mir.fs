@@ -480,9 +480,11 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
         let lCases, lIsDefault = go l
         let rCases, rIsDefault = go r
 
-        let cases = List.append rCases lCases // reverse order
-        let isDefault = lIsDefault || rIsDefault
-        cases, isDefault
+        if lIsDefault || rIsDefault then
+          [], true
+        else
+          let cases = List.append rCases lCases // reverse order
+          cases, false
 
     | _ -> failwithf "NEVER: %A" pat
 
