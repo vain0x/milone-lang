@@ -1,45 +1,79 @@
-/// ## Un-eta
+/// # EtaExpansion
 ///
-/// Resolve partial applications and function references.
-/// Convert them to statements to create a function object with specified /arguments.
+/// Resolves partial applications and function references.
+/// Converts them to statements to create a closure object
+/// that holds specified arguments.
 ///
-/// Thanks to declosure, in this stage, functions don't rely on local scope.
+/// Thanks to ClosureConversion, functions are all closed in this stage.
+/// That is, all local variables are defined in current functions.
 ///
-/// ### Example
+/// ## Example
 ///
-/// Consider `let sum x y z = x + y + z` and partial application `sum 1 2`.
-/// Here the given arguments is `1, 2`, the rest arguments is `z`.
-/// We define a helper function called `sumObj` like this:
+/// A function `sum` is defined to take 3 arguments `x, y, z`.
 ///
 /// ```fsharp
-///    let sumObj env z =
-///      let x, y = unbox env
-///      add x y z
+///   let sum x y z = x + y + z
+///
+///   sum 1 2
+/// //    ^^^ partial application
 /// ```
 ///
-/// and convert partial application into the following.
+/// The expression `sum 1 2` is a partial application
+/// since `sum` is defined to take 3 parameters but given arguments are two,
+/// i.e. `x = 1; y = 2`.
+///
+/// We call parameters whose values are not given in partial application
+/// are *rest parameter(s)*. `z` is the rest parameter in current example.
+///
+/// To transform this, define a helper function, called `sumObj`, like this:
+///
+/// ```fsharp
+///    let sumObj2 env z =
+///       let x, y = unbox env
+///       add x y z
+/// ```
+///
+/// The function `sumObj2` takes an object `env` and rest parameters (`z`).
+/// In its body, expand the `env` and call to the original function (`sum`)
+/// with full arguments, which is not a partial application.
+///
+/// The partial application is finally converted like this (pseudo-code):
 ///
 /// ```fsharp
 ///    let env = box (x, y)
-///    (sumObj, env) :> (int -> int)
+///    (sumObj2, env) :> (int -> int)  // closure object creation
 /// ```
 ///
-/// ### Function references
+/// Given arguments are packed into an object `env` so that `sumObj2` can use them
+/// as described above.
 ///
-/// You can think of function reference as a kind of partial application
-/// with given arguments is empty. In term of the above example,
+/// A closure object is then created, where underlying function is `sumObj2`
+/// and state is `env`.
+///
+/// ## Function references
+///
+/// Function references are partial application with no arguments.
+/// For example:
 ///
 /// ```fsharp
-///    let sumObj env x y z =
+///    let f = sum
+/// //         ^^^ function reference
+/// ```
+///
+/// Given arguments is nothing and rest parameters are `x, y, z`.
+/// Helper function is generated like this:
+///
+/// ```fsharp
+///    let sumObj0 env x y z =
 ///      let () = unbox env
 ///      add x y z
 /// ```
 ///
-/// is defined for function reference `sum` and the use site is converted to:
+/// Call-site is transformed like this:
 ///
 /// ```fsharp
 ///    let env = box ()
-///    (sumObj, ()) :> (int -> int -> int -> int)
+///    (sumObj0, ()) :> (int -> int -> int -> int)
 /// ```
 module rec MiloneLang.EtaExpansion
 
@@ -170,7 +204,7 @@ let private createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
   HLetValExpr(PrivateVis, envPat, unboxExpr, next, exprToTy next, callLoc)
 
 /// Creates a let expression to define an underlying function.
-/// It takes an environment and rest arguments
+/// It takes an environment and rest parameters
 /// and calls the partial-applied callee with full arguments.
 let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
   let envArgRef, envArgSerial, ctx = etaCtxFreshVar "env" tyObj callLoc ctx
