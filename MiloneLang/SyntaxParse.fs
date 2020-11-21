@@ -70,6 +70,29 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 
 // -----------------------------------------------
+// Position
+// -----------------------------------------------
+
+/// No position information. Should be fixed.
+let noPos = -1, -1
+
+let private posX ((_, x): Pos) = x
+
+let private posY ((y, _): Pos) = y
+
+let private posIsSameRow first second = posY first = posY second
+
+let private posIsSameColumn first second = posX first = posX second
+
+/// Gets if `secondPos` is inside of the block of `firstPos`.
+let private posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX secondPos
+
+let private posAddX dx ((y, x): Pos) = y, x + dx
+
+let private posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
+  intMax firstY secondY, intMax firstX secondX
+
+// -----------------------------------------------
 // Bp
 // -----------------------------------------------
 
