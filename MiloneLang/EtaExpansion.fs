@@ -136,14 +136,6 @@ let private etaCtxFreshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
   let refExpr = HRefExpr(serial, ty, loc)
   refExpr, serial, ctx
 
-let private etaCtxIsFun serial (ctx: EtaCtx) =
-  match ctx.Vars |> mapTryFind serial with
-  | Some (FunDef _) -> true
-  | Some (VariantDef _) ->
-      // FIXME: not a function
-      true
-  | _ -> false
-
 let private listSplitAt i xs =
   List.truncate i xs, List.skip (intMin i (List.length xs)) xs
 
