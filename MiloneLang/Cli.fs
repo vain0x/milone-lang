@@ -241,7 +241,7 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
   let expr, tyCtx = tyElaborate (expr, tyCtx)
 
   writeLog host v "ClosureConversion"
-  let expr, tyCtx = declosure (expr, tyCtx)
+  let expr, tyCtx = closureConversion (expr, tyCtx)
 
   writeLog host v "EtaExpansion"
   let expr, tyCtx = uneta (expr, tyCtx)
