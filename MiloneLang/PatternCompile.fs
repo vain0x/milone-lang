@@ -15,6 +15,37 @@ open MiloneLang.Types
 open MiloneLang.TySystem
 open MiloneLang.Typing
 
+let private patToVars pat =
+  let rec go pat acc =
+    match pat with
+    | HLitPat _
+    | HNilPat _
+    | HNonePat _
+    | HSomePat _
+    | HDiscardPat _
+    | HVariantPat _
+    | HNavPat _ -> acc
+
+    | HRefPat (varSerial, ty, loc) -> (varSerial, ty, loc) :: acc
+
+    | HCallPat (_, args, _, _) -> args |> List.fold (fun acc pat -> go pat acc) acc
+
+    | HConsPat (l, r, _, _) -> acc |> go l |> go r
+
+    | HTuplePat (pats, _, _) -> pats |> List.fold (fun acc pat -> go pat acc) acc
+
+    | HBoxPat (bodyPat, _) -> go bodyPat acc
+
+    | HAsPat (bodyPat, varSerial, loc) ->
+        let ty = patToTy bodyPat
+        go bodyPat ((varSerial, ty, loc) :: acc)
+
+    | HAnnoPat (bodyPat, _, _) -> go bodyPat acc
+
+    | HOrPat (l, _, _, _) -> go l acc
+
+  go pat [] |> List.rev
+
 /// ## Intermediate representation (PIR)
 ///
 /// PIR is intermediate representation for pattern matching compilation.
@@ -414,12 +445,19 @@ let private doCompile (conds: (PPath * PTy) list) (clauses: PClause list): bool 
 // -----------------------------------------------
 
 type private PcCtx =
-  { Vars: AssocMap<VarSerial, VarDef>
+  { Serial: Serial
+    Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef> }
 
-let private ofTyCtx (tyCtx: TyCtx): PcCtx = { Vars = tyCtx.Vars; Tys = tyCtx.Tys }
+let private ofTyCtx (tyCtx: TyCtx): PcCtx =
+  { Serial = tyCtx.Serial
+    Vars = tyCtx.Vars
+    Tys = tyCtx.Tys }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: PcCtx): TyCtx = { tyCtx with Vars = ctx.Vars }
+let private toTyCtx (tyCtx: TyCtx) (ctx: PcCtx): TyCtx =
+  { tyCtx with
+      Serial = ctx.Serial
+      Vars = ctx.Vars }
 
 // -----------------------------------------------
 // Conversion from HIR to PIR
@@ -502,7 +540,7 @@ let private patCanCompile (ctx: PcCtx) pat =
   | HLitPat _
   | HNilPat _
   | HDiscardPat _
-  | HRefPat _  -> true
+  | HRefPat _ -> true
 
   | HVariantPat _ -> false
 
@@ -715,6 +753,11 @@ let private toHx (ctx: PcCtx) cond guards bodies targetTy loc (term: PTerm): HEx
 // Control
 // -----------------------------------------------
 
+let tyToFunResult ty =
+  match ty with
+  | AppTy (FunTyCtor, [ _; tTy ]) -> tTy
+  | _ -> failwith "NEVER"
+
 let private pcExpr (expr, ctx: PcCtx) =
   let todo () = failwithf "unimplemented. %A" expr
 
@@ -754,6 +797,63 @@ let private pcExpr (expr, ctx: PcCtx) =
         let _exhaustive, term = doCompile [ PSelfPath, condTy ] clauses
         // printfn "\nmatch result: %s\n" (objToString (exhaustive, term))
 
+        let _, bodies, hole, ctx =
+          arms
+          |> List.fold (fun (i, bodies, hole, ctx: PcCtx) (pat, _guard, body) ->
+               let loc = exprToLoc body
+
+               let funSerial, ctx =
+                 ctx.Serial + 1, { ctx with Serial = ctx.Serial + 1 }
+
+               let args = pat |> patToVars
+
+               let arity, armBody, funTy, hole, ctx =
+                 if args |> List.isEmpty then
+                   let hole =
+                     fun next ->
+                       let unitPat = HTuplePat([], tyUnit, loc)
+                       hole (HLetFunExpr(funSerial, PrivateVis, false, [ unitPat ], body, next, ty, loc))
+
+                   let funTy = tyFun tyUnit ty
+
+                   let armBody =
+                     hxApp (HFunExpr(funSerial, funTy, loc)) (hxUnit loc) ty loc
+
+                   1, armBody, funTy, hole, ctx
+                 else
+                   let hole =
+                     fun next ->
+                       let argPats = args |> List.map HRefPat
+                       hole (HLetFunExpr(funSerial, PrivateVis, false, argPats, body, next, ty, loc))
+
+                   let arity = List.length args
+
+                   let funTy =
+                     args
+                     |> List.rev
+                     |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) ty
+
+                   let armBody =
+                     let funExpr = HFunExpr(funSerial, funTy, loc)
+
+                     args
+                     |> List.fold (fun f (varSerial, argTy, loc) ->
+                          let tTy = f |> exprToTy |> tyToFunResult
+                          hxApp f (HRefExpr(varSerial, argTy, loc)) tTy loc) funExpr
+
+                   arity, armBody, funTy, hole, ctx
+
+               let bodies = bodies |> mapAdd i armBody
+
+               let ctx =
+                 let funDef =
+                   FunDef("clause_" + string (i + 1), arity, TyScheme([], funTy), loc)
+
+                 { ctx with
+                     Vars = ctx.Vars |> mapAdd funSerial funDef }
+
+               i + 1, bodies, hole, ctx) (0, mapEmpty intCmp, id, ctx)
+
         let matchExpr =
           let _, guards =
             arms
@@ -763,15 +863,15 @@ let private pcExpr (expr, ctx: PcCtx) =
 
                  i + 1, guards) (0, mapEmpty intCmp)
 
-          let _, bodies =
-            arms
-            |> List.fold (fun (i, bodies) (_, _, body) ->
-                 let bodies = bodies |> mapAdd i body
-                 i + 1, bodies) (0, mapEmpty intCmp)
+          // let _, bodies =
+          //   arms
+          //   |> List.fold (fun (i, bodies) (_, _, body) ->
+          //        let bodies = bodies |> mapAdd i body
+          //        i + 1, bodies) (0, mapEmpty intCmp)
 
           toHx ctx cond guards bodies ty loc term
 
-        matchExpr, ctx
+        hole matchExpr, ctx
 
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       // unimplemented

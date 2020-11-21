@@ -164,6 +164,12 @@ let iter (f: _ -> unit) (xs: _ list): unit =
       f x
       iter f xs
 
+let head (xs: _ list) =
+  match xs with
+  | [] -> failwith "List.head: Empty list."
+
+  | x :: _ -> x
+
 let last (xs: _ list) =
   let rec listLastLoop xs =
     match xs with
