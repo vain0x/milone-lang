@@ -123,10 +123,16 @@ let private knownCtxAddRef serial (ctx: KnownCtx) =
 
 /// Returns serials referenced in the current context but not known nor locals
 /// including function serials.
-let private knownCtxToCapturedSerials (ctx: KnownCtx): AssocSet<VarSerial> =
-  let refs = setDiff ctx.Refs ctx.Locals
-  let refs = setDiff refs ctx.Known
-  refs
+let private knownCtxToCapturedSerials (ctx: KnownCtx): VarSerial list =
+  ctx.Refs
+  |> setFold (fun acc varSerial ->
+       if ctx.Locals
+          |> setContains varSerial
+          |> not
+          && ctx.Known |> setContains varSerial |> not then
+         varSerial :: acc
+       else
+         acc) []
 
 // -----------------------------------------------
 // CcCtx (ClosureConversionContext)
@@ -194,8 +200,7 @@ let private ccCtxLeaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
 let private ccCtxGetFunCapturedSerials funSerial (ctx: CcCtx) =
   match ctx.Funs |> mapTryFind funSerial with
   | Some knownCtx -> knownCtx |> knownCtxToCapturedSerials
-
-  | None -> setEmpty intCmp
+  | None -> []
 
 /// Gets a list of captured variables for a function.
 /// Doesn't include referenced functions.
@@ -210,7 +215,6 @@ let private ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
 
   ctx
   |> ccCtxGetFunCapturedSerials funSerial
-  |> setToList
   |> chooseVars
 
 /// Extends the set of references to be transitive.
@@ -234,9 +238,7 @@ let private ccCtxClosureRefs (ctx: CcCtx): CcCtx =
         let acc = acc |> setAdd varSerial
 
         let otherRefs =
-          ccCtx
-          |> ccCtxGetFunCapturedSerials varSerial
-          |> setToList
+          ccCtx |> ccCtxGetFunCapturedSerials varSerial
 
         (modified, visited, acc)
         |> closureRefs otherRefs ccCtx

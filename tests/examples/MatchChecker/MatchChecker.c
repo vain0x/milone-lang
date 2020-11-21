@@ -182,9 +182,9 @@ struct IntTuple1;
 
 struct Space_ fun_12(void* env_3, int arg_3, struct Space_Space_Tuple2 arg_4);
 
-struct Space_ fun_28(struct Space_List* seconds_, struct Space_List* firsts_, struct String tag_2, int i_1, struct Space_ arg_87);
+struct Space_ fun_28(struct String tag_2, struct Space_List* firsts_, struct Space_List* seconds_, int i_1, struct Space_ arg_87);
 
-struct Space_ListSpace_ListStringTuple3;
+struct StringSpace_ListSpace_ListTuple3;
 
 struct Space_ fun_13(void* env_4, int arg_6, struct Space_ arg_7);
 
@@ -1364,7 +1364,7 @@ struct Space_ fun_12(void* env_3, int arg_3, struct Space_Space_Tuple2 arg_4) {
     return call_46;
 }
 
-struct Space_ fun_28(struct Space_List* seconds_, struct Space_List* firsts_, struct String tag_2, int i_1, struct Space_ arg_87) {
+struct Space_ fun_28(struct String tag_2, struct Space_List* firsts_, struct Space_List* seconds_, int i_1, struct Space_ arg_87) {
     struct IntTuple1 tuple_4;
     tuple_4.t0 = i_1;
     void* box_5 = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
@@ -1377,16 +1377,16 @@ struct Space_ fun_28(struct Space_List* seconds_, struct Space_List* firsts_, st
     return call_49;
 }
 
-struct Space_ListSpace_ListStringTuple3 {
-    struct Space_List* t0;
+struct StringSpace_ListSpace_ListTuple3 {
+    struct String t0;
     struct Space_List* t1;
-    struct String t2;
+    struct Space_List* t2;
 };
 
 struct Space_ fun_13(void* env_4, int arg_6, struct Space_ arg_7) {
-    struct Space_List* arg_8 = (*(((struct Space_ListSpace_ListStringTuple3*)env_4))).t0;
-    struct Space_List* arg_9 = (*(((struct Space_ListSpace_ListStringTuple3*)env_4))).t1;
-    struct String arg_10 = (*(((struct Space_ListSpace_ListStringTuple3*)env_4))).t2;
+    struct String arg_8 = (*(((struct StringSpace_ListSpace_ListTuple3*)env_4))).t0;
+    struct Space_List* arg_9 = (*(((struct StringSpace_ListSpace_ListTuple3*)env_4))).t1;
+    struct Space_List* arg_10 = (*(((struct StringSpace_ListSpace_ListTuple3*)env_4))).t2;
     struct Space_ call_50 = fun_28(arg_8, arg_9, arg_10, arg_6, arg_7);
     return call_50;
 }
@@ -1460,12 +1460,12 @@ then_124:;
     if_5 = spaceEmpty_;
     goto if_next_123;
 else_125:;
-    struct Space_ListSpace_ListStringTuple3 tuple_6;
-    tuple_6.t0 = seconds_;
+    struct StringSpace_ListSpace_ListTuple3 tuple_6;
+    tuple_6.t0 = tag_2;
     tuple_6.t1 = firsts_;
-    tuple_6.t2 = tag_2;
-    void* box_7 = (void*)milone_mem_alloc(1, sizeof(struct Space_ListSpace_ListStringTuple3));
-    (*(((struct Space_ListSpace_ListStringTuple3*)box_7))) = tuple_6;
+    tuple_6.t2 = seconds_;
+    void* box_7 = (void*)milone_mem_alloc(1, sizeof(struct StringSpace_ListSpace_ListTuple3));
+    (*(((struct StringSpace_ListSpace_ListTuple3*)box_7))) = tuple_6;
     void* env_23 = box_7;
     struct IntSpace_Space_Fun2 fun_33 = (struct IntSpace_Space_Fun2){.fun = fun_13, .env = env_23};
     struct Space_List* call_56 = listMapWithIndex_1(fun_33, firsts_);

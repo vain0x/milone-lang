@@ -213,15 +213,15 @@ let setToListTest () =
   |> setToList
   |> is [ "a"; "b"; "c"; "d" ]
 
-[<Fact>]
-let setDiffTest () =
-  let first = setOfList strCmp [ "a"; "b"; "c"; "d" ]
+// [<Fact>]
+// let setDiffTest () =
+//   let first = setOfList strCmp [ "a"; "b"; "c"; "d" ]
 
-  let second = setOfList strCmp [ "a"; "c"; "e"; "f" ]
+//   let second = setOfList strCmp [ "a"; "c"; "e"; "f" ]
 
-  setDiff first second
-  |> setToList
-  |> is [ "b"; "d" ]
+//   setDiff first second
+//   |> setToList
+//   |> is [ "b"; "d" ]
 
 [<Fact>]
 let intToHexWithPaddingTest () =

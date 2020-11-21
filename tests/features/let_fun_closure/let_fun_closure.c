@@ -30,9 +30,9 @@ int lf_(int lx_, int arg_9);
 
 int lambdaCase_(int arg_10);
 
-int xf4_(int x3_, int x2_, int x1_, int arg_11);
+int xf4_(int x1_, int x2_, int x3_, int arg_11);
 
-int xf3_(int x2_, int x1_, int x3_);
+int xf3_(int x1_, int x2_, int x3_);
 
 int xf2_(int x1_, int x2_);
 
@@ -179,12 +179,12 @@ int lambdaCase_(int arg_10) {
     return 0;
 }
 
-int xf4_(int x3_, int x2_, int x1_, int arg_11) {
+int xf4_(int x1_, int x2_, int x3_, int arg_11) {
     int call_13 = xf1_(((x1_ + x2_) + x3_));
     return call_13;
 }
 
-int xf3_(int x2_, int x1_, int x3_) {
+int xf3_(int x1_, int x2_, int x3_) {
     int if_1;
     if ((x3_ == 3)) {
         goto then_6;
@@ -192,7 +192,7 @@ int xf3_(int x2_, int x1_, int x3_) {
         goto else_7;
     }
 then_6:;
-    int call_14 = xf4_(x3_, x2_, x1_, 0);
+    int call_14 = xf4_(x1_, x2_, x3_, 0);
     if_1 = call_14;
     goto if_next_5;
 else_7:;
@@ -210,7 +210,7 @@ int xf2_(int x1_, int x2_) {
         goto else_10;
     }
 then_9:;
-    int call_15 = xf3_(x2_, x1_, 3);
+    int call_15 = xf3_(x1_, x2_, 3);
     if_2 = call_15;
     goto if_next_8;
 else_10:;

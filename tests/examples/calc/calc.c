@@ -2,11 +2,11 @@
 
 int charEq_(char l_, char r_);
 
-int go_(struct String s_, char c_, int i_);
+int go_(char c_, struct String s_, int i_);
 
 int strContains_(char c_, struct String s_);
 
-int go_1(struct String s_1, struct String prefix_, int i_1);
+int go_1(struct String prefix_, struct String s_1, int i_1);
 
 int strStartsWith_(struct String prefix_, struct String s_1);
 
@@ -34,7 +34,7 @@ int isDigit_(char c_1);
 
 struct CharBoolFun1;
 
-int go_5(struct String source_, struct CharBoolFun1 pred_, int r_1);
+int go_5(struct CharBoolFun1 pred_, struct String source_, int r_1);
 
 struct StringIntTuple2;
 
@@ -84,7 +84,7 @@ int charEq_(char l_, char r_) {
     return (l_ == r_);
 }
 
-int go_(struct String s_, char c_, int i_) {
+int go_(char c_, struct String s_, int i_) {
 tailrec_1:;
     int if_;
     if ((i_ < s_.len)) {
@@ -103,11 +103,11 @@ then_5:;
     if_1 = 1;
     goto if_next_4;
 else_6:;
-    struct String arg_3 = s_;
-    char arg_4 = c_;
+    char arg_3 = c_;
+    struct String arg_4 = s_;
     int arg_5 = (i_ + 1);
-    s_ = arg_3;
-    c_ = arg_4;
+    c_ = arg_3;
+    s_ = arg_4;
     i_ = arg_5;
     goto tailrec_1;
     if_1 = 0;
@@ -123,11 +123,11 @@ if_next_2:;
 }
 
 int strContains_(char c_, struct String s_) {
-    int call_ = go_(s_, c_, 0);
+    int call_ = go_(c_, s_, 0);
     return call_;
 }
 
-int go_1(struct String s_1, struct String prefix_, int i_1) {
+int go_1(struct String prefix_, struct String s_1, int i_1) {
 tailrec_8:;
     int if_2;
     if ((i_1 >= prefix_.len)) {
@@ -146,11 +146,11 @@ else_11:;
         goto else_14;
     }
 then_13:;
-    struct String arg_6 = s_1;
-    struct String arg_7 = prefix_;
+    struct String arg_6 = prefix_;
+    struct String arg_7 = s_1;
     int arg_8 = (i_1 + 1);
-    s_1 = arg_6;
-    prefix_ = arg_7;
+    prefix_ = arg_6;
+    s_1 = arg_7;
     i_1 = arg_8;
     goto tailrec_8;
     if_3 = 0;
@@ -173,7 +173,7 @@ int strStartsWith_(struct String prefix_, struct String s_1) {
         goto else_17;
     }
 then_16:;
-    int call_1 = go_1(s_1, prefix_, 0);
+    int call_1 = go_1(prefix_, s_1, 0);
     if_4 = call_1;
     goto if_next_15;
 else_17:;
@@ -313,7 +313,7 @@ struct CharBoolFun1 {
     void* env;
 };
 
-int go_5(struct String source_, struct CharBoolFun1 pred_, int r_1) {
+int go_5(struct CharBoolFun1 pred_, struct String source_, int r_1) {
 tailrec_32:;
     int if_6;
     if ((r_1 < source_.len)) {
@@ -336,11 +336,11 @@ if_next_33:;
         goto else_38;
     }
 then_37:;
-    struct String arg_13 = source_;
-    struct CharBoolFun1 arg_14 = pred_;
+    struct CharBoolFun1 arg_13 = pred_;
+    struct String arg_14 = source_;
     int arg_15 = (r_1 + 1);
-    source_ = arg_13;
-    pred_ = arg_14;
+    pred_ = arg_13;
+    source_ = arg_14;
     r_1 = arg_15;
     goto tailrec_32;
     if_7 = 0;
@@ -360,7 +360,7 @@ struct StringIntTuple2 {
 int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16) {
     struct String source_ = arg_16.t0;
     int i_2 = arg_16.t1;
-    int call_6 = go_5(source_, pred_, i_2);
+    int call_6 = go_5(pred_, source_, i_2);
     return call_6;
 }
 

@@ -201,10 +201,6 @@ let setOfList cmp xs: AssocSet<_> = mapOfKeys cmp () xs
 
 let setAdd key set: AssocSet<_> = mapAdd key () set
 
-let setDiff (first: AssocSet<_>) (second: AssocSet<_>): AssocSet<_> =
-  first
-  |> mapFilter (fun k () -> second |> setContains k |> not)
-
 let setFold folder state (set: AssocSet<_>) =
   set |> setToList |> List.fold folder state
 
