@@ -180,20 +180,6 @@ type Unary =
   /// `-` Negation
   | NegUnary
 
-/// Binding power.
-[<NoEquality; NoComparison>]
-type Bp =
-  | PrefixBp
-  | MulBp
-  | AddBp
-  | ConsBp
-  /// `|>`
-  | PipeBp
-  /// Comparison.
-  | CmpBp
-  | AndBp
-  | OrBp
-
 /// Binary operator.
 [<NoEquality; NoComparison>]
 type Binary =

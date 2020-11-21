@@ -457,80 +457,6 @@ let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
     intCmp firstX secondX
 
 // -----------------------------------------------
-// Token
-// -----------------------------------------------
-
-/// Gets if a token is in the first set of expressions/patterns,
-/// i.e. whether it can be the first token of an expression or pattern.
-let tokenIsExprOrPatFirst (token: Token) =
-  match token with
-  | IntToken _
-  | CharToken _
-  | StrToken _
-  | IdentToken _
-  | LeftParenToken
-  | LeftBracketToken
-  | LeftBraceToken
-  | FalseToken
-  | TrueToken -> true
-
-  | _ -> false
-
-/// Gets if a token is in the first set of expressions.
-let tokenIsExprFirst (token: Token) =
-  match token with
-  | _ when tokenIsExprOrPatFirst token -> true
-
-  | MinusToken
-  | IfToken
-  | MatchToken
-  | FunToken
-  | DoToken
-  | LetToken
-  | TypeToken
-  | OpenToken -> true
-
-  | _ -> false
-
-/// In the first set of arguments?
-let tokenIsArgFirst (token: Token) =
-  match token with
-  | MinusToken -> false
-
-  | _ -> tokenIsExprFirst token
-
-let tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
-
-let tokenAsVis token =
-  match token with
-  | PrivateToken -> Some PrivateVis
-  | InternalToken
-  | PublicToken -> Some PublicVis
-
-  | _ -> None
-
-// -----------------------------------------------
-// Bp
-// -----------------------------------------------
-
-let bpNext bp =
-  match bp with
-  | OrBp -> AndBp
-
-  | AndBp -> CmpBp
-
-  | CmpBp -> PipeBp
-
-  | PipeBp -> ConsBp
-
-  | ConsBp -> AddBp
-
-  | AddBp -> MulBp
-
-  | MulBp
-  | PrefixBp -> PrefixBp
-
-// -----------------------------------------------
 // APat
 // -----------------------------------------------
 
@@ -1180,8 +1106,7 @@ let mexprToTy expr =
 // Statements (MIR)
 // -----------------------------------------------
 
-let mtAbort loc =
-  MExitTerminator(MLitExpr(IntLit 1, loc))
+let mtAbort loc = MExitTerminator(MLitExpr(IntLit 1, loc))
 
 let msGotoUnless pred label loc =
   let notPred = mxNot pred loc

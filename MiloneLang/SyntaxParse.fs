@@ -70,8 +70,95 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 
 // -----------------------------------------------
+// Bp
+// -----------------------------------------------
+
+/// Binding power.
+[<NoEquality; NoComparison>]
+type private Bp =
+  | PrefixBp
+  | MulBp
+  | AddBp
+  | ConsBp
+
+  /// `|>`
+  | PipeBp
+
+  /// Comparison.
+  | CmpBp
+
+  | AndBp
+  | OrBp
+
+let private bpNext bp =
+  match bp with
+  | OrBp -> AndBp
+
+  | AndBp -> CmpBp
+
+  | CmpBp -> PipeBp
+
+  | PipeBp -> ConsBp
+
+  | ConsBp -> AddBp
+
+  | AddBp -> MulBp
+
+  | MulBp
+  | PrefixBp -> PrefixBp
+
+// -----------------------------------------------
 // Tokens
 // -----------------------------------------------
+
+/// Gets if a token is in the first set of expressions/patterns,
+/// i.e. whether it can be the first token of an expression or pattern.
+let private tokenIsExprOrPatFirst (token: Token) =
+  match token with
+  | IntToken _
+  | CharToken _
+  | StrToken _
+  | IdentToken _
+  | LeftParenToken
+  | LeftBracketToken
+  | LeftBraceToken
+  | FalseToken
+  | TrueToken -> true
+
+  | _ -> false
+
+/// Gets if a token is in the first set of expressions.
+let private tokenIsExprFirst (token: Token) =
+  match token with
+  | _ when tokenIsExprOrPatFirst token -> true
+
+  | MinusToken
+  | IfToken
+  | MatchToken
+  | FunToken
+  | DoToken
+  | LetToken
+  | TypeToken
+  | OpenToken -> true
+
+  | _ -> false
+
+/// In the first set of arguments?
+let private tokenIsArgFirst (token: Token) =
+  match token with
+  | MinusToken -> false
+
+  | _ -> tokenIsExprFirst token
+
+let private tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
+
+let private tokenAsVis token =
+  match token with
+  | PrivateToken -> Some PrivateVis
+  | InternalToken
+  | PublicToken -> Some PublicVis
+
+  | _ -> None
 
 let private leadsExpr tokens =
   match tokens with
@@ -924,7 +1011,7 @@ let private parseNextBp bp basePos (tokens, errors) =
 
   | nextBp -> parseOp nextBp basePos (tokens, errors)
 
-let private  parseOps bp basePos first (tokens, errors) =
+let private parseOps bp basePos first (tokens, errors) =
   let nextL expr op opPos (tokens, errors) =
     let second, tokens, errors = parseNextBp bp basePos (tokens, errors)
 
@@ -1026,7 +1113,7 @@ let private parseStmt basePos (tokens, errors) =
 /// Parses a sequence of statements.
 /// These statements must be aligned on the same column
 /// except ones preceded by semicolon.
-let private  parseStmts basePos (tokens, errors) =
+let private parseStmts basePos (tokens, errors) =
   let rec go acc alignPos (tokens, errors) =
     match tokens with
     | (SemiToken, semiPos) :: tokens when posInside alignPos semiPos ->
