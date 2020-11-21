@@ -393,7 +393,6 @@ let private exInfExpr expr infOp args ty loc ctx =
       HInfExpr(infOp, args, ty, loc), ctx
 
 let private exLetFunExpr callee vis isMainFun argPats body next ty loc ctx =
-  let argPats, ctx = (argPats, ctx) |> stMap exPat
   let body, ctx = (body, ctx) |> exExpr
   let next, ctx = (next, ctx) |> exExpr
   HLetFunExpr(callee, vis, isMainFun, argPats, body, next, ty, loc), ctx
@@ -401,8 +400,6 @@ let private exLetFunExpr callee vis isMainFun argPats body next ty loc ctx =
 // -----------------------------------------------
 // Control
 // -----------------------------------------------
-
-let private exPat (pat, ctx) = pat, ctx
 
 let private exExpr (expr, ctx) =
   match expr with
@@ -422,7 +419,6 @@ let private exExpr (expr, ctx) =
       let arms, ctx =
         (arms, ctx)
         |> stMap (fun ((pat, guard, body), ctx) ->
-             let pat, ctx = (pat, ctx) |> exPat
              let guard, ctx = (guard, ctx) |> exExpr
              let body, ctx = (body, ctx) |> exExpr
              (pat, guard, body), ctx)
@@ -436,7 +432,6 @@ let private exExpr (expr, ctx) =
   | HInfExpr (infOp, args, ty, loc) -> exInfExpr expr infOp args ty loc ctx
 
   | HLetValExpr (vis, pat, init, next, ty, loc) ->
-      let pat, ctx = (pat, ctx) |> exPat
       let init, ctx = (init, ctx) |> exExpr
       let next, ctx = (next, ctx) |> exExpr
       HLetValExpr(vis, pat, init, next, ty, loc), ctx
