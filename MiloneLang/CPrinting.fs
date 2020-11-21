@@ -118,20 +118,6 @@ let private cpStrObjLit (value: string) acc =
   |> cons (string value.Length)
   |> cons "}"
 
-let private cpLit lit acc =
-  match lit with
-  | BoolLit false -> acc |> cons "0"
-  | BoolLit true -> acc |> cons "1"
-  | IntLit value -> acc |> cons (string value)
-
-  | CharLit value ->
-      acc
-      |> cons "'"
-      |> cons (cpCharLit value)
-      |> cons "'"
-
-  | StrLit _ -> failwith "unsupported"
-
 let private cpStructLit fields ty acc =
   acc
   |> cons "("
