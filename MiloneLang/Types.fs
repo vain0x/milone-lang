@@ -23,11 +23,12 @@ type Serial = int
 type Ident = string
 
 /// Literal of primitive, non-generic value.
+[<Struct>]
 type Lit =
-  | BoolLit of bool
-  | IntLit of int
-  | CharLit of char
-  | StrLit of string
+  | BoolLit of boolValue: bool
+  | IntLit of intValue: int
+  | CharLit of charValue: char
+  | StrLit of stringValue: string
 
 /// Visibility.
 type Vis =
@@ -284,17 +285,15 @@ type APat =
 /// Arm of match expression in AST.
 ///
 /// `| pat when guard -> body`
-type AArm =
-  /// (pattern, guard, body).
-  | AArm of APat * AExpr * AExpr * Pos
+[<Struct>]
+type AArm = AArm of pat: APat * guard: AExpr * body: AExpr * Pos
 
 /// Declaration of variant in AST.
 ///
 /// E.g. `| Card of Suit * Rank` (with `of`)
 /// or `| Joker` (without `of`).
-type AVariant =
-  /// (identifier, payload-type).
-  | AVariant of Ident * ATy option * Pos
+[<Struct>]
+type AVariant = AVariant of ident: Ident * payloadTyOpt: ATy option * Pos
 
 /// Field declaration in AST.
 ///
@@ -426,9 +425,11 @@ type StorageModifier =
   /// On static storage.
   | StaticSM
 
-type NameCtx = NameCtx of AssocMap<Serial, Ident> * lastSerial: Serial
+[<Struct>]
+type NameCtx = NameCtx of map: AssocMap<Serial, Ident> * lastSerial: Serial
 
 /// Type constructor.
+[<Struct>]
 type TyCtor =
   | BoolTyCtor
   | IntTyCtor
@@ -449,19 +450,22 @@ type TyCtor =
   | RefTyCtor of TySerial
 
 /// Type of expressions.
+[<Struct>]
 type Ty =
-  | ErrorTy of Loc
+  | ErrorTy of errorLoc: Loc
 
   /// Type variable to be bound or quantified..
-  | MetaTy of Serial * Loc
+  | MetaTy of metaTySerial: Serial * metaLoc: Loc
 
   /// Type application.
-  | AppTy of TyCtor * Ty list
+  | AppTy of TyCtor * tyArgs: Ty list
 
 /// Potentially polymorphic type.
-type TyScheme = TyScheme of TySerial list * Ty
+[<Struct>]
+type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
 /// Type specification.
+[<Struct>]
 type TySpec = TySpec of Ty * Trait list
 
 /// Trait, a constraint about types.
@@ -571,6 +575,7 @@ type HPat =
 
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]
+[<Struct>]
 type HPrim =
   | Add
   | Sub
@@ -600,6 +605,7 @@ type HPrim =
   | NativeFun of Ident * Arity
 
 [<RequireQualifiedAccess>]
+[<Struct>]
 type InfOp =
   | App
 
@@ -679,6 +685,7 @@ type JointSerial = Serial
 ///
 /// Number of args/results/conts depends on the kind of prim.
 /// Prim signature is written as `N/M/K` denoting to use N args, M results, K conts.
+[<Struct>]
 type KPrim =
   // Scalar arithmetic: 2/1/1.
   | KAddPrim
@@ -868,6 +875,7 @@ type MatchIR =
   | Body of body: HExpr
 
 /// Built-in 1-arity operation in middle IR.
+[<Struct>]
 type MUnary =
   | MNotUnary
 
@@ -887,7 +895,7 @@ type MUnary =
   | MTagUnary
 
   /// Gets payload of union value, unchecked.
-  | MGetVariantUnary of VariantSerial
+  | MGetVariantUnary of variantSerial: VariantSerial
 
   | MListIsEmptyUnary
 
@@ -960,9 +968,10 @@ type MInit =
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
 
+[<Struct>]
 type MConst =
-  | MLitConst of Lit
-  | MTagConst of VariantSerial
+  | MLitConst of l: Lit
+  | MTagConst of v: VariantSerial
 
 type MSwitchClause =
   { Cases: MConst list

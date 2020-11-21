@@ -14,6 +14,7 @@ open MiloneLang.Bundling
 // -----------------------------------------------
 
 /// Namespace membership.
+[<Struct>]
 type NameTree = NameTree of AssocMap<Serial, Serial list>
 
 // FIXME: this emits code that doesn't compile due to use of incomplete type
