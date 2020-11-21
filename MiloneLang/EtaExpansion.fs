@@ -425,10 +425,6 @@ let private exExpr (expr, ctx) =
 
       HMatchExpr(target, arms, ty, loc), ctx
 
-  | HNavExpr (subject, message, ty, loc) ->
-      let subject, ctx = exExpr (subject, ctx)
-      HNavExpr(subject, message, ty, loc), ctx
-
   | HInfExpr (infOp, args, ty, loc) -> exInfExpr expr infOp args ty loc ctx
 
   | HLetValExpr (vis, pat, init, next, ty, loc) ->
@@ -439,8 +435,9 @@ let private exExpr (expr, ctx) =
   | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       exLetFunExpr callee vis isMainFun args body next ty loc ctx
 
-  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or TyElaborating"
+  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in TyElaboration"
+  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
 let etaExpansion (expr, tyCtx: TyCtx) =
   let etaCtx = ofTyCtx tyCtx
