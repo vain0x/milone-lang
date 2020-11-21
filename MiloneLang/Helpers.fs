@@ -941,26 +941,8 @@ let spliceExpr firstExpr secondExpr =
   go firstExpr
 
 // -----------------------------------------------
-// Binary Operators (MIR)
-// -----------------------------------------------
-
-let mOpIsAdd op =
-  match op with
-  | MAddBinary -> true
-
-  | _ -> false
-
-let opIsComparison op =
-  match op with
-  | MEqualBinary
-  | MLessBinary -> true
-  | _ -> false
-
-// -----------------------------------------------
 // Expressions (MIR)
 // -----------------------------------------------
-
-let mxNot expr loc = MUnaryExpr(MNotUnary, expr, tyBool, loc)
 
 let mexprExtract expr =
   match expr with
@@ -974,18 +956,7 @@ let mexprExtract expr =
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
 
 let mexprToTy expr =
-  let ty, _ = mexprExtract expr
-  ty
-
-// -----------------------------------------------
-// Statements (MIR)
-// -----------------------------------------------
-
-let mtAbort loc = MExitTerminator(MLitExpr(IntLit 1, loc))
-
-let msGotoUnless pred label loc =
-  let notPred = mxNot pred loc
-  MTerminatorStmt(MGotoIfTerminator(notPred, label), loc)
+  expr |> mexprExtract |> fst
 
 // -----------------------------------------------
 // Expression sugaring (MIR)

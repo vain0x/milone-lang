@@ -9,6 +9,26 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Typing
 
+let private mOpIsAdd op =
+  match op with
+  | MAddBinary -> true
+
+  | _ -> false
+
+let private opIsComparison op =
+  match op with
+  | MEqualBinary
+  | MLessBinary -> true
+  | _ -> false
+
+let private mxNot expr loc = MUnaryExpr(MNotUnary, expr, tyBool, loc)
+
+let private mtAbort loc = MExitTerminator(MLitExpr(IntLit 1, loc))
+
+let private msGotoUnless pred label loc =
+  let notPred = mxNot pred loc
+  MTerminatorStmt(MGotoIfTerminator(notPred, label), loc)
+
 /// Checks whether an expr (body of fun) contains tail-rec call.
 let private containsTailRec expr =
   match expr with
