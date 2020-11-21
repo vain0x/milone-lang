@@ -412,16 +412,11 @@ let locToString ((docId, y, x): Loc) =
   + ":"
   + string (x + 1)
 
-let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
-  let c = strCmp firstDoc secondDoc
-  if c <> 0 then
-    c
-  else
-
-  if firstY <> secondY then
-    intCmp firstY secondY
-  else
-    intCmp firstX secondX
+let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
+  let c = strCmp lDoc rDoc
+  if c <> 0 then c
+  else if ly <> ry then intCmp ly ry
+  else intCmp lx rx
 
 // -----------------------------------------------
 // APat
