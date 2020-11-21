@@ -117,6 +117,7 @@ let spliceExpr firstExpr secondExpr =
 // BundleCtx
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type BundleHost =
   {
     /// Requests the host to load a module.
@@ -124,6 +125,7 @@ type BundleHost =
     /// The host should locate the module and retrieve its source code, tokenize and parse if exists.
     FetchModule: string -> string -> (DocId * ARoot * (string * Pos) list) option }
 
+[<NoEquality; NoComparison>]
 type private BundleCtx =
   { NameCtx: NameCtx
 

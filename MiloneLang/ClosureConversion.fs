@@ -89,6 +89,7 @@ type Caps = (VarSerial * Ty * Loc) list
 // -----------------------------------------------
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type private KnownCtx =
   { Known: AssocSet<FunSerial>
     Locals: AssocSet<VarSerial>
@@ -138,6 +139,7 @@ let private knownCtxToCapturedSerials (ctx: KnownCtx): VarSerial list =
 // CcCtx (ClosureConversionContext)
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type private CcCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>

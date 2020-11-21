@@ -32,12 +32,14 @@ open MiloneLang.Helpers
 
 /// Accumulation of expression stack.
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type HExprAcc =
   | Empty
   | Let of HExpr * HExprAcc
   | Semi of HExpr list * HExprAcc
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type HoistMode =
   | TopLevel
   | Local

@@ -49,11 +49,13 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type private CalleeKind =
   | Fun
   | Obj
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type private EtaCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>

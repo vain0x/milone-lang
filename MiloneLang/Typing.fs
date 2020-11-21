@@ -16,6 +16,7 @@ open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.NameRes
 
+[<NoEquality; NoComparison>]
 type TyCtx =
   {
     /// Next serial number.

@@ -40,6 +40,7 @@ let private containsTailRec expr =
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type MirCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>

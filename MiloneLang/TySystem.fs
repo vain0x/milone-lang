@@ -238,6 +238,7 @@ let tyDisplay getTyIdent ty =
 // -----------------------------------------------
 
 /// Type inference context.
+[<NoEquality; NoComparison>]
 type TyContext =
   { Serial: Serial
     LetDepth: LetDepth
@@ -339,6 +340,7 @@ let typingExpandSynonyms (ctx: TyContext) ty =
 
   go ty
 
+[<NoEquality; NoComparison>]
 type private MetaTyUnifyResult =
   | DidExpand of Ty
   | DidBind of TyContext

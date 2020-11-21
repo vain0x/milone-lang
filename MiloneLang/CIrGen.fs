@@ -53,6 +53,7 @@ let private tupleField (i: int) = "t" + string i
 let private tagTyIdent (tyIdent: string) = tyIdent + "Tag"
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type private CirCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     VarUniqueNames: AssocMap<VarSerial, Ident>

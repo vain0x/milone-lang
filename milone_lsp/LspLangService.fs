@@ -42,8 +42,7 @@ type TokenizeResult = (Token * Pos) list
 
 type ParseResult = ARoot * (string * Pos) list
 
-[<NoEquality>]
-[<NoComparison>]
+[<NoEquality; NoComparison>]
 type AnalysisCache =
   { mutable Ok: bool
     mutable TokenizeResultOpt: TokenizeResult option
@@ -68,8 +67,7 @@ type AnalysisCache =
 // FileCache
 // ---------------------------------------------
 
-[<NoEquality>]
-[<NoComparison>]
+[<NoEquality; NoComparison>]
 type FileCache =
   { FilePath: string
     mutable Text: string
@@ -154,6 +152,7 @@ let useFile (filePath: string): FileCache option =
 // ---------------------------------------------
 
 /// Text doc that is opened in editor.
+[<NoEquality; NoComparison>]
 type DocData =
   {
     /// String to identify a file. E.g. `file:///home/owner/.../foo.milone`.
@@ -207,6 +206,7 @@ let closeDoc (uri: string): unit =
 // Project
 // ---------------------------------------------
 
+[<NoEquality; NoComparison>]
 type ProjectInfo =
   { ProjectDir: string
     ProjectName: string
@@ -322,6 +322,7 @@ let validateDoc (uri: string): (string * Pos) list =
 
   | None -> []
 
+[<NoEquality; NoComparison>]
 type ProjectValidateResult =
   { ModuleUris: string list
 

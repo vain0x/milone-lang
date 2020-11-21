@@ -18,6 +18,7 @@ let private hxUnbox boxExpr itemTy loc =
 // Context
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef> }

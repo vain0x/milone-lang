@@ -26,6 +26,7 @@ open MiloneLang.KirDump
 open MiloneLang.CIrGen
 open MiloneLang.CPrinting
 
+[<NoEquality; NoComparison>]
 type Verbosity =
   | Verbose
   | Profile of Profiler
@@ -98,6 +99,7 @@ let private pathStrToStem (s: string) =
       go s.Length
 
 /// Abstraction layer of CLI program.
+[<NoEquality; NoComparison>]
 type CliHost =
   {
     /// Command line args.
@@ -475,6 +477,7 @@ let private parseVerbosity (host: CliHost) args =
     | "--profile" -> Some(Profile(host.ProfileInit()))
     | _ -> None) Quiet args
 
+[<NoEquality; NoComparison>]
 type private CliCmd =
   | HelpCmd
   | VersionCmd

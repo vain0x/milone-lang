@@ -15,6 +15,7 @@ open MiloneLang.Bundling
 
 /// Namespace membership.
 [<Struct>]
+[<NoEquality; NoComparison>]
 type NameTree = NameTree of AssocMap<Serial, Serial list>
 
 // FIXME: this emits code that doesn't compile due to use of incomplete type
@@ -64,6 +65,7 @@ let private scopeEmpty (): Scope = scopeChainEmpty (), scopeChainEmpty ()
 // ScopeCtx
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type ScopeCtx =
   {
     /// Last serial number.

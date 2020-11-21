@@ -27,6 +27,7 @@ let private restoreCalleeTy args ty =
 let private jointMapEmpty () = mapEmpty intCmp
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type private KirToMirCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>

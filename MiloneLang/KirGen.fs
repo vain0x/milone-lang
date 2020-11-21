@@ -45,12 +45,14 @@ let private unreachable value = failwithf "NEVER: %A" value
 //   in a1 ()
 // ```
 
+[<NoEquality; NoComparison>]
 type private PTerm =
   | PLitTerm of Lit * Loc
   | PTagTerm of VariantSerial * Loc
   | PNilTerm of itemTy: Ty * Loc
   | PNoneTerm of itemTy: Ty * Loc
 
+[<NoEquality; NoComparison>]
 type private PNode =
   /// Success of pattern matching, discard the current value.
   | PDiscardNode
@@ -160,6 +162,7 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type KirGenCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>

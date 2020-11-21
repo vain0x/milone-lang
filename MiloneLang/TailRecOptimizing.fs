@@ -6,6 +6,7 @@ open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Typing
 
+[<NoEquality; NoComparison>]
 type private IsTail =
   | IsTail
   | NotTail
@@ -14,6 +15,7 @@ type private IsTail =
 // Helpers
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type private TailRecCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef>

@@ -59,6 +59,7 @@ open MiloneLang.Typing
 let private intTyCmp (firstValue, firstTy) (secondValue, secondTy) =
   if firstValue <> secondValue then intCmp firstValue secondValue else tyCmp firstTy secondTy
 
+[<NoEquality; NoComparison>]
 type private MonoCtx =
   { Serial: Serial
     Logs: (Log * Loc) list

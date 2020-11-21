@@ -19,6 +19,7 @@ let private hxIsUnboxingRef expr =
 // Context
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type private TyElaborationCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef>

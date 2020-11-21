@@ -24,6 +24,7 @@ type Ident = string
 
 /// Literal of primitive, non-generic value.
 [<Struct>]
+[<NoEquality; NoComparison>]
 type Lit =
   | BoolLit of boolValue: bool
   | IntLit of intValue: int
@@ -31,11 +32,13 @@ type Lit =
   | StrLit of stringValue: string
 
 /// Visibility.
+[<NoEquality; NoComparison>]
 type Vis =
   | PrivateVis
   | PublicVis
 
 /// Tree to generate a string for debugging.
+[<NoEquality; NoComparison>]
 type DumpTree = DumpTree of heading: string * body: DumpTree list * next: DumpTree list
 
 // -----------------------------------------------
@@ -43,11 +46,13 @@ type DumpTree = DumpTree of heading: string * body: DumpTree list * next: DumpTr
 // -----------------------------------------------
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type TyUnifyLog =
   | SelfRec
   | Mismatch
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type Log =
   | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
   | TyBoundError of Trait
@@ -170,11 +175,13 @@ type Token =
   | WithToken
 
 /// Unary operator.
+[<NoEquality; NoComparison>]
 type Unary =
   /// `-` Negation
   | NegUnary
 
 /// Binding power.
+[<NoEquality; NoComparison>]
 type Bp =
   | PrefixBp
   | MulBp
@@ -188,6 +195,7 @@ type Bp =
   | OrBp
 
 /// Binary operator.
+[<NoEquality; NoComparison>]
 type Binary =
   /// `*` Multiplication
   | MulBinary
@@ -223,6 +231,7 @@ type Binary =
   | ConsBinary
 
 /// Type expression in AST.
+[<NoEquality; NoComparison>]
 type ATy =
   | AMissingTy of Pos
 
@@ -242,6 +251,7 @@ type ATy =
   | AFunTy of ATy * ATy * Pos
 
 /// Pattern in AST.
+[<NoEquality; NoComparison>]
 type APat =
   | AMissingPat of Pos
 
@@ -286,6 +296,7 @@ type APat =
 ///
 /// `| pat when guard -> body`
 [<Struct>]
+[<NoEquality; NoComparison>]
 type AArm = AArm of pat: APat * guard: AExpr * body: AExpr * Pos
 
 /// Declaration of variant in AST.
@@ -293,6 +304,7 @@ type AArm = AArm of pat: APat * guard: AExpr * body: AExpr * Pos
 /// E.g. `| Card of Suit * Rank` (with `of`)
 /// or `| Joker` (without `of`).
 [<Struct>]
+[<NoEquality; NoComparison>]
 type AVariant = AVariant of ident: Ident * payloadTyOpt: ATy option * Pos
 
 /// Field declaration in AST.
@@ -301,11 +313,13 @@ type AVariant = AVariant of ident: Ident * payloadTyOpt: ATy option * Pos
 type AFieldDecl = Ident * ATy * Pos
 
 /// Let expression in AST.
+[<NoEquality; NoComparison>]
 type ALet =
   | ALetVal of Vis * APat * AExpr * AExpr * Pos
   | ALetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
+[<NoEquality; NoComparison>]
 type ATyDecl =
   /// E.g. `type Serial = int`.
   | ATySynonymDecl of ATy
@@ -314,6 +328,7 @@ type ATyDecl =
   | ARecordTyDecl of AFieldDecl list
 
 /// Expression in AST.
+[<NoEquality; NoComparison>]
 type AExpr =
   | AMissingExpr of Pos
   | ALitExpr of Lit * Pos
@@ -379,6 +394,7 @@ type AExpr =
   | AOpenExpr of Ident list * Pos
 
 /// Root of AST, a result of parsing single source file.
+[<NoEquality; NoComparison>]
 type ARoot =
   | AExprRoot of AExpr
   | AModuleRoot of Ident * AExpr * Pos
@@ -418,6 +434,7 @@ type Arity = int
 type LetDepth = int
 
 /// Where variable is stored.
+[<NoEquality; NoComparison>]
 type StorageModifier =
   /// On stack.
   | AutoSM
@@ -426,10 +443,12 @@ type StorageModifier =
   | StaticSM
 
 [<Struct>]
+[<NoEquality; NoComparison>]
 type NameCtx = NameCtx of map: AssocMap<Serial, Ident> * lastSerial: Serial
 
 /// Type constructor.
 [<Struct>]
+[<NoEquality; NoComparison>]
 type TyCtor =
   | BoolTyCtor
   | IntTyCtor
@@ -451,6 +470,7 @@ type TyCtor =
 
 /// Type of expressions.
 [<Struct>]
+[<NoEquality; NoComparison>]
 type Ty =
   | ErrorTy of errorLoc: Loc
 
@@ -462,14 +482,17 @@ type Ty =
 
 /// Potentially polymorphic type.
 [<Struct>]
+[<NoEquality; NoComparison>]
 type TyScheme = TyScheme of tyVars: TySerial list * Ty
 
 /// Type specification.
 [<Struct>]
+[<NoEquality; NoComparison>]
 type TySpec = TySpec of Ty * Trait list
 
 /// Trait, a constraint about types.
 // NOTE: `trait` is a reserved word in F#.
+[<NoEquality; NoComparison>]
 type Trait =
   /// The type supports `+`.
   | AddTrait of Ty
@@ -493,6 +516,7 @@ type Trait =
   | ToStringTrait of Ty
 
 /// Type declaration.
+[<NoEquality; NoComparison>]
 type TyDecl =
   | TySynonymDecl of Ty * Loc
 
@@ -503,6 +527,7 @@ type TyDecl =
   | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * Loc
 
 /// Type definition.
+[<NoEquality; NoComparison>]
 type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ident * Ty * Loc
@@ -519,12 +544,14 @@ type TyDef =
   | ModuleTyDef of Ident * Loc
 
 /// Definition of named value in high-level IR.
+[<NoEquality; NoComparison>]
 type VarDef =
   | VarDef of Ident * StorageModifier * Ty * Loc
   | FunDef of Ident * Arity * TyScheme * Loc
   | VariantDef of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
 
 /// Pattern in high-level IR.
+[<NoEquality; NoComparison>]
 type HPat =
   | HLitPat of Lit * Loc
 
@@ -576,6 +603,7 @@ type HPat =
 /// Primitive in high-level IR.
 [<RequireQualifiedAccess>]
 [<Struct>]
+[<NoEquality; NoComparison>]
 type HPrim =
   | Add
   | Sub
@@ -606,6 +634,7 @@ type HPrim =
 
 [<RequireQualifiedAccess>]
 [<Struct>]
+[<NoEquality; NoComparison>]
 type InfOp =
   | App
 
@@ -634,6 +663,7 @@ type InfOp =
   | TupleItem of index: int
 
 /// Expression in HIR.
+[<NoEquality; NoComparison>]
 type HExpr =
   | HLitExpr of Lit * Loc
 
@@ -669,6 +699,7 @@ type HExpr =
   | HErrorExpr of string * Loc
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type MonoMode =
   | Monify
   | RemoveGenerics
@@ -686,6 +717,7 @@ type JointSerial = Serial
 /// Number of args/results/conts depends on the kind of prim.
 /// Prim signature is written as `N/M/K` denoting to use N args, M results, K conts.
 [<Struct>]
+[<NoEquality; NoComparison>]
 type KPrim =
   // Scalar arithmetic: 2/1/1.
   | KAddPrim
@@ -782,6 +814,7 @@ type KPrim =
   | KNativeFunPrim of Ident * Arity
 
 /// Represents an access path to content of data (tuple or union).
+[<NoEquality; NoComparison>]
 type KPath =
   /// The value itself.
   | KSelfPath
@@ -799,6 +832,7 @@ type KPath =
   | KPayloadPath of VariantSerial * Loc
 
 /// Term (expression) in KIR.
+[<NoEquality; NoComparison>]
 type KTerm =
   | KLitTerm of Lit * Loc
   | KVarTerm of VarSerial * Ty * Loc
@@ -814,6 +848,7 @@ type KTerm =
   | KUnitTerm of Loc
 
 /// Node (statement) in KIR.
+[<NoEquality; NoComparison>]
 type KNode =
   /// Jump to joint.
   | KJumpNode of JointSerial * args: KTerm list * Loc
@@ -846,14 +881,18 @@ type KNode =
 /// Since joint doesn't escape from the parent fun, it may use local vars.
 ///
 /// After compiled to C language, a joint is represented as a *label* of block in C language. Calling a joint is a *goto* with some assignments to local vars.
+[<NoEquality; NoComparison>]
 type KJointBinding = KJointBinding of jointSerial: JointSerial * args: VarSerial list * body: KNode * Loc
 
 /// Definition of a fun.
+[<NoEquality; NoComparison>]
 type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * body: KNode * Loc
 
 /// Root node of KIR.
+[<NoEquality; NoComparison>]
 type KRoot = KRoot of KFunBinding list
 
+[<NoEquality; NoComparison>]
 type KVarDef =
   | KLitVarDef of Lit
   | KSelectVarDef of KTerm * KPath
@@ -866,6 +905,7 @@ type Label = string
 
 /// Intermediate language between HIR and MIR for match expressions.
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type MatchIR =
   | PatLabel of Label
   | Pat of HPat * nextLabel: Label
@@ -876,6 +916,7 @@ type MatchIR =
 
 /// Built-in 1-arity operation in middle IR.
 [<Struct>]
+[<NoEquality; NoComparison>]
 type MUnary =
   | MNotUnary
 
@@ -906,6 +947,7 @@ type MUnary =
   | MListTailUnary
 
 /// Built-in 2-arity operation in middle IR.
+[<NoEquality; NoComparison>]
 type MBinary =
   | MMulBinary
   | MDivBinary
@@ -923,6 +965,7 @@ type MBinary =
   | MStrIndexBinary
 
 /// Expression in middle IR.
+[<NoEquality; NoComparison>]
 type MExpr =
   | MLitExpr of Lit * Loc
 
@@ -945,6 +988,7 @@ type MExpr =
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
 
 /// Variable initializer in mid-level IR.
+[<NoEquality; NoComparison>]
 type MInit =
   /// Remain uninitialized at first; initialized later by `MSetStmt`.
   | MUninitInit
@@ -969,15 +1013,18 @@ type MInit =
   | MVariantInit of VariantSerial * payload: MExpr
 
 [<Struct>]
+[<NoEquality; NoComparison>]
 type MConst =
   | MLitConst of l: Lit
   | MTagConst of v: VariantSerial
 
+[<NoEquality; NoComparison>]
 type MSwitchClause =
   { Cases: MConst list
     IsDefault: bool
     Terminator: MTerminator }
 
+[<NoEquality; NoComparison>]
 type MTerminator =
   | MExitTerminator of exitCode: MExpr
   | MReturnTerminator of result: MExpr
@@ -987,6 +1034,7 @@ type MTerminator =
   | MSwitchTerminator of cond: MExpr * MSwitchClause list
 
 /// Statement in middle IR.
+[<NoEquality; NoComparison>]
 type MStmt =
   /// Declare a local variable.
   | MLetValStmt of VarSerial * MInit * Ty * Loc
@@ -1001,19 +1049,23 @@ type MStmt =
 
   | MTerminatorStmt of MTerminator * Loc
 
+[<NoEquality; NoComparison>]
 type MBlock = { Stmts: MStmt list }
 
+[<NoEquality; NoComparison>]
 type MDecl = MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
 
 // -----------------------------------------------
 // CIR types
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type CTyInstance =
   | CTyDeclared
   | CTyDefined
 
 /// Type in C language.
+[<NoEquality; NoComparison>]
 type CTy =
   | CVoidTy
   | CIntTy
@@ -1025,6 +1077,7 @@ type CTy =
   | CEnumTy of Ident
 
 /// Unary operators in C language.
+[<NoEquality; NoComparison>]
 type CUnary =
   /// `!p`
   | CNotUnary
@@ -1033,6 +1086,7 @@ type CUnary =
   | CDerefUnary
 
 /// Binary operators in C language.
+[<NoEquality; NoComparison>]
 type CBinary =
   | CMulBinary
   | CDivBinary
@@ -1047,6 +1101,7 @@ type CBinary =
   | CGreaterEqualBinary
 
 /// Expression in C language.
+[<NoEquality; NoComparison>]
 type CExpr =
   /// `(struct K){}`
   | CDefaultExpr
@@ -1086,6 +1141,7 @@ type CExpr =
   | CBinaryExpr of CBinary * CExpr * CExpr
 
 /// Statement in C language.
+[<NoEquality; NoComparison>]
 type CStmt =
   /// `x;`
   | CExprStmt of CExpr
@@ -1110,6 +1166,7 @@ type CStmt =
   | CReturnStmt of CExpr option
 
 /// Top-level definition in C language.
+[<NoEquality; NoComparison>]
 type CDecl =
   /// `#error` directive to cause compile error manually.
   | CErrorDecl of message: string * line: int
