@@ -7,7 +7,6 @@ module rec MiloneLang.NameRes
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.Bundling
 
 // -----------------------------------------------
 // NameTree
@@ -920,7 +919,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let next, ctx = (next, ctx) |> nameResExpr
 
         // Module no longer needed.
-        Bundling.spliceExpr body next, ctx
+        spliceExpr body next, ctx
 
       doArm ()
 
