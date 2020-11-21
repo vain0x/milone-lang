@@ -374,8 +374,7 @@ let private ccPat (pat, ctx) =
   | HNonePat _
   | HSomePat _
   | HDiscardPat _
-  | HVariantPat _
-  | HNavPat _ -> pat, ctx
+  | HVariantPat _ -> pat, ctx
 
   | HRefPat (serial, _, _) ->
       let ctx = ctx |> addLocal serial
@@ -404,14 +403,13 @@ let private ccPat (pat, ctx) =
       let pat, ctx = (pat, ctx) |> ccPat
       HAsPat(pat, serial, loc), ctx
 
-  | HAnnoPat (pat, ty, loc) ->
-      let pat, ctx = (pat, ctx) |> ccPat
-      HAnnoPat(pat, ty, loc), ctx
-
   | HOrPat (first, second, ty, loc) ->
       let first, ctx = (first, ctx) |> ccPat
       let second, ctx = (second, ctx) |> ccPat
       HOrPat(first, second, ty, loc), ctx
+
+  | HNavPat _ -> failwith "NEVER: HNavPat is resolved in NameRes."
+  | HAnnoPat _ -> failwith "NEVER: HAnnoPat is resolved in Typing."
 
 let private ccExpr (expr, ctx) =
   match expr with
@@ -449,13 +447,6 @@ let private ccExpr (expr, ctx) =
 
       doArm ()
 
-  | HNavExpr (l, r, ty, loc) ->
-      let doArm () =
-        let l, ctx = ccExpr (l, ctx)
-        HNavExpr(l, r, ty, loc), ctx
-
-      doArm ()
-
   | HInfExpr (infOp, items, ty, loc) ->
       let doArm () =
         let items, ctx = (items, ctx) |> stMap ccExpr
@@ -489,8 +480,9 @@ let private ccExpr (expr, ctx) =
       doArm ()
 
   | HErrorExpr (error, loc) -> failwithf "Never: %s at %A" error loc
-  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or TyElaborating"
+  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in TyElaboration"
+  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
 let closureConversion (expr, tyCtx: TyCtx) =
   let ccCtx = ofTyCtx tyCtx
