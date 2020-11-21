@@ -511,7 +511,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
            let cases, isDefault = go pat
 
            let clause: MSwitchClause =
-             { Cases = cases
+             { Cases = List.rev cases
                IsDefault = isDefault
                Terminator = MGotoTerminator clauseLabel }
 

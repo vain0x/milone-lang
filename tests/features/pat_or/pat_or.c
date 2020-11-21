@@ -21,8 +21,8 @@ int main();
 int isZeroOrOne_(int x_) {
     int switch_;
     switch (x_) {
-       case 1:
        case 0:
+       case 1:
           goto clause_2;
 
        default:
