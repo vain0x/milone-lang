@@ -1,8 +1,9 @@
-/// ## Module Bundling
+/// # Bundling
 ///
-/// Resolves dependencies and merges modules into single HIR expression.
+/// Bundles modules. Resolves dependencies over modules
+/// and merges modules into single HIR expression.
 ///
-/// ### `open` statement
+/// ## `open` statements as dependency specification
 ///
 /// In F#, a project file (.fsproj) describes the member modules, their ordering
 /// and external project/package references.
@@ -18,7 +19,7 @@
 /// provided by the caller, to load a module.
 /// See `Cli.fs` for its implementation.
 ///
-/// ### Dependency Resolution Algorithm
+/// ## Dependency Resolution Algorithm
 ///
 /// Dependency resolution is just a topological sort.
 ///
