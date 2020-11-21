@@ -91,6 +91,11 @@ type private CalleeKind =
 let private listSplitAt i xs =
   List.truncate i xs, List.skip (intMin i (List.length xs)) xs
 
+let private tyToArity ty =
+  match ty with
+  | AppTy (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty
+  | _ -> 0
+
 let private tyAppliedBy n ty =
   match ty with
   | AppTy (FunTyCtor, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
@@ -107,6 +112,39 @@ let private hxCallTo calleeKind callee args resultTy loc =
   | _, [] -> callee
   | CalleeKind.Fun, args -> hxCallProc callee args resultTy loc
   | CalleeKind.Obj, args -> hxCallClosure callee args resultTy loc
+
+let private primToArity ty prim =
+  match prim with
+  | HPrim.Nil
+  | HPrim.OptionNone -> 0
+
+  | HPrim.OptionSome
+  | HPrim.Not
+  | HPrim.Exit
+  | HPrim.Assert
+  | HPrim.Box
+  | HPrim.Unbox
+  | HPrim.StrLength
+  | HPrim.Char
+  | HPrim.Int
+  | HPrim.UInt
+  | HPrim.String
+  | HPrim.InRegion -> 1
+
+  | HPrim.Add
+  | HPrim.Sub
+  | HPrim.Mul
+  | HPrim.Div
+  | HPrim.Mod
+  | HPrim.Eq
+  | HPrim.Lt
+  | HPrim.Cons
+  | HPrim.Index -> 2
+
+  | HPrim.StrGetSlice -> 3
+
+  | HPrim.Printfn -> ty |> tyToArity
+  | HPrim.NativeFun (_, arity) -> arity
 
 // -----------------------------------------------
 // Context

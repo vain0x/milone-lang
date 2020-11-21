@@ -522,11 +522,6 @@ let tyUnit = tyTuple []
 
 let tyRef serial tys = AppTy(RefTyCtor serial, tys)
 
-let rec tyToArity ty =
-  match ty with
-  | AppTy (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty
-  | _ -> 0
-
 // -----------------------------------------------
 // Type definitions (HIR)
 // -----------------------------------------------
@@ -708,35 +703,6 @@ let primToTySpec prim =
 
   | HPrim.Printfn
   | HPrim.NativeFun _ -> poly (meta 1) []
-
-let primToArity ty prim =
-  match prim with
-  | HPrim.Nil
-  | HPrim.OptionNone -> 0
-  | HPrim.OptionSome
-  | HPrim.Not
-  | HPrim.Exit
-  | HPrim.Assert
-  | HPrim.Box
-  | HPrim.Unbox
-  | HPrim.StrLength
-  | HPrim.Char
-  | HPrim.Int
-  | HPrim.UInt
-  | HPrim.String
-  | HPrim.InRegion -> 1
-  | HPrim.Add
-  | HPrim.Sub
-  | HPrim.Mul
-  | HPrim.Div
-  | HPrim.Mod
-  | HPrim.Eq
-  | HPrim.Lt
-  | HPrim.Cons
-  | HPrim.Index -> 2
-  | HPrim.StrGetSlice -> 3
-  | HPrim.Printfn -> ty |> tyToArity
-  | HPrim.NativeFun (_, arity) -> arity
 
 // -----------------------------------------------
 // Patterns (HIR)
