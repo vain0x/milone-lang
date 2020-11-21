@@ -16,6 +16,23 @@ open MiloneLang.Typing
 
 let private unreachable value = failwithf "NEVER: %A" value
 
+let private kTermToTy (term: KTerm): Ty =
+  match term with
+  | KLitTerm (lit, _) -> litToTy lit
+
+  | KVarTerm (_, ty, _)
+  | KFunTerm (_, ty, _)
+  | KVariantTerm (_, ty, _) -> ty
+
+  | KTagTerm _ -> tyInt
+
+  | KLabelTerm (_, ty, _) -> ty
+
+  | KNilTerm (itemTy, _)
+  | KNoneTerm (itemTy, _) -> tyList itemTy
+
+  | KUnitTerm _ -> tyUnit
+
 // -----------------------------------------------
 // Pattern matching resolution
 // -----------------------------------------------
