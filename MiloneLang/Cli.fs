@@ -258,7 +258,7 @@ let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
     "", false
   else
     writeLog host v "CIrGen"
-    let cir, success = gen (stmts, mirCtx)
+    let cir, success = genCir (stmts, mirCtx)
     let output = cprint cir
 
     writeLog host v "Finish"
