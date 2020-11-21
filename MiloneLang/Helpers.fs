@@ -522,32 +522,6 @@ let tyUnit = tyTuple []
 
 let tyRef serial tys = AppTy(RefTyCtor serial, tys)
 
-let tyPrimFromIdent ident tys loc =
-  match ident, tys with
-  | "unit", [] -> tyUnit
-
-  | "bool", [] -> tyBool
-
-  | "int", [] -> tyInt
-
-  | "uint", [] -> tyUInt
-
-  | "char", [] -> tyChar
-
-  | "string", [] -> tyStr
-
-  | "obj", [] -> tyObj
-
-  | "option", [ itemTy ] ->
-      // FIXME: option is just an alias of list for now
-      tyList itemTy
-
-  | "list", [ itemTy ] -> tyList itemTy
-
-  | _ ->
-      printfn "#error tyPrimFromIdent ident=%s loc=%s" ident (locToString loc)
-      ErrorTy loc
-
 let rec tyToArity ty =
   match ty with
   | AppTy (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty

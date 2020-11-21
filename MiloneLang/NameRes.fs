@@ -9,6 +9,31 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 
 // -----------------------------------------------
+// Type primitives
+// -----------------------------------------------
+
+let private tyPrimOfIdent ident tys loc =
+  match ident, tys with
+  | "unit", [] -> tyUnit
+  | "bool", [] -> tyBool
+  | "int", [] -> tyInt
+  | "uint", [] -> tyUInt
+  | "char", [] -> tyChar
+  | "string", [] -> tyStr
+  | "obj", [] -> tyObj
+
+  | "option", [ itemTy ] ->
+      // FIXME: option is just an alias of list for now
+      tyList itemTy
+
+  | "list", [ itemTy ] -> tyList itemTy
+
+  | _ ->
+      // FIXME: Report error correctly
+      printfn "#error tyPrimOfIdent ident=%s loc=%s" ident (locToString loc)
+      ErrorTy loc
+
+// -----------------------------------------------
 // NameTree
 // -----------------------------------------------
 
@@ -363,7 +388,7 @@ let private scopeCtxResolveTy ty loc scopeCtx =
 
             | _ -> tyRef tySerial tys, scopeCtx
 
-        | None -> tyPrimFromIdent ident tys loc, scopeCtx
+        | None -> tyPrimOfIdent ident tys loc, scopeCtx
 
     | AppTy (tyCtor, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
