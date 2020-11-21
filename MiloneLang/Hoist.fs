@@ -1,10 +1,11 @@
-/// Rearranges the expression layout for the following stages.
+/// # Hoist
 ///
-/// This stage eliminates local (in-function) type/function definitions
-/// by moving them up to the top-level
-/// because monomorphization doesn't want to clone nested definitions.
+/// Rearranges expression layout for following stages.
 ///
-/// ### Example
+/// Moves declarations in functions to top-level
+/// since monomorphization doesn't want to clone nested definitions.
+///
+/// ## Example
 ///
 /// ```fsharp
 ///  // At top-level
@@ -30,29 +31,19 @@ module rec MiloneLang.Hoist
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-/// Accumulation of expression stack.
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
-type HExprAcc =
-  | Empty
-  | Let of HExpr * HExprAcc
-  | Semi of HExpr list * HExprAcc
-
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
-type HoistMode =
-  | TopLevel
-  | Local
-
-// (decls, exprs), where
-// exprs are non-declaration top-level expressions.
-type HoistContext = HoistMode * HExprAcc * HExprAcc
-
 let private hxDummy = hxUnit noLoc
 
 // -----------------------------------------------
 // HExprAcc
 // -----------------------------------------------
+
+/// Accumulation of expression stack.
+[<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
+type private HExprAcc =
+  | Empty
+  | Let of HExpr * HExprAcc
+  | Semi of HExpr list * HExprAcc
 
 let private hxAccAdd expr exprAcc =
   match expr, exprAcc with
@@ -83,35 +74,48 @@ let private hxAccToExpr next exprAcc =
 
   go exprAcc next
 
+// -----------------------------------------------
+// Context
+// -----------------------------------------------
+
+[<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
+type private HoistMode =
+  | TopLevel
+  | Local
+
+// (decls, exprs), where
+// exprs are non-declaration top-level expressions.
+type private HoistContext = HoistMode * HExprAcc * HExprAcc
+
 let private hoistCtxEmpty: HoistContext =
   HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty
 
-let private hoistCtxIsEmpty ctx =
+let private currentIsEmpty ctx =
   match ctx with
   | HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty -> true
 
   | _ -> false
 
-let private hoistCtxIsTopLevel (mode, _, _) =
+let private currentIsTopLevel (mode, _, _) =
   match mode with
   | HoistMode.TopLevel -> true
-
   | HoistMode.Local -> false
 
-let private hoistCtxAddDecl expr (mode, decls, exprs) =
+let private addDecl expr (mode, decls, exprs) =
   let decls = decls |> hxAccAdd expr
   mode, decls, exprs
 
-let private hoistCtxAddExpr expr (mode, decls, exprs) =
+let private addExpr expr (mode, decls, exprs) =
   let exprs = exprs |> hxAccAdd expr
   mode, decls, exprs
 
-let private hoistCtxTakeDecls next (mode, decls, exprs) =
+let private takeDecls next (mode, decls, exprs) =
   let expr = decls |> hxAccToExpr next
   let ctx = mode, HExprAcc.Empty, exprs
   expr, ctx
 
-let private hoistCtxTakeExprs next (mode, decls, exprs) =
+let private takeExprs next (mode, decls, exprs) =
   let expr = exprs |> hxAccToExpr next
   let ctx = mode, decls, HExprAcc.Empty
   expr, ctx
@@ -119,8 +123,6 @@ let private hoistCtxTakeExprs next (mode, decls, exprs) =
 // -----------------------------------------------
 // Hoist routine
 // -----------------------------------------------
-
-let private hoistPat t = t
 
 let private hoistExprLocal (expr, ctx) =
   // Enter the local.
@@ -147,19 +149,18 @@ let private hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx =
     // Add top-level non-declaration expressions
     // to the head of `main` function body
     // so that they evaluate at the beginning of the program.
-    let body, ctx = ctx |> hoistCtxTakeExprs body
+    let body, ctx = ctx |> takeExprs body
 
     HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc), ctx
 
   // Append the `main` to other declarations
   // to reconstruct the whole expressions.
-  ctx |> hoistCtxTakeDecls mainFunExpr
+  ctx |> takeDecls mainFunExpr
 
 let private hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
   if isMainFun then
     hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx
   else
-
     let body, ctx = (body, ctx) |> hoistExprLocal
 
     let expr =
@@ -168,7 +169,7 @@ let private hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
       let next = hxDummy
       HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc)
 
-    let ctx = ctx |> hoistCtxAddDecl expr
+    let ctx = ctx |> addDecl expr
 
     (next, ctx) |> hoistExpr
 
@@ -185,7 +186,6 @@ let private hoistExprCore (expr, ctx) =
   | HMatchExpr (target, arms, ty, loc) ->
       let doArm () =
         let go ((pat, guard, body), ctx) =
-          let pat, ctx = hoistPat (pat, ctx)
           let guard, ctx = hoistExpr (guard, ctx)
           let body, ctx = hoistExpr (body, ctx)
           (pat, guard, body), ctx
@@ -193,13 +193,6 @@ let private hoistExprCore (expr, ctx) =
         let target, ctx = hoistExpr (target, ctx)
         let arms, ctx = (arms, ctx) |> stMap go
         HMatchExpr(target, arms, ty, loc), ctx
-
-      doArm ()
-
-  | HNavExpr (l, r, ty, loc) ->
-      let doArm () =
-        let l, ctx = hoistExpr (l, ctx)
-        HNavExpr(l, r, ty, loc), ctx
 
       doArm ()
 
@@ -212,7 +205,6 @@ let private hoistExprCore (expr, ctx) =
 
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
-        let pat, ctx = (pat, ctx) |> hoistPat
         let body, ctx = (body, ctx) |> hoistExprLocal
         let next, ctx = (next, ctx) |> hoistExpr
         HLetValExpr(vis, pat, body, next, ty, loc), ctx
@@ -224,19 +216,19 @@ let private hoistExprCore (expr, ctx) =
 
   | HTyDeclExpr _ ->
       let doArm () =
-        let ctx = ctx |> hoistCtxAddDecl expr
+        let ctx = ctx |> addDecl expr
         hxDummy, ctx
 
       doArm ()
 
-  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or TyElaborating"
+  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in TyElaboration"
+  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
 let private hoistExpr (expr, ctx) =
-  if ctx |> hoistCtxIsTopLevel |> not then
+  if ctx |> currentIsTopLevel |> not then
     (expr, ctx) |> hoistExprCore
   else
-
     // At the top-level. Check if inner expressions are also top-level or not.
     match expr with
     | HInfExpr (InfOp.Semi, items, ty, loc) ->
@@ -252,12 +244,12 @@ let private hoistExpr (expr, ctx) =
     | _ ->
         // It's a top-level non-declaration expression.
         let expr, ctx = (expr, ctx) |> hoistExprLocal
-        let ctx = ctx |> hoistCtxAddExpr expr
+        let ctx = ctx |> addExpr expr
         hxDummy, ctx
 
 let hoist (expr: HExpr, tyCtx) =
   let expr, hoistCtx = (expr, hoistCtxEmpty) |> hoistExpr
 
-  assert (hoistCtx |> hoistCtxIsEmpty)
+  assert (hoistCtx |> currentIsEmpty)
 
   expr, tyCtx
