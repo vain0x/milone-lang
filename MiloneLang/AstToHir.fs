@@ -178,7 +178,7 @@ let private desugarLet vis pat body next pos =
 
   | _ -> ALetVal(vis, pat, body, next, pos)
 
-let private astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
+let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
       let loc = toLoc docId pos
@@ -187,8 +187,7 @@ let private astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx 
   | AAppTy (ident, argTys, _) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
 
-      let argTys, nameCtx =
-        (argTys, nameCtx) |> stMap (astToHirTy docId)
+      let argTys, nameCtx = (argTys, nameCtx) |> stMap (athTy docId)
 
       tyRef tySerial argTys, nameCtx
 
@@ -197,22 +196,26 @@ let private astToHirTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx 
       tyRef tySerial [], nameCtx
 
   | ASuffixTy (lTy, ident, _) ->
-      let lTy, nameCtx = (lTy, nameCtx) |> astToHirTy docId
+      let lTy, nameCtx = (lTy, nameCtx) |> athTy docId
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ident
       tyRef tySerial [ lTy ], nameCtx
 
   | ATupleTy (itemTys, _) ->
       let itemTys, nameCtx =
-        (itemTys, nameCtx) |> stMap (astToHirTy docId)
+        (itemTys, nameCtx) |> stMap (athTy docId)
 
       tyTuple itemTys, nameCtx
 
   | AFunTy (sTy, tTy, _) ->
-      let sTy, nameCtx = (sTy, nameCtx) |> astToHirTy docId
-      let tTy, nameCtx = (tTy, nameCtx) |> astToHirTy docId
+      let sTy, nameCtx = (sTy, nameCtx) |> athTy docId
+      let tTy, nameCtx = (tTy, nameCtx) |> athTy docId
       tyFun sTy tTy, nameCtx
 
-let private astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
+// -----------------------------------------------
+// Control
+// -----------------------------------------------
+
+let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
   | AMissingPat pos -> failwithf "Missing pattern %s" (posToString pos)
 
@@ -231,32 +234,30 @@ let private astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * Nam
 
   | AListPat (pats, pos) ->
       let pat = desugarListLitPat pats pos
-      (pat, nameCtx) |> astToHirPat docId
+      (pat, nameCtx) |> athPat docId
 
   | ANavPat (l, r, pos) ->
-      let l, nameCtx = (l, nameCtx) |> astToHirPat docId
+      let l, nameCtx = (l, nameCtx) |> athPat docId
       let loc = toLoc docId pos
       HNavPat(l, r, noTy, loc), nameCtx
 
   | AAppPat (calleePat, argPats, pos) ->
-      let calleePat, nameCtx =
-        (calleePat, nameCtx) |> astToHirPat docId
+      let calleePat, nameCtx = (calleePat, nameCtx) |> athPat docId
 
       let argPats, nameCtx =
-        (argPats, nameCtx) |> stMap (astToHirPat docId)
+        (argPats, nameCtx) |> stMap (athPat docId)
 
       let loc = toLoc docId pos
       HCallPat(calleePat, argPats, noTy, loc), nameCtx
 
   | AConsPat (head, tail, pos) ->
-      let head, nameCtx = (head, nameCtx) |> astToHirPat docId
-      let tail, nameCtx = (tail, nameCtx) |> astToHirPat docId
+      let head, nameCtx = (head, nameCtx) |> athPat docId
+      let tail, nameCtx = (tail, nameCtx) |> athPat docId
       let loc = toLoc docId pos
       HConsPat(head, tail, noTy, loc), nameCtx
 
   | ATuplePat (pats, pos) ->
-      let pats, nameCtx =
-        (pats, nameCtx) |> stMap (astToHirPat docId)
+      let pats, nameCtx = (pats, nameCtx) |> stMap (athPat docId)
 
       let loc = toLoc docId pos
       HTuplePat(pats, noTy, loc), nameCtx
@@ -264,26 +265,26 @@ let private astToHirPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * Nam
   | AAsPat (pat, ident, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
 
-      let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
+      let pat, nameCtx = (pat, nameCtx) |> athPat docId
 
       let loc = toLoc docId pos
       HAsPat(pat, serial, loc), nameCtx
 
   | AAnnoPat (pat, ty, pos) ->
-      let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
-      let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
+      let pat, nameCtx = (pat, nameCtx) |> athPat docId
+      let ty, nameCtx = (ty, nameCtx) |> athTy docId
       let loc = toLoc docId pos
       HAnnoPat(pat, ty, loc), nameCtx
 
   | AOrPat (l, r, pos) ->
-      let l, nameCtx = (l, nameCtx) |> astToHirPat docId
-      let r, nameCtx = (r, nameCtx) |> astToHirPat docId
+      let l, nameCtx = (l, nameCtx) |> athPat docId
+      let r, nameCtx = (r, nameCtx) |> athPat docId
       let loc = toLoc docId pos
       HOrPat(l, r, noTy, loc), nameCtx
 
   | AFunDeclPat (_, _, pos) -> failwithf "Invalid occurrence of fun pattern: %s" (posToString pos)
 
-let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
+let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with
   | AMissingExpr pos ->
       let loc = toLoc docId pos
@@ -296,7 +297,7 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
   | AIdentExpr (ident, pos) ->
       let loc = toLoc docId pos
 
-      // NOTE: Work in a local function to reduce the size of stack frames of `astToHirExpr`.
+      // NOTE: Work in a local function to reduce the size of stack frames of `athExpr`.
       let doArm () =
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
         HRefExpr(serial, noTy, loc), nameCtx
@@ -310,21 +311,20 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
   | AListExpr (items, pos) ->
       let doArm () =
         let expr = desugarListLitExpr items pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ARecordExpr (baseOpt, fields, pos) ->
       let onField ((fieldIdent, init, fieldPos), nameCtx) =
-        let init, nameCtx = (init, nameCtx) |> astToHirExpr docId
+        let init, nameCtx = (init, nameCtx) |> athExpr docId
         let fieldLoc = toLoc docId fieldPos
 
         (fieldIdent, init, fieldLoc), nameCtx
 
       let doArm () =
         let baseOpt, nameCtx =
-          (baseOpt, nameCtx)
-          |> stOptionMap (astToHirExpr docId)
+          (baseOpt, nameCtx) |> stOptionMap (athExpr docId)
 
         let fields, nameCtx = (fields, nameCtx) |> stMap onField
         let loc = toLoc docId pos
@@ -335,7 +335,7 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
   | AIfExpr (cond, body, alt, pos) ->
       let doArm () =
         let expr = desugarIf cond body alt pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
@@ -343,19 +343,19 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
       let doArm () =
         // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
         let onArm (AArm (pat, guard, body, loc), nameCtx) =
-          let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
+          let pat, nameCtx = (pat, nameCtx) |> athPat docId
 
           let loc = toLoc docId pos
 
           let guard, nameCtx =
             match guard with
             | AMissingExpr _ -> hxTrue loc, nameCtx
-            | _ -> (guard, nameCtx) |> astToHirExpr docId
+            | _ -> (guard, nameCtx) |> athExpr docId
 
-          let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
+          let body, nameCtx = (body, nameCtx) |> athExpr docId
           (pat, guard, body), nameCtx
 
-        let target, nameCtx = (target, nameCtx) |> astToHirExpr docId
+        let target, nameCtx = (target, nameCtx) |> athExpr docId
         let arms, nameCtx = (arms, nameCtx) |> stMap onArm
         let loc = toLoc docId pos
         HMatchExpr(target, arms, noTy, loc), nameCtx
@@ -365,13 +365,13 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
   | AFunExpr (pats, body, pos) ->
       let doArm () =
         let expr = desugarFun pats body pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ANavExpr (l, r, pos) ->
       let doArm () =
-        let l, nameCtx = (l, nameCtx) |> astToHirExpr docId
+        let l, nameCtx = (l, nameCtx) |> athExpr docId
         let loc = toLoc docId pos
         HNavExpr(l, r, noTy, loc), nameCtx
 
@@ -380,11 +380,11 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
   | AIndexExpr (l, r, pos) ->
       let doArm () =
         match tryDesugarIndexRange expr pos with
-        | true, expr -> (expr, nameCtx) |> astToHirExpr docId
+        | true, expr -> (expr, nameCtx) |> athExpr docId
 
         | false, _ ->
-            let l, nameCtx = (l, nameCtx) |> astToHirExpr docId
-            let r, nameCtx = (r, nameCtx) |> astToHirExpr docId
+            let l, nameCtx = (l, nameCtx) |> athExpr docId
+            let r, nameCtx = (r, nameCtx) |> athExpr docId
 
             let loc = toLoc docId pos
 
@@ -398,63 +398,63 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
   | AUnaryExpr (NegUnary, arg, pos) ->
       let doArm () =
         let expr = desugarUniNeg arg pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ABinaryExpr (NotEqualBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinNe l r pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ABinaryExpr (LessEqualBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinLe l r pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ABinaryExpr (GreaterBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinGt l r pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ABinaryExpr (GreaterEqualBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinGe l r pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ABinaryExpr (LogAndBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinAnd l r pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ABinaryExpr (LogOrBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinOr l r pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ABinaryExpr (PipeBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinPipe l r pos
-        (expr, nameCtx) |> astToHirExpr docId
+        (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
   | ABinaryExpr (AppBinary, l, r, pos) ->
       let doArm () =
-        let l, nameCtx = (l, nameCtx) |> astToHirExpr docId
-        let r, nameCtx = (r, nameCtx) |> astToHirExpr docId
+        let l, nameCtx = (l, nameCtx) |> athExpr docId
+        let r, nameCtx = (r, nameCtx) |> athExpr docId
         let loc = toLoc docId pos
         hxApp l r noTy loc, nameCtx
 
@@ -463,8 +463,8 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
   | ABinaryExpr (op, l, r, pos) ->
       let doArm () =
         let prim = op |> opToPrim
-        let l, nameCtx = (l, nameCtx) |> astToHirExpr docId
-        let r, nameCtx = (r, nameCtx) |> astToHirExpr docId
+        let l, nameCtx = (l, nameCtx) |> athExpr docId
+        let r, nameCtx = (r, nameCtx) |> athExpr docId
         let loc = toLoc docId pos
         let primExpr = HPrimExpr(prim, noTy, loc)
         hxApp (hxApp primExpr l noTy loc) r noTy loc, nameCtx
@@ -480,7 +480,7 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
         let loc = toLoc docId pos
 
         let items, nameCtx =
-          (items, nameCtx) |> stMap (astToHirExpr docId)
+          (items, nameCtx) |> stMap (athExpr docId)
 
         hxTuple items loc, nameCtx
 
@@ -488,8 +488,8 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
 
   | AAnnoExpr (body, ty, pos) ->
       let doArm () =
-        let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
-        let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
+        let body, nameCtx = (body, nameCtx) |> athExpr docId
+        let ty, nameCtx = (ty, nameCtx) |> athTy docId
         let loc = toLoc docId pos
         hxAnno body ty loc, nameCtx
 
@@ -500,7 +500,7 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
         assert (exprs |> List.isEmpty |> not)
 
         let exprs, nameCtx =
-          (exprs, nameCtx) |> stMap (astToHirExpr docId)
+          (exprs, nameCtx) |> stMap (athExpr docId)
 
         let loc = toLoc docId pos
         hxSemi exprs loc, nameCtx
@@ -514,18 +514,17 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
             let serial, nameCtx = nameCtx |> nameCtxAdd ident
             let isMainFun = false // Name resolution should correct this.
 
-            let args, nameCtx =
-              (args, nameCtx) |> stMap (astToHirPat docId)
+            let args, nameCtx = (args, nameCtx) |> stMap (athPat docId)
 
-            let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
-            let next, nameCtx = (next, nameCtx) |> astToHirExpr docId
+            let body, nameCtx = (body, nameCtx) |> athExpr docId
+            let next, nameCtx = (next, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
             HLetFunExpr(serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
 
         | ALetVal (vis, pat, body, next, pos) ->
-            let pat, nameCtx = (pat, nameCtx) |> astToHirPat docId
-            let body, nameCtx = (body, nameCtx) |> astToHirExpr docId
-            let next, nameCtx = (next, nameCtx) |> astToHirExpr docId
+            let pat, nameCtx = (pat, nameCtx) |> athPat docId
+            let body, nameCtx = (body, nameCtx) |> athExpr docId
+            let next, nameCtx = (next, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
             HLetValExpr(vis, pat, body, next, noTy, loc), nameCtx
 
@@ -534,7 +533,7 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
   | ATySynonymExpr (vis, ident, tyArgs, ty, pos) ->
       let doArm () =
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
-        let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
+        let ty, nameCtx = (ty, nameCtx) |> athTy docId
 
         let tyArgs, nameCtx =
           (tyArgs, nameCtx)
@@ -547,28 +546,28 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
 
   | AUnionTyExpr (vis, ident, variants, pos) ->
       let doArm () =
-        let onVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
+        let athVariant (AVariant (ident, payloadTy, _variantLoc), nameCtx) =
           let serial, nameCtx = nameCtx |> nameCtxAdd ident
 
           let hasPayload, payloadTy, nameCtx =
             match payloadTy with
             | Some ty ->
-                let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
+                let ty, nameCtx = (ty, nameCtx) |> athTy docId
                 true, ty, nameCtx
             | None -> false, tyUnit, nameCtx
 
           (ident, serial, hasPayload, payloadTy), nameCtx
 
         let unionSerial, nameCtx = nameCtx |> nameCtxAdd ident
-        let variants, nameCtx = (variants, nameCtx) |> stMap onVariant
+        let variants, nameCtx = (variants, nameCtx) |> stMap athVariant
         let loc = toLoc docId pos
         HTyDeclExpr(unionSerial, vis, [], UnionTyDecl(ident, variants, loc), loc), nameCtx
 
       doArm ()
 
   | ARecordTyExpr (vis, tyIdent, fieldDecls, pos) ->
-      let onFieldDecl ((fieldIdent, ty, fieldPos), nameCtx) =
-        let ty, nameCtx = (ty, nameCtx) |> astToHirTy docId
+      let athFieldDecl ((fieldIdent, ty, fieldPos), nameCtx) =
+        let ty, nameCtx = (ty, nameCtx) |> athTy docId
         let fieldLoc = toLoc docId fieldPos
 
         (fieldIdent, ty, fieldLoc), nameCtx
@@ -577,7 +576,7 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
         let tySerial, nameCtx = nameCtx |> nameCtxAdd tyIdent
 
         let fields, nameCtx =
-          (fieldDecls, nameCtx) |> stMap onFieldDecl
+          (fieldDecls, nameCtx) |> stMap athFieldDecl
 
         let loc = toLoc docId pos
         HTyDeclExpr(tySerial, vis, [], RecordTyDecl(tyIdent, fields, loc), loc), nameCtx
@@ -593,10 +592,10 @@ let private astToHirExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr *
 
 let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
   match root with
-  | AExprRoot expr -> astToHirExpr docId (expr, nameCtx)
+  | AExprRoot expr -> athExpr docId (expr, nameCtx)
 
   | AModuleRoot (ident, body, pos) ->
-      let body, nameCtx = astToHirExpr docId (body, nameCtx)
+      let body, nameCtx = athExpr docId (body, nameCtx)
       let serial, nameCtx = nameCtx |> nameCtxAdd ident
       let loc = toLoc docId pos
       let next = hxUnit loc
