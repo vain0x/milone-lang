@@ -419,35 +419,6 @@ let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
   else intCmp lx rx
 
 // -----------------------------------------------
-// APat
-// -----------------------------------------------
-
-let apFalse loc = ALitPat(litFalse, loc)
-
-let apTrue loc = ALitPat(litTrue, loc)
-
-// -----------------------------------------------
-// AExpr
-// -----------------------------------------------
-
-let axUnit loc = ATupleExpr([], loc)
-
-let axFalse loc = ALitExpr(litFalse, loc)
-
-let axTrue loc = ALitExpr(litTrue, loc)
-
-let axNil loc = AListExpr([], loc)
-
-let axApp3 f x1 x2 x3 loc =
-  let app x f = ABinaryExpr(AppBinary, f, x, loc)
-  f |> app x1 |> app x2 |> app x3
-
-/// `not x` ==> `x = false`
-let axNot arg loc =
-  let falseExpr = axFalse loc
-  ABinaryExpr(EqualBinary, arg, falseExpr, loc)
-
-// -----------------------------------------------
 // DumpTree (for debugging)
 // -----------------------------------------------
 

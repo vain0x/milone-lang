@@ -33,19 +33,12 @@ let private toLoc (doc: DocId) (pos: Pos): Loc =
 let private opToPrim op =
   match op with
   | AddBinary -> HPrim.Add
-
   | SubBinary -> HPrim.Sub
-
   | MulBinary -> HPrim.Mul
-
   | DivBinary -> HPrim.Div
-
   | ModBinary -> HPrim.Mod
-
   | EqualBinary -> HPrim.Eq
-
   | LessBinary -> HPrim.Lt
-
   | ConsBinary -> HPrim.Cons
 
   | NotEqualBinary
@@ -56,6 +49,37 @@ let private opToPrim op =
   | LogOrBinary
   | AppBinary
   | PipeBinary -> failwithf "NEVER: %A" op
+
+// -----------------------------------------------
+// APat
+// -----------------------------------------------
+
+let private apFalse pos = ALitPat(litFalse, pos)
+
+let private apTrue pos = ALitPat(litTrue, pos)
+
+// -----------------------------------------------
+// AExpr
+// -----------------------------------------------
+
+let private axUnit loc = ATupleExpr([], loc)
+
+let private axFalse loc = ALitExpr(litFalse, loc)
+
+let private axTrue loc = ALitExpr(litTrue, loc)
+
+let private axApp3 f x1 x2 x3 loc =
+  let app x f = ABinaryExpr(AppBinary, f, x, loc)
+  f |> app x1 |> app x2 |> app x3
+
+/// `not x` ==> `x = false`
+let private axNot arg loc =
+  let falseExpr = axFalse loc
+  ABinaryExpr(EqualBinary, arg, falseExpr, loc)
+
+// -----------------------------------------------
+// Desugar
+// -----------------------------------------------
 
 /// `[x; y; ..]`. Desugar to a chain of (::).
 let private desugarListLitPat pats pos =
