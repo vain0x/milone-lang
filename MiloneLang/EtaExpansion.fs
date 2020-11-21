@@ -88,6 +88,26 @@ type private CalleeKind =
   | Fun
   | Obj
 
+let private listSplitAt i xs =
+  List.truncate i xs, List.skip (intMin i (List.length xs)) xs
+
+let private tyAppliedBy n ty =
+  match ty with
+  | AppTy (FunTyCtor, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
+  | _ -> ty
+
+/// E.g. given init = `id x` and args `x, y` then we should return `(id x) y`.
+let private restCall callee args resultTy loc =
+  match args with
+  | [] -> callee
+  | args -> hxCallClosure callee args resultTy loc
+
+let private hxCallTo calleeKind callee args resultTy loc =
+  match calleeKind, args with
+  | _, [] -> callee
+  | CalleeKind.Fun, args -> hxCallProc callee args resultTy loc
+  | CalleeKind.Obj, args -> hxCallClosure callee args resultTy loc
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -140,25 +160,9 @@ let private freshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
   let refExpr = HRefExpr(serial, ty, loc)
   refExpr, serial, ctx
 
-let private listSplitAt i xs =
-  List.truncate i xs, List.skip (intMin i (List.length xs)) xs
-
-let private tyAppliedBy n ty =
-  match ty with
-  | AppTy (FunTyCtor, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
-  | _ -> ty
-
-/// E.g. given init = `id x` and args `x, y` then we should return `(id x) y`.
-let private restCall callee args resultTy loc =
-  match args with
-  | [] -> callee
-  | args -> hxCallClosure callee args resultTy loc
-
-let private hxCallTo calleeKind callee args resultTy loc =
-  match calleeKind, args with
-  | _, [] -> callee
-  | CalleeKind.Fun, args -> hxCallProc callee args resultTy loc
-  | CalleeKind.Obj, args -> hxCallClosure callee args resultTy loc
+// -----------------------------------------------
+// Conversion
+// -----------------------------------------------
 
 let private createRestArgsAndPats callee arity argLen callLoc ctx =
   let rec go n restTy ctx =
