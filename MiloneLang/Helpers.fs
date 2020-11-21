@@ -39,17 +39,6 @@ let stOptionMap f (x, ctx) =
       Some x, ctx
   | None -> None, ctx
 
-/// Maps over a list, collecting things, mutating context.
-let exMap f (xs, acc, ctx) =
-  let rec go ys xs acc ctx =
-    match xs with
-    | [] -> List.rev ys, acc, ctx
-    | x :: xs ->
-        let y, acc, ctx = f (x, acc, ctx)
-        go (y :: ys) xs acc ctx
-
-  go [] xs acc ctx
-
 // -----------------------------------------------
 // Pair
 // -----------------------------------------------
