@@ -24,4 +24,6 @@ let id x = x
 
 let fst (x, _) = x
 
+let snd (_, y) = y
+
 type Profiler = Profiler of obj
