@@ -86,10 +86,6 @@ open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Typing
 
-/// List of captured variables.
-/// Don't forget the case of empty.
-type Caps = (VarSerial * Ty * Loc) list
-
 // -----------------------------------------------
 // KnownCtx
 // -----------------------------------------------
@@ -140,6 +136,44 @@ let private knownCtxToCapturedSerials (ctx: KnownCtx): VarSerial list =
          varSerial :: acc
        else
          acc) []
+
+// -----------------------------------------------
+// Caps
+// -----------------------------------------------
+
+/// List of captured variables.
+/// Don't forget the case of empty.
+type private Caps = (VarSerial * Ty * Loc) list
+
+/// Updates the function type to take captured variables.
+let private capsAddToFunTy tTy (caps: Caps) =
+  caps
+  |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
+
+/// Updates the callee to take captured variables as arguments.
+let private capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
+  let callee =
+    let calleeTy = caps |> capsAddToFunTy calleeTy
+    HFunExpr(calleeSerial, calleeTy, calleeLoc)
+
+  let app, _ =
+    caps
+    |> List.rev
+    |> List.fold (fun (callee, calleeTy) (serial, ty, loc) ->
+         let arg = HRefExpr(serial, ty, loc)
+         hxApp callee arg calleeTy loc, tyFun ty calleeTy) (callee, calleeTy)
+
+  app
+
+/// Updates the argument patterns to take captured variables.
+let private capsAddToFunPats args (caps: Caps) =
+  caps
+  |> List.fold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
+
+let private capsUpdateFunDef funTy arity (caps: Caps) =
+  let funTy = caps |> capsAddToFunTy funTy
+  let arity = arity + List.length caps
+  funTy, arity
 
 // -----------------------------------------------
 // Context
@@ -293,40 +327,6 @@ let private updateFunDefs (ctx: CcCtx) =
   let vars = ctx.Funs |> mapFold update ctx.Vars
 
   { ctx with Vars = vars }
-
-// -----------------------------------------------
-// Caps
-// -----------------------------------------------
-
-/// Updates the function type to take captured variables.
-let private capsAddToFunTy tTy (caps: Caps) =
-  caps
-  |> List.fold (fun tTy (_, sTy, _) -> tyFun sTy tTy) tTy
-
-/// Updates the callee to take captured variables as arguments.
-let private capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
-  let callee =
-    let calleeTy = caps |> capsAddToFunTy calleeTy
-    HFunExpr(calleeSerial, calleeTy, calleeLoc)
-
-  let app, _ =
-    caps
-    |> List.rev
-    |> List.fold (fun (callee, calleeTy) (serial, ty, loc) ->
-         let arg = HRefExpr(serial, ty, loc)
-         hxApp callee arg calleeTy loc, tyFun ty calleeTy) (callee, calleeTy)
-
-  app
-
-/// Updates the argument patterns to take captured variables.
-let private capsAddToFunPats args (caps: Caps) =
-  caps
-  |> List.fold (fun args (serial, ty, loc) -> HRefPat(serial, ty, loc) :: args) args
-
-let private capsUpdateFunDef funTy arity (caps: Caps) =
-  let funTy = caps |> capsAddToFunTy funTy
-  let arity = arity + List.length caps
-  funTy, arity
 
 // -----------------------------------------------
 // Featured transformations
