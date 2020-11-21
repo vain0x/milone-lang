@@ -254,7 +254,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
 
   | AListPat ([], pos) ->
       let loc = toLoc docId pos
-      patNil noTy loc, nameCtx
+      HNilPat(noTy, loc), nameCtx
 
   | AListPat (pats, pos) ->
       let pat = desugarListLitPat pats pos

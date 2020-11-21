@@ -708,10 +708,6 @@ let primToTySpec prim =
 // Patterns (HIR)
 // -----------------------------------------------
 
-let patUnit loc = HTuplePat([], tyUnit, loc)
-
-let patNil itemTy loc = HNilPat(itemTy, loc)
-
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
