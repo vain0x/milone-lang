@@ -534,8 +534,12 @@ type TyDef =
 
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
 
-  //// Module is a type so that it can be used as namespace.
-  | ModuleTyDef of Ident * Loc
+[<Struct; NoEquality; NoComparison>]
+type ModuleTySerial = ModuleTySerial of Serial
+
+//// Module is a type so that it can be used as namespace.
+[<NoEquality; NoComparison>]
+type ModuleTyDef = { Name: Ident; Loc: Loc }
 
 /// Definition of named value in high-level IR.
 [<NoEquality; NoComparison>]
@@ -702,7 +706,7 @@ type HExpr =
   /// Type declaration.
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
-  | HModuleExpr of Serial * body: HExpr * next: HExpr * Loc
+  | HModuleExpr of ModuleTySerial * body: HExpr * next: HExpr * Loc
   | HErrorExpr of string * Loc
 
 [<RequireQualifiedAccess>]

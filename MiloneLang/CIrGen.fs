@@ -117,8 +117,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
     let toKey (serial, tyDef) =
       match tyDef with
       | MetaTyDef _
-      | UniversalTyDef _
-      | ModuleTyDef _ -> MetaTy(serial, noLoc)
+      | UniversalTyDef _ -> MetaTy(serial, noLoc)
 
       | SynonymTyDef _ -> tySynonym serial []
       | UnionTyDef _ -> tyUnion serial

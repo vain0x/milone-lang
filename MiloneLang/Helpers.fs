@@ -530,6 +530,10 @@ let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
 // Type definitions (HIR)
 // -----------------------------------------------
 
+let moduleTySerialToInt (ModuleTySerial serial) = serial
+
+let moduleTySerialCmp l r = moduleTySerialToInt l - moduleTySerialToInt r
+
 let tyDefToName tyDef =
   match tyDef with
   | MetaTyDef (name, _, _) -> name
@@ -537,7 +541,6 @@ let tyDefToName tyDef =
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _) -> name
   | RecordTyDef (name, _, _) -> name
-  | ModuleTyDef (name, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
