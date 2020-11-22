@@ -778,39 +778,35 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   // Assign type vars to var/fun definitions.
   let ctx =
     let vars, ctx =
-      (mapToList (ctx.Vars), ctx)
-      |> stMap (fun ((varSerial, varDef), ctx: TyCtx) ->
+      ctx.Vars
+      |> mapFold (fun (acc, ctx: TyCtx) varSerial varDef ->
            let ctx =
              { ctx with
                  LetDepth = scopeCtx.VarDepths |> mapFind varSerial }
 
-           match varDef with
-           | VarDef (ident, storageModifier, _, loc) ->
-               let ty, _, ctx = freshMetaTy ident loc ctx
+           let varDef, ctx =
+             match varDef with
+             | VarDef (ident, storageModifier, _, loc) ->
+                 let ty, _, ctx = freshMetaTy ident loc ctx
+                 VarDef(ident, storageModifier, ty, loc), ctx
 
-               let varDef = VarDef(ident, storageModifier, ty, loc)
+             | FunDef (ident, arity, _, loc) ->
+                 let ty, _, ctx = freshMetaTy ident loc ctx
+                 FunDef(ident, arity, TyScheme([], ty), loc), ctx
 
-               (varSerial, varDef), ctx
+             | VariantDef (ident, tySerial, hasPayload, payloadTy, _, loc) ->
+                 // Pre-compute the type of variant.
+                 let variantTy =
+                   let unionTy = tyRef tySerial []
+                   if hasPayload then tyFun payloadTy unionTy else unionTy
 
-           | FunDef (ident, arity, _, loc) ->
-               let ty, _, ctx = freshMetaTy ident loc ctx
-               let tyScheme = TyScheme([], ty)
-               let varDef = FunDef(ident, arity, tyScheme, loc)
-               (varSerial, varDef), ctx
+                 VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc), ctx
 
-           | VariantDef (ident, tySerial, hasPayload, payloadTy, _, loc) ->
-               // Pre-compute the type of variant.
-               let variantTy =
-                 let unionTy = tyRef tySerial []
-                 if hasPayload then tyFun payloadTy unionTy else unionTy
+           let acc = acc |> mapAdd varSerial varDef
 
-               let varDef =
-                 VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc)
+           acc, ctx) (mapEmpty intCmp, ctx)
 
-               (varSerial, varDef), ctx)
-
-    { ctx with
-        Vars = mapOfList intCmp vars }
+    { ctx with Vars = vars }
 
   let ctx = { ctx with LetDepth = 0 }
 
@@ -855,15 +851,14 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     let tys =
       ctx.Tys
-      |> mapToList
-      |> List.choose (fun kv ->
-           let tySerial, tyDef = kv
+      |> mapFold (fun acc tySerial tyDef ->
            match tyDef with
-           | MetaTyDef _ -> None
+           | MetaTyDef _ -> acc
 
            | SynonymTyDef (ident, tyArgs, bodyTy, loc) ->
                let bodyTy = bodyTy |> substOrDegenerate
-               Some(tySerial, SynonymTyDef(ident, tyArgs, bodyTy, loc))
+               acc
+               |> mapAdd tySerial (SynonymTyDef(ident, tyArgs, bodyTy, loc))
 
            | RecordTyDef (ident, fields, loc) ->
                let fields =
@@ -872,10 +867,10 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                       let ty = substOrDegenerate ty
                       ident, ty, loc)
 
-               Some(tySerial, RecordTyDef(ident, fields, loc))
+               acc
+               |> mapAdd tySerial (RecordTyDef(ident, fields, loc))
 
-           | _ -> Some kv)
-      |> mapOfList intCmp
+           | _ -> acc |> mapAdd tySerial tyDef) (mapEmpty intCmp)
 
     { ctx with Tys = tys }
 
