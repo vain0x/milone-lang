@@ -100,15 +100,15 @@ type private KnownCtx =
 
 let private knownCtxEmpty (): KnownCtx =
   { Known = setEmpty funSerialCmp
-    Locals = setEmpty intCmp
-    UseVars = setEmpty intCmp
+    Locals = setEmpty varSerialCmp
+    UseVars = setEmpty varSerialCmp
     UseFuns = setEmpty funSerialCmp }
 
 let private knownCtxEnterFunDecl (ctx: KnownCtx) =
   { ctx with
-      UseVars = setEmpty intCmp
+      UseVars = setEmpty varSerialCmp
       UseFuns = setEmpty funSerialCmp
-      Locals = setEmpty intCmp }
+      Locals = setEmpty varSerialCmp }
 
 let private knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
   { ctx with

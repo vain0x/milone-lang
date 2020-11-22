@@ -399,8 +399,9 @@ type Loc = DocId * RowIndex * ColumnIndex
 /// Serial number of types.
 type TySerial = Serial
 
-/// Serial number of nominal values: variables, functions, or variants.
-type VarSerial = Serial
+/// Serial number of variables.
+[<Struct; NoEquality; NoComparison>]
+type VarSerial = VarSerial of Serial
 
 /// Serial number of functions.
 [<Struct; NoEquality; NoComparison>]

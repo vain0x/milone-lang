@@ -50,7 +50,7 @@ type ValueSymbol =
 
 let private valueSymbolToSerial symbol =
   match symbol with
-  | VarSymbol s -> s
+  | VarSymbol (VarSerial s) -> s
   | FunSymbol (FunSerial s) -> s
   | VariantSymbol (VariantSerial s) -> s
 
@@ -135,8 +135,8 @@ type ScopeCtx =
 
     Variants: AssocMap<VariantSerial, VariantDef>
 
-    /// Variable serial to let-depth map.
-    VarDepths: AssocMap<VarSerial, LetDepth>
+    /// Serial of value (variable/fun/variant) to let-depth map.
+    VarDepths: AssocMap<Serial, LetDepth>
 
     /// Type serial to definition map.
     Tys: AssocMap<TySerial, TyDef>
@@ -165,7 +165,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
 
   { Serial = serial
     NameMap = nameMap
-    Vars = mapEmpty intCmp
+    Vars = mapEmpty varSerialCmp
     Funs = mapEmpty funSerialCmp
     Variants = mapEmpty variantSerialCmp
     VarDepths = mapEmpty intCmp
@@ -196,9 +196,7 @@ let private findTy tySerial (scopeCtx: ScopeCtx) =
   scopeCtx.Tys |> mapFind tySerial
 
 /// Defines a variable, without adding to any scope.
-let private addVar valueSymbol varDef (scopeCtx: ScopeCtx): ScopeCtx =
-  let varSerial = valueSymbolToSerial valueSymbol
-
+let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
   let varDef =
     match scopeCtx.Vars |> mapTryFind varSerial, varDef with
@@ -209,7 +207,7 @@ let private addVar valueSymbol varDef (scopeCtx: ScopeCtx): ScopeCtx =
       Vars = scopeCtx.Vars |> mapAdd varSerial varDef
       VarDepths =
         scopeCtx.VarDepths
-        |> mapAdd varSerial scopeCtx.LetDepth }
+        |> mapAdd (varSerialToInt varSerial) scopeCtx.LetDepth }
 
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
@@ -322,10 +320,10 @@ let private openModule moduleSerial (scopeCtx: ScopeCtx) =
   scopeCtx
 
 /// Defines a variable in the local scope.
-let private addLocalVar valueSymbol varDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private addLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
-  |> addVar valueSymbol varDef
-  |> importVar valueSymbol
+  |> addVar varSerial varDef
+  |> importVar (VarSymbol varSerial)
 
 /// Defines a type in the local scope.
 let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
@@ -398,8 +396,11 @@ let private resolvePatAsScope pat scopeCtx =
       // A.B.C (= (A.B).C) case
       failwith "unimpl"
 
-  | HRefPat (serial, _, _) ->
-      let name = scopeCtx |> findName serial
+  | HRefPat (varSerial, _, _) ->
+      let name =
+        let (VarSerial serial) = varSerial
+        scopeCtx |> findName serial
+
       scopeCtx |> resolveLocalTyName name
 
   | _ -> None
@@ -411,8 +412,10 @@ let private resolveExprAsScope expr scopeCtx =
       // A.B.C (= (A.B).C) case
       failwith "unimpl"
 
-  | HRefExpr (serial, _, _) ->
-      let name = scopeCtx |> findName serial
+  | HRefExpr (varSerial, _, _) ->
+      let name =
+        scopeCtx |> findName (varSerialToInt varSerial)
+
       scopeCtx |> resolveLocalTyName name
 
   | _ -> None
@@ -656,16 +659,18 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         assert false
         pat, ctx
 
-    | HRefPat (serial, ty, loc) ->
-        let name = ctx |> findName serial
+    | HRefPat (varSerial, ty, loc) ->
+        let name =
+          ctx |> findName (varSerialToInt varSerial)
+
         match ctx |> resolveLocalVarName name with
         | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
 
         | _ ->
             let ctx =
               ctx
-              |> addLocalVar (VarSymbol serial) (VarDef(name, StaticSM, ty, loc))
-              |> addVarToModule vis (VarSymbol serial)
+              |> addLocalVar varSerial (VarDef(name, StaticSM, ty, loc))
+              |> addVarToModule vis (VarSymbol varSerial)
 
             pat, ctx
 
@@ -682,15 +687,16 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let items, ctx = (items, ctx) |> stMap (goPat vis)
         HTuplePat(items, ty, loc), ctx
 
-    | HAsPat (pat, serial, loc) ->
-        let name = ctx |> findName serial
+    | HAsPat (pat, varSerial, loc) ->
+        let name =
+          ctx |> findName (varSerialToInt varSerial)
 
         let ctx =
           ctx
-          |> addLocalVar (VarSymbol serial) (VarDef(name, StaticSM, noTy, loc))
+          |> addLocalVar varSerial (VarDef(name, StaticSM, noTy, loc))
 
         let pat, ctx = (pat, ctx) |> goPat vis
-        HAsPat(pat, serial, loc), ctx
+        HAsPat(pat, varSerial, loc), ctx
 
     | HAnnoPat (pat, ty, loc) ->
         let pat, ctx = (pat, ctx) |> goPat vis
@@ -748,10 +754,11 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HNonePat _
   | HSomePat _ -> pat, ctx
 
-  | HRefPat (varSerial, ty, loc) when ctx |> findName varSerial = "_" -> HDiscardPat(ty, loc), ctx
+  | HRefPat (varSerial, ty, loc) when ctx |> findName (varSerialToInt varSerial) = "_" -> HDiscardPat(ty, loc), ctx
 
   | HRefPat (varSerial, ty, loc) ->
-      let name = ctx |> findName varSerial
+      let name =
+        ctx |> findName (varSerialToInt varSerial)
 
       match ctx |> resolveLocalVarName name with
       | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
@@ -763,10 +770,9 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
           | "Some" -> HSomePat(ty, loc), ctx
 
           | _ ->
-              let varDef = VarDef(name, AutoSM, ty, loc)
-
               let ctx =
-                ctx |> addLocalVar (VarSymbol varSerial) varDef
+                ctx
+                |> addLocalVar varSerial (VarDef(name, AutoSM, ty, loc))
 
               HRefPat(varSerial, ty, loc), ctx
 
@@ -776,6 +782,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
         | Some symbol ->
             ctx
             |> resolveScopedVarName (tySymbolToSerial symbol) r
+
         | None -> None
 
       match varSerial with
@@ -805,16 +812,16 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       let pats, ctx = (pats, ctx) |> stMap nameResPat
       HTuplePat(pats, tupleTy, loc), ctx
 
-  | HAsPat (pat, serial, loc) ->
-      let name = ctx |> findName serial
-
-      let varDef = VarDef(name, AutoSM, noTy, loc)
+  | HAsPat (pat, varSerial, loc) ->
+      let name =
+        ctx |> findName (varSerialToInt varSerial)
 
       let ctx =
-        ctx |> addLocalVar (VarSymbol serial) varDef
+        ctx
+        |> addLocalVar varSerial (VarDef(name, AutoSM, noTy, loc))
 
       let pat, ctx = (pat, ctx) |> nameResPat
-      HAsPat(pat, serial, loc), ctx
+      HAsPat(pat, varSerial, loc), ctx
 
   | HAnnoPat (pat, ty, loc) ->
       let ty, ctx = ctx |> resolveTy ty loc
@@ -836,12 +843,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HLitExpr _
   | HPrimExpr _ -> expr, ctx
 
-  | HRefExpr (serial, ty, loc) ->
+  | HRefExpr (varSerial, ty, loc) ->
       let doArm () =
-        let name = ctx |> findName serial
+        let name =
+          ctx |> findName (varSerialToInt varSerial)
+
         match ctx |> resolveLocalVarName name with
         | Some (VarSymbol serial) -> HRefExpr(serial, ty, loc), ctx
-        | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc), ctx
+        | Some (FunSymbol serial) -> HFunExpr(serial, ty, loc), ctx
         | Some (VariantSymbol serial) -> HVariantExpr(serial, ty, loc), ctx
 
         | None ->
@@ -889,7 +898,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         // FIXME: Patchwork for tests to pass
         match l, r with
-        | HRefExpr (serial, _, _), "getSlice" when ctx |> findName serial = "String" ->
+        | HRefExpr (varSerial, _, _), "getSlice" when ctx
+                                                      |> findName (varSerialToInt varSerial) = "String" ->
             // NOTE: Actually this functions doesn't exist in the F# standard library.
             HPrimExpr(HPrim.StrGetSlice, ty, loc), ctx
 

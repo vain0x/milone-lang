@@ -193,7 +193,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   refExpr, funSerial, ctx
 
 let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
-  let serial = ctx.Serial + 1
+  let serial = VarSerial(ctx.Serial + 1)
 
   let ctx =
     { ctx with

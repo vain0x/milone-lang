@@ -93,17 +93,17 @@ let private takeDecls (ctx: MirCtx) =
   List.rev ctx.Decls, { ctx with Decls = [] }
 
 let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
-  let serial = (ctx.Serial) + 1
+  let varSerial = VarSerial(ctx.Serial + 1)
 
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> mapAdd serial (VarDef(name, AutoSM, ty, loc)) }
+          |> mapAdd varSerial (VarDef(name, AutoSM, ty, loc)) }
 
-  let refExpr = MRefExpr(serial, ty, loc)
-  refExpr, serial, ctx
+  let refExpr = MRefExpr(varSerial, ty, loc)
+  refExpr, varSerial, ctx
 
 let private letFreshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let refExpr, serial, ctx = freshVar ctx name ty loc

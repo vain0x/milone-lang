@@ -250,7 +250,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
   | AIdentPat (name, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd name
       let loc = toLoc docId pos
-      HRefPat(serial, noTy, loc), nameCtx
+      HRefPat(VarSerial serial, noTy, loc), nameCtx
 
   | AListPat ([], pos) ->
       let loc = toLoc docId pos
@@ -292,7 +292,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
       let pat, nameCtx = (pat, nameCtx) |> athPat docId
 
       let loc = toLoc docId pos
-      HAsPat(pat, serial, loc), nameCtx
+      HAsPat(pat, VarSerial serial, loc), nameCtx
 
   | AAnnoPat (pat, ty, pos) ->
       let pat, nameCtx = (pat, nameCtx) |> athPat docId
@@ -324,7 +324,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
       // NOTE: Work in a local function to reduce the size of stack frames of `athExpr`.
       let doArm () =
         let serial, nameCtx = nameCtx |> nameCtxAdd name
-        HRefExpr(serial, noTy, loc), nameCtx
+        HRefExpr(VarSerial serial, noTy, loc), nameCtx
 
       doArm ()
 

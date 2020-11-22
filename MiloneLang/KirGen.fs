@@ -208,7 +208,8 @@ let private freshFunSerial (ctx: KirGenCtx): FunSerial * KirGenCtx =
   FunSerial serial, ctx
 
 let private newVar hint ty loc (ctx: KirGenCtx) =
-  let varSerial, ctx = ctx |> freshSerial
+  let serial, ctx = ctx |> freshSerial
+  let varSerial = VarSerial serial
 
   let ctx =
     { ctx with

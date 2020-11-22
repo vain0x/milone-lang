@@ -59,7 +59,7 @@ let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
 let private freshVar (ctx: TyCtx) hint ty loc =
-  let varSerial = ctx.Serial + 1
+  let varSerial = VarSerial(ctx.Serial + 1)
 
   let ctx =
     { ctx with
@@ -805,7 +805,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       |> mapFold (fun (acc, ctx: TyCtx) varSerial varDef ->
            let ctx =
              { ctx with
-                 LetDepth = scopeCtx.VarDepths |> mapFind varSerial }
+                 LetDepth =
+                   scopeCtx.VarDepths
+                   |> mapFind (varSerialToInt varSerial) }
 
            let varDef, ctx =
              match varDef with
@@ -815,7 +817,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
            let acc = acc |> mapAdd varSerial varDef
 
-           acc, ctx) (mapEmpty intCmp, ctx)
+           acc, ctx) (mapEmpty varSerialCmp, ctx)
 
     { ctx with Vars = vars }
 

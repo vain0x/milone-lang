@@ -14,8 +14,14 @@ let private deeper indent = indent + "    "
 
 let private getVarName varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapTryFind varSerial with
-  | None -> "UNDEFINED_VAR_" + string varSerial
-  | Some varDef -> varDefToName varDef + "_" + string varSerial
+  | None ->
+      "UNDEFINED_VAR_"
+      + string (varSerialToInt varSerial)
+
+  | Some varDef ->
+      varDefToName varDef
+      + "_"
+      + string (varSerialToInt varSerial)
 
 let private getFunName funSerial (ctx: KirGenCtx) =
   match ctx.Funs |> mapTryFind funSerial with
@@ -112,7 +118,10 @@ let private tyToDebugString ty ctx =
 
 let private kdVarAsTy varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapTryFind varSerial with
-  | None -> "/* ?" + string varSerial + " */ unknown"
+  | None ->
+      "/* ?"
+      + string (varSerialToInt varSerial)
+      + " */ unknown"
   | Some (VarDef (_, _, ty, _)) -> tyToDebugString ty ctx
 
 // -----------------------------------------------

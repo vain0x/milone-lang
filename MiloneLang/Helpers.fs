@@ -543,6 +543,13 @@ let tyDefToName tyDef =
 // Variable definitions (HIR)
 // -----------------------------------------------
 
+let varSerialToInt (VarSerial serial) = serial
+
+let varSerialCmp l r =
+  let (VarSerial l) = l
+  let (VarSerial r) = r
+  intCmp l r
+
 let funSerialCmp l r =
   let (FunSerial l) = l
   let (FunSerial r) = r

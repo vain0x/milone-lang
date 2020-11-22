@@ -24,7 +24,7 @@ type private ValueSymbol =
 let private valueSymbolCmp l r =
   let encode symbol =
     match symbol with
-    | VarSymbol varSerial -> varSerial
+    | VarSymbol (VarSerial serial) -> serial
     | FunSymbol (FunSerial serial) -> serial
     | VariantSymbol (VariantSerial serial) -> serial
 
@@ -380,10 +380,10 @@ let private genRecordTyDef ctx tySerial _fields =
 // Naming
 // -----------------------------------------------
 
-let private getUniqueVarName (ctx: CirCtx) serial =
-  match ctx.ValueUniqueNames |> mapTryFind (VarSymbol serial) with
+let private getUniqueVarName (ctx: CirCtx) varSerial =
+  match ctx.ValueUniqueNames |> mapTryFind (VarSymbol varSerial) with
   | Some name -> name
-  | None -> failwithf "Never: Unknown value-level identifier serial %d" serial
+  | None -> failwithf "Never: Unknown var serial=%s" (objToString varSerial)
 
 let private getUniqueFunName (ctx: CirCtx) funSerial =
   match ctx.ValueUniqueNames |> mapTryFind (FunSymbol funSerial) with
