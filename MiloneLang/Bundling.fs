@@ -1,8 +1,9 @@
-/// ## Module Bundling
+/// # Bundling
 ///
-/// Resolves dependencies and merges modules into single HIR expression.
+/// Bundles modules. Resolves dependencies over modules
+/// and merges modules into single HIR expression.
 ///
-/// ### `open` statement
+/// ## `open` statements as dependency specification
 ///
 /// In F#, a project file (.fsproj) describes the member modules, their ordering
 /// and external project/package references.
@@ -18,7 +19,7 @@
 /// provided by the caller, to load a module.
 /// See `Cli.fs` for its implementation.
 ///
-/// ### Dependency Resolution Algorithm
+/// ## Dependency Resolution Algorithm
 ///
 /// Dependency resolution is just a topological sort.
 ///
@@ -86,37 +87,11 @@ let private findOpenModules expr =
        | projectName :: moduleName :: _ -> Some(projectName, moduleName, loc)
        | _ -> None)
 
-/// Insert the second expression to the bottom of the first expression.
-/// This is bad way because of variable capturing issues and program size/depth issue.
-let spliceExpr firstExpr secondExpr =
-  let rec go expr =
-    match expr with
-    | HLetValExpr (vis, pat, init, next, ty, loc) ->
-        let next = go next
-        HLetValExpr(vis, pat, init, next, ty, loc)
-    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, loc) ->
-        let next = go next
-        HLetFunExpr(serial, vis, isMainFun, args, body, next, ty, loc)
-    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
-        let rec goLast exprs =
-          match exprs with
-          | [] -> [ secondExpr ]
-          | [ lastExpr ] -> [ go lastExpr ]
-          | x :: xs -> x :: goLast xs
-
-        let exprs = goLast exprs
-        HInfExpr(InfOp.Semi, exprs, ty, loc)
-    | HModuleExpr (ident, body, next, loc) ->
-        let next = go next
-        HModuleExpr(ident, body, next, loc)
-    | _ -> hxSemi [ expr; secondExpr ] noLoc
-
-  go firstExpr
-
 // -----------------------------------------------
 // BundleCtx
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type BundleHost =
   {
     /// Requests the host to load a module.
@@ -124,6 +99,7 @@ type BundleHost =
     /// The host should locate the module and retrieve its source code, tokenize and parse if exists.
     FetchModule: string -> string -> (DocId * ARoot * (string * Pos) list) option }
 
+[<NoEquality; NoComparison>]
 type private BundleCtx =
   { NameCtx: NameCtx
 

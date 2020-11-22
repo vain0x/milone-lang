@@ -39,17 +39,6 @@ let stOptionMap f (x, ctx) =
       Some x, ctx
   | None -> None, ctx
 
-/// Maps over a list, collecting things, mutating context.
-let exMap f (xs, acc, ctx) =
-  let rec go ys xs acc ctx =
-    match xs with
-    | [] -> List.rev ys, acc, ctx
-    | x :: xs ->
-        let y, acc, ctx = f (x, acc, ctx)
-        go (y :: ys) xs acc ctx
-
-  go [] xs acc ctx
-
 // -----------------------------------------------
 // Pair
 // -----------------------------------------------
@@ -407,29 +396,7 @@ let strEscape (str: string) =
 // Position
 // -----------------------------------------------
 
-/// No position information. Should be fixed.
-let noPos = -1, -1
-
-let posX ((_, x): Pos) = x
-
-let posY ((y, _): Pos) = y
-
-let posIsSameRow first second = posY first = posY second
-
-let posIsSameColumn first second = posX first = posX second
-
-/// Gets if `secondPos` is inside of the block of `firstPos`.
-let posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX secondPos
-
-let posAddX dx ((y, x): Pos) = y, x + dx
-
-let posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
-  intMax firstY secondY, intMax firstX secondX
-
 let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
-
-let posCmp (firstY, firstX) (secondY, secondX) =
-  if firstY <> secondY then intCmp firstY secondY else intCmp firstX secondX
 
 // -----------------------------------------------
 // Location
@@ -445,119 +412,11 @@ let locToString ((docId, y, x): Loc) =
   + ":"
   + string (x + 1)
 
-let locCmp (firstDoc, firstY, firstX) (secondDoc, secondY, secondX) =
-  let c = strCmp firstDoc secondDoc
-  if c <> 0 then
-    c
-  else
-
-  if firstY <> secondY then
-    intCmp firstY secondY
-  else
-    intCmp firstX secondX
-
-// -----------------------------------------------
-// Token
-// -----------------------------------------------
-
-/// Gets if a token is in the first set of expressions/patterns,
-/// i.e. whether it can be the first token of an expression or pattern.
-let tokenIsExprOrPatFirst (token: Token) =
-  match token with
-  | IntToken _
-  | CharToken _
-  | StrToken _
-  | IdentToken _
-  | LeftParenToken
-  | LeftBracketToken
-  | LeftBraceToken
-  | FalseToken
-  | TrueToken -> true
-
-  | _ -> false
-
-/// Gets if a token is in the first set of expressions.
-let tokenIsExprFirst (token: Token) =
-  match token with
-  | _ when tokenIsExprOrPatFirst token -> true
-
-  | MinusToken
-  | IfToken
-  | MatchToken
-  | FunToken
-  | DoToken
-  | LetToken
-  | TypeToken
-  | OpenToken -> true
-
-  | _ -> false
-
-/// In the first set of arguments?
-let tokenIsArgFirst (token: Token) =
-  match token with
-  | MinusToken -> false
-
-  | _ -> tokenIsExprFirst token
-
-let tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
-
-let tokenAsVis token =
-  match token with
-  | PrivateToken -> Some PrivateVis
-  | InternalToken
-  | PublicToken -> Some PublicVis
-
-  | _ -> None
-
-// -----------------------------------------------
-// Bp
-// -----------------------------------------------
-
-let bpNext bp =
-  match bp with
-  | OrBp -> AndBp
-
-  | AndBp -> CmpBp
-
-  | CmpBp -> PipeBp
-
-  | PipeBp -> ConsBp
-
-  | ConsBp -> AddBp
-
-  | AddBp -> MulBp
-
-  | MulBp
-  | PrefixBp -> PrefixBp
-
-// -----------------------------------------------
-// APat
-// -----------------------------------------------
-
-let apFalse loc = ALitPat(litFalse, loc)
-
-let apTrue loc = ALitPat(litTrue, loc)
-
-// -----------------------------------------------
-// AExpr
-// -----------------------------------------------
-
-let axUnit loc = ATupleExpr([], loc)
-
-let axFalse loc = ALitExpr(litFalse, loc)
-
-let axTrue loc = ALitExpr(litTrue, loc)
-
-let axNil loc = AListExpr([], loc)
-
-let axApp3 f x1 x2 x3 loc =
-  let app x f = ABinaryExpr(AppBinary, f, x, loc)
-  f |> app x1 |> app x2 |> app x3
-
-/// `not x` ==> `x = false`
-let axNot arg loc =
-  let falseExpr = axFalse loc
-  ABinaryExpr(EqualBinary, arg, falseExpr, loc)
+let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
+  let c = strCmp lDoc rDoc
+  if c <> 0 then c
+  else if ly <> ry then intCmp ly ry
+  else intCmp lx rx
 
 // -----------------------------------------------
 // DumpTree (for debugging)
@@ -629,9 +488,9 @@ let dumpTreeToString (node: DumpTree) =
 
 let nameCtxEmpty () = NameCtx(mapEmpty intCmp, 0)
 
-let nameCtxAdd ident (NameCtx (map, serial)) =
+let nameCtxAdd name (NameCtx (map, serial)) =
   let serial = serial + 1
-  let map = map |> mapAdd serial ident
+  let map = map |> mapAdd serial name
   serial, NameCtx(map, serial)
 
 // -----------------------------------------------
@@ -663,59 +522,28 @@ let tyUnit = tyTuple []
 
 let tyRef serial tys = AppTy(RefTyCtor serial, tys)
 
-let tyPrimFromIdent ident tys loc =
-  match ident, tys with
-  | "unit", [] -> tyUnit
-
-  | "bool", [] -> tyBool
-
-  | "int", [] -> tyInt
-
-  | "uint", [] -> tyUInt
-
-  | "char", [] -> tyChar
-
-  | "string", [] -> tyStr
-
-  | "obj", [] -> tyObj
-
-  | "option", [ itemTy ] ->
-      // FIXME: option is just an alias of list for now
-      tyList itemTy
-
-  | "list", [ itemTy ] -> tyList itemTy
-
-  | _ ->
-      printfn "#error tyPrimFromIdent ident=%s loc=%s" ident (locToString loc)
-      ErrorTy loc
-
-let rec tyToArity ty =
-  match ty with
-  | AppTy (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty
-  | _ -> 0
-
 // -----------------------------------------------
 // Type definitions (HIR)
 // -----------------------------------------------
 
-let tyDefToIdent tyDef =
+let tyDefToName tyDef =
   match tyDef with
-  | MetaTyDef (ident, _, _) -> ident
-  | UniversalTyDef (ident, _, _) -> ident
-  | SynonymTyDef (ident, _, _, _) -> ident
-  | UnionTyDef (ident, _, _) -> ident
-  | RecordTyDef (ident, _, _) -> ident
-  | ModuleTyDef (ident, _) -> ident
+  | MetaTyDef (name, _, _) -> name
+  | UniversalTyDef (name, _, _) -> name
+  | SynonymTyDef (name, _, _, _) -> name
+  | UnionTyDef (name, _, _) -> name
+  | RecordTyDef (name, _, _) -> name
+  | ModuleTyDef (name, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
 // -----------------------------------------------
 
-let varDefToIdent varDef =
+let varDefToName varDef =
   match varDef with
-  | VarDef (ident, _, _, _) -> ident
-  | FunDef (ident, _, _, _) -> ident
-  | VariantDef (ident, _, _, _, _, _) -> ident
+  | VarDef (name, _, _, _) -> name
+  | FunDef (name, _, _, _) -> name
+  | VariantDef (name, _, _, _, _, _) -> name
 
 // -----------------------------------------------
 // Literals
@@ -876,42 +704,9 @@ let primToTySpec prim =
   | HPrim.Printfn
   | HPrim.NativeFun _ -> poly (meta 1) []
 
-let primToArity ty prim =
-  match prim with
-  | HPrim.Nil
-  | HPrim.OptionNone -> 0
-  | HPrim.OptionSome
-  | HPrim.Not
-  | HPrim.Exit
-  | HPrim.Assert
-  | HPrim.Box
-  | HPrim.Unbox
-  | HPrim.StrLength
-  | HPrim.Char
-  | HPrim.Int
-  | HPrim.UInt
-  | HPrim.String
-  | HPrim.InRegion -> 1
-  | HPrim.Add
-  | HPrim.Sub
-  | HPrim.Mul
-  | HPrim.Div
-  | HPrim.Mod
-  | HPrim.Eq
-  | HPrim.Lt
-  | HPrim.Cons
-  | HPrim.Index -> 2
-  | HPrim.StrGetSlice -> 3
-  | HPrim.Printfn -> ty |> tyToArity
-  | HPrim.NativeFun (_, arity) -> arity
-
 // -----------------------------------------------
 // Patterns (HIR)
 // -----------------------------------------------
-
-let patUnit loc = HTuplePat([], tyUnit, loc)
-
-let patNil itemTy loc = HNilPat(itemTy, loc)
 
 let rec patExtract (pat: HPat): Ty * Loc =
   match pat with
@@ -943,7 +738,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
     | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
     | HVariantPat (variantSerial, ty, a) -> HVariantPat(variantSerial, f ty, g a)
-    | HNavPat (pat, ident, ty, a) -> HNavPat(go pat, ident, f ty, g a)
+    | HNavPat (l, r, ty, a) -> HNavPat(go l, r, f ty, g a)
     | HCallPat (callee, args, ty, a) -> HCallPat(go callee, List.map go args, f ty, g a)
     | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
     | HTuplePat (itemPats, ty, a) -> HTuplePat(List.map go itemPats, f ty, g a)
@@ -972,9 +767,7 @@ let patNormalize pat =
     | HNilPat _
     | HNonePat _
     | HSomePat _ -> [ pat ]
-    | HNavPat (pat, ident, ty, loc) ->
-        go pat
-        |> List.map (fun pat -> HNavPat(pat, ident, ty, loc))
+    | HNavPat (l, r, ty, loc) -> go l |> List.map (fun l -> HNavPat(l, r, ty, loc))
     | HCallPat (callee, [ arg ], ty, loc) ->
         go callee
         |> List.collect (fun callee ->
@@ -1088,16 +881,16 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 
         let fields =
           fields
-          |> List.map (fun (ident, init, a) -> ident, go init, g a)
+          |> List.map (fun (name, init, a) -> name, go init, g a)
 
         HRecordExpr(baseOpt, fields, f ty, g a)
 
-    | HMatchExpr (target, arms, ty, a) ->
+    | HMatchExpr (cond, arms, ty, a) ->
         let arms =
           arms
           |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-        HMatchExpr(go target, arms, f ty, g a)
+        HMatchExpr(go cond, arms, f ty, g a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
     | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, List.map go args, f resultTy, g a)
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
@@ -1105,7 +898,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
         HLetFunExpr(serial, vis, isMainFun, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
-    | HModuleExpr (ident, body, next, a) -> HModuleExpr(ident, go body, go next, g a)
+    | HModuleExpr (name, body, next, a) -> HModuleExpr(name, go body, go next, g a)
     | HErrorExpr (error, a) -> HErrorExpr(error, g a)
 
   go expr
@@ -1118,48 +911,36 @@ let exprToLoc expr =
   let _, loc = exprExtract expr
   loc
 
-// -----------------------------------------------
-// Term (KIR)
-// -----------------------------------------------
+/// Insert the second expression to the bottom of the first expression.
+/// This is bad way because of variable capturing issues and program size/depth issue.
+let spliceExpr firstExpr secondExpr =
+  let rec go expr =
+    match expr with
+    | HLetValExpr (vis, pat, init, next, ty, loc) ->
+        let next = go next
+        HLetValExpr(vis, pat, init, next, ty, loc)
+    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, loc) ->
+        let next = go next
+        HLetFunExpr(serial, vis, isMainFun, args, body, next, ty, loc)
+    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
+        let rec goLast exprs =
+          match exprs with
+          | [] -> [ secondExpr ]
+          | [ lastExpr ] -> [ go lastExpr ]
+          | x :: xs -> x :: goLast xs
 
-let kTermToTy (term: KTerm): Ty =
-  match term with
-  | KLitTerm (lit, _) -> litToTy lit
+        let exprs = goLast exprs
+        HInfExpr(InfOp.Semi, exprs, ty, loc)
+    | HModuleExpr (name, body, next, loc) ->
+        let next = go next
+        HModuleExpr(name, body, next, loc)
+    | _ -> hxSemi [ expr; secondExpr ] noLoc
 
-  | KVarTerm (_, ty, _)
-  | KFunTerm (_, ty, _)
-  | KVariantTerm (_, ty, _) -> ty
-
-  | KTagTerm _ -> tyInt
-
-  | KLabelTerm (_, ty, _) -> ty
-
-  | KNilTerm (itemTy, _)
-  | KNoneTerm (itemTy, _) -> tyList itemTy
-
-  | KUnitTerm _ -> tyUnit
-
-// -----------------------------------------------
-// Binary Operators (MIR)
-// -----------------------------------------------
-
-let mOpIsAdd op =
-  match op with
-  | MAddBinary -> true
-
-  | _ -> false
-
-let opIsComparison op =
-  match op with
-  | MEqualBinary
-  | MLessBinary -> true
-  | _ -> false
+  go firstExpr
 
 // -----------------------------------------------
 // Expressions (MIR)
 // -----------------------------------------------
-
-let mxNot expr loc = MUnaryExpr(MNotUnary, expr, tyBool, loc)
 
 let mexprExtract expr =
   match expr with
@@ -1172,20 +953,7 @@ let mexprExtract expr =
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
 
-let mexprToTy expr =
-  let ty, _ = mexprExtract expr
-  ty
-
-// -----------------------------------------------
-// Statements (MIR)
-// -----------------------------------------------
-
-let mtAbort loc =
-  MExitTerminator(MLitExpr(IntLit 1, loc))
-
-let msGotoUnless pred label loc =
-  let notPred = mxNot pred loc
-  MTerminatorStmt(MGotoIfTerminator(notPred, label), loc)
+let mexprToTy expr = expr |> mexprExtract |> fst
 
 // -----------------------------------------------
 // Expression sugaring (MIR)
@@ -1298,12 +1066,12 @@ let logToString tyDisplay loc log =
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%s'" loc (tyDisplay ty)
 
-  | Log.RedundantFieldError (recordIdent, fieldIdent) ->
-      sprintf "%s The field '%s' is redundant for record '%s'." loc fieldIdent recordIdent
+  | Log.RedundantFieldError (recordName, fieldName) ->
+      sprintf "%s The field '%s' is redundant for record '%s'." loc fieldName recordName
 
-  | Log.MissingFieldsError (recordIdent, fieldIdents) ->
-      let fields = fieldIdents |> strJoin ", "
+  | Log.MissingFieldsError (recordName, fieldNames) ->
+      let fields = fieldNames |> strJoin ", "
 
-      sprintf "%s Record '%s' must have fields: '%s'." loc recordIdent fields
+      sprintf "%s Record '%s' must have fields: '%s'." loc recordName fields
 
   | Log.Error msg -> loc + " " + msg

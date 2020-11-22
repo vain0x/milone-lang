@@ -8,10 +8,12 @@ module rec MiloneLang.TreeMap
 // Nodes
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type TreeMapColor =
   | R
   | B
 
+[<NoEquality; NoComparison>]
 type TreeMapRawNode =
   | E
   | T of TreeMapColor * left: TreeMapRawNode * keyValuePair: obj * right: TreeMapRawNode

@@ -105,11 +105,11 @@ next_6:;
 end_match_4:;
     int switch_;
     switch ((struct ApiResponse_){.tag = ARCancel_}.tag) {
-       case ARCancel_:
-          goto clause_8;
+        case ARCancel_:
+            goto clause_8;
 
-       default:
-          goto clause_9;
+        default:
+            goto clause_9;
     }
 clause_8:;
     switch_ = 0;
@@ -159,14 +159,14 @@ end_match_10:;
     struct Status_ statusOk_ = (struct Status_){.tag = Ok_1};
     int switch_1;
     switch ((struct Status_){.tag = Ok_1}.tag) {
-       case Ok_1:
-          goto clause_17;
+        case Ok_1:
+            goto clause_17;
 
-       case Err_:
-          goto clause_18;
+        case Err_:
+            goto clause_18;
 
-       default:
-          exit(1);
+        default:
+            exit(1);
     }
 clause_17:;
     switch_1 = 0;

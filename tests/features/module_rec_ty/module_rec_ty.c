@@ -30,11 +30,11 @@ int main() {
     (*(((struct ObjectList**)box_))) = list_;
     int switch_;
     switch ((struct UnionX_){.tag = VariantY_}.tag) {
-       case VariantX_:
-          goto clause_2;
+        case VariantX_:
+            goto clause_2;
 
-       default:
-          goto clause_3;
+        default:
+            goto clause_3;
     }
 clause_2:;
     milone_assert(0, 18, 4);

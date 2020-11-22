@@ -4,6 +4,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.KirGen
 
+[<NoEquality; NoComparison>]
 type private KirPropagateCtx =
   { VarDefs: AssocMap<VarSerial, KVarDef>
     VarUses: AssocMap<VarSerial, int> }

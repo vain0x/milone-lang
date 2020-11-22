@@ -21,12 +21,12 @@ int main();
 int isZeroOrOne_(int x_) {
     int switch_;
     switch (x_) {
-       case 0:
-       case 1:
-          goto clause_2;
+        case 0:
+        case 1:
+            goto clause_2;
 
-       default:
-          goto clause_3;
+        default:
+            goto clause_3;
     }
 clause_2:;
     switch_ = 1;

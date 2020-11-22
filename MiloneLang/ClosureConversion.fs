@@ -1,14 +1,16 @@
-/// ## Declosure: Closure conversion
+/// # ClosureConversion
 ///
-/// Performs closure conversion to make all functions be context-free.
+/// Performs closure conversion (or so-called lambda lifting?)
+/// so that all functions are closed i.e. not using outer local variables.
 ///
-/// Functions can use local variables outside of their body.
-/// Call these variables *captured by the function*.
+/// In milone-lang syntax, functions are allowed to use local variables
+/// outside of their body. Such variables are *captured* by the function.
+/// (They are also called *upvars*.)
 ///
-/// This stage calculates the set of captured variables for functions
+/// This stage calculates the set of captured variables for each function
 /// and transforms them to take captured variables as additional arguments.
 ///
-/// Consists of three steps:
+/// This stage consists of the three steps:
 ///
 /// - Reference collection
 /// - Reference closure
@@ -37,12 +39,13 @@
 /// Perform a closure operation to the relation of references
 /// to make the Refs be *transitive*.
 ///
-/// See also `ccCtxClosureRefs`.
+/// See also `closureRefs` in implementation.
 ///
 /// ## Transformation
 ///
 /// Here the set of captured variables can easily compute
-/// as `(Refs - Locals) - Known` using known context of functions.
+/// as `(Refs \ Locals) \ Known` using known context of functions,
+/// where `s \ t` is set difference.
 ///
 /// Three rules:
 ///
@@ -50,7 +53,7 @@
 ///   as additional arguments.
 /// - Convert a declaration of function to take captured variables
 ///   as addition arguments.
-/// - Update function definitions in the context
+/// - Update function declarations in the context
 ///   because the type of functions may change.
 ///
 /// ## Example
@@ -61,6 +64,7 @@
 ///   let file = "file.fs"
 ///   let line = 2
 ///   let get () = file, line
+///   //           ^^^^^^^^^^ captured vars
 ///   get ()
 /// ```
 ///
@@ -70,7 +74,9 @@
 ///   let file = "file.fs"
 ///   let line = 2
 ///   let get file line () = file, line // the body is now closed
-///   get file line
+///   //      ^^^^^^^^^ added
+///   get file line ()
+///   //  ^^^^^^^^^ added
 /// ```
 ///
 /// See also `let_fun_closure.fs` in tests.
@@ -80,15 +86,12 @@ open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Typing
 
-/// List of captured variables.
-/// Don't forget the case of empty.
-type Caps = (VarSerial * Ty * Loc) list
-
 // -----------------------------------------------
 // KnownCtx
 // -----------------------------------------------
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type private KnownCtx =
   { Known: AssocSet<FunSerial>
     Locals: AssocSet<VarSerial>
@@ -135,160 +138,12 @@ let private knownCtxToCapturedSerials (ctx: KnownCtx): VarSerial list =
          acc) []
 
 // -----------------------------------------------
-// CcCtx (ClosureConversionContext)
-// -----------------------------------------------
-
-type private CcCtx =
-  { Serial: Serial
-    Vars: AssocMap<VarSerial, VarDef>
-    Tys: AssocMap<TySerial, TyDef>
-    Current: KnownCtx
-    Funs: AssocMap<FunSerial, KnownCtx> }
-
-let private ccCtxFromTyCtx (tyCtx: TyCtx): CcCtx =
-  { Serial = tyCtx.Serial
-    Vars = tyCtx.Vars
-    Tys = tyCtx.Tys
-
-    Current = knownCtxEmpty ()
-    Funs = mapEmpty intCmp }
-
-let private ccCtxFeedbackToTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
-  { tyCtx with
-      Serial = ctx.Serial
-      Vars = ctx.Vars
-      Tys = ctx.Tys }
-
-let private ccCtxAddKnown funSerial (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxAddKnown funSerial }
-
-let private ccCtxAddLocal varSerial (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxAddLocal varSerial }
-
-let private ccCtxAddRef varSerial (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxAddRef varSerial }
-
-/// Called on leave function declaration to store the current known context.
-let private ccCtxStoreFunKnownCtx funSerial (ctx: CcCtx) =
-  let ctx = ctx |> ccCtxAddKnown funSerial
-
-  // Don't update in the second traversal for transformation.
-  let funs = ctx.Funs
-  if funs |> mapContainsKey funSerial then
-    ctx
-  else
-    { ctx with
-        Funs = funs |> mapAdd funSerial ctx.Current }
-
-let private ccCtxEnterFunDecl (ctx: CcCtx) =
-  { ctx with
-      Current = ctx.Current |> knownCtxEnterFunDecl }
-
-let private ccCtxLeaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
-  let ctx = ctx |> ccCtxStoreFunKnownCtx funSerial
-
-  { ctx with
-      Current =
-        ctx.Current
-        |> knownCtxLeaveFunDecl baseCtx.Current }
-
-/// Gets a list of captured variable serials for a function
-/// including referenced functions.
-let private ccCtxGetFunCapturedSerials funSerial (ctx: CcCtx) =
-  match ctx.Funs |> mapTryFind funSerial with
-  | Some knownCtx -> knownCtx |> knownCtxToCapturedSerials
-  | None -> []
-
-/// Gets a list of captured variables for a function.
-/// Doesn't include referenced functions.
-let private ccCtxGetFunCaps funSerial (ctx: CcCtx): Caps =
-  let chooseVars varSerials =
-    varSerials
-    |> List.choose (fun varSerial ->
-         match ctx.Vars |> mapTryFind varSerial with
-         | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
-
-         | _ -> None)
-
-  ctx
-  |> ccCtxGetFunCapturedSerials funSerial
-  |> chooseVars
-
-/// Extends the set of references to be transitive.
-/// E.g. a function `f` uses `g` and `g` uses `h` (and `h` uses etc.),
-///      we think `f` also uses `h`.
-let private ccCtxClosureRefs (ctx: CcCtx): CcCtx =
-  let emptySet = setEmpty intCmp
-
-  let rec closureRefs refs ccCtx (modified, visited, acc) =
-    match refs with
-    | [] -> modified, visited, acc
-
-    | varSerial :: refs when visited |> setContains varSerial -> (modified, visited, acc) |> closureRefs refs ccCtx
-
-    | varSerial :: refs ->
-        let visited = visited |> setAdd varSerial
-
-        let modified =
-          modified || (acc |> setContains varSerial |> not)
-
-        let acc = acc |> setAdd varSerial
-
-        let otherRefs =
-          ccCtx |> ccCtxGetFunCapturedSerials varSerial
-
-        (modified, visited, acc)
-        |> closureRefs otherRefs ccCtx
-        |> closureRefs refs ccCtx
-
-  let closureKnownCtx (modified, ccCtx) varSerial (knownCtx: KnownCtx) =
-    let refs = knownCtx.Refs
-    match (false, emptySet, refs)
-          |> closureRefs (refs |> setToList) ccCtx with
-    | true, _, refs ->
-        let knownCtx = { knownCtx with Refs = refs }
-        true,
-        { ccCtx with
-            Funs = ccCtx.Funs |> mapAdd varSerial knownCtx }
-
-    | false, _, _ -> modified, ccCtx
-
-  let rec closureFuns (modified, ccCtx: CcCtx) =
-    if not modified then
-      ccCtx
-    else
-      ccCtx.Funs
-      |> mapFold closureKnownCtx (false, ccCtx)
-      |> closureFuns
-
-  closureFuns (true, ctx)
-
-/// Applies the changes of function types.
-let private ccCtxUpdateFunDefs (ctx: CcCtx) =
-  let update vars varSerial (_: KnownCtx) =
-    match ctx |> ccCtxGetFunCaps varSerial with
-    | [] -> vars
-
-    | caps ->
-        match vars |> mapFind varSerial with
-        | FunDef (ident, arity, TyScheme (fvs, funTy), loc) ->
-            let funTy, arity = caps |> capsUpdateFunDef funTy arity
-            let tyScheme = TyScheme(fvs, funTy)
-            let varDef = FunDef(ident, arity, tyScheme, loc)
-            vars |> mapAdd varSerial varDef
-
-        | _ -> vars
-
-  let vars = ctx.Funs |> mapFold update ctx.Vars
-
-  { ctx with Vars = vars }
-
-// -----------------------------------------------
 // Caps
 // -----------------------------------------------
+
+/// List of captured variables.
+/// Don't forget the case of empty.
+type private Caps = (VarSerial * Ty * Loc) list
 
 /// Updates the function type to take captured variables.
 let private capsAddToFunTy tTy (caps: Caps) =
@@ -321,89 +176,242 @@ let private capsUpdateFunDef funTy arity (caps: Caps) =
   funTy, arity
 
 // -----------------------------------------------
-// Closure conversion routines
+// Context
 // -----------------------------------------------
 
-let private declosureFunExpr refVarSerial refTy refLoc ctx =
+/// Context of closure conversion.
+[<NoEquality; NoComparison>]
+type private CcCtx =
+  { Serial: Serial
+    Vars: AssocMap<VarSerial, VarDef>
+    Tys: AssocMap<TySerial, TyDef>
+    Current: KnownCtx
+    Funs: AssocMap<FunSerial, KnownCtx> }
+
+let private ofTyCtx (tyCtx: TyCtx): CcCtx =
+  { Serial = tyCtx.Serial
+    Vars = tyCtx.Vars
+    Tys = tyCtx.Tys
+
+    Current = knownCtxEmpty ()
+    Funs = mapEmpty intCmp }
+
+let private toTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
+  { tyCtx with
+      Serial = ctx.Serial
+      Vars = ctx.Vars
+      Tys = ctx.Tys }
+
+let private addKnown funSerial (ctx: CcCtx) =
+  { ctx with
+      Current = ctx.Current |> knownCtxAddKnown funSerial }
+
+let private addLocal varSerial (ctx: CcCtx) =
+  { ctx with
+      Current = ctx.Current |> knownCtxAddLocal varSerial }
+
+let private addRef varSerial (ctx: CcCtx) =
+  { ctx with
+      Current = ctx.Current |> knownCtxAddRef varSerial }
+
+/// Called on leave function declaration to store the current known context.
+let private saveKnownCtxToFun funSerial (ctx: CcCtx) =
+  let ctx = ctx |> addKnown funSerial
+
+  // Don't update in the second traversal for transformation.
+  let funs = ctx.Funs
+  if funs |> mapContainsKey funSerial then
+    ctx
+  else
+    { ctx with
+        Funs = funs |> mapAdd funSerial ctx.Current }
+
+let private enterFunDecl (ctx: CcCtx) =
+  { ctx with
+      Current = ctx.Current |> knownCtxEnterFunDecl }
+
+let private leaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
+  let ctx = ctx |> saveKnownCtxToFun funSerial
+
+  { ctx with
+      Current =
+        ctx.Current
+        |> knownCtxLeaveFunDecl baseCtx.Current }
+
+/// Gets a list of captured variable serials for a function
+/// including referenced functions.
+let private getCapturedSerials funSerial (ctx: CcCtx) =
+  match ctx.Funs |> mapTryFind funSerial with
+  | Some knownCtx -> knownCtx |> knownCtxToCapturedSerials
+  | None -> []
+
+/// Gets a list of captured variables for a function.
+/// Doesn't include referenced functions.
+let private genFunCaps funSerial (ctx: CcCtx): Caps =
+  let chooseVars varSerials =
+    varSerials
+    |> List.choose (fun varSerial ->
+         match ctx.Vars |> mapTryFind varSerial with
+         | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
+
+         | _ -> None)
+
+  ctx |> getCapturedSerials funSerial |> chooseVars
+
+/// Extends the set of references to be transitive.
+/// E.g. a function `f` uses `g` and `g` uses `h` (and `h` uses etc.),
+///      we think `f` also uses `h`.
+let private closureRefs (ctx: CcCtx): CcCtx =
+  let emptySet = setEmpty intCmp
+
+  let rec doClosureRefs refs ccCtx (modified, visited, acc) =
+    match refs with
+    | [] -> modified, visited, acc
+
+    | varSerial :: refs when visited |> setContains varSerial ->
+        (modified, visited, acc)
+        |> doClosureRefs refs ccCtx
+
+    | varSerial :: refs ->
+        let visited = visited |> setAdd varSerial
+
+        let modified =
+          modified || (acc |> setContains varSerial |> not)
+
+        let acc = acc |> setAdd varSerial
+
+        let otherRefs = ccCtx |> getCapturedSerials varSerial
+
+        (modified, visited, acc)
+        |> doClosureRefs otherRefs ccCtx
+        |> doClosureRefs refs ccCtx
+
+  let closureKnownCtx (modified, ccCtx) varSerial (knownCtx: KnownCtx) =
+    let refs = knownCtx.Refs
+    match (false, emptySet, refs)
+          |> doClosureRefs (refs |> setToList) ccCtx with
+    | true, _, refs ->
+        let knownCtx = { knownCtx with Refs = refs }
+        true,
+        { ccCtx with
+            Funs = ccCtx.Funs |> mapAdd varSerial knownCtx }
+
+    | false, _, _ -> modified, ccCtx
+
+  let rec closureFuns (modified, ccCtx: CcCtx) =
+    if not modified then
+      ccCtx
+    else
+      ccCtx.Funs
+      |> mapFold closureKnownCtx (false, ccCtx)
+      |> closureFuns
+
+  closureFuns (true, ctx)
+
+/// Applies the changes of function types.
+let private updateFunDefs (ctx: CcCtx) =
+  let update vars varSerial (_: KnownCtx) =
+    match ctx |> genFunCaps varSerial with
+    | [] -> vars
+
+    | caps ->
+        match vars |> mapFind varSerial with
+        | FunDef (name, arity, TyScheme (fvs, funTy), loc) ->
+            let funTy, arity = caps |> capsUpdateFunDef funTy arity
+            let tyScheme = TyScheme(fvs, funTy)
+            let varDef = FunDef(name, arity, tyScheme, loc)
+            vars |> mapAdd varSerial varDef
+
+        | _ -> vars
+
+  let vars = ctx.Funs |> mapFold update ctx.Vars
+
+  { ctx with Vars = vars }
+
+// -----------------------------------------------
+// Featured transformations
+// -----------------------------------------------
+
+let private ccFunExpr refVarSerial refTy refLoc ctx =
   // NOTE: No need to check whether it's a function
   //       because non-function caps are empty.
   let refExpr =
     ctx
-    |> ccCtxGetFunCaps refVarSerial
+    |> genFunCaps refVarSerial
     |> capsMakeApp refVarSerial refTy refLoc
 
   refExpr, ctx
 
-let private declosureFunDecl callee vis isMainFun args body next ty loc ctx =
+let private ccLetFunExpr callee vis isMainFun args body next ty loc ctx =
   let args, body, ctx =
     let baseCtx = ctx
-    let ctx = ctx |> ccCtxEnterFunDecl
+    let ctx = ctx |> enterFunDecl
 
-    let args, ctx = (args, ctx) |> stMap declosurePat
-    let body, ctx = (body, ctx) |> declosureExpr
+    let args, ctx = (args, ctx) |> stMap ccPat
+    let body, ctx = (body, ctx) |> ccExpr
 
-    let ctx = ctx |> ccCtxLeaveFunDecl callee baseCtx
+    let ctx = ctx |> leaveFunDecl callee baseCtx
     args, body, ctx
 
   let args =
-    ctx
-    |> ccCtxGetFunCaps callee
-    |> capsAddToFunPats args
+    ctx |> genFunCaps callee |> capsAddToFunPats args
 
-  let next, ctx = (next, ctx) |> declosureExpr
+  let next, ctx = (next, ctx) |> ccExpr
   HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc), ctx
 
-let private declosureVariantDecl ctx variant =
+let private ccVariantDecl ctx variant =
   let (_, variantSerial, _, _) = variant
-  ctx |> ccCtxAddKnown variantSerial
+  ctx |> addKnown variantSerial
 
-let private declosurePat (pat, ctx) =
+// -----------------------------------------------
+// Control
+// -----------------------------------------------
+
+let private ccPat (pat, ctx) =
   match pat with
   | HLitPat _
   | HNilPat _
   | HNonePat _
   | HSomePat _
   | HDiscardPat _
-  | HVariantPat _
-  | HNavPat _ -> pat, ctx
+  | HVariantPat _ -> pat, ctx
 
   | HRefPat (serial, _, _) ->
-      let ctx = ctx |> ccCtxAddLocal serial
+      let ctx = ctx |> addLocal serial
       pat, ctx
 
   | HConsPat (l, r, itemTy, loc) ->
-      let l, ctx = (l, ctx) |> declosurePat
-      let r, ctx = (r, ctx) |> declosurePat
+      let l, ctx = (l, ctx) |> ccPat
+      let r, ctx = (r, ctx) |> ccPat
       HConsPat(l, r, itemTy, loc), ctx
 
   | HTuplePat (items, ty, loc) ->
-      let items, ctx = (items, ctx) |> stMap declosurePat
+      let items, ctx = (items, ctx) |> stMap ccPat
       HTuplePat(items, ty, loc), ctx
 
   | HCallPat (callee, args, ty, loc) ->
-      let callee, ctx = (callee, ctx) |> declosurePat
-      let args, ctx = (args, ctx) |> stMap declosurePat
+      let callee, ctx = (callee, ctx) |> ccPat
+      let args, ctx = (args, ctx) |> stMap ccPat
       HCallPat(callee, args, ty, loc), ctx
 
   | HBoxPat (itemPat, loc) ->
-      let itemPat, ctx = (itemPat, ctx) |> declosurePat
+      let itemPat, ctx = (itemPat, ctx) |> ccPat
       HBoxPat(itemPat, loc), ctx
 
   | HAsPat (pat, serial, loc) ->
-      let ctx = ctx |> ccCtxAddLocal serial
-      let pat, ctx = (pat, ctx) |> declosurePat
+      let ctx = ctx |> addLocal serial
+      let pat, ctx = (pat, ctx) |> ccPat
       HAsPat(pat, serial, loc), ctx
 
-  | HAnnoPat (pat, ty, loc) ->
-      let pat, ctx = (pat, ctx) |> declosurePat
-      HAnnoPat(pat, ty, loc), ctx
-
   | HOrPat (first, second, ty, loc) ->
-      let first, ctx = (first, ctx) |> declosurePat
-      let second, ctx = (second, ctx) |> declosurePat
+      let first, ctx = (first, ctx) |> ccPat
+      let second, ctx = (second, ctx) |> ccPat
       HOrPat(first, second, ty, loc), ctx
 
-let private declosureExpr (expr, ctx) =
+  | HNavPat _ -> failwith "NEVER: HNavPat is resolved in NameRes."
+  | HAnnoPat _ -> failwith "NEVER: HAnnoPat is resolved in Typing."
+
+let private ccExpr (expr, ctx) =
   match expr with
   | HLitExpr _
   | HVariantExpr _
@@ -412,58 +420,51 @@ let private declosureExpr (expr, ctx) =
 
   | HRefExpr (serial, ty, loc) ->
       let doArm () =
-        let ctx = ctx |> ccCtxAddRef serial
+        let ctx = ctx |> addRef serial
         HRefExpr(serial, ty, loc), ctx
 
       doArm ()
 
   | HFunExpr (serial, refTy, refLoc) ->
       let doArm () =
-        let ctx = ctx |> ccCtxAddRef serial
-        declosureFunExpr serial refTy refLoc ctx
+        let ctx = ctx |> addRef serial
+        ccFunExpr serial refTy refLoc ctx
 
       doArm ()
 
-  | HMatchExpr (target, arms, ty, loc) ->
+  | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
-        let target, ctx = declosureExpr (target, ctx)
+        let cond, ctx = ccExpr (cond, ctx)
 
         let go ((pat, guard, body), ctx) =
-          let pat, ctx = declosurePat (pat, ctx)
-          let guard, ctx = declosureExpr (guard, ctx)
-          let body, ctx = declosureExpr (body, ctx)
+          let pat, ctx = ccPat (pat, ctx)
+          let guard, ctx = ccExpr (guard, ctx)
+          let body, ctx = ccExpr (body, ctx)
           (pat, guard, body), ctx
 
         let arms, ctx = (arms, ctx) |> stMap go
-        HMatchExpr(target, arms, ty, loc), ctx
-
-      doArm ()
-
-  | HNavExpr (l, r, ty, loc) ->
-      let doArm () =
-        let l, ctx = declosureExpr (l, ctx)
-        HNavExpr(l, r, ty, loc), ctx
+        HMatchExpr(cond, arms, ty, loc), ctx
 
       doArm ()
 
   | HInfExpr (infOp, items, ty, loc) ->
       let doArm () =
-        let items, ctx = (items, ctx) |> stMap declosureExpr
+        let items, ctx = (items, ctx) |> stMap ccExpr
         HInfExpr(infOp, items, ty, loc), ctx
 
       doArm ()
 
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
-        let pat, ctx = declosurePat (pat, ctx)
-        let body, ctx = declosureExpr (body, ctx)
-        let next, ctx = declosureExpr (next, ctx)
+        let pat, ctx = ccPat (pat, ctx)
+        let body, ctx = ccExpr (body, ctx)
+        let next, ctx = ccExpr (next, ctx)
         HLetValExpr(vis, pat, body, next, ty, loc), ctx
 
       doArm ()
 
   | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
-      declosureFunDecl callee vis isMainFun args body next ty loc ctx
+      ccLetFunExpr callee vis isMainFun args body next ty loc ctx
 
   | HTyDeclExpr (_, _, _, tyDecl, _) ->
       let doArm () =
@@ -472,35 +473,32 @@ let private declosureExpr (expr, ctx) =
         | RecordTyDecl _ -> expr, ctx
 
         | UnionTyDecl (_, variants, _) ->
-            let ctx =
-              variants |> List.fold declosureVariantDecl ctx
+            let ctx = variants |> List.fold ccVariantDecl ctx
 
             expr, ctx
 
       doArm ()
 
   | HErrorExpr (error, loc) -> failwithf "Never: %s at %A" error loc
-  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or TyElaborating"
+  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in TyElaboration"
+  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
-let declosure (expr, tyCtx: TyCtx) =
-  let ccCtx = ccCtxFromTyCtx tyCtx
+let closureConversion (expr, tyCtx: TyCtx) =
+  let ccCtx = ofTyCtx tyCtx
 
   // Traverse for reference collection.
   // NOTE: Converted expression is possibly incorrect
   //       because the set of captured variables is incomplete
   //       when to process a function reference before definition.
-  let _, ccCtx = (expr, ccCtx) |> declosureExpr
+  let _, ccCtx = (expr, ccCtx) |> ccExpr
 
   // Resolve transitive references.
-  let ccCtx = ccCtx |> ccCtxClosureRefs
+  let ccCtx = ccCtx |> closureRefs
 
   // Traverse again to transform function references.
-  let expr, ccCtx = (expr, ccCtx) |> declosureExpr
+  let expr, ccCtx = (expr, ccCtx) |> ccExpr
 
-  let tyCtx =
-    ccCtx
-    |> ccCtxUpdateFunDefs
-    |> ccCtxFeedbackToTyCtx tyCtx
+  let tyCtx = ccCtx |> updateFunDefs |> toTyCtx tyCtx
 
   expr, tyCtx

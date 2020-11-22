@@ -38,11 +38,11 @@ int typeAnnotationExprCase_(int n_1) {
 int matchExprCase_(int n_2) {
     void* switch_;
     switch (n_2) {
-       case 5:
-          goto clause_2;
+        case 5:
+            goto clause_2;
 
-       default:
-          goto clause_3;
+        default:
+            goto clause_3;
     }
 clause_2:;
     struct IntTuple1 tuple_2;

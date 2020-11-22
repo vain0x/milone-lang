@@ -19,6 +19,7 @@ let private hxIsUnboxingRef expr =
 // Context
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type private TyElaborationCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -46,10 +47,21 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
 /// This stage replaces production and consumption of records with that of tuples,
 /// sorting fields in the order of declaration.
 ///
+/// Record type:
+///
+/// ```fsharp
+/// // Assume type R = { F1: T1; F2: T2 } is defined.
+///   R
+/// //=>
+///   T1 * T2
+/// ```
+///
+/// Occurrences of record types are replaced with a tuple type,
+/// which consists of field types.
+///
 /// Record creation:
 ///
 /// ```fsharp
-/// // Assume type R = { F1: T1; F2: T2; ... } is defined.
 ///   {
 ///     F2 = t2
 ///     F1 = t1
@@ -83,10 +95,10 @@ let private buildRecordMap (ctx: TyElaborationCtx) =
        | RecordTyDef (_, fields, _) ->
            let fields =
              fields
-             |> List.map (fun (ident, ty, loc) ->
+             |> List.map (fun (name, ty, loc) ->
                   // This affects newtype variants only.
                   let ty = ty |> teTy ctx
-                  ident, ty, loc)
+                  name, ty, loc)
 
            let tupleTy =
              fields
@@ -95,13 +107,12 @@ let private buildRecordMap (ctx: TyElaborationCtx) =
 
            let fieldMap =
              fields
-             |> List.mapi (fun i (ident, ty, _) -> ident, (i, ty))
+             |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
              |> mapOfList strCmp
 
-           (tySerial, (tupleTy, fieldMap)) :: acc
+           acc |> mapAdd tySerial (tupleTy, fieldMap)
 
-       | _ -> acc) []
-  |> mapOfList intCmp
+       | _ -> acc) (mapEmpty intCmp)
 
 let private recordToTuple (ctx: TyElaborationCtx) tySerial =
   match ctx.RecordMap |> mapTryFind tySerial with
@@ -126,9 +137,9 @@ let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty l
 
   let fields =
     fields
-    |> List.map (fun (ident, init, _) ->
+    |> List.map (fun (name, init, _) ->
          let init = init |> teExpr ctx
-         let index, _ = fieldMap |> mapFind ident
+         let index, _ = fieldMap |> mapFind name
          index, init)
     |> listSort (fun (l, _) (r, _) -> intCmp l r)
 
@@ -394,9 +405,9 @@ let private teExpr (ctx: TyElaborationCtx) expr =
   | HFunExpr _
   | HPrimExpr _ -> expr |> exprMap (teTy ctx) id
 
-  | HMatchExpr (target, arms, ty, loc) ->
+  | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
-        let target = target |> teExpr ctx
+        let cond = cond |> teExpr ctx
 
         let go (pat, guard, body) =
           let pat = pat |> tePat ctx
@@ -406,7 +417,7 @@ let private teExpr (ctx: TyElaborationCtx) expr =
 
         let arms = arms |> List.map go
         let ty = ty |> teTy ctx
-        HMatchExpr(target, arms, ty, loc)
+        HMatchExpr(cond, arms, ty, loc)
 
       doArm ()
 
@@ -444,17 +455,17 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
     ctx.Vars
     |> mapMap (fun _ varDef ->
          match varDef with
-         | VarDef (ident, sm, ty, loc) ->
+         | VarDef (name, sm, ty, loc) ->
              let ty = ty |> teTy ctx
-             VarDef(ident, sm, ty, loc)
+             VarDef(name, sm, ty, loc)
 
-         | FunDef (ident, arity, TyScheme (tyArgs, ty), loc) ->
+         | FunDef (name, arity, TyScheme (tyArgs, ty), loc) ->
              let ty = ty |> teTy ctx
-             FunDef(ident, arity, TyScheme(tyArgs, ty), loc)
+             FunDef(name, arity, TyScheme(tyArgs, ty), loc)
 
-         | VariantDef (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
+         | VariantDef (name, tySerial, hasPayload, payloadTy, variantTy, loc) ->
              let payloadTy = payloadTy |> teTy ctx
-             VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc))
+             VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc))
 
   let expr = expr |> teExpr ctx
 
@@ -462,9 +473,9 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
     ctx.Tys
     |> mapMap (fun _ tyDef ->
          match tyDef with
-         | SynonymTyDef (ident, tyArgs, bodyTy, loc) ->
+         | SynonymTyDef (name, tyArgs, bodyTy, loc) ->
              let bodyTy = bodyTy |> teTy ctx
-             SynonymTyDef(ident, tyArgs, bodyTy, loc)
+             SynonymTyDef(name, tyArgs, bodyTy, loc)
 
          | _ -> tyDef)
 

@@ -15,12 +15,12 @@ let private deeper indent = indent + "    "
 let private getVarName varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapTryFind varSerial with
   | None -> "UNDEFINED_VAR_" + string varSerial
-  | Some varDef -> varDefToIdent varDef + "_" + string varSerial
+  | Some varDef -> varDefToName varDef + "_" + string varSerial
 
 let private getTyName tySerial (ctx: KirGenCtx) =
   match ctx.Tys |> mapTryFind tySerial with
   | None -> "UNDEFINED_TY_" + string tySerial
-  | Some tyDef -> tyDefToIdent tyDef
+  | Some tyDef -> tyDefToName tyDef
 
 let private kdPath path ctx =
   match path with
@@ -175,7 +175,7 @@ let private kdPrim prim =
   | KStringPrim -> "String"
   | KPrintfnPrim -> "Printfn"
   | KInRegionPrim -> "InRegion"
-  | KNativeFunPrim (ident, arity) -> ident + "/" + string arity
+  | KNativeFunPrim (name, arity) -> name + "/" + string arity
 
 let private kdPrimNode indent prim args results conts ctx =
   // basic prim operation. compute an expression and bind the result to a var, and then continue.

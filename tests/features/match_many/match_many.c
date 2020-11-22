@@ -107,8 +107,8 @@ int testNestedMatchesParseCorrectly_(int arg_3) {
     if (1) goto next_15;
     int switch_;
     switch (1) {
-       default:
-          goto clause_18;
+        default:
+            goto clause_18;
     }
 clause_18:;
     milone_assert(0, 25, 6);

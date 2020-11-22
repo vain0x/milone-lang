@@ -5,24 +5,38 @@ module rec MiloneLang.CPrinting
 open MiloneLang.Types
 open MiloneLang.Helpers
 
-let private eol = """
-"""
+let private eol = "\n"
 
-let private deeper (indent: string) = "   " + indent
+let private deeper (indent: string) = "    " + indent
 
-let private join sep f (xs, acc) =
-  let rec go acc xs =
+let private join sep xs f acc =
+  let rec go xs acc =
     match xs with
     | [] -> acc
-    | [ x ] -> f (x, acc)
-    | x :: xs ->
-        let acc = f (x, acc)
-        let acc = acc |> cons sep
-        go acc xs
+    | [ x ] -> acc |> f x
+    | x :: xs -> acc |> f x |> cons sep |> go xs
 
-  go acc xs
+  go xs acc
 
-let private opStr op =
+type private First =
+  | First
+  | NotFirst
+
+let private isFirst first =
+  match first with
+  | First -> true
+  | NotFirst -> false
+
+// -----------------------------------------------
+// Operators
+// -----------------------------------------------
+
+let private unaryToString op =
+  match op with
+  | CNotUnary -> "!"
+  | CDerefUnary -> "*"
+
+let private binaryToString op =
   match op with
   | CAddBinary -> "+"
   | CSubBinary -> "-"
@@ -36,232 +50,234 @@ let private opStr op =
   | CGreaterBinary -> ">"
   | CGreaterEqualBinary -> ">="
 
-let private cprintTyFunPtr name argTys resultTy acc =
-  let acc = cprintTy acc resultTy
+// -----------------------------------------------
+// Types
+// -----------------------------------------------
 
-  let acc =
-    acc
-    |> cons "(*"
-    |> cons name
-    |> cons ")"
-    |> cons "("
+let private cpFunPtrTy name argTys resultTy acc =
+  acc
+  |> cpTy resultTy
+  |> cons "(*"
+  |> cons name
+  |> cons ")("
+  |> join ", " argTys cpTy
+  |> cons ")"
 
-  let rec go acc argTys =
-    (argTys, acc)
-    |> join ", " (fun (argTy, acc) -> cprintTy acc argTy)
-
-  let acc = go acc argTys
-  acc |> cons ")"
-
-let private cprintTy acc ty: string list =
+let private cpTy ty acc: string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
   | CIntTy -> acc |> cons "int"
   | CUInt32Ty -> acc |> cons "uint32_t"
   | CCharTy -> acc |> cons "char"
-  | CPtrTy ty ->
-      let acc = cprintTy acc ty
-      acc |> cons "*"
-  | CFunPtrTy (argTys, resultTy) -> cprintTyFunPtr "" argTys resultTy acc
-  | CStructTy ident -> acc |> cons "struct " |> cons ident
-  | CEnumTy ident -> acc |> cons "enum " |> cons ident
+  | CPtrTy ty -> acc |> cpTy ty |> cons "*"
+  | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
+  | CStructTy name -> acc |> cons "struct " |> cons name
+  | CEnumTy name -> acc |> cons "enum " |> cons name
 
 /// `T x` or `T (*x)(..)`
-let private cprintTyWithName acc name ty =
+let private cpTyWithName name ty acc =
   match ty with
-  | CFunPtrTy (argTys, resultTy) -> cprintTyFunPtr name argTys resultTy acc
-  | _ -> cprintTy acc ty |> cons " " |> cons name
+  | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy name argTys resultTy
+  | _ -> acc |> cpTy ty |> cons " " |> cons name
 
-let private cprintParams acc ps: string list =
-  let rec go acc ps =
+let private cpParams ps acc: string list =
+  let rec go ps acc =
     match ps with
     | [] -> acc
-    | [ name, ty ] -> cprintTy acc ty |> cons " " |> cons name
+
+    | [ name, ty ] -> acc |> cpTy ty |> cons " " |> cons name
+
     | (name, ty) :: ps ->
-        let acc = cprintTy acc ty
+        acc
+        |> cpTy ty
+        |> cons " "
+        |> cons name
+        |> cons ", "
+        |> go ps
 
-        let acc =
-          acc |> cons " " |> cons name |> cons ", "
+  acc |> go ps
 
-        go acc ps
+// -----------------------------------------------
+// Literals
+// -----------------------------------------------
 
-  go acc ps
-
-let private cprintExprChar value =
+let private cpCharLit value =
   if value |> charNeedsEscaping then value |> charEscape else string value
 
-let private cprintExprStrRaw acc (value: string) =
+let private cpStrRawLit (value: string) acc =
   acc
   |> cons "\""
   |> cons (strEscape value)
   |> cons "\""
 
-let private cprintExprStrObj acc (value: string) =
-  let acc = acc |> cons "(struct String){.str = "
-  let acc = cprintExprStrRaw acc value
-
-  let acc =
-    acc
-    |> cons ", .len = "
-    |> cons (string value.Length)
-    |> cons "}"
-
+let private cpStrObjLit (value: string) acc =
   acc
+  |> cons "(struct String){.str = "
+  |> cpStrRawLit value
+  |> cons ", .len = "
+  |> cons (string value.Length)
+  |> cons "}"
 
-let private cpLit lit acc =
-  match lit with
-  | BoolLit false -> acc |> cons "0"
-  | BoolLit true -> acc |> cons "1"
-  | IntLit value -> acc |> cons (string value)
-  | CharLit value ->
-      acc
-      |> cons "'"
-      |> cons (cprintExprChar value)
-      |> cons "'"
-  | StrLit _ -> failwith "unsupported"
+let private cpStructLit fields ty acc =
+  acc
+  |> cons "("
+  |> cpTy ty
+  |> cons "){"
+  |> join ", " fields (fun (field, value) acc ->
+       acc
+       |> cons "."
+       |> cons field
+       |> cons " = "
+       |> cpExpr value)
+  |> cons "}"
 
-let private cprintExprInit acc fields ty =
-  let acc = acc |> cons "("
-  let acc = cprintTy acc ty
-  let acc = acc |> cons "){"
+// -----------------------------------------------
+// Expressions
+// -----------------------------------------------
 
-  let acc =
-    (fields, acc)
-    |> join ", " (fun ((field, value), acc) ->
+let private cpExpr expr acc: string list =
+  let rec cpExprList sep exprs acc =
+    exprs
+    |> List.fold (fun (first, acc) expr ->
          let acc =
-           acc |> cons "." |> cons field |> cons " = "
+           (if isFirst first then acc else acc |> cons sep)
+           |> cpExpr expr
 
-         let acc = cprintExpr acc value
-         acc)
-
-  let acc = acc |> cons "}"
-  acc
-
-let private cprintExpr acc expr: string list =
-  let rec cprintExprList acc index separator exprs =
-    match exprs with
-    | [] -> acc
-    | expr :: exprs ->
-        let acc =
-          if index > 0 then acc |> cons separator else acc
-
-        let acc = cprintExpr acc expr
-        cprintExprList acc 1 separator exprs
+         NotFirst, acc) (First, acc)
+    |> snd
 
   match expr with
   | CDefaultExpr -> acc |> cons "{}"
   | CIntExpr value -> acc |> cons (string value)
+
   | CCharExpr value ->
       acc
       |> cons "'"
-      |> cons (cprintExprChar value)
+      |> cons (cpCharLit value)
       |> cons "'"
-  | CStrObjExpr value -> cprintExprStrObj acc value
-  | CStrRawExpr value -> cprintExprStrRaw acc value
-  | CInitExpr (fields, ty) -> cprintExprInit acc fields ty
+
+  | CStrObjExpr value -> acc |> cpStrObjLit value
+  | CStrRawExpr value -> acc |> cpStrRawLit value
+
+  | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
+
   | CNavExpr (CStrObjExpr value, "len") -> acc |> cons (string value.Length)
-  | CRefExpr (value) -> acc |> cons value
-  | CProjExpr (left, index) ->
-      let acc = cprintExpr acc left
-      acc |> cons ".t" |> cons (string index)
+
+  | CRefExpr name -> acc |> cons name
+
+  | CProjExpr (l, index) ->
+      acc
+      |> cpExpr l
+      |> cons ".t"
+      |> cons (string index)
+
   | CCastExpr (expr, ty) ->
-      let acc = acc |> cons "(("
-      let acc = cprintTy acc ty
-      let acc = acc |> cons ")"
-      let acc = cprintExpr acc expr
-      let acc = acc |> cons ")"
       acc
-  | CNavExpr (expr, field) ->
-      let acc = cprintExpr acc expr
-      let acc = acc |> cons "." |> cons field
-      acc
-  | CArrowExpr (expr, field) ->
-      let acc = cprintExpr acc expr
-      let acc = acc |> cons "->" |> cons field
-      acc
+      |> cons "(("
+      |> cpTy ty
+      |> cons ")"
+      |> cpExpr expr
+      |> cons ")"
+
+  | CNavExpr (expr, field) -> acc |> cpExpr expr |> cons "." |> cons field
+
+  | CArrowExpr (expr, field) -> acc |> cpExpr expr |> cons "->" |> cons field
+
   | CIndexExpr (l, r) ->
-      let acc = cprintExpr acc l
-      let acc = acc |> cons "["
-      let acc = cprintExpr acc r
-      let acc = acc |> cons "]"
       acc
+      |> cpExpr l
+      |> cons "["
+      |> cpExpr r
+      |> cons "]"
+
   | CCallExpr (callee, args) ->
-      let acc = cprintExpr acc callee
-      let acc = acc |> cons "("
-      let acc = cprintExprList acc 0 ", " args
-      let acc = acc |> cons ")"
       acc
+      |> cpExpr callee
+      |> cons "("
+      |> cpExprList ", " args
+      |> cons ")"
+
   | CUnaryExpr (op, arg) ->
-      let acc = acc |> cons "("
-
-      let acc =
-        match op with
-        | CNotUnary -> acc |> cons "!"
-        | CDerefUnary -> acc |> cons "*"
-
-      let acc = acc |> cons "("
-      let acc = cprintExpr acc arg
-      let acc = acc |> cons "))"
       acc
-  | CBinaryExpr (op, first, second) ->
-      let acc = acc |> cons "("
-      let acc = cprintExpr acc first
+      |> cons "("
+      |> cons (unaryToString op)
+      |> cons "("
+      |> cpExpr arg
+      |> cons "))"
 
-      let acc =
-        acc |> cons " " |> cons (opStr op) |> cons " "
-
-      let acc = cprintExpr acc second
-      let acc = acc |> cons ")"
+  | CBinaryExpr (op, l, r) ->
       acc
+      |> cons "("
+      |> cpExpr l
+      |> cons " "
+      |> cons (binaryToString op)
+      |> cons " "
+      |> cpExpr r
+      |> cons ")"
 
-let private cpExpr expr acc = cprintExpr acc expr
+// -----------------------------------------------
+// Statements
+// -----------------------------------------------
 
-let private cprintStmt acc indent stmt: string list =
+let private cpStmt indent stmt acc: string list =
   match stmt with
   | CReturnStmt None -> acc |> cons indent |> cons "return;" |> cons eol
-  | CReturnStmt (Some expr) ->
-      let acc = acc |> cons indent |> cons "return "
-      let acc = cprintExpr acc expr
-      acc |> cons ";" |> cons eol
-  | CExprStmt expr ->
-      let acc = acc |> cons indent
-      let acc = cprintExpr acc expr
-      acc |> cons ";" |> cons eol
-  | CLetStmt (name, init, ty) ->
-      let acc = acc |> cons indent
-      let acc = cprintTyWithName acc name ty
 
-      let acc =
+  | CReturnStmt (Some expr) ->
+      acc
+      |> cons indent
+      |> cons "return "
+      |> cpExpr expr
+      |> cons ";"
+      |> cons eol
+
+  | CExprStmt expr ->
+      acc
+      |> cons indent
+      |> cpExpr expr
+      |> cons ";"
+      |> cons eol
+
+  | CLetStmt (name, init, ty) ->
+      let cpInit acc =
         match init with
-        | Some init ->
-            let acc = acc |> cons " = "
-            cprintExpr acc init
+        | Some init -> acc |> cons " = " |> cpExpr init
         | None -> acc
 
-      acc |> cons ";" |> cons eol
+      acc
+      |> cons indent
+      |> cpTyWithName name ty
+      |> cpInit
+      |> cons ";"
+      |> cons eol
+
   | CLetAllocStmt (name, valPtrTy, varTy) ->
       let valTy =
         match valPtrTy with
         | CPtrTy ty -> ty
         | _ -> failwithf "Never: Expected pointer type but %A" valPtrTy
 
-      let acc = acc |> cons indent
-      let acc = cprintTyWithName acc name varTy
-      let acc = acc |> cons " = ("
-      let acc = cprintTy acc varTy
-
-      let acc =
-        acc |> cons ")milone_mem_alloc(1, sizeof("
-
-      let acc = cprintTy acc valTy
-      let acc = acc |> cons "));" |> cons eol
       acc
+      |> cons indent
+      |> cpTyWithName name varTy
+      |> cons " = ("
+      |> cpTy varTy
+      |> cons ")milone_mem_alloc(1, sizeof("
+      |> cpTy valTy
+      |> cons "));"
+      |> cons eol
+
   | CSetStmt (l, r) ->
-      let acc = acc |> cons indent
-      let acc = cprintExpr acc l |> cons " = "
-      let acc = cprintExpr acc r |> cons ";" |> cons eol
       acc
+      |> cons indent
+      |> cpExpr l
+      |> cons " = "
+      |> cpExpr r
+      |> cons ";"
+      |> cons eol
+
   | CLabelStmt label -> acc |> cons label |> cons ":;" |> cons eol
+
   | CGotoStmt label ->
       acc
       |> cons indent
@@ -269,222 +285,229 @@ let private cprintStmt acc indent stmt: string list =
       |> cons label
       |> cons ";"
       |> cons eol
+
   | CGotoIfStmt (pred, label) ->
-      let acc = acc |> cons indent |> cons "if ("
-      let acc = cprintExpr acc pred
-
-      let acc =
-        acc
-        |> cons ") goto "
-        |> cons label
-        |> cons ";"
-        |> cons eol
-
       acc
-
-  | CIfStmt (cond, thenCl, elseCl) ->
-      let acc = acc |> cons indent |> cons "if ("
-      let acc = cprintExpr acc cond
-
-      let acc = acc |> cons ") {" |> cons eol
-
-      let acc = cprintStmts acc ("    " + indent) thenCl
-
-      let acc =
-        acc |> cons indent |> cons "} else {" |> cons eol
-
-      let acc = cprintStmts acc ("    " + indent) elseCl
-
-      acc |> cons indent |> cons "}" |> cons eol
-
-  | CSwitchStmt (cond, clauses) ->
-      let acc = acc |> cons indent |> cons "switch ("
-      let acc = cprintExpr acc cond
-      let acc = acc |> cons ") {" |> cons eol
-
-      let _, acc =
-        clauses
-        |> List.fold (fun (i, acc) (cases, isDefault, body) ->
-             let acc = if i = 0 then acc else acc |> cons eol
-
-             let acc =
-               cases
-               |> List.fold (fun acc lit ->
-                    acc
-                    |> cons (deeper indent)
-                    |> cons "case "
-                    |> cpExpr lit
-                    |> cons ":"
-                    |> cons eol) acc
-
-             let acc =
-               if isDefault then
-                 acc
-                 |> cons (deeper indent)
-                 |> cons "default:"
-                 |> cons eol
-               else acc
-
-             let acc =
-               cprintStmts acc (deeper (deeper indent)) body
-
-             i + 1, acc) (0, acc)
-
-      acc |> cons indent |> cons "}" |> cons eol
-
-let private cprintStmts acc indent stmts: string list =
-  match stmts with
-  | [] -> acc
-  | stmt :: stmts ->
-      let acc = cprintStmt acc indent stmt
-      cprintStmts acc indent stmts
-
-let private cprintDecl acc decl =
-  match decl with
-  | CErrorDecl (message, line) ->
-      let acc =
-        acc
-        |> cons "#line "
-        |> cons (string line)
-        |> cons eol
-
-      let acc =
-        acc |> cons "#error " |> cons message |> cons eol
-
-      acc
-  | CStructDecl (ident, fields, variants) ->
-      let cprintFields indent acc fields =
-        let rec go acc fields =
-          match fields with
-          | [] -> acc
-          | (ident, ty) :: fields ->
-              let acc = acc |> cons indent
-              let acc = cprintTyWithName acc ident ty
-              let acc = acc |> cons ";" |> cons eol
-              go acc fields
-
-        go acc fields
-
-      let acc =
-        acc
-        |> cons "struct "
-        |> cons ident
-        |> cons " {"
-        |> cons eol
-
-      let acc = cprintFields "    " acc fields
-
-      let acc =
-        match variants with
-        | [] -> acc
-        | _ ->
-            let acc = acc |> cons "    union {" |> cons eol
-            let acc = cprintFields "        " acc variants
-            let acc = acc |> cons "    };" |> cons eol
-            acc
-
-      let acc = acc |> cons "};" |> cons eol
-      acc
-  | CEnumDecl (tyIdent, variants) ->
-      let acc =
-        acc
-        |> cons "enum "
-        |> cons tyIdent
-        |> cons " {"
-        |> cons eol
-
-      let rec go acc variants =
-        match variants with
-        | [] -> acc
-        | variant :: variants ->
-            let acc = acc |> cons "    "
-
-            let acc =
-              acc |> cons variant |> cons "," |> cons eol
-
-            go acc variants
-
-      let acc = go acc variants
-      let acc = acc |> cons "};" |> cons eol
-      acc
-  | CStaticVarDecl (ident, _) ->
-      acc
-      |> cons "// static "
-      |> cons ident
+      |> cons indent
+      |> cons "if ("
+      |> cpExpr pred
+      |> cons ") goto "
+      |> cons label
       |> cons ";"
       |> cons eol
-  | CFunDecl (ident, args, resultTy, body) ->
-      let acc = cprintTyWithName acc ident resultTy
-      let acc = acc |> cons "("
-      let acc = cprintParams acc args
-      let acc = acc |> cons ") {" |> cons eol
-      let acc = cprintStmts acc "    " body
-      let acc = acc |> cons "}" |> cons eol
+
+  | CIfStmt (cond, thenCl, elseCl) ->
       acc
+      |> cons indent
+      |> cons "if ("
+      |> cpExpr cond
+      |> cons ") {"
+      |> cons eol
+      |> cpStmtList (deeper indent) thenCl
+      |> cons indent
+      |> cons "} else {"
+      |> cons eol
+      |> cpStmtList (deeper indent) elseCl
+      |> cons indent
+      |> cons "}"
+      |> cons eol
+
+  | CSwitchStmt (cond, clauses) ->
+      let cpCaseLabels cases acc =
+        cases
+        |> List.fold (fun acc lit ->
+             acc
+             |> cons (deeper indent)
+             |> cons "case "
+             |> cpExpr lit
+             |> cons ":"
+             |> cons eol) acc
+
+      let cpDefaultLabel isDefault acc =
+        if isDefault then
+          acc
+          |> cons (deeper indent)
+          |> cons "default:"
+          |> cons eol
+        else
+          acc
+
+      let cpClause acc =
+        clauses
+        |> List.fold (fun (first, acc) (cases, isDefault, body) ->
+             let acc =
+               (if isFirst first then acc else acc |> cons eol)
+               |> cpCaseLabels cases
+               |> cpDefaultLabel isDefault
+               |> cpStmtList (deeper (deeper indent)) body
+
+             NotFirst, acc) (First, acc)
+        |> snd
+
+      acc
+      |> cons indent
+      |> cons "switch ("
+      |> cpExpr cond
+      |> cons ") {"
+      |> cons eol
+      |> cpClause
+      |> cons indent
+      |> cons "}"
+      |> cons eol
+
+let private cpStmtList indent stmts acc: string list =
+  stmts
+  |> List.fold (fun acc stmt -> cpStmt indent stmt acc) acc
+
+// -----------------------------------------------
+// Declarations
+// -----------------------------------------------
+
+let private cpDecl decl acc =
+  match decl with
+  | CErrorDecl (message, line) ->
+      acc
+      |> cons "#line "
+      |> cons (string line)
+      |> cons eol
+      |> cons "#error "
+      |> cons message
+      |> cons eol
+
+  | CStructDecl (structName, fields, variants) ->
+      let cpFields indent fields acc =
+        fields
+        |> List.fold (fun acc (name, ty) ->
+             acc
+             |> cons indent
+             |> cpTyWithName name ty
+             |> cons ";"
+             |> cons eol) acc
+
+      let cpVariants acc =
+        match variants with
+        | [] -> acc
+
+        | _ ->
+            acc
+            |> cons "    union {"
+            |> cons eol
+            |> cpFields "        " variants
+            |> cons "    };"
+            |> cons eol
+
+      acc
+      |> cons "struct "
+      |> cons structName
+      |> cons " {"
+      |> cons eol
+      |> cpFields "    " fields
+      |> cpVariants
+      |> cons "};"
+      |> cons eol
+
+  | CEnumDecl (enumName, variants) ->
+      let cpEnumerants variants acc =
+        variants
+        |> List.fold (fun acc variant ->
+             acc
+             |> cons "    "
+             |> cons variant
+             |> cons ","
+             |> cons eol) acc
+
+      acc
+      |> cons "enum "
+      |> cons enumName
+      |> cons " {"
+      |> cons eol
+      |> cpEnumerants variants
+      |> cons "};"
+      |> cons eol
+
+  | CStaticVarDecl (name, _) ->
+      acc
+      |> cons "// static "
+      |> cons name
+      |> cons ";"
+      |> cons eol
+
+  | CFunDecl (name, args, resultTy, body) ->
+      acc
+      |> cpTyWithName name resultTy
+      |> cons "("
+      |> cpParams args
+      |> cons ") {"
+      |> cons eol
+      |> cpStmtList "    " body
+      |> cons "}"
+      |> cons eol
 
 /// Prints forward declaration.
-let private cprintDeclForward acc decl =
+let private cpForwardDecl decl acc =
   match decl with
   | CErrorDecl _ -> acc
-  | CStructDecl (ident, _, _) ->
-      let acc =
-        acc
-        |> cons "struct "
-        |> cons ident
-        |> cons ";"
-        |> cons eol
-        |> cons eol
 
+  | CStructDecl (name, _, _) ->
       acc
-  | CEnumDecl (tyIdent, _) ->
-      let acc =
-        acc
-        |> cons "enum "
-        |> cons tyIdent
-        |> cons ";"
-        |> cons eol
-        |> cons eol
+      |> cons "struct "
+      |> cons name
+      |> cons ";"
+      |> cons eol
+      |> cons eol
 
+  | CEnumDecl (name, _) ->
       acc
-  | CStaticVarDecl (ident, ty) ->
-      let acc = acc |> cons "static "
-      let acc = cprintTyWithName acc ident ty
-      acc |> cons ";" |> cons eol |> cons eol
-  | CFunDecl (ident, args, resultTy, _) ->
-      let acc = cprintTyWithName acc ident resultTy
-      let acc = acc |> cons "("
-      let acc = cprintParams acc args
-      let acc = acc |> cons ");" |> cons eol |> cons eol
+      |> cons "enum "
+      |> cons name
+      |> cons ";"
+      |> cons eol
+      |> cons eol
+
+  | CStaticVarDecl (name, ty) ->
       acc
+      |> cons "static "
+      |> cpTyWithName name ty
+      |> cons ";"
+      |> cons eol
+      |> cons eol
 
-let private cprintDeclForwards acc decls =
-  let rec go acc decls =
-    match decls with
-    | [] -> acc
-    | decl :: decls ->
-        let acc = cprintDeclForward acc decl
-        go acc decls
+  | CFunDecl (name, args, resultTy, _) ->
+      acc
+      |> cpTyWithName name resultTy
+      |> cons "("
+      |> cpParams args
+      |> cons ");"
+      |> cons eol
+      |> cons eol
 
-  go acc decls
+let private cpForwardDecls decls acc =
+  decls
+  |> List.fold (fun acc decl -> cpForwardDecl decl acc) acc
 
-let private cprintDecls acc decls =
-  let acc = cprintDeclForwards acc decls
+let private cpDecls decls acc =
+  let acc = acc |> cpForwardDecls decls
 
-  let rec go acc decls =
-    match decls with
-    | [] -> acc
-    | [ decl ] -> cprintDecl acc decl
-    | decl :: decls ->
-        let acc = cprintDecl acc decl |> cons eol
-        go acc decls
+  decls
+  |> List.fold (fun (first, acc) decl ->
+       let acc =
+         (if isFirst first then acc else acc |> cons eol)
+         |> cpDecl decl
 
-  go acc decls
+       NotFirst, acc) (First, acc)
+  |> snd
 
-let private cprintHeader acc =
+// -----------------------------------------------
+// Root
+// -----------------------------------------------
+
+let private cpHeader acc =
   let header = "#include \"milone.h\""
   acc |> cons header |> cons eol |> cons eol
 
-let cprintRun (printer: string list -> string list): string = printer [] |> List.rev |> strConcat
-
 let cprint (decls: CDecl list): string =
-  cprintRun (fun acc -> cprintDecls (cprintHeader acc) decls)
+  []
+  |> cpHeader
+  |> cpDecls decls
+  |> List.rev
+  |> strConcat

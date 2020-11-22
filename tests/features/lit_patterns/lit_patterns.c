@@ -23,14 +23,14 @@ next_5:;
 end_match_3:;
     int switch_;
     switch (1) {
-       case 0:
-          goto clause_7;
+        case 0:
+            goto clause_7;
 
-       case 1:
-          goto clause_8;
+        case 1:
+            goto clause_8;
 
-       default:
-          goto clause_9;
+        default:
+            goto clause_9;
     }
 clause_7:;
     milone_assert(0, 9, 9);
@@ -48,14 +48,14 @@ clause_9:;
 switch_next_6:;
     int switch_1;
     switch ('a') {
-       case 'A':
-          goto clause_11;
+        case 'A':
+            goto clause_11;
 
-       case 'a':
-          goto clause_12;
+        case 'a':
+            goto clause_12;
 
-       default:
-          goto clause_13;
+        default:
+            goto clause_13;
     }
 clause_11:;
     milone_assert(0, 14, 11);

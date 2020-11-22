@@ -6,6 +6,7 @@ let objToString (value: _) = string (value :> obj)
 
 let inRegion (f: unit -> int): int = f ()
 
+[<NoEquality; NoComparison>]
 type Profiler = Profiler of System.Diagnostics.Stopwatch * int64 ref
 
 let private getAllocatedBytes (): int64 =

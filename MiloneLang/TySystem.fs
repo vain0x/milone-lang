@@ -41,7 +41,7 @@ let tyCtorCmp first second =
 
 let tyCtorEq first second = tyCtorCmp first second = 0
 
-let tyCtorDisplay getTyIdent tyCtor =
+let tyCtorDisplay getTyName tyCtor =
   match tyCtor with
   | BoolTyCtor -> "bool"
   | IntTyCtor -> "int"
@@ -52,7 +52,7 @@ let tyCtorDisplay getTyIdent tyCtor =
   | FunTyCtor -> "fun"
   | TupleTyCtor -> "tuple"
   | ListTyCtor -> "list"
-  | RefTyCtor tySerial -> getTyIdent tySerial
+  | RefTyCtor tySerial -> getTyName tySerial
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -180,9 +180,7 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
   go ty
 
 /// Converts a type to human readable string.
-///
-/// getTyIdent: serial -> ident option. Gets ident of type by serial.
-let tyDisplay getTyIdent ty =
+let tyDisplay getTyName ty =
   let tyEq4 ty1 ty2 ty3 ty4 =
     [ ty2; ty3; ty4 ] |> List.forall (tyEq ty1)
 
@@ -194,8 +192,8 @@ let tyDisplay getTyIdent ty =
     | ErrorTy loc -> "{error}@" + locToString loc
 
     | MetaTy (tySerial, loc) ->
-        match getTyIdent tySerial with
-        | Some ident -> "{" + ident + "}@" + locToString loc
+        match getTyName tySerial with
+        | Some name -> "{" + name + "}@" + locToString loc
         | None -> "{?" + string tySerial + "}@" + locToString loc
 
     | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
@@ -211,8 +209,8 @@ let tyDisplay getTyIdent ty =
 
     | AppTy (RefTyCtor tySerial, args) ->
         let tyCtor =
-          match tySerial |> getTyIdent with
-          | Some ident -> ident
+          match tySerial |> getTyName with
+          | Some name -> name
           | None -> "?" + string tySerial
 
         match args with
@@ -238,6 +236,7 @@ let tyDisplay getTyIdent ty =
 // -----------------------------------------------
 
 /// Type inference context.
+[<NoEquality; NoComparison>]
 type TyContext =
   { Serial: Serial
     LetDepth: LetDepth
@@ -339,6 +338,7 @@ let typingExpandSynonyms (ctx: TyContext) ty =
 
   go ty
 
+[<NoEquality; NoComparison>]
 type private MetaTyUnifyResult =
   | DidExpand of Ty
   | DidBind of TyContext

@@ -16,6 +16,23 @@ open MiloneLang.Typing
 
 let private unreachable value = failwithf "NEVER: %A" value
 
+let private kTermToTy (term: KTerm): Ty =
+  match term with
+  | KLitTerm (lit, _) -> litToTy lit
+
+  | KVarTerm (_, ty, _)
+  | KFunTerm (_, ty, _)
+  | KVariantTerm (_, ty, _) -> ty
+
+  | KTagTerm _ -> tyInt
+
+  | KLabelTerm (_, ty, _) -> ty
+
+  | KNilTerm (itemTy, _)
+  | KNoneTerm (itemTy, _) -> tyList itemTy
+
+  | KUnitTerm _ -> tyUnit
+
 // -----------------------------------------------
 // Pattern matching resolution
 // -----------------------------------------------
@@ -45,12 +62,14 @@ let private unreachable value = failwithf "NEVER: %A" value
 //   in a1 ()
 // ```
 
+[<NoEquality; NoComparison>]
 type private PTerm =
   | PLitTerm of Lit * Loc
   | PTagTerm of VariantSerial * Loc
   | PNilTerm of itemTy: Ty * Loc
   | PNoneTerm of itemTy: Ty * Loc
 
+[<NoEquality; NoComparison>]
 type private PNode =
   /// Success of pattern matching, discard the current value.
   | PDiscardNode
@@ -160,6 +179,7 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 // -----------------------------------------------
 
 [<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
 type KirGenCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
@@ -303,15 +323,15 @@ let private kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx =
 
 /// Converts an expr calling to variant, i.e., construction of a variant with payload.
 let private kgCallVariantExpr variantSerial variantTy variantLoc args ty loc hole ctx =
-  let variantIdent =
-    ctx |> findVarDef variantSerial |> varDefToIdent
+  let variantName =
+    ctx |> findVarDef variantSerial |> varDefToName
 
   let variantTerm =
     KVariantTerm(variantSerial, variantTy, variantLoc)
 
   ctx
   |> kgExprList args (fun args ctx ->
-       let result, ctx = ctx |> newVar variantIdent ty loc
+       let result, ctx = ctx |> newVar variantName ty loc
        let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
        KPrimNode(KVariantPrim, variantTerm :: args, [ result ], [ cont ], loc), ctx)
 
@@ -745,7 +765,7 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.UInt -> regular "uint" KUIntPrim
           | HPrim.String -> regular "string" KStringPrim
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
-          | HPrim.NativeFun (ident, arity) -> regular ident (KNativeFunPrim(ident, arity))
+          | HPrim.NativeFun (name, arity) -> regular name (KNativeFunPrim(name, arity))
 
       | HFunExpr (funSerial, funTy, funLoc) -> kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx
 

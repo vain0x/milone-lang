@@ -1,11 +1,27 @@
-// Tail recursion optimization.
-
+/// # TailRecOptimizing
+///
+/// Detects tail recursive calls and marks them
+/// so that MIR emits efficient code.
+///
+/// A function call to the function itself at the end of it
+/// is a *tail recursive* call.
+///
+/// ## Example
+///
+/// ```fsharp
+///   let rec length xs =
+///     match xs with
+///     | [] -> 0
+///     | _ :: xs -> length xs
+///   //             ^^^^^^ tail recursive call
+/// ```
 module rec MiloneLang.TailRecOptimizing
 
 open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Typing
 
+[<NoEquality; NoComparison>]
 type private IsTail =
   | IsTail
   | NotTail
@@ -14,6 +30,7 @@ type private IsTail =
 // Helpers
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
 type private TailRecCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -77,7 +94,8 @@ let private troExpr isTail (expr, ctx) =
   | HVariantExpr _
   | HPrimExpr _
   | HOpenExpr _
-  | HTyDeclExpr _ -> expr, ctx
+  | HTyDeclExpr _
+  | HErrorExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
@@ -90,13 +108,6 @@ let private troExpr isTail (expr, ctx) =
 
         let arms, ctx = (arms, ctx) |> stMap go
         HMatchExpr(cond, arms, ty, loc), ctx
-
-      doArm ()
-
-  | HNavExpr (l, r, ty, loc) ->
-      let doArm () =
-        let l, ctx = troExpr NotTail (l, ctx)
-        HNavExpr(l, r, ty, loc), ctx
 
       doArm ()
 
@@ -121,13 +132,13 @@ let private troExpr isTail (expr, ctx) =
 
       doArm ()
 
-  | HErrorExpr (error, loc) -> failwithf "NEVER: %s at %A" error loc
-  | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or TyElaborating"
+  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in TyElaboration"
+  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
 let tailRecOptimize (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let ctx = ofTyCtx tyCtx
 
-  let expr, ctx = troExpr IsTail (expr, ctx)
+  let expr, _ = troExpr IsTail (expr, ctx)
 
   expr, tyCtx

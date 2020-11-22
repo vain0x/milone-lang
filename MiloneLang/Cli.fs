@@ -26,11 +26,6 @@ open MiloneLang.KirDump
 open MiloneLang.CIrGen
 open MiloneLang.CPrinting
 
-type Verbosity =
-  | Verbose
-  | Profile of Profiler
-  | Quiet
-
 let private helpText = """milone-lang compiler
 
 USAGE:
@@ -60,6 +55,39 @@ GLOBAL OPTIONS
 
 LINKS
     <https://github.com/vain0x/milone-lang>"""
+
+// -----------------------------------------------
+// Interface (1)
+// -----------------------------------------------
+
+[<NoEquality; NoComparison>]
+type Verbosity =
+  | Verbose
+  | Profile of Profiler
+  | Quiet
+
+/// Abstraction layer of CLI program.
+[<NoEquality; NoComparison>]
+type CliHost =
+  {
+    /// Command line args.
+    Args: string list
+
+    /// Path to milone home (installation directory).
+    MiloneHome: string
+
+    /// Creates a profiler.
+    ProfileInit: (unit -> Profiler)
+
+    /// Prints a message to stderr for profiling.
+    ProfileLog: (string -> Profiler -> unit)
+
+    /// Reads all contents of a file as string.
+    FileReadAllText: (string -> string option) }
+
+// -----------------------------------------------
+// Helpers
+// -----------------------------------------------
 
 let private strTrimEnd (s: string) =
   let rec go i =
@@ -96,24 +124,6 @@ let private pathStrToStem (s: string) =
         else go (i - 1)
 
       go s.Length
-
-/// Abstraction layer of CLI program.
-type CliHost =
-  {
-    /// Command line args.
-    Args: string list
-
-    /// Path to milone home (installation directory).
-    MiloneHome: string
-
-    /// Creates a profiler.
-    ProfileInit: (unit -> Profiler)
-
-    /// Prints a message to stderr for profiling.
-    ProfileLog: (string -> Profiler -> unit)
-
-    /// Reads all contents of a file as string.
-    FileReadAllText: (string -> string option) }
 
 // -----------------------------------------------
 // Read module files
@@ -165,12 +175,12 @@ let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
 let private printLogs (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
-    let getTyIdent tySerial =
+    let getTyName tySerial =
       tyCtx.Tys
       |> mapTryFind tySerial
-      |> Option.map tyDefToIdent
+      |> Option.map tyDefToName
 
-    tyDisplay getTyIdent ty
+    tyDisplay getTyName ty
 
   logs
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
@@ -231,10 +241,10 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
   let expr, tyCtx = tyElaborate (expr, tyCtx)
 
   writeLog host v "ClosureConversion"
-  let expr, tyCtx = declosure (expr, tyCtx)
+  let expr, tyCtx = closureConversion (expr, tyCtx)
 
   writeLog host v "EtaExpansion"
-  let expr, tyCtx = uneta (expr, tyCtx)
+  let expr, tyCtx = etaExpansion (expr, tyCtx)
 
   writeLog host v "Hoist"
   let expr, tyCtx = hoist (expr, tyCtx)
@@ -256,7 +266,7 @@ let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
     "", false
   else
     writeLog host v "CIrGen"
-    let cir, success = gen (stmts, mirCtx)
+    let cir, success = genCir (stmts, mirCtx)
     let output = cprint cir
 
     writeLog host v "Finish"
@@ -434,7 +444,7 @@ let cliCompileViaKir (host: CliHost) projectDirs =
        code) 0
 
 // -----------------------------------------------
-// args
+// Arg parsing
 // -----------------------------------------------
 
 /// Parses CLI args for a flag.
@@ -475,6 +485,7 @@ let private parseVerbosity (host: CliHost) args =
     | "--profile" -> Some(Profile(host.ProfileInit()))
     | _ -> None) Quiet args
 
+[<NoEquality; NoComparison>]
 type private CliCmd =
   | HelpCmd
   | VersionCmd
@@ -509,6 +520,10 @@ let private parseArgs args =
       | "kir-c" -> CompileCmd, "--kir" :: args
 
       | _ -> BadCmd arg, []
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
 
 let cli (host: CliHost) =
   match host.Args |> parseArgs with

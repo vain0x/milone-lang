@@ -476,6 +476,8 @@ let private evalStrLitRaw (text: string) l r =
 // Tokenize routines
 // -----------------------------------------------
 
+[<Struct>]
+[<NoEquality; NoComparison>]
 type private Lookahead =
   | LEof
   | LBlank

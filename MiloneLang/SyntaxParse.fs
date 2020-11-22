@@ -21,8 +21,8 @@
 ///   - `if cond then body else alt`
 ///     - `cond` and `body` are inner subterms
 ///     - `alt` is a dangling subterm
-///   - `match target with | pat when guard -> body`
-///     - `target`, `pat` and `guard` are inner subterms
+///   - `match cond with | pat when guard -> body`
+///     - `cond`, `pat` and `guard` are inner subterms
 ///     - `body` is a dangling subterm if it's in the last arm;
 ///         or an inner subterm otherwise
 ///   - `type`
@@ -70,8 +70,118 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 
 // -----------------------------------------------
+// Position
+// -----------------------------------------------
+
+/// No position information. Should be fixed.
+let noPos = -1, -1
+
+let private posX ((_, x): Pos) = x
+
+let private posY ((y, _): Pos) = y
+
+let private posIsSameRow first second = posY first = posY second
+
+let private posIsSameColumn first second = posX first = posX second
+
+/// Gets if `secondPos` is inside of the block of `firstPos`.
+let private posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX secondPos
+
+let private posAddX dx ((y, x): Pos) = y, x + dx
+
+let private posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
+  intMax firstY secondY, intMax firstX secondX
+
+// -----------------------------------------------
+// Bp
+// -----------------------------------------------
+
+/// Binding power.
+[<NoEquality; NoComparison>]
+type private Bp =
+  | PrefixBp
+  | MulBp
+  | AddBp
+  | ConsBp
+
+  /// `|>`
+  | PipeBp
+
+  /// Comparison.
+  | CmpBp
+
+  | AndBp
+  | OrBp
+
+let private bpNext bp =
+  match bp with
+  | OrBp -> AndBp
+
+  | AndBp -> CmpBp
+
+  | CmpBp -> PipeBp
+
+  | PipeBp -> ConsBp
+
+  | ConsBp -> AddBp
+
+  | AddBp -> MulBp
+
+  | MulBp
+  | PrefixBp -> PrefixBp
+
+// -----------------------------------------------
 // Tokens
 // -----------------------------------------------
+
+/// Gets if a token is in the first set of expressions/patterns,
+/// i.e. whether it can be the first token of an expression or pattern.
+let private tokenIsExprOrPatFirst (token: Token) =
+  match token with
+  | IntToken _
+  | CharToken _
+  | StrToken _
+  | IdentToken _
+  | LeftParenToken
+  | LeftBracketToken
+  | LeftBraceToken
+  | FalseToken
+  | TrueToken -> true
+
+  | _ -> false
+
+/// Gets if a token is in the first set of expressions.
+let private tokenIsExprFirst (token: Token) =
+  match token with
+  | _ when tokenIsExprOrPatFirst token -> true
+
+  | MinusToken
+  | IfToken
+  | MatchToken
+  | FunToken
+  | DoToken
+  | LetToken
+  | TypeToken
+  | OpenToken -> true
+
+  | _ -> false
+
+/// In the first set of arguments?
+let private tokenIsArgFirst (token: Token) =
+  match token with
+  | MinusToken -> false
+
+  | _ -> tokenIsExprFirst token
+
+let private tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
+
+let private tokenAsVis token =
+  match token with
+  | PrivateToken -> Some PrivateVis
+  | InternalToken
+  | PublicToken -> Some PublicVis
+
+  | _ -> None
 
 let private leadsExpr tokens =
   match tokens with
@@ -652,7 +762,7 @@ let private parseMatchArm matchPos armPos (tokens, errors) =
   AArm(pat, guard, body, armPos), tokens, errors
 
 let private parseMatch matchPos (tokens, errors) =
-  let target, tokens, errors = parseExpr matchPos (tokens, errors)
+  let cond, tokens, errors = parseExpr matchPos (tokens, errors)
 
   let armPos, tokens, errors =
     match tokens with
@@ -676,7 +786,7 @@ let private parseMatch matchPos (tokens, errors) =
     | _ -> List.rev (arm :: acc), tokens, errors
 
   let arms, tokens, errors = go [] armPos (tokens, errors)
-  AMatchExpr(target, arms, matchPos), tokens, errors
+  AMatchExpr(cond, arms, matchPos), tokens, errors
 
 /// `fun-expr = 'fun' pat* '->' expr`
 let private parseFun basePos funPos (tokens, errors) =
@@ -924,7 +1034,7 @@ let private parseNextBp bp basePos (tokens, errors) =
 
   | nextBp -> parseOp nextBp basePos (tokens, errors)
 
-let private  parseOps bp basePos first (tokens, errors) =
+let private parseOps bp basePos first (tokens, errors) =
   let nextL expr op opPos (tokens, errors) =
     let second, tokens, errors = parseNextBp bp basePos (tokens, errors)
 
@@ -1026,7 +1136,7 @@ let private parseStmt basePos (tokens, errors) =
 /// Parses a sequence of statements.
 /// These statements must be aligned on the same column
 /// except ones preceded by semicolon.
-let private  parseStmts basePos (tokens, errors) =
+let private parseStmts basePos (tokens, errors) =
   let rec go acc alignPos (tokens, errors) =
     match tokens with
     | (SemiToken, semiPos) :: tokens when posInside alignPos semiPos ->
