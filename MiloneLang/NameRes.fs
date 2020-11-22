@@ -39,13 +39,13 @@ let private tyPrimOfName name tys loc =
 
 [<Struct; NoEquality; NoComparison>]
 type ValueSymbol =
-  | ValueSymbol of varSerial: VarSerial
+  | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
 
 let private valueSymbolToSerial symbol =
   match symbol with
-  | ValueSymbol s -> s
+  | VarSymbol s -> s
   | FunSymbol s -> s
   | VariantSymbol s -> s
 
@@ -590,8 +590,8 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         | _ ->
             let ctx =
               ctx
-              |> addLocalVar (ValueSymbol serial) (VarDef(name, StaticSM, ty, loc))
-              |> addVarToModule vis (ValueSymbol serial)
+              |> addLocalVar (VarSymbol serial) (VarDef(name, StaticSM, ty, loc))
+              |> addVarToModule vis (VarSymbol serial)
 
             pat, ctx
 
@@ -613,7 +613,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
         let ctx =
           ctx
-          |> addLocalVar (ValueSymbol serial) (VarDef(name, StaticSM, noTy, loc))
+          |> addLocalVar (VarSymbol serial) (VarDef(name, StaticSM, noTy, loc))
 
         let pat, ctx = (pat, ctx) |> goPat vis
         HAsPat(pat, serial, loc), ctx
@@ -690,7 +690,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
               let varDef = VarDef(name, AutoSM, ty, loc)
 
               let ctx =
-                ctx |> addLocalVar (ValueSymbol varSerial) varDef
+                ctx |> addLocalVar (VarSymbol varSerial) varDef
 
               HRefPat(varSerial, ty, loc), ctx
 
@@ -702,7 +702,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
         | None -> None
 
       match varSerial with
-      | Some (ValueSymbol varSerial) -> HRefPat(varSerial, ty, loc), ctx
+      | Some (VarSymbol varSerial) -> HRefPat(varSerial, ty, loc), ctx
 
       | Some (FunSymbol _) ->
           // FIXME: proper error handling
@@ -734,7 +734,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       let varDef = VarDef(name, AutoSM, noTy, loc)
 
       let ctx =
-        ctx |> addLocalVar (ValueSymbol serial) varDef
+        ctx |> addLocalVar (VarSymbol serial) varDef
 
       let pat, ctx = (pat, ctx) |> nameResPat
       HAsPat(pat, serial, loc), ctx
@@ -763,7 +763,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         let name = ctx |> findName serial
         match ctx |> resolveLocalVarName name with
-        | Some (ValueSymbol serial) -> HRefExpr(serial, ty, loc), ctx
+        | Some (VarSymbol serial) -> HRefExpr(serial, ty, loc), ctx
         | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc), ctx
         | Some (VariantSymbol serial) -> HVariantExpr(serial, ty, loc), ctx
 
@@ -826,7 +826,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
             match ctx |> resolveExprAsScope l with
             | Some (TySymbol scopeSerial) ->
                 match ctx |> resolveScopedVarName scopeSerial r with
-                | Some (ValueSymbol varSerial) -> HRefExpr(varSerial, ty, loc), ctx
+                | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc), ctx
                 | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc), ctx
                 | Some (VariantSymbol variantSerial) -> HVariantExpr(variantSerial, ty, loc), ctx
 
