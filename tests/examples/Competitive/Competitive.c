@@ -44,17 +44,17 @@ struct StringIntIntObjectObjectTuple5List;
 
 int listIsEmpty_6(struct StringIntIntObjectObjectTuple5List* xs_);
 
-int go_34(int len_1, struct StringList* xs_2);
+int go_32(int len_1, struct StringList* xs_2);
 
-int go_33(int len_1, struct IntList* xs_2);
+int go_31(int len_1, struct IntList* xs_2);
 
 int listLength_2(struct StringList* xs_1);
 
 int listLength_1(struct IntList* xs_1);
 
-struct IntList* go_39(struct IntList* acc_, struct IntList* xs_5);
+struct IntList* go_37(struct IntList* acc_, struct IntList* xs_5);
 
-struct StringList* go_38(struct StringList* acc_, struct StringList* xs_5);
+struct StringList* go_36(struct StringList* acc_, struct StringList* xs_5);
 
 struct IntList* listRev_2(struct IntList* xs_4);
 
@@ -64,25 +64,25 @@ struct IntIntBoolFun2;
 
 struct IntListIntListTuple2;
 
-int go_32(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1);
+int go_30(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1);
 
 struct StringStringBoolFun2;
 
 struct StringListStringListTuple2;
 
-int go_31(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1);
+int go_29(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1);
 
 int listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList* xs_7, struct IntList* ys_);
 
 int listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList* xs_7, struct StringList* ys_);
 
-struct IntList* go_30(int item_, int len_2, struct IntList* acc_1, int i_);
+struct IntList* go_28(int item_, int len_2, struct IntList* acc_1, int i_);
 
 struct IntList* listReplicate_1(int item_, int len_2);
 
 struct IntIntFun1;
 
-struct IntList* go_29(int len_3, struct IntIntFun1 gen_, struct IntList* acc_2, int i_1);
+struct IntList* go_27(int len_3, struct IntIntFun1 gen_, struct IntList* acc_2, int i_1);
 
 struct IntList* listInit_1(int len_3, struct IntIntFun1 gen_);
 
@@ -102,7 +102,7 @@ int strEq_(struct String first_3, struct String second_3);
 
 int failwith_1(struct String msg_);
 
-int fun_23(int arg_59);
+int fun_(int arg_59);
 
 int fun_3(void* env_, int arg_);
 
@@ -140,7 +140,7 @@ int vectorGet_1(int index_3, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectInt
 
 int vectorSet_1(int index_4, int value_1, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 self_2);
 
-int go_28(int len_9, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 v_, int i_2, struct IntList* xs_19);
+int go_26(int len_9, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 v_, int i_2, struct IntList* xs_19);
 
 struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 vectorOfList_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6 ty_, struct IntList* xs_18);
 
@@ -268,31 +268,31 @@ int segTreeToLength_2(struct StringStringStringFun2StringIntIntObjectObjectTuple
 
 int segTreeToHeight_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_6);
 
-int go_27(int index_6, struct IntIntIntObjectObjectTuple5 node_14);
+int go_25(int index_6, struct IntIntIntObjectObjectTuple5 node_14);
 
-struct String go_37(int index_6, struct StringIntIntObjectObjectTuple5 node_14);
+struct String go_35(int index_6, struct StringIntIntObjectObjectTuple5 node_14);
 
 int segTreeGet_1(int index_5, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_8);
 
 struct String segTreeGet_2(int index_5, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 self_8);
 
-int go_26(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_12, struct IntIntTuple2 e_, struct IntIntTuple2 q_, struct IntIntIntObjectObjectTuple5 node_15);
+int go_24(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_12, struct IntIntTuple2 e_, struct IntIntTuple2 q_, struct IntIntIntObjectObjectTuple5 node_15);
 
 int segTreeSum_1(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_9);
 
-struct IntIntIntObjectObjectTuple5 go_25(int newItem_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_13, int index_8, struct IntIntIntObjectObjectTuple5 node_16);
+struct IntIntIntObjectObjectTuple5 go_23(int newItem_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_13, int index_8, struct IntIntIntObjectObjectTuple5 node_16);
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeSet_1(int index_7, int newItem_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_10);
 
-struct IntIntIntObjectObjectTuple5 go_24(int newItem_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, int index_10, struct IntIntIntObjectObjectTuple5 node_17);
+struct IntIntIntObjectObjectTuple5 go_22(int newItem_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, int index_10, struct IntIntIntObjectObjectTuple5 node_17);
 
-struct StringIntIntObjectObjectTuple5 go_36(struct String newItem_1, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, int index_10, struct StringIntIntObjectObjectTuple5 node_17);
+struct StringIntIntObjectObjectTuple5 go_34(struct String newItem_1, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, int index_10, struct StringIntIntObjectObjectTuple5 node_17);
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeInsert_1(int index_9, int newItem_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_11);
 
 struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 segTreeInsert_2(int index_9, struct String newItem_1, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 self_11);
 
-struct IntIntIntObjectObjectTuple5 go_35(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_15, int index_12, struct IntIntIntObjectObjectTuple5 node_18);
+struct IntIntIntObjectObjectTuple5 go_33(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_15, int index_12, struct IntIntIntObjectObjectTuple5 node_18);
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeRemove_1(int index_11, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_12);
 
@@ -302,13 +302,13 @@ struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObject
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreePop_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_14);
 
-struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_23(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 t_2, struct IntList* xs_22);
+struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_21(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 t_2, struct IntList* xs_22);
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeOfList_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_16, struct IntList* xs_21);
 
-struct IntList* go_22(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_4, int len_19, struct IntList* acc_3, int i_4);
+struct IntList* go_20(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_4, int len_19, struct IntList* acc_3, int i_4);
 
-struct StringList* go_21(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 v_4, int len_19, struct StringList* acc_3, int i_4);
+struct StringList* go_19(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 v_4, int len_19, struct StringList* acc_3, int i_4);
 
 struct IntList* segTreeToList_2(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_4);
 
@@ -362,7 +362,7 @@ int abc140aTest_(int arg_122);
 
 int abc140aMain_(int arg_123);
 
-int fun_22(int arg_124, int arg_125);
+int fun_1(int arg_124, int arg_125);
 
 int fun_17(void* env_14, int arg_27, int arg_28);
 
@@ -382,7 +382,7 @@ int abc140bTest_(int arg_135);
 
 int abc140bMain_(int arg_136);
 
-int fun_21(int arg_137, int arg_138);
+int fun_2(int arg_137, int arg_138);
 
 int fun_18(void* env_15, int arg_29, int arg_30);
 
@@ -390,9 +390,9 @@ int fun_19(void* env_16, int arg_31, int arg_32);
 
 int fun_20(void* env_17, int arg_33, int arg_34);
 
-struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_20(int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 perm_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_1, int i_7);
+struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_17(int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 perm_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_1, int i_7);
 
-int go_19(int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_, int sum_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 prev_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 next_1, int p_);
+int go_18(int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_, int sum_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 prev_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 next_1, int p_);
 
 int abc140eSolve_(int n_7, struct IntList* perm_);
 
@@ -595,7 +595,7 @@ if_next_16:;
     return if_5;
 }
 
-int go_34(int len_1, struct StringList* xs_2) {
+int go_32(int len_1, struct StringList* xs_2) {
 tailrec_19:;
     int match_;
     if ((!((!(xs_2))))) goto next_21;
@@ -617,7 +617,7 @@ end_match_20:;
     return match_;
 }
 
-int go_33(int len_1, struct IntList* xs_2) {
+int go_31(int len_1, struct IntList* xs_2) {
 tailrec_23:;
     int match_1;
     if ((!((!(xs_2))))) goto next_25;
@@ -640,16 +640,16 @@ end_match_24:;
 }
 
 int listLength_2(struct StringList* xs_1) {
-    int call_5 = go_34(0, xs_1);
+    int call_5 = go_32(0, xs_1);
     return call_5;
 }
 
 int listLength_1(struct IntList* xs_1) {
-    int call_6 = go_33(0, xs_1);
+    int call_6 = go_31(0, xs_1);
     return call_6;
 }
 
-struct IntList* go_39(struct IntList* acc_, struct IntList* xs_5) {
+struct IntList* go_37(struct IntList* acc_, struct IntList* xs_5) {
 tailrec_27:;
     struct IntList* match_2;
     if ((!((!(xs_5))))) goto next_29;
@@ -675,7 +675,7 @@ end_match_28:;
     return match_2;
 }
 
-struct StringList* go_38(struct StringList* acc_, struct StringList* xs_5) {
+struct StringList* go_36(struct StringList* acc_, struct StringList* xs_5) {
 tailrec_31:;
     struct StringList* match_3;
     if ((!((!(xs_5))))) goto next_33;
@@ -702,12 +702,12 @@ end_match_32:;
 }
 
 struct IntList* listRev_2(struct IntList* xs_4) {
-    struct IntList* call_7 = go_39(NULL, xs_4);
+    struct IntList* call_7 = go_37(NULL, xs_4);
     return call_7;
 }
 
 struct StringList* listRev_1(struct StringList* xs_4) {
-    struct StringList* call_8 = go_38(NULL, xs_4);
+    struct StringList* call_8 = go_36(NULL, xs_4);
     return call_8;
 }
 
@@ -721,7 +721,7 @@ struct IntListIntListTuple2 {
     struct IntList* t1;
 };
 
-int go_32(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1) {
+int go_30(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1) {
 tailrec_35:;
     int match_4;
     struct IntListIntListTuple2 tuple_;
@@ -779,7 +779,7 @@ struct StringListStringListTuple2 {
     struct StringList* t1;
 };
 
-int go_31(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1) {
+int go_29(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1) {
 tailrec_43:;
     int match_5;
     struct StringListStringListTuple2 tuple_1;
@@ -828,16 +828,16 @@ end_match_44:;
 }
 
 int listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList* xs_7, struct IntList* ys_) {
-    int call_9 = go_32(itemEq_, xs_7, ys_);
+    int call_9 = go_30(itemEq_, xs_7, ys_);
     return call_9;
 }
 
 int listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList* xs_7, struct StringList* ys_) {
-    int call_10 = go_31(itemEq_, xs_7, ys_);
+    int call_10 = go_29(itemEq_, xs_7, ys_);
     return call_10;
 }
 
-struct IntList* go_30(int item_, int len_2, struct IntList* acc_1, int i_) {
+struct IntList* go_28(int item_, int len_2, struct IntList* acc_1, int i_) {
 tailrec_51:;
     struct IntList* if_8;
     if ((i_ == len_2)) {
@@ -868,7 +868,7 @@ if_next_52:;
 }
 
 struct IntList* listReplicate_1(int item_, int len_2) {
-    struct IntList* call_11 = go_30(item_, len_2, NULL, 0);
+    struct IntList* call_11 = go_28(item_, len_2, NULL, 0);
     return call_11;
 }
 
@@ -877,7 +877,7 @@ struct IntIntFun1 {
     void* env;
 };
 
-struct IntList* go_29(int len_3, struct IntIntFun1 gen_, struct IntList* acc_2, int i_1) {
+struct IntList* go_27(int len_3, struct IntIntFun1 gen_, struct IntList* acc_2, int i_1) {
 tailrec_55:;
     struct IntList* if_9;
     if ((i_1 == len_3)) {
@@ -912,7 +912,7 @@ if_next_56:;
 struct IntList* listInit_1(int len_3, struct IntIntFun1 gen_) {
     milone_assert((len_3 >= 0), 66, 2);
     int call_13 = 0;
-    struct IntList* call_14 = go_29(len_3, gen_, NULL, 0);
+    struct IntList* call_14 = go_27(len_3, gen_, NULL, 0);
     return call_14;
 }
 
@@ -1033,13 +1033,13 @@ int failwith_1(struct String msg_) {
     return 0;
 }
 
-int fun_23(int arg_59) {
+int fun_(int arg_59) {
     int call_23 = scanInt_(0);
     return call_23;
 }
 
 int fun_3(void* env_, int arg_) {
-    int call_24 = fun_23(arg_);
+    int call_24 = fun_(arg_);
     return call_24;
 }
 
@@ -1047,8 +1047,8 @@ struct IntList* scanIntList_(int len_4) {
     void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
     void* env_18 = box_;
-    struct IntIntFun1 fun_24 = (struct IntIntFun1){.fun = fun_3, .env = env_18};
-    struct IntList* call_25 = listInit_1(len_4, fun_24);
+    struct IntIntFun1 fun_21 = (struct IntIntFun1){.fun = fun_3, .env = env_18};
+    struct IntList* call_25 = listInit_1(len_4, fun_21);
     return call_25;
 }
 
@@ -1192,7 +1192,7 @@ int vectorSet_1(int index_4, int value_1, struct IntIntIntObjectFun1ObjectIntInt
     return 0;
 }
 
-int go_28(int len_9, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 v_, int i_2, struct IntList* xs_19) {
+int go_26(int len_9, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 v_, int i_2, struct IntList* xs_19) {
 tailrec_76:;
     int match_7;
     if ((!((!(xs_19))))) goto next_78;
@@ -1227,7 +1227,7 @@ struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6Obje
     int len_9 = call_39;
     struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 call_40 = vectorNew_1(ty_, len_9);
     struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6ObjectIntIntObjectTuple5 v_ = call_40;
-    int call_41 = go_28(len_9, v_, 0, xs_18);
+    int call_41 = go_26(len_9, v_, 0, xs_18);
     return v_;
 }
 
@@ -2348,7 +2348,7 @@ int segTreeToHeight_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjec
     return call_195;
 }
 
-int go_27(int index_6, struct IntIntIntObjectObjectTuple5 node_14) {
+int go_25(int index_6, struct IntIntIntObjectObjectTuple5 node_14) {
 tailrec_184:;
     int item_4 = node_14.t0;
     int len_14 = node_14.t1;
@@ -2427,7 +2427,7 @@ if_next_191:;
     return if_47;
 }
 
-struct String go_37(int index_6, struct StringIntIntObjectObjectTuple5 node_14) {
+struct String go_35(int index_6, struct StringIntIntObjectObjectTuple5 node_14) {
 tailrec_197:;
     struct String item_4 = node_14.t0;
     int len_14 = node_14.t1;
@@ -2508,17 +2508,17 @@ if_next_204:;
 
 int segTreeGet_1(int index_5, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_8) {
     struct IntIntIntObjectObjectTuple5 call_204 = segTreeToRoot_1(self_8);
-    int call_205 = go_27(index_5, call_204);
+    int call_205 = go_25(index_5, call_204);
     return call_205;
 }
 
 struct String segTreeGet_2(int index_5, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 self_8) {
     struct StringIntIntObjectObjectTuple5 call_206 = segTreeToRoot_2(self_8);
-    struct String call_207 = go_37(index_5, call_206);
+    struct String call_207 = go_35(index_5, call_206);
     return call_207;
 }
 
-int go_26(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_12, struct IntIntTuple2 e_, struct IntIntTuple2 q_, struct IntIntIntObjectObjectTuple5 node_15) {
+int go_24(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_12, struct IntIntTuple2 e_, struct IntIntTuple2 q_, struct IntIntIntObjectObjectTuple5 node_15) {
     int call_208 = intervalIsDisjoint_(q_, e_);
     int if_53;
     if (call_208) {
@@ -2556,12 +2556,12 @@ else_215:;
     struct IntIntTuple2 tuple_25;
     tuple_25.t0 = el_;
     tuple_25.t1 = m_1;
-    int call_216 = go_26(itemTy_12, tuple_25, q_, leftNode_);
+    int call_216 = go_24(itemTy_12, tuple_25, q_, leftNode_);
     int vl_ = call_216;
     struct IntIntTuple2 tuple_26;
     tuple_26.t0 = m_1;
     tuple_26.t1 = er_;
-    int call_217 = go_26(itemTy_12, tuple_26, q_, rightNode_);
+    int call_217 = go_24(itemTy_12, tuple_26, q_, rightNode_);
     int vr_ = call_217;
     struct IntIntIntFun2 call_218 = segItemTypeToAppend_1(itemTy_12);
     int app_10 = call_218.fun(call_218.env, vl_, vr_);
@@ -2602,14 +2602,14 @@ else_218:;
     tuple_29.t0 = 0;
     tuple_29.t1 = len_15;
     struct IntIntTuple2 e_1 = tuple_29;
-    int call_222 = go_26(itemTy_12, e_1, q_1, root_);
+    int call_222 = go_24(itemTy_12, e_1, q_1, root_);
     if_55 = call_222;
     goto if_next_216;
 if_next_216:;
     return if_55;
 }
 
-struct IntIntIntObjectObjectTuple5 go_25(int newItem_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_13, int index_8, struct IntIntIntObjectObjectTuple5 node_16) {
+struct IntIntIntObjectObjectTuple5 go_23(int newItem_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_13, int index_8, struct IntIntIntObjectObjectTuple5 node_16) {
     int len_16 = node_16.t1;
     int height_2 = node_16.t2;
     void* children_1 = node_16.t3;
@@ -2672,12 +2672,12 @@ else_227:;
         goto else_230;
     }
 then_229:;
-    struct IntIntIntObjectObjectTuple5 call_227 = go_25(newItem_, itemTy_13, index_8, left_8);
+    struct IntIntIntObjectObjectTuple5 call_227 = go_23(newItem_, itemTy_13, index_8, left_8);
     struct IntIntIntObjectObjectTuple5 call_228 = segNodeWithLeft_1(itemTy_13, call_227, node_16);
     if_59 = call_228;
     goto if_next_228;
 else_230:;
-    struct IntIntIntObjectObjectTuple5 call_229 = go_25(newItem_, itemTy_13, (index_8 - leftLen_2), right_8);
+    struct IntIntIntObjectObjectTuple5 call_229 = go_23(newItem_, itemTy_13, (index_8 - leftLen_2), right_8);
     struct IntIntIntObjectObjectTuple5 call_230 = segNodeWithRight_1(itemTy_13, call_229, node_16);
     if_59 = call_230;
     goto if_next_228;
@@ -2691,7 +2691,7 @@ if_next_225:;
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeSet_1(int index_7, int newItem_, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_10) {
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_13 = self_10.t0;
     struct IntIntIntObjectObjectTuple5 root_1 = self_10.t1;
-    struct IntIntIntObjectObjectTuple5 call_231 = go_25(newItem_, itemTy_13, index_7, root_1);
+    struct IntIntIntObjectObjectTuple5 call_231 = go_23(newItem_, itemTy_13, index_7, root_1);
     struct IntIntIntObjectObjectTuple5 root_2 = call_231;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 tuple_31;
     tuple_31.t0 = itemTy_13;
@@ -2700,7 +2700,7 @@ struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObject
     return tuple_31;
 }
 
-struct IntIntIntObjectObjectTuple5 go_24(int newItem_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, int index_10, struct IntIntIntObjectObjectTuple5 node_17) {
+struct IntIntIntObjectObjectTuple5 go_22(int newItem_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, int index_10, struct IntIntIntObjectObjectTuple5 node_17) {
     int oldItem_ = node_17.t0;
     int len_17 = node_17.t1;
     milone_assert((len_17 >= index_10), 339, 4);
@@ -2770,7 +2770,7 @@ else_239:;
         goto else_242;
     }
 then_241:;
-    struct IntIntIntObjectObjectTuple5 call_242 = go_24(newItem_1, itemTy_14, index_10, left_10);
+    struct IntIntIntObjectObjectTuple5 call_242 = go_22(newItem_1, itemTy_14, index_10, left_10);
     struct IntIntIntObjectObjectTuple5 left_12 = call_242;
     int call_243 = segNodeToLength_1(left_12);
     milone_assert((call_243 == (leftLen_3 + 1)), 365, 10);
@@ -2781,7 +2781,7 @@ then_241:;
     if_63 = tuple_34;
     goto if_next_240;
 else_242:;
-    struct IntIntIntObjectObjectTuple5 call_245 = go_24(newItem_1, itemTy_14, (index_10 - leftLen_3), right_10);
+    struct IntIntIntObjectObjectTuple5 call_245 = go_22(newItem_1, itemTy_14, (index_10 - leftLen_3), right_10);
     struct IntIntIntObjectObjectTuple5 right_12 = call_245;
     int call_246 = segNodeToLength_1(right_12);
     milone_assert((call_246 == (rightLen_1 + 1)), 369, 10);
@@ -2805,7 +2805,7 @@ if_next_231:;
     return if_60;
 }
 
-struct StringIntIntObjectObjectTuple5 go_36(struct String newItem_1, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, int index_10, struct StringIntIntObjectObjectTuple5 node_17) {
+struct StringIntIntObjectObjectTuple5 go_34(struct String newItem_1, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14, int index_10, struct StringIntIntObjectObjectTuple5 node_17) {
     struct String oldItem_ = node_17.t0;
     int len_17 = node_17.t1;
     milone_assert((len_17 >= index_10), 339, 4);
@@ -2875,7 +2875,7 @@ else_251:;
         goto else_254;
     }
 then_253:;
-    struct StringIntIntObjectObjectTuple5 call_260 = go_36(newItem_1, itemTy_14, index_10, left_10);
+    struct StringIntIntObjectObjectTuple5 call_260 = go_34(newItem_1, itemTy_14, index_10, left_10);
     struct StringIntIntObjectObjectTuple5 left_12 = call_260;
     int call_261 = segNodeToLength_2(left_12);
     milone_assert((call_261 == (leftLen_3 + 1)), 365, 10);
@@ -2886,7 +2886,7 @@ then_253:;
     if_67 = tuple_38;
     goto if_next_252;
 else_254:;
-    struct StringIntIntObjectObjectTuple5 call_263 = go_36(newItem_1, itemTy_14, (index_10 - leftLen_3), right_10);
+    struct StringIntIntObjectObjectTuple5 call_263 = go_34(newItem_1, itemTy_14, (index_10 - leftLen_3), right_10);
     struct StringIntIntObjectObjectTuple5 right_12 = call_263;
     int call_264 = segNodeToLength_2(right_12);
     milone_assert((call_264 == (rightLen_1 + 1)), 369, 10);
@@ -2913,7 +2913,7 @@ if_next_243:;
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeInsert_1(int index_9, int newItem_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_11) {
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14 = self_11.t0;
     struct IntIntIntObjectObjectTuple5 root_3 = self_11.t1;
-    struct IntIntIntObjectObjectTuple5 call_268 = go_24(newItem_1, itemTy_14, index_9, root_3);
+    struct IntIntIntObjectObjectTuple5 call_268 = go_22(newItem_1, itemTy_14, index_9, root_3);
     struct IntIntIntObjectObjectTuple5 root_4 = call_268;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 tuple_40;
     tuple_40.t0 = itemTy_14;
@@ -2925,7 +2925,7 @@ struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObject
 struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 segTreeInsert_2(int index_9, struct String newItem_1, struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 self_11) {
     struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_14 = self_11.t0;
     struct StringIntIntObjectObjectTuple5 root_3 = self_11.t1;
-    struct StringIntIntObjectObjectTuple5 call_269 = go_36(newItem_1, itemTy_14, index_9, root_3);
+    struct StringIntIntObjectObjectTuple5 call_269 = go_34(newItem_1, itemTy_14, index_9, root_3);
     struct StringIntIntObjectObjectTuple5 root_4 = call_269;
     struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 tuple_41;
     tuple_41.t0 = itemTy_14;
@@ -2934,7 +2934,7 @@ struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4Str
     return tuple_41;
 }
 
-struct IntIntIntObjectObjectTuple5 go_35(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_15, int index_12, struct IntIntIntObjectObjectTuple5 node_18) {
+struct IntIntIntObjectObjectTuple5 go_33(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_15, int index_12, struct IntIntIntObjectObjectTuple5 node_18) {
     int len_18 = node_18.t1;
     milone_assert((index_12 < len_18), 384, 4);
     int call_270 = 0;
@@ -2977,7 +2977,7 @@ then_261:;
     if_70 = right_13;
     goto if_next_260;
 else_262:;
-    struct IntIntIntObjectObjectTuple5 call_277 = go_35(itemTy_15, index_12, left_13);
+    struct IntIntIntObjectObjectTuple5 call_277 = go_33(itemTy_15, index_12, left_13);
     struct IntIntIntObjectObjectTuple5 call_278 = segNodeWithLeft_1(itemTy_15, call_277, node_18);
     if_70 = call_278;
     goto if_next_260;
@@ -2995,7 +2995,7 @@ then_265:;
     if_71 = left_13;
     goto if_next_264;
 else_266:;
-    struct IntIntIntObjectObjectTuple5 call_279 = go_35(itemTy_15, (index_12 - leftLen_4), right_13);
+    struct IntIntIntObjectObjectTuple5 call_279 = go_33(itemTy_15, (index_12 - leftLen_4), right_13);
     struct IntIntIntObjectObjectTuple5 call_280 = segNodeWithRight_1(itemTy_15, call_279, node_18);
     if_71 = call_280;
     goto if_next_264;
@@ -3014,7 +3014,7 @@ if_next_255:;
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeRemove_1(int index_11, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 self_12) {
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_15 = self_12.t0;
     struct IntIntIntObjectObjectTuple5 root_5 = self_12.t1;
-    struct IntIntIntObjectObjectTuple5 call_282 = go_35(itemTy_15, index_11, root_5);
+    struct IntIntIntObjectObjectTuple5 call_282 = go_33(itemTy_15, index_11, root_5);
     struct IntIntIntObjectObjectTuple5 root_6 = call_282;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 tuple_42;
     tuple_42.t0 = itemTy_15;
@@ -3044,7 +3044,7 @@ struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObject
     return call_288;
 }
 
-struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_23(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 t_2, struct IntList* xs_22) {
+struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_21(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 t_2, struct IntList* xs_22) {
 tailrec_267:;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 match_10;
     if ((!((!(xs_22))))) goto next_269;
@@ -3070,11 +3070,11 @@ end_match_268:;
 
 struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 segTreeOfList_1(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 itemTy_16, struct IntList* xs_21) {
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_290 = segTreeNew_2(itemTy_16);
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_291 = go_23(call_290, xs_21);
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_291 = go_21(call_290, xs_21);
     return call_291;
 }
 
-struct IntList* go_22(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_4, int len_19, struct IntList* acc_3, int i_4) {
+struct IntList* go_20(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_4, int len_19, struct IntList* acc_3, int i_4) {
 tailrec_271:;
     struct IntList* if_72;
     if ((i_4 == len_19)) {
@@ -3107,7 +3107,7 @@ if_next_272:;
     return if_72;
 }
 
-struct StringList* go_21(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 v_4, int len_19, struct StringList* acc_3, int i_4) {
+struct StringList* go_19(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 v_4, int len_19, struct StringList* acc_3, int i_4) {
 tailrec_275:;
     struct StringList* if_73;
     if ((i_4 == len_19)) {
@@ -3143,14 +3143,14 @@ if_next_276:;
 struct IntList* segTreeToList_2(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 v_4) {
     int call_296 = segTreeToLength_1(v_4);
     int len_19 = call_296;
-    struct IntList* call_297 = go_22(v_4, len_19, NULL, 0);
+    struct IntList* call_297 = go_20(v_4, len_19, NULL, 0);
     return call_297;
 }
 
 struct StringList* segTreeToList_1(struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4StringIntIntObjectObjectTuple5ObjectTuple3 v_4) {
     int call_298 = segTreeToLength_2(v_4);
     int len_19 = call_298;
-    struct StringList* call_299 = go_21(v_4, len_19, NULL, 0);
+    struct StringList* call_299 = go_19(v_4, len_19, NULL, 0);
     return call_299;
 }
 
@@ -3205,7 +3205,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTupl
     void* box_5 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_5))) = 0;
     void* env_19 = box_5;
-    struct IntIntBoolFun2 fun_25 = (struct IntIntBoolFun2){.fun = fun_9, .env = env_19};
+    struct IntIntBoolFun2 fun_22 = (struct IntIntBoolFun2){.fun = fun_9, .env = env_19};
     struct IntList* list_24 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_24->head = 2;
     list_24->tail = NULL;
@@ -3213,7 +3213,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTupl
     list_23->head = 1;
     list_23->tail = list_24;
     struct IntList* call_310 = segTreeToList_2(v_5);
-    int call_311 = listEq_2(fun_25, list_23, call_310);
+    int call_311 = listEq_2(fun_22, list_23, call_310);
     milone_assert(call_311, 462, 4);
     int call_312 = 0;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_313 = segTreePush_1(3, v_5);
@@ -3221,7 +3221,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTupl
     void* box_6 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_6))) = 0;
     void* env_20 = box_6;
-    struct IntIntBoolFun2 fun_26 = (struct IntIntBoolFun2){.fun = fun_10, .env = env_20};
+    struct IntIntBoolFun2 fun_23 = (struct IntIntBoolFun2){.fun = fun_10, .env = env_20};
     struct IntList* list_27 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_27->head = 3;
     list_27->tail = NULL;
@@ -3232,7 +3232,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTupl
     list_25->head = 1;
     list_25->tail = list_26;
     struct IntList* call_314 = segTreeToList_2(v_6);
-    int call_315 = listEq_2(fun_26, list_25, call_314);
+    int call_315 = listEq_2(fun_23, list_25, call_314);
     milone_assert(call_315, 465, 4);
     int call_316 = 0;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_317 = segTreePop_1(v_6);
@@ -3240,7 +3240,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTupl
     void* box_7 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_7))) = 0;
     void* env_21 = box_7;
-    struct IntIntBoolFun2 fun_27 = (struct IntIntBoolFun2){.fun = fun_11, .env = env_21};
+    struct IntIntBoolFun2 fun_24 = (struct IntIntBoolFun2){.fun = fun_11, .env = env_21};
     struct IntList* list_29 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_29->head = 2;
     list_29->tail = NULL;
@@ -3248,7 +3248,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTupl
     list_28->head = 1;
     list_28->tail = list_29;
     struct IntList* call_318 = segTreeToList_2(v_7);
-    int call_319 = listEq_2(fun_27, list_28, call_318);
+    int call_319 = listEq_2(fun_24, list_28, call_318);
     milone_assert(call_319, 468, 4);
     int call_320 = 0;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_321 = segTreePop_1(v_7);
@@ -3256,12 +3256,12 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTupl
     void* box_8 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_8))) = 0;
     void* env_22 = box_8;
-    struct IntIntBoolFun2 fun_28 = (struct IntIntBoolFun2){.fun = fun_12, .env = env_22};
+    struct IntIntBoolFun2 fun_25 = (struct IntIntBoolFun2){.fun = fun_12, .env = env_22};
     struct IntList* list_30 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_30->head = 1;
     list_30->tail = NULL;
     struct IntList* call_322 = segTreeToList_2(v_8);
-    int call_323 = listEq_2(fun_28, list_30, call_322);
+    int call_323 = listEq_2(fun_25, list_30, call_322);
     milone_assert(call_323, 471, 4);
     int call_324 = 0;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_325 = segTreePop_1(v_8);
@@ -3269,9 +3269,9 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTupl
     void* box_9 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_9))) = 0;
     void* env_23 = box_9;
-    struct IntIntBoolFun2 fun_29 = (struct IntIntBoolFun2){.fun = fun_13, .env = env_23};
+    struct IntIntBoolFun2 fun_26 = (struct IntIntBoolFun2){.fun = fun_13, .env = env_23};
     struct IntList* call_326 = segTreeToList_2(v_9);
-    int call_327 = listEq_2(fun_29, NULL, call_326);
+    int call_327 = listEq_2(fun_26, NULL, call_326);
     milone_assert(call_327, 474, 4);
     int call_328 = 0;
     return 0;
@@ -3303,7 +3303,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 s
     void* box_10 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_10))) = 0;
     void* env_24 = box_10;
-    struct IntIntBoolFun2 fun_30 = (struct IntIntBoolFun2){.fun = fun_14, .env = env_24};
+    struct IntIntBoolFun2 fun_27 = (struct IntIntBoolFun2){.fun = fun_14, .env = env_24};
     struct IntList* list_36 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_36->head = 3;
     list_36->tail = NULL;
@@ -3314,7 +3314,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 s
     list_34->head = 1;
     list_34->tail = list_35;
     struct IntList* call_333 = segTreeToList_2(v_10);
-    int call_334 = listEq_2(fun_30, list_34, call_333);
+    int call_334 = listEq_2(fun_27, list_34, call_333);
     milone_assert(call_334, 483, 4);
     int call_335 = 0;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_336 = segTreeSet_1(0, 11, v_10);
@@ -3323,7 +3323,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 s
     void* box_11 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_11))) = 0;
     void* env_25 = box_11;
-    struct IntIntBoolFun2 fun_31 = (struct IntIntBoolFun2){.fun = fun_15, .env = env_25};
+    struct IntIntBoolFun2 fun_28 = (struct IntIntBoolFun2){.fun = fun_15, .env = env_25};
     struct IntList* list_39 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_39->head = 33;
     list_39->tail = NULL;
@@ -3334,7 +3334,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 s
     list_37->head = 11;
     list_37->tail = list_38;
     struct IntList* call_338 = segTreeToList_2(v_11);
-    int call_339 = listEq_2(fun_31, list_37, call_338);
+    int call_339 = listEq_2(fun_28, list_37, call_338);
     milone_assert(call_339, 486, 4);
     int call_340 = 0;
     return 0;
@@ -3535,7 +3535,7 @@ int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectObjectTuple5
     void* box_12 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_12))) = 0;
     void* env_26 = box_12;
-    struct StringStringBoolFun2 fun_32 = (struct StringStringBoolFun2){.fun = fun_16, .env = env_26};
+    struct StringStringBoolFun2 fun_29 = (struct StringStringBoolFun2){.fun = fun_16, .env = env_26};
     struct StringList* list_53 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
     list_53->head = (struct String){.str = "b", .len = 1};
     list_53->tail = NULL;
@@ -3543,7 +3543,7 @@ int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectObjectTuple5
     list_52->head = (struct String){.str = "a", .len = 1};
     list_52->tail = list_53;
     struct StringList* call_361 = segTreeToList_1(v_15);
-    int call_362 = listEq_1(fun_32, list_52, call_361);
+    int call_362 = listEq_1(fun_29, list_52, call_361);
     milone_assert(call_362, 543, 4);
     int call_363 = 0;
     return 0;
@@ -3553,14 +3553,14 @@ int segTreeTest_(int arg_121) {
     void* box_13 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_13))) = 0;
     void* env_27 = box_13;
-    struct IntIntIntFun2 fun_33 = (struct IntIntIntFun2){.fun = fun_7, .env = env_27};
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_364 = segItemTypeNew_1(0, fun_33);
+    struct IntIntIntFun2 fun_30 = (struct IntIntIntFun2){.fun = fun_7, .env = env_27};
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_364 = segItemTypeNew_1(0, fun_30);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 segItemTypeInt_ = call_364;
     void* box_14 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_14))) = 0;
     void* env_28 = box_14;
-    struct StringStringStringFun2 fun_34 = (struct StringStringStringFun2){.fun = fun_8, .env = env_28};
-    struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 call_365 = segItemTypeNew_2((struct String){.str = "", .len = 0}, fun_34);
+    struct StringStringStringFun2 fun_31 = (struct StringStringStringFun2){.fun = fun_8, .env = env_28};
+    struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 call_365 = segItemTypeNew_2((struct String){.str = "", .len = 0}, fun_31);
     struct StringStringStringFun2StringIntIntObjectObjectTuple5ObjectObjectTuple4 segItemTypeStr_ = call_365;
     int call_366 = testPushPop_(segItemTypeInt_, 0);
     int call_367 = testSet_(segItemTypeInt_, 0);
@@ -3595,12 +3595,12 @@ int abc140aMain_(int arg_123) {
     return 0;
 }
 
-int fun_22(int arg_124, int arg_125) {
+int fun_1(int arg_124, int arg_125) {
     return 0;
 }
 
 int fun_17(void* env_14, int arg_27, int arg_28) {
-    int call_379 = fun_22(arg_27, arg_28);
+    int call_379 = fun_1(arg_27, arg_28);
     return call_379;
 }
 
@@ -3672,8 +3672,8 @@ int abc140bSolve_(int n_4, struct IntList* a_, struct IntList* b_, struct IntLis
     void* box_15 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_15))) = 0;
     void* env_29 = box_15;
-    struct IntIntIntFun2 fun_35 = (struct IntIntIntFun2){.fun = fun_17, .env = env_29};
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_384 = segItemTypeNew_1(0, fun_35);
+    struct IntIntIntFun2 fun_32 = (struct IntIntIntFun2){.fun = fun_17, .env = env_29};
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_384 = segItemTypeNew_1(0, fun_32);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 segItemTypeInt_1 = call_384;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_385 = segTreeOfList_1(segItemTypeInt_1, a_);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 a_1 = call_385;
@@ -3823,12 +3823,12 @@ int abc140bMain_(int arg_136) {
     return 0;
 }
 
-int fun_21(int arg_137, int arg_138) {
+int fun_2(int arg_137, int arg_138) {
     return 0;
 }
 
 int fun_18(void* env_15, int arg_29, int arg_30) {
-    int call_410 = fun_21(arg_29, arg_30);
+    int call_410 = fun_2(arg_29, arg_30);
     return call_410;
 }
 
@@ -3842,7 +3842,7 @@ int fun_20(void* env_17, int arg_33, int arg_34) {
     return call_412;
 }
 
-struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_20(int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 perm_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_1, int i_7) {
+struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 go_17(int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 perm_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_1, int i_7) {
 tailrec_306:;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 if_81;
     if ((i_7 == (n_7 + 2))) {
@@ -3872,7 +3872,7 @@ if_next_307:;
     return if_81;
 }
 
-int go_19(int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_, int sum_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 prev_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 next_1, int p_) {
+int go_18(int n_7, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_, int sum_2, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 prev_1, struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 next_1, int p_) {
 tailrec_310:;
     int if_82;
     if ((p_ < 1)) {
@@ -3953,8 +3953,8 @@ int abc140eSolve_(int n_7, struct IntList* perm_) {
     void* box_16 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_16))) = 0;
     void* env_30 = box_16;
-    struct IntIntIntFun2 fun_36 = (struct IntIntIntFun2){.fun = fun_18, .env = env_30};
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_424 = segItemTypeNew_1(0, fun_36);
+    struct IntIntIntFun2 fun_33 = (struct IntIntIntFun2){.fun = fun_18, .env = env_30};
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_424 = segItemTypeNew_1(0, fun_33);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 segItemTypeInt_2 = call_424;
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_425 = segTreeOfList_1(segItemTypeInt_2, perm_);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 perm_1 = call_425;
@@ -3967,25 +3967,25 @@ int abc140eSolve_(int n_7, struct IntList* perm_) {
     void* box_17 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_17))) = 0;
     void* env_31 = box_17;
-    struct IntIntIntFun2 fun_37 = (struct IntIntIntFun2){.fun = fun_19, .env = env_31};
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_430 = segItemTypeNew_1(0, fun_37);
+    struct IntIntIntFun2 fun_34 = (struct IntIntIntFun2){.fun = fun_19, .env = env_31};
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_430 = segItemTypeNew_1(0, fun_34);
     struct IntList* call_431 = listReplicate_1(0, (n_7 + 2));
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_432 = segTreeOfList_1(call_430, call_431);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 prev_ = call_432;
     void* box_18 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_18))) = 0;
     void* env_32 = box_18;
-    struct IntIntIntFun2 fun_38 = (struct IntIntIntFun2){.fun = fun_20, .env = env_32};
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_433 = segItemTypeNew_1((n_7 + 1), fun_38);
+    struct IntIntIntFun2 fun_35 = (struct IntIntIntFun2){.fun = fun_20, .env = env_32};
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4 call_433 = segItemTypeNew_1((n_7 + 1), fun_35);
     struct IntList* call_434 = listReplicate_1((n_7 + 1), (n_7 + 2));
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_435 = segTreeOfList_1(call_433, call_434);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 next_ = call_435;
     struct IntList* call_436 = listReplicate_1(0, (n_7 + 3));
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_437 = segTreeOfList_1(segItemTypeInt_2, call_436);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_3 = call_437;
-    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_438 = go_20(n_7, perm_2, pos_3, 0);
+    struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 call_438 = go_17(n_7, perm_2, pos_3, 0);
     struct IntIntIntFun2IntIntIntObjectObjectTuple5ObjectObjectTuple4IntIntIntObjectObjectTuple5ObjectTuple3 pos_ = call_438;
-    int call_439 = go_19(n_7, pos_, 0, prev_, next_, n_7);
+    int call_439 = go_18(n_7, pos_, 0, prev_, next_, n_7);
     return call_439;
 }
 
@@ -4096,21 +4096,21 @@ int main() {
     void* box_20 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_20))) = 0;
     void* env_33 = box_20;
-    struct IntObjectFun1 fun_39 = (struct IntObjectFun1){.fun = fun_4, .env = env_33};
+    struct IntObjectFun1 fun_36 = (struct IntObjectFun1){.fun = fun_4, .env = env_33};
     void* box_21 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_21))) = 0;
     void* env_34 = box_21;
-    struct ObjectIntIntFun2 fun_40 = (struct ObjectIntIntFun2){.fun = fun_5, .env = env_34};
+    struct ObjectIntIntFun2 fun_37 = (struct ObjectIntIntFun2){.fun = fun_5, .env = env_34};
     void* box_22 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_22))) = 0;
     void* env_35 = box_22;
-    struct ObjectIntIntObjectFun3 fun_41 = (struct ObjectIntIntObjectFun3){.fun = fun_6, .env = env_35};
+    struct ObjectIntIntObjectFun3 fun_38 = (struct ObjectIntIntObjectFun3){.fun = fun_6, .env = env_35};
     struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3ObjectTuple6 tuple_43;
     tuple_43.t0 = 0;
     tuple_43.t1 = 4;
-    tuple_43.t2 = fun_39;
-    tuple_43.t3 = fun_40;
-    tuple_43.t4 = fun_41;
+    tuple_43.t2 = fun_36;
+    tuple_43.t3 = fun_37;
+    tuple_43.t4 = fun_38;
     tuple_43.t5 = 0;
     typeInt_ = tuple_43;
     int call_453 = vectorTest_(0);

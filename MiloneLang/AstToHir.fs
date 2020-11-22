@@ -543,7 +543,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
             let body, nameCtx = (body, nameCtx) |> athExpr docId
             let next, nameCtx = (next, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HLetFunExpr(serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
+            HLetFunExpr(FunSerial serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
 
         | ALetVal (vis, pat, body, next, pos) ->
             let pat, nameCtx = (pat, nameCtx) |> athPat docId

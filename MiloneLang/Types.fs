@@ -402,8 +402,9 @@ type TySerial = Serial
 /// Serial number of nominal values: variables, functions, or variants.
 type VarSerial = Serial
 
-/// Serial number of functions. This is essentially a "subtype" of VarSerial.
-type FunSerial = Serial
+/// Serial number of functions.
+[<Struct; NoEquality; NoComparison>]
+type FunSerial = FunSerial of Serial
 
 /// Serial number of variants.
 [<Struct; NoEquality; NoComparison>]
@@ -537,9 +538,14 @@ type TyDef =
 
 /// Definition of named value in high-level IR.
 [<NoEquality; NoComparison>]
-type VarDef =
-  | VarDef of Ident * StorageModifier * Ty * Loc
-  | FunDef of Ident * Arity * TyScheme * Loc
+type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
+
+[<NoEquality; NoComparison>]
+type FunDef =
+  { Name: Ident
+    Arity: Arity
+    Ty: TyScheme
+    Loc: Loc }
 
 [<NoEquality; NoComparison>]
 type VariantDef =
@@ -710,7 +716,7 @@ type MonoMode =
 
 // KIR is continuation passing style (CPS) intermediate representation.
 
-type JointSerial = Serial
+type JointSerial = FunSerial
 
 /// Primitive in KIR.
 ///
@@ -842,7 +848,8 @@ type KTerm =
   /// Tag of variant. An integer ID of the variant in union.
   | KTagTerm of VariantSerial * Loc
 
-  | KLabelTerm of VarSerial * Ty * Loc
+  | KLabelTerm of FunSerial * Ty * Loc
+
   | KNilTerm of itemTy: Ty * Loc
   | KNoneTerm of itemTy: Ty * Loc
   | KUnitTerm of Loc
@@ -854,7 +861,7 @@ type KNode =
   | KJumpNode of JointSerial * args: KTerm list * Loc
 
   /// Return from the current fun.
-  | KReturnNode of VarSerial * args: KTerm list * Loc
+  | KReturnNode of FunSerial * args: KTerm list * Loc
 
   /// Switch to joint based on the value of `cond`.
   // | KSwitchNode of cond: KTerm * arms: (KTerm * KNode) list * Loc
@@ -886,7 +893,7 @@ type KJointBinding = KJointBinding of jointSerial: JointSerial * args: VarSerial
 
 /// Definition of a fun.
 [<NoEquality; NoComparison>]
-type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * body: KNode * Loc
+type KFunBinding = KFunBinding of funSerial: FunSerial * args: VarSerial list * body: KNode * Loc
 
 /// Root node of KIR.
 [<NoEquality; NoComparison>]

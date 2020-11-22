@@ -87,11 +87,7 @@ type private PNode =
   /// Use the value for multiple nodes.
   | PConjNode of PNode list * Loc
 
-let private kgRefPat itself varSerial _ty loc ctx =
-  match findVarDef varSerial ctx with
-  | VarDef _ -> PLetNode(varSerial, PDiscardNode, loc)
-
-  | FunDef _ -> failwithf "NEVER: fun can't appear as pattern. %A" itself
+let private kgRefPat _itself varSerial _ty loc _ctx = PLetNode(varSerial, PDiscardNode, loc)
 
 let private kgVariantPat _itself variantSerial _ty loc _ctx =
   PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
@@ -178,22 +174,24 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 type KirGenCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
     Logs: (Log * Loc) list
     MainFunSerial: FunSerial option
     Joints: KJointBinding list
-    Funs: KFunBinding list }
+    FunBindings: KFunBinding list }
 
 let private ctxOfTyCtx (tyCtx: TyCtx): KirGenCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
+    Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     Logs = tyCtx.Logs
     MainFunSerial = None
     Joints = []
-    Funs = [] }
+    FunBindings = [] }
 
 let private ctxUpdateTyCtx (tyCtx: TyCtx) (ctx: KirGenCtx) =
   { tyCtx with
@@ -204,6 +202,10 @@ let private freshSerial (ctx: KirGenCtx): Serial * KirGenCtx =
   let serial = ctx.Serial + 1
   let ctx = { ctx with Serial = serial }
   serial, ctx
+
+let private freshFunSerial (ctx: KirGenCtx): FunSerial * KirGenCtx =
+  let serial, ctx = freshSerial ctx
+  FunSerial serial, ctx
 
 let private newVar hint ty loc (ctx: KirGenCtx) =
   let varSerial, ctx = ctx |> freshSerial
@@ -218,7 +220,7 @@ let private newVar hint ty loc (ctx: KirGenCtx) =
 
 let private addFunDef funSerial funDef (ctx: KirGenCtx) =
   { ctx with
-      Vars = ctx.Vars |> mapAdd funSerial funDef }
+      Funs = ctx.Funs |> mapAdd funSerial funDef }
 
 let private addJointBinding jointBinding (ctx: KirGenCtx) =
   { ctx with
@@ -226,7 +228,7 @@ let private addJointBinding jointBinding (ctx: KirGenCtx) =
 
 let private addFunBinding funBinding (ctx: KirGenCtx) =
   { ctx with
-      Funs = funBinding :: ctx.Funs }
+      FunBindings = funBinding :: ctx.FunBindings }
 
 let private findVarDef varSerial (ctx: KirGenCtx) = ctx.Vars |> mapFind varSerial
 
@@ -235,7 +237,6 @@ let private findVariant variantSerial (ctx: KirGenCtx) = ctx.Variants |> mapFind
 let private findVarTy varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapFind varSerial with
   | VarDef (_, _, ty, _) -> ty
-  | _ -> failwithf "NEVER: %A" varSerial
 
 let private selectTy ty path ctx =
   match path with
@@ -416,11 +417,16 @@ let private kgCallComparisonPrimExpr itself hint prim args ty primLoc hole ctx =
            |> kgExpr r (fun r ctx ->
                 // Create a joint.
                 let jointSerial, jointBinding, ctx =
-                  let jointSerial, ctx = ctx |> freshSerial
+                  let jointSerial, ctx = ctx |> freshFunSerial
 
                   let ctx =
-                    ctx
-                    |> addFunDef jointSerial (FunDef(hint, 1, TyScheme([], tyFun tyBool tyUnit), primLoc))
+                    let funDef: FunDef =
+                      { Name = hint
+                        Arity = 1
+                        Ty = TyScheme([], tyFun tyBool tyUnit)
+                        Loc = primLoc }
+
+                    ctx |> addFunDef jointSerial funDef
 
                   let cond, ctx = ctx |> newVar hint tyBool primLoc
 
@@ -523,7 +529,7 @@ let private kgEvalPNode (term: KTerm) (node: PNode) successNode failureNode ctx:
 // `match cond with (| pat when guard -> body)*`
 let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
   // Fun to call to leave the match expr.
-  let targetFunSerial, ctx = freshSerial ctx
+  let targetFunSerial, ctx = freshFunSerial ctx
 
   let leaveMatch target =
     KJumpNode(targetFunSerial, [ target ], loc)
@@ -547,11 +553,14 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
         let loc = patToLoc pat
         let acc, rest, ctx = go acc cond arms ctx
 
-        let jointSerial, ctx = ctx |> freshSerial
+        let jointSerial, ctx = ctx |> freshFunSerial
 
-        let jointDef =
+        let jointDef: FunDef =
           let armFunTy = tyFun tyUnit tyUnit
-          FunDef("arm", 1, TyScheme([], armFunTy), loc)
+          { Name = "arm"
+            Arity = 1
+            Ty = TyScheme([], armFunTy)
+            Loc = loc }
 
         // Compute pattern-matching.
         let body, ctx =
@@ -600,8 +609,11 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
   let createTargetJoint ctx =
     let targetVarSerial, ctx = newVar "match_target" targetTy loc ctx
 
-    let funDef =
-      FunDef("match_next", 1, TyScheme([], tyFun targetTy tyUnit), loc)
+    let funDef: FunDef =
+      { Name = "match_next"
+        Arity = 1
+        Ty = TyScheme([], tyFun targetTy tyUnit)
+        Loc = loc }
 
     let binding, ctx =
       let targetTerm = KVarTerm(targetVarSerial, targetTy, loc)
@@ -849,5 +861,5 @@ let kirGen (expr: HExpr, tyCtx: TyCtx): KRoot * KirGenCtx =
     ctxOfTyCtx tyCtx
     |> kgExpr expr (fun _ ctx -> abortNode noLoc, ctx)
 
-  let funBindings = ctx.Funs |> List.rev
+  let funBindings = ctx.FunBindings |> List.rev
   KRoot(funBindings), ctx

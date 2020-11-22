@@ -20,6 +20,7 @@ open MiloneLang.Typing
 type MirCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
     LabelSerial: Serial
@@ -36,6 +37,7 @@ type MirCtx =
 let private ofTyCtx (tyCtx: TyCtx): MirCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
+    Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     LabelSerial = 0

@@ -543,15 +543,19 @@ let tyDefToName tyDef =
 // Variable definitions (HIR)
 // -----------------------------------------------
 
+let funSerialCmp l r =
+  let (FunSerial l) = l
+  let (FunSerial r) = r
+  intCmp l r
+
 let variantSerialCmp l r =
   let (VariantSerial l) = l
-  let (VariantSerial r ) = r
+  let (VariantSerial r) = r
   intCmp l r
 
 let varDefToName varDef =
   match varDef with
   | VarDef (name, _, _, _) -> name
-  | FunDef (name, _, _, _) -> name
 
 // -----------------------------------------------
 // Literals

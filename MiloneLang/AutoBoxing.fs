@@ -26,11 +26,13 @@ let private hxUnbox boxExpr itemTy loc =
 [<NoEquality; NoComparison>]
 type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef> }
 
 let private ofTyCtx (tyCtx: TyCtx): AbCtx =
   { Vars = tyCtx.Vars
+    Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys }
 
@@ -276,11 +278,15 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
          match varDef with
          | VarDef (name, sm, ty, loc) ->
              let ty = ty |> abTy ctx
-             VarDef(name, sm, ty, loc)
+             VarDef(name, sm, ty, loc))
 
-         | FunDef (name, arity, TyScheme (tyArgs, ty), loc) ->
-             let ty = ty |> abTy ctx
-             FunDef(name, arity, TyScheme(tyArgs, ty), loc))
+  let funs =
+    ctx.Funs
+    |> mapMap (fun _ (funDef: FunDef) ->
+         let (TyScheme (tyVars, ty)) = funDef.Ty
+         let ty = ty |> abTy ctx
+         { funDef with
+             Ty = TyScheme(tyVars, ty) })
 
   let variants =
     ctx.Variants
@@ -311,6 +317,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
   let ctx =
     { ctx with
         Vars = vars
+        Funs = funs
         Variants = variants
         Tys = tys }
 

@@ -17,6 +17,14 @@ let private getVarName varSerial (ctx: KirGenCtx) =
   | None -> "UNDEFINED_VAR_" + string varSerial
   | Some varDef -> varDefToName varDef + "_" + string varSerial
 
+let private getFunName funSerial (ctx: KirGenCtx) =
+  match ctx.Funs |> mapTryFind funSerial with
+  | None ->
+      let (FunSerial serial) = funSerial
+      "UNDEFINED_FUN_" + string serial
+
+  | Some variantDef -> variantDef.Name
+
 let private getVariantName variantSerial (ctx: KirGenCtx) =
   match ctx.Variants |> mapTryFind variantSerial with
   | None ->
@@ -105,8 +113,7 @@ let private tyToDebugString ty ctx =
 let private kdVarAsTy varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapTryFind varSerial with
   | None -> "/* ?" + string varSerial + " */ unknown"
-  | Some (VarDef (_, _, ty, _))
-  | Some (FunDef (_, _, TyScheme (_, ty), _)) -> tyToDebugString ty ctx
+  | Some (VarDef (_, _, ty, _)) -> tyToDebugString ty ctx
 
 // -----------------------------------------------
 // term
@@ -116,9 +123,10 @@ let private kdTerm term ctx =
   match term with
   | KLitTerm (lit, _) -> lit |> litToDebugString
 
-  | KVarTerm (varSerial, _, _)
-  | KFunTerm (varSerial, _, _)
-  | KLabelTerm (varSerial, _, _) -> getVarName varSerial ctx
+  | KVarTerm (varSerial, _, _) -> getVarName varSerial ctx
+
+  | KFunTerm (funSerial, _, _)
+  | KLabelTerm (funSerial, _, _) -> getFunName funSerial ctx
 
   | KVariantTerm (variantSerial, _, _) -> getVariantName variantSerial ctx
   | KTagTerm (variantSerial, _) -> getVariantName variantSerial ctx + ".tag"
@@ -302,7 +310,7 @@ let private kdNode indent node ctx =
       (indent + "// " + locToString loc + "\n")
       + (indent
          + "return "
-         + getVarName jointSerial ctx
+         + getFunName jointSerial ctx
          + kdTermsAsArgList args ctx
          + "\n")
 
@@ -341,7 +349,7 @@ let private kdJointBinding indent isEntryPoint jointBinding ctx =
     + (indent + "// @" + locToString loc + "\n")
     + (indent
        + "function "
-       + getVarName jointSerial ctx
+       + getFunName jointSerial ctx
        + kdArgsAsParamList args ctx
        + " {\n")
     + kdNode (deeper indent) body ctx
@@ -356,7 +364,7 @@ let private kdFunBinding indent funBinding ctx =
   + (indent + "// @" + locToString loc + "\n")
   + (indent
      + "const "
-     + getVarName funSerial ctx
+     + getFunName funSerial ctx
      + " = "
      + kdArgsAsParamList args ctx
      + " => {\n")

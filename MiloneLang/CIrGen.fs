@@ -15,6 +15,21 @@ open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.Mir
 
+[<Struct; NoEquality; NoComparison>]
+type private ValueSymbol =
+  | VarSymbol of varSerial: VarSerial
+  | FunSymbol of funSerial: FunSerial
+  | VariantSymbol of variantSerial: VariantSerial
+
+let private valueSymbolCmp l r =
+  let encode symbol =
+    match symbol with
+    | VarSymbol varSerial -> varSerial
+    | FunSymbol (FunSerial serial) -> serial
+    | VariantSymbol (VariantSerial serial) -> serial
+
+  intCmp (encode l) (encode r)
+
 let private ctVoidPtr = CPtrTy CVoidTy
 
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
@@ -66,9 +81,9 @@ let private toTagEnumName (name: string) = name + "Tag"
 [<NoEquality; NoComparison>]
 type private CirCtx =
   { Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
-    VarUniqueNames: AssocMap<VarSerial, Ident>
-    VariantUniqueNames: AssocMap<VariantSerial, Ident>
+    ValueUniqueNames: AssocMap<ValueSymbol, Ident>
     TyEnv: AssocMap<Ty, CTyInstance * CTy>
     Tys: AssocMap<TySerial, TyDef>
     TyUniqueNames: AssocMap<Ty, Ident>
@@ -77,13 +92,26 @@ type private CirCtx =
     Logs: (Log * Loc) list }
 
 let private ofMirCtx (mirCtx: MirCtx): CirCtx =
-  let varNames =
-    mirCtx.Vars
-    |> renameIdents varDefToName fst intCmp
+  let valueUniqueNames =
+    let m = mapEmpty valueSymbolCmp
 
-  let variantNames =
-    mirCtx.Variants
-    |> renameIdents (fun (d: VariantDef) -> d.Name) fst variantSerialCmp
+    let m =
+      mirCtx.Vars
+      |> mapFold (fun acc varSerial varDef ->
+           acc
+           |> mapAdd (VarSymbol varSerial) (varDefToName varDef)) m
+
+    let m =
+      mirCtx.Funs
+      |> mapFold (fun acc funSerial (funDef: FunDef) -> acc |> mapAdd (FunSymbol funSerial) funDef.Name) m
+
+    let m =
+      mirCtx.Variants
+      |> mapFold (fun acc variantSerial (variantDef: VariantDef) ->
+           acc
+           |> mapAdd (VariantSymbol variantSerial) variantDef.Name) m
+
+    m |> renameIdents id fst valueSymbolCmp
 
   let tyNames =
     let toKey (serial, tyDef) =
@@ -99,9 +127,9 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
     mirCtx.Tys |> renameIdents tyDefToName toKey tyCmp
 
   { Vars = mirCtx.Vars
+    Funs = mirCtx.Funs
     Variants = mirCtx.Variants
-    VarUniqueNames = varNames
-    VariantUniqueNames = variantNames
+    ValueUniqueNames = valueUniqueNames
     TyEnv = mapEmpty tyCmp
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
@@ -353,12 +381,17 @@ let private genRecordTyDef ctx tySerial _fields =
 // -----------------------------------------------
 
 let private getUniqueVarName (ctx: CirCtx) serial =
-  match ctx.VarUniqueNames |> mapTryFind serial with
+  match ctx.ValueUniqueNames |> mapTryFind (VarSymbol serial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown value-level identifier serial %d" serial
 
+let private getUniqueFunName (ctx: CirCtx) funSerial =
+  match ctx.ValueUniqueNames |> mapTryFind (FunSymbol funSerial) with
+  | Some name -> name
+  | None -> failwithf "Never: Unknown fun serial=%s" (objToString funSerial)
+
 let private getUniqueVariantName (ctx: CirCtx) variantSerial =
-  match ctx.VariantUniqueNames |> mapTryFind variantSerial with
+  match ctx.ValueUniqueNames |> mapTryFind (VariantSymbol variantSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown variant serial=%s" (objToString variantSerial)
 
@@ -675,7 +708,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MDefaultExpr (ty, _) -> genDefault ctx ty
 
   | MRefExpr (serial, _, _) -> CRefExpr(getUniqueVarName ctx serial), ctx
-  | MProcExpr (serial, _, _) -> CRefExpr(getUniqueVarName ctx serial), ctx
+  | MProcExpr (serial, _, _) -> CRefExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
   | MTagExpr (variantSerial, _) -> genTag ctx variantSerial, ctx
@@ -837,7 +870,7 @@ let private cgClosureInit ctx serial funSerial envSerial ty =
   let ty, ctx = cgTyComplete ctx ty
 
   let fields =
-    [ "fun", CRefExpr(getUniqueVarName ctx funSerial)
+    [ "fun", CRefExpr(getUniqueFunName ctx funSerial)
       "env", CRefExpr(getUniqueVarName ctx envSerial) ]
 
   let initExpr = CInitExpr(fields, ty)
@@ -1053,7 +1086,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
   | MProcDecl (callee, isMainFun, args, body, resultTy, _) :: decls ->
       let funName, args =
-        if isMainFun then "main", [] else getUniqueVarName ctx callee, args
+        if isMainFun then "main", [] else getUniqueFunName ctx callee, args
 
       let rec go acc ctx args =
         match args with

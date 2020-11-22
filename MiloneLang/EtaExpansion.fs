@@ -155,35 +155,42 @@ let private primToArity ty prim =
 type private EtaCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
     Tys: AssocMap<TySerial, TyDef> }
 
 let private ofTyCtx (tyCtx: TyCtx): EtaCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
+    Funs = tyCtx.Funs
     Tys = tyCtx.Tys }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
   { tyCtx with
       Serial = ctx.Serial
       Vars = ctx.Vars
+      Funs = ctx.Funs
       Tys = ctx.Tys }
 
 let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
-  let serial = ctx.Serial + 1
+  let funSerial = FunSerial(ctx.Serial + 1)
 
-  let tyScheme =
-    let isOwned (_: Serial) = true // FIXME: is it okay?
-    tyGeneralize isOwned ty
+  let funDef: FunDef =
+    let tyScheme =
+      let isOwned (_: Serial) = true // FIXME: is it okay?
+      tyGeneralize isOwned ty
+
+    { Name = name
+      Arity = arity
+      Ty = tyScheme
+      Loc = loc }
 
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars =
-          ctx.Vars
-          |> mapAdd serial (FunDef(name, arity, tyScheme, loc)) }
+        Funs = ctx.Funs |> mapAdd funSerial funDef }
 
-  let refExpr = HFunExpr(serial, ty, loc)
-  refExpr, serial, ctx
+  let refExpr = HFunExpr(funSerial, ty, loc)
+  refExpr, funSerial, ctx
 
 let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
   let serial = ctx.Serial + 1
@@ -371,12 +378,8 @@ let private doExpandCall calleeKind callee arity calleeLoc args resultTy callLoc
 
 let private expandCallExpr callee args resultTy loc (ctx: EtaCtx) =
   match callee, args with
-  | HFunExpr (serial, _, calleeLoc), _ ->
-      let arity =
-        match ctx.Vars |> mapFind serial with
-        | FunDef (_, arity, _, _) -> arity
-        | _ -> failwith "NEVER"
-
+  | HFunExpr (funSerial, _, calleeLoc), _ ->
+      let arity = (ctx.Funs |> mapFind funSerial).Arity
       let args, ctx = (args, ctx) |> stMap exExpr
       doExpandCall CalleeKind.Fun callee arity calleeLoc args resultTy loc ctx
 
@@ -398,10 +401,9 @@ let private expandCallExpr callee args resultTy loc (ctx: EtaCtx) =
       let arity = tyToArity calleeTy // FIXME: maybe wrong
       doExpandCall CalleeKind.Obj callee arity calleeLoc args resultTy loc ctx
 
-let private exFunName expr serial _refTy calleeLoc (ctx: EtaCtx) =
-  match ctx.Vars |> mapTryFind serial with
-  | Some (FunDef (_, arity, _, _)) -> resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
-  | def -> failwithf "NEVER: %A" (expr, def)
+let private exFunName expr funSerial _refTy calleeLoc (ctx: EtaCtx) =
+  let arity = (ctx.Funs |> mapFind funSerial).Arity
+  resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
 // This is used only when variant is not applied syntactically.
 // Value-carrying variant is transformed as partial app.

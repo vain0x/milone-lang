@@ -40,13 +40,13 @@ int xf1_(int x1_);
 
 int escapeCase_(int arg_12);
 
-int zf11_1(int x_4, int arg_13);
+int zf11_(int x_4, int arg_13);
 
-int zf1_1(int x_4);
+int zf1_(int x_4);
 
-int zf22_1(int x_5, int arg_14);
+int zf22_(int x_5, int arg_14);
 
-int zf2_1(int x_5);
+int zf2_(int x_5);
 
 int innerFunCase_(int arg_15);
 
@@ -245,27 +245,27 @@ int escapeCase_(int arg_12) {
     return 0;
 }
 
-int zf11_1(int x_4, int arg_13) {
+int zf11_(int x_4, int arg_13) {
     return x_4;
 }
 
-int zf1_1(int x_4) {
-    int call_19 = zf11_1(x_4, 0);
+int zf1_(int x_4) {
+    int call_19 = zf11_(x_4, 0);
     return call_19;
 }
 
-int zf22_1(int x_5, int arg_14) {
-    int call_20 = zf1_1(x_5);
+int zf22_(int x_5, int arg_14) {
+    int call_20 = zf1_(x_5);
     return call_20;
 }
 
-int zf2_1(int x_5) {
-    int call_21 = zf22_1(x_5, 0);
+int zf2_(int x_5) {
+    int call_21 = zf22_(x_5, 0);
     return call_21;
 }
 
 int innerFunCase_(int arg_15) {
-    int call_22 = zf2_1(1);
+    int call_22 = zf2_(1);
     milone_assert((call_22 == 1), 59, 2);
     int call_23 = 0;
     return 0;

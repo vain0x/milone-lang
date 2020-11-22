@@ -51,7 +51,7 @@ type ValueSymbol =
 let private valueSymbolToSerial symbol =
   match symbol with
   | VarSymbol s -> s
-  | FunSymbol s -> s
+  | FunSymbol (FunSerial s) -> s
   | VariantSymbol (VariantSerial s) -> s
 
 [<Struct; NoEquality; NoComparison>]
@@ -131,6 +131,8 @@ type ScopeCtx =
     /// Variable serial to definition map.
     Vars: AssocMap<VarSerial, VarDef>
 
+    Funs: AssocMap<FunSerial, FunDef>
+
     Variants: AssocMap<VariantSerial, VariantDef>
 
     /// Variable serial to let-depth map.
@@ -164,6 +166,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
   { Serial = serial
     NameMap = nameMap
     Vars = mapEmpty intCmp
+    Funs = mapEmpty funSerialCmp
     Variants = mapEmpty variantSerialCmp
     VarDepths = mapEmpty intCmp
     Tys = mapEmpty intCmp
@@ -179,6 +182,10 @@ let private findName serial (scopeCtx: ScopeCtx): Ident = scopeCtx.NameMap |> ma
 let private findVar varSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Vars |> mapContainsKey varSerial)
   scopeCtx.Vars |> mapFind varSerial
+
+let private findFun funSerial (scopeCtx: ScopeCtx) =
+  assert (scopeCtx.Funs |> mapContainsKey funSerial)
+  scopeCtx.Funs |> mapFind funSerial
 
 let private findVariant variantSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Variants |> mapContainsKey variantSerial)
@@ -203,6 +210,14 @@ let private addVar valueSymbol varDef (scopeCtx: ScopeCtx): ScopeCtx =
       VarDepths =
         scopeCtx.VarDepths
         |> mapAdd varSerial scopeCtx.LetDepth }
+
+let private addFunDef funSerial funDef (scopeCtx: ScopeCtx): ScopeCtx =
+  { scopeCtx with
+      Funs = scopeCtx.Funs |> mapAdd funSerial funDef
+      VarDepths =
+        let (FunSerial serial) = funSerial
+        scopeCtx.VarDepths
+        |> mapAdd serial scopeCtx.LetDepth }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
@@ -254,11 +269,9 @@ let private addTyToNs parentTySerial tySymbol (scopeCtx: ScopeCtx): ScopeCtx =
 let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
   let varName =
     match symbol with
+    | VarSymbol varSerial -> scopeCtx |> findVar varSerial |> varDefToName
+    | FunSymbol funSerial -> (scopeCtx |> findFun funSerial).Name
     | VariantSymbol variantSerial -> (scopeCtx |> findVariant variantSerial).Name
-    | _ ->
-        scopeCtx
-        |> findVar (valueSymbolToSerial symbol)
-        |> varDefToName
 
   assert (varName <> "_")
 
@@ -460,21 +473,25 @@ let private resolveTy ty loc scopeCtx =
 // Definitions
 // -----------------------------------------------
 
-let private defineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
-  let arity = args |> List.length
-  let tyScheme = TyScheme([], ty)
-
-  match scopeCtx.Vars |> mapTryFind serial with
-  | Some (FunDef _) -> scopeCtx
-
-  | Some _ -> failwith "NEVER"
+let private defineFunUniquely funSerial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
+  match scopeCtx.Funs |> mapTryFind funSerial with
+  | Some _ -> scopeCtx
 
   | None ->
-      let name = scopeCtx |> findName serial
-      let varDef = FunDef(name, arity, tyScheme, loc)
+      let name =
+        let (FunSerial serial) = funSerial
+        scopeCtx |> findName serial
+
+      let funDef: FunDef =
+        { Name = name
+          Arity = args |> List.length
+          Ty = TyScheme([], ty)
+          Loc = loc }
 
       let scopeCtx =
-        scopeCtx |> addLocalVar (FunSymbol serial) varDef
+        scopeCtx
+        |> addFunDef funSerial funDef
+        |> importVar (FunSymbol funSerial)
 
       scopeCtx
 
@@ -689,18 +706,20 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let next, ctx = (next, ctx) |> goExpr
         HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
-    | HLetFunExpr (serial, vis, _, args, body, next, ty, loc) ->
-        let isMainFun = ctx |> findName serial = "main"
+    | HLetFunExpr (funSerial, vis, _, args, body, next, ty, loc) ->
+        let isMainFun =
+          let (FunSerial serial) = funSerial
+          ctx |> findName serial = "main"
 
         let ctx =
           ctx
           |> enterLetInit
-          |> defineFunUniquely serial args noTy loc
+          |> defineFunUniquely funSerial args noTy loc
           |> leaveLetInit
-          |> addVarToModule vis (FunSymbol serial)
+          |> addVarToModule vis (FunSymbol funSerial)
 
         let next, ctx = (next, ctx) |> goExpr
-        HLetFunExpr(serial, vis, isMainFun, args, body, next, ty, loc), ctx
+        HLetFunExpr(funSerial, vis, isMainFun, args, body, next, ty, loc), ctx
 
     | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
         let exprs, ctx = (exprs, ctx) |> stMap goExpr
