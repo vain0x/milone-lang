@@ -34,37 +34,37 @@ let private tyPrimOfName name tys loc =
       ErrorTy loc
 
 // -----------------------------------------------
-// NameTree
+// Symbols
 // -----------------------------------------------
 
-/// Namespace membership.
-[<Struct>]
-[<NoEquality; NoComparison>]
-type NameTree = NameTree of AssocMap<Serial, Serial list>
+[<Struct; NoEquality; NoComparison>]
+type ValueSymbol = ValueSymbol of varSerial: VarSerial
+
+[<Struct; NoEquality; NoComparison>]
+type TySymbol = TySymbol of tySerial: TySerial
+
+// -----------------------------------------------
+// Namespace
+// -----------------------------------------------
+
+type Ns<'K, 'V> = AssocMap<'K, AssocMap<Ident, 'V>>
 
 // FIXME: this emits code that doesn't compile due to use of incomplete type
+// type NameTree = NameTree of AssocMap<Serial, Serial list>
 //   > error: invalid use of undefined type ‘struct UnitNameTree_Fun1’
 //   >        struct NameTree_ app_193 = nameTreeEmpty_.fun(nameTreeEmpty_.env, 0);
 // let nameTreeEmpty: unit -> NameTree =
 //   let it = NameTree(mapEmpty (intHash, intCmp))
 //   fun () -> it
 
-let private nameTreeEmpty (): NameTree = NameTree(mapEmpty intCmp)
+let private nsFind (key: Serial) (ns: Ns<_, _>): AssocMap<Ident, _> =
+  match ns |> mapTryFind key with
+  | Some submap -> submap
+  | None -> mapEmpty strCmp
 
-let private nameTreeTryFind (key: Serial) (NameTree map): Serial list =
-  match map |> mapTryFind key with
-  | Some values -> values
-
-  | None -> []
-
-let private nameTreeAdd (key: Serial) (value: Serial) (NameTree map): NameTree =
-  let map =
-    match map |> mapTryFind key with
-    | Some values -> map |> mapAdd key (value :: values)
-
-    | None -> map |> mapAdd key [ value ]
-
-  NameTree map
+let private nsAdd (key: Serial) (ident: Ident) value (ns: Ns<_, _>): Ns<_, _> =
+  ns
+  |> mapAdd key (ns |> nsFind key |> mapAdd ident value)
 
 // --------------------------------------------
 // Scopes
@@ -111,10 +111,11 @@ type ScopeCtx =
     /// Type serial to let-depth map.
     TyDepths: AssocMap<TySerial, LetDepth>
 
-    /// Namespace tree of vars.
-    VarNs: NameTree
+    /// Values contained by types.
+    VarNs: Ns<TySerial, ValueSymbol>
 
-    TyNs: NameTree
+    /// Types contained by types.
+    TyNs: Ns<TySerial, TySymbol>
 
     ///Serial of the current scope.
     LocalSerial: ScopeSerial
@@ -135,8 +136,8 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     VarDepths = mapEmpty intCmp
     Tys = mapEmpty intCmp
     TyDepths = mapEmpty intCmp
-    VarNs = nameTreeEmpty ()
-    TyNs = nameTreeEmpty ()
+    VarNs = mapEmpty intCmp
+    TyNs = mapEmpty intCmp
     LocalSerial = localSerial
     Local = scopeEmpty ()
     LetDepth = 0 }
@@ -194,18 +195,26 @@ let private addUnboundMetaTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Adds a variable to a namespace.
 let private addVarToNs tySerial varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+  let name = scopeCtx |> findName varSerial
+
   { scopeCtx with
-      VarNs = scopeCtx.VarNs |> nameTreeAdd tySerial varSerial }
+      VarNs =
+        scopeCtx.VarNs
+        |> nsAdd tySerial name (ValueSymbol varSerial) }
 
 /// Adds a type to a namespace.
 let private addTyToNs parentTySerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+  let name = scopeCtx |> findName tySerial
+
   { scopeCtx with
       TyNs =
         scopeCtx.TyNs
-        |> nameTreeAdd parentTySerial tySerial }
+        |> nsAdd parentTySerial name (TySymbol tySerial) }
 
 /// Adds a variable to a scope.
-let private importVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
+  let (ValueSymbol varSerial) = symbol
+
   let varName =
     scopeCtx |> findVar varSerial |> varDefToName
 
@@ -225,7 +234,9 @@ let private importVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with Local = scope }
 
 /// Adds a type to a scope.
-let private importTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private importTy symbol (scopeCtx: ScopeCtx): ScopeCtx =
+  let (TySymbol tySerial) = symbol
+
   let tyName =
     scopeCtx |> findTy tySerial |> tyDefToName
 
@@ -246,14 +257,14 @@ let private openModule moduleSerial (scopeCtx: ScopeCtx) =
   // Import vars.
   let scopeCtx =
     scopeCtx.VarNs
-    |> nameTreeTryFind moduleSerial
-    |> List.fold (fun ctx varSerial -> ctx |> importVar varSerial) scopeCtx
+    |> nsFind moduleSerial
+    |> mapFold (fun ctx _ symbol -> ctx |> importVar symbol) scopeCtx
 
   // Import tys.
   let scopeCtx =
     scopeCtx.TyNs
-    |> nameTreeTryFind moduleSerial
-    |> List.fold (fun ctx tySerial -> ctx |> importTy tySerial) scopeCtx
+    |> nsFind moduleSerial
+    |> mapFold (fun ctx _ symbol -> ctx |> importTy symbol) scopeCtx
 
   scopeCtx
 
@@ -261,13 +272,13 @@ let private openModule moduleSerial (scopeCtx: ScopeCtx) =
 let private addLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
   |> addVar varSerial varDef
-  |> importVar varSerial
+  |> importVar (ValueSymbol varSerial)
 
 /// Defines a type in the local scope.
 let private addLocalTy tySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
   |> addTy tySerial tyDef
-  |> importTy tySerial
+  |> importTy (TySymbol tySerial)
 
 /// Called on enter the init of let expressions.
 let private enterLetInit (scopeCtx: ScopeCtx): ScopeCtx =
@@ -310,8 +321,9 @@ let private resolveScopedVarName scopeSerial name (scopeCtx: ScopeCtx): VarSeria
   else
     // Find from namespace.
     scopeCtx.VarNs
-    |> nameTreeTryFind scopeSerial
-    |> List.tryFind (fun varSerial -> (scopeCtx |> findName varSerial) = name)
+    |> nsFind scopeSerial
+    |> mapTryFind name
+    |> Option.map (fun (ValueSymbol varSerial) -> varSerial)
 
 let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySerial option =
   if scopeSerial = scopeCtx.LocalSerial then
@@ -455,7 +467,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
           ctx
           |> addVar variantSerial varDef
           |> addVarToNs tySerial variantSerial
-          |> importVar variantSerial
+          |> importVar (ValueSymbol variantSerial)
           |> addVarToModule variantSerial
 
         let ctx = variants |> List.fold defineVariant ctx
@@ -917,7 +929,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let ctx =
           ctx
           |> addTy serial (ModuleTyDef(moduleName, loc))
-          |> importTy serial
+          |> importTy (TySymbol serial)
 
         let parent, ctx = ctx |> startScope
 
