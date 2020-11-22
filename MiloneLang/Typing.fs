@@ -16,6 +16,10 @@ open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.NameRes
 
+// -----------------------------------------------
+// Context
+// -----------------------------------------------
+
 [<NoEquality; NoComparison>]
 type TyCtx =
   {
@@ -35,8 +39,6 @@ type TyCtx =
     TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list }
 
-let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
-
 let private addLog (ctx: TyCtx) log loc =
   { ctx with
       Logs = (log, loc) :: ctx.Logs }
@@ -45,23 +47,14 @@ let private addError (ctx: TyCtx) message loc =
   { ctx with
       Logs = (Log.Error message, loc) :: ctx.Logs }
 
-let private toTyContext (ctx: TyCtx): TyContext =
-  { Serial = ctx.Serial
-    LetDepth = ctx.LetDepth
-    Tys = ctx.Tys
-    TyDepths = ctx.TyDepths }
-
-let private withTyContext (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
-  { ctx with
-      Serial = tyCtx.Serial
-      Tys = tyCtx.Tys
-      TyDepths = tyCtx.TyDepths
-      Logs = logAcc }
-
 /// Be carefully. Let depths must be counted the same as name resolution.
 let private incDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth + 1 }
 
 let private decDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth - 1 }
+
+let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
+
+let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
 let private freshVar (ctx: TyCtx) hint ty loc =
   let varSerial = ctx.Serial + 1
@@ -89,6 +82,35 @@ let private freshMetaTy (_: Ident) loc (ctx: TyCtx): Ty * unit * TyCtx =
   let serial, ctx = freshTySerial ctx
   let ty = MetaTy(serial, loc)
   ty, (), ctx
+
+let private freshMetaTyForPat pat ctx =
+  let _, loc = pat |> patExtract
+  let tySerial, ctx = ctx |> freshTySerial
+  let ty = MetaTy(tySerial, loc)
+  ty, ctx
+
+let private freshMetaTyForExpr expr ctx =
+  let _, loc = expr |> exprExtract
+  let tySerial, ctx = ctx |> freshTySerial
+  let ty = MetaTy(tySerial, loc)
+  ty, ctx
+
+// -----------------------------------------------
+// Type inference algorithm
+// -----------------------------------------------
+
+let private toTyContext (ctx: TyCtx): TyContext =
+  { Serial = ctx.Serial
+    LetDepth = ctx.LetDepth
+    Tys = ctx.Tys
+    TyDepths = ctx.TyDepths }
+
+let private withTyContext (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
+  { ctx with
+      Serial = tyCtx.Serial
+      Tys = tyCtx.Tys
+      TyDepths = tyCtx.TyDepths
+      Logs = logAcc }
 
 let private addTraitBounds traits (ctx: TyCtx) =
   { ctx with
@@ -118,11 +140,41 @@ let private bindTy (ctx: TyCtx) tySerial ty loc =
 
 let private substTy (ctx: TyCtx) ty: Ty = typingSubst (toTyContext ctx) ty
 
+/// Substitutes bound meta tys in a ty.
+/// Unbound meta tys are degenerated, i.e. replaced with unit.
+let private substOrDegenerateTy (ctx: TyCtx) ty =
+  let substMeta tySerial =
+    match ctx.Tys |> mapTryFind tySerial with
+    | Some (MetaTyDef (_, ty, _)) -> Some ty
+
+    | Some (UniversalTyDef _) -> None
+
+    | _ ->
+        let depth = ctx.TyDepths |> mapFind tySerial
+        // Degenerate unless quantified.
+        if depth < 1000000000 then Some tyUnit else None
+
+  tySubst substMeta ty
+
 let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
   let logAcc, tyCtx =
     typingUnify ctx.Logs (toTyContext ctx) lty rty loc
 
   withTyContext ctx logAcc tyCtx
+
+let private unifyVarTy varSerial tyOpt loc ctx =
+  let varTy, ctx =
+    match findVar ctx varSerial with
+    | VarDef (_, _, ty, _) -> ty, ctx
+    | VariantDef (_, _, _, _, ty, _) -> ty, ctx
+    | FunDef (_, _, tyScheme, _) -> instantiateTyScheme ctx tyScheme loc
+
+  match tyOpt with
+  | Some ty ->
+      let ctx = unifyTy ctx loc varTy ty
+      varTy, ctx
+
+  | None -> varTy, ctx
 
 /// Assume all bound type variables are resolved by `substTy`.
 ///
@@ -177,8 +229,6 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
 
   polyTy, traits, ctx
 
-let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
-
 let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
   match ctx.Vars |> mapFind funSerial with
   | FunDef (ident, arity, TyScheme ([], funTy), loc) ->
@@ -209,21 +259,9 @@ let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
   | FunDef _ -> failwith "Can't generalize already-generalized function"
   | _ -> failwith "Expected function"
 
-/// Substitutes bound meta tys in a ty.
-/// Unbound meta tys are degenerated, i.e. replaced with unit.
-let private substOrDegenerateTy (ctx: TyCtx) ty =
-  let substMeta tySerial =
-    match ctx.Tys |> mapTryFind tySerial with
-    | Some (MetaTyDef (_, ty, _)) -> Some ty
-
-    | Some (UniversalTyDef _) -> None
-
-    | _ ->
-        let depth = ctx.TyDepths |> mapFind tySerial
-        // Degenerate unless quantified.
-        if depth < 1000000000 then Some tyUnit else None
-
-  tySubst substMeta ty
+// -----------------------------------------------
+// Emission helpers
+// -----------------------------------------------
 
 /// Creates an expression to abort.
 let private hxAbort (ctx: TyCtx) loc =
@@ -235,32 +273,6 @@ let private hxAbort (ctx: TyCtx) loc =
     hxApp exitExpr (HLitExpr(IntLit 1, loc)) ty loc
 
   callExpr, ty, ctx
-
-let private unifyVarTy varSerial tyOpt loc ctx =
-  let varTy, ctx =
-    match findVar ctx varSerial with
-    | VarDef (_, _, ty, _) -> ty, ctx
-    | VariantDef (_, _, _, _, ty, _) -> ty, ctx
-    | FunDef (_, _, tyScheme, _) -> instantiateTyScheme ctx tyScheme loc
-
-  match tyOpt with
-  | Some ty ->
-      let ctx = unifyTy ctx loc varTy ty
-      varTy, ctx
-
-  | None -> varTy, ctx
-
-let private freshMetaTyForPat pat ctx =
-  let _, loc = pat |> patExtract
-  let tySerial, ctx = ctx |> freshTySerial
-  let ty = MetaTy(tySerial, loc)
-  ty, ctx
-
-let private freshMetaTyForExpr expr ctx =
-  let _, loc = expr |> exprExtract
-  let tySerial, ctx = ctx |> freshTySerial
-  let ty = MetaTy(tySerial, loc)
-  ty, ctx
 
 // -----------------------------------------------
 // Pattern
