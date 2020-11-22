@@ -271,7 +271,7 @@ let private mirifyPatRef ctx _endLabel serial ty loc expr =
 let private mirifyPatVariant ctx endLabel serial ty loc expr =
   // Compare tags.
   let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
-  let rTagExpr = MRefExpr(serial, tyInt, loc)
+  let rTagExpr = MTagExpr(serial, loc)
 
   let eqExpr =
     MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
@@ -295,7 +295,7 @@ let private mirifyPatCall (ctx: MirCtx) itself endLabel serial args _ty loc expr
 
         // Compare tags.
         let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
-        let rTagExpr = MRefExpr(serial, tyInt, loc)
+        let rTagExpr = MTagExpr(serial, loc)
 
         let eqExpr =
           MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
