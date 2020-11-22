@@ -74,14 +74,14 @@ let private nsAdd (key: Serial) (ident: Ident) value (ns: Ns<_, _>): Ns<_, _> =
 type private ScopeSerial = Serial
 
 /// Stack of local scopes.
-type private ScopeChain = AssocMap<string, Serial> list
+type private ScopeChain<'T> = AssocMap<Ident, 'T> list
 
 /// Scope chains, vars and types.
-type private Scope = ScopeChain * ScopeChain
+type private Scope = ScopeChain<ValueSymbol> * ScopeChain<TySymbol>
 
 let private scopeMapEmpty () = mapEmpty strCmp
 
-let private scopeChainEmpty (): ScopeChain = [ scopeMapEmpty () ]
+let private scopeChainEmpty (): ScopeChain<_> = [ scopeMapEmpty () ]
 
 let private scopeEmpty (): Scope = scopeChainEmpty (), scopeChainEmpty ()
 
@@ -213,9 +213,8 @@ let private addTyToNs parentTySerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Adds a variable to a scope.
 let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
-  let (ValueSymbol varSerial) = symbol
-
   let varName =
+    let (ValueSymbol varSerial) = symbol
     scopeCtx |> findVar varSerial |> varDefToName
 
   assert (varName <> "_")
@@ -224,7 +223,7 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
     match scopeCtx.Local with
     | map :: varScopes, tyScopes ->
         let varScopes =
-          (map |> mapAdd varName varSerial) :: varScopes
+          (map |> mapAdd varName symbol) :: varScopes
 
         varScopes, tyScopes
 
@@ -234,16 +233,15 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Adds a type to a scope.
 let private importTy symbol (scopeCtx: ScopeCtx): ScopeCtx =
-  let (TySymbol tySerial) = symbol
-
   let tyName =
+    let (TySymbol tySerial) = symbol
     scopeCtx |> findTy tySerial |> tyDefToName
 
   let scope: Scope =
     match scopeCtx.Local with
     | varScopes, map :: tyScopes ->
         let tyScopes =
-          (map |> mapAdd tyName tySerial) :: tyScopes
+          (map |> mapAdd tyName symbol) :: tyScopes
 
         varScopes, tyScopes
 
@@ -312,7 +310,7 @@ let private resolveScopedVarName scopeSerial name (scopeCtx: ScopeCtx): VarSeria
     // Find from local scope.
     let varScopes, _ = scopeCtx.Local
     varScopes
-    |> List.tryPick (fun map -> map |> mapTryFind name)
+    |> List.tryPick (fun map -> map |> mapTryFind name |> Option.map (fun (ValueSymbol v) -> v))
   else
     // Find from namespace.
     scopeCtx.VarNs
@@ -325,7 +323,7 @@ let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySerial 
     // Find from local scope.
     let _, tyScopes = scopeCtx.Local
     tyScopes
-    |> List.tryPick (fun map -> map |> mapTryFind name)
+    |> List.tryPick (fun map -> map |> mapTryFind name|> Option.map (fun (TySymbol v) -> v))
   else
     // Find from namespace.
     failwith "Module.Ty syntax is unimplemented"
