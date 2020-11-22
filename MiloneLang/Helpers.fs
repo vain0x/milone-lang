@@ -550,6 +550,8 @@ let varSerialCmp l r =
   let (VarSerial r) = r
   intCmp l r
 
+let funSerialToInt (FunSerial serial) = serial
+
 let funSerialCmp l r =
   let (FunSerial l) = l
   let (FunSerial r) = r

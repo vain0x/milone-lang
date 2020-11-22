@@ -213,9 +213,8 @@ let private addFunDef funSerial funDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       Funs = scopeCtx.Funs |> mapAdd funSerial funDef
       VarDepths =
-        let (FunSerial serial) = funSerial
         scopeCtx.VarDepths
-        |> mapAdd serial scopeCtx.LetDepth }
+        |> mapAdd (funSerialToInt funSerial) scopeCtx.LetDepth }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
@@ -481,9 +480,7 @@ let private defineFunUniquely funSerial args ty loc (scopeCtx: ScopeCtx): ScopeC
   | Some _ -> scopeCtx
 
   | None ->
-      let name =
-        let (FunSerial serial) = funSerial
-        scopeCtx |> findName serial
+      let name = scopeCtx |> findName (funSerialToInt funSerial)
 
       let funDef: FunDef =
         { Name = name
@@ -713,9 +710,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
     | HLetFunExpr (funSerial, vis, _, args, body, next, ty, loc) ->
-        let isMainFun =
-          let (FunSerial serial) = funSerial
-          ctx |> findName serial = "main"
+        let isMainFun = ctx |> findName (funSerialToInt funSerial) = "main"
 
         let ctx =
           ctx

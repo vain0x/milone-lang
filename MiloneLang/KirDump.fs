@@ -25,9 +25,7 @@ let private getVarName varSerial (ctx: KirGenCtx) =
 
 let private getFunName funSerial (ctx: KirGenCtx) =
   match ctx.Funs |> mapTryFind funSerial with
-  | None ->
-      let (FunSerial serial) = funSerial
-      "UNDEFINED_FUN_" + string serial
+  | None -> "UNDEFINED_FUN_" + string (funSerialToInt funSerial)
 
   | Some variantDef -> variantDef.Name
 

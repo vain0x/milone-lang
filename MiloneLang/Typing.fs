@@ -823,7 +823,13 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
   let funs, ctx =
     ctx.Funs
-    |> mapFold (fun (acc, ctx) funSerial (funDef: FunDef) ->
+    |> mapFold (fun (acc, ctx: TyCtx) funSerial (funDef: FunDef) ->
+         let ctx =
+           { ctx with
+               LetDepth =
+                 scopeCtx.VarDepths
+                 |> mapFind (funSerialToInt funSerial) }
+
          let ty, _, ctx = freshMetaTy funDef.Name funDef.Loc ctx
          acc
          |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
