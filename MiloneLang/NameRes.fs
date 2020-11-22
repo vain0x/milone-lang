@@ -74,7 +74,7 @@ let private nsAdd (key: Serial) (ident: Ident) value (ns: Ns<_, _>): Ns<_, _> =
 type private ScopeSerial = Serial
 
 /// Stack of local scopes.
-type private ScopeChain = AssocMap<string, Serial * Ident> list
+type private ScopeChain = AssocMap<string, Serial> list
 
 /// Scope chains, vars and types.
 type private Scope = ScopeChain * ScopeChain
@@ -224,8 +224,7 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
     match scopeCtx.Local with
     | map :: varScopes, tyScopes ->
         let varScopes =
-          (map |> mapAdd varName (varSerial, varName))
-          :: varScopes
+          (map |> mapAdd varName varSerial) :: varScopes
 
         varScopes, tyScopes
 
@@ -244,8 +243,7 @@ let private importTy symbol (scopeCtx: ScopeCtx): ScopeCtx =
     match scopeCtx.Local with
     | varScopes, map :: tyScopes ->
         let tyScopes =
-          (map |> mapAdd tyName (tySerial, tyName))
-          :: tyScopes
+          (map |> mapAdd tyName tySerial) :: tyScopes
 
         varScopes, tyScopes
 
@@ -313,11 +311,8 @@ let private resolveScopedVarName scopeSerial name (scopeCtx: ScopeCtx): VarSeria
   if scopeSerial = scopeCtx.LocalSerial then
     // Find from local scope.
     let varScopes, _ = scopeCtx.Local
-    match varScopes
-          |> List.tryPick (fun map -> map |> mapTryFind name) with
-    | Some (varSerial, _) -> Some varSerial
-    | None -> None
-
+    varScopes
+    |> List.tryPick (fun map -> map |> mapTryFind name)
   else
     // Find from namespace.
     scopeCtx.VarNs
@@ -329,11 +324,8 @@ let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySerial 
   if scopeSerial = scopeCtx.LocalSerial then
     // Find from local scope.
     let _, tyScopes = scopeCtx.Local
-    match tyScopes
-          |> List.tryPick (fun map -> map |> mapTryFind name) with
-    | Some (tySerial, _) -> Some tySerial
-    | None -> None
-
+    tyScopes
+    |> List.tryPick (fun map -> map |> mapTryFind name)
   else
     // Find from namespace.
     failwith "Module.Ty syntax is unimplemented"
