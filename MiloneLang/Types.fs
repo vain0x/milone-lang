@@ -518,7 +518,7 @@ type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ident * Ty * Loc
 
-  | UniversalTyDef of Ident * TySerial * Loc
+  | UniversalTyDef of Ident * Loc
 
   | SynonymTyDef of Ident * TySerial list * Ty * Loc
 

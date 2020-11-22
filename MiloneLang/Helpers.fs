@@ -529,7 +529,7 @@ let tyRef serial tys = AppTy(RefTyCtor serial, tys)
 let tyDefToName tyDef =
   match tyDef with
   | MetaTyDef (name, _, _) -> name
-  | UniversalTyDef (name, _, _) -> name
+  | UniversalTyDef (name, _) -> name
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _) -> name
   | RecordTyDef (name, _, _) -> name
