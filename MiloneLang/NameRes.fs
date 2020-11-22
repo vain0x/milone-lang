@@ -42,26 +42,11 @@ let private tyPrimOfName name tys loc =
 // Symbols
 // -----------------------------------------------
 
-[<Struct; NoEquality; NoComparison>]
-type ValueSymbol =
-  | VarSymbol of varSerial: VarSerial
-  | FunSymbol of funSerial: FunSerial
-  | VariantSymbol of variantSerial: VariantSerial
-
 let private valueSymbolToSerial symbol =
   match symbol with
   | VarSymbol (VarSerial s) -> s
   | FunSymbol (FunSerial s) -> s
   | VariantSymbol (VariantSerial s) -> s
-
-[<Struct; NoEquality; NoComparison>]
-type TySymbol =
-  | MetaTySymbol of tySerial: TySerial
-  | UnivTySymbol of univTySerial: TySerial
-  | SynonymTySymbol of synonymTySerial: TySerial
-  | UnionTySymbol of unionTySerial: TySerial
-  | RecordTySymbol of recordTySerial: TySerial
-  | ModuleTySymbol of moduleTySerial: ModuleTySerial
 
 let private tySymbolToSerial symbol =
   match symbol with

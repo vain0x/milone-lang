@@ -15,12 +15,6 @@ open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.Mir
 
-[<Struct; NoEquality; NoComparison>]
-type private ValueSymbol =
-  | VarSymbol of varSerial: VarSerial
-  | FunSymbol of funSerial: FunSerial
-  | VariantSymbol of variantSerial: VariantSerial
-
 let private valueSymbolCmp l r =
   let encode symbol =
     match symbol with

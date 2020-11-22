@@ -561,6 +561,21 @@ type VariantDef =
     VariantTy: Ty
     Loc: Loc }
 
+[<Struct; NoEquality; NoComparison>]
+type ValueSymbol =
+  | VarSymbol of varSerial: VarSerial
+  | FunSymbol of funSerial: FunSerial
+  | VariantSymbol of variantSerial: VariantSerial
+
+[<Struct; NoEquality; NoComparison>]
+type TySymbol =
+  | MetaTySymbol of tySerial: TySerial
+  | UnivTySymbol of univTySerial: TySerial
+  | SynonymTySymbol of synonymTySerial: TySerial
+  | UnionTySymbol of unionTySerial: TySerial
+  | RecordTySymbol of recordTySerial: TySerial
+  | ModuleTySymbol of moduleTySerial: ModuleTySerial
+
 /// Pattern in high-level IR.
 [<NoEquality; NoComparison>]
 type HPat =
