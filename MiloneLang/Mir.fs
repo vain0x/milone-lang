@@ -595,7 +595,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
 
   temp, ctx
 
-/// Gets if the target must match with any of the patterns.
+/// Gets if the pattern matching must succeed.
 let private patsIsCovering pats =
   let rec go pat =
     match pat with
@@ -619,12 +619,12 @@ let private patsIsCovering pats =
 
   List.exists go pats
 
-let private mirifyExprMatchFull ctx target arms ty loc =
+let private mirifyExprMatchFull ctx cond arms ty loc =
   let noLabel = "<NEVER>"
   let temp, tempSet, ctx = letFreshVar ctx "match" ty loc
   let endLabelStmt, endLabel, ctx = freshLabel ctx "end_match" loc
 
-  let target, ctx = mirifyExpr ctx target
+  let cond, ctx = mirifyExpr ctx cond
 
   let isCovering =
     arms
@@ -716,7 +716,7 @@ let private mirifyExprMatchFull ctx target arms ty loc =
 
     | MatchIR.Pat (pat, nextLabel) :: rest ->
         // Perform pattern matching. Go to the next pattern on failure.
-        let _, ctx = mirifyPat ctx nextLabel pat target
+        let _, ctx = mirifyPat ctx nextLabel pat cond
         emit ctx rest
 
     | MatchIR.GoBody bodyLabel :: rest ->
@@ -761,14 +761,14 @@ let private mirifyExprMatchFull ctx target arms ty loc =
 
   temp, ctx
 
-let private mirifyExprMatch ctx target arms ty loc =
-  match mirifyExprMatchAsIfStmt ctx target arms ty loc with
+let private mirifyExprMatch ctx cond arms ty loc =
+  match mirifyExprMatchAsIfStmt ctx cond arms ty loc with
   | Some (result, ctx) -> result, ctx
 
   | None ->
-      if matchExprCanCompileToSwitch target arms
-      then mirifyExprMatchAsSwitchStmt ctx target arms ty loc
-      else mirifyExprMatchFull ctx target arms ty loc
+      if matchExprCanCompileToSwitch cond arms
+      then mirifyExprMatchAsSwitchStmt ctx cond arms ty loc
+      else mirifyExprMatchFull ctx cond arms ty loc
 
 let private mirifyExprIndex ctx l r _ loc =
   match exprToTy l, exprToTy r with
@@ -1131,7 +1131,7 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
 
   | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx expr serial ty loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
-  | HMatchExpr (target, arms, ty, loc) -> mirifyExprMatch ctx target arms ty loc
+  | HMatchExpr (cond, arms, ty, loc) -> mirifyExprMatch ctx cond arms ty loc
   | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx infOp args ty loc
 
   | HLetValExpr (_vis, pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc

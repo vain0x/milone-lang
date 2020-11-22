@@ -455,8 +455,8 @@ let private exExpr (expr, ctx) =
   | HVariantExpr (_, ty, loc) -> exVariantName expr ty loc ctx
   | HPrimExpr (prim, primTy, calleeLoc) -> exPrimExpr expr prim primTy calleeLoc ctx
 
-  | HMatchExpr (target, arms, ty, loc) ->
-      let target, ctx = (target, ctx) |> exExpr
+  | HMatchExpr (cond, arms, ty, loc) ->
+      let cond, ctx = (cond, ctx) |> exExpr
 
       let arms, ctx =
         (arms, ctx)
@@ -465,7 +465,7 @@ let private exExpr (expr, ctx) =
              let body, ctx = (body, ctx) |> exExpr
              (pat, guard, body), ctx)
 
-      HMatchExpr(target, arms, ty, loc), ctx
+      HMatchExpr(cond, arms, ty, loc), ctx
 
   | HInfExpr (infOp, args, ty, loc) -> exInfExpr expr infOp args ty loc ctx
 

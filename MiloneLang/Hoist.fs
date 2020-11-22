@@ -183,16 +183,16 @@ let private hoistExprCore (expr, ctx) =
   | HPrimExpr _
   | HOpenExpr _ -> expr, ctx
 
-  | HMatchExpr (target, arms, ty, loc) ->
+  | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
         let go ((pat, guard, body), ctx) =
           let guard, ctx = hoistExpr (guard, ctx)
           let body, ctx = hoistExpr (body, ctx)
           (pat, guard, body), ctx
 
-        let target, ctx = hoistExpr (target, ctx)
+        let cond, ctx = hoistExpr (cond, ctx)
         let arms, ctx = (arms, ctx) |> stMap go
-        HMatchExpr(target, arms, ty, loc), ctx
+        HMatchExpr(cond, arms, ty, loc), ctx
 
       doArm ()
 

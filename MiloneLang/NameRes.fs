@@ -782,9 +782,9 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HMatchExpr (target, arms, ty, loc) ->
+  | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
-        let target, ctx = (target, ctx) |> nameResExpr
+        let cond, ctx = (cond, ctx) |> nameResExpr
 
         let arms, ctx =
           (arms, ctx)
@@ -796,7 +796,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                let ctx = ctx |> finishScope parent
                (pat, guard, body), ctx)
 
-        HMatchExpr(target, arms, ty, loc), ctx
+        HMatchExpr(cond, arms, ty, loc), ctx
 
       doArm ()
 

@@ -363,7 +363,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | AMatchExpr (target, arms, pos) ->
+  | AMatchExpr (cond, arms, pos) ->
       let doArm () =
         // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
         let onArm (AArm (pat, guard, body, loc), nameCtx) =
@@ -379,10 +379,10 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
           let body, nameCtx = (body, nameCtx) |> athExpr docId
           (pat, guard, body), nameCtx
 
-        let target, nameCtx = (target, nameCtx) |> athExpr docId
+        let cond, nameCtx = (cond, nameCtx) |> athExpr docId
         let arms, nameCtx = (arms, nameCtx) |> stMap onArm
         let loc = toLoc docId pos
-        HMatchExpr(target, arms, noTy, loc), nameCtx
+        HMatchExpr(cond, arms, noTy, loc), nameCtx
 
       doArm ()
 

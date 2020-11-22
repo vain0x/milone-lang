@@ -887,12 +887,12 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 
         HRecordExpr(baseOpt, fields, f ty, g a)
 
-    | HMatchExpr (target, arms, ty, a) ->
+    | HMatchExpr (cond, arms, ty, a) ->
         let arms =
           arms
           |> List.map (fun (pat, guard, body) -> goPat pat, go guard, go body)
 
-        HMatchExpr(go target, arms, f ty, g a)
+        HMatchExpr(go cond, arms, f ty, g a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
     | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, List.map go args, f resultTy, g a)
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)

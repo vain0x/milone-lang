@@ -237,9 +237,9 @@ let private abExpr ctx expr =
   | HVariantExpr _
   | HPrimExpr _ -> expr |> exprMap (abTy ctx) id
 
-  | HMatchExpr (target, arms, ty, loc) ->
+  | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
-        let target = target |> abExpr ctx
+        let cond = cond |> abExpr ctx
 
         let go (pat, guard, body) =
           let pat = pat |> abPat ctx
@@ -249,7 +249,7 @@ let private abExpr ctx expr =
 
         let arms = arms |> List.map go
         let ty = ty |> abTy ctx
-        HMatchExpr(target, arms, ty, loc)
+        HMatchExpr(cond, arms, ty, loc)
 
       doArm ()
 

@@ -667,7 +667,7 @@ type HExpr =
   | HRecordExpr of HExpr option * fields: (Ident * HExpr * Loc) list * Ty * Loc
 
   /// arms: (pat, guard, body). Guard is `true` if omit.
-  | HMatchExpr of target: HExpr * arms: (HPat * HExpr * HExpr) list * Ty * Loc
+  | HMatchExpr of cond: HExpr * arms: (HPat * HExpr * HExpr) list * Ty * Loc
 
   /// E.g. `List.isEmpty`, `str.Length`
   | HNavExpr of HExpr * Ident * Ty * Loc

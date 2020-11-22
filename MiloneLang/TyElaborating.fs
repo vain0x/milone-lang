@@ -405,9 +405,9 @@ let private teExpr (ctx: TyElaborationCtx) expr =
   | HFunExpr _
   | HPrimExpr _ -> expr |> exprMap (teTy ctx) id
 
-  | HMatchExpr (target, arms, ty, loc) ->
+  | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
-        let target = target |> teExpr ctx
+        let cond = cond |> teExpr ctx
 
         let go (pat, guard, body) =
           let pat = pat |> tePat ctx
@@ -417,7 +417,7 @@ let private teExpr (ctx: TyElaborationCtx) expr =
 
         let arms = arms |> List.map go
         let ty = ty |> teTy ctx
-        HMatchExpr(target, arms, ty, loc)
+        HMatchExpr(cond, arms, ty, loc)
 
       doArm ()
 

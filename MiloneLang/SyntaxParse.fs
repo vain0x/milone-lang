@@ -21,8 +21,8 @@
 ///   - `if cond then body else alt`
 ///     - `cond` and `body` are inner subterms
 ///     - `alt` is a dangling subterm
-///   - `match target with | pat when guard -> body`
-///     - `target`, `pat` and `guard` are inner subterms
+///   - `match cond with | pat when guard -> body`
+///     - `cond`, `pat` and `guard` are inner subterms
 ///     - `body` is a dangling subterm if it's in the last arm;
 ///         or an inner subterm otherwise
 ///   - `type`
@@ -762,7 +762,7 @@ let private parseMatchArm matchPos armPos (tokens, errors) =
   AArm(pat, guard, body, armPos), tokens, errors
 
 let private parseMatch matchPos (tokens, errors) =
-  let target, tokens, errors = parseExpr matchPos (tokens, errors)
+  let cond, tokens, errors = parseExpr matchPos (tokens, errors)
 
   let armPos, tokens, errors =
     match tokens with
@@ -786,7 +786,7 @@ let private parseMatch matchPos (tokens, errors) =
     | _ -> List.rev (arm :: acc), tokens, errors
 
   let arms, tokens, errors = go [] armPos (tokens, errors)
-  AMatchExpr(target, arms, matchPos), tokens, errors
+  AMatchExpr(cond, arms, matchPos), tokens, errors
 
 /// `fun-expr = 'fun' pat* '->' expr`
 let private parseFun basePos funPos (tokens, errors) =

@@ -432,9 +432,9 @@ let private ccExpr (expr, ctx) =
 
       doArm ()
 
-  | HMatchExpr (target, arms, ty, loc) ->
+  | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =
-        let target, ctx = ccExpr (target, ctx)
+        let cond, ctx = ccExpr (cond, ctx)
 
         let go ((pat, guard, body), ctx) =
           let pat, ctx = ccPat (pat, ctx)
@@ -443,7 +443,7 @@ let private ccExpr (expr, ctx) =
           (pat, guard, body), ctx
 
         let arms, ctx = (arms, ctx) |> stMap go
-        HMatchExpr(target, arms, ty, loc), ctx
+        HMatchExpr(cond, arms, ty, loc), ctx
 
       doArm ()
 
