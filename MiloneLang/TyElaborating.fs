@@ -47,10 +47,21 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
 /// This stage replaces production and consumption of records with that of tuples,
 /// sorting fields in the order of declaration.
 ///
+/// Record type:
+///
+/// ```fsharp
+/// // Assume type R = { F1: T1; F2: T2 } is defined.
+///   R
+/// //=>
+///   T1 * T2
+/// ```
+///
+/// Occurrences of record types are replaced with a tuple type,
+/// which consists of field types.
+///
 /// Record creation:
 ///
 /// ```fsharp
-/// // Assume type R = { F1: T1; F2: T2; ... } is defined.
 ///   {
 ///     F2 = t2
 ///     F1 = t1
@@ -99,10 +110,9 @@ let private buildRecordMap (ctx: TyElaborationCtx) =
              |> List.mapi (fun i (ident, ty, _) -> ident, (i, ty))
              |> mapOfList strCmp
 
-           (tySerial, (tupleTy, fieldMap)) :: acc
+           acc |> mapAdd tySerial (tupleTy, fieldMap)
 
-       | _ -> acc) []
-  |> mapOfList intCmp
+       | _ -> acc) (mapEmpty intCmp)
 
 let private recordToTuple (ctx: TyElaborationCtx) tySerial =
   match ctx.RecordMap |> mapTryFind tySerial with
