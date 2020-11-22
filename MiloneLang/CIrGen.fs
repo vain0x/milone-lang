@@ -115,7 +115,6 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
 
       | SynonymTyDef _ -> tySynonym serial []
       | UnionTyDef _ -> tyUnion serial
-      | RecordTyDef _ -> tyRecord serial
 
     mirCtx.Tys |> renameIdents tyDefToName toKey tyCmp
 
@@ -374,17 +373,20 @@ let private genRecordTyDef ctx tySerial _fields =
 // -----------------------------------------------
 
 let private getUniqueVarName (ctx: CirCtx) varSerial =
-  match ctx.ValueUniqueNames |> mapTryFind (VarSymbol varSerial) with
+  match ctx.ValueUniqueNames
+        |> mapTryFind (VarSymbol varSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown var serial=%s" (objToString varSerial)
 
 let private getUniqueFunName (ctx: CirCtx) funSerial =
-  match ctx.ValueUniqueNames |> mapTryFind (FunSymbol funSerial) with
+  match ctx.ValueUniqueNames
+        |> mapTryFind (FunSymbol funSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown fun serial=%s" (objToString funSerial)
 
 let private getUniqueVariantName (ctx: CirCtx) variantSerial =
-  match ctx.ValueUniqueNames |> mapTryFind (VariantSymbol variantSerial) with
+  match ctx.ValueUniqueNames
+        |> mapTryFind (VariantSymbol variantSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown variant serial=%s" (objToString variantSerial)
 
@@ -561,11 +563,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       | _ -> failwithf "NEVER: union type undefined?"
 
-  | AppTy (RecordTyCtor serial, _) ->
-      match ctx.Tys |> mapTryFind serial with
-      | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
-
-      | _ -> failwithf "NEVER: record type undefined?"
+  | AppTy (RecordTyCtor _, _) -> failwith "NEVER: RecordTyCtor is resolved in TyElaborating"
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -1102,10 +1100,19 @@ let private cgDecls (ctx: CirCtx) decls =
 
 let private genLogs (ctx: CirCtx) =
   let tyDisplayFn ty =
-    let getTyName tySerial =
+    let nominal tySerial =
       ctx.Tys
       |> mapTryFind tySerial
       |> Option.map tyDefToName
+
+    let getTyName tySymbol =
+      match tySymbol with
+      | MetaTySymbol metaTySerial -> nominal metaTySerial
+      | UnivTySymbol univTySerial -> nominal univTySerial
+      | SynonymTySymbol synonymTySerial -> nominal synonymTySerial
+      | UnionTySymbol unionTySerial -> nominal unionTySerial
+      | RecordTySymbol _
+      | ModuleTySymbol _ -> None
 
     tyDisplay getTyName ty
 

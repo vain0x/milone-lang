@@ -421,10 +421,8 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
   // Collect errors.
   let errors =
     let tyDisplayFn ty =
-      let getTyName tySerial =
-        tyCtx.Tys
-        |> MiloneLang.Helpers.mapTryFind tySerial
-        |> Option.map MiloneLang.Helpers.tyDefToName
+      // FIXME: implement
+      let getTyName _ = None
 
       ty |> MiloneLang.TySystem.tyDisplay getTyName
 

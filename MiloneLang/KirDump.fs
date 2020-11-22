@@ -25,7 +25,9 @@ let private getVarName varSerial (ctx: KirGenCtx) =
 
 let private getFunName funSerial (ctx: KirGenCtx) =
   match ctx.Funs |> mapTryFind funSerial with
-  | None -> "UNDEFINED_FUN_" + string (funSerialToInt funSerial)
+  | None ->
+      "UNDEFINED_FUN_"
+      + string (funSerialToInt funSerial)
 
   | Some variantDef -> variantDef.Name
 
@@ -37,10 +39,9 @@ let private getVariantName variantSerial (ctx: KirGenCtx) =
 
   | Some variantDef -> variantDef.Name
 
-let private getTyName tySerial (ctx: KirGenCtx) =
-  match ctx.Tys |> mapTryFind tySerial with
-  | None -> "UNDEFINED_TY_" + string tySerial
-  | Some tyDef -> tyDefToName tyDef
+let private getTyName _tySymbol (_ctx: KirGenCtx) =
+  // FIXME: implement
+  failwith "unimplemented"
 
 let private kdPath path ctx =
   match path with

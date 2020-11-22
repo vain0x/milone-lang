@@ -54,7 +54,7 @@ let private tySymbolToSerial symbol =
   | UnivTySymbol s -> s
   | SynonymTySymbol s -> s
   | UnionTySymbol s -> s
-  | RecordTySymbol s -> s
+  | RecordTySymbol (RecordTySerial s) -> s
   | ModuleTySymbol (ModuleTySerial s) -> s
 
 // -----------------------------------------------
@@ -126,6 +126,7 @@ type ScopeCtx =
     /// Type serial to definition map.
     Tys: AssocMap<TySerial, TyDef>
 
+    RecordTys: AssocMap<RecordTySerial, RecordTyDef>
     ModuleTys: AssocMap<ModuleTySerial, ModuleTyDef>
 
     /// Type serial to let-depth map.
@@ -157,6 +158,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Variants = mapEmpty variantSerialCmp
     VarDepths = mapEmpty intCmp
     Tys = mapEmpty intCmp
+    RecordTys = mapEmpty recordTySerialCmp
     ModuleTys = mapEmpty moduleTySerialCmp
     TyDepths = mapEmpty intCmp
     VarNs = mapEmpty intCmp
@@ -182,6 +184,11 @@ let private findVariant variantSerial (scopeCtx: ScopeCtx) =
 let private findTy tySerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Tys |> mapContainsKey tySerial)
   scopeCtx.Tys |> mapFind tySerial
+
+let private findRecordTy recordTySerial (scopeCtx: ScopeCtx) =
+  assert (scopeCtx.RecordTys
+          |> mapContainsKey recordTySerial)
+  scopeCtx.RecordTys |> mapFind recordTySerial
 
 let private findModuleTy moduleSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.ModuleTys |> mapContainsKey moduleSerial)
@@ -227,6 +234,14 @@ let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
       TyDepths =
         scopeCtx.TyDepths
         |> mapAdd tySerial scopeCtx.LetDepth }
+
+/// Defines a type, without adding to any scope.
+let private addRecordTyDef recordTySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
+  { scopeCtx with
+      RecordTys = scopeCtx.RecordTys |> mapAdd recordTySerial tyDef
+      TyDepths =
+        scopeCtx.TyDepths
+        |> mapAdd (recordTySerialToInt recordTySerial) scopeCtx.LetDepth }
 
 let private addModuleTyDef moduleTySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
@@ -287,6 +302,7 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
 let private importTy symbol (scopeCtx: ScopeCtx): ScopeCtx =
   let tyName =
     match symbol with
+    | RecordTySymbol recordTySerial -> (scopeCtx |> findRecordTy recordTySerial).Name
     | ModuleTySymbol moduleSerial -> (scopeCtx |> findModuleTy moduleSerial).Name
     | _ ->
         scopeCtx
@@ -569,12 +585,17 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
         |> addTyToModule tySymbol
 
     | RecordTyDecl (_, fields, loc) ->
+        let tySerial = RecordTySerial tySerial
         let tySymbol = RecordTySymbol tySerial
 
-        let tyDef = RecordTyDef(tyName, fields, loc)
+        let tyDef: RecordTyDef =
+          { Name = tyName
+            Fields = fields
+            Loc = loc }
 
         ctx
-        |> addLocalTy tySymbol tyDef
+        |> addRecordTyDef tySerial tyDef
+        |> importTy tySymbol
         |> addTyToModule tySymbol
 
 /// Completes the type definition.
@@ -587,50 +608,56 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
     ctx
     |> startDefineTy None tySerial PrivateVis tyArgs tyDecl loc
 
-  let tyDef = ctx |> findTy tySerial
+  match tyDecl with
+  | RecordTyDecl _ ->
+      let tySerial = RecordTySerial tySerial
+      let tyDef = ctx |> findRecordTy tySerial
 
-  match tyDef with
-  | MetaTyDef (tyName, bodyTy, loc) ->
-      let bodyTy, ctx = ctx |> resolveTy bodyTy loc
-      ctx
-      |> addTy (MetaTySymbol tySerial) (MetaTyDef(tyName, bodyTy, loc))
-
-  | UniversalTyDef _ -> ctx
-
-  | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
-      let parent, ctx = ctx |> startScope
-
-      let ctx =
-        tyArgs
-        |> List.fold (fun ctx tyArg ->
-             let name = ctx |> findName tyArg
-             ctx
-             |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc))) ctx
-
-      let bodyTy, ctx = ctx |> resolveTy bodyTy loc
-      let ctx = ctx |> finishScope parent
+      let fields, ctx =
+        (tyDef.Fields, ctx)
+        |> stMap (fun ((name, ty, loc), ctx) ->
+             let ty, ctx = ctx |> resolveTy ty loc
+             (name, ty, loc), ctx)
 
       ctx
-      |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
+      |> addRecordTyDef tySerial { tyDef with Fields = fields }
 
-  | UnionTyDef (_, variantSerials, _unionLoc) ->
-      let go ctx variantSerial =
-        let def = ctx |> findVariant variantSerial
-        let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
-        assert (def.VariantTy |> isNoTy)
-        ctx
-        |> addVariantDef variantSerial { def with PayloadTy = payloadTy }
+  | _ ->
+      let tyDef = ctx |> findTy tySerial
 
-      variantSerials |> List.fold go ctx
+      match tyDef with
+      | MetaTyDef (tyName, bodyTy, loc) ->
+          let bodyTy, ctx = ctx |> resolveTy bodyTy loc
+          ctx
+          |> addTy (MetaTySymbol tySerial) (MetaTyDef(tyName, bodyTy, loc))
 
-  | RecordTyDef (tyName, fields, loc) ->
-      let resolveField ((name, ty, loc), ctx) =
-        let ty, ctx = ctx |> resolveTy ty loc
-        (name, ty, loc), ctx
+      | UniversalTyDef _ -> ctx
 
-      let fields, ctx = (fields, ctx) |> stMap resolveField
-      ctx
-      |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc))
+      | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
+          let parent, ctx = ctx |> startScope
+
+          let ctx =
+            tyArgs
+            |> List.fold (fun ctx tyArg ->
+                 let name = ctx |> findName tyArg
+                 ctx
+                 |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc))) ctx
+
+          let bodyTy, ctx = ctx |> resolveTy bodyTy loc
+          let ctx = ctx |> finishScope parent
+
+          ctx
+          |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
+
+      | UnionTyDef (_, variantSerials, _unionLoc) ->
+          let go ctx variantSerial =
+            let def = ctx |> findVariant variantSerial
+            let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
+            assert (def.VariantTy |> isNoTy)
+            ctx
+            |> addVariantDef variantSerial { def with PayloadTy = payloadTy }
+
+          variantSerials |> List.fold go ctx
 
 // -----------------------------------------------
 // Collect declarations
@@ -1012,9 +1039,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let moduleName =
           ctx |> findName (moduleTySerialToInt serial)
 
+        let tyDef: ModuleTyDef = { Name = moduleName; Loc = loc }
+
         let ctx =
           ctx
-          |> addModuleTyDef serial { Name = moduleName; Loc = loc }
+          |> addModuleTyDef serial tyDef
           |> importTy (ModuleTySymbol serial)
 
         let parent, ctx = ctx |> startScope

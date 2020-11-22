@@ -457,7 +457,7 @@ type TyCtor =
   // Nominal types.
   | SynonymTyCtor of synonymTy: TySerial
   | UnionTyCtor of unionTy: TySerial
-  | RecordTyCtor of recordTy: TySerial
+  | RecordTyCtor of recordTy: RecordTySerial
 
   /// Unresolved type. Generated in AstToHir, resolved in NameRes.
   | UnresolvedTyCtor of Serial
@@ -532,7 +532,15 @@ type TyDef =
 
   | UnionTyDef of Ident * VariantSerial list * Loc
 
-  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+[<Struct; NoEquality; NoComparison>]
+type RecordTySerial = RecordTySerial of Serial
+
+//// Module is a type so that it can be used as namespace.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type RecordTyDef =
+  { Name: Ident
+    Fields: (Ident * Ty * Loc) list
+    Loc: Loc }
 
 [<Struct; NoEquality; NoComparison>]
 type ModuleTySerial = ModuleTySerial of Serial
@@ -573,7 +581,7 @@ type TySymbol =
   | UnivTySymbol of univTySerial: TySerial
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
-  | RecordTySymbol of recordTySerial: TySerial
+  | RecordTySymbol of recordTySerial: RecordTySerial
   | ModuleTySymbol of moduleTySerial: ModuleTySerial
 
 /// Pattern in high-level IR.

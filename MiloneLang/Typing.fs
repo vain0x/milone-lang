@@ -35,6 +35,7 @@ type TyCtx =
 
     /// Type serial to type definition.
     Tys: AssocMap<TySerial, TyDef>
+    RecordTys: AssocMap<RecordTySerial, RecordTyDef>
 
     TyDepths: AssocMap<TySerial, LetDepth>
     LetDepth: LetDepth
@@ -452,9 +453,8 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       | Some ((AppTy (RecordTyCtor tySerial, tyArgs)) as recordTy) ->
           assert (List.isEmpty tyArgs)
 
-          match ctx |> findTy tySerial with
-          | RecordTyDef (name, fieldDefs, _) -> Some(recordTy, name, fieldDefs)
-          | _ -> None
+          let tyDef = ctx.RecordTys |> mapFind tySerial
+          Some(recordTy, tyDef.Name, tyDef.Fields)
 
       | _ -> None
 
@@ -579,13 +579,11 @@ let private inferNavExpr ctx l (r: Ident) loc =
       assert (List.isEmpty tyArgs)
 
       let fieldTyOpt =
-        match ctx |> findTy tySerial with
-        | RecordTyDef (_, fieldDefs, _) ->
-            match fieldDefs
-                  |> List.tryFind (fun (theName, _, _) -> theName = r) with
-            | Some (_, fieldTy, _) -> Some fieldTy
-            | None -> None
-        | _ -> None
+        let tyDef = ctx.RecordTys |> mapFind tySerial
+        match tyDef.Fields
+              |> List.tryFind (fun (theName, _, _) -> theName = r) with
+        | Some (_, fieldTy, _) -> Some fieldTy
+        | None -> None
 
       match fieldTyOpt with
       | Some fieldTy -> HNavExpr(l, r, fieldTy, loc), fieldTy, ctx
@@ -789,6 +787,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       Funs = scopeCtx.Funs
       Variants = scopeCtx.Variants
       Tys = scopeCtx.Tys
+      RecordTys = scopeCtx.RecordTys
       TyDepths = scopeCtx.TyDepths
       LetDepth = 0
       TraitBounds = []
@@ -912,18 +911,22 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                acc
                |> mapAdd tySerial (SynonymTyDef(name, tyArgs, bodyTy, loc))
 
-           | RecordTyDef (recordName, fields, loc) ->
-               let fields =
-                 fields
-                 |> List.map (fun (name, ty, loc) ->
-                      let ty = substOrDegenerate ty
-                      name, ty, loc)
-
-               acc
-               |> mapAdd tySerial (RecordTyDef(recordName, fields, loc))
-
            | _ -> acc |> mapAdd tySerial tyDef) (mapEmpty intCmp)
 
-    { ctx with Tys = tys }
+    let recordTys =
+      ctx.RecordTys
+      |> mapFold (fun acc tySerial (tyDef: RecordTyDef) ->
+           let fields =
+             tyDef.Fields
+             |> List.map (fun (name, ty, loc) ->
+                  let ty = substOrDegenerate ty
+                  name, ty, loc)
+
+           acc
+           |> mapAdd tySerial { tyDef with Fields = fields }) ctx.RecordTys
+
+    { ctx with
+        Tys = tys
+        RecordTys = recordTys }
 
   expr, ctx

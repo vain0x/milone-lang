@@ -23,7 +23,6 @@ module rec MiloneLang.AstToHir
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.TySystem
 
 /// Convert pos to loc.
 let private toLoc (doc: DocId) (pos: Pos): Loc =

@@ -175,10 +175,22 @@ let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
 let private printLogs (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
-    let getTyName tySerial =
+    let nominal tySerial =
       tyCtx.Tys
       |> mapTryFind tySerial
       |> Option.map tyDefToName
+
+    let getTyName tySymbol =
+      match tySymbol with
+      | MetaTySymbol metaTySerial -> nominal metaTySerial
+      | UnivTySymbol univTySerial -> nominal univTySerial
+      | SynonymTySymbol synonymTySerial -> nominal synonymTySerial
+      | UnionTySymbol unionTySerial -> nominal unionTySerial
+      | RecordTySymbol recordTySerial ->
+          tyCtx.RecordTys
+          |> mapTryFind recordTySerial
+          |> Option.map (fun (r: RecordTyDef) -> r.Name)
+      | ModuleTySymbol _ -> None
 
     tyDisplay getTyName ty
 
