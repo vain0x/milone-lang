@@ -26,19 +26,19 @@ let private hxUnbox boxExpr itemTy loc =
 [<NoEquality; NoComparison>]
 type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef> }
 
-let private ofTyCtx (tyCtx: TyCtx): AbCtx = { Vars = tyCtx.Vars; Tys = tyCtx.Tys }
+let private ofTyCtx (tyCtx: TyCtx): AbCtx =
+  { Vars = tyCtx.Vars
+    Variants = tyCtx.Variants
+    Tys = tyCtx.Tys }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
   { tyCtx with
       Vars = ctx.Vars
+      Variants = ctx.Variants
       Tys = ctx.Tys }
-
-let private isVariantFun (ctx: AbCtx) varSerial =
-  match ctx.Vars |> mapTryFind varSerial with
-  | Some (VariantDef (_, _, hasPayload, _, _, _)) -> hasPayload
-  | _ -> false
 
 /// ### Boxing of Payloads
 ///
@@ -280,12 +280,14 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
          | FunDef (name, arity, TyScheme (tyArgs, ty), loc) ->
              let ty = ty |> abTy ctx
-             FunDef(name, arity, TyScheme(tyArgs, ty), loc)
+             FunDef(name, arity, TyScheme(tyArgs, ty), loc))
 
-         | VariantDef (name, tySerial, hasPayload, _payloadTy, variantTy, loc) ->
-             let payloadTy = tyObj
-             let variantTy = variantTy |> abTy ctx
-             VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc))
+  let variants =
+    ctx.Variants
+    |> mapMap (fun _ (variantDef: VariantDef) ->
+         { variantDef with
+             PayloadTy = tyObj
+             VariantTy = variantDef.VariantTy |> abTy ctx })
 
   let tys =
     ctx.Tys
@@ -306,7 +308,11 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
          | _ -> tyDef)
 
-  let ctx = { ctx with Vars = vars; Tys = tys }
+  let ctx =
+    { ctx with
+        Vars = vars
+        Variants = variants
+        Tys = tys }
 
   let expr = expr |> abExpr ctx
 

@@ -20,6 +20,7 @@ open MiloneLang.Typing
 type MirCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
     LabelSerial: Serial
 
@@ -35,6 +36,7 @@ type MirCtx =
 let private ofTyCtx (tyCtx: TyCtx): MirCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
+    Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     LabelSerial = 0
     CurrentFun = None
@@ -43,10 +45,10 @@ let private ofTyCtx (tyCtx: TyCtx): MirCtx =
     Decls = []
     Logs = tyCtx.Logs }
 
-let private isNewtypeVariant (ctx: MirCtx) varSerial =
-  match ctx.Vars |> mapFind varSerial with
-  | VariantDef (_, tySerial, _, _, _, _) ->
-      match ctx.Tys |> mapFind tySerial with
+let private isNewtypeVariant (ctx: MirCtx) variantSerial =
+  match ctx.Variants |> mapTryFind variantSerial with
+  | Some variantDef ->
+      match ctx.Tys |> mapFind variantDef.UnionTySerial with
       | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
 
       | _ -> failwith "Expected union serial"
@@ -380,8 +382,8 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * M
 // -----------------------------------------------
 
 let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
-  match ctx.Vars |> mapTryFind serial with
-  | Some (VariantDef (_, tySerial, _, _, _, _)) -> MVariantExpr(tySerial, serial, ty, loc), ctx
+  match ctx.Variants |> mapTryFind serial with
+  | Some variantDef -> MVariantExpr(variantDef.UnionTySerial, serial, ty, loc), ctx
   | _ -> failwithf "NEVER: Illegal HVariantExpr. %A" itself
 
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =

@@ -87,19 +87,14 @@ type private PNode =
   /// Use the value for multiple nodes.
   | PConjNode of PNode list * Loc
 
-let private kgRefPat itself varSerial ty loc ctx =
+let private kgRefPat itself varSerial _ty loc ctx =
   match findVarDef varSerial ctx with
   | VarDef _ -> PLetNode(varSerial, PDiscardNode, loc)
 
-  | VariantDef _ -> PSelectNode(KTagPath loc, PEqualNode(PTagTerm(varSerial, loc), PDiscardNode, loc), loc)
-
   | FunDef _ -> failwithf "NEVER: fun can't appear as pattern. %A" itself
 
-let private kgVariantPat itself variantSerial ty loc ctx =
-  match findVarDef variantSerial ctx with
-  | VariantDef _ -> PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
-
-  | _ -> failwithf "NEVER: Expected variant. %A" itself
+let private kgVariantPat _itself variantSerial _ty loc _ctx =
+  PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
 
 let private kgTuplePat itemPats loc ctx =
   let conts =
@@ -183,6 +178,7 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 type KirGenCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
     Logs: (Log * Loc) list
     MainFunSerial: FunSerial option
@@ -192,6 +188,7 @@ type KirGenCtx =
 let private ctxOfTyCtx (tyCtx: TyCtx): KirGenCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
+    Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     Logs = tyCtx.Logs
     MainFunSerial = None
@@ -233,6 +230,8 @@ let private addFunBinding funBinding (ctx: KirGenCtx) =
 
 let private findVarDef varSerial (ctx: KirGenCtx) = ctx.Vars |> mapFind varSerial
 
+let private findVariant variantSerial (ctx: KirGenCtx) = ctx.Variants |> mapFind variantSerial
+
 let private findVarTy varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapFind varSerial with
   | VarDef (_, _, ty, _) -> ty
@@ -256,9 +255,8 @@ let private selectTy ty path ctx =
   | KTagPath _ -> tyInt
 
   | KPayloadPath (variantSerial, _) ->
-      match findVarDef variantSerial ctx with
-      | VariantDef (_, _, _, payloadTy, _, _) -> payloadTy
-      | _ -> unreachable (ty, path)
+      let variantDef = findVariant variantSerial ctx
+      variantDef.PayloadTy
 
 let private collectJoints (f: KirGenCtx -> _ * KirGenCtx) (ctx: KirGenCtx) =
   let parentJoints = ctx.Joints
@@ -323,8 +321,7 @@ let private kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx =
 
 /// Converts an expr calling to variant, i.e., construction of a variant with payload.
 let private kgCallVariantExpr variantSerial variantTy variantLoc args ty loc hole ctx =
-  let variantName =
-    ctx |> findVarDef variantSerial |> varDefToName
+  let variantName = (ctx |> findVariant variantSerial).Name
 
   let variantTerm =
     KVariantTerm(variantSerial, variantTy, variantLoc)

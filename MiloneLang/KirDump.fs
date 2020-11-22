@@ -17,6 +17,14 @@ let private getVarName varSerial (ctx: KirGenCtx) =
   | None -> "UNDEFINED_VAR_" + string varSerial
   | Some varDef -> varDefToName varDef + "_" + string varSerial
 
+let private getVariantName variantSerial (ctx: KirGenCtx) =
+  match ctx.Variants |> mapTryFind variantSerial with
+  | None ->
+      let (VariantSerial variantSerial) = variantSerial
+      "UNDEFINED_VARIANT_" + string variantSerial
+
+  | Some variantDef -> variantDef.Name
+
 let private getTyName tySerial (ctx: KirGenCtx) =
   match ctx.Tys |> mapTryFind tySerial with
   | None -> "UNDEFINED_TY_" + string tySerial
@@ -29,7 +37,7 @@ let private kdPath path ctx =
   | KTailPath _ -> ".tail"
   | KFieldPath (i, _) -> "[" + string i + "]"
   | KTagPath _ -> ".tag"
-  | KPayloadPath (variantSerial, _) -> "." + getVarName variantSerial ctx
+  | KPayloadPath (variantSerial, _) -> "." + getVariantName variantSerial ctx
 
 let private litToDebugString lit =
   match lit with
@@ -97,10 +105,8 @@ let private tyToDebugString ty ctx =
 let private kdVarAsTy varSerial (ctx: KirGenCtx) =
   match ctx.Vars |> mapTryFind varSerial with
   | None -> "/* ?" + string varSerial + " */ unknown"
-
   | Some (VarDef (_, _, ty, _))
-  | Some (FunDef (_, _, TyScheme (_, ty), _))
-  | Some (VariantDef (_, _, _, _, ty, _)) -> tyToDebugString ty ctx
+  | Some (FunDef (_, _, TyScheme (_, ty), _)) -> tyToDebugString ty ctx
 
 // -----------------------------------------------
 // term
@@ -112,10 +118,10 @@ let private kdTerm term ctx =
 
   | KVarTerm (varSerial, _, _)
   | KFunTerm (varSerial, _, _)
-  | KVariantTerm (varSerial, _, _)
   | KLabelTerm (varSerial, _, _) -> getVarName varSerial ctx
 
-  | KTagTerm (variantSerial, _) -> getVarName variantSerial ctx + ".tag"
+  | KVariantTerm (variantSerial, _, _) -> getVariantName variantSerial ctx
+  | KTagTerm (variantSerial, _) -> getVariantName variantSerial ctx + ".tag"
 
   | KNilTerm _ -> "[]"
   | KNoneTerm _ -> "None"

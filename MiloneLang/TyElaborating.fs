@@ -22,6 +22,7 @@ let private hxIsUnboxingRef expr =
 [<NoEquality; NoComparison>]
 type private TyElaborationCtx =
   { Vars: AssocMap<VarSerial, VarDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
 
     /// recordTySerial -> (tupleTy, (field -> fieldIndex, fieldTy))
@@ -29,6 +30,7 @@ type private TyElaborationCtx =
 
 let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
   { Vars = tyCtx.Vars
+    Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     RecordMap = mapEmpty intCmp }
 
@@ -227,60 +229,53 @@ let private rewriteFieldExpr (ctx: TyElaborationCtx) itself recordTy l r ty loc 
 let private rewriteNewtypeTy (ctx: TyElaborationCtx) tySerial =
   match ctx.Tys |> mapTryFind tySerial with
   | Some (UnionTyDef (_, [ variantSerial ], _)) ->
-      match ctx.Vars |> mapTryFind variantSerial with
-      | Some (VariantDef (_, _, _, payloadTy, _, _)) -> Some payloadTy
-      | _ -> failwithf "NEVER: Expected variant"
+      let variantDef = ctx.Variants |> mapFind variantSerial
+      Some variantDef.PayloadTy
 
   | _ -> None
 
-let private rewriteNewtypeVariantPat (ctx: TyElaborationCtx) varSerial loc =
-  match ctx.Vars |> mapTryFind varSerial with
-  | Some (VariantDef (_, tySerial, hasPayload, _, _, _)) ->
-      match ctx.Tys |> mapTryFind tySerial with
-      | Some (UnionTyDef (_, [ _ ], _)) ->
-          if hasPayload
-          then failwith "ref pat of non-unit newtype should be type error"
-          else Some(HTuplePat([], tyUnit, loc))
+let private rewriteNewtypeVariantPat (ctx: TyElaborationCtx) variantSerial loc =
+  let variantDef = ctx.Variants |> mapFind variantSerial
 
-      | _ -> None
+  match ctx.Tys |> mapTryFind variantDef.UnionTySerial with
+  | Some (UnionTyDef (_, [ _ ], _)) ->
+      if variantDef.HasPayload
+      then failwith "ref pat of non-unit newtype should be type error"
+
+      Some(HTuplePat([], tyUnit, loc))
 
   | _ -> None
 
 let private rewriteNewtypeCallPat (ctx: TyElaborationCtx) callee args =
   match callee, args with
-  | HVariantPat (varSerial, _, _), [ payloadPat ] ->
-      match ctx.Vars |> mapTryFind varSerial with
-      | Some (VariantDef (_, tySerial, _, _, _, _)) ->
-          match ctx.Tys |> mapTryFind tySerial with
-          | Some (UnionTyDef (_, [ _ ], _)) -> Some payloadPat
+  | HVariantPat (variantSerial, _, _), [ payloadPat ] ->
+      let variantDef = ctx.Variants |> mapFind variantSerial
+      match ctx.Tys |> mapTryFind variantDef.UnionTySerial with
+      | Some (UnionTyDef (_, [ _ ], _)) -> Some payloadPat
 
-          | _ -> None
       | _ -> None
+
   | _ -> None
 
-let private rewriteNewtypeVariantExpr (ctx: TyElaborationCtx) varSerial loc =
-  match ctx.Vars |> mapTryFind varSerial with
-  | Some (VariantDef (_, tySerial, hasPayload, _, _, _)) ->
-      match ctx.Tys |> mapTryFind tySerial with
-      | Some (UnionTyDef (_, [ _ ], _)) ->
-          if hasPayload then
-            // N => (fun payload -> N payload) => (fun payload -> payload) => id ?
-            failwith "ref of non-unit newtype is unimplemented"
-          else
-            Some(hxUnit loc)
+let private rewriteNewtypeVariantExpr (ctx: TyElaborationCtx) variantSerial loc =
+  let variantDef = ctx.Variants |> mapFind variantSerial
 
-      | _ -> None
+  match ctx.Tys |> mapTryFind variantDef.UnionTySerial with
+  | Some (UnionTyDef (_, [ _ ], _)) ->
+      if variantDef.HasPayload then
+        // N => (fun payload -> N payload) => (fun payload -> payload) => id ?
+        failwith "ref of non-unit newtype is unimplemented"
+
+      Some(hxUnit loc)
+
   | _ -> None
 
 let private rewriteNewtypeAppExpr (ctx: TyElaborationCtx) infOp items =
   match infOp, items with
-  | InfOp.App, [ HVariantExpr (varSerial, _, _); payload ] ->
-      match ctx.Vars |> mapTryFind varSerial with
-      | Some (VariantDef (_, tySerial, _, _, _, _)) ->
-          match ctx.Tys |> mapTryFind tySerial with
-          | Some (UnionTyDef (_, [ _ ], _)) -> Some payload
-
-          | _ -> None
+  | InfOp.App, [ HVariantExpr (variantSerial, _, _); payload ] ->
+      let variantDef = ctx.Variants |> mapFind variantSerial
+      match ctx.Tys |> mapTryFind variantDef.UnionTySerial with
+      | Some (UnionTyDef (_, [ _ ], _)) -> Some payload
       | _ -> None
   | _ -> None
 
@@ -457,6 +452,8 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
     { ctx with
         RecordMap = buildRecordMap ctx }
 
+  let expr = expr |> teExpr ctx
+
   let vars =
     ctx.Vars
     |> mapMap (fun _ varDef ->
@@ -467,13 +464,13 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
 
          | FunDef (name, arity, TyScheme (tyArgs, ty), loc) ->
              let ty = ty |> teTy ctx
-             FunDef(name, arity, TyScheme(tyArgs, ty), loc)
+             FunDef(name, arity, TyScheme(tyArgs, ty), loc))
 
-         | VariantDef (name, tySerial, hasPayload, payloadTy, variantTy, loc) ->
-             let payloadTy = payloadTy |> teTy ctx
-             VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc))
-
-  let expr = expr |> teExpr ctx
+  let variants =
+    ctx.Variants
+    |> mapMap (fun _ (variantDef: VariantDef) ->
+         { variantDef with
+             PayloadTy = variantDef.PayloadTy |> teTy ctx })
 
   let tys =
     ctx.Tys
@@ -485,7 +482,11 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
 
          | _ -> tyDef)
 
-  let ctx = { ctx with Vars = vars; Tys = tys }
+  let ctx =
+    { ctx with
+        Vars = vars
+        Variants = variants
+        Tys = tys }
 
   let tyCtx = ctx |> toTyCtx tyCtx
   expr, tyCtx

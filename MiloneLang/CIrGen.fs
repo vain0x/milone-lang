@@ -17,7 +17,7 @@ open MiloneLang.Mir
 
 let private ctVoidPtr = CPtrTy CVoidTy
 
-let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
+let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then ident + "_" else ident + "_" + string index
 
@@ -66,7 +66,9 @@ let private toTagEnumName (name: string) = name + "Tag"
 [<NoEquality; NoComparison>]
 type private CirCtx =
   { Vars: AssocMap<VarSerial, VarDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
     VarUniqueNames: AssocMap<VarSerial, Ident>
+    VariantUniqueNames: AssocMap<VariantSerial, Ident>
     TyEnv: AssocMap<Ty, CTyInstance * CTy>
     Tys: AssocMap<TySerial, TyDef>
     TyUniqueNames: AssocMap<Ty, Ident>
@@ -78,6 +80,10 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   let varNames =
     mirCtx.Vars
     |> renameIdents varDefToName fst intCmp
+
+  let variantNames =
+    mirCtx.Variants
+    |> renameIdents (fun (d: VariantDef) -> d.Name) fst variantSerialCmp
 
   let tyNames =
     let toKey (serial, tyDef) =
@@ -93,7 +99,9 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
     mirCtx.Tys |> renameIdents tyDefToName toKey tyCmp
 
   { Vars = mirCtx.Vars
+    Variants = mirCtx.Variants
     VarUniqueNames = varNames
+    VariantUniqueNames = variantNames
     TyEnv = mapEmpty tyCmp
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
@@ -282,13 +290,12 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       let variants =
         variants
         |> List.map (fun variantSerial ->
-             match ctx.Vars |> mapTryFind variantSerial with
-             | Some (VariantDef (name, _, hasPayload, payloadTy, _, _)) -> name, variantSerial, hasPayload, payloadTy
-             | _ -> failwith "Never")
+             let v = ctx.Variants |> mapFind variantSerial
+             v.Name, variantSerial, v.HasPayload, v.PayloadTy)
 
       let tags =
         variants
-        |> List.map (fun (_, serial, _, _) -> getUniqueVarName ctx serial)
+        |> List.map (fun (_, serial, _, _) -> getUniqueVariantName ctx serial)
 
       let variants, ctx =
         (variants, ctx)
@@ -298,7 +305,9 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
                //  (getUniqueVarName ctx serial, payloadTy)
                //  :: acc,
                //  ctx
-               (getUniqueVarName ctx serial, ctVoidPtr) :: acc, ctx
+               (getUniqueVariantName ctx serial, ctVoidPtr)
+               :: acc,
+               ctx
              else
                acc, ctx)
 
@@ -347,6 +356,11 @@ let private getUniqueVarName (ctx: CirCtx) serial =
   match ctx.VarUniqueNames |> mapTryFind serial with
   | Some name -> name
   | None -> failwithf "Never: Unknown value-level identifier serial %d" serial
+
+let private getUniqueVariantName (ctx: CirCtx) variantSerial =
+  match ctx.VariantUniqueNames |> mapTryFind variantSerial with
+  | Some name -> name
+  | None -> failwithf "Never: Unknown variant serial=%s" (objToString variantSerial)
 
 let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
   let rec go ty (ctx: CirCtx) =
@@ -557,7 +571,7 @@ let private genLit lit =
   | BoolLit true -> CIntExpr 1
 
 let private genTag ctx variantSerial =
-  CRefExpr(getUniqueVarName ctx variantSerial)
+  CRefExpr(getUniqueVariantName ctx variantSerial)
 
 let private cgConst ctx mConst =
   match mConst with
@@ -591,7 +605,10 @@ let private genDefault ctx ty =
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
-  let tag = CRefExpr(getUniqueVarName ctx serial)
+
+  let tag =
+    CRefExpr(getUniqueVariantName ctx serial)
+
   CInitExpr([ "tag", tag ], ty), ctx
 
 /// Converts a binary expression to a runtime function call.
@@ -622,7 +639,7 @@ let private genUnaryExpr ctx op arg ty _ =
 
   | MGetVariantUnary serial ->
       let _, ctx = cgTyComplete ctx ty
-      CNavExpr(arg, getUniqueVarName ctx serial), ctx
+      CNavExpr(arg, getUniqueVariantName ctx serial), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
@@ -897,12 +914,12 @@ let private cgVariantInit ctx varSerial variantSerial payload unionTy =
   let storageModifier = findStorageModifier ctx varSerial
 
   let unionTy, ctx = cgTyComplete ctx unionTy
-  let variantName = getUniqueVarName ctx variantSerial
+  let variantName = getUniqueVariantName ctx variantSerial
 
   let payloadExpr, ctx = cgExpr ctx payload
 
   let fields =
-    [ "tag", CRefExpr(getUniqueVarName ctx variantSerial)
+    [ "tag", CRefExpr(getUniqueVariantName ctx variantSerial)
       variantName, payloadExpr ]
 
   let init = CInitExpr(fields, unionTy)

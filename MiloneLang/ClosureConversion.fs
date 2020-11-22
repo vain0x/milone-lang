@@ -360,7 +360,7 @@ let private ccLetFunExpr callee vis isMainFun args body next ty loc ctx =
   HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc), ctx
 
 let private ccVariantDecl ctx variant =
-  let (_, variantSerial, _, _) = variant
+  let (_, VariantSerial variantSerial, _, _) = variant
   ctx |> addKnown variantSerial
 
 // -----------------------------------------------

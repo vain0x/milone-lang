@@ -580,7 +580,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
                 true, ty, nameCtx
             | None -> false, tyUnit, nameCtx
 
-          (name, serial, hasPayload, payloadTy), nameCtx
+          (name, VariantSerial serial, hasPayload, payloadTy), nameCtx
 
         let unionSerial, nameCtx = nameCtx |> nameCtxAdd name
         let variants, nameCtx = (variants, nameCtx) |> stMap athVariant

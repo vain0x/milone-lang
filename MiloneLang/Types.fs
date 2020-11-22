@@ -405,8 +405,9 @@ type VarSerial = Serial
 /// Serial number of functions. This is essentially a "subtype" of VarSerial.
 type FunSerial = Serial
 
-/// Serial number of variants. This is essentially as "subtype" of VarSerial.
-type VariantSerial = Serial
+/// Serial number of variants.
+[<Struct; NoEquality; NoComparison>]
+type VariantSerial = VariantSerial of Serial
 
 /// Number of parameters.
 type Arity = int
@@ -513,7 +514,7 @@ type TyDecl =
 
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
-  | UnionTyDecl of Ident * variants: (Ident * VarSerial * bool * Ty) list * Loc
+  | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty) list * Loc
 
   | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * Loc
 
@@ -539,7 +540,15 @@ type TyDef =
 type VarDef =
   | VarDef of Ident * StorageModifier * Ty * Loc
   | FunDef of Ident * Arity * TyScheme * Loc
-  | VariantDef of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
+
+[<NoEquality; NoComparison>]
+type VariantDef =
+  { Name: Ident
+    UnionTySerial: TySerial
+    HasPayload: bool
+    PayloadTy: Ty
+    VariantTy: Ty
+    Loc: Loc }
 
 /// Pattern in high-level IR.
 [<NoEquality; NoComparison>]

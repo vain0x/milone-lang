@@ -31,6 +31,8 @@ type TyCtx =
     /// Variable serial to variable definition.
     Vars: AssocMap<VarSerial, VarDef>
 
+    Variants: AssocMap<VariantSerial, VariantDef>
+
     /// Type serial to type definition.
     Tys: AssocMap<TySerial, TyDef>
 
@@ -166,7 +168,6 @@ let private unifyVarTy varSerial tyOpt loc ctx =
   let varTy, ctx =
     match findVar ctx varSerial with
     | VarDef (_, _, ty, _) -> ty, ctx
-    | VariantDef (_, _, _, _, ty, _) -> ty, ctx
     | FunDef (_, _, tyScheme, _) -> instantiateTyScheme ctx tyScheme loc
 
   match tyOpt with
@@ -317,7 +318,8 @@ let private inferRefPat (ctx: TyCtx) varSerial loc =
   HRefPat(varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
-  let ty, ctx = ctx |> unifyVarTy variantSerial None loc
+  let ty =
+    (ctx.Variants |> mapFind variantSerial).VariantTy
 
   HVariantPat(variantSerial, ty, loc), ty, ctx
 
@@ -415,7 +417,8 @@ let private inferFunExpr (ctx: TyCtx) varSerial loc =
   HFunExpr(varSerial, ty, loc), ty, ctx
 
 let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
-  let ty, ctx = ctx |> unifyVarTy variantSerial None loc
+  let ty =
+    (ctx.Variants |> mapFind variantSerial).VariantTy
 
   HVariantExpr(variantSerial, ty, loc), ty, ctx
 
@@ -780,6 +783,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx: TyCtx =
     { Serial = scopeCtx.Serial
       Vars = scopeCtx.Vars
+      Variants = scopeCtx.Variants
       Tys = scopeCtx.Tys
       TyDepths = scopeCtx.TyDepths
       LetDepth = 0
@@ -809,19 +813,25 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                  let ty, _, ctx = freshMetaTy name loc ctx
                  FunDef(name, arity, TyScheme([], ty), loc), ctx
 
-             | VariantDef (name, tySerial, hasPayload, payloadTy, _, loc) ->
-                 // Pre-compute the type of variant.
-                 let variantTy =
-                   let unionTy = tyUnion tySerial
-                   if hasPayload then tyFun payloadTy unionTy else unionTy
-
-                 VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc), ctx
-
            let acc = acc |> mapAdd varSerial varDef
 
            acc, ctx) (mapEmpty intCmp, ctx)
 
     { ctx with Vars = vars }
+
+  let ctx =
+    let variants =
+      ctx.Variants
+      |> mapMap (fun _ (variantDef: VariantDef) ->
+           // Pre-compute the type of variant.
+           let variantTy =
+             let unionTy = tyUnion variantDef.UnionTySerial
+             if variantDef.HasPayload then tyFun variantDef.PayloadTy unionTy else unionTy
+
+           { variantDef with
+               VariantTy = variantTy })
+
+    { ctx with Variants = variants }
 
   let ctx = { ctx with LetDepth = 0 }
 
@@ -854,14 +864,19 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
            | FunDef (name, arity, TyScheme (args, ty), loc) ->
                let ty = substOrDegenerate ty
-               FunDef(name, arity, TyScheme(args, ty), loc)
-
-           | VariantDef (name, tySerial, hasPayload, payloadTy, ty, loc) ->
-               let payloadTy = substOrDegenerate payloadTy
-               let ty = substOrDegenerate ty
-               VariantDef(name, tySerial, hasPayload, payloadTy, ty, loc))
+               FunDef(name, arity, TyScheme(args, ty), loc))
 
     { ctx with Vars = vars }
+
+  let ctx =
+    let variants =
+      ctx.Variants
+      |> mapMap (fun _ (variantDef: VariantDef) ->
+           { variantDef with
+               PayloadTy = substOrDegenerate variantDef.PayloadTy
+               VariantTy = substOrDegenerate variantDef.VariantTy })
+
+    { ctx with Variants = variants }
 
   let ctx =
     let tys =

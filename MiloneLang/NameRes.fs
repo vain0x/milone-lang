@@ -8,6 +8,11 @@ module rec MiloneLang.NameRes
 open MiloneLang.Types
 open MiloneLang.Helpers
 
+let private isNoTy ty =
+  match ty with
+  | ErrorTy _ -> true
+  | _ -> false
+
 // -----------------------------------------------
 // Type primitives
 // -----------------------------------------------
@@ -47,7 +52,7 @@ let private valueSymbolToSerial symbol =
   match symbol with
   | VarSymbol s -> s
   | FunSymbol s -> s
-  | VariantSymbol s -> s
+  | VariantSymbol (VariantSerial s) -> s
 
 [<Struct; NoEquality; NoComparison>]
 type TySymbol =
@@ -126,6 +131,8 @@ type ScopeCtx =
     /// Variable serial to definition map.
     Vars: AssocMap<VarSerial, VarDef>
 
+    Variants: AssocMap<VariantSerial, VariantDef>
+
     /// Variable serial to let-depth map.
     VarDepths: AssocMap<VarSerial, LetDepth>
 
@@ -157,6 +164,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
   { Serial = serial
     NameMap = nameMap
     Vars = mapEmpty intCmp
+    Variants = mapEmpty variantSerialCmp
     VarDepths = mapEmpty intCmp
     Tys = mapEmpty intCmp
     TyDepths = mapEmpty intCmp
@@ -171,6 +179,10 @@ let private findName serial (scopeCtx: ScopeCtx): Ident = scopeCtx.NameMap |> ma
 let private findVar varSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Vars |> mapContainsKey varSerial)
   scopeCtx.Vars |> mapFind varSerial
+
+let private findVariant variantSerial (scopeCtx: ScopeCtx) =
+  assert (scopeCtx.Variants |> mapContainsKey variantSerial)
+  scopeCtx.Variants |> mapFind variantSerial
 
 let private findTy tySerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Tys |> mapContainsKey tySerial)
@@ -191,6 +203,16 @@ let private addVar valueSymbol varDef (scopeCtx: ScopeCtx): ScopeCtx =
       VarDepths =
         scopeCtx.VarDepths
         |> mapAdd varSerial scopeCtx.LetDepth }
+
+let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCtx =
+  { scopeCtx with
+      Variants =
+        scopeCtx.Variants
+        |> mapAdd variantSerial variantDef
+      VarDepths =
+        let (VariantSerial variantSerial) = variantSerial
+        scopeCtx.VarDepths
+        |> mapAdd variantSerial scopeCtx.LetDepth }
 
 /// Defines a type, without adding to any scope.
 let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
@@ -231,9 +253,12 @@ let private addTyToNs parentTySerial tySymbol (scopeCtx: ScopeCtx): ScopeCtx =
 /// Adds a variable to a scope.
 let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
   let varName =
-    scopeCtx
-    |> findVar (valueSymbolToSerial symbol)
-    |> varDefToName
+    match symbol with
+    | VariantSymbol variantSerial -> (scopeCtx |> findVariant variantSerial).Name
+    | _ ->
+        scopeCtx
+        |> findVar (valueSymbolToSerial symbol)
+        |> varDefToName
 
   assert (varName <> "_")
 
@@ -490,11 +515,16 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
         let defineVariant ctx (name, variantSerial, hasPayload, payloadTy) =
           let variantSymbol = VariantSymbol variantSerial
 
-          let varDef =
-            VariantDef(name, tySerial, hasPayload, payloadTy, noTy, loc)
+          let variantDef: VariantDef =
+            { Name = name
+              UnionTySerial = tySerial
+              HasPayload = hasPayload
+              PayloadTy = payloadTy
+              VariantTy = noTy
+              Loc = loc }
 
           ctx
-          |> addVar variantSymbol varDef
+          |> addVariantDef variantSerial variantDef
           |> addVarToNs tySerial variantSymbol
           |> importVar variantSymbol
           |> addVarToModule variantSymbol
@@ -561,17 +591,11 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
 
   | UnionTyDef (_, variantSerials, _unionLoc) ->
       let go ctx variantSerial =
-        match ctx |> findVar variantSerial with
-        | VariantDef (name, tySerial, hasPayload, payloadTy, variantTy, loc) ->
-            let payloadTy, ctx = ctx |> resolveTy payloadTy loc
-            let variantTy, ctx = ctx |> resolveTy variantTy loc
-
-            let varDef =
-              VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc)
-
-            ctx |> addVar (VariantSymbol variantSerial) varDef
-
-        | _ -> failwith "NEVER: it must be variant"
+        let def = ctx |> findVariant variantSerial
+        let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
+        assert (def.VariantTy |> isNoTy)
+        ctx
+        |> addVariantDef variantSerial { def with PayloadTy = payloadTy }
 
       variantSerials |> List.fold go ctx
 
