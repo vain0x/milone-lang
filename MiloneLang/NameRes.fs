@@ -385,18 +385,20 @@ let private resolveTy ty loc scopeCtx =
     match ty with
     | ErrorTy _ -> ty, scopeCtx
 
-    | AppTy (RefTyCtor tySerial, []) when (scopeCtx |> findName tySerial) = "_" ->
+    | AppTy (UnresolvedTyCtor serial, []) when (scopeCtx |> findName serial) = "_" ->
         // Handle wildcard type.
-        let scopeCtx = scopeCtx |> addUnboundMetaTy tySerial
+        let scopeCtx = scopeCtx |> addUnboundMetaTy serial
 
-        MetaTy(tySerial, loc), scopeCtx
+        MetaTy(serial, loc), scopeCtx
 
-    | AppTy (RefTyCtor serial, tys) ->
+    | AppTy (UnresolvedTyCtor serial, tys) ->
         let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
         match scopeCtx |> resolveLocalTyName name with
-        | Some (MetaTySymbol tySerial) -> tyRef tySerial tys, scopeCtx
+        | Some (MetaTySymbol tySerial) ->
+            failwithf "meta ty cannot be applied: %A" (serial, tys)
+            MetaTy(tySerial, loc), scopeCtx
 
         | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
 
@@ -407,11 +409,15 @@ let private resolveTy ty loc scopeCtx =
             | Some (SynonymTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> List.length tys ->
                 failwithf "synonym arity mismatch: %A" (tySerial, tys, name, defTyArgs, loc)
 
-            | _ -> tyRef tySerial tys, scopeCtx
+            | _ -> tySynonym tySerial tys, scopeCtx
 
-        | Some (UnionTySymbol tySerial) -> tyRef tySerial tys, scopeCtx
+        | Some (UnionTySymbol tySerial) ->
+            assert (List.isEmpty tys)
+            tyUnion tySerial, scopeCtx
 
-        | Some (RecordTySymbol tySerial) -> tyRef tySerial tys, scopeCtx
+        | Some (RecordTySymbol tySerial) ->
+            assert (List.isEmpty tys)
+            tyRecord tySerial, scopeCtx
 
         | Some (ModuleTySymbol _) -> failwith "module can't be used as type."
 

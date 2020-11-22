@@ -202,6 +202,8 @@ let private desugarLet vis pat body next pos =
 
   | _ -> ALetVal(vis, pat, body, next, pos)
 
+let private tyUnresolved serial argTys = AppTy(UnresolvedTyCtor serial, argTys)
+
 let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
@@ -209,20 +211,18 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
       ErrorTy loc, nameCtx
 
   | AAppTy (name, argTys, _) ->
-      let tySerial, nameCtx = nameCtx |> nameCtxAdd name
-
+      let serial, nameCtx = nameCtx |> nameCtxAdd name
       let argTys, nameCtx = (argTys, nameCtx) |> stMap (athTy docId)
-
-      tyRef tySerial argTys, nameCtx
+      tyUnresolved serial argTys, nameCtx
 
   | AVarTy (name, _) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
-      tyRef tySerial [], nameCtx
+      tyUnresolved tySerial [], nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId
-      let tySerial, nameCtx = nameCtx |> nameCtxAdd suffix
-      tyRef tySerial [ lTy ], nameCtx
+      let serial, nameCtx = nameCtx |> nameCtxAdd suffix
+      tyUnresolved serial [ lTy ], nameCtx
 
   | ATupleTy (itemTys, _) ->
       let itemTys, nameCtx =

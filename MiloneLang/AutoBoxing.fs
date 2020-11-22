@@ -8,6 +8,11 @@ open MiloneLang.Types
 open MiloneLang.TySystem
 open MiloneLang.Typing
 
+let private tyIsRecord ty =
+  match ty with
+  | AppTy (RecordTyCtor _, _) -> true
+  | _ -> false
+
 let private hxBox itemExpr itemTy loc =
   hxApp (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) itemExpr tyObj loc
 
@@ -98,18 +103,7 @@ let private postProcessVariantFunAppExpr ctx infOp items =
 ///   record: obj
 /// ```
 
-let private isRecordTySerial (ctx: AbCtx) tySerial =
-  match ctx.Tys |> mapTryFind tySerial with
-  | Some (RecordTyDef _) -> true
-  | _ -> false
-
-let private isRecordTy ctx ty =
-  match ty with
-  | AppTy (RefTyCtor tySerial, _) -> tySerial |> isRecordTySerial ctx
-  | _ -> false
-
-let private eraseRecordTy ctx tySerial =
-  if tySerial |> isRecordTySerial ctx then Some tyObj else None
+let private eraseRecordTy () = tyObj
 
 let private postProcessRecordExpr baseOpt fields recordTy loc =
   let baseOpt =
@@ -132,10 +126,7 @@ let private postProcessFieldExpr recordExpr recordTy fieldName fieldTy loc =
 
 let private abTy ctx ty =
   match ty with
-  | AppTy (RefTyCtor tySerial, []) ->
-      match eraseRecordTy ctx tySerial with
-      | Some ty -> ty
-      | None -> ty
+  | AppTy (RecordTyCtor _, _) -> eraseRecordTy ()
 
   | AppTy (tyCtor, tyArgs) ->
       let tyArgs = tyArgs |> List.map (abTy ctx)
@@ -192,7 +183,7 @@ let private abExpr ctx expr =
   match expr with
   | HRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =
-        assert (ty |> isRecordTy ctx)
+        assert (tyIsRecord ty)
 
         let baseOpt = baseOpt |> Option.map (abExpr ctx)
 
@@ -209,7 +200,7 @@ let private abExpr ctx expr =
   | HNavExpr (l, r, ty, loc) ->
       let doArm () =
         let recordTy = l |> exprToTy
-        assert (recordTy |> isRecordTy ctx)
+        assert (tyIsRecord recordTy)
 
         let l = l |> abExpr ctx
         let ty = ty |> abTy ctx

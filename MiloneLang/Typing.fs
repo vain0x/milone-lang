@@ -443,7 +443,9 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
       match tyOpt |> Option.map (substTy ctx) with
-      | Some ((AppTy (RefTyCtor tySerial, [])) as recordTy) ->
+      | Some ((AppTy (RecordTyCtor tySerial, tyArgs)) as recordTy) ->
+          assert (List.isEmpty tyArgs)
+
           match ctx |> findTy tySerial with
           | RecordTyDef (name, fieldDefs, _) -> Some(recordTy, name, fieldDefs)
           | _ -> None
@@ -567,7 +569,9 @@ let private inferNavExpr ctx l (r: Ident) loc =
 
       hxApp funExpr l tyInt loc, tyInt, ctx
 
-  | AppTy (RefTyCtor tySerial, []), _ ->
+  | AppTy (RecordTyCtor tySerial, tyArgs), _ ->
+      assert (List.isEmpty tyArgs)
+
       let fieldTyOpt =
         match ctx |> findTy tySerial with
         | RecordTyDef (_, fieldDefs, _) ->
@@ -808,7 +812,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
              | VariantDef (name, tySerial, hasPayload, payloadTy, _, loc) ->
                  // Pre-compute the type of variant.
                  let variantTy =
-                   let unionTy = tyRef tySerial []
+                   let unionTy = tyUnion tySerial
                    if hasPayload then tyFun payloadTy unionTy else unionTy
 
                  VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc), ctx

@@ -520,7 +520,11 @@ let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
 let tyUnit = tyTuple []
 
-let tyRef serial tys = AppTy(RefTyCtor serial, tys)
+let tySynonym tySerial tyArgs = AppTy(SynonymTyCtor tySerial, tyArgs)
+
+let tyUnion tySerial = AppTy(UnionTyCtor tySerial, [])
+
+let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
 
 // -----------------------------------------------
 // Type definitions (HIR)

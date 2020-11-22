@@ -12,32 +12,25 @@ open MiloneLang.Helpers
 // TyCtor
 // -----------------------------------------------
 
-let private tyCtorToInt tyCtor =
+let private tyCtorEncode tyCtor =
   match tyCtor with
-  | BoolTyCtor -> 1
+  | BoolTyCtor -> 1, 0
+  | IntTyCtor -> 2, 0
+  | UIntTyCtor -> 3, 0
+  | CharTyCtor -> 4, 0
+  | StrTyCtor -> 5, 0
+  | ObjTyCtor -> 6, 0
+  | FunTyCtor -> 7, 0
+  | TupleTyCtor -> 8, 0
+  | ListTyCtor -> 9, 0
 
-  | IntTyCtor -> 2
+  | SynonymTyCtor tySerial -> 21, tySerial
+  | UnionTyCtor tySerial -> 22, tySerial
+  | RecordTyCtor tySerial -> 23, tySerial
+  | UnresolvedTyCtor serial -> 24, serial
 
-  | UIntTyCtor -> 9
-
-  | CharTyCtor -> 3
-
-  | StrTyCtor -> 4
-
-  | ObjTyCtor -> 5
-
-  | FunTyCtor -> 6
-
-  | TupleTyCtor -> 7
-
-  | ListTyCtor -> 8
-
-  | RefTyCtor tySerial ->
-      assert (tySerial >= 0)
-      10 + tySerial
-
-let tyCtorCmp first second =
-  intCmp (tyCtorToInt first) (tyCtorToInt second)
+let tyCtorCmp l r =
+  pairCmp intCmp intCmp (tyCtorEncode l) (tyCtorEncode r)
 
 let tyCtorEq first second = tyCtorCmp first second = 0
 
@@ -52,7 +45,10 @@ let tyCtorDisplay getTyName tyCtor =
   | FunTyCtor -> "fun"
   | TupleTyCtor -> "tuple"
   | ListTyCtor -> "list"
-  | RefTyCtor tySerial -> getTyName tySerial
+  | SynonymTyCtor tySerial -> getTyName tySerial
+  | RecordTyCtor tySerial -> getTyName tySerial
+  | UnionTyCtor tySerial -> getTyName tySerial
+  | UnresolvedTyCtor serial -> "?" + string serial
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -188,6 +184,18 @@ let tyDisplay getTyName ty =
     let paren (bp: int) s =
       if bp >= outerBp then s else "(" + s + ")"
 
+    let nominal tySerial args =
+      let tyCtor =
+        match tySerial |> getTyName with
+        | Some name -> name
+        | None -> "?" + string tySerial
+
+      match args with
+      | [] -> tyCtor
+      | _ ->
+          let args = args |> List.map (go 0) |> strJoin ", "
+          tyCtor + "<" + args + ">"
+
     match ty with
     | ErrorTy loc -> "{error}@" + locToString loc
 
@@ -207,17 +215,9 @@ let tyDisplay getTyName ty =
 
     | AppTy (ListTyCtor, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
-    | AppTy (RefTyCtor tySerial, args) ->
-        let tyCtor =
-          match tySerial |> getTyName with
-          | Some name -> name
-          | None -> "?" + string tySerial
-
-        match args with
-        | [] -> tyCtor
-        | _ ->
-            let args = args |> List.map (go 0) |> strJoin ", "
-            tyCtor + "<" + args + ">"
+    | AppTy (SynonymTyCtor tySerial, args) -> nominal tySerial args
+    | AppTy (UnionTyCtor tySerial, args) -> nominal tySerial args
+    | AppTy (RecordTyCtor tySerial, args) -> nominal tySerial args
 
     | AppTy (tyCtor, args) ->
         let tyCtor =
@@ -307,13 +307,13 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
 let tyExpandSynonyms expand ty =
   let rec go ty =
     match ty with
-    | AppTy (RefTyCtor tySerial, useTyArgs) ->
+    | AppTy (SynonymTyCtor tySerial, useTyArgs) ->
         match expand tySerial with
         | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
             tyExpandSynonym useTyArgs defTySerials bodyTy
             |> go
 
-        | _ -> AppTy(RefTyCtor tySerial, useTyArgs)
+        | _ -> AppTy(SynonymTyCtor tySerial, useTyArgs)
 
     | AppTy (tyCtor, tyArgs) -> AppTy(tyCtor, tyArgs |> List.map go)
 
@@ -324,13 +324,13 @@ let tyExpandSynonyms expand ty =
 let typingExpandSynonyms (ctx: TyContext) ty =
   let rec go ty =
     match ty with
-    | AppTy (RefTyCtor tySerial, useTyArgs) ->
+    | AppTy (SynonymTyCtor tySerial, useTyArgs) ->
         match ctx.Tys |> mapTryFind tySerial with
         | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
             tyExpandSynonym useTyArgs defTySerials bodyTy
             |> go
 
-        | _ -> AppTy(RefTyCtor tySerial, useTyArgs)
+        | _ -> AppTy(SynonymTyCtor tySerial, useTyArgs)
 
     | AppTy (tyCtor, tyArgs) -> AppTy(tyCtor, tyArgs |> List.map go)
 
@@ -451,11 +451,11 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
 
         gogo lTyArgs rTyArgs (logAcc, ctx)
 
-    | AppTy (RefTyCtor tySerial, tyArgs), _ when tySerial |> isSynonym ctx ->
+    | AppTy (SynonymTyCtor tySerial, tyArgs), _ when tySerial |> isSynonym ctx ->
         let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
         (logAcc, ctx) |> go ty1 ty2 |> go ty1 rTy
 
-    | _, AppTy (RefTyCtor tySerial, tyArgs) when tySerial |> isSynonym ctx ->
+    | _, AppTy (SynonymTyCtor tySerial, tyArgs) when tySerial |> isSynonym ctx ->
         let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
         (logAcc, ctx) |> go ty1 ty2 |> go ty1 lTy
 

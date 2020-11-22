@@ -122,7 +122,7 @@ let private recordToTuple (ctx: TyElaborationCtx) tySerial =
 let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty loc =
   let tupleTy, fieldMap =
     match ty with
-    | AppTy (RefTyCtor tySerial, []) ->
+    | AppTy (RecordTyCtor tySerial, _) ->
         match ctx.RecordMap |> mapTryFind tySerial with
         | Some (tupleTy, fieldMap) -> tupleTy, fieldMap
         | _ -> failwithf "NEVER: %A" itself
@@ -175,7 +175,7 @@ let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty l
 let private rewriteFieldExpr (ctx: TyElaborationCtx) itself recordTy l r ty loc =
   let index =
     match recordTy with
-    | AppTy (RefTyCtor tySerial, []) ->
+    | AppTy (RecordTyCtor tySerial, _) ->
         let _, fieldMap = ctx.RecordMap |> mapFind tySerial
 
         let index, _ = fieldMap |> mapFind r
@@ -290,13 +290,19 @@ let private rewriteNewtypeAppExpr (ctx: TyElaborationCtx) infOp items =
 
 let private teTy (ctx: TyElaborationCtx) ty =
   match ty with
-  | AppTy (RefTyCtor tySerial, []) ->
+  | AppTy (UnionTyCtor tySerial, tyArgs) ->
+      assert (List.isEmpty tyArgs)
+
+      match rewriteNewtypeTy ctx tySerial with
+      | Some ty -> ty
+      | None -> ty
+
+  | AppTy (RecordTyCtor tySerial, tyArgs) ->
+      assert (List.isEmpty tyArgs)
+
       match recordToTuple ctx tySerial with
       | Some ty -> ty
-      | None ->
-          match rewriteNewtypeTy ctx tySerial with
-          | Some ty -> ty
-          | None -> ty
+      | None -> ty
 
   | AppTy (_, []) -> ty
 

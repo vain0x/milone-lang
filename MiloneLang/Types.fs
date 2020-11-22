@@ -451,8 +451,13 @@ type TyCtor =
   /// Ty args must be `[t]`.
   | ListTyCtor
 
-  /// Nominal type. Union or record.
-  | RefTyCtor of TySerial
+  // Nominal types.
+  | SynonymTyCtor of synonymTy: TySerial
+  | UnionTyCtor of unionTy: TySerial
+  | RecordTyCtor of recordTy: TySerial
+
+  /// Unresolved type. Generated in AstToHir, resolved in NameRes.
+  | UnresolvedTyCtor of Serial
 
 /// Type of expressions.
 [<Struct>]

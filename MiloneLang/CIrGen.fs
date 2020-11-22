@@ -32,7 +32,9 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
         let serials =
           acc |> mapTryFind ident |> Option.defaultValue []
 
-        let acc = acc |> mapAdd ident (serial :: serials)
+        let acc =
+          acc |> mapAdd ident ((serial, def) :: serials)
+
         go acc xs
 
   let serialsMap =
@@ -74,11 +76,21 @@ type private CirCtx =
 
 let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   let varNames =
-    mirCtx.Vars |> renameIdents varDefToName id intCmp
+    mirCtx.Vars
+    |> renameIdents varDefToName fst intCmp
 
   let tyNames =
-    mirCtx.Tys
-    |> renameIdents tyDefToName (fun serial -> tyRef serial []) tyCmp
+    let toKey (serial, tyDef) =
+      match tyDef with
+      | MetaTyDef _
+      | UniversalTyDef _
+      | ModuleTyDef _ -> MetaTy(serial, noLoc)
+
+      | SynonymTyDef _ -> tySynonym serial []
+      | UnionTyDef _ -> tyUnion serial
+      | RecordTyDef _ -> tyRecord serial
+
+    mirCtx.Tys |> renameIdents tyDefToName toKey tyCmp
 
   { Vars = mirCtx.Vars
     VarUniqueNames = varNames
@@ -239,7 +251,7 @@ let private genTupleTyDef (ctx: CirCtx) itemTys =
       selfTy, ctx
 
 let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
-  let unionTyRef = tyRef tySerial []
+  let unionTyRef = tyUnion tySerial
   match ctx.TyEnv |> mapTryFind unionTyRef with
   | Some (_, ty) -> ty, ctx
 
@@ -256,7 +268,7 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
       selfTy, ctx
 
 let private genUnionTyDef (ctx: CirCtx) tySerial variants =
-  let unionTyRef = tyRef tySerial []
+  let unionTyRef = tyUnion tySerial
   match ctx.TyEnv |> mapTryFind unionTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
 
@@ -305,7 +317,7 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       selfTy, ctx
 
 let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
-  let recordTyRef = tyRef tySerial []
+  let recordTyRef = tyRecord tySerial
 
   match ctx.TyEnv |> mapTryFind recordTyRef with
   | Some (_, ty) -> ty, ctx
@@ -319,7 +331,7 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
       selfTy, ctx
 
 let private genRecordTyDef ctx tySerial _fields =
-  let recordTyRef = tyRef tySerial []
+  let recordTyRef = tyRecord tySerial
   let structName, ctx = getUniqueTyName ctx recordTyRef
   let selfTy = CStructTy structName
 
@@ -389,9 +401,12 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           tupleTy, ctx
 
-      | AppTy (RefTyCtor _, _)
       | AppTy (ListTyCtor, _)
       | AppTy (FunTyCtor, _)
+      | AppTy (SynonymTyCtor _, _)
+      | AppTy (UnionTyCtor _, _)
+      | AppTy (RecordTyCtor _, _)
+      | AppTy (UnresolvedTyCtor _, _)
       | ErrorTy _ ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
@@ -434,7 +449,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (TupleTyCtor, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
 
-  | AppTy (RefTyCtor serial, useTyArgs) ->
+  | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
@@ -442,11 +457,11 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
           cgTyIncomplete ctx ty
 
-      | Some (UnionTyDef _) -> genIncompleteUnionTyDecl ctx serial
+      | _ -> failwithf "NEVER: synonym type undefined?"
 
-      | Some (RecordTyDef _) -> genIncompleteRecordTyDecl ctx serial
+  | AppTy (UnionTyCtor serial, _) -> genIncompleteUnionTyDecl ctx serial
 
-      | _ -> CVoidTy, addError ctx "Unknown type reference" noLoc // FIXME: source location
+  | AppTy (RecordTyCtor serial, _) -> genIncompleteRecordTyDecl ctx serial
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -490,7 +505,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       genTupleTyDef ctx itemTys
 
-  | AppTy (RefTyCtor serial, useTyArgs) ->
+  | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
@@ -498,11 +513,19 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
           cgTyComplete ctx ty
 
+      | _ -> failwithf "NEVER: synonym type undefined?"
+
+  | AppTy (UnionTyCtor serial, _) ->
+      match ctx.Tys |> mapTryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
 
+      | _ -> failwithf "NEVER: union type undefined?"
+
+  | AppTy (RecordTyCtor serial, _) ->
+      match ctx.Tys |> mapTryFind serial with
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
-      | _ -> CVoidTy, addError ctx "Unknown type reference" noLoc // FIXME: source location
+      | _ -> failwithf "NEVER: record type undefined?"
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -548,17 +571,23 @@ let private genDefault ctx ty =
   | AppTy (BoolTyCtor, _)
   | AppTy (IntTyCtor, _)
   | AppTy (UIntTyCtor, _) -> CIntExpr 0, ctx
+
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (CharTyCtor, _)
   | AppTy (ObjTyCtor, _)
   | AppTy (ListTyCtor, _) -> CRefExpr "NULL", ctx
+
   | AppTy (StrTyCtor, _)
   | AppTy (FunTyCtor, _)
   | AppTy (TupleTyCtor, _)
-  | AppTy (RefTyCtor _, _) ->
+  | AppTy (SynonymTyCtor _, _)
+  | AppTy (UnionTyCtor _, _)
+  | AppTy (RecordTyCtor _, _) ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
-  | ErrorTy _ -> failwithf "Never %A" ty
+
+  | ErrorTy _
+  | AppTy (UnresolvedTyCtor _, _) -> failwithf "Never %A" ty
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty

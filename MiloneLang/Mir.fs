@@ -476,7 +476,7 @@ let private matchExprCanCompileToSwitch cond arms =
     match ty with
     | AppTy (IntTyCtor, [])
     | AppTy (CharTyCtor, [])
-    | AppTy (RefTyCtor _, _) -> true
+    | AppTy (UnionTyCtor _, _) -> true
 
     | _ -> false
 
@@ -540,7 +540,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
     let cond, ctx = mirifyExpr ctx cond
 
     match condTy with
-    | AppTy (RefTyCtor _, _) -> MUnaryExpr(MTagUnary, cond, tyInt, condLoc), ctx
+    | AppTy (UnionTyCtor _, _) -> MUnaryExpr(MTagUnary, cond, tyInt, condLoc), ctx
     | _ -> cond, ctx
 
   let exhaust, clauses, blocks, ctx =
