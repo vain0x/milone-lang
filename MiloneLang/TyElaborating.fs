@@ -95,10 +95,10 @@ let private buildRecordMap (ctx: TyElaborationCtx) =
        | RecordTyDef (_, fields, _) ->
            let fields =
              fields
-             |> List.map (fun (ident, ty, loc) ->
+             |> List.map (fun (name, ty, loc) ->
                   // This affects newtype variants only.
                   let ty = ty |> teTy ctx
-                  ident, ty, loc)
+                  name, ty, loc)
 
            let tupleTy =
              fields
@@ -107,7 +107,7 @@ let private buildRecordMap (ctx: TyElaborationCtx) =
 
            let fieldMap =
              fields
-             |> List.mapi (fun i (ident, ty, _) -> ident, (i, ty))
+             |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
              |> mapOfList strCmp
 
            acc |> mapAdd tySerial (tupleTy, fieldMap)
@@ -137,9 +137,9 @@ let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty l
 
   let fields =
     fields
-    |> List.map (fun (ident, init, _) ->
+    |> List.map (fun (name, init, _) ->
          let init = init |> teExpr ctx
-         let index, _ = fieldMap |> mapFind ident
+         let index, _ = fieldMap |> mapFind name
          index, init)
     |> listSort (fun (l, _) (r, _) -> intCmp l r)
 
@@ -455,17 +455,17 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
     ctx.Vars
     |> mapMap (fun _ varDef ->
          match varDef with
-         | VarDef (ident, sm, ty, loc) ->
+         | VarDef (name, sm, ty, loc) ->
              let ty = ty |> teTy ctx
-             VarDef(ident, sm, ty, loc)
+             VarDef(name, sm, ty, loc)
 
-         | FunDef (ident, arity, TyScheme (tyArgs, ty), loc) ->
+         | FunDef (name, arity, TyScheme (tyArgs, ty), loc) ->
              let ty = ty |> teTy ctx
-             FunDef(ident, arity, TyScheme(tyArgs, ty), loc)
+             FunDef(name, arity, TyScheme(tyArgs, ty), loc)
 
-         | VariantDef (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
+         | VariantDef (name, tySerial, hasPayload, payloadTy, variantTy, loc) ->
              let payloadTy = payloadTy |> teTy ctx
-             VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc))
+             VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc))
 
   let expr = expr |> teExpr ctx
 
@@ -473,9 +473,9 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
     ctx.Tys
     |> mapMap (fun _ tyDef ->
          match tyDef with
-         | SynonymTyDef (ident, tyArgs, bodyTy, loc) ->
+         | SynonymTyDef (name, tyArgs, bodyTy, loc) ->
              let bodyTy = bodyTy |> teTy ctx
-             SynonymTyDef(ident, tyArgs, bodyTy, loc)
+             SynonymTyDef(name, tyArgs, bodyTy, loc)
 
          | _ -> tyDef)
 

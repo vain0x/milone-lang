@@ -316,10 +316,10 @@ let private updateFunDefs (ctx: CcCtx) =
 
     | caps ->
         match vars |> mapFind varSerial with
-        | FunDef (ident, arity, TyScheme (fvs, funTy), loc) ->
+        | FunDef (name, arity, TyScheme (fvs, funTy), loc) ->
             let funTy, arity = caps |> capsUpdateFunDef funTy arity
             let tyScheme = TyScheme(fvs, funTy)
-            let varDef = FunDef(ident, arity, tyScheme, loc)
+            let varDef = FunDef(name, arity, tyScheme, loc)
             vars |> mapAdd varSerial varDef
 
         | _ -> vars

@@ -408,7 +408,7 @@ let private kmPrimNode itself prim args results conts loc ctx: KirToMirCtx =
   | KStringPrim -> other HPrim.String
   | KPrintfnPrim -> other HPrim.Printfn
   | KInRegionPrim -> other HPrim.InRegion
-  | KNativeFunPrim (ident, arity) -> other (HPrim.NativeFun(ident, arity))
+  | KNativeFunPrim (name, arity) -> other (HPrim.NativeFun(name, arity))
 
 // -----------------------------------------------
 // kmTerm, kmNode
@@ -562,7 +562,7 @@ let private kmFunBinding binding (ctx: KirToMirCtx) =
 
   let isMainFun =
     match findVarDef funSerial ctx with
-    | FunDef (ident, _, _, _) -> ident = "main"
+    | FunDef (name, _, _, _) -> name = "main"
     | _ -> false
 
   let args, resultTy =

@@ -71,8 +71,8 @@ let private cpTy ty acc: string list =
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty -> acc |> cpTy ty |> cons "*"
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
-  | CStructTy ident -> acc |> cons "struct " |> cons ident
-  | CEnumTy ident -> acc |> cons "enum " |> cons ident
+  | CStructTy name -> acc |> cons "struct " |> cons name
+  | CEnumTy name -> acc |> cons "enum " |> cons name
 
 /// `T x` or `T (*x)(..)`
 let private cpTyWithName name ty acc =
@@ -374,13 +374,13 @@ let private cpDecl decl acc =
       |> cons message
       |> cons eol
 
-  | CStructDecl (ident, fields, variants) ->
+  | CStructDecl (structName, fields, variants) ->
       let cpFields indent fields acc =
         fields
-        |> List.fold (fun acc (ident, ty) ->
+        |> List.fold (fun acc (name, ty) ->
              acc
              |> cons indent
-             |> cpTyWithName ident ty
+             |> cpTyWithName name ty
              |> cons ";"
              |> cons eol) acc
 
@@ -398,7 +398,7 @@ let private cpDecl decl acc =
 
       acc
       |> cons "struct "
-      |> cons ident
+      |> cons structName
       |> cons " {"
       |> cons eol
       |> cpFields "    " fields
@@ -406,7 +406,7 @@ let private cpDecl decl acc =
       |> cons "};"
       |> cons eol
 
-  | CEnumDecl (tyIdent, variants) ->
+  | CEnumDecl (enumName, variants) ->
       let cpEnumerants variants acc =
         variants
         |> List.fold (fun acc variant ->
@@ -418,23 +418,23 @@ let private cpDecl decl acc =
 
       acc
       |> cons "enum "
-      |> cons tyIdent
+      |> cons enumName
       |> cons " {"
       |> cons eol
       |> cpEnumerants variants
       |> cons "};"
       |> cons eol
 
-  | CStaticVarDecl (ident, _) ->
+  | CStaticVarDecl (name, _) ->
       acc
       |> cons "// static "
-      |> cons ident
+      |> cons name
       |> cons ";"
       |> cons eol
 
-  | CFunDecl (ident, args, resultTy, body) ->
+  | CFunDecl (name, args, resultTy, body) ->
       acc
-      |> cpTyWithName ident resultTy
+      |> cpTyWithName name resultTy
       |> cons "("
       |> cpParams args
       |> cons ") {"
@@ -448,33 +448,33 @@ let private cpForwardDecl decl acc =
   match decl with
   | CErrorDecl _ -> acc
 
-  | CStructDecl (ident, _, _) ->
+  | CStructDecl (name, _, _) ->
       acc
       |> cons "struct "
-      |> cons ident
+      |> cons name
       |> cons ";"
       |> cons eol
       |> cons eol
 
-  | CEnumDecl (ident, _) ->
+  | CEnumDecl (name, _) ->
       acc
       |> cons "enum "
-      |> cons ident
+      |> cons name
       |> cons ";"
       |> cons eol
       |> cons eol
 
-  | CStaticVarDecl (ident, ty) ->
+  | CStaticVarDecl (name, ty) ->
       acc
       |> cons "static "
-      |> cpTyWithName ident ty
+      |> cpTyWithName name ty
       |> cons ";"
       |> cons eol
       |> cons eol
 
-  | CFunDecl (ident, args, resultTy, _) ->
+  | CFunDecl (name, args, resultTy, _) ->
       acc
-      |> cpTyWithName ident resultTy
+      |> cpTyWithName name resultTy
       |> cons "("
       |> cpParams args
       |> cons ");"

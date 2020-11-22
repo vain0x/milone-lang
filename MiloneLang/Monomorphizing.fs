@@ -133,21 +133,20 @@ let private findVar (ctx: MonoCtx) serial = ctx.Vars |> mapFind serial
 
 let private findGenericFun (ctx: MonoCtx) serial =
   match ctx.Vars |> mapFind serial with
-  | FunDef (ident, arity, TyScheme (tyVars, funTy), loc) when not (List.isEmpty tyVars) ->
-      Some(ident, arity, funTy, loc)
+  | FunDef (name, arity, TyScheme (tyVars, funTy), loc) when not (List.isEmpty tyVars) -> Some(name, arity, funTy, loc)
 
   | _ -> None
 
-let private findFunIdent funSerial (ctx: MonoCtx) =
-  ctx.Vars |> mapFind funSerial |> varDefToIdent
+let private findFunName funSerial (ctx: MonoCtx) =
+  ctx.Vars |> mapFind funSerial |> varDefToName
 
 /// Generalizes all functions that has type variables.
 let private forceGeneralizeFuns (ctx: MonoCtx) =
   let forceGeneralize (varSerial, varDef) =
     match varDef with
-    | FunDef (ident, arity, TyScheme (_, ty), loc) ->
+    | FunDef (name, arity, TyScheme (_, ty), loc) ->
         let fvs = ty |> tyCollectFreeVars
-        varSerial, FunDef(ident, arity, TyScheme(fvs, ty), loc)
+        varSerial, FunDef(name, arity, TyScheme(fvs, ty), loc)
 
     | _ -> varSerial, varDef
 
@@ -164,8 +163,8 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
           |> Option.isNone)
 
   let varDef =
-    let ident = ctx |> findFunIdent genericFunSerial
-    FunDef(ident, arity, TyScheme([], useSiteTy), loc)
+    let name = ctx |> findFunName genericFunSerial
+    FunDef(name, arity, TyScheme([], useSiteTy), loc)
 
   let monoFunSerial = ctx.Serial + 1
 

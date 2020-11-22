@@ -88,7 +88,7 @@ let private addDecl (ctx: MirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
 let private takeDecls (ctx: MirCtx) =
   List.rev ctx.Decls, { ctx with Decls = [] }
 
-let private freshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
+let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let serial = (ctx.Serial) + 1
 
   let ctx =
@@ -96,13 +96,13 @@ let private freshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> mapAdd serial (VarDef(ident, AutoSM, ty, loc)) }
+          |> mapAdd serial (VarDef(name, AutoSM, ty, loc)) }
 
   let refExpr = MRefExpr(serial, ty, loc)
   refExpr, serial, ctx
 
-let private letFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
-  let refExpr, serial, ctx = freshVar ctx ident ty loc
+let private letFreshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
+  let refExpr, serial, ctx = freshVar ctx name ty loc
 
   let ctx =
     addStmt ctx (MLetValStmt(serial, MUninitInit, ty, loc))
@@ -110,14 +110,14 @@ let private letFreshVar (ctx: MirCtx) (ident: Ident) (ty: Ty) loc =
   let setStmt expr = MSetStmt(serial, expr, loc)
   refExpr, setStmt, ctx
 
-let private freshLabel (ctx: MirCtx) (ident: Ident) loc =
+let private freshLabel (ctx: MirCtx) (name: Ident) loc =
   let serial = ctx.LabelSerial + 1
 
   let ctx =
     { ctx with
         LabelSerial = ctx.LabelSerial + 1 }
 
-  let label: Label = ident + "_" + string serial
+  let label: Label = name + "_" + string serial
   let labelStmt = MLabelStmt(label, loc)
   labelStmt, label, ctx
 

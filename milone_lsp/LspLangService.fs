@@ -421,12 +421,12 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
   // Collect errors.
   let errors =
     let tyDisplayFn ty =
-      let getTyIdent tySerial =
+      let getTyName tySerial =
         tyCtx.Tys
         |> MiloneLang.Helpers.mapTryFind tySerial
-        |> Option.map MiloneLang.Helpers.tyDefToIdent
+        |> Option.map MiloneLang.Helpers.tyDefToName
 
-      ty |> MiloneLang.TySystem.tyDisplay getTyIdent
+      ty |> MiloneLang.TySystem.tyDisplay getTyName
 
     [ for log, loc in tyCtx.Logs do
         let moduleName, row, column = loc

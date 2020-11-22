@@ -12,8 +12,8 @@ open MiloneLang.Helpers
 // Type primitives
 // -----------------------------------------------
 
-let private tyPrimOfIdent ident tys loc =
-  match ident, tys with
+let private tyPrimOfName name tys loc =
+  match name, tys with
   | "unit", [] -> tyUnit
   | "bool", [] -> tyBool
   | "int", [] -> tyInt
@@ -30,7 +30,7 @@ let private tyPrimOfIdent ident tys loc =
 
   | _ ->
       // FIXME: Report error correctly
-      printfn "#error tyPrimOfIdent ident=%s loc=%s" ident (locToString loc)
+      printfn "#error tyPrimOfName name=%s loc=%s" name (locToString loc)
       ErrorTy loc
 
 // -----------------------------------------------
@@ -141,7 +141,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Local = scopeEmpty ()
     LetDepth = 0 }
 
-let private findIdent serial (scopeCtx: ScopeCtx): Ident = scopeCtx.NameMap |> mapFind serial
+let private findName serial (scopeCtx: ScopeCtx): Ident = scopeCtx.NameMap |> mapFind serial
 
 let private findVar varSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.Vars |> mapContainsKey varSerial)
@@ -168,7 +168,7 @@ let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
   let varDef =
     match scopeCtx.Vars |> mapTryFind varSerial, varDef with
-    | Some (VarDef (_, StaticSM, _, _)), VarDef (ident, _, ty, loc) -> VarDef(ident, StaticSM, ty, loc)
+    | Some (VarDef (_, StaticSM, _, _)), VarDef (name, _, ty, loc) -> VarDef(name, StaticSM, ty, loc)
     | _ -> varDef
 
   { scopeCtx with
@@ -206,16 +206,16 @@ let private addTyToNs parentTySerial tySerial (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Adds a variable to a scope.
 let private importVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
-  let varIdent =
-    scopeCtx |> findVar varSerial |> varDefToIdent
+  let varName =
+    scopeCtx |> findVar varSerial |> varDefToName
 
-  assert (varIdent <> "_")
+  assert (varName <> "_")
 
   let scope: Scope =
     match scopeCtx.Local with
     | map :: varScopes, tyScopes ->
         let varScopes =
-          (map |> mapAdd varIdent (varSerial, varIdent))
+          (map |> mapAdd varName (varSerial, varName))
           :: varScopes
 
         varScopes, tyScopes
@@ -226,14 +226,14 @@ let private importVar varSerial (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Adds a type to a scope.
 let private importTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
-  let tyIdent =
-    scopeCtx |> findTy tySerial |> tyDefToIdent
+  let tyName =
+    scopeCtx |> findTy tySerial |> tyDefToName
 
   let scope: Scope =
     match scopeCtx.Local with
     | varScopes, map :: tyScopes ->
         let tyScopes =
-          (map |> mapAdd tyIdent (tySerial, tyIdent))
+          (map |> mapAdd tyName (tySerial, tyName))
           :: tyScopes
 
         varScopes, tyScopes
@@ -298,12 +298,12 @@ let private finishScope _parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
       { scopeCtx with
           Local = varScopes, tyScopes }
 
-let private resolveScopedVarIdent scopeSerial ident (scopeCtx: ScopeCtx): VarSerial option =
+let private resolveScopedVarName scopeSerial name (scopeCtx: ScopeCtx): VarSerial option =
   if scopeSerial = scopeCtx.LocalSerial then
     // Find from local scope.
     let varScopes, _ = scopeCtx.Local
     match varScopes
-          |> List.tryPick (fun map -> map |> mapTryFind ident) with
+          |> List.tryPick (fun map -> map |> mapTryFind name) with
     | Some (varSerial, _) -> Some varSerial
     | None -> None
 
@@ -311,14 +311,14 @@ let private resolveScopedVarIdent scopeSerial ident (scopeCtx: ScopeCtx): VarSer
     // Find from namespace.
     scopeCtx.VarNs
     |> nameTreeTryFind scopeSerial
-    |> List.tryFind (fun varSerial -> (scopeCtx |> findIdent varSerial) = ident)
+    |> List.tryFind (fun varSerial -> (scopeCtx |> findName varSerial) = name)
 
-let private resolveScopedTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySerial option =
+let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySerial option =
   if scopeSerial = scopeCtx.LocalSerial then
     // Find from local scope.
     let _, tyScopes = scopeCtx.Local
     match tyScopes
-          |> List.tryPick (fun map -> map |> mapTryFind ident) with
+          |> List.tryPick (fun map -> map |> mapTryFind name) with
     | Some (tySerial, _) -> Some tySerial
     | None -> None
 
@@ -326,13 +326,13 @@ let private resolveScopedTyIdent scopeSerial ident (scopeCtx: ScopeCtx): TySeria
     // Find from namespace.
     failwith "Module.Ty syntax is unimplemented"
 
-let private resolveLocalVarIdent ident (scopeCtx: ScopeCtx) =
+let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
   scopeCtx
-  |> resolveScopedVarIdent scopeCtx.LocalSerial ident
+  |> resolveScopedVarName scopeCtx.LocalSerial name
 
-let private resolveLocalTyIdent ident (scopeCtx: ScopeCtx) =
+let private resolveLocalTyName name (scopeCtx: ScopeCtx) =
   scopeCtx
-  |> resolveScopedTyIdent scopeCtx.LocalSerial ident
+  |> resolveScopedTyName scopeCtx.LocalSerial name
 
 let private resolvePatAsScope pat scopeCtx =
   match pat with
@@ -341,8 +341,8 @@ let private resolvePatAsScope pat scopeCtx =
       failwith "unimpl"
 
   | HRefPat (serial, _, _) ->
-      let ident = scopeCtx |> findIdent serial
-      scopeCtx |> resolveLocalTyIdent ident
+      let name = scopeCtx |> findName serial
+      scopeCtx |> resolveLocalTyName name
 
   | _ -> None
 
@@ -354,38 +354,38 @@ let private resolveExprAsScope expr scopeCtx =
       failwith "unimpl"
 
   | HRefExpr (serial, _, _) ->
-      let ident = scopeCtx |> findIdent serial
-      scopeCtx |> resolveLocalTyIdent ident
+      let name = scopeCtx |> findName serial
+      scopeCtx |> resolveLocalTyName name
 
   | _ -> None
 
-/// Resolves type identifiers in a type expression.
+/// Resolves type names in a type expression.
 let private resolveTy ty loc scopeCtx =
   let rec go (ty, scopeCtx) =
     match ty with
     | ErrorTy _ -> ty, scopeCtx
 
-    | AppTy (RefTyCtor tySerial, []) when (scopeCtx |> findIdent tySerial) = "_" ->
+    | AppTy (RefTyCtor tySerial, []) when (scopeCtx |> findName tySerial) = "_" ->
         // Handle wildcard type.
         let scopeCtx = scopeCtx |> addUnboundMetaTy tySerial
 
         MetaTy(tySerial, loc), scopeCtx
 
     | AppTy (RefTyCtor serial, tys) ->
-        let ident = scopeCtx |> findIdent serial
+        let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
-        match scopeCtx |> resolveLocalTyIdent ident with
+        match scopeCtx |> resolveLocalTyName name with
         | Some tySerial ->
             match scopeCtx.Tys |> mapTryFind tySerial with
             | Some (UniversalTyDef (_, tySerial, _)) -> MetaTy(tySerial, loc), scopeCtx
 
-            | Some (SynonymTyDef (ident, defTyArgs, _, _)) when List.length defTyArgs <> List.length tys ->
-                failwithf "synonym arity mismatch: %A" (tySerial, tys, ident, defTyArgs, loc)
+            | Some (SynonymTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> List.length tys ->
+                failwithf "synonym arity mismatch: %A" (tySerial, tys, name, defTyArgs, loc)
 
             | _ -> tyRef tySerial tys, scopeCtx
 
-        | None -> tyPrimOfIdent ident tys loc, scopeCtx
+        | None -> tyPrimOfName name tys loc, scopeCtx
 
     | AppTy (tyCtor, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
@@ -409,8 +409,8 @@ let private defineFunUniquely serial args ty loc (scopeCtx: ScopeCtx): ScopeCtx 
   | Some _ -> failwith "NEVER"
 
   | None ->
-      let ident = scopeCtx |> findIdent serial
-      let varDef = FunDef(ident, arity, tyScheme, loc)
+      let name = scopeCtx |> findName serial
+      let varDef = FunDef(name, arity, tyScheme, loc)
 
       let scopeCtx = scopeCtx |> addLocalVar serial varDef
 
@@ -435,7 +435,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
 
     | _ -> ctx
 
-  let tyIdent = ctx |> findIdent tySerial
+  let tyName = ctx |> findName tySerial
 
   if ctx.Tys |> mapContainsKey tySerial then
     ctx
@@ -444,13 +444,13 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
     match tyDecl with
     | TySynonymDecl (body, _) ->
         ctx
-        |> addLocalTy tySerial (SynonymTyDef(tyIdent, tyArgs, body, loc))
+        |> addLocalTy tySerial (SynonymTyDef(tyName, tyArgs, body, loc))
         |> addTyToModule tySerial
 
     | UnionTyDecl (_, variants, _unionLoc) ->
-        let defineVariant ctx (variantIdent, variantSerial, hasPayload, payloadTy) =
+        let defineVariant ctx (name, variantSerial, hasPayload, payloadTy) =
           let varDef =
-            VariantDef(variantIdent, tySerial, hasPayload, payloadTy, noTy, loc)
+            VariantDef(name, tySerial, hasPayload, payloadTy, noTy, loc)
 
           ctx
           |> addVar variantSerial varDef
@@ -465,14 +465,14 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
             variants
             |> List.map (fun (_, variantSerial, _, _) -> variantSerial)
 
-          UnionTyDef(tyIdent, variantSerials, loc)
+          UnionTyDef(tyName, variantSerials, loc)
 
         ctx
         |> addLocalTy tySerial tyDef
         |> addTyToModule tySerial
 
-    | RecordTyDecl (ident, fields, loc) ->
-        let tyDef = RecordTyDef(ident, fields, loc)
+    | RecordTyDecl (_, fields, loc) ->
+        let tyDef = RecordTyDef(tyName, fields, loc)
 
         ctx
         |> addLocalTy tySerial tyDef
@@ -491,52 +491,52 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
   let tyDef = ctx |> findTy tySerial
 
   match tyDef with
-  | MetaTyDef (tyIdent, bodyTy, loc) ->
+  | MetaTyDef (tyName, bodyTy, loc) ->
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
       ctx
-      |> addTy tySerial (MetaTyDef(tyIdent, bodyTy, loc))
+      |> addTy tySerial (MetaTyDef(tyName, bodyTy, loc))
 
   | UniversalTyDef _ -> ctx
 
-  | SynonymTyDef (tyIdent, tyArgs, bodyTy, loc) ->
+  | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
       let parent, ctx = ctx |> startScope
 
       let ctx =
         tyArgs
         |> List.fold (fun ctx tyArg ->
-             let ident = ctx |> findIdent tyArg
+             let name = ctx |> findName tyArg
              ctx
-             |> addLocalTy tyArg (UniversalTyDef(ident, tyArg, loc))) ctx
+             |> addLocalTy tyArg (UniversalTyDef(name, tyArg, loc))) ctx
 
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
       let ctx = ctx |> finishScope parent
 
       ctx
-      |> addTy tySerial (SynonymTyDef(tyIdent, tyArgs, bodyTy, loc))
+      |> addTy tySerial (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
 
   | UnionTyDef (_, variantSerials, _unionLoc) ->
       let go ctx variantSerial =
         match ctx |> findVar variantSerial with
-        | VariantDef (ident, tySerial, hasPayload, payloadTy, variantTy, loc) ->
+        | VariantDef (name, tySerial, hasPayload, payloadTy, variantTy, loc) ->
             let payloadTy, ctx = ctx |> resolveTy payloadTy loc
             let variantTy, ctx = ctx |> resolveTy variantTy loc
 
             let varDef =
-              VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc)
+              VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc)
 
             ctx |> addVar variantSerial varDef
         | _ -> failwith "NEVER: it must be variant"
 
       variantSerials |> List.fold go ctx
 
-  | RecordTyDef (ident, fields, loc) ->
-      let resolveField ((ident, ty, loc), ctx) =
+  | RecordTyDef (tyName, fields, loc) ->
+      let resolveField ((name, ty, loc), ctx) =
         let ty, ctx = ctx |> resolveTy ty loc
-        (ident, ty, loc), ctx
+        (name, ty, loc), ctx
 
       let fields, ctx = (fields, ctx) |> stMap resolveField
       ctx
-      |> addTy tySerial (RecordTyDef(ident, fields, loc))
+      |> addTy tySerial (RecordTyDef(tyName, fields, loc))
 
   | ModuleTyDef _ -> failwith "NEVER: no use case"
 
@@ -570,14 +570,14 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         pat, ctx
 
     | HRefPat (serial, ty, loc) ->
-        let ident = ctx |> findIdent serial
-        match ctx |> resolveLocalVarIdent ident with
+        let name = ctx |> findName serial
+        match ctx |> resolveLocalVarName name with
         | Some varSerial when ctx |> isVariant varSerial -> HVariantPat(varSerial, ty, loc), ctx
 
         | _ ->
             let ctx =
               ctx
-              |> addLocalVar serial (VarDef(ident, StaticSM, ty, loc))
+              |> addLocalVar serial (VarDef(name, StaticSM, ty, loc))
               |> addVarToModule vis serial
 
             pat, ctx
@@ -596,11 +596,11 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         HTuplePat(items, ty, loc), ctx
 
     | HAsPat (pat, serial, loc) ->
-        let ident = ctx |> findIdent serial
+        let name = ctx |> findName serial
 
         let ctx =
           ctx
-          |> addLocalVar serial (VarDef(ident, StaticSM, noTy, loc))
+          |> addLocalVar serial (VarDef(name, StaticSM, noTy, loc))
 
         let pat, ctx = (pat, ctx) |> goPat vis
         HAsPat(pat, serial, loc), ctx
@@ -620,7 +620,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
     | HLetFunExpr (serial, vis, _, args, body, next, ty, loc) ->
-        let isMainFun = ctx |> findIdent serial = "main"
+        let isMainFun = ctx |> findName serial = "main"
 
         let ctx =
           ctx
@@ -659,13 +659,13 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HNonePat _
   | HSomePat _ -> pat, ctx
 
-  | HRefPat (varSerial, ty, loc) when ctx |> findIdent varSerial = "_" -> HDiscardPat(ty, loc), ctx
+  | HRefPat (varSerial, ty, loc) when ctx |> findName varSerial = "_" -> HDiscardPat(ty, loc), ctx
 
   | HRefPat (varSerial, ty, loc) ->
-      let ident = ctx |> findIdent varSerial
+      let name = ctx |> findName varSerial
 
       let variantSerial =
-        match ctx |> resolveLocalVarIdent ident with
+        match ctx |> resolveLocalVarName name with
         | Some varSerial ->
             match ctx |> findVar varSerial with
             | VariantDef _ -> Some varSerial
@@ -678,13 +678,13 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       | Some variantSerial -> HVariantPat(variantSerial, ty, loc), ctx
 
       | None ->
-          match ident with
+          match name with
           | "None" -> HNonePat(ty, loc), ctx
 
           | "Some" -> HSomePat(ty, loc), ctx
 
           | _ ->
-              let varDef = VarDef(ident, AutoSM, ty, loc)
+              let varDef = VarDef(name, AutoSM, ty, loc)
 
               let ctx = ctx |> addLocalVar varSerial varDef
 
@@ -693,7 +693,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HNavPat (l, r, ty, loc) ->
       let varSerial =
         match ctx |> resolvePatAsScope l with
-        | Some scopeSerial -> ctx |> resolveScopedVarIdent scopeSerial r
+        | Some scopeSerial -> ctx |> resolveScopedVarName scopeSerial r
 
         | None -> None
 
@@ -720,9 +720,9 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       HTuplePat(pats, tupleTy, loc), ctx
 
   | HAsPat (pat, serial, loc) ->
-      let ident = ctx |> findIdent serial
+      let name = ctx |> findName serial
 
-      let varDef = VarDef(ident, AutoSM, noTy, loc)
+      let varDef = VarDef(name, AutoSM, noTy, loc)
 
       let ctx = ctx |> addLocalVar serial varDef
 
@@ -751,8 +751,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HRefExpr (serial, ty, loc) ->
       let doArm () =
-        let ident = ctx |> findIdent serial
-        match ctx |> resolveLocalVarIdent ident with
+        let name = ctx |> findName serial
+        match ctx |> resolveLocalVarName name with
         | Some serial when ctx |> isFun serial -> HFunExpr(serial, ty, loc), ctx
 
         | Some serial when ctx |> isVariant serial -> HVariantExpr(serial, ty, loc), ctx
@@ -760,10 +760,10 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         | Some serial -> HRefExpr(serial, ty, loc), ctx
 
         | None ->
-            match primFromIdent ident with
+            match primFromIdent name with
             | Some prim -> HPrimExpr(prim, ty, loc), ctx
 
-            | None -> HErrorExpr("Undefined variable " + ident, loc), ctx
+            | None -> HErrorExpr("Undefined variable " + name, loc), ctx
 
       doArm ()
 
@@ -774,9 +774,9 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let fields, ctx =
           (fields, ctx)
-          |> stMap (fun ((ident, init, loc), ctx) ->
+          |> stMap (fun ((name, init, loc), ctx) ->
                let init, ctx = (init, ctx) |> nameResExpr
-               (ident, init, loc), ctx)
+               (name, init, loc), ctx)
 
         HRecordExpr(baseOpt, fields, ty, loc), ctx
 
@@ -804,7 +804,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         // FIXME: Patchwork for tests to pass
         match l, r with
-        | HRefExpr (serial, _, _), "getSlice" when ctx |> findIdent serial = "String" ->
+        | HRefExpr (serial, _, _), "getSlice" when ctx |> findName serial = "String" ->
             // NOTE: Actually this functions doesn't exist in the F# standard library.
             HPrimExpr(HPrim.StrGetSlice, ty, loc), ctx
 
@@ -817,7 +817,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
             match ctx |> resolveExprAsScope l with
             | Some scopeSerial ->
-                match ctx |> resolveScopedVarIdent scopeSerial r with
+                match ctx |> resolveScopedVarName scopeSerial r with
                 | Some varSerial when ctx |> isFun varSerial -> HFunExpr(varSerial, ty, loc), ctx
 
                 | Some varSerial when ctx |> isVariant varSerial -> HVariantExpr(varSerial, ty, loc), ctx
@@ -900,7 +900,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HOpenExpr (path, _) ->
       let doArm () =
         // FIXME: resolve module-name based on path
-        match ctx |> resolveLocalTyIdent (path |> List.last) with
+        match ctx |> resolveLocalTyName (path |> List.last) with
         | Some moduleSerial ->
             let ctx = ctx |> openModule moduleSerial
 
@@ -912,11 +912,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HModuleExpr (serial, body, next, loc) ->
       let doArm () =
-        let ident = ctx |> findIdent serial
+        let moduleName = ctx |> findName serial
 
         let ctx =
           ctx
-          |> addTy serial (ModuleTyDef(ident, loc))
+          |> addTy serial (ModuleTyDef(moduleName, loc))
           |> importTy serial
 
         let parent, ctx = ctx |> startScope
@@ -930,7 +930,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         // HACK: MiloneOnly is auto-open.
         let ctx =
-          if ident = "MiloneOnly" then ctx |> openModule serial else ctx
+          if moduleName = "MiloneOnly" then ctx |> openModule serial else ctx
 
         let next, ctx = (next, ctx) |> nameResExpr
 

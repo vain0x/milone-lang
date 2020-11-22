@@ -54,7 +54,7 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
 let private tupleField (i: int) = "t" + string i
 
 /// Calculates tag type's name of union type.
-let private tagTyIdent (tyIdent: string) = tyIdent + "Tag"
+let private toTagEnumName (name: string) = name + "Tag"
 
 // -----------------------------------------------
 // Context
@@ -74,12 +74,11 @@ type private CirCtx =
 
 let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   let varNames =
-    mirCtx.Vars
-    |> renameIdents varDefToIdent id intCmp
+    mirCtx.Vars |> renameIdents varDefToName id intCmp
 
   let tyNames =
     mirCtx.Tys
-    |> renameIdents tyDefToIdent (fun serial -> tyRef serial []) tyCmp
+    |> renameIdents tyDefToName (fun serial -> tyRef serial []) tyCmp
 
   { Vars = mirCtx.Vars
     VarUniqueNames = varNames
@@ -118,8 +117,8 @@ let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let ident, (ctx: CirCtx) = getUniqueTyName ctx funTy
-      let funStructTy = CStructTy ident
+      let structName, (ctx: CirCtx) = getUniqueTyName ctx funTy
+      let funStructTy = CStructTy structName
 
       let ctx =
         { ctx with
@@ -135,7 +134,7 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
-      let ident, ctx = getUniqueTyName ctx funTy
+      let structName, ctx = getUniqueTyName ctx funTy
       let selfTy, ctx = genIncompleteFunTyDecl ctx sTy tTy
 
       let envTy = CPtrTy CVoidTy
@@ -153,7 +152,7 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
 
       let ctx =
         { ctx with
-            Decls = CStructDecl(ident, fields, []) :: ctx.Decls
+            Decls = CStructDecl(structName, fields, []) :: ctx.Decls
             TyEnv = ctx.TyEnv |> mapAdd funTy (CTyDefined, selfTy) }
 
       selfTy, ctx
@@ -164,8 +163,8 @@ let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let ident, ctx = getUniqueTyName ctx listTy
-      let selfTy = CPtrTy(CStructTy ident)
+      let structName, ctx = getUniqueTyName ctx listTy
+      let selfTy = CPtrTy(CStructTy structName)
 
       let ctx =
         { ctx with
@@ -179,7 +178,7 @@ let private genListTyDef (ctx: CirCtx) itemTy =
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
-      let ident, ctx = getUniqueTyName ctx listTy
+      let structName, ctx = getUniqueTyName ctx listTy
       let selfTy, ctx = genIncompleteListTyDecl ctx itemTy
 
       let itemTy, (ctx: CirCtx) = cgTyComplete ctx itemTy
@@ -187,7 +186,7 @@ let private genListTyDef (ctx: CirCtx) itemTy =
 
       let ctx =
         { ctx with
-            Decls = CStructDecl(ident, fields, []) :: ctx.Decls
+            Decls = CStructDecl(structName, fields, []) :: ctx.Decls
             TyEnv = ctx.TyEnv |> mapAdd listTy (CTyDefined, selfTy) }
 
       selfTy, ctx
@@ -198,8 +197,8 @@ let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let tupleTyIdent, ctx = getUniqueTyName ctx tupleTy
-      let selfTy = CStructTy tupleTyIdent
+      let structName, ctx = getUniqueTyName ctx tupleTy
+      let selfTy = CStructTy structName
 
       let ctx =
         { ctx with
@@ -213,7 +212,7 @@ let private genTupleTyDef (ctx: CirCtx) itemTys =
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
-      let tupleTyIdent, ctx = getUniqueTyName ctx tupleTy
+      let structName, ctx = getUniqueTyName ctx tupleTy
       let selfTy, ctx = genIncompleteTupleTyDecl ctx itemTys
 
       let rec go i itemTys =
@@ -230,7 +229,7 @@ let private genTupleTyDef (ctx: CirCtx) itemTys =
 
       let fields = go 0 itemTys
 
-      let tupleDecl = CStructDecl(tupleTyIdent, fields, [])
+      let tupleDecl = CStructDecl(structName, fields, [])
 
       let ctx =
         { ctx with
@@ -245,8 +244,8 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let unionTyIdent, ctx = getUniqueTyName ctx unionTyRef
-      let selfTy = CStructTy unionTyIdent
+      let structName, ctx = getUniqueTyName ctx unionTyRef
+      let selfTy = CStructTy structName
 
       let ctx =
         { ctx with
@@ -262,17 +261,17 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
-      let unionTyIdent, ctx = getUniqueTyName ctx unionTyRef
+      let structName, ctx = getUniqueTyName ctx unionTyRef
       let selfTy, ctx = genIncompleteUnionTyDecl ctx tySerial
 
-      let tagTyIdent = tagTyIdent unionTyIdent
-      let tagTy = CEnumTy tagTyIdent
+      let tagEnumName = toTagEnumName structName
+      let tagTy = CEnumTy tagEnumName
 
       let variants =
         variants
         |> List.map (fun variantSerial ->
              match ctx.Vars |> mapTryFind variantSerial with
-             | Some (VariantDef (ident, _, hasPayload, payloadTy, _, _)) -> ident, variantSerial, hasPayload, payloadTy
+             | Some (VariantDef (name, _, hasPayload, payloadTy, _, _)) -> name, variantSerial, hasPayload, payloadTy
              | _ -> failwith "Never")
 
       let tags =
@@ -291,10 +290,10 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
              else
                acc, ctx)
 
-      let tagEnumDecl = CEnumDecl(tagTyIdent, tags)
+      let tagEnumDecl = CEnumDecl(tagEnumName, tags)
 
       let structDecl =
-        CStructDecl(unionTyIdent, [ "tag", tagTy ], variants)
+        CStructDecl(structName, [ "tag", tagTy ], variants)
 
       let ctx =
         { ctx with
@@ -312,8 +311,8 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let recordTyIdent, ctx = getUniqueTyName ctx recordTyRef
-      let selfTy = CStructTy recordTyIdent
+      let structName, ctx = getUniqueTyName ctx recordTyRef
+      let selfTy = CStructTy structName
 
       // TODO: Generate type declaration.
 
@@ -321,8 +320,8 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
 
 let private genRecordTyDef ctx tySerial _fields =
   let recordTyRef = tyRef tySerial []
-  let recordTyIdent, ctx = getUniqueTyName ctx recordTyRef
-  let selfTy = CStructTy recordTyIdent
+  let structName, ctx = getUniqueTyName ctx recordTyRef
+  let selfTy = CStructTy structName
 
   // TODO: Generate type definition.
 
@@ -334,7 +333,7 @@ let private genRecordTyDef ctx tySerial _fields =
 
 let private getUniqueVarName (ctx: CirCtx) serial =
   match ctx.VarUniqueNames |> mapTryFind serial with
-  | Some ident -> ident
+  | Some name -> name
   | None -> failwithf "Never: Unknown value-level identifier serial %d" serial
 
 let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
@@ -399,16 +398,16 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
     // Memoization.
     match ctx.TyUniqueNames |> mapTryFind ty with
-    | Some ident -> ident, ctx
+    | Some name -> name, ctx
 
     | None ->
-        let ident, ctx = tyToUniqueName ty
+        let name, ctx = tyToUniqueName ty
 
         let ctx =
           { ctx with
-              TyUniqueNames = ctx.TyUniqueNames |> mapAdd ty ident }
+              TyUniqueNames = ctx.TyUniqueNames |> mapAdd ty name }
 
-        ident, ctx
+        name, ctx
 
   go ty ctx
 
@@ -566,10 +565,11 @@ let private genVariantNameExpr ctx serial ty =
   let tag = CRefExpr(getUniqueVarName ctx serial)
   CInitExpr([ "tag", tag ], ty), ctx
 
-let private genBinaryExprAsCall ctx ident l r =
+/// Converts a binary expression to a runtime function call.
+let private genBinaryExprAsCall ctx funName l r =
   let l, ctx = cgExpr ctx l
   let r, ctx = cgExpr ctx r
-  let callExpr = CCallExpr(CRefExpr ident, [ l; r ])
+  let callExpr = CCallExpr(CRefExpr funName, [ l; r ])
   callExpr, ctx
 
 let private genUnaryExpr ctx op arg ty _ =
@@ -692,9 +692,9 @@ let private cgCallStringExpr arg argTy ctx =
 
 let private cgCallPrimExpr ctx prim args primTy resultTy loc =
   match prim, args, primTy with
-  | HPrim.NativeFun (nativeFunIdent, _), _, _ ->
+  | HPrim.NativeFun (funName, _), _, _ ->
       let args, ctx = cgExprList ctx args
-      CCallExpr(CRefExpr nativeFunIdent, args), ctx
+      CCallExpr(CRefExpr funName, args), ctx
 
   | HPrim.Printfn, (MLitExpr (StrLit format, _)) :: args, _ -> cgPrintfnCallExpr ctx format args
 
@@ -763,30 +763,30 @@ let private cgCallClosureExpr ctx callee args =
   let args, ctx = cgExprList ctx args
   doGenCallClosureExpr ctx callee args
 
-let private addLetStmt ctx ident expr cty storageModifier =
+let private addLetStmt ctx name expr cty storageModifier =
   match storageModifier with
   | StaticSM ->
-      let ctx = addDecl ctx (CStaticVarDecl(ident, cty))
+      let ctx = addDecl ctx (CStaticVarDecl(name, cty))
 
       match expr with
-      | Some expr -> addStmt ctx (CSetStmt(CRefExpr ident, expr))
+      | Some expr -> addStmt ctx (CSetStmt(CRefExpr name, expr))
       | _ -> ctx
 
-  | AutoSM -> addStmt ctx (CLetStmt(ident, expr, cty))
+  | AutoSM -> addStmt ctx (CLetStmt(name, expr, cty))
 
-let private addLetAllocStmt ctx ident valPtrTy varTy storageModifier =
+let private addLetAllocStmt ctx name valPtrTy varTy storageModifier =
   match storageModifier with
   | StaticSM -> failwith "NEVER: let-alloc is used only for temporary variables"
-  | AutoSM -> addStmt ctx (CLetAllocStmt(ident, valPtrTy, varTy))
+  | AutoSM -> addStmt ctx (CLetAllocStmt(name, valPtrTy, varTy))
 
 let private doGenLetValStmt ctx serial expr ty =
-  let ident = getUniqueVarName ctx serial
+  let name = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial
   let cty, ctx = cgTyComplete ctx ty
-  addLetStmt ctx ident expr cty storageModifier
+  addLetStmt ctx name expr cty storageModifier
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
-  let ident = getUniqueVarName ctx serial
+  let name = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial
   let ty, ctx = cgTyComplete ctx ty
 
@@ -795,7 +795,7 @@ let private cgClosureInit ctx serial funSerial envSerial ty =
       "env", CRefExpr(getUniqueVarName ctx envSerial) ]
 
   let initExpr = CInitExpr(fields, ty)
-  addLetStmt ctx ident (Some initExpr) ty storageModifier
+  addLetStmt ctx name (Some initExpr) ty storageModifier
 
 let private cgBoxInit ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
@@ -843,18 +843,18 @@ let private cgConsInit ctx serial head tail listTy =
   ctx
 
 let private cgTupleInit ctx serial items tupleTy =
-  let ident = getUniqueVarName ctx serial
+  let name = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial
   let tupleTy, ctx = cgTyComplete ctx tupleTy
 
   let ctx =
-    addLetStmt ctx ident None tupleTy storageModifier
+    addLetStmt ctx name None tupleTy storageModifier
 
   let rec go ctx i items =
     match items with
     | [] -> ctx
     | item :: items ->
-        let left = CNavExpr(CRefExpr ident, tupleField i)
+        let left = CNavExpr(CRefExpr name, tupleField i)
         let item, ctx = cgExpr ctx item
         let stmt = CSetStmt(left, item)
         let ctx = addStmt ctx stmt
@@ -915,8 +915,8 @@ let private cgLetValStmt ctx serial init ty loc =
 
 let private cgSetStmt ctx serial right =
   let right, ctx = cgExpr ctx right
-  let ident = getUniqueVarName ctx serial
-  let left = CRefExpr(ident)
+  let name = getUniqueVarName ctx serial
+  let left = CRefExpr(name)
   addStmt ctx (CSetStmt(left, right))
 
 let private cgReturnStmt ctx expr =
@@ -1006,21 +1006,21 @@ let private cgDecls (ctx: CirCtx) decls =
   | [] -> ctx
 
   | MProcDecl (callee, isMainFun, args, body, resultTy, _) :: decls ->
-      let ident, args =
+      let funName, args =
         if isMainFun then "main", [] else getUniqueVarName ctx callee, args
 
       let rec go acc ctx args =
         match args with
         | [] -> List.rev acc, ctx
         | (arg, ty, _) :: args ->
-            let ident = getUniqueVarName ctx arg
+            let name = getUniqueVarName ctx arg
             let cty, ctx = cgTyComplete ctx ty
-            go ((ident, cty) :: acc) ctx args
+            go ((name, cty) :: acc) ctx args
 
       let args, ctx = go [] ctx args
       let body, ctx = cgBlocks ctx body
       let resultTy, ctx = cgTyComplete ctx resultTy
-      let funDecl = CFunDecl(ident, args, resultTy, body)
+      let funDecl = CFunDecl(funName, args, resultTy, body)
       let ctx = addDecl ctx funDecl
       cgDecls ctx decls
 
@@ -1030,12 +1030,12 @@ let private cgDecls (ctx: CirCtx) decls =
 
 let private genLogs (ctx: CirCtx) =
   let tyDisplayFn ty =
-    let getTyIdent tySerial =
+    let getTyName tySerial =
       ctx.Tys
       |> mapTryFind tySerial
-      |> Option.map tyDefToIdent
+      |> Option.map tyDefToName
 
-    tyDisplay getTyIdent ty
+    tyDisplay getTyName ty
 
   let rec go (ctx: CirCtx) logs =
     match logs with

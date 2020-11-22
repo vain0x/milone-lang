@@ -168,7 +168,7 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
       Vars = ctx.Vars
       Tys = ctx.Tys }
 
-let private freshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
+let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   let serial = ctx.Serial + 1
 
   let tyScheme =
@@ -180,12 +180,12 @@ let private freshFun (ident: Ident) arity (ty: Ty) loc (ctx: EtaCtx) =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> mapAdd serial (FunDef(ident, arity, tyScheme, loc)) }
+          |> mapAdd serial (FunDef(name, arity, tyScheme, loc)) }
 
   let refExpr = HFunExpr(serial, ty, loc)
   refExpr, serial, ctx
 
-let private freshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
+let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
   let serial = ctx.Serial + 1
 
   let ctx =
@@ -193,7 +193,7 @@ let private freshVar (ident: Ident) (ty: Ty) loc (ctx: EtaCtx) =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> mapAdd serial (VarDef(ident, AutoSM, ty, loc)) }
+          |> mapAdd serial (VarDef(name, AutoSM, ty, loc)) }
 
   let refExpr = HRefExpr(serial, ty, loc)
   refExpr, serial, ctx

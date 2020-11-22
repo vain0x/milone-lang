@@ -121,10 +121,10 @@ let private postProcessRecordExpr baseOpt fields recordTy loc =
 
   hxBox recordExpr recordTy loc
 
-let private postProcessFieldExpr recordExpr recordTy fieldIdent fieldTy loc =
+let private postProcessFieldExpr recordExpr recordTy fieldName fieldTy loc =
   assert (recordExpr |> exprToTy |> tyEq tyObj)
 
-  HNavExpr(hxUnbox recordExpr recordTy loc, fieldIdent, fieldTy, loc)
+  HNavExpr(hxUnbox recordExpr recordTy loc, fieldName, fieldTy, loc)
 
 // -----------------------------------------------
 // Control
@@ -198,9 +198,9 @@ let private abExpr ctx expr =
 
         let fields =
           fields
-          |> List.map (fun (ident, init, loc) ->
+          |> List.map (fun (name, init, loc) ->
                let init = init |> abExpr ctx
-               ident, init, loc)
+               name, init, loc)
 
         postProcessRecordExpr baseOpt fields ty loc
 
@@ -283,35 +283,35 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
     ctx.Vars
     |> mapMap (fun _ varDef ->
          match varDef with
-         | VarDef (ident, sm, ty, loc) ->
+         | VarDef (name, sm, ty, loc) ->
              let ty = ty |> abTy ctx
-             VarDef(ident, sm, ty, loc)
+             VarDef(name, sm, ty, loc)
 
-         | FunDef (ident, arity, TyScheme (tyArgs, ty), loc) ->
+         | FunDef (name, arity, TyScheme (tyArgs, ty), loc) ->
              let ty = ty |> abTy ctx
-             FunDef(ident, arity, TyScheme(tyArgs, ty), loc)
+             FunDef(name, arity, TyScheme(tyArgs, ty), loc)
 
-         | VariantDef (ident, tySerial, hasPayload, _payloadTy, variantTy, loc) ->
+         | VariantDef (name, tySerial, hasPayload, _payloadTy, variantTy, loc) ->
              let payloadTy = tyObj
              let variantTy = variantTy |> abTy ctx
-             VariantDef(ident, tySerial, hasPayload, payloadTy, variantTy, loc))
+             VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc))
 
   let tys =
     ctx.Tys
     |> mapMap (fun _ tyDef ->
          match tyDef with
-         | SynonymTyDef (ident, tyArgs, bodyTy, loc) ->
+         | SynonymTyDef (name, tyArgs, bodyTy, loc) ->
              let bodyTy = bodyTy |> abTy ctx
-             SynonymTyDef(ident, tyArgs, bodyTy, loc)
+             SynonymTyDef(name, tyArgs, bodyTy, loc)
 
-         | RecordTyDef (ident, fields, loc) ->
+         | RecordTyDef (recordName, fields, loc) ->
              let fields =
                fields
-               |> List.map (fun (ident, ty, loc) ->
+               |> List.map (fun (name, ty, loc) ->
                     let ty = ty |> abTy ctx
-                    ident, ty, loc)
+                    name, ty, loc)
 
-             RecordTyDef(ident, fields, loc)
+             RecordTyDef(recordName, fields, loc)
 
          | _ -> tyDef)
 

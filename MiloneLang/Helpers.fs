@@ -488,9 +488,9 @@ let dumpTreeToString (node: DumpTree) =
 
 let nameCtxEmpty () = NameCtx(mapEmpty intCmp, 0)
 
-let nameCtxAdd ident (NameCtx (map, serial)) =
+let nameCtxAdd name (NameCtx (map, serial)) =
   let serial = serial + 1
-  let map = map |> mapAdd serial ident
+  let map = map |> mapAdd serial name
   serial, NameCtx(map, serial)
 
 // -----------------------------------------------
@@ -526,24 +526,24 @@ let tyRef serial tys = AppTy(RefTyCtor serial, tys)
 // Type definitions (HIR)
 // -----------------------------------------------
 
-let tyDefToIdent tyDef =
+let tyDefToName tyDef =
   match tyDef with
-  | MetaTyDef (ident, _, _) -> ident
-  | UniversalTyDef (ident, _, _) -> ident
-  | SynonymTyDef (ident, _, _, _) -> ident
-  | UnionTyDef (ident, _, _) -> ident
-  | RecordTyDef (ident, _, _) -> ident
-  | ModuleTyDef (ident, _) -> ident
+  | MetaTyDef (name, _, _) -> name
+  | UniversalTyDef (name, _, _) -> name
+  | SynonymTyDef (name, _, _, _) -> name
+  | UnionTyDef (name, _, _) -> name
+  | RecordTyDef (name, _, _) -> name
+  | ModuleTyDef (name, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
 // -----------------------------------------------
 
-let varDefToIdent varDef =
+let varDefToName varDef =
   match varDef with
-  | VarDef (ident, _, _, _) -> ident
-  | FunDef (ident, _, _, _) -> ident
-  | VariantDef (ident, _, _, _, _, _) -> ident
+  | VarDef (name, _, _, _) -> name
+  | FunDef (name, _, _, _) -> name
+  | VariantDef (name, _, _, _, _, _) -> name
 
 // -----------------------------------------------
 // Literals
@@ -738,7 +738,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
     | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
     | HVariantPat (variantSerial, ty, a) -> HVariantPat(variantSerial, f ty, g a)
-    | HNavPat (pat, ident, ty, a) -> HNavPat(go pat, ident, f ty, g a)
+    | HNavPat (l, r, ty, a) -> HNavPat(go l, r, f ty, g a)
     | HCallPat (callee, args, ty, a) -> HCallPat(go callee, List.map go args, f ty, g a)
     | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
     | HTuplePat (itemPats, ty, a) -> HTuplePat(List.map go itemPats, f ty, g a)
@@ -767,9 +767,7 @@ let patNormalize pat =
     | HNilPat _
     | HNonePat _
     | HSomePat _ -> [ pat ]
-    | HNavPat (pat, ident, ty, loc) ->
-        go pat
-        |> List.map (fun pat -> HNavPat(pat, ident, ty, loc))
+    | HNavPat (l, r, ty, loc) -> go l |> List.map (fun l -> HNavPat(l, r, ty, loc))
     | HCallPat (callee, [ arg ], ty, loc) ->
         go callee
         |> List.collect (fun callee ->
@@ -883,7 +881,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 
         let fields =
           fields
-          |> List.map (fun (ident, init, a) -> ident, go init, g a)
+          |> List.map (fun (name, init, a) -> name, go init, g a)
 
         HRecordExpr(baseOpt, fields, f ty, g a)
 
@@ -900,7 +898,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
         HLetFunExpr(serial, vis, isMainFun, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
-    | HModuleExpr (ident, body, next, a) -> HModuleExpr(ident, go body, go next, g a)
+    | HModuleExpr (name, body, next, a) -> HModuleExpr(name, go body, go next, g a)
     | HErrorExpr (error, a) -> HErrorExpr(error, g a)
 
   go expr
@@ -933,9 +931,9 @@ let spliceExpr firstExpr secondExpr =
 
         let exprs = goLast exprs
         HInfExpr(InfOp.Semi, exprs, ty, loc)
-    | HModuleExpr (ident, body, next, loc) ->
+    | HModuleExpr (name, body, next, loc) ->
         let next = go next
-        HModuleExpr(ident, body, next, loc)
+        HModuleExpr(name, body, next, loc)
     | _ -> hxSemi [ expr; secondExpr ] noLoc
 
   go firstExpr
@@ -955,8 +953,7 @@ let mexprExtract expr =
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
 
-let mexprToTy expr =
-  expr |> mexprExtract |> fst
+let mexprToTy expr = expr |> mexprExtract |> fst
 
 // -----------------------------------------------
 // Expression sugaring (MIR)
@@ -1069,12 +1066,12 @@ let logToString tyDisplay loc log =
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%s'" loc (tyDisplay ty)
 
-  | Log.RedundantFieldError (recordIdent, fieldIdent) ->
-      sprintf "%s The field '%s' is redundant for record '%s'." loc fieldIdent recordIdent
+  | Log.RedundantFieldError (recordName, fieldName) ->
+      sprintf "%s The field '%s' is redundant for record '%s'." loc fieldName recordName
 
-  | Log.MissingFieldsError (recordIdent, fieldIdents) ->
-      let fields = fieldIdents |> strJoin ", "
+  | Log.MissingFieldsError (recordName, fieldNames) ->
+      let fields = fieldNames |> strJoin ", "
 
-      sprintf "%s Record '%s' must have fields: '%s'." loc recordIdent fields
+      sprintf "%s Record '%s' must have fields: '%s'." loc recordName fields
 
   | Log.Error msg -> loc + " " + msg

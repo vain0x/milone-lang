@@ -291,7 +291,7 @@ type AArm = AArm of pat: APat * guard: AExpr * body: AExpr * Pos
 /// or `| Joker` (without `of`).
 [<Struct>]
 [<NoEquality; NoComparison>]
-type AVariant = AVariant of ident: Ident * payloadTyOpt: ATy option * Pos
+type AVariant = AVariant of Ident * payloadTyOpt: ATy option * Pos
 
 /// Field declaration in AST.
 ///

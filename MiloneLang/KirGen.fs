@@ -323,15 +323,15 @@ let private kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx =
 
 /// Converts an expr calling to variant, i.e., construction of a variant with payload.
 let private kgCallVariantExpr variantSerial variantTy variantLoc args ty loc hole ctx =
-  let variantIdent =
-    ctx |> findVarDef variantSerial |> varDefToIdent
+  let variantName =
+    ctx |> findVarDef variantSerial |> varDefToName
 
   let variantTerm =
     KVariantTerm(variantSerial, variantTy, variantLoc)
 
   ctx
   |> kgExprList args (fun args ctx ->
-       let result, ctx = ctx |> newVar variantIdent ty loc
+       let result, ctx = ctx |> newVar variantName ty loc
        let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
        KPrimNode(KVariantPrim, variantTerm :: args, [ result ], [ cont ], loc), ctx)
 
@@ -765,7 +765,7 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.UInt -> regular "uint" KUIntPrim
           | HPrim.String -> regular "string" KStringPrim
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
-          | HPrim.NativeFun (ident, arity) -> regular ident (KNativeFunPrim(ident, arity))
+          | HPrim.NativeFun (name, arity) -> regular name (KNativeFunPrim(name, arity))
 
       | HFunExpr (funSerial, funTy, funLoc) -> kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx
 

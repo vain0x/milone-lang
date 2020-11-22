@@ -175,12 +175,12 @@ let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
 let private printLogs (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
-    let getTyIdent tySerial =
+    let getTyName tySerial =
       tyCtx.Tys
       |> mapTryFind tySerial
-      |> Option.map tyDefToIdent
+      |> Option.map tyDefToName
 
-    tyDisplay getTyIdent ty
+    tyDisplay getTyName ty
 
   logs
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
