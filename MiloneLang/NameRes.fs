@@ -1012,9 +1012,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let moduleName =
           ctx |> findName (moduleTySerialToInt serial)
 
+        let tyDef: ModuleTyDef = { Name = moduleName; Loc = loc }
+
         let ctx =
           ctx
-          |> addModuleTyDef serial { Name = moduleName; Loc = loc }
+          |> addModuleTyDef serial tyDef
           |> importTy (ModuleTySymbol serial)
 
         let parent, ctx = ctx |> startScope
