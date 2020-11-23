@@ -94,6 +94,7 @@ See the comments in source files for details.
 Most of types are defined in the module:
 
 - [Types](MiloneLang/Types.fs)
+- [Mir](MiloneLang/Mir.fs)
 - [Cir](MiloneLang/Cir.fs)
 
 and functions are in:

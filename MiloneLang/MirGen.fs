@@ -10,6 +10,7 @@ module rec MiloneLang.MirGen
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.Typing
+open MiloneLang.Mir
 
 // -----------------------------------------------
 // Context

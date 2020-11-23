@@ -6,6 +6,8 @@ open MiloneLang.Types
 // CIR types
 // -----------------------------------------------
 
+type CLabel = string
+
 [<NoEquality; NoComparison>]
 type CTyInstance =
   | CTyDeclared
@@ -102,9 +104,9 @@ type CStmt =
   /// `x = a;`
   | CSetStmt of CExpr * CExpr
 
-  | CLabelStmt of Label
-  | CGotoStmt of Label
-  | CGotoIfStmt of CExpr * Label
+  | CLabelStmt of CLabel
+  | CGotoStmt of CLabel
+  | CGotoIfStmt of CExpr * CLabel
   | CIfStmt of CExpr * CStmt list * CStmt list
 
   /// clause: (caseLiterals, isDefault, body).

@@ -532,7 +532,8 @@ let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
 
 let moduleTySerialToInt (ModuleTySerial serial) = serial
 
-let moduleTySerialCmp l r = moduleTySerialToInt l - moduleTySerialToInt r
+let moduleTySerialCmp l r =
+  moduleTySerialToInt l - moduleTySerialToInt r
 
 let tyDefToName tyDef =
   match tyDef with
@@ -961,80 +962,6 @@ let spliceExpr firstExpr secondExpr =
     | _ -> hxSemi [ expr; secondExpr ] noLoc
 
   go firstExpr
-
-// -----------------------------------------------
-// Expressions (MIR)
-// -----------------------------------------------
-
-let mexprExtract expr =
-  match expr with
-  | MDefaultExpr (ty, loc) -> ty, loc
-  | MLitExpr (lit, loc) -> litToTy lit, loc
-  | MRefExpr (_, ty, loc) -> ty, loc
-  | MProcExpr (_, ty, loc) -> ty, loc
-  | MVariantExpr (_, _, ty, loc) -> ty, loc
-  | MTagExpr (_, loc) -> tyInt, loc
-  | MUnaryExpr (_, _, ty, loc) -> ty, loc
-  | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
-
-let mexprToTy expr = expr |> mexprExtract |> fst
-
-// -----------------------------------------------
-// Expression sugaring (MIR)
-// -----------------------------------------------
-
-let rec mxSugar expr =
-  let mxSugarUni op l ty loc =
-    match l with
-    // SUGAR: `not true` ==> `false`
-    // SUGAR: `not false` ==> `true`
-    | MLitExpr (BoolLit value, loc) -> MLitExpr(BoolLit(not value), loc)
-
-    // SUGAR: `not (not x)` ==> `x`
-    | MUnaryExpr (MNotUnary, l, _, _) -> l
-
-    // SUGAR: `not (x = y)` ==> `x <> y`
-    | MBinaryExpr (MEqualBinary, l, r, ty, loc) -> MBinaryExpr(MNotEqualBinary, l, r, ty, loc)
-
-    // SUGAR: `not (x <> y)` ==> `x = y`
-    | MBinaryExpr (MNotEqualBinary, l, r, ty, loc) -> MBinaryExpr(MEqualBinary, l, r, ty, loc)
-
-    // SUGAR: `not (x < y)` ==> `x >= y`
-    | MBinaryExpr (MLessBinary, l, r, ty, loc) -> MBinaryExpr(MGreaterEqualBinary, l, r, ty, loc)
-
-    // SUGAR: `not (x >= y)` ==> `x < y`
-    | MBinaryExpr (MGreaterEqualBinary, l, r, ty, loc) -> MBinaryExpr(MLessBinary, l, r, ty, loc)
-
-    | _ -> MUnaryExpr(op, l, ty, loc)
-
-  let mxSugarBin op l r ty loc =
-    match op, l, r with
-    // SUGAR: `x = false` ==> `not x`
-    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
-
-    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
-
-    // SUGAR: `x = true` ==> `x`
-    | MEqualBinary, MLitExpr (BoolLit true, _), _ -> r
-
-    | MEqualBinary, _, MLitExpr (BoolLit true, _) -> l
-
-    | _ -> MBinaryExpr(op, l, r, ty, loc)
-
-  match expr with
-  // SUGAR: `x: unit` ==> `()`
-  | MRefExpr (_, AppTy (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
-
-  | MUnaryExpr (op, l, ty, loc) ->
-      let l = mxSugar l
-      mxSugarUni op l ty loc
-
-  | MBinaryExpr (op, l, r, ty, loc) ->
-      let l = mxSugar l
-      let r = mxSugar r
-      mxSugarBin op l r ty loc
-
-  | _ -> expr
 
 // -----------------------------------------------
 // Print Formats
