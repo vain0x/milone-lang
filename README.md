@@ -123,12 +123,12 @@ The following transformations are consist of the compilation in the order:
     - Just a preparation of monomorphization
 - [Monomorphization](MiloneLang/Monomorphization.fs)
     - Resolve generic functions by code clone
-- [Mir](MiloneLang/Mir.fs)
+- [MirGen](MiloneLang/MirGen.fs)
     - Resolve pattern matches
     - Convert to mid-level intermediate representation (MIR)
-- [CIrGen](MiloneLang/CIrGen.fs)
+- [CirGen](MiloneLang/CirGen.fs)
     - Generate C code
-- [CPrinting](MiloneLang/CPrinting.fs)
+- [CirDump](MiloneLang/CirDump.fs)
     - C code to string
 
 ## Development
