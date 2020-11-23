@@ -26,7 +26,7 @@ let private tyCtorEncode tyCtor =
 
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
-  | RecordTyCtor (RecordTySerial tySerial) -> 23, tySerial
+  | RecordTyCtor tySerial -> 23, tySerial
   | UnresolvedTyCtor serial -> 24, serial
 
 let tyCtorCmp l r =
@@ -45,9 +45,9 @@ let tyCtorDisplay getTyName tyCtor =
   | FunTyCtor -> "fun"
   | TupleTyCtor -> "tuple"
   | ListTyCtor -> "list"
-  | SynonymTyCtor tySerial -> getTyName (SynonymTySymbol tySerial)
-  | RecordTyCtor tySerial -> getTyName (RecordTySymbol tySerial)
-  | UnionTyCtor tySerial -> getTyName (UnionTySymbol tySerial)
+  | SynonymTyCtor tySerial -> getTyName tySerial
+  | RecordTyCtor tySerial -> getTyName tySerial
+  | UnionTyCtor tySerial -> getTyName tySerial
   | UnresolvedTyCtor serial -> "?" + string serial
 
 // -----------------------------------------------
@@ -184,11 +184,11 @@ let tyDisplay getTyName ty =
     let paren (bp: int) s =
       if bp >= outerBp then s else "(" + s + ")"
 
-    let nominal tySymbol args =
+    let nominal tySerial args =
       let tyCtor =
-        match tySymbol |> getTyName with
+        match tySerial |> getTyName with
         | Some name -> name
-        | None -> "?" + objToString tySymbol
+        | None -> "?" + string tySerial
 
       match args with
       | [] -> tyCtor
@@ -200,7 +200,7 @@ let tyDisplay getTyName ty =
     | ErrorTy loc -> "{error}@" + locToString loc
 
     | MetaTy (tySerial, loc) ->
-        match getTyName (MetaTySymbol tySerial) with
+        match getTyName tySerial with
         | Some name -> "{" + name + "}@" + locToString loc
         | None -> "{?" + string tySerial + "}@" + locToString loc
 
@@ -215,9 +215,9 @@ let tyDisplay getTyName ty =
 
     | AppTy (ListTyCtor, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
-    | AppTy (SynonymTyCtor tySerial, args) -> nominal (SynonymTySymbol tySerial) args
-    | AppTy (UnionTyCtor tySerial, args) -> nominal (UnionTySymbol tySerial) args
-    | AppTy (RecordTyCtor tySerial, args) -> nominal (RecordTySymbol tySerial) args
+    | AppTy (SynonymTyCtor tySerial, args) -> nominal tySerial args
+    | AppTy (UnionTyCtor tySerial, args) -> nominal tySerial args
+    | AppTy (RecordTyCtor tySerial, args) -> nominal tySerial args
 
     | AppTy (tyCtor, args) ->
         let tyCtor =

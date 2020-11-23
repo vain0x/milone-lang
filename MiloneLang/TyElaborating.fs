@@ -25,18 +25,16 @@ type private TyElaborationCtx =
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
-    RecordTys: AssocMap<RecordTySerial, RecordTyDef>
 
     /// recordTySerial -> (tupleTy, (field -> fieldIndex, fieldTy))
-    RecordMap: AssocMap<RecordTySerial, (Ty * AssocMap<Ident, int * Ty>)> }
+    RecordMap: AssocMap<TySerial, (Ty * AssocMap<Ident, int * Ty>)> }
 
 let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
   { Vars = tyCtx.Vars
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
-    RecordTys = tyCtx.RecordTys
-    RecordMap = mapEmpty recordTySerialCmp }
+    RecordMap = mapEmpty intCmp }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
   { tyCtx with
@@ -95,28 +93,30 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
 /// For such fields, reuse base record's value.
 
 let private buildRecordMap (ctx: TyElaborationCtx) =
-  assert (ctx.RecordMap |> mapIsEmpty)
+  ctx.Tys
+  |> mapFold (fun acc tySerial tyDef ->
+       match tyDef with
+       | RecordTyDef (_, fields, _) ->
+           let fields =
+             fields
+             |> List.map (fun (name, ty, loc) ->
+                  // This affects newtype variants only.
+                  let ty = ty |> teTy ctx
+                  name, ty, loc)
 
-  ctx.RecordTys
-  |> mapFold (fun acc tySerial (tyDef: RecordTyDef) ->
-       let fields =
-         tyDef.Fields
-         |> List.map (fun (name, ty, loc) ->
-              // This affects newtype variants only.
-              let ty = ty |> teTy ctx
-              name, ty, loc)
+           let tupleTy =
+             fields
+             |> List.map (fun (_, ty, _) -> ty)
+             |> tyTuple
 
-       let tupleTy =
-         fields
-         |> List.map (fun (_, ty, _) -> ty)
-         |> tyTuple
+           let fieldMap =
+             fields
+             |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
+             |> mapOfList strCmp
 
-       let fieldMap =
-         fields
-         |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
-         |> mapOfList strCmp
+           acc |> mapAdd tySerial (tupleTy, fieldMap)
 
-       acc |> mapAdd tySerial (tupleTy, fieldMap)) ctx.RecordMap
+       | _ -> acc) (mapEmpty intCmp)
 
 let private recordToTuple (ctx: TyElaborationCtx) tySerial =
   match ctx.RecordMap |> mapTryFind tySerial with

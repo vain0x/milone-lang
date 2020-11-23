@@ -28,23 +28,19 @@ type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef>
-    RecordTys: AssocMap<RecordTySerial, RecordTyDef> }
+    Tys: AssocMap<TySerial, TyDef> }
 
 let private ofTyCtx (tyCtx: TyCtx): AbCtx =
   { Vars = tyCtx.Vars
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
-    Tys = tyCtx.Tys
-    RecordTys = tyCtx.RecordTys }
+    Tys = tyCtx.Tys }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
   { tyCtx with
       Vars = ctx.Vars
-      Funs = tyCtx.Funs
       Variants = ctx.Variants
-      Tys = ctx.Tys
-      RecordTys = ctx.RecordTys }
+      Tys = ctx.Tys }
 
 /// ### Boxing of Payloads
 ///
@@ -307,26 +303,23 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
              let bodyTy = bodyTy |> abTy ctx
              SynonymTyDef(name, tyArgs, bodyTy, loc)
 
+         | RecordTyDef (recordName, fields, loc) ->
+             let fields =
+               fields
+               |> List.map (fun (name, ty, loc) ->
+                    let ty = ty |> abTy ctx
+                    name, ty, loc)
+
+             RecordTyDef(recordName, fields, loc)
+
          | _ -> tyDef)
-
-  let recordTys =
-    ctx.RecordTys
-    |> mapMap (fun _ (tyDef: RecordTyDef) ->
-         let fields =
-           tyDef.Fields
-           |> List.map (fun (name, ty, loc) ->
-                let ty = ty |> abTy ctx
-                name, ty, loc)
-
-         { tyDef with Fields = fields })
 
   let ctx =
     { ctx with
         Vars = vars
         Funs = funs
         Variants = variants
-        Tys = tys
-        RecordTys = recordTys }
+        Tys = tys }
 
   let expr = expr |> abExpr ctx
 
