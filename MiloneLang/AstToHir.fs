@@ -1,3 +1,5 @@
+/// # AstToHir
+///
 /// Converts an abstract syntax tree (AST)
 /// to high-level intermediate representation (HIR).
 ///

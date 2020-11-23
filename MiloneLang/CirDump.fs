@@ -1,5 +1,6 @@
+/// # CirDump
+///
 /// Converts CIR to C language source code.
-/// Includes runtime functions.
 module rec MiloneLang.CirDump
 
 open MiloneLang.Util

@@ -1,3 +1,13 @@
+/// # Syntax
+///
+/// Provides types and functions for syntax
+/// and source location information.
+///
+/// ## Lifecycle
+///
+/// Source code (string) is split into a list of tokens in `SyntaxTokenize`
+/// and converted to an abstract syntax tree (AST) in `SyntaxParse`.
+/// Finally AST is converted to HIR in `AstToHir`.
 module rec MiloneLang.Syntax
 
 open MiloneLang.Util

@@ -1,3 +1,15 @@
+/// # Mir
+///
+/// Provides types and functions for mid-level intermediate representation (MIR).
+///
+/// MIR is still similar to HIR, however, it's imperative
+/// and has explicit jump statements and assignments.
+///
+/// Unlike HIR, expressions are not recursive,
+/// e.g. function arguments can't contain another function call.
+///
+/// (TODO: Function body is just a list of statements.
+///        Currently not "well-considered" form; not XXX-normal form nor SSA nor basic blocks etc.)
 module rec MiloneLang.Mir
 
 open MiloneLang.Util

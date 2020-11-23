@@ -89,58 +89,61 @@ See [the tests/examples directory](./tests/examples) for working codes.
 
 ## Internals
 
-See the comments in source files for details.
+See comments written at the top of each file to describe what it is.
 
 Most of types and functions are defined in:
 
 - [Util](MiloneLang/Util.fs)
-    - Basic functions for string, list, map etc.
+    - Just a set of utility functions for string, list, map etc.
 - [Syntax](MiloneLang/Syntax.fs)
-    - Source location information, tokens, abstract syntax tree (AST), etc.
-- [Hir](MiloneLang/Hir.fs)
-- [Mir](MiloneLang/Mir.fs)
+    - Tokens, abstract syntax tree (AST), source location information etc.
+- [Hir](MiloneLang/Hir.fs):
+    - Functional-style intermediate representation
+- [Mir](MiloneLang/Mir.fs):
+    - Imperative-style intermediate representation
 - [Cir](MiloneLang/Cir.fs)
+    - AST of the C language for pretty-printing
 - [FSharpOnly](MiloneLang/FSharpOnly.fs)
 
-The following transformations are consist of the compilation in the order:
+Program analysis and transformations are written in:
 
-- [SyntaxTokenize](MiloneLang/SyntaxTokenize.fs)
-- [SyntaxParse](MiloneLang/SyntaxParse.fs)
-- [Bundling](MiloneLang/Bundling.fs)
-    - Source codes concatenation
-- [AstToHir](MiloneLang/AstToHir.fs)
-    - From abstract syntax tree (AST) to high-level intermediate representation (HIR)
-    - For data structure decoupling and desugaring
+- [SyntaxTokenize](MiloneLang/SyntaxTokenize.fs) (milone-lang source code -> Token list)
+- [SyntaxParse](MiloneLang/SyntaxParse.fs) (Token list -> AST)
+- [AstToHir](MiloneLang/AstToHir.fs) (AST -> HIR)
+- [Bundling](MiloneLang/Bundling.fs) (\*files\* -> HIR)
+    - Loads source files of project and concatenates them into single HIR program
 - [NameRes](MiloneLang/NameRes.fs) (Name resolution)
 - [Typing](MiloneLang/Typing.fs) (Type inference)
 - [MainHoist](MiloneLang/MainHoist.fs)
-    - Resolve top-level bindings
+    - Resolves top-level bindings
+- [AutoBoxing](MiloneLang/AutoBoxing.fs)
+    - Resolves recursive nominal types
 - [TyElaboration](MiloneLang/TyElaborating.fs)
-    - Convert records to tuples
+    - Converts records to tuples
+    - Unwraps newtype variants
 - [ClosureConversion](MiloneLang/ClosureConversion.fs)
-    - Resolve use of local variables in functions
+    - Resolves non-closed functions
 - [EtaExpansion](MiloneLang/EtaExpansion.fs)
-    - Resolve partial applications
+    - Resolves partial applications and function references
 - [Hoist](MiloneLang/Hoist.fs)
     - Just a preparation of monomorphization
 - [Monomorphization](MiloneLang/Monomorphization.fs)
-    - Resolve generic functions by code clone
-- [MirGen](MiloneLang/MirGen.fs)
-    - Resolve pattern matches
-    - Convert to mid-level intermediate representation (MIR)
-- [CirGen](MiloneLang/CirGen.fs)
-    - Generate C code
-- [CirDump](MiloneLang/CirDump.fs)
-    - C code to string
+    - Resolves use of generic functions by code cloning
+- [TailRecOptimizing](MiloneLang/TailRecOptimizing.fs)
+    - Marks tail-recursive calls to be optimized
+- [MirGen](MiloneLang/MirGen.fs) (HIR -> MIR)
+    - Resolves pattern matches
+- [CirGen](MiloneLang/CirGen.fs) (MIR -> CIR)
+- [CirDump](MiloneLang/CirDump.fs) (CIR -> C source code)
 
-Entrypoint is:
+Entrypoints:
 
 - [Cli.fs](MiloneLang/Cli.fs)
-    - CLI application logic shared by F# and milone-lang.
+    - CLI application logic shared by F# and milone-lang
 - [Program.fs](MiloneLang/Program.fs)
-    - Provides `main` function for .NET.
+    - Provides `main` function for .NET
 - [MiloneLang.fs](MiloneLang/MiloneLang.fs)
-    - Provides `main` function for milone-lang.
+    - Provides `main` function for milone-lang
 
 ## Development
 

@@ -1,3 +1,20 @@
+/// # Hir
+///
+/// Provides types and functions for high-level intermediate representation (HIR).
+///
+/// HIR is functional-style. Similar to milone-lang's syntax.
+///
+/// ## Lifecycle
+///
+/// HIR is generated in `AstToHir` for each file
+/// and all modules of a project are *concatenated* in `Bundling`.
+///
+/// Most of analysis (for error reporting and soundness)
+/// and transformations (for code generation) are performed on it.
+///
+/// Finally HIR is converted to MIR in `MirGen`.
+///
+/// See `Cli.fs` for details.
 module rec MiloneLang.Hir
 
 open MiloneLang.Util
@@ -156,7 +173,7 @@ type ModuleTySerial = ModuleTySerial of Serial
 [<NoEquality; NoComparison>]
 type ModuleTyDef = { Name: Ident; Loc: Loc }
 
-/// Definition of named value in high-level IR.
+/// Definition of named value in HIR.
 [<NoEquality; NoComparison>]
 type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
 
@@ -191,7 +208,7 @@ type TySymbol =
   | RecordTySymbol of recordTySerial: TySerial
   | ModuleTySymbol of moduleTySerial: ModuleTySerial
 
-/// Pattern in high-level IR.
+/// Pattern in HIR.
 [<NoEquality; NoComparison>]
 type HPat =
   | HLitPat of Lit * Loc
@@ -241,7 +258,7 @@ type HPat =
   /// Disjunction.
   | HOrPat of HPat * HPat * Ty * Loc
 
-/// Primitive in high-level IR.
+/// Primitive in HIR.
 [<RequireQualifiedAccess>]
 [<Struct>]
 [<NoEquality; NoComparison>]

@@ -2,12 +2,12 @@
 ///
 /// Converts MIR to CIR.
 ///
-/// CIR is a kind of abstract syntax tree of the C language.
+/// Milone-lang's primitives are converted to corresponding C's operator
+/// or function all defined in runtime.
+/// See `runtime/milone.h` for runtime codes.
 ///
-/// This stage does:
-///
-/// - Mapping operations to corresponding C features.
-/// - Translates types of Milone-lang to C-style type definitions.
+/// Milone-lang's types are converted to
+/// C-style struct/union types.
 module rec MiloneLang.CirGen
 
 open MiloneLang.Util

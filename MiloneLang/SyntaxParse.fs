@@ -1,4 +1,4 @@
-/// ## Parse
+/// ## SyntaxParse
 ///
 /// Analyze a list of tokens of a source file
 /// to build an abstract syntax tree (AST)

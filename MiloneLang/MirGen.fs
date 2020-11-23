@@ -1,8 +1,6 @@
 /// # MirGen
 ///
-/// Converts HIR to mid-level intermediate representation (MIR).
-///
-/// MIR is a procedural, non-recursive, relatively similar to C, IR.
+/// Converts HIR to MIR.
 ///
 /// Deconstructs pattern matching.
 module rec MiloneLang.MirGen
