@@ -91,16 +91,13 @@ See [the tests/examples directory](./tests/examples) for working codes.
 
 See the comments in source files for details.
 
-Most of types are defined in the module:
+Most of types and functions are defined in modules:
 
 - [Types](MiloneLang/Types.fs)
+- [Helpers](MiloneLang/Helpers.fs)
 - [Mir](MiloneLang/Mir.fs)
 - [Cir](MiloneLang/Cir.fs)
-
-and functions are in:
-
 - [FSharpOnly](MiloneLang/FSharpOnly.fs)
-- [Helpers](MiloneLang/Helpers.fs)
 
 The following transformations are consist of the compilation in the order:
 

@@ -2,6 +2,7 @@ module rec MiloneLang.KirPropagate
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Kir
 open MiloneLang.KirGen
 
 [<NoEquality; NoComparison>]

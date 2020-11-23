@@ -18,6 +18,7 @@ open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
 open MiloneLang.TailRecOptimizing
 open MiloneLang.Monomorphizing
+open MiloneLang.Kir
 open MiloneLang.KirGen
 open MiloneLang.KirPropagate
 // open MiloneLang.KirToMir

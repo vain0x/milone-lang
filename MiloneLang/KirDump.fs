@@ -8,6 +8,7 @@ module rec MiloneLang.KirDump
 open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem
+open MiloneLang.Kir
 open MiloneLang.KirGen
 
 let private deeper indent = indent + "    "
@@ -25,7 +26,9 @@ let private getVarName varSerial (ctx: KirGenCtx) =
 
 let private getFunName funSerial (ctx: KirGenCtx) =
   match ctx.Funs |> mapTryFind funSerial with
-  | None -> "UNDEFINED_FUN_" + string (funSerialToInt funSerial)
+  | None ->
+      "UNDEFINED_FUN_"
+      + string (funSerialToInt funSerial)
 
   | Some variantDef -> variantDef.Name
 
