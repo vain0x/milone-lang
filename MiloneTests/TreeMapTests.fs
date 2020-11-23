@@ -3,8 +3,8 @@ module MiloneLang.TreeMapTests
 open MiloneLang.Assets
 open Xunit
 
-let private intCmp = Helpers.intCmp
-let private strCmp = Helpers.strCmp
+let private intCmp (l: int) (r: int) = compare l r
+let private strCmp (l: string) (r: string) = compare l r
 
 [<Fact>]
 let basicTest () =

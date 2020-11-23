@@ -6,8 +6,7 @@
 /// - Newtype variants (discriminated union type with exactly-one variant)
 module rec MiloneLang.TyElaborating
 
-open MiloneLang.Helpers
-open MiloneLang.Types
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLang.Typing

@@ -1,6 +1,6 @@
 module MiloneLsp.LspLangService
 
-open MiloneLang.Types
+open MiloneLang.Util
 open MiloneLang.Syntax
 
 let private uriOfFilePath (filePath: string) =
@@ -424,7 +424,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
     let tyDisplayFn ty =
       let getTyName tySerial =
         tyCtx.Tys
-        |> MiloneLang.Helpers.mapTryFind tySerial
+        |> mapTryFind tySerial
         |> Option.map MiloneLang.Hir.tyDefToName
 
       ty |> MiloneLang.TySystem.tyDisplay getTyName

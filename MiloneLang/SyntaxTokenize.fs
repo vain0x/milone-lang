@@ -53,8 +53,7 @@
 /// Sometimes row number is denoted by `y` and column number by `x`.
 module rec MiloneLang.SyntaxTokenize
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 
 // -----------------------------------------------

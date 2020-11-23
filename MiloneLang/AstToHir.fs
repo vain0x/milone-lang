@@ -21,8 +21,7 @@
 /// entities have different behavior in the following stages.
 module rec MiloneLang.AstToHir
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLang.TySystem

@@ -91,11 +91,12 @@ See [the tests/examples directory](./tests/examples) for working codes.
 
 See the comments in source files for details.
 
-Most of types and functions are defined in modules:
+Most of types and functions are defined in:
 
-- [Types](MiloneLang/Types.fs)
-- [Helpers](MiloneLang/Helpers.fs)
+- [Util](MiloneLang/Util.fs)
+    - Basic functions for string, list, map etc.
 - [Syntax](MiloneLang/Syntax.fs)
+    - Source location information, tokens, abstract syntax tree (AST), etc.
 - [Hir](MiloneLang/Hir.fs)
 - [Mir](MiloneLang/Mir.fs)
 - [Cir](MiloneLang/Cir.fs)

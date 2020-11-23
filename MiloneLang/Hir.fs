@@ -1,7 +1,6 @@
 module rec MiloneLang.Hir
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 
 /// Unique serial number to identify something

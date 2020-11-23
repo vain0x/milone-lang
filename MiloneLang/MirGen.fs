@@ -7,8 +7,7 @@
 /// Deconstructs pattern matching.
 module rec MiloneLang.MirGen
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Typing
 open MiloneLang.Syntax
 open MiloneLang.Hir

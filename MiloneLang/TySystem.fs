@@ -5,8 +5,7 @@
 /// This module is mainly used in Typing and Monomorphizing.
 module rec MiloneLang.TySystem
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 

@@ -1,7 +1,45 @@
-/// Defines the functions used in multiple modules.
-module rec MiloneLang.Helpers
+/// Defines utility types and functions used in multiple modules.
+module rec MiloneLang.Util
 
-open MiloneLang.Types
+open MiloneLang.TreeMap
+
+// -----------------------------------------------
+// Collections
+// -----------------------------------------------
+
+type AssocMap<'K, 'V> = TreeMap<'K, 'V>
+
+type AssocSet<'K> = TreeMap<'K, unit>
+
+/// Tree to generate a string for debugging.
+[<NoEquality; NoComparison>]
+type DumpTree = DumpTree of heading: string * body: DumpTree list * next: DumpTree list
+
+// -----------------------------------------------
+// Pair
+// -----------------------------------------------
+
+let pairCmp cmp1 cmp2 (l1, l2) (r1, r2) =
+  let c = cmp1 l1 r1
+  if c <> 0 then c else cmp2 l2 r2
+
+// -----------------------------------------------
+// Option
+// -----------------------------------------------
+
+/// `Option.map`, modifying context.
+let stOptionMap f (x, ctx) =
+  match x with
+  | Some x ->
+      let x, ctx = f (x, ctx)
+      Some x, ctx
+  | None -> None, ctx
+
+// -----------------------------------------------
+// List
+// -----------------------------------------------
+
+let cons head tail = head :: tail
 
 /// `List.map`, modifying context.
 ///
@@ -30,28 +68,6 @@ let stFlatMap f (xs, ctx) =
         go acc xs ctx
 
   go [] xs ctx
-
-/// `Option.map`, modifying context.
-let stOptionMap f (x, ctx) =
-  match x with
-  | Some x ->
-      let x, ctx = f (x, ctx)
-      Some x, ctx
-  | None -> None, ctx
-
-// -----------------------------------------------
-// Pair
-// -----------------------------------------------
-
-let pairCmp cmp1 cmp2 (l1, l2) (r1, r2) =
-  let c = cmp1 l1 r1
-  if c <> 0 then c else cmp2 l2 r2
-
-// -----------------------------------------------
-// List
-// -----------------------------------------------
-
-let cons head tail = head :: tail
 
 let listCmp cmp ls rs =
   let rec go ls rs =

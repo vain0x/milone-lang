@@ -77,8 +77,7 @@
 /// ```
 module rec MiloneLang.EtaExpansion
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.TySystem
 open MiloneLang.Typing

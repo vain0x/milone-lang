@@ -10,8 +10,7 @@
 /// - Translates types of Milone-lang to C-style type definitions.
 module rec MiloneLang.CirGen
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.TySystem
 open MiloneLang.Hir

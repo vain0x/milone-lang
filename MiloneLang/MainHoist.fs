@@ -19,8 +19,7 @@
 /// ```
 module rec MiloneLang.MainHoist
 
-open MiloneLang.Helpers
-open MiloneLang.Types
+open MiloneLang.Util
 open MiloneLang.Hir
 
 let private hoistMainExpr expr =

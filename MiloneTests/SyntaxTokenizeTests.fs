@@ -2,8 +2,7 @@ module MiloneLang.SyntaxTokenize.SyntaxTokenizeTests
 
 open MiloneLang
 open MiloneLang.Assets
-open MiloneLang.Helpers
-open MiloneLang.Types
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.SyntaxTokenize
 open Xunit

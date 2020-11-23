@@ -48,8 +48,7 @@
 /// NOTE: The algorithm seems inefficient and the finiteness is unproven.
 module rec MiloneLang.Monomorphizing
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.TySystem
 open MiloneLang.Typing

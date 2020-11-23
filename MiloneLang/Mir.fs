@@ -1,7 +1,6 @@
 module rec MiloneLang.Mir
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 

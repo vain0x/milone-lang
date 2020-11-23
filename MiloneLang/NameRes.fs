@@ -5,8 +5,7 @@
 /// and assign the same serials to the same symbols.
 module rec MiloneLang.NameRes
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 
@@ -189,6 +188,14 @@ let private findModuleTy moduleSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.ModuleTys |> mapContainsKey moduleSerial)
   scopeCtx.ModuleTys |> mapFind moduleSerial
 
+let private findTyName tySymbol (scopeCtx: ScopeCtx) =
+  match tySymbol with
+  | ModuleTySymbol moduleSerial -> (scopeCtx |> findModuleTy moduleSerial).Name
+  | _ ->
+      scopeCtx
+      |> findTy (tySymbolToSerial tySymbol)
+      |> tyDefToName
+
 /// Defines a variable, without adding to any scope.
 let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
@@ -285,27 +292,22 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
 
   { scopeCtx with Local = scope }
 
-/// Adds a type to a scope.
-let private importTy symbol (scopeCtx: ScopeCtx): ScopeCtx =
-  let tyName =
-    match symbol with
-    | ModuleTySymbol moduleSerial -> (scopeCtx |> findModuleTy moduleSerial).Name
-    | _ ->
-        scopeCtx
-        |> findTy (tySymbolToSerial symbol)
-        |> tyDefToName
-
+/// Adds a type to a scope, aliasing a name.
+let private doImportTyWithAlias alias symbol (scopeCtx: ScopeCtx): ScopeCtx =
   let scope: Scope =
     match scopeCtx.Local with
     | varScopes, map :: tyScopes ->
-        let tyScopes =
-          (map |> mapAdd tyName symbol) :: tyScopes
+        let tyScopes = (map |> mapAdd alias symbol) :: tyScopes
 
         varScopes, tyScopes
 
     | _ -> failwith "NEVER: Scope can't be empty."
 
   { scopeCtx with Local = scope }
+
+let private importTy symbol (scopeCtx: ScopeCtx): ScopeCtx =
+  let tyName = findTyName symbol scopeCtx
+  doImportTyWithAlias tyName symbol scopeCtx
 
 let private openModule moduleSerial (scopeCtx: ScopeCtx) =
   // Import vars.
@@ -419,7 +421,10 @@ let private resolveExprAsScope expr scopeCtx =
       let name =
         scopeCtx |> findName (varSerialToInt varSerial)
 
-      scopeCtx |> resolveLocalTyName name
+      // HACK: Don't find from synonyms, from module instead.
+      match scopeCtx |> resolveLocalTyName name with
+      | Some (SynonymTySymbol _) -> scopeCtx |> resolveLocalTyName (name + "Module")
+      | it -> it
 
   | _ -> None
 
@@ -1020,6 +1025,12 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           ctx
           |> addModuleTyDef serial tyDef
           |> importTy (ModuleTySymbol serial)
+
+        // HACK: Define module alias for the case it is shadowed by another module.
+        //       (F# solves this by merging namespaces of types, but such behavior is unimplemented.)
+        let ctx =
+          ctx
+          |> doImportTyWithAlias (moduleName + "Module") (ModuleTySymbol serial)
 
         let parent, ctx = ctx |> startScope
 

@@ -3,8 +3,7 @@
 /// Provides implicit indirection by inserting allocate/dereference operations.
 module rec MiloneLang.AutoBoxing
 
-open MiloneLang.Helpers
-open MiloneLang.Types
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.TySystem
 open MiloneLang.Typing

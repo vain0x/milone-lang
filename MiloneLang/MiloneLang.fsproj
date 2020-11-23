@@ -6,8 +6,7 @@
   <ItemGroup>
     <Compile Include="FSharpOnly.fs" />
     <Compile Include="TreeMap.fs" />
-    <Compile Include="Types.fs" />
-    <Compile Include="Helpers.fs" />
+    <Compile Include="Util.fs" />
     <Compile Include="Syntax.fs" />
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParse.fs" />

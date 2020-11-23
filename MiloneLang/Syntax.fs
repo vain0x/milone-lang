@@ -1,6 +1,6 @@
 module rec MiloneLang.Syntax
 
-open MiloneLang.Helpers
+open MiloneLang.Util
 
 // -----------------------------------------------
 // Vocabulary types

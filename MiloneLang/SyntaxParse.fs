@@ -66,8 +66,7 @@
 /// Note that the implementation doesn't verify the rule completely.
 module rec MiloneLang.SyntaxParse
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Syntax
 
 // -----------------------------------------------

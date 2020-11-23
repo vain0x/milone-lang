@@ -1,7 +1,7 @@
 module MiloneLang.HelpersTests
 
 open MiloneLang.Assets
-open MiloneLang.Helpers
+open MiloneLang.Util
 open MiloneLang.Hir
 open Xunit
 

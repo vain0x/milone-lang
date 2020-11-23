@@ -82,8 +82,7 @@
 /// See also `let_fun_closure.fs` in tests.
 module rec MiloneLang.ClosureConversion
 
-open MiloneLang.Helpers
-open MiloneLang.Types
+open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Typing
 open MiloneLang.Hir
