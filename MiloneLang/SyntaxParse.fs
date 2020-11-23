@@ -68,6 +68,7 @@ module rec MiloneLang.SyntaxParse
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Syntax
 
 // -----------------------------------------------
 // Position

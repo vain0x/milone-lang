@@ -393,32 +393,6 @@ let strEscape (str: string) =
   if str |> strNeedsEscaping |> not then str else go [] 0 |> List.rev |> strConcat
 
 // -----------------------------------------------
-// Position
-// -----------------------------------------------
-
-let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
-
-// -----------------------------------------------
-// Location
-// -----------------------------------------------
-
-/// No location information. Should be fixed.
-let noLoc = "<noLoc>", -1, -1
-
-let locToString ((docId, y, x): Loc) =
-  docId
-  + ":"
-  + string (y + 1)
-  + ":"
-  + string (x + 1)
-
-let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
-  let c = strCmp lDoc rDoc
-  if c <> 0 then c
-  else if ly <> ry then intCmp ly ry
-  else intCmp lx rx
-
-// -----------------------------------------------
 // DumpTree (for debugging)
 // -----------------------------------------------
 

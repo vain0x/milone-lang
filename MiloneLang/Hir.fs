@@ -2,6 +2,11 @@ module rec MiloneLang.Hir
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Syntax
+
+/// Unique serial number to identify something
+/// such as variables, nominal types, etc.
+type Serial = int
 
 // -----------------------------------------------
 // HIR types

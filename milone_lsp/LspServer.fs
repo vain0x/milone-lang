@@ -1,5 +1,6 @@
 module MiloneLsp.LspServer
 
+open MiloneLang.Syntax
 open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 open MiloneLsp.JsonRpcWriter

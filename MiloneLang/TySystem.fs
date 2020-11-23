@@ -7,6 +7,7 @@ module rec MiloneLang.TySystem
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Syntax
 open MiloneLang.Hir
 
 // -----------------------------------------------

@@ -84,6 +84,7 @@ module rec MiloneLang.ClosureConversion
 
 open MiloneLang.Helpers
 open MiloneLang.Types
+open MiloneLang.Syntax
 open MiloneLang.Typing
 open MiloneLang.Hir
 

@@ -12,6 +12,7 @@ module rec MiloneLang.CirGen
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Syntax
 open MiloneLang.TySystem
 open MiloneLang.Hir
 open MiloneLang.Mir

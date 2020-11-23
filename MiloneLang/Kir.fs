@@ -2,6 +2,7 @@ module rec MiloneLang.Kir
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Syntax
 open MiloneLang.Hir
 
 // -----------------------------------------------

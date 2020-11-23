@@ -1,6 +1,7 @@
 module MiloneLsp.LspLangService
 
 open MiloneLang.Types
+open MiloneLang.Syntax
 
 let private uriOfFilePath (filePath: string) =
   System.Text.StringBuilder().Append(filePath).Replace(":", "%3A").Replace("\\", "/").Insert(0, "file:///").ToString()

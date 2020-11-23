@@ -1,6 +1,7 @@
 module rec MiloneLang.Cir
 
 open MiloneLang.Types
+open MiloneLang.Syntax
 
 // -----------------------------------------------
 // CIR types

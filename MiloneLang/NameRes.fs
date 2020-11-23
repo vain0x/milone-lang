@@ -7,6 +7,7 @@ module rec MiloneLang.NameRes
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Syntax
 open MiloneLang.Hir
 
 let private isNoTy ty =

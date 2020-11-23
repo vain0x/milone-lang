@@ -95,6 +95,7 @@ Most of types and functions are defined in modules:
 
 - [Types](MiloneLang/Types.fs)
 - [Helpers](MiloneLang/Helpers.fs)
+- [Syntax](MiloneLang/Syntax.fs)
 - [Hir](MiloneLang/Hir.fs)
 - [Mir](MiloneLang/Mir.fs)
 - [Cir](MiloneLang/Cir.fs)
@@ -130,6 +131,15 @@ The following transformations are consist of the compilation in the order:
     - Generate C code
 - [CirDump](MiloneLang/CirDump.fs)
     - C code to string
+
+Entrypoint is:
+
+- [Cli.fs](MiloneLang/Cli.fs)
+    - CLI application logic shared by F# and milone-lang.
+- [Program.fs](MiloneLang/Program.fs)
+    - Provides `main` function for .NET.
+- [MiloneLang.fs](MiloneLang/MiloneLang.fs)
+    - Provides `main` function for milone-lang.
 
 ## Development
 

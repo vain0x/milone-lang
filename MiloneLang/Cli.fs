@@ -3,6 +3,7 @@ module rec MiloneLang.Cli
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Syntax
 open MiloneLang.SyntaxTokenize
 open MiloneLang.SyntaxParse
 open MiloneLang.Hir

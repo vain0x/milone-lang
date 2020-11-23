@@ -8,6 +8,7 @@
     <Compile Include="TreeMap.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Helpers.fs" />
+    <Compile Include="Syntax.fs" />
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParse.fs" />
     <Compile Include="Hir.fs" />

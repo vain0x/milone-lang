@@ -8,8 +8,9 @@ module rec MiloneLang.TyElaborating
 
 open MiloneLang.Helpers
 open MiloneLang.Types
-open MiloneLang.Typing
+open MiloneLang.Syntax
 open MiloneLang.Hir
+open MiloneLang.Typing
 
 let private hxIsUnboxingRef expr =
   match expr with

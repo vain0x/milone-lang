@@ -55,6 +55,7 @@ module rec MiloneLang.SyntaxTokenize
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Syntax
 
 // -----------------------------------------------
 // Char

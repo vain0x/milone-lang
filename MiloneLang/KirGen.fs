@@ -12,9 +12,10 @@ module rec MiloneLang.KirGen
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.Typing
+open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLang.Kir
+open MiloneLang.Typing
 
 let private unreachable value = failwithf "NEVER: %A" value
 
