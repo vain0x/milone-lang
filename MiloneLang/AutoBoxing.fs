@@ -7,6 +7,7 @@ open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.TySystem
 open MiloneLang.Typing
+open MiloneLang.Hir
 
 let private tyIsRecord ty =
   match ty with

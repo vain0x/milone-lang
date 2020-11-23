@@ -95,6 +95,7 @@ Most of types and functions are defined in modules:
 
 - [Types](MiloneLang/Types.fs)
 - [Helpers](MiloneLang/Helpers.fs)
+- [Hir](MiloneLang/Hir.fs)
 - [Mir](MiloneLang/Mir.fs)
 - [Cir](MiloneLang/Cir.fs)
 - [FSharpOnly](MiloneLang/FSharpOnly.fs)

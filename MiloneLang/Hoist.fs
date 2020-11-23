@@ -30,6 +30,7 @@ module rec MiloneLang.Hoist
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Hir
 
 let private hxDummy = hxUnit noLoc
 

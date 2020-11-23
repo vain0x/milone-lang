@@ -2,6 +2,7 @@ module rec MiloneLang.Mir
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Hir
 
 // -----------------------------------------------
 // MIR types

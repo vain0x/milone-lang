@@ -406,8 +406,8 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
     match MiloneLang.Bundling.bundleProgram bundleHost projectName with
     | Some it -> it
     | None ->
-        let expr = MiloneLang.Helpers.hxUnit ("", 0, 0)
-        let nameCtx = MiloneLang.Helpers.nameCtxEmpty ()
+        let expr = MiloneLang.Hir.hxUnit ("", 0, 0)
+        let nameCtx = MiloneLang.Hir.nameCtxEmpty ()
         expr, nameCtx, []
 
   // Name resolution.
@@ -424,7 +424,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
       let getTyName tySerial =
         tyCtx.Tys
         |> MiloneLang.Helpers.mapTryFind tySerial
-        |> Option.map MiloneLang.Helpers.tyDefToName
+        |> Option.map MiloneLang.Hir.tyDefToName
 
       ty |> MiloneLang.TySystem.tyDisplay getTyName
 
@@ -439,7 +439,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
         let pos = row, column
 
         let msg =
-          MiloneLang.Helpers.logToString tyDisplayFn loc log
+          MiloneLang.Hir.logToString tyDisplayFn loc log
 
         yield uri, msg, pos ]
 

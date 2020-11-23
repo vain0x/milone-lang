@@ -81,6 +81,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.Typing
+open MiloneLang.Hir
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]

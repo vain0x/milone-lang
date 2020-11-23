@@ -20,6 +20,7 @@ module rec MiloneLang.TailRecOptimizing
 open MiloneLang.Helpers
 open MiloneLang.Types
 open MiloneLang.Typing
+open MiloneLang.Hir
 
 [<NoEquality; NoComparison>]
 type private IsTail =

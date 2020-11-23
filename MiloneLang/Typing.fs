@@ -15,6 +15,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.NameRes
+open MiloneLang.Hir
 
 // -----------------------------------------------
 // Context

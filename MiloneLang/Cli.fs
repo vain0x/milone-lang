@@ -3,9 +3,10 @@ module rec MiloneLang.Cli
 
 open MiloneLang.Types
 open MiloneLang.Helpers
-open MiloneLang.TySystem
 open MiloneLang.SyntaxTokenize
 open MiloneLang.SyntaxParse
+open MiloneLang.Hir
+open MiloneLang.TySystem
 open MiloneLang.AstToHir
 open MiloneLang.AutoBoxing
 open MiloneLang.Bundling

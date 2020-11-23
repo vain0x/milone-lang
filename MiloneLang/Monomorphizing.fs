@@ -52,6 +52,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.Typing
+open MiloneLang.Hir
 
 let private funSerialTyPairCmp l r = pairCmp funSerialCmp tyCmp l r
 

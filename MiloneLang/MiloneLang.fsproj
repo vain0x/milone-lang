@@ -8,9 +8,10 @@
     <Compile Include="TreeMap.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Helpers.fs" />
-    <Compile Include="TySystem.fs" />
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParse.fs" />
+    <Compile Include="Hir.fs" />
+    <Compile Include="TySystem.fs" />
     <Compile Include="AstToHir.fs" />
     <Compile Include="Bundling.fs" />
     <Compile Include="NameRes.fs" />
@@ -28,7 +29,6 @@
     <Compile Include="KirPropagate.fs" />
     <Compile Include="Mir.fs" />
     <Compile Include="MirGen.fs" />
-    <!-- <Compile Include="KirToMir.fs" /> -->
     <Compile Include="KirDump.fs" />
     <Compile Include="Cir.fs" />
     <Compile Include="CirGen.fs" />

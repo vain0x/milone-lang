@@ -7,6 +7,7 @@ module rec MiloneLang.KirDump
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Hir
 open MiloneLang.TySystem
 open MiloneLang.Kir
 open MiloneLang.KirGen
