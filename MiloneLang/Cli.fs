@@ -47,6 +47,12 @@ SUBCOMMANDS
         If error, exits with non-zero code.
         Errors are written to STDOUT. (FIXME: use STDERR)
 
+        --reference <PROJECT-DIR>
+            Adds external project reference.
+            E.g. `--reference 'path/to/ExternProject'`,
+            `open ExternProject.ExternModule` will open
+            `path/to/ExternProject/ExternModule.fs`.
+
 OPTIONS
     -h, --help      Print this text.
     -V, --version   Print version of the compiler.
@@ -158,9 +164,22 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
     Verbosity = verbosity
     Host = host }
 
+let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
+  let projects =
+    references
+    |> List.fold (fun projects projectDir ->
+         let projectDir = projectDir |> pathStrTrimEndPathSep
+         let projectName = projectDir |> pathStrToStem
+
+         if projects |> mapContainsKey projectName
+         then failwithf "Project name is duplicated: '%s'" projectName
+
+         projects |> mapAdd projectName projectDir) ctx.Projects
+
+  { ctx with Projects = projects }
+
 let private toBundleHost parse (ctx: CompileCtx): BundleHost =
   let host = ctx.Host
-  let miloneHome = host.MiloneHome
   let readFile = host.FileReadAllText
 
   let readModuleFile (projectDir: string) (moduleName: string) =
@@ -374,8 +393,10 @@ let cliParse (host: CliHost) v (projectDir: string) =
   |> ignore
   0
 
-let cliCompile (host: CliHost) verbosity projectDir =
-  let ctx = compileCtxNew host verbosity projectDir
+let cliCompile (host: CliHost) verbosity projectDir references =
+  let ctx =
+    compileCtxNew host verbosity projectDir
+    |> compileCtxAddProjectReferences references
 
   let output, success = compile ctx
   let exitCode = if success then 0 else 1
@@ -495,6 +516,35 @@ let private parseVerbosity (host: CliHost) args =
     | "--profile" -> Some(Profile(host.ProfileInit()))
     | _ -> None) Quiet args
 
+let private parseReferences args =
+  let tryPickPos (args: string list) =
+    let rec go acc (args: string list) =
+      match args with
+      | []
+      | "--" :: _ -> None
+
+      | arg :: args when arg.Length <> 0 && arg.[0] = '-' -> go (arg :: acc) args
+
+      | arg :: args -> Some(arg, List.append (List.rev acc) args)
+
+    go [] args
+
+  // acc: args not consumed in reversed order
+  let rec go acc references args =
+    match args with
+    | []
+    | "--" :: _ -> references, List.append (List.rev acc) args
+
+    | "--reference" :: args ->
+        match tryPickPos args with
+        | None -> failwith "Expected project dir after '--reference'"
+
+        | Some (projectDir, args) -> go acc (projectDir :: references) args
+
+    | arg :: args -> go (arg :: acc) references args
+
+  go [] [] args
+
 [<NoEquality; NoComparison>]
 type private CliCmd =
   | HelpCmd
@@ -548,13 +598,15 @@ let cli (host: CliHost) =
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
+      let references, args = parseReferences args
+
       let useKir, args =
         parseFlag (fun _ arg -> if arg = "--kir" then Some true else None) false args
 
       match useKir, args with
       | true, _ -> cliCompileViaKir host args
 
-      | false, projectDir :: _ -> cliCompile host verbosity projectDir
+      | false, projectDir :: _ -> cliCompile host verbosity projectDir references
 
       | false, [] ->
           printfn "ERROR: Expected project dir."
