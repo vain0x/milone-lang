@@ -17,8 +17,9 @@
 /// ```
 module rec MiloneLang.TailRecOptimizing
 
-open MiloneLang.Helpers
-open MiloneLang.Types
+open MiloneLang.Util
+open MiloneLang.Syntax
+open MiloneLang.Hir
 open MiloneLang.Typing
 
 [<NoEquality; NoComparison>]

@@ -67,8 +67,9 @@
 module rec MiloneLang.Bundling
 
 open MiloneLang.AstToHir
-open MiloneLang.Helpers
-open MiloneLang.Types
+open MiloneLang.Util
+open MiloneLang.Syntax
+open MiloneLang.Hir
 
 let private findOpenPaths expr =
   let rec go expr =

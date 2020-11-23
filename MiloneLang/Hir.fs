@@ -1,486 +1,385 @@
-/// Defines the functions used in multiple modules.
-module rec MiloneLang.Helpers
-
-open MiloneLang.Types
-
-/// `List.map`, modifying context.
+/// # Hir
 ///
-/// USAGE:
-///   let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
-let stMap f (xs, ctx) =
-  let rec go acc (xs, ctx) =
-    match xs with
-    | [] -> List.rev acc, ctx
-    | x :: xs ->
-        let y, ctx = f (x, ctx)
-        go (y :: acc) (xs, ctx)
-
-  go [] (xs, ctx)
-
-/// `List.bind`, modifying context.
+/// Provides types and functions for high-level intermediate representation (HIR).
 ///
-/// USAGE:
-///   let ys, ctx = (xs, ctx) |> stFlatMap (fun (x, ctx) -> ys, ctx)
-let stFlatMap f (xs, ctx) =
-  let rec go acc xs ctx =
-    match xs with
-    | [] -> List.rev acc, ctx
-    | x :: xs ->
-        let acc, ctx = f (x, acc, ctx)
-        go acc xs ctx
+/// HIR is functional-style. Similar to milone-lang's syntax.
+///
+/// ## Lifecycle
+///
+/// HIR is generated in `AstToHir` for each file
+/// and all modules of a project are *concatenated* in `Bundling`.
+///
+/// Most of analysis (for error reporting and soundness)
+/// and transformations (for code generation) are performed on it.
+///
+/// Finally HIR is converted to MIR in `MirGen`.
+///
+/// See `Cli.fs` for details.
+module rec MiloneLang.Hir
 
-  go [] xs ctx
+open MiloneLang.Util
+open MiloneLang.Syntax
 
-/// `Option.map`, modifying context.
-let stOptionMap f (x, ctx) =
-  match x with
-  | Some x ->
-      let x, ctx = f (x, ctx)
-      Some x, ctx
-  | None -> None, ctx
-
-// -----------------------------------------------
-// Pair
-// -----------------------------------------------
-
-let pairCmp cmp1 cmp2 (l1, l2) (r1, r2) =
-  let c = cmp1 l1 r1
-  if c <> 0 then c else cmp2 l2 r2
+/// Unique serial number to identify something
+/// such as variables, nominal types, etc.
+type Serial = int
 
 // -----------------------------------------------
-// List
+// HIR types
 // -----------------------------------------------
 
-let cons head tail = head :: tail
+/// Serial number of types.
+type TySerial = Serial
 
-let listCmp cmp ls rs =
-  let rec go ls rs =
-    match ls, rs with
-    | [], [] -> 0
-    | [], _ -> -1
-    | _, [] -> 1
-    | l :: ls, r :: rs ->
-        let c = cmp l r
-        if c <> 0 then c else go ls rs
+/// Serial number of variables.
+[<Struct; NoEquality; NoComparison>]
+type VarSerial = VarSerial of Serial
 
-  go ls rs
+/// Serial number of functions.
+[<Struct; NoEquality; NoComparison>]
+type FunSerial = FunSerial of Serial
 
-let listSortCore unique cmp xs =
-  let rec appendRev acc xs =
-    match xs with
-    | [] -> acc
+/// Serial number of variants.
+[<Struct; NoEquality; NoComparison>]
+type VariantSerial = VariantSerial of Serial
 
-    | x :: xs -> appendRev (x :: acc) xs
+/// Number of parameters.
+type Arity = int
 
-  // `merge (xs, xn) (ys, yn) = (zs, zn), d` where
-  // `zs.[0..zn - 1]` is the merge of `xs.[0..xn - 1]` and `ys.[0..yn - 1]`,
-  // and `d` is the number of duplicated items.
-  // NOTE: It seems not tail-call optimized by GCC?
-  let rec merge (zs, zn) d (xs, xn) (ys, yn) =
-    if xn = 0 then
-      (appendRev ys zs, zn + yn), d
-    else if yn = 0 then
-      (appendRev xs zs, zn + xn), d
-    else
-      match xs, ys with
-      | [], _
-      | _, [] -> failwith "NEVER: wrong list length"
+/// Let-depth, i.e. the number of ancestral let nodes
+/// of the place where the meta type is introduced.
+/// Used for polymorphic type inference.
+/// E.g. in `let x: 'x = ((let y: 'y = a: 'a); b: 'b)`,
+///   `'x`: 0, `'y`: 1, `'a`: 2, `'b`: 1
+/// Only one exception: recursive function have let-depth deeper by 1.
+type LetDepth = int
 
-      | x :: xs1, y :: ys1 ->
-          let c = cmp x y
-          if c > 0
-          then merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
-          else if c = 0 && unique
-          then merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
-          else merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
+/// Where variable is stored.
+[<NoEquality; NoComparison>]
+type StorageModifier =
+  /// On stack.
+  | AutoSM
 
-  // `go (xs, xn) = (zs, zn), xs1, d` where
-  // `zs.[0..xn - 1]` is the sort of `xs.[0..xn - 1]`,
-  // `xs1 = xs.[xn..]`,
-  // and `d` is the number of duplicated items.
-  let rec go (xs, n) =
-    if n <= 1 then
-      (xs, n), List.skip n xs, 0
-    else
-      let m = n / 2
-      let (xs, xn), xs1, d1 = go (xs, m)
-      let (ys, yn), ys1, d2 = go (xs1, n - m)
-      let (zs, zn), d3 = merge ([], 0) 0 (xs, xn) (ys, yn)
-      (zs, zn), ys1, d1 + d2 + d3
+  /// On static storage.
+  | StaticSM
 
-  let xn = List.length xs
-  let (zs, zn), ws, d = go (xs, xn)
-  assert (zn + d = xn)
-  assert (ws |> List.isEmpty)
-  List.truncate zn zs
+[<Struct>]
+[<NoEquality; NoComparison>]
+type NameCtx = NameCtx of map: AssocMap<Serial, Ident> * lastSerial: Serial
 
-let listSort cmp xs = listSortCore false cmp xs
+/// Type constructor.
+[<Struct>]
+[<NoEquality; NoComparison>]
+type TyCtor =
+  | BoolTyCtor
+  | IntTyCtor
+  | UIntTyCtor
+  | CharTyCtor
+  | StrTyCtor
+  | ObjTyCtor
 
-let listUnique cmp xs = listSortCore true cmp xs
+  /// Ty args must be `[s; t]`.
+  | FunTyCtor
+
+  | TupleTyCtor
+
+  /// Ty args must be `[t]`.
+  | ListTyCtor
+
+  // Nominal types.
+  | SynonymTyCtor of synonymTy: TySerial
+  | UnionTyCtor of unionTy: TySerial
+  | RecordTyCtor of recordTy: TySerial
+
+  /// Unresolved type. Generated in AstToHir, resolved in NameRes.
+  | UnresolvedTyCtor of Serial
+
+/// Type of expressions.
+[<Struct>]
+[<NoEquality; NoComparison>]
+type Ty =
+  | ErrorTy of errorLoc: Loc
+
+  /// Type variable to be bound or quantified..
+  | MetaTy of metaTySerial: Serial * metaLoc: Loc
+
+  /// Type application.
+  | AppTy of TyCtor * tyArgs: Ty list
+
+/// Potentially polymorphic type.
+[<Struct>]
+[<NoEquality; NoComparison>]
+type TyScheme = TyScheme of tyVars: TySerial list * Ty
+
+/// Type specification.
+[<Struct>]
+[<NoEquality; NoComparison>]
+type TySpec = TySpec of Ty * Trait list
+
+/// Trait, a constraint about types.
+// NOTE: `trait` is a reserved word in F#.
+[<NoEquality; NoComparison>]
+type Trait =
+  /// The type supports `+`.
+  | AddTrait of Ty
+
+  /// The type is scalar.
+  | ScalarTrait of Ty
+
+  /// The type supports `=`.
+  | EqTrait of Ty
+
+  /// The type supports `<`.
+  | CmpTrait of Ty
+
+  /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
+  | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
+
+  /// Type can be applied to `int`/`uint` function.
+  | ToIntTrait of Ty
+
+  /// Type can be applied to `string` function.
+  | ToStringTrait of Ty
+
+/// Type declaration.
+[<NoEquality; NoComparison>]
+type TyDecl =
+  | TySynonymDecl of Ty * Loc
+
+  /// Union type.
+  /// Variants: (ident, serial, has-payload, payload type).
+  | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty) list * Loc
+
+  | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * Loc
+
+/// Type definition.
+[<NoEquality; NoComparison>]
+type TyDef =
+  /// Bound type variable.
+  | MetaTyDef of Ident * Ty * Loc
+
+  | UniversalTyDef of Ident * Loc
+
+  | SynonymTyDef of Ident * TySerial list * Ty * Loc
+
+  | UnionTyDef of Ident * VariantSerial list * Loc
+
+  | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
+
+[<Struct; NoEquality; NoComparison>]
+type ModuleTySerial = ModuleTySerial of Serial
+
+//// Module is a type so that it can be used as namespace.
+[<NoEquality; NoComparison>]
+type ModuleTyDef = { Name: Ident; Loc: Loc }
+
+/// Definition of named value in HIR.
+[<NoEquality; NoComparison>]
+type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
+
+[<NoEquality; NoComparison>]
+type FunDef =
+  { Name: Ident
+    Arity: Arity
+    Ty: TyScheme
+    Loc: Loc }
+
+[<NoEquality; NoComparison>]
+type VariantDef =
+  { Name: Ident
+    UnionTySerial: TySerial
+    HasPayload: bool
+    PayloadTy: Ty
+    VariantTy: Ty
+    Loc: Loc }
+
+[<Struct; NoEquality; NoComparison>]
+type ValueSymbol =
+  | VarSymbol of varSerial: VarSerial
+  | FunSymbol of funSerial: FunSerial
+  | VariantSymbol of variantSerial: VariantSerial
+
+[<Struct; NoEquality; NoComparison>]
+type TySymbol =
+  | MetaTySymbol of tySerial: TySerial
+  | UnivTySymbol of univTySerial: TySerial
+  | SynonymTySymbol of synonymTySerial: TySerial
+  | UnionTySymbol of unionTySerial: TySerial
+  | RecordTySymbol of recordTySerial: TySerial
+  | ModuleTySymbol of moduleTySerial: ModuleTySerial
+
+/// Pattern in HIR.
+[<NoEquality; NoComparison>]
+type HPat =
+  | HLitPat of Lit * Loc
+
+  /// `[]`
+  | HNilPat of itemTy: Ty * Loc
+
+  | HNonePat of itemTy: Ty * Loc
+  | HSomePat of itemTy: Ty * Loc
+
+  /// `_`
+  | HDiscardPat of Ty * Loc
+
+  /// Variable pattern.
+  | HRefPat of VarSerial * Ty * Loc
+
+  /// Variant pattern.
+  | HVariantPat of VariantSerial * Ty * Loc
+
+  /// Navigation, e.g. `Result.Ok _`.
+  | HNavPat of HPat * Ident * Ty * Loc
+
+  /// Variant decomposition, e.g. `Some x`.
+  | HCallPat of callee: HPat * args: HPat list * Ty * Loc
+
+  /// `::`
+  | HConsPat of HPat * HPat * itemTy: Ty * Loc
+
+  /// e.g. `x, y, z`
+  | HTuplePat of HPat list * tupleTy: Ty * Loc
+
+  /// Used to dereference a box inside of pattern matching.
+  ///
+  /// To match a value `v: obj` with box pattern `box p: T`,
+  /// match `unbox v: T` with `p: T`.
+  ///
+  /// This is only generated internally in AutoBoxing.
+  /// Not a part of F# nor milone-lang syntax.
+  /// Unlike `:? T`, unboxing is unchecked.
+  | HBoxPat of HPat * Loc
+
+  | HAsPat of HPat * VarSerial * Loc
+
+  /// Type annotation, e.g. `x: int`.
+  | HAnnoPat of HPat * Ty * Loc
+
+  /// Disjunction.
+  | HOrPat of HPat * HPat * Ty * Loc
+
+/// Primitive in HIR.
+[<RequireQualifiedAccess>]
+[<Struct>]
+[<NoEquality; NoComparison>]
+type HPrim =
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Mod
+  | Eq
+  | Lt
+  | Nil
+  | Cons
+  | OptionNone
+  | OptionSome
+  | Index
+  | Not
+  | Exit
+  | Assert
+  | Box
+  | Unbox
+  | Printfn
+  | StrLength
+  | StrGetSlice
+  | Char
+  | Int
+  | UInt
+  | String
+  | InRegion
+  | NativeFun of Ident * Arity
+
+[<RequireQualifiedAccess>]
+[<Struct>]
+[<NoEquality; NoComparison>]
+type InfOp =
+  | App
+
+  /// Type annotation `x : 'x`.
+  | Anno
+
+  /// `x; y`
+  | Semi
+
+  /// Direct call to procedure or primitive.
+  | CallProc
+
+  /// Indirect call to closure.
+  | CallClosure
+
+  /// Direct call to current procedure at the end of function (i.e. tail-call).
+  | CallTailRec
+
+  /// Tuple constructor, e.g. `x, y, z`.
+  | Tuple
+
+  /// Closure constructor.
+  | Closure
+
+  /// Get an item of tuple.
+  | TupleItem of index: int
+
+/// Expression in HIR.
+[<NoEquality; NoComparison>]
+type HExpr =
+  | HLitExpr of Lit * Loc
+
+  /// Name of variable.
+  | HRefExpr of VarSerial * Ty * Loc
+
+  /// Name of function.
+  | HFunExpr of FunSerial * Ty * Loc
+
+  /// Name of variant.
+  | HVariantExpr of VariantSerial * Ty * Loc
+
+  | HPrimExpr of HPrim * Ty * Loc
+
+  | HRecordExpr of HExpr option * fields: (Ident * HExpr * Loc) list * Ty * Loc
+
+  /// arms: (pat, guard, body). Guard is `true` if omit.
+  | HMatchExpr of cond: HExpr * arms: (HPat * HExpr * HExpr) list * Ty * Loc
+
+  /// E.g. `List.isEmpty`, `str.Length`
+  | HNavExpr of HExpr * Ident * Ty * Loc
+
+  /// Some built-in operation.
+  | HInfExpr of InfOp * HExpr list * Ty * Loc
+
+  | HLetValExpr of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+
+  /// Type declaration.
+  | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
+  | HOpenExpr of Ident list * Loc
+  | HModuleExpr of ModuleTySerial * body: HExpr * next: HExpr * Loc
+  | HErrorExpr of string * Loc
+
+[<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
+type MonoMode =
+  | Monify
+  | RemoveGenerics
 
 // -----------------------------------------------
-// Assoc
+// Errors
 // -----------------------------------------------
 
-let assocTryFind cmp key assoc =
-  let rec go assoc =
-    match assoc with
-    | [] -> None
-
-    | (k, v) :: _ when cmp k key = 0 -> Some v
-
-    | _ :: assoc -> go assoc
-
-  go assoc
-
-// -----------------------------------------------
-// AssocMap
-// -----------------------------------------------
-
-let mapEmpty cmp: AssocMap<_, _> = TreeMap.empty cmp
-
-let mapIsEmpty (map: AssocMap<_, _>) = TreeMap.isEmpty map
-
-let mapAdd key value (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.add key value map
-
-let mapRemove key (map: AssocMap<_, _>): _ option * AssocMap<_, _> = TreeMap.remove key map
-
-let mapTryFind key (map: AssocMap<_, _>): _ option = TreeMap.tryFind key map
-
-let mapFind key map =
-  match mapTryFind key map with
-  | Some value -> value
-
-  | None -> failwithf "mapFind: missing key (%A)" key
-
-let mapContainsKey key map =
-  match mapTryFind key map with
-  | Some _ -> true
-
-  | None -> false
-
-let mapFold folder state (map: AssocMap<_, _>) = TreeMap.fold folder state map
-
-let mapMap f (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.map f map
-
-let mapFilter pred (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.filter pred map
-
-let mapToKeys (map: AssocMap<_, _>) = TreeMap.toList map |> List.map fst
-
-let mapToList (map: AssocMap<_, _>) = TreeMap.toList map
-
-let mapOfKeys cmp value keys: AssocMap<_, _> =
-  keys
-  |> List.map (fun key -> key, value)
-  |> TreeMap.ofList cmp
-
-let mapOfList cmp assoc: AssocMap<_, _> = TreeMap.ofList cmp assoc
-
-// -----------------------------------------------
-// AssocSet
-// -----------------------------------------------
-
-let setEmpty funs: AssocSet<_> = mapEmpty funs
-
-let setContains key (set: AssocSet<_>) = set |> mapContainsKey key
-
-let setToList (set: AssocSet<_>) = set |> mapToKeys
-
-let setOfList cmp xs: AssocSet<_> = mapOfKeys cmp () xs
-
-let setAdd key set: AssocSet<_> = mapAdd key () set
-
-let setFold folder state (set: AssocSet<_>) =
-  set |> setToList |> List.fold folder state
-
-// TODO: make it more efficient
-let setExists pred (set: AssocSet<_>) = set |> setToList |> List.exists pred
-
-// TODO: make it more efficient
-let setUnion first second =
-  first
-  |> setFold (fun set item -> set |> setAdd item) second
-
-// -----------------------------------------------
-// Bool
-// -----------------------------------------------
-
-let boolCmp l r =
-  (if l then 1 else 0) - (if r then 1 else 0)
-
-// -----------------------------------------------
-// Int
-// -----------------------------------------------
-
-let intMin (x: int) (y: int) = if x > y then y else x
-
-let intMax (x: int) (y: int) = if x < y then y else x
-
-let intEq (x: int) (y: int) = x = y
-
-let intCmp (x: int) (y: int) =
-  if y < x then 1
-  else if y = x then 0
-  else -1
-
-let intToHexWithPadding (len: int) (value: int) =
-  if value < 0 then
-    failwith "intToHexWithPadding: unimplemented negative"
-  else
-
-    assert (len >= 0)
-
-    let rec go acc len (n: int) =
-      if n = 0 && len <= 0 then
-        acc
-      else
-        let d = n % 16
-        let s = "0123456789abcdef" |> strSlice d (d + 1)
-        go (s + acc) (len - 1) (n / 16)
-
-    if value = 0 && len = 0 then "0" else go "" len value
-
-let intFromHex (l: int) (r: int) (s: string) =
-  assert (0 <= l && l < r && r <= s.Length)
-
-  let hexDigitToInt (c: char) =
-    if '0' <= c && c <= '9' then
-      charSub c '0'
-    else if 'A' <= c && c <= 'F' then
-      charSub c 'A' + 10
-    else if 'a' <= c && c <= 'f' then
-      charSub c 'a' + 10
-    else
-      assert false
-      0
-
-  let rec go (acc: int) (i: int) =
-    if i = r then
-      acc
-    else
-      let d = hexDigitToInt s.[i]
-      go (acc * 16 + d) (i + 1)
-
-  go 0 l
-
-// -----------------------------------------------
-// Char
-// -----------------------------------------------
-
-let charSub (x: char) (y: char) = int x - int y
-
-let charIsControl (c: char) =
-  let n = int c
-  0 <= n && n < 32 || n = 127
-
-let charIsSpace (c: char): bool =
-  c = ' ' || c = '\t' || c = '\r' || c = '\n'
-
-let charIsDigit (c: char): bool = '0' <= c && c <= '9'
-
-let charIsAlpha (c: char): bool =
-  ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
-
-let charNeedsEscaping (c: char) =
-  charIsControl c || c = '\\' || c = '"' || c = '\''
-
-let charEscape (c: char) =
-  assert (c |> charNeedsEscaping)
-
-  match c with
-  | '\x00' ->
-      // C-style.
-      "\\0"
-
-  | '\t' -> "\\t"
-
-  | '\n' -> "\\n"
-
-  | '\r' -> "\\r"
-
-  | '\'' -> "\\\'"
-
-  | '\"' -> "\\\""
-
-  | '\\' -> "\\\\"
-
-  | c ->
-      let h = c |> int |> intToHexWithPadding 2
-      "\\x" + h
-
-// -----------------------------------------------
-// String
-// -----------------------------------------------
-
-let strCmp (x: string) (y: string) =
-  if y < x then 1
-  else if y = x then 0
-  else -1
-
-let strSlice (start: int) (endIndex: int) (s: string): string =
-  assert (start <= endIndex && endIndex <= s.Length)
-  if start >= endIndex then "" else s.[start..endIndex - 1]
-
-let strConcat (xs: string list) =
-  /// Get (str, ys) where
-  /// `str` is the concatenation of first `xn` items in `xs`
-  /// `ys` is a list of the other items
-  let rec go xs xn =
-    // assert (xn <= List.length xs)
-    match xs with
-    | [] ->
-        assert (xn = 0)
-        "", []
-    | x :: xs when xn = 1 -> x, xs
-    | x :: y :: xs when xn = 2 -> x + y, xs
-    | xs ->
-        let m = xn / 2
-        let l, xs = go xs m
-        let r, xs = go xs (xn - m)
-        l + r, xs
-
-  let n = xs |> List.length
-  let s, xs = go xs n
-  assert (xs |> List.isEmpty)
-  s
-
-// let rec go (xs: string list) =
-//   match xs with
-//   | [] ->
-//     ""
-//   | x :: xs ->
-//     x + go xs
-// go xs
-
-/// Concatenates a list of strings with separators.
-let strJoin (sep: string) (xs: string list) =
-  match xs with
-  | [] -> ""
-
-  | x :: xs ->
-      x
-      + (xs
-         |> List.collect (fun x -> [ sep; x ])
-         |> strConcat)
-
-let strNeedsEscaping (str: string) =
-  let rec go i =
-    i < str.Length
-    && (charNeedsEscaping str.[i] || go (i + 1))
-
-  go 0
-
-let strEscape (str: string) =
-  let rec go acc i =
-    /// Finds the end index of the maximum non-escaping segment
-    /// that starts at `l`.
-    let rec raw i =
-      if i = str.Length || charNeedsEscaping str.[i]
-      then i
-      else raw (i + 1)
-
-    // Skip the non-escape segment that starts at `i`.
-    let i, acc =
-      let r = raw i
-      r, (str |> strSlice i r) :: acc
-
-    if i = str.Length then
-      acc
-    else
-      let t = str.[i] |> charEscape
-      go (t :: acc) (i + 1)
-
-  if str |> strNeedsEscaping |> not then str else go [] 0 |> List.rev |> strConcat
-
-// -----------------------------------------------
-// Position
-// -----------------------------------------------
-
-let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
-
-// -----------------------------------------------
-// Location
-// -----------------------------------------------
-
-/// No location information. Should be fixed.
-let noLoc = "<noLoc>", -1, -1
-
-let locToString ((docId, y, x): Loc) =
-  docId
-  + ":"
-  + string (y + 1)
-  + ":"
-  + string (x + 1)
-
-let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
-  let c = strCmp lDoc rDoc
-  if c <> 0 then c
-  else if ly <> ry then intCmp ly ry
-  else intCmp lx rx
-
-// -----------------------------------------------
-// DumpTree (for debugging)
-// -----------------------------------------------
-
-let dumpTreeNew text children = DumpTree(text, children, [])
-
-let dumpTreeNewLeaf text = DumpTree(text, [], [])
-
-let dumpTreeAttachNext next tree =
-  match tree with
-  | DumpTree (text, children, oldNext) ->
-      assert (children |> List.isEmpty |> not)
-      assert (oldNext |> List.isEmpty)
-      DumpTree(text, children, [ next ])
-
-let dumpTreeFromError (msg: string) (y, x) =
-  let y = string (y + 1)
-  let x = string (x + 1)
-  dumpTreeNew
-    "ERROR"
-    [ dumpTreeNewLeaf msg
-      dumpTreeNewLeaf ("(" + y + ":" + x + ")") ]
-
-let dumpTreeToString (node: DumpTree) =
-  let rec go eol node acc =
-    let rec goChildren eol children acc =
-      match children with
-      | [] -> acc
-
-      | child :: children ->
-          acc
-          |> cons eol
-          |> cons "- "
-          |> go (eol + "  ") child
-          |> goChildren eol children
-
-    let goNext eol next acc =
-      match next with
-      | [] -> acc
-
-      | [ next ] -> acc |> cons eol |> go eol next
-
-      | _ -> failwith "NEVER: DumpTree.next never empty"
-
-    match node with
-    | DumpTree (text, [], []) -> acc |> cons (strEscape text)
-
-    | DumpTree (text, [ DumpTree (childText, [], []) ], next) ->
-        acc
-        |> cons (strEscape text)
-        |> cons ": "
-        |> cons (strEscape childText)
-        |> goNext eol next
-
-    | DumpTree (text, children, next) ->
-        acc
-        |> cons (strEscape text)
-        |> cons ":"
-        |> goChildren eol children
-        |> goNext eol next
-
-  let eol = "\n"
-  [] |> go eol node |> List.rev |> strConcat
+[<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
+type TyUnifyLog =
+  | SelfRec
+  | Mismatch
+
+[<RequireQualifiedAccess>]
+[<NoEquality; NoComparison>]
+type Log =
+  | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
+  | TyBoundError of Trait
+  | RedundantFieldError of ty: Ident * field: Ident
+  | MissingFieldsError of ty: Ident * fields: Ident list
+  | Error of string
 
 // -----------------------------------------------
 // Name context
@@ -532,7 +431,8 @@ let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
 
 let moduleTySerialToInt (ModuleTySerial serial) = serial
 
-let moduleTySerialCmp l r = moduleTySerialToInt l - moduleTySerialToInt r
+let moduleTySerialCmp l r =
+  moduleTySerialToInt l - moduleTySerialToInt r
 
 let tyDefToName tyDef =
   match tyDef with
@@ -961,80 +861,6 @@ let spliceExpr firstExpr secondExpr =
     | _ -> hxSemi [ expr; secondExpr ] noLoc
 
   go firstExpr
-
-// -----------------------------------------------
-// Expressions (MIR)
-// -----------------------------------------------
-
-let mexprExtract expr =
-  match expr with
-  | MDefaultExpr (ty, loc) -> ty, loc
-  | MLitExpr (lit, loc) -> litToTy lit, loc
-  | MRefExpr (_, ty, loc) -> ty, loc
-  | MProcExpr (_, ty, loc) -> ty, loc
-  | MVariantExpr (_, _, ty, loc) -> ty, loc
-  | MTagExpr (_, loc) -> tyInt, loc
-  | MUnaryExpr (_, _, ty, loc) -> ty, loc
-  | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
-
-let mexprToTy expr = expr |> mexprExtract |> fst
-
-// -----------------------------------------------
-// Expression sugaring (MIR)
-// -----------------------------------------------
-
-let rec mxSugar expr =
-  let mxSugarUni op l ty loc =
-    match l with
-    // SUGAR: `not true` ==> `false`
-    // SUGAR: `not false` ==> `true`
-    | MLitExpr (BoolLit value, loc) -> MLitExpr(BoolLit(not value), loc)
-
-    // SUGAR: `not (not x)` ==> `x`
-    | MUnaryExpr (MNotUnary, l, _, _) -> l
-
-    // SUGAR: `not (x = y)` ==> `x <> y`
-    | MBinaryExpr (MEqualBinary, l, r, ty, loc) -> MBinaryExpr(MNotEqualBinary, l, r, ty, loc)
-
-    // SUGAR: `not (x <> y)` ==> `x = y`
-    | MBinaryExpr (MNotEqualBinary, l, r, ty, loc) -> MBinaryExpr(MEqualBinary, l, r, ty, loc)
-
-    // SUGAR: `not (x < y)` ==> `x >= y`
-    | MBinaryExpr (MLessBinary, l, r, ty, loc) -> MBinaryExpr(MGreaterEqualBinary, l, r, ty, loc)
-
-    // SUGAR: `not (x >= y)` ==> `x < y`
-    | MBinaryExpr (MGreaterEqualBinary, l, r, ty, loc) -> MBinaryExpr(MLessBinary, l, r, ty, loc)
-
-    | _ -> MUnaryExpr(op, l, ty, loc)
-
-  let mxSugarBin op l r ty loc =
-    match op, l, r with
-    // SUGAR: `x = false` ==> `not x`
-    | MEqualBinary, MLitExpr (BoolLit false, _), _ -> mxSugarUni MNotUnary r ty loc
-
-    | MEqualBinary, _, MLitExpr (BoolLit false, _) -> mxSugarUni MNotUnary l ty loc
-
-    // SUGAR: `x = true` ==> `x`
-    | MEqualBinary, MLitExpr (BoolLit true, _), _ -> r
-
-    | MEqualBinary, _, MLitExpr (BoolLit true, _) -> l
-
-    | _ -> MBinaryExpr(op, l, r, ty, loc)
-
-  match expr with
-  // SUGAR: `x: unit` ==> `()`
-  | MRefExpr (_, AppTy (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
-
-  | MUnaryExpr (op, l, ty, loc) ->
-      let l = mxSugar l
-      mxSugarUni op l ty loc
-
-  | MBinaryExpr (op, l, r, ty, loc) ->
-      let l = mxSugar l
-      let r = mxSugar r
-      mxSugarBin op l r ty loc
-
-  | _ -> expr
 
 // -----------------------------------------------
 // Print Formats

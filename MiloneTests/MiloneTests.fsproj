@@ -11,7 +11,6 @@
     <Compile Include="TreeMapTests.fs" />
     <Compile Include="HelpersTests.fs" />
     <Compile Include="SyntaxTokenizeTests.fs" />
-    <Compile Include="CIrGenTests.fs" />
     <Compile Include="CPrintingTests.fs" />
     <Watch Include="../tests/**/*.fs" />
   </ItemGroup>

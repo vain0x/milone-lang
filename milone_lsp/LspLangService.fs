@@ -1,6 +1,7 @@
 module MiloneLsp.LspLangService
 
-open MiloneLang.Types
+open MiloneLang.Util
+open MiloneLang.Syntax
 
 let private uriOfFilePath (filePath: string) =
   System.Text.StringBuilder().Append(filePath).Replace(":", "%3A").Replace("\\", "/").Insert(0, "file:///").ToString()
@@ -406,8 +407,8 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
     match MiloneLang.Bundling.bundleProgram bundleHost projectName with
     | Some it -> it
     | None ->
-        let expr = MiloneLang.Helpers.hxUnit ("", 0, 0)
-        let nameCtx = MiloneLang.Helpers.nameCtxEmpty ()
+        let expr = MiloneLang.Hir.hxUnit ("", 0, 0)
+        let nameCtx = MiloneLang.Hir.nameCtxEmpty ()
         expr, nameCtx, []
 
   // Name resolution.
@@ -423,8 +424,8 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
     let tyDisplayFn ty =
       let getTyName tySerial =
         tyCtx.Tys
-        |> MiloneLang.Helpers.mapTryFind tySerial
-        |> Option.map MiloneLang.Helpers.tyDefToName
+        |> mapTryFind tySerial
+        |> Option.map MiloneLang.Hir.tyDefToName
 
       ty |> MiloneLang.TySystem.tyDisplay getTyName
 
@@ -439,7 +440,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
         let pos = row, column
 
         let msg =
-          MiloneLang.Helpers.logToString tyDisplayFn loc log
+          MiloneLang.Hir.logToString tyDisplayFn loc log
 
         yield uri, msg, pos ]
 

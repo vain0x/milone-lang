@@ -2,18 +2,21 @@
 ///
 /// Converts MIR to CIR.
 ///
-/// CIR is a kind of abstract syntax tree of the C language.
+/// Milone-lang's primitives are converted to corresponding C's operator
+/// or function all defined in runtime.
+/// See `runtime/milone.h` for runtime codes.
 ///
-/// This stage does:
-///
-/// - Mapping operations to corresponding C features.
-/// - Translates types of Milone-lang to C-style type definitions.
-module rec MiloneLang.CIrGen
+/// Milone-lang's types are converted to
+/// C-style struct/union types.
+module rec MiloneLang.CirGen
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
+open MiloneLang.Syntax
 open MiloneLang.TySystem
+open MiloneLang.Hir
 open MiloneLang.Mir
+open MiloneLang.MirGen
+open MiloneLang.Cir
 
 let private valueSymbolCmp l r =
   let encode symbol =
@@ -374,17 +377,20 @@ let private genRecordTyDef ctx tySerial _fields =
 // -----------------------------------------------
 
 let private getUniqueVarName (ctx: CirCtx) varSerial =
-  match ctx.ValueUniqueNames |> mapTryFind (VarSymbol varSerial) with
+  match ctx.ValueUniqueNames
+        |> mapTryFind (VarSymbol varSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown var serial=%s" (objToString varSerial)
 
 let private getUniqueFunName (ctx: CirCtx) funSerial =
-  match ctx.ValueUniqueNames |> mapTryFind (FunSymbol funSerial) with
+  match ctx.ValueUniqueNames
+        |> mapTryFind (FunSymbol funSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown fun serial=%s" (objToString funSerial)
 
 let private getUniqueVariantName (ctx: CirCtx) variantSerial =
-  match ctx.ValueUniqueNames |> mapTryFind (VariantSymbol variantSerial) with
+  match ctx.ValueUniqueNames
+        |> mapTryFind (VariantSymbol variantSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown variant serial=%s" (objToString variantSerial)
 

@@ -1,11 +1,12 @@
 /// Front end of the compiler.
 module rec MiloneLang.Cli
 
-open MiloneLang.Types
-open MiloneLang.Helpers
-open MiloneLang.TySystem
+open MiloneLang.Util
+open MiloneLang.Syntax
 open MiloneLang.SyntaxTokenize
 open MiloneLang.SyntaxParse
+open MiloneLang.Hir
+open MiloneLang.TySystem
 open MiloneLang.AstToHir
 open MiloneLang.AutoBoxing
 open MiloneLang.Bundling
@@ -18,13 +19,15 @@ open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
 open MiloneLang.TailRecOptimizing
 open MiloneLang.Monomorphizing
-open MiloneLang.Mir
+open MiloneLang.Kir
 open MiloneLang.KirGen
 open MiloneLang.KirPropagate
 // open MiloneLang.KirToMir
 open MiloneLang.KirDump
-open MiloneLang.CIrGen
-open MiloneLang.CPrinting
+open MiloneLang.MirGen
+open MiloneLang.Cir
+open MiloneLang.CirGen
+open MiloneLang.CirDump
 
 let private helpText = """milone-lang compiler
 
@@ -265,9 +268,9 @@ let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
     mirCtx.Logs |> printLogs tyCtx
     "", false
   else
-    writeLog host v "CIrGen"
+    writeLog host v "CirGen"
     let cir, success = genCir (stmts, mirCtx)
-    let output = cprint cir
+    let output = cirDump cir
 
     writeLog host v "Finish"
     output, success
@@ -301,7 +304,7 @@ let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
 
 // writeLog host v "Cir generation"
 // let cir, success = gen (stmts, mirCtx)
-// let cOutput = cprint cir
+// let cOutput = cirDump cir
 
 // writeLog host v "Finish"
 // cOutput, success

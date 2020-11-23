@@ -4,8 +4,8 @@
 
 module rec MiloneLang.KirToMir
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
+open MiloneLang.Kir
 open MiloneLang.KirGen
 open MiloneLang.Mir
 

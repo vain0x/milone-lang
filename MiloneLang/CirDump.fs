@@ -1,9 +1,11 @@
+/// # CirDump
+///
 /// Converts CIR to C language source code.
-/// Includes runtime functions.
-module rec MiloneLang.CPrinting
+module rec MiloneLang.CirDump
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
+open MiloneLang.Syntax
+open MiloneLang.Cir
 
 let private eol = "\n"
 
@@ -505,7 +507,7 @@ let private cpHeader acc =
   let header = "#include \"milone.h\""
   acc |> cons header |> cons eol |> cons eol
 
-let cprint (decls: CDecl list): string =
+let cirDump (decls: CDecl list): string =
   []
   |> cpHeader
   |> cpDecls decls

@@ -11,10 +11,11 @@
 
 module rec MiloneLang.Typing
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
+open MiloneLang.Syntax
 open MiloneLang.TySystem
 open MiloneLang.NameRes
+open MiloneLang.Hir
 
 // -----------------------------------------------
 // Context

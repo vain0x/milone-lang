@@ -1,4 +1,4 @@
-/// ## Parse
+/// ## SyntaxParse
 ///
 /// Analyze a list of tokens of a source file
 /// to build an abstract syntax tree (AST)
@@ -66,8 +66,8 @@
 /// Note that the implementation doesn't verify the rule completely.
 module rec MiloneLang.SyntaxParse
 
-open MiloneLang.Types
-open MiloneLang.Helpers
+open MiloneLang.Util
+open MiloneLang.Syntax
 
 // -----------------------------------------------
 // Position
