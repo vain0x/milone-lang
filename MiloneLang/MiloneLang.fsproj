@@ -28,6 +28,7 @@
     <Compile Include="MirGen.fs" />
     <!-- <Compile Include="KirToMir.fs" /> -->
     <Compile Include="KirDump.fs" />
+    <Compile Include="Cir.fs" />
     <Compile Include="CirGen.fs" />
     <Compile Include="CirDump.fs" />
     <Compile Include="Cli.fs" />

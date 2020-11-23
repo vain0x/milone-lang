@@ -14,6 +14,7 @@ open MiloneLang.Types
 open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.MirGen
+open MiloneLang.Cir
 
 let private valueSymbolCmp l r =
   let encode symbol =

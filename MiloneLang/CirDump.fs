@@ -4,6 +4,7 @@ module rec MiloneLang.CirDump
 
 open MiloneLang.Types
 open MiloneLang.Helpers
+open MiloneLang.Cir
 
 let private eol = "\n"
 
