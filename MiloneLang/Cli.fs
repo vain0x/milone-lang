@@ -137,6 +137,9 @@ type CompileCtx =
   { ProjectDir: string
     ProjectName: string
 
+    /// project name -> project directory
+    Projects: AssocMap<string, string>
+
     Verbosity: Verbosity
     Host: CliHost }
 
@@ -144,8 +147,14 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
+  let projects =
+    mapEmpty strCmp
+    |> mapAdd "MiloneCore" (host.MiloneHome + "/libcore")
+    |> mapAdd projectName projectDir
+
   { ProjectDir = projectDir
     ProjectName = projectName
+    Projects = projects
     Verbosity = verbosity
     Host = host }
 
@@ -153,13 +162,6 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
   let host = ctx.Host
   let miloneHome = host.MiloneHome
   let readFile = host.FileReadAllText
-
-  let readCoreFile (moduleName: string) =
-    match readFile (miloneHome + "/libcore/" + moduleName + ".fs") with
-    | Some it -> it
-    | None ->
-        printfn "Missing file: MILONE_HOME='%s' module='%s'" miloneHome moduleName
-        failwithf "File not found"
 
   let readModuleFile (projectDir: string) (moduleName: string) =
     readFile (projectDir + "/" + moduleName + ".fs")
@@ -173,14 +175,12 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
 
   { FetchModule =
       fun projectName moduleName ->
-        if projectName = "MiloneCore" then
-          parseModule moduleName (readCoreFile moduleName)
-        else if projectName = ctx.ProjectName then
-          match readModuleFile ctx.ProjectDir moduleName with
-          | Some contents -> parseModule moduleName contents
-          | None -> None
-        else
-          None }
+        match ctx.Projects |> mapTryFind projectName with
+        | Some projectDir ->
+            match readModuleFile projectDir moduleName with
+            | Some contents -> parseModule moduleName contents
+            | None -> None
+        | None -> None }
 
 // -----------------------------------------------
 // Write output and logs
