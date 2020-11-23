@@ -202,6 +202,8 @@ let private desugarLet vis pat body next pos =
 
   | _ -> ALetVal(vis, pat, body, next, pos)
 
+let private tyUnresolved serial argTys = AppTy(UnresolvedTyCtor serial, argTys)
+
 let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
@@ -209,20 +211,18 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
       ErrorTy loc, nameCtx
 
   | AAppTy (name, argTys, _) ->
-      let tySerial, nameCtx = nameCtx |> nameCtxAdd name
-
+      let serial, nameCtx = nameCtx |> nameCtxAdd name
       let argTys, nameCtx = (argTys, nameCtx) |> stMap (athTy docId)
-
-      tyRef tySerial argTys, nameCtx
+      tyUnresolved serial argTys, nameCtx
 
   | AVarTy (name, _) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
-      tyRef tySerial [], nameCtx
+      tyUnresolved tySerial [], nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId
-      let tySerial, nameCtx = nameCtx |> nameCtxAdd suffix
-      tyRef tySerial [ lTy ], nameCtx
+      let serial, nameCtx = nameCtx |> nameCtxAdd suffix
+      tyUnresolved serial [ lTy ], nameCtx
 
   | ATupleTy (itemTys, _) ->
       let itemTys, nameCtx =
@@ -250,7 +250,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
   | AIdentPat (name, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd name
       let loc = toLoc docId pos
-      HRefPat(serial, noTy, loc), nameCtx
+      HRefPat(VarSerial serial, noTy, loc), nameCtx
 
   | AListPat ([], pos) ->
       let loc = toLoc docId pos
@@ -292,7 +292,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
       let pat, nameCtx = (pat, nameCtx) |> athPat docId
 
       let loc = toLoc docId pos
-      HAsPat(pat, serial, loc), nameCtx
+      HAsPat(pat, VarSerial serial, loc), nameCtx
 
   | AAnnoPat (pat, ty, pos) ->
       let pat, nameCtx = (pat, nameCtx) |> athPat docId
@@ -324,7 +324,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
       // NOTE: Work in a local function to reduce the size of stack frames of `athExpr`.
       let doArm () =
         let serial, nameCtx = nameCtx |> nameCtxAdd name
-        HRefExpr(serial, noTy, loc), nameCtx
+        HRefExpr(VarSerial serial, noTy, loc), nameCtx
 
       doArm ()
 
@@ -543,7 +543,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
             let body, nameCtx = (body, nameCtx) |> athExpr docId
             let next, nameCtx = (next, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HLetFunExpr(serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
+            HLetFunExpr(FunSerial serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
 
         | ALetVal (vis, pat, body, next, pos) ->
             let pat, nameCtx = (pat, nameCtx) |> athPat docId
@@ -580,7 +580,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
                 true, ty, nameCtx
             | None -> false, tyUnit, nameCtx
 
-          (name, serial, hasPayload, payloadTy), nameCtx
+          (name, VariantSerial serial, hasPayload, payloadTy), nameCtx
 
         let unionSerial, nameCtx = nameCtx |> nameCtxAdd name
         let variants, nameCtx = (variants, nameCtx) |> stMap athVariant
@@ -623,4 +623,4 @@ let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
       let serial, nameCtx = nameCtx |> nameCtxAdd moduleName
       let loc = toLoc docId pos
       let next = hxUnit loc
-      HModuleExpr(serial, body, next, loc), nameCtx
+      HModuleExpr(ModuleTySerial serial, body, next, loc), nameCtx

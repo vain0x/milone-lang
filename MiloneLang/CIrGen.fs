@@ -15,9 +15,18 @@ open MiloneLang.Helpers
 open MiloneLang.TySystem
 open MiloneLang.Mir
 
+let private valueSymbolCmp l r =
+  let encode symbol =
+    match symbol with
+    | VarSymbol (VarSerial serial) -> serial
+    | FunSymbol (FunSerial serial) -> serial
+    | VariantSymbol (VariantSerial serial) -> serial
+
+  intCmp (encode l) (encode r)
+
 let private ctVoidPtr = CPtrTy CVoidTy
 
-let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
+let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then ident + "_" else ident + "_" + string index
 
@@ -32,7 +41,9 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<int, _>) =
         let serials =
           acc |> mapTryFind ident |> Option.defaultValue []
 
-        let acc = acc |> mapAdd ident (serial :: serials)
+        let acc =
+          acc |> mapAdd ident ((serial, def) :: serials)
+
         go acc xs
 
   let serialsMap =
@@ -64,7 +75,9 @@ let private toTagEnumName (name: string) = name + "Tag"
 [<NoEquality; NoComparison>]
 type private CirCtx =
   { Vars: AssocMap<VarSerial, VarDef>
-    VarUniqueNames: AssocMap<VarSerial, Ident>
+    Funs: AssocMap<FunSerial, FunDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
+    ValueUniqueNames: AssocMap<ValueSymbol, Ident>
     TyEnv: AssocMap<Ty, CTyInstance * CTy>
     Tys: AssocMap<TySerial, TyDef>
     TyUniqueNames: AssocMap<Ty, Ident>
@@ -73,15 +86,43 @@ type private CirCtx =
     Logs: (Log * Loc) list }
 
 let private ofMirCtx (mirCtx: MirCtx): CirCtx =
-  let varNames =
-    mirCtx.Vars |> renameIdents varDefToName id intCmp
+  let valueUniqueNames =
+    let m = mapEmpty valueSymbolCmp
+
+    let m =
+      mirCtx.Vars
+      |> mapFold (fun acc varSerial varDef ->
+           acc
+           |> mapAdd (VarSymbol varSerial) (varDefToName varDef)) m
+
+    let m =
+      mirCtx.Funs
+      |> mapFold (fun acc funSerial (funDef: FunDef) -> acc |> mapAdd (FunSymbol funSerial) funDef.Name) m
+
+    let m =
+      mirCtx.Variants
+      |> mapFold (fun acc variantSerial (variantDef: VariantDef) ->
+           acc
+           |> mapAdd (VariantSymbol variantSerial) variantDef.Name) m
+
+    m |> renameIdents id fst valueSymbolCmp
 
   let tyNames =
-    mirCtx.Tys
-    |> renameIdents tyDefToName (fun serial -> tyRef serial []) tyCmp
+    let toKey (serial, tyDef) =
+      match tyDef with
+      | MetaTyDef _
+      | UniversalTyDef _ -> MetaTy(serial, noLoc)
+
+      | SynonymTyDef _ -> tySynonym serial []
+      | UnionTyDef _ -> tyUnion serial
+      | RecordTyDef _ -> tyRecord serial
+
+    mirCtx.Tys |> renameIdents tyDefToName toKey tyCmp
 
   { Vars = mirCtx.Vars
-    VarUniqueNames = varNames
+    Funs = mirCtx.Funs
+    Variants = mirCtx.Variants
+    ValueUniqueNames = valueUniqueNames
     TyEnv = mapEmpty tyCmp
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
@@ -239,7 +280,7 @@ let private genTupleTyDef (ctx: CirCtx) itemTys =
       selfTy, ctx
 
 let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
-  let unionTyRef = tyRef tySerial []
+  let unionTyRef = tyUnion tySerial
   match ctx.TyEnv |> mapTryFind unionTyRef with
   | Some (_, ty) -> ty, ctx
 
@@ -256,7 +297,7 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
       selfTy, ctx
 
 let private genUnionTyDef (ctx: CirCtx) tySerial variants =
-  let unionTyRef = tyRef tySerial []
+  let unionTyRef = tyUnion tySerial
   match ctx.TyEnv |> mapTryFind unionTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
 
@@ -270,13 +311,12 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       let variants =
         variants
         |> List.map (fun variantSerial ->
-             match ctx.Vars |> mapTryFind variantSerial with
-             | Some (VariantDef (name, _, hasPayload, payloadTy, _, _)) -> name, variantSerial, hasPayload, payloadTy
-             | _ -> failwith "Never")
+             let v = ctx.Variants |> mapFind variantSerial
+             v.Name, variantSerial, v.HasPayload, v.PayloadTy)
 
       let tags =
         variants
-        |> List.map (fun (_, serial, _, _) -> getUniqueVarName ctx serial)
+        |> List.map (fun (_, serial, _, _) -> getUniqueVariantName ctx serial)
 
       let variants, ctx =
         (variants, ctx)
@@ -286,7 +326,9 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
                //  (getUniqueVarName ctx serial, payloadTy)
                //  :: acc,
                //  ctx
-               (getUniqueVarName ctx serial, ctVoidPtr) :: acc, ctx
+               (getUniqueVariantName ctx serial, ctVoidPtr)
+               :: acc,
+               ctx
              else
                acc, ctx)
 
@@ -305,7 +347,7 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       selfTy, ctx
 
 let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
-  let recordTyRef = tyRef tySerial []
+  let recordTyRef = tyRecord tySerial
 
   match ctx.TyEnv |> mapTryFind recordTyRef with
   | Some (_, ty) -> ty, ctx
@@ -319,7 +361,7 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
       selfTy, ctx
 
 let private genRecordTyDef ctx tySerial _fields =
-  let recordTyRef = tyRef tySerial []
+  let recordTyRef = tyRecord tySerial
   let structName, ctx = getUniqueTyName ctx recordTyRef
   let selfTy = CStructTy structName
 
@@ -331,10 +373,20 @@ let private genRecordTyDef ctx tySerial _fields =
 // Naming
 // -----------------------------------------------
 
-let private getUniqueVarName (ctx: CirCtx) serial =
-  match ctx.VarUniqueNames |> mapTryFind serial with
+let private getUniqueVarName (ctx: CirCtx) varSerial =
+  match ctx.ValueUniqueNames |> mapTryFind (VarSymbol varSerial) with
   | Some name -> name
-  | None -> failwithf "Never: Unknown value-level identifier serial %d" serial
+  | None -> failwithf "Never: Unknown var serial=%s" (objToString varSerial)
+
+let private getUniqueFunName (ctx: CirCtx) funSerial =
+  match ctx.ValueUniqueNames |> mapTryFind (FunSymbol funSerial) with
+  | Some name -> name
+  | None -> failwithf "Never: Unknown fun serial=%s" (objToString funSerial)
+
+let private getUniqueVariantName (ctx: CirCtx) variantSerial =
+  match ctx.ValueUniqueNames |> mapTryFind (VariantSymbol variantSerial) with
+  | Some name -> name
+  | None -> failwithf "Never: Unknown variant serial=%s" (objToString variantSerial)
 
 let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
   let rec go ty (ctx: CirCtx) =
@@ -389,9 +441,12 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           tupleTy, ctx
 
-      | AppTy (RefTyCtor _, _)
       | AppTy (ListTyCtor, _)
       | AppTy (FunTyCtor, _)
+      | AppTy (SynonymTyCtor _, _)
+      | AppTy (UnionTyCtor _, _)
+      | AppTy (RecordTyCtor _, _)
+      | AppTy (UnresolvedTyCtor _, _)
       | ErrorTy _ ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
@@ -434,7 +489,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (TupleTyCtor, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
 
-  | AppTy (RefTyCtor serial, useTyArgs) ->
+  | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
@@ -442,11 +497,11 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
           cgTyIncomplete ctx ty
 
-      | Some (UnionTyDef _) -> genIncompleteUnionTyDecl ctx serial
+      | _ -> failwithf "NEVER: synonym type undefined?"
 
-      | Some (RecordTyDef _) -> genIncompleteRecordTyDecl ctx serial
+  | AppTy (UnionTyCtor serial, _) -> genIncompleteUnionTyDecl ctx serial
 
-      | _ -> CVoidTy, addError ctx "Unknown type reference" noLoc // FIXME: source location
+  | AppTy (RecordTyCtor serial, _) -> genIncompleteRecordTyDecl ctx serial
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -490,7 +545,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       genTupleTyDef ctx itemTys
 
-  | AppTy (RefTyCtor serial, useTyArgs) ->
+  | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
@@ -498,11 +553,19 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
           cgTyComplete ctx ty
 
+      | _ -> failwithf "NEVER: synonym type undefined?"
+
+  | AppTy (UnionTyCtor serial, _) ->
+      match ctx.Tys |> mapTryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
 
+      | _ -> failwithf "NEVER: union type undefined?"
+
+  | AppTy (RecordTyCtor serial, _) ->
+      match ctx.Tys |> mapTryFind serial with
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
-      | _ -> CVoidTy, addError ctx "Unknown type reference" noLoc // FIXME: source location
+      | _ -> failwithf "NEVER: record type undefined?"
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -534,7 +597,7 @@ let private genLit lit =
   | BoolLit true -> CIntExpr 1
 
 let private genTag ctx variantSerial =
-  CRefExpr(getUniqueVarName ctx variantSerial)
+  CRefExpr(getUniqueVariantName ctx variantSerial)
 
 let private cgConst ctx mConst =
   match mConst with
@@ -548,21 +611,30 @@ let private genDefault ctx ty =
   | AppTy (BoolTyCtor, _)
   | AppTy (IntTyCtor, _)
   | AppTy (UIntTyCtor, _) -> CIntExpr 0, ctx
+
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (CharTyCtor, _)
   | AppTy (ObjTyCtor, _)
   | AppTy (ListTyCtor, _) -> CRefExpr "NULL", ctx
+
   | AppTy (StrTyCtor, _)
   | AppTy (FunTyCtor, _)
   | AppTy (TupleTyCtor, _)
-  | AppTy (RefTyCtor _, _) ->
+  | AppTy (SynonymTyCtor _, _)
+  | AppTy (UnionTyCtor _, _)
+  | AppTy (RecordTyCtor _, _) ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
-  | ErrorTy _ -> failwithf "Never %A" ty
+
+  | ErrorTy _
+  | AppTy (UnresolvedTyCtor _, _) -> failwithf "Never %A" ty
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
-  let tag = CRefExpr(getUniqueVarName ctx serial)
+
+  let tag =
+    CRefExpr(getUniqueVariantName ctx serial)
+
   CInitExpr([ "tag", tag ], ty), ctx
 
 /// Converts a binary expression to a runtime function call.
@@ -593,7 +665,7 @@ let private genUnaryExpr ctx op arg ty _ =
 
   | MGetVariantUnary serial ->
       let _, ctx = cgTyComplete ctx ty
-      CNavExpr(arg, getUniqueVarName ctx serial), ctx
+      CNavExpr(arg, getUniqueVariantName ctx serial), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
@@ -629,7 +701,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MDefaultExpr (ty, _) -> genDefault ctx ty
 
   | MRefExpr (serial, _, _) -> CRefExpr(getUniqueVarName ctx serial), ctx
-  | MProcExpr (serial, _, _) -> CRefExpr(getUniqueVarName ctx serial), ctx
+  | MProcExpr (serial, _, _) -> CRefExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
   | MTagExpr (variantSerial, _) -> genTag ctx variantSerial, ctx
@@ -791,7 +863,7 @@ let private cgClosureInit ctx serial funSerial envSerial ty =
   let ty, ctx = cgTyComplete ctx ty
 
   let fields =
-    [ "fun", CRefExpr(getUniqueVarName ctx funSerial)
+    [ "fun", CRefExpr(getUniqueFunName ctx funSerial)
       "env", CRefExpr(getUniqueVarName ctx envSerial) ]
 
   let initExpr = CInitExpr(fields, ty)
@@ -868,12 +940,12 @@ let private cgVariantInit ctx varSerial variantSerial payload unionTy =
   let storageModifier = findStorageModifier ctx varSerial
 
   let unionTy, ctx = cgTyComplete ctx unionTy
-  let variantName = getUniqueVarName ctx variantSerial
+  let variantName = getUniqueVariantName ctx variantSerial
 
   let payloadExpr, ctx = cgExpr ctx payload
 
   let fields =
-    [ "tag", CRefExpr(getUniqueVarName ctx variantSerial)
+    [ "tag", CRefExpr(getUniqueVariantName ctx variantSerial)
       variantName, payloadExpr ]
 
   let init = CInitExpr(fields, unionTy)
@@ -1007,7 +1079,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
   | MProcDecl (callee, isMainFun, args, body, resultTy, _) :: decls ->
       let funName, args =
-        if isMainFun then "main", [] else getUniqueVarName ctx callee, args
+        if isMainFun then "main", [] else getUniqueFunName ctx callee, args
 
       let rec go acc ctx args =
         match args with

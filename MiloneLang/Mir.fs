@@ -20,6 +20,8 @@ open MiloneLang.Typing
 type MirCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
     LabelSerial: Serial
 
@@ -35,6 +37,8 @@ type MirCtx =
 let private ofTyCtx (tyCtx: TyCtx): MirCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
+    Funs = tyCtx.Funs
+    Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     LabelSerial = 0
     CurrentFun = None
@@ -43,10 +47,10 @@ let private ofTyCtx (tyCtx: TyCtx): MirCtx =
     Decls = []
     Logs = tyCtx.Logs }
 
-let private isNewtypeVariant (ctx: MirCtx) varSerial =
-  match ctx.Vars |> mapFind varSerial with
-  | VariantDef (_, tySerial, _, _, _, _) ->
-      match ctx.Tys |> mapFind tySerial with
+let private isNewtypeVariant (ctx: MirCtx) variantSerial =
+  match ctx.Variants |> mapTryFind variantSerial with
+  | Some variantDef ->
+      match ctx.Tys |> mapFind variantDef.UnionTySerial with
       | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
 
       | _ -> failwith "Expected union serial"
@@ -89,17 +93,17 @@ let private takeDecls (ctx: MirCtx) =
   List.rev ctx.Decls, { ctx with Decls = [] }
 
 let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
-  let serial = (ctx.Serial) + 1
+  let varSerial = VarSerial(ctx.Serial + 1)
 
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> mapAdd serial (VarDef(name, AutoSM, ty, loc)) }
+          |> mapAdd varSerial (VarDef(name, AutoSM, ty, loc)) }
 
-  let refExpr = MRefExpr(serial, ty, loc)
-  refExpr, serial, ctx
+  let refExpr = MRefExpr(varSerial, ty, loc)
+  refExpr, varSerial, ctx
 
 let private letFreshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let refExpr, serial, ctx = freshVar ctx name ty loc
@@ -271,7 +275,7 @@ let private mirifyPatRef ctx _endLabel serial ty loc expr =
 let private mirifyPatVariant ctx endLabel serial ty loc expr =
   // Compare tags.
   let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
-  let rTagExpr = MRefExpr(serial, tyInt, loc)
+  let rTagExpr = MTagExpr(serial, loc)
 
   let eqExpr =
     MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
@@ -295,7 +299,7 @@ let private mirifyPatCall (ctx: MirCtx) itself endLabel serial args _ty loc expr
 
         // Compare tags.
         let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
-        let rTagExpr = MRefExpr(serial, tyInt, loc)
+        let rTagExpr = MTagExpr(serial, loc)
 
         let eqExpr =
           MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
@@ -380,8 +384,8 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * M
 // -----------------------------------------------
 
 let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
-  match ctx.Vars |> mapTryFind serial with
-  | Some (VariantDef (_, tySerial, _, _, _, _)) -> MVariantExpr(tySerial, serial, ty, loc), ctx
+  match ctx.Variants |> mapTryFind serial with
+  | Some variantDef -> MVariantExpr(variantDef.UnionTySerial, serial, ty, loc), ctx
   | _ -> failwithf "NEVER: Illegal HVariantExpr. %A" itself
 
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
@@ -476,7 +480,7 @@ let private matchExprCanCompileToSwitch cond arms =
     match ty with
     | AppTy (IntTyCtor, [])
     | AppTy (CharTyCtor, [])
-    | AppTy (RefTyCtor _, _) -> true
+    | AppTy (UnionTyCtor _, _) -> true
 
     | _ -> false
 
@@ -540,7 +544,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
     let cond, ctx = mirifyExpr ctx cond
 
     match condTy with
-    | AppTy (RefTyCtor _, _) -> MUnaryExpr(MTagUnary, cond, tyInt, condLoc), ctx
+    | AppTy (UnionTyCtor _, _) -> MUnaryExpr(MTagUnary, cond, tyInt, condLoc), ctx
     | _ -> cond, ctx
 
   let exhaust, clauses, blocks, ctx =

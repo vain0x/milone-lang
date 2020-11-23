@@ -8,6 +8,11 @@ open MiloneLang.Types
 open MiloneLang.TySystem
 open MiloneLang.Typing
 
+let private tyIsRecord ty =
+  match ty with
+  | AppTy (RecordTyCtor _, _) -> true
+  | _ -> false
+
 let private hxBox itemExpr itemTy loc =
   hxApp (HPrimExpr(HPrim.Box, tyFun itemTy tyObj, loc)) itemExpr tyObj loc
 
@@ -21,19 +26,21 @@ let private hxUnbox boxExpr itemTy loc =
 [<NoEquality; NoComparison>]
 type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef> }
 
-let private ofTyCtx (tyCtx: TyCtx): AbCtx = { Vars = tyCtx.Vars; Tys = tyCtx.Tys }
+let private ofTyCtx (tyCtx: TyCtx): AbCtx =
+  { Vars = tyCtx.Vars
+    Funs = tyCtx.Funs
+    Variants = tyCtx.Variants
+    Tys = tyCtx.Tys }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
   { tyCtx with
       Vars = ctx.Vars
+      Variants = ctx.Variants
       Tys = ctx.Tys }
-
-let private isVariantFun (ctx: AbCtx) varSerial =
-  match ctx.Vars |> mapTryFind varSerial with
-  | Some (VariantDef (_, _, hasPayload, _, _, _)) -> hasPayload
-  | _ -> false
 
 /// ### Boxing of Payloads
 ///
@@ -98,18 +105,7 @@ let private postProcessVariantFunAppExpr ctx infOp items =
 ///   record: obj
 /// ```
 
-let private isRecordTySerial (ctx: AbCtx) tySerial =
-  match ctx.Tys |> mapTryFind tySerial with
-  | Some (RecordTyDef _) -> true
-  | _ -> false
-
-let private isRecordTy ctx ty =
-  match ty with
-  | AppTy (RefTyCtor tySerial, _) -> tySerial |> isRecordTySerial ctx
-  | _ -> false
-
-let private eraseRecordTy ctx tySerial =
-  if tySerial |> isRecordTySerial ctx then Some tyObj else None
+let private eraseRecordTy () = tyObj
 
 let private postProcessRecordExpr baseOpt fields recordTy loc =
   let baseOpt =
@@ -132,10 +128,7 @@ let private postProcessFieldExpr recordExpr recordTy fieldName fieldTy loc =
 
 let private abTy ctx ty =
   match ty with
-  | AppTy (RefTyCtor tySerial, []) ->
-      match eraseRecordTy ctx tySerial with
-      | Some ty -> ty
-      | None -> ty
+  | AppTy (RecordTyCtor _, _) -> eraseRecordTy ()
 
   | AppTy (tyCtor, tyArgs) ->
       let tyArgs = tyArgs |> List.map (abTy ctx)
@@ -192,7 +185,7 @@ let private abExpr ctx expr =
   match expr with
   | HRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =
-        assert (ty |> isRecordTy ctx)
+        assert (tyIsRecord ty)
 
         let baseOpt = baseOpt |> Option.map (abExpr ctx)
 
@@ -209,7 +202,7 @@ let private abExpr ctx expr =
   | HNavExpr (l, r, ty, loc) ->
       let doArm () =
         let recordTy = l |> exprToTy
-        assert (recordTy |> isRecordTy ctx)
+        assert (tyIsRecord recordTy)
 
         let l = l |> abExpr ctx
         let ty = ty |> abTy ctx
@@ -285,16 +278,22 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
          match varDef with
          | VarDef (name, sm, ty, loc) ->
              let ty = ty |> abTy ctx
-             VarDef(name, sm, ty, loc)
+             VarDef(name, sm, ty, loc))
 
-         | FunDef (name, arity, TyScheme (tyArgs, ty), loc) ->
-             let ty = ty |> abTy ctx
-             FunDef(name, arity, TyScheme(tyArgs, ty), loc)
+  let funs =
+    ctx.Funs
+    |> mapMap (fun _ (funDef: FunDef) ->
+         let (TyScheme (tyVars, ty)) = funDef.Ty
+         let ty = ty |> abTy ctx
+         { funDef with
+             Ty = TyScheme(tyVars, ty) })
 
-         | VariantDef (name, tySerial, hasPayload, _payloadTy, variantTy, loc) ->
-             let payloadTy = tyObj
-             let variantTy = variantTy |> abTy ctx
-             VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc))
+  let variants =
+    ctx.Variants
+    |> mapMap (fun _ (variantDef: VariantDef) ->
+         { variantDef with
+             PayloadTy = tyObj
+             VariantTy = variantDef.VariantTy |> abTy ctx })
 
   let tys =
     ctx.Tys
@@ -315,7 +314,12 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
          | _ -> tyDef)
 
-  let ctx = { ctx with Vars = vars; Tys = tys }
+  let ctx =
+    { ctx with
+        Vars = vars
+        Funs = funs
+        Variants = variants
+        Tys = tys }
 
   let expr = expr |> abExpr ctx
 

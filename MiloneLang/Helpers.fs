@@ -520,30 +520,54 @@ let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
 let tyUnit = tyTuple []
 
-let tyRef serial tys = AppTy(RefTyCtor serial, tys)
+let tySynonym tySerial tyArgs = AppTy(SynonymTyCtor tySerial, tyArgs)
+
+let tyUnion tySerial = AppTy(UnionTyCtor tySerial, [])
+
+let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
 
 // -----------------------------------------------
 // Type definitions (HIR)
 // -----------------------------------------------
 
+let moduleTySerialToInt (ModuleTySerial serial) = serial
+
+let moduleTySerialCmp l r = moduleTySerialToInt l - moduleTySerialToInt r
+
 let tyDefToName tyDef =
   match tyDef with
   | MetaTyDef (name, _, _) -> name
-  | UniversalTyDef (name, _, _) -> name
+  | UniversalTyDef (name, _) -> name
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _) -> name
   | RecordTyDef (name, _, _) -> name
-  | ModuleTyDef (name, _) -> name
 
 // -----------------------------------------------
 // Variable definitions (HIR)
 // -----------------------------------------------
 
+let varSerialToInt (VarSerial serial) = serial
+
+let varSerialCmp l r =
+  let (VarSerial l) = l
+  let (VarSerial r) = r
+  intCmp l r
+
+let funSerialToInt (FunSerial serial) = serial
+
+let funSerialCmp l r =
+  let (FunSerial l) = l
+  let (FunSerial r) = r
+  intCmp l r
+
+let variantSerialCmp l r =
+  let (VariantSerial l) = l
+  let (VariantSerial r) = r
+  intCmp l r
+
 let varDefToName varDef =
   match varDef with
   | VarDef (name, _, _, _) -> name
-  | FunDef (name, _, _, _) -> name
-  | VariantDef (name, _, _, _, _, _) -> name
 
 // -----------------------------------------------
 // Literals

@@ -399,14 +399,17 @@ type Loc = DocId * RowIndex * ColumnIndex
 /// Serial number of types.
 type TySerial = Serial
 
-/// Serial number of nominal values: variables, functions, or variants.
-type VarSerial = Serial
+/// Serial number of variables.
+[<Struct; NoEquality; NoComparison>]
+type VarSerial = VarSerial of Serial
 
-/// Serial number of functions. This is essentially a "subtype" of VarSerial.
-type FunSerial = Serial
+/// Serial number of functions.
+[<Struct; NoEquality; NoComparison>]
+type FunSerial = FunSerial of Serial
 
-/// Serial number of variants. This is essentially as "subtype" of VarSerial.
-type VariantSerial = Serial
+/// Serial number of variants.
+[<Struct; NoEquality; NoComparison>]
+type VariantSerial = VariantSerial of Serial
 
 /// Number of parameters.
 type Arity = int
@@ -451,8 +454,13 @@ type TyCtor =
   /// Ty args must be `[t]`.
   | ListTyCtor
 
-  /// Nominal type. Union or record.
-  | RefTyCtor of TySerial
+  // Nominal types.
+  | SynonymTyCtor of synonymTy: TySerial
+  | UnionTyCtor of unionTy: TySerial
+  | RecordTyCtor of recordTy: TySerial
+
+  /// Unresolved type. Generated in AstToHir, resolved in NameRes.
+  | UnresolvedTyCtor of Serial
 
 /// Type of expressions.
 [<Struct>]
@@ -508,7 +516,7 @@ type TyDecl =
 
   /// Union type.
   /// Variants: (ident, serial, has-payload, payload type).
-  | UnionTyDecl of Ident * variants: (Ident * VarSerial * bool * Ty) list * Loc
+  | UnionTyDecl of Ident * variants: (Ident * VariantSerial * bool * Ty) list * Loc
 
   | RecordTyDecl of Ident * fields: (Ident * Ty * Loc) list * Loc
 
@@ -518,7 +526,7 @@ type TyDef =
   /// Bound type variable.
   | MetaTyDef of Ident * Ty * Loc
 
-  | UniversalTyDef of Ident * TySerial * Loc
+  | UniversalTyDef of Ident * Loc
 
   | SynonymTyDef of Ident * TySerial list * Ty * Loc
 
@@ -526,15 +534,47 @@ type TyDef =
 
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
 
-  //// Module is a type so that it can be used as namespace.
-  | ModuleTyDef of Ident * Loc
+[<Struct; NoEquality; NoComparison>]
+type ModuleTySerial = ModuleTySerial of Serial
+
+//// Module is a type so that it can be used as namespace.
+[<NoEquality; NoComparison>]
+type ModuleTyDef = { Name: Ident; Loc: Loc }
 
 /// Definition of named value in high-level IR.
 [<NoEquality; NoComparison>]
-type VarDef =
-  | VarDef of Ident * StorageModifier * Ty * Loc
-  | FunDef of Ident * Arity * TyScheme * Loc
-  | VariantDef of Ident * TySerial * hasPayload: bool * payloadTy: Ty * variantTy: Ty * Loc
+type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
+
+[<NoEquality; NoComparison>]
+type FunDef =
+  { Name: Ident
+    Arity: Arity
+    Ty: TyScheme
+    Loc: Loc }
+
+[<NoEquality; NoComparison>]
+type VariantDef =
+  { Name: Ident
+    UnionTySerial: TySerial
+    HasPayload: bool
+    PayloadTy: Ty
+    VariantTy: Ty
+    Loc: Loc }
+
+[<Struct; NoEquality; NoComparison>]
+type ValueSymbol =
+  | VarSymbol of varSerial: VarSerial
+  | FunSymbol of funSerial: FunSerial
+  | VariantSymbol of variantSerial: VariantSerial
+
+[<Struct; NoEquality; NoComparison>]
+type TySymbol =
+  | MetaTySymbol of tySerial: TySerial
+  | UnivTySymbol of univTySerial: TySerial
+  | SynonymTySymbol of synonymTySerial: TySerial
+  | UnionTySymbol of unionTySerial: TySerial
+  | RecordTySymbol of recordTySerial: TySerial
+  | ModuleTySymbol of moduleTySerial: ModuleTySerial
 
 /// Pattern in high-level IR.
 [<NoEquality; NoComparison>]
@@ -681,7 +721,7 @@ type HExpr =
   /// Type declaration.
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
-  | HModuleExpr of Serial * body: HExpr * next: HExpr * Loc
+  | HModuleExpr of ModuleTySerial * body: HExpr * next: HExpr * Loc
   | HErrorExpr of string * Loc
 
 [<RequireQualifiedAccess>]
@@ -696,7 +736,7 @@ type MonoMode =
 
 // KIR is continuation passing style (CPS) intermediate representation.
 
-type JointSerial = Serial
+type JointSerial = FunSerial
 
 /// Primitive in KIR.
 ///
@@ -828,7 +868,8 @@ type KTerm =
   /// Tag of variant. An integer ID of the variant in union.
   | KTagTerm of VariantSerial * Loc
 
-  | KLabelTerm of VarSerial * Ty * Loc
+  | KLabelTerm of FunSerial * Ty * Loc
+
   | KNilTerm of itemTy: Ty * Loc
   | KNoneTerm of itemTy: Ty * Loc
   | KUnitTerm of Loc
@@ -840,7 +881,7 @@ type KNode =
   | KJumpNode of JointSerial * args: KTerm list * Loc
 
   /// Return from the current fun.
-  | KReturnNode of VarSerial * args: KTerm list * Loc
+  | KReturnNode of FunSerial * args: KTerm list * Loc
 
   /// Switch to joint based on the value of `cond`.
   // | KSwitchNode of cond: KTerm * arms: (KTerm * KNode) list * Loc
@@ -872,7 +913,7 @@ type KJointBinding = KJointBinding of jointSerial: JointSerial * args: VarSerial
 
 /// Definition of a fun.
 [<NoEquality; NoComparison>]
-type KFunBinding = KFunBinding of funSerial: VarSerial * args: VarSerial list * body: KNode * Loc
+type KFunBinding = KFunBinding of funSerial: FunSerial * args: VarSerial list * body: KNode * Loc
 
 /// Root node of KIR.
 [<NoEquality; NoComparison>]

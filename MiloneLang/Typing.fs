@@ -30,6 +30,8 @@ type TyCtx =
 
     /// Variable serial to variable definition.
     Vars: AssocMap<VarSerial, VarDef>
+    Funs: AssocMap<FunSerial, FunDef>
+    Variants: AssocMap<VariantSerial, VariantDef>
 
     /// Type serial to type definition.
     Tys: AssocMap<TySerial, TyDef>
@@ -57,7 +59,7 @@ let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
 let private freshVar (ctx: TyCtx) hint ty loc =
-  let varSerial = ctx.Serial + 1
+  let varSerial = VarSerial(ctx.Serial + 1)
 
   let ctx =
     { ctx with
@@ -166,8 +168,6 @@ let private unifyVarTy varSerial tyOpt loc ctx =
   let varTy, ctx =
     match findVar ctx varSerial with
     | VarDef (_, _, ty, _) -> ty, ctx
-    | VariantDef (_, _, _, _, ty, _) -> ty, ctx
-    | FunDef (_, _, tyScheme, _) -> instantiateTyScheme ctx tyScheme loc
 
   match tyOpt with
   | Some ty ->
@@ -230,8 +230,10 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
   polyTy, traits, ctx
 
 let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
-  match ctx.Vars |> mapFind funSerial with
-  | FunDef (funName, arity, TyScheme ([], funTy), loc) ->
+  let funDef = ctx.Funs |> mapFind funSerial
+
+  match funDef.Ty with
+  | TyScheme ([], funTy) ->
       let isOwned tySerial =
         let depth = ctx.TyDepths |> mapFind tySerial
 
@@ -240,11 +242,11 @@ let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
       let funTy = substTy ctx funTy
       let funTyScheme = tyGeneralize isOwned funTy
 
-      let varDef = FunDef(funName, arity, funTyScheme, loc)
-
       let ctx =
         { ctx with
-            Vars = ctx.Vars |> mapAdd funSerial varDef }
+            Funs =
+              ctx.Funs
+              |> mapAdd funSerial { funDef with Ty = funTyScheme } }
 
       // Mark generalized meta tys (universally quantified vars),
       // by increasing their depth to infinite (10^9).
@@ -256,8 +258,8 @@ let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
               |> List.fold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx.TyDepths) }
 
       ctx
-  | FunDef _ -> failwith "Can't generalize already-generalized function"
-  | _ -> failwith "Expected function"
+
+  | _ -> failwith "Can't generalize already-generalized functions"
 
 // -----------------------------------------------
 // Emission helpers
@@ -317,7 +319,8 @@ let private inferRefPat (ctx: TyCtx) varSerial loc =
   HRefPat(varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
-  let ty, ctx = ctx |> unifyVarTy variantSerial None loc
+  let ty =
+    (ctx.Variants |> mapFind variantSerial).VariantTy
 
   HVariantPat(variantSerial, ty, loc), ty, ctx
 
@@ -409,13 +412,16 @@ let private inferRefExpr (ctx: TyCtx) varSerial loc =
 
   HRefExpr(varSerial, ty, loc), ty, ctx
 
-let private inferFunExpr (ctx: TyCtx) varSerial loc =
-  let ty, ctx = ctx |> unifyVarTy varSerial None loc
+let private inferFunExpr (ctx: TyCtx) funSerial loc =
+  let ty, ctx =
+    let funDef = ctx.Funs |> mapFind funSerial
+    instantiateTyScheme ctx funDef.Ty loc
 
-  HFunExpr(varSerial, ty, loc), ty, ctx
+  HFunExpr(funSerial, ty, loc), ty, ctx
 
 let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
-  let ty, ctx = ctx |> unifyVarTy variantSerial None loc
+  let ty =
+    (ctx.Variants |> mapFind variantSerial).VariantTy
 
   HVariantExpr(variantSerial, ty, loc), ty, ctx
 
@@ -443,7 +449,9 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
       match tyOpt |> Option.map (substTy ctx) with
-      | Some ((AppTy (RefTyCtor tySerial, [])) as recordTy) ->
+      | Some ((AppTy (RecordTyCtor tySerial, tyArgs)) as recordTy) ->
+          assert (List.isEmpty tyArgs)
+
           match ctx |> findTy tySerial with
           | RecordTyDef (name, fieldDefs, _) -> Some(recordTy, name, fieldDefs)
           | _ -> None
@@ -567,7 +575,9 @@ let private inferNavExpr ctx l (r: Ident) loc =
 
       hxApp funExpr l tyInt loc, tyInt, ctx
 
-  | AppTy (RefTyCtor tySerial, []), _ ->
+  | AppTy (RecordTyCtor tySerial, tyArgs), _ ->
+      assert (List.isEmpty tyArgs)
+
       let fieldTyOpt =
         match ctx |> findTy tySerial with
         | RecordTyDef (_, fieldDefs, _) ->
@@ -689,8 +699,8 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis isMainFun argPats 
         freshMetaTy "fun" loc ctx
 
     let ctx =
-      match ctx.Vars |> mapFind callee with
-      | FunDef (_, _, TyScheme ([], oldTy), _) -> unifyTy ctx loc oldTy calleeTy
+      match (ctx.Funs |> mapFind callee).Ty with
+      | TyScheme ([], oldTy) -> unifyTy ctx loc oldTy calleeTy
       | _ -> failwith "NEVER: It must be a pre-generalized function"
 
     calleeTy, ctx
@@ -776,6 +786,8 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx: TyCtx =
     { Serial = scopeCtx.Serial
       Vars = scopeCtx.Vars
+      Funs = scopeCtx.Funs
+      Variants = scopeCtx.Variants
       Tys = scopeCtx.Tys
       TyDepths = scopeCtx.TyDepths
       LetDepth = 0
@@ -793,7 +805,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       |> mapFold (fun (acc, ctx: TyCtx) varSerial varDef ->
            let ctx =
              { ctx with
-                 LetDepth = scopeCtx.VarDepths |> mapFind varSerial }
+                 LetDepth =
+                   scopeCtx.VarDepths
+                   |> mapFind (varSerialToInt varSerial) }
 
            let varDef, ctx =
              match varDef with
@@ -801,25 +815,43 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                  let ty, _, ctx = freshMetaTy name loc ctx
                  VarDef(name, storageModifier, ty, loc), ctx
 
-             | FunDef (name, arity, _, loc) ->
-                 let ty, _, ctx = freshMetaTy name loc ctx
-                 FunDef(name, arity, TyScheme([], ty), loc), ctx
-
-             | VariantDef (name, tySerial, hasPayload, payloadTy, _, loc) ->
-                 // Pre-compute the type of variant.
-                 let variantTy =
-                   let unionTy = tyRef tySerial []
-                   if hasPayload then tyFun payloadTy unionTy else unionTy
-
-                 VariantDef(name, tySerial, hasPayload, payloadTy, variantTy, loc), ctx
-
            let acc = acc |> mapAdd varSerial varDef
 
-           acc, ctx) (mapEmpty intCmp, ctx)
+           acc, ctx) (mapEmpty varSerialCmp, ctx)
 
     { ctx with Vars = vars }
 
-  let ctx = { ctx with LetDepth = 0 }
+  let funs, ctx =
+    ctx.Funs
+    |> mapFold (fun (acc, ctx: TyCtx) funSerial (funDef: FunDef) ->
+         let ctx =
+           { ctx with
+               LetDepth =
+                 scopeCtx.VarDepths
+                 |> mapFind (funSerialToInt funSerial) }
+
+         let ty, _, ctx = freshMetaTy funDef.Name funDef.Loc ctx
+         acc
+         |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
+         ctx) (mapEmpty funSerialCmp, ctx)
+
+  let ctx = { ctx with Funs = funs }
+
+  let ctx =
+    let variants =
+      ctx.Variants
+      |> mapMap (fun _ (variantDef: VariantDef) ->
+           // Pre-compute the type of variant.
+           let variantTy =
+             let unionTy = tyUnion variantDef.UnionTySerial
+             if variantDef.HasPayload then tyFun variantDef.PayloadTy unionTy else unionTy
+
+           { variantDef with
+               VariantTy = variantTy })
+
+    { ctx with Variants = variants }
+
+  let ctx = { ctx with Funs = funs; LetDepth = 0 }
 
   let expr, ctx =
     let expr, topLevelTy, ctx = inferExpr ctx None expr
@@ -846,18 +878,27 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
            match varDef with
            | VarDef (name, storageModifier, ty, loc) ->
                let ty = substOrDegenerate ty
-               VarDef(name, storageModifier, ty, loc)
+               VarDef(name, storageModifier, ty, loc))
 
-           | FunDef (name, arity, TyScheme (args, ty), loc) ->
-               let ty = substOrDegenerate ty
-               FunDef(name, arity, TyScheme(args, ty), loc)
+    let funs =
+      ctx.Funs
+      |> mapMap (fun _ (funDef: FunDef) ->
+           let (TyScheme (tyVars, ty)) = funDef.Ty
+           let ty = substOrDegenerate ty
+           { funDef with
+               Ty = TyScheme(tyVars, ty) })
 
-           | VariantDef (name, tySerial, hasPayload, payloadTy, ty, loc) ->
-               let payloadTy = substOrDegenerate payloadTy
-               let ty = substOrDegenerate ty
-               VariantDef(name, tySerial, hasPayload, payloadTy, ty, loc))
+    let variants =
+      ctx.Variants
+      |> mapMap (fun _ (variantDef: VariantDef) ->
+           { variantDef with
+               PayloadTy = substOrDegenerate variantDef.PayloadTy
+               VariantTy = substOrDegenerate variantDef.VariantTy })
 
-    { ctx with Vars = vars }
+    { ctx with
+        Vars = vars
+        Funs = funs
+        Variants = variants }
 
   let ctx =
     let tys =

@@ -10,8 +10,8 @@ type private KirPropagateCtx =
     VarUses: AssocMap<VarSerial, int> }
 
 let private ctxEmpty (): KirPropagateCtx =
-  { VarDefs = mapEmpty intCmp
-    VarUses = mapEmpty intCmp }
+  { VarDefs = mapEmpty varSerialCmp
+    VarUses = mapEmpty varSerialCmp }
 
 let private findKVarDef varSerial (ctx: KirPropagateCtx) = ctx.VarDefs |> mapTryFind varSerial
 
@@ -26,12 +26,12 @@ let private kpUseTerm term (ctx: KirPropagateCtx) =
   | KVarTerm (varSerial, _, loc) ->
       match ctx |> findKVarDef varSerial with
       | Some (KLitVarDef lit) ->
-          printfn "// kp: [TRACE] const prop #%d => %s" varSerial (objToString lit)
+          printfn "// kp: [TRACE] const prop #%s => %s" (objToString varSerial) (objToString lit)
 
           KLitTerm(lit, loc), ctx
 
       | Some (KSelectVarDef (term, KSelfPath)) ->
-          printfn "// kp: [TRACE] remove mov #%d => %s" varSerial (objToString term)
+          printfn "// kp: [TRACE] remove mov #%s => %s" (objToString varSerial) (objToString term)
 
           term, ctx
 
@@ -66,7 +66,7 @@ let private kpNode (node: KNode) ctx: KNode * KirPropagateCtx =
       let ctx =
         match prim, args, results with
         | KAddPrim, [ KLitTerm (IntLit l, _); KLitTerm (IntLit r, _) ], [ result ] ->
-            printfn "// kp: [TRACE] lit #%d := %d + %d" result l r
+            printfn "// kp: [TRACE] lit #%s := %d + %d" (objToString result) l r
 
             ctx |> kpDefVar result (KLitVarDef(IntLit(l + r)))
 
