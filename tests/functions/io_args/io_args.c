@@ -31,7 +31,6 @@ then_3:;
     struct String call_1 = argGet_(i_1);
     struct String call_2 = str_of_int(i_1);
     milone_assert((str_cmp(call_1, str_add((struct String){.str = "#", .len = 1}, call_2)) != 0), 10, 4);
-    int call_3 = 0;
     int arg_1 = (i_1 + 1);
     i_1 = arg_1;
     goto tailrec_1;
@@ -45,6 +44,6 @@ if_next_2:;
 }
 
 int main() {
-    int call_4 = go_(0);
+    int call_3 = go_(0);
     return 0;
 }

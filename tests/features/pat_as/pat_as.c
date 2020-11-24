@@ -13,12 +13,10 @@ int simpleCase_(int arg_) {
     int x_ = 1;
     if ((x_ != 1)) goto next_2;
     milone_assert((x_ == 1), 3, 4);
-    int call_ = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
     milone_assert(0, 5, 4);
-    int call_1 = 0;
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -68,7 +66,6 @@ else_11:;
     goto if_next_9;
 if_next_9:;
     milone_assert(if_1, 12, 4);
-    int call_2 = 0;
     match_1 = 0;
     goto end_match_4;
 next_5:;
@@ -77,7 +74,7 @@ end_match_4:;
 }
 
 int main() {
-    int call_3 = simpleCase_(0);
-    int call_4 = shadowingCase_(0);
+    int call_ = simpleCase_(0);
+    int call_1 = shadowingCase_(0);
     return 0;
 }

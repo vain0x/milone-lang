@@ -12,6 +12,5 @@ int intCmp_(int l_, int r_) {
 int main() {
     int call_ = intCmp_(5, 3);
     milone_assert((call_ == 1), 4, 2);
-    int call_1 = 0;
     return 0;
 }

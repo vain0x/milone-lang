@@ -755,6 +755,12 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
 // Statements
 // -----------------------------------------------
 
+let private cgActionStmt ctx action args =
+  match action with
+  | MAssertAction ->
+      let args, ctx = cgExprList ctx args
+      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_assert", args)))
+
 let private cgPrintfnCallExpr ctx format args =
   // Insert implicit cast from str to str ptr.
   let rec go acc ctx args =
@@ -781,18 +787,6 @@ let private cgPrintfnCallExpr ctx format args =
 let private cgCallPrimExpr ctx prim args primTy resultTy loc =
   match prim, args, primTy with
   | HPrim.Printfn, (MLitExpr (StrLit format, _)) :: args, _ -> cgPrintfnCallExpr ctx format args
-
-  | HPrim.Assert, _, _ ->
-      let args, ctx = cgExprList ctx args
-      // Embed the source location information.
-      let args =
-        let _, y, x = loc
-        List.append args [ CIntExpr y; CIntExpr x ]
-
-      let ctx =
-        addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_assert", args)))
-
-      genDefault ctx resultTy
 
   | _ -> failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
 
@@ -1100,6 +1094,7 @@ let private cgTerminatorStmt ctx stmt =
 
 let private cgStmt ctx stmt =
   match stmt with
+  | MActionStmt (action, args, _) -> cgActionStmt ctx action args
   | MLetValStmt (serial, init, ty, loc) -> cgLetValStmt ctx serial init ty loc
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)

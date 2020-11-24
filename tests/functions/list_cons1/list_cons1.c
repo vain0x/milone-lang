@@ -18,12 +18,10 @@ int main() {
     int x1_ = list_->head;
     if ((!((!(list_->tail))))) goto next_2;
     milone_assert((x1_ == 1), 3, 4);
-    int call_ = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
     milone_assert(0, 5, 4);
-    int call_1 = 0;
     match_ = 0;
     goto end_match_1;
 next_3:;

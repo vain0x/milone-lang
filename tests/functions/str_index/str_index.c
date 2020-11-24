@@ -24,9 +24,7 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, 2, 2);
-    int call_ = 0;
-    char call_1 = at_(0, hello_);
-    milone_assert((call_1 == 'h'), 7, 2);
-    int call_2 = 0;
+    char call_ = at_(0, hello_);
+    milone_assert((call_ == 'h'), 7, 2);
     return 0;
 }

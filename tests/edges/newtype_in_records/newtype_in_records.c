@@ -42,7 +42,6 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, 10, 2);
-    int call_ = 0;
     void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = value_;
     struct Day_ variant_ = (struct Day_){.tag = Day_, .Day_ = box_};
@@ -60,10 +59,9 @@ struct DayRange_ {
 };
 
 void* newDayRange_(struct Day_ start_, struct Day_ endDay_) {
-    int call_1 = dayToInt_(endDay_);
-    int call_2 = dayToInt_(start_);
-    milone_assert((call_1 >= call_2), 16, 2);
-    int call_3 = 0;
+    int call_ = dayToInt_(endDay_);
+    int call_1 = dayToInt_(start_);
+    milone_assert((call_ >= call_1), 16, 2);
     struct DayRange_ DayRange_;
     DayRange_.Start = start_;
     DayRange_.End = endDay_;
@@ -73,18 +71,18 @@ void* newDayRange_(struct Day_ start_, struct Day_ endDay_) {
 }
 
 int between_(struct Day_ day_, void* range_) {
-    int call_4 = dayToInt_(day_);
-    int call_5 = dayToInt_((*(((struct DayRange_*)range_))).Start);
+    int call_2 = dayToInt_(day_);
+    int call_3 = dayToInt_((*(((struct DayRange_*)range_))).Start);
     int if_1;
-    if ((call_4 >= call_5)) {
+    if ((call_2 >= call_3)) {
         goto then_5;
     } else {
         goto else_6;
     }
 then_5:;
-    int call_6 = dayToInt_((*(((struct DayRange_*)range_))).End);
-    int call_7 = dayToInt_(day_);
-    if_1 = (call_6 >= call_7);
+    int call_4 = dayToInt_((*(((struct DayRange_*)range_))).End);
+    int call_5 = dayToInt_(day_);
+    if_1 = (call_4 >= call_5);
     goto if_next_4;
 else_6:;
     if_1 = 0;
@@ -94,12 +92,11 @@ if_next_4:;
 }
 
 int main() {
-    struct Day_ call_8 = newDay_(13);
-    struct Day_ call_9 = newDay_(10);
-    struct Day_ call_10 = newDay_(20);
-    void* call_11 = newDayRange_(call_9, call_10);
-    int call_12 = between_(call_8, call_11);
-    milone_assert(call_12, 25, 2);
-    int call_13 = 0;
+    struct Day_ call_6 = newDay_(13);
+    struct Day_ call_7 = newDay_(10);
+    struct Day_ call_8 = newDay_(20);
+    void* call_9 = newDayRange_(call_7, call_8);
+    int call_10 = between_(call_6, call_9);
+    milone_assert(call_10, 25, 2);
     return 0;
 }

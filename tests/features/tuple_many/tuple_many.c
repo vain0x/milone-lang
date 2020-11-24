@@ -85,7 +85,6 @@ else_9:;
     goto if_next_7;
 if_next_7:;
     milone_assert(if_2, 2, 2);
-    int call_ = 0;
     struct IntIntIntIntIntIntIntIntIntIntIntTuple11 tuple_2;
     tuple_2.t0 = 1;
     tuple_2.t1 = 2;

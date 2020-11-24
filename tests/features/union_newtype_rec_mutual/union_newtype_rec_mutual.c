@@ -111,18 +111,13 @@ int main() {
     if ((!((!((*(((struct IntEven_ListTuple2*)(*(((struct StringOdd_ListTuple2*)four_.Even_))).t1->head.Odd_))).t1->tail))))) goto next_2;
     if ((!((!((*(((struct StringOdd_ListTuple2*)four_.Even_))).t1->tail))))) goto next_2;
     milone_assert((n1_ == 1), 15, 6);
-    int call_ = 0;
     milone_assert((str_cmp(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 6);
-    int call_1 = 0;
     milone_assert((n3_ == 3), 17, 6);
-    int call_2 = 0;
     milone_assert((str_cmp(s4_, (struct String){.str = "four", .len = 4}) == 0), 18, 6);
-    int call_3 = 0;
     match_ = 0;
     goto end_match_1;
 next_2:;
     milone_assert(0, 20, 9);
-    int call_4 = 0;
     match_ = 0;
     goto end_match_1;
 next_3:;

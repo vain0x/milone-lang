@@ -50,6 +50,5 @@ int main() {
     void* app_ = f_.fun(f_.env, 0);
     void* wrapper_ = app_;
     milone_assert(((*(((struct IntWrapper_*)wrapper_))).Value == 42), 12, 2);
-    int call_1 = 0;
     return 0;
 }

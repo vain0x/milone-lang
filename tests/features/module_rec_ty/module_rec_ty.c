@@ -66,7 +66,6 @@ int main() {
     }
 clause_2:;
     milone_assert(0, 18, 4);
-    int call_ = 0;
     switch_ = 0;
     goto switch_next_1;
 clause_3:;

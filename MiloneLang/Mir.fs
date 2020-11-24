@@ -106,6 +106,9 @@ type MPrim =
 
   | MNativeFunPrim of funName: string
 
+[<NoEquality; NoComparison>]
+type MAction = | MAssertAction
+
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
 type MExpr =
@@ -181,6 +184,8 @@ type MTerminator =
 /// Statement in middle IR.
 [<NoEquality; NoComparison>]
 type MStmt =
+  | MActionStmt of MAction * MExpr list * Loc
+
   /// Declare a local variable.
   | MLetValStmt of VarSerial * MInit * Ty * Loc
 

@@ -17,8 +17,6 @@ int main() {
     (*(((struct Point_*)box_))) = Point_;
     void* point_ = box_;
     milone_assert(((*(((struct Point_*)point_))).X == 40), 7, 2);
-    int call_ = 0;
     milone_assert(((*(((struct Point_*)point_))).Y == 2), 8, 2);
-    int call_1 = 0;
     return 0;
 }

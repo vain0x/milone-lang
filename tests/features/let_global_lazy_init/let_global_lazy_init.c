@@ -20,6 +20,5 @@ int main() {
     boxedValue_ = box_1;
     void* call_ = f_(0);
     milone_assert(((*(((int*)call_))) == 1), 8, 2);
-    int call_1 = 0;
     return 0;
 }
