@@ -1035,6 +1035,28 @@ let private mirifyCallAssertExpr ctx args loc =
 
   MDefaultExpr(tyUnit, loc), ctx
 
+let private mirifyCallInRegionExpr ctx itself args ty loc =
+  match args with
+  | [ arg ] ->
+      // arg: closure
+      let arg, ctx = mirifyExpr ctx arg
+
+      let temp, tempSerial, ctx = freshVar ctx "region_result" tyInt loc
+
+      let ctx =
+        addStmt ctx (MActionStmt(MEnterRegionAction, [], loc))
+
+      let ctx =
+        let unit = MDefaultExpr (tyUnit, loc)
+        addStmt ctx (MLetValStmt(tempSerial, MCallClosureInit(arg, [ unit ]), ty, loc))
+
+      let ctx =
+        addStmt ctx (MActionStmt(MLeaveRegionAction, [], loc))
+
+      temp, ctx
+
+  | _ -> failwithf "NEVER: %A" itself
+
 let private mirifyCallNativeFunExpr ctx (funName: string) arity args ty loc =
   assert (List.length args = arity)
 
@@ -1105,6 +1127,7 @@ let private mirifyExprInfCallProc ctx itself callee args ty loc =
       | HPrim.Char, _ -> mirifyCallCharExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.String, _ -> mirifyCallStringExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.Assert, _ -> mirifyCallAssertExpr ctx args loc
+      | HPrim.InRegion, _ -> mirifyCallInRegionExpr ctx itself args ty loc
       | HPrim.NativeFun (funName, arity), _ -> mirifyCallNativeFunExpr ctx funName arity args ty loc
       | _ -> core ()
 

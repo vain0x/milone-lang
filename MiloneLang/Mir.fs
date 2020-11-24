@@ -107,7 +107,10 @@ type MPrim =
   | MNativeFunPrim of funName: string
 
 [<NoEquality; NoComparison>]
-type MAction = | MAssertAction
+type MAction =
+  | MAssertAction
+  | MEnterRegionAction
+  | MLeaveRegionAction
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]

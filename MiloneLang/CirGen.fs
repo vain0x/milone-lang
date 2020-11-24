@@ -761,6 +761,14 @@ let private cgActionStmt ctx action args =
       let args, ctx = cgExprList ctx args
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_assert", args)))
 
+  | MEnterRegionAction ->
+      assert (List.isEmpty args)
+      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_enter_region", [])))
+
+  | MLeaveRegionAction ->
+      assert (List.isEmpty args)
+      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
+
 let private cgPrintfnCallExpr ctx format args =
   // Insert implicit cast from str to str ptr.
   let rec go acc ctx args =
@@ -789,26 +797,6 @@ let private cgCallPrimExpr ctx prim args primTy resultTy loc =
   | HPrim.Printfn, (MLitExpr (StrLit format, _)) :: args, _ -> cgPrintfnCallExpr ctx format args
 
   | _ -> failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
-
-let private cgCallInRegionExpr ctx serial arg ty _loc =
-  let arg, ctx = cgExpr ctx arg
-
-  // Enter, call, leave. The result of call is set to the initialized variable.
-  let ctx =
-    addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_enter_region", [])))
-
-  let ctx =
-    // t <- f ()
-    let unitLit, ctx = genDefault ctx tyUnit
-
-    let result, ctx = doGenCallClosureExpr ctx arg [ unitLit ]
-
-    doGenLetValStmt ctx serial (Some result) ty
-
-  let ctx =
-    addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
-
-  ctx
 
 let private cgCallProcExpr ctx callee args ty =
   match callee, args with
@@ -1015,8 +1003,6 @@ let private cgLetValStmt ctx serial init ty loc =
       doGenLetValStmt ctx serial (Some expr) ty
 
   | MPrimInit (prim, args) -> cgCallMPrimExpr ctx init serial prim args ty loc
-
-  | MCallPrimInit (HPrim.InRegion, [ arg ], _) -> cgCallInRegionExpr ctx serial arg ty loc
 
   | MCallPrimInit (prim, args, calleeTy) ->
       let expr, ctx =
