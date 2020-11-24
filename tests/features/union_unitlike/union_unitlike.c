@@ -55,8 +55,8 @@ enum MyBool_Tag {
 struct MyBool_ {
     enum MyBool_Tag tag;
     union {
-        void* MyFalse_;
-        void* MyTrue_;
+        struct MyUnit_ MyFalse_;
+        struct MyUnit_ MyTrue_;
     };
 };
 
@@ -83,9 +83,7 @@ switch_next_3:;
 }
 
 int usedInOtherSumTypeCase_(int arg_1) {
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct MyUnit_));
-    (*(((struct MyUnit_*)box_))) = (struct MyUnit_){.tag = MyUnit_};
-    struct MyBool_ variant_ = (struct MyBool_){.tag = MyTrue_, .MyTrue_ = box_};
+    struct MyBool_ variant_ = (struct MyBool_){.tag = MyTrue_, .MyTrue_ = (struct MyUnit_){.tag = MyUnit_}};
     struct MyBool_ myBool_ = variant_;
     int call_ = toBool_(myBool_);
     milone_assert(call_, 27, 2);
@@ -109,13 +107,11 @@ int usedInRecordTypeCase_(int arg_2) {
     struct RecordUsingMyUnit_ RecordUsingMyUnit_;
     RecordUsingMyUnit_.First = (struct MyUnit_){.tag = MyUnit_};
     RecordUsingMyUnit_.Second = list_;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct RecordUsingMyUnit_));
-    (*(((struct RecordUsingMyUnit_*)box_1))) = RecordUsingMyUnit_;
-    void* record_ = box_1;
+    struct RecordUsingMyUnit_ record_ = RecordUsingMyUnit_;
     int match_;
-    if ((!((*(((struct RecordUsingMyUnit_*)record_))).Second))) goto next_7;
-    if (((*(((struct RecordUsingMyUnit_*)record_))).Second->head.tag != MyUnit_)) goto next_7;
-    if ((!((!((*(((struct RecordUsingMyUnit_*)record_))).Second->tail))))) goto next_7;
+    if ((!(record_.Second))) goto next_7;
+    if ((record_.Second->head.tag != MyUnit_)) goto next_7;
+    if ((!((!(record_.Second->tail))))) goto next_7;
     match_ = 0;
     goto end_match_6;
 next_7:;

@@ -5,7 +5,9 @@ type GitCommitOptions =
     Patch: bool
     ReuseMessage: string option
     ReeditMessage: string option
-    Fixup: string option }
+    Fixup: string option
+    Squash: string option
+    ResetAuthor: bool }
 // and more...
 
 let defaultOptions (): GitCommitOptions =
@@ -13,7 +15,9 @@ let defaultOptions (): GitCommitOptions =
     Patch = false
     ReuseMessage = None
     ReeditMessage = None
-    Fixup = None }
+    Fixup = None
+    Squash = None
+    ResetAuthor = false }
 
 let main _ =
   let _options = defaultOptions ()

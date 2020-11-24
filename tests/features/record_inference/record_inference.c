@@ -17,24 +17,20 @@ struct IntWrapper_ {
 int letWithTypeAnnotationCase_(int n_) {
     struct IntWrapper_ IntWrapper_;
     IntWrapper_.Value = n_;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntWrapper_));
-    (*(((struct IntWrapper_*)box_))) = IntWrapper_;
-    void* w_ = box_;
-    milone_assert(((*(((struct IntWrapper_*)w_))).Value == n_), 10, 2);
+    struct IntWrapper_ w_ = IntWrapper_;
+    milone_assert((w_.Value == n_), 10, 2);
     return 0;
 }
 
 int typeAnnotationExprCase_(int n_1) {
     struct IntWrapper_ IntWrapper_1;
     IntWrapper_1.Value = n_1;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntWrapper_));
-    (*(((struct IntWrapper_*)box_1))) = IntWrapper_1;
-    milone_assert(((*(((struct IntWrapper_*)box_1))).Value == n_1), 13, 2);
+    milone_assert((IntWrapper_1.Value == n_1), 13, 2);
     return 0;
 }
 
 int matchExprCase_(int n_2) {
-    void* switch_;
+    struct IntWrapper_ switch_;
     switch (n_2) {
         case 5:
             goto clause_2;
@@ -45,17 +41,15 @@ int matchExprCase_(int n_2) {
 clause_2:;
     struct IntWrapper_ IntWrapper_2;
     IntWrapper_2.Value = 0;
-    void* box_2 = (void*)milone_mem_alloc(1, sizeof(struct IntWrapper_));
-    (*(((struct IntWrapper_*)box_2))) = IntWrapper_2;
-    switch_ = box_2;
+    switch_ = IntWrapper_2;
     goto switch_next_1;
 clause_3:;
     exit(1);
-    switch_ = NULL;
+    switch_ = ((struct IntWrapper_){});
     goto switch_next_1;
 switch_next_1:;
-    void* t_ = switch_;
-    milone_assert(((*(((struct IntWrapper_*)t_))).Value == 0), 21, 2);
+    struct IntWrapper_ t_ = switch_;
+    milone_assert((t_.Value == 0), 21, 2);
     return 0;
 }
 

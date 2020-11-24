@@ -10,11 +10,11 @@ int startsWithDoubleBits_(struct IntList* xs_);
 
 int nestedCase_(int arg_1);
 
+struct IntIntTuple2;
+
 enum Expr_Tag;
 
 struct Expr_;
-
-struct IntIntTuple2;
 
 int performComplexMatching_(struct Expr_ expr_);
 
@@ -128,6 +128,11 @@ int nestedCase_(int arg_1) {
     return 0;
 }
 
+struct IntIntTuple2 {
+    int t0;
+    int t1;
+};
+
 enum Expr_Tag {
     Add_,
 };
@@ -135,23 +140,18 @@ enum Expr_Tag {
 struct Expr_ {
     enum Expr_Tag tag;
     union {
-        void* Add_;
+        struct IntIntTuple2 Add_;
     };
-};
-
-struct IntIntTuple2 {
-    int t0;
-    int t1;
 };
 
 int performComplexMatching_(struct Expr_ expr_) {
     int match_1;
-    if (((*(((struct IntIntTuple2*)expr_.Add_))).t0 != 0)) goto next_16;
-    if (((*(((struct IntIntTuple2*)expr_.Add_))).t1 != 0)) goto next_16;
+    if ((expr_.Add_.t0 != 0)) goto next_16;
+    if ((expr_.Add_.t1 != 0)) goto next_16;
     goto match_body_15;
 next_16:;
-    if (((*(((struct IntIntTuple2*)expr_.Add_))).t0 != 0)) goto next_17;
-    if (((*(((struct IntIntTuple2*)expr_.Add_))).t1 != 1)) goto next_17;
+    if ((expr_.Add_.t0 != 0)) goto next_17;
+    if ((expr_.Add_.t1 != 1)) goto next_17;
     goto match_body_15;
 match_body_15:;
     match_1 = 1;
@@ -168,17 +168,13 @@ int complexCase_(int arg_2) {
     struct IntIntTuple2 tuple_;
     tuple_.t0 = 0;
     tuple_.t1 = 1;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
-    (*(((struct IntIntTuple2*)box_))) = tuple_;
-    struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = box_};
+    struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = tuple_};
     int call_5 = performComplexMatching_(variant_);
     milone_assert(call_5, 35, 2);
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 1;
     tuple_1.t1 = 2;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
-    (*(((struct IntIntTuple2*)box_1))) = tuple_1;
-    struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = box_1};
+    struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = tuple_1};
     int call_6 = performComplexMatching_(variant_1);
     milone_assert((!(call_6)), 36, 2);
     return 0;

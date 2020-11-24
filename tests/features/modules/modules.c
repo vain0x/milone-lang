@@ -20,18 +20,16 @@ enum Val_Tag {
 struct Val_ {
     enum Val_Tag tag;
     union {
-        void* Int_;
-        void* Str_;
+        int Int_;
+        struct String Str_;
     };
 };
 
 int main() {
     int match_;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_))) = 0;
-    struct Val_ variant_ = (struct Val_){.tag = Int_, .Int_ = box_};
+    struct Val_ variant_ = (struct Val_){.tag = Int_, .Int_ = 0};
     if ((variant_.tag != Int_)) goto next_2;
-    int x_ = (*(((int*)variant_.Int_)));
+    int x_ = variant_.Int_;
     match_ = x_;
     goto end_match_1;
 next_2:;

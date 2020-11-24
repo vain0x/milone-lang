@@ -21,6 +21,352 @@ let private hxUnbox boxExpr itemTy loc =
   hxApp (HPrimExpr(HPrim.Unbox, tyFun tyObj itemTy, loc)) boxExpr itemTy loc
 
 // -----------------------------------------------
+// Type recursion detection
+// -----------------------------------------------
+
+[<NoEquality; NoComparison>]
+type private Status =
+  | Recursive
+  | Boxed
+  | Unboxed
+
+type private TrdCtx =
+  { Variants: AssocMap<VariantSerial, VariantDef>
+    Tys: AssocMap<TySerial, TyDef>
+
+    VariantMemo: AssocMap<VariantSerial, Status>
+    RecordTyMemo: AssocMap<TySerial, Status> }
+
+let private trdVariant (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef option) =
+  match ctx.VariantMemo |> mapTryFind variantSerial with
+  | Some Recursive ->
+      // printfn "// trd variant %s is now boxed" (ctx.Variants |> mapFind variantSerial).Name
+      { ctx with
+          VariantMemo = ctx.VariantMemo |> mapAdd variantSerial Boxed }
+
+  | Some t ->
+      // printfn "// trd variant %s is done: %s" (ctx.Variants |> mapFind variantSerial).Name (objToString t)
+      ctx
+
+  | None ->
+      // printfn "// trd variant %s begin" (ctx.Variants |> mapFind variantSerial).Name
+
+      let ctx =
+        { ctx with
+            VariantMemo = ctx.VariantMemo |> mapAdd variantSerial Recursive }
+
+      let ctx: TrdCtx =
+        let variantDef =
+          match variantDefOpt with
+          | Some variantDef -> variantDef
+          | None -> ctx.Variants |> mapFind variantSerial
+
+        trdTy ctx variantDef.PayloadTy
+
+      let ctx =
+        match ctx.VariantMemo |> mapTryFind variantSerial with
+        | Some Recursive
+        | None ->
+            { ctx with
+                VariantMemo = ctx.VariantMemo |> mapAdd variantSerial Unboxed }
+
+        | Some _ -> ctx
+
+      // printfn
+      //   "// trd variant %s end: %s"
+      //   (ctx.Variants |> mapFind variantSerial).Name
+      //   (ctx.VariantMemo
+      //    |> mapFind variantSerial
+      //    |> objToString)
+      ctx
+
+let private trdRecordTyDef (ctx: TrdCtx) tySerial tyDef =
+  match ctx.RecordTyMemo |> mapTryFind tySerial with
+  | Some Recursive ->
+      // printfn "// trd tyDef %s is now boxed" (tyDefToName tyDef)
+      { ctx with
+          RecordTyMemo = ctx.RecordTyMemo |> mapAdd tySerial Boxed }
+
+  | Some t ->
+      // printfn "// trd tyDef %s is done: %s" (tyDefToName tyDef) (objToString t)
+      ctx
+
+  | None ->
+      // printfn "// trd tyDef %s begin" (tyDefToName tyDef)
+
+      let ctx =
+        { ctx with
+            RecordTyMemo = ctx.RecordTyMemo |> mapAdd tySerial Recursive }
+
+      let ctx: TrdCtx =
+        match tyDef with
+        | RecordTyDef (_, fields, _) ->
+            fields
+            |> List.fold (fun ctx (_, fieldTy, _) -> trdTy ctx fieldTy) ctx
+
+        | _ -> failwith "NEVER"
+
+      let ctx =
+        match ctx.RecordTyMemo |> mapTryFind tySerial with
+        | Some Recursive
+        | None ->
+            { ctx with
+                RecordTyMemo = ctx.RecordTyMemo |> mapAdd tySerial Unboxed }
+
+        | Some _ -> ctx
+
+      // printfn "// trd tyDef %s end: %s" (tyDefToName tyDef) (objToString (ctx.RecordTyMemo |> mapFind tySerial))
+
+      ctx
+
+let private trdTyDef (ctx: TrdCtx) tySerial tyDef =
+  match tyDef with
+  | UnionTyDef (_, variants, _) ->
+      variants
+      |> List.fold (fun (ctx: TrdCtx) variantSerial -> trdVariant ctx variantSerial None) ctx
+
+  | RecordTyDef _ -> trdRecordTyDef ctx tySerial tyDef
+
+  | MetaTyDef _
+  | UniversalTyDef _
+  | SynonymTyDef _ -> ctx
+
+let private trdTy (ctx: TrdCtx) ty =
+  match ty with
+  | ErrorTy _
+  | MetaTy _ -> ctx
+
+  | AppTy (tyCtor, tyArgs) ->
+      let nominal tySerial =
+        trdTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
+
+      match tyCtor with
+      | BoolTyCtor
+      | CharTyCtor
+      | IntTyCtor
+      | UIntTyCtor
+      | StrTyCtor
+      | ObjTyCtor ->
+          assert (List.isEmpty tyArgs)
+          ctx
+
+      | ListTyCtor
+      | FunTyCtor
+      | TupleTyCtor -> tyArgs |> List.fold trdTy ctx
+
+      | UnionTyCtor tySerial -> nominal tySerial
+      | RecordTyCtor tySerial -> nominal tySerial
+
+      | SynonymTyCtor _
+      | UnresolvedTyCtor _ -> failwith "NEVER"
+
+let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
+  let ctx: TrdCtx =
+    { Variants = tyCtx.Variants
+      Tys = tyCtx.Tys
+      VariantMemo = mapEmpty variantSerialCmp
+      RecordTyMemo = mapEmpty intCmp }
+
+  let ctx = tyCtx.Tys |> mapFold trdTyDef ctx
+
+  tyCtx.Variants
+  |> mapFold (fun ctx variantSerial varDef -> trdVariant ctx variantSerial (Some varDef)) ctx
+
+// -----------------------------------------------
+// Type size measurement
+// -----------------------------------------------
+
+type private TsmCtx =
+  { Variants: AssocMap<VariantSerial, VariantDef>
+    Tys: AssocMap<TySerial, TyDef>
+
+    BoxedVariants: AssocSet<VariantSerial>
+    BoxedRecordTys: AssocSet<TySerial>
+
+    VariantMemo: AssocMap<VariantSerial, int>
+    RecordTyMemo: AssocMap<TySerial, int> }
+
+let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef option) =
+  match ctx.VariantMemo |> mapTryFind variantSerial with
+  | Some size ->
+      // printfn "// measure variant %s cached: size=%d" (ctx.Variants |> mapFind variantSerial).Name size
+      assert (size >= 0)
+      size, ctx
+
+  | _ when ctx.BoxedVariants |> setContains variantSerial ->
+      // printfn "// measure variant: %s is boxed" (ctx.Variants |> mapFind variantSerial).Name
+      12, ctx
+
+  | None ->
+      // printfn "// measure variant %s begin" (ctx.Variants |> mapFind variantSerial).Name
+
+      // Prevent infinite recursion, just in case. (Recursive variants are already boxed.)
+      let ctx =
+        { ctx with
+            VariantMemo = ctx.VariantMemo |> mapAdd variantSerial (-1) }
+
+      let size, (ctx: TsmCtx) =
+        let variantDef =
+          match variantDefOpt with
+          | Some variantDef -> variantDef
+          | None -> ctx.Variants |> mapFind variantSerial
+
+        tsmTy ctx variantDef.PayloadTy
+
+      let size, isBoxed =
+        if 4 + size > 32 then 8, true else size, false
+
+      let ctx =
+        assert ((ctx.VariantMemo
+                 |> mapTryFind variantSerial
+                 |> Option.defaultValue (-1)) < 0)
+
+        { ctx with
+            VariantMemo = ctx.VariantMemo |> mapAdd variantSerial size
+            BoxedVariants =
+              if isBoxed
+              then ctx.BoxedVariants |> setAdd variantSerial
+              else ctx.BoxedVariants }
+
+      // printfn
+      //   "// measure variant %s end: size=%d%s"
+      //   (ctx.Variants |> mapFind variantSerial).Name
+      //   size
+      //   (if isBoxed then " (boxed)" else "")
+
+      size, ctx
+
+let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
+  match ctx.RecordTyMemo |> mapTryFind tySerial with
+  | Some size ->
+      // printfn "// measure record %s: cached %d" (tyDefToName tyDef) size
+      assert (size >= 1)
+      size, ctx
+
+  | _ when ctx.BoxedRecordTys |> setContains tySerial ->
+      // printfn "// measure record %s: boxed" (tyDefToName tyDef)
+      8, ctx
+
+  | None ->
+      // printfn "// measure record %s begin" (tyDefToName tyDef)
+
+      // Just in case of recursion was not detected correctly.
+      let ctx =
+        { ctx with
+            RecordTyMemo = ctx.RecordTyMemo |> mapAdd tySerial (-1) }
+
+      let size, (ctx: TsmCtx) =
+        match tyDef with
+        | RecordTyDef (_, fields, _) ->
+            fields
+            |> List.fold (fun (totalSize, ctx) (fieldName, fieldTy, _) ->
+                 let fieldSize, ctx = tsmTy ctx fieldTy
+                 //  printfn "//   field %s size=%d total=%d" fieldName fieldSize (totalSize + fieldSize)
+                 totalSize + fieldSize, ctx) (0, ctx)
+
+        | _ -> failwith "NEVER"
+
+      let size, isBoxed =
+        if size > 32 then 8, true else intMax 1 size, false
+
+      let ctx =
+        assert ((ctx.RecordTyMemo
+                 |> mapTryFind tySerial
+                 |> Option.defaultValue (-1)) < 0)
+        { ctx with
+            RecordTyMemo = ctx.RecordTyMemo |> mapAdd tySerial size
+            BoxedRecordTys = if isBoxed then ctx.BoxedRecordTys |> setAdd tySerial else ctx.BoxedRecordTys }
+
+      // printfn "// measure record %s end: size=%d%s" (tyDefToName tyDef) size (if isBoxed then " (boxed)" else "")
+      size, ctx
+
+let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
+  match tyDef with
+  | UnionTyDef (_, variants, _) ->
+      let payloadSize, ctx =
+        variants
+        |> List.fold (fun (maxSize, ctx: TsmCtx) variantSerial ->
+             let payloadSize, ctx = tsmVariant ctx variantSerial None
+             intMax maxSize payloadSize, ctx) (0, ctx)
+
+      4 + payloadSize, ctx
+
+  | RecordTyDef _ -> tsmRecordTyDef ctx tySerial tyDef
+
+  | MetaTyDef _
+  | UniversalTyDef _
+  | SynonymTyDef _ -> 1000000, ctx
+
+let private tsmTy (ctx: TsmCtx) ty =
+  match ty with
+  | ErrorTy _
+  | MetaTy _ -> 1000000, ctx
+
+  | AppTy (tyCtor, tyArgs) ->
+      let nominal tySerial =
+        tsmTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
+
+      match tyCtor with
+      | BoolTyCtor
+      | CharTyCtor -> 1, ctx
+
+      | IntTyCtor
+      | UIntTyCtor -> 4, ctx
+
+      | ObjTyCtor
+      | ListTyCtor -> 8, ctx
+
+      | StrTyCtor
+      | FunTyCtor -> 16, ctx
+
+      | TupleTyCtor ->
+          let size, ctx =
+            tyArgs
+            |> List.fold (fun (totalSize, ctx) fieldTy ->
+                 let size, ctx = tsmTy ctx fieldTy
+                 totalSize + size, ctx) (0, ctx)
+
+          intMax 1 size, ctx
+
+      | UnionTyCtor tySerial -> nominal tySerial
+      | RecordTyCtor tySerial -> nominal tySerial
+
+      | SynonymTyCtor _
+      | UnresolvedTyCtor _ -> failwith "NEVER"
+
+let private measureTys (trdCtx: TrdCtx): TsmCtx =
+  let boxedVariants =
+    trdCtx.VariantMemo
+    |> mapFold (fun set variantSerial status ->
+         match status with
+         | Boxed -> set |> setAdd variantSerial
+         | Unboxed -> set
+         | Recursive -> failwith "NEVER") (setEmpty variantSerialCmp)
+
+  let boxedRecordTys =
+    trdCtx.RecordTyMemo
+    |> mapFold (fun set tySerial status ->
+         match status with
+         | Boxed -> set |> setAdd tySerial
+         | Unboxed -> set
+         | Recursive -> failwith "NEVER") (setEmpty intCmp)
+
+  let ctx: TsmCtx =
+    { Variants = trdCtx.Variants
+      Tys = trdCtx.Tys
+      BoxedVariants = boxedVariants
+      BoxedRecordTys = boxedRecordTys
+      VariantMemo = mapEmpty variantSerialCmp
+      RecordTyMemo = mapEmpty intCmp }
+
+  let ctx =
+    ctx.Tys
+    |> mapFold (fun ctx tySerial tyDef -> tsmTyDef ctx tySerial tyDef |> snd) ctx
+
+  ctx.Variants
+  |> mapFold (fun ctx variantSerial varDef -> tsmVariant ctx variantSerial (Some varDef) |> snd) ctx
+
+// -----------------------------------------------
 // Context
 // -----------------------------------------------
 
@@ -29,19 +375,35 @@ type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
-    Tys: AssocMap<TySerial, TyDef> }
+    Tys: AssocMap<TySerial, TyDef>
+
+    BoxedVariants: AssocSet<VariantSerial>
+    BoxedRecordTys: AssocSet<TySerial> }
 
 let private ofTyCtx (tyCtx: TyCtx): AbCtx =
   { Vars = tyCtx.Vars
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
-    Tys = tyCtx.Tys }
+    Tys = tyCtx.Tys
+    BoxedVariants = mapEmpty variantSerialCmp
+    BoxedRecordTys = mapEmpty intCmp }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
   { tyCtx with
       Vars = ctx.Vars
       Variants = ctx.Variants
       Tys = ctx.Tys }
+
+let private needsBoxedVariant (ctx: AbCtx) variantSerial =
+  ctx.BoxedVariants |> setContains variantSerial
+
+let private needsBoxedRecordTySerial (ctx: AbCtx) tySerial =
+  ctx.BoxedRecordTys |> setContains tySerial
+
+let private needsBoxedRecordTy ctx ty =
+  match ty with
+  | AppTy (RecordTyCtor tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
+  | _ -> false
 
 /// ### Boxing of Payloads
 ///
@@ -61,17 +423,21 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
 ///   K (box payloadPat)  // using box pattern to unbox the payload
 /// ```
 
+let private erasePayloadTy ctx variantSerial payloadTy =
+  if needsBoxedVariant ctx variantSerial then tyObj else payloadTy |> abTy ctx
+
 let private postProcessVariantCallPat ctx calleePat argPats =
   match calleePat, argPats with
-  | HVariantPat (_, variantTy, loc), [ payloadPat ] when tyIsFun variantTy ->
+  | HVariantPat (variantSerial, variantTy, loc), [ payloadPat ] when needsBoxedVariant ctx variantSerial ->
       // FIXME: ty is now wrong. ty is previously T -> U where U: union, T: payload, but now obj -> U.
+      assert (tyIsFun variantTy)
       Some(HBoxPat(payloadPat, loc))
 
   | _ -> None
 
 let private postProcessVariantFunAppExpr ctx infOp items =
   match infOp, items with
-  | InfOp.App, [ (HVariantExpr _) as callee; payload ] ->
+  | InfOp.App, [ (HVariantExpr (variantSerial, _, _)) as callee; payload ] when needsBoxedVariant ctx variantSerial ->
       // FIXME: ty is now wrong for the same reason as call-variant pattern.
       let ty, loc = exprExtract payload
       Some(callee, hxBox payload ty loc)
@@ -80,7 +446,7 @@ let private postProcessVariantFunAppExpr ctx infOp items =
 
 /// ### Boxing of Records
 ///
-/// Records are all boxed because they tend to be too large to clone.
+/// ~Records are all boxed because they tend to be too large to clone.~
 ///
 /// (Ideally, we should measure size of record types and suppress auto-box for small records.)
 ///
@@ -106,22 +472,29 @@ let private postProcessVariantFunAppExpr ctx infOp items =
 ///   record: obj
 /// ```
 
-let private eraseRecordTy () = tyObj
+let private eraseRecordTy ctx ty =
+  if needsBoxedRecordTy ctx ty then Some tyObj else None
 
-let private postProcessRecordExpr baseOpt fields recordTy loc =
-  let baseOpt =
-    baseOpt
-    |> Option.map (fun expr -> hxUnbox expr recordTy loc)
+let private postProcessRecordExpr ctx baseOpt fields recordTy loc =
+  if needsBoxedRecordTy ctx recordTy then
+    let baseOpt =
+      baseOpt
+      |> Option.map (fun expr -> hxUnbox expr recordTy loc)
 
-  let recordExpr =
-    HRecordExpr(baseOpt, fields, recordTy, loc)
+    let recordExpr =
+      HRecordExpr(baseOpt, fields, recordTy, loc)
 
-  hxBox recordExpr recordTy loc
+    Some(hxBox recordExpr recordTy loc)
+  else
+    None
 
-let private postProcessFieldExpr recordExpr recordTy fieldName fieldTy loc =
-  assert (recordExpr |> exprToTy |> tyEq tyObj)
+let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
+  if needsBoxedRecordTy ctx recordTy then
+    assert (recordExpr |> exprToTy |> tyEq tyObj)
 
-  HNavExpr(hxUnbox recordExpr recordTy loc, fieldName, fieldTy, loc)
+    Some(HNavExpr(hxUnbox recordExpr recordTy loc, fieldName, fieldTy, loc))
+  else
+    None
 
 // -----------------------------------------------
 // Control
@@ -129,7 +502,12 @@ let private postProcessFieldExpr recordExpr recordTy fieldName fieldTy loc =
 
 let private abTy ctx ty =
   match ty with
-  | AppTy (RecordTyCtor _, _) -> eraseRecordTy ()
+  | AppTy (RecordTyCtor _, tyArgs) ->
+      assert (List.isEmpty tyArgs)
+
+      match eraseRecordTy ctx ty with
+      | Some ty -> ty
+      | None -> ty
 
   | AppTy (tyCtor, tyArgs) ->
       let tyArgs = tyArgs |> List.map (abTy ctx)
@@ -196,7 +574,9 @@ let private abExpr ctx expr =
                let init = init |> abExpr ctx
                name, init, loc)
 
-        postProcessRecordExpr baseOpt fields ty loc
+        match postProcessRecordExpr ctx baseOpt fields ty loc with
+        | Some expr -> expr
+        | None -> HRecordExpr(baseOpt, fields, ty, loc)
 
       doArm ()
 
@@ -207,7 +587,10 @@ let private abExpr ctx expr =
 
         let l = l |> abExpr ctx
         let ty = ty |> abTy ctx
-        postProcessFieldExpr l recordTy r ty loc
+
+        match postProcessFieldExpr ctx l recordTy r ty loc with
+        | Some expr -> expr
+        | None -> HNavExpr(l, r, ty, loc)
 
       doArm ()
 
@@ -271,7 +654,17 @@ let private abExpr ctx expr =
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
-  let ctx = ofTyCtx tyCtx
+  // Detect recursion.
+  let trdCtx = detectTypeRecursion tyCtx
+
+  // Measure types.
+  let tsmCtx: TsmCtx = measureTys trdCtx
+
+  // Auto boxing.
+  let ctx =
+    { ofTyCtx tyCtx with
+        BoxedVariants = tsmCtx.BoxedVariants
+        BoxedRecordTys = tsmCtx.BoxedRecordTys }
 
   let vars =
     ctx.Vars
@@ -291,10 +684,15 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
   let variants =
     ctx.Variants
-    |> mapMap (fun _ (variantDef: VariantDef) ->
+    |> mapMap (fun variantSerial (variantDef: VariantDef) ->
+         let payloadTy =
+           erasePayloadTy ctx variantSerial variantDef.PayloadTy
+
+         let variantTy = variantDef.VariantTy |> abTy ctx
+
          { variantDef with
-             PayloadTy = tyObj
-             VariantTy = variantDef.VariantTy |> abTy ctx })
+             PayloadTy = payloadTy
+             VariantTy = variantTy })
 
   let tys =
     ctx.Tys

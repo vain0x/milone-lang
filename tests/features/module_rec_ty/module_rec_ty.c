@@ -36,7 +36,7 @@ enum UnionB_Tag {
 struct UnionB_ {
     enum UnionB_Tag tag;
     union {
-        void* T_;
+        struct UnionA_List* T_;
     };
 };
 
@@ -53,9 +53,7 @@ int main() {
     struct UnionA_List* list_ = (struct UnionA_List*)milone_mem_alloc(1, sizeof(struct UnionA_List));
     list_->head = (struct UnionA_){.tag = T_1};
     list_->tail = NULL;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct UnionA_List*));
-    (*(((struct UnionA_List**)box_))) = list_;
-    struct UnionB_ variant_ = (struct UnionB_){.tag = T_, .T_ = box_};
+    struct UnionB_ variant_ = (struct UnionB_){.tag = T_, .T_ = list_};
     int switch_;
     switch ((struct UnionX_){.tag = VariantY_}.tag) {
         case VariantX_:

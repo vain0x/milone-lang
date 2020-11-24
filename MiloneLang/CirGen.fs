@@ -323,13 +323,10 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
 
       let variants, ctx =
         (variants, ctx)
-        |> stFlatMap (fun ((_, serial, hasPayload, _payloadTy), acc, ctx) ->
+        |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
              if hasPayload then
-               //  let payloadTy, ctx = cgTyIncomplete ctx payloadTy
-               //  (getUniqueVarName ctx serial, payloadTy)
-               //  :: acc,
-               //  ctx
-               (getUniqueVariantName ctx serial, ctVoidPtr)
+               let payloadTy, ctx = cgTyComplete ctx payloadTy
+               (getUniqueVariantName ctx serial, payloadTy)
                :: acc,
                ctx
              else

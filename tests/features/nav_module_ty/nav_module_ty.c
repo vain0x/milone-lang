@@ -20,15 +20,13 @@ enum Node_Tag {
 struct Node_ {
     enum Node_Tag tag;
     union {
-        void* Leaf_;
+        int Leaf_;
         void* Node_;
     };
 };
 
 struct Node_ leaf_(int n_) {
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_))) = n_;
-    struct Node_ variant_ = (struct Node_){.tag = Leaf_, .Leaf_ = box_};
+    struct Node_ variant_ = (struct Node_){.tag = Leaf_, .Leaf_ = n_};
     return variant_;
 }
 
@@ -41,9 +39,9 @@ struct Node_ node_(struct Node_ l_, struct Node_ r_) {
     struct Node_Node_Tuple2 tuple_;
     tuple_.t0 = l_;
     tuple_.t1 = r_;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct Node_Node_Tuple2));
-    (*(((struct Node_Node_Tuple2*)box_1))) = tuple_;
-    struct Node_ variant_1 = (struct Node_){.tag = Node_, .Node_ = box_1};
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct Node_Node_Tuple2));
+    (*(((struct Node_Node_Tuple2*)box_))) = tuple_;
+    struct Node_ variant_1 = (struct Node_){.tag = Node_, .Node_ = box_};
     return variant_1;
 }
 
@@ -57,7 +55,7 @@ int main() {
     int match_;
     if ((t_.tag != Node_)) goto next_2;
     if (((*(((struct Node_Node_Tuple2*)t_.Node_))).t0.tag != Leaf_)) goto next_2;
-    int x_ = (*(((int*)(*(((struct Node_Node_Tuple2*)t_.Node_))).t0.Leaf_)));
+    int x_ = (*(((struct Node_Node_Tuple2*)t_.Node_))).t0.Leaf_;
     milone_assert((x_ == 2), 26, 24);
     match_ = 0;
     goto end_match_1;

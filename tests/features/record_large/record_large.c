@@ -19,6 +19,8 @@ struct GitCommitOptions_ {
     struct StringList* ReuseMessage;
     struct StringList* ReeditMessage;
     struct StringList* Fixup;
+    struct StringList* Squash;
+    int ResetAuthor;
 };
 
 void* defaultOptions_(int arg_) {
@@ -28,6 +30,8 @@ void* defaultOptions_(int arg_) {
     GitCommitOptions_.ReuseMessage = NULL;
     GitCommitOptions_.ReeditMessage = NULL;
     GitCommitOptions_.Fixup = NULL;
+    GitCommitOptions_.Squash = NULL;
+    GitCommitOptions_.ResetAuthor = 0;
     void* box_ = (void*)milone_mem_alloc(1, sizeof(struct GitCommitOptions_));
     (*(((struct GitCommitOptions_*)box_))) = GitCommitOptions_;
     return box_;
