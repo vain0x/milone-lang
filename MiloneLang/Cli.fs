@@ -92,6 +92,13 @@ type CliHost =
 // Helpers
 // -----------------------------------------------
 
+let private strStartsWith (prefix: string) (s: string) =
+  let rec go (i: int) =
+    i = prefix.Length
+    || (prefix.[i] = s.[i] && go (i + 1))
+
+  s.Length >= prefix.Length && go 0
+
 let private strTrimEnd (s: string) =
   let rec go i =
     if i = 0 || not (charIsSpace s.[i - 1]) then s |> strSlice 0 i else go (i - 1)
@@ -128,24 +135,172 @@ let private pathStrToStem (s: string) =
 
       go s.Length
 
+let private pathIsRelative (s: string) =
+  (s |> strStartsWith "./")
+  || (s |> strStartsWith "../")
+
 // -----------------------------------------------
-// Read module files
+// Project schema interpreter
 // -----------------------------------------------
 
-let private readCoreFile (host: CliHost) moduleName =
-  let miloneHome = host.MiloneHome
+// type ProjectSchema =
+//   { Name: string
+//     Version: string
+//     Options: ProjectOption list }
+
+// type ProjectOption =
+//   | Ref of projectDir: string
+//   | AliasedRef of projectName: string * projectDir: string
+
+let private doInterpretProjectSchema ast =
+  let asStr expr =
+    match expr with
+    | ALitExpr (StrLit value, _) -> value
+    | _ -> failwith "Expected a string literal."
+
+  let asProjectRef expr =
+    match expr with
+    | ABinaryExpr (AppBinary, AIdentExpr ("Ref", _), projectDir, _) ->
+        let projectDir =
+          projectDir |> asStr |> pathStrTrimEndPathSep
+
+        let projectName = projectDir |> pathStrToStem
+        Some(projectName, projectDir)
+
+    | ABinaryExpr (AppBinary, AIdentExpr ("AliasedRef", _), ATupleExpr ([ projectName; projectDir ], _), _) ->
+        let projectName = projectName |> asStr
+
+        let projectDir =
+          projectDir |> asStr |> pathStrTrimEndPathSep
+
+        Some(projectName, projectDir)
+
+    | _ -> None
+
+  let asProjectSchema expr =
+    match expr with
+    | ARecordExpr (None, fields, _) ->
+        match fields
+              |> List.tryFind (fun (name, _, _) -> name = "Options") with
+        | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
+        | _ -> None
+
+    | _ -> None
+
+  let expr =
+    match ast with
+    | AExprRoot expr -> expr
+    | AModuleRoot (_, expr, _) -> expr
+
+  match expr with
+  | ASemiExpr (items, _) -> items |> List.tryPick asProjectSchema
+  | _ -> asProjectSchema expr
+
+let private parseProjectSchema contents =
+  let ast, errors = contents |> tokenize |> parse
+  if errors |> List.isEmpty |> not then
+    errors
+    |> listSort (fun (_, l) (_, r) -> posCmp l r)
+    |> List.iter (fun (msg, loc) -> printfn "ERROR %s %s" (posToString loc) msg)
+    failwith "Syntax error in project file."
+
+  doInterpretProjectSchema ast
+
+// -----------------------------------------------
+// Context
+// -----------------------------------------------
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type CompileCtx =
+  { ProjectDir: string
+    ProjectName: string
+
+    /// project name -> project directory
+    Projects: AssocMap<string, string>
+
+    Verbosity: Verbosity
+    Host: CliHost }
+
+let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
+  let projectDir = projectDir |> pathStrTrimEndPathSep
+  let projectName = projectDir |> pathStrToStem
+
+  let projects =
+    mapEmpty strCmp
+    |> mapAdd "MiloneCore" (host.MiloneHome + "/libcore")
+    |> mapAdd projectName projectDir
+
+  { ProjectDir = projectDir
+    ProjectName = projectName
+    Projects = projects
+    Verbosity = verbosity
+    Host = host }
+
+let private compileCtxReadProjectFile (ctx: CompileCtx) =
+  let host = ctx.Host
+
+  let projectFilePath =
+    ctx.ProjectDir
+    + "/"
+    + ctx.ProjectName
+    + ".milone_project"
+
+  match host.FileReadAllText projectFilePath with
+  | Some contents ->
+      match parseProjectSchema contents with
+      | Some refs ->
+          let projects =
+            refs
+            |> List.fold (fun projects (projectName, projectDir) ->
+                 if projects |> mapContainsKey projectName
+                 then failwithf "Project name is duplicated: '%s'" projectName
+
+                 let projectDir =
+                   if projectDir |> pathIsRelative then ctx.ProjectDir + "/" + projectDir else projectDir
+
+                 projects |> mapAdd projectName projectDir) ctx.Projects
+
+          { ctx with Projects = projects }
+
+      | None -> failwith "Project is incomplete: couldn't find project schema."
+  | None -> ctx
+
+let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
+  let projects =
+    references
+    |> List.fold (fun projects projectDir ->
+         let projectDir = projectDir |> pathStrTrimEndPathSep
+         let projectName = projectDir |> pathStrToStem
+
+         if projects |> mapContainsKey projectName
+         then failwithf "Project name is duplicated: '%s'" projectName
+
+         projects |> mapAdd projectName projectDir) ctx.Projects
+
+  { ctx with Projects = projects }
+
+let private toBundleHost parse (ctx: CompileCtx): BundleHost =
+  let host = ctx.Host
   let readFile = host.FileReadAllText
 
-  match readFile (miloneHome + "/libcore/" + moduleName + ".fs") with
-  | Some it -> it
-  | None ->
-      printfn "Missing file: home=%s module=%s" miloneHome moduleName
-      failwithf "File not found"
+  let readModuleFile (projectDir: string) (moduleName: string) =
+    readFile (projectDir + "/" + moduleName + ".fs")
 
-let private readModuleFile (host: CliHost) projectDir moduleName =
-  let readFile = host.FileReadAllText
+  let parseModule (moduleName: string) (contents: string) =
+    // unique name?
+    let docId: DocId = moduleName
 
-  readFile (projectDir + "/" + moduleName + ".fs")
+    let ast, errors = parse docId contents
+    Some(docId, ast, errors)
+
+  { FetchModule =
+      fun projectName moduleName ->
+        match ctx.Projects |> mapTryFind projectName with
+        | Some projectDir ->
+            match readModuleFile projectDir moduleName with
+            | Some contents -> parseModule moduleName contents
+            | None -> None
+        | None -> None }
 
 // -----------------------------------------------
 // Write output and logs
@@ -195,34 +350,16 @@ let private printLogs (tyCtx: TyCtx) logs =
 
 /// Loads source codes from files, performs tokenization and SyntaxParse,
 /// and transforms them into high-level intermediate representation (HIR).
-let syntacticallyAnalyze (host: CliHost) v (projectDir: string) =
-  let projectDir = projectDir |> pathStrTrimEndPathSep
-  let projectName = projectDir |> pathStrToStem
+let syntacticallyAnalyze (ctx: CompileCtx) =
+  let host = ctx.Host
+  let v = ctx.Verbosity
 
-  writeLog host v ("Bundling project=" + projectName)
+  writeLog host v ("Bundling project=" + ctx.ProjectName)
 
-  let bundleHost: BundleHost =
-    { FetchModule =
-        fun p m ->
-          // FIXME: unique id?
-          let docId = m
-
-          if p = "MiloneCore" then
-            let ast, errors = readCoreFile host m |> tokenize |> parse
-            Some(docId, ast, errors)
-          else if p = projectName then
-            match readModuleFile host projectDir m with
-            | Some contents ->
-                let ast, errors = contents |> tokenize |> parse
-                Some(docId, ast, errors)
-
-            | None -> None
-          else
-            None }
-
-  match bundleProgram bundleHost projectName with
+  let doParse (_: DocId) (s: string) = s |> tokenize |> parse
+  match bundleProgram (ctx |> toBundleHost doParse) ctx.ProjectName with
   | Some syntax -> syntax
-  | None -> failwithf "No entrypoint module: %s" projectName
+  | None -> failwithf "Entry module file not found: %s" ctx.ProjectName
 
 /// Analyzes HIR to validate program and collect information.
 let semanticallyAnalyze (host: CliHost) v (expr, nameCtx, errors) =
@@ -309,8 +446,11 @@ let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
 // writeLog host v "Finish"
 // cOutput, success
 
-let compile (host: CliHost) v projectDir: string * bool =
-  let syntax = syntacticallyAnalyze host v projectDir
+let compile (ctx: CompileCtx): string * bool =
+  let host = ctx.Host
+  let v = ctx.Verbosity
+
+  let syntax = syntacticallyAnalyze ctx
   if syntax |> syntaxHasError then
     printSyntaxErrors syntax
     "", false
@@ -327,10 +467,8 @@ let compile (host: CliHost) v projectDir: string * bool =
 // Actions
 // -----------------------------------------------
 
-let cliParse (host: CliHost) verbosity (projectDir: string) =
-  let v = verbosity
-  let projectDir = projectDir |> pathStrTrimEndPathSep
-  let projectName = projectDir |> pathStrToStem
+let cliParse (host: CliHost) v (projectDir: string) =
+  let ctx = compileCtxNew host v projectDir
 
   let parseWithLogging moduleName contents =
     writeLog
@@ -346,35 +484,22 @@ let cliParse (host: CliHost) verbosity (projectDir: string) =
       errors
       |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
 
-    match verbosity with
+    match v with
     | Verbose -> printfn "%s" (objToString ast)
     | _ -> ()
 
     ast, errors
 
-  let bundleHost: BundleHost =
-    { FetchModule =
-        fun p m ->
-          let docId = m
-
-          if p = "MiloneCore" then
-            let ast, errors = parseWithLogging m (readCoreFile host m)
-            Some(docId, ast, errors)
-          else if p = projectName then
-            match readModuleFile host projectDir m with
-            | Some contents ->
-                let ast, errors = parseWithLogging m contents
-                Some(docId, ast, errors)
-
-            | None -> None
-          else
-            None }
-
-  bundleProgram bundleHost projectName |> ignore
+  bundleProgram (ctx |> toBundleHost parseWithLogging) ctx.ProjectName
+  |> ignore
   0
 
 let cliCompile (host: CliHost) verbosity projectDir =
-  let output, success = compile host verbosity projectDir
+  let ctx =
+    compileCtxNew host verbosity projectDir
+    |> compileCtxReadProjectFile
+
+  let output, success = compile ctx
   let exitCode = if success then 0 else 1
 
   printfn "%s" (output |> strTrimEnd)
@@ -389,8 +514,10 @@ let cliKirDump (host: CliHost) projectDirs =
        printfn "// -------------------------------\n// %s\n{\n" projectDir
        printfn "/*"
 
+       let ctx = compileCtxNew host v projectDir
+
        let output, success =
-         let syntax = syntacticallyAnalyze host v projectDir
+         let syntax = syntacticallyAnalyze ctx
 
          let expr, tyCtx = semanticallyAnalyze host v syntax
 
@@ -422,8 +549,10 @@ let cliCompileViaKir (host: CliHost) projectDirs =
        printfn "// -------------------------------\n// %s\n" projectDir
        printfn "/*"
 
+       let ctx = compileCtxNew host v projectDir
+
        let output, success =
-         let syntax = syntacticallyAnalyze host v projectDir
+         let syntax = syntacticallyAnalyze ctx
 
          let expr, tyCtx = semanticallyAnalyze host v syntax
 
