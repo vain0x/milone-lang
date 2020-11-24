@@ -1,8 +1,9 @@
 /// # TyElaborating
 ///
+/// Resolve record/field exprs.
+///
 /// Converts some of types to other types.
 ///
-/// - Record types
 /// - Newtype variants (discriminated union type with exactly-one variant)
 module rec MiloneLang.TyElaborating
 
@@ -27,8 +28,8 @@ type private TyElaborationCtx =
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
 
-    /// recordTySerial -> (tupleTy, (field -> fieldIndex, fieldTy))
-    RecordMap: AssocMap<TySerial, (Ty * AssocMap<Ident, int * Ty>)> }
+    /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
+    RecordMap: AssocMap<TySerial, (Ty list * AssocMap<Ident, int * Ty>)> }
 
 let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
   { Vars = tyCtx.Vars
@@ -42,27 +43,19 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
       Vars = ctx.Vars
       Tys = ctx.Tys }
 
-/// ## Records to Tuples
+/// ## Resolution of records and fields
 ///
-/// Field names are unnecessary for code generation.
-/// Records are equivalent to tuples except for ordering of fields.
+/// Record expressions are flexible in order of fields
+/// and allow to *extend* a record.
+/// Field expressions selects accessed field by name,
+/// which requires looking up.
+///
+/// This stage changes them to normalized form.
+/// Record creation always provide all field values in order of declaration
+/// and extending a record is explicitly done.
+/// Accessed field is selected by indexes, not names.
 ///
 /// ### Conversions
-///
-/// This stage replaces production and consumption of records with that of tuples,
-/// sorting fields in the order of declaration.
-///
-/// Record type:
-///
-/// ```fsharp
-/// // Assume type R = { F1: T1; F2: T2 } is defined.
-///   R
-/// //=>
-///   T1 * T2
-/// ```
-///
-/// Occurrences of record types are replaced with a tuple type,
-/// which consists of field types.
 ///
 /// Record creation:
 ///
@@ -70,13 +63,17 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
 ///   {
 ///     F2 = t2
 ///     F1 = t1
-///   }: R
+///   }
 /// //=>
-///   (t1, t2): T1 * T2
+///   {
+///     F1 = t1
+///     F2 = t2
+///   }
 /// ```
 ///
-/// Since record creation is checked in Typing that
-/// fields are exhaustively specified; we just sort them.
+/// Since record creation is checked in Typing,
+/// fields are exhaustively specified; just sort them without extract checking.
+/// (Evaluation order does change.)
 ///
 /// Record mutation:
 ///
@@ -84,9 +81,14 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx =
 ///   { r with
 ///       Fi = ti
 ///       ...
-///   }: R
+///   }
 /// //=>
-///   (r.1, r.2, ..., ti, ...): (T1 * T2 * ...)
+///   {
+///       Fi = Ti  // specified fields
+///       ...
+///       Fj = r.j  // unspecified fields
+///       ...
+///   }
 /// ```
 ///
 /// Conversion of record mutation is similar to record creation
@@ -105,31 +107,25 @@ let private buildRecordMap (ctx: TyElaborationCtx) =
                   let ty = ty |> teTy ctx
                   name, ty, loc)
 
-           let tupleTy =
+           let fieldTys =
              fields
-             |> List.map (fun (_, ty, _) -> ty)
-             |> tyTuple
+             |> List.map (fun (_, ty, _) -> ty |> teTy ctx)
 
            let fieldMap =
              fields
              |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
              |> mapOfList strCmp
 
-           acc |> mapAdd tySerial (tupleTy, fieldMap)
+           acc |> mapAdd tySerial (fieldTys, fieldMap)
 
        | _ -> acc) (mapEmpty intCmp)
 
-let private recordToTuple (ctx: TyElaborationCtx) tySerial =
-  match ctx.RecordMap |> mapTryFind tySerial with
-  | Some (tupleTy, _) -> Some tupleTy
-  | _ -> None
-
 let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty loc =
-  let tupleTy, fieldMap =
+  let fieldTys, fieldMap =
     match ty with
     | AppTy (RecordTyCtor tySerial, _) ->
         match ctx.RecordMap |> mapTryFind tySerial with
-        | Some (tupleTy, fieldMap) -> tupleTy, fieldMap
+        | Some (fieldTys, fieldMap) -> fieldTys, fieldMap
         | _ -> failwithf "NEVER: %A" itself
     | _ -> failwithf "NEVER: %A" itself
 
@@ -150,16 +146,11 @@ let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty l
 
   match baseOpt with
   | Some baseExpr ->
-      let itemTys =
-        match tupleTy with
-        | AppTy (_, fieldTys) -> fieldTys
-        | _ -> failwithf "NEVER: %A" itself
-
       let itemExpr index =
-        let itemTy = itemTys |> List.item index
-        HInfExpr(InfOp.TupleItem index, [ baseExpr ], itemTy, loc)
+        let itemTy = fieldTys |> List.item index
+        HInfExpr(InfOp.RecordItem index, [ baseExpr ], itemTy, loc)
 
-      let n = itemTys |> List.length
+      let n = fieldTys |> List.length
 
       let rec go i fields =
         match fields with
@@ -169,13 +160,14 @@ let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty l
 
         | _ -> itemExpr i :: go (i + 1) fields
 
-      hxTuple (go 0 fields) loc
+      let fields = go 0 fields
+      HInfExpr(InfOp.Record, fields, ty, loc)
 
   | None ->
       let fields =
         fields |> List.map (fun (_, init) -> init)
 
-      hxTuple fields loc
+      HInfExpr(InfOp.Record, fields, ty, loc)
 
 let private rewriteFieldExpr (ctx: TyElaborationCtx) itself recordTy l r ty loc =
   let index =
@@ -188,7 +180,7 @@ let private rewriteFieldExpr (ctx: TyElaborationCtx) itself recordTy l r ty loc 
 
     | _ -> failwithf "NEVER: %A" itself
 
-  HInfExpr(InfOp.TupleItem index, [ l ], ty, loc)
+  HInfExpr(InfOp.RecordItem index, [ l ], ty, loc)
 
 /// ## Newtype variant unwrapping
 ///
@@ -295,13 +287,6 @@ let private teTy (ctx: TyElaborationCtx) ty =
       | Some ty -> ty
       | None -> ty
 
-  | AppTy (RecordTyCtor tySerial, tyArgs) ->
-      assert (List.isEmpty tyArgs)
-
-      match recordToTuple ctx tySerial with
-      | Some ty -> ty
-      | None -> ty
-
   | AppTy (_, []) -> ty
 
   | AppTy (tyCtor, tyArgs) ->
@@ -378,7 +363,16 @@ let private teExpr (ctx: TyElaborationCtx) expr =
           let ty = ty |> teTy ctx
           HVariantExpr(varSerial, ty, loc)
 
-  | HRecordExpr (baseOpt, fields, ty, loc) -> rewriteRecordExpr ctx expr baseOpt fields ty loc
+  | HRecordExpr (baseOpt, fields, ty, loc) ->
+      let baseOpt = baseOpt |> Option.map (teExpr ctx)
+
+      let fields =
+        fields
+        |> List.map (fun (name, init, loc) ->
+             let init = init |> teExpr ctx
+             name, init, loc)
+
+      rewriteRecordExpr ctx expr baseOpt fields ty loc
 
   | HNavExpr (l, r, ty, loc) ->
       let doArm () =
@@ -486,6 +480,15 @@ let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
          | SynonymTyDef (name, tyArgs, bodyTy, loc) ->
              let bodyTy = bodyTy |> teTy ctx
              SynonymTyDef(name, tyArgs, bodyTy, loc)
+
+         | RecordTyDef (name, fields, loc) ->
+             let fields =
+               fields
+               |> List.map (fun (fieldName, fieldTy, fieldLoc) ->
+                    let fieldTy = fieldTy |> teTy ctx
+                    fieldName, fieldTy, fieldLoc)
+
+             RecordTyDef(name, fields, loc)
 
          | _ -> tyDef)
 

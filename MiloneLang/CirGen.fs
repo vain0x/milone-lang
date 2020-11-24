@@ -670,6 +670,7 @@ let private genBinaryExprAsCall ctx funName l r =
   callExpr, ctx
 
 let private genUnaryExpr ctx op arg ty _ =
+  let argTy = arg |> mexprToTy
   let arg, ctx = cgExpr ctx arg
   match op with
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
@@ -691,6 +692,20 @@ let private genUnaryExpr ctx op arg ty _ =
   | MGetVariantUnary serial ->
       let _, ctx = cgTyComplete ctx ty
       CNavExpr(arg, getUniqueVariantName ctx serial), ctx
+
+  | MRecordItemUnary index ->
+      let fieldName =
+        match argTy with
+        | AppTy (RecordTyCtor tySerial, _) ->
+            match ctx.Tys |> mapFind tySerial with
+            | RecordTyDef (_, fields, _) ->
+                let name, _, _ = fields |> List.item index
+                name
+
+            | _ -> failwith "NEVER"
+        | _ -> failwith "NEVER"
+
+      CNavExpr(arg, fieldName), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
@@ -980,6 +995,30 @@ let private cgVariantInit ctx varSerial variantSerial payload unionTy =
 
   ctx
 
+let private cgRecordInit (ctx: CirCtx) serial args ty =
+  let fields =
+    match ty with
+    | AppTy (RecordTyCtor tySerial, _) ->
+        match ctx.Tys |> mapFind tySerial with
+        | RecordTyDef (_, fields, _) -> fields
+        | _ -> failwith "NEVER"
+    | _ -> failwith "NEVER"
+
+  assert (List.length fields = List.length args)
+
+  let name = getUniqueVarName ctx serial
+  let storageModifier = findStorageModifier ctx serial
+  let ty, ctx = cgTyComplete ctx ty
+
+  let ctx =
+    addLetStmt ctx name None ty storageModifier
+
+  List.zip fields args
+  |> List.fold (fun ctx ((fieldName, _, _), arg) ->
+       let l = CNavExpr(CRefExpr name, fieldName)
+       let arg, ctx = cgExpr ctx arg
+       addStmt ctx (CSetStmt(l, arg))) ctx
+
 let private cgLetValStmt ctx serial init ty loc =
   match init with
   | MUninitInit -> doGenLetValStmt ctx serial None ty
@@ -1009,6 +1048,7 @@ let private cgLetValStmt ctx serial init ty loc =
   | MConsInit (head, tail) -> cgConsInit ctx serial head tail ty
   | MTupleInit items -> cgTupleInit ctx serial items ty
   | MVariantInit (variantSerial, payload) -> cgVariantInit ctx serial variantSerial payload ty
+  | MRecordInit fields -> cgRecordInit ctx serial fields ty
 
 let private cgSetStmt ctx serial right =
   let right, ctx = cgExpr ctx right

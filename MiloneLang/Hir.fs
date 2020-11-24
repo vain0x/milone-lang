@@ -317,8 +317,14 @@ type InfOp =
   /// Closure constructor.
   | Closure
 
-  /// Get an item of tuple.
-  | TupleItem of index: int
+  /// Record creation.
+  ///
+  /// Unlike record expr, it's guaranteed that
+  /// all of fields are specified in order of declaration.
+  | Record
+
+  /// Gets i'th field of record.
+  | RecordItem of index: int
 
 /// Expression in HIR.
 [<NoEquality; NoComparison>]

@@ -49,13 +49,16 @@ type MUnary =
   | MUnboxUnary
 
   /// Projection. Gets an item of tuple.
-  | MProjUnary of index: int
+  | MProjUnary of tupleItemIndex: int
 
   /// Gets variant tag of union value.
   | MTagUnary
 
   /// Gets payload of union value, unchecked.
   | MGetVariantUnary of variantSerial: VariantSerial
+
+  /// Gets a field of record.
+  | MRecordItemUnary of recordItemIndex: int
 
   | MListIsEmptyUnary
 
@@ -130,6 +133,7 @@ type MInit =
   | MConsInit of head: MExpr * tail: MExpr
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
+  | MRecordInit of MExpr list
 
 [<Struct>]
 [<NoEquality; NoComparison>]

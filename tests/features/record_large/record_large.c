@@ -2,7 +2,7 @@
 
 struct StringList;
 
-struct BoolBoolStringListStringListStringListTuple5;
+struct GitCommitOptions_;
 
 void* defaultOptions_(int arg_);
 
@@ -13,23 +13,23 @@ struct StringList {
     struct StringList* tail;
 };
 
-struct BoolBoolStringListStringListStringListTuple5 {
-    int t0;
-    int t1;
-    struct StringList* t2;
-    struct StringList* t3;
-    struct StringList* t4;
+struct GitCommitOptions_ {
+    int All;
+    int Patch;
+    struct StringList* ReuseMessage;
+    struct StringList* ReeditMessage;
+    struct StringList* Fixup;
 };
 
 void* defaultOptions_(int arg_) {
-    struct BoolBoolStringListStringListStringListTuple5 tuple_;
-    tuple_.t0 = 0;
-    tuple_.t1 = 0;
-    tuple_.t2 = NULL;
-    tuple_.t3 = NULL;
-    tuple_.t4 = NULL;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct BoolBoolStringListStringListStringListTuple5));
-    (*(((struct BoolBoolStringListStringListStringListTuple5*)box_))) = tuple_;
+    struct GitCommitOptions_ GitCommitOptions_;
+    GitCommitOptions_.All = 0;
+    GitCommitOptions_.Patch = 0;
+    GitCommitOptions_.ReuseMessage = NULL;
+    GitCommitOptions_.ReeditMessage = NULL;
+    GitCommitOptions_.Fixup = NULL;
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct GitCommitOptions_));
+    (*(((struct GitCommitOptions_*)box_))) = GitCommitOptions_;
     return box_;
 }
 

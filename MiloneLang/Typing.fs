@@ -779,7 +779,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HInfExpr (InfOp.CallProc, _, _, _)
   | HInfExpr (InfOp.CallTailRec, _, _, _)
   | HInfExpr (InfOp.CallClosure, _, _, _)
-  | HInfExpr (InfOp.TupleItem _, _, _, _) -> failwith "NEVER"
+  | HInfExpr (InfOp.Record, _, _, _)
+  | HInfExpr (InfOp.RecordItem _, _, _, _) -> failwith "NEVER"
 
   | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 

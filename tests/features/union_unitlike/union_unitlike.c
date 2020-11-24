@@ -12,9 +12,7 @@ int usedInOtherSumTypeCase_(int arg_1);
 
 struct ObjectList;
 
-struct UnitObjectListTuple2;
-
-struct ObjectObjectListTuple2;
+struct RecordUsingMyUnit_;
 
 int usedInRecordTypeCase_(int arg_2);
 
@@ -74,29 +72,24 @@ struct ObjectList {
     struct ObjectList* tail;
 };
 
-struct UnitObjectListTuple2 {
-    int t0;
-    struct ObjectList* t1;
-};
-
-struct ObjectObjectListTuple2 {
-    void* t0;
-    struct ObjectList* t1;
+struct RecordUsingMyUnit_ {
+    void* First;
+    struct ObjectList* Second;
 };
 
 int usedInRecordTypeCase_(int arg_2) {
     struct ObjectList* list_ = (struct ObjectList*)milone_mem_alloc(1, sizeof(struct ObjectList));
     list_->head = 0;
     list_->tail = NULL;
-    struct UnitObjectListTuple2 tuple_;
-    tuple_.t0 = 0;
-    tuple_.t1 = list_;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct UnitObjectListTuple2));
-    (*(((struct UnitObjectListTuple2*)box_1))) = tuple_;
+    struct RecordUsingMyUnit_ RecordUsingMyUnit_;
+    RecordUsingMyUnit_.First = 0;
+    RecordUsingMyUnit_.Second = list_;
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct RecordUsingMyUnit_));
+    (*(((struct RecordUsingMyUnit_*)box_1))) = RecordUsingMyUnit_;
     void* record_ = box_1;
     int match_2;
-    if ((!((*(((struct ObjectObjectListTuple2*)record_))).t1))) goto next_7;
-    if ((!((!((*(((struct ObjectObjectListTuple2*)record_))).t1->tail))))) goto next_7;
+    if ((!((*(((struct RecordUsingMyUnit_*)record_))).Second))) goto next_7;
+    if ((!((!((*(((struct RecordUsingMyUnit_*)record_))).Second->tail))))) goto next_7;
     match_2 = 0;
     goto end_match_6;
 next_7:;

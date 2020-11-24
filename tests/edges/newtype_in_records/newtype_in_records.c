@@ -4,7 +4,7 @@ void* newDay_(int value_);
 
 int dayToInt_(void* arg_);
 
-struct ObjectObjectTuple2;
+struct DayRange_;
 
 void* newDayRange_(void* start_, void* endDay_);
 
@@ -38,9 +38,9 @@ int dayToInt_(void* arg_) {
     return value_1;
 }
 
-struct ObjectObjectTuple2 {
-    void* t0;
-    void* t1;
+struct DayRange_ {
+    void* Start;
+    void* End;
 };
 
 void* newDayRange_(void* start_, void* endDay_) {
@@ -48,17 +48,17 @@ void* newDayRange_(void* start_, void* endDay_) {
     int call_2 = dayToInt_(start_);
     milone_assert((call_1 >= call_2), 16, 2);
     int call_3 = 0;
-    struct ObjectObjectTuple2 tuple_;
-    tuple_.t0 = start_;
-    tuple_.t1 = endDay_;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct ObjectObjectTuple2));
-    (*(((struct ObjectObjectTuple2*)box_1))) = tuple_;
+    struct DayRange_ DayRange_;
+    DayRange_.Start = start_;
+    DayRange_.End = endDay_;
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct DayRange_));
+    (*(((struct DayRange_*)box_1))) = DayRange_;
     return box_1;
 }
 
 int between_(void* day_, void* range_) {
     int call_4 = dayToInt_(day_);
-    int call_5 = dayToInt_((*(((struct ObjectObjectTuple2*)range_))).t0);
+    int call_5 = dayToInt_((*(((struct DayRange_*)range_))).Start);
     int if_1;
     if ((call_4 >= call_5)) {
         goto then_5;
@@ -66,7 +66,7 @@ int between_(void* day_, void* range_) {
         goto else_6;
     }
 then_5:;
-    int call_6 = dayToInt_((*(((struct ObjectObjectTuple2*)range_))).t1);
+    int call_6 = dayToInt_((*(((struct DayRange_*)range_))).End);
     int call_7 = dayToInt_(day_);
     if_1 = (call_6 >= call_7);
     goto if_next_4;

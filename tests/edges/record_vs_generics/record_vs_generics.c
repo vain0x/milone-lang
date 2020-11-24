@@ -6,7 +6,7 @@ struct ObjectTuple1;
 
 void* fun_(void* env_, int arg_);
 
-struct IntTuple1;
+struct IntWrapper_;
 
 struct UnitObjectFun1;
 
@@ -26,8 +26,8 @@ void* fun_(void* env_, int arg_) {
     return call_;
 }
 
-struct IntTuple1 {
-    int t0;
+struct IntWrapper_ {
+    int Value;
 };
 
 struct UnitObjectFun1 {
@@ -36,10 +36,10 @@ struct UnitObjectFun1 {
 };
 
 int main() {
-    struct IntTuple1 tuple_1;
-    tuple_1.t0 = 42;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
-    (*(((struct IntTuple1*)box_))) = tuple_1;
+    struct IntWrapper_ IntWrapper_;
+    IntWrapper_.Value = 42;
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntWrapper_));
+    (*(((struct IntWrapper_*)box_))) = IntWrapper_;
     struct ObjectTuple1 tuple_;
     tuple_.t0 = box_;
     void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct ObjectTuple1));
@@ -49,7 +49,7 @@ int main() {
     struct UnitObjectFun1 f_ = fun_1;
     void* app_ = f_.fun(f_.env, 0);
     void* wrapper_ = app_;
-    milone_assert(((*(((struct IntTuple1*)wrapper_))).t0 == 42), 12, 2);
+    milone_assert(((*(((struct IntWrapper_*)wrapper_))).Value == 42), 12, 2);
     int call_1 = 0;
     return 0;
 }

@@ -1,6 +1,6 @@
 #include "milone.h"
 
-struct IntTuple1;
+struct IntWrapper_;
 
 int letWithTypeAnnotationCase_(int n_);
 
@@ -10,27 +10,27 @@ int matchExprCase_(int n_2);
 
 int main();
 
-struct IntTuple1 {
-    int t0;
+struct IntWrapper_ {
+    int Value;
 };
 
 int letWithTypeAnnotationCase_(int n_) {
-    struct IntTuple1 tuple_;
-    tuple_.t0 = n_;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
-    (*(((struct IntTuple1*)box_))) = tuple_;
+    struct IntWrapper_ IntWrapper_;
+    IntWrapper_.Value = n_;
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntWrapper_));
+    (*(((struct IntWrapper_*)box_))) = IntWrapper_;
     void* w_ = box_;
-    milone_assert(((*(((struct IntTuple1*)w_))).t0 == n_), 10, 2);
+    milone_assert(((*(((struct IntWrapper_*)w_))).Value == n_), 10, 2);
     int call_ = 0;
     return 0;
 }
 
 int typeAnnotationExprCase_(int n_1) {
-    struct IntTuple1 tuple_1;
-    tuple_1.t0 = n_1;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
-    (*(((struct IntTuple1*)box_1))) = tuple_1;
-    milone_assert(((*(((struct IntTuple1*)box_1))).t0 == n_1), 13, 2);
+    struct IntWrapper_ IntWrapper_1;
+    IntWrapper_1.Value = n_1;
+    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntWrapper_));
+    (*(((struct IntWrapper_*)box_1))) = IntWrapper_1;
+    milone_assert(((*(((struct IntWrapper_*)box_1))).Value == n_1), 13, 2);
     int call_1 = 0;
     return 0;
 }
@@ -45,10 +45,10 @@ int matchExprCase_(int n_2) {
             goto clause_3;
     }
 clause_2:;
-    struct IntTuple1 tuple_2;
-    tuple_2.t0 = 0;
-    void* box_2 = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
-    (*(((struct IntTuple1*)box_2))) = tuple_2;
+    struct IntWrapper_ IntWrapper_2;
+    IntWrapper_2.Value = 0;
+    void* box_2 = (void*)milone_mem_alloc(1, sizeof(struct IntWrapper_));
+    (*(((struct IntWrapper_*)box_2))) = IntWrapper_2;
     switch_ = box_2;
     goto switch_next_1;
 clause_3:;
@@ -57,7 +57,7 @@ clause_3:;
     goto switch_next_1;
 switch_next_1:;
     void* t_ = switch_;
-    milone_assert(((*(((struct IntTuple1*)t_))).t0 == 0), 21, 2);
+    milone_assert(((*(((struct IntWrapper_*)t_))).Value == 0), 21, 2);
     int call_2 = 0;
     return 0;
 }

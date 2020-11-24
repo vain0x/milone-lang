@@ -795,13 +795,14 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
   | InfOp.Tuple -> kgTupleExpr args ty loc hole ctx
 
-  | InfOp.TupleItem _ -> failwithf "unimplemented. %A" itself
-
   | InfOp.Closure ->
       match args with
       | [ HFunExpr (funSerial, funTy, funLoc); env ] -> kgClosureExpr funSerial funTy funLoc env ty loc hole ctx
 
       | _ -> failwithf "NEVER: bad use of Closure prim. %A" itself
+
+  | InfOp.Record
+  | InfOp.RecordItem _ -> failwith "unimplemented"
 
   | InfOp.App -> failwithf "NEVER: InfOp.App is resolved in uneta. %A" itself
   | InfOp.Anno -> failwithf "NEVER: InfOp.Anno is resolved in type inference: %A" itself

@@ -868,9 +868,26 @@ let private mirifyExprTuple ctx items itemTys loc =
 
   MRefExpr(tempSerial, ty, loc), ctx
 
-let private mirifyExprTupleItem ctx index tuple itemTy loc =
-  let tuple, ctx = mirifyExpr ctx tuple
-  MUnaryExpr(MProjUnary index, tuple, itemTy, loc), ctx
+let private mirifyExprRecord (ctx: MirCtx) args ty loc =
+  let name =
+    match ty with
+    | AppTy (RecordTyCtor tySerial, _) -> ctx.Tys |> mapFind tySerial |> tyDefToName
+    | _ -> failwith "NEVER"
+
+  let _, tempSerial, ctx = freshVar ctx name ty loc
+
+  let args, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+  let ctx =
+    addStmt ctx (MLetValStmt(tempSerial, MRecordInit args, ty, loc))
+
+  MRefExpr(tempSerial, ty, loc), ctx
+
+let private mirifyExprRecordItem ctx index tuple itemTy loc =
+  let record, ctx = mirifyExpr ctx tuple
+  MUnaryExpr(MRecordItemUnary index, record, itemTy, loc), ctx
 
 let private mirifyExprOpArith ctx op l r ty loc =
   let lTy = exprToTy l
@@ -1032,7 +1049,8 @@ let private mirifyExprInf ctx infOp args ty loc =
   match infOp, args, ty with
   | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
   | InfOp.Tuple, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
-  | InfOp.TupleItem index, [ tuple ], itemTy -> mirifyExprTupleItem ctx index tuple itemTy loc
+  | InfOp.Record, _, _ -> mirifyExprRecord ctx args ty loc
+  | InfOp.RecordItem index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
   | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
   | InfOp.CallTailRec, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
