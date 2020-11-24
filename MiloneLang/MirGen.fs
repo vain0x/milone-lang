@@ -917,7 +917,30 @@ let private mirifyExprSemi ctx exprs =
   let exprs, ctx = mirifyExprs ctx exprs
   List.last exprs, ctx
 
-let private mirifyExprInfCallProc ctx callee args ty loc =
+let private mirifyCallIntExpr ctx itself calleeTy args ty loc =
+  match calleeTy, args with
+  | AppTy (FunTyCtor, [ AppTy (srcTy, _); _ ]), [ arg ] ->
+      let arg, ctx = mirifyExpr ctx arg
+
+      match srcTy with
+      | IntTyCtor -> arg, ctx
+
+      | BoolTyCtor
+      | UIntTyCtor
+      | CharTyCtor -> MUnaryExpr(MIntOfScalarUnary, arg, tyInt, loc), ctx
+
+      | StrTyCtor ->
+          let temp, tempSerial, ctx = freshVar ctx "call" ty loc
+
+          let ctx =
+            addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MIntOfStrPrim, [ arg ]), ty, loc))
+
+          temp, ctx
+
+      | _ -> failwithf "NEVER: %A" itself
+  | _ -> failwithf "NEVER: %A" itself
+
+let private mirifyExprInfCallProc ctx itself callee args ty loc =
   let core () =
     match callee with
     | HPrimExpr (prim, _, _) ->
@@ -966,6 +989,7 @@ let private mirifyExprInfCallProc ctx callee args ty loc =
       | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg ty loc
       | HPrim.Unbox, [ arg ] -> mirifyExprCallUnbox ctx arg ty loc
       | HPrim.StrLength, [ arg ] -> mirifyExprCallStrLength ctx arg ty loc
+      | HPrim.Int, _ -> mirifyCallIntExpr ctx itself (exprToTy callee) args ty loc
       | _ -> core ()
 
   | HVariantExpr (serial, _, _), [ arg ] -> mirifyExprCallVariantFun ctx serial arg ty loc
@@ -1045,14 +1069,14 @@ let private mirifyExprInfClosure ctx funSerial env funTy loc =
 
   tempRef, ctx
 
-let private mirifyExprInf ctx infOp args ty loc =
+let private mirifyExprInf ctx itself infOp args ty loc =
   match infOp, args, ty with
   | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
   | InfOp.Tuple, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
   | InfOp.Record, _, _ -> mirifyExprRecord ctx args ty loc
   | InfOp.RecordItem index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
-  | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx callee args ty loc
+  | InfOp.CallProc, callee :: args, _ -> mirifyExprInfCallProc ctx itself callee args ty loc
   | InfOp.CallTailRec, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
   | InfOp.Closure, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
@@ -1154,7 +1178,7 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx expr serial ty loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
   | HMatchExpr (cond, arms, ty, loc) -> mirifyExprMatch ctx cond arms ty loc
-  | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx infOp args ty loc
+  | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx expr infOp args ty loc
 
   | HLetValExpr (_vis, pat, body, next, _, loc) -> mirifyExprLetVal ctx pat body next loc
   | HLetFunExpr (serial, _vis, isMainFun, args, body, next, _, loc) ->

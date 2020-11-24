@@ -674,6 +674,7 @@ let private genUnaryExpr ctx op arg ty _ =
   let arg, ctx = cgExpr ctx arg
   match op with
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
+  | MIntOfScalarUnary -> CCastExpr(arg, CIntTy), ctx
   | MStrPtrUnary -> CNavExpr(arg, "str"), ctx
   | MStrLenUnary -> CNavExpr(arg, "len"), ctx
 
@@ -775,15 +776,6 @@ let private cgPrintfnCallExpr ctx format args =
   let ctx = addStmt ctx expr
   genDefault ctx tyUnit
 
-let private cgCallIntExpr arg argTy ctx =
-  let arg, ctx = cgExpr ctx arg
-  match argTy with
-  | AppTy (IntTyCtor, _) -> arg, ctx
-  | AppTy (UIntTyCtor, _)
-  | AppTy (CharTyCtor, _) -> CCastExpr(arg, CIntTy), ctx
-  | AppTy (StrTyCtor, _) -> CCallExpr(CRefExpr "str_to_int", [ arg ]), ctx
-  | _ -> failwith "Never: Type Error `int`"
-
 let private cgCallUIntExpr arg argTy ctx =
   let arg, ctx = cgExpr ctx arg
   match argTy with
@@ -829,8 +821,6 @@ let private cgCallPrimExpr ctx prim args primTy resultTy loc =
   | HPrim.Char, [ arg ], _ ->
       let arg, ctx = cgExpr ctx arg
       CCastExpr(arg, CCharTy), ctx
-
-  | HPrim.Int, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> cgCallIntExpr arg argTy ctx
 
   | HPrim.UInt, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> cgCallUIntExpr arg argTy ctx
 
@@ -896,6 +886,30 @@ let private doGenLetValStmt ctx serial expr ty =
   let storageModifier = findStorageModifier ctx serial
   let cty, ctx = cgTyComplete ctx ty
   addLetStmt ctx name expr cty storageModifier
+
+let private tyIsInt ty =
+  match ty with
+  | AppTy (IntTyCtor, []) -> true
+  | _ -> false
+
+let private cgCallMPrimExpr ctx itself serial prim args ty _loc =
+  match prim with
+  | MIntOfStrPrim ->
+      match args with
+      | [ arg ] ->
+          assert (ty |> tyIsInt)
+
+          let name = getUniqueVarName ctx serial
+          let storageModifier = findStorageModifier ctx serial
+
+          let arg, ctx = cgExpr ctx arg
+
+          let initExpr =
+            CCallExpr(CRefExpr "str_to_int", [ arg ])
+
+          addLetStmt ctx name (Some initExpr) CIntTy storageModifier
+
+      | _ -> failwithf "NEVER: %A" itself
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial
@@ -1026,6 +1040,8 @@ let private cgLetValStmt ctx serial init ty loc =
   | MExprInit expr ->
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
+
+  | MPrimInit (prim, args) -> cgCallMPrimExpr ctx init serial prim args ty loc
 
   | MCallPrimInit (HPrim.InRegion, [ arg ], _) -> cgCallInRegionExpr ctx serial arg ty loc
 

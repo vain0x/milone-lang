@@ -39,6 +39,9 @@ type MatchIR =
 type MUnary =
   | MNotUnary
 
+  // Converts a scalar to int.
+  | MIntOfScalarUnary
+
   /// Gets raw ptr of string.
   | MStrPtrUnary
 
@@ -86,6 +89,9 @@ type MBinary =
   /// `s.[i]`
   | MStrIndexBinary
 
+[<NoEquality; NoComparison>]
+type MPrim = | MIntOfStrPrim
+
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
 type MExpr =
@@ -116,6 +122,8 @@ type MInit =
   | MUninitInit
 
   | MExprInit of MExpr
+
+  | MPrimInit of MPrim * MExpr list
 
   /// Call to primitive.
   | MCallPrimInit of HPrim * args: MExpr list * primTy: Ty
