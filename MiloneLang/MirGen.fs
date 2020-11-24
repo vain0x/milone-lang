@@ -778,15 +778,6 @@ let private mirifyExprMatch ctx cond arms ty loc =
 // Expressions
 // -----------------------------------------------
 
-let private mirifyExprIndex ctx l r _ loc =
-  match exprToTy l, exprToTy r with
-  | AppTy (StrTyCtor, _), AppTy (IntTyCtor, _) ->
-      let l, ctx = mirifyExpr ctx l
-      let r, ctx = mirifyExpr ctx r
-      MBinaryExpr(MStrIndexBinary, l, r, tyChar, loc), ctx
-
-  | _ -> failwith "unimpl non-string indexing"
-
 let private mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
 
@@ -803,14 +794,6 @@ let private mirifyExprCallBox ctx arg _ loc =
     addStmt ctx (MLetValStmt(tempSerial, MBoxInit arg, tyObj, loc))
 
   temp, ctx
-
-let private mirifyExprCallUnbox ctx arg ty loc =
-  let arg, ctx = mirifyExpr ctx arg
-  MUnaryExpr(MUnboxUnary, arg, ty, loc), ctx
-
-let private mirifyExprCallStrLength ctx arg ty loc =
-  let arg, ctx = mirifyExpr ctx arg
-  MUnaryExpr(MStrLenUnary, arg, ty, loc), ctx
 
 let private mirifyCallStrGetSliceExpr ctx args loc =
   assert (List.length args = 3)
@@ -837,11 +820,6 @@ let private mirifyExprCallSome ctx item ty loc =
     addStmt ctx (MLetValStmt(tempSerial, MConsInit(item, nil), ty, loc))
 
   MRefExpr(tempSerial, ty, loc), ctx
-
-/// not a ==> !a
-let private mirifyExprCallNot ctx arg ty notLoc =
-  let arg, ctx = mirifyExpr ctx arg
-  MUnaryExpr(MNotUnary, arg, ty, notLoc), ctx
 
 let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let payload, ctx = mirifyExpr ctx payload
@@ -1092,6 +1070,15 @@ let private mirifyCallProcExpr ctx callee args ty loc =
 let private mirifyCallPrimExpr ctx itself prim args ty loc =
   let fail () = failwithf "NEVER: %A" itself
 
+  let regularUnary unary arg =
+    let arg, ctx = mirifyExpr ctx arg
+    MUnaryExpr(unary, arg, ty, loc), ctx
+
+  let regularBinary binary l r =
+      let l, ctx = mirifyExpr ctx l
+      let r, ctx = mirifyExpr ctx r
+      MBinaryExpr(binary, l, r, ty, loc), ctx
+
   match prim, args with
   | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx MAddBinary l r ty loc
   | HPrim.Add, _ -> fail ()
@@ -1109,19 +1096,19 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Lt, _ -> fail ()
   | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc
   | HPrim.Cons, _ -> fail ()
-  | HPrim.Index, [ l; r ] -> mirifyExprIndex ctx l r ty loc
+  | HPrim.Index, [ l; r ] -> regularBinary MStrIndexBinary l r
   | HPrim.Index, _ -> fail ()
   | HPrim.OptionSome, [ item ] -> mirifyExprCallSome ctx item ty loc
   | HPrim.OptionSome, _ -> fail ()
-  | HPrim.Not, [ arg ] -> mirifyExprCallNot ctx arg ty loc
+  | HPrim.Not, [ arg ] -> regularUnary MNotUnary arg
   | HPrim.Not, _ -> fail ()
   | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg ty loc
   | HPrim.Exit, _ -> fail ()
   | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg ty loc
   | HPrim.Box, _ -> fail ()
-  | HPrim.Unbox, [ arg ] -> mirifyExprCallUnbox ctx arg ty loc
+  | HPrim.Unbox, [ arg ] -> regularUnary MUnboxUnary arg
   | HPrim.Unbox, _ -> fail ()
-  | HPrim.StrLength, [ arg ] -> mirifyExprCallStrLength ctx arg ty loc
+  | HPrim.StrLength, [ arg ] -> regularUnary MStrLenUnary arg
   | HPrim.StrLength, _ -> fail ()
   | HPrim.StrGetSlice, _ -> mirifyCallStrGetSliceExpr ctx args loc
   | HPrim.Int, [ arg ] -> mirifyCallIntExpr ctx itself arg ty loc
