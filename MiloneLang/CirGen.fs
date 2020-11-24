@@ -359,18 +359,37 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
       let structName, ctx = getUniqueTyName ctx recordTyRef
       let selfTy = CStructTy structName
 
-      // TODO: Generate type declaration.
+      let ctx =
+        { ctx with
+            TyEnv =
+              ctx.TyEnv
+              |> mapAdd recordTyRef (CTyDeclared, selfTy) }
 
       selfTy, ctx
 
-let private genRecordTyDef ctx tySerial _fields =
+let private genRecordTyDef ctx tySerial fields =
   let recordTyRef = tyRecord tySerial
   let structName, ctx = getUniqueTyName ctx recordTyRef
-  let selfTy = CStructTy structName
+  let selfTy, ctx = genIncompleteRecordTyDecl ctx tySerial
 
-  // TODO: Generate type definition.
+  match ctx.TyEnv |> mapTryFind recordTyRef with
+  | Some (CTyDefined, ty) -> ty, ctx
 
-  selfTy, ctx
+  | _ ->
+      let fields, (ctx: CirCtx) =
+        (fields, ctx)
+        |> stMap (fun ((name, ty, _), ctx) ->
+             let ty, ctx = cgTyComplete ctx ty
+             (name, ty), ctx)
+
+      let ctx =
+        { ctx with
+            Decls = CStructDecl(structName, fields, []) :: ctx.Decls
+            TyEnv =
+              ctx.TyEnv
+              |> mapAdd recordTyRef (CTyDefined, selfTy) }
+
+      selfTy, ctx
 
 // -----------------------------------------------
 // Naming
