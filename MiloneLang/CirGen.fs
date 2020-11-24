@@ -774,7 +774,6 @@ let private cgActionStmt ctx itself action args =
 let private cgPrintfnActionStmt ctx itself args =
   match args with
   | (MLitExpr (StrLit format, _)) :: args ->
-
       let format = CStrRawExpr(format + "\n")
 
       let args, ctx =
@@ -833,7 +832,7 @@ let private doGenLetValStmt ctx serial expr ty =
   let cty, ctx = cgTyComplete ctx ty
   addLetStmt ctx name expr cty storageModifier
 
-let private cgCallMPrimExpr ctx itself serial prim args resultTy _loc =
+let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
   let conversion ctx makeExpr =
     match args with
     | [ arg ] ->
@@ -998,7 +997,7 @@ let private cgLetValStmt ctx serial init ty loc =
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
 
-  | MPrimInit (prim, args) -> cgCallMPrimExpr ctx init serial prim args ty loc
+  | MPrimInit (prim, args) -> cgCallPrimExpr ctx init serial prim args ty loc
 
   | MCallProcInit (callee, args, _) ->
       let expr, ctx = cgCallProcExpr ctx callee args ty
