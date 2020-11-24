@@ -675,6 +675,8 @@ let private genUnaryExpr ctx op arg ty _ =
   match op with
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MIntOfScalarUnary -> CCastExpr(arg, CIntTy), ctx
+  | MUIntOfScalarUnary -> CCastExpr(arg, CUInt32Ty), ctx
+  | MCharOfScalarUnary -> CCastExpr(arg, CCharTy), ctx
   | MStrPtrUnary -> CNavExpr(arg, "str"), ctx
   | MStrLenUnary -> CNavExpr(arg, "len"), ctx
 
@@ -776,15 +778,6 @@ let private cgPrintfnCallExpr ctx format args =
   let ctx = addStmt ctx expr
   genDefault ctx tyUnit
 
-let private cgCallUIntExpr arg argTy ctx =
-  let arg, ctx = cgExpr ctx arg
-  match argTy with
-  | AppTy (UIntTyCtor, _) -> arg, ctx
-  | AppTy (IntTyCtor, _)
-  | AppTy (CharTyCtor, _) -> CCastExpr(arg, CUInt32Ty), ctx
-  | AppTy (StrTyCtor, _) -> CCallExpr(CRefExpr "str_to_uint", [ arg ]), ctx
-  | _ -> failwith "Never: Type Error `uint`"
-
 let private cgCallStringExpr arg argTy ctx =
   let arg, ctx = cgExpr ctx arg
   match argTy with
@@ -817,12 +810,6 @@ let private cgCallPrimExpr ctx prim args primTy resultTy loc =
   | HPrim.StrGetSlice, _, _ ->
       let args, ctx = cgExprList ctx args
       CCallExpr(CRefExpr "str_get_slice", args), ctx
-
-  | HPrim.Char, [ arg ], _ ->
-      let arg, ctx = cgExpr ctx arg
-      CCastExpr(arg, CCharTy), ctx
-
-  | HPrim.UInt, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> cgCallUIntExpr arg argTy ctx
 
   | HPrim.String, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> cgCallStringExpr arg argTy ctx
 
@@ -892,6 +879,11 @@ let private tyIsInt ty =
   | AppTy (IntTyCtor, []) -> true
   | _ -> false
 
+let private tyIsUInt ty =
+  match ty with
+  | AppTy (UIntTyCtor, []) -> true
+  | _ -> false
+
 let private cgCallMPrimExpr ctx itself serial prim args ty _loc =
   match prim with
   | MIntOfStrPrim ->
@@ -908,6 +900,23 @@ let private cgCallMPrimExpr ctx itself serial prim args ty _loc =
             CCallExpr(CRefExpr "str_to_int", [ arg ])
 
           addLetStmt ctx name (Some initExpr) CIntTy storageModifier
+
+      | _ -> failwithf "NEVER: %A" itself
+
+  | MUIntOfStrPrim ->
+      match args with
+      | [ arg ] ->
+          assert (ty |> tyIsUInt)
+
+          let name = getUniqueVarName ctx serial
+          let storageModifier = findStorageModifier ctx serial
+
+          let arg, ctx = cgExpr ctx arg
+
+          let initExpr =
+            CCallExpr(CRefExpr "str_to_uint", [ arg ])
+
+          addLetStmt ctx name (Some initExpr) CUInt32Ty storageModifier
 
       | _ -> failwithf "NEVER: %A" itself
 

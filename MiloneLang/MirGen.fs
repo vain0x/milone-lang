@@ -940,6 +940,44 @@ let private mirifyCallIntExpr ctx itself calleeTy args ty loc =
       | _ -> failwithf "NEVER: %A" itself
   | _ -> failwithf "NEVER: %A" itself
 
+let private mirifyCallUIntExpr ctx itself calleeTy args ty loc =
+  match calleeTy, args with
+  | AppTy (FunTyCtor, [ AppTy (srcTy, _); _ ]), [ arg ] ->
+      let arg, ctx = mirifyExpr ctx arg
+
+      match srcTy with
+      | UIntTyCtor -> arg, ctx
+
+      | BoolTyCtor
+      | IntTyCtor
+      | CharTyCtor -> MUnaryExpr(MUIntOfScalarUnary, arg, tyInt, loc), ctx
+
+      | StrTyCtor ->
+          let temp, tempSerial, ctx = freshVar ctx "call" ty loc
+
+          let ctx =
+            addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MUIntOfStrPrim, [ arg ]), ty, loc))
+
+          temp, ctx
+
+      | _ -> failwithf "NEVER: %A" itself
+  | _ -> failwithf "NEVER: %A" itself
+
+let private mirifyCallCharExpr ctx itself calleeTy args ty loc =
+  match calleeTy, args with
+  | AppTy (FunTyCtor, [ AppTy (srcTy, _); _ ]), [ arg ] ->
+      let arg, ctx = mirifyExpr ctx arg
+
+      match srcTy with
+      | CharTyCtor -> arg, ctx
+
+      | BoolTyCtor
+      | IntTyCtor
+      | UIntTyCtor -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
+
+      | _ -> failwithf "NEVER: %A" itself
+  | _ -> failwithf "NEVER: %A" itself
+
 let private mirifyExprInfCallProc ctx itself callee args ty loc =
   let core () =
     match callee with
@@ -990,6 +1028,8 @@ let private mirifyExprInfCallProc ctx itself callee args ty loc =
       | HPrim.Unbox, [ arg ] -> mirifyExprCallUnbox ctx arg ty loc
       | HPrim.StrLength, [ arg ] -> mirifyExprCallStrLength ctx arg ty loc
       | HPrim.Int, _ -> mirifyCallIntExpr ctx itself (exprToTy callee) args ty loc
+      | HPrim.UInt, _ -> mirifyCallUIntExpr ctx itself (exprToTy callee) args ty loc
+      | HPrim.Char, _ -> mirifyCallCharExpr ctx itself (exprToTy callee) args ty loc
       | _ -> core ()
 
   | HVariantExpr (serial, _, _), [ arg ] -> mirifyExprCallVariantFun ctx serial arg ty loc

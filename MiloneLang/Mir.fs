@@ -41,6 +41,8 @@ type MUnary =
 
   // Converts a scalar to int.
   | MIntOfScalarUnary
+  | MUIntOfScalarUnary
+  | MCharOfScalarUnary
 
   /// Gets raw ptr of string.
   | MStrPtrUnary
@@ -90,7 +92,10 @@ type MBinary =
   | MStrIndexBinary
 
 [<NoEquality; NoComparison>]
-type MPrim = | MIntOfStrPrim
+type MPrim =
+  /// string -> int
+  | MIntOfStrPrim
+  | MUIntOfStrPrim
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]

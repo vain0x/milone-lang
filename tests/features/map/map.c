@@ -75,9 +75,7 @@ if_next_1:;
 }
 
 uint32_t intHash_(int x_1) {
-    uint32_t call_ = ((uint32_t)x_1);
-    uint32_t call_1 = ((uint32_t)128);
-    return (call_ % call_1);
+    return (((uint32_t)x_1) % ((uint32_t)128));
 }
 
 struct IntUIntFun1 {
@@ -119,7 +117,7 @@ struct UIntIntStringTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 {
 struct UIntIntStringTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 mapNewSingleton_2(int key_, struct String value_, struct IntUIntFun1 hash_, struct IntIntIntFun2 cmp_) {
     int app_ = cmp_.fun(cmp_.env, key_, key_);
     milone_assert((app_ == 0), 18, 2);
-    int call_2 = 0;
+    int call_ = 0;
     uint32_t app_1 = hash_.fun(hash_.env, key_);
     struct IntStringTuple2 tuple_2;
     tuple_2.t0 = key_;
@@ -169,7 +167,7 @@ struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 {
 struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 mapNewSingleton_1(int key_, int value_, struct IntUIntFun1 hash_, struct IntIntIntFun2 cmp_) {
     int app_2 = cmp_.fun(cmp_.env, key_, key_);
     milone_assert((app_2 == 0), 18, 2);
-    int call_3 = 0;
+    int call_1 = 0;
     uint32_t app_3 = hash_.fun(hash_.env, key_);
     struct IntUnitTuple2 tuple_5;
     tuple_5.t0 = key_;
@@ -191,23 +189,23 @@ struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 mapNewSingl
 }
 
 uint32_t fun_(void* env_, int arg_) {
-    uint32_t call_4 = intHash_(arg_);
-    return call_4;
+    uint32_t call_2 = intHash_(arg_);
+    return call_2;
 }
 
 int fun_1(void* env_1, int arg_1, int arg_2) {
-    int call_5 = intCmp_(arg_1, arg_2);
-    return call_5;
+    int call_3 = intCmp_(arg_1, arg_2);
+    return call_3;
 }
 
 uint32_t fun_2(void* env_2, int arg_3) {
-    uint32_t call_6 = intHash_(arg_3);
-    return call_6;
+    uint32_t call_4 = intHash_(arg_3);
+    return call_4;
 }
 
 int fun_3(void* env_3, int arg_4, int arg_5) {
-    int call_7 = intCmp_(arg_4, arg_5);
-    return call_7;
+    int call_5 = intCmp_(arg_4, arg_5);
+    return call_5;
 }
 
 int typeTest_(int arg_6) {
@@ -219,8 +217,8 @@ int typeTest_(int arg_6) {
     (*(((int*)box_1))) = 0;
     void* env_5 = box_1;
     struct IntIntIntFun2 fun_5 = (struct IntIntIntFun2){.fun = fun_1, .env = env_5};
-    struct UIntIntStringTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 call_8 = mapNewSingleton_2(1, (struct String){.str = "a", .len = 1}, fun_4, fun_5);
-    struct UIntIntStringTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 map_ = call_8;
+    struct UIntIntStringTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 call_6 = mapNewSingleton_2(1, (struct String){.str = "a", .len = 1}, fun_4, fun_5);
+    struct UIntIntStringTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 map_ = call_6;
     void* box_2 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_2))) = 0;
     void* env_6 = box_2;
@@ -229,12 +227,12 @@ int typeTest_(int arg_6) {
     (*(((int*)box_3))) = 0;
     void* env_7 = box_3;
     struct IntIntIntFun2 fun_7 = (struct IntIntIntFun2){.fun = fun_3, .env = env_7};
-    struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 call_9 = mapNewSingleton_1(2, 0, fun_6, fun_7);
-    struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 set_ = call_9;
+    struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 call_7 = mapNewSingleton_1(2, 0, fun_6, fun_7);
+    struct UIntIntUnitTuple2ListTuple2ListIntUIntFun1IntIntIntFun2Tuple3 set_ = call_7;
     return 0;
 }
 
 int main() {
-    int call_10 = typeTest_(0);
+    int call_8 = typeTest_(0);
     return 0;
 }
