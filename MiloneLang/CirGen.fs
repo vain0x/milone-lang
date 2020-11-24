@@ -798,10 +798,6 @@ let private cgCallPrimExpr ctx prim args primTy resultTy loc =
 
       genDefault ctx resultTy
 
-  | HPrim.StrGetSlice, _, _ ->
-      let args, ctx = cgExprList ctx args
-      CCallExpr(CRefExpr "str_get_slice", args), ctx
-
   | _ -> failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
 
 let private cgCallInRegionExpr ctx serial arg ty _loc =
@@ -883,6 +879,17 @@ let private cgCallMPrimExpr ctx itself serial prim args resultTy _loc =
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_char", [ arg ]))
   | MStrOfIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_int", [ arg ]))
   | MStrOfUIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_uint", [ arg ]))
+
+  | MStrGetSlicePrim ->
+      let name = getUniqueVarName ctx serial
+      let storageModifier = findStorageModifier ctx serial
+      let ty, ctx = cgTyComplete ctx resultTy
+
+      let args, ctx =
+        (args, ctx)
+        |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+      addLetStmt ctx name (Some(CCallExpr(CRefExpr "str_get_slice", args))) ty storageModifier
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial

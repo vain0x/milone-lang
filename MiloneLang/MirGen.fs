@@ -808,6 +808,21 @@ let private mirifyExprCallStrLength ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
   MUnaryExpr(MStrLenUnary, arg, ty, loc), ctx
 
+let private mirifyCallStrGetSliceExpr ctx args loc =
+  assert (List.length args = 3)
+
+  let args, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+  let temp, tempSerial, ctx = freshVar ctx "slice" tyStr loc
+  let init = MPrimInit(MStrGetSlicePrim, args)
+
+  let ctx =
+    addStmt ctx (MLetValStmt(tempSerial, init, tyStr, loc))
+
+  temp, ctx
+
 let private mirifyExprCallSome ctx item ty loc =
   let _, tempSerial, ctx = freshVar ctx "some" ty loc
 
@@ -1051,6 +1066,7 @@ let private mirifyExprInfCallProc ctx itself callee args ty loc =
       | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg ty loc
       | HPrim.Unbox, [ arg ] -> mirifyExprCallUnbox ctx arg ty loc
       | HPrim.StrLength, [ arg ] -> mirifyExprCallStrLength ctx arg ty loc
+      | HPrim.StrGetSlice, _ -> mirifyCallStrGetSliceExpr ctx args loc
       | HPrim.Int, _ -> mirifyCallIntExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.UInt, _ -> mirifyCallUIntExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.Char, _ -> mirifyCallCharExpr ctx itself (exprToTy callee) args ty loc

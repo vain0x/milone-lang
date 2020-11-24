@@ -102,6 +102,8 @@ type MPrim =
   | MStrOfIntPrim
   | MStrOfUIntPrim
 
+  | MStrGetSlicePrim
+
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
 type MExpr =
