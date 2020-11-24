@@ -1,18 +1,28 @@
 #include "milone.h"
 
-struct ObjectObjectTuple2;
+enum First_Tag;
 
-struct ObjectObjectTuple2List;
+struct First_;
 
-struct ObjectList;
+enum Second_Tag;
 
-struct ObjectListObjectListTuple2;
+struct Second_;
 
-struct ObjectListObjectListTuple2 f_(struct ObjectObjectTuple2List* arg_2);
+struct First_Second_Tuple2;
 
-struct ObjectListObjectListTuple2 fun_(void* env_, struct ObjectObjectTuple2List* arg_);
+struct First_Second_Tuple2List;
 
-struct ObjectListObjectListTuple2 fun_1(void* env_1, struct ObjectObjectTuple2List* arg_1);
+struct First_List;
+
+struct Second_List;
+
+struct First_ListSecond_ListTuple2;
+
+struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* arg_2);
+
+struct First_ListSecond_ListTuple2 fun_(void* env_, struct First_Second_Tuple2List* arg_);
+
+struct First_ListSecond_ListTuple2 fun_1(void* env_1, struct First_Second_Tuple2List* arg_1);
 
 enum Node_Tag;
 
@@ -20,7 +30,7 @@ struct Node_;
 
 struct Node_List;
 
-struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1;
+struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1;
 
 enum Third_Tag;
 
@@ -32,40 +42,67 @@ struct IntThird_Tuple2List;
 
 int main();
 
-struct ObjectObjectTuple2 {
-    void* t0;
-    void* t1;
+enum First_Tag {
+    First_,
 };
 
-struct ObjectObjectTuple2List {
-    struct ObjectObjectTuple2 head;
-    struct ObjectObjectTuple2List* tail;
+struct First_ {
+    enum First_Tag tag;
+    union {
+        void* First_;
+    };
 };
 
-struct ObjectList {
-    void* head;
-    struct ObjectList* tail;
+enum Second_Tag {
+    Second_,
 };
 
-struct ObjectListObjectListTuple2 {
-    struct ObjectList* t0;
-    struct ObjectList* t1;
+struct Second_ {
+    enum Second_Tag tag;
+    union {
+        void* Second_;
+    };
 };
 
-struct ObjectListObjectListTuple2 f_(struct ObjectObjectTuple2List* arg_2) {
-    struct ObjectListObjectListTuple2 tuple_;
+struct First_Second_Tuple2 {
+    struct First_ t0;
+    struct Second_ t1;
+};
+
+struct First_Second_Tuple2List {
+    struct First_Second_Tuple2 head;
+    struct First_Second_Tuple2List* tail;
+};
+
+struct First_List {
+    struct First_ head;
+    struct First_List* tail;
+};
+
+struct Second_List {
+    struct Second_ head;
+    struct Second_List* tail;
+};
+
+struct First_ListSecond_ListTuple2 {
+    struct First_List* t0;
+    struct Second_List* t1;
+};
+
+struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List* arg_2) {
+    struct First_ListSecond_ListTuple2 tuple_;
     tuple_.t0 = NULL;
     tuple_.t1 = NULL;
     return tuple_;
 }
 
-struct ObjectListObjectListTuple2 fun_(void* env_, struct ObjectObjectTuple2List* arg_) {
-    struct ObjectListObjectListTuple2 call_ = f_(arg_);
+struct First_ListSecond_ListTuple2 fun_(void* env_, struct First_Second_Tuple2List* arg_) {
+    struct First_ListSecond_ListTuple2 call_ = f_(arg_);
     return call_;
 }
 
-struct ObjectListObjectListTuple2 fun_1(void* env_1, struct ObjectObjectTuple2List* arg_1) {
-    struct ObjectListObjectListTuple2 call_1 = f_(arg_1);
+struct First_ListSecond_ListTuple2 fun_1(void* env_1, struct First_Second_Tuple2List* arg_1) {
+    struct First_ListSecond_ListTuple2 call_1 = f_(arg_1);
     return call_1;
 }
 
@@ -87,8 +124,8 @@ struct Node_List {
     struct Node_List* tail;
 };
 
-struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1 {
-    struct ObjectListObjectListTuple2(*fun)(void*, struct ObjectObjectTuple2List*);
+struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 {
+    struct First_ListSecond_ListTuple2(*fun)(void*, struct First_Second_Tuple2List*);
     void* env;
 };
 
@@ -215,20 +252,22 @@ end_match_1:;
     void* box_7 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_7))) = 0;
     void* env_2 = box_7;
-    struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1 fun_2 = (struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1){.fun = fun_, .env = env_2};
-    void* box_8 = (void*)milone_mem_alloc(1, sizeof(struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1));
-    (*(((struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1*)box_8))) = fun_2;
+    struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 fun_2 = (struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1){.fun = fun_, .env = env_2};
+    void* box_8 = (void*)milone_mem_alloc(1, sizeof(struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1));
+    (*(((struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)box_8))) = fun_2;
+    struct First_ variant_7 = (struct First_){.tag = First_, .First_ = box_8};
     void* box_9 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_9))) = 0;
     void* env_3 = box_9;
-    struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1 fun_3 = (struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1){.fun = fun_1, .env = env_3};
-    void* box_10 = (void*)milone_mem_alloc(1, sizeof(struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1));
-    (*(((struct ObjectObjectTuple2ListObjectListObjectListTuple2Fun1*)box_10))) = fun_3;
-    struct ObjectObjectTuple2 tuple_1;
-    tuple_1.t0 = box_8;
-    tuple_1.t1 = box_10;
-    void* first_ = tuple_1.t0;
-    void* second_ = tuple_1.t1;
+    struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 fun_3 = (struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1){.fun = fun_1, .env = env_3};
+    void* box_10 = (void*)milone_mem_alloc(1, sizeof(struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1));
+    (*(((struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)box_10))) = fun_3;
+    struct Second_ variant_8 = (struct Second_){.tag = Second_, .Second_ = box_10};
+    struct First_Second_Tuple2 tuple_1;
+    tuple_1.t0 = variant_7;
+    tuple_1.t1 = variant_8;
+    struct First_ first_ = tuple_1.t0;
+    struct Second_ second_ = tuple_1.t1;
     int match_1;
     struct IntThird_Tuple2 tuple_2;
     tuple_2.t0 = 0;

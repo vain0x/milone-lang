@@ -119,8 +119,8 @@ Program analysis and transformations are written in:
 - [AutoBoxing](MiloneLang/AutoBoxing.fs)
     - Resolves recursive nominal types
 - [TyElaboration](MiloneLang/TyElaborating.fs)
-    - Converts records to tuples
-    - Unwraps newtype variants
+    - Converts expressions using records
+    - ~Unwraps newtype variants~
 - [ClosureConversion](MiloneLang/ClosureConversion.fs)
     - Resolves non-closed functions
 - [EtaExpansion](MiloneLang/EtaExpansion.fs)

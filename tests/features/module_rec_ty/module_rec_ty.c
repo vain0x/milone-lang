@@ -1,6 +1,14 @@
 #include "milone.h"
 
-struct ObjectList;
+enum UnionA_Tag;
+
+struct UnionA_;
+
+struct UnionA_List;
+
+enum UnionB_Tag;
+
+struct UnionB_;
 
 enum UnionX_Tag;
 
@@ -8,9 +16,28 @@ struct UnionX_;
 
 int main();
 
-struct ObjectList {
-    void* head;
-    struct ObjectList* tail;
+enum UnionA_Tag {
+    T_1,
+};
+
+struct UnionA_ {
+    enum UnionA_Tag tag;
+};
+
+struct UnionA_List {
+    struct UnionA_ head;
+    struct UnionA_List* tail;
+};
+
+enum UnionB_Tag {
+    T_,
+};
+
+struct UnionB_ {
+    enum UnionB_Tag tag;
+    union {
+        void* T_;
+    };
 };
 
 enum UnionX_Tag {
@@ -23,11 +50,12 @@ struct UnionX_ {
 };
 
 int main() {
-    struct ObjectList* list_ = (struct ObjectList*)milone_mem_alloc(1, sizeof(struct ObjectList));
-    list_->head = 0;
+    struct UnionA_List* list_ = (struct UnionA_List*)milone_mem_alloc(1, sizeof(struct UnionA_List));
+    list_->head = (struct UnionA_){.tag = T_1};
     list_->tail = NULL;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct ObjectList*));
-    (*(((struct ObjectList**)box_))) = list_;
+    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct UnionA_List*));
+    (*(((struct UnionA_List**)box_))) = list_;
+    struct UnionB_ variant_ = (struct UnionB_){.tag = T_, .T_ = box_};
     int switch_;
     switch ((struct UnionX_){.tag = VariantY_}.tag) {
         case VariantX_:
