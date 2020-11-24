@@ -480,8 +480,8 @@ let private exExpr (expr, ctx) =
   | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
       exLetFunExpr callee vis isMainFun args body next ty loc ctx
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or TyElaborating"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in TyElaboration"
+  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
+  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
   | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
 let etaExpansion (expr, tyCtx: TyCtx) =

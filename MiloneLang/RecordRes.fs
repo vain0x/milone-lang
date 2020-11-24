@@ -1,9 +1,7 @@
-/// # TyElaborating
+/// # RecordRes
 ///
-/// Resolve record/field exprs.
-///
-/// Converts some of types to other types.
-module rec MiloneLang.TyElaborating
+/// Resolves.
+module rec MiloneLang.RecordRes
 
 open MiloneLang.Util
 open MiloneLang.Syntax
@@ -20,7 +18,7 @@ let private hxIsUnboxingRef expr =
 // -----------------------------------------------
 
 [<NoEquality; NoComparison>]
-type private TyElaborationCtx =
+type private RrCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
@@ -29,14 +27,14 @@ type private TyElaborationCtx =
     /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
     RecordMap: AssocMap<TySerial, (Ty list * AssocMap<Ident, int * Ty>)> }
 
-let private ofTyCtx (tyCtx: TyCtx): TyElaborationCtx =
+let private ofTyCtx (tyCtx: TyCtx): RrCtx =
   { Vars = tyCtx.Vars
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     RecordMap = mapEmpty intCmp }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx = tyCtx
+let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
 
 /// ## Resolution of records and fields
 ///
@@ -90,7 +88,7 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: TyElaborationCtx): TyCtx = tyCtx
 /// but some of fields are unspecified.
 /// For such fields, reuse base record's value.
 
-let private buildRecordMap (ctx: TyElaborationCtx) =
+let private buildRecordMap (ctx: RrCtx) =
   ctx.Tys
   |> mapFold (fun acc tySerial tyDef ->
        match tyDef with
@@ -107,7 +105,7 @@ let private buildRecordMap (ctx: TyElaborationCtx) =
 
        | _ -> acc) (mapEmpty intCmp)
 
-let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty loc =
+let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   let fieldTys, fieldMap =
     match ty with
     | AppTy (RecordTyCtor tySerial, _) ->
@@ -156,7 +154,7 @@ let private rewriteRecordExpr (ctx: TyElaborationCtx) itself baseOpt fields ty l
 
       HInfExpr(InfOp.Record, fields, ty, loc)
 
-let private rewriteFieldExpr (ctx: TyElaborationCtx) itself recordTy l r ty loc =
+let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
   let index =
     match recordTy with
     | AppTy (RecordTyCtor tySerial, _) ->
@@ -173,7 +171,7 @@ let private rewriteFieldExpr (ctx: TyElaborationCtx) itself recordTy l r ty loc 
 // Control
 // -----------------------------------------------
 
-let private teExpr (ctx: TyElaborationCtx) expr =
+let private teExpr (ctx: RrCtx) expr =
   match expr with
   | HRecordExpr (baseOpt, fields, ty, loc) ->
       let baseOpt = baseOpt |> Option.map (teExpr ctx)
@@ -242,7 +240,7 @@ let private teExpr (ctx: TyElaborationCtx) expr =
   | HErrorExpr (error, loc) -> failwithf "NEVER: %A" (error, loc)
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
-let tyElaborate (expr: HExpr, tyCtx: TyCtx) =
+let recordRes (expr: HExpr, tyCtx: TyCtx) =
   let ctx = ofTyCtx tyCtx
 
   let ctx =

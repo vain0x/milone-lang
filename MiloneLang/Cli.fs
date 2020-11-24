@@ -13,7 +13,7 @@ open MiloneLang.Bundling
 open MiloneLang.NameRes
 open MiloneLang.Typing
 open MiloneLang.MainHoist
-open MiloneLang.TyElaborating
+open MiloneLang.RecordRes
 open MiloneLang.ClosureConversion
 open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
@@ -377,8 +377,8 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "AutoBoxing"
   let expr, tyCtx = autoBox (expr, tyCtx)
 
-  writeLog host v "TyElaborating"
-  let expr, tyCtx = tyElaborate (expr, tyCtx)
+  writeLog host v "RecordRes"
+  let expr, tyCtx = recordRes (expr, tyCtx)
 
   writeLog host v "ClosureConversion"
   let expr, tyCtx = closureConversion (expr, tyCtx)

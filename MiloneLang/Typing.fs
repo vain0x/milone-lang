@@ -519,7 +519,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       | None -> HRecordExpr(None, fields, recordTy, loc), recordTy, ctx
 
       | Some baseExpr ->
-          // Assign to a temporary var so that TyElaborating can reuse the expr safely.
+          // Assign to a temporary var so that RecordRes can reuse the expr safely.
           // (This kind of modification is not business of typing, though.)
           // { base with fields... } ==> let t = base in { t with fields... }
           let varSerial, ctx = freshVar ctx "base" recordTy loc

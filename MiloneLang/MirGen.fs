@@ -1075,9 +1075,9 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     MUnaryExpr(unary, arg, ty, loc), ctx
 
   let regularBinary binary l r =
-      let l, ctx = mirifyExpr ctx l
-      let r, ctx = mirifyExpr ctx r
-      MBinaryExpr(binary, l, r, ty, loc), ctx
+    let l, ctx = mirifyExpr ctx l
+    let r, ctx = mirifyExpr ctx r
+    MBinaryExpr(binary, l, r, ty, loc), ctx
 
   match prim, args with
   | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx MAddBinary l r ty loc
@@ -1331,8 +1331,8 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
 
       doArm ()
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or TyElaborating"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in TyElaboration"
+  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
+  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
   | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
 let private mirifyExprs ctx exprs =

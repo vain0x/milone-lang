@@ -118,9 +118,8 @@ Program analysis and transformations are written in:
     - Resolves top-level bindings
 - [AutoBoxing](MiloneLang/AutoBoxing.fs)
     - Resolves recursive nominal types
-- [TyElaboration](MiloneLang/TyElaborating.fs)
-    - Converts expressions using records
-    - ~Unwraps newtype variants~
+- [RecordRes](MiloneLang/RecordRes.fs)
+    - Resolves use of field names
 - [ClosureConversion](MiloneLang/ClosureConversion.fs)
     - Resolves non-closed functions
 - [EtaExpansion](MiloneLang/EtaExpansion.fs)

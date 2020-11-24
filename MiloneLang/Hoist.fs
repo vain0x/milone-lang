@@ -222,8 +222,8 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or TyElaborating"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in TyElaboration"
+  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
+  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
   | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
 let private hoistExpr (expr, ctx) =
