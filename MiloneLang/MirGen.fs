@@ -932,130 +932,118 @@ let private mirifyExprSemi ctx exprs =
   let exprs, ctx = mirifyExprs ctx exprs
   List.last exprs, ctx
 
-let private mirifyCallIntExpr ctx itself calleeTy args ty loc =
-  match calleeTy, args with
-  | AppTy (FunTyCtor, [ AppTy (srcTy, _); _ ]), [ arg ] ->
-      let arg, ctx = mirifyExpr ctx arg
+let private mirifyCallIntExpr ctx itself arg ty loc =
+  let srcTy = arg |> exprToTy
+  let arg, ctx = mirifyExpr ctx arg
 
-      match srcTy with
-      | IntTyCtor -> arg, ctx
+  match srcTy with
+  | AppTy (IntTyCtor, _) -> arg, ctx
 
-      | BoolTyCtor
-      | UIntTyCtor
-      | CharTyCtor -> MUnaryExpr(MIntOfScalarUnary, arg, tyInt, loc), ctx
+  | AppTy ((BoolTyCtor
+           | UIntTyCtor
+           | CharTyCtor),
+           _) -> MUnaryExpr(MIntOfScalarUnary, arg, tyInt, loc), ctx
 
-      | StrTyCtor ->
-          let temp, tempSerial, ctx = freshVar ctx "call" ty loc
+  | AppTy (StrTyCtor, _) ->
+      let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
-          let ctx =
-            addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MIntOfStrPrim, [ arg ]), ty, loc))
+      let ctx =
+        addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MIntOfStrPrim, [ arg ]), ty, loc))
 
-          temp, ctx
+      temp, ctx
 
-      | _ -> failwithf "NEVER: %A" itself
   | _ -> failwithf "NEVER: %A" itself
 
-let private mirifyCallUIntExpr ctx itself calleeTy args ty loc =
-  match calleeTy, args with
-  | AppTy (FunTyCtor, [ AppTy (srcTy, _); _ ]), [ arg ] ->
-      let arg, ctx = mirifyExpr ctx arg
+let private mirifyCallUIntExpr ctx itself arg ty loc =
+  let argTy = arg |> exprToTy
+  let arg, ctx = mirifyExpr ctx arg
 
-      match srcTy with
-      | UIntTyCtor -> arg, ctx
+  match argTy with
+  | AppTy (UIntTyCtor, _) -> arg, ctx
 
-      | BoolTyCtor
-      | IntTyCtor
-      | CharTyCtor -> MUnaryExpr(MUIntOfScalarUnary, arg, tyInt, loc), ctx
+  | AppTy ((BoolTyCtor
+           | IntTyCtor
+           | CharTyCtor),
+           _) -> MUnaryExpr(MUIntOfScalarUnary, arg, tyInt, loc), ctx
 
-      | StrTyCtor ->
-          let temp, tempSerial, ctx = freshVar ctx "call" ty loc
+  | AppTy (StrTyCtor, _) ->
+      let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
-          let ctx =
-            addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MUIntOfStrPrim, [ arg ]), ty, loc))
+      let ctx =
+        addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MUIntOfStrPrim, [ arg ]), ty, loc))
 
-          temp, ctx
+      temp, ctx
 
-      | _ -> failwithf "NEVER: %A" itself
   | _ -> failwithf "NEVER: %A" itself
 
-let private mirifyCallCharExpr ctx itself calleeTy args ty loc =
-  match calleeTy, args with
-  | AppTy (FunTyCtor, [ AppTy (srcTy, _); _ ]), [ arg ] ->
-      let arg, ctx = mirifyExpr ctx arg
+let private mirifyCallCharExpr ctx itself arg ty loc =
+  let argTy = arg |> exprToTy
+  let arg, ctx = mirifyExpr ctx arg
 
-      match srcTy with
-      | CharTyCtor -> arg, ctx
+  match argTy with
+  | AppTy (CharTyCtor, _) -> arg, ctx
 
-      | BoolTyCtor
-      | IntTyCtor
-      | UIntTyCtor -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
+  | AppTy ((BoolTyCtor
+           | IntTyCtor
+           | UIntTyCtor),
+           _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
 
-      | _ -> failwithf "NEVER: %A" itself
   | _ -> failwithf "NEVER: %A" itself
 
-let private mirifyCallStringExpr ctx itself calleeTy args ty loc =
-  match calleeTy, args with
-  | AppTy (FunTyCtor, [ AppTy (srcTy, _); _ ]), [ arg ] ->
-      let arg, ctx = mirifyExpr ctx arg
+let private mirifyCallStringExpr ctx itself arg ty loc =
+  let argTy = arg |> exprToTy
+  let arg, ctx = mirifyExpr ctx arg
 
-      let usePrim prim =
-        let temp, tempSerial, ctx = freshVar ctx "call" ty loc
+  let usePrim prim =
+    let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
-        let ctx =
-          addStmt ctx (MLetValStmt(tempSerial, MPrimInit(prim, [ arg ]), ty, loc))
+    let ctx =
+      addStmt ctx (MLetValStmt(tempSerial, MPrimInit(prim, [ arg ]), ty, loc))
 
-        temp, ctx
+    temp, ctx
 
-      match srcTy with
-      | StrTyCtor -> arg, ctx
+  match argTy with
+  | AppTy (StrTyCtor, _) -> arg, ctx
 
-      | BoolTyCtor -> usePrim MStrOfBoolPrim
-      | IntTyCtor -> usePrim MStrOfIntPrim
-      | UIntTyCtor -> usePrim MStrOfUIntPrim
-      | CharTyCtor -> usePrim MStrOfCharPrim
+  | AppTy (BoolTyCtor, _) -> usePrim MStrOfBoolPrim
+  | AppTy (IntTyCtor, _) -> usePrim MStrOfIntPrim
+  | AppTy (UIntTyCtor, _) -> usePrim MStrOfUIntPrim
+  | AppTy (CharTyCtor, _) -> usePrim MStrOfCharPrim
 
-      | _ -> failwithf "NEVER: %A" itself
   | _ -> failwithf "NEVER: %A" itself
 
-let private mirifyCallAssertExpr ctx args loc =
-  let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+let private mirifyCallAssertExpr ctx arg loc =
+  let arg, ctx = mirifyExpr ctx arg
 
   // Embed the source location information.
   let args =
     let _, y, x = loc
-    List.append
-      args
-      [ MLitExpr(IntLit y, loc)
-        MLitExpr(IntLit x, loc) ]
+    [ arg
+      MLitExpr(IntLit y, loc)
+      MLitExpr(IntLit x, loc) ]
 
   let ctx =
     addStmt ctx (MActionStmt(MAssertAction, args, loc))
 
   MDefaultExpr(tyUnit, loc), ctx
 
-let private mirifyCallInRegionExpr ctx itself args ty loc =
-  match args with
-  | [ arg ] ->
-      // arg: closure
-      let arg, ctx = mirifyExpr ctx arg
+let private mirifyCallInRegionExpr ctx arg ty loc =
+  // arg: closure
+  let arg, ctx = mirifyExpr ctx arg
 
-      let temp, tempSerial, ctx = freshVar ctx "region_result" tyInt loc
+  let temp, tempSerial, ctx = freshVar ctx "region_result" tyInt loc
 
-      let ctx =
-        addStmt ctx (MActionStmt(MEnterRegionAction, [], loc))
+  let ctx =
+    addStmt ctx (MActionStmt(MEnterRegionAction, [], loc))
 
-      let ctx =
-        let unit = MDefaultExpr(tyUnit, loc)
-        addStmt ctx (MLetValStmt(tempSerial, MCallClosureInit(arg, [ unit ]), ty, loc))
+  let ctx =
+    let unit = MDefaultExpr(tyUnit, loc)
+    addStmt ctx (MLetValStmt(tempSerial, MCallClosureInit(arg, [ unit ]), ty, loc))
 
-      let ctx =
-        addStmt ctx (MActionStmt(MLeaveRegionAction, [], loc))
+  let ctx =
+    addStmt ctx (MActionStmt(MLeaveRegionAction, [], loc))
 
-      temp, ctx
-
-  | _ -> failwithf "NEVER: %A" itself
+  temp, ctx
 
 let private mirifyCallPrintfnExpr ctx args loc =
   let args, ctx =
@@ -1083,6 +1071,8 @@ let private mirifyCallNativeFunExpr ctx (funName: string) arity args ty loc =
   temp, ctx
 
 let private mirifyExprInfCallProc ctx itself callee args ty loc =
+  let fail () = failwithf "NEVER: %A" itself
+
   let core () =
     let calleeTy = exprToTy callee
     let callee, ctx = mirifyExpr ctx callee
@@ -1102,30 +1092,53 @@ let private mirifyExprInfCallProc ctx itself callee args ty loc =
   | HPrimExpr (prim, _, _), _ ->
       match prim, args with
       | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx MAddBinary l r ty loc
+      | HPrim.Add, _ -> fail ()
       | HPrim.Sub, [ l; r ] -> mirifyExprOpArith ctx MSubBinary l r ty loc
+      | HPrim.Sub, _ -> fail ()
       | HPrim.Mul, [ l; r ] -> mirifyExprOpArith ctx MMulBinary l r ty loc
+      | HPrim.Mul, _ -> fail ()
       | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx MDivBinary l r ty loc
+      | HPrim.Div, _ -> fail ()
       | HPrim.Mod, [ l; r ] -> mirifyExprOpArith ctx MModBinary l r ty loc
+      | HPrim.Mod, _ -> fail ()
       | HPrim.Eq, [ l; r ] -> mirifyExprOpCmp ctx MEqualBinary l r ty loc
+      | HPrim.Eq, _ -> fail ()
       | HPrim.Lt, [ l; r ] -> mirifyExprOpCmp ctx MLessBinary l r ty loc
+      | HPrim.Lt, _ -> fail ()
       | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc
+      | HPrim.Cons, _ -> fail ()
       | HPrim.Index, [ l; r ] -> mirifyExprIndex ctx l r ty loc
+      | HPrim.Index, _ -> fail ()
       | HPrim.OptionSome, [ item ] -> mirifyExprCallSome ctx item ty loc
+      | HPrim.OptionSome, _ -> fail ()
       | HPrim.Not, [ arg ] -> mirifyExprCallNot ctx arg ty loc
+      | HPrim.Not, _ -> fail ()
       | HPrim.Exit, [ arg ] -> mirifyExprCallExit ctx arg ty loc
+      | HPrim.Exit, _ -> fail ()
       | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg ty loc
+      | HPrim.Box, _ -> fail ()
       | HPrim.Unbox, [ arg ] -> mirifyExprCallUnbox ctx arg ty loc
+      | HPrim.Unbox, _ -> fail ()
       | HPrim.StrLength, [ arg ] -> mirifyExprCallStrLength ctx arg ty loc
+      | HPrim.StrLength, _ -> fail ()
       | HPrim.StrGetSlice, _ -> mirifyCallStrGetSliceExpr ctx args loc
-      | HPrim.Int, _ -> mirifyCallIntExpr ctx itself (exprToTy callee) args ty loc
-      | HPrim.UInt, _ -> mirifyCallUIntExpr ctx itself (exprToTy callee) args ty loc
-      | HPrim.Char, _ -> mirifyCallCharExpr ctx itself (exprToTy callee) args ty loc
-      | HPrim.String, _ -> mirifyCallStringExpr ctx itself (exprToTy callee) args ty loc
-      | HPrim.Assert, _ -> mirifyCallAssertExpr ctx args loc
-      | HPrim.InRegion, _ -> mirifyCallInRegionExpr ctx itself args ty loc
+      | HPrim.Int, [ arg ] -> mirifyCallIntExpr ctx itself arg ty loc
+      | HPrim.Int, _ -> fail ()
+      | HPrim.UInt, [ arg ] -> mirifyCallUIntExpr ctx itself arg ty loc
+      | HPrim.UInt, _ -> fail ()
+      | HPrim.Char, [ arg ] -> mirifyCallCharExpr ctx itself arg ty loc
+      | HPrim.Char, _ -> fail ()
+      | HPrim.String, [ arg ] -> mirifyCallStringExpr ctx itself arg ty loc
+      | HPrim.String, _ -> fail ()
+      | HPrim.Assert, [ arg ] -> mirifyCallAssertExpr ctx arg loc
+      | HPrim.Assert, _ -> fail ()
+      | HPrim.InRegion, [ arg ] -> mirifyCallInRegionExpr ctx arg ty loc
+      | HPrim.InRegion, _ -> fail ()
       | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
       | HPrim.NativeFun (funName, arity), _ -> mirifyCallNativeFunExpr ctx funName arity args ty loc
-      | _ -> failwithf "NEVER: %A" itself
+
+      | HPrim.Nil, _
+      | HPrim.OptionNone, _ -> fail ()
 
   | HVariantExpr (serial, _, _), [ arg ] -> mirifyExprCallVariantFun ctx serial arg ty loc
 
