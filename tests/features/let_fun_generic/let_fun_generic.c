@@ -204,18 +204,17 @@ end_match_12:;
 
 int f_1(int x_3) {
     printf("%d\n", x_3);
-    int call_4 = 0;
     return (x_3 * x_3);
 }
 
 int fun_(void* env_, int arg_) {
-    int call_5 = f_1(arg_);
-    return call_5;
+    int call_4 = f_1(arg_);
+    return call_4;
 }
 
 int fun_1(void* env_1, int arg_1) {
-    int call_6 = f_1(arg_1);
-    return call_6;
+    int call_5 = f_1(arg_1);
+    return call_5;
 }
 
 struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_7) {
@@ -237,8 +236,8 @@ struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_8) {
 }
 
 struct StringIntTuple2 fun_2(void* env_2, struct IntStringTuple2 arg_2) {
-    struct StringIntTuple2 call_7 = flip_1(arg_2);
-    return call_7;
+    struct StringIntTuple2 call_6 = flip_1(arg_2);
+    return call_6;
 }
 
 struct IntListStringListTuple2 {
@@ -247,12 +246,12 @@ struct IntListStringListTuple2 {
 };
 
 int main() {
-    int call_8 = id_2(42);
-    int call_9 = id_2(1);
+    int call_7 = id_2(42);
+    int call_8 = id_2(1);
     struct StringList* list_4 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
     list_4->head = (struct String){.str = "A", .len = 1};
     list_4->tail = NULL;
-    struct StringList* call_10 = id_1(list_4);
+    struct StringList* call_9 = id_1(list_4);
     void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
     void* env_3 = box_;
@@ -270,16 +269,16 @@ int main() {
     struct IntList* list_5 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_5->head = 1;
     list_5->tail = list_6;
-    struct IntList* call_11 = listMap_2(fun_4, list_5);
-    struct IntList* call_12 = listMap_2(fun_3, call_11);
+    struct IntList* call_10 = listMap_2(fun_4, list_5);
+    struct IntList* call_11 = listMap_2(fun_3, call_10);
     int match_4;
     struct IntStringTuple2 tuple_2;
     tuple_2.t0 = 1;
     tuple_2.t1 = (struct String){.str = "a", .len = 1};
-    struct StringIntTuple2 call_13 = flip_1(tuple_2);
-    struct IntStringTuple2 call_14 = flip_2(call_13);
-    if ((call_14.t0 != 1)) goto next_16;
-    if ((str_cmp(call_14.t1, (struct String){.str = "a", .len = 1}) != 0)) goto next_16;
+    struct StringIntTuple2 call_12 = flip_1(tuple_2);
+    struct IntStringTuple2 call_13 = flip_2(call_12);
+    if ((call_13.t0 != 1)) goto next_16;
+    if ((str_cmp(call_13.t1, (struct String){.str = "a", .len = 1}) != 0)) goto next_16;
     match_4 = 0;
     goto end_match_15;
 next_16:;
@@ -295,17 +294,17 @@ end_match_15:;
     struct IntList* list_8 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_8->head = 1;
     list_8->tail = list_9;
-    struct IntList* call_15 = listRev_2(list_8);
+    struct IntList* call_14 = listRev_2(list_8);
     struct StringList* list_11 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
     list_11->head = (struct String){.str = "b", .len = 1};
     list_11->tail = NULL;
     struct StringList* list_10 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
     list_10->head = (struct String){.str = "a", .len = 1};
     list_10->tail = list_11;
-    struct StringList* call_16 = listRev_1(list_10);
+    struct StringList* call_15 = listRev_1(list_10);
     struct IntListStringListTuple2 tuple_3;
-    tuple_3.t0 = call_15;
-    tuple_3.t1 = call_16;
+    tuple_3.t0 = call_14;
+    tuple_3.t1 = call_15;
     if ((!(tuple_3.t0))) goto next_19;
     if ((tuple_3.t0->head != 2)) goto next_19;
     if ((!(tuple_3.t0->tail))) goto next_19;
@@ -341,14 +340,14 @@ end_match_18:;
     struct IntStringTuple2List* list_12 = (struct IntStringTuple2List*)milone_mem_alloc(1, sizeof(struct IntStringTuple2List));
     list_12->head = tuple_4;
     list_12->tail = list_13;
-    struct StringIntTuple2List* call_17 = listMap_1(fun_5, list_12);
-    if ((!(call_17))) goto next_22;
-    if ((str_cmp(call_17->head.t0, (struct String){.str = "a", .len = 1}) != 0)) goto next_22;
-    if ((call_17->head.t1 != 1)) goto next_22;
-    if ((!(call_17->tail))) goto next_22;
-    if ((str_cmp(call_17->tail->head.t0, (struct String){.str = "b", .len = 1}) != 0)) goto next_22;
-    if ((call_17->tail->head.t1 != 2)) goto next_22;
-    if ((!((!(call_17->tail->tail))))) goto next_22;
+    struct StringIntTuple2List* call_16 = listMap_1(fun_5, list_12);
+    if ((!(call_16))) goto next_22;
+    if ((str_cmp(call_16->head.t0, (struct String){.str = "a", .len = 1}) != 0)) goto next_22;
+    if ((call_16->head.t1 != 1)) goto next_22;
+    if ((!(call_16->tail))) goto next_22;
+    if ((str_cmp(call_16->tail->head.t0, (struct String){.str = "b", .len = 1}) != 0)) goto next_22;
+    if ((call_16->tail->head.t1 != 2)) goto next_22;
+    if ((!((!(call_16->tail->tail))))) goto next_22;
     match_6 = 0;
     goto end_match_21;
 next_22:;

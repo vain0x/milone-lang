@@ -1047,7 +1047,7 @@ let private mirifyCallInRegionExpr ctx itself args ty loc =
         addStmt ctx (MActionStmt(MEnterRegionAction, [], loc))
 
       let ctx =
-        let unit = MDefaultExpr (tyUnit, loc)
+        let unit = MDefaultExpr(tyUnit, loc)
         addStmt ctx (MLetValStmt(tempSerial, MCallClosureInit(arg, [ unit ]), ty, loc))
 
       let ctx =
@@ -1056,6 +1056,16 @@ let private mirifyCallInRegionExpr ctx itself args ty loc =
       temp, ctx
 
   | _ -> failwithf "NEVER: %A" itself
+
+let private mirifyCallPrintfnExpr ctx args loc =
+  let args, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+  let ctx =
+    addStmt ctx (MActionStmt(MPrintfnAction, args, loc))
+
+  MDefaultExpr(tyUnit, loc), ctx
 
 let private mirifyCallNativeFunExpr ctx (funName: string) arity args ty loc =
   assert (List.length args = arity)
@@ -1074,34 +1084,19 @@ let private mirifyCallNativeFunExpr ctx (funName: string) arity args ty loc =
 
 let private mirifyExprInfCallProc ctx itself callee args ty loc =
   let core () =
-    match callee with
-    | HPrimExpr (prim, _, _) ->
-        let primTy = exprToTy callee
+    let calleeTy = exprToTy callee
+    let callee, ctx = mirifyExpr ctx callee
 
-        let (args, ctx) =
-          (args, ctx)
-          |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+    let (args, ctx) =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
 
-        let temp, tempSerial, ctx = freshVar ctx "call" ty loc
+    let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
-        let ctx =
-          addStmt ctx (MLetValStmt(tempSerial, MCallPrimInit(prim, args, primTy), ty, loc))
+    let ctx =
+      addStmt ctx (MLetValStmt(tempSerial, MCallProcInit(callee, args, calleeTy), ty, loc))
 
-        temp, ctx
-    | _ ->
-        let calleeTy = exprToTy callee
-        let callee, ctx = mirifyExpr ctx callee
-
-        let (args, ctx) =
-          (args, ctx)
-          |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
-
-        let temp, tempSerial, ctx = freshVar ctx "call" ty loc
-
-        let ctx =
-          addStmt ctx (MLetValStmt(tempSerial, MCallProcInit(callee, args, calleeTy), ty, loc))
-
-        temp, ctx
+    temp, ctx
 
   match callee, args with
   | HPrimExpr (prim, _, _), _ ->
@@ -1128,8 +1123,9 @@ let private mirifyExprInfCallProc ctx itself callee args ty loc =
       | HPrim.String, _ -> mirifyCallStringExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.Assert, _ -> mirifyCallAssertExpr ctx args loc
       | HPrim.InRegion, _ -> mirifyCallInRegionExpr ctx itself args ty loc
+      | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
       | HPrim.NativeFun (funName, arity), _ -> mirifyCallNativeFunExpr ctx funName arity args ty loc
-      | _ -> core ()
+      | _ -> failwithf "NEVER: %A" itself
 
   | HVariantExpr (serial, _, _), [ arg ] -> mirifyExprCallVariantFun ctx serial arg ty loc
 

@@ -755,11 +755,13 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
 // Statements
 // -----------------------------------------------
 
-let private cgActionStmt ctx action args =
+let private cgActionStmt ctx itself action args =
   match action with
   | MAssertAction ->
       let args, ctx = cgExprList ctx args
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_assert", args)))
+
+  | MPrintfnAction -> cgPrintfnActionStmt ctx itself args
 
   | MEnterRegionAction ->
       assert (List.isEmpty args)
@@ -769,34 +771,28 @@ let private cgActionStmt ctx action args =
       assert (List.isEmpty args)
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
 
-let private cgPrintfnCallExpr ctx format args =
-  // Insert implicit cast from str to str ptr.
-  let rec go acc ctx args =
-    match args with
-    | [] -> List.rev acc, ctx
-    | MLitExpr (StrLit value, _) :: args -> go (CStrRawExpr value :: acc) ctx args
-    | arg :: args when tyEq (mexprToTy arg) tyStr ->
-        let arg, ctx = cgExpr ctx arg
-        let acc = CNavExpr(arg, "str") :: acc
-        go acc ctx args
-    | arg :: args ->
-        let arg, ctx = cgExpr ctx arg
-        go (arg :: acc) ctx args
+let private cgPrintfnActionStmt ctx itself args =
+  match args with
+  | (MLitExpr (StrLit format, _)) :: args ->
 
-  let args, ctx = go [] ctx args
-  let format = CStrRawExpr(format + "\n")
+      let format = CStrRawExpr(format + "\n")
 
-  let expr =
-    CExprStmt(CCallExpr(CRefExpr "printf", format :: args))
+      let args, ctx =
+        (args, ctx)
+        |> stMap (fun (arg, ctx) ->
+             match arg with
+             | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
 
-  let ctx = addStmt ctx expr
-  genDefault ctx tyUnit
+             | _ when tyEq (mexprToTy arg) tyStr ->
+                 // Insert implicit cast from str to str ptr.
+                 let arg, ctx = cgExpr ctx arg
+                 CNavExpr(arg, "str"), ctx
 
-let private cgCallPrimExpr ctx prim args primTy resultTy loc =
-  match prim, args, primTy with
-  | HPrim.Printfn, (MLitExpr (StrLit format, _)) :: args, _ -> cgPrintfnCallExpr ctx format args
+             | _ -> cgExpr ctx arg)
 
-  | _ -> failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
+      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "printf", format :: args)))
+
+  | _ -> failwithf "NEVER: %A" itself
 
 let private cgCallProcExpr ctx callee args ty =
   match callee, args with
@@ -1004,12 +1000,6 @@ let private cgLetValStmt ctx serial init ty loc =
 
   | MPrimInit (prim, args) -> cgCallMPrimExpr ctx init serial prim args ty loc
 
-  | MCallPrimInit (prim, args, calleeTy) ->
-      let expr, ctx =
-        cgCallPrimExpr ctx prim args calleeTy ty loc
-
-      doGenLetValStmt ctx serial (Some expr) ty
-
   | MCallProcInit (callee, args, _) ->
       let expr, ctx = cgCallProcExpr ctx callee args ty
       doGenLetValStmt ctx serial (Some expr) ty
@@ -1080,7 +1070,7 @@ let private cgTerminatorStmt ctx stmt =
 
 let private cgStmt ctx stmt =
   match stmt with
-  | MActionStmt (action, args, _) -> cgActionStmt ctx action args
+  | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
   | MLetValStmt (serial, init, ty, loc) -> cgLetValStmt ctx serial init ty loc
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)

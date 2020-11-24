@@ -109,6 +109,7 @@ type MPrim =
 [<NoEquality; NoComparison>]
 type MAction =
   | MAssertAction
+  | MPrintfnAction
   | MEnterRegionAction
   | MLeaveRegionAction
 
@@ -144,9 +145,6 @@ type MInit =
   | MExprInit of MExpr
 
   | MPrimInit of MPrim * MExpr list
-
-  /// Call to primitive.
-  | MCallPrimInit of HPrim * args: MExpr list * primTy: Ty
 
   /// Direct call to procedure.
   | MCallProcInit of callee: MExpr * args: MExpr list * calleeTy: Ty

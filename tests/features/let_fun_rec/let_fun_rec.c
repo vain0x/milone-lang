@@ -21,7 +21,6 @@ then_3:;
     }
 then_5:;
     printf("%d\n", i_);
-    int call_ = 0;
     if_1 = 0;
     goto if_next_4;
 else_6:;
@@ -47,6 +46,6 @@ if_next_2:;
 int main() {
     struct String source_ = (struct String){.str = "hello world", .len = 11};
     int len_ = source_.len;
-    int call_1 = go_(source_, len_, 0);
+    int call_ = go_(source_, len_, 0);
     return 0;
 }
