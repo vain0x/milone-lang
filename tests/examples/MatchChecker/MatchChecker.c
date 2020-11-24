@@ -293,7 +293,6 @@ struct Space_List {
 
 struct Space_List* failwith_3(struct String msg_) {
     printf("ERROR %s\n", msg_.str);
-    int call_ = 0;
     exit(1);
     return NULL;
 }
@@ -305,14 +304,12 @@ struct StringList {
 
 struct StringList* failwith_2(struct String msg_) {
     printf("ERROR %s\n", msg_.str);
-    int call_1 = 0;
     exit(1);
     return NULL;
 }
 
 struct Space_ failwith_1(struct String msg_) {
     printf("ERROR %s\n", msg_.str);
-    int call_2 = 0;
     exit(1);
     return ((struct Space_){});
 }
@@ -444,23 +441,23 @@ end_match_14:;
 }
 
 struct Space_List* listRev_2(struct Space_List* xs_1) {
-    struct Space_List* call_3 = go_27(NULL, xs_1);
-    return call_3;
+    struct Space_List* call_ = go_27(NULL, xs_1);
+    return call_;
 }
 
 struct StringList* listRev_1(struct StringList* xs_1) {
-    struct StringList* call_4 = go_26(NULL, xs_1);
-    return call_4;
+    struct StringList* call_1 = go_26(NULL, xs_1);
+    return call_1;
 }
 
 struct BoolList* listRev_4(struct BoolList* xs_1) {
-    struct BoolList* call_5 = go_29(NULL, xs_1);
-    return call_5;
+    struct BoolList* call_2 = go_29(NULL, xs_1);
+    return call_2;
 }
 
 struct Space_Space_Tuple2List* listRev_3(struct Space_Space_Tuple2List* xs_1) {
-    struct Space_Space_Tuple2List* call_6 = go_28(NULL, xs_1);
-    return call_6;
+    struct Space_Space_Tuple2List* call_3 = go_28(NULL, xs_1);
+    return call_3;
 }
 
 struct Space_Space_Fun1 {
@@ -472,8 +469,8 @@ struct Space_List* go_25(struct Space_Space_Fun1 f_, struct Space_List* acc_1, s
 tailrec_17:;
     struct Space_List* match_4;
     if ((!((!(xs_5))))) goto next_19;
-    struct Space_List* call_7 = listRev_2(acc_1);
-    match_4 = call_7;
+    struct Space_List* call_4 = listRev_2(acc_1);
+    match_4 = call_4;
     goto end_match_18;
 next_19:;
     if ((!(xs_5))) goto next_20;
@@ -526,8 +523,8 @@ struct Space_List* go_24(struct Ty_Space_Fun1 f_, struct Space_List* acc_1, stru
 tailrec_21:;
     struct Space_List* match_5;
     if ((!((!(xs_5))))) goto next_23;
-    struct Space_List* call_8 = listRev_2(acc_1);
-    match_5 = call_8;
+    struct Space_List* call_5 = listRev_2(acc_1);
+    match_5 = call_5;
     goto end_match_22;
 next_23:;
     if ((!(xs_5))) goto next_24;
@@ -583,8 +580,8 @@ struct Space_List* go_23(struct Pat_Space_Fun1 f_, struct Space_List* acc_1, str
 tailrec_25:;
     struct Space_List* match_6;
     if ((!((!(xs_5))))) goto next_27;
-    struct Space_List* call_9 = listRev_2(acc_1);
-    match_6 = call_9;
+    struct Space_List* call_6 = listRev_2(acc_1);
+    match_6 = call_6;
     goto end_match_26;
 next_27:;
     if ((!(xs_5))) goto next_28;
@@ -628,8 +625,8 @@ struct BoolList* go_22(struct StringSpace_Tuple2BoolFun1 f_, struct BoolList* ac
 tailrec_29:;
     struct BoolList* match_7;
     if ((!((!(xs_5))))) goto next_31;
-    struct BoolList* call_10 = listRev_4(acc_1);
-    match_7 = call_10;
+    struct BoolList* call_7 = listRev_4(acc_1);
+    match_7 = call_7;
     goto end_match_30;
 next_31:;
     if ((!(xs_5))) goto next_32;
@@ -684,8 +681,8 @@ struct BoolList* go_21(struct StringTy_Pat_ListCovering_Tuple4BoolFun1 f_, struc
 tailrec_33:;
     struct BoolList* match_8;
     if ((!((!(xs_5))))) goto next_35;
-    struct BoolList* call_11 = listRev_4(acc_1);
-    match_8 = call_11;
+    struct BoolList* call_8 = listRev_4(acc_1);
+    match_8 = call_8;
     goto end_match_34;
 next_35:;
     if ((!(xs_5))) goto next_36;
@@ -711,28 +708,28 @@ end_match_34:;
 }
 
 struct Space_List* listMap_5(struct Space_Space_Fun1 f_, struct Space_List* xs_4) {
-    struct Space_List* call_12 = go_25(f_, NULL, xs_4);
-    return call_12;
+    struct Space_List* call_9 = go_25(f_, NULL, xs_4);
+    return call_9;
 }
 
 struct Space_List* listMap_4(struct Ty_Space_Fun1 f_, struct Ty_List* xs_4) {
-    struct Space_List* call_13 = go_24(f_, NULL, xs_4);
-    return call_13;
+    struct Space_List* call_10 = go_24(f_, NULL, xs_4);
+    return call_10;
 }
 
 struct Space_List* listMap_3(struct Pat_Space_Fun1 f_, struct Pat_List* xs_4) {
-    struct Space_List* call_14 = go_23(f_, NULL, xs_4);
-    return call_14;
+    struct Space_List* call_11 = go_23(f_, NULL, xs_4);
+    return call_11;
 }
 
 struct BoolList* listMap_2(struct StringSpace_Tuple2BoolFun1 f_, struct StringSpace_Tuple2List* xs_4) {
-    struct BoolList* call_15 = go_22(f_, NULL, xs_4);
-    return call_15;
+    struct BoolList* call_12 = go_22(f_, NULL, xs_4);
+    return call_12;
 }
 
 struct BoolList* listMap_1(struct StringTy_Pat_ListCovering_Tuple4BoolFun1 f_, struct StringTy_Pat_ListCovering_Tuple4List* xs_4) {
-    struct BoolList* call_16 = go_21(f_, NULL, xs_4);
-    return call_16;
+    struct BoolList* call_13 = go_21(f_, NULL, xs_4);
+    return call_13;
 }
 
 struct IntSpace_Space_Tuple2Space_Fun2 {
@@ -744,8 +741,8 @@ struct Space_List* go_20(struct IntSpace_Space_Tuple2Space_Fun2 f_1, struct Spac
 tailrec_37:;
     struct Space_List* match_9;
     if ((!((!(xs_8))))) goto next_39;
-    struct Space_List* call_17 = listRev_2(acc_2);
-    match_9 = call_17;
+    struct Space_List* call_14 = listRev_2(acc_2);
+    match_9 = call_14;
     goto end_match_38;
 next_39:;
     if ((!(xs_8))) goto next_40;
@@ -781,8 +778,8 @@ struct Space_List* go_19(struct IntSpace_Space_Fun2 f_1, struct Space_List* acc_
 tailrec_41:;
     struct Space_List* match_10;
     if ((!((!(xs_8))))) goto next_43;
-    struct Space_List* call_18 = listRev_2(acc_2);
-    match_10 = call_18;
+    struct Space_List* call_15 = listRev_2(acc_2);
+    match_10 = call_15;
     goto end_match_42;
 next_43:;
     if ((!(xs_8))) goto next_44;
@@ -810,13 +807,13 @@ end_match_42:;
 }
 
 struct Space_List* listMapWithIndex_2(struct IntSpace_Space_Tuple2Space_Fun2 f_1, struct Space_Space_Tuple2List* xs_7) {
-    struct Space_List* call_19 = go_20(f_1, NULL, 0, xs_7);
-    return call_19;
+    struct Space_List* call_16 = go_20(f_1, NULL, 0, xs_7);
+    return call_16;
 }
 
 struct Space_List* listMapWithIndex_1(struct IntSpace_Space_Fun2 f_1, struct Space_List* xs_7) {
-    struct Space_List* call_20 = go_19(f_1, NULL, 0, xs_7);
-    return call_20;
+    struct Space_List* call_17 = go_19(f_1, NULL, 0, xs_7);
+    return call_17;
 }
 
 struct Space_BoolFun1 {
@@ -946,18 +943,18 @@ end_match_60:;
 }
 
 int listForAll_3(struct Space_BoolFun1 p_, struct Space_List* xs_10) {
-    int call_21 = go_18(p_, xs_10);
-    return call_21;
+    int call_18 = go_18(p_, xs_10);
+    return call_18;
 }
 
 int listForAll_2(struct Space_Space_Tuple2BoolFun1 p_, struct Space_Space_Tuple2List* xs_10) {
-    int call_22 = go_17(p_, xs_10);
-    return call_22;
+    int call_19 = go_17(p_, xs_10);
+    return call_19;
 }
 
 int listForAll_1(struct BoolBoolFun1 p_, struct BoolList* xs_10) {
-    int call_23 = go_16(p_, xs_10);
-    return call_23;
+    int call_20 = go_16(p_, xs_10);
+    return call_20;
 }
 
 int go_15(struct Space_BoolFun1 p_1, struct Space_List* xs_14) {
@@ -998,8 +995,8 @@ end_match_67:;
 }
 
 int listExists_1(struct Space_BoolFun1 p_1, struct Space_List* xs_13) {
-    int call_24 = go_15(p_1, xs_13);
-    return call_24;
+    int call_21 = go_15(p_1, xs_13);
+    return call_21;
 }
 
 struct Space_Space_Space_Fun2 {
@@ -1065,13 +1062,13 @@ end_match_78:;
 }
 
 struct Space_ listFold_2(struct Space_Space_Space_Fun2 folder_, struct Space_ state_, struct Space_List* xs_16) {
-    struct Space_ call_25 = go_14(folder_, state_, xs_16);
-    return call_25;
+    struct Space_ call_22 = go_14(folder_, state_, xs_16);
+    return call_22;
 }
 
 struct StringList* listFold_1(struct StringListSpace_StringListFun2 folder_, struct StringList* state_, struct Space_List* xs_16) {
-    struct StringList* call_26 = go_13(folder_, state_, xs_16);
-    return call_26;
+    struct StringList* call_23 = go_13(folder_, state_, xs_16);
+    return call_23;
 }
 
 struct Space_ListSpace_ListTuple2 {
@@ -1091,8 +1088,8 @@ next_84:;
     if ((!((!(tuple_.t1))))) goto next_85;
     goto match_body_83;
 match_body_83:;
-    struct Space_Space_Tuple2List* call_27 = listRev_3(acc_3);
-    match_17 = call_27;
+    struct Space_Space_Tuple2List* call_24 = listRev_3(acc_3);
+    match_17 = call_24;
     goto end_match_82;
 next_85:;
     if ((!(tuple_.t0))) goto next_86;
@@ -1123,8 +1120,8 @@ end_match_82:;
 }
 
 struct Space_Space_Tuple2List* listZip_1(struct Space_List* xs_19, struct Space_List* ys_) {
-    struct Space_Space_Tuple2List* call_28 = go_12(NULL, xs_19, ys_);
-    return call_28;
+    struct Space_Space_Tuple2List* call_25 = go_12(NULL, xs_19, ys_);
+    return call_25;
 }
 
 struct String go_7(struct StringList* xs_23) {
@@ -1136,8 +1133,8 @@ next_88:;
     if ((!(xs_23))) goto next_89;
     struct String x_9 = xs_23->head;
     struct StringList* xs_24 = xs_23->tail;
-    struct String call_29 = go_7(xs_24);
-    match_18 = str_add(x_9, call_29);
+    struct String call_26 = go_7(xs_24);
+    match_18 = str_add(x_9, call_26);
     goto end_match_87;
 next_89:;
     exit(1);
@@ -1146,8 +1143,8 @@ end_match_87:;
 }
 
 struct String strConcat_(struct StringList* xs_22) {
-    struct String call_30 = go_7(xs_22);
-    return call_30;
+    struct String call_27 = go_7(xs_22);
+    return call_27;
 }
 
 struct StringSpace_ListTuple2 {
@@ -1189,8 +1186,8 @@ struct Space_List* go_8(struct Space_List* spaces_1, struct Space_List* acc_4) {
 tailrec_90:;
     struct Space_List* match_19;
     if ((!((!(spaces_1))))) goto next_92;
-    struct Space_List* call_31 = listRev_2(acc_4);
-    match_19 = call_31;
+    struct Space_List* call_28 = listRev_2(acc_4);
+    match_19 = call_28;
     goto end_match_91;
 next_92:;
     if ((!(spaces_1))) goto next_93;
@@ -1198,8 +1195,8 @@ next_92:;
     struct Space_List* subspaces_ = (*(((struct Space_List**)spaces_1->head.Union_)));
     struct Space_List* spaces_2 = spaces_1->tail;
     struct Space_List* arg_79 = spaces_2;
-    struct Space_List* call_32 = go_8(subspaces_, acc_4);
-    struct Space_List* arg_80 = call_32;
+    struct Space_List* call_29 = go_8(subspaces_, acc_4);
+    struct Space_List* arg_80 = call_29;
     spaces_1 = arg_79;
     acc_4 = arg_80;
     goto tailrec_90;
@@ -1209,8 +1206,8 @@ next_93:;
     if ((!(spaces_1))) goto next_94;
     struct Space_ space_ = spaces_1->head;
     struct Space_List* spaces_3 = spaces_1->tail;
-    int call_33 = spaceIsEmpty_(space_);
-    if ((!(call_33))) goto next_94;
+    int call_30 = spaceIsEmpty_(space_);
+    if ((!(call_30))) goto next_94;
     struct Space_List* arg_81 = spaces_3;
     struct Space_List* arg_82 = acc_4;
     spaces_1 = arg_81;
@@ -1233,8 +1230,8 @@ next_94:;
     match_19 = NULL;
     goto end_match_91;
 next_95:;
-    struct Space_List* call_34 = failwith_3((struct String){.str = "NEVER: suppress warning", .len = 23});
-    match_19 = call_34;
+    struct Space_List* call_31 = failwith_3((struct String){.str = "NEVER: suppress warning", .len = 23});
+    match_19 = call_31;
     goto end_match_91;
 next_96:;
 end_match_91:;
@@ -1243,14 +1240,14 @@ end_match_91:;
 
 struct Space_ spaceUnion_(struct Space_List* spaces_) {
     struct Space_ match_20;
-    struct Space_List* call_35 = go_8(spaces_, NULL);
-    if ((!(call_35))) goto next_98;
-    struct Space_ space_2 = call_35->head;
-    if ((!((!(call_35->tail))))) goto next_98;
+    struct Space_List* call_32 = go_8(spaces_, NULL);
+    if ((!(call_32))) goto next_98;
+    struct Space_ space_2 = call_32->head;
+    if ((!((!(call_32->tail))))) goto next_98;
     match_20 = space_2;
     goto end_match_97;
 next_98:;
-    struct Space_List* spaces_5 = call_35;
+    struct Space_List* spaces_5 = call_32;
     void* box_2 = (void*)milone_mem_alloc(1, sizeof(struct Space_List*));
     (*(((struct Space_List**)box_2))) = spaces_5;
     struct Space_ variant_2 = (struct Space_){.tag = Union_, .Union_ = box_2};
@@ -1262,13 +1259,13 @@ end_match_97:;
 }
 
 int fun_9(void* env_, struct Space_ arg_) {
-    int call_36 = spaceIsEmpty_(arg_);
-    return call_36;
+    int call_33 = spaceIsEmpty_(arg_);
+    return call_33;
 }
 
 int fun_10(void* env_1, struct Space_ arg_1) {
-    int call_37 = spaceIsEmpty_(arg_1);
-    return call_37;
+    int call_34 = spaceIsEmpty_(arg_1);
+    return call_34;
 }
 
 int spaceIsEmpty_(struct Space_ space_3) {
@@ -1279,8 +1276,8 @@ int spaceIsEmpty_(struct Space_ space_3) {
     (*(((int*)box_3))) = 0;
     void* env_19 = box_3;
     struct Space_BoolFun1 fun_29 = (struct Space_BoolFun1){.fun = fun_9, .env = env_19};
-    int call_38 = listExists_1(fun_29, spaces_6);
-    match_21 = call_38;
+    int call_35 = listExists_1(fun_29, spaces_6);
+    match_21 = call_35;
     goto end_match_100;
 next_101:;
     if ((space_3.tag != Union_)) goto next_102;
@@ -1289,8 +1286,8 @@ next_101:;
     (*(((int*)box_4))) = 0;
     void* env_20 = box_4;
     struct Space_BoolFun1 fun_30 = (struct Space_BoolFun1){.fun = fun_10, .env = env_20};
-    int call_39 = listForAll_3(fun_30, spaces_7);
-    match_21 = call_39;
+    int call_36 = listForAll_3(fun_30, spaces_7);
+    match_21 = call_36;
     goto end_match_100;
 next_102:;
     match_21 = 0;
@@ -1307,14 +1304,12 @@ struct Space_ spaceDecompose_(struct Space_ space_4) {
     struct UnitSpace_Fun1 thunk_1 = (*(((struct StringUnitSpace_Fun1Tuple2*)space_4.Ref_))).t1;
     struct Space_ app_13 = thunk_1.fun(thunk_1.env, 0);
     struct Space_ space_5 = app_13;
-    int call_40 = spaceIsEmpty_(space_5);
-    milone_assert((!(call_40)), 234, 4);
-    int call_41 = 0;
+    int call_37 = spaceIsEmpty_(space_5);
+    milone_assert((!(call_37)), 234, 4);
     match_22 = space_5;
     goto end_match_104;
 next_105:;
     milone_assert(0, 238, 4);
-    int call_42 = 0;
     match_22 = space_4;
     goto end_match_104;
 next_106:;
@@ -1325,13 +1320,13 @@ end_match_104:;
 int fun_(struct Space_Space_Tuple2 arg_85) {
     struct Space_ first_1 = arg_85.t0;
     struct Space_ second_1 = arg_85.t1;
-    int call_43 = spaceCovers_(first_1, second_1);
-    return call_43;
+    int call_38 = spaceCovers_(first_1, second_1);
+    return call_38;
 }
 
 int fun_11(void* env_2, struct Space_Space_Tuple2 arg_2) {
-    int call_44 = fun_(arg_2);
-    return call_44;
+    int call_39 = fun_(arg_2);
+    return call_39;
 }
 
 struct Space_ fun_2(int i_1, int j_, struct Space_Space_Tuple2 arg_86) {
@@ -1344,8 +1339,8 @@ struct Space_ fun_2(int i_1, int j_, struct Space_Space_Tuple2 arg_86) {
         goto else_109;
     }
 then_108:;
-    struct Space_ call_45 = spaceExclude_(first_2, second_2);
-    if_4 = call_45;
+    struct Space_ call_40 = spaceExclude_(first_2, second_2);
+    if_4 = call_40;
     goto if_next_107;
 else_109:;
     if_4 = first_2;
@@ -1360,8 +1355,8 @@ struct IntTuple1 {
 
 struct Space_ fun_12(void* env_3, int arg_3, struct Space_Space_Tuple2 arg_4) {
     int arg_5 = (*(((struct IntTuple1*)env_3))).t0;
-    struct Space_ call_46 = fun_2(arg_5, arg_3, arg_4);
-    return call_46;
+    struct Space_ call_41 = fun_2(arg_5, arg_3, arg_4);
+    return call_41;
 }
 
 struct Space_ fun_28(struct String tag_2, struct Space_List* firsts_, struct Space_List* seconds_, int i_1, struct Space_ arg_87) {
@@ -1371,10 +1366,10 @@ struct Space_ fun_28(struct String tag_2, struct Space_List* firsts_, struct Spa
     (*(((struct IntTuple1*)box_5))) = tuple_4;
     void* env_21 = box_5;
     struct IntSpace_Space_Tuple2Space_Fun2 fun_31 = (struct IntSpace_Space_Tuple2Space_Fun2){.fun = fun_12, .env = env_21};
-    struct Space_Space_Tuple2List* call_47 = listZip_1(firsts_, seconds_);
-    struct Space_List* call_48 = listMapWithIndex_2(fun_31, call_47);
-    struct Space_ call_49 = spaceCtor_(tag_2, call_48);
-    return call_49;
+    struct Space_Space_Tuple2List* call_42 = listZip_1(firsts_, seconds_);
+    struct Space_List* call_43 = listMapWithIndex_2(fun_31, call_42);
+    struct Space_ call_44 = spaceCtor_(tag_2, call_43);
+    return call_44;
 }
 
 struct StringSpace_ListSpace_ListTuple3 {
@@ -1387,18 +1382,18 @@ struct Space_ fun_13(void* env_4, int arg_6, struct Space_ arg_7) {
     struct String arg_8 = (*(((struct StringSpace_ListSpace_ListTuple3*)env_4))).t0;
     struct Space_List* arg_9 = (*(((struct StringSpace_ListSpace_ListTuple3*)env_4))).t1;
     struct Space_List* arg_10 = (*(((struct StringSpace_ListSpace_ListTuple3*)env_4))).t2;
-    struct Space_ call_50 = fun_28(arg_8, arg_9, arg_10, arg_6, arg_7);
-    return call_50;
+    struct Space_ call_45 = fun_28(arg_8, arg_9, arg_10, arg_6, arg_7);
+    return call_45;
 }
 
 struct Space_ fun_14(void* env_5, struct Space_ arg_11, struct Space_ arg_12) {
-    struct Space_ call_51 = spaceExclude_(arg_11, arg_12);
-    return call_51;
+    struct Space_ call_46 = spaceExclude_(arg_11, arg_12);
+    return call_46;
 }
 
 struct Space_ fun_3(struct Space_ second_, struct Space_ first_3) {
-    struct Space_ call_52 = spaceExclude_(first_3, second_);
-    return call_52;
+    struct Space_ call_47 = spaceExclude_(first_3, second_);
+    return call_47;
 }
 
 struct Space_Tuple1 {
@@ -1407,8 +1402,8 @@ struct Space_Tuple1 {
 
 struct Space_ fun_15(void* env_6, struct Space_ arg_13) {
     struct Space_ arg_14 = (*(((struct Space_Tuple1*)env_6))).t0;
-    struct Space_ call_53 = fun_3(arg_14, arg_13);
-    return call_53;
+    struct Space_ call_48 = fun_3(arg_14, arg_13);
+    return call_48;
 }
 
 struct Space_ spaceExclude_(struct Space_ first_, struct Space_ second_) {
@@ -1447,9 +1442,9 @@ next_115:;
     (*(((int*)box_6))) = 0;
     void* env_22 = box_6;
     struct Space_Space_Tuple2BoolFun1 fun_32 = (struct Space_Space_Tuple2BoolFun1){.fun = fun_11, .env = env_22};
-    struct Space_Space_Tuple2List* call_54 = listZip_1(firsts_, seconds_);
-    int call_55 = listForAll_2(fun_32, call_54);
-    int dominant_ = call_55;
+    struct Space_Space_Tuple2List* call_49 = listZip_1(firsts_, seconds_);
+    int call_50 = listForAll_2(fun_32, call_49);
+    int dominant_ = call_50;
     struct Space_ if_5;
     if (dominant_) {
         goto then_124;
@@ -1468,9 +1463,9 @@ else_125:;
     (*(((struct StringSpace_ListSpace_ListTuple3*)box_7))) = tuple_6;
     void* env_23 = box_7;
     struct IntSpace_Space_Fun2 fun_33 = (struct IntSpace_Space_Fun2){.fun = fun_13, .env = env_23};
-    struct Space_List* call_56 = listMapWithIndex_1(fun_33, firsts_);
-    struct Space_ call_57 = spaceUnion_(call_56);
-    if_5 = call_57;
+    struct Space_List* call_51 = listMapWithIndex_1(fun_33, firsts_);
+    struct Space_ call_52 = spaceUnion_(call_51);
+    if_5 = call_52;
     goto if_next_123;
 if_next_123:;
     match_23 = if_5;
@@ -1487,8 +1482,8 @@ next_117:;
     (*(((int*)box_8))) = 0;
     void* env_24 = box_8;
     struct Space_Space_Space_Fun2 fun_34 = (struct Space_Space_Space_Fun2){.fun = fun_14, .env = env_24};
-    struct Space_ call_58 = listFold_2(fun_34, first_, seconds_1);
-    match_23 = call_58;
+    struct Space_ call_53 = listFold_2(fun_34, first_, seconds_1);
+    match_23 = call_53;
     goto end_match_111;
 next_118:;
     if ((tuple_5.t0.tag != Union_)) goto next_119;
@@ -1499,9 +1494,9 @@ next_118:;
     (*(((struct Space_Tuple1*)box_9))) = tuple_7;
     void* env_25 = box_9;
     struct Space_Space_Fun1 fun_35 = (struct Space_Space_Fun1){.fun = fun_15, .env = env_25};
-    struct Space_List* call_59 = listMap_5(fun_35, firsts_1);
-    struct Space_ call_60 = spaceUnion_(call_59);
-    match_23 = call_60;
+    struct Space_List* call_54 = listMap_5(fun_35, firsts_1);
+    struct Space_ call_55 = spaceUnion_(call_54);
+    match_23 = call_55;
     goto end_match_111;
 next_119:;
     if ((tuple_5.t0.tag != Ref_)) goto next_120;
@@ -1513,8 +1508,8 @@ next_119:;
     goto end_match_111;
 next_120:;
     if ((tuple_5.t0.tag != Ref_)) goto next_121;
-    struct Space_ call_61 = spaceDecompose_(first_);
-    struct Space_ arg_88 = call_61;
+    struct Space_ call_56 = spaceDecompose_(first_);
+    struct Space_ arg_88 = call_56;
     struct Space_ arg_89 = second_;
     first_ = arg_88;
     second_ = arg_89;
@@ -1524,10 +1519,9 @@ next_120:;
 next_121:;
     if ((tuple_5.t1.tag != Ref_)) goto next_122;
     milone_assert(0, 345, 4);
-    int call_62 = 0;
     struct Space_ arg_90 = first_;
-    struct Space_ call_63 = spaceDecompose_(second_);
-    struct Space_ arg_91 = call_63;
+    struct Space_ call_57 = spaceDecompose_(second_);
+    struct Space_ arg_91 = call_57;
     first_ = arg_90;
     second_ = arg_91;
     goto tailrec_110;
@@ -1540,45 +1534,45 @@ end_match_111:;
 }
 
 int spaceCovers_(struct Space_ other_, struct Space_ cover_) {
-    struct Space_ call_64 = spaceExclude_(other_, cover_);
-    int call_65 = spaceIsEmpty_(call_64);
-    return call_65;
+    struct Space_ call_58 = spaceExclude_(other_, cover_);
+    int call_59 = spaceIsEmpty_(call_58);
+    return call_59;
 }
 
 struct StringList* fun_4(struct StringList* acc_7, struct Space_ space_8) {
-    struct StringList* call_66 = cons_1((struct String){.str = ", ", .len = 2}, acc_7);
-    struct StringList* call_67 = go_9(space_8, call_66);
-    return call_67;
+    struct StringList* call_60 = cons_1((struct String){.str = ", ", .len = 2}, acc_7);
+    struct StringList* call_61 = go_9(space_8, call_60);
+    return call_61;
 }
 
 struct StringList* fun_16(void* env_7, struct StringList* arg_15, struct Space_ arg_16) {
-    struct StringList* call_68 = fun_4(arg_15, arg_16);
-    return call_68;
+    struct StringList* call_62 = fun_4(arg_15, arg_16);
+    return call_62;
 }
 
 struct StringList* fun_5(struct StringList* acc_9, struct Space_ space_9) {
-    struct StringList* call_69 = cons_1((struct String){.str = ", ", .len = 2}, acc_9);
-    struct StringList* call_70 = go_9(space_9, call_69);
-    return call_70;
+    struct StringList* call_63 = cons_1((struct String){.str = ", ", .len = 2}, acc_9);
+    struct StringList* call_64 = go_9(space_9, call_63);
+    return call_64;
 }
 
 struct StringList* fun_17(void* env_8, struct StringList* arg_17, struct Space_ arg_18) {
-    struct StringList* call_71 = fun_5(arg_17, arg_18);
-    return call_71;
+    struct StringList* call_65 = fun_5(arg_17, arg_18);
+    return call_65;
 }
 
 struct StringList* go_9(struct Space_ space_7, struct StringList* acc_5) {
     struct StringList* match_24;
     if ((space_7.tag != Full_)) goto next_127;
-    struct StringList* call_72 = cons_1((struct String){.str = "full", .len = 4}, acc_5);
-    match_24 = call_72;
+    struct StringList* call_66 = cons_1((struct String){.str = "full", .len = 4}, acc_5);
+    match_24 = call_66;
     goto end_match_126;
 next_127:;
     if ((space_7.tag != Ctor_)) goto next_128;
     struct String tag_4 = (*(((struct StringSpace_ListTuple2*)space_7.Ctor_))).t0;
     if ((!((!((*(((struct StringSpace_ListTuple2*)space_7.Ctor_))).t1))))) goto next_128;
-    struct StringList* call_73 = cons_1(tag_4, acc_5);
-    match_24 = call_73;
+    struct StringList* call_67 = cons_1(tag_4, acc_5);
+    match_24 = call_67;
     goto end_match_126;
 next_128:;
     if ((space_7.tag != Ctor_)) goto next_129;
@@ -1586,49 +1580,49 @@ next_128:;
     if ((!((*(((struct StringSpace_ListTuple2*)space_7.Ctor_))).t1))) goto next_129;
     struct Space_ item_ = (*(((struct StringSpace_ListTuple2*)space_7.Ctor_))).t1->head;
     struct Space_List* items_1 = (*(((struct StringSpace_ListTuple2*)space_7.Ctor_))).t1->tail;
-    struct StringList* call_74 = cons_1(tag_5, acc_5);
-    struct StringList* call_75 = cons_1((struct String){.str = "(", .len = 1}, call_74);
-    struct StringList* call_76 = go_9(item_, call_75);
-    struct StringList* acc_6 = call_76;
+    struct StringList* call_68 = cons_1(tag_5, acc_5);
+    struct StringList* call_69 = cons_1((struct String){.str = "(", .len = 1}, call_68);
+    struct StringList* call_70 = go_9(item_, call_69);
+    struct StringList* acc_6 = call_70;
     void* box_10 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_10))) = 0;
     void* env_26 = box_10;
     struct StringListSpace_StringListFun2 fun_36 = (struct StringListSpace_StringListFun2){.fun = fun_16, .env = env_26};
-    struct StringList* call_77 = listFold_1(fun_36, acc_6, items_1);
-    struct StringList* call_78 = cons_1((struct String){.str = ")", .len = 1}, call_77);
-    match_24 = call_78;
+    struct StringList* call_71 = listFold_1(fun_36, acc_6, items_1);
+    struct StringList* call_72 = cons_1((struct String){.str = ")", .len = 1}, call_71);
+    match_24 = call_72;
     goto end_match_126;
 next_129:;
     if ((space_7.tag != Ref_)) goto next_130;
     struct String tag_6 = (*(((struct StringUnitSpace_Fun1Tuple2*)space_7.Ref_))).t0;
-    struct StringList* call_79 = cons_1(tag_6, acc_5);
-    match_24 = call_79;
+    struct StringList* call_73 = cons_1(tag_6, acc_5);
+    match_24 = call_73;
     goto end_match_126;
 next_130:;
     if ((space_7.tag != Union_)) goto next_131;
     if ((!((!((*(((struct Space_List**)space_7.Union_)))))))) goto next_131;
-    struct StringList* call_80 = cons_1((struct String){.str = "empty", .len = 5}, acc_5);
-    match_24 = call_80;
+    struct StringList* call_74 = cons_1((struct String){.str = "empty", .len = 5}, acc_5);
+    match_24 = call_74;
     goto end_match_126;
 next_131:;
     if ((space_7.tag != Union_)) goto next_132;
     if ((!((*(((struct Space_List**)space_7.Union_)))))) goto next_132;
     struct Space_ subspace_ = (*(((struct Space_List**)space_7.Union_)))->head;
     struct Space_List* subspaces_1 = (*(((struct Space_List**)space_7.Union_)))->tail;
-    struct StringList* call_81 = cons_1((struct String){.str = "+(", .len = 2}, acc_5);
-    struct StringList* call_82 = go_9(subspace_, call_81);
-    struct StringList* acc_8 = call_82;
+    struct StringList* call_75 = cons_1((struct String){.str = "+(", .len = 2}, acc_5);
+    struct StringList* call_76 = go_9(subspace_, call_75);
+    struct StringList* acc_8 = call_76;
     void* box_11 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_11))) = 0;
     void* env_27 = box_11;
     struct StringListSpace_StringListFun2 fun_37 = (struct StringListSpace_StringListFun2){.fun = fun_17, .env = env_27};
-    struct StringList* call_83 = listFold_1(fun_37, acc_8, subspaces_1);
-    struct StringList* call_84 = cons_1((struct String){.str = ")", .len = 1}, call_83);
-    match_24 = call_84;
+    struct StringList* call_77 = listFold_1(fun_37, acc_8, subspaces_1);
+    struct StringList* call_78 = cons_1((struct String){.str = ")", .len = 1}, call_77);
+    match_24 = call_78;
     goto end_match_126;
 next_132:;
-    struct StringList* call_85 = failwith_2((struct String){.str = "NEVER: suppress warning", .len = 23});
-    match_24 = call_85;
+    struct StringList* call_79 = failwith_2((struct String){.str = "NEVER: suppress warning", .len = 23});
+    match_24 = call_79;
     goto end_match_126;
 next_133:;
 end_match_126:;
@@ -1636,53 +1630,53 @@ end_match_126:;
 }
 
 struct String spaceToString_(struct Space_ space_6) {
-    struct StringList* call_86 = go_9(space_6, NULL);
-    struct StringList* call_87 = listRev_1(call_86);
-    struct String call_88 = strConcat_(call_87);
-    return call_88;
+    struct StringList* call_80 = go_9(space_6, NULL);
+    struct StringList* call_81 = listRev_1(call_80);
+    struct String call_82 = strConcat_(call_81);
+    return call_82;
 }
 
 struct Space_ fun_18(void* env_9, struct Ty_ arg_19) {
-    struct Space_ call_89 = go_10(arg_19);
-    return call_89;
+    struct Space_ call_83 = go_10(arg_19);
+    return call_83;
 }
 
 struct Space_ fun_19(void* env_10, int arg_20) {
     struct Space_ arg_21 = (*(((struct Space_Tuple1*)env_10))).t0;
-    struct Space_ call_90 = thunk_2(arg_21, 0);
-    return call_90;
+    struct Space_ call_84 = thunk_2(arg_21, 0);
+    return call_84;
 }
 
 struct Space_ thunk_2(struct Space_ itemSpace_, int arg_92) {
-    struct Space_ call_91 = spaceCtor_((struct String){.str = "nil", .len = 3}, NULL);
+    struct Space_ call_85 = spaceCtor_((struct String){.str = "nil", .len = 3}, NULL);
     struct Space_Tuple1 tuple_8;
     tuple_8.t0 = itemSpace_;
     void* box_12 = (void*)milone_mem_alloc(1, sizeof(struct Space_Tuple1));
     (*(((struct Space_Tuple1*)box_12))) = tuple_8;
     void* env_28 = box_12;
     struct UnitSpace_Fun1 fun_38 = (struct UnitSpace_Fun1){.fun = fun_19, .env = env_28};
-    struct Space_ call_92 = spaceRef_((struct String){.str = "list", .len = 4}, fun_38);
+    struct Space_ call_86 = spaceRef_((struct String){.str = "list", .len = 4}, fun_38);
     struct Space_List* list_17 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
-    list_17->head = call_92;
+    list_17->head = call_86;
     list_17->tail = NULL;
     struct Space_List* list_16 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_16->head = itemSpace_;
     list_16->tail = list_17;
-    struct Space_ call_93 = spaceCtor_((struct String){.str = "cons", .len = 4}, list_16);
+    struct Space_ call_87 = spaceCtor_((struct String){.str = "cons", .len = 4}, list_16);
     struct Space_List* list_15 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
-    list_15->head = call_93;
+    list_15->head = call_87;
     list_15->tail = NULL;
     struct Space_List* list_14 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
-    list_14->head = call_91;
+    list_14->head = call_85;
     list_14->tail = list_15;
-    struct Space_ call_94 = spaceUnion_(list_14);
-    return call_94;
+    struct Space_ call_88 = spaceUnion_(list_14);
+    return call_88;
 }
 
 struct Space_ fun_20(void* env_11, int arg_22) {
     struct Space_ arg_23 = (*(((struct Space_Tuple1*)env_11))).t0;
-    struct Space_ call_95 = thunk_2(arg_23, 0);
-    return call_95;
+    struct Space_ call_89 = thunk_2(arg_23, 0);
+    return call_89;
 }
 
 struct Space_ go_10(struct Ty_ ty_1) {
@@ -1697,23 +1691,23 @@ next_135:;
     (*(((int*)box_13))) = 0;
     void* env_29 = box_13;
     struct Ty_Space_Fun1 fun_39 = (struct Ty_Space_Fun1){.fun = fun_18, .env = env_29};
-    struct Space_List* call_96 = listMap_4(fun_39, itemTys_);
-    struct Space_ call_97 = spaceCtor_((struct String){.str = "tuple", .len = 5}, call_96);
-    match_25 = call_97;
+    struct Space_List* call_90 = listMap_4(fun_39, itemTys_);
+    struct Space_ call_91 = spaceCtor_((struct String){.str = "tuple", .len = 5}, call_90);
+    match_25 = call_91;
     goto end_match_134;
 next_136:;
     if ((ty_1.tag != List_)) goto next_137;
     struct Ty_ itemTy_ = (*(((struct Ty_*)ty_1.List_)));
-    struct Space_ call_98 = go_10(itemTy_);
-    struct Space_ itemSpace_ = call_98;
+    struct Space_ call_92 = go_10(itemTy_);
+    struct Space_ itemSpace_ = call_92;
     struct Space_Tuple1 tuple_9;
     tuple_9.t0 = itemSpace_;
     void* box_14 = (void*)milone_mem_alloc(1, sizeof(struct Space_Tuple1));
     (*(((struct Space_Tuple1*)box_14))) = tuple_9;
     void* env_30 = box_14;
     struct UnitSpace_Fun1 fun_40 = (struct UnitSpace_Fun1){.fun = fun_20, .env = env_30};
-    struct Space_ call_99 = spaceRef_((struct String){.str = "list", .len = 4}, fun_40);
-    match_25 = call_99;
+    struct Space_ call_93 = spaceRef_((struct String){.str = "list", .len = 4}, fun_40);
+    match_25 = call_93;
     goto end_match_134;
 next_137:;
     exit(1);
@@ -1722,13 +1716,13 @@ end_match_134:;
 }
 
 struct Space_ tyToSpace_(struct Ty_ ty_) {
-    struct Space_ call_100 = go_10(ty_);
-    return call_100;
+    struct Space_ call_94 = go_10(ty_);
+    return call_94;
 }
 
 struct Space_ fun_21(void* env_12, struct Pat_ arg_24) {
-    struct Space_ call_101 = go_11(arg_24);
-    return call_101;
+    struct Space_ call_95 = go_11(arg_24);
+    return call_95;
 }
 
 struct Pat_Pat_Tuple2 {
@@ -1752,33 +1746,33 @@ next_140:;
     (*(((int*)box_15))) = 0;
     void* env_31 = box_15;
     struct Pat_Space_Fun1 fun_41 = (struct Pat_Space_Fun1){.fun = fun_21, .env = env_31};
-    struct Space_List* call_102 = listMap_3(fun_41, itemPats_);
-    struct Space_ call_103 = spaceCtor_((struct String){.str = "tuple", .len = 5}, call_102);
-    match_26 = call_103;
+    struct Space_List* call_96 = listMap_3(fun_41, itemPats_);
+    struct Space_ call_97 = spaceCtor_((struct String){.str = "tuple", .len = 5}, call_96);
+    match_26 = call_97;
     goto end_match_138;
 next_141:;
     if ((pat_1.tag != Nil_)) goto next_142;
-    struct Space_ call_104 = spaceCtor_((struct String){.str = "nil", .len = 3}, NULL);
-    match_26 = call_104;
+    struct Space_ call_98 = spaceCtor_((struct String){.str = "nil", .len = 3}, NULL);
+    match_26 = call_98;
     goto end_match_138;
 next_142:;
     if ((pat_1.tag != Cons_)) goto next_143;
     struct Pat_ headPat_ = (*(((struct Pat_Pat_Tuple2*)pat_1.Cons_))).t0;
     struct Pat_ tailPat_ = (*(((struct Pat_Pat_Tuple2*)pat_1.Cons_))).t1;
-    struct Space_ call_105 = go_11(headPat_);
-    struct Space_ call_106 = go_11(tailPat_);
+    struct Space_ call_99 = go_11(headPat_);
+    struct Space_ call_100 = go_11(tailPat_);
     struct Space_List* list_19 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
-    list_19->head = call_106;
+    list_19->head = call_100;
     list_19->tail = NULL;
     struct Space_List* list_18 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
-    list_18->head = call_105;
+    list_18->head = call_99;
     list_18->tail = list_19;
-    struct Space_ call_107 = spaceCtor_((struct String){.str = "cons", .len = 4}, list_18);
-    match_26 = call_107;
+    struct Space_ call_101 = spaceCtor_((struct String){.str = "cons", .len = 4}, list_18);
+    match_26 = call_101;
     goto end_match_138;
 next_143:;
-    struct Space_ call_108 = failwith_1((struct String){.str = "NEVER: suppress warning", .len = 23});
-    match_26 = call_108;
+    struct Space_ call_102 = failwith_1((struct String){.str = "NEVER: suppress warning", .len = 23});
+    match_26 = call_102;
     goto end_match_138;
 next_144:;
 end_match_138:;
@@ -1786,13 +1780,13 @@ end_match_138:;
 }
 
 struct Space_ patToSpace_(struct Pat_ pat_) {
-    struct Space_ call_109 = go_11(pat_);
-    return call_109;
+    struct Space_ call_103 = go_11(pat_);
+    return call_103;
 }
 
 struct Space_ fun_22(void* env_13, struct Pat_ arg_25) {
-    struct Space_ call_110 = patToSpace_(arg_25);
-    return call_110;
+    struct Space_ call_104 = patToSpace_(arg_25);
+    return call_104;
 }
 
 struct Space_ patsToSpace_(struct Pat_List* pats_) {
@@ -1800,9 +1794,9 @@ struct Space_ patsToSpace_(struct Pat_List* pats_) {
     (*(((int*)box_16))) = 0;
     void* env_32 = box_16;
     struct Pat_Space_Fun1 fun_42 = (struct Pat_Space_Fun1){.fun = fun_22, .env = env_32};
-    struct Space_List* call_111 = listMap_3(fun_42, pats_);
-    struct Space_ call_112 = spaceUnion_(call_111);
-    return call_112;
+    struct Space_List* call_105 = listMap_3(fun_42, pats_);
+    struct Space_ call_106 = spaceUnion_(call_105);
+    return call_106;
 }
 
 struct Space_ fun_6(int arg_93) {
@@ -1810,53 +1804,47 @@ struct Space_ fun_6(int arg_93) {
 }
 
 struct Space_ fun_23(void* env_14, int arg_26) {
-    struct Space_ call_113 = fun_6(0);
-    return call_113;
+    struct Space_ call_107 = fun_6(0);
+    return call_107;
 }
 
 int testSpaceIsEmpty_(int arg_94) {
-    int call_114 = spaceIsEmpty_(spaceEmpty_);
-    milone_assert(call_114, 455, 2);
-    int call_115 = 0;
+    int call_108 = spaceIsEmpty_(spaceEmpty_);
+    milone_assert(call_108, 455, 2);
     struct Space_List* list_22 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_22->head = spaceEmpty_;
     list_22->tail = NULL;
-    struct Space_ call_116 = spaceUnion_(list_22);
+    struct Space_ call_109 = spaceUnion_(list_22);
     struct Space_List* list_21 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
-    list_21->head = call_116;
+    list_21->head = call_109;
     list_21->tail = NULL;
     struct Space_List* list_20 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_20->head = spaceEmpty_;
     list_20->tail = list_21;
-    struct Space_ call_117 = spaceUnion_(list_20);
-    int call_118 = spaceIsEmpty_(call_117);
-    milone_assert(call_118, 456, 2);
-    int call_119 = 0;
-    int call_120 = spaceIsEmpty_(spaceFull_);
-    milone_assert((!(call_120)), 458, 2);
-    int call_121 = 0;
+    struct Space_ call_110 = spaceUnion_(list_20);
+    int call_111 = spaceIsEmpty_(call_110);
+    milone_assert(call_111, 456, 2);
+    int call_112 = spaceIsEmpty_(spaceFull_);
+    milone_assert((!(call_112)), 458, 2);
     void* box_17 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_17))) = 0;
     void* env_33 = box_17;
     struct UnitSpace_Fun1 fun_43 = (struct UnitSpace_Fun1){.fun = fun_23, .env = env_33};
-    struct Space_ call_122 = spaceRef_((struct String){.str = "ref", .len = 3}, fun_43);
-    int call_123 = spaceIsEmpty_(call_122);
-    milone_assert((!(call_123)), 459, 2);
-    int call_124 = 0;
+    struct Space_ call_113 = spaceRef_((struct String){.str = "ref", .len = 3}, fun_43);
+    int call_114 = spaceIsEmpty_(call_113);
+    milone_assert((!(call_114)), 459, 2);
     struct Space_List* list_24 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_24->head = spaceFull_;
     list_24->tail = NULL;
     struct Space_List* list_23 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_23->head = spaceEmpty_;
     list_23->tail = list_24;
-    struct Space_ call_125 = spaceUnion_(list_23);
-    int call_126 = spaceIsEmpty_(call_125);
-    milone_assert((!(call_126)), 460, 2);
-    int call_127 = 0;
-    struct Space_ call_128 = spaceCtor_((struct String){.str = "tuple", .len = 5}, NULL);
-    int call_129 = spaceIsEmpty_(call_128);
-    milone_assert((!(call_129)), 462, 2);
-    int call_130 = 0;
+    struct Space_ call_115 = spaceUnion_(list_23);
+    int call_116 = spaceIsEmpty_(call_115);
+    milone_assert((!(call_116)), 460, 2);
+    struct Space_ call_117 = spaceCtor_((struct String){.str = "tuple", .len = 5}, NULL);
+    int call_118 = spaceIsEmpty_(call_117);
+    milone_assert((!(call_118)), 462, 2);
     struct Space_List* list_27 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_27->head = spaceFull_;
     list_27->tail = NULL;
@@ -1866,40 +1854,37 @@ int testSpaceIsEmpty_(int arg_94) {
     struct Space_List* list_25 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_25->head = spaceFull_;
     list_25->tail = list_26;
-    struct Space_ call_131 = spaceCtor_((struct String){.str = "tuple", .len = 5}, list_25);
-    int call_132 = spaceIsEmpty_(call_131);
-    milone_assert(call_132, 463, 2);
-    int call_133 = 0;
+    struct Space_ call_119 = spaceCtor_((struct String){.str = "tuple", .len = 5}, list_25);
+    int call_120 = spaceIsEmpty_(call_119);
+    milone_assert(call_120, 463, 2);
     void* box_18 = (void*)milone_mem_alloc(1, sizeof(struct Ty_));
     (*(((struct Ty_*)box_18))) = (struct Ty_){.tag = Int_};
     struct Ty_ variant_3 = (struct Ty_){.tag = List_, .List_ = box_18};
-    struct Space_ call_134 = tyToSpace_(variant_3);
-    int call_135 = spaceIsEmpty_(call_134);
-    milone_assert((!(call_135)), 465, 2);
-    int call_136 = 0;
+    struct Space_ call_121 = tyToSpace_(variant_3);
+    int call_122 = spaceIsEmpty_(call_121);
+    milone_assert((!(call_122)), 465, 2);
     void* box_19 = (void*)milone_mem_alloc(1, sizeof(struct Ty_List*));
     (*(((struct Ty_List**)box_19))) = NULL;
     struct Ty_ variant_4 = (struct Ty_){.tag = Tuple_, .Tuple_ = box_19};
     void* box_20 = (void*)milone_mem_alloc(1, sizeof(struct Ty_));
     (*(((struct Ty_*)box_20))) = variant_4;
     struct Ty_ variant_5 = (struct Ty_){.tag = List_, .List_ = box_20};
-    struct Space_ call_137 = tyToSpace_(variant_5);
-    int call_138 = spaceIsEmpty_(call_137);
-    milone_assert((!(call_138)), 466, 2);
-    int call_139 = 0;
+    struct Space_ call_123 = tyToSpace_(variant_5);
+    int call_124 = spaceIsEmpty_(call_123);
+    milone_assert((!(call_124)), 466, 2);
     return 0;
 }
 
 int fun_24(void* env_15, int arg_27) {
-    int call_140 = id_1(arg_27);
-    return call_140;
+    int call_125 = id_1(arg_27);
+    return call_125;
 }
 
 int fun_7(struct StringSpace_Tuple2 arg_95) {
     struct String expected_ = arg_95.t0;
     struct Space_ space_10 = arg_95.t1;
-    struct String call_141 = spaceToString_(space_10);
-    struct String actual_ = call_141;
+    struct String call_126 = spaceToString_(space_10);
+    struct String actual_ = call_126;
     int if_6;
     if ((str_cmp(actual_, expected_) == 0)) {
         goto then_146;
@@ -1911,7 +1896,6 @@ then_146:;
     goto if_next_145;
 else_147:;
     printf("%s: NG (%s)\n", expected_.str, actual_.str);
-    int call_142 = 0;
     if_6 = 0;
     goto if_next_145;
 if_next_145:;
@@ -1919,8 +1903,8 @@ if_next_145:;
 }
 
 int fun_25(void* env_16, struct StringSpace_Tuple2 arg_28) {
-    int call_143 = fun_7(arg_28);
-    return call_143;
+    int call_127 = fun_7(arg_28);
+    return call_127;
 }
 
 int testSpaceToString_(int arg_96) {
@@ -1930,42 +1914,42 @@ int testSpaceToString_(int arg_96) {
     struct StringSpace_Tuple2 tuple_11;
     tuple_11.t0 = (struct String){.str = "full", .len = 4};
     tuple_11.t1 = spaceFull_;
-    struct Space_ call_144 = spaceCtor_((struct String){.str = "nil", .len = 3}, NULL);
+    struct Space_ call_128 = spaceCtor_((struct String){.str = "nil", .len = 3}, NULL);
     struct StringSpace_Tuple2 tuple_12;
     tuple_12.t0 = (struct String){.str = "nil", .len = 3};
-    tuple_12.t1 = call_144;
+    tuple_12.t1 = call_128;
     struct Space_List* list_33 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_33->head = spaceFull_;
     list_33->tail = NULL;
     struct Space_List* list_32 = (struct Space_List*)milone_mem_alloc(1, sizeof(struct Space_List));
     list_32->head = spaceEmpty_;
     list_32->tail = list_33;
-    struct Space_ call_145 = spaceCtor_((struct String){.str = "tuple", .len = 5}, list_32);
+    struct Space_ call_129 = spaceCtor_((struct String){.str = "tuple", .len = 5}, list_32);
     struct StringSpace_Tuple2 tuple_13;
     tuple_13.t0 = (struct String){.str = "tuple(empty, full)", .len = 18};
-    tuple_13.t1 = call_145;
-    struct Space_ call_146 = tyToSpace_((struct Ty_){.tag = Int_});
+    tuple_13.t1 = call_129;
+    struct Space_ call_130 = tyToSpace_((struct Ty_){.tag = Int_});
     struct StringSpace_Tuple2 tuple_14;
     tuple_14.t0 = (struct String){.str = "full", .len = 4};
-    tuple_14.t1 = call_146;
+    tuple_14.t1 = call_130;
     void* box_21 = (void*)milone_mem_alloc(1, sizeof(struct Ty_));
     (*(((struct Ty_*)box_21))) = (struct Ty_){.tag = Int_};
     struct Ty_ variant_6 = (struct Ty_){.tag = List_, .List_ = box_21};
-    struct Space_ call_147 = tyToSpace_(variant_6);
-    struct Space_ call_148 = spaceDecompose_(call_147);
+    struct Space_ call_131 = tyToSpace_(variant_6);
+    struct Space_ call_132 = spaceDecompose_(call_131);
     struct StringSpace_Tuple2 tuple_15;
     tuple_15.t0 = (struct String){.str = "+(nil, cons(full, list))", .len = 24};
-    tuple_15.t1 = call_148;
+    tuple_15.t1 = call_132;
     struct Pat_Pat_Tuple2 tuple_17;
     tuple_17.t0 = (struct Pat_){.tag = Discard_};
     tuple_17.t1 = (struct Pat_){.tag = Nil_};
     void* box_22 = (void*)milone_mem_alloc(1, sizeof(struct Pat_Pat_Tuple2));
     (*(((struct Pat_Pat_Tuple2*)box_22))) = tuple_17;
     struct Pat_ variant_7 = (struct Pat_){.tag = Cons_, .Cons_ = box_22};
-    struct Space_ call_149 = patToSpace_(variant_7);
+    struct Space_ call_133 = patToSpace_(variant_7);
     struct StringSpace_Tuple2 tuple_16;
     tuple_16.t0 = (struct String){.str = "cons(full, nil)", .len = 15};
-    tuple_16.t1 = call_149;
+    tuple_16.t1 = call_133;
     struct StringSpace_Tuple2List* list_36 = (struct StringSpace_Tuple2List*)milone_mem_alloc(1, sizeof(struct StringSpace_Tuple2List));
     list_36->head = tuple_16;
     list_36->tail = NULL;
@@ -1996,17 +1980,16 @@ int testSpaceToString_(int arg_96) {
     (*(((int*)box_24))) = 0;
     void* env_35 = box_24;
     struct StringSpace_Tuple2BoolFun1 fun_45 = (struct StringSpace_Tuple2BoolFun1){.fun = fun_25, .env = env_35};
-    struct BoolList* call_150 = listMap_2(fun_45, cases_);
-    int call_151 = listForAll_1(fun_44, call_150);
-    int ok_ = call_151;
+    struct BoolList* call_134 = listMap_2(fun_45, cases_);
+    int call_135 = listForAll_1(fun_44, call_134);
+    int ok_ = call_135;
     milone_assert(ok_, 497, 2);
-    int call_152 = 0;
     return 0;
 }
 
 int fun_26(void* env_17, int arg_29) {
-    int call_153 = id_1(arg_29);
-    return call_153;
+    int call_136 = id_1(arg_29);
+    return call_136;
 }
 
 struct BoolStringTuple2 {
@@ -2024,13 +2007,13 @@ int fun_8(struct StringTy_Pat_ListCovering_Tuple4 arg_97) {
     struct Ty_ ty_2 = arg_97.t1;
     struct Pat_List* pats_1 = arg_97.t2;
     struct Covering_ covering_ = arg_97.t3;
-    struct Space_ call_154 = tyToSpace_(ty_2);
-    struct Space_ tySpace_ = call_154;
-    struct Space_ call_155 = patsToSpace_(pats_1);
-    struct Space_ patSpace_ = call_155;
-    int call_156 = spaceCovers_(tySpace_, patSpace_);
+    struct Space_ call_137 = tyToSpace_(ty_2);
+    struct Space_ tySpace_ = call_137;
+    struct Space_ call_138 = patsToSpace_(pats_1);
+    struct Space_ patSpace_ = call_138;
+    int call_139 = spaceCovers_(tySpace_, patSpace_);
     struct Covering_ if_7;
-    if (call_156) {
+    if (call_139) {
         goto then_149;
     } else {
         goto else_150;
@@ -2079,7 +2062,6 @@ end_match_151:;
     int ok_2 = match_27.t0;
     struct String msg_1 = match_27.t1;
     printf("%s: %s\n", name_.str, msg_1.str);
-    int call_157 = 0;
     int if_8;
     if ((!(ok_2))) {
         goto then_158;
@@ -2087,12 +2069,10 @@ end_match_151:;
         goto else_159;
     }
 then_158:;
-    struct String call_158 = spaceToString_(tySpace_);
-    printf("  ty: %s\n", call_158.str);
-    int call_159 = 0;
-    struct String call_160 = spaceToString_(patSpace_);
-    printf("  pats: %s\n", call_160.str);
-    int call_161 = 0;
+    struct String call_140 = spaceToString_(tySpace_);
+    printf("  ty: %s\n", call_140.str);
+    struct String call_141 = spaceToString_(patSpace_);
+    printf("  pats: %s\n", call_141.str);
     if_8 = 0;
     goto if_next_157;
 else_159:;
@@ -2103,8 +2083,8 @@ if_next_157:;
 }
 
 int fun_27(void* env_18, struct StringTy_Pat_ListCovering_Tuple4 arg_30) {
-    int call_162 = fun_8(arg_30);
-    return call_162;
+    int call_142 = fun_8(arg_30);
+    return call_142;
 }
 
 // static spaceFull_;
@@ -2117,8 +2097,8 @@ int main() {
     (*(((struct Space_List**)box_25))) = NULL;
     struct Space_ variant_8 = (struct Space_){.tag = Union_, .Union_ = box_25};
     spaceEmpty_ = variant_8;
-    int call_163 = testSpaceIsEmpty_(0);
-    int call_164 = testSpaceToString_(0);
+    int call_143 = testSpaceIsEmpty_(0);
+    int call_144 = testSpaceToString_(0);
     struct Pat_Pat_Tuple2 tuple_22;
     tuple_22.t0 = (struct Pat_){.tag = Discard_};
     tuple_22.t1 = (struct Pat_){.tag = Discard_};
@@ -2468,9 +2448,9 @@ int main() {
     (*(((int*)box_59))) = 0;
     void* env_37 = box_59;
     struct StringTy_Pat_ListCovering_Tuple4BoolFun1 fun_47 = (struct StringTy_Pat_ListCovering_Tuple4BoolFun1){.fun = fun_27, .env = env_37};
-    struct BoolList* call_165 = listMap_1(fun_47, testCases_);
-    int call_166 = listForAll_1(fun_46, call_165);
-    int ok_1 = call_166;
+    struct BoolList* call_145 = listMap_1(fun_47, testCases_);
+    int call_146 = listForAll_1(fun_46, call_145);
+    int ok_1 = call_146;
     int if_9;
     if (ok_1) {
         goto then_161;

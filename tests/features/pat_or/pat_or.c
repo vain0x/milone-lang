@@ -59,10 +59,8 @@ else_6:;
     goto if_next_4;
 if_next_4:;
     milone_assert(if_, 8, 2);
-    int call_2 = 0;
-    int call_3 = isZeroOrOne_(2);
-    milone_assert((!(call_3)), 9, 2);
-    int call_4 = 0;
+    int call_2 = isZeroOrOne_(2);
+    milone_assert((!(call_2)), 9, 2);
     return 0;
 }
 
@@ -117,18 +115,16 @@ int nestedCase_(int arg_1) {
     struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 0;
     list_->tail = list_1;
-    int call_5 = startsWithDoubleBits_(list_);
-    milone_assert(call_5, 20, 2);
-    int call_6 = 0;
+    int call_3 = startsWithDoubleBits_(list_);
+    milone_assert(call_3, 20, 2);
     struct IntList* list_4 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_4->head = 2;
     list_4->tail = NULL;
     struct IntList* list_3 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_3->head = 1;
     list_3->tail = list_4;
-    int call_7 = startsWithDoubleBits_(list_3);
-    milone_assert((!(call_7)), 21, 2);
-    int call_8 = 0;
+    int call_4 = startsWithDoubleBits_(list_3);
+    milone_assert((!(call_4)), 21, 2);
     return 0;
 }
 
@@ -175,24 +171,22 @@ int complexCase_(int arg_2) {
     void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
     (*(((struct IntIntTuple2*)box_))) = tuple_;
     struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = box_};
-    int call_9 = performComplexMatching_(variant_);
-    milone_assert(call_9, 35, 2);
-    int call_10 = 0;
+    int call_5 = performComplexMatching_(variant_);
+    milone_assert(call_5, 35, 2);
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 1;
     tuple_1.t1 = 2;
     void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
     (*(((struct IntIntTuple2*)box_1))) = tuple_1;
     struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = box_1};
-    int call_11 = performComplexMatching_(variant_1);
-    milone_assert((!(call_11)), 36, 2);
-    int call_12 = 0;
+    int call_6 = performComplexMatching_(variant_1);
+    milone_assert((!(call_6)), 36, 2);
     return 0;
 }
 
 int main() {
-    int call_13 = simpleCase_(0);
-    int call_14 = nestedCase_(0);
-    int call_15 = complexCase_(0);
+    int call_7 = simpleCase_(0);
+    int call_8 = nestedCase_(0);
+    int call_9 = complexCase_(0);
     return 0;
 }

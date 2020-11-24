@@ -39,6 +39,11 @@ type MatchIR =
 type MUnary =
   | MNotUnary
 
+  // Converts a scalar to int.
+  | MIntOfScalarUnary
+  | MUIntOfScalarUnary
+  | MCharOfScalarUnary
+
   /// Gets raw ptr of string.
   | MStrPtrUnary
 
@@ -86,6 +91,28 @@ type MBinary =
   /// `s.[i]`
   | MStrIndexBinary
 
+[<Struct; NoEquality; NoComparison>]
+type MPrim =
+  /// string -> int
+  | MIntOfStrPrim
+  | MUIntOfStrPrim
+
+  | MStrOfBoolPrim
+  | MStrOfCharPrim
+  | MStrOfIntPrim
+  | MStrOfUIntPrim
+
+  | MStrGetSlicePrim
+
+  | MNativeFunPrim of funName: string
+
+[<NoEquality; NoComparison>]
+type MAction =
+  | MAssertAction
+  | MPrintfnAction
+  | MEnterRegionAction
+  | MLeaveRegionAction
+
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
 type MExpr =
@@ -117,8 +144,7 @@ type MInit =
 
   | MExprInit of MExpr
 
-  /// Call to primitive.
-  | MCallPrimInit of HPrim * args: MExpr list * primTy: Ty
+  | MPrimInit of MPrim * MExpr list
 
   /// Direct call to procedure.
   | MCallProcInit of callee: MExpr * args: MExpr list * calleeTy: Ty
@@ -159,6 +185,8 @@ type MTerminator =
 /// Statement in middle IR.
 [<NoEquality; NoComparison>]
 type MStmt =
+  | MActionStmt of MAction * MExpr list * Loc
+
   /// Declare a local variable.
   | MLetValStmt of VarSerial * MInit * Ty * Loc
 

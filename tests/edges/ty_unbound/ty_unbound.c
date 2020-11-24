@@ -33,11 +33,10 @@ if_next_1:;
 int assertIsEmpty_1(struct UnitList* xs_) {
     int call_ = isEmpty_1(xs_);
     milone_assert(call_, 6, 23);
-    int call_1 = 0;
     return 0;
 }
 
 int main() {
-    int call_2 = assertIsEmpty_1(NULL);
+    int call_1 = assertIsEmpty_1(NULL);
     return 0;
 }

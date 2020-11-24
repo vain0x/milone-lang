@@ -21,7 +21,6 @@ then_3:;
     }
 then_5:;
     printf("FizzBuzz\n");
-    int call_ = 0;
     if_1 = 0;
     goto if_next_4;
 else_6:;
@@ -33,7 +32,6 @@ else_6:;
     }
 then_8:;
     printf("Fizz\n");
-    int call_1 = 0;
     if_2 = 0;
     goto if_next_7;
 else_9:;
@@ -45,12 +43,10 @@ else_9:;
     }
 then_11:;
     printf("Buzz\n");
-    int call_2 = 0;
     if_3 = 0;
     goto if_next_10;
 else_12:;
     printf("%d\n", i_);
-    int call_3 = 0;
     if_3 = 0;
     goto if_next_10;
 if_next_10:;
@@ -73,6 +69,6 @@ if_next_2:;
 }
 
 int main() {
-    int call_4 = fizzBuzz_(1);
+    int call_ = fizzBuzz_(1);
     return 0;
 }

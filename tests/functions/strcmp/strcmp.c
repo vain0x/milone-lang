@@ -6,7 +6,6 @@ int main();
 
 int testBinarySafe_(int arg_) {
     milone_assert((str_cmp((struct String){.str = "\0x", .len = 2}, (struct String){.str = "\0y", .len = 2}) < 0), 1, 2);
-    int call_ = 0;
     return 0;
 }
 
@@ -27,7 +26,6 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, 6, 2);
-    int call_1 = 0;
-    int call_2 = testBinarySafe_(0);
+    int call_ = testBinarySafe_(0);
     return 0;
 }

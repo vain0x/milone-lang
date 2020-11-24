@@ -89,7 +89,6 @@ int usedInOtherSumTypeCase_(int arg_1) {
     struct MyBool_ myBool_ = variant_;
     int call_ = toBool_(myBool_);
     milone_assert(call_, 27, 2);
-    int call_1 = 0;
     return 0;
 }
 
@@ -121,7 +120,6 @@ int usedInRecordTypeCase_(int arg_2) {
     goto end_match_6;
 next_7:;
     milone_assert(0, 37, 9);
-    int call_2 = 0;
     match_ = 0;
     goto end_match_6;
 next_8:;
@@ -130,8 +128,8 @@ end_match_6:;
 }
 
 int main() {
-    int call_3 = basicCase_(0);
-    int call_4 = usedInOtherSumTypeCase_(0);
-    int call_5 = usedInRecordTypeCase_(0);
+    int call_1 = basicCase_(0);
+    int call_2 = usedInOtherSumTypeCase_(0);
+    int call_3 = usedInRecordTypeCase_(0);
     return 0;
 }

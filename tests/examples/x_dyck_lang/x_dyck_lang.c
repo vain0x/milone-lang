@@ -89,15 +89,11 @@ int main() {
     struct String case4_ = (struct String){.str = ")(", .len = 2};
     struct String call_1 = parse_(case1_);
     printf("case1 (A): %s\n", call_1.str);
-    int call_2 = 0;
-    struct String call_3 = parse_(case2_);
-    printf("case2 (A): %s\n", call_3.str);
-    int call_4 = 0;
-    struct String call_5 = parse_(case3_);
-    printf("case3 (R): %s\n", call_5.str);
-    int call_6 = 0;
-    struct String call_7 = parse_(case4_);
-    printf("case4 (R): %s\n", call_7.str);
-    int call_8 = 0;
+    struct String call_2 = parse_(case2_);
+    printf("case2 (A): %s\n", call_2.str);
+    struct String call_3 = parse_(case3_);
+    printf("case3 (R): %s\n", call_3.str);
+    struct String call_4 = parse_(case4_);
+    printf("case4 (R): %s\n", call_4.str);
     return 0;
 }

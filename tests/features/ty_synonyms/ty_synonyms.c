@@ -30,13 +30,11 @@ int baseCase_(int arg_) {
     list_->tail = list_1;
     struct IntList* codes_ = list_;
     milone_assert((success_ == 0), 13, 2);
-    int call_ = 0;
     return 0;
 }
 
 int yodaCase_(int exitCode_) {
     milone_assert((0 == exitCode_), 16, 36);
-    int call_1 = 0;
     return 0;
 }
 
@@ -75,18 +73,16 @@ if_next_4:;
 }
 
 int polymorphicFunCase_(int arg_1) {
-    int call_2 = proj_2(1, 1, 0);
-    milone_assert((call_2 == 1), 21, 2);
-    int call_3 = 0;
-    struct String call_4 = proj_1(0, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
-    milone_assert((str_cmp(call_4, (struct String){.str = "F", .len = 1}) == 0), 22, 2);
-    int call_5 = 0;
+    int call_ = proj_2(1, 1, 0);
+    milone_assert((call_ == 1), 21, 2);
+    struct String call_1 = proj_1(0, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
+    milone_assert((str_cmp(call_1, (struct String){.str = "F", .len = 1}) == 0), 22, 2);
     return 0;
 }
 
 int main() {
-    int call_6 = baseCase_(0);
-    int call_7 = yodaCase_(0);
-    int call_8 = polymorphicFunCase_(0);
+    int call_2 = baseCase_(0);
+    int call_3 = yodaCase_(0);
+    int call_4 = polymorphicFunCase_(0);
     return 0;
 }

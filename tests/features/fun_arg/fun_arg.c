@@ -58,12 +58,11 @@ struct StringUnitFun1 bindInt_(struct IntStringUnitFun2 f_, int x_) {
 
 int printInt_(int value_, struct String label_) {
     printf("%d: %s\n", value_, label_.str);
-    int call_ = 0;
     return 0;
 }
 
 int fun_1(void* env_1, int arg_3, struct String arg_4) {
-    int call_1 = printInt_(arg_3, arg_4);
+    int call_ = printInt_(arg_3, arg_4);
     return 0;
 }
 
@@ -77,7 +76,6 @@ tailrec_1:;
     }
 then_3:;
     printf("%s\n", f_1.str);
-    int call_2 = 0;
     if_ = 0;
     goto if_next_2;
 else_4:;
@@ -100,7 +98,7 @@ struct StringTuple1 {
 
 int fun_2(void* env_2, int arg_5, struct String arg_6) {
     struct String arg_7 = (*(((struct StringTuple1*)env_2))).t0;
-    int call_3 = der_(arg_7, arg_5, arg_6);
+    int call_1 = der_(arg_7, arg_5, arg_6);
     return 0;
 }
 
@@ -109,8 +107,8 @@ int main() {
     (*(((int*)box_1))) = 0;
     void* env_4 = box_1;
     struct IntStringUnitFun2 fun_4 = (struct IntStringUnitFun2){.fun = fun_1, .env = env_4};
-    struct StringUnitFun1 call_4 = bindInt_(fun_4, 42);
-    struct StringUnitFun1 print42_ = call_4;
+    struct StringUnitFun1 call_2 = bindInt_(fun_4, 42);
+    struct StringUnitFun1 print42_ = call_2;
     int app_1 = print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
     struct String d_ = (struct String){.str = "\'", .len = 1};
     struct StringTuple1 tuple_1;
@@ -119,8 +117,8 @@ int main() {
     (*(((struct StringTuple1*)box_2))) = tuple_1;
     void* env_5 = box_2;
     struct IntStringUnitFun2 fun_5 = (struct IntStringUnitFun2){.fun = fun_2, .env = env_5};
-    struct StringUnitFun1 call_5 = bindInt_(fun_5, 2);
-    struct StringUnitFun1 der2_ = call_5;
+    struct StringUnitFun1 call_3 = bindInt_(fun_5, 2);
+    struct StringUnitFun1 der2_ = call_3;
     int app_2 = der2_.fun(der2_.env, (struct String){.str = "f", .len = 1});
     return 0;
 }

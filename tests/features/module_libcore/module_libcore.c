@@ -33,7 +33,6 @@ if_next_1:;
 int assertNotEmpty_1(struct IntList* xs_) {
     int call_ = isEmpty_1(xs_);
     milone_assert((!(call_)), 4, 34);
-    int call_1 = 0;
     return 0;
 }
 
@@ -41,6 +40,6 @@ int main() {
     struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
-    int call_2 = assertNotEmpty_1(list_);
+    int call_1 = assertNotEmpty_1(list_);
     return 0;
 }

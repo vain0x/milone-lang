@@ -57,7 +57,6 @@ next_7:;
     int x_1 = xs_3->head;
     struct IntList* xs_4 = xs_3->tail;
     printf("%d\n", x_1);
-    int call_1 = 0;
     struct IntList* arg_2 = xs_4;
     xs_3 = arg_2;
     goto tailrec_5;
@@ -81,11 +80,9 @@ int main() {
     list_1->tail = list_2;
     struct IntList* xs_5 = list_1;
     printf("xs:\n");
-    int call_2 = 0;
-    int call_3 = printList_(xs_5);
+    int call_1 = printList_(xs_5);
     printf("rev xs:\n");
-    int call_4 = 0;
-    struct IntList* call_5 = rev_(xs_5);
-    int call_6 = printList_(call_5);
+    struct IntList* call_2 = rev_(xs_5);
+    int call_3 = printList_(call_2);
     return 0;
 }

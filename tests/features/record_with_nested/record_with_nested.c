@@ -48,6 +48,5 @@ int main() {
     void* john_ = box_2;
     struct String name_ = (*(((struct Person_*)john_))).Name;
     milone_assert((name_.len == 8), 19, 2);
-    int call_1 = 0;
     return 0;
 }

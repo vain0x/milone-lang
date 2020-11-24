@@ -56,6 +56,5 @@ int main() {
     struct IntIntIntFun2 f_ = ((struct IntIntIntFun2){});
     int app_ = f_.fun(f_.env, 2, 3);
     milone_assert((app_ == 5), 20, 2);
-    int call_1 = 0;
     return 0;
 }

@@ -65,7 +65,6 @@ next_7:;
     struct String x_1 = xs_3->head;
     struct StringList* xs_4 = xs_3->tail;
     printf("%s\n", x_1.str);
-    int call_1 = 0;
     struct StringList* arg_2 = xs_4;
     xs_3 = arg_2;
     goto tailrec_5;
@@ -106,8 +105,8 @@ then_14:;
     if_1 = 1;
     goto if_next_13;
 else_15:;
-    int call_2 = isDigit_(s_.str[i_]);
-    if_1 = (!(call_2));
+    int call_1 = isDigit_(s_.str[i_]);
+    if_1 = (!(call_1));
     goto if_next_13;
 if_next_13:;
     int if_2;
@@ -140,8 +139,8 @@ tailrec_19:;
         goto else_22;
     }
 then_21:;
-    struct StringList* call_3 = listRev_(acc_1);
-    if_3 = call_3;
+    struct StringList* call_2 = listRev_(acc_1);
+    if_3 = call_2;
     goto if_next_20;
 else_22:;
     struct StringList* if_4;
@@ -194,9 +193,9 @@ if_next_29:;
         goto else_34;
     }
 then_33:;
-    struct String call_4 = str_get_slice(i_1, i_1, s_);
+    struct String slice_ = str_get_slice(i_1, i_1, s_);
     struct StringList* list_1 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
-    list_1->head = str_add((struct String){.str = "punct ", .len = 6}, call_4);
+    list_1->head = str_add((struct String){.str = "punct ", .len = 6}, slice_);
     list_1->tail = acc_1;
     struct StringList* acc_2 = list_1;
     struct String arg_8 = s_;
@@ -209,19 +208,19 @@ then_33:;
     if_7 = NULL;
     goto if_next_32;
 else_34:;
-    int call_5 = isDigit_(s_.str[i_1]);
+    int call_3 = isDigit_(s_.str[i_1]);
     struct StringList* if_8;
-    if (call_5) {
+    if (call_3) {
         goto then_36;
     } else {
         goto else_37;
     }
 then_36:;
-    int call_6 = readInt_(s_, i_1);
-    int r_ = call_6;
-    struct String call_7 = str_get_slice(i_1, (r_ - 1), s_);
+    int call_4 = readInt_(s_, i_1);
+    int r_ = call_4;
+    struct String slice_1 = str_get_slice(i_1, (r_ - 1), s_);
     struct StringList* list_2 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
-    list_2->head = str_add((struct String){.str = "int ", .len = 4}, call_7);
+    list_2->head = str_add((struct String){.str = "int ", .len = 4}, slice_1);
     list_2->tail = acc_1;
     struct StringList* acc_3 = list_2;
     struct String arg_11 = s_;
@@ -235,7 +234,6 @@ then_36:;
     goto if_next_35;
 else_37:;
     printf("ERROR: Unknown Token \'%c\'\n", s_.str[i_1]);
-    int call_8 = 0;
     exit(1);
     if_8 = NULL;
     goto if_next_35;
@@ -253,14 +251,14 @@ if_next_20:;
 }
 
 struct StringList* tokenize_(struct String s_) {
-    struct StringList* call_9 = go_1(s_, NULL, 0);
-    return call_9;
+    struct StringList* call_5 = go_1(s_, NULL, 0);
+    return call_5;
 }
 
 int main() {
     struct String source_ = (struct String){.str = "[0, 1000000007, 314159]", .len = 23};
-    struct StringList* call_10 = tokenize_(source_);
-    struct StringList* tokens_ = call_10;
-    int call_11 = printList_(tokens_);
+    struct StringList* call_6 = tokenize_(source_);
+    struct StringList* tokens_ = call_6;
+    int call_7 = printList_(tokens_);
     return 0;
 }

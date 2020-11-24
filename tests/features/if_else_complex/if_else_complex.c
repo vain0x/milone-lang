@@ -11,7 +11,6 @@ int main() {
     }
 then_2:;
     printf("then\n");
-    int call_ = 0;
     struct String hello_ = (struct String){.str = "hello", .len = 5};
     int if_1;
     if (1) {
@@ -31,7 +30,6 @@ if_next_3:;
     goto if_next_1;
 else_6:;
     printf("else\n");
-    int call_1 = 0;
     if_ = 1;
     goto if_next_1;
 if_next_1:;

@@ -2,7 +2,7 @@
 
 set -eu
 
-MILONE_INCLUDE="$PWD/boot/runtime"
+MILONE_INCLUDE="$PWD/runtime"
 DIR="$PWD/scripts/region_primitive_checks"
 OUT_C="$DIR/region_primitive_checks.c"
 

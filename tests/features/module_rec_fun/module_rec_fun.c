@@ -45,12 +45,9 @@ if_next_4:;
 int main() {
     int call_2 = odd_(1);
     milone_assert(call_2, 9, 2);
-    int call_3 = 0;
-    int call_4 = even_(2);
-    milone_assert(call_4, 10, 2);
-    int call_5 = 0;
-    int call_6 = even_(3);
-    milone_assert((!(call_6)), 11, 2);
-    int call_7 = 0;
+    int call_3 = even_(2);
+    milone_assert(call_3, 10, 2);
+    int call_4 = even_(3);
+    milone_assert((!(call_4)), 11, 2);
     return 0;
 }

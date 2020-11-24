@@ -90,7 +90,6 @@ int main() {
     struct IntIntFun1 dec3_ = fun_3;
     int call_3 = twice_(dec3_, 8);
     milone_assert((call_3 == 2), 8, 2);
-    int call_4 = 0;
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 2;
     tuple_1.t1 = 3;
@@ -101,7 +100,6 @@ int main() {
     struct IntIntIntFun2 add2_ = fun_4;
     int app_2 = add2_.fun(add2_.env, 5, 7);
     milone_assert((app_2 == (((2 + 3) + 5) + 7)), 11, 2);
-    int call_5 = 0;
     void* box_2 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_2))) = 0;
     void* env_5 = box_2;
@@ -109,6 +107,5 @@ int main() {
     struct IntIntIntIntIntFun4 f_1 = fun_5;
     int app_3 = f_1.fun(f_1.env, 1, 2, 3, 4);
     milone_assert((app_3 == (((1 + 2) + 3) + 4)), 14, 2);
-    int call_6 = 0;
     return 0;
 }
