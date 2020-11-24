@@ -778,15 +778,6 @@ let private cgPrintfnCallExpr ctx format args =
   let ctx = addStmt ctx expr
   genDefault ctx tyUnit
 
-let private cgCallStringExpr arg argTy ctx =
-  let arg, ctx = cgExpr ctx arg
-  match argTy with
-  | AppTy (IntTyCtor, _) -> CCallExpr(CRefExpr "str_of_int", [ arg ]), ctx
-  | AppTy (UIntTyCtor, _) -> CCallExpr(CRefExpr "str_of_uint", [ arg ]), ctx
-  | AppTy (CharTyCtor, _) -> CCallExpr(CRefExpr "str_of_char", [ arg ]), ctx
-  | AppTy (StrTyCtor, _) -> arg, ctx
-  | _ -> failwith "Never: Type Error `string`"
-
 let private cgCallPrimExpr ctx prim args primTy resultTy loc =
   match prim, args, primTy with
   | HPrim.NativeFun (funName, _), _, _ ->
@@ -810,8 +801,6 @@ let private cgCallPrimExpr ctx prim args primTy resultTy loc =
   | HPrim.StrGetSlice, _, _ ->
       let args, ctx = cgExprList ctx args
       CCallExpr(CRefExpr "str_get_slice", args), ctx
-
-  | HPrim.String, [ arg ], AppTy (FunTyCtor, [ argTy; _ ]) -> cgCallStringExpr arg argTy ctx
 
   | _ -> failwithf "Invalid call to primitive %A" (prim, args, primTy, resultTy)
 
@@ -874,51 +863,26 @@ let private doGenLetValStmt ctx serial expr ty =
   let cty, ctx = cgTyComplete ctx ty
   addLetStmt ctx name expr cty storageModifier
 
-let private tyIsInt ty =
-  match ty with
-  | AppTy (IntTyCtor, []) -> true
-  | _ -> false
+let private cgCallMPrimExpr ctx itself serial prim args resultTy _loc =
+  let conversion ctx makeExpr =
+    match args with
+    | [ arg ] ->
+        let name = getUniqueVarName ctx serial
+        let storageModifier = findStorageModifier ctx serial
+        let ty, ctx = cgTyComplete ctx resultTy
+        let arg, ctx = cgExpr ctx arg
+        addLetStmt ctx name (Some(makeExpr arg)) ty storageModifier
 
-let private tyIsUInt ty =
-  match ty with
-  | AppTy (UIntTyCtor, []) -> true
-  | _ -> false
+    | _ -> failwithf "NEVER: %A" itself
 
-let private cgCallMPrimExpr ctx itself serial prim args ty _loc =
   match prim with
-  | MIntOfStrPrim ->
-      match args with
-      | [ arg ] ->
-          assert (ty |> tyIsInt)
+  | MIntOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_int", [ arg ]))
+  | MUIntOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_uint", [ arg ]))
 
-          let name = getUniqueVarName ctx serial
-          let storageModifier = findStorageModifier ctx serial
-
-          let arg, ctx = cgExpr ctx arg
-
-          let initExpr =
-            CCallExpr(CRefExpr "str_to_int", [ arg ])
-
-          addLetStmt ctx name (Some initExpr) CIntTy storageModifier
-
-      | _ -> failwithf "NEVER: %A" itself
-
-  | MUIntOfStrPrim ->
-      match args with
-      | [ arg ] ->
-          assert (ty |> tyIsUInt)
-
-          let name = getUniqueVarName ctx serial
-          let storageModifier = findStorageModifier ctx serial
-
-          let arg, ctx = cgExpr ctx arg
-
-          let initExpr =
-            CCallExpr(CRefExpr "str_to_uint", [ arg ])
-
-          addLetStmt ctx name (Some initExpr) CUInt32Ty storageModifier
-
-      | _ -> failwithf "NEVER: %A" itself
+  | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
+  | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_char", [ arg ]))
+  | MStrOfIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_int", [ arg ]))
+  | MStrOfUIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_uint", [ arg ]))
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial

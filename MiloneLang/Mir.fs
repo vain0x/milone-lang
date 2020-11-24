@@ -97,6 +97,11 @@ type MPrim =
   | MIntOfStrPrim
   | MUIntOfStrPrim
 
+  | MStrOfBoolPrim
+  | MStrOfCharPrim
+  | MStrOfIntPrim
+  | MStrOfUIntPrim
+
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
 type MExpr =

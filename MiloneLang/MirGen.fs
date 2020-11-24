@@ -978,6 +978,30 @@ let private mirifyCallCharExpr ctx itself calleeTy args ty loc =
       | _ -> failwithf "NEVER: %A" itself
   | _ -> failwithf "NEVER: %A" itself
 
+let private mirifyCallStringExpr ctx itself calleeTy args ty loc =
+  match calleeTy, args with
+  | AppTy (FunTyCtor, [ AppTy (srcTy, _); _ ]), [ arg ] ->
+      let arg, ctx = mirifyExpr ctx arg
+
+      let usePrim prim =
+        let temp, tempSerial, ctx = freshVar ctx "call" ty loc
+
+        let ctx =
+          addStmt ctx (MLetValStmt(tempSerial, MPrimInit(prim, [ arg ]), ty, loc))
+
+        temp, ctx
+
+      match srcTy with
+      | StrTyCtor -> arg, ctx
+
+      | BoolTyCtor -> usePrim MStrOfBoolPrim
+      | IntTyCtor -> usePrim MStrOfIntPrim
+      | UIntTyCtor -> usePrim MStrOfUIntPrim
+      | CharTyCtor -> usePrim MStrOfCharPrim
+
+      | _ -> failwithf "NEVER: %A" itself
+  | _ -> failwithf "NEVER: %A" itself
+
 let private mirifyExprInfCallProc ctx itself callee args ty loc =
   let core () =
     match callee with
@@ -1030,6 +1054,7 @@ let private mirifyExprInfCallProc ctx itself callee args ty loc =
       | HPrim.Int, _ -> mirifyCallIntExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.UInt, _ -> mirifyCallUIntExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.Char, _ -> mirifyCallCharExpr ctx itself (exprToTy callee) args ty loc
+      | HPrim.String, _ -> mirifyCallStringExpr ctx itself (exprToTy callee) args ty loc
       | _ -> core ()
 
   | HVariantExpr (serial, _, _), [ arg ] -> mirifyExprCallVariantFun ctx serial arg ty loc

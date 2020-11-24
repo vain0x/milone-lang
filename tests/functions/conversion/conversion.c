@@ -29,8 +29,7 @@ int main() {
     struct String call_14 = str_of_char('\0');
     milone_assert((str_cmp(call_14, (struct String){.str = "", .len = 0}) == 0), 12, 2);
     int call_15 = 0;
-    struct String call_16 = (struct String){.str = "fix", .len = 3};
-    milone_assert((str_cmp(call_16, (struct String){.str = "fix", .len = 3}) == 0), 13, 2);
-    int call_17 = 0;
+    milone_assert((str_cmp((struct String){.str = "fix", .len = 3}, (struct String){.str = "fix", .len = 3}) == 0), 13, 2);
+    int call_16 = 0;
     return 0;
 }
