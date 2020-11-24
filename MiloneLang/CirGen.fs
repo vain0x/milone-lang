@@ -780,10 +780,6 @@ let private cgPrintfnCallExpr ctx format args =
 
 let private cgCallPrimExpr ctx prim args primTy resultTy loc =
   match prim, args, primTy with
-  | HPrim.NativeFun (funName, _), _, _ ->
-      let args, ctx = cgExprList ctx args
-      CCallExpr(CRefExpr funName, args), ctx
-
   | HPrim.Printfn, (MLitExpr (StrLit format, _)) :: args, _ -> cgPrintfnCallExpr ctx format args
 
   | HPrim.Assert, _, _ ->
@@ -871,6 +867,17 @@ let private cgCallMPrimExpr ctx itself serial prim args resultTy _loc =
 
     | _ -> failwithf "NEVER: %A" itself
 
+  let regular ctx makeExpr =
+    let name = getUniqueVarName ctx serial
+    let storageModifier = findStorageModifier ctx serial
+    let ty, ctx = cgTyComplete ctx resultTy
+
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+    addLetStmt ctx name (Some(makeExpr args)) ty storageModifier
+
   match prim with
   | MIntOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_int", [ arg ]))
   | MUIntOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_uint", [ arg ]))
@@ -880,16 +887,8 @@ let private cgCallMPrimExpr ctx itself serial prim args resultTy _loc =
   | MStrOfIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_int", [ arg ]))
   | MStrOfUIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_uint", [ arg ]))
 
-  | MStrGetSlicePrim ->
-      let name = getUniqueVarName ctx serial
-      let storageModifier = findStorageModifier ctx serial
-      let ty, ctx = cgTyComplete ctx resultTy
-
-      let args, ctx =
-        (args, ctx)
-        |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
-
-      addLetStmt ctx name (Some(CCallExpr(CRefExpr "str_get_slice", args))) ty storageModifier
+  | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CRefExpr "str_get_slice", args)))
+  | MNativeFunPrim funName -> regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial

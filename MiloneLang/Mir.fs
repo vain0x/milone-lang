@@ -91,7 +91,7 @@ type MBinary =
   /// `s.[i]`
   | MStrIndexBinary
 
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
   | MIntOfStrPrim
@@ -103,6 +103,8 @@ type MPrim =
   | MStrOfUIntPrim
 
   | MStrGetSlicePrim
+
+  | MNativeFunPrim of funName: string
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]

@@ -1017,6 +1017,20 @@ let private mirifyCallStringExpr ctx itself calleeTy args ty loc =
       | _ -> failwithf "NEVER: %A" itself
   | _ -> failwithf "NEVER: %A" itself
 
+let private mirifyCallNativeFunExpr ctx (funName: string) arity args ty loc =
+  assert (List.length args = arity)
+
+  let args, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+  let temp, tempSerial, ctx = freshVar ctx (funName + "_result") ty loc
+
+  let ctx =
+    addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MNativeFunPrim funName, args), ty, loc))
+
+  temp, ctx
+
 let private mirifyExprInfCallProc ctx itself callee args ty loc =
   let core () =
     match callee with
@@ -1071,6 +1085,7 @@ let private mirifyExprInfCallProc ctx itself callee args ty loc =
       | HPrim.UInt, _ -> mirifyCallUIntExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.Char, _ -> mirifyCallCharExpr ctx itself (exprToTy callee) args ty loc
       | HPrim.String, _ -> mirifyCallStringExpr ctx itself (exprToTy callee) args ty loc
+      | HPrim.NativeFun (funName, arity), _ -> mirifyCallNativeFunExpr ctx funName arity args ty loc
       | _ -> core ()
 
   | HVariantExpr (serial, _, _), [ arg ] -> mirifyExprCallVariantFun ctx serial arg ty loc
