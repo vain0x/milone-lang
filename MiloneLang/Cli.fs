@@ -47,12 +47,6 @@ SUBCOMMANDS
         If error, exits with non-zero code.
         Errors are written to STDOUT. (FIXME: use STDERR)
 
-        --reference <PROJECT-DIR>
-            Adds external project reference.
-            E.g. `--reference 'path/to/ExternProject'`,
-            `open ExternProject.ExternModule` will open
-            `path/to/ExternProject/ExternModule.fs`.
-
 OPTIONS
     -h, --help      Print this text.
     -V, --version   Print version of the compiler.
@@ -98,6 +92,13 @@ type CliHost =
 // Helpers
 // -----------------------------------------------
 
+let private strStartsWith (prefix: string) (s: string) =
+  let rec go (i: int) =
+    i = prefix.Length
+    || (prefix.[i] = s.[i] && go (i + 1))
+
+  s.Length >= prefix.Length && go 0
+
 let private strTrimEnd (s: string) =
   let rec go i =
     if i = 0 || not (charIsSpace s.[i - 1]) then s |> strSlice 0 i else go (i - 1)
@@ -134,6 +135,77 @@ let private pathStrToStem (s: string) =
 
       go s.Length
 
+let private pathIsRelative (s: string) =
+  (s |> strStartsWith "./")
+  || (s |> strStartsWith "../")
+
+// -----------------------------------------------
+// Project schema interpreter
+// -----------------------------------------------
+
+// type ProjectSchema =
+//   { Name: string
+//     Version: string
+//     Options: ProjectOption list }
+
+// type ProjectOption =
+//   | Ref of projectDir: string
+//   | AliasedRef of projectName: string * projectDir: string
+
+let private doInterpretProjectSchema ast =
+  let asStr expr =
+    match expr with
+    | ALitExpr (StrLit value, _) -> value
+    | _ -> failwith "Expected a string literal."
+
+  let asProjectRef expr =
+    match expr with
+    | ABinaryExpr (AppBinary, AIdentExpr ("Ref", _), projectDir, _) ->
+        let projectDir =
+          projectDir |> asStr |> pathStrTrimEndPathSep
+
+        let projectName = projectDir |> pathStrToStem
+        Some(projectName, projectDir)
+
+    | ABinaryExpr (AppBinary, AIdentExpr ("AliasedRef", _), ATupleExpr ([ projectName; projectDir ], _), _) ->
+        let projectName = projectName |> asStr
+
+        let projectDir =
+          projectDir |> asStr |> pathStrTrimEndPathSep
+
+        Some(projectName, projectDir)
+
+    | _ -> None
+
+  let asProjectSchema expr =
+    match expr with
+    | ARecordExpr (None, fields, _) ->
+        match fields
+              |> List.tryFind (fun (name, _, _) -> name = "Options") with
+        | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
+        | _ -> None
+
+    | _ -> None
+
+  let expr =
+    match ast with
+    | AExprRoot expr -> expr
+    | AModuleRoot (_, expr, _) -> expr
+
+  match expr with
+  | ASemiExpr (items, _) -> items |> List.tryPick asProjectSchema
+  | _ -> asProjectSchema expr
+
+let private parseProjectSchema contents =
+  let ast, errors = contents |> tokenize |> parse
+  if errors |> List.isEmpty |> not then
+    errors
+    |> listSort (fun (_, l) (_, r) -> posCmp l r)
+    |> List.iter (fun (msg, loc) -> printfn "ERROR %s %s" (posToString loc) msg)
+    failwith "Syntax error in project file."
+
+  doInterpretProjectSchema ast
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -163,6 +235,35 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
     Projects = projects
     Verbosity = verbosity
     Host = host }
+
+let private compileCtxReadProjectFile (ctx: CompileCtx) =
+  let host = ctx.Host
+
+  let projectFilePath =
+    ctx.ProjectDir
+    + "/"
+    + ctx.ProjectName
+    + ".milone_project"
+
+  match host.FileReadAllText projectFilePath with
+  | Some contents ->
+      match parseProjectSchema contents with
+      | Some refs ->
+          let projects =
+            refs
+            |> List.fold (fun projects (projectName, projectDir) ->
+                 if projects |> mapContainsKey projectName
+                 then failwithf "Project name is duplicated: '%s'" projectName
+
+                 let projectDir =
+                   if projectDir |> pathIsRelative then ctx.ProjectDir + "/" + projectDir else projectDir
+
+                 projects |> mapAdd projectName projectDir) ctx.Projects
+
+          { ctx with Projects = projects }
+
+      | None -> failwith "Project is incomplete: couldn't find project schema."
+  | None -> ctx
 
 let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
   let projects =
@@ -393,10 +494,10 @@ let cliParse (host: CliHost) v (projectDir: string) =
   |> ignore
   0
 
-let cliCompile (host: CliHost) verbosity projectDir references =
+let cliCompile (host: CliHost) verbosity projectDir =
   let ctx =
     compileCtxNew host verbosity projectDir
-    |> compileCtxAddProjectReferences references
+    |> compileCtxReadProjectFile
 
   let output, success = compile ctx
   let exitCode = if success then 0 else 1
@@ -516,35 +617,6 @@ let private parseVerbosity (host: CliHost) args =
     | "--profile" -> Some(Profile(host.ProfileInit()))
     | _ -> None) Quiet args
 
-let private parseReferences args =
-  let tryPickPos (args: string list) =
-    let rec go acc (args: string list) =
-      match args with
-      | []
-      | "--" :: _ -> None
-
-      | arg :: args when arg.Length <> 0 && arg.[0] = '-' -> go (arg :: acc) args
-
-      | arg :: args -> Some(arg, List.append (List.rev acc) args)
-
-    go [] args
-
-  // acc: args not consumed in reversed order
-  let rec go acc references args =
-    match args with
-    | []
-    | "--" :: _ -> references, List.append (List.rev acc) args
-
-    | "--reference" :: args ->
-        match tryPickPos args with
-        | None -> failwith "Expected project dir after '--reference'"
-
-        | Some (projectDir, args) -> go acc (projectDir :: references) args
-
-    | arg :: args -> go (arg :: acc) references args
-
-  go [] [] args
-
 [<NoEquality; NoComparison>]
 type private CliCmd =
   | HelpCmd
@@ -598,15 +670,13 @@ let cli (host: CliHost) =
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
-      let references, args = parseReferences args
-
       let useKir, args =
         parseFlag (fun _ arg -> if arg = "--kir" then Some true else None) false args
 
       match useKir, args with
       | true, _ -> cliCompileViaKir host args
 
-      | false, projectDir :: _ -> cliCompile host verbosity projectDir references
+      | false, projectDir :: _ -> cliCompile host verbosity projectDir
 
       | false, [] ->
           printfn "ERROR: Expected project dir."

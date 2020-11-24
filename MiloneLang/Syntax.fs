@@ -373,6 +373,8 @@ type ARoot =
 // Position
 // -----------------------------------------------
 
+let posCmp l r = pairCmp intCmp intCmp l r
+
 let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 
 // -----------------------------------------------
