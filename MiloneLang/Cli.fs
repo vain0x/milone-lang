@@ -407,6 +407,8 @@ let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
   else
     writeLog host v "CirGen"
     let cir, success = genCir (stmts, mirCtx)
+
+    writeLog host v "CirDump"
     let output = cirDump cir
 
     writeLog host v "Finish"
