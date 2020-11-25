@@ -1,0 +1,10 @@
+Language: Cpp
+
+# `if (cond) {` style.
+BreakBeforeBraces: Attach
+
+# Don't rearrange `#include`s.
+IncludeBlocks: Preserve
+
+# Indent with 4 spaces.
+IndentWidth: 4

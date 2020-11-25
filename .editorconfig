@@ -1,6 +1,13 @@
 root = true
 
+[*.{c,cc,cpp,cxx,h,hh,hpp,hxx}]
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
 [*.{fs,fsx,milone,milone_project,yml}]
 indent_size = 2
 insert_final_newline = true
 trim_trailing_whitespace = true
+charset = utf-8
