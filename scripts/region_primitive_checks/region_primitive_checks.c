@@ -155,7 +155,6 @@ then_17:;
     goto if_next_16;
 else_18:;
     printf("go i=%d\n", i_2);
-    int call_4 = 0;
     struct IntTuple1 tuple_;
     tuple_.t0 = i_2;
     void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
@@ -178,13 +177,13 @@ if_next_16:;
 }
 
 int fun_1(int arg_14) {
-    int call_5 = go_(0, 10);
-    return ((call_5 % 100) - 84);
+    int call_4 = go_(0, 10);
+    return ((call_4 % 100) - 84);
 }
 
 int fun_3(void* env_1, int arg_2) {
-    int call_6 = fun_1(0);
-    return call_6;
+    int call_5 = fun_1(0);
+    return call_5;
 }
 
 int main() {
