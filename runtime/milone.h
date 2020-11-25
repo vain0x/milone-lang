@@ -159,6 +159,10 @@ void* milone_mem_alloc(int count, size_t size) {
   return ptr;
 }
 
+// -----------------------------------------------
+// int
+// -----------------------------------------------
+
 int int_cmp(int l, int r) {
   if (l == r) return 0;
   if (l < r) return -1;
@@ -169,6 +173,58 @@ int int_clamp(int x, int l, int r) {
   if (x < l) return l;
   if (x > r) return r;
   return x;
+}
+
+// -----------------------------------------------
+// str
+// -----------------------------------------------
+
+struct StringBuilder {
+  char* buf;
+  int len;
+  int cap;
+};
+
+static struct StringBuilder* string_builder_new_with_capacity(int cap) {
+  assert(cap >= 0);
+
+  struct StringBuilder* sb = milone_mem_alloc(1, sizeof(struct StringBuilder));
+  *sb = (struct StringBuilder){
+    .buf = cap > 0 ? milone_mem_alloc(cap, sizeof(char)) : "",
+    .len = 0,
+    .cap = cap,
+  };
+  return sb;
+}
+
+static void string_builder_grow(struct StringBuilder* sb, int addition) {
+  assert(addition >= 0);
+  assert(sb->len + addition >= sb->cap);
+
+  // grow exponentially
+  sb->cap *= 2;
+
+  int min_len = sb->len + addition + 1;
+  if (sb->cap < min_len) {
+    sb->cap = min_len;
+  }
+
+  char* buf = milone_mem_alloc(sb->cap, sizeof(char));
+  memcpy(buf, sb->buf, sb->len);
+  sb->buf = buf;
+
+  assert(sb->len < sb->cap);
+  sb->buf[sb->len] = '\0';
+}
+
+static void string_builder_append_string(struct StringBuilder* sb, struct String value) {
+  if (sb->len + value.len >= sb->cap) {
+    string_builder_grow(sb, value.len);
+  }
+
+  memcpy(&sb->buf[sb->len], value.str, value.len + 1);
+  sb->len += value.len;
+  assert(sb->buf[sb->len] == '\0');
 }
 
 int str_cmp(struct String left, struct String right) {
@@ -252,12 +308,46 @@ struct String str_of_char(char value) {
   return (struct String){.str = str, .len = strlen(str)};
 }
 
+struct MyStringList {
+  struct String head;
+  struct MyStringList* tail;
+};
+
+struct String str_concat(struct String sep, void* strings) {
+  struct MyStringList* ss = (struct MyStringList*)strings;
+
+  struct StringBuilder* sb = string_builder_new_with_capacity(0x1000);
+  int first = 1;
+
+  while (ss) {
+    struct String head = ss->head;
+    ss = ss->tail;
+
+    if (!first && sep.len > 0) {
+      string_builder_append_string(sb, sep);
+    }
+    first = 0;
+
+    string_builder_append_string(sb, head);
+  }
+
+  return str_of_raw_parts(sb->buf, sb->len);
+}
+
+// -----------------------------------------------
+// assertion
+// -----------------------------------------------
+
 void milone_assert(int cond, int y, int x) {
   if (!cond) {
     fprintf(stderr, "Assertion failed at (%d, %d)\n", y + 1, x + 1);
     exit(1);
   }
 }
+
+// -----------------------------------------------
+// file IO
+// -----------------------------------------------
 
 int file_exists(struct String file_name) {
   int ok = 0;
@@ -320,6 +410,10 @@ struct String milone_get_env(struct String name) {
 
   return str_of_raw_parts(value, strlen(value));
 }
+
+// -----------------------------------------------
+// profiling
+// -----------------------------------------------
 
 long milone_get_time_millis() {
   struct timespec t;

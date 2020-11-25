@@ -27,3 +27,5 @@ let fst (x, _) = x
 let snd (_, y) = y
 
 type Profiler = Profiler of obj
+
+let strJoin (sep: string) (xs: string list): string = (__nativeFun "str_concat" 2) sep xs

@@ -337,47 +337,7 @@ let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
   if start >= endIndex then "" else s.[start..endIndex - 1]
 
-let strConcat (xs: string list) =
-  /// Get (str, ys) where
-  /// `str` is the concatenation of first `xn` items in `xs`
-  /// `ys` is a list of the other items
-  let rec go xs xn =
-    // assert (xn <= List.length xs)
-    match xs with
-    | [] ->
-        assert (xn = 0)
-        "", []
-    | x :: xs when xn = 1 -> x, xs
-    | x :: y :: xs when xn = 2 -> x + y, xs
-    | xs ->
-        let m = xn / 2
-        let l, xs = go xs m
-        let r, xs = go xs (xn - m)
-        l + r, xs
-
-  let n = xs |> List.length
-  let s, xs = go xs n
-  assert (xs |> List.isEmpty)
-  s
-
-// let rec go (xs: string list) =
-//   match xs with
-//   | [] ->
-//     ""
-//   | x :: xs ->
-//     x + go xs
-// go xs
-
-/// Concatenates a list of strings with separators.
-let strJoin (sep: string) (xs: string list) =
-  match xs with
-  | [] -> ""
-
-  | x :: xs ->
-      x
-      + (xs
-         |> List.collect (fun x -> [ sep; x ])
-         |> strConcat)
+let strConcat (xs: string list) = strJoin "" xs
 
 let strNeedsEscaping (str: string) =
   let rec go i =
