@@ -21,35 +21,27 @@ struct String {
 
 // structure for memory management. poor implementation. thread unsafe.
 struct MemoryChunk {
-  // start of allocated memory
-  void* start_ptr;
+  // start of allocated memory or null
+  void* ptr;
+
+  // used size
+  size_t len;
+
   // total capacity
-  size_t start_cap;
+  size_t cap;
 
-  // ptr to unused part
-  void* next_ptr;
-  // size of unused part
-  size_t next_cap;
-
-  // parent chunk in full list
-  struct MemoryChunk* next;
-};
-
-struct MemoryRegion {
-  // small[h] stores objects with size (m * 2^h)
-  struct MemoryChunk small[16];
-
-  // list of full chunks or null
-  // chunks are linked by MemoryChunk.next and allocated on heap
-  struct MemoryChunk* full;
+  // list of used chunks or null
+  // each chunk is allocated by calloc and should be freed after leaving region
+  struct MemoryChunk* used;
 
   // parent region or null
-  struct MemoryRegion* parent;
+  // each region is allocated by calloc and should be freed after leaving region
+  struct MemoryChunk* parent;
 };
 
-static struct MemoryRegion* s_heap;
-static int s_heap_level; // depth of current region
-static int s_heap_size; // consumed size in all regions
+static struct MemoryChunk s_heap;
+static int s_heap_level;  // depth of current region
+static int s_heap_size;  // consumed size in all regions
 static int s_heap_alloc;  // allocated size in all regions
 
 static void oom() {
@@ -57,108 +49,81 @@ static void oom() {
   exit(1);
 }
 
+// free chunk itself, not used list
 static void free_chunk(struct MemoryChunk* chunk) {
   assert(chunk != NULL);
+  assert(chunk->ptr != NULL);
 
-  free(chunk->start_ptr);
-  s_heap_size -= chunk->start_cap - chunk->next_cap;
-  s_heap_alloc -= chunk->start_cap;
-}
-
-static void free_region(struct MemoryRegion* region) {
-  for (int i = 0; i < 16; i++) {
-    free_chunk(&region->small[i]);
-  }
-
-  struct MemoryChunk* full = region->full;
-  while (full != NULL) {
-    struct MemoryChunk* chunk = full;
-    full = full->next;
-
-    free_chunk(chunk);
-    free(chunk);
-  }
+  free(chunk->ptr);
+  s_heap_size -= chunk->len;
+  s_heap_alloc -= chunk->cap;
 }
 
 void milone_enter_region(void) {
   // fprintf(stderr, "debug: enter_region level=%d size=%d\n", s_heap_level + 1, s_heap_size);
 
-  struct MemoryRegion* region = calloc(1, sizeof(struct MemoryRegion));
-  if (region == NULL) {
+  struct MemoryChunk* parent = calloc(1, sizeof(struct MemoryChunk));
+  if (parent == NULL) {
     oom();
   }
 
-  region->parent = s_heap;
-  s_heap = region;
+  *parent = s_heap;
+  s_heap = (struct MemoryChunk){.parent = parent};
+
   s_heap_level++;
 }
 
 void milone_leave_region(void) {
   // fprintf(stderr, "debug: leave_region level=%d size=%d\n", s_heap_level, s_heap_size);
 
+  assert(s_heap.parent != NULL);
+  struct MemoryChunk* parent = s_heap.parent;
+
+  // free current region
+  {
+    if (s_heap.ptr != NULL) {
+      free_chunk(&s_heap);
+    }
+
+    // other than s_heap, chunk itself needs to be freed
+    struct MemoryChunk* chunk = s_heap.used;
+    while (chunk) {
+      struct MemoryChunk* current = chunk;
+      chunk = current->used;
+
+      free_chunk(current);
+      free(current);
+    }
+
+    s_heap = *parent;
+    free(parent);
+  }
+
   assert(s_heap_level > 0);
   s_heap_level--;
-
-  struct MemoryRegion* region = s_heap;
-  assert(region != NULL);
-  s_heap = region->parent;
-
-  // free all memory allocated in the region
-  free_region(region);
-  free(region);
 
   // fprintf(stderr, "debug: free level=%d size=%d\n", s_heap_level, s_heap_size);
 }
 
-// allocate large data
-static void* milone_mem_alloc_large(int count, size_t size) {
-  assert((size_t)count * size >= (1 << 16));
-
-  void* ptr = calloc((size_t)count, size);
-  if (ptr == NULL) {
-    oom();
-  }
-
-  struct MemoryChunk* chunk = calloc(1, sizeof(struct MemoryChunk));
-  if (chunk == NULL) {
-    oom();
-  }
-  *chunk = (struct MemoryChunk){
-    .start_ptr = ptr,
-    .start_cap = (size_t)count * size,
-    .next_ptr = NULL,
-    .next_cap = 0,
-    .next = s_heap->full,
-  };
-  s_heap->full = chunk;
-
-  s_heap_size += (size_t)count * size;
-  s_heap_alloc += (size_t)count * size;
-
-  // fprintf(stderr, "debug: alloc level=%d size=%d  large\n", s_heap_level, (int)(count * size));
-  return ptr;
-}
-
 // allocate new chunk
-static void* milone_mem_alloc_slow(int h, struct MemoryChunk* chunk, size_t size) {
-  size_t cap = chunk->start_cap;
+static void* milone_mem_alloc_slow(size_t total) {
+  size_t cap = s_heap.cap;
 
-  // move chunk to full list
-  if (chunk->start_ptr != NULL) {
-    struct MemoryChunk* full = malloc(sizeof(struct MemoryChunk));
-    if (full == NULL) {
+  // move current chunk to used list
+  if (s_heap.ptr != NULL) {
+    struct MemoryChunk* used = calloc(1, sizeof(struct MemoryChunk));
+    if (used == NULL) {
       oom();
     }
 
-    *full = *chunk;
-    full->next = s_heap->full;
-    s_heap->full = full;
+    *used = s_heap;
+    s_heap.used = used;
   }
 
   // grow exponentially
   cap *= 2;
-  if (cap < size) {
-    cap = size;
+  if (cap < total) {
+    cap = total;
   }
 
   // initialize chunk
@@ -166,14 +131,11 @@ static void* milone_mem_alloc_slow(int h, struct MemoryChunk* chunk, size_t size
   if (ptr == NULL) {
     oom();
   }
-  *chunk = (struct MemoryChunk){
-    .start_ptr = ptr,
-    .start_cap = cap,
-    .next_ptr = (char*)ptr + size,
-    .next_cap = cap - size,
-    .next = NULL,
-  };
-  s_heap_size += size;
+  s_heap.ptr = ptr;
+  s_heap.len = total;
+  s_heap.cap = cap;
+
+  s_heap_size += total;
   s_heap_alloc += cap;
 
   // fprintf(stderr, "debug: alloc level=%d size=%d  new chunk(h=%d cap=%d)\n", s_heap_level, (int)size, h, (int)cap);
@@ -181,36 +143,19 @@ static void* milone_mem_alloc_slow(int h, struct MemoryChunk* chunk, size_t size
 }
 
 void* milone_mem_alloc(int count, size_t size) {
-  if (count == 0 || size == 0) {
-    return "";
-  }
+  assert (count > 0 && size > 0);
 
   size_t total = (size_t)count * size;
-  if (total >= (1 << 16)) {
-    return milone_mem_alloc_large(count, size);
+  if (s_heap.len + total > s_heap.cap) {
+    return milone_mem_alloc_slow(total);
   }
 
-  // find bin. (use __builtin_ctz?)
-  size_t h = 0;
-  while ((total & ((1 << (h + 1)) - 1)) == 0) {
-    h++;
-  }
-  assert(total % (1 << h) == 0);
-
-  struct MemoryChunk* chunk = &s_heap->small[h];
-
-  // check size of bin, falling back to slow path
-  if (chunk->next_cap < total) {
-    return milone_mem_alloc_slow(h, chunk, total);
-  }
-
-  // use chunk
-  void* ptr = chunk->next_ptr;
-  chunk->next_ptr = (char*)ptr + total;
-  chunk->next_cap -= total;
+  // use current chunk
+  void* ptr = (char*)s_heap.ptr + s_heap.len;
+  s_heap.len += total;
   s_heap_size += total;
 
-  // fprintf(stderr, "debug: alloc level=%d size=%d (%dx%d) h=%d\n", s_heap_level, (int)((size_t)count * size), (int)count, (int)size, h);
+  // fprintf(stderr, "debug: alloc level=%d size=%d (%dx%d)\n", s_heap_level, (int)((size_t)count * size), (int)count, (int)size);
   return ptr;
 }
 
@@ -524,8 +469,6 @@ struct String arg_get(int index) {
 int main(int argc, char** argv) {
   s_argc = argc - 1;
   s_argv = argv + 1;
-
-  milone_enter_region();
 
   int milone_main();
   return milone_main();
