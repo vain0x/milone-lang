@@ -4,7 +4,6 @@
 module rec MiloneLang.CirDump
 
 open MiloneLang.Util
-open MiloneLang.Syntax
 open MiloneLang.Cir
 
 let private eol = "\n"
@@ -28,6 +27,11 @@ let private isFirst first =
   match first with
   | First -> true
   | NotFirst -> false
+
+let private declIsForwardOnly decl =
+  match decl with
+  | CStaticVarDecl _ -> true
+  | _ -> false
 
 // -----------------------------------------------
 // Operators
@@ -427,13 +431,6 @@ let private cpDecl decl acc =
       |> cons "};"
       |> cons eol
 
-  | CStaticVarDecl (name, _) ->
-      acc
-      |> cons "// static "
-      |> cons name
-      |> cons ";"
-      |> cons eol
-
   | CFunDecl (name, args, resultTy, body) ->
       acc
       |> cpTyWithName name resultTy
@@ -444,6 +441,8 @@ let private cpDecl decl acc =
       |> cpStmtList "    " body
       |> cons "}"
       |> cons eol
+
+  | CStaticVarDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
@@ -492,11 +491,14 @@ let private cpDecls decls acc =
 
   decls
   |> List.fold (fun (first, acc) decl ->
-       let acc =
-         (if isFirst first then acc else acc |> cons eol)
-         |> cpDecl decl
+       if decl |> declIsForwardOnly then
+         first, acc
+       else
+         let acc =
+           (if isFirst first then acc else acc |> cons eol)
+           |> cpDecl decl
 
-       NotFirst, acc) (First, acc)
+         NotFirst, acc) (First, acc)
   |> snd
 
 // -----------------------------------------------
