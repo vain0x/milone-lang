@@ -519,12 +519,6 @@ struct String scan_str(int capacity) {
     return (struct String){.str = str, .len = len};
 }
 
-int print_int(int value) { return printf("%d", value); }
-
-int print_char(char c) { return printf("%c", c); }
-
-int print_str(struct String str) { return printf("%s", str.str); }
-
 void *int_array_new(int len) {
     void *p = calloc(len, sizeof(int));
     // fprintf(stderr, "int_array_new(len=%d) = %p\n", len, p);
