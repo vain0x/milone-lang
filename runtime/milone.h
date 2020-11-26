@@ -46,7 +46,7 @@ static int s_heap_level; // depth of current region
 static int s_heap_size;  // consumed size in all regions
 static int s_heap_alloc; // allocated size in all regions
 
-static void oom() {
+static void oom(void) {
     fprintf(stderr, "Out of memory.\n");
     exit(1);
 }
@@ -426,7 +426,7 @@ struct String milone_get_env(struct String name) {
 // profiling
 // -----------------------------------------------
 
-long milone_get_time_millis() {
+long milone_get_time_millis(void) {
     struct timespec t;
     timespec_get(&t, TIME_UTC);
     return t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L);
