@@ -75,6 +75,11 @@ let traitMapTys f it =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
+let tyIsUnit ty =
+  match ty with
+  | AppTy (TupleTyCtor, []) -> true
+  | _ -> false
+
 let tyIsFun ty =
   match ty with
   | AppTy (FunTyCtor, _) -> true

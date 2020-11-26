@@ -305,8 +305,6 @@ int f7_(int arg_23) {
     return a_;
 }
 
-// static a_;
-
 int main() {
     a_ = 1;
     int call_25 = basicCase_(0);

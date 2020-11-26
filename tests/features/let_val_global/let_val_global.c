@@ -17,8 +17,6 @@ int g_(int arg_1) {
     return call_;
 }
 
-// static success_;
-
 int main() {
     success_ = 0;
     int call_1 = g_(0);

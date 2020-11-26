@@ -14,8 +14,6 @@ int getAnswer_(int arg_) {
     return 42;
 }
 
-// static answer_;
-
 enum Answer_Tag {
     Answer_,
 };

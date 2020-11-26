@@ -10,24 +10,23 @@ open MiloneCore.Option
 
 open MiloneLang.Cli
 
-let private argCount (): int = (__nativeFun "arg_count" 1) ()
+let private argCount (): int = __nativeFun "arg_count"
 
-let private argGet (i: int): string = (__nativeFun "arg_get" 1) i
+let private argGet (i: int): string = __nativeFun ("arg_get", i)
 
 let private profileInit (): Profiler =
-  let state: obj = (__nativeFun "milone_profile_init" 1) 0
+  let state: obj = __nativeFun "milone_profile_init"
   Profiler state
 
 let private profileLog (msg: string) (Profiler state): unit =
-  ((__nativeFun "milone_profile_log" 2) msg state: int)
-  |> ignore
+  __nativeFun ("milone_profile_log", msg, state)
 
-let private fileExists (filePath: string): bool = (__nativeFun "file_exists" 1) filePath
+let private fileExists (filePath: string): bool = __nativeFun ("file_exists", filePath)
 
 let private fileReadAllText (filePath: string): string =
-  (__nativeFun "file_read_all_text" 1) filePath
+  __nativeFun ("file_read_all_text", filePath)
 
-let private getEnv (name: string): string = (__nativeFun "milone_get_env" 1) name
+let private getEnv (name: string): string = __nativeFun ("milone_get_env", name)
 
 let private argList () =
   let rec go acc i =

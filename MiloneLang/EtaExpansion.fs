@@ -130,7 +130,8 @@ let private primToArity ty prim =
   | HPrim.Int
   | HPrim.UInt
   | HPrim.String
-  | HPrim.InRegion -> 1
+  | HPrim.InRegion
+  | HPrim.NativeFun -> 1
 
   | HPrim.Add
   | HPrim.Sub
@@ -145,7 +146,6 @@ let private primToArity ty prim =
   | HPrim.StrGetSlice -> 3
 
   | HPrim.Printfn -> ty |> tyToArity
-  | HPrim.NativeFun (_, arity) -> arity
 
 // -----------------------------------------------
 // Context

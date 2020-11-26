@@ -6,11 +6,11 @@ void* rawIntArrayNew_(int len_);
 
 int rawIntArrayGet_(void* array_, int index_);
 
-void* rawIntArraySet_(void* array_1, int index_1, int value_);
+int rawIntArraySet_(void* array_1, int index_1, int value_);
 
-void* rawMemoryCopy_(void* dest_, void* src_, int size_);
+int rawMemoryCopy_(void* dest_, void* src_, int size_);
 
-int ignore_1(void* arg_36);
+int ignore_(void* arg_36);
 
 struct StringList;
 
@@ -116,49 +116,49 @@ struct IntObjectFun1;
 
 struct ObjectIntIntFun2;
 
-struct ObjectIntIntObjectFun3;
+struct ObjectIntIntUnitFun3;
 
 enum TypeTag_Tag;
 
 struct TypeTag_;
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6;
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6;
 
-struct IntObjectFun1 typeToArrayNew_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 arg_60);
+struct IntObjectFun1 typeToArrayNew_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 arg_60);
 
-struct ObjectIntIntFun2 typeToArrayGet_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 arg_61);
+struct ObjectIntIntFun2 typeToArrayGet_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 arg_61);
 
-struct ObjectIntIntObjectFun3 typeToArraySet_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 arg_62);
+struct ObjectIntIntUnitFun3 typeToArraySet_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 arg_62);
 
 void* fun_4(void* env_1, int arg_1);
 
 int fun_5(void* env_2, void* arg_2, int arg_3);
 
-void* fun_6(void* env_3, void* arg_4, int arg_5, int arg_6);
+int fun_6(void* env_3, void* arg_4, int arg_5, int arg_6);
 
 enum VectorTag_Tag;
 
 struct VectorTag_;
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5;
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5;
 
-int vectorToLength_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 arg_63);
+int vectorToLength_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 arg_63);
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 vectorNew_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 itemTy_, int len_6);
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 vectorNew_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 itemTy_, int len_6);
 
-int vectorCheckIndex_1(int index_2, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_);
+int vectorCheckIndex_1(int index_2, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_);
 
-int vectorGet_1(int index_3, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_1);
+int vectorGet_1(int index_3, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_1);
 
-int vectorSet_1(int index_4, int value_1, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_2);
+int vectorSet_1(int index_4, int value_1, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_2);
 
-int go_28(int len_9, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_, int i_2, struct IntList* xs_19);
+int go_28(int len_9, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_, int i_2, struct IntList* xs_19);
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 vectorOfList_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 ty_, struct IntList* xs_18);
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 vectorOfList_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 ty_, struct IntList* xs_18);
 
-int go_7(int len_10, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_1, int i_3);
+int go_7(int len_10, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_1, int i_3);
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 scanIntVector_(int len_10);
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 scanIntVector_(int len_10);
 
 int refCase_(int arg_71);
 
@@ -424,12 +424,12 @@ int abc140eMain_(int arg_150);
 
 static void* unitObj_;
 
-static struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 typeInt_;
+static struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 typeInt_;
 
 int main();
 
 int scanInt_(int arg_35) {
-    int scan_int_result_ = scan_int(0);
+    int scan_int_result_ = scan_int();
     return scan_int_result_;
 }
 
@@ -443,17 +443,18 @@ int rawIntArrayGet_(void* array_, int index_) {
     return int_array_get_result_;
 }
 
-void* rawIntArraySet_(void* array_1, int index_1, int value_) {
-    void* int_array_set_result_ = int_array_set(array_1, index_1, value_);
-    return int_array_set_result_;
+int rawIntArraySet_(void* array_1, int index_1, int value_) {
+    int_array_set(array_1, index_1, value_);
+    return 0;
 }
 
-void* rawMemoryCopy_(void* dest_, void* src_, int size_) {
+int rawMemoryCopy_(void* dest_, void* src_, int size_) {
     void* memcpy_result_ = memcpy(dest_, src_, size_);
-    return memcpy_result_;
+    int call_ = ignore_(memcpy_result_);
+    return 0;
 }
 
-int ignore_1(void* arg_36) {
+int ignore_(void* arg_36) {
     return 0;
 }
 
@@ -668,13 +669,13 @@ end_match_24:;
 }
 
 int listLength_2(struct StringList* xs_1) {
-    int call_ = go_34(0, xs_1);
-    return call_;
+    int call_1 = go_34(0, xs_1);
+    return call_1;
 }
 
 int listLength_1(struct IntList* xs_1) {
-    int call_1 = go_33(0, xs_1);
-    return call_1;
+    int call_2 = go_33(0, xs_1);
+    return call_2;
 }
 
 struct IntList* go_39(struct IntList* acc_, struct IntList* xs_5) {
@@ -730,13 +731,13 @@ end_match_32:;
 }
 
 struct IntList* listRev_2(struct IntList* xs_4) {
-    struct IntList* call_2 = go_39(NULL, xs_4);
-    return call_2;
+    struct IntList* call_3 = go_39(NULL, xs_4);
+    return call_3;
 }
 
 struct StringList* listRev_1(struct StringList* xs_4) {
-    struct StringList* call_3 = go_38(NULL, xs_4);
-    return call_3;
+    struct StringList* call_4 = go_38(NULL, xs_4);
+    return call_4;
 }
 
 struct IntIntBoolFun2 {
@@ -856,13 +857,13 @@ end_match_44:;
 }
 
 int listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList* xs_7, struct IntList* ys_) {
-    int call_4 = go_32(itemEq_, xs_7, ys_);
-    return call_4;
+    int call_5 = go_32(itemEq_, xs_7, ys_);
+    return call_5;
 }
 
 int listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList* xs_7, struct StringList* ys_) {
-    int call_5 = go_31(itemEq_, xs_7, ys_);
-    return call_5;
+    int call_6 = go_31(itemEq_, xs_7, ys_);
+    return call_6;
 }
 
 struct IntList* go_30(int item_, int len_2, struct IntList* acc_1, int i_) {
@@ -896,8 +897,8 @@ if_next_52:;
 }
 
 struct IntList* listReplicate_1(int item_, int len_2) {
-    struct IntList* call_6 = go_30(item_, len_2, NULL, 0);
-    return call_6;
+    struct IntList* call_7 = go_30(item_, len_2, NULL, 0);
+    return call_7;
 }
 
 struct IntIntFun1 {
@@ -914,8 +915,8 @@ tailrec_55:;
         goto else_58;
     }
 then_57:;
-    struct IntList* call_7 = listRev_2(acc_2);
-    if_9 = call_7;
+    struct IntList* call_8 = listRev_2(acc_2);
+    if_9 = call_8;
     goto if_next_56;
 else_58:;
     int arg_55 = len_3;
@@ -938,9 +939,9 @@ if_next_56:;
 }
 
 struct IntList* listInit_1(int len_3, struct IntIntFun1 gen_) {
-    milone_assert((len_3 >= 0), 66, 2);
-    struct IntList* call_8 = go_29(len_3, gen_, NULL, 0);
-    return call_8;
+    milone_assert((len_3 >= 0), 68, 2);
+    struct IntList* call_9 = go_29(len_3, gen_, NULL, 0);
+    return call_9;
 }
 
 struct StringStringListTuple2 {
@@ -951,7 +952,7 @@ struct StringStringListTuple2 {
 struct StringStringListTuple2 go_5(struct StringList* xs_11, int xn_) {
     struct StringStringListTuple2 match_6;
     if ((!((!(xs_11))))) goto next_60;
-    milone_assert((xn_ == 0), 81, 8);
+    milone_assert((xn_ == 0), 83, 8);
     struct StringStringListTuple2 tuple_2;
     tuple_2.t0 = (struct String){.str = "", .len = 0};
     tuple_2.t1 = NULL;
@@ -982,12 +983,12 @@ next_61:;
 next_62:;
     struct StringList* xs_14 = xs_11;
     int m_ = (xn_ / 2);
-    struct StringStringListTuple2 call_9 = go_5(xs_14, m_);
-    struct String l_ = call_9.t0;
-    struct StringList* xs_15 = call_9.t1;
-    struct StringStringListTuple2 call_10 = go_5(xs_15, (xn_ - m_));
-    struct String r_ = call_10.t0;
-    struct StringList* xs_16 = call_10.t1;
+    struct StringStringListTuple2 call_10 = go_5(xs_14, m_);
+    struct String l_ = call_10.t0;
+    struct StringList* xs_15 = call_10.t1;
+    struct StringStringListTuple2 call_11 = go_5(xs_15, (xn_ - m_));
+    struct String r_ = call_11.t0;
+    struct StringList* xs_16 = call_11.t1;
     struct StringStringListTuple2 tuple_5;
     tuple_5.t0 = str_add(l_, r_);
     tuple_5.t1 = xs_16;
@@ -999,13 +1000,13 @@ end_match_59:;
 }
 
 struct String strConcat_(struct StringList* xs_10) {
-    int call_11 = listLength_2(xs_10);
-    int n_ = call_11;
-    struct StringStringListTuple2 call_12 = go_5(xs_10, n_);
-    struct String s_ = call_12.t0;
-    struct StringList* xs_17 = call_12.t1;
-    int call_13 = listIsEmpty_1(xs_17);
-    milone_assert(call_13, 93, 2);
+    int call_12 = listLength_2(xs_10);
+    int n_ = call_12;
+    struct StringStringListTuple2 call_13 = go_5(xs_10, n_);
+    struct String s_ = call_13.t0;
+    struct StringList* xs_17 = call_13.t1;
+    int call_14 = listIsEmpty_1(xs_17);
+    milone_assert(call_14, 95, 2);
     return s_;
 }
 
@@ -1058,13 +1059,13 @@ int failwith_1(struct String msg_) {
 }
 
 int fun_23(int arg_59) {
-    int call_14 = scanInt_(0);
-    return call_14;
+    int call_15 = scanInt_(0);
+    return call_15;
 }
 
 int fun_3(void* env_, int arg_) {
-    int call_15 = fun_23(arg_);
-    return call_15;
+    int call_16 = fun_23(arg_);
+    return call_16;
 }
 
 struct IntList* scanIntList_(int len_4) {
@@ -1072,8 +1073,8 @@ struct IntList* scanIntList_(int len_4) {
     (*(((int*)box_))) = 0;
     void* env_18 = box_;
     struct IntIntFun1 fun_24 = (struct IntIntFun1){.fun = fun_3, .env = env_18};
-    struct IntList* call_16 = listInit_1(len_4, fun_24);
-    return call_16;
+    struct IntList* call_17 = listInit_1(len_4, fun_24);
+    return call_17;
 }
 
 struct IntObjectFun1 {
@@ -1086,8 +1087,8 @@ struct ObjectIntIntFun2 {
     void* env;
 };
 
-struct ObjectIntIntObjectFun3 {
-    void*(*fun)(void*, void*, int, int);
+struct ObjectIntIntUnitFun3 {
+    int(*fun)(void*, void*, int, int);
     void* env;
 };
 
@@ -1099,46 +1100,46 @@ struct TypeTag_ {
     enum TypeTag_Tag tag;
 };
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 {
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 {
     int t0;
     int t1;
     struct IntObjectFun1 t2;
     struct ObjectIntIntFun2 t3;
-    struct ObjectIntIntObjectFun3 t4;
+    struct ObjectIntIntUnitFun3 t4;
     struct TypeTag_ t5;
 };
 
-struct IntObjectFun1 typeToArrayNew_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 arg_60) {
+struct IntObjectFun1 typeToArrayNew_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 arg_60) {
     struct IntObjectFun1 arrayNew_ = arg_60.t2;
     struct TypeTag_ _typeTag_2 = arg_60.t5;
     return arrayNew_;
 }
 
-struct ObjectIntIntFun2 typeToArrayGet_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 arg_61) {
+struct ObjectIntIntFun2 typeToArrayGet_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 arg_61) {
     struct ObjectIntIntFun2 arrayGet_ = arg_61.t3;
     struct TypeTag_ _typeTag_3 = arg_61.t5;
     return arrayGet_;
 }
 
-struct ObjectIntIntObjectFun3 typeToArraySet_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 arg_62) {
-    struct ObjectIntIntObjectFun3 arraySet_ = arg_62.t4;
+struct ObjectIntIntUnitFun3 typeToArraySet_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 arg_62) {
+    struct ObjectIntIntUnitFun3 arraySet_ = arg_62.t4;
     struct TypeTag_ _typeTag_4 = arg_62.t5;
     return arraySet_;
 }
 
 void* fun_4(void* env_1, int arg_1) {
-    void* call_17 = rawIntArrayNew_(arg_1);
-    return call_17;
-}
-
-int fun_5(void* env_2, void* arg_2, int arg_3) {
-    int call_18 = rawIntArrayGet_(arg_2, arg_3);
+    void* call_18 = rawIntArrayNew_(arg_1);
     return call_18;
 }
 
-void* fun_6(void* env_3, void* arg_4, int arg_5, int arg_6) {
-    void* call_19 = rawIntArraySet_(arg_4, arg_5, arg_6);
+int fun_5(void* env_2, void* arg_2, int arg_3) {
+    int call_19 = rawIntArrayGet_(arg_2, arg_3);
     return call_19;
+}
+
+int fun_6(void* env_3, void* arg_4, int arg_5, int arg_6) {
+    int call_20 = rawIntArraySet_(arg_4, arg_5, arg_6);
+    return 0;
 }
 
 enum VectorTag_Tag {
@@ -1149,25 +1150,25 @@ struct VectorTag_ {
     enum VectorTag_Tag tag;
 };
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 {
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 t0;
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 {
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 t0;
     void* t1;
     int t2;
     int t3;
     struct VectorTag_ t4;
 };
 
-int vectorToLength_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 arg_63) {
+int vectorToLength_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 arg_63) {
     int len_5 = arg_63.t2;
     struct VectorTag_ _vectorTag_ = arg_63.t4;
     return len_5;
 }
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 vectorNew_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 itemTy_, int len_6) {
-    struct IntObjectFun1 call_20 = typeToArrayNew_1(itemTy_);
-    void* app_3 = call_20.fun(call_20.env, len_6);
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 vectorNew_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 itemTy_, int len_6) {
+    struct IntObjectFun1 call_21 = typeToArrayNew_1(itemTy_);
+    void* app_3 = call_21.fun(call_21.env, len_6);
     void* array_2 = app_3;
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 tuple_6;
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 tuple_6;
     tuple_6.t0 = itemTy_;
     tuple_6.t1 = array_2;
     tuple_6.t2 = len_6;
@@ -1176,9 +1177,9 @@ struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6Ob
     return tuple_6;
 }
 
-int vectorCheckIndex_1(int index_2, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_) {
-    int call_21 = vectorToLength_1(self_);
-    int len_7 = call_21;
+int vectorCheckIndex_1(int index_2, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_) {
+    int call_22 = vectorToLength_1(self_);
+    int len_7 = call_22;
     int if_12;
     if ((index_2 < 0)) {
         goto then_71;
@@ -1210,32 +1211,31 @@ if_next_73:;
     return 0;
 }
 
-int vectorGet_1(int index_3, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_1) {
-    int call_22 = vectorCheckIndex_1(index_3, self_1);
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 itemTy_1 = self_1.t0;
+int vectorGet_1(int index_3, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_1) {
+    int call_23 = vectorCheckIndex_1(index_3, self_1);
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 itemTy_1 = self_1.t0;
     void* array_3 = self_1.t1;
     struct VectorTag_ _vectorTag_1 = self_1.t4;
-    struct ObjectIntIntFun2 call_23 = typeToArrayGet_1(itemTy_1);
-    int app_4 = call_23.fun(call_23.env, array_3, index_3);
+    struct ObjectIntIntFun2 call_24 = typeToArrayGet_1(itemTy_1);
+    int app_4 = call_24.fun(call_24.env, array_3, index_3);
     return app_4;
 }
 
-int vectorSet_1(int index_4, int value_1, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_2) {
-    int call_24 = vectorCheckIndex_1(index_4, self_2);
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 itemTy_2 = self_2.t0;
+int vectorSet_1(int index_4, int value_1, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_2) {
+    int call_25 = vectorCheckIndex_1(index_4, self_2);
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 itemTy_2 = self_2.t0;
     void* array_4 = self_2.t1;
     struct VectorTag_ _vectorTag_2 = self_2.t4;
-    struct ObjectIntIntObjectFun3 call_25 = typeToArraySet_1(itemTy_2);
-    void* app_5 = call_25.fun(call_25.env, array_4, index_4, value_1);
-    int call_26 = ignore_1(app_5);
+    struct ObjectIntIntUnitFun3 call_26 = typeToArraySet_1(itemTy_2);
+    int app_5 = call_26.fun(call_26.env, array_4, index_4, value_1);
     return 0;
 }
 
-int go_28(int len_9, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_, int i_2, struct IntList* xs_19) {
+int go_28(int len_9, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_, int i_2, struct IntList* xs_19) {
 tailrec_76:;
     int match_7;
     if ((!((!(xs_19))))) goto next_78;
-    milone_assert((i_2 == len_9), 185, 12);
+    milone_assert((i_2 == len_9), 186, 12);
     match_7 = 0;
     goto end_match_77;
 next_78:;
@@ -1244,7 +1244,7 @@ next_78:;
     struct IntList* xs_20 = xs_19->tail;
     int call_27 = vectorSet_1(i_2, x_4, v_);
     int arg_64 = len_9;
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 arg_65 = v_;
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 arg_65 = v_;
     int arg_66 = (i_2 + 1);
     struct IntList* arg_67 = xs_20;
     len_9 = arg_64;
@@ -1260,16 +1260,16 @@ end_match_77:;
     return 0;
 }
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 vectorOfList_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 ty_, struct IntList* xs_18) {
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 vectorOfList_1(struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 ty_, struct IntList* xs_18) {
     int call_28 = listLength_1(xs_18);
     int len_9 = call_28;
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 call_29 = vectorNew_1(ty_, len_9);
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_ = call_29;
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 call_29 = vectorNew_1(ty_, len_9);
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_ = call_29;
     int call_30 = go_28(len_9, v_, 0, xs_18);
     return v_;
 }
 
-int go_7(int len_10, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_1, int i_3) {
+int go_7(int len_10, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_1, int i_3) {
 tailrec_80:;
     int if_14;
     if ((i_3 < len_10)) {
@@ -1282,7 +1282,7 @@ then_82:;
     int value_3 = call_31;
     int call_32 = vectorSet_1(i_3, value_3, v_1);
     int arg_68 = len_10;
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 arg_69 = v_1;
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 arg_69 = v_1;
     int arg_70 = (i_3 + 1);
     len_10 = arg_68;
     v_1 = arg_69;
@@ -1297,23 +1297,23 @@ if_next_81:;
     return 0;
 }
 
-struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 scanIntVector_(int len_10) {
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 call_33 = vectorNew_1(typeInt_, len_10);
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_1 = call_33;
+struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 scanIntVector_(int len_10) {
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 call_33 = vectorNew_1(typeInt_, len_10);
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_1 = call_33;
     int call_34 = go_7(len_10, v_1, 0);
     return v_1;
 }
 
 int refCase_(int arg_71) {
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 call_35 = vectorNew_1(typeInt_, 1);
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_2 = call_35;
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 call_35 = vectorNew_1(typeInt_, 1);
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_2 = call_35;
     int call_36 = vectorToLength_1(v_2);
-    milone_assert((call_36 == 1), 208, 4);
+    milone_assert((call_36 == 1), 209, 4);
     int call_37 = vectorGet_1(0, v_2);
-    milone_assert((call_37 == 0), 209, 4);
+    milone_assert((call_37 == 0), 210, 4);
     int call_38 = vectorSet_1(0, 42, v_2);
     int call_39 = vectorGet_1(0, v_2);
-    milone_assert((call_39 == 42), 211, 4);
+    milone_assert((call_39 == 42), 212, 4);
     return 0;
 }
 
@@ -1327,16 +1327,16 @@ int vectorOfListTest_(int arg_72) {
     struct IntList* list_4 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_4->head = 1;
     list_4->tail = list_5;
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 call_40 = vectorOfList_1(typeInt_, list_4);
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_3 = call_40;
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 call_40 = vectorOfList_1(typeInt_, list_4);
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 v_3 = call_40;
     int call_41 = vectorToLength_1(v_3);
-    milone_assert((call_41 == 3), 217, 4);
+    milone_assert((call_41 == 3), 218, 4);
     int call_42 = vectorGet_1(0, v_3);
-    milone_assert((call_42 == 1), 218, 4);
+    milone_assert((call_42 == 1), 219, 4);
     int call_43 = vectorGet_1(1, v_3);
-    milone_assert((call_43 == 2), 219, 4);
+    milone_assert((call_43 == 2), 220, 4);
     int call_44 = vectorGet_1(2, v_3);
-    milone_assert((call_44 == 3), 220, 4);
+    milone_assert((call_44 == 3), 221, 4);
     return 0;
 }
 
@@ -4069,10 +4069,6 @@ int abc140eMain_(int arg_150) {
     return 0;
 }
 
-// static unitObj_;
-
-// static typeInt_;
-
 int main() {
     void* box_19 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_19))) = 0;
@@ -4088,8 +4084,8 @@ int main() {
     void* box_22 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_22))) = 0;
     void* env_35 = box_22;
-    struct ObjectIntIntObjectFun3 fun_41 = (struct ObjectIntIntObjectFun3){.fun = fun_6, .env = env_35};
-    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntObjectFun3TypeTag_Tuple6 tuple_43;
+    struct ObjectIntIntUnitFun3 fun_41 = (struct ObjectIntIntUnitFun3){.fun = fun_6, .env = env_35};
+    struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6 tuple_43;
     tuple_43.t0 = 0;
     tuple_43.t1 = 4;
     tuple_43.t2 = fun_39;

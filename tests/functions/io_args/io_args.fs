@@ -1,10 +1,10 @@
 // Expect i'th argument to be "#i", e.g. `app #0 #1`.
 
 let argCount (): int =
-  (__nativeFun "arg_count" 1) ()
+  __nativeFun "arg_count"
 
 let argGet (i: int): string =
-  (__nativeFun "arg_get" 1) i
+  __nativeFun ("arg_get", i)
 
 let rec go i =
   if i < argCount () then

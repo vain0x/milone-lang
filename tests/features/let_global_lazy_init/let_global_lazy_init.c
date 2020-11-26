@@ -12,8 +12,6 @@ void* f_(int arg_) {
     return box_;
 }
 
-// static boxedValue_;
-
 int main() {
     void* box_1 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 1;

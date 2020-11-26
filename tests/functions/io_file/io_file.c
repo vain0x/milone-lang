@@ -12,7 +12,7 @@ struct String fileReadAllText_(struct String fileName_) {
 }
 
 int fileWriteAllText_(struct String fileName_1, struct String content_) {
-    int file_write_all_text_result_ = file_write_all_text(fileName_1, content_);
+    file_write_all_text(fileName_1, content_);
     return 0;
 }
 

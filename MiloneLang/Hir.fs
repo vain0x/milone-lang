@@ -288,7 +288,7 @@ type HPrim =
   | UInt
   | String
   | InRegion
-  | NativeFun of Ident * Arity
+  | NativeFun
 
 [<RequireQualifiedAccess>]
 [<Struct>]
@@ -310,6 +310,9 @@ type InfOp =
 
   /// Direct call to current procedure at the end of function (i.e. tail-call).
   | CallTailRec
+
+  /// Direct call to native fun.
+  | CallNative of funName: string
 
   /// Tuple constructor, e.g. `x, y, z`.
   | Tuple
@@ -538,7 +541,7 @@ let primFromIdent ident =
 
   | "inRegion" -> HPrim.InRegion |> Some
 
-  | "__nativeFun" -> HPrim.NativeFun("<native-fun>", -1) |> Some
+  | "__nativeFun" -> HPrim.NativeFun |> Some
 
   | _ -> None
 
@@ -631,8 +634,14 @@ let primToTySpec prim =
 
   | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
 
-  | HPrim.Printfn
-  | HPrim.NativeFun _ -> poly (meta 1) []
+  | HPrim.Printfn ->
+    // printfn followed by format literal is handled specially.
+    // If format argument is not a string literal, printfn is equivalent to `printfn "%s"`.
+    mono (tyFun tyStr tyUnit)
+
+  | HPrim.NativeFun ->
+    // Incorrect use of __nativeFun is handled as error before instantiating its type.
+    failwith "NEVER"
 
 // -----------------------------------------------
 // Patterns (HIR)

@@ -777,7 +777,7 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.UInt -> regular "uint" KUIntPrim
           | HPrim.String -> regular "string" KStringPrim
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
-          | HPrim.NativeFun (name, arity) -> regular name (KNativeFunPrim(name, arity))
+          | HPrim.NativeFun -> failwith "NEVER: HPrim.NativeFun is resolved in Typing."
 
       | HFunExpr (funSerial, funTy, funLoc) -> kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx
 
@@ -791,7 +791,8 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
       | callee :: args -> kgCallClosureExpr callee args ty loc hole ctx
       | [] -> failwithf "NEVER: CallClosure args must begin with callee. %A" itself
 
-  | InfOp.CallTailRec -> failwith "unimplemented"
+  | InfOp.CallTailRec
+  | InfOp.CallNative _ -> failwith "unimplemented"
 
   | InfOp.Tuple -> kgTupleExpr args ty loc hole ctx
 

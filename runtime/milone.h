@@ -319,12 +319,15 @@ struct String str_of_char(char value) {
     return (struct String){.str = str, .len = strlen(str)};
 }
 
+// Actual name of string list.
+struct StringList;
+
 struct MyStringList {
     struct String head;
     struct MyStringList *tail;
 };
 
-struct String str_concat(struct String sep, void *strings) {
+struct String str_concat(struct String sep, struct StringList *strings) {
     struct MyStringList *ss = (struct MyStringList *)strings;
 
     struct StringBuilder *sb = string_builder_new_with_capacity(0x1000);
@@ -400,7 +403,7 @@ struct String file_read_all_text(struct String file_name) {
     return (struct String){.str = content, .len = size};
 }
 
-int file_write_all_text(struct String file_name, struct String content) {
+void file_write_all_text(struct String file_name, struct String content) {
     FILE *fp = fopen(file_name.str, "w");
     if (!fp) {
         fprintf(stderr, "File '%s' not found.", file_name.str);
@@ -410,7 +413,6 @@ int file_write_all_text(struct String file_name, struct String content) {
     fprintf(fp, "%s", content.str);
 
     fclose(fp);
-    return 0;
 }
 
 struct String milone_get_env(struct String name) {
@@ -437,7 +439,7 @@ struct Profiler {
     long heap_size;
 };
 
-void *milone_profile_init(int _unit) {
+void *milone_profile_init(void) {
     struct Profiler *p =
         (struct Profiler *)milone_mem_alloc(1, sizeof(struct Profiler));
     p->epoch = milone_get_time_millis();
@@ -445,7 +447,7 @@ void *milone_profile_init(int _unit) {
     return p;
 }
 
-int milone_profile_log(struct String msg, void *profiler) {
+void milone_profile_log(struct String msg, void *profiler) {
     struct Profiler *p = (struct Profiler *)profiler;
 
     long t = milone_get_time_millis();
@@ -477,20 +479,19 @@ int milone_profile_log(struct String msg, void *profiler) {
 
     p->epoch = t;
     p->heap_size = s_heap_size;
-    return 0; // can't be void due to restriction of __nativeFun
 }
 
 // -----------------------------------------------
 // For competitive programming
 // -----------------------------------------------
 
-int scan_int(int _dummy) {
+int scan_int(void) {
     int value;
     int _n = scanf("%d", &value);
     return value;
 }
 
-char scan_char(int _dummy) {
+char scan_char(void) {
     char value;
     int _n = scanf("%c", &value);
     return value;
@@ -532,11 +533,10 @@ int int_array_get(void *array, int index) {
     return value;
 }
 
-void *int_array_set(void *array, int index, int value) {
+void int_array_set(void *array, int index, int value) {
     // fprintf(stderr, "int_array_set(%p, index=%d, value=%d)\n", array, index,
     // value);
     ((int *)array)[index] = value;
-    return array;
 }
 
 // -----------------------------------------------
@@ -546,7 +546,7 @@ void *int_array_set(void *array, int index, int value) {
 static int s_argc;
 static char **s_argv;
 
-int arg_count(int _unit) { return s_argc; }
+int arg_count(void) { return s_argc; }
 
 struct String arg_get(int index) {
     if (!(0 <= index && index < s_argc)) {

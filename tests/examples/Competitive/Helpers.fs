@@ -4,17 +4,19 @@ module rec Competitive.Helpers
 // Native functions
 // -----------------------------------------------
 
-let scanInt (): int = (__nativeFun "scan_int" 1) 0
+let scanInt (): int = __nativeFun "scan_int"
 
-let rawIntArrayNew (len: int): obj = (__nativeFun "int_array_new" 1) len
+let rawIntArrayNew (len: int): obj = __nativeFun ("int_array_new", len)
 
 let rawIntArrayGet (array: obj) (index: int): int =
-  (__nativeFun "int_array_get" 2) array index
+  __nativeFun ("int_array_get", array, index)
 
-let rawIntArraySet (array: obj) (index: int) (value: int): obj =
-  (__nativeFun "int_array_set" 3) array index value
+let rawIntArraySet (array: obj) (index: int) (value: int): unit =
+  __nativeFun ("int_array_set", array, index, value)
 
-let rawMemoryCopy (dest: obj) (src: obj) (size: int): obj = (__nativeFun "memcpy" 3) dest src size
+let rawMemoryCopy (dest: obj) (src: obj) (size: int): unit =
+  (__nativeFun ("memcpy", dest, src, size): obj)
+  |> ignore
 
 // -----------------------------------------------
 // Polyfills
@@ -162,7 +164,6 @@ let vectorSet (index: int) value self =
 
   let itemTy, array, _, _, _vectorTag = self
   (itemTy |> typeToArraySet) array index value
-  |> ignore
 
 let rec vectorPush value self =
   let itemTy, array, len, capacity, _vectorTag = self
@@ -170,7 +171,7 @@ let rec vectorPush value self =
     let newCapacity = if len = 0 then 16 else capacity * 2
     let newArray = (itemTy |> typeToArrayNew) (newCapacity)
     let copySize = (itemTy |> typeToSize) * len
-    rawMemoryCopy newArray array copySize |> ignore
+    rawMemoryCopy newArray array copySize
     (itemTy, newArray, len, newCapacity, VectorTag)
     |> vectorPush value
   else

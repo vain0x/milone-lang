@@ -2087,10 +2087,6 @@ int fun_27(void* env_18, struct StringTy_Pat_ListCovering_Tuple4 arg_30) {
     return call_142;
 }
 
-// static spaceFull_;
-
-// static spaceEmpty_;
-
 int main() {
     spaceFull_ = (struct Space_){.tag = Full_};
     void* box_25 = (void*)milone_mem_alloc(1, sizeof(struct Space_List*));

@@ -9,7 +9,7 @@ int go_(int i_1);
 int main();
 
 int argCount_(int arg_) {
-    int arg_count_result_ = arg_count(0);
+    int arg_count_result_ = arg_count();
     return arg_count_result_;
 }
 

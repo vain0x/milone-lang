@@ -768,6 +768,10 @@ let private cgActionStmt ctx itself action args =
       assert (List.isEmpty args)
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
 
+  | MCallNativeAction funName ->
+      let args, ctx = cgExprList ctx args
+      addStmt ctx (CExprStmt(CCallExpr(CRefExpr funName, args)))
+
 let private cgPrintfnActionStmt ctx itself args =
   match args with
   | (MLitExpr (StrLit format, _)) :: args ->
@@ -862,7 +866,9 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
   | MStrOfUIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_uint", [ arg ]))
 
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CRefExpr "str_get_slice", args)))
-  | MNativeFunPrim funName -> regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
+
+  | MCallNativePrim funName ->
+    regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial

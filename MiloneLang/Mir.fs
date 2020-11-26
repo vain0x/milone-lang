@@ -104,7 +104,7 @@ type MPrim =
 
   | MStrGetSlicePrim
 
-  | MNativeFunPrim of funName: string
+  | MCallNativePrim of funName: string
 
 [<NoEquality; NoComparison>]
 type MAction =
@@ -112,6 +112,7 @@ type MAction =
   | MPrintfnAction
   | MEnterRegionAction
   | MLeaveRegionAction
+  | MCallNativeAction of funName: string
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]

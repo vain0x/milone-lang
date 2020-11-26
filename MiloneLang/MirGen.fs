@@ -6,9 +6,10 @@
 module rec MiloneLang.MirGen
 
 open MiloneLang.Util
-open MiloneLang.Typing
 open MiloneLang.Syntax
 open MiloneLang.Hir
+open MiloneLang.TySystem
+open MiloneLang.Typing
 open MiloneLang.Mir
 
 // -----------------------------------------------
@@ -1037,21 +1038,6 @@ let private mirifyCallPrintfnExpr ctx args loc =
 
   MDefaultExpr(tyUnit, loc), ctx
 
-let private mirifyCallNativeFunExpr ctx (funName: string) arity args ty loc =
-  assert (List.length args = arity)
-
-  let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
-
-  let temp, tempSerial, ctx =
-    freshVar ctx (funName + "_result") ty loc
-
-  let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MNativeFunPrim funName, args), ty, loc))
-
-  temp, ctx
-
 let private mirifyCallProcExpr ctx callee args ty loc =
   let calleeTy = exprToTy callee
   let callee, ctx = mirifyExpr ctx callee
@@ -1124,10 +1110,11 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.InRegion, [ arg ] -> mirifyCallInRegionExpr ctx arg ty loc
   | HPrim.InRegion, _ -> fail ()
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
-  | HPrim.NativeFun (funName, arity), _ -> mirifyCallNativeFunExpr ctx funName arity args ty loc
 
   | HPrim.Nil, _
   | HPrim.OptionNone, _ -> fail ()
+
+  | HPrim.NativeFun, _ -> failwith "NEVER: HPrim.NativeFun is resolved in Typing."
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
@@ -1202,6 +1189,26 @@ let private mirifyExprInfClosure ctx funSerial env funTy loc =
 
   tempRef, ctx
 
+let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
+  let args, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+  // No result if result type is unit.
+  if ty |> tyIsUnit then
+    let ctx =
+      addStmt ctx (MActionStmt(MCallNativeAction funName, args, loc))
+
+    MDefaultExpr(tyUnit, loc), ctx
+  else
+    let temp, tempSerial, ctx =
+      freshVar ctx (funName + "_result") ty loc
+
+    let ctx =
+      addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MCallNativePrim funName, args), ty, loc))
+
+    temp, ctx
+
 let private mirifyExprInf ctx itself infOp args ty loc =
   match infOp, args, ty with
   | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
@@ -1216,6 +1223,7 @@ let private mirifyExprInf ctx itself infOp args ty loc =
 
   | InfOp.CallTailRec, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
+  | InfOp.CallNative funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | InfOp.Closure, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
   | t -> failwithf "Never: %A" t
 

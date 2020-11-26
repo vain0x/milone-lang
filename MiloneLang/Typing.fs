@@ -427,10 +427,21 @@ let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
   HVariantExpr(variantSerial, ty, loc), ty, ctx
 
 let private inferPrimExpr ctx prim loc =
-  let tySpec = prim |> primToTySpec
-  let primTy, traits, ctx = (tySpec, ctx) |> instantiateTySpec loc
-  let ctx = ctx |> addTraitBounds traits
-  HPrimExpr(prim, primTy, loc), primTy, ctx
+  match prim with
+  | HPrim.NativeFun ->
+      let ctx =
+        addError
+          ctx
+          "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ArgType1 -> ArgType2 -> ... -> ResultType`."
+          loc
+
+      hxAbort ctx loc
+
+  | _ ->
+      let tySpec = prim |> primToTySpec
+      let primTy, traits, ctx = (tySpec, ctx) |> instantiateTySpec loc
+      let ctx = ctx |> addTraitBounds traits
+      HPrimExpr(prim, primTy, loc), primTy, ctx
 
 let private inferNilExpr ctx itself loc =
   let itemTy, ctx = freshMetaTyForExpr itself ctx
@@ -594,56 +605,45 @@ let private inferNavExpr ctx l (r: Ident) loc =
 
   | _ -> fail ctx
 
-let private inferNativeFunAppExpr ctx itself callee firstArg arg targetTy loc =
-  match firstArg, arg with
-  | HLitExpr (StrLit funName, _), HLitExpr (IntLit arity, _) ->
-      let rec go ty arity ctx =
-        if arity = 0 then
-          ty, ctx
-        else
-          let argTy, _, ctx = freshMetaTy "arg" loc ctx
-          go (tyFun argTy ty) (arity - 1) ctx
-
-      let resultTy, ctx = ctx |> freshMetaTyForExpr itself
-      let funTy, ctx = go resultTy arity ctx
-
-      let ctx = unifyTy ctx loc funTy targetTy
-
-      HPrimExpr(HPrim.NativeFun(funName, arity), funTy, loc), funTy, ctx
-  | _ -> hxApp callee arg targetTy loc, targetTy, ctx
-
-let private inferPrintfnAppExpr ctx arg loc =
-  match arg with
-  | HLitExpr (StrLit format, _) ->
-      let funTy = analyzeFormat format
-      HPrimExpr(HPrim.Printfn, funTy, loc), funTy, ctx
-  | _ ->
-      let ctx =
-        addError ctx """First arg of printfn must be string literal, "..".""" loc
-
-      hxAbort ctx loc
-
 let private inferAppExpr ctx itself callee arg loc =
-  let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-  let arg, argTy, ctx = inferExpr ctx None arg
-  let callee, calleeTy, ctx = inferExpr ctx None callee
+  // Special forms must be handled before recursion.
+  match callee, arg with
+  // printfn "..."
+  | HPrimExpr (HPrim.Printfn, _, _), HLitExpr (StrLit format, _) ->
+      let funTy, targetTy =
+        match analyzeFormat format with
+        | (AppTy (FunTyCtor, [ _; targetTy ])) as funTy -> funTy, targetTy
+        | _ -> failwith "NEVER"
 
-  let ctx =
-    unifyTy ctx loc calleeTy (tyFun argTy targetTy)
+      hxApp (HPrimExpr(HPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
-  match callee with
-  | HInfExpr (InfOp.App, [ HPrimExpr (HPrim.NativeFun _, _, _); firstArg ], _, _) ->
-      inferNativeFunAppExpr ctx itself callee firstArg arg targetTy loc
+  // __nativeFun "funName"
+  | HPrimExpr (HPrim.NativeFun, _, loc), HLitExpr (StrLit funName, _) ->
+      let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+      HInfExpr(InfOp.CallNative funName, [], targetTy, loc), targetTy, ctx
 
-  | HPrimExpr (HPrim.Printfn, _, loc) ->
-      let callee, calleeTy, ctx = inferPrintfnAppExpr ctx arg loc
+  // __nativeFun ("funName", arg1, arg2, ...)
+  | HPrimExpr (HPrim.NativeFun, _, loc), HInfExpr (InfOp.Tuple, HLitExpr (StrLit funName, _) :: args, _, _) ->
+      // Type of native function is unchecked. Type annotations must be written correctly.
+      let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+
+      let args, ctx =
+        (args, ctx)
+        |> stMap (fun (arg, ctx) ->
+             let arg, _, ctx = inferExpr ctx None arg
+             arg, ctx)
+
+      HInfExpr(InfOp.CallNative funName, args, targetTy, loc), targetTy, ctx
+
+  | _ ->
+      let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+      let arg, argTy, ctx = inferExpr ctx None arg
+      let callee, calleeTy, ctx = inferExpr ctx None callee
 
       let ctx =
-        unifyTy ctx loc calleeTy (tyFun tyStr targetTy)
+        unifyTy ctx loc calleeTy (tyFun argTy targetTy)
 
       hxApp callee arg targetTy loc, targetTy, ctx
-
-  | _ -> hxApp callee arg targetTy loc, targetTy, ctx
 
 let private inferTupleExpr (ctx: TyCtx) items loc =
   let rec go acc itemTys ctx items =
@@ -779,6 +779,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HInfExpr (InfOp.CallProc, _, _, _)
   | HInfExpr (InfOp.CallTailRec, _, _, _)
   | HInfExpr (InfOp.CallClosure, _, _, _)
+  | HInfExpr (InfOp.CallNative _, _, _, _)
   | HInfExpr (InfOp.Record, _, _, _)
   | HInfExpr (InfOp.RecordItem _, _, _, _) -> failwith "NEVER"
 
