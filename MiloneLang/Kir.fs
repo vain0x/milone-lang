@@ -96,6 +96,7 @@ type KPrim =
   | KCharPrim
 
   /// 1/1/1.
+  // FIXME: signedness, precision
   | KIntPrim
 
   /// 1/1/1.

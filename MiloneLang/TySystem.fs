@@ -7,6 +7,7 @@ module rec MiloneLang.TySystem
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
 // -----------------------------------------------
@@ -15,9 +16,8 @@ open MiloneLang.Hir
 
 let private tyCtorEncode tyCtor =
   match tyCtor with
-  | BoolTyCtor -> 1, 0
-  | IntTyCtor -> 2, 0
-  | UIntTyCtor -> 3, 0
+  | IntTyCtor flavor -> 1, intFlavorToOrdinary flavor
+  | BoolTyCtor -> 2, 0
   | CharTyCtor -> 4, 0
   | StrTyCtor -> 5, 0
   | ObjTyCtor -> 6, 0
@@ -37,9 +37,8 @@ let tyCtorEq first second = tyCtorCmp first second = 0
 
 let tyCtorDisplay getTyName tyCtor =
   match tyCtor with
+  | IntTyCtor flavor -> fsharpIntegerTyName flavor
   | BoolTyCtor -> "bool"
-  | IntTyCtor -> "int"
-  | UIntTyCtor -> "uint"
   | CharTyCtor -> "char"
   | StrTyCtor -> "string"
   | ObjTyCtor -> "obj"
@@ -59,13 +58,13 @@ let traitMapTys f it =
   match it with
   | AddTrait ty -> AddTrait(f ty)
 
-  | ScalarTrait ty -> ScalarTrait(f ty)
-
   | EqTrait ty -> EqTrait(f ty)
 
   | CmpTrait ty -> CmpTrait(f ty)
 
   | IndexTrait (lTy, rTy, outputTy) -> IndexTrait(f lTy, f rTy, f outputTy)
+
+  | IsIntTrait ty -> IsIntTrait(f ty)
 
   | ToIntTrait ty -> ToIntTrait(f ty)
 
@@ -474,12 +473,12 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
     theTrait
     |> traitMapTys (fun ty -> ty |> typingSubst ctx |> typingExpandSynonyms ctx)
 
-  let expectScalar ty (logAcc, ctx) =
+  /// integer, bool, char, or string
+  let expectBasic ty (logAcc, ctx) =
     match ty with
     | ErrorTy _
+    | AppTy (IntTyCtor _, [])
     | AppTy (BoolTyCtor, [])
-    | AppTy (IntTyCtor, [])
-    | AppTy (UIntTyCtor, [])
     | AppTy (CharTyCtor, [])
     | AppTy (StrTyCtor, []) -> logAcc, ctx
 
@@ -489,26 +488,16 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   | AddTrait ty ->
       match ty with
       | ErrorTy _
-      | AppTy (UIntTyCtor, [])
+      | AppTy (IntTyCtor _, [])
       | AppTy (StrTyCtor, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
 
-  | ScalarTrait ty ->
-      match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor, [])
-      | AppTy (UIntTyCtor, []) -> logAcc, ctx
+  | EqTrait ty -> (logAcc, ctx) |> expectBasic ty
 
-      | _ ->
-          // Coerce to int by default.
-          typingUnify logAcc ctx ty tyInt loc
-
-  | EqTrait ty -> (logAcc, ctx) |> expectScalar ty
-
-  | CmpTrait ty -> (logAcc, ctx) |> expectScalar ty
+  | CmpTrait ty -> (logAcc, ctx) |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
       match lTy with
@@ -524,6 +513,22 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
-  | ToIntTrait ty -> (logAcc, ctx) |> expectScalar ty
+  | IsIntTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, []) -> logAcc, ctx
 
-  | ToStringTrait ty -> (logAcc, ctx) |> expectScalar ty
+      | _ ->
+          // Coerce to int by default.
+          typingUnify logAcc ctx ty tyInt loc
+
+  | ToIntTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, [])
+      | AppTy (CharTyCtor, [])
+      | AppTy (StrTyCtor, []) -> logAcc, ctx
+
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+
+  | ToStringTrait ty -> (logAcc, ctx) |> expectBasic ty

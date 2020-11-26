@@ -19,6 +19,7 @@ module rec MiloneLang.Hir
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeIntegers
 
 /// Unique serial number to identify something
 /// such as variables, nominal types, etc.
@@ -71,9 +72,8 @@ type NameCtx = NameCtx of map: AssocMap<Serial, Ident> * lastSerial: Serial
 [<Struct>]
 [<NoEquality; NoComparison>]
 type TyCtor =
+  | IntTyCtor of intFlavor: IntFlavor
   | BoolTyCtor
-  | IntTyCtor
-  | UIntTyCtor
   | CharTyCtor
   | StrTyCtor
   | ObjTyCtor
@@ -92,7 +92,7 @@ type TyCtor =
   | RecordTyCtor of recordTy: TySerial
 
   /// Unresolved type. Generated in AstToHir, resolved in NameRes.
-  | UnresolvedTyCtor of Serial
+  | UnresolvedTyCtor of unresolvedSerial: Serial
 
 /// Type of expressions.
 [<Struct>]
@@ -123,9 +123,6 @@ type Trait =
   /// The type supports `+`.
   | AddTrait of Ty
 
-  /// The type is scalar.
-  | ScalarTrait of Ty
-
   /// The type supports `=`.
   | EqTrait of Ty
 
@@ -135,7 +132,10 @@ type Trait =
   /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
   | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
 
-  /// Type can be applied to `int`/`uint` function.
+  /// Integer type. Defaults to int.
+  | IsIntTrait of Ty
+
+  /// Type supports conversion to integer.
   | ToIntTrait of Ty
 
   /// Type can be applied to `string` function.
@@ -263,6 +263,8 @@ type HPat =
 [<Struct>]
 [<NoEquality; NoComparison>]
 type HPrim =
+  // operator:
+  | Not
   | Add
   | Sub
   | Mul
@@ -270,23 +272,31 @@ type HPrim =
   | Mod
   | Eq
   | Lt
-  | Nil
-  | Cons
-  | OptionNone
-  | OptionSome
   | Index
-  | Not
-  | Exit
-  | Assert
+  | StrGetSlice
+
+  // conversion:
+  | ToInt of toIntFlavor: IntFlavor
+  | Char
+  | String
   | Box
   | Unbox
-  | Printfn
+
+  // string:
   | StrLength
-  | StrGetSlice
-  | Char
-  | Int
-  | UInt
-  | String
+
+  // option:
+  | OptionNone
+  | OptionSome
+
+  // list:
+  | Nil
+  | Cons
+
+  // effects:
+  | Exit
+  | Assert
+  | Printfn
   | InRegion
   | NativeFun
 
@@ -408,11 +418,10 @@ let nameCtxAdd name (NameCtx (map, serial)) =
 /// Placeholder. No type info in the parsing phase.
 let noTy = ErrorTy noLoc
 
+let tyInt =
+  AppTy(IntTyCtor(IntFlavor(Signed, I32)), [])
+
 let tyBool = AppTy(BoolTyCtor, [])
-
-let tyInt = AppTy(IntTyCtor, [])
-
-let tyUInt = AppTy(UIntTyCtor, [])
 
 let tyChar = AppTy(CharTyCtor, [])
 
@@ -529,9 +538,18 @@ let primFromIdent ident =
 
   | "char" -> HPrim.Char |> Some
 
-  | "int" -> HPrim.Int |> Some
-
-  | "uint" -> HPrim.UInt |> Some
+  | "int"
+  | "int32" -> HPrim.ToInt(IntFlavor(Signed, I32)) |> Some
+  | "uint"
+  | "uint32" -> HPrim.ToInt(IntFlavor(Unsigned, I32)) |> Some
+  | "int8" -> HPrim.ToInt(IntFlavor(Signed, I8)) |> Some
+  | "int16" -> HPrim.ToInt(IntFlavor(Signed, I16)) |> Some
+  | "int64" -> HPrim.ToInt(IntFlavor(Signed, I64)) |> Some
+  | "nativeint" -> HPrim.ToInt(IntFlavor(Signed, IPtr)) |> Some
+  | "uint8" -> HPrim.ToInt(IntFlavor(Unsigned, I8)) |> Some
+  | "uint16" -> HPrim.ToInt(IntFlavor(Unsigned, I16)) |> Some
+  | "uint64" -> HPrim.ToInt(IntFlavor(Unsigned, I64)) |> Some
+  | "unativeint" -> HPrim.ToInt(IntFlavor(Unsigned, IPtr)) |> Some
 
   | "string" -> HPrim.String |> Some
 
@@ -550,10 +568,6 @@ let primToTySpec prim =
   let mono ty = TySpec(ty, [])
   let poly ty traits = TySpec(ty, traits)
 
-  let scalarBinary () =
-    let ty = meta 1
-    poly (tyFun ty (tyFun ty ty)) [ ScalarTrait ty ]
-
   match prim with
   | HPrim.Add ->
       let addTy = meta 1
@@ -562,7 +576,9 @@ let primToTySpec prim =
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
-  | HPrim.Mod -> scalarBinary ()
+  | HPrim.Mod ->
+      let ty = meta 1
+      poly (tyFun ty (tyFun ty ty)) [ IsIntTrait ty ]
 
   | HPrim.Eq ->
       let eqTy = meta 1
@@ -616,13 +632,10 @@ let primToTySpec prim =
       // FIXME: `char` can take non-int types.
       mono (tyFun tyInt tyChar)
 
-  | HPrim.Int ->
+  | HPrim.ToInt flavor ->
       let toIntTy = meta 1
-      poly (tyFun toIntTy tyInt) [ ToIntTrait toIntTy ]
-
-  | HPrim.UInt ->
-      let toUIntTy = meta 1
-      poly (tyFun toUIntTy tyUInt) [ ToIntTrait toUIntTy ]
+      let resultTy = AppTy(IntTyCtor flavor, [])
+      poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
 
   | HPrim.String ->
       let toStrTy = meta 1
@@ -635,13 +648,13 @@ let primToTySpec prim =
   | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
 
   | HPrim.Printfn ->
-    // printfn followed by format literal is handled specially.
-    // If format argument is not a string literal, printfn is equivalent to `printfn "%s"`.
-    mono (tyFun tyStr tyUnit)
+      // printfn followed by format literal is handled specially.
+      // If format argument is not a string literal, printfn is equivalent to `printfn "%s"`.
+      mono (tyFun tyStr tyUnit)
 
   | HPrim.NativeFun ->
-    // Incorrect use of __nativeFun is handled as error before instantiating its type.
-    failwith "NEVER"
+      // Incorrect use of __nativeFun is handled as error before instantiating its type.
+      failwith "NEVER"
 
 // -----------------------------------------------
 // Patterns (HIR)
@@ -918,8 +931,6 @@ let logToString tyDisplay loc log =
 
   | Log.TyBoundError (AddTrait ty) -> sprintf "%s No support (+) for '%s' yet" loc (tyDisplay ty)
 
-  | Log.TyBoundError (ScalarTrait ty) -> sprintf "%s Expected scalar type (such as int) but was '%s'" loc (tyDisplay ty)
-
   | Log.TyBoundError (EqTrait ty) -> sprintf "%s No support equality for '%s' yet" loc (tyDisplay ty)
 
   | Log.TyBoundError (CmpTrait ty) -> sprintf "%s No support comparison for '%s' yet" loc (tyDisplay ty)
@@ -927,7 +938,9 @@ let logToString tyDisplay loc log =
   | Log.TyBoundError (IndexTrait (lTy, rTy, _)) ->
       sprintf "%s No support indexing operation: lhs = '%s', rhs = '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
 
-  | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to int from '%s'" loc (tyDisplay ty)
+  | Log.TyBoundError (IsIntTrait ty) -> sprintf "%s Expected int or some integer type but was '%s'" loc (tyDisplay ty)
+
+  | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to integer from '%s'" loc (tyDisplay ty)
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%s'" loc (tyDisplay ty)
 

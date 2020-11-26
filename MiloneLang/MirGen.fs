@@ -7,6 +7,7 @@ module rec MiloneLang.MirGen
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 open MiloneLang.TySystem
 open MiloneLang.Typing
@@ -172,9 +173,8 @@ let private mxStrCmp ctx op l r (ty, loc) =
 let private mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   assert (opIsComparison op)
   match mexprToTy l with
-  | AppTy ((BoolTyCtor
-           | IntTyCtor
-           | UIntTyCtor
+  | AppTy ((IntTyCtor _
+           | BoolTyCtor
            | CharTyCtor),
            _) -> mxBinOpScalar ctx op l r (ty, loc)
   | AppTy (StrTyCtor, _) -> mxStrCmp ctx op l r (ty, loc)
@@ -479,7 +479,7 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
 let private matchExprCanCompileToSwitch cond arms =
   let tyIsLit ty =
     match ty with
-    | AppTy (IntTyCtor, [])
+    | AppTy (IntTyCtor _, [])
     | AppTy (CharTyCtor, [])
     | AppTy (UnionTyCtor _, _) -> true
 
@@ -893,8 +893,7 @@ let private mirifyExprOpArith ctx op l r ty loc =
   let r, ctx = mirifyExpr ctx r
 
   match lTy with
-  | AppTy ((IntTyCtor
-           | UIntTyCtor
+  | AppTy ((IntTyCtor _
            | CharTyCtor),
            _) -> mxBinOpScalar ctx op l r (ty, loc)
 
@@ -915,45 +914,22 @@ let private mirifyExprSemi ctx exprs =
   let exprs, ctx = mirifyExprs ctx exprs
   List.last exprs, ctx
 
-let private mirifyCallIntExpr ctx itself arg ty loc =
+let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
   let srcTy = arg |> exprToTy
   let arg, ctx = mirifyExpr ctx arg
 
   match srcTy with
-  | AppTy (IntTyCtor, _) -> arg, ctx
+  | AppTy (IntTyCtor srcFlavor, _) when intFlavorEq srcFlavor flavor -> arg, ctx
 
-  | AppTy ((BoolTyCtor
-           | UIntTyCtor
+  | AppTy ((IntTyCtor _
            | CharTyCtor),
-           _) -> MUnaryExpr(MIntOfScalarUnary, arg, tyInt, loc), ctx
+           _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, tyInt, loc), ctx
 
   | AppTy (StrTyCtor, _) ->
       let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
       let ctx =
-        addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MIntOfStrPrim, [ arg ]), ty, loc))
-
-      temp, ctx
-
-  | _ -> failwithf "NEVER: %A" itself
-
-let private mirifyCallUIntExpr ctx itself arg ty loc =
-  let argTy = arg |> exprToTy
-  let arg, ctx = mirifyExpr ctx arg
-
-  match argTy with
-  | AppTy (UIntTyCtor, _) -> arg, ctx
-
-  | AppTy ((BoolTyCtor
-           | IntTyCtor
-           | CharTyCtor),
-           _) -> MUnaryExpr(MUIntOfScalarUnary, arg, tyInt, loc), ctx
-
-  | AppTy (StrTyCtor, _) ->
-      let temp, tempSerial, ctx = freshVar ctx "call" ty loc
-
-      let ctx =
-        addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MUIntOfStrPrim, [ arg ]), ty, loc))
+        addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MIntOfStrPrim flavor, [ arg ]), ty, loc))
 
       temp, ctx
 
@@ -966,10 +942,7 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
   match argTy with
   | AppTy (CharTyCtor, _) -> arg, ctx
 
-  | AppTy ((BoolTyCtor
-           | IntTyCtor
-           | UIntTyCtor),
-           _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
+  | AppTy (IntTyCtor _, _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
 
   | _ -> failwithf "NEVER: %A" itself
 
@@ -989,8 +962,7 @@ let private mirifyCallStringExpr ctx itself arg ty loc =
   | AppTy (StrTyCtor, _) -> arg, ctx
 
   | AppTy (BoolTyCtor, _) -> usePrim MStrOfBoolPrim
-  | AppTy (IntTyCtor, _) -> usePrim MStrOfIntPrim
-  | AppTy (UIntTyCtor, _) -> usePrim MStrOfUIntPrim
+  | AppTy (IntTyCtor flavor, _) -> usePrim (MStrOfIntPrim flavor)
   | AppTy (CharTyCtor, _) -> usePrim MStrOfCharPrim
 
   | _ -> failwithf "NEVER: %A" itself
@@ -1097,10 +1069,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.StrLength, [ arg ] -> regularUnary MStrLenUnary arg
   | HPrim.StrLength, _ -> fail ()
   | HPrim.StrGetSlice, _ -> mirifyCallStrGetSliceExpr ctx args loc
-  | HPrim.Int, [ arg ] -> mirifyCallIntExpr ctx itself arg ty loc
-  | HPrim.Int, _ -> fail ()
-  | HPrim.UInt, [ arg ] -> mirifyCallUIntExpr ctx itself arg ty loc
-  | HPrim.UInt, _ -> fail ()
+  | HPrim.ToInt flavor, [ arg ] -> mirifyCallToIntExpr ctx itself flavor arg ty loc
+  | HPrim.ToInt _, _ -> fail ()
   | HPrim.Char, [ arg ] -> mirifyCallCharExpr ctx itself arg ty loc
   | HPrim.Char, _ -> fail ()
   | HPrim.String, [ arg ] -> mirifyCallStringExpr ctx itself arg ty loc

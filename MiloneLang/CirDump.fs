@@ -4,6 +4,7 @@
 module rec MiloneLang.CirDump
 
 open MiloneLang.Util
+open MiloneLang.TypeIntegers
 open MiloneLang.Cir
 
 let private eol = "\n"
@@ -72,8 +73,7 @@ let private cpFunPtrTy name argTys resultTy acc =
 let private cpTy ty acc: string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
-  | CIntTy -> acc |> cons "int"
-  | CUInt32Ty -> acc |> cons "uint32_t"
+  | CIntTy flavor -> acc |> cons (cIntegerTyName flavor)
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty -> acc |> cpTy ty |> cons "*"
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy

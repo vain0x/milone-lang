@@ -127,8 +127,7 @@ let private primToArity ty prim =
   | HPrim.Unbox
   | HPrim.StrLength
   | HPrim.Char
-  | HPrim.Int
-  | HPrim.UInt
+  | HPrim.ToInt _
   | HPrim.String
   | HPrim.InRegion
   | HPrim.NativeFun -> 1

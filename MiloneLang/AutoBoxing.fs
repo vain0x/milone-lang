@@ -5,9 +5,10 @@ module rec MiloneLang.AutoBoxing
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeIntegers
+open MiloneLang.Hir
 open MiloneLang.TySystem
 open MiloneLang.Typing
-open MiloneLang.Hir
 
 let private tyIsRecord ty =
   match ty with
@@ -143,8 +144,7 @@ let private trdTy (ctx: TrdCtx) ty =
       match tyCtor with
       | BoolTyCtor
       | CharTyCtor
-      | IntTyCtor
-      | UIntTyCtor
+      | IntTyCtor _
       | StrTyCtor
       | ObjTyCtor ->
           assert (List.isEmpty tyArgs)
@@ -310,8 +310,7 @@ let private tsmTy (ctx: TsmCtx) ty =
       | BoolTyCtor
       | CharTyCtor -> 1, ctx
 
-      | IntTyCtor
-      | UIntTyCtor -> 4, ctx
+      | IntTyCtor flavor -> intFlavorToBytes flavor, ctx
 
       | ObjTyCtor
       | ListTyCtor -> 8, ctx

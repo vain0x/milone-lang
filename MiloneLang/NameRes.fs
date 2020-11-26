@@ -7,6 +7,7 @@ module rec MiloneLang.NameRes
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
 let private isNoTy ty =
@@ -22,8 +23,20 @@ let private tyPrimOfName name tys loc =
   match name, tys with
   | "unit", [] -> tyUnit
   | "bool", [] -> tyBool
-  | "int", [] -> tyInt
-  | "uint", [] -> tyUInt
+
+  | "int", []
+  | "int32", [] -> tyInt
+  | "uint", []
+  | "uint32", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I32)), [])
+  | "int8", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I8)), [])
+  | "int16", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I16)), [])
+  | "int64", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I64)), [])
+  | "nativeint", [] -> AppTy(IntTyCtor(IntFlavor(Signed, IPtr)), [])
+  | "uint8", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I8)), [])
+  | "uint16", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I16)), [])
+  | "uint64", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I64)), [])
+  | "unativeint", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, IPtr)), [])
+
   | "char", [] -> tyChar
   | "string", [] -> tyStr
   | "obj", [] -> tyObj

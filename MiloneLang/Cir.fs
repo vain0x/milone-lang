@@ -11,6 +11,7 @@
 module rec MiloneLang.Cir
 
 open MiloneLang.Syntax
+open MiloneLang.TypeIntegers
 
 // -----------------------------------------------
 // CIR types
@@ -27,8 +28,7 @@ type CTyInstance =
 [<NoEquality; NoComparison>]
 type CTy =
   | CVoidTy
-  | CIntTy
-  | CUInt32Ty
+  | CIntTy of IntFlavor
   | CCharTy
   | CPtrTy of CTy
   | CFunPtrTy of argTys: CTy list * resultTy: CTy
