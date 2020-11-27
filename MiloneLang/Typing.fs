@@ -432,7 +432,7 @@ let private inferPrimExpr ctx prim loc =
       let ctx =
         addError
           ctx
-          "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ArgType1 -> ArgType2 -> ... -> ResultType`."
+          "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`."
           loc
 
       hxAbort ctx loc
