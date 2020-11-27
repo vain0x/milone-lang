@@ -114,25 +114,25 @@ let listAppendTest () =
 [<Fact>]
 let listSortTest () =
   [ 3; 2; 1; 3; 2; 3 ]
-  |> listSort intCmp
+  |> listSort compare
   |> is [ 1; 2; 2; 3; 3; 3 ]
   [ 3; 1; 4; 1; 5; 9 ]
-  |> listSort intCmp
+  |> listSort compare
   |> is [ 1; 1; 3; 4; 5; 9 ]
 
 [<Fact>]
 let listUniqueTest () =
   [ 1; 2; 2; 3; 3; 3 ]
-  |> listUnique intCmp
+  |> listUnique compare
   |> is [ 1; 2; 3 ]
   [ 3; 1; 4; 1; 5; 9 ]
-  |> listUnique intCmp
+  |> listUnique compare
   |> is [ 1; 3; 4; 5; 9 ]
 
 [<Fact>]
 let mapBasicTest () =
   let m =
-    mapEmpty strCmp |> mapAdd "a" 1 |> mapAdd "b" 2
+    mapEmpty compare |> mapAdd "a" 1 |> mapAdd "b" 2
 
   m |> mapTryFind "a" |> is (Some 1)
   m |> mapTryFind "b" |> is (Some 2)
@@ -141,14 +141,14 @@ let mapBasicTest () =
 [<Fact>]
 let mapAddTest () =
   let m =
-    mapEmpty strCmp |> mapAdd "a" 1 |> mapAdd "a" 2
+    mapEmpty compare |> mapAdd "a" 1 |> mapAdd "a" 2
 
   m |> mapTryFind "a" |> is (Some 2)
 
 [<Fact>]
 let mapRemoveTest () =
   let removed, m =
-    mapEmpty strCmp
+    mapEmpty compare
     |> mapAdd "a" 1
     |> mapAdd "a" 2
     |> mapAdd "b" 3
@@ -164,7 +164,7 @@ let mapRemoveTest () =
 [<Fact>]
 let mapFoldTest () =
   let m =
-    mapEmpty strCmp
+    mapEmpty compare
     |> mapAdd "a" 1
     |> mapAdd "c" 3
     |> mapAdd "a" 2
@@ -175,7 +175,7 @@ let mapFoldTest () =
 
 [<Fact>]
 let mapMapTest () =
-  mapEmpty strCmp
+  mapEmpty compare
   |> mapAdd "a" 1
   |> mapAdd "c" 3
   |> mapAdd "a" 2
@@ -185,7 +185,7 @@ let mapMapTest () =
 
 [<Fact>]
 let mapToListTest () =
-  mapEmpty strCmp
+  mapEmpty compare
   |> mapAdd "a" 1
   |> mapAdd "c" 3
   |> mapAdd "a" 2
@@ -195,20 +195,20 @@ let mapToListTest () =
 
 [<Fact>]
 let mapOfListTest () =
-  mapOfList strCmp [ "a", 1; "c", 3; "a", 2; "b", 0 ]
+  mapOfList compare [ "a", 1; "c", 3; "a", 2; "b", 0 ]
   |> mapToList
   |> is [ "a", 2; "b", 0; "c", 3 ]
 
 [<Fact>]
 let setOfListTest () =
-  let s = setOfList strCmp [ "a"; "b"; "c" ]
+  let s = setOfList compare [ "a"; "b"; "c" ]
 
   s |> setContains "a" |> is true
   s |> setContains "d" |> is false
 
 [<Fact>]
 let setToListTest () =
-  setOfList strCmp [ "a"; "b"; "c" ]
+  setOfList compare [ "a"; "b"; "c" ]
   |> setAdd "a"
   |> setAdd "d"
   |> setToList
@@ -216,9 +216,9 @@ let setToListTest () =
 
 // [<Fact>]
 // let setDiffTest () =
-//   let first = setOfList strCmp [ "a"; "b"; "c"; "d" ]
+//   let first = setOfList compare [ "a"; "b"; "c"; "d" ]
 
-//   let second = setOfList strCmp [ "a"; "c"; "e"; "f" ]
+//   let second = setOfList compare [ "a"; "c"; "e"; "f" ]
 
 //   setDiff first second
 //   |> setToList

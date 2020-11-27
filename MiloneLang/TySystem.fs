@@ -31,7 +31,7 @@ let private tyCtorEncode tyCtor =
   | UnresolvedTyCtor serial -> 24, serial
 
 let tyCtorCmp l r =
-  pairCmp intCmp intCmp (tyCtorEncode l) (tyCtorEncode r)
+  pairCmp compare compare (tyCtorEncode l) (tyCtorEncode r)
 
 let tyCtorEq first second = tyCtorCmp first second = 0
 
@@ -92,8 +92,9 @@ let tyCmp first second =
 
   | _, ErrorTy _ -> 1
 
-  | MetaTy (firstSerial, firstLoc), MetaTy (secondSerial, secondLoc) ->
-      if firstSerial <> secondSerial then intCmp firstSerial secondSerial else locCmp firstLoc secondLoc
+  | MetaTy (l1, l2), MetaTy (r1, r2) ->
+      let c = compare l1 r1
+      if c <> 0 then c else locCmp l2 r2
 
   | MetaTy _, _ -> -1
 
@@ -152,7 +153,7 @@ let tyCollectFreeVars ty =
         let acc = serial :: fvAcc
         go acc tys
 
-  go [] [ ty ] |> listUnique intCmp
+  go [] [ ty ] |> listUnique compare
 
 /// Converts nested function type to multi-arguments function type.
 let rec tyToArgList ty =
@@ -305,7 +306,7 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
   let assignment = List.zip defTySerials useTyArgs
 
   let substMeta tySerial =
-    assignment |> assocTryFind intCmp tySerial
+    assignment |> assocTryFind compare tySerial
 
   tySubst substMeta bodyTy
 
@@ -400,7 +401,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
            assignment, ctx) ([], ctx)
 
     let substMeta tySerial =
-      assignment |> assocTryFind intCmp tySerial
+      assignment |> assocTryFind compare tySerial
 
     tySubst substMeta bodyTy, ctx
 
@@ -408,7 +409,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
     let assignment = List.zip defTySerials useTyArgs
 
     let substMeta tySerial =
-      assignment |> assocTryFind intCmp tySerial
+      assignment |> assocTryFind compare tySerial
 
     tySubst substMeta bodyTy
 
@@ -489,7 +490,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       match ty with
       | ErrorTy _
       | AppTy (IntTyCtor _, [])
-      | AppTy (CharTyCtor _, [])
+      | AppTy (CharTyCtor, [])
       | AppTy (StrTyCtor, []) -> logAcc, ctx
 
       | _ ->

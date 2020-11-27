@@ -8,11 +8,6 @@ type AssocMap<'K, 'V> = (uint * ('K * 'V) list) list * ('K -> uint) * ('K -> 'K 
 
 type AssocSet<'K> = AssocMap<'K, unit>
 
-let intCmp (x: int) (y: int) =
-  if y < x then 1
-  else if y = x then 0
-  else -1
-
 let intHash (x: int) = uint x % uint 128
 
 let mapNewSingleton key value hash cmp: AssocMap<_, _> =
@@ -20,8 +15,8 @@ let mapNewSingleton key value hash cmp: AssocMap<_, _> =
   [ hash key, [ key, value ] ], hash, cmp
 
 let typeTest () =
-  let map = mapNewSingleton 1 "a" intHash intCmp
-  let set: AssocSet<_> = mapNewSingleton 2 () intHash intCmp
+  let map = mapNewSingleton 1 "a" intHash compare
+  let set: AssocSet<_> = mapNewSingleton 2 () intHash compare
   ()
 
 let main _ =

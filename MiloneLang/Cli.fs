@@ -226,7 +226,7 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
   let projectName = projectDir |> pathStrToStem
 
   let projects =
-    mapEmpty strCmp
+    mapEmpty compare
     |> mapAdd "MiloneCore" (host.MiloneHome + "/libcore")
     |> mapAdd projectName projectDir
 

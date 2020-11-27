@@ -410,7 +410,7 @@ type Log =
 // Name context
 // -----------------------------------------------
 
-let nameCtxEmpty () = NameCtx(mapEmpty intCmp, 0)
+let nameCtxEmpty () = NameCtx(mapEmpty compare, 0)
 
 let nameCtxAdd name (NameCtx (map, serial)) =
   let serial = serial + 1
@@ -473,21 +473,17 @@ let tyDefToName tyDef =
 let varSerialToInt (VarSerial serial) = serial
 
 let varSerialCmp l r =
-  let (VarSerial l) = l
-  let (VarSerial r) = r
-  intCmp l r
+  compare (varSerialToInt l) (varSerialToInt r)
 
 let funSerialToInt (FunSerial serial) = serial
 
 let funSerialCmp l r =
-  let (FunSerial l) = l
-  let (FunSerial r) = r
-  intCmp l r
+  compare (funSerialToInt l) (funSerialToInt r)
+
+let variantSerialToInt (VariantSerial serial) = serial
 
 let variantSerialCmp l r =
-  let (VariantSerial l) = l
-  let (VariantSerial r) = r
-  intCmp l r
+  compare (variantSerialToInt l) (variantSerialToInt r)
 
 let varDefToName varDef =
   match varDef with
@@ -510,19 +506,19 @@ let litToTy (lit: Lit): Ty =
 
 let litCmp l r =
   match l, r with
-  | BoolLit l, BoolLit r -> boolCmp l r
+  | BoolLit l, BoolLit r -> compare l r
   | BoolLit _, _ -> -1
   | _, BoolLit _ -> 1
 
-  | IntLit l, IntLit r -> intCmp l r
+  | IntLit l, IntLit r -> compare l r
   | IntLit _, _ -> -1
   | _, IntLit _ -> 1
 
-  | CharLit l, CharLit r -> int l - int r
+  | CharLit l, CharLit r -> compare l r
   | CharLit _, _ -> -1
   | _, CharLit _ -> 1
 
-  | StrLit l, StrLit r -> strCmp l r
+  | StrLit l, StrLit r -> compare l r
 
 // -----------------------------------------------
 // Primitives (HIR)

@@ -399,7 +399,7 @@ type ARoot =
 // Position
 // -----------------------------------------------
 
-let posCmp l r = pairCmp intCmp intCmp l r
+let posCmp (l: Pos) (r: Pos) = pairCmp compare compare l r
 
 let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 
@@ -418,7 +418,7 @@ let locToString ((docId, y, x): Loc) =
   + string (x + 1)
 
 let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
-  let c = strCmp lDoc rDoc
+  let c = compare lDoc rDoc
   if c <> 0 then c
-  else if ly <> ry then intCmp ly ry
-  else intCmp lx rx
+  else if ly <> ry then compare ly ry
+  else compare lx rx

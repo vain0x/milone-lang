@@ -26,7 +26,7 @@ let private valueSymbolCmp l r =
     | FunSymbol (FunSerial serial) -> serial
     | VariantSymbol (VariantSerial serial) -> serial
 
-  intCmp (encode l) (encode r)
+  compare (encode l) (encode r)
 
 let private ctVoidPtr = CPtrTy CVoidTy
 
@@ -51,7 +51,7 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
         go acc xs
 
   let serialsMap =
-    go (mapEmpty strCmp) (defMap |> mapToList)
+    go (mapEmpty compare) (defMap |> mapToList)
 
   let addIdent ident (identMap, index) serial =
     identMap

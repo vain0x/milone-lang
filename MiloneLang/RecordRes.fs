@@ -33,7 +33,7 @@ let private ofTyCtx (tyCtx: TyCtx): RrCtx =
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
-    RecordMap = mapEmpty intCmp }
+    RecordMap = mapEmpty compare }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
 
@@ -100,11 +100,11 @@ let private buildRecordMap (ctx: RrCtx) =
            let fieldMap =
              fields
              |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
-             |> mapOfList strCmp
+             |> mapOfList compare
 
            acc |> mapAdd tySerial (fieldTys, fieldMap)
 
-       | _ -> acc) (mapEmpty intCmp)
+       | _ -> acc) (mapEmpty compare)
 
 let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   let fieldTys, fieldMap =
@@ -128,7 +128,7 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
          let init = init |> teExpr ctx
          let index, _ = fieldMap |> mapFind name
          index, init)
-    |> listSort (fun (l, _) (r, _) -> intCmp l r)
+    |> listSort (fun (l: int, _) (r: int, _) -> compare l r)
 
   match baseOpt with
   | Some baseExpr ->

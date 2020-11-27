@@ -221,7 +221,9 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
          (oldTySerial, MetaTy(tySerial, loc)), ctx)
 
   // Replace meta types in the type and trait bounds.
-  let substMeta tySerial = bindings |> assocTryFind intCmp tySerial
+  let substMeta tySerial =
+    bindings |> assocTryFind compare tySerial
+
   let polyTy = polyTy |> tySubst substMeta
 
   let traits =
@@ -495,7 +497,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
         let fieldDefs =
           fieldDefs
           |> List.map (fun (name, ty, _) -> name, ty)
-          |> mapOfList strCmp
+          |> mapOfList compare
 
         (fields, (fieldDefs, ctx))
         |> stMap (fun (field, (fieldDefs, ctx)) ->
@@ -925,7 +927,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                acc
                |> mapAdd tySerial (RecordTyDef(recordName, fields, loc))
 
-           | _ -> acc |> mapAdd tySerial tyDef) (mapEmpty intCmp)
+           | _ -> acc |> mapAdd tySerial tyDef) (mapEmpty compare)
 
     { ctx with Tys = tys }
 

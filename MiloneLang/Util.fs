@@ -218,13 +218,6 @@ let setUnion first second =
   |> setFold (fun set item -> set |> setAdd item) second
 
 // -----------------------------------------------
-// Bool
-// -----------------------------------------------
-
-let boolCmp l r =
-  (if l then 1 else 0) - (if r then 1 else 0)
-
-// -----------------------------------------------
 // Int
 // -----------------------------------------------
 
@@ -233,11 +226,6 @@ let intMin (x: int) (y: int) = if x > y then y else x
 let intMax (x: int) (y: int) = if x < y then y else x
 
 let intEq (x: int) (y: int) = x = y
-
-let intCmp (x: int) (y: int) =
-  if y < x then 1
-  else if y = x then 0
-  else -1
 
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
@@ -327,11 +315,6 @@ let charEscape (c: char) =
 // -----------------------------------------------
 // String
 // -----------------------------------------------
-
-let strCmp (x: string) (y: string) =
-  if y < x then 1
-  else if y = x then 0
-  else -1
 
 let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
