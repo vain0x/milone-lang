@@ -83,7 +83,7 @@ type TyCtor =
   | BoolTyCtor
   | CharTyCtor
   | StrTyCtor
-  | ObjTyCtor of objMut: IsMut
+  | ObjTyCtor
 
   /// Ty args must be `[s; t]`.
   | FunTyCtor
@@ -94,6 +94,7 @@ type TyCtor =
   | ListTyCtor
 
   // FFI types.
+  | VoidTyCtor
   | NativePtrTyCtor of nativePtrIsMut: IsMut
 
   // Nominal types.
@@ -454,7 +455,7 @@ let tyChar = AppTy(CharTyCtor, [])
 
 let tyStr = AppTy(StrTyCtor, [])
 
-let tyObj = AppTy(ObjTyCtor IsMut, [])
+let tyObj = AppTy(ObjTyCtor, [])
 
 let tyTuple tys = AppTy(TupleTyCtor, tys)
 

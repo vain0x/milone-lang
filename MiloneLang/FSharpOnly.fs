@@ -8,9 +8,25 @@ let inRegion (f: unit -> int): int = f ()
 
 let strJoin (sep: string) (xs: string list): string = System.String.Join(sep, xs)
 
+// -----------------------------------------------
+// C FFI
+// -----------------------------------------------
+
+// `T const *` in C.
+[<AbstractClass; Sealed>]
+type constptr<'T> =
+  override _.ToString() = "constptr is not available in F#"
+
+// `void const *` in C.
+[<AbstractClass; Sealed>]
+type voidconstptr =
+  override _.ToString() = "voidconstptr is not available in F#"
+
+// Calls a C function, which should be linked statically.
 let __nativeFun _ =
   failwith "__nativeFun is not available in F#"
 
+// Casts a pointer, unchecked.
 let __nativeCast _ =
   failwith "__nativeCast is not available in F#"
 

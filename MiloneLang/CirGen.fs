@@ -29,8 +29,6 @@ let private valueSymbolCmp l r =
 
   compare (encode l) (encode r)
 
-let private ctVoidPtr = CPtrTy CVoidTy
-
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then ident + "_" else ident + "_" + string index
@@ -423,8 +421,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
       | AppTy (StrTyCtor, _) -> "String", ctx
 
       | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-      | AppTy (ObjTyCtor IsMut, _) -> "Object", ctx
-      | AppTy (ObjTyCtor IsConst, _) -> "ConstObject", ctx
+      | AppTy (ObjTyCtor, _) -> "Object", ctx
 
       | AppTy (FunTyCtor, _) ->
           let arity, argTys, resultTy = tyToArgList ty
@@ -447,6 +444,8 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
           let itemTy, ctx = ctx |> go itemTy
           let listTy = itemTy + "List"
           listTy, ctx
+
+      | AppTy (VoidTyCtor, _) -> "Void", ctx
 
       | AppTy (NativePtrTyCtor isMut, [ itemTy ]) ->
           let itemTy, ctx = ctx |> go itemTy
@@ -522,15 +521,15 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   // FIXME: Unresolved type variables are `obj` for now.
   | MetaTy _
-  | AppTy (ObjTyCtor IsMut, _) -> CPtrTy CVoidTy, ctx
-
-  | AppTy (ObjTyCtor IsConst, _) -> CConstPtrTy CVoidTy, ctx
+  | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
 
   | AppTy (FunTyCtor, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
 
   | AppTy (ListTyCtor, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
 
   | AppTy (TupleTyCtor, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
+
+  | AppTy (VoidTyCtor, _) -> CVoidTy, ctx
 
   | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
@@ -568,9 +567,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   // FIXME: Unresolved type variables are `obj` for now.
   | MetaTy _
-  | AppTy (ObjTyCtor IsMut, _) -> CPtrTy CVoidTy, ctx
-
-  | AppTy (ObjTyCtor IsConst, _) -> CConstPtrTy CVoidTy, ctx
+  | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
 
   | AppTy (FunTyCtor, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
 
@@ -593,6 +590,8 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
              |> tyExpandSynonyms (fun tySerial -> ctx.Tys |> mapTryFind tySerial))
 
       genTupleTyDef ctx itemTys
+
+  | AppTy (VoidTyCtor, _) -> CVoidTy, ctx
 
   | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
@@ -677,7 +676,7 @@ let private genDefault ctx ty =
   | AppTy (CharTyCtor, _) -> CIntExpr 0, ctx
 
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (ObjTyCtor _, _)
+  | AppTy (ObjTyCtor, _)
   | AppTy (ListTyCtor, _)
   | AppTy (NativePtrTyCtor _, _) -> CRefExpr "NULL", ctx
 
@@ -691,6 +690,7 @@ let private genDefault ctx ty =
       CCastExpr(CDefaultExpr, ty), ctx
 
   | ErrorTy _
+  | AppTy (VoidTyCtor, _)
   | AppTy (UnresolvedTyCtor _, _) -> failwithf "Never %A" ty
 
 let private genVariantNameExpr ctx serial ty =

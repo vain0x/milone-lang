@@ -148,7 +148,8 @@ let private trdTy (ctx: TrdCtx) ty =
       | BoolTyCtor
       | CharTyCtor
       | StrTyCtor
-      | ObjTyCtor _ ->
+      | ObjTyCtor
+      | VoidTyCtor ->
           assert (List.isEmpty tyArgs)
           ctx
 
@@ -311,12 +312,13 @@ let private tsmTy (ctx: TsmCtx) ty =
 
       match tyCtor with
       | BoolTyCtor
-      | CharTyCtor -> 1, ctx
+      | CharTyCtor
+      | VoidTyCtor -> 1, ctx
 
       | IntTyCtor flavor -> intFlavorToBytes flavor, ctx
       | FloatTyCtor flavor -> floatFlavorToBytes flavor, ctx
 
-      | ObjTyCtor _
+      | ObjTyCtor
       | ListTyCtor
       | NativePtrTyCtor _ -> 8, ctx
 

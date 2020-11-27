@@ -51,7 +51,8 @@ let private tyPrimOfName name tys loc =
 
   | "list", [ itemTy ] -> tyList itemTy
 
-  | "constobj", [] -> AppTy(ObjTyCtor IsConst, [])
+  | "voidptr", [] -> AppTy(NativePtrTyCtor IsMut, [ AppTy(VoidTyCtor, []) ])
+  | "voidconstptr", [] -> AppTy(NativePtrTyCtor IsConst, [ AppTy(VoidTyCtor, []) ])
   | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ])
   | "constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ])
 

@@ -27,11 +27,13 @@ let private tyCtorEncode tyCtor =
   | BoolTyCtor -> 3, 0
   | CharTyCtor -> 4, 0
   | StrTyCtor -> 5, 0
-  | ObjTyCtor isMut -> 6, isMutToInt isMut
+  | ObjTyCtor -> 6, 0
   | FunTyCtor -> 7, 0
   | TupleTyCtor -> 8, 0
   | ListTyCtor -> 9, 0
-  | NativePtrTyCtor isMut -> 10, isMutToInt isMut
+
+  | VoidTyCtor -> 11, 0
+  | NativePtrTyCtor isMut -> 12, isMutToInt isMut
 
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
@@ -50,11 +52,11 @@ let tyCtorDisplay getTyName tyCtor =
   | BoolTyCtor -> "bool"
   | CharTyCtor -> "char"
   | StrTyCtor -> "string"
-  | ObjTyCtor IsMut -> "obj"
-  | ObjTyCtor IsConst -> "constobj"
+  | ObjTyCtor -> "obj"
   | FunTyCtor -> "fun"
   | TupleTyCtor -> "tuple"
   | ListTyCtor -> "list"
+  | VoidTyCtor -> "void"
   | NativePtrTyCtor IsMut -> "nativeptr"
   | NativePtrTyCtor IsConst -> "constptr"
   | SynonymTyCtor tySerial -> getTyName tySerial
@@ -589,7 +591,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       match ty with
       | ErrorTy _
       | AppTy (IntTyCtor (IntFlavor (_, IPtr)), [])
-      | AppTy (ObjTyCtor _, [])
+      | AppTy (ObjTyCtor, [])
       | AppTy (ListTyCtor, _)
       | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
 
