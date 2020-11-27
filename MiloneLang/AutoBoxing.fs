@@ -146,7 +146,7 @@ let private trdTy (ctx: TrdCtx) ty =
       | CharTyCtor
       | IntTyCtor _
       | StrTyCtor
-      | ObjTyCtor ->
+      | ObjTyCtor _ ->
           assert (List.isEmpty tyArgs)
           ctx
 
@@ -313,7 +313,7 @@ let private tsmTy (ctx: TsmCtx) ty =
 
       | IntTyCtor flavor -> intFlavorToBytes flavor, ctx
 
-      | ObjTyCtor
+      | ObjTyCtor _
       | ListTyCtor
       | NativePtrTyCtor _ -> 8, ctx
 

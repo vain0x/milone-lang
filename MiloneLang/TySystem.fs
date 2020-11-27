@@ -15,23 +15,21 @@ open MiloneLang.Hir
 // -----------------------------------------------
 
 let private tyCtorEncode tyCtor =
+  let isMutToInt isMut =
+    match isMut with
+    | IsConst -> 1
+    | IsMut -> 2
+
   match tyCtor with
   | IntTyCtor flavor -> 1, intFlavorToOrdinary flavor
   | BoolTyCtor -> 2, 0
   | CharTyCtor -> 4, 0
   | StrTyCtor -> 5, 0
-  | ObjTyCtor -> 6, 0
+  | ObjTyCtor isMut -> 6, isMutToInt isMut
   | FunTyCtor -> 7, 0
   | TupleTyCtor -> 8, 0
   | ListTyCtor -> 9, 0
-
-  | NativePtrTyCtor isMut ->
-      let m =
-        match isMut with
-        | IsConst -> 1
-        | IsMut -> 2
-
-      10, m
+  | NativePtrTyCtor isMut -> 10, isMutToInt isMut
 
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
@@ -49,7 +47,8 @@ let tyCtorDisplay getTyName tyCtor =
   | BoolTyCtor -> "bool"
   | CharTyCtor -> "char"
   | StrTyCtor -> "string"
-  | ObjTyCtor -> "obj"
+  | ObjTyCtor IsMut -> "obj"
+  | ObjTyCtor IsConst -> "constobj"
   | FunTyCtor -> "fun"
   | TupleTyCtor -> "tuple"
   | ListTyCtor -> "list"

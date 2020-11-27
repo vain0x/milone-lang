@@ -81,7 +81,7 @@ type TyCtor =
   | BoolTyCtor
   | CharTyCtor
   | StrTyCtor
-  | ObjTyCtor
+  | ObjTyCtor of objMut: IsMut
 
   /// Ty args must be `[s; t]`.
   | FunTyCtor
@@ -441,7 +441,7 @@ let tyChar = AppTy(CharTyCtor, [])
 
 let tyStr = AppTy(StrTyCtor, [])
 
-let tyObj = AppTy(ObjTyCtor, [])
+let tyObj = AppTy(ObjTyCtor IsMut, [])
 
 let tyTuple tys = AppTy(TupleTyCtor, tys)
 

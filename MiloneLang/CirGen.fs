@@ -421,7 +421,8 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
       | AppTy (StrTyCtor, _) -> "String", ctx
 
       | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-      | AppTy (ObjTyCtor, _) -> "Object", ctx
+      | AppTy (ObjTyCtor IsMut, _) -> "Object", ctx
+      | AppTy (ObjTyCtor IsConst, _) -> "ConstObject", ctx
 
       | AppTy (FunTyCtor, _) ->
           let arity, argTys, resultTy = tyToArgList ty
@@ -515,8 +516,11 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
 
-  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
+  // FIXME: Unresolved type variables are `obj` for now.
+  | MetaTy _
+  | AppTy (ObjTyCtor IsMut, _) -> CPtrTy CVoidTy, ctx
+
+  | AppTy (ObjTyCtor IsConst, _) -> CConstPtrTy CVoidTy, ctx
 
   | AppTy (FunTyCtor, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
 
@@ -556,8 +560,11 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
 
-  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
+  // FIXME: Unresolved type variables are `obj` for now.
+  | MetaTy _
+  | AppTy (ObjTyCtor IsMut, _) -> CPtrTy CVoidTy, ctx
+
+  | AppTy (ObjTyCtor IsConst, _) -> CConstPtrTy CVoidTy, ctx
 
   | AppTy (FunTyCtor, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
 
@@ -662,7 +669,7 @@ let private genDefault ctx ty =
   | AppTy (CharTyCtor, _) -> CIntExpr 0, ctx
 
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (ObjTyCtor, _)
+  | AppTy (ObjTyCtor _, _)
   | AppTy (ListTyCtor, _)
   | AppTy (NativePtrTyCtor _, _) -> CRefExpr "NULL", ctx
 
