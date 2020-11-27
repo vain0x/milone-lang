@@ -11,6 +11,7 @@
 module rec MiloneLang.Cir
 
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 
 // -----------------------------------------------
@@ -29,6 +30,7 @@ type CTyInstance =
 type CTy =
   | CVoidTy
   | CIntTy of IntFlavor
+  | CFloatTy of FloatFlavor
   | CCharTy
   | CPtrTy of CTy
   | CConstPtrTy of CTy
@@ -72,6 +74,7 @@ type CExpr =
   | CDefaultExpr
 
   | CIntExpr of int
+  | CDoubleExpr of text: string
   | CCharExpr of char
 
   /// E.g. `"hi"`

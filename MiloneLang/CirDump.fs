@@ -4,6 +4,7 @@
 module rec MiloneLang.CirDump
 
 open MiloneLang.Util
+open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Cir
 
@@ -80,6 +81,7 @@ let private cpTy ty acc: string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
   | CIntTy flavor -> acc |> cons (cIntegerTyName flavor)
+  | CFloatTy flavor -> acc |> cons (cFloatTyName flavor)
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty -> acc |> cpTy ty |> cons "*"
   | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"
@@ -162,6 +164,7 @@ let private cpExpr expr acc: string list =
   match expr with
   | CDefaultExpr -> acc |> cons "{}"
   | CIntExpr value -> acc |> cons (string value)
+  | CDoubleExpr value -> acc |> cons (string value)
 
   | CCharExpr value ->
       acc

@@ -14,7 +14,7 @@ int main() {
     milone_assert((((int)(((uint32_t)6) * ((uint32_t)7))) == 42), 16, 2);
     milone_assert((((int)(((uint32_t)294) / ((uint32_t)7))) == 42), 17, 2);
     milone_assert((((int)(((uint32_t)2063) % ((uint32_t)43))) == 42), 18, 2);
-    milone_assert((((int)((((uint32_t)(0 - 1)) - ((uint32_t)1)) / ((uint32_t)2))) == 2147483647), 21, 2);
+    milone_assert((((int)((((uint32_t)-1) - ((uint32_t)1)) / ((uint32_t)2))) == 2147483647), 21, 2);
     milone_assert((((uint32_t)2) < ((uint32_t)3)), 24, 2);
     milone_assert((((uint32_t)3) >= ((uint32_t)2)), 25, 2);
     milone_assert((((uint32_t)3) >= ((uint32_t)2)), 26, 2);

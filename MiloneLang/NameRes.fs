@@ -40,6 +40,7 @@ let private tyPrimOfName name tys loc =
   | "uint64", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I64)), [])
   | "unativeint", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, IPtr)), [])
 
+  | "float", [] -> tyFloat
   | "char", [] -> tyChar
   | "string", [] -> tyStr
   | "obj", [] -> tyObj

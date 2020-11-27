@@ -7,6 +7,7 @@ module rec MiloneLang.TySystem
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
@@ -22,7 +23,8 @@ let private tyCtorEncode tyCtor =
 
   match tyCtor with
   | IntTyCtor flavor -> 1, intFlavorToOrdinary flavor
-  | BoolTyCtor -> 2, 0
+  | FloatTyCtor flavor -> 2, floatFlavorToOrdinary flavor
+  | BoolTyCtor -> 3, 0
   | CharTyCtor -> 4, 0
   | StrTyCtor -> 5, 0
   | ObjTyCtor isMut -> 6, isMutToInt isMut
@@ -44,6 +46,7 @@ let tyCtorEq first second = tyCtorCmp first second = 0
 let tyCtorDisplay getTyName tyCtor =
   match tyCtor with
   | IntTyCtor flavor -> fsharpIntegerTyName flavor
+  | FloatTyCtor flavor -> fsharpFloatTyName flavor
   | BoolTyCtor -> "bool"
   | CharTyCtor -> "char"
   | StrTyCtor -> "string"
@@ -75,7 +78,11 @@ let traitMapTys f it =
 
   | IsIntTrait ty -> IsIntTrait(f ty)
 
+  | IsNumberTrait ty -> IsNumberTrait(f ty)
+
   | ToIntTrait ty -> ToIntTrait(f ty)
+
+  | ToFloatTrait ty -> ToFloatTrait(f ty)
 
   | ToStringTrait ty -> ToStringTrait(f ty)
 
@@ -490,6 +497,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
     match ty with
     | ErrorTy _
     | AppTy (IntTyCtor _, [])
+    | AppTy (FloatTyCtor _, [])
     | AppTy (BoolTyCtor, [])
     | AppTy (CharTyCtor, [])
     | AppTy (StrTyCtor, [])
@@ -502,6 +510,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       match ty with
       | ErrorTy _
       | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, [])
       | AppTy (CharTyCtor, [])
       | AppTy (StrTyCtor, []) -> logAcc, ctx
 
@@ -544,13 +553,33 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
 
+  | IsNumberTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, []) -> logAcc, ctx
+
+      | _ ->
+          // Coerce to int by default.
+          typingUnify logAcc ctx ty tyInt loc
+
   | ToIntTrait ty ->
       match ty with
       | ErrorTy _
       | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, [])
       | AppTy (CharTyCtor, [])
       | AppTy (StrTyCtor, [])
       | AppTy (NativePtrTyCtor _, []) -> logAcc, ctx
+
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+
+  | ToFloatTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, [])
+      | AppTy (StrTyCtor _, []) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 

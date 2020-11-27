@@ -30,6 +30,7 @@ type Vis =
 type Lit =
   | BoolLit of boolValue: bool
   | IntLit of intValue: int
+  | FloatLit of floatText: string
   | CharLit of charValue: char
   | StrLit of stringValue: string
 
@@ -67,6 +68,7 @@ type Token =
   | CommentToken
 
   | IntToken of int
+  | FloatToken of string
   | CharToken of char
   | StrToken of string
   | IdentToken of Ident

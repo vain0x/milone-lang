@@ -779,6 +779,7 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.StrGetSlice -> regular "str_get_slice" KStrGetSlicePrim
           | HPrim.Char -> regular "char" KCharPrim
           | HPrim.ToInt _ -> regular "int" KIntPrim
+          | HPrim.ToFloat _ -> failwith "unimplemented"
           | HPrim.String -> regular "string" KStringPrim
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
           | HPrim.NativeFun -> failwith "NEVER: HPrim.NativeFun is resolved in Typing."

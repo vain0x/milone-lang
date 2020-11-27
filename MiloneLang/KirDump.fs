@@ -59,6 +59,7 @@ let private litToDebugString lit =
   match lit with
   | BoolLit false -> "false"
   | BoolLit true -> "true"
+  | FloatLit text -> text
   | IntLit value -> string value
   | CharLit value -> "'" + charEscape value + "'"
   | StrLit value -> "\"" + strEscape value + "\""

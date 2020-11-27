@@ -141,8 +141,17 @@ let private desugarFun pats body pos =
 
 /// Desugar `-x` to `0 - x`.
 let private desugarUniNeg arg pos =
-  let zero = ALitExpr(IntLit 0, pos)
-  ABinaryExpr(SubBinary, zero, arg, pos)
+  match arg with
+  | ALitExpr (IntLit value, pos) ->
+      // FIXME: this trick fails for int min value
+      ALitExpr(IntLit(-value), pos)
+
+  | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit ("-" + text), pos)
+
+  | _ ->
+      // FIXME: this fails when arg is not of int
+      let zero = ALitExpr(IntLit 0, pos)
+      ABinaryExpr(SubBinary, zero, arg, pos)
 
 /// `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos =

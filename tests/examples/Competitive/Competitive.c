@@ -1538,7 +1538,7 @@ struct StringIntIntObjectSegNodeTag_Tuple5 segNodeNewEmpty_2(struct String empty
     struct StringIntIntObjectSegNodeTag_Tuple5 tuple_11;
     tuple_11.t0 = emptyItem_1;
     tuple_11.t1 = 0;
-    tuple_11.t2 = (0 - 1);
+    tuple_11.t2 = -1;
     tuple_11.t3 = unitObj_;
     tuple_11.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
     return tuple_11;
@@ -1548,7 +1548,7 @@ struct IntIntIntObjectSegNodeTag_Tuple5 segNodeNewEmpty_1(int emptyItem_1) {
     struct IntIntIntObjectSegNodeTag_Tuple5 tuple_12;
     tuple_12.t0 = emptyItem_1;
     tuple_12.t1 = 0;
-    tuple_12.t2 = (0 - 1);
+    tuple_12.t2 = -1;
     tuple_12.t3 = unitObj_;
     tuple_12.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
     return tuple_12;
@@ -2132,7 +2132,7 @@ struct IntIntIntObjectSegNodeTag_Tuple5 segNodeMakeBalanced_1(struct IntIntIntFu
     int call_137 = toBalance_1(node_7);
     int selfBalance_ = call_137;
     int if_33;
-    if ((selfBalance_ >= (0 - 1))) {
+    if ((selfBalance_ >= -1)) {
         goto then_149;
     } else {
         goto else_150;
@@ -2226,7 +2226,7 @@ struct StringIntIntObjectSegNodeTag_Tuple5 segNodeMakeBalanced_2(struct StringSt
     int call_146 = toBalance_2(node_7);
     int selfBalance_ = call_146;
     int if_39;
-    if ((selfBalance_ >= (0 - 1))) {
+    if ((selfBalance_ >= -1)) {
         goto then_167;
     } else {
         goto else_168;

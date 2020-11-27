@@ -140,6 +140,7 @@ let private bpNext bp =
 let private tokenIsExprOrPatFirst (token: Token) =
   match token with
   | IntToken _
+  | FloatToken _
   | CharToken _
   | StrToken _
   | IdentToken _
@@ -475,6 +476,8 @@ let private parsePatAtom basePos (tokens, errors) =
       parsePatError "Expected a pattern atom" (tokens, errors)
 
   | (IntToken value, pos) :: tokens -> ALitPat(IntLit value, pos), tokens, errors
+
+  | (FloatToken value, pos) :: tokens -> ALitPat(FloatLit value, pos), tokens, errors
 
   | (CharToken value, pos) :: tokens -> ALitPat(CharLit value, pos), tokens, errors
 
@@ -948,6 +951,8 @@ let private parseAtom basePos (tokens, errors) =
   | (TrueToken, pos) :: tokens -> ALitExpr(BoolLit true, pos), tokens, errors
 
   | (IntToken value, pos) :: tokens -> ALitExpr(IntLit value, pos), tokens, errors
+
+  | (FloatToken value, pos) :: tokens -> ALitExpr(FloatLit value, pos), tokens, errors
 
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
 

@@ -19,6 +19,7 @@ module rec MiloneLang.Hir
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 
 /// Unique serial number to identify something
@@ -78,6 +79,7 @@ type IsMut =
 [<NoEquality; NoComparison>]
 type TyCtor =
   | IntTyCtor of intFlavor: IntFlavor
+  | FloatTyCtor of floatFlavor: FloatFlavor
   | BoolTyCtor
   | CharTyCtor
   | StrTyCtor
@@ -143,8 +145,13 @@ type Trait =
   /// Integer type. Defaults to int.
   | IsIntTrait of Ty
 
+  /// Integer or float type. Defaults to int.
+  | IsNumberTrait of Ty
+
   /// Type supports conversion to integer.
   | ToIntTrait of Ty
+
+  | ToFloatTrait of Ty
 
   /// Type can be applied to `string` function.
   | ToStringTrait of Ty
@@ -293,6 +300,7 @@ type HPrim =
 
   // conversion:
   | ToInt of toIntFlavor: IntFlavor
+  | ToFloat of toFloatFlavor: FloatFlavor
   | Char
   | String
   | Box
@@ -440,6 +448,8 @@ let tyInt =
 
 let tyBool = AppTy(BoolTyCtor, [])
 
+let tyFloat = AppTy(FloatTyCtor F64, [])
+
 let tyChar = AppTy(CharTyCtor, [])
 
 let tyStr = AppTy(StrTyCtor, [])
@@ -512,6 +522,7 @@ let litToTy (lit: Lit): Ty =
   match lit with
   | BoolLit _ -> tyBool
   | IntLit _ -> tyInt
+  | FloatLit _ -> tyFloat
   | CharLit _ -> tyChar
   | StrLit _ -> tyStr
 
@@ -524,6 +535,10 @@ let litCmp l r =
   | IntLit l, IntLit r -> compare l r
   | IntLit _, _ -> -1
   | _, IntLit _ -> 1
+
+  | FloatLit l, FloatLit r -> compare l r
+  | FloatLit _, _ -> -1
+  | _, FloatLit _ -> 1
 
   | CharLit l, CharLit r -> compare l r
   | CharLit _, _ -> -1
@@ -569,6 +584,9 @@ let primFromIdent ident =
   | "uint64" -> HPrim.ToInt(IntFlavor(Unsigned, I64)) |> Some
   | "unativeint" -> HPrim.ToInt(IntFlavor(Unsigned, IPtr)) |> Some
 
+  | "float" -> HPrim.ToFloat F64 |> Some
+  | "float32" -> HPrim.ToFloat F32 |> Some
+
   | "string" -> HPrim.String |> Some
 
   | "None" -> HPrim.OptionNone |> Some
@@ -595,7 +613,10 @@ let primToTySpec prim =
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
-  | HPrim.Mod
+  | HPrim.Mod ->
+      let ty = meta 1
+      poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
+
   | HPrim.BitAnd
   | HPrim.BitOr
   | HPrim.BitXor ->
@@ -667,6 +688,11 @@ let primToTySpec prim =
       let toIntTy = meta 1
       let resultTy = AppTy(IntTyCtor flavor, [])
       poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
+
+  | HPrim.ToFloat flavor ->
+      let srcTy = meta 1
+      let resultTy = AppTy(FloatTyCtor flavor, [])
+      poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
 
   | HPrim.String ->
       let toStrTy = meta 1
@@ -976,7 +1002,11 @@ let logToString tyDisplay loc log =
 
   | Log.TyBoundError (IsIntTrait ty) -> sprintf "%s Expected int or some integer type but was '%s'" loc (tyDisplay ty)
 
+  | Log.TyBoundError (IsNumberTrait ty) -> sprintf "%s Expected int or float type but was '%s'" loc (tyDisplay ty)
+
   | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to integer from '%s'" loc (tyDisplay ty)
+
+  | Log.TyBoundError (ToFloatTrait ty) -> sprintf "%s Can't convert to float from '%s'" loc (tyDisplay ty)
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%s'" loc (tyDisplay ty)
 

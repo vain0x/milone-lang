@@ -12,6 +12,7 @@ module rec MiloneLang.CirGen
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.TySystem
 open MiloneLang.Hir
@@ -416,6 +417,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
     let tyToUniqueName ty =
       match ty with
       | AppTy (IntTyCtor flavor, _) -> cIntegerTyPascalName flavor, ctx
+      | AppTy (FloatTyCtor flavor, _) -> cFloatTyPascalName flavor, ctx
       | AppTy (BoolTyCtor, _) -> "Bool", ctx
       | AppTy (CharTyCtor, _) -> "Char", ctx
       | AppTy (StrTyCtor, _) -> "String", ctx
@@ -512,6 +514,8 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (IntTyCtor flavor, _) -> CIntTy flavor, ctx
 
+  | AppTy (FloatTyCtor flavor, _) -> CFloatTy flavor, ctx
+
   | AppTy (CharTyCtor, _) -> CCharTy, ctx
 
   | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
@@ -555,6 +559,8 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (TupleTyCtor, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
 
   | AppTy (IntTyCtor flavor, _) -> CIntTy flavor, ctx
+
+  | AppTy (FloatTyCtor flavor, _) -> CFloatTy flavor, ctx
 
   | AppTy (CharTyCtor, _) -> CCharTy, ctx
 
@@ -647,6 +653,7 @@ let private cBinaryOf op =
 let private genLit lit =
   match lit with
   | IntLit value -> CIntExpr value
+  | FloatLit text -> CDoubleExpr text
   | CharLit value -> CCharExpr value
   | StrLit value -> CStrObjExpr value
   | BoolLit false -> CIntExpr 0
@@ -664,8 +671,9 @@ let private cgConst ctx mConst =
 let private genDefault ctx ty =
   match ty with
   | AppTy (TupleTyCtor, [])
-  | AppTy (BoolTyCtor, _)
   | AppTy (IntTyCtor _, _)
+  | AppTy (FloatTyCtor _, _)
+  | AppTy (BoolTyCtor, _)
   | AppTy (CharTyCtor, _) -> CIntExpr 0, ctx
 
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
@@ -706,6 +714,7 @@ let private genUnaryExpr ctx op arg ty _ =
   match op with
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx
+  | MFloatOfScalarUnary flavor -> CCastExpr(arg, CFloatTy flavor), ctx
   | MCharOfScalarUnary -> CCastExpr(arg, CCharTy), ctx
   | MStrPtrUnary -> CNavExpr(arg, "str"), ctx
   | MStrLenUnary -> CNavExpr(arg, "len"), ctx
@@ -912,11 +921,19 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
       let name = cStringToIntegerFunName flavor
       conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
 
+  | MFloatOfStrPrim flavor ->
+      let name = cStringToFloatFunName flavor
+      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+
   | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_char", [ arg ]))
 
   | MStrOfIntPrim flavor ->
       let name = cStringOfIntegerFunName flavor
+      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+
+  | MStrOfFloatPrim flavor ->
+      let name = cStringOfFloatFunName flavor
       conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
 
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CRefExpr "str_get_slice", args)))

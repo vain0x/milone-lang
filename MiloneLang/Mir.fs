@@ -14,6 +14,7 @@ module rec MiloneLang.Mir
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
@@ -42,6 +43,7 @@ type MUnary =
 
   // Converts a scalar to int.
   | MIntOfScalarUnary of intOfScalarFlavor: IntFlavor
+  | MFloatOfScalarUnary of floatOfScalarFlavor: FloatFlavor
   | MCharOfScalarUnary
 
   /// Gets raw ptr of string.
@@ -105,10 +107,12 @@ type MBinary =
 type MPrim =
   /// string -> int
   | MIntOfStrPrim of intOfStrFlavor: IntFlavor
+  | MFloatOfStrPrim of floatOfStrFlavor: FloatFlavor
 
   | MStrOfBoolPrim
   | MStrOfCharPrim
   | MStrOfIntPrim of strOfIntFlavor: IntFlavor
+  | MStrOfFloatPrim of strOfFloatFlavor: FloatFlavor
 
   | MStrGetSlicePrim
 

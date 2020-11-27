@@ -5,6 +5,7 @@ module rec MiloneLang.AutoBoxing
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 open MiloneLang.TySystem
@@ -142,9 +143,10 @@ let private trdTy (ctx: TrdCtx) ty =
         trdTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
       match tyCtor with
+      | IntTyCtor _
+      | FloatTyCtor _
       | BoolTyCtor
       | CharTyCtor
-      | IntTyCtor _
       | StrTyCtor
       | ObjTyCtor _ ->
           assert (List.isEmpty tyArgs)
@@ -312,6 +314,7 @@ let private tsmTy (ctx: TsmCtx) ty =
       | CharTyCtor -> 1, ctx
 
       | IntTyCtor flavor -> intFlavorToBytes flavor, ctx
+      | FloatTyCtor flavor -> floatFlavorToBytes flavor, ctx
 
       | ObjTyCtor _
       | ListTyCtor
