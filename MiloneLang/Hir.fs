@@ -270,6 +270,11 @@ type HPrim =
   | Mul
   | Div
   | Mod
+  | BitAnd
+  | BitOr
+  | BitXor
+  | LeftShift
+  | RightShift
   | Eq
   | Lt
   | Index
@@ -542,11 +547,14 @@ let primFromIdent ident =
   | "int32" -> HPrim.ToInt(IntFlavor(Signed, I32)) |> Some
   | "uint"
   | "uint32" -> HPrim.ToInt(IntFlavor(Unsigned, I32)) |> Some
+  | "sbyte"
   | "int8" -> HPrim.ToInt(IntFlavor(Signed, I8)) |> Some
+  | "byte"
+  | "uint8" -> HPrim.ToInt(IntFlavor(Unsigned, I8)) |> Some
+
   | "int16" -> HPrim.ToInt(IntFlavor(Signed, I16)) |> Some
   | "int64" -> HPrim.ToInt(IntFlavor(Signed, I64)) |> Some
   | "nativeint" -> HPrim.ToInt(IntFlavor(Signed, IPtr)) |> Some
-  | "uint8" -> HPrim.ToInt(IntFlavor(Unsigned, I8)) |> Some
   | "uint16" -> HPrim.ToInt(IntFlavor(Unsigned, I16)) |> Some
   | "uint64" -> HPrim.ToInt(IntFlavor(Unsigned, I64)) |> Some
   | "unativeint" -> HPrim.ToInt(IntFlavor(Unsigned, IPtr)) |> Some
@@ -576,9 +584,17 @@ let primToTySpec prim =
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
-  | HPrim.Mod ->
+  | HPrim.Mod
+  | HPrim.BitAnd
+  | HPrim.BitOr
+  | HPrim.BitXor ->
       let ty = meta 1
       poly (tyFun ty (tyFun ty ty)) [ IsIntTrait ty ]
+
+  | HPrim.LeftShift
+  | HPrim.RightShift ->
+      let ty = meta 1
+      poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
 
   | HPrim.Eq ->
       let eqTy = meta 1

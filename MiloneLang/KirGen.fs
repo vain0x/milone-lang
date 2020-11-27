@@ -756,6 +756,11 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.Mul -> regular "mul" KMulPrim
           | HPrim.Div -> regular "div" KDivPrim
           | HPrim.Mod -> regular "mod" KModPrim
+          | HPrim.BitAnd -> regular "bit_and" KBitAndPrim
+          | HPrim.BitOr -> regular "bit_or" KBitOrPrim
+          | HPrim.BitXor -> regular "bit_xor" KBitXorPrim
+          | HPrim.LeftShift -> regular "left_shift" KLeftShiftPrim
+          | HPrim.RightShift -> regular "right_shift" KRightShiftPrim
           | HPrim.Eq -> comparison "equal" KEqualPrim
           | HPrim.Lt -> comparison "less" KLessPrim
           | HPrim.Nil -> unreachable itself

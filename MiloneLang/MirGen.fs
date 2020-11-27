@@ -923,7 +923,7 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
 
   | AppTy ((IntTyCtor _
            | CharTyCtor),
-           _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, tyInt, loc), ctx
+           _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, AppTy(IntTyCtor flavor, []), loc), ctx
 
   | AppTy (StrTyCtor, _) ->
       let temp, tempSerial, ctx = freshVar ctx "call" ty loc
@@ -1048,6 +1048,18 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Div, _ -> fail ()
   | HPrim.Mod, [ l; r ] -> mirifyExprOpArith ctx MModBinary l r ty loc
   | HPrim.Mod, _ -> fail ()
+
+  | HPrim.BitAnd, [ l; r ] -> regularBinary MBitAndBinary l r
+  | HPrim.BitAnd, _ -> fail ()
+  | HPrim.BitOr, [ l; r ] -> regularBinary MBitOrBinary l r
+  | HPrim.BitOr, _ -> fail ()
+  | HPrim.BitXor, [ l; r ] -> regularBinary MBitXorBinary l r
+  | HPrim.BitXor, _ -> fail ()
+  | HPrim.LeftShift, [ l; r ] -> regularBinary MLeftShiftBinary l r
+  | HPrim.LeftShift, _ -> fail ()
+  | HPrim.RightShift, [ l; r ] -> regularBinary MRightShiftBinary l r
+  | HPrim.RightShift, _ -> fail ()
+
   | HPrim.Eq, [ l; r ] -> mirifyExprOpCmp ctx MEqualBinary l r ty loc
   | HPrim.Eq, _ -> fail ()
   | HPrim.Lt, [ l; r ] -> mirifyExprOpCmp ctx MLessBinary l r ty loc

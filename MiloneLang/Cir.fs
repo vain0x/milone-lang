@@ -52,6 +52,11 @@ type CBinary =
   | CModBinary
   | CAddBinary
   | CSubBinary
+  | CBitAndBinary
+  | CBitOrBinary
+  | CBitXorBinary
+  | CLeftShiftBinary
+  | CRightShiftBinary
   | CEqualBinary
   | CNotEqualBinary
   | CLessBinary

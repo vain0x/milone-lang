@@ -81,6 +81,11 @@ type MBinary =
   | MModBinary
   | MAddBinary
   | MSubBinary
+  | MBitAndBinary
+  | MBitOrBinary
+  | MBitXorBinary
+  | MLeftShiftBinary
+  | MRightShiftBinary
   | MEqualBinary
   | MNotEqualBinary
   | MLessBinary

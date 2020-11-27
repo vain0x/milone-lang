@@ -97,12 +97,16 @@ let private posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
 // -----------------------------------------------
 
 /// Binding power.
+///
+/// See: <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/symbol-and-operator-reference/#operator-precedence>
 [<NoEquality; NoComparison>]
 type private Bp =
   | PrefixBp
   | MulBp
   | AddBp
   | ConsBp
+  | XorBp
+  | BitBp
 
   /// `|>`
   | PipeBp
@@ -116,15 +120,12 @@ type private Bp =
 let private bpNext bp =
   match bp with
   | OrBp -> AndBp
-
   | AndBp -> CmpBp
-
   | CmpBp -> PipeBp
-
-  | PipeBp -> ConsBp
-
+  | PipeBp -> BitBp
+  | BitBp -> XorBp
+  | XorBp -> ConsBp
   | ConsBp -> AddBp
-
   | AddBp -> MulBp
 
   | MulBp
@@ -1064,6 +1065,13 @@ let private parseOps bp basePos first (tokens, errors) =
   | CmpBp, (RightEqToken, opPos) :: tokens -> nextL first GreaterEqualBinary opPos (tokens, errors)
 
   | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL first PipeBinary opPos (tokens, errors)
+
+  | XorBp, (HatHatHatToken, opPos) :: tokens -> nextR first BitXorBinary opPos (tokens, errors)
+
+  | BitBp, (AmpAmpAmpToken, opPos) :: tokens -> nextL first BitAndBinary opPos (tokens, errors)
+  | BitBp, (PipePipePipeToken, opPos) :: tokens -> nextL first BitOrBinary opPos (tokens, errors)
+  | BitBp, (LeftLeftLeftToken, opPos) :: tokens -> nextL first LeftShiftBinary opPos (tokens, errors)
+  | BitBp, (RightRightRightToken, opPos) :: tokens -> nextL first RightShiftBinary opPos (tokens, errors)
 
   | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR first ConsBinary opPos (tokens, errors)
 

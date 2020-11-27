@@ -596,10 +596,18 @@ let private cBinaryOf op =
   | MModBinary -> CModBinary
   | MAddBinary -> CAddBinary
   | MSubBinary -> CSubBinary
+
+  | MBitAndBinary -> CBitAndBinary
+  | MBitOrBinary -> CBitOrBinary
+  | MBitXorBinary -> CBitXorBinary
+  | MLeftShiftBinary -> CLeftShiftBinary
+  | MRightShiftBinary -> CRightShiftBinary
+
   | MEqualBinary -> CEqualBinary
   | MNotEqualBinary -> CNotEqualBinary
   | MLessBinary -> CLessBinary
   | MGreaterEqualBinary -> CGreaterEqualBinary
+
   | MStrAddBinary
   | MStrCmpBinary
   | MStrIndexBinary -> failwith "Never"

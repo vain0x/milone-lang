@@ -137,6 +137,11 @@ let private primToArity ty prim =
   | HPrim.Mul
   | HPrim.Div
   | HPrim.Mod
+  | HPrim.BitAnd
+  | HPrim.BitOr
+  | HPrim.BitXor
+  | HPrim.LeftShift
+  | HPrim.RightShift
   | HPrim.Eq
   | HPrim.Lt
   | HPrim.Cons

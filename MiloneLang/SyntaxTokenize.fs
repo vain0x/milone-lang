@@ -341,6 +341,7 @@ let private tokenOfOp (text: string) l r: Token =
       match s with
       | "&" -> AmpToken
       | "&&" -> AmpAmpToken
+      | "&&&" -> AmpAmpAmpToken
       | _ -> ErrorToken
 
   | '-' ->
@@ -366,12 +367,16 @@ let private tokenOfOp (text: string) l r: Token =
       | "<" -> LeftAngleToken
       | "<=" -> LeftEqToken
       | "<>" -> LeftRightToken
+      | "<<" -> LeftLeftToken
+      | "<<<" -> LeftLeftLeftToken
       | _ -> ErrorToken
 
   | '>' ->
       match s with
       | ">" -> RightAngleToken
       | ">=" -> RightEqToken
+      | ">>" -> RightRightToken
+      | ">>>" -> RightRightRightToken
       | _ -> ErrorToken
 
   | '|' ->
@@ -379,6 +384,13 @@ let private tokenOfOp (text: string) l r: Token =
       | "|" -> PipeToken
       | "|>" -> PipeRightToken
       | "||" -> PipePipeToken
+      | "|||" -> PipePipePipeToken
+      | _ -> ErrorToken
+
+  | '^' ->
+      match s with
+      | "^" -> HatToken
+      | "^^^" -> HatHatHatToken
       | _ -> ErrorToken
 
   | '=' -> expect "=" EqToken

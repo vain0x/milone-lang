@@ -26,7 +26,6 @@ module rec MiloneLang.AstToHir
 open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
-open MiloneLang.TySystem
 
 /// Convert pos to loc.
 let private toLoc (doc: DocId) (pos: Pos): Loc =
@@ -40,6 +39,11 @@ let private opToPrim op =
   | MulBinary -> HPrim.Mul
   | DivBinary -> HPrim.Div
   | ModBinary -> HPrim.Mod
+  | BitAndBinary -> HPrim.BitAnd
+  | BitOrBinary -> HPrim.BitOr
+  | BitXorBinary -> HPrim.BitXor
+  | LeftShiftBinary -> HPrim.LeftShift
+  | RightShiftBinary -> HPrim.RightShift
   | EqualBinary -> HPrim.Eq
   | LessBinary -> HPrim.Lt
   | ConsBinary -> HPrim.Cons

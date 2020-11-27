@@ -289,9 +289,12 @@ struct String str_get_slice(int l, int r, struct String s) {
     return (struct String){.str = str, .len = len};
 }
 
-static void verify_str_to_int(const char *int_type_name, const char *endptr, int range_check) {
-    if (!range_check || (*endptr != '\0' && !isspace(*endptr)) || errno == ERANGE) {
-        fprintf(stderr, "FATAL: Failed to convert a string to %s.\n", int_type_name);
+static void verify_str_to_int(const char *int_type_name, const char *endptr,
+                              int range_check) {
+    if (!range_check || (*endptr != '\0' && !isspace(*endptr)) ||
+        errno == ERANGE) {
+        fprintf(stderr, "FATAL: Failed to convert a string to %s.\n",
+                int_type_name);
         exit(1);
     }
 }
@@ -299,7 +302,7 @@ static void verify_str_to_int(const char *int_type_name, const char *endptr, int
 int8_t str_to_int8(struct String s) {
     char *endptr = s.str + s.len;
     int n = strtol(s.str, &endptr, 10);
-    verify_str_to_int("int8_t", endptr,INT8_MIN <= n && n <= INT8_MAX);
+    verify_str_to_int("int8_t", endptr, INT8_MIN <= n && n <= INT8_MAX);
     return (int8_t)n;
 }
 

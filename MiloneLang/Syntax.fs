@@ -95,6 +95,8 @@ type Token =
   | AmpToken
   /// `&&`
   | AmpAmpToken
+  /// `&&&`
+  | AmpAmpAmpToken
   /// `->`
   | ArrowToken
   /// `:`
@@ -109,12 +111,24 @@ type Token =
   | DotDotToken
   /// `=`
   | EqToken
-  /// `>=`
-  | RightEqToken
+  /// `^`
+  | HatToken
+  /// `^^^`
+  | HatHatHatToken
   /// `<=`
   | LeftEqToken
+  /// `<<`
+  | LeftLeftToken
+  /// `<<<`
+  | LeftLeftLeftToken
   /// `<>`
   | LeftRightToken
+  /// `>=`
+  | RightEqToken
+  /// `>>`
+  | RightRightToken
+  /// `>>>`
+  | RightRightRightToken
   /// `-`
   | MinusToken
   /// `%`
@@ -125,6 +139,8 @@ type Token =
   | PipeRightToken
   /// `||`
   | PipePipeToken
+  /// `|||`
+  | PipePipePipeToken
   /// `+`
   | PlusToken
   /// `;`
@@ -189,6 +205,16 @@ type Binary =
   | GreaterBinary
   /// `>=`
   | GreaterEqualBinary
+  /// `&&&`
+  | BitAndBinary
+  /// `|||`
+  | BitOrBinary
+  /// `^^^`
+  | BitXorBinary
+  /// `<<<`
+  | LeftShiftBinary
+  /// `>>>`
+  | RightShiftBinary
   /// `|>`
   | PipeBinary
   /// `&&` Logical and
