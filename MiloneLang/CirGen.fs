@@ -445,6 +445,16 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
           let listTy = itemTy + "List"
           listTy, ctx
 
+      | AppTy (NativePtrTyCtor isMut, [ itemTy ]) ->
+          let itemTy, ctx = ctx |> go itemTy
+
+          let ptrTy =
+            match isMut with
+            | IsConst -> itemTy + "ConstPtr"
+            | IsMut -> itemTy + "MutPtr"
+
+          ptrTy, ctx
+
       | AppTy (TupleTyCtor, []) -> "Unit", ctx
 
       | AppTy (TupleTyCtor, itemTys) ->
@@ -461,6 +471,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
       | AppTy (ListTyCtor, _)
       | AppTy (FunTyCtor, _)
+      | AppTy (NativePtrTyCtor _, _)
       | AppTy (SynonymTyCtor _, _)
       | AppTy (UnionTyCtor _, _)
       | AppTy (RecordTyCtor _, _)
@@ -484,6 +495,13 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
   go ty ctx
 
+let private cgNativePtrTy ctx isMut itemTy =
+  let itemTy, ctx = cgTyIncomplete ctx itemTy
+
+  match isMut with
+  | IsConst -> CConstPtrTy itemTy, ctx
+  | IsMut -> CPtrTy itemTy, ctx
+
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
 let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
@@ -505,6 +523,8 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (ListTyCtor, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
 
   | AppTy (TupleTyCtor, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
+
+  | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
   | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
@@ -560,6 +580,8 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
              |> tyExpandSynonyms (fun tySerial -> ctx.Tys |> mapTryFind tySerial))
 
       genTupleTyDef ctx itemTys
+
+  | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
   | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
@@ -641,7 +663,8 @@ let private genDefault ctx ty =
 
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (ObjTyCtor, _)
-  | AppTy (ListTyCtor, _) -> CRefExpr "NULL", ctx
+  | AppTy (ListTyCtor, _)
+  | AppTy (NativePtrTyCtor _, _) -> CRefExpr "NULL", ctx
 
   | AppTy (StrTyCtor, _)
   | AppTy (FunTyCtor, _)

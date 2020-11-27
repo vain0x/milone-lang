@@ -152,7 +152,8 @@ let private trdTy (ctx: TrdCtx) ty =
 
       | ListTyCtor
       | FunTyCtor
-      | TupleTyCtor -> tyArgs |> List.fold trdTy ctx
+      | TupleTyCtor
+      | NativePtrTyCtor _ -> tyArgs |> List.fold trdTy ctx
 
       | UnionTyCtor tySerial -> nominal tySerial
       | RecordTyCtor tySerial -> nominal tySerial
@@ -313,7 +314,8 @@ let private tsmTy (ctx: TsmCtx) ty =
       | IntTyCtor flavor -> intFlavorToBytes flavor, ctx
 
       | ObjTyCtor
-      | ListTyCtor -> 8, ctx
+      | ListTyCtor
+      | NativePtrTyCtor _ -> 8, ctx
 
       | StrTyCtor
       | FunTyCtor -> 16, ctx

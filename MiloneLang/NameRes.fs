@@ -50,6 +50,9 @@ let private tyPrimOfName name tys loc =
 
   | "list", [ itemTy ] -> tyList itemTy
 
+  | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ])
+  | "constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ])
+
   | _ ->
       // FIXME: Report error correctly
       printfn "#error tyPrimOfName name=%s loc=%s" name (locToString loc)

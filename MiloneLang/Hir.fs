@@ -68,6 +68,11 @@ type StorageModifier =
 [<NoEquality; NoComparison>]
 type NameCtx = NameCtx of map: AssocMap<Serial, Ident> * lastSerial: Serial
 
+[<NoEquality; NoComparison>]
+type IsMut =
+  | IsConst
+  | IsMut
+
 /// Type constructor.
 [<Struct>]
 [<NoEquality; NoComparison>]
@@ -85,6 +90,9 @@ type TyCtor =
 
   /// Ty args must be `[t]`.
   | ListTyCtor
+
+  // FFI types.
+  | NativePtrTyCtor of nativePtrIsMut: IsMut
 
   // Nominal types.
   | SynonymTyCtor of synonymTy: TySerial

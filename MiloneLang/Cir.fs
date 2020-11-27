@@ -31,6 +31,7 @@ type CTy =
   | CIntTy of IntFlavor
   | CCharTy
   | CPtrTy of CTy
+  | CConstPtrTy of CTy
   | CFunPtrTy of argTys: CTy list * resultTy: CTy
   | CStructTy of Ident
   | CEnumTy of Ident

@@ -81,6 +81,7 @@ let private cpTy ty acc: string list =
   | CIntTy flavor -> acc |> cons (cIntegerTyName flavor)
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty -> acc |> cpTy ty |> cons "*"
+  | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name

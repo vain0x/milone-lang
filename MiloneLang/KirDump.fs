@@ -106,6 +106,10 @@ let private tyToDebugString ty ctx =
 
       | ListTyCtor, [ itemTy ] -> "Array<" + tyToDebugString itemTy ctx + ">"
 
+      | NativePtrTyCtor IsMut, [ itemTy ] -> "MutPtr<" + tyToDebugString itemTy ctx + ">"
+
+      | NativePtrTyCtor IsConst, [ itemTy ] -> "ConstPtr<" + tyToDebugString itemTy ctx + ">"
+
       | _, [] -> tyCtorToDebugString tyCtor ctx
 
       | _ ->

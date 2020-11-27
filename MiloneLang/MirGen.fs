@@ -924,7 +924,8 @@ let private mirifyCallCompareExpr ctx itself l r ty loc =
   | AppTy (IntTyCtor (IntFlavor (Signed, I32)), _) -> MBinaryExpr(MIntCompareBinary, l, r, tyInt, loc), ctx
 
   | AppTy ((IntTyCtor (IntFlavor (Signed, I64))
-           | IntTyCtor (IntFlavor (Signed, IPtr))),
+           | IntTyCtor (IntFlavor (Signed, IPtr))
+           | NativePtrTyCtor _),
            _) -> MBinaryExpr(MInt64CompareBinary, l, r, tyInt, loc), ctx
 
   | AppTy ((IntTyCtor (IntFlavor (Unsigned, _))), _) -> MBinaryExpr(MUInt64CompareBinary, l, r, tyInt, loc), ctx
@@ -946,7 +947,8 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
   | AppTy (IntTyCtor srcFlavor, _) when intFlavorEq srcFlavor flavor -> arg, ctx
 
   | AppTy ((IntTyCtor _
-           | CharTyCtor),
+           | CharTyCtor
+           | NativePtrTyCtor _),
            _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, AppTy(IntTyCtor flavor, []), loc), ctx
 
   | AppTy (StrTyCtor, _) ->
@@ -966,7 +968,8 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
   match argTy with
   | AppTy (CharTyCtor, _) -> arg, ctx
 
-  | AppTy (IntTyCtor _, _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
+  | AppTy (IntTyCtor _, _)
+  | AppTy (NativePtrTyCtor _, _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
 
   | _ -> failwithf "NEVER: %A" itself
 
