@@ -489,6 +489,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       match ty with
       | ErrorTy _
       | AppTy (IntTyCtor _, [])
+      | AppTy (CharTyCtor _, [])
       | AppTy (StrTyCtor, []) -> logAcc, ctx
 
       | _ ->
