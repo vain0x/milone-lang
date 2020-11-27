@@ -67,4 +67,7 @@ let main _ =
 
   // Conversion from string.
   assert (float "3.14" = 3.14)
+
+  // Formatting with printfn.
+  printfn "Assume PI is %f." 3.14
   0

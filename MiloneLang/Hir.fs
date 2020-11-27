@@ -964,6 +964,7 @@ let analyzeFormat (format: string) =
       match format.[i + 1] with
       | 's' -> tyFun tyStr (go (i + 2))
       | 'd' -> tyFun tyInt (go (i + 2))
+      | 'f' -> tyFun tyFloat (go (i + 2))
       | 'c' -> tyFun tyChar (go (i + 2))
       | _ -> go (i + 2)
     else
