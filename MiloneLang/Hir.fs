@@ -277,6 +277,7 @@ type HPrim =
   | RightShift
   | Eq
   | Lt
+  | Compare
   | Index
   | StrGetSlice
 
@@ -541,6 +542,8 @@ let primFromIdent ident =
 
   | "printfn" -> HPrim.Printfn |> Some
 
+  | "compare" -> HPrim.Compare |> Some
+
   | "char" -> HPrim.Char |> Some
 
   | "int"
@@ -603,6 +606,10 @@ let primToTySpec prim =
   | HPrim.Lt ->
       let cmpTy = meta 1
       poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ CmpTrait cmpTy ]
+
+  | HPrim.Compare ->
+      let cmpTy = meta 1
+      poly (tyFun cmpTy (tyFun cmpTy tyInt)) [ CmpTrait cmpTy ]
 
   | HPrim.Nil ->
       let itemTy = meta 1

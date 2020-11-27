@@ -44,6 +44,9 @@ type KPrim =
   /// 1/1/1.
   | KNotPrim
 
+  // int:
+  | KIntComparePrim
+
   // String:
   /// 2/1/1.
   | KStrAddPrim

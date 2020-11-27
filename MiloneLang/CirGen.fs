@@ -608,6 +608,9 @@ let private cBinaryOf op =
   | MLessBinary -> CLessBinary
   | MGreaterEqualBinary -> CGreaterEqualBinary
 
+  | MIntCompareBinary
+  | MInt64CompareBinary
+  | MUInt64CompareBinary
   | MStrAddBinary
   | MStrCmpBinary
   | MStrIndexBinary -> failwith "Never"
@@ -713,6 +716,10 @@ let private genUnaryExpr ctx op arg ty _ =
 
 let private genExprBin ctx op l r =
   match op with
+  | MIntCompareBinary -> genBinaryExprAsCall ctx "int_compare" l r
+  | MInt64CompareBinary -> genBinaryExprAsCall ctx "int64_compare" l r
+  | MUInt64CompareBinary -> genBinaryExprAsCall ctx "uint64_compare" l r
+
   | MStrAddBinary -> genBinaryExprAsCall ctx "str_add" l r
   | MStrCmpBinary -> genBinaryExprAsCall ctx "str_cmp" l r
   | MStrIndexBinary ->

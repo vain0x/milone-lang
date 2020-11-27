@@ -41,6 +41,13 @@ let signedCases () =
   assert (int64 17 = int64 17)
   assert (nativeint (-23) < nativeint 19)
 
+  assert (compare (int8 2) (int8 2) = 0)
+  assert (compare (int8 2) (int8 3) < 0)
+  assert (compare (int8 2) (int8 (-1)) > 0)
+
+  assert (compare (int64 1231231231 * int64 2) (int64 1231231231 * int64 3) < 0)
+  assert (compare (int64 1231231231 * int64 3) (int64 1231231231 * int64 2) > 0)
+
   // Conversion to string.
   assert (string (int8 (-1)) = "-1")
   assert (string (int64 1231231231 * int64 3) = "3693693693")
@@ -76,6 +83,10 @@ let unsignedCases () =
   assert (uint 13 = uint32 13)
   assert (uint64 17 = uint64 17)
   assert (unativeint 19 < unativeint 23)
+
+  assert (compare (uint64 2) (uint64 2) = 0)
+  assert (compare (uint64 1231231231 * uint64 2) (uint64 1231231231 * uint64 3) < 0)
+  assert (compare (uint64 1231231231 * uint64 3) (uint64 1231231231 * uint64 2) > 0)
 
   // Conversion to string.
   assert (string (uint8 0) = "0")

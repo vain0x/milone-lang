@@ -144,6 +144,7 @@ let private primToArity ty prim =
   | HPrim.RightShift
   | HPrim.Eq
   | HPrim.Lt
+  | HPrim.Compare
   | HPrim.Cons
   | HPrim.Index -> 2
 

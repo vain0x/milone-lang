@@ -909,6 +909,30 @@ let private mirifyExprOpCmp ctx op l r ty loc =
   let r, ctx = mirifyExpr ctx r
   mxCmp ctx op l r ty loc
 
+let private mirifyCallCompareExpr ctx itself l r ty loc =
+  let l, ctx = mirifyExpr ctx l
+  let r, ctx = mirifyExpr ctx r
+
+  match mexprToTy l with
+  // Comparison of small or unsigned integers is just `-` for not overflow.
+  | AppTy ((IntTyCtor (IntFlavor (_, I8))
+           | IntTyCtor (IntFlavor (_, I16))
+           | BoolTyCtor
+           | CharTyCtor),
+           _) -> MBinaryExpr(MSubBinary, l, r, tyInt, loc), ctx
+
+  | AppTy (IntTyCtor (IntFlavor (Signed, I32)), _) -> MBinaryExpr(MIntCompareBinary, l, r, tyInt, loc), ctx
+
+  | AppTy ((IntTyCtor (IntFlavor (Signed, I64))
+           | IntTyCtor (IntFlavor (Signed, IPtr))),
+           _) -> MBinaryExpr(MInt64CompareBinary, l, r, tyInt, loc), ctx
+
+  | AppTy ((IntTyCtor (IntFlavor (Unsigned, _))), _) -> MBinaryExpr(MUInt64CompareBinary, l, r, tyInt, loc), ctx
+
+  | AppTy (StrTyCtor, _) -> MBinaryExpr(MStrCmpBinary, l, r, tyInt, loc), ctx
+
+  | _ -> failwithf "NEVER: %A" itself
+
 let private mirifyExprSemi ctx exprs =
   // Discard non-last expressions.
   let exprs, ctx = mirifyExprs ctx exprs
@@ -1064,6 +1088,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Eq, _ -> fail ()
   | HPrim.Lt, [ l; r ] -> mirifyExprOpCmp ctx MLessBinary l r ty loc
   | HPrim.Lt, _ -> fail ()
+  | HPrim.Compare, [ l; r ] -> mirifyCallCompareExpr ctx itself l r ty loc
+  | HPrim.Compare, _ -> fail ()
   | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc
   | HPrim.Cons, _ -> fail ()
   | HPrim.Index, [ l; r ] -> regularBinary MStrIndexBinary l r

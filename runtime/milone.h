@@ -170,7 +170,23 @@ void *milone_mem_alloc(int count, size_t size) {
 // int
 // -----------------------------------------------
 
-int int_cmp(int l, int r) {
+int int_compare(int l, int r) {
+    if (l == r)
+        return 0;
+    if (l < r)
+        return -1;
+    return 1;
+}
+
+int int64_compare(int64_t l, int64_t r) {
+    if (l == r)
+        return 0;
+    if (l < r)
+        return -1;
+    return 1;
+}
+
+int uint64_compare(uint64_t l, uint64_t r) {
     if (l == r)
         return 0;
     if (l < r)

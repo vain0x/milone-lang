@@ -183,6 +183,7 @@ let private kdPrim prim =
   | KEqualPrim -> "Equal"
   | KLessPrim -> "Less"
   | KNotPrim -> "Not"
+  | KIntComparePrim -> "IntCompare"
   | KStrAddPrim -> "StrAdd"
   | KStrComparePrim -> "StrCompare"
   | KStrIndexPrim -> "StrIndex"

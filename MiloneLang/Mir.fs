@@ -90,6 +90,9 @@ type MBinary =
   | MNotEqualBinary
   | MLessBinary
   | MGreaterEqualBinary
+  | MIntCompareBinary
+  | MInt64CompareBinary
+  | MUInt64CompareBinary
   | MStrAddBinary
   | MStrCmpBinary
 
