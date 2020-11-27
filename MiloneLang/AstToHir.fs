@@ -26,7 +26,6 @@ module rec MiloneLang.AstToHir
 open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
-open MiloneLang.TySystem
 
 /// Convert pos to loc.
 let private toLoc (doc: DocId) (pos: Pos): Loc =
@@ -40,6 +39,11 @@ let private opToPrim op =
   | MulBinary -> HPrim.Mul
   | DivBinary -> HPrim.Div
   | ModBinary -> HPrim.Mod
+  | BitAndBinary -> HPrim.BitAnd
+  | BitOrBinary -> HPrim.BitOr
+  | BitXorBinary -> HPrim.BitXor
+  | LeftShiftBinary -> HPrim.LeftShift
+  | RightShiftBinary -> HPrim.RightShift
   | EqualBinary -> HPrim.Eq
   | LessBinary -> HPrim.Lt
   | ConsBinary -> HPrim.Cons
@@ -137,8 +141,17 @@ let private desugarFun pats body pos =
 
 /// Desugar `-x` to `0 - x`.
 let private desugarUniNeg arg pos =
-  let zero = ALitExpr(IntLit 0, pos)
-  ABinaryExpr(SubBinary, zero, arg, pos)
+  match arg with
+  | ALitExpr (IntLit value, pos) ->
+      // FIXME: this trick fails for int min value
+      ALitExpr(IntLit(-value), pos)
+
+  | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit ("-" + text), pos)
+
+  | _ ->
+      // FIXME: this fails when arg is not of int
+      let zero = ALitExpr(IntLit 0, pos)
+      ABinaryExpr(SubBinary, zero, arg, pos)
 
 /// `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos =

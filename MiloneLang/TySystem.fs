@@ -7,6 +7,8 @@ module rec MiloneLang.TySystem
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
+open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
 // -----------------------------------------------
@@ -14,10 +16,15 @@ open MiloneLang.Hir
 // -----------------------------------------------
 
 let private tyCtorEncode tyCtor =
+  let isMutToInt isMut =
+    match isMut with
+    | IsConst -> 1
+    | IsMut -> 2
+
   match tyCtor with
-  | BoolTyCtor -> 1, 0
-  | IntTyCtor -> 2, 0
-  | UIntTyCtor -> 3, 0
+  | IntTyCtor flavor -> 1, intFlavorToOrdinary flavor
+  | FloatTyCtor flavor -> 2, floatFlavorToOrdinary flavor
+  | BoolTyCtor -> 3, 0
   | CharTyCtor -> 4, 0
   | StrTyCtor -> 5, 0
   | ObjTyCtor -> 6, 0
@@ -25,27 +32,33 @@ let private tyCtorEncode tyCtor =
   | TupleTyCtor -> 8, 0
   | ListTyCtor -> 9, 0
 
+  | VoidTyCtor -> 11, 0
+  | NativePtrTyCtor isMut -> 12, isMutToInt isMut
+
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
   | RecordTyCtor tySerial -> 23, tySerial
   | UnresolvedTyCtor serial -> 24, serial
 
 let tyCtorCmp l r =
-  pairCmp intCmp intCmp (tyCtorEncode l) (tyCtorEncode r)
+  pairCmp compare compare (tyCtorEncode l) (tyCtorEncode r)
 
 let tyCtorEq first second = tyCtorCmp first second = 0
 
 let tyCtorDisplay getTyName tyCtor =
   match tyCtor with
+  | IntTyCtor flavor -> fsharpIntegerTyName flavor
+  | FloatTyCtor flavor -> fsharpFloatTyName flavor
   | BoolTyCtor -> "bool"
-  | IntTyCtor -> "int"
-  | UIntTyCtor -> "uint"
   | CharTyCtor -> "char"
   | StrTyCtor -> "string"
   | ObjTyCtor -> "obj"
   | FunTyCtor -> "fun"
   | TupleTyCtor -> "tuple"
   | ListTyCtor -> "list"
+  | VoidTyCtor -> "void"
+  | NativePtrTyCtor IsMut -> "nativeptr"
+  | NativePtrTyCtor IsConst -> "constptr"
   | SynonymTyCtor tySerial -> getTyName tySerial
   | RecordTyCtor tySerial -> getTyName tySerial
   | UnionTyCtor tySerial -> getTyName tySerial
@@ -59,17 +72,23 @@ let traitMapTys f it =
   match it with
   | AddTrait ty -> AddTrait(f ty)
 
-  | ScalarTrait ty -> ScalarTrait(f ty)
-
   | EqTrait ty -> EqTrait(f ty)
 
   | CmpTrait ty -> CmpTrait(f ty)
 
   | IndexTrait (lTy, rTy, outputTy) -> IndexTrait(f lTy, f rTy, f outputTy)
 
+  | IsIntTrait ty -> IsIntTrait(f ty)
+
+  | IsNumberTrait ty -> IsNumberTrait(f ty)
+
   | ToIntTrait ty -> ToIntTrait(f ty)
 
+  | ToFloatTrait ty -> ToFloatTrait(f ty)
+
   | ToStringTrait ty -> ToStringTrait(f ty)
+
+  | PtrTrait ty -> PtrTrait(f ty)
 
 // -----------------------------------------------
 // Types (HIR/MIR)
@@ -93,8 +112,9 @@ let tyCmp first second =
 
   | _, ErrorTy _ -> 1
 
-  | MetaTy (firstSerial, firstLoc), MetaTy (secondSerial, secondLoc) ->
-      if firstSerial <> secondSerial then intCmp firstSerial secondSerial else locCmp firstLoc secondLoc
+  | MetaTy (l1, l2), MetaTy (r1, r2) ->
+      let c = compare l1 r1
+      if c <> 0 then c else locCmp l2 r2
 
   | MetaTy _, _ -> -1
 
@@ -153,7 +173,7 @@ let tyCollectFreeVars ty =
         let acc = serial :: fvAcc
         go acc tys
 
-  go [] [ ty ] |> listUnique intCmp
+  go [] [ ty ] |> listUnique compare
 
 /// Converts nested function type to multi-arguments function type.
 let rec tyToArgList ty =
@@ -306,7 +326,7 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
   let assignment = List.zip defTySerials useTyArgs
 
   let substMeta tySerial =
-    assignment |> assocTryFind intCmp tySerial
+    assignment |> assocTryFind compare tySerial
 
   tySubst substMeta bodyTy
 
@@ -401,7 +421,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
            assignment, ctx) ([], ctx)
 
     let substMeta tySerial =
-      assignment |> assocTryFind intCmp tySerial
+      assignment |> assocTryFind compare tySerial
 
     tySubst substMeta bodyTy, ctx
 
@@ -409,7 +429,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
     let assignment = List.zip defTySerials useTyArgs
 
     let substMeta tySerial =
-      assignment |> assocTryFind intCmp tySerial
+      assignment |> assocTryFind compare tySerial
 
     tySubst substMeta bodyTy
 
@@ -474,14 +494,16 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
     theTrait
     |> traitMapTys (fun ty -> ty |> typingSubst ctx |> typingExpandSynonyms ctx)
 
-  let expectScalar ty (logAcc, ctx) =
+  /// integer, bool, char, or string
+  let expectBasic ty (logAcc, ctx) =
     match ty with
     | ErrorTy _
+    | AppTy (IntTyCtor _, [])
+    | AppTy (FloatTyCtor _, [])
     | AppTy (BoolTyCtor, [])
-    | AppTy (IntTyCtor, [])
-    | AppTy (UIntTyCtor, [])
     | AppTy (CharTyCtor, [])
-    | AppTy (StrTyCtor, []) -> logAcc, ctx
+    | AppTy (StrTyCtor, [])
+    | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
 
     | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
@@ -489,26 +511,18 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   | AddTrait ty ->
       match ty with
       | ErrorTy _
-      | AppTy (UIntTyCtor, [])
+      | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, [])
+      | AppTy (CharTyCtor, [])
       | AppTy (StrTyCtor, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
 
-  | ScalarTrait ty ->
-      match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor, [])
-      | AppTy (UIntTyCtor, []) -> logAcc, ctx
+  | EqTrait ty -> (logAcc, ctx) |> expectBasic ty
 
-      | _ ->
-          // Coerce to int by default.
-          typingUnify logAcc ctx ty tyInt loc
-
-  | EqTrait ty -> (logAcc, ctx) |> expectScalar ty
-
-  | CmpTrait ty -> (logAcc, ctx) |> expectScalar ty
+  | CmpTrait ty -> (logAcc, ctx) |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
       match lTy with
@@ -522,8 +536,63 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
           logAcc, ctx
 
+      | AppTy (NativePtrTyCtor _, [ itemTy ]) ->
+          let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
+
+          let logAcc, ctx =
+            typingUnify logAcc ctx resultTy itemTy loc
+
+          logAcc, ctx
+
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
-  | ToIntTrait ty -> (logAcc, ctx) |> expectScalar ty
+  | IsIntTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, []) -> logAcc, ctx
 
-  | ToStringTrait ty -> (logAcc, ctx) |> expectScalar ty
+      | _ ->
+          // Coerce to int by default.
+          typingUnify logAcc ctx ty tyInt loc
+
+  | IsNumberTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, []) -> logAcc, ctx
+
+      | _ ->
+          // Coerce to int by default.
+          typingUnify logAcc ctx ty tyInt loc
+
+  | ToIntTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, [])
+      | AppTy (CharTyCtor, [])
+      | AppTy (StrTyCtor, [])
+      | AppTy (NativePtrTyCtor _, []) -> logAcc, ctx
+
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+
+  | ToFloatTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, [])
+      | AppTy (StrTyCtor, []) -> logAcc, ctx
+
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+
+  | ToStringTrait ty -> (logAcc, ctx) |> expectBasic ty
+
+  | PtrTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor (IntFlavor (_, IPtr)), [])
+      | AppTy (ObjTyCtor, [])
+      | AppTy (ListTyCtor, _)
+      | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
+
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx

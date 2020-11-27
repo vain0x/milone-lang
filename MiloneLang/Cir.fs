@@ -11,6 +11,8 @@
 module rec MiloneLang.Cir
 
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
+open MiloneLang.TypeIntegers
 
 // -----------------------------------------------
 // CIR types
@@ -27,10 +29,11 @@ type CTyInstance =
 [<NoEquality; NoComparison>]
 type CTy =
   | CVoidTy
-  | CIntTy
-  | CUInt32Ty
+  | CIntTy of IntFlavor
+  | CFloatTy of FloatFlavor
   | CCharTy
   | CPtrTy of CTy
+  | CConstPtrTy of CTy
   | CFunPtrTy of argTys: CTy list * resultTy: CTy
   | CStructTy of Ident
   | CEnumTy of Ident
@@ -52,6 +55,11 @@ type CBinary =
   | CModBinary
   | CAddBinary
   | CSubBinary
+  | CBitAndBinary
+  | CBitOrBinary
+  | CBitXorBinary
+  | CLeftShiftBinary
+  | CRightShiftBinary
   | CEqualBinary
   | CNotEqualBinary
   | CLessBinary
@@ -66,6 +74,7 @@ type CExpr =
   | CDefaultExpr
 
   | CIntExpr of int
+  | CDoubleExpr of text: string
   | CCharExpr of char
 
   /// E.g. `"hi"`
@@ -147,5 +156,7 @@ type CDecl =
 
   /// Definition of global var.
   | CStaticVarDecl of Ident * CTy
+
+  | CFunForwardDecl of Ident * argTys: CTy list * resultTy: CTy
 
   | CFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list

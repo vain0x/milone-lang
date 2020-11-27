@@ -1,6 +1,10 @@
 #include "milone.h"
 
+struct String file_read_all_text(struct String);
+
 struct String fileReadAllText_(struct String fileName_);
+
+void file_write_all_text(struct String, struct String);
 
 int fileWriteAllText_(struct String fileName_1, struct String content_);
 

@@ -89,6 +89,10 @@ let private charIsOp (c: char): bool =
 // String
 // -----------------------------------------------
 
+/// Gets i'th byte of string. Returns \x00 if out of range.
+let private at (text: string) (i: int) =
+  if i < text.Length then text.[i] else '\x00'
+
 /// Followed by `"""`?
 let private isFollowedByRawQuotes (i: int) (s: string): bool =
   (i + 3 <= s.Length)
@@ -191,13 +195,40 @@ let private scanIdent (text: string) (i: int) =
 
   go i
 
-let private scanIntLit (text: string) (i: int) =
-  let rec go i =
-    if i < text.Length && text.[i] |> charIsDigit
-    then go (i + 1)
-    else i
 
-  go i
+let private scanNumberLit (text: string) (i: int) =
+  let rec scanDigits (i: int) =
+    if at text i |> charIsDigit then scanDigits (i + 1) else i
+
+  let scanFraction i =
+    // Check if point is following but not a range operator.
+    if at text i = '.' && at text (i + 1) <> '.' then
+      true, scanDigits (i + 1)
+    else
+      false, i
+
+  let scanExponential i =
+    match at text i with
+    | 'e'
+    | 'E'
+    | 'p'
+    | 'P' ->
+        match at text (i + 1) with
+        | '+'
+        | '-' -> true, scanDigits (i + 2)
+
+        | _ -> true, scanDigits (i + 1)
+    | _ -> false, i
+
+  let i = scanDigits i
+  let hasFraction, i = scanFraction i
+  let hasExponential, i = scanExponential i
+
+  // Suffix.
+  let r = scanIdent text i
+
+  let isFloat = hasFraction || hasExponential
+  isFloat, i, r
 
 let private scanCharLit (text: string) (i: int) =
   let at (i: int) =
@@ -341,6 +372,7 @@ let private tokenOfOp (text: string) l r: Token =
       match s with
       | "&" -> AmpToken
       | "&&" -> AmpAmpToken
+      | "&&&" -> AmpAmpAmpToken
       | _ -> ErrorToken
 
   | '-' ->
@@ -366,12 +398,16 @@ let private tokenOfOp (text: string) l r: Token =
       | "<" -> LeftAngleToken
       | "<=" -> LeftEqToken
       | "<>" -> LeftRightToken
+      | "<<" -> LeftLeftToken
+      | "<<<" -> LeftLeftLeftToken
       | _ -> ErrorToken
 
   | '>' ->
       match s with
       | ">" -> RightAngleToken
       | ">=" -> RightEqToken
+      | ">>" -> RightRightToken
+      | ">>>" -> RightRightRightToken
       | _ -> ErrorToken
 
   | '|' ->
@@ -379,6 +415,13 @@ let private tokenOfOp (text: string) l r: Token =
       | "|" -> PipeToken
       | "|>" -> PipeRightToken
       | "||" -> PipePipeToken
+      | "|||" -> PipePipePipeToken
+      | _ -> ErrorToken
+
+  | '^' ->
+      match s with
+      | "^" -> HatToken
+      | "^^^" -> HatHatHatToken
       | _ -> ErrorToken
 
   | '=' -> expect "=" EqToken
@@ -638,8 +681,12 @@ let private doNext (text: string) (index: int): Token * int =
       CommentToken, r
 
   | LNumber ->
-      let r = scanIntLit text (index + len)
-      evalIntLit text index r, r
+      let isFloat, m, r = scanNumberLit text (index + len)
+
+      // m: before suffix
+      if m < r then ErrorToken, r
+      else if isFloat then FloatToken text.[index..r - 1], r
+      else evalIntLit text index r, r
 
   | LNonKeywordIdent ->
       let r = scanIdent text (index + len)

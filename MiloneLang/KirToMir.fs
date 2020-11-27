@@ -24,7 +24,7 @@ let private restoreCalleeTy args ty =
 // KirToMirCtx
 // -----------------------------------------------
 
-let private jointMapEmpty () = mapEmpty intCmp
+let private jointMapEmpty () = mapEmpty compare
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -543,7 +543,7 @@ let private kmFunBinding binding (ctx: KirToMirCtx) =
 
     let ctx =
       { ctx with
-          JointMap = (mapEmpty intCmp)
+          JointMap = (mapEmpty compare)
           Labels = []
           LabelCount = 0 }
 

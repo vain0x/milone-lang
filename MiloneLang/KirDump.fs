@@ -59,6 +59,7 @@ let private litToDebugString lit =
   match lit with
   | BoolLit false -> "false"
   | BoolLit true -> "true"
+  | FloatLit text -> text
   | IntLit value -> string value
   | CharLit value -> "'" + charEscape value + "'"
   | StrLit value -> "\"" + strEscape value + "\""
@@ -105,6 +106,10 @@ let private tyToDebugString ty ctx =
           + "]"
 
       | ListTyCtor, [ itemTy ] -> "Array<" + tyToDebugString itemTy ctx + ">"
+
+      | NativePtrTyCtor IsMut, [ itemTy ] -> "MutPtr<" + tyToDebugString itemTy ctx + ">"
+
+      | NativePtrTyCtor IsConst, [ itemTy ] -> "ConstPtr<" + tyToDebugString itemTy ctx + ">"
 
       | _, [] -> tyCtorToDebugString tyCtor ctx
 
@@ -175,9 +180,15 @@ let private kdPrim prim =
   | KMulPrim -> "Mul"
   | KDivPrim -> "Div"
   | KModPrim -> "Mod"
+  | KBitAndPrim -> "BitAnd"
+  | KBitOrPrim -> "BitOr"
+  | KBitXorPrim -> "BitXor"
+  | KLeftShiftPrim -> "LeftShift"
+  | KRightShiftPrim -> "RightShift"
   | KEqualPrim -> "Equal"
   | KLessPrim -> "Less"
   | KNotPrim -> "Not"
+  | KIntComparePrim -> "IntCompare"
   | KStrAddPrim -> "StrAdd"
   | KStrComparePrim -> "StrCompare"
   | KStrIndexPrim -> "StrIndex"

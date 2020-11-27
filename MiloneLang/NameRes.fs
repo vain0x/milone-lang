@@ -7,6 +7,7 @@ module rec MiloneLang.NameRes
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
 let private isNoTy ty =
@@ -22,8 +23,24 @@ let private tyPrimOfName name tys loc =
   match name, tys with
   | "unit", [] -> tyUnit
   | "bool", [] -> tyBool
-  | "int", [] -> tyInt
-  | "uint", [] -> tyUInt
+
+  | "int", []
+  | "int32", [] -> tyInt
+  | "uint", []
+  | "uint32", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I32)), [])
+  | "sbyte", []
+  | "int8", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I8)), [])
+  | "byte", []
+  | "uint8", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I8)), [])
+
+  | "int16", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I16)), [])
+  | "int64", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I64)), [])
+  | "nativeint", [] -> AppTy(IntTyCtor(IntFlavor(Signed, IPtr)), [])
+  | "uint16", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I16)), [])
+  | "uint64", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I64)), [])
+  | "unativeint", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, IPtr)), [])
+
+  | "float", [] -> tyFloat
   | "char", [] -> tyChar
   | "string", [] -> tyStr
   | "obj", [] -> tyObj
@@ -33,6 +50,11 @@ let private tyPrimOfName name tys loc =
       tyList itemTy
 
   | "list", [ itemTy ] -> tyList itemTy
+
+  | "voidptr", [] -> AppTy(NativePtrTyCtor IsMut, [ AppTy(VoidTyCtor, []) ])
+  | "voidconstptr", [] -> AppTy(NativePtrTyCtor IsConst, [ AppTy(VoidTyCtor, []) ])
+  | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ])
+  | "constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ])
 
   | _ ->
       // FIXME: Report error correctly
@@ -69,13 +91,13 @@ type Ns<'K, 'V> = AssocMap<'K, (AssocMap<Ident, 'V>)>
 //   > error: invalid use of undefined type ‘struct UnitNameTree_Fun1’
 //   >        struct NameTree_ app_193 = nameTreeEmpty_.fun(nameTreeEmpty_.env, 0);
 // let nameTreeEmpty: unit -> NameTree =
-//   let it = NameTree(mapEmpty (intHash, intCmp))
+//   let it = NameTree(mapEmpty (intHash, compare))
 //   fun () -> it
 
 let private nsFind (key: Serial) (ns: Ns<_, _>): AssocMap<Ident, _> =
   match ns |> mapTryFind key with
   | Some submap -> submap
-  | None -> mapEmpty strCmp
+  | None -> mapEmpty compare
 
 let private nsAdd (key: Serial) (ident: Ident) value (ns: Ns<_, _>): Ns<_, _> =
   ns
@@ -94,7 +116,7 @@ type private ScopeChain<'T> = AssocMap<Ident, 'T> list
 /// Scope chains, vars and types.
 type private Scope = ScopeChain<ValueSymbol> * ScopeChain<TySymbol>
 
-let private scopeMapEmpty () = mapEmpty strCmp
+let private scopeMapEmpty (): AssocMap<Ident, _> = mapEmpty compare
 
 let private scopeChainEmpty (): ScopeChain<_> = [ scopeMapEmpty () ]
 
@@ -156,12 +178,12 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Vars = mapEmpty varSerialCmp
     Funs = mapEmpty funSerialCmp
     Variants = mapEmpty variantSerialCmp
-    VarDepths = mapEmpty intCmp
-    Tys = mapEmpty intCmp
+    VarDepths = mapEmpty compare
+    Tys = mapEmpty compare
     ModuleTys = mapEmpty moduleTySerialCmp
-    TyDepths = mapEmpty intCmp
-    VarNs = mapEmpty intCmp
-    TyNs = mapEmpty intCmp
+    TyDepths = mapEmpty compare
+    VarNs = mapEmpty compare
+    TyNs = mapEmpty compare
     LocalSerial = localSerial
     Local = scopeEmpty ()
     LetDepth = 0 }

@@ -123,7 +123,7 @@ let private newCtx host: BundleCtx =
     ModuleQueue = []
     ModuleAcc = []
     ErrorAcc = []
-    FetchMemo = setEmpty (pairCmp strCmp strCmp)
+    FetchMemo = setEmpty (pairCmp compare compare)
     Host = host }
 
 let private addError msg loc (ctx: BundleCtx) =

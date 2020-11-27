@@ -391,8 +391,7 @@ let private kgCallAddExpr itself _primTy args ty loc hole ctx =
   match args with
   | [ l; r ] ->
       match ty with
-      | AppTy ((IntTyCtor
-               | UIntTyCtor
+      | AppTy ((IntTyCtor _
                | CharTyCtor),
                _) -> basicPrimNode2 "add" KAddPrim l r ty loc hole ctx
 
@@ -757,8 +756,14 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.Mul -> regular "mul" KMulPrim
           | HPrim.Div -> regular "div" KDivPrim
           | HPrim.Mod -> regular "mod" KModPrim
+          | HPrim.BitAnd -> regular "bit_and" KBitAndPrim
+          | HPrim.BitOr -> regular "bit_or" KBitOrPrim
+          | HPrim.BitXor -> regular "bit_xor" KBitXorPrim
+          | HPrim.LeftShift -> regular "left_shift" KLeftShiftPrim
+          | HPrim.RightShift -> regular "right_shift" KRightShiftPrim
           | HPrim.Eq -> comparison "equal" KEqualPrim
           | HPrim.Lt -> comparison "less" KLessPrim
+          | HPrim.Compare -> failwith "unimplemented"
           | HPrim.Nil -> unreachable itself
           | HPrim.Cons -> regular "cons" KConsPrim
           | HPrim.OptionNone -> unreachable itself
@@ -773,11 +778,12 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.StrLength -> regular "str_length" KStrLengthPrim
           | HPrim.StrGetSlice -> regular "str_get_slice" KStrGetSlicePrim
           | HPrim.Char -> regular "char" KCharPrim
-          | HPrim.Int -> regular "int" KIntPrim
-          | HPrim.UInt -> regular "uint" KUIntPrim
+          | HPrim.ToInt _ -> regular "int" KIntPrim
+          | HPrim.ToFloat _ -> failwith "unimplemented"
           | HPrim.String -> regular "string" KStringPrim
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
           | HPrim.NativeFun -> failwith "NEVER: HPrim.NativeFun is resolved in Typing."
+          | HPrim.NativeCast -> failwith "unimplemented"
 
       | HFunExpr (funSerial, funTy, funLoc) -> kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx
 

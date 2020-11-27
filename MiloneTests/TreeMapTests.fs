@@ -3,13 +3,10 @@ module MiloneLang.TreeMapTests
 open MiloneLang.Assets
 open Xunit
 
-let private intCmp (l: int) (r: int) = compare l r
-let private strCmp (l: string) (r: string) = compare l r
-
 [<Fact>]
 let basicTest () =
   let m =
-    TreeMap.empty strCmp
+    TreeMap.empty compare
     |> TreeMap.add "a" 1
     |> TreeMap.add "b" 2
 
@@ -19,7 +16,7 @@ let basicTest () =
 
 [<Fact>]
 let addTest () =
-  let m = TreeMap.empty strCmp
+  let m = TreeMap.empty compare
   m |> TreeMap.tryFind "a" |> is None
 
   let m = m |> TreeMap.add "a" 1
@@ -30,7 +27,7 @@ let addTest () =
 
 [<Fact>]
 let removeTest () =
-  let m = TreeMap.empty strCmp
+  let m = TreeMap.empty compare
   let removed, _ = m |> TreeMap.remove "a"
   removed |> is None
 
@@ -51,7 +48,7 @@ let removeTest () =
 
 [<Fact>]
 let mapTest () =
-  TreeMap.empty strCmp
+  TreeMap.empty compare
   |> TreeMap.add "a" 1
   |> TreeMap.add "c" 3
   |> TreeMap.add "a" 2
@@ -63,7 +60,7 @@ let mapTest () =
 let foldTest () =
   let folder s k v = s + "," + (k + ":" + string v)
 
-  let m = TreeMap.empty strCmp
+  let m = TreeMap.empty compare
   m |> TreeMap.fold folder "" |> is ""
 
   let m = m |> TreeMap.add "a" 1
@@ -78,7 +75,7 @@ let foldTest () =
 [<Fact>]
 let ofListTest () =
   let m =
-    TreeMap.ofList strCmp [ "a", 1; "c", 3; "a", 2; "b", 0 ]
+    TreeMap.ofList compare [ "a", 1; "c", 3; "a", 2; "b", 0 ]
 
   m
   |> TreeMap.toList
@@ -86,7 +83,7 @@ let ofListTest () =
 
 [<Fact>]
 let toListTest () =
-  let m = TreeMap.empty strCmp
+  let m = TreeMap.empty compare
   m |> TreeMap.toList |> is []
 
   let m = m |> TreeMap.add "a" 1

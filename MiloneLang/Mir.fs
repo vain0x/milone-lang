@@ -14,6 +14,8 @@ module rec MiloneLang.Mir
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
+open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
 // -----------------------------------------------
@@ -40,8 +42,8 @@ type MUnary =
   | MNotUnary
 
   // Converts a scalar to int.
-  | MIntOfScalarUnary
-  | MUIntOfScalarUnary
+  | MIntOfScalarUnary of intOfScalarFlavor: IntFlavor
+  | MFloatOfScalarUnary of floatOfScalarFlavor: FloatFlavor
   | MCharOfScalarUnary
 
   /// Gets raw ptr of string.
@@ -73,6 +75,8 @@ type MUnary =
   /// Gets tail of list, unchecked.
   | MListTailUnary
 
+  | MNativeCastUnary
+
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
 type MBinary =
@@ -81,10 +85,18 @@ type MBinary =
   | MModBinary
   | MAddBinary
   | MSubBinary
+  | MBitAndBinary
+  | MBitOrBinary
+  | MBitXorBinary
+  | MLeftShiftBinary
+  | MRightShiftBinary
   | MEqualBinary
   | MNotEqualBinary
   | MLessBinary
   | MGreaterEqualBinary
+  | MIntCompareBinary
+  | MInt64CompareBinary
+  | MUInt64CompareBinary
   | MStrAddBinary
   | MStrCmpBinary
 
@@ -94,13 +106,13 @@ type MBinary =
 [<Struct; NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
-  | MIntOfStrPrim
-  | MUIntOfStrPrim
+  | MIntOfStrPrim of intOfStrFlavor: IntFlavor
+  | MFloatOfStrPrim of floatOfStrFlavor: FloatFlavor
 
   | MStrOfBoolPrim
   | MStrOfCharPrim
-  | MStrOfIntPrim
-  | MStrOfUIntPrim
+  | MStrOfIntPrim of strOfIntFlavor: IntFlavor
+  | MStrOfFloatPrim of strOfFloatFlavor: FloatFlavor
 
   | MStrGetSlicePrim
 

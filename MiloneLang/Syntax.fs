@@ -30,6 +30,7 @@ type Vis =
 type Lit =
   | BoolLit of boolValue: bool
   | IntLit of intValue: int
+  | FloatLit of floatText: string
   | CharLit of charValue: char
   | StrLit of stringValue: string
 
@@ -67,6 +68,7 @@ type Token =
   | CommentToken
 
   | IntToken of int
+  | FloatToken of string
   | CharToken of char
   | StrToken of string
   | IdentToken of Ident
@@ -95,6 +97,8 @@ type Token =
   | AmpToken
   /// `&&`
   | AmpAmpToken
+  /// `&&&`
+  | AmpAmpAmpToken
   /// `->`
   | ArrowToken
   /// `:`
@@ -109,12 +113,24 @@ type Token =
   | DotDotToken
   /// `=`
   | EqToken
-  /// `>=`
-  | RightEqToken
+  /// `^`
+  | HatToken
+  /// `^^^`
+  | HatHatHatToken
   /// `<=`
   | LeftEqToken
+  /// `<<`
+  | LeftLeftToken
+  /// `<<<`
+  | LeftLeftLeftToken
   /// `<>`
   | LeftRightToken
+  /// `>=`
+  | RightEqToken
+  /// `>>`
+  | RightRightToken
+  /// `>>>`
+  | RightRightRightToken
   /// `-`
   | MinusToken
   /// `%`
@@ -125,6 +141,8 @@ type Token =
   | PipeRightToken
   /// `||`
   | PipePipeToken
+  /// `|||`
+  | PipePipePipeToken
   /// `+`
   | PlusToken
   /// `;`
@@ -189,6 +207,16 @@ type Binary =
   | GreaterBinary
   /// `>=`
   | GreaterEqualBinary
+  /// `&&&`
+  | BitAndBinary
+  /// `|||`
+  | BitOrBinary
+  /// `^^^`
+  | BitXorBinary
+  /// `<<<`
+  | LeftShiftBinary
+  /// `>>>`
+  | RightShiftBinary
   /// `|>`
   | PipeBinary
   /// `&&` Logical and
@@ -373,7 +401,7 @@ type ARoot =
 // Position
 // -----------------------------------------------
 
-let posCmp l r = pairCmp intCmp intCmp l r
+let posCmp (l: Pos) (r: Pos) = pairCmp compare compare l r
 
 let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 
@@ -392,7 +420,7 @@ let locToString ((docId, y, x): Loc) =
   + string (x + 1)
 
 let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
-  let c = strCmp lDoc rDoc
+  let c = compare lDoc rDoc
   if c <> 0 then c
-  else if ly <> ry then intCmp ly ry
-  else intCmp lx rx
+  else if ly <> ry then compare ly ry
+  else compare lx rx

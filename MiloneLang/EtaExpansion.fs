@@ -127,19 +127,26 @@ let private primToArity ty prim =
   | HPrim.Unbox
   | HPrim.StrLength
   | HPrim.Char
-  | HPrim.Int
-  | HPrim.UInt
+  | HPrim.ToInt _
+  | HPrim.ToFloat _
   | HPrim.String
   | HPrim.InRegion
-  | HPrim.NativeFun -> 1
+  | HPrim.NativeFun
+  | HPrim.NativeCast -> 1
 
   | HPrim.Add
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
   | HPrim.Mod
+  | HPrim.BitAnd
+  | HPrim.BitOr
+  | HPrim.BitXor
+  | HPrim.LeftShift
+  | HPrim.RightShift
   | HPrim.Eq
   | HPrim.Lt
+  | HPrim.Compare
   | HPrim.Cons
   | HPrim.Index -> 2
 

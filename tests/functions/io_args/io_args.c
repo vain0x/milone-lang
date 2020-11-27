@@ -1,6 +1,10 @@
 #include "milone.h"
 
+int arg_count();
+
 int argCount_(int arg_);
+
+struct String arg_get(int);
 
 struct String argGet_(int i_);
 
@@ -29,7 +33,7 @@ tailrec_1:;
     }
 then_3:;
     struct String call_1 = argGet_(i_1);
-    struct String call_2 = str_of_int(i_1);
+    struct String call_2 = str_of_int64(i_1);
     milone_assert((str_cmp(call_1, str_add((struct String){.str = "#", .len = 1}, call_2)) != 0), 10, 4);
     int arg_1 = (i_1 + 1);
     i_1 = arg_1;

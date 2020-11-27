@@ -170,7 +170,23 @@ void *milone_mem_alloc(int count, size_t size) {
 // int
 // -----------------------------------------------
 
-int int_cmp(int l, int r) {
+int int_compare(int l, int r) {
+    if (l == r)
+        return 0;
+    if (l < r)
+        return -1;
+    return 1;
+}
+
+int int64_compare(int64_t l, int64_t r) {
+    if (l == r)
+        return 0;
+    if (l < r)
+        return -1;
+    return 1;
+}
+
+int uint64_compare(uint64_t l, uint64_t r) {
     if (l == r)
         return 0;
     if (l < r)
@@ -289,28 +305,109 @@ struct String str_get_slice(int l, int r, struct String s) {
     return (struct String){.str = str, .len = len};
 }
 
-int str_to_int(struct String s) { return atoi(s.str); }
-
-struct String str_of_int(int value) {
-    char *str = (char *)milone_mem_alloc(20, sizeof(char));
-    sprintf(str, "%d", value);
-    return (struct String){.str = str, .len = strlen(str)};
+static void verify_str_to_number(const char *type_name, const char *endptr,
+                                 int range_check) {
+    if (!range_check || (*endptr != '\0' && !isspace(*endptr)) ||
+        errno == ERANGE) {
+        fprintf(stderr, "FATAL: Failed to convert a string to %s.\n",
+                type_name);
+        exit(1);
+    }
 }
 
-uint32_t str_to_uint(struct String s) {
+int8_t str_to_int8(struct String s) {
     char *endptr = s.str + s.len;
-    uint32_t n = strtoul(s.str, &endptr, 10);
-    if ((*endptr != '\0' && !isspace(*endptr)) || errno == ERANGE) {
-        fprintf(stderr, "FATAL: Failed to convert a string to uint.\n");
-        abort();
-    }
+    int n = strtol(s.str, &endptr, 10);
+    verify_str_to_number("int8_t", endptr, INT8_MIN <= n && n <= INT8_MAX);
+    return (int8_t)n;
+}
+
+int16_t str_to_int16(struct String s) {
+    char *endptr = s.str + s.len;
+    int n = strtol(s.str, &endptr, 10);
+    verify_str_to_number("int16_t", endptr, INT16_MIN <= n && n <= INT16_MAX);
+    return (int16_t)n;
+}
+
+int str_to_int(struct String s) {
+    char *endptr = s.str + s.len;
+    int n = strtol(s.str, &endptr, 10);
+    verify_str_to_number("int", endptr, 1);
     return n;
 }
 
-struct String str_of_uint(uint32_t value) {
-    char buf[20] = {};
-    int len = sprintf(buf, "%u", value);
-    return str_of_raw_parts(buf, len);
+int64_t str_to_int64(struct String s) {
+    char *endptr = s.str + s.len;
+    int64_t n = strtoll(s.str, &endptr, 10);
+    verify_str_to_number("int64_t", endptr, 1);
+    return n;
+}
+
+intptr_t str_to_intptr(struct String s) {
+    char *endptr = s.str + s.len;
+    int64_t n = strtoll(s.str, &endptr, 10);
+    verify_str_to_number("intptr_t", endptr, 1);
+    return (intptr_t)n;
+}
+
+uint8_t str_to_uint8(struct String s) {
+    char *endptr = s.str + s.len;
+    uint32_t n = strtoul(s.str, &endptr, 10);
+    verify_str_to_number("uint8_t", endptr, n <= UINT8_MAX);
+    return (uint8_t)n;
+}
+
+uint16_t str_to_uint16(struct String s) {
+    char *endptr = s.str + s.len;
+    uint32_t n = strtoul(s.str, &endptr, 10);
+    verify_str_to_number("uint16_t", endptr, n <= UINT16_MAX);
+    return (uint16_t)n;
+}
+
+uint32_t str_to_uint32(struct String s) {
+    char *endptr = s.str + s.len;
+    uint32_t n = strtoul(s.str, &endptr, 10);
+    verify_str_to_number("uint32_t", endptr, 1);
+    return n;
+}
+
+uint64_t str_to_uint64(struct String s) {
+    char *endptr = s.str + s.len;
+    uint64_t n = strtoull(s.str, &endptr, 10);
+    verify_str_to_number("uint64_t", endptr, 1);
+    return n;
+}
+
+uintptr_t str_to_uintptr(struct String s) {
+    char *endptr = s.str + s.len;
+    uint64_t n = strtoull(s.str, &endptr, 10);
+    verify_str_to_number("uintptr_t", endptr, 1);
+    return n;
+}
+
+struct String str_of_int64(int64_t value) {
+    char buf[21] = {};
+    int n = sprintf(buf, "%ld", value);
+    return str_of_raw_parts(buf, n);
+}
+
+struct String str_of_uint64(uint64_t value) {
+    char buf[21] = {};
+    int n = sprintf(buf, "%lu", value);
+    return str_of_raw_parts(buf, n);
+}
+
+double str_to_double(struct String s) {
+    char *endptr = s.str + s.len;
+    double n = strtod(s.str, &endptr);
+    verify_str_to_number("float", endptr, 1);
+    return n;
+}
+
+struct String str_of_double(double value) {
+    char buf[64] = {};
+    int n = sprintf(buf, "%f", value);
+    return str_of_raw_parts(buf, n);
 }
 
 struct String str_of_char(char value) {
@@ -537,6 +634,10 @@ void int_array_set(void *array, int index, int value) {
     // fprintf(stderr, "int_array_set(%p, index=%d, value=%d)\n", array, index,
     // value);
     ((int *)array)[index] = value;
+}
+
+void int_array_copy(void *dest, void *src, int size) {
+    memcpy(dest, src, size);
 }
 
 // -----------------------------------------------

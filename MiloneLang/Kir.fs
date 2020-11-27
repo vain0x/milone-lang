@@ -26,6 +26,13 @@ type KPrim =
   | KDivPrim
   | KModPrim
 
+  // Scar bit operation: 2/1/1.
+  | KBitAndPrim
+  | KBitOrPrim
+  | KBitXorPrim
+  | KLeftShiftPrim
+  | KRightShiftPrim
+
   // Scalar comparison:
   /// 2/0/2. The first cont is used if two args equal; or the second otherwise.
   | KEqualPrim
@@ -36,6 +43,9 @@ type KPrim =
   // Bool:
   /// 1/1/1.
   | KNotPrim
+
+  // int:
+  | KIntComparePrim
 
   // String:
   /// 2/1/1.
@@ -96,6 +106,7 @@ type KPrim =
   | KCharPrim
 
   /// 1/1/1.
+  // FIXME: signedness, precision
   | KIntPrim
 
   /// 1/1/1.

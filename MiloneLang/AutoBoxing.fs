@@ -5,9 +5,11 @@ module rec MiloneLang.AutoBoxing
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
+open MiloneLang.TypeIntegers
+open MiloneLang.Hir
 open MiloneLang.TySystem
 open MiloneLang.Typing
-open MiloneLang.Hir
 
 let private tyIsRecord ty =
   match ty with
@@ -141,18 +143,20 @@ let private trdTy (ctx: TrdCtx) ty =
         trdTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
       match tyCtor with
+      | IntTyCtor _
+      | FloatTyCtor _
       | BoolTyCtor
       | CharTyCtor
-      | IntTyCtor
-      | UIntTyCtor
       | StrTyCtor
-      | ObjTyCtor ->
+      | ObjTyCtor
+      | VoidTyCtor ->
           assert (List.isEmpty tyArgs)
           ctx
 
       | ListTyCtor
       | FunTyCtor
-      | TupleTyCtor -> tyArgs |> List.fold trdTy ctx
+      | TupleTyCtor
+      | NativePtrTyCtor _ -> tyArgs |> List.fold trdTy ctx
 
       | UnionTyCtor tySerial -> nominal tySerial
       | RecordTyCtor tySerial -> nominal tySerial
@@ -165,7 +169,7 @@ let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
     { Variants = tyCtx.Variants
       Tys = tyCtx.Tys
       VariantMemo = mapEmpty variantSerialCmp
-      RecordTyMemo = mapEmpty intCmp }
+      RecordTyMemo = mapEmpty compare }
 
   let ctx = tyCtx.Tys |> mapFold trdTyDef ctx
 
@@ -308,13 +312,15 @@ let private tsmTy (ctx: TsmCtx) ty =
 
       match tyCtor with
       | BoolTyCtor
-      | CharTyCtor -> 1, ctx
+      | CharTyCtor
+      | VoidTyCtor -> 1, ctx
 
-      | IntTyCtor
-      | UIntTyCtor -> 4, ctx
+      | IntTyCtor flavor -> intFlavorToBytes flavor, ctx
+      | FloatTyCtor flavor -> floatFlavorToBytes flavor, ctx
 
       | ObjTyCtor
-      | ListTyCtor -> 8, ctx
+      | ListTyCtor
+      | NativePtrTyCtor _ -> 8, ctx
 
       | StrTyCtor
       | FunTyCtor -> 16, ctx
@@ -349,7 +355,7 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
          match status with
          | Boxed -> set |> setAdd tySerial
          | Unboxed -> set
-         | Recursive -> failwith "NEVER") (setEmpty intCmp)
+         | Recursive -> failwith "NEVER") (setEmpty compare)
 
   let ctx: TsmCtx =
     { Variants = trdCtx.Variants
@@ -357,7 +363,7 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
       BoxedVariants = boxedVariants
       BoxedRecordTys = boxedRecordTys
       VariantMemo = mapEmpty variantSerialCmp
-      RecordTyMemo = mapEmpty intCmp }
+      RecordTyMemo = mapEmpty compare }
 
   let ctx =
     ctx.Tys
@@ -386,7 +392,7 @@ let private ofTyCtx (tyCtx: TyCtx): AbCtx =
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     BoxedVariants = mapEmpty variantSerialCmp
-    BoxedRecordTys = mapEmpty intCmp }
+    BoxedRecordTys = mapEmpty compare }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
   { tyCtx with

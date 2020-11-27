@@ -9,7 +9,7 @@ int f_(int x_) {
 }
 
 int main() {
-    int m_ = (0 - 2);
+    int m_ = -2;
     milone_assert(((m_ + 2) == 0), 2, 2);
     int u_ = 2;
     int v_ = (0 - u_);

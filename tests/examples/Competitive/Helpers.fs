@@ -15,8 +15,7 @@ let rawIntArraySet (array: obj) (index: int) (value: int): unit =
   __nativeFun ("int_array_set", array, index, value)
 
 let rawMemoryCopy (dest: obj) (src: obj) (size: int): unit =
-  (__nativeFun ("memcpy", dest, src, size): obj)
-  |> ignore
+  __nativeFun ("int_array_copy", dest, src, size)
 
 // -----------------------------------------------
 // Polyfills

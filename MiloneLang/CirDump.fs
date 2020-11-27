@@ -4,6 +4,8 @@
 module rec MiloneLang.CirDump
 
 open MiloneLang.Util
+open MiloneLang.TypeFloat
+open MiloneLang.TypeIntegers
 open MiloneLang.Cir
 
 let private eol = "\n"
@@ -30,7 +32,8 @@ let private isFirst first =
 
 let private declIsForwardOnly decl =
   match decl with
-  | CStaticVarDecl _ -> true
+  | CStaticVarDecl _
+  | CFunForwardDecl _ -> true
   | _ -> false
 
 // -----------------------------------------------
@@ -49,6 +52,11 @@ let private binaryToString op =
   | CMulBinary -> "*"
   | CDivBinary -> "/"
   | CModBinary -> "%"
+  | CBitAndBinary -> "&"
+  | CBitOrBinary -> "|"
+  | CBitXorBinary -> "^"
+  | CLeftShiftBinary -> "<<"
+  | CRightShiftBinary -> ">>"
   | CEqualBinary -> "=="
   | CNotEqualBinary -> "!="
   | CLessBinary -> "<"
@@ -72,10 +80,11 @@ let private cpFunPtrTy name argTys resultTy acc =
 let private cpTy ty acc: string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
-  | CIntTy -> acc |> cons "int"
-  | CUInt32Ty -> acc |> cons "uint32_t"
+  | CIntTy flavor -> acc |> cons (cIntegerTyName flavor)
+  | CFloatTy flavor -> acc |> cons (cFloatTyName flavor)
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty -> acc |> cpTy ty |> cons "*"
+  | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
@@ -155,6 +164,7 @@ let private cpExpr expr acc: string list =
   match expr with
   | CDefaultExpr -> acc |> cons "{}"
   | CIntExpr value -> acc |> cons (string value)
+  | CDoubleExpr value -> acc |> cons (string value)
 
   | CCharExpr value ->
       acc
@@ -442,7 +452,8 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
-  | CStaticVarDecl _ -> acc
+  | CStaticVarDecl _
+  | CFunForwardDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
@@ -470,6 +481,25 @@ let private cpForwardDecl decl acc =
       |> cons "static "
       |> cpTyWithName name ty
       |> cons ";"
+      |> cons eol
+      |> cons eol
+
+  | CFunForwardDecl (name, argTys, resultTy) ->
+      let cpParamTys acc =
+        argTys
+        |> List.fold (fun (first, acc) ty ->
+             let acc =
+               (if isFirst first then acc else acc |> cons ", ")
+               |> cpTy ty
+
+             (NotFirst, acc)) (First, acc)
+        |> snd
+
+      acc
+      |> cpTyWithName name resultTy
+      |> cons "("
+      |> cpParamTys
+      |> cons ");"
       |> cons eol
       |> cons eol
 

@@ -12,6 +12,8 @@ module rec MiloneLang.CirGen
 
 open MiloneLang.Util
 open MiloneLang.Syntax
+open MiloneLang.TypeFloat
+open MiloneLang.TypeIntegers
 open MiloneLang.TySystem
 open MiloneLang.Hir
 open MiloneLang.Mir
@@ -25,9 +27,7 @@ let private valueSymbolCmp l r =
     | FunSymbol (FunSerial serial) -> serial
     | VariantSymbol (VariantSerial serial) -> serial
 
-  intCmp (encode l) (encode r)
-
-let private ctVoidPtr = CPtrTy CVoidTy
+  compare (encode l) (encode r)
 
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
@@ -50,7 +50,7 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
         go acc xs
 
   let serialsMap =
-    go (mapEmpty strCmp) (defMap |> mapToList)
+    go (mapEmpty compare) (defMap |> mapToList)
 
   let addIdent ident (identMap, index) serial =
     identMap
@@ -414,14 +414,10 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
   let rec go ty (ctx: CirCtx) =
     let tyToUniqueName ty =
       match ty with
+      | AppTy (IntTyCtor flavor, _) -> cIntegerTyPascalName flavor, ctx
+      | AppTy (FloatTyCtor flavor, _) -> cFloatTyPascalName flavor, ctx
       | AppTy (BoolTyCtor, _) -> "Bool", ctx
-
-      | AppTy (IntTyCtor, _) -> "Int", ctx
-
-      | AppTy (UIntTyCtor, _) -> "UInt", ctx
-
       | AppTy (CharTyCtor, _) -> "Char", ctx
-
       | AppTy (StrTyCtor, _) -> "String", ctx
 
       | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
@@ -449,6 +445,18 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
           let listTy = itemTy + "List"
           listTy, ctx
 
+      | AppTy (VoidTyCtor, _) -> "Void", ctx
+
+      | AppTy (NativePtrTyCtor isMut, [ itemTy ]) ->
+          let itemTy, ctx = ctx |> go itemTy
+
+          let ptrTy =
+            match isMut with
+            | IsConst -> itemTy + "ConstPtr"
+            | IsMut -> itemTy + "MutPtr"
+
+          ptrTy, ctx
+
       | AppTy (TupleTyCtor, []) -> "Unit", ctx
 
       | AppTy (TupleTyCtor, itemTys) ->
@@ -465,6 +473,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
       | AppTy (ListTyCtor, _)
       | AppTy (FunTyCtor, _)
+      | AppTy (NativePtrTyCtor _, _)
       | AppTy (SynonymTyCtor _, _)
       | AppTy (UnionTyCtor _, _)
       | AppTy (RecordTyCtor _, _)
@@ -488,21 +497,30 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
   go ty ctx
 
+let private cgNativePtrTy ctx isMut itemTy =
+  let itemTy, ctx = cgTyIncomplete ctx itemTy
+
+  match isMut with
+  | IsConst -> CConstPtrTy itemTy, ctx
+  | IsMut -> CPtrTy itemTy, ctx
+
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
 let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
   | AppTy (BoolTyCtor, _)
-  | AppTy (IntTyCtor, _)
-  | AppTy (TupleTyCtor, []) -> CIntTy, ctx
+  | AppTy (TupleTyCtor, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
 
-  | AppTy (UIntTyCtor, _) -> CUInt32Ty, ctx
+  | AppTy (IntTyCtor flavor, _) -> CIntTy flavor, ctx
+
+  | AppTy (FloatTyCtor flavor, _) -> CFloatTy flavor, ctx
 
   | AppTy (CharTyCtor, _) -> CCharTy, ctx
 
   | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
 
-  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
+  // FIXME: Unresolved type variables are `obj` for now.
+  | MetaTy _
   | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
 
   | AppTy (FunTyCtor, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
@@ -510,6 +528,10 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (ListTyCtor, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
 
   | AppTy (TupleTyCtor, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
+
+  | AppTy (VoidTyCtor, _) -> CVoidTy, ctx
+
+  | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
   | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
@@ -533,16 +555,18 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
   | AppTy (BoolTyCtor, _)
-  | AppTy (IntTyCtor, _)
-  | AppTy (TupleTyCtor, []) -> CIntTy, ctx
+  | AppTy (TupleTyCtor, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
 
-  | AppTy (UIntTyCtor, []) -> CUInt32Ty, ctx
+  | AppTy (IntTyCtor flavor, _) -> CIntTy flavor, ctx
+
+  | AppTy (FloatTyCtor flavor, _) -> CFloatTy flavor, ctx
 
   | AppTy (CharTyCtor, _) -> CCharTy, ctx
 
   | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
 
-  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
+  // FIXME: Unresolved type variables are `obj` for now.
+  | MetaTy _
   | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
 
   | AppTy (FunTyCtor, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
@@ -566,6 +590,10 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
              |> tyExpandSynonyms (fun tySerial -> ctx.Tys |> mapTryFind tySerial))
 
       genTupleTyDef ctx itemTys
+
+  | AppTy (VoidTyCtor, _) -> CVoidTy, ctx
+
+  | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
   | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
@@ -602,10 +630,21 @@ let private cBinaryOf op =
   | MModBinary -> CModBinary
   | MAddBinary -> CAddBinary
   | MSubBinary -> CSubBinary
+
+  | MBitAndBinary -> CBitAndBinary
+  | MBitOrBinary -> CBitOrBinary
+  | MBitXorBinary -> CBitXorBinary
+  | MLeftShiftBinary -> CLeftShiftBinary
+  | MRightShiftBinary -> CRightShiftBinary
+
   | MEqualBinary -> CEqualBinary
   | MNotEqualBinary -> CNotEqualBinary
   | MLessBinary -> CLessBinary
   | MGreaterEqualBinary -> CGreaterEqualBinary
+
+  | MIntCompareBinary
+  | MInt64CompareBinary
+  | MUInt64CompareBinary
   | MStrAddBinary
   | MStrCmpBinary
   | MStrIndexBinary -> failwith "Never"
@@ -613,6 +652,7 @@ let private cBinaryOf op =
 let private genLit lit =
   match lit with
   | IntLit value -> CIntExpr value
+  | FloatLit text -> CDoubleExpr text
   | CharLit value -> CCharExpr value
   | StrLit value -> CStrObjExpr value
   | BoolLit false -> CIntExpr 0
@@ -630,14 +670,15 @@ let private cgConst ctx mConst =
 let private genDefault ctx ty =
   match ty with
   | AppTy (TupleTyCtor, [])
+  | AppTy (IntTyCtor _, _)
+  | AppTy (FloatTyCtor _, _)
   | AppTy (BoolTyCtor, _)
-  | AppTy (IntTyCtor, _)
-  | AppTy (UIntTyCtor, _) -> CIntExpr 0, ctx
+  | AppTy (CharTyCtor, _) -> CIntExpr 0, ctx
 
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (CharTyCtor, _)
   | AppTy (ObjTyCtor, _)
-  | AppTy (ListTyCtor, _) -> CRefExpr "NULL", ctx
+  | AppTy (ListTyCtor, _)
+  | AppTy (NativePtrTyCtor _, _) -> CRefExpr "NULL", ctx
 
   | AppTy (StrTyCtor, _)
   | AppTy (FunTyCtor, _)
@@ -649,6 +690,7 @@ let private genDefault ctx ty =
       CCastExpr(CDefaultExpr, ty), ctx
 
   | ErrorTy _
+  | AppTy (VoidTyCtor, _)
   | AppTy (UnresolvedTyCtor _, _) -> failwithf "Never %A" ty
 
 let private genVariantNameExpr ctx serial ty =
@@ -671,8 +713,8 @@ let private genUnaryExpr ctx op arg ty _ =
   let arg, ctx = cgExpr ctx arg
   match op with
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
-  | MIntOfScalarUnary -> CCastExpr(arg, CIntTy), ctx
-  | MUIntOfScalarUnary -> CCastExpr(arg, CUInt32Ty), ctx
+  | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx
+  | MFloatOfScalarUnary flavor -> CCastExpr(arg, CFloatTy flavor), ctx
   | MCharOfScalarUnary -> CCastExpr(arg, CCharTy), ctx
   | MStrPtrUnary -> CNavExpr(arg, "str"), ctx
   | MStrLenUnary -> CNavExpr(arg, "len"), ctx
@@ -711,8 +753,16 @@ let private genUnaryExpr ctx op arg ty _ =
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
   | MListTailUnary -> CArrowExpr(arg, "tail"), ctx
 
+  | MNativeCastUnary ->
+      let ty, ctx = cgTyComplete ctx ty
+      CCastExpr(arg, ty), ctx
+
 let private genExprBin ctx op l r =
   match op with
+  | MIntCompareBinary -> genBinaryExprAsCall ctx "int_compare" l r
+  | MInt64CompareBinary -> genBinaryExprAsCall ctx "int64_compare" l r
+  | MUInt64CompareBinary -> genBinaryExprAsCall ctx "uint64_compare" l r
+
   | MStrAddBinary -> genBinaryExprAsCall ctx "str_add" l r
   | MStrCmpBinary -> genBinaryExprAsCall ctx "str_cmp" l r
   | MStrIndexBinary ->
@@ -752,6 +802,13 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
 // Statements
 // -----------------------------------------------
 
+let private addNativeFunDecl ctx funName args resultTy =
+  let argTys, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) -> cgTyComplete ctx (mexprToTy arg))
+
+  addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
+
 let private cgActionStmt ctx itself action args =
   match action with
   | MAssertAction ->
@@ -769,6 +826,9 @@ let private cgActionStmt ctx itself action args =
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
 
   | MCallNativeAction funName ->
+      let ctx =
+        addNativeFunDecl ctx funName args CVoidTy
+
       let args, ctx = cgExprList ctx args
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr funName, args)))
 
@@ -857,18 +917,33 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
     addLetStmt ctx name (Some(makeExpr args)) ty storageModifier
 
   match prim with
-  | MIntOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_int", [ arg ]))
-  | MUIntOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_uint", [ arg ]))
+  | MIntOfStrPrim flavor ->
+      let name = cStringToIntegerFunName flavor
+      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+
+  | MFloatOfStrPrim flavor ->
+      let name = cStringToFloatFunName flavor
+      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
 
   | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_char", [ arg ]))
-  | MStrOfIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_int", [ arg ]))
-  | MStrOfUIntPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_uint", [ arg ]))
+
+  | MStrOfIntPrim flavor ->
+      let name = cStringOfIntegerFunName flavor
+      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+
+  | MStrOfFloatPrim flavor ->
+      let name = cStringOfFloatFunName flavor
+      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
 
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CRefExpr "str_get_slice", args)))
 
   | MCallNativePrim funName ->
-    regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
+      let ctx =
+        let resultTy, ctx = cgTyComplete ctx resultTy
+        addNativeFunDecl ctx funName args resultTy
+
+      regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial

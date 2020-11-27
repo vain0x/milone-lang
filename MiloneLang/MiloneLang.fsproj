@@ -10,6 +10,8 @@
     <Compile Include="Syntax.fs" />
     <Compile Include="SyntaxTokenize.fs" />
     <Compile Include="SyntaxParse.fs" />
+    <Compile Include="TypeIntegers.fs" />
+    <Compile Include="TypeFloat.fs" />
     <Compile Include="Hir.fs" />
     <Compile Include="TySystem.fs" />
     <Compile Include="AstToHir.fs" />
