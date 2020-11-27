@@ -31,7 +31,8 @@ let private isFirst first =
 
 let private declIsForwardOnly decl =
   match decl with
-  | CStaticVarDecl _ -> true
+  | CStaticVarDecl _
+  | CFunForwardDecl _ -> true
   | _ -> false
 
 // -----------------------------------------------
@@ -448,7 +449,8 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
-  | CStaticVarDecl _ -> acc
+  | CStaticVarDecl _
+  | CFunForwardDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
@@ -476,6 +478,25 @@ let private cpForwardDecl decl acc =
       |> cons "static "
       |> cpTyWithName name ty
       |> cons ";"
+      |> cons eol
+      |> cons eol
+
+  | CFunForwardDecl (name, argTys, resultTy) ->
+      let cpParamTys acc =
+        argTys
+        |> List.fold (fun (first, acc) ty ->
+             let acc =
+               (if isFirst first then acc else acc |> cons ", ")
+               |> cpTy ty
+
+             (NotFirst, acc)) (First, acc)
+        |> snd
+
+      acc
+      |> cpTyWithName name resultTy
+      |> cons "("
+      |> cpParamTys
+      |> cons ");"
       |> cons eol
       |> cons eol
 

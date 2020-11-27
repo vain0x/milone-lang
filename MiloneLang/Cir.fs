@@ -154,4 +154,6 @@ type CDecl =
   /// Definition of global var.
   | CStaticVarDecl of Ident * CTy
 
+  | CFunForwardDecl of Ident * argTys: CTy list * resultTy: CTy
+
   | CFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list

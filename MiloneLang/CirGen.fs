@@ -782,6 +782,13 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
 // Statements
 // -----------------------------------------------
 
+let private addNativeFunDecl ctx funName args resultTy =
+  let argTys, ctx =
+    (args, ctx)
+    |> stMap (fun (arg, ctx) -> cgTyComplete ctx (mexprToTy arg))
+
+  addDecl ctx (CFunForwardDecl(funName, argTys, resultTy))
+
 let private cgActionStmt ctx itself action args =
   match action with
   | MAssertAction ->
@@ -799,6 +806,9 @@ let private cgActionStmt ctx itself action args =
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
 
   | MCallNativeAction funName ->
+      let ctx =
+        addNativeFunDecl ctx funName args CVoidTy
+
       let args, ctx = cgExprList ctx args
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr funName, args)))
 
@@ -900,7 +910,12 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
 
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CRefExpr "str_get_slice", args)))
 
-  | MCallNativePrim funName -> regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
+  | MCallNativePrim funName ->
+      let ctx =
+        let resultTy, ctx = cgTyComplete ctx resultTy
+        addNativeFunDecl ctx funName args resultTy
+
+      regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial

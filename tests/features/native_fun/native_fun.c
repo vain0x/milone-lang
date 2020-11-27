@@ -1,5 +1,7 @@
 #include "milone.h"
 
+int int_compare(int, int);
+
 int intCompare_(int l_, int r_);
 
 int main();

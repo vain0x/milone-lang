@@ -623,6 +623,10 @@ void int_array_set(void *array, int index, int value) {
     ((int *)array)[index] = value;
 }
 
+void int_array_copy(void *dest, void *src, int size) {
+    memcpy(dest, src, size);
+}
+
 // -----------------------------------------------
 // Command-line Arguments
 // -----------------------------------------------

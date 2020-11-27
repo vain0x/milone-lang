@@ -1,6 +1,10 @@
 #include "milone.h"
 
+int arg_count();
+
 int argCount_(int arg_);
+
+struct String arg_get(int);
 
 struct String argGet_(int i_);
 
