@@ -79,6 +79,8 @@ let traitMapTys f it =
 
   | ToStringTrait ty -> ToStringTrait(f ty)
 
+  | PtrTrait ty -> PtrTrait(f ty)
+
 // -----------------------------------------------
 // Types (HIR/MIR)
 // -----------------------------------------------
@@ -553,3 +555,13 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   | ToStringTrait ty -> (logAcc, ctx) |> expectBasic ty
+
+  | PtrTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor (IntFlavor (_, IPtr)), [])
+      | AppTy (ObjTyCtor _, [])
+      | AppTy (ListTyCtor, _)
+      | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
+
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx

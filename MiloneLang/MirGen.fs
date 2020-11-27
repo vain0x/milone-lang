@@ -1121,6 +1121,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.InRegion, [ arg ] -> mirifyCallInRegionExpr ctx arg ty loc
   | HPrim.InRegion, _ -> fail ()
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
+  | HPrim.NativeCast, [ arg ] -> regularUnary MNativeCastUnary arg
+  | HPrim.NativeCast, _ -> fail ()
 
   | HPrim.Nil, _
   | HPrim.OptionNone, _ -> fail ()

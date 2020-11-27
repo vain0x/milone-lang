@@ -149,6 +149,8 @@ type Trait =
   /// Type can be applied to `string` function.
   | ToStringTrait of Ty
 
+  | PtrTrait of Ty
+
 /// Type declaration.
 [<NoEquality; NoComparison>]
 type TyDecl =
@@ -313,6 +315,7 @@ type HPrim =
   | Printfn
   | InRegion
   | NativeFun
+  | NativeCast
 
 [<RequireQualifiedAccess>]
 [<Struct>]
@@ -575,6 +578,7 @@ let primFromIdent ident =
   | "inRegion" -> HPrim.InRegion |> Some
 
   | "__nativeFun" -> HPrim.NativeFun |> Some
+  | "__nativeCast" -> HPrim.NativeCast |> Some
 
   | _ -> None
 
@@ -682,6 +686,11 @@ let primToTySpec prim =
   | HPrim.NativeFun ->
       // Incorrect use of __nativeFun is handled as error before instantiating its type.
       failwith "NEVER"
+
+  | HPrim.NativeCast ->
+      let srcTy = meta 1
+      let destTy = meta 2
+      poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
 
 // -----------------------------------------------
 // Patterns (HIR)
@@ -970,6 +979,8 @@ let logToString tyDisplay loc log =
   | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to integer from '%s'" loc (tyDisplay ty)
 
   | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%s'" loc (tyDisplay ty)
+
+  | Log.TyBoundError (PtrTrait ty) -> sprintf "%s Expected a pointer type but was '%s'" loc (tyDisplay ty)
 
   | Log.RedundantFieldError (recordName, fieldName) ->
       sprintf "%s The field '%s' is redundant for record '%s'." loc fieldName recordName

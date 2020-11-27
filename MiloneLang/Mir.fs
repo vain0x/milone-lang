@@ -73,6 +73,8 @@ type MUnary =
   /// Gets tail of list, unchecked.
   | MListTailUnary
 
+  | MNativeCastUnary
+
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
 type MBinary =

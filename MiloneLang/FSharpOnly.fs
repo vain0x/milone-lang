@@ -8,6 +8,12 @@ let inRegion (f: unit -> int): int = f ()
 
 let strJoin (sep: string) (xs: string list): string = System.String.Join(sep, xs)
 
+let __nativeFun _ =
+  failwith "__nativeFun is not available in F#"
+
+let __nativeCast _ =
+  failwith "__nativeCast is not available in F#"
+
 // -----------------------------------------------
 // Profiler
 // -----------------------------------------------

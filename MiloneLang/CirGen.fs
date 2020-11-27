@@ -744,6 +744,10 @@ let private genUnaryExpr ctx op arg ty _ =
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
   | MListTailUnary -> CArrowExpr(arg, "tail"), ctx
 
+  | MNativeCastUnary ->
+      let ty, ctx = cgTyComplete ctx ty
+      CCastExpr(arg, ty), ctx
+
 let private genExprBin ctx op l r =
   match op with
   | MIntCompareBinary -> genBinaryExprAsCall ctx "int_compare" l r
