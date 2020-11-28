@@ -10,7 +10,7 @@ then
     exit 0
 fi
 
-CFLAGS='-std=c11 -O2 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label'
+CFLAGS='-std=c11 -O2 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label runtime/milone.c'
 
 NAME=$(basename "$1")
 MILONE=${2:-'MiloneLang/bin/Debug/netcoreapp3.1/MiloneLang'}

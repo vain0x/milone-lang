@@ -68,7 +68,7 @@ chmod +x "$BIN_DIR/milone"
 cat >"$BIN_DIR/milone-gcc" <<'END'
 #!/bin/sh
 
-milone "$@" | gcc -std=c11 -O2 -I "{{ MILONE_HOME }}/runtime" -x c -
+milone "$@" | gcc -std=c11 -O2 -I "{{ MILONE_HOME }}/runtime" "{{ MILONE_HOME }}/runtime/milone.c" -x c -
 END
 
 sed -i "s:{{ MILONE_HOME }}:$MILONE_HOME:g" "$BIN_DIR/milone-gcc"

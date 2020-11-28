@@ -2,7 +2,7 @@
 
 set -eu
 
-MILONE_INCLUDE="$PWD/runtime"
+MILONE_RUNTIME="$PWD/runtime"
 DIR="$PWD/scripts/region_primitive_checks"
 OUT_C="$DIR/region_primitive_checks.c"
 
@@ -10,7 +10,7 @@ OUT_C="$DIR/region_primitive_checks.c"
 
 (
     cd "$DIR"
-    gcc -std=c11 -I "$MILONE_INCLUDE" -g -fsanitize=undefined,address,leak "$OUT_C"
+    gcc -std=c11 -I "$MILONE_RUNTIME" "$MILONE_RUNTIME/milone.c" -g -fsanitize=undefined,address,leak "$OUT_C"
     ./a.out || echo '$?='$?
     echo OK
 )

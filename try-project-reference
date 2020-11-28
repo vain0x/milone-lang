@@ -7,6 +7,6 @@ APP_C=$APP_DIR/app.generated.c
 APP_EXE=$APP_DIR/app.generated.exe
 
 ./milone-netcore build "$APP_DIR" >$APP_C
-gcc -std=c11 -O2 -I "$PWD/runtime" "$APP_C" -o $APP_EXE
+gcc -std=c11 -O2 -I "$PWD/runtime" "$PWD/runtime/milone.c" "$APP_C" -o $APP_EXE
 $APP_EXE
 echo OK
