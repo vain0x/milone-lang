@@ -17,10 +17,16 @@ let strJoin (sep: string) (xs: string list): string = System.String.Join(sep, xs
 type constptr<'T> =
   override _.ToString() = "constptr is not available in F#"
 
+  static member op_Implicit(_: constptr<'T>): int = 0
+  static member op_Implicit(_: constptr<'T>): unativeint = unativeint 0
+
 // `void const *` in C.
 [<AbstractClass; Sealed>]
 type voidconstptr =
   override _.ToString() = "voidconstptr is not available in F#"
+
+  static member op_Implicit(_: voidconstptr): int = 0
+  static member op_Implicit(_: voidconstptr): unativeint = unativeint 0
 
 // Calls a C function, which should be linked statically.
 let __nativeFun _ =
