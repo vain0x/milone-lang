@@ -3,8 +3,7 @@
 .vscode/ipch
 
 a.out
-~*
 *.generated.*
+*.timestamp
 
 milone
-boot/milone
