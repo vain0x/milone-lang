@@ -1,6 +1,6 @@
 /// Defines milone-lang primitives for F#.
 [<AutoOpen>]
-module rec MiloneLang.FSharpOnly
+module FSharpOnly
 
 let objToString (value: _) = string (value :> obj)
 
