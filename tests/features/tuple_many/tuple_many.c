@@ -45,7 +45,7 @@ int main() {
     int y_ = tuple_.t1;
     int z_ = tuple_.t2.t0;
     int w_ = tuple_.t2.t1;
-    int if_;
+    bool if_;
     if ((x_ == 1)) {
         goto then_2;
     } else {
@@ -55,10 +55,10 @@ then_2:;
     if_ = (y_ == 2);
     goto if_next_1;
 else_3:;
-    if_ = 0;
+    if_ = false;
     goto if_next_1;
 if_next_1:;
-    int if_1;
+    bool if_1;
     if (if_) {
         goto then_5;
     } else {
@@ -68,10 +68,10 @@ then_5:;
     if_1 = (z_ == 3);
     goto if_next_4;
 else_6:;
-    if_1 = 0;
+    if_1 = false;
     goto if_next_4;
 if_next_4:;
-    int if_2;
+    bool if_2;
     if (if_1) {
         goto then_8;
     } else {
@@ -81,7 +81,7 @@ then_8:;
     if_2 = (w_ == 4);
     goto if_next_7;
 else_9:;
-    if_2 = 0;
+    if_2 = false;
     goto if_next_7;
 if_next_7:;
     milone_assert(if_2, 2, 2);

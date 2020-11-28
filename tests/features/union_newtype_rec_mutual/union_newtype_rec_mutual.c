@@ -113,7 +113,7 @@ int main() {
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(0, 20, 9);
+    milone_assert(false, 20, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;

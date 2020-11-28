@@ -1,14 +1,14 @@
 #include "milone.h"
 
-int go_(struct String s_, int i_, int d_);
+bool go_(struct String s_, int i_, int d_);
 
 struct String parse_(struct String s_1);
 
 int main();
 
-int go_(struct String s_, int i_, int d_) {
+bool go_(struct String s_, int i_, int d_) {
 tailrec_1:;
-    int if_;
+    bool if_;
     if ((i_ >= s_.len)) {
         goto then_3;
     } else {
@@ -18,7 +18,7 @@ then_3:;
     if_ = (d_ == 0);
     goto if_next_2;
 else_4:;
-    int if_1;
+    bool if_1;
     if ((s_.str[i_] == '(')) {
         goto then_6;
     } else {
@@ -32,17 +32,17 @@ then_6:;
     i_ = arg_1;
     d_ = arg_2;
     goto tailrec_1;
-    if_1 = 0;
+    if_1 = false;
     goto if_next_5;
 else_7:;
-    int if_2;
+    bool if_2;
     if ((0 >= d_)) {
         goto then_9;
     } else {
         goto else_10;
     }
 then_9:;
-    if_2 = 0;
+    if_2 = false;
     goto if_next_8;
 else_10:;
     struct String arg_3 = s_;
@@ -52,7 +52,7 @@ else_10:;
     i_ = arg_4;
     d_ = arg_5;
     goto tailrec_1;
-    if_2 = 0;
+    if_2 = false;
     goto if_next_8;
 if_next_8:;
     if_1 = if_2;
@@ -65,7 +65,7 @@ if_next_2:;
 }
 
 struct String parse_(struct String s_1) {
-    int call_ = go_(s_1, 0, 0);
+    bool call_ = go_(s_1, 0, 0);
     struct String if_3;
     if (call_) {
         goto then_12;

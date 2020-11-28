@@ -21,7 +21,7 @@ int basicCase_1(struct IntList* xs_) {
         goto cons_cl_3;
     }
 nil_cl_2:;
-    milone_assert(0, 2, 10);
+    milone_assert(false, 2, 10);
     if_ = 0;
     goto if_next_1;
 cons_cl_3:;
@@ -34,7 +34,7 @@ if_next_1:;
 int complicatedCase_(struct IntList* xs_1) {
     int match_;
     if ((!((!(xs_1))))) goto next_5;
-    milone_assert(0, 7, 10);
+    milone_assert(false, 7, 10);
     match_ = 0;
     goto end_match_4;
 next_5:;
@@ -43,7 +43,7 @@ next_5:;
     if ((!(xs_1->tail))) goto next_6;
     int y_ = xs_1->tail->head;
     if ((!((!(xs_1->tail->tail))))) goto next_6;
-    int if_1;
+    bool if_1;
     if ((x_ == 1)) {
         goto then_9;
     } else {
@@ -53,14 +53,14 @@ then_9:;
     if_1 = (y_ == 2);
     goto if_next_8;
 else_10:;
-    if_1 = 0;
+    if_1 = false;
     goto if_next_8;
 if_next_8:;
     milone_assert(if_1, 8, 14);
     match_ = 0;
     goto end_match_4;
 next_6:;
-    milone_assert(0, 9, 9);
+    milone_assert(false, 9, 9);
     match_ = 0;
     goto end_match_4;
 next_7:;

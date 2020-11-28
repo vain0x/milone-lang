@@ -206,7 +206,7 @@ int main() {
     int z_ = (*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->tail->tail->head.Node_)))->head.Leaf_;
     if ((!((!((*(((struct Node_List**)(*(((struct Node_List**)variant_6.Node_)))->tail->tail->head.Node_)))->tail))))) goto next_2;
     if ((!((!((*(((struct Node_List**)variant_6.Node_)))->tail->tail->tail))))) goto next_2;
-    int if_;
+    bool if_;
     if ((x_ == 1)) {
         goto then_5;
     } else {
@@ -216,10 +216,10 @@ then_5:;
     if_ = (y_ == 2);
     goto if_next_4;
 else_6:;
-    if_ = 0;
+    if_ = false;
     goto if_next_4;
 if_next_4:;
-    int if_1;
+    bool if_1;
     if (if_) {
         goto then_8;
     } else {
@@ -229,14 +229,14 @@ then_8:;
     if_1 = (z_ == 3);
     goto if_next_7;
 else_9:;
-    if_1 = 0;
+    if_1 = false;
     goto if_next_7;
 if_next_7:;
     milone_assert(if_1, 27, 4);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(0, 29, 4);
+    milone_assert(false, 29, 4);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -274,7 +274,7 @@ end_match_1:;
     match_1 = 0;
     goto end_match_10;
 next_11:;
-    milone_assert(0, 37, 9);
+    milone_assert(false, 37, 9);
     match_1 = 0;
     goto end_match_10;
 next_12:;

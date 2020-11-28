@@ -21,7 +21,7 @@ int main() {
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(0, 5, 4);
+    milone_assert(false, 5, 4);
     match_ = 0;
     goto end_match_1;
 next_3:;

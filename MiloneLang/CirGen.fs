@@ -508,15 +508,11 @@ let private cgNativePtrTy ctx isMut itemTy =
 /// whose type definition is not necessary to be visible.
 let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
-  | AppTy (BoolTyCtor, _)
   | AppTy (TupleTyCtor, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-
   | AppTy (IntTyCtor flavor, _) -> CIntTy flavor, ctx
-
   | AppTy (FloatTyCtor flavor, _) -> CFloatTy flavor, ctx
-
+  | AppTy (BoolTyCtor, _) -> CBoolTy, ctx
   | AppTy (CharTyCtor, _) -> CCharTy, ctx
-
   | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
 
   // FIXME: Unresolved type variables are `obj` for now.
@@ -554,15 +550,11 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 /// A type is complete if its definition is visible.
 let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
-  | AppTy (BoolTyCtor, _)
   | AppTy (TupleTyCtor, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-
   | AppTy (IntTyCtor flavor, _) -> CIntTy flavor, ctx
-
   | AppTy (FloatTyCtor flavor, _) -> CFloatTy flavor, ctx
-
+  | AppTy (BoolTyCtor, _) -> CBoolTy, ctx
   | AppTy (CharTyCtor, _) -> CCharTy, ctx
-
   | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
 
   // FIXME: Unresolved type variables are `obj` for now.
@@ -653,10 +645,10 @@ let private genLit lit =
   match lit with
   | IntLit value -> CIntExpr value
   | FloatLit text -> CDoubleExpr text
+  | BoolLit false -> CRefExpr "false"
+  | BoolLit true -> CRefExpr "true"
   | CharLit value -> CCharExpr value
   | StrLit value -> CStrObjExpr value
-  | BoolLit false -> CIntExpr 0
-  | BoolLit true -> CIntExpr 1
 
 let private genTag ctx variantSerial =
   CRefExpr(getUniqueVariantName ctx variantSerial)
@@ -672,8 +664,9 @@ let private genDefault ctx ty =
   | AppTy (TupleTyCtor, [])
   | AppTy (IntTyCtor _, _)
   | AppTy (FloatTyCtor _, _)
-  | AppTy (BoolTyCtor, _)
   | AppTy (CharTyCtor, _) -> CIntExpr 0, ctx
+
+  | AppTy (BoolTyCtor, _) -> CRefExpr "false", ctx
 
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (ObjTyCtor, _)

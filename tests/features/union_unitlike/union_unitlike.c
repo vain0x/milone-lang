@@ -10,7 +10,7 @@ enum MyBool_Tag;
 
 struct MyBool_;
 
-int toBool_(struct MyBool_ myBool_1);
+bool toBool_(struct MyBool_ myBool_1);
 
 int usedInOtherSumTypeCase_(int arg_1);
 
@@ -60,8 +60,8 @@ struct MyBool_ {
     };
 };
 
-int toBool_(struct MyBool_ myBool_1) {
-    int switch_1;
+bool toBool_(struct MyBool_ myBool_1) {
+    bool switch_1;
     switch (myBool_1.tag) {
         case MyFalse_:
             goto clause_4;
@@ -73,10 +73,10 @@ int toBool_(struct MyBool_ myBool_1) {
             exit(1);
     }
 clause_4:;
-    switch_1 = 0;
+    switch_1 = false;
     goto switch_next_3;
 clause_5:;
-    switch_1 = 1;
+    switch_1 = true;
     goto switch_next_3;
 switch_next_3:;
     return switch_1;
@@ -85,7 +85,7 @@ switch_next_3:;
 int usedInOtherSumTypeCase_(int arg_1) {
     struct MyBool_ variant_ = (struct MyBool_){.tag = MyTrue_, .MyTrue_ = (struct MyUnit_){.tag = MyUnit_}};
     struct MyBool_ myBool_ = variant_;
-    int call_ = toBool_(myBool_);
+    bool call_ = toBool_(myBool_);
     milone_assert(call_, 27, 2);
     return 0;
 }
@@ -115,7 +115,7 @@ int usedInRecordTypeCase_(int arg_2) {
     match_ = 0;
     goto end_match_6;
 next_7:;
-    milone_assert(0, 37, 9);
+    milone_assert(false, 37, 9);
     match_ = 0;
     goto end_match_6;
 next_8:;

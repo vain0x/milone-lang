@@ -22,23 +22,23 @@ int rawMemoryCopy_(void* dest_, void* src_, int size_);
 
 struct StringList;
 
-int listIsEmpty_1(struct StringList* xs_);
+bool listIsEmpty_1(struct StringList* xs_);
 
 struct StringStringStringFun2;
 
 struct StringStringStringFun2List;
 
-int listIsEmpty_4(struct StringStringStringFun2List* xs_);
+bool listIsEmpty_4(struct StringStringStringFun2List* xs_);
 
 struct IntList;
 
-int listIsEmpty_3(struct IntList* xs_);
+bool listIsEmpty_3(struct IntList* xs_);
 
 struct IntIntIntFun2;
 
 struct IntIntIntFun2List;
 
-int listIsEmpty_2(struct IntIntIntFun2List* xs_);
+bool listIsEmpty_2(struct IntIntIntFun2List* xs_);
 
 enum SegNodeTag_Tag;
 
@@ -48,13 +48,13 @@ struct IntIntIntObjectSegNodeTag_Tuple5;
 
 struct IntIntIntObjectSegNodeTag_Tuple5List;
 
-int listIsEmpty_5(struct IntIntIntObjectSegNodeTag_Tuple5List* xs_);
+bool listIsEmpty_5(struct IntIntIntObjectSegNodeTag_Tuple5List* xs_);
 
 struct StringIntIntObjectSegNodeTag_Tuple5;
 
 struct StringIntIntObjectSegNodeTag_Tuple5List;
 
-int listIsEmpty_6(struct StringIntIntObjectSegNodeTag_Tuple5List* xs_);
+bool listIsEmpty_6(struct StringIntIntObjectSegNodeTag_Tuple5List* xs_);
 
 int go_34(int len_1, struct StringList* xs_2);
 
@@ -76,17 +76,17 @@ struct IntIntBoolFun2;
 
 struct IntListIntListTuple2;
 
-int go_32(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1);
+bool go_32(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1);
 
 struct StringStringBoolFun2;
 
 struct StringListStringListTuple2;
 
-int go_31(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1);
+bool go_31(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1);
 
-int listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList* xs_7, struct IntList* ys_);
+bool listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList* xs_7, struct IntList* ys_);
 
-int listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList* xs_7, struct StringList* ys_);
+bool listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList* xs_7, struct StringList* ys_);
 
 struct IntList* go_30(int item_, int len_2, struct IntList* acc_1, int i_);
 
@@ -104,13 +104,13 @@ struct StringStringListTuple2 go_5(struct StringList* xs_11, int xn_);
 
 struct String strConcat_(struct StringList* xs_10);
 
-int intEq_(int first_, int second_);
+bool intEq_(int first_, int second_);
 
 int intMin_(int first_1, int second_1);
 
 int intMax_(int first_2, int second_2);
 
-int strEq_(struct String first_3, struct String second_3);
+bool strEq_(struct String first_3, struct String second_3);
 
 int failwith_1(struct String msg_);
 
@@ -176,9 +176,9 @@ int vectorTest_(int arg_72);
 
 struct IntIntTuple2;
 
-int intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4);
+bool intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4);
 
-int intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5);
+bool intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5);
 
 enum SegItemTypeTag_Tag;
 
@@ -240,7 +240,7 @@ struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 se
 
 struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tuple2 segNodeToChildren_2(struct StringIntIntObjectSegNodeTag_Tuple5 node_3);
 
-int segNodeIsEmpty_1(struct IntIntIntObjectSegNodeTag_Tuple5 node_4);
+bool segNodeIsEmpty_1(struct IntIntIntObjectSegNodeTag_Tuple5 node_4);
 
 struct IntIntIntObjectSegNodeTag_Tuple5 segNodeWithLeft_1(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 itemTy_8, struct IntIntIntObjectSegNodeTag_Tuple5 newLeft_, struct IntIntIntObjectSegNodeTag_Tuple5 node_5);
 
@@ -350,21 +350,21 @@ struct String strAdd_(struct String x_9, struct String y_4);
 
 struct String fun_8(void* env_5, struct String arg_9, struct String arg_10);
 
-int fun_9(void* env_6, int arg_11, int arg_12);
+bool fun_9(void* env_6, int arg_11, int arg_12);
 
-int fun_10(void* env_7, int arg_13, int arg_14);
+bool fun_10(void* env_7, int arg_13, int arg_14);
 
-int fun_11(void* env_8, int arg_15, int arg_16);
+bool fun_11(void* env_8, int arg_15, int arg_16);
 
-int fun_12(void* env_9, int arg_17, int arg_18);
+bool fun_12(void* env_9, int arg_17, int arg_18);
 
-int fun_13(void* env_10, int arg_19, int arg_20);
+bool fun_13(void* env_10, int arg_19, int arg_20);
 
 int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeInt_, int arg_99);
 
-int fun_14(void* env_11, int arg_21, int arg_22);
+bool fun_14(void* env_11, int arg_21, int arg_22);
 
-int fun_15(void* env_12, int arg_23, int arg_24);
+bool fun_15(void* env_12, int arg_23, int arg_24);
 
 int testSet_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeInt_, int arg_100);
 
@@ -378,7 +378,7 @@ int testSumMore_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
 
 int testBalance_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeInt_, int arg_118);
 
-int fun_16(void* env_13, struct String arg_25, struct String arg_26);
+bool fun_16(void* env_13, struct String arg_25, struct String arg_26);
 
 int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeStr_, int arg_119);
 
@@ -400,11 +400,11 @@ int abc140bSolve_(int n_4, struct IntList* a_, struct IntList* b_, struct IntLis
 
 int f_(struct IntList* a_2, struct IntList* b_2, struct IntList* c_2);
 
-int case1_(int arg_131);
+bool case1_(int arg_131);
 
-int case2_(int arg_132);
+bool case2_(int arg_132);
 
-int case3_(int arg_133);
+bool case3_(int arg_133);
 
 int abc140bTest_(int arg_134);
 
@@ -424,7 +424,7 @@ int go_19(int n_7, struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSeg
 
 int abc140eSolve_(int n_7, struct IntList* perm_);
 
-int solve_(struct IntList* p_1, int expected_1);
+bool solve_(struct IntList* p_1, int expected_1);
 
 int abc140eTest_(int arg_148);
 
@@ -466,18 +466,18 @@ struct StringList {
     struct StringList* tail;
 };
 
-int listIsEmpty_1(struct StringList* xs_) {
-    int if_;
+bool listIsEmpty_1(struct StringList* xs_) {
+    bool if_;
     if ((!(xs_))) {
         goto nil_cl_2;
     } else {
         goto cons_cl_3;
     }
 nil_cl_2:;
-    if_ = 1;
+    if_ = true;
     goto if_next_1;
 cons_cl_3:;
-    if_ = 0;
+    if_ = false;
     goto if_next_1;
 if_next_1:;
     return if_;
@@ -493,18 +493,18 @@ struct StringStringStringFun2List {
     struct StringStringStringFun2List* tail;
 };
 
-int listIsEmpty_4(struct StringStringStringFun2List* xs_) {
-    int if_1;
+bool listIsEmpty_4(struct StringStringStringFun2List* xs_) {
+    bool if_1;
     if ((!(xs_))) {
         goto nil_cl_5;
     } else {
         goto cons_cl_6;
     }
 nil_cl_5:;
-    if_1 = 1;
+    if_1 = true;
     goto if_next_4;
 cons_cl_6:;
-    if_1 = 0;
+    if_1 = false;
     goto if_next_4;
 if_next_4:;
     return if_1;
@@ -515,18 +515,18 @@ struct IntList {
     struct IntList* tail;
 };
 
-int listIsEmpty_3(struct IntList* xs_) {
-    int if_2;
+bool listIsEmpty_3(struct IntList* xs_) {
+    bool if_2;
     if ((!(xs_))) {
         goto nil_cl_8;
     } else {
         goto cons_cl_9;
     }
 nil_cl_8:;
-    if_2 = 1;
+    if_2 = true;
     goto if_next_7;
 cons_cl_9:;
-    if_2 = 0;
+    if_2 = false;
     goto if_next_7;
 if_next_7:;
     return if_2;
@@ -542,18 +542,18 @@ struct IntIntIntFun2List {
     struct IntIntIntFun2List* tail;
 };
 
-int listIsEmpty_2(struct IntIntIntFun2List* xs_) {
-    int if_3;
+bool listIsEmpty_2(struct IntIntIntFun2List* xs_) {
+    bool if_3;
     if ((!(xs_))) {
         goto nil_cl_11;
     } else {
         goto cons_cl_12;
     }
 nil_cl_11:;
-    if_3 = 1;
+    if_3 = true;
     goto if_next_10;
 cons_cl_12:;
-    if_3 = 0;
+    if_3 = false;
     goto if_next_10;
 if_next_10:;
     return if_3;
@@ -580,18 +580,18 @@ struct IntIntIntObjectSegNodeTag_Tuple5List {
     struct IntIntIntObjectSegNodeTag_Tuple5List* tail;
 };
 
-int listIsEmpty_5(struct IntIntIntObjectSegNodeTag_Tuple5List* xs_) {
-    int if_4;
+bool listIsEmpty_5(struct IntIntIntObjectSegNodeTag_Tuple5List* xs_) {
+    bool if_4;
     if ((!(xs_))) {
         goto nil_cl_14;
     } else {
         goto cons_cl_15;
     }
 nil_cl_14:;
-    if_4 = 1;
+    if_4 = true;
     goto if_next_13;
 cons_cl_15:;
-    if_4 = 0;
+    if_4 = false;
     goto if_next_13;
 if_next_13:;
     return if_4;
@@ -610,18 +610,18 @@ struct StringIntIntObjectSegNodeTag_Tuple5List {
     struct StringIntIntObjectSegNodeTag_Tuple5List* tail;
 };
 
-int listIsEmpty_6(struct StringIntIntObjectSegNodeTag_Tuple5List* xs_) {
-    int if_5;
+bool listIsEmpty_6(struct StringIntIntObjectSegNodeTag_Tuple5List* xs_) {
+    bool if_5;
     if ((!(xs_))) {
         goto nil_cl_17;
     } else {
         goto cons_cl_18;
     }
 nil_cl_17:;
-    if_5 = 1;
+    if_5 = true;
     goto if_next_16;
 cons_cl_18:;
-    if_5 = 0;
+    if_5 = false;
     goto if_next_16;
 if_next_16:;
     return if_5;
@@ -744,7 +744,7 @@ struct StringList* listRev_1(struct StringList* xs_4) {
 }
 
 struct IntIntBoolFun2 {
-    int(*fun)(void*, int, int);
+    bool(*fun)(void*, int, int);
     void* env;
 };
 
@@ -753,15 +753,15 @@ struct IntListIntListTuple2 {
     struct IntList* t1;
 };
 
-int go_32(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1) {
+bool go_32(struct IntIntBoolFun2 itemEq_, struct IntList* xs_8, struct IntList* ys_1) {
 tailrec_35:;
-    int match_4;
+    bool match_4;
     struct IntListIntListTuple2 tuple_;
     tuple_.t0 = xs_8;
     tuple_.t1 = ys_1;
     if ((!((!(tuple_.t0))))) goto next_37;
     if ((!((!(tuple_.t1))))) goto next_37;
-    match_4 = 1;
+    match_4 = true;
     goto end_match_36;
 next_37:;
     if ((!(tuple_.t0))) goto next_38;
@@ -770,8 +770,8 @@ next_37:;
     if ((!(tuple_.t1))) goto next_38;
     int y_ = tuple_.t1->head;
     struct IntList* ys_2 = tuple_.t1->tail;
-    int app_ = itemEq_.fun(itemEq_.env, x_1, y_);
-    int if_6;
+    bool app_ = itemEq_.fun(itemEq_.env, x_1, y_);
+    bool if_6;
     if (app_) {
         goto then_41;
     } else {
@@ -785,16 +785,16 @@ then_41:;
     xs_8 = arg_45;
     ys_1 = arg_46;
     goto tailrec_35;
-    if_6 = 0;
+    if_6 = false;
     goto if_next_40;
 else_42:;
-    if_6 = 0;
+    if_6 = false;
     goto if_next_40;
 if_next_40:;
     match_4 = if_6;
     goto end_match_36;
 next_38:;
-    match_4 = 0;
+    match_4 = false;
     goto end_match_36;
 next_39:;
 end_match_36:;
@@ -802,7 +802,7 @@ end_match_36:;
 }
 
 struct StringStringBoolFun2 {
-    int(*fun)(void*, struct String, struct String);
+    bool(*fun)(void*, struct String, struct String);
     void* env;
 };
 
@@ -811,15 +811,15 @@ struct StringListStringListTuple2 {
     struct StringList* t1;
 };
 
-int go_31(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1) {
+bool go_31(struct StringStringBoolFun2 itemEq_, struct StringList* xs_8, struct StringList* ys_1) {
 tailrec_43:;
-    int match_5;
+    bool match_5;
     struct StringListStringListTuple2 tuple_1;
     tuple_1.t0 = xs_8;
     tuple_1.t1 = ys_1;
     if ((!((!(tuple_1.t0))))) goto next_45;
     if ((!((!(tuple_1.t1))))) goto next_45;
-    match_5 = 1;
+    match_5 = true;
     goto end_match_44;
 next_45:;
     if ((!(tuple_1.t0))) goto next_46;
@@ -828,8 +828,8 @@ next_45:;
     if ((!(tuple_1.t1))) goto next_46;
     struct String y_ = tuple_1.t1->head;
     struct StringList* ys_2 = tuple_1.t1->tail;
-    int app_1 = itemEq_.fun(itemEq_.env, x_1, y_);
-    int if_7;
+    bool app_1 = itemEq_.fun(itemEq_.env, x_1, y_);
+    bool if_7;
     if (app_1) {
         goto then_49;
     } else {
@@ -843,29 +843,29 @@ then_49:;
     xs_8 = arg_48;
     ys_1 = arg_49;
     goto tailrec_43;
-    if_7 = 0;
+    if_7 = false;
     goto if_next_48;
 else_50:;
-    if_7 = 0;
+    if_7 = false;
     goto if_next_48;
 if_next_48:;
     match_5 = if_7;
     goto end_match_44;
 next_46:;
-    match_5 = 0;
+    match_5 = false;
     goto end_match_44;
 next_47:;
 end_match_44:;
     return match_5;
 }
 
-int listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList* xs_7, struct IntList* ys_) {
-    int call_4 = go_32(itemEq_, xs_7, ys_);
+bool listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList* xs_7, struct IntList* ys_) {
+    bool call_4 = go_32(itemEq_, xs_7, ys_);
     return call_4;
 }
 
-int listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList* xs_7, struct StringList* ys_) {
-    int call_5 = go_31(itemEq_, xs_7, ys_);
+bool listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList* xs_7, struct StringList* ys_) {
+    bool call_5 = go_31(itemEq_, xs_7, ys_);
     return call_5;
 }
 
@@ -1008,12 +1008,12 @@ struct String strConcat_(struct StringList* xs_10) {
     struct StringStringListTuple2 call_12 = go_5(xs_10, n_);
     struct String s_ = call_12.t0;
     struct StringList* xs_17 = call_12.t1;
-    int call_13 = listIsEmpty_1(xs_17);
+    bool call_13 = listIsEmpty_1(xs_17);
     milone_assert(call_13, 94, 2);
     return s_;
 }
 
-int intEq_(int first_, int second_) {
+bool intEq_(int first_, int second_) {
     return (first_ == second_);
 }
 
@@ -1051,7 +1051,7 @@ if_next_67:;
     return if_11;
 }
 
-int strEq_(struct String first_3, struct String second_3) {
+bool strEq_(struct String first_3, struct String second_3) {
     return (str_cmp(first_3, second_3) == 0);
 }
 
@@ -1183,14 +1183,14 @@ struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6Obje
 int vectorCheckIndex_1(int index_2, struct IntIntIntObjectFun1ObjectIntIntFun2ObjectIntIntUnitFun3TypeTag_Tuple6ObjectIntIntVectorTag_Tuple5 self_) {
     int call_21 = vectorToLength_1(self_);
     int len_7 = call_21;
-    int if_12;
+    bool if_12;
     if ((index_2 < 0)) {
         goto then_71;
     } else {
         goto else_72;
     }
 then_71:;
-    if_12 = 1;
+    if_12 = true;
     goto if_next_70;
 else_72:;
     if_12 = (index_2 >= len_7);
@@ -1354,19 +1354,19 @@ struct IntIntTuple2 {
     int t1;
 };
 
-int intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4) {
+bool intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4) {
     int xl_ = first_4.t0;
     int xr_ = first_4.t1;
     int yl_ = second_4.t0;
     int yr_ = second_4.t1;
-    int if_15;
+    bool if_15;
     if ((yl_ >= xr_)) {
         goto then_85;
     } else {
         goto else_86;
     }
 then_85:;
-    if_15 = 1;
+    if_15 = true;
     goto if_next_84;
 else_86:;
     if_15 = (xl_ >= yr_);
@@ -1375,12 +1375,12 @@ if_next_84:;
     return if_15;
 }
 
-int intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5) {
+bool intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5) {
     int xl_1 = first_5.t0;
     int xr_1 = first_5.t1;
     int yl_1 = second_5.t0;
     int yr_1 = second_5.t1;
-    int if_16;
+    bool if_16;
     if ((yl_1 >= xl_1)) {
         goto then_88;
     } else {
@@ -1390,7 +1390,7 @@ then_88:;
     if_16 = (xr_1 >= yr_1);
     goto if_next_87;
 else_89:;
-    if_16 = 0;
+    if_16 = false;
     goto if_next_87;
 if_next_87:;
     return if_16;
@@ -1469,7 +1469,7 @@ struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTyp
     struct StringList* list_7 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
     list_7->head = app_6;
     list_7->tail = list_8;
-    int call_49 = listIsEmpty_1(list_7);
+    bool call_49 = listIsEmpty_1(list_7);
     milone_assert((!(call_49)), 42, 2);
     struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tuple2 tuple_8;
     tuple_8.t0 = emptyNode_1;
@@ -1489,7 +1489,7 @@ struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTyp
     struct StringStringStringFun2List* list_9 = (struct StringStringStringFun2List*)milone_mem_alloc(1, sizeof(struct StringStringStringFun2List));
     list_9->head = call_50;
     list_9->tail = list_10;
-    int call_51 = listIsEmpty_4(list_9);
+    bool call_51 = listIsEmpty_4(list_9);
     milone_assert((!(call_51)), 50, 2);
     return itemTy_5;
 }
@@ -1509,7 +1509,7 @@ struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 
     struct IntList* list_11 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_11->head = app_7;
     list_11->tail = list_12;
-    int call_53 = listIsEmpty_3(list_11);
+    bool call_53 = listIsEmpty_3(list_11);
     milone_assert((!(call_53)), 42, 2);
     struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 tuple_10;
     tuple_10.t0 = emptyNode_1;
@@ -1529,7 +1529,7 @@ struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 
     struct IntIntIntFun2List* list_13 = (struct IntIntIntFun2List*)milone_mem_alloc(1, sizeof(struct IntIntIntFun2List));
     list_13->head = call_54;
     list_13->tail = list_14;
-    int call_55 = listIsEmpty_2(list_13);
+    bool call_55 = listIsEmpty_2(list_13);
     milone_assert((!(call_55)), 50, 2);
     return itemTy_5;
 }
@@ -1585,7 +1585,7 @@ struct IntIntIntObjectSegNodeTag_Tuple5 doNew_1(struct IntIntIntFun2IntIntIntObj
     int rightItem_ = right_.t0;
     int rightLen_ = right_.t1;
     int rightHeight_ = right_.t2;
-    int if_17;
+    bool if_17;
     if ((leftLen_ >= 1)) {
         goto then_91;
     } else {
@@ -1595,7 +1595,7 @@ then_91:;
     if_17 = (rightLen_ >= 1);
     goto if_next_90;
 else_92:;
-    if_17 = 0;
+    if_17 = false;
     goto if_next_90;
 if_next_90:;
     milone_assert(if_17, 73, 4);
@@ -1626,7 +1626,7 @@ struct StringIntIntObjectSegNodeTag_Tuple5 doNew_2(struct StringStringStringFun2
     struct String rightItem_ = right_.t0;
     int rightLen_ = right_.t1;
     int rightHeight_ = right_.t2;
-    int if_18;
+    bool if_18;
     if ((leftLen_ >= 1)) {
         goto then_94;
     } else {
@@ -1636,7 +1636,7 @@ then_94:;
     if_18 = (rightLen_ >= 1);
     goto if_next_93;
 else_95:;
-    if_18 = 0;
+    if_18 = false;
     goto if_next_93;
 if_next_93:;
     milone_assert(if_18, 73, 4);
@@ -1758,7 +1758,7 @@ struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 se
     struct IntIntIntObjectSegNodeTag_Tuple5List* list_15 = (struct IntIntIntObjectSegNodeTag_Tuple5List*)milone_mem_alloc(1, sizeof(struct IntIntIntObjectSegNodeTag_Tuple5List));
     list_15->head = node_3;
     list_15->tail = list_16;
-    int call_70 = listIsEmpty_5(list_15);
+    bool call_70 = listIsEmpty_5(list_15);
     milone_assert((!(call_70)), 121, 2);
     struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 tuple_21;
     tuple_21.t0 = left_1;
@@ -1781,7 +1781,7 @@ struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tup
     struct StringIntIntObjectSegNodeTag_Tuple5List* list_18 = (struct StringIntIntObjectSegNodeTag_Tuple5List*)milone_mem_alloc(1, sizeof(struct StringIntIntObjectSegNodeTag_Tuple5List));
     list_18->head = node_3;
     list_18->tail = list_19;
-    int call_71 = listIsEmpty_6(list_18);
+    bool call_71 = listIsEmpty_6(list_18);
     milone_assert((!(call_71)), 121, 2);
     struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tuple2 tuple_22;
     tuple_22.t0 = left_1;
@@ -1789,7 +1789,7 @@ struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tup
     return tuple_22;
 }
 
-int segNodeIsEmpty_1(struct IntIntIntObjectSegNodeTag_Tuple5 node_4) {
+bool segNodeIsEmpty_1(struct IntIntIntObjectSegNodeTag_Tuple5 node_4) {
     int call_72 = segNodeToLength_1(node_4);
     return (call_72 == 0);
 }
@@ -2131,7 +2131,7 @@ if_next_145:;
 struct IntIntIntObjectSegNodeTag_Tuple5 segNodeMakeBalanced_1(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 itemTy_10, struct IntIntIntObjectSegNodeTag_Tuple5 node_7) {
     int call_137 = toBalance_1(node_7);
     int selfBalance_ = call_137;
-    int if_33;
+    bool if_33;
     if ((selfBalance_ >= -1)) {
         goto then_149;
     } else {
@@ -2141,7 +2141,7 @@ then_149:;
     if_33 = (1 >= selfBalance_);
     goto if_next_148;
 else_150:;
-    if_33 = 0;
+    if_33 = false;
     goto if_next_148;
 if_next_148:;
     struct IntIntIntObjectSegNodeTag_Tuple5 if_34;
@@ -2225,7 +2225,7 @@ if_next_151:;
 struct StringIntIntObjectSegNodeTag_Tuple5 segNodeMakeBalanced_2(struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 itemTy_10, struct StringIntIntObjectSegNodeTag_Tuple5 node_7) {
     int call_146 = toBalance_2(node_7);
     int selfBalance_ = call_146;
-    int if_39;
+    bool if_39;
     if ((selfBalance_ >= -1)) {
         goto then_167;
     } else {
@@ -2235,7 +2235,7 @@ then_167:;
     if_39 = (1 >= selfBalance_);
     goto if_next_166;
 else_168:;
-    if_39 = 0;
+    if_39 = false;
     goto if_next_166;
 if_next_166:;
     struct StringIntIntObjectSegNodeTag_Tuple5 if_40;
@@ -2388,14 +2388,14 @@ int go_27(int index_6, struct IntIntIntObjectSegNodeTag_Tuple5 node_14) {
 tailrec_184:;
     int item_4 = node_14.t0;
     int len_14 = node_14.t1;
-    int if_45;
+    bool if_45;
     if ((index_6 < 0)) {
         goto then_186;
     } else {
         goto else_187;
     }
 then_186:;
-    if_45 = 1;
+    if_45 = true;
     goto if_next_185;
 else_187:;
     if_45 = (index_6 >= len_14);
@@ -2465,14 +2465,14 @@ struct String go_37(int index_6, struct StringIntIntObjectSegNodeTag_Tuple5 node
 tailrec_197:;
     struct String item_4 = node_14.t0;
     int len_14 = node_14.t1;
-    int if_49;
+    bool if_49;
     if ((index_6 < 0)) {
         goto then_199;
     } else {
         goto else_200;
     }
 then_199:;
-    if_49 = 1;
+    if_49 = true;
     goto if_next_198;
 else_200:;
     if_49 = (index_6 >= len_14);
@@ -2551,7 +2551,7 @@ struct String segTreeGet_2(int index_5, struct StringStringStringFun2StringIntIn
 }
 
 int go_26(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 itemTy_12, struct IntIntTuple2 e_, struct IntIntTuple2 q_, struct IntIntIntObjectSegNodeTag_Tuple5 node_15) {
-    int call_171 = intervalIsDisjoint_(q_, e_);
+    bool call_171 = intervalIsDisjoint_(q_, e_);
     int if_53;
     if (call_171) {
         goto then_211;
@@ -2563,7 +2563,7 @@ then_211:;
     if_53 = call_172;
     goto if_next_210;
 else_212:;
-    int call_173 = intervalCovers_(q_, e_);
+    bool call_173 = intervalCovers_(q_, e_);
     int if_54;
     if (call_173) {
         goto then_214;
@@ -2575,7 +2575,7 @@ then_214:;
     if_54 = call_174;
     goto if_next_213;
 else_215:;
-    int call_175 = segNodeIsEmpty_1(node_15);
+    bool call_175 = segNodeIsEmpty_1(node_15);
     milone_assert((!(call_175)), 286, 6);
     struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 call_176 = segNodeToChildren_1(node_15);
     struct IntIntIntObjectSegNodeTag_Tuple5 leftNode_ = call_176.t0;
@@ -2617,7 +2617,7 @@ int segTreeSum_1(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectSegNodeTag
     struct IntIntTuple2 tuple_28;
     tuple_28.t0 = 0;
     tuple_28.t1 = len_15;
-    int call_182 = intervalIsDisjoint_(q_1, tuple_28);
+    bool call_182 = intervalIsDisjoint_(q_1, tuple_28);
     int if_55;
     if (call_182) {
         goto then_217;
@@ -2644,14 +2644,14 @@ struct IntIntIntObjectSegNodeTag_Tuple5 go_25(int newItem_, struct IntIntIntFun2
     int len_16 = node_16.t1;
     int height_2 = node_16.t2;
     void* children_1 = node_16.t3;
-    int if_56;
+    bool if_56;
     if ((index_8 < 0)) {
         goto then_220;
     } else {
         goto else_221;
     }
 then_220:;
-    if_56 = 1;
+    if_56 = true;
     goto if_next_219;
 else_221:;
     if_56 = (index_8 >= len_16);
@@ -3188,28 +3188,28 @@ struct String fun_8(void* env_5, struct String arg_9, struct String arg_10) {
     return call_248;
 }
 
-int fun_9(void* env_6, int arg_11, int arg_12) {
-    int call_249 = intEq_(arg_11, arg_12);
+bool fun_9(void* env_6, int arg_11, int arg_12) {
+    bool call_249 = intEq_(arg_11, arg_12);
     return call_249;
 }
 
-int fun_10(void* env_7, int arg_13, int arg_14) {
-    int call_250 = intEq_(arg_13, arg_14);
+bool fun_10(void* env_7, int arg_13, int arg_14) {
+    bool call_250 = intEq_(arg_13, arg_14);
     return call_250;
 }
 
-int fun_11(void* env_8, int arg_15, int arg_16) {
-    int call_251 = intEq_(arg_15, arg_16);
+bool fun_11(void* env_8, int arg_15, int arg_16) {
+    bool call_251 = intEq_(arg_15, arg_16);
     return call_251;
 }
 
-int fun_12(void* env_9, int arg_17, int arg_18) {
-    int call_252 = intEq_(arg_17, arg_18);
+bool fun_12(void* env_9, int arg_17, int arg_18) {
+    bool call_252 = intEq_(arg_17, arg_18);
     return call_252;
 }
 
-int fun_13(void* env_10, int arg_19, int arg_20) {
-    int call_253 = intEq_(arg_19, arg_20);
+bool fun_13(void* env_10, int arg_19, int arg_20) {
+    bool call_253 = intEq_(arg_19, arg_20);
     return call_253;
 }
 
@@ -3229,7 +3229,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     list_23->head = 1;
     list_23->tail = list_24;
     struct IntList* call_257 = segTreeToList_2(v_5);
-    int call_258 = listEq_2(fun_25, list_23, call_257);
+    bool call_258 = listEq_2(fun_25, list_23, call_257);
     milone_assert(call_258, 462, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_259 = segTreePush_1(3, v_5);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_6 = call_259;
@@ -3247,7 +3247,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     list_25->head = 1;
     list_25->tail = list_26;
     struct IntList* call_260 = segTreeToList_2(v_6);
-    int call_261 = listEq_2(fun_26, list_25, call_260);
+    bool call_261 = listEq_2(fun_26, list_25, call_260);
     milone_assert(call_261, 465, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_262 = segTreePop_1(v_6);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_7 = call_262;
@@ -3262,7 +3262,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     list_28->head = 1;
     list_28->tail = list_29;
     struct IntList* call_263 = segTreeToList_2(v_7);
-    int call_264 = listEq_2(fun_27, list_28, call_263);
+    bool call_264 = listEq_2(fun_27, list_28, call_263);
     milone_assert(call_264, 468, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_265 = segTreePop_1(v_7);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_8 = call_265;
@@ -3274,7 +3274,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     list_30->head = 1;
     list_30->tail = NULL;
     struct IntList* call_266 = segTreeToList_2(v_8);
-    int call_267 = listEq_2(fun_28, list_30, call_266);
+    bool call_267 = listEq_2(fun_28, list_30, call_266);
     milone_assert(call_267, 471, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_268 = segTreePop_1(v_8);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_9 = call_268;
@@ -3283,18 +3283,18 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     void* env_23 = box_9;
     struct IntIntBoolFun2 fun_29 = (struct IntIntBoolFun2){.fun = fun_13, .env = env_23};
     struct IntList* call_269 = segTreeToList_2(v_9);
-    int call_270 = listEq_2(fun_29, NULL, call_269);
+    bool call_270 = listEq_2(fun_29, NULL, call_269);
     milone_assert(call_270, 474, 4);
     return 0;
 }
 
-int fun_14(void* env_11, int arg_21, int arg_22) {
-    int call_271 = intEq_(arg_21, arg_22);
+bool fun_14(void* env_11, int arg_21, int arg_22) {
+    bool call_271 = intEq_(arg_21, arg_22);
     return call_271;
 }
 
-int fun_15(void* env_12, int arg_23, int arg_24) {
-    int call_272 = intEq_(arg_23, arg_24);
+bool fun_15(void* env_12, int arg_23, int arg_24) {
+    bool call_272 = intEq_(arg_23, arg_24);
     return call_272;
 }
 
@@ -3325,7 +3325,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTy
     list_34->head = 1;
     list_34->tail = list_35;
     struct IntList* call_275 = segTreeToList_2(v_10);
-    int call_276 = listEq_2(fun_30, list_34, call_275);
+    bool call_276 = listEq_2(fun_30, list_34, call_275);
     milone_assert(call_276, 483, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_277 = segTreeSet_1(0, 11, v_10);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_278 = segTreeSet_1(2, 33, call_277);
@@ -3344,7 +3344,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTy
     list_37->head = 11;
     list_37->tail = list_38;
     struct IntList* call_279 = segTreeToList_2(v_11);
-    int call_280 = listEq_2(fun_31, list_37, call_279);
+    bool call_280 = listEq_2(fun_31, list_37, call_279);
     milone_assert(call_280, 486, 4);
     return 0;
 }
@@ -3527,8 +3527,8 @@ int testBalance_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     return 0;
 }
 
-int fun_16(void* env_13, struct String arg_25, struct String arg_26) {
-    int call_293 = strEq_(arg_25, arg_26);
+bool fun_16(void* env_13, struct String arg_25, struct String arg_26) {
+    bool call_293 = strEq_(arg_25, arg_26);
     return call_293;
 }
 
@@ -3548,7 +3548,7 @@ int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectSegNodeTag_T
     list_52->head = (struct String){.str = "a", .len = 1};
     list_52->tail = list_53;
     struct StringList* call_297 = segTreeToList_1(v_15);
-    int call_298 = listEq_1(fun_32, list_52, call_297);
+    bool call_298 = listEq_1(fun_32, list_52, call_297);
     milone_assert(call_298, 543, 4);
     return 0;
 }
@@ -3621,7 +3621,7 @@ else_299:;
     int ai_ = call_312;
     int call_313 = segTreeGet_1((ai_ - 1), b_1);
     int eat_ = call_313;
-    int if_79;
+    bool if_79;
     if (((i_6 + 1) < n_4)) {
         goto then_301;
     } else {
@@ -3632,7 +3632,7 @@ then_301:;
     if_79 = (call_314 == (ai_ + 1));
     goto if_next_300;
 else_302:;
-    if_79 = 0;
+    if_79 = false;
     goto if_next_300;
 if_next_300:;
     int if_80;
@@ -3697,7 +3697,7 @@ int f_(struct IntList* a_2, struct IntList* b_2, struct IntList* c_2) {
     return call_324;
 }
 
-int case1_(int arg_131) {
+bool case1_(int arg_131) {
     struct IntList* list_56 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_56->head = 2;
     list_56->tail = NULL;
@@ -3729,7 +3729,7 @@ int case1_(int arg_131) {
     return (call_325 == 14);
 }
 
-int case2_(int arg_132) {
+bool case2_(int arg_132) {
     struct IntList* list_65 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_65->head = 1;
     list_65->tail = NULL;
@@ -3770,7 +3770,7 @@ int case2_(int arg_132) {
     return (call_326 == 74);
 }
 
-int case3_(int arg_133) {
+bool case3_(int arg_133) {
     struct IntList* list_74 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_74->head = 2;
     list_74->tail = NULL;
@@ -3794,11 +3794,11 @@ int case3_(int arg_133) {
 }
 
 int abc140bTest_(int arg_134) {
-    int call_328 = case1_(0);
+    bool call_328 = case1_(0);
     milone_assert(call_328, 41, 2);
-    int call_329 = case2_(0);
+    bool call_329 = case2_(0);
     milone_assert(call_329, 49, 2);
-    int call_330 = case3_(0);
+    bool call_330 = case3_(0);
     milone_assert(call_330, 57, 2);
     return 0;
 }
@@ -3885,7 +3885,7 @@ else_313:;
     int x_11 = call_342;
     int call_343 = segTreeSum_1(0, x_11, prev_1);
     int w_ = call_343;
-    int if_83;
+    bool if_83;
     if ((x_11 >= w_)) {
         goto then_315;
     } else {
@@ -3895,7 +3895,7 @@ then_315:;
     if_83 = (x_11 < i_8);
     goto if_next_314;
 else_316:;
-    if_83 = 0;
+    if_83 = false;
     goto if_next_314;
 if_next_314:;
     milone_assert(if_83, 58, 6);
@@ -3903,7 +3903,7 @@ if_next_314:;
     int y_5 = call_344;
     int call_345 = segTreeSum_1((y_5 + 1), (n_7 + 2), next_1);
     int z_ = call_345;
-    int if_84;
+    bool if_84;
     if ((i_8 < y_5)) {
         goto then_318;
     } else {
@@ -3913,7 +3913,7 @@ then_318:;
     if_84 = (z_ >= y_5);
     goto if_next_317;
 else_319:;
-    if_84 = 0;
+    if_84 = false;
     goto if_next_317;
 if_next_317:;
     milone_assert(if_84, 62, 6);
@@ -3981,23 +3981,23 @@ int abc140eSolve_(int n_7, struct IntList* perm_) {
     return call_362;
 }
 
-int solve_(struct IntList* p_1, int expected_1) {
+bool solve_(struct IntList* p_1, int expected_1) {
     int call_363 = listLength_1(p_1);
     int n_8 = call_363;
     int call_364 = abc140eSolve_(n_8, p_1);
     int actual_1 = call_364;
-    int if_85;
+    bool if_85;
     if ((actual_1 == expected_1)) {
         goto then_321;
     } else {
         goto else_322;
     }
 then_321:;
-    if_85 = 1;
+    if_85 = true;
     goto if_next_320;
 else_322:;
     printf("actual=%d expected=%d\n", actual_1, expected_1);
-    if_85 = 0;
+    if_85 = false;
     goto if_next_320;
 if_next_320:;
     return if_85;
@@ -4013,7 +4013,7 @@ int abc140eTest_(int arg_148) {
     struct IntList* list_78 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_78->head = 2;
     list_78->tail = list_79;
-    int call_365 = solve_(list_78, 5);
+    bool call_365 = solve_(list_78, 5);
     milone_assert(call_365, 88, 2);
     struct IntList* list_85 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_85->head = 5;
@@ -4030,7 +4030,7 @@ int abc140eTest_(int arg_148) {
     struct IntList* list_81 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_81->head = 1;
     list_81->tail = list_82;
-    int call_366 = solve_(list_81, 30);
+    bool call_366 = solve_(list_81, 30);
     milone_assert(call_366, 89, 2);
     struct IntList* list_93 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_93->head = 1;
@@ -4056,7 +4056,7 @@ int abc140eTest_(int arg_148) {
     struct IntList* list_86 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_86->head = 8;
     list_86->tail = list_87;
-    int call_367 = solve_(list_86, 136);
+    bool call_367 = solve_(list_86, 136);
     milone_assert(call_367, 90, 2);
     return 0;
 }

@@ -12,7 +12,7 @@ struct DayRange_;
 
 struct DayRange_ newDayRange_(struct Day_ start_, struct Day_ endDay_);
 
-int between_(struct Day_ day_, struct DayRange_ range_);
+bool between_(struct Day_ day_, struct DayRange_ range_);
 
 int main();
 
@@ -28,7 +28,7 @@ struct Day_ {
 };
 
 struct Day_ newDay_(int value_) {
-    int if_;
+    bool if_;
     if ((value_ >= 1)) {
         goto then_2;
     } else {
@@ -38,7 +38,7 @@ then_2:;
     if_ = (31 >= value_);
     goto if_next_1;
 else_3:;
-    if_ = 0;
+    if_ = false;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, 10, 2);
@@ -66,10 +66,10 @@ struct DayRange_ newDayRange_(struct Day_ start_, struct Day_ endDay_) {
     return DayRange_;
 }
 
-int between_(struct Day_ day_, struct DayRange_ range_) {
+bool between_(struct Day_ day_, struct DayRange_ range_) {
     int call_2 = dayToInt_(day_);
     int call_3 = dayToInt_(range_.Start);
-    int if_1;
+    bool if_1;
     if ((call_2 >= call_3)) {
         goto then_5;
     } else {
@@ -81,7 +81,7 @@ then_5:;
     if_1 = (call_4 >= call_5);
     goto if_next_4;
 else_6:;
-    if_1 = 0;
+    if_1 = false;
     goto if_next_4;
 if_next_4:;
     return if_1;
@@ -92,7 +92,7 @@ int main() {
     struct Day_ call_7 = newDay_(10);
     struct Day_ call_8 = newDay_(20);
     struct DayRange_ call_9 = newDayRange_(call_7, call_8);
-    int call_10 = between_(call_6, call_9);
+    bool call_10 = between_(call_6, call_9);
     milone_assert(call_10, 25, 2);
     return 0;
 }

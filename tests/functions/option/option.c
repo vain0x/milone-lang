@@ -25,7 +25,7 @@ int basicSomeCase_(int arg_) {
     some_->head = 1;
     some_->tail = NULL;
     if ((!((!(some_))))) goto next_2;
-    milone_assert(0, 4, 12);
+    milone_assert(false, 4, 12);
     match_ = 0;
     goto end_match_1;
 next_2:;
@@ -35,7 +35,7 @@ next_2:;
     match_ = 0;
     goto end_match_1;
 next_3:;
-    milone_assert(0, 8, 9);
+    milone_assert(false, 8, 9);
     match_ = 0;
     goto end_match_1;
 next_4:;
@@ -54,7 +54,7 @@ int basicNoneCase_(int arg_1) {
     if ((!(none_))) goto next_6;
     if ((str_cmp(none_->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
     if ((!((!(none_->tail))))) goto next_6;
-    milone_assert(0, 15, 16);
+    milone_assert(false, 15, 16);
     match_1 = 0;
     goto end_match_5;
 next_6:;
@@ -62,7 +62,7 @@ next_6:;
     match_1 = 0;
     goto end_match_5;
 next_7:;
-    milone_assert(0, 19, 9);
+    milone_assert(false, 19, 9);
     match_1 = 0;
     goto end_match_5;
 next_8:;
@@ -86,7 +86,7 @@ int basicMatchCase_(int arg_2) {
         goto some_cl_11;
     }
 none_cl_10:;
-    milone_assert(0, 25, 12);
+    milone_assert(false, 25, 12);
     if_ = 0;
     goto if_next_9;
 some_cl_11:;

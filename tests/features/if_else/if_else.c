@@ -4,7 +4,7 @@ int main();
 
 int main() {
     int if_;
-    if (1) {
+    if (true) {
         goto then_2;
     } else {
         goto else_3;

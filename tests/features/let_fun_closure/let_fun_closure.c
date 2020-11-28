@@ -12,7 +12,7 @@ int transitiveCase_(int arg_3);
 
 int inc_1(int step_2, int x_3);
 
-int go_(int step_2, int n_);
+bool go_(int step_2, int n_);
 
 int recursiveCase_(int arg_6);
 
@@ -102,16 +102,16 @@ int inc_1(int step_2, int x_3) {
     return (x_3 + step_2);
 }
 
-int go_(int step_2, int n_) {
+bool go_(int step_2, int n_) {
 tailrec_1:;
-    int if_;
+    bool if_;
     if ((n_ >= 10)) {
         goto then_3;
     } else {
         goto else_4;
     }
 then_3:;
-    if_ = 1;
+    if_ = true;
     goto if_next_2;
 else_4:;
     int arg_4 = step_2;
@@ -120,7 +120,7 @@ else_4:;
     step_2 = arg_4;
     n_ = arg_5;
     goto tailrec_1;
-    if_ = 0;
+    if_ = false;
     goto if_next_2;
 if_next_2:;
     return if_;
@@ -128,7 +128,7 @@ if_next_2:;
 
 int recursiveCase_(int arg_6) {
     int step_2 = 1;
-    int call_5 = go_(step_2, 0);
+    bool call_5 = go_(step_2, 0);
     milone_assert(call_5, 18, 2);
     return 0;
 }

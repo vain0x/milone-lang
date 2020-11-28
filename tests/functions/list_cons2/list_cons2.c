@@ -22,7 +22,7 @@ int main() {
     if ((!(list_->tail))) goto next_2;
     int x2_ = list_->tail->head;
     if ((!((!(list_->tail->tail))))) goto next_2;
-    int if_;
+    bool if_;
     if ((x1_ == 1)) {
         goto then_5;
     } else {
@@ -32,14 +32,14 @@ then_5:;
     if_ = (x2_ == 2);
     goto if_next_4;
 else_6:;
-    if_ = 0;
+    if_ = false;
     goto if_next_4;
 if_next_4:;
     milone_assert(if_, 3, 4);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(0, 5, 4);
+    milone_assert(false, 5, 4);
     match_ = 0;
     goto end_match_1;
 next_3:;

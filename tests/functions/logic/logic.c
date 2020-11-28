@@ -3,7 +3,7 @@
 int main();
 
 int main() {
-    int if_;
+    bool if_;
     if ((2 >= 1)) {
         goto then_2;
     } else {
@@ -13,20 +13,20 @@ then_2:;
     if_ = (2 < 3);
     goto if_next_1;
 else_3:;
-    if_ = 0;
+    if_ = false;
     goto if_next_1;
 if_next_1:;
-    int if_1;
+    bool if_1;
     if (if_) {
         goto then_5;
     } else {
         goto else_6;
     }
 then_5:;
-    if_1 = 1;
+    if_1 = true;
     goto if_next_4;
 else_6:;
-    int if_2;
+    bool if_2;
     if ((2 < 3)) {
         goto then_8;
     } else {
@@ -36,7 +36,7 @@ then_8:;
     if_2 = (2 >= 1);
     goto if_next_7;
 else_9:;
-    if_2 = 0;
+    if_2 = false;
     goto if_next_7;
 if_next_7:;
     if_1 = if_2;

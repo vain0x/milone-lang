@@ -4,22 +4,22 @@ struct F64BoolFun1;
 
 struct F64List;
 
-int go_1(struct F64BoolFun1 pred_, struct F64List* xs_1);
+bool go_1(struct F64BoolFun1 pred_, struct F64List* xs_1);
 
-int all_1(struct F64BoolFun1 pred_, struct F64List* xs_);
+bool all_1(struct F64BoolFun1 pred_, struct F64List* xs_);
 
-int fun_(double x_1);
+bool fun_(double x_1);
 
-int fun_2(void* env_, double arg_);
+bool fun_2(void* env_, double arg_);
 
-int fun_1(double x_2);
+bool fun_1(double x_2);
 
-int fun_3(void* env_1, double arg_1);
+bool fun_3(void* env_1, double arg_1);
 
 int main();
 
 struct F64BoolFun1 {
-    int(*fun)(void*, double);
+    bool(*fun)(void*, double);
     void* env;
 };
 
@@ -28,18 +28,18 @@ struct F64List {
     struct F64List* tail;
 };
 
-int go_1(struct F64BoolFun1 pred_, struct F64List* xs_1) {
+bool go_1(struct F64BoolFun1 pred_, struct F64List* xs_1) {
 tailrec_1:;
-    int match_;
+    bool match_;
     if ((!((!(xs_1))))) goto next_3;
-    match_ = 1;
+    match_ = true;
     goto end_match_2;
 next_3:;
     if ((!(xs_1))) goto next_4;
     double x_ = xs_1->head;
     struct F64List* xs_2 = xs_1->tail;
-    int app_ = pred_.fun(pred_.env, x_);
-    int if_;
+    bool app_ = pred_.fun(pred_.env, x_);
+    bool if_;
     if (app_) {
         goto then_6;
     } else {
@@ -51,10 +51,10 @@ then_6:;
     pred_ = arg_2;
     xs_1 = arg_3;
     goto tailrec_1;
-    if_ = 0;
+    if_ = false;
     goto if_next_5;
 else_7:;
-    if_ = 0;
+    if_ = false;
     goto if_next_5;
 if_next_5:;
     match_ = if_;
@@ -65,26 +65,26 @@ end_match_2:;
     return match_;
 }
 
-int all_1(struct F64BoolFun1 pred_, struct F64List* xs_) {
-    int call_ = go_1(pred_, xs_);
+bool all_1(struct F64BoolFun1 pred_, struct F64List* xs_) {
+    bool call_ = go_1(pred_, xs_);
     return call_;
 }
 
-int fun_(double x_1) {
+bool fun_(double x_1) {
     return (x_1 == 0.0);
 }
 
-int fun_2(void* env_, double arg_) {
-    int call_1 = fun_(arg_);
+bool fun_2(void* env_, double arg_) {
+    bool call_1 = fun_(arg_);
     return call_1;
 }
 
-int fun_1(double x_2) {
+bool fun_1(double x_2) {
     return (0.0 < x_2);
 }
 
-int fun_3(void* env_1, double arg_1) {
-    int call_2 = fun_1(arg_1);
+bool fun_3(void* env_1, double arg_1) {
+    bool call_2 = fun_1(arg_1);
     return call_2;
 }
 
@@ -118,7 +118,7 @@ int main() {
     (*(((int*)box_))) = 0;
     void* env_2 = box_;
     struct F64BoolFun1 fun_4 = (struct F64BoolFun1){.fun = fun_2, .env = env_2};
-    int call_3 = all_1(fun_4, zeros_);
+    bool call_3 = all_1(fun_4, zeros_);
     milone_assert(call_3, 24, 2);
     struct F64List* list_18 = (struct F64List*)milone_mem_alloc(1, sizeof(struct F64List));
     list_18->head = 6.02e-23;
@@ -158,7 +158,7 @@ int main() {
     (*(((int*)box_1))) = 0;
     void* env_3 = box_1;
     struct F64BoolFun1 fun_5 = (struct F64BoolFun1){.fun = fun_3, .env = env_3};
-    int call_4 = all_1(fun_5, values_);
+    bool call_4 = all_1(fun_5, values_);
     milone_assert(call_4, 39, 2);
     milone_assert((6.0 < (2.3 + 4.5)), 42, 2);
     milone_assert(((44.0 - 2.0) == 42.0), 43, 2);

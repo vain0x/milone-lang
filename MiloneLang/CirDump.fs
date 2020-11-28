@@ -82,6 +82,7 @@ let private cpTy ty acc: string list =
   | CVoidTy -> acc |> cons "void"
   | CIntTy flavor -> acc |> cons (cIntegerTyName flavor)
   | CFloatTy flavor -> acc |> cons (cFloatTyName flavor)
+  | CBoolTy -> acc |> cons "bool"
   | CCharTy -> acc |> cons "char"
   | CPtrTy ty -> acc |> cpTy ty |> cons "*"
   | CConstPtrTy ty -> acc |> cpTy ty |> cons " const*"

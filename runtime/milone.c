@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -306,7 +307,7 @@ struct String str_get_slice(int l, int r, struct String s) {
 }
 
 static void verify_str_to_number(const char *type_name, const char *endptr,
-                                 int range_check) {
+                                 bool range_check) {
     if (!range_check || (*endptr != '\0' && !isspace(*endptr)) ||
         errno == ERANGE) {
         fprintf(stderr, "FATAL: Failed to convert a string to %s.\n",
@@ -332,21 +333,21 @@ int16_t str_to_int16(struct String s) {
 int str_to_int(struct String s) {
     char *endptr = s.str + s.len;
     int n = strtol(s.str, &endptr, 10);
-    verify_str_to_number("int", endptr, 1);
+    verify_str_to_number("int", endptr, true);
     return n;
 }
 
 int64_t str_to_int64(struct String s) {
     char *endptr = s.str + s.len;
     int64_t n = strtoll(s.str, &endptr, 10);
-    verify_str_to_number("int64_t", endptr, 1);
+    verify_str_to_number("int64_t", endptr, true);
     return n;
 }
 
 intptr_t str_to_intptr(struct String s) {
     char *endptr = s.str + s.len;
     int64_t n = strtoll(s.str, &endptr, 10);
-    verify_str_to_number("intptr_t", endptr, 1);
+    verify_str_to_number("intptr_t", endptr, true);
     return (intptr_t)n;
 }
 
@@ -367,21 +368,21 @@ uint16_t str_to_uint16(struct String s) {
 uint32_t str_to_uint32(struct String s) {
     char *endptr = s.str + s.len;
     uint32_t n = strtoul(s.str, &endptr, 10);
-    verify_str_to_number("uint32_t", endptr, 1);
+    verify_str_to_number("uint32_t", endptr, true);
     return n;
 }
 
 uint64_t str_to_uint64(struct String s) {
     char *endptr = s.str + s.len;
     uint64_t n = strtoull(s.str, &endptr, 10);
-    verify_str_to_number("uint64_t", endptr, 1);
+    verify_str_to_number("uint64_t", endptr, true);
     return n;
 }
 
 uintptr_t str_to_uintptr(struct String s) {
     char *endptr = s.str + s.len;
     uint64_t n = strtoull(s.str, &endptr, 10);
-    verify_str_to_number("uintptr_t", endptr, 1);
+    verify_str_to_number("uintptr_t", endptr, true);
     return n;
 }
 
@@ -400,7 +401,7 @@ struct String str_of_uint64(uint64_t value) {
 double str_to_double(struct String s) {
     char *endptr = s.str + s.len;
     double n = strtod(s.str, &endptr);
-    verify_str_to_number("float", endptr, 1);
+    verify_str_to_number("float", endptr, true);
     return n;
 }
 
@@ -425,7 +426,7 @@ struct String str_concat(struct String sep, struct StringList *strings) {
     struct MyStringList *ss = (struct MyStringList *)strings;
 
     struct StringBuilder *sb = string_builder_new_with_capacity(0x1000);
-    int first = 1;
+    bool first = true;
 
     while (ss) {
         struct String head = ss->head;
@@ -434,7 +435,7 @@ struct String str_concat(struct String sep, struct StringList *strings) {
         if (!first && sep.len > 0) {
             string_builder_append_string(sb, sep);
         }
-        first = 0;
+        first = false;
 
         string_builder_append_string(sb, head);
     }
@@ -446,7 +447,7 @@ struct String str_concat(struct String sep, struct StringList *strings) {
 // assertion
 // -----------------------------------------------
 
-void milone_assert(int cond, int y, int x) {
+void milone_assert(bool cond, int y, int x) {
     if (!cond) {
         fprintf(stderr, "Assertion failed at (%d, %d)\n", y + 1, x + 1);
         exit(1);
@@ -458,11 +459,11 @@ void milone_assert(int cond, int y, int x) {
 // -----------------------------------------------
 
 int file_exists(struct String file_name) {
-    int ok = 0;
+    bool ok = false;
 
     FILE *fp = fopen(file_name.str, "r");
     if (fp) {
-        ok = 1;
+        ok = true;
         fclose(fp);
     }
 

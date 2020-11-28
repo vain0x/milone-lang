@@ -62,7 +62,7 @@ int main() {
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(0, 14, 9);
+    milone_assert(false, 14, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -75,7 +75,7 @@ end_match_1:;
     match_1 = 0;
     goto end_match_4;
 next_5:;
-    milone_assert(0, 18, 9);
+    milone_assert(false, 18, 9);
     match_1 = 0;
     goto end_match_4;
 next_6:;

@@ -35,7 +35,7 @@ int testListMatching_(int arg_1) {
     list_->tail = NULL;
     if ((!(list_))) goto next_4;
     if ((!(list_->tail))) goto next_4;
-    milone_assert(0, 6, 19);
+    milone_assert(false, 6, 19);
     match_1 = 0;
     goto end_match_3;
 next_4:;
@@ -45,7 +45,7 @@ next_4:;
     goto end_match_3;
 next_5:;
     if ((!((!(list_))))) goto next_6;
-    milone_assert(0, 8, 10);
+    milone_assert(false, 8, 10);
     match_1 = 0;
     goto end_match_3;
 next_6:;
@@ -67,7 +67,7 @@ int testMatchArmsMakeScope_(int arg_2) {
     tuple_.t1 = 1;
     if ((tuple_.t0 != 1)) goto next_8;
     int x_1 = tuple_.t1;
-    milone_assert(0, 14, 4);
+    milone_assert(false, 14, 4);
     match_2 = 0;
     goto end_match_7;
 next_8:;
@@ -79,7 +79,7 @@ next_8:;
         goto else_13;
     }
 then_12:;
-    milone_assert(0, 16, 19);
+    milone_assert(false, 16, 19);
     if_ = 0;
     goto if_next_11;
 else_13:;
@@ -89,7 +89,7 @@ if_next_11:;
     match_2 = 0;
     goto end_match_7;
 next_9:;
-    milone_assert(0, 18, 4);
+    milone_assert(false, 18, 4);
     match_2 = 0;
     goto end_match_7;
 next_10:;
@@ -99,14 +99,14 @@ end_match_7:;
 
 int testNestedMatchesParseCorrectly_(int arg_3) {
     int match_3;
-    if (1) goto next_15;
+    if (true) goto next_15;
     int switch_;
     switch (1) {
         default:
             goto clause_18;
     }
 clause_18:;
-    milone_assert(0, 25, 6);
+    milone_assert(false, 25, 6);
     switch_ = 0;
     goto switch_next_17;
 switch_next_17:;

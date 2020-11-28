@@ -6,9 +6,9 @@ int abs_(int x_1);
 
 int gcd_(int x_2, int y_);
 
-int go_(int x_3, int k_);
+bool go_(int x_3, int k_);
 
-int isPrime_(int x_3);
+bool isPrime_(int x_3);
 
 int main();
 
@@ -58,19 +58,19 @@ if_next_5:;
     return if_1;
 }
 
-int go_(int x_3, int k_) {
+bool go_(int x_3, int k_) {
 tailrec_8:;
-    int if_2;
+    bool if_2;
     if ((x_3 < (k_ * k_))) {
         goto then_10;
     } else {
         goto else_11;
     }
 then_10:;
-    if_2 = 1;
+    if_2 = true;
     goto if_next_9;
 else_11:;
-    int if_3;
+    bool if_3;
     if (((x_3 % k_) != 0)) {
         goto then_13;
     } else {
@@ -82,10 +82,10 @@ then_13:;
     x_3 = arg_2;
     k_ = arg_3;
     goto tailrec_8;
-    if_3 = 0;
+    if_3 = false;
     goto if_next_12;
 else_14:;
-    if_3 = 0;
+    if_3 = false;
     goto if_next_12;
 if_next_12:;
     if_2 = if_3;
@@ -94,19 +94,19 @@ if_next_9:;
     return if_2;
 }
 
-int isPrime_(int x_3) {
-    int if_4;
+bool isPrime_(int x_3) {
+    bool if_4;
     if ((x_3 >= 2)) {
         goto then_16;
     } else {
         goto else_17;
     }
 then_16:;
-    int call_2 = go_(x_3, 2);
+    bool call_2 = go_(x_3, 2);
     if_4 = call_2;
     goto if_next_15;
 else_17:;
-    if_4 = 0;
+    if_4 = false;
     goto if_next_15;
 if_next_15:;
     return if_4;
@@ -127,13 +127,13 @@ int main() {
     int call_9 = neg_(6);
     int call_10 = gcd_(4, call_9);
     milone_assert((call_10 == 2), 23, 2);
-    int call_11 = isPrime_(2);
+    bool call_11 = isPrime_(2);
     milone_assert(call_11, 25, 2);
-    int call_12 = isPrime_(3);
+    bool call_12 = isPrime_(3);
     milone_assert(call_12, 26, 2);
-    int call_13 = isPrime_(4);
+    bool call_13 = isPrime_(4);
     milone_assert((!(call_13)), 27, 2);
-    int call_14 = isPrime_(1000000007);
+    bool call_14 = isPrime_(1000000007);
     milone_assert(call_14, 28, 2);
     return 0;
 }

@@ -31,6 +31,7 @@ type CTy =
   | CVoidTy
   | CIntTy of IntFlavor
   | CFloatTy of FloatFlavor
+  | CBoolTy
   | CCharTy
   | CPtrTy of CTy
   | CConstPtrTy of CTy

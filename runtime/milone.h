@@ -4,6 +4,7 @@
 #ifndef MILONE_H_INCLUDED
 #define MILONE_H_INCLUDED
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -13,7 +14,7 @@
 // assertion
 // -----------------------------------------------
 
-void milone_assert(int cond, int row, int column);
+void milone_assert(bool cond, int row, int column);
 
 // -----------------------------------------------
 // memory management

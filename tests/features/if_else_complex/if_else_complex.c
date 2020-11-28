@@ -4,7 +4,7 @@ int main();
 
 int main() {
     int if_;
-    if (1) {
+    if (true) {
         goto then_2;
     } else {
         goto else_6;
@@ -13,7 +13,7 @@ then_2:;
     printf("then\n");
     struct String hello_ = (struct String){.str = "hello", .len = 5};
     int if_1;
-    if (1) {
+    if (true) {
         goto then_4;
     } else {
         goto else_5;

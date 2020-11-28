@@ -1,14 +1,14 @@
 #include "milone.h"
 
-int charEq_(char l_, char r_);
+bool charEq_(char l_, char r_);
 
-int go_(char c_, struct String s_, int i_);
+bool go_(char c_, struct String s_, int i_);
 
-int strContains_(char c_, struct String s_);
+bool strContains_(char c_, struct String s_);
 
-int go_1(struct String prefix_, struct String s_1, int i_1);
+bool go_1(struct String prefix_, struct String s_1, int i_1);
 
-int strStartsWith_(struct String prefix_, struct String s_1);
+bool strStartsWith_(struct String prefix_, struct String s_1);
 
 struct StringList;
 
@@ -30,7 +30,7 @@ struct Token_List* go_4(struct Token_List* acc_1, struct Token_List* xs_7);
 
 struct Token_List* tokenListRev_(struct Token_List* xs_6);
 
-int isDigit_(char c_1);
+bool isDigit_(char c_1);
 
 struct CharBoolFun1;
 
@@ -42,7 +42,7 @@ int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16);
 
 struct CharTuple1;
 
-int fun_(void* env_, char arg_);
+bool fun_(void* env_, char arg_);
 
 struct Token_ListIntTuple2;
 
@@ -50,7 +50,7 @@ struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListI
 
 struct Token_ListIntTuple2 readEol_(struct String source_2, struct Token_ListIntTuple2 arg_18);
 
-int fun_1(void* env_1, char arg_2);
+bool fun_1(void* env_1, char arg_2);
 
 struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_19);
 
@@ -80,27 +80,27 @@ int eval_(struct String str_);
 
 int main();
 
-int charEq_(char l_, char r_) {
+bool charEq_(char l_, char r_) {
     return (l_ == r_);
 }
 
-int go_(char c_, struct String s_, int i_) {
+bool go_(char c_, struct String s_, int i_) {
 tailrec_1:;
-    int if_;
+    bool if_;
     if ((i_ < s_.len)) {
         goto then_3;
     } else {
         goto else_7;
     }
 then_3:;
-    int if_1;
+    bool if_1;
     if ((s_.str[i_] == c_)) {
         goto then_5;
     } else {
         goto else_6;
     }
 then_5:;
-    if_1 = 1;
+    if_1 = true;
     goto if_next_4;
 else_6:;
     char arg_3 = c_;
@@ -110,36 +110,36 @@ else_6:;
     s_ = arg_4;
     i_ = arg_5;
     goto tailrec_1;
-    if_1 = 0;
+    if_1 = false;
     goto if_next_4;
 if_next_4:;
     if_ = if_1;
     goto if_next_2;
 else_7:;
-    if_ = 0;
+    if_ = false;
     goto if_next_2;
 if_next_2:;
     return if_;
 }
 
-int strContains_(char c_, struct String s_) {
-    int call_ = go_(c_, s_, 0);
+bool strContains_(char c_, struct String s_) {
+    bool call_ = go_(c_, s_, 0);
     return call_;
 }
 
-int go_1(struct String prefix_, struct String s_1, int i_1) {
+bool go_1(struct String prefix_, struct String s_1, int i_1) {
 tailrec_8:;
-    int if_2;
+    bool if_2;
     if ((i_1 >= prefix_.len)) {
         goto then_10;
     } else {
         goto else_11;
     }
 then_10:;
-    if_2 = 1;
+    if_2 = true;
     goto if_next_9;
 else_11:;
-    int if_3;
+    bool if_3;
     if ((s_1.str[i_1] == prefix_.str[i_1])) {
         goto then_13;
     } else {
@@ -153,10 +153,10 @@ then_13:;
     s_1 = arg_7;
     i_1 = arg_8;
     goto tailrec_8;
-    if_3 = 0;
+    if_3 = false;
     goto if_next_12;
 else_14:;
-    if_3 = 0;
+    if_3 = false;
     goto if_next_12;
 if_next_12:;
     if_2 = if_3;
@@ -165,19 +165,19 @@ if_next_9:;
     return if_2;
 }
 
-int strStartsWith_(struct String prefix_, struct String s_1) {
-    int if_4;
+bool strStartsWith_(struct String prefix_, struct String s_1) {
+    bool if_4;
     if ((s_1.len >= prefix_.len)) {
         goto then_16;
     } else {
         goto else_17;
     }
 then_16:;
-    int call_1 = go_1(prefix_, s_1, 0);
+    bool call_1 = go_1(prefix_, s_1, 0);
     if_4 = call_1;
     goto if_next_15;
 else_17:;
-    if_4 = 0;
+    if_4 = false;
     goto if_next_15;
 if_next_15:;
     return if_4;
@@ -291,8 +291,8 @@ struct Token_List* tokenListRev_(struct Token_List* xs_6) {
     return call_5;
 }
 
-int isDigit_(char c_1) {
-    int if_5;
+bool isDigit_(char c_1) {
+    bool if_5;
     if ((c_1 >= '0')) {
         goto then_30;
     } else {
@@ -302,31 +302,31 @@ then_30:;
     if_5 = ('9' >= c_1);
     goto if_next_29;
 else_31:;
-    if_5 = 0;
+    if_5 = false;
     goto if_next_29;
 if_next_29:;
     return if_5;
 }
 
 struct CharBoolFun1 {
-    int(*fun)(void*, char);
+    bool(*fun)(void*, char);
     void* env;
 };
 
 int go_5(struct CharBoolFun1 pred_, struct String source_, int r_1) {
 tailrec_32:;
-    int if_6;
+    bool if_6;
     if ((r_1 < source_.len)) {
         goto then_34;
     } else {
         goto else_35;
     }
 then_34:;
-    int app_ = pred_.fun(pred_.env, source_.str[r_1]);
+    bool app_ = pred_.fun(pred_.env, source_.str[r_1]);
     if_6 = app_;
     goto if_next_33;
 else_35:;
-    if_6 = 0;
+    if_6 = false;
     goto if_next_33;
 if_next_33:;
     int if_7;
@@ -368,9 +368,9 @@ struct CharTuple1 {
     char t0;
 };
 
-int fun_(void* env_, char arg_) {
+bool fun_(void* env_, char arg_) {
     char arg_1 = (*(((struct CharTuple1*)env_))).t0;
-    int call_7 = charEq_(arg_1, arg_);
+    bool call_7 = charEq_(arg_1, arg_);
     return call_7;
 }
 
@@ -403,21 +403,21 @@ struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListI
 struct Token_ListIntTuple2 readEol_(struct String source_2, struct Token_ListIntTuple2 arg_18) {
     struct Token_List* acc_3 = arg_18.t0;
     int i_4 = arg_18.t1;
-    int if_8;
+    bool if_8;
     if ((source_2.str[i_4] == '\r')) {
         goto then_40;
     } else {
         goto else_41;
     }
 then_40:;
-    if_8 = 1;
+    if_8 = true;
     goto if_next_39;
 else_41:;
     if_8 = (source_2.str[i_4] == '\n');
     goto if_next_39;
 if_next_39:;
     milone_assert(if_8, 62, 2);
-    int if_9;
+    bool if_9;
     if (((i_4 + 1) < source_2.len)) {
         goto then_43;
     } else {
@@ -427,10 +427,10 @@ then_43:;
     if_9 = (source_2.str[i_4] == '\r');
     goto if_next_42;
 else_44:;
-    if_9 = 0;
+    if_9 = false;
     goto if_next_42;
 if_next_42:;
-    int if_10;
+    bool if_10;
     if (if_9) {
         goto then_46;
     } else {
@@ -440,7 +440,7 @@ then_46:;
     if_10 = (source_2.str[(i_4 + 1)] == '\n');
     goto if_next_45;
 else_47:;
-    if_10 = 0;
+    if_10 = false;
     goto if_next_45;
 if_next_45:;
     int if_11;
@@ -463,15 +463,15 @@ if_next_48:;
     return tuple_3;
 }
 
-int fun_1(void* env_1, char arg_2) {
-    int call_9 = isDigit_(arg_2);
+bool fun_1(void* env_1, char arg_2) {
+    bool call_9 = isDigit_(arg_2);
     return call_9;
 }
 
 struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_19) {
     struct Token_List* acc_4 = arg_19.t0;
     int i_5 = arg_19.t1;
-    int call_10 = isDigit_(source_3.str[i_5]);
+    bool call_10 = isDigit_(source_3.str[i_5]);
     milone_assert(call_10, 70, 2);
     void* box_1 = (void*)milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
@@ -568,7 +568,7 @@ next_60:;
     goto end_match_58;
 next_61:;
     char c_2 = source_4.str[i_7];
-    int call_17 = isDigit_(c_2);
+    bool call_17 = isDigit_(c_2);
     struct Token_List* if_14;
     if (call_17) {
         goto then_64;
@@ -820,11 +820,11 @@ end_match_87:;
 }
 
 int main() {
-    int call_32 = strContains_('+', (struct String){.str = "+-*/", .len = 4});
+    bool call_32 = strContains_('+', (struct String){.str = "+-*/", .len = 4});
     milone_assert(call_32, 159, 2);
-    int call_33 = strStartsWith_((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});
+    bool call_33 = strStartsWith_((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});
     milone_assert(call_33, 160, 2);
-    int call_34 = strStartsWith_((struct String){.str = "heaven", .len = 6}, (struct String){.str = "hello", .len = 5});
+    bool call_34 = strStartsWith_((struct String){.str = "heaven", .len = 6}, (struct String){.str = "hello", .len = 5});
     milone_assert((!(call_34)), 161, 2);
     struct StringList* list_6 = (struct StringList*)milone_mem_alloc(1, sizeof(struct StringList));
     list_6->head = (struct String){.str = "b", .len = 1};

@@ -16,7 +16,7 @@ int simpleCase_(int arg_) {
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(0, 5, 4);
+    milone_assert(false, 5, 4);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -39,7 +39,7 @@ int shadowingCase_(int arg_1) {
     int x_2 = y_.t1;
     int y1_ = y_.t0;
     int y2_ = y_.t1;
-    int if_;
+    bool if_;
     if ((x_2 == 2)) {
         goto then_7;
     } else {
@@ -49,10 +49,10 @@ then_7:;
     if_ = (y1_ == 1);
     goto if_next_6;
 else_8:;
-    if_ = 0;
+    if_ = false;
     goto if_next_6;
 if_next_6:;
-    int if_1;
+    bool if_1;
     if (if_) {
         goto then_10;
     } else {
@@ -62,7 +62,7 @@ then_10:;
     if_1 = (y2_ == 2);
     goto if_next_9;
 else_11:;
-    if_1 = 0;
+    if_1 = false;
     goto if_next_9;
 if_next_9:;
     milone_assert(if_1, 12, 4);

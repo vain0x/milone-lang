@@ -6,7 +6,7 @@ int twice_(int x_1);
 
 int sub_(int x_2, int y_);
 
-int between_(int l_, int r_, int x_3);
+bool between_(int l_, int r_, int x_3);
 
 struct IntList;
 
@@ -26,8 +26,8 @@ int sub_(int x_2, int y_) {
     return (x_2 - y_);
 }
 
-int between_(int l_, int r_, int x_3) {
-    int if_;
+bool between_(int l_, int r_, int x_3) {
+    bool if_;
     if ((x_3 >= l_)) {
         goto then_2;
     } else {
@@ -37,7 +37,7 @@ then_2:;
     if_ = (x_3 < r_);
     goto if_next_1;
 else_3:;
-    if_ = 0;
+    if_ = false;
     goto if_next_1;
 if_next_1:;
     return if_;
@@ -72,7 +72,7 @@ int main() {
     int n_ = call_2;
     milone_assert((n_ == 16), 7, 2);
     int call_3 = sub_(100, 98);
-    int call_4 = between_(2, 3, call_3);
+    bool call_4 = between_(2, 3, call_3);
     milone_assert(call_4, 9, 2);
     struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
