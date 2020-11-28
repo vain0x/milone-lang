@@ -572,7 +572,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | AppTy (FloatTyCtor _, [])
       | AppTy (CharTyCtor, [])
       | AppTy (StrTyCtor, [])
-      | AppTy (NativePtrTyCtor _, []) -> logAcc, ctx
+      | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 

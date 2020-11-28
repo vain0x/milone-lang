@@ -21,4 +21,8 @@ let main _ =
   let buf = memAlloc 1 8
   memSet buf (uint8 255) 8
   assert ((unbox (__nativeCast buf: obj): int) = -1)
+
+  // Conversion to int.
+  assert (int buf <> 0)
+  assert (unativeint buf <> unativeint 0)
   0
