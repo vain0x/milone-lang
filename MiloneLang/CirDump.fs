@@ -268,12 +268,7 @@ let private cpStmt indent stmt acc: string list =
       |> cons ";"
       |> cons eol
 
-  | CLetAllocStmt (name, valPtrTy, varTy) ->
-      let valTy =
-        match valPtrTy with
-        | CPtrTy ty -> ty
-        | _ -> failwithf "Never: Expected pointer type but %A" valPtrTy
-
+  | CLetAllocStmt (name, valTy, varTy) ->
       acc
       |> cons indent
       |> cpTyWithName name varTy

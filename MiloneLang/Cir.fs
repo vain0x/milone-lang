@@ -119,7 +119,7 @@ type CStmt =
   | CLetStmt of Ident * init: CExpr option * CTy
 
   /// `U* x = (U*)malloc(sizeof T);`
-  | CLetAllocStmt of Ident * valPtrTy: CTy * varTy: CTy
+  | CLetAllocStmt of Ident * valTy: CTy * varTy: CTy
 
   /// `x = a;`
   | CSetStmt of CExpr * CExpr
