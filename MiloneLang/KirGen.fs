@@ -848,12 +848,6 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
 
       justUnit ()
 
-  | HErrorExpr (msg, loc) ->
-      let raiseError () =
-        failwithf "HErrorExpr in KirGen: %s" (msg + " " + locToString loc)
-
-      raiseError ()
-
   | HNavExpr _ -> failwithf "NEVER: nav is resolved in type inference. %A" expr
   | HModuleExpr _ -> failwithf "NEVER: module is resolved in name res. %A" expr
 

@@ -238,7 +238,6 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
-  | HErrorExpr (error, loc) -> failwithf "NEVER: %A" (error, loc)
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let recordRes (expr: HExpr, tyCtx: TyCtx) =

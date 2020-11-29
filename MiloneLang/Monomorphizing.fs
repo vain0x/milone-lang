@@ -291,7 +291,6 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee vis isMainFun args body next 
 
 let private monifyExpr (expr, ctx) =
   match expr with
-  | HErrorExpr _
   | HTyDeclExpr _
   | HOpenExpr _
   | HLitExpr _

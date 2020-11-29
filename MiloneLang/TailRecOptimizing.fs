@@ -95,8 +95,7 @@ let private troExpr isTail (expr, ctx) =
   | HVariantExpr _
   | HPrimExpr _
   | HOpenExpr _
-  | HTyDeclExpr _
-  | HErrorExpr _ -> expr, ctx
+  | HTyDeclExpr _ -> expr, ctx
 
   | HMatchExpr (cond, arms, ty, loc) ->
       let doArm () =

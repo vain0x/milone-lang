@@ -176,7 +176,6 @@ let private hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
 
 let private hoistExprCore (expr, ctx) =
   match expr with
-  | HErrorExpr _
   | HLitExpr _
   | HRefExpr _
   | HFunExpr _

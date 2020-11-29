@@ -407,7 +407,6 @@ type HExpr =
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
   | HModuleExpr of ModuleTySerial * body: HExpr * next: HExpr * Loc
-  | HErrorExpr of string * Loc
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -896,7 +895,6 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
   | HModuleExpr (_, _, _, a) -> tyUnit, a
-  | HErrorExpr (_, a) -> ErrorTy a, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat = patMap f g pat
@@ -932,7 +930,6 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
     | HModuleExpr (name, body, next, a) -> HModuleExpr(name, go body, go next, g a)
-    | HErrorExpr (error, a) -> HErrorExpr(error, g a)
 
   go expr
 

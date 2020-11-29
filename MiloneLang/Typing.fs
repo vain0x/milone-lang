@@ -771,10 +771,6 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HTyDeclExpr _
   | HOpenExpr _ -> expr, tyUnit, ctx
 
-  | HErrorExpr (error, loc) ->
-      let ctx = addError ctx error loc
-      hxAbort ctx loc
-
   | HInfExpr (InfOp.Range, _, _, loc) ->
       let ctx =
         addError ctx "Range operator can be used in the form of `s.[l..r]` for now." loc

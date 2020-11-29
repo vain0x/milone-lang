@@ -938,7 +938,6 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
 
 let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with
-  | HErrorExpr _
   | HLitExpr _
   | HPrimExpr _ -> expr, ctx
 
@@ -960,7 +959,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                 let ctx =
                   ctx |> addLog (UndefinedValueError name) loc
 
-                HErrorExpr("Undefined variable " + name, loc), ctx
+                HInfExpr(InfOp.Abort, [], ty, loc), ctx
 
       doArm ()
 
