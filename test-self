@@ -2,7 +2,7 @@
 
 set -eux
 
-CFLAGS='-std=c11 -O2 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label runtime/milone.c'
+CFLAGS='-std=c11 -O2 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-pointer-to-int-cast runtime/milone.c'
 GEN2_C='milone_gen2.generated.c'
 GEN3_C='milone_gen3.generated.c'
 

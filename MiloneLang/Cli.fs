@@ -80,13 +80,13 @@ type CliHost =
     MiloneHome: string
 
     /// Creates a profiler.
-    ProfileInit: (unit -> Profiler)
+    ProfileInit: unit -> Profiler
 
     /// Prints a message to stderr for profiling.
-    ProfileLog: (string -> Profiler -> unit)
+    ProfileLog: string -> Profiler -> unit
 
     /// Reads all contents of a file as string.
-    FileReadAllText: (string -> string option) }
+    FileReadAllText: string -> string option }
 
 // -----------------------------------------------
 // Helpers
