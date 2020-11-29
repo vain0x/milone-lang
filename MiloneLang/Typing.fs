@@ -432,10 +432,7 @@ let private inferPrimExpr ctx prim loc =
   match prim with
   | HPrim.NativeFun ->
       let ctx =
-        addError
-          ctx
-          "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`."
-          loc
+        addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
 
       hxAbort ctx loc
 
@@ -773,6 +770,12 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
 
   | HErrorExpr (error, loc) ->
       let ctx = addError ctx error loc
+      hxAbort ctx loc
+
+  | HInfExpr (InfOp.Range, _, _, loc) ->
+      let ctx =
+        addError ctx "Range operator can be used in the form of `s.[l..r]` for now." loc
+
       hxAbort ctx loc
 
   | HInfExpr (InfOp.Anno, _, _, _)

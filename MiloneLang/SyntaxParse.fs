@@ -642,7 +642,7 @@ let private parseRange basePos (tokens, errors) =
   match tokens with
   | (DotDotToken, pos) :: tokens ->
       let r, tokens, errors = parseExpr basePos (tokens, errors)
-      ARangeExpr([ l; r ], pos), tokens, errors
+      ARangeExpr(l, r, pos), tokens, errors
 
   | _ -> l, tokens, errors
 

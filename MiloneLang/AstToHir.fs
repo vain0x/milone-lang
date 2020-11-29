@@ -146,7 +146,7 @@ let private desugarUniNeg arg pos =
       // FIXME: this trick fails for int min value
       ALitExpr(IntLit(-value), pos)
 
-  | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit ("-" + text), pos)
+  | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit("-" + text), pos)
 
   | _ ->
       // FIXME: this fails when arg is not of int
@@ -187,7 +187,7 @@ let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 /// NOTE: Evaluation order does change.
 let private tryDesugarIndexRange expr pos =
   match expr with
-  | AIndexExpr (s, ARangeExpr ([ l; r ], _), _) ->
+  | AIndexExpr (s, ARangeExpr (l, r, _), _) ->
       let getSlice =
         ANavExpr(AIdentExpr("String", pos), "getSlice", pos)
 
@@ -511,9 +511,14 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | ARangeExpr (_, pos) ->
-      let loc = toLoc docId pos
-      HErrorExpr("Invalid use of range syntax.", loc), nameCtx
+  | ARangeExpr (l, r, pos) ->
+      let doArm () =
+        let l, nameCtx = (l, nameCtx) |> athExpr docId
+        let r, nameCtx = (r, nameCtx) |> athExpr docId
+        let loc = toLoc docId pos
+        HInfExpr(InfOp.Range, [ l; r ], noTy, loc), nameCtx
+
+      doArm ()
 
   | ATupleExpr (items, pos) ->
       let doArm () =

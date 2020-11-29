@@ -811,6 +811,7 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
   | InfOp.Record
   | InfOp.RecordItem _ -> failwith "unimplemented"
 
+  | InfOp.Range -> failwithf "NEVER: InfOp.Range causes an error in Typing. %A" itself
   | InfOp.App -> failwithf "NEVER: InfOp.App is resolved in uneta. %A" itself
   | InfOp.Anno -> failwithf "NEVER: InfOp.Anno is resolved in type inference: %A" itself
 

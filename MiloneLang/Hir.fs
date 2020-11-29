@@ -332,6 +332,12 @@ type HPrim =
 type InfOp =
   | App
 
+  /// `..`.
+  ///
+  /// Every occurrence of this is currently error
+  /// because valid use (`s.[l..r]`) gets rewritten in AstToHir.
+  | Range
+
   /// Type annotation `x : 'x`.
   | Anno
 
