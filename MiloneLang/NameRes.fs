@@ -891,8 +891,11 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
 
       | None ->
-          let l, ctx = (l, ctx) |> nameResPat
-          HNavPat(l, r, ty, loc), ctx
+          let ctx =
+            ctx
+            |> addLog (OtherNameResLog "Couldn't resolve nav pattern.") loc
+
+          HDiscardPat(noTy, loc), ctx
 
   | HCallPat (callee, args, ty, loc) ->
       let callee, ctx = (callee, ctx) |> nameResPat
