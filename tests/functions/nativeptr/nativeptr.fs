@@ -23,6 +23,5 @@ let main _ =
   assert ((unbox (__nativeCast buf: obj): int) = -1)
 
   // Conversion to int.
-  assert (int buf <> 0)
   assert (unativeint buf <> unativeint 0)
   0
