@@ -16,7 +16,7 @@ int main() {
     struct String y_ = t_.t1;
     exit(2);
     printf("%s\n", ((struct String){}).str);
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
+    void* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 1;
     exit((*(((int*)box_))));
     exit(0);

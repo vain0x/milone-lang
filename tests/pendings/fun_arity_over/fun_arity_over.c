@@ -39,7 +39,7 @@ struct IntIntFun1 add_(int x_) {
     struct IntUnitTuple2 tuple_;
     tuple_.t0 = x_;
     tuple_.t1 = 0;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntUnitTuple2));
+    void* box_ = milone_mem_alloc(1, sizeof(struct IntUnitTuple2));
     (*(((struct IntUnitTuple2*)box_))) = tuple_;
     void* env_1 = box_;
     struct IntIntFun1 fun_1 = (struct IntIntFun1){.fun = fun_, .env = env_1};

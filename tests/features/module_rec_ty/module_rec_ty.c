@@ -50,7 +50,7 @@ struct UnionX_ {
 };
 
 int main() {
-    struct UnionA_List* list_ = (struct UnionA_List*)milone_mem_alloc(1, sizeof(struct UnionA_List));
+    struct UnionA_List* list_ = milone_mem_alloc(1, sizeof(struct UnionA_List));
     list_->head = (struct UnionA_){.tag = T_1};
     list_->tail = NULL;
     struct UnionB_ variant_ = (struct UnionB_){.tag = T_, .T_ = list_};

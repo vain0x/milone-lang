@@ -1,2 +1,1 @@
-#error vis_private:6:3 Undefined variable vis_private_sub
-#error vis_private:6:18 Expected to have field: 'privateFun'.
+#error vis_private:6:3 The name 'vis_private_sub' here should denote to some value; but not found.

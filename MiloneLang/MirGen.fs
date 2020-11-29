@@ -216,7 +216,6 @@ let private containsTailRec expr =
 
   | HLetFunExpr (_, _, _, _, _, next, _, _) -> next |> containsTailRec
 
-  | HErrorExpr _ -> failwithf "NEVER: %A" expr
   | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
@@ -1366,13 +1365,6 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
 
   | HTyDeclExpr _
   | HOpenExpr _ -> MDefaultExpr(tyUnit, exprToLoc expr), ctx
-
-  | HErrorExpr (error, loc) ->
-      let doArm () =
-        let ctx = addError ctx error loc
-        MDefaultExpr(tyObj, loc), ctx
-
-      doArm ()
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"

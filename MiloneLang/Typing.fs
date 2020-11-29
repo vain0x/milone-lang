@@ -432,10 +432,7 @@ let private inferPrimExpr ctx prim loc =
   match prim with
   | HPrim.NativeFun ->
       let ctx =
-        addError
-          ctx
-          "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`."
-          loc
+        addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
 
       hxAbort ctx loc
 
@@ -759,10 +756,13 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HRecordExpr (baseOpt, fields, _, loc) -> inferRecordExpr ctx expectOpt baseOpt fields loc
   | HMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
+
+  | HInfExpr (InfOp.Abort, _, _, loc) -> hxAbort ctx loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
   | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTupleExpr ctx items loc
   | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnnoExpr ctx expr annoTy loc
   | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemiExpr ctx expectOpt exprs loc
+
   | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt vis pat body next loc
 
   | HLetFunExpr (oldSerial, vis, isMainFun, args, body, next, _, loc) ->
@@ -771,8 +771,10 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HTyDeclExpr _
   | HOpenExpr _ -> expr, tyUnit, ctx
 
-  | HErrorExpr (error, loc) ->
-      let ctx = addError ctx error loc
+  | HInfExpr (InfOp.Range, _, _, loc) ->
+      let ctx =
+        addError ctx "Range operator can be used in the form of `s.[l..r]` for now." loc
+
       hxAbort ctx loc
 
   | HInfExpr (InfOp.Anno, _, _, _)

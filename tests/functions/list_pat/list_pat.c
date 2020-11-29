@@ -69,14 +69,14 @@ end_match_4:;
 }
 
 int main() {
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
     int call_ = basicCase_1(list_);
-    struct IntList* list_2 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     list_2->head = 2;
     list_2->tail = NULL;
-    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
     list_1->head = 1;
     list_1->tail = list_2;
     int call_1 = complicatedCase_(list_1);

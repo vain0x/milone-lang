@@ -34,13 +34,13 @@ struct IntMyList_ListTuple2 {
 };
 
 struct MyList_ myCons_(int head_, struct MyList_ tail_) {
-    struct MyList_List* some_ = (struct MyList_List*)milone_mem_alloc(1, sizeof(struct MyList_List));
+    struct MyList_List* some_ = milone_mem_alloc(1, sizeof(struct MyList_List));
     some_->head = tail_;
     some_->tail = NULL;
     struct IntMyList_ListTuple2 tuple_;
     tuple_.t0 = head_;
     tuple_.t1 = some_;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntMyList_ListTuple2));
+    void* box_ = milone_mem_alloc(1, sizeof(struct IntMyList_ListTuple2));
     (*(((struct IntMyList_ListTuple2*)box_))) = tuple_;
     struct MyList_ variant_ = (struct MyList_){.tag = MyList_, .MyList_ = box_};
     return variant_;
@@ -50,7 +50,7 @@ int main() {
     struct IntMyList_ListTuple2 tuple_1;
     tuple_1.t0 = 0;
     tuple_1.t1 = NULL;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntMyList_ListTuple2));
+    void* box_1 = milone_mem_alloc(1, sizeof(struct IntMyList_ListTuple2));
     (*(((struct IntMyList_ListTuple2*)box_1))) = tuple_1;
     struct MyList_ variant_1 = (struct MyList_){.tag = MyList_, .MyList_ = box_1};
     struct MyList_ first_ = variant_1;

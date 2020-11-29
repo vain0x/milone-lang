@@ -656,7 +656,6 @@ let private abExpr ctx expr =
 
       doArm ()
 
-  | HErrorExpr (error, loc) -> failwithf "NEVER: %A" (error, loc)
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =

@@ -808,9 +808,11 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
       | _ -> failwithf "NEVER: bad use of Closure prim. %A" itself
 
+  | InfOp.Abort
   | InfOp.Record
   | InfOp.RecordItem _ -> failwith "unimplemented"
 
+  | InfOp.Range -> failwithf "NEVER: InfOp.Range causes an error in Typing. %A" itself
   | InfOp.App -> failwithf "NEVER: InfOp.App is resolved in uneta. %A" itself
   | InfOp.Anno -> failwithf "NEVER: InfOp.Anno is resolved in type inference: %A" itself
 
@@ -845,12 +847,6 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
         hole (KUnitTerm loc) ctx
 
       justUnit ()
-
-  | HErrorExpr (msg, loc) ->
-      let raiseError () =
-        failwithf "HErrorExpr in KirGen: %s" (msg + " " + locToString loc)
-
-      raiseError ()
 
   | HNavExpr _ -> failwithf "NEVER: nav is resolved in type inference. %A" expr
   | HModuleExpr _ -> failwithf "NEVER: module is resolved in name res. %A" expr

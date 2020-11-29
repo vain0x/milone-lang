@@ -24,10 +24,10 @@ if_next_1:;
 }
 
 int main() {
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
+    void* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 2;
     int call_ = printIntOrStr_(true, box_);
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct String));
+    void* box_1 = milone_mem_alloc(1, sizeof(struct String));
     (*(((struct String*)box_1))) = (struct String){.str = "Fizz", .len = 4};
     int call_1 = printIntOrStr_(false, box_1);
     return 0;

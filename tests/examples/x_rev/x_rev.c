@@ -25,7 +25,7 @@ next_3:;
     if ((!(xs_1))) goto next_4;
     int x_ = xs_1->head;
     struct IntList* xs_2 = xs_1->tail;
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = x_;
     list_->tail = acc_;
     struct IntList* arg_ = list_;
@@ -69,13 +69,13 @@ end_match_6:;
 }
 
 int main() {
-    struct IntList* list_3 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
     list_3->head = 2;
     list_3->tail = NULL;
-    struct IntList* list_2 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     list_2->head = 1;
     list_2->tail = list_3;
-    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
     list_1->head = 0;
     list_1->tail = list_2;
     struct IntList* xs_5 = list_1;

@@ -330,7 +330,15 @@ type HPrim =
 [<Struct>]
 [<NoEquality; NoComparison>]
 type InfOp =
+  | Abort
+
   | App
+
+  /// `..`.
+  ///
+  /// Every occurrence of this is currently error
+  /// because valid use (`s.[l..r]`) gets rewritten in AstToHir.
+  | Range
 
   /// Type annotation `x : 'x`.
   | Anno
@@ -399,7 +407,6 @@ type HExpr =
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
   | HModuleExpr of ModuleTySerial * body: HExpr * next: HExpr * Loc
-  | HErrorExpr of string * Loc
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -411,6 +418,15 @@ type MonoMode =
 // Errors
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
+type NameResLog =
+  | UndefinedValueError of name: string
+  | UndefinedTyError of name: string
+  | FunPatError of name: string
+  | TyArityError of name: string * actual: int * expected: int
+  | ModuleUsedAsTyError of name: string
+  | OtherNameResLog of msg: string
+
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
 type TyUnifyLog =
@@ -420,6 +436,7 @@ type TyUnifyLog =
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
 type Log =
+  | NameResLog of NameResLog
   | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
   | TyBoundError of Trait
   | RedundantFieldError of ty: Ident * field: Ident
@@ -878,7 +895,6 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
   | HModuleExpr (_, _, _, a) -> tyUnit, a
-  | HErrorExpr (_, a) -> ErrorTy a, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat = patMap f g pat
@@ -914,7 +930,6 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
     | HModuleExpr (name, body, next, a) -> HModuleExpr(name, go body, go next, g a)
-    | HErrorExpr (error, a) -> HErrorExpr(error, g a)
 
   go expr
 
@@ -977,10 +992,47 @@ let analyzeFormat (format: string) =
 // Logs
 // -----------------------------------------------
 
+let nameResLogToString log =
+  match log with
+  | UndefinedValueError name ->
+      "The name '"
+      + name
+      + "' here should denote to some value; but not found."
+
+  | UndefinedTyError name ->
+      "The name '"
+      + name
+      + "' here should denote to some type; but not found."
+
+  | FunPatError name ->
+      "The name '"
+      + name
+      + "' here is a function, which can't be used as a pattern."
+
+  | TyArityError ("_", _, _) -> "'_' can't have type arguments."
+
+  | TyArityError (name, actual, expected) ->
+      "Type arity mismatch. The type '"
+      + name
+      + "' expected "
+      + string expected
+      + " arguments; but given "
+      + string actual
+      + "."
+
+  | ModuleUsedAsTyError name ->
+      "The name '"
+      + name
+      + "' here should denote to some type; but is a module name."
+
+  | OtherNameResLog msg -> msg
+
 let logToString tyDisplay loc log =
   let loc = loc |> locToString
 
   match log with
+  | Log.NameResLog log -> loc + " " + nameResLogToString log
+
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
       sprintf "%s Recursive type occurred while unifying '%s' to '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
 

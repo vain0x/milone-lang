@@ -458,8 +458,7 @@ let private exExpr (expr, ctx) =
   | HLitExpr _
   | HRefExpr _
   | HTyDeclExpr _
-  | HOpenExpr _
-  | HErrorExpr _ -> expr, ctx
+  | HOpenExpr _ -> expr, ctx
 
   | HFunExpr (serial, refTy, calleeLoc) -> exFunName expr serial refTy calleeLoc ctx
   | HVariantExpr (_, ty, loc) -> exVariantName expr ty loc ctx

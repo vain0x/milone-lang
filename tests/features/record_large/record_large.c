@@ -32,7 +32,7 @@ void* defaultOptions_(int arg_) {
     GitCommitOptions_.Fixup = NULL;
     GitCommitOptions_.Squash = NULL;
     GitCommitOptions_.ResetAuthor = false;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct GitCommitOptions_));
+    void* box_ = milone_mem_alloc(1, sizeof(struct GitCommitOptions_));
     (*(((struct GitCommitOptions_*)box_))) = GitCommitOptions_;
     return box_;
 }

@@ -49,7 +49,7 @@ struct StringUnitFun1 bindInt_(struct IntStringUnitFun2 f_, int x_) {
     struct IntStringUnitFun2IntTuple2 tuple_;
     tuple_.t0 = callee_;
     tuple_.t1 = x_;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2));
+    void* box_ = milone_mem_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2));
     (*(((struct IntStringUnitFun2IntTuple2*)box_))) = tuple_;
     void* env_3 = box_;
     struct StringUnitFun1 fun_3 = (struct StringUnitFun1){.fun = fun_, .env = env_3};
@@ -103,7 +103,7 @@ int fun_2(void* env_2, int arg_5, struct String arg_6) {
 }
 
 int main() {
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(int));
+    void* box_1 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
     void* env_4 = box_1;
     struct IntStringUnitFun2 fun_4 = (struct IntStringUnitFun2){.fun = fun_1, .env = env_4};
@@ -113,7 +113,7 @@ int main() {
     struct String d_ = (struct String){.str = "\'", .len = 1};
     struct StringTuple1 tuple_1;
     tuple_1.t0 = d_;
-    void* box_2 = (void*)milone_mem_alloc(1, sizeof(struct StringTuple1));
+    void* box_2 = milone_mem_alloc(1, sizeof(struct StringTuple1));
     (*(((struct StringTuple1*)box_2))) = tuple_1;
     void* env_5 = box_2;
     struct IntStringUnitFun2 fun_5 = (struct IntStringUnitFun2){.fun = fun_2, .env = env_5};

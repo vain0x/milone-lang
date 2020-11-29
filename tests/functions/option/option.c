@@ -21,7 +21,7 @@ struct IntList {
 
 int basicSomeCase_(int arg_) {
     int match_;
-    struct IntList* some_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* some_ = milone_mem_alloc(1, sizeof(struct IntList));
     some_->head = 1;
     some_->tail = NULL;
     if ((!((!(some_))))) goto next_2;
@@ -76,7 +76,7 @@ struct UnitList {
 };
 
 int basicMatchCase_(int arg_2) {
-    struct UnitList* some_1 = (struct UnitList*)milone_mem_alloc(1, sizeof(struct UnitList));
+    struct UnitList* some_1 = milone_mem_alloc(1, sizeof(struct UnitList));
     some_1->head = 0;
     some_1->tail = NULL;
     int if_;

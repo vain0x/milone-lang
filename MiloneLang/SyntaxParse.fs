@@ -642,7 +642,7 @@ let private parseRange basePos (tokens, errors) =
   match tokens with
   | (DotDotToken, pos) :: tokens ->
       let r, tokens, errors = parseExpr basePos (tokens, errors)
-      ARangeExpr([ l; r ], pos), tokens, errors
+      ARangeExpr(l, r, pos), tokens, errors
 
   | _ -> l, tokens, errors
 
@@ -729,19 +729,26 @@ let private parseElseClause basePos (tokens, errors) =
   | (ElseToken, elsePos) :: (IfToken, nextIfPos) :: tokens when posInside basePos elsePos
                                                                 && posIsSameRow elsePos nextIfPos ->
       // ELSE_IF_LAYOUT rule. Parse the next as if `if` in `else if` is placed where `else` is.
-      parseExpr basePos ((IfToken, elsePos) :: tokens, errors)
+      let alt, tokens, errors =
+        parseExpr basePos ((IfToken, elsePos) :: tokens, errors)
 
-  | (ElseToken, elsePos) :: tokens when posInside basePos elsePos -> parseSemi basePos elsePos (tokens, errors)
+      Some alt, tokens, errors
 
-  | _ -> AMissingExpr basePos, tokens, errors
+  | (ElseToken, elsePos) :: tokens when posInside basePos elsePos ->
+      let alt, tokens, errors =
+        parseSemi basePos elsePos (tokens, errors)
+
+      Some alt, tokens, errors
+
+  | _ -> None, tokens, errors
 
 let private parseIf ifPos (tokens, errors) =
   let innerBasePos = ifPos |> posAddX 1
 
   let cond, tokens, errors = parseExpr innerBasePos (tokens, errors)
   let body, tokens, errors = parseThenClause ifPos (tokens, errors)
-  let alt, tokens, errors = parseElseClause ifPos (tokens, errors)
-  AIfExpr(cond, body, alt, ifPos), tokens, errors
+  let altOpt, tokens, errors = parseElseClause ifPos (tokens, errors)
+  AIfExpr(cond, body, altOpt, ifPos), tokens, errors
 
 /// `pat ( 'when' expr )? -> expr`
 let private parseMatchArm matchPos armPos (tokens, errors) =
@@ -749,13 +756,13 @@ let private parseMatchArm matchPos armPos (tokens, errors) =
 
   let pat, tokens, errors = parsePat innerBasePos (tokens, errors)
 
-  let guard, tokens, errors =
+  let guardOpt, tokens, errors =
     match tokens with
-    | (WhenToken, _) :: tokens -> parseExpr innerBasePos (tokens, errors)
+    | (WhenToken, _) :: tokens ->
+        let guard, tokens, errors = parseExpr innerBasePos (tokens, errors)
+        Some guard, tokens, errors
 
-    | _ ->
-        let guard = AMissingExpr(nextPos tokens)
-        guard, tokens, errors
+    | _ -> None, tokens, errors
 
   let body, tokens, errors =
     match tokens with
@@ -763,7 +770,7 @@ let private parseMatchArm matchPos armPos (tokens, errors) =
 
     | _ -> parseExprError "Expected '->'" (tokens, errors)
 
-  AArm(pat, guard, body, armPos), tokens, errors
+  AArm(pat, guardOpt, body, armPos), tokens, errors
 
 let private parseMatch matchPos (tokens, errors) =
   let cond, tokens, errors = parseExpr matchPos (tokens, errors)

@@ -34,7 +34,6 @@ int main() {
     void* buf_ = call_;
     int call_1 = memSet_(buf_, ((uint8_t)255), 8);
     milone_assert(((*(((int*)((void*)buf_)))) == -1), 22, 2);
-    milone_assert((((int)buf_) != 0), 25, 2);
-    milone_assert((((uintptr_t)buf_) != ((uintptr_t)0)), 26, 2);
+    milone_assert((((uintptr_t)buf_) != ((uintptr_t)0)), 25, 2);
     return 0;
 }

@@ -80,13 +80,13 @@ type CliHost =
     MiloneHome: string
 
     /// Creates a profiler.
-    ProfileInit: (unit -> Profiler)
+    ProfileInit: unit -> Profiler
 
     /// Prints a message to stderr for profiling.
-    ProfileLog: (string -> Profiler -> unit)
+    ProfileLog: string -> Profiler -> unit
 
     /// Reads all contents of a file as string.
-    FileReadAllText: (string -> string option) }
+    FileReadAllText: string -> string option }
 
 // -----------------------------------------------
 // Helpers
@@ -332,6 +332,17 @@ let private syntaxErrorToString syntax =
 
 let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
+let private nameResLogsToString logs =
+  logs
+  |> listSort (fun (_, l) (_, r) -> locCmp l r)
+  |> List.map (fun (log, loc) ->
+       "#error "
+       + locToString loc
+       + " "
+       + nameResLogToString log
+       + "\n")
+  |> strConcat
+
 let private semanticErrorToString (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
     let getTyName tySerial =
@@ -366,13 +377,26 @@ let syntacticallyAnalyze (ctx: CompileCtx) =
   | Some syntax -> syntax
   | None -> failwithf "Entry module file not found: %s" ctx.ProjectName
 
+[<NoEquality; NoComparison>]
+type SemaAnalysisResult =
+  | SemaAnalysisOk of HExpr * TyCtx
+  | SemaAnalysisNameResError of (NameResLog * Loc) list
+  | SemaAnalysisTypingError of TyCtx
+
 /// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze (host: CliHost) v (expr, nameCtx, errors) =
+let semanticallyAnalyze (host: CliHost) v (expr, nameCtx, syntaxErrors): SemaAnalysisResult =
+  assert (syntaxErrors |> List.isEmpty)
+
   writeLog host v "NameRes"
   let expr, scopeCtx = nameRes (expr, nameCtx)
 
-  writeLog host v "Typing"
-  infer (expr, scopeCtx, errors)
+  if scopeCtx.Logs |> List.isEmpty |> not then
+    SemaAnalysisNameResError scopeCtx.Logs
+  else
+    writeLog host v "Typing"
+
+    let expr, tyCtx = infer (expr, scopeCtx, [])
+    if tyCtx.Logs |> List.isEmpty |> not then SemaAnalysisTypingError tyCtx else SemaAnalysisOk(expr, tyCtx)
 
 /// Transforms HIR. The result can be converted to KIR or MIR.
 let transformHir (host: CliHost) v (expr, tyCtx) =
@@ -460,12 +484,13 @@ let compile (ctx: CompileCtx): bool * string =
   if syntax |> syntaxHasError then
     false, syntaxErrorToString syntax
   else
-    let expr, tyCtx = semanticallyAnalyze host v syntax
-    if tyCtx |> tyCtxHasError then
-      false, tyCtx.Logs |> semanticErrorToString tyCtx
-    else
-      let expr, tyCtx = transformHir host v (expr, tyCtx)
-      codeGenHirViaMir host v (expr, tyCtx)
+    match semanticallyAnalyze host v syntax with
+    | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
+    | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
+
+    | SemaAnalysisOk (expr, tyCtx) ->
+        let expr, tyCtx = transformHir host v (expr, tyCtx)
+        codeGenHirViaMir host v (expr, tyCtx)
 
 // -----------------------------------------------
 // Actions
@@ -523,13 +548,13 @@ let cliKirDump (host: CliHost) projectDirs =
        let ok, output =
          let syntax = syntacticallyAnalyze ctx
 
-         let expr, tyCtx = semanticallyAnalyze host v syntax
+         match semanticallyAnalyze host v syntax with
+         | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
+         | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
 
-         if tyCtx |> tyCtxHasError then
-           false, tyCtx.Logs |> semanticErrorToString tyCtx
-         else
-           let expr, tyCtx = transformHir host v (expr, tyCtx)
-           dumpHirAsKir host v (expr, tyCtx)
+         | SemaAnalysisOk (expr, tyCtx) ->
+             let expr, tyCtx = transformHir host v (expr, tyCtx)
+             dumpHirAsKir host v (expr, tyCtx)
 
        let code =
          if ok then
@@ -557,13 +582,13 @@ let cliCompileViaKir (host: CliHost) projectDirs =
        let ok, output =
          let syntax = syntacticallyAnalyze ctx
 
-         let expr, tyCtx = semanticallyAnalyze host v syntax
+         match semanticallyAnalyze host v syntax with
+         | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
+         | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
 
-         if tyCtx |> tyCtxHasError then
-           false, tyCtx.Logs |> semanticErrorToString tyCtx
-         else
-           let expr, tyCtx = transformHir host v (expr, tyCtx)
-           codeGenHirViaKir host v (expr, tyCtx)
+         | SemaAnalysisOk (expr, tyCtx) ->
+             let expr, tyCtx = transformHir host v (expr, tyCtx)
+             codeGenHirViaKir host v (expr, tyCtx)
 
        let code =
          if ok then

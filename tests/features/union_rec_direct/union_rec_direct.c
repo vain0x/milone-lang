@@ -55,13 +55,13 @@ int main() {
     struct Expr_Expr_Tuple2 tuple_1;
     tuple_1.t0 = variant_1;
     tuple_1.t1 = variant_2;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
+    void* box_ = milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
     (*(((struct Expr_Expr_Tuple2*)box_))) = tuple_1;
     struct Expr_ variant_3 = (struct Expr_){.tag = Add_, .Add_ = box_};
     struct Expr_Expr_Tuple2 tuple_;
     tuple_.t0 = variant_;
     tuple_.t1 = variant_3;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
+    void* box_1 = milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
     (*(((struct Expr_Expr_Tuple2*)box_1))) = tuple_;
     struct Expr_ variant_4 = (struct Expr_){.tag = Add_, .Add_ = box_1};
     struct Expr_ expr_1 = variant_4;

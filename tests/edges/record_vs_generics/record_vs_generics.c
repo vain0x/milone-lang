@@ -40,7 +40,7 @@ int main() {
     IntWrapper_.Value = 42;
     struct IntWrapper_Tuple1 tuple_;
     tuple_.t0 = IntWrapper_;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntWrapper_Tuple1));
+    void* box_ = milone_mem_alloc(1, sizeof(struct IntWrapper_Tuple1));
     (*(((struct IntWrapper_Tuple1*)box_))) = tuple_;
     void* env_1 = box_;
     struct UnitIntWrapper_Fun1 fun_1 = (struct UnitIntWrapper_Fun1){.fun = fun_, .env = env_1};

@@ -31,7 +31,7 @@ then_3:;
     if_ = acc_;
     goto if_next_2;
 else_4:;
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = i_;
     list_->tail = acc_;
     struct IntList* arg_1 = list_;
@@ -62,7 +62,7 @@ struct UnitIntFun1 {
 };
 
 int doAction_(int arg_4) {
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
+    void* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
     void* env_1 = box_;
     struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = env_1};

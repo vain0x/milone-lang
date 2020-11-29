@@ -268,18 +268,11 @@ let private cpStmt indent stmt acc: string list =
       |> cons ";"
       |> cons eol
 
-  | CLetAllocStmt (name, valPtrTy, varTy) ->
-      let valTy =
-        match valPtrTy with
-        | CPtrTy ty -> ty
-        | _ -> failwithf "Never: Expected pointer type but %A" valPtrTy
-
+  | CLetAllocStmt (name, valTy, varTy) ->
       acc
       |> cons indent
       |> cpTyWithName name varTy
-      |> cons " = ("
-      |> cpTy varTy
-      |> cons ")milone_mem_alloc(1, sizeof("
+      |> cons " = milone_mem_alloc(1, sizeof("
       |> cpTy valTy
       |> cons "));"
       |> cons eol

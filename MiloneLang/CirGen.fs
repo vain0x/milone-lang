@@ -875,10 +875,10 @@ let private addLetStmt ctx name expr cty storageModifier =
 
   | AutoSM -> addStmt ctx (CLetStmt(name, expr, cty))
 
-let private addLetAllocStmt ctx name valPtrTy varTy storageModifier =
+let private addLetAllocStmt ctx name valTy varTy storageModifier =
   match storageModifier with
   | StaticSM -> failwith "NEVER: let-alloc is used only for temporary variables"
-  | AutoSM -> addStmt ctx (CLetAllocStmt(name, valPtrTy, varTy))
+  | AutoSM -> addStmt ctx (CLetAllocStmt(name, valTy, varTy))
 
 let private doGenLetValStmt ctx serial expr ty =
   let name = getUniqueVarName ctx serial
@@ -959,7 +959,7 @@ let private cgBoxInit ctx serial arg =
   let storageModifier = findStorageModifier ctx serial
 
   let ctx =
-    addLetAllocStmt ctx temp (CPtrTy argTy) (CPtrTy CVoidTy) storageModifier
+    addLetAllocStmt ctx temp argTy (CPtrTy CVoidTy) storageModifier
 
   // *(T*)p = t;
   let left =
@@ -975,7 +975,12 @@ let private cgConsInit ctx serial head tail listTy =
   let listTy, ctx = cgTyComplete ctx listTy
 
   let ctx =
-    addLetAllocStmt ctx temp listTy listTy storageModifier
+    let valTy =
+      match listTy with
+      | CPtrTy it -> it
+      | _ -> failwithf "NEVER"
+
+    addLetAllocStmt ctx temp valTy listTy storageModifier
 
   // head
   let head, ctx = cgExpr ctx head

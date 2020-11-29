@@ -20,6 +20,14 @@ fi
 
 mkdir -p "tests/$CATEGORY/$NAME"
 echo -e "module rec $NAME.Program\n\nlet main _ =\n  0" >"tests/$CATEGORY/$NAME/$NAME.fs"
-echo '$? = 0' >"tests/$CATEGORY/$NAME/$NAME.out"
+
+(
+    if test $CATEGORY = "errors"
+    then
+        echo "milone-lang compile error."
+    else
+        echo '$? = 0'
+    fi
+) >"tests/$CATEGORY/$NAME/$NAME.out"
 
 code "tests/$CATEGORY/$NAME/$NAME.fs"

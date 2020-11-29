@@ -83,7 +83,7 @@ struct IntIntIntIntIntFun4 {
 int main() {
     struct IntTuple1 tuple_;
     tuple_.t0 = 3;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntTuple1));
+    void* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;
     void* env_3 = box_;
     struct IntIntFun1 fun_3 = (struct IntIntFun1){.fun = fun_, .env = env_3};
@@ -93,14 +93,14 @@ int main() {
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 2;
     tuple_1.t1 = 3;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
+    void* box_1 = milone_mem_alloc(1, sizeof(struct IntIntTuple2));
     (*(((struct IntIntTuple2*)box_1))) = tuple_1;
     void* env_4 = box_1;
     struct IntIntIntFun2 fun_4 = (struct IntIntIntFun2){.fun = fun_1, .env = env_4};
     struct IntIntIntFun2 add2_ = fun_4;
     int app_2 = add2_.fun(add2_.env, 5, 7);
     milone_assert((app_2 == (((2 + 3) + 5) + 7)), 11, 2);
-    void* box_2 = (void*)milone_mem_alloc(1, sizeof(int));
+    void* box_2 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_2))) = 0;
     void* env_5 = box_2;
     struct IntIntIntIntIntFun4 fun_5 = (struct IntIntIntIntIntFun4){.fun = fun_2, .env = env_5};
