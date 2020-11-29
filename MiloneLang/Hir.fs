@@ -411,6 +411,15 @@ type MonoMode =
 // Errors
 // -----------------------------------------------
 
+[<NoEquality; NoComparison>]
+type NameResLog =
+  | UndefinedValueError of name: string
+  | UndefinedTyError of name: string
+  | FunPatError of name: string
+  | TyArityError of name: string * actual: int * expected: int
+  | ModuleUsedAsTyError of name: string
+  | OtherNameResLog of msg: string
+
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
 type TyUnifyLog =
@@ -420,6 +429,7 @@ type TyUnifyLog =
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
 type Log =
+  | NameResLog of NameResLog
   | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
   | TyBoundError of Trait
   | RedundantFieldError of ty: Ident * field: Ident
@@ -977,10 +987,47 @@ let analyzeFormat (format: string) =
 // Logs
 // -----------------------------------------------
 
+let nameResLogToString log =
+  match log with
+  | UndefinedValueError name ->
+      "The name '"
+      + name
+      + "' here should denote to some value; but not found."
+
+  | UndefinedTyError name ->
+      "The name '"
+      + name
+      + "' here should denote to some type; but not found."
+
+  | FunPatError name ->
+      "The name '"
+      + name
+      + "' here is a function, which can't be used as a pattern."
+
+  | TyArityError ("_", _, _) -> "'_' can't have type arguments."
+
+  | TyArityError (name, actual, expected) ->
+      "Type arity mismatch. The type '"
+      + name
+      + "' expected "
+      + string expected
+      + " arguments; but given "
+      + string actual
+      + "."
+
+  | ModuleUsedAsTyError name ->
+      "The name '"
+      + name
+      + "' here should denote to some type; but is a module name."
+
+  | OtherNameResLog msg -> msg
+
 let logToString tyDisplay loc log =
   let loc = loc |> locToString
 
   match log with
+  | Log.NameResLog log -> loc + " " + nameResLogToString log
+
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
       sprintf "%s Recursive type occurred while unifying '%s' to '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
 

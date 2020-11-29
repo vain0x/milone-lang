@@ -415,6 +415,8 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
   let expr, scopeCtx =
     MiloneLang.NameRes.nameRes (expr, nameCtx)
 
+  // FIXME: collect errors in NameRes
+
   // Type inference.
   let _expr, tyCtx =
     MiloneLang.Typing.infer (expr, scopeCtx, errors)

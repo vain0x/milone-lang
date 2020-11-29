@@ -21,45 +21,64 @@ let private isNoTy ty =
 
 let private tyPrimOfName name tys loc =
   match name, tys with
-  | "unit", [] -> tyUnit
-  | "bool", [] -> tyBool
+  | "unit", [] -> Some tyUnit
+  | "bool", [] -> Some tyBool
 
   | "int", []
-  | "int32", [] -> tyInt
+  | "int32", [] -> Some tyInt
   | "uint", []
-  | "uint32", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I32)), [])
+  | "uint32", [] ->
+      AppTy(IntTyCtor(IntFlavor(Unsigned, I32)), [])
+      |> Some
   | "sbyte", []
-  | "int8", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I8)), [])
+  | "int8", [] ->
+      AppTy(IntTyCtor(IntFlavor(Signed, I8)), [])
+      |> Some
   | "byte", []
-  | "uint8", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I8)), [])
+  | "uint8", [] ->
+      AppTy(IntTyCtor(IntFlavor(Unsigned, I8)), [])
+      |> Some
 
-  | "int16", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I16)), [])
-  | "int64", [] -> AppTy(IntTyCtor(IntFlavor(Signed, I64)), [])
-  | "nativeint", [] -> AppTy(IntTyCtor(IntFlavor(Signed, IPtr)), [])
-  | "uint16", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I16)), [])
-  | "uint64", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, I64)), [])
-  | "unativeint", [] -> AppTy(IntTyCtor(IntFlavor(Unsigned, IPtr)), [])
+  | "int16", [] ->
+      AppTy(IntTyCtor(IntFlavor(Signed, I16)), [])
+      |> Some
+  | "int64", [] ->
+      AppTy(IntTyCtor(IntFlavor(Signed, I64)), [])
+      |> Some
+  | "nativeint", [] ->
+      AppTy(IntTyCtor(IntFlavor(Signed, IPtr)), [])
+      |> Some
+  | "uint16", [] ->
+      AppTy(IntTyCtor(IntFlavor(Unsigned, I16)), [])
+      |> Some
+  | "uint64", [] ->
+      AppTy(IntTyCtor(IntFlavor(Unsigned, I64)), [])
+      |> Some
+  | "unativeint", [] ->
+      AppTy(IntTyCtor(IntFlavor(Unsigned, IPtr)), [])
+      |> Some
 
-  | "float", [] -> tyFloat
-  | "char", [] -> tyChar
-  | "string", [] -> tyStr
-  | "obj", [] -> tyObj
+  | "float", [] -> Some tyFloat
+  | "char", [] -> Some tyChar
+  | "string", [] -> Some tyStr
+  | "obj", [] -> Some tyObj
 
   | "option", [ itemTy ] ->
       // FIXME: option is just an alias of list for now
-      tyList itemTy
+      Some(tyList itemTy)
 
-  | "list", [ itemTy ] -> tyList itemTy
+  | "list", [ itemTy ] -> Some(tyList itemTy)
 
-  | "voidptr", [] -> AppTy(NativePtrTyCtor IsMut, [ AppTy(VoidTyCtor, []) ])
-  | "voidconstptr", [] -> AppTy(NativePtrTyCtor IsConst, [ AppTy(VoidTyCtor, []) ])
-  | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ])
-  | "constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ])
+  | "voidptr", [] ->
+      AppTy(NativePtrTyCtor IsMut, [ AppTy(VoidTyCtor, []) ])
+      |> Some
+  | "voidconstptr", [] ->
+      AppTy(NativePtrTyCtor IsConst, [ AppTy(VoidTyCtor, []) ])
+      |> Some
+  | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ]) |> Some
+  | "constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ]) |> Some
 
-  | _ ->
-      // FIXME: Report error correctly
-      printfn "#error tyPrimOfName name=%s loc=%s" name (locToString loc)
-      ErrorTy loc
+  | _ -> None
 
 // -----------------------------------------------
 // Symbols
@@ -167,7 +186,9 @@ type ScopeCtx =
     Local: Scope
 
     /// Current let-depth, the number of ancestral let-body.
-    LetDepth: LetDepth }
+    LetDepth: LetDepth
+
+    Logs: (NameResLog * Loc) list }
 
 let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
   let (NameCtx (nameMap, serial)) = nameCtx
@@ -186,7 +207,12 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     TyNs = mapEmpty compare
     LocalSerial = localSerial
     Local = scopeEmpty ()
-    LetDepth = 0 }
+    LetDepth = 0
+    Logs = [] }
+
+let private addLog (log: NameResLog) (loc: Loc) (ctx: ScopeCtx) =
+  { ctx with
+      Logs = (log, loc) :: ctx.Logs }
 
 let private findName serial (scopeCtx: ScopeCtx): Ident = scopeCtx.NameMap |> mapFind serial
 
@@ -399,56 +425,68 @@ let private resolveScopedVarName scopeSerial name (scopeCtx: ScopeCtx): ValueSym
     |> nsFind scopeSerial
     |> mapTryFind name
 
-let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySymbol option =
+let private resolveScopedTyName scopeSerial name loc (scopeCtx: ScopeCtx): TySymbol option * ScopeCtx =
   if scopeSerial = scopeCtx.LocalSerial then
     // Find from local scope.
     let _, tyScopes = scopeCtx.Local
     tyScopes
-    |> List.tryPick (fun map -> map |> mapTryFind name)
+    |> List.tryPick (fun map -> map |> mapTryFind name),
+    scopeCtx
   else
     // Find from namespace.
-    failwith "Module.Ty syntax is unimplemented"
+    let scopeCtx =
+      scopeCtx
+      |> addLog (OtherNameResLog "Module.Ty syntax is unimplemented") loc
+
+    None, scopeCtx
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
   scopeCtx
   |> resolveScopedVarName scopeCtx.LocalSerial name
 
-let private resolveLocalTyName name (scopeCtx: ScopeCtx) =
+let private resolveLocalTyName name loc (scopeCtx: ScopeCtx) =
   scopeCtx
-  |> resolveScopedTyName scopeCtx.LocalSerial name
+  |> resolveScopedTyName scopeCtx.LocalSerial name loc
 
 let private resolvePatAsScope pat scopeCtx =
   match pat with
   | HNavPat _ ->
-      // A.B.C (= (A.B).C) case
-      failwith "unimpl"
+      let scopeCtx =
+        scopeCtx
+        |> addLog (OtherNameResLog "nested nav pattern is unimplemented") (patToLoc pat)
 
-  | HRefPat (varSerial, _, _) ->
+      None, scopeCtx
+
+  | HRefPat (varSerial, _, loc) ->
       let name =
-        let (VarSerial serial) = varSerial
-        scopeCtx |> findName serial
+        scopeCtx |> findName (varSerialToInt varSerial)
 
-      scopeCtx |> resolveLocalTyName name
+      scopeCtx |> resolveLocalTyName name loc
 
-  | _ -> None
+  | _ -> None, scopeCtx
 
 /// Resolves an expressions as scope: type, module or namespace.
 let private resolveExprAsScope expr scopeCtx =
   match expr with
   | HNavExpr _ ->
-      // A.B.C (= (A.B).C) case
-      failwith "unimpl"
+      let scopeCtx =
+        scopeCtx
+        |> addLog (OtherNameResLog "nested nav expr is unimplemented") (exprToLoc expr)
 
-  | HRefExpr (varSerial, _, _) ->
+      None, scopeCtx
+
+  | HRefExpr (varSerial, _, loc) ->
       let name =
         scopeCtx |> findName (varSerialToInt varSerial)
 
       // HACK: Don't find from synonyms, from module instead.
-      match scopeCtx |> resolveLocalTyName name with
-      | Some (SynonymTySymbol _) -> scopeCtx |> resolveLocalTyName (name + "Module")
+      match scopeCtx |> resolveLocalTyName name loc with
+      | Some (SynonymTySymbol _), scopeCtx ->
+          scopeCtx
+          |> resolveLocalTyName (name + "Module") loc
       | it -> it
 
-  | _ -> None
+  | _ -> None, scopeCtx
 
 /// Resolves type names in a type expression.
 let private resolveTy ty loc scopeCtx =
@@ -466,19 +504,31 @@ let private resolveTy ty loc scopeCtx =
         let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
-        match scopeCtx |> resolveLocalTyName name with
+        let arity = List.length tys
+        let symbolOpt, scopeCtx = scopeCtx |> resolveLocalTyName name loc
+
+        match symbolOpt with
         | Some (MetaTySymbol tySerial) ->
-            failwithf "meta ty cannot be applied: %A" (serial, tys)
-            MetaTy(tySerial, loc), scopeCtx
+            if arity > 0 then
+              let scopeCtx =
+                scopeCtx
+                |> addLog (TyArityError(name, arity, 0)) loc
+
+              ErrorTy loc, scopeCtx
+            else
+              MetaTy(tySerial, loc), scopeCtx
 
         | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
 
         | Some (SynonymTySymbol tySerial) ->
             // Arity check.
-            // FIXME: proper error handling
             match scopeCtx.Tys |> mapTryFind tySerial with
-            | Some (SynonymTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> List.length tys ->
-                failwithf "synonym arity mismatch: %A" (tySerial, tys, name, defTyArgs, loc)
+            | Some (SynonymTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> arity ->
+                let scopeCtx =
+                  scopeCtx
+                  |> addLog (TyArityError(name, arity, List.length defTyArgs)) loc
+
+                ErrorTy loc, scopeCtx
 
             | _ -> tySynonym tySerial tys, scopeCtx
 
@@ -490,9 +540,20 @@ let private resolveTy ty loc scopeCtx =
             assert (List.isEmpty tys)
             tyRecord tySerial, scopeCtx
 
-        | Some (ModuleTySymbol _) -> failwith "module can't be used as type."
+        | Some (ModuleTySymbol _) ->
+            let scopeCtx =
+              scopeCtx |> addLog (ModuleUsedAsTyError name) loc
 
-        | None -> tyPrimOfName name tys loc, scopeCtx
+            ErrorTy loc, scopeCtx
+
+        | None ->
+            match tyPrimOfName name tys loc with
+            | Some ty -> ty, scopeCtx
+            | None ->
+                let scopeCtx =
+                  scopeCtx |> addLog (UndefinedTyError name) loc
+
+                ErrorTy loc, scopeCtx
 
     | AppTy (tyCtor, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
@@ -810,20 +871,22 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
               HRefPat(varSerial, ty, loc), ctx
 
   | HNavPat (l, r, ty, loc) ->
-      let varSerial =
-        match ctx |> resolvePatAsScope l with
+      let varSerial, ctx =
+        let symbolOpt, ctx = ctx |> resolvePatAsScope l
+        match symbolOpt with
         | Some symbol ->
+            (ctx
+             |> resolveScopedVarName (tySymbolToSerial symbol) r),
             ctx
-            |> resolveScopedVarName (tySymbolToSerial symbol) r
 
-        | None -> None
+        | None -> None, ctx
 
       match varSerial with
       | Some (VarSymbol varSerial) -> HRefPat(varSerial, ty, loc), ctx
 
       | Some (FunSymbol _) ->
-          // FIXME: proper error handling
-          failwith "Function can't be a pattern."
+          let ctx = ctx |> addLog (FunPatError r) loc
+          HDiscardPat(noTy, loc), ctx
 
       | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
 
@@ -890,7 +953,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
             match primFromIdent name with
             | Some prim -> HPrimExpr(prim, ty, loc), ctx
 
-            | None -> HErrorExpr("Undefined variable " + name, loc), ctx
+            | None ->
+                let ctx =
+                  ctx |> addLog (UndefinedValueError name) loc
+
+                HErrorExpr("Undefined variable " + name, loc), ctx
 
       doArm ()
 
@@ -939,11 +1006,12 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         | _ ->
 
             // Keep the nav expression unresolved so that type inference does.
-            let keepUnresolved () =
+            let keepUnresolved ctx =
               let l, ctx = (l, ctx) |> nameResExpr
               HNavExpr(l, r, ty, loc), ctx
 
-            match ctx |> resolveExprAsScope l with
+            let tySymbolOpt, ctx = ctx |> resolveExprAsScope l
+            match tySymbolOpt with
             | Some tySymbol ->
                 let scopeSerial = tySymbolToSerial tySymbol
                 match ctx |> resolveScopedVarName scopeSerial r with
@@ -954,9 +1022,9 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                 | _ ->
                     // X.ty patterns don't appear yet, so don't search for types.
 
-                    keepUnresolved ()
+                    keepUnresolved ctx
 
-            | _ -> keepUnresolved ()
+            | _ -> keepUnresolved ctx
 
       doArm ()
 
@@ -1024,15 +1092,20 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HOpenExpr (path, _) ->
+  | HOpenExpr (path, loc) ->
       let doArm () =
-        // FIXME: resolve module-name based on path
-        match ctx |> resolveLocalTyName (path |> List.last) with
-        | Some (ModuleTySymbol moduleSerial) ->
-            let ctx = ctx |> openModule moduleSerial
-            expr, ctx
+        let ctx =
+          // FIXME: resolve module-name based on path
+          let tySymbolOpt, ctx =
+            ctx |> resolveLocalTyName (path |> List.last) loc
 
-        | _ -> expr, ctx
+          match tySymbolOpt with
+          | Some (ModuleTySymbol moduleSerial) -> ctx |> openModule moduleSerial
+          | _ ->
+              ctx
+              |> addLog (OtherNameResLog("Unknown path: " + strJoin "." path)) loc
+
+        expr, ctx
 
       doArm ()
 
