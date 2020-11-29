@@ -295,7 +295,7 @@ type APat =
 /// `| pat when guard -> body`
 [<Struct>]
 [<NoEquality; NoComparison>]
-type AArm = AArm of pat: APat * guard: AExpr * body: AExpr * Pos
+type AArm = AArm of pat: APat * guard: AExpr option * body: AExpr * Pos
 
 /// Declaration of variant in AST.
 ///
@@ -328,7 +328,9 @@ type ATyDecl =
 /// Expression in AST.
 [<NoEquality; NoComparison>]
 type AExpr =
+  /// Used when syntax error has occurred.
   | AMissingExpr of Pos
+
   | ALitExpr of Lit * Pos
 
   /// E.g. `x`.
@@ -340,8 +342,8 @@ type AExpr =
   /// Record literal, e.g. `{}`, `{ X = 1; Y = 2 }`.
   | ARecordExpr of AExpr option * (Ident * AExpr * Pos) list * Pos
 
-  /// `if cond then body else alt`. alt is filled with `()` if omit.
-  | AIfExpr of cond: AExpr * body: AExpr * alt: AExpr * Pos
+  /// `if cond then body else alt`.
+  | AIfExpr of cond: AExpr * body: AExpr * alt: AExpr option * Pos
 
   /// `match cond with (| pat when guard -> body)*`
   | AMatchExpr of cond: AExpr * arms: AArm list * Pos

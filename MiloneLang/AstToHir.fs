@@ -119,15 +119,15 @@ let private desugarListLitExpr items pos =
 /// Desugar `if` to `match`.
 /// `if cond then body else alt` ==>
 /// `match cond with | true -> body | false -> alt`.
-let private desugarIf cond body alt pos =
+let private desugarIf cond body altOpt pos =
   let alt =
-    match alt with
-    | AMissingExpr _ -> axUnit pos
-    | _ -> alt
+    match altOpt with
+    | None -> axUnit pos
+    | Some alt -> alt
 
   let arms =
-    [ AArm(apTrue pos, axTrue pos, body, pos)
-      AArm(apFalse pos, axTrue pos, alt, pos) ]
+    [ AArm(apTrue pos, None, body, pos)
+      AArm(apFalse pos, None, alt, pos) ]
 
   AMatchExpr(cond, arms, pos)
 
@@ -174,10 +174,10 @@ let private desugarBinGe l r pos =
   axNot ltExpr pos
 
 /// `l && r` ==> `if l then r else false`
-let private desugarBinAnd l r pos = desugarIf l r (axFalse pos) pos
+let private desugarBinAnd l r pos = desugarIf l r (Some(axFalse pos)) pos
 
 /// `l || r` ==> `if l then true else r`
-let private desugarBinOr l r pos = desugarIf l (axTrue pos) r pos
+let private desugarBinOr l r pos = desugarIf l (axTrue pos) (Some r) pos
 
 /// `x |> f` ==> `f x`
 /// NOTE: Evaluation order does change.
@@ -372,9 +372,9 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | AIfExpr (cond, body, alt, pos) ->
+  | AIfExpr (cond, body, altOpt, pos) ->
       let doArm () =
-        let expr = desugarIf cond body alt pos
+        let expr = desugarIf cond body altOpt pos
         (expr, nameCtx) |> athExpr docId
 
       doArm ()
@@ -382,15 +382,15 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
   | AMatchExpr (cond, arms, pos) ->
       let doArm () =
         // Desugar `| pat -> body` to `| pat when true -> body` so that all arms have guard expressions.
-        let onArm (AArm (pat, guard, body, pos), nameCtx) =
+        let onArm (AArm (pat, guardOpt, body, pos), nameCtx) =
           let pat, nameCtx = (pat, nameCtx) |> athPat docId
 
           let loc = toLoc docId pos
 
           let guard, nameCtx =
-            match guard with
-            | AMissingExpr _ -> hxTrue loc, nameCtx
-            | _ -> (guard, nameCtx) |> athExpr docId
+            match guardOpt with
+            | None -> hxTrue loc, nameCtx
+            | Some guard -> (guard, nameCtx) |> athExpr docId
 
           let body, nameCtx = (body, nameCtx) |> athExpr docId
           (pat, guard, body), nameCtx
