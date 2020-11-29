@@ -322,16 +322,17 @@ let private syntaxHasError syntax =
   let _, _, errors = syntax
   errors |> List.isEmpty |> not
 
-let private printSyntaxErrors syntax =
+let private syntaxErrorToString syntax =
   let _, _, errors = syntax
 
   errors
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
-  |> List.iter (fun (msg, loc) -> printfn "#error %s %s" (locToString loc) msg)
+  |> List.map (fun (msg, loc) -> "#error " + locToString loc + " " + msg + "\n")
+  |> strConcat
 
 let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
-let private printLogs (tyCtx: TyCtx) logs =
+let private semanticErrorToString (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
     let getTyName tySerial =
       tyCtx.Tys
@@ -342,7 +343,11 @@ let private printLogs (tyCtx: TyCtx) logs =
 
   logs
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
-  |> List.iter (fun (log, loc) -> printfn "#error %s" (log |> logToString tyDisplayFn loc))
+  |> List.map (fun (log, loc) ->
+       "#error "
+       + (log |> logToString tyDisplayFn loc)
+       + "\n")
+  |> strConcat
 
 // -----------------------------------------------
 // Processes
@@ -402,17 +407,16 @@ let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
   let stmts, mirCtx = mirify (expr, tyCtx)
 
   if mirCtx.Logs |> List.isEmpty |> not then
-    mirCtx.Logs |> printLogs tyCtx
-    "", false
+    false, mirCtx.Logs |> semanticErrorToString tyCtx
   else
     writeLog host v "CirGen"
-    let cir, success = genCir (stmts, mirCtx)
+    let ok, cir = genCir (stmts, mirCtx)
 
     writeLog host v "CirDump"
     let output = cirDump cir
 
     writeLog host v "Finish"
-    output, success
+    ok, output
 
 /// EXPERIMENTAL.
 let dumpHirAsKir (host: CliHost) v (expr, tyCtx) =
@@ -426,7 +430,7 @@ let dumpHirAsKir (host: CliHost) v (expr, tyCtx) =
   let result = kirDump "" "" (kRoot, kirGenCtx)
 
   writeLog host v "Finish"
-  result, true
+  true, result
 
 /// EXPERIMENTAL.
 let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
@@ -448,19 +452,17 @@ let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
 // writeLog host v "Finish"
 // cOutput, success
 
-let compile (ctx: CompileCtx): string * bool =
+let compile (ctx: CompileCtx): bool * string =
   let host = ctx.Host
   let v = ctx.Verbosity
 
   let syntax = syntacticallyAnalyze ctx
   if syntax |> syntaxHasError then
-    printSyntaxErrors syntax
-    "", false
+    false, syntaxErrorToString syntax
   else
     let expr, tyCtx = semanticallyAnalyze host v syntax
     if tyCtx |> tyCtxHasError then
-      tyCtx.Logs |> printLogs tyCtx
-      "", false
+      false, tyCtx.Logs |> semanticErrorToString tyCtx
     else
       let expr, tyCtx = transformHir host v (expr, tyCtx)
       codeGenHirViaMir host v (expr, tyCtx)
@@ -501,8 +503,8 @@ let cliCompile (host: CliHost) verbosity projectDir =
     compileCtxNew host verbosity projectDir
     |> compileCtxReadProjectFile
 
-  let output, success = compile ctx
-  let exitCode = if success then 0 else 1
+  let ok, output = compile ctx
+  let exitCode = if ok then 0 else 1
 
   printfn "%s" (output |> strTrimEnd)
   exitCode
@@ -518,20 +520,19 @@ let cliKirDump (host: CliHost) projectDirs =
 
        let ctx = compileCtxNew host v projectDir
 
-       let output, success =
+       let ok, output =
          let syntax = syntacticallyAnalyze ctx
 
          let expr, tyCtx = semanticallyAnalyze host v syntax
 
          if tyCtx |> tyCtxHasError then
-           tyCtx.Logs |> printLogs tyCtx
-           "", false
+           false, tyCtx.Logs |> semanticErrorToString tyCtx
          else
            let expr, tyCtx = transformHir host v (expr, tyCtx)
            dumpHirAsKir host v (expr, tyCtx)
 
        let code =
-         if success then
+         if ok then
            printfn "*/"
            printfn "%s" (output |> strTrimEnd)
            code
@@ -553,20 +554,19 @@ let cliCompileViaKir (host: CliHost) projectDirs =
 
        let ctx = compileCtxNew host v projectDir
 
-       let output, success =
+       let ok, output =
          let syntax = syntacticallyAnalyze ctx
 
          let expr, tyCtx = semanticallyAnalyze host v syntax
 
          if tyCtx |> tyCtxHasError then
-           tyCtx.Logs |> printLogs tyCtx
-           "", false
+           false, tyCtx.Logs |> semanticErrorToString tyCtx
          else
            let expr, tyCtx = transformHir host v (expr, tyCtx)
            codeGenHirViaKir host v (expr, tyCtx)
 
        let code =
-         if success then
+         if ok then
            printfn "*/"
            printfn "%s" (output |> strTrimEnd)
            code

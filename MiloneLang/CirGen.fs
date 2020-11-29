@@ -1226,9 +1226,9 @@ let private genLogs (ctx: CirCtx) =
   let success = logs |> List.isEmpty
   success, ctx
 
-let genCir (decls, mirCtx: MirCtx): CDecl list * bool =
+let genCir (decls, mirCtx: MirCtx): bool * CDecl list =
   let ctx = ofMirCtx mirCtx
   let ctx = cgDecls ctx decls
-  let success, ctx = genLogs ctx
+  let ok, ctx = genLogs ctx
   let decls = ctx.Decls |> List.rev
-  decls, success
+  ok, decls
