@@ -30,7 +30,7 @@ struct IntList {
 
 int testListMatching_(int arg_1) {
     int match_1;
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 0;
     list_->tail = NULL;
     if ((!(list_))) goto next_4;

@@ -37,7 +37,7 @@ int assertNotEmpty_1(struct IntList* xs_) {
 }
 
 int main() {
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
     int call_1 = assertNotEmpty_1(list_);

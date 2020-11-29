@@ -48,7 +48,7 @@ struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
     struct IntUnitLazyList_Fun1Tuple2 tuple_;
     tuple_.t0 = head_;
     tuple_.t1 = tail_;
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(struct IntUnitLazyList_Fun1Tuple2));
+    void* box_ = milone_mem_alloc(1, sizeof(struct IntUnitLazyList_Fun1Tuple2));
     (*(((struct IntUnitLazyList_Fun1Tuple2*)box_))) = tuple_;
     struct LazyList_ variant_ = (struct LazyList_){.tag = Cons_, .Cons_ = box_};
     return variant_;
@@ -114,7 +114,7 @@ struct LazyList_ makeTail_(int n_2, int prev_, int arg_5) {
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = (n_2 + 1);
     tuple_1.t1 = head_2;
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(struct IntIntTuple2));
+    void* box_1 = milone_mem_alloc(1, sizeof(struct IntIntTuple2));
     (*(((struct IntIntTuple2*)box_1))) = tuple_1;
     void* env_1 = box_1;
     struct UnitLazyList_Fun1 fun_1 = (struct UnitLazyList_Fun1){.fun = fun_, .env = env_1};

@@ -11,7 +11,7 @@ struct IntList {
 
 int main() {
     int match_;
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 1;
     list_->tail = NULL;
     if ((!(list_))) goto next_2;

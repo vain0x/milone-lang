@@ -101,7 +101,7 @@ struct RecordUsingMyUnit_ {
 };
 
 int usedInRecordTypeCase_(int arg_2) {
-    struct MyUnit_List* list_ = (struct MyUnit_List*)milone_mem_alloc(1, sizeof(struct MyUnit_List));
+    struct MyUnit_List* list_ = milone_mem_alloc(1, sizeof(struct MyUnit_List));
     list_->head = (struct MyUnit_){.tag = MyUnit_};
     list_->tail = NULL;
     struct RecordUsingMyUnit_ RecordUsingMyUnit_;

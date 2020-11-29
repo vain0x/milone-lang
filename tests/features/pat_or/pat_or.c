@@ -106,21 +106,21 @@ end_match_7:;
 }
 
 int nestedCase_(int arg_1) {
-    struct IntList* list_2 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     list_2->head = 2;
     list_2->tail = NULL;
-    struct IntList* list_1 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
     list_1->head = 1;
     list_1->tail = list_2;
-    struct IntList* list_ = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     list_->head = 0;
     list_->tail = list_1;
     bool call_3 = startsWithDoubleBits_(list_);
     milone_assert(call_3, 20, 2);
-    struct IntList* list_4 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
     list_4->head = 2;
     list_4->tail = NULL;
-    struct IntList* list_3 = (struct IntList*)milone_mem_alloc(1, sizeof(struct IntList));
+    struct IntList* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
     list_3->head = 1;
     list_3->tail = list_4;
     bool call_4 = startsWithDoubleBits_(list_3);

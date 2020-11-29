@@ -7,13 +7,13 @@ static void* boxedValue_;
 int main();
 
 void* f_(int arg_) {
-    void* box_ = (void*)milone_mem_alloc(1, sizeof(int));
+    void* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 1;
     return box_;
 }
 
 int main() {
-    void* box_1 = (void*)milone_mem_alloc(1, sizeof(int));
+    void* box_1 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 1;
     boxedValue_ = box_1;
     void* call_ = f_(0);
