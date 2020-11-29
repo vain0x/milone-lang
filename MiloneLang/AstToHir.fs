@@ -327,8 +327,9 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
 let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with
   | AMissingExpr pos ->
+      // Error is already reported in parsing.
       let loc = toLoc docId pos
-      HErrorExpr("Missing expression", loc), nameCtx
+      HInfExpr(InfOp.Abort, [], noTy, loc), nameCtx
 
   | ALitExpr (lit, pos) ->
       let loc = toLoc docId pos

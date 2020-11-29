@@ -808,6 +808,7 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
       | _ -> failwithf "NEVER: bad use of Closure prim. %A" itself
 
+  | InfOp.Abort
   | InfOp.Record
   | InfOp.RecordItem _ -> failwith "unimplemented"
 

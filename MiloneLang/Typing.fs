@@ -756,10 +756,13 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HRecordExpr (baseOpt, fields, _, loc) -> inferRecordExpr ctx expectOpt baseOpt fields loc
   | HMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
+
+  | HInfExpr (InfOp.Abort, _, _, loc) -> hxAbort ctx loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
   | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTupleExpr ctx items loc
   | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnnoExpr ctx expr annoTy loc
   | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemiExpr ctx expectOpt exprs loc
+
   | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt vis pat body next loc
 
   | HLetFunExpr (oldSerial, vis, isMainFun, args, body, next, _, loc) ->

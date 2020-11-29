@@ -330,6 +330,8 @@ type HPrim =
 [<Struct>]
 [<NoEquality; NoComparison>]
 type InfOp =
+  | Abort
+
   | App
 
   /// `..`.
