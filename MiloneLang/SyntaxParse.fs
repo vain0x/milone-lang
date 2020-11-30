@@ -92,6 +92,14 @@ let private posAddX dx ((y, x): Pos) = y, x + dx
 let private posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
   intMax firstY secondY, intMax firstX secondX
 
+/// Gets if three tokens can be merged. (Assuming each token is 1-letter.)
+/// That is, no space or comments interleave these positions.
+let private canMerge3 pos1 pos2 pos3 =
+  let y1, x1 = pos1
+  let y2, x2 = pos2
+  let y3, x3 = pos3
+  y1 = y2 && y2 = y3 && x1 + 1 = x2 && x2 + 1 = x3
+
 // -----------------------------------------------
 // Bp
 // -----------------------------------------------
@@ -1083,7 +1091,11 @@ let private parseOps bp basePos first (tokens, errors) =
   | BitBp, (AmpAmpAmpToken, opPos) :: tokens -> nextL first BitAndBinary opPos (tokens, errors)
   | BitBp, (PipePipePipeToken, opPos) :: tokens -> nextL first BitOrBinary opPos (tokens, errors)
   | BitBp, (LeftLeftLeftToken, opPos) :: tokens -> nextL first LeftShiftBinary opPos (tokens, errors)
-  | BitBp, (RightRightRightToken, opPos) :: tokens -> nextL first RightShiftBinary opPos (tokens, errors)
+  | BitBp, (RightAngleToken, opPos) :: (RightAngleToken, pos2) :: (RightAngleToken, pos3) :: tokens when canMerge3
+                                                                                                           opPos
+                                                                                                           pos2
+                                                                                                           pos3 ->
+      nextL first RightShiftBinary opPos (tokens, errors)
 
   | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR first ConsBinary opPos (tokens, errors)
 

@@ -202,10 +202,9 @@ let private scanNumberLit (text: string) (i: int) =
 
   let scanFraction i =
     // Check if point is following but not a range operator.
-    if at text i = '.' && at text (i + 1) <> '.' then
-      true, scanDigits (i + 1)
-    else
-      false, i
+    if at text i = '.' && at text (i + 1) <> '.'
+    then true, scanDigits (i + 1)
+    else false, i
 
   let scanExponential i =
     match at text i with
@@ -406,8 +405,6 @@ let private tokenOfOp (text: string) l r: Token =
       match s with
       | ">" -> RightAngleToken
       | ">=" -> RightEqToken
-      | ">>" -> RightRightToken
-      | ">>>" -> RightRightRightToken
       | _ -> ErrorToken
 
   | '|' ->
@@ -645,6 +642,14 @@ let private lookahead (text: string) (i: int) =
       | '/' -> LComment, 2
       | _ -> LOp, 1
 
+  | '>' ->
+      let c = at (i + 1)
+      if c <> '>' && charIsOp c then
+        LOp, 2
+      else
+        // Consecutive right angles (such as `>>>`) are merged while parsing.
+        LToken RightAngleToken, 1
+
   | '-'
   | ';'
   | ':'
@@ -657,7 +662,6 @@ let private lookahead (text: string) (i: int) =
   | '+'
   | '<'
   | '='
-  | '>'
   | '|' -> LOp, 1
 
   | _ -> LBad, 1

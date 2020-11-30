@@ -127,10 +127,6 @@ type Token =
   | LeftRightToken
   /// `>=`
   | RightEqToken
-  /// `>>`
-  | RightRightToken
-  /// `>>>`
-  | RightRightRightToken
   /// `-`
   | MinusToken
   /// `%`
