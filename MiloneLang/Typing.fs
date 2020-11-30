@@ -451,10 +451,6 @@ let private inferPrimExpr ctx prim loc =
       let ctx = ctx |> addTraitBounds traits
       HPrimExpr(prim, primTy, loc), primTy, ctx
 
-let private inferNilExpr ctx itself loc =
-  let itemTy, ctx = freshMetaTyForExpr itself ctx
-  hxNil itemTy loc, tyList itemTy, ctx
-
 let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   // First, infer base if exists.
   let baseOpt, baseTyOpt, ctx =
