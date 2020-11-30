@@ -183,18 +183,6 @@ let private desugarBinOr l r pos = desugarIf l (axTrue pos) (Some r) pos
 /// NOTE: Evaluation order does change.
 let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 
-/// `s.[l .. r]` ==> `String.getSlice l r x`
-/// NOTE: Evaluation order does change.
-let private tryDesugarIndexRange expr pos =
-  match expr with
-  | AIndexExpr (s, ARangeExpr (l, r, _), _) ->
-      let getSlice =
-        ANavExpr(AIdentExpr("String", pos), "getSlice", pos)
-
-      true, axApp3 getSlice l r s pos
-
-  | _ -> false, expr
-
 /// Analyzes let syntax.
 ///
 /// Annotation move just for simplification:
@@ -420,19 +408,19 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
   | AIndexExpr (l, r, pos) ->
       let doArm () =
-        match tryDesugarIndexRange expr pos with
-        | true, expr -> (expr, nameCtx) |> athExpr docId
-
-        | false, _ ->
+        match expr with
+        | AIndexExpr (x, ARangeExpr (l, r, _), _) ->
+            let x, nameCtx = (x, nameCtx) |> athExpr docId
             let l, nameCtx = (l, nameCtx) |> athExpr docId
             let r, nameCtx = (r, nameCtx) |> athExpr docId
-
             let loc = toLoc docId pos
+            HInfExpr(InfOp.Slice, [l;r;x], noTy, loc), nameCtx
 
-            let hxIndex =
-              hxApp (hxApp (HPrimExpr(HPrim.Index, noTy, loc)) l noTy loc) r noTy loc
-
-            hxIndex, nameCtx
+        | _ ->
+            let l, nameCtx = (l, nameCtx) |> athExpr docId
+            let r, nameCtx = (r, nameCtx) |> athExpr docId
+            let loc = toLoc docId pos
+            HInfExpr(InfOp.Index, [l; r], noTy, loc), nameCtx
 
       doArm ()
 

@@ -736,6 +736,9 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
   match infOp with
   | InfOp.Semi -> kgSemiExpr itself args hole ctx
 
+  | InfOp.Index
+  | InfOp.Slice -> failwith "unimplemented"
+
   | InfOp.CallProc ->
       let callee, args =
         match args with
@@ -768,7 +771,6 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.Cons -> regular "cons" KConsPrim
           | HPrim.OptionNone -> unreachable itself
           | HPrim.OptionSome -> regular "some" KSomePrim
-          | HPrim.Index -> regular "index" KStrIndexPrim
           | HPrim.Not -> regular "not" KNotPrim
           | HPrim.Exit -> kgCallExitExpr itself args primLoc ctx
           | HPrim.Assert -> regular "assert" KAssertPrim
@@ -776,7 +778,6 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.Unbox -> regular "unbox" KUnboxPrim
           | HPrim.Printfn -> regular "printfn" KPrintfnPrim
           | HPrim.StrLength -> regular "str_length" KStrLengthPrim
-          | HPrim.StrGetSlice -> regular "str_get_slice" KStrGetSlicePrim
           | HPrim.Char -> regular "char" KCharPrim
           | HPrim.ToInt _ -> regular "int" KIntPrim
           | HPrim.ToFloat _ -> failwith "unimplemented"

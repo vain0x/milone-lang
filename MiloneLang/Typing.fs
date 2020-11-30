@@ -644,6 +644,32 @@ let private inferAppExpr ctx itself callee arg loc =
 
       hxApp callee arg targetTy loc, targetTy, ctx
 
+let private inferIndexExpr ctx l r loc =
+  let l, lTy, ctx = inferExpr ctx (Some tyStr) l
+  let r, rTy, ctx = inferExpr ctx (Some tyInt) r
+  let tTy, (), ctx = freshMetaTy "index" loc ctx
+
+  let ctx =
+    ctx
+    |> addTraitBounds [ IndexTrait(lTy, rTy, tTy), loc ]
+
+  HInfExpr(InfOp.Index, [ l; r ], tTy, loc), tTy, ctx
+
+let private inferSliceExpr ctx l r x loc =
+  let l, lTy, ctx = inferExpr ctx (Some tyInt) l
+  let r, rTy, ctx = inferExpr ctx (Some tyInt) r
+  let x, xTy, ctx = inferExpr ctx None x
+
+  let ctx =
+    let actualTy = tyFun lTy (tyFun rTy (tyFun xTy xTy))
+
+    let expectedTy =
+      tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr))
+
+    unifyTy ctx loc actualTy expectedTy
+
+  HInfExpr(InfOp.Slice, [ l; r; x ], xTy, loc), xTy, ctx
+
 let private inferTupleExpr (ctx: TyCtx) items loc =
   let rec go acc itemTys ctx items =
     match items with
@@ -746,6 +772,8 @@ let private inferSemiExpr ctx expectOpt exprs loc =
   hxSemi (List.rev exprs) loc, ty, ctx
 
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
+  let fail () = failwithf "NEVER: %A" expr
+
   match expr with
   | HLitExpr (lit, _) -> expr, litToTy lit, ctx
 
@@ -762,6 +790,11 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTupleExpr ctx items loc
   | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnnoExpr ctx expr annoTy loc
   | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemiExpr ctx expectOpt exprs loc
+
+  | HInfExpr (InfOp.Index, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
+  | HInfExpr (InfOp.Index, _, _, _) -> fail ()
+  | HInfExpr (InfOp.Slice, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
+  | HInfExpr (InfOp.Slice, _, _, _) -> fail ()
 
   | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt vis pat body next loc
 

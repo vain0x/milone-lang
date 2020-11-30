@@ -390,7 +390,6 @@ let private kmPrimNode itself prim args results conts loc ctx: KirToMirCtx =
   | KStrComparePrim -> kmPrimStrCompare itself args results conts loc ctx
   | KStrIndexPrim -> kmPrimStrIndex itself args results conts loc ctx
   | KStrLengthPrim -> kmPrimStrLength itself args results conts loc ctx
-  | KStrGetSlicePrim -> other HPrim.StrGetSlice
   | KConsPrim -> kmPrimCons itself args results conts loc ctx
   | KSomePrim -> kmPrimSome itself args results conts loc ctx
   | KTuplePrim -> kmPrimTuple itself args results conts loc ctx

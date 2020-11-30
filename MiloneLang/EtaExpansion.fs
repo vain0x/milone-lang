@@ -147,10 +147,7 @@ let private primToArity ty prim =
   | HPrim.Eq
   | HPrim.Lt
   | HPrim.Compare
-  | HPrim.Cons
-  | HPrim.Index -> 2
-
-  | HPrim.StrGetSlice -> 3
+  | HPrim.Cons -> 2
 
   | HPrim.Printfn -> ty |> tyToArity
 

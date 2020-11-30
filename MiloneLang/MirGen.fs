@@ -796,6 +796,11 @@ let private mirifyExprCallBox ctx arg _ loc =
 
   temp, ctx
 
+let mirifyCallStrIndexExpr ctx l r ty loc =
+  let l, ctx = mirifyExpr ctx l
+  let r, ctx = mirifyExpr ctx r
+  MBinaryExpr(MStrIndexBinary, l, r, ty, loc), ctx
+
 let private mirifyCallStrGetSliceExpr ctx args loc =
   assert (List.length args = 3)
 
@@ -1114,8 +1119,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Compare, _ -> fail ()
   | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc
   | HPrim.Cons, _ -> fail ()
-  | HPrim.Index, [ l; r ] -> regularBinary MStrIndexBinary l r
-  | HPrim.Index, _ -> fail ()
   | HPrim.OptionSome, [ item ] -> mirifyExprCallSome ctx item ty loc
   | HPrim.OptionSome, _ -> fail ()
   | HPrim.Not, [ arg ] -> regularUnary MNotUnary arg
@@ -1128,7 +1131,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Unbox, _ -> fail ()
   | HPrim.StrLength, [ arg ] -> regularUnary MStrLenUnary arg
   | HPrim.StrLength, _ -> fail ()
-  | HPrim.StrGetSlice, _ -> mirifyCallStrGetSliceExpr ctx args loc
   | HPrim.ToInt flavor, [ arg ] -> mirifyCallToIntExpr ctx itself flavor arg ty loc
   | HPrim.ToInt _, _ -> fail ()
   | HPrim.ToFloat flavor, [ arg ] -> mirifyCallToFloatExpr ctx itself flavor arg ty loc
@@ -1250,6 +1252,9 @@ let private mirifyExprInf ctx itself infOp args ty loc =
   | InfOp.Record, _, _ -> mirifyExprRecord ctx args ty loc
   | InfOp.RecordItem index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
   | InfOp.Semi, _, _ -> mirifyExprSemi ctx args
+
+  | InfOp.Index, [ l; r ], _ -> mirifyCallStrIndexExpr ctx l r ty loc
+  | InfOp.Slice, _, _ -> mirifyCallStrGetSliceExpr ctx args loc
 
   | InfOp.CallProc, [ HVariantExpr (variantSerial, _, _); arg ], _ -> mirifyCallVariantExpr ctx variantSerial arg ty loc
   | InfOp.CallProc, HPrimExpr (prim, _, _) :: args, _ -> mirifyCallPrimExpr ctx itself prim args ty loc

@@ -998,35 +998,26 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HNavExpr (l, r, ty, loc) ->
       let doArm () =
-        // FIXME: Patchwork for tests to pass
-        match l, r with
-        | HRefExpr (varSerial, _, _), "getSlice" when ctx
-                                                      |> findName (varSerialToInt varSerial) = "String" ->
-            // NOTE: Actually this functions doesn't exist in the F# standard library.
-            HPrimExpr(HPrim.StrGetSlice, ty, loc), ctx
+        // Keep the nav expression unresolved so that type inference does.
+        let keepUnresolved ctx =
+          let l, ctx = (l, ctx) |> nameResExpr
+          HNavExpr(l, r, ty, loc), ctx
 
-        | _ ->
+        let tySymbolOpt, ctx = ctx |> resolveExprAsScope l
+        match tySymbolOpt with
+        | Some tySymbol ->
+            let scopeSerial = tySymbolToSerial tySymbol
+            match ctx |> resolveScopedVarName scopeSerial r with
+            | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc), ctx
+            | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc), ctx
+            | Some (VariantSymbol variantSerial) -> HVariantExpr(variantSerial, ty, loc), ctx
 
-            // Keep the nav expression unresolved so that type inference does.
-            let keepUnresolved ctx =
-              let l, ctx = (l, ctx) |> nameResExpr
-              HNavExpr(l, r, ty, loc), ctx
+            | _ ->
+                // X.ty patterns don't appear yet, so don't search for types.
 
-            let tySymbolOpt, ctx = ctx |> resolveExprAsScope l
-            match tySymbolOpt with
-            | Some tySymbol ->
-                let scopeSerial = tySymbolToSerial tySymbol
-                match ctx |> resolveScopedVarName scopeSerial r with
-                | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc), ctx
-                | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc), ctx
-                | Some (VariantSymbol variantSerial) -> HVariantExpr(variantSerial, ty, loc), ctx
+                keepUnresolved ctx
 
-                | _ ->
-                    // X.ty patterns don't appear yet, so don't search for types.
-
-                    keepUnresolved ctx
-
-            | _ -> keepUnresolved ctx
+        | _ -> keepUnresolved ctx
 
       doArm ()
 

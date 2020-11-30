@@ -296,8 +296,6 @@ type HPrim =
   | Eq
   | Lt
   | Compare
-  | Index
-  | StrGetSlice
 
   // conversion:
   | ToInt of toIntFlavor: IntFlavor
@@ -345,6 +343,12 @@ type InfOp =
 
   /// `x; y`
   | Semi
+
+  /// `s.[i]`
+  | Index
+
+  /// `s.[l .. r]`
+  | Slice
 
   /// Direct call to procedure or primitive.
   | CallProc
@@ -652,12 +656,6 @@ let primToTySpec prim =
       let listTy = tyList itemTy
       poly (tyFun itemTy listTy) []
 
-  | HPrim.Index ->
-      let lTy = meta 1
-      let rTy = meta 2
-      let resultTy = meta 3
-      poly (tyFun lTy (tyFun rTy resultTy)) [ IndexTrait(lTy, rTy, resultTy) ]
-
   | HPrim.Not -> mono (tyFun tyBool tyBool)
 
   | HPrim.Exit ->
@@ -693,8 +691,6 @@ let primToTySpec prim =
       poly (tyFun toStrTy tyStr) [ ToStringTrait toStrTy ]
 
   | HPrim.StrLength -> mono (tyFun tyStr tyInt)
-
-  | HPrim.StrGetSlice -> mono (tyFun tyInt (tyFun tyInt (tyFun tyStr tyStr)))
 
   | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
 
