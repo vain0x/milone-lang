@@ -430,6 +430,15 @@ let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
 
 let private inferPrimExpr ctx prim loc =
   match prim with
+  | HPrim.Printfn ->
+      let ctx =
+        addError
+          ctx
+          "Illegal use of printfn. printfn must have string literal as first argument; e.g. `printfn \"%s\" s`."
+          loc
+
+      hxAbort ctx loc
+
   | HPrim.NativeFun ->
       let ctx =
         addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc

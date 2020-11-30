@@ -694,13 +694,9 @@ let primToTySpec prim =
 
   | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
 
-  | HPrim.Printfn ->
-      // printfn followed by format literal is handled specially.
-      // If format argument is not a string literal, printfn is equivalent to `printfn "%s"`.
-      mono (tyFun tyStr tyUnit)
-
+  | HPrim.Printfn
   | HPrim.NativeFun ->
-      // Incorrect use of __nativeFun is handled as error before instantiating its type.
+      // Incorrect use of this primitive is handled as error before instantiating its type.
       failwith "NEVER"
 
   | HPrim.NativeCast ->
