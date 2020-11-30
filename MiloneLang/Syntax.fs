@@ -400,6 +400,34 @@ type ARoot =
   | AModuleRoot of Ident * AExpr * Pos
 
 // -----------------------------------------------
+// Literals
+// -----------------------------------------------
+
+let litTrue = BoolLit true
+
+let litFalse = BoolLit false
+
+let litCmp l r =
+  match l, r with
+  | BoolLit l, BoolLit r -> compare l r
+  | BoolLit _, _ -> -1
+  | _, BoolLit _ -> 1
+
+  | IntLit l, IntLit r -> compare l r
+  | IntLit _, _ -> -1
+  | _, IntLit _ -> 1
+
+  | FloatLit l, FloatLit r -> compare l r
+  | FloatLit _, _ -> -1
+  | _, FloatLit _ -> 1
+
+  | CharLit l, CharLit r -> compare l r
+  | CharLit _, _ -> -1
+  | _, CharLit _ -> 1
+
+  | StrLit l, StrLit r -> compare l r
+
+// -----------------------------------------------
 // Position
 // -----------------------------------------------
 
