@@ -81,10 +81,10 @@ let private freshTySerial (ctx: TyCtx) =
 
   serial, ctx
 
-let private freshMetaTy (_: Ident) loc (ctx: TyCtx): Ty * unit * TyCtx =
+let private freshMetaTy loc (ctx: TyCtx): Ty * TyCtx =
   let serial, ctx = freshTySerial ctx
   let ty = MetaTy(serial, loc)
-  ty, (), ctx
+  ty, ctx
 
 let private freshMetaTyForPat pat ctx =
   let _, loc = pat |> patExtract
@@ -270,7 +270,7 @@ let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
 
 /// Creates an expression to abort.
 let private hxAbort (ctx: TyCtx) loc =
-  let ty, (), ctx = ctx |> freshMetaTy "abort" loc
+  let ty, ctx = ctx |> freshMetaTy loc
   let funTy = tyFun tyInt ty
   let exitExpr = HPrimExpr(HPrim.Exit, funTy, loc)
 
@@ -647,7 +647,7 @@ let private inferAppExpr ctx itself callee arg loc =
 let private inferIndexExpr ctx l r loc =
   let l, lTy, ctx = inferExpr ctx (Some tyStr) l
   let r, rTy, ctx = inferExpr ctx (Some tyInt) r
-  let tTy, (), ctx = freshMetaTy "index" loc ctx
+  let tTy, ctx = freshMetaTy loc ctx
 
   let ctx =
     ctx
@@ -718,11 +718,11 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis isMainFun argPats 
   let ctx = ctx |> incDepth
 
   let calleeTy, ctx =
-    let calleeTy, _, ctx =
+    let calleeTy, ctx =
       if isMainFun then
-        tyFun tyUnit tyInt, (), ctx // FIXME: argument type is string[]
+        tyFun tyUnit tyInt, ctx // FIXME: argument type is string[]
       else
-        freshMetaTy "fun" loc ctx
+        freshMetaTy loc ctx
 
     let ctx =
       match (ctx.Funs |> mapFind callee).Ty with
@@ -852,7 +852,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
            let varDef, ctx =
              match varDef with
              | VarDef (name, storageModifier, _, loc) ->
-                 let ty, _, ctx = freshMetaTy name loc ctx
+                 let ty, ctx = freshMetaTy loc ctx
                  VarDef(name, storageModifier, ty, loc), ctx
 
            let acc = acc |> mapAdd varSerial varDef
@@ -870,7 +870,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                  scopeCtx.VarDepths
                  |> mapFind (funSerialToInt funSerial) }
 
-         let ty, _, ctx = freshMetaTy funDef.Name funDef.Loc ctx
+         let ty, ctx = freshMetaTy funDef.Loc ctx
          acc
          |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
          ctx) (mapEmpty funSerialCmp, ctx)
