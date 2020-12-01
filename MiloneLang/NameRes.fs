@@ -19,7 +19,7 @@ let private isNoTy ty =
 // Type primitives
 // -----------------------------------------------
 
-let private tyPrimOfName name tys loc =
+let private tyPrimOfName name tys =
   match name, tys with
   | "unit", [] -> Some tyUnit
   | "bool", [] -> Some tyBool
