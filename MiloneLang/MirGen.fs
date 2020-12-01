@@ -363,8 +363,13 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * M
       mirifyPatCall ctx pat endLabel variantSerial args ty loc expr
 
   | HCallPat (HSomePat (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
+  | HCallPat _ -> failwithf "NEVER: Incorrect HCallPat. %A" pat
+
   | HConsPat (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
+
   | HTuplePat (itemPats, AppTy (TupleTyCtor, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
+  | HTuplePat _ -> failwithf "NEVER: Tuple pattern must be of tuple type. %A" pat
+
   | HBoxPat (itemPat, loc) -> mirifyPatBox ctx endLabel itemPat expr loc
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 
@@ -374,11 +379,11 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * M
 
       false, ctx
 
-  | HOrPat _ -> failwith "Unimpl nested OR pattern."
-  | HNavPat _ -> failwith "Never: Nav pattern in mirify"
-  | HCallPat _ -> failwithf "Never: Call pattern incorrect. %A" pat
-  | HTuplePat _ -> failwith "Never: Tuple pattern must be of tuple type."
-  | HAnnoPat _ -> failwith "Never annotation pattern in MIR-ify stage."
+  | HOrPat _ ->
+      // HOrPat in match expr is resolved by patNormalize and that in let expr is error in NameRes.
+      failwith "NEVER"
+  | HNavPat _ -> failwith "NEVER: HNavPat is resolved in NameRes"
+  | HAnnoPat _ -> failwith "NEVER: HAnnoPat is resolved in Typing."
 
 // -----------------------------------------------
 // Expression
