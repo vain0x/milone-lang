@@ -141,7 +141,7 @@ let private kdTerm term ctx =
 
   | KVarTerm (varSerial, _, _) -> getVarName varSerial ctx
 
-  | KFunTerm (funSerial, _, _)
+  | KFunTerm (funSerial, _, _) -> getFunName funSerial ctx
   | KLabelTerm (funSerial, _, _) -> getFunName funSerial ctx
 
   | KVariantTerm (variantSerial, _, _) -> getVariantName variantSerial ctx

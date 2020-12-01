@@ -161,7 +161,7 @@ let tyCollectFreeVars ty =
     match tys with
     | [] -> fvAcc
 
-    | ErrorTy _ :: tys
+    | ErrorTy _ :: tys -> go fvAcc tys
     | AppTy (_, []) :: tys -> go fvAcc tys
 
     | AppTy (_, tys1) :: tys2 ->

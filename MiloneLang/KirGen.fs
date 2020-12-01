@@ -22,15 +22,15 @@ let private kTermToTy (term: KTerm): Ty =
   match term with
   | KLitTerm (lit, _) -> litToTy lit
 
-  | KVarTerm (_, ty, _)
-  | KFunTerm (_, ty, _)
+  | KVarTerm (_, ty, _) -> ty
+  | KFunTerm (_, ty, _) -> ty
   | KVariantTerm (_, ty, _) -> ty
 
   | KTagTerm _ -> tyInt
 
   | KLabelTerm (_, ty, _) -> ty
 
-  | KNilTerm (itemTy, _)
+  | KNilTerm (itemTy, _) -> tyList itemTy
   | KNoneTerm (itemTy, _) -> tyList itemTy
 
   | KUnitTerm _ -> tyUnit
