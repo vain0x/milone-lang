@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+./milone-netcore parse -q MiloneLang

@@ -1,7 +1,7 @@
 [<AutoOpen>]
 module MiloneLsp.JsonValue
 
-[<Struct>]
+[<Struct; NoEquality; NoComparison>]
 type JsonValue =
   | JNull
   | JString of stringValue: string

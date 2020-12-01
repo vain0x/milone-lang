@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -eu
+
+CAT="$PWD/cat"
+
+(
+    cd tests
+    $CAT input1.txt input2.txt >output.generated.txt
+    diff -q output.generated.txt output-expected.txt
+)
+
+echo OK

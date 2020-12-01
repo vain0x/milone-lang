@@ -16,20 +16,19 @@ printfn, eprintfn, failwithf, etc.
 
 ### Types
 
-- Records
-- Option type
-    - Desugar to `list` or auto-gen unions
+- Recursive records
+- Polymorphic union/records
 - Type variables (`'a`) in type expressions
 
 ### Transformations
 
-- Desugar `list` to auto-gen unions
+- Desugar tuples and closures to auto-gen records
+- Desugar lists and options to auto-gen unions
 - Auto-gen primitives for each type: `string`, `=`, etc.
 
 ### Runtime
 
 - Bump memory allocator instead of malloc
-- Garbage Collection in case of out of memory
 
 ### Others
 
@@ -75,6 +74,13 @@ The following shows edge cases that F# allows but milone-lang doesn't.
         assert false
     | _ ->
       assert false
+```
+
+In F#, the two lines are same, but milone-lang doesn't parse the first line.
+
+```fsharp
+    |   _, _ as xs  :: _  as ys -> ...
+    | ((_, _) as xs :: _) as ys -> ...
 ```
 
 ### Union type syntax without pipes

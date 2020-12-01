@@ -1,0 +1,7 @@
+{
+  Name = "App"
+  Version = "1.0.0"
+  Options = [
+    Ref "../Lib"
+  ]
+}

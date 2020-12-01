@@ -1,7 +1,5 @@
 # MILONE-LANG
 
-[![Build Status](https://travis-ci.org/vain0x/milone-lang.svg?branch=master)](https://travis-ci.org/vain0x/milone-lang)
-
 Self-hosting is **achieved** at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
 
 ## What
@@ -43,7 +41,7 @@ int main() {
 }
 ```
 
-*The actual output is available at [factorial.c](./boot/tests/examples/factorial/factorial.c).*
+*The actual output is available at [factorial.c](./tests/examples/factorial/factorial.c).*
 
 The diagram below illustrates how it does self-host finally.
 
@@ -80,59 +78,73 @@ Not all of F# features are supported. Features for functional-style programming 
     - Polymorphic type inference
     - Primitive types: `int`, `string`, tuples, lists, functions, etc.
     - Discriminated unions (non-generic ones only)
+    - Records (non-generic, non-recursive ones only)
 - IO
     - `printfn` with `%s`, `%d`
     - Some file IOs
 
-See [the boot/tests/examples directory](./boot/tests/examples) for working codes.
+See [the tests/examples directory](./tests/examples) for working codes.
 
 - [notes.md](notes.md): notes on future works.
 
 ## Internals
 
-See the comments in source files for details.
+See comments written at the top of each file to describe what it is.
 
-Most of types are defined in the module:
+Most of types and functions are defined in:
 
-- [Types](boot/MiloneLang/Types.fs)
+- [Util](MiloneLang/Util.fs)
+    - Just a set of utility functions for string, list, map etc.
+- [Syntax](MiloneLang/Syntax.fs)
+    - Tokens, abstract syntax tree (AST), source location information etc.
+- [Hir](MiloneLang/Hir.fs):
+    - Functional-style intermediate representation
+- [Mir](MiloneLang/Mir.fs):
+    - Imperative-style intermediate representation
+- [Cir](MiloneLang/Cir.fs)
+    - AST of the C language for pretty-printing
+- [FSharpOnly](MiloneLang/FSharpOnly.fs)
 
-and functions are in:
+Program analysis and transformations are written in:
 
-- [Compatible](boot/MiloneLang/Compatible.fs)
-- [Helpers](boot/MiloneLang/Helpers.fs)
-
-The following transformations are consist of the compilation in the order:
-
-- [Lexing](boot/MiloneLang/Lexing.fs) (Tokenization)
-- [Parsing](boot/MiloneLang/Parsing.fs)
-- [Bundling](boot/MiloneLang/Bundling.fs)
-    - Source codes concatenation
-- [AstToHir](boot/MiloneLang/AstToHir.fs)
-    - From abstract syntax tree (AST) to high-level intermediate representation (HIR)
-    - For data structure decoupling and desugaring
-- [NameRes](boot/MiloneLang/NameRes.fs) (Name resolution)
-- [Typing](boot/MiloneLang/Typing.fs) (Type inference)
-- [MainHoist](boot/MiloneLang/MainHoist.fs)
-    - Resolve top-level bindings
-- [ClosureConversion](boot/MiloneLang/ClosureConversion.fs)
-    - Resolve use of local variables in functions
-- [EtaExpansion](boot/MiloneLang/EtaExpansion.fs)
-    - Resolve partial applications
-- [Hoist](boot/MiloneLang/Hoist.fs)
+- [SyntaxTokenize](MiloneLang/SyntaxTokenize.fs) (milone-lang source code -> Token list)
+- [SyntaxParse](MiloneLang/SyntaxParse.fs) (Token list -> AST)
+- [AstToHir](MiloneLang/AstToHir.fs) (AST -> HIR)
+- [Bundling](MiloneLang/Bundling.fs) (\*files\* -> HIR)
+    - Loads source files of project and concatenates them into single HIR program
+- [NameRes](MiloneLang/NameRes.fs) (Name resolution)
+- [Typing](MiloneLang/Typing.fs) (Type inference)
+- [MainHoist](MiloneLang/MainHoist.fs)
+    - Resolves top-level bindings
+- [AutoBoxing](MiloneLang/AutoBoxing.fs)
+    - Resolves recursive nominal types
+- [RecordRes](MiloneLang/RecordRes.fs)
+    - Resolves use of field names
+- [ClosureConversion](MiloneLang/ClosureConversion.fs)
+    - Resolves non-closed functions
+- [EtaExpansion](MiloneLang/EtaExpansion.fs)
+    - Resolves partial applications and function references
+- [Hoist](MiloneLang/Hoist.fs)
     - Just a preparation of monomorphization
-- [Monomorphization](boot/MiloneLang/Monomorphization.fs)
-    - Resolve generic functions by code clone
-- [Mir](boot/MiloneLang/Mir.fs)
-    - Resolve pattern matches
-    - Convert to mid-level intermediate representation (MIR)
-- [CIrGen](boot/MiloneLang/CIrGen.fs)
-    - Generate C code
-- [CPrinting](boot/MiloneLang/CPrinting.fs)
-    - C code to string
+- [Monomorphization](MiloneLang/Monomorphization.fs)
+    - Resolves use of generic functions by code cloning
+- [TailRecOptimizing](MiloneLang/TailRecOptimizing.fs)
+    - Marks tail-recursive calls to be optimized
+- [MirGen](MiloneLang/MirGen.fs) (HIR -> MIR)
+    - Resolves pattern matches
+- [CirGen](MiloneLang/CirGen.fs) (MIR -> CIR)
+- [CirDump](MiloneLang/CirDump.fs) (CIR -> C source code)
+
+Entrypoints:
+
+- [Cli.fs](MiloneLang/Cli.fs)
+    - CLI application logic shared by F# and milone-lang
+- [Program.fs](MiloneLang/Program.fs)
+    - Provides `main` function for .NET
+- [MiloneLang.fs](MiloneLang/MiloneLang.fs)
+    - Provides `main` function for milone-lang
 
 ## Development
-
-Work in the `boot` directory.
 
 Scripts are written for `bash` because I use a Ubuntu desktop for development. These scripts might work on Windows Subsystem Linux or macOS (not tried).
 

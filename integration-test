@@ -1,0 +1,84 @@
+#!/bin/bash
+# Perform single integration test case.
+# USAGE: integration-test name milone verbosity
+
+set -u
+
+# Ignore temporary directories.
+if [[ $1 =~ /(bin|obj)(/|$) ]]
+then
+    exit 0
+fi
+
+CFLAGS='-std=c11 -O2 -I runtime -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-pointer-to-int-cast runtime/milone.c'
+
+NAME=$(basename "$1")
+MILONE=${2:-'MiloneLang/bin/Debug/netcoreapp3.1/MiloneLang'}
+VERBOSITY=${3:-'-q'}
+
+DIR=$(find tests -type d | grep -e "\\b$NAME$" | head -n 1)
+TEST_SRC="$DIR/$NAME.fs"
+TEST_OUTX="$DIR/$NAME.out"
+TEST_C="$DIR/$NAME.generated.c"
+TEST_EXE="$DIR/$NAME.generated.exe"
+TEST_OUTA="$DIR/$NAME.generated.out"
+
+if test ! -f $TEST_OUTX
+then
+    echo '$? = 0' >$TEST_OUTX
+fi
+
+if test ! -f $TEST_SRC
+then
+    echo "Missing '$TEST_SRC'." >&2
+    touch $TEST_SRC
+    exit 0
+fi
+
+echo -n "$NAME..." >&2
+
+# Build with milone-lang compiler.
+MILONE_CMD="$MILONE $VERBOSITY $DIR"
+
+if test $VERBOSITY = '-v'
+then
+    echo "+ $MILONE_CMD" >&2
+fi
+
+MILONE_HOME=$PWD $MILONE_CMD >$TEST_C
+if test $? -ne 0
+then
+    echo 'milone-lang compile error.' >$TEST_OUTA
+else
+    # Build with C compiler.
+    CC_CMD="gcc $CFLAGS $TEST_C -o $TEST_EXE"
+
+    if test $VERBOSITY = '-v'
+    then
+        echo "+ $CC_CMD" >&2
+    fi
+
+    $CC_CMD
+    if test $? -ne 0
+    then
+        echo 'gcc compile error.' >$TEST_OUTA
+    else
+        # Execute the binary.
+        if test $VERBOSITY = '-v'
+        then
+            echo "+ $TEST_EXE" >&2
+        fi
+
+        $TEST_EXE >$TEST_OUTA
+        echo '$? = '$? >>$TEST_OUTA
+    fi
+fi
+
+# Verify the result.
+if diff -q $TEST_OUTA $TEST_OUTX
+then
+    echo "✔ ok" >&2
+else
+    echo "✘ FAILED" >&2
+    echo $NAME
+fi

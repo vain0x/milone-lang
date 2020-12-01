@@ -1,6 +1,7 @@
 module MiloneLsp.LspLangService
 
-open MiloneLang.Types
+open MiloneLang.Util
+open MiloneLang.Syntax
 
 let private uriOfFilePath (filePath: string) =
   System.Text.StringBuilder().Append(filePath).Replace(":", "%3A").Replace("\\", "/").Insert(0, "file:///").ToString()
@@ -40,10 +41,9 @@ module MutMultimap =
 
 type TokenizeResult = (Token * Pos) list
 
-type ParseResult = AExpr * (string * Pos) list
+type ParseResult = ARoot * (string * Pos) list
 
-[<NoEquality>]
-[<NoComparison>]
+[<NoEquality; NoComparison>]
 type AnalysisCache =
   { mutable Ok: bool
     mutable TokenizeResultOpt: TokenizeResult option
@@ -68,8 +68,7 @@ type AnalysisCache =
 // FileCache
 // ---------------------------------------------
 
-[<NoEquality>]
-[<NoComparison>]
+[<NoEquality; NoComparison>]
 type FileCache =
   { FilePath: string
     mutable Text: string
@@ -154,6 +153,7 @@ let useFile (filePath: string): FileCache option =
 // ---------------------------------------------
 
 /// Text doc that is opened in editor.
+[<NoEquality; NoComparison>]
 type DocData =
   {
     /// String to identify a file. E.g. `file:///home/owner/.../foo.milone`.
@@ -207,6 +207,7 @@ let closeDoc (uri: string): unit =
 // Project
 // ---------------------------------------------
 
+[<NoEquality; NoComparison>]
 type ProjectInfo =
   { ProjectDir: string
     ProjectName: string
@@ -292,7 +293,7 @@ let tokenizeWithCaching (text: string) (analysisCache: AnalysisCache): TokenizeR
   | Some it -> it
 
   | None ->
-      let result = MiloneLang.Lexing.tokenize text
+      let result = MiloneLang.SyntaxTokenize.tokenize text
       analysisCache.TokenizeResultOpt <- Some result
       result
 
@@ -302,7 +303,7 @@ let parseWithCaching (text: string) (analysisCache: AnalysisCache): ParseResult 
 
   | None ->
       let tokens = tokenizeWithCaching text analysisCache
-      let result = MiloneLang.Parsing.parse tokens
+      let result = MiloneLang.SyntaxParse.parse tokens
 
       let ok =
         let _, errors = result
@@ -322,6 +323,7 @@ let validateDoc (uri: string): (string * Pos) list =
 
   | None -> []
 
+[<NoEquality; NoComparison>]
 type ProjectValidateResult =
   { ModuleUris: string list
 
@@ -351,45 +353,85 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
         | None -> None
 
   // Bundle.
-  let expr, nameCtx, errorListList =
+  let expr, nameCtx, errors =
+    let readCoreFile moduleName =
+      eprintfn "readCoreFile: unimplemented"
+      ""
+
     let readModuleFile moduleName =
       eprintfn "readModuleFile '%s'" moduleName
 
-      let contents, ext =
+      let source =
         match tryReadModule moduleName ".milone" with
-        | Some it -> it, ".milone"
+        | Some it -> Some(it, ".milone")
         | None ->
             match tryReadModule moduleName ".fs" with
-            | Some it -> it, ".fs"
-            | None ->
-                eprintfn "Module '%s' is missing in '%s'." moduleName projectDir
-                "", ".milone"
+            | Some it -> Some(it, ".fs")
+            | None -> None
 
-      // Remember URI to create error location later.
-      if moduleUris.ContainsKey(moduleName) |> not
-      then moduleUris.Add(moduleName, toUri moduleName ext)
+      match source with
+      | Some (source, ext) ->
+          // Remember URI to create error location later.
+          if moduleUris.ContainsKey(moduleName) |> not
+          then moduleUris.Add(moduleName, toUri moduleName ext)
 
-      contents
+          Some source
+
+      | None -> None
 
     let parseModule (moduleName: string) tokens =
       eprintfn "parse: '%s'" moduleName
-      MiloneLang.Parsing.parse tokens
+      MiloneLang.SyntaxParse.parse tokens
 
-    let nameCtx = MiloneLang.Helpers.nameCtxEmpty ()
+    let bundleHost: MiloneLang.Bundling.BundleHost =
+      { FetchModule =
+          fun p m ->
+            if p = projectName then
+              match readModuleFile m with
+              | Some contents ->
+                  let ast, errors =
+                    contents
+                    |> MiloneLang.SyntaxTokenize.tokenize
+                    |> parseModule m
 
-    MiloneLang.Bundling.parseProjectModules readModuleFile parseModule projectName nameCtx
+                  let docId = m
+
+                  Some(docId, ast, errors)
+
+              | None -> None
+
+            else
+              // FIXME: load MiloneCore from libcore
+              None }
+
+    match MiloneLang.Bundling.bundleProgram bundleHost projectName with
+    | Some it -> it
+    | None ->
+        let expr = MiloneLang.Hir.hxUnit ("", 0, 0)
+        let nameCtx = MiloneLang.Hir.nameCtxEmpty ()
+        expr, nameCtx, []
 
   // Name resolution.
   let expr, scopeCtx =
     MiloneLang.NameRes.nameRes (expr, nameCtx)
 
+  // FIXME: collect errors in NameRes
+
   // Type inference.
   let _expr, tyCtx =
-    MiloneLang.Typing.infer (expr, scopeCtx, errorListList)
+    MiloneLang.Typing.infer (expr, scopeCtx, errors)
 
   // Collect errors.
   let errors =
-    [ for log, loc in tyCtx |> MiloneLang.Records.tyCtxGetLogs do
+    let tyDisplayFn ty =
+      let getTyName tySerial =
+        tyCtx.Tys
+        |> mapTryFind tySerial
+        |> Option.map MiloneLang.Hir.tyDefToName
+
+      ty |> MiloneLang.TySystem.tyDisplay getTyName
+
+    [ for log, loc in tyCtx.Logs do
         let moduleName, row, column = loc
 
         let uri =
@@ -399,7 +441,9 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
         let pos = row, column
 
-        let msg = MiloneLang.Helpers.logToString loc log
+        let msg =
+          MiloneLang.Hir.logToString tyDisplayFn loc log
+
         yield uri, msg, pos ]
 
   let moduleUris = List.ofSeq moduleUris.Values
@@ -418,7 +462,7 @@ let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
   | Ok projects ->
       try
         // Collect list of errors per file.
-        // Note we need to report absense of errors for docs opened in editor
+        // Note we need to report absence of errors for docs opened in editor
         // so that the editor clears outdated diagnostics.
         let mutable map = MutMultimap.empty ()
 

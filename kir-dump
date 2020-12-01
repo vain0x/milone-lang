@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eu
+
+TEST_DIRS=$(find tests/*/* -type d)
+
+./milone-netcore --kir-dump $TEST_DIRS >kir_dump_tmp.generated.ts || echo '$?='$?
+./milone-netcore --kir-c $TEST_DIRS >kir_dump_tmp.generated.c || echo '$?='$?
+
+mv -bf kir_dump_tmp.generated.ts kir_dump.generated.ts
+mv -bf kir_dump_tmp.generated.c  kir_dump.generated.c

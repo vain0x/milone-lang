@@ -1,0 +1,4 @@
+#!/bin/bash
+# Compile with milone-lang compiler that runs on .NET Core.
+
+MILONE_HOME=$PWD dotnet run -p MiloneLang -c Release -- "$@"

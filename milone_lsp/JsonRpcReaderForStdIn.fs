@@ -1,7 +1,7 @@
 module MiloneLsp.JsonRpcReaderForStdIn
 
 /// Provides two functions for JSON RPC node to read data from stream.
-/// (Not compilant with JSON-RPC, indeed.)
+/// (Not compliant with JSON-RPC, indeed.)
 let jsonRpcReaderForStdIn () =
   let utf8 = System.Text.Encoding.UTF8
   let input = System.Console.OpenStandardInput()

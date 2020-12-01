@@ -7,3 +7,6 @@
 boot/MiloneLang/Records.fs      linguist-generated
 boot/scripts/**/*.c             linguist-generated
 boot/tests/**/*.c               linguist-generated
+MiloneLang/Records.fs           linguist-generated
+scripts/**/*.c                  linguist-generated
+tests/**/*.c                    linguist-generated

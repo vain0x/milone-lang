@@ -1,6 +1,6 @@
 module rec MiloneLsp.JsonRpcReaderForAbstractStream
 
-// (Not compilant with JSON-RPC for now.)
+// (Not compliant with JSON-RPC for now.)
 
 open System.IO
 open MiloneLsp.JsonValue
@@ -8,6 +8,7 @@ open MiloneLsp.JsonSerialization
 
 type ExitCode = int
 
+[<NoEquality; NoComparison>]
 type JsonRpcReaderHost =
   {
     /// Reads a line from some byte stream.
@@ -21,6 +22,7 @@ type JsonRpcReaderHost =
     /// Processes an incoming message. Returns an exit code to break or None to continue.
     ProcessIncomingMsg: JsonValue -> ExitCode option }
 
+[<NoEquality; NoComparison>]
 type private State = State of len: int option
 
 let private readHeader (host: JsonRpcReaderHost) (state: State): ExitCode =
