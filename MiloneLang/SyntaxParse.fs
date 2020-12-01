@@ -94,7 +94,7 @@ let private posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
 
 /// Gets if three tokens can be merged. (Assuming each token is 1-letter.)
 /// That is, no space or comments interleave these positions.
-let private canMerge3 pos1 pos2 pos3 =
+let private canMerge3 (pos1: Pos) pos2 pos3 =
   let y1, x1 = pos1
   let y2, x2 = pos2
   let y3, x3 = pos3

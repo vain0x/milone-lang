@@ -1,7 +1,6 @@
 /// Defines F# primitives for milone-lang.
 ///
 /// Not used in F#.
-[<AutoOpen>]
 module rec MiloneLang.MiloneOnly
 
 let failwith (str: string) =

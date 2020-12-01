@@ -626,7 +626,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
   | AAttrExpr (contents, next, pos) ->
       let doArm () =
-        printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)
+        // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)
         athExpr docId (next, nameCtx)
 
       doArm ()
