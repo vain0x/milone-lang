@@ -143,9 +143,9 @@ let private bpNext bp =
 // Tokens
 // -----------------------------------------------
 
-/// Gets if a token is in the first set of expressions/patterns,
-/// i.e. whether it can be the first token of an expression or pattern.
-let private tokenIsExprOrPatFirst (token: Token) =
+/// Gets whether a token can be the first of a pattern and an expression.
+/// (Is it a member of the FIRST set of pat and expr?)
+let private inFirstOfPatAndExpr (token: Token) =
   match token with
   | IntToken _
   | FloatToken _
@@ -160,11 +160,12 @@ let private tokenIsExprOrPatFirst (token: Token) =
 
   | _ -> false
 
-/// Gets if a token is in the first set of expressions.
-let private tokenIsExprFirst (token: Token) =
-  match token with
-  | _ when tokenIsExprOrPatFirst token -> true
+/// Gets whether a token can be the first of a pattern.
+let private inFirstOfPat (token: Token) = inFirstOfPatAndExpr token
 
+/// Gets whether a token can be the first of an expression.
+let private inFirstOfExpr (token: Token) =
+  match token with
   | MinusToken
   | IfToken
   | MatchToken
@@ -175,16 +176,14 @@ let private tokenIsExprFirst (token: Token) =
   | OpenToken
   | LeftAttrToken -> true
 
-  | _ -> false
+  | _ -> inFirstOfPatAndExpr token
 
-/// In the first set of arguments?
-let private tokenIsArgFirst (token: Token) =
+/// In the FIRST set of arguments?
+let private inFirstOfArg (token: Token) =
   match token with
   | MinusToken -> false
 
-  | _ -> tokenIsExprFirst token
-
-let private tokenIsPatFirst (token: Token) = tokenIsExprOrPatFirst token
+  | _ -> inFirstOfExpr token
 
 let private tokenAsVis token =
   match token with
@@ -194,21 +193,21 @@ let private tokenAsVis token =
 
   | _ -> None
 
+let private leadsPat tokens =
+  match tokens with
+  | (token, _) :: _ -> inFirstOfPat token
+
+  | _ -> false
+
 let private leadsExpr tokens =
   match tokens with
-  | (token, _) :: _ -> tokenIsExprFirst token
+  | (token, _) :: _ -> inFirstOfExpr token
 
   | _ -> false
 
 let private leadsArg tokens =
   match tokens with
-  | (token, _) :: _ -> tokenIsArgFirst token
-
-  | _ -> false
-
-let private leadsPat tokens =
-  match tokens with
-  | (token, _) :: _ -> tokenIsPatFirst token
+  | (token, _) :: _ -> inFirstOfArg token
 
   | _ -> false
 
