@@ -185,6 +185,11 @@ type ScopeCtx =
     /// Current scope.
     Local: Scope
 
+    /// Variables defined in current pattern.
+    ///
+    /// name -> (varSerial, definedLoc, usedLoc list)
+    PatScope: AssocMap<Ident, VarSerial * Loc * Loc list>
+
     /// Current let-depth, the number of ancestral let-body.
     LetDepth: LetDepth
 
@@ -207,6 +212,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     TyNs = mapEmpty compare
     LocalSerial = localSerial
     Local = scopeEmpty ()
+    PatScope = mapEmpty compare
     LetDepth = 0
     Logs = [] }
 
@@ -743,15 +749,12 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
     match pat with
     | HLitPat _
     | HDiscardPat _
+    | HVariantPat _
     | HNavPat _
     | HNilPat _
     | HNonePat _
-    | HSomePat _ -> pat, ctx
-
-    | HOrPat _ ->
-        // NOTE: OR patterns doesn't appear because not entering `match` arms.
-        assert false
-        pat, ctx
+    | HSomePat _
+    | HOrPat _ -> pat, ctx
 
     | HRefPat (varSerial, ty, loc) ->
         let name =
@@ -796,7 +799,6 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let pat, ctx = (pat, ctx) |> goPat vis
         HAnnoPat(pat, ty, loc), ctx
 
-    | HVariantPat _ -> failwithf "NEVER: HVariantPat is generated in NameRes. %A" pat
     | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
   let rec goExpr (expr, ctx) =
@@ -837,65 +839,95 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
   goExpr (expr, ctx)
 
 // -----------------------------------------------
-// Name Resolution
+// Pattern
 // -----------------------------------------------
+
+let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
+  match ctx.PatScope |> mapTryFind name with
+  | None ->
+      let varSerial = VarSerial serial
+
+      let ctx =
+        { ctx with
+            PatScope = ctx.PatScope |> mapAdd name (varSerial, loc, []) }
+        |> addLocalVar varSerial (VarDef(name, AutoSM, ty, loc))
+
+      varSerial, ctx
+
+  | Some (varSerial, defLoc, useLocs) ->
+      let ctx =
+        { ctx with
+            PatScope =
+              ctx.PatScope
+              |> mapAdd name (varSerial, defLoc, loc :: useLocs) }
+
+      varSerial, ctx
+
+let private nameResRefPat serial ty loc ctx =
+  let name = ctx |> findName serial
+
+  if name = "_" then
+    HDiscardPat(ty, loc), ctx
+  else
+    match ctx |> resolveLocalVarName name with
+    | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
+
+    | _ ->
+        match name with
+        | "None" -> HNonePat(ty, loc), ctx
+        | "Some" -> HSomePat(ty, loc), ctx
+
+        | _ ->
+            let varSerial, ctx = doResolveVarInPat serial name ty loc ctx
+            HRefPat(varSerial, ty, loc), ctx
+
+let private nameResNavPat l r ty loc ctx =
+  let varSerialOpt, ctx =
+    match ctx |> resolvePatAsScope l with
+    | Some symbol, ctx ->
+        (ctx
+         |> resolveScopedVarName (tySymbolToSerial symbol) r),
+        ctx
+
+    | None, ctx -> None, ctx
+
+  match varSerialOpt with
+  | Some (VarSymbol varSerial) -> HRefPat(varSerial, ty, loc), ctx
+
+  | Some (FunSymbol _) ->
+      let ctx = ctx |> addLog (FunPatError r) loc
+      HDiscardPat(noTy, loc), ctx
+
+  | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
+
+  | None ->
+      let ctx =
+        ctx
+        |> addLog (OtherNameResLog "Couldn't resolve nav pattern.") loc
+
+      HDiscardPat(noTy, loc), ctx
+
+let private nameResAsPat bodyPat serial loc ctx =
+  let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
+
+  let varSerial, ctx =
+    let name = ctx |> findName serial
+    doResolveVarInPat serial name noTy loc ctx
+
+  HAsPat(bodyPat, varSerial, loc), ctx
 
 let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   match pat with
   | HLitPat _
   | HDiscardPat _
+  | HVariantPat _
   | HNilPat _
   | HNonePat _
   | HSomePat _ -> pat, ctx
 
-  | HRefPat (varSerial, ty, loc) when ctx |> findName (varSerialToInt varSerial) = "_" -> HDiscardPat(ty, loc), ctx
+  | HRefPat (VarSerial serial, ty, loc) -> nameResRefPat serial ty loc ctx
 
-  | HRefPat (varSerial, ty, loc) ->
-      let name =
-        ctx |> findName (varSerialToInt varSerial)
-
-      match ctx |> resolveLocalVarName name with
-      | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
-
-      | _ ->
-          match name with
-          | "None" -> HNonePat(ty, loc), ctx
-
-          | "Some" -> HSomePat(ty, loc), ctx
-
-          | _ ->
-              let ctx =
-                ctx
-                |> addLocalVar varSerial (VarDef(name, AutoSM, ty, loc))
-
-              HRefPat(varSerial, ty, loc), ctx
-
-  | HNavPat (l, r, ty, loc) ->
-      let varSerial, ctx =
-        let symbolOpt, ctx = ctx |> resolvePatAsScope l
-        match symbolOpt with
-        | Some symbol ->
-            (ctx
-             |> resolveScopedVarName (tySymbolToSerial symbol) r),
-            ctx
-
-        | None -> None, ctx
-
-      match varSerial with
-      | Some (VarSymbol varSerial) -> HRefPat(varSerial, ty, loc), ctx
-
-      | Some (FunSymbol _) ->
-          let ctx = ctx |> addLog (FunPatError r) loc
-          HDiscardPat(noTy, loc), ctx
-
-      | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
-
-      | None ->
-          let ctx =
-            ctx
-            |> addLog (OtherNameResLog "Couldn't resolve nav pattern.") loc
-
-          HDiscardPat(noTy, loc), ctx
+  | HNavPat (l, r, ty, loc) -> nameResNavPat l r ty loc ctx
 
   | HCallPat (callee, args, ty, loc) ->
       let callee, ctx = (callee, ctx) |> nameResPat
@@ -911,30 +943,125 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       let pats, ctx = (pats, ctx) |> stMap nameResPat
       HTuplePat(pats, tupleTy, loc), ctx
 
-  | HAsPat (pat, varSerial, loc) ->
-      let name =
-        ctx |> findName (varSerialToInt varSerial)
+  | HAsPat (bodyPat, VarSerial serial, loc) -> nameResAsPat bodyPat serial loc ctx
 
-      let ctx =
-        ctx
-        |> addLocalVar varSerial (VarDef(name, AutoSM, noTy, loc))
-
-      let pat, ctx = (pat, ctx) |> nameResPat
-      HAsPat(pat, varSerial, loc), ctx
-
-  | HAnnoPat (pat, ty, loc) ->
+  | HAnnoPat (bodyPat, ty, loc) ->
       let ty, ctx = ctx |> resolveTy ty loc
-      let pat, ctx = (pat, ctx) |> nameResPat
-      HAnnoPat(pat, ty, loc), ctx
+      let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
+      HAnnoPat(bodyPat, ty, loc), ctx
 
   | HOrPat (l, r, ty, loc) ->
-      // FIXME: Currently variable bindings in OR patterns are not supported correctly.
+      // No OR patterns appear in arm patterns due to normalization.
+      // So we can assume that it's inside of irrefutable pattern.
+      let ctx =
+        ctx
+        |> addLog (OtherNameResLog "OR pattern is disallowed in let expressions.") loc
+
       let l, ctx = (l, ctx) |> nameResPat
       let r, ctx = (r, ctx) |> nameResPat
       HOrPat(l, r, ty, loc), ctx
 
-  | HVariantPat _ -> failwithf "NEVER: HVariantPat is generated in NameRes. %A" pat
   | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
+
+let private doWithPatScope patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) (ctx: ScopeCtx) =
+  let parentPatScope, ctx =
+    ctx.PatScope,
+    { ctx with
+        PatScope =
+          patScopeOpt
+          |> Option.defaultValue (mapEmpty compare) }
+
+  let result, ctx = f ctx
+
+  let patScope, ctx =
+    ctx.PatScope, { ctx with PatScope = parentPatScope }
+
+  (patScope, result), ctx
+
+let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
+  let loc = patToLoc pat
+
+  let pat, pats =
+    match patNormalize pat with
+    | [] -> failwith "NEVER"
+    | pat :: pats -> pat, pats
+
+  let (lScope, pat), ctx =
+    ctx
+    |> doWithPatScope None (fun ctx -> nameResPat (pat, ctx))
+
+  let ctx =
+    lScope
+    |> mapFold (fun ctx (_: string) (_, _, useLocs) ->
+         match useLocs with
+         | [] -> ctx
+         | loc :: _ ->
+             ctx
+             |> addLog (OtherNameResLog "Variable name conflicts") loc) ctx
+
+  // Set of variables defined in the left-hand side.
+  let varSerialSet =
+    lScope
+    |> mapToList
+    |> List.map (fun (_: string, (varSerial, _, _)) -> varSerial)
+    |> setOfList varSerialCmp
+
+  let pats, ctx =
+    (pats, ctx)
+    |> stMap (fun (pat, ctx) ->
+         let (rScope, pat), ctx =
+           ctx
+           |> doWithPatScope (Some lScope) (fun ctx -> nameResPat (pat, ctx))
+
+         // Validate that each variable defined in the left-hand side
+         // appears also right-hand side exactly once.
+         let ok =
+           let ok, set =
+             rScope
+             |> mapFold (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
+                  match usedLocs with
+                  | [ _ ] when ok ->
+                      let removed, set = set |> setRemove varSerial
+                      ok && removed, set
+
+                  | _ -> false, set) (true, varSerialSet)
+
+           ok && setIsEmpty set
+
+         let ctx =
+           if ok then
+             ctx
+           else
+             ctx
+             |> addLog (OtherNameResLog "OR pattern binds different set of variables") loc
+
+         pat, ctx)
+
+  let pat =
+    (pat :: pats)
+    |> List.reduce (fun l r -> HOrPat(l, r, noTy, loc))
+
+  pat, ctx
+
+let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
+  let (scope, pat), ctx =
+    ctx
+    |> doWithPatScope None (fun ctx -> nameResPat (pat, ctx))
+
+  let ctx =
+    scope
+    |> mapFold (fun ctx (_: string) (_, _, useLocs) ->
+         match useLocs with
+         | [] -> ctx
+         | loc :: _ ->
+             ctx
+             |> addLog (OtherNameResLog "Variable name conflicts") loc) ctx
+
+  pat, ctx
+
+// -----------------------------------------------
+// Expression
+// -----------------------------------------------
 
 let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with
@@ -986,7 +1113,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           (arms, ctx)
           |> stMap (fun ((pat, guard, body), ctx) ->
                let parent, ctx = ctx |> startScope
-               let pat, ctx = (pat, ctx) |> nameResPat
+               let pat, ctx = (pat, ctx) |> nameResRefutablePat
                let guard, ctx = (guard, ctx) |> nameResExpr
                let body, ctx = (body, ctx) |> nameResExpr
                let ctx = ctx |> finishScope parent
@@ -1041,7 +1168,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let pat, next, ctx =
           let parent, ctx = ctx |> startScope
-          let pat, ctx = (pat, ctx) |> nameResPat
+          let pat, ctx = (pat, ctx) |> nameResIrrefutablePat
           let next, ctx = (next, ctx) |> nameResExpr
           let ctx = ctx |> finishScope parent
           pat, next, ctx
@@ -1063,7 +1190,10 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let pats, body, ctx =
           // Introduce a function body scope.
           let parent, ctx = ctx |> startScope
-          let pats, ctx = (pats, ctx) |> stMap nameResPat
+
+          let pats, ctx =
+            (pats, ctx) |> stMap nameResIrrefutablePat
+
           let body, ctx = (body, ctx) |> nameResExpr
           let ctx = ctx |> finishScope parent
           pats, body, ctx
@@ -1140,7 +1270,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | _ -> failwithf "NEVER: HVariantExpr is generated in NameRes. %A" expr
+  | HFunExpr _
+  | HVariantExpr _ -> failwithf "NEVER: HFunExpr and HVariantExpr is generated in NameRes. %A" expr
 
 let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = ofNameCtx nameCtx

@@ -198,6 +198,8 @@ let mapOfList cmp assoc: AssocMap<_, _> = TreeMap.ofList cmp assoc
 
 let setEmpty funs: AssocSet<_> = mapEmpty funs
 
+let setIsEmpty (set: AssocSet<_>): bool = set |> mapIsEmpty
+
 let setContains key (set: AssocSet<_>) = set |> mapContainsKey key
 
 let setToList (set: AssocSet<_>) = set |> mapToKeys
@@ -205,6 +207,10 @@ let setToList (set: AssocSet<_>) = set |> mapToKeys
 let setOfList cmp xs: AssocSet<_> = mapOfKeys cmp () xs
 
 let setAdd key set: AssocSet<_> = mapAdd key () set
+
+let setRemove key set: bool * AssocSet<_> =
+  let opt, set = set |> mapRemove key
+  Option.isSome opt, set
 
 let setFold folder state (set: AssocSet<_>) =
   set |> setToList |> List.fold folder state
