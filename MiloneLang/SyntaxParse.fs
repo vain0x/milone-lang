@@ -185,14 +185,6 @@ let private inFirstOfArg (token: Token) =
 
   | _ -> inFirstOfExpr token
 
-let private tokenAsVis token =
-  match token with
-  | PrivateToken -> Some PrivateVis
-  | InternalToken
-  | PublicToken -> Some PublicVis
-
-  | _ -> None
-
 let private leadsPat tokens =
   match tokens with
   | (token, _) :: _ -> inFirstOfPat token
@@ -262,6 +254,44 @@ let private parseNewError msg (tokens, errors) =
   parseErrorCore msg pos errors
 
 // -----------------------------------------------
+// Eating
+// -----------------------------------------------
+
+let private expectRightParen (tokens, errors) =
+  match tokens with
+  | (RightParenToken, _) :: tokens -> tokens, errors
+  | _ -> tokens, parseNewError "Expected ')'" (tokens, errors)
+
+let private expectRightBracket (tokens, errors) =
+  match tokens with
+  | (RightBracketToken, _) :: tokens -> tokens, errors
+  | _ -> tokens, parseNewError "Expected ']'" (tokens, errors)
+
+let private expectRightBrace (tokens, errors) =
+  match tokens with
+  | (RightBraceToken, _) :: tokens -> tokens, errors
+  | _ -> tokens, parseNewError "Expected '}'" (tokens, errors)
+
+let private expectRightAngle (tokens, errors) =
+  match tokens with
+  | (RightAngleToken, _) :: tokens -> tokens, errors
+  | _ -> tokens, parseNewError "Expected '>'" (tokens, errors)
+
+let private expectRightAttr (tokens, errors) =
+  match tokens with
+  | (RightAttrToken, _) :: tokens -> tokens, errors
+  | _ -> tokens, parseNewError "Expected '>]'" (tokens, errors)
+
+let private eatVis tokens =
+  match tokens with
+  | (PrivateToken, _) :: tokens -> PrivateVis, tokens
+
+  | (InternalToken, _) :: tokens -> PublicVis, tokens
+  | (PublicToken, _) :: tokens -> PublicVis, tokens
+
+  | _ -> PublicVis, tokens
+
+// -----------------------------------------------
 // Parse types
 // -----------------------------------------------
 
@@ -280,15 +310,7 @@ let private parseTyArgs basePos (tokens, errors) =
       let argTy, tokens, errors = parseTy basePos (tokens, errors)
       let argTys, tokens, errors = go [ argTy ] (tokens, errors)
 
-      let tokens, errors =
-        match tokens with
-        | (RightAngleToken, _) :: tokens -> tokens, errors
-
-        | _ ->
-            let errors =
-              parseNewError "Expected '>'" (tokens, errors)
-
-            tokens, errors
+      let tokens, errors = (tokens, errors) |> expectRightAngle
 
       argTys, tokens, errors
 
@@ -306,15 +328,8 @@ let private parseTyAtom basePos (tokens, errors) =
 
   | (LeftParenToken, _) :: tokens ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
-
-      match tokens with
-      | (RightParenToken, _) :: tokens -> ty, tokens, errors
-
-      | _ ->
-          let errors =
-            parseNewError "Expected ')'" (tokens, errors)
-
-          ty, tokens, errors
+      let tokens, errors = (tokens, errors) |> expectRightParen
+      ty, tokens, errors
 
   | _ -> parseTyError "Expected a type atom" (tokens, errors)
 
@@ -377,15 +392,8 @@ let private parseTy basePos (tokens, errors) = parseTyFun basePos (tokens, error
 /// `pat ')'`
 let private parsePatParenBody basePos (tokens, errors) =
   let pat, tokens, errors = parsePat basePos (tokens, errors)
-
-  match tokens with
-  | (RightParenToken, _) :: tokens -> pat, tokens, errors
-
-  | tokens ->
-      let errors =
-        parseNewError "Expected ')'" (tokens, errors)
-
-      pat, tokens, errors
+  let tokens, errors = (tokens, errors) |> expectRightParen
+  pat, tokens, errors
 
 /// `pat ( ';' pat )* ']'`
 let private parsePatListBody basePos bracketPos (tokens, errors) =
@@ -580,18 +588,19 @@ let private parseAtom basePos (tokens, errors) =
   match tokens with
   | _ when not (nextInside basePos tokens) -> parseExprError "Expected an expression" (tokens, errors)
 
-  | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATupleExpr([], pos), tokens, errors
-  | (FalseToken, pos) :: tokens -> ALitExpr(BoolLit false, pos), tokens, errors
-  | (TrueToken, pos) :: tokens -> ALitExpr(BoolLit true, pos), tokens, errors
   | (IntToken value, pos) :: tokens -> ALitExpr(IntLit value, pos), tokens, errors
   | (FloatToken value, pos) :: tokens -> ALitExpr(FloatLit value, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
   | (IdentToken ident, pos) :: tokens -> AIdentExpr(ident, pos), tokens, errors
 
+  | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATupleExpr([], pos), tokens, errors
   | (LeftParenToken, parenPos) :: tokens -> parseParenBody basePos parenPos (tokens, errors)
   | (LeftBracketToken, bracketPos) :: tokens -> parseList basePos bracketPos (tokens, errors)
   | (LeftBraceToken, bracePos) :: tokens -> parseRecordExpr bracePos (tokens, errors)
+
+  | (FalseToken, pos) :: tokens -> ALitExpr(BoolLit false, pos), tokens, errors
+  | (TrueToken, pos) :: tokens -> ALitExpr(BoolLit true, pos), tokens, errors
 
   | (IfToken, pos) :: tokens -> parseIf pos (tokens, errors)
   | (MatchToken, pos) :: tokens -> parseMatch pos (tokens, errors)
@@ -608,16 +617,7 @@ let private parseSuffix basePos (tokens, errors) =
     match tokens with
     | (DotToken, pos) :: (LeftBracketToken, _) :: tokens ->
         let r, tokens, errors = parseRange basePos (tokens, errors)
-
-        let tokens, errors =
-          match tokens with
-          | (RightBracketToken, _) :: tokens -> tokens, errors
-
-          | _ ->
-              let errors =
-                parseNewError "Expected closing ']'" (tokens, errors)
-
-              tokens, errors
+        let tokens, errors = (tokens, errors) |> expectRightBracket
 
         go (AIndexExpr(acc, r, pos)) (tokens, errors)
 
@@ -761,29 +761,12 @@ let private parseParenBody basePos _parenPos (tokens, errors) =
   //  If does, `(` in `xs |> List.map (fun x -> body)` unexpectedly requires
   //  `body` to be deeper than it. This is one of flaws of the simplified layout rule.
   let body, tokens, errors = parseExpr basePos (tokens, errors)
-
-  match tokens with
-  | (RightParenToken, _) :: tokens -> body, tokens, errors
-
-  | _ ->
-      let errors =
-        parseNewError "Expected ')'" (tokens, errors)
-
-      body, tokens, errors
+  let tokens, errors = (tokens, errors) |> expectRightParen
+  body, tokens, errors
 
 let private parseList basePos bracketPos (tokens, errors) =
   let items, tokens, errors = parseStmts basePos (tokens, errors)
-
-  let tokens, errors =
-    match tokens with
-    | (RightBracketToken, _) :: tokens -> tokens, errors
-
-    | _ ->
-        let errors =
-          parseNewError "Expected ']'" (tokens, errors)
-
-        tokens, errors
-
+  let tokens, errors = (tokens, errors) |> expectRightBracket
   AListExpr(items, bracketPos), tokens, errors
 
 let private parseRecordExpr bracePos (tokens, errors) =
@@ -829,15 +812,7 @@ let private parseRecordExpr bracePos (tokens, errors) =
 
         Some baseExpr, go [] (nextPos tokens) (tokens, errors)
 
-  let tokens, errors =
-    match tokens with
-    | (RightBraceToken, _) :: tokens -> tokens, errors
-
-    | _ ->
-        let errors =
-          parseErrorCore "Expected a '}'." (nextPos tokens) errors
-
-        tokens, errors
+  let tokens, errors = (tokens, errors) |> expectRightBrace
 
   ARecordExpr(baseOpt, fields, bracePos), tokens, errors
 
@@ -941,22 +916,10 @@ let private parseFun basePos funPos (tokens, errors) =
 // Parse binding statements
 // -----------------------------------------------
 
-let private parseVis tokens =
-  let outerTokens = tokens
-
-  match tokens with
-  | (t, _) :: tokens ->
-      match tokenAsVis t with
-      | Some vis -> vis, tokens
-
-      | None -> PublicVis, outerTokens
-
-  | [] -> PublicVis, tokens
-
 let private parseLet letPos (tokens, errors) =
   let innerBasePos = letPos |> posAddX 1
 
-  let vis, tokens = parseVis tokens
+  let vis, tokens = eatVis tokens
 
   let pat, tokens, errors =
     parsePatLet innerBasePos (tokens, errors)
@@ -1021,15 +984,7 @@ let private parseTyDeclRecord basePos (tokens, errors) =
     let alignPos = nextPos tokens
     go [] alignPos (tokens, errors)
 
-  let tokens, errors =
-    match tokens with
-    | (RightBraceToken, _) :: tokens -> tokens, errors
-
-    | _ ->
-        let errors =
-          parseErrorCore "Expected a '}'." (nextPos tokens) errors
-
-        tokens, errors
+  let tokens, errors = (tokens, errors) |> expectRightBrace
 
   ARecordTyDecl fields, tokens, errors
 
@@ -1052,7 +1007,7 @@ let private parseTyDeclBody basePos (tokens, errors) =
 let private parseTyDecl typePos (tokens, errors) =
   let basePos = typePos |> posAddX 1
 
-  let vis, tokens = parseVis tokens
+  let vis, tokens = eatVis tokens
 
   match tokens with
   | (IdentToken tyIdent, _) :: (LeftAngleToken, _) :: tokens ->
@@ -1135,10 +1090,7 @@ let private parseAttrStmt basePos (tokens, errors) =
   let contents, tokens, errors =
     parseSemi basePos basePos (tokens, errors)
 
-  let tokens, errors =
-    match tokens with
-    | (RightAttrToken, _) :: tokens -> tokens, errors
-    | _ -> tokens, parseNewError "Expected '>]'" (tokens, errors)
+  let tokens, errors = (tokens, errors) |> expectRightAttr
 
   if tokens
      |> nextPos
@@ -1209,7 +1161,6 @@ let private parseSemi basePos mainPos (tokens, errors) =
 
 /// `top-level = ( 'module' 'rec'? path module-body / module-body )?`
 let private parseTopLevel (tokens, errors) =
-
   match tokens with
   | [] ->
       let pos = 0, 0
