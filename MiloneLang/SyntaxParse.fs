@@ -172,7 +172,8 @@ let private tokenIsExprFirst (token: Token) =
   | DoToken
   | LetToken
   | TypeToken
-  | OpenToken -> true
+  | OpenToken
+  | LeftAttrToken -> true
 
   | _ -> false
 
@@ -955,6 +956,27 @@ let private parseOpen openPos (tokens, errors) =
   let path, tokens, errors = parsePath (tokens, errors)
   AOpenExpr(path, openPos), tokens, errors
 
+let private parseAttrStmt basePos (tokens, errors) =
+  let contents, tokens, errors =
+    parseSemi basePos basePos (tokens, errors)
+
+  let tokens, errors =
+    match tokens with
+    | (RightAttrToken, _) :: tokens -> tokens, errors
+    | _ -> tokens, parseNewError "Expected '>]'" (tokens, errors)
+
+  if tokens
+     |> nextPos
+     |> posIsSameColumn basePos
+     |> not then
+    let errors =
+      parseNewError "Expected a statement after attribute." (tokens, errors)
+
+    contents, tokens, errors
+  else
+    let stmt, tokens, errors = parseStmt (basePos) (tokens, errors)
+    AAttrExpr(contents, stmt, basePos), tokens, errors
+
 let private parseAtom basePos (tokens, errors) =
   match tokens with
   | _ when not (nextInside basePos tokens) -> parseExprError "Expected an expression" (tokens, errors)
@@ -1162,6 +1184,8 @@ let private parseStmt basePos (tokens, errors) =
   | (TypeToken, typePos) :: tokens -> parseTyDecl typePos (tokens, errors)
 
   | (OpenToken, typePos) :: tokens -> parseOpen typePos (tokens, errors)
+
+  | (LeftAttrToken, pos) :: tokens -> parseAttrStmt pos (tokens, errors)
 
   | _ -> parseExpr basePos (tokens, errors)
 

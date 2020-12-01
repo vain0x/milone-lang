@@ -627,11 +627,9 @@ let private lookahead (text: string) (i: int) =
   | ')' -> LToken RightParenToken, 1
 
   | '[' ->
-      if at (i + 1) = '<' then
-        // FIXME: Attributes are just ignored for now.
-        LComment, 2
-      else
-        LToken LeftBracketToken, 1
+      match at (i + 1) with
+      | '<' -> LToken LeftAttrToken, 2
+      | _ -> LToken LeftBracketToken, 1
 
   | ']' -> LToken RightBracketToken, 1
   | '{' -> LToken LeftBraceToken, 1
@@ -643,12 +641,14 @@ let private lookahead (text: string) (i: int) =
       | _ -> LOp, 1
 
   | '>' ->
-      let c = at (i + 1)
-      if c <> '>' && charIsOp c then
-        LOp, 2
-      else
-        // Consecutive right angles (such as `>>>`) are merged while parsing.
-        LToken RightAngleToken, 1
+      match at (i + 1) with
+      | ']' -> LToken RightAttrToken, 2
+
+      | c when c <> '>' && charIsOp c -> LOp, 2
+
+      | _ ->
+          // Consecutive right angles (such as `>>>`) are merged while parsing.
+          LToken RightAngleToken, 1
 
   | '-'
   | ';'

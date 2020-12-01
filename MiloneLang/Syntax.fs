@@ -93,6 +93,10 @@ type Token =
   | LeftAngleToken
   /// `>`
   | RightAngleToken
+  /// `[<`
+  | LeftAttrToken
+  /// `>]`
+  | RightAttrToken
   /// `&`
   | AmpToken
   /// `&&`
@@ -388,6 +392,9 @@ type AExpr =
 
   /// Open statement, e.g. `open System.IO`.
   | AOpenExpr of Ident list * Pos
+
+  /// Expression with some attribute.
+  | AAttrExpr of contents: AExpr * next: AExpr * Pos
 
 /// Root of AST, a result of parsing single source file.
 [<NoEquality; NoComparison>]

@@ -624,6 +624,13 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
+  | AAttrExpr (contents, next, pos) ->
+      let doArm () =
+        printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)
+        athExpr docId (next, nameCtx)
+
+      doArm ()
+
 let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
   match root with
   | AExprRoot expr -> athExpr docId (expr, nameCtx)
