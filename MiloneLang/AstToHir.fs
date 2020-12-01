@@ -414,13 +414,13 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
             let l, nameCtx = (l, nameCtx) |> athExpr docId
             let r, nameCtx = (r, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HInfExpr(InfOp.Slice, [l;r;x], noTy, loc), nameCtx
+            HInfExpr(InfOp.Slice, [ l; r; x ], noTy, loc), nameCtx
 
         | _ ->
             let l, nameCtx = (l, nameCtx) |> athExpr docId
             let r, nameCtx = (r, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HInfExpr(InfOp.Index, [l; r], noTy, loc), nameCtx
+            HInfExpr(InfOp.Index, [ l; r ], noTy, loc), nameCtx
 
       doArm ()
 
