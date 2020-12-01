@@ -214,19 +214,23 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
       let loc = toLoc docId pos
       ErrorTy loc, nameCtx
 
-  | AAppTy (name, argTys, _) ->
+  | AAppTy (quals, name, argTys, _) ->
+      let quals, nameCtx =
+        (quals, nameCtx)
+        |> stMap (fun (name, ctx) -> ctx |> nameCtxAdd name)
+
       let serial, nameCtx = nameCtx |> nameCtxAdd name
       let argTys, nameCtx = (argTys, nameCtx) |> stMap (athTy docId)
-      tyUnresolved serial argTys, nameCtx
+      tyUnresolved (quals, serial) argTys, nameCtx
 
   | AVarTy (name, _) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
-      tyUnresolved tySerial [], nameCtx
+      tyUnresolved ([], tySerial) [], nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId
       let serial, nameCtx = nameCtx |> nameCtxAdd suffix
-      tyUnresolved serial [ lTy ], nameCtx
+      tyUnresolved ([], serial) [ lTy ], nameCtx
 
   | ATupleTy (itemTys, _) ->
       let itemTys, nameCtx =

@@ -234,7 +234,7 @@ type ATy =
   | AMissingTy of Pos
 
   /// Type application, e.g. `int` or `AssocMap<K, V>`.
-  | AAppTy of Ident * ATy list * Pos
+  | AAppTy of quals: Ident list * Ident * ATy list * Pos
 
   /// Type variable, e.g. `'T`.
   | AVarTy of Ident * Pos

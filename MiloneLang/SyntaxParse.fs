@@ -316,13 +316,27 @@ let private parseTyArgs basePos (tokens, errors) =
 
   | _ -> [], tokens, errors
 
+/// `qual.ident <...>`
+let private parseNavTy basePos (tokens, errors) =
+  let rec go acc (tokens, errors) =
+    match tokens with
+    | (IdentToken qual, _) :: (DotToken, _) :: tokens -> go (qual :: acc) (tokens, errors)
+
+    | (IdentToken ident, pos) :: tokens ->
+        let argTys, tokens, errors = parseTyArgs basePos (tokens, errors)
+        AAppTy(List.rev acc, ident, argTys, pos), tokens, errors
+
+    | _ ->
+        let (_: ATy list), tokens, errors = parseTyArgs basePos (tokens, errors)
+        parseTyError "Expected identifier" (tokens, errors)
+
+  go [] (tokens, errors)
+
 let private parseTyAtom basePos (tokens, errors) =
   match tokens with
   | _ when nextInside basePos tokens |> not -> parseTyError "Expected a type atom" (tokens, errors)
 
-  | (IdentToken ident, pos) :: tokens ->
-      let argTys, tokens, errors = parseTyArgs basePos (tokens, errors)
-      AAppTy(ident, argTys, pos), tokens, errors
+  | (IdentToken _, _) :: _ -> parseNavTy basePos (tokens, errors)
 
   | (TyVarToken name, pos) :: tokens -> AVarTy(name, pos), tokens, errors
 

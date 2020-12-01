@@ -11,8 +11,7 @@ open nav_module_ty.nav_module_ty_sub
 // FIXME: dot notation in type is not parsed correctly
 // Define abbreviation of type in another module.
 // type Node = unit
-// type MyNode = nav_module_ty_sub.Node
-type MyNode = Node
+type MyNode = nav_module_ty_sub.Node
 
 let main _ =
   let leaf n = nav_module_ty_sub.Leaf n

@@ -103,7 +103,7 @@ type TyCtor =
   | RecordTyCtor of recordTy: TySerial
 
   /// Unresolved type. Generated in AstToHir, resolved in NameRes.
-  | UnresolvedTyCtor of unresolvedSerial: Serial
+  | UnresolvedTyCtor of quals: Serial list * unresolvedSerial: Serial
 
 /// Type of expressions.
 [<Struct>]

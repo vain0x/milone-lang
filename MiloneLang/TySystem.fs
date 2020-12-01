@@ -38,10 +38,17 @@ let private tyCtorEncode tyCtor =
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
   | RecordTyCtor tySerial -> 23, tySerial
-  | UnresolvedTyCtor serial -> 24, serial
+  | UnresolvedTyCtor _ -> failwith "NEVER"
 
 let tyCtorCmp l r =
-  pairCmp compare compare (tyCtorEncode l) (tyCtorEncode r)
+  match l, r with
+  | UnresolvedTyCtor (lQuals, lSerial), UnresolvedTyCtor (rQuals, rSerial) ->
+      pairCmp (listCmp compare) compare (lQuals, lSerial) (rQuals, rSerial)
+
+  | UnresolvedTyCtor _, _ -> -1
+  | _, UnresolvedTyCtor _ -> 1
+
+  | _ -> pairCmp compare compare (tyCtorEncode l) (tyCtorEncode r)
 
 let tyCtorEq first second = tyCtorCmp first second = 0
 
@@ -62,7 +69,7 @@ let tyCtorDisplay getTyName tyCtor =
   | SynonymTyCtor tySerial -> getTyName tySerial
   | RecordTyCtor tySerial -> getTyName tySerial
   | UnionTyCtor tySerial -> getTyName tySerial
-  | UnresolvedTyCtor serial -> "?" + string serial
+  | UnresolvedTyCtor (_, serial) -> "?" + string serial
 
 // -----------------------------------------------
 // Traits (HIR)

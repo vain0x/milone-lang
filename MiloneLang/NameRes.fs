@@ -431,28 +431,25 @@ let private resolveScopedVarName scopeSerial name (scopeCtx: ScopeCtx): ValueSym
     |> nsFind scopeSerial
     |> mapTryFind name
 
-let private resolveScopedTyName scopeSerial name loc (scopeCtx: ScopeCtx): TySymbol option * ScopeCtx =
+let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySymbol option =
   if scopeSerial = scopeCtx.LocalSerial then
     // Find from local scope.
     let _, tyScopes = scopeCtx.Local
     tyScopes
-    |> List.tryPick (fun map -> map |> mapTryFind name),
-    scopeCtx
+    |> List.tryPick (fun map -> map |> mapTryFind name)
   else
     // Find from namespace.
-    let scopeCtx =
-      scopeCtx
-      |> addLog (OtherNameResLog "Module.Ty syntax is unimplemented") loc
-
-    None, scopeCtx
+    scopeCtx.TyNs
+    |> nsFind scopeSerial
+    |> mapTryFind name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
   scopeCtx
   |> resolveScopedVarName scopeCtx.LocalSerial name
 
-let private resolveLocalTyName name loc (scopeCtx: ScopeCtx) =
+let private resolveLocalTyName name (scopeCtx: ScopeCtx) =
   scopeCtx
-  |> resolveScopedTyName scopeCtx.LocalSerial name loc
+  |> resolveScopedTyName scopeCtx.LocalSerial name
 
 let private resolvePatAsScope pat scopeCtx =
   match pat with
@@ -463,11 +460,11 @@ let private resolvePatAsScope pat scopeCtx =
 
       None, scopeCtx
 
-  | HRefPat (varSerial, _, loc) ->
+  | HRefPat (varSerial, _, _) ->
       let name =
         scopeCtx |> findName (varSerialToInt varSerial)
 
-      scopeCtx |> resolveLocalTyName name loc
+      scopeCtx |> resolveLocalTyName name, scopeCtx
 
   | _ -> None, scopeCtx
 
@@ -486,11 +483,9 @@ let private resolveExprAsScope expr scopeCtx =
         scopeCtx |> findName (varSerialToInt varSerial)
 
       // HACK: Don't find from synonyms, from module instead.
-      match scopeCtx |> resolveLocalTyName name loc with
-      | Some (SynonymTySymbol _), scopeCtx ->
-          scopeCtx
-          |> resolveLocalTyName (name + "Module") loc
-      | it -> it
+      match scopeCtx |> resolveLocalTyName name with
+      | Some (SynonymTySymbol _) -> scopeCtx |> resolveLocalTyName (name + "Module"), scopeCtx
+      | it -> it, scopeCtx
 
   | _ -> None, scopeCtx
 
@@ -500,18 +495,41 @@ let private resolveTy ty loc scopeCtx =
     match ty with
     | ErrorTy _ -> ty, scopeCtx
 
-    | AppTy (UnresolvedTyCtor serial, []) when (scopeCtx |> findName serial) = "_" ->
+    | AppTy (UnresolvedTyCtor ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
         // Handle wildcard type.
         let scopeCtx = scopeCtx |> addUnboundMetaTy serial
 
         MetaTy(serial, loc), scopeCtx
 
-    | AppTy (UnresolvedTyCtor serial, tys) ->
+    | AppTy (UnresolvedTyCtor (quals, serial), tys) ->
+        let qualNames =
+          quals
+          |> List.map (fun qual -> scopeCtx |> findName qual)
+
         let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
 
         let arity = List.length tys
-        let symbolOpt, scopeCtx = scopeCtx |> resolveLocalTyName name loc
+
+        let symbolOpt, scopeCtx =
+          match qualNames with
+          | [] -> scopeCtx |> resolveLocalTyName name, scopeCtx
+
+          | [ baseQual ] ->
+              let tySymbolOpt = scopeCtx |> resolveLocalTyName baseQual
+
+              match tySymbolOpt with
+              | Some tySymbol ->
+                  scopeCtx
+                  |> resolveScopedTyName (tySymbolToSerial tySymbol) name,
+                  scopeCtx
+
+              | None -> None, scopeCtx
+
+          | _ ->
+              None,
+              scopeCtx
+              |> addLog (OtherNameResLog "Type with 2+ '.'s is unimplemented") loc
 
         match symbolOpt with
         | Some (MetaTySymbol tySerial) ->
@@ -745,6 +763,14 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
     | _ -> ctx
 
+  let addTyToModule vis tySerial ctx =
+    match moduleSerialOpt, vis with
+    | Some moduleSerial, PublicVis ->
+        ctx
+        |> addTyToNs (moduleTySerialToInt moduleSerial) tySerial
+
+    | _ -> ctx
+
   let rec goPat vis (pat, ctx) =
     match pat with
     | HLitPat _
@@ -833,6 +859,16 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           |> startDefineTy moduleSerialOpt serial vis tyArgs tyDecl loc
 
         HTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
+
+    | HModuleExpr (serial, body, next, loc) ->
+        let ctx =
+          ctx
+          |> addTyToModule PublicVis (ModuleTySymbol serial)
+          |> importTy (ModuleTySymbol serial)
+
+        let next, ctx = (next, ctx) |> goExpr
+
+        HModuleExpr(serial, body, next, loc), ctx
 
     | _ -> expr, ctx
 
@@ -1219,8 +1255,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         let ctx =
           // FIXME: resolve module-name based on path
-          let tySymbolOpt, ctx =
-            ctx |> resolveLocalTyName (path |> List.last) loc
+          let tySymbolOpt =
+            ctx |> resolveLocalTyName (path |> List.last)
 
           match tySymbolOpt with
           | Some (ModuleTySymbol moduleSerial) -> ctx |> openModule moduleSerial
