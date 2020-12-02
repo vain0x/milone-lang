@@ -78,6 +78,10 @@ let private tyPrimOfName name tys =
   | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ]) |> Some
   | "__constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ]) |> Some
 
+  | "__nativeFun", [ AppTy (TupleTyCtor, itemTys); resultTy ] ->
+      AppTy(NativeFunTyCtor, List.append itemTys [ resultTy ])
+      |> Some
+
   | _ -> None
 
 // -----------------------------------------------

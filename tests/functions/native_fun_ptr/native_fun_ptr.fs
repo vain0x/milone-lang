@@ -1,6 +1,6 @@
 module rec native_fun_ptr.Program
 
-type CompareFun = extern fun (__voidconstptr, __voidconstptr) -> int
+type CompareFun = __nativeFun<__voidconstptr * __voidconstptr, int>
 
 let memAlloc (len: int) (size: int): voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)

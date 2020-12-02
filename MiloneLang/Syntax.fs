@@ -249,9 +249,6 @@ type ATy =
   /// Function type, e.g. `int -> string`.
   | AFunTy of ATy * ATy * Pos
 
-  /// Native function type for FFI, e.g. `extern fun (string, int, int) -> string`. (Not F#.)
-  | ANativeFunTy of ATy list * ATy * Pos
-
 /// Pattern in AST.
 [<NoEquality; NoComparison>]
 type APat =
