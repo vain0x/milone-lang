@@ -235,6 +235,8 @@ let private cpExpr expr acc: string list =
       |> cpExpr r
       |> cons ")"
 
+  | CNativeExpr code -> acc |> cons code
+
 // -----------------------------------------------
 // Statements
 // -----------------------------------------------
@@ -368,6 +370,8 @@ let private cpStmt indent stmt acc: string list =
       |> cons "}"
       |> cons eol
 
+  | CNativeStmt code -> acc |> cons code
+
 let private cpStmtList indent stmts acc: string list =
   stmts
   |> List.fold (fun acc stmt -> cpStmt indent stmt acc) acc
@@ -449,13 +453,16 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
+  | CNativeDecl code -> acc |> cons code |> cons eol
+
   | CStaticVarDecl _
   | CFunForwardDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
   match decl with
-  | CErrorDecl _ -> acc
+  | CErrorDecl _
+  | CNativeDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc

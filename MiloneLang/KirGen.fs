@@ -786,7 +786,10 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.ToFloat _ -> failwith "unimplemented"
           | HPrim.String -> regular "string" KStringPrim
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
-          | HPrim.NativeFun -> failwith "NEVER: HPrim.NativeFun is resolved in Typing."
+          | HPrim.NativeFun
+          | HPrim.NativeExpr
+          | HPrim.NativeStmt
+          | HPrim.NativeDecl -> failwith "NEVER: Resolved in Typing."
           | HPrim.NativeCast
           | HPrim.SizeOfVal
           | HPrim.PtrRead
@@ -818,7 +821,10 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
   | InfOp.Abort
   | InfOp.Record
   | InfOp.RecordItem _
-  | InfOp.NativeFun _ -> failwith "unimplemented"
+  | InfOp.NativeFun _
+  | InfOp.NativeExpr _
+  | InfOp.NativeStmt _
+  | InfOp.NativeDecl _ -> failwith "unimplemented"
 
   | InfOp.Range -> failwithf "NEVER: InfOp.Range causes an error in Typing. %A" itself
   | InfOp.App -> failwithf "NEVER: InfOp.App is resolved in uneta. %A" itself

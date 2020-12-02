@@ -831,6 +831,8 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
+  | MNativeExpr (code, _, _) -> CNativeExpr code, ctx
+
 // -----------------------------------------------
 // Statements
 // -----------------------------------------------
@@ -1210,6 +1212,8 @@ let private cgStmt ctx stmt =
       let elseCl, ctx = cgBlock ctx elseCl
       addStmt ctx (CIfStmt(cond, thenCl, elseCl))
 
+  | MNativeStmt (code, _) -> addStmt ctx (CNativeStmt code)
+
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx: CirCtx = cgStmts (enterBlock ctx) stmts
   let stmts = bodyCtx.Stmts
@@ -1253,6 +1257,10 @@ let private cgDecls (ctx: CirCtx) decls =
       let resultTy, ctx = cgTyComplete ctx resultTy
       let funDecl = CFunDecl(funName, args, resultTy, body)
       let ctx = addDecl ctx funDecl
+      cgDecls ctx decls
+
+  | MNativeDecl (code, _) :: decls ->
+      let ctx = addDecl ctx (CNativeDecl code)
       cgDecls ctx decls
 
 // -----------------------------------------------

@@ -1176,7 +1176,10 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Nil, _
   | HPrim.OptionNone, _ -> fail ()
 
-  | HPrim.NativeFun, _ -> failwith "NEVER: HPrim.NativeFun is resolved in Typing."
+  | HPrim.NativeFun, _
+  | HPrim.NativeExpr, _
+  | HPrim.NativeStmt, _
+  | HPrim.NativeDecl, _ -> failwith "NEVER: Resolved in Typing."
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
@@ -1291,6 +1294,17 @@ let private mirifyExprInf ctx itself infOp args ty loc =
   | InfOp.Closure, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 
   | InfOp.NativeFun funSerial, _, _ -> MProcExpr(funSerial, ty, loc), ctx
+
+  | InfOp.NativeExpr code, _, _ -> MNativeExpr(code, ty, loc), ctx
+
+  | InfOp.NativeStmt code, _, _ ->
+    let ctx = addStmt ctx (MNativeStmt (code, loc))
+    MDefaultExpr(tyUnit, loc), ctx
+
+  | InfOp.NativeDecl code, _, _ ->
+    let ctx =  addDecl ctx (MNativeDecl (code, loc))
+    MDefaultExpr(tyUnit, loc), ctx
+
   | t -> failwithf "Never: %A" t
 
 let private mirifyExprLetValContents ctx pat init letLoc =

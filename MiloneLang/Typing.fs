@@ -277,7 +277,10 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
 
   let nativeFunTy =
     let (TyScheme (_, ty)) = funDef.Ty
-    let ty = typingExpandSynonyms (toTyContext ctx) ty
+
+    let ty =
+      typingExpandSynonyms (toTyContext ctx) ty
+
     let _, paramTys, resultTy = tyToArgList ty
     tyNativeFun paramTys resultTy
 
@@ -461,6 +464,12 @@ let private inferPrimExpr ctx prim loc =
   | HPrim.NativeFun ->
       let ctx =
         addError ctx "Illegal use of __nativeFun. Hint: `__nativeFun (\"funName\", arg1, arg2, ...): ResultType`." loc
+
+      hxAbort ctx loc
+
+  | HPrim.NativeDecl ->
+      let ctx =
+        addError ctx "Illegal use of __nativeDecl. Hint: `__nativeDecl \"Some C code here.\"`." loc
 
       hxAbort ctx loc
 
@@ -663,6 +672,19 @@ let private inferAppExpr ctx itself callee arg loc =
 
       HInfExpr(InfOp.CallNative funName, args, targetTy, loc), targetTy, ctx
 
+  // __nativeExpr "code"
+  | HPrimExpr (HPrim.NativeExpr, _, loc), HLitExpr (StrLit code, _) ->
+      let targetTy, ctx = ctx |> freshMetaTyForExpr itself
+      HInfExpr(InfOp.NativeExpr code, [], targetTy, loc), targetTy, ctx
+
+  // __nativeStmt "code"
+  | HPrimExpr (HPrim.NativeStmt, _, loc), HLitExpr (StrLit code, _) ->
+      HInfExpr(InfOp.NativeStmt code, [], tyUnit, loc), tyUnit, ctx
+
+  // __nativeDecl "code"
+  | HPrimExpr (HPrim.NativeDecl, _, loc), HLitExpr (StrLit code, _) ->
+      HInfExpr(InfOp.NativeDecl code, [], tyUnit, loc), tyUnit, ctx
+
   | _ ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
       let arg, argTy, ctx = inferExpr ctx None arg
@@ -848,7 +870,10 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HInfExpr (InfOp.CallNative _, _, _, _)
   | HInfExpr (InfOp.Record, _, _, _)
   | HInfExpr (InfOp.RecordItem _, _, _, _)
-  | HInfExpr (InfOp.NativeFun _, _, _, _) -> failwith "NEVER"
+  | HInfExpr (InfOp.NativeFun _, _, _, _)
+  | HInfExpr (InfOp.NativeExpr _, _, _, _)
+  | HInfExpr (InfOp.NativeStmt _, _, _, _)
+  | HInfExpr (InfOp.NativeDecl _, _, _, _) -> failwith "NEVER"
 
   | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 

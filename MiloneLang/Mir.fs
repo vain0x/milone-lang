@@ -152,6 +152,8 @@ type MExpr =
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
 
+  | MNativeExpr of code: string * Ty * Loc
+
 /// Variable initializer in mid-level IR.
 [<NoEquality; NoComparison>]
 type MInit =
@@ -216,11 +218,15 @@ type MStmt =
 
   | MTerminatorStmt of MTerminator * Loc
 
+  | MNativeStmt of string * Loc
+
 [<NoEquality; NoComparison>]
 type MBlock = { Stmts: MStmt list }
 
 [<NoEquality; NoComparison>]
-type MDecl = MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
+type MDecl =
+  | MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
+  | MNativeDecl of code: string * Loc
 
 // -----------------------------------------------
 // Expressions (MIR)
@@ -236,6 +242,7 @@ let mexprExtract expr =
   | MTagExpr (_, loc) -> tyInt, loc
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
+  | MNativeExpr (_, ty, loc) -> ty, loc
 
 let mexprToTy expr = expr |> mexprExtract |> fst
 

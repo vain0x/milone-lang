@@ -334,6 +334,9 @@ type HPrim =
   | InRegion
   | NativeFun
   | NativeCast
+  | NativeExpr
+  | NativeStmt
+  | NativeDecl
   | SizeOfVal
   | PtrRead
   | PtrWrite
@@ -393,6 +396,15 @@ type InfOp =
 
   /// Use function as function pointer.
   | NativeFun of FunSerial
+
+  /// Embed some C expression to output.
+  | NativeExpr of nativeExprCode: string
+
+  /// Embed some C statement to output.
+  | NativeStmt of nativeStmtCode: string
+
+  /// Embed some C toplevel codes to output.
+  | NativeDecl of nativeDeclCode: string
 
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
@@ -620,6 +632,9 @@ let primFromIdent ident =
 
   | "__nativeFun" -> HPrim.NativeFun |> Some
   | "__nativeCast" -> HPrim.NativeCast |> Some
+  | "__nativeExpr" -> HPrim.NativeExpr |> Some
+  | "__nativeStmt" -> HPrim.NativeStmt |> Some
+  | "__nativeDecl" -> HPrim.NativeDecl |> Some
   | "__sizeOfVal" -> HPrim.SizeOfVal |> Some
   | "__ptrRead" -> HPrim.PtrRead |> Some
   | "__ptrWrite" -> HPrim.PtrWrite |> Some
@@ -723,7 +738,10 @@ let primToTySpec prim =
   | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
 
   | HPrim.Printfn
-  | HPrim.NativeFun ->
+  | HPrim.NativeFun
+  | HPrim.NativeExpr
+  | HPrim.NativeStmt
+  | HPrim.NativeDecl ->
       // Incorrect use of this primitive is handled as error before instantiating its type.
       failwith "NEVER"
 
