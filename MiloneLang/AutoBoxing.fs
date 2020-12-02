@@ -157,7 +157,8 @@ let private trdTy (ctx: TrdCtx) ty =
       | FunTyCtor
       | TupleTyCtor
       | NativePtrTyCtor _
-      | NativeFunTyCtor -> tyArgs |> List.fold trdTy ctx
+      | NativeFunTyCtor
+      | NativeTypeTyCtor _ -> tyArgs |> List.fold trdTy ctx
 
       | UnionTyCtor tySerial -> nominal tySerial
       | RecordTyCtor tySerial -> nominal tySerial
@@ -338,6 +339,8 @@ let private tsmTy (ctx: TsmCtx) ty =
 
       | UnionTyCtor tySerial -> nominal tySerial
       | RecordTyCtor tySerial -> nominal tySerial
+
+      | NativeTypeTyCtor _ -> 1000000, ctx
 
       | SynonymTyCtor _
       | UnresolvedTyCtor _ -> failwith "NEVER"

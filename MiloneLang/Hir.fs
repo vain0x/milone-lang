@@ -97,6 +97,7 @@ type TyCtor =
   | VoidTyCtor
   | NativePtrTyCtor of nativePtrIsMut: IsMut
   | NativeFunTyCtor
+  | NativeTypeTyCtor of cCode: string
 
   // Nominal types.
   | SynonymTyCtor of synonymTy: TySerial

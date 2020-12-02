@@ -89,6 +89,7 @@ let private cpTy ty acc: string list =
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
+  | CEmbedTy code -> acc |> cons code
 
 /// `T x` or `T (*x)(..)`
 let private cpTyWithName name ty acc =

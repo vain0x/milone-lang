@@ -505,6 +505,12 @@ let private resolveTy ty loc scopeCtx =
 
         MetaTy(serial, loc), scopeCtx
 
+    | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when (scopeCtx
+                                                                                                    |> findName serial =
+                                                                                                      "__nativeType") ->
+        let code = scopeCtx |> findName itemSerial
+        AppTy(NativeTypeTyCtor code, []), scopeCtx
+
     | AppTy (UnresolvedTyCtor (quals, serial), tys) ->
         let qualNames =
           quals

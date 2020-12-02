@@ -469,6 +469,8 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           funTy, ctx
 
+      | AppTy (NativeTypeTyCtor code, _) -> code, ctx
+
       | AppTy (TupleTyCtor, []) -> "Unit", ctx
 
       | AppTy (TupleTyCtor, itemTys) ->
@@ -554,6 +556,8 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | AppTy (NativeFunTyCtor, tys) -> cgNativeFunTy ctx tys
 
+  | AppTy (NativeTypeTyCtor code, _) -> CEmbedTy code, ctx
+
   | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
@@ -613,6 +617,8 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
   | AppTy (NativeFunTyCtor, tys) -> cgNativeFunTy ctx tys
+
+  | AppTy (NativeTypeTyCtor code, _) -> CEmbedTy code, ctx
 
   | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
@@ -706,7 +712,8 @@ let private genDefault ctx ty =
   | AppTy (TupleTyCtor, _)
   | AppTy (SynonymTyCtor _, _)
   | AppTy (UnionTyCtor _, _)
-  | AppTy (RecordTyCtor _, _) ->
+  | AppTy (RecordTyCtor _, _)
+  | AppTy (NativeTypeTyCtor _, _) ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
 
@@ -979,10 +986,10 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
 
   | MPtrReadPrim ->
       regular ctx (fun args ->
-          match args with
-          | [ ptr; CIntExpr 0 ] -> CUnaryExpr (CDerefUnary, ptr)
-          | [ ptr; index ] -> CIndexExpr(ptr, index)
-          | _ -> failwith "NEVER")
+        match args with
+        | [ ptr; CIntExpr 0 ] -> CUnaryExpr(CDerefUnary, ptr)
+        | [ ptr; index ] -> CIndexExpr(ptr, index)
+        | _ -> failwith "NEVER")
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial

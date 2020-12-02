@@ -39,10 +39,17 @@ let private tyCtorEncode tyCtor =
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
   | RecordTyCtor tySerial -> 23, tySerial
+
+  | NativeTypeTyCtor _
   | UnresolvedTyCtor _ -> failwith "NEVER"
 
 let tyCtorCmp l r =
   match l, r with
+  | NativeTypeTyCtor l, NativeTypeTyCtor r -> compare l r
+
+  | NativeTypeTyCtor _, _ -> -1
+  | _, NativeTypeTyCtor _ -> 1
+
   | UnresolvedTyCtor (lQuals, lSerial), UnresolvedTyCtor (rQuals, rSerial) ->
       pairCmp (listCmp compare) compare (lQuals, lSerial) (rQuals, rSerial)
 
@@ -67,7 +74,8 @@ let tyCtorDisplay getTyName tyCtor =
   | VoidTyCtor -> "void"
   | NativePtrTyCtor IsMut -> "nativeptr"
   | NativePtrTyCtor IsConst -> "__constptr"
-  | NativeFunTyCtor -> "nativefun"
+  | NativeFunTyCtor -> "__nativeFun"
+  | NativeTypeTyCtor _ -> "__nativeType"
   | SynonymTyCtor tySerial -> getTyName tySerial
   | RecordTyCtor tySerial -> getTyName tySerial
   | UnionTyCtor tySerial -> getTyName tySerial

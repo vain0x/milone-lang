@@ -38,6 +38,7 @@ type CTy =
   | CFunPtrTy of argTys: CTy list * resultTy: CTy
   | CStructTy of Ident
   | CEnumTy of Ident
+  | CEmbedTy of string
 
 /// Unary operators in CIR.
 [<NoEquality; NoComparison>]

@@ -111,7 +111,8 @@ let private tyToDebugString ty ctx =
 
       | NativePtrTyCtor IsConst, [ itemTy ] -> "ConstPtr<" + tyToDebugString itemTy ctx + ">"
 
-      | NativeFunTyCtor, _ -> "unimplemented"
+      | NativeFunTyCtor, _
+      | NativeTypeTyCtor _, _ -> "unimplemented"
 
       | _, [] -> tyCtorToDebugString tyCtor ctx
 
