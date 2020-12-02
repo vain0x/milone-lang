@@ -500,7 +500,8 @@ let tyList ty = AppTy(ListTyCtor, [ ty ])
 
 let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
-let tyConstPtr itemTy = AppTy(NativePtrTyCtor IsConst, [ itemTy ])
+let tyConstPtr itemTy =
+  AppTy(NativePtrTyCtor IsConst, [ itemTy ])
 
 let tyNativePtr itemTy = AppTy(NativePtrTyCtor IsMut, [ itemTy ])
 
@@ -733,7 +734,7 @@ let primToTySpec prim =
   | HPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
 
   | HPrim.PtrRead ->
-      // constptr<'p> -> int -> 'a
+      // __constptr<'p> -> int -> 'a
       let valueTy = meta 1
       poly (tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)) []
 

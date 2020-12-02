@@ -66,7 +66,7 @@ let tyCtorDisplay getTyName tyCtor =
   | ListTyCtor -> "list"
   | VoidTyCtor -> "void"
   | NativePtrTyCtor IsMut -> "nativeptr"
-  | NativePtrTyCtor IsConst -> "constptr"
+  | NativePtrTyCtor IsConst -> "__constptr"
   | NativeFunTyCtor -> "nativefun"
   | SynonymTyCtor tySerial -> getTyName tySerial
   | RecordTyCtor tySerial -> getTyName tySerial

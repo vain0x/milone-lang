@@ -2,7 +2,7 @@ module rec ptr_write.Program
 
 // Writing to memory, unchecked.
 
-let strOfRawParts (p: constptr<char>) (len: int): string = __nativeFun ("str_of_raw_parts", p, len)
+let strOfRawParts (p: __constptr<char>) (len: int): string = __nativeFun ("str_of_raw_parts", p, len)
 
 let main _ =
   // write to box

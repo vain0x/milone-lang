@@ -14,19 +14,19 @@ let strJoin (sep: string) (xs: string list): string = System.String.Join(sep, xs
 
 // `T const *` in C.
 [<AbstractClass; Sealed>]
-type constptr<'T> =
-  override _.ToString() = "constptr is not available in F#"
+type __constptr<'T> =
+  override _.ToString() = "__constptr is not available in F#"
 
-  static member op_Implicit(_: constptr<'T>): int = 0
-  static member op_Implicit(_: constptr<'T>): unativeint = unativeint 0
+  static member op_Implicit(_: __constptr<'T>): int = 0
+  static member op_Implicit(_: __constptr<'T>): unativeint = unativeint 0
 
 // `void const *` in C.
 [<AbstractClass; Sealed>]
-type voidconstptr =
-  override _.ToString() = "voidconstptr is not available in F#"
+type __voidconstptr =
+  override _.ToString() = "__voidconstptr is not available in F#"
 
-  static member op_Implicit(_: voidconstptr): int = 0
-  static member op_Implicit(_: voidconstptr): unativeint = unativeint 0
+  static member op_Implicit(_: __voidconstptr): int = 0
+  static member op_Implicit(_: __voidconstptr): unativeint = unativeint 0
 
 // Calls a C function, which should be linked statically.
 let __nativeFun _ =
@@ -37,7 +37,7 @@ let __nativeCast _ =
   failwith "__nativeCast is not available in F#"
 
 /// Accesses to `ptr[i]` to read a value.
-let __ptrRead (ptr: constptr<'a>) (index: int): 'a =
+let __ptrRead (ptr: __constptr<'a>) (index: int): 'a =
   failwith "__ptrRead is not available in F#"
 
 /// Writes a value to `ptr[i]`.

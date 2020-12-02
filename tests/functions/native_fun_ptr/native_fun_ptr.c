@@ -38,14 +38,14 @@ int main() {
     int call_1 = sortIntArray_(array_1, len_2);
     int const* array_2 = ((int const*)array_1);
     int read_ = (*(array_2));
-    milone_assert((read_ == 1), 24, 2);
+    milone_assert((read_ == 1), 28, 2);
     int read_1 = array_2[1];
-    milone_assert((read_1 == 1), 25, 2);
+    milone_assert((read_1 == 1), 29, 2);
     int read_2 = array_2[2];
-    milone_assert((read_2 == 3), 26, 2);
+    milone_assert((read_2 == 3), 30, 2);
     int read_3 = array_2[3];
-    milone_assert((read_3 == 4), 27, 2);
+    milone_assert((read_3 == 4), 31, 2);
     int read_4 = array_2[4];
-    milone_assert((read_4 == 5), 28, 2);
+    milone_assert((read_4 == 5), 32, 2);
     return 0;
 }
