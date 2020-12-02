@@ -334,6 +334,7 @@ type HPrim =
   | NativeFun
   | NativeCast
   | SizeOfVal
+  | PtrWrite
 
 [<RequireQualifiedAccess>]
 [<Struct>]
@@ -498,6 +499,8 @@ let tyList ty = AppTy(ListTyCtor, [ ty ])
 
 let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
+let tyNativePtr itemTy = AppTy(NativePtrTyCtor IsMut, [ itemTy ])
+
 let tyNativeFun paramTys resultTy =
   AppTy(NativeFunTyCtor, List.append paramTys [ resultTy ])
 
@@ -613,6 +616,7 @@ let primFromIdent ident =
   | "__nativeFun" -> HPrim.NativeFun |> Some
   | "__nativeCast" -> HPrim.NativeCast |> Some
   | "__sizeOfVal" -> HPrim.SizeOfVal |> Some
+  | "__ptrWrite" -> HPrim.PtrWrite |> Some
 
   | _ -> None
 
@@ -723,6 +727,11 @@ let primToTySpec prim =
       poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
 
   | HPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
+
+  | HPrim.PtrWrite ->
+      // nativeptr<'a> -> int -> 'a -> unit
+      let valueTy = meta 1
+      poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
 
 // -----------------------------------------------
 // Patterns (HIR)

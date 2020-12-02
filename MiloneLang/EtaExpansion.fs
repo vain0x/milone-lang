@@ -150,6 +150,8 @@ let private primToArity ty prim =
   | HPrim.Compare
   | HPrim.Cons -> 2
 
+  | HPrim.PtrWrite -> 3
+
   | HPrim.Printfn -> ty |> tyToArity
 
 // -----------------------------------------------

@@ -1088,6 +1088,16 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     let r, ctx = mirifyExpr ctx r
     MBinaryExpr(binary, l, r, ty, loc), ctx
 
+  let regularAction action args =
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+    let ctx =
+      addStmt ctx (MActionStmt(action, args, loc))
+
+    MDefaultExpr(tyUnit, loc), ctx
+
   match prim, args with
   | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx itself MAddBinary l r ty loc
   | HPrim.Add, _ -> fail ()
@@ -1148,6 +1158,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.NativeCast, _ -> fail ()
   | HPrim.SizeOfVal, [ arg ] -> regularUnary MSizeOfValUnary arg
   | HPrim.SizeOfVal, _ -> fail ()
+  | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction args
 
   | HPrim.Nil, _
   | HPrim.OptionNone, _ -> fail ()

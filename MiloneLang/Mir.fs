@@ -126,6 +126,7 @@ type MAction =
   | MEnterRegionAction
   | MLeaveRegionAction
   | MCallNativeAction of funName: string
+  | MPtrWriteAction
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]

@@ -857,6 +857,12 @@ let private cgActionStmt ctx itself action args =
       let args, ctx = cgExprList ctx args
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr funName, args)))
 
+  | MPtrWriteAction ->
+      match cgExprList ctx args with
+      | [ ptr; CIntExpr 0; value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
+      | [ ptr; index; value ], ctx -> addStmt ctx (CSetStmt(CIndexExpr(ptr, index), value))
+      | _ -> failwith "NEVER"
+
 let private cgPrintfnActionStmt ctx itself args =
   match args with
   | (MLitExpr (StrLit format, _)) :: args ->
