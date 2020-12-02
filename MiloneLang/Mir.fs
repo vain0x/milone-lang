@@ -121,6 +121,7 @@ type MPrim =
   | MStrGetSlicePrim
 
   | MCallNativePrim of funName: string
+  | MPtrReadPrim
 
 [<NoEquality; NoComparison>]
 type MAction =

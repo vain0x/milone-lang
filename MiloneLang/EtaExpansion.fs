@@ -148,7 +148,8 @@ let private primToArity ty prim =
   | HPrim.Eq
   | HPrim.Lt
   | HPrim.Compare
-  | HPrim.Cons -> 2
+  | HPrim.Cons
+  | HPrim.PtrRead -> 2
 
   | HPrim.PtrWrite -> 3
 

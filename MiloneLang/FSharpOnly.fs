@@ -36,6 +36,14 @@ let __nativeFun _ =
 let __nativeCast _ =
   failwith "__nativeCast is not available in F#"
 
+/// Accesses to `ptr[i]` to read a value.
+let __ptrRead (ptr: constptr<'a>) (index: int): 'a =
+  failwith "__ptrRead is not available in F#"
+
+/// Writes a value to `ptr[i]`.
+let __ptrWrite (ptr: nativeptr<'a>) (index: int) (value: 'a): unit =
+  failwith "__ptrWrite is not available in F#"
+
 // -----------------------------------------------
 // Profiler
 // -----------------------------------------------

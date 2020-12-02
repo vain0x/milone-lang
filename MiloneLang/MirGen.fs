@@ -1092,7 +1092,19 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     let r, ctx = mirifyExpr ctx r
     MBinaryExpr(binary, l, r, ty, loc), ctx
 
-  let regularAction action args =
+  let regularPrim hint prim =
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+    let tempExpr, temp, ctx = freshVar ctx hint ty loc
+
+    let ctx =
+      addStmt ctx (MLetValStmt(temp, MPrimInit(prim, args), ty, loc))
+
+    tempExpr, ctx
+
+  let regularAction action =
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
@@ -1162,7 +1174,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.NativeCast, _ -> fail ()
   | HPrim.SizeOfVal, [ arg ] -> regularUnary MSizeOfValUnary arg
   | HPrim.SizeOfVal, _ -> fail ()
-  | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction args
+  | HPrim.PtrRead, _ -> regularPrim "read" MPtrReadPrim
+  | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction
 
   | HPrim.Nil, _
   | HPrim.OptionNone, _ -> fail ()

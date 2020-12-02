@@ -983,6 +983,13 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
 
       regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
 
+  | MPtrReadPrim ->
+      regular ctx (fun args ->
+          match args with
+          | [ ptr; CIntExpr 0 ] -> CUnaryExpr (CDerefUnary, ptr)
+          | [ ptr; index ] -> CIndexExpr(ptr, index)
+          | _ -> failwith "NEVER")
+
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial

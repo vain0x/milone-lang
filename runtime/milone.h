@@ -80,6 +80,10 @@ struct StringList;
 
 struct String str_concat(struct String sep, struct StringList *strings);
 
+// Low level operations.
+
+inline char const *str_as_ptr(struct String s) { return s.str; }
+
 // -----------------------------------------------
 // Runtime Entrypoint
 // -----------------------------------------------
