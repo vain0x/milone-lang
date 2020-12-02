@@ -2,33 +2,29 @@ module rec native_fun_ptr.Program
 
 type CompareFun = extern fun (voidconstptr, voidconstptr) -> int
 
-let rawIntArrayNew (len: int): obj = __nativeFun ("int_array_new", len)
+let memAlloc (len: int) (size: int): voidptr =
+  __nativeFun ("milone_mem_alloc", len, unativeint size)
 
-let rawIntArrayGet (array: obj) (index: int): int =
-  __nativeFun ("int_array_get", array, index)
-
-let rawIntArraySet (array: obj) (index: int) (value: int): unit =
-  __nativeFun ("int_array_set", array, index, value)
-
-let rawIntArraySort (array: obj) (len: int): unit =
+let sortIntArray (array: nativeptr<int>) (len: int): unit =
   let intCompare (l: voidconstptr) (r: voidconstptr) = compare (unbox (__nativeCast l) : int) (unbox (__nativeCast r) : int)
 
-  __nativeFun ("qsort", array, unativeint len, unativeint 4, (__nativeFun intCompare: CompareFun))
+  __nativeFun ("qsort", (__nativeCast array: obj), unativeint len, unativeint 4, (__nativeFun intCompare: CompareFun))
 
 let main _ =
   let len = 5
-  let array = rawIntArrayNew len
-  rawIntArraySet array 0 3
-  rawIntArraySet array 1 1
-  rawIntArraySet array 2 4
-  rawIntArraySet array 3 1
-  rawIntArraySet array 4 5
+  let array: nativeptr<int> = memAlloc len (__sizeOfVal 0) |> __nativeCast
+  __ptrWrite array 0 3
+  __ptrWrite array 1 1
+  __ptrWrite array 2 4
+  __ptrWrite array 3 1
+  __ptrWrite array 4 5
 
-  rawIntArraySort array len
+  sortIntArray array len
 
-  assert (rawIntArrayGet array 0 = 1)
-  assert (rawIntArrayGet array 1 = 1)
-  assert (rawIntArrayGet array 2 = 3)
-  assert (rawIntArrayGet array 3 = 4)
-  assert (rawIntArrayGet array 4 = 5)
+  let array: constptr<int> = __nativeCast array
+  assert (__ptrRead array 0 = 1)
+  assert (__ptrRead array 1 = 1)
+  assert (__ptrRead array 2 = 3)
+  assert (__ptrRead array 3 = 4)
+  assert (__ptrRead array 4 = 5)
   0

@@ -620,29 +620,6 @@ struct String scan_str(int capacity) {
     return (struct String){.str = str, .len = len};
 }
 
-void *int_array_new(int len) {
-    void *p = calloc(len, sizeof(int));
-    // fprintf(stderr, "int_array_new(len=%d) = %p\n", len, p);
-    return p;
-}
-
-int int_array_get(void *array, int index) {
-    int value = ((int *)array)[index];
-    // fprintf(stderr, "int_array_get(%p, index=%d) = %d\n", array, index,
-    // value);
-    return value;
-}
-
-void int_array_set(void *array, int index, int value) {
-    // fprintf(stderr, "int_array_set(%p, index=%d, value=%d)\n", array, index,
-    // value);
-    ((int *)array)[index] = value;
-}
-
-void int_array_copy(void *dest, void *src, int size) {
-    memcpy(dest, src, size);
-}
-
 // -----------------------------------------------
 // Command-line Arguments
 // -----------------------------------------------
