@@ -65,6 +65,20 @@ let tokenizeStrLiteral () =
   source |> tokenize |> is expected
 
 [<Fact>]
+let tokenizeRawIdent () =
+  let source = """let `` `` = ``true``"""
+
+  let expected = [ " ", (0, 4); "true", (0, 12) ]
+
+  source
+  |> tokenize
+  |> List.choose (fun (token, pos) ->
+       match token with
+       | IdentToken text -> Some(text, pos)
+       | _ -> None)
+  |> is expected
+
+[<Fact>]
 let tokenizeTyVarIdent () =
   let source =
     """type option<'T> = Some of 'T | None"""

@@ -100,6 +100,13 @@ let private isFollowedByRawQuotes (i: int) (s: string): bool =
       | '"', '"', '"' -> true
       | _ -> false)
 
+/// Followed by \`\`?
+let private isFollowedByBackticks (i: int) (s: string): bool =
+  (i + 2 <= s.Length)
+  && (match s.[i], s.[i + 1] with
+      | '`', '`' -> true
+      | _ -> false)
+
 // -----------------------------------------------
 // Pos
 // -----------------------------------------------
@@ -195,6 +202,17 @@ let private scanIdent (text: string) (i: int) =
 
   go i
 
+let private scanRawIdent (text: string) (i: int) =
+  let rec go i =
+    if text |> isFollowedByBackticks i then true, i
+    else if i >= text.Length then false, i
+    else go (i + 1)
+
+  if text |> isFollowedByBackticks i then
+    let ok, m = go (i + 1)
+    if ok then Some m else None
+  else
+    None
 
 let private scanNumberLit (text: string) (i: int) =
   let rec scanDigits (i: int) =
@@ -526,6 +544,7 @@ type private Lookahead =
   | LNumber
   | LNonKeywordIdent
   | LIdent
+  | LRawIdent
   | LTyVar
   | LChar
   | LStr
@@ -622,6 +641,8 @@ let private lookahead (text: string) (i: int) =
 
   | '"' -> if isFollowedByRawQuotes i text then LRawStr, 3 else LStr, 1
 
+  | '`' -> LRawIdent, 1
+
   | ',' -> LToken CommaToken, 1
   | '(' -> LToken LeftParenToken, 1
   | ')' -> LToken RightParenToken, 1
@@ -699,6 +720,16 @@ let private doNext (text: string) (index: int): Token * int =
   | LIdent ->
       let r = scanIdent text (index + len)
       tokenOfIdent text index r, r
+
+  | LRawIdent ->
+      match scanRawIdent text index with
+      | Some m ->
+        assert (text |> isFollowedByBackticks m)
+        let ident = text.[index + 2..m - 1]
+        IdentToken ident, m + 2
+
+      | None ->
+        ErrorToken, index + len
 
   | LTyVar ->
       let r = index + len
