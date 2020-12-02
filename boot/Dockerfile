@@ -6,6 +6,6 @@ ENV DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 
 RUN apt-get update
-RUN apt-get install -y gcc
+RUN apt-get install -y gcc git make
 
-WORKDIR /mnt/milone-lang/boot
+WORKDIR /mnt/milone-lang
