@@ -333,6 +333,7 @@ type HPrim =
   | InRegion
   | NativeFun
   | NativeCast
+  | SizeOfVal
 
 [<RequireQualifiedAccess>]
 [<Struct>]
@@ -611,6 +612,7 @@ let primFromIdent ident =
 
   | "__nativeFun" -> HPrim.NativeFun |> Some
   | "__nativeCast" -> HPrim.NativeCast |> Some
+  | "__sizeOfVal" -> HPrim.SizeOfVal |> Some
 
   | _ -> None
 
@@ -719,6 +721,8 @@ let primToTySpec prim =
       let srcTy = meta 1
       let destTy = meta 2
       poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
+
+  | HPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
 
 // -----------------------------------------------
 // Patterns (HIR)

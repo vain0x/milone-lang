@@ -134,6 +134,17 @@ let listSort cmp xs = listSortCore false cmp xs
 
 let listUnique cmp xs = listSortCore true cmp xs
 
+/// Tries to split a list to pair of non-last items and the last item.
+let splitLast xs =
+  let rec go acc last xs =
+    match xs with
+    | [] -> List.rev acc, last
+    | x :: xs -> go (last :: acc) x xs
+
+  match xs with
+  | [] -> None
+  | x :: xs -> Some(go [] x xs)
+
 // -----------------------------------------------
 // Assoc
 // -----------------------------------------------

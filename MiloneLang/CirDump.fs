@@ -214,6 +214,8 @@ let private cpExpr expr acc: string list =
       |> cpExprList ", " args
       |> cons ")"
 
+  | CSizeOfExpr ty -> acc |> cons "sizeof(" |> cpTy ty |> cons ")"
+
   | CUnaryExpr (op, arg) ->
       acc
       |> cons "("

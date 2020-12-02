@@ -517,23 +517,15 @@ let private cgNativePtrTy ctx isMut itemTy =
   | IsMut -> CPtrTy itemTy, ctx
 
 let private cgNativeFunTy ctx tys =
-  let splitLast xs =
-    let rec go acc last xs =
-      match xs with
-      | [] -> List.rev acc, last
-      | x :: xs -> go (last :: acc) x xs
-
-    match tys with
-    | [] -> None
-
-    | x :: xs -> Some (go [] x xs)
-
   match splitLast tys with
   | None -> failwith "NEVER"
   | Some (paramTys, resultTy) ->
-    let paramTys, ctx = (paramTys, ctx) |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
-    let resultTy, ctx = cgTyComplete ctx resultTy
-    CFunPtrTy (paramTys, resultTy), ctx
+      let paramTys, ctx =
+        (paramTys, ctx)
+        |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
+
+      let resultTy, ctx = cgTyComplete ctx resultTy
+      CFunPtrTy(paramTys, resultTy), ctx
 
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
@@ -785,6 +777,10 @@ let private genUnaryExpr ctx op arg ty _ =
   | MNativeCastUnary ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(arg, ty), ctx
+
+  | MSizeOfValUnary ->
+      let argTy, ctx = cgTyComplete ctx argTy
+      CSizeOfExpr argTy, ctx
 
 let private genExprBin ctx op l r =
   match op with

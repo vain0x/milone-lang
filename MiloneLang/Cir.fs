@@ -106,6 +106,7 @@ type CExpr =
   | CIndexExpr of CExpr * CExpr
 
   | CCallExpr of CExpr * args: CExpr list
+  | CSizeOfExpr of CTy
   | CUnaryExpr of CUnary * CExpr
   | CBinaryExpr of CBinary * CExpr * CExpr
 

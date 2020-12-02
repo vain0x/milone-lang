@@ -1146,6 +1146,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
   | HPrim.NativeCast, [ arg ] -> regularUnary MNativeCastUnary arg
   | HPrim.NativeCast, _ -> fail ()
+  | HPrim.SizeOfVal, [ arg ] -> regularUnary MSizeOfValUnary arg
+  | HPrim.SizeOfVal, _ -> fail ()
 
   | HPrim.Nil, _
   | HPrim.OptionNone, _ -> fail ()
@@ -1264,7 +1266,7 @@ let private mirifyExprInf ctx itself infOp args ty loc =
   | InfOp.CallNative funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | InfOp.Closure, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 
-  | InfOp.NativeFun funSerial, _, _ -> MProcExpr (funSerial, ty, loc), ctx
+  | InfOp.NativeFun funSerial, _, _ -> MProcExpr(funSerial, ty, loc), ctx
   | t -> failwithf "Never: %A" t
 
 let private mirifyExprLetValContents ctx pat init letLoc =

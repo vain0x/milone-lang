@@ -76,6 +76,7 @@ type MUnary =
   | MListTailUnary
 
   | MNativeCastUnary
+  | MSizeOfValUnary
 
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
