@@ -801,14 +801,10 @@ let private mirifyExprCallBox ctx arg _ loc =
 
   temp, ctx
 
-let mirifyCallStrIndexExpr ctx l r ty loc =
+let private mirifyCallStrIndexExpr ctx l r ty loc =
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
-
-  match mexprToTy l with
-  | AppTy (StrTyCtor, _) -> MBinaryExpr(MStrIndexBinary, l, r, ty, loc), ctx
-  | AppTy (NativePtrTyCtor _, _) -> MBinaryExpr(MPtrIndexBinary, l, r, ty, loc), ctx
-  | _ -> failwith "NEVER"
+  MBinaryExpr(MStrIndexBinary, l, r, ty, loc), ctx
 
 let private mirifyCallStrGetSliceExpr ctx args loc =
   assert (List.length args = 3)

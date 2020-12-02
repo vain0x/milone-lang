@@ -545,14 +545,6 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
           logAcc, ctx
 
-      | AppTy (NativePtrTyCtor _, [ itemTy ]) ->
-          let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
-
-          let logAcc, ctx =
-            typingUnify logAcc ctx resultTy itemTy loc
-
-          logAcc, ctx
-
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   | IsIntTrait ty ->

@@ -104,9 +104,6 @@ type MBinary =
   /// `s.str[i]`
   | MStrIndexBinary
 
-  /// `p[i]`
-  | MPtrIndexBinary
-
 [<Struct; NoEquality; NoComparison>]
 type MPrim =
   /// string -> int

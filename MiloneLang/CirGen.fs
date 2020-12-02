@@ -666,8 +666,7 @@ let private cBinaryOf op =
   | MUInt64CompareBinary
   | MStrAddBinary
   | MStrCmpBinary
-  | MStrIndexBinary
-  | MPtrIndexBinary -> failwith "Never"
+  | MStrIndexBinary -> failwith "Never"
 
 let private genLit lit =
   match lit with
@@ -795,11 +794,6 @@ let private genExprBin ctx op l r =
       let l, ctx = cgExpr ctx l
       let r, ctx = cgExpr ctx r
       CIndexExpr(CNavExpr(l, "str"), r), ctx
-
-  | MPtrIndexBinary ->
-      let l, ctx = cgExpr ctx l
-      let r, ctx = cgExpr ctx r
-      CIndexExpr(l, r), ctx
 
   | _ ->
       let l, ctx = cgExpr ctx l
