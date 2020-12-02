@@ -72,11 +72,15 @@ let private tyPrimOfName name tys =
   | "voidptr", [] ->
       AppTy(NativePtrTyCtor IsMut, [ AppTy(VoidTyCtor, []) ])
       |> Some
-  | "voidconstptr", [] ->
+  | "__voidconstptr", [] ->
       AppTy(NativePtrTyCtor IsConst, [ AppTy(VoidTyCtor, []) ])
       |> Some
   | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ]) |> Some
-  | "constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ]) |> Some
+  | "__constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ]) |> Some
+
+  | "__nativeFun", [ AppTy (TupleTyCtor, itemTys); resultTy ] ->
+      AppTy(NativeFunTyCtor, List.append itemTys [ resultTy ])
+      |> Some
 
   | _ -> None
 
@@ -501,6 +505,12 @@ let private resolveTy ty loc scopeCtx =
 
         MetaTy(serial, loc), scopeCtx
 
+    | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when (scopeCtx
+                                                                                                    |> findName serial =
+                                                                                                      "__nativeType") ->
+        let code = scopeCtx |> findName itemSerial
+        AppTy(NativeTypeTyCtor code, []), scopeCtx
+
     | AppTy (UnresolvedTyCtor (quals, serial), tys) ->
         let qualNames =
           quals
@@ -603,6 +613,7 @@ let private defineFunUniquely funSerial args ty loc (scopeCtx: ScopeCtx): ScopeC
         { Name = name
           Arity = args |> List.length
           Ty = TyScheme([], ty)
+          Abi = MiloneAbi
           Loc = loc }
 
       let scopeCtx =

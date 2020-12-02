@@ -89,6 +89,7 @@ let private cpTy ty acc: string list =
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
+  | CEmbedTy code -> acc |> cons code
 
 /// `T x` or `T (*x)(..)`
 let private cpTyWithName name ty acc =
@@ -214,6 +215,8 @@ let private cpExpr expr acc: string list =
       |> cpExprList ", " args
       |> cons ")"
 
+  | CSizeOfExpr ty -> acc |> cons "sizeof(" |> cpTy ty |> cons ")"
+
   | CUnaryExpr (op, arg) ->
       acc
       |> cons "("
@@ -231,6 +234,8 @@ let private cpExpr expr acc: string list =
       |> cons " "
       |> cpExpr r
       |> cons ")"
+
+  | CNativeExpr code -> acc |> cons code
 
 // -----------------------------------------------
 // Statements
@@ -365,6 +370,8 @@ let private cpStmt indent stmt acc: string list =
       |> cons "}"
       |> cons eol
 
+  | CNativeStmt code -> acc |> cons code
+
 let private cpStmtList indent stmts acc: string list =
   stmts
   |> List.fold (fun acc stmt -> cpStmt indent stmt acc) acc
@@ -446,13 +453,16 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
+  | CNativeDecl code -> acc |> cons code |> cons eol
+
   | CStaticVarDecl _
   | CFunForwardDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
   match decl with
-  | CErrorDecl _ -> acc
+  | CErrorDecl _
+  | CNativeDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc

@@ -457,6 +457,20 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           ptrTy, ctx
 
+      | AppTy (NativeFunTyCtor, tyArgs) ->
+          let tyArgs, ctx =
+            (tyArgs, ctx)
+            |> stMap (fun (ty, ctx) -> ctx |> go ty)
+
+          let funTy =
+            (tyArgs |> strConcat)
+            + "NativeFun"
+            + string (List.length tyArgs - 1)
+
+          funTy, ctx
+
+      | AppTy (NativeTypeTyCtor code, _) -> code, ctx
+
       | AppTy (TupleTyCtor, []) -> "Unit", ctx
 
       | AppTy (TupleTyCtor, itemTys) ->
@@ -504,6 +518,17 @@ let private cgNativePtrTy ctx isMut itemTy =
   | IsConst -> CConstPtrTy itemTy, ctx
   | IsMut -> CPtrTy itemTy, ctx
 
+let private cgNativeFunTy ctx tys =
+  match splitLast tys with
+  | None -> failwith "NEVER"
+  | Some (paramTys, resultTy) ->
+      let paramTys, ctx =
+        (paramTys, ctx)
+        |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
+
+      let resultTy, ctx = cgTyComplete ctx resultTy
+      CFunPtrTy(paramTys, resultTy), ctx
+
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
 let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
@@ -528,6 +553,10 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (VoidTyCtor, _) -> CVoidTy, ctx
 
   | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+
+  | AppTy (NativeFunTyCtor, tys) -> cgNativeFunTy ctx tys
+
+  | AppTy (NativeTypeTyCtor code, _) -> CEmbedTy code, ctx
 
   | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
@@ -586,6 +615,10 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (VoidTyCtor, _) -> CVoidTy, ctx
 
   | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+
+  | AppTy (NativeFunTyCtor, tys) -> cgNativeFunTy ctx tys
+
+  | AppTy (NativeTypeTyCtor code, _) -> CEmbedTy code, ctx
 
   | AppTy (SynonymTyCtor serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
@@ -671,14 +704,16 @@ let private genDefault ctx ty =
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (ObjTyCtor, _)
   | AppTy (ListTyCtor, _)
-  | AppTy (NativePtrTyCtor _, _) -> CRefExpr "NULL", ctx
+  | AppTy (NativePtrTyCtor _, _)
+  | AppTy (NativeFunTyCtor, _) -> CRefExpr "NULL", ctx
 
   | AppTy (StrTyCtor, _)
   | AppTy (FunTyCtor, _)
   | AppTy (TupleTyCtor, _)
   | AppTy (SynonymTyCtor _, _)
   | AppTy (UnionTyCtor _, _)
-  | AppTy (RecordTyCtor _, _) ->
+  | AppTy (RecordTyCtor _, _)
+  | AppTy (NativeTypeTyCtor _, _) ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
 
@@ -750,6 +785,10 @@ let private genUnaryExpr ctx op arg ty _ =
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(arg, ty), ctx
 
+  | MSizeOfValUnary ->
+      let argTy, ctx = cgTyComplete ctx argTy
+      CSizeOfExpr argTy, ctx
+
 let private genExprBin ctx op l r =
   match op with
   | MIntCompareBinary -> genBinaryExprAsCall ctx "int_compare" l r
@@ -762,6 +801,7 @@ let private genExprBin ctx op l r =
       let l, ctx = cgExpr ctx l
       let r, ctx = cgExpr ctx r
       CIndexExpr(CNavExpr(l, "str"), r), ctx
+
   | _ ->
       let l, ctx = cgExpr ctx l
       let r, ctx = cgExpr ctx r
@@ -790,6 +830,8 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MTagExpr (variantSerial, _) -> genTag ctx variantSerial, ctx
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
+
+  | MNativeExpr (code, _, _) -> CNativeExpr code, ctx
 
 // -----------------------------------------------
 // Statements
@@ -824,6 +866,12 @@ let private cgActionStmt ctx itself action args =
 
       let args, ctx = cgExprList ctx args
       addStmt ctx (CExprStmt(CCallExpr(CRefExpr funName, args)))
+
+  | MPtrWriteAction ->
+      match cgExprList ctx args with
+      | [ ptr; CIntExpr 0; value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
+      | [ ptr; index; value ], ctx -> addStmt ctx (CSetStmt(CIndexExpr(ptr, index), value))
+      | _ -> failwith "NEVER"
 
 let private cgPrintfnActionStmt ctx itself args =
   match args with
@@ -937,6 +985,13 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
         addNativeFunDecl ctx funName args resultTy
 
       regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
+
+  | MPtrReadPrim ->
+      regular ctx (fun args ->
+        match args with
+        | [ ptr; CIntExpr 0 ] -> CUnaryExpr(CDerefUnary, ptr)
+        | [ ptr; index ] -> CIndexExpr(ptr, index)
+        | _ -> failwith "NEVER")
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial
@@ -1157,6 +1212,8 @@ let private cgStmt ctx stmt =
       let elseCl, ctx = cgBlock ctx elseCl
       addStmt ctx (CIfStmt(cond, thenCl, elseCl))
 
+  | MNativeStmt (code, _) -> addStmt ctx (CNativeStmt code)
+
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx: CirCtx = cgStmts (enterBlock ctx) stmts
   let stmts = bodyCtx.Stmts
@@ -1200,6 +1257,10 @@ let private cgDecls (ctx: CirCtx) decls =
       let resultTy, ctx = cgTyComplete ctx resultTy
       let funDecl = CFunDecl(funName, args, resultTy, body)
       let ctx = addDecl ctx funDecl
+      cgDecls ctx decls
+
+  | MNativeDecl (code, _) :: decls ->
+      let ctx = addDecl ctx (CNativeDecl code)
       cgDecls ctx decls
 
 // -----------------------------------------------

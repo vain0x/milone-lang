@@ -217,6 +217,8 @@ let private kmPrimNot itself args results conts loc ctx =
 let private kmPrimStrIndex itself args results conts loc ctx =
   match args, results, conts with
   | [ l; r ], [ result ], [ cont ] ->
+      // TODO: support l: nativeptr or __constptr
+
       ctx
       |> setBinaryK MStrIndexBinary l r result cont loc
 

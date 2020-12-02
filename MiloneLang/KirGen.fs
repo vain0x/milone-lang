@@ -426,6 +426,7 @@ let private kgCallComparisonPrimExpr itself hint prim args ty primLoc hole ctx =
                       { Name = hint
                         Arity = 1
                         Ty = TyScheme([], tyFun tyBool tyUnit)
+                        Abi = MiloneAbi
                         Loc = primLoc }
 
                     ctx |> addFunDef jointSerial funDef
@@ -562,6 +563,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
           { Name = "arm"
             Arity = 1
             Ty = TyScheme([], armFunTy)
+            Abi = MiloneAbi
             Loc = loc }
 
         // Compute pattern-matching.
@@ -615,6 +617,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
       { Name = "match_next"
         Arity = 1
         Ty = TyScheme([], tyFun targetTy tyUnit)
+        Abi = MiloneAbi
         Loc = loc }
 
     let binding, ctx =
@@ -783,8 +786,14 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
           | HPrim.ToFloat _ -> failwith "unimplemented"
           | HPrim.String -> regular "string" KStringPrim
           | HPrim.InRegion -> regular "in_region" KInRegionPrim
-          | HPrim.NativeFun -> failwith "NEVER: HPrim.NativeFun is resolved in Typing."
-          | HPrim.NativeCast -> failwith "unimplemented"
+          | HPrim.NativeFun
+          | HPrim.NativeExpr
+          | HPrim.NativeStmt
+          | HPrim.NativeDecl -> failwith "NEVER: Resolved in Typing."
+          | HPrim.NativeCast
+          | HPrim.SizeOfVal
+          | HPrim.PtrRead
+          | HPrim.PtrWrite -> failwith "unimplemented"
 
       | HFunExpr (funSerial, funTy, funLoc) -> kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx
 
@@ -811,7 +820,11 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
   | InfOp.Abort
   | InfOp.Record
-  | InfOp.RecordItem _ -> failwith "unimplemented"
+  | InfOp.RecordItem _
+  | InfOp.NativeFun _
+  | InfOp.NativeExpr _
+  | InfOp.NativeStmt _
+  | InfOp.NativeDecl _ -> failwith "unimplemented"
 
   | InfOp.Range -> failwithf "NEVER: InfOp.Range causes an error in Typing. %A" itself
   | InfOp.App -> failwithf "NEVER: InfOp.App is resolved in uneta. %A" itself

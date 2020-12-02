@@ -34,14 +34,22 @@ let private tyCtorEncode tyCtor =
 
   | VoidTyCtor -> 11, 0
   | NativePtrTyCtor isMut -> 12, isMutToInt isMut
+  | NativeFunTyCtor -> 13, 0
 
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
   | RecordTyCtor tySerial -> 23, tySerial
+
+  | NativeTypeTyCtor _
   | UnresolvedTyCtor _ -> failwith "NEVER"
 
 let tyCtorCmp l r =
   match l, r with
+  | NativeTypeTyCtor l, NativeTypeTyCtor r -> compare l r
+
+  | NativeTypeTyCtor _, _ -> -1
+  | _, NativeTypeTyCtor _ -> 1
+
   | UnresolvedTyCtor (lQuals, lSerial), UnresolvedTyCtor (rQuals, rSerial) ->
       pairCmp (listCmp compare) compare (lQuals, lSerial) (rQuals, rSerial)
 
@@ -65,7 +73,9 @@ let tyCtorDisplay getTyName tyCtor =
   | ListTyCtor -> "list"
   | VoidTyCtor -> "void"
   | NativePtrTyCtor IsMut -> "nativeptr"
-  | NativePtrTyCtor IsConst -> "constptr"
+  | NativePtrTyCtor IsConst -> "__constptr"
+  | NativeFunTyCtor -> "__nativeFun"
+  | NativeTypeTyCtor _ -> "__nativeType"
   | SynonymTyCtor tySerial -> getTyName tySerial
   | RecordTyCtor tySerial -> getTyName tySerial
   | UnionTyCtor tySerial -> getTyName tySerial
@@ -543,14 +553,6 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
           logAcc, ctx
 
-      | AppTy (NativePtrTyCtor _, [ itemTy ]) ->
-          let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
-
-          let logAcc, ctx =
-            typingUnify logAcc ctx resultTy itemTy loc
-
-          logAcc, ctx
-
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   | IsIntTrait ty ->
@@ -600,6 +602,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | AppTy (IntTyCtor (IntFlavor (_, IPtr)), [])
       | AppTy (ObjTyCtor, [])
       | AppTy (ListTyCtor, _)
-      | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
+      | AppTy (NativePtrTyCtor _, _)
+      | AppTy (NativeFunTyCtor, _) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx

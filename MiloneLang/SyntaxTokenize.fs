@@ -315,6 +315,7 @@ let private tokenOfIdent (text: string) l r: Token =
   | 'e' ->
       match s with
       | "else" -> ElseToken
+      | "extern" -> ExternToken
       | _ -> IdentToken s
 
   | 'f' ->

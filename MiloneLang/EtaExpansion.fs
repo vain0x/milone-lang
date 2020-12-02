@@ -132,7 +132,11 @@ let private primToArity ty prim =
   | HPrim.String
   | HPrim.InRegion
   | HPrim.NativeFun
-  | HPrim.NativeCast -> 1
+  | HPrim.NativeCast
+  | HPrim.NativeExpr
+  | HPrim.NativeStmt
+  | HPrim.NativeDecl
+  | HPrim.SizeOfVal -> 1
 
   | HPrim.Add
   | HPrim.Sub
@@ -147,7 +151,10 @@ let private primToArity ty prim =
   | HPrim.Eq
   | HPrim.Lt
   | HPrim.Compare
-  | HPrim.Cons -> 2
+  | HPrim.Cons
+  | HPrim.PtrRead -> 2
+
+  | HPrim.PtrWrite -> 3
 
   | HPrim.Printfn -> ty |> tyToArity
 
@@ -187,6 +194,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
     { Name = name
       Arity = arity
       Ty = tyScheme
+      Abi = MiloneAbi
       Loc = loc }
 
   let ctx =

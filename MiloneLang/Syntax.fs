@@ -156,6 +156,7 @@ type Token =
   | AsToken
   | DoToken
   | ElseToken
+  | ExternToken
   | FalseToken
   | FunToken
   | IfToken

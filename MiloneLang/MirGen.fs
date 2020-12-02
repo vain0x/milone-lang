@@ -801,7 +801,7 @@ let private mirifyExprCallBox ctx arg _ loc =
 
   temp, ctx
 
-let mirifyCallStrIndexExpr ctx l r ty loc =
+let private mirifyCallStrIndexExpr ctx l r ty loc =
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
   MBinaryExpr(MStrIndexBinary, l, r, ty, loc), ctx
@@ -1088,6 +1088,28 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     let r, ctx = mirifyExpr ctx r
     MBinaryExpr(binary, l, r, ty, loc), ctx
 
+  let regularPrim hint prim =
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+    let tempExpr, temp, ctx = freshVar ctx hint ty loc
+
+    let ctx =
+      addStmt ctx (MLetValStmt(temp, MPrimInit(prim, args), ty, loc))
+
+    tempExpr, ctx
+
+  let regularAction action =
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+
+    let ctx =
+      addStmt ctx (MActionStmt(action, args, loc))
+
+    MDefaultExpr(tyUnit, loc), ctx
+
   match prim, args with
   | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx itself MAddBinary l r ty loc
   | HPrim.Add, _ -> fail ()
@@ -1146,11 +1168,18 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
   | HPrim.NativeCast, [ arg ] -> regularUnary MNativeCastUnary arg
   | HPrim.NativeCast, _ -> fail ()
+  | HPrim.SizeOfVal, [ arg ] -> regularUnary MSizeOfValUnary arg
+  | HPrim.SizeOfVal, _ -> fail ()
+  | HPrim.PtrRead, _ -> regularPrim "read" MPtrReadPrim
+  | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction
 
   | HPrim.Nil, _
   | HPrim.OptionNone, _ -> fail ()
 
-  | HPrim.NativeFun, _ -> failwith "NEVER: HPrim.NativeFun is resolved in Typing."
+  | HPrim.NativeFun, _
+  | HPrim.NativeExpr, _
+  | HPrim.NativeStmt, _
+  | HPrim.NativeDecl, _ -> failwith "NEVER: Resolved in Typing."
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
@@ -1263,6 +1292,19 @@ let private mirifyExprInf ctx itself infOp args ty loc =
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
   | InfOp.CallNative funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | InfOp.Closure, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
+
+  | InfOp.NativeFun funSerial, _, _ -> MProcExpr(funSerial, ty, loc), ctx
+
+  | InfOp.NativeExpr code, _, _ -> MNativeExpr(code, ty, loc), ctx
+
+  | InfOp.NativeStmt code, _, _ ->
+    let ctx = addStmt ctx (MNativeStmt (code, loc))
+    MDefaultExpr(tyUnit, loc), ctx
+
+  | InfOp.NativeDecl code, _, _ ->
+    let ctx =  addDecl ctx (MNativeDecl (code, loc))
+    MDefaultExpr(tyUnit, loc), ctx
+
   | t -> failwithf "Never: %A" t
 
 let private mirifyExprLetValContents ctx pat init letLoc =

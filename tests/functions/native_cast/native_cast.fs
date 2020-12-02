@@ -4,8 +4,8 @@ module rec native_cast.Program
 
 let main _ =
   let mutNull: voidptr = __nativeCast (unativeint 0)
-  let constNull: voidconstptr = __nativeCast mutNull
-  let constIntPtr: constptr<int> = __nativeCast constNull
+  let constNull: __voidconstptr = __nativeCast mutNull
+  let constIntPtr: __constptr<int> = __nativeCast constNull
   let intPtr: nativeptr<int> = __nativeCast constIntPtr
 
   let address: nativeint = __nativeCast intPtr

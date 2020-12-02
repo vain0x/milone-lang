@@ -38,6 +38,7 @@ type CTy =
   | CFunPtrTy of argTys: CTy list * resultTy: CTy
   | CStructTy of Ident
   | CEnumTy of Ident
+  | CEmbedTy of string
 
 /// Unary operators in CIR.
 [<NoEquality; NoComparison>]
@@ -106,8 +107,10 @@ type CExpr =
   | CIndexExpr of CExpr * CExpr
 
   | CCallExpr of CExpr * args: CExpr list
+  | CSizeOfExpr of CTy
   | CUnaryExpr of CUnary * CExpr
   | CBinaryExpr of CBinary * CExpr * CExpr
+  | CNativeExpr of string
 
 /// Statement in CIR.
 [<NoEquality; NoComparison>]
@@ -133,6 +136,7 @@ type CStmt =
   | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt list) list
 
   | CReturnStmt of CExpr option
+  | CNativeStmt of string
 
 /// Directive or definition in CIR.
 [<NoEquality; NoComparison>]
@@ -161,3 +165,5 @@ type CDecl =
   | CFunForwardDecl of Ident * argTys: CTy list * resultTy: CTy
 
   | CFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list
+
+  | CNativeDecl of string

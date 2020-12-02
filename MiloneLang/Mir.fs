@@ -76,6 +76,7 @@ type MUnary =
   | MListTailUnary
 
   | MNativeCastUnary
+  | MSizeOfValUnary
 
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
@@ -100,7 +101,7 @@ type MBinary =
   | MStrAddBinary
   | MStrCmpBinary
 
-  /// `s.[i]`
+  /// `s.str[i]`
   | MStrIndexBinary
 
 [<Struct; NoEquality; NoComparison>]
@@ -117,6 +118,7 @@ type MPrim =
   | MStrGetSlicePrim
 
   | MCallNativePrim of funName: string
+  | MPtrReadPrim
 
 [<NoEquality; NoComparison>]
 type MAction =
@@ -125,6 +127,7 @@ type MAction =
   | MEnterRegionAction
   | MLeaveRegionAction
   | MCallNativeAction of funName: string
+  | MPtrWriteAction
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
@@ -148,6 +151,8 @@ type MExpr =
 
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
+
+  | MNativeExpr of code: string * Ty * Loc
 
 /// Variable initializer in mid-level IR.
 [<NoEquality; NoComparison>]
@@ -213,11 +218,15 @@ type MStmt =
 
   | MTerminatorStmt of MTerminator * Loc
 
+  | MNativeStmt of string * Loc
+
 [<NoEquality; NoComparison>]
 type MBlock = { Stmts: MStmt list }
 
 [<NoEquality; NoComparison>]
-type MDecl = MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
+type MDecl =
+  | MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
+  | MNativeDecl of code: string * Loc
 
 // -----------------------------------------------
 // Expressions (MIR)
@@ -233,6 +242,7 @@ let mexprExtract expr =
   | MTagExpr (_, loc) -> tyInt, loc
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
+  | MNativeExpr (_, ty, loc) -> ty, loc
 
 let mexprToTy expr = expr |> mexprExtract |> fst
 
