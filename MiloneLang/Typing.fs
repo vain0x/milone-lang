@@ -264,6 +264,25 @@ let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
 
   | _ -> failwith "Can't generalize already-generalized functions"
 
+let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
+  let funDef = ctx.Funs |> mapFind funSerial
+
+  // Mark this function as extern "C".
+  let ctx =
+    { ctx with
+        Funs =
+          ctx.Funs
+          |> mapAdd funSerial { funDef with Abi = CAbi } }
+
+
+  let nativeFunTy =
+    let (TyScheme (_, ty)) = funDef.Ty
+    let ty = typingExpandSynonyms (toTyContext ctx) ty
+    let _, paramTys, resultTy = tyToArgList ty
+    tyNativeFun paramTys resultTy
+
+  nativeFunTy, ctx
+
 // -----------------------------------------------
 // Emission helpers
 // -----------------------------------------------
@@ -621,6 +640,11 @@ let private inferAppExpr ctx itself callee arg loc =
 
       hxApp (HPrimExpr(HPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
+  // __nativeFun f
+  | HPrimExpr (HPrim.NativeFun, _, loc), HFunExpr (funSerial, _, _) ->
+      let targetTy, ctx = castFunAsNativeFun funSerial ctx
+      HInfExpr(InfOp.NativeFun funSerial, [], targetTy, loc), targetTy, ctx
+
   // __nativeFun "funName"
   | HPrimExpr (HPrim.NativeFun, _, loc), HLitExpr (StrLit funName, _) ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
@@ -823,7 +847,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HInfExpr (InfOp.CallClosure, _, _, _)
   | HInfExpr (InfOp.CallNative _, _, _, _)
   | HInfExpr (InfOp.Record, _, _, _)
-  | HInfExpr (InfOp.RecordItem _, _, _, _) -> failwith "NEVER"
+  | HInfExpr (InfOp.RecordItem _, _, _, _)
+  | HInfExpr (InfOp.NativeFun _, _, _, _) -> failwith "NEVER"
 
   | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 

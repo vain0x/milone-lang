@@ -243,6 +243,13 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
       let tTy, nameCtx = (tTy, nameCtx) |> athTy docId
       tyFun sTy tTy, nameCtx
 
+  | ANativeFunTy (paramTys, resultTy, _) ->
+      let paramTys, nameCtx =
+        (paramTys, nameCtx) |> stMap (athTy docId)
+
+      let resultTy, nameCtx = (resultTy, nameCtx) |> athTy docId
+      tyNativeFun paramTys resultTy, nameCtx
+
 // -----------------------------------------------
 // Control
 // -----------------------------------------------

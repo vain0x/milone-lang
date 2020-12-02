@@ -295,6 +295,55 @@ let private eatVis tokens =
 // Parse types
 // -----------------------------------------------
 
+/// `extern fun '(' ( ty ),* ')' '->' ty` (Not F#)
+let private parseNativeFunTy basePos tyPos (tokens, errors) =
+  let tokens, errors =
+    match tokens with
+    | (FunToken, _) :: tokens -> tokens, errors
+
+    | _ ->
+        let errors =
+          parseNewError "Wrong syntax of native function type: `extern fun (paramTys, ...) -> resultTy`." (tokens, errors)
+
+        tokens, errors
+
+  let paramTys, tokens, errors =
+    match tokens with
+    | (LeftParenToken, _) :: (RightParenToken, _) :: tokens -> [], tokens, errors
+
+    | (LeftParenToken, _) :: tokens ->
+        let rec go acc (tokens, errors) =
+          match tokens with
+          | (RightParenToken, _) :: _ -> List.rev acc, tokens, errors
+
+          | (CommaToken, _) :: tokens ->
+              let paramTy, tokens, errors = parseTy basePos (tokens, errors)
+              go (paramTy :: acc) (tokens, errors)
+
+          | _ ->
+              let errors =
+                parseNewError "Expected ',' or ')'" (tokens, errors)
+
+              List.rev acc, tokens, errors
+
+        let paramTy, tokens, errors = parseTy basePos (tokens, errors)
+        let paramTys, tokens, errors = go [ paramTy ] (tokens, errors)
+        let tokens, errors = (tokens, errors) |> expectRightParen
+        paramTys, tokens, errors
+
+    | _ ->
+        let errors =
+          parseNewError "Expected '('" (tokens, errors)
+
+        [], tokens, errors
+
+  match tokens with
+  | (ArrowToken, _) :: tokens ->
+      let resultTy, tokens, errors = parseTy basePos (tokens, errors)
+      ANativeFunTy(paramTys, resultTy, tyPos), tokens, errors
+
+  | _ -> parseTyError "Expected '->'" (tokens, errors)
+
 /// `'<' ty '>'`
 let private parseTyArgs basePos (tokens, errors) =
   match tokens with
@@ -344,6 +393,8 @@ let private parseTyAtom basePos (tokens, errors) =
       let ty, tokens, errors = parseTy basePos (tokens, errors)
       let tokens, errors = (tokens, errors) |> expectRightParen
       ty, tokens, errors
+
+  | (ExternToken, pos) :: tokens -> parseNativeFunTy basePos pos (tokens, errors)
 
   | _ -> parseTyError "Expected a type atom" (tokens, errors)
 

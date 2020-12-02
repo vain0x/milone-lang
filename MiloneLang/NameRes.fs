@@ -603,6 +603,7 @@ let private defineFunUniquely funSerial args ty loc (scopeCtx: ScopeCtx): ScopeC
         { Name = name
           Arity = args |> List.length
           Ty = TyScheme([], ty)
+          Abi = MiloneAbi
           Loc = loc }
 
       let scopeCtx =

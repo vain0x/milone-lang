@@ -34,6 +34,7 @@ let private tyCtorEncode tyCtor =
 
   | VoidTyCtor -> 11, 0
   | NativePtrTyCtor isMut -> 12, isMutToInt isMut
+  | NativeFunTyCtor -> 13, 0
 
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
@@ -66,6 +67,7 @@ let tyCtorDisplay getTyName tyCtor =
   | VoidTyCtor -> "void"
   | NativePtrTyCtor IsMut -> "nativeptr"
   | NativePtrTyCtor IsConst -> "constptr"
+  | NativeFunTyCtor -> "nativefun"
   | SynonymTyCtor tySerial -> getTyName tySerial
   | RecordTyCtor tySerial -> getTyName tySerial
   | UnionTyCtor tySerial -> getTyName tySerial
@@ -600,6 +602,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | AppTy (IntTyCtor (IntFlavor (_, IPtr)), [])
       | AppTy (ObjTyCtor, [])
       | AppTy (ListTyCtor, _)
-      | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
+      | AppTy (NativePtrTyCtor _, _)
+      | AppTy (NativeFunTyCtor, _) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx

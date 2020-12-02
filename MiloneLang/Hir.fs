@@ -96,6 +96,7 @@ type TyCtor =
   // FFI types.
   | VoidTyCtor
   | NativePtrTyCtor of nativePtrIsMut: IsMut
+  | NativeFunTyCtor
 
   // Nominal types.
   | SynonymTyCtor of synonymTy: TySerial
@@ -195,11 +196,20 @@ type ModuleTyDef = { Name: Ident; Loc: Loc }
 [<NoEquality; NoComparison>]
 type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
 
+/// Assembly binary interface (ABI): how function looks like at machine-code level.
+[<NoEquality; NoComparison>]
+type FunAbi =
+  | MiloneAbi
+
+  /// Compatible with C language.
+  | CAbi
+
 [<NoEquality; NoComparison>]
 type FunDef =
   { Name: Ident
     Arity: Arity
     Ty: TyScheme
+    Abi: FunAbi
     Loc: Loc }
 
 [<NoEquality; NoComparison>]
@@ -377,6 +387,9 @@ type InfOp =
   /// Gets i'th field of record.
   | RecordItem of index: int
 
+  /// Use function as function pointer.
+  | NativeFun of FunSerial
+
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
 type HExpr =
@@ -483,6 +496,9 @@ let tyTuple tys = AppTy(TupleTyCtor, tys)
 let tyList ty = AppTy(ListTyCtor, [ ty ])
 
 let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
+
+let tyNativeFun paramTys resultTy =
+  AppTy(NativeFunTyCtor, List.append paramTys [ resultTy ])
 
 let tyUnit = tyTuple []
 

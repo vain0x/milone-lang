@@ -1263,6 +1263,8 @@ let private mirifyExprInf ctx itself infOp args ty loc =
   | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
   | InfOp.CallNative funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
   | InfOp.Closure, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
+
+  | InfOp.NativeFun funSerial, _, _ -> MProcExpr (funSerial, ty, loc), ctx
   | t -> failwithf "Never: %A" t
 
 let private mirifyExprLetValContents ctx pat init letLoc =
