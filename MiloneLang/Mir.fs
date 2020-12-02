@@ -101,8 +101,11 @@ type MBinary =
   | MStrAddBinary
   | MStrCmpBinary
 
-  /// `s.[i]`
+  /// `s.str[i]`
   | MStrIndexBinary
+
+  /// `p[i]`
+  | MPtrIndexBinary
 
 [<Struct; NoEquality; NoComparison>]
 type MPrim =
