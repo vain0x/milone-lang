@@ -571,7 +571,7 @@ let private resolveTy ty loc scopeCtx =
             ErrorTy loc, scopeCtx
 
         | None ->
-            match tyPrimOfName name tys loc with
+            match tyPrimOfName name tys with
             | Some ty -> ty, scopeCtx
             | None ->
                 let scopeCtx =
