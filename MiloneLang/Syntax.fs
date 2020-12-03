@@ -400,8 +400,8 @@ type AExpr =
 /// Root of AST, a result of parsing single source file.
 [<NoEquality; NoComparison>]
 type ARoot =
-  | AExprRoot of AExpr
-  | AModuleRoot of Ident * AExpr * Pos
+  | AExprRoot of AExpr list
+  | AModuleRoot of Ident * AExpr list * Pos
 
 // -----------------------------------------------
 // Literals

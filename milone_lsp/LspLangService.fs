@@ -353,7 +353,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
         | None -> None
 
   // Bundle.
-  let expr, nameCtx, errors =
+  let exprs, nameCtx, errors =
     let readCoreFile moduleName =
       eprintfn "readCoreFile: unimplemented"
       ""
@@ -407,13 +407,13 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
     match MiloneLang.Bundling.bundleProgram bundleHost projectName with
     | Some it -> it
     | None ->
-        let expr = MiloneLang.Hir.hxUnit ("", 0, 0)
+        let exprs = [ MiloneLang.Hir.hxUnit ("", 0, 0) ]
         let nameCtx = MiloneLang.Hir.nameCtxEmpty ()
-        expr, nameCtx, []
+        exprs, nameCtx, []
 
   // Name resolution.
   let expr, scopeCtx =
-    MiloneLang.NameRes.nameRes (expr, nameCtx)
+    MiloneLang.NameRes.nameRes (exprs, nameCtx)
 
   // FIXME: collect errors in NameRes
 

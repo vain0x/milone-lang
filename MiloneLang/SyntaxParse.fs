@@ -1176,32 +1176,24 @@ let private parseSemi basePos mainPos (tokens, errors) =
 /// `top-level = ( 'module' 'rec'? path module-body / module-body )?`
 let private parseTopLevel (tokens, errors) =
   match tokens with
-  | [] ->
-      let pos = 0, 0
-      AExprRoot(ATupleExpr([], pos)), tokens, errors
+  | [] -> AExprRoot [], tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, _) :: tokens ->
-      let expr, tokens, errors =
-        parseSemi modulePos modulePos (tokens, errors)
-
-      AModuleRoot(ident, expr, modulePos), tokens, errors
+      let exprs, tokens, errors = parseStmts modulePos (tokens, errors)
+      AModuleRoot(ident, exprs, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken ident, _) :: tokens ->
-      let expr, tokens, errors =
-        parseSemi modulePos modulePos (tokens, errors)
-
-      AModuleRoot(ident, expr, modulePos), tokens, errors
+      let exprs, tokens, errors = parseStmts modulePos (tokens, errors)
+      AModuleRoot(ident, exprs, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (IdentToken ident, _) :: tokens ->
-      let expr, tokens, errors =
-        parseSemi modulePos modulePos (tokens, errors)
-
-      AModuleRoot(ident, expr, modulePos), tokens, errors
+      let exprs, tokens, errors = parseStmts modulePos (tokens, errors)
+      AModuleRoot(ident, exprs, modulePos), tokens, errors
 
   | _ ->
       let pos = 0, 0
-      let expr, tokens, errors = parseSemi pos pos (tokens, errors)
-      AExprRoot expr, tokens, errors
+      let exprs, tokens, errors = parseStmts pos (tokens, errors)
+      AExprRoot exprs, tokens, errors
 
 let parse (tokens: (Token * Pos) list): ARoot * (string * Pos) list =
   let expr, tokens, errors = parseTopLevel (tokens, [])

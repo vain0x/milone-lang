@@ -1304,8 +1304,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let body, ctx =
           (body, ctx)
-          |> collectDecls (Some serial)
-          |> nameResExpr
+          |> stMap (collectDecls (Some serial))
+          |> stMap nameResExpr
 
         let ctx = ctx |> finishScope parent
 
@@ -1314,20 +1314,19 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           if moduleName = "MiloneOnly" then ctx |> openModule serial else ctx
 
         // Module no longer needed.
-        body, ctx
+        hxSemi body loc, ctx
 
       doArm ()
 
   | HFunExpr _
   | HVariantExpr _ -> failwithf "NEVER: HFunExpr and HVariantExpr is generated in NameRes. %A" expr
 
-let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
+let nameRes (exprs: HExpr list, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = ofNameCtx nameCtx
 
-  match expr with
-  | HModuleExpr _ -> (expr, scopeCtx) |> nameResExpr
+  let exprs, scopeCtx =
+    (exprs, scopeCtx)
+    |> stMap (collectDecls None)
+    |> stMap nameResExpr
 
-  | _ ->
-      (expr, scopeCtx)
-      |> collectDecls None
-      |> nameResExpr
+  hxSemi exprs noLoc, scopeCtx

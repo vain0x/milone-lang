@@ -632,12 +632,12 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
+let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr list * NameCtx =
   match root with
-  | AExprRoot expr -> athExpr docId (expr, nameCtx)
+  | AExprRoot exprs -> (exprs, nameCtx) |> stMap (athExpr docId)
 
   | AModuleRoot (moduleName, body, pos) ->
-      let body, nameCtx = athExpr docId (body, nameCtx)
+      let body, nameCtx = (body, nameCtx) |> stMap (athExpr docId)
       let serial, nameCtx = nameCtx |> nameCtxAdd moduleName
       let loc = toLoc docId pos
-      HModuleExpr(ModuleTySerial serial, body, loc), nameCtx
+      [ HModuleExpr(ModuleTySerial serial, body, loc) ], nameCtx

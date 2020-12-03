@@ -442,7 +442,7 @@ type HExpr =
   /// Type declaration.
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
-  | HModuleExpr of ModuleTySerial * body: HExpr * Loc
+  | HModuleExpr of ModuleTySerial * body: HExpr list * Loc
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -958,7 +958,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
         HLetFunExpr(serial, vis, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
-    | HModuleExpr (name, body, a) -> HModuleExpr(name, go body, g a)
+    | HModuleExpr (name, body, a) -> HModuleExpr(name, List.map go body, g a)
 
   go expr
 
@@ -969,30 +969,6 @@ let exprToTy expr =
 let exprToLoc expr =
   let _, loc = exprExtract expr
   loc
-
-/// Insert the second expression to the bottom of the first expression.
-/// This is bad way because of variable capturing issues and program size/depth issue.
-let spliceExpr firstExpr secondExpr =
-  let rec go expr =
-    match expr with
-    | HLetValExpr (vis, pat, init, next, ty, loc) ->
-        let next = go next
-        HLetValExpr(vis, pat, init, next, ty, loc)
-    | HLetFunExpr (serial, vis, args, body, next, ty, loc) ->
-        let next = go next
-        HLetFunExpr(serial, vis, args, body, next, ty, loc)
-    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
-        let rec goLast exprs =
-          match exprs with
-          | [] -> [ secondExpr ]
-          | [ lastExpr ] -> [ go lastExpr ]
-          | x :: xs -> x :: goLast xs
-
-        let exprs = goLast exprs
-        HInfExpr(InfOp.Semi, exprs, ty, loc)
-    | _ -> hxSemi [ expr; secondExpr ] noLoc
-
-  go firstExpr
 
 // -----------------------------------------------
 // Print Formats

@@ -187,14 +187,12 @@ let private doInterpretProjectSchema ast =
 
     | _ -> None
 
-  let expr =
+  let exprs =
     match ast with
-    | AExprRoot expr -> expr
-    | AModuleRoot (_, expr, _) -> expr
+    | AExprRoot exprs -> exprs
+    | AModuleRoot (_, exprs, _) -> exprs
 
-  match expr with
-  | ASemiExpr (items, _) -> items |> List.tryPick asProjectSchema
-  | _ -> asProjectSchema expr
+  exprs |> List.tryPick asProjectSchema
 
 let private parseProjectSchema contents =
   let ast, errors = contents |> tokenize |> parse
@@ -384,11 +382,11 @@ type SemaAnalysisResult =
   | SemaAnalysisTypingError of TyCtx
 
 /// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze (host: CliHost) v (expr, nameCtx, syntaxErrors): SemaAnalysisResult =
+let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAnalysisResult =
   assert (syntaxErrors |> List.isEmpty)
 
   writeLog host v "NameRes"
-  let expr, scopeCtx = nameRes (expr, nameCtx)
+  let expr, scopeCtx = nameRes (exprs, nameCtx)
 
   if scopeCtx.Logs |> List.isEmpty |> not then
     SemaAnalysisNameResError scopeCtx.Logs
