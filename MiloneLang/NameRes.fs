@@ -875,8 +875,12 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         HTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
 
     | HModuleExpr (serial, body, next, loc) ->
+        let name =
+          ctx |> findName (moduleTySerialToInt serial)
+
         let ctx =
           ctx
+          |> addModuleTyDef serial ({ Name = name; Loc = loc }: ModuleTyDef)
           |> addTyToModule PublicVis (ModuleTySymbol serial)
           |> importTy (ModuleTySymbol serial)
 
@@ -1287,11 +1291,9 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let moduleName =
           ctx |> findName (moduleTySerialToInt serial)
 
-        let tyDef: ModuleTyDef = { Name = moduleName; Loc = loc }
-
         let ctx =
           ctx
-          |> addModuleTyDef serial tyDef
+          |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
           |> importTy (ModuleTySymbol serial)
 
         // HACK: Define module alias for the case it is shadowed by another module.
