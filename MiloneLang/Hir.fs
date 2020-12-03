@@ -406,6 +406,9 @@ type InfOp =
   /// Embed some C toplevel codes to output.
   | NativeDecl of nativeDeclCode: string
 
+  /// Size of type.
+  | SizeOfVal
+
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
 type HExpr =

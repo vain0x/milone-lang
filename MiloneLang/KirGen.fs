@@ -824,7 +824,8 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
   | InfOp.NativeFun _
   | InfOp.NativeExpr _
   | InfOp.NativeStmt _
-  | InfOp.NativeDecl _ -> failwith "unimplemented"
+  | InfOp.NativeDecl _
+  | InfOp.SizeOfVal -> failwith "unimplemented"
 
   | InfOp.Range -> failwithf "NEVER: InfOp.Range causes an error in Typing. %A" itself
   | InfOp.App -> failwithf "NEVER: InfOp.App is resolved in uneta. %A" itself

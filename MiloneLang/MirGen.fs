@@ -1168,8 +1168,6 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
   | HPrim.NativeCast, [ arg ] -> regularUnary MNativeCastUnary arg
   | HPrim.NativeCast, _ -> fail ()
-  | HPrim.SizeOfVal, [ arg ] -> regularUnary MSizeOfValUnary arg
-  | HPrim.SizeOfVal, _ -> fail ()
   | HPrim.PtrRead, _ -> regularPrim "read" MPtrReadPrim
   | HPrim.PtrWrite, _ -> regularAction MPtrWriteAction
 
@@ -1179,7 +1177,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.NativeFun, _
   | HPrim.NativeExpr, _
   | HPrim.NativeStmt, _
-  | HPrim.NativeDecl, _ -> failwith "NEVER: Resolved in Typing."
+  | HPrim.NativeDecl, _
+  | HPrim.SizeOfVal, _ -> failwith "NEVER: Resolved in Typing."
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
@@ -1298,12 +1297,15 @@ let private mirifyExprInf ctx itself infOp args ty loc =
   | InfOp.NativeExpr code, _, _ -> MNativeExpr(code, ty, loc), ctx
 
   | InfOp.NativeStmt code, _, _ ->
-    let ctx = addStmt ctx (MNativeStmt (code, loc))
-    MDefaultExpr(tyUnit, loc), ctx
+      let ctx = addStmt ctx (MNativeStmt(code, loc))
+      MDefaultExpr(tyUnit, loc), ctx
 
   | InfOp.NativeDecl code, _, _ ->
-    let ctx =  addDecl ctx (MNativeDecl (code, loc))
-    MDefaultExpr(tyUnit, loc), ctx
+      let ctx = addDecl ctx (MNativeDecl(code, loc))
+      MDefaultExpr(tyUnit, loc), ctx
+
+  | InfOp.SizeOfVal, [ HInfExpr (_, _, ty, _) ], _ ->
+      MUnaryExpr(MSizeOfValUnary, MDefaultExpr(ty, loc), tyInt, loc), ctx
 
   | t -> failwithf "Never: %A" t
 

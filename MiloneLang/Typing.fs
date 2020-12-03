@@ -473,6 +473,12 @@ let private inferPrimExpr ctx prim loc =
 
       hxAbort ctx loc
 
+  | HPrim.SizeOfVal ->
+      let ctx =
+        addError ctx "Illegal use of __sizeOfVal. Hint: `__sizeOfVal expr`." loc
+
+      hxAbort ctx loc
+
   | _ ->
       let tySpec = prim |> primToTySpec
       let primTy, traits, ctx = (tySpec, ctx) |> instantiateTySpec loc
@@ -685,6 +691,10 @@ let private inferAppExpr ctx itself callee arg loc =
   | HPrimExpr (HPrim.NativeDecl, _, loc), HLitExpr (StrLit code, _) ->
       HInfExpr(InfOp.NativeDecl code, [], tyUnit, loc), tyUnit, ctx
 
+  | HPrimExpr (HPrim.SizeOfVal, _, loc), _ ->
+      let arg, argTy, ctx = inferExpr ctx None arg
+      HInfExpr(InfOp.SizeOfVal, [ HInfExpr(InfOp.Abort, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
+
   | _ ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
       let arg, argTy, ctx = inferExpr ctx None arg
@@ -873,7 +883,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HInfExpr (InfOp.NativeFun _, _, _, _)
   | HInfExpr (InfOp.NativeExpr _, _, _, _)
   | HInfExpr (InfOp.NativeStmt _, _, _, _)
-  | HInfExpr (InfOp.NativeDecl _, _, _, _) -> failwith "NEVER"
+  | HInfExpr (InfOp.NativeDecl _, _, _, _)
+  | HInfExpr (InfOp.SizeOfVal, _, _, _) -> failwith "NEVER"
 
   | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
 
