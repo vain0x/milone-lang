@@ -377,7 +377,7 @@ type AExpr =
   | AAnnoExpr of AExpr * ATy * Pos
 
   /// Semicolon-separated expressions.
-  | ASemiExpr of AExpr list * Pos
+  | ASemiExpr of AExpr list * AExpr * Pos
 
   /// (pattern, initializer, next). Let-in expression.
   | ALetExpr of Vis * APat * AExpr * AExpr * Pos

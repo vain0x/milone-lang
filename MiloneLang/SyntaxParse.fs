@@ -779,7 +779,7 @@ let private parseParenBody basePos _parenPos (tokens, errors) =
   body, tokens, errors
 
 let private parseList basePos bracketPos (tokens, errors) =
-  let items, tokens, errors = parseStmts basePos (tokens, errors)
+  let items, tokens, errors = parseItems basePos (tokens, errors)
   let tokens, errors = (tokens, errors) |> expectRightBracket
   AListExpr(items, bracketPos), tokens, errors
 
@@ -1135,22 +1135,28 @@ let private parseStmt basePos (tokens, errors) =
 /// Parses a sequence of statements.
 /// These statements must be aligned on the same column
 /// except ones preceded by semicolon.
-let private parseStmts basePos (tokens, errors) =
-  let rec go acc alignPos (tokens, errors) =
+///
+/// Returns last and non-last statements in reversed order.
+let private doParseStmts basePos (tokens, errors) =
+  let rec go last acc alignPos (tokens, errors) =
     match tokens with
     | (SemiToken, semiPos) :: tokens when posInside alignPos semiPos ->
         let expr, tokens, errors = parseStmt alignPos (tokens, errors)
-        go (expr :: acc) alignPos (tokens, errors)
+        go expr (last :: acc) alignPos (tokens, errors)
 
     | _ when posIsSameColumn alignPos (nextPos tokens)
              && leadsExpr tokens ->
         let expr, tokens, errors = parseStmt alignPos (tokens, errors)
-        go (expr :: acc) alignPos (tokens, errors)
+        go expr (last :: acc) alignPos (tokens, errors)
 
-    | _ -> List.rev acc, tokens, errors
+    | _ -> Some(last, acc), tokens, errors
 
   let alignPos = nextPos tokens
-  if posInside basePos alignPos then go [] alignPos (tokens, errors) else [], tokens, errors
+  if posInside basePos alignPos && leadsExpr tokens then
+    let first, tokens, errors = parseStmt alignPos (tokens, errors)
+    go first [] alignPos (tokens, errors)
+  else
+    None, tokens, errors
 
 /// Parses a sequence of expressions separated by `;`s
 /// or aligned on the same column.
@@ -1160,14 +1166,16 @@ let private parseStmts basePos (tokens, errors) =
 /// `stmts = stmt ( ';' stmt )*`
 let private parseSemi basePos mainPos (tokens, errors) =
   let basePos = nextPos tokens |> posMax basePos
-  let items, tokens, errors = parseStmts basePos (tokens, errors)
+  let contents, tokens, errors = doParseStmts basePos (tokens, errors)
+  match contents with
+  | None -> parseExprError "Expected statements" (tokens, errors)
+  | Some (last, acc) -> ASemiExpr(List.rev acc, last, mainPos), tokens, errors
 
-  match items with
-  | [] -> parseExprError "Expected statements" (tokens, errors)
-
-  | [ item ] -> item, tokens, errors
-
-  | _ -> ASemiExpr(items, mainPos), tokens, errors
+let private parseItems basePos (tokens, errors) =
+  let contents, tokens, errors = doParseStmts basePos (tokens, errors)
+  match contents with
+  | Some (last, acc) -> List.rev (last :: acc), tokens, errors
+  | None -> [], tokens, errors
 
 // -----------------------------------------------
 // Parse toplevel
@@ -1179,20 +1187,20 @@ let private parseTopLevel (tokens, errors) =
   | [] -> AExprRoot [], tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, _) :: tokens ->
-      let exprs, tokens, errors = parseStmts modulePos (tokens, errors)
+      let exprs, tokens, errors = parseItems modulePos (tokens, errors)
       AModuleRoot(ident, exprs, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken ident, _) :: tokens ->
-      let exprs, tokens, errors = parseStmts modulePos (tokens, errors)
+      let exprs, tokens, errors = parseItems modulePos (tokens, errors)
       AModuleRoot(ident, exprs, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (IdentToken ident, _) :: tokens ->
-      let exprs, tokens, errors = parseStmts modulePos (tokens, errors)
+      let exprs, tokens, errors = parseItems modulePos (tokens, errors)
       AModuleRoot(ident, exprs, modulePos), tokens, errors
 
   | _ ->
       let pos = 0, 0
-      let exprs, tokens, errors = parseStmts pos (tokens, errors)
+      let exprs, tokens, errors = parseItems pos (tokens, errors)
       AExprRoot exprs, tokens, errors
 
 let parse (tokens: (Token * Pos) list): ARoot * (string * Pos) list =

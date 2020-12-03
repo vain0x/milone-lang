@@ -533,15 +533,14 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | ASemiExpr (exprs, pos) ->
+  | ASemiExpr (stmts, last, pos) ->
       let doArm () =
-        assert (exprs |> List.isEmpty |> not)
+        let stmts, nameCtx =
+          (stmts, nameCtx) |> stMap (athExpr docId)
 
-        let exprs, nameCtx =
-          (exprs, nameCtx) |> stMap (athExpr docId)
-
+        let last, nameCtx = (last, nameCtx) |> athExpr docId
         let loc = toLoc docId pos
-        hxSemi exprs loc, nameCtx
+        hxSemi (List.append stmts [ last ]) loc, nameCtx
 
       doArm ()
 
