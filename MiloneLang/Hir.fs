@@ -442,7 +442,7 @@ type HExpr =
   /// Type declaration.
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
-  | HModuleExpr of ModuleTySerial * body: HExpr * next: HExpr * Loc
+  | HModuleExpr of ModuleTySerial * body: HExpr * Loc
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -923,7 +923,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HLetFunExpr (_, _, _, _, _, ty, a) -> ty, a
   | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
-  | HModuleExpr (_, _, _, a) -> tyUnit, a
+  | HModuleExpr (_, _, a) -> tyUnit, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat = patMap f g pat
@@ -958,7 +958,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
         HLetFunExpr(serial, vis, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
-    | HModuleExpr (name, body, next, a) -> HModuleExpr(name, go body, go next, g a)
+    | HModuleExpr (name, body, a) -> HModuleExpr(name, go body, g a)
 
   go expr
 
@@ -990,9 +990,6 @@ let spliceExpr firstExpr secondExpr =
 
         let exprs = goLast exprs
         HInfExpr(InfOp.Semi, exprs, ty, loc)
-    | HModuleExpr (name, body, next, loc) ->
-        let next = go next
-        HModuleExpr(name, body, next, loc)
     | _ -> hxSemi [ expr; secondExpr ] noLoc
 
   go firstExpr

@@ -640,5 +640,4 @@ let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr * NameCtx =
       let body, nameCtx = athExpr docId (body, nameCtx)
       let serial, nameCtx = nameCtx |> nameCtxAdd moduleName
       let loc = toLoc docId pos
-      let next = hxUnit loc
-      HModuleExpr(ModuleTySerial serial, body, next, loc), nameCtx
+      HModuleExpr(ModuleTySerial serial, body, loc), nameCtx

@@ -874,7 +874,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
         HTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
 
-    | HModuleExpr (serial, body, next, loc) ->
+    | HModuleExpr (serial, body, loc) ->
         let name =
           ctx |> findName (moduleTySerialToInt serial)
 
@@ -884,9 +884,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           |> addTyToModule PublicVis (ModuleTySymbol serial)
           |> importTy (ModuleTySymbol serial)
 
-        let next, ctx = (next, ctx) |> goExpr
-
-        HModuleExpr(serial, body, next, loc), ctx
+        HModuleExpr(serial, body, loc), ctx
 
     | _ -> expr, ctx
 
@@ -1286,7 +1284,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HModuleExpr (serial, body, next, loc) ->
+  | HModuleExpr (serial, body, loc) ->
       let doArm () =
         let moduleName =
           ctx |> findName (moduleTySerialToInt serial)
@@ -1315,10 +1313,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let ctx =
           if moduleName = "MiloneOnly" then ctx |> openModule serial else ctx
 
-        let next, ctx = (next, ctx) |> nameResExpr
-
         // Module no longer needed.
-        spliceExpr body next, ctx
+        body, ctx
 
       doArm ()
 
