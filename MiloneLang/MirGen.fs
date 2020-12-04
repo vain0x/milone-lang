@@ -198,8 +198,6 @@ let private containsTailRec expr =
   match expr with
   | HInfExpr (InfOp.CallTailRec, _, _, _) -> true
 
-  | HInfExpr (InfOp.Semi, items, _, _) -> items |> List.last |> containsTailRec
-
   | HLitExpr _
   | HRefExpr _
   | HFunExpr _
@@ -213,6 +211,8 @@ let private containsTailRec expr =
   | HMatchExpr (_, arms, _, _) ->
       arms
       |> List.exists (fun (_, _, body) -> body |> containsTailRec)
+
+  | HBlockExpr (_, last) -> last |> containsTailRec
 
   | HLetValExpr (_, _, _, next, _, _) -> next |> containsTailRec
 
@@ -1403,6 +1403,7 @@ let private mirifyOtherExprWrapper ctx expr =
   | HMatchExpr (cond, arms, ty, loc) -> mirifyExprMatch ctx cond arms ty loc
   | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx expr infOp args ty loc
 
+  | HBlockExpr _
   | HLetValExpr _
   | HLetFunExpr _ -> failwith "NEVER: See mirifyExpr below"
 
@@ -1421,19 +1422,14 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   //       and utilize tail-rec optimization as possible.
 
   match expr with
-  | HInfExpr (InfOp.Semi, exprs, _, _) ->
-      let rec go ctx exprs =
-        match exprs with
-        | [] -> failwith "NEVER"
+  | HBlockExpr (stmts, last) ->
+      let ctx =
+        stmts
+        |> List.fold (fun ctx stmt ->
+             // Discard intermediate results.
+             let _, ctx = mirifyExpr ctx stmt
+             ctx) ctx
 
-        | [ last ] -> last, ctx
-
-        | expr :: exprs ->
-            // Discard non-last expression.
-            let _, ctx = mirifyExpr ctx expr
-            go ctx exprs
-
-      let last, ctx = go ctx exprs
       mirifyExpr ctx last
 
   | HLetValExpr (_, _, _, next, _, _) ->

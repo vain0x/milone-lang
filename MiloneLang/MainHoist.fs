@@ -19,7 +19,6 @@
 /// ```
 module rec MiloneLang.MainHoist
 
-open MiloneLang.Util
 open MiloneLang.Hir
 open MiloneLang.Typing
 
@@ -37,6 +36,10 @@ let private hoistMainExpr mainFunOpt expr =
 
         next, makeMain
 
+    | HBlockExpr (stmts, last) ->
+        let last, f = go last
+        HBlockExpr(stmts, last), f
+
     | HLetValExpr (vis, pat, init, next, ty, loc) ->
         let next, f = go next
         HLetValExpr(vis, pat, init, next, ty, loc), f
@@ -45,19 +48,6 @@ let private hoistMainExpr mainFunOpt expr =
         let next, f = go next
         HLetFunExpr(serial, vis, args, body, next, ty, loc), f
 
-    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
-        let rec goLast exprs =
-          match exprs with
-          | [] -> [], id
-          | [ last ] ->
-              let last, f = go last
-              [ last ], f
-          | expr :: exprs ->
-              let exprs, f = goLast exprs
-              expr :: exprs, f
-
-        let exprs, f = goLast exprs
-        HInfExpr(InfOp.Semi, exprs, ty, loc), f
     | _ -> expr, id
 
   let expr, makeMain = go expr

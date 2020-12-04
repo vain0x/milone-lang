@@ -211,6 +211,14 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts, ctx = (stmts, ctx) |> stMap hoistExpr
+        let last, ctx = (last, ctx) |> hoistExpr
+        HBlockExpr(stmts, last), ctx
+
+      doArm ()
+
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx = (body, ctx) |> hoistExprLocal
@@ -238,9 +246,10 @@ let private hoistExpr (expr, ctx) =
   else
     // At the top-level. Check if inner expressions are also top-level or not.
     match expr with
-    | HInfExpr (InfOp.Semi, items, ty, loc) ->
-        let items, ctx = (items, ctx) |> stMap hoistExpr
-        HInfExpr(InfOp.Semi, items, ty, loc), ctx
+    | HBlockExpr (stmts, last) ->
+        let stmts, ctx = (stmts, ctx) |> stMap hoistExpr
+        let last, ctx = (last, ctx) |> hoistExpr
+        HBlockExpr(stmts, last), ctx
 
     | HLetValExpr _
     | HLetFunExpr _

@@ -758,6 +758,21 @@ let private inferAnnoExpr ctx body annoTy loc =
 
   body, annoTy, ctx
 
+let private inferBlockExpr ctx expectOpt stmts last =
+  let stmts, ctx =
+    (stmts, ctx)
+    |> stMap (fun (expr, ctx) ->
+         let loc = exprToLoc expr
+
+         let expr, resultTy, ctx = inferExpr ctx None expr
+         let ctx = unifyTy ctx loc resultTy tyUnit
+
+         expr, ctx)
+
+  let last, lastTy, ctx = inferExpr ctx expectOpt last
+
+  HBlockExpr(stmts, last), lastTy, ctx
+
 let private inferLetValExpr ctx expectOpt vis pat init next loc =
   let init, initTy, ctx =
     let expectOpt = patToAnnoTy pat
@@ -818,27 +833,6 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetFunExpr(callee, vis, argPats, body, next, nextTy, loc), nextTy, ctx
 
-/// Returns in reversed order.
-let private inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
-  let rec go acc (prevTy, prevLoc) ctx exprs =
-    match exprs with
-    | [] -> acc, prevTy, ctx
-
-    | expr :: exprs ->
-        let ctx = unifyTy ctx prevLoc prevTy tyUnit
-
-        let expectOpt =
-          if List.isEmpty exprs then expectOpt else None
-
-        let expr, ty, ctx = inferExpr ctx expectOpt expr
-        go (expr :: acc) (ty, exprToLoc expr) ctx exprs
-
-  go [] (tyUnit, loc) ctx exprs
-
-let private inferSemiExpr ctx expectOpt exprs loc =
-  let exprs, ty, ctx = inferExprs ctx expectOpt exprs loc
-  hxSemi (List.rev exprs) loc, ty, ctx
-
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
   let fail () = failwithf "NEVER: %A" expr
 
@@ -857,12 +851,13 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
   | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTupleExpr ctx items loc
   | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnnoExpr ctx expr annoTy loc
-  | HInfExpr (InfOp.Semi, exprs, _, loc) -> inferSemiExpr ctx expectOpt exprs loc
 
   | HInfExpr (InfOp.Index, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
   | HInfExpr (InfOp.Index, _, _, _) -> fail ()
   | HInfExpr (InfOp.Slice, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
   | HInfExpr (InfOp.Slice, _, _, _) -> fail ()
+
+  | HBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
 
   | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt vis pat body next loc
 

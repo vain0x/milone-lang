@@ -863,9 +863,10 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let next, ctx = (next, ctx) |> goExpr
         HLetFunExpr(funSerial, vis, args, body, next, ty, loc), ctx
 
-    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
-        let exprs, ctx = (exprs, ctx) |> stMap goExpr
-        HInfExpr(InfOp.Semi, exprs, ty, loc), ctx
+    | HBlockExpr (stmts, last) ->
+        let stmts, ctx = (stmts, ctx) |> stMap goExpr
+        let last, ctx = (last, ctx) |> goExpr
+        HBlockExpr(stmts, last), ctx
 
     | HTyDeclExpr (serial, vis, tyArgs, tyDecl, loc) ->
         let ctx =
@@ -1207,6 +1208,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let items, ctx = (items, ctx) |> stMap nameResExpr
         HInfExpr(op, items, ty, loc), ctx
+
+      doArm ()
+
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts, ctx = (stmts, ctx) |> stMap nameResExpr
+        let last, ctx = (last, ctx) |> nameResExpr
+        HBlockExpr (stmts, last), ctx
 
       doArm ()
 

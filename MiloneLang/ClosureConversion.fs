@@ -488,6 +488,14 @@ let private ccExpr (expr, ctx) =
 
       doArm ()
 
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts, ctx = (stmts, ctx) |> stMap ccExpr
+        let last, ctx = (last, ctx) |> ccExpr
+        HBlockExpr(stmts, last), ctx
+
+      doArm ()
+
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let pat, ctx = ccPat (pat, ctx)

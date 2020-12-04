@@ -303,18 +303,16 @@ let private kgFunExpr funSerial ty loc hole ctx =
 let private kgVariantExpr variantSerial ty loc hole ctx =
   ctx |> hole (KVariantTerm(variantSerial, ty, loc))
 
-let private kgSemiExpr itself args hole ctx =
-  let rec go args hole ctx =
-    match args with
-    | [ last ] -> kgExpr last hole ctx
+let private kgBlockExpr stmts last hole ctx =
+  let rec go stmts hole ctx =
+    match stmts with
+    | [] -> kgExpr last hole ctx
 
-    | arg :: args ->
-        // Generate arg and the result is discarded.
-        kgExpr arg (fun _ ctx -> go args hole ctx) ctx
+    | stmt :: stmts ->
+        // The result is discarded.
+        kgExpr stmt (fun _ ctx -> go stmts hole ctx) ctx
 
-    | [] -> failwithf "NEVER: Semi expr can't be empty. %A" itself
-
-  go args hole ctx
+  go stmts hole ctx
 
 let private kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx =
   ctx
@@ -729,8 +727,6 @@ let private kgLetFunExpr funSerial argPats body next loc hole (ctx: KirGenCtx): 
 
 let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
   match infOp with
-  | InfOp.Semi -> kgSemiExpr itself args hole ctx
-
   | InfOp.Index
   | InfOp.Slice -> failwith "unimplemented"
 
@@ -841,6 +837,8 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
   | HMatchExpr (cond, arms, ty, loc) -> kgMatchExpr cond arms ty loc hole ctx
 
   | HInfExpr (infOp, args, ty, loc) -> kgInfExpr expr infOp args ty loc hole ctx
+
+  | HBlockExpr (stmts, last) -> kgBlockExpr stmts last hole ctx
 
   | HLetValExpr (_vis, pat, init, next, _, loc) -> kgLetValExpr pat init next loc hole ctx
 
