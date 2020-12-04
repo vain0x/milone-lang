@@ -386,7 +386,6 @@ let private parseTyTuple basePos (tokens, errors) =
   | _ -> itemTy, tokens, errors
 
 /// `ty-fun = ty-tuple ( '->' ty-fun )?`
-/// FIXME: Support chain of arrows
 let private parseTyFun basePos (tokens, errors) =
   let sTy, tokens, errors = parseTyTuple basePos (tokens, errors)
 
