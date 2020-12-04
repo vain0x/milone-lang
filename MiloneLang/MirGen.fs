@@ -24,6 +24,7 @@ type MirCtx =
     Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
+    MainFunOpt: FunSerial option
     Tys: AssocMap<TySerial, TyDef>
     LabelSerial: Serial
 
@@ -41,6 +42,7 @@ let private ofTyCtx (tyCtx: TyCtx): MirCtx =
     Vars = tyCtx.Vars
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
+    MainFunOpt = tyCtx.MainFunOpt
     Tys = tyCtx.Tys
     LabelSerial = 0
     CurrentFun = None
@@ -214,7 +216,7 @@ let private containsTailRec expr =
 
   | HLetValExpr (_, _, _, next, _, _) -> next |> containsTailRec
 
-  | HLetFunExpr (_, _, _, _, _, next, _, _) -> next |> containsTailRec
+  | HLetFunExpr (_, _, _, _, next, _, _) -> next |> containsTailRec
 
   | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
@@ -1317,7 +1319,7 @@ let private mirifyExprLetValContents ctx pat init letLoc =
   then ctx
   else addError ctx "Let pattern must be exhaustive for now" letLoc
 
-let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial isMainFun argPats body letLoc =
+let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body letLoc =
   let prepareTailRec (ctx: MirCtx) args =
     let parentFun = ctx.CurrentFun
 
@@ -1384,7 +1386,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial isMainFun argPat
     let ctx = rollback ctx bodyCtx
 
     let ctx =
-      addDecl ctx (MProcDecl(calleeSerial, isMainFun, args, body, resultTy, letLoc))
+      addDecl ctx (MProcDecl(calleeSerial, args, body, resultTy, letLoc))
 
     ctx
 
@@ -1442,11 +1444,11 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
 
       mirifyExpr (doArm ()) next
 
-  | HLetFunExpr (_, _, _, _, _, next, _, _) ->
+  | HLetFunExpr (_, _, _, _, next, _, _) ->
       let doArm () =
         match expr with
-        | HLetFunExpr (funSerial, _, isMainFun, argPats, body, _, _, loc) ->
-            mirifyExprLetFunContents ctx funSerial isMainFun argPats body loc
+        | HLetFunExpr (funSerial, _, argPats, body, _, _, loc) ->
+            mirifyExprLetFunContents ctx funSerial argPats body loc
         | _ -> failwith "NEVER"
 
       mirifyExpr (doArm ()) next

@@ -225,7 +225,7 @@ type MBlock = { Stmts: MStmt list }
 
 [<NoEquality; NoComparison>]
 type MDecl =
-  | MProcDecl of FunSerial * isMain: bool * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
+  | MProcDecl of FunSerial * args: (VarSerial * Ty * Loc) list * body: MBlock list * resultTy: Ty * Loc
   | MNativeDecl of code: string * Loc
 
 // -----------------------------------------------

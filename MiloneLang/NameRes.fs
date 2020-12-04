@@ -169,6 +169,8 @@ type ScopeCtx =
     /// Serial of value (variable/fun/variant) to let-depth map.
     VarDepths: AssocMap<Serial, LetDepth>
 
+    MainFunOpt: FunSerial option
+
     /// Type serial to definition map.
     Tys: AssocMap<TySerial, TyDef>
 
@@ -209,6 +211,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Funs = mapEmpty funSerialCmp
     Variants = mapEmpty variantSerialCmp
     VarDepths = mapEmpty compare
+    MainFunOpt = None
     Tys = mapEmpty compare
     ModuleTys = mapEmpty moduleTySerialCmp
     TyDepths = mapEmpty compare
@@ -845,10 +848,10 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let next, ctx = (next, ctx) |> goExpr
         HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
-    | HLetFunExpr (funSerial, vis, _, args, body, next, ty, loc) ->
-        let isMainFun =
-          ctx
-          |> findName (funSerialToInt funSerial) = "main"
+    | HLetFunExpr (funSerial, vis, args, body, next, ty, loc) ->
+        let ctx =
+          let name = ctx |> findName (funSerialToInt funSerial)
+          if name = "main" then { ctx with MainFunOpt = Some funSerial } else ctx
 
         let ctx =
           ctx
@@ -858,7 +861,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           |> addVarToModule vis (FunSymbol funSerial)
 
         let next, ctx = (next, ctx) |> goExpr
-        HLetFunExpr(funSerial, vis, isMainFun, args, body, next, ty, loc), ctx
+        HLetFunExpr(funSerial, vis, args, body, next, ty, loc), ctx
 
     | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
         let exprs, ctx = (exprs, ctx) |> stMap goExpr
@@ -1224,7 +1227,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HLetFunExpr (serial, vis, isMainFun, pats, body, next, ty, loc) ->
+  | HLetFunExpr (serial, vis, pats, body, next, ty, loc) ->
       let doArm () =
         let parent, ctx = ctx |> startScope
         let ctx = ctx |> enterLetInit
@@ -1249,7 +1252,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let next, ctx = (next, ctx) |> nameResExpr
         let ctx = ctx |> finishScope parent
 
-        HLetFunExpr(serial, vis, isMainFun, pats, body, next, ty, loc), ctx
+        HLetFunExpr(serial, vis, pats, body, next, ty, loc), ctx
 
       doArm ()
 

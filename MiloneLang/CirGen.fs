@@ -80,6 +80,7 @@ type private CirCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
+    MainFunOpt: FunSerial option
     ValueUniqueNames: AssocMap<ValueSymbol, Ident>
     TyEnv: AssocMap<Ty, CTyInstance * CTy>
     Tys: AssocMap<TySerial, TyDef>
@@ -125,6 +126,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   { Vars = mirCtx.Vars
     Funs = mirCtx.Funs
     Variants = mirCtx.Variants
+    MainFunOpt = mirCtx.MainFunOpt
     ValueUniqueNames = valueUniqueNames
     TyEnv = mapEmpty tyCmp
     Tys = mirCtx.Tys
@@ -138,6 +140,11 @@ let private findStorageModifier (ctx: CirCtx) varSerial =
   | Some (VarDef (_, storageModifier, _, _)) -> storageModifier
 
   | _ -> StaticSM
+
+let private isMainFun (ctx: CirCtx) funSerial =
+  match ctx.MainFunOpt with
+  | Some mainFun -> funSerialCmp mainFun funSerial = 0
+  | _ -> false
 
 let private addError (ctx: CirCtx) message loc =
   { ctx with
@@ -1240,9 +1247,9 @@ let private cgDecls (ctx: CirCtx) decls =
   match decls with
   | [] -> ctx
 
-  | MProcDecl (callee, isMainFun, args, body, resultTy, _) :: decls ->
+  | MProcDecl (callee, args, body, resultTy, _) :: decls ->
       let funName, args =
-        if isMainFun then "main", [] else getUniqueFunName ctx callee, args
+        if isMainFun ctx callee then "main", [] else getUniqueFunName ctx callee, args
 
       let rec go acc ctx args =
         match args with

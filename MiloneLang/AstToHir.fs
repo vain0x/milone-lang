@@ -550,14 +550,11 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
         match desugarLet vis pat body next pos with
         | ALetFun (vis, name, args, body, next, pos) ->
             let serial, nameCtx = nameCtx |> nameCtxAdd name
-            let isMainFun = false // Name resolution should correct this.
-
             let args, nameCtx = (args, nameCtx) |> stMap (athPat docId)
-
             let body, nameCtx = (body, nameCtx) |> athExpr docId
             let next, nameCtx = (next, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HLetFunExpr(FunSerial serial, vis, isMainFun, args, body, next, noTy, loc), nameCtx
+            HLetFunExpr(FunSerial serial, vis, args, body, next, noTy, loc), nameCtx
 
         | ALetVal (vis, pat, body, next, pos) ->
             let pat, nameCtx = (pat, nameCtx) |> athPat docId

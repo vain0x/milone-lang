@@ -34,6 +34,8 @@ type TyCtx =
     Funs: AssocMap<FunSerial, FunDef>
     Variants: AssocMap<VariantSerial, VariantDef>
 
+    MainFunOpt: FunSerial option
+
     /// Type serial to type definition.
     Tys: AssocMap<TySerial, TyDef>
 
@@ -58,6 +60,11 @@ let private decDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth - 1 }
 let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
+
+let private isMainFun funSerial (ctx: TyCtx) =
+  match ctx.MainFunOpt with
+  | Some mainFun -> funSerialCmp mainFun funSerial = 0
+  | _ -> false
 
 let private freshVar (ctx: TyCtx) hint ty loc =
   let varSerial = VarSerial(ctx.Serial + 1)
@@ -763,7 +770,7 @@ let private inferLetValExpr ctx expectOpt vis pat init next loc =
   let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetValExpr(vis, pat, init, next, nextTy, loc), nextTy, ctx
 
-let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis isMainFun argPats body next loc =
+let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next loc =
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx funTy argPats =
@@ -780,7 +787,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis isMainFun argPats 
 
   let calleeTy, ctx =
     let calleeTy, ctx =
-      if isMainFun then
+      if ctx |> isMainFun callee then
         tyFun tyUnit tyInt, ctx // FIXME: argument type is string[]
       else
         freshMetaTy loc ctx
@@ -809,7 +816,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis isMainFun argPats 
   let ctx = generalizeFun ctx outerLetDepth callee
 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
-  HLetFunExpr(callee, vis, isMainFun, argPats, body, next, nextTy, loc), nextTy, ctx
+  HLetFunExpr(callee, vis, argPats, body, next, nextTy, loc), nextTy, ctx
 
 /// Returns in reversed order.
 let private inferExprs ctx expectOpt exprs loc: HExpr list * Ty * TyCtx =
@@ -859,8 +866,8 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
 
   | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt vis pat body next loc
 
-  | HLetFunExpr (oldSerial, vis, isMainFun, args, body, next, _, loc) ->
-      inferLetFunExpr ctx expectOpt oldSerial vis isMainFun args body next loc
+  | HLetFunExpr (oldSerial, vis, args, body, next, _, loc) ->
+      inferLetFunExpr ctx expectOpt oldSerial vis args body next loc
 
   | HTyDeclExpr _
   | HOpenExpr _ -> expr, tyUnit, ctx
@@ -894,6 +901,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       Vars = scopeCtx.Vars
       Funs = scopeCtx.Funs
       Variants = scopeCtx.Variants
+      MainFunOpt = scopeCtx.MainFunOpt
       Tys = scopeCtx.Tys
       TyDepths = scopeCtx.TyDepths
       LetDepth = 0

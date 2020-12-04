@@ -437,7 +437,7 @@ type HExpr =
   | HInfExpr of InfOp * HExpr list * Ty * Loc
 
   | HLetValExpr of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
   /// Type declaration.
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
@@ -920,7 +920,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HNavExpr (_, _, ty, a) -> ty, a
   | HInfExpr (_, _, ty, a) -> ty, a
   | HLetValExpr (_, _, _, _, ty, a) -> ty, a
-  | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
+  | HLetFunExpr (_, _, _, _, _, ty, a) -> ty, a
   | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
   | HModuleExpr (_, _, _, a) -> tyUnit, a
@@ -954,8 +954,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
     | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, List.map go args, f resultTy, g a)
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
-    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, a) ->
-        HLetFunExpr(serial, vis, isMainFun, List.map goPat args, go body, go next, f ty, g a)
+    | HLetFunExpr (serial, vis, args, body, next, ty, a) ->
+        HLetFunExpr(serial, vis, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
     | HModuleExpr (name, body, next, a) -> HModuleExpr(name, go body, go next, g a)
@@ -978,9 +978,9 @@ let spliceExpr firstExpr secondExpr =
     | HLetValExpr (vis, pat, init, next, ty, loc) ->
         let next = go next
         HLetValExpr(vis, pat, init, next, ty, loc)
-    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, loc) ->
+    | HLetFunExpr (serial, vis, args, body, next, ty, loc) ->
         let next = go next
-        HLetFunExpr(serial, vis, isMainFun, args, body, next, ty, loc)
+        HLetFunExpr(serial, vis, args, body, next, ty, loc)
     | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
         let rec goLast exprs =
           match exprs with

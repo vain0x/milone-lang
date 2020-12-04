@@ -191,7 +191,7 @@ let private ctxOfTyCtx (tyCtx: TyCtx): KirGenCtx =
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     Logs = tyCtx.Logs
-    MainFunSerial = None
+    MainFunSerial = tyCtx.MainFunOpt
     Joints = []
     FunBindings = [] }
 
@@ -661,16 +661,8 @@ let private kgLetValExpr pat init next loc hole ctx: KNode * KirGenCtx =
            let failure = abortNode loc
            kgEvalPNode init (kgPat pat ctx) success failure ctx)
 
-let private kgLetFunExpr funSerial isMainFun argPats body next loc hole (ctx: KirGenCtx): KNode * KirGenCtx =
+let private kgLetFunExpr funSerial argPats body next loc hole (ctx: KirGenCtx): KNode * KirGenCtx =
   let failure = abortNode loc
-
-  // Remember main fun.
-  let ctx =
-    if isMainFun then
-      { ctx with
-          MainFunSerial = Some funSerial }
-    else
-      ctx
 
   // Process arg pats and body.
   let (argVars, body), joints, ctx =
@@ -852,8 +844,8 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
 
   | HLetValExpr (_vis, pat, init, next, _, loc) -> kgLetValExpr pat init next loc hole ctx
 
-  | HLetFunExpr (funSerial, _vis, isMainFun, args, body, next, _, loc) ->
-      kgLetFunExpr funSerial isMainFun args body next loc hole ctx
+  | HLetFunExpr (funSerial, _vis, args, body, next, _, loc) ->
+      kgLetFunExpr funSerial args body next loc hole ctx
 
   | HTyDeclExpr _
   | HOpenExpr _ ->
