@@ -1,12 +1,10 @@
 # MILONE-LANG
 
-Self-hosting is **achieved** at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
+Self-hosting the initial goal was **achieved** at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0). Currently working for initial release.
 
 ## What
 
-**Milone-lang** is a F#-subset programming language.
-
-The goal is **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself.
+**Milone-lang** is a F#-subset programming language. The goal ~is~ was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself.
 
 This is a hobby project. Don't use in production. Pull requests and issues are welcome.
 
@@ -84,8 +82,6 @@ Not all of F# features are supported. Features for functional-style programming 
     - Some file IOs
 
 See [the tests/examples directory](./tests/examples) for working codes.
-
-- [notes.md](notes.md): notes on future works.
 
 ## Internals
 
@@ -165,8 +161,14 @@ The `tests` directory contains files for testing.
 
 There are some categories of testing files:
 
-- `features`: Testing of language features
-- `functions`: Testing of primitives
-- `errors`: Testing of compile errors
+- `features`: Test cases of language features
+- `functions`: Test cases of primitives
 - `examples`: Complex codes
 - `pendings`: Incomplete test cases
+- `edges`: Exotic test cases
+- `errors`: Test cases of compile errors
+
+### Dev: See also
+
+- [TODO list](https://github.com/vain0x/milone-lang/projects/1): TODO list. Feel free to clarify by opening an issue.
+- [notes.md](notes.md): Notes on future works.
