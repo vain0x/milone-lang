@@ -329,6 +329,14 @@ let private monifyExpr (expr, ctx) =
 
       doArm ()
 
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts, ctx = (stmts, ctx) |> stMap monifyExpr
+        let last, ctx = (last, ctx) |> monifyExpr
+        HBlockExpr(stmts, last), ctx
+
+      doArm ()
+
   | HLetValExpr (vis, pat, init, next, ty, loc) ->
       let doArm () =
         let init, ctx = (init, ctx) |> monifyExpr

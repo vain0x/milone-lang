@@ -75,8 +75,8 @@ let private findOpenPaths expr =
   let rec go expr =
     match expr with
     | HOpenExpr (path, loc) -> [ path, loc ]
-    | HInfExpr (InfOp.Semi, exprs, _, _) -> exprs |> List.collect go
-    | HModuleExpr (_, body, _, _) -> go body
+    | HBlockExpr (stmts, last) -> List.append (List.collect go stmts) (go last)
+    | HModuleExpr (_, body, _) -> body |> List.collect go
     | _ -> []
 
   go expr
@@ -108,7 +108,7 @@ type private BundleCtx =
     ModuleQueue: (string * string) list
 
     /// Processed module.
-    ModuleAcc: HExpr list
+    ModuleAcc: HExpr list list
 
     /// Errors occurred while processing.
     ErrorAcc: (string * Loc) list
@@ -171,7 +171,7 @@ let private doLoadModule docId ast errors (ctx: BundleCtx) =
   let ctx =
     if errors |> List.isEmpty then
       expr
-      |> findOpenModules
+      |> List.collect findOpenModules
       |> List.fold (fun ctx (projectName, moduleName, loc) ->
            let docId, _, _ = loc
            ctx |> requireModule docId projectName moduleName) ctx
@@ -199,7 +199,7 @@ let private requireModule docId projectName moduleName (ctx: BundleCtx) =
       ctx |> addError msg (docId, 0, 0)
 
 /// Returns None if no module is load.
-let bundleProgram (host: BundleHost) (projectName: string): (HExpr * NameCtx * (string * Loc) list) option =
+let bundleProgram (host: BundleHost) (projectName: string): (HExpr list * NameCtx * (string * Loc) list) option =
   let ctx = newCtx host
 
   // HACK: Load "./MiloneOnly" module in the project if exists.
@@ -216,9 +216,7 @@ let bundleProgram (host: BundleHost) (projectName: string): (HExpr * NameCtx * (
       let ctx = ctx |> doLoadModule docId ast errors
 
       let expr =
-        ctx.ModuleAcc
-        |> List.rev
-        |> List.reduce spliceExpr
+        ctx.ModuleAcc |> List.rev |> List.collect id
 
       Some(expr, ctx.NameCtx, ctx.ErrorAcc)
 

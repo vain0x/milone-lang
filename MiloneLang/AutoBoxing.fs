@@ -641,6 +641,14 @@ let private abExpr ctx expr =
 
       doArm ()
 
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts = stmts |> List.map (abExpr ctx)
+        let last = last |> abExpr ctx
+        HBlockExpr (stmts, last)
+
+      doArm ()
+
   | HLetValExpr (vis, pat, init, next, ty, loc) ->
       let doArm () =
         let pat = pat |> abPat ctx

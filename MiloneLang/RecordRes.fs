@@ -222,6 +222,14 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts = stmts |> List.map (teExpr ctx)
+        let last = last |> teExpr ctx
+        HBlockExpr(stmts, last)
+
+      doArm ()
+
   | HLetValExpr (vis, pat, init, next, ty, loc) ->
       let doArm () =
         let init = init |> teExpr ctx

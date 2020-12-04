@@ -319,12 +319,12 @@ type ALet =
 
 /// Body of type declaration in AST.
 [<NoEquality; NoComparison>]
-type ATyDecl =
+type ATyDeclBody =
   /// E.g. `type Serial = int`.
-  | ATySynonymDecl of ATy
+  | ATySynonymDeclBody of ATy
 
-  | AUnionTyDecl of AVariant list
-  | ARecordTyDecl of AFieldDecl list
+  | AUnionTyDeclBody of AVariant list
+  | ARecordTyDeclBody of AFieldDecl list
 
 /// Expression in AST.
 [<NoEquality; NoComparison>]
@@ -377,31 +377,42 @@ type AExpr =
   | AAnnoExpr of AExpr * ATy * Pos
 
   /// Semicolon-separated expressions.
-  | ASemiExpr of AExpr list * Pos
+  | ASemiExpr of AExpr list * AExpr * Pos
 
   /// (pattern, initializer, next). Let-in expression.
   | ALetExpr of Vis * APat * AExpr * AExpr * Pos
 
+[<NoEquality; NoComparison>]
+type ALetDecl =
+  | ALetFunDecl of Vis * Ident * APat list * AExpr * Pos
+  | ALetValDecl of Vis * APat * AExpr * Pos
+
+[<NoEquality; NoComparison>]
+type ADecl =
+  | AExprDecl of AExpr
+
+  | ALetDecl of Vis * APat * AExpr * Pos
+
   /// Type synonym declaration, e.g. `type UserId = int`.
-  | ATySynonymExpr of Vis * Ident * tyArgs: Ident list * ATy * Pos
+  | ATySynonymDecl of Vis * Ident * tyArgs: Ident list * ATy * Pos
 
   /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
-  | AUnionTyExpr of Vis * Ident * AVariant list * Pos
+  | AUnionTyDecl of Vis * Ident * AVariant list * Pos
 
   /// Record type declaration, e.g. `type Pos = { X: int; Y: int }`.
-  | ARecordTyExpr of Vis * Ident * AFieldDecl list * Pos
+  | ARecordTyDecl of Vis * Ident * AFieldDecl list * Pos
 
   /// Open statement, e.g. `open System.IO`.
-  | AOpenExpr of Ident list * Pos
+  | AOpenDecl of Ident list * Pos
 
   /// Expression with some attribute.
-  | AAttrExpr of contents: AExpr * next: AExpr * Pos
+  | AAttrDecl of contents: AExpr * next: ADecl * Pos
 
 /// Root of AST, a result of parsing single source file.
 [<NoEquality; NoComparison>]
 type ARoot =
-  | AExprRoot of AExpr
-  | AModuleRoot of Ident * AExpr * Pos
+  | AExprRoot of ADecl list
+  | AModuleRoot of Ident * ADecl list * Pos
 
 // -----------------------------------------------
 // Literals

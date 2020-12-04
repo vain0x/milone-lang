@@ -177,9 +177,9 @@ let private doInterpretProjectSchema ast =
 
     | _ -> None
 
-  let asProjectSchema expr =
-    match expr with
-    | ARecordExpr (None, fields, _) ->
+  let asProjectSchema decl =
+    match decl with
+    | AExprDecl (ARecordExpr (None, fields, _)) ->
         match fields
               |> List.tryFind (fun (name, _, _) -> name = "Options") with
         | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
@@ -187,14 +187,12 @@ let private doInterpretProjectSchema ast =
 
     | _ -> None
 
-  let expr =
+  let decls =
     match ast with
-    | AExprRoot expr -> expr
-    | AModuleRoot (_, expr, _) -> expr
+    | AExprRoot decls -> decls
+    | AModuleRoot (_, decls, _) -> decls
 
-  match expr with
-  | ASemiExpr (items, _) -> items |> List.tryPick asProjectSchema
-  | _ -> asProjectSchema expr
+  decls |> List.tryPick asProjectSchema
 
 let private parseProjectSchema contents =
   let ast, errors = contents |> tokenize |> parse
@@ -384,11 +382,11 @@ type SemaAnalysisResult =
   | SemaAnalysisTypingError of TyCtx
 
 /// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze (host: CliHost) v (expr, nameCtx, syntaxErrors): SemaAnalysisResult =
+let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAnalysisResult =
   assert (syntaxErrors |> List.isEmpty)
 
   writeLog host v "NameRes"
-  let expr, scopeCtx = nameRes (expr, nameCtx)
+  let expr, scopeCtx = nameRes (exprs, nameCtx)
 
   if scopeCtx.Logs |> List.isEmpty |> not then
     SemaAnalysisNameResError scopeCtx.Logs

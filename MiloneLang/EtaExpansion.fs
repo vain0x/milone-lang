@@ -483,6 +483,14 @@ let private exExpr (expr, ctx) =
 
   | HInfExpr (infOp, args, ty, loc) -> exInfExpr expr infOp args ty loc ctx
 
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts, ctx = (stmts, ctx) |> stMap exExpr
+        let last, ctx = (last, ctx) |> exExpr
+        HBlockExpr (stmts, last), ctx
+
+      doArm ()
+
   | HLetValExpr (vis, pat, init, next, ty, loc) ->
       let init, ctx = (init, ctx) |> exExpr
       let next, ctx = (next, ctx) |> exExpr

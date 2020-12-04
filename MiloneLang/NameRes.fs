@@ -863,9 +863,10 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let next, ctx = (next, ctx) |> goExpr
         HLetFunExpr(funSerial, vis, args, body, next, ty, loc), ctx
 
-    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
-        let exprs, ctx = (exprs, ctx) |> stMap goExpr
-        HInfExpr(InfOp.Semi, exprs, ty, loc), ctx
+    | HBlockExpr (stmts, last) ->
+        let stmts, ctx = (stmts, ctx) |> stMap goExpr
+        let last, ctx = (last, ctx) |> goExpr
+        HBlockExpr(stmts, last), ctx
 
     | HTyDeclExpr (serial, vis, tyArgs, tyDecl, loc) ->
         let ctx =
@@ -874,15 +875,17 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
         HTyDeclExpr(serial, vis, tyArgs, tyDecl, loc), ctx
 
-    | HModuleExpr (serial, body, next, loc) ->
+    | HModuleExpr (serial, body, loc) ->
+        let name =
+          ctx |> findName (moduleTySerialToInt serial)
+
         let ctx =
           ctx
+          |> addModuleTyDef serial ({ Name = name; Loc = loc }: ModuleTyDef)
           |> addTyToModule PublicVis (ModuleTySymbol serial)
           |> importTy (ModuleTySymbol serial)
 
-        let next, ctx = (next, ctx) |> goExpr
-
-        HModuleExpr(serial, body, next, loc), ctx
+        HModuleExpr(serial, body, loc), ctx
 
     | _ -> expr, ctx
 
@@ -1208,6 +1211,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts, ctx = (stmts, ctx) |> stMap nameResExpr
+        let last, ctx = (last, ctx) |> nameResExpr
+        HBlockExpr (stmts, last), ctx
+
+      doArm ()
+
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
@@ -1282,16 +1293,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HModuleExpr (serial, body, next, loc) ->
+  | HModuleExpr (serial, body, loc) ->
       let doArm () =
         let moduleName =
           ctx |> findName (moduleTySerialToInt serial)
 
-        let tyDef: ModuleTyDef = { Name = moduleName; Loc = loc }
-
         let ctx =
           ctx
-          |> addModuleTyDef serial tyDef
+          |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
           |> importTy (ModuleTySymbol serial)
 
         // HACK: Define module alias for the case it is shadowed by another module.
@@ -1304,8 +1313,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let body, ctx =
           (body, ctx)
-          |> collectDecls (Some serial)
-          |> nameResExpr
+          |> stMap (collectDecls (Some serial))
+          |> stMap nameResExpr
 
         let ctx = ctx |> finishScope parent
 
@@ -1313,23 +1322,20 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let ctx =
           if moduleName = "MiloneOnly" then ctx |> openModule serial else ctx
 
-        let next, ctx = (next, ctx) |> nameResExpr
-
         // Module no longer needed.
-        spliceExpr body next, ctx
+        hxSemi body loc, ctx
 
       doArm ()
 
   | HFunExpr _
   | HVariantExpr _ -> failwithf "NEVER: HFunExpr and HVariantExpr is generated in NameRes. %A" expr
 
-let nameRes (expr: HExpr, nameCtx: NameCtx): HExpr * ScopeCtx =
+let nameRes (exprs: HExpr list, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = ofNameCtx nameCtx
 
-  match expr with
-  | HModuleExpr _ -> (expr, scopeCtx) |> nameResExpr
+  let exprs, scopeCtx =
+    (exprs, scopeCtx)
+    |> stMap (collectDecls None)
+    |> stMap nameResExpr
 
-  | _ ->
-      (expr, scopeCtx)
-      |> collectDecls None
-      |> nameResExpr
+  hxSemi exprs noLoc, scopeCtx
