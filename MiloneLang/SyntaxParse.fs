@@ -171,10 +171,7 @@ let private inFirstOfExpr (token: Token) =
   | MatchToken
   | FunToken
   | DoToken
-  | LetToken
-  | TypeToken
-  | OpenToken
-  | LeftAttrToken -> true
+  | LetToken -> true
 
   | _ -> inFirstOfPatAndExpr token
 
@@ -185,22 +182,33 @@ let private inFirstOfArg (token: Token) =
 
   | _ -> inFirstOfExpr token
 
+let private inFirstOfDecl (token: Token) =
+  match token with
+  | TypeToken
+  | OpenToken
+  | ModuleToken
+  | LeftAttrToken -> true
+
+  | _ -> inFirstOfExpr token
+
 let private leadsPat tokens =
   match tokens with
   | (token, _) :: _ -> inFirstOfPat token
-
   | _ -> false
 
 let private leadsExpr tokens =
   match tokens with
   | (token, _) :: _ -> inFirstOfExpr token
-
   | _ -> false
 
 let private leadsArg tokens =
   match tokens with
   | (token, _) :: _ -> inFirstOfArg token
+  | _ -> false
 
+let private leadsDecl tokens =
+  match tokens with
+  | (token, _) :: _ -> inFirstOfDecl token
   | _ -> false
 
 /// Position of next token.
@@ -210,7 +218,7 @@ let private nextPos tokens: Pos =
 
   | (_, pos) :: _ -> pos
 
-/// Gets if next token exists and is inside the outer box.
+/// Gets whether next token exists and it is not shallower than `basePos`.
 let private nextInside basePos tokens: bool =
   match tokens with
   | [] -> false
@@ -249,6 +257,11 @@ let private parseExprError msg (tokens, errors) =
   let errors = parseErrorCore msg pos errors
   AMissingExpr pos, tokens, errors
 
+let private parseDeclError msg (tokens, errors) =
+  let pos = nextPos tokens
+  let errors = parseErrorCore msg pos errors
+  None, tokens, errors
+
 let private parseNewError msg (tokens, errors) =
   let pos = nextPos tokens
   parseErrorCore msg pos errors
@@ -281,6 +294,11 @@ let private expectRightAttr (tokens, errors) =
   match tokens with
   | (RightAttrToken, _) :: tokens -> tokens, errors
   | _ -> tokens, parseNewError "Expected '>]'" (tokens, errors)
+
+let private eatRec tokens =
+  match tokens with
+  | (RecToken, _) :: tokens -> tokens
+  | _ -> tokens
 
 let private eatVis tokens =
   match tokens with
@@ -969,7 +987,7 @@ let private parseTyDeclUnion basePos (tokens, errors) =
     | _ -> List.rev acc, tokens, errors
 
   let variants, tokens, errors = go [] (tokens, errors)
-  AUnionTyDecl variants, tokens, errors
+  AUnionTyDeclBody variants, tokens, errors
 
 /// Parses the body of record type declaration.
 let private parseTyDeclRecord basePos (tokens, errors) =
@@ -999,7 +1017,7 @@ let private parseTyDeclRecord basePos (tokens, errors) =
 
   let tokens, errors = (tokens, errors) |> expectRightBrace
 
-  ARecordTyDecl fields, tokens, errors
+  ARecordTyDeclBody fields, tokens, errors
 
 /// Parses after `type .. =`.
 /// NOTE: Unlike F#, it can't parse `type A = A` as definition of discriminated union.
@@ -1015,119 +1033,15 @@ let private parseTyDeclBody basePos (tokens, errors) =
 
   | _ ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
-      ATySynonymDecl ty, tokens, errors
-
-let private parseTyDecl typePos (tokens, errors) =
-  let basePos = typePos |> posAddX 1
-
-  let vis, tokens = eatVis tokens
-
-  match tokens with
-  | (IdentToken tyIdent, _) :: (LeftAngleToken, _) :: tokens ->
-      let rec go acc tokens =
-        match tokens with
-        | (TyVarToken ident, _) :: tokens ->
-            let acc = ident :: acc
-
-            match tokens with
-            | (CommaToken, _) :: tokens -> go acc tokens
-
-            | (RightAngleToken, _) :: tokens -> List.rev acc, None, tokens
-
-            | _ -> List.rev acc, Some "Expected '>'.", tokens
-
-        | _ -> List.rev acc, Some "Expected type variable.", tokens
-
-      match go [] tokens with
-      | _, Some msg, tokens -> parseExprError msg (tokens, errors)
-
-      | tyArgs, None, tokens ->
-          let ty, tokens, errors =
-            match tokens with
-            | (EqToken, _) :: tokens -> parseTy basePos (tokens, errors)
-            | _ -> parseTyError "Expected '='." (tokens, errors)
-
-          ATySynonymExpr(vis, tyIdent, tyArgs, ty, typePos), tokens, errors
-
-  | (IdentToken tyIdent, _) :: tokens ->
-      match tokens with
-      | (EqToken, _) :: tokens ->
-          let tyDecl, tokens, errors = parseTyDeclBody basePos (tokens, errors)
-
-          let expr =
-            match tyDecl with
-            | ATySynonymDecl ty -> ATySynonymExpr(vis, tyIdent, [], ty, typePos)
-
-            | AUnionTyDecl variants -> AUnionTyExpr(vis, tyIdent, variants, typePos)
-
-            | ARecordTyDecl fields -> ARecordTyExpr(vis, tyIdent, fields, typePos)
-
-          expr, tokens, errors
-
-      | _ ->
-          let ty, tokens, errors =
-            parseTyError "Expected '='" (tokens, errors)
-
-          ATySynonymExpr(vis, tyIdent, [], ty, typePos), tokens, errors
-
-  | _ -> parseExprError "Expected identifier" (tokens, errors)
-
-/// `open = 'open' ident ( '.' ident )*`
-let private parseOpen openPos (tokens, errors) =
-  let parsePath (tokens, errors) =
-    let rec go acc (tokens, errors) =
-      match tokens with
-      | (DotToken, _) :: (IdentToken ident, _) :: tokens -> go (ident :: acc) (tokens, errors)
-
-      | (DotToken, _) :: tokens ->
-          let errors =
-            parseNewError "Expected identifier" (tokens, errors)
-
-          List.rev acc, tokens, errors
-
-      | _ -> List.rev acc, tokens, errors
-
-    match tokens with
-    | (IdentToken ident, _) :: tokens -> go [ ident ] (tokens, errors)
-
-    | _ ->
-        let errors =
-          parseNewError "Expected identifier" (tokens, errors)
-
-        [], tokens, errors
-
-  let path, tokens, errors = parsePath (tokens, errors)
-  AOpenExpr(path, openPos), tokens, errors
-
-let private parseAttrStmt basePos (tokens, errors) =
-  let contents, tokens, errors =
-    parseSemi basePos basePos (tokens, errors)
-
-  let tokens, errors = (tokens, errors) |> expectRightAttr
-
-  if tokens
-     |> nextPos
-     |> posIsSameColumn basePos
-     |> not then
-    let errors =
-      parseNewError "Expected a statement after attribute." (tokens, errors)
-
-    contents, tokens, errors
-  else
-    let stmt, tokens, errors = parseStmt (basePos) (tokens, errors)
-    AAttrExpr(contents, stmt, basePos), tokens, errors
+      ATySynonymDeclBody ty, tokens, errors
 
 let private parseStmt basePos (tokens, errors) =
   match tokens with
-  | (LeftAttrToken, pos) :: tokens -> parseAttrStmt pos (tokens, errors)
-
   | (LetToken, letPos) :: (RecToken, _) :: tokens ->
       // FIXME: use `rec`
       parseLet letPos (tokens, errors)
 
   | (LetToken, letPos) :: tokens -> parseLet letPos (tokens, errors)
-  | (TypeToken, typePos) :: tokens -> parseTyDecl typePos (tokens, errors)
-  | (OpenToken, typePos) :: tokens -> parseOpen typePos (tokens, errors)
 
   | _ -> parseExpr basePos (tokens, errors)
 
@@ -1177,6 +1091,150 @@ let private parseItems basePos (tokens, errors) =
   | None -> [], tokens, errors
 
 // -----------------------------------------------
+// Parse declarations
+// -----------------------------------------------
+
+let private parseLetDecl letPos (tokens, errors) =
+  let innerBasePos = letPos |> posAddX 1
+
+  let tokens = eatRec tokens
+  let vis, tokens = eatVis tokens
+
+  let pat, tokens, errors =
+    parsePatLet innerBasePos (tokens, errors)
+
+  let init, tokens, errors =
+    match tokens with
+    | (EqToken, equalPos) :: tokens -> parseSemi innerBasePos equalPos (tokens, errors)
+    | _ -> parseExprError "Missing '='" (tokens, errors)
+
+  Some(ALetDecl(vis, pat, init, letPos)), tokens, errors
+
+let private parseTyDecl typePos (tokens, errors) =
+  let basePos = typePos |> posAddX 1
+
+  let vis, tokens = eatVis tokens
+
+  match tokens with
+  | (IdentToken tyIdent, _) :: (LeftAngleToken, _) :: tokens ->
+      let rec go acc tokens =
+        match tokens with
+        | (TyVarToken ident, _) :: tokens ->
+            let acc = ident :: acc
+
+            match tokens with
+            | (CommaToken, _) :: tokens -> go acc tokens
+
+            | (RightAngleToken, _) :: tokens -> List.rev acc, None, tokens
+
+            | _ -> List.rev acc, Some "Expected '>'.", tokens
+
+        | _ -> List.rev acc, Some "Expected type variable.", tokens
+
+      match go [] tokens with
+      | _, Some msg, tokens -> parseDeclError msg (tokens, errors)
+
+      | tyArgs, None, tokens ->
+          let ty, tokens, errors =
+            match tokens with
+            | (EqToken, _) :: tokens -> parseTy basePos (tokens, errors)
+            | _ -> parseTyError "Expected '='." (tokens, errors)
+
+          Some(ATySynonymDecl(vis, tyIdent, tyArgs, ty, typePos)), tokens, errors
+
+  | (IdentToken tyIdent, _) :: tokens ->
+      match tokens with
+      | (EqToken, _) :: tokens ->
+          let tyDecl, tokens, errors = parseTyDeclBody basePos (tokens, errors)
+
+          let decl =
+            match tyDecl with
+            | ATySynonymDeclBody ty -> ATySynonymDecl(vis, tyIdent, [], ty, typePos)
+            | AUnionTyDeclBody variants -> AUnionTyDecl(vis, tyIdent, variants, typePos)
+            | ARecordTyDeclBody fields -> ARecordTyDecl(vis, tyIdent, fields, typePos)
+
+          Some decl, tokens, errors
+
+      | _ ->
+          let ty, tokens, errors =
+            parseTyError "Expected '='" (tokens, errors)
+
+          Some(ATySynonymDecl(vis, tyIdent, [], ty, typePos)), tokens, errors
+
+  | _ -> parseDeclError "Expected identifier" (tokens, errors)
+
+/// `open = 'open' ident ( '.' ident )*`
+let private parseOpenDecl openPos (tokens, errors) =
+  let parsePath (tokens, errors) =
+    let rec go acc (tokens, errors) =
+      match tokens with
+      | (DotToken, _) :: (IdentToken ident, _) :: tokens -> go (ident :: acc) (tokens, errors)
+
+      | (DotToken, _) :: tokens ->
+          let errors =
+            parseNewError "Expected identifier" (tokens, errors)
+
+          List.rev acc, tokens, errors
+
+      | _ -> List.rev acc, tokens, errors
+
+    match tokens with
+    | (IdentToken ident, _) :: tokens -> go [ ident ] (tokens, errors)
+
+    | _ ->
+        let errors =
+          parseNewError "Expected identifier" (tokens, errors)
+
+        [], tokens, errors
+
+  let path, tokens, errors = parsePath (tokens, errors)
+  Some(AOpenDecl(path, openPos)), tokens, errors
+
+let private parseAttrDecl basePos (tokens, errors) =
+  let contents, tokens, errors =
+    parseSemi basePos basePos (tokens, errors)
+
+  let tokens, errors = (tokens, errors) |> expectRightAttr
+
+  if tokens
+     |> nextPos
+     |> posIsSameColumn basePos
+     |> not then
+    parseDeclError "Expected a declaration after attribute." (tokens, errors)
+  else
+    let declOpt, tokens, errors = parseDecl basePos (tokens, errors)
+    match declOpt with
+    | Some decl -> Some(AAttrDecl(contents, decl, basePos)), tokens, errors
+    | None -> None, tokens, errors
+
+let private parseDecl basePos (tokens, errors) =
+  match tokens with
+  | (LeftAttrToken, pos) :: tokens -> parseAttrDecl pos (tokens, errors)
+  | (LetToken, letPos) :: tokens -> parseLetDecl letPos (tokens, errors)
+  | (TypeToken, typePos) :: tokens -> parseTyDecl typePos (tokens, errors)
+  | (OpenToken, typePos) :: tokens -> parseOpenDecl typePos (tokens, errors)
+
+  | _ ->
+      let exprOpt, tokens, errors = parseExpr basePos (tokens, errors)
+      match exprOpt with
+      | AMissingExpr _ -> None, tokens, errors
+      | expr -> Some(AExprDecl expr), tokens, errors
+
+let private parseModuleBody basePos (tokens, errors) =
+  let rec go acc (tokens, errors) =
+    match tokens with
+    | _ when nextInside basePos tokens |> not -> List.rev acc, tokens, errors
+
+    | _ ->
+        // error if unaligned
+        let declOpt, tokens, errors = parseDecl basePos (tokens, errors)
+        match declOpt with
+        | Some decl -> go (decl :: acc) (tokens, errors)
+        | None -> List.rev acc, tokens, errors
+
+  go [] (tokens, errors)
+
+// -----------------------------------------------
 // Parse toplevel
 // -----------------------------------------------
 
@@ -1186,20 +1244,26 @@ let private parseTopLevel (tokens, errors) =
   | [] -> AExprRoot [], tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, _) :: tokens ->
-      let exprs, tokens, errors = parseItems modulePos (tokens, errors)
-      AModuleRoot(ident, exprs, modulePos), tokens, errors
+      let decls, tokens, errors =
+        parseModuleBody modulePos (tokens, errors)
+
+      AModuleRoot(ident, decls, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken ident, _) :: tokens ->
-      let exprs, tokens, errors = parseItems modulePos (tokens, errors)
-      AModuleRoot(ident, exprs, modulePos), tokens, errors
+      let decls, tokens, errors =
+        parseModuleBody modulePos (tokens, errors)
+
+      AModuleRoot(ident, decls, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (IdentToken ident, _) :: tokens ->
-      let exprs, tokens, errors = parseItems modulePos (tokens, errors)
-      AModuleRoot(ident, exprs, modulePos), tokens, errors
+      let decls, tokens, errors =
+        parseModuleBody modulePos (tokens, errors)
+
+      AModuleRoot(ident, decls, modulePos), tokens, errors
 
   | _ ->
       let pos = 0, 0
-      let exprs, tokens, errors = parseItems pos (tokens, errors)
+      let exprs, tokens, errors = parseModuleBody pos (tokens, errors)
       AExprRoot exprs, tokens, errors
 
 let parse (tokens: (Token * Pos) list): ARoot * (string * Pos) list =

@@ -177,9 +177,9 @@ let private doInterpretProjectSchema ast =
 
     | _ -> None
 
-  let asProjectSchema expr =
-    match expr with
-    | ARecordExpr (None, fields, _) ->
+  let asProjectSchema decl =
+    match decl with
+    | AExprDecl (ARecordExpr (None, fields, _)) ->
         match fields
               |> List.tryFind (fun (name, _, _) -> name = "Options") with
         | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
@@ -187,12 +187,12 @@ let private doInterpretProjectSchema ast =
 
     | _ -> None
 
-  let exprs =
+  let decls =
     match ast with
-    | AExprRoot exprs -> exprs
-    | AModuleRoot (_, exprs, _) -> exprs
+    | AExprRoot decls -> decls
+    | AModuleRoot (_, decls, _) -> decls
 
-  exprs |> List.tryPick asProjectSchema
+  decls |> List.tryPick asProjectSchema
 
 let private parseProjectSchema contents =
   let ast, errors = contents |> tokenize |> parse
