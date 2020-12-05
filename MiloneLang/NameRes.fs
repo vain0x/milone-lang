@@ -249,7 +249,11 @@ let private findModuleTy moduleSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.ModuleTys |> mapContainsKey moduleSerial)
   scopeCtx.ModuleTys |> mapFind moduleSerial
 
-let private findTyName tySymbol (scopeCtx: ScopeCtx) =
+let private findValueSymbolName valueSymbol scopeCtx =
+  scopeCtx
+  |> findName (valueSymbolToSerial valueSymbol)
+
+let private findTySymbolName tySymbol (scopeCtx: ScopeCtx) =
   match tySymbol with
   | ModuleTySymbol moduleSerial -> (scopeCtx |> findModuleTy moduleSerial).Name
   | _ ->
@@ -298,7 +302,7 @@ let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
         scopeCtx.TyDepths
         |> mapAdd tySerial scopeCtx.LetDepth }
 
-let private addModuleTyDef moduleTySerial tyDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       ModuleTys = scopeCtx.ModuleTys |> mapAdd moduleTySerial tyDef
       TyDepths =
@@ -313,18 +317,18 @@ let private addUnboundMetaTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
         |> mapAdd tySerial scopeCtx.LetDepth }
 
 /// Adds a variable to a namespace.
-let private addVarToNs tySerial valueSymbol (scopeCtx: ScopeCtx): ScopeCtx =
+let private addVarToNs parentTySerial valueSymbol (scopeCtx: ScopeCtx): ScopeCtx =
   let name =
-    scopeCtx
-    |> findName (valueSymbolToSerial valueSymbol)
+    scopeCtx |> findValueSymbolName valueSymbol
 
   { scopeCtx with
-      VarNs = scopeCtx.VarNs |> nsAdd tySerial name valueSymbol }
+      VarNs =
+        scopeCtx.VarNs
+        |> nsAdd parentTySerial name valueSymbol }
 
 /// Adds a type to a namespace.
 let private addTyToNs parentTySerial tySymbol (scopeCtx: ScopeCtx): ScopeCtx =
-  let name =
-    scopeCtx |> findName (tySymbolToSerial tySymbol)
+  let name = scopeCtx |> findTySymbolName tySymbol
 
   { scopeCtx with
       TyNs =
@@ -367,7 +371,7 @@ let private doImportTyWithAlias alias symbol (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with Local = scope }
 
 let private importTy symbol (scopeCtx: ScopeCtx): ScopeCtx =
-  let tyName = findTyName symbol scopeCtx
+  let tyName = findTySymbolName symbol scopeCtx
   doImportTyWithAlias tyName symbol scopeCtx
 
 let private openModule moduleSerial (scopeCtx: ScopeCtx) =
@@ -529,7 +533,13 @@ let private resolveTy ty loc scopeCtx =
           | [] -> scopeCtx |> resolveLocalTyName name, scopeCtx
 
           | [ baseQual ] ->
-              let tySymbolOpt = scopeCtx |> resolveLocalTyName baseQual
+              let tySymbolOpt =
+                // HACK: Don't find from data types, from module instead.
+                match scopeCtx |> resolveLocalTyName baseQual with
+                | Some (SynonymTySymbol _)
+                | Some (UnionTySymbol _)
+                | Some (RecordTySymbol _) -> scopeCtx |> resolveLocalTyName (name + "Module")
+                | it -> it
 
               match tySymbolOpt with
               | Some tySymbol ->
@@ -850,7 +860,9 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
     | HLetFunExpr (funSerial, vis, args, body, next, ty, loc) ->
         let ctx =
-          let name = ctx |> findName (funSerialToInt funSerial)
+          let name =
+            ctx |> findName (funSerialToInt funSerial)
+
           if name = "main" then { ctx with MainFunOpt = Some funSerial } else ctx
 
         let ctx =
@@ -1215,7 +1227,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         let stmts, ctx = (stmts, ctx) |> stMap nameResExpr
         let last, ctx = (last, ctx) |> nameResExpr
-        HBlockExpr (stmts, last), ctx
+        HBlockExpr(stmts, last), ctx
 
       doArm ()
 
@@ -1281,7 +1293,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let ctx =
           // FIXME: resolve module-name based on path
           let tySymbolOpt =
-            ctx |> resolveLocalTyName (path |> List.last)
+            ctx
+            |> resolveLocalTyName (List.last path + "Module")
 
           match tySymbolOpt with
           | Some (ModuleTySymbol moduleSerial) -> ctx |> openModule moduleSerial

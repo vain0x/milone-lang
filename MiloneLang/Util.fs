@@ -7,9 +7,9 @@ open MiloneLang.TreeMap
 // Collections
 // -----------------------------------------------
 
-type AssocMap<'K, 'V> = TreeMap<'K, 'V>
+type AssocMap<'K, 'V> = TreeMap.TreeMap<'K, 'V>
 
-type AssocSet<'K> = TreeMap<'K, unit>
+type AssocSet<'K> = TreeMap.TreeMap<'K, unit>
 
 /// Tree to generate a string for debugging.
 [<NoEquality; NoComparison>]
