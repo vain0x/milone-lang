@@ -189,3 +189,23 @@ let tryPick (f: _ -> _ option) (xs: _ list): _ option =
         | None -> listTryPickLoop xs
 
   listTryPickLoop xs
+
+/// Creates a list with specified length. i'th element is filled by `f i`.
+/// That is, `[ f 0; f 1; ...; f (len - 1) ]`.
+let init (len: int) (f: int -> _): _ list =
+  assert (len >= 0)
+
+  let rec listInitLoop acc i =
+    if i = len then rev acc else listInitLoop (f i :: acc) (i + 1)
+
+  listInitLoop [] 0
+
+/// Creates a list with specified length. Every element is `item`.
+/// That is, `[ item; item; ...; item ]`.
+let replicate (len: int) item: _ list =
+  assert (len >= 0)
+
+  let rec listReplicateLoop acc i =
+    if i = len then acc else listReplicateLoop (item :: acc) (i + 1)
+
+  listReplicateLoop [] 0
