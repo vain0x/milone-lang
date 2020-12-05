@@ -282,7 +282,9 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
   let readFile = host.FileReadAllText
 
   let readModuleFile (projectDir: string) (moduleName: string) =
-    readFile (projectDir + "/" + moduleName + ".fs")
+    match readFile (projectDir + "/" + moduleName + ".fs") with
+    | (Some _) as it -> it
+    | None -> readFile (projectDir + "/" + moduleName + ".milone")
 
   let parseModule (moduleName: string) (contents: string) =
     // unique name?
