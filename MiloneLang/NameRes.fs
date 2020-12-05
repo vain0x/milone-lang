@@ -15,6 +15,8 @@ let private isNoTy ty =
   | ErrorTy _ -> true
   | _ -> false
 
+let private hxAbort loc = HInfExpr(InfOp.Abort, [], noTy, loc)
+
 // -----------------------------------------------
 // Type primitives
 // -----------------------------------------------
@@ -249,6 +251,9 @@ let private findModuleTy moduleSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.ModuleTys |> mapContainsKey moduleSerial)
   scopeCtx.ModuleTys |> mapFind moduleSerial
 
+let private findVarName varSerial (scopeCtx: ScopeCtx) =
+  scopeCtx |> findName (varSerialToInt varSerial)
+
 let private findValueSymbolName valueSymbol scopeCtx =
   scopeCtx
   |> findName (valueSymbolToSerial valueSymbol)
@@ -462,43 +467,42 @@ let private resolveLocalTyName name (scopeCtx: ScopeCtx) =
   scopeCtx
   |> resolveScopedTyName scopeCtx.LocalSerial name
 
-let private resolvePatAsScope pat scopeCtx =
-  match pat with
-  | HNavPat _ ->
-      let scopeCtx =
-        scopeCtx
-        |> addLog (OtherNameResLog "nested nav pattern is unimplemented") (patToLoc pat)
+/// Resolves qualifiers of type.
+let private resolveNavTy quals last ctx =
+  let path =
+    quals
+    |> List.map (fun qual -> ctx |> findName qual)
 
-      None, scopeCtx
+  match path with
+  | [] -> ctx |> resolveLocalTyName last, ctx
 
-  | HRefPat (varSerial, _, _) ->
-      let name =
-        scopeCtx |> findName (varSerialToInt varSerial)
+  | head :: tail ->
+      // Resolve head.
+      let scopeOpt =
+        // HACK: If resolved to a data type, find module instead.
+        match ctx |> resolveLocalTyName head with
+        | Some (SynonymTySymbol _)
+        | Some (UnionTySymbol _)
+        | Some (RecordTySymbol _) -> ctx |> resolveLocalTyName (head + "Module")
+        | it -> it
 
-      scopeCtx |> resolveLocalTyName name, scopeCtx
+      // Resolve tail.
+      let rec resolveTyPath tySymbol path ctx =
+        match path with
+        | [] -> Some tySymbol
 
-  | _ -> None, scopeCtx
+        | name :: path ->
+            let scope = tySymbolToSerial tySymbol
+            match ctx |> resolveScopedTyName scope name with
+            | Some tySymbol -> resolveTyPath tySymbol path ctx
+            | None -> None
 
-/// Resolves an expressions as scope: type, module or namespace.
-let private resolveExprAsScope expr scopeCtx =
-  match expr with
-  | HNavExpr _ ->
-      let scopeCtx =
-        scopeCtx
-        |> addLog (OtherNameResLog "nested nav expr is unimplemented") (exprToLoc expr)
+      let tySymbolOpt =
+        match scopeOpt with
+        | Some scope -> resolveTyPath scope (List.append tail [ last ]) ctx
+        | None -> None
 
-      None, scopeCtx
-
-  | HRefExpr (varSerial, _, loc) ->
-      let name =
-        scopeCtx |> findName (varSerialToInt varSerial)
-
-      // HACK: Don't find from synonyms, from module instead.
-      match scopeCtx |> resolveLocalTyName name with
-      | Some (SynonymTySymbol _) -> scopeCtx |> resolveLocalTyName (name + "Module"), scopeCtx
-      | it -> it, scopeCtx
-
-  | _ -> None, scopeCtx
+      tySymbolOpt, ctx
 
 /// Resolves type names in a type expression.
 let private resolveTy ty loc scopeCtx =
@@ -519,41 +523,11 @@ let private resolveTy ty loc scopeCtx =
         AppTy(NativeTypeTyCtor code, []), scopeCtx
 
     | AppTy (UnresolvedTyCtor (quals, serial), tys) ->
-        let qualNames =
-          quals
-          |> List.map (fun qual -> scopeCtx |> findName qual)
-
         let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
-
         let arity = List.length tys
 
-        let symbolOpt, scopeCtx =
-          match qualNames with
-          | [] -> scopeCtx |> resolveLocalTyName name, scopeCtx
-
-          | [ baseQual ] ->
-              let tySymbolOpt =
-                // HACK: Don't find from data types, from module instead.
-                match scopeCtx |> resolveLocalTyName baseQual with
-                | Some (SynonymTySymbol _)
-                | Some (UnionTySymbol _)
-                | Some (RecordTySymbol _) -> scopeCtx |> resolveLocalTyName (name + "Module")
-                | it -> it
-
-              match tySymbolOpt with
-              | Some tySymbol ->
-                  scopeCtx
-                  |> resolveScopedTyName (tySymbolToSerial tySymbol) name,
-                  scopeCtx
-
-              | None -> None, scopeCtx
-
-          | _ ->
-              None,
-              scopeCtx
-              |> addLog (OtherNameResLog "Type with 2+ '.'s is unimplemented") loc
-
+        let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
         match symbolOpt with
         | Some (MetaTySymbol tySerial) ->
             if arity > 0 then
@@ -946,31 +920,50 @@ let private nameResRefPat serial ty loc ctx =
             let varSerial, ctx = doResolveVarInPat serial name ty loc ctx
             HRefPat(varSerial, ty, loc), ctx
 
-let private nameResNavPat l r ty loc ctx =
-  let varSerialOpt, ctx =
-    match ctx |> resolvePatAsScope l with
-    | Some symbol, ctx ->
-        (ctx
-         |> resolveScopedVarName (tySymbolToSerial symbol) r),
+let private nameResNavPat pat ctx =
+  /// Resolves a pattern as scope.
+  ///
+  /// Returns (scopeOpt, pat).
+  /// scopeOpt is `Some s` if pat is resolved to scope `s`.
+  /// `pat` is also updated by resolving inner qualifiers as possible.
+  let rec resolvePatAsScope pat ctx =
+    match pat with
+    | HRefPat (varSerial, _, _) ->
+        let name = ctx |> findVarName varSerial
+        ctx |> resolveLocalTyName name
+
+    | HNavPat (l, r, _, _) ->
+        match ctx |> resolvePatAsScope l with
+        | None -> None
+        | Some tySymbol ->
+            ctx
+            |> resolveScopedTyName (tySymbolToSerial tySymbol) r
+
+    | _ -> None
+
+  let l, r, ty, loc =
+    match pat with
+    | HNavPat (l, r, ty, loc) -> l, r, ty, loc
+    | _ -> failwith "NEVER"
+
+  let notResolved ctx =
+    let ctx =
+      ctx
+      |> addLog (OtherNameResLog "Couldn't resolve nav pattern.") loc
+
+    HDiscardPat(noTy, loc), ctx
+
+  match resolvePatAsScope l ctx with
+  | Some tySymbol ->
+      let varSymbolOpt =
         ctx
+        |> resolveScopedVarName (tySymbolToSerial tySymbol) r
 
-    | None, ctx -> None, ctx
+      match varSymbolOpt with
+      | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
+      | _ -> notResolved ctx
 
-  match varSerialOpt with
-  | Some (VarSymbol varSerial) -> HRefPat(varSerial, ty, loc), ctx
-
-  | Some (FunSymbol _) ->
-      let ctx = ctx |> addLog (FunPatError r) loc
-      HDiscardPat(noTy, loc), ctx
-
-  | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
-
-  | None ->
-      let ctx =
-        ctx
-        |> addLog (OtherNameResLog "Couldn't resolve nav pattern.") loc
-
-      HDiscardPat(noTy, loc), ctx
+  | None -> notResolved ctx
 
 let private nameResAsPat bodyPat serial loc ctx =
   let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
@@ -992,7 +985,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
 
   | HRefPat (VarSerial serial, ty, loc) -> nameResRefPat serial ty loc ctx
 
-  | HNavPat (l, r, ty, loc) -> nameResNavPat l r ty loc ctx
+  | HNavPat _ -> nameResNavPat pat ctx
 
   | HCallPat (callee, args, ty, loc) ->
       let callee, ctx = (callee, ctx) |> nameResPat
@@ -1128,32 +1121,143 @@ let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
 // Expression
 // -----------------------------------------------
 
+type private ResolvedExpr =
+  | ResolvedAsExpr of HExpr
+  | ResolvedAsScope of TySymbol * HExpr option * Loc
+  | NotResolvedExpr of Ident * Loc
+
+/// Tries to resolve a name expression as value; or just return None.
+let private doNameResRefExpr expr ctx =
+  let serial, ty, loc =
+    match expr with
+    | HRefExpr (VarSerial serial, ty, loc) -> serial, ty, loc
+    | _ -> failwith "NEVER"
+
+  let name = ctx |> findName serial
+
+  match ctx |> resolveLocalVarName name with
+  | Some (VarSymbol serial) -> HRefExpr(serial, ty, loc) |> Some
+  | Some (FunSymbol serial) -> HFunExpr(serial, ty, loc) |> Some
+  | Some (VariantSymbol serial) -> HVariantExpr(serial, ty, loc) |> Some
+
+  | None ->
+      match primFromIdent name with
+      | Some prim -> HPrimExpr(prim, ty, loc) |> Some
+      | None -> None
+
+let private nameResRefExpr expr ctx =
+  match doNameResRefExpr expr ctx with
+  | Some expr -> expr, ctx
+
+  | None ->
+      let name, loc =
+        match expr with
+        | HRefExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
+        | _ -> failwith "NEVER"
+
+      let ctx =
+        ctx |> addLog (UndefinedValueError name) loc
+
+      hxAbort loc, ctx
+
+let private nameResNavExpr expr ctx =
+  /// Resolves an expressions as scope.
+  ///
+  /// Returns (scopeOpt, exprOpt).
+  /// scopeOpt should eb some it can be resolved to scope.
+  /// exprOpt is also obtained by resolving inner `nav`s as possible.
+  let rec resolveExprAsScope expr ctx =
+    match expr with
+    | HRefExpr (VarSerial serial, _, loc) ->
+        let name = ctx |> findName serial
+
+        let scopeOpt =
+          // HACK: Don't resolve to synonyms, try module instead.
+          match ctx |> resolveLocalTyName name with
+          | Some (SynonymTySymbol _) -> ctx |> resolveLocalTyName (name + "Module")
+          | it -> it
+
+        let result =
+          match scopeOpt with
+          | Some tySymbol -> ResolvedAsScope(tySymbol, None, loc)
+
+          | None ->
+              match doNameResRefExpr expr ctx with
+              | Some expr -> ResolvedAsExpr expr
+              | None -> NotResolvedExpr(name, loc)
+
+        result, ctx
+
+    | HNavExpr (l, r, ty, loc) ->
+        let l, ctx = ctx |> resolveExprAsScope l
+
+        match l with
+        | NotResolvedExpr _ -> l, ctx
+
+        | ResolvedAsExpr l -> ResolvedAsExpr(HNavExpr(l, r, ty, loc)), ctx
+
+        | ResolvedAsScope (lTySymbol, lExprOpt, _) ->
+            // Resolve as scope.
+            let tySymbolOpt =
+              ctx
+              |> resolveScopedTyName (tySymbolToSerial lTySymbol) r
+
+            // Resolve as value.
+            let exprOpt =
+              let varSymbolOpt =
+                match ctx
+                      |> resolveScopedVarName (tySymbolToSerial lTySymbol) r with
+                | None -> None
+                | it -> it
+
+              match varSymbolOpt with
+              | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc) |> Some
+              | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc) |> Some
+              | Some (VariantSymbol variantSerial) -> HVariantExpr(variantSerial, ty, loc) |> Some
+              | None -> None
+
+            // If not resolved as value, keep try to unresolved.
+            let exprOpt =
+              match exprOpt, lExprOpt with
+              | Some _, _ -> exprOpt
+              | None, Some l -> HNavExpr(l, r, ty, loc) |> Some
+              | None, None -> None
+
+            match tySymbolOpt, exprOpt with
+            | Some tySymbol, _ -> ResolvedAsScope(tySymbol, exprOpt, loc), ctx
+            | None, Some expr -> ResolvedAsExpr expr, ctx
+            | None, None -> NotResolvedExpr(r, loc), ctx
+
+    | _ ->
+        // l is clearly unresolvable as type, e.g. `(getStr ()).Length`.
+        let expr, ctx = nameResExpr (expr, ctx)
+        ResolvedAsExpr expr, ctx
+
+  let result, ctx = resolveExprAsScope expr ctx
+  match result with
+  | ResolvedAsExpr expr -> expr, ctx
+
+  | ResolvedAsScope (_, Some expr, _) -> expr, ctx
+
+  | ResolvedAsScope (_, None, loc) ->
+      let ctx =
+        ctx
+        |> addLog (OtherNameResLog "This is a type. A value is expected here.") loc
+
+      hxAbort loc, ctx
+
+  | NotResolvedExpr (name, loc) ->
+      let ctx =
+        ctx |> addLog (UndefinedValueError name) loc
+
+      hxAbort loc, ctx
+
 let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   match expr with
   | HLitExpr _
   | HPrimExpr _ -> expr, ctx
 
-  | HRefExpr (varSerial, ty, loc) ->
-      let doArm () =
-        let name =
-          ctx |> findName (varSerialToInt varSerial)
-
-        match ctx |> resolveLocalVarName name with
-        | Some (VarSymbol serial) -> HRefExpr(serial, ty, loc), ctx
-        | Some (FunSymbol serial) -> HFunExpr(serial, ty, loc), ctx
-        | Some (VariantSymbol serial) -> HVariantExpr(serial, ty, loc), ctx
-
-        | None ->
-            match primFromIdent name with
-            | Some prim -> HPrimExpr(prim, ty, loc), ctx
-
-            | None ->
-                let ctx =
-                  ctx |> addLog (UndefinedValueError name) loc
-
-                HInfExpr(InfOp.Abort, [], ty, loc), ctx
-
-      doArm ()
+  | HRefExpr _ -> nameResRefExpr expr ctx
 
   | HRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =
@@ -1188,30 +1292,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HNavExpr (l, r, ty, loc) ->
-      let doArm () =
-        // Keep the nav expression unresolved so that type inference does.
-        let keepUnresolved ctx =
-          let l, ctx = (l, ctx) |> nameResExpr
-          HNavExpr(l, r, ty, loc), ctx
-
-        let tySymbolOpt, ctx = ctx |> resolveExprAsScope l
-        match tySymbolOpt with
-        | Some tySymbol ->
-            let scopeSerial = tySymbolToSerial tySymbol
-            match ctx |> resolveScopedVarName scopeSerial r with
-            | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc), ctx
-            | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc), ctx
-            | Some (VariantSymbol variantSerial) -> HVariantExpr(variantSerial, ty, loc), ctx
-
-            | _ ->
-                // X.ty patterns don't appear yet, so don't search for types.
-
-                keepUnresolved ctx
-
-        | _ -> keepUnresolved ctx
-
-      doArm ()
+  | HNavExpr _ -> nameResNavExpr expr ctx
 
   | HInfExpr (op, items, ty, loc) ->
       let doArm () =

@@ -420,6 +420,14 @@ let private parseTy basePos (tokens, errors) = parseTyFun basePos (tokens, error
 // Parse patterns
 // -----------------------------------------------
 
+let private parseNavPatBody head headPos (tokens, errors) =
+  let rec go acc tokens =
+    match tokens with
+    | (DotToken, dotPos) :: (IdentToken ident, _) :: tokens -> go (ANavPat(acc, ident, dotPos)) tokens
+    | _ -> acc, tokens, errors
+
+  go (AIdentPat(head, headPos)) tokens
+
 /// `pat ')'`
 let private parsePatParenBody basePos (tokens, errors) =
   let pat, tokens, errors = parsePat basePos (tokens, errors)
@@ -456,7 +464,8 @@ let private parsePatAtom basePos (tokens, errors) =
   | (FloatToken value, pos) :: tokens -> ALitPat(FloatLit value, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitPat(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitPat(StrLit value, pos), tokens, errors
-  | (IdentToken ident, pos) :: tokens -> AIdentPat(ident, pos), tokens, errors
+
+  | (IdentToken ident, pos) :: tokens -> parseNavPatBody ident pos (tokens, errors)
 
   | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATuplePat([], pos), tokens, errors
   | (LeftParenToken, _) :: tokens -> parsePatParenBody basePos (tokens, errors)
