@@ -154,11 +154,11 @@ let trimEnd (s: string) = s |> trimEndIf isSpace
 // Split
 // -----------------------------------------------
 
-let private findIndexOfNewline (start: int) (s: string) =
+let private findNewline (start: int) (s: string) =
   let i = start
   if i < s.Length
      && (s.[i] <> '\x00' && s.[i] <> '\r' && s.[i] <> '\n') then
-    findIndexOfNewline (i + 1) s
+    findNewline (i + 1) s
   else
     i
 
@@ -174,7 +174,7 @@ let private findIndexOfNewline (start: int) (s: string) =
 /// `rest` is the string after the newline.
 /// Empty if it ends with the newline or no newline found.
 let scanLine (s: string): string * string option * string =
-  let m = findIndexOfNewline 0 s
+  let m = findNewline 0 s
   let lineContents = if m > 0 then s.[0..m - 1] else ""
 
   if m = s.Length then
@@ -201,7 +201,7 @@ let scanLine (s: string): string * string option * string =
 let toLines (s: string): string list =
   // l: Start index of current line.
   let rec stringToLinesLoop (l: int) acc =
-    let r = findIndexOfNewline l s
+    let r = findNewline l s
 
     let acc =
       (if l < r then s.[l..r - 1] else "") :: acc
