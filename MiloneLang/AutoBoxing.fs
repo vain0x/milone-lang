@@ -645,7 +645,7 @@ let private abExpr ctx expr =
       let doArm () =
         let stmts = stmts |> List.map (abExpr ctx)
         let last = last |> abExpr ctx
-        HBlockExpr (stmts, last)
+        HBlockExpr(stmts, last)
 
       doArm ()
 
