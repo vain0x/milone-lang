@@ -1,10 +1,11 @@
 /// Provides functions about lists for milone-lang.
 ///
-/// This is almost compatible with the `List` module in F#.
+/// This is a subset of `List` module in F#.
+/// Some functions are not unimplemented yet,
+/// however, existing functions have compatible with F#.
+///
+/// Partial functions, which could throw exceptions, are unavailable intentionally.
 module rec MiloneCore.List
-
-// For failwith.
-open MiloneCore.MiloneOnly
 
 // Make sure every function is tail-recursive.
 // Inner functions have verbose name for readability of output code.
@@ -132,12 +133,6 @@ let fold (folder: _ -> _ -> _) state (xs: _ list) =
 
   listFoldLoop state xs
 
-let reduce (reducer: _ -> _ -> _) (xs: _ list) =
-  match xs with
-  | [] -> failwith "List.reduce: Empty list."
-
-  | x :: xs -> fold reducer x xs
-
 let forall (pred: _ -> bool) (xs: _ list): bool =
   let rec listForAllLoop xs =
     match xs with
@@ -164,26 +159,13 @@ let iter (f: _ -> unit) (xs: _ list): unit =
       f x
       iter f xs
 
-let last (xs: _ list) =
-  let rec listLastLoop xs =
-    match xs with
-    | [] -> failwith "List.last: Empty list."
-
-    | [ x ] -> x
-
-    | _ :: xs -> listLastLoop xs
-
-  listLastLoop xs
-
 /// Gets the i'th item if exists.
 ///
-/// Avoid using this as possible.
-/// This causes runtime error if out of range.
-/// Spends O(N) time at worst.
-let item (i: int) (xs: _ list) =
+/// Spends O(N) time at worst. Avoid using this as possible.
+let tryItem (i: int) (xs: _ list): _ option =
   match skip i xs with
-  | x :: _ -> x
-  | _ -> failwith "List.item: out of range"
+  | x :: _ -> Some x
+  | _ -> None
 
 let tryFind (pred: _ -> bool) (xs: _ list): _ option =
   let rec listTryFindLoop xs =
@@ -207,15 +189,3 @@ let tryPick (f: _ -> _ option) (xs: _ list): _ option =
         | None -> listTryPickLoop xs
 
   listTryPickLoop xs
-
-let zip (xs: _ list) (ys: _ list): (_ * _) list =
-  let rec listZipLoop acc xs ys =
-    match xs, ys with
-    | [], [] -> rev acc
-
-    | x :: xs, y :: ys -> listZipLoop ((x, y) :: acc) xs ys
-
-    | [], _
-    | _, [] -> failwith "List.zip: Length mismatch."
-
-  listZipLoop [] xs ys

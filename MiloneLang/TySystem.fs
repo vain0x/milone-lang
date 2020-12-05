@@ -340,7 +340,10 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
   assert (List.length defTySerials = List.length useTyArgs)
 
   // Expand synonym.
-  let assignment = List.zip defTySerials useTyArgs
+  let assignment =
+    match listTryZip defTySerials useTyArgs with
+    | assignment, [], [] -> assignment
+    | _ -> failwith "NEVER"
 
   let substMeta tySerial =
     assignment |> assocTryFind compare tySerial
@@ -443,7 +446,10 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
     tySubst substMeta bodyTy, ctx
 
   let expandedTy =
-    let assignment = List.zip defTySerials useTyArgs
+    let assignment =
+      match listTryZip defTySerials useTyArgs with
+      | assignment, [], [] -> assignment
+      | _ -> failwith "NEVER"
 
     let substMeta tySerial =
       assignment |> assocTryFind compare tySerial

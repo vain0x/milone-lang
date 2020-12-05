@@ -86,15 +86,15 @@ let listFoldTest () =
   |> List.fold (fun s x -> s * 10 + x) 0
   |> is 3141
 
-[<Fact>]
-let listReduceTest () =
-  [ 3; 1; 4; 1 ]
-  |> List.reduce (fun s x -> s * 10 + x)
-  |> is 3141
+// [<Fact>]
+// let listReduceTest () =
+//   [ 3; 1; 4; 1 ]
+//   |> List.reduce (fun s x -> s * 10 + x)
+//   |> is 3141
 
-[<Fact>]
-let listLastTest () =
-  [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
+// [<Fact>]
+// let listLastTest () =
+//   [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
 
 [<Fact>]
 let listSkipTest () =

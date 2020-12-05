@@ -1096,8 +1096,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
          pat, ctx)
 
   let pat =
-    (pat :: pats)
-    |> List.reduce (fun l r -> HOrPat(l, r, noTy, loc))
+    List.fold (fun l r -> HOrPat(l, r, noTy, loc)) pat pats
 
   pat, ctx
 
@@ -1373,9 +1372,13 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       let doArm () =
         let ctx =
           // FIXME: resolve module-name based on path
+          let moduleName =
+            match splitLast path with
+            | Some (_, last) -> last
+            | _ -> failwith "NEVER: open with empty path emits syntax error."
+
           let tySymbolOpt =
-            ctx
-            |> resolveLocalTyName (List.last path + "Module")
+            ctx |> resolveLocalTyName (moduleName + "Module")
 
           match tySymbolOpt with
           | Some (ModuleTySymbol moduleSerial) -> ctx |> openModule moduleSerial

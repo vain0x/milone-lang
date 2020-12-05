@@ -133,7 +133,12 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   match baseOpt with
   | Some baseExpr ->
       let itemExpr index =
-        let itemTy = fieldTys |> List.item index
+        // FIXME: avoid failwith
+        let itemTy =
+          match fieldTys |> List.tryItem index with
+          | Some it -> it
+          | None -> failwith "NEVER"
+
         HInfExpr(InfOp.RecordItem index, [ baseExpr ], itemTy, loc)
 
       let n = fieldTys |> List.length

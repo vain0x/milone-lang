@@ -253,7 +253,10 @@ let private selectTy ty path ctx =
 
   | KFieldPath (i, _) ->
       match ty with
-      | AppTy (TupleTyCtor, itemTys) -> itemTys |> List.item i
+      | AppTy (TupleTyCtor, itemTys) ->
+          match itemTys |> List.tryItem i with
+          | Some it -> it
+          | None -> unreachable (ty, path)
       | _ -> unreachable (ty, path)
 
   | KTagPath _ -> tyInt

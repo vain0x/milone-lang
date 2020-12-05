@@ -41,6 +41,21 @@ let stOptionMap f (x, ctx) =
 
 let cons head tail = head :: tail
 
+/// Tries to "zip" two lists by pairing every i'th item from both lists.
+///
+/// If two lists have different length, some elements have no pair.
+/// These items are returns as third result.
+/// The second result indicates which list is longer.
+let listTryZip (xs: _ list) (ys: _ list): (_ * _) list * _ list * _ list =
+  let rec listTryZipLoop acc xs ys =
+    match xs, ys with
+    | _, []
+    | [], _ -> List.rev acc, xs, ys
+
+    | x :: xs, y :: ys -> listTryZipLoop ((x, y) :: acc) xs ys
+
+  listTryZipLoop [] xs ys
+
 /// `List.map`, modifying context.
 ///
 /// USAGE:

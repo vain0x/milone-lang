@@ -776,9 +776,9 @@ let private genUnaryExpr ctx op arg ty _ =
         | AppTy (RecordTyCtor tySerial, _) ->
             match ctx.Tys |> mapFind tySerial with
             | RecordTyDef (_, fields, _) ->
-                let name, _, _ = fields |> List.item index
-                name
-
+                match fields |> List.tryItem index with
+                | Some (name, _, _) -> name
+                | None -> failwith "NEVER"
             | _ -> failwith "NEVER"
         | _ -> failwith "NEVER"
 
@@ -1114,6 +1114,11 @@ let private cgRecordInit (ctx: CirCtx) serial args ty =
 
   assert (List.length fields = List.length args)
 
+  let pairs =
+    match listTryZip fields args with
+    | it, [], [] -> it
+    | _ -> failwith "NEVER"
+
   let name = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial
   let ty, ctx = cgTyComplete ctx ty
@@ -1121,7 +1126,7 @@ let private cgRecordInit (ctx: CirCtx) serial args ty =
   let ctx =
     addLetStmt ctx name None ty storageModifier
 
-  List.zip fields args
+  pairs
   |> List.fold (fun ctx ((fieldName, _, _), arg) ->
        let l = CNavExpr(CRefExpr name, fieldName)
        let arg, ctx = cgExpr ctx arg
