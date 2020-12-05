@@ -17,9 +17,7 @@ let tryItem (index: int) (str: string): char option =
 // Search
 // -----------------------------------------------
 
-/// Gets if a substring occurs at the specified index in string.
-///
-/// Start index is strict.
+/// Gets whether a substring occurs at the specified index in string.
 let private occursAt (start: int) (substr: string) (s: string): bool =
   let rec occursAtLoop i =
     (i = substr.Length)
@@ -57,7 +55,7 @@ let findLastIndex (substr: string) (s: string): int option =
 
   stringFindLastIndexLoop r
 
-/// Gets a substring occurs in a string.
+/// Gets whether a substring occurs in a string.
 let contains (substr: string) (s: string): bool =
   match findIndex substr s with
   | Some _ -> true
@@ -162,17 +160,15 @@ let private findNewline (start: int) (s: string) =
   else
     i
 
-/// Scans a line of string. Line ends with a `\r`, `\n`, or `\x00`.
+/// Scans a line of string. A line ends with a `\r`, `\n`, `\x00`, or end of string.
 ///
 /// Returns `(lineContents, newlineOpt, rest)`, where:
 ///
-/// `lineContents` is the contents of the line.
-/// Empty if string starts with newline or is empty.
-///
-/// `newlineOpt` is "\n" or "\r\n" (or perhaps "\r"), which is actually found.
-///
-/// `rest` is the string after the newline.
-/// Empty if it ends with the newline or no newline found.
+/// - `lineContents` is the contents of the line.
+///     Empty if string starts with newline or is empty.
+/// - `newlineOpt` is "\n" or "\r\n" (or perhaps "\r"), which is actually found.
+/// - `rest` is the string after the newline.
+///     Empty if it ends with the newline or no newline found.
 let scanLine (s: string): string * string option * string =
   let m = findNewline 0 s
   let lineContents = if m > 0 then s.[0..m - 1] else ""
@@ -219,8 +215,12 @@ let toLines (s: string): string list =
   [] |> stringToLinesLoop 0 |> List.rev
 
 // -----------------------------------------------
-// Compose
+// Concatenation
 // -----------------------------------------------
 
-/// Same as `String.concat` but takes a list, rather than #seq (which is unimplemented in milone-lang).
+/// Concatenates a list of strings
+/// by inserting a separator between every two items.
+///
+/// This functions is almost same as `String.concat` in F#
+/// but takes a list rather than seq, which is unimplemented in milone-lang.
 let concat (sep: string) (xs: string list): string = __stringJoin sep xs
