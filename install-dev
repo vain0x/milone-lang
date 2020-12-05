@@ -31,9 +31,9 @@ dotnet publish MiloneLang \
 test -d "$MILONE_HOME/runtime" && rm "$MILONE_HOME/runtime"
 ln -sf "$PWD/runtime" "$MILONE_HOME/runtime"
 
-# Link MiloneCore.
-test -d "$MILONE_HOME/libcore" && rm "$MILONE_HOME/libcore"
-ln -sf "$PWD/libcore" "$MILONE_HOME/libcore"
+# Link milone_libs.
+test -d "$MILONE_HOME/milone_libs" && rm "$MILONE_HOME/milone_libs"
+ln -sf "$PWD/milone_libs" "$MILONE_HOME/milone_libs"
 
 # ------------------------------------------------
 # milone script

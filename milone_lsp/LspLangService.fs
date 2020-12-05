@@ -401,7 +401,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
               | None -> None
 
             else
-              // FIXME: load MiloneCore from libcore
+              // FIXME: load MiloneCore
               None }
 
     match MiloneLang.Bundling.bundleProgram bundleHost projectName with
