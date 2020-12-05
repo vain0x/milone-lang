@@ -11,6 +11,10 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiloneLsp", "milone_lsp\Mil
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiloneTests", "MiloneTests\MiloneTests.fsproj", "{E6026C0B-F3B5-4C6A-8698-3BAC2E221360}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "milone_libs", "milone_libs", "{A3A6A990-9FE0-4F27-B836-88024C8B16C6}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiloneStd", "milone_libs\MiloneStd\MiloneStd.fsproj", "{ADF61C50-B086-46AC-AE20-FF24E5D49280}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,8 +64,21 @@ Global
 		{E6026C0B-F3B5-4C6A-8698-3BAC2E221360}.Release|x64.Build.0 = Release|Any CPU
 		{E6026C0B-F3B5-4C6A-8698-3BAC2E221360}.Release|x86.ActiveCfg = Release|Any CPU
 		{E6026C0B-F3B5-4C6A-8698-3BAC2E221360}.Release|x86.Build.0 = Release|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Debug|x64.Build.0 = Debug|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Debug|x86.Build.0 = Debug|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Release|x64.ActiveCfg = Release|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Release|x64.Build.0 = Release|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Release|x86.ActiveCfg = Release|Any CPU
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AC64C44D-611F-474A-AEA4-B9A32D2E5817} = {8745793A-BA52-4026-A8DA-75CEC3C7D106}
+		{ADF61C50-B086-46AC-AE20-FF24E5D49280} = {A3A6A990-9FE0-4F27-B836-88024C8B16C6}
 	EndGlobalSection
 EndGlobal

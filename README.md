@@ -173,3 +173,5 @@ There are some categories of testing files:
 - [TODO list](https://github.com/vain0x/milone-lang/projects/1): TODO list. Feel free to clarify by opening an issue.
 - [notes.md](notes.md): Notes on future works.
 - [milone_libs](./milone_libs): Standard library for milone-lang.
+    - [MiloneCore](./milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
+    - [MiloneStd](./milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.
