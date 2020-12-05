@@ -39,11 +39,23 @@ let findIndex (substr: string) (s: string): int option =
   let r = s.Length - substr.Length + 1
 
   let rec stringFindIndexLoop i =
-    if i = r then None
+    if i >= r then None
     else if occursAt i substr s then Some i
     else stringFindIndexLoop (i + 1)
 
-  if r >= 0 then stringFindIndexLoop 0 else None
+  stringFindIndexLoop 0
+
+/// Finds last index of string where a substring occurs.
+let findLastIndex (substr: string) (s: string): int option =
+  let rec stringFindLastIndexLoop r =
+    if r <= 0 then None
+    else if occursAt (r - 1) substr s then Some(r - 1)
+    else stringFindLastIndexLoop (r - 1)
+
+  // Upper bound of the index that could satisfy the predicate.
+  let r = s.Length - substr.Length + 1
+
+  stringFindLastIndexLoop r
 
 /// Gets a substring occurs in a string.
 let contains (substr: string) (s: string): bool =
