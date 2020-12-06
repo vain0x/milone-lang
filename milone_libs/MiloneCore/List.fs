@@ -190,6 +190,24 @@ let tryPick (f: _ -> _ option) (xs: _ list): _ option =
 
   listTryPickLoop xs
 
+/// Splits a list into a pair `(trueItems, falseItems)`, where:
+///
+/// - `trueItems` consists of items that return `true` for the predicate,
+/// - `falseItems` is the other items, which return `false` for the predicate.
+///
+/// Ordering is preserved.
+let partition (pred: _ -> bool) (xs: _ list): _ list * _ list =
+  let rec listPartitionLoop trueAcc falseAcc xs =
+    match xs with
+    | [] -> rev trueAcc, rev falseAcc
+
+    | x :: xs ->
+        if pred x
+        then listPartitionLoop (x :: trueAcc) falseAcc xs
+        else listPartitionLoop trueAcc (x :: falseAcc) xs
+
+  listPartitionLoop [] [] xs
+
 /// Creates a list with specified length. i'th element is filled by `f i`.
 /// That is, `[ f 0; f 1; ...; f (len - 1) ]`.
 let init (len: int) (f: int -> _): _ list =
