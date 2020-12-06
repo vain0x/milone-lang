@@ -725,12 +725,11 @@ let private doNext (text: string) (index: int): Token * int =
   | LRawIdent ->
       match scanRawIdent text index with
       | Some m ->
-        assert (text |> isFollowedByBackticks m)
-        let ident = text.[index + 2..m - 1]
-        IdentToken ident, m + 2
+          assert (text |> isFollowedByBackticks m)
+          let ident = text.[index + 2..m - 1]
+          IdentToken ident, m + 2
 
-      | None ->
-        ErrorToken, index + len
+      | None -> ErrorToken, index + len
 
   | LTyVar ->
       let r = index + len
