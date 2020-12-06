@@ -19,7 +19,7 @@ struct Expr_ {
     enum Expr_Tag tag;
     union {
         int Int_;
-        void* Add_;
+        void const* Add_;
     };
 };
 
@@ -36,8 +36,8 @@ int eval_(struct Expr_ expr_) {
     goto end_match_1;
 next_2:;
     if ((expr_.tag != Add_)) goto next_3;
-    struct Expr_ l_ = (*(((struct Expr_Expr_Tuple2*)expr_.Add_))).t0;
-    struct Expr_ r_ = (*(((struct Expr_Expr_Tuple2*)expr_.Add_))).t1;
+    struct Expr_ l_ = (*(((struct Expr_Expr_Tuple2 const*)expr_.Add_))).t0;
+    struct Expr_ r_ = (*(((struct Expr_Expr_Tuple2 const*)expr_.Add_))).t1;
     int call_ = eval_(l_);
     int call_1 = eval_(r_);
     match_ = (call_ + call_1);
@@ -55,13 +55,13 @@ int main() {
     struct Expr_Expr_Tuple2 tuple_1;
     tuple_1.t0 = variant_1;
     tuple_1.t1 = variant_2;
-    void* box_ = milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
+    void const* box_ = milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
     (*(((struct Expr_Expr_Tuple2*)box_))) = tuple_1;
     struct Expr_ variant_3 = (struct Expr_){.tag = Add_, .Add_ = box_};
     struct Expr_Expr_Tuple2 tuple_;
     tuple_.t0 = variant_;
     tuple_.t1 = variant_3;
-    void* box_1 = milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
+    void const* box_1 = milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
     (*(((struct Expr_Expr_Tuple2*)box_1))) = tuple_;
     struct Expr_ variant_4 = (struct Expr_){.tag = Add_, .Add_ = box_1};
     struct Expr_ expr_1 = variant_4;

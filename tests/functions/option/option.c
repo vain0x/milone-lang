@@ -16,14 +16,13 @@ int main();
 
 struct IntList {
     int head;
-    struct IntList* tail;
+    struct IntList const* tail;
 };
 
 int basicSomeCase_(int arg_) {
     int match_;
-    struct IntList* some_ = milone_mem_alloc(1, sizeof(struct IntList));
-    some_->head = 1;
-    some_->tail = NULL;
+    struct IntList const* some_ = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)some_))) = (struct IntList){.head = 1, .tail = NULL};
     if ((!((!(some_))))) goto next_2;
     milone_assert(false, 4, 12);
     match_ = 0;
@@ -45,11 +44,11 @@ end_match_1:;
 
 struct StringList {
     struct String head;
-    struct StringList* tail;
+    struct StringList const* tail;
 };
 
 int basicNoneCase_(int arg_1) {
-    struct StringList* none_ = NULL;
+    struct StringList const* none_ = NULL;
     int match_1;
     if ((!(none_))) goto next_6;
     if ((str_cmp(none_->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
@@ -72,13 +71,12 @@ end_match_5:;
 
 struct UnitList {
     int head;
-    struct UnitList* tail;
+    struct UnitList const* tail;
 };
 
 int basicMatchCase_(int arg_2) {
-    struct UnitList* some_1 = milone_mem_alloc(1, sizeof(struct UnitList));
-    some_1->head = 0;
-    some_1->tail = NULL;
+    struct UnitList const* some_1 = milone_mem_alloc(1, sizeof(struct UnitList));
+    (*(((struct UnitList*)some_1))) = (struct UnitList){.head = 0, .tail = NULL};
     int if_;
     if ((!(some_1))) {
         goto none_cl_10;

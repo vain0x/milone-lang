@@ -1,15 +1,16 @@
 module rec native_fun_ptr.Program
 
-type CompareFun = __nativeFun<__voidconstptr * __voidconstptr, int>
+type CompareFun = __nativeFun<obj * obj, int>
 
 let memAlloc (len: int) (size: int): voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)
 
 let sortIntArray (array: nativeptr<int>) (len: int): unit =
-  let intCompare (l: __voidconstptr) (r: __voidconstptr) =
+  let intCompare (l: obj) (r: obj) =
     compare (unbox (__nativeCast l): int) (unbox (__nativeCast r): int)
 
-  __nativeFun ("qsort", (__nativeCast array: obj), unativeint len, unativeint 4, (__nativeFun intCompare: CompareFun))
+  __nativeFun
+    ("qsort", (__nativeCast array: voidptr), unativeint len, unativeint 4, (__nativeFun intCompare: CompareFun))
 
 let main _ =
   let len = 5

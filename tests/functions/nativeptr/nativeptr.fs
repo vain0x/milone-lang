@@ -1,10 +1,10 @@
 module rec nativeptr.Program
 
-// nativeptr<T> is equivalent to `T *` in C, which exists in F#.
-// voidptr is `void *` in C. (Exists in F#.)
+// nativeptr<T> is equivalent to `T *` in C.
+// voidptr is `void *` in C.
+// obj is `void const *` in C.
 
 // __constptr<T> is equivalent to `T const *` in C. (NOT exists in F#.)
-// __voidconstptr is `void const *` in C. (NOT exists in F#.)
 
 let memAlloc (count: int) (size: int): voidptr =
   __nativeFun ("milone_mem_alloc", count, unativeint size)

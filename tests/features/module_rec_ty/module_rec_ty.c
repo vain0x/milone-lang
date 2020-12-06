@@ -26,7 +26,7 @@ struct UnionA_ {
 
 struct UnionA_List {
     struct UnionA_ head;
-    struct UnionA_List* tail;
+    struct UnionA_List const* tail;
 };
 
 enum UnionB_Tag {
@@ -36,7 +36,7 @@ enum UnionB_Tag {
 struct UnionB_ {
     enum UnionB_Tag tag;
     union {
-        struct UnionA_List* T_;
+        struct UnionA_List const* T_;
     };
 };
 
@@ -50,9 +50,8 @@ struct UnionX_ {
 };
 
 int main() {
-    struct UnionA_List* list_ = milone_mem_alloc(1, sizeof(struct UnionA_List));
-    list_->head = (struct UnionA_){.tag = T_1};
-    list_->tail = NULL;
+    struct UnionA_List const* list_ = milone_mem_alloc(1, sizeof(struct UnionA_List));
+    (*(((struct UnionA_List*)list_))) = (struct UnionA_List){.head = (struct UnionA_){.tag = T_1}, .tail = NULL};
     struct UnionB_ variant_ = (struct UnionB_){.tag = T_, .T_ = list_};
     int switch_;
     switch ((struct UnionX_){.tag = VariantY_}.tag) {

@@ -6,17 +6,15 @@ int main();
 
 struct IntList {
     int head;
-    struct IntList* tail;
+    struct IntList const* tail;
 };
 
 int main() {
     int match_;
-    struct IntList* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    list_1->head = 2;
-    list_1->tail = NULL;
-    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    list_->head = 1;
-    list_->tail = list_1;
+    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = NULL};
+    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = list_1};
     if ((!(list_))) goto next_2;
     int x1_ = list_->head;
     if ((!(list_->tail))) goto next_2;

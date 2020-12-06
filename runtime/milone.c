@@ -424,11 +424,11 @@ struct String str_of_char(char value) {
 
 struct MyStringList {
     struct String head;
-    struct MyStringList *tail;
+    struct MyStringList const *tail;
 };
 
-struct String str_concat(struct String sep, struct StringList *strings) {
-    struct MyStringList *ss = (struct MyStringList *)strings;
+struct String str_concat(struct String sep, struct StringList const *strings) {
+    struct MyStringList const *ss = (struct MyStringList const *)strings;
 
     struct StringBuilder *sb = string_builder_new_with_capacity(0x1000);
     bool first = true;

@@ -78,7 +78,7 @@ struct String str_of_char(char value);
 // Actual name of string list.
 struct StringList;
 
-struct String str_concat(struct String sep, struct StringList *strings);
+struct String str_concat(struct String sep, struct StringList const *strings);
 
 // Low level operations.
 

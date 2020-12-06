@@ -16,19 +16,17 @@ int main();
 
 struct IntList {
     int head;
-    struct IntList* tail;
+    struct IntList const* tail;
 };
 
 int baseCase_(int arg_) {
     int success_ = 0;
     int failure_ = 1;
-    struct IntList* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    list_1->head = failure_;
-    list_1->tail = NULL;
-    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    list_->head = success_;
-    list_->tail = list_1;
-    struct IntList* codes_ = list_;
+    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_1))) = (struct IntList){.head = failure_, .tail = NULL};
+    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_))) = (struct IntList){.head = success_, .tail = list_1};
+    struct IntList const* codes_ = list_;
     milone_assert((success_ == 0), 13, 2);
     return 0;
 }

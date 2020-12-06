@@ -21,7 +21,7 @@ struct Node_ {
     enum Node_Tag tag;
     union {
         int Leaf_;
-        void* Node_;
+        void const* Node_;
     };
 };
 
@@ -39,7 +39,7 @@ struct Node_ node_(struct Node_ l_, struct Node_ r_) {
     struct Node_Node_Tuple2 tuple_;
     tuple_.t0 = l_;
     tuple_.t1 = r_;
-    void* box_ = milone_mem_alloc(1, sizeof(struct Node_Node_Tuple2));
+    void const* box_ = milone_mem_alloc(1, sizeof(struct Node_Node_Tuple2));
     (*(((struct Node_Node_Tuple2*)box_))) = tuple_;
     struct Node_ variant_1 = (struct Node_){.tag = Node_, .Node_ = box_};
     return variant_1;
@@ -54,8 +54,8 @@ int main() {
     struct Node_ t_ = call_4;
     int match_;
     if ((t_.tag != Node_)) goto next_2;
-    if (((*(((struct Node_Node_Tuple2*)t_.Node_))).t0.tag != Leaf_)) goto next_2;
-    int x_ = (*(((struct Node_Node_Tuple2*)t_.Node_))).t0.Leaf_;
+    if (((*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.tag != Leaf_)) goto next_2;
+    int x_ = (*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.Leaf_;
     milone_assert((x_ == 2), 22, 24);
     match_ = 0;
     goto end_match_1;

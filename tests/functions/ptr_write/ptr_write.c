@@ -12,12 +12,12 @@ struct String strOfRawParts_(char const* p_, int len_) {
 }
 
 int main() {
-    void* box_ = milone_mem_alloc(1, sizeof(int));
+    void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
-    void* intBox_ = box_;
+    void const* intBox_ = box_;
     (*(((int*)intBox_))) = 42;
-    milone_assert(((*(((int*)intBox_))) == 42), 10, 2);
-    void* box_1 = milone_mem_alloc(1, sizeof(uint64_t));
+    milone_assert(((*(((int const*)intBox_))) == 42), 10, 2);
+    void const* box_1 = milone_mem_alloc(1, sizeof(uint64_t));
     (*(((uint64_t*)box_1))) = ((uint64_t)0);
     char* buf_ = ((char*)box_1);
     (*(buf_)) = 'H';

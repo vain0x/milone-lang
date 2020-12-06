@@ -188,7 +188,7 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
       let structName, ctx = getUniqueTyName ctx funTy
       let selfTy, ctx = genIncompleteFunTyDecl ctx sTy tTy
 
-      let envTy = CPtrTy CVoidTy
+      let envTy = CConstPtrTy CVoidTy
       let _, argTys, resultTy = tyToArgList funTy
 
       let argTys, ctx =
@@ -215,7 +215,7 @@ let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
 
   | None ->
       let structName, ctx = getUniqueTyName ctx listTy
-      let selfTy = CPtrTy(CStructTy structName)
+      let selfTy = CConstPtrTy(CStructTy structName)
 
       let ctx =
         { ctx with
@@ -549,7 +549,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   // FIXME: Unresolved type variables are `obj` for now.
   | MetaTy _
-  | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
+  | AppTy (ObjTyCtor, _) -> CConstPtrTy CVoidTy, ctx
 
   | AppTy (FunTyCtor, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
 
@@ -595,7 +595,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   // FIXME: Unresolved type variables are `obj` for now.
   | MetaTy _
-  | AppTy (ObjTyCtor, _) -> CPtrTy CVoidTy, ctx
+  | AppTy (ObjTyCtor, _) -> CConstPtrTy CVoidTy, ctx
 
   | AppTy (FunTyCtor, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
 
@@ -758,7 +758,7 @@ let private genUnaryExpr ctx op arg ty _ =
       let valTy, ctx = cgTyComplete ctx ty
 
       let deref =
-        CUnaryExpr(CDerefUnary, CCastExpr(arg, CPtrTy valTy))
+        CUnaryExpr(CDerefUnary, CCastExpr(arg, CConstPtrTy valTy))
 
       deref, ctx
 
@@ -1016,12 +1016,12 @@ let private cgBoxInit ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
   let arg, ctx = cgExpr ctx arg
 
-  // void* p = (void*)malloc(sizeof T);
+  // void const* p = malloc(sizeof T);
   let temp = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial
 
   let ctx =
-    addLetAllocStmt ctx temp argTy (CPtrTy CVoidTy) storageModifier
+    addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy) storageModifier
 
   // *(T*)p = t;
   let left =
@@ -1036,27 +1036,20 @@ let private cgConsInit ctx serial head tail listTy =
   let storageModifier = findStorageModifier ctx serial
   let listTy, ctx = cgTyComplete ctx listTy
 
+  let listStructTy =
+    match listTy with
+    | CConstPtrTy it -> it
+    | _ -> failwithf "NEVER"
+
   let ctx =
-    let valTy =
-      match listTy with
-      | CPtrTy it -> it
-      | _ -> failwithf "NEVER"
+    addLetAllocStmt ctx temp listStructTy listTy storageModifier
 
-    addLetAllocStmt ctx temp valTy listTy storageModifier
-
-  // head
   let head, ctx = cgExpr ctx head
-
-  let stmt =
-    CSetStmt(CArrowExpr(CRefExpr temp, "head"), head)
-
-  let ctx = addStmt ctx stmt
-
-  // tail
   let tail, ctx = cgExpr ctx tail
 
   let stmt =
-    CSetStmt(CArrowExpr(CRefExpr temp, "tail"), tail)
+    let fields = [ "head", head; "tail", tail ]
+    CSetStmt(CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CPtrTy listStructTy)), CInitExpr(fields, listStructTy))
 
   let ctx = addStmt ctx stmt
 

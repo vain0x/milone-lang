@@ -76,9 +76,6 @@ let private tyPrimOfName name tys =
   | "voidptr", [] ->
       AppTy(NativePtrTyCtor IsMut, [ AppTy(VoidTyCtor, []) ])
       |> Some
-  | "__voidconstptr", [] ->
-      AppTy(NativePtrTyCtor IsConst, [ AppTy(VoidTyCtor, []) ])
-      |> Some
   | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ]) |> Some
   | "__constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ]) |> Some
 

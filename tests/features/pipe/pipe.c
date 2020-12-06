@@ -10,7 +10,7 @@ bool between_(int l_, int r_, int x_3);
 
 struct IntList;
 
-int len_(struct IntList* xs_);
+int len_(struct IntList const* xs_);
 
 int main();
 
@@ -45,10 +45,10 @@ if_next_1:;
 
 struct IntList {
     int head;
-    struct IntList* tail;
+    struct IntList const* tail;
 };
 
-int len_(struct IntList* xs_) {
+int len_(struct IntList const* xs_) {
     int if_1;
     if ((!(xs_))) {
         goto nil_cl_5;
@@ -74,9 +74,8 @@ int main() {
     int call_3 = sub_(100, 98);
     bool call_4 = between_(2, 3, call_3);
     milone_assert(call_4, 9, 2);
-    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    list_->head = 1;
-    list_->tail = NULL;
+    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
     int call_5 = len_(list_);
     milone_assert((call_5 != 0), 17, 2);
     return 0;

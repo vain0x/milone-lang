@@ -33,7 +33,7 @@ int main() {
     void* call_ = memAlloc_(1, 8);
     void* buf_ = call_;
     int call_1 = memSet_(buf_, ((uint8_t)255), 8);
-    milone_assert(((*(((int*)((void*)buf_)))) == -1), 22, 2);
+    milone_assert(((*(((int const*)((void const*)buf_)))) == -1), 22, 2);
     milone_assert((((uintptr_t)buf_) != ((uintptr_t)0)), 25, 2);
     return 0;
 }

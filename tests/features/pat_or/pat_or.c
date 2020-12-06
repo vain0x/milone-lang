@@ -6,7 +6,7 @@ int simpleCase_(int arg_);
 
 struct IntList;
 
-bool startsWithDoubleBits_(struct IntList* xs_);
+bool startsWithDoubleBits_(struct IntList const* xs_);
 
 int nestedCase_(int arg_1);
 
@@ -66,10 +66,10 @@ if_next_4:;
 
 struct IntList {
     int head;
-    struct IntList* tail;
+    struct IntList const* tail;
 };
 
-bool startsWithDoubleBits_(struct IntList* xs_) {
+bool startsWithDoubleBits_(struct IntList const* xs_) {
     bool match_;
     if ((!(xs_))) goto next_9;
     if ((xs_->head != 0)) goto next_9;
@@ -106,23 +106,18 @@ end_match_7:;
 }
 
 int nestedCase_(int arg_1) {
-    struct IntList* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    list_2->head = 2;
-    list_2->tail = NULL;
-    struct IntList* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    list_1->head = 1;
-    list_1->tail = list_2;
-    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    list_->head = 0;
-    list_->tail = list_1;
+    struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_2))) = (struct IntList){.head = 2, .tail = NULL};
+    struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_1))) = (struct IntList){.head = 1, .tail = list_2};
+    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = list_1};
     bool call_3 = startsWithDoubleBits_(list_);
     milone_assert(call_3, 20, 2);
-    struct IntList* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
-    list_4->head = 2;
-    list_4->tail = NULL;
-    struct IntList* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
-    list_3->head = 1;
-    list_3->tail = list_4;
+    struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_4))) = (struct IntList){.head = 2, .tail = NULL};
+    struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_3))) = (struct IntList){.head = 1, .tail = list_4};
     bool call_4 = startsWithDoubleBits_(list_3);
     milone_assert((!(call_4)), 21, 2);
     return 0;

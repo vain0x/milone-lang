@@ -25,14 +25,13 @@ end_match_1:;
 
 struct IntList {
     int head;
-    struct IntList* tail;
+    struct IntList const* tail;
 };
 
 int testListMatching_(int arg_1) {
     int match_1;
-    struct IntList* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    list_->head = 0;
-    list_->tail = NULL;
+    struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
+    (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = NULL};
     if ((!(list_))) goto next_4;
     if ((!(list_->tail))) goto next_4;
     milone_assert(false, 6, 19);

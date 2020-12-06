@@ -11,10 +11,10 @@ let profileInit (): Profiler =
 let profileLog (msg: string) (Profiler state): unit =
   __nativeFun ("milone_profile_log", msg, state)
 
-type Buffer = { Ptr: __voidconstptr; Length: int }
+type Buffer = { Ptr: obj; Length: int }
 
-/// buf: Buffer *
-let bufferRefNew (buf: __voidconstptr): Buffer =
+/// buf: Buffer const *
+let bufferRefNew (buf: obj): Buffer =
   let len: int = __nativeFun ("buffer_get_length", buf)
 
   { Ptr = buf; Length = len }
@@ -33,7 +33,7 @@ let fileClose (Fd fd): bool =
   stat = 0
 
 let fileReadBytes (size: int) (Fd fd): Buffer option =
-  let buf: __voidconstptr =
+  let buf: obj =
     __nativeFun ("file_read_bytes", fd, size)
 
   if unativeint buf <> unativeint 0 then Some(bufferRefNew buf) else None

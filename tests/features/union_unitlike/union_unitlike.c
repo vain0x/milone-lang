@@ -92,18 +92,17 @@ int usedInOtherSumTypeCase_(int arg_1) {
 
 struct MyUnit_List {
     struct MyUnit_ head;
-    struct MyUnit_List* tail;
+    struct MyUnit_List const* tail;
 };
 
 struct RecordUsingMyUnit_ {
     struct MyUnit_ First;
-    struct MyUnit_List* Second;
+    struct MyUnit_List const* Second;
 };
 
 int usedInRecordTypeCase_(int arg_2) {
-    struct MyUnit_List* list_ = milone_mem_alloc(1, sizeof(struct MyUnit_List));
-    list_->head = (struct MyUnit_){.tag = MyUnit_};
-    list_->tail = NULL;
+    struct MyUnit_List const* list_ = milone_mem_alloc(1, sizeof(struct MyUnit_List));
+    (*(((struct MyUnit_List*)list_))) = (struct MyUnit_List){.head = (struct MyUnit_){.tag = MyUnit_}, .tail = NULL};
     struct RecordUsingMyUnit_ RecordUsingMyUnit_;
     RecordUsingMyUnit_.First = (struct MyUnit_){.tag = MyUnit_};
     RecordUsingMyUnit_.Second = list_;

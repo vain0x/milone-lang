@@ -18,14 +18,6 @@ type __constptr<'T> =
   static member op_Implicit(_: __constptr<'T>): int = 0
   static member op_Implicit(_: __constptr<'T>): unativeint = unativeint 0
 
-/// `void const *` in C.
-[<AbstractClass; Sealed>]
-type __voidconstptr =
-  override _.ToString() = "__voidconstptr is not available in F#"
-
-  static member op_Implicit(_: __voidconstptr): int = 0
-  static member op_Implicit(_: __voidconstptr): unativeint = unativeint 0
-
 /// C-ABI function pointer type: `T (*)(params...)` in C.
 ///
 /// P is `()` or `P1 * P2 * ...`.
