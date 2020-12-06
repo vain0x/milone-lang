@@ -278,7 +278,7 @@ struct String str_of_raw_parts(char const *p, int len) {
         return (struct String){.str = "", .len = 0};
     }
 
-    char *str = (char *)milone_mem_alloc(len + 1, sizeof(char));
+    char *str = milone_mem_alloc(len + 1, sizeof(char));
     memcpy(str, p, len * sizeof(char));
     str[len] = '\0';
     return (struct String){.str = str, .len = len};
@@ -289,7 +289,7 @@ struct String str_add(struct String left, struct String right) {
         return right.len == 0 ? left : right;
     }
     int len = left.len + right.len;
-    char *str = (char *)milone_mem_alloc(len + 1, sizeof(char));
+    char *str = milone_mem_alloc(len + 1, sizeof(char));
     memcpy(str, left.str, left.len);
     memcpy(str + left.len, right.str, right.len);
     assert(str[len] == '\0');
@@ -305,7 +305,7 @@ struct String str_get_slice(int l, int r, struct String s) {
     }
 
     int len = r - l;
-    char *str = (char *)milone_mem_alloc(len + 1, sizeof(char));
+    char *str = milone_mem_alloc(len + 1, sizeof(char));
     memcpy(str, s.str + l, len);
     assert(str[len] == '\0');
     return (struct String){.str = str, .len = len};
@@ -417,7 +417,7 @@ struct String str_of_double(double value) {
 }
 
 struct String str_of_char(char value) {
-    char *str = (char *)milone_mem_alloc(2, sizeof(char));
+    char *str = milone_mem_alloc(2, sizeof(char));
     str[0] = value;
     return (struct String){.str = str, .len = strlen(str)};
 }
@@ -491,7 +491,7 @@ struct String file_read_all_text(struct String file_name) {
     }
     fseek(fp, 0, SEEK_SET);
 
-    char *content = (char *)milone_mem_alloc((size_t)size + 1, sizeof(char));
+    char *content = milone_mem_alloc((size_t)size + 1, sizeof(char));
     size_t read_size = fread(content, 1, (size_t)size, fp);
     if (read_size != (size_t)size) {
         fclose(fp);
@@ -540,8 +540,7 @@ struct Profiler {
 };
 
 void *milone_profile_init(void) {
-    struct Profiler *p =
-        (struct Profiler *)milone_mem_alloc(1, sizeof(struct Profiler));
+    struct Profiler *p = milone_mem_alloc(1, sizeof(struct Profiler));
     p->epoch = milone_get_time_millis();
     p->heap_size = s_heap_size;
     return p;
