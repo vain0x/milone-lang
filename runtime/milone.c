@@ -603,7 +603,7 @@ struct String scan_str(int capacity) {
         exit(1);
     }
 
-    char *str = calloc(capacity, sizeof(char));
+    char *str = milone_mem_alloc(capacity, sizeof(char));
     if (str == NULL) {
         fprintf(stderr, "scan_str(%d) out of memory", capacity);
         exit(1);
