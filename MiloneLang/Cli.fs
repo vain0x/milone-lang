@@ -293,7 +293,9 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
     let ast, errors = parse docId contents
     Some(docId, ast, errors)
 
-  { FetchModule =
+  { ProjectRefs = ctx.Projects |> mapToKeys
+
+    FetchModule =
       fun projectName moduleName ->
         match ctx.Projects |> mapTryFind projectName with
         | Some projectDir ->

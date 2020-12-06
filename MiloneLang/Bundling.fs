@@ -104,6 +104,9 @@ type ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 [<NoEquality; NoComparison>]
 type BundleHost =
   {
+    /// External project references.
+    ProjectRefs: ProjectName list
+
     /// Requests the host to load a module.
     ///
     /// The host should locate the module and retrieve its source code, tokenize and parse if exists.
@@ -210,13 +213,15 @@ let private requireModule docId projectName moduleName (ctx: BundleCtx) =
 let bundleProgram (host: BundleHost) (projectName: string): (HExpr list * NameCtx * (string * Loc) list) option =
   let ctx = newCtx host
 
-  // HACK: Load "./MiloneOnly" module in the project if exists.
+  // HACK: Load "MiloneOnly" module of projects if exists.
   let ctx =
-    match ctx
-          |> fetchModuleWithMemo projectName "MiloneOnly" with
-    | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
+    (List.append host.ProjectRefs [ projectName ])
+    |> List.fold (fun ctx projectName ->
+         match ctx
+               |> fetchModuleWithMemo projectName "MiloneOnly" with
+         | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
 
-    | _ -> ctx
+         | _ -> ctx) ctx
 
   // Load entrypoint module of the project.
   match ctx |> fetchModuleWithMemo projectName projectName with
