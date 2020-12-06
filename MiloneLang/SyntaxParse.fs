@@ -1172,32 +1172,53 @@ let private parseTyDecl typePos (tokens, errors) =
 
   | _ -> parseDeclError "Expected identifier" (tokens, errors)
 
+let private parsePath (tokens, errors) =
+  let rec go acc (tokens, errors) =
+    match tokens with
+    | (DotToken, _) :: (IdentToken ident, _) :: tokens -> go (ident :: acc) (tokens, errors)
+
+    | (DotToken, _) :: tokens ->
+        let errors =
+          parseNewError "Expected identifier" (tokens, errors)
+
+        List.rev acc, tokens, errors
+
+    | _ -> List.rev acc, tokens, errors
+
+  match tokens with
+  | (IdentToken ident, _) :: tokens -> go [ ident ] (tokens, errors)
+
+  | _ ->
+      let errors =
+        parseNewError "Expected identifier" (tokens, errors)
+
+      [], tokens, errors
+
 /// `open = 'open' ident ( '.' ident )*`
 let private parseOpenDecl openPos (tokens, errors) =
-  let parsePath (tokens, errors) =
-    let rec go acc (tokens, errors) =
-      match tokens with
-      | (DotToken, _) :: (IdentToken ident, _) :: tokens -> go (ident :: acc) (tokens, errors)
+  let path, tokens, errors = parsePath (tokens, errors)
+  Some(AOpenDecl(path, openPos)), tokens, errors
 
-      | (DotToken, _) :: tokens ->
-          let errors =
-            parseNewError "Expected identifier" (tokens, errors)
-
-          List.rev acc, tokens, errors
-
-      | _ -> List.rev acc, tokens, errors
-
+let private parseModuleDecl modulePos (tokens, errors) =
+  let moduleName, tokens, errors =
     match tokens with
-    | (IdentToken ident, _) :: tokens -> go [ ident ] (tokens, errors)
-
+    | (IdentToken moduleName, _) :: tokens -> moduleName, tokens, errors
     | _ ->
         let errors =
           parseNewError "Expected identifier" (tokens, errors)
 
+        "_", tokens, errors
+
+  let path, tokens, errors =
+    match tokens with
+    | (EqToken, _) :: tokens -> parsePath (tokens, errors)
+    | _ ->
+        let errors =
+          parseNewError "Expected '='" (tokens, errors)
+
         [], tokens, errors
 
-  let path, tokens, errors = parsePath (tokens, errors)
-  Some(AOpenDecl(path, openPos)), tokens, errors
+  Some(AModuleSynonymDecl(moduleName, path, modulePos)), tokens, errors
 
 let private parseAttrDecl basePos (tokens, errors) =
   let contents, tokens, errors =
@@ -1222,6 +1243,7 @@ let private parseDecl basePos (tokens, errors) =
   | (LetToken, letPos) :: tokens -> parseLetDecl letPos (tokens, errors)
   | (TypeToken, typePos) :: tokens -> parseTyDecl typePos (tokens, errors)
   | (OpenToken, typePos) :: tokens -> parseOpenDecl typePos (tokens, errors)
+  | (ModuleToken, modulePos) :: tokens -> parseModuleDecl modulePos (tokens, errors)
 
   | _ ->
       let exprOpt, tokens, errors = parseExpr basePos (tokens, errors)

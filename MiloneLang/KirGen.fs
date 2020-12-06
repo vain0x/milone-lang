@@ -845,8 +845,7 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
 
   | HLetValExpr (_vis, pat, init, next, _, loc) -> kgLetValExpr pat init next loc hole ctx
 
-  | HLetFunExpr (funSerial, _vis, args, body, next, _, loc) ->
-      kgLetFunExpr funSerial args body next loc hole ctx
+  | HLetFunExpr (funSerial, _vis, args, body, next, _, loc) -> kgLetFunExpr funSerial args body next loc hole ctx
 
   | HTyDeclExpr _
   | HOpenExpr _ ->
@@ -857,7 +856,8 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
       justUnit ()
 
   | HNavExpr _ -> failwithf "NEVER: nav is resolved in type inference. %A" expr
-  | HModuleExpr _ -> failwithf "NEVER: module is resolved in name res. %A" expr
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 /// Converts a list of expressions sequentially
 /// and fills a hole with the list of their results.

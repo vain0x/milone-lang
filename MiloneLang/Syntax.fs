@@ -405,6 +405,9 @@ type ADecl =
   /// Open statement, e.g. `open System.IO`.
   | AOpenDecl of Ident list * Pos
 
+  /// Module synonym statement, e.g. `module T = System.Text`.
+  | AModuleSynonymDecl of Ident * Ident list * Pos
+
   /// Expression with some attribute.
   | AAttrDecl of contents: AExpr * next: ADecl * Pos
 

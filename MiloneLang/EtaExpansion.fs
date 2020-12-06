@@ -487,7 +487,7 @@ let private exExpr (expr, ctx) =
       let doArm () =
         let stmts, ctx = (stmts, ctx) |> stMap exExpr
         let last, ctx = (last, ctx) |> exExpr
-        HBlockExpr (stmts, last), ctx
+        HBlockExpr(stmts, last), ctx
 
       doArm ()
 
@@ -496,12 +496,12 @@ let private exExpr (expr, ctx) =
       let next, ctx = (next, ctx) |> exExpr
       HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, vis, args, body, next, ty, loc) ->
-      exLetFunExpr callee vis args body next ty loc ctx
+  | HLetFunExpr (callee, vis, args, body, next, ty, loc) -> exLetFunExpr callee vis args body next ty loc ctx
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
-  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 let etaExpansion (expr, tyCtx: TyCtx) =
   let etaCtx = ofTyCtx tyCtx

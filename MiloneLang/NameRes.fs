@@ -104,6 +104,7 @@ let private tySymbolToSerial symbol =
   | UnionTySymbol s -> s
   | RecordTySymbol s -> s
   | ModuleTySymbol (ModuleTySerial s) -> s
+  | ModuleSynonymSymbol (ModuleSynonymSerial s) -> s
 
 // -----------------------------------------------
 // Namespace
@@ -177,6 +178,7 @@ type ScopeCtx =
     Tys: AssocMap<TySerial, TyDef>
 
     ModuleTys: AssocMap<ModuleTySerial, ModuleTyDef>
+    ModuleSynonyms: AssocMap<ModuleSynonymSerial, ModuleSynonymDef>
 
     /// Type serial to let-depth map.
     TyDepths: AssocMap<TySerial, LetDepth>
@@ -216,6 +218,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     MainFunOpt = None
     Tys = mapEmpty compare
     ModuleTys = mapEmpty moduleTySerialCmp
+    ModuleSynonyms = mapEmpty moduleSynonymSerialCmp
     TyDepths = mapEmpty compare
     VarNs = mapEmpty compare
     TyNs = mapEmpty compare
@@ -251,6 +254,10 @@ let private findModuleTy moduleSerial (scopeCtx: ScopeCtx) =
   assert (scopeCtx.ModuleTys |> mapContainsKey moduleSerial)
   scopeCtx.ModuleTys |> mapFind moduleSerial
 
+let private findModuleSynonym serial (scopeCtx: ScopeCtx) =
+  assert (scopeCtx.ModuleSynonyms |> mapContainsKey serial)
+  scopeCtx.ModuleSynonyms |> mapFind serial
+
 let private findVarName varSerial (scopeCtx: ScopeCtx) =
   scopeCtx |> findName (varSerialToInt varSerial)
 
@@ -261,6 +268,7 @@ let private findValueSymbolName valueSymbol scopeCtx =
 let private findTySymbolName tySymbol (scopeCtx: ScopeCtx) =
   match tySymbol with
   | ModuleTySymbol moduleSerial -> (scopeCtx |> findModuleTy moduleSerial).Name
+  | ModuleSynonymSymbol serial -> (scopeCtx |> findModuleSynonym serial).Name
   | _ ->
       scopeCtx
       |> findTy (tySymbolToSerial tySymbol)
@@ -313,6 +321,13 @@ let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeC
       TyDepths =
         scopeCtx.TyDepths
         |> mapAdd (moduleTySerialToInt moduleTySerial) scopeCtx.LetDepth }
+
+let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: ScopeCtx): ScopeCtx =
+  { scopeCtx with
+      ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef
+      TyDepths =
+        scopeCtx.TyDepths
+        |> mapAdd (moduleSynonymSerialToInt serial) scopeCtx.LetDepth }
 
 /// Defines an unbound meta type.
 let private addUnboundMetaTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
@@ -561,7 +576,8 @@ let private resolveTy ty loc scopeCtx =
             assert (List.isEmpty tys)
             tyRecord tySerial, scopeCtx
 
-        | Some (ModuleTySymbol _) ->
+        | Some (ModuleTySymbol _)
+        | Some (ModuleSynonymSymbol _) ->
             let scopeCtx =
               scopeCtx |> addLog (ModuleUsedAsTyError name) loc
 
@@ -872,6 +888,22 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           |> importTy (ModuleTySymbol serial)
 
         HModuleExpr(serial, body, loc), ctx
+
+    | HModuleSynonymExpr (serial, path, loc) ->
+        let name =
+          ctx |> findName (moduleSynonymSerialToInt serial)
+
+        match name, path with
+        | "_", _
+        | _, [] -> expr, ctx
+
+        | _ ->
+            let ctx =
+              ctx
+              |> addModuleSynonymDef serial ({ Name = name; Bound = None; Loc = loc }: ModuleSynonymDef)
+              |> importTy (ModuleSynonymSymbol serial)
+
+            expr, ctx
 
     | _ -> expr, ctx
 
@@ -1421,6 +1453,39 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         // Module no longer needed.
         hxSemi body loc, ctx
+
+      doArm ()
+
+  | HModuleSynonymExpr (serial, path, loc) ->
+      let doArm () =
+        let name =
+          ctx |> findName (moduleSynonymSerialToInt serial)
+
+        let ctx =
+          match name, path with
+          | "_", _
+          | _, [] -> ctx
+
+          // FIXME: resolve module-name based on path
+          | _, [ _; moduleName ] ->
+              match ctx |> resolveLocalTyName (moduleName + "Module") with
+              | Some (ModuleTySymbol referent) ->
+                  ctx
+                  |> addModuleSynonymDef
+                       serial
+                       ({ Name = name
+                          Bound = Some referent
+                          Loc = loc }: ModuleSynonymDef)
+                  |> doImportTyWithAlias name (ModuleTySymbol referent)
+                  |> doImportTyWithAlias (name + "Module") (ModuleTySymbol referent)
+              | _ ->
+                  ctx
+                  |> addLog (OtherNameResLog "Module not found.") loc
+          | _ ->
+              ctx
+              |> addLog (OtherNameResLog "This kind of module synonym is unimplemented. Hint: `module A = P.M`.") loc
+
+        hxUnit loc, ctx
 
       doArm ()
 

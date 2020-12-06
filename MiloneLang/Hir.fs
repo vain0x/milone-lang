@@ -193,6 +193,16 @@ type ModuleTySerial = ModuleTySerial of Serial
 [<NoEquality; NoComparison>]
 type ModuleTyDef = { Name: Ident; Loc: Loc }
 
+[<Struct; NoEquality; NoComparison>]
+type ModuleSynonymSerial = ModuleSynonymSerial of Serial
+
+//// Module is a type so that it can be used as namespace.
+[<NoEquality; NoComparison>]
+type ModuleSynonymDef =
+  { Name: Ident
+    Bound: ModuleTySerial option
+    Loc: Loc }
+
 /// Definition of named value in HIR.
 [<NoEquality; NoComparison>]
 type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
@@ -236,6 +246,7 @@ type TySymbol =
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
   | ModuleTySymbol of moduleTySerial: ModuleTySerial
+  | ModuleSynonymSymbol of moduleSynonymSerial: ModuleSynonymSerial
 
 /// Pattern in HIR.
 [<NoEquality; NoComparison>]
@@ -443,6 +454,7 @@ type HExpr =
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
   | HModuleExpr of ModuleTySerial * body: HExpr list * Loc
+  | HModuleSynonymExpr of ModuleSynonymSerial * path: Ident list * Loc
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -540,6 +552,12 @@ let moduleTySerialToInt (ModuleTySerial serial) = serial
 
 let moduleTySerialCmp l r =
   moduleTySerialToInt l - moduleTySerialToInt r
+
+let moduleSynonymSerialToInt (ModuleSynonymSerial serial) = serial
+
+let moduleSynonymSerialCmp l r =
+  moduleSynonymSerialToInt l
+  - moduleSynonymSerialToInt r
 
 let tyDefToName tyDef =
   match tyDef with
@@ -927,6 +945,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
   | HModuleExpr (_, _, a) -> tyUnit, a
+  | HModuleSynonymExpr (_, _, a) -> tyUnit, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat = patMap f g pat
@@ -963,6 +982,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
     | HModuleExpr (name, body, a) -> HModuleExpr(name, List.map go body, g a)
+    | HModuleSynonymExpr (name, path, a) -> HModuleSynonymExpr(name, path, g a)
 
   go expr
 

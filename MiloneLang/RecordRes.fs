@@ -251,7 +251,8 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 let recordRes (expr: HExpr, tyCtx: TyCtx) =
   let ctx = ofTyCtx tyCtx

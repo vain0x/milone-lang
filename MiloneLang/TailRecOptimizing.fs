@@ -121,7 +121,8 @@ let private troExpr isTail (expr, ctx) =
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
-  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 let tailRecOptimize (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let ctx = ofTyCtx tyCtx

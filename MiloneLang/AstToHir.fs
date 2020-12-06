@@ -660,6 +660,14 @@ let private athDecl docId (decl, nameCtx) =
 
       doArm ()
 
+  | AModuleSynonymDecl (ident, path, pos) ->
+      let doArm () =
+        let serial, nameCtx = nameCtx |> nameCtxAdd ident
+        let loc = toLoc docId pos
+        prepend (HModuleSynonymExpr(ModuleSynonymSerial serial, path, loc)), nameCtx
+
+      doArm ()
+
   | AAttrDecl (contents, next, pos) ->
       let doArm () =
         // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)

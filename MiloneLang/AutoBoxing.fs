@@ -669,7 +669,8 @@ let private abExpr ctx expr =
 
       doArm ()
 
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
   // Detect recursion.
