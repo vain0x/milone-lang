@@ -470,11 +470,26 @@ type MonoMode =
 
 [<NoEquality; NoComparison>]
 type NameResLog =
+  // in expression
   | UndefinedValueError of name: string
+  | TyUsedAsValueError
+
+  // in pat
+  | UnresolvedNavPatError
+  | IllegalOrPatError
+  | OrPatInconsistentBindingError
+  | VarNameConflictError
+
+  // in type
   | UndefinedTyError of name: string
-  | FunPatError of name: string
   | TyArityError of name: string * actual: int * expected: int
   | ModuleUsedAsTyError of name: string
+
+  // other
+  | ModulePathNotFoundError
+
+  | UnimplModuleSynonymError
+  | UnimplOrPatBindingError
   | OtherNameResLog of msg: string
 
 [<RequireQualifiedAccess>]
@@ -1027,15 +1042,20 @@ let nameResLogToString log =
       + name
       + "' here should denote to some value; but not found."
 
+  | TyUsedAsValueError -> "This is a type. A value is expected here."
+
   | UndefinedTyError name ->
       "The name '"
       + name
       + "' here should denote to some type; but not found."
 
-  | FunPatError name ->
-      "The name '"
-      + name
-      + "' here is a function, which can't be used as a pattern."
+  | VarNameConflictError -> "Variable name conflicts"
+
+  | UnresolvedNavPatError -> "Couldn't resolve nav pattern."
+
+  | IllegalOrPatError -> "OR pattern is disallowed in let expressions."
+
+  | OrPatInconsistentBindingError -> "OR pattern binds different set of variables"
 
   | TyArityError ("_", _, _) -> "'_' can't have type arguments."
 
@@ -1052,6 +1072,12 @@ let nameResLogToString log =
       "The name '"
       + name
       + "' here should denote to some type; but is a module name."
+
+  | ModulePathNotFoundError -> "Module not found for this path"
+
+  | UnimplModuleSynonymError -> "This kind of module synonym is unimplemented. Hint: `module A = P.M`."
+
+  | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
 
   | OtherNameResLog msg -> msg
 

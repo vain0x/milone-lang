@@ -978,9 +978,7 @@ let private nameResNavPat pat ctx =
     | _ -> failwith "NEVER"
 
   let notResolved ctx =
-    let ctx =
-      ctx
-      |> addLog (OtherNameResLog "Couldn't resolve nav pattern.") loc
+    let ctx = ctx |> addLog UnresolvedNavPatError loc
 
     HDiscardPat(noTy, loc), ctx
 
@@ -1042,9 +1040,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HOrPat (l, r, ty, loc) ->
       // No OR patterns appear in arm patterns due to normalization.
       // So we can assume that it's inside of irrefutable pattern.
-      let ctx =
-        ctx
-        |> addLog (OtherNameResLog "OR pattern is disallowed in let expressions.") loc
+      let ctx = ctx |> addLog IllegalOrPatError loc
 
       let l, ctx = (l, ctx) |> nameResPat
       let r, ctx = (r, ctx) |> nameResPat
@@ -1084,9 +1080,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
     |> mapFold (fun ctx (_: string) (_, _, useLocs) ->
          match useLocs with
          | [] -> ctx
-         | loc :: _ ->
-             ctx
-             |> addLog (OtherNameResLog "Variable name conflicts") loc) ctx
+         | loc :: _ -> ctx |> addLog VarNameConflictError loc) ctx
 
   // Set of variables defined in the left-hand side.
   let varSerialSet =
@@ -1118,11 +1112,9 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
            ok && setIsEmpty set
 
          let ctx =
-           if ok then
-             ctx
-           else
-             ctx
-             |> addLog (OtherNameResLog "OR pattern binds different set of variables") loc
+           if ok
+           then ctx
+           else ctx |> addLog OrPatInconsistentBindingError loc
 
          pat, ctx)
 
@@ -1130,8 +1122,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
   let ctx =
     if not (List.isEmpty pats)
        && not (setIsEmpty varSerialSet) then
-      ctx
-      |> addLog (OtherNameResLog "OR pattern including some binding is unimplemented") loc
+      ctx |> addLog UnimplOrPatBindingError loc
     else
       ctx
 
@@ -1150,9 +1141,7 @@ let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
     |> mapFold (fun ctx (_: string) (_, _, useLocs) ->
          match useLocs with
          | [] -> ctx
-         | loc :: _ ->
-             ctx
-             |> addLog (OtherNameResLog "Variable name conflicts") loc) ctx
+         | loc :: _ -> ctx |> addLog VarNameConflictError loc) ctx
 
   pat, ctx
 
@@ -1279,10 +1268,7 @@ let private nameResNavExpr expr ctx =
   | ResolvedAsScope (_, Some expr, _) -> expr, ctx
 
   | ResolvedAsScope (_, None, loc) ->
-      let ctx =
-        ctx
-        |> addLog (OtherNameResLog "This is a type. A value is expected here.") loc
-
+      let ctx = ctx |> addLog TyUsedAsValueError loc
       hxAbort loc, ctx
 
   | NotResolvedExpr (name, loc) ->
@@ -1422,9 +1408,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
           match tySymbolOpt with
           | Some (ModuleTySymbol moduleSerial) -> ctx |> openModule moduleSerial
-          | _ ->
-              ctx
-              |> addLog (OtherNameResLog("Unknown path: " + S.concat "." path)) loc
+          | _ -> ctx |> addLog ModulePathNotFoundError loc
 
         expr, ctx
 
@@ -1486,12 +1470,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                           Loc = loc }: ModuleSynonymDef)
                   |> doImportTyWithAlias name (ModuleTySymbol referent)
                   |> doImportTyWithAlias (name + "Module") (ModuleTySymbol referent)
-              | _ ->
-                  ctx
-                  |> addLog (OtherNameResLog "Module not found.") loc
-          | _ ->
-              ctx
-              |> addLog (OtherNameResLog "This kind of module synonym is unimplemented. Hint: `module A = P.M`.") loc
+              | _ -> ctx |> addLog ModulePathNotFoundError loc
+          | _ -> ctx |> addLog UnimplModuleSynonymError loc
 
         hxUnit loc, ctx
 
