@@ -1,6 +1,6 @@
 module rec MiloneStd.StdString
 
-open MiloneStd.StdChar
+module C = MiloneStd.StdChar
 
 /// Ensures `minValue <= value <= maxValue`.
 let private intClamp (minValue: int) (maxValue: int) (value: int) =
@@ -140,13 +140,13 @@ let trimEndIf (isTrimmed: char -> bool) (s: string) =
   if r > 0 then s.[0..r - 1] else ""
 
 /// Removes leading and trailing spaces.
-let trim (s: string) = s |> trimIf isSpace
+let trim (s: string) = s |> trimIf C.isSpace
 
 /// Removes leading spaces.
-let trimStart (s: string) = s |> trimStartIf isSpace
+let trimStart (s: string) = s |> trimStartIf C.isSpace
 
 /// Removes trailing spaces.
-let trimEnd (s: string) = s |> trimEndIf isSpace
+let trimEnd (s: string) = s |> trimEndIf C.isSpace
 
 // -----------------------------------------------
 // Split
