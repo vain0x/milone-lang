@@ -1126,6 +1126,15 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
 
          pat, ctx)
 
+  // PENDING: MirGen generates illegal code for binding OR patterns, so reject here.
+  let ctx =
+    if not (List.isEmpty pats)
+       && not (setIsEmpty varSerialSet) then
+      ctx
+      |> addLog (OtherNameResLog "OR pattern including some binding is unimplemented") loc
+    else
+      ctx
+
   let pat =
     List.fold (fun l r -> HOrPat(l, r, noTy, loc)) pat pats
 
