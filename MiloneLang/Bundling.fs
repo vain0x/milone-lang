@@ -73,6 +73,10 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 
+type private ProjectName = string
+
+type private ModuleName = string
+
 let private findModulePaths expr =
   let rec go expr =
     match expr with
@@ -95,20 +99,22 @@ let private findOpenModules expr =
 // BundleCtx
 // -----------------------------------------------
 
+type ModuleSyntaxData = DocId * ARoot * (string * Pos) list
+
 [<NoEquality; NoComparison>]
 type BundleHost =
   {
     /// Requests the host to load a module.
     ///
     /// The host should locate the module and retrieve its source code, tokenize and parse if exists.
-    FetchModule: string -> string -> (DocId * ARoot * (string * Pos) list) option }
+    FetchModule: ProjectName -> ModuleName -> ModuleSyntaxData option }
 
 [<NoEquality; NoComparison>]
 type private BundleCtx =
   { NameCtx: NameCtx
 
     /// Modules to be opened.
-    ModuleQueue: (string * string) list
+    ModuleQueue: (ProjectName * ModuleName) list
 
     /// Processed module.
     ModuleAcc: HExpr list list
@@ -117,7 +123,7 @@ type private BundleCtx =
     ErrorAcc: (string * Loc) list
 
     /// Set of modules already fetched.
-    FetchMemo: AssocSet<string * string>
+    FetchMemo: AssocSet<ProjectName * ModuleName>
 
     Host: BundleHost }
 

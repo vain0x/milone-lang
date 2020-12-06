@@ -41,6 +41,6 @@ int main() {
     Person_1.Birthday = base_.Birthday;
     struct Person_ john_ = Person_1;
     struct String name_ = john_.Name;
-    milone_assert((name_.len == 8), 19, 2);
+    milone_assert((name_.len == 8), 18, 2);
     return 0;
 }

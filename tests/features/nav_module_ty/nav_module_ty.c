@@ -56,11 +56,11 @@ int main() {
     if ((t_.tag != Node_)) goto next_2;
     if (((*(((struct Node_Node_Tuple2*)t_.Node_))).t0.tag != Leaf_)) goto next_2;
     int x_ = (*(((struct Node_Node_Tuple2*)t_.Node_))).t0.Leaf_;
-    milone_assert((x_ == 2), 25, 24);
+    milone_assert((x_ == 2), 22, 24);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, 26, 9);
+    milone_assert(false, 23, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;
