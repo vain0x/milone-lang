@@ -1,7 +1,7 @@
 module rec module_synonym.Program
 
-open module_synonym.sub
-
+// S is defined as alias of `module_synonym.sub`
+// and `module_synonym.sub` is added to the project.
 module S = module_synonym.sub
 
 let main _ =

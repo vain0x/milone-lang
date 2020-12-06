@@ -219,7 +219,8 @@ let private containsTailRec expr =
   | HLetFunExpr (_, _, _, _, next, _, _) -> next |> containsTailRec
 
   | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes."
 
 // -----------------------------------------------
 // Pattern

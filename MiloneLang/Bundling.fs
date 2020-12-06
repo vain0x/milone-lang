@@ -3,18 +3,21 @@
 /// Bundles modules. Resolves dependencies over modules
 /// and merges modules into single HIR expression.
 ///
-/// ## `open` statements as dependency specification
+/// ## Statements as dependency specification
 ///
 /// In F#, a project file (.fsproj) describes the member modules, their ordering
 /// and external project/package references.
 ///
-/// In milone-lang, `open` statements work as dependency for now.
+/// In milone-lang, `open`/`module` statements work as dependency for now.
+///
 /// When a module X has a statement `open P.M`,
 /// where P is project name and M is module name,
 /// such module `P.M` is also a member of the project,
 /// and `P.M` should be earlier than X in the project.
 ///
-/// `open` doesn't specify where the project `P` come from.
+/// `module Y = P.M` (module synonym) has same effect too.
+///
+/// Where the project `P` come from, is not specified here.
 /// Instead, this module just uses a function `FetchModule`,
 /// provided by the caller, to load a module.
 /// See `Cli.fs` for its implementation.
@@ -24,8 +27,7 @@
 /// Dependency resolution is just a topological sort.
 ///
 /// Starting from a module that is specified by the user,
-/// recursively loads modules based on `open` statements
-/// as described above.
+/// recursively loads modules based on statements described above.
 ///
 /// ## Example
 ///
@@ -71,18 +73,19 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 
-let private findOpenPaths expr =
+let private findModulePaths expr =
   let rec go expr =
     match expr with
-    | HOpenExpr (path, loc) -> [ path, loc ]
+    | HOpenExpr (([ _; _ ] as path), loc) -> [ path, loc ]
     | HBlockExpr (stmts, last) -> List.append (List.collect go stmts) (go last)
     | HModuleExpr (_, body, _) -> body |> List.collect go
+    | HModuleSynonymExpr (_, ([ _; _ ] as path), loc) -> [ path, loc ]
     | _ -> []
 
   go expr
 
 let private findOpenModules expr =
-  findOpenPaths expr
+  findModulePaths expr
   |> List.choose (fun (path, loc) ->
        match path with
        | projectName :: moduleName :: _ -> Some(projectName, moduleName, loc)
