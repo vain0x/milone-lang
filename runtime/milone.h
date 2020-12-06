@@ -38,7 +38,7 @@ int uint64_compare(uint64_t l, uint64_t r);
 
 // null-terminated, immutable, utf-8 string
 struct String {
-    char *str;
+    char const *str;
     int len;
 };
 

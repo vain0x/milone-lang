@@ -299,14 +299,14 @@ struct String str_add(struct String left, struct String right) {
 struct String str_get_slice(int l, int r, struct String s) {
     l = int_clamp(l, 0, s.len);
     r = int_clamp(r + 1, l, s.len);
-    int len = r - l;
-    char *str;
+
     if (r == s.len) {
-        str = s.str + l;
-    } else {
-        str = (char *)milone_mem_alloc(len + 1, sizeof(char));
-        memcpy(str, s.str + l, len);
+        return (struct String){.str = s.str + l, .len = s.len - l};
     }
+
+    int len = r - l;
+    char *str = (char *)milone_mem_alloc(len + 1, sizeof(char));
+    memcpy(str, s.str + l, len);
     assert(str[len] == '\0');
     return (struct String){.str = str, .len = len};
 }
@@ -322,70 +322,70 @@ static void verify_str_to_number(const char *type_name, const char *endptr,
 }
 
 int8_t str_to_int8(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int n = strtol(s.str, &endptr, 10);
     verify_str_to_number("int8_t", endptr, INT8_MIN <= n && n <= INT8_MAX);
     return (int8_t)n;
 }
 
 int16_t str_to_int16(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int n = strtol(s.str, &endptr, 10);
     verify_str_to_number("int16_t", endptr, INT16_MIN <= n && n <= INT16_MAX);
     return (int16_t)n;
 }
 
 int str_to_int(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int n = strtol(s.str, &endptr, 10);
     verify_str_to_number("int", endptr, true);
     return n;
 }
 
 int64_t str_to_int64(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int64_t n = strtoll(s.str, &endptr, 10);
     verify_str_to_number("int64_t", endptr, true);
     return n;
 }
 
 intptr_t str_to_intptr(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int64_t n = strtoll(s.str, &endptr, 10);
     verify_str_to_number("intptr_t", endptr, true);
     return (intptr_t)n;
 }
 
 uint8_t str_to_uint8(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint32_t n = strtoul(s.str, &endptr, 10);
     verify_str_to_number("uint8_t", endptr, n <= UINT8_MAX);
     return (uint8_t)n;
 }
 
 uint16_t str_to_uint16(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint32_t n = strtoul(s.str, &endptr, 10);
     verify_str_to_number("uint16_t", endptr, n <= UINT16_MAX);
     return (uint16_t)n;
 }
 
 uint32_t str_to_uint32(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint32_t n = strtoul(s.str, &endptr, 10);
     verify_str_to_number("uint32_t", endptr, true);
     return n;
 }
 
 uint64_t str_to_uint64(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint64_t n = strtoull(s.str, &endptr, 10);
     verify_str_to_number("uint64_t", endptr, true);
     return n;
 }
 
 uintptr_t str_to_uintptr(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint64_t n = strtoull(s.str, &endptr, 10);
     verify_str_to_number("uintptr_t", endptr, true);
     return n;
@@ -404,7 +404,7 @@ struct String str_of_uint64(uint64_t value) {
 }
 
 double str_to_double(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     double n = strtod(s.str, &endptr);
     verify_str_to_number("float", endptr, true);
     return n;
@@ -634,7 +634,7 @@ struct String arg_get(int index) {
         abort();
     }
 
-    char *str = s_argv[index];
+    char const *str = s_argv[index];
     int len = strlen(str);
     return (struct String){.str = str, .len = len};
 }
