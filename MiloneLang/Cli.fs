@@ -355,6 +355,18 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
 // Processes
 // -----------------------------------------------
 
+let private isErrorToken token =
+  match token with
+  | ErrorToken _, _ -> true
+  | _ -> false
+
+let private tokenizeErrors errorTokens =
+  errorTokens
+  |> List.map (fun token ->
+       match token with
+       | ErrorToken error, pos -> tokenizeErrorToString error, pos
+       | _ -> failwith "NEVER")
+
 /// Loads source codes from files, performs tokenization and SyntaxParse,
 /// and transforms them into high-level intermediate representation (HIR).
 let syntacticallyAnalyze (ctx: CompileCtx) =
@@ -363,7 +375,16 @@ let syntacticallyAnalyze (ctx: CompileCtx) =
 
   writeLog host v ("Bundling project=" + ctx.ProjectName)
 
-  let doParse (_: DocId) (s: string) = s |> tokenize |> parse
+  let doParse (_: DocId) (s: string) =
+    let tokens = s |> tokenize
+    let errorTokens, tokens = tokens |> List.partition isErrorToken
+    let ast, parseErrors = tokens |> parse
+
+    let errors =
+      List.append (tokenizeErrors errorTokens) parseErrors
+
+    ast, errors
+
   match bundleProgram (ctx |> toBundleHost doParse) ctx.ProjectName with
   | Some syntax -> syntax
   | None -> failwithf "Entry module file not found: %s" ctx.ProjectName

@@ -383,8 +383,9 @@ let private tokenOfIdent (text: string) l r: Token =
 let private tokenOfOp (text: string) l r: Token =
   let s = text |> strSlice l r
 
-  let expect expected token =
-    if s = expected then token else ErrorToken
+  let error () = ErrorToken UndefinedOpTokenError
+
+  let expect expected token = if s = expected then token else error ()
 
   match s.[0] with
   | '&' ->
@@ -392,25 +393,25 @@ let private tokenOfOp (text: string) l r: Token =
       | "&" -> AmpToken
       | "&&" -> AmpAmpToken
       | "&&&" -> AmpAmpAmpToken
-      | _ -> ErrorToken
+      | _ -> error ()
 
   | '-' ->
       match s with
       | "->" -> ArrowToken
       | "-" -> MinusToken
-      | _ -> ErrorToken
+      | _ -> error ()
 
   | ':' ->
       match s with
       | ":" -> ColonToken
       | "::" -> ColonColonToken
-      | _ -> ErrorToken
+      | _ -> error ()
 
   | '.' ->
       match s with
       | "." -> DotToken
       | ".." -> DotDotToken
-      | _ -> ErrorToken
+      | _ -> error ()
 
   | '<' ->
       match s with
@@ -419,13 +420,13 @@ let private tokenOfOp (text: string) l r: Token =
       | "<>" -> LeftRightToken
       | "<<" -> LeftLeftToken
       | "<<<" -> LeftLeftLeftToken
-      | _ -> ErrorToken
+      | _ -> error ()
 
   | '>' ->
       match s with
       | ">" -> RightAngleToken
       | ">=" -> RightEqToken
-      | _ -> ErrorToken
+      | _ -> error ()
 
   | '|' ->
       match s with
@@ -433,13 +434,13 @@ let private tokenOfOp (text: string) l r: Token =
       | "|>" -> PipeRightToken
       | "||" -> PipePipeToken
       | "|||" -> PipePipePipeToken
-      | _ -> ErrorToken
+      | _ -> error ()
 
   | '^' ->
       match s with
       | "^" -> HatToken
       | "^^^" -> HatHatHatToken
-      | _ -> ErrorToken
+      | _ -> error ()
 
   | '=' -> expect "=" EqToken
   | '%' -> expect "%" PercentToken
@@ -448,7 +449,7 @@ let private tokenOfOp (text: string) l r: Token =
   | '*' -> expect "*" StarToken
   | '/' -> expect "/" SlashToken
 
-  | _ -> ErrorToken
+  | _ -> error ()
 
 let private evalIntLit (text: string) (l: int) (r: int): Token =
   // FIXME: This fails when minimum int value.
@@ -473,17 +474,16 @@ let private evalCharLit (text: string) (l: int) (r: int): Token =
       | '\''
       | '"' -> CharToken c
 
-      | _ -> ErrorToken
+      | _ -> ErrorToken UnknownEscapeSequenceError
 
   // '\xHH'
   | 6 when text.[l] = '\''
            && text.[l + 1] = '\\'
            && text.[l + 2] = 'x'
            && text.[l + 5] = '\'' ->
-      // FIXME: Support other than \x00
-      CharToken '\x00'
+      if text.[l + 3] = '0' && text.[l + 4] = '0' then CharToken '\x00' else ErrorToken UnimplHexEscapeError
 
-  | _ -> ErrorToken
+  | _ -> ErrorToken InvalidCharLitError
 
 let private evalStrLit (text: string) (l: int) (r: int): Token =
   let rec skipVerbatim i =
@@ -508,7 +508,10 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
     else
       assert (i < r - 1 && text.[i] = '\\')
       match text.[i + 1] with
-      | 'x' when i + 4 < r -> go ("\x00" :: acc) (i + 4)
+      | 'x' when i
+                 + 4 < r
+                 && text.[i + 2] = '0'
+                 && text.[i + 3] = '0' -> go ("\x00" :: acc) (i + 4)
       | 't' when i + 2 < r -> go ("\t" :: acc) (i + 2)
       | 'r' when i + 2 < r -> go ("\r" :: acc) (i + 2)
       | 'n' when i + 2 < r -> go ("\n" :: acc) (i + 2)
@@ -517,11 +520,11 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
       | '\''
       | '"' when i + 2 < r -> go ((text |> strSlice (i + 1) (i + 2)) :: acc) (i + 2)
 
-      | _ -> ErrorToken
+      | _ -> ErrorToken UnknownEscapeSequenceError
 
   if l + 2 <= r && text.[l] = '"' && text.[r - 1] = '"'
   then go [] (l + 1)
-  else ErrorToken
+  else ErrorToken InvalidStrLitError
 
 let private evalStrLitRaw (text: string) l r =
   if (l + 6 <= r)
@@ -530,7 +533,7 @@ let private evalStrLitRaw (text: string) l r =
      && text |> isFollowedByRawQuotes (r - 3) then
     StrToken(text |> strSlice (l + 3) (r - 3))
   else
-    ErrorToken
+    ErrorToken InvalidStrLitError
 
 // -----------------------------------------------
 // Tokenize routines
@@ -711,7 +714,7 @@ let private doNext (text: string) (index: int): Token * int =
       let isFloat, m, r = scanNumberLit text (index + len)
 
       // m: before suffix
-      if m < r then ErrorToken, r
+      if m < r then ErrorToken UnimplNumberSuffixError, r
       else if isFloat then FloatToken text.[index..r - 1], r
       else evalIntLit text index r, r
 
@@ -730,7 +733,7 @@ let private doNext (text: string) (index: int): Token * int =
           let ident = text.[index + 2..m - 1]
           IdentToken ident, m + 2
 
-      | None -> ErrorToken, index + len
+      | None -> ErrorToken InvalidRawIdentError, index + len
 
   | LTyVar ->
       let r = index + len
@@ -759,7 +762,7 @@ let private doNext (text: string) (index: int): Token * int =
 
   | LBad ->
       let r = scanBad text (index + len)
-      ErrorToken, r
+      ErrorToken BadTokenError, r
 
 /// Tokenizes a string. Trivias are removed.
 let tokenize (text: string): (Token * Pos) list =

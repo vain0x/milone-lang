@@ -55,13 +55,43 @@ type DocId = string
 type Loc = DocId * RowIndex * ColumnIndex
 
 // -----------------------------------------------
+// Syntax errors
+// -----------------------------------------------
+
+type TokenizeError =
+  | InvalidCharLitError
+  | InvalidStrLitError
+  | InvalidRawIdentError
+  | BadTokenError
+  | UnknownEscapeSequenceError
+  | UndefinedOpTokenError
+  | UnimplNumberSuffixError
+  | UnimplHexEscapeError
+  | OtherTokenizeError of msg: string
+
+let tokenizeErrorToString error =
+  match error with
+  | InvalidCharLitError -> "Invalid char literal."
+  | InvalidStrLitError -> "Invalid string literal."
+  | InvalidRawIdentError -> "Invalid raw identifier. Hint: ``write like this``."
+  | BadTokenError -> "Invalid characters."
+
+  | UnknownEscapeSequenceError ->
+      "Unknown escape sequence. After `\\`, one of these chars is only allowed: `\\` `'` `\"` t r n x. `\\xHH` other than `\\x00` is unimplemented."
+
+  | UndefinedOpTokenError -> "Undefined operator."
+
+  | UnimplNumberSuffixError -> "Number literal suffix is unimplemented yet."
+  | UnimplHexEscapeError -> "`\\xHH` escape sequence is unimplemented yet, except for `\\x00`."
+  | OtherTokenizeError msg -> msg
+
+// -----------------------------------------------
 // Syntax types
 // -----------------------------------------------
 
 /// Words and punctuations in source code.
 type Token =
-  /// Illegal bytes, etc.
-  | ErrorToken
+  | ErrorToken of TokenizeError
 
   | BlankToken
   | NewlinesToken
