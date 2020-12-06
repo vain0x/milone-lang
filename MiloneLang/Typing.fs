@@ -408,7 +408,6 @@ let private inferAnnoPat ctx body annoTy loc =
   body, annoTy, ctx
 
 let private inferOrPat ctx first second loc =
-  // FIXME: Error if two patterns introduce different bindings.
   let first, firstTy, ctx = inferPat ctx first
   let second, secondTy, ctx = inferPat ctx second
 

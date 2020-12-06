@@ -148,8 +148,7 @@ let private fetchModuleWithMemo projectName moduleName (ctx: BundleCtx) =
           FetchMemo = ctx.FetchMemo |> setAdd (projectName, moduleName) }
 
     let result =
-      let host = ctx.Host // FIXME: A.B.C is unimplemented
-      host.FetchModule projectName moduleName
+      ctx.Host.FetchModule projectName moduleName
 
     false, result, ctx
 
