@@ -6,8 +6,6 @@ let objToString (value: _) = string (value :> obj)
 
 let inRegion (f: unit -> int): int = f ()
 
-let strJoin (sep: string) (xs: string list): string = System.String.Join(sep, xs)
-
 // -----------------------------------------------
 // C FFI
 // -----------------------------------------------

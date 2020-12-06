@@ -11,6 +11,8 @@ open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
+module S = MiloneStd.StdString
+
 // -----------------------------------------------
 // TyCtor
 // -----------------------------------------------
@@ -236,7 +238,7 @@ let tyDisplay getTyName ty =
       match args with
       | [] -> tyCtor
       | _ ->
-          let args = args |> List.map (go 0) |> strJoin ", "
+          let args = args |> List.map (go 0) |> S.concat ", "
           tyCtor + "<" + args + ">"
 
     match ty with
@@ -253,7 +255,7 @@ let tyDisplay getTyName ty =
 
     | AppTy (TupleTyCtor, itemTys) ->
         "("
-        + (itemTys |> List.map (go 20) |> strJoin " * ")
+        + (itemTys |> List.map (go 20) |> S.concat " * ")
         + ")"
 
     | AppTy (ListTyCtor, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
@@ -269,7 +271,7 @@ let tyDisplay getTyName ty =
         match args with
         | [] -> tyCtor
         | _ ->
-            let args = args |> List.map (go 0) |> strJoin ", "
+            let args = args |> List.map (go 0) |> S.concat ", "
             tyCtor + "<" + args + ">"
 
   go 0 ty

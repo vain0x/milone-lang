@@ -22,6 +22,8 @@ open MiloneLang.Syntax
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 
+module S = MiloneStd.StdString
+
 /// Unique serial number to identify something
 /// such as variables, nominal types, etc.
 type Serial = int
@@ -1096,7 +1098,7 @@ let logToString tyDisplay loc log =
       sprintf "%s The field '%s' is redundant for record '%s'." loc fieldName recordName
 
   | Log.MissingFieldsError (recordName, fieldNames) ->
-      let fields = fieldNames |> strJoin ", "
+      let fields = fieldNames |> S.concat ", "
 
       sprintf "%s Record '%s' must have fields: '%s'." loc recordName fields
 

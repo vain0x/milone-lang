@@ -56,14 +56,15 @@ module rec MiloneLang.SyntaxTokenize
 open MiloneLang.Util
 open MiloneLang.Syntax
 
+module C = MiloneStd.StdChar
+
 // -----------------------------------------------
 // Char
 // -----------------------------------------------
 
-let private charIsIdent (c: char): bool =
-  c = '_' || charIsDigit c || charIsAlpha c
+let private charIsIdent (c: char): bool = c = '_' || C.isAlphanumeric c
 
-let private charIsTyVar (c: char): bool = c = '_' || charIsAlpha c
+let private charIsTyVar (c: char): bool = c = '_' || C.isAlphabetic c
 
 let private charIsOp (c: char): bool =
   match c with
@@ -159,7 +160,7 @@ let private scanBlank (text: string) (i: int) =
       | '\t', _ -> go (i + 1)
 
       | _ -> i
-    else if i < text.Length && text.[i] |> charIsSpace then
+    else if i < text.Length && text.[i] |> C.isSpace then
       i + 1
     else
       i
@@ -216,7 +217,7 @@ let private scanRawIdent (text: string) (i: int) =
 
 let private scanNumberLit (text: string) (i: int) =
   let rec scanDigits (i: int) =
-    if at text i |> charIsDigit then scanDigits (i + 1) else i
+    if at text i |> C.isDigit then scanDigits (i + 1) else i
 
   let scanFraction i =
     // Check if point is following but not a range operator.

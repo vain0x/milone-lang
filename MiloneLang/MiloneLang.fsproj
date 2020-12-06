@@ -38,4 +38,7 @@
     <Compile Include="Cli.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\milone_libs\MiloneStd\MiloneStd.fsproj" />
+  </ItemGroup>
 </Project>

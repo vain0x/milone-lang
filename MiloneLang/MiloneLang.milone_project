@@ -1,0 +1,6 @@
+{
+  Options = [
+    // FIXME: wants to reference implicitly
+    Ref "../milone_libs/MiloneStd"
+  ]
+}

@@ -29,6 +29,9 @@ open MiloneLang.Cir
 open MiloneLang.CirGen
 open MiloneLang.CirDump
 
+module C = MiloneStd.StdChar
+module S = MiloneStd.StdString
+
 let private helpText = """milone-lang compiler
 
 USAGE:
@@ -92,31 +95,16 @@ type CliHost =
 // Helpers
 // -----------------------------------------------
 
-let private strStartsWith (prefix: string) (s: string) =
-  let rec go (i: int) =
-    i = prefix.Length
-    || (prefix.[i] = s.[i] && go (i + 1))
-
-  s.Length >= prefix.Length && go 0
-
-let private strTrimEnd (s: string) =
-  let rec go i =
-    if i = 0 || not (charIsSpace s.[i - 1]) then s |> strSlice 0 i else go (i - 1)
-
-  go s.Length
-
 let private charIsPathSep (c: char) = c = '/' || c = '\\'
 
-let private pathStrTrimEndPathSep (s: string) =
-  if s.Length >= 1 && charIsPathSep s.[s.Length - 1]
-  then s |> strSlice 0 (s.Length - 1)
-  else s
+let private pathStrTrimEndPathSep (s: string) = S.trimEndIf charIsPathSep s
 
+// wants string.findLastIndex
 /// Gets the final component splitting by path separators.
 let private pathStrToFileName (s: string) =
   let rec go i =
     if i = 0 then s
-    else if charIsPathSep s.[i - 1] then s |> strSlice i s.Length
+    else if charIsPathSep s.[i - 1] then s |> S.slice i s.Length
     else go (i - 1)
 
   go s.Length
@@ -128,16 +116,17 @@ let private pathStrToStem (s: string) =
   | ".." -> s
 
   | s ->
+      // wants findLastIndex
       let rec go i =
         if i = 0 then s
-        else if s.[i - 1] = '.' then s |> strSlice 0 (i - 1)
+        else if s.[i - 1] = '.' then s |> S.slice 0 (i - 1)
         else go (i - 1)
 
       go s.Length
 
 let private pathIsRelative (s: string) =
-  (s |> strStartsWith "./")
-  || (s |> strStartsWith "../")
+  (s |> S.startsWith "./")
+  || (s |> S.startsWith "../")
 
 // -----------------------------------------------
 // Project schema interpreter
@@ -533,7 +522,7 @@ let cliCompile (host: CliHost) verbosity projectDir =
   let ok, output = compile ctx
   let exitCode = if ok then 0 else 1
 
-  printfn "%s" (output |> strTrimEnd)
+  printfn "%s" (output |> S.trimEnd)
   exitCode
 
 let cliKirDump (host: CliHost) projectDirs =
@@ -561,7 +550,7 @@ let cliKirDump (host: CliHost) projectDirs =
        let code =
          if ok then
            printfn "*/"
-           printfn "%s" (output |> strTrimEnd)
+           printfn "%s" (output |> S.trimEnd)
            code
          else
            printfn "\n%s\n*/" output
@@ -595,7 +584,7 @@ let cliCompileViaKir (host: CliHost) projectDirs =
        let code =
          if ok then
            printfn "*/"
-           printfn "%s" (output |> strTrimEnd)
+           printfn "%s" (output |> S.trimEnd)
            code
          else
            printfn "\n%s\n*/" output

@@ -3,6 +3,9 @@ module rec MiloneLang.Util
 
 open MiloneLang.TreeMap
 
+module C = MiloneStd.StdChar
+module S = MiloneStd.StdString
+
 // -----------------------------------------------
 // Collections
 // -----------------------------------------------
@@ -281,11 +284,11 @@ let intFromHex (l: int) (r: int) (s: string) =
 
   let hexDigitToInt (c: char) =
     if '0' <= c && c <= '9' then
-      charSub c '0'
+      int c - int '0'
     else if 'A' <= c && c <= 'F' then
-      charSub c 'A' + 10
+      int c - int 'A' + 10
     else if 'a' <= c && c <= 'f' then
-      charSub c 'a' + 10
+      int c - int 'a' + 10
     else
       assert false
       0
@@ -303,22 +306,8 @@ let intFromHex (l: int) (r: int) (s: string) =
 // Char
 // -----------------------------------------------
 
-let charSub (x: char) (y: char) = int x - int y
-
-let charIsControl (c: char) =
-  let n = int c
-  0 <= n && n < 32 || n = 127
-
-let charIsSpace (c: char): bool =
-  c = ' ' || c = '\t' || c = '\r' || c = '\n'
-
-let charIsDigit (c: char): bool = '0' <= c && c <= '9'
-
-let charIsAlpha (c: char): bool =
-  ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
-
 let charNeedsEscaping (c: char) =
-  charIsControl c || c = '\\' || c = '"' || c = '\''
+  C.isControl c || c = '\\' || c = '"' || c = '\''
 
 let charEscape (c: char) =
   assert (c |> charNeedsEscaping)
@@ -352,7 +341,7 @@ let strSlice (start: int) (endIndex: int) (s: string): string =
   assert (start <= endIndex && endIndex <= s.Length)
   if start >= endIndex then "" else s.[start..endIndex - 1]
 
-let strConcat (xs: string list) = strJoin "" xs
+let strConcat (xs: string list) = S.concat "" xs
 
 let strNeedsEscaping (str: string) =
   let rec go i =

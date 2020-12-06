@@ -10,6 +10,8 @@ open MiloneLang.Syntax
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
+module S = MiloneStd.StdString
+
 let private isNoTy ty =
   match ty with
   | ErrorTy _ -> true
@@ -1416,7 +1418,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           | Some (ModuleTySymbol moduleSerial) -> ctx |> openModule moduleSerial
           | _ ->
               ctx
-              |> addLog (OtherNameResLog("Unknown path: " + strJoin "." path)) loc
+              |> addLog (OtherNameResLog("Unknown path: " + S.concat "." path)) loc
 
         expr, ctx
 

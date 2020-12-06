@@ -4,9 +4,11 @@ module rec MiloneLang.EntryPoint
 // HACK: "MiloneOnly" module is automatically loaded in Bundling and opened in NameRes.
 // open MiloneLang.MiloneOnly
 
-// See milone_libs/MiloneCore for implementations.
+// See milone_libs for implementations.
 open MiloneCore.List
 open MiloneCore.Option
+open MiloneStd.StdChar
+open MiloneStd.StdString
 
 open MiloneLang.Cli
 
