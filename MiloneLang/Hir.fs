@@ -502,6 +502,7 @@ type TyUnifyLog =
 [<NoEquality; NoComparison>]
 type Log =
   | NameResLog of NameResLog
+  | IrrefutablePatNonExhaustiveError
   | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
   | TyBoundError of Trait
   | RedundantFieldError of ty: Ident * field: Ident
@@ -905,6 +906,34 @@ let patNormalize pat =
 
   go pat
 
+/// Gets whether a pattern is clearly exhaustive, that is,
+/// pattern matching on it always succeeds (assuming type check is passing).
+let patIsClearlyExhaustive isNewtypeVariant pat =
+  let rec go pat =
+    match pat with
+    | HDiscardPat _
+    | HRefPat _ -> true
+
+    | HLitPat _
+    | HNilPat _
+    | HNonePat _
+    | HSomePat _
+    | HNavPat _
+    | HConsPat _ -> false
+
+    | HVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
+    | HCallPat (HVariantPat (variantSerial, _, _), [ payloadPat ], _, _) ->
+        isNewtypeVariant variantSerial && go payloadPat
+    | HCallPat _ -> false
+
+    | HTuplePat (itemPats, _, _) -> itemPats |> List.forall go
+    | HBoxPat (itemPat, _) -> go itemPat
+    | HAsPat (bodyPat, _, _) -> go bodyPat
+    | HAnnoPat (bodyPat, _, _) -> go bodyPat
+    | HOrPat (first, second, _, _) -> go first || go second
+
+  go pat
+
 // -----------------------------------------------
 // Expressions (HIR)
 // -----------------------------------------------
@@ -1086,6 +1115,8 @@ let logToString tyDisplay loc log =
 
   match log with
   | Log.NameResLog log -> loc + " " + nameResLogToString log
+
+  | Log.IrrefutablePatNonExhaustiveError -> loc + " Let expressions cannot contain refutable patterns, which could fail to match for now."
 
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
       sprintf "%s Recursive type occurred while unifying '%s' to '%s'." loc (tyDisplay lTy) (tyDisplay rTy)

@@ -61,6 +61,12 @@ let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
+let private isNewtypeVariant (ctx: TyCtx) variantSerial =
+  match ctx
+        |> findTy (ctx.Variants |> mapFind variantSerial).UnionTySerial with
+  | UnionTyDef (_, [ _ ], _) -> true
+  | _ -> false
+
 let private isMainFun funSerial (ctx: TyCtx) =
   match ctx.MainFunOpt with
   | Some mainFun -> funSerialCmp mainFun funSerial = 0
@@ -434,6 +440,22 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
   | HNavPat _ -> failwithf "NEVER: HNavPat is resolved in NameRes. %A" pat
   | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
+let private inferRefutablePat ctx pat = inferPat ctx pat
+
+let private inferIrrefutablePat ctx pat =
+  if pat
+     |> patIsClearlyExhaustive (isNewtypeVariant ctx)
+     |> not then
+    let loc = patToLoc pat
+
+    let ctx =
+      addLog ctx Log.IrrefutablePatNonExhaustiveError loc
+
+    let ty, ctx = freshMetaTyForPat pat ctx
+    HDiscardPat(ty, loc), ty, ctx
+  else
+    inferPat ctx pat
+
 // -----------------------------------------------
 // Expression
 // -----------------------------------------------
@@ -596,7 +618,7 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
   let arms, ctx =
     (arms, ctx)
     |> stMap (fun ((pat, guard, body), ctx) ->
-         let pat, patTy, ctx = inferPat ctx pat
+         let pat, patTy, ctx = inferRefutablePat ctx pat
 
          let ctx = unifyTy ctx (patToLoc pat) patTy condTy
 
@@ -777,7 +799,7 @@ let private inferLetValExpr ctx expectOpt vis pat init next loc =
     let expectOpt = patToAnnoTy pat
     inferExpr ctx expectOpt init
 
-  let pat, patTy, ctx = inferPat ctx pat
+  let pat, patTy, ctx = inferIrrefutablePat ctx pat
 
   let ctx = unifyTy ctx loc initTy patTy
 
@@ -792,7 +814,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
     | [] -> [], funTy, ctx
 
     | argPat :: argPats ->
-        let argPat, argTy, ctx = inferPat ctx argPat
+        let argPat, argTy, ctx = inferIrrefutablePat ctx argPat
         let argPats, funTy, ctx = inferArgs ctx funTy argPats
         argPat :: argPats, tyFun argTy funTy, ctx
 

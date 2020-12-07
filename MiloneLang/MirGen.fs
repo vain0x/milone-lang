@@ -234,7 +234,7 @@ let private mirifyPatLit ctx endLabel lit expr loc =
 
   let gotoStmt = msGotoUnless eqExpr endLabel loc
   let ctx = addStmt ctx gotoStmt
-  false, ctx
+  ctx
 
 let private mirifyPatNil ctx endLabel itemTy expr loc =
   let isEmptyExpr =
@@ -242,7 +242,7 @@ let private mirifyPatNil ctx endLabel itemTy expr loc =
 
   let gotoStmt = msGotoUnless isEmptyExpr endLabel loc
   let ctx = addStmt ctx gotoStmt
-  false, ctx
+  ctx
 
 let private mirifyPatNone ctx endLabel itemTy expr loc =
   mirifyPatNil ctx endLabel itemTy expr loc
@@ -265,16 +265,16 @@ let private mirifyPatCons ctx endLabel l r itemTy loc expr =
   let tail =
     MUnaryExpr(MListTailUnary, expr, listTy, loc)
 
-  let _, ctx = mirifyPat ctx endLabel l head
-  let _, ctx = mirifyPat ctx endLabel r tail
-  false, ctx
+  let ctx = mirifyPat ctx endLabel l head
+  let ctx = mirifyPat ctx endLabel r tail
+  ctx
 
 let private mirifyPatSome ctx endLabel item itemTy loc expr =
   let nilPat = HNilPat(itemTy, loc)
   mirifyPatCons ctx endLabel item nilPat itemTy loc expr
 
 let private mirifyPatRef ctx _endLabel serial ty loc expr =
-  true, addStmt ctx (MLetValStmt(serial, MExprInit expr, ty, loc))
+  addStmt ctx (MLetValStmt(serial, MExprInit expr, ty, loc))
 
 let private mirifyPatVariant ctx endLabel serial ty loc expr =
   // Compare tags.
@@ -286,7 +286,7 @@ let private mirifyPatVariant ctx endLabel serial ty loc expr =
 
   let gotoStmt = msGotoUnless eqExpr endLabel loc
   let ctx = addStmt ctx gotoStmt
-  false, ctx
+  ctx
 
 let private mirifyPatCall (ctx: MirCtx) itself endLabel serial args _ty loc expr =
   match args with
@@ -311,25 +311,22 @@ let private mirifyPatCall (ctx: MirCtx) itself endLabel serial args _ty loc expr
         let gotoStmt = msGotoUnless eqExpr endLabel loc
         let ctx = addStmt ctx gotoStmt
 
-        // Extract content.
-        let _, ctx =
-          mirifyPat ctx endLabel payload extractExpr
-
-        false, ctx
+        // Extract payload.
+        mirifyPat ctx endLabel payload extractExpr
 
   | _ -> failwithf "NEVER: %A" itself
 
 let private mirifyPatTuple ctx endLabel itemPats itemTys expr loc =
-  let rec go covered ctx i itemPats itemTys =
+  let rec go ctx i itemPats itemTys =
     match itemPats, itemTys with
-    | [], [] -> covered, ctx
+    | [], [] -> ctx
     | itemPat :: itemPats, itemTy :: itemTys ->
         let item = mxProj expr i itemTy loc
-        let itemCovered, ctx = mirifyPat ctx endLabel itemPat item
-        go (covered && itemCovered) ctx (i + 1) itemPats itemTys
+        let ctx = mirifyPat ctx endLabel itemPat item
+        go  ctx (i + 1) itemPats itemTys
     | _ -> failwith "Never"
 
-  go true ctx 0 itemPats itemTys
+  go ctx 0 itemPats itemTys
 
 let private mirifyPatBox ctx endLabel itemPat expr loc =
   let ty, _ = patExtract itemPat
@@ -342,19 +339,14 @@ let private mirifyPatAs ctx endLabel pat serial expr loc =
     addStmt ctx (MLetValStmt(serial, MExprInit expr, ty, loc))
 
   let expr = MRefExpr(serial, ty, loc)
-  let covers, ctx = mirifyPat ctx endLabel pat expr
-  covers, ctx
+  mirifyPat ctx endLabel pat expr
 
 /// Processes pattern matching
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
-/// Determines if the pattern covers the whole.
-let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * MirCtx =
+let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
   match pat with
-  | HDiscardPat _ ->
-      // Discard the result, which we know is pure.
-      // FIXME: This should be done in optimization?
-      true, ctx
+  | HDiscardPat _ -> ctx
 
   | HLitPat (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
   | HNilPat (itemTy, loc) -> mirifyPatNil ctx endLabel itemTy expr loc
@@ -376,15 +368,12 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): bool * M
   | HBoxPat (itemPat, loc) -> mirifyPatBox ctx endLabel itemPat expr loc
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 
-  | HSomePat (_, loc) ->
-      let ctx =
-        addError ctx "Some pattern must be used in the form of `Some pat`" loc
-
-      false, ctx
+  | HSomePat (_, loc) -> addError ctx "Some pattern must be used in the form of `Some pat`" loc
 
   | HOrPat _ ->
       // HOrPat in match expr is resolved by patNormalize and that in let expr is error in NameRes.
       failwith "NEVER"
+
   | HNavPat _ -> failwith "NEVER: HNavPat is resolved in NameRes"
   | HAnnoPat _ -> failwith "NEVER: HAnnoPat is resolved in Typing."
 
@@ -609,28 +598,8 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
   temp, ctx
 
 /// Gets if the pattern matching must succeed.
-let private patsIsCovering pats =
-  let rec go pat =
-    match pat with
-    | HDiscardPat _
-    | HRefPat _ -> true
-
-    | HLitPat _
-    | HNilPat _
-    | HNonePat _
-    | HSomePat _
-    | HVariantPat _
-    | HNavPat _
-    | HConsPat _
-    | HCallPat _ -> false
-
-    | HTuplePat (itemPats, _, _) -> itemPats |> List.forall go
-    | HBoxPat (itemPat, _) -> go itemPat
-    | HAsPat (pat, _, _) -> go pat
-    | HAnnoPat (pat, _, _) -> go pat
-    | HOrPat (first, second, _, _) -> go first || go second
-
-  List.exists go pats
+let private patsIsCovering ctx pats =
+  pats |> List.exists (patIsClearlyExhaustive (isNewtypeVariant ctx))
 
 let private mirifyExprMatchFull ctx cond arms ty loc =
   let noLabel = "<NEVER>"
@@ -642,7 +611,7 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
   let isCovering =
     arms
     |> List.choose (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
-    |> patsIsCovering
+    |> patsIsCovering ctx
 
   /// By walking over arms, calculates what kind of MIR instructions to emit.
   let rec goArms ctx acc firstPat arms =
@@ -729,7 +698,7 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
 
     | MatchIR.Pat (pat, nextLabel) :: rest ->
         // Perform pattern matching. Go to the next pattern on failure.
-        let _, ctx = mirifyPat ctx nextLabel pat cond
+        let ctx = mirifyPat ctx nextLabel pat cond
         emit ctx rest
 
     | MatchIR.GoBody bodyLabel :: rest ->
@@ -1312,13 +1281,10 @@ let private mirifyExprInf ctx itself infOp args ty loc =
 
   | t -> failwithf "Never: %A" t
 
-let private mirifyExprLetValContents ctx pat init letLoc =
+let private mirifyExprLetValContents ctx pat init =
+  assert (patsIsCovering ctx [ pat ])
   let init, ctx = mirifyExpr ctx init
-  let exhaustive, ctx = mirifyPat ctx "_never_" pat init
-
-  if exhaustive
-  then ctx
-  else addError ctx "Let pattern must be exhaustive for now" letLoc
+  mirifyPat ctx "_never_" pat init
 
 let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body letLoc =
   let prepareTailRec (ctx: MirCtx) args =
@@ -1339,6 +1305,8 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
   let cleanUpTailRec (ctx: MirCtx) parentFun = { ctx with CurrentFun = parentFun }
 
   let defineArg ctx argPat =
+    assert (patsIsCovering ctx [ argPat ])
+
     match argPat with
     | HRefPat (serial, ty, loc) ->
         // NOTE: Optimize for usual cases to not generate redundant local vars.
@@ -1346,12 +1314,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
     | _ ->
         let argTy, argLoc = patExtract argPat
         let arg, argSerial, ctx = freshVar ctx "arg" argTy argLoc
-        let exhaustive, ctx = mirifyPat ctx "_never_" argPat arg
-
-        let ctx =
-          if exhaustive
-          then ctx
-          else addError ctx "Argument pattern must be exhaustive for now" argLoc
+        let ctx = mirifyPat ctx "_never_" argPat arg
 
         (argSerial, argTy, argLoc), ctx
 
@@ -1437,7 +1400,7 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   | HLetValExpr (_, _, _, next, _, _) ->
       let doArm () =
         match expr with
-        | HLetValExpr (_, pat, init, _, _, loc) -> mirifyExprLetValContents ctx pat init loc
+        | HLetValExpr (_, pat, init, _, _, _) -> mirifyExprLetValContents ctx pat init
         | _ -> failwith "NEVER"
 
       mirifyExpr (doArm ()) next
