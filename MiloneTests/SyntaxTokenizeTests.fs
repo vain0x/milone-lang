@@ -4,8 +4,12 @@ open MiloneLang
 open MiloneLang.Assets
 open MiloneLang.Util
 open MiloneLang.Syntax
-open MiloneLang.SyntaxTokenize
 open Xunit
+
+let private tokenizeHost = tokenizeHostNew ()
+
+let private tokenize text =
+  MiloneLang.SyntaxTokenize.tokenize tokenizeHost text
 
 [<Fact>]
 let tokenizeMainEmpty () =

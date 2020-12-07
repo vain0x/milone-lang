@@ -170,7 +170,6 @@ let private inFirstOfExpr (token: Token) =
   | IfToken
   | MatchToken
   | FunToken
-  | DoToken
   | LetToken -> true
 
   | _ -> inFirstOfPatAndExpr token
@@ -303,10 +302,7 @@ let private eatRec tokens =
 let private eatVis tokens =
   match tokens with
   | (PrivateToken, _) :: tokens -> PrivateVis, tokens
-
-  | (InternalToken, _) :: tokens -> PublicVis, tokens
   | (PublicToken, _) :: tokens -> PublicVis, tokens
-
   | _ -> PublicVis, tokens
 
 // -----------------------------------------------
@@ -1003,7 +999,7 @@ let private parsePayloadTy basePos (tokens, errors) =
 
   match itemTys with
   | [ itemTy ] -> itemTy, tokens, errors
-  | _ -> ATupleTy (itemTys, pos), tokens, errors
+  | _ -> ATupleTy(itemTys, pos), tokens, errors
 
 /// Parses the body of union `type` declaration.
 let private parseTyDeclUnion basePos (tokens, errors) =
