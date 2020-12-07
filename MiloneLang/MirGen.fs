@@ -337,6 +337,9 @@ let private mirifyPatBox ctx endLabel itemPat expr loc =
   let ty, _ = patExtract itemPat
   mirifyPat ctx endLabel itemPat (MUnaryExpr(MUnboxUnary, expr, ty, loc))
 
+let private mirifyPatAbort ctx loc =
+  addTerminator ctx (mtAbort loc) loc
+
 let private mirifyPatAs ctx endLabel pat serial expr loc =
   let ty, _ = patExtract pat
 
@@ -377,6 +380,8 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
 
       | HBoxPN, [ itemPat ] -> mirifyPatBox ctx endLabel itemPat expr loc
       | HBoxPN, _ -> fail ()
+
+      | HAbortPN, _ -> mirifyPatAbort ctx loc
 
       | HSomePN, _ -> fail () // Resolved in Typing.
       | HAppPN, _ -> fail () // Resolved in NameRes.

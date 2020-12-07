@@ -960,7 +960,7 @@ let private nameResNavPat pat ctx =
 
   let notResolved ctx =
     let ctx = ctx |> addLog UnresolvedNavPatError loc
-    HDiscardPat(noTy, loc), ctx
+    hpAbort noTy loc, ctx
 
   match resolvePatAsScope l ctx with
   | Some tySymbol ->
@@ -986,7 +986,7 @@ let private nameResAppPat l r loc ctx =
         ctx
         |> addLog (OtherNameResLog "Pattern can apply to Some or a variant that takes a payload.") loc
 
-      HDiscardPat(noTy, loc), ctx
+      hpAbort noTy loc, ctx
 
 let private nameResAnnotatePat bodyPat annotateTy loc ctx =
   let annotateTy, ctx = ctx |> resolveTy annotateTy loc
@@ -1016,7 +1016,8 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       match kind, argPats with
       | HNilPN, _
       | HNonePN, _
-      | HSomePN, _ ->
+      | HSomePN, _
+      | HAbortPN, _ ->
           assert (List.isEmpty argPats)
           pat, ctx
 

@@ -292,6 +292,9 @@ type HPatKind =
   /// Unlike `:? T`, unboxing is unchecked.
   | HBoxPN
 
+  /// Generated after compile error occurred while processing a pattern.
+  | HAbortPN
+
 /// Pattern in HIR.
 [<NoEquality; NoComparison>]
 type HPat =
@@ -818,6 +821,8 @@ let primToTySpec prim =
 // Patterns (HIR)
 // -----------------------------------------------
 
+let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
+
 let hpTuple itemPats loc =
   let tupleTy = itemPats |> List.map patToTy |> tyTuple
   HNodePat(HTuplePN, itemPats, tupleTy, loc)
@@ -901,6 +906,8 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
     | HNodePat (kind, argPats, _, _) ->
         match kind, argPats with
         | HVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
+
+        | HAbortPN, _ -> true
 
         | HNilPN, _
         | HConsPN, _

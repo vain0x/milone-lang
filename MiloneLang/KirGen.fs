@@ -157,7 +157,8 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
 
       | HTuplePN, _ -> kgTuplePat argPats loc ctx
 
-      | HBoxPN, _ -> fail () // unimplemented
+      | HBoxPN, _
+      | HAbortPN, _ -> fail () // unimplemented
 
       | HSomePN, _ -> fail () // Resolved in Typing.
       | HAppPN, _ -> fail () // Resolved in NameRes.

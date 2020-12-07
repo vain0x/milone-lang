@@ -259,7 +259,9 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
 let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
-  | AMissingPat pos -> failwithf "Missing pattern %s" (posToString pos)
+  | AMissingPat pos ->
+      let loc = toLoc docId pos
+      hpAbort noTy loc, nameCtx
 
   | ALitPat (lit, pos) ->
       let loc = toLoc docId pos

@@ -348,7 +348,7 @@ let private inferSomePat ctx pat loc =
   let ctx =
     addError ctx "Some pattern must be used in the form of: `Some pattern`." loc
 
-  HDiscardPat(ty, loc), ty, ctx
+  hpAbort ty loc, ty, ctx
 
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
@@ -421,6 +421,10 @@ let private inferOrPat ctx l r loc =
   let ctx = unifyTy ctx loc lTy rTy
   HOrPat(l, r, loc), lTy, ctx
 
+let private inferAbortPat ctx pat loc =
+  let targetTy, ctx = freshMetaTyForPat pat ctx
+  hpAbort targetTy loc, targetTy, ctx
+
 let private doInferPats ctx pats =
   let rec go ctx patAcc tyAcc pats =
     match pats with
@@ -461,6 +465,8 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
       | HAnnotatePN, [ bodyPat ] -> inferAnnotatePat ctx bodyPat nodeTy loc
       | HAnnotatePN, _ -> fail ()
 
+      | HAbortPN, _ -> inferAbortPat ctx pat loc
+
       | HAppPN, _ -> fail () // Error in NameRes.
       | HNavPN _, _ -> fail () // Resolved in NameRes.
       | HBoxPN, _ -> fail () // Generated in AutoBoxing.
@@ -480,7 +486,7 @@ let private inferIrrefutablePat ctx pat =
       addLog ctx Log.IrrefutablePatNonExhaustiveError loc
 
     let ty, ctx = freshMetaTyForPat pat ctx
-    HDiscardPat(ty, loc), ty, ctx
+    hpAbort ty loc, ty, ctx
   else
     inferPat ctx pat
 
