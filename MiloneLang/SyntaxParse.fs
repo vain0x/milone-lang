@@ -488,22 +488,22 @@ let private parsePatCallArgs basePos (tokens, errors) =
 
   go [] (tokens, errors)
 
-/// `pat-call = pat-nav ( pat-nav )*`
-let private parsePatCall basePos (tokens, errors) =
+/// `pat-app = pat-nav ( pat-nav )?`
+let private parsePatApp basePos (tokens, errors) =
   let calleePos = nextPos tokens
   let callee, tokens, errors = parsePatNav basePos (tokens, errors)
 
-  let args, tokens, errors =
-    parsePatCallArgs basePos (tokens, errors)
-
-  match args with
-  | [] -> callee, tokens, errors
-
-  | _ -> AAppPat(callee, args, calleePos), tokens, errors
+  // Parse argument if exists.
+  if nextInside (basePos |> posAddX 1) tokens
+     && leadsPat tokens then
+    let arg, tokens, errors = parsePatNav basePos (tokens, errors)
+    AAppPat(callee, arg, calleePos), tokens, errors
+  else
+    callee, tokens, errors
 
 /// `pat-cons = pat-call ( '::' pat-cons )?`
 let private parsePatCons basePos (tokens, errors) =
-  let head, tokens, errors = parsePatCall basePos (tokens, errors)
+  let head, tokens, errors = parsePatApp basePos (tokens, errors)
 
   match tokens with
   | (ColonColonToken, pos) :: tokens ->

@@ -403,9 +403,6 @@ let private ccLetFunExpr callee vis args body next ty loc ctx =
 let private ccPat (pat, ctx) =
   match pat with
   | HLitPat _
-  | HNilPat _
-  | HNonePat _
-  | HSomePat _
   | HDiscardPat _
   | HVariantPat _ -> pat, ctx
 
@@ -413,36 +410,19 @@ let private ccPat (pat, ctx) =
       let ctx = ctx |> addLocal serial
       pat, ctx
 
-  | HConsPat (l, r, itemTy, loc) ->
-      let l, ctx = (l, ctx) |> ccPat
-      let r, ctx = (r, ctx) |> ccPat
-      HConsPat(l, r, itemTy, loc), ctx
-
-  | HTuplePat (items, ty, loc) ->
-      let items, ctx = (items, ctx) |> stMap ccPat
-      HTuplePat(items, ty, loc), ctx
-
-  | HCallPat (callee, args, ty, loc) ->
-      let callee, ctx = (callee, ctx) |> ccPat
-      let args, ctx = (args, ctx) |> stMap ccPat
-      HCallPat(callee, args, ty, loc), ctx
-
-  | HBoxPat (itemPat, loc) ->
-      let itemPat, ctx = (itemPat, ctx) |> ccPat
-      HBoxPat(itemPat, loc), ctx
+  | HNodePat (kind, argPats, ty, loc) ->
+      let argPats, ctx = (argPats, ctx) |> stMap ccPat
+      HNodePat(kind, argPats, ty, loc), ctx
 
   | HAsPat (pat, serial, loc) ->
       let ctx = ctx |> addLocal serial
       let pat, ctx = (pat, ctx) |> ccPat
       HAsPat(pat, serial, loc), ctx
 
-  | HOrPat (first, second, ty, loc) ->
-      let first, ctx = (first, ctx) |> ccPat
-      let second, ctx = (second, ctx) |> ccPat
-      HOrPat(first, second, ty, loc), ctx
-
-  | HNavPat _ -> failwith "NEVER: HNavPat is resolved in NameRes."
-  | HAnnoPat _ -> failwith "NEVER: HAnnoPat is resolved in Typing."
+  | HOrPat (l, r, loc) ->
+      let l, ctx = (l, ctx) |> ccPat
+      let r, ctx = (r, ctx) |> ccPat
+      HOrPat(l, r, loc), ctx
 
 let private ccExpr (expr, ctx) =
   match expr with

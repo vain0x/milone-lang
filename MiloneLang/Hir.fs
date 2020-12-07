@@ -250,37 +250,37 @@ type TySymbol =
   | ModuleTySymbol of moduleTySerial: ModuleTySerial
   | ModuleSynonymSymbol of moduleSynonymSerial: ModuleSynonymSerial
 
-/// Pattern in HIR.
-[<NoEquality; NoComparison>]
-type HPat =
-  | HLitPat of Lit * Loc
+/// Kind of HNodePat.
+[<Struct; NoEquality; NoComparison>]
+type HPatKind =
+  /// `[]`.
+  | HNilPN
 
-  /// `[]`
-  | HNilPat of itemTy: Ty * Loc
+  /// `p1 :: p2`.
+  | HConsPN
 
-  | HNonePat of itemTy: Ty * Loc
-  | HSomePat of itemTy: Ty * Loc
+  | HNonePN
 
-  /// `_`
-  | HDiscardPat of Ty * Loc
+  /// `Some`.
+  | HSomePN
 
-  /// Variable pattern.
-  | HRefPat of VarSerial * Ty * Loc
+  /// `p1 p2`.
+  | HAppPN
 
-  /// Variant pattern.
-  | HVariantPat of VariantSerial * Ty * Loc
+  /// `Some p1`.
+  | HSomeAppPN
 
-  /// Navigation, e.g. `Result.Ok _`.
-  | HNavPat of HPat * Ident * Ty * Loc
+  /// `Variant p1`.
+  | HVariantAppPN of variantApp: VariantSerial
 
-  /// Variant decomposition, e.g. `Some x`.
-  | HCallPat of callee: HPat * args: HPat list * Ty * Loc
+  /// `p1, p2, ..., pN` or `()`.
+  | HTuplePN
 
-  /// `::`
-  | HConsPat of HPat * HPat * itemTy: Ty * Loc
+  /// `p1.r`
+  | HNavPN of navR: string
 
-  /// e.g. `x, y, z`
-  | HTuplePat of HPat list * tupleTy: Ty * Loc
+  /// `p1: ty`
+  | HAnnotatePN
 
   /// Used to dereference a box inside of pattern matching.
   ///
@@ -290,15 +290,28 @@ type HPat =
   /// This is only generated internally in AutoBoxing.
   /// Not a part of F# nor milone-lang syntax.
   /// Unlike `:? T`, unboxing is unchecked.
-  | HBoxPat of HPat * Loc
+  | HBoxPN
+
+/// Pattern in HIR.
+[<NoEquality; NoComparison>]
+type HPat =
+  | HLitPat of Lit * Loc
+
+  /// `_`.
+  | HDiscardPat of Ty * Loc
+
+  /// Variable pattern.
+  | HRefPat of VarSerial * Ty * Loc
+
+  /// Variant name pattern.
+  | HVariantPat of VariantSerial * Ty * Loc
+
+  | HNodePat of HPatKind * HPat list * Ty * Loc
 
   | HAsPat of HPat * VarSerial * Loc
 
-  /// Type annotation, e.g. `x: int`.
-  | HAnnoPat of HPat * Ty * Loc
-
   /// Disjunction.
-  | HOrPat of HPat * HPat * Ty * Loc
+  | HOrPat of HPat * HPat * Loc
 
 /// Primitive in HIR.
 [<RequireQualifiedAccess>]
@@ -805,52 +818,38 @@ let primToTySpec prim =
 // Patterns (HIR)
 // -----------------------------------------------
 
-let rec patExtract (pat: HPat): Ty * Loc =
+let hpTuple itemPats loc =
+  let tupleTy = itemPats |> List.map patToTy |> tyTuple
+  HNodePat(HTuplePN, itemPats, tupleTy, loc)
+
+let patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
-  | HNilPat (itemTy, a) -> tyList itemTy, a
-  | HNonePat (itemTy, a) -> tyList itemTy, a
-  | HSomePat (itemTy, a) -> tyList itemTy, a
   | HDiscardPat (ty, a) -> ty, a
   | HRefPat (_, ty, a) -> ty, a
   | HVariantPat (_, ty, a) -> ty, a
-  | HNavPat (_, _, ty, a) -> ty, a
-  | HCallPat (_, _, ty, a) -> ty, a
-  | HConsPat (_, _, itemTy, a) -> tyList itemTy, a
-  | HTuplePat (_, ty, a) -> ty, a
-  | HBoxPat (_, a) -> tyObj, a
-  | HAsPat (pat, _, a) ->
-      let ty, _ = patExtract pat
-      ty, a
-  | HAnnoPat (_, ty, a) -> ty, a
-  | HOrPat (_, _, ty, a) -> ty, a
+
+  | HNodePat (_, _, ty, a) -> ty, a
+  | HAsPat (bodyPat, _, a) -> patToTy bodyPat, a
+  | HOrPat (l, _, a) -> patToTy l, a
+
+let patToTy pat = pat |> patExtract |> fst
+
+let patToLoc pat = pat |> patExtract |> snd
 
 let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
   let rec go pat =
     match pat with
     | HLitPat (lit, a) -> HLitPat(lit, g a)
-    | HNilPat (itemTy, a) -> HNilPat(f itemTy, g a)
-    | HNonePat (itemTy, a) -> HNonePat(f itemTy, g a)
-    | HSomePat (itemTy, a) -> HSomePat(f itemTy, g a)
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
     | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
-    | HVariantPat (variantSerial, ty, a) -> HVariantPat(variantSerial, f ty, g a)
-    | HNavPat (l, r, ty, a) -> HNavPat(go l, r, f ty, g a)
-    | HCallPat (callee, args, ty, a) -> HCallPat(go callee, List.map go args, f ty, g a)
-    | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
-    | HTuplePat (itemPats, ty, a) -> HTuplePat(List.map go itemPats, f ty, g a)
-    | HBoxPat (itemPat, a) -> HBoxPat(go itemPat, g a)
-    | HAsPat (pat, serial, a) -> HAsPat(go pat, serial, g a)
-    | HAnnoPat (pat, ty, a) -> HAnnoPat(go pat, f ty, g a)
-    | HOrPat (first, second, ty, a) -> HOrPat(go first, go second, f ty, g a)
+    | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
+
+    | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)
+    | HAsPat (bodyPat, serial, a) -> HAsPat(go bodyPat, serial, g a)
+    | HOrPat (l, r, a) -> HOrPat(go l, go r, g a)
 
   go pat
-
-let patToTy pat = pat |> patExtract |> fst
-
-let patToLoc pat =
-  let _, loc = patExtract pat
-  loc
 
 /// Converts a pattern in disjunctive normal form.
 /// E.g. `A, [B | C]` → `(A | [B]), (A | [C])`
@@ -860,77 +859,64 @@ let patNormalize pat =
     | HLitPat _
     | HDiscardPat _
     | HRefPat _
-    | HVariantPat _
-    | HNilPat _
-    | HNonePat _
-    | HSomePat _ -> [ pat ]
-    | HNavPat (l, r, ty, loc) -> go l |> List.map (fun l -> HNavPat(l, r, ty, loc))
-    | HCallPat (callee, [ arg ], ty, loc) ->
-        go callee
-        |> List.collect (fun callee ->
-             go arg
-             |> List.map (fun arg -> HCallPat(callee, [ arg ], ty, loc)))
-    | HConsPat (l, r, ty, loc) ->
-        go l
-        |> List.collect (fun l ->
-             go r
-             |> List.map (fun r -> HConsPat(l, r, ty, loc)))
-    | HTuplePat (itemPats, ty, loc) ->
-        let rec gogo itemPats =
-          match itemPats with
-          | [] -> [ [] ]
-          | itemPat :: itemPats ->
-              let itemPat = go itemPat
-              gogo itemPats
-              |> List.collect (fun itemPats ->
-                   itemPat
-                   |> List.map (fun itemPat -> itemPat :: itemPats))
+    | HVariantPat _ -> [ pat ]
 
-        gogo itemPats
-        |> List.map (fun itemPats -> HTuplePat(itemPats, ty, loc))
+    | HNodePat (kind, argPats, ty, loc) ->
+        argPats
+        |> doNormalizePats
+        |> List.map (fun itemPats -> HNodePat(kind, itemPats, ty, loc))
 
-    | HBoxPat (itemPat, loc) ->
-        go itemPat
-        |> List.map (fun itemPat -> HBoxPat(itemPat, loc))
-
-    | HAsPat (bodyPat, varSerial, loc) ->
+    | HAsPat (bodyPat, serial, loc) ->
         go bodyPat
-        |> List.map (fun bodyPat -> HAsPat(bodyPat, varSerial, loc))
+        |> List.map (fun bodyPat -> HAsPat(bodyPat, serial, loc))
 
-    | HAnnoPat (pat, annoTy, loc) ->
-        go pat
-        |> List.map (fun pat -> HAnnoPat(pat, annoTy, loc))
-
-    | HOrPat (first, second, _, _) -> List.append (go first) (go second)
-    | HCallPat _ -> failwith "Unimpl"
+    | HOrPat (l, r, _) -> List.append (go l) (go r)
 
   go pat
+
+let private doNormalizePats pats =
+  match pats with
+  | [] -> [ [] ]
+
+  | headPat :: tailPats ->
+      let headPats = patNormalize headPat
+
+      doNormalizePats tailPats
+      |> List.collect (fun tailPats ->
+           headPats
+           |> List.map (fun headPat -> headPat :: tailPats))
 
 /// Gets whether a pattern is clearly exhaustive, that is,
 /// pattern matching on it always succeeds (assuming type check is passing).
 let patIsClearlyExhaustive isNewtypeVariant pat =
   let rec go pat =
     match pat with
+    | HLitPat _ -> false
+
     | HDiscardPat _
     | HRefPat _ -> true
 
-    | HLitPat _
-    | HNilPat _
-    | HNonePat _
-    | HSomePat _
-    | HNavPat _
-    | HConsPat _ -> false
-
     | HVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
-    | HCallPat (HVariantPat (variantSerial, _, _), [ payloadPat ], _, _) ->
-        isNewtypeVariant variantSerial && go payloadPat
-    | HCallPat _ -> false
 
-    | HTuplePat (itemPats, _, _) -> itemPats |> List.forall go
-    | HBoxPat (itemPat, _) -> go itemPat
+    | HNodePat (kind, argPats, _, _) ->
+        match kind, argPats with
+        | HVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
+
+        | HNilPN, _
+        | HConsPN, _
+        | HNonePN, _
+        | HSomePN, _
+        | HSomeAppPN, _
+        | HAppPN, _
+        | HVariantAppPN _, _
+        | HNavPN _, _ -> false
+
+        | HTuplePN, _
+        | HAnnotatePN, _
+        | HBoxPN, _ -> argPats |> List.forall go
+
     | HAsPat (bodyPat, _, _) -> go bodyPat
-    | HAnnoPat (bodyPat, _, _) -> go bodyPat
-    | HOrPat (first, second, _, _) -> go first || go second
+    | HOrPat (l, r, _) -> go l || go r
 
   go pat
 
@@ -1116,7 +1102,9 @@ let logToString tyDisplay loc log =
   match log with
   | Log.NameResLog log -> loc + " " + nameResLogToString log
 
-  | Log.IrrefutablePatNonExhaustiveError -> loc + " Let expressions cannot contain refutable patterns, which could fail to match for now."
+  | Log.IrrefutablePatNonExhaustiveError ->
+      loc
+      + " Let expressions cannot contain refutable patterns, which could fail to match for now."
 
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
       sprintf "%s Recursive type occurred while unifying '%s' to '%s'." loc (tyDisplay lTy) (tyDisplay rTy)

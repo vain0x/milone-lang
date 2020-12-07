@@ -30,7 +30,6 @@ int basicSomeCase_(int arg_) {
 next_2:;
     if ((!(some_))) goto next_3;
     if ((some_->head != 1)) goto next_3;
-    if ((!((!(some_->tail))))) goto next_3;
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -52,7 +51,6 @@ int basicNoneCase_(int arg_1) {
     int match_1;
     if ((!(none_))) goto next_6;
     if ((str_cmp(none_->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
-    if ((!((!(none_->tail))))) goto next_6;
     milone_assert(false, 15, 16);
     match_1 = 0;
     goto end_match_5;

@@ -789,10 +789,6 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
     | HLitPat _
     | HDiscardPat _
     | HVariantPat _
-    | HNavPat _
-    | HNilPat _
-    | HNonePat _
-    | HSomePat _
     | HOrPat _ -> pat, ctx
 
     | HRefPat (varSerial, ty, loc) ->
@@ -810,18 +806,9 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
             pat, ctx
 
-    | HCallPat (callee, args, ty, loc) ->
-        let args, ctx = (args, ctx) |> stMap (goPat vis)
-        HCallPat(callee, args, ty, loc), ctx
-
-    | HConsPat (l, r, ty, loc) ->
-        let l, ctx = (l, ctx) |> goPat vis
-        let r, ctx = (r, ctx) |> goPat vis
-        HConsPat(l, r, ty, loc), ctx
-
-    | HTuplePat (items, ty, loc) ->
-        let items, ctx = (items, ctx) |> stMap (goPat vis)
-        HTuplePat(items, ty, loc), ctx
+    | HNodePat (kind, argPats, ty, loc) ->
+        let argPats, ctx = (argPats, ctx) |> stMap (goPat vis)
+        HNodePat(kind, argPats, ty, loc), ctx
 
     | HAsPat (pat, varSerial, loc) ->
         let name =
@@ -833,12 +820,6 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
         let pat, ctx = (pat, ctx) |> goPat vis
         HAsPat(pat, varSerial, loc), ctx
-
-    | HAnnoPat (pat, ty, loc) ->
-        let pat, ctx = (pat, ctx) |> goPat vis
-        HAnnoPat(pat, ty, loc), ctx
-
-    | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
 
   let rec goExpr (expr, ctx) =
     match expr with
@@ -944,8 +925,8 @@ let private nameResRefPat serial ty loc ctx =
 
     | _ ->
         match name with
-        | "None" -> HNonePat(ty, loc), ctx
-        | "Some" -> HSomePat(ty, loc), ctx
+        | "None" -> HNodePat(HNonePN, [], ty, loc), ctx
+        | "Some" -> HNodePat(HSomePN, [], ty, loc), ctx
 
         | _ ->
             let varSerial, ctx = doResolveVarInPat serial name ty loc ctx
@@ -963,7 +944,7 @@ let private nameResNavPat pat ctx =
         let name = ctx |> findVarName varSerial
         ctx |> resolveLocalTyName name
 
-    | HNavPat (l, r, _, _) ->
+    | HNodePat (HNavPN r, [ l ], _, _) ->
         match ctx |> resolvePatAsScope l with
         | None -> None
         | Some tySymbol ->
@@ -974,12 +955,11 @@ let private nameResNavPat pat ctx =
 
   let l, r, ty, loc =
     match pat with
-    | HNavPat (l, r, ty, loc) -> l, r, ty, loc
+    | HNodePat (HNavPN r, [ l ], ty, loc) -> l, r, ty, loc
     | _ -> failwith "NEVER"
 
   let notResolved ctx =
     let ctx = ctx |> addLog UnresolvedNavPatError loc
-
     HDiscardPat(noTy, loc), ctx
 
   match resolvePatAsScope l ctx with
@@ -994,6 +974,25 @@ let private nameResNavPat pat ctx =
 
   | None -> notResolved ctx
 
+let private nameResAppPat l r loc ctx =
+  let l, ctx = (l, ctx) |> nameResPat
+  let r, ctx = (r, ctx) |> nameResPat
+
+  match l with
+  | HNodePat (HSomePN, [], _, _) -> HNodePat(HSomeAppPN, [ r ], noTy, loc), ctx
+  | HVariantPat (variantSerial, _, _) -> HNodePat(HVariantAppPN variantSerial, [ r ], noTy, loc), ctx
+  | _ ->
+      let ctx =
+        ctx
+        |> addLog (OtherNameResLog "Pattern can apply to Some or a variant that takes a payload.") loc
+
+      HDiscardPat(noTy, loc), ctx
+
+let private nameResAnnotatePat bodyPat annotateTy loc ctx =
+  let annotateTy, ctx = ctx |> resolveTy annotateTy loc
+  let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
+  HNodePat(HAnnotatePN, [ bodyPat ], annotateTy, loc), ctx
+
 let private nameResAsPat bodyPat serial loc ctx =
   let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
 
@@ -1007,46 +1006,47 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   match pat with
   | HLitPat _
   | HDiscardPat _
-  | HVariantPat _
-  | HNilPat _
-  | HNonePat _
-  | HSomePat _ -> pat, ctx
+  | HVariantPat _ -> pat, ctx
 
   | HRefPat (VarSerial serial, ty, loc) -> nameResRefPat serial ty loc ctx
 
-  | HNavPat _ -> nameResNavPat pat ctx
+  | HNodePat (kind, argPats, ty, loc) ->
+      let fail () = failwithf "NEVER: %A" pat
 
-  | HCallPat (callee, args, ty, loc) ->
-      let callee, ctx = (callee, ctx) |> nameResPat
-      let args, ctx = (args, ctx) |> stMap nameResPat
-      HCallPat(callee, args, ty, loc), ctx
+      match kind, argPats with
+      | HNilPN, _
+      | HNonePN, _
+      | HSomePN, _ ->
+          assert (List.isEmpty argPats)
+          pat, ctx
 
-  | HConsPat (l, r, itemTy, loc) ->
-      let l, ctx = (l, ctx) |> nameResPat
-      let r, ctx = (r, ctx) |> nameResPat
-      HConsPat(l, r, itemTy, loc), ctx
+      | HAppPN, [ l; r ] -> nameResAppPat l r loc ctx
+      | HAppPN, _ -> fail ()
 
-  | HTuplePat (pats, tupleTy, loc) ->
-      let pats, ctx = (pats, ctx) |> stMap nameResPat
-      HTuplePat(pats, tupleTy, loc), ctx
+      | HConsPN, _
+      | HSomeAppPN, _
+      | HVariantAppPN _, _
+      | HTuplePN, _
+      | HBoxPN, _ ->
+          let argPats, ctx = (argPats, ctx) |> stMap nameResPat
+          HNodePat(kind, argPats, ty, loc), ctx
+
+      | HNavPN _, [ _ ] -> nameResNavPat pat ctx
+      | HNavPN _, _ -> fail ()
+
+      | HAnnotatePN, [ bodyPat ] -> nameResAnnotatePat bodyPat ty loc ctx
+      | HAnnotatePN, _ -> fail ()
 
   | HAsPat (bodyPat, VarSerial serial, loc) -> nameResAsPat bodyPat serial loc ctx
 
-  | HAnnoPat (bodyPat, ty, loc) ->
-      let ty, ctx = ctx |> resolveTy ty loc
-      let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
-      HAnnoPat(bodyPat, ty, loc), ctx
-
-  | HOrPat (l, r, ty, loc) ->
+  | HOrPat (l, r, loc) ->
       // No OR patterns appear in arm patterns due to normalization.
       // So we can assume that it's inside of irrefutable pattern.
       let ctx = ctx |> addLog IllegalOrPatError loc
 
       let l, ctx = (l, ctx) |> nameResPat
       let r, ctx = (r, ctx) |> nameResPat
-      HOrPat(l, r, ty, loc), ctx
-
-  | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
+      HOrPat(l, r, loc), ctx
 
 let private doWithPatScope patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) (ctx: ScopeCtx) =
   let parentPatScope, ctx =
@@ -1127,7 +1127,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
       ctx
 
   let pat =
-    List.fold (fun l r -> HOrPat(l, r, noTy, loc)) pat pats
+    List.fold (fun l r -> HOrPat(l, r, loc)) pat pats
 
   pat, ctx
 

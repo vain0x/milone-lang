@@ -100,9 +100,6 @@ int main() {
     if ((!((*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->head.Even_.t1))) goto next_2;
     int n1_ = (*(((struct IntEven_ListTuple2 const*)(*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->head.Even_.t1->head.Odd_))).t0;
     if ((!((!((*(((struct IntEven_ListTuple2 const*)(*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->head.Even_.t1->head.Odd_))).t1))))) goto next_2;
-    if ((!((!((*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->head.Even_.t1->tail))))) goto next_2;
-    if ((!((!((*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->tail))))) goto next_2;
-    if ((!((!(four_.Even_.t1->tail))))) goto next_2;
     milone_assert((n1_ == 1), 15, 6);
     milone_assert((str_cmp(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 6);
     milone_assert((n3_ == 3), 17, 6);

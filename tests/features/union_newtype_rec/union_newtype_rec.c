@@ -69,7 +69,6 @@ end_match_1:;
     int match_1;
     if ((!((*(((struct IntMyList_ListTuple2 const*)second_.MyList_))).t1))) goto next_5;
     int value_ = (*(((struct IntMyList_ListTuple2 const*)(*(((struct IntMyList_ListTuple2 const*)second_.MyList_))).t1->head.MyList_))).t0;
-    if ((!((!((*(((struct IntMyList_ListTuple2 const*)second_.MyList_))).t1->tail))))) goto next_5;
     milone_assert((value_ == 0), 17, 44);
     match_1 = 0;
     goto end_match_4;

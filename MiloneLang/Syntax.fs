@@ -300,7 +300,7 @@ type APat =
   ///
   /// Used only for variant destruction.
   /// AFunDeclPat is used for `let`.
-  | AAppPat of APat * APat list * Pos
+  | AAppPat of APat * APat * Pos
 
   /// `::`
   | AConsPat of APat * APat * Pos
