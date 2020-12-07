@@ -2,10 +2,10 @@ module rec CmdCat.Ffi
 
 let strAsPtr (s: string): __constptr<char> = __nativeFun ("str_as_ptr", s)
 
-type Profiler = Profiler of obj
+type Profiler = Profiler of voidptr
 
 let profileInit (): Profiler =
-  let state: obj = __nativeFun "milone_profile_init"
+  let state: voidptr = __nativeFun "milone_profile_init"
   Profiler state
 
 let profileLog (msg: string) (Profiler state): unit =

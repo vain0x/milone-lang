@@ -7,22 +7,22 @@ module rec Competitive.Helpers
 let memAlloc (len: int) (size: int): voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)
 
-let memCopy (dest: obj) (src: obj) (size: int): obj =
+let memCopy (dest: voidptr) (src: obj) (size: int): voidptr =
   __nativeFun ("memcpy", dest, src, unativeint size)
 
 let scanInt (): int = __nativeFun "scan_int"
 
-let rawIntArrayNew (len: int): obj =
+let rawIntArrayNew (len: int): voidptr =
   memAlloc len (__sizeOfVal 0) |> __nativeCast
 
-let rawIntArrayGet (array: obj) (index: int): int = __ptrRead (__nativeCast array) index
+let rawIntArrayGet (array: voidptr) (index: int): int = __ptrRead (__nativeCast array) index
 
-let rawIntArraySet (array: obj) (index: int) (value: int): unit =
+let rawIntArraySet (array: voidptr) (index: int) (value: int): unit =
   __ptrWrite (__nativeCast array) index value
 
-let rawMemoryCopy (dest: obj) (src: obj) (size: int): unit =
+let rawMemoryCopy (dest: voidptr) (src: voidptr) (size: int): unit =
   let _ =
-    memCopy (__nativeCast dest) (__nativeCast src) (size * __sizeOfVal 0)
+    memCopy dest (__nativeCast src) (size * __sizeOfVal 0)
 
   ()
 
