@@ -374,7 +374,7 @@ let private inferSomeAppPat ctx payloadPat loc =
   let targetTy = tyList payloadTy
   HNodePat(HSomeAppPN, [ payloadPat ], targetTy, loc), targetTy, ctx
 
-let private inferVariantAppPat ctx variantSerial payloadPat loc =
+let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
   let variantDef = ctx.Variants |> mapFind variantSerial
   let targetTy = tyUnion variantDef.UnionTySerial
 

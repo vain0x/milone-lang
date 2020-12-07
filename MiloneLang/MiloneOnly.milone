@@ -27,4 +27,4 @@ let fst (x, _) = x
 
 let snd (_, y) = y
 
-type Profiler = Profiler of obj
+type Profiler = Profiler of voidptr
