@@ -148,23 +148,38 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 
 - Install .NET Core SDK [3.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/3.1)
 - Install [F#](http://ionide.io/#requirements) 4.1 tools
+- Install [ninja](https://github.com/ninja-build/ninja) 1.10 (task runner)
+
+### Dev: Build
+
+First of all, generate ninja configuration. (This is necessary to avoid listing all source file names in build script.)
+
+```sh
+./build-ninja-gen
+```
+
+To perform building and testing, do:
+
+```sh
+ninja
+```
 
 ### Dev: Testing
 
-The `tests` directory contains files for testing.
+The `tests` directory contains projects for testing. Testing consist of two phases.
 
-`dotnet test` performs unit testing. All `tests/*/X/X.fs` files are compiled to matching `tests/*/X/X.c`. The outputs have verified before commit, so it's OK if none of them changed. If an output is changed, you need to perform integration testing to verify.
+First, snapshot testing: each test project (at `tests/*/X`) is compiled with milone-lang compiler to C file. C files are committed to Git and you can assume they are verified before commit. OK if unchanged. Otherwise, the project proceeds to the next phase to verify the modified output.
 
-`./test` performs integration testing. Each `tests/*/X/X.fs` file is compiled to an executable using GCC and executed. It is verified by matching the stdout and exit code with `tests/*/X/X.out`.
+Second, integration testing: each test project is compiled with GCC and executed. The standard output and exit code is written to `tests/*/X/X.generated.out`. The expected result is stored in `tests/*/X/X.out`, which is committed. OK if the two files are same. Otherwise, something wrong. Debug it.
 
-`./test-self` performs self-compile checking. The milone-lang compiler (on .NET) compiles the compiler itself (obtaining first C code) and the output compiler also compiles the compiler itself (obtaining second C code). It's okay if the generated two C codes are same.
+In addition, self compilation is also a kind of testing. The milone-lang compiler (on .NET) compiles the compiler itself (obtaining first C code) and the output compiler also compiles the compiler itself (obtaining second C code). OK if the generated two C codes are same, and the generated compiler passes the all tests described above.
 
-There are some categories of testing files:
+In tests, there are some categories of test cases:
 
 - `features`: Test cases of language features
 - `functions`: Test cases of primitives
 - `examples`: Complex codes
-- `pendings`: Incomplete test cases
+- `pendings`: Test cases pointing out flaw of the compiler
 - `edges`: Exotic test cases
 - `errors`: Test cases of compile errors
 
