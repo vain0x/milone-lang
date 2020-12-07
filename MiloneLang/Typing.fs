@@ -825,6 +825,20 @@ let private inferLetValExpr ctx expectOpt vis pat init next loc =
   HLetValExpr(vis, pat, init, next, nextTy, loc), nextTy, ctx
 
 let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next loc =
+  // Special treatment for main function.
+  let mainFunTyOpt, ctx =
+    if ctx |> isMainFun callee then
+      // arguments must be syntactically `_`.
+      let ctx =
+        match argPats with
+        | [ HDiscardPat _ ] -> ctx
+        | _ -> addError ctx "main function must be defined in the form of: `let main _ = ...`." loc
+
+      // FIXME: argument type is string[]
+      Some(tyFun tyUnit tyInt), ctx
+    else
+      None, ctx
+
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx funTy argPats =
@@ -841,10 +855,9 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
 
   let calleeTy, ctx =
     let calleeTy, ctx =
-      if ctx |> isMainFun callee then
-        tyFun tyUnit tyInt, ctx // FIXME: argument type is string[]
-      else
-        freshMetaTy loc ctx
+      match mainFunTyOpt with
+      | Some calleeTy -> calleeTy, ctx
+      | None -> freshMetaTy loc ctx
 
     let ctx =
       match (ctx.Funs |> mapFind callee).Ty with
