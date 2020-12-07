@@ -17,6 +17,8 @@ let sprintf (fmt: string) =
 
 let objToString _ = "<objToString not supported>"
 
+let __stringLengthInUtf8Bytes (s: string) = s.Length
+
 let ignore _ = ()
 
 let id x = x

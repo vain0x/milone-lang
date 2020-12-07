@@ -10,5 +10,6 @@ int main() {
     milone_assert((message_.len == 10), 7, 2);
     milone_assert((hello_.len == 5), 9, 2);
     milone_assert((5 == 5), 13, 2);
+    milone_assert((3 == 3), 16, 2);
     return 0;
 }
