@@ -437,14 +437,12 @@ let private needsBoxedRecordTy ctx ty =
 let private erasePayloadTy ctx variantSerial payloadTy =
   if needsBoxedVariant ctx variantSerial then tyObj else payloadTy |> abTy ctx
 
-let private postProcessVariantCallPat ctx calleePat argPats =
-  match calleePat, argPats with
-  | HVariantPat (variantSerial, variantTy, loc), [ payloadPat ] when needsBoxedVariant ctx variantSerial ->
-      // FIXME: ty is now wrong. ty is previously T -> U where U: union, T: payload, but now obj -> U.
-      assert (tyIsFun variantTy)
-      Some(HBoxPat(payloadPat, loc))
-
-  | _ -> None
+let private postProcessVariantAppPat (ctx: AbCtx) variantSerial payloadPat =
+  if needsBoxedVariant ctx variantSerial then
+    let loc = patToLoc payloadPat
+    Some(HNodePat(HBoxPN, [ payloadPat ], tyObj, loc))
+  else
+    None
 
 let private postProcessVariantFunAppExpr ctx infOp items =
   match infOp, items with
@@ -530,46 +528,32 @@ let private abTy ctx ty =
 let private abPat ctx pat =
   match pat with
   | HLitPat _
-  | HNilPat _
-  | HNonePat _
-  | HSomePat _
   | HDiscardPat _
   | HRefPat _
   | HVariantPat _ -> pat |> patMap (abTy ctx) id
 
-  | HCallPat (calleePat, argPats, ty, loc) ->
-      let calleePat = calleePat |> abPat ctx
+  | HNodePat (kind, argPats, ty, loc) ->
+      let fail () = failwithf "NEVER: %A" pat
+
       let argPats = argPats |> List.map (abPat ctx)
       let ty = ty |> abTy ctx
 
-      match postProcessVariantCallPat ctx calleePat argPats with
-      | Some payloadPat -> HCallPat(calleePat, [ payloadPat ], ty, loc)
-      | None -> HCallPat(calleePat, argPats, ty, loc)
+      match kind, argPats with
+      | HVariantAppPN variantSerial, [ payloadPat ] ->
+          match postProcessVariantAppPat ctx variantSerial payloadPat with
+          | Some payloadPat -> HNodePat(kind, [ payloadPat ], ty, loc)
+          | None -> HNodePat(kind, argPats, ty, loc)
 
-  | HConsPat (l, r, itemTy, loc) ->
-      let l = l |> abPat ctx
-      let r = r |> abPat ctx
-      let itemTy = itemTy |> abTy ctx
-      HConsPat(l, r, itemTy, loc)
-
-  | HTuplePat (itemPats, tupleTy, loc) ->
-      let itemPats = itemPats |> List.map (abPat ctx)
-      let tupleTy = tupleTy |> abTy ctx
-      HTuplePat(itemPats, tupleTy, loc)
+      | _ -> HNodePat(kind, argPats, ty, loc)
 
   | HAsPat (bodyPat, varSerial, loc) ->
       let bodyPat = bodyPat |> abPat ctx
       HAsPat(bodyPat, varSerial, loc)
 
-  | HOrPat (l, r, ty, loc) ->
+  | HOrPat (l, r, loc) ->
       let l = l |> abPat ctx
       let r = r |> abPat ctx
-      let ty = ty |> abTy ctx
-      HOrPat(l, r, ty, loc)
-
-  | HBoxPat _ -> failwithf "NEVER: HBoxPat is only generated in AutoBoxing. %A" pat
-  | HNavPat _ -> failwithf "NEVER: HNavPat is resolved in NameRes. %A" pat
-  | HAnnoPat _ -> failwithf "NEVER: HAnnoPat is resolved in Typing. %A" pat
+      HOrPat(l, r, loc)
 
 let private abExpr ctx expr =
   match expr with

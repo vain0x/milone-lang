@@ -18,6 +18,11 @@ open MiloneLang.Typing
 
 let private unreachable value = failwithf "NEVER: %A" value
 
+let private unwrapListTy ty =
+  match ty with
+  | AppTy (ListTyCtor, [ it ]) -> it
+  | _ -> failwith "NEVER"
+
 let private kTermToTy (term: KTerm): Ty =
   match term with
   | KLitTerm (lit, _) -> litToTy lit
@@ -89,9 +94,9 @@ type private PNode =
   /// Use the value for multiple nodes.
   | PConjNode of PNode list * Loc
 
-let private kgRefPat _itself varSerial _ty loc _ctx = PLetNode(varSerial, PDiscardNode, loc)
+let private kgRefPat varSerial loc = PLetNode(varSerial, PDiscardNode, loc)
 
-let private kgVariantPat _itself variantSerial _ty loc _ctx =
+let private kgVariantPat variantSerial loc =
   PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
 
 let private kgTuplePat itemPats loc ctx =
@@ -101,30 +106,19 @@ let private kgTuplePat itemPats loc ctx =
 
   PConjNode(conts, loc)
 
+// decomposition of Some
+let private kgSomeAppPat payloadPat ty loc ctx =
+  PConjNode
+    ([ PEqualNode(PNoneTerm(unwrapListTy ty, loc), PDiscardNode, loc)
+       PSelectNode(KHeadPath(loc), kgPat payloadPat ctx, loc) ],
+     loc)
+
 // decomposition of variant
-let private kgCallPat itself callee args _ty loc ctx =
-  match callee with
-  | HVariantPat (variantSerial, _, _) ->
-      match args with
-      | [ payloadPat ] ->
-          PConjNode
-            ([ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
-               PSelectNode(KPayloadPath(variantSerial, loc), kgPat payloadPat ctx, loc) ],
-             loc)
-
-      | _ -> failwithf "NEVER: illegal call pat. %A" itself
-
-  | HSomePat (itemTy, _) ->
-      match args with
-      | [ itemPat ] ->
-          PConjNode
-            ([ PEqualNode(PNoneTerm(itemTy, loc), PDiscardNode, loc)
-               PSelectNode(KHeadPath(loc), kgPat itemPat ctx, loc) ],
-             loc)
-
-      | _ -> failwithf "NEVER: bad arity. %A" itself
-
-  | _ -> failwithf "NEVER: illegal call pat. %A" itself
+let private kgVariantAppPat variantSerial payloadPat loc ctx =
+  PConjNode
+    ([ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
+       PSelectNode(KPayloadPath(variantSerial, loc), kgPat payloadPat ctx, loc) ],
+     loc)
 
 let private kgConsPat l r itemTy loc ctx =
   PNotEqualNode
@@ -139,33 +133,41 @@ let private kgAsPat bodyPat varSerial loc ctx =
   PLetNode(varSerial, kgPat bodyPat ctx, loc)
 
 let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
+  let fail () = failwithf "NEVER: %A" pat
+
   match pat with
-  | HDiscardPat _ -> PDiscardNode
-
   | HLitPat (lit, loc) -> PEqualNode(PLitTerm(lit, loc), PDiscardNode, loc)
+  | HDiscardPat _ -> PDiscardNode
+  | HRefPat (varSerial, _, loc) -> kgRefPat varSerial loc
+  | HVariantPat (variantSerial, _, loc) -> kgVariantPat variantSerial loc
 
-  | HNilPat (itemTy, loc) -> PEqualNode(PNilTerm(itemTy, loc), PDiscardNode, loc)
+  | HNodePat (kind, argPats, ty, loc) ->
+      match kind, argPats with
+      | HNilPN, _ -> PEqualNode(PNilTerm(unwrapListTy ty, loc), PDiscardNode, loc)
+      | HNonePN, _ -> PEqualNode(PNoneTerm(unwrapListTy ty, loc), PDiscardNode, loc)
 
-  | HNonePat (itemTy, loc) -> PEqualNode(PNoneTerm(itemTy, loc), PDiscardNode, loc)
+      | HSomeAppPN, [ payloadPat ] -> kgSomeAppPat payloadPat ty loc ctx
+      | HSomeAppPN, _ -> fail ()
 
-  | HRefPat (varSerial, ty, loc) -> kgRefPat pat varSerial ty loc ctx
+      | HVariantAppPN variantSerial, [ payloadPat ] -> kgVariantAppPat variantSerial payloadPat loc ctx
+      | HVariantAppPN _, _ -> fail ()
 
-  | HVariantPat (variantSerial, ty, loc) -> kgVariantPat pat variantSerial ty loc ctx
+      | HConsPN, [ l; r ] -> kgConsPat l r ty loc ctx
+      | HConsPN, _ -> fail ()
 
-  | HCallPat (callee, args, ty, loc) -> kgCallPat pat callee args ty loc ctx
+      | HTuplePN, _ -> kgTuplePat argPats loc ctx
 
-  | HConsPat (l, r, itemTy, loc) -> kgConsPat l r itemTy loc ctx
+      | HBoxPN, _
+      | HAbortPN, _ -> fail () // unimplemented
 
-  | HTuplePat (itemPats, _, loc) -> kgTuplePat itemPats loc ctx
-
-  | HBoxPat _ -> failwithf "unimplemented. %A" pat
+      | HSomePN, _ -> fail () // Resolved in Typing.
+      | HAppPN, _ -> fail () // Resolved in NameRes.
+      | HNavPN _, _ -> fail () // Resolved in NameRes.
+      | HAnnotatePN, _ -> fail () // Resolved in Typing.
 
   | HAsPat (bodyPat, varSerial, loc) -> kgAsPat bodyPat varSerial loc ctx
 
-  | HSomePat _ -> failwithf "TODO: match of fun type should be type error. %A" pat
-  | HOrPat _ -> failwithf "TODO: implement nested OR pattern. %A" pat
-  | HNavPat _ -> failwithf "NEVER: Nav pattern is resolved in type inference. %A" pat
-  | HAnnoPat _ -> failwithf "NEVER: Anno pattern is resolved in type inference. %A" pat
+  | HOrPat _ -> fail () // TODO: unimplemented
 
 // -----------------------------------------------
 // KirGenCtx

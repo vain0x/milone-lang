@@ -259,7 +259,9 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
 let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
   match pat with
-  | AMissingPat pos -> failwithf "Missing pattern %s" (posToString pos)
+  | AMissingPat pos ->
+      let loc = toLoc docId pos
+      hpAbort noTy loc, nameCtx
 
   | ALitPat (lit, pos) ->
       let loc = toLoc docId pos
@@ -272,7 +274,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
 
   | AListPat ([], pos) ->
       let loc = toLoc docId pos
-      HNilPat(noTy, loc), nameCtx
+      HNodePat(HNilPN, [], noTy, loc), nameCtx
 
   | AListPat (pats, pos) ->
       let pat = desugarListLitPat pats pos
@@ -281,48 +283,42 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
   | ANavPat (l, r, pos) ->
       let l, nameCtx = (l, nameCtx) |> athPat docId
       let loc = toLoc docId pos
-      HNavPat(l, r, noTy, loc), nameCtx
+      HNodePat(HNavPN r, [ l ], noTy, loc), nameCtx
 
-  | AAppPat (calleePat, argPats, pos) ->
+  | AAppPat (calleePat, argPat, pos) ->
       let calleePat, nameCtx = (calleePat, nameCtx) |> athPat docId
-
-      let argPats, nameCtx =
-        (argPats, nameCtx) |> stMap (athPat docId)
-
+      let argPat, nameCtx = (argPat, nameCtx) |> athPat docId
       let loc = toLoc docId pos
-      HCallPat(calleePat, argPats, noTy, loc), nameCtx
+      HNodePat(HAppPN, [ calleePat; argPat ], noTy, loc), nameCtx
 
-  | AConsPat (head, tail, pos) ->
-      let head, nameCtx = (head, nameCtx) |> athPat docId
-      let tail, nameCtx = (tail, nameCtx) |> athPat docId
+  | AConsPat (l, r, pos) ->
+      let l, nameCtx = (l, nameCtx) |> athPat docId
+      let r, nameCtx = (r, nameCtx) |> athPat docId
       let loc = toLoc docId pos
-      HConsPat(head, tail, noTy, loc), nameCtx
+      HNodePat(HConsPN, [ l; r ], noTy, loc), nameCtx
 
   | ATuplePat (pats, pos) ->
       let pats, nameCtx = (pats, nameCtx) |> stMap (athPat docId)
-
       let loc = toLoc docId pos
-      HTuplePat(pats, noTy, loc), nameCtx
+      HNodePat(HTuplePN, pats, noTy, loc), nameCtx
 
   | AAsPat (pat, name, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd name
-
       let pat, nameCtx = (pat, nameCtx) |> athPat docId
-
       let loc = toLoc docId pos
       HAsPat(pat, VarSerial serial, loc), nameCtx
 
-  | AAnnoPat (pat, ty, pos) ->
-      let pat, nameCtx = (pat, nameCtx) |> athPat docId
+  | AAnnoPat (bodyPat, ty, pos) ->
+      let bodyPat, nameCtx = (bodyPat, nameCtx) |> athPat docId
       let ty, nameCtx = (ty, nameCtx) |> athTy docId
       let loc = toLoc docId pos
-      HAnnoPat(pat, ty, loc), nameCtx
+      HNodePat(HAnnotatePN, [ bodyPat ], ty, loc), nameCtx
 
   | AOrPat (l, r, pos) ->
       let l, nameCtx = (l, nameCtx) |> athPat docId
       let r, nameCtx = (r, nameCtx) |> athPat docId
       let loc = toLoc docId pos
-      HOrPat(l, r, noTy, loc), nameCtx
+      HOrPat(l, r, loc), nameCtx
 
   | AFunDeclPat (_, _, pos) -> failwithf "Invalid occurrence of fun pattern: %s" (posToString pos)
 

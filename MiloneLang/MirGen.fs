@@ -13,6 +13,11 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Mir
 
+let private unwrapListTy ty =
+  match ty with
+  | AppTy (ListTyCtor, [ it ]) -> it
+  | _ -> failwith "NEVER"
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -236,7 +241,9 @@ let private mirifyPatLit ctx endLabel lit expr loc =
   let ctx = addStmt ctx gotoStmt
   ctx
 
-let private mirifyPatNil ctx endLabel itemTy expr loc =
+let private mirifyPatNil ctx endLabel listTy expr loc =
+  let itemTy = unwrapListTy listTy
+
   let isEmptyExpr =
     MUnaryExpr(MListIsEmptyUnary, expr, tyList itemTy, loc)
 
@@ -244,11 +251,8 @@ let private mirifyPatNil ctx endLabel itemTy expr loc =
   let ctx = addStmt ctx gotoStmt
   ctx
 
-let private mirifyPatNone ctx endLabel itemTy expr loc =
-  mirifyPatNil ctx endLabel itemTy expr loc
-
-let private mirifyPatCons ctx endLabel l r itemTy loc expr =
-  let listTy = tyList itemTy
+let private mirifyPatCons ctx endLabel l r listTy loc expr =
+  let itemTy = unwrapListTy listTy
 
   let isEmpty =
     MUnaryExpr(MListIsEmptyUnary, expr, tyBool, loc)
@@ -269,9 +273,14 @@ let private mirifyPatCons ctx endLabel l r itemTy loc expr =
   let ctx = mirifyPat ctx endLabel r tail
   ctx
 
-let private mirifyPatSome ctx endLabel item itemTy loc expr =
-  let nilPat = HNilPat(itemTy, loc)
-  mirifyPatCons ctx endLabel item nilPat itemTy loc expr
+let private mirifyPatNone ctx endLabel listTy expr loc =
+  // None ==> []
+  mirifyPatNil ctx endLabel listTy expr loc
+
+let private mirifyPatSomeApp ctx endLabel payloadPat listTy loc expr =
+  // Some pat ==> pat :: _
+  let r = HDiscardPat(listTy, loc)
+  mirifyPatCons ctx endLabel payloadPat r listTy loc expr
 
 let private mirifyPatRef ctx _endLabel serial ty loc expr =
   addStmt ctx (MLetValStmt(serial, MExprInit expr, ty, loc))
@@ -288,49 +297,48 @@ let private mirifyPatVariant ctx endLabel serial ty loc expr =
   let ctx = addStmt ctx gotoStmt
   ctx
 
-let private mirifyPatCall (ctx: MirCtx) itself endLabel serial args _ty loc expr =
-  match args with
-  | [ payload ] ->
-      let extractExpr =
-        MUnaryExpr(MGetVariantUnary serial, expr, patToTy payload, loc)
+let private mirifyPatVariantApp (ctx: MirCtx) endLabel serial payloadPat loc expr =
+  let extractExpr =
+    MUnaryExpr(MGetVariantUnary serial, expr, patToTy payloadPat, loc)
 
-      // Special treatment for new-type variants
-      // so that we can deconstruct it with irrefutable patterns
-      // (`let` and arguments) without generating an abort branch.
-      if isNewtypeVariant ctx serial then
-        mirifyPat ctx endLabel payload extractExpr
-      else
+  // Special treatment for new-type variants
+  // so that we can deconstruct it with irrefutable patterns
+  // (`let` and arguments) without generating an abort branch.
+  if isNewtypeVariant ctx serial then
+    mirifyPat ctx endLabel payloadPat extractExpr
+  else
+    // Compare tags.
+    let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
+    let rTagExpr = MTagExpr(serial, loc)
 
-        // Compare tags.
-        let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
-        let rTagExpr = MTagExpr(serial, loc)
+    let eqExpr =
+      MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
 
-        let eqExpr =
-          MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
+    let gotoStmt = msGotoUnless eqExpr endLabel loc
+    let ctx = addStmt ctx gotoStmt
 
-        let gotoStmt = msGotoUnless eqExpr endLabel loc
-        let ctx = addStmt ctx gotoStmt
+    // Extract payload.
+    mirifyPat ctx endLabel payloadPat extractExpr
 
-        // Extract payload.
-        mirifyPat ctx endLabel payload extractExpr
+let private mirifyPatTuple ctx endLabel itemPats expr loc =
+  let rec go ctx i itemPats =
+    match itemPats with
+    | [] -> ctx
 
-  | _ -> failwithf "NEVER: %A" itself
-
-let private mirifyPatTuple ctx endLabel itemPats itemTys expr loc =
-  let rec go ctx i itemPats itemTys =
-    match itemPats, itemTys with
-    | [], [] -> ctx
-    | itemPat :: itemPats, itemTy :: itemTys ->
+    | itemPat :: itemPats ->
+        let itemTy = patToTy itemPat
         let item = mxProj expr i itemTy loc
         let ctx = mirifyPat ctx endLabel itemPat item
-        go  ctx (i + 1) itemPats itemTys
-    | _ -> failwith "Never"
+        go ctx (i + 1) itemPats
 
-  go ctx 0 itemPats itemTys
+  go ctx 0 itemPats
 
 let private mirifyPatBox ctx endLabel itemPat expr loc =
   let ty, _ = patExtract itemPat
   mirifyPat ctx endLabel itemPat (MUnaryExpr(MUnboxUnary, expr, ty, loc))
+
+let private mirifyPatAbort ctx loc =
+  addTerminator ctx (mtAbort loc) loc
 
 let private mirifyPatAs ctx endLabel pat serial expr loc =
   let ty, _ = patExtract pat
@@ -345,37 +353,46 @@ let private mirifyPatAs ctx endLabel pat serial expr loc =
 /// to generate let-val statements for each subexpression
 /// and goto statements when determined if the pattern to match.
 let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
-  match pat with
-  | HDiscardPat _ -> ctx
+  let fail () = failwithf "NEVER: %A" pat
 
+  match pat with
   | HLitPat (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
-  | HNilPat (itemTy, loc) -> mirifyPatNil ctx endLabel itemTy expr loc
-  | HNonePat (itemTy, loc) -> mirifyPatNone ctx endLabel itemTy expr loc
+  | HDiscardPat _ -> ctx
   | HRefPat (serial, ty, loc) -> mirifyPatRef ctx endLabel serial ty loc expr
   | HVariantPat (serial, ty, loc) -> mirifyPatVariant ctx endLabel serial ty loc expr
 
-  | HCallPat (HVariantPat (variantSerial, _, _), args, ty, loc) ->
-      mirifyPatCall ctx pat endLabel variantSerial args ty loc expr
+  | HNodePat (kind, argPats, ty, loc) ->
+      match kind, argPats with
+      | HNilPN, _
+      | HNonePN, _ -> mirifyPatNil ctx endLabel ty expr loc
 
-  | HCallPat (HSomePat (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
-  | HCallPat _ -> failwith "NEVER: Error in Typing."
+      | HConsPN, [ l; r ] -> mirifyPatCons ctx endLabel l r ty loc expr
+      | HConsPN, _ -> fail ()
 
-  | HConsPat (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
+      | HSomeAppPN, [ payloadPat ] -> mirifyPatSomeApp ctx endLabel payloadPat ty loc expr
+      | HSomeAppPN, _ -> fail ()
 
-  | HTuplePat (itemPats, AppTy (TupleTyCtor, itemTys), loc) -> mirifyPatTuple ctx endLabel itemPats itemTys expr loc
-  | HTuplePat _ -> failwithf "NEVER: Tuple pattern must be of tuple type. %A" pat
+      | HVariantAppPN variantSerial, [ payloadPat ] ->
+          mirifyPatVariantApp ctx endLabel variantSerial payloadPat loc expr
+      | HVariantAppPN _, _ -> fail ()
 
-  | HBoxPat (itemPat, loc) -> mirifyPatBox ctx endLabel itemPat expr loc
+      | HTuplePN, _ -> mirifyPatTuple ctx endLabel argPats expr loc
+
+      | HBoxPN, [ itemPat ] -> mirifyPatBox ctx endLabel itemPat expr loc
+      | HBoxPN, _ -> fail ()
+
+      | HAbortPN, _ -> mirifyPatAbort ctx loc
+
+      | HSomePN, _ -> fail () // Resolved in Typing.
+      | HAppPN, _ -> fail () // Resolved in NameRes.
+      | HNavPN _, _ -> fail () // Resolved in NameRes.
+      | HAnnotatePN, _ -> fail () // Resolved in Typing.
+
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
-
 
   | HOrPat _ ->
       // HOrPat in match expr is resolved by patNormalize and that in let expr is error in NameRes.
-      failwith "NEVER"
-
-  | HSomePat _ -> failwith "NEVER: error in Typing."
-  | HNavPat _ -> failwith "NEVER: HNavPat is resolved in NameRes"
-  | HAnnoPat _ -> failwith "NEVER: HAnnoPat is resolved in Typing."
+      fail ()
 
 // -----------------------------------------------
 // Expression
@@ -449,8 +466,9 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
       doEmitIfStmt ctx cond "then" body "else" alt ty loc
       |> Some
 
+  // | None -> ... | _ -> ...
   | AppTy (ListTyCtor, _),
-    [ HNonePat _, HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
+    [ HNodePat (HNonePN, _, _, _), HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
       let cond, ctx = mirifyExpr ctx cond
 
       let isNone =
@@ -460,8 +478,9 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
       doEmitIfStmt ctx isNone "none_cl" noneCl "some_cl" someCl ty loc
       |> Some
 
+  // | [] -> ... | _ -> ...
   | AppTy (ListTyCtor, _),
-    [ HNilPat _, HLitExpr (BoolLit true, _), nilCl; HDiscardPat _, HLitExpr (BoolLit true, _), consCl ] ->
+    [ HNodePat (HNilPN, _, _, _), HLitExpr (BoolLit true, _), nilCl; HDiscardPat _, HLitExpr (BoolLit true, _), consCl ] ->
       let cond, ctx = mirifyExpr ctx cond
 
       let isNil =
@@ -485,10 +504,10 @@ let private matchExprCanCompileToSwitch cond arms =
   let rec patIsSimpleAtomic pat =
     match pat with
     | HLitPat _
-    | HVariantPat _
-    | HDiscardPat _ -> true
+    | HDiscardPat _
+    | HVariantPat _ -> true
 
-    | HBoxPat (bodyPat, _) -> patIsSimpleAtomic bodyPat
+    | HNodePat (HBoxPN, [ bodyPat ], _, _) -> patIsSimpleAtomic bodyPat
 
     | _ -> false
 
@@ -496,12 +515,12 @@ let private matchExprCanCompileToSwitch cond arms =
   let rec patIsSimple pat =
     match pat with
     | HLitPat _
-    | HVariantPat _
-    | HDiscardPat _ -> true
+    | HDiscardPat _
+    | HVariantPat _ -> true
 
-    | HCallPat (HVariantPat _, [ payload ], _, _) -> patIsSimpleAtomic payload
+    | HNodePat (HVariantAppPN _, [ payloadPat ], _, _) -> patIsSimpleAtomic payloadPat
 
-    | HOrPat (l, r, _, _) -> patIsSimple l && patIsSimple r
+    | HOrPat (l, r, _) -> patIsSimple l && patIsSimple r
 
     | _ -> false
 
@@ -520,9 +539,9 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
 
     | HVariantPat (variantSerial, _, _) -> [ MTagConst variantSerial ], false
 
-    | HCallPat (HVariantPat (variantSerial, _, _), _, _, _) -> [ MTagConst variantSerial ], false
+    | HNodePat (HVariantAppPN variantSerial, _, _, _) -> [ MTagConst variantSerial ], false
 
-    | HOrPat (l, r, _, _) ->
+    | HOrPat (l, r, _) ->
         let lCases, lIsDefault = go l
         let rCases, rIsDefault = go r
 
@@ -599,7 +618,8 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
 
 /// Gets if the pattern matching must succeed.
 let private patsIsCovering ctx pats =
-  pats |> List.exists (patIsClearlyExhaustive (isNewtypeVariant ctx))
+  pats
+  |> List.exists (patIsClearlyExhaustive (isNewtypeVariant ctx))
 
 let private mirifyExprMatchFull ctx cond arms ty loc =
   let noLabel = "<NEVER>"

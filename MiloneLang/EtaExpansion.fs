@@ -252,7 +252,7 @@ let private createEnvPatAndTy items callLoc ctx =
 
   let itemPats, itemTys, itemRefs, ctx = go items ctx
   let envTy = tyTuple itemTys
-  let envPat = HTuplePat(itemPats, envTy, callLoc)
+  let envPat = hpTuple itemPats callLoc
   envPat, envTy, itemRefs, ctx
 
 let private createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =

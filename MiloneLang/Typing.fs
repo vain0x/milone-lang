@@ -321,11 +321,11 @@ let private hxAbort (ctx: TyCtx) loc =
 /// Tries to get ty annotation from pat.
 let private patToAnnoTy pat =
   match pat with
-  | HAnnoPat (_, ty, _) -> Some ty
+  | HNodePat (HAnnotatePN, _, ty, _) -> Some ty
 
-  | HAsPat (pat, _, _) -> patToAnnoTy pat
+  | HAsPat (bodyPat, _, _) -> patToAnnoTy bodyPat
 
-  | HOrPat (l, r, _, _) ->
+  | HOrPat (l, r, _) ->
       match patToAnnoTy l with
       | None -> patToAnnoTy r
       | it -> it
@@ -335,21 +335,20 @@ let private patToAnnoTy pat =
 let private inferNilPat ctx pat loc =
   let itemTy, ctx = ctx |> freshMetaTyForPat pat
   let ty = tyList itemTy
-  HNilPat(itemTy, loc), ty, ctx
+  HNodePat(HNilPN, [], ty, loc), ty, ctx
 
 let private inferNonePat ctx pat loc =
   let itemTy, ctx = ctx |> freshMetaTyForPat pat
   let ty = tyList itemTy
-  HNonePat(itemTy, loc), ty, ctx
+  HNodePat(HNonePN, [], tyList ty, loc), ty, ctx
 
 let private inferSomePat ctx pat loc =
-  let itemTy, ctx = ctx |> freshMetaTyForPat pat
-  let someTy = tyFun itemTy (tyList itemTy)
+  let ty, ctx = ctx |> freshMetaTyForPat pat
 
   let ctx =
     addError ctx "Some pattern must be used in the form of: `Some pattern`." loc
 
-  HSomePat(itemTy, loc), someTy, ctx
+  hpAbort ty loc, ty, ctx
 
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
@@ -357,7 +356,6 @@ let private inferDiscardPat ctx pat loc =
 
 let private inferRefPat (ctx: TyCtx) varSerial loc =
   let ty, ctx = ctx |> unifyVarTy varSerial None loc
-
   HRefPat(varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
@@ -371,52 +369,42 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
 
   HVariantPat(variantSerial, ty, loc), ty, ctx
 
-let private inferCallPat (ctx: TyCtx) pat calleePat argPats loc =
-  match calleePat, argPats with
-  | HSomePat (_, someLoc), [ payloadPat ] ->
-      let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
-      let targetTy = tyList payloadTy
-      HCallPat(HSomePat(payloadTy, someLoc), [ payloadPat ], targetTy, loc), targetTy, ctx
+let private inferSomeAppPat ctx payloadPat loc =
+  let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
+  let targetTy = tyList payloadTy
+  HNodePat(HSomeAppPN, [ payloadPat ], targetTy, loc), targetTy, ctx
 
-  | HVariantPat (variantSerial, _, variantLoc), [ payloadPat ] ->
-      let variantDef = ctx.Variants |> mapFind variantSerial
-      let targetTy = tyUnion variantDef.UnionTySerial
+let private inferVariantAppPat ctx variantSerial payloadPat loc =
+  let variantDef = ctx.Variants |> mapFind variantSerial
+  let targetTy = tyUnion variantDef.UnionTySerial
 
-      let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
+  let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
 
-      let ctx =
-        unifyTy ctx loc variantDef.PayloadTy payloadTy
+  let ctx =
+    unifyTy ctx loc variantDef.PayloadTy payloadTy
 
-      HCallPat(HVariantPat(variantSerial, tyFun payloadTy targetTy, variantLoc), [ payloadPat ], targetTy, loc),
-      targetTy,
-      ctx
-
-  | _ ->
-      let ty, ctx = ctx |> freshMetaTyForPat pat
-      HDiscardPat(ty, loc), ty, addError ctx "Invalid use of call pattern." loc
-
-let private inferTuplePat ctx itemPats loc =
-  let rec go accPats accTys ctx itemPats =
-    match itemPats with
-    | [] -> List.rev accPats, List.rev accTys, ctx
-    | itemPat :: itemPats ->
-        let itemPat, itemTy, ctx = inferPat ctx itemPat
-        go (itemPat :: accPats) (itemTy :: accTys) ctx itemPats
-
-  let itemPats, itemTys, ctx = go [] [] ctx itemPats
-
-  let tupleTy = tyTuple itemTys
-  HTuplePat(itemPats, tupleTy, loc), tupleTy, ctx
+  HNodePat(HVariantAppPN variantSerial, [ payloadPat ], targetTy, loc), targetTy, ctx
 
 let private inferConsPat ctx l r loc =
   let l, lTy, ctx = inferPat ctx l
   let r, rTy, ctx = inferPat ctx r
 
-  let itemTy = lTy
-  let listTy = tyList itemTy
+  let listTy = tyList lTy
   let ctx = unifyTy ctx loc rTy listTy
 
-  HConsPat(l, r, itemTy, loc), listTy, ctx
+  HNodePat(HConsPN, [ l; r ], listTy, loc), listTy, ctx
+
+let private inferTuplePat ctx itemPats loc =
+  let itemPats, itemTys, ctx = doInferPats ctx itemPats
+
+  let tupleTy = tyTuple itemTys
+  HNodePat(HTuplePN, itemPats, tupleTy, loc), tupleTy, ctx
+
+let private inferAnnotatePat ctx body annoTy loc =
+  let body, bodyTy, ctx = inferPat ctx body
+
+  let ctx = unifyTy ctx loc bodyTy annoTy
+  body, annoTy, ctx
 
 let private inferAsPat ctx body varSerial loc =
   let body, bodyTy, ctx = inferPat ctx body
@@ -426,37 +414,65 @@ let private inferAsPat ctx body varSerial loc =
 
   HAsPat(body, varSerial, loc), bodyTy, ctx
 
-let private inferAnnoPat ctx body annoTy loc =
-  let body, bodyTy, ctx = inferPat ctx body
-  let ctx = unifyTy ctx loc bodyTy annoTy
-  body, annoTy, ctx
+let private inferOrPat ctx l r loc =
+  let l, lTy, ctx = inferPat ctx l
+  let r, rTy, ctx = inferPat ctx r
 
-let private inferOrPat ctx first second loc =
-  let first, firstTy, ctx = inferPat ctx first
-  let second, secondTy, ctx = inferPat ctx second
+  let ctx = unifyTy ctx loc lTy rTy
+  HOrPat(l, r, loc), lTy, ctx
 
-  let ctx = unifyTy ctx loc firstTy secondTy
+let private inferAbortPat ctx pat loc =
+  let targetTy, ctx = freshMetaTyForPat pat ctx
+  hpAbort targetTy loc, targetTy, ctx
 
-  let ty = firstTy
-  HOrPat(first, second, ty, loc), ty, ctx
+let private doInferPats ctx pats =
+  let rec go ctx patAcc tyAcc pats =
+    match pats with
+    | [] -> List.rev patAcc, List.rev tyAcc, ctx
+
+    | pat :: pats ->
+        let pat, ty, ctx = inferPat ctx pat
+        go ctx (pat :: patAcc) (ty :: tyAcc) pats
+
+  go ctx [] [] pats
 
 let private inferPat ctx pat: HPat * Ty * TyCtx =
   match pat with
   | HLitPat (lit, _) -> pat, litToTy lit, ctx
-  | HNilPat (_, loc) -> inferNilPat ctx pat loc
-  | HNonePat (_, loc) -> inferNonePat ctx pat loc
-  | HSomePat (_, loc) -> inferSomePat ctx pat loc
   | HDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
   | HRefPat (varSerial, _, loc) -> inferRefPat ctx varSerial loc
   | HVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
-  | HCallPat (callee, args, _, loc) -> inferCallPat ctx pat callee args loc
-  | HConsPat (l, r, _, loc) -> inferConsPat ctx l r loc
-  | HTuplePat (items, _, loc) -> inferTuplePat ctx items loc
-  | HAsPat (body, serial, loc) -> inferAsPat ctx body serial loc
-  | HAnnoPat (body, annoTy, loc) -> inferAnnoPat ctx body annoTy loc
-  | HOrPat (first, second, _, loc) -> inferOrPat ctx first second loc
-  | HNavPat _ -> failwithf "NEVER: HNavPat is resolved in NameRes. %A" pat
-  | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
+
+  | HNodePat (kind, argPats, nodeTy, loc) ->
+      let fail () = failwithf "NEVER: %A" pat
+
+      match kind, argPats with
+      | HNilPN, _ -> inferNilPat ctx pat loc
+      | HNonePN, _ -> inferNonePat ctx pat loc
+      | HSomePN, _ -> inferSomePat ctx pat loc
+
+      | HConsPN, [ l; r ] -> inferConsPat ctx l r loc
+      | HConsPN, _ -> fail ()
+
+      | HSomeAppPN, [ payloadPat ] -> inferSomeAppPat ctx payloadPat loc
+      | HSomeAppPN, _ -> fail ()
+
+      | HVariantAppPN variantSerial, [ payloadPat ] -> inferVariantAppPat ctx variantSerial payloadPat loc
+      | HVariantAppPN _, _ -> fail ()
+
+      | HTuplePN, _ -> inferTuplePat ctx argPats loc
+
+      | HAnnotatePN, [ bodyPat ] -> inferAnnotatePat ctx bodyPat nodeTy loc
+      | HAnnotatePN, _ -> fail ()
+
+      | HAbortPN, _ -> inferAbortPat ctx pat loc
+
+      | HAppPN, _ -> fail () // Error in NameRes.
+      | HNavPN _, _ -> fail () // Resolved in NameRes.
+      | HBoxPN, _ -> fail () // Generated in AutoBoxing.
+
+  | HAsPat (bodyPat, serial, loc) -> inferAsPat ctx bodyPat serial loc
+  | HOrPat (l, r, loc) -> inferOrPat ctx l r loc
 
 let private inferRefutablePat ctx pat = inferPat ctx pat
 
@@ -470,7 +486,7 @@ let private inferIrrefutablePat ctx pat =
       addLog ctx Log.IrrefutablePatNonExhaustiveError loc
 
     let ty, ctx = freshMetaTyForPat pat ctx
-    HDiscardPat(ty, loc), ty, ctx
+    hpAbort ty loc, ty, ctx
   else
     inferPat ctx pat
 
