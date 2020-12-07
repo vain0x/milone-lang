@@ -61,6 +61,12 @@ let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
+let private isNewtypeVariant (ctx: TyCtx) variantSerial =
+  match ctx
+        |> findTy (ctx.Variants |> mapFind variantSerial).UnionTySerial with
+  | UnionTyDef (_, [ _ ], _) -> true
+  | _ -> false
+
 let private isMainFun funSerial (ctx: TyCtx) =
   match ctx.MainFunOpt with
   | Some mainFun -> funSerialCmp mainFun funSerial = 0
@@ -338,8 +344,12 @@ let private inferNonePat ctx pat loc =
 
 let private inferSomePat ctx pat loc =
   let itemTy, ctx = ctx |> freshMetaTyForPat pat
-  let ty = tyFun itemTy (tyList itemTy)
-  HSomePat(itemTy, loc), ty, ctx
+  let someTy = tyFun itemTy (tyList itemTy)
+
+  let ctx =
+    addError ctx "Some pattern must be used in the form of: `Some pattern`." loc
+
+  HSomePat(itemTy, loc), someTy, ctx
 
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
@@ -351,25 +361,39 @@ let private inferRefPat (ctx: TyCtx) varSerial loc =
   HRefPat(varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
-  let ty =
-    (ctx.Variants |> mapFind variantSerial).VariantTy
+  let variantDef = ctx.Variants |> mapFind variantSerial
+  let ty = variantDef.VariantTy
+
+  let ctx =
+    if variantDef.HasPayload
+    then addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
+    else ctx
 
   HVariantPat(variantSerial, ty, loc), ty, ctx
 
-let private inferCallPat (ctx: TyCtx) pat callee args loc =
-  match args with
-  | [ payload ] ->
-      let resultTy, ctx = ctx |> freshMetaTyForPat pat
+let private inferCallPat (ctx: TyCtx) pat calleePat argPats loc =
+  match calleePat, argPats with
+  | HSomePat (_, someLoc), [ payloadPat ] ->
+      let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
+      let targetTy = tyList payloadTy
+      HCallPat(HSomePat(payloadTy, someLoc), [ payloadPat ], targetTy, loc), targetTy, ctx
 
-      let callee, calleeTy, ctx = inferPat ctx callee
-      let payload, payloadTy, ctx = inferPat ctx payload
+  | HVariantPat (variantSerial, _, variantLoc), [ payloadPat ] ->
+      let variantDef = ctx.Variants |> mapFind variantSerial
+      let targetTy = tyUnion variantDef.UnionTySerial
+
+      let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
 
       let ctx =
-        unifyTy ctx loc calleeTy (tyFun payloadTy resultTy)
+        unifyTy ctx loc variantDef.PayloadTy payloadTy
 
-      HCallPat(callee, [ payload ], resultTy, loc), resultTy, ctx
+      HCallPat(HVariantPat(variantSerial, tyFun payloadTy targetTy, variantLoc), [ payloadPat ], targetTy, loc),
+      targetTy,
+      ctx
 
-  | _ -> failwith "invalid use of call pattern"
+  | _ ->
+      let ty, ctx = ctx |> freshMetaTyForPat pat
+      HDiscardPat(ty, loc), ty, addError ctx "Invalid use of call pattern." loc
 
 let private inferTuplePat ctx itemPats loc =
   let rec go accPats accTys ctx itemPats =
@@ -433,6 +457,22 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
   | HOrPat (first, second, _, loc) -> inferOrPat ctx first second loc
   | HNavPat _ -> failwithf "NEVER: HNavPat is resolved in NameRes. %A" pat
   | HBoxPat _ -> failwithf "NEVER: HBoxPat is generated in AutoBoxing. %A" pat
+
+let private inferRefutablePat ctx pat = inferPat ctx pat
+
+let private inferIrrefutablePat ctx pat =
+  if pat
+     |> patIsClearlyExhaustive (isNewtypeVariant ctx)
+     |> not then
+    let loc = patToLoc pat
+
+    let ctx =
+      addLog ctx Log.IrrefutablePatNonExhaustiveError loc
+
+    let ty, ctx = freshMetaTyForPat pat ctx
+    HDiscardPat(ty, loc), ty, ctx
+  else
+    inferPat ctx pat
 
 // -----------------------------------------------
 // Expression
@@ -596,7 +636,7 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
   let arms, ctx =
     (arms, ctx)
     |> stMap (fun ((pat, guard, body), ctx) ->
-         let pat, patTy, ctx = inferPat ctx pat
+         let pat, patTy, ctx = inferRefutablePat ctx pat
 
          let ctx = unifyTy ctx (patToLoc pat) patTy condTy
 
@@ -777,7 +817,7 @@ let private inferLetValExpr ctx expectOpt vis pat init next loc =
     let expectOpt = patToAnnoTy pat
     inferExpr ctx expectOpt init
 
-  let pat, patTy, ctx = inferPat ctx pat
+  let pat, patTy, ctx = inferIrrefutablePat ctx pat
 
   let ctx = unifyTy ctx loc initTy patTy
 
@@ -785,6 +825,20 @@ let private inferLetValExpr ctx expectOpt vis pat init next loc =
   HLetValExpr(vis, pat, init, next, nextTy, loc), nextTy, ctx
 
 let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next loc =
+  // Special treatment for main function.
+  let mainFunTyOpt, ctx =
+    if ctx |> isMainFun callee then
+      // arguments must be syntactically `_`.
+      let ctx =
+        match argPats with
+        | [ HDiscardPat _ ] -> ctx
+        | _ -> addError ctx "main function must be defined in the form of: `let main _ = ...`." loc
+
+      // FIXME: argument type is string[]
+      Some(tyFun tyUnit tyInt), ctx
+    else
+      None, ctx
+
   /// Infers argument patterns,
   /// constructing function's type.
   let rec inferArgs ctx funTy argPats =
@@ -792,7 +846,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
     | [] -> [], funTy, ctx
 
     | argPat :: argPats ->
-        let argPat, argTy, ctx = inferPat ctx argPat
+        let argPat, argTy, ctx = inferIrrefutablePat ctx argPat
         let argPats, funTy, ctx = inferArgs ctx funTy argPats
         argPat :: argPats, tyFun argTy funTy, ctx
 
@@ -801,10 +855,9 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
 
   let calleeTy, ctx =
     let calleeTy, ctx =
-      if ctx |> isMainFun callee then
-        tyFun tyUnit tyInt, ctx // FIXME: argument type is string[]
-      else
-        freshMetaTy loc ctx
+      match mainFunTyOpt with
+      | Some calleeTy -> calleeTy, ctx
+      | None -> freshMetaTy loc ctx
 
     let ctx =
       match (ctx.Funs |> mapFind callee).Ty with

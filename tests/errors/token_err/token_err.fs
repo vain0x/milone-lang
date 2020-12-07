@@ -3,6 +3,15 @@
 // undefined operator
 2&&&-3
 
+// reserved word (F# keyword)
+class
+
+// reserved word (OCaml keyword)
+sig
+
+// reserved word (F# reserved word)
+trait
+
 // invalid characters outside of comments/quotes
 こんにちは〜！
 

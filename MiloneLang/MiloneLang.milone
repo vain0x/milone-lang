@@ -17,7 +17,7 @@ let private argCount (): int = __nativeFun "arg_count"
 let private argGet (i: int): string = __nativeFun ("arg_get", i)
 
 let private profileInit (): Profiler =
-  let state: obj = __nativeFun "milone_profile_init"
+  let state: voidptr = __nativeFun "milone_profile_init"
   Profiler state
 
 let private profileLog (msg: string) (Profiler state): unit =

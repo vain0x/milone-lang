@@ -288,12 +288,16 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
 // Analysis
 // ---------------------------------------------
 
+let tokenizeHost = tokenizeHostNew ()
+
 let tokenizeWithCaching (text: string) (analysisCache: AnalysisCache): TokenizeResult =
   match analysisCache.TokenizeResultOpt with
   | Some it -> it
 
   | None ->
-      let result = MiloneLang.SyntaxTokenize.tokenize text
+      let result =
+        MiloneLang.SyntaxTokenize.tokenize tokenizeHost text
+
       analysisCache.TokenizeResultOpt <- Some result
       result
 
@@ -391,7 +395,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
               | Some contents ->
                   let ast, errors =
                     contents
-                    |> MiloneLang.SyntaxTokenize.tokenize
+                    |> MiloneLang.SyntaxTokenize.tokenize tokenizeHost
                     |> parseModule m
 
                   let docId = m

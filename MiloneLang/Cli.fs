@@ -183,8 +183,10 @@ let private doInterpretProjectSchema ast =
 
   decls |> List.tryPick asProjectSchema
 
-let private parseProjectSchema contents =
-  let ast, errors = contents |> tokenize |> parse
+let private parseProjectSchema tokenizeHost contents =
+  let ast, errors =
+    contents |> tokenize tokenizeHost |> parse
+
   if errors |> List.isEmpty |> not then
     errors
     |> listSort (fun (_, l) (_, r) -> posCmp l r)
@@ -205,6 +207,7 @@ type CompileCtx =
     /// project name -> project directory
     Projects: AssocMap<string, string>
 
+    TokenizeHost: TokenizeHost
     Verbosity: Verbosity
     Host: CliHost }
 
@@ -220,6 +223,7 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
   { ProjectDir = projectDir
     ProjectName = projectName
     Projects = projects
+    TokenizeHost = tokenizeHostNew ()
     Verbosity = verbosity
     Host = host }
 
@@ -234,7 +238,7 @@ let private compileCtxReadProjectFile (ctx: CompileCtx) =
 
   match host.FileReadAllText projectFilePath with
   | Some contents ->
-      match parseProjectSchema contents with
+      match parseProjectSchema ctx.TokenizeHost contents with
       | Some refs ->
           let projects =
             refs
@@ -376,7 +380,7 @@ let syntacticallyAnalyze (ctx: CompileCtx) =
   writeLog host v ("Bundling project=" + ctx.ProjectName)
 
   let doParse (_: DocId) (s: string) =
-    let tokens = s |> tokenize
+    let tokens = s |> tokenize ctx.TokenizeHost
     let errorTokens, tokens = tokens |> List.partition isErrorToken
     let ast, parseErrors = tokens |> parse
 
@@ -517,7 +521,9 @@ let cliParse (host: CliHost) v (projectDir: string) =
       v
       ("\n-------------\nSyntaxParse %s...\n--------------"
        + moduleName)
-    let ast, errors = contents |> tokenize |> parse
+
+    let ast, errors =
+      contents |> tokenize ctx.TokenizeHost |> parse
 
     if errors |> List.isEmpty |> not then
       printfn "In %s" moduleName

@@ -65,6 +65,7 @@ type TokenizeError =
   | BadTokenError
   | UnknownEscapeSequenceError
   | UndefinedOpTokenError
+  | ReservedWordError
   | UnimplNumberSuffixError
   | UnimplHexEscapeError
   | OtherTokenizeError of msg: string
@@ -80,6 +81,9 @@ let tokenizeErrorToString error =
       "Unknown escape sequence. After `\\`, one of these chars is only allowed: `\\` `'` `\"` t r n x. `\\xHH` other than `\\x00` is unimplemented."
 
   | UndefinedOpTokenError -> "Undefined operator."
+
+  | ReservedWordError ->
+      "This word can't be used as identifier, because it's reserved for future expansion of the language."
 
   | UnimplNumberSuffixError -> "Number literal suffix is unimplemented yet."
   | UnimplHexEscapeError -> "`\\xHH` escape sequence is unimplemented yet, except for `\\x00`."
@@ -184,18 +188,14 @@ type Token =
 
   // keywords:
   | AsToken
-  | DoToken
   | ElseToken
-  | ExternToken
   | FalseToken
   | FunToken
   | IfToken
   | InToken
-  | InternalToken
   | LetToken
   | MatchToken
   | ModuleToken
-  | NamespaceToken
   | OfToken
   | OpenToken
   | PrivateToken
@@ -502,3 +502,148 @@ let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
   if c <> 0 then c
   else if ly <> ry then compare ly ry
   else compare lx rx
+
+// -----------------------------------------------
+// Keywords
+// -----------------------------------------------
+
+type private KeywordMap = AssocMap<Ident, Token>
+
+// See also <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/keyword-reference>.
+let private keywordMapBuild (): KeywordMap =
+  let miloneKeywords =
+    [ "as", AsToken
+      "else", ElseToken
+      "false", FalseToken
+      "fun", FunToken
+      "if", IfToken
+      "in", InToken
+      "let", LetToken
+      "match", MatchToken
+      "module", ModuleToken
+      "of", OfToken
+      "open", OpenToken
+      "private", PrivateToken
+      "public", PublicToken
+      "rec", RecToken
+      "then", ThenToken
+      "true", TrueToken
+      "type", TypeToken
+      "when", WhenToken
+      "with", WithToken ]
+
+  let fsharpKeywords =
+    [ "abstract"
+      "and"
+      "base"
+      "begin"
+      "class"
+      "const"
+      "default"
+      "delegate"
+      "do"
+      "done"
+      "downcast"
+      "downto"
+      "elif"
+      "end"
+      "exception"
+      "extern"
+      "finally"
+      "fixed"
+      "for"
+      "function"
+      "global"
+      "inherit"
+      "inline"
+      "interface"
+      "internal"
+      "lazy"
+      "member"
+      "mutable"
+      "namespace"
+      "new"
+      "null"
+      "or"
+      "override"
+      "return"
+      "static"
+      "struct"
+      "to"
+      "try"
+      "upcast"
+      "use"
+      "val"
+      "void"
+      "while"
+      "yield" ]
+
+  let ocamlKeywords =
+    [ "asr"
+      "land"
+      "lor"
+      "lsl"
+      "lsr"
+      "lxor"
+      "mod"
+      "sig" ]
+
+  let reservedWords =
+    [ "atomic"
+      "break"
+      "checked"
+      "component"
+      "const"
+      "constraint"
+      "constructor"
+      "continue"
+      "eager"
+      "event"
+      "external"
+      "functor"
+      "include"
+      "method"
+      "mixin"
+      "object"
+      "parallel"
+      "process"
+      "protected"
+      "pure"
+      "sealed"
+      "tailcall"
+      "trait"
+      "virtual"
+      "volatile" ]
+
+  let reservedToken = ErrorToken ReservedWordError
+
+  let map = mapEmpty compare
+
+  let map =
+    miloneKeywords
+    |> List.fold (fun map (name, token) -> mapAdd name token map) map
+
+  let map =
+    fsharpKeywords
+    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+
+  let map =
+    ocamlKeywords
+    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+
+  let map =
+    reservedWords
+    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+
+  map
+
+// -----------------------------------------------
+// Host
+// -----------------------------------------------
+
+type TokenizeHost = { FindKeyword: string -> Token option }
+
+let tokenizeHostNew (): TokenizeHost =
+  let keywordMap = keywordMapBuild ()
+
+  { FindKeyword = fun ident -> keywordMap |> mapTryFind ident }

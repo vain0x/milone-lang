@@ -170,7 +170,6 @@ let private inFirstOfExpr (token: Token) =
   | IfToken
   | MatchToken
   | FunToken
-  | DoToken
   | LetToken -> true
 
   | _ -> inFirstOfPatAndExpr token
@@ -303,10 +302,7 @@ let private eatRec tokens =
 let private eatVis tokens =
   match tokens with
   | (PrivateToken, _) :: tokens -> PrivateVis, tokens
-
-  | (InternalToken, _) :: tokens -> PublicVis, tokens
   | (PublicToken, _) :: tokens -> PublicVis, tokens
-
   | _ -> PublicVis, tokens
 
 // -----------------------------------------------
@@ -376,25 +372,17 @@ let private parseTySuffix basePos (tokens, errors) =
 
   parseTyAtom basePos (tokens, errors) |> go
 
-/// `ty-prefix = ( ident ':' )? ty-suffix`
-/// FIXME: `foo:Foo` is only allowed in payload types.
-let private parseTyPrefix basePos (tokens, errors) =
-  match tokens with
-  | (IdentToken _, _) :: (ColonToken, _) :: tokens -> parseTySuffix basePos (tokens, errors)
-
-  | _ -> parseTySuffix basePos (tokens, errors)
-
-/// `ty-tuple = ty-prefix ( '*' ty-prefix )*`
+/// `ty-tuple = ty-suffix ( '*' ty-suffix )*`
 let private parseTyTuple basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
     | (StarToken, _) :: tokens ->
-        let itemTy, tokens, errors = parseTyPrefix basePos (tokens, errors)
+        let itemTy, tokens, errors = parseTySuffix basePos (tokens, errors)
         go (itemTy :: acc) (tokens, errors)
 
     | _ -> List.rev acc, tokens, errors
 
-  let itemTy, tokens, errors = parseTyPrefix basePos (tokens, errors)
+  let itemTy, tokens, errors = parseTySuffix basePos (tokens, errors)
 
   match tokens with
   | (StarToken, opPos) :: _ ->
@@ -982,12 +970,43 @@ let private parseLet letPos (tokens, errors) =
 
   ALetExpr(vis, pat, body, next, letPos), tokens, errors
 
+
+/// `payload-ty = labeled-ty ( '*' labeled-ty )*`
+/// `labeled-ty = ( ident ':' )? ty-suffix`
+let private parsePayloadTy basePos (tokens, errors) =
+  let eatLabel tokens =
+    match tokens with
+    | (IdentToken _, _) :: (ColonToken, _) :: tokens -> tokens
+    | _ -> tokens
+
+  let pos = nextPos tokens
+
+  // parse first
+  let tokens = eatLabel tokens
+  let firstTy, tokens, errors = parseTySuffix basePos (tokens, errors)
+
+  // parse second or more
+  let rec go acc (tokens, errors) =
+    match tokens with
+    | (StarToken, _) :: tokens ->
+        let tokens = eatLabel tokens
+        let itemTy, tokens, errors = parseTySuffix basePos (tokens, errors)
+        go (itemTy :: acc) (tokens, errors)
+
+    | _ -> List.rev acc, tokens, errors
+
+  let itemTys, tokens, errors = go [ firstTy ] (tokens, errors)
+
+  match itemTys with
+  | [ itemTy ] -> itemTy, tokens, errors
+  | _ -> ATupleTy(itemTys, pos), tokens, errors
+
 /// Parses the body of union `type` declaration.
 let private parseTyDeclUnion basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
     | (PipeToken, _) :: (IdentToken variantIdent, pos) :: (OfToken, _) :: tokens ->
-        let payloadTy, tokens, errors = parseTy basePos (tokens, errors)
+        let payloadTy, tokens, errors = parsePayloadTy basePos (tokens, errors)
         go (AVariant(variantIdent, Some payloadTy, pos) :: acc) (tokens, errors)
 
     | (PipeToken, _) :: (IdentToken variantIdent, pos) :: tokens ->

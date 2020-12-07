@@ -299,87 +299,6 @@ let private scanStrLitRaw (text: string) (i: int) =
 // Evaluation
 // -----------------------------------------------
 
-let private tokenOfIdent (text: string) l r: Token =
-  let s = text |> strSlice l r
-
-  match s.[0] with
-  | 'a' ->
-      match s with
-      | "as" -> AsToken
-      | _ -> IdentToken s
-
-  | 'd' ->
-      match s with
-      | "do" -> DoToken
-      | _ -> IdentToken s
-
-  | 'e' ->
-      match s with
-      | "else" -> ElseToken
-      | "extern" -> ExternToken
-      | _ -> IdentToken s
-
-  | 'f' ->
-      match s with
-      | "false" -> FalseToken
-      | "fun" -> FunToken
-      | _ -> IdentToken s
-
-  | 'i' ->
-      match s with
-      | "if" -> IfToken
-      | "in" -> InToken
-      | "internal" -> InternalToken
-      | _ -> IdentToken s
-
-  | 'l' ->
-      match s with
-      | "let" -> LetToken
-      | _ -> IdentToken s
-
-  | 'm' ->
-      match s with
-      | "match" -> MatchToken
-      | "module" -> ModuleToken
-      | _ -> IdentToken s
-
-  | 'n' ->
-      match s with
-      | "namespace" -> NamespaceToken
-      | _ -> IdentToken s
-
-  | 'r' ->
-      match s with
-      | "rec" -> RecToken
-      | _ -> IdentToken s
-
-  | 'o' ->
-      match s with
-      | "open" -> OpenToken
-      | "of" -> OfToken
-      | _ -> IdentToken s
-
-  | 'p' ->
-      match s with
-      | "private" -> PrivateToken
-      | "public" -> PublicToken
-      | _ -> IdentToken s
-
-  | 't' ->
-      match s with
-      | "true" -> TrueToken
-      | "then" -> ThenToken
-      | "type" -> TypeToken
-      | _ -> IdentToken s
-
-  | 'w' ->
-      match s with
-      | "with" -> WithToken
-      | "when" -> WhenToken
-      | _ -> IdentToken s
-
-  | _ -> IdentToken s
-
 let private tokenOfOp (text: string) l r: Token =
   let s = text |> strSlice l r
 
@@ -692,7 +611,7 @@ let private lookahead (text: string) (i: int) =
 
   | _ -> LBad, 1
 
-let private doNext (text: string) (index: int): Token * int =
+let private doNext (host: TokenizeHost) (text: string) (index: int): Token * int =
   let look, len = lookahead text index
 
   match look with
@@ -724,7 +643,14 @@ let private doNext (text: string) (index: int): Token * int =
 
   | LIdent ->
       let r = scanIdent text (index + len)
-      tokenOfIdent text index r, r
+      let ident = text |> strSlice index r
+
+      let token =
+        match host.FindKeyword ident with
+        | Some it -> it
+        | None -> IdentToken ident
+
+      token, r
 
   | LRawIdent ->
       match scanRawIdent text index with
@@ -765,10 +691,10 @@ let private doNext (text: string) (index: int): Token * int =
       ErrorToken BadTokenError, r
 
 /// Tokenizes a string. Trivias are removed.
-let tokenize (text: string): (Token * Pos) list =
+let tokenize (host: TokenizeHost) (text: string): (Token * Pos) list =
   let rec go acc (i: int) (pos: Pos) =
     if i < text.Length then
-      let token, r = doNext text i
+      let token, r = doNext host text i
 
       // if i >= r
       // then failwithf "i=%d r=%d pos=%A text=%s" i r pos text

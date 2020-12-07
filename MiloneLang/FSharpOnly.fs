@@ -6,6 +6,9 @@ let objToString (value: _) = string (value :> obj)
 
 let inRegion (f: unit -> int): int = f ()
 
+let __stringLengthInUtf8Bytes (s: string): int =
+  System.Text.Encoding.UTF8.GetByteCount(s)
+
 // -----------------------------------------------
 // C FFI
 // -----------------------------------------------

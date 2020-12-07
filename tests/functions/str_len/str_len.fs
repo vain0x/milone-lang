@@ -12,4 +12,7 @@ let main _ =
   // Hex escape other than \x00 is unimplemented.
   // assert ("\x00\x01\x02\x03\x04".Length = 5)
   assert ("\x00ABCD".Length = 5)
+
+  // unicode character length
+  assert ("あ".Length = 3)
   0
