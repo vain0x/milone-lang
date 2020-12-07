@@ -2,26 +2,26 @@
 #    make
 #    make install-dev
 
-.PHONY: build test install-dev clean
+.PHONY: all build test install-dev clean
+
+all: build.ninja
+	ninja
+
+# ninja config file.
+build.ninja: build.ninja-template
+	./build-ninja-gen
 
 # ------------------------------------------------
-# build & test
+# ninja wrapper
 # ------------------------------------------------
 
-build: test
+build: build.ninja **/*.fs **/*.milone
+	ninja test_self
 
-test: milone-netcore.timestamp dotnet-test.timestamp milone
+test: build
 
-milone-netcore.timestamp: MiloneLang/*.fs
-	dotnet build -nologo MiloneLang
-	touch milone-netcore.timestamp
-
-dotnet-test.timestamp: MiloneLang/*.fs MiloneTests/*.fs
-	dotnet test -nologo
-	touch dotnet-test.timestamp
-
-milone: MiloneLang/*.fs runtime/*.c runtime/*.h
-	./test-self
+clean: build.ninja
+	ninja clean
 
 # ------------------------------------------------
 # install
@@ -32,20 +32,3 @@ install-dev: install-dev.timestamp
 install-dev.timestamp: build
 	./install-dev
 	touch install-dev.timestamp
-
-# ------------------------------------------------
-# clean
-# ------------------------------------------------
-
-clean:
-	rm -f *.generated.*
-	rm -f tests/*/*/*.generated.*
-	rm -f *.timestamp
-	rm -f milone
-	rm -rf \
-		MiloneLang/bin \
-		MiloneLang/obj \
-		MiloneTests/bin \
-		MiloneTests/obj \
-		milone_lsp/bin \
-		milone_lsp/obj

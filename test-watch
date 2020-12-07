@@ -1,5 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-DOTNET_USE_POLLING_FILE_WATCHER=true dotnet watch -p MiloneTests test
