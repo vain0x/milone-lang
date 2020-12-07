@@ -2,8 +2,16 @@
 .ionide
 .vscode/ipch
 
-a.out
+
+
+# Build caches.
 *.generated.*
 *.timestamp
+build.ninja
+target
 
+
+
+# Build outputs.
+a.out
 milone
