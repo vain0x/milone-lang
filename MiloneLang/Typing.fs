@@ -344,8 +344,12 @@ let private inferNonePat ctx pat loc =
 
 let private inferSomePat ctx pat loc =
   let itemTy, ctx = ctx |> freshMetaTyForPat pat
-  let ty = tyFun itemTy (tyList itemTy)
-  HSomePat(itemTy, loc), ty, ctx
+  let someTy = tyFun itemTy (tyList itemTy)
+
+  let ctx =
+    addError ctx "Some pattern must be used in the form of: `Some pattern`." loc
+
+  HSomePat(itemTy, loc), someTy, ctx
 
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
@@ -357,25 +361,39 @@ let private inferRefPat (ctx: TyCtx) varSerial loc =
   HRefPat(varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
-  let ty =
-    (ctx.Variants |> mapFind variantSerial).VariantTy
+  let variantDef = ctx.Variants |> mapFind variantSerial
+  let ty = variantDef.VariantTy
+
+  let ctx =
+    if variantDef.HasPayload
+    then addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
+    else ctx
 
   HVariantPat(variantSerial, ty, loc), ty, ctx
 
-let private inferCallPat (ctx: TyCtx) pat callee args loc =
-  match args with
-  | [ payload ] ->
-      let resultTy, ctx = ctx |> freshMetaTyForPat pat
+let private inferCallPat (ctx: TyCtx) pat calleePat argPats loc =
+  match calleePat, argPats with
+  | HSomePat (_, someLoc), [ payloadPat ] ->
+      let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
+      let targetTy = tyList payloadTy
+      HCallPat(HSomePat(payloadTy, someLoc), [ payloadPat ], targetTy, loc), targetTy, ctx
 
-      let callee, calleeTy, ctx = inferPat ctx callee
-      let payload, payloadTy, ctx = inferPat ctx payload
+  | HVariantPat (variantSerial, _, variantLoc), [ payloadPat ] ->
+      let variantDef = ctx.Variants |> mapFind variantSerial
+      let targetTy = tyUnion variantDef.UnionTySerial
+
+      let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
 
       let ctx =
-        unifyTy ctx loc calleeTy (tyFun payloadTy resultTy)
+        unifyTy ctx loc variantDef.PayloadTy payloadTy
 
-      HCallPat(callee, [ payload ], resultTy, loc), resultTy, ctx
+      HCallPat(HVariantPat(variantSerial, tyFun payloadTy targetTy, variantLoc), [ payloadPat ], targetTy, loc),
+      targetTy,
+      ctx
 
-  | _ -> failwith "invalid use of call pattern"
+  | _ ->
+      let ty, ctx = ctx |> freshMetaTyForPat pat
+      HDiscardPat(ty, loc), ty, addError ctx "Invalid use of call pattern." loc
 
 let private inferTuplePat ctx itemPats loc =
   let rec go accPats accTys ctx itemPats =

@@ -358,7 +358,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
       mirifyPatCall ctx pat endLabel variantSerial args ty loc expr
 
   | HCallPat (HSomePat (itemTy, loc), [ item ], _, _) -> mirifyPatSome ctx endLabel item itemTy loc expr
-  | HCallPat _ -> failwithf "NEVER: Incorrect HCallPat. %A" pat
+  | HCallPat _ -> failwith "NEVER: Error in Typing."
 
   | HConsPat (l, r, itemTy, loc) -> mirifyPatCons ctx endLabel l r itemTy loc expr
 
@@ -368,12 +368,12 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
   | HBoxPat (itemPat, loc) -> mirifyPatBox ctx endLabel itemPat expr loc
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 
-  | HSomePat (_, loc) -> addError ctx "Some pattern must be used in the form of `Some pat`" loc
 
   | HOrPat _ ->
       // HOrPat in match expr is resolved by patNormalize and that in let expr is error in NameRes.
       failwith "NEVER"
 
+  | HSomePat _ -> failwith "NEVER: error in Typing."
   | HNavPat _ -> failwith "NEVER: HNavPat is resolved in NameRes"
   | HAnnoPat _ -> failwith "NEVER: HAnnoPat is resolved in Typing."
 
