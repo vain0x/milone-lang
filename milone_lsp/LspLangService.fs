@@ -388,7 +388,8 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
       MiloneLang.SyntaxParse.parse tokens
 
     let bundleHost: MiloneLang.Bundling.BundleHost =
-      { FetchModule =
+      { ProjectRefs = []
+        FetchModule =
           fun p m ->
             if p = projectName then
               match readModuleFile m with
