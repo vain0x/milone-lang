@@ -376,6 +376,9 @@ type HPrim =
 type InfOp =
   | Abort
 
+  /// `-x`.
+  | Minus
+
   | App
 
   /// `..`.

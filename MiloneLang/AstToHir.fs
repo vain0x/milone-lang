@@ -139,19 +139,21 @@ let private desugarFun pats body pos =
   let next = AIdentExpr(name, pos)
   ALetExpr(PrivateVis, pat, body, next, pos)
 
-/// Desugar `-x` to `0 - x`.
-let private desugarUniNeg arg pos =
+/// Desugar `-x`.
+///
+/// `-(-x)` ==> x.
+/// `-n` (n: literal).
+let private desugarUniNeg arg =
   match arg with
+  | AUnaryExpr (NegUnary, arg, _) -> Some arg
+
   | ALitExpr (IntLit value, pos) ->
-      // FIXME: this trick fails for int min value
-      ALitExpr(IntLit(-value), pos)
+      assert (value >= 0)
+      ALitExpr(IntLit(-value), pos) |> Some
 
-  | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit("-" + text), pos)
+  | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit("-" + text), pos) |> Some
 
-  | _ ->
-      // FIXME: this fails when arg is not of int
-      let zero = ALitExpr(IntLit 0, pos)
-      ABinaryExpr(SubBinary, zero, arg, pos)
+  | _ -> None
 
 /// `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos =
@@ -436,8 +438,12 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
   | AUnaryExpr (NegUnary, arg, pos) ->
       let doArm () =
-        let expr = desugarUniNeg arg pos
-        (expr, nameCtx) |> athExpr docId
+        match desugarUniNeg arg with
+        | Some arg -> (arg, nameCtx) |> athExpr docId
+        | None ->
+            let arg, nameCtx = (arg, nameCtx) |> athExpr docId
+            let loc = toLoc docId pos
+            HInfExpr(InfOp.Minus, [ arg ], noTy, loc), nameCtx
 
       doArm ()
 

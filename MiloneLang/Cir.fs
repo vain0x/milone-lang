@@ -43,6 +43,9 @@ type CTy =
 /// Unary operators in CIR.
 [<NoEquality; NoComparison>]
 type CUnary =
+  /// `-x`
+  | CMinusUnary
+
   /// `!p`
   | CNotUnary
 

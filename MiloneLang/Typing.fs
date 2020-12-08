@@ -767,6 +767,15 @@ let private inferAppExpr ctx itself callee arg loc =
 
       hxApp callee arg targetTy loc, targetTy, ctx
 
+let private inferMinusExpr ctx arg loc =
+  let arg, argTy, ctx = inferExpr ctx None arg
+
+  let ctx =
+    ctx
+    |> addTraitBounds [ IsNumberTrait argTy, loc ]
+
+  HInfExpr(InfOp.Minus, [ arg ], argTy, loc), argTy, ctx
+
 let private inferIndexExpr ctx l r loc =
   let l, lTy, ctx = inferExpr ctx (Some tyStr) l
   let r, rTy, ctx = inferExpr ctx (Some tyInt) r
@@ -916,6 +925,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
 
   | HInfExpr (InfOp.Abort, _, _, loc) -> hxAbort ctx loc
+  | HInfExpr (InfOp.Minus, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
   | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
   | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTupleExpr ctx items loc
   | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnnoExpr ctx expr annoTy loc
@@ -941,6 +951,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
 
       hxAbort ctx loc
 
+  | HInfExpr (InfOp.Minus, _, _, _)
   | HInfExpr (InfOp.Anno, _, _, _)
   | HInfExpr (InfOp.App, _, _, _)
   | HInfExpr (InfOp.Closure, _, _, _)

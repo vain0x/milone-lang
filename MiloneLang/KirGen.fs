@@ -732,6 +732,7 @@ let private kgLetFunExpr funSerial argPats body next loc hole (ctx: KirGenCtx): 
 
 let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
   match infOp with
+  | InfOp.Minus
   | InfOp.Index
   | InfOp.Slice -> failwith "unimplemented"
 

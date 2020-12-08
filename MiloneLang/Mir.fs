@@ -39,6 +39,7 @@ type MatchIR =
 [<Struct>]
 [<NoEquality; NoComparison>]
 type MUnary =
+  | MMinusUnary
   | MNotUnary
 
   // Converts a scalar to int.

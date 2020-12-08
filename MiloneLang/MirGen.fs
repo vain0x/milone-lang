@@ -337,8 +337,7 @@ let private mirifyPatBox ctx endLabel itemPat expr loc =
   let ty, _ = patExtract itemPat
   mirifyPat ctx endLabel itemPat (MUnaryExpr(MUnboxUnary, expr, ty, loc))
 
-let private mirifyPatAbort ctx loc =
-  addTerminator ctx (mtAbort loc) loc
+let private mirifyPatAbort ctx loc = addTerminator ctx (mtAbort loc) loc
 
 let private mirifyPatAs ctx endLabel pat serial expr loc =
   let ty, _ = patExtract pat
@@ -1267,6 +1266,10 @@ let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
 
 let private mirifyExprInf ctx itself infOp args ty loc =
   match infOp, args, ty with
+  | InfOp.Minus, [ arg ], _ ->
+      let arg, ctx = mirifyExpr ctx arg
+      MUnaryExpr(MMinusUnary, arg, ty, loc), ctx
+
   | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
   | InfOp.Tuple, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
   | InfOp.Record, _, _ -> mirifyExprRecord ctx args ty loc
