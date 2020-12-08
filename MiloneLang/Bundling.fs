@@ -77,24 +77,6 @@ type private ProjectName = string
 
 type private ModuleName = string
 
-let private findModulePaths expr =
-  let rec go expr =
-    match expr with
-    | HOpenExpr (([ _; _ ] as path), loc) -> [ path, loc ]
-    | HBlockExpr (stmts, last) -> List.append (List.collect go stmts) (go last)
-    | HModuleExpr (_, body, _) -> body |> List.collect go
-    | HModuleSynonymExpr (_, ([ _; _ ] as path), loc) -> [ path, loc ]
-    | _ -> []
-
-  go expr
-
-let private findOpenModules expr =
-  findModulePaths expr
-  |> List.choose (fun (path, loc) ->
-       match path with
-       | projectName :: moduleName :: _ -> Some(projectName, moduleName, loc)
-       | _ -> None)
-
 // -----------------------------------------------
 // BundleCtx
 // -----------------------------------------------
@@ -181,11 +163,9 @@ let private doLoadModule docId ast errors (ctx: BundleCtx) =
   // Open dependent modules if no error.
   let ctx =
     if errors |> List.isEmpty then
-      expr
-      |> List.collect findOpenModules
-      |> List.fold (fun ctx (projectName, moduleName, loc) ->
-           let docId, _, _ = loc
-           ctx |> requireModule docId projectName moduleName) ctx
+      ast
+      |> findDependentModules
+      |> List.fold (fun ctx (projectName, moduleName, _) -> ctx |> requireModule docId projectName moduleName) ctx
     else
       ctx
 

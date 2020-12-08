@@ -647,3 +647,23 @@ let tokenizeHostNew (): TokenizeHost =
   let keywordMap = keywordMapBuild ()
 
   { FindKeyword = fun ident -> keywordMap |> mapTryFind ident }
+
+// -----------------------------------------------
+// Module dependencies
+// -----------------------------------------------
+
+/// (projectName, moduleName, pos) list
+let findDependentModules ast =
+  let rec onDecl decl =
+    match decl with
+    | AOpenDecl ([ p; m ], pos) -> Some(p, m, pos)
+    | AModuleSynonymDecl (_, [ p; m ], pos) -> Some(p, m, pos)
+    | AAttrDecl (_, next, _) -> onDecl next
+    | _ -> None
+
+  let decls =
+    match ast with
+    | AExprRoot decls -> decls
+    | AModuleRoot (_, decls, _) -> decls
+
+  decls |> List.choose onDecl
