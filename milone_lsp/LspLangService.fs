@@ -447,7 +447,7 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
         let pos = row, column
 
         let msg =
-          MiloneLang.Hir.logToString tyDisplayFn loc log
+          locToString loc + " " + MiloneLang.Hir.logToString tyDisplayFn log
 
         yield uri, msg, pos ]
 

@@ -351,7 +351,9 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
   |> List.map (fun (log, loc) ->
        "#error "
-       + (log |> logToString tyDisplayFn loc)
+       + locToString loc
+       + " "
+       + logToString tyDisplayFn log
        + "\n")
   |> strConcat
 

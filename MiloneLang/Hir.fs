@@ -1106,55 +1106,76 @@ let nameResLogToString log =
 
   | OtherNameResLog msg -> msg
 
-let logToString tyDisplay loc log =
-  let loc = loc |> locToString
+let private traitBoundErrorToString tyDisplay it =
+  match it with
+  | AddTrait ty ->
+      "Operator (+) is not supported for type: "
+      + tyDisplay ty
 
+  | EqTrait ty ->
+      "Equality is not defined for type: "
+      + tyDisplay ty
+
+  | CmpTrait ty ->
+      "Comparison is not defined for type: "
+      + tyDisplay ty
+
+  | IndexTrait (lTy, rTy, _) ->
+      sprintf "Index operation type error: lhs: '"
+      + tyDisplay lTy
+      + "', rhs: "
+      + tyDisplay rTy
+      + "."
+
+  | IsIntTrait ty ->
+      "Expected int or some integer type but was: "
+      + tyDisplay ty
+
+  | IsNumberTrait ty ->
+      "Expected int or float type but was: "
+      + tyDisplay ty
+
+  | ToIntTrait ty -> "Can't convert to integer from: " + tyDisplay ty
+  | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
+  | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
+  | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
+
+let logToString tyDisplay log =
   match log with
-  | Log.NameResLog log -> loc + " " + nameResLogToString log
+  | Log.NameResLog log -> nameResLogToString log
 
   | Log.IrrefutablePatNonExhaustiveError ->
-      loc
-      + " Let expressions cannot contain refutable patterns, which could fail to match for now."
+      "Let expressions cannot contain refutable patterns, which could fail to match for now."
 
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
-      sprintf "%s Recursive type occurred while unifying '%s' to '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
+      "Recursive type occurred while unifying '"
+      + tyDisplay lTy
+      + "' to '"
+      + tyDisplay rTy
+      + "'."
 
-  | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
-      sprintf
-        "%s Type mismatch: '%s' <> '%s'. Occurred while unifying '%s' to '%s'."
-        loc
-        (tyDisplay lTy)
-        (tyDisplay rTy)
-        (tyDisplay lRootTy)
-        (tyDisplay rRootTy)
+  | Log.TyUnify (TyUnifyLog.Mismatch, _, _, lTy, rTy) ->
+      "Type mismatch: '"
+      + tyDisplay lTy
+      + "' <> '"
+      + tyDisplay rTy
+      + "'."
 
-  | Log.TyBoundError (AddTrait ty) -> sprintf "%s No support (+) for '%s' yet" loc (tyDisplay ty)
-
-  | Log.TyBoundError (EqTrait ty) -> sprintf "%s No support equality for '%s' yet" loc (tyDisplay ty)
-
-  | Log.TyBoundError (CmpTrait ty) -> sprintf "%s No support comparison for '%s' yet" loc (tyDisplay ty)
-
-  | Log.TyBoundError (IndexTrait (lTy, rTy, _)) ->
-      sprintf "%s No support indexing operation: lhs = '%s', rhs = '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
-
-  | Log.TyBoundError (IsIntTrait ty) -> sprintf "%s Expected int or some integer type but was '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (IsNumberTrait ty) -> sprintf "%s Expected int or float type but was '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to integer from '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (ToFloatTrait ty) -> sprintf "%s Can't convert to float from '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (PtrTrait ty) -> sprintf "%s Expected a pointer type but was '%s'" loc (tyDisplay ty)
+  | Log.TyBoundError it -> traitBoundErrorToString tyDisplay it
 
   | Log.RedundantFieldError (recordName, fieldName) ->
-      sprintf "%s The field '%s' is redundant for record '%s'." loc fieldName recordName
+      "The field '"
+      + fieldName
+      + "' is redundant for record '"
+      + recordName
+      + "'."
 
   | Log.MissingFieldsError (recordName, fieldNames) ->
       let fields = fieldNames |> S.concat ", "
 
-      sprintf "%s Record '%s' must have fields: '%s'." loc recordName fields
+      "Record '"
+      + recordName
+      + "' must have fields: "
+      + fields
 
-  | Log.Error msg -> loc + " " + msg
+  | Log.Error msg -> msg

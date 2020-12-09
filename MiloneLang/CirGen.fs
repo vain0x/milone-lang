@@ -1287,10 +1287,8 @@ let private genLogs (ctx: CirCtx) =
     | [] -> ctx
     | (log, loc) :: logs ->
         let _, y, _ = loc
-        let msg = log |> logToString tyDisplayFn loc
-
+        let msg = locToString loc + " " + logToString tyDisplayFn log
         let ctx = addDecl ctx (CErrorDecl(msg, 1 + y))
-
         go ctx logs
 
   let logs = ctx.Logs |> List.rev
