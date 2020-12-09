@@ -245,35 +245,6 @@ let intFromHexTest () =
   "(0xbeef)" |> intFromHex 3 7 |> is 0xbeef
 
 [<Fact>]
-let dumpTreeTestEscape () =
-  let toString text = dumpTreeNewLeaf text |> dumpTreeToString
-  " hello \x00 \x08 \x1f \x7f \t \n \r \\ \" ' "
-  |> toString
-  |> is """ hello \0 \x08 \x1f \x7f \t \n \r \\ \" \' """
-
-[<Fact>]
-let dumpTreeTestLayout () =
-  let tree =
-    dumpTreeNew "module" [ dumpTreeNewLeaf "Program" ]
-    |> dumpTreeAttachNext
-         (dumpTreeNew
-           "let"
-            [ dumpTreeNewLeaf "main"
-              dumpTreeNew
-                "body"
-                [ dumpTreeNew "printfn" [ dumpTreeNewLeaf "\"Hello, world!\"" ]
-                  dumpTreeNewLeaf "0" ] ])
-
-  let expected = """module: Program
-let:
-- main
-- body:
-  - printfn: \"Hello, world!\"
-  - 0"""
-
-  tree |> dumpTreeToString |> is expected
-
-[<Fact>]
 let analyzeFormatTests () =
   analyzeFormat "Brave 100%%"
   |> is (tyFun tyStr tyUnit)

@@ -14,10 +14,6 @@ type AssocMap<'K, 'V> = TreeMap.TreeMap<'K, 'V>
 
 type AssocSet<'K> = TreeMap.TreeMap<'K, unit>
 
-/// Tree to generate a string for debugging.
-[<NoEquality; NoComparison>]
-type DumpTree = DumpTree of heading: string * body: DumpTree list * next: DumpTree list
-
 // -----------------------------------------------
 // Pair
 // -----------------------------------------------
@@ -371,67 +367,3 @@ let strEscape (str: string) =
       go (t :: acc) (i + 1)
 
   if str |> strNeedsEscaping |> not then str else go [] 0 |> List.rev |> strConcat
-
-// -----------------------------------------------
-// DumpTree (for debugging)
-// -----------------------------------------------
-
-let dumpTreeNew text children = DumpTree(text, children, [])
-
-let dumpTreeNewLeaf text = DumpTree(text, [], [])
-
-let dumpTreeAttachNext next tree =
-  match tree with
-  | DumpTree (text, children, oldNext) ->
-      assert (children |> List.isEmpty |> not)
-      assert (oldNext |> List.isEmpty)
-      DumpTree(text, children, [ next ])
-
-let dumpTreeFromError (msg: string) (y, x) =
-  let y = string (y + 1)
-  let x = string (x + 1)
-  dumpTreeNew
-    "ERROR"
-    [ dumpTreeNewLeaf msg
-      dumpTreeNewLeaf ("(" + y + ":" + x + ")") ]
-
-let dumpTreeToString (node: DumpTree) =
-  let rec go eol node acc =
-    let rec goChildren eol children acc =
-      match children with
-      | [] -> acc
-
-      | child :: children ->
-          acc
-          |> cons eol
-          |> cons "- "
-          |> go (eol + "  ") child
-          |> goChildren eol children
-
-    let goNext eol next acc =
-      match next with
-      | [] -> acc
-
-      | [ next ] -> acc |> cons eol |> go eol next
-
-      | _ -> failwith "NEVER: DumpTree.next never empty"
-
-    match node with
-    | DumpTree (text, [], []) -> acc |> cons (strEscape text)
-
-    | DumpTree (text, [ DumpTree (childText, [], []) ], next) ->
-        acc
-        |> cons (strEscape text)
-        |> cons ": "
-        |> cons (strEscape childText)
-        |> goNext eol next
-
-    | DumpTree (text, children, next) ->
-        acc
-        |> cons (strEscape text)
-        |> cons ":"
-        |> goChildren eol children
-        |> goNext eol next
-
-  let eol = "\n"
-  [] |> go eol node |> List.rev |> strConcat
