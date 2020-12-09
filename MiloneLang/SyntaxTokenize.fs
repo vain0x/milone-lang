@@ -57,6 +57,7 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 
 module C = MiloneStd.StdChar
+module S = MiloneStd.StdString
 
 // -----------------------------------------------
 // Char
@@ -300,7 +301,7 @@ let private scanStrLitRaw (text: string) (i: int) =
 // -----------------------------------------------
 
 let private tokenOfOp (text: string) l r: Token =
-  let s = text |> strSlice l r
+  let s = text |> S.slice l r
 
   let error () = ErrorToken UndefinedOpTokenError
 
@@ -417,7 +418,7 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
     let endIndex = skipVerbatim i
 
     let acc =
-      if i < endIndex then (text |> strSlice i endIndex) :: acc else acc
+      if i < endIndex then (text |> S.slice i endIndex) :: acc else acc
 
     let i = endIndex
 
@@ -437,7 +438,7 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
 
       | '\\'
       | '\''
-      | '"' when i + 2 < r -> go ((text |> strSlice (i + 1) (i + 2)) :: acc) (i + 2)
+      | '"' when i + 2 < r -> go ((text |> S.slice (i + 1) (i + 2)) :: acc) (i + 2)
 
       | _ -> ErrorToken UnknownEscapeSequenceError
 
@@ -450,7 +451,7 @@ let private evalStrLitRaw (text: string) l r =
      && text
      |> isFollowedByRawQuotes l
      && text |> isFollowedByRawQuotes (r - 3) then
-    StrToken(text |> strSlice (l + 3) (r - 3))
+    StrToken(text |> S.slice (l + 3) (r - 3))
   else
     ErrorToken InvalidStrLitError
 
@@ -643,7 +644,7 @@ let private doNext (host: TokenizeHost) (text: string) (index: int): Token * int
 
   | LIdent ->
       let r = scanIdent text (index + len)
-      let ident = text |> strSlice index r
+      let ident = text |> S.slice index r
 
       let token =
         match host.FindKeyword ident with

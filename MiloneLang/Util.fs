@@ -270,7 +270,7 @@ let intToHexWithPadding (len: int) (value: int) =
         acc
       else
         let d = n % 16
-        let s = "0123456789abcdef" |> strSlice d (d + 1)
+        let s = "0123456789abcdef" |> S.slice d (d + 1)
         go (s + acc) (len - 1) (n / 16)
 
     if value = 0 && len = 0 then "0" else go "" len value
@@ -333,10 +333,6 @@ let charEscape (c: char) =
 // String
 // -----------------------------------------------
 
-let strSlice (start: int) (endIndex: int) (s: string): string =
-  assert (start <= endIndex && endIndex <= s.Length)
-  if start >= endIndex then "" else s.[start..endIndex - 1]
-
 let strConcat (xs: string list) = S.concat "" xs
 
 let strNeedsEscaping (str: string) =
@@ -358,7 +354,7 @@ let strEscape (str: string) =
     // Skip the non-escape segment that starts at `i`.
     let i, acc =
       let r = raw i
-      r, (str |> strSlice i r) :: acc
+      r, (str |> S.slice i r) :: acc
 
     if i = str.Length then
       acc
