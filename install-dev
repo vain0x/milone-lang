@@ -15,11 +15,13 @@ MILONE_HOME="$HOME/.milone"
 # Process
 # ------------------------------------------------
 
+ninja target/milone
+
 # Ensure directory exists.
 mkdir -p "$MILONE_HOME"
 
 # Install native executable.
-cp -bf ./milone "$MILONE_HOME/milone_native"
+cp -bf target/milone "$MILONE_HOME/milone_native"
 
 # Install .NET Core executable. (.NET Core runtime is required to run.)
 dotnet publish MiloneLang \

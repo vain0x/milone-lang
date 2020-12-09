@@ -67,7 +67,7 @@ rule build_cc
 
 # .fs -> .c (with .NET)
 
-build milone_gen2.generated.c: $
+build target/milone_gen2.c: $
   build_milone $
     | {{ MILONE_LANG_SRC }} $
     $milone_netcore_debug
@@ -76,17 +76,17 @@ build milone_gen2.generated.c: $
 
 # .c -> .exe
 
-build milone: $
+build target/milone: $
   build_cc $
-    milone_gen2.generated.c
+    target/milone_gen2.c
 
 # .fs -> .c (with native)
 
-build milone_gen3.generated.c: $
+build target/milone_gen3.c: $
   build_milone $
-    | MiloneLang/AstToHir.fs $
-    milone
-  milone = ./milone
+    | {{ MILONE_LANG_SRC }} $
+    target/milone
+  milone = target/milone
   verbosity = --profile
 
 # .c -> .diff
@@ -94,10 +94,10 @@ build milone_gen3.generated.c: $
 rule diff
   command = diff $in >$out
 
-build milone_gen3.generated.diff: $
+build target/milone_gen3.diff: $
   diff $
-    milone_gen2.generated.c $
-    milone_gen3.generated.c
+    target/milone_gen2.c $
+    target/milone_gen3.c
 
 # Verify diff.
 # About test command:
@@ -113,7 +113,7 @@ rule verify_no_diff
 
 build target/test_self.timestamp: $
   verify_no_diff $
-    milone_gen3.generated.diff
+    target/milone_gen3.diff
 
 build test_self: $
   phony target/test_self.timestamp
@@ -197,15 +197,16 @@ rule clean
   command = $
     rm -f *.generated.* $
     rm -f tests/*/*/*.generated.* $
-    rm -f milone $
     rm -rf target $
     rm -rf $
+      milone_libs/MiloneStd/bin $
+      milone_libs/MiloneStd/obj $
+      milone_lsp/bin $
+      milone_lsp/obj $
       MiloneLang/bin $
       MiloneLang/obj $
       MiloneTests/bin $
-      MiloneTests/obj $
-      milone_lsp/bin $
-      milone_lsp/obj
+      MiloneTests/obj
 
 build clean: clean
 
