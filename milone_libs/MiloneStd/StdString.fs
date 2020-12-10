@@ -16,7 +16,7 @@ let private intClamp (minValue: int) (maxValue: int) (value: int) =
 let isEmpty (str: string): bool = str.Length = 0
 
 let tryItem (index: int) (str: string): char option =
-  if 0 <= index && index <= str.Length then Some str.[index] else None
+  if 0 <= index && index < str.Length then Some str.[index] else None
 
 // -----------------------------------------------
 // Search
