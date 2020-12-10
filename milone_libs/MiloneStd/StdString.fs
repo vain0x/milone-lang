@@ -1,4 +1,3 @@
-
 /// # StdString
 ///
 /// Provides functions to manipulate string.
@@ -153,6 +152,21 @@ let trimStart (s: string) = s |> trimStartIf C.isSpace
 
 /// Removes trailing spaces.
 let trimEnd (s: string) = s |> trimEndIf C.isSpace
+
+// -----------------------------------------------
+// Replace
+// -----------------------------------------------
+
+/// Replaces all occurrences of substring with other string.
+let replace (pattern: string) (target: string) (s: string) =
+  let rec replaceLoop acc (i: int) =
+    match findIndex pattern (skip i s) with
+    | None -> (skip i s) :: acc
+    | Some n -> replaceLoop ((s |> skip i |> truncate n) :: acc) (i + n + pattern.Length)
+
+  if pattern.Length = 0
+  then s
+  else replaceLoop [] 0 |> List.rev |> concat target
 
 // -----------------------------------------------
 // Split
