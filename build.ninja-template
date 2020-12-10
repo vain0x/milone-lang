@@ -48,7 +48,7 @@ rule build_milone_netcore
 
 build $milone_netcore_debug: $
   build_milone_netcore $
-    {{ MILONE_LANG_SRC }}
+    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }}
   CONFIG = Debug
 
 build $milone_netcore_release: $
@@ -69,7 +69,7 @@ rule build_cc
 
 build target/milone_gen2.c: $
   build_milone $
-    | {{ MILONE_LANG_SRC }} $
+    | {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
     $milone_netcore_debug
   milone = $milone_netcore_debug
   verbosity = -q
@@ -84,7 +84,7 @@ build target/milone: $
 
 build target/milone_gen3.c: $
   build_milone $
-    | {{ MILONE_LANG_SRC }} $
+    | {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
     target/milone
   milone = target/milone
   verbosity = --profile
