@@ -2,6 +2,7 @@ module MiloneLsp.Util
 
 open System
 open System.Collections.Generic
+open System.IO
 open System.Threading.Tasks
 
 let partition1 (f: 'T -> 'U option) (items: #seq<'T>): 'U array * 'T array =
@@ -97,6 +98,18 @@ module MutMultimap =
     | true, values -> values.Add(value)
 
     | false, _ -> multimap.Add(key, ResizeArray([ value ]))
+
+// -----------------------------------------------
+// IO
+// -----------------------------------------------
+
+module File =
+  let tryReadFile (filePath: string) =
+    try
+      if File.Exists(filePath)
+      then System.IO.File.ReadAllText(filePath) |> Some
+      else None
+    with _ -> None
 
 // -----------------------------------------------
 // Timeout
