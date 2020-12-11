@@ -1,4 +1,5 @@
 import { homedir } from "os"
+import * as ChildProcess from "child_process"
 import * as path from "path"
 import { ExtensionContext, workspace } from "vscode"
 import {
@@ -66,8 +67,32 @@ const startLspSession = (_context: ExtensionContext, logger: Logger) => {
   }
   logger.info("lspCommand =", lspCommand)
 
-  const serverOptions: ServerOptions = {
-    command: lspCommand,
+  // const serverOptions: ServerOptions = {
+  //   command: lspCommand,
+  // }
+
+  const serverOptions: ServerOptions = async (): Promise<ChildProcess.ChildProcess> => {
+    const p = ChildProcess.spawn(lspCommand, {
+      env: {
+        MILONE_HOME: miloneHome,
+      },
+    })
+
+    p.stderr.on("readable", () => {
+      let buf = ""
+
+      while (true) {
+        const chunk = p.stderr.read() as Buffer | null
+        if (!chunk || chunk.length === 0) {
+          break
+        }
+
+        buf += chunk.toString("utf-8")
+      }
+
+      logger.info("[server] ", buf)
+    })
+    return p
   }
 
   const clientOptions: LanguageClientOptions = {
@@ -95,7 +120,7 @@ const startLspSession = (_context: ExtensionContext, logger: Logger) => {
  * Called when the extension is activated.
  */
 export const activate = (context: ExtensionContext): void => {
-  const logger: Logger =  {
+  const logger: Logger = {
     info: (...args) => console.info("[milone-lsp]", ...args),
   }
 
