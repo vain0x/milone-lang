@@ -2,4 +2,4 @@
 
 set -eu
 
-echo -e 'Content-Length: 30\n\n{"method":"initialize"}                  Content-Length: 30\n\n{"method":"exit"}                 ' | dotnet run
+echo -e 'Content-Length: 31\n\n{"method":"initialize", "id":1}            Content-Length: 30\n\n{"method":"exit"}                 ' | dotnet run
