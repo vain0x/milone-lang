@@ -42,7 +42,7 @@ module ResizeArray =
 type MutMap<'K, 'T> = Dictionary<'K, 'T>
 
 module MutMap =
-  let empty (): MutMap<_, _> = MutMap()
+  let empty<'K, 'T when 'K: equality> (): MutMap<'K, 'T> = MutMap()
 
   let isEmpty (map: MutMap<_, _>): bool = map.Count = 0
 
