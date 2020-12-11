@@ -11,6 +11,7 @@
     <Compile Include="JsonRpcReaderForStdIn.fs" />
     <Compile Include="JsonRpcReaderForAbstractStream.fs" />
     <Compile Include="JsonRpcWriter.fs" />
+    <Compile Include="Util.fs" />
     <Compile Include="LspLangService.fs" />
     <Compile Include="LspServer.fs" />
     <Compile Include="Program.fs" />
