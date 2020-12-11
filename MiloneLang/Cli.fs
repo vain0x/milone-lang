@@ -66,6 +66,10 @@ LINKS
 // Interface (1)
 // -----------------------------------------------
 
+type private ProjectName = string
+
+type private ModuleName = string
+
 [<NoEquality; NoComparison>]
 type Verbosity =
   | Verbose
@@ -208,6 +212,10 @@ type CompileCtx =
     Projects: AssocMap<string, string>
 
     TokenizeHost: TokenizeHost
+
+    /// ProjectName -> moduleName -> docId
+    GetDocId: ProjectName -> ModuleName -> DocId
+
     Verbosity: Verbosity
     Host: CliHost }
 
@@ -224,6 +232,7 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
     ProjectName = projectName
     Projects = projects
     TokenizeHost = tokenizeHostNew ()
+    GetDocId = fun (_: string) (moduleName: string) -> moduleName
     Verbosity = verbosity
     Host = host }
 
@@ -275,14 +284,14 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
   let readFile = host.FileReadAllText
 
   let readModuleFile (projectDir: string) (moduleName: string) =
-    match readFile (projectDir + "/" + moduleName + ".fs") with
+    let read (ext: string) = readFile (projectDir + "/" + moduleName + ext)
+
+    match read ".milone" with
     | (Some _) as it -> it
-    | None -> readFile (projectDir + "/" + moduleName + ".milone")
+    | None -> read ".fs"
 
-  let parseModule (moduleName: string) (contents: string) =
-    // unique name?
-    let docId: DocId = moduleName
-
+  let parseModule (projectName: string) (moduleName: string) (contents: string) =
+    let docId = ctx.GetDocId projectName moduleName
     let ast, errors = parse docId contents
     Some(docId, ast, errors)
 
@@ -293,7 +302,8 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
         match ctx.Projects |> mapTryFind projectName with
         | Some projectDir ->
             match readModuleFile projectDir moduleName with
-            | Some contents -> parseModule moduleName contents
+            | Some text -> parseModule projectName moduleName text
+
             | None -> None
         | None -> None }
 
