@@ -1,6 +1,5 @@
 module MiloneLsp.LspServer
 
-open MiloneLang.Syntax
 open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 open MiloneLsp.JsonRpcWriter
@@ -81,7 +80,8 @@ let lspServer (): JsonValue -> int option =
            let endPos = jOfPos r2 c2
 
            jOfObj [ "range", jOfRange start endPos
-                    "message", JString msg ])
+                    "message", JString msg
+                    "source", JString "milone-lang" ])
       |> JArray
 
     let paramsValue =
@@ -90,12 +90,12 @@ let lspServer (): JsonValue -> int option =
 
     jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
 
-  let validateDoc (uri: string): unit =
-    let errors =
-      LspLangService.validateDoc uri
-      |> List.map (fun (msg, (row, column)) -> msg, row, column, row, column)
+  // let validateDoc (uri: string): unit =
+  //   let errors =
+  //     LspLangService.validateDoc uri
+  //     |> List.map (fun (msg, (row, column)) -> msg, row, column, row, column)
 
-    doPublishDiagnostics uri errors
+  //   doPublishDiagnostics uri errors
 
   let validateWorkspace (): unit =
     for uri, errors in LspLangService.validateWorkspace rootUriOpt do
@@ -141,8 +141,8 @@ let lspServer (): JsonValue -> int option =
 
           jToString uri, jToInt version, jToString text
 
-        LspLangService.openDoc uri version text
-        validateDoc uri
+        LspDocCache.openDoc uri version text
+        // validateDoc uri
         validateWorkspace ()
         None
 
@@ -162,8 +162,8 @@ let lspServer (): JsonValue -> int option =
           |> jFind "text"
           |> jToString
 
-        LspLangService.changeDoc uri version text
-        validateDoc uri
+        LspDocCache.changeDoc uri version text
+        // validateDoc uri
         validateWorkspace ()
         None
 
@@ -173,7 +173,8 @@ let lspServer (): JsonValue -> int option =
           |> jFind3 "params" "textDocument" "uri"
           |> jToString
 
-        LspLangService.closeDoc uri
+        LspDocCache.closeDoc uri
+        validateWorkspace ()
         None
 
     | methodName ->
