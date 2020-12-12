@@ -25,8 +25,14 @@ let jsonRpcReaderForStdIn () =
     bufLen <- bufLen - len
 
   let rec readLine () =
-    match buf |> Array.tryFindIndex ((=) (byte '\n')) with
-    | Some i ->
+    // eprintfn "readLine"
+    if closed then
+      None
+    else
+      let i =
+        System.Array.FindIndex(buf, 0, bufLen, System.Predicate((=) (byte '\n')))
+
+      if i >= 0 then
         let line =
           let len =
             if i >= 1 && buf.[i - 1] = byte '\r' then i - 1 else i
@@ -35,14 +41,12 @@ let jsonRpcReaderForStdIn () =
 
         shrink (i + 1)
         Some line
-
-    | None when closed -> None
-
-    | None ->
+      else
         readBuffer ()
         readLine ()
 
   let rec readBytes len =
+    // eprintfn "readBytes %d" len
     if len > buf.Length / 2 then System.Array.Resize(&buf, len * 2)
 
     if bufLen >= len then
