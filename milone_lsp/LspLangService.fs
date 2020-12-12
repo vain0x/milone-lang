@@ -15,7 +15,19 @@ let private uriOfFilePath (filePath: string) =
 
 let private uriToFilePath (uri: string) =
   try
-    Uri(uri).LocalPath |> Some
+    let path = Uri(uri).LocalPath
+
+    // HOTFIX: On linux, path starts with \\ and is separated by \ for some reason.
+    let path =
+      path.Replace("\\\\", "/").Replace("\\", "/")
+
+    // HOTFIX: On Windows, path sometimes starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
+    let path =
+      if path.Contains(":") && path.StartsWith("/")
+      then path.TrimStart('/')
+      else path
+
+    Some path
   with _ -> None
 
 /// Whether dir is excluded in traversal?
@@ -47,12 +59,9 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
   let projects = ResizeArray()
 
   let rootDir =
-    let path = Uri(rootUri).LocalPath
-
-    // HOTFIX: On Windows, Uri.LocalPath can starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
-    if path.Contains(":") && path.StartsWith("/")
-    then path.TrimStart('/')
-    else path
+    match rootUri |> uriToFilePath with
+    | Some it -> it
+    | None -> failwithf "rootUri: %A" rootUri
 
   eprintfn "rootDir = '%s'" rootDir
 
