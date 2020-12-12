@@ -58,10 +58,10 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
 
   // Find projects recursively.
   let mutable stack = Stack()
-  stack.Push(rootDir)
+  stack.Push((0, rootDir))
 
   while stack.Count <> 0 do
-    let dir = stack.Pop()
+    let depth, dir = stack.Pop()
     eprintfn "dir: '%s'" dir
 
     let projectName = Path.GetFileNameWithoutExtension(dir)
@@ -79,15 +79,16 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
     tryAddProject ".milone"
     tryAddProject ".fs"
 
-    let subdirs =
-      try
-        Directory.GetDirectories(dir)
-      with _ ->
-        eprintfn "couldn't get list of files: '%s'" dir
-        [||]
+    if depth < 3 then
+      let subdirs =
+        try
+          Directory.GetDirectories(dir)
+        with _ ->
+          eprintfn "couldn't get list of files: '%s'" dir
+          [||]
 
-    for subdir in subdirs do
-      if subdir |> dirIsExcluded |> not then stack.Push(subdir)
+      for subdir in subdirs do
+        if subdir |> dirIsExcluded |> not then stack.Push((depth + 1, subdir))
 
   List.ofSeq projects
 
