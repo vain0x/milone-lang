@@ -29,4 +29,4 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | dotnet run
+} | MILONE_HOME="$(dirname $PWD)" dotnet run

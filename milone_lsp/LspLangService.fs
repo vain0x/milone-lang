@@ -135,24 +135,26 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
   let toUri moduleName ext =
     toFilePath moduleName ext |> uriOfFilePath
 
-  let findExt moduleName =
-    if File.Exists(toFilePath moduleName ".milone")
-       || not (File.Exists(toFilePath moduleName ".fs")) then
-      ".milone"
-    else
-      ".fs"
+  let fixExt filePath =
+    let fs = Path.ChangeExtension(filePath, ".fs")
+    if File.Exists(filePath) || not (File.Exists(fs))
+    then filePath
+    else fs
 
   let findDocId projectName moduleName =
     match projectName with
     | "MiloneCore"
     | "MiloneStd" ->
-        sprintf "%s/milone_libs/%s/%s.fs" miloneHome projectName moduleName
+        sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
+        |> fixExt
         |> uriOfFilePath
         |> Some
 
     | _ when projectName = project.ProjectName ->
-        let ext = findExt moduleName
-        toUri moduleName ext |> Some
+        toFilePath moduleName ".milone"
+        |> fixExt
+        |> uriOfFilePath
+        |> Some
 
     | _ ->
         eprintfn "findDocId: not found %s/%s" projectName moduleName

@@ -102,6 +102,10 @@ let private doBundle (ls: LangServiceState) projectDir =
 
   let compileCtx =
     { compileCtx with
+        // FIXME: read .milone_project
+        Projects =
+          compileCtx.Projects
+          |> mapAdd "MiloneStd" (ls.Host.MiloneHome + "/milone_libs/MiloneStd")
         ReadModuleFile = readModuleFile }
 
   let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
