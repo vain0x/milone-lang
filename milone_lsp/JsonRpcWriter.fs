@@ -46,10 +46,10 @@ let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list):
   jsonRpcWriteString text
 
 /// Writes a JSON-RPC message with result field. (For LSP responses.)
-let jsonRpcWriteWithResult (methodName: string) (result: JsonValue): unit =
+let jsonRpcWriteWithResult (id: JsonValue) (result: JsonValue): unit =
   let jsonValue =
     [ "jsonrpc", JString "2.0"
-      "method", JString methodName
+      "id", id
       "result", result ]
     |> Map.ofList
     |> JObject

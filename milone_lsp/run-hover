@@ -12,12 +12,13 @@ MILONE_LANG_DIR="$(dirname $PWD)/MiloneLang"
 END
 
 ./req <<END
-{"method": "textDocument/didOpen", "params": {
+{"method": "textDocument/hover", "id": 2, "params": {
     "textDocument": {
-        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
-        "languageId": "milone",
-        "version": 1,
-        "text": $(cat ${MILONE_LANG_DIR}/MiloneLang.milone | ./json-encode)
+        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+    },
+    "position": {
+        "line": 54,
+        "character": 2
     }
 }}
 END
@@ -29,4 +30,4 @@ END
 ./req <<END
 {"method": "exit"}
 END
-} | MILONE_HOME="$(dirname $PWD)" dotnet run
+} | MILONE_HOME="$(dirname $PWD)" dotnet run 2>err.txt

@@ -126,7 +126,7 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
 /// (msg, loc) list
 type ProjectValidateResult = (string * Loc) list
 
-let validateProject (project: ProjectInfo): ProjectValidateResult =
+let newLangService (project: ProjectInfo): LangServiceState =
   let { ProjectDir = projectDir; ProjectName = projectName } = project
 
   let toFilePath moduleName ext =
@@ -166,10 +166,16 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
     | None ->
         match docId |> uriToFilePath with
-        | None -> ""
+        | None ->
+            eprintfn "getText: docId not found: %s" docId
+            ""
+
         | Some filePath ->
-            File.tryReadFile filePath
-            |> Option.defaultValue ""
+            match File.tryReadFile filePath with
+            | Some it -> it
+            | None ->
+                eprintfn "getText: docId file could not read: %s" filePath
+                ""
 
   let getProjectName docId =
     match docId |> uriToFilePath with
@@ -186,9 +192,11 @@ let validateProject (project: ProjectInfo): ProjectValidateResult =
 
   let langServiceHost: LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
 
-  let langService = LangService.create langServiceHost
+  LangService.create langServiceHost
 
-  LangService.validateProject projectDir langService
+let validateProject (project: ProjectInfo): ProjectValidateResult =
+  newLangService project
+  |> LangService.validateProject project.ProjectDir
 
 // (docId, (msg, pos) list) list
 type WorkspaceValidateResult = (string * (string * Pos) list) list
@@ -237,4 +245,20 @@ let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
         doValidateWorkspace projects
       with ex ->
         eprintfn "validateWorkspace failed: %A" ex
+        []
+
+let private doHover (project: ProjectInfo) uri pos =
+  newLangService project
+  |> LangService.hover project.ProjectDir uri pos
+
+let hover rootUriOpt uri pos =
+  match findProjects rootUriOpt with
+  | Error _ -> []
+
+  | Ok projects ->
+      try
+        projects
+        |> List.choose (fun project -> doHover project uri pos)
+      with ex ->
+        eprintfn "hover failed: %A" ex
         []
