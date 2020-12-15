@@ -12,6 +12,7 @@
     <Compile Include="JsonRpcReaderForAbstractStream.fs" />
     <Compile Include="JsonRpcWriter.fs" />
     <Compile Include="Util.fs" />
+    <Compile Include="LspCacheLayer.fs" />
     <Compile Include="Lsp.fs" />
     <Compile Include="LspDocCache.fs" />
     <Compile Include="LspLangService.fs" />
