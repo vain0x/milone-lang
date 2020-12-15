@@ -6,6 +6,7 @@ open System.IO
 open System.Text
 open MiloneLsp.Lsp
 open MiloneLsp.Util
+open MiloneLsp.LspCacheLayer
 
 let private miloneHome =
   Environment.GetEnvironmentVariable("MILONE_HOME")
@@ -203,6 +204,9 @@ type WorkspaceValidateResult = (string * (string * Pos) list) list
 
 let private diagnosticKeys = ResizeArray<string>()
 
+// URI -> MD5 hash of diagnostics
+let private diagnosticsCache = DiagnosticsCache.empty ()
+
 let private doValidateWorkspace projects =
   // Collect list of errors per file.
   // Note we need to report absence of errors for docs opened in editor
@@ -233,7 +237,8 @@ let private doValidateWorkspace projects =
        (diagnostics
         |> List.choose (fun (docId, errors) -> if errors |> List.isEmpty |> not then Some docId else None))
 
-  diagnostics
+  diagnosticsCache
+  |> DiagnosticsCache.filter diagnostics
 
 /// Validate all projects in workspace to report errors.
 let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
