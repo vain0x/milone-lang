@@ -9,7 +9,7 @@
             },
             "definitionProvider": false,
             "documentHighlightProvider": false,
-            "hoverProvider": false,
+            "hoverProvider": true,
             "referencesProvider": false,
             "renameProvider": false
         },

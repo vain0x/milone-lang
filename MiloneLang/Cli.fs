@@ -66,6 +66,12 @@ LINKS
 // Interface (1)
 // -----------------------------------------------
 
+type private ProjectName = string
+
+type private ProjectDir = string
+
+type private ModuleName = string
+
 [<NoEquality; NoComparison>]
 type Verbosity =
   | Verbose
@@ -208,6 +214,9 @@ type CompileCtx =
     Projects: AssocMap<string, string>
 
     TokenizeHost: TokenizeHost
+
+    ReadModuleFile: ProjectName -> ProjectDir -> ModuleName -> (DocId * string) option
+
     Verbosity: Verbosity
     Host: CliHost }
 
@@ -220,10 +229,21 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
     |> mapAdd "MiloneCore" (host.MiloneHome + "/milone_libs/MiloneCore")
     |> mapAdd projectName projectDir
 
+  let readModuleFile (_: string) (projectDir: string) (moduleName: string) =
+    let read (ext: string) =
+      match host.FileReadAllText(projectDir + "/" + moduleName + ext) with
+      | Some text -> Some(moduleName, text)
+      | None -> None
+
+    match read ".milone" with
+    | (Some _) as it -> it
+    | None -> read ".fs"
+
   { ProjectDir = projectDir
     ProjectName = projectName
     Projects = projects
     TokenizeHost = tokenizeHostNew ()
+    ReadModuleFile = readModuleFile
     Verbosity = verbosity
     Host = host }
 
@@ -274,16 +294,8 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
   let host = ctx.Host
   let readFile = host.FileReadAllText
 
-  let readModuleFile (projectDir: string) (moduleName: string) =
-    match readFile (projectDir + "/" + moduleName + ".fs") with
-    | (Some _) as it -> it
-    | None -> readFile (projectDir + "/" + moduleName + ".milone")
-
-  let parseModule (moduleName: string) (contents: string) =
-    // unique name?
-    let docId: DocId = moduleName
-
-    let ast, errors = parse docId contents
+  let parseModule (docId: DocId) (text: string) =
+    let ast, errors = parse docId text
     Some(docId, ast, errors)
 
   { ProjectRefs = ctx.Projects |> mapToKeys
@@ -292,8 +304,9 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
       fun projectName moduleName ->
         match ctx.Projects |> mapTryFind projectName with
         | Some projectDir ->
-            match readModuleFile projectDir moduleName with
-            | Some contents -> parseModule moduleName contents
+            match ctx.ReadModuleFile projectName projectDir moduleName with
+            | Some (docId, text) -> parseModule docId text
+
             | None -> None
         | None -> None }
 

@@ -715,3 +715,19 @@ let tokenize (host: TokenizeHost) (text: string): (Token * Pos) list =
       acc
 
   go [] 0 (0, 0) |> List.rev
+
+/// Tokenizes a string. Trivias are preserved.
+let tokenizeAll (host: TokenizeHost) (text: string): (Token * Pos) list =
+  let rec go acc (i: int) (pos: Pos) =
+    if i < text.Length then
+      let token, r = doNext host text i
+      assert (i < r)
+
+      let acc = (token, pos) :: acc
+
+      let pos = posShift text i r pos
+      go acc r pos
+    else
+      acc
+
+  go [] 0 (0, 0) |> List.rev

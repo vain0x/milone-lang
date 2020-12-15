@@ -1,14 +1,38 @@
 module MiloneLsp.LspLangService
 
-open MiloneLang.Util
-open MiloneLang.Syntax
+open System
+open System.Collections.Generic
+open System.IO
+open System.Text
+open MiloneLsp.Lsp
+open MiloneLsp.Util
+
+let private miloneHome =
+  Environment.GetEnvironmentVariable("MILONE_HOME")
 
 let private uriOfFilePath (filePath: string) =
-  System.Text.StringBuilder().Append(filePath).Replace(":", "%3A").Replace("\\", "/").Insert(0, "file:///").ToString()
+  StringBuilder().Append(filePath).Replace(":", "%3A").Replace("\\", "/").Insert(0, "file://").ToString()
+
+let private uriToFilePath (uri: string) =
+  try
+    let path = Uri(uri).LocalPath
+
+    // HOTFIX: On linux, path starts with \\ and is separated by \ for some reason.
+    let path =
+      path.Replace("\\\\", "/").Replace("\\", "/")
+
+    // HOTFIX: On Windows, path sometimes starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
+    let path =
+      if path.Contains(":") && path.StartsWith("/")
+      then path.TrimStart('/')
+      else path
+
+    Some path
+  with _ -> None
 
 /// Whether dir is excluded in traversal?
 let private dirIsExcluded (dir: string) =
-  let name = System.IO.Path.GetFileName(dir)
+  let name = Path.GetFileName(dir)
 
   name.StartsWith(".")
   || name.Contains("~")
@@ -16,192 +40,6 @@ let private dirIsExcluded (dir: string) =
   || name = "target"
   || name = "bin"
   || name = "obj"
-
-// -----------------------------------------------
-// MutMultimap
-// -----------------------------------------------
-
-type MutMultimap<'K, 'T> = System.Collections.Generic.Dictionary<'K, ResizeArray<'T>>
-
-module MutMultimap =
-  let empty<'K, 'T when 'K: equality> () = MutMultimap()
-
-  let insertKey key (multimap: MutMultimap<_, _>) =
-    if multimap.ContainsKey(key) |> not then multimap.Add(key, ResizeArray())
-
-  let insert key value (multimap: MutMultimap<_, _>) =
-    match multimap.TryGetValue(key) with
-    | true, values -> values.Add(value)
-
-    | false, _ -> multimap.Add(key, ResizeArray([ value ]))
-
-// ---------------------------------------------
-// AnalysisCache
-// ---------------------------------------------
-
-type TokenizeResult = (Token * Pos) list
-
-type ParseResult = ARoot * (string * Pos) list
-
-[<NoEquality; NoComparison>]
-type AnalysisCache =
-  { mutable Ok: bool
-    mutable TokenizeResultOpt: TokenizeResult option
-    mutable ParseResultOpt: ParseResult option }
-
-  static member Create(): AnalysisCache =
-    { Ok = true
-      TokenizeResultOpt = None
-      ParseResultOpt = None }
-
-  member this.Reset() =
-    this.Ok <- true
-    this.TokenizeResultOpt <- None
-    this.ParseResultOpt <- None
-
-  member this.IsReady =
-    match this with
-    | { Ok = true; TokenizeResultOpt = Some _; ParseResultOpt = Some _ } -> true
-    | _ -> false
-
-// ---------------------------------------------
-// FileCache
-// ---------------------------------------------
-
-[<NoEquality; NoComparison>]
-type FileCache =
-  { FilePath: string
-    mutable Text: string
-    mutable Timestamp: System.DateTime
-    AnalysisCache: AnalysisCache }
-
-let private files =
-  System.Collections.Generic.Dictionary<string, FileCache>()
-
-let private fetchFile (filePath: string) lastWriteTime: FileCache option =
-  let timestamp = System.DateTime() |> max lastWriteTime
-
-  let textOpt =
-    try
-      System.IO.File.ReadAllText(filePath) |> Some
-    with _ -> None
-
-  match textOpt with
-  | None -> None
-
-  | Some text ->
-      let fileCache: FileCache =
-        { FilePath = filePath
-          Text = text
-          Timestamp = timestamp
-          AnalysisCache = AnalysisCache.Create() }
-
-      eprintfn "file cache added: '%s'" filePath
-      files.Add(filePath, fileCache)
-
-      Some fileCache
-
-let private invalidateFileCache (fileCache: FileCache) lastWriteTime =
-  let { FilePath = filePath } = fileCache
-
-  let timestamp = System.DateTime() |> max lastWriteTime
-
-  let textOpt =
-    try
-      System.IO.File.ReadAllText(filePath) |> Some
-    with _ -> None
-
-  match textOpt with
-  | Some text ->
-      eprintfn "file cache updated: '%s'" filePath
-      fileCache.AnalysisCache.Reset()
-      fileCache.Text <- text
-      fileCache.Timestamp <- timestamp
-
-      Some fileCache
-
-  | None ->
-      eprintfn "file cache removed: '%s'" filePath
-      files.Remove(filePath) |> ignore
-      None
-
-let useFile (filePath: string): FileCache option =
-  let lastWriteTimeOpt =
-    try
-      if System.IO.File.Exists(filePath)
-      then System.IO.File.GetLastWriteTime(filePath) |> Some
-      else None
-    with _ -> None
-
-  match files.TryGetValue(filePath), lastWriteTimeOpt with
-  | (true, fileCache), Some lastWriteTime ->
-      if fileCache.Timestamp < lastWriteTime
-      then invalidateFileCache fileCache lastWriteTime
-      else Some fileCache
-
-  | (true, _), None ->
-      eprintfn "file cache removed: '%s'" filePath
-      files.Remove(filePath) |> ignore
-      None
-
-  | (false, _), Some lastWriteTime -> fetchFile filePath lastWriteTime
-
-  | (false, _), None -> None
-
-// ---------------------------------------------
-// DocData
-// ---------------------------------------------
-
-/// Text doc that is opened in editor.
-[<NoEquality; NoComparison>]
-type DocData =
-  {
-    /// String to identify a file. E.g. `file:///home/owner/.../foo.milone`.
-    Uri: string
-
-    /// Number to identify an edition of this file.
-    Version: int
-
-    Text: string
-
-    AnalysisCache: AnalysisCache }
-
-/// List of docs open in editor, keyed by URI.
-let private docs =
-  System.Collections.Generic.Dictionary<string, DocData>()
-
-let findDoc (uri: string): DocData option =
-  match docs.TryGetValue(uri) with
-  | true, docData -> Some docData
-  | false, _ -> None
-
-let openDoc (uri: string) (version: int) (text: string) =
-  let docData: DocData =
-    { Uri = uri
-      Version = version
-      Text = text
-      AnalysisCache = AnalysisCache.Create() }
-
-  eprintfn "INFO: Doc opened uri:'%s' v:%d len:%d" uri version text.Length
-  docs.Add(uri, docData)
-
-let changeDoc (uri: string) (version: int) (text: string): unit =
-  match findDoc uri with
-  | Some _ ->
-      let docData =
-        { Uri = uri
-          Version = version
-          Text = text
-          AnalysisCache = AnalysisCache.Create() }
-
-      eprintfn "INFO: Doc changed uri:'%s' v:%d len:%d" uri version text.Length
-      docs.[uri] <- docData
-
-  | None -> openDoc uri version text
-
-let closeDoc (uri: string): unit =
-  eprintfn "INFO: Doc closed uri:'%s'" uri
-  docs.Remove(uri) |> ignore
 
 // ---------------------------------------------
 // Project
@@ -221,28 +59,24 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
   let projects = ResizeArray()
 
   let rootDir =
-    let path = System.Uri(rootUri).LocalPath
-
-    // HOTFIX: On Windows, Uri.LocalPath can starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
-    if path.Contains(":") && path.StartsWith("/")
-    then path.TrimStart([| '/' |])
-    else path
+    match rootUri |> uriToFilePath with
+    | Some it -> it
+    | None -> failwithf "rootUri: %A" rootUri
 
   eprintfn "rootDir = '%s'" rootDir
 
   // Find projects recursively.
-  let mutable stack = System.Collections.Generic.Stack()
-  stack.Push(rootDir)
+  let mutable stack = Stack()
+  stack.Push((0, rootDir))
 
   while stack.Count <> 0 do
-    let dir = stack.Pop()
+    let depth, dir = stack.Pop()
     eprintfn "dir: '%s'" dir
 
-    let projectName =
-      System.IO.Path.GetFileNameWithoutExtension(dir)
+    let projectName = Path.GetFileNameWithoutExtension(dir)
 
     let tryAddProject ext =
-      if System.IO.File.Exists(System.IO.Path.Combine(dir, projectName + ext)) then
+      if File.Exists(Path.Combine(dir, projectName + ext)) then
         let project: ProjectInfo =
           { ProjectDir = dir
             ProjectName = projectName
@@ -254,15 +88,16 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
     tryAddProject ".milone"
     tryAddProject ".fs"
 
-    let subdirs =
-      try
-        System.IO.Directory.GetDirectories(dir)
-      with _ ->
-        eprintfn "couldn't get list of files: '%s'" dir
-        [||]
+    if depth < 3 then
+      let subdirs =
+        try
+          Directory.GetDirectories(dir)
+        with _ ->
+          eprintfn "couldn't get list of files: '%s'" dir
+          [||]
 
-    for subdir in subdirs do
-      if subdir |> dirIsExcluded |> not then stack.Push(subdir)
+      for subdir in subdirs do
+        if subdir |> dirIsExcluded |> not then stack.Push((depth + 1, subdir))
 
   List.ofSeq projects
 
@@ -288,200 +123,142 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
 // Analysis
 // ---------------------------------------------
 
-let tokenizeHost = tokenizeHostNew ()
+/// (msg, loc) list
+type ProjectValidateResult = (string * Loc) list
 
-let tokenizeWithCaching (text: string) (analysisCache: AnalysisCache): TokenizeResult =
-  match analysisCache.TokenizeResultOpt with
-  | Some it -> it
-
-  | None ->
-      let result =
-        MiloneLang.SyntaxTokenize.tokenize tokenizeHost text
-
-      analysisCache.TokenizeResultOpt <- Some result
-      result
-
-let parseWithCaching (text: string) (analysisCache: AnalysisCache): ParseResult =
-  match analysisCache.ParseResultOpt with
-  | Some it -> it
-
-  | None ->
-      let tokens = tokenizeWithCaching text analysisCache
-      let result = MiloneLang.SyntaxParse.parse tokens
-
-      let ok =
-        let _, errors = result
-        List.isEmpty errors
-
-      analysisCache.ParseResultOpt <- Some result
-      analysisCache.Ok <- analysisCache.Ok && ok
-      result
-
-let validateDoc (uri: string): (string * Pos) list =
-  match findDoc uri with
-  | Some docData ->
-      let _, errors =
-        parseWithCaching docData.Text docData.AnalysisCache
-
-      errors
-
-  | None -> []
-
-[<NoEquality; NoComparison>]
-type ProjectValidateResult =
-  { ModuleUris: string list
-
-    /// (uri, msg, pos) list
-    Errors: (string * string * Pos) list }
-
-let validateProject (project: ProjectInfo): ProjectValidateResult =
+let newLangService (project: ProjectInfo): LangServiceState =
   let { ProjectDir = projectDir; ProjectName = projectName } = project
 
   let toFilePath moduleName ext =
-    System.IO.Path.Combine(projectDir, moduleName + ext)
+    Path.Combine(projectDir, moduleName + ext)
 
   let toUri moduleName ext =
     toFilePath moduleName ext |> uriOfFilePath
 
-  let moduleUris = System.Collections.Generic.Dictionary()
-  moduleUris.Add(projectName, toUri projectName project.EntryFileExt)
+  let fixExt filePath =
+    let fs = Path.ChangeExtension(filePath, ".fs")
+    if File.Exists(filePath) || not (File.Exists(fs))
+    then filePath
+    else fs
 
-  // Get contents of module from doc in editor or file, if any.
-  let tryReadModule moduleName ext =
-    match docs.TryGetValue(toUri moduleName ext) with
-    | true, docData -> Some docData.Text
+  let findDocId projectName moduleName =
+    match projectName with
+    | "MiloneCore"
+    | "MiloneStd" ->
+        sprintf "%s/milone_libs/%s/%s.milone" miloneHome projectName moduleName
+        |> fixExt
+        |> uriOfFilePath
+        |> Some
 
-    | false, _ ->
-        match useFile (toFilePath moduleName ext) with
-        | Some fileCache -> Some fileCache.Text
-        | None -> None
+    | _ when projectName = project.ProjectName ->
+        toFilePath moduleName ".milone"
+        |> fixExt
+        |> uriOfFilePath
+        |> Some
 
-  // Bundle.
-  let exprs, nameCtx, errors =
-    let readCoreFile moduleName =
-      eprintfn "readCoreFile: unimplemented"
-      ""
+    | _ ->
+        eprintfn "findDocId: not found %s/%s" projectName moduleName
+        None
 
-    let readModuleFile moduleName =
-      eprintfn "readModuleFile '%s'" moduleName
+  let getText docId =
+    match LspDocCache.findDoc docId with
+    | Some docCache -> docCache.Text
 
-      let source =
-        match tryReadModule moduleName ".milone" with
-        | Some it -> Some(it, ".milone")
-        | None ->
-            match tryReadModule moduleName ".fs" with
-            | Some it -> Some(it, ".fs")
-            | None -> None
-
-      match source with
-      | Some (source, ext) ->
-          // Remember URI to create error location later.
-          if moduleUris.ContainsKey(moduleName) |> not
-          then moduleUris.Add(moduleName, toUri moduleName ext)
-
-          Some source
-
-      | None -> None
-
-    let parseModule (moduleName: string) tokens =
-      eprintfn "parse: '%s'" moduleName
-      MiloneLang.SyntaxParse.parse tokens
-
-    let bundleHost: MiloneLang.Bundling.BundleHost =
-      { ProjectRefs = []
-        FetchModule =
-          fun p m ->
-            if p = projectName then
-              match readModuleFile m with
-              | Some contents ->
-                  let ast, errors =
-                    contents
-                    |> MiloneLang.SyntaxTokenize.tokenize tokenizeHost
-                    |> parseModule m
-
-                  let docId = m
-
-                  Some(docId, ast, errors)
-
-              | None -> None
-
-            else
-              // FIXME: load MiloneCore
-              None }
-
-    match MiloneLang.Bundling.bundleProgram bundleHost projectName with
-    | Some it -> it
     | None ->
-        let exprs = [ MiloneLang.Hir.hxUnit ("", 0, 0) ]
-        let nameCtx = MiloneLang.Hir.nameCtxEmpty ()
-        exprs, nameCtx, []
+        match docId |> uriToFilePath with
+        | None ->
+            eprintfn "getText: docId not found: %s" docId
+            ""
 
-  // Name resolution.
-  let expr, scopeCtx =
-    MiloneLang.NameRes.nameRes (exprs, nameCtx)
+        | Some filePath ->
+            match File.tryReadFile filePath with
+            | Some it -> it
+            | None ->
+                eprintfn "getText: docId file could not read: %s" filePath
+                ""
 
-  // FIXME: collect errors in NameRes
+  let getProjectName docId =
+    match docId |> uriToFilePath with
+    | None -> None
+    | Some filePath ->
+        try
+          Path.GetDirectoryName(filePath) |> Some
+        with _ -> None
 
-  // Type inference.
-  let _expr, tyCtx =
-    MiloneLang.Typing.infer (expr, scopeCtx, errors)
+  let docs: LangServiceDocs =
+    { FindDocId = findDocId
+      GetText = getText
+      GetProjectName = getProjectName }
 
-  // Collect errors.
-  let errors =
-    let tyDisplayFn ty =
-      let getTyName tySerial =
-        tyCtx.Tys
-        |> mapTryFind tySerial
-        |> Option.map MiloneLang.Hir.tyDefToName
+  let langServiceHost: LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
 
-      ty |> MiloneLang.TySystem.tyDisplay getTyName
+  LangService.create langServiceHost
 
-    [ for log, loc in tyCtx.Logs do
-        let moduleName, row, column = loc
+let validateProject (project: ProjectInfo): ProjectValidateResult =
+  newLangService project
+  |> LangService.validateProject project.ProjectDir
 
-        let uri =
-          match moduleUris.TryGetValue(moduleName) with
-          | true, it -> it
-          | false, _ -> toUri moduleName ".milone"
-
-        let pos = row, column
-
-        let msg =
-          locToString loc + " " + MiloneLang.Hir.logToString tyDisplayFn log
-
-        yield uri, msg, pos ]
-
-  let moduleUris = List.ofSeq moduleUris.Values
-
-  { ModuleUris = moduleUris
-    Errors = errors }
-
-// (uri, (msg, pos) list) list
+// (docId, (msg, pos) list) list
 type WorkspaceValidateResult = (string * (string * Pos) list) list
 
-/// Validate all projects in workspace to collect semantic errors.
+let private diagnosticKeys = ResizeArray<string>()
+
+let private doValidateWorkspace projects =
+  // Collect list of errors per file.
+  // Note we need to report absence of errors for docs opened in editor
+  // so that the editor clears outdated diagnostics.
+  let map = MutMultimap<string, string * Pos>()
+
+  for docId in diagnosticKeys do
+    map |> MutMultimap.insertKey docId
+
+  for project in projects do
+    for msg, loc in validateProject project do
+      let docId, y, x = loc
+      map |> MutMultimap.insert docId (msg, (y, x))
+
+  let diagnostics =
+    [ for KeyValue (docId, errors) in map do
+        let errors =
+          errors.ToArray()
+          |> Array.sortBy (fun (_, pos) -> pos)
+          |> Array.toList
+
+        yield docId, errors ]
+
+  // Remember docId for each document that some error is published to.
+  // We need publish empty error list to it to remove these errors next time.
+  diagnosticKeys
+  |> ResizeArray.assign
+       (diagnostics
+        |> List.choose (fun (docId, errors) -> if errors |> List.isEmpty |> not then Some docId else None))
+
+  diagnostics
+
+/// Validate all projects in workspace to report errors.
 let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
   match findProjects rootUriOpt with
   | Error _ -> []
 
   | Ok projects ->
       try
-        // Collect list of errors per file.
-        // Note we need to report absence of errors for docs opened in editor
-        // so that the editor clears outdated diagnostics.
-        let mutable map = MutMultimap.empty ()
-
-        for project in projects do
-          let { ModuleUris = moduleUris; Errors = errors } = validateProject project
-
-          for uri in moduleUris do
-            map |> MutMultimap.insertKey uri
-
-          for uri, msg, pos in errors do
-            map |> MutMultimap.insert uri (msg, pos)
-
-        [ for KeyValue (uri, errors) in map do
-            yield uri, List.ofSeq errors ]
+        doValidateWorkspace projects
       with ex ->
         eprintfn "validateWorkspace failed: %A" ex
+        []
+
+let private doHover (project: ProjectInfo) uri pos =
+  newLangService project
+  |> LangService.hover project.ProjectDir uri pos
+
+let hover rootUriOpt uri pos =
+  match findProjects rootUriOpt with
+  | Error _ -> []
+
+  | Ok projects ->
+      try
+        projects
+        |> List.choose (fun project -> doHover project uri pos)
+      with ex ->
+        eprintfn "hover failed: %A" ex
         []

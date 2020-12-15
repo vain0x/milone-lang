@@ -10,11 +10,13 @@
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode_ext"
             ],
             "env": {
-                "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/netcoreapp3.1/MiloneLsp"
+                "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/netcoreapp3.1/MiloneLsp",
+                "MILONE_HOME": "${workspaceFolder}/.."
             },
             "windows": {
                 "env": {
-                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/netcoreapp3.1/MiloneLsp.exe"
+                    "MILONE_LSP_COMMAND": "${workspaceFolder}/bin/Debug/netcoreapp3.1/MiloneLsp.exe",
+                    "MILONE_HOME": "${workspaceFolder}/.."
                 }
             },
             "preLaunchTask": "vscode_ext_build"
