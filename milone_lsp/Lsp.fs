@@ -25,6 +25,7 @@ type private ModuleName = string
 [<NoEquality; NoComparison>]
 type LangServiceDocs =
   { FindDocId: ProjectName -> ModuleName -> DocId option
+    GetVersion: DocId -> DocVersion
     GetText: DocId -> DocVersion * string
     GetProjectName: DocId -> ProjectName option }
 
@@ -95,15 +96,22 @@ let private doBundle (ls: LangServiceState) projectDir =
   let compileCtx =
     Cli.compileCtxNew cliHost Cli.Quiet projectDir
 
-  let fetchModule (projectName: string) (_projectDir: string) (moduleName: string) =
+  let docVersions = MutMap()
+
+  let fetchModule (projectName: string) (projectDir: string) (moduleName: string) =
+
     match ls.Host.Docs.FindDocId projectName moduleName with
     | None -> None
     | Some docId ->
         let currentVersion, text = ls.Host.Docs.GetText docId
 
+        docVersions
+        |> MutMap.insert docId currentVersion
+        |> ignore
+
         let cacheOpt = ls.ParseCache |> MutMap.tryFind docId
         match cacheOpt with
-        | Some (v, ast, errors) when v >= currentVersion ->
+        | Some (v, (ast, errors)) when v >= currentVersion ->
             // eprintfn "parse cache reused: %s v%d" docId v
             Some(docId, ast, errors)
 
@@ -132,7 +140,7 @@ let private doBundle (ls: LangServiceState) projectDir =
               List.append (tokenizeErrors |> Array.choose id |> List.ofArray) parseErrors
 
             ls.ParseCache
-            |> MutMap.insert docId (currentVersion, ast, errors)
+            |> MutMap.insert docId (currentVersion, (ast, errors))
             |> ignore
 
             Some(docId, ast, errors)
@@ -148,35 +156,67 @@ let private doBundle (ls: LangServiceState) projectDir =
 
   let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
   if errors |> List.isEmpty |> not then
-    None, errors
+    None, errors, docVersions
   else
     match Cli.semanticallyAnalyze cliHost Cli.Quiet (expr, nameCtx, []) with
-    | Cli.SemaAnalysisOk (expr, tyCtx) -> Some(expr, tyCtx), []
+    | Cli.SemaAnalysisOk (expr, tyCtx) -> Some(expr, tyCtx), [], docVersions
 
     | Cli.SemaAnalysisNameResError errors ->
         let errors =
           errors
           |> List.map (fun (log, loc) -> Hir.nameResLogToString log, loc)
 
-        None, errors
+        None, errors, docVersions
 
     | Cli.SemaAnalysisTypingError tyCtx ->
         let errors =
           tyCtx.Logs
           |> List.map (fun (log, loc) -> Hir.logToString (tyDisplayFn tyCtx) log, loc)
 
-        None, errors
+        None, errors, docVersions
+
+let bundleWithCache (ls: LangServiceState) projectDir =
+  let docsAreAllFresh (docs: MutMap<DocId, DocVersion>) =
+    docs
+    |> Seq.forall (fun (KeyValue (docId, version)) -> ls.Host.Docs.GetVersion docId <= version)
+
+  match ls.BundleCache |> MutMap.tryFind projectDir with
+  | Some (opt, errors, docs) when docsAreAllFresh docs ->
+      eprintfn "bundle cache reused"
+      opt, errors
+
+  | cacheOpt ->
+      match cacheOpt with
+      | Some _ -> eprintfn "bundle cache invalidated"
+      | _ -> eprintfn "bundle cache not found"
+
+      let opt, errors, versions = doBundle ls projectDir
+
+      ls.BundleCache
+      |> MutMap.insert projectDir (opt, errors, versions)
+      |> ignore
+
+      opt, errors
 
 // -----------------------------------------------
 // State
 // -----------------------------------------------
 
+type private ProjectDir = string
+
 type private TokenizeFullResult = (Token * Pos) list
+
+type private ParseResult = ARoot * (string * Pos) list
+
+type private BundleResult = (HExpr * Typing.TyCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
 
 [<NoEquality; NoComparison>]
 type LangServiceState =
   private { TokenizeFullCache: MutMap<DocId, DocVersion * TokenizeFullResult>
-            ParseCache: MutMap<DocId, DocVersion * ARoot * (string * Pos) list>
+            ParseCache: MutMap<DocId, DocVersion * ParseResult>
+
+            BundleCache: MutMap<ProjectDir, BundleResult>
+
             Host: LangServiceHost }
 
 let private isTrivia token =
@@ -274,12 +314,13 @@ module LangService =
   let create (host: LangServiceHost): LangServiceState =
     { TokenizeFullCache = MutMap()
       ParseCache = MutMap()
+      BundleCache = MutMap()
       Host = host }
 
-  let validateProject projectDir (ls: LangServiceState) = doBundle ls projectDir |> snd
+  let validateProject projectDir (ls: LangServiceState) = bundleWithCache ls projectDir |> snd
 
   let hover projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
-    let resultOpt, errors = doBundle ls projectDir
+    let resultOpt, errors = bundleWithCache ls projectDir
     match resultOpt with
     | None ->
         eprintfn "hover: no bundle result: %A" errors

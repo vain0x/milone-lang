@@ -161,6 +161,11 @@ let newLangService (project: ProjectInfo): LangServiceState =
         eprintfn "findDocId: not found %s/%s" projectName moduleName
         None
 
+  let getVersion docId =
+    match LspDocCache.findDoc docId with
+    | Some docCache -> docCache.Version
+    | None -> 0
+
   let getText docId =
     match LspDocCache.findDoc docId with
     | Some docCache -> docCache.Version, docCache.Text
@@ -191,6 +196,7 @@ let newLangService (project: ProjectInfo): LangServiceState =
 
   let docs: LangServiceDocs =
     { FindDocId = findDocId
+      GetVersion = getVersion
       GetText = getText
       GetProjectName = getProjectName }
 
