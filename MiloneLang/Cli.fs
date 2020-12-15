@@ -205,6 +205,8 @@ let private parseProjectSchema tokenizeHost contents =
 // Context
 // -----------------------------------------------
 
+type private ModuleSyntaxData = DocId * ARoot * (string * Pos) list
+
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type CompileCtx =
   { ProjectDir: string
@@ -214,8 +216,7 @@ type CompileCtx =
     Projects: AssocMap<string, string>
 
     TokenizeHost: TokenizeHost
-
-    ReadModuleFile: ProjectName -> ProjectDir -> ModuleName -> (DocId * string) option
+    FetchModule: ProjectName -> ProjectDir -> ModuleName -> ModuleSyntaxData option
 
     Verbosity: Verbosity
     Host: CliHost }
@@ -239,11 +240,30 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
     | (Some _) as it -> it
     | None -> read ".fs"
 
+  let tokenizeHost = tokenizeHostNew ()
+
+  let doParse (text: string) =
+    let tokens = text |> tokenize tokenizeHost
+    let errorTokens, tokens = tokens |> List.partition isErrorToken
+    let ast, parseErrors = tokens |> parse
+
+    let errors =
+      List.append (tokenizeErrors errorTokens) parseErrors
+
+    ast, errors
+
+  let fetchModule (projectName: string) (projectDir: string) (moduleName: string) =
+    match readModuleFile projectName projectDir moduleName with
+    | None -> None
+    | Some (docId, text) ->
+        let ast, errors = doParse text
+        Some(docId, ast, errors)
+
   { ProjectDir = projectDir
     ProjectName = projectName
     Projects = projects
-    TokenizeHost = tokenizeHostNew ()
-    ReadModuleFile = readModuleFile
+    TokenizeHost = tokenizeHost
+    FetchModule = fetchModule
     Verbosity = verbosity
     Host = host }
 
@@ -303,12 +323,9 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
     FetchModule =
       fun projectName moduleName ->
         match ctx.Projects |> mapTryFind projectName with
+        | None -> None
         | Some projectDir ->
-            match ctx.ReadModuleFile projectName projectDir moduleName with
-            | Some (docId, text) -> parseModule docId text
-
-            | None -> None
-        | None -> None }
+            ctx.FetchModule projectName projectDir moduleName }
 
 // -----------------------------------------------
 // Write output and logs

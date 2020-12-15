@@ -148,7 +148,7 @@ let lspServer (): JsonValue -> int option =
                   ]
 
   fun jsonValue ->
-    eprintfn "received %A" jsonValue
+    // eprintfn "received %A" jsonValue
     let getMsgId () = jsonValue |> jFind "id"
 
     match jsonValue |> jFind "method" |> jToString with

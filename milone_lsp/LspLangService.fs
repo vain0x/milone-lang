@@ -56,7 +56,7 @@ let private projectsRef: Result<ProjectInfo list, exn> option ref = ref None
 
 /// Finds all projects inside of the workspace.
 let private doFindProjects (rootUri: string): ProjectInfo list =
-  eprintfn "findProjects: rootUri = %s" rootUri
+  // eprintfn "findProjects: rootUri = %s" rootUri
   let projects = ResizeArray()
 
   let rootDir =
@@ -72,7 +72,7 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
 
   while stack.Count <> 0 do
     let depth, dir = stack.Pop()
-    eprintfn "dir: '%s'" dir
+    // eprintfn "dir: '%s'" dir
 
     let projectName = Path.GetFileNameWithoutExtension(dir)
 
@@ -163,20 +163,23 @@ let newLangService (project: ProjectInfo): LangServiceState =
 
   let getText docId =
     match LspDocCache.findDoc docId with
-    | Some docCache -> docCache.Text
+    | Some docCache -> docCache.Version, docCache.Text
 
     | None ->
         match docId |> uriToFilePath with
         | None ->
             eprintfn "getText: docId not found: %s" docId
-            ""
+            0, ""
 
         | Some filePath ->
             match File.tryReadFile filePath with
-            | Some it -> it
+            | Some it -> 0, it
             | None ->
-                eprintfn "getText: docId file could not read: %s" filePath
-                ""
+                if Path.GetFileNameWithoutExtension(filePath)
+                   <> "MiloneOnly" then
+                  eprintfn "getText: docId file could not read: %s" filePath
+
+                0, ""
 
   let getProjectName docId =
     match docId |> uriToFilePath with
@@ -195,8 +198,23 @@ let newLangService (project: ProjectInfo): LangServiceState =
 
   LangService.create langServiceHost
 
+let private langServiceCache = MutMap<string, LangServiceState>()
+
+let newLangServiceWithCache (project: ProjectInfo) =
+  match langServiceCache
+        |> MutMap.tryFind project.ProjectName with
+  | Some it -> it
+
+  | None ->
+      let ls = newLangService project
+      langServiceCache
+      |> MutMap.insert project.ProjectName ls
+      |> ignore
+      ls
+
 let validateProject (project: ProjectInfo): ProjectValidateResult =
-  newLangService project
+  project
+  |> newLangServiceWithCache
   |> LangService.validateProject project.ProjectDir
 
 // (docId, (msg, pos) list) list
@@ -253,7 +271,7 @@ let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
         []
 
 let private doHover (project: ProjectInfo) uri pos =
-  newLangService project
+  newLangServiceWithCache project
   |> LangService.hover project.ProjectDir uri pos
 
 let hover rootUriOpt uri pos =

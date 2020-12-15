@@ -17,6 +17,7 @@ type Loc = Syntax.Loc
 // Host
 // -----------------------------------------------
 
+type private DocVersion = int
 type private FilePath = string
 type private ProjectName = string
 type private ModuleName = string
@@ -24,7 +25,7 @@ type private ModuleName = string
 [<NoEquality; NoComparison>]
 type LangServiceDocs =
   { FindDocId: ProjectName -> ModuleName -> DocId option
-    GetText: DocId -> string
+    GetText: DocId -> DocVersion * string
     GetProjectName: DocId -> ProjectName option }
 
 [<NoEquality; NoComparison>]
@@ -38,10 +39,11 @@ type LangServiceHost =
 
 let private tokenizeHost = tokenizeHostNew ()
 
-// let private tokenAsError token =
-//   match token with
-//   | ErrorToken error, pos -> Some(tokenizeErrorToString error, pos)
-//   | _ -> None
+let private tokenAsTriviaOrError (token, pos) =
+  match token with
+  | ErrorToken error -> Some(Some(tokenizeErrorToString error, pos))
+  | _ when isTrivia token -> Some None
+  | _ -> None
 
 // let private doTokenize text =
 //   let result =
@@ -93,13 +95,47 @@ let private doBundle (ls: LangServiceState) projectDir =
   let compileCtx =
     Cli.compileCtxNew cliHost Cli.Quiet projectDir
 
-  let readModuleFile projectName (_projectDir: string) moduleName =
+  let fetchModule (projectName: string) (_projectDir: string) (moduleName: string) =
     match ls.Host.Docs.FindDocId projectName moduleName with
-    | Some docId ->
-        let text = ls.Host.Docs.GetText docId
-        Some(docId, text)
-
     | None -> None
+    | Some docId ->
+        let currentVersion, text = ls.Host.Docs.GetText docId
+
+        let cacheOpt = ls.ParseCache |> MutMap.tryFind docId
+        match cacheOpt with
+        | Some (v, ast, errors) when v >= currentVersion ->
+            // eprintfn "parse cache reused: %s v%d" docId v
+            Some(docId, ast, errors)
+
+        | _ ->
+            // match cacheOpt with
+            // | Some (v, _, _) -> eprintfn "parse cache invalidated: v%d -> v%d" v currentVersion
+            // | _ -> ()
+
+            // Tokenize.
+            let tokens =
+              text |> SyntaxTokenize.tokenizeAll tokenizeHost
+
+            ls.TokenizeFullCache
+            |> MutMap.insert docId (currentVersion, tokens)
+            |> ignore
+
+            // Remove trivias.
+            let tokenizeErrors, tokens =
+              tokens |> partition1 tokenAsTriviaOrError
+
+            // Parse.
+            let ast, parseErrors =
+              tokens |> Array.toList |> SyntaxParse.parse
+
+            let errors =
+              List.append (tokenizeErrors |> Array.choose id |> List.ofArray) parseErrors
+
+            ls.ParseCache
+            |> MutMap.insert docId (currentVersion, ast, errors)
+            |> ignore
+
+            Some(docId, ast, errors)
 
   let compileCtx =
     { compileCtx with
@@ -107,7 +143,8 @@ let private doBundle (ls: LangServiceState) projectDir =
         Projects =
           compileCtx.Projects
           |> mapAdd "MiloneStd" (ls.Host.MiloneHome + "/milone_libs/MiloneStd")
-        ReadModuleFile = readModuleFile }
+
+        FetchModule = fetchModule }
 
   let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
   if errors |> List.isEmpty |> not then
@@ -134,8 +171,13 @@ let private doBundle (ls: LangServiceState) projectDir =
 // State
 // -----------------------------------------------
 
+type private TokenizeFullResult = (Token * Pos) list
+
 [<NoEquality; NoComparison>]
-type LangServiceState = private { Host: LangServiceHost }
+type LangServiceState =
+  private { TokenizeFullCache: MutMap<DocId, DocVersion * TokenizeFullResult>
+            ParseCache: MutMap<DocId, DocVersion * ARoot * (string * Pos) list>
+            Host: LangServiceHost }
 
 let private isTrivia token =
   match token with
@@ -229,7 +271,10 @@ let private dfsExpr (visitor: Visitor) expr =
   | HModuleSynonymExpr _ -> ()
 
 module LangService =
-  let create (host: LangServiceHost): LangServiceState = { Host = host }
+  let create (host: LangServiceHost): LangServiceState =
+    { TokenizeFullCache = MutMap()
+      ParseCache = MutMap()
+      Host = host }
 
   let validateProject projectDir (ls: LangServiceState) = doBundle ls projectDir |> snd
 
@@ -241,9 +286,26 @@ module LangService =
         None
 
     | Some (expr, tyCtx) ->
+        let currentVersion, text = ls.Host.Docs.GetText docId
+
         let tokens =
-          ls.Host.Docs.GetText docId
-          |> SyntaxTokenize.tokenizeAll tokenizeHost
+          match ls.TokenizeFullCache |> MutMap.tryFind docId with
+          | Some (v, tokens) when v >= currentVersion ->
+              // eprintfn "hover tokens cache reused: v%d ~ v%d" v currentVersion
+              tokens
+
+          | cacheOpt ->
+              // match cacheOpt with
+              // | Some (v, _) -> eprintfn "hover tokens cache invalidated: v%d -> v%d" v currentVersion
+              // | _ -> ()
+
+              let tokens =
+                text |> SyntaxTokenize.tokenizeAll tokenizeHost
+
+              ls.TokenizeFullCache
+              |> MutMap.insert docId (currentVersion, tokens)
+              |> ignore
+              tokens
 
         // find token position
         let rec go tokens =

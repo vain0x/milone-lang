@@ -10,7 +10,7 @@ let private jsonRpcWriteString: string -> unit =
   let writer = new System.IO.BinaryWriter(buf)
 
   fun msg ->
-    eprintfn "write %s" msg
+    // eprintfn "write %s" msg
     let bytes = System.Text.Encoding.UTF8.GetBytes(msg)
 
     writer.Write(System.Text.Encoding.UTF8.GetBytes(sprintf "Content-Length: %d\r\n\r\n" bytes.Length))
