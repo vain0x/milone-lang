@@ -77,6 +77,67 @@ let private tokenAsTriviaOrError (token, pos) =
 
 //       AExprRoot [], [ msg, (0, 0) ]
 
+let private tokenizeWithCache (ls: LangServiceState) docId =
+  let currentVersion = ls.Host.Docs.GetVersion docId
+
+  let cacheOpt =
+    ls.TokenizeFullCache |> MutMap.tryFind docId
+
+  match cacheOpt with
+  | Some (v, tokens) when v >= currentVersion ->
+      // eprintfn "tokens cache reused: %s v%d" docId v
+      tokens
+
+  | _ ->
+      // match cacheOpt with
+      // | Some (v, _) -> eprintfn "tokens cache invalidated: v%d -> v%d" v currentVersion
+      // | _ -> eprintfn "tokens cache not found: v%d" currentVersion
+
+      let _, text = ls.Host.Docs.GetText docId
+
+      let tokens =
+        text |> SyntaxTokenize.tokenizeAll tokenizeHost
+
+      ls.TokenizeFullCache
+      |> MutMap.insert docId (currentVersion, tokens)
+      |> ignore
+
+      tokens
+
+let private parseWithCache (ls: LangServiceState) docId =
+  let currentVersion = ls.Host.Docs.GetVersion docId
+
+  let cacheOpt = ls.ParseCache |> MutMap.tryFind docId
+  match cacheOpt with
+  | Some (v, (ast, errors)) when v >= currentVersion ->
+      // eprintfn "parse cache reused: %s v%d" docId v
+      docId, ast, errors
+
+  | _ ->
+      // match cacheOpt with
+      // | Some (v, _) -> eprintfn "parse cache invalidated: v%d -> v%d" v currentVersion
+      // | _ -> eprintfn "parse cache not found: v%d" currentVersion
+
+      // Tokenize.
+      let tokens = tokenizeWithCache ls docId
+
+      // Remove trivias.
+      let tokenizeErrors, tokens =
+        tokens |> partition1 tokenAsTriviaOrError
+
+      // Parse.
+      let ast, parseErrors =
+        tokens |> Array.toList |> SyntaxParse.parse
+
+      let errors =
+        List.append (tokenizeErrors |> Array.choose id |> List.ofArray) parseErrors
+
+      ls.ParseCache
+      |> MutMap.insert docId (currentVersion, (ast, errors))
+      |> ignore
+
+      docId, ast, errors
+
 // -----------------------------------------------
 // Semantic analysis
 // -----------------------------------------------
@@ -98,52 +159,15 @@ let private doBundle (ls: LangServiceState) projectDir =
 
   let docVersions = MutMap()
 
-  let fetchModule (projectName: string) (projectDir: string) (moduleName: string) =
-
+  let fetchModule (projectName: string) (_projectDir: string) (moduleName: string) =
     match ls.Host.Docs.FindDocId projectName moduleName with
     | None -> None
     | Some docId ->
-        let currentVersion, text = ls.Host.Docs.GetText docId
-
         docVersions
-        |> MutMap.insert docId currentVersion
+        |> MutMap.insert docId (ls.Host.Docs.GetVersion docId)
         |> ignore
 
-        let cacheOpt = ls.ParseCache |> MutMap.tryFind docId
-        match cacheOpt with
-        | Some (v, (ast, errors)) when v >= currentVersion ->
-            // eprintfn "parse cache reused: %s v%d" docId v
-            Some(docId, ast, errors)
-
-        | _ ->
-            // match cacheOpt with
-            // | Some (v, _, _) -> eprintfn "parse cache invalidated: v%d -> v%d" v currentVersion
-            // | _ -> ()
-
-            // Tokenize.
-            let tokens =
-              text |> SyntaxTokenize.tokenizeAll tokenizeHost
-
-            ls.TokenizeFullCache
-            |> MutMap.insert docId (currentVersion, tokens)
-            |> ignore
-
-            // Remove trivias.
-            let tokenizeErrors, tokens =
-              tokens |> partition1 tokenAsTriviaOrError
-
-            // Parse.
-            let ast, parseErrors =
-              tokens |> Array.toList |> SyntaxParse.parse
-
-            let errors =
-              List.append (tokenizeErrors |> Array.choose id |> List.ofArray) parseErrors
-
-            ls.ParseCache
-            |> MutMap.insert docId (currentVersion, (ast, errors))
-            |> ignore
-
-            Some(docId, ast, errors)
+        parseWithCache ls docId |> Some
 
   let compileCtx =
     { compileCtx with
@@ -180,15 +204,18 @@ let bundleWithCache (ls: LangServiceState) projectDir =
     docs
     |> Seq.forall (fun (KeyValue (docId, version)) -> ls.Host.Docs.GetVersion docId <= version)
 
-  match ls.BundleCache |> MutMap.tryFind projectDir with
+  let cacheOpt =
+    ls.BundleCache |> MutMap.tryFind projectDir
+
+  match cacheOpt with
   | Some (opt, errors, docs) when docsAreAllFresh docs ->
-      eprintfn "bundle cache reused"
+      // eprintfn "bundle cache reused"
       opt, errors
 
-  | cacheOpt ->
-      match cacheOpt with
-      | Some _ -> eprintfn "bundle cache invalidated"
-      | _ -> eprintfn "bundle cache not found"
+  | _ ->
+      // match cacheOpt with
+      // | Some _ -> eprintfn "bundle cache invalidated"
+      // | _ -> eprintfn "bundle cache not found"
 
       let opt, errors, versions = doBundle ls projectDir
 
@@ -327,26 +354,7 @@ module LangService =
         None
 
     | Some (expr, tyCtx) ->
-        let currentVersion, text = ls.Host.Docs.GetText docId
-
-        let tokens =
-          match ls.TokenizeFullCache |> MutMap.tryFind docId with
-          | Some (v, tokens) when v >= currentVersion ->
-              // eprintfn "hover tokens cache reused: v%d ~ v%d" v currentVersion
-              tokens
-
-          | cacheOpt ->
-              // match cacheOpt with
-              // | Some (v, _) -> eprintfn "hover tokens cache invalidated: v%d -> v%d" v currentVersion
-              // | _ -> ()
-
-              let tokens =
-                text |> SyntaxTokenize.tokenizeAll tokenizeHost
-
-              ls.TokenizeFullCache
-              |> MutMap.insert docId (currentVersion, tokens)
-              |> ignore
-              tokens
+        let tokens = tokenizeWithCache ls docId
 
         // find token position
         let rec go tokens =
