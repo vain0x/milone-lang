@@ -166,14 +166,6 @@ let lspServer (): JsonValue -> int option =
                  //  "range", jOfRange range
                   ]
 
-  // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
-  let references uri pos includeDecl: JsonValue =
-    LspLangService.references rootUriOpt uri pos includeDecl
-    |> List.map (fun (docId, range) ->
-         jOfObj [ "uri", JString docId
-                  "range", jOfRange range ])
-    |> JArray
-
   fun jsonValue ->
     // eprintfn "received %A" jsonValue
     let getMsgId () = jsonValue |> jFind "id"
@@ -265,18 +257,44 @@ let lspServer (): JsonValue -> int option =
         jsonRpcWriteWithResult (getMsgId ()) result
         None
 
-    | "textDocument/references" ->
+    | "textDocument/definition" ->
+        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
+
         let uri, pos =
           jsonValue
           |> jFind "params"
           |> jAsObjToTextDocumentPositionParams
 
-        let includeDecls =
+        let result =
+          LspLangService.definition rootUriOpt uri pos
+          |> List.map (fun (docId, range) ->
+               jOfObj [ "uri", JString docId
+                        "range", jOfRange range ])
+          |> JArray
+
+        jsonRpcWriteWithResult (getMsgId ()) result
+        None
+
+    | "textDocument/references" ->
+        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
+
+        let uri, pos =
+          jsonValue
+          |> jFind "params"
+          |> jAsObjToTextDocumentPositionParams
+
+        let includeDecl =
           jsonValue
           |> jFind3 "params" "context" "includeDeclaration"
           |> jToBool
 
-        let result = references uri pos includeDecls
+        let result =
+          LspLangService.references rootUriOpt uri pos includeDecl
+          |> List.map (fun (docId, range) ->
+               jOfObj [ "uri", JString docId
+                        "range", jOfRange range ])
+          |> JArray
+
         jsonRpcWriteWithResult (getMsgId ()) result
         None
 

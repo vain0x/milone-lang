@@ -12,7 +12,19 @@ MILONE_LANG_DIR="$(dirname $PWD)/MiloneLang"
 END
 
 ./req <<END
-{"method": "textDocument/references", "id": 2, "params": {
+{"method": "textDocument/definition", "id": 2, "params": {
+    "textDocument": {
+        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+    },
+    "position": {
+        "line": 48,
+        "character": 13
+    }
+}}
+END
+
+./req <<END
+{"method": "textDocument/references", "id": 3, "params": {
     "textDocument": {
         "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
     },

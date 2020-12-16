@@ -472,6 +472,58 @@ let private symbolToName (tyCtx: Typing.TyCtx) symbol =
       | ModuleTySymbol _
       | ModuleSynonymSymbol _ -> None
 
+let private doCollectSymbolOccurrences hint
+                                       projectDir
+                                       (docId: DocId)
+                                       (targetPos: Pos)
+                                       (includeDecl: bool)
+                                       (includeUse: bool)
+                                       (ls: LangServiceState)
+                                       =
+  let resultOpt, errors = bundleWithCache ls projectDir
+  match resultOpt with
+  | None ->
+      eprintfn "%s: no bundle result: errors %d" hint (List.length errors)
+      []
+
+  | Some (expr, _tyCtx) ->
+      let tokenOpt = findTokenAt ls docId targetPos
+      match tokenOpt with
+      | None ->
+          eprintfn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
+          []
+
+      | Some (_token, tokenPos) ->
+          // eprintfn "%s: tokenPos=%A" hint tokenPos
+
+          let tokenLoc = locOfDocPos docId tokenPos
+
+          let symbols = collectSymbolsInExpr expr
+
+          let symbolIndex =
+            symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
+
+          if symbolIndex < 0 then
+            eprintfn "%s: no symbol" hint
+            []
+          else
+            let targetSymbol, _, _ = symbols.[symbolIndex]
+
+            let map = MutMultimap.empty ()
+
+            for symbol, defOrUse, loc in symbols do
+              match defOrUse with
+              | Def when not includeDecl -> ()
+              | Use when not includeUse -> ()
+              | _ ->
+                  if symbol = targetSymbol then
+                    map
+                    |> MutMultimap.insert (locToDoc loc) (locToPos loc)
+
+            [ for KeyValue (docId, posList) in map do
+                for range in resolveTokenRanges ls docId (List.ofSeq posList) do
+                  docId, range ]
+
 module LangService =
   let create (host: LangServiceHost): LangServiceState =
     { TokenizeFullCache = MutMap()
@@ -557,46 +609,11 @@ module LangService =
             | None -> None
             | Some ty -> Some(tyDisplayFn tyCtx ty)
 
+  let definition projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
+    let includeDecl = true
+    let includeUse = false
+    doCollectSymbolOccurrences "definition" projectDir docId targetPos includeDecl includeUse ls
+
   let references projectDir (docId: DocId) (targetPos: Pos) (includeDecl: bool) (ls: LangServiceState) =
-    let resultOpt, errors = bundleWithCache ls projectDir
-    match resultOpt with
-    | None ->
-        eprintfn "references: no bundle result: errors %d" (List.length errors)
-        []
-
-    | Some (expr, _tyCtx) ->
-        let tokenOpt = findTokenAt ls docId targetPos
-        match tokenOpt with
-        | None ->
-            eprintfn "references: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
-            []
-
-        | Some (_token, tokenPos) ->
-            // eprintfn "references: tokenPos=%A" tokenPos
-
-            let tokenLoc = locOfDocPos docId tokenPos
-
-            let symbols = collectSymbolsInExpr expr
-
-            let symbolIndex =
-              symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
-
-            if symbolIndex < 0 then
-              eprintfn "references: no symbol"
-              []
-            else
-              let targetSymbol, _, _ = symbols.[symbolIndex]
-
-              let map = MutMultimap.empty ()
-
-              for symbol, defOrUse, loc in symbols do
-                match defOrUse with
-                | Def when not includeDecl -> ()
-                | _ ->
-                    if symbol = targetSymbol then
-                      map
-                      |> MutMultimap.insert (locToDoc loc) (locToPos loc)
-
-              [ for KeyValue (docId, posList) in map do
-                  for range in resolveTokenRanges ls docId (List.ofSeq posList) do
-                    docId, range ]
+    let includeUse = true
+    doCollectSymbolOccurrences "references" projectDir docId targetPos includeDecl includeUse ls

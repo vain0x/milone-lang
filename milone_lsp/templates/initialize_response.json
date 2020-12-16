@@ -7,7 +7,7 @@
                 "openClose": true,
                 "change": 1
             },
-            "definitionProvider": false,
+            "definitionProvider": true,
             "documentHighlightProvider": true,
             "hoverProvider": true,
             "referencesProvider": true,

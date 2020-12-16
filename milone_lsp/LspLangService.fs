@@ -317,6 +317,22 @@ let hover rootUriOpt uri pos =
         eprintfn "hover failed: %A" ex
         []
 
+let definition rootUriOpt uri pos =
+  let doDefinition (project: ProjectInfo) uri pos =
+    project
+    |> newLangServiceWithCache
+    |> LangService.definition project.ProjectDir uri pos
+
+  match findProjects rootUriOpt with
+  | Error _ -> []
+  | Ok projects ->
+      try
+        projects
+        |> List.collect (fun project -> doDefinition project uri pos)
+      with ex ->
+        eprintfn "definition failed: %A" ex
+        []
+
 let references rootUriOpt uri pos (includeDecl: bool) =
   let doReferences (project: ProjectInfo) uri pos =
     project
