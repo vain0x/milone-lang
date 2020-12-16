@@ -8,7 +8,7 @@
                 "change": 1
             },
             "definitionProvider": false,
-            "documentHighlightProvider": false,
+            "documentHighlightProvider": true,
             "hoverProvider": true,
             "referencesProvider": false,
             "renameProvider": false

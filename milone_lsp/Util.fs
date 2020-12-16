@@ -37,6 +37,31 @@ module ResizeArray =
     array.AddRange(items)
 
 // -----------------------------------------------
+// MutSet
+// -----------------------------------------------
+
+type MutSet<'T when 'T: equality> = HashSet<'T>
+
+module MutSet =
+  let empty<'T when 'T: equality> (): MutSet<'T> = MutSet()
+
+  let isEmpty (set: MutSet<_>): bool = set.Count = 0
+
+  let length (set: MutSet<_>): int = set.Count
+
+  let contains item (set: MutSet<_>): bool = set.Contains(item)
+
+  let ofSeq (items: #seq<_>): MutSet<_> = System.Linq.Enumerable.ToHashSet(items)
+
+  let toSeq (set: MutSet<_>): seq<_> = set :> seq<_>
+
+  /// Returns true if newly inserted.
+  let insert item (set: MutSet<_>): bool = set.Add(item)
+
+  /// Returns true if actually removed.
+  let remove item (set: MutSet<_>): bool = set.Remove(item)
+
+// -----------------------------------------------
 // MutMap
 // -----------------------------------------------
 

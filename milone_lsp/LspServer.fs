@@ -137,6 +137,20 @@ let lspServer (): JsonValue -> int option =
 
       doPublishDiagnostics uri errors
 
+  // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
+  let documentHighlight uri pos: JsonValue =
+    let reads, writes =
+      LspLangService.documentHighlight rootUriOpt uri pos
+
+    let toHighlights kind posList =
+      posList
+      |> Seq.map (fun (start, endPos) ->
+           jOfObj [ "range", jOfRange (start, endPos)
+                    "kind", jOfInt kind ])
+
+    JArray [ yield! toHighlights 2 reads
+             yield! toHighlights 3 writes ]
+
   // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
   let hover uri pos: JsonValue =
     let contents = LspLangService.hover rootUriOpt uri pos
@@ -216,6 +230,16 @@ let lspServer (): JsonValue -> int option =
 
         LspDocCache.closeDoc uri
         validateWorkspace ()
+        None
+
+    | "textDocument/documentHighlight" ->
+        let uri, pos =
+          jsonValue
+          |> jFind "params"
+          |> jAsObjToTextDocumentPositionParams
+
+        let result = documentHighlight uri pos
+        jsonRpcWriteWithResult (getMsgId ()) result
         None
 
     | "textDocument/hover" ->

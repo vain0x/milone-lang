@@ -13,6 +13,8 @@ let private defaultTimeout = 5 * 1000
 type Pos = Syntax.Pos
 type Loc = Syntax.Loc
 
+type Range = Pos * Pos
+
 // -----------------------------------------------
 // Host
 // -----------------------------------------------
@@ -37,6 +39,14 @@ type LangServiceHost =
 // -----------------------------------------------
 // Syntax
 // -----------------------------------------------
+
+let private locToDoc (loc: Loc): DocId =
+  let docId, _, _ = loc
+  docId
+
+let private locToPos (loc: Loc): Pos =
+  let _, y, x = loc
+  y, x
 
 let private tokenizeHost = tokenizeHostNew ()
 
@@ -274,10 +284,34 @@ let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
 
   go tokens
 
+let private resolveTokenRanges (ls: LangServiceState) docId (posList: Pos list) =
+  let tokens = tokenizeWithCache ls docId
+
+  let posSet = MutSet.ofSeq posList
+  let ranges = ResizeArray()
+
+  let rec go tokens =
+    match tokens with
+    | []
+    | [ _ ] -> ()
+
+    | (_, p1) :: (((_, p2) :: _) as tokens) ->
+        if posSet |> MutSet.remove p1 then ranges.Add((p1, p2))
+
+        go tokens
+
+  go tokens
+  ranges
+
+[<NoEquality; NoComparison>]
+type private DefOrUse =
+  | Def
+  | Use
+
 [<NoEquality; NoComparison>]
 type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
-    OnVar: VarSerial * Ty * Loc -> unit
+    OnVar: VarSerial * DefOrUse * Ty * Loc -> unit
     OnFun: FunSerial * Ty option * Loc -> unit
     OnVariant: VariantSerial * Ty * Loc -> unit
     OnPrim: HPrim * Ty * Loc -> unit }
@@ -286,7 +320,7 @@ let private dfsPat (visitor: Visitor) pat =
   match pat with
   | HLitPat _ -> ()
   | HDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
-  | HRefPat (varSerial, ty, loc) -> visitor.OnVar(varSerial, ty, loc)
+  | HRefPat (varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
   | HVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
 
   | HNodePat (_, pats, _, _) ->
@@ -295,7 +329,7 @@ let private dfsPat (visitor: Visitor) pat =
 
   | HAsPat (bodyPat, varSerial, loc) ->
       let ty = patToTy bodyPat
-      visitor.OnVar(varSerial, ty, loc)
+      visitor.OnVar(varSerial, Def, ty, loc)
       dfsPat visitor bodyPat
 
   | HOrPat (l, r, _) ->
@@ -305,7 +339,7 @@ let private dfsPat (visitor: Visitor) pat =
 let private dfsExpr (visitor: Visitor) expr =
   match expr with
   | HLitExpr _ -> ()
-  | HRefExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, ty, loc)
+  | HRefExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
   | HFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Some ty, loc)
   | HVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
   | HPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
@@ -368,13 +402,73 @@ let private findTyInExpr (ls: LangServiceState) (expr: HExpr) (tyCtx: Typing.TyC
 
   let visitor: Visitor =
     { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
-      OnVar = fun (_varSerial, ty, loc) -> onVisit (Some ty) loc
-      OnFun = fun (_funSerial, tyOpt, loc) -> onVisit tyOpt loc
-      OnVariant = fun (_variantSerial, ty, loc) -> onVisit (Some ty) loc
-      OnPrim = fun (_prim, ty, loc) -> onVisit (Some ty) loc }
+      OnVar = fun (_, _, ty, loc) -> onVisit (Some ty) loc
+      OnFun = fun (_, tyOpt, loc) -> onVisit tyOpt loc
+      OnVariant = fun (_, ty, loc) -> onVisit (Some ty) loc
+      OnPrim = fun (_, ty, loc) -> onVisit (Some ty) loc }
 
   dfsExpr visitor expr
   contentOpt
+
+[<NoEquality; NoComparison>]
+type private Symbol =
+  | DiscardSymbol
+  | PrimSymbol of HPrim
+  | ValueSymbol of ValueSymbol
+  | TySymbol of TySymbol
+
+let private symbolEq (l: Symbol) (r: Symbol) = sprintf "%A" l = sprintf "%A" r
+
+let private collectSymbolsInExpr (expr: HExpr) =
+  let mutable symbols = ResizeArray()
+
+  let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
+
+  let visitor: Visitor =
+    { OnDiscardPat = fun (_, loc) -> onVisit DiscardSymbol Def loc
+      OnVar = fun (varSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VarSymbol varSerial)) defOrUse loc
+      OnFun = fun (funSerial, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) Use loc
+      OnVariant = fun (variantSerial, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) Use loc
+      OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc }
+
+  dfsExpr visitor expr
+  symbols
+
+let private symbolToName (tyCtx: Typing.TyCtx) symbol =
+  match symbol with
+  | DiscardSymbol -> Some "_"
+
+  | PrimSymbol prim -> (sprintf "%A" prim).ToLowerInvariant() |> Some
+
+  | ValueSymbol valueSymbol ->
+      match valueSymbol with
+      | VarSymbol varSerial ->
+          tyCtx.Vars
+          |> mapTryFind varSerial
+          |> Option.map varDefToName
+      | FunSymbol funSerial ->
+          tyCtx.Funs
+          |> mapTryFind funSerial
+          |> Option.map (fun (def: FunDef) -> def.Name)
+      | VariantSymbol variantSerial ->
+          tyCtx.Variants
+          |> mapTryFind variantSerial
+          |> Option.map (fun (def: VariantDef) -> def.Name)
+
+  | TySymbol tySymbol ->
+      match tySymbol with
+      | MetaTySymbol tySerial -> sprintf "?%d" tySerial |> Some
+
+      | UnivTySymbol tySerial
+      | SynonymTySymbol tySerial
+      | UnionTySymbol tySerial
+      | RecordTySymbol tySerial ->
+          tyCtx.Tys
+          |> mapTryFind tySerial
+          |> Option.map tyDefToName
+
+      | ModuleTySymbol _
+      | ModuleSynonymSymbol _ -> None
 
 module LangService =
   let create (host: LangServiceHost): LangServiceState =
@@ -384,6 +478,57 @@ module LangService =
       Host = host }
 
   let validateProject projectDir (ls: LangServiceState) = bundleWithCache ls projectDir |> snd
+
+  let documentHighlight projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
+    let resultOpt, errors = bundleWithCache ls projectDir
+    match resultOpt with
+    | None ->
+        eprintfn "highlight: no bundle result: errors %d" (List.length errors)
+        None
+
+    | Some (expr, _tyCtx) ->
+        let tokenOpt = findTokenAt ls docId targetPos
+        match tokenOpt with
+        | None ->
+            eprintfn "highlight: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+            None
+
+        | Some (_token, tokenPos) ->
+            eprintfn "highlight: tokenPos=%A" tokenPos
+
+            let symbols = collectSymbolsInExpr expr
+
+            // Remove symbols occurred in other documents.
+            symbols.RemoveAll(fun (_, _, loc) -> locToDoc loc <> docId)
+            |> ignore
+
+            let symbolIndex =
+              symbols.FindIndex(fun (_, _, loc) -> locToPos loc = tokenPos)
+
+            if symbolIndex < 0 then
+              eprintfn "highlight: no symbol"
+              None
+            else
+              let targetSymbol, _, _ = symbols.[symbolIndex]
+
+              let reads = ResizeArray()
+              let writes = ResizeArray()
+
+              for symbol, defOrUse, loc in symbols do
+                if symbolEq symbol targetSymbol then
+                  let pos = locToPos loc
+
+                  match defOrUse with
+                  | Def -> writes.Add(pos)
+                  | Use -> reads.Add(pos)
+
+              let reads =
+                resolveTokenRanges ls docId (List.ofSeq reads)
+
+              let writes =
+                resolveTokenRanges ls docId (List.ofSeq writes)
+
+              Some((reads, writes))
 
   let hover projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
     let resultOpt, errors = bundleWithCache ls projectDir

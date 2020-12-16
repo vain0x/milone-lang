@@ -276,11 +276,36 @@ let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
         eprintfn "validateWorkspace failed: %A" ex
         []
 
-let private doHover (project: ProjectInfo) uri pos =
-  newLangServiceWithCache project
-  |> LangService.hover project.ProjectDir uri pos
+let documentHighlight rootUriOpt uri pos =
+  let doHighlight (project: ProjectInfo) uri pos =
+    project
+    |> newLangServiceWithCache
+    |> LangService.documentHighlight project.ProjectDir uri pos
+
+  // let texts = ResizeArray()
+  let reads = ResizeArray()
+  let writes = ResizeArray()
+
+  match findProjects rootUriOpt with
+  | Error _ -> ()
+  | Ok projects ->
+      try
+        for project in projects do
+          match doHighlight project uri pos with
+          | None -> ()
+          | Some (r, w) ->
+              reads.AddRange(r)
+              writes.AddRange(w)
+      with ex -> eprintfn "documentHighlight failed: %A" ex
+
+  reads, writes
 
 let hover rootUriOpt uri pos =
+  let doHover (project: ProjectInfo) uri pos =
+    project
+    |> newLangServiceWithCache
+    |> LangService.hover project.ProjectDir uri pos
+
   match findProjects rootUriOpt with
   | Error _ -> []
 
