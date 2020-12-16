@@ -10,7 +10,7 @@
             "definitionProvider": false,
             "documentHighlightProvider": true,
             "hoverProvider": true,
-            "referencesProvider": false,
+            "referencesProvider": true,
             "renameProvider": false
         },
         "serverInfo": {

@@ -1,11 +1,11 @@
 module rec MiloneLang.TypeIntegers
 
-[<NoEquality; NoComparison>]
+[<NoComparison>]
 type Signedness =
   | Signed
   | Unsigned
 
-[<NoEquality; NoComparison>]
+[<NoComparison>]
 type IntPrecision =
   /// 8-bit
   | I8
@@ -16,7 +16,7 @@ type IntPrecision =
   /// Size of pointer.
   | IPtr
 
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type IntFlavor = IntFlavor of Signedness * IntPrecision
 
 let intFlavorToBytes flavor =

@@ -316,3 +316,19 @@ let hover rootUriOpt uri pos =
       with ex ->
         eprintfn "hover failed: %A" ex
         []
+
+let references rootUriOpt uri pos (includeDecl: bool) =
+  let doReferences (project: ProjectInfo) uri pos =
+    project
+    |> newLangServiceWithCache
+    |> LangService.references project.ProjectDir uri pos includeDecl
+
+  match findProjects rootUriOpt with
+  | Error _ -> []
+  | Ok projects ->
+      try
+        projects
+        |> List.collect (fun project -> doReferences project uri pos)
+      with ex ->
+        eprintfn "references failed: %A" ex
+        []

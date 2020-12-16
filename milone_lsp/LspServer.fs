@@ -70,6 +70,11 @@ let jToNumber jsonValue: float =
 
 let jToInt jsonValue: int = jsonValue |> jToNumber |> int
 
+let jToBool jsonValue: bool =
+  match jsonValue with
+  | JBoolean value -> value
+  | _ -> false
+
 let jToPos jsonValue: Position =
   let row, column = jsonValue |> jFields2 "line" "character"
   jToInt row, jToInt column
@@ -161,6 +166,14 @@ let lspServer (): JsonValue -> int option =
                  //  "range", jOfRange range
                   ]
 
+  // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
+  let references uri pos includeDecl: JsonValue =
+    LspLangService.references rootUriOpt uri pos includeDecl
+    |> List.map (fun (docId, range) ->
+         jOfObj [ "uri", JString docId
+                  "range", jOfRange range ])
+    |> JArray
+
   fun jsonValue ->
     // eprintfn "received %A" jsonValue
     let getMsgId () = jsonValue |> jFind "id"
@@ -249,6 +262,21 @@ let lspServer (): JsonValue -> int option =
           |> jAsObjToTextDocumentPositionParams
 
         let result = hover uri pos
+        jsonRpcWriteWithResult (getMsgId ()) result
+        None
+
+    | "textDocument/references" ->
+        let uri, pos =
+          jsonValue
+          |> jFind "params"
+          |> jAsObjToTextDocumentPositionParams
+
+        let includeDecls =
+          jsonValue
+          |> jFind3 "params" "context" "includeDeclaration"
+          |> jToBool
+
+        let result = references uri pos includeDecls
         jsonRpcWriteWithResult (getMsgId ()) result
         None
 

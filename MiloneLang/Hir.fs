@@ -36,15 +36,15 @@ type Serial = int
 type TySerial = Serial
 
 /// Serial number of variables.
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type VarSerial = VarSerial of Serial
 
 /// Serial number of functions.
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type FunSerial = FunSerial of Serial
 
 /// Serial number of variants.
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type VariantSerial = VariantSerial of Serial
 
 /// Number of parameters.
@@ -188,14 +188,14 @@ type TyDef =
 
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
 
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type ModuleTySerial = ModuleTySerial of Serial
 
 //// Module is a type so that it can be used as namespace.
 [<NoEquality; NoComparison>]
 type ModuleTyDef = { Name: Ident; Loc: Loc }
 
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type ModuleSynonymSerial = ModuleSynonymSerial of Serial
 
 //// Module is a type so that it can be used as namespace.
@@ -234,13 +234,13 @@ type VariantDef =
     VariantTy: Ty
     Loc: Loc }
 
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
 
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type TySymbol =
   | MetaTySymbol of tySerial: TySerial
   | UnivTySymbol of univTySerial: TySerial
@@ -317,9 +317,7 @@ type HPat =
   | HOrPat of HPat * HPat * Loc
 
 /// Primitive in HIR.
-[<RequireQualifiedAccess>]
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; Struct; NoComparison>]
 type HPrim =
   // operator:
   | Not

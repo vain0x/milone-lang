@@ -40,6 +40,10 @@ type LangServiceHost =
 // Syntax
 // -----------------------------------------------
 
+let private locOfDocPos (docId: DocId) (pos: Pos): Loc =
+  let y, x = pos
+  docId, y, x
+
 let private locToDoc (loc: Loc): DocId =
   let docId, _, _ = loc
   docId
@@ -410,14 +414,12 @@ let private findTyInExpr (ls: LangServiceState) (expr: HExpr) (tyCtx: Typing.TyC
   dfsExpr visitor expr
   contentOpt
 
-[<NoEquality; NoComparison>]
+[<NoComparison>]
 type private Symbol =
   | DiscardSymbol
   | PrimSymbol of HPrim
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
-
-let private symbolEq (l: Symbol) (r: Symbol) = sprintf "%A" l = sprintf "%A" r
 
 let private collectSymbolsInExpr (expr: HExpr) =
   let mutable symbols = ResizeArray()
@@ -494,7 +496,7 @@ module LangService =
             None
 
         | Some (_token, tokenPos) ->
-            eprintfn "highlight: tokenPos=%A" tokenPos
+            // eprintfn "highlight: tokenPos=%A" tokenPos
 
             let symbols = collectSymbolsInExpr expr
 
@@ -515,7 +517,7 @@ module LangService =
               let writes = ResizeArray()
 
               for symbol, defOrUse, loc in symbols do
-                if symbolEq symbol targetSymbol then
+                if symbol = targetSymbol then
                   let pos = locToPos loc
 
                   match defOrUse with
@@ -554,3 +556,47 @@ module LangService =
             match findTyInExpr ls expr tyCtx tokenLoc with
             | None -> None
             | Some ty -> Some(tyDisplayFn tyCtx ty)
+
+  let references projectDir (docId: DocId) (targetPos: Pos) (includeDecl: bool) (ls: LangServiceState) =
+    let resultOpt, errors = bundleWithCache ls projectDir
+    match resultOpt with
+    | None ->
+        eprintfn "references: no bundle result: errors %d" (List.length errors)
+        []
+
+    | Some (expr, _tyCtx) ->
+        let tokenOpt = findTokenAt ls docId targetPos
+        match tokenOpt with
+        | None ->
+            eprintfn "references: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
+            []
+
+        | Some (_token, tokenPos) ->
+            // eprintfn "references: tokenPos=%A" tokenPos
+
+            let tokenLoc = locOfDocPos docId tokenPos
+
+            let symbols = collectSymbolsInExpr expr
+
+            let symbolIndex =
+              symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
+
+            if symbolIndex < 0 then
+              eprintfn "references: no symbol"
+              []
+            else
+              let targetSymbol, _, _ = symbols.[symbolIndex]
+
+              let map = MutMultimap.empty ()
+
+              for symbol, defOrUse, loc in symbols do
+                match defOrUse with
+                | Def when not includeDecl -> ()
+                | _ ->
+                    if symbol = targetSymbol then
+                      map
+                      |> MutMultimap.insert (locToDoc loc) (locToPos loc)
+
+              [ for KeyValue (docId, posList) in map do
+                  for range in resolveTokenRanges ls docId (List.ofSeq posList) do
+                    docId, range ]

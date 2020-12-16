@@ -110,10 +110,10 @@ module MutMap =
 // MutMultimap
 // -----------------------------------------------
 
-type MutMultimap<'K, 'T> = Dictionary<'K, ResizeArray<'T>>
+type MutMultimap<'K, 'T when 'K: equality> = Dictionary<'K, ResizeArray<'T>>
 
 module MutMultimap =
-  let empty<'K, 'T when 'K: equality> () = MutMultimap()
+  let empty<'K, 'T when 'K: equality> () = MutMultimap<'K, 'T>()
 
   let insertKey key (multimap: MutMultimap<_, _>) =
     if multimap.ContainsKey(key) |> not then multimap.Add(key, ResizeArray())
