@@ -274,11 +274,13 @@ let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
 
   go tokens
 
-type Visitor =
+[<NoEquality; NoComparison>]
+type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
     OnVar: VarSerial * Ty * Loc -> unit
     OnFun: FunSerial * Ty option * Loc -> unit
-    OnVariant: VariantSerial * Ty * Loc -> unit }
+    OnVariant: VariantSerial * Ty * Loc -> unit
+    OnPrim: HPrim * Ty * Loc -> unit }
 
 let private dfsPat (visitor: Visitor) pat =
   match pat with
@@ -306,7 +308,7 @@ let private dfsExpr (visitor: Visitor) expr =
   | HRefExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, ty, loc)
   | HFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Some ty, loc)
   | HVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
-  | HPrimExpr _ -> ()
+  | HPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
 
   | HMatchExpr (cond, arms, _, _) ->
       dfsExpr visitor cond
@@ -357,6 +359,23 @@ let private dfsExpr (visitor: Visitor) expr =
 
   | HModuleSynonymExpr _ -> ()
 
+let private findTyInExpr (ls: LangServiceState) (expr: HExpr) (tyCtx: Typing.TyCtx) (tokenLoc: Loc) =
+  let mutable contentOpt = None
+
+  let onVisit tyOpt loc =
+    // eprintfn "hover: loc=%A tyOpt=%A" loc (tyOpt |> Option.map (tyDisplayFn tyCtx))
+    if loc = tokenLoc then contentOpt <- tyOpt
+
+  let visitor: Visitor =
+    { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
+      OnVar = fun (_varSerial, ty, loc) -> onVisit (Some ty) loc
+      OnFun = fun (_funSerial, tyOpt, loc) -> onVisit tyOpt loc
+      OnVariant = fun (_variantSerial, ty, loc) -> onVisit (Some ty) loc
+      OnPrim = fun (_prim, ty, loc) -> onVisit (Some ty) loc }
+
+  dfsExpr visitor expr
+  contentOpt
+
 module LangService =
   let create (host: LangServiceHost): LangServiceState =
     { TokenizeFullCache = MutMap()
@@ -370,7 +389,7 @@ module LangService =
     let resultOpt, errors = bundleWithCache ls projectDir
     match resultOpt with
     | None ->
-        eprintfn "hover: no bundle result: %A" errors
+        eprintfn "hover: no bundle result: errors %d" (List.length errors)
         None
 
     | Some (expr, tyCtx) ->
@@ -387,22 +406,6 @@ module LangService =
 
             // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
-            let mutable contentOpt = None
-
-            let onVisit tyOpt loc =
-              // eprintfn "hover: loc=%A tyOpt=%A" loc (tyOpt |> Option.map (tyDisplayFn tyCtx))
-              if loc = tokenLoc then contentOpt <- tyOpt
-
-            let visitor: Visitor =
-              { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
-                OnVar = fun (_varSerial, ty, loc) -> onVisit (Some ty) loc
-                OnFun = fun (_funSerial, tyOpt, loc) -> onVisit tyOpt loc
-                OnVariant = fun (_variantSerial, ty, loc) -> onVisit (Some ty) loc }
-
-            dfsExpr visitor expr
-
-            match contentOpt with
+            match findTyInExpr ls expr tyCtx tokenLoc with
             | None -> None
-            | Some ty ->
-                let contents = tyDisplayFn tyCtx ty
-                Some contents
+            | Some ty -> Some(tyDisplayFn tyCtx ty)
