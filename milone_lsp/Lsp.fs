@@ -254,6 +254,26 @@ let private isTrivia token =
 
   | _ -> false
 
+let private findTokenAt (ls: LangServiceState) (docId: DocId) (targetPos: Pos) =
+  let tokens = tokenizeWithCache ls docId
+
+  let rec go tokens =
+    match tokens with
+    | []
+    | [ _ ] -> None
+
+    | (token, p1) :: (((_, p2) :: _) as tokens) ->
+        if not (isTrivia token)
+           && (p1 <= targetPos)
+           && targetPos <= p2 then
+          Some(token, p1)
+        else if p1 > targetPos then
+          None
+        else
+          go tokens
+
+  go tokens
+
 type Visitor =
   { OnDiscardPat: Ty * Loc -> unit
     OnVar: VarSerial * Ty * Loc -> unit
@@ -354,30 +374,13 @@ module LangService =
         None
 
     | Some (expr, tyCtx) ->
-        let tokens = tokenizeWithCache ls docId
-
-        // find token position
-        let rec go tokens =
-          match tokens with
-          | []
-          | [ _ ] -> None
-
-          | (token, p1) :: (((_, p2) :: _) as tokens) ->
-              if not (isTrivia token)
-                 && (p1 <= targetPos)
-                 && targetPos <= p2 then
-                Some(token, p1)
-              else if p1 > targetPos then
-                None
-              else
-                go tokens
-
-        match go tokens with
+        let tokenOpt = findTokenAt ls docId targetPos
+        match tokenOpt with
         | None ->
-            eprintfn "hover: token not found on position: docId=%s %d" docId (List.length tokens)
+            eprintfn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
             None
 
-        | Some (token, tokenPos) ->
+        | Some (_token, tokenPos) ->
             let tokenLoc =
               let y, x = tokenPos
               docId, y, x
