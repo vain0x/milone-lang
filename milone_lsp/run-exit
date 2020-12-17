@@ -1,21 +1,21 @@
 #!/bin/bash
-# Executes LSP server and stops it immediately.
 
 set -eu
 
-INITIALIZE_REQUEST=$(./req <<END
+{
+./req <<END
 {"method": "initialize", "id": 1}
 END
-)
 
-SHUTDOWN_REQUEST=$(./req <<END
+./req <<END
+{"method": "initialized"}
+END
+
+./req <<END
 {"method": "shutdown", "id": 2}
 END
-)
 
-EXIT_REQUEST=$(./req <<END
+./req <<END
 {"method": "exit"}
 END
-)
-
-echo "$INITIALIZE_REQUEST" "$SHUTDOWN_REQUEST" "$EXIT_REQUEST" | dotnet run
+} | dotnet run

@@ -184,6 +184,10 @@ let lspServer (): JsonValue -> int option =
         jsonRpcWriteWithTemplate "initialize_response" [ "MSG_ID", getMsgId () ]
         None
 
+    | "initialized" ->
+        validateWorkspace ()
+        None
+
     | "shutdown" ->
         exitCode <- 0
         jsonRpcWriteWithTemplate "shutdown_response" [ "MSG_ID", getMsgId () ]
