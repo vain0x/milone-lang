@@ -101,6 +101,8 @@ let traitMapTys f it =
 
   | IsNumberTrait ty -> IsNumberTrait(f ty)
 
+  | ToCharTrait ty -> ToCharTrait(f ty)
+
   | ToIntTrait ty -> ToIntTrait(f ty)
 
   | ToFloatTrait ty -> ToFloatTrait(f ty)
@@ -581,6 +583,16 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | _ ->
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
+
+  | ToCharTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, [])
+      | AppTy (CharTyCtor, [])
+      | AppTy (StrTyCtor, []) -> logAcc, ctx
+
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   | ToIntTrait ty ->
       match ty with

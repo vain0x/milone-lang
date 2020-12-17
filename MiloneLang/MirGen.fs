@@ -982,8 +982,16 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
   match argTy with
   | AppTy (CharTyCtor, _) -> arg, ctx
 
-  | AppTy (IntTyCtor _, _)
-  | AppTy (NativePtrTyCtor _, _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
+  | AppTy ((IntTyCtor _
+           | FloatTyCtor _), _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
+
+  | AppTy (StrTyCtor, _) ->
+      let temp, tempSerial, ctx = freshVar ctx "char_of_string" ty loc
+
+      let ctx =
+        addStmt ctx (MLetValStmt(tempSerial, MPrimInit(MCharOfStrPrim, [ arg ]), ty, loc))
+
+      temp, ctx
 
   | _ -> failwithf "NEVER: %A" itself
 

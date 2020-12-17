@@ -153,6 +153,9 @@ type Trait =
   /// Integer or float type. Defaults to int.
   | IsNumberTrait of Ty
 
+  /// Type supports conversion to char.
+  | ToCharTrait of Ty
+
   /// Type supports conversion to integer.
   | ToIntTrait of Ty
 
@@ -772,8 +775,8 @@ let primToTySpec prim =
       poly (tyFun tyObj itemTy) []
 
   | HPrim.Char ->
-      // FIXME: `char` can take non-int types.
-      mono (tyFun tyInt tyChar)
+      let srcTy = meta 1
+      poly (tyFun srcTy tyChar) [ ToCharTrait srcTy ]
 
   | HPrim.ToInt flavor ->
       let toIntTy = meta 1
@@ -1133,6 +1136,7 @@ let private traitBoundErrorToString tyDisplay it =
       "Expected int or float type but was: "
       + tyDisplay ty
 
+  | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
   | ToIntTrait ty -> "Can't convert to integer from: " + tyDisplay ty
   | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
   | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty

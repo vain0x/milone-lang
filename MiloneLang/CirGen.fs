@@ -974,6 +974,9 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
       let name = cStringToFloatFunName flavor
       conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
 
+  | MCharOfStrPrim ->
+      conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_char", [ arg ]))
+
   | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_char", [ arg ]))
 

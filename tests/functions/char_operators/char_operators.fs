@@ -26,7 +26,15 @@ let comparisonOperatorsTest () =
   assert (compare 'A' 'B' < 0)
   assert (compare 'B' 'A' > 0)
 
+let conversionTest () =
+  assert (char 'A' = 'A')
+  assert (char 65 = 'A')
+  assert (char (uint 65) = 'A')
+  assert (char 65.5 = 'A')
+  assert (char "A" = 'A')
+
 let main _ =
   arithmeticOperatorsTest ()
   comparisonOperatorsTest ()
+  conversionTest ()
   0

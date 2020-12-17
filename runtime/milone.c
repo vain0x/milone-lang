@@ -416,6 +416,10 @@ struct String str_of_double(double value) {
     return str_of_raw_parts(buf, n);
 }
 
+char str_to_char(struct String s) {
+    return s.len >= 1 ? *s.str : '\0';
+}
+
 struct String str_of_char(char value) {
     char *str = milone_mem_alloc(2, sizeof(char));
     str[0] = value;

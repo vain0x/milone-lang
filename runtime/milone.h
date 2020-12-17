@@ -73,6 +73,7 @@ struct String str_of_uint64(uint64_t value);
 double str_to_double(struct String s);
 struct String str_of_double(double value);
 
+char str_to_char(struct String s);
 struct String str_of_char(char value);
 
 // Actual name of string list.

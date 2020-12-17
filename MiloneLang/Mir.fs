@@ -110,6 +110,7 @@ type MPrim =
   /// string -> int
   | MIntOfStrPrim of intOfStrFlavor: IntFlavor
   | MFloatOfStrPrim of floatOfStrFlavor: FloatFlavor
+  | MCharOfStrPrim
 
   | MStrOfBoolPrim
   | MStrOfCharPrim
