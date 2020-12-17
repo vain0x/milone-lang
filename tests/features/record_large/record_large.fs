@@ -1,5 +1,7 @@
 module rec record_large.Program
 
+// An example of large record type.
+
 type GitCommitOptions =
   { All: bool
     Patch: bool

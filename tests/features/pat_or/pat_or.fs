@@ -1,3 +1,7 @@
+module rec pat_or.Program
+
+// OR patterns (without bindings).
+
 // Simple case.
 let isZeroOrOne x =
   match x with
@@ -12,29 +16,28 @@ let simpleCase () =
 // Nested case.
 let startsWithDoubleBits xs =
   match xs with
-  | (0 | 1) :: (0 | 1) :: _ ->
-    true
-  | _ ->
-    false
+  | (0
+  | 1) :: (0
+  | 1) :: _ -> true
+  | _ -> false
 
 let nestedCase () =
-  assert (startsWithDoubleBits [0; 1; 2])
-  assert (startsWithDoubleBits [1; 2] |> not)
+  assert (startsWithDoubleBits [ 0; 1; 2 ])
+  assert (startsWithDoubleBits [ 1; 2 ] |> not)
 
 // Complex case.
-type Expr =
-  | Add of int * int
+type Expr = Add of int * int
 
 let performComplexMatching expr =
   match expr with
-  | Add (0, (0 | 1) : int) ->
-    true
-  | _ ->
-    false
+  | Add (0,
+         (0
+         | 1): int) -> true
+  | _ -> false
 
 let complexCase () =
-  assert (performComplexMatching (Add (0, 1)))
-  assert (performComplexMatching (Add (1, 2)) |> not)
+  assert (performComplexMatching (Add(0, 1)))
+  assert (performComplexMatching (Add(1, 2)) |> not)
 
 let main _ =
   simpleCase ()

@@ -6,7 +6,7 @@
 ///   <https://qiita.com/ukitaka/items/7345e74116e11eb10f33> (written in Japanese)
 /// - "A generic algorithm for checking exhaustivity of pattern matching"
 ///   <https://infoscience.epfl.ch/record/225497> (written in English)
-module rec MatchChecker
+module rec MatchChecker.Program
 
 // -----------------------------------------------
 // Polyfills

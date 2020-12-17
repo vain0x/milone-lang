@@ -1,3 +1,5 @@
+module rec ty_errors.Program
+
 let main _ =
   let deepUnificationError =
     match ((1, 2), 3) with

@@ -1,5 +1,7 @@
 module rec record_with_nested.Program
 
+// Nested record.
+
 type Date = { Year: int; Month: int; Date: int }
 
 type Person =

@@ -1,16 +1,12 @@
-let neg (x : int) =
-  0 - x
+module rec x_algorithm.Program
 
-let abs (x : int) =
-  if x >= 0 then x else neg x
+let neg (x: int) = 0 - x
 
-let rec gcd (x : int) (y : int) =
-  if y = 0 then
-    abs x
-  else
-    gcd y (x % y)
+let abs (x: int) = if x >= 0 then x else neg x
 
-let isPrime (x : int) =
+let rec gcd (x: int) (y: int) = if y = 0 then abs x else gcd y (x % y)
+
+let isPrime (x: int) =
   let rec go k = k * k > x || x % k <> 0 && go (k + 1)
   x >= 2 && go 2
 

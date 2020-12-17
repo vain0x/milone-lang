@@ -1,5 +1,7 @@
 module rec nav_nested.Program
 
+// Nav patterns and expressions can be nested.
+
 open nav_nested.sub
 
 let main _ =

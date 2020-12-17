@@ -470,7 +470,7 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
     struct Token_List const* acc_4 = arg_19.t0;
     int i_5 = arg_19.t1;
     bool call_10 = isDigit_(source_3.str[i_5]);
-    milone_assert(call_10, 70, 2);
+    milone_assert(call_10, 76, 2);
     void const* box_1 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
     void const* env_3 = box_1;
@@ -817,11 +817,11 @@ end_match_87:;
 
 int main() {
     bool call_32 = strContains_('+', (struct String){.str = "+-*/", .len = 4});
-    milone_assert(call_32, 159, 2);
+    milone_assert(call_32, 157, 2);
     bool call_33 = strStartsWith_((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});
-    milone_assert(call_33, 160, 2);
+    milone_assert(call_33, 158, 2);
     bool call_34 = strStartsWith_((struct String){.str = "heaven", .len = 6}, (struct String){.str = "hello", .len = 5});
-    milone_assert((!(call_34)), 161, 2);
+    milone_assert((!(call_34)), 159, 2);
     struct StringList const* list_6 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_6))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_5 = milone_mem_alloc(1, sizeof(struct StringList));
@@ -829,7 +829,7 @@ int main() {
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_5};
     struct String call_35 = strConcat_(list_4);
-    milone_assert((str_cmp(call_35, (struct String){.str = "a,b", .len = 3}) == 0), 162, 2);
+    milone_assert((str_cmp(call_35, (struct String){.str = "a,b", .len = 3}) == 0), 160, 2);
     struct StringList const* list_9 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_9))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_8 = milone_mem_alloc(1, sizeof(struct StringList));
@@ -838,7 +838,7 @@ int main() {
     (*(((struct StringList*)list_7))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_8};
     struct StringList const* call_36 = strListRev_(list_7);
     struct String call_37 = strConcat_(call_36);
-    milone_assert((str_cmp(call_37, (struct String){.str = "b,a", .len = 3}) == 0), 163, 2);
+    milone_assert((str_cmp(call_37, (struct String){.str = "b,a", .len = 3}) == 0), 161, 2);
     struct String source_5 = (struct String){.str = "2 + 3\r\n    - 4", .len = 14};
     struct Token_List const* call_38 = tokenize_(source_5);
     int call_39 = tokenListPrint_(call_38);

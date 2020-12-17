@@ -1,5 +1,7 @@
 module rec record.Program
 
+// Basic use of record type.
+
 type Point = { X: int; Y: int }
 
 let main _ =

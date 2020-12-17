@@ -176,12 +176,12 @@ In addition, self compilation is also a kind of testing. The milone-lang compile
 
 In tests, there are some categories of test cases:
 
-- `features`: Test cases of language features
-- `functions`: Test cases of primitives
-- `examples`: Complex codes
+- `features`: Tests for language features
+- `primitives`: Tests for primitive operators, functions, and types
+- `examples`: (should be) meaningful codes
+- `edges`: Tests for exotic cases
+- `errors`: Tests of compile errors
 - `pendings`: Test cases pointing out flaw of the compiler
-- `edges`: Exotic test cases
-- `errors`: Test cases of compile errors
 
 ### Dev: See also
 

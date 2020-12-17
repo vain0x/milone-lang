@@ -1,5 +1,7 @@
 module rec record_unordered.Program
 
+// Record creation with shuffled fields.
+
 type Person = { Name: string; Age: int }
 
 let main _ =

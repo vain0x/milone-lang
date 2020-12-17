@@ -1,15 +1,13 @@
+module rec x_dyck_lang.Program
+
 let main _ =
-  let rec go (s : string) i d =
-    if i >= s.Length then
-      d = 0
-    else if s.[i] = '(' then
-      go s (i + 1) (d + 1)
-    else if d <= 0 then
-      false
-    else
-      go s (i + 1) (d - 1)
-  let parse (s : string) =
-    if go s 0 0 then "Accept" else "Reject"
+  let rec go (s: string) i d =
+    if i >= s.Length then d = 0
+    else if s.[i] = '(' then go s (i + 1) (d + 1)
+    else if d <= 0 then false
+    else go s (i + 1) (d - 1)
+
+  let parse (s: string) = if go s 0 0 then "Accept" else "Reject"
 
   let case1 = "()"
   let case2 = "()((())(()))()"

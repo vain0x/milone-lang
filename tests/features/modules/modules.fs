@@ -1,7 +1,7 @@
-module rec modules
+module rec modules.Program
 
-open modules.helpers
-open modules.helpers
+open modules.sub
+open modules.sub
 
 let main _ =
   let n =
@@ -13,7 +13,7 @@ let main _ =
     // nav pattern of imported type
     | Val.Str _ -> 0
 
-  // `helpers.f` is imported
+  // `sub.f` is imported
   let m = f n
 
   m

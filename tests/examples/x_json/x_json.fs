@@ -1,31 +1,27 @@
 // Incomplete.
 
+module rec x_json.Program
+
 let listRev xs =
-  let rec go acc (xs : string list) =
+  let rec go acc (xs: string list) =
     match xs with
-    | [] ->
-      acc
-    | x :: xs ->
-      go (x :: acc) xs
+    | [] -> acc
+    | x :: xs -> go (x :: acc) xs
+
   go [] xs
 
 let rec printList xs =
   match xs with
-  | [] ->
-    ()
+  | [] -> ()
   | x :: xs ->
-    printfn "%s" x
-    printList xs
+      printfn "%s" x
+      printList xs
 
-let isDigit c =
-  '0' <= c && c <= '9'
+let isDigit c = '0' <= c && c <= '9'
 
-let tokenize (s : string) =
+let tokenize (s: string) =
   let rec readInt i =
-    if i >= s.Length || not (isDigit s.[i]) then
-      i
-    else
-      readInt (i + 1)
+    if i >= s.Length || not (isDigit s.[i]) then i else readInt (i + 1)
 
   let rec go acc i =
     if i >= s.Length then
@@ -42,6 +38,7 @@ let tokenize (s : string) =
     else
       printfn "ERROR: Unknown Token '%c'" s.[i]
       exit 1
+
   go [] 0
 
 let main _ =

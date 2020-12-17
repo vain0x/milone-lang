@@ -66,6 +66,6 @@ int main() {
     struct Expr_ variant_4 = (struct Expr_){.tag = Add_, .Add_ = box_1};
     struct Expr_ expr_1 = variant_4;
     int call_2 = eval_(expr_1);
-    milone_assert((call_2 == 42), 18, 2);
+    milone_assert((call_2 == 42), 17, 2);
     return 0;
 }

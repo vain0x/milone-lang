@@ -14,7 +14,7 @@ int main() {
     Point_.X = 40;
     Point_.Y = 2;
     struct Point_ point_ = Point_;
-    milone_assert((point_.X == 40), 7, 2);
-    milone_assert((point_.Y == 2), 8, 2);
+    milone_assert((point_.X == 40), 9, 2);
+    milone_assert((point_.Y == 2), 10, 2);
     return 0;
 }

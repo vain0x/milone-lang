@@ -20,6 +20,6 @@ struct NewTypeInt_ {
 int main() {
     struct NewTypeInt_ variant_ = (struct NewTypeInt_){.tag = NewTypeInt_, .NewTypeInt_ = 1};
     int inner_ = variant_.NewTypeInt_;
-    milone_assert((inner_ == 1), 7, 2);
+    milone_assert((inner_ == 1), 8, 2);
     return 0;
 }

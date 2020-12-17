@@ -58,9 +58,9 @@ else_6:;
     if_ = false;
     goto if_next_4;
 if_next_4:;
-    milone_assert(if_, 8, 2);
+    milone_assert(if_, 12, 2);
     bool call_2 = isZeroOrOne_(2);
-    milone_assert((!(call_2)), 9, 2);
+    milone_assert((!(call_2)), 13, 2);
     return 0;
 }
 
@@ -113,13 +113,13 @@ int nestedCase_(int arg_1) {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = list_1};
     bool call_3 = startsWithDoubleBits_(list_);
-    milone_assert(call_3, 20, 2);
+    milone_assert(call_3, 24, 2);
     struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 1, .tail = list_4};
     bool call_4 = startsWithDoubleBits_(list_3);
-    milone_assert((!(call_4)), 21, 2);
+    milone_assert((!(call_4)), 25, 2);
     return 0;
 }
 
@@ -165,13 +165,13 @@ int complexCase_(int arg_2) {
     tuple_.t1 = 1;
     struct Expr_ variant_ = (struct Expr_){.tag = Add_, .Add_ = tuple_};
     bool call_5 = performComplexMatching_(variant_);
-    milone_assert(call_5, 35, 2);
+    milone_assert(call_5, 38, 2);
     struct IntIntTuple2 tuple_1;
     tuple_1.t0 = 1;
     tuple_1.t1 = 2;
     struct Expr_ variant_1 = (struct Expr_){.tag = Add_, .Add_ = tuple_1};
     bool call_6 = performComplexMatching_(variant_1);
-    milone_assert((!(call_6)), 36, 2);
+    milone_assert((!(call_6)), 39, 2);
     return 0;
 }
 
