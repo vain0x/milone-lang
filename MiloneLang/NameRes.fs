@@ -139,7 +139,9 @@ type private ScopeSerial = Serial
 type private ScopeChain<'T> = AssocMap<Ident, 'T> list
 
 /// Scope chains, vars and types.
-type private Scope = ScopeChain<ValueSymbol> * ScopeChain<TySymbol>
+///
+/// Type has also a list of types that it shadows for namespace merging.
+type private Scope = ScopeChain<ValueSymbol> * ScopeChain<TySymbol * TySymbol list>
 
 let private scopeMapEmpty (): AssocMap<Ident, _> = mapEmpty compare
 
@@ -380,8 +382,16 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
 let private doImportTyWithAlias alias symbol (scopeCtx: ScopeCtx): ScopeCtx =
   let scope: Scope =
     match scopeCtx.Local with
-    | varScopes, map :: tyScopes ->
-        let tyScopes = (map |> mapAdd alias symbol) :: tyScopes
+    | varScopes, ((map :: tyScopes) as allTyScopes) ->
+        let shadowed =
+          match allTyScopes
+                |> List.tryPick (fun map -> map |> mapTryFind alias) with
+          | Some (otherSymbol, otherTys) -> otherSymbol :: otherTys
+          | None -> []
+
+        let tyScopes =
+          (map |> mapAdd alias (symbol, shadowed))
+          :: tyScopes
 
         varScopes, tyScopes
 
@@ -461,25 +471,27 @@ let private resolveScopedVarName scopeSerial name (scopeCtx: ScopeCtx): ValueSym
     |> nsFind scopeSerial
     |> mapTryFind name
 
+// Find from namespace (not local).
 let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySymbol option =
-  if scopeSerial = scopeCtx.LocalSerial then
-    // Find from local scope.
-    let _, tyScopes = scopeCtx.Local
-    tyScopes
-    |> List.tryPick (fun map -> map |> mapTryFind name)
-  else
-    // Find from namespace.
-    scopeCtx.TyNs
-    |> nsFind scopeSerial
-    |> mapTryFind name
+  assert (scopeSerial <> scopeCtx.LocalSerial)
+  scopeCtx.TyNs
+  |> nsFind scopeSerial
+  |> mapTryFind name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
   scopeCtx
   |> resolveScopedVarName scopeCtx.LocalSerial name
 
 let private resolveLocalTyName name (scopeCtx: ScopeCtx) =
-  scopeCtx
-  |> resolveScopedTyName scopeCtx.LocalSerial name
+  let _, tyScopes = scopeCtx.Local
+
+  let opt =
+    tyScopes
+    |> List.tryPick (fun map -> map |> mapTryFind name)
+
+  match opt with
+  | Some (head, tail) -> head :: tail
+  | None -> []
 
 /// Resolves qualifiers of type.
 let private resolveNavTy quals last ctx =
@@ -488,17 +500,11 @@ let private resolveNavTy quals last ctx =
     |> List.map (fun qual -> ctx |> findName qual)
 
   match path with
-  | [] -> ctx |> resolveLocalTyName last, ctx
+  | [] -> ctx |> resolveLocalTyName last |> List.tryHead, ctx
 
   | head :: tail ->
       // Resolve head.
-      let scopeOpt =
-        // HACK: If resolved to a data type, find module instead.
-        match ctx |> resolveLocalTyName head with
-        | Some (SynonymTySymbol _)
-        | Some (UnionTySymbol _)
-        | Some (RecordTySymbol _) -> ctx |> resolveLocalTyName (head + "Module")
-        | it -> it
+      let scopes = ctx |> resolveLocalTyName head
 
       // Resolve tail.
       let rec resolveTyPath tySymbol path ctx =
@@ -512,9 +518,8 @@ let private resolveNavTy quals last ctx =
             | None -> None
 
       let tySymbolOpt =
-        match scopeOpt with
-        | Some scope -> resolveTyPath scope (List.append tail [ last ]) ctx
-        | None -> None
+        scopes
+        |> List.tryPick (fun scope -> resolveTyPath scope (List.append tail [ last ]) ctx)
 
       tySymbolOpt, ctx
 
@@ -945,13 +950,13 @@ let private nameResNavPat pat ctx =
         ctx |> resolveLocalTyName name
 
     | HNodePat (HNavPN r, [ l ], _, _) ->
-        match ctx |> resolvePatAsScope l with
-        | None -> None
-        | Some tySymbol ->
-            ctx
-            |> resolveScopedTyName (tySymbolToSerial tySymbol) r
+        ctx
+        |> resolvePatAsScope l
+        |> List.choose (fun tySymbol ->
+             ctx
+             |> resolveScopedTyName (tySymbolToSerial tySymbol) r)
 
-    | _ -> None
+    | _ -> []
 
   let l, r, ty, loc =
     match pat with
@@ -962,16 +967,19 @@ let private nameResNavPat pat ctx =
     let ctx = ctx |> addLog UnresolvedNavPatError loc
     hpAbort noTy loc, ctx
 
-  match resolvePatAsScope l ctx with
-  | Some tySymbol ->
-      let varSymbolOpt =
-        ctx
-        |> resolveScopedVarName (tySymbolToSerial tySymbol) r
+  let patOpt =
+    resolvePatAsScope l ctx
+    |> List.tryPick (fun tySymbol ->
+         let varSymbolOpt =
+           ctx
+           |> resolveScopedVarName (tySymbolToSerial tySymbol) r
 
-      match varSymbolOpt with
-      | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
-      | _ -> notResolved ctx
+         match varSymbolOpt with
+         | Some (VariantSymbol variantSerial) -> Some(HVariantPat(variantSerial, ty, loc))
+         | _ -> None)
 
+  match patOpt with
+  | Some pat -> pat, ctx
   | None -> notResolved ctx
 
 let private nameResAppPat l r loc ctx =
@@ -1152,7 +1160,7 @@ let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
 
 type private ResolvedExpr =
   | ResolvedAsExpr of HExpr
-  | ResolvedAsScope of TySymbol * HExpr option * Loc
+  | ResolvedAsScope of TySymbol list * HExpr option * Loc
   | NotResolvedExpr of Ident * Loc
 
 /// Tries to resolve a name expression as value; or just return None.
@@ -1199,23 +1207,13 @@ let private nameResNavExpr expr ctx =
     match expr with
     | HRefExpr (VarSerial serial, _, loc) ->
         let name = ctx |> findName serial
+        let scopes = ctx |> resolveLocalTyName name
+        let exprOpt = doNameResRefExpr expr ctx
 
-        let scopeOpt =
-          // HACK: Don't resolve to synonyms, try module instead.
-          match ctx |> resolveLocalTyName name with
-          | Some (SynonymTySymbol _) -> ctx |> resolveLocalTyName (name + "Module")
-          | it -> it
-
-        let result =
-          match scopeOpt with
-          | Some tySymbol -> ResolvedAsScope(tySymbol, None, loc)
-
-          | None ->
-              match doNameResRefExpr expr ctx with
-              | Some expr -> ResolvedAsExpr expr
-              | None -> NotResolvedExpr(name, loc)
-
-        result, ctx
+        match scopes, exprOpt with
+        | [], None -> NotResolvedExpr(name, loc), ctx
+        | [], Some expr -> ResolvedAsExpr expr, ctx
+        | _ -> ResolvedAsScope(scopes, exprOpt, loc), ctx
 
     | HNavExpr (l, r, ty, loc) ->
         let l, ctx = ctx |> resolveExprAsScope l
@@ -1225,19 +1223,25 @@ let private nameResNavExpr expr ctx =
 
         | ResolvedAsExpr l -> ResolvedAsExpr(HNavExpr(l, r, ty, loc)), ctx
 
-        | ResolvedAsScope (lTySymbol, lExprOpt, _) ->
+        | ResolvedAsScope (lTySymbols, lExprOpt, _) ->
+            assert (List.isEmpty lTySymbols |> not)
+
             // Resolve as scope.
-            let tySymbolOpt =
-              ctx
-              |> resolveScopedTyName (tySymbolToSerial lTySymbol) r
+            let tySymbols =
+              lTySymbols
+              |> List.choose (fun lTySymbol ->
+                   ctx
+                   |> resolveScopedTyName (tySymbolToSerial lTySymbol) r)
 
             // Resolve as value.
             let exprOpt =
               let varSymbolOpt =
-                match ctx
-                      |> resolveScopedVarName (tySymbolToSerial lTySymbol) r with
-                | None -> None
-                | it -> it
+                lTySymbols
+                |> List.tryPick (fun lTySymbol ->
+                     match ctx
+                           |> resolveScopedVarName (tySymbolToSerial lTySymbol) r with
+                     | None -> None
+                     | it -> it)
 
               match varSymbolOpt with
               | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc) |> Some
@@ -1252,10 +1256,10 @@ let private nameResNavExpr expr ctx =
               | None, Some l -> HNavExpr(l, r, ty, loc) |> Some
               | None, None -> None
 
-            match tySymbolOpt, exprOpt with
-            | Some tySymbol, _ -> ResolvedAsScope(tySymbol, exprOpt, loc), ctx
-            | None, Some expr -> ResolvedAsExpr expr, ctx
-            | None, None -> NotResolvedExpr(r, loc), ctx
+            match tySymbols, exprOpt with
+            | [], None -> NotResolvedExpr(r, loc), ctx
+            | [], Some expr -> ResolvedAsExpr expr, ctx
+            | _ -> ResolvedAsScope(tySymbols, exprOpt, loc), ctx
 
     | _ ->
         // l is clearly unresolvable as type, e.g. `(getStr ()).Length`.
@@ -1404,12 +1408,17 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
             | Some (_, last) -> last
             | _ -> failwith "NEVER: open with empty path emits syntax error."
 
-          let tySymbolOpt =
-            ctx |> resolveLocalTyName (moduleName + "Module")
+          let moduleSerialOpt =
+            ctx
+            |> resolveLocalTyName moduleName
+            |> List.tryPick (fun tySymbol ->
+                 match tySymbol with
+                 | ModuleTySymbol moduleSerial -> Some moduleSerial
+                 | _ -> None)
 
-          match tySymbolOpt with
-          | Some (ModuleTySymbol moduleSerial) -> ctx |> openModule moduleSerial
-          | _ -> ctx |> addLog ModulePathNotFoundError loc
+          match moduleSerialOpt with
+          | Some moduleSerial -> ctx |> openModule moduleSerial
+          | None -> ctx |> addLog ModulePathNotFoundError loc
 
         expr, ctx
 
@@ -1424,12 +1433,6 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           ctx
           |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
           |> importTy (ModuleTySymbol serial)
-
-        // HACK: Define module alias for the case it is shadowed by another module.
-        //       (F# solves this by merging namespaces of types, but such behavior is unimplemented.)
-        let ctx =
-          ctx
-          |> doImportTyWithAlias (moduleName + "Module") (ModuleTySymbol serial)
 
         let parent, ctx = ctx |> startScope
 
@@ -1461,8 +1464,16 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
           // FIXME: resolve module-name based on path
           | _, [ _; moduleName ] ->
-              match ctx |> resolveLocalTyName (moduleName + "Module") with
-              | Some (ModuleTySymbol referent) ->
+              let moduleSerialOpt =
+                ctx
+                |> resolveLocalTyName moduleName
+                |> List.tryPick (fun tySymbol ->
+                     match tySymbol with
+                     | ModuleTySymbol moduleSerial -> Some moduleSerial
+                     | _ -> None)
+
+              match moduleSerialOpt with
+              | Some referent ->
                   ctx
                   |> addModuleSynonymDef
                        serial
@@ -1470,8 +1481,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                           Bound = Some referent
                           Loc = loc }: ModuleSynonymDef)
                   |> doImportTyWithAlias name (ModuleTySymbol referent)
-                  |> doImportTyWithAlias (name + "Module") (ModuleTySymbol referent)
-              | _ -> ctx |> addLog ModulePathNotFoundError loc
+
+              | None -> ctx |> addLog ModulePathNotFoundError loc
           | _ -> ctx |> addLog UnimplModuleSynonymError loc
 
         hxUnit loc, ctx
