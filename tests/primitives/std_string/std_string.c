@@ -6,6 +6,14 @@ struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
 
+void* milone_mem_alloc(int, uintptr_t);
+
+void* memAlloc_(int len_, uintptr_t size_);
+
+void* memcpy(void*, void const*, uintptr_t);
+
+void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
+
 struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6);
 
 struct StringList const* rev_1(struct StringList const* xs_5);
@@ -46,15 +54,15 @@ char toUpper_(char c_11);
 
 char toLower_(char c_12);
 
-int intClamp_(int minValue_, int maxValue_, int value_1);
+int intClamp_(int minValue_, int maxValue_, int value_2);
 
 bool isEmpty_1(struct String str_);
 
-struct CharList const* tryItem_1(int index_, struct String str_1);
+struct CharList const* tryItem_1(int index_4, struct String str_1);
 
-bool occursAtLoop_(int start_, struct String substr_, struct String s_, int i_4);
+bool occursAtLoop_(int start_2, struct String substr_, struct String s_, int i_4);
 
-bool occursAt_(int start_, struct String substr_, struct String s_);
+bool occursAt_(int start_2, struct String substr_, struct String s_);
 
 bool startsWith_(struct String prefix_, struct String s_1);
 
@@ -74,7 +82,7 @@ struct String truncate_1(int prefixLen_, struct String s_6);
 
 struct String skip_1(int prefixLen_1, struct String s_7);
 
-struct String slice_(int start_1, int endIndex_, struct String s_8);
+struct String slice_(int start_3, int endIndex_2, struct String s_8);
 
 struct CharBoolFun1;
 
@@ -108,7 +116,7 @@ struct StringList const* replaceLoop_(struct String pattern_, struct String s_15
 
 struct String replace_(struct String pattern_, struct String target_, struct String s_15);
 
-int findNewline_(int start_3, struct String s_16);
+int findNewline_(int start_5, struct String s_16);
 
 struct StringStringListStringTuple3;
 
@@ -162,6 +170,16 @@ struct StringList {
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     struct String str_concat_result_ = str_concat(sep_, xs_);
     return str_concat_result_;
+}
+
+void* memAlloc_(int len_, uintptr_t size_) {
+    void* milone_mem_alloc_result_ = milone_mem_alloc(len_, size_);
+    return milone_mem_alloc_result_;
+}
+
+void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
+    void* memcpy_result_ = memcpy(dest_, src_, size_1);
+    return memcpy_result_;
 }
 
 struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6) {
@@ -613,9 +631,9 @@ if_next_80:;
     return if_23;
 }
 
-int intClamp_(int minValue_, int maxValue_, int value_1) {
+int intClamp_(int minValue_, int maxValue_, int value_2) {
     int if_24;
-    if ((value_1 < minValue_)) {
+    if ((value_2 < minValue_)) {
         goto then_84;
     } else {
         goto else_85;
@@ -625,7 +643,7 @@ then_84:;
     goto if_next_83;
 else_85:;
     int if_25;
-    if ((maxValue_ < value_1)) {
+    if ((maxValue_ < value_2)) {
         goto then_87;
     } else {
         goto else_88;
@@ -634,7 +652,7 @@ then_87:;
     if_25 = maxValue_;
     goto if_next_86;
 else_88:;
-    if_25 = value_1;
+    if_25 = value_2;
     goto if_next_86;
 if_next_86:;
     if_24 = if_25;
@@ -647,15 +665,15 @@ bool isEmpty_1(struct String str_) {
     return (str_.len == 0);
 }
 
-struct CharList const* tryItem_1(int index_, struct String str_1) {
+struct CharList const* tryItem_1(int index_4, struct String str_1) {
     bool if_26;
-    if ((index_ >= 0)) {
+    if ((index_4 >= 0)) {
         goto then_90;
     } else {
         goto else_91;
     }
 then_90:;
-    if_26 = (index_ < str_1.len);
+    if_26 = (index_4 < str_1.len);
     goto if_next_89;
 else_91:;
     if_26 = false;
@@ -669,7 +687,7 @@ if_next_89:;
     }
 then_93:;
     struct CharList const* some_ = milone_mem_alloc(1, sizeof(struct CharList));
-    (*(((struct CharList*)some_))) = (struct CharList){.head = str_1.str[index_], .tail = NULL};
+    (*(((struct CharList*)some_))) = (struct CharList){.head = str_1.str[index_4], .tail = NULL};
     if_27 = some_;
     goto if_next_92;
 else_94:;
@@ -679,7 +697,7 @@ if_next_92:;
     return if_27;
 }
 
-bool occursAtLoop_(int start_, struct String substr_, struct String s_, int i_4) {
+bool occursAtLoop_(int start_2, struct String substr_, struct String s_, int i_4) {
 tailrec_95:;
     bool if_28;
     if ((i_4 == substr_.len)) {
@@ -692,17 +710,17 @@ then_97:;
     goto if_next_96;
 else_98:;
     bool if_29;
-    if ((s_.str[(start_ + i_4)] == substr_.str[i_4])) {
+    if ((s_.str[(start_2 + i_4)] == substr_.str[i_4])) {
         goto then_100;
     } else {
         goto else_101;
     }
 then_100:;
-    int arg_5 = start_;
+    int arg_5 = start_2;
     struct String arg_6 = substr_;
     struct String arg_7 = s_;
     int arg_8 = (i_4 + 1);
-    start_ = arg_5;
+    start_2 = arg_5;
     substr_ = arg_6;
     s_ = arg_7;
     i_4 = arg_8;
@@ -719,15 +737,15 @@ if_next_96:;
     return if_28;
 }
 
-bool occursAt_(int start_, struct String substr_, struct String s_) {
+bool occursAt_(int start_2, struct String substr_, struct String s_) {
     bool if_30;
-    if ((start_ >= 0)) {
+    if ((start_2 >= 0)) {
         goto then_103;
     } else {
         goto else_104;
     }
 then_103:;
-    if_30 = (s_.len >= (start_ + substr_.len));
+    if_30 = (s_.len >= (start_2 + substr_.len));
     goto if_next_102;
 else_104:;
     if_30 = false;
@@ -740,7 +758,7 @@ if_next_102:;
         goto else_107;
     }
 then_106:;
-    bool call_10 = occursAtLoop_(start_, substr_, s_, 0);
+    bool call_10 = occursAtLoop_(start_2, substr_, s_, 0);
     if_31 = call_10;
     goto if_next_105;
 else_107:;
@@ -934,19 +952,19 @@ if_next_131:;
     return if_38;
 }
 
-struct String slice_(int start_1, int endIndex_, struct String s_8) {
-    int call_18 = intClamp_(0, s_8.len, start_1);
-    int start_2 = call_18;
-    int call_19 = intClamp_(start_2, s_8.len, endIndex_);
-    int endIndex_1 = call_19;
+struct String slice_(int start_3, int endIndex_2, struct String s_8) {
+    int call_18 = intClamp_(0, s_8.len, start_3);
+    int start_4 = call_18;
+    int call_19 = intClamp_(start_4, s_8.len, endIndex_2);
+    int endIndex_3 = call_19;
     struct String if_40;
-    if ((start_2 < endIndex_1)) {
+    if ((start_4 < endIndex_3)) {
         goto then_138;
     } else {
         goto else_139;
     }
 then_138:;
-    struct String slice_3 = str_get_slice(start_2, (endIndex_1 - 1), s_8);
+    struct String slice_3 = str_get_slice(start_4, (endIndex_3 - 1), s_8);
     if_40 = slice_3;
     goto if_next_137;
 else_139:;
@@ -1278,9 +1296,9 @@ if_next_181:;
     return if_52;
 }
 
-int findNewline_(int start_3, struct String s_16) {
+int findNewline_(int start_5, struct String s_16) {
 tailrec_184:;
-    int i_7 = start_3;
+    int i_7 = start_5;
     bool if_53;
     if ((i_7 < s_16.len)) {
         goto then_186;
@@ -1329,7 +1347,7 @@ if_next_185:;
 then_195:;
     int arg_33 = (i_7 + 1);
     struct String arg_34 = s_16;
-    start_3 = arg_33;
+    start_5 = arg_33;
     s_16 = arg_34;
     goto tailrec_184;
     if_56 = 0;
@@ -1594,8 +1612,8 @@ struct String concat_(struct String sep_2, struct StringList const* xs_53) {
 char unwrap_2(struct CharList const* opt_) {
     char match_5;
     if ((!(opt_))) goto next_241;
-    char value_ = opt_->head;
-    match_5 = value_;
+    char value_1 = opt_->head;
+    match_5 = value_1;
     goto end_match_240;
 next_241:;
     if ((!((!(opt_))))) goto next_242;
@@ -1612,8 +1630,8 @@ end_match_240:;
 int unwrap_1(struct IntList const* opt_) {
     int match_6;
     if ((!(opt_))) goto next_244;
-    int value_ = opt_->head;
-    match_6 = value_;
+    int value_1 = opt_->head;
+    match_6 = value_1;
     goto end_match_243;
 next_244:;
     if ((!((!(opt_))))) goto next_245;

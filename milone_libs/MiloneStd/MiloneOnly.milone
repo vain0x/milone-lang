@@ -1,3 +1,95 @@
 module rec MiloneStd.MiloneOnly
 
 let __stringJoin (sep: string) (xs: string list): string = __nativeFun ("str_concat", sep, xs)
+
+// -----------------------------------------------
+// Pointer util
+// -----------------------------------------------
+
+let private __pointeeSize (constPtr: __constptr<_>): nativeint =
+  nativeint (__sizeOfVal (__ptrRead constPtr 0))
+
+let private __ptrAsMut (constPtr: __constptr<_>): nativeptr<_> =
+  let mutPtr = __nativeCast constPtr
+  let _typeUnifier () = __ptrWrite mutPtr 0 (__ptrRead constPtr 0)
+  mutPtr
+
+let private __ptrAsConst (mutPtr: nativeptr<_>): __constptr<_> =
+  let constPtr = __nativeCast mutPtr
+  let _typeUnifier () = __ptrWrite mutPtr 0 (__ptrRead constPtr 0)
+  constPtr
+
+let private __ptrAdd (index: int) (ptr: __constptr<_>): __constptr<_> =
+  let addedPtr = __nativeCast (nativeint ptr + nativeint index * __pointeeSize ptr)
+  let _typeUnifier () = [ ptr; addedPtr ]
+  addedPtr
+
+let private __mutPtrAdd (index: int) (mutPtr: nativeptr<_>): nativeptr<_> =
+  let addedPtr = __nativeCast (nativeint mutPtr + nativeint index * __pointeeSize (__ptrAsConst mutPtr))
+  let _typeUnifier () = [ mutPtr; addedPtr ]
+  addedPtr
+
+// -----------------------------------------------
+// MutArray
+// -----------------------------------------------
+
+let private memAlloc (len: int) (size: unativeint): voidptr =
+  __nativeFun ("milone_mem_alloc", len, size)
+
+let private memcpy (dest: voidptr) (src: obj) (size: unativeint): voidptr =
+  __nativeFun ("memcpy", dest, src, size)
+
+// ptr, len
+type __MutArray<'T> = nativeptr<'T> * int
+
+let __mutArrayCreate (len: int): __MutArray<_> =
+  if len = 0 then
+    __nativeCast (unativeint 0), 0
+  else
+    let nullPtr: __constptr<_> = __nativeCast (unativeint 0)
+
+    let ptr = __nativeCast (memAlloc len (unativeint (__pointeeSize nullPtr)))
+
+    let _typeUnifier () = [ ptr; __ptrAsMut nullPtr ]
+
+    ptr, len
+
+let __mutArraySet (index: int) value (array: __MutArray<_>) =
+  let mutPtr, len = array
+
+  assert (uint index < uint len)
+
+  __ptrWrite mutPtr index value
+
+let __mutArraySlice (start: int) (endIndex: int) (array: __MutArray<_>): __MutArray<_> =
+  let mutPtr, len = array
+
+  assert(0 <= start && start <= endIndex && endIndex <= len)
+
+  __mutPtrAdd start mutPtr, endIndex - start
+
+// -----------------------------------------------
+// ConstArray
+// -----------------------------------------------
+
+type __ConstArray<'T> = __constptr<'T> * int
+
+let __constArrayOfMut (mutArray: __MutArray<_>): __ConstArray<_> =
+  let mutPtr, len = mutArray
+  __ptrAsConst mutPtr, len
+
+let __constArrayLength (array: __ConstArray<_>) =
+  let _, len = array
+  len
+
+let __constArrayGet (index: int) (array: __ConstArray<_>) =
+  let ptr, len = array
+  assert (uint index < uint len)
+  __ptrRead ptr index
+
+let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>): __ConstArray<_> =
+  let ptr, len = array
+
+  assert(0 <= start && start <= endIndex && endIndex <= len)
+
+  __ptrAdd start ptr, endIndex - start
