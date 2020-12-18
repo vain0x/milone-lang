@@ -159,13 +159,15 @@ let iter (f: _ -> unit) (xs: _ list): unit =
       f x
       iter f xs
 
+let tryHead (xs: _ list): _ option =
+  match xs with
+  | x :: _ -> Some x
+  | _ -> None
+
 /// Gets the i'th item if exists.
 ///
 /// Spends O(N) time at worst. Avoid using this as possible.
-let tryItem (i: int) (xs: _ list): _ option =
-  match skip i xs with
-  | x :: _ -> Some x
-  | _ -> None
+let tryItem (i: int) (xs: _ list): _ option = xs |> skip i |> tryHead
 
 let tryFind (pred: _ -> bool) (xs: _ list): _ option =
   let rec listTryFindLoop xs =

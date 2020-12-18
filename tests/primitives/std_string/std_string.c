@@ -126,7 +126,7 @@ struct StringList const* stringToLinesLoop_(struct String s_18, int l_4, struct 
 
 struct StringList const* toLines_(struct String s_18);
 
-struct String concat_(struct String sep_2, struct StringList const* xs_53);
+struct String concat_(struct String sep_2, struct StringList const* xs_54);
 
 char unwrap_2(struct CharList const* opt_);
 
@@ -1604,8 +1604,8 @@ struct StringList const* toLines_(struct String s_18) {
     return call_41;
 }
 
-struct String concat_(struct String sep_2, struct StringList const* xs_53) {
-    struct String call_42 = __stringJoin_(sep_2, xs_53);
+struct String concat_(struct String sep_2, struct StringList const* xs_54) {
+    struct String call_42 = __stringJoin_(sep_2, xs_54);
     return call_42;
 }
 
