@@ -1305,11 +1305,13 @@ let private parseTopLevel (tokens, errors) =
 
       AModuleRoot(ident, decls, modulePos), tokens, errors
 
-  | (ModuleToken, modulePos) :: (IdentToken ident, _) :: tokens ->
-      let decls, tokens, errors =
-        parseModuleBody modulePos (tokens, errors)
+  | (ModuleToken, _) :: tokens ->
+      let errors =
+        parseNewError
+          "module syntax error. Hint: `module rec ProjectName.ModuleName`. (rec keyword is mandatory for now.)"
+          (tokens, errors)
 
-      AModuleRoot(ident, decls, modulePos), tokens, errors
+      AExprRoot [], [], errors
 
   | _ ->
       let pos = 0, 0
