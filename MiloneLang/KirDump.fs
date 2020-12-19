@@ -60,7 +60,7 @@ let private litToDebugString lit =
   | BoolLit false -> "false"
   | BoolLit true -> "true"
   | FloatLit text -> text
-  | IntLit value -> string value
+  | IntLit text -> text
   | CharLit value -> "'" + charEscape value + "'"
   | StrLit value -> "\"" + strEscape value + "\""
 

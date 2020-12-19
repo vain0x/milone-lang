@@ -68,9 +68,11 @@ let private kpNode (node: KNode) ctx: KNode * KirPropagateCtx =
       let ctx =
         match prim, args, results with
         | KAddPrim, [ KLitTerm (IntLit l, _); KLitTerm (IntLit r, _) ], [ result ] ->
-            printfn "// kp: [TRACE] lit #%s := %d + %d" (objToString result) l r
+            printfn "// kp: [TRACE] lit #%s := %s + %s" (objToString result) l r
 
-            ctx |> kpDefVar result (KLitVarDef(IntLit(l + r)))
+            // should check overflow
+            ctx
+            |> kpDefVar result (KLitVarDef(IntLit(string (int l + int r))))
 
         | _ -> ctx
 

@@ -21,7 +21,7 @@ let tokenizeMainEmpty () =
       LeftParenToken
       RightParenToken
       EqToken
-      IntToken 0 ]
+      IntToken "0" ]
 
   source |> tokenize |> List.map fst |> is expected
 
@@ -39,9 +39,9 @@ let main _ =
       IdentToken "main"
       IdentToken "_"
       EqToken
-      IntToken 1
+      IntToken "1"
       MinusToken
-      IntToken 1 ]
+      IntToken "1" ]
 
   source |> tokenize |> List.map fst |> is expected
 
@@ -111,6 +111,6 @@ let main () =
       RightParenToken, (1, 10)
       EqToken, (1, 12)
       IdentToken "f", (2, 2)
-      IntToken 1, (2, 4) ]
+      IntToken "1", (2, 4) ]
 
   source |> tokenize |> is expected

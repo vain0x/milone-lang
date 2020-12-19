@@ -371,10 +371,6 @@ let private tokenOfOp (text: string) l r: Token =
 
   | _ -> error ()
 
-let private evalIntLit (text: string) (l: int) (r: int): Token =
-  // FIXME: This fails when minimum int value.
-  IntToken(int text.[l..r - 1])
-
 let private evalCharLit (text: string) (l: int) (r: int): Token =
   match r - l with
   // '?'
@@ -633,10 +629,13 @@ let private doNext (host: TokenizeHost) (text: string) (index: int): Token * int
   | LNumber ->
       let isFloat, m, r = scanNumberLit text (index + len)
 
+      // Value can be too large or too small; range should be checked in Typing.
       // m: before suffix
-      if m < r then ErrorToken UnimplNumberSuffixError, r
-      else if isFloat then FloatToken text.[index..r - 1], r
-      else evalIntLit text index r, r
+      if m < r
+      then ErrorToken UnimplNumberSuffixError, r
+      else if isFloat
+      then FloatToken text.[index..r - 1], r
+      else IntToken(S.slice index r text), r
 
   | LNonKeywordIdent ->
       let r = scanIdent text (index + len)

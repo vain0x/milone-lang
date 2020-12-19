@@ -448,8 +448,8 @@ let private parsePatAtom basePos (tokens, errors) =
   | _ when not (nextInside basePos tokens && leadsPat tokens) ->
       parsePatError "Expected a pattern atom" (tokens, errors)
 
-  | (IntToken value, pos) :: tokens -> ALitPat(IntLit value, pos), tokens, errors
-  | (FloatToken value, pos) :: tokens -> ALitPat(FloatLit value, pos), tokens, errors
+  | (IntToken text, pos) :: tokens -> ALitPat(IntLit text, pos), tokens, errors
+  | (FloatToken text, pos) :: tokens -> ALitPat(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitPat(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitPat(StrLit value, pos), tokens, errors
 
@@ -616,8 +616,8 @@ let private parseAtom basePos (tokens, errors) =
   match tokens with
   | _ when not (nextInside basePos tokens) -> parseExprError "Expected an expression" (tokens, errors)
 
-  | (IntToken value, pos) :: tokens -> ALitExpr(IntLit value, pos), tokens, errors
-  | (FloatToken value, pos) :: tokens -> ALitExpr(FloatLit value, pos), tokens, errors
+  | (IntToken text, pos) :: tokens -> ALitExpr(IntLit text, pos), tokens, errors
+  | (FloatToken text, pos) :: tokens -> ALitExpr(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
   | (IdentToken ident, pos) :: tokens -> AIdentExpr(ident, pos), tokens, errors

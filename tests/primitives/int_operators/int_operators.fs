@@ -1,5 +1,9 @@
 module rec int_operators.Program
 
+let literalTest () =
+  // Int minimum/maximum values can be written as literal.
+  assert (-((-2147483648) + 1) = 2147483647)
+
 let arithmeticOperatorsTest (two: int) (three: int) (thirtyNine: int) =
   assert (two + three = 5)
   assert (three - two = 1)
@@ -53,6 +57,7 @@ let toIntTest () =
   assert (int "-1" + 1 = 0)
 
 let main _ =
+  literalTest ()
   arithmeticOperatorsTest 2 3 39
   bitOperatorsTest 1
   compareTest 2 3

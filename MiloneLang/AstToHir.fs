@@ -147,9 +147,8 @@ let private desugarUniNeg arg =
   match arg with
   | AUnaryExpr (NegUnary, arg, _) -> Some arg
 
-  | ALitExpr (IntLit value, pos) ->
-      assert (value >= 0)
-      ALitExpr(IntLit(-value), pos) |> Some
+  | ALitExpr (IntLit text, pos) ->
+      ALitExpr(IntLit("-" + text), pos) |> Some
 
   | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit("-" + text), pos) |> Some
 

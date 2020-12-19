@@ -282,7 +282,7 @@ let private collectJoints (f: KirGenCtx -> _ * KirGenCtx) (ctx: KirGenCtx) =
 let private kTrueTerm loc = KLitTerm(BoolLit true, loc)
 
 let private abortNode loc =
-  let code = KLitTerm(IntLit 1, loc)
+  let code = KLitTerm(IntLit "1", loc)
   KPrimNode(KExitPrim, [ code ], [], [], loc)
 
 /// Converts to basic 2-arity prim node.

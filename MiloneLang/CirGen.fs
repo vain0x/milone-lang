@@ -683,7 +683,7 @@ let private cBinaryOf op =
 
 let private genLit lit =
   match lit with
-  | IntLit value -> CIntExpr value
+  | IntLit text -> CIntExpr text
   | FloatLit text -> CDoubleExpr text
   | BoolLit false -> CRefExpr "false"
   | BoolLit true -> CRefExpr "true"
@@ -704,7 +704,7 @@ let private genDefault ctx ty =
   | AppTy (TupleTyCtor, [])
   | AppTy (IntTyCtor _, _)
   | AppTy (FloatTyCtor _, _)
-  | AppTy (CharTyCtor, _) -> CIntExpr 0, ctx
+  | AppTy (CharTyCtor, _) -> CIntExpr "0", ctx
 
   | AppTy (BoolTyCtor, _) -> CRefExpr "false", ctx
 
@@ -877,7 +877,7 @@ let private cgActionStmt ctx itself action args =
 
   | MPtrWriteAction ->
       match cgExprList ctx args with
-      | [ ptr; CIntExpr 0; value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
+      | [ ptr; CIntExpr "0"; value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
       | [ ptr; index; value ], ctx -> addStmt ctx (CSetStmt(CIndexExpr(ptr, index), value))
       | _ -> failwith "NEVER"
 
@@ -974,8 +974,7 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
       let name = cStringToFloatFunName flavor
       conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
 
-  | MCharOfStrPrim ->
-      conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_char", [ arg ]))
+  | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_char", [ arg ]))
 
   | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_char", [ arg ]))
@@ -1000,7 +999,7 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
   | MPtrReadPrim ->
       regular ctx (fun args ->
         match args with
-        | [ ptr; CIntExpr 0 ] -> CUnaryExpr(CDerefUnary, ptr)
+        | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
         | [ ptr; index ] -> CIndexExpr(ptr, index)
         | _ -> failwith "NEVER")
 
@@ -1290,7 +1289,12 @@ let private genLogs (ctx: CirCtx) =
     | [] -> ctx
     | (log, loc) :: logs ->
         let _, y, _ = loc
-        let msg = locToString loc + " " + logToString tyDisplayFn log
+
+        let msg =
+          locToString loc
+          + " "
+          + logToString tyDisplayFn log
+
         let ctx = addDecl ctx (CErrorDecl(msg, 1 + y))
         go ctx logs
 

@@ -522,6 +522,7 @@ type TyUnifyLog =
 [<NoEquality; NoComparison>]
 type Log =
   | NameResLog of NameResLog
+  | LiteralRangeError
   | IrrefutablePatNonExhaustiveError
   | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
   | TyBoundError of Trait
@@ -1147,6 +1148,8 @@ let logToString tyDisplay log =
   match log with
   | Log.NameResLog log -> nameResLogToString log
 
+  | Log.LiteralRangeError -> "This type of literal can't represent the value."
+
   | Log.IrrefutablePatNonExhaustiveError ->
       "Let expressions cannot contain refutable patterns, which could fail to match for now."
 
@@ -1182,6 +1185,10 @@ let logToString tyDisplay log =
       + fields
 
   | Log.ArityMismatch (actual, expected) ->
-      "Arity mismatch: expected " + string expected + ", but was " + string actual + "."
+      "Arity mismatch: expected "
+      + string expected
+      + ", but was "
+      + string actual
+      + "."
 
   | Log.Error msg -> msg

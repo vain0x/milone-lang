@@ -29,7 +29,7 @@ type Vis =
 [<Struct; NoEquality; NoComparison>]
 type Lit =
   | BoolLit of boolValue: bool
-  | IntLit of intValue: int
+  | IntLit of intText: string
   | FloatLit of floatText: string
   | CharLit of charValue: char
   | StrLit of stringValue: string
@@ -101,8 +101,8 @@ type Token =
   | NewlinesToken
   | CommentToken
 
-  | IntToken of int
-  | FloatToken of string
+  | IntToken of intText: string
+  | FloatToken of floatText: string
   | CharToken of char
   | StrToken of string
   | IdentToken of Ident
@@ -455,6 +455,7 @@ let litTrue = BoolLit true
 
 let litFalse = BoolLit false
 
+// int and float are not ordered by value.
 let litCmp l r =
   match l, r with
   | BoolLit l, BoolLit r -> compare l r

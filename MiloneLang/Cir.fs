@@ -78,7 +78,7 @@ type CExpr =
   /// `(struct K){}`
   | CDefaultExpr
 
-  | CIntExpr of int
+  | CIntExpr of text: string
   | CDoubleExpr of text: string
   | CCharExpr of char
 

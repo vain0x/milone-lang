@@ -17,6 +17,8 @@ open MiloneLang.TySystem
 open MiloneLang.NameRes
 open MiloneLang.Hir
 
+module StdInt = MiloneStd.StdInt
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -110,6 +112,16 @@ let private freshMetaTyForExpr expr ctx =
   let tySerial, ctx = ctx |> freshTySerial
   let ty = MetaTy(tySerial, loc)
   ty, ctx
+
+let private validateLit ctx lit loc =
+  // FIXME: validate float too
+  match lit with
+  | IntLit text ->
+      match StdInt.tryParse text with
+      | Some _ -> ctx
+      | None -> addLog ctx Log.LiteralRangeError loc
+
+  | _ -> ctx
 
 // -----------------------------------------------
 // Type inference algorithm
@@ -310,13 +322,17 @@ let private hxAbort (ctx: TyCtx) loc =
   let exitExpr = HPrimExpr(HPrim.Exit, funTy, loc)
 
   let callExpr =
-    hxApp exitExpr (HLitExpr(IntLit 1, loc)) ty loc
+    hxApp exitExpr (HLitExpr(IntLit "1", loc)) ty loc
 
   callExpr, ty, ctx
 
 // -----------------------------------------------
 // Pattern
 // -----------------------------------------------
+
+let private inferLitPat ctx pat lit =
+  let ctx = validateLit ctx lit (patToLoc pat)
+  pat, litToTy lit, ctx
 
 /// Tries to get ty annotation from pat.
 let private patToAnnoTy pat =
@@ -438,7 +454,7 @@ let private doInferPats ctx pats =
 
 let private inferPat ctx pat: HPat * Ty * TyCtx =
   match pat with
-  | HLitPat (lit, _) -> pat, litToTy lit, ctx
+  | HLitPat (lit, _) -> inferLitPat ctx pat lit
   | HDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
   | HRefPat (varSerial, _, loc) -> inferRefPat ctx varSerial loc
   | HVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
@@ -493,6 +509,10 @@ let private inferIrrefutablePat ctx pat =
 // -----------------------------------------------
 // Expression
 // -----------------------------------------------
+
+let private inferLitExpr ctx expr lit =
+  let ctx = validateLit ctx lit (exprToLoc expr)
+  expr, litToTy lit, ctx
 
 let private inferRefExpr (ctx: TyCtx) varSerial loc =
   let ty, ctx = ctx |> unifyVarTy varSerial None loc
@@ -771,8 +791,7 @@ let private inferMinusExpr ctx arg loc =
   let arg, argTy, ctx = inferExpr ctx None arg
 
   let ctx =
-    ctx
-    |> addTraitBounds [ IsNumberTrait argTy, loc ]
+    ctx |> addTraitBounds [ IsNumberTrait argTy, loc ]
 
   HInfExpr(InfOp.Minus, [ arg ], argTy, loc), argTy, ctx
 
@@ -914,8 +933,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   let fail () = failwithf "NEVER: %A" expr
 
   match expr with
-  | HLitExpr (lit, _) -> expr, litToTy lit, ctx
-
+  | HLitExpr (lit, _) -> inferLitExpr ctx expr lit
   | HRefExpr (serial, _, loc) -> inferRefExpr ctx serial loc
   | HFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
   | HVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc

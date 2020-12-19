@@ -169,7 +169,7 @@ let private mxStrCmp ctx op l r (ty, loc) =
   let strCmpExpr =
     MBinaryExpr(MStrCmpBinary, l, r, tyInt, loc)
 
-  let zeroExpr = MLitExpr(IntLit 0, loc)
+  let zeroExpr = MLitExpr(IntLit "0", loc)
 
   let opExpr =
     MBinaryExpr(op, strCmpExpr, zeroExpr, ty, loc)
@@ -188,7 +188,8 @@ let private mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   | AppTy (StrTyCtor, _) -> mxStrCmp ctx op l r (ty, loc)
   | _ -> failwithf "unimpl %A" (op, l, ty)
 
-let private mtAbort loc = MExitTerminator(MLitExpr(IntLit 1, loc))
+let private mtAbort loc =
+  MExitTerminator(MLitExpr(IntLit "1", loc))
 
 let private msGotoUnless pred label loc =
   let notPred = mxNot pred loc
@@ -983,7 +984,8 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
   | AppTy (CharTyCtor, _) -> arg, ctx
 
   | AppTy ((IntTyCtor _
-           | FloatTyCtor _), _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
+           | FloatTyCtor _),
+           _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
 
   | AppTy (StrTyCtor, _) ->
       let temp, tempSerial, ctx = freshVar ctx "char_of_string" ty loc
@@ -1024,8 +1026,8 @@ let private mirifyCallAssertExpr ctx arg loc =
   let args =
     let _, y, x = loc
     [ arg
-      MLitExpr(IntLit y, loc)
-      MLitExpr(IntLit x, loc) ]
+      MLitExpr(IntLit (string y), loc)
+      MLitExpr(IntLit (string x), loc) ]
 
   let ctx =
     addStmt ctx (MActionStmt(MAssertAction, args, loc))
