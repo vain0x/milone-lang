@@ -11,6 +11,8 @@ open MiloneLang.Hir
 open MiloneLang.TySystem
 open MiloneLang.Typing
 
+module Int = MiloneStd.StdInt
+
 let private tyIsRecord ty =
   match ty with
   | AppTy (RecordTyCtor _, _) -> true
@@ -273,7 +275,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
         | _ -> failwith "NEVER"
 
       let size, isBoxed =
-        if size > 32 then 8, true else intMax 1 size, false
+        if size > 32 then 8, true else Int.max 1 size, false
 
       let ctx =
         assert ((ctx.RecordTyMemo
@@ -293,7 +295,7 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
         variants
         |> List.fold (fun (maxSize, ctx: TsmCtx) variantSerial ->
              let payloadSize, ctx = tsmVariant ctx variantSerial None
-             intMax maxSize payloadSize, ctx) (0, ctx)
+             Int.max maxSize payloadSize, ctx) (0, ctx)
 
       4 + payloadSize, ctx
 
@@ -335,7 +337,7 @@ let private tsmTy (ctx: TsmCtx) ty =
                  let size, ctx = tsmTy ctx fieldTy
                  totalSize + size, ctx) (0, ctx)
 
-          intMax 1 size, ctx
+          Int.max 1 size, ctx
 
       | UnionTyCtor tySerial -> nominal tySerial
       | RecordTyCtor tySerial -> nominal tySerial

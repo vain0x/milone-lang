@@ -83,6 +83,8 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Hir
 
+module Int = MiloneStd.StdInt
+
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
 type private CalleeKind =
@@ -90,7 +92,7 @@ type private CalleeKind =
   | Obj
 
 let private listSplitAt i xs =
-  List.truncate i xs, List.skip (intMin i (List.length xs)) xs
+  List.truncate i xs, List.skip (Int.min i (List.length xs)) xs
 
 let private tyToArity ty =
   match ty with

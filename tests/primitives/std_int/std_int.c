@@ -22,6 +22,10 @@ struct IntList;
 
 struct IntList const* __intOfStr_(struct String s_);
 
+int min_(int l_, int r_);
+
+int max_(int l_1, int r_1);
+
 struct IntList const* tryParse_(struct String s_3);
 
 int parseOk_(struct String s_1);
@@ -87,6 +91,40 @@ if_next_1:;
     return if_;
 }
 
+int min_(int l_, int r_) {
+    int if_1;
+    if ((l_ < r_)) {
+        goto then_5;
+    } else {
+        goto else_6;
+    }
+then_5:;
+    if_1 = l_;
+    goto if_next_4;
+else_6:;
+    if_1 = r_;
+    goto if_next_4;
+if_next_4:;
+    return if_1;
+}
+
+int max_(int l_1, int r_1) {
+    int if_2;
+    if ((l_1 < r_1)) {
+        goto then_8;
+    } else {
+        goto else_9;
+    }
+then_8:;
+    if_2 = r_1;
+    goto if_next_7;
+else_9:;
+    if_2 = l_1;
+    goto if_next_7;
+if_next_7:;
+    return if_2;
+}
+
 struct IntList const* tryParse_(struct String s_3) {
     struct IntList const* call_2 = __intOfStr_(s_3);
     return call_2;
@@ -95,37 +133,37 @@ struct IntList const* tryParse_(struct String s_3) {
 int parseOk_(struct String s_1) {
     int match_;
     struct IntList const* call_3 = tryParse_(s_1);
-    if ((!(call_3))) goto next_5;
+    if ((!(call_3))) goto next_11;
     int value_1 = call_3->head;
     match_ = value_1;
-    goto end_match_4;
-next_5:;
-    if ((!((!(call_3))))) goto next_6;
+    goto end_match_10;
+next_11:;
+    if ((!((!(call_3))))) goto next_12;
     printf("should parse: %s\n", s_1.str);
     milone_assert(false, 11, 8);
     match_ = 0;
-    goto end_match_4;
-next_6:;
+    goto end_match_10;
+next_12:;
     exit(1);
-end_match_4:;
+end_match_10:;
     return match_;
 }
 
 bool parseError_(struct String s_2) {
     bool match_1;
     struct IntList const* call_4 = tryParse_(s_2);
-    if ((!((!(call_4))))) goto next_8;
+    if ((!((!(call_4))))) goto next_14;
     match_1 = true;
-    goto end_match_7;
-next_8:;
-    if ((!(call_4))) goto next_9;
+    goto end_match_13;
+next_14:;
+    if ((!(call_4))) goto next_15;
     int value_2 = call_4->head;
     printf("should not parse: %s -> %d\n", s_2.str, value_2);
     match_1 = false;
-    goto end_match_7;
-next_9:;
+    goto end_match_13;
+next_15:;
     exit(1);
-end_match_7:;
+end_match_13:;
     return match_1;
 }
 

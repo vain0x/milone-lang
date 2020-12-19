@@ -69,6 +69,8 @@ module rec MiloneLang.SyntaxParse
 open MiloneLang.Util
 open MiloneLang.Syntax
 
+module Int = MiloneStd.StdInt
+
 // -----------------------------------------------
 // Position
 // -----------------------------------------------
@@ -90,7 +92,7 @@ let private posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX s
 let private posAddX dx ((y, x): Pos) = y, x + dx
 
 let private posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
-  intMax firstY secondY, intMax firstX secondX
+  Int.max firstY secondY, Int.max firstX secondX
 
 /// Gets if three tokens can be merged. (Assuming each token is 1-letter.)
 /// That is, no space or comments interleave these positions.

@@ -5,6 +5,7 @@ open MiloneLang.TreeMap
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
+module Int = MiloneStd.StdInt
 
 // -----------------------------------------------
 // Collections
@@ -251,10 +252,6 @@ let setUnion first second =
 // -----------------------------------------------
 // Int
 // -----------------------------------------------
-
-let intMin (x: int) (y: int) = if x > y then y else x
-
-let intMax (x: int) (y: int) = if x < y then y else x
 
 let intEq (x: int) (y: int) = x = y
 
