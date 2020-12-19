@@ -253,8 +253,6 @@ let setUnion first second =
 // Int
 // -----------------------------------------------
 
-let intEq (x: int) (y: int) = x = y
-
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
     failwith "intToHexWithPadding: unimplemented negative"
