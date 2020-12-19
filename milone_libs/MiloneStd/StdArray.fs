@@ -5,6 +5,7 @@ module rec MiloneStd.StdArray
 // Public functions should be written carefully so that they are pure,
 // i.e. observable side-effects don't happen.
 
+/// Immutable array.
 type Array<'T> = __ConstArray<'T>
 
 // -----------------------------------------------
@@ -12,6 +13,8 @@ type Array<'T> = __ConstArray<'T>
 // -----------------------------------------------
 
 /// Gets an empty array.
+///
+/// PERF: O(1) time, no allocation.
 let empty (): Array<_> = __constArrayOfMut (__mutArrayCreate 0)
 
 /// Creates an array with specified length. i'th item is `f i`.
@@ -48,12 +51,18 @@ let range (len: int): Array<int> = init len (fun (i: int) -> i)
 // -----------------------------------------------
 
 /// Gets the length of array.
+///
+/// O(1) time.
 let length (array: Array<_>): int = __constArrayLength array
 
 /// Gets whether the array is empty (that is, length is zero).
+///
+/// O(1) time.
 let isEmpty (array: Array<_>): bool = length array = 0
 
 /// Gets the i'th item of array.
+///
+/// O(1) time.
 let tryItem (i: int) (array: Array<_>): _ option =
   if uint i < uint (length array) then Some(__constArrayGet i array) else None
 
@@ -71,6 +80,12 @@ let tryItem (i: int) (array: Array<_>): _ option =
 // Split
 // -----------------------------------------------
 
+/// Gets a contiguous part of specified array.
+///
+/// Boundary exceeding is just ignored.
+/// Intersection of (start .. endIndex-1) and (0 .. len-1) is used.
+///
+/// O(1) time, no allocation.
 let slice (start: int) (endIndex: int) (array: Array<_>): Array<_> =
   let len = length array
   let start = if start >= 0 then start else 0
@@ -86,6 +101,8 @@ let splitAt (index: int) (array: Array<_>): Array<_> * Array<_> =
   slice 0 index array, slice index (length array) array
 
 /// Tries to split an array into a pair of head item and tail part.
+///
+/// E.g. `[| x1; x2; ... |]` => `Some (x1, [| x2; ... |])`
 let uncons (array: Array<_>): (_ * Array<_>) option =
   let len = length array
   if len = 0 then

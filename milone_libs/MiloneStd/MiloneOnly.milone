@@ -1,3 +1,5 @@
+/// Provides functions, whose implementations use C FFI and work only in milone-lang.
+/// Public interface of this module should be compatible with file://./FSharpOnly.fs .
 module rec MiloneStd.MiloneOnly
 
 let __stringJoin (sep: string) (xs: string list): string = __nativeFun ("str_concat", sep, xs)
@@ -6,6 +8,7 @@ let __stringJoin (sep: string) (xs: string list): string = __nativeFun ("str_con
 // Pointer util
 // -----------------------------------------------
 
+/// Gets the size of pointee type.
 let private __pointeeSize (constPtr: __constptr<_>): nativeint =
   nativeint (__sizeOfVal (__ptrRead constPtr 0))
 

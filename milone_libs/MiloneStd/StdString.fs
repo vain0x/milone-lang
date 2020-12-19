@@ -13,8 +13,14 @@ let private intClamp (minValue: int) (maxValue: int) (value: int) =
   else if maxValue < value then maxValue
   else value
 
+/// Gets whether a string is empty, i.e. length is zero.
+///
+/// O(1) time.
 let isEmpty (str: string): bool = str.Length = 0
 
+/// Gets a byte in string at specified index.
+///
+/// O(1) time.
 let tryItem (index: int) (str: string): char option =
   if 0 <= index && index < str.Length then Some str.[index] else None
 
@@ -23,6 +29,8 @@ let tryItem (index: int) (str: string): char option =
 // -----------------------------------------------
 
 /// Gets whether a substring occurs at the specified index in string.
+///
+/// O(N) time.
 let private occursAt (start: int) (substr: string) (s: string): bool =
   let rec occursAtLoop i =
     (i = substr.Length)
@@ -31,12 +39,20 @@ let private occursAt (start: int) (substr: string) (s: string): bool =
   (0 <= start && start + substr.Length <= s.Length)
   && occursAtLoop 0
 
+/// Gets whether a string starts with specified substring.
+///
+/// O(|P|) time, P: prefix.
 let startsWith (prefix: string) (s: string): bool = occursAt 0 prefix s
 
+/// Gets whether a string ends with specified substring.
+///
+/// O(|S|) time, S: suffix.
 let endsWith (suffix: string) (s: string): bool =
   occursAt (s.Length - suffix.Length) suffix s
 
 /// Finds first index of string where a substring occurs.
+///
+/// O(NM) time, N: length of substring, M: length of total string.
 let findIndex (substr: string) (s: string): int option =
   // Upper bound of the index that could satisfy the predicate.
   let r = s.Length - substr.Length + 1
@@ -49,6 +65,8 @@ let findIndex (substr: string) (s: string): int option =
   stringFindIndexLoop 0
 
 /// Finds last index of string where a substring occurs.
+///
+/// O(NM) time, N: length of substring, M: length of total string.
 let findLastIndex (substr: string) (s: string): int option =
   let rec stringFindLastIndexLoop r =
     if r <= 0 then None
@@ -61,6 +79,8 @@ let findLastIndex (substr: string) (s: string): int option =
   stringFindLastIndexLoop r
 
 /// Gets whether a substring occurs in a string.
+///
+/// O(NM) time, N: length of substring, M: length of total string.
 let contains (substr: string) (s: string): bool =
   match findIndex substr s with
   | Some _ -> true
@@ -74,7 +94,7 @@ let contains (substr: string) (s: string): bool =
 ///
 /// Analogue to `List.truncate`.
 ///
-/// This functions is tolerant about exceeding the boundary.
+/// This function is tolerant about exceeding the boundary.
 /// If `prefixLen < 0`, returns `""`.
 /// If `prefixLen > s.Length`, returns s itself.
 let truncate (prefixLen: int) (s: string): string =
@@ -86,7 +106,7 @@ let truncate (prefixLen: int) (s: string): string =
 ///
 /// Analogue to `List.skip`.
 ///
-/// This functions is tolerant about exceeding the boundary.
+/// This function is tolerant about exceeding the boundary.
 /// If `prefixLen < 0`, returns `s` itself.
 /// If `prefixLen > s.Length`, returns `""`.
 let skip (prefixLen: int) (s: string): string =
@@ -99,6 +119,8 @@ let skip (prefixLen: int) (s: string): string =
 /// Unlike `s.[..]`, this function is tolerant about exceeding the boundary.
 /// If `start < 0`, use 0 as start index instead.
 /// If `end > s.Length`, use `s.Length` as end index instead.
+///
+/// O(1) time.
 let slice (start: int) (endIndex: int) (s: string): string =
   let start = start |> intClamp 0 s.Length
   let endIndex = endIndex |> intClamp start s.Length
@@ -158,6 +180,8 @@ let trimEnd (s: string) = s |> trimEndIf C.isSpace
 // -----------------------------------------------
 
 /// Replaces all occurrences of substring with other string.
+///
+/// If pattern is empty string, just returns `s` itself.
 let replace (pattern: string) (target: string) (s: string) =
   let rec replaceLoop acc (i: int) =
     match findIndex pattern (skip i s) with
@@ -241,6 +265,6 @@ let toLines (s: string): string list =
 /// Concatenates a list of strings
 /// by inserting a separator between every two items.
 ///
-/// This functions is almost same as `String.concat` in F#
+/// This function is almost same as `String.concat` in F#
 /// but takes a list rather than seq, which is unimplemented in milone-lang.
 let concat (sep: string) (xs: string list): string = __stringJoin sep xs

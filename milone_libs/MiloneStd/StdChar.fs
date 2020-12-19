@@ -1,8 +1,17 @@
 module rec MiloneStd.StdChar
 
+/// Subtracts char codes.
 let subtract (l: char) (r: char): char = char (int l - int r)
 
+/// Gets whether a char is in ASCII range, i.e. `0x00 <= c <= 0x7f`.
 let isAscii (c: char): bool = '\x00' <= c && c <= char 127
+
+// -----------------------------------------------
+// Char class checks
+// -----------------------------------------------
+
+// These functions should be compatible with functions from <ctype.h> in the C language.
+// See: https://en.cppreference.com/w/c/string/byte
 
 let isControl (c: char): bool =
   let n = int c
