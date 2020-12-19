@@ -176,6 +176,8 @@ void *milone_mem_alloc(int count, size_t size) {
 // int
 // -----------------------------------------------
 
+static int int_min(int l, int r) { return l < r ? l : r; }
+
 int int_compare(int l, int r) {
     if (l == r)
         return 0;
@@ -311,6 +313,19 @@ struct String str_get_slice(int l, int r, struct String s) {
     return (struct String){.str = str, .len = len};
 }
 
+static bool str_is_all_spaces(char const *begin, char const *end) {
+    char const *p = begin;
+    while (p != end && *p != 0 && isspace(*p)) {
+        p++;
+    }
+    return p == end;
+}
+
+_Noreturn static void string_conversion_error(char const *type_name) {
+    fprintf(stderr, "FATAL: Failed to convert a string to %s.\n", type_name);
+    exit(1);
+}
+
 static void verify_str_to_number(const char *type_name, const char *endptr,
                                  bool range_check) {
     if (!range_check || (*endptr != '\0' && !isspace(*endptr)) ||
@@ -335,11 +350,28 @@ int16_t str_to_int16(struct String s) {
     return (int16_t)n;
 }
 
+bool str_to_int_checked(struct String s, int *value_ptr) {
+    // Copy to temporary buffer.
+    char buf[12] = {};
+    size_t buf_len = (size_t)int_min(s.len, sizeof(buf) - 1);
+    memcpy(buf, s.str, buf_len);
+    assert(buf_len < sizeof(buf) && buf[buf_len] == '\0');
+
+    // Convert.
+    char *endptr = buf + buf_len;
+    long value = strtol(buf, &endptr, 10);
+    *value_ptr = (int)value;
+    return endptr != buf && str_is_all_spaces(endptr, buf + buf_len) &&
+           errno != ERANGE && INT32_MIN <= value && value <= INT32_MAX;
+}
+
 int str_to_int(struct String s) {
-    char *endptr = (char *)(s.str + s.len);
-    int n = strtol(s.str, &endptr, 10);
-    verify_str_to_number("int", endptr, true);
-    return n;
+    int value;
+    bool ok = str_to_int_checked(s, &value);
+    if (!ok) {
+        string_conversion_error("int");
+    }
+    return value;
 }
 
 int64_t str_to_int64(struct String s) {
@@ -416,9 +448,7 @@ struct String str_of_double(double value) {
     return str_of_raw_parts(buf, n);
 }
 
-char str_to_char(struct String s) {
-    return s.len >= 1 ? *s.str : '\0';
-}
+char str_to_char(struct String s) { return s.len >= 1 ? *s.str : '\0'; }
 
 struct String str_of_char(char value) {
     char *str = milone_mem_alloc(2, sizeof(char));

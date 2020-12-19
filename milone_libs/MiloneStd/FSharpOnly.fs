@@ -42,3 +42,12 @@ let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>): __C
   assert (start <= endIndex)
   assert (endIndex <= array.Count)
   { Inner = __MutArray (array.Array, array.Offset + start, endIndex - start) }
+
+// -----------------------------------------------
+// StrInt
+// -----------------------------------------------
+
+let __intOfStr (s: string): int option =
+  match Int32.TryParse(s) with
+  | true, value -> Some value
+  | false, _ -> None
