@@ -8,7 +8,7 @@ let main _ =
 
     // FIXME: `f`'s result should be a function object with arity 2,
     //        however, the actual result is 1-arity for now.
-    // add
+    add
 
     // We need convert `add` to something like this:
     // let f x y =
@@ -16,7 +16,7 @@ let main _ =
     //   inc y
     // f
 
-    exit 0
+    // exit 0
 
   assert (f 2 3 = 5)
 

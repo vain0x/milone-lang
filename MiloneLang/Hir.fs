@@ -527,6 +527,7 @@ type Log =
   | TyBoundError of Trait
   | RedundantFieldError of ty: Ident * field: Ident
   | MissingFieldsError of ty: Ident * fields: Ident list
+  | ArityMismatch of actual: Arity * expected: Arity
   | Error of string
 
 // -----------------------------------------------
@@ -1179,5 +1180,8 @@ let logToString tyDisplay log =
       + recordName
       + "' must have fields: "
       + fields
+
+  | Log.ArityMismatch (actual, expected) ->
+      "Arity mismatch: expected " + string expected + ", but was " + string actual + "."
 
   | Log.Error msg -> msg

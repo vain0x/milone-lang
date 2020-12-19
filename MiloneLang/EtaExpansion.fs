@@ -159,6 +159,113 @@ let private primToArity ty prim =
   | HPrim.Printfn -> ty |> tyToArity
 
 // -----------------------------------------------
+// ArityCheck
+// -----------------------------------------------
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private ArityCheckCtx =
+  { GetFunArity: FunSerial -> int
+    Errors: (int * int * Loc) list }
+
+let private addArityError actual expected (loc: Loc) (ctx: ArityCheckCtx) =
+  { ctx with
+      Errors = (actual, expected, loc) :: ctx.Errors }
+
+let private acExprChecked expr ctx =
+  let expected = tyToArity (exprToTy expr)
+  let actual, ctx = acExpr (expr, ctx)
+  if actual <> expected then
+    ctx
+    |> addArityError actual expected (exprToLoc expr)
+  else
+    ctx
+
+let private acExpr (expr, ctx: ArityCheckCtx) =
+  match expr with
+  | HLitExpr _
+  | HTyDeclExpr _
+  | HOpenExpr _ -> 0, ctx
+
+  | HRefExpr (_, ty, _) -> tyToArity ty, ctx
+  | HVariantExpr (_, ty, _) -> tyToArity ty, ctx
+  | HPrimExpr (_, ty, _) -> tyToArity ty, ctx
+
+  | HFunExpr (funSerial, _, _) -> ctx.GetFunArity funSerial, ctx
+
+  | HRecordExpr (baseOpt, fields, _, _) ->
+      let doArm () =
+        let ctx =
+          match baseOpt with
+          | Some baseExpr -> acExpr (baseExpr, ctx) |> snd
+          | None -> ctx
+
+        let ctx =
+          fields
+          |> List.fold (fun ctx (_, init, _) -> acExprChecked init ctx) ctx
+
+        0, ctx
+
+      doArm ()
+
+  | HMatchExpr (cond, arms, ty, _) ->
+      let doArm () =
+        let _, ctx = acExpr (cond, ctx)
+
+        let ctx =
+          arms
+          |> List.fold (fun ctx (_, guard, body) ->
+               let _, ctx = acExpr (guard, ctx)
+               acExprChecked body ctx) ctx
+
+        tyToArity ty, ctx
+
+      doArm ()
+
+  | HNavExpr (l, _, ty, _) ->
+      let _, ctx = acExpr (l, ctx)
+      tyToArity ty, ctx
+
+  | HInfExpr (_, items, ty, _) ->
+      let ctx = acExprs items ctx
+      tyToArity ty, ctx
+
+  | HBlockExpr (stmts, last) ->
+      let ctx = acExprs stmts ctx
+      acExpr (last, ctx)
+
+  | HLetValExpr (_, _, init, next, _, _) ->
+      let ctx = acExprChecked init ctx
+      acExpr (next, ctx)
+
+  | HLetFunExpr (_, _, _, body, next, _, _) ->
+      let ctx = acExprChecked body ctx
+      acExpr (next, ctx)
+
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+
+let private acExprs exprs ctx =
+  exprs
+  |> List.fold (fun ctx expr -> acExpr (expr, ctx) |> snd) ctx
+
+let arityCheck (expr, tyCtx: Typing.TyCtx) =
+  let ctx: ArityCheckCtx =
+    { GetFunArity =
+        fun funSerial ->
+          let funDef = tyCtx.Funs |> mapFind funSerial
+          funDef.Arity
+
+      Errors = [] }
+
+  let _, ctx = acExpr (expr, ctx)
+
+  let logs =
+    ctx.Errors
+    |> List.map (fun (actual, expected, loc) -> Log.ArityMismatch(actual, expected), loc)
+
+  { tyCtx with Logs = List.append tyCtx.Logs logs }
+
+// -----------------------------------------------
 // Context
 // -----------------------------------------------
 

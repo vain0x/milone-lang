@@ -324,8 +324,7 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
       fun projectName moduleName ->
         match ctx.Projects |> mapTryFind projectName with
         | None -> None
-        | Some projectDir ->
-            ctx.FetchModule projectName projectDir moduleName }
+        | Some projectDir -> ctx.FetchModule projectName projectDir moduleName }
 
 // -----------------------------------------------
 // Write output and logs
@@ -444,7 +443,12 @@ let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAn
     writeLog host v "Typing"
 
     let expr, tyCtx = infer (expr, scopeCtx, [])
-    if tyCtx.Logs |> List.isEmpty |> not then SemaAnalysisTypingError tyCtx else SemaAnalysisOk(expr, tyCtx)
+    if tyCtx.Logs |> List.isEmpty |> not then
+      SemaAnalysisTypingError tyCtx
+    else
+      writeLog host v "ArityCheck"
+      let tyCtx = arityCheck (expr, tyCtx)
+      if tyCtx.Logs |> List.isEmpty |> not then SemaAnalysisTypingError tyCtx else SemaAnalysisOk(expr, tyCtx)
 
 /// Transforms HIR. The result can be converted to KIR or MIR.
 let transformHir (host: CliHost) v (expr, tyCtx) =
