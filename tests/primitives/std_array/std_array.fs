@@ -49,15 +49,17 @@ let tryItemTest () =
 let sliceTest () =
   let ten = A.range 10
 
-  let three = A.slice 1 3 ten
+  let three = A.slice 1 4 ten
   assert (A.length three = 3)
   assert (get 0 three = 1)
   assert (get 2 three = 3)
 
+  // starts from 0
   let behind = A.slice (-1) 2 ten
   assert (A.length behind = 2)
   assert (get 1 behind = 1)
 
+  // ends until 10
   let beyond = A.slice 7 11 ten
   assert (A.length beyond = 3)
   assert (get 0 beyond = 7)
@@ -141,6 +143,7 @@ let main _ =
   initTest ()
   rangeTest ()
   tryItemTest ()
+  sliceTest ()
   unconsTest ()
   mapTest ()
   chooseTest ()
