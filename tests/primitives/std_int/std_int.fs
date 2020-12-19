@@ -23,11 +23,12 @@ let tryParseTest () =
   assert (parseOk "000" = 0)
   assert (parseOk "0010" = 10)
   assert (parseOk "42" = 42)
-  assert (parseOk "  42 " = 42)
+  assert (parseOk " \t            42             \t " = 42)
   assert (parseOk "+81" = 81)
   assert (parseOk "-1" + 1 = 0)
   assert (parseOk "2147483647" = 2147483647)
   assert (parseOk "-2147483648" + 1 = -2147483647)
+  assert (parseOk "123456789123456789".[0..4] = 12345)
 
   assert (parseError "")
   assert (parseError "   ")

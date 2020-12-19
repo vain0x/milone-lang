@@ -176,8 +176,6 @@ void *milone_mem_alloc(int count, size_t size) {
 // int
 // -----------------------------------------------
 
-static int int_min(int l, int r) { return l < r ? l : r; }
-
 int int_compare(int l, int r) {
     if (l == r)
         return 0;
@@ -351,18 +349,12 @@ int16_t str_to_int16(struct String s) {
 }
 
 bool str_to_int_checked(struct String s, int *value_ptr) {
-    // Copy to temporary buffer.
-    char buf[12] = {};
-    size_t buf_len = (size_t)int_min(s.len, sizeof(buf) - 1);
-    memcpy(buf, s.str, buf_len);
-    assert(buf_len < sizeof(buf) && buf[buf_len] == '\0');
-
-    // Convert.
-    char *endptr = buf + buf_len;
-    long value = strtol(buf, &endptr, 10);
+    char *endptr = (char *)(s.str + s.len);
+    long value = strtol(s.str, &endptr, 10);
     *value_ptr = (int)value;
-    return endptr != buf && str_is_all_spaces(endptr, buf + buf_len) &&
-           errno != ERANGE && INT32_MIN <= value && value <= INT32_MAX;
+    return endptr != s.str && (uintptr_t)(endptr - s.str) <= (uintptr_t)s.len &&
+           str_is_all_spaces(endptr, s.str + s.len) && errno != ERANGE &&
+           INT32_MIN <= value && value <= INT32_MAX;
 }
 
 int str_to_int(struct String s) {

@@ -138,7 +138,7 @@ int tryParseTest_(int arg_) {
     milone_assert((call_7 == 10), 23, 2);
     int call_8 = parseOk_((struct String){.str = "42", .len = 2});
     milone_assert((call_8 == 42), 24, 2);
-    int call_9 = parseOk_((struct String){.str = "  42 ", .len = 5});
+    int call_9 = parseOk_((struct String){.str = " \t            42             \t ", .len = 31});
     milone_assert((call_9 == 42), 25, 2);
     int call_10 = parseOk_((struct String){.str = "+81", .len = 3});
     milone_assert((call_10 == 81), 26, 2);
@@ -148,30 +148,33 @@ int tryParseTest_(int arg_) {
     milone_assert((call_12 == 2147483647), 28, 2);
     int call_13 = parseOk_((struct String){.str = "-2147483648", .len = 11});
     milone_assert(((call_13 + 1) == -2147483647), 29, 2);
-    bool call_14 = parseError_((struct String){.str = "", .len = 0});
-    milone_assert(call_14, 31, 2);
-    bool call_15 = parseError_((struct String){.str = "   ", .len = 3});
+    struct String slice_ = str_get_slice(0, 4, (struct String){.str = "123456789123456789", .len = 18});
+    int call_14 = parseOk_(slice_);
+    milone_assert((call_14 == 12345), 30, 2);
+    bool call_15 = parseError_((struct String){.str = "", .len = 0});
     milone_assert(call_15, 32, 2);
-    bool call_16 = parseError_((struct String){.str = "\0 1", .len = 3});
+    bool call_16 = parseError_((struct String){.str = "   ", .len = 3});
     milone_assert(call_16, 33, 2);
-    bool call_17 = parseError_((struct String){.str = "+ 81", .len = 4});
+    bool call_17 = parseError_((struct String){.str = "\0 1", .len = 3});
     milone_assert(call_17, 34, 2);
-    bool call_18 = parseError_((struct String){.str = "2147483648", .len = 10});
+    bool call_18 = parseError_((struct String){.str = "+ 81", .len = 4});
     milone_assert(call_18, 35, 2);
-    bool call_19 = parseError_((struct String){.str = "-2147483649", .len = 11});
+    bool call_19 = parseError_((struct String){.str = "2147483648", .len = 10});
     milone_assert(call_19, 36, 2);
-    bool call_20 = parseError_((struct String){.str = "0x0", .len = 3});
+    bool call_20 = parseError_((struct String){.str = "-2147483649", .len = 11});
     milone_assert(call_20, 37, 2);
-    bool call_21 = parseError_((struct String){.str = "0.0", .len = 3});
+    bool call_21 = parseError_((struct String){.str = "0x0", .len = 3});
     milone_assert(call_21, 38, 2);
-    bool call_22 = parseError_((struct String){.str = ".0", .len = 2});
+    bool call_22 = parseError_((struct String){.str = "0.0", .len = 3});
     milone_assert(call_22, 39, 2);
-    bool call_23 = parseError_((struct String){.str = "1e9", .len = 3});
+    bool call_23 = parseError_((struct String){.str = ".0", .len = 2});
     milone_assert(call_23, 40, 2);
+    bool call_24 = parseError_((struct String){.str = "1e9", .len = 3});
+    milone_assert(call_24, 41, 2);
     return 0;
 }
 
 int main() {
-    int call_24 = tryParseTest_(0);
+    int call_25 = tryParseTest_(0);
     return 0;
 }
