@@ -526,6 +526,7 @@ type Log =
   | IrrefutablePatNonExhaustiveError
   | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
   | TyBoundError of Trait
+  | TySynonymCycleError
   | RedundantFieldError of ty: Ident * field: Ident
   | MissingFieldsError of ty: Ident * fields: Ident list
   | ArityMismatch of actual: Arity * expected: Arity
@@ -1168,6 +1169,8 @@ let logToString tyDisplay log =
       + "'."
 
   | Log.TyBoundError it -> traitBoundErrorToString tyDisplay it
+
+  | Log.TySynonymCycleError -> "Cyclic type synonym is forbidden."
 
   | Log.RedundantFieldError (recordName, fieldName) ->
       "The field '"

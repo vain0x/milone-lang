@@ -988,6 +988,104 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HModuleExpr _
   | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
+// -----------------------------------------------
+// Reject cyclic synonyms
+// -----------------------------------------------
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private State =
+  | Recursive
+  | Cyclic
+  | Acyclic
+
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type private SynonymCycleCtx =
+  { ExpandMetaOrSynonymTy: TySerial -> Ty option
+    TyState: AssocMap<TySerial, State> }
+
+let private setTyState tySerial state (ctx: SynonymCycleCtx) =
+  { ctx with
+      TyState = ctx.TyState |> mapAdd tySerial state }
+
+let private rcsSynonymTy (ctx: SynonymCycleCtx) tySerial =
+  match ctx.TyState |> mapTryFind tySerial with
+  | Some State.Recursive -> setTyState tySerial State.Cyclic ctx
+
+  | Some _ -> ctx
+
+  | None ->
+      let ctx = setTyState tySerial State.Recursive ctx
+
+      let ctx =
+        match ctx.ExpandMetaOrSynonymTy tySerial with
+        | Some bodyTy -> rcsTy ctx bodyTy
+        | None -> ctx
+
+      match ctx.TyState |> mapTryFind tySerial with
+      | Some State.Recursive -> setTyState tySerial State.Acyclic ctx
+      | _ -> ctx
+
+let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
+  match ty with
+  | ErrorTy _ -> ctx
+
+  | MetaTy (tySerial, _) ->
+      match ctx.ExpandMetaOrSynonymTy tySerial with
+      | Some bodyTy -> rcsTy ctx bodyTy
+      | None -> ctx
+
+  | AppTy (tyCtor, tyArgs) ->
+      let ctx = rcsTys ctx tyArgs
+
+      match tyCtor with
+      | SynonymTyCtor tySerial -> rcsSynonymTy ctx tySerial
+      | _ -> ctx
+
+let private rcsTys ctx tys = List.fold rcsTy ctx tys
+
+let private synonymCycleCheck (tyCtx: TyCtx) =
+  let ctx: SynonymCycleCtx =
+    { ExpandMetaOrSynonymTy =
+        fun tySerial ->
+          match findTy tySerial tyCtx with
+          | MetaTyDef (_, bodyTy, _) -> Some bodyTy
+          | SynonymTyDef (_, _, bodyTy, _) -> Some bodyTy
+          | _ -> None
+
+      TyState = mapEmpty compare }
+
+  let ctx =
+    tyCtx.Tys
+    |> mapFold (fun ctx tySerial (tyDef: TyDef) ->
+         match tyDef with
+         | SynonymTyDef _ -> rcsSynonymTy ctx tySerial
+         | _ -> ctx) ctx
+
+  let tys, logs =
+    ctx.TyState
+    |> mapFold (fun (tys, logs) tySerial state ->
+         match state with
+         | State.Cyclic ->
+             match findTy tySerial tyCtx with
+             | SynonymTyDef (ident, tyArgs, _, loc) ->
+                 // Remove body of cyclic synonym to prevent the synonym expansion
+                 // from running into stack overflow.
+                 let tys =
+                   tys
+                   |> mapAdd tySerial (SynonymTyDef(ident, tyArgs, tyUnit, loc))
+
+                 let logs = (Log.TySynonymCycleError, loc) :: logs
+                 tys, logs
+
+             | _ -> tys, logs
+         | _ -> tys, logs) (tyCtx.Tys, tyCtx.Logs)
+
+  { tyCtx with Tys = tys; Logs = logs }
+
+// -----------------------------------------------
+// Interface
+// -----------------------------------------------
+
 let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx: TyCtx =
     { Serial = scopeCtx.Serial
@@ -1069,6 +1167,8 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
     expr, ctx
 
   let ctx = ctx |> resolveTraitBounds
+
+  let ctx = synonymCycleCheck ctx
 
   // Substitute all types. Unbound types are degenerated here.
   let substOrDegenerate ty =
