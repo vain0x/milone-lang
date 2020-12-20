@@ -34,6 +34,10 @@ bool parseError_(struct String s_2);
 
 int tryParseTest_(int arg_);
 
+static int MinValue_;
+
+static int MaxValue_;
+
 int main();
 
 struct StringList {
@@ -213,6 +217,8 @@ int tryParseTest_(int arg_) {
 }
 
 int main() {
+    MinValue_ = -2147483648;
+    MaxValue_ = 2147483647;
     int call_25 = tryParseTest_(0);
     return 0;
 }
