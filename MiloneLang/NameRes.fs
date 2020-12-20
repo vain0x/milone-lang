@@ -459,17 +459,11 @@ let private finishScope _parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
       { scopeCtx with
           Local = varScopes, tyScopes }
 
-let private resolveScopedVarName scopeSerial name (scopeCtx: ScopeCtx): ValueSymbol option =
-  if scopeSerial = scopeCtx.LocalSerial then
-    // Find from local scope.
-    let varScopes, _ = scopeCtx.Local
-    varScopes
-    |> List.tryPick (fun map -> map |> mapTryFind name)
-  else
-    // Find from namespace.
-    scopeCtx.VarNs
-    |> nsFind scopeSerial
-    |> mapTryFind name
+// Find from namespace of type (not local).
+let private resolveScopedVarName tySymbol name (scopeCtx: ScopeCtx): ValueSymbol option =
+  scopeCtx.VarNs
+  |> nsFind (tySymbolToSerial tySymbol)
+  |> mapTryFind name
 
 // Find from namespace (not local).
 let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySymbol option =
@@ -479,8 +473,9 @@ let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySymbol 
   |> mapTryFind name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
-  scopeCtx
-  |> resolveScopedVarName scopeCtx.LocalSerial name
+  let varScopes, _ = scopeCtx.Local
+  varScopes
+  |> List.tryPick (fun map -> map |> mapTryFind name)
 
 let private resolveLocalTyName name (scopeCtx: ScopeCtx) =
   let _, tyScopes = scopeCtx.Local
@@ -970,11 +965,7 @@ let private nameResNavPat pat ctx =
   let patOpt =
     resolvePatAsScope l ctx
     |> List.tryPick (fun tySymbol ->
-         let varSymbolOpt =
-           ctx
-           |> resolveScopedVarName (tySymbolToSerial tySymbol) r
-
-         match varSymbolOpt with
+         match ctx |> resolveScopedVarName tySymbol r with
          | Some (VariantSymbol variantSerial) -> Some(HVariantPat(variantSerial, ty, loc))
          | _ -> None)
 
@@ -1238,8 +1229,7 @@ let private nameResNavExpr expr ctx =
               let varSymbolOpt =
                 lTySymbols
                 |> List.tryPick (fun lTySymbol ->
-                     match ctx
-                           |> resolveScopedVarName (tySymbolToSerial lTySymbol) r with
+                     match ctx |> resolveScopedVarName lTySymbol r with
                      | None -> None
                      | it -> it)
 
