@@ -132,9 +132,6 @@ let private nsAdd (key: Serial) (ident: Ident) value (ns: Ns<_, _>): Ns<_, _> =
 // Scopes
 // --------------------------------------------
 
-// FIXME: Not used?
-type private ScopeSerial = Serial
-
 /// Stack of local scopes.
 type private ScopeChain<'T> = AssocMap<Ident, 'T> list
 
@@ -190,9 +187,6 @@ type ScopeCtx =
     /// Types contained by types.
     TyNs: Ns<TySerial, TySymbol>
 
-    ///Serial of the current scope.
-    LocalSerial: ScopeSerial
-
     /// Current scope.
     Local: Scope
 
@@ -208,7 +202,6 @@ type ScopeCtx =
 
 let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
   let (NameCtx (nameMap, serial)) = nameCtx
-  let (localSerial as serial) = serial + 1
 
   { Serial = serial
     NameMap = nameMap
@@ -223,7 +216,6 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     TyDepths = mapEmpty compare
     VarNs = mapEmpty compare
     TyNs = mapEmpty compare
-    LocalSerial = localSerial
     Local = scopeEmpty ()
     PatScope = mapEmpty compare
     LetDepth = 0
@@ -440,17 +432,12 @@ let private leaveLetInit (scopeCtx: ScopeCtx): ScopeCtx =
       LetDepth = scopeCtx.LetDepth - 1 }
 
 /// Starts a new scope.
-let private startScope (scopeCtx: ScopeCtx): ScopeSerial * ScopeCtx =
-  let parentSerial = scopeCtx.LocalSerial
+let private startScope (scopeCtx: ScopeCtx): ScopeCtx =
+  let varScopes, tyScopes = scopeCtx.Local
+  { scopeCtx with
+      Local = scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes }
 
-  let scopeCtx =
-    let varScopes, tyScopes = scopeCtx.Local
-    { scopeCtx with
-        Local = scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes }
-
-  parentSerial, scopeCtx
-
-let private finishScope _parentSerial (scopeCtx: ScopeCtx): ScopeCtx =
+let private finishScope (scopeCtx: ScopeCtx): ScopeCtx =
   match scopeCtx.Local with
   | [], _
   | _, [] -> failwith "NEVER: Scope can't be empty."
@@ -465,11 +452,10 @@ let private resolveScopedVarName tySymbol name (scopeCtx: ScopeCtx): ValueSymbol
   |> nsFind (tySymbolToSerial tySymbol)
   |> mapTryFind name
 
-// Find from namespace (not local).
-let private resolveScopedTyName scopeSerial name (scopeCtx: ScopeCtx): TySymbol option =
-  assert (scopeSerial <> scopeCtx.LocalSerial)
+// Find from namespace of type (not local).
+let private resolveScopedTyName tySerial name (scopeCtx: ScopeCtx): TySymbol option =
   scopeCtx.TyNs
-  |> nsFind scopeSerial
+  |> nsFind tySerial
   |> mapTryFind name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
@@ -725,7 +711,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
   | UniversalTyDef _ -> ctx
 
   | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
-      let parent, ctx = ctx |> startScope
+      let ctx = ctx |> startScope
 
       let ctx =
         tyArgs
@@ -735,7 +721,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
              |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc))) ctx
 
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
-      let ctx = ctx |> finishScope parent
+      let ctx = ctx |> finishScope
 
       ctx
       |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
@@ -1301,11 +1287,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let arms, ctx =
           (arms, ctx)
           |> stMap (fun ((pat, guard, body), ctx) ->
-               let parent, ctx = ctx |> startScope
+               let ctx = ctx |> startScope
                let pat, ctx = (pat, ctx) |> nameResRefutablePat
                let guard, ctx = (guard, ctx) |> nameResExpr
                let body, ctx = (body, ctx) |> nameResExpr
-               let ctx = ctx |> finishScope parent
+               let ctx = ctx |> finishScope
                (pat, guard, body), ctx)
 
         HMatchExpr(cond, arms, ty, loc), ctx
@@ -1335,16 +1321,16 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
-          let parent, ctx = ctx |> startScope
+          let ctx = ctx |> startScope
           let body, ctx = (body, ctx) |> nameResExpr
-          let ctx = ctx |> finishScope parent
+          let ctx = ctx |> finishScope
           body, ctx
 
         let pat, next, ctx =
-          let parent, ctx = ctx |> startScope
+          let ctx = ctx |> startScope
           let pat, ctx = (pat, ctx) |> nameResIrrefutablePat
           let next, ctx = (next, ctx) |> nameResExpr
-          let ctx = ctx |> finishScope parent
+          let ctx = ctx |> finishScope
           pat, next, ctx
 
         HLetValExpr(vis, pat, body, next, ty, loc), ctx
@@ -1353,7 +1339,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HLetFunExpr (serial, vis, pats, body, next, ty, loc) ->
       let doArm () =
-        let parent, ctx = ctx |> startScope
+        let ctx = ctx |> startScope
         let ctx = ctx |> enterLetInit
 
         // Define the function itself for recursive referencing.
@@ -1363,18 +1349,18 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let pats, body, ctx =
           // Introduce a function body scope.
-          let parent, ctx = ctx |> startScope
+          let ctx = ctx |> startScope
 
           let pats, ctx =
             (pats, ctx) |> stMap nameResIrrefutablePat
 
           let body, ctx = (body, ctx) |> nameResExpr
-          let ctx = ctx |> finishScope parent
+          let ctx = ctx |> finishScope
           pats, body, ctx
 
         let ctx = ctx |> leaveLetInit
         let next, ctx = (next, ctx) |> nameResExpr
-        let ctx = ctx |> finishScope parent
+        let ctx = ctx |> finishScope
 
         HLetFunExpr(serial, vis, pats, body, next, ty, loc), ctx
 
@@ -1424,14 +1410,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
           |> importTy (ModuleTySymbol serial)
 
-        let parent, ctx = ctx |> startScope
+        let ctx = ctx |> startScope
 
         let body, ctx =
           (body, ctx)
           |> stMap (collectDecls (Some serial))
           |> stMap nameResExpr
 
-        let ctx = ctx |> finishScope parent
+        let ctx = ctx |> finishScope
 
         // HACK: MiloneOnly is auto-open.
         let ctx =
