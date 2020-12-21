@@ -7,6 +7,5 @@
     <Compile Include="../../MiloneLang/FSharpOnly.fs" />
     <Compile Include="Ffi.fs" />
     <Compile Include="CmdCat.fs" />
-    <!-- <Compile Include="Program.fs" /> -->
   </ItemGroup>
 </Project>

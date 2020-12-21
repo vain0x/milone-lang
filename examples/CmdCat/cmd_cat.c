@@ -10,8 +10,6 @@
 
 #include <milone.h>
 
-char const *str_as_ptr(struct String s) { return s.str; }
-
 // -----------------------------------------------
 // buffer
 // -----------------------------------------------
