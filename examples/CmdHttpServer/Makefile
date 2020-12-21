@@ -6,7 +6,7 @@
 MILONE_RUNTIME := ${HOME}/.milone/runtime
 
 target/serve: target/cmd_http_server.c cmd_http_server.c
-	gcc -std=c11 -g \
+	gcc -std=gnu11 -g \
 		-Wall -Wextra -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-parameter -Wno-unused-but-set-parameter \
 		-I ${MILONE_RUNTIME} \
 		${MILONE_RUNTIME}/milone.c \

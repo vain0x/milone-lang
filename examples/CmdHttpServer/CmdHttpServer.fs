@@ -1,5 +1,5 @@
 module rec CmdHttpServer.EntryPoint
 
-let main _ =
-  printfn "Hello, world!"
-  0
+open CmdHttpServer.Ffi
+
+let main _ = __nativeFun "do_serve"
