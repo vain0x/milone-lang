@@ -814,7 +814,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let next, ctx = (next, ctx) |> goExpr
         HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
-    | HLetFunExpr (funSerial, vis, args, body, next, ty, loc) ->
+    | HLetFunExpr (funSerial, isRec, vis, args, body, next, ty, loc) ->
         let ctx =
           let name =
             ctx |> findName (funSerialToInt funSerial)
@@ -829,7 +829,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           |> addVarToModule vis (FunSymbol funSerial)
 
         let next, ctx = (next, ctx) |> goExpr
-        HLetFunExpr(funSerial, vis, args, body, next, ty, loc), ctx
+        HLetFunExpr(funSerial, isRec, vis, args, body, next, ty, loc), ctx
 
     | HBlockExpr (stmts, last) ->
         let stmts, ctx = (stmts, ctx) |> stMap goExpr
@@ -1337,32 +1337,47 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HLetFunExpr (serial, vis, pats, body, next, ty, loc) ->
+  | HLetFunExpr (serial, isRec, vis, pats, body, next, ty, loc) ->
       let doArm () =
         let ctx = ctx |> startScope
-        let ctx = ctx |> enterLetInit
-
-        // Define the function itself for recursive referencing.
-        // FIXME: Functions are recursive even if `rec` is missing.
-        let ctx =
-          ctx |> defineFunUniquely serial pats noTy loc
 
         let pats, body, ctx =
-          // Introduce a function body scope.
-          let ctx = ctx |> startScope
+          match isRec with
+          | IsRec ->
+              // Define the function itself for recursive referencing.
+              let ctx =
+                ctx
+                |> enterLetInit
+                |> defineFunUniquely serial pats noTy loc
+                |> startScope
 
-          let pats, ctx =
-            (pats, ctx) |> stMap nameResIrrefutablePat
+              let pats, ctx =
+                (pats, ctx) |> stMap nameResIrrefutablePat
 
-          let body, ctx = (body, ctx) |> nameResExpr
-          let ctx = ctx |> finishScope
-          pats, body, ctx
+              let body, ctx = (body, ctx) |> nameResExpr
+              let ctx = ctx |> finishScope |> leaveLetInit
+              pats, body, ctx
 
-        let ctx = ctx |> leaveLetInit
+          | NotRec ->
+              let ctx = ctx |> enterLetInit |> startScope
+
+              let pats, ctx =
+                (pats, ctx) |> stMap nameResIrrefutablePat
+
+              let body, ctx = (body, ctx) |> nameResExpr
+
+              let ctx =
+                ctx
+                |> finishScope
+                |> defineFunUniquely serial pats noTy loc
+                |> leaveLetInit
+
+              pats, body, ctx
+
         let next, ctx = (next, ctx) |> nameResExpr
         let ctx = ctx |> finishScope
 
-        HLetFunExpr(serial, vis, pats, body, next, ty, loc), ctx
+        HLetFunExpr(serial, isRec, vis, pats, body, next, ty, loc), ctx
 
       doArm ()
 

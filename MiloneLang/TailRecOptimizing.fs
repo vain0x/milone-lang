@@ -108,14 +108,14 @@ let private troExpr isTail (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
           ctx
           |> withCurrentFun callee (fun ctx -> troExpr IsTail (body, ctx))
 
         let next, ctx = troExpr isTail (next, ctx)
-        HLetFunExpr(callee, vis, args, body, next, ty, loc), ctx
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
 
       doArm ()
 

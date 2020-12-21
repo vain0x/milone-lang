@@ -222,7 +222,7 @@ let private containsTailRec expr =
 
   | HLetValExpr (_, _, _, next, _, _) -> next |> containsTailRec
 
-  | HLetFunExpr (_, _, _, _, next, _, _) -> next |> containsTailRec
+  | HLetFunExpr (_, _, _, _, _, next, _, _) -> next |> containsTailRec
 
   | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _
@@ -1438,10 +1438,10 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
 
       mirifyExpr (doArm ()) next
 
-  | HLetFunExpr (_, _, _, _, next, _, _) ->
+  | HLetFunExpr (_, _, _, _, _, next, _, _) ->
       let doArm () =
         match expr with
-        | HLetFunExpr (funSerial, _, argPats, body, _, _, loc) ->
+        | HLetFunExpr (funSerial, _, _, argPats, body, _, _, loc) ->
             mirifyExprLetFunContents ctx funSerial argPats body loc
         | _ -> failwith "NEVER"
 

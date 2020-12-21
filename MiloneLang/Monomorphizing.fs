@@ -248,11 +248,11 @@ let private monifyFunExpr ctx funSerial useSiteTy =
 
         funSerial, ctx
 
-let private monifyLetFunExpr (ctx: MonoCtx) callee vis args body next ty loc =
+let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty loc =
   let genericFunSerial = callee
 
   let letGenericFunExpr =
-    HLetFunExpr(callee, vis, args, body, next, ty, loc)
+    HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
   let rec go next arity genericFunTy useSiteTys ctx =
     match useSiteTys with
@@ -274,7 +274,7 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee vis args body next ty loc =
               addMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
 
             let next =
-              HLetFunExpr(monoFunSerial, vis, monoArgs, monoBody, next, ty, loc)
+              HLetFunExpr(monoFunSerial, isRec, vis, monoArgs, monoBody, next, ty, loc)
 
             go next arity genericFunTy useSiteTys ctx
 
@@ -345,11 +345,11 @@ let private monifyExpr (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       let doArm () =
         let body, ctx = (body, ctx) |> monifyExpr
         let next, ctx = (next, ctx) |> monifyExpr
-        monifyLetFunExpr ctx callee vis args body next ty loc
+        monifyLetFunExpr ctx callee isRec vis args body next ty loc
 
       doArm ()
 

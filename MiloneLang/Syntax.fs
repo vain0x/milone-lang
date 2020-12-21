@@ -25,6 +25,12 @@ type Vis =
   | PrivateVis
   | PublicVis
 
+/// Is recursive?
+[<NoEquality; NoComparison>]
+type IsRec =
+  | IsRec
+  | NotRec
+
 /// Literal of primitive, non-generic value.
 [<Struct; NoEquality; NoComparison>]
 type Lit =
@@ -344,8 +350,8 @@ type AFieldDecl = Ident * ATy * Pos
 /// Let expression in AST.
 [<NoEquality; NoComparison>]
 type ALet =
-  | ALetVal of Vis * APat * AExpr * AExpr * Pos
-  | ALetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
+  | ALetVal of IsRec * Vis * APat * AExpr * AExpr * Pos
+  | ALetFun of IsRec * Vis * Ident * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
 [<NoEquality; NoComparison>]
@@ -410,18 +416,18 @@ type AExpr =
   | ASemiExpr of AExpr list * AExpr * Pos
 
   /// (pattern, initializer, next). Let-in expression.
-  | ALetExpr of Vis * APat * AExpr * AExpr * Pos
+  | ALetExpr of IsRec * Vis * APat * AExpr * AExpr * Pos
 
 [<NoEquality; NoComparison>]
 type ALetDecl =
-  | ALetFunDecl of Vis * Ident * APat list * AExpr * Pos
-  | ALetValDecl of Vis * APat * AExpr * Pos
+  | ALetFunDecl of IsRec * Vis * Ident * APat list * AExpr * Pos
+  | ALetValDecl of IsRec * Vis * APat * AExpr * Pos
 
 [<NoEquality; NoComparison>]
 type ADecl =
   | AExprDecl of AExpr
 
-  | ALetDecl of Vis * APat * AExpr * Pos
+  | ALetDecl of IsRec * Vis * APat * AExpr * Pos
 
   /// Type synonym declaration, e.g. `type UserId = int`.
   | ATySynonymDecl of Vis * Ident * tyArgs: Ident list * ATy * Pos

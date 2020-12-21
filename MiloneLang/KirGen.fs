@@ -848,7 +848,7 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
 
   | HLetValExpr (_vis, pat, init, next, _, loc) -> kgLetValExpr pat init next loc hole ctx
 
-  | HLetFunExpr (funSerial, _vis, args, body, next, _, loc) -> kgLetFunExpr funSerial args body next loc hole ctx
+  | HLetFunExpr (funSerial, _, _, args, body, next, _, loc) -> kgLetFunExpr funSerial args body next loc hole ctx
 
   | HTyDeclExpr _
   | HOpenExpr _ ->

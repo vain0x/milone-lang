@@ -30,9 +30,9 @@ let private isMainFun serial mainFunOpt =
 let private hoistMainExpr mainFunOpt expr =
   let rec go expr =
     match expr with
-    | HLetFunExpr (serial, vis, args, body, next, ty, loc) when isMainFun serial mainFunOpt ->
+    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, loc) when isMainFun serial mainFunOpt ->
         let makeMain rest =
-          HLetFunExpr(serial, vis, args, hxSemi [ rest; body ] loc, next, ty, loc)
+          HLetFunExpr(serial, isRec, vis, args, hxSemi [ rest; body ] loc, next, ty, loc)
 
         next, makeMain
 
@@ -44,9 +44,9 @@ let private hoistMainExpr mainFunOpt expr =
         let next, f = go next
         HLetValExpr(vis, pat, init, next, ty, loc), f
 
-    | HLetFunExpr (serial, vis, args, body, next, ty, loc) ->
+    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, loc) ->
         let next, f = go next
-        HLetFunExpr(serial, vis, args, body, next, ty, loc), f
+        HLetFunExpr(serial, isRec, vis, args, body, next, ty, loc), f
 
     | _ -> expr, id
 

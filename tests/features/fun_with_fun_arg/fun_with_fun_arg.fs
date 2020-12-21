@@ -13,7 +13,7 @@ let main _ =
 
   let d = "'"
   // Capturing `d`.
-  let der (n: int) (f: string) =
+  let rec der (n: int) (f: string) =
     if n = 0 then printfn "%s" f else der (n - 1) (f + d)
 
   let der2 = bindInt der 2

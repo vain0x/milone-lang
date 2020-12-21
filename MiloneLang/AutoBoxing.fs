@@ -645,13 +645,13 @@ let private abExpr ctx expr =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       let doArm () =
         let args = args |> List.map (abPat ctx)
         let body = body |> abExpr ctx
         let next = next |> abExpr ctx
         let ty = ty |> abTy ctx
-        HLetFunExpr(callee, vis, args, body, next, ty, loc)
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
       doArm ()
 

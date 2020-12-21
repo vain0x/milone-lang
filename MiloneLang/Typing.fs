@@ -927,7 +927,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
   let ctx = generalizeFun ctx outerLetDepth callee
 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
-  HLetFunExpr(callee, vis, argPats, body, next, nextTy, loc), nextTy, ctx
+  HLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
 
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
   let fail () = failwithf "NEVER: %A" expr
@@ -957,7 +957,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
 
   | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt vis pat body next loc
 
-  | HLetFunExpr (oldSerial, vis, args, body, next, _, loc) ->
+  | HLetFunExpr (oldSerial, _, vis, args, body, next, _, loc) ->
       inferLetFunExpr ctx expectOpt oldSerial vis args body next loc
 
   | HTyDeclExpr _

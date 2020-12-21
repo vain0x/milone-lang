@@ -137,7 +137,7 @@ let private desugarFun pats body pos =
   let name = "fun"
   let pat = AFunDeclPat(name, pats, pos)
   let next = AIdentExpr(name, pos)
-  ALetExpr(PrivateVis, pat, body, next, pos)
+  ALetExpr(NotRec, PrivateVis, pat, body, next, pos)
 
 /// Desugar `-x`.
 ///
@@ -147,8 +147,7 @@ let private desugarUniNeg arg =
   match arg with
   | AUnaryExpr (NegUnary, arg, _) -> Some arg
 
-  | ALitExpr (IntLit text, pos) ->
-      ALitExpr(IntLit("-" + text), pos) |> Some
+  | ALitExpr (IntLit text, pos) -> ALitExpr(IntLit("-" + text), pos) |> Some
 
   | ALitExpr (FloatLit text, pos) -> ALitExpr(FloatLit("-" + text), pos) |> Some
 
@@ -197,25 +196,25 @@ let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 /// Let to let-val:
 /// `let pat = body` ==>
 ///   `let-val pat = body`
-let private desugarLet vis pat body next pos =
+let private desugarLet isRec vis pat body next pos =
   match pat with
   | AAnnoPat (pat, annoTy, annoLoc) ->
       let body = AAnnoExpr(body, annoTy, annoLoc)
-      desugarLet vis pat body next pos
+      desugarLet isRec vis pat body next pos
 
-  | AFunDeclPat (name, args, _) -> ALetFun(vis, name, args, body, next, pos)
+  | AFunDeclPat (name, args, _) -> ALetFun(isRec, vis, name, args, body, next, pos)
 
-  | _ -> ALetVal(vis, pat, body, next, pos)
+  | _ -> ALetVal(isRec, vis, pat, body, next, pos)
 
-let private desugarLetDecl vis pat body pos =
+let private desugarLetDecl isRec vis pat body pos =
   match pat with
   | AAnnoPat (pat, annoTy, annoLoc) ->
       let body = AAnnoExpr(body, annoTy, annoLoc)
-      desugarLetDecl vis pat body pos
+      desugarLetDecl isRec vis pat body pos
 
-  | AFunDeclPat (name, args, _) -> ALetFunDecl(vis, name, args, body, pos)
+  | AFunDeclPat (name, args, _) -> ALetFunDecl(isRec, vis, name, args, body, pos)
 
-  | _ -> ALetValDecl(vis, pat, body, pos)
+  | _ -> ALetValDecl(isRec, vis, pat, body, pos)
 
 let private tyUnresolved serial argTys = AppTy(UnresolvedTyCtor serial, argTys)
 
@@ -555,22 +554,23 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | ALetExpr (vis, pat, body, next, pos) ->
+  | ALetExpr (isRec, vis, pat, body, next, pos) ->
       let doArm () =
-        match desugarLet vis pat body next pos with
-        | ALetFun (vis, name, args, body, next, pos) ->
+        match desugarLet isRec vis pat body next pos with
+        | ALetFun (isRec, vis, name, args, body, next, pos) ->
             let serial, nameCtx = nameCtx |> nameCtxAdd name
             let args, nameCtx = (args, nameCtx) |> stMap (athPat docId)
             let body, nameCtx = (body, nameCtx) |> athExpr docId
             let next, nameCtx = (next, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HLetFunExpr(FunSerial serial, vis, args, body, next, noTy, loc), nameCtx
+            HLetFunExpr(FunSerial serial, isRec, vis, args, body, next, noTy, loc), nameCtx
 
-        | ALetVal (vis, pat, body, next, pos) ->
+        | ALetVal (isRec, vis, pat, body, next, pos) ->
             let pat, nameCtx = (pat, nameCtx) |> athPat docId
             let body, nameCtx = (body, nameCtx) |> athExpr docId
             let next, nameCtx = (next, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
+            // FIXME: let rec for let-val is error. No way to report it for now...
             HLetValExpr(vis, pat, body, next, noTy, loc), nameCtx
 
       doArm ()
@@ -583,20 +583,21 @@ let private athDecl docId (decl, nameCtx) =
       let expr, nameCtx = (expr, nameCtx) |> athExpr docId
       prepend expr, nameCtx
 
-  | ALetDecl (vis, pat, body, pos) ->
+  | ALetDecl (isRec, vis, pat, body, pos) ->
       let doArm () =
-        match desugarLetDecl vis pat body pos with
-        | ALetFunDecl (vis, name, args, body, pos) ->
+        match desugarLetDecl isRec vis pat body pos with
+        | ALetFunDecl (isRec, vis, name, args, body, pos) ->
             let serial, nameCtx = nameCtx |> nameCtxAdd name
             let args, nameCtx = (args, nameCtx) |> stMap (athPat docId)
             let body, nameCtx = (body, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            (fun next -> [ HLetFunExpr(FunSerial serial, vis, args, body, hxSemi next loc, noTy, loc) ]), nameCtx
+            (fun next -> [ HLetFunExpr(FunSerial serial, isRec, vis, args, body, hxSemi next loc, noTy, loc) ]), nameCtx
 
-        | ALetValDecl (vis, pat, body, pos) ->
+        | ALetValDecl (isRec, vis, pat, body, pos) ->
             let pat, nameCtx = (pat, nameCtx) |> athPat docId
             let body, nameCtx = (body, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
+            // FIXME: let rec for let-val is error, no way to report.
             (fun next -> [ HLetValExpr(vis, pat, body, hxSemi next loc, noTy, loc) ]), nameCtx
 
       doArm ()

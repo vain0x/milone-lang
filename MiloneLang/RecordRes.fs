@@ -243,11 +243,11 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       let doArm () =
         let body = body |> teExpr ctx
         let next = next |> teExpr ctx
-        HLetFunExpr(callee, vis, args, body, next, ty, loc)
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
       doArm ()
 

@@ -379,7 +379,7 @@ let private ccFunExpr refVarSerial refTy refLoc ctx =
 
   refExpr, ctx
 
-let private ccLetFunExpr callee vis args body next ty loc ctx =
+let private ccLetFunExpr callee isRec vis args body next ty loc ctx =
   let args, body, ctx =
     let baseCtx = ctx
     let ctx = ctx |> enterFunDecl
@@ -394,7 +394,7 @@ let private ccLetFunExpr callee vis args body next ty loc ctx =
     ctx |> genFunCaps callee |> capsAddToFunPats args
 
   let next, ctx = (next, ctx) |> ccExpr
-  HLetFunExpr(callee, vis, args, body, next, ty, loc), ctx
+  HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -485,7 +485,7 @@ let private ccExpr (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, args, body, next, ty, loc) -> ccLetFunExpr callee vis args body next ty loc ctx
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) -> ccLetFunExpr callee isRec vis args body next ty loc ctx
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"

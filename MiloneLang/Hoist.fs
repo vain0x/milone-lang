@@ -58,9 +58,9 @@ let private hxAccAdd expr exprAcc =
 let private hxAccToExpr next exprAcc =
   let withNext next letExpr =
     match letExpr with
-    | HLetFunExpr (callee, vis, args, body, oldNext, ty, loc) ->
+    | HLetFunExpr (callee, isRec, vis, args, body, oldNext, ty, loc) ->
         assert (oldNext |> hxIsUnitLit)
-        HLetFunExpr(callee, vis, args, body, next, ty, loc)
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
     | _ -> failwith "Never"
 
@@ -148,7 +148,7 @@ let private hoistExprLocal (expr, ctx) =
 
   expr, ctx
 
-let private hoistExprLetFunMain callee vis args body next ty loc ctx =
+let private hoistExprLetFunMain callee isRec vis args body next ty loc ctx =
   let body, ctx = (body, ctx) |> hoistExprLocal
 
   // Go until the end to accumulate all expressions to the context.
@@ -160,15 +160,15 @@ let private hoistExprLetFunMain callee vis args body next ty loc ctx =
     // so that they evaluate at the beginning of the program.
     let body, ctx = ctx |> takeExprs body
 
-    HLetFunExpr(callee, vis, args, body, next, ty, loc), ctx
+    HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
 
   // Append the `main` to other declarations
   // to reconstruct the whole expressions.
   ctx |> takeDecls mainFunExpr
 
-let private hoistExprLetFun callee vis args body next ty loc ctx =
+let private hoistExprLetFun callee isRec vis args body next ty loc ctx =
   if ctx |> isMainFun callee then
-    hoistExprLetFunMain callee vis args body next ty loc ctx
+    hoistExprLetFunMain callee isRec vis args body next ty loc ctx
   else
     let body, ctx = (body, ctx) |> hoistExprLocal
 
@@ -176,7 +176,7 @@ let private hoistExprLetFun callee vis args body next ty loc ctx =
       // Replace the `next` with a placeholder,
       // which is replaced with actual expressions again at the end.
       let next = hxDummy
-      HLetFunExpr(callee, vis, args, body, next, ty, loc)
+      HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
     let ctx = ctx |> addDecl expr
 
@@ -227,7 +227,7 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, args, body, next, ty, loc) -> hoistExprLetFun callee vis args body next ty loc ctx
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) -> hoistExprLetFun callee isRec vis args body next ty loc ctx
 
   | HTyDeclExpr _ ->
       let doArm () =

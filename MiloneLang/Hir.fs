@@ -470,7 +470,7 @@ type HExpr =
   | HBlockExpr of HExpr list * HExpr
 
   | HLetValExpr of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
   /// Type declaration.
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
@@ -987,7 +987,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HInfExpr (_, _, ty, a) -> ty, a
   | HBlockExpr (_, last) -> exprExtract last
   | HLetValExpr (_, _, _, _, ty, a) -> ty, a
-  | HLetFunExpr (_, _, _, _, _, ty, a) -> ty, a
+  | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
   | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
   | HModuleExpr (_, _, a) -> tyUnit, a
@@ -1023,8 +1023,8 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, List.map go args, f resultTy, g a)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
-    | HLetFunExpr (serial, vis, args, body, next, ty, a) ->
-        HLetFunExpr(serial, vis, List.map goPat args, go body, go next, f ty, g a)
+    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
+        HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
     | HModuleExpr (name, body, a) -> HModuleExpr(name, List.map go body, g a)

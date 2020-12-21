@@ -298,8 +298,8 @@ let private expectRightAttr (tokens, errors) =
 
 let private eatRec tokens =
   match tokens with
-  | (RecToken, _) :: tokens -> tokens
-  | _ -> tokens
+  | (RecToken, _) :: tokens -> IsRec, tokens
+  | _ -> NotRec, tokens
 
 let private eatVis tokens =
   match tokens with
@@ -949,6 +949,7 @@ let private parseFun basePos funPos (tokens, errors) =
 let private parseLet letPos (tokens, errors) =
   let innerBasePos = letPos |> posAddX 1
 
+  let isRec, tokens = eatRec tokens
   let vis, tokens = eatVis tokens
 
   let pat, tokens, errors =
@@ -970,8 +971,7 @@ let private parseLet letPos (tokens, errors) =
 
     | tokens -> ATupleExpr([], letPos), tokens, errors
 
-  ALetExpr(vis, pat, body, next, letPos), tokens, errors
-
+  ALetExpr(isRec, vis, pat, body, next, letPos), tokens, errors
 
 /// `payload-ty = labeled-ty ( '*' labeled-ty )*`
 /// `labeled-ty = ( ident ':' )? ty-suffix`
@@ -1067,12 +1067,7 @@ let private parseTyDeclBody basePos (tokens, errors) =
 
 let private parseStmt basePos (tokens, errors) =
   match tokens with
-  | (LetToken, letPos) :: (RecToken, _) :: tokens ->
-      // FIXME: use `rec`
-      parseLet letPos (tokens, errors)
-
   | (LetToken, letPos) :: tokens -> parseLet letPos (tokens, errors)
-
   | _ -> parseExpr basePos (tokens, errors)
 
 /// Parses a sequence of statements.
@@ -1127,7 +1122,7 @@ let private parseItems basePos (tokens, errors) =
 let private parseLetDecl letPos (tokens, errors) =
   let innerBasePos = letPos |> posAddX 1
 
-  let tokens = eatRec tokens
+  let isRec, tokens = eatRec tokens
   let vis, tokens = eatVis tokens
 
   let pat, tokens, errors =
@@ -1138,7 +1133,7 @@ let private parseLetDecl letPos (tokens, errors) =
     | (EqToken, equalPos) :: tokens -> parseSemi innerBasePos equalPos (tokens, errors)
     | _ -> parseExprError "Missing '='" (tokens, errors)
 
-  Some(ALetDecl(vis, pat, init, letPos)), tokens, errors
+  Some(ALetDecl(isRec, vis, pat, init, letPos)), tokens, errors
 
 let private parseTyDecl typePos (tokens, errors) =
   let basePos = typePos |> posAddX 1
