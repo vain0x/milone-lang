@@ -81,7 +81,10 @@ Not all of F# features are supported. Features for functional-style programming 
     - `printfn` with `%s`, `%d`
     - Some file IOs
 
-See [the tests/examples directory](./tests/examples) for working codes.
+See also:
+
+- [the tests/examples directory](./tests/examples) for working codes
+- [the docs/refs directory](./docs/refs/) for detailed references
 
 ## Internals
 
