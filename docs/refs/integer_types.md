@@ -105,4 +105,4 @@ Typing rules:
 
 ## Runtime representation
 
-Currently, `int` is `int` in C. For other types, [Fixed width integer types](https://en.cppreference.com/w/c/types/integer) are used. `nativeint` is `intptr_t`, `unativeint` is `uintptr_t`.
+Currently, `int` in milone-lang is converted to `int` in C. For other types, [Fixed width integer types](https://en.cppreference.com/w/c/types/integer) are used. `nativeint` is `intptr_t`, `unativeint` is `uintptr_t`.

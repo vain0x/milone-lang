@@ -51,3 +51,17 @@ List literal can be used as a pattern.
 ```fsharp
     | [ first; second ] -> ...
 ```
+
+## Runtime representation
+
+Currently, list types are represented by intrusive linked list structure like this:
+
+```c
+// int list ==> struct IntList const *
+struct IntList {
+    int head;
+    struct IntList const *tail;
+};
+```
+
+Especially, `[]` is `NULL`. Each cons object is allocated on heap.

@@ -17,4 +17,4 @@ Float supports arithmetic operations (`(+)` etc.) and comparison operations (`(=
 
 ## Runtime representation
 
-- `float` in milone-lang is same as `double` in C.
+Currently, `float` in milone-lang is converted to `double` in C.
