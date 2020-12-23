@@ -25,7 +25,7 @@ Built-in container types:
 User-defined types:
 
 - [discriminated union types (DU)](./discriminated_union_types.md)
-- ~~record types~~
+- [record types](./record_types.md)
 
 ## Others
 
