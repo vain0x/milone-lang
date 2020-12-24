@@ -567,12 +567,14 @@ let tyTuple tys = AppTy(TupleTyCtor, tys)
 
 let tyList ty = AppTy(ListTyCtor, [ ty ])
 
-let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
+let tyFun sourceTy targetTy =
+  AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
 let tyConstPtr itemTy =
   AppTy(NativePtrTyCtor IsConst, [ itemTy ])
 
-let tyNativePtr itemTy = AppTy(NativePtrTyCtor IsMut, [ itemTy ])
+let tyNativePtr itemTy =
+  AppTy(NativePtrTyCtor IsMut, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
   AppTy(NativeFunTyCtor, List.append paramTys [ resultTy ])
@@ -894,9 +896,10 @@ let private doNormalizePats pats =
       let headPats = patNormalize headPat
 
       doNormalizePats tailPats
-      |> List.collect (fun tailPats ->
-           headPats
-           |> List.map (fun headPat -> headPat :: tailPats))
+      |> List.collect
+           (fun tailPats ->
+             headPats
+             |> List.map (fun headPat -> headPat :: tailPats))
 
 /// Gets whether a pattern is clearly exhaustive, that is,
 /// pattern matching on it always succeeds (assuming type check is passing).
@@ -962,7 +965,8 @@ let hxTuple items loc =
 
 let hxUnit loc = hxTuple [] loc
 
-let hxNil itemTy loc = HPrimExpr(HPrim.Nil, tyList itemTy, loc)
+let hxNil itemTy loc =
+  HPrimExpr(HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with

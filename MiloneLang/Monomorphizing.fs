@@ -145,12 +145,14 @@ let private findFunName funSerial (ctx: MonoCtx) = (ctx.Funs |> mapFind funSeria
 let private forceGeneralizeFuns (ctx: MonoCtx) =
   let funs =
     ctx.Funs
-    |> mapFold (fun funs funSerial (funDef: FunDef) ->
-         let (TyScheme (_, ty)) = funDef.Ty
-         let fvs = ty |> tyCollectFreeVars
+    |> mapFold
+         (fun funs funSerial (funDef: FunDef) ->
+           let (TyScheme (_, ty)) = funDef.Ty
+           let fvs = ty |> tyCollectFreeVars
 
-         funs
-         |> mapAdd funSerial { funDef with Ty = TyScheme(fvs, ty) }) ctx.Funs
+           funs
+           |> mapAdd funSerial { funDef with Ty = TyScheme(fvs, ty) })
+         ctx.Funs
 
   { ctx with Funs = funs }
 
@@ -160,6 +162,7 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
 
   let funDef: FunDef =
     let name = ctx |> findFunName genericFunSerial
+
     { Name = name
       Arity = arity
       Ty = TyScheme([], useSiteTy)
@@ -237,6 +240,7 @@ let private takeMarkedTys (ctx: MonoCtx) funSerial =
 let private monifyFunExpr ctx funSerial useSiteTy =
   let funDef = findFun ctx funSerial
   let (TyScheme (tyVars, _)) = funDef.Ty
+
   if List.isEmpty tyVars then
     funSerial, ctx
   else
@@ -313,10 +317,11 @@ let private monifyExpr (expr, ctx) =
 
         let arms, ctx =
           (arms, ctx)
-          |> stMap (fun ((pat, guard, body), ctx) ->
-               let guard, ctx = (guard, ctx) |> monifyExpr
-               let body, ctx = (body, ctx) |> monifyExpr
-               (pat, guard, body), ctx)
+          |> stMap
+               (fun ((pat, guard, body), ctx) ->
+                 let guard, ctx = (guard, ctx) |> monifyExpr
+                 let body, ctx = (body, ctx) |> monifyExpr
+                 (pat, guard, body), ctx)
 
         HMatchExpr(cond, arms, ty, loc), ctx
 

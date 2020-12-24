@@ -227,7 +227,8 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) -> hoistExprLetFun callee isRec vis args body next ty loc ctx
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
+      hoistExprLetFun callee isRec vis args body next ty loc ctx
 
   | HTyDeclExpr _ ->
       let doArm () =

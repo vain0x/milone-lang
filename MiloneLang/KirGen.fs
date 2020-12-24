@@ -108,26 +108,30 @@ let private kgTuplePat itemPats loc ctx =
 
 // decomposition of Some
 let private kgSomeAppPat payloadPat ty loc ctx =
-  PConjNode
-    ([ PEqualNode(PNoneTerm(unwrapListTy ty, loc), PDiscardNode, loc)
-       PSelectNode(KHeadPath(loc), kgPat payloadPat ctx, loc) ],
-     loc)
+  PConjNode(
+    [ PEqualNode(PNoneTerm(unwrapListTy ty, loc), PDiscardNode, loc)
+      PSelectNode(KHeadPath(loc), kgPat payloadPat ctx, loc) ],
+    loc
+  )
 
 // decomposition of variant
 let private kgVariantAppPat variantSerial payloadPat loc ctx =
-  PConjNode
-    ([ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
-       PSelectNode(KPayloadPath(variantSerial, loc), kgPat payloadPat ctx, loc) ],
-     loc)
+  PConjNode(
+    [ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
+      PSelectNode(KPayloadPath(variantSerial, loc), kgPat payloadPat ctx, loc) ],
+    loc
+  )
 
 let private kgConsPat l r itemTy loc ctx =
-  PNotEqualNode
-    (PNilTerm(itemTy, loc),
-     PConjNode
-       ([ PSelectNode(KHeadPath(loc), kgPat l ctx, loc)
-          PSelectNode(KTailPath(loc), kgPat r ctx, loc) ],
-        loc),
-     loc)
+  PNotEqualNode(
+    PNilTerm(itemTy, loc),
+    PConjNode(
+      [ PSelectNode(KHeadPath(loc), kgPat l ctx, loc)
+        PSelectNode(KTailPath(loc), kgPat r ctx, loc) ],
+      loc
+    ),
+    loc
+  )
 
 let private kgAsPat bodyPat varSerial loc ctx =
   PLetNode(varSerial, kgPat bodyPat ctx, loc)
@@ -288,12 +292,16 @@ let private abortNode loc =
 /// Converts to basic 2-arity prim node.
 let private basicPrimNode2 hint prim l r ty loc hole ctx =
   ctx
-  |> kgExpr l (fun l ctx ->
-       ctx
-       |> kgExpr r (fun r ctx ->
-            let result, ctx = ctx |> newVar hint ty loc
-            let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
-            KPrimNode(prim, [ l; r ], [ result ], [ cont ], loc), ctx))
+  |> kgExpr
+       l
+       (fun l ctx ->
+         ctx
+         |> kgExpr
+              r
+              (fun r ctx ->
+                let result, ctx = ctx |> newVar hint ty loc
+                let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+                KPrimNode(prim, [ l; r ], [ result ], [ cont ], loc), ctx))
 
 // -----------------------------------------------
 // Non-prim basic expr
@@ -321,10 +329,12 @@ let private kgBlockExpr stmts last hole ctx =
 
 let private kgCallFunExpr funSerial funTy funLoc args ty loc hole ctx =
   ctx
-  |> kgExprList args (fun args ctx ->
-       let result, ctx = ctx |> newVar "call" ty loc
-       let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
-       KPrimNode(KCallProcPrim, KFunTerm(funSerial, funTy, funLoc) :: args, [ result ], [ cont ], loc), ctx)
+  |> kgExprList
+       args
+       (fun args ctx ->
+         let result, ctx = ctx |> newVar "call" ty loc
+         let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+         KPrimNode(KCallProcPrim, KFunTerm(funSerial, funTy, funLoc) :: args, [ result ], [ cont ], loc), ctx)
 
 /// Converts an expr calling to variant, i.e., construction of a variant with payload.
 let private kgCallVariantExpr variantSerial variantTy variantLoc args ty loc hole ctx =
@@ -334,34 +344,44 @@ let private kgCallVariantExpr variantSerial variantTy variantLoc args ty loc hol
     KVariantTerm(variantSerial, variantTy, variantLoc)
 
   ctx
-  |> kgExprList args (fun args ctx ->
-       let result, ctx = ctx |> newVar variantName ty loc
-       let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
-       KPrimNode(KVariantPrim, variantTerm :: args, [ result ], [ cont ], loc), ctx)
+  |> kgExprList
+       args
+       (fun args ctx ->
+         let result, ctx = ctx |> newVar variantName ty loc
+         let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+         KPrimNode(KVariantPrim, variantTerm :: args, [ result ], [ cont ], loc), ctx)
 
 let private kgCallClosureExpr callee args ty loc hole ctx =
   ctx
-  |> kgExpr callee (fun callee ctx ->
-       ctx
-       |> kgExprList args (fun args ctx ->
-            let result, ctx = ctx |> newVar "call" ty loc
-            let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
-            KPrimNode(KCallClosurePrim, callee :: args, [ result ], [ cont ], loc), ctx))
+  |> kgExpr
+       callee
+       (fun callee ctx ->
+         ctx
+         |> kgExprList
+              args
+              (fun args ctx ->
+                let result, ctx = ctx |> newVar "call" ty loc
+                let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+                KPrimNode(KCallClosurePrim, callee :: args, [ result ], [ cont ], loc), ctx))
 
 let private kgTupleExpr args ty loc hole ctx =
   ctx
-  |> kgExprList args (fun args ctx ->
-       let result, ctx = ctx |> newVar "tuple" ty loc
-       let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
-       KPrimNode(KTuplePrim, args, [ result ], [ cont ], loc), ctx)
+  |> kgExprList
+       args
+       (fun args ctx ->
+         let result, ctx = ctx |> newVar "tuple" ty loc
+         let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+         KPrimNode(KTuplePrim, args, [ result ], [ cont ], loc), ctx)
 
 let private kgClosureExpr funSerial funTy funLoc env ty loc hole ctx =
   ctx
-  |> kgExpr env (fun env ctx ->
-       let funTerm = KFunTerm(funSerial, funTy, funLoc)
-       let result, ctx = ctx |> newVar "closure" ty loc
-       let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
-       KPrimNode(KClosurePrim, [ funTerm; env ], [ result ], [ cont ], loc), ctx)
+  |> kgExpr
+       env
+       (fun env ctx ->
+         let funTerm = KFunTerm(funSerial, funTy, funLoc)
+         let result, ctx = ctx |> newVar "closure" ty loc
+         let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+         KPrimNode(KClosurePrim, [ funTerm; env ], [ result ], [ cont ], loc), ctx)
 
 // -----------------------------------------------
 // Prims
@@ -417,51 +437,58 @@ let private kgCallComparisonPrimExpr itself hint prim args ty primLoc hole ctx =
   match args with
   | [ l; r ] ->
       ctx
-      |> kgExpr l (fun l ctx ->
-           ctx
-           |> kgExpr r (fun r ctx ->
-                // Create a joint.
-                let jointSerial, jointBinding, ctx =
-                  let jointSerial, ctx = ctx |> freshFunSerial
+      |> kgExpr
+           l
+           (fun l ctx ->
+             ctx
+             |> kgExpr
+                  r
+                  (fun r ctx ->
+                    // Create a joint.
+                    let jointSerial, jointBinding, ctx =
+                      let jointSerial, ctx = ctx |> freshFunSerial
 
-                  let ctx =
-                    let funDef: FunDef =
-                      { Name = hint
-                        Arity = 1
-                        Ty = TyScheme([], tyFun tyBool tyUnit)
-                        Abi = MiloneAbi
-                        Loc = primLoc }
+                      let ctx =
+                        let funDef: FunDef =
+                          { Name = hint
+                            Arity = 1
+                            Ty = TyScheme([], tyFun tyBool tyUnit)
+                            Abi = MiloneAbi
+                            Loc = primLoc }
 
-                    ctx |> addFunDef jointSerial funDef
+                        ctx |> addFunDef jointSerial funDef
 
-                  let cond, ctx = ctx |> newVar hint tyBool primLoc
+                      let cond, ctx = ctx |> newVar hint tyBool primLoc
 
-                  let cont, ctx =
-                    hole (KVarTerm(cond, tyBool, primLoc)) ctx
+                      let cont, ctx =
+                        hole (KVarTerm(cond, tyBool, primLoc)) ctx
 
-                  let binding =
-                    KJointBinding(jointSerial, [ cond ], cont, primLoc)
+                      let binding =
+                        KJointBinding(jointSerial, [ cond ], cont, primLoc)
 
-                  jointSerial, binding, ctx
+                      jointSerial, binding, ctx
 
-                let jumpToJoint cond =
-                  KJumpNode(jointSerial, [ KLitTerm(BoolLit cond, primLoc) ], primLoc)
+                    let jumpToJoint cond =
+                      KJumpNode(jointSerial, [ KLitTerm(BoolLit cond, primLoc) ], primLoc)
 
-                KJointNode
-                  ([ jointBinding ],
-                   KPrimNode(prim, [ l; r ], [], [ jumpToJoint true; jumpToJoint false ], primLoc),
-                   primLoc),
-                ctx))
+                    KJointNode(
+                      [ jointBinding ],
+                      KPrimNode(prim, [ l; r ], [], [ jumpToJoint true; jumpToJoint false ], primLoc),
+                      primLoc
+                    ),
+                    ctx))
 
   | _ -> unreachable itself
 
 /// Converts call to regular (not special) prim.
 let private kgCallRegularPrimExpr hint prim args ty loc hole ctx =
   ctx
-  |> kgExprList args (fun args ctx ->
-       let result, ctx = ctx |> newVar hint ty loc
-       let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
-       KPrimNode(prim, args, [ result ], [ cont ], loc), ctx)
+  |> kgExprList
+       args
+       (fun args ctx ->
+         let result, ctx = ctx |> newVar hint ty loc
+         let cont, ctx = hole (KVarTerm(result, ty, loc)) ctx
+         KPrimNode(prim, args, [ result ], [ cont ], loc), ctx)
 
 // -----------------------------------------------
 // match
@@ -563,6 +590,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
 
         let jointDef: FunDef =
           let armFunTy = tyFun tyUnit tyUnit
+
           { Name = "arm"
             Arity = 1
             Ty = TyScheme([], armFunTy)
@@ -577,12 +605,14 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
               |> kgExpr body (fun body ctx -> leaveMatch body, ctx)
             else
               ctx
-              |> kgExpr guard (fun guard ctx ->
-                   let body, ctx =
-                     ctx
-                     |> kgExpr body (fun body ctx -> leaveMatch body, ctx)
+              |> kgExpr
+                   guard
+                   (fun guard ctx ->
+                     let body, ctx =
+                       ctx
+                       |> kgExpr body (fun body ctx -> leaveMatch body, ctx)
 
-                   KPrimNode(KEqualPrim, [ guard; kTrueTerm loc ], [], [ body; rest ], loc), ctx)
+                     KPrimNode(KEqualPrim, [ guard; kTrueTerm loc ], [], [ body; rest ], loc), ctx)
 
           let rec go pats ctx =
             match pats with
@@ -603,14 +633,16 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
 
   let createArmJoints ctx =
     ctx
-    |> kgExpr cond (fun cond ctx ->
-         let joints, cont, ctx = go [] cond arms ctx
+    |> kgExpr
+         cond
+         (fun cond ctx ->
+           let joints, cont, ctx = go [] cond arms ctx
 
-         let ctx =
-           { ctx with
-               Joints = List.append (List.rev joints) ctx.Joints }
+           let ctx =
+             { ctx with
+                 Joints = List.append (List.rev joints) ctx.Joints }
 
-         cont, ctx)
+           cont, ctx)
 
   // Create a joint to be called after the match expr.
   let createTargetJoint ctx =
@@ -634,10 +666,11 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
 
   let entryPoint, joints, ctx =
     ctx
-    |> collectJoints (fun ctx ->
-         let entryPoint, ctx = createArmJoints ctx
-         let ctx = createTargetJoint ctx
-         entryPoint, ctx)
+    |> collectJoints
+         (fun ctx ->
+           let entryPoint, ctx = createArmJoints ctx
+           let ctx = createTargetJoint ctx
+           entryPoint, ctx)
 
   KJointNode(joints, entryPoint, loc), ctx
 
@@ -653,16 +686,20 @@ let private kgLetValExpr pat init next loc hole ctx: KNode * KirGenCtx =
 
   | HRefPat (varSerial, _, loc) ->
       ctx
-      |> kgExpr init (fun init ctx ->
-           let cont, ctx = ctx |> kgExpr next hole
-           KSelectNode(init, KSelfPath, varSerial, cont, loc), ctx)
+      |> kgExpr
+           init
+           (fun init ctx ->
+             let cont, ctx = ctx |> kgExpr next hole
+             KSelectNode(init, KSelfPath, varSerial, cont, loc), ctx)
 
   | _ ->
       ctx
-      |> kgExpr init (fun init ctx ->
-           let success, ctx = ctx |> kgExpr next hole
-           let failure = abortNode loc
-           kgEvalPNode init (kgPat pat ctx) success failure ctx)
+      |> kgExpr
+           init
+           (fun init ctx ->
+             let success, ctx = ctx |> kgExpr next hole
+             let failure = abortNode loc
+             kgEvalPNode init (kgPat pat ctx) success failure ctx)
 
 let private kgLetFunExpr funSerial argPats body next loc hole (ctx: KirGenCtx): KNode * KirGenCtx =
   let failure = abortNode loc
@@ -693,6 +730,7 @@ let private kgLetFunExpr funSerial argPats body next loc hole (ctx: KirGenCtx): 
           // Prepend pattern-matching to the hole.
           let hole ctx =
             let cont, ctx = hole ctx
+
             ctx
             |> kgEvalPNode argTerm (kgPat argPat ctx) cont failure
 
@@ -705,10 +743,11 @@ let private kgLetFunExpr funSerial argPats body next loc hole (ctx: KirGenCtx): 
       |> kgExpr body (fun body ctx -> returnNode body, ctx)
 
     ctx
-    |> collectJoints (fun ctx ->
-         let argVars, hole, ctx = ctx |> go argPats bodyHole
-         let body, ctx = hole ctx
-         (argVars, body), ctx)
+    |> collectJoints
+         (fun ctx ->
+           let argVars, hole, ctx = ctx |> go argPats bodyHole
+           let body, ctx = hole ctx
+           (argVars, body), ctx)
 
   let ctx =
     let joints =
@@ -870,9 +909,11 @@ let private kgExprList args hole ctx =
 
   | arg :: args ->
       ctx
-      |> kgExpr arg (fun arg ctx ->
-           ctx
-           |> kgExprList args (fun args ctx -> hole (arg :: args) ctx))
+      |> kgExpr
+           arg
+           (fun arg ctx ->
+             ctx
+             |> kgExprList args (fun args ctx -> hole (arg :: args) ctx))
 
 let kirGen (expr: HExpr, tyCtx: TyCtx): KRoot * KirGenCtx =
   let _, ctx =

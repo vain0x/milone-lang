@@ -138,17 +138,21 @@ let private knownCtxUseFun funSerial (ctx: KnownCtx) =
 let private knownCtxToNonlocalUses (ctx: KnownCtx): VarSerial list * FunSerial list =
   let vars =
     ctx.UseVars
-    |> setFold (fun acc varSerial ->
-         if ctx.Locals |> setContains varSerial |> not
-         then varSerial :: acc
-         else acc) []
+    |> setFold
+         (fun acc varSerial ->
+           if ctx.Locals |> setContains varSerial |> not
+           then varSerial :: acc
+           else acc)
+         []
 
   let funs =
     ctx.UseFuns
-    |> setFold (fun acc funSerial ->
-         if ctx.Known |> setContains funSerial |> not
-         then funSerial :: acc
-         else acc) []
+    |> setFold
+         (fun acc funSerial ->
+           if ctx.Known |> setContains funSerial |> not
+           then funSerial :: acc
+           else acc)
+         []
 
   vars, funs
 
@@ -174,9 +178,11 @@ let private capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
   let app, _ =
     caps
     |> List.rev
-    |> List.fold (fun (callee, calleeTy) (serial, ty, loc) ->
-         let arg = HRefExpr(serial, ty, loc)
-         hxApp callee arg calleeTy loc, tyFun ty calleeTy) (callee, calleeTy)
+    |> List.fold
+         (fun (callee, calleeTy) (serial, ty, loc) ->
+           let arg = HRefExpr(serial, ty, loc)
+           hxApp callee arg calleeTy loc, tyFun ty calleeTy)
+         (callee, calleeTy)
 
   app
 
@@ -248,6 +254,7 @@ let private saveKnownCtxToFun funSerial (ctx: CcCtx) =
 
   // Don't update in the second traversal for transformation.
   let funKnowns = ctx.FunKnowns
+
   if funKnowns |> mapContainsKey funSerial then
     ctx
   else
@@ -279,11 +286,12 @@ let private genFunCaps funSerial (ctx: CcCtx): Caps =
   let varSerials, _ = ctx |> getCapturedSerials funSerial
 
   varSerials
-  |> List.choose (fun varSerial ->
-       match ctx.Vars |> mapTryFind varSerial with
-       | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
+  |> List.choose
+       (fun varSerial ->
+         match ctx.Vars |> mapTryFind varSerial with
+         | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
 
-       | _ -> None)
+         | _ -> None)
 
 /// Extends the set of references to be transitive.
 /// E.g. a function `f` uses `g` and `g` uses `h` (and `h` uses etc.),
@@ -318,6 +326,7 @@ let private closureRefs (ctx: CcCtx): CcCtx =
   let closureKnownCtx (modified, ccCtx) funSerial (knownCtx: KnownCtx) =
     let vars = knownCtx.UseVars
     let funs = knownCtx.UseFuns
+
     match (false, funs, vars)
           |> doClosureRefs (vars |> setToList) (funs |> setToList) ccCtx with
     | true, visited, vars ->
@@ -347,21 +356,23 @@ let private closureRefs (ctx: CcCtx): CcCtx =
 let private updateFunDefs (ctx: CcCtx) =
   let funs =
     ctx.FunKnowns
-    |> mapFold (fun funs funSerial (_: KnownCtx) ->
-         match ctx |> genFunCaps funSerial with
-         | [] -> funs
+    |> mapFold
+         (fun funs funSerial (_: KnownCtx) ->
+           match ctx |> genFunCaps funSerial with
+           | [] -> funs
 
-         | caps ->
-             let funDef: FunDef = funs |> mapFind funSerial
-             let (TyScheme (tyVars, funTy)) = funDef.Ty
+           | caps ->
+               let funDef: FunDef = funs |> mapFind funSerial
+               let (TyScheme (tyVars, funTy)) = funDef.Ty
 
-             let funTy, arity =
-               caps |> capsUpdateFunDef funTy funDef.Arity
+               let funTy, arity =
+                 caps |> capsUpdateFunDef funTy funDef.Arity
 
-             let ty = TyScheme(tyVars, funTy)
+               let ty = TyScheme(tyVars, funTy)
 
-             funs
-             |> mapAdd funSerial { funDef with Arity = arity; Ty = ty }) ctx.Funs
+               funs
+               |> mapAdd funSerial { funDef with Arity = arity; Ty = ty })
+         ctx.Funs
 
   { ctx with Funs = funs }
 
@@ -485,7 +496,8 @@ let private ccExpr (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) -> ccLetFunExpr callee isRec vis args body next ty loc ctx
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
+      ccLetFunExpr callee isRec vis args body next ty loc ctx
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"

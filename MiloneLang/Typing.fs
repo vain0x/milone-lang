@@ -55,9 +55,11 @@ let private addError (ctx: TyCtx) message loc =
       Logs = (Log.Error message, loc) :: ctx.Logs }
 
 /// Be carefully. Let depths must be counted the same as name resolution.
-let private incDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth + 1 }
+let private incDepth (ctx: TyCtx) =
+  { ctx with LetDepth = ctx.LetDepth + 1 }
 
-let private decDepth (ctx: TyCtx) = { ctx with LetDepth = ctx.LetDepth - 1 }
+let private decDepth (ctx: TyCtx) =
+  { ctx with LetDepth = ctx.LetDepth - 1 }
 
 let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
@@ -65,7 +67,9 @@ let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
 let private isNewtypeVariant (ctx: TyCtx) variantSerial =
   match ctx
-        |> findTy (ctx.Variants |> mapFind variantSerial).UnionTySerial with
+        |> findTy
+             (ctx.Variants |> mapFind variantSerial)
+               .UnionTySerial with
   | UnionTyDef (_, [ _ ], _) -> true
   | _ -> false
 
@@ -158,7 +162,8 @@ let private resolveTraitBounds (ctx: TyCtx) =
   let traits = ctx.TraitBounds |> List.rev
   let ctx = { ctx with TraitBounds = [] }
 
-  let logAcc, tyCtx = ctx |> toTyContext |> go ctx.Logs traits
+  let logAcc, tyCtx =
+    ctx |> toTyContext |> go ctx.Logs traits
 
   withTyContext ctx logAcc tyCtx
 
@@ -221,9 +226,10 @@ let private instantiateTyScheme ctx (tyScheme: TyScheme) loc =
       // Generate fresh type variable for each bound type variable.
       let mapping, ctx =
         (fvs, ctx)
-        |> stMap (fun (fv, ctx) ->
-             let newSerial, ctx = freshTySerial ctx
-             (fv, newSerial), ctx)
+        |> stMap
+             (fun (fv, ctx) ->
+               let newSerial, ctx = freshTySerial ctx
+               (fv, newSerial), ctx)
 
       // Replace bound variables in the type with fresh ones.
       let ty =
@@ -241,9 +247,10 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
 
   let bindings, ctx =
     (oldTySerials, ctx)
-    |> stMap (fun (oldTySerial, ctx) ->
-         let tySerial, ctx = ctx |> freshTySerial
-         (oldTySerial, MetaTy(tySerial, loc)), ctx)
+    |> stMap
+         (fun (oldTySerial, ctx) ->
+           let tySerial, ctx = ctx |> freshTySerial
+           (oldTySerial, MetaTy(tySerial, loc)), ctx)
 
   // Replace meta types in the type and trait bounds.
   let substMeta tySerial =
@@ -280,6 +287,7 @@ let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
       // by increasing their depth to infinite (10^9).
       let ctx =
         let (TyScheme (fvs, _)) = funTyScheme
+
         { ctx with
             TyDepths =
               fvs
@@ -618,24 +626,24 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
           |> mapOfList compare
 
         (fields, (fieldDefs, ctx))
-        |> stMap (fun (field, (fieldDefs, ctx)) ->
-             let name, init, loc = field
+        |> stMap
+             (fun (field, (fieldDefs, ctx)) ->
+               let name, init, loc = field
 
-             match fieldDefs |> mapRemove name with
-             | None, _ ->
-                 let ctx = ctx |> addRedundantErr name loc
-                 let init, _, ctx = inferExpr ctx None init
-                 (name, init, loc), (fieldDefs, ctx)
+               match fieldDefs |> mapRemove name with
+               | None, _ ->
+                   let ctx = ctx |> addRedundantErr name loc
+                   let init, _, ctx = inferExpr ctx None init
+                   (name, init, loc), (fieldDefs, ctx)
 
-             | Some defTy, fieldDefs ->
-                 let init, initTy, ctx = inferExpr ctx (Some defTy) init
-                 let ctx = unifyTy ctx loc initTy defTy
-                 (name, init, loc), (fieldDefs, ctx))
+               | Some defTy, fieldDefs ->
+                   let init, initTy, ctx = inferExpr ctx (Some defTy) init
+                   let ctx = unifyTy ctx loc initTy defTy
+                   (name, init, loc), (fieldDefs, ctx))
 
       // Unless base expr is specified, set of field initializers must be complete.
       let ctx =
-        if baseOpt
-           |> Option.isNone
+        if baseOpt |> Option.isNone
            && fieldDefs |> mapIsEmpty |> not then
           let fields =
             fieldDefs
@@ -671,22 +679,23 @@ let private inferMatchExpr ctx expectOpt itself cond arms loc =
 
   let arms, ctx =
     (arms, ctx)
-    |> stMap (fun ((pat, guard, body), ctx) ->
-         let pat, patTy, ctx = inferRefutablePat ctx pat
+    |> stMap
+         (fun ((pat, guard, body), ctx) ->
+           let pat, patTy, ctx = inferRefutablePat ctx pat
 
-         let ctx = unifyTy ctx (patToLoc pat) patTy condTy
+           let ctx = unifyTy ctx (patToLoc pat) patTy condTy
 
-         let guard, guardTy, ctx = inferExpr ctx None guard
+           let guard, guardTy, ctx = inferExpr ctx None guard
 
-         let ctx =
-           unifyTy ctx (exprToLoc guard) guardTy tyBool
+           let ctx =
+             unifyTy ctx (exprToLoc guard) guardTy tyBool
 
-         let body, bodyTy, ctx = inferExpr ctx expectOpt body
+           let body, bodyTy, ctx = inferExpr ctx expectOpt body
 
-         let ctx =
-           unifyTy ctx (exprToLoc body) targetTy bodyTy
+           let ctx =
+             unifyTy ctx (exprToLoc body) targetTy bodyTy
 
-         (pat, guard, body), ctx)
+           (pat, guard, body), ctx)
 
   HMatchExpr(cond, arms, targetTy, loc), targetTy, ctx
 
@@ -700,6 +709,7 @@ let private inferNavExpr ctx l (r: Ident) loc =
   let l, lTy, ctx = inferExpr ctx None l
 
   let lTy = substTy ctx lTy
+
   match lTy, r with
   | AppTy (StrTyCtor, []), "Length" ->
       let funExpr =
@@ -754,9 +764,10 @@ let private inferAppExpr ctx itself callee arg loc =
 
       let args, ctx =
         (args, ctx)
-        |> stMap (fun (arg, ctx) ->
-             let arg, _, ctx = inferExpr ctx None arg
-             arg, ctx)
+        |> stMap
+             (fun (arg, ctx) ->
+               let arg, _, ctx = inferExpr ctx None arg
+               arg, ctx)
 
       HInfExpr(InfOp.CallNative funName, args, targetTy, loc), targetTy, ctx
 
@@ -844,13 +855,14 @@ let private inferAnnoExpr ctx body annoTy loc =
 let private inferBlockExpr ctx expectOpt stmts last =
   let stmts, ctx =
     (stmts, ctx)
-    |> stMap (fun (expr, ctx) ->
-         let loc = exprToLoc expr
+    |> stMap
+         (fun (expr, ctx) ->
+           let loc = exprToLoc expr
 
-         let expr, resultTy, ctx = inferExpr ctx None expr
-         let ctx = unifyTy ctx loc resultTy tyUnit
+           let expr, resultTy, ctx = inferExpr ctx None expr
+           let ctx = unifyTy ctx loc resultTy tyUnit
 
-         expr, ctx)
+           expr, ctx)
 
   let last, lastTy, ctx = inferExpr ctx expectOpt last
 
@@ -1056,29 +1068,33 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 
   let ctx =
     tyCtx.Tys
-    |> mapFold (fun ctx tySerial (tyDef: TyDef) ->
-         match tyDef with
-         | SynonymTyDef _ -> rcsSynonymTy ctx tySerial
-         | _ -> ctx) ctx
+    |> mapFold
+         (fun ctx tySerial (tyDef: TyDef) ->
+           match tyDef with
+           | SynonymTyDef _ -> rcsSynonymTy ctx tySerial
+           | _ -> ctx)
+         ctx
 
   let tys, logs =
     ctx.TyState
-    |> mapFold (fun (tys, logs) tySerial state ->
-         match state with
-         | State.Cyclic ->
-             match findTy tySerial tyCtx with
-             | SynonymTyDef (ident, tyArgs, _, loc) ->
-                 // Remove body of cyclic synonym to prevent the synonym expansion
-                 // from running into stack overflow.
-                 let tys =
-                   tys
-                   |> mapAdd tySerial (SynonymTyDef(ident, tyArgs, tyUnit, loc))
+    |> mapFold
+         (fun (tys, logs) tySerial state ->
+           match state with
+           | State.Cyclic ->
+               match findTy tySerial tyCtx with
+               | SynonymTyDef (ident, tyArgs, _, loc) ->
+                   // Remove body of cyclic synonym to prevent the synonym expansion
+                   // from running into stack overflow.
+                   let tys =
+                     tys
+                     |> mapAdd tySerial (SynonymTyDef(ident, tyArgs, tyUnit, loc))
 
-                 let logs = (Log.TySynonymCycleError, loc) :: logs
-                 tys, logs
+                   let logs = (Log.TySynonymCycleError, loc) :: logs
+                   tys, logs
 
-             | _ -> tys, logs
-         | _ -> tys, logs) (tyCtx.Tys, tyCtx.Logs)
+               | _ -> tys, logs
+           | _ -> tys, logs)
+         (tyCtx.Tys, tyCtx.Logs)
 
   { tyCtx with Tys = tys; Logs = logs }
 
@@ -1107,52 +1123,58 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     let vars, ctx =
       ctx.Vars
-      |> mapFold (fun (acc, ctx: TyCtx) varSerial varDef ->
-           let ctx =
-             { ctx with
-                 LetDepth =
-                   scopeCtx.VarDepths
-                   |> mapFind (varSerialToInt varSerial) }
+      |> mapFold
+           (fun (acc, ctx: TyCtx) varSerial varDef ->
+             let ctx =
+               { ctx with
+                   LetDepth =
+                     scopeCtx.VarDepths
+                     |> mapFind (varSerialToInt varSerial) }
 
-           let varDef, ctx =
-             match varDef with
-             | VarDef (name, storageModifier, _, loc) ->
-                 let ty, ctx = freshMetaTy loc ctx
-                 VarDef(name, storageModifier, ty, loc), ctx
+             let varDef, ctx =
+               match varDef with
+               | VarDef (name, storageModifier, _, loc) ->
+                   let ty, ctx = freshMetaTy loc ctx
+                   VarDef(name, storageModifier, ty, loc), ctx
 
-           let acc = acc |> mapAdd varSerial varDef
+             let acc = acc |> mapAdd varSerial varDef
 
-           acc, ctx) (mapEmpty varSerialCmp, ctx)
+             acc, ctx)
+           (mapEmpty varSerialCmp, ctx)
 
     { ctx with Vars = vars }
 
   let funs, ctx =
     ctx.Funs
-    |> mapFold (fun (acc, ctx: TyCtx) funSerial (funDef: FunDef) ->
-         let ctx =
-           { ctx with
-               LetDepth =
-                 scopeCtx.VarDepths
-                 |> mapFind (funSerialToInt funSerial) }
+    |> mapFold
+         (fun (acc, ctx: TyCtx) funSerial (funDef: FunDef) ->
+           let ctx =
+             { ctx with
+                 LetDepth =
+                   scopeCtx.VarDepths
+                   |> mapFind (funSerialToInt funSerial) }
 
-         let ty, ctx = freshMetaTy funDef.Loc ctx
-         acc
-         |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
-         ctx) (mapEmpty funSerialCmp, ctx)
+           let ty, ctx = freshMetaTy funDef.Loc ctx
+
+           acc
+           |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
+           ctx)
+         (mapEmpty funSerialCmp, ctx)
 
   let ctx = { ctx with Funs = funs }
 
   let ctx =
     let variants =
       ctx.Variants
-      |> mapMap (fun _ (variantDef: VariantDef) ->
-           // Pre-compute the type of variant.
-           let variantTy =
-             let unionTy = tyUnion variantDef.UnionTySerial
-             if variantDef.HasPayload then tyFun variantDef.PayloadTy unionTy else unionTy
+      |> mapMap
+           (fun _ (variantDef: VariantDef) ->
+             // Pre-compute the type of variant.
+             let variantTy =
+               let unionTy = tyUnion variantDef.UnionTySerial
+               if variantDef.HasPayload then tyFun variantDef.PayloadTy unionTy else unionTy
 
-           { variantDef with
-               VariantTy = variantTy })
+             { variantDef with
+                 VariantTy = variantTy })
 
     { ctx with Variants = variants }
 
@@ -1181,26 +1203,30 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     let vars =
       ctx.Vars
-      |> mapMap (fun _ varDef ->
-           match varDef with
-           | VarDef (name, storageModifier, ty, loc) ->
-               let ty = substOrDegenerate ty
-               VarDef(name, storageModifier, ty, loc))
+      |> mapMap
+           (fun _ varDef ->
+             match varDef with
+             | VarDef (name, storageModifier, ty, loc) ->
+                 let ty = substOrDegenerate ty
+                 VarDef(name, storageModifier, ty, loc))
 
     let funs =
       ctx.Funs
-      |> mapMap (fun _ (funDef: FunDef) ->
-           let (TyScheme (tyVars, ty)) = funDef.Ty
-           let ty = substOrDegenerate ty
-           { funDef with
-               Ty = TyScheme(tyVars, ty) })
+      |> mapMap
+           (fun _ (funDef: FunDef) ->
+             let (TyScheme (tyVars, ty)) = funDef.Ty
+             let ty = substOrDegenerate ty
+
+             { funDef with
+                 Ty = TyScheme(tyVars, ty) })
 
     let variants =
       ctx.Variants
-      |> mapMap (fun _ (variantDef: VariantDef) ->
-           { variantDef with
-               PayloadTy = substOrDegenerate variantDef.PayloadTy
-               VariantTy = substOrDegenerate variantDef.VariantTy })
+      |> mapMap
+           (fun _ (variantDef: VariantDef) ->
+             { variantDef with
+                 PayloadTy = substOrDegenerate variantDef.PayloadTy
+                 VariantTy = substOrDegenerate variantDef.VariantTy })
 
     { ctx with
         Vars = vars
@@ -1210,26 +1236,30 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     let tys =
       ctx.Tys
-      |> mapFold (fun acc tySerial tyDef ->
-           match tyDef with
-           | MetaTyDef _ -> acc
+      |> mapFold
+           (fun acc tySerial tyDef ->
+             match tyDef with
+             | MetaTyDef _ -> acc
 
-           | SynonymTyDef (name, tyArgs, bodyTy, loc) ->
-               let bodyTy = bodyTy |> substOrDegenerate
-               acc
-               |> mapAdd tySerial (SynonymTyDef(name, tyArgs, bodyTy, loc))
+             | SynonymTyDef (name, tyArgs, bodyTy, loc) ->
+                 let bodyTy = bodyTy |> substOrDegenerate
 
-           | RecordTyDef (recordName, fields, loc) ->
-               let fields =
-                 fields
-                 |> List.map (fun (name, ty, loc) ->
-                      let ty = substOrDegenerate ty
-                      name, ty, loc)
+                 acc
+                 |> mapAdd tySerial (SynonymTyDef(name, tyArgs, bodyTy, loc))
 
-               acc
-               |> mapAdd tySerial (RecordTyDef(recordName, fields, loc))
+             | RecordTyDef (recordName, fields, loc) ->
+                 let fields =
+                   fields
+                   |> List.map
+                        (fun (name, ty, loc) ->
+                          let ty = substOrDegenerate ty
+                          name, ty, loc)
 
-           | _ -> acc |> mapAdd tySerial tyDef) (mapEmpty compare)
+                 acc
+                 |> mapAdd tySerial (RecordTyDef(recordName, fields, loc))
+
+             | _ -> acc |> mapAdd tySerial tyDef)
+           (mapEmpty compare)
 
     { ctx with Tys = tys }
 

@@ -38,13 +38,20 @@ module DiagnosticsCache =
 
         for msg, pos in errors do
           let y, x = pos
-          sb.Append(y).Append(',').Append(x).Append(',').AppendLine(msg)
+
+          sb
+            .Append(y)
+            .Append(',')
+            .Append(x)
+            .Append(',')
+            .AppendLine(msg)
           |> ignore
 
         hasher.ComputeHash(encoding.GetBytes(sb.ToString()))
 
       // Remove if unchanged.
       let oldHashOpt = map.Map |> MutMap.remove docId
+
       if oldHashOpt
          |> Option.forall (fun oldHash -> hashEquals oldHash newHash |> not) then
         publish.Add((docId, errors))

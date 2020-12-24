@@ -506,6 +506,7 @@ let locToString ((docId, y, x): Loc) =
 
 let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
   let c = compare lDoc rDoc
+
   if c <> 0 then c
   else if ly <> ry then compare ly ry
   else compare lx rx

@@ -230,7 +230,10 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
         |> stMap (fun (name, ctx) -> ctx |> nameCtxAdd name)
 
       let serial, nameCtx = nameCtx |> nameCtxAdd name
-      let argTys, nameCtx = (argTys, nameCtx) |> stMap (athTy docId)
+
+      let argTys, nameCtx =
+        (argTys, nameCtx) |> stMap (athTy docId)
+
       tyUnresolved (quals, serial) argTys, nameCtx
 
   | AVarTy (name, _) ->

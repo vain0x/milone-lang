@@ -107,10 +107,11 @@ let private collectStmts (processBody: _ -> KirToMirCtx) (ctx: KirToMirCtx) =
 let private addLabelWith label loc processBody ctx =
   let stmts, ctx =
     ctx
-    |> collectStmts (fun ctx ->
-         ctx
-         |> addStmt (MLabelStmt(label, loc))
-         |> processBody)
+    |> collectStmts
+         (fun ctx ->
+           ctx
+           |> addStmt (MLabelStmt(label, loc))
+           |> processBody)
 
   { ctx with
       Labels = stmts :: ctx.Labels }
@@ -504,10 +505,13 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
         // Declaration of args as local vars.
         let ctx =
           args
-          |> List.fold (fun ctx arg ->
-               let argTy = ctx |> findVarTy arg
+          |> List.fold
+               (fun ctx arg ->
+                 let argTy = ctx |> findVarTy arg
+
+                 ctx
+                 |> addStmt (MLetValStmt(arg, MUninitInit, argTy, jointLoc)))
                ctx
-               |> addStmt (MLetValStmt(arg, MUninitInit, argTy, jointLoc))) ctx
 
         jointMap, labelCount, ctx
 
@@ -527,12 +531,14 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
 
       let ctx =
         joints
-        |> List.fold (fun (ctx: KirToMirCtx) joint ->
-             let (KJointBinding (jointSerial, _, body, loc)) = joint
+        |> List.fold
+             (fun (ctx: KirToMirCtx) joint ->
+               let (KJointBinding (jointSerial, _, body, loc)) = joint
 
-             let label, _ = ctx.JointMap |> mapFind jointSerial
+               let label, _ = ctx.JointMap |> mapFind jointSerial
 
-             ctx |> addLabelWith label loc (kmNode body)) ctx
+               ctx |> addLabelWith label loc (kmNode body))
+             ctx
 
       ctx
 

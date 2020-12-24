@@ -40,8 +40,6 @@ let changeDoc (uri: string) (version: int) (text: string): unit =
         { Uri = uri
           Version = version
           Text = text }
-
-      // eprintfn "INFO: Doc changed uri:'%s' v:%d len:%d" uri version text.Length
       docs.[uri] <- docData
 
   | None -> openDoc uri version text

@@ -116,6 +116,7 @@ let listSortTest () =
   [ 3; 2; 1; 3; 2; 3 ]
   |> listSort compare
   |> is [ 1; 2; 2; 3; 3; 3 ]
+
   [ 3; 1; 4; 1; 5; 9 ]
   |> listSort compare
   |> is [ 1; 1; 3; 4; 5; 9 ]
@@ -125,6 +126,7 @@ let listUniqueTest () =
   [ 1; 2; 2; 3; 3; 3 ]
   |> listUnique compare
   |> is [ 1; 2; 3 ]
+
   [ 3; 1; 4; 1; 5; 9 ]
   |> listUnique compare
   |> is [ 1; 3; 4; 5; 9 ]

@@ -23,7 +23,13 @@ let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list):
 
   let templateText =
     let dir =
-      System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
+      System.IO.Path.GetDirectoryName(
+        System
+          .Reflection
+          .Assembly
+          .GetExecutingAssembly()
+          .Location
+      )
 
     System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "..", "..", "..", "templates", sprintf "%s.json" name))
 
@@ -32,9 +38,11 @@ let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list):
   let text =
     // Replace placeholders.
     let mutable buf = System.Text.StringBuilder(templateText)
+
     for key, value in values do
       buf.Replace(sprintf "\"${%s}\"" key, jsonDisplay value)
       |> ignore
+
     let text = buf.ToString()
 
     // eprintfn "    -> '%s'" text

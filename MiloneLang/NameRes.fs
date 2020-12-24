@@ -295,6 +295,7 @@ let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCt
         |> mapAdd variantSerial variantDef
       VarDepths =
         let (VariantSerial variantSerial) = variantSerial
+
         scopeCtx.VarDepths
         |> mapAdd variantSerial scopeCtx.LetDepth }
 
@@ -434,6 +435,7 @@ let private leaveLetInit (scopeCtx: ScopeCtx): ScopeCtx =
 /// Starts a new scope.
 let private startScope (scopeCtx: ScopeCtx): ScopeCtx =
   let varScopes, tyScopes = scopeCtx.Local
+
   { scopeCtx with
       Local = scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes }
 
@@ -460,6 +462,7 @@ let private resolveScopedTyName tySerial name (scopeCtx: ScopeCtx): TySymbol opt
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
   let varScopes, _ = scopeCtx.Local
+
   varScopes
   |> List.tryPick (fun map -> map |> mapTryFind name)
 
@@ -494,6 +497,7 @@ let private resolveNavTy quals last ctx =
 
         | name :: path ->
             let scope = tySymbolToSerial tySymbol
+
             match ctx |> resolveScopedTyName scope name with
             | Some tySymbol -> resolveTyPath tySymbol path ctx
             | None -> None
@@ -518,7 +522,7 @@ let private resolveTy ty loc scopeCtx =
 
     | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when (scopeCtx
                                                                                                     |> findName serial =
-                                                                                                      "__nativeType") ->
+        "__nativeType") ->
         let code = scopeCtx |> findName itemSerial
         AppTy(NativeTypeTyCtor code, []), scopeCtx
 
@@ -528,6 +532,7 @@ let private resolveTy ty loc scopeCtx =
         let arity = List.length tys
 
         let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
+
         match symbolOpt with
         | Some (MetaTySymbol tySerial) ->
             if arity > 0 then
@@ -705,6 +710,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
   match tyDef with
   | MetaTyDef (tyName, bodyTy, loc) ->
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
+
       ctx
       |> addTy (MetaTySymbol tySerial) (MetaTyDef(tyName, bodyTy, loc))
 
@@ -715,10 +721,13 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
 
       let ctx =
         tyArgs
-        |> List.fold (fun ctx tyArg ->
-             let name = ctx |> findName tyArg
+        |> List.fold
+             (fun ctx tyArg ->
+               let name = ctx |> findName tyArg
+
+               ctx
+               |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
              ctx
-             |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc))) ctx
 
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
       let ctx = ctx |> finishScope
@@ -731,6 +740,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
         let def = ctx |> findVariant variantSerial
         let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
         assert (def.VariantTy |> isNoTy)
+
         ctx
         |> addVariantDef variantSerial { def with PayloadTy = payloadTy }
 
@@ -742,6 +752,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
         (name, ty, loc), ctx
 
       let fields, ctx = (fields, ctx) |> stMap resolveField
+
       ctx
       |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc))
 
@@ -915,7 +926,9 @@ let private nameResRefPat serial ty loc ctx =
         | "Some" -> HNodePat(HSomePN, [], ty, loc), ctx
 
         | _ ->
-            let varSerial, ctx = doResolveVarInPat serial name ty loc ctx
+            let varSerial, ctx =
+              doResolveVarInPat serial name ty loc ctx
+
             HRefPat(varSerial, ty, loc), ctx
 
 let private nameResNavPat pat ctx =
@@ -933,9 +946,10 @@ let private nameResNavPat pat ctx =
     | HNodePat (HNavPN r, [ l ], _, _) ->
         ctx
         |> resolvePatAsScope l
-        |> List.choose (fun tySymbol ->
-             ctx
-             |> resolveScopedTyName (tySymbolToSerial tySymbol) r)
+        |> List.choose
+             (fun tySymbol ->
+               ctx
+               |> resolveScopedTyName (tySymbolToSerial tySymbol) r)
 
     | _ -> []
 
@@ -950,10 +964,11 @@ let private nameResNavPat pat ctx =
 
   let patOpt =
     resolvePatAsScope l ctx
-    |> List.tryPick (fun tySymbol ->
-         match ctx |> resolveScopedVarName tySymbol r with
-         | Some (VariantSymbol variantSerial) -> Some(HVariantPat(variantSerial, ty, loc))
-         | _ -> None)
+    |> List.tryPick
+         (fun tySymbol ->
+           match ctx |> resolveScopedVarName tySymbol r with
+           | Some (VariantSymbol variantSerial) -> Some(HVariantPat(variantSerial, ty, loc))
+           | _ -> None)
 
   match patOpt with
   | Some pat -> pat, ctx
@@ -1063,10 +1078,12 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let ctx =
     lScope
-    |> mapFold (fun ctx (_: string) (_, _, useLocs) ->
-         match useLocs with
-         | [] -> ctx
-         | loc :: _ -> ctx |> addLog VarNameConflictError loc) ctx
+    |> mapFold
+         (fun ctx (_: string) (_, _, useLocs) ->
+           match useLocs with
+           | [] -> ctx
+           | loc :: _ -> ctx |> addLog VarNameConflictError loc)
+         ctx
 
   // Set of variables defined in the left-hand side.
   let varSerialSet =
@@ -1077,32 +1094,35 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let pats, ctx =
     (pats, ctx)
-    |> stMap (fun (pat, ctx) ->
-         let (rScope, pat), ctx =
-           ctx
-           |> doWithPatScope (Some lScope) (fun ctx -> nameResPat (pat, ctx))
+    |> stMap
+         (fun (pat, ctx) ->
+           let (rScope, pat), ctx =
+             ctx
+             |> doWithPatScope (Some lScope) (fun ctx -> nameResPat (pat, ctx))
 
-         // Validate that each variable defined in the left-hand side
-         // appears also right-hand side exactly once.
-         let ok =
-           let ok, set =
-             rScope
-             |> mapFold (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
-                  match usedLocs with
-                  | [ _ ] when ok ->
-                      let removed, set = set |> setRemove varSerial
-                      ok && removed, set
+           // Validate that each variable defined in the left-hand side
+           // appears also right-hand side exactly once.
+           let ok =
+             let ok, set =
+               rScope
+               |> mapFold
+                    (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
+                      match usedLocs with
+                      | [ _ ] when ok ->
+                          let removed, set = set |> setRemove varSerial
+                          ok && removed, set
 
-                  | _ -> false, set) (true, varSerialSet)
+                      | _ -> false, set)
+                    (true, varSerialSet)
 
-           ok && setIsEmpty set
+             ok && setIsEmpty set
 
-         let ctx =
-           if ok
-           then ctx
-           else ctx |> addLog OrPatInconsistentBindingError loc
+           let ctx =
+             if ok
+             then ctx
+             else ctx |> addLog OrPatInconsistentBindingError loc
 
-         pat, ctx)
+           pat, ctx)
 
   // PENDING: MirGen generates illegal code for binding OR patterns, so reject here.
   let ctx =
@@ -1124,10 +1144,12 @@ let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let ctx =
     scope
-    |> mapFold (fun ctx (_: string) (_, _, useLocs) ->
-         match useLocs with
-         | [] -> ctx
-         | loc :: _ -> ctx |> addLog VarNameConflictError loc) ctx
+    |> mapFold
+         (fun ctx (_: string) (_, _, useLocs) ->
+           match useLocs with
+           | [] -> ctx
+           | loc :: _ -> ctx |> addLog VarNameConflictError loc)
+         ctx
 
   pat, ctx
 
@@ -1206,18 +1228,20 @@ let private nameResNavExpr expr ctx =
             // Resolve as scope.
             let tySymbols =
               lTySymbols
-              |> List.choose (fun lTySymbol ->
-                   ctx
-                   |> resolveScopedTyName (tySymbolToSerial lTySymbol) r)
+              |> List.choose
+                   (fun lTySymbol ->
+                     ctx
+                     |> resolveScopedTyName (tySymbolToSerial lTySymbol) r)
 
             // Resolve as value.
             let exprOpt =
               let varSymbolOpt =
                 lTySymbols
-                |> List.tryPick (fun lTySymbol ->
-                     match ctx |> resolveScopedVarName lTySymbol r with
-                     | None -> None
-                     | it -> it)
+                |> List.tryPick
+                     (fun lTySymbol ->
+                       match ctx |> resolveScopedVarName lTySymbol r with
+                       | None -> None
+                       | it -> it)
 
               match varSymbolOpt with
               | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc) |> Some
@@ -1243,6 +1267,7 @@ let private nameResNavExpr expr ctx =
         ResolvedAsExpr expr, ctx
 
   let result, ctx = resolveExprAsScope expr ctx
+
   match result with
   | ResolvedAsExpr expr -> expr, ctx
 
@@ -1272,9 +1297,10 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let fields, ctx =
           (fields, ctx)
-          |> stMap (fun ((name, init, loc), ctx) ->
-               let init, ctx = (init, ctx) |> nameResExpr
-               (name, init, loc), ctx)
+          |> stMap
+               (fun ((name, init, loc), ctx) ->
+                 let init, ctx = (init, ctx) |> nameResExpr
+                 (name, init, loc), ctx)
 
         HRecordExpr(baseOpt, fields, ty, loc), ctx
 
@@ -1286,13 +1312,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let arms, ctx =
           (arms, ctx)
-          |> stMap (fun ((pat, guard, body), ctx) ->
-               let ctx = ctx |> startScope
-               let pat, ctx = (pat, ctx) |> nameResRefutablePat
-               let guard, ctx = (guard, ctx) |> nameResExpr
-               let body, ctx = (body, ctx) |> nameResExpr
-               let ctx = ctx |> finishScope
-               (pat, guard, body), ctx)
+          |> stMap
+               (fun ((pat, guard, body), ctx) ->
+                 let ctx = ctx |> startScope
+                 let pat, ctx = (pat, ctx) |> nameResRefutablePat
+                 let guard, ctx = (guard, ctx) |> nameResExpr
+                 let body, ctx = (body, ctx) |> nameResExpr
+                 let ctx = ctx |> finishScope
+                 (pat, guard, body), ctx)
 
         HMatchExpr(cond, arms, ty, loc), ctx
 
@@ -1402,10 +1429,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           let moduleSerialOpt =
             ctx
             |> resolveLocalTyName moduleName
-            |> List.tryPick (fun tySymbol ->
-                 match tySymbol with
-                 | ModuleTySymbol moduleSerial -> Some moduleSerial
-                 | _ -> None)
+            |> List.tryPick
+                 (fun tySymbol ->
+                   match tySymbol with
+                   | ModuleTySymbol moduleSerial -> Some moduleSerial
+                   | _ -> None)
 
           match moduleSerialOpt with
           | Some moduleSerial -> ctx |> openModule moduleSerial
@@ -1458,10 +1486,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
               let moduleSerialOpt =
                 ctx
                 |> resolveLocalTyName moduleName
-                |> List.tryPick (fun tySymbol ->
-                     match tySymbol with
-                     | ModuleTySymbol moduleSerial -> Some moduleSerial
-                     | _ -> None)
+                |> List.tryPick
+                     (fun tySymbol ->
+                       match tySymbol with
+                       | ModuleTySymbol moduleSerial -> Some moduleSerial
+                       | _ -> None)
 
               match moduleSerialOpt with
               | Some referent ->

@@ -23,6 +23,7 @@ let isSpace (c: char): bool = ('\t' <= c && c <= '\r') || c = ' '
 
 let isPunctuation (c: char): bool =
   let n = int c
+
   (33 <= n && n <= 47)
   || (58 <= n && n <= 64)
   || (91 <= n && n <= 96)

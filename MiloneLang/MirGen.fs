@@ -82,9 +82,11 @@ let private addStmtListList (ctx: MirCtx) (stmtListList: MStmt list list) =
   let stmts =
     stmtListList
     |> List.rev
-    |> List.fold (fun stmts stmtList ->
-         stmtList
-         |> List.fold (fun stmts stmt -> stmt :: stmts) stmts) ctx.Stmts
+    |> List.fold
+         (fun stmts stmtList ->
+           stmtList
+           |> List.fold (fun stmts stmt -> stmt :: stmts) stmts)
+         ctx.Stmts
 
   { ctx with Stmts = stmts }
 
@@ -149,7 +151,8 @@ let private opIsComparison op =
   | MLessBinary -> true
   | _ -> false
 
-let private mxNot expr loc = MUnaryExpr(MNotUnary, expr, tyBool, loc)
+let private mxNot expr loc =
+  MUnaryExpr(MNotUnary, expr, tyBool, loc)
 
 /// Wraps an expression with projection operation.
 /// And unbox if necessary.
@@ -179,6 +182,7 @@ let private mxStrCmp ctx op l r (ty, loc) =
 /// Generates a comparison expression.
 let private mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   assert (opIsComparison op)
+
   match mexprToTy l with
   | AppTy ((IntTyCtor _
            | FloatTyCtor _
@@ -526,7 +530,7 @@ let private matchExprCanCompileToSwitch cond arms =
 
   tyIsLit (exprToTy cond)
   && arms
-  |> List.forall (fun (pat, guard, _) -> patIsSimple pat && hxIsAlwaysTrue guard)
+     |> List.forall (fun (pat, guard, _) -> patIsSimple pat && hxIsAlwaysTrue guard)
 
 /// Converts a match expression to switch statement.
 let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
@@ -566,36 +570,38 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
 
   let exhaust, clauses, blocks, ctx =
     arms
-    |> List.fold (fun (hasDefault, clauses, blocks, ctx) (pat, _, body) ->
-         if hasDefault then
-           true, clauses, blocks, ctx
-         else
-           let _, clauseLoc = patExtract pat
-           let clauseLabelStmt, clauseLabel, ctx = freshLabel ctx "clause" clauseLoc
+    |> List.fold
+         (fun (hasDefault, clauses, blocks, ctx) (pat, _, body) ->
+           if hasDefault then
+             true, clauses, blocks, ctx
+           else
+             let _, clauseLoc = patExtract pat
+             let clauseLabelStmt, clauseLabel, ctx = freshLabel ctx "clause" clauseLoc
 
-           let cases, isDefault = go pat
+             let cases, isDefault = go pat
 
-           let clause: MSwitchClause =
-             { Cases = List.rev cases
-               IsDefault = isDefault
-               Terminator = MGotoTerminator clauseLabel }
+             let clause: MSwitchClause =
+               { Cases = List.rev cases
+                 IsDefault = isDefault
+                 Terminator = MGotoTerminator clauseLabel }
 
-           // Generate body.
-           let parentCtx, ctx = ctx, startBlock ctx
+             // Generate body.
+             let parentCtx, ctx = ctx, startBlock ctx
 
-           let block, ctx =
-             let ctx = addStmt ctx clauseLabelStmt
-             let body, ctx = mirifyExpr ctx body
-             let ctx = addStmt ctx (tempSet body)
+             let block, ctx =
+               let ctx = addStmt ctx clauseLabelStmt
+               let body, ctx = mirifyExpr ctx body
+               let ctx = addStmt ctx (tempSet body)
 
-             let ctx =
-               addTerminator ctx (MGotoTerminator nextLabel) loc
+               let ctx =
+                 addTerminator ctx (MGotoTerminator nextLabel) loc
 
-             takeStmts ctx
+               takeStmts ctx
 
-           let ctx = rollback parentCtx ctx
+             let ctx = rollback parentCtx ctx
 
-           hasDefault || isDefault, clause :: clauses, block :: blocks, ctx) (false, [], [], ctx)
+             hasDefault || isDefault, clause :: clauses, block :: blocks, ctx)
+         (false, [], [], ctx)
 
   let clauses =
     if exhaust then
@@ -1025,9 +1031,10 @@ let private mirifyCallAssertExpr ctx arg loc =
   // Embed the source location information.
   let args =
     let _, y, x = loc
+
     [ arg
-      MLitExpr(IntLit (string y), loc)
-      MLitExpr(IntLit (string x), loc) ]
+      MLitExpr(IntLit(string y), loc)
+      MLitExpr(IntLit(string x), loc) ]
 
   let ctx =
     addStmt ctx (MActionStmt(MAssertAction, args, loc))
@@ -1207,16 +1214,17 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args ty loc =
   // Evaluate args and assign to temp vars.
   let tempExprs, ctx =
     (args, ctx)
-    |> stMap (fun (arg, ctx) ->
-         let ty, loc = exprExtract arg
-         let tempVarExpr, tempVarSerial, ctx = freshVar ctx "arg" ty loc
+    |> stMap
+         (fun (arg, ctx) ->
+           let ty, loc = exprExtract arg
+           let tempVarExpr, tempVarSerial, ctx = freshVar ctx "arg" ty loc
 
-         let arg, ctx = mirifyExpr ctx arg
+           let arg, ctx = mirifyExpr ctx arg
 
-         let ctx =
-           addStmt ctx (MLetValStmt(tempVarSerial, MExprInit arg, ty, loc))
+           let ctx =
+             addStmt ctx (MLetValStmt(tempVarSerial, MExprInit arg, ty, loc))
 
-         tempVarExpr, ctx)
+           tempVarExpr, ctx)
 
   // Update args.
   let ctx =
@@ -1423,10 +1431,12 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
   | HBlockExpr (stmts, last) ->
       let ctx =
         stmts
-        |> List.fold (fun ctx stmt ->
-             // Discard intermediate results.
-             let _, ctx = mirifyExpr ctx stmt
-             ctx) ctx
+        |> List.fold
+             (fun ctx stmt ->
+               // Discard intermediate results.
+               let _, ctx = mirifyExpr ctx stmt
+               ctx)
+             ctx
 
       mirifyExpr ctx last
 

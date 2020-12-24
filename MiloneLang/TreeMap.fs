@@ -29,6 +29,7 @@ let private doTryFind keyCmp key node =
         let _typeUnifier () = [ k; key ] |> ignore
 
         let c = keyCmp key k
+
         if c < 0 then
           // key < k
           go a
@@ -62,6 +63,7 @@ let private doInsert keyCmp key value node =
         let _typeUnifier () = [ k, v; key, value ] |> ignore
 
         let c = keyCmp key k
+
         if c < 0 then
           // key < k
           balance (color, T(go l), kv, r)
@@ -101,6 +103,7 @@ let private doRemove keyCmp key node =
         let _typeUnifier () = [ k; key ] |> ignore
 
         let c = keyCmp key k
+
         if c < 0 then
           // key < k
           let removed, l = go key l

@@ -198,6 +198,7 @@ let replace (pattern: string) (target: string) (s: string) =
 
 let private findNewline (start: int) (s: string) =
   let i = start
+
   if i < s.Length
      && (s.[i] <> '\x00' && s.[i] <> '\r' && s.[i] <> '\n') then
     findNewline (i + 1) s

@@ -9,31 +9,47 @@ type private JsonValueFormatter() =
       match value with
       | JNull -> writer.WriteNull()
 
-      | JNumber value -> formatterResolver.GetFormatter().Serialize(&writer, value, formatterResolver)
+      | JNumber value ->
+          formatterResolver
+            .GetFormatter()
+            .Serialize(&writer, value, formatterResolver)
 
-      | JString value -> formatterResolver.GetFormatter().Serialize(&writer, value, formatterResolver)
+      | JString value ->
+          formatterResolver
+            .GetFormatter()
+            .Serialize(&writer, value, formatterResolver)
 
-      | JBoolean value -> formatterResolver.GetFormatter().Serialize(&writer, value, formatterResolver)
+      | JBoolean value ->
+          formatterResolver
+            .GetFormatter()
+            .Serialize(&writer, value, formatterResolver)
 
       | JArray array ->
           writer.WriteBeginArray()
           let mutable first = true
+
           for item in array do
             if first then first <- false else writer.WriteValueSeparator()
 
-            formatterResolver.GetFormatter().Serialize(&writer, item, formatterResolver)
+            formatterResolver
+              .GetFormatter()
+              .Serialize(&writer, item, formatterResolver)
 
           writer.WriteEndArray()
 
       | JObject map ->
           writer.WriteBeginObject()
           let mutable first = true
+
           for KeyValue (key, value) in map do
             if first then first <- false else writer.WriteValueSeparator()
 
             writer.WriteString(key)
             writer.WriteNameSeparator()
-            formatterResolver.GetFormatter().Serialize(&writer, value, formatterResolver)
+
+            formatterResolver
+              .GetFormatter()
+              .Serialize(&writer, value, formatterResolver)
 
           writer.WriteEndObject()
 
@@ -66,7 +82,9 @@ type private JsonValueFormatter() =
 
           while running do
             let item =
-              formatterResolver.GetFormatter<JsonValue>().Deserialize(&reader, formatterResolver)
+              formatterResolver
+                .GetFormatter<JsonValue>()
+                .Deserialize(&reader, formatterResolver)
 
             array.Add(item)
 
@@ -98,7 +116,9 @@ type private JsonValueFormatter() =
             // eprintfn "JsonValue de: ':'"
 
             let value =
-              formatterResolver.GetFormatter<JsonValue>().Deserialize(&reader, formatterResolver)
+              formatterResolver
+                .GetFormatter<JsonValue>()
+                .Deserialize(&reader, formatterResolver)
 
             // eprintfn "JsonValue de: value"
 

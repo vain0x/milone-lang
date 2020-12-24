@@ -43,6 +43,7 @@ let private readHeader (host: JsonRpcReaderHost) (state: State): ExitCode =
       // eprintfn "header: %s" line
 
       let line = line.Trim()
+
       if line.StartsWith("Content-Length:") then
         let len =
           let n = "Content-Length:".Length

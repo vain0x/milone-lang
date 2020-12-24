@@ -12,7 +12,12 @@ let private miloneHome =
   Environment.GetEnvironmentVariable("MILONE_HOME")
 
 let private uriOfFilePath (filePath: string) =
-  StringBuilder().Append(filePath).Replace(":", "%3A").Replace("\\", "/").Insert(0, "file://").ToString()
+  StringBuilder()
+    .Append(filePath)
+    .Replace(":", "%3A")
+    .Replace("\\", "/")
+    .Insert(0, "file://")
+    .ToString()
 
 let private uriToFilePath (uri: string) =
   try
@@ -128,7 +133,9 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
 type ProjectValidateResult = (string * Loc) list
 
 let newLangService (project: ProjectInfo): LangServiceState =
-  let { ProjectDir = projectDir; ProjectName = projectName } = project
+  let { ProjectDir = projectDir
+        ProjectName = projectName } =
+    project
 
   let toFilePath moduleName ext =
     Path.Combine(projectDir, moduleName + ext)
@@ -138,6 +145,7 @@ let newLangService (project: ProjectInfo): LangServiceState =
 
   let fixExt filePath =
     let fs = Path.ChangeExtension(filePath, ".fs")
+
     if File.Exists(filePath) || not (File.Exists(fs))
     then filePath
     else fs
@@ -213,9 +221,11 @@ let newLangServiceWithCache (project: ProjectInfo) =
 
   | None ->
       let ls = newLangService project
+
       langServiceCache
       |> MutMap.insert project.ProjectName ls
       |> ignore
+
       ls
 
 let validateProject (project: ProjectInfo): ProjectValidateResult =
@@ -257,9 +267,10 @@ let private doValidateWorkspace projects =
   // Remember docId for each document that some error is published to.
   // We need publish empty error list to it to remove these errors next time.
   diagnosticKeys
-  |> ResizeArray.assign
-       (diagnostics
-        |> List.choose (fun (docId, errors) -> if errors |> List.isEmpty |> not then Some docId else None))
+  |> ResizeArray.assign (
+    diagnostics
+    |> List.choose (fun (docId, errors) -> if errors |> List.isEmpty |> not then Some docId else None)
+  )
 
   diagnosticsCache
   |> DiagnosticsCache.filter diagnostics

@@ -367,6 +367,7 @@ let private parseTyAtom basePos (tokens, errors) =
 let private parseTySuffix basePos (tokens, errors) =
   let rec go (ty, tokens, errors) =
     let inside = nextInside basePos tokens
+
     match tokens with
     | (IdentToken ident, pos) :: tokens when inside -> go (ASuffixTy(ty, ident, pos), tokens, errors)
 
@@ -1090,6 +1091,7 @@ let private doParseStmts basePos (tokens, errors) =
     | _ -> Some(last, acc), tokens, errors
 
   let alignPos = nextPos tokens
+
   if posInside basePos alignPos && leadsExpr tokens then
     let first, tokens, errors = parseStmt alignPos (tokens, errors)
     go first [] alignPos (tokens, errors)
@@ -1105,12 +1107,14 @@ let private doParseStmts basePos (tokens, errors) =
 let private parseSemi basePos mainPos (tokens, errors) =
   let basePos = nextPos tokens |> posMax basePos
   let contents, tokens, errors = doParseStmts basePos (tokens, errors)
+
   match contents with
   | None -> parseExprError "Expected statements" (tokens, errors)
   | Some (last, acc) -> ASemiExpr(List.rev acc, last, mainPos), tokens, errors
 
 let private parseItems basePos (tokens, errors) =
   let contents, tokens, errors = doParseStmts basePos (tokens, errors)
+
   match contents with
   | Some (last, acc) -> List.rev (last :: acc), tokens, errors
   | None -> [], tokens, errors
@@ -1170,7 +1174,8 @@ let private parseTyDecl typePos (tokens, errors) =
   | (IdentToken tyIdent, _) :: tokens ->
       match tokens with
       | (EqToken, _) :: tokens ->
-          let tyDecl, tokens, errors = parseTyDeclBody basePos (tokens, errors)
+          let tyDecl, tokens, errors =
+            parseTyDeclBody basePos (tokens, errors)
 
           let decl =
             match tyDecl with
@@ -1249,6 +1254,7 @@ let private parseAttrDecl basePos (tokens, errors) =
     parseDeclError "Expected a declaration after attribute." (tokens, errors)
   else
     let declOpt, tokens, errors = parseDecl basePos (tokens, errors)
+
     match declOpt with
     | Some decl -> Some(AAttrDecl(contents, decl, basePos)), tokens, errors
     | None -> None, tokens, errors
@@ -1263,6 +1269,7 @@ let private parseDecl basePos (tokens, errors) =
 
   | _ ->
       let exprOpt, tokens, errors = parseExpr basePos (tokens, errors)
+
       match exprOpt with
       | AMissingExpr _ -> None, tokens, errors
       | expr -> Some(AExprDecl expr), tokens, errors
@@ -1275,6 +1282,7 @@ let private parseModuleBody basePos (tokens, errors) =
     | _ ->
         // error if unaligned
         let declOpt, tokens, errors = parseDecl basePos (tokens, errors)
+
         match declOpt with
         | Some decl -> go (decl :: acc) (tokens, errors)
         | None -> List.rev acc, tokens, errors

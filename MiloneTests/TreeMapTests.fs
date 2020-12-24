@@ -96,6 +96,7 @@ let toListTest () =
   m |> TreeMap.toList |> is [ "a", 2; "c", 3 ]
 
   let m = m |> TreeMap.add "b" 0
+
   m
   |> TreeMap.toList
   |> is [ "a", 2; "b", 0; "c", 3 ]

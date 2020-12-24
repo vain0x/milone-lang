@@ -91,20 +91,22 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
 
 let private buildRecordMap (ctx: RrCtx) =
   ctx.Tys
-  |> mapFold (fun acc tySerial tyDef ->
-       match tyDef with
-       | RecordTyDef (_, fields, _) ->
-           let fieldTys =
-             fields |> List.map (fun (_, ty, _) -> ty)
+  |> mapFold
+       (fun acc tySerial tyDef ->
+         match tyDef with
+         | RecordTyDef (_, fields, _) ->
+             let fieldTys =
+               fields |> List.map (fun (_, ty, _) -> ty)
 
-           let fieldMap =
-             fields
-             |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
-             |> mapOfList compare
+             let fieldMap =
+               fields
+               |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
+               |> mapOfList compare
 
-           acc |> mapAdd tySerial (fieldTys, fieldMap)
+             acc |> mapAdd tySerial (fieldTys, fieldMap)
 
-       | _ -> acc) (mapEmpty compare)
+         | _ -> acc)
+       (mapEmpty compare)
 
 let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   let fieldTys, fieldMap =
@@ -124,10 +126,11 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
 
   let fields =
     fields
-    |> List.map (fun (name, init, _) ->
-         let init = init |> teExpr ctx
-         let index, _ = fieldMap |> mapFind name
-         index, init)
+    |> List.map
+         (fun (name, init, _) ->
+           let init = init |> teExpr ctx
+           let index, _ = fieldMap |> mapFind name
+           index, init)
     |> listSort (fun (l: int, _) (r: int, _) -> compare l r)
 
   match baseOpt with
@@ -184,9 +187,10 @@ let private teExpr (ctx: RrCtx) expr =
 
       let fields =
         fields
-        |> List.map (fun (name, init, loc) ->
-             let init = init |> teExpr ctx
-             name, init, loc)
+        |> List.map
+             (fun (name, init, loc) ->
+               let init = init |> teExpr ctx
+               name, init, loc)
 
       rewriteRecordExpr ctx expr baseOpt fields ty loc
 

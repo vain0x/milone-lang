@@ -176,6 +176,7 @@ let private addArityError actual expected (loc: Loc) (ctx: ArityCheckCtx) =
 let private acExprChecked expr ctx =
   let expected = tyToArity (exprToTy expr)
   let actual, ctx = acExpr (expr, ctx)
+
   if actual <> expected then
     ctx
     |> addArityError actual expected (exprToLoc expr)
@@ -215,9 +216,11 @@ let private acExpr (expr, ctx: ArityCheckCtx) =
 
         let ctx =
           arms
-          |> List.fold (fun ctx (_, guard, body) ->
-               let _, ctx = acExpr (guard, ctx)
-               acExprChecked body ctx) ctx
+          |> List.fold
+               (fun ctx (_, guard, body) ->
+                 let _, ctx = acExpr (guard, ctx)
+                 acExprChecked body ctx)
+               ctx
 
         tyToArity ty, ctx
 
@@ -265,7 +268,8 @@ let arityCheck (expr, tyCtx: Typing.TyCtx) =
     ctx.Errors
     |> List.map (fun (actual, expected, loc) -> Log.ArityMismatch(actual, expected), loc)
 
-  { tyCtx with Logs = List.append tyCtx.Logs logs }
+  { tyCtx with
+      Logs = List.append tyCtx.Logs logs }
 
 // -----------------------------------------------
 // Context
@@ -477,6 +481,7 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
 
 let private resolvePartialApp calleeKind callee arity args argLen callLoc ctx =
   assert (argLen < arity)
+
   match calleeKind with
   | CalleeKind.Fun -> resolvePartialAppFun callee arity args argLen callLoc ctx
   | CalleeKind.Obj -> resolvePartialAppObj callee arity args argLen callLoc ctx
@@ -487,6 +492,7 @@ let private resolvePartialApp calleeKind callee arity args argLen callLoc ctx =
 
 let private doExpandCall calleeKind callee arity calleeLoc args resultTy callLoc ctx =
   let argLen = List.length args
+
   if argLen < arity then
     resolvePartialApp calleeKind callee arity args argLen callLoc ctx
   else
@@ -538,6 +544,7 @@ let private exVariantName expr variantTy loc (ctx: EtaCtx) =
 
 let private exPrimExpr expr prim primTy calleeLoc (ctx: EtaCtx) =
   let arity = prim |> primToArity primTy
+
   if arity = 0
   then expr, ctx
   else resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
@@ -583,10 +590,11 @@ let private exExpr (expr, ctx) =
 
       let arms, ctx =
         (arms, ctx)
-        |> stMap (fun ((pat, guard, body), ctx) ->
-             let guard, ctx = (guard, ctx) |> exExpr
-             let body, ctx = (body, ctx) |> exExpr
-             (pat, guard, body), ctx)
+        |> stMap
+             (fun ((pat, guard, body), ctx) ->
+               let guard, ctx = (guard, ctx) |> exExpr
+               let body, ctx = (body, ctx) |> exExpr
+               (pat, guard, body), ctx)
 
       HMatchExpr(cond, arms, ty, loc), ctx
 
@@ -605,7 +613,8 @@ let private exExpr (expr, ctx) =
       let next, ctx = (next, ctx) |> exExpr
       HLetValExpr(vis, pat, init, next, ty, loc), ctx
 
-  | HLetFunExpr (callee, isRec,vis, args, body, next, ty, loc) -> exLetFunExpr callee isRec vis args body next ty loc ctx
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
+      exLetFunExpr callee isRec vis args body next ty loc ctx
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"

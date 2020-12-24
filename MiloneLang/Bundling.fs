@@ -196,12 +196,14 @@ let bundleProgram (host: BundleHost) (projectName: string): (HExpr list * NameCt
   // HACK: Load "MiloneOnly" module of projects if exists.
   let ctx =
     (List.append host.ProjectRefs [ projectName ])
-    |> List.fold (fun ctx projectName ->
-         match ctx
-               |> fetchModuleWithMemo projectName "MiloneOnly" with
-         | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
+    |> List.fold
+         (fun ctx projectName ->
+           match ctx
+                 |> fetchModuleWithMemo projectName "MiloneOnly" with
+           | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
 
-         | _ -> ctx) ctx
+           | _ -> ctx)
+         ctx
 
   // Load entrypoint module of the project.
   match ctx |> fetchModuleWithMemo projectName projectName with

@@ -31,7 +31,11 @@ let renderTestCaseBuildStatements category projectName =
   let file ext =
     sprintf "tests/%s/%s/%s%s" category projectName projectName ext
 
-  buildTemplate.Replace("{{ CATEGORY }}", category).Replace("{{ PROJECT }}", projectName)
-               .Replace("{{ C_FILE }}", file ".c").Replace("{{ FS_FILE }}", file ".fs")
-               .Replace("{{ DIFF_FILE }}", file ".generated.diff").Replace("{{ EXE_FILE }}", file ".generated.exe")
-               .Replace("{{ OUT_FILE }}", file ".generated.out")
+  buildTemplate
+    .Replace("{{ CATEGORY }}", category)
+    .Replace("{{ PROJECT }}", projectName)
+    .Replace("{{ C_FILE }}", file ".c")
+    .Replace("{{ FS_FILE }}", file ".fs")
+    .Replace("{{ DIFF_FILE }}", file ".generated.diff")
+    .Replace("{{ EXE_FILE }}", file ".generated.exe")
+    .Replace("{{ OUT_FILE }}", file ".generated.out")

@@ -313,15 +313,17 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 
         ty
         |> tyCollectFreeVars
-        |> List.fold (fun tyDepths tySerial ->
-             let currentDepth = ctx.TyDepths |> mapFind tySerial
+        |> List.fold
+             (fun tyDepths tySerial ->
+               let currentDepth = ctx.TyDepths |> mapFind tySerial
 
-             if currentDepth <= depth then
-               // Already non-deep enough.
-               tyDepths
-             else
-               // Prevent this meta ty from getting generalized until depth of the bound meta ty.
-               tyDepths |> mapAdd tySerial depth) ctx.TyDepths
+               if currentDepth <= depth then
+                 // Already non-deep enough.
+                 tyDepths
+               else
+                 // Prevent this meta ty from getting generalized until depth of the bound meta ty.
+                 tyDepths |> mapAdd tySerial depth)
+             ctx.TyDepths
 
       let ctx =
         ctx
@@ -427,22 +429,24 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
   let instantiatedTy, ctx =
     let assignment, ctx =
       defTySerials
-      |> List.fold (fun (assignment, ctx: TyContext) defTySerial ->
-           let newTySerial = ctx.Serial + 1
+      |> List.fold
+           (fun (assignment, ctx: TyContext) defTySerial ->
+             let newTySerial = ctx.Serial + 1
 
-           let assignment =
-             (defTySerial, (MetaTy(newTySerial, loc)))
-             :: assignment
+             let assignment =
+               (defTySerial, (MetaTy(newTySerial, loc)))
+               :: assignment
 
-           let ctx =
-             let tyDepths =
-               ctx.TyDepths |> mapAdd newTySerial ctx.LetDepth
+             let ctx =
+               let tyDepths =
+                 ctx.TyDepths |> mapAdd newTySerial ctx.LetDepth
 
-             { ctx with
-                 Serial = newTySerial
-                 TyDepths = tyDepths }
+               { ctx with
+                   Serial = newTySerial
+                   TyDepths = tyDepths }
 
-           assignment, ctx) ([], ctx)
+             assignment, ctx)
+           ([], ctx)
 
     let substMeta tySerial =
       assignment |> assocTryFind compare tySerial
@@ -470,6 +474,7 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
   let addLog kind lTy rTy logAcc ctx =
     let lRootTy = typingSubst ctx lRootTy
     let rRootTy = typingSubst ctx rRootTy
+
     (Log.TyUnify(kind, lRootTy, rRootTy, lTy, rTy), loc)
     :: logAcc,
     ctx
