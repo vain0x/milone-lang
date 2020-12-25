@@ -383,7 +383,7 @@ let private dfsExpr (visitor: Visitor) expr =
       dfsExpr visitor init
       dfsExpr visitor next
 
-  | HLetFunExpr (funSerial, _, argPats, body, next, _, loc) ->
+  | HLetFunExpr (funSerial, _, _, argPats, body, next, _, loc) ->
       visitor.OnFun(funSerial, None, loc)
 
       for argPat in argPats do
