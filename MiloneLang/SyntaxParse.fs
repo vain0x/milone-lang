@@ -158,6 +158,7 @@ let private inFirstOfPatAndExpr (token: Token) =
   | LeftBracketToken
   | LeftBraceToken
   | FalseToken
+  | MinusToken
   | TrueToken -> true
 
   | _ -> false
@@ -168,7 +169,6 @@ let private inFirstOfPat (token: Token) = inFirstOfPatAndExpr token
 /// Gets whether a token can be the first of an expression.
 let private inFirstOfExpr (token: Token) =
   match token with
-  | MinusToken
   | IfToken
   | MatchToken
   | FunToken
@@ -465,6 +465,9 @@ let private parsePatAtom basePos (tokens, errors) =
 
   | (FalseToken, pos) :: tokens -> ALitPat(BoolLit false, pos), tokens, errors
   | (TrueToken, pos) :: tokens -> ALitPat(BoolLit true, pos), tokens, errors
+
+  | (MinusToken, pos) :: (IntToken text, _) :: tokens ->
+    ALitPat(IntLit ("-" + text), pos), tokens, errors
 
   | _ -> parsePatError "NEVER: The token must be a pat" (tokens, errors)
 
