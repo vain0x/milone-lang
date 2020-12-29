@@ -1,6 +1,6 @@
 #include "milone.h"
 
-enum Day_Tag;
+enum Day_Discriminant;
 
 struct Day_;
 
@@ -16,12 +16,12 @@ bool between_(struct Day_ day_, struct DayRange_ range_);
 
 int main();
 
-enum Day_Tag {
+enum Day_Discriminant {
     Day_,
 };
 
 struct Day_ {
-    enum Day_Tag tag;
+    enum Day_Discriminant discriminant;
     union {
         int Day_;
     };
@@ -42,7 +42,7 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     milone_assert(if_, 10, 2);
-    struct Day_ variant_ = (struct Day_){.tag = Day_, .Day_ = value_};
+    struct Day_ variant_ = (struct Day_){.discriminant = Day_, .Day_ = value_};
     return variant_;
 }
 

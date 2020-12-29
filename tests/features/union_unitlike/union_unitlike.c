@@ -1,12 +1,12 @@
 #include "milone.h"
 
-enum MyUnit_Tag;
+enum MyUnit_Discriminant;
 
 struct MyUnit_;
 
 int basicCase_(int arg_);
 
-enum MyBool_Tag;
+enum MyBool_Discriminant;
 
 struct MyBool_;
 
@@ -22,18 +22,18 @@ int usedInRecordTypeCase_(int arg_2);
 
 int main();
 
-enum MyUnit_Tag {
+enum MyUnit_Discriminant {
     MyUnit_,
 };
 
 struct MyUnit_ {
-    enum MyUnit_Tag tag;
+    enum MyUnit_Discriminant discriminant;
 };
 
 int basicCase_(int arg_) {
-    struct MyUnit_ myUnit_ = (struct MyUnit_){.tag = MyUnit_};
+    struct MyUnit_ myUnit_ = (struct MyUnit_){.discriminant = MyUnit_};
     int switch_;
-    switch (myUnit_.tag) {
+    switch (myUnit_.discriminant) {
         case MyUnit_:
             goto clause_2;
 
@@ -47,13 +47,13 @@ switch_next_1:;
     return 0;
 }
 
-enum MyBool_Tag {
+enum MyBool_Discriminant {
     MyFalse_,
     MyTrue_,
 };
 
 struct MyBool_ {
-    enum MyBool_Tag tag;
+    enum MyBool_Discriminant discriminant;
     union {
         struct MyUnit_ MyFalse_;
         struct MyUnit_ MyTrue_;
@@ -62,7 +62,7 @@ struct MyBool_ {
 
 bool toBool_(struct MyBool_ myBool_1) {
     bool switch_1;
-    switch (myBool_1.tag) {
+    switch (myBool_1.discriminant) {
         case MyFalse_:
             goto clause_4;
 
@@ -83,7 +83,7 @@ switch_next_3:;
 }
 
 int usedInOtherSumTypeCase_(int arg_1) {
-    struct MyBool_ variant_ = (struct MyBool_){.tag = MyTrue_, .MyTrue_ = (struct MyUnit_){.tag = MyUnit_}};
+    struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = (struct MyUnit_){.discriminant = MyUnit_}};
     struct MyBool_ myBool_ = variant_;
     bool call_ = toBool_(myBool_);
     milone_assert(call_, 27, 2);
@@ -102,14 +102,14 @@ struct RecordUsingMyUnit_ {
 
 int usedInRecordTypeCase_(int arg_2) {
     struct MyUnit_List const* list_ = milone_mem_alloc(1, sizeof(struct MyUnit_List));
-    (*(((struct MyUnit_List*)list_))) = (struct MyUnit_List){.head = (struct MyUnit_){.tag = MyUnit_}, .tail = NULL};
+    (*(((struct MyUnit_List*)list_))) = (struct MyUnit_List){.head = (struct MyUnit_){.discriminant = MyUnit_}, .tail = NULL};
     struct RecordUsingMyUnit_ RecordUsingMyUnit_;
-    RecordUsingMyUnit_.First = (struct MyUnit_){.tag = MyUnit_};
+    RecordUsingMyUnit_.First = (struct MyUnit_){.discriminant = MyUnit_};
     RecordUsingMyUnit_.Second = list_;
     struct RecordUsingMyUnit_ record_ = RecordUsingMyUnit_;
     int match_;
     if ((!(record_.Second))) goto next_7;
-    if ((record_.Second->head.tag != MyUnit_)) goto next_7;
+    if ((record_.Second->head.discriminant != MyUnit_)) goto next_7;
     if ((!((!(record_.Second->tail))))) goto next_7;
     match_ = 0;
     goto end_match_6;

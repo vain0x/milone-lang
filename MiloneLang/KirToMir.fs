@@ -424,7 +424,7 @@ let private kmTerm (term: KTerm): MExpr =
   | KFunTerm (varSerial, ty, loc)
   | KLabelTerm (varSerial, ty, loc) -> MRefExpr(varSerial, ty, loc)
 
-  | KTagTerm (variantSerial, loc) -> MTagExpr(variantSerial, loc)
+  | KDiscriminantConstTerm (variantSerial, loc) -> MDiscriminantConstExpr(variantSerial, loc)
 
   | KVariantTerm (variantSerial, ty, loc) -> MVariantExpr(-1, variantSerial, ty, loc)
 
@@ -486,7 +486,7 @@ let private kmNode (node: KNode) ctx: KirToMirCtx =
         | KHeadPath _ -> doUnary MListHeadUnary ctx
         | KTailPath _ -> doUnary MListTailUnary ctx
         | KFieldPath (i, _) -> doUnary (MProjUnary i) ctx
-        | KTagPath _ -> doUnary MTagUnary ctx
+        | KDiscriminantPath _ -> doUnary MGetDiscriminantUnary ctx
         | KPayloadPath (variantSerial, _) -> doUnary (MGetVariantUnary variantSerial) ctx
 
       kmNode cont ctx

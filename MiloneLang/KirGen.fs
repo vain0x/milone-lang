@@ -31,7 +31,7 @@ let private kTermToTy (term: KTerm): Ty =
   | KFunTerm (_, ty, _) -> ty
   | KVariantTerm (_, ty, _) -> ty
 
-  | KTagTerm _ -> tyInt
+  | KDiscriminantConstTerm _ -> tyInt
 
   | KLabelTerm (_, ty, _) -> ty
 
@@ -72,7 +72,7 @@ let private kTermToTy (term: KTerm): Ty =
 [<NoEquality; NoComparison>]
 type private PTerm =
   | PLitTerm of Lit * Loc
-  | PTagTerm of VariantSerial * Loc
+  | PDiscriminantConstTerm of VariantSerial * Loc
   | PNilTerm of itemTy: Ty * Loc
   | PNoneTerm of itemTy: Ty * Loc
 
@@ -82,6 +82,7 @@ type private PNode =
   | PDiscardNode
 
   /// Set the current value to a var and continue.
+
   | PLetNode of VarSerial * cont: PNode * Loc
 
   /// Select a content of the value and continue.
@@ -97,7 +98,7 @@ type private PNode =
 let private kgRefPat varSerial loc = PLetNode(varSerial, PDiscardNode, loc)
 
 let private kgVariantPat variantSerial loc =
-  PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
+  PSelectNode(KDiscriminantPath loc, PEqualNode(PDiscriminantConstTerm(variantSerial, loc), PDiscardNode, loc), loc)
 
 let private kgTuplePat itemPats loc ctx =
   let conts =
@@ -117,7 +118,7 @@ let private kgSomeAppPat payloadPat ty loc ctx =
 // decomposition of variant
 let private kgVariantAppPat variantSerial payloadPat loc ctx =
   PConjNode(
-    [ PSelectNode(KTagPath loc, PEqualNode(PTagTerm(variantSerial, loc), PDiscardNode, loc), loc)
+    [ PSelectNode(KDiscriminantPath loc, PEqualNode(PDiscriminantConstTerm(variantSerial, loc), PDiscardNode, loc), loc)
       PSelectNode(KPayloadPath(variantSerial, loc), kgPat payloadPat ctx, loc) ],
     loc
   )
@@ -265,7 +266,7 @@ let private selectTy ty path ctx =
           | None -> unreachable (ty, path)
       | _ -> unreachable (ty, path)
 
-  | KTagPath _ -> tyInt
+  | KDiscriminantPath _ -> tyInt
 
   | KPayloadPath (variantSerial, _) ->
       let variantDef = findVariant variantSerial ctx
@@ -497,7 +498,7 @@ let private kgCallRegularPrimExpr hint prim args ty loc hole ctx =
 let private kgEvalPTerm (term: PTerm): KTerm =
   match term with
   | PLitTerm (lit, loc) -> KLitTerm(lit, loc)
-  | PTagTerm (variantSerial, loc) -> KTagTerm(variantSerial, loc)
+  | PDiscriminantConstTerm (variantSerial, loc) -> KDiscriminantConstTerm(variantSerial, loc)
   | PNilTerm (itemTy, loc) -> KNilTerm(itemTy, loc)
   | PNoneTerm (itemTy, loc) -> KNoneTerm(itemTy, loc)
 

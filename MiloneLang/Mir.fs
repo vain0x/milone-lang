@@ -60,7 +60,7 @@ type MUnary =
   | MProjUnary of tupleItemIndex: int
 
   /// Gets variant tag of union value.
-  | MTagUnary
+  | MGetDiscriminantUnary
 
   /// Gets payload of union value, unchecked.
   | MGetVariantUnary of variantSerial: VariantSerial
@@ -148,8 +148,7 @@ type MExpr =
   /// Variant constant.
   | MVariantExpr of TySerial * VariantSerial * Ty * Loc
 
-  /// Variant tag value.
-  | MTagExpr of VariantSerial * Loc
+  | MDiscriminantConstExpr of VariantSerial * Loc
 
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
@@ -185,7 +184,7 @@ type MInit =
 [<NoEquality; NoComparison>]
 type MConst =
   | MLitConst of l: Lit
-  | MTagConst of v: VariantSerial
+  | MDiscriminantConst of v: VariantSerial
 
 [<NoEquality; NoComparison>]
 type MSwitchClause =
@@ -241,7 +240,7 @@ let mexprExtract expr =
   | MRefExpr (_, ty, loc) -> ty, loc
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc
-  | MTagExpr (_, loc) -> tyInt, loc
+  | MDiscriminantConstExpr (_, loc) -> tyInt, loc
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
   | MNativeExpr (_, ty, loc) -> ty, loc

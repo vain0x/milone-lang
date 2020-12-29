@@ -135,7 +135,7 @@ Each variant is associated with an integer. The value is called *discriminant* o
 
 (The runtime representation of discriminated union types is unlikely stabilized. FFI codes shouldn't rely on the layout.)
 
-Currently, discriminated union type is converted to a struct. It consists of a pair of tag and payload. Tag is an enum of discriminants. Payload is (an anonymous union of) pointer to payload type.
+Currently, discriminated union type is converted to a struct. It consists of a pair of discriminant and payload. Discriminant type is an enum of discriminant. Payload type is (an anonymous union of) pointer to type of its actual payload.
 
 Example:
 
@@ -146,7 +146,7 @@ type Customer =
 ```
 
 ```c
-enum CustomerTag {
+enum CustomerDiscriminant {
     Guest,
     Member,
 };
@@ -158,7 +158,7 @@ struct IntStringPair {
 };
 
 struct Customer {
-    enum CustomerTag tag_;
+    enum CustomerDiscriminant discriminant_;
     union {
         struct IntStringPair const *member_;
     };

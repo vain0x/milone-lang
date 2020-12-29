@@ -2,7 +2,7 @@
 
 struct SubRecord_;
 
-enum SubUnion_Tag;
+enum SubUnion_Discriminant;
 
 struct SubUnion_;
 
@@ -12,12 +12,12 @@ struct SubRecord_ {
     struct String Text;
 };
 
-enum SubUnion_Tag {
+enum SubUnion_Discriminant {
     SubUnion_,
 };
 
 struct SubUnion_ {
-    enum SubUnion_Tag tag;
+    enum SubUnion_Discriminant discriminant;
     union {
         int SubUnion_;
     };
@@ -29,7 +29,7 @@ int main() {
     struct SubRecord_ text_ = SubRecord_;
     milone_assert((text_.Text.len == 5), 8, 2);
     int match_;
-    struct SubUnion_ variant_ = (struct SubUnion_){.tag = SubUnion_, .SubUnion_ = 42};
+    struct SubUnion_ variant_ = (struct SubUnion_){.discriminant = SubUnion_, .SubUnion_ = 42};
     int value_ = variant_.SubUnion_;
     milone_assert((value_ == 42), 11, 35);
     match_ = 0;

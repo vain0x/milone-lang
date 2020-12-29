@@ -2,7 +2,7 @@
 
 bool id_1(bool x_);
 
-enum Space_Tag;
+enum Space_Discriminant;
 
 struct Space_;
 
@@ -46,7 +46,7 @@ struct Space_List const* go_25(struct Space_Space_Fun1 f_, struct Space_List con
 
 struct Ty_Space_Fun1;
 
-enum Ty_Tag;
+enum Ty_Discriminant;
 
 struct Ty_;
 
@@ -56,7 +56,7 @@ struct Space_List const* go_24(struct Ty_Space_Fun1 f_, struct Space_List const*
 
 struct Pat_Space_Fun1;
 
-enum Pat_Tag;
+enum Pat_Discriminant;
 
 struct Pat_;
 
@@ -74,7 +74,7 @@ struct BoolList const* go_22(struct StringSpace_Tuple2BoolFun1 f_, struct BoolLi
 
 struct StringTy_Pat_ListCovering_Tuple4BoolFun1;
 
-enum Covering_Tag;
+enum Covering_Discriminant;
 
 struct Covering_;
 
@@ -270,7 +270,7 @@ bool id_1(bool x_) {
     return x_;
 }
 
-enum Space_Tag {
+enum Space_Discriminant {
     Full_,
     Ctor_,
     Ref_,
@@ -278,7 +278,7 @@ enum Space_Tag {
 };
 
 struct Space_ {
-    enum Space_Tag tag;
+    enum Space_Discriminant discriminant;
     union {
         void const* Ctor_;
         void const* Ref_;
@@ -494,14 +494,14 @@ struct Ty_Space_Fun1 {
     void const* env;
 };
 
-enum Ty_Tag {
+enum Ty_Discriminant {
     Int_,
     Tuple_,
     List_,
 };
 
 struct Ty_ {
-    enum Ty_Tag tag;
+    enum Ty_Discriminant discriminant;
     union {
         void const* Tuple_;
         void const* List_;
@@ -547,7 +547,7 @@ struct Pat_Space_Fun1 {
     void const* env;
 };
 
-enum Pat_Tag {
+enum Pat_Discriminant {
     Discard_,
     IntLit_,
     TupleLit_,
@@ -556,7 +556,7 @@ enum Pat_Tag {
 };
 
 struct Pat_ {
-    enum Pat_Tag tag;
+    enum Pat_Discriminant discriminant;
     union {
         int IntLit_;
         void const* TupleLit_;
@@ -647,13 +647,13 @@ struct StringTy_Pat_ListCovering_Tuple4BoolFun1 {
     void const* env;
 };
 
-enum Covering_Tag {
+enum Covering_Discriminant {
     Covering_,
     Open_,
 };
 
 struct Covering_ {
-    enum Covering_Tag tag;
+    enum Covering_Discriminant discriminant;
 };
 
 struct StringTy_Pat_ListCovering_Tuple4 {
@@ -1145,7 +1145,7 @@ struct Space_ spaceCtor_(struct String tag_, struct Space_List const* items_) {
     tuple_2.t1 = items_;
     void const* box_ = milone_mem_alloc(1, sizeof(struct StringSpace_ListTuple2));
     (*(((struct StringSpace_ListTuple2*)box_))) = tuple_2;
-    struct Space_ variant_ = (struct Space_){.tag = Ctor_, .Ctor_ = box_};
+    struct Space_ variant_ = (struct Space_){.discriminant = Ctor_, .Ctor_ = box_};
     return variant_;
 }
 
@@ -1165,7 +1165,7 @@ struct Space_ spaceRef_(struct String tag_1, struct UnitSpace_Fun1 thunk_) {
     tuple_3.t1 = thunk_;
     void const* box_1 = milone_mem_alloc(1, sizeof(struct StringUnitSpace_Fun1Tuple2));
     (*(((struct StringUnitSpace_Fun1Tuple2*)box_1))) = tuple_3;
-    struct Space_ variant_1 = (struct Space_){.tag = Ref_, .Ref_ = box_1};
+    struct Space_ variant_1 = (struct Space_){.discriminant = Ref_, .Ref_ = box_1};
     return variant_1;
 }
 
@@ -1178,7 +1178,7 @@ tailrec_90:;
     goto end_match_91;
 next_92:;
     if ((!(spaces_1))) goto next_93;
-    if ((spaces_1->head.tag != Union_)) goto next_93;
+    if ((spaces_1->head.discriminant != Union_)) goto next_93;
     struct Space_List const* subspaces_ = (*(((struct Space_List const* const*)spaces_1->head.Union_)));
     struct Space_List const* spaces_2 = spaces_1->tail;
     struct Space_List const* arg_79 = spaces_2;
@@ -1236,7 +1236,7 @@ next_98:;
     struct Space_List const* spaces_5 = call_32;
     void const* box_2 = milone_mem_alloc(1, sizeof(struct Space_List const*));
     (*(((struct Space_List const**)box_2))) = spaces_5;
-    struct Space_ variant_2 = (struct Space_){.tag = Union_, .Union_ = box_2};
+    struct Space_ variant_2 = (struct Space_){.discriminant = Union_, .Union_ = box_2};
     match_20 = variant_2;
     goto end_match_97;
 next_99:;
@@ -1256,7 +1256,7 @@ bool fun_10(void const* env_1, struct Space_ arg_1) {
 
 bool spaceIsEmpty_(struct Space_ space_3) {
     bool match_21;
-    if ((space_3.tag != Ctor_)) goto next_101;
+    if ((space_3.discriminant != Ctor_)) goto next_101;
     struct Space_List const* spaces_6 = (*(((struct StringSpace_ListTuple2 const*)space_3.Ctor_))).t1;
     void const* box_3 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_3))) = 0;
@@ -1266,7 +1266,7 @@ bool spaceIsEmpty_(struct Space_ space_3) {
     match_21 = call_35;
     goto end_match_100;
 next_101:;
-    if ((space_3.tag != Union_)) goto next_102;
+    if ((space_3.discriminant != Union_)) goto next_102;
     struct Space_List const* spaces_7 = (*(((struct Space_List const* const*)space_3.Union_)));
     void const* box_4 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_4))) = 0;
@@ -1286,7 +1286,7 @@ end_match_100:;
 
 struct Space_ spaceDecompose_(struct Space_ space_4) {
     struct Space_ match_22;
-    if ((space_4.tag != Ref_)) goto next_105;
+    if ((space_4.discriminant != Ref_)) goto next_105;
     struct UnitSpace_Fun1 thunk_1 = (*(((struct StringUnitSpace_Fun1Tuple2 const*)space_4.Ref_))).t1;
     struct Space_ app_13 = thunk_1.fun(thunk_1.env, 0);
     struct Space_ space_5 = app_13;
@@ -1398,29 +1398,29 @@ tailrec_110:;
     struct Space_Space_Tuple2 tuple_5;
     tuple_5.t0 = first_;
     tuple_5.t1 = second_;
-    if ((tuple_5.t0.tag != Union_)) goto next_112;
+    if ((tuple_5.t0.discriminant != Union_)) goto next_112;
     if ((!((!((*(((struct Space_List const* const*)tuple_5.t0.Union_)))))))) goto next_112;
     match_23 = spaceEmpty_;
     goto end_match_111;
 next_112:;
-    if ((tuple_5.t1.tag != Union_)) goto next_113;
+    if ((tuple_5.t1.discriminant != Union_)) goto next_113;
     if ((!((!((*(((struct Space_List const* const*)tuple_5.t1.Union_)))))))) goto next_113;
     match_23 = first_;
     goto end_match_111;
 next_113:;
-    if ((tuple_5.t1.tag != Full_)) goto next_114;
+    if ((tuple_5.t1.discriminant != Full_)) goto next_114;
     match_23 = spaceEmpty_;
     goto end_match_111;
 next_114:;
-    if ((tuple_5.t0.tag != Full_)) goto next_115;
-    if ((tuple_5.t1.tag != Ctor_)) goto next_115;
+    if ((tuple_5.t0.discriminant != Full_)) goto next_115;
+    if ((tuple_5.t1.discriminant != Ctor_)) goto next_115;
     match_23 = spaceFull_;
     goto end_match_111;
 next_115:;
-    if ((tuple_5.t0.tag != Ctor_)) goto next_116;
+    if ((tuple_5.t0.discriminant != Ctor_)) goto next_116;
     struct String tag_2 = (*(((struct StringSpace_ListTuple2 const*)tuple_5.t0.Ctor_))).t0;
     struct Space_List const* firsts_ = (*(((struct StringSpace_ListTuple2 const*)tuple_5.t0.Ctor_))).t1;
-    if ((tuple_5.t1.tag != Ctor_)) goto next_116;
+    if ((tuple_5.t1.discriminant != Ctor_)) goto next_116;
     struct String secondTag_ = (*(((struct StringSpace_ListTuple2 const*)tuple_5.t1.Ctor_))).t0;
     struct Space_List const* seconds_ = (*(((struct StringSpace_ListTuple2 const*)tuple_5.t1.Ctor_))).t1;
     if ((str_cmp(tag_2, secondTag_) != 0)) goto next_116;
@@ -1457,12 +1457,12 @@ if_next_123:;
     match_23 = if_5;
     goto end_match_111;
 next_116:;
-    if ((tuple_5.t0.tag != Ctor_)) goto next_117;
-    if ((tuple_5.t1.tag != Ctor_)) goto next_117;
+    if ((tuple_5.t0.discriminant != Ctor_)) goto next_117;
+    if ((tuple_5.t1.discriminant != Ctor_)) goto next_117;
     match_23 = first_;
     goto end_match_111;
 next_117:;
-    if ((tuple_5.t1.tag != Union_)) goto next_118;
+    if ((tuple_5.t1.discriminant != Union_)) goto next_118;
     struct Space_List const* seconds_1 = (*(((struct Space_List const* const*)tuple_5.t1.Union_)));
     void const* box_8 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_8))) = 0;
@@ -1472,7 +1472,7 @@ next_117:;
     match_23 = call_53;
     goto end_match_111;
 next_118:;
-    if ((tuple_5.t0.tag != Union_)) goto next_119;
+    if ((tuple_5.t0.discriminant != Union_)) goto next_119;
     struct Space_List const* firsts_1 = (*(((struct Space_List const* const*)tuple_5.t0.Union_)));
     struct Space_Tuple1 tuple_7;
     tuple_7.t0 = second_;
@@ -1485,15 +1485,15 @@ next_118:;
     match_23 = call_55;
     goto end_match_111;
 next_119:;
-    if ((tuple_5.t0.tag != Ref_)) goto next_120;
+    if ((tuple_5.t0.discriminant != Ref_)) goto next_120;
     struct String tag_3 = (*(((struct StringUnitSpace_Fun1Tuple2 const*)tuple_5.t0.Ref_))).t0;
-    if ((tuple_5.t1.tag != Ref_)) goto next_120;
+    if ((tuple_5.t1.discriminant != Ref_)) goto next_120;
     struct String secondTag_1 = (*(((struct StringUnitSpace_Fun1Tuple2 const*)tuple_5.t1.Ref_))).t0;
     if ((str_cmp(tag_3, secondTag_1) != 0)) goto next_120;
     match_23 = spaceEmpty_;
     goto end_match_111;
 next_120:;
-    if ((tuple_5.t0.tag != Ref_)) goto next_121;
+    if ((tuple_5.t0.discriminant != Ref_)) goto next_121;
     struct Space_ call_56 = spaceDecompose_(first_);
     struct Space_ arg_88 = call_56;
     struct Space_ arg_89 = second_;
@@ -1503,7 +1503,7 @@ next_120:;
     match_23 = ((struct Space_){});
     goto end_match_111;
 next_121:;
-    if ((tuple_5.t1.tag != Ref_)) goto next_122;
+    if ((tuple_5.t1.discriminant != Ref_)) goto next_122;
     milone_assert(false, 345, 4);
     struct Space_ arg_90 = first_;
     struct Space_ call_57 = spaceDecompose_(second_);
@@ -1549,19 +1549,19 @@ struct StringList const* fun_17(void const* env_8, struct StringList const* arg_
 
 struct StringList const* go_9(struct Space_ space_7, struct StringList const* acc_5) {
     struct StringList const* match_24;
-    if ((space_7.tag != Full_)) goto next_127;
+    if ((space_7.discriminant != Full_)) goto next_127;
     struct StringList const* call_66 = cons_1((struct String){.str = "full", .len = 4}, acc_5);
     match_24 = call_66;
     goto end_match_126;
 next_127:;
-    if ((space_7.tag != Ctor_)) goto next_128;
+    if ((space_7.discriminant != Ctor_)) goto next_128;
     struct String tag_4 = (*(((struct StringSpace_ListTuple2 const*)space_7.Ctor_))).t0;
     if ((!((!((*(((struct StringSpace_ListTuple2 const*)space_7.Ctor_))).t1))))) goto next_128;
     struct StringList const* call_67 = cons_1(tag_4, acc_5);
     match_24 = call_67;
     goto end_match_126;
 next_128:;
-    if ((space_7.tag != Ctor_)) goto next_129;
+    if ((space_7.discriminant != Ctor_)) goto next_129;
     struct String tag_5 = (*(((struct StringSpace_ListTuple2 const*)space_7.Ctor_))).t0;
     if ((!((*(((struct StringSpace_ListTuple2 const*)space_7.Ctor_))).t1))) goto next_129;
     struct Space_ item_ = (*(((struct StringSpace_ListTuple2 const*)space_7.Ctor_))).t1->head;
@@ -1579,19 +1579,19 @@ next_128:;
     match_24 = call_72;
     goto end_match_126;
 next_129:;
-    if ((space_7.tag != Ref_)) goto next_130;
+    if ((space_7.discriminant != Ref_)) goto next_130;
     struct String tag_6 = (*(((struct StringUnitSpace_Fun1Tuple2 const*)space_7.Ref_))).t0;
     struct StringList const* call_73 = cons_1(tag_6, acc_5);
     match_24 = call_73;
     goto end_match_126;
 next_130:;
-    if ((space_7.tag != Union_)) goto next_131;
+    if ((space_7.discriminant != Union_)) goto next_131;
     if ((!((!((*(((struct Space_List const* const*)space_7.Union_)))))))) goto next_131;
     struct StringList const* call_74 = cons_1((struct String){.str = "empty", .len = 5}, acc_5);
     match_24 = call_74;
     goto end_match_126;
 next_131:;
-    if ((space_7.tag != Union_)) goto next_132;
+    if ((space_7.discriminant != Union_)) goto next_132;
     if ((!((*(((struct Space_List const* const*)space_7.Union_)))))) goto next_132;
     struct Space_ subspace_ = (*(((struct Space_List const* const*)space_7.Union_)))->head;
     struct Space_List const* subspaces_1 = (*(((struct Space_List const* const*)space_7.Union_)))->tail;
@@ -1663,11 +1663,11 @@ struct Space_ fun_20(void const* env_11, int arg_22) {
 
 struct Space_ go_10(struct Ty_ ty_1) {
     struct Space_ match_25;
-    if ((ty_1.tag != Int_)) goto next_135;
+    if ((ty_1.discriminant != Int_)) goto next_135;
     match_25 = spaceFull_;
     goto end_match_134;
 next_135:;
-    if ((ty_1.tag != Tuple_)) goto next_136;
+    if ((ty_1.discriminant != Tuple_)) goto next_136;
     struct Ty_List const* itemTys_ = (*(((struct Ty_List const* const*)ty_1.Tuple_)));
     void const* box_13 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_13))) = 0;
@@ -1678,7 +1678,7 @@ next_135:;
     match_25 = call_91;
     goto end_match_134;
 next_136:;
-    if ((ty_1.tag != List_)) goto next_137;
+    if ((ty_1.discriminant != List_)) goto next_137;
     struct Ty_ itemTy_ = (*(((struct Ty_ const*)ty_1.List_)));
     struct Space_ call_92 = go_10(itemTy_);
     struct Space_ itemSpace_ = call_92;
@@ -1714,15 +1714,15 @@ struct Pat_Pat_Tuple2 {
 
 struct Space_ go_11(struct Pat_ pat_1) {
     struct Space_ match_26;
-    if ((pat_1.tag != Discard_)) goto next_139;
+    if ((pat_1.discriminant != Discard_)) goto next_139;
     match_26 = spaceFull_;
     goto end_match_138;
 next_139:;
-    if ((pat_1.tag != IntLit_)) goto next_140;
+    if ((pat_1.discriminant != IntLit_)) goto next_140;
     match_26 = spaceEmpty_;
     goto end_match_138;
 next_140:;
-    if ((pat_1.tag != TupleLit_)) goto next_141;
+    if ((pat_1.discriminant != TupleLit_)) goto next_141;
     struct Pat_List const* itemPats_ = (*(((struct Pat_List const* const*)pat_1.TupleLit_)));
     void const* box_15 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_15))) = 0;
@@ -1733,12 +1733,12 @@ next_140:;
     match_26 = call_97;
     goto end_match_138;
 next_141:;
-    if ((pat_1.tag != Nil_)) goto next_142;
+    if ((pat_1.discriminant != Nil_)) goto next_142;
     struct Space_ call_98 = spaceCtor_((struct String){.str = "nil", .len = 3}, NULL);
     match_26 = call_98;
     goto end_match_138;
 next_142:;
-    if ((pat_1.tag != Cons_)) goto next_143;
+    if ((pat_1.discriminant != Cons_)) goto next_143;
     struct Pat_ headPat_ = (*(((struct Pat_Pat_Tuple2 const*)pat_1.Cons_))).t0;
     struct Pat_ tailPat_ = (*(((struct Pat_Pat_Tuple2 const*)pat_1.Cons_))).t1;
     struct Space_ call_99 = go_11(headPat_);
@@ -1830,17 +1830,17 @@ int testSpaceIsEmpty_(int arg_94) {
     bool call_120 = spaceIsEmpty_(call_119);
     milone_assert(call_120, 463, 2);
     void const* box_18 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_18))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_3 = (struct Ty_){.tag = List_, .List_ = box_18};
+    (*(((struct Ty_*)box_18))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_3 = (struct Ty_){.discriminant = List_, .List_ = box_18};
     struct Space_ call_121 = tyToSpace_(variant_3);
     bool call_122 = spaceIsEmpty_(call_121);
     milone_assert((!(call_122)), 465, 2);
     void const* box_19 = milone_mem_alloc(1, sizeof(struct Ty_List const*));
     (*(((struct Ty_List const**)box_19))) = NULL;
-    struct Ty_ variant_4 = (struct Ty_){.tag = Tuple_, .Tuple_ = box_19};
+    struct Ty_ variant_4 = (struct Ty_){.discriminant = Tuple_, .Tuple_ = box_19};
     void const* box_20 = milone_mem_alloc(1, sizeof(struct Ty_));
     (*(((struct Ty_*)box_20))) = variant_4;
-    struct Ty_ variant_5 = (struct Ty_){.tag = List_, .List_ = box_20};
+    struct Ty_ variant_5 = (struct Ty_){.discriminant = List_, .List_ = box_20};
     struct Space_ call_123 = tyToSpace_(variant_5);
     bool call_124 = spaceIsEmpty_(call_123);
     milone_assert((!(call_124)), 466, 2);
@@ -1898,24 +1898,24 @@ int testSpaceToString_(int arg_96) {
     struct StringSpace_Tuple2 tuple_13;
     tuple_13.t0 = (struct String){.str = "tuple(empty, full)", .len = 18};
     tuple_13.t1 = call_129;
-    struct Space_ call_130 = tyToSpace_((struct Ty_){.tag = Int_});
+    struct Space_ call_130 = tyToSpace_((struct Ty_){.discriminant = Int_});
     struct StringSpace_Tuple2 tuple_14;
     tuple_14.t0 = (struct String){.str = "full", .len = 4};
     tuple_14.t1 = call_130;
     void const* box_21 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_21))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_6 = (struct Ty_){.tag = List_, .List_ = box_21};
+    (*(((struct Ty_*)box_21))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_6 = (struct Ty_){.discriminant = List_, .List_ = box_21};
     struct Space_ call_131 = tyToSpace_(variant_6);
     struct Space_ call_132 = spaceDecompose_(call_131);
     struct StringSpace_Tuple2 tuple_15;
     tuple_15.t0 = (struct String){.str = "+(nil, cons(full, list))", .len = 24};
     tuple_15.t1 = call_132;
     struct Pat_Pat_Tuple2 tuple_17;
-    tuple_17.t0 = (struct Pat_){.tag = Discard_};
-    tuple_17.t1 = (struct Pat_){.tag = Nil_};
+    tuple_17.t0 = (struct Pat_){.discriminant = Discard_};
+    tuple_17.t1 = (struct Pat_){.discriminant = Nil_};
     void const* box_22 = milone_mem_alloc(1, sizeof(struct Pat_Pat_Tuple2));
     (*(((struct Pat_Pat_Tuple2*)box_22))) = tuple_17;
-    struct Pat_ variant_7 = (struct Pat_){.tag = Cons_, .Cons_ = box_22};
+    struct Pat_ variant_7 = (struct Pat_){.discriminant = Cons_, .Cons_ = box_22};
     struct Space_ call_133 = patToSpace_(variant_7);
     struct StringSpace_Tuple2 tuple_16;
     tuple_16.t0 = (struct String){.str = "cons(full, nil)", .len = 15};
@@ -1982,10 +1982,10 @@ bool fun_8(struct StringTy_Pat_ListCovering_Tuple4 arg_97) {
         goto else_150;
     }
 then_149:;
-    if_7 = (struct Covering_){.tag = Covering_};
+    if_7 = (struct Covering_){.discriminant = Covering_};
     goto if_next_148;
 else_150:;
-    if_7 = (struct Covering_){.tag = Open_};
+    if_7 = (struct Covering_){.discriminant = Open_};
     goto if_next_148;
 if_next_148:;
     struct Covering_ actual_1 = if_7;
@@ -1993,12 +1993,12 @@ if_next_148:;
     struct Covering_Covering_Tuple2 tuple_18;
     tuple_18.t0 = covering_;
     tuple_18.t1 = actual_1;
-    if ((tuple_18.t0.tag != Covering_)) goto next_153;
-    if ((tuple_18.t1.tag != Covering_)) goto next_153;
+    if ((tuple_18.t0.discriminant != Covering_)) goto next_153;
+    if ((tuple_18.t1.discriminant != Covering_)) goto next_153;
     goto match_body_152;
 next_153:;
-    if ((tuple_18.t0.tag != Open_)) goto next_154;
-    if ((tuple_18.t1.tag != Open_)) goto next_154;
+    if ((tuple_18.t0.discriminant != Open_)) goto next_154;
+    if ((tuple_18.t1.discriminant != Open_)) goto next_154;
     goto match_body_152;
 match_body_152:;
     struct BoolStringTuple2 tuple_19;
@@ -2007,8 +2007,8 @@ match_body_152:;
     match_27 = tuple_19;
     goto end_match_151;
 next_154:;
-    if ((tuple_18.t0.tag != Covering_)) goto next_155;
-    if ((tuple_18.t1.tag != Open_)) goto next_155;
+    if ((tuple_18.t0.discriminant != Covering_)) goto next_155;
+    if ((tuple_18.t1.discriminant != Open_)) goto next_155;
     struct BoolStringTuple2 tuple_20;
     tuple_20.t0 = false;
     tuple_20.t1 = (struct String){.str = "NG. Expected covering but open", .len = 30};
@@ -2051,108 +2051,108 @@ bool fun_27(void const* env_18, struct StringTy_Pat_ListCovering_Tuple4 arg_30) 
 }
 
 int main() {
-    spaceFull_ = (struct Space_){.tag = Full_};
+    spaceFull_ = (struct Space_){.discriminant = Full_};
     void const* box_25 = milone_mem_alloc(1, sizeof(struct Space_List const*));
     (*(((struct Space_List const**)box_25))) = NULL;
-    struct Space_ variant_8 = (struct Space_){.tag = Union_, .Union_ = box_25};
+    struct Space_ variant_8 = (struct Space_){.discriminant = Union_, .Union_ = box_25};
     spaceEmpty_ = variant_8;
     int call_143 = testSpaceIsEmpty_(0);
     int call_144 = testSpaceToString_(0);
     struct Pat_Pat_Tuple2 tuple_22;
-    tuple_22.t0 = (struct Pat_){.tag = Discard_};
-    tuple_22.t1 = (struct Pat_){.tag = Discard_};
+    tuple_22.t0 = (struct Pat_){.discriminant = Discard_};
+    tuple_22.t1 = (struct Pat_){.discriminant = Discard_};
     void const* box_26 = milone_mem_alloc(1, sizeof(struct Pat_Pat_Tuple2));
     (*(((struct Pat_Pat_Tuple2*)box_26))) = tuple_22;
-    struct Pat_ variant_9 = (struct Pat_){.tag = Cons_, .Cons_ = box_26};
+    struct Pat_ variant_9 = (struct Pat_){.discriminant = Cons_, .Cons_ = box_26};
     struct Pat_ anyConsPat_ = variant_9;
     void const* box_27 = milone_mem_alloc(1, sizeof(struct Ty_List const*));
     (*(((struct Ty_List const**)box_27))) = NULL;
-    struct Ty_ variant_10 = (struct Ty_){.tag = Tuple_, .Tuple_ = box_27};
+    struct Ty_ variant_10 = (struct Ty_){.discriminant = Tuple_, .Tuple_ = box_27};
     void const* box_28 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_28))) = NULL;
-    struct Pat_ variant_11 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_28};
+    struct Pat_ variant_11 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_28};
     struct Pat_List const* list_38 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_38))) = (struct Pat_List){.head = variant_11, .tail = NULL};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_23;
     tuple_23.t0 = (struct String){.str = "unit with ()", .len = 12};
     tuple_23.t1 = variant_10;
     tuple_23.t2 = list_38;
-    tuple_23.t3 = (struct Covering_){.tag = Covering_};
-    struct Pat_ variant_12 = (struct Pat_){.tag = IntLit_, .IntLit_ = 1};
+    tuple_23.t3 = (struct Covering_){.discriminant = Covering_};
+    struct Pat_ variant_12 = (struct Pat_){.discriminant = IntLit_, .IntLit_ = 1};
     struct Pat_List const* list_40 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_40))) = (struct Pat_List){.head = variant_12, .tail = NULL};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_24;
     tuple_24.t0 = (struct String){.str = "int with literal pats", .len = 21};
-    tuple_24.t1 = (struct Ty_){.tag = Int_};
+    tuple_24.t1 = (struct Ty_){.discriminant = Int_};
     tuple_24.t2 = list_40;
-    tuple_24.t3 = (struct Covering_){.tag = Open_};
+    tuple_24.t3 = (struct Covering_){.discriminant = Open_};
     struct Pat_List const* list_42 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_42))) = (struct Pat_List){.head = (struct Pat_){.tag = Discard_}, .tail = NULL};
+    (*(((struct Pat_List*)list_42))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Discard_}, .tail = NULL};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_25;
     tuple_25.t0 = (struct String){.str = "int with _", .len = 10};
-    tuple_25.t1 = (struct Ty_){.tag = Int_};
+    tuple_25.t1 = (struct Ty_){.discriminant = Int_};
     tuple_25.t2 = list_42;
-    tuple_25.t3 = (struct Covering_){.tag = Covering_};
-    struct Pat_ variant_13 = (struct Pat_){.tag = IntLit_, .IntLit_ = 1};
+    tuple_25.t3 = (struct Covering_){.discriminant = Covering_};
+    struct Pat_ variant_13 = (struct Pat_){.discriminant = IntLit_, .IntLit_ = 1};
     struct Pat_List const* list_45 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_45))) = (struct Pat_List){.head = (struct Pat_){.tag = Discard_}, .tail = NULL};
+    (*(((struct Pat_List*)list_45))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Discard_}, .tail = NULL};
     struct Pat_List const* list_44 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_44))) = (struct Pat_List){.head = variant_13, .tail = list_45};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_26;
     tuple_26.t0 = (struct String){.str = "int with 1|_", .len = 12};
-    tuple_26.t1 = (struct Ty_){.tag = Int_};
+    tuple_26.t1 = (struct Ty_){.discriminant = Int_};
     tuple_26.t2 = list_44;
-    tuple_26.t3 = (struct Covering_){.tag = Covering_};
+    tuple_26.t3 = (struct Covering_){.discriminant = Covering_};
     void const* box_29 = milone_mem_alloc(1, sizeof(struct Ty_List const*));
     (*(((struct Ty_List const**)box_29))) = NULL;
-    struct Ty_ variant_14 = (struct Ty_){.tag = Tuple_, .Tuple_ = box_29};
+    struct Ty_ variant_14 = (struct Ty_){.discriminant = Tuple_, .Tuple_ = box_29};
     struct Ty_List const* list_48 = milone_mem_alloc(1, sizeof(struct Ty_List));
     (*(((struct Ty_List*)list_48))) = (struct Ty_List){.head = variant_14, .tail = NULL};
     struct Ty_List const* list_47 = milone_mem_alloc(1, sizeof(struct Ty_List));
-    (*(((struct Ty_List*)list_47))) = (struct Ty_List){.head = (struct Ty_){.tag = Int_}, .tail = list_48};
+    (*(((struct Ty_List*)list_47))) = (struct Ty_List){.head = (struct Ty_){.discriminant = Int_}, .tail = list_48};
     void const* box_30 = milone_mem_alloc(1, sizeof(struct Ty_List const*));
     (*(((struct Ty_List const**)box_30))) = list_47;
-    struct Ty_ variant_15 = (struct Ty_){.tag = Tuple_, .Tuple_ = box_30};
+    struct Ty_ variant_15 = (struct Ty_){.discriminant = Tuple_, .Tuple_ = box_30};
     void const* box_31 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_31))) = NULL;
-    struct Pat_ variant_16 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_31};
+    struct Pat_ variant_16 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_31};
     struct Pat_List const* list_51 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_51))) = (struct Pat_List){.head = variant_16, .tail = NULL};
     struct Pat_List const* list_50 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_50))) = (struct Pat_List){.head = (struct Pat_){.tag = Discard_}, .tail = list_51};
+    (*(((struct Pat_List*)list_50))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Discard_}, .tail = list_51};
     void const* box_32 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_32))) = list_50;
-    struct Pat_ variant_17 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_32};
+    struct Pat_ variant_17 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_32};
     struct Pat_List const* list_49 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_49))) = (struct Pat_List){.head = variant_17, .tail = NULL};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_27;
     tuple_27.t0 = (struct String){.str = "int * unit with _, ()", .len = 21};
     tuple_27.t1 = variant_15;
     tuple_27.t2 = list_49;
-    tuple_27.t3 = (struct Covering_){.tag = Covering_};
+    tuple_27.t3 = (struct Covering_){.discriminant = Covering_};
     struct Ty_List const* list_54 = milone_mem_alloc(1, sizeof(struct Ty_List));
-    (*(((struct Ty_List*)list_54))) = (struct Ty_List){.head = (struct Ty_){.tag = Int_}, .tail = NULL};
+    (*(((struct Ty_List*)list_54))) = (struct Ty_List){.head = (struct Ty_){.discriminant = Int_}, .tail = NULL};
     struct Ty_List const* list_53 = milone_mem_alloc(1, sizeof(struct Ty_List));
-    (*(((struct Ty_List*)list_53))) = (struct Ty_List){.head = (struct Ty_){.tag = Int_}, .tail = list_54};
+    (*(((struct Ty_List*)list_53))) = (struct Ty_List){.head = (struct Ty_){.discriminant = Int_}, .tail = list_54};
     void const* box_33 = milone_mem_alloc(1, sizeof(struct Ty_List const*));
     (*(((struct Ty_List const**)box_33))) = list_53;
-    struct Ty_ variant_18 = (struct Ty_){.tag = Tuple_, .Tuple_ = box_33};
-    struct Pat_ variant_19 = (struct Pat_){.tag = IntLit_, .IntLit_ = 1};
+    struct Ty_ variant_18 = (struct Ty_){.discriminant = Tuple_, .Tuple_ = box_33};
+    struct Pat_ variant_19 = (struct Pat_){.discriminant = IntLit_, .IntLit_ = 1};
     struct Pat_List const* list_57 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_57))) = (struct Pat_List){.head = (struct Pat_){.tag = Discard_}, .tail = NULL};
+    (*(((struct Pat_List*)list_57))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Discard_}, .tail = NULL};
     struct Pat_List const* list_56 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_56))) = (struct Pat_List){.head = variant_19, .tail = list_57};
     void const* box_34 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_34))) = list_56;
-    struct Pat_ variant_20 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_34};
-    struct Pat_ variant_21 = (struct Pat_){.tag = IntLit_, .IntLit_ = 1};
+    struct Pat_ variant_20 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_34};
+    struct Pat_ variant_21 = (struct Pat_){.discriminant = IntLit_, .IntLit_ = 1};
     struct Pat_List const* list_60 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_60))) = (struct Pat_List){.head = variant_21, .tail = NULL};
     struct Pat_List const* list_59 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_59))) = (struct Pat_List){.head = (struct Pat_){.tag = Discard_}, .tail = list_60};
+    (*(((struct Pat_List*)list_59))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Discard_}, .tail = list_60};
     void const* box_35 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_35))) = list_59;
-    struct Pat_ variant_22 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_35};
+    struct Pat_ variant_22 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_35};
     struct Pat_List const* list_58 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_58))) = (struct Pat_List){.head = variant_22, .tail = NULL};
     struct Pat_List const* list_55 = milone_mem_alloc(1, sizeof(struct Pat_List));
@@ -2161,89 +2161,89 @@ int main() {
     tuple_28.t0 = (struct String){.str = "int * int with 1, _ | _, 1", .len = 26};
     tuple_28.t1 = variant_18;
     tuple_28.t2 = list_55;
-    tuple_28.t3 = (struct Covering_){.tag = Open_};
+    tuple_28.t3 = (struct Covering_){.discriminant = Open_};
     void const* box_36 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_36))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_23 = (struct Ty_){.tag = List_, .List_ = box_36};
+    (*(((struct Ty_*)box_36))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_23 = (struct Ty_){.discriminant = List_, .List_ = box_36};
     struct Pat_List const* list_62 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_62))) = (struct Pat_List){.head = (struct Pat_){.tag = Nil_}, .tail = NULL};
+    (*(((struct Pat_List*)list_62))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Nil_}, .tail = NULL};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_29;
     tuple_29.t0 = (struct String){.str = "int list with []", .len = 16};
     tuple_29.t1 = variant_23;
     tuple_29.t2 = list_62;
-    tuple_29.t3 = (struct Covering_){.tag = Open_};
+    tuple_29.t3 = (struct Covering_){.discriminant = Open_};
     void const* box_37 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_37))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_24 = (struct Ty_){.tag = List_, .List_ = box_37};
+    (*(((struct Ty_*)box_37))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_24 = (struct Ty_){.discriminant = List_, .List_ = box_37};
     struct Pat_List const* list_64 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_64))) = (struct Pat_List){.head = anyConsPat_, .tail = NULL};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_30;
     tuple_30.t0 = (struct String){.str = "int list with _::_", .len = 18};
     tuple_30.t1 = variant_24;
     tuple_30.t2 = list_64;
-    tuple_30.t3 = (struct Covering_){.tag = Open_};
+    tuple_30.t3 = (struct Covering_){.discriminant = Open_};
     void const* box_38 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_38))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_25 = (struct Ty_){.tag = List_, .List_ = box_38};
+    (*(((struct Ty_*)box_38))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_25 = (struct Ty_){.discriminant = List_, .List_ = box_38};
     struct Pat_List const* list_67 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_67))) = (struct Pat_List){.head = anyConsPat_, .tail = NULL};
     struct Pat_List const* list_66 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_66))) = (struct Pat_List){.head = (struct Pat_){.tag = Nil_}, .tail = list_67};
+    (*(((struct Pat_List*)list_66))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Nil_}, .tail = list_67};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_31;
     tuple_31.t0 = (struct String){.str = "int list with [] | _::_", .len = 23};
     tuple_31.t1 = variant_25;
     tuple_31.t2 = list_66;
-    tuple_31.t3 = (struct Covering_){.tag = Covering_};
+    tuple_31.t3 = (struct Covering_){.discriminant = Covering_};
     void const* box_39 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_39))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_26 = (struct Ty_){.tag = List_, .List_ = box_39};
+    (*(((struct Ty_*)box_39))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_26 = (struct Ty_){.discriminant = List_, .List_ = box_39};
     struct Pat_Pat_Tuple2 tuple_33;
-    tuple_33.t0 = (struct Pat_){.tag = Discard_};
-    tuple_33.t1 = (struct Pat_){.tag = Nil_};
+    tuple_33.t0 = (struct Pat_){.discriminant = Discard_};
+    tuple_33.t1 = (struct Pat_){.discriminant = Nil_};
     void const* box_40 = milone_mem_alloc(1, sizeof(struct Pat_Pat_Tuple2));
     (*(((struct Pat_Pat_Tuple2*)box_40))) = tuple_33;
-    struct Pat_ variant_27 = (struct Pat_){.tag = Cons_, .Cons_ = box_40};
+    struct Pat_ variant_27 = (struct Pat_){.discriminant = Cons_, .Cons_ = box_40};
     struct Pat_Pat_Tuple2 tuple_34;
-    tuple_34.t0 = (struct Pat_){.tag = Discard_};
+    tuple_34.t0 = (struct Pat_){.discriminant = Discard_};
     tuple_34.t1 = anyConsPat_;
     void const* box_41 = milone_mem_alloc(1, sizeof(struct Pat_Pat_Tuple2));
     (*(((struct Pat_Pat_Tuple2*)box_41))) = tuple_34;
-    struct Pat_ variant_28 = (struct Pat_){.tag = Cons_, .Cons_ = box_41};
+    struct Pat_ variant_28 = (struct Pat_){.discriminant = Cons_, .Cons_ = box_41};
     struct Pat_List const* list_71 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_71))) = (struct Pat_List){.head = variant_28, .tail = NULL};
     struct Pat_List const* list_70 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_70))) = (struct Pat_List){.head = variant_27, .tail = list_71};
     struct Pat_List const* list_69 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_69))) = (struct Pat_List){.head = (struct Pat_){.tag = Nil_}, .tail = list_70};
+    (*(((struct Pat_List*)list_69))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Nil_}, .tail = list_70};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_32;
     tuple_32.t0 = (struct String){.str = "int list with [] | [_] | _::_::_", .len = 32};
     tuple_32.t1 = variant_26;
     tuple_32.t2 = list_69;
-    tuple_32.t3 = (struct Covering_){.tag = Covering_};
+    tuple_32.t3 = (struct Covering_){.discriminant = Covering_};
     void const* box_42 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_42))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_29 = (struct Ty_){.tag = List_, .List_ = box_42};
+    (*(((struct Ty_*)box_42))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_29 = (struct Ty_){.discriminant = List_, .List_ = box_42};
     void const* box_43 = milone_mem_alloc(1, sizeof(struct Ty_));
     (*(((struct Ty_*)box_43))) = variant_29;
-    struct Ty_ variant_30 = (struct Ty_){.tag = List_, .List_ = box_43};
+    struct Ty_ variant_30 = (struct Ty_){.discriminant = List_, .List_ = box_43};
     struct Pat_Pat_Tuple2 tuple_36;
-    tuple_36.t0 = (struct Pat_){.tag = Nil_};
-    tuple_36.t1 = (struct Pat_){.tag = Nil_};
+    tuple_36.t0 = (struct Pat_){.discriminant = Nil_};
+    tuple_36.t1 = (struct Pat_){.discriminant = Nil_};
     void const* box_44 = milone_mem_alloc(1, sizeof(struct Pat_Pat_Tuple2));
     (*(((struct Pat_Pat_Tuple2*)box_44))) = tuple_36;
-    struct Pat_ variant_31 = (struct Pat_){.tag = Cons_, .Cons_ = box_44};
+    struct Pat_ variant_31 = (struct Pat_){.discriminant = Cons_, .Cons_ = box_44};
     struct Pat_Pat_Tuple2 tuple_37;
     tuple_37.t0 = anyConsPat_;
-    tuple_37.t1 = (struct Pat_){.tag = Discard_};
+    tuple_37.t1 = (struct Pat_){.discriminant = Discard_};
     void const* box_45 = milone_mem_alloc(1, sizeof(struct Pat_Pat_Tuple2));
     (*(((struct Pat_Pat_Tuple2*)box_45))) = tuple_37;
-    struct Pat_ variant_32 = (struct Pat_){.tag = Cons_, .Cons_ = box_45};
+    struct Pat_ variant_32 = (struct Pat_){.discriminant = Cons_, .Cons_ = box_45};
     struct Pat_Pat_Tuple2 tuple_38;
-    tuple_38.t0 = (struct Pat_){.tag = Discard_};
+    tuple_38.t0 = (struct Pat_){.discriminant = Discard_};
     tuple_38.t1 = anyConsPat_;
     void const* box_46 = milone_mem_alloc(1, sizeof(struct Pat_Pat_Tuple2));
     (*(((struct Pat_Pat_Tuple2*)box_46))) = tuple_38;
-    struct Pat_ variant_33 = (struct Pat_){.tag = Cons_, .Cons_ = box_46};
+    struct Pat_ variant_33 = (struct Pat_){.discriminant = Cons_, .Cons_ = box_46};
     struct Pat_List const* list_76 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_76))) = (struct Pat_List){.head = variant_33, .tail = NULL};
     struct Pat_List const* list_75 = milone_mem_alloc(1, sizeof(struct Pat_List));
@@ -2251,53 +2251,53 @@ int main() {
     struct Pat_List const* list_74 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_74))) = (struct Pat_List){.head = variant_31, .tail = list_75};
     struct Pat_List const* list_73 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_73))) = (struct Pat_List){.head = (struct Pat_){.tag = Nil_}, .tail = list_74};
+    (*(((struct Pat_List*)list_73))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Nil_}, .tail = list_74};
     struct StringTy_Pat_ListCovering_Tuple4 tuple_35;
     tuple_35.t0 = (struct String){.str = "int list list with [] | [[]] | [_::_] | _::_::_", .len = 47};
     tuple_35.t1 = variant_30;
     tuple_35.t2 = list_73;
-    tuple_35.t3 = (struct Covering_){.tag = Covering_};
+    tuple_35.t3 = (struct Covering_){.discriminant = Covering_};
     void const* box_47 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_47))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_34 = (struct Ty_){.tag = List_, .List_ = box_47};
+    (*(((struct Ty_*)box_47))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_34 = (struct Ty_){.discriminant = List_, .List_ = box_47};
     void const* box_48 = milone_mem_alloc(1, sizeof(struct Ty_));
-    (*(((struct Ty_*)box_48))) = (struct Ty_){.tag = Int_};
-    struct Ty_ variant_35 = (struct Ty_){.tag = List_, .List_ = box_48};
+    (*(((struct Ty_*)box_48))) = (struct Ty_){.discriminant = Int_};
+    struct Ty_ variant_35 = (struct Ty_){.discriminant = List_, .List_ = box_48};
     struct Ty_List const* list_79 = milone_mem_alloc(1, sizeof(struct Ty_List));
     (*(((struct Ty_List*)list_79))) = (struct Ty_List){.head = variant_35, .tail = NULL};
     struct Ty_List const* list_78 = milone_mem_alloc(1, sizeof(struct Ty_List));
     (*(((struct Ty_List*)list_78))) = (struct Ty_List){.head = variant_34, .tail = list_79};
     void const* box_49 = milone_mem_alloc(1, sizeof(struct Ty_List const*));
     (*(((struct Ty_List const**)box_49))) = list_78;
-    struct Ty_ variant_36 = (struct Ty_){.tag = Tuple_, .Tuple_ = box_49};
+    struct Ty_ variant_36 = (struct Ty_){.discriminant = Tuple_, .Tuple_ = box_49};
     struct Pat_List const* list_82 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_82))) = (struct Pat_List){.head = (struct Pat_){.tag = Nil_}, .tail = NULL};
+    (*(((struct Pat_List*)list_82))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Nil_}, .tail = NULL};
     struct Pat_List const* list_81 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_81))) = (struct Pat_List){.head = (struct Pat_){.tag = Nil_}, .tail = list_82};
+    (*(((struct Pat_List*)list_81))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Nil_}, .tail = list_82};
     void const* box_50 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_50))) = list_81;
-    struct Pat_ variant_37 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_50};
+    struct Pat_ variant_37 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_50};
     struct Pat_List const* list_85 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_85))) = (struct Pat_List){.head = (struct Pat_){.tag = Nil_}, .tail = NULL};
+    (*(((struct Pat_List*)list_85))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Nil_}, .tail = NULL};
     struct Pat_List const* list_84 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_84))) = (struct Pat_List){.head = anyConsPat_, .tail = list_85};
     void const* box_51 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_51))) = list_84;
-    struct Pat_ variant_38 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_51};
+    struct Pat_ variant_38 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_51};
     struct Pat_List const* list_88 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_88))) = (struct Pat_List){.head = anyConsPat_, .tail = NULL};
     struct Pat_List const* list_87 = milone_mem_alloc(1, sizeof(struct Pat_List));
-    (*(((struct Pat_List*)list_87))) = (struct Pat_List){.head = (struct Pat_){.tag = Nil_}, .tail = list_88};
+    (*(((struct Pat_List*)list_87))) = (struct Pat_List){.head = (struct Pat_){.discriminant = Nil_}, .tail = list_88};
     void const* box_52 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_52))) = list_87;
-    struct Pat_ variant_39 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_52};
+    struct Pat_ variant_39 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_52};
     struct Pat_List const* list_91 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_91))) = (struct Pat_List){.head = anyConsPat_, .tail = NULL};
     struct Pat_List const* list_90 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_90))) = (struct Pat_List){.head = anyConsPat_, .tail = list_91};
     void const* box_53 = milone_mem_alloc(1, sizeof(struct Pat_List const*));
     (*(((struct Pat_List const**)box_53))) = list_90;
-    struct Pat_ variant_40 = (struct Pat_){.tag = TupleLit_, .TupleLit_ = box_53};
+    struct Pat_ variant_40 = (struct Pat_){.discriminant = TupleLit_, .TupleLit_ = box_53};
     struct Pat_List const* list_89 = milone_mem_alloc(1, sizeof(struct Pat_List));
     (*(((struct Pat_List*)list_89))) = (struct Pat_List){.head = variant_40, .tail = NULL};
     struct Pat_List const* list_86 = milone_mem_alloc(1, sizeof(struct Pat_List));
@@ -2310,7 +2310,7 @@ int main() {
     tuple_39.t0 = (struct String){.str = "int list * int list with [], [] | [], _::_ | _::_, [] | _::_, _::_", .len = 66};
     tuple_39.t1 = variant_36;
     tuple_39.t2 = list_80;
-    tuple_39.t3 = (struct Covering_){.tag = Covering_};
+    tuple_39.t3 = (struct Covering_){.discriminant = Covering_};
     struct StringTy_Pat_ListCovering_Tuple4List const* list_77 = milone_mem_alloc(1, sizeof(struct StringTy_Pat_ListCovering_Tuple4List));
     (*(((struct StringTy_Pat_ListCovering_Tuple4List*)list_77))) = (struct StringTy_Pat_ListCovering_Tuple4List){.head = tuple_39, .tail = NULL};
     struct StringTy_Pat_ListCovering_Tuple4List const* list_72 = milone_mem_alloc(1, sizeof(struct StringTy_Pat_ListCovering_Tuple4List));

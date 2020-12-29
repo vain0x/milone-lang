@@ -52,7 +52,7 @@ let private kdPath path ctx =
   | KHeadPath _ -> ".head"
   | KTailPath _ -> ".tail"
   | KFieldPath (i, _) -> "[" + string i + "]"
-  | KTagPath _ -> ".tag"
+  | KDiscriminantPath _ -> ".discriminant"
   | KPayloadPath (variantSerial, _) -> "." + getVariantName variantSerial ctx
 
 let private litToDebugString lit =
@@ -152,7 +152,7 @@ let private kdTerm term ctx =
   | KLabelTerm (funSerial, _, _) -> getFunName funSerial ctx
 
   | KVariantTerm (variantSerial, _, _) -> getVariantName variantSerial ctx
-  | KTagTerm (variantSerial, _) -> getVariantName variantSerial ctx + ".tag"
+  | KDiscriminantConstTerm (variantSerial, _) -> getVariantName variantSerial ctx + ".discriminant"
 
   | KNilTerm _ -> "[]"
   | KNoneTerm _ -> "None"

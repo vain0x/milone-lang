@@ -292,11 +292,12 @@ let private mirifyPatRef ctx _endLabel serial ty loc expr =
 
 let private mirifyPatVariant ctx endLabel serial ty loc expr =
   // Compare tags.
-  let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
-  let rTagExpr = MTagExpr(serial, loc)
-
   let eqExpr =
-    MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
+    let lDiscriminant =
+      MUnaryExpr(MGetDiscriminantUnary, expr, tyInt, loc)
+
+    let rDiscriminant = MDiscriminantConstExpr(serial, loc)
+    MBinaryExpr(MEqualBinary, lDiscriminant, rDiscriminant, tyBool, loc)
 
   let gotoStmt = msGotoUnless eqExpr endLabel loc
   let ctx = addStmt ctx gotoStmt
@@ -313,11 +314,12 @@ let private mirifyPatVariantApp (ctx: MirCtx) endLabel serial payloadPat loc exp
     mirifyPat ctx endLabel payloadPat extractExpr
   else
     // Compare tags.
-    let lTagExpr = MUnaryExpr(MTagUnary, expr, tyInt, loc)
-    let rTagExpr = MTagExpr(serial, loc)
-
     let eqExpr =
-      MBinaryExpr(MEqualBinary, lTagExpr, rTagExpr, tyBool, loc)
+      let lDiscriminant =
+        MUnaryExpr(MGetDiscriminantUnary, expr, tyInt, loc)
+
+      let rDiscriminant = MDiscriminantConstExpr(serial, loc)
+      MBinaryExpr(MEqualBinary, lDiscriminant, rDiscriminant, tyBool, loc)
 
     let gotoStmt = msGotoUnless eqExpr endLabel loc
     let ctx = addStmt ctx gotoStmt
@@ -541,9 +543,9 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
 
     | HDiscardPat _ -> [], true
 
-    | HVariantPat (variantSerial, _, _) -> [ MTagConst variantSerial ], false
+    | HVariantPat (variantSerial, _, _) -> [ MDiscriminantConst variantSerial ], false
 
-    | HNodePat (HVariantAppPN variantSerial, _, _, _) -> [ MTagConst variantSerial ], false
+    | HNodePat (HVariantAppPN variantSerial, _, _, _) -> [ MDiscriminantConst variantSerial ], false
 
     | HOrPat (l, r, _) ->
         let lCases, lIsDefault = go l
@@ -565,7 +567,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
     let cond, ctx = mirifyExpr ctx cond
 
     match condTy with
-    | AppTy (UnionTyCtor _, _) -> MUnaryExpr(MTagUnary, cond, tyInt, condLoc), ctx
+    | AppTy (UnionTyCtor _, _) -> MUnaryExpr(MGetDiscriminantUnary, cond, tyInt, condLoc), ctx
     | _ -> cond, ctx
 
   let exhaust, clauses, blocks, ctx =

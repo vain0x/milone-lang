@@ -40,7 +40,7 @@ struct IntIntIntFun2List;
 
 bool listIsEmpty_2(struct IntIntIntFun2List const* xs_);
 
-enum SegNodeTag_Tag;
+enum SegNodeTag_Discriminant;
 
 struct SegNodeTag_;
 
@@ -126,7 +126,7 @@ struct VoidMutPtrIntIntFun2;
 
 struct VoidMutPtrIntIntUnitFun3;
 
-enum TypeTag_Tag;
+enum TypeTag_Discriminant;
 
 struct TypeTag_;
 
@@ -144,7 +144,7 @@ int fun_5(void const* env_2, void* arg_2, int arg_3);
 
 int fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6);
 
-enum VectorTag_Tag;
+enum VectorTag_Discriminant;
 
 struct VectorTag_;
 
@@ -180,7 +180,7 @@ bool intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second
 
 bool intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5);
 
-enum SegItemTypeTag_Tag;
+enum SegItemTypeTag_Discriminant;
 
 struct SegItemTypeTag_;
 
@@ -274,7 +274,7 @@ struct IntIntIntObjectSegNodeTag_Tuple5 segNodeMakeBalanced_1(struct IntIntIntFu
 
 struct StringIntIntObjectSegNodeTag_Tuple5 segNodeMakeBalanced_2(struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 itemTy_10, struct StringIntIntObjectSegNodeTag_Tuple5 node_7);
 
-enum SegTreeTag_Tag;
+enum SegTreeTag_Discriminant;
 
 struct SegTreeTag_;
 
@@ -569,12 +569,12 @@ if_next_10:;
     return if_3;
 }
 
-enum SegNodeTag_Tag {
+enum SegNodeTag_Discriminant {
     SegNodeTag_,
 };
 
 struct SegNodeTag_ {
-    enum SegNodeTag_Tag tag;
+    enum SegNodeTag_Discriminant discriminant;
 };
 
 struct IntIntIntObjectSegNodeTag_Tuple5 {
@@ -1101,12 +1101,12 @@ struct VoidMutPtrIntIntUnitFun3 {
     void const* env;
 };
 
-enum TypeTag_Tag {
+enum TypeTag_Discriminant {
     TypeTag_,
 };
 
 struct TypeTag_ {
-    enum TypeTag_Tag tag;
+    enum TypeTag_Discriminant discriminant;
 };
 
 struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3TypeTag_Tuple6 {
@@ -1151,12 +1151,12 @@ int fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6) {
     return 0;
 }
 
-enum VectorTag_Tag {
+enum VectorTag_Discriminant {
     VectorTag_,
 };
 
 struct VectorTag_ {
-    enum VectorTag_Tag tag;
+    enum VectorTag_Discriminant discriminant;
 };
 
 struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3TypeTag_Tuple6VoidMutPtrIntIntVectorTag_Tuple5 {
@@ -1182,7 +1182,7 @@ struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3TypeTa
     tuple_6.t1 = array_2;
     tuple_6.t2 = len_7;
     tuple_6.t3 = len_7;
-    tuple_6.t4 = (struct VectorTag_){.tag = VectorTag_};
+    tuple_6.t4 = (struct VectorTag_){.discriminant = VectorTag_};
     return tuple_6;
 }
 
@@ -1399,12 +1399,12 @@ if_next_87:;
     return if_16;
 }
 
-enum SegItemTypeTag_Tag {
+enum SegItemTypeTag_Discriminant {
     SegItemTypeTag_,
 };
 
 struct SegItemTypeTag_ {
-    enum SegItemTypeTag_Tag tag;
+    enum SegItemTypeTag_Discriminant discriminant;
 };
 
 struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 {
@@ -1481,7 +1481,7 @@ struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTyp
     tuple_7.t0 = append_1;
     tuple_7.t1 = emptyNode_1;
     tuple_7.t2 = box_1;
-    tuple_7.t3 = (struct SegItemTypeTag_){.tag = SegItemTypeTag_};
+    tuple_7.t3 = (struct SegItemTypeTag_){.discriminant = SegItemTypeTag_};
     struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 itemTy_5 = tuple_7;
     struct StringStringStringFun2 call_52 = segItemTypeToAppend_2(itemTy_5);
     struct StringStringStringFun2List const* list_10 = milone_mem_alloc(1, sizeof(struct StringStringStringFun2List));
@@ -1517,7 +1517,7 @@ struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 
     tuple_9.t0 = append_1;
     tuple_9.t1 = emptyNode_1;
     tuple_9.t2 = box_2;
-    tuple_9.t3 = (struct SegItemTypeTag_){.tag = SegItemTypeTag_};
+    tuple_9.t3 = (struct SegItemTypeTag_){.discriminant = SegItemTypeTag_};
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 itemTy_5 = tuple_9;
     struct IntIntIntFun2 call_56 = segItemTypeToAppend_1(itemTy_5);
     struct IntIntIntFun2List const* list_14 = milone_mem_alloc(1, sizeof(struct IntIntIntFun2List));
@@ -1535,7 +1535,7 @@ struct StringIntIntObjectSegNodeTag_Tuple5 segNodeNewEmpty_2(struct String empty
     tuple_11.t1 = 0;
     tuple_11.t2 = -1;
     tuple_11.t3 = unitObj_;
-    tuple_11.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
+    tuple_11.t4 = (struct SegNodeTag_){.discriminant = SegNodeTag_};
     return tuple_11;
 }
 
@@ -1545,7 +1545,7 @@ struct IntIntIntObjectSegNodeTag_Tuple5 segNodeNewEmpty_1(int emptyItem_1) {
     tuple_12.t1 = 0;
     tuple_12.t2 = -1;
     tuple_12.t3 = unitObj_;
-    tuple_12.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
+    tuple_12.t4 = (struct SegNodeTag_){.discriminant = SegNodeTag_};
     return tuple_12;
 }
 
@@ -1557,7 +1557,7 @@ struct IntIntIntObjectSegNodeTag_Tuple5 segNodeNewLeaf_1(struct IntIntIntFun2Int
     tuple_13.t1 = 1;
     tuple_13.t2 = 0;
     tuple_13.t3 = noChildren_1;
-    tuple_13.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
+    tuple_13.t4 = (struct SegNodeTag_){.discriminant = SegNodeTag_};
     return tuple_13;
 }
 
@@ -1569,7 +1569,7 @@ struct StringIntIntObjectSegNodeTag_Tuple5 segNodeNewLeaf_2(struct StringStringS
     tuple_14.t1 = 1;
     tuple_14.t2 = 0;
     tuple_14.t3 = noChildren_1;
-    tuple_14.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
+    tuple_14.t4 = (struct SegNodeTag_){.discriminant = SegNodeTag_};
     return tuple_14;
 }
 
@@ -1610,7 +1610,7 @@ if_next_90:;
     tuple_15.t1 = len_12;
     tuple_15.t2 = height_;
     tuple_15.t3 = box_3;
-    tuple_15.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
+    tuple_15.t4 = (struct SegNodeTag_){.discriminant = SegNodeTag_};
     return tuple_15;
 }
 
@@ -1651,7 +1651,7 @@ if_next_93:;
     tuple_17.t1 = len_12;
     tuple_17.t2 = height_;
     tuple_17.t3 = box_4;
-    tuple_17.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
+    tuple_17.t4 = (struct SegNodeTag_){.discriminant = SegNodeTag_};
     return tuple_17;
 }
 
@@ -2305,12 +2305,12 @@ if_next_169:;
     return if_40;
 }
 
-enum SegTreeTag_Tag {
+enum SegTreeTag_Discriminant {
     SegTreeTag_,
 };
 
 struct SegTreeTag_ {
-    enum SegTreeTag_Tag tag;
+    enum SegTreeTag_Discriminant discriminant;
 };
 
 struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 {
@@ -2325,7 +2325,7 @@ struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4I
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 tuple_23;
     tuple_23.t0 = itemTy_11;
     tuple_23.t1 = emptyNode_2;
-    tuple_23.t2 = (struct SegTreeTag_){.tag = SegTreeTag_};
+    tuple_23.t2 = (struct SegTreeTag_){.discriminant = SegTreeTag_};
     return tuple_23;
 }
 
@@ -2341,7 +2341,7 @@ struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTyp
     struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4StringIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 tuple_24;
     tuple_24.t0 = itemTy_11;
     tuple_24.t1 = emptyNode_2;
-    tuple_24.t2 = (struct SegTreeTag_){.tag = SegTreeTag_};
+    tuple_24.t2 = (struct SegTreeTag_){.discriminant = SegTreeTag_};
     return tuple_24;
 }
 
@@ -2674,7 +2674,7 @@ then_226:;
     tuple_30.t1 = len_17;
     tuple_30.t2 = height_2;
     tuple_30.t3 = children_1;
-    tuple_30.t4 = (struct SegNodeTag_){.tag = SegNodeTag_};
+    tuple_30.t4 = (struct SegNodeTag_){.discriminant = SegNodeTag_};
     if_58 = tuple_30;
     goto if_next_225;
 else_227:;
@@ -2714,7 +2714,7 @@ struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4I
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 tuple_31;
     tuple_31.t0 = itemTy_13;
     tuple_31.t1 = root_2;
-    tuple_31.t2 = (struct SegTreeTag_){.tag = SegTreeTag_};
+    tuple_31.t2 = (struct SegTreeTag_){.discriminant = SegTreeTag_};
     return tuple_31;
 }
 
@@ -2926,7 +2926,7 @@ struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4I
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 tuple_40;
     tuple_40.t0 = itemTy_14;
     tuple_40.t1 = root_4;
-    tuple_40.t2 = (struct SegTreeTag_){.tag = SegTreeTag_};
+    tuple_40.t2 = (struct SegTreeTag_){.discriminant = SegTreeTag_};
     return tuple_40;
 }
 
@@ -2938,7 +2938,7 @@ struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTyp
     struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4StringIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 tuple_41;
     tuple_41.t0 = itemTy_14;
     tuple_41.t1 = root_4;
-    tuple_41.t2 = (struct SegTreeTag_){.tag = SegTreeTag_};
+    tuple_41.t2 = (struct SegTreeTag_){.discriminant = SegTreeTag_};
     return tuple_41;
 }
 
@@ -3024,7 +3024,7 @@ struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4I
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 tuple_42;
     tuple_42.t0 = itemTy_15;
     tuple_42.t1 = root_6;
-    tuple_42.t2 = (struct SegTreeTag_){.tag = SegTreeTag_};
+    tuple_42.t2 = (struct SegTreeTag_){.discriminant = SegTreeTag_};
     return tuple_42;
 }
 
@@ -4010,7 +4010,7 @@ int main() {
     tuple_43.t2 = fun_39;
     tuple_43.t3 = fun_40;
     tuple_43.t4 = fun_41;
-    tuple_43.t5 = (struct TypeTag_){.tag = TypeTag_};
+    tuple_43.t5 = (struct TypeTag_){.discriminant = TypeTag_};
     typeInt_ = tuple_43;
     int call_373 = vectorTest_(0);
     int call_374 = segTreeTest_(0);

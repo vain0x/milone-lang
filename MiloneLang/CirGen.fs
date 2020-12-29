@@ -67,8 +67,8 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
 
 let private tupleField (i: int) = "t" + string i
 
-/// Calculates tag type's name of union type.
-let private toTagEnumName (name: string) = name + "Tag"
+/// Calculates discriminant type's name of union type.
+let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 
 // -----------------------------------------------
 // Context
@@ -327,8 +327,8 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       let structName, ctx = getUniqueTyName ctx unionTyRef
       let selfTy, ctx = genIncompleteUnionTyDecl ctx tySerial
 
-      let tagEnumName = toTagEnumName structName
-      let tagTy = CEnumTy tagEnumName
+      let discriminantEnumName = toDiscriminantEnumName structName
+      let discriminantTy = CEnumTy discriminantEnumName
 
       let variants =
         variants
@@ -337,7 +337,7 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
                let v = ctx.Variants |> mapFind variantSerial
                v.Name, variantSerial, v.HasPayload, v.PayloadTy)
 
-      let tags =
+      let discriminants =
         variants
         |> List.map (fun (_, serial, _, _) -> getUniqueVariantName ctx serial)
 
@@ -354,14 +354,15 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
                else
                  acc, ctx)
 
-      let tagEnumDecl = CEnumDecl(tagEnumName, tags)
+      let discriminantEnumDecl =
+        CEnumDecl(discriminantEnumName, discriminants)
 
       let structDecl =
-        CStructDecl(structName, [ "tag", tagTy ], variants)
+        CStructDecl(structName, [ "discriminant", discriminantTy ], variants)
 
       let ctx =
         { ctx with
-            Decls = structDecl :: tagEnumDecl :: ctx.Decls
+            Decls = structDecl :: discriminantEnumDecl :: ctx.Decls
             TyEnv =
               ctx.TyEnv
               |> mapAdd unionTyRef (CTyDefined, selfTy) }
@@ -708,13 +709,13 @@ let private genLit lit =
   | CharLit value -> CCharExpr value
   | StrLit value -> CStrObjExpr value
 
-let private genTag ctx variantSerial =
+let private genDiscriminant ctx variantSerial =
   CVarExpr(getUniqueVariantName ctx variantSerial)
 
 let private cgConst ctx mConst =
   match mConst with
   | MLitConst lit -> genLit lit
-  | MTagConst variantSerial -> genTag ctx variantSerial
+  | MDiscriminantConst variantSerial -> genDiscriminant ctx variantSerial
 
 /// `0`, `NULL`, or `(T) {}`
 let private genDefault ctx ty =
@@ -750,10 +751,10 @@ let private genDefault ctx ty =
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
 
-  let tag =
+  let discriminant =
     CVarExpr(getUniqueVariantName ctx serial)
 
-  CInitExpr([ "tag", tag ], ty), ctx
+  CInitExpr([ "discriminant", discriminant ], ty), ctx
 
 /// Converts a binary expression to a runtime function call.
 let private genBinaryExprAsCall ctx funName l r =
@@ -785,7 +786,7 @@ let private genUnaryExpr ctx op arg ty _ =
 
   | MProjUnary index -> CDotExpr(arg, tupleField index), ctx
 
-  | MTagUnary -> CDotExpr(arg, "tag"), ctx
+  | MGetDiscriminantUnary -> CDotExpr(arg, "discriminant"), ctx
 
   | MGetVariantUnary serial ->
       let _, ctx = cgTyComplete ctx ty
@@ -855,7 +856,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
-  | MTagExpr (variantSerial, _) -> genTag ctx variantSerial, ctx
+  | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
@@ -1112,7 +1113,7 @@ let private cgVariantInit ctx varSerial variantSerial payload unionTy =
   let payloadExpr, ctx = cgExpr ctx payload
 
   let fields =
-    [ "tag", CVarExpr(getUniqueVariantName ctx variantSerial)
+    [ "discriminant", CVarExpr(getUniqueVariantName ctx variantSerial)
       variantName, payloadExpr ]
 
   let init = CInitExpr(fields, unionTy)

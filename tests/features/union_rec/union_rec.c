@@ -1,6 +1,6 @@
 #include "milone.h"
 
-enum LazyList_Tag;
+enum LazyList_Discriminant;
 
 struct LazyList_;
 
@@ -22,13 +22,13 @@ struct LazyList_ makeTail_(int n_2, int prev_, int arg_5);
 
 int main();
 
-enum LazyList_Tag {
+enum LazyList_Discriminant {
     Nil_,
     Cons_,
 };
 
 struct LazyList_ {
-    enum LazyList_Tag tag;
+    enum LazyList_Discriminant discriminant;
     union {
         void const* Cons_;
     };
@@ -50,7 +50,7 @@ struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
     tuple_.t1 = tail_;
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntUnitLazyList_Fun1Tuple2));
     (*(((struct IntUnitLazyList_Fun1Tuple2*)box_))) = tuple_;
-    struct LazyList_ variant_ = (struct LazyList_){.tag = Cons_, .Cons_ = box_};
+    struct LazyList_ variant_ = (struct LazyList_){.discriminant = Cons_, .Cons_ = box_};
     return variant_;
 }
 
@@ -64,11 +64,11 @@ tailrec_1:;
     }
 then_3:;
     int match_;
-    if ((xs_1.tag != Nil_)) goto next_5;
+    if ((xs_1.discriminant != Nil_)) goto next_5;
     match_ = 0;
     goto end_match_4;
 next_5:;
-    if ((xs_1.tag != Cons_)) goto next_6;
+    if ((xs_1.discriminant != Cons_)) goto next_6;
     int head_1 = (*(((struct IntUnitLazyList_Fun1Tuple2 const*)xs_1.Cons_))).t0;
     struct UnitLazyList_Fun1 tail_1 = (*(((struct IntUnitLazyList_Fun1Tuple2 const*)xs_1.Cons_))).t1;
     printf("%d\n", head_1);
