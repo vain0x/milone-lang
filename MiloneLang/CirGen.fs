@@ -783,7 +783,7 @@ let private genUnaryExpr ctx op arg ty _ =
 
       deref, ctx
 
-  | MProjUnary index -> CProjExpr(arg, index), ctx
+  | MProjUnary index -> CNavExpr(arg, tupleField index), ctx
 
   | MTagUnary -> CNavExpr(arg, "tag"), ctx
 

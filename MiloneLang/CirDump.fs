@@ -191,12 +191,6 @@ let private cpExpr expr acc: string list =
 
   | CRefExpr name -> acc |> cons name
 
-  | CProjExpr (l, index) ->
-      acc
-      |> cpExpr l
-      |> cons ".t"
-      |> cons (string index)
-
   | CCastExpr (expr, ty) ->
       acc
       |> cons "(("

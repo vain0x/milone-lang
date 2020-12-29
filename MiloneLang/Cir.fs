@@ -94,9 +94,6 @@ type CExpr =
   /// `(struct T){.x = x, ..}` Initializer.
   | CInitExpr of fields: (Ident * CExpr) list * CTy
 
-  /// Projection. Field access of tuple.
-  | CProjExpr of CExpr * index: int
-
   /// `(T)x`
   | CCastExpr of CExpr * CTy
 
