@@ -34,6 +34,7 @@
     <Compile Include="KirDump.fs" />
     <Compile Include="Cir.fs" />
     <Compile Include="CirGen.fs" />
+    <Compile Include="CirAlpha.fs" />
     <Compile Include="CirDump.fs" />
     <Compile Include="Cli.fs" />
     <Compile Include="Program.fs" />
