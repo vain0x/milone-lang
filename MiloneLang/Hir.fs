@@ -108,6 +108,7 @@ type TyCtor =
 
   /// Unresolved type. Generated in AstToHir, resolved in NameRes.
   | UnresolvedTyCtor of quals: Serial list * unresolvedSerial: Serial
+  | UnresolvedVarTyCtor of unresolvedVarTySerial: Serial
 
 /// Type of expressions.
 [<Struct>]

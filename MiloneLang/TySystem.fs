@@ -43,7 +43,8 @@ let private tyCtorEncode tyCtor =
   | RecordTyCtor tySerial -> 23, tySerial
 
   | NativeTypeTyCtor _
-  | UnresolvedTyCtor _ -> failwith "NEVER"
+  | UnresolvedTyCtor _
+  | UnresolvedVarTyCtor _ -> failwith "NEVER"
 
 let tyCtorCmp l r =
   match l, r with
@@ -82,6 +83,7 @@ let tyCtorDisplay getTyName tyCtor =
   | RecordTyCtor tySerial -> getTyName tySerial
   | UnionTyCtor tySerial -> getTyName tySerial
   | UnresolvedTyCtor (_, serial) -> "?" + string serial
+  | UnresolvedVarTyCtor serial -> "'" + string serial
 
 // -----------------------------------------------
 // Traits (HIR)

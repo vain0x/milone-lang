@@ -238,7 +238,7 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
   | AVarTy (name, _) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
-      tyUnresolved ([], tySerial) [], nameCtx
+      AppTy (UnresolvedVarTyCtor tySerial, []), nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId

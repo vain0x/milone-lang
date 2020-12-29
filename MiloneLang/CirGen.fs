@@ -499,6 +499,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
       | AppTy (UnionTyCtor _, _)
       | AppTy (RecordTyCtor _, _)
       | AppTy (UnresolvedTyCtor _, _)
+      | AppTy (UnresolvedVarTyCtor _, _)
       | ErrorTy _ ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
@@ -726,7 +727,8 @@ let private genDefault ctx ty =
 
   | ErrorTy _
   | AppTy (VoidTyCtor, _)
-  | AppTy (UnresolvedTyCtor _, _) -> failwithf "Never %A" ty
+  | AppTy (UnresolvedTyCtor _, _)
+  | AppTy (UnresolvedVarTyCtor _, _) -> failwithf "Never %A" ty
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty

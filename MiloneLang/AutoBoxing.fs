@@ -166,7 +166,8 @@ let private trdTy (ctx: TrdCtx) ty =
       | RecordTyCtor tySerial -> nominal tySerial
 
       | SynonymTyCtor _
-      | UnresolvedTyCtor _ -> failwith "NEVER"
+      | UnresolvedTyCtor _
+      | UnresolvedVarTyCtor _ -> failwith "NEVER"
 
 let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
   let ctx: TrdCtx =
@@ -352,7 +353,8 @@ let private tsmTy (ctx: TsmCtx) ty =
       | NativeTypeTyCtor _ -> 1000000, ctx
 
       | SynonymTyCtor _
-      | UnresolvedTyCtor _ -> failwith "NEVER"
+      | UnresolvedTyCtor _
+      | UnresolvedVarTyCtor _ -> failwith "NEVER"
 
 let private measureTys (trdCtx: TrdCtx): TsmCtx =
   let boxedVariants =

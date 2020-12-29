@@ -526,6 +526,19 @@ let private resolveTy ty loc scopeCtx =
         let code = scopeCtx |> findName itemSerial
         AppTy(NativeTypeTyCtor code, []), scopeCtx
 
+    | AppTy (UnresolvedVarTyCtor serial, tys) ->
+        assert (List.isEmpty tys)
+        let name = scopeCtx |> findName serial
+
+        match resolveLocalTyName name scopeCtx |> List.tryHead with
+        | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
+
+        | _ ->
+            let scopeCtx =
+              scopeCtx |> addLog (UndefinedTyError name) loc
+
+            ErrorTy loc, scopeCtx
+
     | AppTy (UnresolvedTyCtor (quals, serial), tys) ->
         let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
