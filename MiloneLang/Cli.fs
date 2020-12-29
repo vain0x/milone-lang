@@ -22,7 +22,6 @@ open MiloneLang.Monomorphizing
 open MiloneLang.Kir
 open MiloneLang.KirGen
 open MiloneLang.KirPropagate
-// open MiloneLang.KirToMir
 open MiloneLang.KirDump
 open MiloneLang.MirGen
 open MiloneLang.Cir
