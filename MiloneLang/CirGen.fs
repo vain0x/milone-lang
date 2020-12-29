@@ -703,13 +703,13 @@ let private genLit lit =
   match lit with
   | IntLit text -> CIntExpr text
   | FloatLit text -> CDoubleExpr text
-  | BoolLit false -> CRefExpr "false"
-  | BoolLit true -> CRefExpr "true"
+  | BoolLit false -> CVarExpr "false"
+  | BoolLit true -> CVarExpr "true"
   | CharLit value -> CCharExpr value
   | StrLit value -> CStrObjExpr value
 
 let private genTag ctx variantSerial =
-  CRefExpr(getUniqueVariantName ctx variantSerial)
+  CVarExpr(getUniqueVariantName ctx variantSerial)
 
 let private cgConst ctx mConst =
   match mConst with
@@ -724,13 +724,13 @@ let private genDefault ctx ty =
   | AppTy (FloatTyCtor _, _)
   | AppTy (CharTyCtor, _) -> CIntExpr "0", ctx
 
-  | AppTy (BoolTyCtor, _) -> CRefExpr "false", ctx
+  | AppTy (BoolTyCtor, _) -> CVarExpr "false", ctx
 
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (ObjTyCtor, _)
   | AppTy (ListTyCtor, _)
   | AppTy (NativePtrTyCtor _, _)
-  | AppTy (NativeFunTyCtor, _) -> CRefExpr "NULL", ctx
+  | AppTy (NativeFunTyCtor, _) -> CVarExpr "NULL", ctx
 
   | AppTy (StrTyCtor, _)
   | AppTy (FunTyCtor, _)
@@ -751,7 +751,7 @@ let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
 
   let tag =
-    CRefExpr(getUniqueVariantName ctx serial)
+    CVarExpr(getUniqueVariantName ctx serial)
 
   CInitExpr([ "tag", tag ], ty), ctx
 
@@ -759,7 +759,7 @@ let private genVariantNameExpr ctx serial ty =
 let private genBinaryExprAsCall ctx funName l r =
   let l, ctx = cgExpr ctx l
   let r, ctx = cgExpr ctx r
-  let callExpr = CCallExpr(CRefExpr funName, [ l; r ])
+  let callExpr = CCallExpr(CVarExpr funName, [ l; r ])
   callExpr, ctx
 
 let private genUnaryExpr ctx op arg ty _ =
@@ -851,8 +851,8 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MLitExpr (lit, _) -> genLit lit, ctx
   | MDefaultExpr (ty, _) -> genDefault ctx ty
 
-  | MRefExpr (serial, _, _) -> CRefExpr(getUniqueVarName ctx serial), ctx
-  | MProcExpr (serial, _, _) -> CRefExpr(getUniqueFunName ctx serial), ctx
+  | MRefExpr (serial, _, _) -> CVarExpr(getUniqueVarName ctx serial), ctx
+  | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
   | MTagExpr (variantSerial, _) -> genTag ctx variantSerial, ctx
@@ -876,24 +876,24 @@ let private cgActionStmt ctx itself action args =
   match action with
   | MAssertAction ->
       let args, ctx = cgExprList ctx args
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_assert", args)))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_assert", args)))
 
   | MPrintfnAction -> cgPrintfnActionStmt ctx itself args
 
   | MEnterRegionAction ->
       assert (List.isEmpty args)
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_enter_region", [])))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_enter_region", [])))
 
   | MLeaveRegionAction ->
       assert (List.isEmpty args)
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_leave_region", [])))
 
   | MCallNativeAction funName ->
       let ctx =
         addNativeFunDecl ctx funName args CVoidTy
 
       let args, ctx = cgExprList ctx args
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr funName, args)))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr funName, args)))
 
   | MPtrWriteAction ->
       match cgExprList ctx args with
@@ -920,7 +920,7 @@ let private cgPrintfnActionStmt ctx itself args =
 
                | _ -> cgExpr ctx arg)
 
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "printf", format :: args)))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr "printf", format :: args)))
 
   | _ -> failwithf "NEVER: %A" itself
 
@@ -947,7 +947,7 @@ let private addLetStmt ctx name expr cty storageModifier =
       let ctx = addDecl ctx (CStaticVarDecl(name, cty))
 
       match expr with
-      | Some expr -> addStmt ctx (CSetStmt(CRefExpr name, expr))
+      | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
       | _ -> ctx
 
   | AutoSM -> addStmt ctx (CLetStmt(name, expr, cty))
@@ -989,33 +989,33 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
   match prim with
   | MIntOfStrPrim flavor ->
       let name = cStringToIntegerFunName flavor
-      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+      conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
   | MFloatOfStrPrim flavor ->
       let name = cStringToFloatFunName flavor
-      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+      conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
-  | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_char", [ arg ]))
+  | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_to_char", [ arg ]))
 
   | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
-  | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_char", [ arg ]))
+  | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_char", [ arg ]))
 
   | MStrOfIntPrim flavor ->
       let name = cStringOfIntegerFunName flavor
-      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+      conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
   | MStrOfFloatPrim flavor ->
       let name = cStringOfFloatFunName flavor
-      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+      conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
-  | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CRefExpr "str_get_slice", args)))
+  | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "str_get_slice", args)))
 
   | MCallNativePrim funName ->
       let ctx =
         let resultTy, ctx = cgTyComplete ctx resultTy
         addNativeFunDecl ctx funName args resultTy
 
-      regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
+      regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
 
   | MPtrReadPrim ->
       regular
@@ -1032,8 +1032,8 @@ let private cgClosureInit ctx serial funSerial envSerial ty =
   let ty, ctx = cgTyComplete ctx ty
 
   let fields =
-    [ "fun", CRefExpr(getUniqueFunName ctx funSerial)
-      "env", CRefExpr(getUniqueVarName ctx envSerial) ]
+    [ "fun", CVarExpr(getUniqueFunName ctx funSerial)
+      "env", CVarExpr(getUniqueVarName ctx envSerial) ]
 
   let initExpr = CInitExpr(fields, ty)
   addLetStmt ctx name (Some initExpr) ty storageModifier
@@ -1051,7 +1051,7 @@ let private cgBoxInit ctx serial arg =
 
   // *(T*)p = t;
   let left =
-    CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CPtrTy argTy))
+    CUnaryExpr(CDerefUnary, CCastExpr(CVarExpr temp, CPtrTy argTy))
 
   let ctx = addStmt ctx (CSetStmt(left, arg))
 
@@ -1075,7 +1075,7 @@ let private cgConsInit ctx serial head tail listTy =
 
   let stmt =
     let fields = [ "head", head; "tail", tail ]
-    CSetStmt(CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CPtrTy listStructTy)), CInitExpr(fields, listStructTy))
+    CSetStmt(CUnaryExpr(CDerefUnary, CCastExpr(CVarExpr temp, CPtrTy listStructTy)), CInitExpr(fields, listStructTy))
 
   let ctx = addStmt ctx stmt
 
@@ -1093,7 +1093,7 @@ let private cgTupleInit ctx serial items tupleTy =
     match items with
     | [] -> ctx
     | item :: items ->
-        let left = CNavExpr(CRefExpr name, tupleField i)
+        let left = CNavExpr(CVarExpr name, tupleField i)
         let item, ctx = cgExpr ctx item
         let stmt = CSetStmt(left, item)
         let ctx = addStmt ctx stmt
@@ -1112,7 +1112,7 @@ let private cgVariantInit ctx varSerial variantSerial payload unionTy =
   let payloadExpr, ctx = cgExpr ctx payload
 
   let fields =
-    [ "tag", CRefExpr(getUniqueVariantName ctx variantSerial)
+    [ "tag", CVarExpr(getUniqueVariantName ctx variantSerial)
       variantName, payloadExpr ]
 
   let init = CInitExpr(fields, unionTy)
@@ -1148,7 +1148,7 @@ let private cgRecordInit (ctx: CirCtx) serial args ty =
   pairs
   |> List.fold
        (fun ctx ((fieldName, _, _), arg) ->
-         let l = CNavExpr(CRefExpr name, fieldName)
+         let l = CNavExpr(CVarExpr name, fieldName)
          let arg, ctx = cgExpr ctx arg
          addStmt ctx (CSetStmt(l, arg)))
        ctx
@@ -1181,7 +1181,7 @@ let private cgLetValStmt ctx serial init ty loc =
 let private cgSetStmt ctx serial right =
   let right, ctx = cgExpr ctx right
   let name = getUniqueVarName ctx serial
-  let left = CRefExpr(name)
+  let left = CVarExpr(name)
   addStmt ctx (CSetStmt(left, right))
 
 let private cgReturnStmt ctx expr =
@@ -1228,7 +1228,7 @@ let private cgTerminatorStmt ctx stmt =
   | MExitTerminator arg ->
       let doArm () =
         let arg, ctx = cgExpr ctx arg
-        addStmt ctx (CExprStmt(CCallExpr(CRefExpr "exit", [ arg ])))
+        addStmt ctx (CExprStmt(CCallExpr(CVarExpr "exit", [ arg ])))
 
       doArm ()
 

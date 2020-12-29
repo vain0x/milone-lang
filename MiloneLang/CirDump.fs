@@ -189,7 +189,7 @@ let private cpExpr expr acc: string list =
       acc
       |> cons (string (__stringLengthInUtf8Bytes value))
 
-  | CRefExpr name -> acc |> cons name
+  | CVarExpr name -> acc |> cons name
 
   | CCastExpr (expr, ty) ->
       acc

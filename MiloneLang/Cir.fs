@@ -89,7 +89,7 @@ type CExpr =
   | CStrObjExpr of string
 
   /// Variable.
-  | CRefExpr of Ident
+  | CVarExpr of Ident
 
   /// `(struct T){.x = x, ..}` Initializer.
   | CInitExpr of fields: (Ident * CExpr) list * CTy
