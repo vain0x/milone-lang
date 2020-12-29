@@ -98,14 +98,14 @@ let private cpTyWithName name ty acc =
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy name argTys resultTy
   | _ -> acc |> cpTy ty |> cons " " |> cons name
 
-let private cpParams ps acc: string list =
+let private cpParams paramList acc: string list =
   let rec go ps acc =
     match ps with
     | [] -> acc
 
-    | [ name, ty ] -> acc |> cpTy ty |> cons " " |> cons name
+    | [ (name, _), ty ] -> acc |> cpTy ty |> cons " " |> cons name
 
-    | (name, ty) :: ps ->
+    | ((name, _), ty) :: ps ->
         acc
         |> cpTy ty
         |> cons " "
@@ -113,7 +113,7 @@ let private cpParams ps acc: string list =
         |> cons ", "
         |> go ps
 
-  acc |> go ps
+  acc |> go paramList
 
 // -----------------------------------------------
 // Literals
@@ -189,7 +189,9 @@ let private cpExpr expr acc: string list =
       acc
       |> cons (string (__stringLengthInUtf8Bytes value))
 
-  | CVarExpr name -> acc |> cons name
+  | CVarExpr (CPublicIdent ident) -> acc |> cons ident
+
+  | CVarExpr (CPrivateIdent (hint, _)) -> acc |> cons hint
 
   | CCastExpr (expr, ty) ->
       acc
@@ -262,7 +264,7 @@ let private cpStmt indent stmt acc: string list =
       |> cons ";"
       |> cons eol
 
-  | CLetStmt (name, init, ty) ->
+  | CLetStmt ((name, _), init, ty) ->
       let cpInit acc =
         match init with
         | Some init -> acc |> cons " = " |> cpExpr init
@@ -275,7 +277,7 @@ let private cpStmt indent stmt acc: string list =
       |> cons ";"
       |> cons eol
 
-  | CLetAllocStmt (name, valTy, varTy) ->
+  | CLetAllocStmt ((name, _), valTy, varTy) ->
       acc
       |> cons indent
       |> cpTyWithName name varTy

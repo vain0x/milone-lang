@@ -18,6 +18,14 @@ open MiloneLang.TypeIntegers
 // CIR types
 // -----------------------------------------------
 
+// hint, serial
+type CPrivateIdent = string * int
+
+[<Struct; NoEquality; NoComparison>]
+type CIdent =
+  | CPublicIdent of publicIdent: Ident
+  | CPrivateIdent of privateIdent: CPrivateIdent
+
 type CLabel = string
 
 [<NoEquality; NoComparison>]
@@ -89,7 +97,7 @@ type CExpr =
   | CStrObjExpr of string
 
   /// Variable.
-  | CVarExpr of Ident
+  | CVarExpr of CIdent
 
   /// `(struct T){.x = x, ..}` Initializer.
   | CInitExpr of fields: (Ident * CExpr) list * CTy
@@ -119,10 +127,10 @@ type CStmt =
   | CExprStmt of CExpr
 
   /// `T x = a;`
-  | CLetStmt of Ident * init: CExpr option * CTy
+  | CLetStmt of CPrivateIdent * init: CExpr option * CTy
 
   /// `U* x = (U*)malloc(sizeof T);`
-  | CLetAllocStmt of Ident * valTy: CTy * varTy: CTy
+  | CLetAllocStmt of CPrivateIdent * valTy: CTy * varTy: CTy
 
   /// `x = a;`
   | CSetStmt of CExpr * CExpr
@@ -164,6 +172,6 @@ type CDecl =
 
   | CFunForwardDecl of Ident * argTys: CTy list * resultTy: CTy
 
-  | CFunDecl of Ident * args: (Ident * CTy) list * resultTy: CTy * body: CStmt list
+  | CFunDecl of Ident * args: (CPrivateIdent * CTy) list * resultTy: CTy * body: CStmt list
 
   | CNativeDecl of string
