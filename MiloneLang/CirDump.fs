@@ -185,7 +185,7 @@ let private cpExpr expr acc: string list =
 
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
-  | CNavExpr (CStrObjExpr value, "len") ->
+  | CDotExpr (CStrObjExpr value, "len") ->
       acc
       |> cons (string (__stringLengthInUtf8Bytes value))
 
@@ -199,7 +199,7 @@ let private cpExpr expr acc: string list =
       |> cpExpr expr
       |> cons ")"
 
-  | CNavExpr (expr, field) -> acc |> cpExpr expr |> cons "." |> cons field
+  | CDotExpr (expr, field) -> acc |> cpExpr expr |> cons "." |> cons field
 
   | CArrowExpr (expr, field) -> acc |> cpExpr expr |> cons "->" |> cons field
 

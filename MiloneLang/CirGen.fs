@@ -772,8 +772,8 @@ let private genUnaryExpr ctx op arg ty _ =
   | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx
   | MFloatOfScalarUnary flavor -> CCastExpr(arg, CFloatTy flavor), ctx
   | MCharOfScalarUnary -> CCastExpr(arg, CCharTy), ctx
-  | MStrPtrUnary -> CNavExpr(arg, "str"), ctx
-  | MStrLenUnary -> CNavExpr(arg, "len"), ctx
+  | MStrPtrUnary -> CDotExpr(arg, "str"), ctx
+  | MStrLenUnary -> CDotExpr(arg, "len"), ctx
 
   | MUnboxUnary ->
       let valTy, ctx = cgTyComplete ctx ty
@@ -783,13 +783,13 @@ let private genUnaryExpr ctx op arg ty _ =
 
       deref, ctx
 
-  | MProjUnary index -> CNavExpr(arg, tupleField index), ctx
+  | MProjUnary index -> CDotExpr(arg, tupleField index), ctx
 
-  | MTagUnary -> CNavExpr(arg, "tag"), ctx
+  | MTagUnary -> CDotExpr(arg, "tag"), ctx
 
   | MGetVariantUnary serial ->
       let _, ctx = cgTyComplete ctx ty
-      CNavExpr(arg, getUniqueVariantName ctx serial), ctx
+      CDotExpr(arg, getUniqueVariantName ctx serial), ctx
 
   | MRecordItemUnary index ->
       let fieldName =
@@ -803,7 +803,7 @@ let private genUnaryExpr ctx op arg ty _ =
             | _ -> failwith "NEVER"
         | _ -> failwith "NEVER"
 
-      CNavExpr(arg, fieldName), ctx
+      CDotExpr(arg, fieldName), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
@@ -828,7 +828,7 @@ let private genExprBin ctx op l r =
   | MStrIndexBinary ->
       let l, ctx = cgExpr ctx l
       let r, ctx = cgExpr ctx r
-      CIndexExpr(CNavExpr(l, "str"), r), ctx
+      CIndexExpr(CDotExpr(l, "str"), r), ctx
 
   | _ ->
       let l, ctx = cgExpr ctx l
@@ -916,7 +916,7 @@ let private cgPrintfnActionStmt ctx itself args =
                | _ when tyEq (mexprToTy arg) tyStr ->
                    // Insert implicit cast from str to str ptr.
                    let arg, ctx = cgExpr ctx arg
-                   CNavExpr(arg, "str"), ctx
+                   CDotExpr(arg, "str"), ctx
 
                | _ -> cgExpr ctx arg)
 
@@ -932,8 +932,8 @@ let private cgCallProcExpr ctx callee args ty =
       CCallExpr(callee, args), ctx
 
 let private doGenCallClosureExpr ctx callee args =
-  let funPtr = CNavExpr(callee, "fun")
-  let envArg = CNavExpr(callee, "env")
+  let funPtr = CDotExpr(callee, "fun")
+  let envArg = CDotExpr(callee, "env")
   CCallExpr(funPtr, envArg :: args), ctx
 
 let private cgCallClosureExpr ctx callee args =
@@ -1093,7 +1093,7 @@ let private cgTupleInit ctx serial items tupleTy =
     match items with
     | [] -> ctx
     | item :: items ->
-        let left = CNavExpr(CVarExpr name, tupleField i)
+        let left = CDotExpr(CVarExpr name, tupleField i)
         let item, ctx = cgExpr ctx item
         let stmt = CSetStmt(left, item)
         let ctx = addStmt ctx stmt
@@ -1148,7 +1148,7 @@ let private cgRecordInit (ctx: CirCtx) serial args ty =
   pairs
   |> List.fold
        (fun ctx ((fieldName, _, _), arg) ->
-         let l = CNavExpr(CVarExpr name, fieldName)
+         let l = CDotExpr(CVarExpr name, fieldName)
          let arg, ctx = cgExpr ctx arg
          addStmt ctx (CSetStmt(l, arg)))
        ctx

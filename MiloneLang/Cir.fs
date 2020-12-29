@@ -98,7 +98,7 @@ type CExpr =
   | CCastExpr of CExpr * CTy
 
   /// `a.x`
-  | CNavExpr of CExpr * Ident
+  | CDotExpr of CExpr * Ident
 
   /// `p->x`
   | CArrowExpr of CExpr * Ident
