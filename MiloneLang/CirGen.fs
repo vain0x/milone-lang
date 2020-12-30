@@ -1004,6 +1004,11 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
         | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
         | _ -> failwithf "NEVER: %A" itself)
 
+  | MBoxPrim ->
+      match args with
+      | [ arg ] -> cgBoxStmt ctx serial arg
+      | _ -> failwithf "NEVER: %A" itself
+
   | MCallProcPrim ->
       regular ctx (fun args ->
           match args with
@@ -1040,7 +1045,7 @@ let private cgCallPrimExpr ctx itself serial prim args =
   let fail msg = failwithf "%s: %A" msg itself
   cgPrimStmt ctx fail prim args serial
 
-let private cgBoxInit ctx serial arg =
+let private cgBoxStmt ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
   let arg, ctx = cgExpr ctx arg
 
@@ -1055,9 +1060,7 @@ let private cgBoxInit ctx serial arg =
   let left =
     CUnaryExpr(CDerefUnary, CCastExpr(CVarExpr temp, CPtrTy argTy))
 
-  let ctx = addStmt ctx (CSetStmt(left, arg))
-
-  ctx
+  addStmt ctx (CSetStmt(left, arg))
 
 let private cgConsInit ctx serial head tail listTy =
   let temp = getUniqueVarName ctx serial
@@ -1163,7 +1166,6 @@ let private cgLetValStmt ctx serial init ty loc =
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
 
-  | MBoxInit arg -> cgBoxInit ctx serial arg
   | MConsInit (head, tail) -> cgConsInit ctx serial head tail ty
   | MTupleInit items -> cgTupleInit ctx serial items ty
   | MVariantInit (variantSerial, payload) -> cgVariantInit ctx serial variantSerial payload ty

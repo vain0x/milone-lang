@@ -131,6 +131,8 @@ type MPrim =
   /// Construct a closure, packing environment.
   | MClosurePrim of closureFunSerial: FunSerial
 
+  | MBoxPrim
+
   /// Direct call to procedure.
   | MCallProcPrim
 
@@ -172,7 +174,6 @@ type MInit =
 
   | MExprInit of MExpr
 
-  | MBoxInit of MExpr
   | MConsInit of head: MExpr * tail: MExpr
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr

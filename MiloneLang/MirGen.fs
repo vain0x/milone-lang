@@ -797,7 +797,7 @@ let private mirifyExprCallBox ctx arg _ loc =
   let temp, tempSerial, ctx = freshVar ctx "box" tyObj loc
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MBoxInit arg, tyObj, loc))
+    addStmt ctx (MPrimStmt(MBoxPrim, [arg], tempSerial, loc))
 
   temp, ctx
 
