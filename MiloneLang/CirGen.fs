@@ -1030,6 +1030,19 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
         CInitExpr(fields, tupleTy)
       )
 
+  | MVariantPrim variantSerial ->
+      regularWithTy ctx (fun args unionTy ->
+          match args with
+          | [ payload ] ->
+              let variantName = getUniqueVariantName ctx variantSerial
+              let fields =
+                [ "discriminant", CVarExpr variantName
+                  variantName, payload ]
+
+              CInitExpr(fields, unionTy)
+
+          | _ -> failwithf "NEVER: %A" itself)
+
   | MCallProcPrim ->
       regular ctx (fun args ->
           match args with
@@ -1105,27 +1118,6 @@ let private cgConsStmt ctx serial head tail listTy =
 
   addStmt ctx stmt
 
-let private cgVariantInit ctx varSerial variantSerial payload unionTy =
-  let temp = getUniqueVarName ctx varSerial
-
-  let storageModifier = findStorageModifier ctx varSerial
-
-  let unionTy, ctx = cgTyComplete ctx unionTy
-  let variantName = getUniqueVariantName ctx variantSerial
-
-  let payloadExpr, ctx = cgExpr ctx payload
-
-  let fields =
-    [ "discriminant", CVarExpr(getUniqueVariantName ctx variantSerial)
-      variantName, payloadExpr ]
-
-  let init = CInitExpr(fields, unionTy)
-
-  let ctx =
-    addLetStmt ctx temp (Some init) unionTy storageModifier
-
-  ctx
-
 let private cgRecordInit (ctx: CirCtx) serial args ty =
   let fields =
     match ty with
@@ -1165,7 +1157,6 @@ let private cgLetValStmt ctx serial init ty loc =
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
 
-  | MVariantInit (variantSerial, payload) -> cgVariantInit ctx serial variantSerial payload ty
   | MRecordInit fields -> cgRecordInit ctx serial fields ty
 
 let private cgSetStmt ctx serial right =

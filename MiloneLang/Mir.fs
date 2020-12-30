@@ -134,6 +134,7 @@ type MPrim =
   | MBoxPrim
   | MConsPrim
   | MTuplePrim
+  | MVariantPrim of variantSerial: VariantSerial
 
   /// Direct call to procedure.
   | MCallProcPrim
@@ -176,7 +177,6 @@ type MInit =
 
   | MExprInit of MExpr
 
-  | MVariantInit of VariantSerial * payload: MExpr
   | MRecordInit of MExpr list
 
 [<Struct>]

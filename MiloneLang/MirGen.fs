@@ -836,10 +836,9 @@ let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let _, _payloadSerial, ctx = freshVar ctx "payload" payloadTy loc
 
   let temp, tempSerial, ctx = freshVar ctx "variant" ty loc
-  let init = MVariantInit(serial, payload)
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, init, ty, loc))
+    addStmt ctx (MPrimStmt(MVariantPrim serial, [ payload ], tempSerial, loc))
 
   temp, ctx
 
