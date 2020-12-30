@@ -214,9 +214,6 @@ type MStmt =
 
   | MLabelStmt of Label * Loc
 
-  // Only for KIR (comparison prim).
-  | MIfStmt of MExpr * MStmt list * MStmt list * Loc
-
   | MTerminatorStmt of MTerminator * Loc
 
   | MNativeStmt of string * Loc

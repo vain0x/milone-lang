@@ -1245,13 +1245,6 @@ let private cgStmt ctx stmt =
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
   | MTerminatorStmt (terminator, _loc) -> cgTerminatorStmt ctx terminator
-
-  | MIfStmt (cond, thenCl, elseCl, _) ->
-      let cond, ctx = cgExpr ctx cond
-      let thenCl, ctx = cgBlock ctx thenCl
-      let elseCl, ctx = cgBlock ctx elseCl
-      addStmt ctx (CIfStmt(cond, thenCl, elseCl))
-
   | MNativeStmt (code, _) -> addStmt ctx (CNativeStmt code)
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
