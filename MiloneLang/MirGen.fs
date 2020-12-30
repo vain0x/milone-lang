@@ -1036,7 +1036,7 @@ let private mirifyCallAssertExpr ctx arg loc =
 
   MDefaultExpr(tyUnit, loc), ctx
 
-let private mirifyCallInRegionExpr ctx arg ty loc =
+let private mirifyCallInRegionExpr ctx arg loc =
   // arg: closure
   let arg, ctx = mirifyExpr ctx arg
 
@@ -1047,7 +1047,7 @@ let private mirifyCallInRegionExpr ctx arg ty loc =
 
   let ctx =
     let unit = MDefaultExpr(tyUnit, loc)
-    addStmt ctx (MLetValStmt(tempSerial, MCallClosureInit(arg, [ unit ]), ty, loc))
+    addStmt ctx (MPrimStmt(MCallClosurePrim, [ arg; unit ], tempSerial, loc))
 
   let ctx =
     addStmt ctx (MActionStmt(MLeaveRegionAction, [], loc))
@@ -1165,7 +1165,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.String, _ -> fail ()
   | HPrim.Assert, [ arg ] -> mirifyCallAssertExpr ctx arg loc
   | HPrim.Assert, _ -> fail ()
-  | HPrim.InRegion, [ arg ] -> mirifyCallInRegionExpr ctx arg ty loc
+  | HPrim.InRegion, [ arg ] -> mirifyCallInRegionExpr ctx arg loc
   | HPrim.InRegion, _ -> fail ()
   | HPrim.Printfn, _ -> mirifyCallPrintfnExpr ctx args loc
   | HPrim.NativeCast, [ arg ] -> regularUnary MNativeCastUnary arg
@@ -1192,7 +1192,7 @@ let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let tempRef, tempSerial, ctx = freshVar ctx "app" resultTy loc
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MCallClosureInit(callee, args), resultTy, loc))
+    addStmt ctx (MPrimStmt(MCallClosurePrim, callee :: args, tempSerial, loc))
 
   tempRef, ctx
 

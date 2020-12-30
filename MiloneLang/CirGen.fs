@@ -925,16 +925,6 @@ let private cgPrintfnActionStmt ctx itself args =
 
   | _ -> failwithf "NEVER: %A" itself
 
-let private doGenCallClosureExpr ctx callee args =
-  let funPtr = CDotExpr(callee, "fun")
-  let envArg = CDotExpr(callee, "env")
-  CCallExpr(funPtr, envArg :: args), ctx
-
-let private cgCallClosureExpr ctx callee args =
-  let callee, ctx = cgExpr ctx callee
-  let args, ctx = cgExprList ctx args
-  doGenCallClosureExpr ctx callee args
-
 let private addLetStmt ctx name expr cty storageModifier =
   match storageModifier with
   | StaticSM ->
@@ -1010,6 +1000,16 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       regular ctx (fun args ->
           match args with
           | callee :: args -> CCallExpr(callee, args)
+          | [] -> failwithf "NEVER: %A" itself)
+
+  | MCallClosurePrim ->
+      regular ctx (fun args ->
+          match args with
+          | callee :: args ->
+            let funPtr = CDotExpr(callee, "fun")
+            let envArg = CDotExpr(callee, "env")
+            CCallExpr(funPtr, envArg :: args)
+
           | [] -> failwithf "NEVER: %A" itself)
 
   | MCallNativePrim funName ->
@@ -1165,10 +1165,6 @@ let private cgLetValStmt ctx serial init ty loc =
 
   | MExprInit expr ->
       let expr, ctx = cgExpr ctx expr
-      doGenLetValStmt ctx serial (Some expr) ty
-
-  | MCallClosureInit (callee, args) ->
-      let expr, ctx = cgCallClosureExpr ctx callee args
       doGenLetValStmt ctx serial (Some expr) ty
 
   | MClosureInit (funSerial, envSerial) -> cgClosureInit ctx serial funSerial envSerial ty

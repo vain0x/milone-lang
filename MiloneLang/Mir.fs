@@ -131,6 +131,9 @@ type MPrim =
   /// Direct call to procedure.
   | MCallProcPrim
 
+  /// Indirect call to closure.
+  | MCallClosurePrim
+
   | MCallNativePrim of funName: string
   | MPtrReadPrim
 
@@ -165,9 +168,6 @@ type MInit =
   | MUninitInit
 
   | MExprInit of MExpr
-
-  /// Indirect call to closure.
-  | MCallClosureInit of callee: MExpr * args: MExpr list
 
   /// Construct a closure, packing environment.
   | MClosureInit of subFunSerial: FunSerial * envSerial: VarSerial
