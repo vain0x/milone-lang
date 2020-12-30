@@ -105,6 +105,15 @@ type MBinary =
   /// `s.str[i]`
   | MStrIndexBinary
 
+[<NoEquality; NoComparison>]
+type MAction =
+  | MAssertAction
+  | MPrintfnAction
+  | MEnterRegionAction
+  | MLeaveRegionAction
+  | MCallNativeAction of funName: string
+  | MPtrWriteAction
+
 [<Struct; NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
@@ -121,15 +130,6 @@ type MPrim =
 
   | MCallNativePrim of funName: string
   | MPtrReadPrim
-
-[<NoEquality; NoComparison>]
-type MAction =
-  | MAssertAction
-  | MPrintfnAction
-  | MEnterRegionAction
-  | MLeaveRegionAction
-  | MCallNativeAction of funName: string
-  | MPtrWriteAction
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
