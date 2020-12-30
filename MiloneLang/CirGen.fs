@@ -964,7 +964,9 @@ let private doGenLetValStmt ctx serial expr ty =
   let cty, ctx = cgTyComplete ctx ty
   addLetStmt ctx name expr cty storageModifier
 
-let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
+let private cgPrimStmt (ctx: CirCtx) fail prim args serial =
+  let (VarDef (_, _, resultTy, _)) = ctx.Vars |> mapFind serial
+
   let conversion ctx makeExpr =
     match args with
     | [ arg ] ->
@@ -974,7 +976,7 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
         let arg, ctx = cgExpr ctx arg
         addLetStmt ctx name (Some(makeExpr arg)) ty storageModifier
 
-    | _ -> failwithf "NEVER: %A" itself
+    | _ -> fail "NEVER"
 
   let regular ctx makeExpr =
     let name = getUniqueVarName ctx serial
@@ -998,7 +1000,7 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
 
   | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_to_char", [ arg ]))
 
-  | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
+  | MStrOfBoolPrim -> fail "unimplemented"
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_char", [ arg ]))
 
   | MStrOfIntPrim flavor ->
@@ -1026,6 +1028,10 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
           | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
           | [ ptr; index ] -> CIndexExpr(ptr, index)
           | _ -> failwith "NEVER")
+
+let private cgCallPrimExpr ctx itself serial prim args =
+  let fail msg = failwithf "%s: %A" msg itself
+  cgPrimStmt ctx fail prim args serial
 
 let private cgClosureInit ctx serial funSerial envSerial ty =
   let name = getUniqueVarName ctx serial
@@ -1162,7 +1168,9 @@ let private cgLetValStmt ctx serial init ty loc =
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
 
-  | MPrimInit (prim, args) -> cgCallPrimExpr ctx init serial prim args ty loc
+  | MPrimInit (prim, args) ->
+    let fail msg = failwithf "%s: %A" msg init
+    cgCallPrimExpr ctx fail serial prim args
 
   | MCallProcInit (callee, args, _) ->
       let expr, ctx = cgCallProcExpr ctx callee args ty
@@ -1236,6 +1244,11 @@ let private cgTerminatorStmt ctx stmt =
 let private cgStmt ctx stmt =
   match stmt with
   | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
+
+  | MPrimStmt (prim, args, temp, _) ->
+    let fail msg = failwithf "%s: %A" msg stmt
+    cgPrimStmt ctx fail prim args temp
+
   | MLetValStmt (serial, init, ty, loc) -> cgLetValStmt ctx serial init ty loc
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
