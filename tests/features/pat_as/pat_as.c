@@ -32,9 +32,7 @@ struct IntIntTuple2 {
 int shadowingCase_(int arg_1) {
     int x_1 = 1;
     int match_1;
-    struct IntIntTuple2 tuple_;
-    tuple_.t0 = x_1;
-    tuple_.t1 = 2;
+    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_1, .t1 = 2};
     struct IntIntTuple2 y_ = tuple_;
     int x_2 = y_.t1;
     int y1_ = y_.t0;

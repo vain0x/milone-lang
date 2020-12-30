@@ -105,6 +105,15 @@ type MBinary =
   /// `s.str[i]`
   | MStrIndexBinary
 
+[<NoEquality; NoComparison>]
+type MAction =
+  | MAssertAction
+  | MPrintfnAction
+  | MEnterRegionAction
+  | MLeaveRegionAction
+  | MCallNativeAction of funName: string
+  | MPtrWriteAction
+
 [<Struct; NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
@@ -119,17 +128,23 @@ type MPrim =
 
   | MStrGetSlicePrim
 
+  /// Construct a closure, packing environment.
+  | MClosurePrim of closureFunSerial: FunSerial
+
+  | MBoxPrim
+  | MConsPrim
+  | MTuplePrim
+  | MVariantPrim of variantSerial: VariantSerial
+  | MRecordPrim
+
+  /// Direct call to procedure.
+  | MCallProcPrim
+
+  /// Indirect call to closure.
+  | MCallClosurePrim
+
   | MCallNativePrim of funName: string
   | MPtrReadPrim
-
-[<NoEquality; NoComparison>]
-type MAction =
-  | MAssertAction
-  | MPrintfnAction
-  | MEnterRegionAction
-  | MLeaveRegionAction
-  | MCallNativeAction of funName: string
-  | MPtrWriteAction
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
@@ -154,31 +169,6 @@ type MExpr =
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
 
   | MNativeExpr of code: string * Ty * Loc
-
-/// Variable initializer in mid-level IR.
-[<NoEquality; NoComparison>]
-type MInit =
-  /// Remain uninitialized at first; initialized later by `MSetStmt`.
-  | MUninitInit
-
-  | MExprInit of MExpr
-
-  | MPrimInit of MPrim * MExpr list
-
-  /// Direct call to procedure.
-  | MCallProcInit of callee: MExpr * args: MExpr list * calleeTy: Ty
-
-  /// Indirect call to closure.
-  | MCallClosureInit of callee: MExpr * args: MExpr list
-
-  /// Construct a closure, packing environment.
-  | MClosureInit of subFunSerial: FunSerial * envSerial: VarSerial
-
-  | MBoxInit of MExpr
-  | MConsInit of head: MExpr * tail: MExpr
-  | MTupleInit of items: MExpr list
-  | MVariantInit of VariantSerial * payload: MExpr
-  | MRecordInit of MExpr list
 
 [<Struct>]
 [<NoEquality; NoComparison>]
@@ -206,16 +196,15 @@ type MTerminator =
 type MStmt =
   | MActionStmt of MAction * MExpr list * Loc
 
+  | MPrimStmt of MPrim * MExpr list * result: VarSerial * Loc
+
   /// Declare a local variable.
-  | MLetValStmt of VarSerial * MInit * Ty * Loc
+  | MLetValStmt of VarSerial * MExpr option * Ty * Loc
 
   /// Set to uninitialized local variable.
   | MSetStmt of VarSerial * init: MExpr * Loc
 
   | MLabelStmt of Label * Loc
-
-  // Only for KIR (comparison prim).
-  | MIfStmt of MExpr * MStmt list * MStmt list * Loc
 
   | MTerminatorStmt of MTerminator * Loc
 

@@ -18,9 +18,7 @@ int sub_(struct IntIntTuple2 arg_) {
 }
 
 int main() {
-    struct IntIntTuple2 tuple_;
-    tuple_.t0 = 8;
-    tuple_.t1 = 3;
+    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 8, .t1 = 3};
     int call_ = sub_(tuple_);
     return (call_ - 5);
 }

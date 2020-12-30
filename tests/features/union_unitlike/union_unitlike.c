@@ -96,21 +96,19 @@ struct MyUnit_List {
 };
 
 struct RecordUsingMyUnit_ {
-    struct MyUnit_ First;
-    struct MyUnit_List const* Second;
+    struct MyUnit_ t0;
+    struct MyUnit_List const* t1;
 };
 
 int usedInRecordTypeCase_(int arg_2) {
     struct MyUnit_List const* list_ = milone_mem_alloc(1, sizeof(struct MyUnit_List));
     (*(((struct MyUnit_List*)list_))) = (struct MyUnit_List){.head = (struct MyUnit_){.discriminant = MyUnit_}, .tail = NULL};
-    struct RecordUsingMyUnit_ RecordUsingMyUnit_;
-    RecordUsingMyUnit_.First = (struct MyUnit_){.discriminant = MyUnit_};
-    RecordUsingMyUnit_.Second = list_;
+    struct RecordUsingMyUnit_ RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = (struct MyUnit_){.discriminant = MyUnit_}, .t1 = list_};
     struct RecordUsingMyUnit_ record_ = RecordUsingMyUnit_;
     int match_;
-    if ((!(record_.Second))) goto next_7;
-    if ((record_.Second->head.discriminant != MyUnit_)) goto next_7;
-    if ((!((!(record_.Second->tail))))) goto next_7;
+    if ((!(record_.t1))) goto next_7;
+    if ((record_.t1->head.discriminant != MyUnit_)) goto next_7;
+    if ((!((!(record_.t1->tail))))) goto next_7;
     match_ = 0;
     goto end_match_6;
 next_7:;

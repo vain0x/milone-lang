@@ -36,9 +36,7 @@ struct Node_Node_Tuple2 {
 };
 
 struct Node_ node_(struct Node_ l_, struct Node_ r_) {
-    struct Node_Node_Tuple2 tuple_;
-    tuple_.t0 = l_;
-    tuple_.t1 = r_;
+    struct Node_Node_Tuple2 tuple_ = (struct Node_Node_Tuple2){.t0 = l_, .t1 = r_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct Node_Node_Tuple2));
     (*(((struct Node_Node_Tuple2*)box_))) = tuple_;
     struct Node_ variant_1 = (struct Node_){.discriminant = Node_, .Node_ = box_};

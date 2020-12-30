@@ -1243,8 +1243,7 @@ bool fun_(void const* env_, char arg_) {
 struct String trim_(struct String s_13) {
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
-    void const* env_3 = box_;
-    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_, .env = env_3};
+    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_, .env = box_};
     struct String call_27 = trimIf_(fun_3, s_13);
     return call_27;
 }
@@ -1257,8 +1256,7 @@ bool fun_1(void const* env_1, char arg_1) {
 struct String trimStart_(struct String s_14) {
     void const* box_1 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
-    void const* env_4 = box_1;
-    struct CharBoolFun1 fun_4 = (struct CharBoolFun1){.fun = fun_1, .env = env_4};
+    struct CharBoolFun1 fun_4 = (struct CharBoolFun1){.fun = fun_1, .env = box_1};
     struct String call_29 = trimStartIf_(fun_4, s_14);
     return call_29;
 }
@@ -1271,8 +1269,7 @@ bool fun_2(void const* env_2, char arg_2) {
 struct String trimEnd_(struct String s_15) {
     void const* box_2 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_2))) = 0;
-    void const* env_5 = box_2;
-    struct CharBoolFun1 fun_5 = (struct CharBoolFun1){.fun = fun_2, .env = env_5};
+    struct CharBoolFun1 fun_5 = (struct CharBoolFun1){.fun = fun_2, .env = box_2};
     struct String call_31 = trimEndIf_(fun_5, s_15);
     return call_31;
 }
@@ -1426,10 +1423,7 @@ if_next_200:;
         goto else_205;
     }
 then_204:;
-    struct StringStringListStringTuple3 tuple_;
-    tuple_.t0 = lineContents_;
-    tuple_.t1 = NULL;
-    tuple_.t2 = (struct String){.str = "", .len = 0};
+    struct StringStringListStringTuple3 tuple_ = (struct StringStringListStringTuple3){.t0 = lineContents_, .t1 = NULL, .t2 = (struct String){.str = "", .len = 0}};
     if_59 = tuple_;
     goto if_next_203;
 else_205:;
@@ -1520,10 +1514,7 @@ if_next_221:;
     struct String rest_ = if_65;
     struct StringList const* some_4 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)some_4))) = (struct StringList){.head = sep_1, .tail = NULL};
-    struct StringStringListStringTuple3 tuple_1;
-    tuple_1.t0 = lineContents_;
-    tuple_1.t1 = some_4;
-    tuple_1.t2 = rest_;
+    struct StringStringListStringTuple3 tuple_1 = (struct StringStringListStringTuple3){.t0 = lineContents_, .t1 = some_4, .t2 = rest_};
     if_59 = tuple_1;
     goto if_next_203;
 if_next_203:;

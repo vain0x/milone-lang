@@ -61,9 +61,7 @@ struct IntIntTuple2 {
 int testMatchArmsMakeScope_(int arg_2) {
     int x_ = 2;
     int match_2;
-    struct IntIntTuple2 tuple_;
-    tuple_.t0 = x_;
-    tuple_.t1 = 1;
+    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_, .t1 = 1};
     if ((tuple_.t0 != 1)) goto next_8;
     int x_1 = tuple_.t1;
     milone_assert(false, 17, 12);
