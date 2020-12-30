@@ -19,8 +19,6 @@ struct UnitUnitTuple2 {
 int main() {
     int call_ = f_(0);
     int call_1 = f_(0);
-    struct UnitUnitTuple2 tuple_;
-    tuple_.t0 = 0;
-    tuple_.t1 = 0;
+    struct UnitUnitTuple2 tuple_ = (struct UnitUnitTuple2){.t0 = 0, .t1 = 0};
     return 0;
 }

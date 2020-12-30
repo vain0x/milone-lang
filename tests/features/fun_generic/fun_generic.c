@@ -216,18 +216,14 @@ int fun_1(void const* env_1, int arg_1) {
 struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_7) {
     struct String x_4 = arg_7.t0;
     int y_ = arg_7.t1;
-    struct IntStringTuple2 tuple_;
-    tuple_.t0 = y_;
-    tuple_.t1 = x_4;
+    struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = y_, .t1 = x_4};
     return tuple_;
 }
 
 struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_8) {
     int x_4 = arg_8.t0;
     struct String y_ = arg_8.t1;
-    struct StringIntTuple2 tuple_1;
-    tuple_1.t0 = y_;
-    tuple_1.t1 = x_4;
+    struct StringIntTuple2 tuple_1 = (struct StringIntTuple2){.t0 = y_, .t1 = x_4};
     return tuple_1;
 }
 
@@ -262,9 +258,7 @@ int main() {
     struct IntList const* call_10 = listMap_2(fun_4, list_5);
     struct IntList const* call_11 = listMap_2(fun_3, call_10);
     int match_4;
-    struct IntStringTuple2 tuple_2;
-    tuple_2.t0 = 1;
-    tuple_2.t1 = (struct String){.str = "a", .len = 1};
+    struct IntStringTuple2 tuple_2 = (struct IntStringTuple2){.t0 = 1, .t1 = (struct String){.str = "a", .len = 1}};
     struct StringIntTuple2 call_12 = flip_1(tuple_2);
     struct IntStringTuple2 call_13 = flip_2(call_12);
     if ((call_13.t0 != 1)) goto next_16;
@@ -288,9 +282,7 @@ end_match_15:;
     struct StringList const* list_10 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_10))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_11};
     struct StringList const* call_15 = listRev_1(list_10);
-    struct IntListStringListTuple2 tuple_3;
-    tuple_3.t0 = call_14;
-    tuple_3.t1 = call_15;
+    struct IntListStringListTuple2 tuple_3 = (struct IntListStringListTuple2){.t0 = call_14, .t1 = call_15};
     if ((!(tuple_3.t0))) goto next_19;
     if ((tuple_3.t0->head != 2)) goto next_19;
     if ((!(tuple_3.t0->tail))) goto next_19;
@@ -313,12 +305,8 @@ end_match_18:;
     void const* box_2 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_2))) = 0;
     struct IntStringTuple2StringIntTuple2Fun1 fun_5 = (struct IntStringTuple2StringIntTuple2Fun1){.fun = fun_2, .env = box_2};
-    struct IntStringTuple2 tuple_4;
-    tuple_4.t0 = 1;
-    tuple_4.t1 = (struct String){.str = "a", .len = 1};
-    struct IntStringTuple2 tuple_5;
-    tuple_5.t0 = 2;
-    tuple_5.t1 = (struct String){.str = "b", .len = 1};
+    struct IntStringTuple2 tuple_4 = (struct IntStringTuple2){.t0 = 1, .t1 = (struct String){.str = "a", .len = 1}};
+    struct IntStringTuple2 tuple_5 = (struct IntStringTuple2){.t0 = 2, .t1 = (struct String){.str = "b", .len = 1}};
     struct IntStringTuple2List const* list_13 = milone_mem_alloc(1, sizeof(struct IntStringTuple2List));
     (*(((struct IntStringTuple2List*)list_13))) = (struct IntStringTuple2List){.head = tuple_5, .tail = NULL};
     struct IntStringTuple2List const* list_12 = milone_mem_alloc(1, sizeof(struct IntStringTuple2List));

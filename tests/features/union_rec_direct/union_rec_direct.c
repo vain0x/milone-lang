@@ -52,15 +52,11 @@ int main() {
     struct Expr_ variant_ = (struct Expr_){.discriminant = Int_, .Int_ = 11};
     struct Expr_ variant_1 = (struct Expr_){.discriminant = Int_, .Int_ = 22};
     struct Expr_ variant_2 = (struct Expr_){.discriminant = Int_, .Int_ = 9};
-    struct Expr_Expr_Tuple2 tuple_1;
-    tuple_1.t0 = variant_1;
-    tuple_1.t1 = variant_2;
+    struct Expr_Expr_Tuple2 tuple_1 = (struct Expr_Expr_Tuple2){.t0 = variant_1, .t1 = variant_2};
     void const* box_ = milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
     (*(((struct Expr_Expr_Tuple2*)box_))) = tuple_1;
     struct Expr_ variant_3 = (struct Expr_){.discriminant = Add_, .Add_ = box_};
-    struct Expr_Expr_Tuple2 tuple_;
-    tuple_.t0 = variant_;
-    tuple_.t1 = variant_3;
+    struct Expr_Expr_Tuple2 tuple_ = (struct Expr_Expr_Tuple2){.t0 = variant_, .t1 = variant_3};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct Expr_Expr_Tuple2));
     (*(((struct Expr_Expr_Tuple2*)box_1))) = tuple_;
     struct Expr_ variant_4 = (struct Expr_){.discriminant = Add_, .Add_ = box_1};

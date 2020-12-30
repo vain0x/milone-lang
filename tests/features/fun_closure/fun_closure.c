@@ -158,8 +158,7 @@ struct UnitIntFun1 {
 };
 
 int lf_(int lx_, int arg_9) {
-    struct IntTuple1 tuple_;
-    tuple_.t0 = lx_;
+    struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = lx_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;
     struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = box_};

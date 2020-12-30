@@ -133,6 +133,7 @@ type MPrim =
 
   | MBoxPrim
   | MConsPrim
+  | MTuplePrim
 
   /// Direct call to procedure.
   | MCallProcPrim
@@ -175,7 +176,6 @@ type MInit =
 
   | MExprInit of MExpr
 
-  | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
   | MRecordInit of MExpr list
 

@@ -90,9 +90,7 @@ struct First_ListSecond_ListTuple2 {
 };
 
 struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2) {
-    struct First_ListSecond_ListTuple2 tuple_;
-    tuple_.t0 = NULL;
-    tuple_.t1 = NULL;
+    struct First_ListSecond_ListTuple2 tuple_ = (struct First_ListSecond_ListTuple2){.t0 = NULL, .t1 = NULL};
     return tuple_;
 }
 
@@ -247,15 +245,11 @@ end_match_1:;
     void const* box_7 = milone_mem_alloc(1, sizeof(struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1));
     (*(((struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1*)box_7))) = fun_3;
     struct Second_ variant_8 = (struct Second_){.discriminant = Second_, .Second_ = box_7};
-    struct First_Second_Tuple2 tuple_1;
-    tuple_1.t0 = variant_7;
-    tuple_1.t1 = variant_8;
+    struct First_Second_Tuple2 tuple_1 = (struct First_Second_Tuple2){.t0 = variant_7, .t1 = variant_8};
     struct First_ first_ = tuple_1.t0;
     struct Second_ second_ = tuple_1.t1;
     int match_1;
-    struct IntThird_Tuple2 tuple_2;
-    tuple_2.t0 = 0;
-    tuple_2.t1 = (struct Third_){.discriminant = Leaf3_};
+    struct IntThird_Tuple2 tuple_2 = (struct IntThird_Tuple2){.t0 = 0, .t1 = (struct Third_){.discriminant = Leaf3_}};
     struct IntThird_Tuple2List const* list_6 = milone_mem_alloc(1, sizeof(struct IntThird_Tuple2List));
     (*(((struct IntThird_Tuple2List*)list_6))) = (struct IntThird_Tuple2List){.head = tuple_2, .tail = NULL};
     if ((!(list_6))) goto next_11;

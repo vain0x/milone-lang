@@ -868,7 +868,7 @@ let private mirifyExprTuple ctx items itemTys loc =
   let items, ctx = go [] ctx items
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MTupleInit items, ty, loc))
+    addStmt ctx (MPrimStmt(MTuplePrim, items, tempSerial, loc))
 
   MRefExpr(tempSerial, ty, loc), ctx
 

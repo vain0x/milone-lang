@@ -38,8 +38,7 @@ struct UnitIntWrapper_Fun1 {
 int main() {
     struct IntWrapper_ IntWrapper_;
     IntWrapper_.Value = 42;
-    struct IntWrapper_Tuple1 tuple_;
-    tuple_.t0 = IntWrapper_;
+    struct IntWrapper_Tuple1 tuple_ = (struct IntWrapper_Tuple1){.t0 = IntWrapper_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntWrapper_Tuple1));
     (*(((struct IntWrapper_Tuple1*)box_))) = tuple_;
     struct UnitIntWrapper_Fun1 fun_1 = (struct UnitIntWrapper_Fun1){.fun = fun_, .env = box_};

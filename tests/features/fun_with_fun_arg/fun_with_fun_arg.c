@@ -46,9 +46,7 @@ struct StringUnitFun1 {
 
 struct StringUnitFun1 bindInt_(struct IntStringUnitFun2 f_, int x_) {
     struct IntStringUnitFun2 callee_ = f_;
-    struct IntStringUnitFun2IntTuple2 tuple_;
-    tuple_.t0 = callee_;
-    tuple_.t1 = x_;
+    struct IntStringUnitFun2IntTuple2 tuple_ = (struct IntStringUnitFun2IntTuple2){.t0 = callee_, .t1 = x_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2));
     (*(((struct IntStringUnitFun2IntTuple2*)box_))) = tuple_;
     struct StringUnitFun1 fun_3 = (struct StringUnitFun1){.fun = fun_, .env = box_};
@@ -109,8 +107,7 @@ int main() {
     struct StringUnitFun1 print42_ = call_2;
     int app_1 = print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
     struct String d_ = (struct String){.str = "\'", .len = 1};
-    struct StringTuple1 tuple_1;
-    tuple_1.t0 = d_;
+    struct StringTuple1 tuple_1 = (struct StringTuple1){.t0 = d_};
     void const* box_2 = milone_mem_alloc(1, sizeof(struct StringTuple1));
     (*(((struct StringTuple1*)box_2))) = tuple_1;
     struct IntStringUnitFun2 fun_5 = (struct IntStringUnitFun2){.fun = fun_2, .env = box_2};

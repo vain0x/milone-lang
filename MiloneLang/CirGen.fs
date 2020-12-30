@@ -1024,6 +1024,12 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       | [ l; r ] -> cgConsStmt ctx serial l r resultTy
       | _ -> failwithf "NEVER: %A" itself
 
+  | MTuplePrim ->
+      regularWithTy ctx (fun args tupleTy ->
+        let fields = args |> List.mapi (fun i arg -> tupleField i, arg)
+        CInitExpr(fields, tupleTy)
+      )
+
   | MCallProcPrim ->
       regular ctx (fun args ->
           match args with
@@ -1099,26 +1105,6 @@ let private cgConsStmt ctx serial head tail listTy =
 
   addStmt ctx stmt
 
-let private cgTupleInit ctx serial items tupleTy =
-  let name = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
-  let tupleTy, ctx = cgTyComplete ctx tupleTy
-
-  let ctx =
-    addLetStmt ctx name None tupleTy storageModifier
-
-  let rec go ctx i items =
-    match items with
-    | [] -> ctx
-    | item :: items ->
-        let left = CDotExpr(CVarExpr name, tupleField i)
-        let item, ctx = cgExpr ctx item
-        let stmt = CSetStmt(left, item)
-        let ctx = addStmt ctx stmt
-        go ctx (i + 1) items
-
-  go ctx 0 items
-
 let private cgVariantInit ctx varSerial variantSerial payload unionTy =
   let temp = getUniqueVarName ctx varSerial
 
@@ -1179,7 +1165,6 @@ let private cgLetValStmt ctx serial init ty loc =
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
 
-  | MTupleInit items -> cgTupleInit ctx serial items ty
   | MVariantInit (variantSerial, payload) -> cgVariantInit ctx serial variantSerial payload ty
   | MRecordInit fields -> cgRecordInit ctx serial fields ty
 
