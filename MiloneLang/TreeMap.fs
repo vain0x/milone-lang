@@ -18,16 +18,13 @@ type TreeMapRawNode =
   | E
   | T of TreeMapColor * left: TreeMapRawNode * keyValuePair: obj * right: TreeMapRawNode
 
-let private doTryFind keyCmp key node =
+let private doTryFind (keyCmp: 'K -> 'K -> int) (key: 'K) node: 'T option =
   let rec go node =
     match node with
     | E -> None
 
     | T (_, a, kv, b) ->
-        let k, v = unbox kv
-
-        let _typeUnifier () = [ k; key ] |> ignore
-
+        let k, v = unbox kv: 'K * 'T
         let c = keyCmp key k
 
         if c < 0 then
@@ -50,7 +47,7 @@ let private balance body =
   | B, a, x, T (R, b, y, T (R, c, z, d)) -> R, T(B, a, x, b), y, T(B, c, z, d)
   | _ -> body
 
-let private doInsert keyCmp key value node =
+let private doInsert (keyCmp: 'K -> 'K -> int) (key: 'K) (value: 'T) node =
   let newKv = box (key, value)
 
   let rec go node =
@@ -58,10 +55,7 @@ let private doInsert keyCmp key value node =
     | E -> R, E, newKv, E
 
     | T (color, l, kv, r) ->
-        let k, v = unbox kv
-
-        let _typeUnifier () = [ k, v; key, value ] |> ignore
-
+        let k, _ = unbox kv: 'K * 'T
         let c = keyCmp key k
 
         if c < 0 then
@@ -93,15 +87,13 @@ let private findMinItem node =
 
   go node
 
-let private doRemove keyCmp key node =
+let private doRemove (keyCmp: 'K -> 'K -> int) (key: 'K) node: 'T option * _ =
   let rec go key node =
     match node with
     | E -> None, E
 
     | T (color, l, kv, r) ->
-        let k, v = unbox kv
-        let _typeUnifier () = [ k; key ] |> ignore
-
+        let k, v = unbox kv: 'K * 'T
         let c = keyCmp key k
 
         if c < 0 then
@@ -122,16 +114,13 @@ let private doRemove keyCmp key node =
                 match findMinItem r with
                 | None -> failwith ""
                 | Some rkv ->
-                    let rk, rv = unbox rkv
-                    let _typeUnifier () = [ k, v; rk, rv ] |> ignore
-
+                    let rk, rv = unbox rkv: 'K * 'T
                     let _, r = go rk r
                     T(balance (color, l, rkv, r))
 
           Some v, rest
 
-  let removed, node = go key node
-  removed, node
+  go key node
 
 let private doMap f node =
   let rec go node =
@@ -174,7 +163,7 @@ let private doFold folder state node =
 // Third item is always None. This is just for "phantom" type parameter 'T.
 type TreeMap<'K, 'T> = TreeMapRawNode * ('K -> 'K -> int) * ('T option)
 
-let empty (keyCmp: _ -> _ -> int): TreeMap<_, _> = E, keyCmp, None
+let empty (keyCmp: 'K -> 'K -> int): TreeMap<'K, 'T> = E, keyCmp, None
 
 let isEmpty (map: TreeMap<_, _>): bool =
   let node, _, _ = map
@@ -183,82 +172,49 @@ let isEmpty (map: TreeMap<_, _>): bool =
   | E -> true
   | _ -> false
 
-let tryFind key (map: TreeMap<_, _>): _ option =
-  let node, keyCmp, none = map
+let tryFind key (map: TreeMap<'K, 'T>): 'T option =
+  let node, keyCmp, _ = map
+  node |> doTryFind keyCmp key
 
-  let valueOpt = node |> doTryFind keyCmp key
-
-  let _typeUnifier () = [ valueOpt; none ] |> ignore
-
-  valueOpt
-
-let add key value (map: TreeMap<_, _>): TreeMap<_, _> =
+let add (key: 'K) (value: 'T) (map: TreeMap<'K, 'T>): TreeMap<'K, 'T> =
   let node, keyCmp, none = map
 
   let node = doInsert keyCmp key value node
 
-  let _typeUnifier () = [ Some value; none ] |> ignore
-
   node, keyCmp, none
 
-let remove key (map: TreeMap<_, _>): _ option * TreeMap<_, _> =
+let remove (key: 'K) (map: TreeMap<'K, 'T>): 'T option * TreeMap<'K, 'T> =
   let node, keyCmp, none = map
 
   let valueOpt, node = doRemove keyCmp key node
 
-  let _typeUnifier () = [ valueOpt; none ] |> ignore
-
   valueOpt, (node, keyCmp, none)
 
-let map f (map: TreeMap<_, _>): TreeMap<_, _> =
-  let node, keyCmp, oldNone = map
-
-  let none =
-    match oldNone with
-    | None -> None
-
-    | Some v ->
-        let k = failwith ""
-        keyCmp k k |> ignore
-        Some(f k v)
-
+let map (f: 'K -> 'T -> 'U) (map: TreeMap<'K, 'T>): TreeMap<'K, 'U> =
+  let node, keyCmp, _ = map
   let node = doMap f node
+  node, keyCmp, None
 
-  node, keyCmp, none
-
-let fold folder state (map: TreeMap<_, _>) =
-  let node, keyCmp, none = map
-
-  let _typeUnifier k =
-    match none with
-    | Some v ->
-        keyCmp k k |> ignore
-        [ folder state k v; state ] |> ignore
-
-    | None -> ()
+let fold (folder: 'S -> 'K -> 'T -> 'S) (state: 'S) (map: TreeMap<'K, 'T>): 'S =
+  let node, keyCmp, _ = map
 
   doFold folder state node
 
-let filter pred (map: TreeMap<_, _>): TreeMap<_, _> =
+let filter (pred: 'K -> 'T -> bool) (map: TreeMap<'K, 'T>): TreeMap<'K, 'T> =
   let _, keyCmp, _ = map
 
   map
   |> fold (fun acc k v -> if pred k v then (k, v) :: acc else acc) []
   |> ofList keyCmp
 
-let ofList keyCmp (assoc: (_ * _) list): TreeMap<_, _> =
+let ofList (keyCmp: 'K -> 'K -> int) (assoc: ('K * 'T) list): TreeMap<'K, 'T> =
   let node =
     assoc
     |> List.fold (fun node (key, value) -> doInsert keyCmp key value node) E
 
-  let none =
-    match assoc with
-    | (_, v) :: _ when false -> Some v
-    | _ -> None
+  node, keyCmp, None
 
-  node, keyCmp, none
-
-let toList (map: TreeMap<_, _>): (_ * _) list =
+let toList (map: TreeMap<'K, 'T>): ('K * 'T) list =
   map
   |> fold (fun acc key value -> (key, value) :: acc) []
   |> List.rev

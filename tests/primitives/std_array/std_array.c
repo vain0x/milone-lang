@@ -10,13 +10,13 @@ intptr_t __pointeeSize_2(int const* constPtr_);
 
 intptr_t __pointeeSize_1(int const* constPtr_);
 
-int const* __ptrAsConst_1(int* mutPtr_1);
+int const* __ptrAsConst_1(int* mutPtr_);
 
-int const* __ptrAsConst_2(int* mutPtr_1);
+int const* __ptrAsConst_2(int* mutPtr_);
 
 int const* __ptrAdd_1(int index_, int const* ptr_);
 
-int* __mutPtrAdd_1(int index_1, int* mutPtr_2);
+int* __mutPtrAdd_1(int index_1, int* mutPtr_1);
 
 void* milone_mem_alloc(int, uintptr_t);
 
@@ -202,27 +202,23 @@ intptr_t __pointeeSize_1(int const* constPtr_) {
     return ((intptr_t)sizeof(int));
 }
 
-int const* __ptrAsConst_1(int* mutPtr_1) {
-    int const* constPtr_2 = ((int const*)mutPtr_1);
-    return constPtr_2;
+int const* __ptrAsConst_1(int* mutPtr_) {
+    return ((int const*)mutPtr_);
 }
 
-int const* __ptrAsConst_2(int* mutPtr_1) {
-    int const* constPtr_2 = ((int const*)mutPtr_1);
-    return constPtr_2;
+int const* __ptrAsConst_2(int* mutPtr_) {
+    return ((int const*)mutPtr_);
 }
 
 int const* __ptrAdd_1(int index_, int const* ptr_) {
     intptr_t call_ = __pointeeSize_1(ptr_);
-    int const* addedPtr_ = ((int const*)(((intptr_t)ptr_) + (((intptr_t)index_) * call_)));
-    return addedPtr_;
+    return ((int const*)(((intptr_t)ptr_) + (((intptr_t)index_) * call_)));
 }
 
-int* __mutPtrAdd_1(int index_1, int* mutPtr_2) {
-    int const* call_1 = __ptrAsConst_1(mutPtr_2);
+int* __mutPtrAdd_1(int index_1, int* mutPtr_1) {
+    int const* call_1 = __ptrAsConst_1(mutPtr_1);
     intptr_t call_2 = __pointeeSize_1(call_1);
-    int* addedPtr_1 = ((int*)(((intptr_t)mutPtr_2) + (((intptr_t)index_1) * call_2)));
-    return addedPtr_1;
+    return ((int*)(((intptr_t)mutPtr_1) + (((intptr_t)index_1) * call_2)));
 }
 
 void* memAlloc_(int len_, uintptr_t size_) {
@@ -292,23 +288,23 @@ if_next_4:;
 }
 
 int __mutArraySet_2(int index_2, int value_, struct UnitMutPtrIntTuple2 array_) {
-    int* mutPtr_3 = array_.t0;
+    int* mutPtr_2 = array_.t0;
     int len_2 = array_.t1;
-    milone_assert((((uint32_t)index_2) < ((uint32_t)len_2)), 62, 2);
-    mutPtr_3[index_2] = 0;
+    milone_assert((((uint32_t)index_2) < ((uint32_t)len_2)), 54, 2);
+    mutPtr_2[index_2] = 0;
     return 0;
 }
 
 int __mutArraySet_1(int index_2, int value_, struct IntMutPtrIntTuple2 array_) {
-    int* mutPtr_3 = array_.t0;
+    int* mutPtr_2 = array_.t0;
     int len_2 = array_.t1;
-    milone_assert((((uint32_t)index_2) < ((uint32_t)len_2)), 62, 2);
-    mutPtr_3[index_2] = value_;
+    milone_assert((((uint32_t)index_2) < ((uint32_t)len_2)), 54, 2);
+    mutPtr_2[index_2] = value_;
     return 0;
 }
 
 struct IntMutPtrIntTuple2 __mutArraySlice_1(int start_, int endIndex_, struct IntMutPtrIntTuple2 array_1) {
-    int* mutPtr_4 = array_1.t0;
+    int* mutPtr_3 = array_1.t0;
     int len_3 = array_1.t1;
     bool if_2;
     if ((start_ >= 0)) {
@@ -336,8 +332,8 @@ else_12:;
     if_3 = false;
     goto if_next_10;
 if_next_10:;
-    milone_assert(if_3, 69, 2);
-    int* call_7 = __mutPtrAdd_1(start_, mutPtr_4);
+    milone_assert(if_3, 61, 2);
+    int* call_7 = __mutPtrAdd_1(start_, mutPtr_3);
     struct IntMutPtrIntTuple2 tuple_4 = (struct IntMutPtrIntTuple2){.t0 = call_7, .t1 = (endIndex_ - start_)};
     return tuple_4;
 }
@@ -348,9 +344,9 @@ struct UnitConstPtrIntTuple2 {
 };
 
 struct UnitConstPtrIntTuple2 __constArrayOfMut_2(struct UnitMutPtrIntTuple2 mutArray_) {
-    int* mutPtr_5 = mutArray_.t0;
+    int* mutPtr_4 = mutArray_.t0;
     int len_4 = mutArray_.t1;
-    int const* call_8 = __ptrAsConst_2(mutPtr_5);
+    int const* call_8 = __ptrAsConst_2(mutPtr_4);
     struct UnitConstPtrIntTuple2 tuple_5 = (struct UnitConstPtrIntTuple2){.t0 = call_8, .t1 = len_4};
     return tuple_5;
 }
@@ -361,9 +357,9 @@ struct IntConstPtrIntTuple2 {
 };
 
 struct IntConstPtrIntTuple2 __constArrayOfMut_1(struct IntMutPtrIntTuple2 mutArray_) {
-    int* mutPtr_5 = mutArray_.t0;
+    int* mutPtr_4 = mutArray_.t0;
     int len_4 = mutArray_.t1;
-    int const* call_9 = __ptrAsConst_1(mutPtr_5);
+    int const* call_9 = __ptrAsConst_1(mutPtr_4);
     struct IntConstPtrIntTuple2 tuple_6 = (struct IntConstPtrIntTuple2){.t0 = call_9, .t1 = len_4};
     return tuple_6;
 }
@@ -381,7 +377,7 @@ int __constArrayLength_1(struct IntConstPtrIntTuple2 array_2) {
 int __constArrayGet_1(int index_3, struct IntConstPtrIntTuple2 array_3) {
     int const* ptr_2 = array_3.t0;
     int len_6 = array_3.t1;
-    milone_assert((((uint32_t)index_3) < ((uint32_t)len_6)), 89, 2);
+    milone_assert((((uint32_t)index_3) < ((uint32_t)len_6)), 81, 2);
     int read_ = ptr_2[index_3];
     return read_;
 }
@@ -415,7 +411,7 @@ else_18:;
     if_5 = false;
     goto if_next_16;
 if_next_16:;
-    milone_assert(if_5, 95, 2);
+    milone_assert(if_5, 87, 2);
     int const* call_10 = __ptrAdd_1(start_1, ptr_3);
     struct IntConstPtrIntTuple2 tuple_7 = (struct IntConstPtrIntTuple2){.t0 = call_10, .t1 = (endIndex_1 - start_1)};
     return tuple_7;

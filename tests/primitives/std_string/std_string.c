@@ -6,7 +6,7 @@ struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
 
-int const* __ptrAsConst_1(int* mutPtr_1);
+int const* __ptrAsConst_1(int* mutPtr_);
 
 void* milone_mem_alloc(int, uintptr_t);
 
@@ -178,9 +178,8 @@ struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     return str_concat_result_;
 }
 
-int const* __ptrAsConst_1(int* mutPtr_1) {
-    int const* constPtr_2 = ((int const*)mutPtr_1);
-    return constPtr_2;
+int const* __ptrAsConst_1(int* mutPtr_) {
+    return ((int const*)mutPtr_);
 }
 
 void* memAlloc_(int len_, uintptr_t size_) {
