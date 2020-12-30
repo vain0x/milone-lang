@@ -170,14 +170,6 @@ type MExpr =
 
   | MNativeExpr of code: string * Ty * Loc
 
-/// Variable initializer in mid-level IR.
-[<NoEquality; NoComparison>]
-type MInit =
-  /// Remain uninitialized at first; initialized later by `MSetStmt`.
-  | MUninitInit
-
-  | MExprInit of MExpr
-
 [<Struct>]
 [<NoEquality; NoComparison>]
 type MConst =
@@ -207,7 +199,7 @@ type MStmt =
   | MPrimStmt of MPrim * MExpr list * result: VarSerial * Loc
 
   /// Declare a local variable.
-  | MLetValStmt of VarSerial * MInit * Ty * Loc
+  | MLetValStmt of VarSerial * MExpr option * Ty * Loc
 
   /// Set to uninitialized local variable.
   | MSetStmt of VarSerial * init: MExpr * Loc

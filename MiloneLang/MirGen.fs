@@ -120,7 +120,7 @@ let private letFreshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let refExpr, serial, ctx = freshVar ctx name ty loc
 
   let ctx =
-    addStmt ctx (MLetValStmt(serial, MUninitInit, ty, loc))
+    addStmt ctx (MLetValStmt(serial, None, ty, loc))
 
   let setStmt expr = MSetStmt(serial, expr, loc)
   refExpr, setStmt, ctx
@@ -288,7 +288,7 @@ let private mirifyPatSomeApp ctx endLabel payloadPat listTy loc expr =
   mirifyPatCons ctx endLabel payloadPat r listTy loc expr
 
 let private mirifyPatRef ctx _endLabel serial ty loc expr =
-  addStmt ctx (MLetValStmt(serial, MExprInit expr, ty, loc))
+  addStmt ctx (MLetValStmt(serial, Some expr, ty, loc))
 
 let private mirifyPatVariant ctx endLabel serial ty loc expr =
   // Compare tags.
@@ -350,7 +350,7 @@ let private mirifyPatAs ctx endLabel pat serial expr loc =
   let ty, _ = patExtract pat
 
   let ctx =
-    addStmt ctx (MLetValStmt(serial, MExprInit expr, ty, loc))
+    addStmt ctx (MLetValStmt(serial, Some expr, ty, loc))
 
   let expr = MRefExpr(serial, ty, loc)
   mirifyPat ctx endLabel pat expr
@@ -1215,7 +1215,7 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args ty loc =
            let arg, ctx = mirifyExpr ctx arg
 
            let ctx =
-             addStmt ctx (MLetValStmt(tempVarSerial, MExprInit arg, ty, loc))
+             addStmt ctx (MLetValStmt(tempVarSerial, Some arg, ty, loc))
 
            tempVarExpr, ctx)
 

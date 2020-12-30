@@ -1114,13 +1114,16 @@ let private cgConsStmt ctx serial head tail listTy =
 
   addStmt ctx stmt
 
-let private cgLetValStmt ctx serial init ty loc =
-  match init with
-  | MUninitInit -> doGenLetValStmt ctx serial None ty
+let private cgLetValStmt ctx serial init ty =
+  let init, ctx =
+    match init with
+    | None -> None, ctx
 
-  | MExprInit expr ->
-      let expr, ctx = cgExpr ctx expr
-      doGenLetValStmt ctx serial (Some expr) ty
+    | Some init ->
+        let init, ctx = cgExpr ctx init
+        Some init, ctx
+
+  doGenLetValStmt ctx serial init ty
 
 let private cgSetStmt ctx serial right =
   let right, ctx = cgExpr ctx right
@@ -1180,7 +1183,7 @@ let private cgStmt ctx stmt =
   match stmt with
   | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
   | MPrimStmt (prim, args, temp, _) -> cgPrimStmt ctx stmt prim args temp
-  | MLetValStmt (serial, init, ty, loc) -> cgLetValStmt ctx serial init ty loc
+  | MLetValStmt (serial, init, ty, _) -> cgLetValStmt ctx serial init ty
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
   | MTerminatorStmt (terminator, _loc) -> cgTerminatorStmt ctx terminator
