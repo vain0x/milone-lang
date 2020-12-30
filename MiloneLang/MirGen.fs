@@ -824,7 +824,7 @@ let private mirifyExprCallSome ctx item ty loc =
   let nil = MDefaultExpr(ty, loc)
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MConsInit(item, nil), ty, loc))
+    addStmt ctx (MPrimStmt(MConsPrim, [ item; nil ], tempSerial, loc))
 
   MRefExpr(tempSerial, ty, loc), ctx
 
@@ -850,7 +850,7 @@ let private mirifyExprOpCons ctx l r listTy loc =
   let r, ctx = mirifyExpr ctx r
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MConsInit(l, r), listTy, loc))
+    addStmt ctx (MPrimStmt(MConsPrim, [ l; r ], tempSerial, loc))
 
   MRefExpr(tempSerial, listTy, loc), ctx
 

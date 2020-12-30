@@ -132,6 +132,7 @@ type MPrim =
   | MClosurePrim of closureFunSerial: FunSerial
 
   | MBoxPrim
+  | MConsPrim
 
   /// Direct call to procedure.
   | MCallProcPrim
@@ -174,7 +175,6 @@ type MInit =
 
   | MExprInit of MExpr
 
-  | MConsInit of head: MExpr * tail: MExpr
   | MTupleInit of items: MExpr list
   | MVariantInit of VariantSerial * payload: MExpr
   | MRecordInit of MExpr list
