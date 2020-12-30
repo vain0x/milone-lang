@@ -116,8 +116,7 @@ struct LazyList_ makeTail_(int n_2, int prev_, int arg_5) {
     tuple_1.t1 = head_2;
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntIntTuple2));
     (*(((struct IntIntTuple2*)box_1))) = tuple_1;
-    void const* env_1 = box_1;
-    struct UnitLazyList_Fun1 fun_1 = (struct UnitLazyList_Fun1){.fun = fun_, .env = env_1};
+    struct UnitLazyList_Fun1 fun_1 = (struct UnitLazyList_Fun1){.fun = fun_, .env = box_1};
     struct LazyList_ call_2 = cons_(fun_1, head_2);
     return call_2;
 }

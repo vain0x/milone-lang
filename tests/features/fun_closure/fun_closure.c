@@ -162,8 +162,7 @@ int lf_(int lx_, int arg_9) {
     tuple_.t0 = lx_;
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;
-    void const* env_1 = box_;
-    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = env_1};
+    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = box_};
     int app_ = fun_2.fun(fun_2.env, 0);
     return app_;
 }

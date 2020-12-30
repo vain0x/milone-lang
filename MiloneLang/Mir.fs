@@ -128,6 +128,9 @@ type MPrim =
 
   | MStrGetSlicePrim
 
+  /// Construct a closure, packing environment.
+  | MClosurePrim of closureFunSerial: FunSerial
+
   /// Direct call to procedure.
   | MCallProcPrim
 
@@ -168,9 +171,6 @@ type MInit =
   | MUninitInit
 
   | MExprInit of MExpr
-
-  /// Construct a closure, packing environment.
-  | MClosureInit of subFunSerial: FunSerial * envSerial: VarSerial
 
   | MBoxInit of MExpr
   | MConsInit of head: MExpr * tail: MExpr

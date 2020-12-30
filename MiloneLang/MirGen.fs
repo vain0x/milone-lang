@@ -1244,15 +1244,14 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args ty loc =
 let private mirifyExprInfClosure ctx funSerial env funTy loc =
   let envTy, envLoc = exprExtract env
   let env, ctx = mirifyExpr ctx env
-  let _, envSerial, ctx = freshVar ctx "env" envTy envLoc
 
-  let ctx =
-    addStmt ctx (MLetValStmt(envSerial, MExprInit env, envTy, envLoc))
+  // FIXME: Generate a serial to reduce diff; remove this later.
+  let _, _, ctx = freshVar ctx "env" envTy envLoc
 
   let tempRef, tempSerial, ctx = freshVar ctx "fun" funTy loc
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MClosureInit(funSerial, envSerial), funTy, loc))
+    addStmt ctx (MPrimStmt(MClosurePrim funSerial, [ env ], tempSerial, loc))
 
   tempRef, ctx
 

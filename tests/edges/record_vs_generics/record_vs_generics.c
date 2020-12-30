@@ -42,8 +42,7 @@ int main() {
     tuple_.t0 = IntWrapper_;
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntWrapper_Tuple1));
     (*(((struct IntWrapper_Tuple1*)box_))) = tuple_;
-    void const* env_1 = box_;
-    struct UnitIntWrapper_Fun1 fun_1 = (struct UnitIntWrapper_Fun1){.fun = fun_, .env = env_1};
+    struct UnitIntWrapper_Fun1 fun_1 = (struct UnitIntWrapper_Fun1){.fun = fun_, .env = box_};
     struct UnitIntWrapper_Fun1 f_ = fun_1;
     struct IntWrapper_ app_ = f_.fun(f_.env, 0);
     struct IntWrapper_ wrapper_ = app_;

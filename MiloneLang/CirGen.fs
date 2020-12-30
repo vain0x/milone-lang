@@ -996,6 +996,14 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "str_get_slice", args)))
 
+  | MClosurePrim funSerial ->
+      regular ctx (fun args ->
+        let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
+        let resultTy, _ = cgTyComplete ctx resultTy
+        match args with
+        | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
+        | _ -> failwithf "NEVER: %A" itself)
+
   | MCallProcPrim ->
       regular ctx (fun args ->
           match args with
@@ -1031,18 +1039,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 let private cgCallPrimExpr ctx itself serial prim args =
   let fail msg = failwithf "%s: %A" msg itself
   cgPrimStmt ctx fail prim args serial
-
-let private cgClosureInit ctx serial funSerial envSerial ty =
-  let name = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
-  let ty, ctx = cgTyComplete ctx ty
-
-  let fields =
-    [ "fun", CVarExpr(getUniqueFunName ctx funSerial)
-      "env", CVarExpr(getUniqueVarName ctx envSerial) ]
-
-  let initExpr = CInitExpr(fields, ty)
-  addLetStmt ctx name (Some initExpr) ty storageModifier
 
 let private cgBoxInit ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
@@ -1167,7 +1163,6 @@ let private cgLetValStmt ctx serial init ty loc =
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
 
-  | MClosureInit (funSerial, envSerial) -> cgClosureInit ctx serial funSerial envSerial ty
   | MBoxInit arg -> cgBoxInit ctx serial arg
   | MConsInit (head, tail) -> cgConsInit ctx serial head tail ty
   | MTupleInit items -> cgTupleInit ctx serial items ty

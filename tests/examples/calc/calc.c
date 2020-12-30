@@ -385,8 +385,7 @@ struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListI
     tuple_.t0 = ' ';
     void const* box_ = milone_mem_alloc(1, sizeof(struct CharTuple1));
     (*(((struct CharTuple1*)box_))) = tuple_;
-    void const* env_2 = box_;
-    struct CharBoolFun1 fun_2 = (struct CharBoolFun1){.fun = fun_, .env = env_2};
+    struct CharBoolFun1 fun_2 = (struct CharBoolFun1){.fun = fun_, .env = box_};
     struct StringIntTuple2 tuple_1;
     tuple_1.t0 = source_1;
     tuple_1.t1 = (i_3 + 1);
@@ -473,8 +472,7 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
     milone_assert(call_10, 76, 2);
     void const* box_1 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
-    void const* env_3 = box_1;
-    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_1, .env = env_3};
+    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_1, .env = box_1};
     struct StringIntTuple2 tuple_4;
     tuple_4.t0 = source_3;
     tuple_4.t1 = i_5;

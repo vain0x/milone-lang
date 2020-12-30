@@ -1080,8 +1080,7 @@ int fun_3(void const* env_, int arg_) {
 struct IntList const* scanIntList_(int len_5) {
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
-    void const* env_18 = box_;
-    struct IntIntFun1 fun_24 = (struct IntIntFun1){.fun = fun_3, .env = env_18};
+    struct IntIntFun1 fun_24 = (struct IntIntFun1){.fun = fun_3, .env = box_};
     struct IntList const* call_18 = listInit_1(len_5, fun_24);
     return call_18;
 }
@@ -3207,8 +3206,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_5 = call_258;
     void const* box_5 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_5))) = 0;
-    void const* env_19 = box_5;
-    struct IntIntBoolFun2 fun_25 = (struct IntIntBoolFun2){.fun = fun_9, .env = env_19};
+    struct IntIntBoolFun2 fun_25 = (struct IntIntBoolFun2){.fun = fun_9, .env = box_5};
     struct IntList const* list_24 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_24))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_23 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3220,8 +3218,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_6 = call_261;
     void const* box_6 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_6))) = 0;
-    void const* env_20 = box_6;
-    struct IntIntBoolFun2 fun_26 = (struct IntIntBoolFun2){.fun = fun_10, .env = env_20};
+    struct IntIntBoolFun2 fun_26 = (struct IntIntBoolFun2){.fun = fun_10, .env = box_6};
     struct IntList const* list_27 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_27))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_26 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3235,8 +3232,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_7 = call_264;
     void const* box_7 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_7))) = 0;
-    void const* env_21 = box_7;
-    struct IntIntBoolFun2 fun_27 = (struct IntIntBoolFun2){.fun = fun_11, .env = env_21};
+    struct IntIntBoolFun2 fun_27 = (struct IntIntBoolFun2){.fun = fun_11, .env = box_7};
     struct IntList const* list_29 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_29))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_28 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3248,8 +3244,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_8 = call_267;
     void const* box_8 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_8))) = 0;
-    void const* env_22 = box_8;
-    struct IntIntBoolFun2 fun_28 = (struct IntIntBoolFun2){.fun = fun_12, .env = env_22};
+    struct IntIntBoolFun2 fun_28 = (struct IntIntBoolFun2){.fun = fun_12, .env = box_8};
     struct IntList const* list_30 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_30))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* call_268 = segTreeToList_2(v_8);
@@ -3259,8 +3254,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_9 = call_270;
     void const* box_9 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_9))) = 0;
-    void const* env_23 = box_9;
-    struct IntIntBoolFun2 fun_29 = (struct IntIntBoolFun2){.fun = fun_13, .env = env_23};
+    struct IntIntBoolFun2 fun_29 = (struct IntIntBoolFun2){.fun = fun_13, .env = box_9};
     struct IntList const* call_271 = segTreeToList_2(v_9);
     bool call_272 = listEq_2(fun_29, NULL, call_271);
     milone_assert(call_272, 474, 4);
@@ -3289,8 +3283,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTy
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_10 = call_276;
     void const* box_10 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_10))) = 0;
-    void const* env_24 = box_10;
-    struct IntIntBoolFun2 fun_30 = (struct IntIntBoolFun2){.fun = fun_14, .env = env_24};
+    struct IntIntBoolFun2 fun_30 = (struct IntIntBoolFun2){.fun = fun_14, .env = box_10};
     struct IntList const* list_36 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_36))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_35 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3305,8 +3298,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTy
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_11 = call_280;
     void const* box_11 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_11))) = 0;
-    void const* env_25 = box_11;
-    struct IntIntBoolFun2 fun_31 = (struct IntIntBoolFun2){.fun = fun_15, .env = env_25};
+    struct IntIntBoolFun2 fun_31 = (struct IntIntBoolFun2){.fun = fun_15, .env = box_11};
     struct IntList const* list_39 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_39))) = (struct IntList){.head = 33, .tail = NULL};
     struct IntList const* list_38 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3497,8 +3489,7 @@ int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectSegNodeTag_T
     struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4StringIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_15 = call_298;
     void const* box_12 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_12))) = 0;
-    void const* env_26 = box_12;
-    struct StringStringBoolFun2 fun_32 = (struct StringStringBoolFun2){.fun = fun_16, .env = env_26};
+    struct StringStringBoolFun2 fun_32 = (struct StringStringBoolFun2){.fun = fun_16, .env = box_12};
     struct StringList const* list_53 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_53))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_52 = milone_mem_alloc(1, sizeof(struct StringList));
@@ -3512,14 +3503,12 @@ int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectSegNodeTag_T
 int segTreeTest_(int arg_120) {
     void const* box_13 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_13))) = 0;
-    void const* env_27 = box_13;
-    struct IntIntIntFun2 fun_33 = (struct IntIntIntFun2){.fun = fun_7, .env = env_27};
+    struct IntIntIntFun2 fun_33 = (struct IntIntIntFun2){.fun = fun_7, .env = box_13};
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 call_301 = segItemTypeNew_1(0, fun_33);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeInt_ = call_301;
     void const* box_14 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_14))) = 0;
-    void const* env_28 = box_14;
-    struct StringStringStringFun2 fun_34 = (struct StringStringStringFun2){.fun = fun_8, .env = env_28};
+    struct StringStringStringFun2 fun_34 = (struct StringStringStringFun2){.fun = fun_8, .env = box_14};
     struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 call_302 = segItemTypeNew_2((struct String){.str = "", .len = 0}, fun_34);
     struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeStr_ = call_302;
     int call_303 = testPushPop_(segItemTypeInt_, 0);
@@ -3628,8 +3617,7 @@ if_next_297:;
 int abc140bSolve_(int n_4, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_) {
     void const* box_15 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_15))) = 0;
-    void const* env_29 = box_15;
-    struct IntIntIntFun2 fun_35 = (struct IntIntIntFun2){.fun = fun_17, .env = env_29};
+    struct IntIntIntFun2 fun_35 = (struct IntIntIntFun2){.fun = fun_17, .env = box_15};
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 call_318 = segItemTypeNew_1(0, fun_35);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeInt_1 = call_318;
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_319 = segTreeOfList_1(segItemTypeInt_1, a_);
@@ -3877,8 +3865,7 @@ if_next_311:;
 int abc140eSolve_(int n_7, struct IntList const* perm_) {
     void const* box_16 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_16))) = 0;
-    void const* env_30 = box_16;
-    struct IntIntIntFun2 fun_36 = (struct IntIntIntFun2){.fun = fun_18, .env = env_30};
+    struct IntIntIntFun2 fun_36 = (struct IntIntIntFun2){.fun = fun_18, .env = box_16};
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 call_350 = segItemTypeNew_1(0, fun_36);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeInt_2 = call_350;
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_351 = segTreeOfList_1(segItemTypeInt_2, perm_);
@@ -3890,16 +3877,14 @@ int abc140eSolve_(int n_7, struct IntList const* perm_) {
     milone_assert((call_354 == (n_7 + 2)), 22, 2);
     void const* box_17 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_17))) = 0;
-    void const* env_31 = box_17;
-    struct IntIntIntFun2 fun_37 = (struct IntIntIntFun2){.fun = fun_19, .env = env_31};
+    struct IntIntIntFun2 fun_37 = (struct IntIntIntFun2){.fun = fun_19, .env = box_17};
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 call_355 = segItemTypeNew_1(0, fun_37);
     struct IntList const* call_356 = listReplicate_1(0, (n_7 + 2));
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_357 = segTreeOfList_1(call_355, call_356);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 prev_ = call_357;
     void const* box_18 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_18))) = 0;
-    void const* env_32 = box_18;
-    struct IntIntIntFun2 fun_38 = (struct IntIntIntFun2){.fun = fun_20, .env = env_32};
+    struct IntIntIntFun2 fun_38 = (struct IntIntIntFun2){.fun = fun_20, .env = box_18};
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 call_358 = segItemTypeNew_1((n_7 + 1), fun_38);
     struct IntList const* call_359 = listReplicate_1((n_7 + 1), (n_7 + 2));
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_360 = segTreeOfList_1(call_358, call_359);
@@ -3994,16 +3979,13 @@ int main() {
     unitObj_ = box_19;
     void const* box_20 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_20))) = 0;
-    void const* env_33 = box_20;
-    struct IntVoidMutPtrFun1 fun_39 = (struct IntVoidMutPtrFun1){.fun = fun_4, .env = env_33};
+    struct IntVoidMutPtrFun1 fun_39 = (struct IntVoidMutPtrFun1){.fun = fun_4, .env = box_20};
     void const* box_21 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_21))) = 0;
-    void const* env_34 = box_21;
-    struct VoidMutPtrIntIntFun2 fun_40 = (struct VoidMutPtrIntIntFun2){.fun = fun_5, .env = env_34};
+    struct VoidMutPtrIntIntFun2 fun_40 = (struct VoidMutPtrIntIntFun2){.fun = fun_5, .env = box_21};
     void const* box_22 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_22))) = 0;
-    void const* env_35 = box_22;
-    struct VoidMutPtrIntIntUnitFun3 fun_41 = (struct VoidMutPtrIntIntUnitFun3){.fun = fun_6, .env = env_35};
+    struct VoidMutPtrIntIntUnitFun3 fun_41 = (struct VoidMutPtrIntIntUnitFun3){.fun = fun_6, .env = box_22};
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3TypeTag_Tuple6 tuple_43;
     tuple_43.t0 = 0;
     tuple_43.t1 = 4;
