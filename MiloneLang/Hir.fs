@@ -1130,7 +1130,7 @@ let private traitBoundErrorToString tyDisplay it =
       + tyDisplay ty
 
   | IndexTrait (lTy, rTy, _) ->
-      sprintf "Index operation type error: lhs: '"
+      "Index operation type error: lhs: '"
       + tyDisplay lTy
       + "', rhs: "
       + tyDisplay rTy
