@@ -1033,6 +1033,12 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
           | _ -> failwithf "NEVER: %A" itself)
 
+  | MRecordPrim ->
+      regularWithTy ctx (fun args recordTy ->
+        let fields = args |> List.mapi (fun i arg -> tupleField i, arg)
+        CInitExpr(fields, recordTy)
+      )
+
   | MCallProcPrim ->
       regular ctx (fun args ->
           match args with
@@ -1108,21 +1114,6 @@ let private cgConsStmt ctx serial head tail listTy =
 
   addStmt ctx stmt
 
-let private cgRecordInit (ctx: CirCtx) serial args ty =
-  let name = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
-  let ty, ctx = cgTyComplete ctx ty
-
-  let fields, ctx =
-    (List.mapi (fun i arg -> i, arg) args, ctx)
-    |> stMap (fun ((i, arg), ctx) ->
-        let arg, ctx = cgExpr ctx arg
-        (tupleField i, arg), ctx)
-
-  let init = CInitExpr(fields, ty)
-
-  addLetStmt ctx name (Some init) ty storageModifier
-
 let private cgLetValStmt ctx serial init ty loc =
   match init with
   | MUninitInit -> doGenLetValStmt ctx serial None ty
@@ -1130,8 +1121,6 @@ let private cgLetValStmt ctx serial init ty loc =
   | MExprInit expr ->
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
-
-  | MRecordInit fields -> cgRecordInit ctx serial fields ty
 
 let private cgSetStmt ctx serial right =
   let right, ctx = cgExpr ctx right

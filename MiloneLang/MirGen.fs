@@ -884,7 +884,7 @@ let private mirifyExprRecord (ctx: MirCtx) args ty loc =
     |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MRecordInit args, ty, loc))
+    addStmt ctx (MPrimStmt(MRecordPrim, args, tempSerial, loc))
 
   MRefExpr(tempSerial, ty, loc), ctx
 
