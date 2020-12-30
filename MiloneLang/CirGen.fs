@@ -925,13 +925,6 @@ let private cgPrintfnActionStmt ctx itself args =
 
   | _ -> failwithf "NEVER: %A" itself
 
-let private cgCallProcExpr ctx callee args ty =
-  match callee, args with
-  | _ ->
-      let callee, ctx = cgExpr ctx callee
-      let args, ctx = cgExprList ctx args
-      CCallExpr(callee, args), ctx
-
 let private doGenCallClosureExpr ctx callee args =
   let funPtr = CDotExpr(callee, "fun")
   let envArg = CDotExpr(callee, "env")
@@ -1012,6 +1005,12 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "str_get_slice", args)))
+
+  | MCallProcPrim ->
+      regular ctx (fun args ->
+          match args with
+          | callee :: args -> CCallExpr(callee, args)
+          | [] -> failwithf "NEVER: %A" itself)
 
   | MCallNativePrim funName ->
       let ctx =
@@ -1166,10 +1165,6 @@ let private cgLetValStmt ctx serial init ty loc =
 
   | MExprInit expr ->
       let expr, ctx = cgExpr ctx expr
-      doGenLetValStmt ctx serial (Some expr) ty
-
-  | MCallProcInit (callee, args, _) ->
-      let expr, ctx = cgCallProcExpr ctx callee args ty
       doGenLetValStmt ctx serial (Some expr) ty
 
   | MCallClosureInit (callee, args) ->

@@ -128,6 +128,9 @@ type MPrim =
 
   | MStrGetSlicePrim
 
+  /// Direct call to procedure.
+  | MCallProcPrim
+
   | MCallNativePrim of funName: string
   | MPtrReadPrim
 
@@ -162,9 +165,6 @@ type MInit =
   | MUninitInit
 
   | MExprInit of MExpr
-
-  /// Direct call to procedure.
-  | MCallProcInit of callee: MExpr * args: MExpr list * calleeTy: Ty
 
   /// Indirect call to closure.
   | MCallClosureInit of callee: MExpr * args: MExpr list

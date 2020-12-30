@@ -1075,7 +1075,7 @@ let private mirifyCallProcExpr ctx callee args ty loc =
   let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
   let ctx =
-    addStmt ctx (MLetValStmt(tempSerial, MCallProcInit(callee, args, calleeTy), ty, loc))
+    addStmt ctx (MPrimStmt(MCallProcPrim, callee :: args, tempSerial, loc))
 
   temp, ctx
 
