@@ -163,8 +163,6 @@ type MInit =
 
   | MExprInit of MExpr
 
-  | MPrimInit of MPrim * MExpr list
-
   /// Direct call to procedure.
   | MCallProcInit of callee: MExpr * args: MExpr list * calleeTy: Ty
 

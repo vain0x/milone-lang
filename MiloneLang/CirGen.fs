@@ -964,7 +964,7 @@ let private doGenLetValStmt ctx serial expr ty =
   let cty, ctx = cgTyComplete ctx ty
   addLetStmt ctx name expr cty storageModifier
 
-let private cgPrimStmt (ctx: CirCtx) fail prim args serial =
+let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
   let (VarDef (_, _, resultTy, _)) = ctx.Vars |> mapFind serial
 
   let conversion ctx makeExpr =
@@ -976,7 +976,7 @@ let private cgPrimStmt (ctx: CirCtx) fail prim args serial =
         let arg, ctx = cgExpr ctx arg
         addLetStmt ctx name (Some(makeExpr arg)) ty storageModifier
 
-    | _ -> fail "NEVER"
+    | _ -> failwithf "NEVER: %A" itself
 
   let regular ctx makeExpr =
     let name = getUniqueVarName ctx serial
@@ -1000,7 +1000,7 @@ let private cgPrimStmt (ctx: CirCtx) fail prim args serial =
 
   | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_to_char", [ arg ]))
 
-  | MStrOfBoolPrim -> fail "unimplemented"
+  | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_char", [ arg ]))
 
   | MStrOfIntPrim flavor ->
@@ -1168,10 +1168,6 @@ let private cgLetValStmt ctx serial init ty loc =
       let expr, ctx = cgExpr ctx expr
       doGenLetValStmt ctx serial (Some expr) ty
 
-  | MPrimInit (prim, args) ->
-    let fail msg = failwithf "%s: %A" msg init
-    cgCallPrimExpr ctx fail serial prim args
-
   | MCallProcInit (callee, args, _) ->
       let expr, ctx = cgCallProcExpr ctx callee args ty
       doGenLetValStmt ctx serial (Some expr) ty
@@ -1244,11 +1240,7 @@ let private cgTerminatorStmt ctx stmt =
 let private cgStmt ctx stmt =
   match stmt with
   | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
-
-  | MPrimStmt (prim, args, temp, _) ->
-    let fail msg = failwithf "%s: %A" msg stmt
-    cgPrimStmt ctx fail prim args temp
-
+  | MPrimStmt (prim, args, temp, _) -> cgPrimStmt ctx stmt prim args temp
   | MLetValStmt (serial, init, ty, loc) -> cgLetValStmt ctx serial init ty loc
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
