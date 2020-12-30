@@ -396,12 +396,14 @@ let private genRecordTyDef ctx tySerial fields =
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
-      let fields, (ctx: CirCtx) =
+      let fieldTys, (ctx: CirCtx) =
         (fields, ctx)
         |> stMap
-             (fun ((name, ty, _), ctx) ->
+             (fun ((_, ty, _), ctx) ->
                let ty, ctx = cgTyComplete ctx ty
-               (name, ty), ctx)
+               ty, ctx)
+
+      let fields = fieldTys |> List.mapi (fun i ty -> tupleField i, ty)
 
       let ctx =
         { ctx with
@@ -792,19 +794,7 @@ let private genUnaryExpr ctx op arg ty _ =
       let _, ctx = cgTyComplete ctx ty
       CDotExpr(arg, getUniqueVariantName ctx serial), ctx
 
-  | MRecordItemUnary index ->
-      let fieldName =
-        match argTy with
-        | AppTy (RecordTyCtor tySerial, _) ->
-            match ctx.Tys |> mapFind tySerial with
-            | RecordTyDef (_, fields, _) ->
-                match fields |> List.tryItem index with
-                | Some (name, _, _) -> name
-                | None -> failwith "NEVER"
-            | _ -> failwith "NEVER"
-        | _ -> failwith "NEVER"
-
-      CDotExpr(arg, fieldName), ctx
+  | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
@@ -1119,35 +1109,19 @@ let private cgConsStmt ctx serial head tail listTy =
   addStmt ctx stmt
 
 let private cgRecordInit (ctx: CirCtx) serial args ty =
-  let fields =
-    match ty with
-    | AppTy (RecordTyCtor tySerial, _) ->
-        match ctx.Tys |> mapFind tySerial with
-        | RecordTyDef (_, fields, _) -> fields
-        | _ -> failwith "NEVER"
-    | _ -> failwith "NEVER"
-
-  assert (List.length fields = List.length args)
-
-  let pairs =
-    match listTryZip fields args with
-    | it, [], [] -> it
-    | _ -> failwith "NEVER"
-
   let name = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial
   let ty, ctx = cgTyComplete ctx ty
 
-  let ctx =
-    addLetStmt ctx name None ty storageModifier
+  let fields, ctx =
+    (List.mapi (fun i arg -> i, arg) args, ctx)
+    |> stMap (fun ((i, arg), ctx) ->
+        let arg, ctx = cgExpr ctx arg
+        (tupleField i, arg), ctx)
 
-  pairs
-  |> List.fold
-       (fun ctx ((fieldName, _, _), arg) ->
-         let l = CDotExpr(CVarExpr name, fieldName)
-         let arg, ctx = cgExpr ctx arg
-         addStmt ctx (CSetStmt(l, arg)))
-       ctx
+  let init = CInitExpr(fields, ty)
+
+  addLetStmt ctx name (Some init) ty storageModifier
 
 let private cgLetValStmt ctx serial init ty loc =
   match init with
