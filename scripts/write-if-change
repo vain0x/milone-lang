@@ -1,0 +1,30 @@
+#!/bin/bash
+# USAGE:
+#   ... | write-if-change $FILENAME
+#
+# Write standard input to a file unless the input is same as current contents.
+# That is, timestamp changes only if its contents change.
+
+set -eu
+
+FILENAME="$1"
+
+if test -r "$FILENAME" && test ! -f "$FILENAME"
+then
+    echo "ERROR: $FILENAME is not a regular file."
+    exit 1
+fi
+
+if test ! -f "$FILENAME"
+then
+    cat >$FILENAME
+    exit 0
+fi
+
+OLD_CONTENTS="$(cat $FILENAME)"
+NEW_CONTENTS="$(cat)"
+
+if test "$OLD_CONTENTS" != "$NEW_CONTENTS"
+then
+    echo "$NEW_CONTENTS" >$FILENAME
+fi

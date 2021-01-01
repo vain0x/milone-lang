@@ -55,7 +55,8 @@ build $milone_dotnet_release: $
 
 rule build_milone
   description = build_milone out=$out
-  command = MILONE_HOME=$$PWD $milone compile $verbosity MiloneLang >$out
+  command = MILONE_HOME=$$PWD $milone compile $verbosity MiloneLang | scripts/write-if-change $out
+  restat = 1
 
 rule build_cc
   description = build_cc in=$in
@@ -92,7 +93,8 @@ build target/milone_gen3.c: $
 
 rule diff
   description = diff out=$out
-  command = diff $in >$out
+  command = diff $in | scripts/write-if-change $out
+  restat = 1
 
 build target/milone_gen3.diff: $
   diff $
@@ -128,12 +130,14 @@ build test_self: $
 rule take_snapshot
   description = take_snapshot $project
   command = $
-    MILONE_HOME=$$PWD $milone compile -q $project >$out || $
-    echo 'milone-lang compile error.' >$out_file
+    MILONE_HOME=$$PWD $milone compile -q $project | scripts/write-if-change $out || $
+    echo 'milone-lang compile error.' | scripts/write-if-change $out_file
+  restat = 1
 
 # Print snapshot diff.
 rule git_diff_snapshot_stats
-  command = git diff --stat -- 'tests/**/*.c' >$out
+  command = git diff --stat -- 'tests/**/*.c' | scripts/write-if-change $out
+  restat = 1
 
 build snapshot_diff: $
   git_diff_snapshot_stats $
@@ -154,10 +158,13 @@ rule execute_test
   description = execute_test $c_file
   command = $
     test ! -z "$$(grep '#error' -- $c_file)" && $
-    echo 'milone-lang compile error.' >$out || { $
-      $in >$out ; $
-      echo '$$? = '$$? >>$out ; $
+    echo 'milone-lang compile error.' | scripts/write-if-change $out || { $
+      $in >$out.tmp ; $
+      echo '$$? = '$$? >>$out.tmp ; $
+      cat $out.tmp | scripts/write-if-change $out ; $
+      rm -f $out.tmp ; $
     }
+  restat = 1
 
 rule diff_test_output
   description = diff_test_output $test
