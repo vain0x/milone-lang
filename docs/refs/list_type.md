@@ -2,9 +2,37 @@
 
 List is a container of multiple values in order.
 
-All items of single list must have same type. For item type `T`, the type of list is written as `T list` or `list<T>`. For example, `int list` is the list type of int values.
+## Instant usage
 
-## List literals
+```fsharp
+    // Create a list.
+    let nil = []
+    let xyz = [ x; y; z ]
+    let wxyz = w :: xyz
+
+    // Multiline list literal.
+    let numbers =
+        [
+            1
+            2
+        ]
+
+    // Decompose a list.
+    match xyz with
+    | [] -> assert false
+    | head :: tail -> assert (head = x)
+
+    match xyz with
+    | [ a; b; c ] -> assert (a = x && b = y && c = z)
+    | _ -> assert false
+```
+
+## Guide-level explanation
+
+`T list` or `list<T>` is a list type for values of type `T`.
+For example, `int list` is the list type of int values.
+
+### List literals
 
 Lists are written as `[ x; y; z ]` or in multiline:
 
@@ -16,23 +44,23 @@ Lists are written as `[ x; y; z ]` or in multiline:
     ]
 ```
 
-Example: `[]`, `[ 2 ]`, `[ 2; 3; 5; 7 ]`.
+Examples: `[]`, `[ 1 ]`, `[ 1; 2; 3; 4 ]`.
 
 Empty list `[]` is called *nil*.
 
-## Cons operator
+### Cons operator
 
 Cons operator (`(::)`) prepends an item to a list: `x :: xs`.
 
-Example:
+For example:
 
 ```fsharp
-    let xs = [ 3; 5 ]
-    let ys = 2 :: xs
-    // ys is [ 2; 3; 5 ]
+    let xs = [ 1; 2 ]
+    let ys = 0 :: xs
+    // ys is [ 0; 1; 2 ]
 ```
 
-## Pattern matching
+### Pattern matching
 
 A list value is either *nil* (empty) or *cons* (non-empty).
 
@@ -52,7 +80,9 @@ List literal can be used as a pattern.
     | [ first; second ] -> ...
 ```
 
-## Runtime representation
+## Advanced topics
+
+### Runtime representation
 
 Currently, list types are represented by intrusive linked list structure like this:
 
@@ -64,4 +94,6 @@ struct IntList {
 };
 ```
 
-Especially, `[]` is `NULL`. Each cons object is allocated on heap.
+Especially, `[]` is `NULL`.
+
+Cons objects are allocated on heap.
