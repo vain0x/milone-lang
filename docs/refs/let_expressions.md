@@ -1,6 +1,6 @@
 # Let Expressions
 
-## Basic usage
+## Guide-level explanation
 
 ### Variable definition
 
@@ -37,7 +37,7 @@ Example:
     assert (sum = 2 + 3 + 5)
 ```
 
-#### Indentation
+### About indentation
 
 `next` expression must be indented on the same column as `let` keyword.
 
@@ -148,7 +148,9 @@ Function defined by `let-fun` is polymorphic as possible.
 
 (TODO: Explain more. If you want to learn by yourself, search for Hindley-Milner type inference.)
 
-## Generic syntax of let expressions
+## Advanced topics
+
+### Generic syntax of let expressions
 
 Let expression has several variants of syntax.
 

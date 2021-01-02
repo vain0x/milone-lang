@@ -1,16 +1,18 @@
-# String Type
+# String type
 
-`string` is built-in type.
+`string` is a built-in type to represent a string (text).
+
+## Guide-level explanation
 
 String literals are written between two double-quotes (`"`), e.g. `"Hello, world!"`.
 
-## Invariants
+### Invariants
 
 In milone-lang, strings are assumed to be encoded in UTF-8. (Not guaranteed nor checked, though.)
 
 Strings are immutable. No operation is provided to modify contents of strings (except for FFI).
 
-## `Length` property
+### `Length` property
 
 Strings have `Length` property to get length in bytes. (O(1) time.)
 
@@ -18,7 +20,7 @@ Strings have `Length` property to get length in bytes. (O(1) time.)
     assert ("hello".Length = 5)
 ```
 
-## Operations
+### Operations
 
 Strings support "add" operation (`(+)`) for concatenation and comparison operations (`(=)` etc.) See also [Integer Types](./integer_types.md) for details.
 
@@ -28,7 +30,7 @@ Strings support "add" operation (`(+)`) for concatenation and comparison operati
 
 About performance: the operation likely copies the both strings and newly allocates a string on heap.
 
-## Index operation
+### Index operation
 
 `s.[i]` extracts the `i`'th byte of string `s`. (O(1) time. Exceeding the boundary is undefined behavior for now.)
 
@@ -45,7 +47,7 @@ Index must have `int` type (rather than other integer type). Since `.[ ]` operat
     //       ^^^^^^^^ Annotation for `s.[...]`
 ```
 
-## Subscript operation
+### Subscript operation
 
 `s.[l .. r]` is a substring from `l`'th byte to `r`'th byte, inclusive.
 
@@ -59,15 +61,15 @@ About performance: if resulting substring is suffix of the string or empty, the 
 
 Exceeding the boundary is runtime error for now.
 
-## Conversion from numbers
+### Conversion from numbers
 
-`string` function converts a value of integer or float type to string. (The result format is not specified for now.)
+`string` function converts a value of integer or float type to string. (The result format is unspecified for now.)
 
 ```fsharp
     assert (string 42 = "42")
 ```
 
-## Escape sequences
+### Escape sequences
 
 In quotes, backslashes *escape* other characters.
 
@@ -79,9 +81,11 @@ In quotes, backslashes *escape* other characters.
 - `\"`: the character `"`
 - `\\`: the character `\`
 
-## Runtime representation
+## Advanced topics
 
-(See also `struct String` in `runtime/milone.h`.)
+### Runtime representation
+
+(See also `struct String` in [milone.h](../../runtime/milone.h).
 
 Currently, string is a pair of pointer and length.
 

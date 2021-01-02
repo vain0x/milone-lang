@@ -29,7 +29,7 @@ let agedJohn =
 assert (agedJohn.Age = 19)
 ```
 
-## Basic usage
+## Guide-level explanation
 
 ### Record type declaration
 

@@ -1,4 +1,4 @@
-# Discriminated Union Types
+# Discriminated union types
 
 Discriminated union type (DU) is a kind of user-defined types.
 
@@ -19,11 +19,11 @@ match john with
 | Member id -> assert (id = 1)
 ```
 
-## Basic usage
+## Guide-level explanation
 
 ### Constant variants
 
-Type declaration defines a discriminated union type. Discriminated union consists of any number of variants, separated by `|`s.
+Type declaration defines a discriminated union type. Discriminated union consists of any number of variants, separated by pipes (`|`).
 
 ```fsharp
 type TypeName =
@@ -100,7 +100,9 @@ To handle the case of value-carrying variants, variant in arm can take some "par
     assert (greetMessage john = "Hi, John Doe!")
 ```
 
-## Notes on name of parts
+## Advanced topics
+
+### Notes on name of parts
 
 - "discriminated union type" is also known as "algebraic data type (ADT)", "custom type", "enum" (enumeration), "sum type", "tagged union type", "variant", etc. in other communities.
 - "variant" is also known as "case", "constructor", etc.
@@ -131,7 +133,7 @@ If a variant is declared without `of` clause, its payload is empty. Its payload 
 
 Each variant is associated with an integer. The value is called *discriminant* of the variant.
 
-## Runtime representation
+### Runtime representation
 
 (The runtime representation of discriminated union types is unlikely stabilized. FFI codes shouldn't rely on the layout.)
 
