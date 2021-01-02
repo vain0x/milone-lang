@@ -1,92 +1,88 @@
-# This file describes a form of syntax tree of milone-lang source code in ungrammar.
-# See <https://github.com/rust-analyzer/ungrammar> for ungrammar.
-# (Not validated yet.)
+// This file describes a form of syntax tree of milone-lang source code in ungrammar.
+// See <https://github.com/rust-analyzer/ungrammar> for ungrammar.
+// (Not validated yet.)
 
-# ------------------------------------------------
-# Misc
-# ------------------------------------------------
+// -----------------------------------------------
+// Misc
+// -----------------------------------------------
 
-# Visibility.
+// Visibility.
 Vis =
-| "public"
-| "private"
+  'public'
+| 'private'
 
-# Path to symbol (value or type).
-# IDENT is bare identifier tokens (such as `x`) or identifier tokens quoted by 2 backticks.
-Path = (Path ".")? IDENT TyArgList?
+// Path to symbol (value or type).
+Path = (Path '.')? 'ident' TyArgList?
 
-# Path to module.
-ModulePath = (ModulePath ".")? IDENT
+// Path to module.
+ModulePath = (ModulePath '.')? 'ident'
 
-# Attribute.
-Attr = "[<" Expr ">]"
+// Attribute.
+Attr = '[<' Expr '>]'
 
-# Literal.
-# NUMBER_LIT is any kind of integer or float literals, e.g. 0, 0xff, 6.02e+23.
-# CHAR_LIT is single-quoted tokens, e.g. 'x'.
-# STRING_LIT is double-quoted or triple-quoted tokens, e.g. "x", """...""".
+// Literal.
 Lit =
-| NUMBER_LIT
-| CHAR_LIT
-| STRING_LIT
-| "false"
-| "true"
+  'int_number'
+| 'float_number'
+| 'false' | 'true'
+| 'char'
+| 'string'
 
-# ------------------------------------------------
-# Type
-# ------------------------------------------------
+// -----------------------------------------------
+// Type
+// -----------------------------------------------
 
-TyParamList = "<" (TY_IDENT ("," TY_IDENT)*)? ">"
+TyParamList = '<' ('greek' (',' 'greek')*)? '>'
 
-TyArgList = "<" (Ty ("," Ty)*)? ">"
+TyArgList = '<' (Ty (',' Ty)*)? '>'
 
-# Term of type.
+// Term of type.
 Ty =
-| Path
-| "(" Ty ")"
-| Ty "[]"
-| Ty IDENT
-| Ty ("*" Ty)+
-| Ty "->" Ty
+  Path
+| '(' Ty ')'
+| Ty '[]'
+| Ty 'ident'
+| Ty ('*' Ty)+
+| Ty '->' Ty
 
 
 
-LabeledTy = (IDENT ":")? Ty
+LabeledTy = ('ident' ':')? Ty
 
-VariantDecl = IDENT ("of" LabeledTy ("*" LabeledTy)*)?
+VariantDecl = 'ident' ('of' LabeledTy ('*' LabeledTy)*)?
 
-FieldDecl = IDENT ":" Ty
+FieldDecl = 'ident' ':' Ty
 
-# Body of type declaration.
+// Body of type declaration.
 TyDeclBody =
-| Ty
-| "|"? VariantDecl ("|" VariantDecl)*
-| "{" FieldDecl (";"? FieldDecl)* "}"
+  Ty
+| '|'? VariantDecl ('|' VariantDecl)*
+| '{' FieldDecl (';'? FieldDecl)* '}'
 
-# ------------------------------------------------
-# Pattern
-# ------------------------------------------------
+// -----------------------------------------------
+// Pattern
+// -----------------------------------------------
 
 LitPat = Lit
 
-VarPat = Vis? IDENT
+VarPat = Vis? 'ident'
 
-# At least one dot is required to be distinct from VarPat.
-PathPat = Path "." IDENT TyArgList?
+// At least one dot is required to be distinct from VarPat.
+PathPat = Path '.' 'ident' TyArgList?
 
-UnitPat = "(" ")"
-GroupPat = "(" Pat ")"
-ListPat = "[" (Pat (";"? Pat)*)? "]"
+UnitPat = '(' ')'
+GroupPat = '(' Pat ')'
+ListPat = '[' (Pat (';'? Pat)*)? ']'
 AppPat = Pat Pat
-TuplePat = Pat ("," Pat)+
-ConsPat = Pat "::" Pat
-AnnotatePat = Pat ":" Ty
-AsPat = Pat "as" Vis? IDENT
-OrPat = Pat "|" Pat
+TuplePat = Pat (',' Pat)+
+ConsPat = Pat ':' Pat
+AnnotatePat = Pat ':' Ty
+AsPat = Pat 'as' Vis? 'ident'
+OrPat = Pat '|' Pat
 
-# Term of pattern.
+// Term of pattern.
 Pat =
-| LitPat
+  LitPat
 | VarPat
 | PathPat
 | UnitPat
@@ -99,87 +95,90 @@ Pat =
 | AsPat
 | OrPat
 
-# ------------------------------------------------
-# Expression
-# ------------------------------------------------
+// -----------------------------------------------
+// Expression
+// -----------------------------------------------
 
-Unary =
-| "-"
+Unary = '-'
 
 Binary =
-| "+"
-| "-"
-| "*"
-| "/"
-| "%"
-| "**"
-| "&&&"
-| "|||"
-| "^^^"
-| "<<<"
-| ">>>"
-| "="
-| "<>"
-| "<"
-| "<="
-| ">"
-| ">="
-| "&&"
-| "||"
-| "|>"
+  '+'
+| '-'
+| '*'
+| '/'
+| '%'
+| '**'
+| '&&&'
+| '|||'
+| '^^^'
+| '<<<'
+| '>>>'
+| '='
+| '<>'
+| '<'
+| '<='
+| '>'
+| '>='
+| '&&'
+| '||'
+| '|>'
 
 LitExpr = Lit
 PathExpr = Path
-UnitExpr = "(" ")"
-GroupExpr = "(" Expr ")"
-ListExpr = "[" (Expr (";"? Expr)*)? "]"
+UnitExpr = '(' ')'
+GroupExpr = '(' Expr ')'
+ListExpr = '[' (Expr (';'? Expr)*)? ']'
 
 RecordExpr =
-    "{"
-        (Expr "with")?
-        IDENT "=" Expr (";"? IDENT "=" Expr)*
-    "}"
+    '{'
+        (Expr 'with')?
+        'ident' '=' Expr (';'? 'ident' '=' Expr)*
+    '}'
 
-IfExpr = "if" Expr "then" Expr ("else" Expr)?
+IfExpr = 'if' Expr 'then' Expr ('else' Expr)?
 
-MatchArm = Pat ("when" Expr)? "->" Expr
+MatchArm = Pat ('when' Expr)? '->' Expr
 
-MatchExpr = "match" Expr "with" "|"? MatchArm ("|" MatchArm)*
+MatchExpr = 'match' Expr 'with' '|'? MatchArm ('|' MatchArm)*
 
-FunExpr = "fun" Pat+ "->" Expr
+FunExpr = 'fun' Pat+ '->' Expr
 
-# Arithmetic expressions:
+
+
+// Arithmetic expressions:
 
 UnaryExpr = Unary Expr
 
-FieldExpr = Expr "." IDENT
+FieldExpr = Expr '.' 'ident'
 
-IndexExpr = Expr "." "[" Expr "]"
+IndexExpr = Expr '.' '[' Expr ']'
 
 AppExpr = Expr Expr
 
-RangeExpr = Expr (".." Expr)+
+RangeExpr = Expr ('..' Expr)+
 
 BinaryExpr = Expr Binary Expr
 
-AnnotateExpr = Expr ":" Ty
+AnnotateExpr = Expr ':' Ty
 
-TupleExpr = Expr ("," Expr)+
+TupleExpr = Expr (',' Expr)+
 
-BlockExpr = Expr (";"? Expr)+
+BlockExpr = Expr (';'? Expr)+
 
-# Bindings:
 
-LetValExpr = "let" Pat "=" Expr "in"? Expr
+
+// Bindings:
+
+LetValExpr = 'let' Pat '=' Expr 'in'? Expr
 
 LetFunExpr =
-    "let" "rec"?
-    Vis? IDENT TyParamList? Pat+
-    "=" Expr
-    "in"? Expr
+    'let' 'rec'?
+    Vis? 'ident' TyParamList? Pat+
+    '=' Expr
+    'in'? Expr
 
 Expr =
-| LitExpr
+  LitExpr
 | PathExpr
 | UnitExpr
 | GroupExpr
@@ -200,27 +199,27 @@ Expr =
 | LetValExpr
 | LetFunExpr
 
-# ------------------------------------------------
-# Declarations
-# ------------------------------------------------
+// -----------------------------------------------
+// Declarations
+// -----------------------------------------------
 
 ExprDecl = Expr
 
-LetValDecl = "let" Pat "=" Expr
+LetValDecl = 'let' Pat '=' Expr
 
 LetFunDecl =
-    "let" "rec"?
-    Vis? IDENT TyParamList? Pat+
-    "=" Expr
+    'let' 'rec'?
+    Vis? 'ident' TyParamList? Pat+
+    '=' Expr
 
-TyDecl = "type" Vis? IDENT TyParamList? "=" TyDeclBody
+TyDecl = 'type' Vis? 'ident' TyParamList? '=' TyDeclBody
 
-OpenDecl = "open" ModulePath
+OpenDecl = 'open' ModulePath
 
-ModuleSynonymDecl = "module" IDENT "=" ModulePath
+ModuleSynonymDecl = 'module' 'ident' '=' ModulePath
 
 Decl =
-| ExprDecl
+  ExprDecl
 | LetValDecl
 | LetFunDecl
 | TyDecl
@@ -229,6 +228,6 @@ Decl =
 
 
 
-Header = "module" "rec" ModulePath
+Header = 'module' 'rec' ModulePath
 
 Program = Header? Decl*
