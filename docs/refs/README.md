@@ -15,7 +15,7 @@ Built-in basic types:
 - [bool type](./bool_type.md)
 - [char type](./char_type.md)
 - [string type](./string_type.md)
-- ~~function type~~
+- [function type](./function_type.md)
 
 Built-in container types:
 
