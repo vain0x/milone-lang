@@ -5,6 +5,7 @@ Language references.
 ## Syntax
 
 - [let_expressions](./let_expressions.md)
+- [match_expressions](./match_expressions.md)
 
 ## Types and type-specific primitives
 
