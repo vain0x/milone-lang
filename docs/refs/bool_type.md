@@ -1,10 +1,14 @@
-# bool type
+# Bool type
 
-`bool` is built-in type. Boolean literals are `true` and `false`.
+`bool` is a built-in type to represent a truth value.
 
-bool type supports comparison operators in the order: `false < true`.
+## Guide-level explanation
 
-## `not` function
+Boolean literals are `true` and `false`.
+
+The `bool` type supports comparison operations in the order: `false < true`. See [Integer types](./integer_types.md#Operations) for details.
+
+### `not` function
 
 The `not` function flips a boolean value.
 
@@ -12,18 +16,18 @@ The `not` function flips a boolean value.
     assert (not false)
 ```
 
-## Logical operators
+### Logical operators
 
 Logical operators combine two conditions.
 
 - `p && q`: both p and q are true
 - `p || q`: either p or q is true
 
-## If expression
+### If expression
 
 `if` expression evaluates either of two expressions depending on a condition.
 
-### Syntax
+Syntax:
 
 ```fsharp
     // (1) When body or alt is long.
@@ -32,7 +36,7 @@ Logical operators combine two conditions.
     else
         alt
 
-    // (2) When body and alt is short enough.
+    // (2) When body and alt are short enough.
     if condition
     then body
     else alt
@@ -41,7 +45,7 @@ Logical operators combine two conditions.
     if condition then body else alt
 ```
 
-Else clause can be omitted:
+Else clause can be omitted (and `else ()` is used):
 
 ```fsharp
     // (1')
@@ -56,9 +60,49 @@ Else clause can be omitted:
     if condition then body
 ```
 
+Example: the function `collatz` halves an integer if even or multiplies by 3 and adds 1.
+
+```fsharp
+    let collatz (x: int): int =
+        if x % 2 = 0 then
+            x / 2
+        else
+            x * 3 + 1
+
+    assert (collatz 4 = 2)   // 4 / 2
+    assert (collatz 5 = 16)  // 5 * 3 + 1
+```
+
+### `assert` function
+
+The `assert` function states that "This condition must be true."
+
+```fsharp
+    assert condition
+```
+
+For example:
+
+```fsharp
+    assert (2 + 3 = 5)
+```
+
+If the condition evaluated to false, the program ends with runtime error.
+
+### Remarks
+
+- Conditions for `if`, `&&`, `assert` etc. must have `bool` type.
+    - No implicit conversion from int, string, etc. to bool.
+    - No truthy/falsy categorization.
+    - This design choice is compatible with F#. It improves type inference.
+
+## Advanced topics
+
 ### Typing rule
 
-The condition must have `bool` type. The two expressions must have same type. Else clause is omitted, the body must have `unit` type.
+The condition must have `bool` type.
+The two expressions must have same type.
+If `else` clause is omitted, body must have `unit` type.
 
 ```fsharp
     condition: bool,
@@ -75,48 +119,13 @@ The condition must have `bool` type. The two expressions must have same type. El
     (if condition then body else alt): T
 ```
 
-### Example
-
-The function `collatz` halves an integer if even or multiplies by 3 and adds 1.
-
-```fsharp
-    let collatz (x: int): int =
-        if x % 2 = 0 then
-            x / 2
-        else
-            x * 3 + 1
-
-    assert (collatz 4 = 2)   // 4 / 2
-    assert (collatz 5 = 16)  // 5 * 3 + 1
-```
-
-## `assert`
-
-The `assert` function states that "This condition must be true."
-
-```fsharp
-    assert (condition)
-```
-
-For example:
-
-```fsharp
-    assert (2 + 3 = 5)
-```
-
-If the condition evaluated to false, the program ends with runtime error.
-
-## Derived forms
+### Derived forms
 
 - `p && q` expands to `if p then q else false`. (Short-circuit occurs.)
 - `p || q` expands to `if p then true else q`.
 - `if cond then body else alt` expands to `match cond with true -> body | false -> alt`.
 
-## Remarks
+### Runtime representation
 
-- Conditions for `if`, `&&`, `assert` etc. are must have `bool` type exactly. (No implicit conversion from int, string, etc. to bool. No truthy/falsy categories. This design choice is compatible with F#. Bad for short coding. Condition type error detects some kind of program error and improves type inference.)
-- No conversion from bool to integer types is provided for now.
-
-## Runtime representation
-
-Currently, `bool` type from `<stdbool.h>` is used. That type is a macro, which expands to [`_Bool` type introduced from C99](https://en.cppreference.com/w/c/language/arithmetic_types#Boolean_type).
+Currently, `bool` in milone-lang is same as `bool` from `<stdbool.h>`, which is a macro of `_Bool`.
+See [`_Bool` type introduced from C99](https://en.cppreference.com/w/c/language/arithmetic_types#Boolean_type).
