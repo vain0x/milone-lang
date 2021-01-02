@@ -1,14 +1,12 @@
 # Integer types
 
-## int type
+## Guide-level explanation
 
-`int` is a built-in type mainly used for integers in milone-lang.
+`int` is a built-in type to represent a integer (in a limited set).
 
 Integer literals are written as `0`, `1`, `42`, etc. Their type is `int`.
 
-## Operations
-
-`int` type supports arithmetic operations:
+### Arithmetic operations
 
 - `-x`: minus
     - *Known issue*: Due to incorrect parsing of unary operators, you should wrap it with parens, e.g. `(-1)`.
@@ -18,7 +16,7 @@ Integer literals are written as `0`, `1`, `42`, etc. Their type is `int`.
 - `x / y`: division
 - `x % y`: modulo
 
-`int` type supports bit operations:
+### Bit operations
 
 - `x &&& y`: bit-wise and
 - `x ||| y`: bit-wise or
@@ -26,7 +24,7 @@ Integer literals are written as `0`, `1`, `42`, etc. Their type is `int`.
 - `x <<< n`: left shift
 - `x >>> n`: right shift
 
-`int` type supports comparison operations:
+### Comparison operations
 
 - `x = y`: x equals to y (Don't confuse with `==`.)
 - `x <> y`: x does NOT equal to y
@@ -36,13 +34,19 @@ Integer literals are written as `0`, `1`, `42`, etc. Their type is `int`.
 - `x >= y`: x is greater than or equal to y
 - `compare x y`: gets a negative number if `x < y`, zero if `x = y`, positive if `x > y`
 
-## Conversion
+### Conversion
 
-int type supports conversion from/to float and string.
+`int` type supports conversion from/to float and string.
 
-When int-to-string conversion failed, the program exits with runtime error.
+When string-to-int conversion failed, the program ends with runtime error.
 
-## Integer types other than `int`
+### Remarks
+
+- Overflow of signed integer is undefined behavior. (This behavior is derived from C language.)
+
+## Advanced topics
+
+### Integer types other than `int`
 
 | name          | signedness    | width     | alias |
 |:--------------|--------------:|----------:|:------|
@@ -69,7 +73,8 @@ There are built-in functions with same name as every integer type to convert an 
     //                  ^^^^^^^^^^ Conversion to unativeint.
 ```
 
-All integer types support arithmetic operations (`(+)` etc.), bit operations (`(&&&)` etc.), and comparison operators (`(=)` etc.) as `int` does. Both side of operands must have same type, except for right-hand side of shifts.
+All integer types support arithmetic operations (`(+)` etc.), bit operations (`(&&&)` etc.), and comparison operations (`(=)` etc.) as `int` does.
+Both side of operands must have same type, except for right-hand side of shifts.
 
 Typing rules:
 
@@ -99,10 +104,10 @@ Typing rules:
     (l >>> r): I
 ```
 
-## Remarks
+### Runtime representation
 
-- Overflow of signed integer is undefined behavior. (This behavior is derived from C language.)
+Currently, `int` in milone-lang is same as `int` in C.
+For other types, fixed integer types[^1] in C language are used.
+`nativeint` is `intptr_t`, `unativeint` is `uintptr_t`.
 
-## Runtime representation
-
-Currently, `int` in milone-lang is converted to `int` in C. For other types, [Fixed width integer types](https://en.cppreference.com/w/c/types/integer) are used. `nativeint` is `intptr_t`, `unativeint` is `uintptr_t`.
+[^1]: [Fixed width integer types](https://en.cppreference.com/w/c/types/integer).
