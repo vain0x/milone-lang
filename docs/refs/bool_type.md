@@ -77,17 +77,17 @@ The condition must have `bool` type. The two expressions must have same type. El
 
 ### Example
 
-The function `collatz` halves an integer if even or multiplies by 3.
+The function `collatz` halves an integer if even or multiplies by 3 and adds 1.
 
 ```fsharp
     let collatz (x: int): int =
         if x % 2 = 0 then
             x / 2
         else
-            x * 3
+            x * 3 + 1
 
-    assert (collatz 4 = 2)   // 4 / 2 = 2
-    assert (collatz 5 = 15)  // 5 * 3 = 15
+    assert (collatz 4 = 2)   // 4 / 2
+    assert (collatz 5 = 16)  // 5 * 3 + 1
 ```
 
 ## `assert`
