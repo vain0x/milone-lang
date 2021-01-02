@@ -269,10 +269,17 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
             // resolve all types in args and body.
             let extendedCtx = unifyTy ctx genericFunTy useSiteTy loc
 
-            let monoArgs =
-              args |> List.map (patMap (substTy extendedCtx) id)
+            let substMeta tySerial =
+              match extendedCtx.Tys |> mapTryFind tySerial with
+              | Some (MetaTyDef (_, ty, _)) -> Some ty
+              | _ -> Some tyUnit
 
-            let monoBody = body |> exprMap (substTy extendedCtx) id
+            let substOrDegenerateTy ty = tySubst substMeta ty
+
+            let monoArgs =
+              args |> List.map (patMap substOrDegenerateTy id)
+
+            let monoBody = body |> exprMap substOrDegenerateTy id
 
             let monoFunSerial, ctx =
               addMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
