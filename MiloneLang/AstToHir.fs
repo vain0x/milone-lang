@@ -143,9 +143,9 @@ let private desugarFun pats body pos =
 ///
 /// `-(-x)` ==> x.
 /// `-n` (n: literal).
-let private desugarUniNeg arg =
+let private desugarMinusUnary arg =
   match arg with
-  | AUnaryExpr (NegUnary, arg, _) -> Some arg
+  | AUnaryExpr (MinusUnary, arg, _) -> Some arg
 
   | ALitExpr (IntLit text, pos) -> ALitExpr(IntLit("-" + text), pos) |> Some
 
@@ -437,9 +437,9 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | AUnaryExpr (NegUnary, arg, pos) ->
+  | AUnaryExpr (MinusUnary, arg, pos) ->
       let doArm () =
-        match desugarUniNeg arg with
+        match desugarMinusUnary arg with
         | Some arg -> (arg, nameCtx) |> athExpr docId
         | None ->
             let arg, nameCtx = (arg, nameCtx) |> athExpr docId

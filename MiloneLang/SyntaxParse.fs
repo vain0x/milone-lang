@@ -688,7 +688,7 @@ let private parsePrefix basePos (tokens, errors) =
   match tokens with
   | (MinusToken, pos) :: tokens ->
       let arg, tokens, errors = parseApp basePos (tokens, errors)
-      AUnaryExpr(NegUnary, arg, pos), tokens, errors
+      AUnaryExpr(MinusUnary, arg, pos), tokens, errors
 
   | _ -> parseApp basePos (tokens, errors)
 

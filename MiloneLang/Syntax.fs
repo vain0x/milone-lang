@@ -216,8 +216,7 @@ type Token =
 /// Unary operator.
 [<NoEquality; NoComparison>]
 type Unary =
-  /// `-` Negation
-  | NegUnary
+  | MinusUnary
 
 /// Binary operator.
 [<NoEquality; NoComparison>]
@@ -270,7 +269,8 @@ type Binary =
 type ATy =
   | AMissingTy of Pos
 
-  /// Type application, e.g. `int` or `AssocMap<K, V>`.
+  /// Named type with potential qualifiers and type arguments,
+  /// e.g. `int`, `M.AssocMap<K, V>`.
   | AAppTy of quals: Ident list * Ident * ATy list * Pos
 
   /// Type variable, e.g. `'T`.
