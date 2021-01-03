@@ -308,7 +308,7 @@ let private basicPrimNode2 hint prim l r ty loc hole ctx =
 // Non-prim basic expr
 // -----------------------------------------------
 
-let private kgRefExpr varSerial ty loc hole ctx =
+let private kgVarExpr varSerial ty loc hole ctx =
   ctx |> hole (KVarTerm(varSerial, ty, loc))
 
 let private kgFunExpr funSerial ty loc hole ctx =
@@ -870,7 +870,7 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
   match expr with
   | HLitExpr (lit, loc) -> hole (KLitTerm(lit, loc)) ctx
 
-  | HRefExpr (varSerial, ty, loc) -> kgRefExpr varSerial ty loc hole ctx
+  | HVarExpr (varSerial, ty, loc) -> kgVarExpr varSerial ty loc hole ctx
 
   | HFunExpr (varSerial, ty, loc) -> kgFunExpr varSerial ty loc hole ctx
 

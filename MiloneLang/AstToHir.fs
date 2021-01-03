@@ -342,7 +342,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
       // NOTE: Work in a local function to reduce the size of stack frames of `athExpr`.
       let doArm () =
         let serial, nameCtx = nameCtx |> nameCtxAdd name
-        HRefExpr(VarSerial serial, noTy, loc), nameCtx
+        HVarExpr(VarSerial serial, noTy, loc), nameCtx
 
       doArm ()
 

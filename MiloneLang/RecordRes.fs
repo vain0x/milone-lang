@@ -8,10 +8,10 @@ open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLang.Typing
 
-let private hxIsRefOrUnboxingRef expr =
+let private hxIsVarOrUnboxingVar expr =
   match expr with
-  | HRefExpr _
-  | HNodeExpr (HAppEN, [ HPrimExpr (HPrim.Unbox, _, _); HRefExpr _ ], _, _) -> true
+  | HVarExpr _
+  | HNodeExpr (HAppEN, [ HPrimExpr (HPrim.Unbox, _, _); HVarExpr _ ], _, _) -> true
   | _ -> false
 
 // -----------------------------------------------
@@ -120,7 +120,7 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   // Base expr is guaranteed to be a cheap expr thanks to modification in Typing,
   // so we can freely clone this.
   let baseOpt =
-    assert (baseOpt |> Option.forall hxIsRefOrUnboxingRef)
+    assert (baseOpt |> Option.forall hxIsVarOrUnboxingVar)
 
     baseOpt |> Option.map (teExpr ctx)
 
@@ -210,7 +210,7 @@ let private teExpr (ctx: RrCtx) expr =
       doArm ()
 
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _

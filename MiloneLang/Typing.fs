@@ -522,10 +522,10 @@ let private inferLitExpr ctx expr lit =
   let ctx = validateLit ctx lit (exprToLoc expr)
   expr, litToTy lit, ctx
 
-let private inferRefExpr (ctx: TyCtx) varSerial loc =
+let private inferVarExpr (ctx: TyCtx) varSerial loc =
   let ty, ctx = ctx |> unifyVarTy varSerial None loc
 
-  HRefExpr(varSerial, ty, loc), ty, ctx
+  HVarExpr(varSerial, ty, loc), ty, ctx
 
 let private inferFunExpr (ctx: TyCtx) funSerial loc =
   let ty, ctx =
@@ -664,7 +664,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
           let varSerial, ctx = freshVar ctx "base" recordTy loc
 
           let varPat = HVarPat(varSerial, recordTy, loc)
-          let varExpr = HRefExpr(varSerial, recordTy, loc)
+          let varExpr = HVarExpr(varSerial, recordTy, loc)
 
           let recordExpr =
             HRecordExpr(Some varExpr, fields, recordTy, loc)
@@ -946,7 +946,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
 
   match expr with
   | HLitExpr (lit, _) -> inferLitExpr ctx expr lit
-  | HRefExpr (serial, _, loc) -> inferRefExpr ctx serial loc
+  | HVarExpr (serial, _, loc) -> inferVarExpr ctx serial loc
   | HFunExpr (serial, _, loc) -> inferFunExpr ctx serial loc
   | HVariantExpr (serial, _, loc) -> inferVariantExpr ctx serial loc
   | HPrimExpr (prim, _, loc) -> inferPrimExpr ctx prim loc

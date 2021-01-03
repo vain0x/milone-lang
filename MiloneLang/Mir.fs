@@ -155,7 +155,7 @@ type MExpr =
   | MDefaultExpr of Ty * Loc
 
   /// Variable.
-  | MRefExpr of VarSerial * Ty * Loc
+  | MVarExpr of VarSerial * Ty * Loc
 
   /// Procedure.
   | MProcExpr of FunSerial * Ty * Loc
@@ -226,7 +226,7 @@ let mexprExtract expr =
   match expr with
   | MDefaultExpr (ty, loc) -> ty, loc
   | MLitExpr (lit, loc) -> litToTy lit, loc
-  | MRefExpr (_, ty, loc) -> ty, loc
+  | MVarExpr (_, ty, loc) -> ty, loc
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc
   | MDiscriminantConstExpr (_, loc) -> tyInt, loc
@@ -280,7 +280,7 @@ let rec mxSugar expr =
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MRefExpr (_, AppTy (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
+  | MVarExpr (_, AppTy (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
 
   | MUnaryExpr (op, l, ty, loc) ->
       let l = mxSugar l

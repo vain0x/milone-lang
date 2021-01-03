@@ -347,7 +347,7 @@ let private dfsPat (visitor: Visitor) pat =
 let private dfsExpr (visitor: Visitor) expr =
   match expr with
   | HLitExpr _ -> ()
-  | HRefExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
+  | HVarExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
   | HFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Some ty, loc)
   | HVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
   | HPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)

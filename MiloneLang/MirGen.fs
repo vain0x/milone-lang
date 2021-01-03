@@ -113,17 +113,17 @@ let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
           ctx.Vars
           |> mapAdd varSerial (VarDef(name, AutoSM, ty, loc)) }
 
-  let refExpr = MRefExpr(varSerial, ty, loc)
-  refExpr, varSerial, ctx
+  let varExpr = MVarExpr(varSerial, ty, loc)
+  varExpr, varSerial, ctx
 
 let private letFreshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
-  let refExpr, serial, ctx = freshVar ctx name ty loc
+  let varExpr, serial, ctx = freshVar ctx name ty loc
 
   let ctx =
     addStmt ctx (MLetValStmt(serial, None, ty, loc))
 
   let setStmt expr = MSetStmt(serial, expr, loc)
-  refExpr, setStmt, ctx
+  varExpr, setStmt, ctx
 
 let private freshLabel (ctx: MirCtx) (name: Ident) loc =
   let serial = ctx.LabelSerial + 1
@@ -209,7 +209,7 @@ let private containsTailRec expr =
   | HNodeExpr (HCallTailRecEN, _, _, _) -> true
 
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _
@@ -352,7 +352,7 @@ let private mirifyPatAs ctx endLabel pat serial expr loc =
   let ctx =
     addStmt ctx (MLetValStmt(serial, Some expr, ty, loc))
 
-  let expr = MRefExpr(serial, ty, loc)
+  let expr = MVarExpr(serial, ty, loc)
   mirifyPat ctx endLabel pat expr
 
 /// Processes pattern matching
@@ -826,7 +826,7 @@ let private mirifyExprCallSome ctx item ty loc =
   let ctx =
     addStmt ctx (MPrimStmt(MConsPrim, [ item; nil ], tempSerial, loc))
 
-  MRefExpr(tempSerial, ty, loc), ctx
+  MVarExpr(tempSerial, ty, loc), ctx
 
 let private mirifyCallVariantExpr (ctx: MirCtx) serial payload ty loc =
   let payload, ctx = mirifyExpr ctx payload
@@ -851,7 +851,7 @@ let private mirifyExprOpCons ctx l r listTy loc =
   let ctx =
     addStmt ctx (MPrimStmt(MConsPrim, [ l; r ], tempSerial, loc))
 
-  MRefExpr(tempSerial, listTy, loc), ctx
+  MVarExpr(tempSerial, listTy, loc), ctx
 
 let private mirifyExprTuple ctx items itemTys loc =
   let ty = tyTuple itemTys
@@ -869,7 +869,7 @@ let private mirifyExprTuple ctx items itemTys loc =
   let ctx =
     addStmt ctx (MPrimStmt(MTuplePrim, items, tempSerial, loc))
 
-  MRefExpr(tempSerial, ty, loc), ctx
+  MVarExpr(tempSerial, ty, loc), ctx
 
 let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let name =
@@ -886,7 +886,7 @@ let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let ctx =
     addStmt ctx (MPrimStmt(MRecordPrim, args, tempSerial, loc))
 
-  MRefExpr(tempSerial, ty, loc), ctx
+  MVarExpr(tempSerial, ty, loc), ctx
 
 let private mirifyExprRecordItem ctx index tuple itemTy loc =
   let record, ctx = mirifyExpr ctx tuple
@@ -1392,7 +1392,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
 let private mirifyOtherExprWrapper ctx expr =
   match expr with
   | HLitExpr (lit, loc) -> MLitExpr(lit, loc), ctx
-  | HRefExpr (serial, ty, loc) -> MRefExpr(serial, ty, loc), ctx
+  | HVarExpr (serial, ty, loc) -> MVarExpr(serial, ty, loc), ctx
   | HFunExpr (serial, ty, loc) -> MProcExpr(serial, ty, loc), ctx
 
   | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx expr serial ty loc

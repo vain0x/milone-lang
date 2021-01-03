@@ -1195,16 +1195,16 @@ type private ResolvedExpr =
   | NotResolvedExpr of Ident * Loc
 
 /// Tries to resolve a name expression as value; or just return None.
-let private doNameResRefExpr expr ctx =
+let private doNameResVarExpr expr ctx =
   let serial, ty, loc =
     match expr with
-    | HRefExpr (VarSerial serial, ty, loc) -> serial, ty, loc
+    | HVarExpr (VarSerial serial, ty, loc) -> serial, ty, loc
     | _ -> failwith "NEVER"
 
   let name = ctx |> findName serial
 
   match ctx |> resolveLocalVarName name with
-  | Some (VarSymbol serial) -> HRefExpr(serial, ty, loc) |> Some
+  | Some (VarSymbol serial) -> HVarExpr(serial, ty, loc) |> Some
   | Some (FunSymbol serial) -> HFunExpr(serial, ty, loc) |> Some
   | Some (VariantSymbol serial) -> HVariantExpr(serial, ty, loc) |> Some
 
@@ -1213,14 +1213,14 @@ let private doNameResRefExpr expr ctx =
       | Some prim -> HPrimExpr(prim, ty, loc) |> Some
       | None -> None
 
-let private nameResRefExpr expr ctx =
-  match doNameResRefExpr expr ctx with
+let private nameResVarExpr expr ctx =
+  match doNameResVarExpr expr ctx with
   | Some expr -> expr, ctx
 
   | None ->
       let name, loc =
         match expr with
-        | HRefExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
+        | HVarExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
         | _ -> failwith "NEVER"
 
       let ctx =
@@ -1236,10 +1236,10 @@ let private nameResNavExpr expr ctx =
   /// exprOpt is also obtained by resolving inner `nav`s as possible.
   let rec resolveExprAsScope expr ctx =
     match expr with
-    | HRefExpr (VarSerial serial, _, loc) ->
+    | HVarExpr (VarSerial serial, _, loc) ->
         let name = ctx |> findName serial
         let scopes = ctx |> resolveLocalTyName name
-        let exprOpt = doNameResRefExpr expr ctx
+        let exprOpt = doNameResVarExpr expr ctx
 
         match scopes, exprOpt with
         | [], None -> NotResolvedExpr(name, loc), ctx
@@ -1276,7 +1276,7 @@ let private nameResNavExpr expr ctx =
                        | it -> it)
 
               match varSymbolOpt with
-              | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc) |> Some
+              | Some (VarSymbol varSerial) -> HVarExpr(varSerial, ty, loc) |> Some
               | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc) |> Some
               | Some (VariantSymbol variantSerial) -> HVariantExpr(variantSerial, ty, loc) |> Some
               | None -> None
@@ -1320,7 +1320,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HLitExpr _
   | HPrimExpr _ -> expr, ctx
 
-  | HRefExpr _ -> nameResRefExpr expr ctx
+  | HVarExpr _ -> nameResVarExpr expr ctx
 
   | HRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =

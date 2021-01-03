@@ -160,7 +160,7 @@ let private capsMakeApp calleeSerial calleeTy calleeLoc (caps: Caps) =
     |> List.rev
     |> List.fold
          (fun (callee, calleeTy) (serial, ty, loc) ->
-           let arg = HRefExpr(serial, ty, loc)
+           let arg = HVarExpr(serial, ty, loc)
            hxApp callee arg calleeTy loc, tyFun ty calleeTy)
          (callee, calleeTy)
 
@@ -344,15 +344,12 @@ let private updateFunDefs (ctx: CcCtx) =
 // Featured transformations
 // -----------------------------------------------
 
-let private ccFunExpr refVarSerial refTy refLoc ctx =
+let private ccFunExpr funSerial funTy funLoc ctx =
   // NOTE: No need to check whether it's a function
   //       because non-function caps are empty.
-  let refExpr =
-    ctx
-    |> genFunCaps refVarSerial
-    |> capsMakeApp refVarSerial refTy refLoc
-
-  refExpr, ctx
+  ctx
+  |> genFunCaps funSerial
+  |> capsMakeApp funSerial funTy funLoc
 
 let private ccLetFunExpr callee isRec vis args body next ty loc ctx =
   let args, body, ctx =
@@ -407,17 +404,17 @@ let private ccExpr (expr, ctx) =
   | HTyDeclExpr _
   | HOpenExpr _ -> expr, ctx
 
-  | HRefExpr (serial, ty, loc) ->
+  | HVarExpr (serial, ty, loc) ->
       let doArm () =
         let ctx = ctx |> useVar serial
-        HRefExpr(serial, ty, loc), ctx
+        HVarExpr(serial, ty, loc), ctx
 
       doArm ()
 
-  | HFunExpr (serial, refTy, refLoc) ->
+  | HFunExpr (serial, funTy, funLoc) ->
       let doArm () =
         let ctx = ctx |> useFun serial
-        ccFunExpr serial refTy refLoc ctx
+        ccFunExpr serial funTy funLoc ctx, ctx
 
       doArm ()
 

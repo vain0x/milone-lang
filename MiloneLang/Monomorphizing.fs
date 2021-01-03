@@ -306,7 +306,7 @@ let private monifyExpr (expr, ctx) =
   | HTyDeclExpr _
   | HOpenExpr _
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HVariantExpr _
   | HPrimExpr _ -> expr, ctx
 
