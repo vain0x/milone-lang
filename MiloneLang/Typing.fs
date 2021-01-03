@@ -183,7 +183,7 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-        let level = ctx.TyLevels |> mapFind tySerial
+        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
         // Degenerate unless quantified.
         if level < 1000000000 then Some tyUnit else None
 
@@ -270,7 +270,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
   match funDef.Ty with
   | TyScheme ([], funTy) ->
       let isOwned tySerial =
-        let level = ctx.TyLevels |> mapFind tySerial
+        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
 
         level > outerLevel
 
@@ -318,6 +318,28 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
     tyNativeFun paramTys resultTy
 
   nativeFunTy, ctx
+
+/// Resolves ascription type.
+///
+/// Current level is assigned to `'T`s and `_`s.
+let private resolveAscriptionTy ctx ascriptionTy =
+  let rec go (ty, ctx: TyCtx) =
+    match ty with
+    | ErrorTy _ -> ty, ctx
+
+    | MetaTy(serial, loc) when ctx.TyLevels |> mapContainsKey serial |> not ->
+      let ctx = { ctx with TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
+      MetaTy (serial, loc), ctx
+
+    | MetaTy _ -> ty, ctx
+
+    | AppTy (_, []) -> ty, ctx
+
+    | AppTy (tyCtor, tys) ->
+      let tys, ctx = (tys, ctx) |> stMap go
+      AppTy(tyCtor, tys), ctx
+
+  go (ascriptionTy, ctx)
 
 // -----------------------------------------------
 // Emission helpers
@@ -426,6 +448,7 @@ let private inferTuplePat ctx itemPats loc =
 
 let private inferAscribePat ctx body ascriptionTy loc =
   let body, bodyTy, ctx = inferPat ctx body
+  let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
 
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
   body, ascriptionTy, ctx
@@ -847,9 +870,9 @@ let private inferTupleExpr (ctx: TyCtx) items loc =
 
 let private inferAscribeExpr ctx body ascriptionTy loc =
   let body, bodyTy, ctx = inferExpr ctx (Some ascriptionTy) body
+  let ascriptionTy, ctx = resolveAscriptionTy ctx ascriptionTy
 
   let ctx = unifyTy ctx loc bodyTy ascriptionTy
-
   body, ascriptionTy, ctx
 
 let private inferBlockExpr ctx expectOpt stmts last =
@@ -1110,7 +1133,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       Variants = scopeCtx.Variants
       MainFunOpt = scopeCtx.MainFunOpt
       Tys = scopeCtx.Tys
-      TyLevels = scopeCtx.TyLevels
+      TyLevels = mapEmpty compare
       Level = 0
       TraitBounds = []
       Logs = [] }

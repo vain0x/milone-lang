@@ -83,7 +83,7 @@ let tyCtorDisplay getTyName tyCtor =
   | RecordTyCtor tySerial -> getTyName tySerial
   | UnionTyCtor tySerial -> getTyName tySerial
   | UnresolvedTyCtor (_, serial) -> "?" + string serial
-  | UnresolvedVarTyCtor serial -> "'" + string serial
+  | UnresolvedVarTyCtor (serial, _) -> "'" + string serial
 
 // -----------------------------------------------
 // Traits (HIR)

@@ -19,8 +19,6 @@ let private isNoTy ty =
 
 let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
 
-let private globalLevel: Level = 0
-
 // -----------------------------------------------
 // Type primitives
 // -----------------------------------------------
@@ -186,9 +184,6 @@ type ScopeCtx =
     ModuleTys: AssocMap<ModuleTySerial, ModuleTyDef>
     ModuleSynonyms: AssocMap<ModuleSynonymSerial, ModuleSynonymDef>
 
-    /// Type serial to level map.
-    TyLevels: AssocMap<TySerial, Level>
-
     /// Values contained by types.
     VarNs: Ns<TySerial, ValueSymbol>
 
@@ -221,7 +216,6 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Tys = mapEmpty compare
     ModuleTys = mapEmpty moduleTySerialCmp
     ModuleSynonyms = mapEmpty moduleSynonymSerialCmp
-    TyLevels = mapEmpty compare
     VarNs = mapEmpty compare
     TyNs = mapEmpty compare
     Local = scopeEmpty ()
@@ -308,16 +302,11 @@ let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCt
         |> mapAdd variantSerial scopeCtx.Level }
 
 /// Defines a type, without adding to any scope.
-let private addTy tySymbol tyDef level (scopeCtx: ScopeCtx): ScopeCtx =
+let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   let tySerial = tySymbolToSerial tySymbol
 
   { scopeCtx with
-      Tys = scopeCtx.Tys |> mapAdd tySerial tyDef
-      TyLevels =
-        if level = globalLevel then
-          scopeCtx.TyLevels
-        else
-          scopeCtx.TyLevels |> mapAdd tySerial level }
+      Tys = scopeCtx.Tys |> mapAdd tySerial tyDef }
 
 let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
@@ -326,13 +315,6 @@ let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeC
 let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef }
-
-/// Defines an unbound meta type.
-let private addUnboundMetaTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
-  { scopeCtx with
-      TyLevels =
-        scopeCtx.TyLevels
-        |> mapAdd tySerial scopeCtx.Level }
 
 /// Adds a variable to a namespace.
 let private addVarToNs parentTySerial valueSymbol (scopeCtx: ScopeCtx): ScopeCtx =
@@ -422,9 +404,9 @@ let private addLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   |> importVar (VarSymbol varSerial)
 
 /// Defines a type in the local scope.
-let private addLocalTy tySymbol tyDef level (scopeCtx: ScopeCtx): ScopeCtx =
+let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
-  |> addTy tySymbol tyDef level
+  |> addTy tySymbol tyDef
   |> importTy tySymbol
 
 /// Called on enter the init of let expressions.
@@ -525,9 +507,6 @@ let private resolveTy ty loc scopeCtx =
     | ErrorTy _ -> ty, scopeCtx
 
     | AppTy (UnresolvedTyCtor ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
-        // Handle wildcard type.
-        let scopeCtx = scopeCtx |> addUnboundMetaTy serial
-
         MetaTy(serial, loc), scopeCtx
 
     | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when
@@ -535,7 +514,7 @@ let private resolveTy ty loc scopeCtx =
         let code = scopeCtx |> findName itemSerial
         AppTy(NativeTypeTyCtor code, []), scopeCtx
 
-    | AppTy (UnresolvedVarTyCtor serial, tys) ->
+    | AppTy (UnresolvedVarTyCtor (serial, loc), tys) ->
         assert (List.isEmpty tys)
         let name = scopeCtx |> findName serial
 
@@ -551,7 +530,7 @@ let private resolveTy ty loc scopeCtx =
         | _ ->
             let scopeCtx =
               scopeCtx
-              |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc)) scopeCtx.Level
+              |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc))
 
             MetaTy(serial, loc), scopeCtx
 
@@ -563,16 +542,6 @@ let private resolveTy ty loc scopeCtx =
         let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
 
         match symbolOpt with
-        | Some (MetaTySymbol tySerial) ->
-            if arity > 0 then
-              let scopeCtx =
-                scopeCtx
-                |> addLog (TyArityError(name, arity, 0)) loc
-
-              ErrorTy loc, scopeCtx
-            else
-              MetaTy(tySerial, loc), scopeCtx
-
         | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
 
         | Some (SynonymTySymbol tySerial) ->
@@ -601,6 +570,8 @@ let private resolveTy ty loc scopeCtx =
               scopeCtx |> addLog (ModuleUsedAsTyError name) loc
 
             ErrorTy loc, scopeCtx
+
+        | Some (MetaTySymbol _) -> failwithf "NEVER: %A" (serial, name, loc)
 
         | None ->
             match tyPrimOfName name tys with
@@ -679,7 +650,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
         let tySymbol = SynonymTySymbol tySerial
 
         ctx
-        |> addLocalTy tySymbol (SynonymTyDef(tyName, tyArgs, body, loc)) globalLevel
+        |> addLocalTy tySymbol (SynonymTyDef(tyName, tyArgs, body, loc))
         |> addTyToModule tySymbol
 
     | UnionTyDecl (_, variants, _unionLoc) ->
@@ -712,7 +683,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
           UnionTyDef(tyName, variantSerials, loc)
 
         ctx
-        |> addLocalTy tySymbol tyDef globalLevel
+        |> addLocalTy tySymbol tyDef
         |> addTyToModule tySymbol
 
     | RecordTyDecl (_, fields, loc) ->
@@ -721,7 +692,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
         let tyDef = RecordTyDef(tyName, fields, loc)
 
         ctx
-        |> addLocalTy tySymbol tyDef globalLevel
+        |> addLocalTy tySymbol tyDef
         |> addTyToModule tySymbol
 
 /// Completes the type definition.
@@ -749,14 +720,14 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
                let name = ctx |> findName tyArg
 
                ctx
-               |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)) globalLevel)
+               |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
              ctx
 
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
       let ctx = ctx |> finishScope
 
       ctx
-      |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc)) globalLevel
+      |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
 
   | UnionTyDef (_, variantSerials, _unionLoc) ->
       let go ctx variantSerial =
@@ -777,7 +748,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
       let fields, ctx = (fields, ctx) |> stMap resolveField
 
       ctx
-      |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc)) globalLevel
+      |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc))
 
   | MetaTyDef _ -> failwithf "NEVER: %A" tyDecl // Bound meta types don't happen in NameRes.
 

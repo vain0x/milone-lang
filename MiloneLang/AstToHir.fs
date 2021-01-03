@@ -232,9 +232,10 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 
       tyUnresolved (quals, serial) argTys, nameCtx
 
-  | AVarTy (name, _) ->
+  | AVarTy (name, pos) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
-      AppTy (UnresolvedVarTyCtor tySerial, []), nameCtx
+      let loc = toLoc docId pos
+      AppTy (UnresolvedVarTyCtor (tySerial, loc), []), nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId
