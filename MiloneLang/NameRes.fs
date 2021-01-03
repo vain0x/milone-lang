@@ -173,7 +173,7 @@ type ScopeCtx =
 
     Variants: AssocMap<VariantSerial, VariantDef>
 
-    /// Serial of value (variable/fun/variant) to level map.
+    /// Serial of value (variable/fun) to level map.
     VarLevels: AssocMap<Serial, Level>
 
     MainFunOpt: FunSerial option
@@ -294,12 +294,7 @@ let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCt
   { scopeCtx with
       Variants =
         scopeCtx.Variants
-        |> mapAdd variantSerial variantDef
-      VarLevels =
-        let (VariantSerial variantSerial) = variantSerial
-
-        scopeCtx.VarLevels
-        |> mapAdd variantSerial scopeCtx.Level }
+        |> mapAdd variantSerial variantDef }
 
 /// Defines a type, without adding to any scope.
 let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
