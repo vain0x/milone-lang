@@ -2,9 +2,6 @@ module rec std_string.Program
 
 // Tests for MiloneStd.StdString.
 
-open MiloneCore.List
-open MiloneCore.Option
-
 module S = MiloneStd.StdString
 
 let unwrap opt =

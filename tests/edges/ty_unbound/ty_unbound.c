@@ -32,7 +32,7 @@ if_next_1:;
 
 int assertIsEmpty_1(struct UnitList const* xs_) {
     bool call_ = isEmpty_1(xs_);
-    milone_assert(call_, 6, 23);
+    milone_assert(call_, 4, 23);
     return 0;
 }
 

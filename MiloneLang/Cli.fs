@@ -202,6 +202,49 @@ let private parseProjectSchema tokenizeHost contents =
   doInterpretProjectSchema ast
 
 // -----------------------------------------------
+// MiloneCore resolution
+// -----------------------------------------------
+
+/// Generates decls for each MiloneCore module
+/// whose name appears in the token stream.
+let private resolveMiloneCoreDeps tokens ast =
+  let knownNames = [ "List"; "Option"; "String" ]
+
+  let isKnownName moduleName =
+    knownNames
+    |> List.exists (fun name -> name = moduleName)
+
+  let moduleMap =
+    let rec go acc tokens =
+      match tokens with
+      | [] -> acc
+      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens -> go ((moduleName, pos) :: acc) tokens
+      | _ :: tokens -> go acc tokens
+
+    let moduleNames = go [] tokens
+
+    let add acc (moduleName, pos) =
+      if (acc |> mapContainsKey moduleName |> not)
+         && isKnownName moduleName then
+        acc |> mapAdd moduleName pos
+      else
+        acc
+
+    moduleNames |> List.fold add (mapEmpty compare)
+
+  let insertOpenDecls decls =
+    moduleMap
+    |> mapFold
+         (fun decls moduleName pos ->
+           AModuleSynonymDecl(moduleName, [ "MiloneCore"; moduleName ], pos)
+           :: decls)
+         decls
+
+  match ast with
+  | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
+  | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
+
+// -----------------------------------------------
 // Context
 // -----------------------------------------------
 
@@ -249,6 +292,12 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
 
     let errors =
       List.append (tokenizeErrors errorTokens) parseErrors
+
+    let ast =
+      if errors |> List.isEmpty then
+        resolveMiloneCoreDeps tokens ast
+      else
+        ast
 
     ast, errors
 

@@ -5,8 +5,6 @@ module rec MiloneLang.EntryPoint
 // open MiloneLang.MiloneOnly
 
 // See milone_libs for implementations.
-open MiloneCore.List
-open MiloneCore.Option
 open MiloneStd.StdChar
 open MiloneStd.StdString
 

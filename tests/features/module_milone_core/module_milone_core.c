@@ -32,7 +32,7 @@ if_next_1:;
 
 int assertNotEmpty_1(struct IntList const* xs_) {
     bool call_ = isEmpty_1(xs_);
-    milone_assert((!(call_)), 7, 34);
+    milone_assert((!(call_)), 5, 34);
     return 0;
 }
 
