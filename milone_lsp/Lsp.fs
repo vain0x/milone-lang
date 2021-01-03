@@ -328,7 +328,7 @@ let private dfsPat (visitor: Visitor) pat =
   match pat with
   | HLitPat _ -> ()
   | HDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
-  | HRefPat (varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
+  | HVarPat (varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
   | HVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
 
   | HNodePat (_, pats, _, _) ->

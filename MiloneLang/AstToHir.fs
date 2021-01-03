@@ -273,7 +273,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
   | AIdentPat (name, pos) ->
       let serial, nameCtx = nameCtx |> nameCtxAdd name
       let loc = toLoc docId pos
-      HRefPat(VarSerial serial, noTy, loc), nameCtx
+      HVarPat(VarSerial serial, noTy, loc), nameCtx
 
   | AListPat ([], pos) ->
       let loc = toLoc docId pos

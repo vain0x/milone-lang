@@ -287,7 +287,7 @@ let private mirifyPatSomeApp ctx endLabel payloadPat listTy loc expr =
   let r = HDiscardPat(listTy, loc)
   mirifyPatCons ctx endLabel payloadPat r listTy loc expr
 
-let private mirifyPatRef ctx _endLabel serial ty loc expr =
+let private mirifyPatVar ctx _endLabel serial ty loc expr =
   addStmt ctx (MLetValStmt(serial, Some expr, ty, loc))
 
 let private mirifyPatVariant ctx endLabel serial ty loc expr =
@@ -364,7 +364,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
   match pat with
   | HLitPat (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
   | HDiscardPat _ -> ctx
-  | HRefPat (serial, ty, loc) -> mirifyPatRef ctx endLabel serial ty loc expr
+  | HVarPat (serial, ty, loc) -> mirifyPatVar ctx endLabel serial ty loc expr
   | HVariantPat (serial, ty, loc) -> mirifyPatVariant ctx endLabel serial ty loc expr
 
   | HNodePat (kind, argPats, ty, loc) ->
@@ -1341,7 +1341,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
     assert (patsIsCovering ctx [ argPat ])
 
     match argPat with
-    | HRefPat (serial, ty, loc) ->
+    | HVarPat (serial, ty, loc) ->
         // NOTE: Optimize for usual cases to not generate redundant local vars.
         (serial, ty, loc), ctx
     | _ ->

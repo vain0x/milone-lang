@@ -820,7 +820,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
     | HVariantPat _
     | HOrPat _ -> pat, ctx
 
-    | HRefPat (varSerial, ty, loc) ->
+    | HVarPat (varSerial, ty, loc) ->
         let name =
           ctx |> findName (varSerialToInt varSerial)
 
@@ -943,7 +943,7 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
 
       varSerial, ctx
 
-let private nameResRefPat serial ty loc ctx =
+let private nameResVarPat serial ty loc ctx =
   let name = ctx |> findName serial
 
   if name = "_" then
@@ -961,7 +961,7 @@ let private nameResRefPat serial ty loc ctx =
             let varSerial, ctx =
               doResolveVarInPat serial name ty loc ctx
 
-            HRefPat(varSerial, ty, loc), ctx
+            HVarPat(varSerial, ty, loc), ctx
 
 let private nameResNavPat pat ctx =
   /// Resolves a pattern as scope.
@@ -971,7 +971,7 @@ let private nameResNavPat pat ctx =
   /// `pat` is also updated by resolving inner qualifiers as possible.
   let rec resolvePatAsScope pat ctx =
     match pat with
-    | HRefPat (varSerial, _, _) ->
+    | HVarPat (varSerial, _, _) ->
         let name = ctx |> findVarName varSerial
         ctx |> resolveLocalTyName name
 
@@ -1040,7 +1040,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HDiscardPat _
   | HVariantPat _ -> pat, ctx
 
-  | HRefPat (VarSerial serial, ty, loc) -> nameResRefPat serial ty loc ctx
+  | HVarPat (VarSerial serial, ty, loc) -> nameResVarPat serial ty loc ctx
 
   | HNodePat (kind, argPats, ty, loc) ->
       let fail () = failwithf "NEVER: %A" pat

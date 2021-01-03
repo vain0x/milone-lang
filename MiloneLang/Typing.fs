@@ -378,9 +378,9 @@ let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
   HDiscardPat(ty, loc), ty, ctx
 
-let private inferRefPat (ctx: TyCtx) varSerial loc =
+let private inferVarPat (ctx: TyCtx) varSerial loc =
   let ty, ctx = ctx |> unifyVarTy varSerial None loc
-  HRefPat(varSerial, ty, loc), ty, ctx
+  HVarPat(varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let variantDef = ctx.Variants |> mapFind variantSerial
@@ -464,7 +464,7 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
   match pat with
   | HLitPat (lit, _) -> inferLitPat ctx pat lit
   | HDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
-  | HRefPat (varSerial, _, loc) -> inferRefPat ctx varSerial loc
+  | HVarPat (varSerial, _, loc) -> inferVarPat ctx varSerial loc
   | HVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
 
   | HNodePat (kind, argPats, nodeTy, loc) ->
@@ -663,7 +663,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
           // { base with fields... } ==> let t = base in { t with fields... }
           let varSerial, ctx = freshVar ctx "base" recordTy loc
 
-          let varPat = HRefPat(varSerial, recordTy, loc)
+          let varPat = HVarPat(varSerial, recordTy, loc)
           let varExpr = HRefExpr(varSerial, recordTy, loc)
 
           let recordExpr =

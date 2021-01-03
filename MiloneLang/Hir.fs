@@ -314,7 +314,7 @@ type HPat =
   | HDiscardPat of Ty * Loc
 
   /// Variable pattern.
-  | HRefPat of VarSerial * Ty * Loc
+  | HVarPat of VarSerial * Ty * Loc
 
   /// Variant name pattern.
   | HVariantPat of VariantSerial * Ty * Loc
@@ -845,7 +845,7 @@ let patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
   | HDiscardPat (ty, a) -> ty, a
-  | HRefPat (_, ty, a) -> ty, a
+  | HVarPat (_, ty, a) -> ty, a
   | HVariantPat (_, ty, a) -> ty, a
 
   | HNodePat (_, _, ty, a) -> ty, a
@@ -861,7 +861,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     match pat with
     | HLitPat (lit, a) -> HLitPat(lit, g a)
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
-    | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
+    | HVarPat (serial, ty, a) -> HVarPat(serial, f ty, g a)
     | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
 
     | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)
@@ -877,7 +877,7 @@ let patNormalize pat =
     match pat with
     | HLitPat _
     | HDiscardPat _
-    | HRefPat _
+    | HVarPat _
     | HVariantPat _ -> [ pat ]
 
     | HNodePat (kind, argPats, ty, loc) ->
@@ -914,7 +914,7 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
     | HLitPat _ -> false
 
     | HDiscardPat _
-    | HRefPat _ -> true
+    | HVarPat _ -> true
 
     | HVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
 

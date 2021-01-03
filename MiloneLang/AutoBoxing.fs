@@ -544,7 +544,7 @@ let private abPat ctx pat =
   match pat with
   | HLitPat _
   | HDiscardPat _
-  | HRefPat _
+  | HVarPat _
   | HVariantPat _ -> pat |> patMap (abTy ctx) id
 
   | HNodePat (kind, argPats, ty, loc) ->

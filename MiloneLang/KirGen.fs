@@ -95,7 +95,7 @@ type private PNode =
   /// Use the value for multiple nodes.
   | PConjNode of PNode list * Loc
 
-let private kgRefPat varSerial loc = PLetNode(varSerial, PDiscardNode, loc)
+let private kgVarPat varSerial loc = PLetNode(varSerial, PDiscardNode, loc)
 
 let private kgVariantPat variantSerial loc =
   PSelectNode(KDiscriminantPath loc, PEqualNode(PDiscriminantConstTerm(variantSerial, loc), PDiscardNode, loc), loc)
@@ -143,7 +143,7 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
   match pat with
   | HLitPat (lit, loc) -> PEqualNode(PLitTerm(lit, loc), PDiscardNode, loc)
   | HDiscardPat _ -> PDiscardNode
-  | HRefPat (varSerial, _, loc) -> kgRefPat varSerial loc
+  | HVarPat (varSerial, _, loc) -> kgVarPat varSerial loc
   | HVariantPat (variantSerial, _, loc) -> kgVariantPat variantSerial loc
 
   | HNodePat (kind, argPats, ty, loc) ->
@@ -685,7 +685,7 @@ let private kgLetValExpr pat init next loc hole ctx: KNode * KirGenCtx =
       ctx
       |> kgExpr init (fun _ ctx -> ctx |> kgExpr next hole)
 
-  | HRefPat (varSerial, _, loc) ->
+  | HVarPat (varSerial, _, loc) ->
       ctx
       |> kgExpr
            init
@@ -711,7 +711,7 @@ let private kgLetFunExpr funSerial argPats body next loc hole (ctx: KirGenCtx): 
       match argPats with
       | [] -> [], hole, ctx
 
-      | HRefPat (varSerial, _, _) :: argPats ->
+      | HVarPat (varSerial, _, _) :: argPats ->
           // Skip pattern-matching in this usual case.
           let argVars, hole, ctx = ctx |> go argPats hole
           (varSerial :: argVars), hole, ctx

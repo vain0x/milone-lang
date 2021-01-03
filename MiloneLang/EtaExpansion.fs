@@ -343,7 +343,7 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
     | n, AppTy (FunTyCtor, [ argTy; restTy ]) ->
         let argRef, argSerial, ctx = freshVar "arg" argTy callLoc ctx
         let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
-        let restArgPat = HRefPat(argSerial, argTy, callLoc)
+        let restArgPat = HVarPat(argSerial, argTy, callLoc)
         restArgPat :: restArgPats, argRef :: restArgs, ctx
 
     | _ -> failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
@@ -359,7 +359,7 @@ let private createEnvPatAndTy items callLoc ctx =
     | item :: items ->
         let itemTy, itemLoc = exprExtract item
         let itemRef, itemSerial, ctx = freshVar "arg" itemTy itemLoc ctx
-        let itemPat = HRefPat(itemSerial, itemTy, itemLoc)
+        let itemPat = HVarPat(itemSerial, itemTy, itemLoc)
         let itemPats, argTys, argRefs, ctx = go items ctx
         itemPat :: itemPats, itemTy :: argTys, itemRef :: argRefs, ctx
 
@@ -382,7 +382,7 @@ let private createEnvDeconstructLetExpr envPat envTy envArgRef next callLoc =
 /// and calls the partial-applied callee with full arguments.
 let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
   let envArgRef, envArgSerial, ctx = freshVar "env" tyObj callLoc ctx
-  let envArgPat = HRefPat(envArgSerial, tyObj, callLoc)
+  let envArgPat = HVarPat(envArgSerial, tyObj, callLoc)
 
   let underlyingFunTy = tyFun envTy funTy
 
@@ -446,7 +446,7 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let calleeRef, calleeLet, ctx =
     let calleeRef, calleeSerial, ctx = freshVar "callee" funTy callLoc ctx
 
-    let calleePat = HRefPat(calleeSerial, funTy, callLoc)
+    let calleePat = HVarPat(calleeSerial, funTy, callLoc)
 
     let calleeLet next =
       HLetValExpr(PrivateVis, calleePat, callee, next, exprToTy next, callLoc)
