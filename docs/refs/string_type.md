@@ -40,11 +40,11 @@ About performance: the operation likely copies the both strings and newly alloca
     //        ^
 ```
 
-Index must have `int` type (rather than other integer type). Since `.[ ]` operation is also used for arrays in F#, type of operands are not inferred well. Write type annotation.
+Index must have `int` type (rather than other integer type). Since `.[ ]` operation is also used for arrays in F#, type of operands are not inferred well. Write type ascription.
 
 ```fsharp
     let at (s: string) i = s.[i]
-    //       ^^^^^^^^ Annotation for `s.[...]`
+    //       ^^^^^^^^ Ascription for `s.[...]`
 ```
 
 ### Subscript operation

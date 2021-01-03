@@ -76,7 +76,7 @@ ListPat = '[' (Pat (';'? Pat)*)? ']'
 AppPat = Pat Pat
 TuplePat = Pat (',' Pat)+
 ConsPat = Pat ':' Pat
-AnnotatePat = Pat ':' Ty
+AscribePat = Pat ':' Ty
 AsPat = Pat 'as' Vis? 'ident'
 OrPat = Pat '|' Pat
 
@@ -91,7 +91,7 @@ Pat =
 | AppPat
 | TuplePat
 | ConsPat
-| AnnotatePat
+| AscribePat
 | AsPat
 | OrPat
 
@@ -159,7 +159,7 @@ RangeExpr = Expr ('..' Expr)+
 
 BinaryExpr = Expr Binary Expr
 
-AnnotateExpr = Expr ':' Ty
+AscribeExpr = Expr ':' Ty
 
 TupleExpr = Expr (',' Expr)+
 
@@ -193,7 +193,7 @@ Expr =
 | AppExpr
 | RangeExpr
 | BinaryExpr
-| AnnotateExpr
+| AscribeExpr
 | TupleExpr
 | BlockExpr
 | LetValExpr

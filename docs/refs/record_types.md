@@ -12,13 +12,13 @@ type Person =
       Age: int }
 
 // Create a record.
-// (Type annotations is required.)
+// (Type ascription is required.)
 let john: Person =
     { Name = "John Doe"
       Age = 18 }
 
 // Read a field of record.
-// (Record type must be annotated somewhere above.)
+// (Record type must be ascribed somewhere above.)
 assert (john.Name = "John Doe")
 
 // Update a record.
@@ -61,7 +61,7 @@ let john: Person =
 
 Field names must be aligned on the same column and indented deeper than `{`. While record expression doesn't specify its type, **the record type must be inferred** [^1].
 
-[^1]: The limitation is same as require-qualified-access records in F#, but milone-lang compiler is less clever to infer record types. You always need type annotation for record expression.
+[^1]: The limitation is same as require-qualified-access records in F#, but milone-lang compiler is less clever to infer record types. You always need type ascription for record expression.
 
 In record creation (without `with` clause described later), every field must have initializer.
 
@@ -109,26 +109,26 @@ assert (agedJohn.Age = 19)
 
 Current implementation of type inference is subtle on records.
 
-Currently, the record expression must have record type explicitly. To avoid type error, write type annotation around record expressions like this:
+Currently, the record expression must have record type explicitly. To avoid type error, write type ascription around record expressions like this:
 
 ```fsharp
-    // Record expression itself has type annotation.
+    // Record expression itself has type ascription.
     { ... }: RecordType
 
-    // Type of base record expression is explicitly annotated.
+    // Type of base record expression is explicitly ascribed.
     let baseExpr: RecordType = { ... }
     let newExpr = { baseExpr with ... }
 
-    // Assign record expression to variable with type annotation.
+    // Assign record expression to variable with type ascription.
     let x: RecordType = { ... }
 
-    // Pass record expression in a parameter with type annotation.
+    // Pass record expression in a parameter with type ascription.
     // The function must be defined before the record expression.
     let f (x: RecordType) = ...
     f { ... }
 ```
 
-Similarly, left-hand side of field expression (before `.`) also needs type annotation.
+Similarly, left-hand side of field expression (before `.`) also needs type ascription.
 
 ## Remarks
 

@@ -185,7 +185,7 @@ let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 
 /// Analyzes let syntax.
 ///
-/// Annotation move just for simplification:
+/// Ascription move just for simplification:
 /// `let p : ty = body` ==>
 ///   `let p = body : ty`
 ///
@@ -198,8 +198,8 @@ let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 ///   `let-val pat = body`
 let private desugarLet isRec vis pat body next pos =
   match pat with
-  | AAnnoPat (pat, annoTy, annoLoc) ->
-      let body = AAnnoExpr(body, annoTy, annoLoc)
+  | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
+      let body = AAscribeExpr(body, ascriptionTy, ascriptionLoc)
       desugarLet isRec vis pat body next pos
 
   | AFunDeclPat (name, args, _) -> ALetFun(isRec, vis, name, args, body, next, pos)
@@ -208,8 +208,8 @@ let private desugarLet isRec vis pat body next pos =
 
 let private desugarLetDecl isRec vis pat body pos =
   match pat with
-  | AAnnoPat (pat, annoTy, annoLoc) ->
-      let body = AAnnoExpr(body, annoTy, annoLoc)
+  | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
+      let body = AAscribeExpr(body, ascriptionTy, ascriptionLoc)
       desugarLetDecl isRec vis pat body pos
 
   | AFunDeclPat (name, args, _) -> ALetFunDecl(isRec, vis, name, args, body, pos)
@@ -311,11 +311,11 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
       let loc = toLoc docId pos
       HAsPat(pat, VarSerial serial, loc), nameCtx
 
-  | AAnnoPat (bodyPat, ty, pos) ->
+  | AAscribePat (bodyPat, ty, pos) ->
       let bodyPat, nameCtx = (bodyPat, nameCtx) |> athPat docId
       let ty, nameCtx = (ty, nameCtx) |> athTy docId
       let loc = toLoc docId pos
-      HNodePat(HAnnotatePN, [ bodyPat ], ty, loc), nameCtx
+      HNodePat(HAscribePN, [ bodyPat ], ty, loc), nameCtx
 
   | AOrPat (l, r, pos) ->
       let l, nameCtx = (l, nameCtx) |> athPat docId
@@ -537,12 +537,12 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | AAnnoExpr (body, ty, pos) ->
+  | AAscribeExpr (body, ty, pos) ->
       let doArm () =
         let body, nameCtx = (body, nameCtx) |> athExpr docId
         let ty, nameCtx = (ty, nameCtx) |> athTy docId
         let loc = toLoc docId pos
-        hxAnno body ty loc, nameCtx
+        hxAscribe body ty loc, nameCtx
 
       doArm ()
 

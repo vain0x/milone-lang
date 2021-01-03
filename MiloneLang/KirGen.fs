@@ -168,7 +168,7 @@ let private kgPat (pat: HPat) (ctx: KirGenCtx): PNode =
       | HSomePN, _ -> fail () // Resolved in Typing.
       | HAppPN, _ -> fail () // Resolved in NameRes.
       | HNavPN _, _ -> fail () // Resolved in NameRes.
-      | HAnnotatePN, _ -> fail () // Resolved in Typing.
+      | HAscribePN, _ -> fail () // Resolved in Typing.
 
   | HAsPat (bodyPat, varSerial, loc) -> kgAsPat bodyPat varSerial loc ctx
 
@@ -863,7 +863,7 @@ let private kgInfExpr itself kind args ty loc hole ctx: KNode * KirGenCtx =
 
   | HRangeEN -> failwithf "NEVER: HRangeEN causes an error in Typing. %A" itself
   | HAppEN -> failwithf "NEVER: HAppEN is resolved in uneta. %A" itself
-  | HAnnoEN -> failwithf "NEVER: HAnnoEN is resolved in type inference: %A" itself
+  | HAscribeEN -> failwithf "NEVER: HAscribeEN is resolved in type inference: %A" itself
 
 /// Evaluates an expression and fills a hole with the result term.
 let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx) (ctx: KirGenCtx): KNode * KirGenCtx =

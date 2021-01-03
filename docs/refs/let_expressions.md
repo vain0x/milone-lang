@@ -63,9 +63,9 @@ Example:
     assert (sum = 5)
 ```
 
-### Type annotation
+### Type ascription
 
-The type of variable is same as the type of `initializer` expression. If you want to make it explicit, write a type annotation like this:
+The type of variable is same as the type of `initializer` expression. If you want to make it explicit, write a type ascription like this:
 
 ```fsharp
     let sum: int = 2 + 3
@@ -74,9 +74,9 @@ The type of variable is same as the type of `initializer` expression. If you wan
     assert (sum = 5)
 ```
 
-Compiler reports a type error if the annotation is wrong.
+Compiler reports a type error if the ascription is wrong.
 
-**Remark**: Type annotation doesn't change the value of expression. Type annotation is not *type casting*.
+**Remark**: Type ascription doesn't change the value of expression. Type ascription is not *type casting*.
 
 ### Function definition
 
@@ -98,7 +98,7 @@ Example:
     assert (squareSum 3 4 = 25)
 ```
 
-These type annotations are recommended for readability, but optional:
+These type ascriptions are recommended for readability, but optional:
 
 ```fsharp
     let squareSum x y = x * x + y * y

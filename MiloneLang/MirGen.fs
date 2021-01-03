@@ -392,7 +392,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
       | HSomePN, _ -> fail () // Resolved in Typing.
       | HAppPN, _ -> fail () // Resolved in NameRes.
       | HNavPN _, _ -> fail () // Resolved in NameRes.
-      | HAnnotatePN, _ -> fail () // Resolved in Typing.
+      | HAscribePN, _ -> fail () // Resolved in Typing.
 
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 

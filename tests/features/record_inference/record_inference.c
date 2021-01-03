@@ -2,9 +2,9 @@
 
 struct IntWrapper_;
 
-int letWithTypeAnnotationCase_(int n_);
+int letWithTypeAscriptionCase_(int n_);
 
-int typeAnnotationExprCase_(int n_1);
+int typeAscriptionExprCase_(int n_1);
 
 int matchExprCase_(int n_2);
 
@@ -14,14 +14,14 @@ struct IntWrapper_ {
     int t0;
 };
 
-int letWithTypeAnnotationCase_(int n_) {
+int letWithTypeAscriptionCase_(int n_) {
     struct IntWrapper_ IntWrapper_ = (struct IntWrapper_){.t0 = n_};
     struct IntWrapper_ w_ = IntWrapper_;
     milone_assert((w_.t0 == n_), 10, 2);
     return 0;
 }
 
-int typeAnnotationExprCase_(int n_1) {
+int typeAscriptionExprCase_(int n_1) {
     struct IntWrapper_ IntWrapper_1 = (struct IntWrapper_){.t0 = n_1};
     milone_assert((IntWrapper_1.t0 == n_1), 13, 2);
     return 0;
@@ -51,8 +51,8 @@ switch_next_1:;
 }
 
 int main() {
-    int call_ = letWithTypeAnnotationCase_(2);
-    int call_1 = typeAnnotationExprCase_(3);
+    int call_ = letWithTypeAscriptionCase_(2);
+    int call_1 = typeAscriptionExprCase_(3);
     int call_2 = matchExprCase_(5);
     return 0;
 }

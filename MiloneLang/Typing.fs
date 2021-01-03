@@ -342,16 +342,16 @@ let private inferLitPat ctx pat lit =
   let ctx = validateLit ctx lit (patToLoc pat)
   pat, litToTy lit, ctx
 
-/// Tries to get ty annotation from pat.
-let private patToAnnoTy pat =
+/// Tries to get ty ascription from pat.
+let private patToAscriptionTy pat =
   match pat with
-  | HNodePat (HAnnotatePN, _, ty, _) -> Some ty
+  | HNodePat (HAscribePN, _, ty, _) -> Some ty
 
-  | HAsPat (bodyPat, _, _) -> patToAnnoTy bodyPat
+  | HAsPat (bodyPat, _, _) -> patToAscriptionTy bodyPat
 
   | HOrPat (l, r, _) ->
-      match patToAnnoTy l with
-      | None -> patToAnnoTy r
+      match patToAscriptionTy l with
+      | None -> patToAscriptionTy r
       | it -> it
 
   | _ -> None
@@ -424,11 +424,11 @@ let private inferTuplePat ctx itemPats loc =
   let tupleTy = tyTuple itemTys
   HNodePat(HTuplePN, itemPats, tupleTy, loc), tupleTy, ctx
 
-let private inferAnnotatePat ctx body annoTy loc =
+let private inferAscribePat ctx body ascriptionTy loc =
   let body, bodyTy, ctx = inferPat ctx body
 
-  let ctx = unifyTy ctx loc bodyTy annoTy
-  body, annoTy, ctx
+  let ctx = unifyTy ctx loc bodyTy ascriptionTy
+  body, ascriptionTy, ctx
 
 let private inferAsPat ctx body varSerial loc =
   let body, bodyTy, ctx = inferPat ctx body
@@ -486,8 +486,8 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
 
       | HTuplePN, _ -> inferTuplePat ctx argPats loc
 
-      | HAnnotatePN, [ bodyPat ] -> inferAnnotatePat ctx bodyPat nodeTy loc
-      | HAnnotatePN, _ -> fail ()
+      | HAscribePN, [ bodyPat ] -> inferAscribePat ctx bodyPat nodeTy loc
+      | HAscribePN, _ -> fail ()
 
       | HAbortPN, _ -> inferAbortPat ctx pat loc
 
@@ -759,7 +759,7 @@ let private inferAppExpr ctx itself callee arg loc =
 
   // __nativeFun ("funName", arg1, arg2, ...)
   | HPrimExpr (HPrim.NativeFun, _, loc), HNodeExpr (HTupleEN, HLitExpr (StrLit funName, _) :: args, _, _) ->
-      // Type of native function is unchecked. Type annotations must be written correctly.
+      // Type of native function is unchecked. Type ascriptions must be written correctly.
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
 
       let args, ctx =
@@ -845,12 +845,12 @@ let private inferTupleExpr (ctx: TyCtx) items loc =
 
   hxTuple items loc, tyTuple itemTys, ctx
 
-let private inferAnnoExpr ctx body annoTy loc =
-  let body, bodyTy, ctx = inferExpr ctx (Some annoTy) body
+let private inferAscribeExpr ctx body ascriptionTy loc =
+  let body, bodyTy, ctx = inferExpr ctx (Some ascriptionTy) body
 
-  let ctx = unifyTy ctx loc bodyTy annoTy
+  let ctx = unifyTy ctx loc bodyTy ascriptionTy
 
-  body, annoTy, ctx
+  body, ascriptionTy, ctx
 
 let private inferBlockExpr ctx expectOpt stmts last =
   let stmts, ctx =
@@ -870,7 +870,7 @@ let private inferBlockExpr ctx expectOpt stmts last =
 
 let private inferLetValExpr ctx expectOpt vis pat init next loc =
   let init, initTy, ctx =
-    let expectOpt = patToAnnoTy pat
+    let expectOpt = patToAscriptionTy pat
     inferExpr ctx expectOpt init
 
   let pat, patTy, ctx = inferIrrefutablePat ctx pat
@@ -958,7 +958,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HNodeExpr (HMinusEN, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
   | HNodeExpr (HAppEN, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
   | HNodeExpr (HTupleEN, items, _, loc) -> inferTupleExpr ctx items loc
-  | HNodeExpr (HAnnoEN, [ expr ], annoTy, loc) -> inferAnnoExpr ctx expr annoTy loc
+  | HNodeExpr (HAscribeEN, [ expr ], ascriptionTy, loc) -> inferAscribeExpr ctx expr ascriptionTy loc
 
   | HNodeExpr (HIndexEN, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
   | HNodeExpr (HIndexEN, _, _, _) -> fail ()
@@ -982,7 +982,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
       hxAbort ctx loc
 
   | HNodeExpr (HMinusEN, _, _, _)
-  | HNodeExpr (HAnnoEN, _, _, _)
+  | HNodeExpr (HAscribeEN, _, _, _)
   | HNodeExpr (HAppEN, _, _, _)
   | HNodeExpr (HClosureEN, _, _, _)
   | HNodeExpr (HCallProcEN, _, _, _)

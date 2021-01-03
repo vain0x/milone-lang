@@ -1135,7 +1135,7 @@ let private cgReturnStmt ctx expr =
   let expr, ctx = cgExpr ctx expr
   addStmt ctx (CReturnStmt(Some expr))
 
-// FIXME: Without the result type annotation, invalid code is generated for some reason.
+// FIXME: Without the result type ascription, invalid code is generated for some reason.
 let private cgTerminatorAsBlock ctx terminator: CStmt list * CirCtx =
   cgBlock ctx [ MTerminatorStmt(terminator, noLoc) ]
 

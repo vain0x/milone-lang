@@ -518,8 +518,8 @@ let private parsePatCons basePos (tokens, errors) =
 
   | _ -> head, tokens, errors
 
-/// `pat-anno = pat-cons ( ':' ty )?`
-let private parsePatAnno basePos (tokens, errors) =
+/// `pat-ascribe = pat-cons ( ':' ty )?`
+let private parsePatAscribe basePos (tokens, errors) =
   let pat, tokens, errors = parsePatCons basePos (tokens, errors)
 
   match tokens with
@@ -527,21 +527,21 @@ let private parsePatAnno basePos (tokens, errors) =
       let ty, tokens, errors =
         parseTy (nextPos tokens) (tokens, errors)
 
-      AAnnoPat(pat, ty, pos), tokens, errors
+      AAscribePat(pat, ty, pos), tokens, errors
 
   | _ -> pat, tokens, errors
 
-/// `pat-tuple = pat-anno ( ',' pat-anno )*`
+/// `pat-tuple = pat-ascribe ( ',' pat-ascribe )*`
 let private parsePatTuple basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
     | (CommaToken, _) :: tokens ->
-        let second, tokens, errors = parsePatAnno basePos (tokens, errors)
+        let second, tokens, errors = parsePatAscribe basePos (tokens, errors)
         go (second :: acc) (tokens, errors)
 
     | _ -> List.rev acc, tokens, errors
 
-  let itemPat, tokens, errors = parsePatAnno basePos (tokens, errors)
+  let itemPat, tokens, errors = parsePatAscribe basePos (tokens, errors)
 
   match tokens with
   | (CommaToken, pos) :: _ ->
@@ -591,7 +591,7 @@ let private parsePatLet basePos (tokens, errors) =
       match tokens with
       | (ColonToken, pos) :: tokens ->
           let ty, tokens, errors = parseTy basePos (tokens, errors)
-          AAnnoPat(pat, ty, pos), tokens, errors
+          AAscribePat(pat, ty, pos), tokens, errors
 
       | _ -> pat, tokens, errors
 
@@ -773,18 +773,18 @@ let private parseTuple basePos (tokens, errors) =
 
   | _ -> item, tokens, errors
 
-/// `anno = tuple ( ':' ty )?`
-let private parseAnno basePos (tokens, errors) =
+/// `ascribe = tuple ( ':' ty )?`
+let private parseAscribe basePos (tokens, errors) =
   let body, tokens, errors = parseTuple basePos (tokens, errors)
 
   match tokens with
   | (ColonToken, pos) :: tokens ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
-      AAnnoExpr(body, ty, pos), tokens, errors
+      AAscribeExpr(body, ty, pos), tokens, errors
 
   | _ -> body, tokens, errors
 
-let private parseExpr basePos (tokens, errors) = parseAnno basePos (tokens, errors)
+let private parseExpr basePos (tokens, errors) = parseAscribe basePos (tokens, errors)
 
 // -----------------------------------------------
 // Parse block expressions

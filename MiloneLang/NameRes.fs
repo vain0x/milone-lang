@@ -1020,10 +1020,10 @@ let private nameResAppPat l r loc ctx =
 
       hpAbort noTy loc, ctx
 
-let private nameResAnnotatePat bodyPat annotateTy loc ctx =
-  let annotateTy, ctx = ctx |> resolveTy annotateTy loc
+let private nameResAscribePat bodyPat ascriptionTy loc ctx =
+  let ascriptionTy, ctx = ctx |> resolveTy ascriptionTy loc
   let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
-  HNodePat(HAnnotatePN, [ bodyPat ], annotateTy, loc), ctx
+  HNodePat(HAscribePN, [ bodyPat ], ascriptionTy, loc), ctx
 
 let private nameResAsPat bodyPat serial loc ctx =
   let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
@@ -1067,8 +1067,8 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       | HNavPN _, [ _ ] -> nameResNavPat pat ctx
       | HNavPN _, _ -> fail ()
 
-      | HAnnotatePN, [ bodyPat ] -> nameResAnnotatePat bodyPat ty loc ctx
-      | HAnnotatePN, _ -> fail ()
+      | HAscribePN, [ bodyPat ] -> nameResAscribePat bodyPat ty loc ctx
+      | HAscribePN, _ -> fail ()
 
   | HAsPat (bodyPat, VarSerial serial, loc) -> nameResAsPat bodyPat serial loc ctx
 
@@ -1361,7 +1361,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HNodeExpr (op, items, ty, loc) ->
       let doArm () =
-        // Necessary in case of annotation expression.
+        // Necessary in case of ascribe expression.
         let ty, ctx = ctx |> resolveTy ty loc
 
         let items, ctx = (items, ctx) |> stMap nameResExpr

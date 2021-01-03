@@ -284,7 +284,7 @@ type HPatKind =
   | HNavPN of navR: string
 
   /// `p1: ty`
-  | HAnnotatePN
+  | HAscribePN
 
   /// Used to dereference a box inside of pattern matching.
   ///
@@ -387,8 +387,8 @@ type HExprKind =
   /// because valid use (`s.[l..r]`) gets rewritten in AstToHir.
   | HRangeEN
 
-  /// Type annotation `x : 'x`.
-  | HAnnoEN
+  /// Type ascription `x : 'x`.
+  | HAscribeEN
 
   /// `s.[i]`
   | HIndexEN
@@ -928,7 +928,7 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
         | HNavPN _, _ -> false
 
         | HTuplePN, _
-        | HAnnotatePN, _
+        | HAscribePN, _
         | HBoxPN, _ -> argPats |> List.forall go
 
     | HAsPat (bodyPat, _, _) -> go bodyPat
@@ -946,7 +946,7 @@ let hxFalse loc = HLitExpr(litFalse, loc)
 
 let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 
-let hxAnno expr ty loc = HNodeExpr(HAnnoEN, [ expr ], ty, loc)
+let hxAscribe expr ty loc = HNodeExpr(HAscribeEN, [ expr ], ty, loc)
 
 let hxSemi items loc =
   match splitLast items with

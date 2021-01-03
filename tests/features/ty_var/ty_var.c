@@ -8,7 +8,7 @@ struct StringStringTuple2;
 
 int pair_1(struct StringStringTuple2 arg_1);
 
-char useStringIndexWithoutAnnotation_(struct String x_);
+char useStringIndexWithoutAscription_(struct String x_);
 
 struct StringList;
 
@@ -36,7 +36,7 @@ int pair_1(struct StringStringTuple2 arg_1) {
     return 2;
 }
 
-char useStringIndexWithoutAnnotation_(struct String x_) {
+char useStringIndexWithoutAscription_(struct String x_) {
     struct StringStringTuple2 tuple_ = (struct StringStringTuple2){.t0 = x_, .t1 = (struct String){.str = "", .len = 0}};
     int call_ = pair_1(tuple_);
     return x_.str[0];
@@ -65,7 +65,7 @@ int main() {
     struct StringStringTuple2 tuple_3 = (struct StringStringTuple2){.t0 = (struct String){.str = "", .len = 0}, .t1 = (struct String){.str = "", .len = 0}};
     int call_2 = pair_1(tuple_3);
     milone_assert((call_2 == 2), 19, 2);
-    char call_3 = useStringIndexWithoutAnnotation_((struct String){.str = "a", .len = 1});
+    char call_3 = useStringIndexWithoutAscription_((struct String){.str = "a", .len = 1});
     milone_assert((call_3 == 'a'), 21, 2);
     int match_;
     struct StringStringListTuple2 call_4 = useTyVarInBody_1((struct String){.str = "b", .len = 1});

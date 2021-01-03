@@ -317,8 +317,8 @@ type APat =
   /// E.g. `(Some x) as opt`.
   | AAsPat of APat * Ident * Pos
 
-  /// Type annotation, e.g. `x: int`.
-  | AAnnoPat of APat * ATy * Pos
+  /// Type ascription, e.g. `x: int`.
+  | AAscribePat of APat * ATy * Pos
 
   /// E.g. `l | r`
   | AOrPat of APat * APat * Pos
@@ -409,8 +409,8 @@ type AExpr =
   /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
   | ATupleExpr of AExpr list * Pos
 
-  /// Type annotation, e.g. `None: int option`.
-  | AAnnoExpr of AExpr * ATy * Pos
+  /// Type ascription, e.g. `None: int option`.
+  | AAscribeExpr of AExpr * ATy * Pos
 
   /// Semicolon-separated expressions.
   | ASemiExpr of AExpr list * AExpr * Pos
