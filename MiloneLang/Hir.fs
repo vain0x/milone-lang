@@ -50,13 +50,19 @@ type VariantSerial = VariantSerial of Serial
 /// Number of parameters.
 type Arity = int
 
-/// Let-depth, i.e. the number of ancestral let nodes
-/// of the place where the meta type is introduced.
-/// Used for polymorphic type inference.
-/// E.g. in `let x: 'x = ((let y: 'y = a: 'a); b: 'b)`,
-///   `'x`: 0, `'y`: 1, `'a`: 2, `'b`: 1
-/// Only one exception: recursive function have let-depth deeper by 1.
-type LetDepth = int
+/// Level.
+///
+/// Top-level is 0.
+/// Inside of init part of `let`, level is incremented by 1.
+///
+/// For example, in `let none = None: 'a option in none`,
+/// level of `'a` is 1.
+///
+/// In `let _ = (let  = None: 'b option in ()) in ()`,
+/// level of `'b` is 2.
+///
+/// Only one exception: recursive function has level higher by 1.
+type Level = int
 
 /// Where variable is stored.
 [<NoEquality; NoComparison>]

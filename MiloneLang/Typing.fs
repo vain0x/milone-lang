@@ -41,8 +41,8 @@ type TyCtx =
     /// Type serial to type definition.
     Tys: AssocMap<TySerial, TyDef>
 
-    TyDepths: AssocMap<TySerial, LetDepth>
-    LetDepth: LetDepth
+    TyLevels: AssocMap<TySerial, Level>
+    Level: Level
     TraitBounds: (Trait * Loc) list
     Logs: (Log * Loc) list }
 
@@ -54,12 +54,12 @@ let private addError (ctx: TyCtx) message loc =
   { ctx with
       Logs = (Log.Error message, loc) :: ctx.Logs }
 
-/// Be carefully. Let depths must be counted the same as name resolution.
-let private incDepth (ctx: TyCtx) =
-  { ctx with LetDepth = ctx.LetDepth + 1 }
+/// Be carefully. Levels must be counted the same as name resolution.
+let private incLevel (ctx: TyCtx) =
+  { ctx with Level = ctx.Level + 1 }
 
-let private decDepth (ctx: TyCtx) =
-  { ctx with LetDepth = ctx.LetDepth - 1 }
+let private decLevel (ctx: TyCtx) =
+  { ctx with Level = ctx.Level - 1 }
 
 let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
@@ -96,7 +96,7 @@ let private freshTySerial (ctx: TyCtx) =
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        TyDepths = ctx.TyDepths |> mapAdd serial ctx.LetDepth }
+        TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
 
   serial, ctx
 
@@ -133,15 +133,15 @@ let private validateLit ctx lit loc =
 
 let private toTyContext (ctx: TyCtx): TyContext =
   { Serial = ctx.Serial
-    LetDepth = ctx.LetDepth
+    Level = ctx.Level
     Tys = ctx.Tys
-    TyDepths = ctx.TyDepths }
+    TyLevels = ctx.TyLevels }
 
 let private withTyContext (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
   { ctx with
       Serial = tyCtx.Serial
       Tys = tyCtx.Tys
-      TyDepths = tyCtx.TyDepths
+      TyLevels = tyCtx.TyLevels
       Logs = logAcc }
 
 let private addTraitBounds traits (ctx: TyCtx) =
@@ -183,9 +183,9 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-        let depth = ctx.TyDepths |> mapFind tySerial
+        let level = ctx.TyLevels |> mapFind tySerial
         // Degenerate unless quantified.
-        if depth < 1000000000 then Some tyUnit else None
+        if level < 1000000000 then Some tyUnit else None
 
   tySubst substMeta ty
 
@@ -264,15 +264,15 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
 
   polyTy, traits, ctx
 
-let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
+let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
 
   match funDef.Ty with
   | TyScheme ([], funTy) ->
       let isOwned tySerial =
-        let depth = ctx.TyDepths |> mapFind tySerial
+        let level = ctx.TyLevels |> mapFind tySerial
 
-        depth > outerLetDepth
+        level > outerLevel
 
       let funTy = substTy ctx funTy
       let funTyScheme = tyGeneralize isOwned funTy
@@ -284,14 +284,14 @@ let private generalizeFun (ctx: TyCtx) (outerLetDepth: LetDepth) funSerial =
               |> mapAdd funSerial { funDef with Ty = funTyScheme } }
 
       // Mark generalized meta tys (universally quantified vars),
-      // by increasing their depth to infinite (10^9).
+      // by increasing their level to infinite (10^9).
       let ctx =
         let (TyScheme (fvs, _)) = funTyScheme
 
         { ctx with
-            TyDepths =
+            TyLevels =
               fvs
-              |> List.fold (fun tyDepths fv -> tyDepths |> mapAdd fv 1000000000) (ctx.TyDepths) }
+              |> List.fold (fun tyLevels fv -> tyLevels |> mapAdd fv 1000000000) (ctx.TyLevels) }
 
       ctx
 
@@ -906,8 +906,8 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
         let argPats, funTy, ctx = inferArgs ctx funTy argPats
         argPat :: argPats, tyFun argTy funTy, ctx
 
-  let outerLetDepth = ctx.LetDepth
-  let ctx = ctx |> incDepth
+  let outerLevel = ctx.Level
+  let ctx = ctx |> incLevel
 
   let calleeTy, ctx =
     let calleeTy, ctx =
@@ -934,9 +934,9 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
   let ctx =
     unifyTy ctx loc bodyTy provisionalResultTy
 
-  let ctx = ctx |> decDepth
+  let ctx = ctx |> decLevel
 
-  let ctx = generalizeFun ctx outerLetDepth callee
+  let ctx = generalizeFun ctx outerLevel callee
 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
@@ -1110,8 +1110,8 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       Variants = scopeCtx.Variants
       MainFunOpt = scopeCtx.MainFunOpt
       Tys = scopeCtx.Tys
-      TyDepths = scopeCtx.TyDepths
-      LetDepth = 0
+      TyLevels = scopeCtx.TyLevels
+      Level = 0
       TraitBounds = []
       Logs = [] }
 
@@ -1127,8 +1127,8 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
            (fun (acc, ctx: TyCtx) varSerial varDef ->
              let ctx =
                { ctx with
-                   LetDepth =
-                     scopeCtx.VarDepths
+                   Level =
+                     scopeCtx.VarLevels
                      |> mapFind (varSerialToInt varSerial) }
 
              let varDef, ctx =
@@ -1150,8 +1150,8 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
          (fun (acc, ctx: TyCtx) funSerial (funDef: FunDef) ->
            let ctx =
              { ctx with
-                 LetDepth =
-                   scopeCtx.VarDepths
+                 Level =
+                   scopeCtx.VarLevels
                    |> mapFind (funSerialToInt funSerial) }
 
            let ty, ctx = freshMetaTy funDef.Loc ctx
@@ -1178,7 +1178,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
     { ctx with Variants = variants }
 
-  let ctx = { ctx with Funs = funs; LetDepth = 0 }
+  let ctx = { ctx with Funs = funs; Level = 0 }
 
   let expr, ctx =
     let expr, topLevelTy, ctx = inferExpr ctx None expr

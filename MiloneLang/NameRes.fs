@@ -173,8 +173,8 @@ type ScopeCtx =
 
     Variants: AssocMap<VariantSerial, VariantDef>
 
-    /// Serial of value (variable/fun/variant) to let-depth map.
-    VarDepths: AssocMap<Serial, LetDepth>
+    /// Serial of value (variable/fun/variant) to level map.
+    VarLevels: AssocMap<Serial, Level>
 
     MainFunOpt: FunSerial option
 
@@ -184,8 +184,8 @@ type ScopeCtx =
     ModuleTys: AssocMap<ModuleTySerial, ModuleTyDef>
     ModuleSynonyms: AssocMap<ModuleSynonymSerial, ModuleSynonymDef>
 
-    /// Type serial to let-depth map.
-    TyDepths: AssocMap<TySerial, LetDepth>
+    /// Type serial to level map.
+    TyLevels: AssocMap<TySerial, Level>
 
     /// Values contained by types.
     VarNs: Ns<TySerial, ValueSymbol>
@@ -201,8 +201,8 @@ type ScopeCtx =
     /// name -> (varSerial, definedLoc, usedLoc list)
     PatScope: AssocMap<Ident, VarSerial * Loc * Loc list>
 
-    /// Current let-depth, the number of ancestral let-body.
-    LetDepth: LetDepth
+    /// Current level.
+    Level: Level
 
     Logs: (NameResLog * Loc) list }
 
@@ -214,17 +214,17 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Vars = mapEmpty varSerialCmp
     Funs = mapEmpty funSerialCmp
     Variants = mapEmpty variantSerialCmp
-    VarDepths = mapEmpty compare
+    VarLevels = mapEmpty compare
     MainFunOpt = None
     Tys = mapEmpty compare
     ModuleTys = mapEmpty moduleTySerialCmp
     ModuleSynonyms = mapEmpty moduleSynonymSerialCmp
-    TyDepths = mapEmpty compare
+    TyLevels = mapEmpty compare
     VarNs = mapEmpty compare
     TyNs = mapEmpty compare
     Local = scopeEmpty ()
     PatScope = mapEmpty compare
-    LetDepth = 0
+    Level = 0
     Logs = [] }
 
 let private addLog (log: NameResLog) (loc: Loc) (ctx: ScopeCtx) =
@@ -283,27 +283,27 @@ let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
 
   { scopeCtx with
       Vars = scopeCtx.Vars |> mapAdd varSerial varDef
-      VarDepths =
-        scopeCtx.VarDepths
-        |> mapAdd (varSerialToInt varSerial) scopeCtx.LetDepth }
+      VarLevels =
+        scopeCtx.VarLevels
+        |> mapAdd (varSerialToInt varSerial) scopeCtx.Level }
 
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       Funs = scopeCtx.Funs |> mapAdd funSerial funDef
-      VarDepths =
-        scopeCtx.VarDepths
-        |> mapAdd (funSerialToInt funSerial) scopeCtx.LetDepth }
+      VarLevels =
+        scopeCtx.VarLevels
+        |> mapAdd (funSerialToInt funSerial) scopeCtx.Level }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       Variants =
         scopeCtx.Variants
         |> mapAdd variantSerial variantDef
-      VarDepths =
+      VarLevels =
         let (VariantSerial variantSerial) = variantSerial
 
-        scopeCtx.VarDepths
-        |> mapAdd variantSerial scopeCtx.LetDepth }
+        scopeCtx.VarLevels
+        |> mapAdd variantSerial scopeCtx.Level }
 
 /// Defines a type, without adding to any scope.
 let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
@@ -311,30 +311,30 @@ let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
 
   { scopeCtx with
       Tys = scopeCtx.Tys |> mapAdd tySerial tyDef
-      TyDepths =
-        scopeCtx.TyDepths
-        |> mapAdd tySerial scopeCtx.LetDepth }
+      TyLevels =
+        scopeCtx.TyLevels
+        |> mapAdd tySerial scopeCtx.Level }
 
 let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       ModuleTys = scopeCtx.ModuleTys |> mapAdd moduleTySerial tyDef
-      TyDepths =
-        scopeCtx.TyDepths
-        |> mapAdd (moduleTySerialToInt moduleTySerial) scopeCtx.LetDepth }
+      TyLevels =
+        scopeCtx.TyLevels
+        |> mapAdd (moduleTySerialToInt moduleTySerial) scopeCtx.Level }
 
 let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef
-      TyDepths =
-        scopeCtx.TyDepths
-        |> mapAdd (moduleSynonymSerialToInt serial) scopeCtx.LetDepth }
+      TyLevels =
+        scopeCtx.TyLevels
+        |> mapAdd (moduleSynonymSerialToInt serial) scopeCtx.Level }
 
 /// Defines an unbound meta type.
 let private addUnboundMetaTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      TyDepths =
-        scopeCtx.TyDepths
-        |> mapAdd tySerial scopeCtx.LetDepth }
+      TyLevels =
+        scopeCtx.TyLevels
+        |> mapAdd tySerial scopeCtx.Level }
 
 /// Adds a variable to a namespace.
 let private addVarToNs parentTySerial valueSymbol (scopeCtx: ScopeCtx): ScopeCtx =
@@ -432,11 +432,11 @@ let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
 /// Called on enter the init of let expressions.
 let private enterLetInit (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      LetDepth = scopeCtx.LetDepth + 1 }
+      Level = scopeCtx.Level + 1 }
 
 let private leaveLetInit (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      LetDepth = scopeCtx.LetDepth - 1 }
+      Level = scopeCtx.Level - 1 }
 
 /// Starts a new scope.
 let private startScope kind (scopeCtx: ScopeCtx): ScopeCtx =

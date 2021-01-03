@@ -288,9 +288,9 @@ let tyDisplay getTyName ty =
 [<NoEquality; NoComparison>]
 type TyContext =
   { Serial: Serial
-    LetDepth: LetDepth
+    Level: Level
     Tys: AssocMap<TySerial, TyDef>
-    TyDepths: AssocMap<TySerial, LetDepth> }
+    TyLevels: AssocMap<TySerial, Level> }
 
 let private addTyDef tySerial tyDef (ctx: TyContext) =
   { ctx with
@@ -309,29 +309,29 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   match typingSubst ctx ty with
   | MetaTy (s, _) when s = tySerial -> ctx
   | ty ->
-      // Reduce depth of meta tys in the referent ty to the meta ty's depth at most.
-      let tyDepths =
-        let depth = ctx.TyDepths |> mapFind tySerial
+      // Reduce level of meta tys in the referent ty to the meta ty's level at most.
+      let tyLevels =
+        let level = ctx.TyLevels |> mapFind tySerial
 
         ty
         |> tyCollectFreeVars
         |> List.fold
-             (fun tyDepths tySerial ->
-               let currentDepth = ctx.TyDepths |> mapFind tySerial
+             (fun tyLevels tySerial ->
+               let currentLevel = ctx.TyLevels |> mapFind tySerial
 
-               if currentDepth <= depth then
+               if currentLevel <= level then
                  // Already non-deep enough.
-                 tyDepths
+                 tyLevels
                else
-                 // Prevent this meta ty from getting generalized until depth of the bound meta ty.
-                 tyDepths |> mapAdd tySerial depth)
-             ctx.TyDepths
+                 // Prevent this meta ty from getting generalized until level of the bound meta ty.
+                 tyLevels |> mapAdd tySerial level)
+             ctx.TyLevels
 
       let ctx =
         ctx
         |> addTyDef tySerial (MetaTyDef(noIdent, ty, loc))
 
-      { ctx with TyDepths = tyDepths }
+      { ctx with TyLevels = tyLevels }
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
@@ -440,12 +440,12 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
                :: assignment
 
              let ctx =
-               let tyDepths =
-                 ctx.TyDepths |> mapAdd newTySerial ctx.LetDepth
+               let tyLevels =
+                 ctx.TyLevels |> mapAdd newTySerial ctx.Level
 
                { ctx with
                    Serial = newTySerial
-                   TyDepths = tyDepths }
+                   TyLevels = tyLevels }
 
              assignment, ctx)
            ([], ctx)
