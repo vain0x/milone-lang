@@ -750,15 +750,15 @@ let private inferAppExpr ctx itself callee arg loc =
   // __nativeFun f
   | HPrimExpr (HPrim.NativeFun, _, loc), HFunExpr (funSerial, _, _) ->
       let targetTy, ctx = castFunAsNativeFun funSerial ctx
-      HInfExpr(InfOp.NativeFun funSerial, [], targetTy, loc), targetTy, ctx
+      HNodeExpr(HNativeFunEN funSerial, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun "funName"
   | HPrimExpr (HPrim.NativeFun, _, loc), HLitExpr (StrLit funName, _) ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-      HInfExpr(InfOp.CallNative funName, [], targetTy, loc), targetTy, ctx
+      HNodeExpr(HCallNativeEN funName, [], targetTy, loc), targetTy, ctx
 
   // __nativeFun ("funName", arg1, arg2, ...)
-  | HPrimExpr (HPrim.NativeFun, _, loc), HInfExpr (InfOp.Tuple, HLitExpr (StrLit funName, _) :: args, _, _) ->
+  | HPrimExpr (HPrim.NativeFun, _, loc), HNodeExpr (HTupleEN, HLitExpr (StrLit funName, _) :: args, _, _) ->
       // Type of native function is unchecked. Type annotations must be written correctly.
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
 
@@ -769,24 +769,24 @@ let private inferAppExpr ctx itself callee arg loc =
                let arg, _, ctx = inferExpr ctx None arg
                arg, ctx)
 
-      HInfExpr(InfOp.CallNative funName, args, targetTy, loc), targetTy, ctx
+      HNodeExpr(HCallNativeEN funName, args, targetTy, loc), targetTy, ctx
 
   // __nativeExpr "code"
   | HPrimExpr (HPrim.NativeExpr, _, loc), HLitExpr (StrLit code, _) ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-      HInfExpr(InfOp.NativeExpr code, [], targetTy, loc), targetTy, ctx
+      HNodeExpr(HNativeExprEN code, [], targetTy, loc), targetTy, ctx
 
   // __nativeStmt "code"
   | HPrimExpr (HPrim.NativeStmt, _, loc), HLitExpr (StrLit code, _) ->
-      HInfExpr(InfOp.NativeStmt code, [], tyUnit, loc), tyUnit, ctx
+      HNodeExpr(HNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
 
   // __nativeDecl "code"
   | HPrimExpr (HPrim.NativeDecl, _, loc), HLitExpr (StrLit code, _) ->
-      HInfExpr(InfOp.NativeDecl code, [], tyUnit, loc), tyUnit, ctx
+      HNodeExpr(HNativeDeclEN code, [], tyUnit, loc), tyUnit, ctx
 
   | HPrimExpr (HPrim.SizeOfVal, _, loc), _ ->
       let arg, argTy, ctx = inferExpr ctx None arg
-      HInfExpr(InfOp.SizeOfVal, [ HInfExpr(InfOp.Abort, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
+      HNodeExpr(HSizeOfValEN, [ HNodeExpr(HAbortEN, [], argTy, exprToLoc arg) ], tyInt, loc), tyInt, ctx
 
   | _ ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
@@ -804,7 +804,7 @@ let private inferMinusExpr ctx arg loc =
   let ctx =
     ctx |> addTraitBounds [ IsNumberTrait argTy, loc ]
 
-  HInfExpr(InfOp.Minus, [ arg ], argTy, loc), argTy, ctx
+  HNodeExpr(HMinusEN, [ arg ], argTy, loc), argTy, ctx
 
 let private inferIndexExpr ctx l r loc =
   let l, lTy, ctx = inferExpr ctx (Some tyStr) l
@@ -815,7 +815,7 @@ let private inferIndexExpr ctx l r loc =
     ctx
     |> addTraitBounds [ IndexTrait(lTy, rTy, tTy), loc ]
 
-  HInfExpr(InfOp.Index, [ l; r ], tTy, loc), tTy, ctx
+  HNodeExpr(HIndexEN, [ l; r ], tTy, loc), tTy, ctx
 
 let private inferSliceExpr ctx l r x loc =
   let l, lTy, ctx = inferExpr ctx (Some tyInt) l
@@ -830,7 +830,7 @@ let private inferSliceExpr ctx l r x loc =
 
     unifyTy ctx loc actualTy expectedTy
 
-  HInfExpr(InfOp.Slice, [ l; r; x ], xTy, loc), xTy, ctx
+  HNodeExpr(HSliceEN, [ l; r; x ], xTy, loc), xTy, ctx
 
 let private inferTupleExpr (ctx: TyCtx) items loc =
   let rec go acc itemTys ctx items =
@@ -954,16 +954,16 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HMatchExpr (cond, arms, _, loc) -> inferMatchExpr ctx expectOpt expr cond arms loc
   | HNavExpr (receiver, field, _, loc) -> inferNavExpr ctx receiver field loc
 
-  | HInfExpr (InfOp.Abort, _, _, loc) -> hxAbort ctx loc
-  | HInfExpr (InfOp.Minus, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
-  | HInfExpr (InfOp.App, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
-  | HInfExpr (InfOp.Tuple, items, _, loc) -> inferTupleExpr ctx items loc
-  | HInfExpr (InfOp.Anno, [ expr ], annoTy, loc) -> inferAnnoExpr ctx expr annoTy loc
+  | HNodeExpr (HAbortEN, _, _, loc) -> hxAbort ctx loc
+  | HNodeExpr (HMinusEN, [ arg ], _, loc) -> inferMinusExpr ctx arg loc
+  | HNodeExpr (HAppEN, [ callee; arg ], _, loc) -> inferAppExpr ctx expr callee arg loc
+  | HNodeExpr (HTupleEN, items, _, loc) -> inferTupleExpr ctx items loc
+  | HNodeExpr (HAnnoEN, [ expr ], annoTy, loc) -> inferAnnoExpr ctx expr annoTy loc
 
-  | HInfExpr (InfOp.Index, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
-  | HInfExpr (InfOp.Index, _, _, _) -> fail ()
-  | HInfExpr (InfOp.Slice, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
-  | HInfExpr (InfOp.Slice, _, _, _) -> fail ()
+  | HNodeExpr (HIndexEN, [ l; r ], _, loc) -> inferIndexExpr ctx l r loc
+  | HNodeExpr (HIndexEN, _, _, _) -> fail ()
+  | HNodeExpr (HSliceEN, [ l; r; x ], _, loc) -> inferSliceExpr ctx l r x loc
+  | HNodeExpr (HSliceEN, _, _, _) -> fail ()
 
   | HBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
 
@@ -975,27 +975,27 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HTyDeclExpr _
   | HOpenExpr _ -> expr, tyUnit, ctx
 
-  | HInfExpr (InfOp.Range, _, _, loc) ->
+  | HNodeExpr (HRangeEN, _, _, loc) ->
       let ctx =
         addError ctx "Range operator can be used in the form of `s.[l..r]` for now." loc
 
       hxAbort ctx loc
 
-  | HInfExpr (InfOp.Minus, _, _, _)
-  | HInfExpr (InfOp.Anno, _, _, _)
-  | HInfExpr (InfOp.App, _, _, _)
-  | HInfExpr (InfOp.Closure, _, _, _)
-  | HInfExpr (InfOp.CallProc, _, _, _)
-  | HInfExpr (InfOp.CallTailRec, _, _, _)
-  | HInfExpr (InfOp.CallClosure, _, _, _)
-  | HInfExpr (InfOp.CallNative _, _, _, _)
-  | HInfExpr (InfOp.Record, _, _, _)
-  | HInfExpr (InfOp.RecordItem _, _, _, _)
-  | HInfExpr (InfOp.NativeFun _, _, _, _)
-  | HInfExpr (InfOp.NativeExpr _, _, _, _)
-  | HInfExpr (InfOp.NativeStmt _, _, _, _)
-  | HInfExpr (InfOp.NativeDecl _, _, _, _)
-  | HInfExpr (InfOp.SizeOfVal, _, _, _) -> failwith "NEVER"
+  | HNodeExpr (HMinusEN, _, _, _)
+  | HNodeExpr (HAnnoEN, _, _, _)
+  | HNodeExpr (HAppEN, _, _, _)
+  | HNodeExpr (HClosureEN, _, _, _)
+  | HNodeExpr (HCallProcEN, _, _, _)
+  | HNodeExpr (HCallTailRecEN, _, _, _)
+  | HNodeExpr (HCallClosureEN, _, _, _)
+  | HNodeExpr (HCallNativeEN _, _, _, _)
+  | HNodeExpr (HRecordEN, _, _, _)
+  | HNodeExpr (HRecordItemEN _, _, _, _)
+  | HNodeExpr (HNativeFunEN _, _, _, _)
+  | HNodeExpr (HNativeExprEN _, _, _, _)
+  | HNodeExpr (HNativeStmtEN _, _, _, _)
+  | HNodeExpr (HNativeDeclEN _, _, _, _)
+  | HNodeExpr (HSizeOfValEN, _, _, _) -> failwith "NEVER"
 
   | HModuleExpr _
   | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"

@@ -11,7 +11,7 @@ open MiloneLang.Typing
 let private hxIsRefOrUnboxingRef expr =
   match expr with
   | HRefExpr _
-  | HInfExpr (InfOp.App, [ HPrimExpr (HPrim.Unbox, _, _); HRefExpr _ ], _, _) -> true
+  | HNodeExpr (HAppEN, [ HPrimExpr (HPrim.Unbox, _, _); HRefExpr _ ], _, _) -> true
   | _ -> false
 
 // -----------------------------------------------
@@ -142,7 +142,7 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
           | Some it -> it
           | None -> failwith "NEVER"
 
-        HInfExpr(InfOp.RecordItem index, [ baseExpr ], itemTy, loc)
+        HNodeExpr(HRecordItemEN index, [ baseExpr ], itemTy, loc)
 
       let n = fieldTys |> List.length
 
@@ -155,13 +155,13 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
         | _ -> itemExpr i :: go (i + 1) fields
 
       let fields = go 0 fields
-      HInfExpr(InfOp.Record, fields, ty, loc)
+      HNodeExpr(HRecordEN, fields, ty, loc)
 
   | None ->
       let fields =
         fields |> List.map (fun (_, init) -> init)
 
-      HInfExpr(InfOp.Record, fields, ty, loc)
+      HNodeExpr(HRecordEN, fields, ty, loc)
 
 let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
   let index =
@@ -174,7 +174,7 @@ let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
 
     | _ -> failwithf "NEVER: %A" itself
 
-  HInfExpr(InfOp.RecordItem index, [ l ], ty, loc)
+  HNodeExpr(HRecordItemEN index, [ l ], ty, loc)
 
 // -----------------------------------------------
 // Control
@@ -202,10 +202,10 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
-  | HInfExpr (infOp, items, ty, loc) ->
+  | HNodeExpr (kind, items, ty, loc) ->
       let doArm () =
         let items = items |> List.map (teExpr ctx)
-        HInfExpr(infOp, items, ty, loc)
+        HNodeExpr(kind, items, ty, loc)
 
       doArm ()
 

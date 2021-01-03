@@ -17,7 +17,7 @@ let private isNoTy ty =
   | ErrorTy _ -> true
   | _ -> false
 
-let private hxAbort loc = HInfExpr(InfOp.Abort, [], noTy, loc)
+let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
 
 // -----------------------------------------------
 // Type primitives
@@ -1359,13 +1359,13 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HNavExpr _ -> nameResNavExpr expr ctx
 
-  | HInfExpr (op, items, ty, loc) ->
+  | HNodeExpr (op, items, ty, loc) ->
       let doArm () =
         // Necessary in case of annotation expression.
         let ty, ctx = ctx |> resolveTy ty loc
 
         let items, ctx = (items, ctx) |> stMap nameResExpr
-        HInfExpr(op, items, ty, loc), ctx
+        HNodeExpr(op, items, ty, loc), ctx
 
       doArm ()
 

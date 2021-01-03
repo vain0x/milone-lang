@@ -770,13 +770,13 @@ let private kgLetFunExpr funSerial argPats body next loc hole (ctx: KirGenCtx): 
 // Controller of the pass.
 // Decompose an HIR expr and dispatch to one of funs to generate KIR node, defined above.
 
-let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
-  match infOp with
-  | InfOp.Minus
-  | InfOp.Index
-  | InfOp.Slice -> failwith "unimplemented"
+let private kgInfExpr itself kind args ty loc hole ctx: KNode * KirGenCtx =
+  match kind with
+  | HMinusEN
+  | HIndexEN
+  | HSliceEN -> failwith "unimplemented"
 
-  | InfOp.CallProc ->
+  | HCallProcEN ->
       let callee, args =
         match args with
         | callee :: args -> callee, args
@@ -836,34 +836,34 @@ let private kgInfExpr itself infOp args ty loc hole ctx: KNode * KirGenCtx =
 
       | _ -> failwithf "NEVER: CallClosure should be used. %A" itself
 
-  | InfOp.CallClosure ->
+  | HCallClosureEN ->
       match args with
       | callee :: args -> kgCallClosureExpr callee args ty loc hole ctx
       | [] -> failwithf "NEVER: CallClosure args must begin with callee. %A" itself
 
-  | InfOp.CallTailRec
-  | InfOp.CallNative _ -> failwith "unimplemented"
+  | HCallTailRecEN
+  | HCallNativeEN _ -> failwith "unimplemented"
 
-  | InfOp.Tuple -> kgTupleExpr args ty loc hole ctx
+  | HTupleEN -> kgTupleExpr args ty loc hole ctx
 
-  | InfOp.Closure ->
+  | HClosureEN ->
       match args with
       | [ HFunExpr (funSerial, funTy, funLoc); env ] -> kgClosureExpr funSerial funTy funLoc env ty loc hole ctx
 
       | _ -> failwithf "NEVER: bad use of Closure prim. %A" itself
 
-  | InfOp.Abort
-  | InfOp.Record
-  | InfOp.RecordItem _
-  | InfOp.NativeFun _
-  | InfOp.NativeExpr _
-  | InfOp.NativeStmt _
-  | InfOp.NativeDecl _
-  | InfOp.SizeOfVal -> failwith "unimplemented"
+  | HAbortEN
+  | HRecordEN
+  | HRecordItemEN _
+  | HNativeFunEN _
+  | HNativeExprEN _
+  | HNativeStmtEN _
+  | HNativeDeclEN _
+  | HSizeOfValEN -> failwith "unimplemented"
 
-  | InfOp.Range -> failwithf "NEVER: InfOp.Range causes an error in Typing. %A" itself
-  | InfOp.App -> failwithf "NEVER: InfOp.App is resolved in uneta. %A" itself
-  | InfOp.Anno -> failwithf "NEVER: InfOp.Anno is resolved in type inference: %A" itself
+  | HRangeEN -> failwithf "NEVER: HRangeEN causes an error in Typing. %A" itself
+  | HAppEN -> failwithf "NEVER: HAppEN is resolved in uneta. %A" itself
+  | HAnnoEN -> failwithf "NEVER: HAnnoEN is resolved in type inference: %A" itself
 
 /// Evaluates an expression and fills a hole with the result term.
 let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx) (ctx: KirGenCtx): KNode * KirGenCtx =
@@ -882,7 +882,7 @@ let private kgExpr (expr: HExpr) (hole: KTerm -> KirGenCtx -> KNode * KirGenCtx)
 
   | HMatchExpr (cond, arms, ty, loc) -> kgMatchExpr cond arms ty loc hole ctx
 
-  | HInfExpr (infOp, args, ty, loc) -> kgInfExpr expr infOp args ty loc hole ctx
+  | HNodeExpr (kind, args, ty, loc) -> kgInfExpr expr kind args ty loc hole ctx
 
   | HBlockExpr (stmts, last) -> kgBlockExpr stmts last hole ctx
 

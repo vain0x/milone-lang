@@ -372,73 +372,71 @@ type HPrim =
   | PtrRead
   | PtrWrite
 
-[<RequireQualifiedAccess>]
-[<Struct>]
-[<NoEquality; NoComparison>]
-type InfOp =
-  | Abort
+[<Struct; NoEquality; NoComparison>]
+type HExprKind =
+  | HAbortEN
 
   /// `-x`.
-  | Minus
+  | HMinusEN
 
-  | App
+  | HAppEN
 
   /// `..`.
   ///
   /// Every occurrence of this is currently error
   /// because valid use (`s.[l..r]`) gets rewritten in AstToHir.
-  | Range
+  | HRangeEN
 
   /// Type annotation `x : 'x`.
-  | Anno
+  | HAnnoEN
 
   /// `s.[i]`
-  | Index
+  | HIndexEN
 
   /// `s.[l .. r]`
-  | Slice
+  | HSliceEN
 
   /// Direct call to procedure or primitive.
-  | CallProc
+  | HCallProcEN
 
   /// Indirect call to closure.
-  | CallClosure
+  | HCallClosureEN
 
   /// Direct call to current procedure at the end of function (i.e. tail-call).
-  | CallTailRec
+  | HCallTailRecEN
 
   /// Direct call to native fun.
-  | CallNative of funName: string
+  | HCallNativeEN of funName: string
 
   /// Tuple constructor, e.g. `x, y, z`.
-  | Tuple
+  | HTupleEN
 
   /// Closure constructor.
-  | Closure
+  | HClosureEN
 
   /// Record creation.
   ///
   /// Unlike record expr, it's guaranteed that
   /// all of fields are specified in order of declaration.
-  | Record
+  | HRecordEN
 
   /// Gets i'th field of record.
-  | RecordItem of index: int
+  | HRecordItemEN of index: int
 
   /// Use function as function pointer.
-  | NativeFun of FunSerial
+  | HNativeFunEN of FunSerial
 
   /// Embed some C expression to output.
-  | NativeExpr of nativeExprCode: string
+  | HNativeExprEN of nativeExprCode: string
 
   /// Embed some C statement to output.
-  | NativeStmt of nativeStmtCode: string
+  | HNativeStmtEN of nativeStmtCode: string
 
   /// Embed some C toplevel codes to output.
-  | NativeDecl of nativeDeclCode: string
+  | HNativeDeclEN of nativeDeclCode: string
 
   /// Size of type.
-  | SizeOfVal
+  | HSizeOfValEN
 
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
@@ -465,7 +463,7 @@ type HExpr =
   | HNavExpr of HExpr * Ident * Ty * Loc
 
   /// Some built-in operation.
-  | HInfExpr of InfOp * HExpr list * Ty * Loc
+  | HNodeExpr of HExprKind * HExpr list * Ty * Loc
 
   /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
   | HBlockExpr of HExpr list * HExpr
@@ -946,23 +944,23 @@ let hxTrue loc = HLitExpr(litTrue, loc)
 
 let hxFalse loc = HLitExpr(litFalse, loc)
 
-let hxApp f x ty loc = HInfExpr(InfOp.App, [ f; x ], ty, loc)
+let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 
-let hxAnno expr ty loc = HInfExpr(InfOp.Anno, [ expr ], ty, loc)
+let hxAnno expr ty loc = HNodeExpr(HAnnoEN, [ expr ], ty, loc)
 
 let hxSemi items loc =
   match splitLast items with
   | Some (stmts, last) -> HBlockExpr(stmts, last)
-  | None -> HInfExpr(InfOp.Tuple, [], tyUnit, loc)
+  | None -> HNodeExpr(HTupleEN, [], tyUnit, loc)
 
 let hxCallProc callee args resultTy loc =
-  HInfExpr(InfOp.CallProc, callee :: args, resultTy, loc)
+  HNodeExpr(HCallProcEN, callee :: args, resultTy, loc)
 
 let hxCallClosure callee args resultTy loc =
-  HInfExpr(InfOp.CallClosure, callee :: args, resultTy, loc)
+  HNodeExpr(HCallClosureEN, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HInfExpr(InfOp.Tuple, items, tyTuple (List.map exprToTy items), loc)
+  HNodeExpr(HTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
 let hxUnit loc = hxTuple [] loc
 
@@ -971,7 +969,7 @@ let hxNil itemTy loc =
 
 let hxIsUnitLit expr =
   match expr with
-  | HInfExpr (InfOp.Tuple, [], _, _) -> true
+  | HNodeExpr (HTupleEN, [], _, _) -> true
   | _ -> false
 
 let hxIsAlwaysTrue expr =
@@ -989,7 +987,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HRecordExpr (_, _, ty, a) -> ty, a
   | HMatchExpr (_, _, ty, a) -> ty, a
   | HNavExpr (_, _, ty, a) -> ty, a
-  | HInfExpr (_, _, ty, a) -> ty, a
+  | HNodeExpr (_, _, ty, a) -> ty, a
   | HBlockExpr (_, last) -> exprExtract last
   | HLetValExpr (_, _, _, _, ty, a) -> ty, a
   | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
@@ -1025,7 +1023,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 
         HMatchExpr(go cond, arms, f ty, g a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
-    | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, List.map go args, f resultTy, g a)
+    | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
     | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->

@@ -230,7 +230,7 @@ let private acExpr (expr, ctx: ArityCheckCtx) =
       let _, ctx = acExpr (l, ctx)
       tyToArity ty, ctx
 
-  | HInfExpr (_, items, ty, _) ->
+  | HNodeExpr (_, items, ty, _) ->
       let ctx = acExprs items ctx
       tyToArity ty, ctx
 
@@ -431,7 +431,7 @@ let private resolvePartialAppFun callee arity args argLen callLoc ctx =
   let envBoxExpr = createEnvBoxExpr envItems envTy callLoc
 
   let funObjExpr =
-    HInfExpr(InfOp.Closure, [ funRef; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
+    HNodeExpr(HClosureEN, [ funRef; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
 
   let expr = funLet funObjExpr
   expr, ctx
@@ -474,7 +474,7 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let envBoxExpr = createEnvBoxExpr envItems envTy callLoc
 
   let closureExpr =
-    HInfExpr(InfOp.Closure, [ funRef; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
+    HNodeExpr(HClosureEN, [ funRef; envBoxExpr ], tyAppliedBy argLen funTy, callLoc)
 
   let expr = calleeLet (funLet closureExpr)
   expr, ctx
@@ -549,13 +549,13 @@ let private exPrimExpr expr prim primTy calleeLoc (ctx: EtaCtx) =
   then expr, ctx
   else resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
-let private exInfExpr expr infOp args ty loc ctx =
-  match infOp with
-  | InfOp.App ->
+let private exInfExpr expr kind args ty loc ctx =
+  match kind with
+  | HAppEN ->
       /// Converts `(((f x) ..) y)` to `f(x, .., y)`.
       let rec roll acc callee =
         match callee with
-        | HInfExpr (InfOp.App, [ callee; arg ], _, _) -> roll (arg :: acc) callee
+        | HNodeExpr (HAppEN, [ callee; arg ], _, _) -> roll (arg :: acc) callee
         | _ -> callee, acc
 
       let callee, args = roll [] expr
@@ -563,7 +563,7 @@ let private exInfExpr expr infOp args ty loc ctx =
 
   | _ ->
       let args, ctx = (args, ctx) |> stMap exExpr
-      HInfExpr(infOp, args, ty, loc), ctx
+      HNodeExpr(kind, args, ty, loc), ctx
 
 let private exLetFunExpr callee isRec vis argPats body next ty loc ctx =
   let body, ctx = (body, ctx) |> exExpr
@@ -598,7 +598,7 @@ let private exExpr (expr, ctx) =
 
       HMatchExpr(cond, arms, ty, loc), ctx
 
-  | HInfExpr (infOp, args, ty, loc) -> exInfExpr expr infOp args ty loc ctx
+  | HNodeExpr (kind, args, ty, loc) -> exInfExpr expr kind args ty loc ctx
 
   | HBlockExpr (stmts, last) ->
       let doArm () =

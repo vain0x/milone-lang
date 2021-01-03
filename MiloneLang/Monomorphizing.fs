@@ -334,10 +334,10 @@ let private monifyExpr (expr, ctx) =
 
       doArm ()
 
-  | HInfExpr (infOp, args, ty, loc) ->
+  | HNodeExpr (kind, args, ty, loc) ->
       let doArm () =
         let args, ctx = (args, ctx) |> stMap monifyExpr
-        HInfExpr(infOp, args, ty, loc), ctx
+        HNodeExpr(kind, args, ty, loc), ctx
 
       doArm ()
 

@@ -459,9 +459,9 @@ let private postProcessVariantAppPat (ctx: AbCtx) variantSerial payloadPat =
   else
     None
 
-let private postProcessVariantFunAppExpr ctx infOp items =
-  match infOp, items with
-  | InfOp.App, [ (HVariantExpr (variantSerial, _, _)) as callee; payload ] when needsBoxedVariant ctx variantSerial ->
+let private postProcessVariantFunAppExpr ctx kind items =
+  match kind, items with
+  | HAppEN, [ (HVariantExpr (variantSerial, _, _)) as callee; payload ] when needsBoxedVariant ctx variantSerial ->
       // FIXME: ty is now wrong for the same reason as call-variant pattern.
       let ty, loc = exprExtract payload
       Some(callee, hxBox payload ty loc)
@@ -605,14 +605,14 @@ let private abExpr ctx expr =
 
       doArm ()
 
-  | HInfExpr (infOp, items, ty, loc) ->
+  | HNodeExpr (kind, items, ty, loc) ->
       let doArm () =
         let items = items |> List.map (abExpr ctx)
         let ty = ty |> abTy ctx
 
-        match postProcessVariantFunAppExpr ctx infOp items with
+        match postProcessVariantFunAppExpr ctx kind items with
         | Some (callee, payload) -> hxApp callee payload ty loc
-        | None -> HInfExpr(infOp, items, ty, loc)
+        | None -> HNodeExpr(kind, items, ty, loc)
 
       doArm ()
 

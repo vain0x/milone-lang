@@ -204,10 +204,10 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HInfExpr (infOp, items, ty, loc) ->
+  | HNodeExpr (kind, items, ty, loc) ->
       let doArm () =
         let items, ctx = (items, ctx) |> stMap hoistExpr
-        HInfExpr(infOp, items, ty, loc), ctx
+        HNodeExpr(kind, items, ty, loc), ctx
 
       doArm ()
 

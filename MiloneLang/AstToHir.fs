@@ -330,7 +330,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
   | AMissingExpr pos ->
       // Error is already reported in parsing.
       let loc = toLoc docId pos
-      HInfExpr(InfOp.Abort, [], noTy, loc), nameCtx
+      HNodeExpr(HAbortEN, [], noTy, loc), nameCtx
 
   | ALitExpr (lit, pos) ->
       let loc = toLoc docId pos
@@ -427,13 +427,13 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
             let l, nameCtx = (l, nameCtx) |> athExpr docId
             let r, nameCtx = (r, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HInfExpr(InfOp.Slice, [ l; r; x ], noTy, loc), nameCtx
+            HNodeExpr(HSliceEN, [ l; r; x ], noTy, loc), nameCtx
 
         | _ ->
             let l, nameCtx = (l, nameCtx) |> athExpr docId
             let r, nameCtx = (r, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HInfExpr(InfOp.Index, [ l; r ], noTy, loc), nameCtx
+            HNodeExpr(HIndexEN, [ l; r ], noTy, loc), nameCtx
 
       doArm ()
 
@@ -444,7 +444,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
         | None ->
             let arg, nameCtx = (arg, nameCtx) |> athExpr docId
             let loc = toLoc docId pos
-            HInfExpr(InfOp.Minus, [ arg ], noTy, loc), nameCtx
+            HNodeExpr(HMinusEN, [ arg ], noTy, loc), nameCtx
 
       doArm ()
 
@@ -522,7 +522,7 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
         let l, nameCtx = (l, nameCtx) |> athExpr docId
         let r, nameCtx = (r, nameCtx) |> athExpr docId
         let loc = toLoc docId pos
-        HInfExpr(InfOp.Range, [ l; r ], noTy, loc), nameCtx
+        HNodeExpr(HRangeEN, [ l; r ], noTy, loc), nameCtx
 
       doArm ()
 

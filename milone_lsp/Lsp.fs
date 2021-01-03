@@ -368,7 +368,7 @@ let private dfsExpr (visitor: Visitor) expr =
 
   | HNavExpr (expr, _, _, _) -> dfsExpr visitor expr
 
-  | HInfExpr (_, exprs, _, _) ->
+  | HNodeExpr (_, exprs, _, _) ->
       for expr in exprs do
         dfsExpr visitor expr
 

@@ -206,7 +206,7 @@ let private msGotoUnless pred label loc =
 /// Checks whether an expr (body of fun) contains tail-rec call.
 let private containsTailRec expr =
   match expr with
-  | HInfExpr (InfOp.CallTailRec, _, _, _) -> true
+  | HNodeExpr (HCallTailRecEN, _, _, _) -> true
 
   | HLitExpr _
   | HRefExpr _
@@ -214,7 +214,7 @@ let private containsTailRec expr =
   | HVariantExpr _
   | HPrimExpr _
   | HNavExpr _
-  | HInfExpr _
+  | HNodeExpr _
   | HOpenExpr _
   | HTyDeclExpr _ -> false
 
@@ -1274,42 +1274,42 @@ let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
 
     temp, ctx
 
-let private mirifyExprInf ctx itself infOp args ty loc =
-  match infOp, args, ty with
-  | InfOp.Minus, [ arg ], _ ->
+let private mirifyExprInf ctx itself kind args ty loc =
+  match kind, args, ty with
+  | HMinusEN, [ arg ], _ ->
       let arg, ctx = mirifyExpr ctx arg
       MUnaryExpr(MMinusUnary, arg, ty, loc), ctx
 
-  | InfOp.Tuple, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
-  | InfOp.Tuple, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
-  | InfOp.Record, _, _ -> mirifyExprRecord ctx args ty loc
-  | InfOp.RecordItem index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
+  | HTupleEN, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
+  | HTupleEN, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
+  | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
+  | HRecordItemEN index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
 
-  | InfOp.Index, [ l; r ], _ -> mirifyCallStrIndexExpr ctx l r ty loc
-  | InfOp.Slice, _, _ -> mirifyCallStrGetSliceExpr ctx args loc
+  | HIndexEN, [ l; r ], _ -> mirifyCallStrIndexExpr ctx l r ty loc
+  | HSliceEN, _, _ -> mirifyCallStrGetSliceExpr ctx args loc
 
-  | InfOp.CallProc, [ HVariantExpr (variantSerial, _, _); arg ], _ -> mirifyCallVariantExpr ctx variantSerial arg ty loc
-  | InfOp.CallProc, HPrimExpr (prim, _, _) :: args, _ -> mirifyCallPrimExpr ctx itself prim args ty loc
-  | InfOp.CallProc, callee :: args, _ -> mirifyCallProcExpr ctx callee args ty loc
+  | HCallProcEN, [ HVariantExpr (variantSerial, _, _); arg ], _ -> mirifyCallVariantExpr ctx variantSerial arg ty loc
+  | HCallProcEN, HPrimExpr (prim, _, _) :: args, _ -> mirifyCallPrimExpr ctx itself prim args ty loc
+  | HCallProcEN, callee :: args, _ -> mirifyCallProcExpr ctx callee args ty loc
 
-  | InfOp.CallTailRec, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
-  | InfOp.CallClosure, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
-  | InfOp.CallNative funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
-  | InfOp.Closure, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
+  | HCallTailRecEN, callee :: args, _ -> mirifyExprInfCallTailRec ctx callee args ty loc
+  | HCallClosureEN, callee :: args, _ -> mirifyExprInfCallClosure ctx callee args ty loc
+  | HCallNativeEN funName, args, _ -> mirifyExprInfCallNative ctx funName args ty loc
+  | HClosureEN, [ HFunExpr (funSerial, _, _); env ], _ -> mirifyExprInfClosure ctx funSerial env ty loc
 
-  | InfOp.NativeFun funSerial, _, _ -> MProcExpr(funSerial, ty, loc), ctx
+  | HNativeFunEN funSerial, _, _ -> MProcExpr(funSerial, ty, loc), ctx
 
-  | InfOp.NativeExpr code, _, _ -> MNativeExpr(code, ty, loc), ctx
+  | HNativeExprEN code, _, _ -> MNativeExpr(code, ty, loc), ctx
 
-  | InfOp.NativeStmt code, _, _ ->
+  | HNativeStmtEN code, _, _ ->
       let ctx = addStmt ctx (MNativeStmt(code, loc))
       MDefaultExpr(tyUnit, loc), ctx
 
-  | InfOp.NativeDecl code, _, _ ->
+  | HNativeDeclEN code, _, _ ->
       let ctx = addDecl ctx (MNativeDecl(code, loc))
       MDefaultExpr(tyUnit, loc), ctx
 
-  | InfOp.SizeOfVal, [ HInfExpr (_, _, ty, _) ], _ ->
+  | HSizeOfValEN, [ HNodeExpr (_, _, ty, _) ], _ ->
       MUnaryExpr(MSizeOfValUnary, MDefaultExpr(ty, loc), tyInt, loc), ctx
 
   | t -> failwithf "Never: %A" t
@@ -1398,7 +1398,7 @@ let private mirifyOtherExprWrapper ctx expr =
   | HVariantExpr (serial, ty, loc) -> mirifyExprVariant ctx expr serial ty loc
   | HPrimExpr (prim, ty, loc) -> mirifyExprPrim ctx prim ty loc
   | HMatchExpr (cond, arms, ty, loc) -> mirifyExprMatch ctx cond arms ty loc
-  | HInfExpr (infOp, args, ty, loc) -> mirifyExprInf ctx expr infOp args ty loc
+  | HNodeExpr (kind, args, ty, loc) -> mirifyExprInf ctx expr kind args ty loc
 
   | HBlockExpr _
   | HLetValExpr _
