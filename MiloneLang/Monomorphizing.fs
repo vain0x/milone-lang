@@ -67,7 +67,6 @@ type private MonoCtx =
 
     Funs: AssocMap<FunSerial, FunDef>
     Tys: AssocMap<TySerial, TyDef>
-    TyLevels: AssocMap<TySerial, Level>
 
     /// Map from
     /// - generic function serial
@@ -94,7 +93,6 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
 
     Funs = tyCtx.Funs
     Tys = tyCtx.Tys
-    TyLevels = tyCtx.TyLevels
 
     GenericFunUseSiteTys = mapEmpty funSerialCmp
     GenericFunMonoSerials = mapEmpty funSerialTyPairCmp
@@ -105,17 +103,16 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
 let private toTyContext (monoCtx: MonoCtx): TyContext =
   { Serial = monoCtx.Serial
     Tys = monoCtx.Tys
-    TyLevels = monoCtx.TyLevels
 
     // Not used.
-    Level = 0 }
+    Level = 0
+    TyLevels = mapEmpty compare }
 
 let private withTyContext (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
   { monoCtx with
       Serial = tyCtx.Serial
       Logs = logAcc
-      Tys = tyCtx.Tys
-      TyLevels = tyCtx.TyLevels }
+      Tys = tyCtx.Tys }
 
 let private substTy (monoCtx: MonoCtx) ty: Ty = typingSubst (toTyContext monoCtx) ty
 

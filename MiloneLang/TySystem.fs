@@ -311,13 +311,13 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   | ty ->
       // Reduce level of meta tys in the referent ty to the meta ty's level at most.
       let tyLevels =
-        let level = ctx.TyLevels |> mapFind tySerial
+        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
 
         ty
         |> tyCollectFreeVars
         |> List.fold
              (fun tyLevels tySerial ->
-               let currentLevel = ctx.TyLevels |> mapFind tySerial
+               let currentLevel = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
 
                if currentLevel <= level then
                  // Already non-deep enough.
