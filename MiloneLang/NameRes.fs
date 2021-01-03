@@ -19,6 +19,8 @@ let private isNoTy ty =
 
 let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
 
+let private globalLevel: Level = 0
+
 // -----------------------------------------------
 // Type primitives
 // -----------------------------------------------
@@ -306,14 +308,14 @@ let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCt
         |> mapAdd variantSerial scopeCtx.Level }
 
 /// Defines a type, without adding to any scope.
-let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private addTy tySymbol tyDef level (scopeCtx: ScopeCtx): ScopeCtx =
   let tySerial = tySymbolToSerial tySymbol
 
   { scopeCtx with
       Tys = scopeCtx.Tys |> mapAdd tySerial tyDef
       TyLevels =
         scopeCtx.TyLevels
-        |> mapAdd tySerial scopeCtx.Level }
+        |> mapAdd tySerial level }
 
 let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
@@ -424,9 +426,9 @@ let private addLocalVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   |> importVar (VarSymbol varSerial)
 
 /// Defines a type in the local scope.
-let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private addLocalTy tySymbol tyDef level (scopeCtx: ScopeCtx): ScopeCtx =
   scopeCtx
-  |> addTy tySymbol tyDef
+  |> addTy tySymbol tyDef level
   |> importTy tySymbol
 
 /// Called on enter the init of let expressions.
@@ -554,7 +556,7 @@ let private resolveTy ty loc scopeCtx =
         | _ ->
             let scopeCtx =
               scopeCtx
-              |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc))
+              |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc)) scopeCtx.Level
 
             MetaTy(serial, loc), scopeCtx
 
@@ -682,7 +684,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
         let tySymbol = SynonymTySymbol tySerial
 
         ctx
-        |> addLocalTy tySymbol (SynonymTyDef(tyName, tyArgs, body, loc))
+        |> addLocalTy tySymbol (SynonymTyDef(tyName, tyArgs, body, loc)) globalLevel
         |> addTyToModule tySymbol
 
     | UnionTyDecl (_, variants, _unionLoc) ->
@@ -715,7 +717,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
           UnionTyDef(tyName, variantSerials, loc)
 
         ctx
-        |> addLocalTy tySymbol tyDef
+        |> addLocalTy tySymbol tyDef globalLevel
         |> addTyToModule tySymbol
 
     | RecordTyDecl (_, fields, loc) ->
@@ -724,7 +726,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
         let tyDef = RecordTyDef(tyName, fields, loc)
 
         ctx
-        |> addLocalTy tySymbol tyDef
+        |> addLocalTy tySymbol tyDef globalLevel
         |> addTyToModule tySymbol
 
 /// Completes the type definition.
@@ -744,7 +746,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
 
       ctx
-      |> addTy (MetaTySymbol tySerial) (MetaTyDef(tyName, bodyTy, loc))
+      |> addTy (MetaTySymbol tySerial) (MetaTyDef(tyName, bodyTy, loc)) ctx.Level
 
   | UniversalTyDef _ -> ctx
 
@@ -758,14 +760,14 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
                let name = ctx |> findName tyArg
 
                ctx
-               |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
+               |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)) globalLevel)
              ctx
 
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
       let ctx = ctx |> finishScope
 
       ctx
-      |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc))
+      |> addTy (SynonymTySymbol tySerial) (SynonymTyDef(tyName, tyArgs, bodyTy, loc)) globalLevel
 
   | UnionTyDef (_, variantSerials, _unionLoc) ->
       let go ctx variantSerial =
@@ -786,7 +788,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
       let fields, ctx = (fields, ctx) |> stMap resolveField
 
       ctx
-      |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc))
+      |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc)) globalLevel
 
 // -----------------------------------------------
 // Collect declarations

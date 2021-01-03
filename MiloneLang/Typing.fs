@@ -291,7 +291,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
         { ctx with
             TyLevels =
               fvs
-              |> List.fold (fun tyLevels fv -> tyLevels |> mapAdd fv 1000000000) (ctx.TyLevels) }
+              |> List.fold (fun tyLevels fv -> tyLevels |> mapAdd fv 1000000000) ctx.TyLevels }
 
       ctx
 
