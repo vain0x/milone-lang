@@ -314,22 +314,18 @@ let private addTy tySymbol tyDef level (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       Tys = scopeCtx.Tys |> mapAdd tySerial tyDef
       TyLevels =
-        scopeCtx.TyLevels
-        |> mapAdd tySerial level }
+        if level = globalLevel then
+          scopeCtx.TyLevels
+        else
+          scopeCtx.TyLevels |> mapAdd tySerial level }
 
 let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      ModuleTys = scopeCtx.ModuleTys |> mapAdd moduleTySerial tyDef
-      TyLevels =
-        scopeCtx.TyLevels
-        |> mapAdd (moduleTySerialToInt moduleTySerial) scopeCtx.Level }
+      ModuleTys = scopeCtx.ModuleTys |> mapAdd moduleTySerial tyDef }
 
 let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef
-      TyLevels =
-        scopeCtx.TyLevels
-        |> mapAdd (moduleSynonymSerialToInt serial) scopeCtx.Level }
+      ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef }
 
 /// Defines an unbound meta type.
 let private addUnboundMetaTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
@@ -534,9 +530,8 @@ let private resolveTy ty loc scopeCtx =
 
         MetaTy(serial, loc), scopeCtx
 
-    | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when (scopeCtx
-                                                                                                    |> findName serial =
-        "__nativeType") ->
+    | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when
+      (scopeCtx |> findName serial = "__nativeType") ->
         let code = scopeCtx |> findName itemSerial
         AppTy(NativeTypeTyCtor code, []), scopeCtx
 
@@ -742,12 +737,6 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
   let tyDef = ctx |> findTy tySerial
 
   match tyDef with
-  | MetaTyDef (tyName, bodyTy, loc) ->
-      let bodyTy, ctx = ctx |> resolveTy bodyTy loc
-
-      ctx
-      |> addTy (MetaTySymbol tySerial) (MetaTyDef(tyName, bodyTy, loc)) ctx.Level
-
   | UniversalTyDef _ -> ctx
 
   | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
@@ -789,6 +778,8 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
 
       ctx
       |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc)) globalLevel
+
+  | MetaTyDef _ -> failwithf "NEVER: %A" tyDecl // Bound meta types don't happen in NameRes.
 
 // -----------------------------------------------
 // Collect declarations
