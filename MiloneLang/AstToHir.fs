@@ -75,10 +75,6 @@ let private axFalse loc = ALitExpr(litFalse, loc)
 
 let private axTrue loc = ALitExpr(litTrue, loc)
 
-let private axApp3 f x1 x2 x3 loc =
-  let app x f = ABinaryExpr(AppBinary, f, x, loc)
-  f |> app x1 |> app x2 |> app x3
-
 /// `not x` ==> `x = false`
 let private axNot arg loc =
   let falseExpr = axFalse loc
