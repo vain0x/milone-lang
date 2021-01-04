@@ -146,6 +146,20 @@ let private withTyContext (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
       Logs = logAcc }
 
 let private addTraitBounds traits (ctx: TyCtx) =
+  // HOTFIX: types mentioned in traits must not be quantified (without trait bounds of function types).
+  //         Increment type levels to prevent such generalization.
+  let ctx =
+    let tyLevelToZero (ctx: TyCtx) ty =
+      let ty = substTy ctx ty
+      ty |> tyCollectFreeVars |> List.fold (fun ctx tySerial ->
+        if ctx.TyLevels |> mapContainsKey tySerial then
+          let _, tyLevels = ctx.TyLevels |> mapRemove tySerial
+          { ctx with TyLevels = tyLevels }
+        else
+          ctx) ctx
+
+    traits |> List.fold (fun ctx (theTrait, _) -> theTrait |> traitToTys |> List.fold tyLevelToZero ctx) ctx
+
   { ctx with
       TraitBounds = List.append traits ctx.TraitBounds }
 
@@ -589,8 +603,7 @@ let private inferFunExpr (ctx: TyCtx) funSerial loc =
     if hasTy then
       instantiateTyScheme ctx funDef.Ty loc
     else
-      // level is zero.
-      let serial, ctx = ctx.Serial + 1, { ctx with Serial = ctx.Serial + 1 }
+      let serial, ctx = freshTySerial ctx
 
       printfn "/* fun %s is not declared, provisional type is used. %s */" (funDef.Name) (locToString loc)
       let ctx =

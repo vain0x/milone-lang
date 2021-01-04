@@ -61,17 +61,17 @@ let innerFunCase () =
 
   assert (zf2 1 = 1)
 
-// deprecated: static variables don't get captured now.
-let mutuallyRecursiveCase () = assert (f1 () = 1)
+// // deprecated: static variables don't get captured now.
+// let mutuallyRecursiveCase () = assert (f1 () = 1)
 
-let f1 () = f2 ()
-let f2 () = f3 ()
-let f3 () = f4 ()
-let f4 () = f5 ()
-let f5 () = f6 ()
-let f6 () = f7 ()
-let f7 () = a
-let a = 1
+// let f1 () = f2 ()
+// let f2 () = f3 ()
+// let f3 () = f4 ()
+// let f4 () = f5 ()
+// let f5 () = f6 ()
+// let f6 () = f7 ()
+// let f7 () = a
+// let a = 1
 
 let main _ =
   basicCase ()
@@ -80,5 +80,5 @@ let main _ =
   lambdaCase ()
   escapeCase ()
   innerFunCase ()
-  mutuallyRecursiveCase ()
+  // mutuallyRecursiveCase ()
   0
