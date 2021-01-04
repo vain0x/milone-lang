@@ -221,7 +221,7 @@ let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let structName, ctx = getUniqueTyName ctx listTy
+      let structName, (ctx: CirCtx) = getUniqueTyName ctx listTy
       let selfTy = CConstPtrTy(CStructTy structName)
 
       let ctx =
@@ -257,7 +257,7 @@ let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let structName, ctx = getUniqueTyName ctx tupleTy
+      let structName, (ctx: CirCtx) = getUniqueTyName ctx tupleTy
       let selfTy = CStructTy structName
 
       let ctx =
@@ -306,7 +306,7 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let structName, ctx = getUniqueTyName ctx unionTyRef
+      let structName, (ctx: CirCtx) = getUniqueTyName ctx unionTyRef
       let selfTy = CStructTy structName
 
       let ctx =
@@ -376,7 +376,7 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
   | Some (_, ty) -> ty, ctx
 
   | None ->
-      let structName, ctx = getUniqueTyName ctx recordTyRef
+      let structName, (ctx: CirCtx) = getUniqueTyName ctx recordTyRef
       let selfTy = CStructTy structName
 
       let ctx =

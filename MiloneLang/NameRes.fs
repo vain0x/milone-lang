@@ -12,11 +12,6 @@ open MiloneLang.Hir
 
 module S = MiloneStd.StdString
 
-let private isNoTy ty =
-  match ty with
-  | ErrorTy _ -> true
-  | _ -> false
-
 let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
 
 // -----------------------------------------------

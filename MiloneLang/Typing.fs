@@ -37,6 +37,7 @@ type TyCtx =
     Variants: AssocMap<VariantSerial, VariantDef>
 
     MainFunOpt: FunSerial option
+    ProvisionalFunTys: AssocMap<FunSerial, (TySerial * Loc) list>
 
     /// Type serial to type definition.
     Tys: AssocMap<TySerial, TyDef>
@@ -183,7 +184,11 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+        let level =
+          ctx.TyLevels
+          |> mapTryFind tySerial
+          |> Option.defaultValue 0
+
         // Degenerate unless quantified.
         if level < 1000000000 then Some tyUnit else None
 
@@ -220,7 +225,9 @@ let tyGeneralize isOwned (ty: Ty) =
 
 let private instantiateTyScheme ctx (tyScheme: TyScheme) loc =
   match tyScheme with
-  | TyScheme ([], ty) -> ty, ctx
+  | TyScheme ([], ty) ->
+      assert (isNoTy ty |> not)
+      ty, ctx
 
   | TyScheme (fvs, ty) ->
       // Generate fresh type variable for each bound type variable.
@@ -264,13 +271,16 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
 
   polyTy, traits, ctx
 
-let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
+let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial funTy =
   let funDef = ctx.Funs |> mapFind funSerial
 
   match funDef.Ty with
-  | TyScheme ([], funTy) ->
+  | TyScheme _ ->
       let isOwned tySerial =
-        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+        let level =
+          ctx.TyLevels
+          |> mapTryFind tySerial
+          |> Option.defaultValue 0
 
         level > outerLevel
 
@@ -293,9 +303,27 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
               fvs
               |> List.fold (fun tyLevels fv -> tyLevels |> mapAdd fv 1000000000) ctx.TyLevels }
 
-      ctx
+      printfn "/* fun %s is generalized to %s */" (ctx.Funs |> mapFind funSerial).Name (objToString funTyScheme)
 
-  | _ -> failwith "Can't generalize already-generalized functions"
+      // Unify provisional types.
+      let ctx =
+        match ctx.ProvisionalFunTys |> mapRemove funSerial with
+        | None, _ -> ctx
+
+        | Some provisionalTys, provisionalFunTys ->
+            let ctx =
+              { ctx with
+                  ProvisionalFunTys = provisionalFunTys }
+
+            provisionalTys
+            |> List.fold
+                 (fun ctx (tySerial, loc) ->
+                   let ty, ctx = instantiateTyScheme ctx funTyScheme loc
+                   printfn "/*   provisional type %s at %s */" (objToString (MetaTy(tySerial, loc) |> substTy ctx)) (locToString loc)
+                   unifyTy ctx loc (MetaTy(tySerial, loc)) ty)
+                 ctx
+
+      ctx
 
 let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
   let funDef = ctx.Funs |> mapFind funSerial
@@ -553,7 +581,30 @@ let private inferVarExpr (ctx: TyCtx) varSerial loc =
 let private inferFunExpr (ctx: TyCtx) funSerial loc =
   let ty, ctx =
     let funDef = ctx.Funs |> mapFind funSerial
-    instantiateTyScheme ctx funDef.Ty loc
+
+    let hasTy =
+      let (TyScheme (_, ty)) = funDef.Ty
+      isNoTy ty |> not
+
+    if hasTy then
+      instantiateTyScheme ctx funDef.Ty loc
+    else
+      // level is zero.
+      let serial, ctx = ctx.Serial + 1, { ctx with Serial = ctx.Serial + 1 }
+
+      printfn "/* fun %s is not declared, provisional type is used. %s */" (funDef.Name) (locToString loc)
+      let ctx =
+        { ctx with
+            ProvisionalFunTys =
+              ctx.ProvisionalFunTys
+              |> mapAdd
+                   funSerial
+                   ((serial, loc)
+                    :: (ctx.ProvisionalFunTys
+                        |> mapTryFind funSerial
+                        |> Option.defaultValue [])) }
+
+      MetaTy(serial, loc), ctx
 
   HFunExpr(funSerial, ty, loc), ty, ctx
 
@@ -938,10 +989,10 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
       | Some calleeTy -> calleeTy, ctx
       | None -> freshMetaTy loc ctx
 
+    // Set provisional function type in case the function is referenced in body.
     let ctx =
-      match (ctx.Funs |> mapFind callee).Ty with
-      | TyScheme ([], oldTy) -> unifyTy ctx loc oldTy calleeTy
-      | _ -> failwith "NEVER: It must be a pre-generalized function"
+      let funDef = ctx.Funs |> mapFind callee
+      { ctx with Funs = ctx.Funs |> mapAdd callee { funDef with Ty = TyScheme ([], calleeTy) } }
 
     calleeTy, ctx
 
@@ -959,7 +1010,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
 
   let ctx = ctx |> decLevel
 
-  let ctx = generalizeFun ctx outerLevel callee
+  let ctx = generalizeFun ctx outerLevel callee funTy
 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
@@ -1132,6 +1183,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       Funs = scopeCtx.Funs
       Variants = scopeCtx.Variants
       MainFunOpt = scopeCtx.MainFunOpt
+      ProvisionalFunTys = mapEmpty funSerialCmp
       Tys = scopeCtx.Tys
       TyLevels = mapEmpty compare
       Level = 0
@@ -1167,25 +1219,6 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
     { ctx with Vars = vars }
 
-  let funs, ctx =
-    ctx.Funs
-    |> mapFold
-         (fun (acc, ctx: TyCtx) funSerial (funDef: FunDef) ->
-           let ctx =
-             { ctx with
-                 Level =
-                   scopeCtx.VarLevels
-                   |> mapFind (funSerialToInt funSerial) }
-
-           let ty, ctx = freshMetaTy funDef.Loc ctx
-
-           acc
-           |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
-           ctx)
-         (mapEmpty funSerialCmp, ctx)
-
-  let ctx = { ctx with Funs = funs }
-
   let ctx =
     let variants =
       ctx.Variants
@@ -1201,7 +1234,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
     { ctx with Variants = variants }
 
-  let ctx = { ctx with Funs = funs; Level = 0 }
+  let ctx = { ctx with Level = 0 }
 
   let expr, ctx =
     let expr, topLevelTy, ctx = inferExpr ctx None expr
@@ -1238,6 +1271,10 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       |> mapMap
            (fun _ (funDef: FunDef) ->
              let (TyScheme (tyVars, ty)) = funDef.Ty
+
+             if ty |> isNoTy then
+               failwithf "Unexpected noTy: %A" (funDef.Name, funDef.Loc)
+
              let ty = substOrDegenerate ty
 
              { funDef with
