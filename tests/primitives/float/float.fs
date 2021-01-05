@@ -62,7 +62,7 @@ let main _ =
   assert (float 3 = 3.0)
 
   // Conversion to string.
-  // FIXME: Formatting should be compatible with .NET Core?
+  // FIXME: Formatting should be compatible with .NET?
   assert (string 3.14 = "3.140000")
 
   // Conversion from string.

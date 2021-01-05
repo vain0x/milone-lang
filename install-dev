@@ -27,7 +27,7 @@ mkdir -p "$MILONE_HOME"
 # Install native executable.
 cp -bf target/milone "$MILONE_HOME/milone_native"
 
-# Install .NET Core executable. (.NET Core runtime is required to run.)
+# Install .NET executable. (.NET runtime is required to run.)
 dotnet publish MiloneLang \
     --runtime linux-x64 \
     -o "$MILONE_HOME/milone_dotnet" \
@@ -53,7 +53,7 @@ MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/milone_native" "$@"
 CODE1=$?
 test $CODE1 -eq 0 && exit 0
 
-echo -e '\nmilone: Retrying with .NET Core version...\n' >&2
+echo -e '\nmilone: Retrying with .NET version...\n' >&2
 
 MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/milone_dotnet/MiloneLang" "$@"
 CODE2=$?

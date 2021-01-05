@@ -64,7 +64,7 @@ mkdir -p "$MILONE_HOME/bin"
 ninja target/milone >>$LOG
 cp -bf target/milone "$BIN_DIR/milone"
 
-# Install .NET Core executable.
+# Install .NET executable.
 dotnet publish MiloneLang \
     --runtime linux-x64 \
     -c Release \
