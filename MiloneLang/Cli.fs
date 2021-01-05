@@ -31,7 +31,12 @@ open MiloneLang.CirDump
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 
-let private helpText = """milone-lang compiler
+let private currentVersion () = "0.2.0"
+
+let private helpText () =
+  """milone-lang v"""
+  + currentVersion ()
+  + """ <https://github.com/vain0x/milone-lang>
 
 USAGE:
     milone [SUBCOMMAND] OPTIONS...
@@ -50,16 +55,13 @@ SUBCOMMANDS
         Errors are written to STDOUT. (FIXME: use STDERR)
 
 OPTIONS
-    -h, --help      Print this text.
-    -V, --version   Print version of the compiler.
+    -h, --help      Print help text.
+    -V, --version   Print compiler version.
 
 GLOBAL OPTIONS
     -v, --verbose   Enable verbose logging for debug
         --profile   Enable profile logging
-    -q, --quiet     Disable logging
-
-LINKS
-    <https://github.com/vain0x/milone-lang>"""
+    -q, --quiet     Disable logging"""
 
 // -----------------------------------------------
 // Interface (1)
@@ -811,11 +813,11 @@ let private parseArgs args =
 let cli (host: CliHost) =
   match host.Args |> parseArgs with
   | HelpCmd, _ ->
-      printfn "%s" helpText
+      printfn "%s" (helpText ())
       0
 
   | VersionCmd, _ ->
-      printfn "0.1.0"
+      printfn "%s" (currentVersion ())
       0
 
   | CompileCmd, args ->
