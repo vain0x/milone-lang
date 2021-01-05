@@ -197,8 +197,23 @@ let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
 
 let private unifyVarTy varSerial tyOpt loc ctx =
   let varTy, ctx =
-    match findVar ctx varSerial with
-    | VarDef (_, _, ty, _) -> ty, ctx
+    let varDef = findVar ctx varSerial
+    let (VarDef (_, _, ty, _)) = varDef
+
+    if isNoTy ty then
+      let metaTy, ctx = freshMetaTy loc ctx
+
+      let ctx =
+        let (VarDef (name, sm, _, loc)) = varDef
+
+        { ctx with
+            Vars =
+              ctx.Vars
+              |> mapAdd varSerial (VarDef(name, sm, metaTy, loc)) }
+
+      metaTy, ctx
+    else
+      ty, ctx
 
   match tyOpt with
   | Some ty ->
@@ -1142,31 +1157,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
     errors
     |> List.fold (fun ctx (msg, loc) -> addError ctx msg loc) ctx
 
-  // Assign type vars to var/fun definitions.
-  let ctx =
-    let vars, ctx =
-      ctx.Vars
-      |> mapFold
-           (fun (acc, ctx: TyCtx) varSerial varDef ->
-             let ctx =
-               { ctx with
-                   Level =
-                     scopeCtx.VarLevels
-                     |> mapFind (varSerialToInt varSerial) }
-
-             let varDef, ctx =
-               match varDef with
-               | VarDef (name, storageModifier, _, loc) ->
-                   let ty, ctx = freshMetaTy loc ctx
-                   VarDef(name, storageModifier, ty, loc), ctx
-
-             let acc = acc |> mapAdd varSerial varDef
-
-             acc, ctx)
-           (mapEmpty varSerialCmp, ctx)
-
-    { ctx with Vars = vars }
-
+  // Assign provisional types to functions.
   let funs, ctx =
     ctx.Funs
     |> mapFold
@@ -1217,6 +1208,12 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
   // Substitute all types. Unbound types are degenerated here.
   let substOrDegenerate ty =
+    match ty with
+    | ErrorTy loc -> failwithf "Invalid error type: %s" (locToString loc)
+    | _ -> ()
+
+    assert (isNoTy ty |> not)
+
     ty
     |> substOrDegenerateTy ctx
     |> typingExpandSynonyms (toTyContext ctx)

@@ -555,6 +555,11 @@ let nameCtxAdd name (NameCtx (map, serial)) =
 /// Placeholder. No type info in the parsing phase.
 let noTy = ErrorTy noLoc
 
+let isNoTy ty =
+  match ty with
+  | ErrorTy _ -> true
+  | _ -> false
+
 let tyInt =
   AppTy(IntTyCtor(IntFlavor(Signed, I32)), [])
 
