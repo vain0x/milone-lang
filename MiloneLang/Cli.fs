@@ -39,7 +39,7 @@ let private helpText () =
   + """ <https://github.com/vain0x/milone-lang>
 
 USAGE:
-    milone [SUBCOMMAND] OPTIONS...
+    milone <SUBCOMMAND> OPTIONS...
 
 EXAMPLE
     milone compile ./MiloneLang
