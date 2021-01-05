@@ -91,6 +91,7 @@ let private freshVar (ctx: TyCtx) hint ty loc =
 let private freshTySerial (ctx: TyCtx) =
   let serial = ctx.Serial + 1
 
+  printfn "/* ty var ?%d level=%d */" serial ctx.Level
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
@@ -305,6 +306,8 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial funTy =
               ctx.Funs
               |> mapAdd funSerial { funDef with Ty = funTyScheme } }
 
+      printfn "/* fun %s generalized %s */" funDef.Name (objToString funTyScheme)
+
       // Mark generalized meta tys (universally quantified vars),
       // by increasing their level to infinite (10^9).
       let ctx =
@@ -348,7 +351,9 @@ let private resolveAscriptionTy ctx ascriptionTy =
     | ErrorTy _ -> ty, ctx
 
     | MetaTy (serial, loc) when ctx.TyLevels |> mapContainsKey serial |> not ->
+        printfn "/* ty var ?%d level=%d */" serial ctx.Level
         let ctx =
+
           { ctx with
               TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
 
@@ -953,10 +958,10 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
         let argPats, funTy, ctx = inferArgs ctx funTy argPats
         argPat :: argPats, tyFun argTy funTy, ctx
 
-  let outerLevel = ctx.Level
-  let ctx = ctx |> incLevel
-
   let funDef = ctx.Funs |> mapFind callee
+
+  let parentLevel, outerLevel = ctx.Level, StdInt.max funDef.Level ctx.Level
+  let ctx = { ctx with Level = outerLevel + 1 }
 
   let calleeTy, ctx =
     let provisionalTyOpt =
@@ -972,8 +977,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
     | None, Some ty -> ty, ctx
     | Some ty, None -> ty, ctx
 
-    | None, None ->
-        freshMetaTy loc ctx
+    | None, None -> freshMetaTy loc ctx
 
   let provisionalResultTy, ctx = ctx |> freshMetaTyForExpr body
 
@@ -993,10 +997,11 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
   let ctx =
     unifyTy ctx loc bodyTy provisionalResultTy
 
-  let ctx = ctx |> decLevel
+  let ctx =
+    let ctx = { ctx with Level = outerLevel }
+    generalizeFun ctx outerLevel callee funTy
 
-  let ctx = generalizeFun ctx outerLevel callee funTy
-
+  let ctx = { ctx with Level = parentLevel }
   let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
 
@@ -1181,18 +1186,18 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   // Assign provisional types to toplevel functions
   // since these types are used before visiting declarations.
   let funs, ctx =
-    let ctx = { ctx with Level = 1 }
-
     scopeCtx.ToplevelFuns
     |> List.fold
          (fun (acc, ctx: TyCtx) funSerial ->
+           let ctx = ctx |> incLevel
+
            let funDef = ctx.Funs |> mapFind funSerial
            assert (funDef.Ty |> tySchemeToTy |> isNoTy)
 
            let ty, ctx = freshMetaTy funDef.Loc ctx
 
            acc
-           |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
+           |> mapAdd funSerial { funDef with Ty = TyScheme([], ty); Level = ctx.Level - 1 },
            ctx)
          (ctx.Funs, ctx)
 

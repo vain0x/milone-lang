@@ -34,7 +34,10 @@ let indexOperatorTest () =
   assert (hello.[0] = 'h' && hello.[4] = 'o')
 
   // Index type should be inferred as int.
-  let at i (s: string) = s.[i]
+  // FIXME: Without ascription, the result type is inferred too generic
+  //        since trait bounds are processed after generalization
+  //        (bounds should be processed *before* generalization ideally).
+  let at (i: int) (s: string): char = s.[i]
 
   assert (at 0 hello = 'h')
 

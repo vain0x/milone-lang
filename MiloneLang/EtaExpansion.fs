@@ -308,6 +308,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
       Arity = arity
       Ty = tyScheme
       Abi = MiloneAbi
+      Level = 0
       Loc = loc }
 
   let ctx =

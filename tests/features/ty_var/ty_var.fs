@@ -4,7 +4,10 @@ module rec ty_var.Program
 
 let pair (_: 'x * 'x) = 2
 
-let useStringIndexWithoutAscription x =
+// FIXME: Without ascription, the result type is inferred too generic
+//        since trait bounds are processed after generalization
+//        (bounds should be processed *before* generalization ideally).
+let useStringIndexWithoutAscription x: char =
   // This unifies type of x to string.
   let _ = pair (x, "")
 

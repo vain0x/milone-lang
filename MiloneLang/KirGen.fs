@@ -455,6 +455,7 @@ let private kgCallComparisonPrimExpr itself hint prim args ty primLoc hole ctx =
                             Arity = 1
                             Ty = TyScheme([], tyFun tyBool tyUnit)
                             Abi = MiloneAbi
+                            Level = 0
                             Loc = primLoc }
 
                         ctx |> addFunDef jointSerial funDef
@@ -596,6 +597,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
             Arity = 1
             Ty = TyScheme([], armFunTy)
             Abi = MiloneAbi
+            Level = 0
             Loc = loc }
 
         // Compute pattern-matching.
@@ -654,6 +656,7 @@ let private kgMatchExpr cond arms targetTy loc hole ctx: KNode * KirGenCtx =
         Arity = 1
         Ty = TyScheme([], tyFun targetTy tyUnit)
         Abi = MiloneAbi
+        Level = 0
         Loc = loc }
 
     let binding, ctx =

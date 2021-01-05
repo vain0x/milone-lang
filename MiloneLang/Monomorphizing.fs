@@ -164,6 +164,7 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
       Arity = arity
       Ty = TyScheme([], useSiteTy)
       Abi = CAbi
+      Level = 0
       Loc = loc }
 
   let monoFunSerial = FunSerial(ctx.Serial + 1)

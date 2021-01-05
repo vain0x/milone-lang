@@ -36,7 +36,7 @@ let segItemTypeToNoChildren (_, _, noChildren, (_: SegItemTypeTag)): obj = noChi
 let segItemTypeToEmptyItem itemTy =
   itemTy |> segItemTypeToEmptyNode |> segNodeToItem
 
-let segItemTypeNew emptyItem append =
+let segItemTypeNew (emptyItem: 'T) (append: 'T -> 'T -> 'T): ('T -> 'T -> 'T) * ('T * int * int * obj * SegNodeTag) * obj * SegItemTypeTag =
   let emptyNode = segNodeNewEmpty emptyItem
 
   // Type unification.
@@ -448,10 +448,15 @@ let segTreeToList v =
 // -----------------------------------------------
 
 let segTreeTest () =
-  let intAdd (x: int) (y: int) = x + y
+  // FIXME: Without ascription, the result type is inferred too generic
+  //        since trait bounds are processed after generalization
+  //        (bounds should be processed *before* generalization ideally).
+  let intAdd (x: int) (y: int): int = x + y
+
   let segItemTypeInt = segItemTypeNew 0 intAdd
 
-  let strAdd (x: string) (y: string) = x + y
+  // FIXME: same as above
+  let strAdd (x: string) (y: string): string = x + y
   let segItemTypeStr = segItemTypeNew "" strAdd
 
   let testPushPop () =

@@ -233,6 +233,7 @@ type FunDef =
     Arity: Arity
     Ty: TyScheme
     Abi: FunAbi
+    Level: Level
     Loc: Loc }
 
 [<NoEquality; NoComparison>]
