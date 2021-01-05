@@ -8,10 +8,10 @@
 #
 #   - $HOME/bin/
 #       - milone            (executable)
-#       - milone_netcore    (executable)
+#       - milone_dotnet    (executable)
 #   - $HOME/.milone/
 #       - bin/
-#           - milone_netcore/   (.NET binaries)
+#           - milone_dotnet/   (.NET binaries)
 #           - milone_lsp/       (.NET binaries)
 #       - milone_libs/          (copied from milone_libs)
 #       - version               (text file)
@@ -68,10 +68,10 @@ cp -bf target/milone "$BIN_DIR/milone"
 dotnet publish MiloneLang \
     --runtime linux-x64 \
     -c Release \
-    -o "$MILONE_HOME/bin/milone_netcore" \
+    -o "$MILONE_HOME/bin/milone_dotnet" \
     -nologo >>$LOG
 
-ln -s "$MILONE_HOME/bin/milone_netcore/MiloneLang" "$BIN_DIR/milone_netcore"
+ln -s "$MILONE_HOME/bin/milone_dotnet/MiloneLang" "$BIN_DIR/milone_dotnet"
 
 # Install LSP server.
 dotnet publish milone_lsp \

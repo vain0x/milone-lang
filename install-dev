@@ -30,7 +30,7 @@ cp -bf target/milone "$MILONE_HOME/milone_native"
 # Install .NET Core executable. (.NET Core runtime is required to run.)
 dotnet publish MiloneLang \
     --runtime linux-x64 \
-    -o "$MILONE_HOME/milone_netcore" \
+    -o "$MILONE_HOME/milone_dotnet" \
     -nologo
 
 # Link runtime.
@@ -55,11 +55,11 @@ test $CODE1 -eq 0 && exit 0
 
 echo -e '\nmilone: Retrying with .NET Core version...\n' >&2
 
-MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/milone_netcore/MiloneLang" "$@"
+MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/milone_dotnet/MiloneLang" "$@"
 CODE2=$?
 test $CODE2 -eq 0 && exit 0
 
-echo "milone: Exited with $CODE1 (native) and $CODE2 (netcore)"
+echo "milone: Exited with $CODE1 (native) and $CODE2 (dotnet)"
 exit 1
 END
 

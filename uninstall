@@ -25,7 +25,7 @@ VERSION=$(cat $MILONE_HOME/version)
 echo "uninstall: milone-lang v$VERSION is currently installed."
 
 test -f "$BIN_DIR/milone" && rm "$BIN_DIR/milone"
-test -f "$BIN_DIR/milone_netcore" && rm "$BIN_DIR/milone_netcore"
+test -f "$BIN_DIR/milone_dotnet" && rm "$BIN_DIR/milone_dotnet"
 test -d "$MILONE_HOME" && rm -rf "$MILONE_HOME"
 
 echo "uninstall: milone-lang v$VERSION is uninstalled successfully."

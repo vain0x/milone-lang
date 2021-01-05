@@ -8,9 +8,9 @@
 
 builddir = target
 
-milone_netcore_debug = MiloneLang/bin/Debug/net5.0/MiloneLang
+milone_dotnet_debug = MiloneLang/bin/Debug/net5.0/MiloneLang
 
-milone_netcore_release = MiloneLang/bin/Release/net5.0/MiloneLang
+milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 
 cflags = -std=c11 $
   -O2 $
@@ -40,19 +40,19 @@ build dotnet_restore: $
   phony target/timestamp.dotnet_restore
 
 # ------------------------------------------------
-# milone-netcore
+# milone-dotnet
 # ------------------------------------------------
 
-rule build_milone_netcore
+rule build_milone_dotnet
   command = dotnet build -nologo MiloneLang -c $CONFIG
 
-build $milone_netcore_debug: $
-  build_milone_netcore $
+build $milone_dotnet_debug: $
+  build_milone_dotnet $
     {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }}
   CONFIG = Debug
 
-build $milone_netcore_release: $
-  build_milone_netcore
+build $milone_dotnet_release: $
+  build_milone_dotnet
   CONFIG = Release
 
 # ------------------------------------------------
@@ -70,8 +70,8 @@ rule build_cc
 build target/milone_gen2.c: $
   build_milone $
     | {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
-    $milone_netcore_debug
-  milone = $milone_netcore_debug
+    $milone_dotnet_debug
+  milone = $milone_dotnet_debug
   verbosity = -q
 
 # .c -> .exe
