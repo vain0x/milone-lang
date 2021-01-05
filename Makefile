@@ -1,11 +1,16 @@
 # USAGE:
 #    make
+#    make install
 #    make install-dev
 
-.PHONY: all build test install-dev clean
+.PHONY: all build test install install-dev clean
 
-all: build.ninja
+all: target build.ninja
 	ninja
+
+# Directory for intermediate files.
+target:
+	mkdir -p target
 
 # ninja config file.
 build.ninja: build.ninja-template
@@ -27,8 +32,16 @@ clean: build.ninja
 # install
 # ------------------------------------------------
 
-install-dev: install-dev.timestamp
+install: target/install.timestamp
 
-install-dev.timestamp: build
+target/install.timestamp: target build.ninja
+	./install
+	touch target/install.timestamp
+
+
+
+install-dev: target build.ninja target/install-dev.timestamp
+
+target/install-dev.timestamp: target build
 	./install-dev
-	touch install-dev.timestamp
+	touch target/install-dev.timestamp

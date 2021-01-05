@@ -1,7 +1,11 @@
 #!/bin/sh
-# WARN: This script unlikely works other than author's env.
-
+# WARN: This script is intended to be used only by the auther.
+# WARN: This script deletes currently installed milone-lang tools.
+#
 # Install milone command locally for development.
+#
+# See ./install for production.
+# Generated files are same as that.
 
 set -eu
 
