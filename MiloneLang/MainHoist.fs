@@ -19,44 +19,40 @@
 /// ```
 module rec MiloneLang.MainHoist
 
-open MiloneLang.Util
 open MiloneLang.Hir
+open MiloneLang.Typing
 
-let private hoistMainExpr expr =
+let private isMainFun serial mainFunOpt =
+  match mainFunOpt with
+  | Some mainFun -> funSerialCmp serial mainFun = 0
+  | _ -> false
+
+let private hoistMainExpr mainFunOpt expr =
   let rec go expr =
     match expr with
-    | HLetFunExpr (serial, vis, true, args, body, next, ty, loc) ->
+    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, loc) when isMainFun serial mainFunOpt ->
         let makeMain rest =
-          HLetFunExpr(serial, vis, true, args, hxSemi [ rest; body ] loc, next, ty, loc)
+          HLetFunExpr(serial, isRec, vis, args, hxSemi [ rest; body ] loc, next, ty, loc)
 
         next, makeMain
+
+    | HBlockExpr (stmts, last) ->
+        let last, f = go last
+        HBlockExpr(stmts, last), f
 
     | HLetValExpr (vis, pat, init, next, ty, loc) ->
         let next, f = go next
         HLetValExpr(vis, pat, init, next, ty, loc), f
 
-    | HLetFunExpr (serial, vis, false, args, body, next, ty, loc) ->
+    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, loc) ->
         let next, f = go next
-        HLetFunExpr(serial, vis, false, args, body, next, ty, loc), f
+        HLetFunExpr(serial, isRec, vis, args, body, next, ty, loc), f
 
-    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
-        let rec goLast exprs =
-          match exprs with
-          | [] -> [], id
-          | [ last ] ->
-              let last, f = go last
-              [ last ], f
-          | expr :: exprs ->
-              let exprs, f = goLast exprs
-              expr :: exprs, f
-
-        let exprs, f = goLast exprs
-        HInfExpr(InfOp.Semi, exprs, ty, loc), f
     | _ -> expr, id
 
   let expr, makeMain = go expr
   makeMain expr
 
-let hoistMain (expr, tyCtx) =
-  let expr = expr |> hoistMainExpr
+let hoistMain (expr, tyCtx: TyCtx) =
+  let expr = expr |> hoistMainExpr tyCtx.MainFunOpt
   expr, tyCtx

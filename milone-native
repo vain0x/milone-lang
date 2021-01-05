@@ -2,4 +2,4 @@
 
 set -eu
 
-MILONE_HOME=$PWD ./milone "$@"
+MILONE_HOME=$PWD target/milone "$@"

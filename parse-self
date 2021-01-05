@@ -2,4 +2,5 @@
 
 set -eu
 
-./milone-netcore parse -q MiloneLang
+# With -q, errors are only emitted. With -v, all syntax is emitted (too long to see).
+./milone-dotnet parse -q MiloneLang

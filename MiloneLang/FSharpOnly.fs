@@ -6,27 +6,28 @@ let objToString (value: _) = string (value :> obj)
 
 let inRegion (f: unit -> int): int = f ()
 
-let strJoin (sep: string) (xs: string list): string = System.String.Join(sep, xs)
+let __stringLengthInUtf8Bytes (s: string): int =
+  System.Text.Encoding.UTF8.GetByteCount(s)
 
 // -----------------------------------------------
 // C FFI
 // -----------------------------------------------
 
-// `T const *` in C.
+/// `T const *` in C.
 [<AbstractClass; Sealed>]
-type constptr<'T> =
-  override _.ToString() = "constptr is not available in F#"
+type __constptr<'T> =
+  override _.ToString() = "__constptr is not available in F#"
 
-  static member op_Implicit(_: constptr<'T>): int = 0
-  static member op_Implicit(_: constptr<'T>): unativeint = unativeint 0
+  static member op_Implicit(_: __constptr<'T>): int = 0
+  static member op_Implicit(_: __constptr<'T>): unativeint = unativeint 0
 
-// `void const *` in C.
+/// C-ABI function pointer type: `T (*)(params...)` in C.
+///
+/// P is `()` or `P1 * P2 * ...`.
 [<AbstractClass; Sealed>]
-type voidconstptr =
-  override _.ToString() = "voidconstptr is not available in F#"
-
-  static member op_Implicit(_: voidconstptr): int = 0
-  static member op_Implicit(_: voidconstptr): unativeint = unativeint 0
+type __nativeFun<'P, 'T> =
+  override _.ToString() =
+    failwith "__nativeFun type is not available in F#"
 
 // Calls a C function, which should be linked statically.
 let __nativeFun _ =
@@ -35,6 +36,14 @@ let __nativeFun _ =
 // Casts a pointer, unchecked.
 let __nativeCast _ =
   failwith "__nativeCast is not available in F#"
+
+/// Accesses to `ptr[i]` to read a value.
+let __ptrRead (ptr: __constptr<'a>) (index: int): 'a =
+  failwith "__ptrRead is not available in F#"
+
+/// Writes a value to `ptr[i]`.
+let __ptrWrite (ptr: nativeptr<'a>) (index: int) (value: 'a): unit =
+  failwith "__ptrWrite is not available in F#"
 
 // -----------------------------------------------
 // Profiler

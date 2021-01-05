@@ -1,51 +1,47 @@
 # USAGE:
 #    make
+#    make install
 #    make install-dev
 
-.PHONY: build test install-dev clean
+.PHONY: all build test install install-dev clean
+
+all: target build.ninja
+	ninja
+
+# Directory for intermediate files.
+target:
+	mkdir -p target
+
+# ninja config file.
+build.ninja: build.ninja-template
+	./build-ninja-gen
 
 # ------------------------------------------------
-# build & test
+# ninja wrapper
 # ------------------------------------------------
 
-build: test
+build: build.ninja **/*.fs **/*.milone
+	ninja test_self
 
-test: milone-netcore.timestamp dotnet-test.timestamp milone
+test: build
 
-milone-netcore.timestamp: MiloneLang/*.fs
-	dotnet build -nologo MiloneLang
-	touch milone-netcore.timestamp
-
-dotnet-test.timestamp: MiloneLang/*.fs MiloneTests/*.fs
-	dotnet test -nologo
-	touch dotnet-test.timestamp
-
-milone: MiloneLang/*.fs runtime/*.c runtime/*.h
-	./test-self
+clean: build.ninja
+	ninja clean
 
 # ------------------------------------------------
 # install
 # ------------------------------------------------
 
-install-dev: install-dev.timestamp
+install: target/install.timestamp
 
-install-dev.timestamp: build
+target/install.timestamp: target build.ninja
+	./install
+	touch target/install.timestamp
+
+
+
+install-dev: target build.ninja target/install-dev.timestamp
+
+target/install-dev.timestamp: target build
 	./install-dev
-	touch install-dev.timestamp
-
-# ------------------------------------------------
-# clean
-# ------------------------------------------------
-
-clean:
-	rm -f *.generated.*
-	rm -f tests/*/*/*.generated.*
-	rm -f *.timestamp
-	rm -f milone
-	rm -rf \
-		MiloneLang/bin \
-		MiloneLang/obj \
-		MiloneTests/bin \
-		MiloneTests/obj \
-		milone_lsp/bin \
-		milone_lsp/obj
+	touch target/install-dev.timestamp

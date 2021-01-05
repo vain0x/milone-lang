@@ -1,6 +1,6 @@
 module rec MiloneLang.TypeFloat
 
-[<NoEquality; NoComparison>]
+[<NoComparison>]
 type FloatFlavor =
   | F32
   | F64

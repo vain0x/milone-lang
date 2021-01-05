@@ -12,11 +12,11 @@ int simpleCase_(int arg_) {
     int match_;
     int x_ = 1;
     if ((x_ != 1)) goto next_2;
-    milone_assert((x_ == 1), 3, 4);
+    milone_assert((x_ == 1), 6, 14);
     match_ = 0;
     goto end_match_1;
 next_2:;
-    milone_assert(false, 5, 4);
+    milone_assert(false, 7, 9);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -32,9 +32,7 @@ struct IntIntTuple2 {
 int shadowingCase_(int arg_1) {
     int x_1 = 1;
     int match_1;
-    struct IntIntTuple2 tuple_;
-    tuple_.t0 = x_1;
-    tuple_.t1 = 2;
+    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_1, .t1 = 2};
     struct IntIntTuple2 y_ = tuple_;
     int x_2 = y_.t1;
     int y1_ = y_.t0;
@@ -65,7 +63,7 @@ else_11:;
     if_1 = false;
     goto if_next_9;
 if_next_9:;
-    milone_assert(if_1, 12, 4);
+    milone_assert(if_1, 14, 6);
     match_1 = 0;
     goto end_match_4;
 next_5:;

@@ -56,32 +56,14 @@ let private withCurrentFun funSerial (f: TailRecCtx -> HExpr * TailRecCtx) (ctx:
   let ctx = { ctx with CurrentFun = parentFun }
   result, ctx
 
-let private troInfExpr isTail infOp items ty loc ctx =
+let private troInfExpr isTail kind items ty loc ctx =
   let items, ctx = (items, ctx) |> stMap (troExpr NotTail)
 
-  match infOp, items, isTail with
-  | InfOp.CallProc, HFunExpr (funSerial, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
-      HInfExpr(InfOp.CallTailRec, items, ty, loc), ctx
+  match kind, items, isTail with
+  | HCallProcEN, HFunExpr (funSerial, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
+      HNodeExpr(HCallTailRecEN, items, ty, loc), ctx
 
-  | InfOp.Semi, _, IsTail ->
-      let items, ctx =
-        let rec go items ctx =
-          match items with
-          | [] -> [], ctx
-
-          | [ item ] ->
-              let item, ctx = troExpr IsTail (item, ctx)
-              [ item ], ctx
-
-          | item :: items ->
-              let items, ctx = go items ctx
-              item :: items, ctx
-
-        go items ctx
-
-      HInfExpr(infOp, items, ty, loc), ctx
-
-  | _ -> HInfExpr(infOp, items, ty, loc), ctx
+  | _ -> HNodeExpr(kind, items, ty, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -90,7 +72,7 @@ let private troInfExpr isTail infOp items ty loc ctx =
 let private troExpr isTail (expr, ctx) =
   match expr with
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _
@@ -111,7 +93,12 @@ let private troExpr isTail (expr, ctx) =
 
       doArm ()
 
-  | HInfExpr (infOp, items, ty, loc) -> ctx |> troInfExpr isTail infOp items ty loc
+  | HNodeExpr (kind, items, ty, loc) -> ctx |> troInfExpr isTail kind items ty loc
+
+  | HBlockExpr (stmts, last) ->
+      let stmts, ctx = (stmts, ctx) |> stMap (troExpr NotTail)
+      let last, ctx = (last, ctx) |> troExpr isTail
+      HBlockExpr(stmts, last), ctx
 
   | HLetValExpr (vis, pat, init, next, ty, loc) ->
       let doArm () =
@@ -121,20 +108,21 @@ let private troExpr isTail (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
           ctx
           |> withCurrentFun callee (fun ctx -> troExpr IsTail (body, ctx))
 
         let next, ctx = troExpr isTail (next, ctx)
-        HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc), ctx
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
 
       doArm ()
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
-  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 let tailRecOptimize (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let ctx = ofTyCtx tyCtx

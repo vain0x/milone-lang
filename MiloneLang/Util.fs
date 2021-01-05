@@ -3,17 +3,17 @@ module rec MiloneLang.Util
 
 open MiloneLang.TreeMap
 
+module C = MiloneStd.StdChar
+module S = MiloneStd.StdString
+module Int = MiloneStd.StdInt
+
 // -----------------------------------------------
 // Collections
 // -----------------------------------------------
 
-type AssocMap<'K, 'V> = TreeMap<'K, 'V>
+type AssocMap<'K, 'V> = TreeMap.TreeMap<'K, 'V>
 
-type AssocSet<'K> = TreeMap<'K, unit>
-
-/// Tree to generate a string for debugging.
-[<NoEquality; NoComparison>]
-type DumpTree = DumpTree of heading: string * body: DumpTree list * next: DumpTree list
+type AssocSet<'K> = TreeMap.TreeMap<'K, unit>
 
 // -----------------------------------------------
 // Pair
@@ -40,6 +40,21 @@ let stOptionMap f (x, ctx) =
 // -----------------------------------------------
 
 let cons head tail = head :: tail
+
+/// Tries to "zip" two lists by pairing every i'th item from both lists.
+///
+/// If two lists have different length, some elements have no pair.
+/// These items are returns as third result.
+/// The second result indicates which list is longer.
+let listTryZip (xs: _ list) (ys: _ list): (_ * _) list * _ list * _ list =
+  let rec listTryZipLoop acc xs ys =
+    match xs, ys with
+    | _, []
+    | [], _ -> List.rev acc, xs, ys
+
+    | x :: xs, y :: ys -> listTryZipLoop ((x, y) :: acc) xs ys
+
+  listTryZipLoop [] xs ys
 
 /// `List.map`, modifying context.
 ///
@@ -104,6 +119,7 @@ let listSortCore unique cmp xs =
 
       | x :: xs1, y :: ys1 ->
           let c = cmp x y
+
           if c > 0
           then merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
           else if c = 0 && unique
@@ -133,6 +149,17 @@ let listSortCore unique cmp xs =
 let listSort cmp xs = listSortCore false cmp xs
 
 let listUnique cmp xs = listSortCore true cmp xs
+
+/// Tries to split a list to pair of non-last items and the last item.
+let splitLast xs =
+  let rec go acc last xs =
+    match xs with
+    | [] -> List.rev acc, last
+    | x :: xs -> go (last :: acc) x xs
+
+  match xs with
+  | [] -> None
+  | x :: xs -> Some(go [] x xs)
 
 // -----------------------------------------------
 // Assoc
@@ -227,12 +254,6 @@ let setUnion first second =
 // Int
 // -----------------------------------------------
 
-let intMin (x: int) (y: int) = if x > y then y else x
-
-let intMax (x: int) (y: int) = if x < y then y else x
-
-let intEq (x: int) (y: int) = x = y
-
 let intToHexWithPadding (len: int) (value: int) =
   if value < 0 then
     failwith "intToHexWithPadding: unimplemented negative"
@@ -245,7 +266,7 @@ let intToHexWithPadding (len: int) (value: int) =
         acc
       else
         let d = n % 16
-        let s = "0123456789abcdef" |> strSlice d (d + 1)
+        let s = "0123456789abcdef" |> S.slice d (d + 1)
         go (s + acc) (len - 1) (n / 16)
 
     if value = 0 && len = 0 then "0" else go "" len value
@@ -255,11 +276,11 @@ let intFromHex (l: int) (r: int) (s: string) =
 
   let hexDigitToInt (c: char) =
     if '0' <= c && c <= '9' then
-      charSub c '0'
+      int c - int '0'
     else if 'A' <= c && c <= 'F' then
-      charSub c 'A' + 10
+      int c - int 'A' + 10
     else if 'a' <= c && c <= 'f' then
-      charSub c 'a' + 10
+      int c - int 'a' + 10
     else
       assert false
       0
@@ -277,22 +298,8 @@ let intFromHex (l: int) (r: int) (s: string) =
 // Char
 // -----------------------------------------------
 
-let charSub (x: char) (y: char) = int x - int y
-
-let charIsControl (c: char) =
-  let n = int c
-  0 <= n && n < 32 || n = 127
-
-let charIsSpace (c: char): bool =
-  c = ' ' || c = '\t' || c = '\r' || c = '\n'
-
-let charIsDigit (c: char): bool = '0' <= c && c <= '9'
-
-let charIsAlpha (c: char): bool =
-  ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
-
 let charNeedsEscaping (c: char) =
-  charIsControl c || c = '\\' || c = '"' || c = '\''
+  C.isControl c || c = '\\' || c = '"' || c = '\''
 
 let charEscape (c: char) =
   assert (c |> charNeedsEscaping)
@@ -322,11 +329,7 @@ let charEscape (c: char) =
 // String
 // -----------------------------------------------
 
-let strSlice (start: int) (endIndex: int) (s: string): string =
-  assert (start <= endIndex && endIndex <= s.Length)
-  if start >= endIndex then "" else s.[start..endIndex - 1]
-
-let strConcat (xs: string list) = strJoin "" xs
+let strConcat (xs: string list) = S.concat "" xs
 
 let strNeedsEscaping (str: string) =
   let rec go i =
@@ -347,7 +350,7 @@ let strEscape (str: string) =
     // Skip the non-escape segment that starts at `i`.
     let i, acc =
       let r = raw i
-      r, (str |> strSlice i r) :: acc
+      r, (str |> S.slice i r) :: acc
 
     if i = str.Length then
       acc
@@ -356,67 +359,3 @@ let strEscape (str: string) =
       go (t :: acc) (i + 1)
 
   if str |> strNeedsEscaping |> not then str else go [] 0 |> List.rev |> strConcat
-
-// -----------------------------------------------
-// DumpTree (for debugging)
-// -----------------------------------------------
-
-let dumpTreeNew text children = DumpTree(text, children, [])
-
-let dumpTreeNewLeaf text = DumpTree(text, [], [])
-
-let dumpTreeAttachNext next tree =
-  match tree with
-  | DumpTree (text, children, oldNext) ->
-      assert (children |> List.isEmpty |> not)
-      assert (oldNext |> List.isEmpty)
-      DumpTree(text, children, [ next ])
-
-let dumpTreeFromError (msg: string) (y, x) =
-  let y = string (y + 1)
-  let x = string (x + 1)
-  dumpTreeNew
-    "ERROR"
-    [ dumpTreeNewLeaf msg
-      dumpTreeNewLeaf ("(" + y + ":" + x + ")") ]
-
-let dumpTreeToString (node: DumpTree) =
-  let rec go eol node acc =
-    let rec goChildren eol children acc =
-      match children with
-      | [] -> acc
-
-      | child :: children ->
-          acc
-          |> cons eol
-          |> cons "- "
-          |> go (eol + "  ") child
-          |> goChildren eol children
-
-    let goNext eol next acc =
-      match next with
-      | [] -> acc
-
-      | [ next ] -> acc |> cons eol |> go eol next
-
-      | _ -> failwith "NEVER: DumpTree.next never empty"
-
-    match node with
-    | DumpTree (text, [], []) -> acc |> cons (strEscape text)
-
-    | DumpTree (text, [ DumpTree (childText, [], []) ], next) ->
-        acc
-        |> cons (strEscape text)
-        |> cons ": "
-        |> cons (strEscape childText)
-        |> goNext eol next
-
-    | DumpTree (text, children, next) ->
-        acc
-        |> cons (strEscape text)
-        |> cons ":"
-        |> goChildren eol children
-        |> goNext eol next
-
-  let eol = "\n"
-  [] |> go eol node |> List.rev |> strConcat

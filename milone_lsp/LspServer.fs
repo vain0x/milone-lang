@@ -1,24 +1,28 @@
 module MiloneLsp.LspServer
 
-open MiloneLang.Syntax
 open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 open MiloneLsp.JsonRpcWriter
+
+type Position = int * int
+
+type Range = Position * Position
 
 let jOfInt (value: int): JsonValue = JNumber(float value)
 
 let jOfObj (assoc: (string * JsonValue) list) = JObject(Map.ofList assoc)
 
-let jOfPos (row: int) (column: int): JsonValue =
+let jOfPos (row: int, column: int): JsonValue =
   jOfObj [ "line", jOfInt row
            "character", jOfInt column ]
 
-let jOfRange (start: JsonValue) (endValue: JsonValue): JsonValue =
-  jOfObj [ "start", start
-           "end", endValue ]
+let jOfRange (start: Position, endValue: Position): JsonValue =
+  jOfObj [ "start", jOfPos start
+           "end", jOfPos endValue ]
 
 let freshMsgId: unit -> int =
   let mutable lastId = 0
+
   fun () ->
     lastId <- lastId + 1
     lastId
@@ -67,6 +71,40 @@ let jToNumber jsonValue: float =
 
 let jToInt jsonValue: int = jsonValue |> jToNumber |> int
 
+let jToBool jsonValue: bool =
+  match jsonValue with
+  | JBoolean value -> value
+  | _ -> false
+
+let jToPos jsonValue: Position =
+  let row, column =
+    jsonValue |> jFields2 "line" "character"
+
+  jToInt row, jToInt column
+
+let jToRange jsonValue: Range =
+  let start, endPos = jsonValue |> jFields2 "start" "end"
+  jToPos start, jToPos endPos
+
+let jAsObjToTextDocumentPositionParams jsonValue =
+  let uri =
+    jsonValue
+    |> jFind2 "textDocument" "uri"
+    |> jToString
+
+  let pos = jsonValue |> jFind "position" |> jToPos
+
+  uri, pos
+
+// MarkupContent
+// let jOfMarkupContentAsMarkdown (text: string) =
+//   jOfObj [ "kind", JString "markdown"
+//            "value", JString text ]
+
+let jOfMarkdownString (text: string) =
+  jOfObj [ "language", JString "markdown"
+           "value", JString text ]
+
 let lspServer (): JsonValue -> int option =
   let freshMsgId () = freshMsgId () |> jOfInt
 
@@ -76,12 +114,14 @@ let lspServer (): JsonValue -> int option =
   let doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
     let diagnostics =
       errors
-      |> List.map (fun (msg, r1, c1, r2, c2) ->
-           let start = jOfPos r1 c1
-           let endPos = jOfPos r2 c2
+      |> List.map
+           (fun (msg, r1, c1, r2, c2) ->
+             let start = r1, c1
+             let endPos = r2, c2
 
-           jOfObj [ "range", jOfRange start endPos
-                    "message", JString msg ])
+             jOfObj [ "range", jOfRange (start, endPos)
+                      "message", JString msg
+                      "source", JString "milone-lang" ])
       |> JArray
 
     let paramsValue =
@@ -90,12 +130,12 @@ let lspServer (): JsonValue -> int option =
 
     jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
 
-  let validateDoc (uri: string): unit =
-    let errors =
-      LspLangService.validateDoc uri
-      |> List.map (fun (msg, (row, column)) -> msg, row, column, row, column)
+  // let validateDoc (uri: string): unit =
+  //   let errors =
+  //     LspLangService.validateDoc uri
+  //     |> List.map (fun (msg, (row, column)) -> msg, row, column, row, column)
 
-    doPublishDiagnostics uri errors
+  //   doPublishDiagnostics uri errors
 
   let validateWorkspace (): unit =
     for uri, errors in LspLangService.validateWorkspace rootUriOpt do
@@ -106,8 +146,34 @@ let lspServer (): JsonValue -> int option =
 
       doPublishDiagnostics uri errors
 
+  // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
+  let documentHighlight uri pos: JsonValue =
+    let reads, writes =
+      LspLangService.documentHighlight rootUriOpt uri pos
+
+    let toHighlights kind posList =
+      posList
+      |> Seq.map
+           (fun (start, endPos) ->
+             jOfObj [ "range", jOfRange (start, endPos)
+                      "kind", jOfInt kind ])
+
+    JArray [ yield! toHighlights 2 reads
+             yield! toHighlights 3 writes ]
+
+  // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
+  let hover uri pos: JsonValue =
+    let contents = LspLangService.hover rootUriOpt uri pos
+
+    match contents with
+    | [] -> JNull
+    | _ ->
+        jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
+                 //  "range", jOfRange range
+                  ]
+
   fun jsonValue ->
-    eprintfn "received %A" jsonValue
+    // eprintfn "received %A" jsonValue
     let getMsgId () = jsonValue |> jFind "id"
 
     match jsonValue |> jFind "method" |> jToString with
@@ -119,9 +185,14 @@ let lspServer (): JsonValue -> int option =
             |> jToString
             |> Some
           with _ -> None
+
         eprintfn "rootUriOpt = %A" rootUriOpt
 
         jsonRpcWriteWithTemplate "initialize_response" [ "MSG_ID", getMsgId () ]
+        None
+
+    | "initialized" ->
+        validateWorkspace ()
         None
 
     | "shutdown" ->
@@ -141,8 +212,8 @@ let lspServer (): JsonValue -> int option =
 
           jToString uri, jToInt version, jToString text
 
-        LspLangService.openDoc uri version text
-        validateDoc uri
+        LspDocCache.openDoc uri version text
+        // validateDoc uri
         validateWorkspace ()
         None
 
@@ -162,8 +233,8 @@ let lspServer (): JsonValue -> int option =
           |> jFind "text"
           |> jToString
 
-        LspLangService.changeDoc uri version text
-        validateDoc uri
+        LspDocCache.changeDoc uri version text
+        // validateDoc uri
         validateWorkspace ()
         None
 
@@ -173,7 +244,71 @@ let lspServer (): JsonValue -> int option =
           |> jFind3 "params" "textDocument" "uri"
           |> jToString
 
-        LspLangService.closeDoc uri
+        LspDocCache.closeDoc uri
+        validateWorkspace ()
+        None
+
+    | "textDocument/documentHighlight" ->
+        let uri, pos =
+          jsonValue
+          |> jFind "params"
+          |> jAsObjToTextDocumentPositionParams
+
+        let result = documentHighlight uri pos
+        jsonRpcWriteWithResult (getMsgId ()) result
+        None
+
+    | "textDocument/hover" ->
+        let uri, pos =
+          jsonValue
+          |> jFind "params"
+          |> jAsObjToTextDocumentPositionParams
+
+        let result = hover uri pos
+        jsonRpcWriteWithResult (getMsgId ()) result
+        None
+
+    | "textDocument/definition" ->
+        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
+
+        let uri, pos =
+          jsonValue
+          |> jFind "params"
+          |> jAsObjToTextDocumentPositionParams
+
+        let result =
+          LspLangService.definition rootUriOpt uri pos
+          |> List.map
+               (fun (docId, range) ->
+                 jOfObj [ "uri", JString docId
+                          "range", jOfRange range ])
+          |> JArray
+
+        jsonRpcWriteWithResult (getMsgId ()) result
+        None
+
+    | "textDocument/references" ->
+        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
+
+        let uri, pos =
+          jsonValue
+          |> jFind "params"
+          |> jAsObjToTextDocumentPositionParams
+
+        let includeDecl =
+          jsonValue
+          |> jFind3 "params" "context" "includeDeclaration"
+          |> jToBool
+
+        let result =
+          LspLangService.references rootUriOpt uri pos includeDecl
+          |> List.map
+               (fun (docId, range) ->
+                 jOfObj [ "uri", JString docId
+                          "range", jOfRange range ])
+          |> JArray
+
+        jsonRpcWriteWithResult (getMsgId ()) result
         None
 
     | methodName ->

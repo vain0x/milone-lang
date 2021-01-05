@@ -11,6 +11,8 @@ open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
+module S = MiloneStd.StdString
+
 // -----------------------------------------------
 // TyCtor
 // -----------------------------------------------
@@ -34,14 +36,23 @@ let private tyCtorEncode tyCtor =
 
   | VoidTyCtor -> 11, 0
   | NativePtrTyCtor isMut -> 12, isMutToInt isMut
+  | NativeFunTyCtor -> 13, 0
 
   | SynonymTyCtor tySerial -> 21, tySerial
   | UnionTyCtor tySerial -> 22, tySerial
   | RecordTyCtor tySerial -> 23, tySerial
-  | UnresolvedTyCtor _ -> failwith "NEVER"
+
+  | NativeTypeTyCtor _
+  | UnresolvedTyCtor _
+  | UnresolvedVarTyCtor _ -> failwith "NEVER"
 
 let tyCtorCmp l r =
   match l, r with
+  | NativeTypeTyCtor l, NativeTypeTyCtor r -> compare l r
+
+  | NativeTypeTyCtor _, _ -> -1
+  | _, NativeTypeTyCtor _ -> 1
+
   | UnresolvedTyCtor (lQuals, lSerial), UnresolvedTyCtor (rQuals, rSerial) ->
       pairCmp (listCmp compare) compare (lQuals, lSerial) (rQuals, rSerial)
 
@@ -65,11 +76,14 @@ let tyCtorDisplay getTyName tyCtor =
   | ListTyCtor -> "list"
   | VoidTyCtor -> "void"
   | NativePtrTyCtor IsMut -> "nativeptr"
-  | NativePtrTyCtor IsConst -> "constptr"
+  | NativePtrTyCtor IsConst -> "__constptr"
+  | NativeFunTyCtor -> "__nativeFun"
+  | NativeTypeTyCtor _ -> "__nativeType"
   | SynonymTyCtor tySerial -> getTyName tySerial
   | RecordTyCtor tySerial -> getTyName tySerial
   | UnionTyCtor tySerial -> getTyName tySerial
   | UnresolvedTyCtor (_, serial) -> "?" + string serial
+  | UnresolvedVarTyCtor (serial, _) -> "'" + string serial
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -88,6 +102,8 @@ let traitMapTys f it =
   | IsIntTrait ty -> IsIntTrait(f ty)
 
   | IsNumberTrait ty -> IsNumberTrait(f ty)
+
+  | ToCharTrait ty -> ToCharTrait(f ty)
 
   | ToIntTrait ty -> ToIntTrait(f ty)
 
@@ -226,7 +242,7 @@ let tyDisplay getTyName ty =
       match args with
       | [] -> tyCtor
       | _ ->
-          let args = args |> List.map (go 0) |> strJoin ", "
+          let args = args |> List.map (go 0) |> S.concat ", "
           tyCtor + "<" + args + ">"
 
     match ty with
@@ -243,7 +259,7 @@ let tyDisplay getTyName ty =
 
     | AppTy (TupleTyCtor, itemTys) ->
         "("
-        + (itemTys |> List.map (go 20) |> strJoin " * ")
+        + (itemTys |> List.map (go 20) |> S.concat " * ")
         + ")"
 
     | AppTy (ListTyCtor, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
@@ -259,7 +275,7 @@ let tyDisplay getTyName ty =
         match args with
         | [] -> tyCtor
         | _ ->
-            let args = args |> List.map (go 0) |> strJoin ", "
+            let args = args |> List.map (go 0) |> S.concat ", "
             tyCtor + "<" + args + ">"
 
   go 0 ty
@@ -272,9 +288,9 @@ let tyDisplay getTyName ty =
 [<NoEquality; NoComparison>]
 type TyContext =
   { Serial: Serial
-    LetDepth: LetDepth
+    Level: Level
     Tys: AssocMap<TySerial, TyDef>
-    TyDepths: AssocMap<TySerial, LetDepth> }
+    TyLevels: AssocMap<TySerial, Level> }
 
 let private addTyDef tySerial tyDef (ctx: TyContext) =
   { ctx with
@@ -293,27 +309,29 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   match typingSubst ctx ty with
   | MetaTy (s, _) when s = tySerial -> ctx
   | ty ->
-      // Reduce depth of meta tys in the referent ty to the meta ty's depth at most.
-      let tyDepths =
-        let depth = ctx.TyDepths |> mapFind tySerial
+      // Reduce level of meta tys in the referent ty to the meta ty's level at most.
+      let tyLevels =
+        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
 
         ty
         |> tyCollectFreeVars
-        |> List.fold (fun tyDepths tySerial ->
-             let currentDepth = ctx.TyDepths |> mapFind tySerial
+        |> List.fold
+             (fun tyLevels tySerial ->
+               let currentLevel = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
 
-             if currentDepth <= depth then
-               // Already non-deep enough.
-               tyDepths
-             else
-               // Prevent this meta ty from getting generalized until depth of the bound meta ty.
-               tyDepths |> mapAdd tySerial depth) ctx.TyDepths
+               if currentLevel <= level then
+                 // Already non-deep enough.
+                 tyLevels
+               else
+                 // Prevent this meta ty from getting generalized until level of the bound meta ty.
+                 tyLevels |> mapAdd tySerial level)
+             ctx.TyLevels
 
       let ctx =
         ctx
         |> addTyDef tySerial (MetaTyDef(noIdent, ty, loc))
 
-      { ctx with TyDepths = tyDepths }
+      { ctx with TyLevels = tyLevels }
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
@@ -330,7 +348,10 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
   assert (List.length defTySerials = List.length useTyArgs)
 
   // Expand synonym.
-  let assignment = List.zip defTySerials useTyArgs
+  let assignment =
+    match listTryZip defTySerials useTyArgs with
+    | assignment, [], [] -> assignment
+    | _ -> failwith "NEVER"
 
   let substMeta tySerial =
     assignment |> assocTryFind compare tySerial
@@ -410,22 +431,24 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
   let instantiatedTy, ctx =
     let assignment, ctx =
       defTySerials
-      |> List.fold (fun (assignment, ctx: TyContext) defTySerial ->
-           let newTySerial = ctx.Serial + 1
+      |> List.fold
+           (fun (assignment, ctx: TyContext) defTySerial ->
+             let newTySerial = ctx.Serial + 1
 
-           let assignment =
-             (defTySerial, (MetaTy(newTySerial, loc)))
-             :: assignment
+             let assignment =
+               (defTySerial, (MetaTy(newTySerial, loc)))
+               :: assignment
 
-           let ctx =
-             let tyDepths =
-               ctx.TyDepths |> mapAdd newTySerial ctx.LetDepth
+             let ctx =
+               let tyLevels =
+                 ctx.TyLevels |> mapAdd newTySerial ctx.Level
 
-             { ctx with
-                 Serial = newTySerial
-                 TyDepths = tyDepths }
+               { ctx with
+                   Serial = newTySerial
+                   TyLevels = tyLevels }
 
-           assignment, ctx) ([], ctx)
+             assignment, ctx)
+           ([], ctx)
 
     let substMeta tySerial =
       assignment |> assocTryFind compare tySerial
@@ -433,7 +456,10 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
     tySubst substMeta bodyTy, ctx
 
   let expandedTy =
-    let assignment = List.zip defTySerials useTyArgs
+    let assignment =
+      match listTryZip defTySerials useTyArgs with
+      | assignment, [], [] -> assignment
+      | _ -> failwith "NEVER"
 
     let substMeta tySerial =
       assignment |> assocTryFind compare tySerial
@@ -450,6 +476,7 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
   let addLog kind lTy rTy logAcc ctx =
     let lRootTy = typingSubst ctx lRootTy
     let rRootTy = typingSubst ctx rRootTy
+
     (Log.TyUnify(kind, lRootTy, rRootTy, lTy, rTy), loc)
     :: logAcc,
     ctx
@@ -543,14 +570,6 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
           logAcc, ctx
 
-      | AppTy (NativePtrTyCtor _, [ itemTy ]) ->
-          let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
-
-          let logAcc, ctx =
-            typingUnify logAcc ctx resultTy itemTy loc
-
-          logAcc, ctx
-
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   | IsIntTrait ty ->
@@ -571,6 +590,16 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | _ ->
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
+
+  | ToCharTrait ty ->
+      match ty with
+      | ErrorTy _
+      | AppTy (IntTyCtor _, [])
+      | AppTy (FloatTyCtor _, [])
+      | AppTy (CharTyCtor, [])
+      | AppTy (StrTyCtor, []) -> logAcc, ctx
+
+      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   | ToIntTrait ty ->
       match ty with
@@ -600,6 +629,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | AppTy (IntTyCtor (IntFlavor (_, IPtr)), [])
       | AppTy (ObjTyCtor, [])
       | AppTy (ListTyCtor, _)
-      | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
+      | AppTy (NativePtrTyCtor _, _)
+      | AppTy (NativeFunTyCtor, _) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx

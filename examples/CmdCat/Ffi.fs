@@ -1,20 +1,20 @@
 module rec CmdCat.Ffi
 
-let strAsPtr (s: string): constptr<char> = __nativeFun ("str_as_ptr", s)
+let strAsPtr (s: string): __constptr<char> = __nativeFun ("str_as_ptr", s)
 
-type Profiler = Profiler of obj
+type Profiler = Profiler of voidptr
 
 let profileInit (): Profiler =
-  let state: obj = __nativeFun "milone_profile_init"
+  let state: voidptr = __nativeFun "milone_profile_init"
   Profiler state
 
 let profileLog (msg: string) (Profiler state): unit =
   __nativeFun ("milone_profile_log", msg, state)
 
-type Buffer = { Ptr: voidconstptr; Length: int }
+type Buffer = { Ptr: obj; Length: int }
 
-/// buf: Buffer *
-let bufferRefNew (buf: voidconstptr): Buffer =
+/// buf: Buffer const *
+let bufferRefNew (buf: obj): Buffer =
   let len: int = __nativeFun ("buffer_get_length", buf)
 
   { Ptr = buf; Length = len }
@@ -33,10 +33,10 @@ let fileClose (Fd fd): bool =
   stat = 0
 
 let fileReadBytes (size: int) (Fd fd): Buffer option =
-  let buf: voidconstptr =
+  let buf: obj =
     __nativeFun ("file_read_bytes", fd, size)
 
-  if unativeint buf <> unativeint 0 then Some(bufferRefNew buf) else None
+  if __nativeCast buf <> unativeint 0 then Some(bufferRefNew buf) else None
 
 let fileWriteBytes (buf: Buffer) (Fd fd): bool =
   let writtenLen: int =

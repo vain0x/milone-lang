@@ -10,21 +10,21 @@ int main();
 
 struct IntList {
     int head;
-    struct IntList* tail;
+    struct IntList const* tail;
 };
 
 struct IntListList {
-    struct IntList* head;
-    struct IntListList* tail;
+    struct IntList const* head;
+    struct IntListList const* tail;
 };
 
 struct IntListListList {
-    struct IntListList* head;
-    struct IntListListList* tail;
+    struct IntListList const* head;
+    struct IntListListList const* tail;
 };
 
 int main() {
-    struct IntListListList* n_ = NULL;
+    struct IntListListList const* n_ = NULL;
     bool if_;
     if ((!(n_))) {
         goto nil_cl_2;

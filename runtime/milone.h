@@ -38,7 +38,7 @@ int uint64_compare(uint64_t l, uint64_t r);
 
 // null-terminated, immutable, utf-8 string
 struct String {
-    char *str;
+    char const *str;
     int len;
 };
 
@@ -73,12 +73,17 @@ struct String str_of_uint64(uint64_t value);
 double str_to_double(struct String s);
 struct String str_of_double(double value);
 
+char str_to_char(struct String s);
 struct String str_of_char(char value);
 
 // Actual name of string list.
 struct StringList;
 
-struct String str_concat(struct String sep, struct StringList *strings);
+struct String str_concat(struct String sep, struct StringList const *strings);
+
+// Low level operations.
+
+inline char const *str_as_ptr(struct String s) { return s.str; }
 
 // -----------------------------------------------
 // Runtime Entrypoint

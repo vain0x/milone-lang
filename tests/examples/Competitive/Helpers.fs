@@ -4,18 +4,27 @@ module rec Competitive.Helpers
 // Native functions
 // -----------------------------------------------
 
+let memAlloc (len: int) (size: int): voidptr =
+  __nativeFun ("milone_mem_alloc", len, unativeint size)
+
+let memCopy (dest: voidptr) (src: obj) (size: int): voidptr =
+  __nativeFun ("memcpy", dest, src, unativeint size)
+
 let scanInt (): int = __nativeFun "scan_int"
 
-let rawIntArrayNew (len: int): obj = __nativeFun ("int_array_new", len)
+let rawIntArrayNew (len: int): voidptr =
+  memAlloc len (__sizeOfVal 0) |> __nativeCast
 
-let rawIntArrayGet (array: obj) (index: int): int =
-  __nativeFun ("int_array_get", array, index)
+let rawIntArrayGet (array: voidptr) (index: int): int = __ptrRead (__nativeCast array) index
 
-let rawIntArraySet (array: obj) (index: int) (value: int): unit =
-  __nativeFun ("int_array_set", array, index, value)
+let rawIntArraySet (array: voidptr) (index: int) (value: int): unit =
+  __ptrWrite (__nativeCast array) index value
 
-let rawMemoryCopy (dest: obj) (src: obj) (size: int): unit =
-  __nativeFun ("int_array_copy", dest, src, size)
+let rawMemoryCopy (dest: voidptr) (src: voidptr) (size: int): unit =
+  let _ =
+    memCopy dest (__nativeCast src) (size * __sizeOfVal 0)
+
+  ()
 
 // -----------------------------------------------
 // Polyfills

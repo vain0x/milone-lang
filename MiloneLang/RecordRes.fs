@@ -8,10 +8,10 @@ open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLang.Typing
 
-let private hxIsRefOrUnboxingRef expr =
+let private hxIsVarOrUnboxingVar expr =
   match expr with
-  | HRefExpr _
-  | HInfExpr (InfOp.App, [ HPrimExpr (HPrim.Unbox, _, _); HRefExpr _ ], _, _) -> true
+  | HVarExpr _
+  | HNodeExpr (HAppEN, [ HPrimExpr (HPrim.Unbox, _, _); HVarExpr _ ], _, _) -> true
   | _ -> false
 
 // -----------------------------------------------
@@ -91,20 +91,22 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
 
 let private buildRecordMap (ctx: RrCtx) =
   ctx.Tys
-  |> mapFold (fun acc tySerial tyDef ->
-       match tyDef with
-       | RecordTyDef (_, fields, _) ->
-           let fieldTys =
-             fields |> List.map (fun (_, ty, _) -> ty)
+  |> mapFold
+       (fun acc tySerial tyDef ->
+         match tyDef with
+         | RecordTyDef (_, fields, _) ->
+             let fieldTys =
+               fields |> List.map (fun (_, ty, _) -> ty)
 
-           let fieldMap =
-             fields
-             |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
-             |> mapOfList compare
+             let fieldMap =
+               fields
+               |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
+               |> mapOfList compare
 
-           acc |> mapAdd tySerial (fieldTys, fieldMap)
+             acc |> mapAdd tySerial (fieldTys, fieldMap)
 
-       | _ -> acc) (mapEmpty compare)
+         | _ -> acc)
+       (mapEmpty compare)
 
 let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   let fieldTys, fieldMap =
@@ -118,23 +120,29 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   // Base expr is guaranteed to be a cheap expr thanks to modification in Typing,
   // so we can freely clone this.
   let baseOpt =
-    assert (baseOpt |> Option.forall hxIsRefOrUnboxingRef)
+    assert (baseOpt |> Option.forall hxIsVarOrUnboxingVar)
 
     baseOpt |> Option.map (teExpr ctx)
 
   let fields =
     fields
-    |> List.map (fun (name, init, _) ->
-         let init = init |> teExpr ctx
-         let index, _ = fieldMap |> mapFind name
-         index, init)
+    |> List.map
+         (fun (name, init, _) ->
+           let init = init |> teExpr ctx
+           let index, _ = fieldMap |> mapFind name
+           index, init)
     |> listSort (fun (l: int, _) (r: int, _) -> compare l r)
 
   match baseOpt with
   | Some baseExpr ->
       let itemExpr index =
-        let itemTy = fieldTys |> List.item index
-        HInfExpr(InfOp.RecordItem index, [ baseExpr ], itemTy, loc)
+        // FIXME: avoid failwith
+        let itemTy =
+          match fieldTys |> List.tryItem index with
+          | Some it -> it
+          | None -> failwith "NEVER"
+
+        HNodeExpr(HRecordItemEN index, [ baseExpr ], itemTy, loc)
 
       let n = fieldTys |> List.length
 
@@ -147,13 +155,13 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
         | _ -> itemExpr i :: go (i + 1) fields
 
       let fields = go 0 fields
-      HInfExpr(InfOp.Record, fields, ty, loc)
+      HNodeExpr(HRecordEN, fields, ty, loc)
 
   | None ->
       let fields =
         fields |> List.map (fun (_, init) -> init)
 
-      HInfExpr(InfOp.Record, fields, ty, loc)
+      HNodeExpr(HRecordEN, fields, ty, loc)
 
 let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
   let index =
@@ -166,7 +174,7 @@ let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
 
     | _ -> failwithf "NEVER: %A" itself
 
-  HInfExpr(InfOp.RecordItem index, [ l ], ty, loc)
+  HNodeExpr(HRecordItemEN index, [ l ], ty, loc)
 
 // -----------------------------------------------
 // Control
@@ -179,9 +187,10 @@ let private teExpr (ctx: RrCtx) expr =
 
       let fields =
         fields
-        |> List.map (fun (name, init, loc) ->
-             let init = init |> teExpr ctx
-             name, init, loc)
+        |> List.map
+             (fun (name, init, loc) ->
+               let init = init |> teExpr ctx
+               name, init, loc)
 
       rewriteRecordExpr ctx expr baseOpt fields ty loc
 
@@ -193,15 +202,15 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
-  | HInfExpr (infOp, items, ty, loc) ->
+  | HNodeExpr (kind, items, ty, loc) ->
       let doArm () =
         let items = items |> List.map (teExpr ctx)
-        HInfExpr(infOp, items, ty, loc)
+        HNodeExpr(kind, items, ty, loc)
 
       doArm ()
 
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _
@@ -222,6 +231,14 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts = stmts |> List.map (teExpr ctx)
+        let last = last |> teExpr ctx
+        HBlockExpr(stmts, last)
+
+      doArm ()
+
   | HLetValExpr (vis, pat, init, next, ty, loc) ->
       let doArm () =
         let init = init |> teExpr ctx
@@ -230,15 +247,16 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       let doArm () =
         let body = body |> teExpr ctx
         let next = next |> teExpr ctx
-        HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc)
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
       doArm ()
 
-  | HModuleExpr _ -> failwith "NEVER: module is resolved in name res"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 let recordRes (expr: HExpr, tyCtx: TyCtx) =
   let ctx = ofTyCtx tyCtx

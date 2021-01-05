@@ -31,6 +31,7 @@ module rec MiloneLang.Hoist
 open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
+open MiloneLang.Typing
 
 let private hxDummy = hxUnit noLoc
 
@@ -57,9 +58,9 @@ let private hxAccAdd expr exprAcc =
 let private hxAccToExpr next exprAcc =
   let withNext next letExpr =
     match letExpr with
-    | HLetFunExpr (callee, vis, isMainFun, args, body, oldNext, ty, loc) ->
+    | HLetFunExpr (callee, isRec, vis, args, body, oldNext, ty, loc) ->
         assert (oldNext |> hxIsUnitLit)
-        HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc)
+        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
     | _ -> failwith "Never"
 
@@ -87,38 +88,45 @@ type private HoistMode =
 
 // (decls, exprs), where
 // exprs are non-declaration top-level expressions.
-type private HoistContext = HoistMode * HExprAcc * HExprAcc
+type private HoistContext = HoistMode * HExprAcc * HExprAcc * FunSerial option
 
 let private hoistCtxEmpty: HoistContext =
-  HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty
+  HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty, None
 
 let private currentIsEmpty ctx =
   match ctx with
-  | HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty -> true
+  | HoistMode.TopLevel, HExprAcc.Empty, HExprAcc.Empty, _ -> true
 
   | _ -> false
 
-let private currentIsTopLevel (mode, _, _) =
+let private currentIsTopLevel (mode, _, _, _) =
   match mode with
   | HoistMode.TopLevel -> true
   | HoistMode.Local -> false
 
-let private addDecl expr (mode, decls, exprs) =
+let private isMainFun funSerial (_, _, _, mainFunOpt) =
+  match mainFunOpt with
+  | Some mainFun -> funSerialCmp mainFun funSerial = 0
+  | _ -> false
+
+let private withMainFun mainFunOpt (mode, decls, exprs, _) = mode, decls, exprs, mainFunOpt
+
+let private addDecl expr (mode, decls, exprs, mainFunOpt) =
   let decls = decls |> hxAccAdd expr
-  mode, decls, exprs
+  mode, decls, exprs, mainFunOpt
 
-let private addExpr expr (mode, decls, exprs) =
+let private addExpr expr (mode, decls, exprs, mainFunOpt) =
   let exprs = exprs |> hxAccAdd expr
-  mode, decls, exprs
+  mode, decls, exprs, mainFunOpt
 
-let private takeDecls next (mode, decls, exprs) =
+let private takeDecls next (mode, decls, exprs, mainFunOpt) =
   let expr = decls |> hxAccToExpr next
-  let ctx = mode, HExprAcc.Empty, exprs
+  let ctx = mode, HExprAcc.Empty, exprs, mainFunOpt
   expr, ctx
 
-let private takeExprs next (mode, decls, exprs) =
+let private takeExprs next (mode, decls, exprs, mainFunOpt) =
   let expr = exprs |> hxAccToExpr next
-  let ctx = mode, decls, HExprAcc.Empty
+  let ctx = mode, decls, HExprAcc.Empty, mainFunOpt
   expr, ctx
 
 // -----------------------------------------------
@@ -127,20 +135,20 @@ let private takeExprs next (mode, decls, exprs) =
 
 let private hoistExprLocal (expr, ctx) =
   // Enter the local.
-  let mode, decls, exprs = ctx
-  let ctx = HoistMode.Local, decls, exprs
+  let mode, decls, exprs, mainFunOpt = ctx
+
+  let ctx =
+    HoistMode.Local, decls, exprs, mainFunOpt
 
   let expr, ctx = (expr, ctx) |> hoistExpr
 
   // Leave the local.
-  let _, decls, _ = ctx
-  let ctx = mode, decls, exprs
+  let _, decls, _, _ = ctx
+  let ctx = mode, decls, exprs, mainFunOpt
 
   expr, ctx
 
-let private hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx =
-  assert isMainFun
-
+let private hoistExprLetFunMain callee isRec vis args body next ty loc ctx =
   let body, ctx = (body, ctx) |> hoistExprLocal
 
   // Go until the end to accumulate all expressions to the context.
@@ -152,15 +160,15 @@ let private hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx =
     // so that they evaluate at the beginning of the program.
     let body, ctx = ctx |> takeExprs body
 
-    HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc), ctx
+    HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx
 
   // Append the `main` to other declarations
   // to reconstruct the whole expressions.
   ctx |> takeDecls mainFunExpr
 
-let private hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
-  if isMainFun then
-    hoistExprLetFunMain callee vis isMainFun args body next ty loc ctx
+let private hoistExprLetFun callee isRec vis args body next ty loc ctx =
+  if ctx |> isMainFun callee then
+    hoistExprLetFunMain callee isRec vis args body next ty loc ctx
   else
     let body, ctx = (body, ctx) |> hoistExprLocal
 
@@ -168,7 +176,7 @@ let private hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
       // Replace the `next` with a placeholder,
       // which is replaced with actual expressions again at the end.
       let next = hxDummy
-      HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc)
+      HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
     let ctx = ctx |> addDecl expr
 
@@ -177,7 +185,7 @@ let private hoistExprLetFun callee vis isMainFun args body next ty loc ctx =
 let private hoistExprCore (expr, ctx) =
   match expr with
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _
@@ -196,10 +204,18 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HInfExpr (infOp, items, ty, loc) ->
+  | HNodeExpr (kind, items, ty, loc) ->
       let doArm () =
         let items, ctx = (items, ctx) |> stMap hoistExpr
-        HInfExpr(infOp, items, ty, loc), ctx
+        HNodeExpr(kind, items, ty, loc), ctx
+
+      doArm ()
+
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts, ctx = (stmts, ctx) |> stMap hoistExpr
+        let last, ctx = (last, ctx) |> hoistExpr
+        HBlockExpr(stmts, last), ctx
 
       doArm ()
 
@@ -211,8 +227,8 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
-      hoistExprLetFun callee vis isMainFun args body next ty loc ctx
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
+      hoistExprLetFun callee isRec vis args body next ty loc ctx
 
   | HTyDeclExpr _ ->
       let doArm () =
@@ -223,7 +239,8 @@ let private hoistExprCore (expr, ctx) =
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
-  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 let private hoistExpr (expr, ctx) =
   if ctx |> currentIsTopLevel |> not then
@@ -231,9 +248,10 @@ let private hoistExpr (expr, ctx) =
   else
     // At the top-level. Check if inner expressions are also top-level or not.
     match expr with
-    | HInfExpr (InfOp.Semi, items, ty, loc) ->
-        let items, ctx = (items, ctx) |> stMap hoistExpr
-        HInfExpr(InfOp.Semi, items, ty, loc), ctx
+    | HBlockExpr (stmts, last) ->
+        let stmts, ctx = (stmts, ctx) |> stMap hoistExpr
+        let last, ctx = (last, ctx) |> hoistExpr
+        HBlockExpr(stmts, last), ctx
 
     | HLetValExpr _
     | HLetFunExpr _
@@ -247,8 +265,11 @@ let private hoistExpr (expr, ctx) =
         let ctx = ctx |> addExpr expr
         hxDummy, ctx
 
-let hoist (expr: HExpr, tyCtx) =
-  let expr, hoistCtx = (expr, hoistCtxEmpty) |> hoistExpr
+let hoist (expr: HExpr, tyCtx: TyCtx) =
+  let hoistCtx =
+    hoistCtxEmpty |> withMainFun tyCtx.MainFunOpt
+
+  let expr, hoistCtx = (expr, hoistCtx) |> hoistExpr
 
   assert (hoistCtx |> currentIsEmpty)
 

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -eu
+
+dotnet run -p ../scripts/JsonEncode

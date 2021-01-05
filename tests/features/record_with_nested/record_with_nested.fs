@@ -1,6 +1,7 @@
 module rec record_with_nested.Program
 
-// FIXME: Nested record is unimplemented.
+// Nested record.
+
 type Date = { Year: int; Month: int; Date: int }
 
 type Person =

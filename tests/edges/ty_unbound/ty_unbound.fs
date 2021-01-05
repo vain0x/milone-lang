@@ -2,8 +2,6 @@ module rec ty_unbound.Program
 
 // Unbound type variable should be degenerated.
 
-open MiloneCore.List
-
 let assertIsEmpty xs = assert (List.isEmpty xs)
 
 let main _ =

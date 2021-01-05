@@ -86,15 +86,15 @@ let listFoldTest () =
   |> List.fold (fun s x -> s * 10 + x) 0
   |> is 3141
 
-[<Fact>]
-let listReduceTest () =
-  [ 3; 1; 4; 1 ]
-  |> List.reduce (fun s x -> s * 10 + x)
-  |> is 3141
+// [<Fact>]
+// let listReduceTest () =
+//   [ 3; 1; 4; 1 ]
+//   |> List.reduce (fun s x -> s * 10 + x)
+//   |> is 3141
 
-[<Fact>]
-let listLastTest () =
-  [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
+// [<Fact>]
+// let listLastTest () =
+//   [ 3; 1; 4; 1; 5; 9 ] |> List.last |> is 9
 
 [<Fact>]
 let listSkipTest () =
@@ -116,6 +116,7 @@ let listSortTest () =
   [ 3; 2; 1; 3; 2; 3 ]
   |> listSort compare
   |> is [ 1; 2; 2; 3; 3; 3 ]
+
   [ 3; 1; 4; 1; 5; 9 ]
   |> listSort compare
   |> is [ 1; 1; 3; 4; 5; 9 ]
@@ -125,6 +126,7 @@ let listUniqueTest () =
   [ 1; 2; 2; 3; 3; 3 ]
   |> listUnique compare
   |> is [ 1; 2; 3 ]
+
   [ 3; 1; 4; 1; 5; 9 ]
   |> listUnique compare
   |> is [ 1; 3; 4; 5; 9 ]
@@ -243,35 +245,6 @@ let intFromHexTest () =
   "0" |> parse |> is 0
   "19aF" |> parse |> is 0x19af
   "(0xbeef)" |> intFromHex 3 7 |> is 0xbeef
-
-[<Fact>]
-let dumpTreeTestEscape () =
-  let toString text = dumpTreeNewLeaf text |> dumpTreeToString
-  " hello \x00 \x08 \x1f \x7f \t \n \r \\ \" ' "
-  |> toString
-  |> is """ hello \0 \x08 \x1f \x7f \t \n \r \\ \" \' """
-
-[<Fact>]
-let dumpTreeTestLayout () =
-  let tree =
-    dumpTreeNew "module" [ dumpTreeNewLeaf "Program" ]
-    |> dumpTreeAttachNext
-         (dumpTreeNew
-           "let"
-            [ dumpTreeNewLeaf "main"
-              dumpTreeNew
-                "body"
-                [ dumpTreeNew "printfn" [ dumpTreeNewLeaf "\"Hello, world!\"" ]
-                  dumpTreeNewLeaf "0" ] ])
-
-  let expected = """module: Program
-let:
-- main
-- body:
-  - printfn: \"Hello, world!\"
-  - 0"""
-
-  tree |> dumpTreeToString |> is expected
 
 [<Fact>]
 let analyzeFormatTests () =

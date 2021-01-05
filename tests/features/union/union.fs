@@ -1,5 +1,8 @@
-type Ok =
-  | Ok
+module rec union.Program
+
+// Discriminated union types.
+
+type Ok = | Ok
 
 type Status =
   | Ok
@@ -10,15 +13,11 @@ type Limit =
   | LimitDiv
 
 type ApiResponse =
-  | ARJson
-    of string
-  | ARError
-    of code:int * msg:string
+  | ARJson of string
+  | ARError of code: int * msg: string
   | ARCancel
 
-type OkWrapper =
-  | T
-    of Ok // use another union types
+type OkWrapper = T of Ok // use another union types
 
 let main _ =
   let () =
@@ -27,33 +26,25 @@ let main _ =
     let err2 = Err "Access denied."
 
     match err1 with
-    | Ok ->
-      assert false
-    | Err e ->
-      assert (e = "No such file or directory.")
+    | Ok -> assert false
+    | Err e -> assert (e = "No such file or directory.")
 
   let () =
     match LimitVal 1 with
-    | LimitVal x ->
-      assert (x = 1)
-    | LimitDiv ->
-      exit 2
+    | LimitVal x -> assert (x = 1)
+    | LimitDiv -> exit 2
 
   let () =
     match ARCancel with
-    | ARCancel ->
-      ()
-    | _ ->
-      assert false
+    | ARCancel -> ()
+    | _ -> assert false
 
   let () =
-    match ARError (404, "Not Found") with
-    | ARError (statusCode, statusText) ->
-      assert (statusCode = 404 && statusText = "Not Found")
-    | _ ->
-      assert false
+    match ARError(404, "Not Found") with
+    | ARError (statusCode, statusText) -> assert (statusCode = 404 && statusText = "Not Found")
+    | _ -> assert false
 
-  // Type annotations should work.
+  // Type ascriptions should work.
   let ok: Status = Ok: Status
 
   // Variants can have the same name with others. Distinct by qualification.
@@ -61,10 +52,8 @@ let main _ =
   let statusOk: Status = Status.Ok
 
   match Status.Ok with
-  | Status.Ok ->
-    ()
-  | Status.Err _ ->
-    assert false
+  | Status.Ok -> ()
+  | Status.Err _ -> assert false
 
   let okWrapper = OkWrapper.T Ok.Ok
 

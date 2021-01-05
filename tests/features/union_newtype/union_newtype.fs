@@ -1,6 +1,7 @@
+module rec union_newtype.Program
+
 /// New-type union.
-type NewTypeInt =
-  | NewTypeInt of int
+type NewTypeInt = NewTypeInt of int
 
 let main _ =
   // New-type union can be unwrap with `let`.

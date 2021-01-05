@@ -4,8 +4,12 @@ open MiloneLang
 open MiloneLang.Assets
 open MiloneLang.Util
 open MiloneLang.Syntax
-open MiloneLang.SyntaxTokenize
 open Xunit
+
+let private tokenizeHost = tokenizeHostNew ()
+
+let private tokenize text =
+  MiloneLang.SyntaxTokenize.tokenize tokenizeHost text
 
 [<Fact>]
 let tokenizeMainEmpty () =
@@ -17,7 +21,7 @@ let tokenizeMainEmpty () =
       LeftParenToken
       RightParenToken
       EqToken
-      IntToken 0 ]
+      IntToken "0" ]
 
   source |> tokenize |> List.map fst |> is expected
 
@@ -35,9 +39,9 @@ let main _ =
       IdentToken "main"
       IdentToken "_"
       EqToken
-      IntToken 1
+      IntToken "1"
       MinusToken
-      IntToken 1 ]
+      IntToken "1" ]
 
   source |> tokenize |> List.map fst |> is expected
 
@@ -50,6 +54,7 @@ let tokenizeCharLiteral () =
 
   let source = """'a' '\'' '\n' '\x00'"""
   let expected = [ 'a'; '\''; '\n'; '\x00' ]
+
   source
   |> tokenize
   |> List.map unwrapChar
@@ -65,6 +70,21 @@ let tokenizeStrLiteral () =
   source |> tokenize |> is expected
 
 [<Fact>]
+let tokenizeRawIdent () =
+  let source = """let `` `` = ``true``"""
+
+  let expected = [ " ", (0, 4); "true", (0, 12) ]
+
+  source
+  |> tokenize
+  |> List.choose
+       (fun (token, pos) ->
+         match token with
+         | IdentToken text -> Some(text, pos)
+         | _ -> None)
+  |> is expected
+
+[<Fact>]
 let tokenizeTyVarIdent () =
   let source =
     """type option<'T> = Some of 'T | None"""
@@ -73,10 +93,11 @@ let tokenizeTyVarIdent () =
 
   source
   |> tokenize
-  |> List.choose (fun (token, pos) ->
-       match token with
-       | TyVarToken text -> Some(text, pos)
-       | _ -> None)
+  |> List.choose
+       (fun (token, pos) ->
+         match token with
+         | TyVarToken text -> Some(text, pos)
+         | _ -> None)
   |> is expected
 
 [<Fact>]
@@ -93,6 +114,6 @@ let main () =
       RightParenToken, (1, 10)
       EqToken, (1, 12)
       IdentToken "f", (2, 2)
-      IntToken 1, (2, 4) ]
+      IntToken "1", (2, 4) ]
 
   source |> tokenize |> is expected

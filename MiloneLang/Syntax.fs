@@ -25,11 +25,17 @@ type Vis =
   | PrivateVis
   | PublicVis
 
+/// Is recursive?
+[<NoEquality; NoComparison>]
+type IsRec =
+  | IsRec
+  | NotRec
+
 /// Literal of primitive, non-generic value.
 [<Struct; NoEquality; NoComparison>]
 type Lit =
   | BoolLit of boolValue: bool
-  | IntLit of intValue: int
+  | IntLit of intText: string
   | FloatLit of floatText: string
   | CharLit of charValue: char
   | StrLit of stringValue: string
@@ -55,20 +61,54 @@ type DocId = string
 type Loc = DocId * RowIndex * ColumnIndex
 
 // -----------------------------------------------
+// Syntax errors
+// -----------------------------------------------
+
+type TokenizeError =
+  | InvalidCharLitError
+  | InvalidStrLitError
+  | InvalidRawIdentError
+  | BadTokenError
+  | UnknownEscapeSequenceError
+  | UndefinedOpTokenError
+  | ReservedWordError
+  | UnimplNumberSuffixError
+  | UnimplHexEscapeError
+  | OtherTokenizeError of msg: string
+
+let tokenizeErrorToString error =
+  match error with
+  | InvalidCharLitError -> "Invalid char literal."
+  | InvalidStrLitError -> "Invalid string literal."
+  | InvalidRawIdentError -> "Invalid raw identifier. Hint: ``write like this``."
+  | BadTokenError -> "Invalid characters."
+
+  | UnknownEscapeSequenceError ->
+      "Unknown escape sequence. After `\\`, one of these chars is only allowed: `\\` `'` `\"` t r n x. `\\xHH` other than `\\x00` is unimplemented."
+
+  | UndefinedOpTokenError -> "Undefined operator."
+
+  | ReservedWordError ->
+      "This word can't be used as identifier, because it's reserved for future expansion of the language."
+
+  | UnimplNumberSuffixError -> "Number literal suffix is unimplemented yet."
+  | UnimplHexEscapeError -> "`\\xHH` escape sequence is unimplemented yet, except for `\\x00`."
+  | OtherTokenizeError msg -> msg
+
+// -----------------------------------------------
 // Syntax types
 // -----------------------------------------------
 
 /// Words and punctuations in source code.
 type Token =
-  /// Illegal bytes, etc.
-  | ErrorToken
+  | ErrorToken of TokenizeError
 
   | BlankToken
   | NewlinesToken
   | CommentToken
 
-  | IntToken of int
-  | FloatToken of string
+  | IntToken of intText: string
+  | FloatToken of floatText: string
   | CharToken of char
   | StrToken of string
   | IdentToken of Ident
@@ -154,17 +194,14 @@ type Token =
 
   // keywords:
   | AsToken
-  | DoToken
   | ElseToken
   | FalseToken
   | FunToken
   | IfToken
   | InToken
-  | InternalToken
   | LetToken
   | MatchToken
   | ModuleToken
-  | NamespaceToken
   | OfToken
   | OpenToken
   | PrivateToken
@@ -179,8 +216,7 @@ type Token =
 /// Unary operator.
 [<NoEquality; NoComparison>]
 type Unary =
-  /// `-` Negation
-  | NegUnary
+  | MinusUnary
 
 /// Binary operator.
 [<NoEquality; NoComparison>]
@@ -233,7 +269,8 @@ type Binary =
 type ATy =
   | AMissingTy of Pos
 
-  /// Type application, e.g. `int` or `AssocMap<K, V>`.
+  /// Named type with potential qualifiers and type arguments,
+  /// e.g. `int`, `M.AssocMap<K, V>`.
   | AAppTy of quals: Ident list * Ident * ATy list * Pos
 
   /// Type variable, e.g. `'T`.
@@ -269,7 +306,7 @@ type APat =
   ///
   /// Used only for variant destruction.
   /// AFunDeclPat is used for `let`.
-  | AAppPat of APat * APat list * Pos
+  | AAppPat of APat * APat * Pos
 
   /// `::`
   | AConsPat of APat * APat * Pos
@@ -280,8 +317,8 @@ type APat =
   /// E.g. `(Some x) as opt`.
   | AAsPat of APat * Ident * Pos
 
-  /// Type annotation, e.g. `x: int`.
-  | AAnnoPat of APat * ATy * Pos
+  /// Type ascription, e.g. `x: int`.
+  | AAscribePat of APat * ATy * Pos
 
   /// E.g. `l | r`
   | AOrPat of APat * APat * Pos
@@ -313,17 +350,17 @@ type AFieldDecl = Ident * ATy * Pos
 /// Let expression in AST.
 [<NoEquality; NoComparison>]
 type ALet =
-  | ALetVal of Vis * APat * AExpr * AExpr * Pos
-  | ALetFun of Vis * Ident * args: APat list * AExpr * AExpr * Pos
+  | ALetVal of IsRec * Vis * APat * AExpr * AExpr * Pos
+  | ALetFun of IsRec * Vis * Ident * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
 [<NoEquality; NoComparison>]
-type ATyDecl =
+type ATyDeclBody =
   /// E.g. `type Serial = int`.
-  | ATySynonymDecl of ATy
+  | ATySynonymDeclBody of ATy
 
-  | AUnionTyDecl of AVariant list
-  | ARecordTyDecl of AFieldDecl list
+  | AUnionTyDeclBody of AVariant list
+  | ARecordTyDeclBody of AFieldDecl list
 
 /// Expression in AST.
 [<NoEquality; NoComparison>]
@@ -372,35 +409,49 @@ type AExpr =
   /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
   | ATupleExpr of AExpr list * Pos
 
-  /// Type annotation, e.g. `None: int option`.
-  | AAnnoExpr of AExpr * ATy * Pos
+  /// Type ascription, e.g. `None: int option`.
+  | AAscribeExpr of AExpr * ATy * Pos
 
   /// Semicolon-separated expressions.
-  | ASemiExpr of AExpr list * Pos
+  | ASemiExpr of AExpr list * AExpr * Pos
 
   /// (pattern, initializer, next). Let-in expression.
-  | ALetExpr of Vis * APat * AExpr * AExpr * Pos
+  | ALetExpr of IsRec * Vis * APat * AExpr * AExpr * Pos
+
+[<NoEquality; NoComparison>]
+type ALetDecl =
+  | ALetFunDecl of IsRec * Vis * Ident * APat list * AExpr * Pos
+  | ALetValDecl of IsRec * Vis * APat * AExpr * Pos
+
+[<NoEquality; NoComparison>]
+type ADecl =
+  | AExprDecl of AExpr
+
+  | ALetDecl of IsRec * Vis * APat * AExpr * Pos
 
   /// Type synonym declaration, e.g. `type UserId = int`.
-  | ATySynonymExpr of Vis * Ident * tyArgs: Ident list * ATy * Pos
+  | ATySynonymDecl of Vis * Ident * tyArgs: Ident list * ATy * Pos
 
   /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
-  | AUnionTyExpr of Vis * Ident * AVariant list * Pos
+  | AUnionTyDecl of Vis * Ident * AVariant list * Pos
 
   /// Record type declaration, e.g. `type Pos = { X: int; Y: int }`.
-  | ARecordTyExpr of Vis * Ident * AFieldDecl list * Pos
+  | ARecordTyDecl of Vis * Ident * AFieldDecl list * Pos
 
   /// Open statement, e.g. `open System.IO`.
-  | AOpenExpr of Ident list * Pos
+  | AOpenDecl of Ident list * Pos
+
+  /// Module synonym statement, e.g. `module T = System.Text`.
+  | AModuleSynonymDecl of Ident * Ident list * Pos
 
   /// Expression with some attribute.
-  | AAttrExpr of contents: AExpr * next: AExpr * Pos
+  | AAttrDecl of contents: AExpr * next: ADecl * Pos
 
 /// Root of AST, a result of parsing single source file.
 [<NoEquality; NoComparison>]
 type ARoot =
-  | AExprRoot of AExpr
-  | AModuleRoot of Ident * AExpr * Pos
+  | AExprRoot of ADecl list
+  | AModuleRoot of Ident * ADecl list * Pos
 
 // -----------------------------------------------
 // Literals
@@ -410,6 +461,7 @@ let litTrue = BoolLit true
 
 let litFalse = BoolLit false
 
+// int and float are not ordered by value.
 let litCmp l r =
   match l, r with
   | BoolLit l, BoolLit r -> compare l r
@@ -454,6 +506,172 @@ let locToString ((docId, y, x): Loc) =
 
 let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
   let c = compare lDoc rDoc
+
   if c <> 0 then c
   else if ly <> ry then compare ly ry
   else compare lx rx
+
+// -----------------------------------------------
+// Keywords
+// -----------------------------------------------
+
+type private KeywordMap = AssocMap<Ident, Token>
+
+// See also <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/keyword-reference>.
+let private keywordMapBuild (): KeywordMap =
+  let miloneKeywords =
+    [ "as", AsToken
+      "else", ElseToken
+      "false", FalseToken
+      "fun", FunToken
+      "if", IfToken
+      "in", InToken
+      "let", LetToken
+      "match", MatchToken
+      "module", ModuleToken
+      "of", OfToken
+      "open", OpenToken
+      "private", PrivateToken
+      "public", PublicToken
+      "rec", RecToken
+      "then", ThenToken
+      "true", TrueToken
+      "type", TypeToken
+      "when", WhenToken
+      "with", WithToken ]
+
+  let fsharpKeywords =
+    [ "abstract"
+      "and"
+      "base"
+      "begin"
+      "class"
+      "const"
+      "default"
+      "delegate"
+      "do"
+      "done"
+      "downcast"
+      "downto"
+      "elif"
+      "end"
+      "exception"
+      "extern"
+      "finally"
+      "fixed"
+      "for"
+      "function"
+      "global"
+      "inherit"
+      "inline"
+      "interface"
+      "internal"
+      "lazy"
+      "member"
+      "mutable"
+      "namespace"
+      "new"
+      "null"
+      "or"
+      "override"
+      "return"
+      "static"
+      "struct"
+      "to"
+      "try"
+      "upcast"
+      "use"
+      "val"
+      "void"
+      "while"
+      "yield" ]
+
+  let ocamlKeywords =
+    [ "asr"
+      "land"
+      "lor"
+      "lsl"
+      "lsr"
+      "lxor"
+      "mod"
+      "sig" ]
+
+  let reservedWords =
+    [ "atomic"
+      "break"
+      "checked"
+      "component"
+      "const"
+      "constraint"
+      "constructor"
+      "continue"
+      "eager"
+      "event"
+      "external"
+      "functor"
+      "include"
+      "method"
+      "mixin"
+      "object"
+      "parallel"
+      "process"
+      "protected"
+      "pure"
+      "sealed"
+      "tailcall"
+      "trait"
+      "virtual"
+      "volatile" ]
+
+  let reservedToken = ErrorToken ReservedWordError
+
+  let map = mapEmpty compare
+
+  let map =
+    miloneKeywords
+    |> List.fold (fun map (name, token) -> mapAdd name token map) map
+
+  let map =
+    fsharpKeywords
+    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+
+  let map =
+    ocamlKeywords
+    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+
+  let map =
+    reservedWords
+    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+
+  map
+
+// -----------------------------------------------
+// Host
+// -----------------------------------------------
+
+type TokenizeHost = { FindKeyword: string -> Token option }
+
+let tokenizeHostNew (): TokenizeHost =
+  let keywordMap = keywordMapBuild ()
+
+  { FindKeyword = fun ident -> keywordMap |> mapTryFind ident }
+
+// -----------------------------------------------
+// Module dependencies
+// -----------------------------------------------
+
+/// (projectName, moduleName, pos) list
+let findDependentModules ast =
+  let rec onDecl decl =
+    match decl with
+    | AOpenDecl ([ p; m ], pos) -> Some(p, m, pos)
+    | AModuleSynonymDecl (_, [ p; m ], pos) -> Some(p, m, pos)
+    | AAttrDecl (_, next, _) -> onDecl next
+    | _ -> None
+
+  let decls =
+    match ast with
+    | AExprRoot decls -> decls
+    | AModuleRoot (_, decls, _) -> decls
+
+  decls |> List.choose onDecl

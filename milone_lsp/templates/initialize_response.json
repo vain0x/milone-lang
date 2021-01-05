@@ -7,10 +7,10 @@
                 "openClose": true,
                 "change": 1
             },
-            "definitionProvider": false,
-            "documentHighlightProvider": false,
-            "hoverProvider": false,
-            "referencesProvider": false,
+            "definitionProvider": true,
+            "documentHighlightProvider": true,
+            "hoverProvider": true,
+            "referencesProvider": true,
             "renameProvider": false
         },
         "serverInfo": {

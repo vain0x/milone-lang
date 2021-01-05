@@ -136,8 +136,7 @@ type KPath =
   /// N'th field of tuple.
   | KFieldPath of int * Loc
 
-  /// Tag of union.
-  | KTagPath of Loc
+  | KDiscriminantPath of Loc
 
   /// Payload of union.
   | KPayloadPath of VariantSerial * Loc
@@ -149,12 +148,8 @@ type KTerm =
   | KVarTerm of VarSerial * Ty * Loc
   | KFunTerm of FunSerial * Ty * Loc
   | KVariantTerm of VariantSerial * Ty * Loc
-
-  /// Tag of variant. An integer ID of the variant in union.
-  | KTagTerm of VariantSerial * Loc
-
+  | KDiscriminantConstTerm of VariantSerial * Loc
   | KLabelTerm of FunSerial * Ty * Loc
-
   | KNilTerm of itemTy: Ty * Loc
   | KNoneTerm of itemTy: Ty * Loc
   | KUnitTerm of Loc

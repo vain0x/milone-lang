@@ -22,6 +22,8 @@ open MiloneLang.Syntax
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 
+module S = MiloneStd.StdString
+
 /// Unique serial number to identify something
 /// such as variables, nominal types, etc.
 type Serial = int
@@ -34,27 +36,33 @@ type Serial = int
 type TySerial = Serial
 
 /// Serial number of variables.
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type VarSerial = VarSerial of Serial
 
 /// Serial number of functions.
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type FunSerial = FunSerial of Serial
 
 /// Serial number of variants.
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type VariantSerial = VariantSerial of Serial
 
 /// Number of parameters.
 type Arity = int
 
-/// Let-depth, i.e. the number of ancestral let nodes
-/// of the place where the meta type is introduced.
-/// Used for polymorphic type inference.
-/// E.g. in `let x: 'x = ((let y: 'y = a: 'a); b: 'b)`,
-///   `'x`: 0, `'y`: 1, `'a`: 2, `'b`: 1
-/// Only one exception: recursive function have let-depth deeper by 1.
-type LetDepth = int
+/// Level.
+///
+/// Top-level is 0.
+/// Inside of init part of `let`, level is incremented by 1.
+///
+/// For example, in `let none = None: 'a option in none`,
+/// level of `'a` is 1.
+///
+/// In `let _ = (let  = None: 'b option in ()) in ()`,
+/// level of `'b` is 2.
+///
+/// Only one exception: recursive function has level higher by 1.
+type Level = int
 
 /// Where variable is stored.
 [<NoEquality; NoComparison>]
@@ -96,6 +104,8 @@ type TyCtor =
   // FFI types.
   | VoidTyCtor
   | NativePtrTyCtor of nativePtrIsMut: IsMut
+  | NativeFunTyCtor
+  | NativeTypeTyCtor of cCode: string
 
   // Nominal types.
   | SynonymTyCtor of synonymTy: TySerial
@@ -104,6 +114,7 @@ type TyCtor =
 
   /// Unresolved type. Generated in AstToHir, resolved in NameRes.
   | UnresolvedTyCtor of quals: Serial list * unresolvedSerial: Serial
+  | UnresolvedVarTyCtor of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
 [<Struct>]
@@ -149,6 +160,9 @@ type Trait =
   /// Integer or float type. Defaults to int.
   | IsNumberTrait of Ty
 
+  /// Type supports conversion to char.
+  | ToCharTrait of Ty
+
   /// Type supports conversion to integer.
   | ToIntTrait of Ty
 
@@ -184,22 +198,41 @@ type TyDef =
 
   | RecordTyDef of Ident * fields: (Ident * Ty * Loc) list * Loc
 
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type ModuleTySerial = ModuleTySerial of Serial
 
 //// Module is a type so that it can be used as namespace.
 [<NoEquality; NoComparison>]
 type ModuleTyDef = { Name: Ident; Loc: Loc }
 
+[<Struct; NoComparison>]
+type ModuleSynonymSerial = ModuleSynonymSerial of Serial
+
+//// Module is a type so that it can be used as namespace.
+[<NoEquality; NoComparison>]
+type ModuleSynonymDef =
+  { Name: Ident
+    Bound: ModuleTySerial option
+    Loc: Loc }
+
 /// Definition of named value in HIR.
 [<NoEquality; NoComparison>]
 type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
+
+/// Assembly binary interface (ABI): how function looks like at machine-code level.
+[<NoEquality; NoComparison>]
+type FunAbi =
+  | MiloneAbi
+
+  /// Compatible with C language.
+  | CAbi
 
 [<NoEquality; NoComparison>]
 type FunDef =
   { Name: Ident
     Arity: Arity
     Ty: TyScheme
+    Abi: FunAbi
     Loc: Loc }
 
 [<NoEquality; NoComparison>]
@@ -211,13 +244,13 @@ type VariantDef =
     VariantTy: Ty
     Loc: Loc }
 
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type ValueSymbol =
   | VarSymbol of varSerial: VarSerial
   | FunSymbol of funSerial: FunSerial
   | VariantSymbol of variantSerial: VariantSerial
 
-[<Struct; NoEquality; NoComparison>]
+[<Struct; NoComparison>]
 type TySymbol =
   | MetaTySymbol of tySerial: TySerial
   | UnivTySymbol of univTySerial: TySerial
@@ -225,38 +258,39 @@ type TySymbol =
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
   | ModuleTySymbol of moduleTySerial: ModuleTySerial
+  | ModuleSynonymSymbol of moduleSynonymSerial: ModuleSynonymSerial
 
-/// Pattern in HIR.
-[<NoEquality; NoComparison>]
-type HPat =
-  | HLitPat of Lit * Loc
+/// Kind of HNodePat.
+[<Struct; NoEquality; NoComparison>]
+type HPatKind =
+  /// `[]`.
+  | HNilPN
 
-  /// `[]`
-  | HNilPat of itemTy: Ty * Loc
+  /// `p1 :: p2`.
+  | HConsPN
 
-  | HNonePat of itemTy: Ty * Loc
-  | HSomePat of itemTy: Ty * Loc
+  | HNonePN
 
-  /// `_`
-  | HDiscardPat of Ty * Loc
+  /// `Some`.
+  | HSomePN
 
-  /// Variable pattern.
-  | HRefPat of VarSerial * Ty * Loc
+  /// `p1 p2`.
+  | HAppPN
 
-  /// Variant pattern.
-  | HVariantPat of VariantSerial * Ty * Loc
+  /// `Some p1`.
+  | HSomeAppPN
 
-  /// Navigation, e.g. `Result.Ok _`.
-  | HNavPat of HPat * Ident * Ty * Loc
+  /// `Variant p1`.
+  | HVariantAppPN of variantApp: VariantSerial
 
-  /// Variant decomposition, e.g. `Some x`.
-  | HCallPat of callee: HPat * args: HPat list * Ty * Loc
+  /// `p1, p2, ..., pN` or `()`.
+  | HTuplePN
 
-  /// `::`
-  | HConsPat of HPat * HPat * itemTy: Ty * Loc
+  /// `p1.r`
+  | HNavPN of navR: string
 
-  /// e.g. `x, y, z`
-  | HTuplePat of HPat list * tupleTy: Ty * Loc
+  /// `p1: ty`
+  | HAscribePN
 
   /// Used to dereference a box inside of pattern matching.
   ///
@@ -266,20 +300,34 @@ type HPat =
   /// This is only generated internally in AutoBoxing.
   /// Not a part of F# nor milone-lang syntax.
   /// Unlike `:? T`, unboxing is unchecked.
-  | HBoxPat of HPat * Loc
+  | HBoxPN
+
+  /// Generated after compile error occurred while processing a pattern.
+  | HAbortPN
+
+/// Pattern in HIR.
+[<NoEquality; NoComparison>]
+type HPat =
+  | HLitPat of Lit * Loc
+
+  /// `_`.
+  | HDiscardPat of Ty * Loc
+
+  /// Variable pattern.
+  | HVarPat of VarSerial * Ty * Loc
+
+  /// Variant name pattern.
+  | HVariantPat of VariantSerial * Ty * Loc
+
+  | HNodePat of HPatKind * HPat list * Ty * Loc
 
   | HAsPat of HPat * VarSerial * Loc
 
-  /// Type annotation, e.g. `x: int`.
-  | HAnnoPat of HPat * Ty * Loc
-
   /// Disjunction.
-  | HOrPat of HPat * HPat * Ty * Loc
+  | HOrPat of HPat * HPat * Loc
 
 /// Primitive in HIR.
-[<RequireQualifiedAccess>]
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; Struct; NoComparison>]
 type HPrim =
   // operator:
   | Not
@@ -323,59 +371,78 @@ type HPrim =
   | InRegion
   | NativeFun
   | NativeCast
+  | NativeExpr
+  | NativeStmt
+  | NativeDecl
+  | SizeOfVal
+  | PtrRead
+  | PtrWrite
 
-[<RequireQualifiedAccess>]
-[<Struct>]
-[<NoEquality; NoComparison>]
-type InfOp =
-  | Abort
+[<Struct; NoEquality; NoComparison>]
+type HExprKind =
+  | HAbortEN
 
-  | App
+  /// `-x`.
+  | HMinusEN
+
+  | HAppEN
 
   /// `..`.
   ///
   /// Every occurrence of this is currently error
   /// because valid use (`s.[l..r]`) gets rewritten in AstToHir.
-  | Range
+  | HRangeEN
 
-  /// Type annotation `x : 'x`.
-  | Anno
-
-  /// `x; y`
-  | Semi
+  /// Type ascription `x : 'x`.
+  | HAscribeEN
 
   /// `s.[i]`
-  | Index
+  | HIndexEN
 
   /// `s.[l .. r]`
-  | Slice
+  | HSliceEN
 
   /// Direct call to procedure or primitive.
-  | CallProc
+  | HCallProcEN
 
   /// Indirect call to closure.
-  | CallClosure
+  | HCallClosureEN
 
   /// Direct call to current procedure at the end of function (i.e. tail-call).
-  | CallTailRec
+  | HCallTailRecEN
 
   /// Direct call to native fun.
-  | CallNative of funName: string
+  | HCallNativeEN of funName: string
 
   /// Tuple constructor, e.g. `x, y, z`.
-  | Tuple
+  | HTupleEN
 
   /// Closure constructor.
-  | Closure
+  | HClosureEN
 
   /// Record creation.
   ///
   /// Unlike record expr, it's guaranteed that
   /// all of fields are specified in order of declaration.
-  | Record
+  | HRecordEN
 
   /// Gets i'th field of record.
-  | RecordItem of index: int
+  | HRecordItemEN of index: int
+
+  /// Use function as function pointer.
+  | HNativeFunEN of FunSerial
+
+  /// Embed some C expression to output.
+  | HNativeExprEN of nativeExprCode: string
+
+  /// Embed some C statement to output.
+  | HNativeStmtEN of nativeStmtCode: string
+
+  /// Embed some C toplevel codes to output.
+  | HNativeDeclEN of nativeDeclCode: string
+
+  /// Size of type.
+  | HSizeOfValEN
 
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
@@ -383,7 +450,7 @@ type HExpr =
   | HLitExpr of Lit * Loc
 
   /// Name of variable.
-  | HRefExpr of VarSerial * Ty * Loc
+  | HVarExpr of VarSerial * Ty * Loc
 
   /// Name of function.
   | HFunExpr of FunSerial * Ty * Loc
@@ -402,15 +469,19 @@ type HExpr =
   | HNavExpr of HExpr * Ident * Ty * Loc
 
   /// Some built-in operation.
-  | HInfExpr of InfOp * HExpr list * Ty * Loc
+  | HNodeExpr of HExprKind * HExpr list * Ty * Loc
+
+  /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
+  | HBlockExpr of HExpr list * HExpr
 
   | HLetValExpr of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
-  | HLetFunExpr of FunSerial * Vis * isMainFun: bool * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
+  | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
   /// Type declaration.
   | HTyDeclExpr of TySerial * Vis * tyArgs: TySerial list * TyDecl * Loc
   | HOpenExpr of Ident list * Loc
-  | HModuleExpr of ModuleTySerial * body: HExpr * next: HExpr * Loc
+  | HModuleExpr of ModuleTySerial * body: HExpr list * Loc
+  | HModuleSynonymExpr of ModuleSynonymSerial * path: Ident list * Loc
 
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
@@ -424,11 +495,26 @@ type MonoMode =
 
 [<NoEquality; NoComparison>]
 type NameResLog =
+  // in expression
   | UndefinedValueError of name: string
+  | TyUsedAsValueError
+
+  // in pat
+  | UnresolvedNavPatError
+  | IllegalOrPatError
+  | OrPatInconsistentBindingError
+  | VarNameConflictError
+
+  // in type
   | UndefinedTyError of name: string
-  | FunPatError of name: string
   | TyArityError of name: string * actual: int * expected: int
   | ModuleUsedAsTyError of name: string
+
+  // other
+  | ModulePathNotFoundError
+
+  | UnimplModuleSynonymError
+  | UnimplOrPatBindingError
   | OtherNameResLog of msg: string
 
 [<RequireQualifiedAccess>]
@@ -441,10 +527,14 @@ type TyUnifyLog =
 [<NoEquality; NoComparison>]
 type Log =
   | NameResLog of NameResLog
+  | LiteralRangeError
+  | IrrefutablePatNonExhaustiveError
   | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
   | TyBoundError of Trait
+  | TySynonymCycleError
   | RedundantFieldError of ty: Ident * field: Ident
   | MissingFieldsError of ty: Ident * fields: Ident list
+  | ArityMismatch of actual: Arity * expected: Arity
   | Error of string
 
 // -----------------------------------------------
@@ -482,7 +572,17 @@ let tyTuple tys = AppTy(TupleTyCtor, tys)
 
 let tyList ty = AppTy(ListTyCtor, [ ty ])
 
-let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
+let tyFun sourceTy targetTy =
+  AppTy(FunTyCtor, [ sourceTy; targetTy ])
+
+let tyConstPtr itemTy =
+  AppTy(NativePtrTyCtor IsConst, [ itemTy ])
+
+let tyNativePtr itemTy =
+  AppTy(NativePtrTyCtor IsMut, [ itemTy ])
+
+let tyNativeFun paramTys resultTy =
+  AppTy(NativeFunTyCtor, List.append paramTys [ resultTy ])
 
 let tyUnit = tyTuple []
 
@@ -500,6 +600,12 @@ let moduleTySerialToInt (ModuleTySerial serial) = serial
 
 let moduleTySerialCmp l r =
   moduleTySerialToInt l - moduleTySerialToInt r
+
+let moduleSynonymSerialToInt (ModuleSynonymSerial serial) = serial
+
+let moduleSynonymSerialCmp l r =
+  moduleSynonymSerialToInt l
+  - moduleSynonymSerialToInt r
 
 let tyDefToName tyDef =
   match tyDef with
@@ -595,6 +701,12 @@ let primFromIdent ident =
 
   | "__nativeFun" -> HPrim.NativeFun |> Some
   | "__nativeCast" -> HPrim.NativeCast |> Some
+  | "__nativeExpr" -> HPrim.NativeExpr |> Some
+  | "__nativeStmt" -> HPrim.NativeStmt |> Some
+  | "__nativeDecl" -> HPrim.NativeDecl |> Some
+  | "__sizeOfVal" -> HPrim.SizeOfVal |> Some
+  | "__ptrRead" -> HPrim.PtrRead |> Some
+  | "__ptrWrite" -> HPrim.PtrWrite |> Some
 
   | _ -> None
 
@@ -673,8 +785,8 @@ let primToTySpec prim =
       poly (tyFun tyObj itemTy) []
 
   | HPrim.Char ->
-      // FIXME: `char` can take non-int types.
-      mono (tyFun tyInt tyChar)
+      let srcTy = meta 1
+      poly (tyFun srcTy tyChar) [ ToCharTrait srcTy ]
 
   | HPrim.ToInt flavor ->
       let toIntTy = meta 1
@@ -695,7 +807,10 @@ let primToTySpec prim =
   | HPrim.InRegion -> mono (tyFun (tyFun tyUnit tyInt) tyInt)
 
   | HPrim.Printfn
-  | HPrim.NativeFun ->
+  | HPrim.NativeFun
+  | HPrim.NativeExpr
+  | HPrim.NativeStmt
+  | HPrim.NativeDecl ->
       // Incorrect use of this primitive is handled as error before instantiating its type.
       failwith "NEVER"
 
@@ -704,56 +819,56 @@ let primToTySpec prim =
       let destTy = meta 2
       poly (tyFun srcTy destTy) [ PtrTrait srcTy; PtrTrait destTy ]
 
+  | HPrim.SizeOfVal -> poly (tyFun (meta 1) tyInt) []
+
+  | HPrim.PtrRead ->
+      // __constptr<'p> -> int -> 'a
+      let valueTy = meta 1
+      poly (tyFun (tyConstPtr valueTy) (tyFun tyInt valueTy)) []
+
+  | HPrim.PtrWrite ->
+      // nativeptr<'a> -> int -> 'a -> unit
+      let valueTy = meta 1
+      poly (tyFun (tyNativePtr valueTy) (tyFun tyInt (tyFun valueTy tyUnit))) []
+
 // -----------------------------------------------
 // Patterns (HIR)
 // -----------------------------------------------
 
-let rec patExtract (pat: HPat): Ty * Loc =
+let hpAbort ty loc = HNodePat(HAbortPN, [], ty, loc)
+
+let hpTuple itemPats loc =
+  let tupleTy = itemPats |> List.map patToTy |> tyTuple
+  HNodePat(HTuplePN, itemPats, tupleTy, loc)
+
+let patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
-  | HNilPat (itemTy, a) -> tyList itemTy, a
-  | HNonePat (itemTy, a) -> tyList itemTy, a
-  | HSomePat (itemTy, a) -> tyList itemTy, a
   | HDiscardPat (ty, a) -> ty, a
-  | HRefPat (_, ty, a) -> ty, a
+  | HVarPat (_, ty, a) -> ty, a
   | HVariantPat (_, ty, a) -> ty, a
-  | HNavPat (_, _, ty, a) -> ty, a
-  | HCallPat (_, _, ty, a) -> ty, a
-  | HConsPat (_, _, itemTy, a) -> tyList itemTy, a
-  | HTuplePat (_, ty, a) -> ty, a
-  | HBoxPat (_, a) -> tyObj, a
-  | HAsPat (pat, _, a) ->
-      let ty, _ = patExtract pat
-      ty, a
-  | HAnnoPat (_, ty, a) -> ty, a
-  | HOrPat (_, _, ty, a) -> ty, a
+
+  | HNodePat (_, _, ty, a) -> ty, a
+  | HAsPat (bodyPat, _, a) -> patToTy bodyPat, a
+  | HOrPat (l, _, a) -> patToTy l, a
+
+let patToTy pat = pat |> patExtract |> fst
+
+let patToLoc pat = pat |> patExtract |> snd
 
 let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
   let rec go pat =
     match pat with
     | HLitPat (lit, a) -> HLitPat(lit, g a)
-    | HNilPat (itemTy, a) -> HNilPat(f itemTy, g a)
-    | HNonePat (itemTy, a) -> HNonePat(f itemTy, g a)
-    | HSomePat (itemTy, a) -> HSomePat(f itemTy, g a)
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
-    | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
-    | HVariantPat (variantSerial, ty, a) -> HVariantPat(variantSerial, f ty, g a)
-    | HNavPat (l, r, ty, a) -> HNavPat(go l, r, f ty, g a)
-    | HCallPat (callee, args, ty, a) -> HCallPat(go callee, List.map go args, f ty, g a)
-    | HConsPat (l, r, itemTy, a) -> HConsPat(go l, go r, f itemTy, g a)
-    | HTuplePat (itemPats, ty, a) -> HTuplePat(List.map go itemPats, f ty, g a)
-    | HBoxPat (itemPat, a) -> HBoxPat(go itemPat, g a)
-    | HAsPat (pat, serial, a) -> HAsPat(go pat, serial, g a)
-    | HAnnoPat (pat, ty, a) -> HAnnoPat(go pat, f ty, g a)
-    | HOrPat (first, second, ty, a) -> HOrPat(go first, go second, f ty, g a)
+    | HVarPat (serial, ty, a) -> HVarPat(serial, f ty, g a)
+    | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
+
+    | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)
+    | HAsPat (bodyPat, serial, a) -> HAsPat(go bodyPat, serial, g a)
+    | HOrPat (l, r, a) -> HOrPat(go l, go r, g a)
 
   go pat
-
-let patToTy pat = pat |> patExtract |> fst
-
-let patToLoc pat =
-  let _, loc = patExtract pat
-  loc
 
 /// Converts a pattern in disjunctive normal form.
 /// E.g. `A, [B | C]` → `(A | [B]), (A | [C])`
@@ -762,50 +877,68 @@ let patNormalize pat =
     match pat with
     | HLitPat _
     | HDiscardPat _
-    | HRefPat _
-    | HVariantPat _
-    | HNilPat _
-    | HNonePat _
-    | HSomePat _ -> [ pat ]
-    | HNavPat (l, r, ty, loc) -> go l |> List.map (fun l -> HNavPat(l, r, ty, loc))
-    | HCallPat (callee, [ arg ], ty, loc) ->
-        go callee
-        |> List.collect (fun callee ->
-             go arg
-             |> List.map (fun arg -> HCallPat(callee, [ arg ], ty, loc)))
-    | HConsPat (l, r, ty, loc) ->
-        go l
-        |> List.collect (fun l ->
-             go r
-             |> List.map (fun r -> HConsPat(l, r, ty, loc)))
-    | HTuplePat (itemPats, ty, loc) ->
-        let rec gogo itemPats =
-          match itemPats with
-          | [] -> [ [] ]
-          | itemPat :: itemPats ->
-              let itemPat = go itemPat
-              gogo itemPats
-              |> List.collect (fun itemPats ->
-                   itemPat
-                   |> List.map (fun itemPat -> itemPat :: itemPats))
+    | HVarPat _
+    | HVariantPat _ -> [ pat ]
 
-        gogo itemPats
-        |> List.map (fun itemPats -> HTuplePat(itemPats, ty, loc))
+    | HNodePat (kind, argPats, ty, loc) ->
+        argPats
+        |> doNormalizePats
+        |> List.map (fun itemPats -> HNodePat(kind, itemPats, ty, loc))
 
-    | HBoxPat (itemPat, loc) ->
-        go itemPat
-        |> List.map (fun itemPat -> HBoxPat(itemPat, loc))
-
-    | HAsPat (bodyPat, varSerial, loc) ->
+    | HAsPat (bodyPat, serial, loc) ->
         go bodyPat
-        |> List.map (fun bodyPat -> HAsPat(bodyPat, varSerial, loc))
+        |> List.map (fun bodyPat -> HAsPat(bodyPat, serial, loc))
 
-    | HAnnoPat (pat, annoTy, loc) ->
-        go pat
-        |> List.map (fun pat -> HAnnoPat(pat, annoTy, loc))
+    | HOrPat (l, r, _) -> List.append (go l) (go r)
 
-    | HOrPat (first, second, _, _) -> List.append (go first) (go second)
-    | HCallPat _ -> failwith "Unimpl"
+  go pat
+
+let private doNormalizePats pats =
+  match pats with
+  | [] -> [ [] ]
+
+  | headPat :: tailPats ->
+      let headPats = patNormalize headPat
+
+      doNormalizePats tailPats
+      |> List.collect
+           (fun tailPats ->
+             headPats
+             |> List.map (fun headPat -> headPat :: tailPats))
+
+/// Gets whether a pattern is clearly exhaustive, that is,
+/// pattern matching on it always succeeds (assuming type check is passing).
+let patIsClearlyExhaustive isNewtypeVariant pat =
+  let rec go pat =
+    match pat with
+    | HLitPat _ -> false
+
+    | HDiscardPat _
+    | HVarPat _ -> true
+
+    | HVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
+
+    | HNodePat (kind, argPats, _, _) ->
+        match kind, argPats with
+        | HVariantAppPN variantSerial, [ payloadPat ] -> isNewtypeVariant variantSerial && go payloadPat
+
+        | HAbortPN, _ -> true
+
+        | HNilPN, _
+        | HConsPN, _
+        | HNonePN, _
+        | HSomePN, _
+        | HSomeAppPN, _
+        | HAppPN, _
+        | HVariantAppPN _, _
+        | HNavPN _, _ -> false
+
+        | HTuplePN, _
+        | HAscribePN, _
+        | HBoxPN, _ -> argPats |> List.forall go
+
+    | HAsPat (bodyPat, _, _) -> go bodyPat
+    | HOrPat (l, r, _) -> go l || go r
 
   go pat
 
@@ -817,29 +950,32 @@ let hxTrue loc = HLitExpr(litTrue, loc)
 
 let hxFalse loc = HLitExpr(litFalse, loc)
 
-let hxApp f x ty loc = HInfExpr(InfOp.App, [ f; x ], ty, loc)
+let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 
-let hxAnno expr ty loc = HInfExpr(InfOp.Anno, [ expr ], ty, loc)
+let hxAscribe expr ty loc = HNodeExpr(HAscribeEN, [ expr ], ty, loc)
 
 let hxSemi items loc =
-  HInfExpr(InfOp.Semi, items, exprToTy (List.last items), loc)
+  match splitLast items with
+  | Some (stmts, last) -> HBlockExpr(stmts, last)
+  | None -> HNodeExpr(HTupleEN, [], tyUnit, loc)
 
 let hxCallProc callee args resultTy loc =
-  HInfExpr(InfOp.CallProc, callee :: args, resultTy, loc)
+  HNodeExpr(HCallProcEN, callee :: args, resultTy, loc)
 
 let hxCallClosure callee args resultTy loc =
-  HInfExpr(InfOp.CallClosure, callee :: args, resultTy, loc)
+  HNodeExpr(HCallClosureEN, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HInfExpr(InfOp.Tuple, items, tyTuple (List.map exprToTy items), loc)
+  HNodeExpr(HTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
 let hxUnit loc = hxTuple [] loc
 
-let hxNil itemTy loc = HPrimExpr(HPrim.Nil, tyList itemTy, loc)
+let hxNil itemTy loc =
+  HPrimExpr(HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
-  | HInfExpr (InfOp.Tuple, [], _, _) -> true
+  | HNodeExpr (HTupleEN, [], _, _) -> true
   | _ -> false
 
 let hxIsAlwaysTrue expr =
@@ -850,19 +986,21 @@ let hxIsAlwaysTrue expr =
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HLitExpr (lit, a) -> litToTy lit, a
-  | HRefExpr (_, ty, a) -> ty, a
+  | HVarExpr (_, ty, a) -> ty, a
   | HFunExpr (_, ty, a) -> ty, a
   | HVariantExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
   | HRecordExpr (_, _, ty, a) -> ty, a
   | HMatchExpr (_, _, ty, a) -> ty, a
   | HNavExpr (_, _, ty, a) -> ty, a
-  | HInfExpr (_, _, ty, a) -> ty, a
+  | HNodeExpr (_, _, ty, a) -> ty, a
+  | HBlockExpr (_, last) -> exprExtract last
   | HLetValExpr (_, _, _, _, ty, a) -> ty, a
   | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
   | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
-  | HModuleExpr (_, _, _, a) -> tyUnit, a
+  | HModuleExpr (_, _, a) -> tyUnit, a
+  | HModuleSynonymExpr (_, _, a) -> tyUnit, a
 
 let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let goPat pat = patMap f g pat
@@ -870,7 +1008,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let rec go expr =
     match expr with
     | HLitExpr (lit, a) -> HLitExpr(lit, g a)
-    | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
+    | HVarExpr (serial, ty, a) -> HVarExpr(serial, f ty, g a)
     | HFunExpr (serial, ty, a) -> HFunExpr(serial, f ty, g a)
     | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, g a)
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
@@ -891,13 +1029,15 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 
         HMatchExpr(go cond, arms, f ty, g a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
-    | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, List.map go args, f resultTy, g a)
+    | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
+    | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
-    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, a) ->
-        HLetFunExpr(serial, vis, isMainFun, List.map goPat args, go body, go next, f ty, g a)
+    | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
+        HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
     | HOpenExpr (path, a) -> HOpenExpr(path, g a)
-    | HModuleExpr (name, body, next, a) -> HModuleExpr(name, go body, go next, g a)
+    | HModuleExpr (name, body, a) -> HModuleExpr(name, List.map go body, g a)
+    | HModuleSynonymExpr (name, path, a) -> HModuleSynonymExpr(name, path, g a)
 
   go expr
 
@@ -908,33 +1048,6 @@ let exprToTy expr =
 let exprToLoc expr =
   let _, loc = exprExtract expr
   loc
-
-/// Insert the second expression to the bottom of the first expression.
-/// This is bad way because of variable capturing issues and program size/depth issue.
-let spliceExpr firstExpr secondExpr =
-  let rec go expr =
-    match expr with
-    | HLetValExpr (vis, pat, init, next, ty, loc) ->
-        let next = go next
-        HLetValExpr(vis, pat, init, next, ty, loc)
-    | HLetFunExpr (serial, vis, isMainFun, args, body, next, ty, loc) ->
-        let next = go next
-        HLetFunExpr(serial, vis, isMainFun, args, body, next, ty, loc)
-    | HInfExpr (InfOp.Semi, exprs, ty, loc) ->
-        let rec goLast exprs =
-          match exprs with
-          | [] -> [ secondExpr ]
-          | [ lastExpr ] -> [ go lastExpr ]
-          | x :: xs -> x :: goLast xs
-
-        let exprs = goLast exprs
-        HInfExpr(InfOp.Semi, exprs, ty, loc)
-    | HModuleExpr (name, body, next, loc) ->
-        let next = go next
-        HModuleExpr(name, body, next, loc)
-    | _ -> hxSemi [ expr; secondExpr ] noLoc
-
-  go firstExpr
 
 // -----------------------------------------------
 // Print Formats
@@ -967,15 +1080,20 @@ let nameResLogToString log =
       + name
       + "' here should denote to some value; but not found."
 
+  | TyUsedAsValueError -> "This is a type. A value is expected here."
+
   | UndefinedTyError name ->
       "The name '"
       + name
       + "' here should denote to some type; but not found."
 
-  | FunPatError name ->
-      "The name '"
-      + name
-      + "' here is a function, which can't be used as a pattern."
+  | VarNameConflictError -> "Variable name conflicts"
+
+  | UnresolvedNavPatError -> "Couldn't resolve nav pattern."
+
+  | IllegalOrPatError -> "OR pattern is disallowed in let expressions."
+
+  | OrPatInconsistentBindingError -> "OR pattern binds different set of variables"
 
   | TyArityError ("_", _, _) -> "'_' can't have type arguments."
 
@@ -993,53 +1111,96 @@ let nameResLogToString log =
       + name
       + "' here should denote to some type; but is a module name."
 
+  | ModulePathNotFoundError -> "Module not found for this path"
+
+  | UnimplModuleSynonymError -> "This kind of module synonym is unimplemented. Hint: `module A = P.M`."
+
+  | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
+
   | OtherNameResLog msg -> msg
 
-let logToString tyDisplay loc log =
-  let loc = loc |> locToString
+let private traitBoundErrorToString tyDisplay it =
+  match it with
+  | AddTrait ty ->
+      "Operator (+) is not supported for type: "
+      + tyDisplay ty
 
+  | EqTrait ty ->
+      "Equality is not defined for type: "
+      + tyDisplay ty
+
+  | CmpTrait ty ->
+      "Comparison is not defined for type: "
+      + tyDisplay ty
+
+  | IndexTrait (lTy, rTy, _) ->
+      "Index operation type error: lhs: '"
+      + tyDisplay lTy
+      + "', rhs: "
+      + tyDisplay rTy
+      + "."
+
+  | IsIntTrait ty ->
+      "Expected int or some integer type but was: "
+      + tyDisplay ty
+
+  | IsNumberTrait ty ->
+      "Expected int or float type but was: "
+      + tyDisplay ty
+
+  | ToCharTrait ty -> "Can't convert to char from: " + tyDisplay ty
+  | ToIntTrait ty -> "Can't convert to integer from: " + tyDisplay ty
+  | ToFloatTrait ty -> "Can't convert to float from: " + tyDisplay ty
+  | ToStringTrait ty -> "Can't convert to string from: " + tyDisplay ty
+  | PtrTrait ty -> "Expected a pointer type but was: " + tyDisplay ty
+
+let logToString tyDisplay log =
   match log with
-  | Log.NameResLog log -> loc + " " + nameResLogToString log
+  | Log.NameResLog log -> nameResLogToString log
+
+  | Log.LiteralRangeError -> "This type of literal can't represent the value."
+
+  | Log.IrrefutablePatNonExhaustiveError ->
+      "Let expressions cannot contain refutable patterns, which could fail to match for now."
 
   | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
-      sprintf "%s Recursive type occurred while unifying '%s' to '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
+      "Recursive type occurred while unifying '"
+      + tyDisplay lTy
+      + "' to '"
+      + tyDisplay rTy
+      + "'."
 
-  | Log.TyUnify (TyUnifyLog.Mismatch, lRootTy, rRootTy, lTy, rTy) ->
-      sprintf
-        "%s Type mismatch: '%s' <> '%s'. Occurred while unifying '%s' to '%s'."
-        loc
-        (tyDisplay lTy)
-        (tyDisplay rTy)
-        (tyDisplay lRootTy)
-        (tyDisplay rRootTy)
+  | Log.TyUnify (TyUnifyLog.Mismatch, _, _, lTy, rTy) ->
+      "Type mismatch: '"
+      + tyDisplay lTy
+      + "' <> '"
+      + tyDisplay rTy
+      + "'."
 
-  | Log.TyBoundError (AddTrait ty) -> sprintf "%s No support (+) for '%s' yet" loc (tyDisplay ty)
+  | Log.TyBoundError it -> traitBoundErrorToString tyDisplay it
 
-  | Log.TyBoundError (EqTrait ty) -> sprintf "%s No support equality for '%s' yet" loc (tyDisplay ty)
-
-  | Log.TyBoundError (CmpTrait ty) -> sprintf "%s No support comparison for '%s' yet" loc (tyDisplay ty)
-
-  | Log.TyBoundError (IndexTrait (lTy, rTy, _)) ->
-      sprintf "%s No support indexing operation: lhs = '%s', rhs = '%s'." loc (tyDisplay lTy) (tyDisplay rTy)
-
-  | Log.TyBoundError (IsIntTrait ty) -> sprintf "%s Expected int or some integer type but was '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (IsNumberTrait ty) -> sprintf "%s Expected int or float type but was '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (ToIntTrait ty) -> sprintf "%s Can't convert to integer from '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (ToFloatTrait ty) -> sprintf "%s Can't convert to float from '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (ToStringTrait ty) -> sprintf "%s Can't convert to string from '%s'" loc (tyDisplay ty)
-
-  | Log.TyBoundError (PtrTrait ty) -> sprintf "%s Expected a pointer type but was '%s'" loc (tyDisplay ty)
+  | Log.TySynonymCycleError -> "Cyclic type synonym is forbidden."
 
   | Log.RedundantFieldError (recordName, fieldName) ->
-      sprintf "%s The field '%s' is redundant for record '%s'." loc fieldName recordName
+      "The field '"
+      + fieldName
+      + "' is redundant for record '"
+      + recordName
+      + "'."
 
   | Log.MissingFieldsError (recordName, fieldNames) ->
-      let fields = fieldNames |> strJoin ", "
+      let fields = fieldNames |> S.concat ", "
 
-      sprintf "%s Record '%s' must have fields: '%s'." loc recordName fields
+      "Record '"
+      + recordName
+      + "' must have fields: "
+      + fields
 
-  | Log.Error msg -> loc + " " + msg
+  | Log.ArityMismatch (actual, expected) ->
+      "Arity mismatch: expected "
+      + string expected
+      + ", but was "
+      + string actual
+      + "."
+
+  | Log.Error msg -> msg

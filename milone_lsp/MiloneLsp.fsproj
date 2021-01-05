@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +11,10 @@
     <Compile Include="JsonRpcReaderForStdIn.fs" />
     <Compile Include="JsonRpcReaderForAbstractStream.fs" />
     <Compile Include="JsonRpcWriter.fs" />
+    <Compile Include="Util.fs" />
+    <Compile Include="LspCacheLayer.fs" />
+    <Compile Include="Lsp.fs" />
+    <Compile Include="LspDocCache.fs" />
     <Compile Include="LspLangService.fs" />
     <Compile Include="LspServer.fs" />
     <Compile Include="Program.fs" />

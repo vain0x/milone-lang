@@ -67,7 +67,6 @@ type private MonoCtx =
 
     Funs: AssocMap<FunSerial, FunDef>
     Tys: AssocMap<TySerial, TyDef>
-    TyDepths: AssocMap<TySerial, LetDepth>
 
     /// Map from
     /// - generic function serial
@@ -94,7 +93,6 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
 
     Funs = tyCtx.Funs
     Tys = tyCtx.Tys
-    TyDepths = tyCtx.TyDepths
 
     GenericFunUseSiteTys = mapEmpty funSerialCmp
     GenericFunMonoSerials = mapEmpty funSerialTyPairCmp
@@ -105,17 +103,16 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
 let private toTyContext (monoCtx: MonoCtx): TyContext =
   { Serial = monoCtx.Serial
     Tys = monoCtx.Tys
-    TyDepths = monoCtx.TyDepths
 
-    // This doesn't matter here since we don't generalize.
-    LetDepth = 0 }
+    // Not used.
+    Level = 0
+    TyLevels = mapEmpty compare }
 
 let private withTyContext (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
   { monoCtx with
       Serial = tyCtx.Serial
       Logs = logAcc
-      Tys = tyCtx.Tys
-      TyDepths = tyCtx.TyDepths }
+      Tys = tyCtx.Tys }
 
 let private substTy (monoCtx: MonoCtx) ty: Ty = typingSubst (toTyContext monoCtx) ty
 
@@ -145,12 +142,14 @@ let private findFunName funSerial (ctx: MonoCtx) = (ctx.Funs |> mapFind funSeria
 let private forceGeneralizeFuns (ctx: MonoCtx) =
   let funs =
     ctx.Funs
-    |> mapFold (fun funs funSerial (funDef: FunDef) ->
-         let (TyScheme (_, ty)) = funDef.Ty
-         let fvs = ty |> tyCollectFreeVars
+    |> mapFold
+         (fun funs funSerial (funDef: FunDef) ->
+           let (TyScheme (_, ty)) = funDef.Ty
+           let fvs = ty |> tyCollectFreeVars
 
-         funs
-         |> mapAdd funSerial { funDef with Ty = TyScheme(fvs, ty) }) ctx.Funs
+           funs
+           |> mapAdd funSerial { funDef with Ty = TyScheme(fvs, ty) })
+         ctx.Funs
 
   { ctx with Funs = funs }
 
@@ -160,9 +159,11 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
 
   let funDef: FunDef =
     let name = ctx |> findFunName genericFunSerial
+
     { Name = name
       Arity = arity
       Ty = TyScheme([], useSiteTy)
+      Abi = CAbi
       Loc = loc }
 
   let monoFunSerial = FunSerial(ctx.Serial + 1)
@@ -236,6 +237,7 @@ let private takeMarkedTys (ctx: MonoCtx) funSerial =
 let private monifyFunExpr ctx funSerial useSiteTy =
   let funDef = findFun ctx funSerial
   let (TyScheme (tyVars, _)) = funDef.Ty
+
   if List.isEmpty tyVars then
     funSerial, ctx
   else
@@ -247,11 +249,11 @@ let private monifyFunExpr ctx funSerial useSiteTy =
 
         funSerial, ctx
 
-let private monifyLetFunExpr (ctx: MonoCtx) callee vis isMainFun args body next ty loc =
+let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty loc =
   let genericFunSerial = callee
 
   let letGenericFunExpr =
-    HLetFunExpr(callee, vis, isMainFun, args, body, next, ty, loc)
+    HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc)
 
   let rec go next arity genericFunTy useSiteTys ctx =
     match useSiteTys with
@@ -264,16 +266,23 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee vis isMainFun args body next 
             // resolve all types in args and body.
             let extendedCtx = unifyTy ctx genericFunTy useSiteTy loc
 
-            let monoArgs =
-              args |> List.map (patMap (substTy extendedCtx) id)
+            let substMeta tySerial =
+              match extendedCtx.Tys |> mapTryFind tySerial with
+              | Some (MetaTyDef (_, ty, _)) -> Some ty
+              | _ -> Some tyUnit
 
-            let monoBody = body |> exprMap (substTy extendedCtx) id
+            let substOrDegenerateTy ty = tySubst substMeta ty
+
+            let monoArgs =
+              args |> List.map (patMap substOrDegenerateTy id)
+
+            let monoBody = body |> exprMap substOrDegenerateTy id
 
             let monoFunSerial, ctx =
               addMonomorphizedFun ctx genericFunSerial arity useSiteTy loc
 
             let next =
-              HLetFunExpr(monoFunSerial, vis, isMainFun, monoArgs, monoBody, next, ty, loc)
+              HLetFunExpr(monoFunSerial, isRec, vis, monoArgs, monoBody, next, ty, loc)
 
             go next arity genericFunTy useSiteTys ctx
 
@@ -294,7 +303,7 @@ let private monifyExpr (expr, ctx) =
   | HTyDeclExpr _
   | HOpenExpr _
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HVariantExpr _
   | HPrimExpr _ -> expr, ctx
 
@@ -312,19 +321,28 @@ let private monifyExpr (expr, ctx) =
 
         let arms, ctx =
           (arms, ctx)
-          |> stMap (fun ((pat, guard, body), ctx) ->
-               let guard, ctx = (guard, ctx) |> monifyExpr
-               let body, ctx = (body, ctx) |> monifyExpr
-               (pat, guard, body), ctx)
+          |> stMap
+               (fun ((pat, guard, body), ctx) ->
+                 let guard, ctx = (guard, ctx) |> monifyExpr
+                 let body, ctx = (body, ctx) |> monifyExpr
+                 (pat, guard, body), ctx)
 
         HMatchExpr(cond, arms, ty, loc), ctx
 
       doArm ()
 
-  | HInfExpr (infOp, args, ty, loc) ->
+  | HNodeExpr (kind, args, ty, loc) ->
       let doArm () =
         let args, ctx = (args, ctx) |> stMap monifyExpr
-        HInfExpr(infOp, args, ty, loc), ctx
+        HNodeExpr(kind, args, ty, loc), ctx
+
+      doArm ()
+
+  | HBlockExpr (stmts, last) ->
+      let doArm () =
+        let stmts, ctx = (stmts, ctx) |> stMap monifyExpr
+        let last, ctx = (last, ctx) |> monifyExpr
+        HBlockExpr(stmts, last), ctx
 
       doArm ()
 
@@ -336,17 +354,18 @@ let private monifyExpr (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, vis, isMainFun, args, body, next, ty, loc) ->
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       let doArm () =
         let body, ctx = (body, ctx) |> monifyExpr
         let next, ctx = (next, ctx) |> monifyExpr
-        monifyLetFunExpr ctx callee vis isMainFun args body next ty loc
+        monifyLetFunExpr ctx callee isRec vis args body next ty loc
 
       doArm ()
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
-  | HModuleExpr _ -> failwith "NEVER: HModuleExpr is resolved in NameRes"
+  | HModuleExpr _
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
   let monoCtx = ofTyCtx tyCtx |> forceGeneralizeFuns

@@ -10,7 +10,7 @@ let private jsonRpcWriteString: string -> unit =
   let writer = new System.IO.BinaryWriter(buf)
 
   fun msg ->
-    eprintfn "write %s" msg
+    // eprintfn "write %s" msg
     let bytes = System.Text.Encoding.UTF8.GetBytes(msg)
 
     writer.Write(System.Text.Encoding.UTF8.GetBytes(sprintf "Content-Length: %d\r\n\r\n" bytes.Length))
@@ -23,7 +23,13 @@ let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list):
 
   let templateText =
     let dir =
-      System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
+      System.IO.Path.GetDirectoryName(
+        System
+          .Reflection
+          .Assembly
+          .GetExecutingAssembly()
+          .Location
+      )
 
     System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "..", "..", "..", "templates", sprintf "%s.json" name))
 
@@ -32,9 +38,11 @@ let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list):
   let text =
     // Replace placeholders.
     let mutable buf = System.Text.StringBuilder(templateText)
+
     for key, value in values do
       buf.Replace(sprintf "\"${%s}\"" key, jsonDisplay value)
       |> ignore
+
     let text = buf.ToString()
 
     // eprintfn "    -> '%s'" text
@@ -46,10 +54,10 @@ let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list):
   jsonRpcWriteString text
 
 /// Writes a JSON-RPC message with result field. (For LSP responses.)
-let jsonRpcWriteWithResult (methodName: string) (result: JsonValue): unit =
+let jsonRpcWriteWithResult (id: JsonValue) (result: JsonValue): unit =
   let jsonValue =
     [ "jsonrpc", JString "2.0"
-      "method", JString methodName
+      "id", id
       "result", result ]
     |> Map.ofList
     |> JObject

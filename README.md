@@ -1,18 +1,81 @@
 # MILONE-LANG
 
-Self-hosting is **achieved** at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
+Self-hosting the initial goal was **achieved** at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0). Currently working for initial release.
 
 ## What
 
-**Milone-lang** is a F#-subset programming language.
+**Milone-lang** is a F#-subset programming language. The goal ~is~ was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself.
 
-The goal is **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself.
+This is a hobby project. Don't use in production. Pull requests and issues etc. are welcome.
 
-This is a hobby project. Don't use in production. Pull requests and issues are welcome.
+## Getting Started
 
-## (No) Getting Started
+(Installation from binary or via package manager is not available yet.)
 
-No releases available yet. To try, see the Development section below.
+### Install from sources
+
+Prerequisites:
+
+- Ubuntu 18.04
+- Install Git
+- Install [.NET SDK 5.0](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
+
+Do:
+
+```sh
+# Clone this repository.
+git clone https://github.com/vain0x/milone-lang --depth=1
+
+# Build and install.
+cd milone-lang
+./install
+```
+
+- Feel free to ask anything in [discussion](https://github.com/vain0x/milone-lang/discussions/4).
+- To uninstall, run `./uninstall`.
+
+### Other platforms (Windows/macOS)
+
+Installation script is not available yet.
+
+So you need run commands by hand.
+See `./install` for details.
+(The milone-lang compiler should work on these platforms since .NET and C language are cross-platform.
+The milone-lang compiler emits C11-compliant codes and the [runtime codes](runtime/milone.c) are C11-compliant.)
+
+## Documentation
+
+See [the docs/refs directory](./docs/refs/).
+
+## Examples
+
+See [the tests/examples directory](./tests/examples).
+
+The largest and most practical example is [compiler itself](./MiloneLang).
+
+### How to build a test project
+
+TODO: Write in docs and include in test chain.
+
+These two commands build [tests/examples/hello_world](./tests/examples/hello_world) project.
+
+```sh
+# Compile to C.
+milone compile tests/examples/hello_world >hello.c
+
+# Build C. You need to specify runtime directory and link runtime codes.
+gcc -std=c11 \
+    -I $HOME/.milone/runtime \
+    $HOME/.milone/runtime/milone.c \
+    hello.c \
+    -o hello
+
+# Execute.
+./hello
+```
+
+----
 
 ## How It Works
 
@@ -83,9 +146,10 @@ Not all of F# features are supported. Features for functional-style programming 
     - `printfn` with `%s`, `%d`
     - Some file IOs
 
-See [the tests/examples directory](./tests/examples) for working codes.
+See also:
 
-- [notes.md](notes.md): notes on future works.
+- [the tests/examples directory](./tests/examples) for working codes
+- [the docs/refs directory](./docs/refs/) for detailed references
 
 ## Internals
 
@@ -150,23 +214,46 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 
 ### Dev: Prerequisites
 
-- Install .NET Core SDK [3.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/3.1)
-- Install [F#](http://ionide.io/#requirements) 4.1 tools
+- Install [.NET SDK 5.0](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
+
+### Dev: Build
+
+First of all, generate ninja configuration. (This is necessary to avoid listing all source file names in build script.)
+
+```sh
+./build-ninja-gen
+```
+
+To perform building and testing, do:
+
+```sh
+ninja
+```
 
 ### Dev: Testing
 
-The `tests` directory contains files for testing.
+The `tests` directory contains projects for testing. Testing consist of two phases.
 
-`dotnet test` performs unit testing. All `tests/*/X/X.fs` files are compiled to matching `tests/*/X/X.c`. The outputs have verified before commit, so it's OK if none of them changed. If an output is changed, you need to perform integration testing to verify.
+First, snapshot testing: each test project (at `tests/*/X`) is compiled with milone-lang compiler to C file. C files are committed to Git and you can assume they are verified before commit. OK if unchanged. Otherwise, the project proceeds to the next phase to verify the modified output.
 
-`./test` performs integration testing. Each `tests/*/X/X.fs` file is compiled to an executable using GCC and executed. It is verified by matching the stdout and exit code with `tests/*/X/X.out`.
+Second, integration testing: each test project is compiled with GCC and executed. The standard output and exit code is written to `tests/*/X/X.generated.out`. The expected result is stored in `tests/*/X/X.out`, which is committed. OK if the two files are same. Otherwise, something wrong. Debug it.
 
-`./test-self` performs self-compile checking. The milone-lang compiler (on .NET) compiles the compiler itself (obtaining first C code) and the output compiler also compiles the compiler itself (obtaining second C code). It's okay if the generated two C codes are same.
+In addition, self compilation is also a kind of testing. The milone-lang compiler (on .NET) compiles the compiler itself (obtaining first C code) and the output compiler also compiles the compiler itself (obtaining second C code). OK if the generated two C codes are same, and the generated compiler passes the all tests described above.
 
-There are some categories of testing files:
+In tests, there are some categories of test cases:
 
-- `features`: Testing of language features
-- `functions`: Testing of primitives
-- `errors`: Testing of compile errors
-- `examples`: Complex codes
-- `pendings`: Incomplete test cases
+- `features`: Tests for language features
+- `primitives`: Tests for primitive operators, functions, and types
+- `examples`: (should be) meaningful codes
+- `edges`: Tests for exotic cases
+- `errors`: Tests of compile errors
+- `pendings`: Test cases pointing out flaw of the compiler
+
+### Dev: See also
+
+- [TODO list](https://github.com/vain0x/milone-lang/projects/1): TODO list. Feel free to clarify by opening an issue.
+- [notes.md](notes.md): Notes on future works.
+- [milone_libs](./milone_libs): Standard library for milone-lang.
+    - [MiloneCore](./milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
+    - [MiloneStd](./milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.

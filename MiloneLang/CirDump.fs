@@ -42,6 +42,7 @@ let private declIsForwardOnly decl =
 
 let private unaryToString op =
   match op with
+  | CMinusUnary -> "-"
   | CNotUnary -> "!"
   | CDerefUnary -> "*"
 
@@ -89,6 +90,7 @@ let private cpTy ty acc: string list =
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy "" argTys resultTy
   | CStructTy name -> acc |> cons "struct " |> cons name
   | CEnumTy name -> acc |> cons "enum " |> cons name
+  | CEmbedTy code -> acc |> cons code
 
 /// `T x` or `T (*x)(..)`
 let private cpTyWithName name ty acc =
@@ -131,7 +133,7 @@ let private cpStrObjLit (value: string) acc =
   |> cons "(struct String){.str = "
   |> cpStrRawLit value
   |> cons ", .len = "
-  |> cons (string value.Length)
+  |> cons (string (__stringLengthInUtf8Bytes value))
   |> cons "}"
 
 let private cpStructLit fields ty acc =
@@ -139,12 +141,15 @@ let private cpStructLit fields ty acc =
   |> cons "("
   |> cpTy ty
   |> cons "){"
-  |> join ", " fields (fun (field, value) acc ->
-       acc
-       |> cons "."
-       |> cons field
-       |> cons " = "
-       |> cpExpr value)
+  |> join
+       ", "
+       fields
+       (fun (field, value) acc ->
+         acc
+         |> cons "."
+         |> cons field
+         |> cons " = "
+         |> cpExpr value)
   |> cons "}"
 
 // -----------------------------------------------
@@ -154,12 +159,14 @@ let private cpStructLit fields ty acc =
 let private cpExpr expr acc: string list =
   let rec cpExprList sep exprs acc =
     exprs
-    |> List.fold (fun (first, acc) expr ->
-         let acc =
-           (if isFirst first then acc else acc |> cons sep)
-           |> cpExpr expr
+    |> List.fold
+         (fun (first, acc) expr ->
+           let acc =
+             (if isFirst first then acc else acc |> cons sep)
+             |> cpExpr expr
 
-         NotFirst, acc) (First, acc)
+           NotFirst, acc)
+         (First, acc)
     |> snd
 
   match expr with
@@ -178,15 +185,11 @@ let private cpExpr expr acc: string list =
 
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
-  | CNavExpr (CStrObjExpr value, "len") -> acc |> cons (string value.Length)
-
-  | CRefExpr name -> acc |> cons name
-
-  | CProjExpr (l, index) ->
+  | CDotExpr (CStrObjExpr value, "len") ->
       acc
-      |> cpExpr l
-      |> cons ".t"
-      |> cons (string index)
+      |> cons (string (__stringLengthInUtf8Bytes value))
+
+  | CVarExpr name -> acc |> cons name
 
   | CCastExpr (expr, ty) ->
       acc
@@ -196,7 +199,7 @@ let private cpExpr expr acc: string list =
       |> cpExpr expr
       |> cons ")"
 
-  | CNavExpr (expr, field) -> acc |> cpExpr expr |> cons "." |> cons field
+  | CDotExpr (expr, field) -> acc |> cpExpr expr |> cons "." |> cons field
 
   | CArrowExpr (expr, field) -> acc |> cpExpr expr |> cons "->" |> cons field
 
@@ -213,6 +216,8 @@ let private cpExpr expr acc: string list =
       |> cons "("
       |> cpExprList ", " args
       |> cons ")"
+
+  | CSizeOfExpr ty -> acc |> cons "sizeof(" |> cpTy ty |> cons ")"
 
   | CUnaryExpr (op, arg) ->
       acc
@@ -231,6 +236,8 @@ let private cpExpr expr acc: string list =
       |> cons " "
       |> cpExpr r
       |> cons ")"
+
+  | CNativeExpr code -> acc |> cons code
 
 // -----------------------------------------------
 // Statements
@@ -325,13 +332,15 @@ let private cpStmt indent stmt acc: string list =
   | CSwitchStmt (cond, clauses) ->
       let cpCaseLabels cases acc =
         cases
-        |> List.fold (fun acc lit ->
+        |> List.fold
+             (fun acc lit ->
+               acc
+               |> cons (deeper indent)
+               |> cons "case "
+               |> cpExpr lit
+               |> cons ":"
+               |> cons eol)
              acc
-             |> cons (deeper indent)
-             |> cons "case "
-             |> cpExpr lit
-             |> cons ":"
-             |> cons eol) acc
 
       let cpDefaultLabel isDefault acc =
         if isDefault then
@@ -344,14 +353,16 @@ let private cpStmt indent stmt acc: string list =
 
       let cpClause acc =
         clauses
-        |> List.fold (fun (first, acc) (cases, isDefault, body) ->
-             let acc =
-               (if isFirst first then acc else acc |> cons eol)
-               |> cpCaseLabels cases
-               |> cpDefaultLabel isDefault
-               |> cpStmtList (deeper (deeper indent)) body
+        |> List.fold
+             (fun (first, acc) (cases, isDefault, body) ->
+               let acc =
+                 (if isFirst first then acc else acc |> cons eol)
+                 |> cpCaseLabels cases
+                 |> cpDefaultLabel isDefault
+                 |> cpStmtList (deeper (deeper indent)) body
 
-             NotFirst, acc) (First, acc)
+               NotFirst, acc)
+             (First, acc)
         |> snd
 
       acc
@@ -364,6 +375,8 @@ let private cpStmt indent stmt acc: string list =
       |> cons indent
       |> cons "}"
       |> cons eol
+
+  | CNativeStmt code -> acc |> cons code
 
 let private cpStmtList indent stmts acc: string list =
   stmts
@@ -387,12 +400,14 @@ let private cpDecl decl acc =
   | CStructDecl (structName, fields, variants) ->
       let cpFields indent fields acc =
         fields
-        |> List.fold (fun acc (name, ty) ->
+        |> List.fold
+             (fun acc (name, ty) ->
+               acc
+               |> cons indent
+               |> cpTyWithName name ty
+               |> cons ";"
+               |> cons eol)
              acc
-             |> cons indent
-             |> cpTyWithName name ty
-             |> cons ";"
-             |> cons eol) acc
 
       let cpVariants acc =
         match variants with
@@ -419,12 +434,14 @@ let private cpDecl decl acc =
   | CEnumDecl (enumName, variants) ->
       let cpEnumerants variants acc =
         variants
-        |> List.fold (fun acc variant ->
+        |> List.fold
+             (fun acc variant ->
+               acc
+               |> cons "    "
+               |> cons variant
+               |> cons ","
+               |> cons eol)
              acc
-             |> cons "    "
-             |> cons variant
-             |> cons ","
-             |> cons eol) acc
 
       acc
       |> cons "enum "
@@ -446,13 +463,16 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
+  | CNativeDecl code -> acc |> cons code |> cons eol
+
   | CStaticVarDecl _
   | CFunForwardDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
   match decl with
-  | CErrorDecl _ -> acc
+  | CErrorDecl _
+  | CNativeDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc
@@ -481,12 +501,14 @@ let private cpForwardDecl decl acc =
   | CFunForwardDecl (name, argTys, resultTy) ->
       let cpParamTys acc =
         argTys
-        |> List.fold (fun (first, acc) ty ->
-             let acc =
-               (if isFirst first then acc else acc |> cons ", ")
-               |> cpTy ty
+        |> List.fold
+             (fun (first, acc) ty ->
+               let acc =
+                 (if isFirst first then acc else acc |> cons ", ")
+                 |> cpTy ty
 
-             (NotFirst, acc)) (First, acc)
+               (NotFirst, acc))
+             (First, acc)
         |> snd
 
       acc
@@ -514,15 +536,17 @@ let private cpDecls decls acc =
   let acc = acc |> cpForwardDecls decls
 
   decls
-  |> List.fold (fun (first, acc) decl ->
-       if decl |> declIsForwardOnly then
-         first, acc
-       else
-         let acc =
-           (if isFirst first then acc else acc |> cons eol)
-           |> cpDecl decl
+  |> List.fold
+       (fun (first, acc) decl ->
+         if decl |> declIsForwardOnly then
+           first, acc
+         else
+           let acc =
+             (if isFirst first then acc else acc |> cons eol)
+             |> cpDecl decl
 
-         NotFirst, acc) (First, acc)
+           NotFirst, acc)
+       (First, acc)
   |> snd
 
 // -----------------------------------------------

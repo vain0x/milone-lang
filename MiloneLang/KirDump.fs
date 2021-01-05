@@ -52,7 +52,7 @@ let private kdPath path ctx =
   | KHeadPath _ -> ".head"
   | KTailPath _ -> ".tail"
   | KFieldPath (i, _) -> "[" + string i + "]"
-  | KTagPath _ -> ".tag"
+  | KDiscriminantPath _ -> ".discriminant"
   | KPayloadPath (variantSerial, _) -> "." + getVariantName variantSerial ctx
 
 let private litToDebugString lit =
@@ -60,7 +60,7 @@ let private litToDebugString lit =
   | BoolLit false -> "false"
   | BoolLit true -> "true"
   | FloatLit text -> text
-  | IntLit value -> string value
+  | IntLit text -> text
   | CharLit value -> "'" + charEscape value + "'"
   | StrLit value -> "\"" + strEscape value + "\""
 
@@ -98,11 +98,13 @@ let private tyToDebugString ty ctx =
 
       | TupleTyCtor, _ ->
           "["
-          + strConcat
-              (args
-               |> List.mapi (fun i ty ->
-                    (if i = 0 then "" else ", ")
-                    + tyToDebugString ty ctx))
+          + strConcat (
+            args
+            |> List.mapi
+                 (fun i ty ->
+                   (if i = 0 then "" else ", ")
+                   + tyToDebugString ty ctx)
+          )
           + "]"
 
       | ListTyCtor, [ itemTy ] -> "Array<" + tyToDebugString itemTy ctx + ">"
@@ -111,16 +113,21 @@ let private tyToDebugString ty ctx =
 
       | NativePtrTyCtor IsConst, [ itemTy ] -> "ConstPtr<" + tyToDebugString itemTy ctx + ">"
 
+      | NativeFunTyCtor, _
+      | NativeTypeTyCtor _, _ -> "unimplemented"
+
       | _, [] -> tyCtorToDebugString tyCtor ctx
 
       | _ ->
           tyCtorToDebugString tyCtor ctx
           + "<"
-          + strConcat
-              (args
-               |> List.mapi (fun i ty ->
-                    (if i = 0 then "" else ", ")
-                    + tyToDebugString ty ctx))
+          + strConcat (
+            args
+            |> List.mapi
+                 (fun i ty ->
+                   (if i = 0 then "" else ", ")
+                   + tyToDebugString ty ctx)
+          )
           + ">"
 
 let private kdVarAsTy varSerial (ctx: KirGenCtx) =
@@ -145,7 +152,7 @@ let private kdTerm term ctx =
   | KLabelTerm (funSerial, _, _) -> getFunName funSerial ctx
 
   | KVariantTerm (variantSerial, _, _) -> getVariantName variantSerial ctx
-  | KTagTerm (variantSerial, _) -> getVariantName variantSerial ctx + ".tag"
+  | KDiscriminantConstTerm (variantSerial, _) -> getVariantName variantSerial ctx + ".discriminant"
 
   | KNilTerm _ -> "[]"
   | KNoneTerm _ -> "None"
@@ -154,11 +161,12 @@ let private kdTerm term ctx =
 let private kdArgsAsParamList args ctx =
   "("
   + (args
-     |> List.mapi (fun i arg ->
-          (if i = 0 then "" else ", ")
-          + getVarName arg ctx
-          + ": "
-          + kdVarAsTy arg ctx)
+     |> List.mapi
+          (fun i arg ->
+            (if i = 0 then "" else ", ")
+            + getVarName arg ctx
+            + ": "
+            + kdVarAsTy arg ctx)
      |> strConcat)
   + ")"
 
@@ -251,9 +259,10 @@ let private kdPrimNode indent prim args results conts ctx =
 
     let resultList =
       results
-      |> List.mapi (fun i result ->
-           (if i = 0 then "" else ", ")
-           + getVarName result ctx)
+      |> List.mapi
+           (fun i result ->
+             (if i = 0 then "" else ", ")
+             + getVarName result ctx)
       |> strConcat
 
     match conts with
@@ -266,14 +275,15 @@ let private kdPrimNode indent prim args results conts ctx =
     | _ ->
         tsConstStmt indent ("[" + resultList + "]") (kdPrim prim + argList)
         + (conts
-           |> List.mapi (fun (i: int) cont ->
-                (indent
-                 + "// "
-                 + (kdPrim prim + ".cont#" + string i)
-                 + "\n")
-                + (indent + "{\n")
-                + kdNode (deeper indent) cont ctx
-                + (indent + "}\n"))
+           |> List.mapi
+                (fun (i: int) cont ->
+                  (indent
+                   + "// "
+                   + (kdPrim prim + ".cont#" + string i)
+                   + "\n")
+                  + (indent + "{\n")
+                  + kdNode (deeper indent) cont ctx
+                  + (indent + "}\n"))
            |> strConcat)
 
   match prim, args, results, conts with
@@ -393,7 +403,8 @@ let private kdFunBinding indent funBinding ctx =
   + kdNode (deeper indent) body ctx
   + ("}\n")
 
-let kirHeader () = """
+let kirHeader () =
+  """
 type unit = undefined
 type bool = boolean
 type int = number

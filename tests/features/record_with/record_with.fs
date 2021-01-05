@@ -1,5 +1,7 @@
 module rec record_with.Program
 
+// Record update syntax.
+
 type Person = { Name: string; Age: int }
 
 let main _ =

@@ -1,0 +1,3 @@
+module rec Lib.MiloneOnly
+
+let __someBuiltInFun () = 42

@@ -278,7 +278,7 @@ struct String str_of_raw_parts(char const *p, int len) {
         return (struct String){.str = "", .len = 0};
     }
 
-    char *str = (char *)milone_mem_alloc(len + 1, sizeof(char));
+    char *str = milone_mem_alloc(len + 1, sizeof(char));
     memcpy(str, p, len * sizeof(char));
     str[len] = '\0';
     return (struct String){.str = str, .len = len};
@@ -289,7 +289,7 @@ struct String str_add(struct String left, struct String right) {
         return right.len == 0 ? left : right;
     }
     int len = left.len + right.len;
-    char *str = (char *)milone_mem_alloc(len + 1, sizeof(char));
+    char *str = milone_mem_alloc(len + 1, sizeof(char));
     memcpy(str, left.str, left.len);
     memcpy(str + left.len, right.str, right.len);
     assert(str[len] == '\0');
@@ -299,16 +299,29 @@ struct String str_add(struct String left, struct String right) {
 struct String str_get_slice(int l, int r, struct String s) {
     l = int_clamp(l, 0, s.len);
     r = int_clamp(r + 1, l, s.len);
-    int len = r - l;
-    char *str;
+
     if (r == s.len) {
-        str = s.str + l;
-    } else {
-        str = (char *)milone_mem_alloc(len + 1, sizeof(char));
-        memcpy(str, s.str + l, len);
+        return (struct String){.str = s.str + l, .len = s.len - l};
     }
+
+    int len = r - l;
+    char *str = milone_mem_alloc(len + 1, sizeof(char));
+    memcpy(str, s.str + l, len);
     assert(str[len] == '\0');
     return (struct String){.str = str, .len = len};
+}
+
+static bool str_is_all_spaces(char const *begin, char const *end) {
+    char const *p = begin;
+    while (p != end && *p != 0 && isspace(*p)) {
+        p++;
+    }
+    return p == end;
+}
+
+_Noreturn static void string_conversion_error(char const *type_name) {
+    fprintf(stderr, "FATAL: Failed to convert a string to %s.\n", type_name);
+    exit(1);
 }
 
 static void verify_str_to_number(const char *type_name, const char *endptr,
@@ -322,70 +335,81 @@ static void verify_str_to_number(const char *type_name, const char *endptr,
 }
 
 int8_t str_to_int8(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int n = strtol(s.str, &endptr, 10);
     verify_str_to_number("int8_t", endptr, INT8_MIN <= n && n <= INT8_MAX);
     return (int8_t)n;
 }
 
 int16_t str_to_int16(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int n = strtol(s.str, &endptr, 10);
     verify_str_to_number("int16_t", endptr, INT16_MIN <= n && n <= INT16_MAX);
     return (int16_t)n;
 }
 
+bool str_to_int_checked(struct String s, int *value_ptr) {
+    char *endptr = (char *)(s.str + s.len);
+    long value = strtol(s.str, &endptr, 10);
+    *value_ptr = (int)value;
+    return endptr != s.str && (uintptr_t)(endptr - s.str) <= (uintptr_t)s.len &&
+           str_is_all_spaces(endptr, s.str + s.len) && errno != ERANGE &&
+           INT32_MIN <= value && value <= INT32_MAX;
+}
+
 int str_to_int(struct String s) {
-    char *endptr = s.str + s.len;
-    int n = strtol(s.str, &endptr, 10);
-    verify_str_to_number("int", endptr, true);
-    return n;
+    int value;
+    bool ok = str_to_int_checked(s, &value);
+    if (!ok) {
+        string_conversion_error("int");
+    }
+    return value;
 }
 
 int64_t str_to_int64(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int64_t n = strtoll(s.str, &endptr, 10);
     verify_str_to_number("int64_t", endptr, true);
     return n;
 }
 
 intptr_t str_to_intptr(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     int64_t n = strtoll(s.str, &endptr, 10);
     verify_str_to_number("intptr_t", endptr, true);
     return (intptr_t)n;
 }
 
 uint8_t str_to_uint8(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint32_t n = strtoul(s.str, &endptr, 10);
     verify_str_to_number("uint8_t", endptr, n <= UINT8_MAX);
     return (uint8_t)n;
 }
 
 uint16_t str_to_uint16(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint32_t n = strtoul(s.str, &endptr, 10);
     verify_str_to_number("uint16_t", endptr, n <= UINT16_MAX);
     return (uint16_t)n;
 }
 
 uint32_t str_to_uint32(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint32_t n = strtoul(s.str, &endptr, 10);
     verify_str_to_number("uint32_t", endptr, true);
     return n;
 }
 
 uint64_t str_to_uint64(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint64_t n = strtoull(s.str, &endptr, 10);
     verify_str_to_number("uint64_t", endptr, true);
     return n;
 }
 
 uintptr_t str_to_uintptr(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     uint64_t n = strtoull(s.str, &endptr, 10);
     verify_str_to_number("uintptr_t", endptr, true);
     return n;
@@ -404,7 +428,7 @@ struct String str_of_uint64(uint64_t value) {
 }
 
 double str_to_double(struct String s) {
-    char *endptr = s.str + s.len;
+    char *endptr = (char *)(s.str + s.len);
     double n = strtod(s.str, &endptr);
     verify_str_to_number("float", endptr, true);
     return n;
@@ -416,19 +440,21 @@ struct String str_of_double(double value) {
     return str_of_raw_parts(buf, n);
 }
 
+char str_to_char(struct String s) { return s.len >= 1 ? *s.str : '\0'; }
+
 struct String str_of_char(char value) {
-    char *str = (char *)milone_mem_alloc(2, sizeof(char));
+    char *str = milone_mem_alloc(2, sizeof(char));
     str[0] = value;
     return (struct String){.str = str, .len = strlen(str)};
 }
 
 struct MyStringList {
     struct String head;
-    struct MyStringList *tail;
+    struct MyStringList const *tail;
 };
 
-struct String str_concat(struct String sep, struct StringList *strings) {
-    struct MyStringList *ss = (struct MyStringList *)strings;
+struct String str_concat(struct String sep, struct StringList const *strings) {
+    struct MyStringList const *ss = (struct MyStringList const *)strings;
 
     struct StringBuilder *sb = string_builder_new_with_capacity(0x1000);
     bool first = true;
@@ -491,7 +517,7 @@ struct String file_read_all_text(struct String file_name) {
     }
     fseek(fp, 0, SEEK_SET);
 
-    char *content = (char *)milone_mem_alloc((size_t)size + 1, sizeof(char));
+    char *content = milone_mem_alloc((size_t)size + 1, sizeof(char));
     size_t read_size = fread(content, 1, (size_t)size, fp);
     if (read_size != (size_t)size) {
         fclose(fp);
@@ -540,8 +566,7 @@ struct Profiler {
 };
 
 void *milone_profile_init(void) {
-    struct Profiler *p =
-        (struct Profiler *)milone_mem_alloc(1, sizeof(struct Profiler));
+    struct Profiler *p = milone_mem_alloc(1, sizeof(struct Profiler));
     p->epoch = milone_get_time_millis();
     p->heap_size = s_heap_size;
     return p;
@@ -603,7 +628,7 @@ struct String scan_str(int capacity) {
         exit(1);
     }
 
-    char *str = calloc(capacity, sizeof(char));
+    char *str = milone_mem_alloc(capacity, sizeof(char));
     if (str == NULL) {
         fprintf(stderr, "scan_str(%d) out of memory", capacity);
         exit(1);
@@ -620,29 +645,6 @@ struct String scan_str(int capacity) {
     return (struct String){.str = str, .len = len};
 }
 
-void *int_array_new(int len) {
-    void *p = calloc(len, sizeof(int));
-    // fprintf(stderr, "int_array_new(len=%d) = %p\n", len, p);
-    return p;
-}
-
-int int_array_get(void *array, int index) {
-    int value = ((int *)array)[index];
-    // fprintf(stderr, "int_array_get(%p, index=%d) = %d\n", array, index,
-    // value);
-    return value;
-}
-
-void int_array_set(void *array, int index, int value) {
-    // fprintf(stderr, "int_array_set(%p, index=%d, value=%d)\n", array, index,
-    // value);
-    ((int *)array)[index] = value;
-}
-
-void int_array_copy(void *dest, void *src, int size) {
-    memcpy(dest, src, size);
-}
-
 // -----------------------------------------------
 // Command-line Arguments
 // -----------------------------------------------
@@ -657,7 +659,7 @@ struct String arg_get(int index) {
         abort();
     }
 
-    char *str = s_argv[index];
+    char const *str = s_argv[index];
     int len = strlen(str);
     return (struct String){.str = str, .len = len};
 }

@@ -1,0 +1,102 @@
+#!/bin/sh
+# Build and install milone-lang tools.
+# (This removes current installation whichever is new.)
+#
+# USAGE: ./install
+#
+# Files to be generated outside of the repository:
+#
+#   - $HOME/bin/
+#       - milone            (executable)
+#       - milone_dotnet    (executable)
+#   - $HOME/.milone/
+#       - bin/
+#           - milone_dotnet/   (.NET binaries)
+#           - milone_lsp/       (.NET binaries)
+#       - milone_libs/          (copied from milone_libs)
+#       - version               (text file)
+#
+# Remarks: $HOME/bin is expected to be listed in $PATH.
+
+set -eu
+
+BIN_DIR="$HOME/bin"
+MILONE_HOME="$HOME/.milone"
+
+# ------------------------------------------------
+# Check
+# ------------------------------------------------
+
+if test ! -d MiloneLang
+then
+    echo "install: Run in the root of milone-lang repository."
+    exit 1
+fi
+
+# Set log file.
+mkdir -p target
+LOG="./target/install.log"
+echo "install: Started." >>$LOG
+
+# Trap error.
+on_error() {
+    if test $? -ne 0
+    then
+        echo "install: Installation failed. See $LOG for logs." "$@"
+    fi
+}
+trap 'on_error "$@"' EXIT
+
+# Check prerequisites.
+dotnet --version >>$LOG
+ninja --version >>$LOG
+
+# ------------------------------------------------
+# Process
+# ------------------------------------------------
+
+./uninstall >>$LOG
+
+mkdir -p "$BIN_DIR"
+mkdir -p "$MILONE_HOME/bin"
+
+# Install native executable.
+ninja target/milone >>$LOG
+cp -bf target/milone "$BIN_DIR/milone"
+
+# Install .NET executable.
+dotnet publish MiloneLang \
+    --runtime linux-x64 \
+    -c Release \
+    -o "$MILONE_HOME/bin/milone_dotnet" \
+    -nologo >>$LOG
+
+ln -s "$MILONE_HOME/bin/milone_dotnet/MiloneLang" "$BIN_DIR/milone_dotnet"
+
+# Install LSP server.
+dotnet publish milone_lsp \
+    --runtime linux-x64 \
+    -c Release \
+    -o "$MILONE_HOME/bin/milone_lsp" \
+    -nologo >>$LOG
+
+# Copy files.
+cp -R runtime "$MILONE_HOME/runtime"
+cp -R milone_libs "$MILONE_HOME/milone_libs"
+
+# Record installed version.
+VERSION=$($BIN_DIR/milone --version)
+
+echo "$VERSION" >$MILONE_HOME/version
+
+# ------------------------------------------------
+# End
+# ------------------------------------------------
+
+if ! milone --version >/dev/null
+then
+    echo "install: It's recommended to add $BIN_DIR to \$PATH."
+fi
+
+echo "install: Finished." >>$LOG
+echo "install: milone-lang v$VERSION is installed successfully."

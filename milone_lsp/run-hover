@@ -1,0 +1,68 @@
+#!/bin/bash
+
+set -eu
+
+MILONE_LANG_DIR="$(dirname $PWD)/MiloneLang"
+
+{
+./req <<END
+{"method": "initialize", "id": 1, "params": {
+    "rootUri": "file://${MILONE_LANG_DIR}"
+}}
+END
+
+./req <<END
+{"method": "textDocument/hover", "id": 2, "params": {
+    "textDocument": {
+        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+    },
+    "position": {
+        "line": 54,
+        "character": 2
+    }
+}}
+END
+
+./req <<END
+{"method": "textDocument/didOpen", "params": {
+    "textDocument": {
+        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
+        "languageId": "milone",
+        "version": 1,
+        "text": $(cat ${MILONE_LANG_DIR}/MiloneLang.milone | ./json-encode)
+    }
+}}
+END
+
+./req <<END
+{"method": "textDocument/hover", "id": 3, "params": {
+    "textDocument": {
+        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+    },
+    "position": {
+        "line": 54,
+        "character": 3
+    }
+}}
+END
+
+./req <<END
+{"method": "textDocument/hover", "id": 4, "params": {
+    "textDocument": {
+        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
+    },
+    "position": {
+        "line": 54,
+        "character": 2
+    }
+}}
+END
+
+./req <<END
+{"method": "shutdown", "id": 1000000000}
+END
+
+./req <<END
+{"method": "exit"}
+END
+} | MILONE_HOME="$(dirname $PWD)" dotnet run 2>err.generated.txt

@@ -68,9 +68,11 @@ let private kpNode (node: KNode) ctx: KNode * KirPropagateCtx =
       let ctx =
         match prim, args, results with
         | KAddPrim, [ KLitTerm (IntLit l, _); KLitTerm (IntLit r, _) ], [ result ] ->
-            printfn "// kp: [TRACE] lit #%s := %d + %d" (objToString result) l r
+            printfn "// kp: [TRACE] lit #%s := %s + %s" (objToString result) l r
 
-            ctx |> kpDefVar result (KLitVarDef(IntLit(l + r)))
+            // should check overflow
+            ctx
+            |> kpDefVar result (KLitVarDef(IntLit(string (int l + int r))))
 
         | _ -> ctx
 
@@ -84,12 +86,13 @@ let private kpNode (node: KNode) ctx: KNode * KirPropagateCtx =
   | KJointNode (joints, cont, loc) ->
       let joints, ctx =
         (joints, ctx)
-        |> stMap (fun (jointBinding, ctx) ->
-             let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
+        |> stMap
+             (fun (jointBinding, ctx) ->
+               let (KJointBinding (jointSerial, args, body, loc)) = jointBinding
 
-             let body, ctx = ctx |> kpNode body
+               let body, ctx = ctx |> kpNode body
 
-             KJointBinding(jointSerial, args, body, loc), ctx)
+               KJointBinding(jointSerial, args, body, loc), ctx)
 
       let cont, ctx = ctx |> kpNode cont
       KJointNode(joints, cont, loc), ctx
@@ -101,11 +104,12 @@ let kirPropagate (root: KRoot, kirGenCtx: KirGenCtx): KRoot * KirGenCtx =
 
   let funBindings, _ =
     (funBindings, ctx)
-    |> stMap (fun (funBinding, ctx) ->
-         let (KFunBinding (funSerial, args, body, loc)) = funBinding
+    |> stMap
+         (fun (funBinding, ctx) ->
+           let (KFunBinding (funSerial, args, body, loc)) = funBinding
 
-         let body, ctx = ctx |> kpNode body
+           let body, ctx = ctx |> kpNode body
 
-         KFunBinding(funSerial, args, body, loc), ctx)
+           KFunBinding(funSerial, args, body, loc), ctx)
 
   KRoot(funBindings), kirGenCtx

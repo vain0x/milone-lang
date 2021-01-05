@@ -69,6 +69,8 @@ module rec MiloneLang.SyntaxParse
 open MiloneLang.Util
 open MiloneLang.Syntax
 
+module Int = MiloneStd.StdInt
+
 // -----------------------------------------------
 // Position
 // -----------------------------------------------
@@ -90,7 +92,7 @@ let private posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX s
 let private posAddX dx ((y, x): Pos) = y, x + dx
 
 let private posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
-  intMax firstY secondY, intMax firstX secondX
+  Int.max firstY secondY, Int.max firstX secondX
 
 /// Gets if three tokens can be merged. (Assuming each token is 1-letter.)
 /// That is, no space or comments interleave these positions.
@@ -156,6 +158,7 @@ let private inFirstOfPatAndExpr (token: Token) =
   | LeftBracketToken
   | LeftBraceToken
   | FalseToken
+  | MinusToken
   | TrueToken -> true
 
   | _ -> false
@@ -166,15 +169,10 @@ let private inFirstOfPat (token: Token) = inFirstOfPatAndExpr token
 /// Gets whether a token can be the first of an expression.
 let private inFirstOfExpr (token: Token) =
   match token with
-  | MinusToken
   | IfToken
   | MatchToken
   | FunToken
-  | DoToken
-  | LetToken
-  | TypeToken
-  | OpenToken
-  | LeftAttrToken -> true
+  | LetToken -> true
 
   | _ -> inFirstOfPatAndExpr token
 
@@ -185,22 +183,33 @@ let private inFirstOfArg (token: Token) =
 
   | _ -> inFirstOfExpr token
 
+let private inFirstOfDecl (token: Token) =
+  match token with
+  | TypeToken
+  | OpenToken
+  | ModuleToken
+  | LeftAttrToken -> true
+
+  | _ -> inFirstOfExpr token
+
 let private leadsPat tokens =
   match tokens with
   | (token, _) :: _ -> inFirstOfPat token
-
   | _ -> false
 
 let private leadsExpr tokens =
   match tokens with
   | (token, _) :: _ -> inFirstOfExpr token
-
   | _ -> false
 
 let private leadsArg tokens =
   match tokens with
   | (token, _) :: _ -> inFirstOfArg token
+  | _ -> false
 
+let private leadsDecl tokens =
+  match tokens with
+  | (token, _) :: _ -> inFirstOfDecl token
   | _ -> false
 
 /// Position of next token.
@@ -210,7 +219,7 @@ let private nextPos tokens: Pos =
 
   | (_, pos) :: _ -> pos
 
-/// Gets if next token exists and is inside the outer box.
+/// Gets whether next token exists and it is not shallower than `basePos`.
 let private nextInside basePos tokens: bool =
   match tokens with
   | [] -> false
@@ -249,6 +258,11 @@ let private parseExprError msg (tokens, errors) =
   let errors = parseErrorCore msg pos errors
   AMissingExpr pos, tokens, errors
 
+let private parseDeclError msg (tokens, errors) =
+  let pos = nextPos tokens
+  let errors = parseErrorCore msg pos errors
+  None, tokens, errors
+
 let private parseNewError msg (tokens, errors) =
   let pos = nextPos tokens
   parseErrorCore msg pos errors
@@ -282,13 +296,15 @@ let private expectRightAttr (tokens, errors) =
   | (RightAttrToken, _) :: tokens -> tokens, errors
   | _ -> tokens, parseNewError "Expected '>]'" (tokens, errors)
 
+let private eatRec tokens =
+  match tokens with
+  | (RecToken, _) :: tokens -> IsRec, tokens
+  | _ -> NotRec, tokens
+
 let private eatVis tokens =
   match tokens with
   | (PrivateToken, _) :: tokens -> PrivateVis, tokens
-
-  | (InternalToken, _) :: tokens -> PublicVis, tokens
   | (PublicToken, _) :: tokens -> PublicVis, tokens
-
   | _ -> PublicVis, tokens
 
 // -----------------------------------------------
@@ -351,6 +367,7 @@ let private parseTyAtom basePos (tokens, errors) =
 let private parseTySuffix basePos (tokens, errors) =
   let rec go (ty, tokens, errors) =
     let inside = nextInside basePos tokens
+
     match tokens with
     | (IdentToken ident, pos) :: tokens when inside -> go (ASuffixTy(ty, ident, pos), tokens, errors)
 
@@ -358,25 +375,17 @@ let private parseTySuffix basePos (tokens, errors) =
 
   parseTyAtom basePos (tokens, errors) |> go
 
-/// `ty-prefix = ( ident ':' )? ty-suffix`
-/// FIXME: `foo:Foo` is only allowed in payload types.
-let private parseTyPrefix basePos (tokens, errors) =
-  match tokens with
-  | (IdentToken _, _) :: (ColonToken, _) :: tokens -> parseTySuffix basePos (tokens, errors)
-
-  | _ -> parseTySuffix basePos (tokens, errors)
-
-/// `ty-tuple = ty-prefix ( '*' ty-prefix )*`
+/// `ty-tuple = ty-suffix ( '*' ty-suffix )*`
 let private parseTyTuple basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
     | (StarToken, _) :: tokens ->
-        let itemTy, tokens, errors = parseTyPrefix basePos (tokens, errors)
+        let itemTy, tokens, errors = parseTySuffix basePos (tokens, errors)
         go (itemTy :: acc) (tokens, errors)
 
     | _ -> List.rev acc, tokens, errors
 
-  let itemTy, tokens, errors = parseTyPrefix basePos (tokens, errors)
+  let itemTy, tokens, errors = parseTySuffix basePos (tokens, errors)
 
   match tokens with
   | (StarToken, opPos) :: _ ->
@@ -386,7 +395,6 @@ let private parseTyTuple basePos (tokens, errors) =
   | _ -> itemTy, tokens, errors
 
 /// `ty-fun = ty-tuple ( '->' ty-fun )?`
-/// FIXME: Support chain of arrows
 let private parseTyFun basePos (tokens, errors) =
   let sTy, tokens, errors = parseTyTuple basePos (tokens, errors)
 
@@ -402,6 +410,14 @@ let private parseTy basePos (tokens, errors) = parseTyFun basePos (tokens, error
 // -----------------------------------------------
 // Parse patterns
 // -----------------------------------------------
+
+let private parseNavPatBody head headPos (tokens, errors) =
+  let rec go acc tokens =
+    match tokens with
+    | (DotToken, dotPos) :: (IdentToken ident, _) :: tokens -> go (ANavPat(acc, ident, dotPos)) tokens
+    | _ -> acc, tokens, errors
+
+  go (AIdentPat(head, headPos)) tokens
 
 /// `pat ')'`
 let private parsePatParenBody basePos (tokens, errors) =
@@ -435,11 +451,12 @@ let private parsePatAtom basePos (tokens, errors) =
   | _ when not (nextInside basePos tokens && leadsPat tokens) ->
       parsePatError "Expected a pattern atom" (tokens, errors)
 
-  | (IntToken value, pos) :: tokens -> ALitPat(IntLit value, pos), tokens, errors
-  | (FloatToken value, pos) :: tokens -> ALitPat(FloatLit value, pos), tokens, errors
+  | (IntToken text, pos) :: tokens -> ALitPat(IntLit text, pos), tokens, errors
+  | (FloatToken text, pos) :: tokens -> ALitPat(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitPat(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitPat(StrLit value, pos), tokens, errors
-  | (IdentToken ident, pos) :: tokens -> AIdentPat(ident, pos), tokens, errors
+
+  | (IdentToken ident, pos) :: tokens -> parseNavPatBody ident pos (tokens, errors)
 
   | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATuplePat([], pos), tokens, errors
   | (LeftParenToken, _) :: tokens -> parsePatParenBody basePos (tokens, errors)
@@ -448,6 +465,9 @@ let private parsePatAtom basePos (tokens, errors) =
 
   | (FalseToken, pos) :: tokens -> ALitPat(BoolLit false, pos), tokens, errors
   | (TrueToken, pos) :: tokens -> ALitPat(BoolLit true, pos), tokens, errors
+
+  | (MinusToken, pos) :: (IntToken text, _) :: tokens ->
+    ALitPat(IntLit ("-" + text), pos), tokens, errors
 
   | _ -> parsePatError "NEVER: The token must be a pat" (tokens, errors)
 
@@ -474,22 +494,22 @@ let private parsePatCallArgs basePos (tokens, errors) =
 
   go [] (tokens, errors)
 
-/// `pat-call = pat-nav ( pat-nav )*`
-let private parsePatCall basePos (tokens, errors) =
+/// `pat-app = pat-nav ( pat-nav )?`
+let private parsePatApp basePos (tokens, errors) =
   let calleePos = nextPos tokens
   let callee, tokens, errors = parsePatNav basePos (tokens, errors)
 
-  let args, tokens, errors =
-    parsePatCallArgs basePos (tokens, errors)
-
-  match args with
-  | [] -> callee, tokens, errors
-
-  | _ -> AAppPat(callee, args, calleePos), tokens, errors
+  // Parse argument if exists.
+  if nextInside (basePos |> posAddX 1) tokens
+     && leadsPat tokens then
+    let arg, tokens, errors = parsePatNav basePos (tokens, errors)
+    AAppPat(callee, arg, calleePos), tokens, errors
+  else
+    callee, tokens, errors
 
 /// `pat-cons = pat-call ( '::' pat-cons )?`
 let private parsePatCons basePos (tokens, errors) =
-  let head, tokens, errors = parsePatCall basePos (tokens, errors)
+  let head, tokens, errors = parsePatApp basePos (tokens, errors)
 
   match tokens with
   | (ColonColonToken, pos) :: tokens ->
@@ -498,8 +518,8 @@ let private parsePatCons basePos (tokens, errors) =
 
   | _ -> head, tokens, errors
 
-/// `pat-anno = pat-cons ( ':' ty )?`
-let private parsePatAnno basePos (tokens, errors) =
+/// `pat-ascribe = pat-cons ( ':' ty )?`
+let private parsePatAscribe basePos (tokens, errors) =
   let pat, tokens, errors = parsePatCons basePos (tokens, errors)
 
   match tokens with
@@ -507,21 +527,21 @@ let private parsePatAnno basePos (tokens, errors) =
       let ty, tokens, errors =
         parseTy (nextPos tokens) (tokens, errors)
 
-      AAnnoPat(pat, ty, pos), tokens, errors
+      AAscribePat(pat, ty, pos), tokens, errors
 
   | _ -> pat, tokens, errors
 
-/// `pat-tuple = pat-anno ( ',' pat-anno )*`
+/// `pat-tuple = pat-ascribe ( ',' pat-ascribe )*`
 let private parsePatTuple basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
     | (CommaToken, _) :: tokens ->
-        let second, tokens, errors = parsePatAnno basePos (tokens, errors)
+        let second, tokens, errors = parsePatAscribe basePos (tokens, errors)
         go (second :: acc) (tokens, errors)
 
     | _ -> List.rev acc, tokens, errors
 
-  let itemPat, tokens, errors = parsePatAnno basePos (tokens, errors)
+  let itemPat, tokens, errors = parsePatAscribe basePos (tokens, errors)
 
   match tokens with
   | (CommaToken, pos) :: _ ->
@@ -571,7 +591,7 @@ let private parsePatLet basePos (tokens, errors) =
       match tokens with
       | (ColonToken, pos) :: tokens ->
           let ty, tokens, errors = parseTy basePos (tokens, errors)
-          AAnnoPat(pat, ty, pos), tokens, errors
+          AAscribePat(pat, ty, pos), tokens, errors
 
       | _ -> pat, tokens, errors
 
@@ -602,8 +622,8 @@ let private parseAtom basePos (tokens, errors) =
   match tokens with
   | _ when not (nextInside basePos tokens) -> parseExprError "Expected an expression" (tokens, errors)
 
-  | (IntToken value, pos) :: tokens -> ALitExpr(IntLit value, pos), tokens, errors
-  | (FloatToken value, pos) :: tokens -> ALitExpr(FloatLit value, pos), tokens, errors
+  | (IntToken text, pos) :: tokens -> ALitExpr(IntLit text, pos), tokens, errors
+  | (FloatToken text, pos) :: tokens -> ALitExpr(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
   | (IdentToken ident, pos) :: tokens -> AIdentExpr(ident, pos), tokens, errors
@@ -668,7 +688,7 @@ let private parsePrefix basePos (tokens, errors) =
   match tokens with
   | (MinusToken, pos) :: tokens ->
       let arg, tokens, errors = parseApp basePos (tokens, errors)
-      AUnaryExpr(NegUnary, arg, pos), tokens, errors
+      AUnaryExpr(MinusUnary, arg, pos), tokens, errors
 
   | _ -> parseApp basePos (tokens, errors)
 
@@ -753,18 +773,18 @@ let private parseTuple basePos (tokens, errors) =
 
   | _ -> item, tokens, errors
 
-/// `anno = tuple ( ':' ty )?`
-let private parseAnno basePos (tokens, errors) =
+/// `ascribe = tuple ( ':' ty )?`
+let private parseAscribe basePos (tokens, errors) =
   let body, tokens, errors = parseTuple basePos (tokens, errors)
 
   match tokens with
   | (ColonToken, pos) :: tokens ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
-      AAnnoExpr(body, ty, pos), tokens, errors
+      AAscribeExpr(body, ty, pos), tokens, errors
 
   | _ -> body, tokens, errors
 
-let private parseExpr basePos (tokens, errors) = parseAnno basePos (tokens, errors)
+let private parseExpr basePos (tokens, errors) = parseAscribe basePos (tokens, errors)
 
 // -----------------------------------------------
 // Parse block expressions
@@ -779,7 +799,7 @@ let private parseParenBody basePos _parenPos (tokens, errors) =
   body, tokens, errors
 
 let private parseList basePos bracketPos (tokens, errors) =
-  let items, tokens, errors = parseStmts basePos (tokens, errors)
+  let items, tokens, errors = parseItems basePos (tokens, errors)
   let tokens, errors = (tokens, errors) |> expectRightBracket
   AListExpr(items, bracketPos), tokens, errors
 
@@ -933,6 +953,7 @@ let private parseFun basePos funPos (tokens, errors) =
 let private parseLet letPos (tokens, errors) =
   let innerBasePos = letPos |> posAddX 1
 
+  let isRec, tokens = eatRec tokens
   let vis, tokens = eatVis tokens
 
   let pat, tokens, errors =
@@ -954,14 +975,44 @@ let private parseLet letPos (tokens, errors) =
 
     | tokens -> ATupleExpr([], letPos), tokens, errors
 
-  ALetExpr(vis, pat, body, next, letPos), tokens, errors
+  ALetExpr(isRec, vis, pat, body, next, letPos), tokens, errors
+
+/// `payload-ty = labeled-ty ( '*' labeled-ty )*`
+/// `labeled-ty = ( ident ':' )? ty-suffix`
+let private parsePayloadTy basePos (tokens, errors) =
+  let eatLabel tokens =
+    match tokens with
+    | (IdentToken _, _) :: (ColonToken, _) :: tokens -> tokens
+    | _ -> tokens
+
+  let pos = nextPos tokens
+
+  // parse first
+  let tokens = eatLabel tokens
+  let firstTy, tokens, errors = parseTySuffix basePos (tokens, errors)
+
+  // parse second or more
+  let rec go acc (tokens, errors) =
+    match tokens with
+    | (StarToken, _) :: tokens ->
+        let tokens = eatLabel tokens
+        let itemTy, tokens, errors = parseTySuffix basePos (tokens, errors)
+        go (itemTy :: acc) (tokens, errors)
+
+    | _ -> List.rev acc, tokens, errors
+
+  let itemTys, tokens, errors = go [ firstTy ] (tokens, errors)
+
+  match itemTys with
+  | [ itemTy ] -> itemTy, tokens, errors
+  | _ -> ATupleTy(itemTys, pos), tokens, errors
 
 /// Parses the body of union `type` declaration.
 let private parseTyDeclUnion basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
     | (PipeToken, _) :: (IdentToken variantIdent, pos) :: (OfToken, _) :: tokens ->
-        let payloadTy, tokens, errors = parseTy basePos (tokens, errors)
+        let payloadTy, tokens, errors = parsePayloadTy basePos (tokens, errors)
         go (AVariant(variantIdent, Some payloadTy, pos) :: acc) (tokens, errors)
 
     | (PipeToken, _) :: (IdentToken variantIdent, pos) :: tokens ->
@@ -970,7 +1021,7 @@ let private parseTyDeclUnion basePos (tokens, errors) =
     | _ -> List.rev acc, tokens, errors
 
   let variants, tokens, errors = go [] (tokens, errors)
-  AUnionTyDecl variants, tokens, errors
+  AUnionTyDeclBody variants, tokens, errors
 
 /// Parses the body of record type declaration.
 let private parseTyDeclRecord basePos (tokens, errors) =
@@ -1000,7 +1051,7 @@ let private parseTyDeclRecord basePos (tokens, errors) =
 
   let tokens, errors = (tokens, errors) |> expectRightBrace
 
-  ARecordTyDecl fields, tokens, errors
+  ARecordTyDeclBody fields, tokens, errors
 
 /// Parses after `type .. =`.
 /// NOTE: Unlike F#, it can't parse `type A = A` as definition of discriminated union.
@@ -1016,7 +1067,80 @@ let private parseTyDeclBody basePos (tokens, errors) =
 
   | _ ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
-      ATySynonymDecl ty, tokens, errors
+      ATySynonymDeclBody ty, tokens, errors
+
+let private parseStmt basePos (tokens, errors) =
+  match tokens with
+  | (LetToken, letPos) :: tokens -> parseLet letPos (tokens, errors)
+  | _ -> parseExpr basePos (tokens, errors)
+
+/// Parses a sequence of statements.
+/// These statements must be aligned on the same column
+/// except ones preceded by semicolon.
+///
+/// Returns last and non-last statements in reversed order.
+let private doParseStmts basePos (tokens, errors) =
+  let rec go last acc alignPos (tokens, errors) =
+    match tokens with
+    | (SemiToken, semiPos) :: tokens when posInside alignPos semiPos ->
+        let expr, tokens, errors = parseStmt alignPos (tokens, errors)
+        go expr (last :: acc) alignPos (tokens, errors)
+
+    | _ when posIsSameColumn alignPos (nextPos tokens)
+             && leadsExpr tokens ->
+        let expr, tokens, errors = parseStmt alignPos (tokens, errors)
+        go expr (last :: acc) alignPos (tokens, errors)
+
+    | _ -> Some(last, acc), tokens, errors
+
+  let alignPos = nextPos tokens
+
+  if posInside basePos alignPos && leadsExpr tokens then
+    let first, tokens, errors = parseStmt alignPos (tokens, errors)
+    go first [] alignPos (tokens, errors)
+  else
+    None, tokens, errors
+
+/// Parses a sequence of expressions separated by `;`s
+/// or aligned on the same column.
+/// Contents must be deeper than or equal to `basePos`,
+/// which is typically the pos of `let`/`type`/`module`/etc.
+/// The `mainPos` is a hint of the semi expression's pos.
+/// `stmts = stmt ( ';' stmt )*`
+let private parseSemi basePos mainPos (tokens, errors) =
+  let basePos = nextPos tokens |> posMax basePos
+  let contents, tokens, errors = doParseStmts basePos (tokens, errors)
+
+  match contents with
+  | None -> parseExprError "Expected statements" (tokens, errors)
+  | Some (last, acc) -> ASemiExpr(List.rev acc, last, mainPos), tokens, errors
+
+let private parseItems basePos (tokens, errors) =
+  let contents, tokens, errors = doParseStmts basePos (tokens, errors)
+
+  match contents with
+  | Some (last, acc) -> List.rev (last :: acc), tokens, errors
+  | None -> [], tokens, errors
+
+// -----------------------------------------------
+// Parse declarations
+// -----------------------------------------------
+
+let private parseLetDecl letPos (tokens, errors) =
+  let innerBasePos = letPos |> posAddX 1
+
+  let isRec, tokens = eatRec tokens
+  let vis, tokens = eatVis tokens
+
+  let pat, tokens, errors =
+    parsePatLet innerBasePos (tokens, errors)
+
+  let init, tokens, errors =
+    match tokens with
+    | (EqToken, equalPos) :: tokens -> parseSemi innerBasePos equalPos (tokens, errors)
+    | _ -> parseExprError "Missing '='" (tokens, errors)
+
+  Some(ALetDecl(isRec, vis, pat, init, letPos)), tokens, errors
 
 let private parseTyDecl typePos (tokens, errors) =
   let basePos = typePos |> posAddX 1
@@ -1040,7 +1164,7 @@ let private parseTyDecl typePos (tokens, errors) =
         | _ -> List.rev acc, Some "Expected type variable.", tokens
 
       match go [] tokens with
-      | _, Some msg, tokens -> parseExprError msg (tokens, errors)
+      | _, Some msg, tokens -> parseDeclError msg (tokens, errors)
 
       | tyArgs, None, tokens ->
           let ty, tokens, errors =
@@ -1048,59 +1172,79 @@ let private parseTyDecl typePos (tokens, errors) =
             | (EqToken, _) :: tokens -> parseTy basePos (tokens, errors)
             | _ -> parseTyError "Expected '='." (tokens, errors)
 
-          ATySynonymExpr(vis, tyIdent, tyArgs, ty, typePos), tokens, errors
+          Some(ATySynonymDecl(vis, tyIdent, tyArgs, ty, typePos)), tokens, errors
 
   | (IdentToken tyIdent, _) :: tokens ->
       match tokens with
       | (EqToken, _) :: tokens ->
-          let tyDecl, tokens, errors = parseTyDeclBody basePos (tokens, errors)
+          let tyDecl, tokens, errors =
+            parseTyDeclBody basePos (tokens, errors)
 
-          let expr =
+          let decl =
             match tyDecl with
-            | ATySynonymDecl ty -> ATySynonymExpr(vis, tyIdent, [], ty, typePos)
+            | ATySynonymDeclBody ty -> ATySynonymDecl(vis, tyIdent, [], ty, typePos)
+            | AUnionTyDeclBody variants -> AUnionTyDecl(vis, tyIdent, variants, typePos)
+            | ARecordTyDeclBody fields -> ARecordTyDecl(vis, tyIdent, fields, typePos)
 
-            | AUnionTyDecl variants -> AUnionTyExpr(vis, tyIdent, variants, typePos)
-
-            | ARecordTyDecl fields -> ARecordTyExpr(vis, tyIdent, fields, typePos)
-
-          expr, tokens, errors
+          Some decl, tokens, errors
 
       | _ ->
           let ty, tokens, errors =
             parseTyError "Expected '='" (tokens, errors)
 
-          ATySynonymExpr(vis, tyIdent, [], ty, typePos), tokens, errors
+          Some(ATySynonymDecl(vis, tyIdent, [], ty, typePos)), tokens, errors
 
-  | _ -> parseExprError "Expected identifier" (tokens, errors)
+  | _ -> parseDeclError "Expected identifier" (tokens, errors)
+
+let private parsePath (tokens, errors) =
+  let rec go acc (tokens, errors) =
+    match tokens with
+    | (DotToken, _) :: (IdentToken ident, _) :: tokens -> go (ident :: acc) (tokens, errors)
+
+    | (DotToken, _) :: tokens ->
+        let errors =
+          parseNewError "Expected identifier" (tokens, errors)
+
+        List.rev acc, tokens, errors
+
+    | _ -> List.rev acc, tokens, errors
+
+  match tokens with
+  | (IdentToken ident, _) :: tokens -> go [ ident ] (tokens, errors)
+
+  | _ ->
+      let errors =
+        parseNewError "Expected identifier" (tokens, errors)
+
+      [], tokens, errors
 
 /// `open = 'open' ident ( '.' ident )*`
-let private parseOpen openPos (tokens, errors) =
-  let parsePath (tokens, errors) =
-    let rec go acc (tokens, errors) =
-      match tokens with
-      | (DotToken, _) :: (IdentToken ident, _) :: tokens -> go (ident :: acc) (tokens, errors)
+let private parseOpenDecl openPos (tokens, errors) =
+  let path, tokens, errors = parsePath (tokens, errors)
+  Some(AOpenDecl(path, openPos)), tokens, errors
 
-      | (DotToken, _) :: tokens ->
-          let errors =
-            parseNewError "Expected identifier" (tokens, errors)
-
-          List.rev acc, tokens, errors
-
-      | _ -> List.rev acc, tokens, errors
-
+let private parseModuleDecl modulePos (tokens, errors) =
+  let moduleName, tokens, errors =
     match tokens with
-    | (IdentToken ident, _) :: tokens -> go [ ident ] (tokens, errors)
-
+    | (IdentToken moduleName, _) :: tokens -> moduleName, tokens, errors
     | _ ->
         let errors =
           parseNewError "Expected identifier" (tokens, errors)
 
+        "_", tokens, errors
+
+  let path, tokens, errors =
+    match tokens with
+    | (EqToken, _) :: tokens -> parsePath (tokens, errors)
+    | _ ->
+        let errors =
+          parseNewError "Expected '='" (tokens, errors)
+
         [], tokens, errors
 
-  let path, tokens, errors = parsePath (tokens, errors)
-  AOpenExpr(path, openPos), tokens, errors
+  Some(AModuleSynonymDecl(moduleName, path, modulePos)), tokens, errors
 
-let private parseAttrStmt basePos (tokens, errors) =
+let private parseAttrDecl basePos (tokens, errors) =
   let contents, tokens, errors =
     parseSemi basePos basePos (tokens, errors)
 
@@ -1110,64 +1254,43 @@ let private parseAttrStmt basePos (tokens, errors) =
      |> nextPos
      |> posIsSameColumn basePos
      |> not then
-    let errors =
-      parseNewError "Expected a statement after attribute." (tokens, errors)
-
-    contents, tokens, errors
+    parseDeclError "Expected a declaration after attribute." (tokens, errors)
   else
-    let stmt, tokens, errors = parseStmt (basePos) (tokens, errors)
-    AAttrExpr(contents, stmt, basePos), tokens, errors
+    let declOpt, tokens, errors = parseDecl basePos (tokens, errors)
 
-let private parseStmt basePos (tokens, errors) =
+    match declOpt with
+    | Some decl -> Some(AAttrDecl(contents, decl, basePos)), tokens, errors
+    | None -> None, tokens, errors
+
+let private parseDecl basePos (tokens, errors) =
   match tokens with
-  | (LeftAttrToken, pos) :: tokens -> parseAttrStmt pos (tokens, errors)
-
-  | (LetToken, letPos) :: (RecToken, _) :: tokens ->
-      // FIXME: use `rec`
-      parseLet letPos (tokens, errors)
-
-  | (LetToken, letPos) :: tokens -> parseLet letPos (tokens, errors)
+  | (LeftAttrToken, pos) :: tokens -> parseAttrDecl pos (tokens, errors)
+  | (LetToken, letPos) :: tokens -> parseLetDecl letPos (tokens, errors)
   | (TypeToken, typePos) :: tokens -> parseTyDecl typePos (tokens, errors)
-  | (OpenToken, typePos) :: tokens -> parseOpen typePos (tokens, errors)
+  | (OpenToken, typePos) :: tokens -> parseOpenDecl typePos (tokens, errors)
+  | (ModuleToken, modulePos) :: tokens -> parseModuleDecl modulePos (tokens, errors)
 
-  | _ -> parseExpr basePos (tokens, errors)
+  | _ ->
+      let exprOpt, tokens, errors = parseExpr basePos (tokens, errors)
 
-/// Parses a sequence of statements.
-/// These statements must be aligned on the same column
-/// except ones preceded by semicolon.
-let private parseStmts basePos (tokens, errors) =
-  let rec go acc alignPos (tokens, errors) =
+      match exprOpt with
+      | AMissingExpr _ -> None, tokens, errors
+      | expr -> Some(AExprDecl expr), tokens, errors
+
+let private parseModuleBody basePos (tokens, errors) =
+  let rec go acc (tokens, errors) =
     match tokens with
-    | (SemiToken, semiPos) :: tokens when posInside alignPos semiPos ->
-        let expr, tokens, errors = parseStmt alignPos (tokens, errors)
-        go (expr :: acc) alignPos (tokens, errors)
+    | _ when nextInside basePos tokens |> not -> List.rev acc, tokens, errors
 
-    | _ when posIsSameColumn alignPos (nextPos tokens)
-             && leadsExpr tokens ->
-        let expr, tokens, errors = parseStmt alignPos (tokens, errors)
-        go (expr :: acc) alignPos (tokens, errors)
+    | _ ->
+        // error if unaligned
+        let declOpt, tokens, errors = parseDecl basePos (tokens, errors)
 
-    | _ -> List.rev acc, tokens, errors
+        match declOpt with
+        | Some decl -> go (decl :: acc) (tokens, errors)
+        | None -> List.rev acc, tokens, errors
 
-  let alignPos = nextPos tokens
-  if posInside basePos alignPos then go [] alignPos (tokens, errors) else [], tokens, errors
-
-/// Parses a sequence of expressions separated by `;`s
-/// or aligned on the same column.
-/// Contents must be deeper than or equal to `basePos`,
-/// which is typically the pos of `let`/`type`/`module`/etc.
-/// The `mainPos` is a hint of the semi expression's pos.
-/// `stmts = stmt ( ';' stmt )*`
-let private parseSemi basePos mainPos (tokens, errors) =
-  let basePos = nextPos tokens |> posMax basePos
-  let items, tokens, errors = parseStmts basePos (tokens, errors)
-
-  match items with
-  | [] -> parseExprError "Expected statements" (tokens, errors)
-
-  | [ item ] -> item, tokens, errors
-
-  | _ -> ASemiExpr(items, mainPos), tokens, errors
+  go [] (tokens, errors)
 
 // -----------------------------------------------
 // Parse toplevel
@@ -1176,32 +1299,32 @@ let private parseSemi basePos mainPos (tokens, errors) =
 /// `top-level = ( 'module' 'rec'? path module-body / module-body )?`
 let private parseTopLevel (tokens, errors) =
   match tokens with
-  | [] ->
-      let pos = 0, 0
-      AExprRoot(ATupleExpr([], pos)), tokens, errors
+  | [] -> AExprRoot [], tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, _) :: tokens ->
-      let expr, tokens, errors =
-        parseSemi modulePos modulePos (tokens, errors)
+      let decls, tokens, errors =
+        parseModuleBody modulePos (tokens, errors)
 
-      AModuleRoot(ident, expr, modulePos), tokens, errors
+      AModuleRoot(ident, decls, modulePos), tokens, errors
 
   | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken ident, _) :: tokens ->
-      let expr, tokens, errors =
-        parseSemi modulePos modulePos (tokens, errors)
+      let decls, tokens, errors =
+        parseModuleBody modulePos (tokens, errors)
 
-      AModuleRoot(ident, expr, modulePos), tokens, errors
+      AModuleRoot(ident, decls, modulePos), tokens, errors
 
-  | (ModuleToken, modulePos) :: (IdentToken ident, _) :: tokens ->
-      let expr, tokens, errors =
-        parseSemi modulePos modulePos (tokens, errors)
+  | (ModuleToken, _) :: tokens ->
+      let errors =
+        parseNewError
+          "module syntax error. Hint: `module rec ProjectName.ModuleName`. (rec keyword is mandatory for now.)"
+          (tokens, errors)
 
-      AModuleRoot(ident, expr, modulePos), tokens, errors
+      AExprRoot [], [], errors
 
   | _ ->
       let pos = 0, 0
-      let expr, tokens, errors = parseSemi pos pos (tokens, errors)
-      AExprRoot expr, tokens, errors
+      let exprs, tokens, errors = parseModuleBody pos (tokens, errors)
+      AExprRoot exprs, tokens, errors
 
 let parse (tokens: (Token * Pos) list): ARoot * (string * Pos) list =
   let expr, tokens, errors = parseTopLevel (tokens, [])

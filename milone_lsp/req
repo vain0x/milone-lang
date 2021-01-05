@@ -1,0 +1,10 @@
+#!/bin/bash
+# USAGE: echo '{ ... }' | ./req
+
+set -eu
+
+BODY=$(cat)
+
+echo "Content-Length: $(echo "$BODY" | wc -c)"
+echo
+echo "$BODY"
