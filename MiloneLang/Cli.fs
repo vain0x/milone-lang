@@ -763,8 +763,10 @@ let private parseVerbosity (host: CliHost) args =
   parseFlag
     (fun (_: Verbosity) arg ->
       match arg with
-      | "-v" -> Some Verbose
-      | "-q" -> Some Quiet
+      | "-v"
+      | "--verbose" -> Some Verbose
+      | "-q"
+      | "--quiet" -> Some Quiet
       | "--profile" -> Some(Profile(host.ProfileInit()))
       | _ -> None)
     Quiet
