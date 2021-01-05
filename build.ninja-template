@@ -8,9 +8,9 @@
 
 builddir = target
 
-milone_netcore_debug = MiloneLang/bin/Debug/netcoreapp3.1/MiloneLang
+milone_netcore_debug = MiloneLang/bin/Debug/net5.0/MiloneLang
 
-milone_netcore_release = MiloneLang/bin/Release/netcoreapp3.1/MiloneLang
+milone_netcore_release = MiloneLang/bin/Release/net5.0/MiloneLang
 
 cflags = -std=c11 $
   -O2 $

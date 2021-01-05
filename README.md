@@ -18,7 +18,7 @@ Prerequisites:
 
 - Ubuntu 18.04
 - Install Git
-- Install .NET SDK ([.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1) or [.NET 5](https://dotnet.microsoft.com/download/dotnet/5.0))
+- Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
 - Install [ninja](https://github.com/ninja-build/ninja) 1.10 (build tool)
 
 Do:
@@ -214,8 +214,8 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 
 ### Dev: Prerequisites
 
-- Install .NET Core SDK [3.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/3.1)
-- Install [ninja](https://github.com/ninja-build/ninja) 1.10 (task runner)
+- Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install [ninja](https://github.com/ninja-build/ninja) 1.10 (build tool)
 
 ### Dev: Build
 
