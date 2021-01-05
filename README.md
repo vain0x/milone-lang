@@ -6,11 +6,76 @@ Self-hosting the initial goal was **achieved** at [v0.1.0](https://github.com/va
 
 **Milone-lang** is a F#-subset programming language. The goal ~is~ was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself.
 
-This is a hobby project. Don't use in production. Pull requests and issues are welcome.
+This is a hobby project. Don't use in production. Pull requests and issues etc. are welcome.
 
-## (No) Getting Started
+## Getting Started
 
-No releases available yet. To try, see the Development section below.
+(Installation from binary or via package manager is not available yet.)
+
+### Install from sources
+
+Prerequisites:
+
+- Ubuntu 18.04
+- Install Git
+- Install .NET SDK ([.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1) or [.NET 5](https://dotnet.microsoft.com/download/dotnet/5.0))
+- Install [ninja](https://github.com/ninja-build/ninja) 1.10 (build tool)
+
+Do:
+
+```sh
+# Clone this repository.
+git clone https://github.com/vain0x/milone-lang --depth=1
+
+# Build and install.
+cd milone-lang
+./install
+```
+
+- Feel free to ask anything in [discussion](https://github.com/vain0x/milone-lang/discussions/4).
+- To uninstall, run `./uninstall`.
+
+### Other platforms (Windows/macOS)
+
+Installation script is not available yet.
+
+So you need run commands by hand.
+See `./install` for details.
+(The milone-lang compiler should work on these platforms since .NET and C language are cross-platform.
+The milone-lang compiler emits C11-compliant codes and the [runtime codes](runtime/milone.c) are C11-compliant.)
+
+## Documentation
+
+See [the docs/refs directory](./docs/refs/).
+
+## Examples
+
+See [the tests/examples directory](./tests/examples).
+
+The largest and most practical example is [compiler itself](./MiloneLang).
+
+### How to build a test project
+
+TODO: Write in docs and include in test chain.
+
+These two commands build [tests/examples/hello_world](./tests/examples/hello_world) project.
+
+```sh
+# Compile to C.
+milone compile tests/examples/hello_world >hello.c
+
+# Build C. You need to specify runtime directory and link runtime codes.
+gcc -std=c11 \
+    -I $HOME/.milone/runtime \
+    $HOME/.milone/runtime/milone.c \
+    hello.c \
+    -o hello
+
+# Execute.
+./hello
+```
+
+----
 
 ## How It Works
 
@@ -150,7 +215,6 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 ### Dev: Prerequisites
 
 - Install .NET Core SDK [3.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/3.1)
-- Install [F#](http://ionide.io/#requirements) 4.1 tools
 - Install [ninja](https://github.com/ninja-build/ninja) 1.10 (task runner)
 
 ### Dev: Build
