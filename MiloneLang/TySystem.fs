@@ -397,10 +397,14 @@ type private MetaTyUnifyResult =
   | DidExpand of Ty
   | DidBind of TyContext
   | DidRecurse
+  | DidMismatch
 
 let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
   match ctx.Tys |> mapTryFind tySerial with
   | Some (MetaTyDef (_, ty, _)) -> DidExpand ty
+
+  // Quantified types can't be bound.
+  | _ when (ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0) = 1000000000 -> DidMismatch
 
   | _ ->
       match typingSubst ctx otherTy with
@@ -493,12 +497,14 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
         | DidExpand ty -> go ty rTy (logAcc, ctx)
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
+        | DidMismatch -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
 
     | _, MetaTy (rSerial, loc) ->
         match unifyMetaTy rSerial lTy loc ctx with
         | DidExpand ty -> go lTy ty (logAcc, ctx)
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
+        | DidMismatch -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
 
     | AppTy (lTyCtor, lTyArgs), AppTy (rTyCtor, rTyArgs) when tyCtorEq lTyCtor rTyCtor ->
         let rec gogo lTyArgs rTyArgs (logAcc, ctx) =

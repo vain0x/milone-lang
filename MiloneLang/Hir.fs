@@ -560,6 +560,10 @@ let isNoTy ty =
   | ErrorTy _ -> true
   | _ -> false
 
+let tySchemeToTy tyScheme =
+  let (TyScheme (_, ty)) = tyScheme
+  ty
+
 let tyInt =
   AppTy(IntTyCtor(IntFlavor(Signed, I32)), [])
 

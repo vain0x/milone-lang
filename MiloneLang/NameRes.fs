@@ -172,6 +172,7 @@ type ScopeCtx =
     VarLevels: AssocMap<Serial, Level>
 
     MainFunOpt: FunSerial option
+    ToplevelFuns: FunSerial list
 
     /// Type serial to definition map.
     Tys: AssocMap<TySerial, TyDef>
@@ -208,6 +209,7 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Variants = mapEmpty variantSerialCmp
     VarLevels = mapEmpty compare
     MainFunOpt = None
+    ToplevelFuns = []
     Tys = mapEmpty compare
     ModuleTys = mapEmpty moduleTySerialCmp
     ModuleSynonyms = mapEmpty moduleSynonymSerialCmp
@@ -817,6 +819,8 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
             ctx |> findName (funSerialToInt funSerial)
 
           if name = "main" then { ctx with MainFunOpt = Some funSerial } else ctx
+
+        let ctx = { ctx with ToplevelFuns = funSerial :: ctx.ToplevelFuns }
 
         let ctx =
           ctx
