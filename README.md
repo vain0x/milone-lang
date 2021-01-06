@@ -19,6 +19,7 @@ Prerequisites:
 - Ubuntu 18.04
 - Install Git
 - Install [.NET SDK 5.0.101](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install GCC 7.5.0 (Note: This is old, current latest version is 10.)
 - Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
 
 Do:
@@ -215,6 +216,7 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 ### Dev: Prerequisites
 
 - Install [.NET SDK 5.0.101](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install GCC 7.5.0
 - Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
 
 ### Dev: Build
