@@ -29,8 +29,8 @@ build: **/*.fs **/*.milone
 
 test: build
 
-clean: build.ninja
-	ninja clean
+clean:
+	./clean
 
 # ------------------------------------------------
 # install

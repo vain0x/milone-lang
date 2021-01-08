@@ -194,19 +194,7 @@ build integration_tests: $
 
 # Remove generated files.
 rule clean
-  command = $
-    rm -f *.generated.* $
-    rm -f tests/*/*/*.generated.* $
-    rm -rf target $
-    rm -rf $
-      milone_libs/MiloneStd/bin $
-      milone_libs/MiloneStd/obj $
-      milone_lsp/bin $
-      milone_lsp/obj $
-      MiloneLang/bin $
-      MiloneLang/obj $
-      MiloneTests/bin $
-      MiloneTests/obj
+  command = ./clean
 
 build clean: clean
 
