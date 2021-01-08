@@ -668,12 +668,11 @@ struct String arg_get(int index) {
 // Runtime Entrypoint
 // -----------------------------------------------
 
-#undef main
+int milone_main(void);
 
 int main(int argc, char **argv) {
     s_argc = argc - 1;
     s_argv = argv + 1;
 
-    int milone_main();
     return milone_main();
 }

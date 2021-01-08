@@ -6,7 +6,7 @@ enum SubUnion_Discriminant;
 
 struct SubUnion_;
 
-int main();
+int milone_main();
 
 struct SubRecord_ {
     struct String t0;
@@ -23,7 +23,7 @@ struct SubUnion_ {
     };
 };
 
-int main() {
+int milone_main() {
     struct SubRecord_ SubRecord_ = (struct SubRecord_){.t0 = (struct String){.str = "Hello", .len = 5}};
     struct SubRecord_ text_ = SubRecord_;
     milone_assert((text_.t0.len == 5), 8, 2);

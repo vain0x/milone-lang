@@ -6,7 +6,7 @@ struct IntIntIntIntTuple2Tuple3;
 
 struct IntIntIntIntIntIntIntIntIntIntIntTuple11;
 
-int main();
+int milone_main();
 
 struct IntIntTuple2 {
     int t0;
@@ -33,7 +33,7 @@ struct IntIntIntIntIntIntIntIntIntIntIntTuple11 {
     int t10;
 };
 
-int main() {
+int milone_main() {
     struct IntIntTuple2 tuple_1 = (struct IntIntTuple2){.t0 = 3, .t1 = 4};
     struct IntIntIntIntTuple2Tuple3 tuple_ = (struct IntIntIntIntTuple2Tuple3){.t0 = 1, .t1 = 2, .t2 = tuple_1};
     int x_ = tuple_.t0;

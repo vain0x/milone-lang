@@ -78,7 +78,7 @@ struct IntToken_ListTuple2 evalExpr_(struct Token_List const* tokens_3);
 
 int eval_(struct String str_);
 
-int main();
+int milone_main();
 
 bool charEq_(char l_, char r_) {
     return (l_ == r_);
@@ -782,7 +782,7 @@ end_match_87:;
     return match_9;
 }
 
-int main() {
+int milone_main() {
     bool call_32 = strContains_('+', (struct String){.str = "+-*/", .len = 4});
     milone_assert(call_32, 157, 2);
     bool call_33 = strStartsWith_((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});

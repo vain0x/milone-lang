@@ -166,7 +166,7 @@ int splitTest_(int arg_53);
 
 int concatTest_(int arg_54);
 
-int main();
+int milone_main();
 
 struct StringList {
     struct String head;
@@ -1866,7 +1866,7 @@ int concatTest_(int arg_54) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_121 = isEmptyTest_(0);
     int call_122 = tryItemTest_(0);
     int call_123 = startsWithTest_(0);

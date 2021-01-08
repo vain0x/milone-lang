@@ -14,7 +14,7 @@ int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2List const* phantom
 
 int testCase_(struct IntStringTuple2 kv_);
 
-int main();
+int milone_main();
 
 struct IntUnitTuple2 {
     int t0;
@@ -54,7 +54,7 @@ int testCase_(struct IntStringTuple2 kv_) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 0, .t1 = (struct String){.str = "right", .len = 5}};
     int call_3 = testCase_(tuple_);
     return 0;

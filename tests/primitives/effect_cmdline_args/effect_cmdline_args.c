@@ -10,7 +10,7 @@ struct String argGet_(int i_);
 
 int go_(int i_1);
 
-int main();
+int milone_main();
 
 int argCount_(int arg_) {
     int arg_count_result_ = arg_count();
@@ -47,7 +47,7 @@ if_next_2:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_3 = go_(0);
     return 0;
 }

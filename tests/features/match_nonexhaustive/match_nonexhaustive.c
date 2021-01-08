@@ -2,14 +2,14 @@
 
 struct IntIntTuple2;
 
-int main();
+int milone_main();
 
 struct IntIntTuple2 {
     int t0;
     int t1;
 };
 
-int main() {
+int milone_main() {
     int match_;
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = (2 * 2), .t1 = (3 * 3)};
     if ((tuple_.t0 != 4)) goto next_2;

@@ -8,7 +8,7 @@ struct StringStringTuple2;
 
 struct StringStringTuple2StringTuple2;
 
-int main();
+int milone_main();
 
 struct IntStringTuple2 {
     int t0;
@@ -30,7 +30,7 @@ struct StringStringTuple2StringTuple2 {
     struct String t1;
 };
 
-int main() {
+int milone_main() {
     struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 1, .t1 = (struct String){.str = "snd", .len = 3}};
     struct IntStringTuple2 a_ = tuple_;
     int x_ = a_.t0;

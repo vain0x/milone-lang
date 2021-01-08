@@ -40,7 +40,7 @@ struct IntThird_Tuple2;
 
 struct IntThird_Tuple2List;
 
-int main();
+int milone_main();
 
 enum First_Discriminant {
     First_,
@@ -149,7 +149,7 @@ struct IntThird_Tuple2List {
     struct IntThird_Tuple2List const* tail;
 };
 
-int main() {
+int milone_main() {
     int match_;
     struct Node_ variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = 1};
     struct Node_ variant_1 = (struct Node_){.discriminant = Leaf_, .Leaf_ = 2};

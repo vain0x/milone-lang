@@ -4,7 +4,7 @@ int testEol_(int arg_);
 
 int testNoEscape_(int arg_1);
 
-int main();
+int milone_main();
 
 int testEol_(int arg_) {
     struct String eol_ = (struct String){.str = "\n", .len = 1};
@@ -30,7 +30,7 @@ int testNoEscape_(int arg_1) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = testEol_(0);
     int call_1 = testNoEscape_(0);
     return 0;

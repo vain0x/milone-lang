@@ -22,7 +22,7 @@ enum OkWrapper_Discriminant;
 
 struct OkWrapper_;
 
-int main();
+int milone_main();
 
 enum Status_Discriminant {
     Ok_1,
@@ -86,7 +86,7 @@ struct OkWrapper_ {
     };
 };
 
-int main() {
+int milone_main() {
     struct Status_ ok_ = (struct Status_){.discriminant = Ok_1};
     struct Status_ variant_ = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
     struct Status_ err1_ = variant_;

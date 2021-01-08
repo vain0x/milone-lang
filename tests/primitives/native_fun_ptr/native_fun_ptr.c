@@ -10,7 +10,7 @@ void qsort(void*, uintptr_t, uintptr_t, int(*)(void const*, void const*));
 
 int sortIntArray_(int* array_, int len_1);
 
-int main();
+int milone_main();
 
 void* memAlloc_(int len_, int size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(len_, ((uintptr_t)size_));
@@ -26,7 +26,7 @@ int sortIntArray_(int* array_, int len_1) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int len_2 = 5;
     void* call_ = memAlloc_(len_2, sizeof(int));
     int* array_1 = ((int*)call_);

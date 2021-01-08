@@ -4,7 +4,7 @@ bool even_(int n_);
 
 bool odd_(int n_1);
 
-int main();
+int milone_main();
 
 bool even_(int n_) {
     bool if_;
@@ -42,7 +42,7 @@ if_next_4:;
     return if_1;
 }
 
-int main() {
+int milone_main() {
     bool call_2 = odd_(1);
     milone_assert(call_2, 9, 2);
     bool call_3 = even_(2);

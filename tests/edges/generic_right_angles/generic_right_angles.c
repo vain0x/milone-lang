@@ -6,7 +6,7 @@ struct IntListList;
 
 struct IntListListList;
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -23,7 +23,7 @@ struct IntListListList {
     struct IntListListList const* tail;
 };
 
-int main() {
+int milone_main() {
     struct IntListListList const* n_ = NULL;
     bool if_;
     if ((!(n_))) {

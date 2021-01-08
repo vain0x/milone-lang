@@ -2,14 +2,14 @@
 
 struct IntStringTuple2;
 
-int main();
+int milone_main();
 
 struct IntStringTuple2 {
     int t0;
     struct String t1;
 };
 
-int main() {
+int milone_main() {
     exit(1);
     struct IntStringTuple2 t_ = ((struct IntStringTuple2){});
     int x_ = t_.t0;

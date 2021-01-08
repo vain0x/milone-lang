@@ -38,7 +38,7 @@ static int MinValue_;
 
 static int MaxValue_;
 
-int main();
+int milone_main();
 
 struct StringList {
     struct String head;
@@ -215,7 +215,7 @@ int tryParseTest_(int arg_) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     MinValue_ = -2147483648;
     MaxValue_ = 2147483647;
     int call_25 = tryParseTest_(0);

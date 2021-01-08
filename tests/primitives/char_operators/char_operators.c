@@ -6,7 +6,7 @@ int comparisonOperatorsTest_(int arg_1);
 
 int conversionTest_(int arg_2);
 
-int main();
+int milone_main();
 
 int arithmeticOperatorsTest_(int arg_) {
     milone_assert((('\r' + '\n') == ((char)(13 + 10))), 6, 2);
@@ -38,7 +38,7 @@ int conversionTest_(int arg_2) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = arithmeticOperatorsTest_(0);
     int call_1 = comparisonOperatorsTest_(0);
     int call_2 = conversionTest_(0);

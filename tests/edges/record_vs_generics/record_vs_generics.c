@@ -10,7 +10,7 @@ struct IntWrapper_ fun_(void const* env_, int arg_);
 
 struct UnitIntWrapper_Fun1;
 
-int main();
+int milone_main();
 
 struct IntWrapper_ {
     int t0;
@@ -35,7 +35,7 @@ struct UnitIntWrapper_Fun1 {
     void const* env;
 };
 
-int main() {
+int milone_main() {
     struct IntWrapper_ IntWrapper_ = (struct IntWrapper_){.t0 = 42};
     struct IntWrapper_Tuple1 tuple_ = (struct IntWrapper_Tuple1){.t0 = IntWrapper_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntWrapper_Tuple1));

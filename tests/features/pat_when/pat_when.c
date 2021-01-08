@@ -4,7 +4,7 @@ struct IntIntTuple2;
 
 bool eq_(struct IntIntTuple2 t_);
 
-int main();
+int milone_main();
 
 struct IntIntTuple2 {
     int t0;
@@ -26,7 +26,7 @@ end_match_1:;
     return match_;
 }
 
-int main() {
+int milone_main() {
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 1, .t1 = 1};
     bool call_ = eq_(tuple_);
     milone_assert(call_, 10, 2);

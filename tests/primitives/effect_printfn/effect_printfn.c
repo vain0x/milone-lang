@@ -1,8 +1,8 @@
 #include "milone.h"
 
-int main();
+int milone_main();
 
-int main() {
+int milone_main() {
     printf("No formats\n");
     struct String hello_ = (struct String){.str = "Hello!", .len = 6};
     printf("%s\n", hello_.str);

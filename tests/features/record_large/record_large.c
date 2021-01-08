@@ -6,7 +6,7 @@ struct GitCommitOptions_;
 
 void const* defaultOptions_(int arg_);
 
-int main();
+int milone_main();
 
 struct StringList {
     struct String head;
@@ -30,7 +30,7 @@ void const* defaultOptions_(int arg_) {
     return box_;
 }
 
-int main() {
+int milone_main() {
     void const* call_ = defaultOptions_(0);
     void const* _options_ = call_;
     return 0;

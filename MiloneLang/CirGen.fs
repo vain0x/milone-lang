@@ -1217,7 +1217,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
       let funName, args =
-        if isMainFun ctx callee then "main", [] else getUniqueFunName ctx callee, args
+        if isMainFun ctx callee then "milone_main", [] else getUniqueFunName ctx callee, args
 
       let rec go acc ctx args =
         match args with

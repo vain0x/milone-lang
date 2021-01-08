@@ -4,7 +4,7 @@ struct IntList;
 
 struct IntList const* newStack_1(int arg_);
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -15,7 +15,7 @@ struct IntList const* newStack_1(int arg_) {
     return NULL;
 }
 
-int main() {
+int milone_main() {
     struct IntList const* call_ = newStack_1(0);
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = call_};

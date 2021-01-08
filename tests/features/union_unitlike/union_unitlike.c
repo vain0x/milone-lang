@@ -20,7 +20,7 @@ struct RecordUsingMyUnit_;
 
 int usedInRecordTypeCase_(int arg_2);
 
-int main();
+int milone_main();
 
 enum MyUnit_Discriminant {
     MyUnit_,
@@ -120,7 +120,7 @@ end_match_6:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_1 = basicCase_(0);
     int call_2 = usedInOtherSumTypeCase_(0);
     int call_3 = usedInRecordTypeCase_(0);

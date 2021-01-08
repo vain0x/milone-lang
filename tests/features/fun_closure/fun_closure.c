@@ -68,7 +68,7 @@ int f7_(int arg_23);
 
 static int a_;
 
-int main();
+int milone_main();
 
 int sub_(int step_, int x_) {
     return (x_ - step_);
@@ -303,7 +303,7 @@ int f7_(int arg_23) {
     return a_;
 }
 
-int main() {
+int milone_main() {
     a_ = 1;
     int call_25 = basicCase_(0);
     int call_26 = transitiveCase_(0);

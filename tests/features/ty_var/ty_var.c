@@ -16,7 +16,7 @@ struct StringStringListTuple2;
 
 struct StringStringListTuple2 useTyVarInBody_1(struct String x_1);
 
-int main();
+int milone_main();
 
 struct IntIntTuple2 {
     int t0;
@@ -58,7 +58,7 @@ struct StringStringListTuple2 useTyVarInBody_1(struct String x_1) {
     return tuple_1;
 }
 
-int main() {
+int milone_main() {
     struct IntIntTuple2 tuple_2 = (struct IntIntTuple2){.t0 = 0, .t1 = 0};
     int call_1 = pair_2(tuple_2);
     milone_assert((call_1 == 2), 18, 2);

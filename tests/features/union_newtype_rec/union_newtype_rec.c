@@ -10,7 +10,7 @@ struct IntMyList_ListTuple2;
 
 struct MyList_ myCons_(int head_, struct MyList_ tail_);
 
-int main();
+int milone_main();
 
 enum MyList_Discriminant {
     MyList_,
@@ -43,7 +43,7 @@ struct MyList_ myCons_(int head_, struct MyList_ tail_) {
     return variant_;
 }
 
-int main() {
+int milone_main() {
     struct IntMyList_ListTuple2 tuple_1 = (struct IntMyList_ListTuple2){.t0 = 0, .t1 = NULL};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntMyList_ListTuple2));
     (*(((struct IntMyList_ListTuple2*)box_1))) = tuple_1;

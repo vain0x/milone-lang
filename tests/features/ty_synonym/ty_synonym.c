@@ -12,7 +12,7 @@ struct String proj_1(bool cond_, struct String body_, struct String alt_);
 
 int polymorphicFunCase_(int arg_1);
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -78,7 +78,7 @@ int polymorphicFunCase_(int arg_1) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_2 = baseCase_(0);
     int call_3 = yodaCase_(0);
     int call_4 = polymorphicFunCase_(0);

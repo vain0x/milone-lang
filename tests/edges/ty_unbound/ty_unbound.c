@@ -6,7 +6,7 @@ bool isEmpty_1(struct UnitList const* xs_1);
 
 int assertIsEmpty_1(struct UnitList const* xs_);
 
-int main();
+int milone_main();
 
 struct UnitList {
     int head;
@@ -36,7 +36,7 @@ int assertIsEmpty_1(struct UnitList const* xs_) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_1 = assertIsEmpty_1(NULL);
     return 0;
 }

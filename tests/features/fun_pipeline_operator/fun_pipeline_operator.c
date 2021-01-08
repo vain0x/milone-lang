@@ -12,7 +12,7 @@ struct IntList;
 
 int len_(struct IntList const* xs_);
 
-int main();
+int milone_main();
 
 int inc_(int x_) {
     return (x_ + 1);
@@ -65,7 +65,7 @@ if_next_4:;
     return if_1;
 }
 
-int main() {
+int milone_main() {
     int call_ = inc_(1);
     int call_1 = twice_(call_);
     int call_2 = twice_(call_1);

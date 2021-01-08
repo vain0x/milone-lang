@@ -4,7 +4,7 @@ enum NewTypeInt_Discriminant;
 
 struct NewTypeInt_;
 
-int main();
+int milone_main();
 
 enum NewTypeInt_Discriminant {
     NewTypeInt_,
@@ -17,7 +17,7 @@ struct NewTypeInt_ {
     };
 };
 
-int main() {
+int milone_main() {
     struct NewTypeInt_ variant_ = (struct NewTypeInt_){.discriminant = NewTypeInt_, .NewTypeInt_ = 1};
     int inner_ = variant_.NewTypeInt_;
     milone_assert((inner_ == 1), 8, 2);

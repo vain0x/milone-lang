@@ -182,7 +182,7 @@ int ofListTest_(int arg_66);
 
 int toListTest_(int arg_67);
 
-int main();
+int milone_main();
 
 struct StringList {
     struct String head;
@@ -1331,7 +1331,7 @@ end_match_95:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_136 = initTest_(0);
     int call_137 = rangeTest_(0);
     int call_138 = tryItemTest_(0);

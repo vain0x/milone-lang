@@ -4,7 +4,7 @@ bool go_(struct String s_, int i_, int d_);
 
 struct String parse_(struct String s_1);
 
-int main();
+int milone_main();
 
 bool go_(struct String s_, int i_, int d_) {
 tailrec_1:;
@@ -82,7 +82,7 @@ if_next_11:;
     return if_3;
 }
 
-int main() {
+int milone_main() {
     struct String case1_ = (struct String){.str = "()", .len = 2};
     struct String case2_ = (struct String){.str = "()((())(()))()", .len = 14};
     struct String case3_ = (struct String){.str = "(()", .len = 3};

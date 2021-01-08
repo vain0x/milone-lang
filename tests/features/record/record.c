@@ -2,14 +2,14 @@
 
 struct Point_;
 
-int main();
+int milone_main();
 
 struct Point_ {
     int t0;
     int t1;
 };
 
-int main() {
+int milone_main() {
     struct Point_ Point_ = (struct Point_){.t0 = 40, .t1 = 2};
     struct Point_ point_ = Point_;
     milone_assert((point_.t0 == 40), 9, 2);

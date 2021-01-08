@@ -46,7 +46,7 @@ struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2);
 
 struct IntListStringListTuple2;
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -237,7 +237,7 @@ struct IntListStringListTuple2 {
     struct StringList const* t1;
 };
 
-int main() {
+int milone_main() {
     int call_7 = id_2(42);
     int call_8 = id_2(1);
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));

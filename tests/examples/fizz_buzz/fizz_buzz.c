@@ -2,7 +2,7 @@
 
 int fizzBuzz_(int i_);
 
-int main();
+int milone_main();
 
 int fizzBuzz_(int i_) {
 tailrec_1:;
@@ -68,7 +68,7 @@ if_next_2:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = fizzBuzz_(1);
     return 0;
 }

@@ -264,7 +264,7 @@ static struct Space_ spaceFull_;
 
 static struct Space_ spaceEmpty_;
 
-int main();
+int milone_main();
 
 bool id_1(bool x_) {
     return x_;
@@ -1992,7 +1992,7 @@ bool fun_27(void const* env_18, struct StringTy_Pat_ListCovering_Tuple4 arg_30) 
     return call_142;
 }
 
-int main() {
+int milone_main() {
     spaceFull_ = (struct Space_){.discriminant = Full_};
     void const* box_25 = milone_mem_alloc(1, sizeof(struct Space_List const*));
     (*(((struct Space_List const**)box_25))) = NULL;

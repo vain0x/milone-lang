@@ -2,7 +2,7 @@
 
 int printIntOrStr_(bool isInt_, void const* value_);
 
-int main();
+int milone_main();
 
 int printIntOrStr_(bool isInt_, void const* value_) {
     int if_;
@@ -23,7 +23,7 @@ if_next_1:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 2;
     int call_ = printIntOrStr_(true, box_);

@@ -8,7 +8,7 @@ int typeAscriptionExprCase_(int n_1);
 
 int matchExprCase_(int n_2);
 
-int main();
+int milone_main();
 
 struct IntWrapper_ {
     int t0;
@@ -50,7 +50,7 @@ switch_next_1:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = letWithTypeAscriptionCase_(2);
     int call_1 = typeAscriptionExprCase_(3);
     int call_2 = matchExprCase_(5);

@@ -434,7 +434,7 @@ static void const* unitObj_;
 
 static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3TypeTag_Tuple6 typeInt_;
 
-int main();
+int milone_main();
 
 void* memAlloc_(int len_, int size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(len_, ((uintptr_t)size_));
@@ -3853,7 +3853,7 @@ int abc140eMain_(int arg_149) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     void const* box_19 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_19))) = 0;
     unitObj_ = box_19;

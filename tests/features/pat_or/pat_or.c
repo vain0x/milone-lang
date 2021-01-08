@@ -20,7 +20,7 @@ bool performComplexMatching_(struct Expr_ expr_);
 
 int complexCase_(int arg_2);
 
-int main();
+int milone_main();
 
 bool isZeroOrOne_(int x_) {
     bool switch_;
@@ -171,7 +171,7 @@ int complexCase_(int arg_2) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_7 = simpleCase_(0);
     int call_8 = nestedCase_(0);
     int call_9 = complexCase_(0);

@@ -16,7 +16,7 @@ bool fun_1(double x_2);
 
 bool fun_3(void const* env_1, double arg_1);
 
-int main();
+int milone_main();
 
 struct F64BoolFun1 {
     bool(*fun)(void const*, double);
@@ -88,7 +88,7 @@ bool fun_3(void const* env_1, double arg_1) {
     return call_2;
 }
 
-int main() {
+int milone_main() {
     struct F64List const* list_7 = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_7))) = (struct F64List){.head = 00.00e-00, .tail = NULL};
     struct F64List const* list_6 = milone_mem_alloc(1, sizeof(struct F64List));

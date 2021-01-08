@@ -16,7 +16,7 @@ struct Even_List;
 
 struct IntEven_ListTuple2;
 
-int main();
+int milone_main();
 
 enum Odd_Discriminant {
     Odd_,
@@ -60,7 +60,7 @@ struct IntEven_ListTuple2 {
     struct Even_List const* t1;
 };
 
-int main() {
+int milone_main() {
     struct IntEven_ListTuple2 tuple_ = (struct IntEven_ListTuple2){.t0 = 1, .t1 = NULL};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntEven_ListTuple2));
     (*(((struct IntEven_ListTuple2*)box_))) = tuple_;

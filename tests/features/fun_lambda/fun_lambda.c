@@ -22,7 +22,7 @@ int fun_5(void const* env_2, int arg_2, int arg_3);
 
 struct IntIntIntFun2;
 
-int main();
+int milone_main();
 
 struct IntIntFun1 {
     int(*fun)(void const*, int);
@@ -83,7 +83,7 @@ struct IntIntIntFun2 {
     void const* env;
 };
 
-int main() {
+int milone_main() {
     void const* box_1 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
     struct IntIntFun1 fun_7 = (struct IntIntFun1){.fun = fun_4, .env = box_1};

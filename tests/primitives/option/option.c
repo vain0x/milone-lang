@@ -12,7 +12,7 @@ struct UnitList;
 
 int basicMatchCase_(int arg_2);
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -92,7 +92,7 @@ if_next_9:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = basicSomeCase_(0);
     int call_1 = basicNoneCase_(0);
     int call_2 = basicMatchCase_(0);
