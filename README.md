@@ -221,17 +221,16 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 
 ### Dev: Build
 
-First of all, generate ninja configuration. (This is necessary to avoid listing all source file names in build script.)
+Just do as usual:
 
 ```sh
-./build-ninja-gen
+make
 ```
 
-To perform building and testing, do:
-
-```sh
-ninja
-```
+(Notes:
+    [Makefile](./Makefile) is a thin wrapper of ninja.
+    You need to generate build script for ninja before using it.
+    Makefile automates that.)
 
 ### Dev: Testing
 

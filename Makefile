@@ -3,25 +3,29 @@
 #    make install
 #    make install-dev
 
-.PHONY: all build test install install-dev clean
+# Makefile is a thin-wrapper of ninja.
+# When ninja fails, refresh build script for ninja and retry.
 
-all: target build.ninja
-	ninja
+.PHONY: default build test install install-dev clean
+
+# (This is the first rule in file and therefore it's default.)
+default:
+	ninja || ( ./build-ninja-gen && ninja )
+
+# ------------------------------------------------
+# Utilities
+# ------------------------------------------------
 
 # Directory for intermediate files.
 target:
 	mkdir -p target
 
-# ninja config file.
-build.ninja: build.ninja-template
-	./build-ninja-gen
-
 # ------------------------------------------------
 # ninja wrapper
 # ------------------------------------------------
 
-build: build.ninja **/*.fs **/*.milone
-	ninja test_self
+build: **/*.fs **/*.milone
+	ninja test_self || ( ./build-ninja-gen && ninja test_self )
 
 test: build
 
