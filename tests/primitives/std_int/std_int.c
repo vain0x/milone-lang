@@ -20,17 +20,17 @@ bool str_to_int_checked(struct String, int*);
 
 struct IntList;
 
-struct IntList const* __intOfStr_(struct String s_);
+struct IntList const* __intOfStr_(struct String s_3);
 
 int min_(int l_, int r_);
 
 int max_(int l_1, int r_1);
 
-struct IntList const* tryParse_(struct String s_3);
+struct IntList const* tryParse_(struct String s_2);
 
-int parseOk_(struct String s_1);
+int parseOk_(struct String s_);
 
-bool parseError_(struct String s_2);
+bool parseError_(struct String s_1);
 
 int tryParseTest_(int arg_);
 
@@ -69,10 +69,10 @@ struct IntList {
     struct IntList const* tail;
 };
 
-struct IntList const* __intOfStr_(struct String s_) {
+struct IntList const* __intOfStr_(struct String s_3) {
     void* call_ = memAlloc_(1, ((uintptr_t)sizeof(int)));
     int* valueRef_ = ((int*)call_);
-    bool str_to_int_checked_result_ = str_to_int_checked(s_, valueRef_);
+    bool str_to_int_checked_result_ = str_to_int_checked(s_3, valueRef_);
     bool ok_ = str_to_int_checked_result_;
     struct IntList const* if_;
     if (ok_) {
@@ -128,21 +128,21 @@ if_next_7:;
     return if_2;
 }
 
-struct IntList const* tryParse_(struct String s_3) {
-    struct IntList const* call_2 = __intOfStr_(s_3);
+struct IntList const* tryParse_(struct String s_2) {
+    struct IntList const* call_2 = __intOfStr_(s_2);
     return call_2;
 }
 
-int parseOk_(struct String s_1) {
+int parseOk_(struct String s_) {
     int match_;
-    struct IntList const* call_3 = tryParse_(s_1);
+    struct IntList const* call_3 = tryParse_(s_);
     if ((!(call_3))) goto next_11;
-    int value_1 = call_3->head;
-    match_ = value_1;
+    int value_ = call_3->head;
+    match_ = value_;
     goto end_match_10;
 next_11:;
     if ((!((!(call_3))))) goto next_12;
-    printf("should parse: %s\n", s_1.str);
+    printf("should parse: %s\n", s_.str);
     milone_assert(false, 11, 8);
     match_ = 0;
     goto end_match_10;
@@ -152,16 +152,16 @@ end_match_10:;
     return match_;
 }
 
-bool parseError_(struct String s_2) {
+bool parseError_(struct String s_1) {
     bool match_1;
-    struct IntList const* call_4 = tryParse_(s_2);
+    struct IntList const* call_4 = tryParse_(s_1);
     if ((!((!(call_4))))) goto next_14;
     match_1 = true;
     goto end_match_13;
 next_14:;
     if ((!(call_4))) goto next_15;
-    int value_2 = call_4->head;
-    printf("should not parse: %s -> %d\n", s_2.str, value_2);
+    int value_1 = call_4->head;
+    printf("should not parse: %s -> %d\n", s_1.str, value_1);
     match_1 = false;
     goto end_match_13;
 next_15:;
