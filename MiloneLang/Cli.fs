@@ -273,6 +273,7 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
   let projects =
     mapEmpty compare
     |> mapAdd "MiloneCore" (host.MiloneHome + "/milone_libs/MiloneCore")
+    |> mapAdd "MiloneStd" (host.MiloneHome + "/milone_libs/MiloneStd")
     |> mapAdd projectName projectDir
 
   let readModuleFile (_: string) (projectDir: string) (moduleName: string) =
