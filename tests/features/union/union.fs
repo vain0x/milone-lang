@@ -44,7 +44,7 @@ let main _ =
     | ARError (statusCode, statusText) -> assert (statusCode = 404 && statusText = "Not Found")
     | _ -> assert false
 
-  // Type annotations should work.
+  // Type ascriptions should work.
   let ok: Status = Ok: Status
 
   // Variants can have the same name with others. Distinct by qualification.

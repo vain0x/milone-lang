@@ -1,0 +1,233 @@
+// This file describes a form of syntax tree of milone-lang source code in ungrammar.
+// See <https://github.com/rust-analyzer/ungrammar> for ungrammar.
+// (Not validated yet.)
+
+// -----------------------------------------------
+// Misc
+// -----------------------------------------------
+
+// Visibility.
+Vis =
+  'public'
+| 'private'
+
+// Path to symbol (value or type).
+Path = (Path '.')? 'ident' TyArgList?
+
+// Path to module.
+ModulePath = (ModulePath '.')? 'ident'
+
+// Attribute.
+Attr = '[<' Expr '>]'
+
+// Literal.
+Lit =
+  'int_number'
+| 'float_number'
+| 'false' | 'true'
+| 'char'
+| 'string'
+
+// -----------------------------------------------
+// Type
+// -----------------------------------------------
+
+TyParamList = '<' ('greek' (',' 'greek')*)? '>'
+
+TyArgList = '<' (Ty (',' Ty)*)? '>'
+
+// Term of type.
+Ty =
+  Path
+| '(' Ty ')'
+| Ty '[]'
+| Ty 'ident'
+| Ty ('*' Ty)+
+| Ty '->' Ty
+
+
+
+LabeledTy = ('ident' ':')? Ty
+
+VariantDecl = 'ident' ('of' LabeledTy ('*' LabeledTy)*)?
+
+FieldDecl = 'ident' ':' Ty
+
+// Body of type declaration.
+TyDeclBody =
+  Ty
+| '|'? VariantDecl ('|' VariantDecl)*
+| '{' FieldDecl (';'? FieldDecl)* '}'
+
+// -----------------------------------------------
+// Pattern
+// -----------------------------------------------
+
+LitPat = Lit
+
+VarPat = Vis? 'ident'
+
+// At least one dot is required to be distinct from VarPat.
+PathPat = Path '.' 'ident' TyArgList?
+
+UnitPat = '(' ')'
+GroupPat = '(' Pat ')'
+ListPat = '[' (Pat (';'? Pat)*)? ']'
+AppPat = Pat Pat
+TuplePat = Pat (',' Pat)+
+ConsPat = Pat ':' Pat
+AscribePat = Pat ':' Ty
+AsPat = Pat 'as' Vis? 'ident'
+OrPat = Pat '|' Pat
+
+// Term of pattern.
+Pat =
+  LitPat
+| VarPat
+| PathPat
+| UnitPat
+| GroupPat
+| ListPat
+| AppPat
+| TuplePat
+| ConsPat
+| AscribePat
+| AsPat
+| OrPat
+
+// -----------------------------------------------
+// Expression
+// -----------------------------------------------
+
+Unary = '-'
+
+Binary =
+  '+'
+| '-'
+| '*'
+| '/'
+| '%'
+| '**'
+| '&&&'
+| '|||'
+| '^^^'
+| '<<<'
+| '>>>'
+| '='
+| '<>'
+| '<'
+| '<='
+| '>'
+| '>='
+| '&&'
+| '||'
+| '|>'
+
+LitExpr = Lit
+PathExpr = Path
+UnitExpr = '(' ')'
+GroupExpr = '(' Expr ')'
+ListExpr = '[' (Expr (';'? Expr)*)? ']'
+
+RecordExpr =
+    '{'
+        (Expr 'with')?
+        'ident' '=' Expr (';'? 'ident' '=' Expr)*
+    '}'
+
+IfExpr = 'if' Expr 'then' Expr ('else' Expr)?
+
+MatchArm = Pat ('when' Expr)? '->' Expr
+
+MatchExpr = 'match' Expr 'with' '|'? MatchArm ('|' MatchArm)*
+
+FunExpr = 'fun' Pat+ '->' Expr
+
+
+
+// Arithmetic expressions:
+
+UnaryExpr = Unary Expr
+
+FieldExpr = Expr '.' 'ident'
+
+IndexExpr = Expr '.' '[' Expr ']'
+
+AppExpr = Expr Expr
+
+RangeExpr = Expr ('..' Expr)+
+
+BinaryExpr = Expr Binary Expr
+
+AscribeExpr = Expr ':' Ty
+
+TupleExpr = Expr (',' Expr)+
+
+BlockExpr = Expr (';'? Expr)+
+
+
+
+// Bindings:
+
+LetValExpr = 'let' Pat '=' Expr 'in'? Expr
+
+LetFunExpr =
+    'let' 'rec'?
+    Vis? 'ident' TyParamList? Pat+
+    '=' Expr
+    'in'? Expr
+
+Expr =
+  LitExpr
+| PathExpr
+| UnitExpr
+| GroupExpr
+| ListExpr
+| RecordExpr
+| IfExpr
+| MatchExpr
+| FunExpr
+| UnaryExpr
+| FieldExpr
+| IndexExpr
+| AppExpr
+| RangeExpr
+| BinaryExpr
+| AscribeExpr
+| TupleExpr
+| BlockExpr
+| LetValExpr
+| LetFunExpr
+
+// -----------------------------------------------
+// Declarations
+// -----------------------------------------------
+
+ExprDecl = Expr
+
+LetValDecl = 'let' Pat '=' Expr
+
+LetFunDecl =
+    'let' 'rec'?
+    Vis? 'ident' TyParamList? Pat+
+    '=' Expr
+
+TyDecl = 'type' Vis? 'ident' TyParamList? '=' TyDeclBody
+
+OpenDecl = 'open' ModulePath
+
+ModuleSynonymDecl = 'module' 'ident' '=' ModulePath
+
+Decl =
+  ExprDecl
+| LetValDecl
+| LetFunDecl
+| TyDecl
+| OpenDecl
+| ModuleSynonymDecl
+
+
+
+Header = 'module' 'rec' ModulePath
+
+Program = Header? Decl*

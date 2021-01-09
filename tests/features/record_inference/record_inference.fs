@@ -6,11 +6,11 @@ type IntWrapper = { Value: int }
 
 type IntWrapperEx = { Value: int; Extra: int }
 
-let letWithTypeAnnotationCase n =
+let letWithTypeAscriptionCase n =
   let w: IntWrapper = { Value = n }
   assert (w.Value = n)
 
-let typeAnnotationExprCase (n: int) =
+let typeAscriptionExprCase (n: int) =
   assert (({ Value = n }: IntWrapper).Value = n)
 
 let matchExprCase (n: int) =
@@ -22,8 +22,8 @@ let matchExprCase (n: int) =
   assert (t.Value = 0)
 
 let main _ =
-  letWithTypeAnnotationCase 2
-  typeAnnotationExprCase 3
+  letWithTypeAscriptionCase 2
+  typeAscriptionExprCase 3
   matchExprCase 5
 
   0

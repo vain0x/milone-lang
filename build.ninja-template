@@ -8,9 +8,9 @@
 
 builddir = target
 
-milone_netcore_debug = MiloneLang/bin/Debug/netcoreapp3.1/MiloneLang
+milone_dotnet_debug = MiloneLang/bin/Debug/net5.0/MiloneLang
 
-milone_netcore_release = MiloneLang/bin/Release/netcoreapp3.1/MiloneLang
+milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 
 cflags = -std=c11 $
   -O2 $
@@ -40,19 +40,19 @@ build dotnet_restore: $
   phony target/timestamp.dotnet_restore
 
 # ------------------------------------------------
-# milone-netcore
+# milone-dotnet
 # ------------------------------------------------
 
-rule build_milone_netcore
+rule build_milone_dotnet
   command = dotnet build -nologo MiloneLang -c $CONFIG
 
-build $milone_netcore_debug: $
-  build_milone_netcore $
+build $milone_dotnet_debug: $
+  build_milone_dotnet $
     {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }}
   CONFIG = Debug
 
-build $milone_netcore_release: $
-  build_milone_netcore
+build $milone_dotnet_release: $
+  build_milone_dotnet
   CONFIG = Release
 
 # ------------------------------------------------
@@ -70,15 +70,17 @@ rule build_cc
 build target/milone_gen2.c: $
   build_milone $
     | {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
-    $milone_netcore_debug
-  milone = $milone_netcore_debug
+    $milone_dotnet_debug
+  milone = $milone_dotnet_debug
   verbosity = -q
 
 # .c -> .exe
 
 build target/milone: $
   build_cc $
-    target/milone_gen2.c
+    target/milone_gen2.c $
+    | runtime/milone.h $
+      runtime/milone.c
 
 # .fs -> .c (with native)
 
@@ -88,6 +90,7 @@ build target/milone_gen3.c: $
     target/milone
   milone = target/milone
   verbosity = --profile
+  pool = console
 
 # .c -> .diff
 
@@ -136,6 +139,7 @@ rule git_diff_snapshot_stats
 build target/snapshot_stat.diff: $
   git_diff_snapshot_stats $
     {{ TEST_C_FILES }}
+  pool = console
 
 rule cat_stderr
   command = cat $in >&2
@@ -173,11 +177,17 @@ rule diff_test_output
 # Verify outputs.
 rule verify_test_output
   command = $
-    cat $in | sort --rev
+    OK_COUNT=$$(grep ^OK -- $in | wc -l); $
+    FAIL_COUNT=$$(grep ^FAIL -- $in | wc -l); $
+    TOTAL_COUNT=$$(cat $in | wc -l) $
+    STATUS=$$(if test $$FAIL_COUNT -eq 0; then echo OK; else echo FAIL; fi); $
+    grep ^FAIL -- $in; $
+    echo "$$STATUS - ok $$OK_COUNT / fail $$FAIL_COUNT / total $$TOTAL_COUNT"
 
 build target/integration_tests.timestamp: $
   verify_test_output $
     {{ TEST_DIFF_FILES }}
+  pool = console
 
 build integration_tests: $
   phony target/integration_tests.timestamp
@@ -194,19 +204,7 @@ build integration_tests: $
 
 # Remove generated files.
 rule clean
-  command = $
-    rm -f *.generated.* $
-    rm -f tests/*/*/*.generated.* $
-    rm -rf target $
-    rm -rf $
-      milone_libs/MiloneStd/bin $
-      milone_libs/MiloneStd/obj $
-      milone_lsp/bin $
-      milone_lsp/obj $
-      MiloneLang/bin $
-      MiloneLang/obj $
-      MiloneTests/bin $
-      MiloneTests/obj
+  command = ./clean
 
 build clean: clean
 

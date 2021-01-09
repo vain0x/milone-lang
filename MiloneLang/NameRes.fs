@@ -17,7 +17,7 @@ let private isNoTy ty =
   | ErrorTy _ -> true
   | _ -> false
 
-let private hxAbort loc = HInfExpr(InfOp.Abort, [], noTy, loc)
+let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
 
 // -----------------------------------------------
 // Type primitives
@@ -132,19 +132,25 @@ let private nsAdd (key: Serial) (ident: Ident) value (ns: Ns<_, _>): Ns<_, _> =
 // Scopes
 // --------------------------------------------
 
+[<NoEquality; NoComparison>]
+type ScopeKind =
+  | ExprScope
+  | TyDeclScope
+
 /// Stack of local scopes.
 type private ScopeChain<'T> = AssocMap<Ident, 'T> list
 
 /// Scope chains, vars and types.
 ///
 /// Type has also a list of types that it shadows for namespace merging.
-type private Scope = ScopeChain<ValueSymbol> * ScopeChain<TySymbol * TySymbol list>
+type private Scope = ScopeKind list * ScopeChain<ValueSymbol> * ScopeChain<TySymbol * TySymbol list>
 
 let private scopeMapEmpty (): AssocMap<Ident, _> = mapEmpty compare
 
 let private scopeChainEmpty (): ScopeChain<_> = [ scopeMapEmpty () ]
 
-let private scopeEmpty (): Scope = scopeChainEmpty (), scopeChainEmpty ()
+let private scopeEmpty (): Scope =
+  [], scopeChainEmpty (), scopeChainEmpty ()
 
 // -----------------------------------------------
 // ScopeCtx
@@ -167,8 +173,8 @@ type ScopeCtx =
 
     Variants: AssocMap<VariantSerial, VariantDef>
 
-    /// Serial of value (variable/fun/variant) to let-depth map.
-    VarDepths: AssocMap<Serial, LetDepth>
+    /// Serial of value (variable/fun) to level map.
+    VarLevels: AssocMap<Serial, Level>
 
     MainFunOpt: FunSerial option
 
@@ -177,9 +183,6 @@ type ScopeCtx =
 
     ModuleTys: AssocMap<ModuleTySerial, ModuleTyDef>
     ModuleSynonyms: AssocMap<ModuleSynonymSerial, ModuleSynonymDef>
-
-    /// Type serial to let-depth map.
-    TyDepths: AssocMap<TySerial, LetDepth>
 
     /// Values contained by types.
     VarNs: Ns<TySerial, ValueSymbol>
@@ -195,8 +198,8 @@ type ScopeCtx =
     /// name -> (varSerial, definedLoc, usedLoc list)
     PatScope: AssocMap<Ident, VarSerial * Loc * Loc list>
 
-    /// Current let-depth, the number of ancestral let-body.
-    LetDepth: LetDepth
+    /// Current level.
+    Level: Level
 
     Logs: (NameResLog * Loc) list }
 
@@ -208,17 +211,16 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Vars = mapEmpty varSerialCmp
     Funs = mapEmpty funSerialCmp
     Variants = mapEmpty variantSerialCmp
-    VarDepths = mapEmpty compare
+    VarLevels = mapEmpty compare
     MainFunOpt = None
     Tys = mapEmpty compare
     ModuleTys = mapEmpty moduleTySerialCmp
     ModuleSynonyms = mapEmpty moduleSynonymSerialCmp
-    TyDepths = mapEmpty compare
     VarNs = mapEmpty compare
     TyNs = mapEmpty compare
     Local = scopeEmpty ()
     PatScope = mapEmpty compare
-    LetDepth = 0
+    Level = 0
     Logs = [] }
 
 let private addLog (log: NameResLog) (loc: Loc) (ctx: ScopeCtx) =
@@ -277,57 +279,37 @@ let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
 
   { scopeCtx with
       Vars = scopeCtx.Vars |> mapAdd varSerial varDef
-      VarDepths =
-        scopeCtx.VarDepths
-        |> mapAdd (varSerialToInt varSerial) scopeCtx.LetDepth }
+      VarLevels =
+        scopeCtx.VarLevels
+        |> mapAdd (varSerialToInt varSerial) scopeCtx.Level }
 
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       Funs = scopeCtx.Funs |> mapAdd funSerial funDef
-      VarDepths =
-        scopeCtx.VarDepths
-        |> mapAdd (funSerialToInt funSerial) scopeCtx.LetDepth }
+      VarLevels =
+        scopeCtx.VarLevels
+        |> mapAdd (funSerialToInt funSerial) scopeCtx.Level }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       Variants =
         scopeCtx.Variants
-        |> mapAdd variantSerial variantDef
-      VarDepths =
-        let (VariantSerial variantSerial) = variantSerial
-        scopeCtx.VarDepths
-        |> mapAdd variantSerial scopeCtx.LetDepth }
+        |> mapAdd variantSerial variantDef }
 
 /// Defines a type, without adding to any scope.
 let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   let tySerial = tySymbolToSerial tySymbol
 
   { scopeCtx with
-      Tys = scopeCtx.Tys |> mapAdd tySerial tyDef
-      TyDepths =
-        scopeCtx.TyDepths
-        |> mapAdd tySerial scopeCtx.LetDepth }
+      Tys = scopeCtx.Tys |> mapAdd tySerial tyDef }
 
 let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      ModuleTys = scopeCtx.ModuleTys |> mapAdd moduleTySerial tyDef
-      TyDepths =
-        scopeCtx.TyDepths
-        |> mapAdd (moduleTySerialToInt moduleTySerial) scopeCtx.LetDepth }
+      ModuleTys = scopeCtx.ModuleTys |> mapAdd moduleTySerial tyDef }
 
 let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef
-      TyDepths =
-        scopeCtx.TyDepths
-        |> mapAdd (moduleSynonymSerialToInt serial) scopeCtx.LetDepth }
-
-/// Defines an unbound meta type.
-let private addUnboundMetaTy tySerial (scopeCtx: ScopeCtx): ScopeCtx =
-  { scopeCtx with
-      TyDepths =
-        scopeCtx.TyDepths
-        |> mapAdd tySerial scopeCtx.LetDepth }
+      ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef }
 
 /// Adds a variable to a namespace.
 let private addVarToNs parentTySerial valueSymbol (scopeCtx: ScopeCtx): ScopeCtx =
@@ -360,11 +342,11 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
 
   let scope: Scope =
     match scopeCtx.Local with
-    | map :: varScopes, tyScopes ->
+    | kinds, map :: varScopes, tyScopes ->
         let varScopes =
           (map |> mapAdd varName symbol) :: varScopes
 
-        varScopes, tyScopes
+        kinds, varScopes, tyScopes
 
     | _ -> failwith "NEVER: Scope can't be empty."
 
@@ -374,7 +356,7 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
 let private doImportTyWithAlias alias symbol (scopeCtx: ScopeCtx): ScopeCtx =
   let scope: Scope =
     match scopeCtx.Local with
-    | varScopes, ((map :: tyScopes) as allTyScopes) ->
+    | kinds, varScopes, ((map :: tyScopes) as allTyScopes) ->
         let shadowed =
           match allTyScopes
                 |> List.tryPick (fun map -> map |> mapTryFind alias) with
@@ -385,7 +367,7 @@ let private doImportTyWithAlias alias symbol (scopeCtx: ScopeCtx): ScopeCtx =
           (map |> mapAdd alias (symbol, shadowed))
           :: tyScopes
 
-        varScopes, tyScopes
+        kinds, varScopes, tyScopes
 
     | _ -> failwith "NEVER: Scope can't be empty."
 
@@ -425,26 +407,33 @@ let private addLocalTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
 /// Called on enter the init of let expressions.
 let private enterLetInit (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      LetDepth = scopeCtx.LetDepth + 1 }
+      Level = scopeCtx.Level + 1 }
 
 let private leaveLetInit (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      LetDepth = scopeCtx.LetDepth - 1 }
+      Level = scopeCtx.Level - 1 }
 
 /// Starts a new scope.
-let private startScope (scopeCtx: ScopeCtx): ScopeCtx =
-  let varScopes, tyScopes = scopeCtx.Local
+let private startScope kind (scopeCtx: ScopeCtx): ScopeCtx =
+  let kinds, varScopes, tyScopes = scopeCtx.Local
+
   { scopeCtx with
-      Local = scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes }
+      Local = kind :: kinds, scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes }
 
 let private finishScope (scopeCtx: ScopeCtx): ScopeCtx =
   match scopeCtx.Local with
-  | [], _
-  | _, [] -> failwith "NEVER: Scope can't be empty."
+  | [], _, _
+  | _, [], _
+  | _, _, [] -> failwith "NEVER: Scope can't be empty."
 
-  | _ :: varScopes, _ :: tyScopes ->
+  | _ :: kinds, _ :: varScopes, _ :: tyScopes ->
       { scopeCtx with
-          Local = varScopes, tyScopes }
+          Local = kinds, varScopes, tyScopes }
+
+let private isTyDeclScope (scopeCtx: ScopeCtx) =
+  match scopeCtx.Local with
+  | TyDeclScope :: _, _, _ -> true
+  | _ -> false
 
 // Find from namespace of type (not local).
 let private resolveScopedVarName tySymbol name (scopeCtx: ScopeCtx): ValueSymbol option =
@@ -459,12 +448,13 @@ let private resolveScopedTyName tySerial name (scopeCtx: ScopeCtx): TySymbol opt
   |> mapTryFind name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
-  let varScopes, _ = scopeCtx.Local
+  let _, varScopes, _ = scopeCtx.Local
+
   varScopes
   |> List.tryPick (fun map -> map |> mapTryFind name)
 
 let private resolveLocalTyName name (scopeCtx: ScopeCtx) =
-  let _, tyScopes = scopeCtx.Local
+  let _, _, tyScopes = scopeCtx.Local
 
   let opt =
     tyScopes
@@ -494,6 +484,7 @@ let private resolveNavTy quals last ctx =
 
         | name :: path ->
             let scope = tySymbolToSerial tySymbol
+
             match ctx |> resolveScopedTyName scope name with
             | Some tySymbol -> resolveTyPath tySymbol path ctx
             | None -> None
@@ -511,16 +502,32 @@ let private resolveTy ty loc scopeCtx =
     | ErrorTy _ -> ty, scopeCtx
 
     | AppTy (UnresolvedTyCtor ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
-        // Handle wildcard type.
-        let scopeCtx = scopeCtx |> addUnboundMetaTy serial
-
         MetaTy(serial, loc), scopeCtx
 
-    | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when (scopeCtx
-                                                                                                    |> findName serial =
-                                                                                                      "__nativeType") ->
+    | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when
+      (scopeCtx |> findName serial = "__nativeType") ->
         let code = scopeCtx |> findName itemSerial
         AppTy(NativeTypeTyCtor code, []), scopeCtx
+
+    | AppTy (UnresolvedVarTyCtor (serial, loc), tys) ->
+        assert (List.isEmpty tys)
+        let name = scopeCtx |> findName serial
+
+        match resolveLocalTyName name scopeCtx |> List.tryHead with
+        | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
+
+        | _ when scopeCtx |> isTyDeclScope ->
+            let scopeCtx =
+              scopeCtx |> addLog (UndefinedTyError name) loc
+
+            ErrorTy loc, scopeCtx
+
+        | _ ->
+            let scopeCtx =
+              scopeCtx
+              |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc))
+
+            MetaTy(serial, loc), scopeCtx
 
     | AppTy (UnresolvedTyCtor (quals, serial), tys) ->
         let name = scopeCtx |> findName serial
@@ -528,17 +535,8 @@ let private resolveTy ty loc scopeCtx =
         let arity = List.length tys
 
         let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
+
         match symbolOpt with
-        | Some (MetaTySymbol tySerial) ->
-            if arity > 0 then
-              let scopeCtx =
-                scopeCtx
-                |> addLog (TyArityError(name, arity, 0)) loc
-
-              ErrorTy loc, scopeCtx
-            else
-              MetaTy(tySerial, loc), scopeCtx
-
         | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
 
         | Some (SynonymTySymbol tySerial) ->
@@ -567,6 +565,8 @@ let private resolveTy ty loc scopeCtx =
               scopeCtx |> addLog (ModuleUsedAsTyError name) loc
 
             ErrorTy loc, scopeCtx
+
+        | Some (MetaTySymbol _) -> failwithf "NEVER: %A" (serial, name, loc)
 
         | None ->
             match tyPrimOfName name tys with
@@ -703,22 +703,20 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
   let tyDef = ctx |> findTy tySerial
 
   match tyDef with
-  | MetaTyDef (tyName, bodyTy, loc) ->
-      let bodyTy, ctx = ctx |> resolveTy bodyTy loc
-      ctx
-      |> addTy (MetaTySymbol tySerial) (MetaTyDef(tyName, bodyTy, loc))
-
   | UniversalTyDef _ -> ctx
 
   | SynonymTyDef (tyName, tyArgs, bodyTy, loc) ->
-      let ctx = ctx |> startScope
+      let ctx = ctx |> startScope TyDeclScope
 
       let ctx =
         tyArgs
-        |> List.fold (fun ctx tyArg ->
-             let name = ctx |> findName tyArg
+        |> List.fold
+             (fun ctx tyArg ->
+               let name = ctx |> findName tyArg
+
+               ctx
+               |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc)))
              ctx
-             |> addLocalTy (UnivTySymbol tyArg) (UniversalTyDef(name, loc))) ctx
 
       let bodyTy, ctx = ctx |> resolveTy bodyTy loc
       let ctx = ctx |> finishScope
@@ -731,6 +729,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
         let def = ctx |> findVariant variantSerial
         let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
         assert (def.VariantTy |> isNoTy)
+
         ctx
         |> addVariantDef variantSerial { def with PayloadTy = payloadTy }
 
@@ -742,8 +741,11 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
         (name, ty, loc), ctx
 
       let fields, ctx = (fields, ctx) |> stMap resolveField
+
       ctx
       |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc))
+
+  | MetaTyDef _ -> failwithf "NEVER: %A" tyDecl // Bound meta types don't happen in NameRes.
 
 // -----------------------------------------------
 // Collect declarations
@@ -777,7 +779,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
     | HVariantPat _
     | HOrPat _ -> pat, ctx
 
-    | HRefPat (varSerial, ty, loc) ->
+    | HVarPat (varSerial, ty, loc) ->
         let name =
           ctx |> findName (varSerialToInt varSerial)
 
@@ -900,7 +902,7 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
 
       varSerial, ctx
 
-let private nameResRefPat serial ty loc ctx =
+let private nameResVarPat serial ty loc ctx =
   let name = ctx |> findName serial
 
   if name = "_" then
@@ -915,8 +917,10 @@ let private nameResRefPat serial ty loc ctx =
         | "Some" -> HNodePat(HSomePN, [], ty, loc), ctx
 
         | _ ->
-            let varSerial, ctx = doResolveVarInPat serial name ty loc ctx
-            HRefPat(varSerial, ty, loc), ctx
+            let varSerial, ctx =
+              doResolveVarInPat serial name ty loc ctx
+
+            HVarPat(varSerial, ty, loc), ctx
 
 let private nameResNavPat pat ctx =
   /// Resolves a pattern as scope.
@@ -926,16 +930,17 @@ let private nameResNavPat pat ctx =
   /// `pat` is also updated by resolving inner qualifiers as possible.
   let rec resolvePatAsScope pat ctx =
     match pat with
-    | HRefPat (varSerial, _, _) ->
+    | HVarPat (varSerial, _, _) ->
         let name = ctx |> findVarName varSerial
         ctx |> resolveLocalTyName name
 
     | HNodePat (HNavPN r, [ l ], _, _) ->
         ctx
         |> resolvePatAsScope l
-        |> List.choose (fun tySymbol ->
-             ctx
-             |> resolveScopedTyName (tySymbolToSerial tySymbol) r)
+        |> List.choose
+             (fun tySymbol ->
+               ctx
+               |> resolveScopedTyName (tySymbolToSerial tySymbol) r)
 
     | _ -> []
 
@@ -950,10 +955,11 @@ let private nameResNavPat pat ctx =
 
   let patOpt =
     resolvePatAsScope l ctx
-    |> List.tryPick (fun tySymbol ->
-         match ctx |> resolveScopedVarName tySymbol r with
-         | Some (VariantSymbol variantSerial) -> Some(HVariantPat(variantSerial, ty, loc))
-         | _ -> None)
+    |> List.tryPick
+         (fun tySymbol ->
+           match ctx |> resolveScopedVarName tySymbol r with
+           | Some (VariantSymbol variantSerial) -> Some(HVariantPat(variantSerial, ty, loc))
+           | _ -> None)
 
   match patOpt with
   | Some pat -> pat, ctx
@@ -973,10 +979,10 @@ let private nameResAppPat l r loc ctx =
 
       hpAbort noTy loc, ctx
 
-let private nameResAnnotatePat bodyPat annotateTy loc ctx =
-  let annotateTy, ctx = ctx |> resolveTy annotateTy loc
+let private nameResAscribePat bodyPat ascriptionTy loc ctx =
+  let ascriptionTy, ctx = ctx |> resolveTy ascriptionTy loc
   let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
-  HNodePat(HAnnotatePN, [ bodyPat ], annotateTy, loc), ctx
+  HNodePat(HAscribePN, [ bodyPat ], ascriptionTy, loc), ctx
 
 let private nameResAsPat bodyPat serial loc ctx =
   let bodyPat, ctx = (bodyPat, ctx) |> nameResPat
@@ -993,7 +999,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HDiscardPat _
   | HVariantPat _ -> pat, ctx
 
-  | HRefPat (VarSerial serial, ty, loc) -> nameResRefPat serial ty loc ctx
+  | HVarPat (VarSerial serial, ty, loc) -> nameResVarPat serial ty loc ctx
 
   | HNodePat (kind, argPats, ty, loc) ->
       let fail () = failwithf "NEVER: %A" pat
@@ -1020,8 +1026,8 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
       | HNavPN _, [ _ ] -> nameResNavPat pat ctx
       | HNavPN _, _ -> fail ()
 
-      | HAnnotatePN, [ bodyPat ] -> nameResAnnotatePat bodyPat ty loc ctx
-      | HAnnotatePN, _ -> fail ()
+      | HAscribePN, [ bodyPat ] -> nameResAscribePat bodyPat ty loc ctx
+      | HAscribePN, _ -> fail ()
 
   | HAsPat (bodyPat, VarSerial serial, loc) -> nameResAsPat bodyPat serial loc ctx
 
@@ -1063,10 +1069,12 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let ctx =
     lScope
-    |> mapFold (fun ctx (_: string) (_, _, useLocs) ->
-         match useLocs with
-         | [] -> ctx
-         | loc :: _ -> ctx |> addLog VarNameConflictError loc) ctx
+    |> mapFold
+         (fun ctx (_: string) (_, _, useLocs) ->
+           match useLocs with
+           | [] -> ctx
+           | loc :: _ -> ctx |> addLog VarNameConflictError loc)
+         ctx
 
   // Set of variables defined in the left-hand side.
   let varSerialSet =
@@ -1077,32 +1085,35 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let pats, ctx =
     (pats, ctx)
-    |> stMap (fun (pat, ctx) ->
-         let (rScope, pat), ctx =
-           ctx
-           |> doWithPatScope (Some lScope) (fun ctx -> nameResPat (pat, ctx))
+    |> stMap
+         (fun (pat, ctx) ->
+           let (rScope, pat), ctx =
+             ctx
+             |> doWithPatScope (Some lScope) (fun ctx -> nameResPat (pat, ctx))
 
-         // Validate that each variable defined in the left-hand side
-         // appears also right-hand side exactly once.
-         let ok =
-           let ok, set =
-             rScope
-             |> mapFold (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
-                  match usedLocs with
-                  | [ _ ] when ok ->
-                      let removed, set = set |> setRemove varSerial
-                      ok && removed, set
+           // Validate that each variable defined in the left-hand side
+           // appears also right-hand side exactly once.
+           let ok =
+             let ok, set =
+               rScope
+               |> mapFold
+                    (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
+                      match usedLocs with
+                      | [ _ ] when ok ->
+                          let removed, set = set |> setRemove varSerial
+                          ok && removed, set
 
-                  | _ -> false, set) (true, varSerialSet)
+                      | _ -> false, set)
+                    (true, varSerialSet)
 
-           ok && setIsEmpty set
+             ok && setIsEmpty set
 
-         let ctx =
-           if ok
-           then ctx
-           else ctx |> addLog OrPatInconsistentBindingError loc
+           let ctx =
+             if ok
+             then ctx
+             else ctx |> addLog OrPatInconsistentBindingError loc
 
-         pat, ctx)
+           pat, ctx)
 
   // PENDING: MirGen generates illegal code for binding OR patterns, so reject here.
   let ctx =
@@ -1124,10 +1135,12 @@ let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let ctx =
     scope
-    |> mapFold (fun ctx (_: string) (_, _, useLocs) ->
-         match useLocs with
-         | [] -> ctx
-         | loc :: _ -> ctx |> addLog VarNameConflictError loc) ctx
+    |> mapFold
+         (fun ctx (_: string) (_, _, useLocs) ->
+           match useLocs with
+           | [] -> ctx
+           | loc :: _ -> ctx |> addLog VarNameConflictError loc)
+         ctx
 
   pat, ctx
 
@@ -1141,16 +1154,16 @@ type private ResolvedExpr =
   | NotResolvedExpr of Ident * Loc
 
 /// Tries to resolve a name expression as value; or just return None.
-let private doNameResRefExpr expr ctx =
+let private doNameResVarExpr expr ctx =
   let serial, ty, loc =
     match expr with
-    | HRefExpr (VarSerial serial, ty, loc) -> serial, ty, loc
+    | HVarExpr (VarSerial serial, ty, loc) -> serial, ty, loc
     | _ -> failwith "NEVER"
 
   let name = ctx |> findName serial
 
   match ctx |> resolveLocalVarName name with
-  | Some (VarSymbol serial) -> HRefExpr(serial, ty, loc) |> Some
+  | Some (VarSymbol serial) -> HVarExpr(serial, ty, loc) |> Some
   | Some (FunSymbol serial) -> HFunExpr(serial, ty, loc) |> Some
   | Some (VariantSymbol serial) -> HVariantExpr(serial, ty, loc) |> Some
 
@@ -1159,14 +1172,14 @@ let private doNameResRefExpr expr ctx =
       | Some prim -> HPrimExpr(prim, ty, loc) |> Some
       | None -> None
 
-let private nameResRefExpr expr ctx =
-  match doNameResRefExpr expr ctx with
+let private nameResVarExpr expr ctx =
+  match doNameResVarExpr expr ctx with
   | Some expr -> expr, ctx
 
   | None ->
       let name, loc =
         match expr with
-        | HRefExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
+        | HVarExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
         | _ -> failwith "NEVER"
 
       let ctx =
@@ -1182,10 +1195,10 @@ let private nameResNavExpr expr ctx =
   /// exprOpt is also obtained by resolving inner `nav`s as possible.
   let rec resolveExprAsScope expr ctx =
     match expr with
-    | HRefExpr (VarSerial serial, _, loc) ->
+    | HVarExpr (VarSerial serial, _, loc) ->
         let name = ctx |> findName serial
         let scopes = ctx |> resolveLocalTyName name
-        let exprOpt = doNameResRefExpr expr ctx
+        let exprOpt = doNameResVarExpr expr ctx
 
         match scopes, exprOpt with
         | [], None -> NotResolvedExpr(name, loc), ctx
@@ -1206,21 +1219,23 @@ let private nameResNavExpr expr ctx =
             // Resolve as scope.
             let tySymbols =
               lTySymbols
-              |> List.choose (fun lTySymbol ->
-                   ctx
-                   |> resolveScopedTyName (tySymbolToSerial lTySymbol) r)
+              |> List.choose
+                   (fun lTySymbol ->
+                     ctx
+                     |> resolveScopedTyName (tySymbolToSerial lTySymbol) r)
 
             // Resolve as value.
             let exprOpt =
               let varSymbolOpt =
                 lTySymbols
-                |> List.tryPick (fun lTySymbol ->
-                     match ctx |> resolveScopedVarName lTySymbol r with
-                     | None -> None
-                     | it -> it)
+                |> List.tryPick
+                     (fun lTySymbol ->
+                       match ctx |> resolveScopedVarName lTySymbol r with
+                       | None -> None
+                       | it -> it)
 
               match varSymbolOpt with
-              | Some (VarSymbol varSerial) -> HRefExpr(varSerial, ty, loc) |> Some
+              | Some (VarSymbol varSerial) -> HVarExpr(varSerial, ty, loc) |> Some
               | Some (FunSymbol funSerial) -> HFunExpr(funSerial, ty, loc) |> Some
               | Some (VariantSymbol variantSerial) -> HVariantExpr(variantSerial, ty, loc) |> Some
               | None -> None
@@ -1243,6 +1258,7 @@ let private nameResNavExpr expr ctx =
         ResolvedAsExpr expr, ctx
 
   let result, ctx = resolveExprAsScope expr ctx
+
   match result with
   | ResolvedAsExpr expr -> expr, ctx
 
@@ -1263,7 +1279,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HLitExpr _
   | HPrimExpr _ -> expr, ctx
 
-  | HRefExpr _ -> nameResRefExpr expr ctx
+  | HVarExpr _ -> nameResVarExpr expr ctx
 
   | HRecordExpr (baseOpt, fields, ty, loc) ->
       let doArm () =
@@ -1272,9 +1288,10 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let fields, ctx =
           (fields, ctx)
-          |> stMap (fun ((name, init, loc), ctx) ->
-               let init, ctx = (init, ctx) |> nameResExpr
-               (name, init, loc), ctx)
+          |> stMap
+               (fun ((name, init, loc), ctx) ->
+                 let init, ctx = (init, ctx) |> nameResExpr
+                 (name, init, loc), ctx)
 
         HRecordExpr(baseOpt, fields, ty, loc), ctx
 
@@ -1286,13 +1303,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         let arms, ctx =
           (arms, ctx)
-          |> stMap (fun ((pat, guard, body), ctx) ->
-               let ctx = ctx |> startScope
-               let pat, ctx = (pat, ctx) |> nameResRefutablePat
-               let guard, ctx = (guard, ctx) |> nameResExpr
-               let body, ctx = (body, ctx) |> nameResExpr
-               let ctx = ctx |> finishScope
-               (pat, guard, body), ctx)
+          |> stMap
+               (fun ((pat, guard, body), ctx) ->
+                 let ctx = ctx |> startScope ExprScope
+                 let pat, ctx = (pat, ctx) |> nameResRefutablePat
+                 let guard, ctx = (guard, ctx) |> nameResExpr
+                 let body, ctx = (body, ctx) |> nameResExpr
+                 let ctx = ctx |> finishScope
+                 (pat, guard, body), ctx)
 
         HMatchExpr(cond, arms, ty, loc), ctx
 
@@ -1300,13 +1318,13 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HNavExpr _ -> nameResNavExpr expr ctx
 
-  | HInfExpr (op, items, ty, loc) ->
+  | HNodeExpr (op, items, ty, loc) ->
       let doArm () =
-        // Necessary in case of annotation expression.
+        // Necessary in case of ascribe expression.
         let ty, ctx = ctx |> resolveTy ty loc
 
         let items, ctx = (items, ctx) |> stMap nameResExpr
-        HInfExpr(op, items, ty, loc), ctx
+        HNodeExpr(op, items, ty, loc), ctx
 
       doArm ()
 
@@ -1321,13 +1339,13 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HLetValExpr (vis, pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
-          let ctx = ctx |> startScope
+          let ctx = ctx |> startScope ExprScope
           let body, ctx = (body, ctx) |> nameResExpr
           let ctx = ctx |> finishScope
           body, ctx
 
         let pat, next, ctx =
-          let ctx = ctx |> startScope
+          let ctx = ctx |> startScope ExprScope
           let pat, ctx = (pat, ctx) |> nameResIrrefutablePat
           let next, ctx = (next, ctx) |> nameResExpr
           let ctx = ctx |> finishScope
@@ -1339,7 +1357,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
   | HLetFunExpr (serial, isRec, vis, pats, body, next, ty, loc) ->
       let doArm () =
-        let ctx = ctx |> startScope
+        let ctx = ctx |> startScope ExprScope
 
         let pats, body, ctx =
           match isRec with
@@ -1349,7 +1367,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                 ctx
                 |> enterLetInit
                 |> defineFunUniquely serial pats noTy loc
-                |> startScope
+                |> startScope ExprScope
 
               let pats, ctx =
                 (pats, ctx) |> stMap nameResIrrefutablePat
@@ -1359,7 +1377,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
               pats, body, ctx
 
           | NotRec ->
-              let ctx = ctx |> enterLetInit |> startScope
+              let ctx =
+                ctx |> enterLetInit |> startScope ExprScope
 
               let pats, ctx =
                 (pats, ctx) |> stMap nameResIrrefutablePat
@@ -1402,10 +1421,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           let moduleSerialOpt =
             ctx
             |> resolveLocalTyName moduleName
-            |> List.tryPick (fun tySymbol ->
-                 match tySymbol with
-                 | ModuleTySymbol moduleSerial -> Some moduleSerial
-                 | _ -> None)
+            |> List.tryPick
+                 (fun tySymbol ->
+                   match tySymbol with
+                   | ModuleTySymbol moduleSerial -> Some moduleSerial
+                   | _ -> None)
 
           match moduleSerialOpt with
           | Some moduleSerial -> ctx |> openModule moduleSerial
@@ -1425,7 +1445,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
           |> importTy (ModuleTySymbol serial)
 
-        let ctx = ctx |> startScope
+        let ctx = ctx |> startScope ExprScope
 
         let body, ctx =
           (body, ctx)
@@ -1458,10 +1478,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
               let moduleSerialOpt =
                 ctx
                 |> resolveLocalTyName moduleName
-                |> List.tryPick (fun tySymbol ->
-                     match tySymbol with
-                     | ModuleTySymbol moduleSerial -> Some moduleSerial
-                     | _ -> None)
+                |> List.tryPick
+                     (fun tySymbol ->
+                       match tySymbol with
+                       | ModuleTySymbol moduleSerial -> Some moduleSerial
+                       | _ -> None)
 
               match moduleSerialOpt with
               | Some referent ->

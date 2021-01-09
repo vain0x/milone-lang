@@ -22,7 +22,6 @@ open MiloneLang.Monomorphizing
 open MiloneLang.Kir
 open MiloneLang.KirGen
 open MiloneLang.KirPropagate
-// open MiloneLang.KirToMir
 open MiloneLang.KirDump
 open MiloneLang.MirGen
 open MiloneLang.Cir
@@ -32,15 +31,29 @@ open MiloneLang.CirDump
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 
-let private helpText = """milone-lang compiler
+let private currentVersion () = "0.2.0"
+
+let private helpText () =
+  """milone-lang v"""
+  + currentVersion ()
+  + """ <https://github.com/vain0x/milone-lang>
 
 USAGE:
-    milone [SUBCOMMAND] OPTIONS...
+    milone <SUBCOMMAND> OPTIONS...
 
 EXAMPLE
     milone compile ./MiloneLang
 
 SUBCOMMANDS
+    milone check <PROJECT-DIR>
+        Checks a milone-lang project.
+
+        Performs syntax validation and type checking
+        but skips code generation.
+
+        If error, exits with non-zero code
+        after writing errors to standard output.
+
     milone compile <PROJECT-DIR>
         Compiles a milone-lang project to C.
 
@@ -51,16 +64,13 @@ SUBCOMMANDS
         Errors are written to STDOUT. (FIXME: use STDERR)
 
 OPTIONS
-    -h, --help      Print this text.
-    -V, --version   Print version of the compiler.
+    -h, --help      Print help text.
+    -V, --version   Print compiler version.
 
 GLOBAL OPTIONS
     -v, --verbose   Enable verbose logging for debug
         --profile   Enable profile logging
-    -q, --quiet     Disable logging
-
-LINKS
-    <https://github.com/vain0x/milone-lang>"""
+    -q, --quiet     Disable logging"""
 
 // -----------------------------------------------
 // Interface (1)
@@ -84,6 +94,9 @@ type CliHost =
   {
     /// Command line args.
     Args: string list
+
+    /// Path to $HOME.
+    Home: string
 
     /// Path to milone home (installation directory).
     MiloneHome: string
@@ -122,13 +135,9 @@ let private pathStrToStem (s: string) =
   | ".." -> s
 
   | s ->
-      // wants findLastIndex
-      let rec go i =
-        if i = 0 then s
-        else if s.[i - 1] = '.' then s |> S.slice 0 (i - 1)
-        else go (i - 1)
-
-      go s.Length
+      match s |> S.findLastIndex "." with
+      | Some i -> s |> S.slice 0 (i - 1)
+      | None -> s
 
 let private pathIsRelative (s: string) =
   (s |> S.startsWith "./")
@@ -197,9 +206,53 @@ let private parseProjectSchema tokenizeHost contents =
     errors
     |> listSort (fun (_, l) (_, r) -> posCmp l r)
     |> List.iter (fun (msg, loc) -> printfn "ERROR %s %s" (posToString loc) msg)
+
     failwith "Syntax error in project file."
 
   doInterpretProjectSchema ast
+
+// -----------------------------------------------
+// MiloneCore resolution
+// -----------------------------------------------
+
+/// Generates decls for each MiloneCore module
+/// whose name appears in the token stream.
+let private resolveMiloneCoreDeps tokens ast =
+  let knownNames = [ "List"; "Option"; "String" ]
+
+  let isKnownName moduleName =
+    knownNames
+    |> List.exists (fun name -> name = moduleName)
+
+  let moduleMap =
+    let rec go acc tokens =
+      match tokens with
+      | [] -> acc
+      | (IdentToken moduleName, pos) :: (DotToken, _) :: tokens -> go ((moduleName, pos) :: acc) tokens
+      | _ :: tokens -> go acc tokens
+
+    let moduleNames = go [] tokens
+
+    let add acc (moduleName, pos) =
+      if (acc |> mapContainsKey moduleName |> not)
+         && isKnownName moduleName then
+        acc |> mapAdd moduleName pos
+      else
+        acc
+
+    moduleNames |> List.fold add (mapEmpty compare)
+
+  let insertOpenDecls decls =
+    moduleMap
+    |> mapFold
+         (fun decls moduleName pos ->
+           AModuleSynonymDecl(moduleName, [ "MiloneCore"; moduleName ], pos)
+           :: decls)
+         decls
+
+  match ast with
+  | AExprRoot decls -> AExprRoot(insertOpenDecls decls)
+  | AModuleRoot (name, decls, pos) -> AModuleRoot(name, insertOpenDecls decls, pos)
 
 // -----------------------------------------------
 // Context
@@ -225,9 +278,16 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
+  let miloneHome =
+    if host.MiloneHome <> "" then
+      host.MiloneHome
+    else
+      host.Home + "/.milone"
+
   let projects =
     mapEmpty compare
-    |> mapAdd "MiloneCore" (host.MiloneHome + "/milone_libs/MiloneCore")
+    |> mapAdd "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
+    |> mapAdd "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
     |> mapAdd projectName projectDir
 
   let readModuleFile (_: string) (projectDir: string) (moduleName: string) =
@@ -249,6 +309,12 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
 
     let errors =
       List.append (tokenizeErrors errorTokens) parseErrors
+
+    let ast =
+      if errors |> List.isEmpty then
+        resolveMiloneCoreDeps tokens ast
+      else
+        ast
 
     ast, errors
 
@@ -282,14 +348,16 @@ let private compileCtxReadProjectFile (ctx: CompileCtx) =
       | Some refs ->
           let projects =
             refs
-            |> List.fold (fun projects (projectName, projectDir) ->
-                 if projects |> mapContainsKey projectName
-                 then failwithf "Project name is duplicated: '%s'" projectName
+            |> List.fold
+                 (fun projects (projectName, projectDir) ->
+                   if projects |> mapContainsKey projectName
+                   then failwithf "Project name is duplicated: '%s'" projectName
 
-                 let projectDir =
-                   if projectDir |> pathIsRelative then ctx.ProjectDir + "/" + projectDir else projectDir
+                   let projectDir =
+                     if projectDir |> pathIsRelative then ctx.ProjectDir + "/" + projectDir else projectDir
 
-                 projects |> mapAdd projectName projectDir) ctx.Projects
+                   projects |> mapAdd projectName projectDir)
+                 ctx.Projects
 
           { ctx with Projects = projects }
 
@@ -299,14 +367,16 @@ let private compileCtxReadProjectFile (ctx: CompileCtx) =
 let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
   let projects =
     references
-    |> List.fold (fun projects projectDir ->
-         let projectDir = projectDir |> pathStrTrimEndPathSep
-         let projectName = projectDir |> pathStrToStem
+    |> List.fold
+         (fun projects projectDir ->
+           let projectDir = projectDir |> pathStrTrimEndPathSep
+           let projectName = projectDir |> pathStrToStem
 
-         if projects |> mapContainsKey projectName
-         then failwithf "Project name is duplicated: '%s'" projectName
+           if projects |> mapContainsKey projectName
+           then failwithf "Project name is duplicated: '%s'" projectName
 
-         projects |> mapAdd projectName projectDir) ctx.Projects
+           projects |> mapAdd projectName projectDir)
+         ctx.Projects
 
   { ctx with Projects = projects }
 
@@ -359,12 +429,13 @@ let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 let private nameResLogsToString logs =
   logs
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
-  |> List.map (fun (log, loc) ->
-       "#error "
-       + locToString loc
-       + " "
-       + nameResLogToString log
-       + "\n")
+  |> List.map
+       (fun (log, loc) ->
+         "#error "
+         + locToString loc
+         + " "
+         + nameResLogToString log
+         + "\n")
   |> strConcat
 
 let private semanticErrorToString (tyCtx: TyCtx) logs =
@@ -378,12 +449,13 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
 
   logs
   |> listSort (fun (_, l) (_, r) -> locCmp l r)
-  |> List.map (fun (log, loc) ->
-       "#error "
-       + locToString loc
-       + " "
-       + logToString tyDisplayFn log
-       + "\n")
+  |> List.map
+       (fun (log, loc) ->
+         "#error "
+         + locToString loc
+         + " "
+         + logToString tyDisplayFn log
+         + "\n")
   |> strConcat
 
 // -----------------------------------------------
@@ -397,10 +469,11 @@ let private isErrorToken token =
 
 let private tokenizeErrors errorTokens =
   errorTokens
-  |> List.map (fun token ->
-       match token with
-       | ErrorToken error, pos -> tokenizeErrorToString error, pos
-       | _ -> failwith "NEVER")
+  |> List.map
+       (fun token ->
+         match token with
+         | ErrorToken error, pos -> tokenizeErrorToString error, pos
+         | _ -> failwith "NEVER")
 
 /// Loads source codes from files, performs tokenization and SyntaxParse,
 /// and transforms them into high-level intermediate representation (HIR).
@@ -435,6 +508,7 @@ let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAn
   assert (syntaxErrors |> List.isEmpty)
 
   writeLog host v "NameRes"
+
   let expr, scopeCtx = nameRes (exprs, nameCtx)
 
   if scopeCtx.Logs |> List.isEmpty |> not then
@@ -443,6 +517,7 @@ let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAn
     writeLog host v "Typing"
 
     let expr, tyCtx = infer (expr, scopeCtx, [])
+
     if tyCtx.Logs |> List.isEmpty |> not then
       SemaAnalysisTypingError tyCtx
     else
@@ -528,11 +603,26 @@ let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
 // writeLog host v "Finish"
 // cOutput, success
 
+let check (ctx: CompileCtx): bool * string =
+  let host = ctx.Host
+  let v = ctx.Verbosity
+
+  let syntax = syntacticallyAnalyze ctx
+
+  if syntax |> syntaxHasError then
+    false, syntaxErrorToString syntax
+  else
+    match semanticallyAnalyze host v syntax with
+    | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
+    | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
+    | SemaAnalysisOk _ -> true, ""
+
 let compile (ctx: CompileCtx): bool * string =
   let host = ctx.Host
   let v = ctx.Verbosity
 
   let syntax = syntacticallyAnalyze ctx
+
   if syntax |> syntaxHasError then
     false, syntaxErrorToString syntax
   else
@@ -575,7 +665,19 @@ let cliParse (host: CliHost) v (projectDir: string) =
 
   bundleProgram (ctx |> toBundleHost parseWithLogging) ctx.ProjectName
   |> ignore
+
   0
+
+let cliCheck (host: CliHost) verbosity projectDir =
+  let ctx =
+    compileCtxNew host verbosity projectDir
+    |> compileCtxReadProjectFile
+
+  let ok, output = check ctx
+  let exitCode = if ok then 0 else 1
+
+  printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
+  exitCode
 
 let cliCompile (host: CliHost) verbosity projectDir =
   let ctx =
@@ -593,68 +695,72 @@ let cliKirDump (host: CliHost) projectDirs =
   printfn "// Common code.\n%s\n" (kirHeader ())
 
   projectDirs
-  |> List.fold (fun code projectDir ->
-       printfn "// -------------------------------\n// %s\n{\n" projectDir
-       printfn "/*"
+  |> List.fold
+       (fun code projectDir ->
+         printfn "// -------------------------------\n// %s\n{\n" projectDir
+         printfn "/*"
 
-       let ctx = compileCtxNew host v projectDir
+         let ctx = compileCtxNew host v projectDir
 
-       let ok, output =
-         let syntax = syntacticallyAnalyze ctx
+         let ok, output =
+           let syntax = syntacticallyAnalyze ctx
 
-         match semanticallyAnalyze host v syntax with
-         | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
-         | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
+           match semanticallyAnalyze host v syntax with
+           | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
+           | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
 
-         | SemaAnalysisOk (expr, tyCtx) ->
-             let expr, tyCtx = transformHir host v (expr, tyCtx)
-             dumpHirAsKir host v (expr, tyCtx)
+           | SemaAnalysisOk (expr, tyCtx) ->
+               let expr, tyCtx = transformHir host v (expr, tyCtx)
+               dumpHirAsKir host v (expr, tyCtx)
 
-       let code =
-         if ok then
-           printfn "*/"
-           printfn "%s" (output |> S.trimEnd)
-           code
-         else
-           printfn "\n%s\n*/" output
-           1
+         let code =
+           if ok then
+             printfn "*/"
+             printfn "%s" (output |> S.trimEnd)
+             code
+           else
+             printfn "\n%s\n*/" output
+             1
 
-       printfn "\n// exit = %d\n}\n" code
-       code) 0
+         printfn "\n// exit = %d\n}\n" code
+         code)
+       0
 
 let cliCompileViaKir (host: CliHost) projectDirs =
   let v = Quiet
   printfn "// Generated using KIR.\n"
 
   projectDirs
-  |> List.fold (fun code projectDir ->
-       printfn "// -------------------------------\n// %s\n" projectDir
-       printfn "/*"
+  |> List.fold
+       (fun code projectDir ->
+         printfn "// -------------------------------\n// %s\n" projectDir
+         printfn "/*"
 
-       let ctx = compileCtxNew host v projectDir
+         let ctx = compileCtxNew host v projectDir
 
-       let ok, output =
-         let syntax = syntacticallyAnalyze ctx
+         let ok, output =
+           let syntax = syntacticallyAnalyze ctx
 
-         match semanticallyAnalyze host v syntax with
-         | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
-         | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
+           match semanticallyAnalyze host v syntax with
+           | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
+           | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
 
-         | SemaAnalysisOk (expr, tyCtx) ->
-             let expr, tyCtx = transformHir host v (expr, tyCtx)
-             codeGenHirViaKir host v (expr, tyCtx)
+           | SemaAnalysisOk (expr, tyCtx) ->
+               let expr, tyCtx = transformHir host v (expr, tyCtx)
+               codeGenHirViaKir host v (expr, tyCtx)
 
-       let code =
-         if ok then
-           printfn "*/"
-           printfn "%s" (output |> S.trimEnd)
-           code
-         else
-           printfn "\n%s\n*/" output
-           1
+         let code =
+           if ok then
+             printfn "*/"
+             printfn "%s" (output |> S.trimEnd)
+             code
+           else
+             printfn "\n%s\n*/" output
+             1
 
-       printfn "\n// exit = %d\n" code
-       code) 0
+         printfn "\n// exit = %d\n" code
+         code)
+       0
 
 // -----------------------------------------------
 // Arg parsing
@@ -682,26 +788,35 @@ let private parseFlag picker state args =
 
 let private containsHelpFlag args =
   let ok, _ =
-    parseFlag (fun _ arg ->
-      match arg with
-      | "-h"
-      | "--help" -> Some true
-      | _ -> None) false args
+    parseFlag
+      (fun _ arg ->
+        match arg with
+        | "-h"
+        | "--help" -> Some true
+        | _ -> None)
+      false
+      args
 
   ok
 
 let private parseVerbosity (host: CliHost) args =
-  parseFlag (fun (_: Verbosity) arg ->
-    match arg with
-    | "-v" -> Some Verbose
-    | "-q" -> Some Quiet
-    | "--profile" -> Some(Profile(host.ProfileInit()))
-    | _ -> None) Quiet args
+  parseFlag
+    (fun (_: Verbosity) arg ->
+      match arg with
+      | "-v"
+      | "--verbose" -> Some Verbose
+      | "-q"
+      | "--quiet" -> Some Quiet
+      | "--profile" -> Some(Profile(host.ProfileInit()))
+      | _ -> None)
+    Quiet
+    args
 
 [<NoEquality; NoComparison>]
 type private CliCmd =
   | HelpCmd
   | VersionCmd
+  | CheckCmd
   | CompileCmd
   | ParseCmd
   | KirDumpCmd
@@ -724,6 +839,8 @@ let private parseArgs args =
 
   | arg :: args ->
       match arg with
+      | "check" -> CheckCmd, args
+
       | "build"
       | "compile" -> CompileCmd, args
 
@@ -741,12 +858,26 @@ let private parseArgs args =
 let cli (host: CliHost) =
   match host.Args |> parseArgs with
   | HelpCmd, _ ->
-      printfn "%s" helpText
+      printfn "%s" (helpText ())
       0
 
   | VersionCmd, _ ->
-      printfn "0.1.0"
+      printfn "%s" (currentVersion ())
       0
+
+  | CheckCmd, args ->
+      let verbosity, args = parseVerbosity host args
+
+      match args with
+      | [ projectDir ] -> cliCheck host verbosity projectDir
+
+      | [] ->
+          printfn "ERROR: Expected project dir."
+          1
+
+      | arg :: _ ->
+          printfn "ERROR: Unknown argument: '%s'." arg
+          1
 
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args

@@ -1,8 +1,8 @@
 #include "milone.h"
 
-int main();
+int milone_main();
 
-int main() {
+int milone_main() {
     milone_assert((((char)97) == 'a'), 1, 2);
     milone_assert((((char)0) == '\0'), 2, 2);
     milone_assert((0 == 0), 4, 2);

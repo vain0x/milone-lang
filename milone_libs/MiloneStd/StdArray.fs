@@ -105,6 +105,7 @@ let splitAt (index: int) (array: Array<_>): Array<_> * Array<_> =
 /// E.g. `[| x1; x2; ... |]` => `Some (x1, [| x2; ... |])`
 let uncons (array: Array<_>): (_ * Array<_>) option =
   let len = length array
+
   if len = 0 then
     None
   else
@@ -140,6 +141,7 @@ let choose (f: _ -> _ option) (src: Array<_>): Array<_> =
       | None -> chooseLoop di (si + 1)
 
   let di = chooseLoop 0 0
+
   if di = 0
   then empty ()
   else __constArrayOfMut (__mutArraySlice 0 di dest)

@@ -2,9 +2,9 @@
 
 char const* str_as_ptr(struct String);
 
-int main();
+int milone_main();
 
-int main() {
+int milone_main() {
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 42;
     int const* p_ = ((int const*)box_);

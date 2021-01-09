@@ -54,6 +54,7 @@ let tokenizeCharLiteral () =
 
   let source = """'a' '\'' '\n' '\x00'"""
   let expected = [ 'a'; '\''; '\n'; '\x00' ]
+
   source
   |> tokenize
   |> List.map unwrapChar
@@ -76,10 +77,11 @@ let tokenizeRawIdent () =
 
   source
   |> tokenize
-  |> List.choose (fun (token, pos) ->
-       match token with
-       | IdentToken text -> Some(text, pos)
-       | _ -> None)
+  |> List.choose
+       (fun (token, pos) ->
+         match token with
+         | IdentToken text -> Some(text, pos)
+         | _ -> None)
   |> is expected
 
 [<Fact>]
@@ -91,10 +93,11 @@ let tokenizeTyVarIdent () =
 
   source
   |> tokenize
-  |> List.choose (fun (token, pos) ->
-       match token with
-       | TyVarToken text -> Some(text, pos)
-       | _ -> None)
+  |> List.choose
+       (fun (token, pos) ->
+         match token with
+         | TyVarToken text -> Some(text, pos)
+         | _ -> None)
   |> is expected
 
 [<Fact>]

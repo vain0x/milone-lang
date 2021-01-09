@@ -1,9 +1,7 @@
 module rec module_milone_core.Program
 
-// Currently, "MiloneCore" is visible to any modules without project references.
-// (Ideally, prelude modules (List, Option, etc.) should be visible by default.)
-
-open MiloneCore.List
+// MiloneCore modules are visible by default.
+// See milone_libs/MiloneCore for implementations.
 
 let assertNotEmpty (xs: _ list) = assert (not (List.isEmpty xs))
 

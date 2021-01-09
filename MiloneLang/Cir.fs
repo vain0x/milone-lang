@@ -89,19 +89,16 @@ type CExpr =
   | CStrObjExpr of string
 
   /// Variable.
-  | CRefExpr of Ident
+  | CVarExpr of Ident
 
   /// `(struct T){.x = x, ..}` Initializer.
   | CInitExpr of fields: (Ident * CExpr) list * CTy
-
-  /// Projection. Field access of tuple.
-  | CProjExpr of CExpr * index: int
 
   /// `(T)x`
   | CCastExpr of CExpr * CTy
 
   /// `a.x`
-  | CNavExpr of CExpr * Ident
+  | CDotExpr of CExpr * Ident
 
   /// `p->x`
   | CArrowExpr of CExpr * Ident

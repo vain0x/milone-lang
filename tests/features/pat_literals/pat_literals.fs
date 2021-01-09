@@ -15,6 +15,11 @@ let main _ =
   | 1 -> ()
   | _ -> assert false
 
+  match -2 with
+  | 2 -> assert false
+  | -2 -> ()
+  | _ -> assert false
+
   match 'a' with
   | 'A' -> assert false
   | 'a' -> ()

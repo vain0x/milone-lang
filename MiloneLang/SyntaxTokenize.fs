@@ -305,7 +305,8 @@ let private tokenOfOp (text: string) l r: Token =
 
   let error () = ErrorToken UndefinedOpTokenError
 
-  let expect expected token = if s = expected then token else error ()
+  let expect expected token =
+    if s = expected then token else error ()
 
   match s.[0] with
   | '&' ->
@@ -381,6 +382,7 @@ let private evalCharLit (text: string) (l: int) (r: int): Token =
            && text.[l + 1] = '\\'
            && text.[l + 3] = '\'' ->
       let c = text.[l + 2]
+
       match c with
       | 't' -> CharToken '\t'
       | 'r' -> CharToken '\r'
@@ -423,9 +425,9 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
       StrToken(acc |> List.rev |> strConcat)
     else
       assert (i < r - 1 && text.[i] = '\\')
+
       match text.[i + 1] with
-      | 'x' when i
-                 + 4 < r
+      | 'x' when i + 4 < r
                  && text.[i + 2] = '0'
                  && text.[i + 3] = '0' -> go ("\x00" :: acc) (i + 4)
       | 't' when i + 2 < r -> go ("\t" :: acc) (i + 2)
@@ -444,8 +446,7 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
 
 let private evalStrLitRaw (text: string) l r =
   if (l + 6 <= r)
-     && text
-     |> isFollowedByRawQuotes l
+     && text |> isFollowedByRawQuotes l
      && text |> isFollowedByRawQuotes (r - 3) then
     StrToken(text |> S.slice (l + 3) (r - 3))
   else
@@ -480,6 +481,7 @@ let private lookahead (text: string) (i: int) =
 
   assert (i < text.Length)
   let c = text.[i]
+
   match c with
   | '\x00' -> LEof, 0
 
@@ -631,10 +633,8 @@ let private doNext (host: TokenizeHost) (text: string) (index: int): Token * int
 
       // Value can be too large or too small; range should be checked in Typing.
       // m: before suffix
-      if m < r
-      then ErrorToken UnimplNumberSuffixError, r
-      else if isFloat
-      then FloatToken text.[index..r - 1], r
+      if m < r then ErrorToken UnimplNumberSuffixError, r
+      else if isFloat then FloatToken text.[index..r - 1], r
       else IntToken(S.slice index r text), r
 
   | LNonKeywordIdent ->

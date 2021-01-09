@@ -147,13 +147,15 @@ let doWithTimeout (timeoutMs: int) (action: unit -> 'T): Result<'T, exn> =
 
   if index = 0 then
     assert task.IsCompleted
+
     match task.Status with
     | TaskStatus.RanToCompletion -> Ok task.Result
 
     | TaskStatus.Faulted ->
-        if task.Exception.InnerExceptions.Count = 1
-        then Error task.Exception.InnerExceptions.[0]
-        else Error(task.Exception :> exn)
+        if task.Exception.InnerExceptions.Count = 1 then
+          Error task.Exception.InnerExceptions.[0]
+        else
+          Error(task.Exception :> exn)
 
     | _ -> failwith "NEVER"
   else

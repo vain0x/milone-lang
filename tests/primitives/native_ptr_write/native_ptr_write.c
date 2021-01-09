@@ -4,14 +4,14 @@ struct String str_of_raw_parts(char const*, int);
 
 struct String strOfRawParts_(char const* p_, int len_);
 
-int main();
+int milone_main();
 
 struct String strOfRawParts_(char const* p_, int len_) {
     struct String str_of_raw_parts_result_ = str_of_raw_parts(p_, len_);
     return str_of_raw_parts_result_;
 }
 
-int main() {
+int milone_main() {
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
     void const* intBox_ = box_;

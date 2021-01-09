@@ -185,7 +185,7 @@ let private hoistExprLetFun callee isRec vis args body next ty loc ctx =
 let private hoistExprCore (expr, ctx) =
   match expr with
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _
@@ -204,10 +204,10 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HInfExpr (infOp, items, ty, loc) ->
+  | HNodeExpr (kind, items, ty, loc) ->
       let doArm () =
         let items, ctx = (items, ctx) |> stMap hoistExpr
-        HInfExpr(infOp, items, ty, loc), ctx
+        HNodeExpr(kind, items, ty, loc), ctx
 
       doArm ()
 
@@ -227,7 +227,8 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) -> hoistExprLetFun callee isRec vis args body next ty loc ctx
+  | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
+      hoistExprLetFun callee isRec vis args body next ty loc ctx
 
   | HTyDeclExpr _ ->
       let doArm () =

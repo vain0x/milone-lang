@@ -16,7 +16,7 @@ struct StringList const* go_1(struct String s_, struct StringList const* acc_1, 
 
 struct StringList const* tokenize_(struct String s_);
 
-int main();
+int milone_main();
 
 struct StringList {
     struct String head;
@@ -63,7 +63,7 @@ next_7:;
     if ((!(xs_3))) goto next_8;
     struct String x_1 = xs_3->head;
     struct StringList const* xs_4 = xs_3->tail;
-    printf("%s\n", x_1.str);
+    printf("%s\n", str_to_c_str(x_1));
     struct StringList const* arg_2 = xs_4;
     xs_3 = arg_2;
     goto tailrec_5;
@@ -252,7 +252,7 @@ struct StringList const* tokenize_(struct String s_) {
     return call_5;
 }
 
-int main() {
+int milone_main() {
     struct String source_ = (struct String){.str = "[0, 1000000007, 314159]", .len = 23};
     struct StringList const* call_6 = tokenize_(source_);
     struct StringList const* tokens_ = call_6;

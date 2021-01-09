@@ -8,6 +8,7 @@ open System.IO
 
 let private pathIsOk (filePath: string) =
   let fileName = Path.GetFileName(filePath)
+
   match fileName with
   | "bin"
   | "obj"
@@ -45,6 +46,7 @@ let private findTestProjects testsDir =
        // features, examples, etc.
        let category = Path.GetFileName(category)
        let categoryDir = Path.Combine(testsDir, category)
+
        for projectName in IO.Directory.GetDirectories(categoryDir) do
          let projectName = Path.GetFileName(projectName)
          if pathIsOk projectName then yield category, projectName |]
@@ -71,12 +73,14 @@ let private generate (solutionDir: string) (ninjaTemplate: string) =
     }
     |> String.concat "\n"
 
-  ninjaTemplate.Replace("{{ FS_PROJ_FILES }}", findFiles (extIs ".fsproj") solutionDir)
-               .Replace("{{ MILONE_CORE_SRC }}", findFiles extIsSrc (solutionDir + "/milone_libs/MiloneCore"))
-               .Replace("{{ MILONE_STD_SRC }}", findFiles extIsSrc (solutionDir + "/milone_libs/MiloneStd"))
-               .Replace("{{ MILONE_LANG_SRC }}", findFiles extIsSrc (solutionDir + "/MiloneLang"))
-               .Replace("{{ TEST_C_FILES }}", testCFiles).Replace("{{ TEST_DIFF_FILES }}", testDiffFiles)
-               .Replace("{{ TEST_BUILDS }}", testBuilds)
+  ninjaTemplate
+    .Replace("{{ FS_PROJ_FILES }}", findFiles (extIs ".fsproj") solutionDir)
+    .Replace("{{ MILONE_CORE_SRC }}", findFiles extIsSrc (solutionDir + "/milone_libs/MiloneCore"))
+    .Replace("{{ MILONE_STD_SRC }}", findFiles extIsSrc (solutionDir + "/milone_libs/MiloneStd"))
+    .Replace("{{ MILONE_LANG_SRC }}", findFiles extIsSrc (solutionDir + "/MiloneLang"))
+    .Replace("{{ TEST_C_FILES }}", testCFiles)
+    .Replace("{{ TEST_DIFF_FILES }}", testDiffFiles)
+    .Replace("{{ TEST_BUILDS }}", testBuilds)
 
 [<EntryPoint>]
 let main argv =

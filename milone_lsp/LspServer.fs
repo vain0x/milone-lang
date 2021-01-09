@@ -22,6 +22,7 @@ let jOfRange (start: Position, endValue: Position): JsonValue =
 
 let freshMsgId: unit -> int =
   let mutable lastId = 0
+
   fun () ->
     lastId <- lastId + 1
     lastId
@@ -76,7 +77,9 @@ let jToBool jsonValue: bool =
   | _ -> false
 
 let jToPos jsonValue: Position =
-  let row, column = jsonValue |> jFields2 "line" "character"
+  let row, column =
+    jsonValue |> jFields2 "line" "character"
+
   jToInt row, jToInt column
 
 let jToRange jsonValue: Range =
@@ -111,13 +114,14 @@ let lspServer (): JsonValue -> int option =
   let doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
     let diagnostics =
       errors
-      |> List.map (fun (msg, r1, c1, r2, c2) ->
-           let start = r1, c1
-           let endPos = r2, c2
+      |> List.map
+           (fun (msg, r1, c1, r2, c2) ->
+             let start = r1, c1
+             let endPos = r2, c2
 
-           jOfObj [ "range", jOfRange (start, endPos)
-                    "message", JString msg
-                    "source", JString "milone-lang" ])
+             jOfObj [ "range", jOfRange (start, endPos)
+                      "message", JString msg
+                      "source", JString "milone-lang" ])
       |> JArray
 
     let paramsValue =
@@ -149,9 +153,10 @@ let lspServer (): JsonValue -> int option =
 
     let toHighlights kind posList =
       posList
-      |> Seq.map (fun (start, endPos) ->
-           jOfObj [ "range", jOfRange (start, endPos)
-                    "kind", jOfInt kind ])
+      |> Seq.map
+           (fun (start, endPos) ->
+             jOfObj [ "range", jOfRange (start, endPos)
+                      "kind", jOfInt kind ])
 
     JArray [ yield! toHighlights 2 reads
              yield! toHighlights 3 writes ]
@@ -159,6 +164,7 @@ let lspServer (): JsonValue -> int option =
   // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
   let hover uri pos: JsonValue =
     let contents = LspLangService.hover rootUriOpt uri pos
+
     match contents with
     | [] -> JNull
     | _ ->
@@ -179,6 +185,7 @@ let lspServer (): JsonValue -> int option =
             |> jToString
             |> Some
           with _ -> None
+
         eprintfn "rootUriOpt = %A" rootUriOpt
 
         jsonRpcWriteWithTemplate "initialize_response" [ "MSG_ID", getMsgId () ]
@@ -271,9 +278,10 @@ let lspServer (): JsonValue -> int option =
 
         let result =
           LspLangService.definition rootUriOpt uri pos
-          |> List.map (fun (docId, range) ->
-               jOfObj [ "uri", JString docId
-                        "range", jOfRange range ])
+          |> List.map
+               (fun (docId, range) ->
+                 jOfObj [ "uri", JString docId
+                          "range", jOfRange range ])
           |> JArray
 
         jsonRpcWriteWithResult (getMsgId ()) result
@@ -294,9 +302,10 @@ let lspServer (): JsonValue -> int option =
 
         let result =
           LspLangService.references rootUriOpt uri pos includeDecl
-          |> List.map (fun (docId, range) ->
-               jOfObj [ "uri", JString docId
-                        "range", jOfRange range ])
+          |> List.map
+               (fun (docId, range) ->
+                 jOfObj [ "uri", JString docId
+                          "range", jOfRange range ])
           |> JArray
 
         jsonRpcWriteWithResult (getMsgId ()) result

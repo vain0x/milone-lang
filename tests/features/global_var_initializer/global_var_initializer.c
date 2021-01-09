@@ -4,7 +4,7 @@ void const* f_(int arg_);
 
 static void const* boxedValue_;
 
-int main();
+int milone_main();
 
 void const* f_(int arg_) {
     void const* box_ = milone_mem_alloc(1, sizeof(int));
@@ -12,7 +12,7 @@ void const* f_(int arg_) {
     return box_;
 }
 
-int main() {
+int milone_main() {
     void const* box_1 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 1;
     boxedValue_ = box_1;

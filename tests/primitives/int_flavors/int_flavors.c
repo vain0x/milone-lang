@@ -4,7 +4,7 @@ int signedCases_(int arg_);
 
 int unsignedCases_(int arg_1);
 
-int main();
+int milone_main();
 
 int signedCases_(int arg_) {
     milone_assert((1 == 1), 10, 2);
@@ -62,7 +62,7 @@ int unsignedCases_(int arg_1) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_7 = signedCases_(0);
     int call_8 = unsignedCases_(0);
     return 0;

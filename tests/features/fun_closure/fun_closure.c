@@ -68,7 +68,7 @@ int f7_(int arg_23);
 
 static int a_;
 
-int main();
+int milone_main();
 
 int sub_(int step_, int x_) {
     return (x_ - step_);
@@ -158,12 +158,10 @@ struct UnitIntFun1 {
 };
 
 int lf_(int lx_, int arg_9) {
-    struct IntTuple1 tuple_;
-    tuple_.t0 = lx_;
+    struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = lx_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;
-    void const* env_1 = box_;
-    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = env_1};
+    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = box_};
     int app_ = fun_2.fun(fun_2.env, 0);
     return app_;
 }
@@ -305,7 +303,7 @@ int f7_(int arg_23) {
     return a_;
 }
 
-int main() {
+int milone_main() {
     a_ = 1;
     int call_25 = basicCase_(0);
     int call_26 = transitiveCase_(0);

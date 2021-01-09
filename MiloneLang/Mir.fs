@@ -60,7 +60,7 @@ type MUnary =
   | MProjUnary of tupleItemIndex: int
 
   /// Gets variant tag of union value.
-  | MTagUnary
+  | MGetDiscriminantUnary
 
   /// Gets payload of union value, unchecked.
   | MGetVariantUnary of variantSerial: VariantSerial
@@ -105,6 +105,15 @@ type MBinary =
   /// `s.str[i]`
   | MStrIndexBinary
 
+[<NoEquality; NoComparison>]
+type MAction =
+  | MAssertAction
+  | MPrintfnAction
+  | MEnterRegionAction
+  | MLeaveRegionAction
+  | MCallNativeAction of funName: string
+  | MPtrWriteAction
+
 [<Struct; NoEquality; NoComparison>]
 type MPrim =
   /// string -> int
@@ -119,17 +128,23 @@ type MPrim =
 
   | MStrGetSlicePrim
 
+  /// Construct a closure, packing environment.
+  | MClosurePrim of closureFunSerial: FunSerial
+
+  | MBoxPrim
+  | MConsPrim
+  | MTuplePrim
+  | MVariantPrim of variantSerial: VariantSerial
+  | MRecordPrim
+
+  /// Direct call to procedure.
+  | MCallProcPrim
+
+  /// Indirect call to closure.
+  | MCallClosurePrim
+
   | MCallNativePrim of funName: string
   | MPtrReadPrim
-
-[<NoEquality; NoComparison>]
-type MAction =
-  | MAssertAction
-  | MPrintfnAction
-  | MEnterRegionAction
-  | MLeaveRegionAction
-  | MCallNativeAction of funName: string
-  | MPtrWriteAction
 
 /// Expression in middle IR.
 [<NoEquality; NoComparison>]
@@ -140,7 +155,7 @@ type MExpr =
   | MDefaultExpr of Ty * Loc
 
   /// Variable.
-  | MRefExpr of VarSerial * Ty * Loc
+  | MVarExpr of VarSerial * Ty * Loc
 
   /// Procedure.
   | MProcExpr of FunSerial * Ty * Loc
@@ -148,44 +163,18 @@ type MExpr =
   /// Variant constant.
   | MVariantExpr of TySerial * VariantSerial * Ty * Loc
 
-  /// Variant tag value.
-  | MTagExpr of VariantSerial * Loc
+  | MDiscriminantConstExpr of VariantSerial * Loc
 
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
 
   | MNativeExpr of code: string * Ty * Loc
 
-/// Variable initializer in mid-level IR.
-[<NoEquality; NoComparison>]
-type MInit =
-  /// Remain uninitialized at first; initialized later by `MSetStmt`.
-  | MUninitInit
-
-  | MExprInit of MExpr
-
-  | MPrimInit of MPrim * MExpr list
-
-  /// Direct call to procedure.
-  | MCallProcInit of callee: MExpr * args: MExpr list * calleeTy: Ty
-
-  /// Indirect call to closure.
-  | MCallClosureInit of callee: MExpr * args: MExpr list
-
-  /// Construct a closure, packing environment.
-  | MClosureInit of subFunSerial: FunSerial * envSerial: VarSerial
-
-  | MBoxInit of MExpr
-  | MConsInit of head: MExpr * tail: MExpr
-  | MTupleInit of items: MExpr list
-  | MVariantInit of VariantSerial * payload: MExpr
-  | MRecordInit of MExpr list
-
 [<Struct>]
 [<NoEquality; NoComparison>]
 type MConst =
   | MLitConst of l: Lit
-  | MTagConst of v: VariantSerial
+  | MDiscriminantConst of v: VariantSerial
 
 [<NoEquality; NoComparison>]
 type MSwitchClause =
@@ -207,16 +196,15 @@ type MTerminator =
 type MStmt =
   | MActionStmt of MAction * MExpr list * Loc
 
+  | MPrimStmt of MPrim * MExpr list * result: VarSerial * Loc
+
   /// Declare a local variable.
-  | MLetValStmt of VarSerial * MInit * Ty * Loc
+  | MLetValStmt of VarSerial * MExpr option * Ty * Loc
 
   /// Set to uninitialized local variable.
   | MSetStmt of VarSerial * init: MExpr * Loc
 
   | MLabelStmt of Label * Loc
-
-  // Only for KIR (comparison prim).
-  | MIfStmt of MExpr * MStmt list * MStmt list * Loc
 
   | MTerminatorStmt of MTerminator * Loc
 
@@ -238,10 +226,10 @@ let mexprExtract expr =
   match expr with
   | MDefaultExpr (ty, loc) -> ty, loc
   | MLitExpr (lit, loc) -> litToTy lit, loc
-  | MRefExpr (_, ty, loc) -> ty, loc
+  | MVarExpr (_, ty, loc) -> ty, loc
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc
-  | MTagExpr (_, loc) -> tyInt, loc
+  | MDiscriminantConstExpr (_, loc) -> tyInt, loc
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
   | MNativeExpr (_, ty, loc) -> ty, loc
@@ -292,7 +280,7 @@ let rec mxSugar expr =
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MRefExpr (_, AppTy (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
+  | MVarExpr (_, AppTy (TupleTyCtor, []), loc) -> MDefaultExpr(tyUnit, loc)
 
   | MUnaryExpr (op, l, ty, loc) ->
       let l = mxSugar l

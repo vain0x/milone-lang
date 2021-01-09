@@ -12,25 +12,17 @@ let __stringJoin (sep: string) (xs: string list): string = __nativeFun ("str_con
 let private __pointeeSize (constPtr: __constptr<_>): nativeint =
   nativeint (__sizeOfVal (__ptrRead constPtr 0))
 
-let private __ptrAsMut (constPtr: __constptr<_>): nativeptr<_> =
-  let mutPtr = __nativeCast constPtr
-  let _typeUnifier () = __ptrWrite mutPtr 0 (__ptrRead constPtr 0)
-  mutPtr
+let private __ptrAsMut (constPtr: __constptr<'T>): nativeptr<'T> =
+  __nativeCast constPtr
 
-let private __ptrAsConst (mutPtr: nativeptr<_>): __constptr<_> =
-  let constPtr = __nativeCast mutPtr
-  let _typeUnifier () = __ptrWrite mutPtr 0 (__ptrRead constPtr 0)
-  constPtr
+let private __ptrAsConst (mutPtr: nativeptr<'T>): __constptr<'T> =
+  __nativeCast mutPtr
 
-let private __ptrAdd (index: int) (ptr: __constptr<_>): __constptr<_> =
-  let addedPtr = __nativeCast (nativeint ptr + nativeint index * __pointeeSize ptr)
-  let _typeUnifier () = [ ptr; addedPtr ]
-  addedPtr
+let private __ptrAdd (index: int) (ptr: __constptr<'T>): __constptr<'T> =
+  __nativeCast (nativeint ptr + nativeint index * __pointeeSize ptr)
 
-let private __mutPtrAdd (index: int) (mutPtr: nativeptr<_>): nativeptr<_> =
-  let addedPtr = __nativeCast (nativeint mutPtr + nativeint index * __pointeeSize (__ptrAsConst mutPtr))
-  let _typeUnifier () = [ mutPtr; addedPtr ]
-  addedPtr
+let private __mutPtrAdd (index: int) (mutPtr: nativeptr<'T>): nativeptr<'T> =
+  __nativeCast (nativeint mutPtr + nativeint index * __pointeeSize (__ptrAsConst mutPtr))
 
 // -----------------------------------------------
 // MutArray

@@ -1,6 +1,6 @@
 #include "milone.h"
 
-int neg_(int x_);
+int minus_(int x_);
 
 int abs_(int x_1);
 
@@ -10,9 +10,9 @@ bool go_(int x_3, int k_);
 
 bool isPrime_(int x_3);
 
-int main();
+int milone_main();
 
-int neg_(int x_) {
+int minus_(int x_) {
     return (0 - x_);
 }
 
@@ -27,7 +27,7 @@ then_2:;
     if_ = x_1;
     goto if_next_1;
 else_3:;
-    int call_ = neg_(x_1);
+    int call_ = minus_(x_1);
     if_ = call_;
     goto if_next_1;
 if_next_1:;
@@ -112,19 +112,19 @@ if_next_15:;
     return if_4;
 }
 
-int main() {
+int milone_main() {
     int call_3 = abs_(0);
     milone_assert((call_3 == 0), 13, 2);
     int call_4 = abs_(1);
     milone_assert((call_4 == 1), 14, 2);
-    int call_5 = neg_(1);
+    int call_5 = minus_(1);
     int call_6 = abs_(call_5);
     milone_assert((call_6 == 1), 15, 2);
     int call_7 = gcd_(1, 1);
     milone_assert((call_7 == 1), 17, 2);
     int call_8 = gcd_(12, 18);
     milone_assert((call_8 == 6), 18, 2);
-    int call_9 = neg_(6);
+    int call_9 = minus_(6);
     int call_10 = gcd_(4, call_9);
     milone_assert((call_10 == 2), 19, 2);
     bool call_11 = isPrime_(2);

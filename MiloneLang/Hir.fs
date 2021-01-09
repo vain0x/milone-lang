@@ -50,13 +50,19 @@ type VariantSerial = VariantSerial of Serial
 /// Number of parameters.
 type Arity = int
 
-/// Let-depth, i.e. the number of ancestral let nodes
-/// of the place where the meta type is introduced.
-/// Used for polymorphic type inference.
-/// E.g. in `let x: 'x = ((let y: 'y = a: 'a); b: 'b)`,
-///   `'x`: 0, `'y`: 1, `'a`: 2, `'b`: 1
-/// Only one exception: recursive function have let-depth deeper by 1.
-type LetDepth = int
+/// Level.
+///
+/// Top-level is 0.
+/// Inside of init part of `let`, level is incremented by 1.
+///
+/// For example, in `let none = None: 'a option in none`,
+/// level of `'a` is 1.
+///
+/// In `let _ = (let  = None: 'b option in ()) in ()`,
+/// level of `'b` is 2.
+///
+/// Only one exception: recursive function has level higher by 1.
+type Level = int
 
 /// Where variable is stored.
 [<NoEquality; NoComparison>]
@@ -108,6 +114,7 @@ type TyCtor =
 
   /// Unresolved type. Generated in AstToHir, resolved in NameRes.
   | UnresolvedTyCtor of quals: Serial list * unresolvedSerial: Serial
+  | UnresolvedVarTyCtor of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
 [<Struct>]
@@ -283,7 +290,7 @@ type HPatKind =
   | HNavPN of navR: string
 
   /// `p1: ty`
-  | HAnnotatePN
+  | HAscribePN
 
   /// Used to dereference a box inside of pattern matching.
   ///
@@ -307,7 +314,7 @@ type HPat =
   | HDiscardPat of Ty * Loc
 
   /// Variable pattern.
-  | HRefPat of VarSerial * Ty * Loc
+  | HVarPat of VarSerial * Ty * Loc
 
   /// Variant name pattern.
   | HVariantPat of VariantSerial * Ty * Loc
@@ -371,73 +378,71 @@ type HPrim =
   | PtrRead
   | PtrWrite
 
-[<RequireQualifiedAccess>]
-[<Struct>]
-[<NoEquality; NoComparison>]
-type InfOp =
-  | Abort
+[<Struct; NoEquality; NoComparison>]
+type HExprKind =
+  | HAbortEN
 
   /// `-x`.
-  | Minus
+  | HMinusEN
 
-  | App
+  | HAppEN
 
   /// `..`.
   ///
   /// Every occurrence of this is currently error
   /// because valid use (`s.[l..r]`) gets rewritten in AstToHir.
-  | Range
+  | HRangeEN
 
-  /// Type annotation `x : 'x`.
-  | Anno
+  /// Type ascription `x : 'x`.
+  | HAscribeEN
 
   /// `s.[i]`
-  | Index
+  | HIndexEN
 
   /// `s.[l .. r]`
-  | Slice
+  | HSliceEN
 
   /// Direct call to procedure or primitive.
-  | CallProc
+  | HCallProcEN
 
   /// Indirect call to closure.
-  | CallClosure
+  | HCallClosureEN
 
   /// Direct call to current procedure at the end of function (i.e. tail-call).
-  | CallTailRec
+  | HCallTailRecEN
 
   /// Direct call to native fun.
-  | CallNative of funName: string
+  | HCallNativeEN of funName: string
 
   /// Tuple constructor, e.g. `x, y, z`.
-  | Tuple
+  | HTupleEN
 
   /// Closure constructor.
-  | Closure
+  | HClosureEN
 
   /// Record creation.
   ///
   /// Unlike record expr, it's guaranteed that
   /// all of fields are specified in order of declaration.
-  | Record
+  | HRecordEN
 
   /// Gets i'th field of record.
-  | RecordItem of index: int
+  | HRecordItemEN of index: int
 
   /// Use function as function pointer.
-  | NativeFun of FunSerial
+  | HNativeFunEN of FunSerial
 
   /// Embed some C expression to output.
-  | NativeExpr of nativeExprCode: string
+  | HNativeExprEN of nativeExprCode: string
 
   /// Embed some C statement to output.
-  | NativeStmt of nativeStmtCode: string
+  | HNativeStmtEN of nativeStmtCode: string
 
   /// Embed some C toplevel codes to output.
-  | NativeDecl of nativeDeclCode: string
+  | HNativeDeclEN of nativeDeclCode: string
 
   /// Size of type.
-  | SizeOfVal
+  | HSizeOfValEN
 
 /// Expression in HIR.
 [<NoEquality; NoComparison>]
@@ -445,7 +450,7 @@ type HExpr =
   | HLitExpr of Lit * Loc
 
   /// Name of variable.
-  | HRefExpr of VarSerial * Ty * Loc
+  | HVarExpr of VarSerial * Ty * Loc
 
   /// Name of function.
   | HFunExpr of FunSerial * Ty * Loc
@@ -464,7 +469,7 @@ type HExpr =
   | HNavExpr of HExpr * Ident * Ty * Loc
 
   /// Some built-in operation.
-  | HInfExpr of InfOp * HExpr list * Ty * Loc
+  | HNodeExpr of HExprKind * HExpr list * Ty * Loc
 
   /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
   | HBlockExpr of HExpr list * HExpr
@@ -567,12 +572,14 @@ let tyTuple tys = AppTy(TupleTyCtor, tys)
 
 let tyList ty = AppTy(ListTyCtor, [ ty ])
 
-let tyFun sourceTy targetTy = AppTy(FunTyCtor, [ sourceTy; targetTy ])
+let tyFun sourceTy targetTy =
+  AppTy(FunTyCtor, [ sourceTy; targetTy ])
 
 let tyConstPtr itemTy =
   AppTy(NativePtrTyCtor IsConst, [ itemTy ])
 
-let tyNativePtr itemTy = AppTy(NativePtrTyCtor IsMut, [ itemTy ])
+let tyNativePtr itemTy =
+  AppTy(NativePtrTyCtor IsMut, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
   AppTy(NativeFunTyCtor, List.append paramTys [ resultTy ])
@@ -838,7 +845,7 @@ let patExtract (pat: HPat): Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
   | HDiscardPat (ty, a) -> ty, a
-  | HRefPat (_, ty, a) -> ty, a
+  | HVarPat (_, ty, a) -> ty, a
   | HVariantPat (_, ty, a) -> ty, a
 
   | HNodePat (_, _, ty, a) -> ty, a
@@ -854,7 +861,7 @@ let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
     match pat with
     | HLitPat (lit, a) -> HLitPat(lit, g a)
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
-    | HRefPat (serial, ty, a) -> HRefPat(serial, f ty, g a)
+    | HVarPat (serial, ty, a) -> HVarPat(serial, f ty, g a)
     | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
 
     | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)
@@ -870,7 +877,7 @@ let patNormalize pat =
     match pat with
     | HLitPat _
     | HDiscardPat _
-    | HRefPat _
+    | HVarPat _
     | HVariantPat _ -> [ pat ]
 
     | HNodePat (kind, argPats, ty, loc) ->
@@ -894,9 +901,10 @@ let private doNormalizePats pats =
       let headPats = patNormalize headPat
 
       doNormalizePats tailPats
-      |> List.collect (fun tailPats ->
-           headPats
-           |> List.map (fun headPat -> headPat :: tailPats))
+      |> List.collect
+           (fun tailPats ->
+             headPats
+             |> List.map (fun headPat -> headPat :: tailPats))
 
 /// Gets whether a pattern is clearly exhaustive, that is,
 /// pattern matching on it always succeeds (assuming type check is passing).
@@ -906,7 +914,7 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
     | HLitPat _ -> false
 
     | HDiscardPat _
-    | HRefPat _ -> true
+    | HVarPat _ -> true
 
     | HVariantPat (variantSerial, _, _) -> isNewtypeVariant variantSerial
 
@@ -926,7 +934,7 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
         | HNavPN _, _ -> false
 
         | HTuplePN, _
-        | HAnnotatePN, _
+        | HAscribePN, _
         | HBoxPN, _ -> argPats |> List.forall go
 
     | HAsPat (bodyPat, _, _) -> go bodyPat
@@ -942,31 +950,32 @@ let hxTrue loc = HLitExpr(litTrue, loc)
 
 let hxFalse loc = HLitExpr(litFalse, loc)
 
-let hxApp f x ty loc = HInfExpr(InfOp.App, [ f; x ], ty, loc)
+let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 
-let hxAnno expr ty loc = HInfExpr(InfOp.Anno, [ expr ], ty, loc)
+let hxAscribe expr ty loc = HNodeExpr(HAscribeEN, [ expr ], ty, loc)
 
 let hxSemi items loc =
   match splitLast items with
   | Some (stmts, last) -> HBlockExpr(stmts, last)
-  | None -> HInfExpr(InfOp.Tuple, [], tyUnit, loc)
+  | None -> HNodeExpr(HTupleEN, [], tyUnit, loc)
 
 let hxCallProc callee args resultTy loc =
-  HInfExpr(InfOp.CallProc, callee :: args, resultTy, loc)
+  HNodeExpr(HCallProcEN, callee :: args, resultTy, loc)
 
 let hxCallClosure callee args resultTy loc =
-  HInfExpr(InfOp.CallClosure, callee :: args, resultTy, loc)
+  HNodeExpr(HCallClosureEN, callee :: args, resultTy, loc)
 
 let hxTuple items loc =
-  HInfExpr(InfOp.Tuple, items, tyTuple (List.map exprToTy items), loc)
+  HNodeExpr(HTupleEN, items, tyTuple (List.map exprToTy items), loc)
 
 let hxUnit loc = hxTuple [] loc
 
-let hxNil itemTy loc = HPrimExpr(HPrim.Nil, tyList itemTy, loc)
+let hxNil itemTy loc =
+  HPrimExpr(HPrim.Nil, tyList itemTy, loc)
 
 let hxIsUnitLit expr =
   match expr with
-  | HInfExpr (InfOp.Tuple, [], _, _) -> true
+  | HNodeExpr (HTupleEN, [], _, _) -> true
   | _ -> false
 
 let hxIsAlwaysTrue expr =
@@ -977,14 +986,14 @@ let hxIsAlwaysTrue expr =
 let exprExtract (expr: HExpr): Ty * Loc =
   match expr with
   | HLitExpr (lit, a) -> litToTy lit, a
-  | HRefExpr (_, ty, a) -> ty, a
+  | HVarExpr (_, ty, a) -> ty, a
   | HFunExpr (_, ty, a) -> ty, a
   | HVariantExpr (_, ty, a) -> ty, a
   | HPrimExpr (_, ty, a) -> ty, a
   | HRecordExpr (_, _, ty, a) -> ty, a
   | HMatchExpr (_, _, ty, a) -> ty, a
   | HNavExpr (_, _, ty, a) -> ty, a
-  | HInfExpr (_, _, ty, a) -> ty, a
+  | HNodeExpr (_, _, ty, a) -> ty, a
   | HBlockExpr (_, last) -> exprExtract last
   | HLetValExpr (_, _, _, _, ty, a) -> ty, a
   | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
@@ -999,7 +1008,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
   let rec go expr =
     match expr with
     | HLitExpr (lit, a) -> HLitExpr(lit, g a)
-    | HRefExpr (serial, ty, a) -> HRefExpr(serial, f ty, g a)
+    | HVarExpr (serial, ty, a) -> HVarExpr(serial, f ty, g a)
     | HFunExpr (serial, ty, a) -> HFunExpr(serial, f ty, g a)
     | HVariantExpr (serial, ty, a) -> HVariantExpr(serial, f ty, g a)
     | HPrimExpr (prim, ty, a) -> HPrimExpr(prim, f ty, g a)
@@ -1020,7 +1029,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
 
         HMatchExpr(go cond, arms, f ty, g a)
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
-    | HInfExpr (infOp, args, resultTy, a) -> HInfExpr(infOp, List.map go args, f resultTy, g a)
+    | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
     | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
     | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
@@ -1125,7 +1134,7 @@ let private traitBoundErrorToString tyDisplay it =
       + tyDisplay ty
 
   | IndexTrait (lTy, rTy, _) ->
-      sprintf "Index operation type error: lhs: '"
+      "Index operation type error: lhs: '"
       + tyDisplay lTy
       + "', rhs: "
       + tyDisplay rTy

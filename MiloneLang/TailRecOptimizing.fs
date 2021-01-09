@@ -56,14 +56,14 @@ let private withCurrentFun funSerial (f: TailRecCtx -> HExpr * TailRecCtx) (ctx:
   let ctx = { ctx with CurrentFun = parentFun }
   result, ctx
 
-let private troInfExpr isTail infOp items ty loc ctx =
+let private troInfExpr isTail kind items ty loc ctx =
   let items, ctx = (items, ctx) |> stMap (troExpr NotTail)
 
-  match infOp, items, isTail with
-  | InfOp.CallProc, HFunExpr (funSerial, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
-      HInfExpr(InfOp.CallTailRec, items, ty, loc), ctx
+  match kind, items, isTail with
+  | HCallProcEN, HFunExpr (funSerial, _, _) :: _, IsTail when ctx |> isCurrentFun funSerial ->
+      HNodeExpr(HCallTailRecEN, items, ty, loc), ctx
 
-  | _ -> HInfExpr(infOp, items, ty, loc), ctx
+  | _ -> HNodeExpr(kind, items, ty, loc), ctx
 
 // -----------------------------------------------
 // Control
@@ -72,7 +72,7 @@ let private troInfExpr isTail infOp items ty loc ctx =
 let private troExpr isTail (expr, ctx) =
   match expr with
   | HLitExpr _
-  | HRefExpr _
+  | HVarExpr _
   | HFunExpr _
   | HVariantExpr _
   | HPrimExpr _
@@ -93,7 +93,7 @@ let private troExpr isTail (expr, ctx) =
 
       doArm ()
 
-  | HInfExpr (infOp, items, ty, loc) -> ctx |> troInfExpr isTail infOp items ty loc
+  | HNodeExpr (kind, items, ty, loc) -> ctx |> troInfExpr isTail kind items ty loc
 
   | HBlockExpr (stmts, last) ->
       let stmts, ctx = (stmts, ctx) |> stMap (troExpr NotTail)

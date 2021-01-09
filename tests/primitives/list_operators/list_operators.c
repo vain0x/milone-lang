@@ -10,7 +10,7 @@ int cons2Test_(int arg_2);
 
 int literalTest_(int arg_3);
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -128,7 +128,7 @@ end_match_13:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = nilTest_(0);
     int call_1 = cons1Test_(0);
     int call_2 = cons2Test_(0);

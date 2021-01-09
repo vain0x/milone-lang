@@ -5,14 +5,16 @@ let buildTemplate = """
 build {{ C_FILE }}: $
   take_snapshot $
     {{ FS_FILE }} $
-    | $milone_netcore_debug
-  milone = $milone_netcore_debug
+    | $milone_dotnet_debug
+  milone = $milone_dotnet_debug
   project = tests/{{ CATEGORY }}/{{ PROJECT }}
   out_file = {{ OUT_FILE }}
 
 build {{ EXE_FILE }}: $
   build_test $
-    {{ C_FILE }}
+    {{ C_FILE }} $
+    | runtime/milone.h $
+      runtime/milone.c
   out_file = {{ OUT_FILE }}
 
 build {{ OUT_FILE }}: $
@@ -31,7 +33,11 @@ let renderTestCaseBuildStatements category projectName =
   let file ext =
     sprintf "tests/%s/%s/%s%s" category projectName projectName ext
 
-  buildTemplate.Replace("{{ CATEGORY }}", category).Replace("{{ PROJECT }}", projectName)
-               .Replace("{{ C_FILE }}", file ".c").Replace("{{ FS_FILE }}", file ".fs")
-               .Replace("{{ DIFF_FILE }}", file ".generated.diff").Replace("{{ EXE_FILE }}", file ".generated.exe")
-               .Replace("{{ OUT_FILE }}", file ".generated.out")
+  buildTemplate
+    .Replace("{{ CATEGORY }}", category)
+    .Replace("{{ PROJECT }}", projectName)
+    .Replace("{{ C_FILE }}", file ".c")
+    .Replace("{{ FS_FILE }}", file ".fs")
+    .Replace("{{ DIFF_FILE }}", file ".generated.diff")
+    .Replace("{{ EXE_FILE }}", file ".generated.exe")
+    .Replace("{{ OUT_FILE }}", file ".generated.out")

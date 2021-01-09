@@ -1,10 +1,9 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneLang.Util
 
-open MiloneLang.TreeMap
-
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
+module TreeMap = MiloneStd.StdMap
 module Int = MiloneStd.StdInt
 
 // -----------------------------------------------
@@ -119,6 +118,7 @@ let listSortCore unique cmp xs =
 
       | x :: xs1, y :: ys1 ->
           let c = cmp x y
+
           if c > 0
           then merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
           else if c = 0 && unique

@@ -67,8 +67,8 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
 
 let private tupleField (i: int) = "t" + string i
 
-/// Calculates tag type's name of union type.
-let private toTagEnumName (name: string) = name + "Tag"
+/// Calculates discriminant type's name of union type.
+let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 
 // -----------------------------------------------
 // Context
@@ -95,9 +95,11 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
 
     let m =
       mirCtx.Vars
-      |> mapFold (fun acc varSerial varDef ->
-           acc
-           |> mapAdd (VarSymbol varSerial) (varDefToName varDef)) m
+      |> mapFold
+           (fun acc varSerial varDef ->
+             acc
+             |> mapAdd (VarSymbol varSerial) (varDefToName varDef))
+           m
 
     let m =
       mirCtx.Funs
@@ -105,9 +107,11 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
 
     let m =
       mirCtx.Variants
-      |> mapFold (fun acc variantSerial (variantDef: VariantDef) ->
-           acc
-           |> mapAdd (VariantSymbol variantSerial) variantDef.Name) m
+      |> mapFold
+           (fun acc variantSerial (variantDef: VariantDef) ->
+             acc
+             |> mapAdd (VariantSymbol variantSerial) variantDef.Name)
+           m
 
     m |> renameIdents id fst valueSymbolCmp
 
@@ -164,6 +168,7 @@ let private addDecl (ctx: CirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
 
 let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
+
   match ctx.TyEnv |> mapTryFind funTy with
   | Some (_, ty) -> ty, ctx
 
@@ -181,6 +186,7 @@ let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
 
 let private genFunTyDef (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
+
   match ctx.TyEnv |> mapTryFind funTy with
   | Some (CTyDefined, ty) -> ty, ctx
 
@@ -210,6 +216,7 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
 
 let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
+
   match ctx.TyEnv |> mapTryFind listTy with
   | Some (_, ty) -> ty, ctx
 
@@ -225,6 +232,7 @@ let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
 
 let private genListTyDef (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
+
   match ctx.TyEnv |> mapTryFind listTy with
   | Some (CTyDefined, ty) -> ty, ctx
 
@@ -244,6 +252,7 @@ let private genListTyDef (ctx: CirCtx) itemTy =
 
 let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
   let tupleTy = tyTuple itemTys
+
   match ctx.TyEnv |> mapTryFind tupleTy with
   | Some (_, ty) -> ty, ctx
 
@@ -259,6 +268,7 @@ let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
 
 let private genTupleTyDef (ctx: CirCtx) itemTys =
   let tupleTy = tyTuple itemTys
+
   match ctx.TyEnv |> mapTryFind tupleTy with
   | Some (CTyDefined, ty) -> ty, ctx
 
@@ -291,6 +301,7 @@ let private genTupleTyDef (ctx: CirCtx) itemTys =
 
 let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
   let unionTyRef = tyUnion tySerial
+
   match ctx.TyEnv |> mapTryFind unionTyRef with
   | Some (_, ty) -> ty, ctx
 
@@ -308,6 +319,7 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
 
 let private genUnionTyDef (ctx: CirCtx) tySerial variants =
   let unionTyRef = tyUnion tySerial
+
   match ctx.TyEnv |> mapTryFind unionTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
 
@@ -315,38 +327,42 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
       let structName, ctx = getUniqueTyName ctx unionTyRef
       let selfTy, ctx = genIncompleteUnionTyDecl ctx tySerial
 
-      let tagEnumName = toTagEnumName structName
-      let tagTy = CEnumTy tagEnumName
+      let discriminantEnumName = toDiscriminantEnumName structName
+      let discriminantTy = CEnumTy discriminantEnumName
 
       let variants =
         variants
-        |> List.map (fun variantSerial ->
-             let v = ctx.Variants |> mapFind variantSerial
-             v.Name, variantSerial, v.HasPayload, v.PayloadTy)
+        |> List.map
+             (fun variantSerial ->
+               let v = ctx.Variants |> mapFind variantSerial
+               v.Name, variantSerial, v.HasPayload, v.PayloadTy)
 
-      let tags =
+      let discriminants =
         variants
         |> List.map (fun (_, serial, _, _) -> getUniqueVariantName ctx serial)
 
       let variants, ctx =
         (variants, ctx)
-        |> stFlatMap (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
-             if hasPayload then
-               let payloadTy, ctx = cgTyComplete ctx payloadTy
-               (getUniqueVariantName ctx serial, payloadTy)
-               :: acc,
-               ctx
-             else
-               acc, ctx)
+        |> stFlatMap
+             (fun ((_, serial, hasPayload, payloadTy), acc, ctx) ->
+               if hasPayload then
+                 let payloadTy, ctx = cgTyComplete ctx payloadTy
 
-      let tagEnumDecl = CEnumDecl(tagEnumName, tags)
+                 (getUniqueVariantName ctx serial, payloadTy)
+                 :: acc,
+                 ctx
+               else
+                 acc, ctx)
+
+      let discriminantEnumDecl =
+        CEnumDecl(discriminantEnumName, discriminants)
 
       let structDecl =
-        CStructDecl(structName, [ "tag", tagTy ], variants)
+        CStructDecl(structName, [ "discriminant", discriminantTy ], variants)
 
       let ctx =
         { ctx with
-            Decls = structDecl :: tagEnumDecl :: ctx.Decls
+            Decls = structDecl :: discriminantEnumDecl :: ctx.Decls
             TyEnv =
               ctx.TyEnv
               |> mapAdd unionTyRef (CTyDefined, selfTy) }
@@ -380,11 +396,14 @@ let private genRecordTyDef ctx tySerial fields =
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
-      let fields, (ctx: CirCtx) =
+      let fieldTys, (ctx: CirCtx) =
         (fields, ctx)
-        |> stMap (fun ((name, ty, _), ctx) ->
-             let ty, ctx = cgTyComplete ctx ty
-             (name, ty), ctx)
+        |> stMap
+             (fun ((_, ty, _), ctx) ->
+               let ty, ctx = cgTyComplete ctx ty
+               ty, ctx)
+
+      let fields = fieldTys |> List.mapi (fun i ty -> tupleField i, ty)
 
       let ctx =
         { ctx with
@@ -499,6 +518,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
       | AppTy (UnionTyCtor _, _)
       | AppTy (RecordTyCtor _, _)
       | AppTy (UnresolvedTyCtor _, _)
+      | AppTy (UnresolvedVarTyCtor _, _)
       | ErrorTy _ ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
@@ -605,17 +625,18 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
       // HOTFIX: Remove Undefined MetaTy. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
       let itemTys =
         itemTys
-        |> List.map (fun ty ->
-             let substMeta tySerial =
-               match ctx.Tys |> mapTryFind tySerial with
-               | Some (MetaTyDef (_, ty, _)) -> Some ty
-               | Some (UniversalTyDef _)
-               | None -> Some tyObj
-               | _ -> None
+        |> List.map
+             (fun ty ->
+               let substMeta tySerial =
+                 match ctx.Tys |> mapTryFind tySerial with
+                 | Some (MetaTyDef (_, ty, _)) -> Some ty
+                 | Some (UniversalTyDef _)
+                 | None -> Some tyObj
+                 | _ -> None
 
-             ty
-             |> tySubst substMeta
-             |> tyExpandSynonyms (fun tySerial -> ctx.Tys |> mapTryFind tySerial))
+               ty
+               |> tySubst substMeta
+               |> tyExpandSynonyms (fun tySerial -> ctx.Tys |> mapTryFind tySerial))
 
       genTupleTyDef ctx itemTys
 
@@ -685,18 +706,18 @@ let private genLit lit =
   match lit with
   | IntLit text -> CIntExpr text
   | FloatLit text -> CDoubleExpr text
-  | BoolLit false -> CRefExpr "false"
-  | BoolLit true -> CRefExpr "true"
+  | BoolLit false -> CVarExpr "false"
+  | BoolLit true -> CVarExpr "true"
   | CharLit value -> CCharExpr value
   | StrLit value -> CStrObjExpr value
 
-let private genTag ctx variantSerial =
-  CRefExpr(getUniqueVariantName ctx variantSerial)
+let private genDiscriminant ctx variantSerial =
+  CVarExpr(getUniqueVariantName ctx variantSerial)
 
 let private cgConst ctx mConst =
   match mConst with
   | MLitConst lit -> genLit lit
-  | MTagConst variantSerial -> genTag ctx variantSerial
+  | MDiscriminantConst variantSerial -> genDiscriminant ctx variantSerial
 
 /// `0`, `NULL`, or `(T) {}`
 let private genDefault ctx ty =
@@ -706,13 +727,13 @@ let private genDefault ctx ty =
   | AppTy (FloatTyCtor _, _)
   | AppTy (CharTyCtor, _) -> CIntExpr "0", ctx
 
-  | AppTy (BoolTyCtor, _) -> CRefExpr "false", ctx
+  | AppTy (BoolTyCtor, _) -> CVarExpr "false", ctx
 
   | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (ObjTyCtor, _)
   | AppTy (ListTyCtor, _)
   | AppTy (NativePtrTyCtor _, _)
-  | AppTy (NativeFunTyCtor, _) -> CRefExpr "NULL", ctx
+  | AppTy (NativeFunTyCtor, _) -> CVarExpr "NULL", ctx
 
   | AppTy (StrTyCtor, _)
   | AppTy (FunTyCtor, _)
@@ -726,34 +747,36 @@ let private genDefault ctx ty =
 
   | ErrorTy _
   | AppTy (VoidTyCtor, _)
-  | AppTy (UnresolvedTyCtor _, _) -> failwithf "Never %A" ty
+  | AppTy (UnresolvedTyCtor _, _)
+  | AppTy (UnresolvedVarTyCtor _, _) -> failwithf "Never %A" ty
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
 
-  let tag =
-    CRefExpr(getUniqueVariantName ctx serial)
+  let discriminant =
+    CVarExpr(getUniqueVariantName ctx serial)
 
-  CInitExpr([ "tag", tag ], ty), ctx
+  CInitExpr([ "discriminant", discriminant ], ty), ctx
 
 /// Converts a binary expression to a runtime function call.
 let private genBinaryExprAsCall ctx funName l r =
   let l, ctx = cgExpr ctx l
   let r, ctx = cgExpr ctx r
-  let callExpr = CCallExpr(CRefExpr funName, [ l; r ])
+  let callExpr = CCallExpr(CVarExpr funName, [ l; r ])
   callExpr, ctx
 
 let private genUnaryExpr ctx op arg ty _ =
   let argTy = arg |> mexprToTy
   let arg, ctx = cgExpr ctx arg
+
   match op with
   | MMinusUnary -> CUnaryExpr(CMinusUnary, arg), ctx
   | MNotUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MIntOfScalarUnary flavor -> CCastExpr(arg, CIntTy flavor), ctx
   | MFloatOfScalarUnary flavor -> CCastExpr(arg, CFloatTy flavor), ctx
   | MCharOfScalarUnary -> CCastExpr(arg, CCharTy), ctx
-  | MStrPtrUnary -> CNavExpr(arg, "str"), ctx
-  | MStrLenUnary -> CNavExpr(arg, "len"), ctx
+  | MStrPtrUnary -> CDotExpr(arg, "str"), ctx
+  | MStrLenUnary -> CDotExpr(arg, "len"), ctx
 
   | MUnboxUnary ->
       let valTy, ctx = cgTyComplete ctx ty
@@ -763,27 +786,15 @@ let private genUnaryExpr ctx op arg ty _ =
 
       deref, ctx
 
-  | MProjUnary index -> CProjExpr(arg, index), ctx
+  | MProjUnary index -> CDotExpr(arg, tupleField index), ctx
 
-  | MTagUnary -> CNavExpr(arg, "tag"), ctx
+  | MGetDiscriminantUnary -> CDotExpr(arg, "discriminant"), ctx
 
   | MGetVariantUnary serial ->
       let _, ctx = cgTyComplete ctx ty
-      CNavExpr(arg, getUniqueVariantName ctx serial), ctx
+      CDotExpr(arg, getUniqueVariantName ctx serial), ctx
 
-  | MRecordItemUnary index ->
-      let fieldName =
-        match argTy with
-        | AppTy (RecordTyCtor tySerial, _) ->
-            match ctx.Tys |> mapFind tySerial with
-            | RecordTyDef (_, fields, _) ->
-                match fields |> List.tryItem index with
-                | Some (name, _, _) -> name
-                | None -> failwith "NEVER"
-            | _ -> failwith "NEVER"
-        | _ -> failwith "NEVER"
-
-      CNavExpr(arg, fieldName), ctx
+  | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
@@ -808,7 +819,7 @@ let private genExprBin ctx op l r =
   | MStrIndexBinary ->
       let l, ctx = cgExpr ctx l
       let r, ctx = cgExpr ctx r
-      CIndexExpr(CNavExpr(l, "str"), r), ctx
+      CIndexExpr(CDotExpr(l, "str"), r), ctx
 
   | _ ->
       let l, ctx = cgExpr ctx l
@@ -831,11 +842,11 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MLitExpr (lit, _) -> genLit lit, ctx
   | MDefaultExpr (ty, _) -> genDefault ctx ty
 
-  | MRefExpr (serial, _, _) -> CRefExpr(getUniqueVarName ctx serial), ctx
-  | MProcExpr (serial, _, _) -> CRefExpr(getUniqueFunName ctx serial), ctx
+  | MVarExpr (serial, _, _) -> CVarExpr(getUniqueVarName ctx serial), ctx
+  | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
-  | MTagExpr (variantSerial, _) -> genTag ctx variantSerial, ctx
+  | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
@@ -856,24 +867,24 @@ let private cgActionStmt ctx itself action args =
   match action with
   | MAssertAction ->
       let args, ctx = cgExprList ctx args
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_assert", args)))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_assert", args)))
 
   | MPrintfnAction -> cgPrintfnActionStmt ctx itself args
 
   | MEnterRegionAction ->
       assert (List.isEmpty args)
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_enter_region", [])))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_enter_region", [])))
 
   | MLeaveRegionAction ->
       assert (List.isEmpty args)
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "milone_leave_region", [])))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr "milone_leave_region", [])))
 
   | MCallNativeAction funName ->
       let ctx =
         addNativeFunDecl ctx funName args CVoidTy
 
       let args, ctx = cgExprList ctx args
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr funName, args)))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr funName, args)))
 
   | MPtrWriteAction ->
       match cgExprList ctx args with
@@ -888,37 +899,21 @@ let private cgPrintfnActionStmt ctx itself args =
 
       let args, ctx =
         (args, ctx)
-        |> stMap (fun (arg, ctx) ->
-             match arg with
-             | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
+        |> stMap
+             (fun (arg, ctx) ->
+               match arg with
+               | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
 
-             | _ when tyEq (mexprToTy arg) tyStr ->
-                 // Insert implicit cast from str to str ptr.
-                 let arg, ctx = cgExpr ctx arg
-                 CNavExpr(arg, "str"), ctx
+               | _ when tyEq (mexprToTy arg) tyStr ->
+                   // Insert implicit cast from str to str ptr.
+                   let arg, ctx = cgExpr ctx arg
+                   CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx
 
-             | _ -> cgExpr ctx arg)
+               | _ -> cgExpr ctx arg)
 
-      addStmt ctx (CExprStmt(CCallExpr(CRefExpr "printf", format :: args)))
+      addStmt ctx (CExprStmt(CCallExpr(CVarExpr "printf", format :: args)))
 
   | _ -> failwithf "NEVER: %A" itself
-
-let private cgCallProcExpr ctx callee args ty =
-  match callee, args with
-  | _ ->
-      let callee, ctx = cgExpr ctx callee
-      let args, ctx = cgExprList ctx args
-      CCallExpr(callee, args), ctx
-
-let private doGenCallClosureExpr ctx callee args =
-  let funPtr = CNavExpr(callee, "fun")
-  let envArg = CNavExpr(callee, "env")
-  CCallExpr(funPtr, envArg :: args), ctx
-
-let private cgCallClosureExpr ctx callee args =
-  let callee, ctx = cgExpr ctx callee
-  let args, ctx = cgExprList ctx args
-  doGenCallClosureExpr ctx callee args
 
 let private addLetStmt ctx name expr cty storageModifier =
   match storageModifier with
@@ -926,7 +921,7 @@ let private addLetStmt ctx name expr cty storageModifier =
       let ctx = addDecl ctx (CStaticVarDecl(name, cty))
 
       match expr with
-      | Some expr -> addStmt ctx (CSetStmt(CRefExpr name, expr))
+      | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
       | _ -> ctx
 
   | AutoSM -> addStmt ctx (CLetStmt(name, expr, cty))
@@ -942,7 +937,9 @@ let private doGenLetValStmt ctx serial expr ty =
   let cty, ctx = cgTyComplete ctx ty
   addLetStmt ctx name expr cty storageModifier
 
-let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
+let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
+  let (VarDef (_, _, resultTy, _)) = ctx.Vars |> mapFind serial
+
   let conversion ctx makeExpr =
     match args with
     | [ arg ] ->
@@ -965,57 +962,120 @@ let private cgCallPrimExpr ctx itself serial prim args resultTy _loc =
 
     addLetStmt ctx name (Some(makeExpr args)) ty storageModifier
 
+  let regularWithTy ctx makeExpr =
+    let name = getUniqueVarName ctx serial
+    let storageModifier = findStorageModifier ctx serial
+    let ty, ctx = cgTyComplete ctx resultTy
+
+    let args, ctx =
+      (args, ctx)
+      |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
+
+    addLetStmt ctx name (Some(makeExpr args ty)) ty storageModifier
+
   match prim with
   | MIntOfStrPrim flavor ->
       let name = cStringToIntegerFunName flavor
-      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+      conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
   | MFloatOfStrPrim flavor ->
       let name = cStringToFloatFunName flavor
-      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+      conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
-  | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_to_char", [ arg ]))
+  | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_to_char", [ arg ]))
 
   | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
-  | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CRefExpr "str_of_char", [ arg ]))
+  | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_char", [ arg ]))
 
   | MStrOfIntPrim flavor ->
       let name = cStringOfIntegerFunName flavor
-      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+      conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
   | MStrOfFloatPrim flavor ->
       let name = cStringOfFloatFunName flavor
-      conversion ctx (fun arg -> CCallExpr(CRefExpr name, [ arg ]))
+      conversion ctx (fun arg -> CCallExpr(CVarExpr name, [ arg ]))
 
-  | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CRefExpr "str_get_slice", args)))
+  | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "str_get_slice", args)))
+
+  | MClosurePrim funSerial ->
+      regularWithTy ctx (fun args resultTy ->
+        let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
+        match args with
+        | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
+        | _ -> failwithf "NEVER: %A" itself)
+
+  | MBoxPrim ->
+      match args with
+      | [ arg ] -> cgBoxStmt ctx serial arg
+      | _ -> failwithf "NEVER: %A" itself
+
+  | MConsPrim ->
+      match args with
+      | [ l; r ] -> cgConsStmt ctx serial l r resultTy
+      | _ -> failwithf "NEVER: %A" itself
+
+  | MTuplePrim ->
+      regularWithTy ctx (fun args tupleTy ->
+        let fields = args |> List.mapi (fun i arg -> tupleField i, arg)
+        CInitExpr(fields, tupleTy)
+      )
+
+  | MVariantPrim variantSerial ->
+      regularWithTy ctx (fun args unionTy ->
+          match args with
+          | [ payload ] ->
+              let variantName = getUniqueVariantName ctx variantSerial
+              let fields =
+                [ "discriminant", CVarExpr variantName
+                  variantName, payload ]
+
+              CInitExpr(fields, unionTy)
+
+          | _ -> failwithf "NEVER: %A" itself)
+
+  | MRecordPrim ->
+      regularWithTy ctx (fun args recordTy ->
+        let fields = args |> List.mapi (fun i arg -> tupleField i, arg)
+        CInitExpr(fields, recordTy)
+      )
+
+  | MCallProcPrim ->
+      regular ctx (fun args ->
+          match args with
+          | callee :: args -> CCallExpr(callee, args)
+          | [] -> failwithf "NEVER: %A" itself)
+
+  | MCallClosurePrim ->
+      regular ctx (fun args ->
+          match args with
+          | callee :: args ->
+            let funPtr = CDotExpr(callee, "fun")
+            let envArg = CDotExpr(callee, "env")
+            CCallExpr(funPtr, envArg :: args)
+
+          | [] -> failwithf "NEVER: %A" itself)
 
   | MCallNativePrim funName ->
       let ctx =
         let resultTy, ctx = cgTyComplete ctx resultTy
         addNativeFunDecl ctx funName args resultTy
 
-      regular ctx (fun args -> (CCallExpr(CRefExpr funName, args)))
+      regular ctx (fun args -> (CCallExpr(CVarExpr funName, args)))
 
   | MPtrReadPrim ->
-      regular ctx (fun args ->
-        match args with
-        | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
-        | [ ptr; index ] -> CIndexExpr(ptr, index)
-        | _ -> failwith "NEVER")
+      regular
+        ctx
+        (fun args ->
+          match args with
+          | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
+          | [ ptr; index ] -> CIndexExpr(ptr, index)
+          | _ -> failwith "NEVER")
 
-let private cgClosureInit ctx serial funSerial envSerial ty =
-  let name = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
-  let ty, ctx = cgTyComplete ctx ty
+let private cgCallPrimExpr ctx itself serial prim args =
+  let fail msg = failwithf "%s: %A" msg itself
+  cgPrimStmt ctx fail prim args serial
 
-  let fields =
-    [ "fun", CRefExpr(getUniqueFunName ctx funSerial)
-      "env", CRefExpr(getUniqueVarName ctx envSerial) ]
-
-  let initExpr = CInitExpr(fields, ty)
-  addLetStmt ctx name (Some initExpr) ty storageModifier
-
-let private cgBoxInit ctx serial arg =
+let private cgBoxStmt ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
   let arg, ctx = cgExpr ctx arg
 
@@ -1028,13 +1088,11 @@ let private cgBoxInit ctx serial arg =
 
   // *(T*)p = t;
   let left =
-    CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CPtrTy argTy))
+    CUnaryExpr(CDerefUnary, CCastExpr(CVarExpr temp, CPtrTy argTy))
 
-  let ctx = addStmt ctx (CSetStmt(left, arg))
+  addStmt ctx (CSetStmt(left, arg))
 
-  ctx
-
-let private cgConsInit ctx serial head tail listTy =
+let private cgConsStmt ctx serial head tail listTy =
   let temp = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial
   let listTy, ctx = cgTyComplete ctx listTy
@@ -1052,118 +1110,32 @@ let private cgConsInit ctx serial head tail listTy =
 
   let stmt =
     let fields = [ "head", head; "tail", tail ]
-    CSetStmt(CUnaryExpr(CDerefUnary, CCastExpr(CRefExpr temp, CPtrTy listStructTy)), CInitExpr(fields, listStructTy))
+    CSetStmt(CUnaryExpr(CDerefUnary, CCastExpr(CVarExpr temp, CPtrTy listStructTy)), CInitExpr(fields, listStructTy))
 
-  let ctx = addStmt ctx stmt
+  addStmt ctx stmt
 
-  ctx
+let private cgLetValStmt ctx serial init ty =
+  let init, ctx =
+    match init with
+    | None -> None, ctx
 
-let private cgTupleInit ctx serial items tupleTy =
-  let name = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
-  let tupleTy, ctx = cgTyComplete ctx tupleTy
+    | Some init ->
+        let init, ctx = cgExpr ctx init
+        Some init, ctx
 
-  let ctx =
-    addLetStmt ctx name None tupleTy storageModifier
-
-  let rec go ctx i items =
-    match items with
-    | [] -> ctx
-    | item :: items ->
-        let left = CNavExpr(CRefExpr name, tupleField i)
-        let item, ctx = cgExpr ctx item
-        let stmt = CSetStmt(left, item)
-        let ctx = addStmt ctx stmt
-        go ctx (i + 1) items
-
-  go ctx 0 items
-
-let private cgVariantInit ctx varSerial variantSerial payload unionTy =
-  let temp = getUniqueVarName ctx varSerial
-
-  let storageModifier = findStorageModifier ctx varSerial
-
-  let unionTy, ctx = cgTyComplete ctx unionTy
-  let variantName = getUniqueVariantName ctx variantSerial
-
-  let payloadExpr, ctx = cgExpr ctx payload
-
-  let fields =
-    [ "tag", CRefExpr(getUniqueVariantName ctx variantSerial)
-      variantName, payloadExpr ]
-
-  let init = CInitExpr(fields, unionTy)
-
-  let ctx =
-    addLetStmt ctx temp (Some init) unionTy storageModifier
-
-  ctx
-
-let private cgRecordInit (ctx: CirCtx) serial args ty =
-  let fields =
-    match ty with
-    | AppTy (RecordTyCtor tySerial, _) ->
-        match ctx.Tys |> mapFind tySerial with
-        | RecordTyDef (_, fields, _) -> fields
-        | _ -> failwith "NEVER"
-    | _ -> failwith "NEVER"
-
-  assert (List.length fields = List.length args)
-
-  let pairs =
-    match listTryZip fields args with
-    | it, [], [] -> it
-    | _ -> failwith "NEVER"
-
-  let name = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
-  let ty, ctx = cgTyComplete ctx ty
-
-  let ctx =
-    addLetStmt ctx name None ty storageModifier
-
-  pairs
-  |> List.fold (fun ctx ((fieldName, _, _), arg) ->
-       let l = CNavExpr(CRefExpr name, fieldName)
-       let arg, ctx = cgExpr ctx arg
-       addStmt ctx (CSetStmt(l, arg))) ctx
-
-let private cgLetValStmt ctx serial init ty loc =
-  match init with
-  | MUninitInit -> doGenLetValStmt ctx serial None ty
-
-  | MExprInit expr ->
-      let expr, ctx = cgExpr ctx expr
-      doGenLetValStmt ctx serial (Some expr) ty
-
-  | MPrimInit (prim, args) -> cgCallPrimExpr ctx init serial prim args ty loc
-
-  | MCallProcInit (callee, args, _) ->
-      let expr, ctx = cgCallProcExpr ctx callee args ty
-      doGenLetValStmt ctx serial (Some expr) ty
-
-  | MCallClosureInit (callee, args) ->
-      let expr, ctx = cgCallClosureExpr ctx callee args
-      doGenLetValStmt ctx serial (Some expr) ty
-
-  | MClosureInit (funSerial, envSerial) -> cgClosureInit ctx serial funSerial envSerial ty
-  | MBoxInit arg -> cgBoxInit ctx serial arg
-  | MConsInit (head, tail) -> cgConsInit ctx serial head tail ty
-  | MTupleInit items -> cgTupleInit ctx serial items ty
-  | MVariantInit (variantSerial, payload) -> cgVariantInit ctx serial variantSerial payload ty
-  | MRecordInit fields -> cgRecordInit ctx serial fields ty
+  doGenLetValStmt ctx serial init ty
 
 let private cgSetStmt ctx serial right =
   let right, ctx = cgExpr ctx right
   let name = getUniqueVarName ctx serial
-  let left = CRefExpr(name)
+  let left = CVarExpr(name)
   addStmt ctx (CSetStmt(left, right))
 
 let private cgReturnStmt ctx expr =
   let expr, ctx = cgExpr ctx expr
   addStmt ctx (CReturnStmt(Some expr))
 
-// FIXME: Without the result type annotation, invalid code is generated for some reason.
+// FIXME: Without the result type ascription, invalid code is generated for some reason.
 let private cgTerminatorAsBlock ctx terminator: CStmt list * CirCtx =
   cgBlock ctx [ MTerminatorStmt(terminator, noLoc) ]
 
@@ -1187,39 +1159,34 @@ let private cgTerminatorStmt ctx stmt =
 
       let clauses, ctx =
         (clauses, ctx)
-        |> stMap (fun (clause: MSwitchClause, ctx) ->
-             let cases =
-               clause.Cases
-               |> List.map (fun cond -> cgConst ctx cond)
+        |> stMap
+             (fun (clause: MSwitchClause, ctx) ->
+               let cases =
+                 clause.Cases
+                 |> List.map (fun cond -> cgConst ctx cond)
 
-             let stmts, ctx =
-               cgTerminatorAsBlock ctx clause.Terminator
+               let stmts, ctx =
+                 cgTerminatorAsBlock ctx clause.Terminator
 
-             (cases, clause.IsDefault, stmts), ctx)
+               (cases, clause.IsDefault, stmts), ctx)
 
       addStmt ctx (CSwitchStmt(cond, clauses))
 
   | MExitTerminator arg ->
       let doArm () =
         let arg, ctx = cgExpr ctx arg
-        addStmt ctx (CExprStmt(CCallExpr(CRefExpr "exit", [ arg ])))
+        addStmt ctx (CExprStmt(CCallExpr(CVarExpr "exit", [ arg ])))
 
       doArm ()
 
 let private cgStmt ctx stmt =
   match stmt with
   | MActionStmt (action, args, _) -> cgActionStmt ctx stmt action args
-  | MLetValStmt (serial, init, ty, loc) -> cgLetValStmt ctx serial init ty loc
+  | MPrimStmt (prim, args, temp, _) -> cgPrimStmt ctx stmt prim args temp
+  | MLetValStmt (serial, init, ty, _) -> cgLetValStmt ctx serial init ty
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
   | MTerminatorStmt (terminator, _loc) -> cgTerminatorStmt ctx terminator
-
-  | MIfStmt (cond, thenCl, elseCl, _) ->
-      let cond, ctx = cgExpr ctx cond
-      let thenCl, ctx = cgBlock ctx thenCl
-      let elseCl, ctx = cgBlock ctx elseCl
-      addStmt ctx (CIfStmt(cond, thenCl, elseCl))
-
   | MNativeStmt (code, _) -> addStmt ctx (CNativeStmt code)
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
@@ -1250,7 +1217,7 @@ let private cgDecls (ctx: CirCtx) decls =
 
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
       let funName, args =
-        if isMainFun ctx callee then "main", [] else getUniqueFunName ctx callee, args
+        if isMainFun ctx callee then "milone_main", [] else getUniqueFunName ctx callee, args
 
       let rec go acc ctx args =
         match args with

@@ -20,6 +20,7 @@ type Range = Pos * Pos
 // -----------------------------------------------
 
 type private DocVersion = int
+
 type private FilePath = string
 type private ProjectName = string
 type private ModuleName = string
@@ -122,6 +123,7 @@ let private parseWithCache (ls: LangServiceState) docId =
   let currentVersion = ls.Host.Docs.GetVersion docId
 
   let cacheOpt = ls.ParseCache |> MutMap.tryFind docId
+
   match cacheOpt with
   | Some (v, (ast, errors)) when v >= currentVersion ->
       // eprintfn "parse cache reused: %s v%d" docId v
@@ -193,6 +195,7 @@ let private doBundle (ls: LangServiceState) projectDir =
         FetchModule = fetchModule }
 
   let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
+
   if errors |> List.isEmpty |> not then
     None, errors, docVersions
   else
@@ -253,12 +256,13 @@ type private BundleResult = (HExpr * Typing.TyCtx) option * (string * Loc) list 
 
 [<NoEquality; NoComparison>]
 type LangServiceState =
-  private { TokenizeFullCache: MutMap<DocId, DocVersion * TokenizeFullResult>
-            ParseCache: MutMap<DocId, DocVersion * ParseResult>
+  private
+    { TokenizeFullCache: MutMap<DocId, DocVersion * TokenizeFullResult>
+      ParseCache: MutMap<DocId, DocVersion * ParseResult>
 
-            BundleCache: MutMap<ProjectDir, BundleResult>
+      BundleCache: MutMap<ProjectDir, BundleResult>
 
-            Host: LangServiceHost }
+      Host: LangServiceHost }
 
 let private isTrivia token =
   match token with
@@ -324,7 +328,7 @@ let private dfsPat (visitor: Visitor) pat =
   match pat with
   | HLitPat _ -> ()
   | HDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
-  | HRefPat (varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
+  | HVarPat (varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
   | HVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
 
   | HNodePat (_, pats, _, _) ->
@@ -343,7 +347,7 @@ let private dfsPat (visitor: Visitor) pat =
 let private dfsExpr (visitor: Visitor) expr =
   match expr with
   | HLitExpr _ -> ()
-  | HRefExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
+  | HVarExpr (varSerial, ty, loc) -> visitor.OnVar(varSerial, Use, ty, loc)
   | HFunExpr (funSerial, ty, loc) -> visitor.OnFun(funSerial, Some ty, loc)
   | HVariantExpr (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
   | HPrimExpr (prim, ty, loc) -> visitor.OnPrim(prim, ty, loc)
@@ -364,7 +368,7 @@ let private dfsExpr (visitor: Visitor) expr =
 
   | HNavExpr (expr, _, _, _) -> dfsExpr visitor expr
 
-  | HInfExpr (_, exprs, _, _) ->
+  | HNodeExpr (_, exprs, _, _) ->
       for expr in exprs do
         dfsExpr visitor expr
 
@@ -379,7 +383,7 @@ let private dfsExpr (visitor: Visitor) expr =
       dfsExpr visitor init
       dfsExpr visitor next
 
-  | HLetFunExpr (funSerial, _, argPats, body, next, _, loc) ->
+  | HLetFunExpr (funSerial, _, _, argPats, body, next, _, loc) ->
       visitor.OnFun(funSerial, None, loc)
 
       for argPat in argPats do
@@ -481,6 +485,7 @@ let private doCollectSymbolOccurrences hint
                                        (ls: LangServiceState)
                                        =
   let resultOpt, errors = bundleWithCache ls projectDir
+
   match resultOpt with
   | None ->
       eprintfn "%s: no bundle result: errors %d" hint (List.length errors)
@@ -488,6 +493,7 @@ let private doCollectSymbolOccurrences hint
 
   | Some (expr, _tyCtx) ->
       let tokenOpt = findTokenAt ls docId targetPos
+
       match tokenOpt with
       | None ->
           eprintfn "%s: token not found on position: docId=%s pos=%s" hint docId (posToString targetPos)
@@ -535,6 +541,7 @@ module LangService =
 
   let documentHighlight projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
     let resultOpt, errors = bundleWithCache ls projectDir
+
     match resultOpt with
     | None ->
         eprintfn "highlight: no bundle result: errors %d" (List.length errors)
@@ -542,6 +549,7 @@ module LangService =
 
     | Some (expr, _tyCtx) ->
         let tokenOpt = findTokenAt ls docId targetPos
+
         match tokenOpt with
         | None ->
             eprintfn "highlight: token not found on position: docId=%s pos=%s" docId (posToString targetPos)
@@ -586,6 +594,7 @@ module LangService =
 
   let hover projectDir (docId: DocId) (targetPos: Pos) (ls: LangServiceState) =
     let resultOpt, errors = bundleWithCache ls projectDir
+
     match resultOpt with
     | None ->
         eprintfn "hover: no bundle result: errors %d" (List.length errors)
@@ -593,6 +602,7 @@ module LangService =
 
     | Some (expr, tyCtx) ->
         let tokenOpt = findTokenAt ls docId targetPos
+
         match tokenOpt with
         | None ->
             eprintfn "hover: token not found on position: docId=%s pos=%s" docId (posToString targetPos)

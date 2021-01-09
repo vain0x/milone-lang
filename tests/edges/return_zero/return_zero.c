@@ -1,7 +1,7 @@
 #include "milone.h"
 
-int main();
+int milone_main();
 
-int main() {
+int milone_main() {
     return 0;
 }

@@ -12,7 +12,7 @@ struct UnitIntFun1;
 
 int doAction_(int arg_4);
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -63,15 +63,14 @@ struct UnitIntFun1 {
 int doAction_(int arg_4) {
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 0;
-    void const* env_1 = box_;
-    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = env_1};
+    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = box_};
     milone_enter_region();
     int region_result_ = fun_2.fun(fun_2.env, 0);
     milone_leave_region();
     return region_result_;
 }
 
-int main() {
+int milone_main() {
     int call_2 = doAction_(0);
     return 0;
 }

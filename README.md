@@ -1,16 +1,78 @@
 # MILONE-LANG
 
-Self-hosting the initial goal was **achieved** at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0). Currently working for initial release.
+**Milone-lang** is a F#-subset programming language.
 
-## What
+The initial goal was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself. It was achieved at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
 
-**Milone-lang** is a F#-subset programming language. The goal ~is~ was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself.
+Currently, working toward initial release (v0.2.0).
 
-This is a hobby project. Don't use in production. Pull requests and issues are welcome.
+This is a hobby project. Don't use in production. Pull requests and issues etc. are welcome.
 
-## (No) Getting Started
+## Index
 
-No releases available yet. To try, see the Development section below.
+- [Install](#install)
+- [Documentation](./docs/refs/)
+- [Examples](./tests/examples)
+
+## Install
+
+(Installation from binary or via package manager is not available yet.)
+
+### Install from sources
+
+Prerequisites:
+
+- Ubuntu 18.04
+- Install Git 2.30.0
+- Install [.NET SDK 5.0.101](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install GCC 7.5.0 (Note: This is old, current latest version is 10.)
+- Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
+
+Do:
+
+```sh
+# Clone this repository.
+git clone https://github.com/vain0x/milone-lang --depth=1
+
+# Build and install.
+cd milone-lang
+./install
+```
+
+- Feel free to ask anything in [discussion](https://github.com/vain0x/milone-lang/discussions/4).
+- To uninstall, run `./uninstall`.
+
+### Other platforms (Windows/macOS)
+
+Installation script is not available yet.
+
+So you need run commands by hand.
+See `./install` for details.
+(The milone-lang compiler should work on these platforms since .NET and C language are cross-platform.
+The milone-lang compiler emits C11-compliant codes and the [runtime codes](runtime/milone.c) are C11-compliant.)
+
+## How to build a test project
+
+TODO: Write in docs and include in test chain.
+
+These commands build [tests/examples/hello_world](./tests/examples/hello_world) project.
+
+```sh
+# Compile to C.
+milone compile tests/examples/hello_world >hello.c
+
+# Build C. You need to specify runtime directory and link runtime codes.
+gcc -std=c11 \
+    -I $HOME/.milone/runtime \
+    $HOME/.milone/runtime/milone.c \
+    hello.c \
+    -o hello
+
+# Execute.
+./hello
+```
+
+----
 
 ## How It Works
 
@@ -81,7 +143,10 @@ Not all of F# features are supported. Features for functional-style programming 
     - `printfn` with `%s`, `%d`
     - Some file IOs
 
-See [the tests/examples directory](./tests/examples) for working codes.
+See also:
+
+- [the tests/examples directory](./tests/examples) for working codes
+- [the docs/refs directory](./docs/refs/) for detailed references
 
 ## Internals
 
@@ -146,25 +211,38 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 
 ### Dev: Prerequisites
 
-- Install .NET Core SDK [3.1 LTS](https://dotnet.microsoft.com/download/dotnet-core/3.1)
-- Install [F#](http://ionide.io/#requirements) 4.1 tools
-- Install [ninja](https://github.com/ninja-build/ninja) 1.10 (task runner)
+See the "install from sources" section above.
 
 ### Dev: Build
 
-First of all, generate ninja configuration. (This is necessary to avoid listing all source file names in build script.)
+Just do as usual:
 
 ```sh
-./build-ninja-gen
+make
 ```
 
-To perform building and testing, do:
+Or, without make:
 
 ```sh
-ninja
+./build-ninja-gen && ninja
 ```
+
+(Notes:
+    [Makefile](./Makefile) is a thin wrapper of ninja.
+    Before using ninja, you need to generate build script for it.
+    Makefile automates that.)
 
 ### Dev: Testing
+
+```
+    tests/*/X/X.fs
+        ↓ compile with milone-lang compiler
+    tests/*/X/X.c       → snapshot test
+        ↓ compile with C compiler
+    tests/*/X/X.exe
+        ↓ execute
+    tests/*/X/X.out     → integration test
+```
 
 The `tests` directory contains projects for testing. Testing consist of two phases.
 

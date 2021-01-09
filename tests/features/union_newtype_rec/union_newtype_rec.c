@@ -1,6 +1,6 @@
 #include "milone.h"
 
-enum MyList_Tag;
+enum MyList_Discriminant;
 
 struct MyList_;
 
@@ -10,14 +10,14 @@ struct IntMyList_ListTuple2;
 
 struct MyList_ myCons_(int head_, struct MyList_ tail_);
 
-int main();
+int milone_main();
 
-enum MyList_Tag {
+enum MyList_Discriminant {
     MyList_,
 };
 
 struct MyList_ {
-    enum MyList_Tag tag;
+    enum MyList_Discriminant discriminant;
     union {
         void const* MyList_;
     };
@@ -36,22 +36,18 @@ struct IntMyList_ListTuple2 {
 struct MyList_ myCons_(int head_, struct MyList_ tail_) {
     struct MyList_List const* some_ = milone_mem_alloc(1, sizeof(struct MyList_List));
     (*(((struct MyList_List*)some_))) = (struct MyList_List){.head = tail_, .tail = NULL};
-    struct IntMyList_ListTuple2 tuple_;
-    tuple_.t0 = head_;
-    tuple_.t1 = some_;
+    struct IntMyList_ListTuple2 tuple_ = (struct IntMyList_ListTuple2){.t0 = head_, .t1 = some_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntMyList_ListTuple2));
     (*(((struct IntMyList_ListTuple2*)box_))) = tuple_;
-    struct MyList_ variant_ = (struct MyList_){.tag = MyList_, .MyList_ = box_};
+    struct MyList_ variant_ = (struct MyList_){.discriminant = MyList_, .MyList_ = box_};
     return variant_;
 }
 
-int main() {
-    struct IntMyList_ListTuple2 tuple_1;
-    tuple_1.t0 = 0;
-    tuple_1.t1 = NULL;
+int milone_main() {
+    struct IntMyList_ListTuple2 tuple_1 = (struct IntMyList_ListTuple2){.t0 = 0, .t1 = NULL};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntMyList_ListTuple2));
     (*(((struct IntMyList_ListTuple2*)box_1))) = tuple_1;
-    struct MyList_ variant_1 = (struct MyList_){.tag = MyList_, .MyList_ = box_1};
+    struct MyList_ variant_1 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_1};
     struct MyList_ first_ = variant_1;
     struct MyList_ call_ = myCons_(1, first_);
     struct MyList_ second_ = call_;

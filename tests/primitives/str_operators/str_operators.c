@@ -10,7 +10,7 @@ int indexOperatorTest_(int arg_2);
 
 int subscriptOperatorTest_(int arg_3);
 
-int main();
+int milone_main();
 
 int addTest_(int arg_) {
     struct String hello_ = (struct String){.str = "Hello", .len = 5};
@@ -70,7 +70,7 @@ int subscriptOperatorTest_(int arg_3) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_1 = addTest_(0);
     int call_2 = compareTest_(0);
     int call_3 = indexOperatorTest_(0);

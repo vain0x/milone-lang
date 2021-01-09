@@ -11,10 +11,6 @@ let failwithf (str: string) =
   printfn "FATAL ERROR: %s" str
   exit 1
 
-let sprintf (fmt: string) =
-  printfn "%s" fmt
-  exit 1
-
 let objToString _ = "<objToString not supported>"
 
 let __stringLengthInUtf8Bytes (s: string) = s.Length

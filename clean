@@ -1,0 +1,26 @@
+#!/bin/sh
+# Delete build caches and outputs.
+
+set -eu
+
+rm -f build.ninja
+
+find -type d \
+    -name target \
+    -prune \
+    -exec rm -rf -- {} \;
+
+find -type f \
+    -name '*.generated.*' \
+    -exec rm -f {} \;
+
+find -type d \
+    -and \( \
+        -path '*/bin/Debug' \
+        -or -path '*/bin/Release' \
+        -or -path '*/obj/Debug' \
+        -or -path '*/obj/Release' \) \
+    -prune \
+    -exec dirname {} \; \
+| uniq \
+| xargs rm -rf --

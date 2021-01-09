@@ -2,7 +2,7 @@
 
 int go_(struct String source_, int len_, int i_);
 
-int main();
+int milone_main();
 
 int go_(struct String source_, int len_, int i_) {
 tailrec_1:;
@@ -43,7 +43,7 @@ if_next_2:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     struct String source_ = (struct String){.str = "hello world", .len = 11};
     int len_ = source_.len;
     int call_ = go_(source_, len_, 0);

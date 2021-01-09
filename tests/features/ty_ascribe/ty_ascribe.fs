@@ -1,6 +1,6 @@
-module rec ty_annotate.Program
+module rec ty_ascribe.Program
 
-// Type annotation (`xxx : type`).
+// Type ascription (`xxx : type`).
 
 let main _ =
   let f x: int = x

@@ -216,8 +216,7 @@ type Token =
 /// Unary operator.
 [<NoEquality; NoComparison>]
 type Unary =
-  /// `-` Negation
-  | NegUnary
+  | MinusUnary
 
 /// Binary operator.
 [<NoEquality; NoComparison>]
@@ -270,7 +269,8 @@ type Binary =
 type ATy =
   | AMissingTy of Pos
 
-  /// Type application, e.g. `int` or `AssocMap<K, V>`.
+  /// Named type with potential qualifiers and type arguments,
+  /// e.g. `int`, `M.AssocMap<K, V>`.
   | AAppTy of quals: Ident list * Ident * ATy list * Pos
 
   /// Type variable, e.g. `'T`.
@@ -317,8 +317,8 @@ type APat =
   /// E.g. `(Some x) as opt`.
   | AAsPat of APat * Ident * Pos
 
-  /// Type annotation, e.g. `x: int`.
-  | AAnnoPat of APat * ATy * Pos
+  /// Type ascription, e.g. `x: int`.
+  | AAscribePat of APat * ATy * Pos
 
   /// E.g. `l | r`
   | AOrPat of APat * APat * Pos
@@ -409,8 +409,8 @@ type AExpr =
   /// Tuple construction or unit literal, e.g. `()`, `2, "two"`.
   | ATupleExpr of AExpr list * Pos
 
-  /// Type annotation, e.g. `None: int option`.
-  | AAnnoExpr of AExpr * ATy * Pos
+  /// Type ascription, e.g. `None: int option`.
+  | AAscribeExpr of AExpr * ATy * Pos
 
   /// Semicolon-separated expressions.
   | ASemiExpr of AExpr list * AExpr * Pos
@@ -506,6 +506,7 @@ let locToString ((docId, y, x): Loc) =
 
 let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
   let c = compare lDoc rDoc
+
   if c <> 0 then c
   else if ly <> ry then compare ly ry
   else compare lx rx

@@ -8,6 +8,7 @@ let init (count: int) (f: int -> string): string =
 
   let rec stringInitAux l r =
     assert (l < r)
+
     if r - l = 1 then
       f l
     else
@@ -25,6 +26,7 @@ let replicate (count: int) (s: string): string =
   // n times `s`
   let rec stringReplicateAux n =
     assert (n >= 1)
+
     if n = 1 then
       s
     else
