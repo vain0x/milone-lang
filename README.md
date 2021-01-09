@@ -1,14 +1,20 @@
 # MILONE-LANG
 
-Self-hosting the initial goal was **achieved** at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0). Currently working for initial release.
+**Milone-lang** is a F#-subset programming language.
 
-## What
+The initial goal was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself. It was achieved at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
 
-**Milone-lang** is a F#-subset programming language. The goal ~is~ was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself.
+Currently, working toward initial release (v0.2.0).
 
 This is a hobby project. Don't use in production. Pull requests and issues etc. are welcome.
 
-## Getting Started
+## Index
+
+- [Install](#install)
+- [Documentation](./docs/refs/)
+- [Examples](./tests/examples)
+
+## Install
 
 (Installation from binary or via package manager is not available yet.)
 
@@ -45,21 +51,11 @@ See `./install` for details.
 (The milone-lang compiler should work on these platforms since .NET and C language are cross-platform.
 The milone-lang compiler emits C11-compliant codes and the [runtime codes](runtime/milone.c) are C11-compliant.)
 
-## Documentation
-
-See [the docs/refs directory](./docs/refs/).
-
-## Examples
-
-See [the tests/examples directory](./tests/examples).
-
-The largest and most practical example is [compiler itself](./MiloneLang).
-
-### How to build a test project
+## How to build a test project
 
 TODO: Write in docs and include in test chain.
 
-These two commands build [tests/examples/hello_world](./tests/examples/hello_world) project.
+These commands build [tests/examples/hello_world](./tests/examples/hello_world) project.
 
 ```sh
 # Compile to C.
@@ -215,9 +211,7 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 
 ### Dev: Prerequisites
 
-- Install [.NET SDK 5.0.101](https://dotnet.microsoft.com/download/dotnet/5.0)
-- Install GCC 7.5.0
-- Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
+See the "install from sources" section above.
 
 ### Dev: Build
 
@@ -227,12 +221,28 @@ Just do as usual:
 make
 ```
 
+Or, without make:
+
+```sh
+./build-ninja-gen && ninja
+```
+
 (Notes:
     [Makefile](./Makefile) is a thin wrapper of ninja.
-    You need to generate build script for ninja before using it.
+    Before using ninja, you need to generate build script for it.
     Makefile automates that.)
 
 ### Dev: Testing
+
+```
+    tests/*/X/X.fs
+        ↓ compile with milone-lang compiler
+    tests/*/X/X.c       → snapshot test
+        ↓ compile with C compiler
+    tests/*/X/X.exe
+        ↓ execute
+    tests/*/X/X.out     → integration test
+```
 
 The `tests` directory contains projects for testing. Testing consist of two phases.
 
