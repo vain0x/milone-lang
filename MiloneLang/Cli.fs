@@ -95,6 +95,9 @@ type CliHost =
     /// Command line args.
     Args: string list
 
+    /// Path to $HOME.
+    Home: string
+
     /// Path to milone home (installation directory).
     MiloneHome: string
 
@@ -275,10 +278,16 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
+  let miloneHome =
+    if host.MiloneHome <> "" then
+      host.MiloneHome
+    else
+      host.Home + "/.milone"
+
   let projects =
     mapEmpty compare
-    |> mapAdd "MiloneCore" (host.MiloneHome + "/milone_libs/MiloneCore")
-    |> mapAdd "MiloneStd" (host.MiloneHome + "/milone_libs/MiloneStd")
+    |> mapAdd "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
+    |> mapAdd "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
     |> mapAdd projectName projectDir
 
   let readModuleFile (_: string) (projectDir: string) (moduleName: string) =

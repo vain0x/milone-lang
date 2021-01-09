@@ -11,7 +11,10 @@ let private readFile (filePath: string) =
   with _ -> None
 
 let dotnetCliHost args miloneHome: CliHost =
+  let home = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile)
+
   { Args = args
+    Home = home
     MiloneHome = miloneHome
     ProfileInit = profileInit
     ProfileLog = profileLog

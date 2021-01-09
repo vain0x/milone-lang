@@ -9,7 +9,11 @@ open MiloneLsp.Util
 open MiloneLsp.LspCacheLayer
 
 let private miloneHome =
-  Environment.GetEnvironmentVariable("MILONE_HOME")
+  let miloneHome = Environment.GetEnvironmentVariable("MILONE_HOME")
+  if miloneHome <> "" then
+    miloneHome
+  else
+    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.milone"
 
 let private uriOfFilePath (filePath: string) =
   StringBuilder()

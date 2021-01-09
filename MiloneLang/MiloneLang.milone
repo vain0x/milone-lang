@@ -41,10 +41,12 @@ let private readFile filePath =
 let main _ =
   let args = argList ()
 
+  let home = getEnv "HOME"
   let miloneHome = getEnv "MILONE_HOME"
 
   let host: CliHost =
     { Args = args
+      Home = home
       MiloneHome = miloneHome
       ProfileInit = profileInit
       ProfileLog = profileLog
