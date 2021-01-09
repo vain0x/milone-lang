@@ -2,7 +2,7 @@
 /// based on red-black tree.
 ///
 /// Requires comparison of keys.
-module rec MiloneLang.TreeMap
+module rec MiloneStd.StdMap
 
 // -----------------------------------------------
 // Nodes

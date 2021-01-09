@@ -9,6 +9,7 @@
     <Compile Include="StdChar.fs" />
     <Compile Include="StdString.fs" />
     <Compile Include="StdArray.fs" />
+    <Compile Include="StdMap.fs" />
     <Compile Include="StdInt.fs" />
   </ItemGroup>
 

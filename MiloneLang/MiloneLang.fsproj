@@ -5,7 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="FSharpOnly.fs" />
-    <Compile Include="TreeMap.fs" />
     <Compile Include="Util.fs" />
     <Compile Include="Syntax.fs" />
     <Compile Include="SyntaxTokenize.fs" />

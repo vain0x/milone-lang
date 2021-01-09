@@ -1,10 +1,9 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneLang.Util
 
-open MiloneLang.TreeMap
-
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
+module TreeMap = MiloneStd.StdMap
 module Int = MiloneStd.StdInt
 
 // -----------------------------------------------
