@@ -132,13 +132,9 @@ let private pathStrToStem (s: string) =
   | ".." -> s
 
   | s ->
-      // wants findLastIndex
-      let rec go i =
-        if i = 0 then s
-        else if s.[i - 1] = '.' then s |> S.slice 0 (i - 1)
-        else go (i - 1)
-
-      go s.Length
+      match s |> S.findLastIndex "." with
+      | Some i -> s |> S.slice 0 (i - 1)
+      | None -> s
 
 let private pathIsRelative (s: string) =
   (s |> S.startsWith "./")
