@@ -177,6 +177,7 @@ rule verify_test_output
     FAIL_COUNT=$$(grep ^FAIL -- $in | wc -l); $
     TOTAL_COUNT=$$(cat $in | wc -l) $
     STATUS=$$(if test $$FAIL_COUNT -eq 0; then echo OK; else echo FAIL; fi); $
+    grep ^FAIL -- $in; $
     echo "$$STATUS - ok $$OK_COUNT / fail $$FAIL_COUNT / total $$TOTAL_COUNT"
 
 build target/integration_tests.timestamp: $
