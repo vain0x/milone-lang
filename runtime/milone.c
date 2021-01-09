@@ -155,8 +155,8 @@ void *milone_mem_alloc(int count, size_t size) {
     size_t total = (size_t)count * size;
 
     // align to 16x
-    total = ((total & ~15) | 15) + 1;
-    assert(total % 16 == 0);
+    total = (total + 0xf) & ~0xf;
+    assert(total % 16 == 0 && total >= (size_t)count * size);
 
     if (s_heap.len + total > s_heap.cap) {
         return milone_mem_alloc_slow(total);
