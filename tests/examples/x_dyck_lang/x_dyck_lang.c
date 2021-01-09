@@ -88,12 +88,12 @@ int milone_main() {
     struct String case3_ = (struct String){.str = "(()", .len = 3};
     struct String case4_ = (struct String){.str = ")(", .len = 2};
     struct String call_1 = parse_(case1_);
-    printf("case1 (A): %s\n", call_1.str);
+    printf("case1 (A): %s\n", str_to_c_str(call_1));
     struct String call_2 = parse_(case2_);
-    printf("case2 (A): %s\n", call_2.str);
+    printf("case2 (A): %s\n", str_to_c_str(call_2));
     struct String call_3 = parse_(case3_);
-    printf("case3 (R): %s\n", call_3.str);
+    printf("case3 (R): %s\n", str_to_c_str(call_3));
     struct String call_4 = parse_(case4_);
-    printf("case4 (R): %s\n", call_4.str);
+    printf("case4 (R): %s\n", str_to_c_str(call_4));
     return 0;
 }

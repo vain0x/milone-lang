@@ -54,7 +54,7 @@ struct StringUnitFun1 bindInt_(struct IntStringUnitFun2 f_, int x_) {
 }
 
 int printInt_(int value_, struct String label_) {
-    printf("%d: %s\n", value_, label_.str);
+    printf("%d: %s\n", value_, str_to_c_str(label_));
     return 0;
 }
 
@@ -72,7 +72,7 @@ tailrec_1:;
         goto else_4;
     }
 then_3:;
-    printf("%s\n", f_1.str);
+    printf("%s\n", str_to_c_str(f_1));
     if_ = 0;
     goto if_next_2;
 else_4:;

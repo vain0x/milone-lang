@@ -311,6 +311,15 @@ struct String str_get_slice(int l, int r, struct String s) {
     return (struct String){.str = str, .len = len};
 }
 
+char const *str_to_c_str(struct String s) {
+    if (s.str[s.len] != '\0') {
+        s = str_of_raw_parts(s.str, s.len);
+    }
+
+    assert(s.str[s.len] == '\0');
+    return s.str;
+}
+
 static bool str_is_all_spaces(char const *begin, char const *end) {
     char const *p = begin;
     while (p != end && *p != 0 && isspace(*p)) {

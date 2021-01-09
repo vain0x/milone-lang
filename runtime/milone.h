@@ -53,6 +53,9 @@ struct String str_add(struct String l, struct String r);
 // Create a slice of string.
 struct String str_get_slice(int l, int r, struct String s);
 
+// Ensure null-terminated.
+char const *str_to_c_str(struct String s);
+
 // Conversion:
 
 int8_t str_to_int8(struct String s);
