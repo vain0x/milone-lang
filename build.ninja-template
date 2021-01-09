@@ -88,6 +88,7 @@ build target/milone_gen3.c: $
     target/milone
   milone = target/milone
   verbosity = --profile
+  pool = console
 
 # .c -> .diff
 
@@ -136,6 +137,7 @@ rule git_diff_snapshot_stats
 build target/snapshot_stat.diff: $
   git_diff_snapshot_stats $
     {{ TEST_C_FILES }}
+  pool = console
 
 rule cat_stderr
   command = cat $in >&2
@@ -183,6 +185,7 @@ rule verify_test_output
 build target/integration_tests.timestamp: $
   verify_test_output $
     {{ TEST_DIFF_FILES }}
+  pool = console
 
 build integration_tests: $
   phony target/integration_tests.timestamp
