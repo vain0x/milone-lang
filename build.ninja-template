@@ -78,7 +78,9 @@ build target/milone_gen2.c: $
 
 build target/milone: $
   build_cc $
-    target/milone_gen2.c
+    target/milone_gen2.c $
+    | runtime/milone.h $
+      runtime/milone.c
 
 # .fs -> .c (with native)
 
