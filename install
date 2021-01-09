@@ -62,6 +62,7 @@ mkdir -p "$BIN_DIR"
 mkdir -p "$MILONE_HOME/bin"
 
 # Install native executable.
+./build-ninja-gen
 ninja target/milone >>$LOG
 cp -bf target/milone "$BIN_DIR/milone"
 
