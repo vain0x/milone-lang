@@ -36,12 +36,13 @@ int uint64_compare(uint64_t l, uint64_t r);
 // str
 // -----------------------------------------------
 
-// null-terminated, immutable, utf-8 string
+// This assumes some invariants, see documentation about string type.
 struct String {
     char const *str;
     int len;
 };
 
+// Compare two strings in lexicographical order.
 int str_cmp(struct String l, struct String r);
 
 // Create a copy of native C string.
