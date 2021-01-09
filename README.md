@@ -17,7 +17,7 @@ This is a hobby project. Don't use in production. Pull requests and issues etc. 
 Prerequisites:
 
 - Ubuntu 18.04
-- Install Git
+- Install Git 2.30.0
 - Install [.NET SDK 5.0.101](https://dotnet.microsoft.com/download/dotnet/5.0)
 - Install GCC 7.5.0 (Note: This is old, current latest version is 10.)
 - Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
