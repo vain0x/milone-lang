@@ -142,7 +142,7 @@ int parseOk_(struct String s_) {
     goto end_match_10;
 next_11:;
     if ((!((!(call_3))))) goto next_12;
-    printf("should parse: %s\n", s_.str);
+    printf("should parse: %s\n", str_to_c_str(s_));
     milone_assert(false, 11, 8);
     match_ = 0;
     goto end_match_10;
@@ -161,7 +161,7 @@ bool parseError_(struct String s_1) {
 next_14:;
     if ((!(call_4))) goto next_15;
     int value_1 = call_4->head;
-    printf("should not parse: %s -> %d\n", s_1.str, value_1);
+    printf("should not parse: %s -> %d\n", str_to_c_str(s_1), value_1);
     match_1 = false;
     goto end_match_13;
 next_15:;

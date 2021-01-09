@@ -1050,7 +1050,7 @@ bool strEq_(struct String first_3, struct String second_3) {
 }
 
 int failwith_1(struct String msg_) {
-    printf("ERROR %s\n", msg_.str);
+    printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
     return 0;
 }

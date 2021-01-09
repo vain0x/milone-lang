@@ -292,7 +292,7 @@ struct Space_List {
 };
 
 struct Space_List const* failwith_3(struct String msg_) {
-    printf("ERROR %s\n", msg_.str);
+    printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
     return NULL;
 }
@@ -303,13 +303,13 @@ struct StringList {
 };
 
 struct StringList const* failwith_2(struct String msg_) {
-    printf("ERROR %s\n", msg_.str);
+    printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
     return NULL;
 }
 
 struct Space_ failwith_1(struct String msg_) {
-    printf("ERROR %s\n", msg_.str);
+    printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
     return ((struct Space_){});
 }
@@ -1835,7 +1835,7 @@ then_146:;
     if_6 = true;
     goto if_next_145;
 else_147:;
-    printf("%s: NG (%s)\n", expected_.str, actual_.str);
+    printf("%s: NG (%s)\n", str_to_c_str(expected_), str_to_c_str(actual_));
     if_6 = false;
     goto if_next_145;
 if_next_145:;
@@ -1966,7 +1966,7 @@ next_156:;
 end_match_151:;
     bool ok_2 = match_27.t0;
     struct String msg_1 = match_27.t1;
-    printf("%s: %s\n", name_.str, msg_1.str);
+    printf("%s: %s\n", str_to_c_str(name_), str_to_c_str(msg_1));
     int if_8;
     if ((!(ok_2))) {
         goto then_158;
@@ -1975,9 +1975,9 @@ end_match_151:;
     }
 then_158:;
     struct String call_140 = spaceToString_(tySpace_);
-    printf("  ty: %s\n", call_140.str);
+    printf("  ty: %s\n", str_to_c_str(call_140));
     struct String call_141 = spaceToString_(patSpace_);
-    printf("  pats: %s\n", call_141.str);
+    printf("  pats: %s\n", str_to_c_str(call_141));
     if_8 = 0;
     goto if_next_157;
 else_159:;

@@ -16,7 +16,7 @@ then_2:;
     if_ = 0;
     goto if_next_1;
 else_3:;
-    printf("%s\n", (*(((struct String const*)value_))).str);
+    printf("%s\n", str_to_c_str((*(((struct String const*)value_)))));
     if_ = 0;
     goto if_next_1;
 if_next_1:;

@@ -40,17 +40,17 @@ int milone_main() {
     struct StringIntTuple2 b_ = tuple_1;
     struct String y_ = b_.t0;
     int _y_ = b_.t1;
-    printf("%s\n", y_.str);
+    printf("%s\n", str_to_c_str(y_));
     struct StringStringTuple2 tuple_2 = (struct StringStringTuple2){.t0 = (struct String){.str = "z", .len = 1}, .t1 = (struct String){.str = "w", .len = 1}};
     struct String z_ = tuple_2.t0;
     struct String w_ = tuple_2.t1;
-    printf("z=%s\n", z_.str);
-    printf("w=%s\n", w_.str);
+    printf("z=%s\n", str_to_c_str(z_));
+    printf("w=%s\n", str_to_c_str(w_));
     struct StringStringTuple2 tuple_4 = (struct StringStringTuple2){.t0 = (struct String){.str = "p", .len = 1}, .t1 = (struct String){.str = "q", .len = 1}};
     struct StringStringTuple2StringTuple2 tuple_3 = (struct StringStringTuple2StringTuple2){.t0 = tuple_4, .t1 = (struct String){.str = "r", .len = 1}};
     struct String p_ = tuple_3.t0.t0;
     struct String q_ = tuple_3.t0.t1;
     struct String r_ = tuple_3.t1;
-    printf("p=%s\n", p_.str);
+    printf("p=%s\n", str_to_c_str(p_));
     return 0;
 }

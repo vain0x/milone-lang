@@ -22,7 +22,7 @@ then_4:;
     if_1 = 0;
     goto if_next_3;
 else_5:;
-    printf("else: %s\n", hello_.str);
+    printf("else: %s\n", str_to_c_str(hello_));
     if_1 = 1;
     goto if_next_3;
 if_next_3:;

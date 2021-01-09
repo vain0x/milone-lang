@@ -15,7 +15,7 @@ int milone_main() {
     int x_ = t_.t0;
     struct String y_ = t_.t1;
     exit(2);
-    printf("%s\n", ((struct String){}).str);
+    printf("%s\n", str_to_c_str(((struct String){})));
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 1;
     exit((*(((int const*)box_))));
