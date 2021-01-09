@@ -45,6 +45,15 @@ EXAMPLE
     milone compile ./MiloneLang
 
 SUBCOMMANDS
+    milone check <PROJECT-DIR>
+        Checks a milone-lang project.
+
+        Performs syntax validation and type checking
+        but skips code generation.
+
+        If error, exits with non-zero code
+        after writing errors to standard output.
+
     milone compile <PROJECT-DIR>
         Compiles a milone-lang project to C.
 
@@ -589,6 +598,20 @@ let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
 // writeLog host v "Finish"
 // cOutput, success
 
+let check (ctx: CompileCtx): bool * string =
+  let host = ctx.Host
+  let v = ctx.Verbosity
+
+  let syntax = syntacticallyAnalyze ctx
+
+  if syntax |> syntaxHasError then
+    false, syntaxErrorToString syntax
+  else
+    match semanticallyAnalyze host v syntax with
+    | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
+    | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
+    | SemaAnalysisOk _ -> true, ""
+
 let compile (ctx: CompileCtx): bool * string =
   let host = ctx.Host
   let v = ctx.Verbosity
@@ -639,6 +662,17 @@ let cliParse (host: CliHost) v (projectDir: string) =
   |> ignore
 
   0
+
+let cliCheck (host: CliHost) verbosity projectDir =
+  let ctx =
+    compileCtxNew host verbosity projectDir
+    |> compileCtxReadProjectFile
+
+  let ok, output = check ctx
+  let exitCode = if ok then 0 else 1
+
+  printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
+  exitCode
 
 let cliCompile (host: CliHost) verbosity projectDir =
   let ctx =
@@ -777,6 +811,7 @@ let private parseVerbosity (host: CliHost) args =
 type private CliCmd =
   | HelpCmd
   | VersionCmd
+  | CheckCmd
   | CompileCmd
   | ParseCmd
   | KirDumpCmd
@@ -799,6 +834,8 @@ let private parseArgs args =
 
   | arg :: args ->
       match arg with
+      | "check" -> CheckCmd, args
+
       | "build"
       | "compile" -> CompileCmd, args
 
@@ -822,6 +859,20 @@ let cli (host: CliHost) =
   | VersionCmd, _ ->
       printfn "%s" (currentVersion ())
       0
+
+  | CheckCmd, args ->
+      let verbosity, args = parseVerbosity host args
+
+      match args with
+      | [ projectDir ] -> cliCheck host verbosity projectDir
+
+      | [] ->
+          printfn "ERROR: Expected project dir."
+          1
+
+      | arg :: _ ->
+          printfn "ERROR: Unknown argument: '%s'." arg
+          1
 
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
