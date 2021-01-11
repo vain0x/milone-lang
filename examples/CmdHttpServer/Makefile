@@ -9,6 +9,7 @@ default: target/serve
 
 target/serve: target/cmd_http_server.c cmd_http_server.c
 	gcc -std=gnu11 -g \
+		-fsanitize=address,leak,undefined \
 		-Wall -Wextra -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-parameter -Wno-unused-but-set-parameter \
 		-I ${MILONE_RUNTIME} \
 		${MILONE_RUNTIME}/milone.c \

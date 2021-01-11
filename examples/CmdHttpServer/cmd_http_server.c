@@ -19,6 +19,17 @@
 #define SERVER_NAME "httpd"
 #define SERVER_VERSION "0.1.0"
 
+typedef struct String (*request_handler_t)(struct String method,
+                                           struct String pathname);
+
+static struct String str_borrow(char const *c_str) {
+    return (struct String){.str = c_str, .len = strlen(c_str)};
+}
+
+struct MiloneProfiler;
+struct MiloneProfiler *milone_profile_init(void);
+void milone_profile_log(struct String msg, struct MiloneProfiler *profiler);
+
 // -----------------------------------------------
 // Error
 // -----------------------------------------------
@@ -254,8 +265,8 @@ static void write_common_res_headers(struct Req *req, FILE *out,
     fprintf(out, "Connection: close\r\n");
 }
 
-static void write_res_with_body(struct Req *req, FILE *out, uint8_t const *body, size_t len,
-                                bool write_body) {
+static void write_res_with_body(struct Req *req, FILE *out, uint8_t const *body,
+                                size_t len, bool write_body) {
     write_common_res_headers(req, out, "200 OK");
     fprintf(out, "Content-Length: %ld\r\n", len);
     fprintf(out, "Content-Type: text/plain\r\n");
@@ -270,22 +281,20 @@ static void write_res_with_body(struct Req *req, FILE *out, uint8_t const *body,
     fflush(out);
 }
 
-static void respond_to(struct Req *req, FILE *out) {
-    bool is_get = strcmp(req->method, "GET") == 0;
-    bool is_head = strcmp(req->method, "HEAD") == 0;
-    if (is_get || is_head) {
-        uint8_t const *body = (uint8_t const *)req->path;
-        size_t len = strlen(req->path);
-        write_res_with_body(req, out, body, len, is_get);
-        return;
-    }
-
-    write_common_res_headers(req, out, "404 Not Found");
-}
-
-static void http_service(FILE *in, FILE *out) {
+static void http_service(FILE *in, FILE *out, request_handler_t handler) {
     struct Req *req = read_req(in);
-    respond_to(req, out);
+
+    struct MiloneProfiler *p = milone_profile_init();
+    milone_profile_log(str_borrow("handle begin"), p);
+    milone_enter_region();
+    bool write_body = strcmp(req->method, "HEAD") != 0;
+    struct String result =
+        handler(str_borrow(req->method), str_borrow(req->path));
+    write_res_with_body(req, out, (uint8_t const *)result.str, result.len,
+                        write_body);
+    milone_leave_region();
+    milone_profile_log(str_borrow("handle end"), p);
+
     free_req(req);
 }
 
@@ -293,8 +302,8 @@ static void http_service(FILE *in, FILE *out) {
 // Entrypoint
 // -----------------------------------------------
 
-int do_serve() {
+int do_serve(request_handler_t handler) {
     install_signal_handlers();
-    http_service(stdin, stdout);
+    http_service(stdin, stdout, handler);
     return 0;
 }
