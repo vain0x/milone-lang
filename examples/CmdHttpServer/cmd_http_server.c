@@ -22,10 +22,6 @@
 typedef struct String (*request_handler_t)(struct String method,
                                            struct String pathname);
 
-static struct String str_borrow(char const *c_str) {
-    return (struct String){.str = c_str, .len = strlen(c_str)};
-}
-
 struct MiloneProfiler;
 struct MiloneProfiler *milone_profile_init(void);
 void milone_profile_log(struct String msg, struct MiloneProfiler *profiler);

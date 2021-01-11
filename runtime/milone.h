@@ -42,6 +42,11 @@ struct String {
     int len;
 };
 
+// Convert a null-terminated string to a string object by computing its length.
+//
+// SAFETY: The resulting string is valid until the pointer is valid.
+struct String str_borrow(char const *c_str);
+
 // Compare two strings in lexicographical order.
 int str_cmp(struct String l, struct String r);
 

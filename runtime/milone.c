@@ -265,6 +265,11 @@ static void string_builder_append_string(struct StringBuilder *sb,
     assert(sb->buf[sb->cap - 1] == '\0');
 }
 
+struct String str_borrow(char const *c_str) {
+    assert(c_str != NULL);
+    return (struct String){.str = c_str, .len = strlen(c_str)};
+}
+
 int str_cmp(struct String left, struct String right) {
     // Compare prefix part of two strings.
     int min_len = int_clamp(left.len, 0, right.len);
