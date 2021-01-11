@@ -295,7 +295,7 @@ struct String str_of_raw_parts(char const *p, int len) {
             error_str_of_raw_parts(len);
         }
 
-        return (struct String){.str = "", .len = 0};
+        return str_borrow("");
     }
 
     // +1 for the invariant of existence of null byte.
@@ -602,7 +602,7 @@ struct String milone_get_env(struct String name) {
 
     char const *value = getenv(name.str);
     if (value == NULL) {
-        return (struct String){.str = "", .len = 0};
+        return str_borrow("");
     }
 
     return str_of_raw_parts(value, strlen(value));
@@ -704,33 +704,26 @@ struct String scan_str(int capacity) {
 }
 
 // -----------------------------------------------
-// Command-line Arguments
+// Runtime Entrypoint
 // -----------------------------------------------
 
 static int s_argc;
 static char **s_argv;
 
-int arg_count(void) { return s_argc; }
+int milone_get_arg_count(void) { return s_argc; }
 
-struct String arg_get(int index) {
-    if (!(0 <= index && index < s_argc)) {
-        abort();
+struct String milone_get_arg(int index) {
+    if ((uint32_t)index >= (uint32_t)s_argc) {
+        return str_borrow("");
     }
 
-    char const *str = s_argv[index];
-    int len = strlen(str);
-    return (struct String){.str = str, .len = len};
+    return str_borrow(s_argv[index]);
 }
-
-// -----------------------------------------------
-// Runtime Entrypoint
-// -----------------------------------------------
 
 int milone_main(void);
 
 int main(int argc, char **argv) {
-    s_argc = argc - 1;
-    s_argv = argv + 1;
-
+    s_argc = argc;
+    s_argv = argv;
     return milone_main();
 }

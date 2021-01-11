@@ -22,6 +22,14 @@ struct IntList;
 
 struct IntList const* __intOfStr_(struct String s_3);
 
+int milone_get_arg_count();
+
+int __argCount_(int arg_);
+
+struct String milone_get_arg(int);
+
+struct String __argGet_(int index_4);
+
 int min_(int l_, int r_);
 
 int max_(int l_1, int r_1);
@@ -32,7 +40,7 @@ int parseOk_(struct String s_);
 
 bool parseError_(struct String s_1);
 
-int tryParseTest_(int arg_);
+int tryParseTest_(int arg_1);
 
 static int MinValue_;
 
@@ -92,6 +100,16 @@ else_3:;
     goto if_next_1;
 if_next_1:;
     return if_;
+}
+
+int __argCount_(int arg_) {
+    int milone_get_arg_count_result_ = milone_get_arg_count();
+    return milone_get_arg_count_result_;
+}
+
+struct String __argGet_(int index_4) {
+    struct String milone_get_arg_result_ = milone_get_arg(index_4);
+    return milone_get_arg_result_;
 }
 
 int min_(int l_, int r_) {
@@ -170,7 +188,7 @@ end_match_13:;
     return match_1;
 }
 
-int tryParseTest_(int arg_) {
+int tryParseTest_(int arg_1) {
     int call_5 = parseOk_((struct String){.str = "0", .len = 1});
     milone_assert((call_5 == 0), 21, 2);
     int call_6 = parseOk_((struct String){.str = "000", .len = 3});

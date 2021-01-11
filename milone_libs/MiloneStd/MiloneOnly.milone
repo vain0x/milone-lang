@@ -101,3 +101,11 @@ let __intOfStr (s: string): int option =
     __nativeFun("str_to_int_checked", s, valueRef)
 
   if ok then Some(__ptrRead (__ptrAsConst valueRef) 0) else None
+
+// -----------------------------------------------
+// StdEnv
+// -----------------------------------------------
+
+let __argCount (): int = __nativeFun "milone_get_arg_count"
+
+let __argGet (index: int): string = __nativeFun ("milone_get_arg", index)
