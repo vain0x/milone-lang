@@ -1,0 +1,80 @@
+module rec CmdHttpServer.MiloneOnly
+
+// -----------------------------------------------
+// Ptr
+// -----------------------------------------------
+
+let private mutIsNull (p: nativeptr<_>): bool = unativeint p = unativeint 0
+
+// -----------------------------------------------
+// String
+// -----------------------------------------------
+
+let private strToCStr (s: string): __constptr<char> = __nativeFun ("str_to_c_str", s)
+
+// -----------------------------------------------
+// Buffer
+// -----------------------------------------------
+
+type private Span = __nativeType<``struct Span``>
+
+type private SpanMut = __nativeType<``struct SpanMut``>
+
+type private Buffer = __nativeType<``struct Buffer``>
+
+let private spanTake (len: unativeint) (itemSize: unativeint) (span: Span): Span = __nativeFun ("span_take", span, len, itemSize)
+
+let private spanMutAsConst (span: SpanMut): Span = __nativeFun ("span_mut_as_const", span)
+
+let private bufferNew (cap: unativeint) (itemSize: unativeint): Buffer = __nativeFun ("buffer_new", cap, itemSize)
+
+let private bufferNewUninit (len: unativeint) (cap: unativeint) (itemSize: unativeint): Buffer = __nativeFun ("buffer_new_uninit", len, cap, itemSize)
+
+let private bufferAppend (src: Span) (itemSize: unativeint) (buffer: Buffer): Buffer = __nativeFun ("buffer_append_nonmut", buffer, src, itemSize)
+
+let private bufferSliceMut (start: unativeint) (endIndex: unativeint) (itemSize: unativeint) (buffer: Buffer): SpanMut = __nativeFun ("buffer_slice_mut", buffer, start, endIndex, itemSize)
+
+let private bufferAsString (buffer: Buffer): string = __nativeFun ("buffer_as_string", buffer)
+
+// -----------------------------------------------
+// Files
+// -----------------------------------------------
+
+type private FilePtr = nativeptr<__nativeType<``FILE``>>
+
+let private __fileOpen (filePath: string) (mode: string): FilePtr option =
+  let fp: FilePtr = __nativeFun ("fopen", strToCStr filePath, strToCStr mode)
+  if not (mutIsNull fp) then Some fp else None
+
+let private __fileClose (fp: FilePtr): unit =
+  let _: int = __nativeFun ("fclose", fp)
+  ()
+
+let __fileExists (filePath: string) (followLink: bool): bool =
+  __nativeFun ("milone_file_exists", filePath, followLink)
+
+let __fileRead (dest: SpanMut) (fp: FilePtr): unativeint = __nativeFun ("milone_file_read", fp, dest)
+
+let __fileWrite (src: Span) (fp: FilePtr): unativeint = __nativeFun ("milone_file_write", fp, src)
+
+let __fileReadAllText (filePath: string): string option =
+  match __fileOpen filePath "r" with
+  | None -> None
+  | Some fp ->
+      let itemSize = unativeint 1
+      let chunkLen = unativeint 64
+
+      let contents = bufferNew (unativeint 1024) itemSize
+      let chunk = bufferNewUninit chunkLen chunkLen itemSize |> bufferSliceMut (unativeint 0) chunkLen itemSize
+
+      let rec go contents =
+        let n = __fileRead chunk fp
+        if n = unativeint 0 then
+          contents
+        else
+          contents |> bufferAppend (chunk |> spanMutAsConst |> spanTake n itemSize) itemSize |> go
+
+      let contents = go contents |> bufferAsString
+
+      __fileClose fp
+      Some contents
