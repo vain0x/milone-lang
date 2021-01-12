@@ -11,4 +11,8 @@
     <Compile Include="CmdHttpServer.fs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\milone_libs\MiloneStd\MiloneStd.fsproj" />
+  </ItemGroup>
+
 </Project>
