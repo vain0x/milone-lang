@@ -670,6 +670,16 @@ let private athDecl docId (decl, nameCtx) =
 
       doArm ()
 
+  | AModuleDecl (_isRec, _vis, name, decls, pos) ->
+      // FIXME: use rec, vis
+      let doArm () =
+        let serial, nameCtx = nameCtx |> nameCtxAdd name
+        let decls, nameCtx = (decls, nameCtx) |> athDecls docId
+        let loc = toLoc docId pos
+        prepend (HModuleExpr(ModuleTySerial serial, decls, loc)), nameCtx
+
+      doArm ()
+
   | AAttrDecl (contents, next, pos) ->
       let doArm () =
         // printfn "/* attribute: %s %s */" (pos |> toLoc docId |> locToString) (objToString contents)

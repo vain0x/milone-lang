@@ -444,6 +444,9 @@ type ADecl =
   /// Module synonym statement, e.g. `module T = System.Text`.
   | AModuleSynonymDecl of Ident * Ident list * Pos
 
+  /// Module statement, e.g. `module Pos = let zero () = ...`.
+  | AModuleDecl of IsRec * Vis * Ident * ADecl list * Pos
+
   /// Expression with some attribute.
   | AAttrDecl of contents: AExpr * next: ADecl * Pos
 

@@ -1224,25 +1224,34 @@ let private parseOpenDecl openPos (tokens, errors) =
   Some(AOpenDecl(path, openPos)), tokens, errors
 
 let private parseModuleDecl modulePos (tokens, errors) =
+  let isRec, tokens = eatRec tokens
+  let vis, tokens = eatVis tokens
+
   let moduleName, tokens, errors =
     match tokens with
     | (IdentToken moduleName, _) :: tokens -> moduleName, tokens, errors
+
     | _ ->
         let errors =
           parseNewError "Expected identifier" (tokens, errors)
 
         "_", tokens, errors
 
-  let path, tokens, errors =
-    match tokens with
-    | (EqToken, _) :: tokens -> parsePath (tokens, errors)
-    | _ ->
-        let errors =
-          parseNewError "Expected '='" (tokens, errors)
+  match tokens with
+  | (EqToken, _) :: (((IdentToken _, _) :: _) as tokens) ->
+      // FIXME: error if rec/vis is specified
+      let path, tokens, errors = parsePath (tokens, errors)
+      Some(AModuleSynonymDecl(moduleName, path, modulePos)), tokens, errors
 
-        [], tokens, errors
+  | (EqToken, _) :: tokens ->
+      let decls, tokens, errors = parseModuleBody (nextPos tokens) (tokens, errors)
+      Some(AModuleDecl(isRec, vis, moduleName, decls, modulePos)), tokens, errors
 
-  Some(AModuleSynonymDecl(moduleName, path, modulePos)), tokens, errors
+  | _ ->
+      let errors =
+        parseNewError "Expected '='" (tokens, errors)
+
+      Some(AModuleSynonymDecl(moduleName, [], modulePos)), tokens, errors
 
 let private parseAttrDecl basePos (tokens, errors) =
   let contents, tokens, errors =

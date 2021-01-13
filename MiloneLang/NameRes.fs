@@ -466,12 +466,19 @@ let private resolveLocalTyName name (scopeCtx: ScopeCtx) =
 
 /// Resolves qualifiers of type.
 let private resolveNavTy quals last ctx =
+  let notModule tySymbol =
+    match tySymbol with
+    | ModuleTySymbol _
+    | ModuleSynonymSymbol _ -> false
+
+    | _ -> true
+
   let path =
     quals
     |> List.map (fun qual -> ctx |> findName qual)
 
   match path with
-  | [] -> ctx |> resolveLocalTyName last |> List.tryHead, ctx
+  | [] -> ctx |> resolveLocalTyName last |> List.tryFind notModule, ctx
 
   | head :: tail ->
       // Resolve head.
