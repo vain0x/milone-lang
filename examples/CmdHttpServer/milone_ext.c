@@ -80,6 +80,18 @@ struct SpanMut buffer_slice_mut(struct Buffer buffer, size_t start, size_t end,
     };
 }
 
+// -----------------------------------------------
+// Files
+// -----------------------------------------------
+
+struct File milone_file_open(struct String path, struct String mode) {
+    FILE *fp = fopen(str_to_c_str(path), str_to_c_str(mode));
+    // fp maybe null.
+    return (struct File){.fp = fp};
+}
+
+void milone_file_close(struct File file) { fclose(file.fp); }
+
 bool milone_file_exists(struct String file_path, bool follow_link) {
     struct stat st = {};
     bool ok = follow_link ? stat(str_to_c_str(file_path), &st) == 0
@@ -91,12 +103,12 @@ bool milone_file_exists(struct String file_path, bool follow_link) {
     return S_ISREG(st.st_mode);
 }
 
-size_t milone_file_read(FILE *fp, struct SpanMut dest) {
-    assert(fp != NULL);
-    return fread(dest.ptr, 1, dest.len, fp);
+size_t milone_file_read(struct File file, struct SpanMut dest) {
+    assert(file.fp != NULL);
+    return fread(dest.ptr, 1, dest.len, file.fp);
 }
 
-size_t milone_file_write(FILE *fp, struct SpanMut src) {
-    assert(fp != NULL);
-    return fwrite(src.ptr, 1, src.len, fp);
+size_t milone_file_write(struct File file, struct SpanMut src) {
+    assert(file.fp != NULL);
+    return fwrite(src.ptr, 1, src.len, file.fp);
 }

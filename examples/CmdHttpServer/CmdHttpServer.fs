@@ -1,6 +1,7 @@
 module rec CmdHttpServer.EntryPoint
 
 open CmdHttpServer.Ffi
+open CmdHttpServer.ExtIO
 
 module S = MiloneStd.StdString
 
@@ -14,10 +15,10 @@ let handler (methodName: string) (pathname: string): string =
         let path = "." + pathname
         let followLink = false
 
-        if __fileExists path followLink |> not then
+        if ReadableFileStream.exists path followLink |> not then
           "ERROR: File not found.\n"
         else
-          match __fileReadAllText path with
+          match ReadableFileStream.readAllText path with
           | Some contents -> contents
           | None -> "ERROR: File cannot read.\n"
 

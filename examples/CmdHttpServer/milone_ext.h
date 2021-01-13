@@ -61,4 +61,13 @@ static inline struct String buffer_as_string(struct Buffer buffer) {
     return (struct String){.str = (char const *)buffer.ptr, .len = buffer.len};
 }
 
+// Wrapper.
+struct File {
+    FILE *fp;
+};
+
+static inline bool milone_file_is_null(struct File file) {
+    return file.fp == NULL;
+}
+
 #endif

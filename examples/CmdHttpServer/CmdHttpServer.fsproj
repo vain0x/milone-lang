@@ -9,6 +9,8 @@
     <Compile Include="../../MiloneLang/FSharpOnly.fs" />
     <Compile Include="FSharpOnly.fs" />
     <Compile Include="Ffi.fs" />
+    <Compile Include="ExtBuffer.fs" />
+    <Compile Include="ExtIO.fs" />
     <Compile Include="CmdHttpServer.fs" />
   </ItemGroup>
 
