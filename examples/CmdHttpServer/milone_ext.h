@@ -1,9 +1,10 @@
 #ifndef INCLUDED_MILONE_EXT_H
 #define INCLUDED_MILONE_EXT_H
 
-#include <milone.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include <milone.h>
 
 // Read-only untyped memory.
 struct Span {

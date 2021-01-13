@@ -1,12 +1,12 @@
 #include <assert.h>
 #include <errno.h>
-#include <milone.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #include "./milone_ext.h"
+#include <milone.h>
 
 struct Span span_slice(struct Span span, size_t start, size_t end,
                        size_t item_size) {
@@ -68,7 +68,6 @@ void buffer_append(struct Buffer *buffer, struct Span src, size_t item_size) {
 
 struct SpanMut buffer_slice_mut(struct Buffer buffer, size_t start, size_t end,
                                 size_t item_size) {
-
     if (end > buffer.len) {
         end = buffer.len;
     }
@@ -77,7 +76,8 @@ struct SpanMut buffer_slice_mut(struct Buffer buffer, size_t start, size_t end,
     }
     return (struct SpanMut){
         .ptr = (void *)((uintptr_t)buffer.ptr + start * item_size),
-        .len = end - start};
+        .len = end - start,
+    };
 }
 
 bool milone_file_exists(struct String file_path, bool follow_link) {
