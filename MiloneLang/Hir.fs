@@ -212,7 +212,8 @@ type ModuleSynonymSerial = ModuleSynonymSerial of Serial
 [<NoEquality; NoComparison>]
 type ModuleSynonymDef =
   { Name: Ident
-    Bound: ModuleTySerial option
+    // Not used.
+    Bound: ModuleTySerial list
     Loc: Loc }
 
 /// Definition of named value in HIR.
