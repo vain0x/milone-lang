@@ -12,6 +12,10 @@ open MiloneLang.Hir
 
 module S = MiloneStd.StdString
 
+let private mapAddList key value map =
+  let values = map |> mapTryFind key |> Option.defaultValue []
+  mapAdd key (value :: values) map
+
 let private isNoTy ty =
   match ty with
   | ErrorTy _ -> true
@@ -102,8 +106,6 @@ let private tySymbolToSerial symbol =
   | SynonymTySymbol s -> s
   | UnionTySymbol s -> s
   | RecordTySymbol s -> s
-  | ModuleTySymbol (ModuleTySerial s) -> s
-  | ModuleSynonymSymbol (ModuleSynonymSerial s) -> s
 
 // -----------------------------------------------
 // NsOwner
@@ -125,14 +127,7 @@ let private nsOwnerCompare (l: NsOwner) r: int =
   compare (nsOwnerToInt l) (nsOwnerToInt r)
 
 let private nsOwnerOfTySymbol (tySymbol: TySymbol): NsOwner =
-  match tySymbol with
-  | MetaTySymbol serial -> TyNsOwner serial
-  | UnivTySymbol serial -> TyNsOwner serial
-  | SynonymTySymbol serial -> TyNsOwner serial
-  | UnionTySymbol serial -> TyNsOwner serial
-  | RecordTySymbol serial -> TyNsOwner serial
-  | ModuleTySymbol serial -> ModuleNsOwner serial
-  | ModuleSynonymSymbol serial -> ModuleSynonymNsOwner serial
+  TyNsOwner (tySymbolToSerial tySymbol)
 
 // -----------------------------------------------
 // Namespace
@@ -157,6 +152,12 @@ let private nsAdd (key: NsOwner) (ident: Ident) value (ns: Ns<_>): Ns<_> =
   ns
   |> mapAdd key (ns |> nsFind key |> mapAdd ident value)
 
+let private nsMerge (key: NsOwner) (ident: Ident) value (ns: Ns<_>): Ns<_> =
+  let submap = ns |> nsFind key
+
+  ns
+  |> mapAdd key (submap |> mapAdd ident (value :: (submap |> mapTryFind ident |> Option.defaultValue [])))
+
 // --------------------------------------------
 // Scopes
 // --------------------------------------------
@@ -172,14 +173,14 @@ type private ScopeChain<'T> = AssocMap<Ident, 'T> list
 /// Scope chains, vars and types.
 ///
 /// Type has also a list of types that it shadows for namespace merging.
-type private Scope = ScopeKind list * ScopeChain<ValueSymbol> * ScopeChain<TySymbol * TySymbol list>
+type private Scope = ScopeKind list * ScopeChain<ValueSymbol> * ScopeChain<TySymbol> * ScopeChain<NsOwner list>
 
 let private scopeMapEmpty (): AssocMap<Ident, _> = mapEmpty compare
 
 let private scopeChainEmpty (): ScopeChain<_> = [ scopeMapEmpty () ]
 
 let private scopeEmpty (): Scope =
-  [], scopeChainEmpty (), scopeChainEmpty ()
+  [], scopeChainEmpty (), scopeChainEmpty (), scopeChainEmpty ()
 
 // -----------------------------------------------
 // ScopeCtx
@@ -294,13 +295,19 @@ let private findValueSymbolName valueSymbol scopeCtx =
   |> findName (valueSymbolToSerial valueSymbol)
 
 let private findTySymbolName tySymbol (scopeCtx: ScopeCtx) =
-  match tySymbol with
-  | ModuleTySymbol moduleSerial -> (scopeCtx |> findModuleTy moduleSerial).Name
-  | ModuleSynonymSymbol serial -> (scopeCtx |> findModuleSynonym serial).Name
-  | _ ->
-      scopeCtx
-      |> findTy (tySymbolToSerial tySymbol)
-      |> tyDefToName
+  scopeCtx
+  |> findTy (tySymbolToSerial tySymbol)
+  |> tyDefToName
+
+let private findNsOwnerName nsOwner (scopeCtx: ScopeCtx) =
+  match nsOwner with
+  | TyNsOwner tySerial ->
+      match scopeCtx.Tys |> mapTryFind tySerial with
+      | Some a -> a |> tyDefToName
+      | None -> "type#" + string tySerial
+
+  | ModuleNsOwner serial -> (scopeCtx.ModuleTys |> mapFind serial).Name
+  | ModuleSynonymNsOwner serial -> (scopeCtx.ModuleSynonyms |> mapFind serial).Name
 
 /// Defines a variable, without adding to any scope.
 let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
@@ -361,7 +368,20 @@ let private addTyToNs (nsOwner: NsOwner) tySymbol (scopeCtx: ScopeCtx): ScopeCtx
   { scopeCtx with
       TyNs =
         scopeCtx.TyNs
-        |> nsAdd nsOwner name tySymbol }
+        |> nsAdd nsOwner name tySymbol
+
+      NsNs =
+        scopeCtx.NsNs
+        |> nsMerge nsOwner name (nsOwnerOfTySymbol tySymbol) }
+
+/// Adds a child namespace.
+let private addNsToNs (parentNsOwner: NsOwner) (childNsOwner: NsOwner) (scopeCtx: ScopeCtx): ScopeCtx =
+  let name = scopeCtx |> findNsOwnerName childNsOwner
+
+  { scopeCtx with
+      NsNs =
+        scopeCtx.NsNs
+        |> nsMerge parentNsOwner name childNsOwner }
 
 /// Adds a variable to a scope.
 let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
@@ -375,32 +395,25 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
 
   let scope: Scope =
     match scopeCtx.Local with
-    | kinds, map :: varScopes, tyScopes ->
+    | kinds, map :: varScopes, tyScopes, nsScopes ->
         let varScopes =
           (map |> mapAdd varName symbol) :: varScopes
 
-        kinds, varScopes, tyScopes
+        kinds, varScopes, tyScopes, nsScopes
 
     | _ -> failwith "NEVER: Scope can't be empty."
 
   { scopeCtx with Local = scope }
 
 /// Adds a type to a scope, aliasing a name.
-let private doImportTyWithAlias alias symbol (scopeCtx: ScopeCtx): ScopeCtx =
+let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx): ScopeCtx =
   let scope: Scope =
     match scopeCtx.Local with
-    | kinds, varScopes, ((map :: tyScopes) as allTyScopes) ->
-        let shadowed =
-          match allTyScopes
-                |> List.tryPick (fun map -> map |> mapTryFind alias) with
-          | Some (otherSymbol, otherTys) -> otherSymbol :: otherTys
-          | None -> []
+    | kinds, varScopes, (tyMap :: tyScopes), (nsMap :: nsScopes) ->
+        let tyMap = tyMap |> mapAdd alias symbol
+        let nsMap = nsMap |> mapAddList alias (nsOwnerOfTySymbol symbol)
 
-        let tyScopes =
-          (map |> mapAdd alias (symbol, shadowed))
-          :: tyScopes
-
-        kinds, varScopes, tyScopes
+        kinds, varScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
     | _ -> failwith "NEVER: Scope can't be empty."
 
@@ -409,6 +422,27 @@ let private doImportTyWithAlias alias symbol (scopeCtx: ScopeCtx): ScopeCtx =
 let private importTy symbol (scopeCtx: ScopeCtx): ScopeCtx =
   let tyName = findTySymbolName symbol scopeCtx
   doImportTyWithAlias tyName symbol scopeCtx
+
+/// Adds a type to a scope, aliasing a name.
+let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx): ScopeCtx =
+  let scope: Scope =
+    match scopeCtx.Local with
+    | kinds, varScopes, tyScopes, ((map :: nsScopes) as allNsScopes) ->
+        let shadowed =
+          allNsScopes
+          |> List.tryPick (fun map -> map |> mapTryFind alias) |> Option.defaultValue []
+
+        let map = map |> mapAdd alias (nsOwner :: shadowed)
+
+        kinds, varScopes, tyScopes, map :: nsScopes
+
+    | _ -> failwith "NEVER: Scope can't be empty."
+
+  { scopeCtx with Local = scope }
+
+let private importNs nsOwner (scopeCtx: ScopeCtx): ScopeCtx =
+  let name = findNsOwnerName nsOwner scopeCtx
+  doImportNsWithAlias name nsOwner scopeCtx
 
 let private openModule moduleSerial (scopeCtx: ScopeCtx) =
   // Import vars.
@@ -422,6 +456,12 @@ let private openModule moduleSerial (scopeCtx: ScopeCtx) =
     scopeCtx.TyNs
     |> nsFind (ModuleNsOwner moduleSerial)
     |> mapFold (fun ctx _ symbol -> ctx |> importTy symbol) scopeCtx
+
+  // Import subnamespaces.
+  let scopeCtx =
+    scopeCtx.NsNs
+    |> nsFind (ModuleNsOwner moduleSerial)
+    |> mapFold (fun ctx _ nsOwners -> ctx |> forList importNs nsOwners) scopeCtx
 
   scopeCtx
 
@@ -448,24 +488,25 @@ let private leaveLetInit (scopeCtx: ScopeCtx): ScopeCtx =
 
 /// Starts a new scope.
 let private startScope kind (scopeCtx: ScopeCtx): ScopeCtx =
-  let kinds, varScopes, tyScopes = scopeCtx.Local
+  let kinds, varScopes, tyScopes, nsScopes = scopeCtx.Local
 
   { scopeCtx with
-      Local = kind :: kinds, scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes }
+      Local = kind :: kinds, scopeMapEmpty () :: varScopes, scopeMapEmpty () :: tyScopes, scopeMapEmpty () :: nsScopes }
 
 let private finishScope (scopeCtx: ScopeCtx): ScopeCtx =
   match scopeCtx.Local with
-  | [], _, _
-  | _, [], _
-  | _, _, [] -> failwith "NEVER: Scope can't be empty."
+  | [], _, _, _
+  | _, [], _, _
+  | _, _, [], _
+  | _, _, _, [] -> failwith "NEVER: Scope can't be empty."
 
-  | _ :: kinds, _ :: varScopes, _ :: tyScopes ->
+  | _ :: kinds, _ :: varScopes, _ :: tyScopes, _ :: nsScopes ->
       { scopeCtx with
-          Local = kinds, varScopes, tyScopes }
+          Local = kinds, varScopes, tyScopes, nsScopes }
 
 let private isTyDeclScope (scopeCtx: ScopeCtx) =
   match scopeCtx.Local with
-  | TyDeclScope :: _, _, _ -> true
+  | TyDeclScope :: _, _, _, _ -> true
   | _ -> false
 
 // Find from namespace of type (not local).
@@ -481,60 +522,29 @@ let private resolveScopedTyName nsOwner name (scopeCtx: ScopeCtx): TySymbol opti
   |> mapTryFind name
 
 let private resolveSubNsOwners nsOwner name (scopeCtx: ScopeCtx): NsOwner list =
-  let opt =
-    scopeCtx.TyNs
-    |> nsFind nsOwner
-    |> mapTryFind name
-
-  match opt with
-  | Some tySymbol -> [nsOwnerOfTySymbol tySymbol]
-  | None -> []
+  scopeCtx.NsNs
+  |> nsFind nsOwner
+  |> mapTryFind name
+  |> Option.defaultValue []
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
-  let _, varScopes, _ = scopeCtx.Local
+  let _, varScopes, _, _ = scopeCtx.Local
 
   varScopes
   |> List.tryPick (fun map -> map |> mapTryFind name)
 
 let private resolveLocalTyName name (scopeCtx: ScopeCtx): TySymbol option =
-  let notModule tySymbol =
-    match tySymbol with
-    | ModuleTySymbol _
-    | ModuleSynonymSymbol _ -> false
+  let _, _, tyScopes, _ = scopeCtx.Local
 
-    | _ -> true
-
-  let _, _, tyScopes = scopeCtx.Local
-
-  let opt =
-    tyScopes
-    |> List.tryPick (fun map -> map |> mapTryFind name)
-
-  match opt with
-  | Some (head, tail) -> (head :: tail) |> List.tryFind notModule
-  | None -> None
+  tyScopes
+  |> List.tryPick (fun map -> map |> mapTryFind name)
 
 let private resolveLocalNsOwners name (scopeCtx: ScopeCtx): NsOwner list =
-  let asNsOwner tySymbol =
-    match tySymbol with
-    | MetaTySymbol _
-    | UnivTySymbol _
-    | SynonymTySymbol _
-    | RecordTySymbol _ -> None
+  let _, _, _, nsScopes = scopeCtx.Local
 
-    | UnionTySymbol tySerial -> TyNsOwner tySerial |> Some
-    | ModuleTySymbol serial -> ModuleNsOwner serial |> Some
-    | ModuleSynonymSymbol serial -> ModuleSynonymNsOwner serial |> Some
-
-  let _, _, tyScopes = scopeCtx.Local
-
-  let opt =
-    tyScopes
-    |> List.tryPick (fun map -> map |> mapTryFind name)
-
-  match opt with
-  | Some (head, tail) -> (head :: tail) |> List.choose asNsOwner
-  | None -> []
+  nsScopes
+  |> List.tryPick (fun map -> map |> mapTryFind name)
+  |> Option.defaultValue []
 
 /// Resolves qualifiers of type.
 let private resolveNavTy quals last ctx =
@@ -628,13 +638,6 @@ let private resolveTy ty loc scopeCtx =
             assert (List.isEmpty tys)
             tyRecord tySerial, scopeCtx
 
-        | Some (ModuleTySymbol _)
-        | Some (ModuleSynonymSymbol _) ->
-            let scopeCtx =
-              scopeCtx |> addLog (ModuleUsedAsTyError name) loc
-
-            ErrorTy loc, scopeCtx
-
         | Some (MetaTySymbol _) -> failwithf "NEVER: %A" (serial, name, loc)
 
         | None ->
@@ -708,7 +711,6 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
   if ctx.Tys |> mapContainsKey tySerial then
     ctx
   else
-
     match tyDecl with
     | TySynonymDecl (body, _) ->
         let tySymbol = SynonymTySymbol tySerial
@@ -841,6 +843,14 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
     | _ -> ctx
 
+  let addNsToModule vis nsOwner ctx =
+    match moduleSerialOpt, vis with
+    | Some moduleSerial, PublicVis ->
+        ctx
+        |> addNsToNs (ModuleNsOwner moduleSerial) nsOwner
+
+    | _ -> ctx
+
   let rec goPat vis (pat, ctx) =
     match pat with
     | HLitPat _
@@ -921,8 +931,8 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let ctx =
           ctx
           |> addModuleTyDef serial ({ Name = name; Loc = loc }: ModuleTyDef)
-          |> addTyToModule PublicVis (ModuleTySymbol serial)
-          |> importTy (ModuleTySymbol serial)
+          |> addNsToModule PublicVis (ModuleNsOwner serial)
+          |> importNs (ModuleNsOwner serial)
 
         HModuleExpr(serial, body, loc), ctx
 
@@ -938,7 +948,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
             let ctx =
               ctx
               |> addModuleSynonymDef serial ({ Name = name; Bound = []; Loc = loc }: ModuleSynonymDef)
-              |> importTy (ModuleSynonymSymbol serial)
+              |> importNs (ModuleSynonymNsOwner serial)
 
             expr, ctx
 
@@ -997,7 +1007,7 @@ let private nameResNavPat pat ctx =
   /// Returns (scopeOpt, pat).
   /// scopeOpt is `Some s` if pat is resolved to scope `s`.
   /// `pat` is also updated by resolving inner qualifiers as possible.
-  let rec resolvePatAsNs pat ctx: NsOwner list =
+  let rec resolvePatAsNsOwners pat ctx: NsOwner list =
     match pat with
     | HVarPat (varSerial, _, _) ->
         let name = ctx |> findVarName varSerial
@@ -1005,7 +1015,7 @@ let private nameResNavPat pat ctx =
 
     | HNodePat (HNavPN r, [ l ], _, _) ->
         ctx
-        |> resolvePatAsNs l
+        |> resolvePatAsNsOwners l
         |> List.collect (fun nsOwner -> ctx |> resolveSubNsOwners nsOwner r)
 
     | _ -> []
@@ -1020,7 +1030,7 @@ let private nameResNavPat pat ctx =
     hpAbort noTy loc, ctx
 
   let patOpt =
-    resolvePatAsNs l ctx
+    resolvePatAsNsOwners l ctx
     |> List.tryPick
          (fun nsOwner ->
            match ctx |> resolveScopedVarName nsOwner r with
@@ -1259,7 +1269,7 @@ let private nameResNavExpr expr ctx =
   /// Returns (scopeOpt, exprOpt).
   /// scopeOpt should eb some it can be resolved to scope.
   /// exprOpt is also obtained by resolving inner `nav`s as possible.
-  let rec resolveExprAsScope expr ctx =
+  let rec resolveExprAsNsOwners expr ctx: ResolvedExpr * ScopeCtx =
     match expr with
     | HVarExpr (VarSerial serial, _, loc) ->
         let name = ctx |> findName serial
@@ -1272,7 +1282,7 @@ let private nameResNavExpr expr ctx =
         | _ -> ResolvedAsScope(nsOwners, exprOpt, loc), ctx
 
     | HNavExpr (l, r, ty, loc) ->
-        let l, ctx = ctx |> resolveExprAsScope l
+        let l, ctx = ctx |> resolveExprAsNsOwners l
 
         match l with
         | NotResolvedExpr _ -> l, ctx
@@ -1319,7 +1329,7 @@ let private nameResNavExpr expr ctx =
         let expr, ctx = nameResExpr (expr, ctx)
         ResolvedAsExpr expr, ctx
 
-  let result, ctx = resolveExprAsScope expr ctx
+  let result, ctx = resolveExprAsNsOwners expr ctx
 
   match result with
   | ResolvedAsExpr expr -> expr, ctx
@@ -1508,7 +1518,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let ctx =
           ctx
           |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
-          |> importTy (ModuleTySymbol serial)
+          |> importNs (ModuleNsOwner serial)
 
         let ctx = ctx |> startScope ExprScope
 
@@ -1558,7 +1568,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                      ({ Name = name
                         Bound = moduleSerials
                         Loc = loc }: ModuleSynonymDef)
-                |> forList (fun moduleSerial ctx -> doImportTyWithAlias name (ModuleTySymbol moduleSerial) ctx) moduleSerials
+                |> forList (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx) moduleSerials
 
           | _ -> ctx |> addLog UnimplModuleSynonymError loc
 

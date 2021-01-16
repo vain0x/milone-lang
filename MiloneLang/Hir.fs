@@ -258,8 +258,6 @@ type TySymbol =
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
-  | ModuleTySymbol of moduleTySerial: ModuleTySerial
-  | ModuleSynonymSymbol of moduleSynonymSerial: ModuleSynonymSerial
 
 /// Kind of HNodePat.
 [<Struct; NoEquality; NoComparison>]

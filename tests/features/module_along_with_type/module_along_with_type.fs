@@ -14,10 +14,12 @@ module rec Range =
     let (Pos (sy, sx)) = s
     let (Pos (ty, tx)) = t
 
-    string (sy + 1) "."
+    string (sy + 1)
+    + "."
     + string (sx + 1)
     + "-"
-    + string (ty + 1) "."
+    + string (ty + 1)
+    + "."
     + string (tx + 1)
 
 let main _ =

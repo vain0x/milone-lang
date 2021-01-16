@@ -473,9 +473,6 @@ let private symbolToName (tyCtx: Typing.TyCtx) symbol =
           |> mapTryFind tySerial
           |> Option.map tyDefToName
 
-      | ModuleTySymbol _
-      | ModuleSynonymSymbol _ -> None
-
 let private doCollectSymbolOccurrences hint
                                        projectDir
                                        (docId: DocId)
