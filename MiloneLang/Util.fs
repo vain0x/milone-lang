@@ -40,6 +40,8 @@ let stOptionMap f (x, ctx) =
 
 let cons head tail = head :: tail
 
+let forList folder xs state = List.fold (fun state x -> folder x state) state xs
+
 /// Tries to "zip" two lists by pairing every i'th item from both lists.
 ///
 /// If two lists have different length, some elements have no pair.
