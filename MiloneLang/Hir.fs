@@ -212,7 +212,8 @@ type ModuleSynonymSerial = ModuleSynonymSerial of Serial
 [<NoEquality; NoComparison>]
 type ModuleSynonymDef =
   { Name: Ident
-    Bound: ModuleTySerial option
+    // Not used.
+    Bound: ModuleTySerial list
     Loc: Loc }
 
 /// Definition of named value in HIR.
@@ -257,8 +258,6 @@ type TySymbol =
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
-  | ModuleTySymbol of moduleTySerial: ModuleTySerial
-  | ModuleSynonymSymbol of moduleSynonymSerial: ModuleSynonymSerial
 
 /// Kind of HNodePat.
 [<Struct; NoEquality; NoComparison>]

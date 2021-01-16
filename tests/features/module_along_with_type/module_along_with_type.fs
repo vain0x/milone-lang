@@ -2,21 +2,33 @@ module rec module_along_with_type.Program
 
 // Typically a module is defined with the same name as a type.
 
-type Pos = Pos of int * int
+open module_along_with_type.sub
 
-module rec Pos =
-  let eol = Pos (1, 0)
+type Range = Range of Pos * Pos
 
-  let add l r: Pos =
-    let (Pos (ly, lx)) = l
-    let (Pos (ry, rx)) = r
-    Pos (ly + ry, lx + rx)
+module rec Range =
+  let pair s t = Range(s, t)
 
-// Extension.
-module rec Pos =
-  let toString (Pos (row, column)) = string (row + 1) + ":" + string (column + 1)
+module rec Range =
+  let toString (Range (s, t)) =
+    let (Pos (sy, sx)) = s
+    let (Pos (ty, tx)) = t
+
+    string (sy + 1)
+    + "."
+    + string (sx + 1)
+    + "-"
+    + string (ty + 1)
+    + "."
+    + string (tx + 1)
 
 let main _ =
-  assert (Pos.toString Pos.eol = "2:1")
-  assert (Pos.toString (Pos.add Pos.eol Pos.eol) = "3:1")
+  // Type name is not shadowed.
+  let p: Pos = Pos.eol
+  let r: Range = Range(p, Pos.add p p)
+
+  assert (Pos.toString p = "2:1")
+  assert (Pos.toString (Pos.add p p) = "3:1")
+
+  assert (Range.toString r = "2.1-3.1")
   0
