@@ -106,10 +106,39 @@ let private tySymbolToSerial symbol =
   | ModuleSynonymSymbol (ModuleSynonymSerial s) -> s
 
 // -----------------------------------------------
+// NsOwner
+// -----------------------------------------------
+
+/// Identity of namespace owner.
+type NsOwner =
+  | TyNsOwner of TySerial
+  | ModuleNsOwner of ModuleTySerial
+  | ModuleSynonymNsOwner of ModuleSynonymSerial
+
+let private nsOwnerToInt (nsOwner: NsOwner): int =
+  match nsOwner with
+  | TyNsOwner tySerial -> tySerial
+  | ModuleNsOwner serial -> moduleTySerialToInt serial
+  | ModuleSynonymNsOwner serial -> moduleSynonymSerialToInt serial
+
+let private nsOwnerCompare (l: NsOwner) r: int =
+  compare (nsOwnerToInt l) (nsOwnerToInt r)
+
+let private nsOwnerOfTySymbol (tySymbol: TySymbol): NsOwner =
+  match tySymbol with
+  | MetaTySymbol serial -> TyNsOwner serial
+  | UnivTySymbol serial -> TyNsOwner serial
+  | SynonymTySymbol serial -> TyNsOwner serial
+  | UnionTySymbol serial -> TyNsOwner serial
+  | RecordTySymbol serial -> TyNsOwner serial
+  | ModuleTySymbol serial -> ModuleNsOwner serial
+  | ModuleSynonymSymbol serial -> ModuleSynonymNsOwner serial
+
+// -----------------------------------------------
 // Namespace
 // -----------------------------------------------
 
-type Ns<'K, 'V> = AssocMap<'K, (AssocMap<Ident, 'V>)>
+type Ns<'T> = AssocMap<NsOwner, (AssocMap<Ident, 'T>)>
 
 // FIXME: this emits code that doesn't compile due to use of incomplete type
 // type NameTree = NameTree of AssocMap<Serial, Serial list>
@@ -119,12 +148,12 @@ type Ns<'K, 'V> = AssocMap<'K, (AssocMap<Ident, 'V>)>
 //   let it = NameTree(mapEmpty (intHash, compare))
 //   fun () -> it
 
-let private nsFind (key: Serial) (ns: Ns<_, _>): AssocMap<Ident, _> =
+let private nsFind (key: NsOwner) (ns: Ns<_>): AssocMap<Ident, _> =
   match ns |> mapTryFind key with
   | Some submap -> submap
   | None -> mapEmpty compare
 
-let private nsAdd (key: Serial) (ident: Ident) value (ns: Ns<_, _>): Ns<_, _> =
+let private nsAdd (key: NsOwner) (ident: Ident) value (ns: Ns<_>): Ns<_> =
   ns
   |> mapAdd key (ns |> nsFind key |> mapAdd ident value)
 
@@ -185,10 +214,13 @@ type ScopeCtx =
     ModuleSynonyms: AssocMap<ModuleSynonymSerial, ModuleSynonymDef>
 
     /// Values contained by types.
-    VarNs: Ns<TySerial, ValueSymbol>
+    VarNs: Ns<ValueSymbol>
 
     /// Types contained by types.
-    TyNs: Ns<TySerial, TySymbol>
+    TyNs: Ns<TySymbol>
+
+    /// Sub namespaces.
+    NsNs: Ns<NsOwner list>
 
     /// Current scope.
     Local: Scope
@@ -216,8 +248,9 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
     Tys = mapEmpty compare
     ModuleTys = mapEmpty moduleTySerialCmp
     ModuleSynonyms = mapEmpty moduleSynonymSerialCmp
-    VarNs = mapEmpty compare
-    TyNs = mapEmpty compare
+    VarNs = mapEmpty nsOwnerCompare
+    TyNs = mapEmpty nsOwnerCompare
+    NsNs = mapEmpty nsOwnerCompare
     Local = scopeEmpty ()
     PatScope = mapEmpty compare
     Level = 0
@@ -312,23 +345,23 @@ let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: Scop
       ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef }
 
 /// Adds a variable to a namespace.
-let private addVarToNs parentTySerial valueSymbol (scopeCtx: ScopeCtx): ScopeCtx =
+let private addVarToNs (nsOwner: NsOwner) valueSymbol (scopeCtx: ScopeCtx): ScopeCtx =
   let name =
     scopeCtx |> findValueSymbolName valueSymbol
 
   { scopeCtx with
       VarNs =
         scopeCtx.VarNs
-        |> nsAdd parentTySerial name valueSymbol }
+        |> nsAdd nsOwner name valueSymbol }
 
 /// Adds a type to a namespace.
-let private addTyToNs parentTySerial tySymbol (scopeCtx: ScopeCtx): ScopeCtx =
+let private addTyToNs (nsOwner: NsOwner) tySymbol (scopeCtx: ScopeCtx): ScopeCtx =
   let name = scopeCtx |> findTySymbolName tySymbol
 
   { scopeCtx with
       TyNs =
         scopeCtx.TyNs
-        |> nsAdd parentTySerial name tySymbol }
+        |> nsAdd nsOwner name tySymbol }
 
 /// Adds a variable to a scope.
 let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
@@ -381,13 +414,13 @@ let private openModule moduleSerial (scopeCtx: ScopeCtx) =
   // Import vars.
   let scopeCtx =
     scopeCtx.VarNs
-    |> nsFind (moduleTySerialToInt moduleSerial)
+    |> nsFind (ModuleNsOwner moduleSerial)
     |> mapFold (fun ctx _ symbol -> ctx |> importVar symbol) scopeCtx
 
   // Import tys.
   let scopeCtx =
     scopeCtx.TyNs
-    |> nsFind (moduleTySerialToInt moduleSerial)
+    |> nsFind (ModuleNsOwner moduleSerial)
     |> mapFold (fun ctx _ symbol -> ctx |> importTy symbol) scopeCtx
 
   scopeCtx
@@ -436,15 +469,15 @@ let private isTyDeclScope (scopeCtx: ScopeCtx) =
   | _ -> false
 
 // Find from namespace of type (not local).
-let private resolveScopedVarName tySymbol name (scopeCtx: ScopeCtx): ValueSymbol option =
+let private resolveScopedVarName nsOwner name (scopeCtx: ScopeCtx): ValueSymbol option =
   scopeCtx.VarNs
-  |> nsFind (tySymbolToSerial tySymbol)
+  |> nsFind nsOwner
   |> mapTryFind name
 
 // Find from namespace of type (not local).
-let private resolveScopedTyName tySerial name (scopeCtx: ScopeCtx): TySymbol option =
+let private resolveScopedTyName nsOwner name (scopeCtx: ScopeCtx): TySymbol option =
   scopeCtx.TyNs
-  |> nsFind tySerial
+  |> nsFind nsOwner
   |> mapTryFind name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
@@ -490,15 +523,15 @@ let private resolveNavTy quals last ctx =
         | [] -> Some tySymbol
 
         | name :: path ->
-            let scope = tySymbolToSerial tySymbol
+            let nsOwner = nsOwnerOfTySymbol tySymbol
 
-            match ctx |> resolveScopedTyName scope name with
+            match ctx |> resolveScopedTyName nsOwner name with
             | Some tySymbol -> resolveTyPath tySymbol path ctx
             | None -> None
 
       let tySymbolOpt =
         scopes
-        |> List.tryPick (fun scope -> resolveTyPath scope (List.append tail [ last ]) ctx)
+        |> List.tryPick (fun nsOwner -> resolveTyPath nsOwner (List.append tail [ last ]) ctx)
 
       tySymbolOpt, ctx
 
@@ -629,7 +662,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
     match moduleSerialOpt, vis with
     | Some moduleSerial, PublicVis ->
         ctx
-        |> addVarToNs (moduleTySerialToInt moduleSerial) varSerial
+        |> addVarToNs (ModuleNsOwner moduleSerial) varSerial
 
     | _ -> ctx
 
@@ -637,7 +670,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
     match moduleSerialOpt, vis with
     | Some moduleSerial, PublicVis ->
         ctx
-        |> addTyToNs (moduleTySerialToInt moduleSerial) tySerial
+        |> addTyToNs (ModuleNsOwner moduleSerial) tySerial
 
     | _ -> ctx
 
@@ -669,7 +702,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
 
           ctx
           |> addVariantDef variantSerial variantDef
-          |> addVarToNs tySerial variantSymbol
+          |> addVarToNs (TyNsOwner tySerial) variantSymbol
           |> importVar variantSymbol
           |> addVarToModule variantSymbol
 
@@ -767,7 +800,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
     match moduleSerialOpt, vis with
     | Some moduleSerial, PublicVis ->
         ctx
-        |> addVarToNs (moduleTySerialToInt moduleSerial) varSerial
+        |> addVarToNs (ModuleNsOwner moduleSerial) varSerial
 
     | _ -> ctx
 
@@ -775,7 +808,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
     match moduleSerialOpt, vis with
     | Some moduleSerial, PublicVis ->
         ctx
-        |> addTyToNs (moduleTySerialToInt moduleSerial) tySerial
+        |> addTyToNs (ModuleNsOwner moduleSerial) tySerial
 
     | _ -> ctx
 
@@ -947,7 +980,7 @@ let private nameResNavPat pat ctx =
         |> List.choose
              (fun tySymbol ->
                ctx
-               |> resolveScopedTyName (tySymbolToSerial tySymbol) r)
+               |> resolveScopedTyName (nsOwnerOfTySymbol tySymbol) r)
 
     | _ -> []
 
@@ -964,7 +997,7 @@ let private nameResNavPat pat ctx =
     resolvePatAsScope l ctx
     |> List.tryPick
          (fun tySymbol ->
-           match ctx |> resolveScopedVarName tySymbol r with
+           match ctx |> resolveScopedVarName (nsOwnerOfTySymbol tySymbol) r with
            | Some (VariantSymbol variantSerial) -> Some(HVariantPat(variantSerial, ty, loc))
            | _ -> None)
 
@@ -1229,7 +1262,7 @@ let private nameResNavExpr expr ctx =
               |> List.choose
                    (fun lTySymbol ->
                      ctx
-                     |> resolveScopedTyName (tySymbolToSerial lTySymbol) r)
+                     |> resolveScopedTyName (nsOwnerOfTySymbol lTySymbol) r)
 
             // Resolve as value.
             let exprOpt =
@@ -1237,7 +1270,7 @@ let private nameResNavExpr expr ctx =
                 lTySymbols
                 |> List.tryPick
                      (fun lTySymbol ->
-                       match ctx |> resolveScopedVarName lTySymbol r with
+                       match ctx |> resolveScopedVarName (nsOwnerOfTySymbol lTySymbol) r with
                        | None -> None
                        | it -> it)
 
