@@ -20,6 +20,7 @@ milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 # Also generate a file for timestamp to suppress re-execute.
 
 rule dotnet_restore
+  description = dotnet_restore
   command = $
     dotnet restore; $
     touch target/timestamp.dotnet_restore
@@ -36,6 +37,7 @@ build dotnet_restore: $
 # ------------------------------------------------
 
 rule build_milone_dotnet
+  description = build_milone_dotnet ($CONFIG)
   command = dotnet build -nologo --no-restore MiloneLang -c $CONFIG
 
 build $milone_dotnet_debug: $
@@ -52,9 +54,11 @@ build $milone_dotnet_release: $
 # ------------------------------------------------
 
 rule build_milone
+  description = build_milone out=$out
   command = MILONE_HOME=$$PWD $milone compile $verbosity MiloneLang >$out
 
 rule build_cc
+  description = build_cc in=$in
   command = MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" ./scripts/build-with-gcc
 
 # .fs -> .c (with .NET)
@@ -87,6 +91,7 @@ build target/milone_gen3.c: $
 # .c -> .diff
 
 rule diff
+  description = diff out=$out
   command = diff $in >$out
 
 build target/milone_gen3.diff: $
@@ -101,6 +106,7 @@ build target/milone_gen3.diff: $
 #   so the conjunction (`-a`) means that the file exists and is empty.
 
 rule verify_no_diff
+  description = verify_no_diff in=$in
   command = $
     test -f $in -a ! -s $in && $
     echo '✔ OK' || $
@@ -120,6 +126,7 @@ build test_self: $
 # Build a test-case project.
 # This always succeeds for some cases to test compile error.
 rule take_snapshot
+  description = take_snapshot $project
   command = $
     MILONE_HOME=$$PWD $milone compile -q $project >$out || $
     echo 'milone-lang compile error.' >$out_file
@@ -148,11 +155,13 @@ build snapshot_diff: $
 # ------------------------------------------------
 
 rule build_test
+  description = build_test $in
   command = $
     test ! -z "$$(grep '#error' -- $in)" || $
     MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" ./scripts/build-with-gcc
 
 rule execute_test
+  description = execute_test $c_file
   command = $
     test ! -z "$$(grep '#error' -- $c_file)" && $
     echo 'milone-lang compile error.' >$out || { $
@@ -161,6 +170,7 @@ rule execute_test
     }
 
 rule diff_test_output
+  description = diff_test_output $in
   command = $
     diff -q $in && $
       echo OK $test >$out || $
