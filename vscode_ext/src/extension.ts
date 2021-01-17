@@ -31,7 +31,7 @@ const getMiloneHome = (logger: Logger): string | null => {
   return path.join(homedir(), ".milone")
 }
 
-const getLspCommand = (home: string, logger: Logger): string | null => {
+const getLspCommand = (miloneHome: string, logger: Logger): string | null => {
   const config = workspace.getConfiguration("milone-lang")
 
   const enabled = config.get<boolean>("lsp-enabled", true)
@@ -51,7 +51,7 @@ const getLspCommand = (home: string, logger: Logger): string | null => {
   }
   logger.info("Environment variable 'MILONE_LSP_COMMAND' is unset or empty.")
 
-  return path.join(home, "bin/MiloneLsp")
+  return path.join(miloneHome, "bin/milone_lsp/MiloneLsp")
 }
 
 const startLspSession = (_context: ExtensionContext, logger: Logger) => {
