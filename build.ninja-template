@@ -12,15 +12,6 @@ milone_dotnet_debug = MiloneLang/bin/Debug/net5.0/MiloneLang
 
 milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 
-cflags = -std=c11 $
-  -O2 $
-  -I runtime $
-  -Wall -Wno-unused-variable $
-  -Wno-unused-but-set-variable $
-  -Wno-unused-label $
-  -Wno-pointer-to-int-cast $
-  runtime/milone.c
-
 # ------------------------------------------------
 # dotnet restore
 # ------------------------------------------------
@@ -64,7 +55,7 @@ rule build_milone
   command = MILONE_HOME=$$PWD $milone compile $verbosity MiloneLang >$out
 
 rule build_cc
-  command = gcc $cflags $in -o $out
+  command = MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" ./scripts/build-with-gcc
 
 # .fs -> .c (with .NET)
 
@@ -159,7 +150,7 @@ build snapshot_diff: $
 rule build_test
   command = $
     test ! -z "$$(grep '#error' -- $in)" || $
-    gcc $cflags $in -o $out
+    MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" ./scripts/build-with-gcc
 
 rule execute_test
   command = $
