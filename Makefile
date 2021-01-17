@@ -6,19 +6,11 @@
 # Makefile is a thin-wrapper of ninja.
 # When ninja fails, refresh build script for ninja and retry.
 
-.PHONY: default build test install install-dev clean
+.PHONY: build default test install install-dev clean
 
 # (This is the first rule in file and therefore it's default.)
 default:
 	ninja || ( ./build-ninja-gen && ninja )
-
-# ------------------------------------------------
-# Utilities
-# ------------------------------------------------
-
-# Directory for intermediate files.
-target:
-	mkdir -p target
 
 # ------------------------------------------------
 # ninja wrapper
@@ -38,7 +30,7 @@ clean:
 
 install: target/install.timestamp
 
-target/install.timestamp: target build.ninja
+target/install.timestamp: build.ninja
 	./install
 	touch target/install.timestamp
 
@@ -46,6 +38,6 @@ target/install.timestamp: target build.ninja
 
 install-dev: target build.ninja target/install-dev.timestamp
 
-target/install-dev.timestamp: target build
+target/install-dev.timestamp: build
 	./install-dev
 	touch target/install-dev.timestamp
