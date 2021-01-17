@@ -32,7 +32,7 @@ clean:
 
 install: target/install.timestamp
 
-target/install.timestamp: build.ninja
+target/install.timestamp:
 	./install
 	touch target/install.timestamp
 
