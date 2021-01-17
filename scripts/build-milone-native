@@ -1,0 +1,25 @@
+#!/bin/sh
+# Build milone binary without using ninja.
+
+set -eu
+
+# ------------------------------------------------
+# Check
+# ------------------------------------------------
+
+dotnet --version >/dev/null
+gcc --version >/dev/null
+
+# ------------------------------------------------
+# Process
+# ------------------------------------------------
+
+MILONE_HOME=$PWD \
+    dotnet run -p MiloneLang -- \
+    compile --quiet ./MiloneLang \
+    >'target/milone_gen2.c'
+
+MILONE_HOME=$PWD \
+INPUTS='target/milone_gen2.c' \
+OUTPUT='target/milone' \
+    ./scripts/build-with-gcc
