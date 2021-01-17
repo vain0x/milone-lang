@@ -27,10 +27,15 @@ mkdir -p "$MILONE_HOME"
 # Install native executable.
 cp -bf target/milone "$MILONE_HOME/milone_native"
 
-# Install .NET executable. (.NET runtime is required to run.)
-dotnet publish MiloneLang \
+# Link milone-dotnet.
+ln -bfs "$PWD/MiloneLang/bin/Debug/net5.0/MiloneLang" "$MILONE_HOME/milone_dotnet/MiloneLang"
+
+# Link LSP server.
+ln -bfs "$PWD/milone_lsp/bin/Debug/net5.0/MiloneLsp" "$MILONE_HOME/bin/milone_lsp/MiloneLsp"
+
+dotnet publish milone_lsp \
     --runtime linux-x64 \
-    -o "$MILONE_HOME/milone_dotnet" \
+    -o "$MILONE_HOME/bin/milone_lsp" \
     -nologo
 
 # Link runtime.
