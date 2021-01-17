@@ -19,10 +19,6 @@ open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
 open MiloneLang.TailRecOptimizing
 open MiloneLang.Monomorphizing
-open MiloneLang.Kir
-open MiloneLang.KirGen
-open MiloneLang.KirPropagate
-open MiloneLang.KirDump
 open MiloneLang.MirGen
 open MiloneLang.Cir
 open MiloneLang.CirGen
@@ -525,7 +521,7 @@ let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAn
       let tyCtx = arityCheck (expr, tyCtx)
       if tyCtx.Logs |> List.isEmpty |> not then SemaAnalysisTypingError tyCtx else SemaAnalysisOk(expr, tyCtx)
 
-/// Transforms HIR. The result can be converted to KIR or MIR.
+/// Transforms HIR. The result can be converted to MIR.
 let transformHir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "MainHoist"
   let expr, tyCtx = hoistMain (expr, tyCtx)
@@ -568,40 +564,6 @@ let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
 
     writeLog host v "Finish"
     ok, output
-
-/// EXPERIMENTAL.
-let dumpHirAsKir (host: CliHost) v (expr, tyCtx) =
-  writeLog host v "KirGen"
-  let kRoot, kirGenCtx = kirGen (expr, tyCtx)
-
-  writeLog host v "KirPropagate"
-  let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
-
-  writeLog host v "KirDump"
-  let result = kirDump "" "" (kRoot, kirGenCtx)
-
-  writeLog host v "Finish"
-  true, result
-
-/// EXPERIMENTAL.
-let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
-  writeLog host v "KirGen"
-  let kRoot, kirGenCtx = kirGen (expr, tyCtx)
-
-  writeLog host v "KirPropagate"
-  let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
-
-  failwith "compile with KIR is suspended"
-
-// writeLog host v "KirToMir"
-// let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
-
-// writeLog host v "Cir generation"
-// let cir, success = gen (stmts, mirCtx)
-// let cOutput = cirDump cir
-
-// writeLog host v "Finish"
-// cOutput, success
 
 let check (ctx: CompileCtx): bool * string =
   let host = ctx.Host
@@ -690,78 +652,6 @@ let cliCompile (host: CliHost) verbosity projectDir =
   printfn "%s" (output |> S.trimEnd)
   exitCode
 
-let cliKirDump (host: CliHost) projectDirs =
-  let v = Quiet
-  printfn "// Common code.\n%s\n" (kirHeader ())
-
-  projectDirs
-  |> List.fold
-       (fun code projectDir ->
-         printfn "// -------------------------------\n// %s\n{\n" projectDir
-         printfn "/*"
-
-         let ctx = compileCtxNew host v projectDir
-
-         let ok, output =
-           let syntax = syntacticallyAnalyze ctx
-
-           match semanticallyAnalyze host v syntax with
-           | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
-           | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
-
-           | SemaAnalysisOk (expr, tyCtx) ->
-               let expr, tyCtx = transformHir host v (expr, tyCtx)
-               dumpHirAsKir host v (expr, tyCtx)
-
-         let code =
-           if ok then
-             printfn "*/"
-             printfn "%s" (output |> S.trimEnd)
-             code
-           else
-             printfn "\n%s\n*/" output
-             1
-
-         printfn "\n// exit = %d\n}\n" code
-         code)
-       0
-
-let cliCompileViaKir (host: CliHost) projectDirs =
-  let v = Quiet
-  printfn "// Generated using KIR.\n"
-
-  projectDirs
-  |> List.fold
-       (fun code projectDir ->
-         printfn "// -------------------------------\n// %s\n" projectDir
-         printfn "/*"
-
-         let ctx = compileCtxNew host v projectDir
-
-         let ok, output =
-           let syntax = syntacticallyAnalyze ctx
-
-           match semanticallyAnalyze host v syntax with
-           | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
-           | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
-
-           | SemaAnalysisOk (expr, tyCtx) ->
-               let expr, tyCtx = transformHir host v (expr, tyCtx)
-               codeGenHirViaKir host v (expr, tyCtx)
-
-         let code =
-           if ok then
-             printfn "*/"
-             printfn "%s" (output |> S.trimEnd)
-             code
-           else
-             printfn "\n%s\n*/" output
-             1
-
-         printfn "\n// exit = %d\n" code
-         code)
-       0
-
 // -----------------------------------------------
 // Arg parsing
 // -----------------------------------------------
@@ -819,7 +709,6 @@ type private CliCmd =
   | CheckCmd
   | CompileCmd
   | ParseCmd
-  | KirDumpCmd
   | BadCmd of string
 
 let private parseArgs args =
@@ -848,8 +737,6 @@ let private parseArgs args =
 
       // for debug
       | "parse" -> ParseCmd, args
-      | "kir-dump" -> KirDumpCmd, args
-      | "kir-c" -> CompileCmd, "--kir" :: args
 
       | _ -> BadCmd arg, []
 
@@ -884,15 +771,10 @@ let cli (host: CliHost) =
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
-      let useKir, args =
-        parseFlag (fun _ arg -> if arg = "--kir" then Some true else None) false args
+      match args with
+      | projectDir :: _ -> cliCompile host verbosity projectDir
 
-      match useKir, args with
-      | true, _ -> cliCompileViaKir host args
-
-      | false, projectDir :: _ -> cliCompile host verbosity projectDir
-
-      | false, [] ->
+      | [] ->
           printfn "ERROR: Expected project dir."
           1
 
@@ -905,8 +787,6 @@ let cli (host: CliHost) =
       | [] ->
           printfn "ERROR: Expected project dir."
           1
-
-  | KirDumpCmd, projectDirs -> cliKirDump host projectDirs
 
   | BadCmd subcommand, _ ->
       printfn "ERROR: Unknown subcommand '%s'." subcommand
