@@ -28,7 +28,7 @@ mkdir -p "$MILONE_HOME"
 cp -bf target/milone "$MILONE_HOME/milone_native"
 
 # Link milone-dotnet.
-ln -bfs "$PWD/MiloneLang/bin/Debug/net5.0/MiloneLang" "$MILONE_HOME/milone_dotnet/MiloneLang"
+ln -bfs "$PWD/MiloneLang/bin/Debug/net5.0/MiloneLang" "$MILONE_HOME/bin/milone_dotnet/MiloneLang"
 
 # Link LSP server.
 ln -bfs "$PWD/milone_lsp/bin/Debug/net5.0/MiloneLsp" "$MILONE_HOME/bin/milone_lsp/MiloneLsp"
