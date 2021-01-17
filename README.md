@@ -22,17 +22,17 @@ This is a hobby project. Don't use in production. Pull requests and issues etc. 
 
 Prerequisites:
 
-- Ubuntu 18.04
-- Install Git 2.30.0
+- Ubuntu 18.04 (or similar platform)
 - Install [.NET SDK 5.0.101](https://dotnet.microsoft.com/download/dotnet/5.0)
 - Install GCC 7.5.0 (Note: This is old, current latest version is 10.)
-- Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
 
 Do:
 
 ```sh
-# Clone this repository.
-git clone https://github.com/vain0x/milone-lang --depth=1
+# Download the source codes. (Or `git clone 'https://github.com/vain0x/milone-lang'`.)
+curl -L 'https://github.com/vain0x/milone-lang/archive/master.zip' | \
+    busybox unzip -q - && \
+    mv milone-lang-master milone-lang
 
 # Build and install.
 cd milone-lang
@@ -47,7 +47,7 @@ cd milone-lang
 Installation script is not available yet.
 
 So you need run commands by hand.
-See `./install` for details.
+See [./install](./install) for details.
 (The milone-lang compiler should work on these platforms since .NET and C language are cross-platform.
 The milone-lang compiler emits C11-compliant codes and the [runtime codes](runtime/milone.c) are C11-compliant.)
 
@@ -63,6 +63,7 @@ milone compile tests/examples/hello_world >hello.c
 
 # Build C. You need to specify runtime directory and link runtime codes.
 gcc -std=c11 \
+    -O2 \
     -I $HOME/.milone/runtime \
     $HOME/.milone/runtime/milone.c \
     hello.c \
@@ -213,24 +214,19 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 
 See the "install from sources" section above.
 
+For incremental building and testing, `ninja` command is also used.
+`git` command is used in tests to generate diff.
+
+- Install Git 2.30.0
+- Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
+
 ### Dev: Build
 
-Just do as usual:
-
-```sh
-make
-```
-
-Or, without make:
+Generate a build script for ninja and then run ninja command.
 
 ```sh
 ./build-ninja-gen && ninja
 ```
-
-(Notes:
-    [Makefile](./Makefile) is a thin wrapper of ninja.
-    Before using ninja, you need to generate build script for it.
-    Makefile automates that.)
 
 ### Dev: Testing
 

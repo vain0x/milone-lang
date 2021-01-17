@@ -2,5 +2,5 @@
 
 set -eu
 
-cat build.ninja-template | \
+cat build-template.ninja | \
     dotnet run -p scripts/GenNinjaFile -- $PWD >build.ninja

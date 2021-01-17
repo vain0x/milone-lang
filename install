@@ -50,7 +50,6 @@ trap 'on_error "$@"' EXIT
 # Check prerequisites.
 dotnet --version >>$LOG
 gcc --version >>$LOG
-ninja --version >>$LOG
 
 # ------------------------------------------------
 # Process
@@ -62,8 +61,7 @@ mkdir -p "$BIN_DIR"
 mkdir -p "$MILONE_HOME/bin"
 
 # Install native executable.
-./build-ninja-gen
-ninja target/milone >>$LOG
+./scripts/build-milone-native
 cp -bf target/milone "$BIN_DIR/milone"
 
 # Install .NET executable.
