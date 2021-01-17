@@ -7,8 +7,8 @@ set -eu
 test -f milone-lang.vsix && rm milone-lang.vsix
 
 # Build.
-npm run vsce-package
 npm run webpack-prod
+npm run vsce-package
 
 # Install to the local VSCode.
 ./uninstall || :
