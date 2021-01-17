@@ -29,8 +29,9 @@ cflags = -std=c11 $
 # Also generate a file for timestamp to suppress re-execute.
 
 rule dotnet_restore
-  command = dotnet restore
-  restat = 1
+  command = $
+    dotnet restore; $
+    touch target/timestamp.dotnet_restore
 
 build target/timestamp.dotnet_restore: $
   dotnet_restore $
