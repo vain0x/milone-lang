@@ -188,7 +188,26 @@ let lspServer (): JsonValue -> int option =
 
         eprintfn "rootUriOpt = %A" rootUriOpt
 
-        jsonRpcWriteWithTemplate "initialize_response" [ "MSG_ID", getMsgId () ]
+        let result =
+          jsonDeserializeString """{
+            "capabilities": {
+                "textDocumentSync": {
+                    "openClose": true,
+                    "change": 1
+                },
+                "definitionProvider": true,
+                "documentHighlightProvider": true,
+                "hoverProvider": true,
+                "referencesProvider": true,
+                "renameProvider": false
+            },
+            "serverInfo": {
+                "name": "milone_lsp",
+                "version": "0.1.0"
+            }
+          }"""
+
+        jsonRpcWriteWithResult (getMsgId ()) result
         None
 
     | "initialized" ->
@@ -197,7 +216,7 @@ let lspServer (): JsonValue -> int option =
 
     | "shutdown" ->
         exitCode <- 0
-        jsonRpcWriteWithTemplate "shutdown_response" [ "MSG_ID", getMsgId () ]
+        jsonRpcWriteWithResult (getMsgId ()) JNull
         None
 
     | "exit" -> Some exitCode
