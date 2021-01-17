@@ -73,6 +73,10 @@ gcc -std=c11 \
 ./hello
 ```
 
+## Install VSCode Extension
+
+See [./vscode_ext](./vscode_ext)
+
 ----
 
 ## How It Works

@@ -1,17 +1,28 @@
 # milone-lang support for VSCode
 
-WIP
+Visual Studio Code extension for Milone-lang syntax highlighting and IDE features. Implemented partially.
 
 ## Install
 
-Not available yet.
+Install milone-lang tool-chain first. (`milone_lsp` command should work.)
+
+```sh
+npm ci
+./install
+```
+
+- To uninstall, `./uninstall`.
 
 ## Features
 
-- [ ] Syntax highlighting
+- [x] Syntax highlighting
 - [ ] Hover on symbols for tooltip
-- [ ] Documentation symbol highlighting
-- [ ] Find and jump to definitions and references
+    - [x] Hover on variables, functions etc.
+    - [ ] Hover on fields
+- [x] Documentation symbol highlighting
+- [ ] Find definitions and references
+    - [x] Find variables, functions, etc.
+    - [ ] Find field references
 - [ ] Rename
 - [ ] Completion
 
@@ -21,9 +32,10 @@ Not available yet.
 
 ### Dev: Prerequisites
 
-- Visual Studio Code
-- Node.js (>= 12)
-- Git (on Window, in order to run shell scripts)
+- Install [Visual Studio Code](https://code.visualstudio.com/) (1.52.1)
+- Install [Node.js](https://nodejs.org) (13.14.0)
+- On Windows:
+    - Install Git 2.30.0 (To run shell scripts)
 
 ### Dev: Build Scripts
 
