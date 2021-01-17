@@ -21,8 +21,8 @@ let dotnetCliHost args miloneHome: CliHost =
     FileReadAllText = readFile }
 
 [<EntryPoint>]
-let main args =
-  let args = List.ofArray args
+let main _ =
+  let args = System.Environment.GetCommandLineArgs() |> Array.toList
 
   let miloneHome =
     System.Environment.GetEnvironmentVariable("MILONE_HOME")
