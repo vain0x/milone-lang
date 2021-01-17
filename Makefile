@@ -6,7 +6,7 @@
 # Makefile is a thin-wrapper of ninja.
 # When ninja fails, refresh build script for ninja and retry.
 
-.PHONY: build default test install install-dev clean
+.PHONY: build build.ninja default test install install-dev clean
 
 # (This is the first rule in file and therefore it's default.)
 default:
@@ -15,6 +15,9 @@ default:
 # ------------------------------------------------
 # ninja wrapper
 # ------------------------------------------------
+
+build.ninja:
+	./build-ninja-gen
 
 build: **/*.fs **/*.milone
 	ninja test_self || ( ./build-ninja-gen && ninja test_self )
