@@ -133,22 +133,12 @@ rule take_snapshot
 
 # Print snapshot diff.
 rule git_diff_snapshot_stats
-  command = git diff --stat -- tests/**/*.c >$out
+  command = git diff --stat -- 'tests/**/*.c' >$out
 
-build target/snapshot_stat.diff: $
+build snapshot_diff: $
   git_diff_snapshot_stats $
     {{ TEST_C_FILES }}
   pool = console
-
-rule cat_stderr
-  command = cat $in >&2
-  restat = 1
-
-build target/print_snapshot_diff.timestamp: $
-  cat_stderr target/snapshot_stat.diff
-
-build snapshot_diff: $
-  phony target/print_snapshot_diff.timestamp
 
 # ------------------------------------------------
 # Execution testing
