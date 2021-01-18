@@ -151,7 +151,7 @@ let private primToArity ty prim =
   | HPrim.LeftShift
   | HPrim.RightShift
   | HPrim.Equal
-  | HPrim.Lt
+  | HPrim.Less
   | HPrim.Compare
   | HPrim.Cons
   | HPrim.PtrRead -> 2

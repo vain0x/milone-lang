@@ -45,7 +45,7 @@ let private opToPrim op =
   | LeftShiftBinary -> HPrim.LeftShift
   | RightShiftBinary -> HPrim.RightShift
   | EqualBinary -> HPrim.Equal
-  | LessBinary -> HPrim.Lt
+  | LessBinary -> HPrim.Less
   | ConsBinary -> HPrim.Cons
 
   | NotEqualBinary

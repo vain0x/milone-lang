@@ -1136,8 +1136,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
 
   | HPrim.Equal, [ l; r ] -> mirifyExprOpCompare ctx MEqualBinary l r ty loc
   | HPrim.Equal, _ -> fail ()
-  | HPrim.Lt, [ l; r ] -> mirifyExprOpCompare ctx MLessBinary l r ty loc
-  | HPrim.Lt, _ -> fail ()
+  | HPrim.Less, [ l; r ] -> mirifyExprOpCompare ctx MLessBinary l r ty loc
+  | HPrim.Less, _ -> fail ()
   | HPrim.Compare, [ l; r ] -> mirifyCallCompareExpr ctx itself l r ty loc
   | HPrim.Compare, _ -> fail ()
   | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc

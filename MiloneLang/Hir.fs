@@ -341,7 +341,7 @@ type HPrim =
   | LeftShift
   | RightShift
   | Equal
-  | Lt
+  | Less
   | Compare
 
   // conversion:
@@ -741,7 +741,7 @@ let primToTySpec prim =
       let argTy = meta 1
       poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
 
-  | HPrim.Lt ->
+  | HPrim.Less ->
       let compareTy = meta 1
       poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
 
