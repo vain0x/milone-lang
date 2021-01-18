@@ -109,6 +109,7 @@ type Tk =
   | NativeTypeTk of cCode: string
 
   // Nominal types.
+  | MetaTk of metaTy: TySerial * metaLoc: Loc
   | SynonymTk of synonymTy: TySerial
   | UnionTk of unionTy: TySerial
   | RecordTk of recordTy: TySerial
@@ -118,12 +119,8 @@ type Tk =
   | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type Ty =
-  /// Type variable to be bound or quantified..
-  | MetaTy of metaTySerial: Serial * metaLoc: Loc
-
   /// Type application.
   | AppTy of Tk * tyArgs: Ty list
 
@@ -586,6 +583,8 @@ let tyNativeFun paramTys resultTy =
 
 let tyUnit = tyTuple []
 
+let tyMeta serial loc = AppTy(MetaTk (serial, loc), [])
+
 let tySynonym tySerial tyArgs = AppTy(SynonymTk tySerial, tyArgs)
 
 let tyUnion tySerial = AppTy(UnionTk tySerial, [])
@@ -711,7 +710,7 @@ let primFromIdent ident =
   | _ -> None
 
 let primToTySpec prim =
-  let meta id = MetaTy(id, noLoc)
+  let meta id = tyMeta id noLoc
   let mono ty = TySpec(ty, [])
   let poly ty traits = TySpec(ty, traits)
 

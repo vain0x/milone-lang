@@ -102,19 +102,19 @@ let private freshTySerial (ctx: TyCtx) =
 
 let private freshMetaTy loc (ctx: TyCtx): Ty * TyCtx =
   let serial, ctx = freshTySerial ctx
-  let ty = MetaTy(serial, loc)
+  let ty = tyMeta serial loc
   ty, ctx
 
 let private freshMetaTyForPat pat ctx =
   let _, loc = pat |> patExtract
   let tySerial, ctx = ctx |> freshTySerial
-  let ty = MetaTy(tySerial, loc)
+  let ty = tyMeta tySerial loc
   ty, ctx
 
 let private freshMetaTyForExpr expr ctx =
   let _, loc = expr |> exprExtract
   let tySerial, ctx = ctx |> freshTySerial
-  let ty = MetaTy(tySerial, loc)
+  let ty = tyMeta tySerial loc
   ty, ctx
 
 let private validateLit ctx lit loc =
@@ -235,7 +235,7 @@ let private instantiateTyScheme ctx (tyScheme: TyScheme) loc =
       let ty =
         let extendedCtx =
           mapping
-          |> List.fold (fun ctx (src, target) -> bindTy ctx src (MetaTy(target, loc)) loc) ctx
+          |> List.fold (fun ctx (src, target) -> bindTy ctx src (tyMeta target loc) loc) ctx
 
         substTy extendedCtx ty
 
@@ -250,7 +250,7 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
     |> stMap
          (fun (oldTySerial, ctx) ->
            let tySerial, ctx = ctx |> freshTySerial
-           (oldTySerial, MetaTy(tySerial, loc)), ctx)
+           (oldTySerial, tyMeta tySerial loc), ctx)
 
   // Replace meta types in the type and trait bounds.
   let substMeta tySerial =
@@ -327,11 +327,11 @@ let private resolveAscriptionTy ctx ascriptionTy =
     match ty with
     | AppTy (ErrorTk _, _) -> ty, ctx
 
-    | MetaTy(serial, loc) when ctx.TyLevels |> mapContainsKey serial |> not ->
+    | AppTy (MetaTk (serial, loc), _) when ctx.TyLevels |> mapContainsKey serial |> not ->
       let ctx = { ctx with TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
-      MetaTy (serial, loc), ctx
+      tyMeta serial loc, ctx
 
-    | MetaTy _ -> ty, ctx
+    | AppTy (MetaTk _, _) -> ty, ctx
 
     | AppTy (_, []) -> ty, ctx
 
@@ -1064,7 +1064,7 @@ let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
   match ty with
   | AppTy (ErrorTk _, _) -> ctx
 
-  | MetaTy (tySerial, _) ->
+  | AppTy (MetaTk (tySerial, _), _) ->
       match ctx.ExpandMetaOrSynonymTy tySerial with
       | Some bodyTy -> rcsTy ctx bodyTy
       | None -> ctx

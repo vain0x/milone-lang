@@ -137,8 +137,6 @@ let private trdTyDef (ctx: TrdCtx) tySerial tyDef =
 
 let private trdTy (ctx: TrdCtx) ty =
   match ty with
-  | MetaTy _ -> ctx
-
   | AppTy (tk, tyArgs) ->
       let nominal tySerial =
         trdTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
@@ -151,7 +149,8 @@ let private trdTy (ctx: TrdCtx) ty =
       | CharTk
       | StrTk
       | ObjTk
-      | VoidTk ->
+      | VoidTk
+      | MetaTk _ ->
           assert (List.isEmpty tyArgs)
           ctx
 
@@ -313,8 +312,6 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
-  | MetaTy _ -> 1000000, ctx
-
   | AppTy (tk, tyArgs) ->
       let nominal tySerial =
         tsmTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
@@ -350,6 +347,7 @@ let private tsmTy (ctx: TsmCtx) ty =
       | RecordTk tySerial -> nominal tySerial
 
       | ErrorTk _
+      | MetaTk _
       | NativeTypeTk _ -> 1000000, ctx
 
       | SynonymTk _
@@ -536,8 +534,6 @@ let private abTy ctx ty =
   | AppTy (tk, tyArgs) ->
       let tyArgs = tyArgs |> List.map (abTy ctx)
       AppTy(tk, tyArgs)
-
-  | MetaTy _ -> ty
 
 let private abPat ctx pat =
   match pat with

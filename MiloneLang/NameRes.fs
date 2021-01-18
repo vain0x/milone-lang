@@ -573,7 +573,7 @@ let private resolveTy ty loc scopeCtx =
     | AppTy (ErrorTk _, _) -> ty, scopeCtx
 
     | AppTy (UnresolvedTk ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
-        MetaTy(serial, loc), scopeCtx
+        tyMeta serial loc, scopeCtx
 
     | AppTy (UnresolvedTk ([], serial), [ AppTy (UnresolvedTk ([], itemSerial), _) ]) when
       (scopeCtx |> findName serial = "__nativeType") ->
@@ -585,7 +585,7 @@ let private resolveTy ty loc scopeCtx =
         let name = scopeCtx |> findName serial
 
         match resolveLocalTyName name scopeCtx with
-        | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
+        | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
 
         | _ when scopeCtx |> isTyDeclScope ->
             let scopeCtx =
@@ -598,7 +598,7 @@ let private resolveTy ty loc scopeCtx =
               scopeCtx
               |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc))
 
-            MetaTy(serial, loc), scopeCtx
+            tyMeta serial loc, scopeCtx
 
     | AppTy (UnresolvedTk (quals, serial), tys) ->
         let name = scopeCtx |> findName serial
@@ -608,7 +608,7 @@ let private resolveTy ty loc scopeCtx =
         let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
 
         match symbolOpt with
-        | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
+        | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
 
         | Some (SynonymTySymbol tySerial) ->
             // Arity check.

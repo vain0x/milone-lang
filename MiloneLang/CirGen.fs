@@ -119,7 +119,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
     let toKey (serial, tyDef) =
       match tyDef with
       | MetaTyDef _
-      | UniversalTyDef _ -> MetaTy(serial, noLoc)
+      | UniversalTyDef _ -> tyMeta serial noLoc
 
       | SynonymTyDef _ -> tySynonym serial []
       | UnionTyDef _ -> tyUnion serial
@@ -446,7 +446,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
       | AppTy (CharTk, _) -> "Char", ctx
       | AppTy (StrTk, _) -> "String", ctx
 
-      | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
+      | AppTy (MetaTk _, _) // FIXME: Unresolved type variables are `obj` for now.
       | AppTy (ObjTk, _) -> "Object", ctx
 
       | AppTy (FunTk, _) ->
@@ -568,7 +568,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (StrTk, _) -> CStructTy "String", ctx
 
   // FIXME: Unresolved type variables are `obj` for now.
-  | MetaTy _
+  | AppTy (MetaTk _, _)
   | AppTy (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
 
   | AppTy (FunTk, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
@@ -614,7 +614,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (StrTk, _) -> CStructTy "String", ctx
 
   // FIXME: Unresolved type variables are `obj` for now.
-  | MetaTy _
+  | AppTy (MetaTk _, _)
   | AppTy (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
 
   | AppTy (FunTk, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
@@ -622,7 +622,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | AppTy (ListTk, [ itemTy ]) -> genListTyDef ctx itemTy
 
   | AppTy (TupleTk, itemTys) ->
-      // HOTFIX: Remove Undefined MetaTy. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
+      // HOTFIX: Remove Undefined meta types. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
       let itemTys =
         itemTys
         |> List.map
@@ -729,7 +729,7 @@ let private genDefault ctx ty =
 
   | AppTy (BoolTk, _) -> CVarExpr "false", ctx
 
-  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
+  | AppTy (MetaTk _, _) // FIXME: Unresolved type variables are `obj` for now.
   | AppTy (ObjTk, _)
   | AppTy (ListTk, _)
   | AppTy (NativePtrTk _, _)

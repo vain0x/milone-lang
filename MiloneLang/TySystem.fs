@@ -39,6 +39,7 @@ let private tkEncode tk =
   | NativePtrTk isMut -> 12, isMutToInt isMut
   | NativeFunTk -> 13, 0
 
+  | MetaTk (tySerial, _) -> 20, tySerial
   | SynonymTk tySerial -> 21, tySerial
   | UnionTk tySerial -> 22, tySerial
   | RecordTk tySerial -> 23, tySerial
@@ -81,6 +82,7 @@ let tkDisplay getTyName tk =
   | NativePtrTk IsConst -> "__constptr"
   | NativeFunTk -> "__nativeFun"
   | NativeTypeTk _ -> "__nativeType"
+  | MetaTk (tySerial, _) -> getTyName tySerial
   | SynonymTk tySerial -> getTyName tySerial
   | RecordTk tySerial -> getTyName tySerial
   | UnionTk tySerial -> getTyName tySerial
@@ -131,18 +133,6 @@ let tyIsFun ty =
 
 let tyCompare first second =
   match first, second with
-  | AppTy (ErrorTk l, _), AppTy (ErrorTk r, _) -> locCompare l r
-
-  | AppTy (ErrorTk _, _), _ -> -1
-  | _, AppTy (ErrorTk _, _) -> 1
-
-  | MetaTy (l1, l2), MetaTy (r1, r2) ->
-      let c = compare l1 r1
-      if c <> 0 then c else locCompare l2 r2
-
-  | MetaTy _, _ -> -1
-  | _, MetaTy _ -> 1
-
   | AppTy (firstTk, firstTys), AppTy (secondTk, secondTys) ->
       let c = tkCompare firstTk secondTk
       if c <> 0 then c else listCompare tyCompare firstTys secondTys
@@ -153,11 +143,11 @@ let tyEqual first second = tyCompare first second = 0
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
     match ty with
+    | AppTy (MetaTk (s, _), _) -> s <> tySerial
+
     | AppTy (_, []) -> true
 
     | AppTy (tk, ty :: tys) -> go ty && go (AppTy(tk, tys))
-
-    | MetaTy (s, _) -> s <> tySerial
 
   go ty
 
@@ -168,7 +158,7 @@ let tyIsMonomorphic ty: bool =
     match tys with
     | [] -> true
 
-    | MetaTy _ :: _ -> false
+    | AppTy (MetaTk _, _) :: _ -> false
 
     | AppTy (_, tys1) :: tys2 -> go tys1 && go tys2
 
@@ -181,16 +171,16 @@ let tyCollectFreeVars ty =
     match tys with
     | [] -> fvAcc
 
+    | AppTy (MetaTk (serial, _), _) :: tys ->
+        let acc = serial :: fvAcc
+        go acc tys
+
     | AppTy (_, []) :: tys -> go fvAcc tys
 
     | AppTy (_, tys1) :: tys2 ->
         let acc = go fvAcc tys1
         let acc = go acc tys2
         acc
-
-    | MetaTy (serial, _) :: tys ->
-        let acc = serial :: fvAcc
-        go acc tys
 
   go [] [ ty ] |> listUnique compare
 
@@ -207,15 +197,15 @@ let rec tyToArgList ty =
 let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
     match ty with
-    | AppTy (_, []) -> ty
-
-    | AppTy (tk, tys) -> AppTy(tk, List.map go tys)
-
-    | MetaTy (tySerial, _) ->
+    | AppTy (MetaTk (tySerial, _), _) ->
         match substMeta tySerial with
         | Some ty -> go ty
 
         | None -> ty
+
+    | AppTy (_, []) -> ty
+
+    | AppTy (tk, tys) -> AppTy(tk, List.map go tys)
 
   go ty
 
@@ -238,11 +228,6 @@ let tyDisplay getTyName ty =
           tk + "<" + args + ">"
 
     match ty with
-    | MetaTy (tySerial, loc) ->
-        match getTyName tySerial with
-        | Some name -> "{" + name + "}@" + locToString loc
-        | None -> "{?" + string tySerial + "}@" + locToString loc
-
     | AppTy (FunTk, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
 
     | AppTy (TupleTk, []) -> "unit"
@@ -253,6 +238,11 @@ let tyDisplay getTyName ty =
         + ")"
 
     | AppTy (ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
+
+    | AppTy (MetaTk (tySerial, loc), _) ->
+        match getTyName tySerial with
+        | Some name -> "{" + name + "}@" + locToString loc
+        | None -> "{?" + string tySerial + "}@" + locToString loc
 
     | AppTy (SynonymTk tySerial, args) -> nominal tySerial args
     | AppTy (UnionTk tySerial, args) -> nominal tySerial args
@@ -297,7 +287,8 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 
   // Don't bind itself.
   match typingSubst ctx ty with
-  | MetaTy (s, _) when s = tySerial -> ctx
+  | AppTy (MetaTk (s, _), _) when s = tySerial -> ctx
+
   | ty ->
       // Reduce level of meta tys in the referent ty to the meta ty's level at most.
       let tyLevels =
@@ -361,8 +352,6 @@ let tyExpandSynonyms expand ty =
 
     | AppTy (tk, tyArgs) -> AppTy(tk, tyArgs |> List.map go)
 
-    | _ -> ty
-
   go ty
 
 let typingExpandSynonyms (ctx: TyContext) ty =
@@ -378,8 +367,6 @@ let typingExpandSynonyms (ctx: TyContext) ty =
 
     | AppTy (tk, tyArgs) -> AppTy(tk, tyArgs |> List.map go)
 
-    | _ -> ty
-
   go ty
 
 [<NoEquality; NoComparison>]
@@ -394,7 +381,7 @@ let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
 
   | _ ->
       match typingSubst ctx otherTy with
-      | MetaTy (otherSerial, _) when otherSerial = tySerial -> DidBind ctx
+      | AppTy (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> DidBind ctx
 
       | otherTy when tyIsFreeIn otherTy tySerial |> not ->
           // ^ Occurrence check.
@@ -426,7 +413,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
              let newTySerial = ctx.Serial + 1
 
              let assignment =
-               (defTySerial, (MetaTy(newTySerial, loc)))
+               (defTySerial, (tyMeta newTySerial loc))
                :: assignment
 
              let ctx =
@@ -473,15 +460,15 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
 
   let rec go lTy rTy (logAcc, ctx) =
     match lTy, rTy with
-    | MetaTy (l, _), MetaTy (r, _) when l = r -> logAcc, ctx
+    | AppTy (MetaTk (l, _), _), AppTy (MetaTk (r, _), _) when l = r -> logAcc, ctx
 
-    | MetaTy (lSerial, loc), _ ->
+    | AppTy (MetaTk (lSerial, loc), _), _ ->
         match unifyMetaTy lSerial rTy loc ctx with
         | DidExpand ty -> go ty rTy (logAcc, ctx)
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
 
-    | _, MetaTy (rSerial, loc) ->
+    | _, AppTy (MetaTk (rSerial, loc), _) ->
         match unifyMetaTy rSerial lTy loc ctx with
         | DidExpand ty -> go lTy ty (logAcc, ctx)
         | DidBind ctx -> logAcc, ctx
