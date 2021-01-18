@@ -8,10 +8,10 @@
 #
 #   - $HOME/bin/
 #       - milone            (executable)
-#       - milone_dotnet    (executable)
+#       - milone_dotnet     (executable)
 #   - $HOME/.milone/
 #       - bin/
-#           - milone_dotnet/   (.NET binaries)
+#           - milone_dotnet/    (.NET binaries)
 #           - milone_lsp/       (.NET binaries)
 #       - milone_libs/          (copied from milone_libs)
 #       - version               (text file)
