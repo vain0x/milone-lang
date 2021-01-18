@@ -135,14 +135,6 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol): NsOwner =
 
 type Ns<'T> = AssocMap<NsOwner, (AssocMap<Ident, 'T>)>
 
-// FIXME: this emits code that doesn't compile due to use of incomplete type
-// type NameTree = NameTree of AssocMap<Serial, Serial list>
-//   > error: invalid use of undefined type ‘struct UnitNameTree_Fun1’
-//   >        struct NameTree_ app_193 = nameTreeEmpty_.fun(nameTreeEmpty_.env, 0);
-// let nameTreeEmpty: unit -> NameTree =
-//   let it = NameTree(mapEmpty (intHash, compare))
-//   fun () -> it
-
 let private nsFind (key: NsOwner) (ns: Ns<_>): AssocMap<Ident, _> =
   match ns |> mapTryFind key with
   | Some submap -> submap
