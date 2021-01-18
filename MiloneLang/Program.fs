@@ -10,8 +10,13 @@ let private readFile (filePath: string) =
     else None
   with _ -> None
 
-let dotnetCliHost args miloneHome: CliHost =
+let dotnetCliHost (): CliHost =
+  let args = System.Environment.GetCommandLineArgs() |> Array.toList
+
   let home = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile)
+
+  let miloneHome =
+    System.Environment.GetEnvironmentVariable("MILONE_HOME")
 
   { Args = args
     Home = home
@@ -21,10 +26,4 @@ let dotnetCliHost args miloneHome: CliHost =
     FileReadAllText = readFile }
 
 [<EntryPoint>]
-let main _ =
-  let args = System.Environment.GetCommandLineArgs() |> Array.toList
-
-  let miloneHome =
-    System.Environment.GetEnvironmentVariable("MILONE_HOME")
-
-  cli (dotnetCliHost args miloneHome)
+let main _ = cli (dotnetCliHost ())

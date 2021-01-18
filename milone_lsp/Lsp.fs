@@ -167,8 +167,7 @@ let private tyDisplayFn (tyCtx: Typing.TyCtx) ty =
   TySystem.tyDisplay getTyName ty
 
 let private doBundle (ls: LangServiceState) projectDir =
-  let cliHost =
-    Program.dotnetCliHost [] ls.Host.MiloneHome
+  let cliHost = Program.dotnetCliHost ()
 
   let compileCtx =
     Cli.compileCtxNew cliHost Cli.Quiet projectDir
