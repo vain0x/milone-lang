@@ -30,16 +30,8 @@ clean:
 # install
 # ------------------------------------------------
 
-install: target/install.timestamp
-
-target/install.timestamp:
+install:
 	./install
-	touch target/install.timestamp
 
-
-
-install-dev: build.ninja target/install-dev.timestamp
-
-target/install-dev.timestamp: build
+install-dev:
 	./install-dev
-	touch target/install-dev.timestamp
