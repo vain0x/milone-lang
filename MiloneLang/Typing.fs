@@ -335,9 +335,9 @@ let private resolveAscriptionTy ctx ascriptionTy =
 
     | AppTy (_, []) -> ty, ctx
 
-    | AppTy (tyCtor, tys) ->
+    | AppTy (tk, tys) ->
       let tys, ctx = (tys, ctx) |> stMap go
-      AppTy(tyCtor, tys), ctx
+      AppTy(tk, tys), ctx
 
   go (ascriptionTy, ctx)
 
@@ -612,7 +612,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
       match tyOpt |> Option.map (substTy ctx) with
-      | Some ((AppTy (RecordTyCtor tySerial, tyArgs)) as recordTy) ->
+      | Some ((AppTy (RecordTk tySerial, tyArgs)) as recordTy) ->
           assert (List.isEmpty tyArgs)
 
           match ctx |> findTy tySerial with
@@ -734,13 +734,13 @@ let private inferNavExpr ctx l (r: Ident) loc =
   let lTy = substTy ctx lTy
 
   match lTy, r with
-  | AppTy (StrTyCtor, []), "Length" ->
+  | AppTy (StrTk, []), "Length" ->
       let funExpr =
         HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
 
       hxApp funExpr l tyInt loc, tyInt, ctx
 
-  | AppTy (RecordTyCtor tySerial, tyArgs), _ ->
+  | AppTy (RecordTk tySerial, tyArgs), _ ->
       assert (List.isEmpty tyArgs)
 
       let fieldTyOpt =
@@ -765,7 +765,7 @@ let private inferAppExpr ctx itself callee arg loc =
   | HPrimExpr (HPrim.Printfn, _, _), HLitExpr (StrLit format, _) ->
       let funTy, targetTy =
         match analyzeFormat format with
-        | (AppTy (FunTyCtor, [ _; targetTy ])) as funTy -> funTy, targetTy
+        | (AppTy (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
         | _ -> failwith "NEVER"
 
       hxApp (HPrimExpr(HPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
@@ -1069,11 +1069,11 @@ let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
       | Some bodyTy -> rcsTy ctx bodyTy
       | None -> ctx
 
-  | AppTy (tyCtor, tyArgs) ->
+  | AppTy (tk, tyArgs) ->
       let ctx = rcsTys ctx tyArgs
 
-      match tyCtor with
-      | SynonymTyCtor tySerial -> rcsSynonymTy ctx tySerial
+      match tk with
+      | SynonymTk tySerial -> rcsSynonymTy ctx tySerial
       | _ -> ctx
 
 let private rcsTys ctx tys = List.fold rcsTy ctx tys

@@ -212,7 +212,7 @@ let private desugarLetDecl isRec vis pat body pos =
 
   | _ -> ALetValDecl(isRec, vis, pat, body, pos)
 
-let private tyUnresolved serial argTys = AppTy(UnresolvedTyCtor serial, argTys)
+let private tyUnresolved serial argTys = AppTy(UnresolvedTk serial, argTys)
 
 let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
@@ -235,7 +235,7 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   | AVarTy (name, pos) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
       let loc = toLoc docId pos
-      AppTy (UnresolvedVarTyCtor (tySerial, loc), []), nameCtx
+      AppTy (UnresolvedVarTk (tySerial, loc), []), nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId

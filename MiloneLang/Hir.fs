@@ -85,36 +85,36 @@ type IsMut =
 /// Type constructor.
 [<Struct>]
 [<NoEquality; NoComparison>]
-type TyCtor =
-  | IntTyCtor of intFlavor: IntFlavor
-  | FloatTyCtor of floatFlavor: FloatFlavor
-  | BoolTyCtor
-  | CharTyCtor
-  | StrTyCtor
-  | ObjTyCtor
+type Tk =
+  | IntTk of intFlavor: IntFlavor
+  | FloatTk of floatFlavor: FloatFlavor
+  | BoolTk
+  | CharTk
+  | StrTk
+  | ObjTk
 
   /// Ty args must be `[s; t]`.
-  | FunTyCtor
+  | FunTk
 
-  | TupleTyCtor
+  | TupleTk
 
   /// Ty args must be `[t]`.
-  | ListTyCtor
+  | ListTk
 
   // FFI types.
-  | VoidTyCtor
-  | NativePtrTyCtor of nativePtrIsMut: IsMut
-  | NativeFunTyCtor
-  | NativeTypeTyCtor of cCode: string
+  | VoidTk
+  | NativePtrTk of nativePtrIsMut: IsMut
+  | NativeFunTk
+  | NativeTypeTk of cCode: string
 
   // Nominal types.
-  | SynonymTyCtor of synonymTy: TySerial
-  | UnionTyCtor of unionTy: TySerial
-  | RecordTyCtor of recordTy: TySerial
+  | SynonymTk of synonymTy: TySerial
+  | UnionTk of unionTy: TySerial
+  | RecordTk of recordTy: TySerial
 
   /// Unresolved type. Generated in AstToHir, resolved in NameRes.
-  | UnresolvedTyCtor of quals: Serial list * unresolvedSerial: Serial
-  | UnresolvedVarTyCtor of unresolvedVarTySerial: (Serial * Loc)
+  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial
+  | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
 [<Struct>]
@@ -126,7 +126,7 @@ type Ty =
   | MetaTy of metaTySerial: Serial * metaLoc: Loc
 
   /// Type application.
-  | AppTy of TyCtor * tyArgs: Ty list
+  | AppTy of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
 [<Struct>]
@@ -555,41 +555,41 @@ let nameCtxAdd name (NameCtx (map, serial)) =
 let noTy = ErrorTy noLoc
 
 let tyInt =
-  AppTy(IntTyCtor(IntFlavor(Signed, I32)), [])
+  AppTy(IntTk(IntFlavor(Signed, I32)), [])
 
-let tyBool = AppTy(BoolTyCtor, [])
+let tyBool = AppTy(BoolTk, [])
 
-let tyFloat = AppTy(FloatTyCtor F64, [])
+let tyFloat = AppTy(FloatTk F64, [])
 
-let tyChar = AppTy(CharTyCtor, [])
+let tyChar = AppTy(CharTk, [])
 
-let tyStr = AppTy(StrTyCtor, [])
+let tyStr = AppTy(StrTk, [])
 
-let tyObj = AppTy(ObjTyCtor, [])
+let tyObj = AppTy(ObjTk, [])
 
-let tyTuple tys = AppTy(TupleTyCtor, tys)
+let tyTuple tys = AppTy(TupleTk, tys)
 
-let tyList ty = AppTy(ListTyCtor, [ ty ])
+let tyList ty = AppTy(ListTk, [ ty ])
 
 let tyFun sourceTy targetTy =
-  AppTy(FunTyCtor, [ sourceTy; targetTy ])
+  AppTy(FunTk, [ sourceTy; targetTy ])
 
 let tyConstPtr itemTy =
-  AppTy(NativePtrTyCtor IsConst, [ itemTy ])
+  AppTy(NativePtrTk IsConst, [ itemTy ])
 
 let tyNativePtr itemTy =
-  AppTy(NativePtrTyCtor IsMut, [ itemTy ])
+  AppTy(NativePtrTk IsMut, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
-  AppTy(NativeFunTyCtor, List.append paramTys [ resultTy ])
+  AppTy(NativeFunTk, List.append paramTys [ resultTy ])
 
 let tyUnit = tyTuple []
 
-let tySynonym tySerial tyArgs = AppTy(SynonymTyCtor tySerial, tyArgs)
+let tySynonym tySerial tyArgs = AppTy(SynonymTk tySerial, tyArgs)
 
-let tyUnion tySerial = AppTy(UnionTyCtor tySerial, [])
+let tyUnion tySerial = AppTy(UnionTk tySerial, [])
 
-let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
+let tyRecord tySerial = AppTy(RecordTk tySerial, [])
 
 // -----------------------------------------------
 // Type definitions (HIR)
@@ -789,12 +789,12 @@ let primToTySpec prim =
 
   | HPrim.ToInt flavor ->
       let toIntTy = meta 1
-      let resultTy = AppTy(IntTyCtor flavor, [])
+      let resultTy = AppTy(IntTk flavor, [])
       poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
 
   | HPrim.ToFloat flavor ->
       let srcTy = meta 1
-      let resultTy = AppTy(FloatTyCtor flavor, [])
+      let resultTy = AppTy(FloatTk flavor, [])
       poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
 
   | HPrim.String ->

@@ -15,7 +15,7 @@ open MiloneLang.Mir
 
 let private unwrapListTy ty =
   match ty with
-  | AppTy (ListTyCtor, [ it ]) -> it
+  | AppTy (ListTk, [ it ]) -> it
   | _ -> failwith "NEVER"
 
 // -----------------------------------------------
@@ -184,12 +184,12 @@ let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   assert (opIsComparison op)
 
   match mexprToTy l with
-  | AppTy ((IntTyCtor _
-           | FloatTyCtor _
-           | BoolTyCtor
-           | CharTyCtor),
+  | AppTy ((IntTk _
+           | FloatTk _
+           | BoolTk
+           | CharTk),
            _) -> mxBinOpScalar ctx op l r (ty, loc)
-  | AppTy (StrTyCtor, _) -> mxStrCompare ctx op l r (ty, loc)
+  | AppTy (StrTk, _) -> mxStrCompare ctx op l r (ty, loc)
   | _ -> failwithf "unimpl %A" (op, l, ty)
 
 let private mtAbort loc =
@@ -464,7 +464,7 @@ let private doEmitIfStmt ctx cond thenHint body altHint alt targetTy loc =
 /// when `match p with true -> body | false -> alt`.
 let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
   match exprToTy cond, arms with
-  | AppTy (BoolTyCtor, []),
+  | AppTy (BoolTk, []),
     [ HLitPat (BoolLit true, _), HLitExpr (BoolLit true, _), body;
       HLitPat (BoolLit false, _), HLitExpr (BoolLit true, _), alt ] ->
       let cond, ctx = mirifyExpr ctx cond
@@ -473,7 +473,7 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
       |> Some
 
   // | None -> ... | _ -> ...
-  | AppTy (ListTyCtor, _),
+  | AppTy (ListTk, _),
     [ HNodePat (HNonePN, _, _, _), HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
       let cond, ctx = mirifyExpr ctx cond
 
@@ -485,7 +485,7 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
       |> Some
 
   // | [] -> ... | _ -> ...
-  | AppTy (ListTyCtor, _),
+  | AppTy (ListTk, _),
     [ HNodePat (HNilPN, _, _, _), HLitExpr (BoolLit true, _), nilCl; HDiscardPat _, HLitExpr (BoolLit true, _), consCl ] ->
       let cond, ctx = mirifyExpr ctx cond
 
@@ -501,9 +501,9 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
 let private matchExprCanCompileToSwitch cond arms =
   let tyIsLit ty =
     match ty with
-    | AppTy (IntTyCtor _, [])
-    | AppTy (CharTyCtor, [])
-    | AppTy (UnionTyCtor _, _) -> true
+    | AppTy (IntTk _, [])
+    | AppTy (CharTk, [])
+    | AppTy (UnionTk _, _) -> true
 
     | _ -> false
 
@@ -567,7 +567,7 @@ let private mirifyExprMatchAsSwitchStmt ctx cond arms ty loc =
     let cond, ctx = mirifyExpr ctx cond
 
     match condTy with
-    | AppTy (UnionTyCtor _, _) -> MUnaryExpr(MGetDiscriminantUnary, cond, tyInt, condLoc), ctx
+    | AppTy (UnionTk _, _) -> MUnaryExpr(MGetDiscriminantUnary, cond, tyInt, condLoc), ctx
     | _ -> cond, ctx
 
   let exhaust, clauses, blocks, ctx =
@@ -874,7 +874,7 @@ let private mirifyExprTuple ctx items itemTys loc =
 let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let name =
     match ty with
-    | AppTy (RecordTyCtor tySerial, _) -> ctx.Tys |> mapFind tySerial |> tyDefToName
+    | AppTy (RecordTk tySerial, _) -> ctx.Tys |> mapFind tySerial |> tyDefToName
     | _ -> failwith "NEVER"
 
   let _, tempSerial, ctx = freshVar ctx name ty loc
@@ -898,12 +898,12 @@ let private mirifyExprOpArith ctx itself op l r ty loc =
   let r, ctx = mirifyExpr ctx r
 
   match lTy with
-  | AppTy ((IntTyCtor _
-           | FloatTyCtor _
-           | CharTyCtor),
+  | AppTy ((IntTk _
+           | FloatTk _
+           | CharTk),
            _) -> mxBinOpScalar ctx op l r (ty, loc)
 
-  | AppTy (StrTyCtor, _) when op |> mOpIsAdd -> mxStrAdd ctx op l r (ty, loc)
+  | AppTy (StrTk, _) when op |> mOpIsAdd -> mxStrAdd ctx op l r (ty, loc)
 
   | _ -> failwithf "NEVER: %A" itself
 
@@ -918,22 +918,22 @@ let private mirifyCallCompareExpr ctx itself l r ty loc =
 
   match mexprToTy l with
   // Comparison of small or unsigned integers is just `-` for not overflow.
-  | AppTy ((IntTyCtor (IntFlavor (_, I8))
-           | IntTyCtor (IntFlavor (_, I16))
-           | BoolTyCtor
-           | CharTyCtor),
+  | AppTy ((IntTk (IntFlavor (_, I8))
+           | IntTk (IntFlavor (_, I16))
+           | BoolTk
+           | CharTk),
            _) -> MBinaryExpr(MSubBinary, l, r, tyInt, loc), ctx
 
-  | AppTy (IntTyCtor (IntFlavor (Signed, I32)), _) -> MBinaryExpr(MIntCompareBinary, l, r, tyInt, loc), ctx
+  | AppTy (IntTk (IntFlavor (Signed, I32)), _) -> MBinaryExpr(MIntCompareBinary, l, r, tyInt, loc), ctx
 
-  | AppTy ((IntTyCtor (IntFlavor (Signed, I64))
-           | IntTyCtor (IntFlavor (Signed, IPtr))
-           | NativePtrTyCtor _),
+  | AppTy ((IntTk (IntFlavor (Signed, I64))
+           | IntTk (IntFlavor (Signed, IPtr))
+           | NativePtrTk _),
            _) -> MBinaryExpr(MInt64CompareBinary, l, r, tyInt, loc), ctx
 
-  | AppTy ((IntTyCtor (IntFlavor (Unsigned, _))), _) -> MBinaryExpr(MUInt64CompareBinary, l, r, tyInt, loc), ctx
+  | AppTy ((IntTk (IntFlavor (Unsigned, _))), _) -> MBinaryExpr(MUInt64CompareBinary, l, r, tyInt, loc), ctx
 
-  | AppTy (StrTyCtor, _) -> MBinaryExpr(MStrCompareBinary, l, r, tyInt, loc), ctx
+  | AppTy (StrTk, _) -> MBinaryExpr(MStrCompareBinary, l, r, tyInt, loc), ctx
 
   | _ -> failwithf "NEVER: %A" itself
 
@@ -942,15 +942,15 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
 
   match srcTy with
-  | AppTy (IntTyCtor srcFlavor, _) when intFlavorEqual srcFlavor flavor -> arg, ctx
+  | AppTy (IntTk srcFlavor, _) when intFlavorEqual srcFlavor flavor -> arg, ctx
 
-  | AppTy ((IntTyCtor _
-           | FloatTyCtor _
-           | CharTyCtor
-           | NativePtrTyCtor _),
-           _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, AppTy(IntTyCtor flavor, []), loc), ctx
+  | AppTy ((IntTk _
+           | FloatTk _
+           | CharTk
+           | NativePtrTk _),
+           _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, AppTy(IntTk flavor, []), loc), ctx
 
-  | AppTy (StrTyCtor, _) ->
+  | AppTy (StrTk, _) ->
       let temp, tempSerial, ctx = freshVar ctx "call" ty loc
       let ctx = addStmt ctx (MPrimStmt(MIntOfStrPrim flavor, [ arg ], tempSerial, loc))
       temp, ctx
@@ -962,11 +962,11 @@ let private mirifyCallToFloatExpr ctx itself flavor arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
 
   match srcTy with
-  | AppTy (FloatTyCtor _, _) -> arg, ctx
+  | AppTy (FloatTk _, _) -> arg, ctx
 
-  | AppTy (IntTyCtor _, _) -> MUnaryExpr(MFloatOfScalarUnary flavor, arg, tyFloat, loc), ctx
+  | AppTy (IntTk _, _) -> MUnaryExpr(MFloatOfScalarUnary flavor, arg, tyFloat, loc), ctx
 
-  | AppTy (StrTyCtor, _) ->
+  | AppTy (StrTk, _) ->
       let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
       let ctx =
@@ -981,13 +981,13 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
 
   match argTy with
-  | AppTy (CharTyCtor, _) -> arg, ctx
+  | AppTy (CharTk, _) -> arg, ctx
 
-  | AppTy ((IntTyCtor _
-           | FloatTyCtor _),
+  | AppTy ((IntTk _
+           | FloatTk _),
            _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
 
-  | AppTy (StrTyCtor, _) ->
+  | AppTy (StrTk, _) ->
       let temp, tempSerial, ctx = freshVar ctx "char_of_string" ty loc
 
       let ctx =
@@ -1010,12 +1010,12 @@ let private mirifyCallStringExpr ctx itself arg ty loc =
     temp, ctx
 
   match argTy with
-  | AppTy (StrTyCtor, _) -> arg, ctx
+  | AppTy (StrTk, _) -> arg, ctx
 
-  | AppTy (IntTyCtor flavor, _) -> usePrim (MStrOfIntPrim flavor)
-  | AppTy (FloatTyCtor flavor, _) -> usePrim (MStrOfFloatPrim flavor)
-  | AppTy (BoolTyCtor, _) -> usePrim MStrOfBoolPrim
-  | AppTy (CharTyCtor, _) -> usePrim MStrOfCharPrim
+  | AppTy (IntTk flavor, _) -> usePrim (MStrOfIntPrim flavor)
+  | AppTy (FloatTk flavor, _) -> usePrim (MStrOfFloatPrim flavor)
+  | AppTy (BoolTk, _) -> usePrim MStrOfBoolPrim
+  | AppTy (CharTk, _) -> usePrim MStrOfCharPrim
 
   | _ -> failwithf "NEVER: %A" itself
 
@@ -1280,8 +1280,8 @@ let private mirifyExprInf ctx itself kind args ty loc =
       let arg, ctx = mirifyExpr ctx arg
       MUnaryExpr(MMinusUnary, arg, ty, loc), ctx
 
-  | HTupleEN, [], AppTy (TupleTyCtor, []) -> MDefaultExpr(tyUnit, loc), ctx
-  | HTupleEN, _, AppTy (TupleTyCtor, itemTys) -> mirifyExprTuple ctx args itemTys loc
+  | HTupleEN, [], AppTy (TupleTk, []) -> MDefaultExpr(tyUnit, loc), ctx
+  | HTupleEN, _, AppTy (TupleTk, itemTys) -> mirifyExprTuple ctx args itemTys loc
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
   | HRecordItemEN index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
 

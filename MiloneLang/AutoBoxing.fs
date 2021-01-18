@@ -15,7 +15,7 @@ module Int = MiloneStd.StdInt
 
 let private tyIsRecord ty =
   match ty with
-  | AppTy (RecordTyCtor _, _) -> true
+  | AppTy (RecordTk _, _) -> true
   | _ -> false
 
 let private hxBox itemExpr itemTy loc =
@@ -140,34 +140,34 @@ let private trdTy (ctx: TrdCtx) ty =
   | ErrorTy _
   | MetaTy _ -> ctx
 
-  | AppTy (tyCtor, tyArgs) ->
+  | AppTy (tk, tyArgs) ->
       let nominal tySerial =
         trdTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
-      match tyCtor with
-      | IntTyCtor _
-      | FloatTyCtor _
-      | BoolTyCtor
-      | CharTyCtor
-      | StrTyCtor
-      | ObjTyCtor
-      | VoidTyCtor ->
+      match tk with
+      | IntTk _
+      | FloatTk _
+      | BoolTk
+      | CharTk
+      | StrTk
+      | ObjTk
+      | VoidTk ->
           assert (List.isEmpty tyArgs)
           ctx
 
-      | ListTyCtor
-      | FunTyCtor
-      | TupleTyCtor
-      | NativePtrTyCtor _
-      | NativeFunTyCtor
-      | NativeTypeTyCtor _ -> tyArgs |> List.fold trdTy ctx
+      | ListTk
+      | FunTk
+      | TupleTk
+      | NativePtrTk _
+      | NativeFunTk
+      | NativeTypeTk _ -> tyArgs |> List.fold trdTy ctx
 
-      | UnionTyCtor tySerial -> nominal tySerial
-      | RecordTyCtor tySerial -> nominal tySerial
+      | UnionTk tySerial -> nominal tySerial
+      | RecordTk tySerial -> nominal tySerial
 
-      | SynonymTyCtor _
-      | UnresolvedTyCtor _
-      | UnresolvedVarTyCtor _ -> failwith "NEVER"
+      | SynonymTk _
+      | UnresolvedTk _
+      | UnresolvedVarTk _ -> failwith "NEVER"
 
 let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
   let ctx: TrdCtx =
@@ -316,27 +316,27 @@ let private tsmTy (ctx: TsmCtx) ty =
   | ErrorTy _
   | MetaTy _ -> 1000000, ctx
 
-  | AppTy (tyCtor, tyArgs) ->
+  | AppTy (tk, tyArgs) ->
       let nominal tySerial =
         tsmTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
-      match tyCtor with
-      | BoolTyCtor
-      | CharTyCtor
-      | VoidTyCtor -> 1, ctx
+      match tk with
+      | BoolTk
+      | CharTk
+      | VoidTk -> 1, ctx
 
-      | IntTyCtor flavor -> intFlavorToBytes flavor, ctx
-      | FloatTyCtor flavor -> floatFlavorToBytes flavor, ctx
+      | IntTk flavor -> intFlavorToBytes flavor, ctx
+      | FloatTk flavor -> floatFlavorToBytes flavor, ctx
 
-      | ObjTyCtor
-      | ListTyCtor
-      | NativePtrTyCtor _
-      | NativeFunTyCtor -> 8, ctx
+      | ObjTk
+      | ListTk
+      | NativePtrTk _
+      | NativeFunTk -> 8, ctx
 
-      | StrTyCtor
-      | FunTyCtor -> 16, ctx
+      | StrTk
+      | FunTk -> 16, ctx
 
-      | TupleTyCtor ->
+      | TupleTk ->
           let size, ctx =
             tyArgs
             |> List.fold
@@ -347,14 +347,14 @@ let private tsmTy (ctx: TsmCtx) ty =
 
           Int.max 1 size, ctx
 
-      | UnionTyCtor tySerial -> nominal tySerial
-      | RecordTyCtor tySerial -> nominal tySerial
+      | UnionTk tySerial -> nominal tySerial
+      | RecordTk tySerial -> nominal tySerial
 
-      | NativeTypeTyCtor _ -> 1000000, ctx
+      | NativeTypeTk _ -> 1000000, ctx
 
-      | SynonymTyCtor _
-      | UnresolvedTyCtor _
-      | UnresolvedVarTyCtor _ -> failwith "NEVER"
+      | SynonymTk _
+      | UnresolvedTk _
+      | UnresolvedVarTk _ -> failwith "NEVER"
 
 let private measureTys (trdCtx: TrdCtx): TsmCtx =
   let boxedVariants =
@@ -428,7 +428,7 @@ let private needsBoxedRecordTySerial (ctx: AbCtx) tySerial =
 
 let private needsBoxedRecordTy ctx ty =
   match ty with
-  | AppTy (RecordTyCtor tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
+  | AppTy (RecordTk tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
   | _ -> false
 
 /// ### Boxing of Payloads
@@ -526,16 +526,16 @@ let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
 
 let private abTy ctx ty =
   match ty with
-  | AppTy (RecordTyCtor _, tyArgs) ->
+  | AppTy (RecordTk _, tyArgs) ->
       assert (List.isEmpty tyArgs)
 
       match eraseRecordTy ctx ty with
       | Some ty -> ty
       | None -> ty
 
-  | AppTy (tyCtor, tyArgs) ->
+  | AppTy (tk, tyArgs) ->
       let tyArgs = tyArgs |> List.map (abTy ctx)
-      AppTy(tyCtor, tyArgs)
+      AppTy(tk, tyArgs)
 
   | MetaTy _
   | ErrorTy _ -> ty

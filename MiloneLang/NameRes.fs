@@ -36,34 +36,34 @@ let private tyPrimOfName name tys =
   | "int32", [] -> Some tyInt
   | "uint", []
   | "uint32", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, I32)), [])
+      AppTy(IntTk(IntFlavor(Unsigned, I32)), [])
       |> Some
   | "sbyte", []
   | "int8", [] ->
-      AppTy(IntTyCtor(IntFlavor(Signed, I8)), [])
+      AppTy(IntTk(IntFlavor(Signed, I8)), [])
       |> Some
   | "byte", []
   | "uint8", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, I8)), [])
+      AppTy(IntTk(IntFlavor(Unsigned, I8)), [])
       |> Some
 
   | "int16", [] ->
-      AppTy(IntTyCtor(IntFlavor(Signed, I16)), [])
+      AppTy(IntTk(IntFlavor(Signed, I16)), [])
       |> Some
   | "int64", [] ->
-      AppTy(IntTyCtor(IntFlavor(Signed, I64)), [])
+      AppTy(IntTk(IntFlavor(Signed, I64)), [])
       |> Some
   | "nativeint", [] ->
-      AppTy(IntTyCtor(IntFlavor(Signed, IPtr)), [])
+      AppTy(IntTk(IntFlavor(Signed, IPtr)), [])
       |> Some
   | "uint16", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, I16)), [])
+      AppTy(IntTk(IntFlavor(Unsigned, I16)), [])
       |> Some
   | "uint64", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, I64)), [])
+      AppTy(IntTk(IntFlavor(Unsigned, I64)), [])
       |> Some
   | "unativeint", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, IPtr)), [])
+      AppTy(IntTk(IntFlavor(Unsigned, IPtr)), [])
       |> Some
 
   | "float", [] -> Some tyFloat
@@ -78,13 +78,13 @@ let private tyPrimOfName name tys =
   | "list", [ itemTy ] -> Some(tyList itemTy)
 
   | "voidptr", [] ->
-      AppTy(NativePtrTyCtor IsMut, [ AppTy(VoidTyCtor, []) ])
+      AppTy(NativePtrTk IsMut, [ AppTy(VoidTk, []) ])
       |> Some
-  | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ]) |> Some
-  | "__constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ]) |> Some
+  | "nativeptr", [ itemTy ] -> AppTy(NativePtrTk IsMut, [ itemTy ]) |> Some
+  | "__constptr", [ itemTy ] -> AppTy(NativePtrTk IsConst, [ itemTy ]) |> Some
 
-  | "__nativeFun", [ AppTy (TupleTyCtor, itemTys); resultTy ] ->
-      AppTy(NativeFunTyCtor, List.append itemTys [ resultTy ])
+  | "__nativeFun", [ AppTy (TupleTk, itemTys); resultTy ] ->
+      AppTy(NativeFunTk, List.append itemTys [ resultTy ])
       |> Some
 
   | _ -> None
@@ -572,15 +572,15 @@ let private resolveTy ty loc scopeCtx =
     match ty with
     | ErrorTy _ -> ty, scopeCtx
 
-    | AppTy (UnresolvedTyCtor ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
+    | AppTy (UnresolvedTk ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
         MetaTy(serial, loc), scopeCtx
 
-    | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when
+    | AppTy (UnresolvedTk ([], serial), [ AppTy (UnresolvedTk ([], itemSerial), _) ]) when
       (scopeCtx |> findName serial = "__nativeType") ->
         let code = scopeCtx |> findName itemSerial
-        AppTy(NativeTypeTyCtor code, []), scopeCtx
+        AppTy(NativeTypeTk code, []), scopeCtx
 
-    | AppTy (UnresolvedVarTyCtor (serial, loc), tys) ->
+    | AppTy (UnresolvedVarTk (serial, loc), tys) ->
         assert (List.isEmpty tys)
         let name = scopeCtx |> findName serial
 
@@ -600,7 +600,7 @@ let private resolveTy ty loc scopeCtx =
 
             MetaTy(serial, loc), scopeCtx
 
-    | AppTy (UnresolvedTyCtor (quals, serial), tys) ->
+    | AppTy (UnresolvedTk (quals, serial), tys) ->
         let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
         let arity = List.length tys
@@ -641,9 +641,9 @@ let private resolveTy ty loc scopeCtx =
 
                 ErrorTy loc, scopeCtx
 
-    | AppTy (tyCtor, tys) ->
+    | AppTy (tk, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
-        AppTy(tyCtor, tys), scopeCtx
+        AppTy(tk, tys), scopeCtx
 
     | _ -> ty, scopeCtx
 

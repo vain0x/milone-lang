@@ -111,7 +111,7 @@ let private buildRecordMap (ctx: RrCtx) =
 let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   let fieldTys, fieldMap =
     match ty with
-    | AppTy (RecordTyCtor tySerial, _) ->
+    | AppTy (RecordTk tySerial, _) ->
         match ctx.RecordMap |> mapTryFind tySerial with
         | Some (fieldTys, fieldMap) -> fieldTys, fieldMap
         | _ -> failwithf "NEVER: %A" itself
@@ -166,7 +166,7 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
 let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
   let index =
     match recordTy with
-    | AppTy (RecordTyCtor tySerial, _) ->
+    | AppTy (RecordTk tySerial, _) ->
         let _, fieldMap = ctx.RecordMap |> mapFind tySerial
 
         let index, _ = fieldMap |> mapFind r
