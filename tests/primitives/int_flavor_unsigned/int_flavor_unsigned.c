@@ -8,7 +8,7 @@ int milone_main() {
     uint32_t call_ = str_to_uint32((struct String){.str = "42", .len = 2});
     milone_assert((((int)call_) == 42), 10, 2);
     struct String call_1 = str_of_uint64(((uint32_t)42));
-    milone_assert((str_cmp(call_1, (struct String){.str = "42", .len = 2}) == 0), 11, 2);
+    milone_assert((str_compare(call_1, (struct String){.str = "42", .len = 2}) == 0), 11, 2);
     milone_assert((((int)(((uint32_t)40) + ((uint32_t)2))) == 42), 14, 2);
     milone_assert((((int)(((uint32_t)49) - ((uint32_t)7))) == 42), 15, 2);
     milone_assert((((int)(((uint32_t)6) * ((uint32_t)7))) == 42), 16, 2);

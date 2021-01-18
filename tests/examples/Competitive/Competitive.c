@@ -1046,7 +1046,7 @@ if_next_67:;
 }
 
 bool strEq_(struct String first_3, struct String second_3) {
-    return (str_cmp(first_3, second_3) == 0);
+    return (str_compare(first_3, second_3) == 0);
 }
 
 int failwith_1(struct String msg_) {

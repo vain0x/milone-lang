@@ -106,7 +106,7 @@ let private currentIsTopLevel (mode, _, _, _) =
 
 let private isMainFun funSerial (_, _, _, mainFunOpt) =
   match mainFunOpt with
-  | Some mainFun -> funSerialCmp mainFun funSerial = 0
+  | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
 
 let private withMainFun mainFunOpt (mode, decls, exprs, _) = mode, decls, exprs, mainFunOpt

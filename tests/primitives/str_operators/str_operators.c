@@ -15,22 +15,22 @@ int milone_main();
 int addTest_(int arg_) {
     struct String hello_ = (struct String){.str = "Hello", .len = 5};
     struct String world_ = (struct String){.str = ", world!", .len = 8};
-    milone_assert((str_cmp(str_add(hello_, world_), (struct String){.str = "Hello, world!", .len = 13}) == 0), 5, 2);
+    milone_assert((str_compare(str_add(hello_, world_), (struct String){.str = "Hello, world!", .len = 13}) == 0), 5, 2);
     milone_assert((str_add((struct String){.str = "a", .len = 1}, (struct String){.str = "\0b", .len = 2}).str[2] == 'b'), 8, 2);
     return 0;
 }
 
 int compareTest_(int arg_1) {
-    milone_assert((str_cmp((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0}) == 0), 11, 2);
-    milone_assert((str_cmp((struct String){.str = "o", .len = 1}, (struct String){.str = "o", .len = 1}) == 0), 12, 2);
-    milone_assert((str_cmp((struct String){.str = "alpha", .len = 5}, (struct String){.str = "alpha", .len = 5}) == 0), 13, 2);
-    milone_assert((str_cmp((struct String){.str = "a", .len = 1}, (struct String){.str = "b", .len = 1}) < 0), 15, 2);
-    milone_assert((str_cmp((struct String){.str = "alpha", .len = 5}, (struct String){.str = "beta", .len = 4}) < 0), 16, 2);
-    milone_assert((str_cmp((struct String){.str = "a", .len = 1}, (struct String){.str = "z", .len = 1}) < 0), 18, 2);
-    milone_assert((str_cmp((struct String){.str = "alpha", .len = 5}, (struct String){.str = "beta", .len = 4}) < 0), 20, 2);
-    milone_assert((str_cmp((struct String){.str = "alpha", .len = 5}, (struct String){.str = "alpha", .len = 5}) == 0), 21, 2);
-    milone_assert((0 < str_cmp((struct String){.str = "beta", .len = 4}, (struct String){.str = "alpha", .len = 5})), 22, 2);
-    milone_assert((str_cmp((struct String){.str = "\0x", .len = 2}, (struct String){.str = "\0y", .len = 2}) < 0), 25, 2);
+    milone_assert((str_compare((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0}) == 0), 11, 2);
+    milone_assert((str_compare((struct String){.str = "o", .len = 1}, (struct String){.str = "o", .len = 1}) == 0), 12, 2);
+    milone_assert((str_compare((struct String){.str = "alpha", .len = 5}, (struct String){.str = "alpha", .len = 5}) == 0), 13, 2);
+    milone_assert((str_compare((struct String){.str = "a", .len = 1}, (struct String){.str = "b", .len = 1}) < 0), 15, 2);
+    milone_assert((str_compare((struct String){.str = "alpha", .len = 5}, (struct String){.str = "beta", .len = 4}) < 0), 16, 2);
+    milone_assert((str_compare((struct String){.str = "a", .len = 1}, (struct String){.str = "z", .len = 1}) < 0), 18, 2);
+    milone_assert((str_compare((struct String){.str = "alpha", .len = 5}, (struct String){.str = "beta", .len = 4}) < 0), 20, 2);
+    milone_assert((str_compare((struct String){.str = "alpha", .len = 5}, (struct String){.str = "alpha", .len = 5}) == 0), 21, 2);
+    milone_assert((0 < str_compare((struct String){.str = "beta", .len = 4}, (struct String){.str = "alpha", .len = 5})), 22, 2);
+    milone_assert((str_compare((struct String){.str = "\0x", .len = 2}, (struct String){.str = "\0y", .len = 2}) < 0), 25, 2);
     return 0;
 }
 
@@ -62,11 +62,11 @@ if_next_1:;
 int subscriptOperatorTest_(int arg_3) {
     struct String str_ = (struct String){.str = "Hello, John!", .len = 12};
     struct String slice_ = str_get_slice(0, 4, str_);
-    milone_assert((str_cmp(slice_, (struct String){.str = "Hello", .len = 5}) == 0), 42, 2);
+    milone_assert((str_compare(slice_, (struct String){.str = "Hello", .len = 5}) == 0), 42, 2);
     struct String slice_1 = str_get_slice(7, 10, str_);
-    milone_assert((str_cmp(slice_1, (struct String){.str = "John", .len = 4}) == 0), 43, 2);
+    milone_assert((str_compare(slice_1, (struct String){.str = "John", .len = 4}) == 0), 43, 2);
     struct String slice_2 = str_get_slice(11, 11, str_);
-    milone_assert((str_cmp(slice_2, (struct String){.str = "!", .len = 1}) == 0), 44, 2);
+    milone_assert((str_compare(slice_2, (struct String){.str = "!", .len = 1}) == 0), 44, 2);
     return 0;
 }
 

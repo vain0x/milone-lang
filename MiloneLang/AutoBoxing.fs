@@ -173,7 +173,7 @@ let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
   let ctx: TrdCtx =
     { Variants = tyCtx.Variants
       Tys = tyCtx.Tys
-      VariantMemo = mapEmpty variantSerialCmp
+      VariantMemo = mapEmpty variantSerialCompare
       RecordTyMemo = mapEmpty compare }
 
   let ctx = tyCtx.Tys |> mapFold trdTyDef ctx
@@ -365,7 +365,7 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
            | Boxed -> set |> setAdd variantSerial
            | Unboxed -> set
            | Recursive -> failwith "NEVER")
-         (setEmpty variantSerialCmp)
+         (setEmpty variantSerialCompare)
 
   let boxedRecordTys =
     trdCtx.RecordTyMemo
@@ -382,7 +382,7 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
       Tys = trdCtx.Tys
       BoxedVariants = boxedVariants
       BoxedRecordTys = boxedRecordTys
-      VariantMemo = mapEmpty variantSerialCmp
+      VariantMemo = mapEmpty variantSerialCompare
       RecordTyMemo = mapEmpty compare }
 
   let ctx =
@@ -411,7 +411,7 @@ let private ofTyCtx (tyCtx: TyCtx): AbCtx =
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
-    BoxedVariants = mapEmpty variantSerialCmp
+    BoxedVariants = mapEmpty variantSerialCompare
     BoxedRecordTys = mapEmpty compare }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =

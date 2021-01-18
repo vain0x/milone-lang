@@ -149,7 +149,7 @@ type Trait =
   | EqTrait of Ty
 
   /// The type supports `<`.
-  | CmpTrait of Ty
+  | CompareTrait of Ty
 
   /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
   | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
@@ -597,12 +597,12 @@ let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
 
 let moduleTySerialToInt (ModuleTySerial serial) = serial
 
-let moduleTySerialCmp l r =
+let moduleTySerialCompare l r =
   moduleTySerialToInt l - moduleTySerialToInt r
 
 let moduleSynonymSerialToInt (ModuleSynonymSerial serial) = serial
 
-let moduleSynonymSerialCmp l r =
+let moduleSynonymSerialCompare l r =
   moduleSynonymSerialToInt l
   - moduleSynonymSerialToInt r
 
@@ -620,17 +620,17 @@ let tyDefToName tyDef =
 
 let varSerialToInt (VarSerial serial) = serial
 
-let varSerialCmp l r =
+let varSerialCompare l r =
   compare (varSerialToInt l) (varSerialToInt r)
 
 let funSerialToInt (FunSerial serial) = serial
 
-let funSerialCmp l r =
+let funSerialCompare l r =
   compare (funSerialToInt l) (funSerialToInt r)
 
 let variantSerialToInt (VariantSerial serial) = serial
 
-let variantSerialCmp l r =
+let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
 let varDefToName varDef =
@@ -742,12 +742,12 @@ let primToTySpec prim =
       poly (tyFun eqTy (tyFun eqTy tyBool)) [ EqTrait eqTy ]
 
   | HPrim.Lt ->
-      let cmpTy = meta 1
-      poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ CmpTrait cmpTy ]
+      let compareTy = meta 1
+      poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
 
   | HPrim.Compare ->
-      let cmpTy = meta 1
-      poly (tyFun cmpTy (tyFun cmpTy tyInt)) [ CmpTrait cmpTy ]
+      let compareTy = meta 1
+      poly (tyFun compareTy (tyFun compareTy tyInt)) [ CompareTrait compareTy ]
 
   | HPrim.Nil ->
       let itemTy = meta 1
@@ -1128,7 +1128,7 @@ let private traitBoundErrorToString tyDisplay it =
       "Equality is not defined for type: "
       + tyDisplay ty
 
-  | CmpTrait ty ->
+  | CompareTrait ty ->
       "Comparison is not defined for type: "
       + tyDisplay ty
 

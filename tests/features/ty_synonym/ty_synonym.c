@@ -74,7 +74,7 @@ int polymorphicFunCase_(int arg_1) {
     int call_ = proj_2(true, 1, 0);
     milone_assert((call_ == 1), 21, 2);
     struct String call_1 = proj_1(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
-    milone_assert((str_cmp(call_1, (struct String){.str = "F", .len = 1}) == 0), 22, 2);
+    milone_assert((str_compare(call_1, (struct String){.str = "F", .len = 1}) == 0), 22, 2);
     return 0;
 }
 

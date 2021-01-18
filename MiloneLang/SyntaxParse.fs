@@ -121,8 +121,7 @@ type private Bp =
   /// `|>`
   | PipeBp
 
-  /// Comparison.
-  | CmpBp
+  | CompareBp
 
   | AndBp
   | OrBp
@@ -130,8 +129,8 @@ type private Bp =
 let private bpNext bp =
   match bp with
   | OrBp -> AndBp
-  | AndBp -> CmpBp
-  | CmpBp -> PipeBp
+  | AndBp -> CompareBp
+  | CompareBp -> PipeBp
   | PipeBp -> BitBp
   | BitBp -> XorBp
   | XorBp -> ConsBp
@@ -715,12 +714,12 @@ let private parseOps bp basePos first (tokens, errors) =
 
   | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first LogAndBinary opPos (tokens, errors)
 
-  | CmpBp, (EqToken, opPos) :: tokens -> nextL first EqualBinary opPos (tokens, errors)
-  | CmpBp, (LeftRightToken, opPos) :: tokens -> nextL first NotEqualBinary opPos (tokens, errors)
-  | CmpBp, (LeftAngleToken, opPos) :: tokens -> nextL first LessBinary opPos (tokens, errors)
-  | CmpBp, (LeftEqToken, opPos) :: tokens -> nextL first LessEqualBinary opPos (tokens, errors)
-  | CmpBp, (RightAngleToken, opPos) :: tokens -> nextL first GreaterBinary opPos (tokens, errors)
-  | CmpBp, (RightEqToken, opPos) :: tokens -> nextL first GreaterEqualBinary opPos (tokens, errors)
+  | CompareBp, (EqToken, opPos) :: tokens -> nextL first EqualBinary opPos (tokens, errors)
+  | CompareBp, (LeftRightToken, opPos) :: tokens -> nextL first NotEqualBinary opPos (tokens, errors)
+  | CompareBp, (LeftAngleToken, opPos) :: tokens -> nextL first LessBinary opPos (tokens, errors)
+  | CompareBp, (LeftEqToken, opPos) :: tokens -> nextL first LessEqualBinary opPos (tokens, errors)
+  | CompareBp, (RightAngleToken, opPos) :: tokens -> nextL first GreaterBinary opPos (tokens, errors)
+  | CompareBp, (RightEqToken, opPos) :: tokens -> nextL first GreaterEqualBinary opPos (tokens, errors)
 
   | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL first PipeBinary opPos (tokens, errors)
 

@@ -50,7 +50,7 @@ int basicNoneCase_(int arg_1) {
     struct StringList const* none_ = NULL;
     int match_1;
     if ((!(none_))) goto next_6;
-    if ((str_cmp(none_->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
+    if ((str_compare(none_->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
     milone_assert(false, 17, 16);
     match_1 = 0;
     goto end_match_5;

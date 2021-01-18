@@ -100,7 +100,7 @@ type MBinary =
   | MInt64CompareBinary
   | MUInt64CompareBinary
   | MStrAddBinary
-  | MStrCmpBinary
+  | MStrCompareBinary
 
   /// `s.str[i]`
   | MStrIndexBinary

@@ -270,7 +270,7 @@ struct String str_borrow(char const *c_str) {
     return (struct String){.str = c_str, .len = strlen(c_str)};
 }
 
-int str_cmp(struct String left, struct String right) {
+int str_compare(struct String left, struct String right) {
     // Compare prefix part of two strings.
     int min_len = int_clamp(left.len, 0, right.len);
     int c = memcmp(left.str, right.str, min_len);

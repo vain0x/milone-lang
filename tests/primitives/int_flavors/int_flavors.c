@@ -27,9 +27,9 @@ int signedCases_(int arg_) {
     milone_assert((int64_compare((((int64_t)1231231231) * ((int64_t)2)), (((int64_t)1231231231) * ((int64_t)3))) < 0), 47, 2);
     milone_assert((0 < int64_compare((((int64_t)1231231231) * ((int64_t)3)), (((int64_t)1231231231) * ((int64_t)2)))), 48, 2);
     struct String call_ = str_of_int64(((int8_t)-1));
-    milone_assert((str_cmp(call_, (struct String){.str = "-1", .len = 2}) == 0), 51, 2);
+    milone_assert((str_compare(call_, (struct String){.str = "-1", .len = 2}) == 0), 51, 2);
     struct String call_1 = str_of_int64((((int64_t)1231231231) * ((int64_t)3)));
-    milone_assert((str_cmp(call_1, (struct String){.str = "3693693693", .len = 10}) == 0), 52, 2);
+    milone_assert((str_compare(call_1, (struct String){.str = "3693693693", .len = 10}) == 0), 52, 2);
     int64_t call_2 = str_to_int64((struct String){.str = "-3693693693", .len = 11});
     milone_assert((((int)(call_2 / ((int64_t)3))) == -1231231231), 55, 2);
     return 0;
@@ -52,9 +52,9 @@ int unsignedCases_(int arg_1) {
     milone_assert((uint64_compare((((uint64_t)1231231231) * ((uint64_t)2)), (((uint64_t)1231231231) * ((uint64_t)3))) < 0), 87, 2);
     milone_assert((0 < uint64_compare((((uint64_t)1231231231) * ((uint64_t)3)), (((uint64_t)1231231231) * ((uint64_t)2)))), 88, 2);
     struct String call_3 = str_of_uint64(((uint8_t)0));
-    milone_assert((str_cmp(call_3, (struct String){.str = "0", .len = 1}) == 0), 91, 2);
+    milone_assert((str_compare(call_3, (struct String){.str = "0", .len = 1}) == 0), 91, 2);
     struct String call_4 = str_of_uint64((((uint64_t)1231231231) * ((uint64_t)3)));
-    milone_assert((str_cmp(call_4, (struct String){.str = "3693693693", .len = 10}) == 0), 92, 2);
+    milone_assert((str_compare(call_4, (struct String){.str = "3693693693", .len = 10}) == 0), 92, 2);
     uint8_t call_5 = str_to_uint8((struct String){.str = "255", .len = 3});
     milone_assert((call_5 == ((uint8_t)255)), 95, 2);
     uint64_t call_6 = str_to_uint64((struct String){.str = "3693693693", .len = 10});

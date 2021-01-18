@@ -54,7 +54,7 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Hir
 
-let private funSerialTyPairCmp l r = pairCmp funSerialCmp tyCmp l r
+let private funSerialTyPairCompare l r = pairCompare funSerialCompare tyCompare l r
 
 // -----------------------------------------------
 // Context
@@ -94,8 +94,8 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
     Funs = tyCtx.Funs
     Tys = tyCtx.Tys
 
-    GenericFunUseSiteTys = mapEmpty funSerialCmp
-    GenericFunMonoSerials = mapEmpty funSerialTyPairCmp
+    GenericFunUseSiteTys = mapEmpty funSerialCompare
+    GenericFunMonoSerials = mapEmpty funSerialTyPairCompare
     Mode = MonoMode.Monify
     SomethingHappened = true
     InfiniteLoopDetector = 0 }

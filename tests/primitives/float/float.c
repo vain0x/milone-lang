@@ -154,7 +154,7 @@ int milone_main() {
     milone_assert((((int)3.14) == 3), 60, 2);
     milone_assert((((double)3) == 3.0), 61, 2);
     struct String call_5 = str_of_double(3.14);
-    milone_assert((str_cmp(call_5, (struct String){.str = "3.140000", .len = 8}) == 0), 65, 2);
+    milone_assert((str_compare(call_5, (struct String){.str = "3.140000", .len = 8}) == 0), 65, 2);
     double call_6 = str_to_double((struct String){.str = "3.14", .len = 4});
     milone_assert((call_6 == 3.14), 68, 2);
     printf("Assume PI is %f.\n", 3.14);

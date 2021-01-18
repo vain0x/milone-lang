@@ -1409,7 +1409,7 @@ next_115:;
     if ((tuple_5.t1.discriminant != Ctor_)) goto next_116;
     struct String secondTag_ = (*(((struct StringSpace_ListTuple2 const*)tuple_5.t1.Ctor_))).t0;
     struct Space_List const* seconds_ = (*(((struct StringSpace_ListTuple2 const*)tuple_5.t1.Ctor_))).t1;
-    if ((str_cmp(tag_2, secondTag_) != 0)) goto next_116;
+    if ((str_compare(tag_2, secondTag_) != 0)) goto next_116;
     void const* box_6 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_6))) = 0;
     struct Space_Space_Tuple2BoolFun1 fun_32 = (struct Space_Space_Tuple2BoolFun1){.fun = fun_11, .env = box_6};
@@ -1467,7 +1467,7 @@ next_119:;
     struct String tag_3 = (*(((struct StringUnitSpace_Fun1Tuple2 const*)tuple_5.t0.Ref_))).t0;
     if ((tuple_5.t1.discriminant != Ref_)) goto next_120;
     struct String secondTag_1 = (*(((struct StringUnitSpace_Fun1Tuple2 const*)tuple_5.t1.Ref_))).t0;
-    if ((str_cmp(tag_3, secondTag_1) != 0)) goto next_120;
+    if ((str_compare(tag_3, secondTag_1) != 0)) goto next_120;
     match_23 = spaceEmpty_;
     goto end_match_111;
 next_120:;
@@ -1826,7 +1826,7 @@ bool fun_7(struct StringSpace_Tuple2 arg_95) {
     struct String call_126 = spaceToString_(space_10);
     struct String actual_ = call_126;
     bool if_6;
-    if ((str_cmp(actual_, expected_) == 0)) {
+    if ((str_compare(actual_, expected_) == 0)) {
         goto then_146;
     } else {
         goto else_147;

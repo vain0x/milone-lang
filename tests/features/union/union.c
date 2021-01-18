@@ -100,7 +100,7 @@ int milone_main() {
 next_2:;
     if ((err1_.discriminant != Err_)) goto next_3;
     struct String e_ = err1_.Err_;
-    milone_assert((str_cmp(e_, (struct String){.str = "No such file or directory.", .len = 26}) == 0), 29, 15);
+    milone_assert((str_compare(e_, (struct String){.str = "No such file or directory.", .len = 26}) == 0), 29, 15);
     match_ = 0;
     goto end_match_1;
 next_3:;
@@ -150,7 +150,7 @@ switch_next_7:;
         goto else_15;
     }
 then_14:;
-    if_ = (str_cmp(statusText_, (struct String){.str = "Not Found", .len = 9}) == 0);
+    if_ = (str_compare(statusText_, (struct String){.str = "Not Found", .len = 9}) == 0);
     goto if_next_13;
 else_15:;
     if_ = false;

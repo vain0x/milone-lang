@@ -117,7 +117,7 @@ let private newCtx host: BundleCtx =
     ModuleQueue = []
     ModuleAcc = []
     ErrorAcc = []
-    FetchMemo = setEmpty (pairCmp compare compare)
+    FetchMemo = setEmpty (pairCompare compare compare)
     Host = host }
 
 let private addError msg loc (ctx: BundleCtx) =

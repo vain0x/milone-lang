@@ -24,7 +24,7 @@ open MiloneLang.Typing
 
 let private isMainFun serial mainFunOpt =
   match mainFunOpt with
-  | Some mainFun -> funSerialCmp serial mainFun = 0
+  | Some mainFun -> funSerialCompare serial mainFun = 0
   | _ -> false
 
 let private hoistMainExpr mainFunOpt expr =

@@ -200,7 +200,7 @@ let private parseProjectSchema tokenizeHost contents =
 
   if errors |> List.isEmpty |> not then
     errors
-    |> listSort (fun (_, l) (_, r) -> posCmp l r)
+    |> listSort (fun (_, l) (_, r) -> posCompare l r)
     |> List.iter (fun (msg, loc) -> printfn "ERROR %s %s" (posToString loc) msg)
 
     failwith "Syntax error in project file."
@@ -416,7 +416,7 @@ let private syntaxErrorToString syntax =
   let _, _, errors = syntax
 
   errors
-  |> listSort (fun (_, l) (_, r) -> locCmp l r)
+  |> listSort (fun (_, l) (_, r) -> locCompare l r)
   |> List.map (fun (msg, loc) -> "#error " + locToString loc + " " + msg + "\n")
   |> strConcat
 
@@ -424,7 +424,7 @@ let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
 let private nameResLogsToString logs =
   logs
-  |> listSort (fun (_, l) (_, r) -> locCmp l r)
+  |> listSort (fun (_, l) (_, r) -> locCompare l r)
   |> List.map
        (fun (log, loc) ->
          "#error "
@@ -444,7 +444,7 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
     tyDisplay getTyName ty
 
   logs
-  |> listSort (fun (_, l) (_, r) -> locCmp l r)
+  |> listSort (fun (_, l) (_, r) -> locCompare l r)
   |> List.map
        (fun (log, loc) ->
          "#error "
