@@ -1,6 +1,6 @@
 #include "milone.h"
 
-bool charEq_(char l_, char r_);
+bool charEqual_(char l_, char r_);
 
 bool go_(char c_, struct String s_, int i_);
 
@@ -80,7 +80,7 @@ int eval_(struct String str_);
 
 int milone_main();
 
-bool charEq_(char l_, char r_) {
+bool charEqual_(char l_, char r_) {
     return (l_ == r_);
 }
 
@@ -368,7 +368,7 @@ struct CharTuple1 {
 
 bool fun_(void const* env_, char arg_) {
     char arg_1 = (*(((struct CharTuple1 const*)env_))).t0;
-    bool call_7 = charEq_(arg_1, arg_);
+    bool call_7 = charEqual_(arg_1, arg_);
     return call_7;
 }
 

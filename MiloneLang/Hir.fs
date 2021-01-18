@@ -146,7 +146,7 @@ type Trait =
   | AddTrait of Ty
 
   /// The type supports `=`.
-  | EqTrait of Ty
+  | EqualTrait of Ty
 
   /// The type supports `<`.
   | CompareTrait of Ty
@@ -340,7 +340,7 @@ type HPrim =
   | BitXor
   | LeftShift
   | RightShift
-  | Eq
+  | Equal
   | Lt
   | Compare
 
@@ -737,9 +737,9 @@ let primToTySpec prim =
       let ty = meta 1
       poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
 
-  | HPrim.Eq ->
-      let eqTy = meta 1
-      poly (tyFun eqTy (tyFun eqTy tyBool)) [ EqTrait eqTy ]
+  | HPrim.Equal ->
+      let argTy = meta 1
+      poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
 
   | HPrim.Lt ->
       let compareTy = meta 1
@@ -1124,7 +1124,7 @@ let private traitBoundErrorToString tyDisplay it =
       "Operator (+) is not supported for type: "
       + tyDisplay ty
 
-  | EqTrait ty ->
+  | EqualTrait ty ->
       "Equality is not defined for type: "
       + tyDisplay ty
 

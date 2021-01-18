@@ -904,7 +904,7 @@ let private cgPrintfnActionStmt ctx itself args =
                match arg with
                | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
 
-               | _ when tyEq (mexprToTy arg) tyStr ->
+               | _ when tyEqual (mexprToTy arg) tyStr ->
                    // Insert implicit cast from str to str ptr.
                    let arg, ctx = cgExpr ctx arg
                    CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx

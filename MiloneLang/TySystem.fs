@@ -61,7 +61,7 @@ let tyCtorCompare l r =
 
   | _ -> pairCompare compare compare (tyCtorEncode l) (tyCtorEncode r)
 
-let tyCtorEq first second = tyCtorCompare first second = 0
+let tyCtorEqual first second = tyCtorCompare first second = 0
 
 let tyCtorDisplay getTyName tyCtor =
   match tyCtor with
@@ -93,7 +93,7 @@ let traitMapTys f it =
   match it with
   | AddTrait ty -> AddTrait(f ty)
 
-  | EqTrait ty -> EqTrait(f ty)
+  | EqualTrait ty -> EqualTrait(f ty)
 
   | CompareTrait ty -> CompareTrait(f ty)
 
@@ -147,7 +147,7 @@ let tyCompare first second =
       let c = tyCtorCompare firstTyCtor secondTyCtor
       if c <> 0 then c else listCompare tyCompare firstTys secondTys
 
-let tyEq first second = tyCompare first second = 0
+let tyEqual first second = tyCompare first second = 0
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
@@ -226,9 +226,6 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
-  let tyEq4 ty1 ty2 ty3 ty4 =
-    [ ty2; ty3; ty4 ] |> List.forall (tyEq ty1)
-
   let rec go (outerBp: int) ty =
     let paren (bp: int) s =
       if bp >= outerBp then s else "(" + s + ")"
@@ -500,7 +497,7 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
 
-    | AppTy (lTyCtor, lTyArgs), AppTy (rTyCtor, rTyArgs) when tyCtorEq lTyCtor rTyCtor ->
+    | AppTy (lTyCtor, lTyArgs), AppTy (rTyCtor, rTyArgs) when tyCtorEqual lTyCtor rTyCtor ->
         let rec gogo lTyArgs rTyArgs (logAcc, ctx) =
           match lTyArgs, rTyArgs with
           | [], [] -> logAcc, ctx
@@ -554,7 +551,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
 
-  | EqTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | EqualTrait ty -> (logAcc, ctx) |> expectBasic ty
 
   | CompareTrait ty -> (logAcc, ctx) |> expectBasic ty
 

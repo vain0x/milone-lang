@@ -156,13 +156,13 @@ type Token =
   /// `..`
   | DotDotToken
   /// `=`
-  | EqToken
+  | EqualToken
   /// `^`
   | HatToken
   /// `^^^`
   | HatHatHatToken
   /// `<=`
-  | LeftEqToken
+  | LeftEqualToken
   /// `<<`
   | LeftLeftToken
   /// `<<<`
@@ -170,7 +170,7 @@ type Token =
   /// `<>`
   | LeftRightToken
   /// `>=`
-  | RightEqToken
+  | RightEqualToken
   /// `-`
   | MinusToken
   /// `%`

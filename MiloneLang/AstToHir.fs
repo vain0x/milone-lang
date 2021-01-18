@@ -44,7 +44,7 @@ let private opToPrim op =
   | BitXorBinary -> HPrim.BitXor
   | LeftShiftBinary -> HPrim.LeftShift
   | RightShiftBinary -> HPrim.RightShift
-  | EqualBinary -> HPrim.Eq
+  | EqualBinary -> HPrim.Equal
   | LessBinary -> HPrim.Lt
   | ConsBinary -> HPrim.Cons
 
@@ -151,8 +151,8 @@ let private desugarMinusUnary arg =
 
 /// `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos =
-  let eqExpr = ABinaryExpr(EqualBinary, l, r, pos)
-  axNot eqExpr pos
+  let equalExpr = ABinaryExpr(EqualBinary, l, r, pos)
+  axNot equalExpr pos
 
 /// `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.

@@ -239,10 +239,10 @@ let private containsTailRec expr =
 let private mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MLitExpr(lit, loc)
 
-  let eqExpr, ctx =
+  let equalExpr, ctx =
     mxCompare ctx MEqualBinary expr litExpr tyBool loc
 
-  let gotoStmt = msGotoUnless eqExpr endLabel loc
+  let gotoStmt = msGotoUnless equalExpr endLabel loc
   let ctx = addStmt ctx gotoStmt
   ctx
 
@@ -292,14 +292,14 @@ let private mirifyPatVar ctx _endLabel serial ty loc expr =
 
 let private mirifyPatVariant ctx endLabel serial ty loc expr =
   // Compare tags.
-  let eqExpr =
+  let equalExpr =
     let lDiscriminant =
       MUnaryExpr(MGetDiscriminantUnary, expr, tyInt, loc)
 
     let rDiscriminant = MDiscriminantConstExpr(serial, loc)
     MBinaryExpr(MEqualBinary, lDiscriminant, rDiscriminant, tyBool, loc)
 
-  let gotoStmt = msGotoUnless eqExpr endLabel loc
+  let gotoStmt = msGotoUnless equalExpr endLabel loc
   let ctx = addStmt ctx gotoStmt
   ctx
 
@@ -314,14 +314,14 @@ let private mirifyPatVariantApp (ctx: MirCtx) endLabel serial payloadPat loc exp
     mirifyPat ctx endLabel payloadPat extractExpr
   else
     // Compare tags.
-    let eqExpr =
+    let equalExpr =
       let lDiscriminant =
         MUnaryExpr(MGetDiscriminantUnary, expr, tyInt, loc)
 
       let rDiscriminant = MDiscriminantConstExpr(serial, loc)
       MBinaryExpr(MEqualBinary, lDiscriminant, rDiscriminant, tyBool, loc)
 
-    let gotoStmt = msGotoUnless eqExpr endLabel loc
+    let gotoStmt = msGotoUnless equalExpr endLabel loc
     let ctx = addStmt ctx gotoStmt
 
     // Extract payload.
@@ -942,7 +942,7 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
 
   match srcTy with
-  | AppTy (IntTyCtor srcFlavor, _) when intFlavorEq srcFlavor flavor -> arg, ctx
+  | AppTy (IntTyCtor srcFlavor, _) when intFlavorEqual srcFlavor flavor -> arg, ctx
 
   | AppTy ((IntTyCtor _
            | FloatTyCtor _
@@ -1134,8 +1134,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.RightShift, [ l; r ] -> regularBinary MRightShiftBinary l r
   | HPrim.RightShift, _ -> fail ()
 
-  | HPrim.Eq, [ l; r ] -> mirifyExprOpCompare ctx MEqualBinary l r ty loc
-  | HPrim.Eq, _ -> fail ()
+  | HPrim.Equal, [ l; r ] -> mirifyExprOpCompare ctx MEqualBinary l r ty loc
+  | HPrim.Equal, _ -> fail ()
   | HPrim.Lt, [ l; r ] -> mirifyExprOpCompare ctx MLessBinary l r ty loc
   | HPrim.Lt, _ -> fail ()
   | HPrim.Compare, [ l; r ] -> mirifyCallCompareExpr ctx itself l r ty loc

@@ -514,7 +514,7 @@ let private postProcessRecordExpr ctx baseOpt fields recordTy loc =
 
 let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
   if needsBoxedRecordTy ctx recordTy then
-    assert (recordExpr |> exprToTy |> tyEq tyObj)
+    assert (recordExpr |> exprToTy |> tyEqual tyObj)
 
     Some(HNavExpr(hxUnbox recordExpr recordTy loc, fieldName, fieldTy, loc))
   else

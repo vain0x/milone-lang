@@ -150,7 +150,7 @@ let private primToArity ty prim =
   | HPrim.BitXor
   | HPrim.LeftShift
   | HPrim.RightShift
-  | HPrim.Eq
+  | HPrim.Equal
   | HPrim.Lt
   | HPrim.Compare
   | HPrim.Cons
