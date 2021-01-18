@@ -710,9 +710,9 @@ let private parseOps bp basePos first (tokens, errors) =
     parseOps bp basePos expr (tokens, errors)
 
   match bp, tokens with
-  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL first LogOrBinary opPos (tokens, errors)
+  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL first LogicalOrBinary opPos (tokens, errors)
 
-  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first LogAndBinary opPos (tokens, errors)
+  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first LogicalAndBinary opPos (tokens, errors)
 
   | CompareBp, (EqToken, opPos) :: tokens -> nextL first EqualBinary opPos (tokens, errors)
   | CompareBp, (LeftRightToken, opPos) :: tokens -> nextL first NotEqualBinary opPos (tokens, errors)

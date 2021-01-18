@@ -255,10 +255,10 @@ type Binary =
   | RightShiftBinary
   /// `|>`
   | PipeBinary
-  /// `&&` Logical and
-  | LogAndBinary
-  /// `||` Logical or
-  | LogOrBinary
+  /// `&&`
+  | LogicalAndBinary
+  /// `||`
+  | LogicalOrBinary
   /// `f x` Functional application
   | AppBinary
   /// `::` Construction

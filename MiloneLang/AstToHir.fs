@@ -52,8 +52,8 @@ let private opToPrim op =
   | LessEqualBinary
   | GreaterBinary
   | GreaterEqualBinary
-  | LogAndBinary
-  | LogOrBinary
+  | LogicalAndBinary
+  | LogicalOrBinary
   | AppBinary
   | PipeBinary -> failwithf "NEVER: %A" op
 
@@ -473,14 +473,14 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | ABinaryExpr (LogAndBinary, l, r, pos) ->
+  | ABinaryExpr (LogicalAndBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinAnd l r pos
         (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
-  | ABinaryExpr (LogOrBinary, l, r, pos) ->
+  | ABinaryExpr (LogicalOrBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinOr l r pos
         (expr, nameCtx) |> athExpr docId
