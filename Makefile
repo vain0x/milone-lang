@@ -5,7 +5,7 @@
 
 # Makefile is a thin-wrapper of ninja.
 
-.PHONY: build build.ninja default install install-dev clean test
+.PHONY: build build.ninja clean default install install-dev test uninstall
 
 # (This is the first rule in file and therefore it's default.)
 default: build.ninja
@@ -35,3 +35,6 @@ install:
 
 install-dev:
 	./install-dev
+
+uninstall:
+	./uninstall
