@@ -135,7 +135,11 @@ let tyCompare first second =
   match first, second with
   | Ty (firstTk, firstTys), Ty (secondTk, secondTys) ->
       let c = tkCompare firstTk secondTk
-      if c <> 0 then c else listCompare tyCompare firstTys secondTys
+
+      if c <> 0 then
+        c
+      else
+        listCompare tyCompare firstTys secondTys
 
 let tyEqual first second = tyCompare first second = 0
 
@@ -213,7 +217,10 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 let tyDisplay getTyName ty =
   let rec go (outerBp: int) ty =
     let paren (bp: int) s =
-      if bp >= outerBp then s else "(" + s + ")"
+      if bp >= outerBp then
+        s
+      else
+        "(" + s + ")"
 
     let nominal tySerial args =
       let tk =
@@ -249,8 +256,7 @@ let tyDisplay getTyName ty =
     | Ty (RecordTk tySerial, args) -> nominal tySerial args
 
     | Ty (tk, args) ->
-        let tk =
-          tkDisplay (fun _ -> failwith "NEVER") tk
+        let tk = tkDisplay (fun _ -> failwith "NEVER") tk
 
         match args with
         | [] -> tk
@@ -292,13 +298,19 @@ let typingBind (ctx: TyContext) tySerial ty loc =
   | ty ->
       // Reduce level of meta tys in the referent ty to the meta ty's level at most.
       let tyLevels =
-        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+        let level =
+          ctx.TyLevels
+          |> mapTryFind tySerial
+          |> Option.defaultValue 0
 
         ty
         |> tyCollectFreeVars
         |> List.fold
              (fun tyLevels tySerial ->
-               let currentLevel = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+               let currentLevel =
+                 ctx.TyLevels
+                 |> mapTryFind tySerial
+                 |> Option.defaultValue 0
 
                if currentLevel <= level then
                  // Already non-deep enough.

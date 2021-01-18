@@ -38,11 +38,11 @@ let __nativeCast _ =
   failwith "__nativeCast is not available in F#"
 
 /// Accesses to `ptr[i]` to read a value.
-let __ptrRead (ptr: __constptr<'a>) (index: int): 'a =
+let __ptrRead (_ptr: __constptr<'a>) (_index: int): 'a =
   failwith "__ptrRead is not available in F#"
 
 /// Writes a value to `ptr[i]`.
-let __ptrWrite (ptr: nativeptr<'a>) (index: int) (value: 'a): unit =
+let __ptrWrite (_ptr: nativeptr<'a>) (_index: int) (_value: 'a): unit =
   failwith "__ptrWrite is not available in F#"
 
 // -----------------------------------------------

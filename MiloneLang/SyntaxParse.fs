@@ -465,8 +465,7 @@ let private parsePatAtom basePos (tokens, errors) =
   | (FalseToken, pos) :: tokens -> ALitPat(BoolLit false, pos), tokens, errors
   | (TrueToken, pos) :: tokens -> ALitPat(BoolLit true, pos), tokens, errors
 
-  | (MinusToken, pos) :: (IntToken text, _) :: tokens ->
-    ALitPat(IntLit ("-" + text), pos), tokens, errors
+  | (MinusToken, pos) :: (IntToken text, _) :: tokens -> ALitPat(IntLit("-" + text), pos), tokens, errors
 
   | _ -> parsePatError "NEVER: The token must be a pat" (tokens, errors)
 
@@ -535,12 +534,15 @@ let private parsePatTuple basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
     | (CommaToken, _) :: tokens ->
-        let second, tokens, errors = parsePatAscribe basePos (tokens, errors)
+        let second, tokens, errors =
+          parsePatAscribe basePos (tokens, errors)
+
         go (second :: acc) (tokens, errors)
 
     | _ -> List.rev acc, tokens, errors
 
-  let itemPat, tokens, errors = parsePatAscribe basePos (tokens, errors)
+  let itemPat, tokens, errors =
+    parsePatAscribe basePos (tokens, errors)
 
   match tokens with
   | (CommaToken, pos) :: _ ->
@@ -598,9 +600,10 @@ let private parsePatLet basePos (tokens, errors) =
 
 /// `pat = pat-or`
 let private parsePat basePos (tokens, errors) =
-  if not (nextInside basePos tokens && leadsPat tokens)
-  then parsePatError "Expected a pattern" (tokens, errors)
-  else parsePatOr basePos (tokens, errors)
+  if not (nextInside basePos tokens && leadsPat tokens) then
+    parsePatError "Expected a pattern" (tokens, errors)
+  else
+    parsePatOr basePos (tokens, errors)
 
 // -----------------------------------------------
 // Parse operator expressions
@@ -728,11 +731,8 @@ let private parseOps bp basePos first (tokens, errors) =
   | BitBp, (AmpAmpAmpToken, opPos) :: tokens -> nextL first BitAndBinary opPos (tokens, errors)
   | BitBp, (PipePipePipeToken, opPos) :: tokens -> nextL first BitOrBinary opPos (tokens, errors)
   | BitBp, (LeftLeftLeftToken, opPos) :: tokens -> nextL first LeftShiftBinary opPos (tokens, errors)
-  | BitBp, (RightAngleToken, opPos) :: (RightAngleToken, pos2) :: (RightAngleToken, pos3) :: tokens when canMerge3
-                                                                                                           opPos
-                                                                                                           pos2
-                                                                                                           pos3 ->
-      nextL first RightShiftBinary opPos (tokens, errors)
+  | BitBp, (RightAngleToken, opPos) :: (RightAngleToken, pos2) :: (RightAngleToken, pos3) :: tokens when
+    canMerge3 opPos pos2 pos3 -> nextL first RightShiftBinary opPos (tokens, errors)
 
   | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR first ConsBinary opPos (tokens, errors)
 
@@ -859,8 +859,9 @@ let private parseThenClause basePos (tokens, errors) =
 
 let private parseElseClause basePos (tokens, errors) =
   match tokens with
-  | (ElseToken, elsePos) :: (IfToken, nextIfPos) :: tokens when posInside basePos elsePos
-                                                                && posIsSameRow elsePos nextIfPos ->
+  | (ElseToken, elsePos) :: (IfToken, nextIfPos) :: tokens when
+    posInside basePos elsePos
+    && posIsSameRow elsePos nextIfPos ->
       // ELSE_IF_LAYOUT rule. Parse the next as if `if` in `else if` is placed where `else` is.
       let alt, tokens, errors =
         parseExpr basePos ((IfToken, elsePos) :: tokens, errors)
@@ -1085,8 +1086,9 @@ let private doParseStmts basePos (tokens, errors) =
         let expr, tokens, errors = parseStmt alignPos (tokens, errors)
         go expr (last :: acc) alignPos (tokens, errors)
 
-    | _ when posIsSameColumn alignPos (nextPos tokens)
-             && leadsExpr tokens ->
+    | _ when
+      posIsSameColumn alignPos (nextPos tokens)
+      && leadsExpr tokens ->
         let expr, tokens, errors = parseStmt alignPos (tokens, errors)
         go expr (last :: acc) alignPos (tokens, errors)
 
@@ -1243,7 +1245,9 @@ let private parseModuleDecl modulePos (tokens, errors) =
       Some(AModuleSynonymDecl(moduleName, path, modulePos)), tokens, errors
 
   | (EqualToken, _) :: tokens ->
-      let decls, tokens, errors = parseModuleBody (nextPos tokens) (tokens, errors)
+      let decls, tokens, errors =
+        parseModuleBody (nextPos tokens) (tokens, errors)
+
       Some(AModuleDecl(isRec, vis, moduleName, decls, modulePos)), tokens, errors
 
   | _ ->

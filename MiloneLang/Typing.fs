@@ -55,11 +55,9 @@ let private addError (ctx: TyCtx) message loc =
       Logs = (Log.Error message, loc) :: ctx.Logs }
 
 /// Be carefully. Levels must be counted the same as name resolution.
-let private incLevel (ctx: TyCtx) =
-  { ctx with Level = ctx.Level + 1 }
+let private incLevel (ctx: TyCtx) = { ctx with Level = ctx.Level + 1 }
 
-let private decLevel (ctx: TyCtx) =
-  { ctx with Level = ctx.Level - 1 }
+let private decLevel (ctx: TyCtx) = { ctx with Level = ctx.Level - 1 }
 
 let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
@@ -183,9 +181,15 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+        let level =
+          ctx.TyLevels
+          |> mapTryFind tySerial
+          |> Option.defaultValue 0
         // Degenerate unless quantified.
-        if level < 1000000000 then Some tyUnit else None
+        if level < 1000000000 then
+          Some tyUnit
+        else
+          None
 
   tySubst substMeta ty
 
@@ -270,7 +274,10 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
   match funDef.Ty with
   | TyScheme ([], funTy) ->
       let isOwned tySerial =
-        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+        let level =
+          ctx.TyLevels
+          |> mapTryFind tySerial
+          |> Option.defaultValue 0
 
         level > outerLevel
 
@@ -328,16 +335,19 @@ let private resolveAscriptionTy ctx ascriptionTy =
     | Ty (ErrorTk _, _) -> ty, ctx
 
     | Ty (MetaTk (serial, loc), _) when ctx.TyLevels |> mapContainsKey serial |> not ->
-      let ctx = { ctx with TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
-      tyMeta serial loc, ctx
+        let ctx =
+          { ctx with
+              TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
+
+        tyMeta serial loc, ctx
 
     | Ty (MetaTk _, _) -> ty, ctx
 
     | Ty (_, []) -> ty, ctx
 
     | Ty (tk, tys) ->
-      let tys, ctx = (tys, ctx) |> stMap go
-      Ty(tk, tys), ctx
+        let tys, ctx = (tys, ctx) |> stMap go
+        Ty(tk, tys), ctx
 
   go (ascriptionTy, ctx)
 
@@ -409,9 +419,10 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let ty = variantDef.VariantTy
 
   let ctx =
-    if variantDef.HasPayload
-    then addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
-    else ctx
+    if variantDef.HasPayload then
+      addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
+    else
+      ctx
 
   HVariantPat(variantSerial, ty, loc), ty, ctx
 
@@ -1194,7 +1205,11 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
              // Pre-compute the type of variant.
              let variantTy =
                let unionTy = tyUnion variantDef.UnionTySerial
-               if variantDef.HasPayload then tyFun variantDef.PayloadTy unionTy else unionTy
+
+               if variantDef.HasPayload then
+                 tyFun variantDef.PayloadTy unionTy
+               else
+                 unionTy
 
              { variantDef with
                  VariantTy = variantTy })

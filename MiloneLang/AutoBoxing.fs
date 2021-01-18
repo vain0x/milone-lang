@@ -222,7 +222,10 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
         tsmTy ctx variantDef.PayloadTy
 
       let size, isBoxed =
-        if 4 + size > 32 then 8, true else size, false
+        if 4 + size > 32 then
+          8, true
+        else
+          size, false
 
       let ctx =
         assert ((ctx.VariantMemo
@@ -232,9 +235,10 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
         { ctx with
             VariantMemo = ctx.VariantMemo |> mapAdd variantSerial size
             BoxedVariants =
-              if isBoxed
-              then ctx.BoxedVariants |> setAdd variantSerial
-              else ctx.BoxedVariants }
+              if isBoxed then
+                ctx.BoxedVariants |> setAdd variantSerial
+              else
+                ctx.BoxedVariants }
 
       // printfn
       //   "// measure variant %s end: size=%d%s"
@@ -277,7 +281,10 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
         | _ -> failwith "NEVER"
 
       let size, isBoxed =
-        if size > 32 then 8, true else Int.max 1 size, false
+        if size > 32 then
+          8, true
+        else
+          Int.max 1 size, false
 
       let ctx =
         assert ((ctx.RecordTyMemo
@@ -286,7 +293,11 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
         { ctx with
             RecordTyMemo = ctx.RecordTyMemo |> mapAdd tySerial size
-            BoxedRecordTys = if isBoxed then ctx.BoxedRecordTys |> setAdd tySerial else ctx.BoxedRecordTys }
+            BoxedRecordTys =
+              if isBoxed then
+                ctx.BoxedRecordTys |> setAdd tySerial
+              else
+                ctx.BoxedRecordTys }
 
       // printfn "// measure record %s end: size=%d%s" (tyDefToName tyDef) size (if isBoxed then " (boxed)" else "")
       size, ctx
@@ -448,7 +459,10 @@ let private needsBoxedRecordTy ctx ty =
 /// ```
 
 let private erasePayloadTy ctx variantSerial payloadTy =
-  if needsBoxedVariant ctx variantSerial then tyObj else payloadTy |> abTy ctx
+  if needsBoxedVariant ctx variantSerial then
+    tyObj
+  else
+    payloadTy |> abTy ctx
 
 let private postProcessVariantAppPat (ctx: AbCtx) variantSerial payloadPat =
   if needsBoxedVariant ctx variantSerial then
@@ -495,7 +509,10 @@ let private postProcessVariantFunAppExpr ctx kind items =
 /// ```
 
 let private eraseRecordTy ctx ty =
-  if needsBoxedRecordTy ctx ty then Some tyObj else None
+  if needsBoxedRecordTy ctx ty then
+    Some tyObj
+  else
+    None
 
 let private postProcessRecordExpr ctx baseOpt fields recordTy loc =
   if needsBoxedRecordTy ctx recordTy then

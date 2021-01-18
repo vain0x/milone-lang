@@ -5,15 +5,19 @@ open MiloneLang.Cli
 
 let private readFile (filePath: string) =
   try
-    if System.IO.File.Exists(filePath)
-    then System.IO.File.ReadAllText(filePath) |> Some
-    else None
+    if System.IO.File.Exists(filePath) then
+      System.IO.File.ReadAllText(filePath) |> Some
+    else
+      None
   with _ -> None
 
 let dotnetCliHost (): CliHost =
-  let args = System.Environment.GetCommandLineArgs() |> Array.toList
+  let args =
+    System.Environment.GetCommandLineArgs()
+    |> Array.toList
 
-  let home = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile)
+  let home =
+    System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile)
 
   let miloneHome =
     System.Environment.GetEnvironmentVariable("MILONE_HOME")

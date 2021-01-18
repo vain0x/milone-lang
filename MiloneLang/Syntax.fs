@@ -215,8 +215,7 @@ type Token =
 
 /// Unary operator.
 [<NoEquality; NoComparison>]
-type Unary =
-  | MinusUnary
+type Unary = | MinusUnary
 
 /// Binary operator.
 [<NoEquality; NoComparison>]

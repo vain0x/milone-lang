@@ -49,7 +49,9 @@ let private findTestProjects testsDir =
 
        for projectName in IO.Directory.GetDirectories(categoryDir) do
          let projectName = Path.GetFileName(projectName)
-         if pathIsOk projectName then yield category, projectName |]
+
+         if pathIsOk projectName then
+           yield category, projectName |]
 
 let private generate (solutionDir: string) (ninjaTemplate: string) =
   let testsDir = solutionDir + "/tests"

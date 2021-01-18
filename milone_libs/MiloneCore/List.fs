@@ -204,9 +204,10 @@ let partition (pred: _ -> bool) (xs: _ list): _ list * _ list =
     | [] -> rev trueAcc, rev falseAcc
 
     | x :: xs ->
-        if pred x
-        then listPartitionLoop (x :: trueAcc) falseAcc xs
-        else listPartitionLoop trueAcc (x :: falseAcc) xs
+        if pred x then
+          listPartitionLoop (x :: trueAcc) falseAcc xs
+        else
+          listPartitionLoop trueAcc (x :: falseAcc) xs
 
   listPartitionLoop [] [] xs
 
@@ -216,7 +217,10 @@ let init (len: int) (f: int -> _): _ list =
   assert (len >= 0)
 
   let rec listInitLoop acc i =
-    if i = len then rev acc else listInitLoop (f i :: acc) (i + 1)
+    if i = len then
+      rev acc
+    else
+      listInitLoop (f i :: acc) (i + 1)
 
   listInitLoop [] 0
 
@@ -226,6 +230,9 @@ let replicate (len: int) item: _ list =
   assert (len >= 0)
 
   let rec listReplicateLoop acc i =
-    if i = len then acc else listReplicateLoop (item :: acc) (i + 1)
+    if i = len then
+      acc
+    else
+      listReplicateLoop (item :: acc) (i + 1)
 
   listReplicateLoop [] 0

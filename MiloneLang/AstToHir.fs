@@ -195,7 +195,9 @@ let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 let private desugarLet isRec vis pat body next pos =
   match pat with
   | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-      let body = AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+      let body =
+        AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+
       desugarLet isRec vis pat body next pos
 
   | AFunDeclPat (name, args, _) -> ALetFun(isRec, vis, name, args, body, next, pos)
@@ -205,7 +207,9 @@ let private desugarLet isRec vis pat body next pos =
 let private desugarLetDecl isRec vis pat body pos =
   match pat with
   | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-      let body = AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+      let body =
+        AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+
       desugarLetDecl isRec vis pat body pos
 
   | AFunDeclPat (name, args, _) -> ALetFunDecl(isRec, vis, name, args, body, pos)
@@ -235,7 +239,7 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   | AVarTy (name, pos) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
       let loc = toLoc docId pos
-      Ty (UnresolvedVarTk (tySerial, loc), []), nameCtx
+      Ty(UnresolvedVarTk(tySerial, loc), []), nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId

@@ -310,7 +310,8 @@ let private resolveTokenRanges (ls: LangServiceState) docId (posList: Pos list) 
     | [ _ ] -> ()
 
     | (_, p1) :: (((_, p2) :: _) as tokens) ->
-        if posSet |> MutSet.remove p1 then ranges.Add((p1, p2))
+        if posSet |> MutSet.remove p1 then
+          ranges.Add((p1, p2))
 
         go tokens
 
@@ -412,7 +413,8 @@ let private findTyInExpr (ls: LangServiceState) (expr: HExpr) (tyCtx: Typing.TyC
 
   let onVisit tyOpt loc =
     // eprintfn "hover: loc=%A tyOpt=%A" loc (tyOpt |> Option.map (tyDisplayFn tyCtx))
-    if loc = tokenLoc then contentOpt <- tyOpt
+    if loc = tokenLoc then
+      contentOpt <- tyOpt
 
   let visitor: Visitor =
     { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
@@ -479,14 +481,15 @@ let private symbolToName (tyCtx: Typing.TyCtx) symbol =
           |> mapTryFind tySerial
           |> Option.map tyDefToName
 
-let private doCollectSymbolOccurrences hint
-                                       projectDir
-                                       (docId: DocId)
-                                       (targetPos: Pos)
-                                       (includeDecl: bool)
-                                       (includeUse: bool)
-                                       (ls: LangServiceState)
-                                       =
+let private doCollectSymbolOccurrences
+  hint
+  projectDir
+  (docId: DocId)
+  (targetPos: Pos)
+  (includeDecl: bool)
+  (includeUse: bool)
+  (ls: LangServiceState)
+  =
   let resultOpt, errors = bundleWithCache ls projectDir
 
   match resultOpt with

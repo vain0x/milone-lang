@@ -552,8 +552,7 @@ let tyError loc = Ty(ErrorTk loc, [])
 /// Placeholder. No type info in the parsing phase.
 let noTy = tyError noLoc
 
-let tyInt =
-  Ty(IntTk(IntFlavor(Signed, I32)), [])
+let tyInt = Ty(IntTk(IntFlavor(Signed, I32)), [])
 
 let tyBool = Ty(BoolTk, [])
 
@@ -569,21 +568,18 @@ let tyTuple tys = Ty(TupleTk, tys)
 
 let tyList ty = Ty(ListTk, [ ty ])
 
-let tyFun sourceTy targetTy =
-  Ty(FunTk, [ sourceTy; targetTy ])
+let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
 
-let tyConstPtr itemTy =
-  Ty(NativePtrTk IsConst, [ itemTy ])
+let tyConstPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
 
-let tyNativePtr itemTy =
-  Ty(NativePtrTk IsMut, [ itemTy ])
+let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
   Ty(NativeFunTk, List.append paramTys [ resultTy ])
 
 let tyUnit = tyTuple []
 
-let tyMeta serial loc = Ty(MetaTk (serial, loc), [])
+let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
 let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 
@@ -951,7 +947,8 @@ let hxFalse loc = HLitExpr(litFalse, loc)
 
 let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 
-let hxAscribe expr ty loc = HNodeExpr(HAscribeEN, [ expr ], ty, loc)
+let hxAscribe expr ty loc =
+  HNodeExpr(HAscribeEN, [ expr ], ty, loc)
 
 let hxSemi items loc =
   match splitLast items with

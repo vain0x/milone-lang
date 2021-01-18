@@ -38,7 +38,10 @@ let fileReadBytes (size: int) (Fd fd): Buffer option =
   let buf: obj =
     __nativeFun ("file_read_bytes", fd, size)
 
-  if __nativeCast buf <> unativeint 0 then Some(bufferRefNew buf) else None
+  if __nativeCast buf <> unativeint 0 then
+    Some(bufferRefNew buf)
+  else
+    None
 
 let fileWriteBytes (buf: Buffer) (Fd fd): bool =
   let writtenLen: int =

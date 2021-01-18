@@ -185,10 +185,10 @@ let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
 
   match mexprToTy l with
   | Ty ((IntTk _
-           | FloatTk _
-           | BoolTk
-           | CharTk),
-           _) -> mxBinOpScalar ctx op l r (ty, loc)
+        | FloatTk _
+        | BoolTk
+        | CharTk),
+        _) -> mxBinOpScalar ctx op l r (ty, loc)
   | Ty (StrTk, _) -> mxStrCompare ctx op l r (ty, loc)
   | _ -> failwithf "unimpl %A" (op, l, ty)
 
@@ -638,7 +638,12 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
 
   let isCovering =
     arms
-    |> List.choose (fun (pat, guard, _) -> if hxIsAlwaysTrue guard then Some pat else None)
+    |> List.choose
+         (fun (pat, guard, _) ->
+           if hxIsAlwaysTrue guard then
+             Some pat
+           else
+             None)
     |> patsIsCovering ctx
 
   /// By walking over arms, calculates what kind of MIR instructions to emit.
@@ -673,7 +678,10 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
               let acc = MatchIR.Pat(pat, noLabel) :: acc
 
               let acc =
-                if not needsJump then acc else MatchIR.GoBody bodyLabel :: acc
+                if not needsJump then
+                  acc
+                else
+                  MatchIR.GoBody bodyLabel :: acc
 
               goPats ctx acc false pats
           | [] -> acc, ctx
@@ -681,7 +689,10 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
         let acc, ctx = goPats ctx acc firstPat pats
 
         let acc =
-          if not needsJump then acc else MatchIR.BodyLabel bodyLabel :: acc
+          if not needsJump then
+            acc
+          else
+            MatchIR.BodyLabel bodyLabel :: acc
 
         let acc = MatchIR.Guard(guard, noLabel) :: acc
         let acc = MatchIR.Body body :: acc
@@ -709,7 +720,10 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
     | MatchIR.Guard (guard, _) :: rest ->
         let acc =
           // Trivial guard is unnecessary.
-          if guard |> hxIsAlwaysTrue then acc else MatchIR.Guard(guard, nextLabel) :: acc
+          if guard |> hxIsAlwaysTrue then
+            acc
+          else
+            MatchIR.Guard(guard, nextLabel) :: acc
 
         fixUp acc nextLabel rest
 
@@ -762,7 +776,10 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
 
     | [] ->
         // Abort if exhaust.
-        if isCovering then ctx else addTerminator ctx (mtAbort loc) loc
+        if isCovering then
+          ctx
+        else
+          addTerminator ctx (mtAbort loc) loc
 
   let instructionsRev, ctx = goArms ctx [] true arms
   let instructions = fixUp [] endLabel instructionsRev
@@ -776,9 +793,10 @@ let private mirifyExprMatch ctx cond arms ty loc =
   | Some (result, ctx) -> result, ctx
 
   | None ->
-      if matchExprCanCompileToSwitch cond arms
-      then mirifyExprMatchAsSwitchStmt ctx cond arms ty loc
-      else mirifyExprMatchFull ctx cond arms ty loc
+      if matchExprCanCompileToSwitch cond arms then
+        mirifyExprMatchAsSwitchStmt ctx cond arms ty loc
+      else
+        mirifyExprMatchFull ctx cond arms ty loc
 
 // -----------------------------------------------
 // Expressions
@@ -797,7 +815,7 @@ let private mirifyExprCallBox ctx arg _ loc =
   let temp, tempSerial, ctx = freshVar ctx "box" tyObj loc
 
   let ctx =
-    addStmt ctx (MPrimStmt(MBoxPrim, [arg], tempSerial, loc))
+    addStmt ctx (MPrimStmt(MBoxPrim, [ arg ], tempSerial, loc))
 
   temp, ctx
 
@@ -814,7 +832,10 @@ let private mirifyCallStrGetSliceExpr ctx args loc =
     |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
 
   let temp, tempSerial, ctx = freshVar ctx "slice" tyStr loc
-  let ctx = addStmt ctx (MPrimStmt(MStrGetSlicePrim, args, tempSerial,loc))
+
+  let ctx =
+    addStmt ctx (MPrimStmt(MStrGetSlicePrim, args, tempSerial, loc))
+
   temp, ctx
 
 let private mirifyExprCallSome ctx item ty loc =
@@ -899,9 +920,9 @@ let private mirifyExprOpArith ctx itself op l r ty loc =
 
   match lTy with
   | Ty ((IntTk _
-           | FloatTk _
-           | CharTk),
-           _) -> mxBinOpScalar ctx op l r (ty, loc)
+        | FloatTk _
+        | CharTk),
+        _) -> mxBinOpScalar ctx op l r (ty, loc)
 
   | Ty (StrTk, _) when op |> mOpIsAdd -> mxStrAdd ctx op l r (ty, loc)
 
@@ -919,17 +940,17 @@ let private mirifyCallCompareExpr ctx itself l r ty loc =
   match mexprToTy l with
   // Comparison of small or unsigned integers is just `-` for not overflow.
   | Ty ((IntTk (IntFlavor (_, I8))
-           | IntTk (IntFlavor (_, I16))
-           | BoolTk
-           | CharTk),
-           _) -> MBinaryExpr(MSubBinary, l, r, tyInt, loc), ctx
+        | IntTk (IntFlavor (_, I16))
+        | BoolTk
+        | CharTk),
+        _) -> MBinaryExpr(MSubBinary, l, r, tyInt, loc), ctx
 
   | Ty (IntTk (IntFlavor (Signed, I32)), _) -> MBinaryExpr(MIntCompareBinary, l, r, tyInt, loc), ctx
 
   | Ty ((IntTk (IntFlavor (Signed, I64))
-           | IntTk (IntFlavor (Signed, IPtr))
-           | NativePtrTk _),
-           _) -> MBinaryExpr(MInt64CompareBinary, l, r, tyInt, loc), ctx
+        | IntTk (IntFlavor (Signed, IPtr))
+        | NativePtrTk _),
+        _) -> MBinaryExpr(MInt64CompareBinary, l, r, tyInt, loc), ctx
 
   | Ty ((IntTk (IntFlavor (Unsigned, _))), _) -> MBinaryExpr(MUInt64CompareBinary, l, r, tyInt, loc), ctx
 
@@ -945,14 +966,17 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
   | Ty (IntTk srcFlavor, _) when intFlavorEqual srcFlavor flavor -> arg, ctx
 
   | Ty ((IntTk _
-           | FloatTk _
-           | CharTk
-           | NativePtrTk _),
-           _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, Ty(IntTk flavor, []), loc), ctx
+        | FloatTk _
+        | CharTk
+        | NativePtrTk _),
+        _) -> MUnaryExpr(MIntOfScalarUnary flavor, arg, Ty(IntTk flavor, []), loc), ctx
 
   | Ty (StrTk, _) ->
       let temp, tempSerial, ctx = freshVar ctx "call" ty loc
-      let ctx = addStmt ctx (MPrimStmt(MIntOfStrPrim flavor, [ arg ], tempSerial, loc))
+
+      let ctx =
+        addStmt ctx (MPrimStmt(MIntOfStrPrim flavor, [ arg ], tempSerial, loc))
+
       temp, ctx
 
   | _ -> failwithf "NEVER: %A" itself
@@ -984,8 +1008,8 @@ let private mirifyCallCharExpr ctx itself arg ty loc =
   | Ty (CharTk, _) -> arg, ctx
 
   | Ty ((IntTk _
-           | FloatTk _),
-           _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
+        | FloatTk _),
+        _) -> MUnaryExpr(MCharOfScalarUnary, arg, tyInt, loc), ctx
 
   | Ty (StrTk, _) ->
       let temp, tempSerial, ctx = freshVar ctx "char_of_string" ty loc
@@ -1097,7 +1121,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
 
     let tempExpr, temp, ctx = freshVar ctx hint ty loc
 
-    let ctx = addStmt ctx (MPrimStmt(prim, args, temp,loc))
+    let ctx =
+      addStmt ctx (MPrimStmt(prim, args, temp, loc))
 
     tempExpr, ctx
 
@@ -1309,8 +1334,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
       let ctx = addDecl ctx (MNativeDecl(code, loc))
       MDefaultExpr(tyUnit, loc), ctx
 
-  | HSizeOfValEN, [ HNodeExpr (_, _, ty, _) ], _ ->
-      MUnaryExpr(MSizeOfValUnary, MDefaultExpr(ty, loc), tyInt, loc), ctx
+  | HSizeOfValEN, [ HNodeExpr (_, _, ty, _) ], _ -> MUnaryExpr(MSizeOfValUnary, MDefaultExpr(ty, loc), tyInt, loc), ctx
 
   | t -> failwithf "Never: %A" t
 

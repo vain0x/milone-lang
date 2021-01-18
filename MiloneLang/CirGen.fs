@@ -31,7 +31,10 @@ let private valueSymbolCompare l r =
 
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
-    if index = 0 then ident + "_" else ident + "_" + string index
+    if index = 0 then
+      ident + "_"
+    else
+      ident + "_" + string index
 
   // Group serials by ident.
   let rec go acc xs =
@@ -125,7 +128,8 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
       | UnionTyDef _ -> tyUnion serial
       | RecordTyDef _ -> tyRecord serial
 
-    mirCtx.Tys |> renameIdents tyDefToName toKey tyCompare
+    mirCtx.Tys
+    |> renameIdents tyDefToName toKey tyCompare
 
   { Vars = mirCtx.Vars
     Funs = mirCtx.Funs
@@ -403,7 +407,9 @@ let private genRecordTyDef ctx tySerial fields =
                let ty, ctx = cgTyComplete ctx ty
                ty, ctx)
 
-      let fields = fieldTys |> List.mapi (fun i ty -> tupleField i, ty)
+      let fields =
+        fieldTys
+        |> List.mapi (fun i ty -> tupleField i, ty)
 
       let ctx =
         { ctx with
@@ -446,7 +452,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
       | Ty (CharTk, _) -> "Char", ctx
       | Ty (StrTk, _) -> "String", ctx
 
-      | Ty (MetaTk _, _) // FIXME: Unresolved type variables are `obj` for now.
+      | Ty (MetaTk _, _)
       | Ty (ObjTk, _) -> "Object", ctx
 
       | Ty (FunTk, _) ->
@@ -729,7 +735,7 @@ let private genDefault ctx ty =
 
   | Ty (BoolTk, _) -> CVarExpr "false", ctx
 
-  | Ty (MetaTk _, _) // FIXME: Unresolved type variables are `obj` for now.
+  | Ty (MetaTk _, _)
   | Ty (ObjTk, _)
   | Ty (ListTk, _)
   | Ty (NativePtrTk _, _)
@@ -998,11 +1004,14 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "str_get_slice", args)))
 
   | MClosurePrim funSerial ->
-      regularWithTy ctx (fun args resultTy ->
-        let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
-        match args with
-        | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
-        | _ -> failwithf "NEVER: %A" itself)
+      regularWithTy
+        ctx
+        (fun args resultTy ->
+          let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
+
+          match args with
+          | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
+          | _ -> failwithf "NEVER: %A" itself)
 
   | MBoxPrim ->
       match args with
@@ -1015,16 +1024,22 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       | _ -> failwithf "NEVER: %A" itself
 
   | MTuplePrim ->
-      regularWithTy ctx (fun args tupleTy ->
-        let fields = args |> List.mapi (fun i arg -> tupleField i, arg)
-        CInitExpr(fields, tupleTy)
-      )
+      regularWithTy
+        ctx
+        (fun args tupleTy ->
+          let fields =
+            args |> List.mapi (fun i arg -> tupleField i, arg)
+
+          CInitExpr(fields, tupleTy))
 
   | MVariantPrim variantSerial ->
-      regularWithTy ctx (fun args unionTy ->
+      regularWithTy
+        ctx
+        (fun args unionTy ->
           match args with
           | [ payload ] ->
               let variantName = getUniqueVariantName ctx variantSerial
+
               let fields =
                 [ "discriminant", CVarExpr variantName
                   variantName, payload ]
@@ -1034,24 +1049,31 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
           | _ -> failwithf "NEVER: %A" itself)
 
   | MRecordPrim ->
-      regularWithTy ctx (fun args recordTy ->
-        let fields = args |> List.mapi (fun i arg -> tupleField i, arg)
-        CInitExpr(fields, recordTy)
-      )
+      regularWithTy
+        ctx
+        (fun args recordTy ->
+          let fields =
+            args |> List.mapi (fun i arg -> tupleField i, arg)
+
+          CInitExpr(fields, recordTy))
 
   | MCallProcPrim ->
-      regular ctx (fun args ->
+      regular
+        ctx
+        (fun args ->
           match args with
           | callee :: args -> CCallExpr(callee, args)
           | [] -> failwithf "NEVER: %A" itself)
 
   | MCallClosurePrim ->
-      regular ctx (fun args ->
+      regular
+        ctx
+        (fun args ->
           match args with
           | callee :: args ->
-            let funPtr = CDotExpr(callee, "fun")
-            let envArg = CDotExpr(callee, "env")
-            CCallExpr(funPtr, envArg :: args)
+              let funPtr = CDotExpr(callee, "fun")
+              let envArg = CDotExpr(callee, "env")
+              CCallExpr(funPtr, envArg :: args)
 
           | [] -> failwithf "NEVER: %A" itself)
 
@@ -1217,7 +1239,10 @@ let private cgDecls (ctx: CirCtx) decls =
 
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
       let funName, args =
-        if isMainFun ctx callee then "milone_main", [] else getUniqueFunName ctx callee, args
+        if isMainFun ctx callee then
+          "milone_main", []
+        else
+          getUniqueFunName ctx callee, args
 
       let rec go acc ctx args =
         match args with

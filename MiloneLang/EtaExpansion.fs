@@ -544,9 +544,10 @@ let private exVariantName expr variantTy loc (ctx: EtaCtx) =
 let private exPrimExpr expr prim primTy calleeLoc (ctx: EtaCtx) =
   let arity = prim |> primToArity primTy
 
-  if arity = 0
-  then expr, ctx
-  else resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
+  if arity = 0 then
+    expr, ctx
+  else
+    resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
 let private exInfExpr expr kind args ty loc ctx =
   match kind with

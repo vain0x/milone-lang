@@ -73,4 +73,5 @@ let __intOfStr (s: string): int option =
 
 let __argCount (): int = Environment.GetCommandLineArgs().Length
 
-let __argGet (index: int): string = Environment.GetCommandLineArgs().[index]
+let __argGet (index: int): string =
+  Environment.GetCommandLineArgs().[index]
