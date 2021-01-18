@@ -46,7 +46,7 @@ let private tyCtorEncode tyCtor =
   | UnresolvedTyCtor _
   | UnresolvedVarTyCtor _ -> failwith "NEVER"
 
-let tyCtorCmp l r =
+let tyCtorCompare l r =
   match l, r with
   | NativeTypeTyCtor l, NativeTypeTyCtor r -> compare l r
 
@@ -54,14 +54,14 @@ let tyCtorCmp l r =
   | _, NativeTypeTyCtor _ -> 1
 
   | UnresolvedTyCtor (lQuals, lSerial), UnresolvedTyCtor (rQuals, rSerial) ->
-      pairCmp (listCmp compare) compare (lQuals, lSerial) (rQuals, rSerial)
+      pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
 
   | UnresolvedTyCtor _, _ -> -1
   | _, UnresolvedTyCtor _ -> 1
 
-  | _ -> pairCmp compare compare (tyCtorEncode l) (tyCtorEncode r)
+  | _ -> pairCompare compare compare (tyCtorEncode l) (tyCtorEncode r)
 
-let tyCtorEq first second = tyCtorCmp first second = 0
+let tyCtorEqual first second = tyCtorCompare first second = 0
 
 let tyCtorDisplay getTyName tyCtor =
   match tyCtor with
@@ -93,9 +93,9 @@ let traitMapTys f it =
   match it with
   | AddTrait ty -> AddTrait(f ty)
 
-  | EqTrait ty -> EqTrait(f ty)
+  | EqualTrait ty -> EqualTrait(f ty)
 
-  | CmpTrait ty -> CmpTrait(f ty)
+  | CompareTrait ty -> CompareTrait(f ty)
 
   | IndexTrait (lTy, rTy, outputTy) -> IndexTrait(f lTy, f rTy, f outputTy)
 
@@ -127,9 +127,9 @@ let tyIsFun ty =
   | AppTy (FunTyCtor, _) -> true
   | _ -> false
 
-let tyCmp first second =
+let tyCompare first second =
   match first, second with
-  | ErrorTy first, ErrorTy second -> locCmp first second
+  | ErrorTy first, ErrorTy second -> locCompare first second
 
   | ErrorTy _, _ -> -1
 
@@ -137,17 +137,17 @@ let tyCmp first second =
 
   | MetaTy (l1, l2), MetaTy (r1, r2) ->
       let c = compare l1 r1
-      if c <> 0 then c else locCmp l2 r2
+      if c <> 0 then c else locCompare l2 r2
 
   | MetaTy _, _ -> -1
 
   | _, MetaTy _ -> 1
 
   | AppTy (firstTyCtor, firstTys), AppTy (secondTyCtor, secondTys) ->
-      let c = tyCtorCmp firstTyCtor secondTyCtor
-      if c <> 0 then c else listCmp tyCmp firstTys secondTys
+      let c = tyCtorCompare firstTyCtor secondTyCtor
+      if c <> 0 then c else listCompare tyCompare firstTys secondTys
 
-let tyEq first second = tyCmp first second = 0
+let tyEqual first second = tyCompare first second = 0
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
@@ -226,9 +226,6 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
-  let tyEq4 ty1 ty2 ty3 ty4 =
-    [ ty2; ty3; ty4 ] |> List.forall (tyEq ty1)
-
   let rec go (outerBp: int) ty =
     let paren (bp: int) s =
       if bp >= outerBp then s else "(" + s + ")"
@@ -500,7 +497,7 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
 
-    | AppTy (lTyCtor, lTyArgs), AppTy (rTyCtor, rTyArgs) when tyCtorEq lTyCtor rTyCtor ->
+    | AppTy (lTyCtor, lTyArgs), AppTy (rTyCtor, rTyArgs) when tyCtorEqual lTyCtor rTyCtor ->
         let rec gogo lTyArgs rTyArgs (logAcc, ctx) =
           match lTyArgs, rTyArgs with
           | [], [] -> logAcc, ctx
@@ -554,9 +551,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
 
-  | EqTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | EqualTrait ty -> (logAcc, ctx) |> expectBasic ty
 
-  | CmpTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | CompareTrait ty -> (logAcc, ctx) |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
       match lTy with

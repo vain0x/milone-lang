@@ -156,13 +156,13 @@ type Token =
   /// `..`
   | DotDotToken
   /// `=`
-  | EqToken
+  | EqualToken
   /// `^`
   | HatToken
   /// `^^^`
   | HatHatHatToken
   /// `<=`
-  | LeftEqToken
+  | LeftEqualToken
   /// `<<`
   | LeftLeftToken
   /// `<<<`
@@ -170,7 +170,7 @@ type Token =
   /// `<>`
   | LeftRightToken
   /// `>=`
-  | RightEqToken
+  | RightEqualToken
   /// `-`
   | MinusToken
   /// `%`
@@ -225,8 +225,8 @@ type Binary =
   | MulBinary
   /// `/` Division
   | DivBinary
-  /// `%` Modulo
-  | ModBinary
+  /// `%`
+  | ModuloBinary
   /// `+` Addition
   | AddBinary
   /// `-` Subtraction
@@ -255,10 +255,10 @@ type Binary =
   | RightShiftBinary
   /// `|>`
   | PipeBinary
-  /// `&&` Logical and
-  | LogAndBinary
-  /// `||` Logical or
-  | LogOrBinary
+  /// `&&`
+  | LogicalAndBinary
+  /// `||`
+  | LogicalOrBinary
   /// `f x` Functional application
   | AppBinary
   /// `::` Construction
@@ -465,7 +465,7 @@ let litTrue = BoolLit true
 let litFalse = BoolLit false
 
 // int and float are not ordered by value.
-let litCmp l r =
+let litCompare l r =
   match l, r with
   | BoolLit l, BoolLit r -> compare l r
   | BoolLit _, _ -> -1
@@ -489,7 +489,7 @@ let litCmp l r =
 // Position
 // -----------------------------------------------
 
-let posCmp (l: Pos) (r: Pos) = pairCmp compare compare l r
+let posCompare (l: Pos) (r: Pos) = pairCompare compare compare l r
 
 let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 
@@ -507,7 +507,7 @@ let locToString ((docId, y, x): Loc) =
   + ":"
   + string (x + 1)
 
-let locCmp ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
+let locCompare ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
   let c = compare lDoc rDoc
 
   if c <> 0 then c

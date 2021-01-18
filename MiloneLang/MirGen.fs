@@ -168,19 +168,19 @@ let private mxStrAdd ctx _op l r (_, loc) =
 let private mxBinOpScalar ctx op l r (ty, loc) = MBinaryExpr(op, l, r, ty, loc), ctx
 
 /// x <=> y ==> `strcmp(x, y) <=> 0` if `x : string`
-let private mxStrCmp ctx op l r (ty, loc) =
-  let strCmpExpr =
-    MBinaryExpr(MStrCmpBinary, l, r, tyInt, loc)
+let private mxStrCompare ctx op l r (ty, loc) =
+  let strCompareExpr =
+    MBinaryExpr(MStrCompareBinary, l, r, tyInt, loc)
 
   let zeroExpr = MLitExpr(IntLit "0", loc)
 
   let opExpr =
-    MBinaryExpr(op, strCmpExpr, zeroExpr, ty, loc)
+    MBinaryExpr(op, strCompareExpr, zeroExpr, ty, loc)
 
   opExpr, ctx
 
 /// Generates a comparison expression.
-let private mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
+let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   assert (opIsComparison op)
 
   match mexprToTy l with
@@ -189,7 +189,7 @@ let private mxCmp ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
            | BoolTyCtor
            | CharTyCtor),
            _) -> mxBinOpScalar ctx op l r (ty, loc)
-  | AppTy (StrTyCtor, _) -> mxStrCmp ctx op l r (ty, loc)
+  | AppTy (StrTyCtor, _) -> mxStrCompare ctx op l r (ty, loc)
   | _ -> failwithf "unimpl %A" (op, l, ty)
 
 let private mtAbort loc =
@@ -239,10 +239,10 @@ let private containsTailRec expr =
 let private mirifyPatLit ctx endLabel lit expr loc =
   let litExpr = MLitExpr(lit, loc)
 
-  let eqExpr, ctx =
-    mxCmp ctx MEqualBinary expr litExpr tyBool loc
+  let equalExpr, ctx =
+    mxCompare ctx MEqualBinary expr litExpr tyBool loc
 
-  let gotoStmt = msGotoUnless eqExpr endLabel loc
+  let gotoStmt = msGotoUnless equalExpr endLabel loc
   let ctx = addStmt ctx gotoStmt
   ctx
 
@@ -292,14 +292,14 @@ let private mirifyPatVar ctx _endLabel serial ty loc expr =
 
 let private mirifyPatVariant ctx endLabel serial ty loc expr =
   // Compare tags.
-  let eqExpr =
+  let equalExpr =
     let lDiscriminant =
       MUnaryExpr(MGetDiscriminantUnary, expr, tyInt, loc)
 
     let rDiscriminant = MDiscriminantConstExpr(serial, loc)
     MBinaryExpr(MEqualBinary, lDiscriminant, rDiscriminant, tyBool, loc)
 
-  let gotoStmt = msGotoUnless eqExpr endLabel loc
+  let gotoStmt = msGotoUnless equalExpr endLabel loc
   let ctx = addStmt ctx gotoStmt
   ctx
 
@@ -314,14 +314,14 @@ let private mirifyPatVariantApp (ctx: MirCtx) endLabel serial payloadPat loc exp
     mirifyPat ctx endLabel payloadPat extractExpr
   else
     // Compare tags.
-    let eqExpr =
+    let equalExpr =
       let lDiscriminant =
         MUnaryExpr(MGetDiscriminantUnary, expr, tyInt, loc)
 
       let rDiscriminant = MDiscriminantConstExpr(serial, loc)
       MBinaryExpr(MEqualBinary, lDiscriminant, rDiscriminant, tyBool, loc)
 
-    let gotoStmt = msGotoUnless eqExpr endLabel loc
+    let gotoStmt = msGotoUnless equalExpr endLabel loc
     let ctx = addStmt ctx gotoStmt
 
     // Extract payload.
@@ -907,10 +907,10 @@ let private mirifyExprOpArith ctx itself op l r ty loc =
 
   | _ -> failwithf "NEVER: %A" itself
 
-let private mirifyExprOpCmp ctx op l r ty loc =
+let private mirifyExprOpCompare ctx op l r ty loc =
   let l, ctx = mirifyExpr ctx l
   let r, ctx = mirifyExpr ctx r
-  mxCmp ctx op l r ty loc
+  mxCompare ctx op l r ty loc
 
 let private mirifyCallCompareExpr ctx itself l r ty loc =
   let l, ctx = mirifyExpr ctx l
@@ -933,7 +933,7 @@ let private mirifyCallCompareExpr ctx itself l r ty loc =
 
   | AppTy ((IntTyCtor (IntFlavor (Unsigned, _))), _) -> MBinaryExpr(MUInt64CompareBinary, l, r, tyInt, loc), ctx
 
-  | AppTy (StrTyCtor, _) -> MBinaryExpr(MStrCmpBinary, l, r, tyInt, loc), ctx
+  | AppTy (StrTyCtor, _) -> MBinaryExpr(MStrCompareBinary, l, r, tyInt, loc), ctx
 
   | _ -> failwithf "NEVER: %A" itself
 
@@ -942,7 +942,7 @@ let private mirifyCallToIntExpr ctx itself flavor arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
 
   match srcTy with
-  | AppTy (IntTyCtor srcFlavor, _) when intFlavorEq srcFlavor flavor -> arg, ctx
+  | AppTy (IntTyCtor srcFlavor, _) when intFlavorEqual srcFlavor flavor -> arg, ctx
 
   | AppTy ((IntTyCtor _
            | FloatTyCtor _
@@ -1120,8 +1120,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Mul, _ -> fail ()
   | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx itself MDivBinary l r ty loc
   | HPrim.Div, _ -> fail ()
-  | HPrim.Mod, [ l; r ] -> mirifyExprOpArith ctx itself MModBinary l r ty loc
-  | HPrim.Mod, _ -> fail ()
+  | HPrim.Modulo, [ l; r ] -> mirifyExprOpArith ctx itself MModuloBinary l r ty loc
+  | HPrim.Modulo, _ -> fail ()
 
   | HPrim.BitAnd, [ l; r ] -> regularBinary MBitAndBinary l r
   | HPrim.BitAnd, _ -> fail ()
@@ -1134,10 +1134,10 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.RightShift, [ l; r ] -> regularBinary MRightShiftBinary l r
   | HPrim.RightShift, _ -> fail ()
 
-  | HPrim.Eq, [ l; r ] -> mirifyExprOpCmp ctx MEqualBinary l r ty loc
-  | HPrim.Eq, _ -> fail ()
-  | HPrim.Lt, [ l; r ] -> mirifyExprOpCmp ctx MLessBinary l r ty loc
-  | HPrim.Lt, _ -> fail ()
+  | HPrim.Equal, [ l; r ] -> mirifyExprOpCompare ctx MEqualBinary l r ty loc
+  | HPrim.Equal, _ -> fail ()
+  | HPrim.Less, [ l; r ] -> mirifyExprOpCompare ctx MLessBinary l r ty loc
+  | HPrim.Less, _ -> fail ()
   | HPrim.Compare, [ l; r ] -> mirifyCallCompareExpr ctx itself l r ty loc
   | HPrim.Compare, _ -> fail ()
   | HPrim.Cons, [ l; r ] -> mirifyExprOpCons ctx l r ty loc

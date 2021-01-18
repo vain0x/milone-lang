@@ -144,14 +144,14 @@ let private primToArity ty prim =
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
-  | HPrim.Mod
+  | HPrim.Modulo
   | HPrim.BitAnd
   | HPrim.BitOr
   | HPrim.BitXor
   | HPrim.LeftShift
   | HPrim.RightShift
-  | HPrim.Eq
-  | HPrim.Lt
+  | HPrim.Equal
+  | HPrim.Less
   | HPrim.Compare
   | HPrim.Cons
   | HPrim.PtrRead -> 2

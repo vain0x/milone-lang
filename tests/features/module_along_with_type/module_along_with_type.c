@@ -104,11 +104,11 @@ int milone_main() {
     struct Range_ variant_3 = (struct Range_){.discriminant = Range_, .Range_ = tuple_3};
     struct Range_ r_ = variant_3;
     struct String call_7 = toString_1(p_);
-    milone_assert((str_cmp(call_7, (struct String){.str = "2:1", .len = 3}) == 0), 29, 2);
+    milone_assert((str_compare(call_7, (struct String){.str = "2:1", .len = 3}) == 0), 29, 2);
     struct Pos_ call_8 = add_(p_, p_);
     struct String call_9 = toString_1(call_8);
-    milone_assert((str_cmp(call_9, (struct String){.str = "3:1", .len = 3}) == 0), 30, 2);
+    milone_assert((str_compare(call_9, (struct String){.str = "3:1", .len = 3}) == 0), 30, 2);
     struct String call_10 = toString_(r_);
-    milone_assert((str_cmp(call_10, (struct String){.str = "2.1-3.1", .len = 7}) == 0), 32, 2);
+    milone_assert((str_compare(call_10, (struct String){.str = "2.1-3.1", .len = 7}) == 0), 32, 2);
     return 0;
 }

@@ -146,10 +146,10 @@ type Trait =
   | AddTrait of Ty
 
   /// The type supports `=`.
-  | EqTrait of Ty
+  | EqualTrait of Ty
 
   /// The type supports `<`.
-  | CmpTrait of Ty
+  | CompareTrait of Ty
 
   /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
   | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
@@ -334,14 +334,14 @@ type HPrim =
   | Sub
   | Mul
   | Div
-  | Mod
+  | Modulo
   | BitAnd
   | BitOr
   | BitXor
   | LeftShift
   | RightShift
-  | Eq
-  | Lt
+  | Equal
+  | Less
   | Compare
 
   // conversion:
@@ -597,12 +597,12 @@ let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
 
 let moduleTySerialToInt (ModuleTySerial serial) = serial
 
-let moduleTySerialCmp l r =
+let moduleTySerialCompare l r =
   moduleTySerialToInt l - moduleTySerialToInt r
 
 let moduleSynonymSerialToInt (ModuleSynonymSerial serial) = serial
 
-let moduleSynonymSerialCmp l r =
+let moduleSynonymSerialCompare l r =
   moduleSynonymSerialToInt l
   - moduleSynonymSerialToInt r
 
@@ -620,17 +620,17 @@ let tyDefToName tyDef =
 
 let varSerialToInt (VarSerial serial) = serial
 
-let varSerialCmp l r =
+let varSerialCompare l r =
   compare (varSerialToInt l) (varSerialToInt r)
 
 let funSerialToInt (FunSerial serial) = serial
 
-let funSerialCmp l r =
+let funSerialCompare l r =
   compare (funSerialToInt l) (funSerialToInt r)
 
 let variantSerialToInt (VariantSerial serial) = serial
 
-let variantSerialCmp l r =
+let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
 let varDefToName varDef =
@@ -722,7 +722,7 @@ let primToTySpec prim =
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
-  | HPrim.Mod ->
+  | HPrim.Modulo ->
       let ty = meta 1
       poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
 
@@ -737,17 +737,17 @@ let primToTySpec prim =
       let ty = meta 1
       poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
 
-  | HPrim.Eq ->
-      let eqTy = meta 1
-      poly (tyFun eqTy (tyFun eqTy tyBool)) [ EqTrait eqTy ]
+  | HPrim.Equal ->
+      let argTy = meta 1
+      poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
 
-  | HPrim.Lt ->
-      let cmpTy = meta 1
-      poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ CmpTrait cmpTy ]
+  | HPrim.Less ->
+      let compareTy = meta 1
+      poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
 
   | HPrim.Compare ->
-      let cmpTy = meta 1
-      poly (tyFun cmpTy (tyFun cmpTy tyInt)) [ CmpTrait cmpTy ]
+      let compareTy = meta 1
+      poly (tyFun compareTy (tyFun compareTy tyInt)) [ CompareTrait compareTy ]
 
   | HPrim.Nil ->
       let itemTy = meta 1
@@ -1124,11 +1124,11 @@ let private traitBoundErrorToString tyDisplay it =
       "Operator (+) is not supported for type: "
       + tyDisplay ty
 
-  | EqTrait ty ->
+  | EqualTrait ty ->
       "Equality is not defined for type: "
       + tyDisplay ty
 
-  | CmpTrait ty ->
+  | CompareTrait ty ->
       "Comparison is not defined for type: "
       + tyDisplay ty
 

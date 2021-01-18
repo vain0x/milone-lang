@@ -48,7 +48,7 @@ struct String {
 struct String str_borrow(char const *c_str);
 
 // Compare two strings in lexicographical order.
-int str_cmp(struct String l, struct String r);
+int str_compare(struct String l, struct String r);
 
 // Create a copy of native C string.
 struct String str_of_raw_parts(char const *ptr, int len);

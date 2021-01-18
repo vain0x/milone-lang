@@ -337,7 +337,7 @@ let private tokenOfOp (text: string) l r: Token =
   | '<' ->
       match s with
       | "<" -> LeftAngleToken
-      | "<=" -> LeftEqToken
+      | "<=" -> LeftEqualToken
       | "<>" -> LeftRightToken
       | "<<" -> LeftLeftToken
       | "<<<" -> LeftLeftLeftToken
@@ -346,7 +346,7 @@ let private tokenOfOp (text: string) l r: Token =
   | '>' ->
       match s with
       | ">" -> RightAngleToken
-      | ">=" -> RightEqToken
+      | ">=" -> RightEqualToken
       | _ -> error ()
 
   | '|' ->
@@ -363,7 +363,7 @@ let private tokenOfOp (text: string) l r: Token =
       | "^^^" -> HatHatHatToken
       | _ -> error ()
 
-  | '=' -> expect "=" EqToken
+  | '=' -> expect "=" EqualToken
   | '%' -> expect "%" PercentToken
   | '+' -> expect "+" PlusToken
   | ';' -> expect ";" SemiToken

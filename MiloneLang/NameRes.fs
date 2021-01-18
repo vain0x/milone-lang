@@ -241,14 +241,14 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
 
   { Serial = serial
     NameMap = nameMap
-    Vars = mapEmpty varSerialCmp
-    Funs = mapEmpty funSerialCmp
-    Variants = mapEmpty variantSerialCmp
+    Vars = mapEmpty varSerialCompare
+    Funs = mapEmpty funSerialCompare
+    Variants = mapEmpty variantSerialCompare
     VarLevels = mapEmpty compare
     MainFunOpt = None
     Tys = mapEmpty compare
-    ModuleTys = mapEmpty moduleTySerialCmp
-    ModuleSynonyms = mapEmpty moduleSynonymSerialCmp
+    ModuleTys = mapEmpty moduleTySerialCompare
+    ModuleSynonyms = mapEmpty moduleSynonymSerialCompare
     VarNs = mapEmpty nsOwnerCompare
     TyNs = mapEmpty nsOwnerCompare
     NsNs = mapEmpty nsOwnerCompare
@@ -1157,7 +1157,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
     lScope
     |> mapToList
     |> List.map (fun (_: string, (varSerial, _, _)) -> varSerial)
-    |> setOfList varSerialCmp
+    |> setOfList varSerialCompare
 
   let pats, ctx =
     (pats, ctx)

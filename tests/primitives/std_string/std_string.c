@@ -1783,90 +1783,90 @@ int containsTest_(int arg_48) {
 
 int truncateTest_(int arg_49) {
     struct String call_84 = truncate_(-1, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_84, (struct String){.str = "", .len = 0}) == 0), 56, 2);
+    milone_assert((str_compare(call_84, (struct String){.str = "", .len = 0}) == 0), 56, 2);
     struct String call_85 = truncate_(0, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_85, (struct String){.str = "", .len = 0}) == 0), 57, 2);
+    milone_assert((str_compare(call_85, (struct String){.str = "", .len = 0}) == 0), 57, 2);
     struct String call_86 = truncate_(1, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_86, (struct String){.str = "a", .len = 1}) == 0), 58, 2);
+    milone_assert((str_compare(call_86, (struct String){.str = "a", .len = 1}) == 0), 58, 2);
     struct String call_87 = truncate_(2, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_87, (struct String){.str = "ab", .len = 2}) == 0), 59, 2);
+    milone_assert((str_compare(call_87, (struct String){.str = "ab", .len = 2}) == 0), 59, 2);
     struct String call_88 = truncate_(3, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_88, (struct String){.str = "ab", .len = 2}) == 0), 60, 2);
+    milone_assert((str_compare(call_88, (struct String){.str = "ab", .len = 2}) == 0), 60, 2);
     return 0;
 }
 
 int skipTest_(int arg_50) {
     struct String call_89 = skip_(-1, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_89, (struct String){.str = "ab", .len = 2}) == 0), 63, 2);
+    milone_assert((str_compare(call_89, (struct String){.str = "ab", .len = 2}) == 0), 63, 2);
     struct String call_90 = skip_(0, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_90, (struct String){.str = "ab", .len = 2}) == 0), 64, 2);
+    milone_assert((str_compare(call_90, (struct String){.str = "ab", .len = 2}) == 0), 64, 2);
     struct String call_91 = skip_(1, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_91, (struct String){.str = "b", .len = 1}) == 0), 65, 2);
+    milone_assert((str_compare(call_91, (struct String){.str = "b", .len = 1}) == 0), 65, 2);
     struct String call_92 = skip_(2, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_92, (struct String){.str = "", .len = 0}) == 0), 66, 2);
+    milone_assert((str_compare(call_92, (struct String){.str = "", .len = 0}) == 0), 66, 2);
     struct String call_93 = skip_(3, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_93, (struct String){.str = "", .len = 0}) == 0), 67, 2);
+    milone_assert((str_compare(call_93, (struct String){.str = "", .len = 0}) == 0), 67, 2);
     return 0;
 }
 
 int sliceTest_(int arg_51) {
     struct String call_94 = slice_(-2, -1, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_94, (struct String){.str = "", .len = 0}) == 0), 70, 2);
+    milone_assert((str_compare(call_94, (struct String){.str = "", .len = 0}) == 0), 70, 2);
     struct String call_95 = slice_(-1, 1, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_95, (struct String){.str = "a", .len = 1}) == 0), 71, 2);
+    milone_assert((str_compare(call_95, (struct String){.str = "a", .len = 1}) == 0), 71, 2);
     struct String call_96 = slice_(0, 1, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_96, (struct String){.str = "a", .len = 1}) == 0), 72, 2);
+    milone_assert((str_compare(call_96, (struct String){.str = "a", .len = 1}) == 0), 72, 2);
     struct String call_97 = slice_(0, 2, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_97, (struct String){.str = "ab", .len = 2}) == 0), 73, 2);
+    milone_assert((str_compare(call_97, (struct String){.str = "ab", .len = 2}) == 0), 73, 2);
     struct String call_98 = slice_(0, 3, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_98, (struct String){.str = "ab", .len = 2}) == 0), 74, 2);
+    milone_assert((str_compare(call_98, (struct String){.str = "ab", .len = 2}) == 0), 74, 2);
     struct String call_99 = slice_(1, 2, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_99, (struct String){.str = "b", .len = 1}) == 0), 75, 2);
+    milone_assert((str_compare(call_99, (struct String){.str = "b", .len = 1}) == 0), 75, 2);
     struct String call_100 = slice_(1, 3, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_100, (struct String){.str = "b", .len = 1}) == 0), 76, 2);
+    milone_assert((str_compare(call_100, (struct String){.str = "b", .len = 1}) == 0), 76, 2);
     struct String call_101 = slice_(2, 3, (struct String){.str = "ab", .len = 2});
-    milone_assert((str_cmp(call_101, (struct String){.str = "", .len = 0}) == 0), 77, 2);
+    milone_assert((str_compare(call_101, (struct String){.str = "", .len = 0}) == 0), 77, 2);
     return 0;
 }
 
 int trimTest_(int arg_52) {
     struct String call_102 = trim_((struct String){.str = "  ab  ", .len = 6});
-    milone_assert((str_cmp(call_102, (struct String){.str = "ab", .len = 2}) == 0), 80, 2);
+    milone_assert((str_compare(call_102, (struct String){.str = "ab", .len = 2}) == 0), 80, 2);
     struct String call_103 = trimStart_((struct String){.str = "  ab  ", .len = 6});
-    milone_assert((str_cmp(call_103, (struct String){.str = "ab  ", .len = 4}) == 0), 81, 2);
+    milone_assert((str_compare(call_103, (struct String){.str = "ab  ", .len = 4}) == 0), 81, 2);
     struct String call_104 = trimEnd_((struct String){.str = " ab", .len = 3});
-    milone_assert((str_cmp(call_104, (struct String){.str = " ab", .len = 3}) == 0), 82, 2);
+    milone_assert((str_compare(call_104, (struct String){.str = " ab", .len = 3}) == 0), 82, 2);
     return 0;
 }
 
 int replaceTest_(int arg_53) {
     struct String call_105 = replace_((struct String){.str = "a", .len = 1}, (struct String){.str = "A", .len = 1}, (struct String){.str = "abaca", .len = 5});
-    milone_assert((str_cmp(call_105, (struct String){.str = "AbAcA", .len = 5}) == 0), 85, 2);
+    milone_assert((str_compare(call_105, (struct String){.str = "AbAcA", .len = 5}) == 0), 85, 2);
     struct String call_106 = replace_((struct String){.str = "xy", .len = 2}, (struct String){.str = "yx", .len = 2}, (struct String){.str = "xyxyx", .len = 5});
-    milone_assert((str_cmp(call_106, (struct String){.str = "yxyxx", .len = 5}) == 0), 86, 2);
+    milone_assert((str_compare(call_106, (struct String){.str = "yxyxx", .len = 5}) == 0), 86, 2);
     struct String call_107 = replace_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0}, (struct String){.str = "as is", .len = 5});
-    milone_assert((str_cmp(call_107, (struct String){.str = "as is", .len = 5}) == 0), 87, 2);
+    milone_assert((str_compare(call_107, (struct String){.str = "as is", .len = 5}) == 0), 87, 2);
     struct String call_108 = replace_((struct String){.str = "aa", .len = 2}, (struct String){.str = "a", .len = 1}, (struct String){.str = "aaaaa", .len = 5});
-    milone_assert((str_cmp(call_108, (struct String){.str = "aaa", .len = 3}) == 0), 88, 2);
+    milone_assert((str_compare(call_108, (struct String){.str = "aaa", .len = 3}) == 0), 88, 2);
     return 0;
 }
 
 int splitTest_(int arg_54) {
     struct StringList const* call_109 = toLines_((struct String){.str = "a\nb\nc", .len = 5});
     struct String call_110 = concat_((struct String){.str = ";", .len = 1}, call_109);
-    milone_assert((str_cmp(call_110, (struct String){.str = "a;b;c", .len = 5}) == 0), 91, 2);
+    milone_assert((str_compare(call_110, (struct String){.str = "a;b;c", .len = 5}) == 0), 91, 2);
     struct StringList const* call_111 = toLines_((struct String){.str = "a\nb\nc\n", .len = 6});
     struct String call_112 = concat_((struct String){.str = ";", .len = 1}, call_111);
-    milone_assert((str_cmp(call_112, (struct String){.str = "a;b;c;", .len = 6}) == 0), 92, 2);
+    milone_assert((str_compare(call_112, (struct String){.str = "a;b;c;", .len = 6}) == 0), 92, 2);
     struct StringList const* call_113 = toLines_((struct String){.str = "a", .len = 1});
     struct String call_114 = concat_((struct String){.str = ";", .len = 1}, call_113);
-    milone_assert((str_cmp(call_114, (struct String){.str = "a", .len = 1}) == 0), 93, 2);
+    milone_assert((str_compare(call_114, (struct String){.str = "a", .len = 1}) == 0), 93, 2);
     struct StringList const* call_115 = toLines_((struct String){.str = "\n", .len = 1});
     struct String call_116 = concat_((struct String){.str = ";", .len = 1}, call_115);
-    milone_assert((str_cmp(call_116, (struct String){.str = ";", .len = 1}) == 0), 94, 2);
+    milone_assert((str_compare(call_116, (struct String){.str = ";", .len = 1}) == 0), 94, 2);
     struct StringList const* call_117 = toLines_((struct String){.str = "", .len = 0});
     struct String call_118 = concat_((struct String){.str = ";", .len = 1}, call_117);
-    milone_assert((str_cmp(call_118, (struct String){.str = "", .len = 0}) == 0), 95, 2);
+    milone_assert((str_compare(call_118, (struct String){.str = "", .len = 0}) == 0), 95, 2);
     return 0;
 }
 
@@ -1878,9 +1878,9 @@ int concatTest_(int arg_55) {
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "ab", .len = 2}, .tail = list_5};
     struct String call_119 = concat_((struct String){.str = ", ", .len = 2}, list_4);
-    milone_assert((str_cmp(call_119, (struct String){.str = "ab, cd, ef", .len = 10}) == 0), 98, 2);
+    milone_assert((str_compare(call_119, (struct String){.str = "ab, cd, ef", .len = 10}) == 0), 98, 2);
     struct String call_120 = concat_((struct String){.str = "", .len = 0}, NULL);
-    milone_assert((str_cmp(call_120, (struct String){.str = "", .len = 0}) == 0), 99, 2);
+    milone_assert((str_compare(call_120, (struct String){.str = "", .len = 0}) == 0), 99, 2);
     return 0;
 }
 

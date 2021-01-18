@@ -121,8 +121,7 @@ type private Bp =
   /// `|>`
   | PipeBp
 
-  /// Comparison.
-  | CmpBp
+  | CompareBp
 
   | AndBp
   | OrBp
@@ -130,8 +129,8 @@ type private Bp =
 let private bpNext bp =
   match bp with
   | OrBp -> AndBp
-  | AndBp -> CmpBp
-  | CmpBp -> PipeBp
+  | AndBp -> CompareBp
+  | CompareBp -> PipeBp
   | PipeBp -> BitBp
   | BitBp -> XorBp
   | XorBp -> ConsBp
@@ -711,16 +710,16 @@ let private parseOps bp basePos first (tokens, errors) =
     parseOps bp basePos expr (tokens, errors)
 
   match bp, tokens with
-  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL first LogOrBinary opPos (tokens, errors)
+  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL first LogicalOrBinary opPos (tokens, errors)
 
-  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first LogAndBinary opPos (tokens, errors)
+  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first LogicalAndBinary opPos (tokens, errors)
 
-  | CmpBp, (EqToken, opPos) :: tokens -> nextL first EqualBinary opPos (tokens, errors)
-  | CmpBp, (LeftRightToken, opPos) :: tokens -> nextL first NotEqualBinary opPos (tokens, errors)
-  | CmpBp, (LeftAngleToken, opPos) :: tokens -> nextL first LessBinary opPos (tokens, errors)
-  | CmpBp, (LeftEqToken, opPos) :: tokens -> nextL first LessEqualBinary opPos (tokens, errors)
-  | CmpBp, (RightAngleToken, opPos) :: tokens -> nextL first GreaterBinary opPos (tokens, errors)
-  | CmpBp, (RightEqToken, opPos) :: tokens -> nextL first GreaterEqualBinary opPos (tokens, errors)
+  | CompareBp, (EqualToken, opPos) :: tokens -> nextL first EqualBinary opPos (tokens, errors)
+  | CompareBp, (LeftRightToken, opPos) :: tokens -> nextL first NotEqualBinary opPos (tokens, errors)
+  | CompareBp, (LeftAngleToken, opPos) :: tokens -> nextL first LessBinary opPos (tokens, errors)
+  | CompareBp, (LeftEqualToken, opPos) :: tokens -> nextL first LessEqualBinary opPos (tokens, errors)
+  | CompareBp, (RightAngleToken, opPos) :: tokens -> nextL first GreaterBinary opPos (tokens, errors)
+  | CompareBp, (RightEqualToken, opPos) :: tokens -> nextL first GreaterEqualBinary opPos (tokens, errors)
 
   | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL first PipeBinary opPos (tokens, errors)
 
@@ -742,7 +741,7 @@ let private parseOps bp basePos first (tokens, errors) =
 
   | MulBp, (StarToken, opPos) :: tokens -> nextL first MulBinary opPos (tokens, errors)
   | MulBp, (SlashToken, opPos) :: tokens -> nextL first DivBinary opPos (tokens, errors)
-  | MulBp, (PercentToken, opPos) :: tokens -> nextL first ModBinary opPos (tokens, errors)
+  | MulBp, (PercentToken, opPos) :: tokens -> nextL first ModuloBinary opPos (tokens, errors)
 
   | _ -> first, tokens, errors
 
@@ -810,7 +809,7 @@ let private parseRecordExpr bracePos (tokens, errors) =
 
     | (SemiToken, _) :: tokens -> go acc (nextPos tokens) (tokens, errors)
 
-    | (IdentToken ident, fieldPos) :: (EqToken, _) :: tokens when fieldPos |> posIsSameColumn alignPos ->
+    | (IdentToken ident, fieldPos) :: (EqualToken, _) :: tokens when fieldPos |> posIsSameColumn alignPos ->
         let init, tokens, errors =
           parseExpr (fieldPos |> posAddX 1) (tokens, errors)
 
@@ -828,7 +827,7 @@ let private parseRecordExpr bracePos (tokens, errors) =
     match tokens with
     | (RightBraceToken, _) :: _ -> None, ([], tokens, errors)
 
-    | (IdentToken _, _) :: (EqToken, _) :: _ -> None, go [] (nextPos tokens) (tokens, errors)
+    | (IdentToken _, _) :: (EqualToken, _) :: _ -> None, go [] (nextPos tokens) (tokens, errors)
 
     | _ ->
         let baseExpr, tokens, errors =
@@ -961,7 +960,7 @@ let private parseLet letPos (tokens, errors) =
 
   let body, tokens, errors =
     match tokens with
-    | (EqToken, eqPos) :: tokens -> parseSemi innerBasePos eqPos (tokens, errors)
+    | (EqualToken, equalPos) :: tokens -> parseSemi innerBasePos equalPos (tokens, errors)
 
     | _ -> parseExprError "Missing '='" (tokens, errors)
 
@@ -1137,7 +1136,7 @@ let private parseLetDecl letPos (tokens, errors) =
 
   let init, tokens, errors =
     match tokens with
-    | (EqToken, equalPos) :: tokens -> parseSemi innerBasePos equalPos (tokens, errors)
+    | (EqualToken, equalPos) :: tokens -> parseSemi innerBasePos equalPos (tokens, errors)
     | _ -> parseExprError "Missing '='" (tokens, errors)
 
   Some(ALetDecl(isRec, vis, pat, init, letPos)), tokens, errors
@@ -1169,14 +1168,14 @@ let private parseTyDecl typePos (tokens, errors) =
       | tyArgs, None, tokens ->
           let ty, tokens, errors =
             match tokens with
-            | (EqToken, _) :: tokens -> parseTy basePos (tokens, errors)
+            | (EqualToken, _) :: tokens -> parseTy basePos (tokens, errors)
             | _ -> parseTyError "Expected '='." (tokens, errors)
 
           Some(ATySynonymDecl(vis, tyIdent, tyArgs, ty, typePos)), tokens, errors
 
   | (IdentToken tyIdent, _) :: tokens ->
       match tokens with
-      | (EqToken, _) :: tokens ->
+      | (EqualToken, _) :: tokens ->
           let tyDecl, tokens, errors =
             parseTyDeclBody basePos (tokens, errors)
 
@@ -1238,12 +1237,12 @@ let private parseModuleDecl modulePos (tokens, errors) =
         "_", tokens, errors
 
   match tokens with
-  | (EqToken, _) :: (((IdentToken _, _) :: _) as tokens) ->
+  | (EqualToken, _) :: (((IdentToken _, _) :: _) as tokens) ->
       // FIXME: error if rec/vis is specified
       let path, tokens, errors = parsePath (tokens, errors)
       Some(AModuleSynonymDecl(moduleName, path, modulePos)), tokens, errors
 
-  | (EqToken, _) :: tokens ->
+  | (EqualToken, _) :: tokens ->
       let decls, tokens, errors = parseModuleBody (nextPos tokens) (tokens, errors)
       Some(AModuleDecl(isRec, vis, moduleName, decls, modulePos)), tokens, errors
 

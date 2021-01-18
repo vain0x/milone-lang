@@ -75,7 +75,7 @@ let private isNewtypeVariant (ctx: TyCtx) variantSerial =
 
 let private isMainFun funSerial (ctx: TyCtx) =
   match ctx.MainFunOpt with
-  | Some mainFun -> funSerialCmp mainFun funSerial = 0
+  | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
 
 let private freshVar (ctx: TyCtx) hint ty loc =
@@ -1163,7 +1163,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
              let acc = acc |> mapAdd varSerial varDef
 
              acc, ctx)
-           (mapEmpty varSerialCmp, ctx)
+           (mapEmpty varSerialCompare, ctx)
 
     { ctx with Vars = vars }
 
@@ -1182,7 +1182,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
            acc
            |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
            ctx)
-         (mapEmpty funSerialCmp, ctx)
+         (mapEmpty funSerialCompare, ctx)
 
   let ctx = { ctx with Funs = funs }
 

@@ -44,7 +44,7 @@ let private ofTyCtx (tyCtx: TyCtx): TailRecCtx =
 
 let private isCurrentFun funSerial (ctx: TailRecCtx) =
   match ctx.CurrentFun with
-  | Some current -> funSerialCmp current funSerial = 0
+  | Some current -> funSerialCompare current funSerial = 0
   | _ -> false
 
 let private withCurrentFun funSerial (f: TailRecCtx -> HExpr * TailRecCtx) (ctx: TailRecCtx) =

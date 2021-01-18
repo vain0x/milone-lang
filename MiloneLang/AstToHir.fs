@@ -38,22 +38,22 @@ let private opToPrim op =
   | SubBinary -> HPrim.Sub
   | MulBinary -> HPrim.Mul
   | DivBinary -> HPrim.Div
-  | ModBinary -> HPrim.Mod
+  | ModuloBinary -> HPrim.Modulo
   | BitAndBinary -> HPrim.BitAnd
   | BitOrBinary -> HPrim.BitOr
   | BitXorBinary -> HPrim.BitXor
   | LeftShiftBinary -> HPrim.LeftShift
   | RightShiftBinary -> HPrim.RightShift
-  | EqualBinary -> HPrim.Eq
-  | LessBinary -> HPrim.Lt
+  | EqualBinary -> HPrim.Equal
+  | LessBinary -> HPrim.Less
   | ConsBinary -> HPrim.Cons
 
   | NotEqualBinary
   | LessEqualBinary
   | GreaterBinary
   | GreaterEqualBinary
-  | LogAndBinary
-  | LogOrBinary
+  | LogicalAndBinary
+  | LogicalOrBinary
   | AppBinary
   | PipeBinary -> failwithf "NEVER: %A" op
 
@@ -151,8 +151,8 @@ let private desugarMinusUnary arg =
 
 /// `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos =
-  let eqExpr = ABinaryExpr(EqualBinary, l, r, pos)
-  axNot eqExpr pos
+  let equalExpr = ABinaryExpr(EqualBinary, l, r, pos)
+  axNot equalExpr pos
 
 /// `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.
@@ -473,14 +473,14 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | ABinaryExpr (LogAndBinary, l, r, pos) ->
+  | ABinaryExpr (LogicalAndBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinAnd l r pos
         (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
-  | ABinaryExpr (LogOrBinary, l, r, pos) ->
+  | ABinaryExpr (LogicalOrBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinOr l r pos
         (expr, nameCtx) |> athExpr docId

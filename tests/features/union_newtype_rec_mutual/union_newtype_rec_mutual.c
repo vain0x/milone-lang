@@ -93,9 +93,9 @@ int milone_main() {
     int n1_ = (*(((struct IntEven_ListTuple2 const*)(*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->head.Even_.t1->head.Odd_))).t0;
     if ((!((!((*(((struct IntEven_ListTuple2 const*)(*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->head.Even_.t1->head.Odd_))).t1))))) goto next_2;
     milone_assert((n1_ == 1), 15, 6);
-    milone_assert((str_cmp(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 6);
+    milone_assert((str_compare(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 6);
     milone_assert((n3_ == 3), 17, 6);
-    milone_assert((str_cmp(s4_, (struct String){.str = "four", .len = 4}) == 0), 18, 6);
+    milone_assert((str_compare(s4_, (struct String){.str = "four", .len = 4}) == 0), 18, 6);
     match_ = 0;
     goto end_match_1;
 next_2:;

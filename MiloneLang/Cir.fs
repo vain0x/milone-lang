@@ -57,7 +57,7 @@ type CUnary =
 type CBinary =
   | CMulBinary
   | CDivBinary
-  | CModBinary
+  | CModuloBinary
   | CAddBinary
   | CSubBinary
   | CBitAndBinary

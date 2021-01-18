@@ -23,7 +23,7 @@ int fileWriteAllText_(struct String fileName_1, struct String content_) {
 int milone_main() {
     struct String call_ = fileReadAllText_((struct String){.str = "tests/primitives/effect_file_io/input.txt", .len = 41});
     struct String content_1 = call_;
-    milone_assert((str_cmp(content_1, (struct String){.str = "hello\n", .len = 6}) == 0), 12, 2);
+    milone_assert((str_compare(content_1, (struct String){.str = "hello\n", .len = 6}) == 0), 12, 2);
     struct String content_2 = str_add(content_1, (struct String){.str = "world\n", .len = 6});
     int call_1 = fileWriteAllText_((struct String){.str = "tests/primitives/effect_file_io/output.txt", .len = 42}, content_2);
     return 0;

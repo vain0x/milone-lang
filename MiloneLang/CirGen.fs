@@ -20,7 +20,7 @@ open MiloneLang.Mir
 open MiloneLang.MirGen
 open MiloneLang.Cir
 
-let private valueSymbolCmp l r =
+let private valueSymbolCompare l r =
   let encode symbol =
     match symbol with
     | VarSymbol (VarSerial serial) -> serial
@@ -91,7 +91,7 @@ type private CirCtx =
 
 let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   let valueUniqueNames =
-    let m = mapEmpty valueSymbolCmp
+    let m = mapEmpty valueSymbolCompare
 
     let m =
       mirCtx.Vars
@@ -113,7 +113,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
              |> mapAdd (VariantSymbol variantSerial) variantDef.Name)
            m
 
-    m |> renameIdents id fst valueSymbolCmp
+    m |> renameIdents id fst valueSymbolCompare
 
   let tyNames =
     let toKey (serial, tyDef) =
@@ -125,14 +125,14 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
       | UnionTyDef _ -> tyUnion serial
       | RecordTyDef _ -> tyRecord serial
 
-    mirCtx.Tys |> renameIdents tyDefToName toKey tyCmp
+    mirCtx.Tys |> renameIdents tyDefToName toKey tyCompare
 
   { Vars = mirCtx.Vars
     Funs = mirCtx.Funs
     Variants = mirCtx.Variants
     MainFunOpt = mirCtx.MainFunOpt
     ValueUniqueNames = valueUniqueNames
-    TyEnv = mapEmpty tyCmp
+    TyEnv = mapEmpty tyCompare
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []
@@ -147,7 +147,7 @@ let private findStorageModifier (ctx: CirCtx) varSerial =
 
 let private isMainFun (ctx: CirCtx) funSerial =
   match ctx.MainFunOpt with
-  | Some mainFun -> funSerialCmp mainFun funSerial = 0
+  | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
 
 let private addError (ctx: CirCtx) message loc =
@@ -680,7 +680,7 @@ let private cBinaryOf op =
   match op with
   | MMulBinary -> CMulBinary
   | MDivBinary -> CDivBinary
-  | MModBinary -> CModBinary
+  | MModuloBinary -> CModuloBinary
   | MAddBinary -> CAddBinary
   | MSubBinary -> CSubBinary
 
@@ -699,7 +699,7 @@ let private cBinaryOf op =
   | MInt64CompareBinary
   | MUInt64CompareBinary
   | MStrAddBinary
-  | MStrCmpBinary
+  | MStrCompareBinary
   | MStrIndexBinary -> failwith "Never"
 
 let private genLit lit =
@@ -815,7 +815,7 @@ let private genExprBin ctx op l r =
   | MUInt64CompareBinary -> genBinaryExprAsCall ctx "uint64_compare" l r
 
   | MStrAddBinary -> genBinaryExprAsCall ctx "str_add" l r
-  | MStrCmpBinary -> genBinaryExprAsCall ctx "str_cmp" l r
+  | MStrCompareBinary -> genBinaryExprAsCall ctx "str_compare" l r
   | MStrIndexBinary ->
       let l, ctx = cgExpr ctx l
       let r, ctx = cgExpr ctx r
@@ -904,7 +904,7 @@ let private cgPrintfnActionStmt ctx itself args =
                match arg with
                | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
 
-               | _ when tyEq (mexprToTy arg) tyStr ->
+               | _ when tyEqual (mexprToTy arg) tyStr ->
                    // Insert implicit cast from str to str ptr.
                    let arg, ctx = cgExpr ctx arg
                    CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx

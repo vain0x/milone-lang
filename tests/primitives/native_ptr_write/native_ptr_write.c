@@ -24,6 +24,6 @@ int milone_main() {
     buf_[1] = 'i';
     struct String call_ = strOfRawParts_(((char const*)buf_), 2);
     struct String s_ = call_;
-    milone_assert((str_cmp(s_, (struct String){.str = "Hi", .len = 2}) == 0), 17, 2);
+    milone_assert((str_compare(s_, (struct String){.str = "Hi", .len = 2}) == 0), 17, 2);
     return 0;
 }
