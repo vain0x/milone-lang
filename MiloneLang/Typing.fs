@@ -325,7 +325,7 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
 let private resolveAscriptionTy ctx ascriptionTy =
   let rec go (ty, ctx: TyCtx) =
     match ty with
-    | ErrorTy _ -> ty, ctx
+    | AppTy (ErrorTk _, _) -> ty, ctx
 
     | MetaTy(serial, loc) when ctx.TyLevels |> mapContainsKey serial |> not ->
       let ctx = { ctx with TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
@@ -1062,7 +1062,7 @@ let private rcsSynonymTy (ctx: SynonymCycleCtx) tySerial =
 
 let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
   match ty with
-  | ErrorTy _ -> ctx
+  | AppTy (ErrorTk _, _) -> ctx
 
   | MetaTy (tySerial, _) ->
       match ctx.ExpandMetaOrSynonymTy tySerial with

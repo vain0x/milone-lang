@@ -18,7 +18,7 @@ let private mapAddList key value map =
 
 let private isNoTy ty =
   match ty with
-  | ErrorTy _ -> true
+  | AppTy (ErrorTk _, _) -> true
   | _ -> false
 
 let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
@@ -570,7 +570,7 @@ let private resolveNavTy quals last ctx =
 let private resolveTy ty loc scopeCtx =
   let rec go (ty, scopeCtx) =
     match ty with
-    | ErrorTy _ -> ty, scopeCtx
+    | AppTy (ErrorTk _, _) -> ty, scopeCtx
 
     | AppTy (UnresolvedTk ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
         MetaTy(serial, loc), scopeCtx
@@ -591,7 +591,7 @@ let private resolveTy ty loc scopeCtx =
             let scopeCtx =
               scopeCtx |> addLog (UndefinedTyError name) loc
 
-            ErrorTy loc, scopeCtx
+            tyError loc, scopeCtx
 
         | _ ->
             let scopeCtx =
@@ -618,7 +618,7 @@ let private resolveTy ty loc scopeCtx =
                   scopeCtx
                   |> addLog (TyArityError(name, arity, List.length defTyArgs)) loc
 
-                ErrorTy loc, scopeCtx
+                tyError loc, scopeCtx
 
             | _ -> tySynonym tySerial tys, scopeCtx
 
@@ -639,7 +639,7 @@ let private resolveTy ty loc scopeCtx =
                 let scopeCtx =
                   scopeCtx |> addLog (UndefinedTyError name) loc
 
-                ErrorTy loc, scopeCtx
+                tyError loc, scopeCtx
 
     | AppTy (tk, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go

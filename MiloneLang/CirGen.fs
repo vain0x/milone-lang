@@ -511,6 +511,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           tupleTy, ctx
 
+      | AppTy (ErrorTk _, _)
       | AppTy (ListTk, _)
       | AppTy (FunTk, _)
       | AppTy (NativePtrTk _, _)
@@ -518,8 +519,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
       | AppTy (UnionTk _, _)
       | AppTy (RecordTk _, _)
       | AppTy (UnresolvedTk _, _)
-      | AppTy (UnresolvedVarTk _, _)
-      | ErrorTy _ ->
+      | AppTy (UnresolvedVarTk _, _) ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
 
@@ -745,7 +745,7 @@ let private genDefault ctx ty =
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
 
-  | ErrorTy _
+  | AppTy (ErrorTk _, _)
   | AppTy (VoidTk, _)
   | AppTy (UnresolvedTk _, _)
   | AppTy (UnresolvedVarTk _, _) -> failwithf "Never %A" ty

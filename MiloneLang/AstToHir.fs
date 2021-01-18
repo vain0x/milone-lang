@@ -218,7 +218,7 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
       let loc = toLoc docId pos
-      ErrorTy loc, nameCtx
+      tyError loc, nameCtx
 
   | AAppTy (quals, name, argTys, _) ->
       let quals, nameCtx =

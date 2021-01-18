@@ -83,9 +83,10 @@ type IsMut =
   | IsMut
 
 /// Type constructor.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type Tk =
+  | ErrorTk of errorLoc: Loc
+
   | IntTk of intFlavor: IntFlavor
   | FloatTk of floatFlavor: FloatFlavor
   | BoolTk
@@ -120,8 +121,6 @@ type Tk =
 [<Struct>]
 [<NoEquality; NoComparison>]
 type Ty =
-  | ErrorTy of errorLoc: Loc
-
   /// Type variable to be bound or quantified..
   | MetaTy of metaTySerial: Serial * metaLoc: Loc
 
@@ -551,8 +550,10 @@ let nameCtxAdd name (NameCtx (map, serial)) =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
+let tyError loc = AppTy(ErrorTk loc, [])
+
 /// Placeholder. No type info in the parsing phase.
-let noTy = ErrorTy noLoc
+let noTy = tyError noLoc
 
 let tyInt =
   AppTy(IntTk(IntFlavor(Signed, I32)), [])
