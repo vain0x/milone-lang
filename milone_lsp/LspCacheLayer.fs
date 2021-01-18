@@ -57,7 +57,7 @@ module DiagnosticsCache =
         publish.Add((docId, errors))
 
       // Update cache.
-      if errors |> List.isEmpty |> not
-      then map.Map |> MutMap.insert docId newHash |> ignore
+      if errors |> List.isEmpty |> not then
+        map.Map |> MutMap.insert docId newHash |> ignore
 
     List.ofSeq publish

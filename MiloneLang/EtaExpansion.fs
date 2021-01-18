@@ -96,12 +96,12 @@ let private listSplitAt i xs =
 
 let private tyToArity ty =
   match ty with
-  | AppTy (FunTyCtor, [ _; ty ]) -> 1 + tyToArity ty
+  | Ty (FunTk, [ _; ty ]) -> 1 + tyToArity ty
   | _ -> 0
 
 let private tyAppliedBy n ty =
   match ty with
-  | AppTy (FunTyCtor, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
+  | Ty (FunTk, [ _; ty ]) when n > 0 -> tyAppliedBy (n - 1) ty
   | _ -> ty
 
 /// E.g. given init = `id x` and args `x, y` then we should return `(id x) y`.
@@ -339,7 +339,7 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
     match n, restTy with
     | 0, _ -> [], [], ctx
 
-    | n, AppTy (FunTyCtor, [ argTy; restTy ]) ->
+    | n, Ty (FunTk, [ argTy; restTy ]) ->
         let argExpr, argSerial, ctx = freshVar "arg" argTy callLoc ctx
         let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
         let restArgPat = HVarPat(argSerial, argTy, callLoc)
@@ -544,9 +544,10 @@ let private exVariantName expr variantTy loc (ctx: EtaCtx) =
 let private exPrimExpr expr prim primTy calleeLoc (ctx: EtaCtx) =
   let arity = prim |> primToArity primTy
 
-  if arity = 0
-  then expr, ctx
-  else resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
+  if arity = 0 then
+    expr, ctx
+  else
+    resolvePartialApp CalleeKind.Fun expr arity [] 0 calleeLoc ctx
 
 let private exInfExpr expr kind args ty loc ctx =
   match kind with

@@ -40,6 +40,7 @@ let changeDoc (uri: string) (version: int) (text: string): unit =
         { Uri = uri
           Version = version
           Text = text }
+
       docs.[uri] <- docData
 
   | None -> openDoc uri version text

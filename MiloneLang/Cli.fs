@@ -118,9 +118,12 @@ let private pathStrTrimEndPathSep (s: string) = S.trimEndIf charIsPathSep s
 /// Gets the final component splitting by path separators.
 let private pathStrToFileName (s: string) =
   let rec go i =
-    if i = 0 then s
-    else if charIsPathSep s.[i - 1] then s |> S.slice i s.Length
-    else go (i - 1)
+    if i = 0 then
+      s
+    else if charIsPathSep s.[i - 1] then
+      s |> S.slice i s.Length
+    else
+      go (i - 1)
 
   go s.Length
 
@@ -346,11 +349,14 @@ let private compileCtxReadProjectFile (ctx: CompileCtx) =
             refs
             |> List.fold
                  (fun projects (projectName, projectDir) ->
-                   if projects |> mapContainsKey projectName
-                   then failwithf "Project name is duplicated: '%s'" projectName
+                   if projects |> mapContainsKey projectName then
+                     failwithf "Project name is duplicated: '%s'" projectName
 
                    let projectDir =
-                     if projectDir |> pathIsRelative then ctx.ProjectDir + "/" + projectDir else projectDir
+                     if projectDir |> pathIsRelative then
+                       ctx.ProjectDir + "/" + projectDir
+                     else
+                       projectDir
 
                    projects |> mapAdd projectName projectDir)
                  ctx.Projects
@@ -368,8 +374,8 @@ let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
            let projectDir = projectDir |> pathStrTrimEndPathSep
            let projectName = projectDir |> pathStrToStem
 
-           if projects |> mapContainsKey projectName
-           then failwithf "Project name is duplicated: '%s'" projectName
+           if projects |> mapContainsKey projectName then
+             failwithf "Project name is duplicated: '%s'" projectName
 
            projects |> mapAdd projectName projectDir)
          ctx.Projects
@@ -519,7 +525,11 @@ let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAn
     else
       writeLog host v "ArityCheck"
       let tyCtx = arityCheck (expr, tyCtx)
-      if tyCtx.Logs |> List.isEmpty |> not then SemaAnalysisTypingError tyCtx else SemaAnalysisOk(expr, tyCtx)
+
+      if tyCtx.Logs |> List.isEmpty |> not then
+        SemaAnalysisTypingError tyCtx
+      else
+        SemaAnalysisOk(expr, tyCtx)
 
 /// Transforms HIR. The result can be converted to MIR.
 let transformHir (host: CliHost) v (expr, tyCtx) =

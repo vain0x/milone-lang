@@ -189,11 +189,14 @@ let private resolveAutoInclude (ctx: BundleCtx) =
     |> List.map fst
     |> listUnique compare
 
-  let moduleAcc, ctx = ctx.ModuleAcc, { ctx with ModuleAcc = [] }
+  let moduleAcc, ctx =
+    ctx.ModuleAcc, { ctx with ModuleAcc = [] }
 
-  let ctx = fetchedProjects |> List.fold addMiloneOnly ctx
+  let ctx =
+    fetchedProjects |> List.fold addMiloneOnly ctx
 
-  { ctx with ModuleAcc = List.append moduleAcc ctx.ModuleAcc }
+  { ctx with
+      ModuleAcc = List.append moduleAcc ctx.ModuleAcc }
 
 /// Requires a module to load.
 let private requireModule docId projectName moduleName (ctx: BundleCtx) =

@@ -195,7 +195,9 @@ let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 let private desugarLet isRec vis pat body next pos =
   match pat with
   | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-      let body = AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+      let body =
+        AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+
       desugarLet isRec vis pat body next pos
 
   | AFunDeclPat (name, args, _) -> ALetFun(isRec, vis, name, args, body, next, pos)
@@ -205,20 +207,22 @@ let private desugarLet isRec vis pat body next pos =
 let private desugarLetDecl isRec vis pat body pos =
   match pat with
   | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-      let body = AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+      let body =
+        AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+
       desugarLetDecl isRec vis pat body pos
 
   | AFunDeclPat (name, args, _) -> ALetFunDecl(isRec, vis, name, args, body, pos)
 
   | _ -> ALetValDecl(isRec, vis, pat, body, pos)
 
-let private tyUnresolved serial argTys = AppTy(UnresolvedTyCtor serial, argTys)
+let private tyUnresolved serial argTys = Ty(UnresolvedTk serial, argTys)
 
 let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
       let loc = toLoc docId pos
-      ErrorTy loc, nameCtx
+      tyError loc, nameCtx
 
   | AAppTy (quals, name, argTys, _) ->
       let quals, nameCtx =
@@ -235,7 +239,7 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   | AVarTy (name, pos) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
       let loc = toLoc docId pos
-      AppTy (UnresolvedVarTyCtor (tySerial, loc), []), nameCtx
+      Ty(UnresolvedVarTk(tySerial, loc), []), nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId

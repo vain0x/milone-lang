@@ -15,7 +15,7 @@ module Int = MiloneStd.StdInt
 
 let private tyIsRecord ty =
   match ty with
-  | AppTy (RecordTyCtor _, _) -> true
+  | Ty (RecordTk _, _) -> true
   | _ -> false
 
 let private hxBox itemExpr itemTy loc =
@@ -137,37 +137,36 @@ let private trdTyDef (ctx: TrdCtx) tySerial tyDef =
 
 let private trdTy (ctx: TrdCtx) ty =
   match ty with
-  | ErrorTy _
-  | MetaTy _ -> ctx
-
-  | AppTy (tyCtor, tyArgs) ->
+  | Ty (tk, tyArgs) ->
       let nominal tySerial =
         trdTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
-      match tyCtor with
-      | IntTyCtor _
-      | FloatTyCtor _
-      | BoolTyCtor
-      | CharTyCtor
-      | StrTyCtor
-      | ObjTyCtor
-      | VoidTyCtor ->
+      match tk with
+      | ErrorTk _
+      | IntTk _
+      | FloatTk _
+      | BoolTk
+      | CharTk
+      | StrTk
+      | ObjTk
+      | VoidTk
+      | MetaTk _ ->
           assert (List.isEmpty tyArgs)
           ctx
 
-      | ListTyCtor
-      | FunTyCtor
-      | TupleTyCtor
-      | NativePtrTyCtor _
-      | NativeFunTyCtor
-      | NativeTypeTyCtor _ -> tyArgs |> List.fold trdTy ctx
+      | ListTk
+      | FunTk
+      | TupleTk
+      | NativePtrTk _
+      | NativeFunTk
+      | NativeTypeTk _ -> tyArgs |> List.fold trdTy ctx
 
-      | UnionTyCtor tySerial -> nominal tySerial
-      | RecordTyCtor tySerial -> nominal tySerial
+      | UnionTk tySerial -> nominal tySerial
+      | RecordTk tySerial -> nominal tySerial
 
-      | SynonymTyCtor _
-      | UnresolvedTyCtor _
-      | UnresolvedVarTyCtor _ -> failwith "NEVER"
+      | SynonymTk _
+      | UnresolvedTk _
+      | UnresolvedVarTk _ -> failwith "NEVER"
 
 let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
   let ctx: TrdCtx =
@@ -223,7 +222,10 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
         tsmTy ctx variantDef.PayloadTy
 
       let size, isBoxed =
-        if 4 + size > 32 then 8, true else size, false
+        if 4 + size > 32 then
+          8, true
+        else
+          size, false
 
       let ctx =
         assert ((ctx.VariantMemo
@@ -233,9 +235,10 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
         { ctx with
             VariantMemo = ctx.VariantMemo |> mapAdd variantSerial size
             BoxedVariants =
-              if isBoxed
-              then ctx.BoxedVariants |> setAdd variantSerial
-              else ctx.BoxedVariants }
+              if isBoxed then
+                ctx.BoxedVariants |> setAdd variantSerial
+              else
+                ctx.BoxedVariants }
 
       // printfn
       //   "// measure variant %s end: size=%d%s"
@@ -278,7 +281,10 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
         | _ -> failwith "NEVER"
 
       let size, isBoxed =
-        if size > 32 then 8, true else Int.max 1 size, false
+        if size > 32 then
+          8, true
+        else
+          Int.max 1 size, false
 
       let ctx =
         assert ((ctx.RecordTyMemo
@@ -287,7 +293,11 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
         { ctx with
             RecordTyMemo = ctx.RecordTyMemo |> mapAdd tySerial size
-            BoxedRecordTys = if isBoxed then ctx.BoxedRecordTys |> setAdd tySerial else ctx.BoxedRecordTys }
+            BoxedRecordTys =
+              if isBoxed then
+                ctx.BoxedRecordTys |> setAdd tySerial
+              else
+                ctx.BoxedRecordTys }
 
       // printfn "// measure record %s end: size=%d%s" (tyDefToName tyDef) size (if isBoxed then " (boxed)" else "")
       size, ctx
@@ -313,30 +323,27 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
-  | ErrorTy _
-  | MetaTy _ -> 1000000, ctx
-
-  | AppTy (tyCtor, tyArgs) ->
+  | Ty (tk, tyArgs) ->
       let nominal tySerial =
         tsmTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
-      match tyCtor with
-      | BoolTyCtor
-      | CharTyCtor
-      | VoidTyCtor -> 1, ctx
+      match tk with
+      | BoolTk
+      | CharTk
+      | VoidTk -> 1, ctx
 
-      | IntTyCtor flavor -> intFlavorToBytes flavor, ctx
-      | FloatTyCtor flavor -> floatFlavorToBytes flavor, ctx
+      | IntTk flavor -> intFlavorToBytes flavor, ctx
+      | FloatTk flavor -> floatFlavorToBytes flavor, ctx
 
-      | ObjTyCtor
-      | ListTyCtor
-      | NativePtrTyCtor _
-      | NativeFunTyCtor -> 8, ctx
+      | ObjTk
+      | ListTk
+      | NativePtrTk _
+      | NativeFunTk -> 8, ctx
 
-      | StrTyCtor
-      | FunTyCtor -> 16, ctx
+      | StrTk
+      | FunTk -> 16, ctx
 
-      | TupleTyCtor ->
+      | TupleTk ->
           let size, ctx =
             tyArgs
             |> List.fold
@@ -347,14 +354,16 @@ let private tsmTy (ctx: TsmCtx) ty =
 
           Int.max 1 size, ctx
 
-      | UnionTyCtor tySerial -> nominal tySerial
-      | RecordTyCtor tySerial -> nominal tySerial
+      | UnionTk tySerial -> nominal tySerial
+      | RecordTk tySerial -> nominal tySerial
 
-      | NativeTypeTyCtor _ -> 1000000, ctx
+      | ErrorTk _
+      | MetaTk _
+      | NativeTypeTk _ -> 1000000, ctx
 
-      | SynonymTyCtor _
-      | UnresolvedTyCtor _
-      | UnresolvedVarTyCtor _ -> failwith "NEVER"
+      | SynonymTk _
+      | UnresolvedTk _
+      | UnresolvedVarTk _ -> failwith "NEVER"
 
 let private measureTys (trdCtx: TrdCtx): TsmCtx =
   let boxedVariants =
@@ -428,7 +437,7 @@ let private needsBoxedRecordTySerial (ctx: AbCtx) tySerial =
 
 let private needsBoxedRecordTy ctx ty =
   match ty with
-  | AppTy (RecordTyCtor tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
+  | Ty (RecordTk tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
   | _ -> false
 
 /// ### Boxing of Payloads
@@ -450,7 +459,10 @@ let private needsBoxedRecordTy ctx ty =
 /// ```
 
 let private erasePayloadTy ctx variantSerial payloadTy =
-  if needsBoxedVariant ctx variantSerial then tyObj else payloadTy |> abTy ctx
+  if needsBoxedVariant ctx variantSerial then
+    tyObj
+  else
+    payloadTy |> abTy ctx
 
 let private postProcessVariantAppPat (ctx: AbCtx) variantSerial payloadPat =
   if needsBoxedVariant ctx variantSerial then
@@ -497,7 +509,10 @@ let private postProcessVariantFunAppExpr ctx kind items =
 /// ```
 
 let private eraseRecordTy ctx ty =
-  if needsBoxedRecordTy ctx ty then Some tyObj else None
+  if needsBoxedRecordTy ctx ty then
+    Some tyObj
+  else
+    None
 
 let private postProcessRecordExpr ctx baseOpt fields recordTy loc =
   if needsBoxedRecordTy ctx recordTy then
@@ -526,19 +541,16 @@ let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
 
 let private abTy ctx ty =
   match ty with
-  | AppTy (RecordTyCtor _, tyArgs) ->
+  | Ty (RecordTk _, tyArgs) ->
       assert (List.isEmpty tyArgs)
 
       match eraseRecordTy ctx ty with
       | Some ty -> ty
       | None -> ty
 
-  | AppTy (tyCtor, tyArgs) ->
+  | Ty (tk, tyArgs) ->
       let tyArgs = tyArgs |> List.map (abTy ctx)
-      AppTy(tyCtor, tyArgs)
-
-  | MetaTy _
-  | ErrorTy _ -> ty
+      Ty(tk, tyArgs)
 
 let private abPat ctx pat =
   match pat with

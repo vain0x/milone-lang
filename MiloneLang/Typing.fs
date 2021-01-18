@@ -55,11 +55,9 @@ let private addError (ctx: TyCtx) message loc =
       Logs = (Log.Error message, loc) :: ctx.Logs }
 
 /// Be carefully. Levels must be counted the same as name resolution.
-let private incLevel (ctx: TyCtx) =
-  { ctx with Level = ctx.Level + 1 }
+let private incLevel (ctx: TyCtx) = { ctx with Level = ctx.Level + 1 }
 
-let private decLevel (ctx: TyCtx) =
-  { ctx with Level = ctx.Level - 1 }
+let private decLevel (ctx: TyCtx) = { ctx with Level = ctx.Level - 1 }
 
 let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
@@ -102,19 +100,19 @@ let private freshTySerial (ctx: TyCtx) =
 
 let private freshMetaTy loc (ctx: TyCtx): Ty * TyCtx =
   let serial, ctx = freshTySerial ctx
-  let ty = MetaTy(serial, loc)
+  let ty = tyMeta serial loc
   ty, ctx
 
 let private freshMetaTyForPat pat ctx =
   let _, loc = pat |> patExtract
   let tySerial, ctx = ctx |> freshTySerial
-  let ty = MetaTy(tySerial, loc)
+  let ty = tyMeta tySerial loc
   ty, ctx
 
 let private freshMetaTyForExpr expr ctx =
   let _, loc = expr |> exprExtract
   let tySerial, ctx = ctx |> freshTySerial
-  let ty = MetaTy(tySerial, loc)
+  let ty = tyMeta tySerial loc
   ty, ctx
 
 let private validateLit ctx lit loc =
@@ -183,9 +181,15 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+        let level =
+          ctx.TyLevels
+          |> mapTryFind tySerial
+          |> Option.defaultValue 0
         // Degenerate unless quantified.
-        if level < 1000000000 then Some tyUnit else None
+        if level < 1000000000 then
+          Some tyUnit
+        else
+          None
 
   tySubst substMeta ty
 
@@ -235,7 +239,7 @@ let private instantiateTyScheme ctx (tyScheme: TyScheme) loc =
       let ty =
         let extendedCtx =
           mapping
-          |> List.fold (fun ctx (src, target) -> bindTy ctx src (MetaTy(target, loc)) loc) ctx
+          |> List.fold (fun ctx (src, target) -> bindTy ctx src (tyMeta target loc) loc) ctx
 
         substTy extendedCtx ty
 
@@ -250,7 +254,7 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
     |> stMap
          (fun (oldTySerial, ctx) ->
            let tySerial, ctx = ctx |> freshTySerial
-           (oldTySerial, MetaTy(tySerial, loc)), ctx)
+           (oldTySerial, tyMeta tySerial loc), ctx)
 
   // Replace meta types in the type and trait bounds.
   let substMeta tySerial =
@@ -270,7 +274,10 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
   match funDef.Ty with
   | TyScheme ([], funTy) ->
       let isOwned tySerial =
-        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+        let level =
+          ctx.TyLevels
+          |> mapTryFind tySerial
+          |> Option.defaultValue 0
 
         level > outerLevel
 
@@ -325,19 +332,22 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
 let private resolveAscriptionTy ctx ascriptionTy =
   let rec go (ty, ctx: TyCtx) =
     match ty with
-    | ErrorTy _ -> ty, ctx
+    | Ty (ErrorTk _, _) -> ty, ctx
 
-    | MetaTy(serial, loc) when ctx.TyLevels |> mapContainsKey serial |> not ->
-      let ctx = { ctx with TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
-      MetaTy (serial, loc), ctx
+    | Ty (MetaTk (serial, loc), _) when ctx.TyLevels |> mapContainsKey serial |> not ->
+        let ctx =
+          { ctx with
+              TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
 
-    | MetaTy _ -> ty, ctx
+        tyMeta serial loc, ctx
 
-    | AppTy (_, []) -> ty, ctx
+    | Ty (MetaTk _, _) -> ty, ctx
 
-    | AppTy (tyCtor, tys) ->
-      let tys, ctx = (tys, ctx) |> stMap go
-      AppTy(tyCtor, tys), ctx
+    | Ty (_, []) -> ty, ctx
+
+    | Ty (tk, tys) ->
+        let tys, ctx = (tys, ctx) |> stMap go
+        Ty(tk, tys), ctx
 
   go (ascriptionTy, ctx)
 
@@ -409,9 +419,10 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let ty = variantDef.VariantTy
 
   let ctx =
-    if variantDef.HasPayload
-    then addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
-    else ctx
+    if variantDef.HasPayload then
+      addError ctx "Variant with payload must be used in the form of: `Variant pattern`." loc
+    else
+      ctx
 
   HVariantPat(variantSerial, ty, loc), ty, ctx
 
@@ -612,7 +623,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
       match tyOpt |> Option.map (substTy ctx) with
-      | Some ((AppTy (RecordTyCtor tySerial, tyArgs)) as recordTy) ->
+      | Some ((Ty (RecordTk tySerial, tyArgs)) as recordTy) ->
           assert (List.isEmpty tyArgs)
 
           match ctx |> findTy tySerial with
@@ -734,13 +745,13 @@ let private inferNavExpr ctx l (r: Ident) loc =
   let lTy = substTy ctx lTy
 
   match lTy, r with
-  | AppTy (StrTyCtor, []), "Length" ->
+  | Ty (StrTk, []), "Length" ->
       let funExpr =
         HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
 
       hxApp funExpr l tyInt loc, tyInt, ctx
 
-  | AppTy (RecordTyCtor tySerial, tyArgs), _ ->
+  | Ty (RecordTk tySerial, tyArgs), _ ->
       assert (List.isEmpty tyArgs)
 
       let fieldTyOpt =
@@ -765,7 +776,7 @@ let private inferAppExpr ctx itself callee arg loc =
   | HPrimExpr (HPrim.Printfn, _, _), HLitExpr (StrLit format, _) ->
       let funTy, targetTy =
         match analyzeFormat format with
-        | (AppTy (FunTyCtor, [ _; targetTy ])) as funTy -> funTy, targetTy
+        | (Ty (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
         | _ -> failwith "NEVER"
 
       hxApp (HPrimExpr(HPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
@@ -1062,18 +1073,18 @@ let private rcsSynonymTy (ctx: SynonymCycleCtx) tySerial =
 
 let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
   match ty with
-  | ErrorTy _ -> ctx
+  | Ty (ErrorTk _, _) -> ctx
 
-  | MetaTy (tySerial, _) ->
+  | Ty (MetaTk (tySerial, _), _) ->
       match ctx.ExpandMetaOrSynonymTy tySerial with
       | Some bodyTy -> rcsTy ctx bodyTy
       | None -> ctx
 
-  | AppTy (tyCtor, tyArgs) ->
+  | Ty (tk, tyArgs) ->
       let ctx = rcsTys ctx tyArgs
 
-      match tyCtor with
-      | SynonymTyCtor tySerial -> rcsSynonymTy ctx tySerial
+      match tk with
+      | SynonymTk tySerial -> rcsSynonymTy ctx tySerial
       | _ -> ctx
 
 let private rcsTys ctx tys = List.fold rcsTy ctx tys
@@ -1194,7 +1205,11 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
              // Pre-compute the type of variant.
              let variantTy =
                let unionTy = tyUnion variantDef.UnionTySerial
-               if variantDef.HasPayload then tyFun variantDef.PayloadTy unionTy else unionTy
+
+               if variantDef.HasPayload then
+                 tyFun variantDef.PayloadTy unionTy
+               else
+                 unionTy
 
              { variantDef with
                  VariantTy = variantTy })

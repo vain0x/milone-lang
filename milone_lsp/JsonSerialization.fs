@@ -29,7 +29,10 @@ type private JsonValueFormatter() =
           let mutable first = true
 
           for item in array do
-            if first then first <- false else writer.WriteValueSeparator()
+            if first then
+              first <- false
+            else
+              writer.WriteValueSeparator()
 
             formatterResolver
               .GetFormatter()
@@ -42,7 +45,10 @@ type private JsonValueFormatter() =
           let mutable first = true
 
           for KeyValue (key, value) in map do
-            if first then first <- false else writer.WriteValueSeparator()
+            if first then
+              first <- false
+            else
+              writer.WriteValueSeparator()
 
             writer.WriteString(key)
             writer.WriteNameSeparator()

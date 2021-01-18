@@ -17,7 +17,10 @@ let jsonRpcReaderForStdIn () =
         reader.BaseStream.Read(buf, bufLen, buf.Length - bufLen)
 
       // eprintfn "read: %d (%d -> %d)" len bufLen (bufLen + len)
-      if len <> 0 then bufLen <- bufLen + len else closed <- true
+      if len <> 0 then
+        bufLen <- bufLen + len
+      else
+        closed <- true
 
   let shrink len =
     // eprintfn "consume: %d (%d -> %d)" len bufLen (bufLen - len)
@@ -35,7 +38,10 @@ let jsonRpcReaderForStdIn () =
       if i >= 0 then
         let line =
           let len =
-            if i >= 1 && buf.[i - 1] = byte '\r' then i - 1 else i
+            if i >= 1 && buf.[i - 1] = byte '\r' then
+              i - 1
+            else
+              i
 
           utf8.GetString(buf, 0, len)
 
@@ -47,7 +53,8 @@ let jsonRpcReaderForStdIn () =
 
   let rec readBytes len =
     // eprintfn "readBytes %d" len
-    if len > buf.Length / 2 then System.Array.Resize(&buf, len * 2)
+    if len > buf.Length / 2 then
+      System.Array.Resize(&buf, len * 2)
 
     if bufLen >= len then
       let data = buf.[0..len]

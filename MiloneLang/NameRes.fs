@@ -13,12 +13,14 @@ open MiloneLang.Hir
 module S = MiloneStd.StdString
 
 let private mapAddList key value map =
-  let values = map |> mapTryFind key |> Option.defaultValue []
+  let values =
+    map |> mapTryFind key |> Option.defaultValue []
+
   mapAdd key (value :: values) map
 
 let private isNoTy ty =
   match ty with
-  | ErrorTy _ -> true
+  | Ty (ErrorTk _, _) -> true
   | _ -> false
 
 let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
@@ -35,36 +37,18 @@ let private tyPrimOfName name tys =
   | "int", []
   | "int32", [] -> Some tyInt
   | "uint", []
-  | "uint32", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, I32)), [])
-      |> Some
+  | "uint32", [] -> Ty(IntTk(IntFlavor(Unsigned, I32)), []) |> Some
   | "sbyte", []
-  | "int8", [] ->
-      AppTy(IntTyCtor(IntFlavor(Signed, I8)), [])
-      |> Some
+  | "int8", [] -> Ty(IntTk(IntFlavor(Signed, I8)), []) |> Some
   | "byte", []
-  | "uint8", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, I8)), [])
-      |> Some
+  | "uint8", [] -> Ty(IntTk(IntFlavor(Unsigned, I8)), []) |> Some
 
-  | "int16", [] ->
-      AppTy(IntTyCtor(IntFlavor(Signed, I16)), [])
-      |> Some
-  | "int64", [] ->
-      AppTy(IntTyCtor(IntFlavor(Signed, I64)), [])
-      |> Some
-  | "nativeint", [] ->
-      AppTy(IntTyCtor(IntFlavor(Signed, IPtr)), [])
-      |> Some
-  | "uint16", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, I16)), [])
-      |> Some
-  | "uint64", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, I64)), [])
-      |> Some
-  | "unativeint", [] ->
-      AppTy(IntTyCtor(IntFlavor(Unsigned, IPtr)), [])
-      |> Some
+  | "int16", [] -> Ty(IntTk(IntFlavor(Signed, I16)), []) |> Some
+  | "int64", [] -> Ty(IntTk(IntFlavor(Signed, I64)), []) |> Some
+  | "nativeint", [] -> Ty(IntTk(IntFlavor(Signed, IPtr)), []) |> Some
+  | "uint16", [] -> Ty(IntTk(IntFlavor(Unsigned, I16)), []) |> Some
+  | "uint64", [] -> Ty(IntTk(IntFlavor(Unsigned, I64)), []) |> Some
+  | "unativeint", [] -> Ty(IntTk(IntFlavor(Unsigned, IPtr)), []) |> Some
 
   | "float", [] -> Some tyFloat
   | "char", [] -> Some tyChar
@@ -77,14 +61,12 @@ let private tyPrimOfName name tys =
 
   | "list", [ itemTy ] -> Some(tyList itemTy)
 
-  | "voidptr", [] ->
-      AppTy(NativePtrTyCtor IsMut, [ AppTy(VoidTyCtor, []) ])
-      |> Some
-  | "nativeptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsMut, [ itemTy ]) |> Some
-  | "__constptr", [ itemTy ] -> AppTy(NativePtrTyCtor IsConst, [ itemTy ]) |> Some
+  | "voidptr", [] -> Ty(NativePtrTk IsMut, [ Ty(VoidTk, []) ]) |> Some
+  | "nativeptr", [ itemTy ] -> Ty(NativePtrTk IsMut, [ itemTy ]) |> Some
+  | "__constptr", [ itemTy ] -> Ty(NativePtrTk IsConst, [ itemTy ]) |> Some
 
-  | "__nativeFun", [ AppTy (TupleTyCtor, itemTys); resultTy ] ->
-      AppTy(NativeFunTyCtor, List.append itemTys [ resultTy ])
+  | "__nativeFun", [ Ty (TupleTk, itemTys); resultTy ] ->
+      Ty(NativeFunTk, List.append itemTys [ resultTy ])
       |> Some
 
   | _ -> None
@@ -126,8 +108,7 @@ let private nsOwnerToInt (nsOwner: NsOwner): int =
 let private nsOwnerCompare (l: NsOwner) r: int =
   compare (nsOwnerToInt l) (nsOwnerToInt r)
 
-let private nsOwnerOfTySymbol (tySymbol: TySymbol): NsOwner =
-  TyNsOwner (tySymbolToSerial tySymbol)
+let private nsOwnerOfTySymbol (tySymbol: TySymbol): NsOwner = TyNsOwner(tySymbolToSerial tySymbol)
 
 // -----------------------------------------------
 // Namespace
@@ -148,7 +129,15 @@ let private nsMerge (key: NsOwner) (ident: Ident) value (ns: Ns<_>): Ns<_> =
   let submap = ns |> nsFind key
 
   ns
-  |> mapAdd key (submap |> mapAdd ident (value :: (submap |> mapTryFind ident |> Option.defaultValue [])))
+  |> mapAdd
+       key
+       (submap
+        |> mapAdd
+             ident
+             (value
+              :: (submap
+                  |> mapTryFind ident
+                  |> Option.defaultValue [])))
 
 // --------------------------------------------
 // Scopes
@@ -349,18 +338,14 @@ let private addVarToNs (nsOwner: NsOwner) valueSymbol (scopeCtx: ScopeCtx): Scop
     scopeCtx |> findValueSymbolName valueSymbol
 
   { scopeCtx with
-      VarNs =
-        scopeCtx.VarNs
-        |> nsAdd nsOwner name valueSymbol }
+      VarNs = scopeCtx.VarNs |> nsAdd nsOwner name valueSymbol }
 
 /// Adds a type to a namespace.
 let private addTyToNs (nsOwner: NsOwner) tySymbol (scopeCtx: ScopeCtx): ScopeCtx =
   let name = scopeCtx |> findTySymbolName tySymbol
 
   { scopeCtx with
-      TyNs =
-        scopeCtx.TyNs
-        |> nsAdd nsOwner name tySymbol
+      TyNs = scopeCtx.TyNs |> nsAdd nsOwner name tySymbol
 
       NsNs =
         scopeCtx.NsNs
@@ -403,7 +388,10 @@ let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx): S
     match scopeCtx.Local with
     | kinds, varScopes, (tyMap :: tyScopes), (nsMap :: nsScopes) ->
         let tyMap = tyMap |> mapAdd alias symbol
-        let nsMap = nsMap |> mapAddList alias (nsOwnerOfTySymbol symbol)
+
+        let nsMap =
+          nsMap
+          |> mapAddList alias (nsOwnerOfTySymbol symbol)
 
         kinds, varScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
@@ -422,9 +410,11 @@ let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx): ScopeCtx =
     | kinds, varScopes, tyScopes, ((map :: nsScopes) as allNsScopes) ->
         let shadowed =
           allNsScopes
-          |> List.tryPick (fun map -> map |> mapTryFind alias) |> Option.defaultValue []
+          |> List.tryPick (fun map -> map |> mapTryFind alias)
+          |> Option.defaultValue []
 
-        let map = map |> mapAdd alias (nsOwner :: shadowed)
+        let map =
+          map |> mapAdd alias (nsOwner :: shadowed)
 
         kinds, varScopes, tyScopes, map :: nsScopes
 
@@ -509,9 +499,7 @@ let private resolveScopedVarName nsOwner name (scopeCtx: ScopeCtx): ValueSymbol 
 
 // Find from namespace of type (not local).
 let private resolveScopedTyName nsOwner name (scopeCtx: ScopeCtx): TySymbol option =
-  scopeCtx.TyNs
-  |> nsFind nsOwner
-  |> mapTryFind name
+  scopeCtx.TyNs |> nsFind nsOwner |> mapTryFind name
 
 let private resolveSubNsOwners nsOwner name (scopeCtx: ScopeCtx): NsOwner list =
   scopeCtx.NsNs
@@ -554,10 +542,12 @@ let private resolveNavTy quals last ctx =
       // Resolve tail.
       let rec resolveTyPath (nsOwner: NsOwner) path ctx =
         match path with
-        | [] -> [nsOwner]
+        | [] -> [ nsOwner ]
 
         | name :: path ->
-            ctx |> resolveSubNsOwners nsOwner name |> List.collect (fun subNsOwner -> resolveTyPath subNsOwner path ctx)
+            ctx
+            |> resolveSubNsOwners nsOwner name
+            |> List.collect (fun subNsOwner -> resolveTyPath subNsOwner path ctx)
 
       let tySymbolOpt =
         nsOwners
@@ -570,37 +560,36 @@ let private resolveNavTy quals last ctx =
 let private resolveTy ty loc scopeCtx =
   let rec go (ty, scopeCtx) =
     match ty with
-    | ErrorTy _ -> ty, scopeCtx
+    | Ty (ErrorTk _, _) -> ty, scopeCtx
 
-    | AppTy (UnresolvedTyCtor ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
-        MetaTy(serial, loc), scopeCtx
+    | Ty (UnresolvedTk ([], serial), []) when (scopeCtx |> findName serial) = "_" -> tyMeta serial loc, scopeCtx
 
-    | AppTy (UnresolvedTyCtor ([], serial), [ AppTy (UnresolvedTyCtor ([], itemSerial), _) ]) when
+    | Ty (UnresolvedTk ([], serial), [ Ty (UnresolvedTk ([], itemSerial), _) ]) when
       (scopeCtx |> findName serial = "__nativeType") ->
         let code = scopeCtx |> findName itemSerial
-        AppTy(NativeTypeTyCtor code, []), scopeCtx
+        Ty(NativeTypeTk code, []), scopeCtx
 
-    | AppTy (UnresolvedVarTyCtor (serial, loc), tys) ->
+    | Ty (UnresolvedVarTk (serial, loc), tys) ->
         assert (List.isEmpty tys)
         let name = scopeCtx |> findName serial
 
         match resolveLocalTyName name scopeCtx with
-        | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
+        | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
 
         | _ when scopeCtx |> isTyDeclScope ->
             let scopeCtx =
               scopeCtx |> addLog (UndefinedTyError name) loc
 
-            ErrorTy loc, scopeCtx
+            tyError loc, scopeCtx
 
         | _ ->
             let scopeCtx =
               scopeCtx
               |> addLocalTy (UnivTySymbol serial) (UniversalTyDef(name, loc))
 
-            MetaTy(serial, loc), scopeCtx
+            tyMeta serial loc, scopeCtx
 
-    | AppTy (UnresolvedTyCtor (quals, serial), tys) ->
+    | Ty (UnresolvedTk (quals, serial), tys) ->
         let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
         let arity = List.length tys
@@ -608,7 +597,7 @@ let private resolveTy ty loc scopeCtx =
         let symbolOpt, scopeCtx = resolveNavTy quals name scopeCtx
 
         match symbolOpt with
-        | Some (UnivTySymbol tySerial) -> MetaTy(tySerial, loc), scopeCtx
+        | Some (UnivTySymbol tySerial) -> tyMeta tySerial loc, scopeCtx
 
         | Some (SynonymTySymbol tySerial) ->
             // Arity check.
@@ -618,7 +607,7 @@ let private resolveTy ty loc scopeCtx =
                   scopeCtx
                   |> addLog (TyArityError(name, arity, List.length defTyArgs)) loc
 
-                ErrorTy loc, scopeCtx
+                tyError loc, scopeCtx
 
             | _ -> tySynonym tySerial tys, scopeCtx
 
@@ -639,11 +628,11 @@ let private resolveTy ty loc scopeCtx =
                 let scopeCtx =
                   scopeCtx |> addLog (UndefinedTyError name) loc
 
-                ErrorTy loc, scopeCtx
+                tyError loc, scopeCtx
 
-    | AppTy (tyCtor, tys) ->
+    | Ty (tk, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
-        AppTy(tyCtor, tys), scopeCtx
+        Ty(tk, tys), scopeCtx
 
     | _ -> ty, scopeCtx
 
@@ -892,7 +881,10 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           let name =
             ctx |> findName (funSerialToInt funSerial)
 
-          if name = "main" then { ctx with MainFunOpt = Some funSerial } else ctx
+          if name = "main" then
+            { ctx with MainFunOpt = Some funSerial }
+          else
+            ctx
 
         let ctx =
           ctx
@@ -1177,9 +1169,10 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
              ok && setIsEmpty set
 
            let ctx =
-             if ok
-             then ctx
-             else ctx |> addLog OrPatInconsistentBindingError loc
+             if ok then
+               ctx
+             else
+               ctx |> addLog OrPatInconsistentBindingError loc
 
            pat, ctx)
 
@@ -1286,7 +1279,8 @@ let private nameResNavExpr expr ctx =
 
             // Resolve as namespaces.
             let nsOwners =
-              superNsOwners |> List.collect (fun nsOwner -> ctx |> resolveSubNsOwners nsOwner r)
+              superNsOwners
+              |> List.collect (fun nsOwner -> ctx |> resolveSubNsOwners nsOwner r)
 
             // Resolve as value.
             let exprOpt =
@@ -1494,9 +1488,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           if List.isEmpty moduleSerials then
             ctx |> addLog ModulePathNotFoundError loc
           else
-            moduleSerials |> List.fold (fun ctx moduleSerial ->
-              ctx |> openModule moduleSerial
-            ) ctx
+            moduleSerials
+            |> List.fold (fun ctx moduleSerial -> ctx |> openModule moduleSerial) ctx
 
         expr, ctx
 
@@ -1523,7 +1516,10 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
         // HACK: MiloneOnly is auto-open.
         let ctx =
-          if moduleName = "MiloneOnly" then ctx |> openModule serial else ctx
+          if moduleName = "MiloneOnly" then
+            ctx |> openModule serial
+          else
+            ctx
 
         // Module no longer needed.
         hxSemi body loc, ctx
@@ -1560,7 +1556,9 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                      ({ Name = name
                         Bound = moduleSerials
                         Loc = loc }: ModuleSynonymDef)
-                |> forList (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx) moduleSerials
+                |> forList
+                     (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx)
+                     moduleSerials
 
           | _ -> ctx |> addLog UnimplModuleSynonymError loc
 

@@ -40,7 +40,8 @@ let stOptionMap f (x, ctx) =
 
 let cons head tail = head :: tail
 
-let forList folder xs state = List.fold (fun state x -> folder x state) state xs
+let forList folder xs state =
+  List.fold (fun state x -> folder x state) state xs
 
 /// Tries to "zip" two lists by pairing every i'th item from both lists.
 ///
@@ -111,7 +112,9 @@ let listSortCore unique compare xs =
   let rec merge (zs, zn) d (xs, xn) (ys, yn) =
     if xn = 0 then
       (appendRev ys zs, zn + yn), d
-    else if yn = 0 then
+    else
+
+    if yn = 0 then
       (appendRev xs zs, zn + xn), d
     else
       match xs, ys with
@@ -121,11 +124,12 @@ let listSortCore unique compare xs =
       | x :: xs1, y :: ys1 ->
           let c = compare x y
 
-          if c > 0
-          then merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
-          else if c = 0 && unique
-          then merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
-          else merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
+          if c > 0 then
+            merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
+          else if c = 0 && unique then
+            merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
+          else
+            merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
 
   // `go (xs, xn) = (zs, zn), xs1, d` where
   // `zs.[0..xn - 1]` is the sort of `xs.[0..xn - 1]`,
@@ -270,7 +274,10 @@ let intToHexWithPadding (len: int) (value: int) =
         let s = "0123456789abcdef" |> S.slice d (d + 1)
         go (s + acc) (len - 1) (n / 16)
 
-    if value = 0 && len = 0 then "0" else go "" len value
+    if value = 0 && len = 0 then
+      "0"
+    else
+      go "" len value
 
 let intFromHex (l: int) (r: int) (s: string) =
   assert (0 <= l && l < r && r <= s.Length)
@@ -318,7 +325,7 @@ let charEscape (c: char) =
 
   | '\'' -> "\\\'"
 
-  | '\"' -> "\\\""
+  | '"' -> "\\\""
 
   | '\\' -> "\\\\"
 
@@ -344,9 +351,10 @@ let strEscape (str: string) =
     /// Finds the end index of the maximum non-escaping segment
     /// that starts at `l`.
     let rec raw i =
-      if i = str.Length || charNeedsEscaping str.[i]
-      then i
-      else raw (i + 1)
+      if i = str.Length || charNeedsEscaping str.[i] then
+        i
+      else
+        raw (i + 1)
 
     // Skip the non-escape segment that starts at `i`.
     let i, acc =
@@ -359,4 +367,7 @@ let strEscape (str: string) =
       let t = str.[i] |> charEscape
       go (t :: acc) (i + 1)
 
-  if str |> strNeedsEscaping |> not then str else go [] 0 |> List.rev |> strConcat
+  if str |> strNeedsEscaping |> not then
+    str
+  else
+    go [] 0 |> List.rev |> strConcat

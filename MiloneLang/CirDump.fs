@@ -120,7 +120,10 @@ let private cpParams ps acc: string list =
 // -----------------------------------------------
 
 let private cpCharLit value =
-  if value |> charNeedsEscaping then value |> charEscape else string value
+  if value |> charNeedsEscaping then
+    value |> charEscape
+  else
+    string value
 
 let private cpStrRawLit (value: string) acc =
   acc
@@ -162,7 +165,10 @@ let private cpExpr expr acc: string list =
     |> List.fold
          (fun (first, acc) expr ->
            let acc =
-             (if isFirst first then acc else acc |> cons sep)
+             (if isFirst first then
+                acc
+              else
+                acc |> cons sep)
              |> cpExpr expr
 
            NotFirst, acc)
@@ -356,7 +362,10 @@ let private cpStmt indent stmt acc: string list =
         |> List.fold
              (fun (first, acc) (cases, isDefault, body) ->
                let acc =
-                 (if isFirst first then acc else acc |> cons eol)
+                 (if isFirst first then
+                    acc
+                  else
+                    acc |> cons eol)
                  |> cpCaseLabels cases
                  |> cpDefaultLabel isDefault
                  |> cpStmtList (deeper (deeper indent)) body
@@ -504,7 +513,10 @@ let private cpForwardDecl decl acc =
         |> List.fold
              (fun (first, acc) ty ->
                let acc =
-                 (if isFirst first then acc else acc |> cons ", ")
+                 (if isFirst first then
+                    acc
+                  else
+                    acc |> cons ", ")
                  |> cpTy ty
 
                (NotFirst, acc))
@@ -542,7 +554,10 @@ let private cpDecls decls acc =
            first, acc
          else
            let acc =
-             (if isFirst first then acc else acc |> cons eol)
+             (if isFirst first then
+                acc
+              else
+                acc |> cons eol)
              |> cpDecl decl
 
            NotFirst, acc)

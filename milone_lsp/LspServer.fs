@@ -189,7 +189,8 @@ let lspServer (): JsonValue -> int option =
         eprintfn "rootUriOpt = %A" rootUriOpt
 
         let result =
-          jsonDeserializeString """{
+          jsonDeserializeString
+            """{
             "capabilities": {
                 "textDocumentSync": {
                     "openClose": true,
