@@ -122,7 +122,7 @@ type Tk =
 [<Struct; NoEquality; NoComparison>]
 type Ty =
   /// Type application.
-  | AppTy of Tk * tyArgs: Ty list
+  | Ty of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
 [<Struct>]
@@ -547,49 +547,49 @@ let nameCtxAdd name (NameCtx (map, serial)) =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
-let tyError loc = AppTy(ErrorTk loc, [])
+let tyError loc = Ty(ErrorTk loc, [])
 
 /// Placeholder. No type info in the parsing phase.
 let noTy = tyError noLoc
 
 let tyInt =
-  AppTy(IntTk(IntFlavor(Signed, I32)), [])
+  Ty(IntTk(IntFlavor(Signed, I32)), [])
 
-let tyBool = AppTy(BoolTk, [])
+let tyBool = Ty(BoolTk, [])
 
-let tyFloat = AppTy(FloatTk F64, [])
+let tyFloat = Ty(FloatTk F64, [])
 
-let tyChar = AppTy(CharTk, [])
+let tyChar = Ty(CharTk, [])
 
-let tyStr = AppTy(StrTk, [])
+let tyStr = Ty(StrTk, [])
 
-let tyObj = AppTy(ObjTk, [])
+let tyObj = Ty(ObjTk, [])
 
-let tyTuple tys = AppTy(TupleTk, tys)
+let tyTuple tys = Ty(TupleTk, tys)
 
-let tyList ty = AppTy(ListTk, [ ty ])
+let tyList ty = Ty(ListTk, [ ty ])
 
 let tyFun sourceTy targetTy =
-  AppTy(FunTk, [ sourceTy; targetTy ])
+  Ty(FunTk, [ sourceTy; targetTy ])
 
 let tyConstPtr itemTy =
-  AppTy(NativePtrTk IsConst, [ itemTy ])
+  Ty(NativePtrTk IsConst, [ itemTy ])
 
 let tyNativePtr itemTy =
-  AppTy(NativePtrTk IsMut, [ itemTy ])
+  Ty(NativePtrTk IsMut, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
-  AppTy(NativeFunTk, List.append paramTys [ resultTy ])
+  Ty(NativeFunTk, List.append paramTys [ resultTy ])
 
 let tyUnit = tyTuple []
 
-let tyMeta serial loc = AppTy(MetaTk (serial, loc), [])
+let tyMeta serial loc = Ty(MetaTk (serial, loc), [])
 
-let tySynonym tySerial tyArgs = AppTy(SynonymTk tySerial, tyArgs)
+let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 
-let tyUnion tySerial = AppTy(UnionTk tySerial, [])
+let tyUnion tySerial = Ty(UnionTk tySerial, [])
 
-let tyRecord tySerial = AppTy(RecordTk tySerial, [])
+let tyRecord tySerial = Ty(RecordTk tySerial, [])
 
 // -----------------------------------------------
 // Type definitions (HIR)
@@ -789,12 +789,12 @@ let primToTySpec prim =
 
   | HPrim.ToInt flavor ->
       let toIntTy = meta 1
-      let resultTy = AppTy(IntTk flavor, [])
+      let resultTy = Ty(IntTk flavor, [])
       poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
 
   | HPrim.ToFloat flavor ->
       let srcTy = meta 1
-      let resultTy = AppTy(FloatTk flavor, [])
+      let resultTy = Ty(FloatTk flavor, [])
       poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
 
   | HPrim.String ->

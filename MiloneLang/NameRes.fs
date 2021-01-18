@@ -18,7 +18,7 @@ let private mapAddList key value map =
 
 let private isNoTy ty =
   match ty with
-  | AppTy (ErrorTk _, _) -> true
+  | Ty (ErrorTk _, _) -> true
   | _ -> false
 
 let private hxAbort loc = HNodeExpr(HAbortEN, [], noTy, loc)
@@ -36,34 +36,34 @@ let private tyPrimOfName name tys =
   | "int32", [] -> Some tyInt
   | "uint", []
   | "uint32", [] ->
-      AppTy(IntTk(IntFlavor(Unsigned, I32)), [])
+      Ty(IntTk(IntFlavor(Unsigned, I32)), [])
       |> Some
   | "sbyte", []
   | "int8", [] ->
-      AppTy(IntTk(IntFlavor(Signed, I8)), [])
+      Ty(IntTk(IntFlavor(Signed, I8)), [])
       |> Some
   | "byte", []
   | "uint8", [] ->
-      AppTy(IntTk(IntFlavor(Unsigned, I8)), [])
+      Ty(IntTk(IntFlavor(Unsigned, I8)), [])
       |> Some
 
   | "int16", [] ->
-      AppTy(IntTk(IntFlavor(Signed, I16)), [])
+      Ty(IntTk(IntFlavor(Signed, I16)), [])
       |> Some
   | "int64", [] ->
-      AppTy(IntTk(IntFlavor(Signed, I64)), [])
+      Ty(IntTk(IntFlavor(Signed, I64)), [])
       |> Some
   | "nativeint", [] ->
-      AppTy(IntTk(IntFlavor(Signed, IPtr)), [])
+      Ty(IntTk(IntFlavor(Signed, IPtr)), [])
       |> Some
   | "uint16", [] ->
-      AppTy(IntTk(IntFlavor(Unsigned, I16)), [])
+      Ty(IntTk(IntFlavor(Unsigned, I16)), [])
       |> Some
   | "uint64", [] ->
-      AppTy(IntTk(IntFlavor(Unsigned, I64)), [])
+      Ty(IntTk(IntFlavor(Unsigned, I64)), [])
       |> Some
   | "unativeint", [] ->
-      AppTy(IntTk(IntFlavor(Unsigned, IPtr)), [])
+      Ty(IntTk(IntFlavor(Unsigned, IPtr)), [])
       |> Some
 
   | "float", [] -> Some tyFloat
@@ -78,13 +78,13 @@ let private tyPrimOfName name tys =
   | "list", [ itemTy ] -> Some(tyList itemTy)
 
   | "voidptr", [] ->
-      AppTy(NativePtrTk IsMut, [ AppTy(VoidTk, []) ])
+      Ty(NativePtrTk IsMut, [ Ty(VoidTk, []) ])
       |> Some
-  | "nativeptr", [ itemTy ] -> AppTy(NativePtrTk IsMut, [ itemTy ]) |> Some
-  | "__constptr", [ itemTy ] -> AppTy(NativePtrTk IsConst, [ itemTy ]) |> Some
+  | "nativeptr", [ itemTy ] -> Ty(NativePtrTk IsMut, [ itemTy ]) |> Some
+  | "__constptr", [ itemTy ] -> Ty(NativePtrTk IsConst, [ itemTy ]) |> Some
 
-  | "__nativeFun", [ AppTy (TupleTk, itemTys); resultTy ] ->
-      AppTy(NativeFunTk, List.append itemTys [ resultTy ])
+  | "__nativeFun", [ Ty (TupleTk, itemTys); resultTy ] ->
+      Ty(NativeFunTk, List.append itemTys [ resultTy ])
       |> Some
 
   | _ -> None
@@ -570,17 +570,17 @@ let private resolveNavTy quals last ctx =
 let private resolveTy ty loc scopeCtx =
   let rec go (ty, scopeCtx) =
     match ty with
-    | AppTy (ErrorTk _, _) -> ty, scopeCtx
+    | Ty (ErrorTk _, _) -> ty, scopeCtx
 
-    | AppTy (UnresolvedTk ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
+    | Ty (UnresolvedTk ([], serial), []) when (scopeCtx |> findName serial) = "_" ->
         tyMeta serial loc, scopeCtx
 
-    | AppTy (UnresolvedTk ([], serial), [ AppTy (UnresolvedTk ([], itemSerial), _) ]) when
+    | Ty (UnresolvedTk ([], serial), [ Ty (UnresolvedTk ([], itemSerial), _) ]) when
       (scopeCtx |> findName serial = "__nativeType") ->
         let code = scopeCtx |> findName itemSerial
-        AppTy(NativeTypeTk code, []), scopeCtx
+        Ty(NativeTypeTk code, []), scopeCtx
 
-    | AppTy (UnresolvedVarTk (serial, loc), tys) ->
+    | Ty (UnresolvedVarTk (serial, loc), tys) ->
         assert (List.isEmpty tys)
         let name = scopeCtx |> findName serial
 
@@ -600,7 +600,7 @@ let private resolveTy ty loc scopeCtx =
 
             tyMeta serial loc, scopeCtx
 
-    | AppTy (UnresolvedTk (quals, serial), tys) ->
+    | Ty (UnresolvedTk (quals, serial), tys) ->
         let name = scopeCtx |> findName serial
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
         let arity = List.length tys
@@ -641,9 +641,9 @@ let private resolveTy ty loc scopeCtx =
 
                 tyError loc, scopeCtx
 
-    | AppTy (tk, tys) ->
+    | Ty (tk, tys) ->
         let tys, scopeCtx = (tys, scopeCtx) |> stMap go
-        AppTy(tk, tys), scopeCtx
+        Ty(tk, tys), scopeCtx
 
     | _ -> ty, scopeCtx
 

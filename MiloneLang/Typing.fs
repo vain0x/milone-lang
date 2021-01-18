@@ -325,19 +325,19 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
 let private resolveAscriptionTy ctx ascriptionTy =
   let rec go (ty, ctx: TyCtx) =
     match ty with
-    | AppTy (ErrorTk _, _) -> ty, ctx
+    | Ty (ErrorTk _, _) -> ty, ctx
 
-    | AppTy (MetaTk (serial, loc), _) when ctx.TyLevels |> mapContainsKey serial |> not ->
+    | Ty (MetaTk (serial, loc), _) when ctx.TyLevels |> mapContainsKey serial |> not ->
       let ctx = { ctx with TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
       tyMeta serial loc, ctx
 
-    | AppTy (MetaTk _, _) -> ty, ctx
+    | Ty (MetaTk _, _) -> ty, ctx
 
-    | AppTy (_, []) -> ty, ctx
+    | Ty (_, []) -> ty, ctx
 
-    | AppTy (tk, tys) ->
+    | Ty (tk, tys) ->
       let tys, ctx = (tys, ctx) |> stMap go
-      AppTy(tk, tys), ctx
+      Ty(tk, tys), ctx
 
   go (ascriptionTy, ctx)
 
@@ -612,7 +612,7 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
   let recordTyInfoOpt =
     let asRecordTy tyOpt =
       match tyOpt |> Option.map (substTy ctx) with
-      | Some ((AppTy (RecordTk tySerial, tyArgs)) as recordTy) ->
+      | Some ((Ty (RecordTk tySerial, tyArgs)) as recordTy) ->
           assert (List.isEmpty tyArgs)
 
           match ctx |> findTy tySerial with
@@ -734,13 +734,13 @@ let private inferNavExpr ctx l (r: Ident) loc =
   let lTy = substTy ctx lTy
 
   match lTy, r with
-  | AppTy (StrTk, []), "Length" ->
+  | Ty (StrTk, []), "Length" ->
       let funExpr =
         HPrimExpr(HPrim.StrLength, tyFun tyStr tyInt, loc)
 
       hxApp funExpr l tyInt loc, tyInt, ctx
 
-  | AppTy (RecordTk tySerial, tyArgs), _ ->
+  | Ty (RecordTk tySerial, tyArgs), _ ->
       assert (List.isEmpty tyArgs)
 
       let fieldTyOpt =
@@ -765,7 +765,7 @@ let private inferAppExpr ctx itself callee arg loc =
   | HPrimExpr (HPrim.Printfn, _, _), HLitExpr (StrLit format, _) ->
       let funTy, targetTy =
         match analyzeFormat format with
-        | (AppTy (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
+        | (Ty (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
         | _ -> failwith "NEVER"
 
       hxApp (HPrimExpr(HPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
@@ -1062,14 +1062,14 @@ let private rcsSynonymTy (ctx: SynonymCycleCtx) tySerial =
 
 let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
   match ty with
-  | AppTy (ErrorTk _, _) -> ctx
+  | Ty (ErrorTk _, _) -> ctx
 
-  | AppTy (MetaTk (tySerial, _), _) ->
+  | Ty (MetaTk (tySerial, _), _) ->
       match ctx.ExpandMetaOrSynonymTy tySerial with
       | Some bodyTy -> rcsTy ctx bodyTy
       | None -> ctx
 
-  | AppTy (tk, tyArgs) ->
+  | Ty (tk, tyArgs) ->
       let ctx = rcsTys ctx tyArgs
 
       match tk with

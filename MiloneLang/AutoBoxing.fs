@@ -15,7 +15,7 @@ module Int = MiloneStd.StdInt
 
 let private tyIsRecord ty =
   match ty with
-  | AppTy (RecordTk _, _) -> true
+  | Ty (RecordTk _, _) -> true
   | _ -> false
 
 let private hxBox itemExpr itemTy loc =
@@ -137,7 +137,7 @@ let private trdTyDef (ctx: TrdCtx) tySerial tyDef =
 
 let private trdTy (ctx: TrdCtx) ty =
   match ty with
-  | AppTy (tk, tyArgs) ->
+  | Ty (tk, tyArgs) ->
       let nominal tySerial =
         trdTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
@@ -312,7 +312,7 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
-  | AppTy (tk, tyArgs) ->
+  | Ty (tk, tyArgs) ->
       let nominal tySerial =
         tsmTyDef ctx tySerial (ctx.Tys |> mapFind tySerial)
 
@@ -426,7 +426,7 @@ let private needsBoxedRecordTySerial (ctx: AbCtx) tySerial =
 
 let private needsBoxedRecordTy ctx ty =
   match ty with
-  | AppTy (RecordTk tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
+  | Ty (RecordTk tySerial, _) -> needsBoxedRecordTySerial ctx tySerial
   | _ -> false
 
 /// ### Boxing of Payloads
@@ -524,16 +524,16 @@ let private postProcessFieldExpr ctx recordExpr recordTy fieldName fieldTy loc =
 
 let private abTy ctx ty =
   match ty with
-  | AppTy (RecordTk _, tyArgs) ->
+  | Ty (RecordTk _, tyArgs) ->
       assert (List.isEmpty tyArgs)
 
       match eraseRecordTy ctx ty with
       | Some ty -> ty
       | None -> ty
 
-  | AppTy (tk, tyArgs) ->
+  | Ty (tk, tyArgs) ->
       let tyArgs = tyArgs |> List.map (abTy ctx)
-      AppTy(tk, tyArgs)
+      Ty(tk, tyArgs)
 
 let private abPat ctx pat =
   match pat with

@@ -440,16 +440,16 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
   let rec go ty (ctx: CirCtx) =
     let tyToUniqueName ty =
       match ty with
-      | AppTy (IntTk flavor, _) -> cIntegerTyPascalName flavor, ctx
-      | AppTy (FloatTk flavor, _) -> cFloatTyPascalName flavor, ctx
-      | AppTy (BoolTk, _) -> "Bool", ctx
-      | AppTy (CharTk, _) -> "Char", ctx
-      | AppTy (StrTk, _) -> "String", ctx
+      | Ty (IntTk flavor, _) -> cIntegerTyPascalName flavor, ctx
+      | Ty (FloatTk flavor, _) -> cFloatTyPascalName flavor, ctx
+      | Ty (BoolTk, _) -> "Bool", ctx
+      | Ty (CharTk, _) -> "Char", ctx
+      | Ty (StrTk, _) -> "String", ctx
 
-      | AppTy (MetaTk _, _) // FIXME: Unresolved type variables are `obj` for now.
-      | AppTy (ObjTk, _) -> "Object", ctx
+      | Ty (MetaTk _, _) // FIXME: Unresolved type variables are `obj` for now.
+      | Ty (ObjTk, _) -> "Object", ctx
 
-      | AppTy (FunTk, _) ->
+      | Ty (FunTk, _) ->
           let arity, argTys, resultTy = tyToArgList ty
 
           let argTys, ctx =
@@ -466,14 +466,14 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           funTy, ctx
 
-      | AppTy (ListTk, [ itemTy ]) ->
+      | Ty (ListTk, [ itemTy ]) ->
           let itemTy, ctx = ctx |> go itemTy
           let listTy = itemTy + "List"
           listTy, ctx
 
-      | AppTy (VoidTk, _) -> "Void", ctx
+      | Ty (VoidTk, _) -> "Void", ctx
 
-      | AppTy (NativePtrTk isMut, [ itemTy ]) ->
+      | Ty (NativePtrTk isMut, [ itemTy ]) ->
           let itemTy, ctx = ctx |> go itemTy
 
           let ptrTy =
@@ -483,7 +483,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           ptrTy, ctx
 
-      | AppTy (NativeFunTk, tyArgs) ->
+      | Ty (NativeFunTk, tyArgs) ->
           let tyArgs, ctx =
             (tyArgs, ctx)
             |> stMap (fun (ty, ctx) -> ctx |> go ty)
@@ -495,11 +495,11 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           funTy, ctx
 
-      | AppTy (NativeTypeTk code, _) -> code, ctx
+      | Ty (NativeTypeTk code, _) -> code, ctx
 
-      | AppTy (TupleTk, []) -> "Unit", ctx
+      | Ty (TupleTk, []) -> "Unit", ctx
 
-      | AppTy (TupleTk, itemTys) ->
+      | Ty (TupleTk, itemTys) ->
           let len = itemTys |> List.length
 
           let itemTys, ctx =
@@ -511,15 +511,15 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           tupleTy, ctx
 
-      | AppTy (ErrorTk _, _)
-      | AppTy (ListTk, _)
-      | AppTy (FunTk, _)
-      | AppTy (NativePtrTk _, _)
-      | AppTy (SynonymTk _, _)
-      | AppTy (UnionTk _, _)
-      | AppTy (RecordTk _, _)
-      | AppTy (UnresolvedTk _, _)
-      | AppTy (UnresolvedVarTk _, _) ->
+      | Ty (ErrorTk _, _)
+      | Ty (ListTk, _)
+      | Ty (FunTk, _)
+      | Ty (NativePtrTk _, _)
+      | Ty (SynonymTk _, _)
+      | Ty (UnionTk _, _)
+      | Ty (RecordTk _, _)
+      | Ty (UnresolvedTk _, _)
+      | Ty (UnresolvedVarTk _, _) ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
 
@@ -560,32 +560,32 @@ let private cgNativeFunTy ctx tys =
 /// whose type definition is not necessary to be visible.
 let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
-  | AppTy (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-  | AppTy (IntTk flavor, _) -> CIntTy flavor, ctx
-  | AppTy (FloatTk flavor, _) -> CFloatTy flavor, ctx
-  | AppTy (BoolTk, _) -> CBoolTy, ctx
-  | AppTy (CharTk, _) -> CCharTy, ctx
-  | AppTy (StrTk, _) -> CStructTy "String", ctx
+  | Ty (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | Ty (IntTk flavor, _) -> CIntTy flavor, ctx
+  | Ty (FloatTk flavor, _) -> CFloatTy flavor, ctx
+  | Ty (BoolTk, _) -> CBoolTy, ctx
+  | Ty (CharTk, _) -> CCharTy, ctx
+  | Ty (StrTk, _) -> CStructTy "String", ctx
 
   // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (MetaTk _, _)
-  | AppTy (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
+  | Ty (MetaTk _, _)
+  | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
 
-  | AppTy (FunTk, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
+  | Ty (FunTk, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
 
-  | AppTy (ListTk, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
+  | Ty (ListTk, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
 
-  | AppTy (TupleTk, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
+  | Ty (TupleTk, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
 
-  | AppTy (VoidTk, _) -> CVoidTy, ctx
+  | Ty (VoidTk, _) -> CVoidTy, ctx
 
-  | AppTy (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+  | Ty (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
-  | AppTy (NativeFunTk, tys) -> cgNativeFunTy ctx tys
+  | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
 
-  | AppTy (NativeTypeTk code, _) -> CEmbedTy code, ctx
+  | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
 
-  | AppTy (SynonymTk serial, useTyArgs) ->
+  | Ty (SynonymTk serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
@@ -595,9 +595,9 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       | _ -> failwithf "NEVER: synonym type undefined?"
 
-  | AppTy (UnionTk serial, _) -> genIncompleteUnionTyDecl ctx serial
+  | Ty (UnionTk serial, _) -> genIncompleteUnionTyDecl ctx serial
 
-  | AppTy (RecordTk serial, _) -> genIncompleteRecordTyDecl ctx serial
+  | Ty (RecordTk serial, _) -> genIncompleteRecordTyDecl ctx serial
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -606,22 +606,22 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 /// A type is complete if its definition is visible.
 let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
-  | AppTy (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-  | AppTy (IntTk flavor, _) -> CIntTy flavor, ctx
-  | AppTy (FloatTk flavor, _) -> CFloatTy flavor, ctx
-  | AppTy (BoolTk, _) -> CBoolTy, ctx
-  | AppTy (CharTk, _) -> CCharTy, ctx
-  | AppTy (StrTk, _) -> CStructTy "String", ctx
+  | Ty (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | Ty (IntTk flavor, _) -> CIntTy flavor, ctx
+  | Ty (FloatTk flavor, _) -> CFloatTy flavor, ctx
+  | Ty (BoolTk, _) -> CBoolTy, ctx
+  | Ty (CharTk, _) -> CCharTy, ctx
+  | Ty (StrTk, _) -> CStructTy "String", ctx
 
   // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (MetaTk _, _)
-  | AppTy (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
+  | Ty (MetaTk _, _)
+  | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
 
-  | AppTy (FunTk, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
+  | Ty (FunTk, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
 
-  | AppTy (ListTk, [ itemTy ]) -> genListTyDef ctx itemTy
+  | Ty (ListTk, [ itemTy ]) -> genListTyDef ctx itemTy
 
-  | AppTy (TupleTk, itemTys) ->
+  | Ty (TupleTk, itemTys) ->
       // HOTFIX: Remove Undefined meta types. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
       let itemTys =
         itemTys
@@ -640,15 +640,15 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       genTupleTyDef ctx itemTys
 
-  | AppTy (VoidTk, _) -> CVoidTy, ctx
+  | Ty (VoidTk, _) -> CVoidTy, ctx
 
-  | AppTy (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+  | Ty (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
-  | AppTy (NativeFunTk, tys) -> cgNativeFunTy ctx tys
+  | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
 
-  | AppTy (NativeTypeTk code, _) -> CEmbedTy code, ctx
+  | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
 
-  | AppTy (SynonymTk serial, useTyArgs) ->
+  | Ty (SynonymTk serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
@@ -658,13 +658,13 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       | _ -> failwithf "NEVER: synonym type undefined?"
 
-  | AppTy (UnionTk serial, _) ->
+  | Ty (UnionTk serial, _) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
 
       | _ -> failwithf "NEVER: union type undefined?"
 
-  | AppTy (RecordTk serial, _) ->
+  | Ty (RecordTk serial, _) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
@@ -722,33 +722,33 @@ let private cgConst ctx mConst =
 /// `0`, `NULL`, or `(T) {}`
 let private genDefault ctx ty =
   match ty with
-  | AppTy (TupleTk, [])
-  | AppTy (IntTk _, _)
-  | AppTy (FloatTk _, _)
-  | AppTy (CharTk, _) -> CIntExpr "0", ctx
+  | Ty (TupleTk, [])
+  | Ty (IntTk _, _)
+  | Ty (FloatTk _, _)
+  | Ty (CharTk, _) -> CIntExpr "0", ctx
 
-  | AppTy (BoolTk, _) -> CVarExpr "false", ctx
+  | Ty (BoolTk, _) -> CVarExpr "false", ctx
 
-  | AppTy (MetaTk _, _) // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (ObjTk, _)
-  | AppTy (ListTk, _)
-  | AppTy (NativePtrTk _, _)
-  | AppTy (NativeFunTk, _) -> CVarExpr "NULL", ctx
+  | Ty (MetaTk _, _) // FIXME: Unresolved type variables are `obj` for now.
+  | Ty (ObjTk, _)
+  | Ty (ListTk, _)
+  | Ty (NativePtrTk _, _)
+  | Ty (NativeFunTk, _) -> CVarExpr "NULL", ctx
 
-  | AppTy (StrTk, _)
-  | AppTy (FunTk, _)
-  | AppTy (TupleTk, _)
-  | AppTy (SynonymTk _, _)
-  | AppTy (UnionTk _, _)
-  | AppTy (RecordTk _, _)
-  | AppTy (NativeTypeTk _, _) ->
+  | Ty (StrTk, _)
+  | Ty (FunTk, _)
+  | Ty (TupleTk, _)
+  | Ty (SynonymTk _, _)
+  | Ty (UnionTk _, _)
+  | Ty (RecordTk _, _)
+  | Ty (NativeTypeTk _, _) ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
 
-  | AppTy (ErrorTk _, _)
-  | AppTy (VoidTk, _)
-  | AppTy (UnresolvedTk _, _)
-  | AppTy (UnresolvedVarTk _, _) -> failwithf "Never %A" ty
+  | Ty (ErrorTk _, _)
+  | Ty (VoidTk, _)
+  | Ty (UnresolvedTk _, _)
+  | Ty (UnresolvedVarTk _, _) -> failwithf "Never %A" ty
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty

@@ -280,7 +280,7 @@ let rec mxSugar expr =
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MVarExpr (_, AppTy (TupleTk, []), loc) -> MDefaultExpr(tyUnit, loc)
+  | MVarExpr (_, Ty (TupleTk, []), loc) -> MDefaultExpr(tyUnit, loc)
 
   | MUnaryExpr (op, l, ty, loc) ->
       let l = mxSugar l
