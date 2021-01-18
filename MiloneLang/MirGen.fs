@@ -1088,7 +1088,6 @@ let private mirifyCallPrintfnExpr ctx args loc =
   MDefaultExpr(tyUnit, loc), ctx
 
 let private mirifyCallProcExpr ctx callee args ty loc =
-  let calleeTy = exprToTy callee
   let callee, ctx = mirifyExpr ctx callee
 
   let (args, ctx) =
