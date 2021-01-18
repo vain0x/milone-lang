@@ -213,7 +213,7 @@ let private parseProjectSchema tokenizeHost contents =
 
 /// Generates decls for each MiloneCore module
 /// whose name appears in the token stream.
-let private resolveMiloneCoreDeps tokens ast =
+let resolveMiloneCoreDeps tokens ast =
   let knownNames = [ "List"; "Option"; "String" ]
 
   let isKnownName moduleName =

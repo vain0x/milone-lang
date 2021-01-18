@@ -141,12 +141,19 @@ let private parseWithCache (ls: LangServiceState) docId =
       let tokenizeErrors, tokens =
         tokens |> partition1 tokenAsTriviaOrError
 
+      let tokens = List.ofArray tokens
+
       // Parse.
-      let ast, parseErrors =
-        tokens |> Array.toList |> SyntaxParse.parse
+      let ast, parseErrors = SyntaxParse.parse tokens
 
       let errors =
         List.append (tokenizeErrors |> Array.choose id |> List.ofArray) parseErrors
+
+      let ast =
+        if errors |> List.isEmpty then
+          Cli.resolveMiloneCoreDeps tokens ast
+        else
+          ast
 
       ls.ParseCache
       |> MutMap.insert docId (currentVersion, (ast, errors))
