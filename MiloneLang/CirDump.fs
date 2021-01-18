@@ -52,7 +52,7 @@ let private binaryToString op =
   | CSubBinary -> "-"
   | CMulBinary -> "*"
   | CDivBinary -> "/"
-  | CModBinary -> "%"
+  | CModuloBinary -> "%"
   | CBitAndBinary -> "&"
   | CBitOrBinary -> "|"
   | CBitXorBinary -> "^"

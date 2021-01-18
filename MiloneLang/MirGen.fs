@@ -1120,8 +1120,8 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Mul, _ -> fail ()
   | HPrim.Div, [ l; r ] -> mirifyExprOpArith ctx itself MDivBinary l r ty loc
   | HPrim.Div, _ -> fail ()
-  | HPrim.Mod, [ l; r ] -> mirifyExprOpArith ctx itself MModBinary l r ty loc
-  | HPrim.Mod, _ -> fail ()
+  | HPrim.Modulo, [ l; r ] -> mirifyExprOpArith ctx itself MModuloBinary l r ty loc
+  | HPrim.Modulo, _ -> fail ()
 
   | HPrim.BitAnd, [ l; r ] -> regularBinary MBitAndBinary l r
   | HPrim.BitAnd, _ -> fail ()

@@ -680,7 +680,7 @@ let private cBinaryOf op =
   match op with
   | MMulBinary -> CMulBinary
   | MDivBinary -> CDivBinary
-  | MModBinary -> CModBinary
+  | MModuloBinary -> CModuloBinary
   | MAddBinary -> CAddBinary
   | MSubBinary -> CSubBinary
 

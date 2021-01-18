@@ -225,8 +225,8 @@ type Binary =
   | MulBinary
   /// `/` Division
   | DivBinary
-  /// `%` Modulo
-  | ModBinary
+  /// `%`
+  | ModuloBinary
   /// `+` Addition
   | AddBinary
   /// `-` Subtraction

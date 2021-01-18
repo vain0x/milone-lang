@@ -38,7 +38,7 @@ let private opToPrim op =
   | SubBinary -> HPrim.Sub
   | MulBinary -> HPrim.Mul
   | DivBinary -> HPrim.Div
-  | ModBinary -> HPrim.Mod
+  | ModuloBinary -> HPrim.Modulo
   | BitAndBinary -> HPrim.BitAnd
   | BitOrBinary -> HPrim.BitOr
   | BitXorBinary -> HPrim.BitXor

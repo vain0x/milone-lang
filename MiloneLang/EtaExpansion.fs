@@ -144,7 +144,7 @@ let private primToArity ty prim =
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
-  | HPrim.Mod
+  | HPrim.Modulo
   | HPrim.BitAnd
   | HPrim.BitOr
   | HPrim.BitXor

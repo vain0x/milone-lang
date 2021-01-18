@@ -334,7 +334,7 @@ type HPrim =
   | Sub
   | Mul
   | Div
-  | Mod
+  | Modulo
   | BitAnd
   | BitOr
   | BitXor
@@ -722,7 +722,7 @@ let primToTySpec prim =
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
-  | HPrim.Mod ->
+  | HPrim.Modulo ->
       let ty = meta 1
       poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
 

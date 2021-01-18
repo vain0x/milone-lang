@@ -741,7 +741,7 @@ let private parseOps bp basePos first (tokens, errors) =
 
   | MulBp, (StarToken, opPos) :: tokens -> nextL first MulBinary opPos (tokens, errors)
   | MulBp, (SlashToken, opPos) :: tokens -> nextL first DivBinary opPos (tokens, errors)
-  | MulBp, (PercentToken, opPos) :: tokens -> nextL first ModBinary opPos (tokens, errors)
+  | MulBp, (PercentToken, opPos) :: tokens -> nextL first ModuloBinary opPos (tokens, errors)
 
   | _ -> first, tokens, errors
 

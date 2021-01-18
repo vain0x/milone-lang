@@ -84,7 +84,7 @@ type MUnary =
 type MBinary =
   | MMulBinary
   | MDivBinary
-  | MModBinary
+  | MModuloBinary
   | MAddBinary
   | MSubBinary
   | MBitAndBinary
