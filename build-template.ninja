@@ -160,7 +160,7 @@ rule execute_test
     }
 
 rule diff_test_output
-  description = diff_test_output $in
+  description = diff_test_output $test
   command = $
     diff -q $in && $
       echo OK $test >$out || $
@@ -168,6 +168,7 @@ rule diff_test_output
 
 # Verify outputs.
 rule verify_test_output
+  description = verify_test_output
   command = $
     OK_COUNT=$$(grep ^OK -- $in | wc -l); $
     FAIL_COUNT=$$(grep ^FAIL -- $in | wc -l); $

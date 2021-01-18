@@ -27,6 +27,10 @@ build {{ DIFF_FILE }}: $
     {{ OUT_FILE }} $
     tests/{{ CATEGORY }}/{{ PROJECT }}/{{ PROJECT }}.out
   test = {{ PROJECT }}
+
+build {{ PROJECT }}: $
+  verify_test_output {{ DIFF_FILE }}
+  pool = console
 """
 
 let renderTestCaseBuildStatements category projectName =
