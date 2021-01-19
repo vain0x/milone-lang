@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -eu
+
+MILONE_HOME=${MILONE_HOME:-"${HOME}/.milone"}
+MILONE_RUNTIME="$MILONE_HOME/runtime"
+
+gcc -std=gnu11 -g \
+    -fsanitize=address,leak,undefined \
+    -Wall \
+    -Wextra \
+    -Wno-unused-but-set-parameter \
+    -Wno-unused-but-set-variable \
+    -Wno-unused-label \
+    -Wno-unused-parameter \
+    -Wno-unused-variable \
+    $(pkg-config --cflags --libs gtk+-3.0) \
+    -I "$MILONE_RUNTIME" \
+    "$MILONE_RUNTIME/milone.c" \
+    app_gtk.c \
+    target/app_gtk.c \
+    -o target/app \
+    $(pkg-config --libs gtk+-3.0)

@@ -1,0 +1,3 @@
+module rec AppGtk.Program
+
+let main _: int = __nativeFun "app_main"
