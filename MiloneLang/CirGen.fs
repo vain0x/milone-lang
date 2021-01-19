@@ -1094,8 +1094,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
           | _ -> failwith "NEVER")
 
 let private cgCallPrimExpr ctx itself serial prim args =
-  let fail msg = failwithf "%s: %A" msg itself
-  cgPrimStmt ctx fail prim args serial
+  cgPrimStmt ctx itself prim args serial
 
 let private cgBoxStmt ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)

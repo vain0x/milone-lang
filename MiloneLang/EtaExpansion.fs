@@ -83,6 +83,7 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Hir
 
+module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
 
 [<RequireQualifiedAccess>]
@@ -161,37 +162,105 @@ let private primToArity ty prim =
   | HPrim.Printfn -> ty |> tyToArity
 
 // -----------------------------------------------
+// ArityEx
+// -----------------------------------------------
+
+/// Arity extended.
+///
+/// This is similar to type, but ignores non-function types to unit type
+/// and handles arity of functions.
+[<NoEquality; NoComparison>]
+type private ArityEx =
+  /// Arity of non-function value.
+  | UnitAx
+
+  /// Arity of hungry function.
+  | HungryAx
+
+  /// Arity of function.
+  | FunAx of args: ArityEx list * result: ArityEx
+
+let private arityExIsUnifiable l r =
+  let rec go (l, r) =
+    match l, r with
+    | HungryAx, _
+    | _, HungryAx -> true
+
+    | UnitAx, UnitAx -> true
+
+    | FunAx (ls, lt), FunAx (rs, rt) ->
+        let zipped, lRest, rRest = listTryZip ls rs
+
+        List.isEmpty lRest
+        && List.isEmpty rRest
+        && List.forall go zipped
+        && go (lt, rt)
+
+    | UnitAx, _
+    | FunAx _, _ -> false
+
+  go (l, r)
+
+let private arityExToString a =
+  match a with
+  | UnitAx -> "_"
+  | HungryAx -> "*"
+
+  | FunAx (args, result) ->
+      "("
+      + (args |> List.map arityExToString |> S.concat ", ")
+      + ") -> "
+      + arityExToString result
+
+let private tyToArityEx ty =
+  let rec goFun ty =
+    match ty with
+    | Ty (FunTk, [ sTy; tTy ]) ->
+        let sTy = tyToArityEx sTy
+        let args, result = goFun tTy
+        sTy :: args, result
+
+    | _ -> [], UnitAx
+
+  let args, result = goFun ty
+
+  if List.isEmpty args then
+    result
+  else
+    FunAx(args, result)
+
+// -----------------------------------------------
 // ArityCheck
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private ArityCheckCtx =
-  { GetFunArity: FunSerial -> int
-    Errors: (int * int * Loc) list }
+  { GetFunArity: FunSerial -> ArityEx
+    Errors: (string * string * Loc) list }
 
 let private addArityError actual expected (loc: Loc) (ctx: ArityCheckCtx) =
   { ctx with
       Errors = (actual, expected, loc) :: ctx.Errors }
 
 let private acExprChecked expr ctx =
-  let expected = tyToArity (exprToTy expr)
+  let expected = tyToArityEx (exprToTy expr)
   let actual, ctx = acExpr (expr, ctx)
 
-  if actual <> expected then
+  if arityExIsUnifiable actual expected |> not then
     ctx
-    |> addArityError actual expected (exprToLoc expr)
+    |> addArityError (arityExToString actual) (arityExToString expected) (exprToLoc expr)
   else
     ctx
 
-let private acExpr (expr, ctx: ArityCheckCtx) =
+let private acExpr (expr, ctx: ArityCheckCtx): ArityEx * ArityCheckCtx =
   match expr with
   | HLitExpr _
   | HTyDeclExpr _
-  | HOpenExpr _ -> 0, ctx
+  | HOpenExpr _ -> UnitAx, ctx
 
-  | HVarExpr (_, ty, _) -> tyToArity ty, ctx
-  | HVariantExpr (_, ty, _) -> tyToArity ty, ctx
-  | HPrimExpr (_, ty, _) -> tyToArity ty, ctx
+  | HVarExpr (_, ty, _) -> tyToArityEx ty, ctx
+  | HVariantExpr (_, ty, _) -> tyToArityEx ty, ctx
+  | HPrimExpr (_, ty, _) -> tyToArityEx ty, ctx
 
   | HFunExpr (funSerial, _, _) -> ctx.GetFunArity funSerial, ctx
 
@@ -206,7 +275,7 @@ let private acExpr (expr, ctx: ArityCheckCtx) =
           fields
           |> List.fold (fun ctx (_, init, _) -> acExprChecked init ctx) ctx
 
-        0, ctx
+        UnitAx, ctx
 
       doArm ()
 
@@ -222,17 +291,39 @@ let private acExpr (expr, ctx: ArityCheckCtx) =
                  acExprChecked body ctx)
                ctx
 
-        tyToArity ty, ctx
+        tyToArityEx ty, ctx
 
       doArm ()
 
   | HNavExpr (l, _, ty, _) ->
       let _, ctx = acExpr (l, ctx)
-      tyToArity ty, ctx
+      tyToArityEx ty, ctx
+
+  | HNodeExpr (HAppEN, [ callee; arg ], ty, loc) ->
+      let calleeArity, ctx = acExpr (callee, ctx)
+      let argArity, ctx = acExpr (arg, ctx)
+
+      match calleeArity with
+      | HungryAx -> HungryAx, ctx
+
+      | FunAx (a :: args, result) when arityExIsUnifiable a argArity ->
+          if List.isEmpty args then
+            tyToArityEx ty, ctx
+          else
+            FunAx(args, result), ctx
+
+      | _ ->
+          let expected =
+            "(" + arityExToString argArity + ", ..) -> .."
+
+          let ctx =
+            addArityError (arityExToString calleeArity) expected loc ctx
+
+          tyToArityEx ty, ctx
 
   | HNodeExpr (_, items, ty, _) ->
       let ctx = acExprs items ctx
-      tyToArity ty, ctx
+      tyToArityEx ty, ctx
 
   | HBlockExpr (stmts, last) ->
       let ctx = acExprs stmts ctx
@@ -258,7 +349,26 @@ let arityCheck (expr, tyCtx: Typing.TyCtx) =
     { GetFunArity =
         fun funSerial ->
           let funDef = tyCtx.Funs |> mapFind funSerial
-          funDef.Arity
+
+          // HACK: failwithf can take any number of arguments.
+          if funDef.Name = "failwithf" then
+            HungryAx
+          else
+            let (TyScheme (_, ty)) = funDef.Ty
+
+            let _, args, result = ty |> tyToArgList
+
+            let args, otherArgs =
+              List.truncate funDef.Arity args, List.skip funDef.Arity args
+
+            let result =
+              otherArgs
+              |> List.rev
+              |> List.fold (fun a result -> tyFun a result) result
+
+            let args = List.map tyToArityEx args
+            let result = tyToArityEx result
+            FunAx(args, result)
 
       Errors = [] }
 

@@ -529,7 +529,7 @@ type Log =
   | TySynonymCycleError
   | RedundantFieldError of ty: Ident * field: Ident
   | MissingFieldsError of ty: Ident * fields: Ident list
-  | ArityMismatch of actual: Arity * expected: Arity
+  | ArityMismatch of actual: string * expected: string
   | Error of string
 
 // -----------------------------------------------
@@ -1194,9 +1194,9 @@ let logToString tyDisplay log =
 
   | Log.ArityMismatch (actual, expected) ->
       "Arity mismatch: expected "
-      + string expected
+      + expected
       + ", but was "
-      + string actual
+      + actual
       + "."
 
   | Log.Error msg -> msg
