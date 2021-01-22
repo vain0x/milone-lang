@@ -1,5 +1,6 @@
 module MiloneLsp.LspServer
 
+open System.Threading
 open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 open MiloneLsp.JsonRpcWriter
@@ -105,232 +106,250 @@ let jOfMarkdownString (text: string) =
   jOfObj [ "language", JString "markdown"
            "value", JString text ]
 
-let lspServer (): JsonValue -> int option =
-  let freshMsgId () = freshMsgId () |> jOfInt
+type LspServerHost =
+  { DrainRequests: unit -> JsonValue list }
 
-  let mutable exitCode = 1
-  let mutable rootUriOpt: string option = None
+let lspServer (host: LspServerHost): Async<int> =
+  async {
+    let freshMsgId () = freshMsgId () |> jOfInt
 
-  let doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
-    let diagnostics =
-      errors
-      |> List.map
-           (fun (msg, r1, c1, r2, c2) ->
-             let start = r1, c1
-             let endPos = r2, c2
+    let mutable exitCode = 1
+    let mutable rootUriOpt: string option = None
 
-             jOfObj [ "range", jOfRange (start, endPos)
-                      "message", JString msg
-                      "source", JString "milone-lang" ])
-      |> JArray
+    let doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
+      let diagnostics =
+        errors
+        |> List.map
+             (fun (msg, r1, c1, r2, c2) ->
+               let start = r1, c1
+               let endPos = r2, c2
 
-    let paramsValue =
-      jOfObj [ "uri", JString uri
-               "diagnostics", diagnostics ]
+               jOfObj [ "range", jOfRange (start, endPos)
+                        "message", JString msg
+                        "source", JString "milone-lang" ])
+        |> JArray
 
-    jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
+      let paramsValue =
+        jOfObj [ "uri", JString uri
+                 "diagnostics", diagnostics ]
 
-  // let validateDoc (uri: string): unit =
-  //   let errors =
-  //     LspLangService.validateDoc uri
-  //     |> List.map (fun (msg, (row, column)) -> msg, row, column, row, column)
+      jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
 
-  //   doPublishDiagnostics uri errors
+    // let validateDoc (uri: string): unit =
+    //   let errors =
+    //     LspLangService.validateDoc uri
+    //     |> List.map (fun (msg, (row, column)) -> msg, row, column, row, column)
 
-  let validateWorkspace (): unit =
-    for uri, errors in LspLangService.validateWorkspace rootUriOpt do
-      let errors =
-        [ for msg, pos in errors do
-            let row, column = pos
-            yield msg, row, column, row, column ]
+    //   doPublishDiagnostics uri errors
 
-      doPublishDiagnostics uri errors
+    let validateWorkspace (): unit =
+      for uri, errors in LspLangService.validateWorkspace rootUriOpt do
+        let errors =
+          [ for msg, pos in errors do
+              let row, column = pos
+              yield msg, row, column, row, column ]
 
-  // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
-  let documentHighlight uri pos: JsonValue =
-    let reads, writes =
-      LspLangService.documentHighlight rootUriOpt uri pos
+        doPublishDiagnostics uri errors
 
-    let toHighlights kind posList =
-      posList
-      |> Seq.map
-           (fun (start, endPos) ->
-             jOfObj [ "range", jOfRange (start, endPos)
-                      "kind", jOfInt kind ])
+    // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_documentHighlight>
+    let documentHighlight uri pos: JsonValue =
+      let reads, writes =
+        LspLangService.documentHighlight rootUriOpt uri pos
 
-    JArray [ yield! toHighlights 2 reads
-             yield! toHighlights 3 writes ]
+      let toHighlights kind posList =
+        posList
+        |> Seq.map
+             (fun (start, endPos) ->
+               jOfObj [ "range", jOfRange (start, endPos)
+                        "kind", jOfInt kind ])
 
-  // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
-  let hover uri pos: JsonValue =
-    let contents = LspLangService.hover rootUriOpt uri pos
+      JArray [ yield! toHighlights 2 reads
+               yield! toHighlights 3 writes ]
 
-    match contents with
-    | [] -> JNull
-    | _ ->
-        jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
-                 //  "range", jOfRange range
-                  ]
+    // https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_hover
+    let hover uri pos: JsonValue =
+      let contents = LspLangService.hover rootUriOpt uri pos
 
-  fun jsonValue ->
-    // eprintfn "received %A" jsonValue
-    let getMsgId () = jsonValue |> jFind "id"
+      match contents with
+      | [] -> JNull
+      | _ ->
+          jOfObj [ "contents", contents |> List.map jOfMarkdownString |> JArray
+                   //  "range", jOfRange range
+                    ]
 
-    match jsonValue |> jFind "method" |> jToString with
-    | "initialize" ->
-        rootUriOpt <-
-          try
-            jsonValue
-            |> jFind2 "params" "rootUri"
-            |> jToString
-            |> Some
-          with _ -> None
+    let onRequest jsonValue =
+      // eprintfn "received %A" jsonValue
+      let getMsgId () = jsonValue |> jFind "id"
 
-        eprintfn "rootUriOpt = %A" rootUriOpt
+      match jsonValue |> jFind "method" |> jToString with
+      | "initialize" ->
+          rootUriOpt <-
+            try
+              jsonValue
+              |> jFind2 "params" "rootUri"
+              |> jToString
+              |> Some
+            with _ -> None
 
-        let result =
-          jsonDeserializeString
-            """{
-            "capabilities": {
-                "textDocumentSync": {
-                    "openClose": true,
-                    "change": 1
-                },
-                "definitionProvider": true,
-                "documentHighlightProvider": true,
-                "hoverProvider": true,
-                "referencesProvider": true,
-                "renameProvider": false
-            },
-            "serverInfo": {
-                "name": "milone_lsp",
-                "version": "0.1.0"
-            }
-          }"""
+          eprintfn "rootUriOpt = %A" rootUriOpt
 
-        jsonRpcWriteWithResult (getMsgId ()) result
-        None
+          let result =
+            jsonDeserializeString
+              """{
+              "capabilities": {
+                  "textDocumentSync": {
+                      "openClose": true,
+                      "change": 1
+                  },
+                  "definitionProvider": true,
+                  "documentHighlightProvider": true,
+                  "hoverProvider": true,
+                  "referencesProvider": true,
+                  "renameProvider": false
+              },
+              "serverInfo": {
+                  "name": "milone_lsp",
+                  "version": "0.1.0"
+              }
+            }"""
 
-    | "initialized" ->
-        validateWorkspace ()
-        None
+          jsonRpcWriteWithResult (getMsgId ()) result
+          None
 
-    | "shutdown" ->
-        exitCode <- 0
-        jsonRpcWriteWithResult (getMsgId ()) JNull
-        None
+      | "initialized" ->
+          validateWorkspace ()
+          None
 
-    | "exit" -> Some exitCode
+      | "shutdown" ->
+          exitCode <- 0
+          jsonRpcWriteWithResult (getMsgId ()) JNull
+          None
 
-    | "textDocument/didOpen" ->
-        let docParam =
-          jsonValue |> jFind2 "params" "textDocument"
+      | "exit" -> Some exitCode
 
-        let uri, version, text =
-          let uri, version, text =
-            docParam |> jFields3 "uri" "version" "text"
-
-          jToString uri, jToInt version, jToString text
-
-        LspDocCache.openDoc uri version text
-        // validateDoc uri
-        validateWorkspace ()
-        None
-
-    | "textDocument/didChange" ->
-        let uri, version =
+      | "textDocument/didOpen" ->
           let docParam =
             jsonValue |> jFind2 "params" "textDocument"
 
-          let uri, version = docParam |> jFields2 "uri" "version"
+          let uri, version, text =
+            let uri, version, text =
+              docParam |> jFields3 "uri" "version" "text"
 
-          jToString uri, jToInt version
+            jToString uri, jToInt version, jToString text
 
-        let text =
-          jsonValue
-          |> jFind2 "params" "contentChanges"
-          |> jAt 0
-          |> jFind "text"
-          |> jToString
+          LspDocCache.openDoc uri version text
+          // validateDoc uri
+          validateWorkspace ()
+          None
 
-        LspDocCache.changeDoc uri version text
-        // validateDoc uri
-        validateWorkspace ()
-        None
+      | "textDocument/didChange" ->
+          let uri, version =
+            let docParam =
+              jsonValue |> jFind2 "params" "textDocument"
 
-    | "textDocument/didClose" ->
-        let uri =
-          jsonValue
-          |> jFind3 "params" "textDocument" "uri"
-          |> jToString
+            let uri, version = docParam |> jFields2 "uri" "version"
 
-        LspDocCache.closeDoc uri
-        validateWorkspace ()
-        None
+            jToString uri, jToInt version
 
-    | "textDocument/documentHighlight" ->
-        let uri, pos =
-          jsonValue
-          |> jFind "params"
-          |> jAsObjToTextDocumentPositionParams
+          let text =
+            jsonValue
+            |> jFind2 "params" "contentChanges"
+            |> jAt 0
+            |> jFind "text"
+            |> jToString
 
-        let result = documentHighlight uri pos
-        jsonRpcWriteWithResult (getMsgId ()) result
-        None
+          LspDocCache.changeDoc uri version text
+          // validateDoc uri
+          validateWorkspace ()
+          None
 
-    | "textDocument/hover" ->
-        let uri, pos =
-          jsonValue
-          |> jFind "params"
-          |> jAsObjToTextDocumentPositionParams
+      | "textDocument/didClose" ->
+          let uri =
+            jsonValue
+            |> jFind3 "params" "textDocument" "uri"
+            |> jToString
 
-        let result = hover uri pos
-        jsonRpcWriteWithResult (getMsgId ()) result
-        None
+          LspDocCache.closeDoc uri
+          validateWorkspace ()
+          None
 
-    | "textDocument/definition" ->
-        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
+      | "textDocument/documentHighlight" ->
+          let uri, pos =
+            jsonValue
+            |> jFind "params"
+            |> jAsObjToTextDocumentPositionParams
 
-        let uri, pos =
-          jsonValue
-          |> jFind "params"
-          |> jAsObjToTextDocumentPositionParams
+          let result = documentHighlight uri pos
+          jsonRpcWriteWithResult (getMsgId ()) result
+          None
 
-        let result =
-          LspLangService.definition rootUriOpt uri pos
-          |> List.map
-               (fun (docId, range) ->
-                 jOfObj [ "uri", JString docId
-                          "range", jOfRange range ])
-          |> JArray
+      | "textDocument/hover" ->
+          let uri, pos =
+            jsonValue
+            |> jFind "params"
+            |> jAsObjToTextDocumentPositionParams
 
-        jsonRpcWriteWithResult (getMsgId ()) result
-        None
+          let result = hover uri pos
+          jsonRpcWriteWithResult (getMsgId ()) result
+          None
 
-    | "textDocument/references" ->
-        // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
+      | "textDocument/definition" ->
+          // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
 
-        let uri, pos =
-          jsonValue
-          |> jFind "params"
-          |> jAsObjToTextDocumentPositionParams
+          let uri, pos =
+            jsonValue
+            |> jFind "params"
+            |> jAsObjToTextDocumentPositionParams
 
-        let includeDecl =
-          jsonValue
-          |> jFind3 "params" "context" "includeDeclaration"
-          |> jToBool
+          let result =
+            LspLangService.definition rootUriOpt uri pos
+            |> List.map
+                 (fun (docId, range) ->
+                   jOfObj [ "uri", JString docId
+                            "range", jOfRange range ])
+            |> JArray
 
-        let result =
-          LspLangService.references rootUriOpt uri pos includeDecl
-          |> List.map
-               (fun (docId, range) ->
-                 jOfObj [ "uri", JString docId
-                          "range", jOfRange range ])
-          |> JArray
+          jsonRpcWriteWithResult (getMsgId ()) result
+          None
 
-        jsonRpcWriteWithResult (getMsgId ()) result
-        None
+      | "textDocument/references" ->
+          // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
 
-    | methodName ->
-        eprintfn "unknown method '%s'" methodName
-        None
+          let uri, pos =
+            jsonValue
+            |> jFind "params"
+            |> jAsObjToTextDocumentPositionParams
+
+          let includeDecl =
+            jsonValue
+            |> jFind3 "params" "context" "includeDeclaration"
+            |> jToBool
+
+          let result =
+            LspLangService.references rootUriOpt uri pos includeDecl
+            |> List.map
+                 (fun (docId, range) ->
+                   jOfObj [ "uri", JString docId
+                            "range", jOfRange range ])
+            |> JArray
+
+          jsonRpcWriteWithResult (getMsgId ()) result
+          None
+
+      | methodName ->
+          eprintfn "unknown method '%s'" methodName
+          None
+
+    let rec go requests =
+      async {
+        match requests with
+        | [] -> return! go (host.DrainRequests())
+
+        | r :: requests ->
+            match onRequest r with
+            | Some it -> return it
+            | None -> return! go requests
+      }
+
+    return! go []
+  }

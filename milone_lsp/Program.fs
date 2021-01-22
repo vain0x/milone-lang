@@ -1,14 +1,20 @@
 module rec MiloneLsp.Program
 
+open System.Threading
 open MiloneLsp.JsonRpcReaderForAbstractStream
 open MiloneLsp.JsonRpcReaderForStdIn
 open MiloneLsp.LspServer
 
 [<EntryPoint>]
 let main _ =
-  let readLine, readBytes = jsonRpcReaderForStdIn ()
+  async {
+    let readLine, readBytes = jsonRpcReaderForStdIn ()
 
-  startJsonRpcReader
-    { ReadLine = readLine
-      ReadBytes = readBytes
-      ProcessIncomingMsg = lspServer () }
+    let requestReader, drainRequests =
+      startJsonRpcReader
+        { ReadLine = readLine
+          ReadBytes = readBytes }
+
+    Async.Start(requestReader)
+    return! lspServer { DrainRequests = drainRequests }
+  } |> Async.RunSynchronously
