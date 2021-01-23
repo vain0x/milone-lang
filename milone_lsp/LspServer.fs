@@ -244,7 +244,7 @@ type private LspIncome =
   | DidCloseNotification of DidCloseParam
 
   // Queries.
-  | DiagnosticsRequest of uri: string
+  | DiagnosticsRequest
   | DefinitionsRequest of MsgId * DocumentPositionParam
   | ReferencesRequest of MsgId * ReferencesParam
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
@@ -278,13 +278,6 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
 
   | methodName -> UnknownIncome methodName
-
-let private asDocumentChange income: string option =
-  match income with
-  | DidOpenNotification p -> p.Uri |> Some
-  | DidChangeNotification p -> p.Uri |> Some
-  | DidCloseNotification p -> p.Uri |> Some
-  | _ -> None
 
 let private doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
   let diagnostics =
@@ -322,7 +315,7 @@ let private processNext (): LspIncome -> ProcessResult =
     match income with
     | InitializeRequest (msgId, param) ->
         rootUriOpt <- param.RootUriOpt
-        eprintfn "rootUriOpt = %A" rootUriOpt
+        // eprintfn "rootUriOpt = %A" rootUriOpt
 
         let result = createInitializeResult ()
         jsonRpcWriteWithResult msgId result
@@ -355,7 +348,7 @@ let private processNext (): LspIncome -> ProcessResult =
         LspDocCache.closeDoc uri
         Continue
 
-    | DiagnosticsRequest _ ->
+    | DiagnosticsRequest ->
         validateWorkspace rootUriOpt
         Continue
 
@@ -436,6 +429,25 @@ let private processNext (): LspIncome -> ProcessResult =
         Continue
 
 // -----------------------------------------------
+// Request preprocess
+// -----------------------------------------------
+
+let private preprocess (incomes: LspIncome list): LspIncome list =
+  let doesUpdateDiagnostics income =
+    match income with
+    | InitializedNotification _
+    | DidOpenNotification _
+    | DidChangeNotification _
+    | DidCloseNotification _ -> true
+
+    | _ -> false
+
+  if incomes |> List.exists doesUpdateDiagnostics then
+    List.append incomes [ DiagnosticsRequest ]
+  else
+    incomes
+
+// -----------------------------------------------
 // Server
 // -----------------------------------------------
 
@@ -452,15 +464,14 @@ let lspServer (host: LspServerHost): Async<int> =
         match incomes with
         | [] ->
             let incomes =
-              host.DrainRequests() |> List.map parseIncome
+              host.DrainRequests()
+              |> List.map parseIncome
+              |> preprocess
 
             return! go incomes
 
         | income :: incomes ->
-            let incomes =
-              match asDocumentChange income with
-              | Some uri -> DiagnosticsRequest uri :: incomes
-              | None -> incomes
+            // eprintfn "[TRACE] process %A" income
 
             match onRequest income with
             | Exit it -> return it
