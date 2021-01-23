@@ -4,10 +4,15 @@ open System.Threading
 open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 open MiloneLsp.JsonRpcWriter
+open MiloneLsp.Lsp
 
 type Position = int * int
 
 type Range = Position * Position
+
+// -----------------------------------------------
+// JSON helper
+// -----------------------------------------------
 
 let jOfInt (value: int): JsonValue = JNumber(float value)
 
@@ -87,16 +92,6 @@ let jToRange jsonValue: Range =
   let start, endPos = jsonValue |> jFields2 "start" "end"
   jToPos start, jToPos endPos
 
-let jAsObjToTextDocumentPositionParams jsonValue =
-  let uri =
-    jsonValue
-    |> jFind2 "textDocument" "uri"
-    |> jToString
-
-  let pos = jsonValue |> jFind "position" |> jToPos
-
-  uri, pos
-
 // MarkupContent
 // let jOfMarkupContentAsMarkdown (text: string) =
 //   jOfObj [ "kind", JString "markdown"
@@ -105,6 +100,113 @@ let jAsObjToTextDocumentPositionParams jsonValue =
 let jOfMarkdownString (text: string) =
   jOfObj [ "language", JString "markdown"
            "value", JString text ]
+
+// -----------------------------------------------
+// LSP types
+// -----------------------------------------------
+
+type InitializeParam = { RootUriOpt: string option }
+
+let parseInitializeParam jsonValue: InitializeParam =
+  let rootUriOpt =
+    try
+      jsonValue
+      |> jFind2 "params" "rootUri"
+      |> jToString
+      |> Some
+    with _ -> None
+
+  { RootUriOpt = rootUriOpt }
+
+type DidOpenParam =
+  { Uri: string
+    Version: int
+    Text: string }
+
+let parseDidOpenParam jsonValue: DidOpenParam =
+  let docParam =
+    jsonValue |> jFind2 "params" "textDocument"
+
+  let uri, version, text =
+    docParam |> jFields3 "uri" "version" "text"
+
+  let uri, version, text =
+    jToString uri, jToInt version, jToString text
+
+  { Uri = uri
+    Version = version
+    Text = text }
+
+type DidChangeParam =
+  { Uri: string
+    Version: int
+    Text: string }
+
+let parseDidChangeParam jsonValue: DidChangeParam =
+  let uri, version =
+    let uri, version =
+      jsonValue
+      |> jFind2 "params" "textDocument"
+      |> jFields2 "uri" "version"
+
+    jToString uri, jToInt version
+
+  let text =
+    jsonValue
+    |> jFind2 "params" "contentChanges"
+    |> jAt 0
+    |> jFind "text"
+    |> jToString
+
+  { Uri = uri
+    Version = version
+    Text = text }
+
+type DidCloseParam = { Uri: string }
+
+let parseDidCloseParam jsonValue: DidCloseParam =
+  let uri =
+    jsonValue
+    |> jFind3 "params" "textDocument" "uri"
+    |> jToString
+
+  { Uri = uri }
+
+type DocumentPositionParam = { Uri: string; Pos: Pos }
+
+let parseDocumentPositionParam jsonValue: DocumentPositionParam =
+  let uri =
+    jsonValue
+    |> jFind3 "params" "textDocument" "uri"
+    |> jToString
+
+  let pos =
+    jsonValue |> jFind2 "params" "position" |> jToPos
+
+  { Uri = uri; Pos = pos }
+
+type ReferencesParam =
+  { Uri: string
+    Pos: Pos
+    IncludeDecl: bool }
+
+let parseReferencesParam jsonValue: ReferencesParam =
+  let uri, pos =
+    let p = parseDocumentPositionParam jsonValue
+    p.Uri, p.Pos
+
+  let includeDecl =
+    jsonValue
+    |> jFind3 "params" "context" "includeDeclaration"
+    |> jToBool
+
+  { Uri = uri
+    Pos = pos
+    IncludeDecl = includeDecl }
+
+// -----------------------------------------------
+// Server
+// -----------------------------------------------
 
 type LspServerHost =
   { DrainRequests: unit -> JsonValue list }
@@ -183,13 +285,8 @@ let lspServer (host: LspServerHost): Async<int> =
 
       match jsonValue |> jFind "method" |> jToString with
       | "initialize" ->
-          rootUriOpt <-
-            try
-              jsonValue
-              |> jFind2 "params" "rootUri"
-              |> jToString
-              |> Some
-            with _ -> None
+          let p = parseInitializeParam jsonValue
+          rootUriOpt <- p.RootUriOpt
 
           eprintfn "rootUriOpt = %A" rootUriOpt
 
@@ -228,14 +325,9 @@ let lspServer (host: LspServerHost): Async<int> =
       | "exit" -> Some exitCode
 
       | "textDocument/didOpen" ->
-          let docParam =
-            jsonValue |> jFind2 "params" "textDocument"
-
           let uri, version, text =
-            let uri, version, text =
-              docParam |> jFields3 "uri" "version" "text"
-
-            jToString uri, jToInt version, jToString text
+            let p = parseDidOpenParam jsonValue
+            p.Uri, p.Version, p.Text
 
           LspDocCache.openDoc uri version text
           // validateDoc uri
@@ -243,20 +335,9 @@ let lspServer (host: LspServerHost): Async<int> =
           None
 
       | "textDocument/didChange" ->
-          let uri, version =
-            let docParam =
-              jsonValue |> jFind2 "params" "textDocument"
-
-            let uri, version = docParam |> jFields2 "uri" "version"
-
-            jToString uri, jToInt version
-
-          let text =
-            jsonValue
-            |> jFind2 "params" "contentChanges"
-            |> jAt 0
-            |> jFind "text"
-            |> jToString
+          let uri, version, text =
+            let p = parseDidChangeParam jsonValue
+            p.Uri, p.Version, p.Text
 
           LspDocCache.changeDoc uri version text
           // validateDoc uri
@@ -265,9 +346,8 @@ let lspServer (host: LspServerHost): Async<int> =
 
       | "textDocument/didClose" ->
           let uri =
-            jsonValue
-            |> jFind3 "params" "textDocument" "uri"
-            |> jToString
+            let p = parseDidCloseParam jsonValue
+            p.Uri
 
           LspDocCache.closeDoc uri
           validateWorkspace ()
@@ -275,9 +355,8 @@ let lspServer (host: LspServerHost): Async<int> =
 
       | "textDocument/documentHighlight" ->
           let uri, pos =
-            jsonValue
-            |> jFind "params"
-            |> jAsObjToTextDocumentPositionParams
+            let p = parseDocumentPositionParam jsonValue
+            p.Uri, p.Pos
 
           let result = documentHighlight uri pos
           jsonRpcWriteWithResult (getMsgId ()) result
@@ -285,9 +364,8 @@ let lspServer (host: LspServerHost): Async<int> =
 
       | "textDocument/hover" ->
           let uri, pos =
-            jsonValue
-            |> jFind "params"
-            |> jAsObjToTextDocumentPositionParams
+            let p = parseDocumentPositionParam jsonValue
+            p.Uri, p.Pos
 
           let result = hover uri pos
           jsonRpcWriteWithResult (getMsgId ()) result
@@ -297,9 +375,8 @@ let lspServer (host: LspServerHost): Async<int> =
           // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
 
           let uri, pos =
-            jsonValue
-            |> jFind "params"
-            |> jAsObjToTextDocumentPositionParams
+            let p = parseDocumentPositionParam jsonValue
+            p.Uri, p.Pos
 
           let result =
             LspLangService.definition rootUriOpt uri pos
@@ -315,15 +392,9 @@ let lspServer (host: LspServerHost): Async<int> =
       | "textDocument/references" ->
           // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_references>
 
-          let uri, pos =
-            jsonValue
-            |> jFind "params"
-            |> jAsObjToTextDocumentPositionParams
-
-          let includeDecl =
-            jsonValue
-            |> jFind3 "params" "context" "includeDeclaration"
-            |> jToBool
+          let uri, pos, includeDecl =
+            let p = parseReferencesParam jsonValue
+            p.Uri, p.Pos, p.IncludeDecl
 
           let result =
             LspLangService.references rootUriOpt uri pos includeDecl
