@@ -224,10 +224,19 @@ let private parseReferencesParam jsonValue: ReferencesParam =
     IncludeDecl = includeDecl }
 
 // -----------------------------------------------
-// LspIncome
+// LspError
 // -----------------------------------------------
 
 type private MsgId = JsonValue
+
+[<NoEquality; NoComparison>]
+type private LspError =
+  | CancelledRequestError of msgId: MsgId
+  | MethodNotFoundError of methodName: string
+
+// -----------------------------------------------
+// LspIncome
+// -----------------------------------------------
 
 /// Incoming message.
 [<NoEquality; NoComparison>]
@@ -245,12 +254,14 @@ type private LspIncome =
 
   // Queries.
   | DiagnosticsRequest
-  | DefinitionsRequest of MsgId * DocumentPositionParam
+  | DefinitionRequest of MsgId * DocumentPositionParam
   | ReferencesRequest of MsgId * ReferencesParam
   | DocumentHighlightRequest of MsgId * DocumentPositionParam
   | HoverRequest of MsgId * DocumentPositionParam
 
-  | UnknownIncome of methodName: string
+  // Others.
+  | CancelRequestNotification of MsgId
+  | ErrorIncome of LspError
 
 [<NoEquality; NoComparison>]
 type private ProcessResult =
@@ -272,12 +283,13 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
   | "textDocument/didChange" -> DidChangeNotification(parseDidChangeParam jsonValue)
   | "textDocument/didClose" -> DidCloseNotification(parseDidCloseParam jsonValue)
 
-  | "textDocument/definitions" -> DefinitionsRequest(getMsgId (), parseDocumentPositionParam jsonValue)
+  | "textDocument/definition" -> DefinitionRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/references" -> ReferencesRequest(getMsgId (), parseReferencesParam jsonValue)
   | "textDocument/documentHighlight" -> DocumentHighlightRequest(getMsgId (), parseDocumentPositionParam jsonValue)
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
 
-  | methodName -> UnknownIncome methodName
+  | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
+  | methodName -> ErrorIncome(MethodNotFoundError methodName)
 
 let private doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
   let diagnostics =
@@ -352,7 +364,7 @@ let private processNext (): LspIncome -> ProcessResult =
         validateWorkspace rootUriOpt
         Continue
 
-    | DefinitionsRequest (msgId, p) ->
+    | DefinitionRequest (msgId, p) ->
         // <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_definition>
 
         let uri, pos = p.Uri, p.Pos
@@ -424,9 +436,23 @@ let private processNext (): LspIncome -> ProcessResult =
         jsonRpcWriteWithResult msgId result
         Continue
 
-    | UnknownIncome methodName ->
-        eprintfn "unknown method '%s'" methodName
-        Continue
+    | CancelRequestNotification _ -> Continue
+
+    | ErrorIncome error ->
+        let requestCancelledCode = -32800
+
+        match error with
+        | CancelledRequestError msgId ->
+            let error =
+              jOfObj [ "code", jOfInt requestCancelledCode
+                       "message", JString "Request is cancelled." ]
+
+            jsonRpcWriteWithError msgId error
+            Continue
+
+        | MethodNotFoundError methodName ->
+            // eprintfn "unknown method '%s'" methodName
+            Continue
 
 // -----------------------------------------------
 // Request preprocess
@@ -442,10 +468,49 @@ let private preprocess (incomes: LspIncome list): LspIncome list =
 
     | _ -> false
 
-  if incomes |> List.exists doesUpdateDiagnostics then
-    List.append incomes [ DiagnosticsRequest ]
-  else
-    incomes
+  // Add diagnostics request if some document changed.
+  let incomes =
+    if incomes |> List.exists doesUpdateDiagnostics then
+      List.append incomes [ DiagnosticsRequest ]
+    else
+      incomes
+
+  // Replace request and cancellation with cancellation error.
+  let incomes =
+    let asCancelRequest income =
+      match income with
+      | CancelRequestNotification msgId -> Some msgId
+      | _ -> None
+
+    let asMsgId income =
+      match income with
+      | DefinitionRequest (msgId, _)
+      | ReferencesRequest (msgId, _)
+      | DocumentHighlightRequest (msgId, _)
+      | HoverRequest (msgId, _) -> Some msgId
+
+      | _ -> None
+
+    let cancelledIds =
+      incomes
+      |> List.choose asCancelRequest
+      |> Set.ofList
+
+    if Set.isEmpty cancelledIds then
+      incomes
+    else
+      incomes
+      |> List.choose
+           (fun income ->
+             if income |> asCancelRequest |> Option.isSome then
+               None
+             else
+               match asMsgId income with
+               | Some msgId when Set.contains msgId cancelledIds -> ErrorIncome(CancelledRequestError msgId) |> Some
+
+               | _ -> Some income)
+
+  incomes
 
 // -----------------------------------------------
 // Server

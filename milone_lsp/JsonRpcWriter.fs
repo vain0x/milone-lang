@@ -38,3 +38,13 @@ let jsonRpcWriteWithParams (methodName: string) (paramsValue: JsonValue): unit =
     |> JObject
 
   jsonRpcWriteString (jsonDisplay jsonValue + "\n")
+
+let jsonRpcWriteWithError (id: JsonValue) (error: JsonValue): unit =
+  let jsonValue =
+    [ "jsonrpc", JString "2.0"
+      "id", id
+      "error", error ]
+    |> Map.ofList
+    |> JObject
+
+  jsonRpcWriteString (jsonDisplay jsonValue + "\n")
