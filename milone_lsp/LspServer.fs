@@ -32,6 +32,11 @@ let private jAt index jsonValue: JsonValue =
 
   | _ -> failwithf "Expected a list with index: %d; but was: '%s'" index (jsonDisplay jsonValue)
 
+let private jTryFind key jsonValue: JsonValue option =
+  match jsonValue with
+  | JObject map -> Map.tryFind key map
+  | _ -> None
+
 let private jFind key jsonValue: JsonValue =
   match jsonValue with
   | JObject map ->
@@ -232,7 +237,7 @@ type private MsgId = JsonValue
 [<NoEquality; NoComparison>]
 type private LspError =
   | CancelledRequestError of msgId: MsgId
-  | MethodNotFoundError of methodName: string
+  | MethodNotFoundError of msgId: MsgId
 
 // -----------------------------------------------
 // LspIncome
@@ -289,7 +294,12 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
   | "textDocument/hover" -> HoverRequest(getMsgId (), parseDocumentPositionParam jsonValue)
 
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
-  | methodName -> ErrorIncome(MethodNotFoundError methodName)
+
+  | methodName ->
+    eprintfn "[TRACE] Unknown methodName: '%s'." methodName
+
+    let msgId = jsonValue |> jTryFind "id" |> Option.defaultValue JNull
+    ErrorIncome(MethodNotFoundError msgId)
 
 let private doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
   let diagnostics =
@@ -439,6 +449,7 @@ let private processNext (): LspIncome -> ProcessResult =
     | CancelRequestNotification _ -> Continue
 
     | ErrorIncome error ->
+        let methodNotFoundCode = -32601
         let requestCancelledCode = -32800
 
         match error with
@@ -450,8 +461,12 @@ let private processNext (): LspIncome -> ProcessResult =
             jsonRpcWriteWithError msgId error
             Continue
 
-        | MethodNotFoundError methodName ->
-            // eprintfn "unknown method '%s'" methodName
+        | MethodNotFoundError msgId ->
+            let error =
+              jOfObj [ "code", jOfInt methodNotFoundCode
+                       "message", JString "Unknown method." ]
+
+            jsonRpcWriteWithError msgId error
             Continue
 
 // -----------------------------------------------
