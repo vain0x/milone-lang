@@ -5,6 +5,7 @@ open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 open MiloneLsp.JsonRpcWriter
 open MiloneLsp.Lsp
+open MiloneLsp.Util
 
 type private Position = int * int
 
@@ -477,6 +478,22 @@ let private processNext (): LspIncome -> ProcessResult =
 // Request preprocess
 // -----------------------------------------------
 
+/// Removes a list of didChange notifications in a line
+/// except for the last one.
+let private dedupChanges (incomes: LspIncome list): LspIncome list =
+  match List.rev incomes with
+  | [] -> []
+
+  | last :: incomes ->
+      incomes
+      |> List.fold
+           (fun (next, acc) income ->
+             match income, next with
+             | DidChangeNotification p, DidChangeNotification q when p.Uri = q.Uri -> next, acc
+             | _ -> income, next :: acc)
+           (last, [ last ])
+      |> snd
+
 /// Automatically update diagnostics by appending diagnostics request
 /// if some document changed.
 let private autoUpdateDiagnostics (incomes: LspIncome list): LspIncome list =
@@ -532,6 +549,7 @@ let private preprocessCancelRequests (incomes: LspIncome list): LspIncome list =
 /// Optimizes a bunch of messages.
 let private preprocess (incomes: LspIncome list): LspIncome list =
   incomes
+  |> dedupChanges
   |> autoUpdateDiagnostics
   |> preprocessCancelRequests
 
