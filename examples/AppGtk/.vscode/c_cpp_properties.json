@@ -4,6 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
+                "${HOME}/.milone/runtime",
+                "/usr/include/gtk-3.0",
                 "/usr/include/**"
             ],
             "defines": [],
