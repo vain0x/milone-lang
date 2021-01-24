@@ -1,3 +1,34 @@
-module rec AppGtk.Program
+module rec AppGtk.EntryPoint
 
-let main _: int = __nativeFun "app_main"
+// -----------------------------------------------
+// Runtime
+// -----------------------------------------------
+
+type UI = string
+
+let gtkRun (init: 'S) (update: 'S -> 'M -> 'S) (view: 'S -> UI): int =
+  let initObj: obj = box init
+
+  let updateObj: obj -> obj -> obj =
+    fun (state: obj) (msg: obj) -> update (unbox state) (unbox msg) |> box
+
+  let viewObj: obj -> obj =
+    fun (state: obj) -> view (unbox state) |> box
+
+  __nativeFun ("app_main", initObj, updateObj, viewObj)
+
+// -----------------------------------------------
+// App
+// -----------------------------------------------
+
+type MyState = { Count: int }
+
+let private init: MyState = { Count = 0 }
+
+type MyMsg = int
+
+let private update (state: MyState) (msg: MyMsg): MyState = { state with Count = state.Count + 1 }
+
+let private view (state: MyState): UI = string state.Count
+
+let main _: int = inRegion (fun () -> gtkRun init update view)
