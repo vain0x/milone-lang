@@ -238,7 +238,7 @@ type private MsgId = JsonValue
 [<NoEquality; NoComparison>]
 type private LspError =
   | CancelledRequestError of msgId: MsgId
-  | MethodNotFoundError of msgId: MsgId
+  | MethodNotFoundError of msgId: MsgId * methodName: string
 
 // -----------------------------------------------
 // LspIncome
@@ -302,7 +302,7 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
         |> jTryFind "id"
         |> Option.defaultValue JNull
 
-      ErrorIncome(MethodNotFoundError msgId)
+      ErrorIncome(MethodNotFoundError(msgId, methodName))
 
 let private processNext (): LspIncome -> ProcessResult =
   let mutable exitCode: int = 1
@@ -359,6 +359,7 @@ let private processNext (): LspIncome -> ProcessResult =
                      "diagnostics", diagnostics ]
 
           jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
+
         Continue
 
     | DefinitionRequest (msgId, p) ->
@@ -448,10 +449,15 @@ let private processNext (): LspIncome -> ProcessResult =
             jsonRpcWriteWithError msgId error
             Continue
 
-        | MethodNotFoundError msgId ->
+        | MethodNotFoundError (JNull, methodName) ->
+            eprintfn "[TRACE] Unknown methodName: '%s'." methodName
+            Continue
+
+        | MethodNotFoundError (msgId, methodName) ->
             let error =
               jOfObj [ "code", jOfInt methodNotFoundCode
-                       "message", JString "Unknown method." ]
+                       "message", JString "Unknown method."
+                       "data", jOfObj [ "methodName", JString methodName ] ]
 
             jsonRpcWriteWithError msgId error
             Continue
