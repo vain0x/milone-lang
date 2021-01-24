@@ -477,7 +477,9 @@ let private processNext (): LspIncome -> ProcessResult =
 // Request preprocess
 // -----------------------------------------------
 
-let private preprocess (incomes: LspIncome list): LspIncome list =
+/// Automatically update diagnostics by appending diagnostics request
+/// if some document changed.
+let private autoUpdateDiagnostics (incomes: LspIncome list): LspIncome list =
   let doesUpdateDiagnostics income =
     match income with
     | InitializedNotification _
@@ -487,49 +489,51 @@ let private preprocess (incomes: LspIncome list): LspIncome list =
 
     | _ -> false
 
-  // Add diagnostics request if some document changed.
-  let incomes =
-    if incomes |> List.exists doesUpdateDiagnostics then
-      List.append incomes [ DiagnosticsRequest ]
-    else
-      incomes
+  if incomes |> List.exists doesUpdateDiagnostics then
+    List.append incomes [ DiagnosticsRequest ]
+  else
+    incomes
 
-  // Replace request and cancellation with cancellation error.
-  let incomes =
-    let asCancelRequest income =
-      match income with
-      | CancelRequestNotification msgId -> Some msgId
-      | _ -> None
+/// Replaces each pair of request and cancellation with an error.
+let private preprocessCancelRequests (incomes: LspIncome list): LspIncome list =
+  let asCancelRequest income =
+    match income with
+    | CancelRequestNotification msgId -> Some msgId
+    | _ -> None
 
-    let asMsgId income =
-      match income with
-      | DefinitionRequest (msgId, _)
-      | ReferencesRequest (msgId, _)
-      | DocumentHighlightRequest (msgId, _)
-      | HoverRequest (msgId, _) -> Some msgId
+  let asMsgId income =
+    match income with
+    | DefinitionRequest (msgId, _)
+    | ReferencesRequest (msgId, _)
+    | DocumentHighlightRequest (msgId, _)
+    | HoverRequest (msgId, _) -> Some msgId
 
-      | _ -> None
+    | _ -> None
 
-    let cancelledIds =
-      incomes
-      |> List.choose asCancelRequest
-      |> Set.ofList
+  let cancelledIds =
+    incomes
+    |> List.choose asCancelRequest
+    |> Set.ofList
 
-    if Set.isEmpty cancelledIds then
-      incomes
-    else
-      incomes
-      |> List.choose
-           (fun income ->
-             if income |> asCancelRequest |> Option.isSome then
-               None
-             else
-               match asMsgId income with
-               | Some msgId when Set.contains msgId cancelledIds -> ErrorIncome(CancelledRequestError msgId) |> Some
+  if Set.isEmpty cancelledIds then
+    incomes
+  else
+    incomes
+    |> List.choose
+         (fun income ->
+           if income |> asCancelRequest |> Option.isSome then
+             None
+           else
+             match asMsgId income with
+             | Some msgId when Set.contains msgId cancelledIds -> ErrorIncome(CancelledRequestError msgId) |> Some
 
-               | _ -> Some income)
+             | _ -> Some income)
 
+/// Optimizes a bunch of messages.
+let private preprocess (incomes: LspIncome list): LspIncome list =
   incomes
+  |> autoUpdateDiagnostics
+  |> preprocessCancelRequests
 
 // -----------------------------------------------
 // Server
