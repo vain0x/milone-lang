@@ -7,8 +7,6 @@ open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLsp.Util
 
-let private defaultTimeout = 5 * 1000
-
 // Re-exports.
 type Pos = Syntax.Pos
 type Loc = Syntax.Loc
