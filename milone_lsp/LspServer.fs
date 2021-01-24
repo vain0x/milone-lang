@@ -478,7 +478,7 @@ let private dedupChanges (incomes: LspIncome list): LspIncome list =
            (fun (next, acc) income ->
              match income, next with
              | DidChangeNotification p, DidChangeNotification q when p.Uri = q.Uri -> next, acc
-             | _ -> income, next :: acc)
+             | _ -> income, income :: acc)
            (last, [ last ])
       |> snd
 
