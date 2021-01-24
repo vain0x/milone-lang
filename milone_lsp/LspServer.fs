@@ -297,8 +297,6 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
 
   | methodName ->
-      eprintfn "[TRACE] Unknown methodName: '%s'." methodName
-
       let msgId =
         jsonValue
         |> jTryFind "id"
