@@ -142,9 +142,7 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
 type ProjectValidateResult = (string * Loc) list
 
 let newLangService (project: ProjectInfo): LangServiceState =
-  let { ProjectDir = projectDir
-        ProjectName = projectName } =
-    project
+  let projectDir = project.ProjectDir
 
   let toFilePath moduleName ext =
     Path.Combine(projectDir, moduleName + ext)
