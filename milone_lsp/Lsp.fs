@@ -191,14 +191,8 @@ let private doBundle (ls: LangServiceState) projectDir =
 
         parseWithCache ls docId |> Some
 
-  let compileCtx =
-    { compileCtx with
-        // FIXME: read .milone_project
-        Projects =
-          compileCtx.Projects
-          |> mapAdd "MiloneStd" (ls.Host.MiloneHome + "/milone_libs/MiloneStd")
-
-        FetchModule = fetchModule }
+  // FIXME: read .milone_project
+  let compileCtx = { compileCtx with FetchModule = fetchModule }
 
   let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
 
