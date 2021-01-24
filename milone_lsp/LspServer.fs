@@ -306,34 +306,6 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
 
       ErrorIncome(MethodNotFoundError msgId)
 
-let private doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
-  let diagnostics =
-    errors
-    |> List.map
-         (fun (msg, r1, c1, r2, c2) ->
-           let start = r1, c1
-           let endPos = r2, c2
-
-           jOfObj [ "range", jOfRange (start, endPos)
-                    "message", JString msg
-                    "source", JString "milone-lang" ])
-    |> JArray
-
-  let paramsValue =
-    jOfObj [ "uri", JString uri
-             "diagnostics", diagnostics ]
-
-  jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
-
-let private validateWorkspace (rootUriOpt: string option): unit =
-  for uri, errors in LspLangService.validateWorkspace rootUriOpt do
-    let errors =
-      [ for msg, pos in errors do
-          let row, column = pos
-          yield msg, row, column, row, column ]
-
-    doPublishDiagnostics uri errors
-
 let private processNext (): LspIncome -> ProcessResult =
   let mutable exitCode: int = 1
   let mutable rootUriOpt: string option = None
@@ -376,7 +348,19 @@ let private processNext (): LspIncome -> ProcessResult =
         Continue
 
     | DiagnosticsRequest ->
-        validateWorkspace rootUriOpt
+        for uri, errors in LspLangService.validateWorkspace rootUriOpt do
+          let diagnostics =
+            [ for msg, pos in errors do
+                jOfObj [ "range", jOfRange (pos, pos)
+                         "message", JString msg
+                         "source", JString "milone-lang" ] ]
+            |> JArray
+
+          let param =
+            jOfObj [ "uri", JString uri
+                     "diagnostics", diagnostics ]
+
+          jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
         Continue
 
     | DefinitionRequest (msgId, p) ->
