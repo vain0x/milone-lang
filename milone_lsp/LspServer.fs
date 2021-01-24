@@ -296,10 +296,14 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
 
   | methodName ->
-    eprintfn "[TRACE] Unknown methodName: '%s'." methodName
+      eprintfn "[TRACE] Unknown methodName: '%s'." methodName
 
-    let msgId = jsonValue |> jTryFind "id" |> Option.defaultValue JNull
-    ErrorIncome(MethodNotFoundError msgId)
+      let msgId =
+        jsonValue
+        |> jTryFind "id"
+        |> Option.defaultValue JNull
+
+      ErrorIncome(MethodNotFoundError msgId)
 
 let private doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
   let diagnostics =
