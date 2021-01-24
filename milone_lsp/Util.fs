@@ -1,9 +1,7 @@
 module MiloneLsp.Util
 
-open System
 open System.Collections.Generic
 open System.IO
-open System.Threading.Tasks
 
 let partition1 (f: 'T -> 'U option) (items: #seq<'T>): 'U array * 'T array =
   let someItems = ResizeArray()
@@ -137,29 +135,3 @@ module File =
       else
         None
     with _ -> None
-
-// -----------------------------------------------
-// Timeout
-// -----------------------------------------------
-
-let doWithTimeout (timeoutMs: int) (action: unit -> 'T): Result<'T, exn> =
-  use task = Task.Run(action)
-  use delayTask = Task.Delay(timeoutMs)
-  let index = Task.WaitAny(task, delayTask)
-
-  if index = 0 then
-    assert task.IsCompleted
-
-    match task.Status with
-    | TaskStatus.RanToCompletion -> Ok task.Result
-
-    | TaskStatus.Faulted ->
-        if task.Exception.InnerExceptions.Count = 1 then
-          Error task.Exception.InnerExceptions.[0]
-        else
-          Error(task.Exception :> exn)
-
-    | _ -> failwith "NEVER"
-  else
-    assert (index = 1)
-    Error(Exception(sprintf "Timeout (%d ms)." timeoutMs))

@@ -1,6 +1,5 @@
 module rec MiloneLsp.Program
 
-open System.Threading
 open MiloneLsp.JsonRpcReaderForAbstractStream
 open MiloneLsp.JsonRpcReaderForStdIn
 open MiloneLsp.LspServer
