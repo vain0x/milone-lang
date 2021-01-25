@@ -40,9 +40,6 @@ static void const *s_ui;
 static void update_view(void) {
     fprintf(stderr, "trace: update_view\n");
     s_view.fun(s_view.env, s_state);
-    // struct String value =
-    //     *(struct String const *)s_view.fun(s_view.env, s_state);
-    // gtk_label_set_text(GTK_LABEL(s_label), str_to_c_str(value));
 }
 
 static void on_button_clicked(GtkWidget *button, gpointer data) {
@@ -88,6 +85,8 @@ void milone_gtk_apply_diff(struct String diff_string) {
 
             GtkWidget *label = gtk_label_new(text);
             gtk_grid_attach(GTK_GRID(grid), label, 0, index, 1, 1);
+
+            gtk_widget_show(label);
             continue;
         }
 
@@ -97,8 +96,11 @@ void milone_gtk_apply_diff(struct String diff_string) {
             char const *text = strtok_r(NULL, delim, &tok);
 
             GtkWidget *button = gtk_button_new_with_label(text);
-            g_signal_connect(button, "clicked", G_CALLBACK(on_button_clicked), (gpointer)(uintptr_t)msg);
+            g_signal_connect(button, "clicked", G_CALLBACK(on_button_clicked),
+                             (gpointer)(uintptr_t)msg);
             gtk_grid_attach(GTK_GRID(grid), button, 0, index, 1, 1);
+
+            gtk_widget_show(button);
             continue;
         }
 
@@ -125,18 +127,6 @@ static void activate(GtkApplication *app, gpointer _data) {
     GtkWidget *grid = gtk_grid_new();
     gtk_container_add(GTK_CONTAINER(window), grid);
     s_grid = grid;
-
-    // GtkWidget *button_box = gtk_button_box_new(GTK_ORIENTATION_HORIZONTAL);
-    // gtk_container_add(GTK_CONTAINER(window), button_box);
-
-    // GtkWidget *button = gtk_button_new_with_label("Hello World");
-    // g_signal_connect(button, "clicked", G_CALLBACK(on_button_clicked), NULL);
-    // // gtk_container_add(GTK_CONTAINER(button_box), button);
-    // gtk_grid_attach(GTK_GRID(grid), button, 0, 0, 1, 1);
-
-    // GtkWidget *label = gtk_label_new("0");
-    // gtk_grid_attach(GTK_GRID(grid), label, 0, 1, 1, 1);
-    // s_label = label;
 
     update_view();
     gtk_widget_show_all(window);

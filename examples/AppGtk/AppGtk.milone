@@ -119,7 +119,7 @@ let gtkRun (init: 'S) (update: 'S -> 'M -> 'S) (view: 'S -> UI): int =
 
 type MyState = { Count: int; History: int option list }
 
-let private init: MyState = { Count = 0; History = List.replicate 5 None }
+let private init: MyState = { Count = 0; History = [] }
 
 type MyMsg = int
 
