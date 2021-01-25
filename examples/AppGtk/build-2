@@ -6,7 +6,7 @@ MILONE_HOME=${MILONE_HOME:-"${HOME}/.milone"}
 MILONE_RUNTIME="$MILONE_HOME/runtime"
 
 gcc -std=gnu11 -g \
-    -fsanitize=address,leak,undefined \
+    -fsanitize=undefined \
     -Wall \
     -Wextra \
     -Wno-unused-but-set-parameter \
