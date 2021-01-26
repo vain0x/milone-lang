@@ -10,10 +10,8 @@ module Span =
   let take (len: unativeint) (itemSize: unativeint) (span: Span): Span =
     __nativeFun ("span_take", span, len, itemSize)
 
-// FIXME: With existence of this module, SpanMut can not be referenced as type in ExtIO for some reason.
-// module SpanMut =
-//   let asConst (span: SpanMut): Span = __nativeFun ("span_mut_as_const", span)
-let spanMutAsConst (span: SpanMut): Span = __nativeFun ("span_mut_as_const", span)
+module SpanMut =
+  let asConst (span: SpanMut): Span = __nativeFun ("span_mut_as_const", span)
 
 module Buffer =
   let create (cap: unativeint) (itemSize: unativeint): Buffer =

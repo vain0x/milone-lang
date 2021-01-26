@@ -47,7 +47,7 @@ module ReadableFileStream =
             contents
           else
             let chunk =
-              chunk |> spanMutAsConst |> Span.take n itemSize
+              chunk |> SpanMut.asConst |> Span.take n itemSize
 
             contents |> Buffer.append chunk itemSize |> go
 
