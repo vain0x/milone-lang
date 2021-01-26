@@ -16,11 +16,14 @@
 
 #include <milone.h>
 
-#define SERVER_NAME "httpd"
-#define SERVER_VERSION "0.1.0"
+struct StringUnitFun1 {
+    void (*fun)(void const *, struct String);
+    void const *env;
+};
 
-typedef struct String (*request_handler_t)(struct String method,
-                                           struct String pathname);
+typedef void (*request_handler_t)(struct String method, struct String pathname,
+                                  struct String date, int protocolMinorVersion,
+                                  struct StringUnitFun1 write_string);
 
 struct MiloneProfiler;
 struct MiloneProfiler *milone_profile_init(void);
@@ -243,8 +246,7 @@ static struct Req *read_req(FILE *in) {
     return req;
 }
 
-static void write_common_res_headers(struct Req *req, FILE *out,
-                                     char const *status_text) {
+static struct String get_date() {
     time_t t;
     time(&t);
     struct tm *tm = gmtime(&t);
@@ -253,28 +255,13 @@ static void write_common_res_headers(struct Req *req, FILE *out,
     }
 
     char date_value[64];
-    strftime(date_value, sizeof(date_value), "%a, %d %b %Y %H:%M:%S GMT", tm);
-
-    fprintf(out, "HTTP/1.%d %s\r\n", req->protocol_minor_version, status_text);
-    fprintf(out, "Date: %s\r\n", date_value);
-    fprintf(out, "Server: %s/%s\r\n", SERVER_NAME, SERVER_VERSION);
-    fprintf(out, "Connection: close\r\n");
+    size_t len = strftime(date_value, sizeof(date_value),
+                          "%a, %d %b %Y %H:%M:%S GMT", tm);
+    return str_of_raw_parts(date_value, (int)len);
 }
 
-static void write_res_with_body(struct Req *req, FILE *out, uint8_t const *body,
-                                size_t len, bool write_body) {
-    write_common_res_headers(req, out, "200 OK");
-    fprintf(out, "Content-Length: %ld\r\n", len);
-    fprintf(out, "Content-Type: text/plain\r\n");
-    fprintf(out, "\r\n");
-
-    if (write_body) {
-        size_t n = fwrite(body, len, 1, out);
-        if (n != 1) {
-            log_exit("failed to write to socket: %s", strerror(errno));
-        }
-    }
-    fflush(out);
+static void do_write_string(void const *env, struct String value) {
+    fprintf((FILE *)env, "%s", str_to_c_str(value));
 }
 
 static void http_service(FILE *in, FILE *out, request_handler_t handler) {
@@ -283,11 +270,17 @@ static void http_service(FILE *in, FILE *out, request_handler_t handler) {
     struct MiloneProfiler *p = milone_profile_init();
     milone_profile_log(str_borrow("handle begin"), p);
     milone_enter_region();
-    bool write_body = strcmp(req->method, "HEAD") != 0;
-    struct String result =
-        handler(str_borrow(req->method), str_borrow(req->path));
-    write_res_with_body(req, out, (uint8_t const *)result.str, result.len,
-                        write_body);
+
+    {
+        struct StringUnitFun1 write_string = (struct StringUnitFun1){
+            .env = out,
+            .fun = do_write_string,
+        };
+        handler(str_borrow(req->method), str_borrow(req->path), get_date(),
+                req->protocol_minor_version, write_string);
+        fflush(out);
+    }
+
     milone_leave_region();
     milone_profile_log(str_borrow("handle end"), p);
 
