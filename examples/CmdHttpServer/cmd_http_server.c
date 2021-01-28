@@ -22,12 +22,15 @@ struct StringUnitFun1 {
 };
 
 typedef void (*request_handler_t)(struct String method, struct String pathname,
-                                  struct String date, int protocolMinorVersion,
+                                  struct String date, struct String dist_dir,
+                                  int protocolMinorVersion,
                                   struct StringUnitFun1 write_string);
 
 struct MiloneProfiler;
 struct MiloneProfiler *milone_profile_init(void);
 void milone_profile_log(struct String msg, struct MiloneProfiler *profiler);
+
+struct String milone_get_env(struct String name);
 
 // -----------------------------------------------
 // Error
@@ -264,11 +267,30 @@ static void do_write_string(void const *env, struct String value) {
     fprintf((FILE *)env, "%s", str_to_c_str(value));
 }
 
+static struct String get_dist_dir(void) {
+    struct String dist_dir = milone_get_env(str_borrow("DIST_DIR"));
+    if (str_compare(dist_dir, str_borrow("")) != 0) {
+        return dist_dir;
+    }
+
+    // Default to $PWD/dist.
+    {
+        char buf[FILENAME_MAX];
+        bool ok = getcwd(buf, sizeof buf) != NULL;
+        if (!ok) {
+            fprintf(stderr, "error: getcwd failed\n");
+            exit(1);
+        }
+
+        return str_add(str_borrow(buf), str_borrow("/dist"));
+    }
+}
+
 static void http_service(FILE *in, FILE *out, request_handler_t handler) {
     struct Req *req = read_req(in);
 
-    struct MiloneProfiler *p = milone_profile_init();
-    milone_profile_log(str_borrow("handle begin"), p);
+    // struct MiloneProfiler *p = milone_profile_init();
+    // milone_profile_log(str_borrow("handle begin"), p);
     milone_enter_region();
 
     {
@@ -277,12 +299,12 @@ static void http_service(FILE *in, FILE *out, request_handler_t handler) {
             .fun = do_write_string,
         };
         handler(str_borrow(req->method), str_borrow(req->path), get_date(),
-                req->protocol_minor_version, write_string);
+                get_dist_dir(), req->protocol_minor_version, write_string);
         fflush(out);
     }
 
     milone_leave_region();
-    milone_profile_log(str_borrow("handle end"), p);
+    // milone_profile_log(str_borrow("handle end"), p);
 
     free_req(req);
 }

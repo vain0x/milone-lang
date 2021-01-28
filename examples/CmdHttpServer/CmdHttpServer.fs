@@ -31,13 +31,12 @@ let private doHandle (methodName: string) (pathname: string): HttpResult =
       if pathname |> S.contains ".." then
         Error(BadRequestError, "Path may not include '..'.")
       else
-        let path = "." + pathname
         let followLink = false
 
-        if ReadableFileStream.exists path followLink |> not then
+        if ReadableFileStream.exists pathname followLink |> not then
           Error(NotFoundError, "File not found.")
         else
-          match ReadableFileStream.readAllText path with
+          match ReadableFileStream.readAllText pathname with
           | Some contents -> Ok contents
           | None -> Error(NotFoundError, "File cannot read.")
 
@@ -51,6 +50,7 @@ let handler
   (methodName: string)
   (pathname: string)
   (date: string)
+  (distDir: string)
   (protocolMinorVersion: int)
   (writeString: string -> unit)
   : unit =
@@ -82,7 +82,7 @@ let handler
     if methodName <> "HEAD" then
       writeString content
 
-  match doHandle methodName pathname with
+  match doHandle methodName (distDir + "/" + pathname) with
   | Ok content ->
       writeCommonHeaders "200 OK"
       writeBody content
