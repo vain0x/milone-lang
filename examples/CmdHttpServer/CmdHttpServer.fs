@@ -77,7 +77,7 @@ let handler
 
   let writeBody (content: string): unit =
     writeString ("Content-Length: " + string content.Length + "\r\n")
-    writeString "Content-Type: text/plain\r\n\r\n"
+    writeString "Content-Type: text/plain; charset=utf-8\r\n\r\n"
 
     if methodName <> "HEAD" then
       writeString content
