@@ -76,7 +76,7 @@ let handler
     writeString "Connection: close\r\n"
 
   let writeBody (content: string): unit =
-    writeString ("ContentLength: " + string content.Length + "\r\n")
+    writeString ("Content-Length: " + string content.Length + "\r\n")
     writeString "Content-Type: text/plain\r\n\r\n"
 
     if methodName <> "HEAD" then
