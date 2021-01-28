@@ -15,7 +15,7 @@ type HttpError =
   | NotImplementedError
 
 type HttpResult =
-  | Ok of okContent: string
+  | Ok of okContent: string * okContentType: string
   | Error of status: HttpError * message: string
 
 // -----------------------------------------------
@@ -23,6 +23,7 @@ type HttpResult =
 // -----------------------------------------------
 
 let serverName = "httpd"
+
 let serverVersion = "0.1.0"
 
 let private doHandle (methodName: string) (pathname: string): HttpResult =
@@ -33,11 +34,20 @@ let private doHandle (methodName: string) (pathname: string): HttpResult =
       else
         let followLink = false
 
-        if ReadableFileStream.exists pathname followLink |> not then
+        if ReadableFileStream.exists pathname followLink
+           |> not then
           Error(NotFoundError, "File not found.")
         else
           match ReadableFileStream.readAllText pathname with
-          | Some contents -> Ok contents
+          | Some contents ->
+              let contentType =
+                if pathname |> S.endsWith ".html" then
+                  "text/html; charset=utf-8"
+                else
+                  "text/plain; charset=utf-8"
+
+              Ok(contents, contentType)
+
           | None -> Error(NotFoundError, "File cannot read.")
 
   | _ -> Error(NotImplementedError, "Method not implemented.")
@@ -75,17 +85,22 @@ let handler
 
     writeString "Connection: close\r\n"
 
-  let writeBody (content: string): unit =
-    writeString ("Content-Length: " + string content.Length + "\r\n")
-    writeString "Content-Type: text/plain; charset=utf-8\r\n\r\n"
+  let writeBody (content: string) (contentType: string): unit =
+    writeString (
+      "Content-Length: "
+      + string content.Length
+      + "\r\n"
+    )
+
+    writeString ("Content-Type: " + contentType + "\r\n\r\n")
 
     if methodName <> "HEAD" then
       writeString content
 
   match doHandle methodName (distDir + "/" + pathname) with
-  | Ok content ->
+  | Ok (content, contentType) ->
       writeCommonHeaders "200 OK"
-      writeBody content
+      writeBody content contentType
 
   | Error (err, _) ->
       let statusText =
@@ -95,7 +110,7 @@ let handler
         | NotImplementedError -> "501 Not Implemented"
 
       writeCommonHeaders statusText
-      writeBody ""
+      writeBody "" "text/plain; charset=utf-8"
 
 let main _ =
   __nativeFun ("do_serve", __nativeFun handler)
