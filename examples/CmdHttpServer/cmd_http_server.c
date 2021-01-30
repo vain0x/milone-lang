@@ -22,7 +22,7 @@ struct StringUnitFun1 {
 
 typedef void (*request_handler_t)(struct String method, struct String pathname,
                                   struct String date, struct String dist_dir,
-                                  int protocolMinorVersion,
+                                  int protocol_minor_version,
                                   struct StringUnitFun1 write_string);
 
 struct MiloneProfiler;
