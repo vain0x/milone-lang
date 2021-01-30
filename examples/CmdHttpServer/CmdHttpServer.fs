@@ -75,6 +75,7 @@ let handler
   (distDir: string)
   (protocolMinorVersion: int)
   (writeString: string -> unit)
+  (writeTrace: string -> unit)
   : unit =
   let writeCommonHeaders (statusText: string) =
     writeString (
@@ -109,20 +110,37 @@ let handler
     if methodName <> "HEAD" then
       writeString content
 
-  match doHandle methodName (distDir + "/" + pathname) with
-  | Ok (content, contentType) ->
-      writeCommonHeaders "200 OK"
-      writeBody content contentType
+  let res =
+    doHandle methodName (distDir + "/" + pathname)
 
-  | Error (err, _) ->
-      let statusText =
-        match err with
-        | BadRequestError -> "400 Bad Request"
-        | NotFoundError -> "404 Not Found"
-        | NotImplementedError -> "501 Not Implemented"
+  let statusText =
+    match res with
+    | Ok (content, contentType) ->
+        let statusText = "200 OK"
+        writeCommonHeaders statusText
+        writeBody content contentType
+        statusText
 
-      writeCommonHeaders statusText
-      writeBody "" "text/plain; charset=utf-8"
+    | Error (err, _) ->
+        let statusText =
+          match err with
+          | BadRequestError -> "400 Bad Request"
+          | NotFoundError -> "404 Not Found"
+          | NotImplementedError -> "501 Not Implemented"
+
+        writeCommonHeaders statusText
+        writeBody "" "text/plain; charset=utf-8"
+        statusText
+
+  // Access log.
+  writeTrace (
+    "["
+    + methodName
+    + "] "
+    + pathname
+    + " - "
+    + statusText
+  )
 
 let main _ =
   // Never return.

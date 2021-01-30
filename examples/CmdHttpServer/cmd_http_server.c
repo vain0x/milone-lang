@@ -23,7 +23,8 @@ struct StringUnitFun1 {
 typedef void (*request_handler_t)(struct String method, struct String pathname,
                                   struct String date, struct String dist_dir,
                                   int protocol_minor_version,
-                                  struct StringUnitFun1 write_string);
+                                  struct StringUnitFun1 write_string,
+                                  struct StringUnitFun1 write_trace);
 
 struct MiloneProfiler;
 struct MiloneProfiler *milone_profile_init(void);
@@ -288,6 +289,11 @@ static void do_write_string(void const *env, struct String value) {
     fprintf((FILE *)env, "%s", str_to_c_str(value));
 }
 
+static void do_write_trace(void const *env, struct String value) {
+    (void)env;
+    fprintf(stderr, "%s\n", str_to_c_str(value));
+}
+
 static struct String get_dist_dir(void) {
     struct String dist_dir = milone_get_env(str_borrow("DIST_DIR"));
     if (str_compare(dist_dir, str_borrow("")) != 0) {
@@ -315,12 +321,17 @@ static void http_service(FILE *in, FILE *out, request_handler_t handler) {
     milone_enter_region();
 
     {
-        struct StringUnitFun1 write_string = (struct StringUnitFun1){
+        struct StringUnitFun1 write_string = {
             .env = out,
             .fun = do_write_string,
         };
+        struct StringUnitFun1 write_trace = {
+            .env = NULL,
+            .fun = do_write_trace,
+        };
         handler(str_borrow(req->method), str_borrow(req->path), get_date(),
-                get_dist_dir(), req->protocol_minor_version, write_string);
+                get_dist_dir(), req->protocol_minor_version, write_string,
+                write_trace);
         fflush(out);
     }
 
