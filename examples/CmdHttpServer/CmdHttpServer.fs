@@ -27,6 +27,26 @@ let serverName = "httpd"
 let serverVersion = "0.1.0"
 
 let private doHandle (methodName: string) (pathname: string): HttpResult =
+  let contentType () =
+    let ext =
+      match S.findLastIndex "." pathname with
+      | Some i when i >= 1 -> S.skip i pathname
+      | _ -> ""
+
+    match ext with
+    | ".css" -> "text/css; charset=utf-8"
+    | ".html" -> "text/html; charset=utf-8"
+    | ".js"
+    | ".mjs" -> "text/javascript; charset=utf-8"
+
+    | ".jpeg"
+    | ".jpg" -> "image/jpeg"
+    | ".png" -> "image/png"
+    | ".woff" -> "font/woff"
+
+    | ".json" -> "application/json; charset=utf-8"
+    | _ -> "text/plain; charset=utf-8"
+
   match methodName with
   | "GET" ->
       if pathname |> S.contains ".." then
@@ -39,15 +59,7 @@ let private doHandle (methodName: string) (pathname: string): HttpResult =
           Error(NotFoundError, "File not found.")
         else
           match ReadableFileStream.readAllText pathname with
-          | Some contents ->
-              let contentType =
-                if pathname |> S.endsWith ".html" then
-                  "text/html; charset=utf-8"
-                else
-                  "text/plain; charset=utf-8"
-
-              Ok(contents, contentType)
-
+          | Some contents -> Ok(contents, contentType ())
           | None -> Error(NotFoundError, "File cannot read.")
 
   | _ -> Error(NotImplementedError, "Method not implemented.")
