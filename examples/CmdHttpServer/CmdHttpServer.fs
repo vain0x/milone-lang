@@ -113,4 +113,7 @@ let handler
       writeBody "" "text/plain; charset=utf-8"
 
 let main _ =
+  // Never return.
   __nativeFun ("do_serve", __nativeFun handler)
+
+  0

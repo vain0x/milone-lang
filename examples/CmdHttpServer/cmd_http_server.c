@@ -1,5 +1,4 @@
 // Works on Linux only.
-// Current code is not http server yet.
 
 #include <errno.h>
 #include <netdb.h>
@@ -80,7 +79,29 @@ static void trap_signal(int sig, __sighandler_t handler) {
     }
 }
 
-static void install_signal_handlers() { trap_signal(SIGPIPE, signal_exit); }
+static void noop_handler(int sig) { (void)sig; }
+
+static void detach_children(void) {
+    sigset_t mask;
+    sigemptyset(&mask);
+    struct sigaction act = {
+        .sa_handler = noop_handler,
+        .sa_mask = mask,
+        .sa_flags = SA_RESTART | SA_NOCLDWAIT,
+    };
+
+    int stat = sigaction(SIGCHLD, &act, NULL);
+    if (stat < 0) {
+        log_exit("sigaction() failed: %s", strerror(errno));
+    }
+}
+
+static void install_signal_handlers() {
+    trap_signal(SIGINT, signal_exit);
+    trap_signal(SIGTERM, signal_exit);
+    trap_signal(SIGPIPE, signal_exit);
+    detach_children();
+}
 
 // -----------------------------------------------
 // HTTP
@@ -313,8 +334,75 @@ static void http_service(FILE *in, FILE *out, request_handler_t handler) {
 // Entrypoint
 // -----------------------------------------------
 
-int do_serve(request_handler_t handler) {
+static int const MAX_BACKLOG = 5;
+static char const *const port = "8080";
+
+static int listen_socket() {
+    struct addrinfo hints = {
+        .ai_family = AF_INET,
+        .ai_socktype = SOCK_STREAM,
+        .ai_flags = AI_PASSIVE,
+    };
+    struct addrinfo *res;
+    int err = getaddrinfo(NULL, port, &hints, &res);
+    if (err != 0) {
+        log_exit(gai_strerror(err));
+    }
+
+    for (struct addrinfo *ai = res; ai != NULL; ai = ai->ai_next) {
+        int sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+        if (sock < 0) {
+            continue;
+        }
+
+        int stat = bind(sock, ai->ai_addr, ai->ai_addrlen);
+        if (stat < 0) {
+            close(sock);
+            continue;
+        }
+
+        stat = listen(sock, MAX_BACKLOG);
+        if (stat < 0) {
+            close(sock);
+            continue;
+        }
+
+        // Success.
+        freeaddrinfo(res);
+        return sock;
+    }
+
+    log_exit("failed to listen socket");
+}
+
+_Noreturn void do_serve(request_handler_t handler) {
     install_signal_handlers();
-    http_service(stdin, stdout, handler);
-    return 0;
+
+    int server_fd = listen_socket();
+    fprintf(stderr, "INFO: Listening to http://localhost:8080\n");
+
+    while (true) {
+        struct sockaddr_storage addr;
+        socklen_t addr_len = sizeof addr;
+        int sock = accept(server_fd, (struct sockaddr *)&addr, &addr_len);
+        if (sock < 0) {
+            log_exit("accept(2) failed: %s", strerror(errno));
+        }
+
+        int pid = fork();
+        if (pid < 0) {
+            exit(3);
+        }
+        if (pid == 0) {
+            // Child process.
+
+            FILE *input = fdopen(sock, "r");
+            FILE *output = fdopen(sock, "w");
+
+            http_service(input, output, handler);
+            exit(0);
+        }
+
+        close(sock);
+    }
 }
