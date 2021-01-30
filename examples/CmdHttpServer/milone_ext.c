@@ -112,3 +112,14 @@ size_t milone_file_write(struct File file, struct SpanMut src) {
     assert(file.fp != NULL);
     return fwrite(src.ptr, 1, src.len, file.fp);
 }
+
+bool milone_dir_exists(struct String file_path, bool follow_link) {
+    struct stat st = {};
+    bool ok = follow_link ? stat(str_to_c_str(file_path), &st) == 0
+                          : lstat(str_to_c_str(file_path), &st) == 0;
+    if (!ok) {
+        return false;
+    }
+
+    return S_ISDIR(st.st_mode);
+}

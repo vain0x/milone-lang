@@ -55,3 +55,7 @@ module ReadableFileStream =
 
         doClose fp
         Some contents
+
+module Directory =
+  let exists (path: string) (followLink: bool): bool =
+    __nativeFun ("milone_dir_exists", path, followLink)

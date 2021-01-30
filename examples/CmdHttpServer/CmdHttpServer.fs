@@ -13,6 +13,7 @@ type HttpError =
   | BadRequestError
   | NotFoundError
   | NotImplementedError
+  | FoundError of location: string
 
 type HttpResult =
   | Ok of okContent: string * okContentType: string
@@ -54,13 +55,15 @@ let private doHandle (methodName: string) (pathname: string): HttpResult =
       else
         let followLink = false
 
-        if ReadableFileStream.exists pathname followLink
-           |> not then
-          Error(NotFoundError, "File not found.")
-        else
+        if ReadableFileStream.exists pathname followLink then
           match ReadableFileStream.readAllText pathname with
           | Some contents -> Ok(contents, contentType ())
           | None -> Error(NotFoundError, "File cannot read.")
+        else if Directory.exists pathname followLink
+                && ReadableFileStream.exists (pathname + "/index.html") followLink then
+          Error(FoundError "index.html", "Redirect.")
+        else
+          Error(NotFoundError, "File not found.")
 
   | _ -> Error(NotImplementedError, "Method not implemented.")
 
@@ -122,13 +125,24 @@ let handler
         statusText
 
     | Error (err, _) ->
-        let statusText =
+        let statusText, headers =
           match err with
-          | BadRequestError -> "400 Bad Request"
-          | NotFoundError -> "404 Not Found"
-          | NotImplementedError -> "501 Not Implemented"
+          | FoundError location -> "302 Found", [ "Location", location ]
+          | BadRequestError -> "400 Bad Request", []
+          | NotFoundError -> "404 Not Found", []
+          | NotImplementedError -> "501 Not Implemented", []
 
         writeCommonHeaders statusText
+
+        let rec go headers =
+          match headers with
+          | [] -> ()
+          | (header, text) :: headers ->
+              writeString (header + ": " + text + "\r\n")
+              go headers
+
+        go headers
+
         writeBody "" "text/plain; charset=utf-8"
         statusText
 
