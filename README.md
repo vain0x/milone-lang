@@ -219,18 +219,22 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 See the "install from sources" section above.
 
 For incremental building and testing, `ninja` command is also used.
+
 `git` command is used in tests to generate diff.
 
 - Install Git 2.30.0
 - Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
+    with `scripts/install-ninja`
 
 ### Dev: Build
 
 Generate a build script for ninja and then run ninja command.
 
 ```sh
-./build-ninja-gen && ninja
+script/build-ninja-gen && bin/ninja
 ```
+
+Or just do `make`.
 
 ### Dev: Testing
 

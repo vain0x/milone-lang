@@ -3,4 +3,4 @@
 
 set -eux
 
-ninja test
+bin/ninja test

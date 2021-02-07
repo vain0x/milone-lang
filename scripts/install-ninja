@@ -1,25 +1,18 @@
 #!/bin/sh
-# WARN: This script is not guaranteed to work in your environment.
 # See also: https://github.com/ninja-build/ninja
+#
+# Prerequisites:
+#   - busybox (which is likely pre-installed)
+#       `apt install -y busybox-static`
 
-set -eux
+set -eu
 
 URL='https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip'
 
-# Prerequisites:
-#   sudo apt install -y curl unzip
+mkdir -p bin
 
-mkdir -p "$HOME/bin"
-
-curl -sL "$URL" -o /tmp/ninja.zip
-unzip /tmp/ninja.zip -d "$HOME/bin"
-rm /tmp/ninja.zip
-
-# Add to path:
-# which -q ninja
-# if test $? -ne 0
-# then
-#     export PATH="$HOME/bin:$PATH"
-# fi
-
-
+(
+    cd bin
+    busybox wget -q "$URL" -O - | busybox unzip -q -
+    chmod +x ninja
+)
