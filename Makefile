@@ -18,7 +18,7 @@ default: build.ninja bin/ninja
 build.ninja:
 	scripts/build-ninja-gen
 
-build: bin/ninja build.ninja **/*.fs **/*.milone
+build: bin/ninja build.ninja
 	bin/ninja test_self
 
 test: build
