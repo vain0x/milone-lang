@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eu
+
+MILONE_HOME=${MILONE_HOME:-"${HOME}/.milone"}
+
+mkdir -p target
+
+milone compile "$PWD" >target/app_gtk.c
