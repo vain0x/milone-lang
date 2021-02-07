@@ -1,4 +1,5 @@
 #!/bin/sh
+# USAGE: scripts/build-ninja-gen
 
 set -eu
 

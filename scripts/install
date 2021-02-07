@@ -2,7 +2,7 @@
 # Build and install milone-lang tools.
 # (This removes current installation whichever is new.)
 #
-# USAGE: ./install
+# USAGE: scripts/install
 #
 # Files to be generated outside of the repository:
 #
@@ -55,13 +55,13 @@ gcc --version >>$LOG
 # Process
 # ------------------------------------------------
 
-./uninstall >>$LOG
+scripts/uninstall >>$LOG
 
 mkdir -p "$BIN_DIR"
 mkdir -p "$MILONE_HOME/bin"
 
 # Install native executable.
-./scripts/build-milone-native
+scripts/build-milone-native
 cp -bf target/milone "$BIN_DIR/milone"
 
 # Install .NET executable.

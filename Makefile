@@ -16,7 +16,7 @@ default: build.ninja
 # ------------------------------------------------
 
 build.ninja:
-	./build-ninja-gen
+	scripts/build-ninja-gen
 
 build: build.ninja **/*.fs **/*.milone
 	ninja test_self
@@ -24,17 +24,17 @@ build: build.ninja **/*.fs **/*.milone
 test: build
 
 clean:
-	./clean
+	scripts/clean
 
 # ------------------------------------------------
 # install
 # ------------------------------------------------
 
 install:
-	./install
+	scripts/install
 
 install-dev:
-	./install-dev
+	scripts/install-dev
 
 uninstall:
-	./uninstall
+	scripts/uninstall

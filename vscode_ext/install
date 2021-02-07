@@ -11,5 +11,5 @@ npm run webpack-prod
 npm run vsce-package
 
 # Install to the local VSCode.
-./uninstall || :
+scripts/uninstall || :
 code --install-extension milone-lang.vsix

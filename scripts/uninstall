@@ -1,5 +1,6 @@
 #!/bin/sh
 # Delete milone-lang tool-chains from local.
+# USAGE: scripts/uninstall
 
 set -eu
 

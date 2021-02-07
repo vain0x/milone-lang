@@ -1,5 +1,5 @@
 #!/bin/bash
-# USAGE: test-new features/lambda
+# USAGE: scripts/test-new features/lambda
 
 set -eu
 

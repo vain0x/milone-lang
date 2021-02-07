@@ -40,7 +40,7 @@ cd milone-lang
 ```
 
 - Feel free to ask anything in [discussion](https://github.com/vain0x/milone-lang/discussions/4).
-- To uninstall, run `./uninstall`.
+- To uninstall, run `scripts/uninstall`.
 
 ### Other platforms (Windows/macOS)
 

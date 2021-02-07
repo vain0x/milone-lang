@@ -1,4 +1,5 @@
 #!/bin/sh
+# USAGE: scripts/test
 
 set -eux
 

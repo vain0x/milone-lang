@@ -22,4 +22,4 @@ MILONE_HOME=$PWD \
 MILONE_HOME=$PWD \
 INPUTS='target/milone_gen2.c' \
 OUTPUT='target/milone' \
-    ./scripts/build-with-gcc
+    scripts/build-with-gcc
