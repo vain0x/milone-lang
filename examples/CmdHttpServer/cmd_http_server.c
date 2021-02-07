@@ -1,5 +1,4 @@
 // Works on Linux only.
-// Current code is not http server yet.
 
 #include <errno.h>
 #include <netdb.h>
@@ -16,15 +15,22 @@
 
 #include <milone.h>
 
-#define SERVER_NAME "httpd"
-#define SERVER_VERSION "0.1.0"
+struct StringUnitFun1 {
+    void (*fun)(void const *, struct String);
+    void const *env;
+};
 
-typedef struct String (*request_handler_t)(struct String method,
-                                           struct String pathname);
+typedef void (*request_handler_t)(struct String method, struct String pathname,
+                                  struct String date, struct String dist_dir,
+                                  int protocol_minor_version,
+                                  struct StringUnitFun1 write_string,
+                                  struct StringUnitFun1 write_trace);
 
 struct MiloneProfiler;
 struct MiloneProfiler *milone_profile_init(void);
 void milone_profile_log(struct String msg, struct MiloneProfiler *profiler);
+
+struct String milone_get_env(struct String name);
 
 // -----------------------------------------------
 // Error
@@ -74,7 +80,29 @@ static void trap_signal(int sig, __sighandler_t handler) {
     }
 }
 
-static void install_signal_handlers() { trap_signal(SIGPIPE, signal_exit); }
+static void noop_handler(int sig) { (void)sig; }
+
+static void detach_children(void) {
+    sigset_t mask;
+    sigemptyset(&mask);
+    struct sigaction act = {
+        .sa_handler = noop_handler,
+        .sa_mask = mask,
+        .sa_flags = SA_RESTART | SA_NOCLDWAIT,
+    };
+
+    int stat = sigaction(SIGCHLD, &act, NULL);
+    if (stat < 0) {
+        log_exit("sigaction() failed: %s", strerror(errno));
+    }
+}
+
+static void install_signal_handlers() {
+    trap_signal(SIGINT, signal_exit);
+    trap_signal(SIGTERM, signal_exit);
+    trap_signal(SIGPIPE, signal_exit);
+    detach_children();
+}
 
 // -----------------------------------------------
 // HTTP
@@ -243,8 +271,7 @@ static struct Req *read_req(FILE *in) {
     return req;
 }
 
-static void write_common_res_headers(struct Req *req, FILE *out,
-                                     char const *status_text) {
+static struct String get_date() {
     time_t t;
     time(&t);
     struct tm *tm = gmtime(&t);
@@ -253,43 +280,63 @@ static void write_common_res_headers(struct Req *req, FILE *out,
     }
 
     char date_value[64];
-    strftime(date_value, sizeof(date_value), "%a, %d %b %Y %H:%M:%S GMT", tm);
-
-    fprintf(out, "HTTP/1.%d %s\r\n", req->protocol_minor_version, status_text);
-    fprintf(out, "Date: %s\r\n", date_value);
-    fprintf(out, "Server: %s/%s\r\n", SERVER_NAME, SERVER_VERSION);
-    fprintf(out, "Connection: close\r\n");
+    size_t len = strftime(date_value, sizeof(date_value),
+                          "%a, %d %b %Y %H:%M:%S GMT", tm);
+    return str_of_raw_parts(date_value, (int)len);
 }
 
-static void write_res_with_body(struct Req *req, FILE *out, uint8_t const *body,
-                                size_t len, bool write_body) {
-    write_common_res_headers(req, out, "200 OK");
-    fprintf(out, "Content-Length: %ld\r\n", len);
-    fprintf(out, "Content-Type: text/plain\r\n");
-    fprintf(out, "\r\n");
+static void do_write_string(void const *env, struct String value) {
+    fprintf((FILE *)env, "%s", str_to_c_str(value));
+}
 
-    if (write_body) {
-        size_t n = fwrite(body, len, 1, out);
-        if (n != 1) {
-            log_exit("failed to write to socket: %s", strerror(errno));
-        }
+static void do_write_trace(void const *env, struct String value) {
+    (void)env;
+    fprintf(stderr, "%s\n", str_to_c_str(value));
+}
+
+static struct String get_dist_dir(void) {
+    struct String dist_dir = milone_get_env(str_borrow("DIST_DIR"));
+    if (str_compare(dist_dir, str_borrow("")) != 0) {
+        return dist_dir;
     }
-    fflush(out);
+
+    // Default to $PWD/dist.
+    {
+        char buf[FILENAME_MAX];
+        bool ok = getcwd(buf, sizeof buf) != NULL;
+        if (!ok) {
+            fprintf(stderr, "error: getcwd failed\n");
+            exit(1);
+        }
+
+        return str_add(str_borrow(buf), str_borrow("/dist"));
+    }
 }
 
 static void http_service(FILE *in, FILE *out, request_handler_t handler) {
     struct Req *req = read_req(in);
 
-    struct MiloneProfiler *p = milone_profile_init();
-    milone_profile_log(str_borrow("handle begin"), p);
+    // struct MiloneProfiler *p = milone_profile_init();
+    // milone_profile_log(str_borrow("handle begin"), p);
     milone_enter_region();
-    bool write_body = strcmp(req->method, "HEAD") != 0;
-    struct String result =
-        handler(str_borrow(req->method), str_borrow(req->path));
-    write_res_with_body(req, out, (uint8_t const *)result.str, result.len,
-                        write_body);
+
+    {
+        struct StringUnitFun1 write_string = {
+            .env = out,
+            .fun = do_write_string,
+        };
+        struct StringUnitFun1 write_trace = {
+            .env = NULL,
+            .fun = do_write_trace,
+        };
+        handler(str_borrow(req->method), str_borrow(req->path), get_date(),
+                get_dist_dir(), req->protocol_minor_version, write_string,
+                write_trace);
+        fflush(out);
+    }
+
     milone_leave_region();
-    milone_profile_log(str_borrow("handle end"), p);
+    // milone_profile_log(str_borrow("handle end"), p);
 
     free_req(req);
 }
@@ -298,8 +345,75 @@ static void http_service(FILE *in, FILE *out, request_handler_t handler) {
 // Entrypoint
 // -----------------------------------------------
 
-int do_serve(request_handler_t handler) {
+static int const MAX_BACKLOG = 5;
+static char const *const port = "8080";
+
+static int listen_socket() {
+    struct addrinfo hints = {
+        .ai_family = AF_INET,
+        .ai_socktype = SOCK_STREAM,
+        .ai_flags = AI_PASSIVE,
+    };
+    struct addrinfo *res;
+    int err = getaddrinfo(NULL, port, &hints, &res);
+    if (err != 0) {
+        log_exit(gai_strerror(err));
+    }
+
+    for (struct addrinfo *ai = res; ai != NULL; ai = ai->ai_next) {
+        int sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+        if (sock < 0) {
+            continue;
+        }
+
+        int stat = bind(sock, ai->ai_addr, ai->ai_addrlen);
+        if (stat < 0) {
+            close(sock);
+            continue;
+        }
+
+        stat = listen(sock, MAX_BACKLOG);
+        if (stat < 0) {
+            close(sock);
+            continue;
+        }
+
+        // Success.
+        freeaddrinfo(res);
+        return sock;
+    }
+
+    log_exit("failed to listen socket");
+}
+
+_Noreturn void do_serve(request_handler_t handler) {
     install_signal_handlers();
-    http_service(stdin, stdout, handler);
-    return 0;
+
+    int server_fd = listen_socket();
+    fprintf(stderr, "INFO: Listening to http://localhost:8080\n");
+
+    while (true) {
+        struct sockaddr_storage addr;
+        socklen_t addr_len = sizeof addr;
+        int sock = accept(server_fd, (struct sockaddr *)&addr, &addr_len);
+        if (sock < 0) {
+            log_exit("accept(2) failed: %s", strerror(errno));
+        }
+
+        int pid = fork();
+        if (pid < 0) {
+            exit(3);
+        }
+        if (pid == 0) {
+            // Child process.
+
+            FILE *input = fdopen(sock, "r");
+            FILE *output = fdopen(sock, "w");
+
+            http_service(input, output, handler);
+            exit(0);
+        }
+
+        close(sock);
+    }
 }
