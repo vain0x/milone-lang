@@ -70,7 +70,7 @@
       {
         "language": "milone",
         "scopeName": "source.milone",
-        "path": "./syntaxes/milone.json"
+        "path": "syntaxes/milone.json"
       }
     ]
   },

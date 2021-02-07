@@ -6,7 +6,7 @@
 
 Boolean literals are `true` and `false`.
 
-The `bool` type supports comparison operations in the order: `false < true`. See [Integer types](./integer_types.md#Operations) for details.
+The `bool` type supports comparison operations in the order: `false < true`. See [Integer types](integer_types.md#Operations) for details.
 
 ### `not` function
 

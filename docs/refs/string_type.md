@@ -18,7 +18,7 @@ About performance: O(1) time.
 
 ### Operations
 
-Strings support concatenation operation (`(+)`) and comparison operations (`(=)` etc.) See also [Integer types](./integer_types.md).
+Strings support concatenation operation (`(+)`) and comparison operations (`(=)` etc.) See also [Integer types](integer_types.md).
 
 ```fsharp
     assert ("!" + "?" = "!?")

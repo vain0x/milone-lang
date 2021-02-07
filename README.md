@@ -11,8 +11,8 @@ This is a hobby project. Don't use in production. Pull requests and issues etc. 
 ## Index
 
 - [Install](#install)
-- [Documentation](./docs/refs/)
-- [Examples](./tests/examples)
+- [Documentation](docs/refs/)
+- [Examples](tests/examples)
 
 ## Install
 
@@ -55,7 +55,7 @@ The milone-lang compiler emits C11-compliant codes and the [runtime codes](runti
 
 TODO: Write in docs and include in test chain.
 
-These commands build [tests/examples/hello_world](./tests/examples/hello_world) project.
+These commands build [tests/examples/hello_world](tests/examples/hello_world) project.
 
 ```sh
 # Compile to C.
@@ -106,7 +106,7 @@ int main() {
 }
 ```
 
-*The actual output is available at [factorial.c](./tests/examples/factorial/factorial.c).*
+*The actual output is available at [factorial.c](tests/examples/factorial/factorial.c).*
 
 The diagram below illustrates how it does self-host finally.
 
@@ -150,8 +150,8 @@ Not all of F# features are supported. Features for functional-style programming 
 
 See also:
 
-- [the tests/examples directory](./tests/examples) for working codes
-- [the docs/refs directory](./docs/refs/) for detailed references
+- [the tests/examples directory](tests/examples) for working codes
+- [the docs/refs directory](docs/refs/) for detailed references
 
 ## Internals
 
@@ -269,6 +269,6 @@ In tests, there are some categories of test cases:
 
 - [TODO list](https://github.com/vain0x/milone-lang/projects/1): TODO list. Feel free to clarify by opening an issue.
 - [notes.md](notes.md): Notes on future works.
-- [milone_libs](./milone_libs): Standard library for milone-lang.
-    - [MiloneCore](./milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
-    - [MiloneStd](./milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.
+- [milone_libs](milone_libs): Standard library for milone-lang.
+    - [MiloneCore](milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
+    - [MiloneStd](milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.

@@ -35,7 +35,7 @@ fi
 
 # Set log file.
 mkdir -p target
-LOG="./target/install.log"
+LOG="target/install.log"
 echo "install: Started." >>$LOG
 
 # Trap error.

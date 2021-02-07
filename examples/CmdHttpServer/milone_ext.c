@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "./milone_ext.h"
+#include "milone_ext.h"
 #include <milone.h>
 
 struct Span span_slice(struct Span span, size_t start, size_t end,
