@@ -1,4 +1,5 @@
 #!/bin/sh
+# USAGE: scripts/check_region_primitive
 
 set -eu
 
@@ -6,7 +7,7 @@ MILONE_RUNTIME="$PWD/runtime"
 DIR="$PWD/scripts/region_primitive_checks"
 OUT_C="$DIR/region_primitive_checks.c"
 
-./milone-dotnet -q "$DIR" >$OUT_C
+milone -q "$DIR" >$OUT_C
 
 (
     cd "$DIR"

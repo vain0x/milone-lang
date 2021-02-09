@@ -1,8 +1,10 @@
 #!/bin/sh
 # Install milone command locally for development.
 #
-# See ./install for production.
+# See <scripts/install> for production.
 # Generated files are same as that.
+#
+# USAGE: scripts/install-dev
 
 set -eu
 
@@ -23,7 +25,7 @@ trap 'test $? -ne 0 && echo "install-dev: Installation failed."' EXIT
 # Process
 # ------------------------------------------------
 
-./uninstall
+scripts/uninstall
 
 # Ensure directories exist.
 mkdir -p "$MILONE_HOME/bin/milone_dotnet"

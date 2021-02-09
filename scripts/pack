@@ -1,0 +1,88 @@
+#!/bin/sh
+# Make a binary package.
+#
+# USAGE: scripts/pack
+
+set -eu
+
+RUNTIME_IDENTIFIER=${RUNTIME_IDENTIFIER:-'linux-x64'}
+
+TEMP_DIR="$PWD/milone-$(date +%s)"
+BIN_DIR="$TEMP_DIR/bin"
+MILONE_HOME="$TEMP_DIR/.milone"
+
+# ------------------------------------------------
+# Check
+# ------------------------------------------------
+
+if test ! -d MiloneLang
+then
+    echo "pack: ERROR: Run at the milone-lang directory."
+    exit 1
+fi
+
+# Trap exit.
+on_exit() {
+    if test $? -eq 0
+    then
+        echo "pack: OK."
+    else
+        echo "pack: Failed."
+    fi
+}
+trap 'on_exit' EXIT
+
+# Check prerequisites.
+dotnet --version
+gcc --version
+
+# ------------------------------------------------
+# Process
+# ------------------------------------------------
+
+mkdir -p "$BIN_DIR"
+mkdir -p "$MILONE_HOME"
+
+# Install native executable.
+scripts/build-milone-native
+cp target/milone "$BIN_DIR/milone"
+
+# Install .NET executable.
+dotnet publish MiloneLang \
+    --runtime "$RUNTIME_IDENTIFIER" \
+    -c Release \
+    -o "$MILONE_HOME/bin/milone_dotnet" \
+    -nologo
+
+# Install LSP server.
+dotnet publish milone_lsp \
+    --runtime "$RUNTIME_IDENTIFIER" \
+    -c Release \
+    -o "$MILONE_HOME/bin/milone_lsp" \
+    -nologo
+
+# Copy files.
+cp -R runtime "$MILONE_HOME/runtime"
+cp -R milone_libs "$MILONE_HOME/milone_libs"
+
+# Record installed version.
+VERSION=$($BIN_DIR/milone --version)
+
+echo "$VERSION" >"$MILONE_HOME/version"
+
+# Rename temporary directory.
+PACK_DIR="milone-$VERSION"
+mv "$TEMP_DIR" "$PACK_DIR"
+
+# Make tarball and zip.
+tar -czf "milone-$VERSION.tar.gz" "$PACK_DIR"
+zip -rq "milone-$VERSION.zip" "$PACK_DIR"
+
+# Delete temporary directory.
+rm -rf "$PACK_DIR"
+
+# ------------------------------------------------
+# End
+# ------------------------------------------------
+
+echo "pack: milone-lang v$VERSION is packed."

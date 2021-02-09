@@ -8,7 +8,7 @@ Char literals are written between two single-quotes (`'`), e.g. `'a'`.
 
 ### Escape sequences
 
-Escape sequences work same as string literals. See also [String type](./string_type.md).
+Escape sequences work same as string literals. See also [String type](string_type.md).
 
 ### Conversion
 
@@ -18,7 +18,7 @@ Escape sequences work same as string literals. See also [String type](./string_t
     assert (char 65 = 'A')
 ```
 
-Char value can be converted to integer types. See [Int types#Conversion](./integer_types.md#Conversion) for details.
+Char value can be converted to integer types. See [Int types#Conversion](integer_types.md#Conversion) for details.
 
 ```fsharp
     assert (int 'A' = 65)

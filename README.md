@@ -11,8 +11,8 @@ This is a hobby project. Don't use in production. Pull requests and issues etc. 
 ## Index
 
 - [Install](#install)
-- [Documentation](./docs/refs/)
-- [Examples](./tests/examples)
+- [Documentation](docs/refs/)
+- [Examples](tests/examples)
 
 ## Install
 
@@ -40,7 +40,7 @@ cd milone-lang
 ```
 
 - Feel free to ask anything in [discussion](https://github.com/vain0x/milone-lang/discussions/4).
-- To uninstall, run `./uninstall`.
+- To uninstall, run `scripts/uninstall`.
 
 ### Other platforms (Windows/macOS)
 
@@ -55,7 +55,7 @@ The milone-lang compiler emits C11-compliant codes and the [runtime codes](runti
 
 TODO: Write in docs and include in test chain.
 
-These commands build [tests/examples/hello_world](./tests/examples/hello_world) project.
+These commands build [tests/examples/hello_world](tests/examples/hello_world) project.
 
 ```sh
 # Compile to C.
@@ -106,7 +106,7 @@ int main() {
 }
 ```
 
-*The actual output is available at [factorial.c](./tests/examples/factorial/factorial.c).*
+*The actual output is available at [factorial.c](tests/examples/factorial/factorial.c).*
 
 The diagram below illustrates how it does self-host finally.
 
@@ -150,8 +150,8 @@ Not all of F# features are supported. Features for functional-style programming 
 
 See also:
 
-- [the tests/examples directory](./tests/examples) for working codes
-- [the docs/refs directory](./docs/refs/) for detailed references
+- [the tests/examples directory](tests/examples) for working codes
+- [the docs/refs directory](docs/refs/) for detailed references
 
 ## Internals
 
@@ -219,18 +219,22 @@ Scripts are written for `bash` because I use a Ubuntu desktop for development. T
 See the "install from sources" section above.
 
 For incremental building and testing, `ninja` command is also used.
+
 `git` command is used in tests to generate diff.
 
 - Install Git 2.30.0
 - Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
+    with `scripts/install-ninja`
 
 ### Dev: Build
 
 Generate a build script for ninja and then run ninja command.
 
 ```sh
-./build-ninja-gen && ninja
+script/build-ninja-gen && bin/ninja
 ```
+
+Or just do `make`.
 
 ### Dev: Testing
 
@@ -265,6 +269,6 @@ In tests, there are some categories of test cases:
 
 - [TODO list](https://github.com/vain0x/milone-lang/projects/1): TODO list. Feel free to clarify by opening an issue.
 - [notes.md](notes.md): Notes on future works.
-- [milone_libs](./milone_libs): Standard library for milone-lang.
-    - [MiloneCore](./milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
-    - [MiloneStd](./milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.
+- [milone_libs](milone_libs): Standard library for milone-lang.
+    - [MiloneCore](milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
+    - [MiloneStd](milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.

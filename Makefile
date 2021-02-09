@@ -8,33 +8,40 @@
 .PHONY: build build.ninja clean default install install-dev test uninstall
 
 # (This is the first rule in file and therefore it's default.)
-default: build.ninja
-	ninja
+default: build.ninja bin/ninja
+	bin/ninja
 
 # ------------------------------------------------
 # ninja wrapper
 # ------------------------------------------------
 
 build.ninja:
-	./build-ninja-gen
+	scripts/build-ninja-gen
 
-build: build.ninja **/*.fs **/*.milone
-	ninja test_self
+build: bin/ninja build.ninja
+	bin/ninja test_self
 
 test: build
 
 clean:
-	./clean
+	scripts/clean
 
 # ------------------------------------------------
 # install
 # ------------------------------------------------
 
 install:
-	./install
+	scripts/install
 
 install-dev:
-	./install-dev
+	scripts/install-dev
 
 uninstall:
-	./uninstall
+	scripts/uninstall
+
+# ------------------------------------------------
+# misc
+# ------------------------------------------------
+
+bin/ninja:
+	scripts/install-ninja

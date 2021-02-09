@@ -16,10 +16,10 @@ gcc --version >/dev/null
 
 MILONE_HOME=$PWD \
     dotnet run -p MiloneLang -- \
-    compile --quiet ./MiloneLang \
+    compile --quiet MiloneLang \
     >'target/milone_gen2.c'
 
 MILONE_HOME=$PWD \
 INPUTS='target/milone_gen2.c' \
 OUTPUT='target/milone' \
-    ./scripts/build-with-gcc
+    scripts/build-with-gcc

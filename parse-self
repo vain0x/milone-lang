@@ -1,6 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-# With -q, errors are only emitted. With -v, all syntax is emitted (too long to see).
-./milone-dotnet parse -q MiloneLang

@@ -13,7 +13,7 @@ target/serve: target/cmd_http_server.c cmd_http_server.c
 		-Wall -Wextra -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-parameter -Wno-unused-but-set-parameter \
 		-I ${MILONE_RUNTIME} \
 		${MILONE_RUNTIME}/milone.c \
-		./milone_ext.c \
+		milone_ext.c \
 		cmd_http_server.c \
 		target/cmd_http_server.c \
 		-o target/serve
