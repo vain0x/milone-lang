@@ -29,6 +29,10 @@ User-defined types:
 - [discriminated union types (DU)](discriminated_union_types.md)
 - [record types](record_types.md)
 
+## Structure
+
+- [projects](projects.md)
+
 ## Others
 
 - [milone_syntax_tree.ungram](milone_syntax_tree.ungram): The form of syntax tree described in ungrammar
