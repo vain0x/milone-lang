@@ -38,22 +38,22 @@ let private opToPrim op =
   | SubBinary -> HPrim.Sub
   | MulBinary -> HPrim.Mul
   | DivBinary -> HPrim.Div
-  | ModBinary -> HPrim.Mod
+  | ModuloBinary -> HPrim.Modulo
   | BitAndBinary -> HPrim.BitAnd
   | BitOrBinary -> HPrim.BitOr
   | BitXorBinary -> HPrim.BitXor
   | LeftShiftBinary -> HPrim.LeftShift
   | RightShiftBinary -> HPrim.RightShift
-  | EqualBinary -> HPrim.Eq
-  | LessBinary -> HPrim.Lt
+  | EqualBinary -> HPrim.Equal
+  | LessBinary -> HPrim.Less
   | ConsBinary -> HPrim.Cons
 
   | NotEqualBinary
   | LessEqualBinary
   | GreaterBinary
   | GreaterEqualBinary
-  | LogAndBinary
-  | LogOrBinary
+  | LogicalAndBinary
+  | LogicalOrBinary
   | AppBinary
   | PipeBinary -> failwithf "NEVER: %A" op
 
@@ -151,8 +151,8 @@ let private desugarMinusUnary arg =
 
 /// `l <> r` ==> `not (l = r)`
 let private desugarBinNe l r pos =
-  let eqExpr = ABinaryExpr(EqualBinary, l, r, pos)
-  axNot eqExpr pos
+  let equalExpr = ABinaryExpr(EqualBinary, l, r, pos)
+  axNot equalExpr pos
 
 /// `l <= r` ==> `not (r < l)`
 /// NOTE: Evaluation order does change.
@@ -195,7 +195,9 @@ let private desugarBinPipe l r pos = ABinaryExpr(AppBinary, r, l, pos)
 let private desugarLet isRec vis pat body next pos =
   match pat with
   | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-      let body = AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+      let body =
+        AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+
       desugarLet isRec vis pat body next pos
 
   | AFunDeclPat (name, args, _) -> ALetFun(isRec, vis, name, args, body, next, pos)
@@ -205,20 +207,22 @@ let private desugarLet isRec vis pat body next pos =
 let private desugarLetDecl isRec vis pat body pos =
   match pat with
   | AAscribePat (pat, ascriptionTy, ascriptionLoc) ->
-      let body = AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+      let body =
+        AAscribeExpr(body, ascriptionTy, ascriptionLoc)
+
       desugarLetDecl isRec vis pat body pos
 
   | AFunDeclPat (name, args, _) -> ALetFunDecl(isRec, vis, name, args, body, pos)
 
   | _ -> ALetValDecl(isRec, vis, pat, body, pos)
 
-let private tyUnresolved serial argTys = AppTy(UnresolvedTyCtor serial, argTys)
+let private tyUnresolved serial argTys = Ty(UnresolvedTk serial, argTys)
 
 let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
       let loc = toLoc docId pos
-      ErrorTy loc, nameCtx
+      tyError loc, nameCtx
 
   | AAppTy (quals, name, argTys, _) ->
       let quals, nameCtx =
@@ -235,7 +239,7 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
   | AVarTy (name, pos) ->
       let tySerial, nameCtx = nameCtx |> nameCtxAdd ("'" + name)
       let loc = toLoc docId pos
-      AppTy (UnresolvedVarTyCtor (tySerial, loc), []), nameCtx
+      Ty(UnresolvedVarTk(tySerial, loc), []), nameCtx
 
   | ASuffixTy (lTy, suffix, _) ->
       let lTy, nameCtx = (lTy, nameCtx) |> athTy docId
@@ -473,14 +477,14 @@ let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * Name
 
       doArm ()
 
-  | ABinaryExpr (LogAndBinary, l, r, pos) ->
+  | ABinaryExpr (LogicalAndBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinAnd l r pos
         (expr, nameCtx) |> athExpr docId
 
       doArm ()
 
-  | ABinaryExpr (LogOrBinary, l, r, pos) ->
+  | ABinaryExpr (LogicalOrBinary, l, r, pos) ->
       let doArm () =
         let expr = desugarBinOr l r pos
         (expr, nameCtx) |> athExpr docId
@@ -667,6 +671,16 @@ let private athDecl docId (decl, nameCtx) =
         let serial, nameCtx = nameCtx |> nameCtxAdd ident
         let loc = toLoc docId pos
         prepend (HModuleSynonymExpr(ModuleSynonymSerial serial, path, loc)), nameCtx
+
+      doArm ()
+
+  | AModuleDecl (_isRec, _vis, name, decls, pos) ->
+      // FIXME: use rec, vis
+      let doArm () =
+        let serial, nameCtx = nameCtx |> nameCtxAdd name
+        let decls, nameCtx = (decls, nameCtx) |> athDecls docId
+        let loc = toLoc docId pos
+        prepend (HModuleExpr(ModuleTySerial serial, decls, loc)), nameCtx
 
       doArm ()
 

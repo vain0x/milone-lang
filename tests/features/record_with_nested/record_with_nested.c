@@ -6,7 +6,7 @@ struct Person_;
 
 struct Person_ newPerson_(int arg_);
 
-int main();
+int milone_main();
 
 struct Date_ {
     int t0;
@@ -26,7 +26,7 @@ struct Person_ newPerson_(int arg_) {
     return Person_;
 }
 
-int main() {
+int milone_main() {
     struct Person_ call_ = newPerson_(0);
     struct Person_ base_ = call_;
     struct Person_ Person_1 = (struct Person_){.t0 = (struct String){.str = "John Doe", .len = 8}, .t1 = base_.t1, .t2 = base_.t2};

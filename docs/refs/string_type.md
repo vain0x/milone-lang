@@ -6,33 +6,29 @@
 
 String literals are written between two double-quotes (`"`), e.g. `"Hello, world!"`.
 
-### Invariants
-
-In milone-lang, strings are assumed to be encoded in UTF-8. (Not guaranteed nor checked, though.)
-
-Strings are immutable. No operation is provided to modify contents of strings (except for FFI).
-
 ### `Length` property
 
-Strings have `Length` property to get length in bytes. (O(1) time.)
+Strings have `Length` property to get its length in bytes.
 
 ```fsharp
     assert ("hello".Length = 5)
 ```
 
+About performance: O(1) time.
+
 ### Operations
 
-Strings support "add" operation (`(+)`) for concatenation and comparison operations (`(=)` etc.) See also [Integer Types](./integer_types.md) for details.
+Strings support concatenation operation (`(+)`) and comparison operations (`(=)` etc.) See also [Integer types](integer_types.md).
 
 ```fsharp
     assert ("!" + "?" = "!?")
 ```
 
-About performance: the operation likely copies the both strings and newly allocates a string on heap.
+About performance: concatenation likely copies the both strings and newly allocates a string on heap.
 
 ### Index operation
 
-`s.[i]` extracts the `i`'th byte of string `s`. (O(1) time. Exceeding the boundary is undefined behavior for now.)
+`s.[i]` extracts the `i`'th byte of string `s`.
 
 ```fsharp
     //       01234 (indices)
@@ -40,12 +36,14 @@ About performance: the operation likely copies the both strings and newly alloca
     //        ^
 ```
 
-Index must have `int` type (rather than other integer type). Since `.[ ]` operation is also used for arrays in F#, type of operands are not inferred well. Write type ascription.
+Index must have `int` type (rather than other integer types). Since `.[]` operation is also used for arrays in F#, type of operands are not inferred well. Write type ascription.
 
 ```fsharp
     let at (s: string) i = s.[i]
     //       ^^^^^^^^ Ascription for `s.[...]`
 ```
+
+About performance and safety: indexing is O(1) time. Exceeding the boundary is undefined behavior for now.
 
 ### Subscript operation
 
@@ -57,9 +55,7 @@ Index must have `int` type (rather than other integer type). Since `.[ ]` operat
     //        ^ ^               ^ ^
 ```
 
-About performance: if resulting substring is suffix of the string or empty, the operation is guaranteed to be O(1) time. Otherwise, the substring likely gets copied and newly allocated on heap.
-
-Exceeding the boundary is runtime error for now.
+About performance and safety: O(1) time and no allocation. Exceeding the boundary is runtime error for now.
 
 ### Conversion from numbers
 
@@ -85,19 +81,28 @@ In quotes, backslashes *escape* other characters.
 
 ### Runtime representation
 
-(See also `struct String` in [milone.h](../../runtime/milone.h).
+(See also `struct String` in [milone.h](../../runtime/milone.h).)
 
-Currently, string is a pair of pointer and length.
-
-The pointer points to start or middle of either:
-
-- C string literal, or
-- buffer allocated by `calloc` and terminated by null byte.
-
+Currently, string is a pair of a pointer (to `char`s) and length.
+The pointer can't be null.
 The length represents the number of bytes of string.
 
-A string object spans from `pointer` to `pointer + length` (exclusive).
+Span from `pointer` to `pointer + length` (exclusive) is an interval of either:
 
-The span doesn't include the trailing null byte of string literal or last byte of allocated buffer. String itself is not guaranteed to be null-terminated, but it's not undefined behavior to pass it in a function that expects null-terminated string, e.g. `strtol`.
+- a C string literal, or
+- a buffer allocated by `calloc`.
 
-Since strings are immutable, the buffer pointed by some string object should not be mutated. At least mutation is not observable.
+A string spans from `pointer` to `pointer + length` (exclusive).
+
+### Invariants
+
+- Strings are encoded in UTF-8.
+    - This is not guaranteed nor checked.
+- Strings are immutable.
+    - No operation is provided to modify contents of strings except for FFI.
+    - This allows sharing of strings. With this property, the runtime can guarantee that subscript operation doesn't allocate.
+- Buffer pointed by string must contain at least one null byte (`\x00`) after the end of string.
+    - This property doesn't imply that strings are null-terminated.
+        For example, `"hello".[0..1]` (= `"he"`) is unlikely null-terminated.
+    - This property implies that the end of span is safe to dereference.
+        - Runtime may check whether a string is null-terminated or not just by dereferencing `pointer + length`.

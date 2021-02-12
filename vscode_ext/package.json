@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "description": "milone-lang support for VSCode",
   "author": "vain0x <vainzerox@gmail.com>",
+  "publisher": "vain0x",
   "license": "Apache2.0",
   "activationEvents": [
     "onLanguage:milone"
   ],
   "engines": {
-    "vscode": "^1.45.1"
+    "vscode": "^1.50.0"
   },
   "keywords": [],
   "main": "dist/extension.js",
@@ -69,7 +70,7 @@
       {
         "language": "milone",
         "scopeName": "source.milone",
-        "path": "./syntaxes/milone.json"
+        "path": "syntaxes/milone.json"
       }
     ]
   },

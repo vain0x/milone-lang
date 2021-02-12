@@ -10,9 +10,7 @@ open MiloneStd.StdString
 
 open MiloneLang.Cli
 
-let private argCount (): int = __nativeFun "arg_count"
-
-let private argGet (i: int): string = __nativeFun ("arg_get", i)
+module Env = MiloneStd.StdEnv
 
 let private profileInit (): Profiler =
   let state: voidptr = __nativeFun "milone_profile_init"
@@ -28,23 +26,19 @@ let private fileReadAllText (filePath: string): string =
 
 let private getEnv (name: string): string = __nativeFun ("milone_get_env", name)
 
-let private argList () =
-  let rec go acc i =
-    if i = 0 then acc else go (argGet (i - 1) :: acc) (i - 1)
-
-  go [] (argCount ())
-
 let private readFile filePath =
   if fileExists filePath then fileReadAllText filePath |> Some else None
 
 [<EntryPoint>]
 let main _ =
-  let args = argList ()
+  let args = Env.commandLineArgs ()
 
+  let home = getEnv "HOME"
   let miloneHome = getEnv "MILONE_HOME"
 
   let host: CliHost =
     { Args = args
+      Home = home
       MiloneHome = miloneHome
       ProfileInit = profileInit
       ProfileLog = profileLog

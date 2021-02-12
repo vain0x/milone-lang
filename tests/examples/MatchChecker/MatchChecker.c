@@ -264,7 +264,7 @@ static struct Space_ spaceFull_;
 
 static struct Space_ spaceEmpty_;
 
-int main();
+int milone_main();
 
 bool id_1(bool x_) {
     return x_;
@@ -292,7 +292,7 @@ struct Space_List {
 };
 
 struct Space_List const* failwith_3(struct String msg_) {
-    printf("ERROR %s\n", msg_.str);
+    printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
     return NULL;
 }
@@ -303,13 +303,13 @@ struct StringList {
 };
 
 struct StringList const* failwith_2(struct String msg_) {
-    printf("ERROR %s\n", msg_.str);
+    printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
     return NULL;
 }
 
 struct Space_ failwith_1(struct String msg_) {
-    printf("ERROR %s\n", msg_.str);
+    printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
     return ((struct Space_){});
 }
@@ -1409,7 +1409,7 @@ next_115:;
     if ((tuple_5.t1.discriminant != Ctor_)) goto next_116;
     struct String secondTag_ = (*(((struct StringSpace_ListTuple2 const*)tuple_5.t1.Ctor_))).t0;
     struct Space_List const* seconds_ = (*(((struct StringSpace_ListTuple2 const*)tuple_5.t1.Ctor_))).t1;
-    if ((str_cmp(tag_2, secondTag_) != 0)) goto next_116;
+    if ((str_compare(tag_2, secondTag_) != 0)) goto next_116;
     void const* box_6 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_6))) = 0;
     struct Space_Space_Tuple2BoolFun1 fun_32 = (struct Space_Space_Tuple2BoolFun1){.fun = fun_11, .env = box_6};
@@ -1467,7 +1467,7 @@ next_119:;
     struct String tag_3 = (*(((struct StringUnitSpace_Fun1Tuple2 const*)tuple_5.t0.Ref_))).t0;
     if ((tuple_5.t1.discriminant != Ref_)) goto next_120;
     struct String secondTag_1 = (*(((struct StringUnitSpace_Fun1Tuple2 const*)tuple_5.t1.Ref_))).t0;
-    if ((str_cmp(tag_3, secondTag_1) != 0)) goto next_120;
+    if ((str_compare(tag_3, secondTag_1) != 0)) goto next_120;
     match_23 = spaceEmpty_;
     goto end_match_111;
 next_120:;
@@ -1826,7 +1826,7 @@ bool fun_7(struct StringSpace_Tuple2 arg_95) {
     struct String call_126 = spaceToString_(space_10);
     struct String actual_ = call_126;
     bool if_6;
-    if ((str_cmp(actual_, expected_) == 0)) {
+    if ((str_compare(actual_, expected_) == 0)) {
         goto then_146;
     } else {
         goto else_147;
@@ -1835,7 +1835,7 @@ then_146:;
     if_6 = true;
     goto if_next_145;
 else_147:;
-    printf("%s: NG (%s)\n", expected_.str, actual_.str);
+    printf("%s: NG (%s)\n", str_to_c_str(expected_), str_to_c_str(actual_));
     if_6 = false;
     goto if_next_145;
 if_next_145:;
@@ -1966,7 +1966,7 @@ next_156:;
 end_match_151:;
     bool ok_2 = match_27.t0;
     struct String msg_1 = match_27.t1;
-    printf("%s: %s\n", name_.str, msg_1.str);
+    printf("%s: %s\n", str_to_c_str(name_), str_to_c_str(msg_1));
     int if_8;
     if ((!(ok_2))) {
         goto then_158;
@@ -1975,9 +1975,9 @@ end_match_151:;
     }
 then_158:;
     struct String call_140 = spaceToString_(tySpace_);
-    printf("  ty: %s\n", call_140.str);
+    printf("  ty: %s\n", str_to_c_str(call_140));
     struct String call_141 = spaceToString_(patSpace_);
-    printf("  pats: %s\n", call_141.str);
+    printf("  pats: %s\n", str_to_c_str(call_141));
     if_8 = 0;
     goto if_next_157;
 else_159:;
@@ -1992,7 +1992,7 @@ bool fun_27(void const* env_18, struct StringTy_Pat_ListCovering_Tuple4 arg_30) 
     return call_142;
 }
 
-int main() {
+int milone_main() {
     spaceFull_ = (struct Space_){.discriminant = Full_};
     void const* box_25 = milone_mem_alloc(1, sizeof(struct Space_List const*));
     (*(((struct Space_List const**)box_25))) = NULL;

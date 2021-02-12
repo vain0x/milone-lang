@@ -73,7 +73,7 @@
         {
             "comment": "Unsupported keywords",
             "name": "invalid.deprecated.milone",
-            "match": "\\b(abstract|and|async|atomic|base|begin|break|checked|class|component|const|constraint|constructor|continue|default|delegate|done|downcast|downto|eager|elif|end|event|exception|extern|external|finally|fixed|for|function|functor|global|include|inherit|inline|interface|lazy|member|method|mixin|mutable|mut|new|null|object|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|using|val|virtual|void|volatile|while|yield)\\b|!=|!|#|$|%%|`|\\(\\*|\\(\\|\\*\\*|:=|:>|:\\?|:\\?>|<-|\\|\\|+>|<\\|+|<@|==|\\?|@|\\[\\||\\{|\\}|~"
+            "match": "\\b(abstract|and|async|atomic|base|become|begin|break|checked|class|component|const|constraint|constructor|continue|default|delegate|done|downcast|downto|eager|elif|end|event|exception|extern|external|finally|fixed|for|function|functor|global|include|inherit|inline|interface|internal|lazy|member|method|mixin|mutable|mut|namespace|new|null|object|or|override|parallel|process|protected|pure|ref|return|sealed|select|seq|signature|sig|static|struct|tailcall|to|trait|try|upcast|use|using|val|virtual|void|volatile|while|yield)\\b|!=|!|#|$|%%|`|\\(\\*|\\(\\|\\*\\*|:=|:>|:\\?|:\\?>|<-|\\|\\|+>|<\\|+|<@|==|\\?|@|\\[\\||~"
         },
         {
             "comment": "Control keywords",
@@ -83,22 +83,22 @@
         {
             "comment": "Visibility keywords",
             "name": "storage.modifier.visibility.milone",
-            "match": "\\b(internal|private|public)\\b"
+            "match": "\\b(private|public)\\b"
         },
         {
             "comment": "Other keywords",
             "name": "keyword.milone",
-            "match": "\\b(as|do|fun|in|let|module|namespace|of|open|rec|type)\\b"
+            "match": "\\b(as|do|fun|in|let|module|of|open|rec|type)\\b"
         },
         {
             "comment": "Built-in types",
             "name": "entity.name.type.milone",
-            "match": "\\b(bool|char|float|int|list|obj|string|unit|AssocMap|AssocSet)\\b"
+            "match": "\\b(bool|s?byte|char|float(32)?|int|list|nativeptr|obj|string|u?int(8|16|32|64)|u?nativeint|unit|voidptr|__constptr|__nativeType)\\b"
         },
         {
             "comment": "Built-in functions",
             "name": "entity.name.function.milone",
-            "match": "\\b(assert|char|failwithf?|id|ignore|int|not|printfn|sprintf|string)\\b"
+            "match": "\\b(assert|box|char|compare|exit|int|not|printfn|string|unbox|inRegion|__nativeCast|__nativeDecl|__nativeExpr|__nativeFun|__nativeStmt|__nativeType|__ptrRead|__ptrWrite|__sizeOfVal)\\b"
         },
         {
             "comment": "Built-in values",
@@ -133,7 +133,7 @@
         {
             "comment": "Other sigils",
             "name": "keyword.operator.other.milone",
-            "match": "\\.\\.|\\.|,|::|:|;|->|\\|>|&|\\|"
+            "match": "\\{|\\}|\\.\\.|\\.|,|::|:|;|->|\\|>|&|\\|"
         },
         {
             "comment": "Potential namespaces guess (front of dot)",

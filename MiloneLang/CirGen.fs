@@ -20,7 +20,7 @@ open MiloneLang.Mir
 open MiloneLang.MirGen
 open MiloneLang.Cir
 
-let private valueSymbolCmp l r =
+let private valueSymbolCompare l r =
   let encode symbol =
     match symbol with
     | VarSymbol (VarSerial serial) -> serial
@@ -31,7 +31,10 @@ let private valueSymbolCmp l r =
 
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
-    if index = 0 then ident + "_" else ident + "_" + string index
+    if index = 0 then
+      ident + "_"
+    else
+      ident + "_" + string index
 
   // Group serials by ident.
   let rec go acc xs =
@@ -91,7 +94,7 @@ type private CirCtx =
 
 let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   let valueUniqueNames =
-    let m = mapEmpty valueSymbolCmp
+    let m = mapEmpty valueSymbolCompare
 
     let m =
       mirCtx.Vars
@@ -113,26 +116,27 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
              |> mapAdd (VariantSymbol variantSerial) variantDef.Name)
            m
 
-    m |> renameIdents id fst valueSymbolCmp
+    m |> renameIdents id fst valueSymbolCompare
 
   let tyNames =
     let toKey (serial, tyDef) =
       match tyDef with
       | MetaTyDef _
-      | UniversalTyDef _ -> MetaTy(serial, noLoc)
+      | UniversalTyDef _ -> tyMeta serial noLoc
 
       | SynonymTyDef _ -> tySynonym serial []
       | UnionTyDef _ -> tyUnion serial
       | RecordTyDef _ -> tyRecord serial
 
-    mirCtx.Tys |> renameIdents tyDefToName toKey tyCmp
+    mirCtx.Tys
+    |> renameIdents tyDefToName toKey tyCompare
 
   { Vars = mirCtx.Vars
     Funs = mirCtx.Funs
     Variants = mirCtx.Variants
     MainFunOpt = mirCtx.MainFunOpt
     ValueUniqueNames = valueUniqueNames
-    TyEnv = mapEmpty tyCmp
+    TyEnv = mapEmpty tyCompare
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []
@@ -147,7 +151,7 @@ let private findStorageModifier (ctx: CirCtx) varSerial =
 
 let private isMainFun (ctx: CirCtx) funSerial =
   match ctx.MainFunOpt with
-  | Some mainFun -> funSerialCmp mainFun funSerial = 0
+  | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
 
 let private addError (ctx: CirCtx) message loc =
@@ -403,7 +407,9 @@ let private genRecordTyDef ctx tySerial fields =
                let ty, ctx = cgTyComplete ctx ty
                ty, ctx)
 
-      let fields = fieldTys |> List.mapi (fun i ty -> tupleField i, ty)
+      let fields =
+        fieldTys
+        |> List.mapi (fun i ty -> tupleField i, ty)
 
       let ctx =
         { ctx with
@@ -440,16 +446,16 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
   let rec go ty (ctx: CirCtx) =
     let tyToUniqueName ty =
       match ty with
-      | AppTy (IntTyCtor flavor, _) -> cIntegerTyPascalName flavor, ctx
-      | AppTy (FloatTyCtor flavor, _) -> cFloatTyPascalName flavor, ctx
-      | AppTy (BoolTyCtor, _) -> "Bool", ctx
-      | AppTy (CharTyCtor, _) -> "Char", ctx
-      | AppTy (StrTyCtor, _) -> "String", ctx
+      | Ty (IntTk flavor, _) -> cIntegerTyPascalName flavor, ctx
+      | Ty (FloatTk flavor, _) -> cFloatTyPascalName flavor, ctx
+      | Ty (BoolTk, _) -> "Bool", ctx
+      | Ty (CharTk, _) -> "Char", ctx
+      | Ty (StrTk, _) -> "String", ctx
 
-      | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-      | AppTy (ObjTyCtor, _) -> "Object", ctx
+      | Ty (MetaTk _, _)
+      | Ty (ObjTk, _) -> "Object", ctx
 
-      | AppTy (FunTyCtor, _) ->
+      | Ty (FunTk, _) ->
           let arity, argTys, resultTy = tyToArgList ty
 
           let argTys, ctx =
@@ -466,14 +472,14 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           funTy, ctx
 
-      | AppTy (ListTyCtor, [ itemTy ]) ->
+      | Ty (ListTk, [ itemTy ]) ->
           let itemTy, ctx = ctx |> go itemTy
           let listTy = itemTy + "List"
           listTy, ctx
 
-      | AppTy (VoidTyCtor, _) -> "Void", ctx
+      | Ty (VoidTk, _) -> "Void", ctx
 
-      | AppTy (NativePtrTyCtor isMut, [ itemTy ]) ->
+      | Ty (NativePtrTk isMut, [ itemTy ]) ->
           let itemTy, ctx = ctx |> go itemTy
 
           let ptrTy =
@@ -483,7 +489,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           ptrTy, ctx
 
-      | AppTy (NativeFunTyCtor, tyArgs) ->
+      | Ty (NativeFunTk, tyArgs) ->
           let tyArgs, ctx =
             (tyArgs, ctx)
             |> stMap (fun (ty, ctx) -> ctx |> go ty)
@@ -495,11 +501,11 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           funTy, ctx
 
-      | AppTy (NativeTypeTyCtor code, _) -> code, ctx
+      | Ty (NativeTypeTk code, _) -> code, ctx
 
-      | AppTy (TupleTyCtor, []) -> "Unit", ctx
+      | Ty (TupleTk, []) -> "Unit", ctx
 
-      | AppTy (TupleTyCtor, itemTys) ->
+      | Ty (TupleTk, itemTys) ->
           let len = itemTys |> List.length
 
           let itemTys, ctx =
@@ -511,15 +517,15 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           tupleTy, ctx
 
-      | AppTy (ListTyCtor, _)
-      | AppTy (FunTyCtor, _)
-      | AppTy (NativePtrTyCtor _, _)
-      | AppTy (SynonymTyCtor _, _)
-      | AppTy (UnionTyCtor _, _)
-      | AppTy (RecordTyCtor _, _)
-      | AppTy (UnresolvedTyCtor _, _)
-      | AppTy (UnresolvedVarTyCtor _, _)
-      | ErrorTy _ ->
+      | Ty (ErrorTk _, _)
+      | Ty (ListTk, _)
+      | Ty (FunTk, _)
+      | Ty (NativePtrTk _, _)
+      | Ty (SynonymTk _, _)
+      | Ty (UnionTk _, _)
+      | Ty (RecordTk _, _)
+      | Ty (UnresolvedTk _, _)
+      | Ty (UnresolvedVarTk _, _) ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
 
@@ -560,32 +566,32 @@ let private cgNativeFunTy ctx tys =
 /// whose type definition is not necessary to be visible.
 let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
-  | AppTy (TupleTyCtor, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-  | AppTy (IntTyCtor flavor, _) -> CIntTy flavor, ctx
-  | AppTy (FloatTyCtor flavor, _) -> CFloatTy flavor, ctx
-  | AppTy (BoolTyCtor, _) -> CBoolTy, ctx
-  | AppTy (CharTyCtor, _) -> CCharTy, ctx
-  | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
+  | Ty (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | Ty (IntTk flavor, _) -> CIntTy flavor, ctx
+  | Ty (FloatTk flavor, _) -> CFloatTy flavor, ctx
+  | Ty (BoolTk, _) -> CBoolTy, ctx
+  | Ty (CharTk, _) -> CCharTy, ctx
+  | Ty (StrTk, _) -> CStructTy "String", ctx
 
   // FIXME: Unresolved type variables are `obj` for now.
-  | MetaTy _
-  | AppTy (ObjTyCtor, _) -> CConstPtrTy CVoidTy, ctx
+  | Ty (MetaTk _, _)
+  | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
 
-  | AppTy (FunTyCtor, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
+  | Ty (FunTk, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
 
-  | AppTy (ListTyCtor, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
+  | Ty (ListTk, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
 
-  | AppTy (TupleTyCtor, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
+  | Ty (TupleTk, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
 
-  | AppTy (VoidTyCtor, _) -> CVoidTy, ctx
+  | Ty (VoidTk, _) -> CVoidTy, ctx
 
-  | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+  | Ty (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
-  | AppTy (NativeFunTyCtor, tys) -> cgNativeFunTy ctx tys
+  | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
 
-  | AppTy (NativeTypeTyCtor code, _) -> CEmbedTy code, ctx
+  | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
 
-  | AppTy (SynonymTyCtor serial, useTyArgs) ->
+  | Ty (SynonymTk serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
@@ -595,9 +601,9 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       | _ -> failwithf "NEVER: synonym type undefined?"
 
-  | AppTy (UnionTyCtor serial, _) -> genIncompleteUnionTyDecl ctx serial
+  | Ty (UnionTk serial, _) -> genIncompleteUnionTyDecl ctx serial
 
-  | AppTy (RecordTyCtor serial, _) -> genIncompleteRecordTyDecl ctx serial
+  | Ty (RecordTk serial, _) -> genIncompleteRecordTyDecl ctx serial
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -606,23 +612,23 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 /// A type is complete if its definition is visible.
 let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   match ty with
-  | AppTy (TupleTyCtor, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-  | AppTy (IntTyCtor flavor, _) -> CIntTy flavor, ctx
-  | AppTy (FloatTyCtor flavor, _) -> CFloatTy flavor, ctx
-  | AppTy (BoolTyCtor, _) -> CBoolTy, ctx
-  | AppTy (CharTyCtor, _) -> CCharTy, ctx
-  | AppTy (StrTyCtor, _) -> CStructTy "String", ctx
+  | Ty (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | Ty (IntTk flavor, _) -> CIntTy flavor, ctx
+  | Ty (FloatTk flavor, _) -> CFloatTy flavor, ctx
+  | Ty (BoolTk, _) -> CBoolTy, ctx
+  | Ty (CharTk, _) -> CCharTy, ctx
+  | Ty (StrTk, _) -> CStructTy "String", ctx
 
   // FIXME: Unresolved type variables are `obj` for now.
-  | MetaTy _
-  | AppTy (ObjTyCtor, _) -> CConstPtrTy CVoidTy, ctx
+  | Ty (MetaTk _, _)
+  | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
 
-  | AppTy (FunTyCtor, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
+  | Ty (FunTk, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
 
-  | AppTy (ListTyCtor, [ itemTy ]) -> genListTyDef ctx itemTy
+  | Ty (ListTk, [ itemTy ]) -> genListTyDef ctx itemTy
 
-  | AppTy (TupleTyCtor, itemTys) ->
-      // HOTFIX: Remove Undefined MetaTy. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
+  | Ty (TupleTk, itemTys) ->
+      // HOTFIX: Remove Undefined meta types. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
       let itemTys =
         itemTys
         |> List.map
@@ -640,15 +646,15 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       genTupleTyDef ctx itemTys
 
-  | AppTy (VoidTyCtor, _) -> CVoidTy, ctx
+  | Ty (VoidTk, _) -> CVoidTy, ctx
 
-  | AppTy (NativePtrTyCtor isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+  | Ty (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
 
-  | AppTy (NativeFunTyCtor, tys) -> cgNativeFunTy ctx tys
+  | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
 
-  | AppTy (NativeTypeTyCtor code, _) -> CEmbedTy code, ctx
+  | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
 
-  | AppTy (SynonymTyCtor serial, useTyArgs) ->
+  | Ty (SynonymTk serial, useTyArgs) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
@@ -658,13 +664,13 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
       | _ -> failwithf "NEVER: synonym type undefined?"
 
-  | AppTy (UnionTyCtor serial, _) ->
+  | Ty (UnionTk serial, _) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
 
       | _ -> failwithf "NEVER: union type undefined?"
 
-  | AppTy (RecordTyCtor serial, _) ->
+  | Ty (RecordTk serial, _) ->
       match ctx.Tys |> mapTryFind serial with
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
@@ -680,7 +686,7 @@ let private cBinaryOf op =
   match op with
   | MMulBinary -> CMulBinary
   | MDivBinary -> CDivBinary
-  | MModBinary -> CModBinary
+  | MModuloBinary -> CModuloBinary
   | MAddBinary -> CAddBinary
   | MSubBinary -> CSubBinary
 
@@ -699,7 +705,7 @@ let private cBinaryOf op =
   | MInt64CompareBinary
   | MUInt64CompareBinary
   | MStrAddBinary
-  | MStrCmpBinary
+  | MStrCompareBinary
   | MStrIndexBinary -> failwith "Never"
 
 let private genLit lit =
@@ -722,33 +728,33 @@ let private cgConst ctx mConst =
 /// `0`, `NULL`, or `(T) {}`
 let private genDefault ctx ty =
   match ty with
-  | AppTy (TupleTyCtor, [])
-  | AppTy (IntTyCtor _, _)
-  | AppTy (FloatTyCtor _, _)
-  | AppTy (CharTyCtor, _) -> CIntExpr "0", ctx
+  | Ty (TupleTk, [])
+  | Ty (IntTk _, _)
+  | Ty (FloatTk _, _)
+  | Ty (CharTk, _) -> CIntExpr "0", ctx
 
-  | AppTy (BoolTyCtor, _) -> CVarExpr "false", ctx
+  | Ty (BoolTk, _) -> CVarExpr "false", ctx
 
-  | MetaTy _ // FIXME: Unresolved type variables are `obj` for now.
-  | AppTy (ObjTyCtor, _)
-  | AppTy (ListTyCtor, _)
-  | AppTy (NativePtrTyCtor _, _)
-  | AppTy (NativeFunTyCtor, _) -> CVarExpr "NULL", ctx
+  | Ty (MetaTk _, _)
+  | Ty (ObjTk, _)
+  | Ty (ListTk, _)
+  | Ty (NativePtrTk _, _)
+  | Ty (NativeFunTk, _) -> CVarExpr "NULL", ctx
 
-  | AppTy (StrTyCtor, _)
-  | AppTy (FunTyCtor, _)
-  | AppTy (TupleTyCtor, _)
-  | AppTy (SynonymTyCtor _, _)
-  | AppTy (UnionTyCtor _, _)
-  | AppTy (RecordTyCtor _, _)
-  | AppTy (NativeTypeTyCtor _, _) ->
+  | Ty (StrTk, _)
+  | Ty (FunTk, _)
+  | Ty (TupleTk, _)
+  | Ty (SynonymTk _, _)
+  | Ty (UnionTk _, _)
+  | Ty (RecordTk _, _)
+  | Ty (NativeTypeTk _, _) ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
 
-  | ErrorTy _
-  | AppTy (VoidTyCtor, _)
-  | AppTy (UnresolvedTyCtor _, _)
-  | AppTy (UnresolvedVarTyCtor _, _) -> failwithf "Never %A" ty
+  | Ty (ErrorTk _, _)
+  | Ty (VoidTk, _)
+  | Ty (UnresolvedTk _, _)
+  | Ty (UnresolvedVarTk _, _) -> failwithf "Never %A" ty
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
@@ -815,7 +821,7 @@ let private genExprBin ctx op l r =
   | MUInt64CompareBinary -> genBinaryExprAsCall ctx "uint64_compare" l r
 
   | MStrAddBinary -> genBinaryExprAsCall ctx "str_add" l r
-  | MStrCmpBinary -> genBinaryExprAsCall ctx "str_cmp" l r
+  | MStrCompareBinary -> genBinaryExprAsCall ctx "str_compare" l r
   | MStrIndexBinary ->
       let l, ctx = cgExpr ctx l
       let r, ctx = cgExpr ctx r
@@ -904,10 +910,10 @@ let private cgPrintfnActionStmt ctx itself args =
                match arg with
                | MLitExpr (StrLit value, _) -> CStrRawExpr value, ctx
 
-               | _ when tyEq (mexprToTy arg) tyStr ->
+               | _ when tyEqual (mexprToTy arg) tyStr ->
                    // Insert implicit cast from str to str ptr.
                    let arg, ctx = cgExpr ctx arg
-                   CDotExpr(arg, "str"), ctx
+                   CCallExpr(CVarExpr "str_to_c_str", [ arg ]), ctx
 
                | _ -> cgExpr ctx arg)
 
@@ -998,11 +1004,14 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
   | MStrGetSlicePrim -> regular ctx (fun args -> (CCallExpr(CVarExpr "str_get_slice", args)))
 
   | MClosurePrim funSerial ->
-      regularWithTy ctx (fun args resultTy ->
-        let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
-        match args with
-        | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
-        | _ -> failwithf "NEVER: %A" itself)
+      regularWithTy
+        ctx
+        (fun args resultTy ->
+          let funExpr = CVarExpr(getUniqueFunName ctx funSerial)
+
+          match args with
+          | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
+          | _ -> failwithf "NEVER: %A" itself)
 
   | MBoxPrim ->
       match args with
@@ -1015,16 +1024,22 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       | _ -> failwithf "NEVER: %A" itself
 
   | MTuplePrim ->
-      regularWithTy ctx (fun args tupleTy ->
-        let fields = args |> List.mapi (fun i arg -> tupleField i, arg)
-        CInitExpr(fields, tupleTy)
-      )
+      regularWithTy
+        ctx
+        (fun args tupleTy ->
+          let fields =
+            args |> List.mapi (fun i arg -> tupleField i, arg)
+
+          CInitExpr(fields, tupleTy))
 
   | MVariantPrim variantSerial ->
-      regularWithTy ctx (fun args unionTy ->
+      regularWithTy
+        ctx
+        (fun args unionTy ->
           match args with
           | [ payload ] ->
               let variantName = getUniqueVariantName ctx variantSerial
+
               let fields =
                 [ "discriminant", CVarExpr variantName
                   variantName, payload ]
@@ -1034,24 +1049,31 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
           | _ -> failwithf "NEVER: %A" itself)
 
   | MRecordPrim ->
-      regularWithTy ctx (fun args recordTy ->
-        let fields = args |> List.mapi (fun i arg -> tupleField i, arg)
-        CInitExpr(fields, recordTy)
-      )
+      regularWithTy
+        ctx
+        (fun args recordTy ->
+          let fields =
+            args |> List.mapi (fun i arg -> tupleField i, arg)
+
+          CInitExpr(fields, recordTy))
 
   | MCallProcPrim ->
-      regular ctx (fun args ->
+      regular
+        ctx
+        (fun args ->
           match args with
           | callee :: args -> CCallExpr(callee, args)
           | [] -> failwithf "NEVER: %A" itself)
 
   | MCallClosurePrim ->
-      regular ctx (fun args ->
+      regular
+        ctx
+        (fun args ->
           match args with
           | callee :: args ->
-            let funPtr = CDotExpr(callee, "fun")
-            let envArg = CDotExpr(callee, "env")
-            CCallExpr(funPtr, envArg :: args)
+              let funPtr = CDotExpr(callee, "fun")
+              let envArg = CDotExpr(callee, "env")
+              CCallExpr(funPtr, envArg :: args)
 
           | [] -> failwithf "NEVER: %A" itself)
 
@@ -1072,8 +1094,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
           | _ -> failwith "NEVER")
 
 let private cgCallPrimExpr ctx itself serial prim args =
-  let fail msg = failwithf "%s: %A" msg itself
-  cgPrimStmt ctx fail prim args serial
+  cgPrimStmt ctx itself prim args serial
 
 let private cgBoxStmt ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
@@ -1217,7 +1238,10 @@ let private cgDecls (ctx: CirCtx) decls =
 
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
       let funName, args =
-        if isMainFun ctx callee then "main", [] else getUniqueFunName ctx callee, args
+        if isMainFun ctx callee then
+          "milone_main", []
+        else
+          getUniqueFunName ctx callee, args
 
       let rec go acc ctx args =
         match args with

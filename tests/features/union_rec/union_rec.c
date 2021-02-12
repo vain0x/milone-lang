@@ -20,7 +20,7 @@ struct LazyList_ fun_(void const* env_, int arg_);
 
 struct LazyList_ makeTail_(int n_2, int prev_, int arg_5);
 
-int main();
+int milone_main();
 
 enum LazyList_Discriminant {
     Nil_,
@@ -117,7 +117,7 @@ struct LazyList_ makeTail_(int n_2, int prev_, int arg_5) {
     return call_2;
 }
 
-int main() {
+int milone_main() {
     struct LazyList_ call_3 = makeTail_(1, 1, 0);
     struct LazyList_ fact_ = call_3;
     int call_4 = lazyListPrint_(5, fact_);

@@ -22,7 +22,10 @@ let isEmpty (str: string): bool = str.Length = 0
 ///
 /// O(1) time.
 let tryItem (index: int) (str: string): char option =
-  if 0 <= index && index < str.Length then Some str.[index] else None
+  if 0 <= index && index < str.Length then
+    Some str.[index]
+  else
+    None
 
 // -----------------------------------------------
 // Search
@@ -69,9 +72,12 @@ let findIndex (substr: string) (s: string): int option =
 /// O(NM) time, N: length of substring, M: length of total string.
 let findLastIndex (substr: string) (s: string): int option =
   let rec stringFindLastIndexLoop r =
-    if r <= 0 then None
-    else if occursAt (r - 1) substr s then Some(r - 1)
-    else stringFindLastIndexLoop (r - 1)
+    if r <= 0 then
+      None
+    else if occursAt (r - 1) substr s then
+      Some(r - 1)
+    else
+      stringFindLastIndexLoop (r - 1)
 
   // Upper bound of the index that could satisfy the predicate.
   let r = s.Length - substr.Length + 1
@@ -124,7 +130,11 @@ let skip (prefixLen: int) (s: string): string =
 let slice (start: int) (endIndex: int) (s: string): string =
   let start = start |> intClamp 0 s.Length
   let endIndex = endIndex |> intClamp start s.Length
-  if start < endIndex then s.[start..endIndex - 1] else ""
+
+  if start < endIndex then
+    s.[start..endIndex - 1]
+  else
+    ""
 
 // -----------------------------------------------
 // Trim
@@ -134,13 +144,19 @@ let slice (start: int) (endIndex: int) (s: string): string =
 let trimIf (isTrimmed: char -> bool) (s: string) =
   let l =
     let rec stringTrimIfLoop1 (l: int) =
-      if l < s.Length && isTrimmed s.[l] then stringTrimIfLoop1 (l + 1) else l
+      if l < s.Length && isTrimmed s.[l] then
+        stringTrimIfLoop1 (l + 1)
+      else
+        l
 
     stringTrimIfLoop1 0
 
   let r =
     let rec stringTrimIfLoop2 (r: int) =
-      if r > l && isTrimmed s.[r - 1] then stringTrimIfLoop2 (r - 1) else r
+      if r > l && isTrimmed s.[r - 1] then
+        stringTrimIfLoop2 (r - 1)
+      else
+        r
 
     stringTrimIfLoop2 s.Length
 
@@ -150,17 +166,26 @@ let trimIf (isTrimmed: char -> bool) (s: string) =
 let trimStartIf (isTrimmed: char -> bool) (s: string) =
   let l =
     let rec stringTrimStartIfLoop (l: int) =
-      if l < s.Length && isTrimmed s.[l] then stringTrimStartIfLoop (l + 1) else l
+      if l < s.Length && isTrimmed s.[l] then
+        stringTrimStartIfLoop (l + 1)
+      else
+        l
 
     stringTrimStartIfLoop 0
 
-  if l < s.Length then s.[l..s.Length - 1] else ""
+  if l < s.Length then
+    s.[l..s.Length - 1]
+  else
+    ""
 
 /// Removes trailing chars that satisfy predicate.
 let trimEndIf (isTrimmed: char -> bool) (s: string) =
   let r =
     let rec stringTrimEndIfLoop (r: int) =
-      if r > 0 && isTrimmed s.[r - 1] then stringTrimEndIfLoop (r - 1) else r
+      if r > 0 && isTrimmed s.[r - 1] then
+        stringTrimEndIfLoop (r - 1)
+      else
+        r
 
     stringTrimEndIfLoop s.Length
 
@@ -188,9 +213,10 @@ let replace (pattern: string) (target: string) (s: string) =
     | None -> (skip i s) :: acc
     | Some n -> replaceLoop ((s |> skip i |> truncate n) :: acc) (i + n + pattern.Length)
 
-  if pattern.Length = 0
-  then s
-  else replaceLoop [] 0 |> List.rev |> concat target
+  if pattern.Length = 0 then
+    s
+  else
+    replaceLoop [] 0 |> List.rev |> concat target
 
 // -----------------------------------------------
 // Split
@@ -234,7 +260,10 @@ let scanLine (s: string): string * string option * string =
     let sep = s.[m..r - 1]
 
     let rest =
-      if r < s.Length then s.[r..s.Length - 1] else ""
+      if r < s.Length then
+        s.[r..s.Length - 1]
+      else
+        ""
 
     lineContents, Some sep, rest
 

@@ -22,7 +22,7 @@ struct IntIntIntFun2;
 
 struct IntIntIntIntIntFun4;
 
-int main();
+int milone_main();
 
 struct IntIntFun1 {
     int(*fun)(void const*, int);
@@ -80,7 +80,7 @@ struct IntIntIntIntIntFun4 {
     void const* env;
 };
 
-int main() {
+int milone_main() {
     struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = 3};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;

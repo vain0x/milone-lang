@@ -8,7 +8,7 @@ struct IntList;
 
 struct StringList;
 
-int main();
+int milone_main();
 
 int f_(int x_) {
     return x_;
@@ -28,7 +28,7 @@ struct StringList {
     struct StringList const* tail;
 };
 
-int main() {
+int milone_main() {
     int call_ = f_(1);
     int call_1 = g_(1);
     int zero_ = (call_ - call_1);

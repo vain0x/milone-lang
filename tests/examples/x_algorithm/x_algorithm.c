@@ -10,7 +10,7 @@ bool go_(int x_3, int k_);
 
 bool isPrime_(int x_3);
 
-int main();
+int milone_main();
 
 int minus_(int x_) {
     return (0 - x_);
@@ -112,7 +112,7 @@ if_next_15:;
     return if_4;
 }
 
-int main() {
+int milone_main() {
     int call_3 = abs_(0);
     milone_assert((call_3 == 0), 13, 2);
     int call_4 = abs_(1);

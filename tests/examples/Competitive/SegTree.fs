@@ -460,19 +460,19 @@ let segTreeTest () =
       |> segTreePush 1
       |> segTreePush 2
 
-    assert (v |> segTreeToList |> listEq intEq [ 1; 2 ])
+    assert (v |> segTreeToList |> listEqual intEqual [ 1; 2 ])
 
     let v = v |> segTreePush 3
-    assert (v |> segTreeToList |> listEq intEq [ 1; 2; 3 ])
+    assert (v |> segTreeToList |> listEqual intEqual [ 1; 2; 3 ])
 
     let v = v |> segTreePop
-    assert (v |> segTreeToList |> listEq intEq [ 1; 2 ])
+    assert (v |> segTreeToList |> listEqual intEqual [ 1; 2 ])
 
     let v = v |> segTreePop
-    assert (v |> segTreeToList |> listEq intEq [ 1 ])
+    assert (v |> segTreeToList |> listEqual intEqual [ 1 ])
 
     let v = v |> segTreePop
-    assert (v |> segTreeToList |> listEq intEq [])
+    assert (v |> segTreeToList |> listEqual intEqual [])
 
   testPushPop ()
 
@@ -481,10 +481,10 @@ let segTreeTest () =
       segTreeOfList segItemTypeInt [ 1; 2; 3 ]
       |> segTreeSet 1 22
 
-    assert (v |> segTreeToList |> listEq intEq [ 1; 22; 3 ])
+    assert (v |> segTreeToList |> listEqual intEqual [ 1; 22; 3 ])
 
     let v = v |> segTreeSet 0 11 |> segTreeSet 2 33
-    assert (v |> segTreeToList |> listEq intEq [ 11; 22; 33 ])
+    assert (v |> segTreeToList |> listEqual intEqual [ 11; 22; 33 ])
 
   testSet ()
 
@@ -541,6 +541,6 @@ let segTreeTest () =
       |> segTreePush "a"
       |> segTreePush "b"
 
-    assert (v |> segTreeToList |> listEq strEq [ "a"; "b" ])
+    assert (v |> segTreeToList |> listEqual strEqual [ "a"; "b" ])
 
   testPolymorphic ()

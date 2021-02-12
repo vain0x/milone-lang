@@ -20,7 +20,7 @@ struct StringTuple1;
 
 int fun_2(void const* env_2, int arg_5, struct String arg_6);
 
-int main();
+int milone_main();
 
 struct IntStringUnitFun2 {
     int(*fun)(void const*, int, struct String);
@@ -54,7 +54,7 @@ struct StringUnitFun1 bindInt_(struct IntStringUnitFun2 f_, int x_) {
 }
 
 int printInt_(int value_, struct String label_) {
-    printf("%d: %s\n", value_, label_.str);
+    printf("%d: %s\n", value_, str_to_c_str(label_));
     return 0;
 }
 
@@ -72,7 +72,7 @@ tailrec_1:;
         goto else_4;
     }
 then_3:;
-    printf("%s\n", f_1.str);
+    printf("%s\n", str_to_c_str(f_1));
     if_ = 0;
     goto if_next_2;
 else_4:;
@@ -99,7 +99,7 @@ int fun_2(void const* env_2, int arg_5, struct String arg_6) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     void const* box_1 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_1))) = 0;
     struct IntStringUnitFun2 fun_4 = (struct IntStringUnitFun2){.fun = fun_1, .env = box_1};

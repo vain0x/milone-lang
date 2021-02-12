@@ -16,7 +16,7 @@ int goo_2(int x_1);
 
 struct String goo_1(struct String x_1);
 
-int main();
+int milone_main();
 
 int aux_2(int x_, int arg_) {
     return x_;
@@ -56,14 +56,14 @@ struct String goo_1(struct String x_1) {
     return call_5;
 }
 
-int main() {
+int milone_main() {
     int call_6 = id_2(1);
     milone_assert((call_6 == 1), 11, 2);
     struct String call_7 = id_1((struct String){.str = "a", .len = 1});
-    milone_assert((str_cmp(call_7, (struct String){.str = "a", .len = 1}) == 0), 12, 2);
+    milone_assert((str_compare(call_7, (struct String){.str = "a", .len = 1}) == 0), 12, 2);
     int call_8 = goo_2(1);
     milone_assert((call_8 == 1), 20, 2);
     struct String call_9 = goo_1((struct String){.str = "a", .len = 1});
-    milone_assert((str_cmp(call_9, (struct String){.str = "a", .len = 1}) == 0), 21, 2);
+    milone_assert((str_compare(call_9, (struct String){.str = "a", .len = 1}) == 0), 21, 2);
     return 0;
 }

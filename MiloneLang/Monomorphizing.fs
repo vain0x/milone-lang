@@ -54,7 +54,8 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Hir
 
-let private funSerialTyPairCmp l r = pairCmp funSerialCmp tyCmp l r
+let private funSerialTyPairCompare l r =
+  pairCompare funSerialCompare tyCompare l r
 
 // -----------------------------------------------
 // Context
@@ -94,8 +95,8 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
     Funs = tyCtx.Funs
     Tys = tyCtx.Tys
 
-    GenericFunUseSiteTys = mapEmpty funSerialCmp
-    GenericFunMonoSerials = mapEmpty funSerialTyPairCmp
+    GenericFunUseSiteTys = mapEmpty funSerialCompare
+    GenericFunMonoSerials = mapEmpty funSerialTyPairCompare
     Mode = MonoMode.Monify
     SomethingHappened = true
     InfiniteLoopDetector = 0 }
@@ -132,9 +133,10 @@ let private findGenericFun (ctx: MonoCtx) funSerial =
   let funDef = ctx.Funs |> mapFind funSerial
   let (TyScheme (tyVars, funTy)) = funDef.Ty
 
-  if List.isEmpty tyVars
-  then None
-  else Some(funDef.Name, funDef.Arity, funTy, funDef.Loc)
+  if List.isEmpty tyVars then
+    None
+  else
+    Some(funDef.Name, funDef.Arity, funTy, funDef.Loc)
 
 let private findFunName funSerial (ctx: MonoCtx) = (ctx.Funs |> mapFind funSerial).Name
 

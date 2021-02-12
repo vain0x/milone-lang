@@ -33,6 +33,9 @@ let replicate (count: int) (s: string): string =
       let t = stringReplicateAux (n / 2)
       if n % 2 = 0 then t + t else t + t + s
 
-  if count = 0 then "" else stringReplicateAux count
+  if count = 0 then
+    ""
+  else
+    stringReplicateAux count
 
 let length (s: string): int = s.Length

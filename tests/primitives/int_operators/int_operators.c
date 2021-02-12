@@ -10,7 +10,7 @@ int compareTest_(int n2_1, int n3_);
 
 int toIntTest_(int arg_1);
 
-int main();
+int milone_main();
 
 int literalTest_(int arg_) {
     milone_assert(((-((-2147483648 + 1))) == 2147483647), 4, 2);
@@ -71,7 +71,7 @@ int toIntTest_(int arg_1) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_2 = literalTest_(0);
     int call_3 = arithmeticOperatorsTest_(2, 3, 39);
     int call_4 = bitOperatorsTest_(1);

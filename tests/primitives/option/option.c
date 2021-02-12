@@ -12,7 +12,7 @@ struct UnitList;
 
 int basicMatchCase_(int arg_2);
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -50,7 +50,7 @@ int basicNoneCase_(int arg_1) {
     struct StringList const* none_ = NULL;
     int match_1;
     if ((!(none_))) goto next_6;
-    if ((str_cmp(none_->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
+    if ((str_compare(none_->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
     milone_assert(false, 17, 16);
     match_1 = 0;
     goto end_match_5;
@@ -92,7 +92,7 @@ if_next_9:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = basicSomeCase_(0);
     int call_1 = basicNoneCase_(0);
     int call_2 = basicMatchCase_(0);

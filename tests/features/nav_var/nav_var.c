@@ -8,7 +8,7 @@ enum Answer_Discriminant;
 
 struct Answer_;
 
-int main();
+int milone_main();
 
 int getAnswer_(int arg_) {
     return 42;
@@ -25,7 +25,7 @@ struct Answer_ {
     };
 };
 
-int main() {
+int milone_main() {
     answer_ = 42;
     milone_assert((answer_ == 42), 8, 2);
     int call_ = getAnswer_(0);

@@ -9,7 +9,14 @@ open MiloneLsp.Util
 open MiloneLsp.LspCacheLayer
 
 let private miloneHome =
-  Environment.GetEnvironmentVariable("MILONE_HOME")
+  let miloneHome =
+    Environment.GetEnvironmentVariable("MILONE_HOME")
+
+  if miloneHome <> "" then
+    miloneHome
+  else
+    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+    + "/.milone"
 
 let private uriOfFilePath (filePath: string) =
   StringBuilder()
@@ -29,9 +36,10 @@ let private uriToFilePath (uri: string) =
 
     // HOTFIX: On Windows, path sometimes starts with an extra / and then it's invalid as file path; e.g. `/c:/Users/john/Foo/Foo.milone`.
     let path =
-      if path.Contains(":") && path.StartsWith("/")
-      then path.TrimStart('/')
-      else path
+      if path.Contains(":") && path.StartsWith("/") then
+        path.TrimStart('/')
+      else
+        path
 
     Some path
   with _ -> None
@@ -103,7 +111,8 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
           [||]
 
       for subdir in subdirs do
-        if subdir |> dirIsExcluded |> not then stack.Push((depth + 1, subdir))
+        if subdir |> dirIsExcluded |> not then
+          stack.Push((depth + 1, subdir))
 
   List.ofSeq projects
 
@@ -146,9 +155,10 @@ let newLangService (project: ProjectInfo): LangServiceState =
   let fixExt filePath =
     let fs = Path.ChangeExtension(filePath, ".fs")
 
-    if File.Exists(filePath) || not (File.Exists(fs))
-    then filePath
-    else fs
+    if File.Exists(filePath) || not (File.Exists(fs)) then
+      filePath
+    else
+      fs
 
   let findDocId projectName moduleName =
     match projectName with
@@ -269,7 +279,12 @@ let private doValidateWorkspace projects =
   diagnosticKeys
   |> ResizeArray.assign (
     diagnostics
-    |> List.choose (fun (docId, errors) -> if errors |> List.isEmpty |> not then Some docId else None)
+    |> List.choose
+         (fun (docId, errors) ->
+           if errors |> List.isEmpty |> not then
+             Some docId
+           else
+             None)
   )
 
   diagnosticsCache

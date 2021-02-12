@@ -1,8 +1,8 @@
 #include "milone.h"
 
-int main();
+int milone_main();
 
-int main() {
+int milone_main() {
     int match_;
     match_ = 0;
     goto end_match_1;
@@ -90,12 +90,12 @@ clause_17:;
     goto switch_next_14;
 switch_next_14:;
     int match_2;
-    if ((str_cmp((struct String){.str = "a", .len = 1}, (struct String){.str = "an", .len = 2}) != 0)) goto next_19;
+    if ((str_compare((struct String){.str = "a", .len = 1}, (struct String){.str = "an", .len = 2}) != 0)) goto next_19;
     milone_assert(false, 28, 12);
     match_2 = 0;
     goto end_match_18;
 next_19:;
-    if ((str_cmp((struct String){.str = "a", .len = 1}, (struct String){.str = "a", .len = 1}) != 0)) goto next_20;
+    if ((str_compare((struct String){.str = "a", .len = 1}, (struct String){.str = "a", .len = 1}) != 0)) goto next_20;
     match_2 = 0;
     goto end_match_18;
 next_20:;

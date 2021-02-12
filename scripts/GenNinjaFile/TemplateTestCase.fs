@@ -12,7 +12,9 @@ build {{ C_FILE }}: $
 
 build {{ EXE_FILE }}: $
   build_test $
-    {{ C_FILE }}
+    {{ C_FILE }} $
+    | runtime/milone.h $
+      runtime/milone.c
   out_file = {{ OUT_FILE }}
 
 build {{ OUT_FILE }}: $
@@ -25,6 +27,10 @@ build {{ DIFF_FILE }}: $
     {{ OUT_FILE }} $
     tests/{{ CATEGORY }}/{{ PROJECT }}/{{ PROJECT }}.out
   test = {{ PROJECT }}
+
+build {{ PROJECT }}: $
+  verify_test_output {{ DIFF_FILE }}
+  pool = console
 """
 
 let renderTestCaseBuildStatements category projectName =

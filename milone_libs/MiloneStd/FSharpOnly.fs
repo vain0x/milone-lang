@@ -66,3 +66,12 @@ let __intOfStr (s: string): int option =
   match Int32.TryParse(s) with
   | true, value -> Some value
   | false, _ -> None
+
+// -----------------------------------------------
+// StrEnv
+// -----------------------------------------------
+
+let __argCount (): int = Environment.GetCommandLineArgs().Length
+
+let __argGet (index: int): string =
+  Environment.GetCommandLineArgs().[index]

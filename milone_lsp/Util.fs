@@ -116,7 +116,8 @@ module MutMultimap =
   let empty<'K, 'T when 'K: equality> () = MutMultimap<'K, 'T>()
 
   let insertKey key (multimap: MutMultimap<_, _>) =
-    if multimap.ContainsKey(key) |> not then multimap.Add(key, ResizeArray())
+    if multimap.ContainsKey(key) |> not then
+      multimap.Add(key, ResizeArray())
 
   let insert key value (multimap: MutMultimap<_, _>) =
     match multimap.TryGetValue(key) with
@@ -131,9 +132,10 @@ module MutMultimap =
 module File =
   let tryReadFile (filePath: string) =
     try
-      if File.Exists(filePath)
-      then System.IO.File.ReadAllText(filePath) |> Some
-      else None
+      if File.Exists(filePath) then
+        System.IO.File.ReadAllText(filePath) |> Some
+      else
+        None
     with _ -> None
 
 // -----------------------------------------------

@@ -4,6 +4,10 @@ set -eu
 
 MILONE_LANG_DIR="$(dirname $PWD)/MiloneLang"
 
+# Find the line number.
+LINE=$(cat ../MiloneLang/MiloneLang.milone | grep -n 'cli host' | cut -d ':' -f 1)
+LINE=$(( $LINE - 1 ))
+
 {
 ./req <<END
 {"method": "initialize", "id": 1, "params": {
@@ -17,7 +21,7 @@ END
         "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
     },
     "position": {
-        "line": 54,
+        "line": $LINE,
         "character": 2
     }
 }}
@@ -40,7 +44,7 @@ END
         "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
     },
     "position": {
-        "line": 54,
+        "line": $LINE,
         "character": 3
     }
 }}
@@ -52,7 +56,7 @@ END
         "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone"
     },
     "position": {
-        "line": 54,
+        "line": $LINE,
         "character": 2
     }
 }}

@@ -6,7 +6,7 @@ int writeLine_(struct String msg_);
 
 int getWriteCount_(int arg_);
 
-int main();
+int milone_main();
 
 
       // Embedded by __nativeDecl.
@@ -30,7 +30,7 @@ int getWriteCount_(int arg_) {
     return s_write_count;
 }
 
-int main() {
+int milone_main() {
     int call_ = writeLine_((struct String){.str = "HEY!", .len = 4});
     int call_1 = writeLine_((struct String){.str = "YO!", .len = 3});
     int call_2 = getWriteCount_(0);

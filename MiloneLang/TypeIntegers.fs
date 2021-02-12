@@ -44,7 +44,7 @@ let intFlavorToOrdinary flavor =
   | Signed -> n
   | Unsigned -> n * 2
 
-let intFlavorEq l r =
+let intFlavorEqual l r =
   intFlavorToOrdinary l = intFlavorToOrdinary r
 
 let fsharpIntegerTyName flavor =

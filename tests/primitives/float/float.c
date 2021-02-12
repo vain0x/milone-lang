@@ -16,7 +16,7 @@ bool fun_1(double x_2);
 
 bool fun_3(void const* env_1, double arg_1);
 
-int main();
+int milone_main();
 
 struct F64BoolFun1 {
     bool(*fun)(void const*, double);
@@ -88,7 +88,7 @@ bool fun_3(void const* env_1, double arg_1) {
     return call_2;
 }
 
-int main() {
+int milone_main() {
     struct F64List const* list_7 = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_7))) = (struct F64List){.head = 00.00e-00, .tail = NULL};
     struct F64List const* list_6 = milone_mem_alloc(1, sizeof(struct F64List));
@@ -154,7 +154,7 @@ int main() {
     milone_assert((((int)3.14) == 3), 60, 2);
     milone_assert((((double)3) == 3.0), 61, 2);
     struct String call_5 = str_of_double(3.14);
-    milone_assert((str_cmp(call_5, (struct String){.str = "3.140000", .len = 8}) == 0), 65, 2);
+    milone_assert((str_compare(call_5, (struct String){.str = "3.140000", .len = 8}) == 0), 65, 2);
     double call_6 = str_to_double((struct String){.str = "3.14", .len = 4});
     milone_assert((call_6 == 3.14), 68, 2);
     printf("Assume PI is %f.\n", 3.14);

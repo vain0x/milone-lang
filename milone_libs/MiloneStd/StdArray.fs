@@ -64,7 +64,10 @@ let isEmpty (array: Array<_>): bool = length array = 0
 ///
 /// O(1) time.
 let tryItem (i: int) (array: Array<_>): _ option =
-  if uint i < uint (length array) then Some(__constArrayGet i array) else None
+  if uint i < uint (length array) then
+    Some(__constArrayGet i array)
+  else
+    None
 
 // -----------------------------------------------
 // Search
@@ -91,7 +94,10 @@ let slice (start: int) (endIndex: int) (array: Array<_>): Array<_> =
   let start = if start >= 0 then start else 0
   let endIndex = if endIndex < len then endIndex else len
 
-  if start < endIndex then __constArraySlice start endIndex array else empty ()
+  if start < endIndex then
+    __constArraySlice start endIndex array
+  else
+    empty ()
 
 let skip (skipLen: int) (array: Array<_>): Array<_> = slice skipLen (length array) array
 
@@ -142,9 +148,10 @@ let choose (f: _ -> _ option) (src: Array<_>): Array<_> =
 
   let di = chooseLoop 0 0
 
-  if di = 0
-  then empty ()
-  else __constArrayOfMut (__mutArraySlice 0 di dest)
+  if di = 0 then
+    empty ()
+  else
+    __constArrayOfMut (__mutArraySlice 0 di dest)
 
 let filter (pred: _ -> bool) (src: Array<_>): Array<_> =
   choose (fun item -> if pred item then Some item else None) src
@@ -153,9 +160,10 @@ let fold folder state (array: Array<_>) =
   let len = length array
 
   let rec arrayFoldLoop state i =
-    if i = len
-    then state
-    else arrayFoldLoop (folder state (__constArrayGet i array)) (i + 1)
+    if i = len then
+      state
+    else
+      arrayFoldLoop (folder state (__constArrayGet i array)) (i + 1)
 
   arrayFoldLoop state 0
 
@@ -186,8 +194,9 @@ let ofList (xs: _ list): Array<_> =
 
 let toList (array: Array<_>): _ list =
   let rec toListLoop acc i =
-    if i = 0
-    then acc
-    else toListLoop (__constArrayGet (i - 1) array :: acc) (i - 1)
+    if i = 0 then
+      acc
+    else
+      toListLoop (__constArrayGet (i - 1) array :: acc) (i - 1)
 
   toListLoop [] (length array)

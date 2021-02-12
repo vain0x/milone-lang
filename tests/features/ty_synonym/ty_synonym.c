@@ -12,7 +12,7 @@ struct String proj_1(bool cond_, struct String body_, struct String alt_);
 
 int polymorphicFunCase_(int arg_1);
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -74,11 +74,11 @@ int polymorphicFunCase_(int arg_1) {
     int call_ = proj_2(true, 1, 0);
     milone_assert((call_ == 1), 21, 2);
     struct String call_1 = proj_1(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
-    milone_assert((str_cmp(call_1, (struct String){.str = "F", .len = 1}) == 0), 22, 2);
+    milone_assert((str_compare(call_1, (struct String){.str = "F", .len = 1}) == 0), 22, 2);
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_2 = baseCase_(0);
     int call_3 = yodaCase_(0);
     int call_4 = polymorphicFunCase_(0);

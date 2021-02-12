@@ -12,7 +12,7 @@ int fclose(FILE*);
 
 int fclose_(FILE* fp_);
 
-int main();
+int milone_main();
 
 char const* strAsPtr_(struct String s_) {
     char const* str_as_ptr_result_ = str_as_ptr(s_);
@@ -31,7 +31,7 @@ int fclose_(FILE* fp_) {
     return fclose_result_;
 }
 
-int main() {
+int milone_main() {
     FILE* call_2 = fopen_((struct String){.str = "LICENSE", .len = 7}, (struct String){.str = "r", .len = 1});
     FILE* fp_1 = call_2;
     milone_assert((((uintptr_t)fp_1) != ((uintptr_t)0)), 15, 2);

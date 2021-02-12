@@ -45,7 +45,13 @@ let isAlphabetic (c: char): bool = isUpper c || isLower c
 let isAlphanumeric (c: char): bool = isDigit c || isAlphabetic c
 
 let toUpper (c: char): char =
-  if isLower c then subtract c 'a' + 'A' else c
+  if isLower c then
+    subtract c 'a' + 'A'
+  else
+    c
 
 let toLower (c: char): char =
-  if isUpper c then subtract c 'A' + 'a' else c
+  if isUpper c then
+    subtract c 'A' + 'a'
+  else
+    c

@@ -12,7 +12,7 @@ int testMatchArmsMakeScope_(int arg_2);
 
 int testNestedMatchesParseCorrectly_(int arg_3);
 
-int main();
+int milone_main();
 
 int testTrivialCase_(int arg_) {
     int match_;
@@ -117,7 +117,7 @@ end_match_14:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = testTrivialCase_(0);
     int call_1 = testListMatching_(0);
     int call_2 = testMatchArmsMakeScope_(0);

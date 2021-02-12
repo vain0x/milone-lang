@@ -19,10 +19,6 @@ open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
 open MiloneLang.TailRecOptimizing
 open MiloneLang.Monomorphizing
-open MiloneLang.Kir
-open MiloneLang.KirGen
-open MiloneLang.KirPropagate
-open MiloneLang.KirDump
 open MiloneLang.MirGen
 open MiloneLang.Cir
 open MiloneLang.CirGen
@@ -45,6 +41,15 @@ EXAMPLE
     milone compile ./MiloneLang
 
 SUBCOMMANDS
+    milone check <PROJECT-DIR>
+        Checks a milone-lang project.
+
+        Performs syntax validation and type checking
+        but skips code generation.
+
+        If error, exits with non-zero code
+        after writing errors to standard output.
+
     milone compile <PROJECT-DIR>
         Compiles a milone-lang project to C.
 
@@ -86,6 +91,9 @@ type CliHost =
     /// Command line args.
     Args: string list
 
+    /// Path to $HOME.
+    Home: string
+
     /// Path to milone home (installation directory).
     MiloneHome: string
 
@@ -110,9 +118,12 @@ let private pathStrTrimEndPathSep (s: string) = S.trimEndIf charIsPathSep s
 /// Gets the final component splitting by path separators.
 let private pathStrToFileName (s: string) =
   let rec go i =
-    if i = 0 then s
-    else if charIsPathSep s.[i - 1] then s |> S.slice i s.Length
-    else go (i - 1)
+    if i = 0 then
+      s
+    else if charIsPathSep s.[i - 1] then
+      s |> S.slice i s.Length
+    else
+      go (i - 1)
 
   go s.Length
 
@@ -123,13 +134,9 @@ let private pathStrToStem (s: string) =
   | ".." -> s
 
   | s ->
-      // wants findLastIndex
-      let rec go i =
-        if i = 0 then s
-        else if s.[i - 1] = '.' then s |> S.slice 0 (i - 1)
-        else go (i - 1)
-
-      go s.Length
+      match s |> S.findLastIndex "." with
+      | Some i -> s |> S.slice 0 (i - 1)
+      | None -> s
 
 let private pathIsRelative (s: string) =
   (s |> S.startsWith "./")
@@ -196,7 +203,7 @@ let private parseProjectSchema tokenizeHost contents =
 
   if errors |> List.isEmpty |> not then
     errors
-    |> listSort (fun (_, l) (_, r) -> posCmp l r)
+    |> listSort (fun (_, l) (_, r) -> posCompare l r)
     |> List.iter (fun (msg, loc) -> printfn "ERROR %s %s" (posToString loc) msg)
 
     failwith "Syntax error in project file."
@@ -209,7 +216,7 @@ let private parseProjectSchema tokenizeHost contents =
 
 /// Generates decls for each MiloneCore module
 /// whose name appears in the token stream.
-let private resolveMiloneCoreDeps tokens ast =
+let resolveMiloneCoreDeps tokens ast =
   let knownNames = [ "List"; "Option"; "String" ]
 
   let isKnownName moduleName =
@@ -270,9 +277,16 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
+  let miloneHome =
+    if host.MiloneHome <> "" then
+      host.MiloneHome
+    else
+      host.Home + "/.milone"
+
   let projects =
     mapEmpty compare
-    |> mapAdd "MiloneCore" (host.MiloneHome + "/milone_libs/MiloneCore")
+    |> mapAdd "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
+    |> mapAdd "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
     |> mapAdd projectName projectDir
 
   let readModuleFile (_: string) (projectDir: string) (moduleName: string) =
@@ -335,11 +349,14 @@ let private compileCtxReadProjectFile (ctx: CompileCtx) =
             refs
             |> List.fold
                  (fun projects (projectName, projectDir) ->
-                   if projects |> mapContainsKey projectName
-                   then failwithf "Project name is duplicated: '%s'" projectName
+                   if projects |> mapContainsKey projectName then
+                     failwithf "Project name is duplicated: '%s'" projectName
 
                    let projectDir =
-                     if projectDir |> pathIsRelative then ctx.ProjectDir + "/" + projectDir else projectDir
+                     if projectDir |> pathIsRelative then
+                       ctx.ProjectDir + "/" + projectDir
+                     else
+                       projectDir
 
                    projects |> mapAdd projectName projectDir)
                  ctx.Projects
@@ -357,8 +374,8 @@ let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
            let projectDir = projectDir |> pathStrTrimEndPathSep
            let projectName = projectDir |> pathStrToStem
 
-           if projects |> mapContainsKey projectName
-           then failwithf "Project name is duplicated: '%s'" projectName
+           if projects |> mapContainsKey projectName then
+             failwithf "Project name is duplicated: '%s'" projectName
 
            projects |> mapAdd projectName projectDir)
          ctx.Projects
@@ -405,7 +422,7 @@ let private syntaxErrorToString syntax =
   let _, _, errors = syntax
 
   errors
-  |> listSort (fun (_, l) (_, r) -> locCmp l r)
+  |> listSort (fun (_, l) (_, r) -> locCompare l r)
   |> List.map (fun (msg, loc) -> "#error " + locToString loc + " " + msg + "\n")
   |> strConcat
 
@@ -413,7 +430,7 @@ let private tyCtxHasError (tyCtx: TyCtx) = tyCtx.Logs |> List.isEmpty |> not
 
 let private nameResLogsToString logs =
   logs
-  |> listSort (fun (_, l) (_, r) -> locCmp l r)
+  |> listSort (fun (_, l) (_, r) -> locCompare l r)
   |> List.map
        (fun (log, loc) ->
          "#error "
@@ -433,7 +450,7 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
     tyDisplay getTyName ty
 
   logs
-  |> listSort (fun (_, l) (_, r) -> locCmp l r)
+  |> listSort (fun (_, l) (_, r) -> locCompare l r)
   |> List.map
        (fun (log, loc) ->
          "#error "
@@ -508,9 +525,13 @@ let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAn
     else
       writeLog host v "ArityCheck"
       let tyCtx = arityCheck (expr, tyCtx)
-      if tyCtx.Logs |> List.isEmpty |> not then SemaAnalysisTypingError tyCtx else SemaAnalysisOk(expr, tyCtx)
 
-/// Transforms HIR. The result can be converted to KIR or MIR.
+      if tyCtx.Logs |> List.isEmpty |> not then
+        SemaAnalysisTypingError tyCtx
+      else
+        SemaAnalysisOk(expr, tyCtx)
+
+/// Transforms HIR. The result can be converted to MIR.
 let transformHir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "MainHoist"
   let expr, tyCtx = hoistMain (expr, tyCtx)
@@ -554,39 +575,19 @@ let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
     writeLog host v "Finish"
     ok, output
 
-/// EXPERIMENTAL.
-let dumpHirAsKir (host: CliHost) v (expr, tyCtx) =
-  writeLog host v "KirGen"
-  let kRoot, kirGenCtx = kirGen (expr, tyCtx)
+let check (ctx: CompileCtx): bool * string =
+  let host = ctx.Host
+  let v = ctx.Verbosity
 
-  writeLog host v "KirPropagate"
-  let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
+  let syntax = syntacticallyAnalyze ctx
 
-  writeLog host v "KirDump"
-  let result = kirDump "" "" (kRoot, kirGenCtx)
-
-  writeLog host v "Finish"
-  true, result
-
-/// EXPERIMENTAL.
-let codeGenHirViaKir (host: CliHost) v (expr, tyCtx) =
-  writeLog host v "KirGen"
-  let kRoot, kirGenCtx = kirGen (expr, tyCtx)
-
-  writeLog host v "KirPropagate"
-  let kRoot, kirGenCtx = kirPropagate (kRoot, kirGenCtx)
-
-  failwith "compile with KIR is suspended"
-
-// writeLog host v "KirToMir"
-// let stmts, mirCtx = kirToMir (kRoot, kirGenCtx)
-
-// writeLog host v "Cir generation"
-// let cir, success = gen (stmts, mirCtx)
-// let cOutput = cirDump cir
-
-// writeLog host v "Finish"
-// cOutput, success
+  if syntax |> syntaxHasError then
+    false, syntaxErrorToString syntax
+  else
+    match semanticallyAnalyze host v syntax with
+    | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
+    | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
+    | SemaAnalysisOk _ -> true, ""
 
 let compile (ctx: CompileCtx): bool * string =
   let host = ctx.Host
@@ -639,6 +640,17 @@ let cliParse (host: CliHost) v (projectDir: string) =
 
   0
 
+let cliCheck (host: CliHost) verbosity projectDir =
+  let ctx =
+    compileCtxNew host verbosity projectDir
+    |> compileCtxReadProjectFile
+
+  let ok, output = check ctx
+  let exitCode = if ok then 0 else 1
+
+  printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
+  exitCode
+
 let cliCompile (host: CliHost) verbosity projectDir =
   let ctx =
     compileCtxNew host verbosity projectDir
@@ -649,78 +661,6 @@ let cliCompile (host: CliHost) verbosity projectDir =
 
   printfn "%s" (output |> S.trimEnd)
   exitCode
-
-let cliKirDump (host: CliHost) projectDirs =
-  let v = Quiet
-  printfn "// Common code.\n%s\n" (kirHeader ())
-
-  projectDirs
-  |> List.fold
-       (fun code projectDir ->
-         printfn "// -------------------------------\n// %s\n{\n" projectDir
-         printfn "/*"
-
-         let ctx = compileCtxNew host v projectDir
-
-         let ok, output =
-           let syntax = syntacticallyAnalyze ctx
-
-           match semanticallyAnalyze host v syntax with
-           | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
-           | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
-
-           | SemaAnalysisOk (expr, tyCtx) ->
-               let expr, tyCtx = transformHir host v (expr, tyCtx)
-               dumpHirAsKir host v (expr, tyCtx)
-
-         let code =
-           if ok then
-             printfn "*/"
-             printfn "%s" (output |> S.trimEnd)
-             code
-           else
-             printfn "\n%s\n*/" output
-             1
-
-         printfn "\n// exit = %d\n}\n" code
-         code)
-       0
-
-let cliCompileViaKir (host: CliHost) projectDirs =
-  let v = Quiet
-  printfn "// Generated using KIR.\n"
-
-  projectDirs
-  |> List.fold
-       (fun code projectDir ->
-         printfn "// -------------------------------\n// %s\n" projectDir
-         printfn "/*"
-
-         let ctx = compileCtxNew host v projectDir
-
-         let ok, output =
-           let syntax = syntacticallyAnalyze ctx
-
-           match semanticallyAnalyze host v syntax with
-           | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
-           | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
-
-           | SemaAnalysisOk (expr, tyCtx) ->
-               let expr, tyCtx = transformHir host v (expr, tyCtx)
-               codeGenHirViaKir host v (expr, tyCtx)
-
-         let code =
-           if ok then
-             printfn "*/"
-             printfn "%s" (output |> S.trimEnd)
-             code
-           else
-             printfn "\n%s\n*/" output
-             1
-
-         printfn "\n// exit = %d\n" code
-         code)
-       0
 
 // -----------------------------------------------
 // Arg parsing
@@ -776,12 +716,14 @@ let private parseVerbosity (host: CliHost) args =
 type private CliCmd =
   | HelpCmd
   | VersionCmd
+  | CheckCmd
   | CompileCmd
   | ParseCmd
-  | KirDumpCmd
   | BadCmd of string
 
 let private parseArgs args =
+  let args = args |> List.skip 1
+
   match args with
   | []
   | "help" :: _ -> HelpCmd, []
@@ -798,13 +740,13 @@ let private parseArgs args =
 
   | arg :: args ->
       match arg with
+      | "check" -> CheckCmd, args
+
       | "build"
       | "compile" -> CompileCmd, args
 
       // for debug
       | "parse" -> ParseCmd, args
-      | "kir-dump" -> KirDumpCmd, args
-      | "kir-c" -> CompileCmd, "--kir" :: args
 
       | _ -> BadCmd arg, []
 
@@ -822,18 +764,27 @@ let cli (host: CliHost) =
       printfn "%s" (currentVersion ())
       0
 
+  | CheckCmd, args ->
+      let verbosity, args = parseVerbosity host args
+
+      match args with
+      | [ projectDir ] -> cliCheck host verbosity projectDir
+
+      | [] ->
+          printfn "ERROR: Expected project dir."
+          1
+
+      | arg :: _ ->
+          printfn "ERROR: Unknown argument: '%s'." arg
+          1
+
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
-      let useKir, args =
-        parseFlag (fun _ arg -> if arg = "--kir" then Some true else None) false args
+      match args with
+      | projectDir :: _ -> cliCompile host verbosity projectDir
 
-      match useKir, args with
-      | true, _ -> cliCompileViaKir host args
-
-      | false, projectDir :: _ -> cliCompile host verbosity projectDir
-
-      | false, [] ->
+      | [] ->
           printfn "ERROR: Expected project dir."
           1
 
@@ -846,8 +797,6 @@ let cli (host: CliHost) =
       | [] ->
           printfn "ERROR: Expected project dir."
           1
-
-  | KirDumpCmd, projectDirs -> cliKirDump host projectDirs
 
   | BadCmd subcommand, _ ->
       printfn "ERROR: Unknown subcommand '%s'." subcommand

@@ -6,7 +6,7 @@ enum Val_Discriminant;
 
 struct Val_;
 
-int main();
+int milone_main();
 
 int f_1(int x_1) {
     return x_1;
@@ -25,7 +25,7 @@ struct Val_ {
     };
 };
 
-int main() {
+int milone_main() {
     int match_;
     struct Val_ variant_ = (struct Val_){.discriminant = Int_, .Int_ = 0};
     if ((variant_.discriminant != Int_)) goto next_2;

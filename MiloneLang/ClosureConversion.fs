@@ -98,15 +98,15 @@ type private KnownCtx =
     UseFuns: AssocSet<FunSerial> }
 
 let private knownCtxEmpty (): KnownCtx =
-  { Locals = setEmpty varSerialCmp
-    UseVars = setEmpty varSerialCmp
-    UseFuns = setEmpty funSerialCmp }
+  { Locals = setEmpty varSerialCompare
+    UseVars = setEmpty varSerialCompare
+    UseFuns = setEmpty funSerialCompare }
 
 let private knownCtxEnterFunDecl (ctx: KnownCtx) =
   { ctx with
-      UseVars = setEmpty varSerialCmp
-      UseFuns = setEmpty funSerialCmp
-      Locals = setEmpty varSerialCmp }
+      UseVars = setEmpty varSerialCompare
+      UseFuns = setEmpty funSerialCompare
+      Locals = setEmpty varSerialCompare }
 
 let private knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
   { ctx with
@@ -134,7 +134,7 @@ let private knownCtxToNonlocalVars (ctx: KnownCtx): AssocSet<VarSerial> =
            acc |> setAdd varSerial
          else
            acc)
-       (setEmpty varSerialCmp)
+       (setEmpty varSerialCompare)
 
 // -----------------------------------------------
 // Caps
@@ -198,8 +198,8 @@ let private ofTyCtx (tyCtx: TyCtx): CcCtx =
     Tys = tyCtx.Tys
 
     Current = knownCtxEmpty ()
-    FunKnowns = mapEmpty funSerialCmp
-    FunUpvars = mapEmpty funSerialCmp }
+    FunKnowns = mapEmpty funSerialCompare
+    FunUpvars = mapEmpty funSerialCompare }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
   { tyCtx with

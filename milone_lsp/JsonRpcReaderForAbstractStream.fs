@@ -3,6 +3,7 @@ module rec MiloneLsp.JsonRpcReaderForAbstractStream
 // (Not compliant with JSON-RPC for now.)
 
 open System.IO
+open System.Threading
 open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 
@@ -17,17 +18,14 @@ type JsonRpcReaderHost =
 
     /// Reads a block of data with specified length from some byte stream.
     /// Used for bodies.
-    ReadBytes: int -> byte [] option
-
-    /// Processes an incoming message. Returns an exit code to break or None to continue.
-    ProcessIncomingMsg: JsonValue -> ExitCode option }
+    ReadBytes: int -> byte [] option }
 
 [<NoEquality; NoComparison>]
 type private State = State of len: int option
 
-let private readHeader (host: JsonRpcReaderHost) (state: State): ExitCode =
+let private readHeader (host: JsonRpcReaderHost) (state: State): int option =
   match host.ReadLine() with
-  | None -> failwith "ERROR: STDIN closed before exit notification."
+  | None -> None
 
   | Some "" ->
       // \n\n is read, which indicates the start of body.
@@ -37,7 +35,7 @@ let private readHeader (host: JsonRpcReaderHost) (state: State): ExitCode =
 
       | State (Some len) ->
           // eprintfn "begin body (len = %d)" len
-          readBody host len
+          Some len
 
   | Some line ->
       // eprintfn "header: %s" line
@@ -57,19 +55,59 @@ let private readHeader (host: JsonRpcReaderHost) (state: State): ExitCode =
         // ignore unsupported header
         readHeader host state
 
-let readBody host (len: int): ExitCode =
+let private readBody (host: JsonRpcReaderHost) (len: int): JsonValue =
   match host.ReadBytes len with
   | None -> failwith "ERROR: unexpected EOF in the middle of body"
 
   | Some body ->
       // eprintfn "body.length = %d" body.Length
+      jsonDeserializeBytes body
 
-      let jsonValue = jsonDeserializeBytes body
+type DrainFun = unit -> JsonValue list
 
-      match host.ProcessIncomingMsg jsonValue with
-      | Some exitCode -> exitCode
+/// Starts an asynchronous loop to read from stream.
+let startJsonRpcReader (host: JsonRpcReaderHost): Async<unit> * DrainFun =
+  let queue =
+    System.Collections.Concurrent.ConcurrentQueue<JsonValue>()
 
-      | None -> readHeader host (State None)
+  let signal = new ManualResetEventSlim()
 
-/// Starts a loop to read from stream and process each message.
-let startJsonRpcReader (host: JsonRpcReaderHost): ExitCode = readHeader host (State None)
+  let work =
+    let rec go () =
+      async {
+        match readHeader host (State None) with
+        | None -> ()
+
+        | Some contentLength ->
+            let value = readBody host contentLength
+            queue.Enqueue(value)
+            signal.Set()
+            return! go ()
+      }
+
+    go ()
+
+  let itemAcc = ResizeArray()
+
+  let rec drain () =
+    let rec go () =
+      match queue.TryDequeue() with
+      | true, value ->
+          itemAcc.Add(value)
+          go ()
+
+      | false, _ ->
+          let items = List.ofSeq itemAcc
+          itemAcc.Clear()
+          items
+
+    match go () with
+    | [] ->
+        signal.Wait()
+        drain ()
+
+    | items ->
+        signal.Reset()
+        items
+
+  work, drain

@@ -24,7 +24,7 @@ enum RecA_Discriminant;
 
 struct RecA_;
 
-int main();
+int milone_main();
 
 enum UnionA_Discriminant {
     T_3,
@@ -86,7 +86,7 @@ struct RecA_ {
     };
 };
 
-int main() {
+int milone_main() {
     struct UnionA_List const* list_ = milone_mem_alloc(1, sizeof(struct UnionA_List));
     (*(((struct UnionA_List*)list_))) = (struct UnionA_List){.head = (struct UnionA_){.discriminant = T_3}, .tail = NULL};
     struct UnionB_ variant_ = (struct UnionB_){.discriminant = T_, .T_ = list_};

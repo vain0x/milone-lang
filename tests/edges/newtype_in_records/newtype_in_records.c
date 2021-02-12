@@ -14,7 +14,7 @@ struct DayRange_ newDayRange_(struct Day_ start_, struct Day_ endDay_);
 
 bool between_(struct Day_ day_, struct DayRange_ range_);
 
-int main();
+int milone_main();
 
 enum Day_Discriminant {
     Day_,
@@ -85,7 +85,7 @@ if_next_4:;
     return if_1;
 }
 
-int main() {
+int milone_main() {
     struct Day_ call_6 = newDay_(13);
     struct Day_ call_7 = newDay_(10);
     struct Day_ call_8 = newDay_(20);

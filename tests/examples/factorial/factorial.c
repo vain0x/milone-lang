@@ -2,7 +2,7 @@
 
 int factorial_(int x_);
 
-int main();
+int milone_main();
 
 int factorial_(int x_) {
     int if_;
@@ -22,7 +22,7 @@ if_next_1:;
     return if_;
 }
 
-int main() {
+int milone_main() {
     int call_1 = factorial_(5);
     return (call_1 - 120);
 }

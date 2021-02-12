@@ -117,7 +117,7 @@ let private newCtx host: BundleCtx =
     ModuleQueue = []
     ModuleAcc = []
     ErrorAcc = []
-    FetchMemo = setEmpty (pairCmp compare compare)
+    FetchMemo = setEmpty (pairCompare compare compare)
     Host = host }
 
 let private addError msg loc (ctx: BundleCtx) =
@@ -173,6 +173,31 @@ let private doLoadModule docId ast errors (ctx: BundleCtx) =
   { ctx with
       ModuleAcc = expr :: ctx.ModuleAcc }
 
+// HACK: Load "MiloneOnly" module of projects if exists.
+//       (Ignore MiloneOnly in projects that no modules are bundled.)
+let private resolveAutoInclude (ctx: BundleCtx) =
+  let addMiloneOnly ctx projectName =
+    match ctx
+          |> fetchModuleWithMemo projectName "MiloneOnly" with
+    | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
+
+    | _ -> ctx
+
+  let fetchedProjects =
+    ctx.FetchMemo
+    |> setToList
+    |> List.map fst
+    |> listUnique compare
+
+  let moduleAcc, ctx =
+    ctx.ModuleAcc, { ctx with ModuleAcc = [] }
+
+  let ctx =
+    fetchedProjects |> List.fold addMiloneOnly ctx
+
+  { ctx with
+      ModuleAcc = List.append moduleAcc ctx.ModuleAcc }
+
 /// Requires a module to load.
 let private requireModule docId projectName moduleName (ctx: BundleCtx) =
   match ctx |> fetchModuleWithMemo projectName moduleName with
@@ -193,22 +218,13 @@ let private requireModule docId projectName moduleName (ctx: BundleCtx) =
 let bundleProgram (host: BundleHost) (projectName: string): (HExpr list * NameCtx * (string * Loc) list) option =
   let ctx = newCtx host
 
-  // HACK: Load "MiloneOnly" module of projects if exists.
-  let ctx =
-    (List.append host.ProjectRefs [ projectName ])
-    |> List.fold
-         (fun ctx projectName ->
-           match ctx
-                 |> fetchModuleWithMemo projectName "MiloneOnly" with
-           | false, Some (docId, ast, errors), ctx -> ctx |> doLoadModule docId ast errors
-
-           | _ -> ctx)
-         ctx
-
   // Load entrypoint module of the project.
   match ctx |> fetchModuleWithMemo projectName projectName with
   | false, Some (docId, ast, errors), ctx ->
-      let ctx = ctx |> doLoadModule docId ast errors
+      let ctx =
+        ctx
+        |> doLoadModule docId ast errors
+        |> resolveAutoInclude
 
       let expr =
         ctx.ModuleAcc |> List.rev |> List.collect id

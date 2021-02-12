@@ -16,7 +16,7 @@ struct Even_List;
 
 struct IntEven_ListTuple2;
 
-int main();
+int milone_main();
 
 enum Odd_Discriminant {
     Odd_,
@@ -60,7 +60,7 @@ struct IntEven_ListTuple2 {
     struct Even_List const* t1;
 };
 
-int main() {
+int milone_main() {
     struct IntEven_ListTuple2 tuple_ = (struct IntEven_ListTuple2){.t0 = 1, .t1 = NULL};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntEven_ListTuple2));
     (*(((struct IntEven_ListTuple2*)box_))) = tuple_;
@@ -93,9 +93,9 @@ int main() {
     int n1_ = (*(((struct IntEven_ListTuple2 const*)(*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->head.Even_.t1->head.Odd_))).t0;
     if ((!((!((*(((struct IntEven_ListTuple2 const*)(*(((struct IntEven_ListTuple2 const*)four_.Even_.t1->head.Odd_))).t1->head.Even_.t1->head.Odd_))).t1))))) goto next_2;
     milone_assert((n1_ == 1), 15, 6);
-    milone_assert((str_cmp(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 6);
+    milone_assert((str_compare(s2_, (struct String){.str = "two", .len = 3}) == 0), 16, 6);
     milone_assert((n3_ == 3), 17, 6);
-    milone_assert((str_cmp(s4_, (struct String){.str = "four", .len = 4}) == 0), 18, 6);
+    milone_assert((str_compare(s4_, (struct String){.str = "four", .len = 4}) == 0), 18, 6);
     match_ = 0;
     goto end_match_1;
 next_2:;

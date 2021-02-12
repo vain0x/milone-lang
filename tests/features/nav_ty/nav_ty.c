@@ -10,7 +10,7 @@ struct Node_Node_Tuple2;
 
 struct Node_ node_(struct Node_ l_, struct Node_ r_);
 
-int main();
+int milone_main();
 
 enum Node_Discriminant {
     Leaf_,
@@ -43,7 +43,7 @@ struct Node_ node_(struct Node_ l_, struct Node_ r_) {
     return variant_1;
 }
 
-int main() {
+int milone_main() {
     struct Node_ call_ = leaf_(2);
     struct Node_ call_1 = leaf_(3);
     struct Node_ call_2 = leaf_(5);

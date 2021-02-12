@@ -12,7 +12,7 @@ struct UnitIntFun1;
 
 int doAction_(int arg_4);
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -70,7 +70,7 @@ int doAction_(int arg_4) {
     return region_result_;
 }
 
-int main() {
+int milone_main() {
     int call_2 = doAction_(0);
     return 0;
 }

@@ -6,7 +6,7 @@ type Token =
   | TkInt of int
   | TkOp of char
 
-let charEq (l: char) (r: char) = l = r
+let charEqual (l: char) (r: char) = l = r
 
 let strContains (c: char) (s: string) =
   let rec go i =
@@ -56,7 +56,7 @@ let takeWhile (pred: char -> bool) (source: string, i) =
 
 let private readSpace (source: string) (acc: Token list, i) =
   assert (source.[i] = ' ')
-  let r = takeWhile (charEq ' ') (source, i + 1)
+  let r = takeWhile (charEqual ' ') (source, i + 1)
   acc, r
 
 let private readEol (source: string) (acc: Token list, i) =

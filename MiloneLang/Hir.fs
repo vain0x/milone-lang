@@ -83,50 +83,46 @@ type IsMut =
   | IsMut
 
 /// Type constructor.
-[<Struct>]
-[<NoEquality; NoComparison>]
-type TyCtor =
-  | IntTyCtor of intFlavor: IntFlavor
-  | FloatTyCtor of floatFlavor: FloatFlavor
-  | BoolTyCtor
-  | CharTyCtor
-  | StrTyCtor
-  | ObjTyCtor
+[<Struct; NoEquality; NoComparison>]
+type Tk =
+  | ErrorTk of errorLoc: Loc
+
+  | IntTk of intFlavor: IntFlavor
+  | FloatTk of floatFlavor: FloatFlavor
+  | BoolTk
+  | CharTk
+  | StrTk
+  | ObjTk
 
   /// Ty args must be `[s; t]`.
-  | FunTyCtor
+  | FunTk
 
-  | TupleTyCtor
+  | TupleTk
 
   /// Ty args must be `[t]`.
-  | ListTyCtor
+  | ListTk
 
   // FFI types.
-  | VoidTyCtor
-  | NativePtrTyCtor of nativePtrIsMut: IsMut
-  | NativeFunTyCtor
-  | NativeTypeTyCtor of cCode: string
+  | VoidTk
+  | NativePtrTk of nativePtrIsMut: IsMut
+  | NativeFunTk
+  | NativeTypeTk of cCode: string
 
   // Nominal types.
-  | SynonymTyCtor of synonymTy: TySerial
-  | UnionTyCtor of unionTy: TySerial
-  | RecordTyCtor of recordTy: TySerial
+  | MetaTk of metaTy: TySerial * metaLoc: Loc
+  | SynonymTk of synonymTy: TySerial
+  | UnionTk of unionTy: TySerial
+  | RecordTk of recordTy: TySerial
 
   /// Unresolved type. Generated in AstToHir, resolved in NameRes.
-  | UnresolvedTyCtor of quals: Serial list * unresolvedSerial: Serial
-  | UnresolvedVarTyCtor of unresolvedVarTySerial: (Serial * Loc)
+  | UnresolvedTk of quals: Serial list * unresolvedSerial: Serial
+  | UnresolvedVarTk of unresolvedVarTySerial: (Serial * Loc)
 
 /// Type of expressions.
-[<Struct>]
-[<NoEquality; NoComparison>]
+[<Struct; NoEquality; NoComparison>]
 type Ty =
-  | ErrorTy of errorLoc: Loc
-
-  /// Type variable to be bound or quantified..
-  | MetaTy of metaTySerial: Serial * metaLoc: Loc
-
   /// Type application.
-  | AppTy of TyCtor * tyArgs: Ty list
+  | Ty of Tk * tyArgs: Ty list
 
 /// Potentially polymorphic type.
 [<Struct>]
@@ -146,10 +142,10 @@ type Trait =
   | AddTrait of Ty
 
   /// The type supports `=`.
-  | EqTrait of Ty
+  | EqualTrait of Ty
 
   /// The type supports `<`.
-  | CmpTrait of Ty
+  | CompareTrait of Ty
 
   /// For `l: lTy, r: rTy`, `l.[r]` is allowed.
   | IndexTrait of lTy: Ty * rTy: Ty * resultTy: Ty
@@ -212,7 +208,8 @@ type ModuleSynonymSerial = ModuleSynonymSerial of Serial
 [<NoEquality; NoComparison>]
 type ModuleSynonymDef =
   { Name: Ident
-    Bound: ModuleTySerial option
+    // Not used.
+    Bound: ModuleTySerial list
     Loc: Loc }
 
 /// Definition of named value in HIR.
@@ -257,8 +254,6 @@ type TySymbol =
   | SynonymTySymbol of synonymTySerial: TySerial
   | UnionTySymbol of unionTySerial: TySerial
   | RecordTySymbol of recordTySerial: TySerial
-  | ModuleTySymbol of moduleTySerial: ModuleTySerial
-  | ModuleSynonymSymbol of moduleSynonymSerial: ModuleSynonymSerial
 
 /// Kind of HNodePat.
 [<Struct; NoEquality; NoComparison>]
@@ -335,14 +330,14 @@ type HPrim =
   | Sub
   | Mul
   | Div
-  | Mod
+  | Modulo
   | BitAnd
   | BitOr
   | BitXor
   | LeftShift
   | RightShift
-  | Eq
-  | Lt
+  | Equal
+  | Less
   | Compare
 
   // conversion:
@@ -534,7 +529,7 @@ type Log =
   | TySynonymCycleError
   | RedundantFieldError of ty: Ident * field: Ident
   | MissingFieldsError of ty: Ident * fields: Ident list
-  | ArityMismatch of actual: Arity * expected: Arity
+  | ArityMismatch of actual: string * expected: string
   | Error of string
 
 // -----------------------------------------------
@@ -552,45 +547,45 @@ let nameCtxAdd name (NameCtx (map, serial)) =
 // Types (HIR/MIR)
 // -----------------------------------------------
 
+let tyError loc = Ty(ErrorTk loc, [])
+
 /// Placeholder. No type info in the parsing phase.
-let noTy = ErrorTy noLoc
+let noTy = tyError noLoc
 
-let tyInt =
-  AppTy(IntTyCtor(IntFlavor(Signed, I32)), [])
+let tyInt = Ty(IntTk(IntFlavor(Signed, I32)), [])
 
-let tyBool = AppTy(BoolTyCtor, [])
+let tyBool = Ty(BoolTk, [])
 
-let tyFloat = AppTy(FloatTyCtor F64, [])
+let tyFloat = Ty(FloatTk F64, [])
 
-let tyChar = AppTy(CharTyCtor, [])
+let tyChar = Ty(CharTk, [])
 
-let tyStr = AppTy(StrTyCtor, [])
+let tyStr = Ty(StrTk, [])
 
-let tyObj = AppTy(ObjTyCtor, [])
+let tyObj = Ty(ObjTk, [])
 
-let tyTuple tys = AppTy(TupleTyCtor, tys)
+let tyTuple tys = Ty(TupleTk, tys)
 
-let tyList ty = AppTy(ListTyCtor, [ ty ])
+let tyList ty = Ty(ListTk, [ ty ])
 
-let tyFun sourceTy targetTy =
-  AppTy(FunTyCtor, [ sourceTy; targetTy ])
+let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
 
-let tyConstPtr itemTy =
-  AppTy(NativePtrTyCtor IsConst, [ itemTy ])
+let tyConstPtr itemTy = Ty(NativePtrTk IsConst, [ itemTy ])
 
-let tyNativePtr itemTy =
-  AppTy(NativePtrTyCtor IsMut, [ itemTy ])
+let tyNativePtr itemTy = Ty(NativePtrTk IsMut, [ itemTy ])
 
 let tyNativeFun paramTys resultTy =
-  AppTy(NativeFunTyCtor, List.append paramTys [ resultTy ])
+  Ty(NativeFunTk, List.append paramTys [ resultTy ])
 
 let tyUnit = tyTuple []
 
-let tySynonym tySerial tyArgs = AppTy(SynonymTyCtor tySerial, tyArgs)
+let tyMeta serial loc = Ty(MetaTk(serial, loc), [])
 
-let tyUnion tySerial = AppTy(UnionTyCtor tySerial, [])
+let tySynonym tySerial tyArgs = Ty(SynonymTk tySerial, tyArgs)
 
-let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
+let tyUnion tySerial = Ty(UnionTk tySerial, [])
+
+let tyRecord tySerial = Ty(RecordTk tySerial, [])
 
 // -----------------------------------------------
 // Type definitions (HIR)
@@ -598,12 +593,12 @@ let tyRecord tySerial = AppTy(RecordTyCtor tySerial, [])
 
 let moduleTySerialToInt (ModuleTySerial serial) = serial
 
-let moduleTySerialCmp l r =
+let moduleTySerialCompare l r =
   moduleTySerialToInt l - moduleTySerialToInt r
 
 let moduleSynonymSerialToInt (ModuleSynonymSerial serial) = serial
 
-let moduleSynonymSerialCmp l r =
+let moduleSynonymSerialCompare l r =
   moduleSynonymSerialToInt l
   - moduleSynonymSerialToInt r
 
@@ -621,17 +616,17 @@ let tyDefToName tyDef =
 
 let varSerialToInt (VarSerial serial) = serial
 
-let varSerialCmp l r =
+let varSerialCompare l r =
   compare (varSerialToInt l) (varSerialToInt r)
 
 let funSerialToInt (FunSerial serial) = serial
 
-let funSerialCmp l r =
+let funSerialCompare l r =
   compare (funSerialToInt l) (funSerialToInt r)
 
 let variantSerialToInt (VariantSerial serial) = serial
 
-let variantSerialCmp l r =
+let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
 let varDefToName varDef =
@@ -711,7 +706,7 @@ let primFromIdent ident =
   | _ -> None
 
 let primToTySpec prim =
-  let meta id = MetaTy(id, noLoc)
+  let meta id = tyMeta id noLoc
   let mono ty = TySpec(ty, [])
   let poly ty traits = TySpec(ty, traits)
 
@@ -723,7 +718,7 @@ let primToTySpec prim =
   | HPrim.Sub
   | HPrim.Mul
   | HPrim.Div
-  | HPrim.Mod ->
+  | HPrim.Modulo ->
       let ty = meta 1
       poly (tyFun ty (tyFun ty ty)) [ IsNumberTrait ty ]
 
@@ -738,17 +733,17 @@ let primToTySpec prim =
       let ty = meta 1
       poly (tyFun ty (tyFun tyInt ty)) [ IsIntTrait ty ]
 
-  | HPrim.Eq ->
-      let eqTy = meta 1
-      poly (tyFun eqTy (tyFun eqTy tyBool)) [ EqTrait eqTy ]
+  | HPrim.Equal ->
+      let argTy = meta 1
+      poly (tyFun argTy (tyFun argTy tyBool)) [ EqualTrait argTy ]
 
-  | HPrim.Lt ->
-      let cmpTy = meta 1
-      poly (tyFun cmpTy (tyFun cmpTy tyBool)) [ CmpTrait cmpTy ]
+  | HPrim.Less ->
+      let compareTy = meta 1
+      poly (tyFun compareTy (tyFun compareTy tyBool)) [ CompareTrait compareTy ]
 
   | HPrim.Compare ->
-      let cmpTy = meta 1
-      poly (tyFun cmpTy (tyFun cmpTy tyInt)) [ CmpTrait cmpTy ]
+      let compareTy = meta 1
+      poly (tyFun compareTy (tyFun compareTy tyInt)) [ CompareTrait compareTy ]
 
   | HPrim.Nil ->
       let itemTy = meta 1
@@ -790,12 +785,12 @@ let primToTySpec prim =
 
   | HPrim.ToInt flavor ->
       let toIntTy = meta 1
-      let resultTy = AppTy(IntTyCtor flavor, [])
+      let resultTy = Ty(IntTk flavor, [])
       poly (tyFun toIntTy resultTy) [ ToIntTrait toIntTy ]
 
   | HPrim.ToFloat flavor ->
       let srcTy = meta 1
-      let resultTy = AppTy(FloatTyCtor flavor, [])
+      let resultTy = Ty(FloatTk flavor, [])
       poly (tyFun srcTy resultTy) [ ToFloatTrait srcTy ]
 
   | HPrim.String ->
@@ -952,7 +947,8 @@ let hxFalse loc = HLitExpr(litFalse, loc)
 
 let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 
-let hxAscribe expr ty loc = HNodeExpr(HAscribeEN, [ expr ], ty, loc)
+let hxAscribe expr ty loc =
+  HNodeExpr(HAscribeEN, [ expr ], ty, loc)
 
 let hxSemi items loc =
   match splitLast items with
@@ -1125,11 +1121,11 @@ let private traitBoundErrorToString tyDisplay it =
       "Operator (+) is not supported for type: "
       + tyDisplay ty
 
-  | EqTrait ty ->
+  | EqualTrait ty ->
       "Equality is not defined for type: "
       + tyDisplay ty
 
-  | CmpTrait ty ->
+  | CompareTrait ty ->
       "Comparison is not defined for type: "
       + tyDisplay ty
 
@@ -1198,9 +1194,9 @@ let logToString tyDisplay log =
 
   | Log.ArityMismatch (actual, expected) ->
       "Arity mismatch: expected "
-      + string expected
+      + expected
       + ", but was "
-      + string actual
+      + actual
       + "."
 
   | Log.Error msg -> msg

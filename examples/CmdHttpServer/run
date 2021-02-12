@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -eu
+
+cat <<END | target/serve
+GET /empty HTTP/1.1
+Content-Length: 0
+
+END
+
+cat <<END | target/serve
+GET /path/to/not_found HTTP/1.1
+Content-Length: 0
+
+END
+
+cat <<END | target/serve
+GET /../run HTTP/1.1
+Content-Length: 0
+
+END
+
+cat <<END | target/serve
+POST /empty HTTP/1.1
+Content-Length: 0
+
+END

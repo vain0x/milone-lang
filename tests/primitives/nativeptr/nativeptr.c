@@ -12,7 +12,7 @@ char* strcpy(char*, char const*);
 
 char* strcpy_(char* dest_1, char const* src_);
 
-int main();
+int milone_main();
 
 void* memAlloc_(int count_, int size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(count_, ((uintptr_t)size_));
@@ -29,7 +29,7 @@ char* strcpy_(char* dest_1, char const* src_) {
     return strcpy_result_;
 }
 
-int main() {
+int milone_main() {
     void* call_ = memAlloc_(1, 8);
     void* buf_ = call_;
     int call_1 = memSet_(buf_, ((uint8_t)255), 8);

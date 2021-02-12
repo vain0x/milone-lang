@@ -6,6 +6,7 @@ Each source file is a module.
 
 Each file starts with a module header.
 Currently `ProjectName` is same as directory name and `ModuleName` is same as file name (excluding extension).
+(See also [Projects](projects.md).)
 
 ```fsharp
 module rec ProjectName.ModuleName

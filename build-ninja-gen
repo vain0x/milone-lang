@@ -1,6 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-cat build.ninja-template | \
-    dotnet run -p scripts/GenNinjaFile -- $PWD >build.ninja

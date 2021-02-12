@@ -14,76 +14,80 @@ open MiloneLang.Hir
 module S = MiloneStd.StdString
 
 // -----------------------------------------------
-// TyCtor
+// Tk
 // -----------------------------------------------
 
-let private tyCtorEncode tyCtor =
+let private tkEncode tk =
   let isMutToInt isMut =
     match isMut with
     | IsConst -> 1
     | IsMut -> 2
 
-  match tyCtor with
-  | IntTyCtor flavor -> 1, intFlavorToOrdinary flavor
-  | FloatTyCtor flavor -> 2, floatFlavorToOrdinary flavor
-  | BoolTyCtor -> 3, 0
-  | CharTyCtor -> 4, 0
-  | StrTyCtor -> 5, 0
-  | ObjTyCtor -> 6, 0
-  | FunTyCtor -> 7, 0
-  | TupleTyCtor -> 8, 0
-  | ListTyCtor -> 9, 0
+  match tk with
+  | ErrorTk _ -> 0, 0
+  | IntTk flavor -> 1, intFlavorToOrdinary flavor
+  | FloatTk flavor -> 2, floatFlavorToOrdinary flavor
+  | BoolTk -> 3, 0
+  | CharTk -> 4, 0
+  | StrTk -> 5, 0
+  | ObjTk -> 6, 0
+  | FunTk -> 7, 0
+  | TupleTk -> 8, 0
+  | ListTk -> 9, 0
 
-  | VoidTyCtor -> 11, 0
-  | NativePtrTyCtor isMut -> 12, isMutToInt isMut
-  | NativeFunTyCtor -> 13, 0
+  | VoidTk -> 11, 0
+  | NativePtrTk isMut -> 12, isMutToInt isMut
+  | NativeFunTk -> 13, 0
 
-  | SynonymTyCtor tySerial -> 21, tySerial
-  | UnionTyCtor tySerial -> 22, tySerial
-  | RecordTyCtor tySerial -> 23, tySerial
+  | MetaTk (tySerial, _) -> 20, tySerial
+  | SynonymTk tySerial -> 21, tySerial
+  | UnionTk tySerial -> 22, tySerial
+  | RecordTk tySerial -> 23, tySerial
 
-  | NativeTypeTyCtor _
-  | UnresolvedTyCtor _
-  | UnresolvedVarTyCtor _ -> failwith "NEVER"
+  | NativeTypeTk _
+  | UnresolvedTk _
+  | UnresolvedVarTk _ -> failwith "NEVER"
 
-let tyCtorCmp l r =
+let tkCompare l r =
   match l, r with
-  | NativeTypeTyCtor l, NativeTypeTyCtor r -> compare l r
+  | NativeTypeTk l, NativeTypeTk r -> compare l r
 
-  | NativeTypeTyCtor _, _ -> -1
-  | _, NativeTypeTyCtor _ -> 1
+  | NativeTypeTk _, _ -> -1
+  | _, NativeTypeTk _ -> 1
 
-  | UnresolvedTyCtor (lQuals, lSerial), UnresolvedTyCtor (rQuals, rSerial) ->
-      pairCmp (listCmp compare) compare (lQuals, lSerial) (rQuals, rSerial)
+  | UnresolvedTk (lQuals, lSerial), UnresolvedTk (rQuals, rSerial) ->
+      pairCompare (listCompare compare) compare (lQuals, lSerial) (rQuals, rSerial)
 
-  | UnresolvedTyCtor _, _ -> -1
-  | _, UnresolvedTyCtor _ -> 1
+  | UnresolvedTk _, _ -> -1
+  | _, UnresolvedTk _ -> 1
 
-  | _ -> pairCmp compare compare (tyCtorEncode l) (tyCtorEncode r)
+  | _ -> pairCompare compare compare (tkEncode l) (tkEncode r)
 
-let tyCtorEq first second = tyCtorCmp first second = 0
+let tkEqual first second = tkCompare first second = 0
 
-let tyCtorDisplay getTyName tyCtor =
-  match tyCtor with
-  | IntTyCtor flavor -> fsharpIntegerTyName flavor
-  | FloatTyCtor flavor -> fsharpFloatTyName flavor
-  | BoolTyCtor -> "bool"
-  | CharTyCtor -> "char"
-  | StrTyCtor -> "string"
-  | ObjTyCtor -> "obj"
-  | FunTyCtor -> "fun"
-  | TupleTyCtor -> "tuple"
-  | ListTyCtor -> "list"
-  | VoidTyCtor -> "void"
-  | NativePtrTyCtor IsMut -> "nativeptr"
-  | NativePtrTyCtor IsConst -> "__constptr"
-  | NativeFunTyCtor -> "__nativeFun"
-  | NativeTypeTyCtor _ -> "__nativeType"
-  | SynonymTyCtor tySerial -> getTyName tySerial
-  | RecordTyCtor tySerial -> getTyName tySerial
-  | UnionTyCtor tySerial -> getTyName tySerial
-  | UnresolvedTyCtor (_, serial) -> "?" + string serial
-  | UnresolvedVarTyCtor (serial, _) -> "'" + string serial
+let tkDisplay getTyName tk =
+  match tk with
+  | ErrorTk loc -> "{error}@" + locToString loc
+  | IntTk flavor -> fsharpIntegerTyName flavor
+  | FloatTk flavor -> fsharpFloatTyName flavor
+  | BoolTk -> "bool"
+  | CharTk -> "char"
+  | StrTk -> "string"
+  | ObjTk -> "obj"
+  | FunTk -> "fun"
+  | TupleTk -> "tuple"
+  | ListTk -> "list"
+  | VoidTk -> "void"
+  | NativePtrTk IsMut -> "nativeptr"
+  | NativePtrTk IsConst -> "__constptr"
+  | NativeFunTk -> "__nativeFun"
+  | NativeTypeTk _ -> "__nativeType"
+  | MetaTk (tySerial, _) -> getTyName tySerial
+  | SynonymTk tySerial -> getTyName tySerial
+  | RecordTk tySerial -> getTyName tySerial
+  | UnionTk tySerial -> getTyName tySerial
+  | UnresolvedTk (_, serial) -> "?" + string serial
+  | UnresolvedVarTk (serial, _) -> "'" + string serial
 
 // -----------------------------------------------
 // Traits (HIR)
@@ -93,9 +97,9 @@ let traitMapTys f it =
   match it with
   | AddTrait ty -> AddTrait(f ty)
 
-  | EqTrait ty -> EqTrait(f ty)
+  | EqualTrait ty -> EqualTrait(f ty)
 
-  | CmpTrait ty -> CmpTrait(f ty)
+  | CompareTrait ty -> CompareTrait(f ty)
 
   | IndexTrait (lTy, rTy, outputTy) -> IndexTrait(f lTy, f rTy, f outputTy)
 
@@ -119,46 +123,35 @@ let traitMapTys f it =
 
 let tyIsUnit ty =
   match ty with
-  | AppTy (TupleTyCtor, []) -> true
+  | Ty (TupleTk, []) -> true
   | _ -> false
 
 let tyIsFun ty =
   match ty with
-  | AppTy (FunTyCtor, _) -> true
+  | Ty (FunTk, _) -> true
   | _ -> false
 
-let tyCmp first second =
+let tyCompare first second =
   match first, second with
-  | ErrorTy first, ErrorTy second -> locCmp first second
+  | Ty (firstTk, firstTys), Ty (secondTk, secondTys) ->
+      let c = tkCompare firstTk secondTk
 
-  | ErrorTy _, _ -> -1
+      if c <> 0 then
+        c
+      else
+        listCompare tyCompare firstTys secondTys
 
-  | _, ErrorTy _ -> 1
-
-  | MetaTy (l1, l2), MetaTy (r1, r2) ->
-      let c = compare l1 r1
-      if c <> 0 then c else locCmp l2 r2
-
-  | MetaTy _, _ -> -1
-
-  | _, MetaTy _ -> 1
-
-  | AppTy (firstTyCtor, firstTys), AppTy (secondTyCtor, secondTys) ->
-      let c = tyCtorCmp firstTyCtor secondTyCtor
-      if c <> 0 then c else listCmp tyCmp firstTys secondTys
-
-let tyEq first second = tyCmp first second = 0
+let tyEqual first second = tyCompare first second = 0
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
   let rec go ty =
     match ty with
-    | ErrorTy _
-    | AppTy (_, []) -> true
+    | Ty (MetaTk (s, _), _) -> s <> tySerial
 
-    | AppTy (tyCtor, ty :: tys) -> go ty && go (AppTy(tyCtor, tys))
+    | Ty (_, []) -> true
 
-    | MetaTy (s, _) -> s <> tySerial
+    | Ty (tk, ty :: tys) -> go ty && go (Ty(tk, tys))
 
   go ty
 
@@ -169,11 +162,9 @@ let tyIsMonomorphic ty: bool =
     match tys with
     | [] -> true
 
-    | MetaTy _ :: _ -> false
+    | Ty (MetaTk _, _) :: _ -> false
 
-    | ErrorTy _ :: tys -> go tys
-
-    | AppTy (_, tys1) :: tys2 -> go tys1 && go tys2
+    | Ty (_, tys1) :: tys2 -> go tys1 && go tys2
 
   go [ ty ]
 
@@ -184,17 +175,16 @@ let tyCollectFreeVars ty =
     match tys with
     | [] -> fvAcc
 
-    | ErrorTy _ :: tys -> go fvAcc tys
-    | AppTy (_, []) :: tys -> go fvAcc tys
+    | Ty (MetaTk (serial, _), _) :: tys ->
+        let acc = serial :: fvAcc
+        go acc tys
 
-    | AppTy (_, tys1) :: tys2 ->
+    | Ty (_, []) :: tys -> go fvAcc tys
+
+    | Ty (_, tys1) :: tys2 ->
         let acc = go fvAcc tys1
         let acc = go acc tys2
         acc
-
-    | MetaTy (serial, _) :: tys ->
-        let acc = serial :: fvAcc
-        go acc tys
 
   go [] [ ty ] |> listUnique compare
 
@@ -202,7 +192,7 @@ let tyCollectFreeVars ty =
 let rec tyToArgList ty =
   let rec go n acc ty =
     match ty with
-    | AppTy (FunTyCtor, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
+    | Ty (FunTk, [ sTy; tTy ]) -> go (n + 1) (sTy :: acc) tTy
     | tTy -> n, List.rev acc, tTy
 
   go 0 [] ty
@@ -211,72 +201,68 @@ let rec tyToArgList ty =
 let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
     match ty with
-    | ErrorTy _
-    | AppTy (_, []) -> ty
-
-    | AppTy (tyCtor, tys) -> AppTy(tyCtor, List.map go tys)
-
-    | MetaTy (tySerial, _) ->
+    | Ty (MetaTk (tySerial, _), _) ->
         match substMeta tySerial with
         | Some ty -> go ty
 
         | None -> ty
 
+    | Ty (_, []) -> ty
+
+    | Ty (tk, tys) -> Ty(tk, List.map go tys)
+
   go ty
 
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
-  let tyEq4 ty1 ty2 ty3 ty4 =
-    [ ty2; ty3; ty4 ] |> List.forall (tyEq ty1)
-
   let rec go (outerBp: int) ty =
     let paren (bp: int) s =
-      if bp >= outerBp then s else "(" + s + ")"
+      if bp >= outerBp then
+        s
+      else
+        "(" + s + ")"
 
     let nominal tySerial args =
-      let tyCtor =
+      let tk =
         match tySerial |> getTyName with
         | Some name -> name
         | None -> "?" + string tySerial
 
       match args with
-      | [] -> tyCtor
+      | [] -> tk
       | _ ->
           let args = args |> List.map (go 0) |> S.concat ", "
-          tyCtor + "<" + args + ">"
+          tk + "<" + args + ">"
 
     match ty with
-    | ErrorTy loc -> "{error}@" + locToString loc
+    | Ty (FunTk, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
 
-    | MetaTy (tySerial, loc) ->
-        match getTyName tySerial with
-        | Some name -> "{" + name + "}@" + locToString loc
-        | None -> "{?" + string tySerial + "}@" + locToString loc
+    | Ty (TupleTk, []) -> "unit"
 
-    | AppTy (FunTyCtor, [ sTy; tTy ]) -> paren 10 (go 11 sTy + " -> " + go 10 tTy)
-
-    | AppTy (TupleTyCtor, []) -> "unit"
-
-    | AppTy (TupleTyCtor, itemTys) ->
+    | Ty (TupleTk, itemTys) ->
         "("
         + (itemTys |> List.map (go 20) |> S.concat " * ")
         + ")"
 
-    | AppTy (ListTyCtor, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
+    | Ty (ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
-    | AppTy (SynonymTyCtor tySerial, args) -> nominal tySerial args
-    | AppTy (UnionTyCtor tySerial, args) -> nominal tySerial args
-    | AppTy (RecordTyCtor tySerial, args) -> nominal tySerial args
+    | Ty (MetaTk (tySerial, loc), _) ->
+        match getTyName tySerial with
+        | Some name -> "{" + name + "}@" + locToString loc
+        | None -> "{?" + string tySerial + "}@" + locToString loc
 
-    | AppTy (tyCtor, args) ->
-        let tyCtor =
-          tyCtorDisplay (fun _ -> failwith "NEVER") tyCtor
+    | Ty (SynonymTk tySerial, args) -> nominal tySerial args
+    | Ty (UnionTk tySerial, args) -> nominal tySerial args
+    | Ty (RecordTk tySerial, args) -> nominal tySerial args
+
+    | Ty (tk, args) ->
+        let tk = tkDisplay (fun _ -> failwith "NEVER") tk
 
         match args with
-        | [] -> tyCtor
+        | [] -> tk
         | _ ->
             let args = args |> List.map (go 0) |> S.concat ", "
-            tyCtor + "<" + args + ">"
+            tk + "<" + args + ">"
 
   go 0 ty
 
@@ -307,17 +293,24 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 
   // Don't bind itself.
   match typingSubst ctx ty with
-  | MetaTy (s, _) when s = tySerial -> ctx
+  | Ty (MetaTk (s, _), _) when s = tySerial -> ctx
+
   | ty ->
       // Reduce level of meta tys in the referent ty to the meta ty's level at most.
       let tyLevels =
-        let level = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+        let level =
+          ctx.TyLevels
+          |> mapTryFind tySerial
+          |> Option.defaultValue 0
 
         ty
         |> tyCollectFreeVars
         |> List.fold
              (fun tyLevels tySerial ->
-               let currentLevel = ctx.TyLevels |> mapTryFind tySerial |> Option.defaultValue 0
+               let currentLevel =
+                 ctx.TyLevels
+                 |> mapTryFind tySerial
+                 |> Option.defaultValue 0
 
                if currentLevel <= level then
                  // Already non-deep enough.
@@ -361,34 +354,30 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
 let tyExpandSynonyms expand ty =
   let rec go ty =
     match ty with
-    | AppTy (SynonymTyCtor tySerial, useTyArgs) ->
+    | Ty (SynonymTk tySerial, useTyArgs) ->
         match expand tySerial with
         | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
             tyExpandSynonym useTyArgs defTySerials bodyTy
             |> go
 
-        | _ -> AppTy(SynonymTyCtor tySerial, useTyArgs)
+        | _ -> Ty(SynonymTk tySerial, useTyArgs)
 
-    | AppTy (tyCtor, tyArgs) -> AppTy(tyCtor, tyArgs |> List.map go)
-
-    | _ -> ty
+    | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
 
   go ty
 
 let typingExpandSynonyms (ctx: TyContext) ty =
   let rec go ty =
     match ty with
-    | AppTy (SynonymTyCtor tySerial, useTyArgs) ->
+    | Ty (SynonymTk tySerial, useTyArgs) ->
         match ctx.Tys |> mapTryFind tySerial with
         | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
             tyExpandSynonym useTyArgs defTySerials bodyTy
             |> go
 
-        | _ -> AppTy(SynonymTyCtor tySerial, useTyArgs)
+        | _ -> Ty(SynonymTk tySerial, useTyArgs)
 
-    | AppTy (tyCtor, tyArgs) -> AppTy(tyCtor, tyArgs |> List.map go)
-
-    | _ -> ty
+    | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
 
   go ty
 
@@ -404,7 +393,7 @@ let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
 
   | _ ->
       match typingSubst ctx otherTy with
-      | MetaTy (otherSerial, _) when otherSerial = tySerial -> DidBind ctx
+      | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> DidBind ctx
 
       | otherTy when tyIsFreeIn otherTy tySerial |> not ->
           // ^ Occurrence check.
@@ -436,7 +425,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
              let newTySerial = ctx.Serial + 1
 
              let assignment =
-               (defTySerial, (MetaTy(newTySerial, loc)))
+               (defTySerial, (tyMeta newTySerial loc))
                :: assignment
 
              let ctx =
@@ -483,24 +472,21 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
 
   let rec go lTy rTy (logAcc, ctx) =
     match lTy, rTy with
-    | ErrorTy _, _
-    | _, ErrorTy _ -> logAcc, ctx
+    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> logAcc, ctx
 
-    | MetaTy (l, _), MetaTy (r, _) when l = r -> logAcc, ctx
-
-    | MetaTy (lSerial, loc), _ ->
+    | Ty (MetaTk (lSerial, loc), _), _ ->
         match unifyMetaTy lSerial rTy loc ctx with
         | DidExpand ty -> go ty rTy (logAcc, ctx)
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
 
-    | _, MetaTy (rSerial, loc) ->
+    | _, Ty (MetaTk (rSerial, loc), _) ->
         match unifyMetaTy rSerial lTy loc ctx with
         | DidExpand ty -> go lTy ty (logAcc, ctx)
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
 
-    | AppTy (lTyCtor, lTyArgs), AppTy (rTyCtor, rTyArgs) when tyCtorEq lTyCtor rTyCtor ->
+    | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
         let rec gogo lTyArgs rTyArgs (logAcc, ctx) =
           match lTyArgs, rTyArgs with
           | [], [] -> logAcc, ctx
@@ -511,15 +497,15 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
 
         gogo lTyArgs rTyArgs (logAcc, ctx)
 
-    | AppTy (SynonymTyCtor tySerial, tyArgs), _ when tySerial |> isSynonym ctx ->
+    | Ty (SynonymTk tySerial, tyArgs), _ when tySerial |> isSynonym ctx ->
         let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
         (logAcc, ctx) |> go ty1 ty2 |> go ty1 rTy
 
-    | _, AppTy (SynonymTyCtor tySerial, tyArgs) when tySerial |> isSynonym ctx ->
+    | _, Ty (SynonymTk tySerial, tyArgs) when tySerial |> isSynonym ctx ->
         let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
         (logAcc, ctx) |> go ty1 ty2 |> go ty1 lTy
 
-    | AppTy _, _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
+    | Ty _, _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
 
   go lty rty (logAcc, ctx)
 
@@ -531,38 +517,38 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   /// integer, bool, char, or string
   let expectBasic ty (logAcc, ctx) =
     match ty with
-    | ErrorTy _
-    | AppTy (IntTyCtor _, [])
-    | AppTy (FloatTyCtor _, [])
-    | AppTy (BoolTyCtor, [])
-    | AppTy (CharTyCtor, [])
-    | AppTy (StrTyCtor, [])
-    | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
+    | Ty (ErrorTk _, _)
+    | Ty (IntTk _, [])
+    | Ty (FloatTk _, [])
+    | Ty (BoolTk, [])
+    | Ty (CharTk, [])
+    | Ty (StrTk, [])
+    | Ty (NativePtrTk _, _) -> logAcc, ctx
 
     | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   match theTrait with
   | AddTrait ty ->
       match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor _, [])
-      | AppTy (FloatTyCtor _, [])
-      | AppTy (CharTyCtor, [])
-      | AppTy (StrTyCtor, []) -> logAcc, ctx
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, [])
+      | Ty (CharTk, [])
+      | Ty (StrTk, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
           typingUnify logAcc ctx ty tyInt loc
 
-  | EqTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | EqualTrait ty -> (logAcc, ctx) |> expectBasic ty
 
-  | CmpTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | CompareTrait ty -> (logAcc, ctx) |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
       match lTy with
-      | ErrorTy _ -> [], ctx
+      | Ty (ErrorTk _, _) -> [], ctx
 
-      | AppTy (StrTyCtor, []) ->
+      | Ty (StrTk, []) ->
           let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
 
           let logAcc, ctx =
@@ -574,8 +560,8 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | IsIntTrait ty ->
       match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor _, []) -> logAcc, ctx
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
@@ -583,9 +569,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | IsNumberTrait ty ->
       match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor _, [])
-      | AppTy (FloatTyCtor _, []) -> logAcc, ctx
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, []) -> logAcc, ctx
 
       | _ ->
           // Coerce to int by default.
@@ -593,31 +579,31 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | ToCharTrait ty ->
       match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor _, [])
-      | AppTy (FloatTyCtor _, [])
-      | AppTy (CharTyCtor, [])
-      | AppTy (StrTyCtor, []) -> logAcc, ctx
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, [])
+      | Ty (CharTk, [])
+      | Ty (StrTk, []) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   | ToIntTrait ty ->
       match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor _, [])
-      | AppTy (FloatTyCtor _, [])
-      | AppTy (CharTyCtor, [])
-      | AppTy (StrTyCtor, [])
-      | AppTy (NativePtrTyCtor _, _) -> logAcc, ctx
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, [])
+      | Ty (CharTk, [])
+      | Ty (StrTk, [])
+      | Ty (NativePtrTk _, _) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
   | ToFloatTrait ty ->
       match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor _, [])
-      | AppTy (FloatTyCtor _, [])
-      | AppTy (StrTyCtor, []) -> logAcc, ctx
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, [])
+      | Ty (StrTk, []) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
@@ -625,11 +611,11 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
   | PtrTrait ty ->
       match ty with
-      | ErrorTy _
-      | AppTy (IntTyCtor (IntFlavor (_, IPtr)), [])
-      | AppTy (ObjTyCtor, [])
-      | AppTy (ListTyCtor, _)
-      | AppTy (NativePtrTyCtor _, _)
-      | AppTy (NativeFunTyCtor, _) -> logAcc, ctx
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk (IntFlavor (_, IPtr)), [])
+      | Ty (ObjTk, [])
+      | Ty (ListTk, _)
+      | Ty (NativePtrTk _, _)
+      | Ty (NativeFunTk, _) -> logAcc, ctx
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx

@@ -46,7 +46,7 @@ struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2);
 
 struct IntListStringListTuple2;
 
-int main();
+int milone_main();
 
 struct IntList {
     int head;
@@ -237,7 +237,7 @@ struct IntListStringListTuple2 {
     struct StringList const* t1;
 };
 
-int main() {
+int milone_main() {
     int call_7 = id_2(42);
     int call_8 = id_2(1);
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
@@ -262,7 +262,7 @@ int main() {
     struct StringIntTuple2 call_12 = flip_1(tuple_2);
     struct IntStringTuple2 call_13 = flip_2(call_12);
     if ((call_13.t0 != 1)) goto next_16;
-    if ((str_cmp(call_13.t1, (struct String){.str = "a", .len = 1}) != 0)) goto next_16;
+    if ((str_compare(call_13.t1, (struct String){.str = "a", .len = 1}) != 0)) goto next_16;
     match_4 = 0;
     goto end_match_15;
 next_16:;
@@ -289,9 +289,9 @@ end_match_15:;
     if ((tuple_3.t0->tail->head != 1)) goto next_19;
     if ((!((!(tuple_3.t0->tail->tail))))) goto next_19;
     if ((!(tuple_3.t1))) goto next_19;
-    if ((str_cmp(tuple_3.t1->head, (struct String){.str = "b", .len = 1}) != 0)) goto next_19;
+    if ((str_compare(tuple_3.t1->head, (struct String){.str = "b", .len = 1}) != 0)) goto next_19;
     if ((!(tuple_3.t1->tail))) goto next_19;
-    if ((str_cmp(tuple_3.t1->tail->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_19;
+    if ((str_compare(tuple_3.t1->tail->head, (struct String){.str = "a", .len = 1}) != 0)) goto next_19;
     if ((!((!(tuple_3.t1->tail->tail))))) goto next_19;
     match_5 = 0;
     goto end_match_18;
@@ -313,10 +313,10 @@ end_match_18:;
     (*(((struct IntStringTuple2List*)list_12))) = (struct IntStringTuple2List){.head = tuple_4, .tail = list_13};
     struct StringIntTuple2List const* call_16 = listMap_1(fun_5, list_12);
     if ((!(call_16))) goto next_22;
-    if ((str_cmp(call_16->head.t0, (struct String){.str = "a", .len = 1}) != 0)) goto next_22;
+    if ((str_compare(call_16->head.t0, (struct String){.str = "a", .len = 1}) != 0)) goto next_22;
     if ((call_16->head.t1 != 1)) goto next_22;
     if ((!(call_16->tail))) goto next_22;
-    if ((str_cmp(call_16->tail->head.t0, (struct String){.str = "b", .len = 1}) != 0)) goto next_22;
+    if ((str_compare(call_16->tail->head.t0, (struct String){.str = "b", .len = 1}) != 0)) goto next_22;
     if ((call_16->tail->head.t1 != 2)) goto next_22;
     if ((!((!(call_16->tail->tail))))) goto next_22;
     match_6 = 0;

@@ -1,0 +1,12 @@
+#!/bin/sh
+# Build the milone-lang compiler on .NET.
+
+# Requires:
+#   dotnet restore
+
+# Environment variables:
+#   CONFIG: Debug or Release (default: Debug)
+
+set -eu
+
+dotnet build -nologo --no-restore MiloneLang -c ${CONFIG:-Debug}

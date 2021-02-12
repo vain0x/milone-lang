@@ -56,12 +56,12 @@ let listRev xs =
 
   go [] xs
 
-let listEq itemEq xs ys =
+let listEqual itemEqual xs ys =
   let rec go xs ys =
     match xs, ys with
     | [], [] -> true
 
-    | x :: xs, y :: ys -> itemEq x y && go xs ys
+    | x :: xs, y :: ys -> itemEqual x y && go xs ys
 
     | _ -> false
 
@@ -106,13 +106,13 @@ let strConcat (xs: string list) =
 
 let unitObj = box ()
 
-let intEq (first: int) (second: int) = first = second
+let intEqual (first: int) (second: int) = first = second
 
 let intMin (first: int) (second: int) = if second < first then second else first
 
 let intMax (first: int) (second: int) = if first < second then second else first
 
-let strEq (first: string) (second: string) = first = second
+let strEqual (first: string) (second: string) = first = second
 
 let failwith msg =
   printfn "ERROR %s" msg

@@ -1,0 +1,73 @@
+#!/bin/sh
+# Install milone command locally for development.
+#
+# See <scripts/install> for production.
+# Generated files are same as that.
+#
+# USAGE: scripts/install-dev
+
+set -eu
+
+# Somewhere in PATH.
+BIN_DIR="$HOME/bin"
+
+# Installation directory.
+MILONE_HOME="$HOME/.milone"
+
+# ------------------------------------------------
+# Prepare
+# ------------------------------------------------
+
+# Trap error.
+trap 'test $? -ne 0 && echo "install-dev: Installation failed."' EXIT
+
+# ------------------------------------------------
+# Process
+# ------------------------------------------------
+
+scripts/uninstall
+
+# Ensure directories exist.
+mkdir -p "$MILONE_HOME/bin/milone_dotnet"
+mkdir -p "$MILONE_HOME/bin/milone_lsp"
+
+# Make symbolic links.
+ln -fs "$PWD/target/milone" "$MILONE_HOME/milone_native"
+ln -fs "$PWD/MiloneLang/bin/Debug/net5.0/MiloneLang" "$MILONE_HOME/bin/milone_dotnet/MiloneLang"
+ln -fs "$PWD/milone_lsp/bin/Debug/net5.0/MiloneLsp" "$MILONE_HOME/bin/milone_lsp/MiloneLsp"
+ln -fs "$PWD/runtime" "$MILONE_HOME/runtime"
+ln -fs "$PWD/milone_libs" "$MILONE_HOME/milone_libs"
+
+# Record version number and commit hash.
+VERSION="$(target/milone --version) $(git rev-parse HEAD)"
+
+echo $VERSION >"$MILONE_HOME/version"
+
+# ------------------------------------------------
+# milone script
+# ------------------------------------------------
+
+cat >"$BIN_DIR/milone" <<'END'
+#!/bin/sh
+# Execute milone and fallback to .NET version on error.
+
+# Try run native version.
+MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/milone_native" "$@"
+CODE1=$?
+test $CODE1 -eq 0 && exit 0
+
+echo -e '\nmilone: Retrying with .NET version...\n' >&2
+
+MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/milone_dotnet/MiloneLang" "$@"
+CODE2=$?
+test $CODE2 -eq 0 && exit 0
+
+echo "milone: Exited with $CODE1 (native) and $CODE2 (dotnet)"
+exit 1
+END
+
+sed -i "s:{{ MILONE_HOME }}:$MILONE_HOME:g" "$BIN_DIR/milone"
+
+chmod +x "$BIN_DIR/milone"
+
+echo "install-dev: milone-lang v$VERSION is installed successfully."

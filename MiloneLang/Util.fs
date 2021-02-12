@@ -1,10 +1,9 @@
 /// Defines utility types and functions used in multiple modules.
 module rec MiloneLang.Util
 
-open MiloneLang.TreeMap
-
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
+module TreeMap = MiloneStd.StdMap
 module Int = MiloneStd.StdInt
 
 // -----------------------------------------------
@@ -19,9 +18,9 @@ type AssocSet<'K> = TreeMap.TreeMap<'K, unit>
 // Pair
 // -----------------------------------------------
 
-let pairCmp cmp1 cmp2 (l1, l2) (r1, r2) =
-  let c = cmp1 l1 r1
-  if c <> 0 then c else cmp2 l2 r2
+let pairCompare compare1 compare2 (l1, l2) (r1, r2) =
+  let c = compare1 l1 r1
+  if c <> 0 then c else compare2 l2 r2
 
 // -----------------------------------------------
 // Option
@@ -40,6 +39,9 @@ let stOptionMap f (x, ctx) =
 // -----------------------------------------------
 
 let cons head tail = head :: tail
+
+let forList folder xs state =
+  List.fold (fun state x -> folder x state) state xs
 
 /// Tries to "zip" two lists by pairing every i'th item from both lists.
 ///
@@ -84,19 +86,19 @@ let stFlatMap f (xs, ctx) =
 
   go [] xs ctx
 
-let listCmp cmp ls rs =
+let listCompare compare ls rs =
   let rec go ls rs =
     match ls, rs with
     | [], [] -> 0
     | [], _ -> -1
     | _, [] -> 1
     | l :: ls, r :: rs ->
-        let c = cmp l r
+        let c = compare l r
         if c <> 0 then c else go ls rs
 
   go ls rs
 
-let listSortCore unique cmp xs =
+let listSortCore unique compare xs =
   let rec appendRev acc xs =
     match xs with
     | [] -> acc
@@ -110,7 +112,9 @@ let listSortCore unique cmp xs =
   let rec merge (zs, zn) d (xs, xn) (ys, yn) =
     if xn = 0 then
       (appendRev ys zs, zn + yn), d
-    else if yn = 0 then
+    else
+
+    if yn = 0 then
       (appendRev xs zs, zn + xn), d
     else
       match xs, ys with
@@ -118,13 +122,14 @@ let listSortCore unique cmp xs =
       | _, [] -> failwith "NEVER: wrong list length"
 
       | x :: xs1, y :: ys1 ->
-          let c = cmp x y
+          let c = compare x y
 
-          if c > 0
-          then merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
-          else if c = 0 && unique
-          then merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
-          else merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
+          if c > 0 then
+            merge (y :: zs, zn + 1) d (xs, xn) (ys1, yn - 1)
+          else if c = 0 && unique then
+            merge (zs, zn) (d + 1) (xs, xn) (ys1, yn - 1)
+          else
+            merge (x :: zs, zn + 1) d (xs1, xn - 1) (ys, yn)
 
   // `go (xs, xn) = (zs, zn), xs1, d` where
   // `zs.[0..xn - 1]` is the sort of `xs.[0..xn - 1]`,
@@ -146,9 +151,9 @@ let listSortCore unique cmp xs =
   assert (ws |> List.isEmpty)
   List.truncate zn zs
 
-let listSort cmp xs = listSortCore false cmp xs
+let listSort compare xs = listSortCore false compare xs
 
-let listUnique cmp xs = listSortCore true cmp xs
+let listUnique compare xs = listSortCore true compare xs
 
 /// Tries to split a list to pair of non-last items and the last item.
 let splitLast xs =
@@ -165,12 +170,12 @@ let splitLast xs =
 // Assoc
 // -----------------------------------------------
 
-let assocTryFind cmp key assoc =
+let assocTryFind compare key assoc =
   let rec go assoc =
     match assoc with
     | [] -> None
 
-    | (k, v) :: _ when cmp k key = 0 -> Some v
+    | (k, v) :: _ when compare k key = 0 -> Some v
 
     | _ :: assoc -> go assoc
 
@@ -180,7 +185,7 @@ let assocTryFind cmp key assoc =
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty cmp: AssocMap<_, _> = TreeMap.empty cmp
+let mapEmpty compare: AssocMap<_, _> = TreeMap.empty compare
 
 let mapIsEmpty (map: AssocMap<_, _>) = TreeMap.isEmpty map
 
@@ -212,12 +217,12 @@ let mapToKeys (map: AssocMap<_, _>) = TreeMap.toList map |> List.map fst
 
 let mapToList (map: AssocMap<_, _>) = TreeMap.toList map
 
-let mapOfKeys cmp value keys: AssocMap<_, _> =
+let mapOfKeys compare value keys: AssocMap<_, _> =
   keys
   |> List.map (fun key -> key, value)
-  |> TreeMap.ofList cmp
+  |> TreeMap.ofList compare
 
-let mapOfList cmp assoc: AssocMap<_, _> = TreeMap.ofList cmp assoc
+let mapOfList compare assoc: AssocMap<_, _> = TreeMap.ofList compare assoc
 
 // -----------------------------------------------
 // AssocSet
@@ -231,7 +236,7 @@ let setContains key (set: AssocSet<_>) = set |> mapContainsKey key
 
 let setToList (set: AssocSet<_>) = set |> mapToKeys
 
-let setOfList cmp xs: AssocSet<_> = mapOfKeys cmp () xs
+let setOfList compare xs: AssocSet<_> = mapOfKeys compare () xs
 
 let setAdd key set: AssocSet<_> = mapAdd key () set
 
@@ -269,7 +274,10 @@ let intToHexWithPadding (len: int) (value: int) =
         let s = "0123456789abcdef" |> S.slice d (d + 1)
         go (s + acc) (len - 1) (n / 16)
 
-    if value = 0 && len = 0 then "0" else go "" len value
+    if value = 0 && len = 0 then
+      "0"
+    else
+      go "" len value
 
 let intFromHex (l: int) (r: int) (s: string) =
   assert (0 <= l && l < r && r <= s.Length)
@@ -317,7 +325,7 @@ let charEscape (c: char) =
 
   | '\'' -> "\\\'"
 
-  | '\"' -> "\\\""
+  | '"' -> "\\\""
 
   | '\\' -> "\\\\"
 
@@ -343,9 +351,10 @@ let strEscape (str: string) =
     /// Finds the end index of the maximum non-escaping segment
     /// that starts at `l`.
     let rec raw i =
-      if i = str.Length || charNeedsEscaping str.[i]
-      then i
-      else raw (i + 1)
+      if i = str.Length || charNeedsEscaping str.[i] then
+        i
+      else
+        raw (i + 1)
 
     // Skip the non-escape segment that starts at `i`.
     let i, acc =
@@ -358,4 +367,7 @@ let strEscape (str: string) =
       let t = str.[i] |> charEscape
       go (t :: acc) (i + 1)
 
-  if str |> strNeedsEscaping |> not then str else go [] 0 |> List.rev |> strConcat
+  if str |> strNeedsEscaping |> not then
+    str
+  else
+    go [] 0 |> List.rev |> strConcat

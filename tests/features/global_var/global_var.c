@@ -6,7 +6,7 @@ int g_(int arg_1);
 
 static int success_;
 
-int main();
+int milone_main();
 
 int f_(int arg_) {
     return success_;
@@ -17,7 +17,7 @@ int g_(int arg_1) {
     return call_;
 }
 
-int main() {
+int milone_main() {
     success_ = 0;
     int call_1 = g_(0);
     return call_1;

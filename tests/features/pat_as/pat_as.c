@@ -6,7 +6,7 @@ struct IntIntTuple2;
 
 int shadowingCase_(int arg_1);
 
-int main();
+int milone_main();
 
 int simpleCase_(int arg_) {
     int match_;
@@ -71,7 +71,7 @@ end_match_4:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = simpleCase_(0);
     int call_1 = shadowingCase_(0);
     return 0;

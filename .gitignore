@@ -4,6 +4,11 @@
 
 
 
+# Third-party tools.
+/bin/
+
+
+
 # Build caches.
 *.generated.*
 *.timestamp

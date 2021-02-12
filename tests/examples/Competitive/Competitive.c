@@ -76,17 +76,17 @@ struct IntIntBoolFun2;
 
 struct IntListIntListTuple2;
 
-bool go_32(struct IntIntBoolFun2 itemEq_, struct IntList const* xs_8, struct IntList const* ys_1);
+bool go_32(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1);
 
 struct StringStringBoolFun2;
 
 struct StringListStringListTuple2;
 
-bool go_31(struct StringStringBoolFun2 itemEq_, struct StringList const* xs_8, struct StringList const* ys_1);
+bool go_31(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1);
 
-bool listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList const* xs_7, struct IntList const* ys_);
+bool listEqual_2(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_7, struct IntList const* ys_);
 
-bool listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList const* xs_7, struct StringList const* ys_);
+bool listEqual_1(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_7, struct StringList const* ys_);
 
 struct IntList const* go_30(int item_, int len_3, struct IntList const* acc_1, int i_);
 
@@ -104,13 +104,13 @@ struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_);
 
 struct String strConcat_(struct StringList const* xs_10);
 
-bool intEq_(int first_, int second_);
+bool intEqual_(int first_, int second_);
 
 int intMin_(int first_1, int second_1);
 
 int intMax_(int first_2, int second_2);
 
-bool strEq_(struct String first_3, struct String second_3);
+bool strEqual_(struct String first_3, struct String second_3);
 
 int failwith_1(struct String msg_);
 
@@ -434,7 +434,7 @@ static void const* unitObj_;
 
 static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3TypeTag_Tuple6 typeInt_;
 
-int main();
+int milone_main();
 
 void* memAlloc_(int len_, int size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(len_, ((uintptr_t)size_));
@@ -761,7 +761,7 @@ struct IntListIntListTuple2 {
     struct IntList const* t1;
 };
 
-bool go_32(struct IntIntBoolFun2 itemEq_, struct IntList const* xs_8, struct IntList const* ys_1) {
+bool go_32(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1) {
 tailrec_35:;
     bool match_4;
     struct IntListIntListTuple2 tuple_ = (struct IntListIntListTuple2){.t0 = xs_8, .t1 = ys_1};
@@ -776,7 +776,7 @@ next_37:;
     if ((!(tuple_.t1))) goto next_38;
     int y_ = tuple_.t1->head;
     struct IntList const* ys_2 = tuple_.t1->tail;
-    bool app_ = itemEq_.fun(itemEq_.env, x_1, y_);
+    bool app_ = itemEqual_.fun(itemEqual_.env, x_1, y_);
     bool if_6;
     if (app_) {
         goto then_41;
@@ -784,10 +784,10 @@ next_37:;
         goto else_42;
     }
 then_41:;
-    struct IntIntBoolFun2 arg_44 = itemEq_;
+    struct IntIntBoolFun2 arg_44 = itemEqual_;
     struct IntList const* arg_45 = xs_9;
     struct IntList const* arg_46 = ys_2;
-    itemEq_ = arg_44;
+    itemEqual_ = arg_44;
     xs_8 = arg_45;
     ys_1 = arg_46;
     goto tailrec_35;
@@ -817,7 +817,7 @@ struct StringListStringListTuple2 {
     struct StringList const* t1;
 };
 
-bool go_31(struct StringStringBoolFun2 itemEq_, struct StringList const* xs_8, struct StringList const* ys_1) {
+bool go_31(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1) {
 tailrec_43:;
     bool match_5;
     struct StringListStringListTuple2 tuple_1 = (struct StringListStringListTuple2){.t0 = xs_8, .t1 = ys_1};
@@ -832,7 +832,7 @@ next_45:;
     if ((!(tuple_1.t1))) goto next_46;
     struct String y_ = tuple_1.t1->head;
     struct StringList const* ys_2 = tuple_1.t1->tail;
-    bool app_1 = itemEq_.fun(itemEq_.env, x_1, y_);
+    bool app_1 = itemEqual_.fun(itemEqual_.env, x_1, y_);
     bool if_7;
     if (app_1) {
         goto then_49;
@@ -840,10 +840,10 @@ next_45:;
         goto else_50;
     }
 then_49:;
-    struct StringStringBoolFun2 arg_47 = itemEq_;
+    struct StringStringBoolFun2 arg_47 = itemEqual_;
     struct StringList const* arg_48 = xs_9;
     struct StringList const* arg_49 = ys_2;
-    itemEq_ = arg_47;
+    itemEqual_ = arg_47;
     xs_8 = arg_48;
     ys_1 = arg_49;
     goto tailrec_43;
@@ -863,13 +863,13 @@ end_match_44:;
     return match_5;
 }
 
-bool listEq_2(struct IntIntBoolFun2 itemEq_, struct IntList const* xs_7, struct IntList const* ys_) {
-    bool call_6 = go_32(itemEq_, xs_7, ys_);
+bool listEqual_2(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_7, struct IntList const* ys_) {
+    bool call_6 = go_32(itemEqual_, xs_7, ys_);
     return call_6;
 }
 
-bool listEq_1(struct StringStringBoolFun2 itemEq_, struct StringList const* xs_7, struct StringList const* ys_) {
-    bool call_7 = go_31(itemEq_, xs_7, ys_);
+bool listEqual_1(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_7, struct StringList const* ys_) {
+    bool call_7 = go_31(itemEqual_, xs_7, ys_);
     return call_7;
 }
 
@@ -1007,7 +1007,7 @@ struct String strConcat_(struct StringList const* xs_10) {
     return s_;
 }
 
-bool intEq_(int first_, int second_) {
+bool intEqual_(int first_, int second_) {
     return (first_ == second_);
 }
 
@@ -1045,12 +1045,12 @@ if_next_67:;
     return if_11;
 }
 
-bool strEq_(struct String first_3, struct String second_3) {
-    return (str_cmp(first_3, second_3) == 0);
+bool strEqual_(struct String first_3, struct String second_3) {
+    return (str_compare(first_3, second_3) == 0);
 }
 
 int failwith_1(struct String msg_) {
-    printf("ERROR %s\n", msg_.str);
+    printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
     return 0;
 }
@@ -3055,27 +3055,27 @@ struct String fun_8(void const* env_5, struct String arg_9, struct String arg_10
 }
 
 bool fun_9(void const* env_6, int arg_11, int arg_12) {
-    bool call_251 = intEq_(arg_11, arg_12);
+    bool call_251 = intEqual_(arg_11, arg_12);
     return call_251;
 }
 
 bool fun_10(void const* env_7, int arg_13, int arg_14) {
-    bool call_252 = intEq_(arg_13, arg_14);
+    bool call_252 = intEqual_(arg_13, arg_14);
     return call_252;
 }
 
 bool fun_11(void const* env_8, int arg_15, int arg_16) {
-    bool call_253 = intEq_(arg_15, arg_16);
+    bool call_253 = intEqual_(arg_15, arg_16);
     return call_253;
 }
 
 bool fun_12(void const* env_9, int arg_17, int arg_18) {
-    bool call_254 = intEq_(arg_17, arg_18);
+    bool call_254 = intEqual_(arg_17, arg_18);
     return call_254;
 }
 
 bool fun_13(void const* env_10, int arg_19, int arg_20) {
-    bool call_255 = intEq_(arg_19, arg_20);
+    bool call_255 = intEqual_(arg_19, arg_20);
     return call_255;
 }
 
@@ -3092,7 +3092,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntList const* list_23 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_23))) = (struct IntList){.head = 1, .tail = list_24};
     struct IntList const* call_259 = segTreeToList_2(v_5);
-    bool call_260 = listEq_2(fun_25, list_23, call_259);
+    bool call_260 = listEqual_2(fun_25, list_23, call_259);
     milone_assert(call_260, 462, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_261 = segTreePush_1(3, v_5);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_6 = call_261;
@@ -3106,7 +3106,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntList const* list_25 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_25))) = (struct IntList){.head = 1, .tail = list_26};
     struct IntList const* call_262 = segTreeToList_2(v_6);
-    bool call_263 = listEq_2(fun_26, list_25, call_262);
+    bool call_263 = listEqual_2(fun_26, list_25, call_262);
     milone_assert(call_263, 465, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_264 = segTreePop_1(v_6);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_7 = call_264;
@@ -3118,7 +3118,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntList const* list_28 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_28))) = (struct IntList){.head = 1, .tail = list_29};
     struct IntList const* call_265 = segTreeToList_2(v_7);
-    bool call_266 = listEq_2(fun_27, list_28, call_265);
+    bool call_266 = listEqual_2(fun_27, list_28, call_265);
     milone_assert(call_266, 468, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_267 = segTreePop_1(v_7);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_8 = call_267;
@@ -3128,7 +3128,7 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     struct IntList const* list_30 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_30))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* call_268 = segTreeToList_2(v_8);
-    bool call_269 = listEq_2(fun_28, list_30, call_268);
+    bool call_269 = listEqual_2(fun_28, list_30, call_268);
     milone_assert(call_269, 471, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_270 = segTreePop_1(v_8);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 v_9 = call_270;
@@ -3136,18 +3136,18 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
     (*(((int*)box_9))) = 0;
     struct IntIntBoolFun2 fun_29 = (struct IntIntBoolFun2){.fun = fun_13, .env = box_9};
     struct IntList const* call_271 = segTreeToList_2(v_9);
-    bool call_272 = listEq_2(fun_29, NULL, call_271);
+    bool call_272 = listEqual_2(fun_29, NULL, call_271);
     milone_assert(call_272, 474, 4);
     return 0;
 }
 
 bool fun_14(void const* env_11, int arg_21, int arg_22) {
-    bool call_273 = intEq_(arg_21, arg_22);
+    bool call_273 = intEqual_(arg_21, arg_22);
     return call_273;
 }
 
 bool fun_15(void const* env_12, int arg_23, int arg_24) {
-    bool call_274 = intEq_(arg_23, arg_24);
+    bool call_274 = intEqual_(arg_23, arg_24);
     return call_274;
 }
 
@@ -3171,7 +3171,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTy
     struct IntList const* list_34 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_34))) = (struct IntList){.head = 1, .tail = list_35};
     struct IntList const* call_277 = segTreeToList_2(v_10);
-    bool call_278 = listEq_2(fun_30, list_34, call_277);
+    bool call_278 = listEqual_2(fun_30, list_34, call_277);
     milone_assert(call_278, 483, 4);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_279 = segTreeSet_1(0, 11, v_10);
     struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4IntIntIntObjectSegNodeTag_Tuple5SegTreeTag_Tuple3 call_280 = segTreeSet_1(2, 33, call_279);
@@ -3186,7 +3186,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTy
     struct IntList const* list_37 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_37))) = (struct IntList){.head = 11, .tail = list_38};
     struct IntList const* call_281 = segTreeToList_2(v_11);
-    bool call_282 = listEq_2(fun_31, list_37, call_281);
+    bool call_282 = listEqual_2(fun_31, list_37, call_281);
     milone_assert(call_282, 486, 4);
     return 0;
 }
@@ -3358,7 +3358,7 @@ int testBalance_(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegIt
 }
 
 bool fun_16(void const* env_13, struct String arg_25, struct String arg_26) {
-    bool call_295 = strEq_(arg_25, arg_26);
+    bool call_295 = strEqual_(arg_25, arg_26);
     return call_295;
 }
 
@@ -3375,7 +3375,7 @@ int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectSegNodeTag_T
     struct StringList const* list_52 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_52))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_53};
     struct StringList const* call_299 = segTreeToList_1(v_15);
-    bool call_300 = listEq_1(fun_32, list_52, call_299);
+    bool call_300 = listEqual_1(fun_32, list_52, call_299);
     milone_assert(call_300, 543, 4);
     return 0;
 }
@@ -3853,7 +3853,7 @@ int abc140eMain_(int arg_149) {
     return 0;
 }
 
-int main() {
+int milone_main() {
     void const* box_19 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_19))) = 0;
     unitObj_ = box_19;

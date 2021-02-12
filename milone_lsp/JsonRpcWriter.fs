@@ -17,42 +17,6 @@ let private jsonRpcWriteString: string -> unit =
     writer.Write(bytes)
     writer.Flush()
 
-/// Writes a JSON-RPC message using template file.
-let jsonRpcWriteWithTemplate (name: string) (values: (string * JsonValue) list): unit =
-  // eprintfn "template '%s' values=%A" name values
-
-  let templateText =
-    let dir =
-      System.IO.Path.GetDirectoryName(
-        System
-          .Reflection
-          .Assembly
-          .GetExecutingAssembly()
-          .Location
-      )
-
-    System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "..", "..", "..", "templates", sprintf "%s.json" name))
-
-  // eprintfn "    '%s'" templateText
-
-  let text =
-    // Replace placeholders.
-    let mutable buf = System.Text.StringBuilder(templateText)
-
-    for key, value in values do
-      buf.Replace(sprintf "\"${%s}\"" key, jsonDisplay value)
-      |> ignore
-
-    let text = buf.ToString()
-
-    // eprintfn "    -> '%s'" text
-    // eprintfn "    -> %A" (jsonDeserializeString text)
-
-    // Format.
-    jsonDisplay (jsonDeserializeString text) + "\n"
-
-  jsonRpcWriteString text
-
 /// Writes a JSON-RPC message with result field. (For LSP responses.)
 let jsonRpcWriteWithResult (id: JsonValue) (result: JsonValue): unit =
   let jsonValue =
@@ -70,6 +34,16 @@ let jsonRpcWriteWithParams (methodName: string) (paramsValue: JsonValue): unit =
     [ "jsonrpc", JString "2.0"
       "method", JString methodName
       "params", paramsValue ]
+    |> Map.ofList
+    |> JObject
+
+  jsonRpcWriteString (jsonDisplay jsonValue + "\n")
+
+let jsonRpcWriteWithError (id: JsonValue) (error: JsonValue): unit =
+  let jsonValue =
+    [ "jsonrpc", JString "2.0"
+      "id", id
+      "error", error ]
     |> Map.ofList
     |> JObject
 

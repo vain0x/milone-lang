@@ -6,7 +6,7 @@ struct BoolBoolFun1;
 
 int testShortCircuit_(bool t_1, bool f_1);
 
-int main();
+int milone_main();
 
 int test_(bool t_, bool f_) {
     milone_assert(t_, 6, 2);
@@ -174,7 +174,7 @@ if_next_28:;
     return 0;
 }
 
-int main() {
+int milone_main() {
     int call_ = test_(true, false);
     int call_1 = testShortCircuit_(true, false);
     return 0;

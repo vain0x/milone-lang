@@ -1,5 +1,0 @@
-{
-  Options = [
-    Ref "../../../milone_libs/MiloneStd"
-  ]
-}

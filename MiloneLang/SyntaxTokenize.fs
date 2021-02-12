@@ -93,7 +93,10 @@ let private charIsOp (c: char): bool =
 
 /// Gets i'th byte of string. Returns \x00 if out of range.
 let private at (text: string) (i: int) =
-  if i < text.Length then text.[i] else '\x00'
+  if i < text.Length then
+    text.[i]
+  else
+    '\x00'
 
 /// Followed by `"""`?
 let private isFollowedByRawQuotes (i: int) (s: string): bool =
@@ -121,9 +124,12 @@ let private posShift (text: string) (l: int) (r: int) (pos: Pos) =
   let y, x = pos
 
   let rec go y x i =
-    if i = r then y, x
-    else if text.[i] = '\n' then go (y + 1) 0 (i + 1)
-    else go y (x + 1) (i + 1)
+    if i = r then
+      y, x
+    else if text.[i] = '\n' then
+      go (y + 1) 0 (i + 1)
+    else
+      go y (x + 1) (i + 1)
 
   go y x l
 
@@ -147,7 +153,10 @@ let private scanBad (text: string) (i: int) =
     | _ -> true
 
   let rec go i =
-    if i < text.Length && stillBad text.[i] then go (i + 1) else i
+    if i < text.Length && stillBad text.[i] then
+      go (i + 1)
+    else
+      i
 
   go i
 
@@ -184,7 +193,10 @@ let private scanNewlines (text: string) (i: int) =
 /// Skips current line.
 let private scanLine (text: string) (i: int) =
   let rec go i =
-    if i < text.Length && text.[i] <> '\n' then go (i + 1) else i
+    if i < text.Length && text.[i] <> '\n' then
+      go (i + 1)
+    else
+      i
 
   go i
 
@@ -192,23 +204,30 @@ let private scanLine (text: string) (i: int) =
 // can be single token.
 let private scanOp (text: string) (i: int) =
   let rec go i =
-    if i < text.Length && text.[i] |> charIsOp then go (i + 1) else i
+    if i < text.Length && text.[i] |> charIsOp then
+      go (i + 1)
+    else
+      i
 
   go i
 
 let private scanIdent (text: string) (i: int) =
   let rec go i =
-    if i < text.Length && text.[i] |> charIsIdent
-    then go (i + 1)
-    else i
+    if i < text.Length && text.[i] |> charIsIdent then
+      go (i + 1)
+    else
+      i
 
   go i
 
 let private scanRawIdent (text: string) (i: int) =
   let rec go i =
-    if text |> isFollowedByBackticks i then true, i
-    else if i >= text.Length then false, i
-    else go (i + 1)
+    if text |> isFollowedByBackticks i then
+      true, i
+    else if i >= text.Length then
+      false, i
+    else
+      go (i + 1)
 
   if text |> isFollowedByBackticks i then
     let ok, m = go (i + 1)
@@ -218,13 +237,17 @@ let private scanRawIdent (text: string) (i: int) =
 
 let private scanNumberLit (text: string) (i: int) =
   let rec scanDigits (i: int) =
-    if at text i |> C.isDigit then scanDigits (i + 1) else i
+    if at text i |> C.isDigit then
+      scanDigits (i + 1)
+    else
+      i
 
   let scanFraction i =
     // Check if point is following but not a range operator.
-    if at text i = '.' && at text (i + 1) <> '.'
-    then true, scanDigits (i + 1)
-    else false, i
+    if at text i = '.' && at text (i + 1) <> '.' then
+      true, scanDigits (i + 1)
+    else
+      false, i
 
   let scanExponential i =
     match at text i with
@@ -251,7 +274,10 @@ let private scanNumberLit (text: string) (i: int) =
 
 let private scanCharLit (text: string) (i: int) =
   let at (i: int) =
-    if i < text.Length then text.[i] else '\x00'
+    if i < text.Length then
+      text.[i]
+    else
+      '\x00'
 
   let rec go i =
     match at i with
@@ -261,7 +287,11 @@ let private scanCharLit (text: string) (i: int) =
     | '\r'
     | '\n' -> i
 
-    | '\\' -> if at (i + 1) <> '\x00' then go (i + 2) else i + 1
+    | '\\' ->
+        if at (i + 1) <> '\x00' then
+          go (i + 2)
+        else
+          i + 1
 
     | _ -> go (i + 1)
 
@@ -270,17 +300,24 @@ let private scanCharLit (text: string) (i: int) =
 
 let private scanStrLit (text: string) (i: int) =
   let at (i: int) =
-    if i < text.Length then text.[i] else '\x00'
+    if i < text.Length then
+      text.[i]
+    else
+      '\x00'
 
   let rec go i =
     match at i with
-    | '\"' -> i + 1
+    | '"' -> i + 1
 
     | '\x00'
     | '\r'
     | '\n' -> i
 
-    | '\\' -> if at (i + 1) <> '\x00' then go (i + 2) else i + 1
+    | '\\' ->
+        if at (i + 1) <> '\x00' then
+          go (i + 2)
+        else
+          i + 1
 
     | _ -> go (i + 1)
 
@@ -289,9 +326,13 @@ let private scanStrLit (text: string) (i: int) =
 
 let private scanStrLitRaw (text: string) (i: int) =
   let rec go i =
-    if i + 3 <= text.Length
-    then if text |> isFollowedByRawQuotes i then i + 3 else go (i + 1)
-    else text.Length
+    if i + 3 <= text.Length then
+      if text |> isFollowedByRawQuotes i then
+        i + 3
+      else
+        go (i + 1)
+    else
+      text.Length
 
   assert (i >= 3 && isFollowedByRawQuotes (i - 3) text)
   go i
@@ -337,7 +378,7 @@ let private tokenOfOp (text: string) l r: Token =
   | '<' ->
       match s with
       | "<" -> LeftAngleToken
-      | "<=" -> LeftEqToken
+      | "<=" -> LeftEqualToken
       | "<>" -> LeftRightToken
       | "<<" -> LeftLeftToken
       | "<<<" -> LeftLeftLeftToken
@@ -346,7 +387,7 @@ let private tokenOfOp (text: string) l r: Token =
   | '>' ->
       match s with
       | ">" -> RightAngleToken
-      | ">=" -> RightEqToken
+      | ">=" -> RightEqualToken
       | _ -> error ()
 
   | '|' ->
@@ -363,7 +404,7 @@ let private tokenOfOp (text: string) l r: Token =
       | "^^^" -> HatHatHatToken
       | _ -> error ()
 
-  | '=' -> expect "=" EqToken
+  | '=' -> expect "=" EqualToken
   | '%' -> expect "%" PercentToken
   | '+' -> expect "+" PlusToken
   | ';' -> expect ";" SemiToken
@@ -378,9 +419,10 @@ let private evalCharLit (text: string) (l: int) (r: int): Token =
   | 3 when text.[l] = '\'' && text.[l + 2] = '\'' -> CharToken(text.[l + 1])
 
   // '\?'
-  | 4 when text.[l] = '\''
-           && text.[l + 1] = '\\'
-           && text.[l + 3] = '\'' ->
+  | 4 when
+    text.[l] = '\''
+    && text.[l + 1] = '\\'
+    && text.[l + 3] = '\'' ->
       let c = text.[l + 2]
 
       match c with
@@ -395,17 +437,24 @@ let private evalCharLit (text: string) (l: int) (r: int): Token =
       | _ -> ErrorToken UnknownEscapeSequenceError
 
   // '\xHH'
-  | 6 when text.[l] = '\''
-           && text.[l + 1] = '\\'
-           && text.[l + 2] = 'x'
-           && text.[l + 5] = '\'' ->
-      if text.[l + 3] = '0' && text.[l + 4] = '0' then CharToken '\x00' else ErrorToken UnimplHexEscapeError
+  | 6 when
+    text.[l] = '\''
+    && text.[l + 1] = '\\'
+    && text.[l + 2] = 'x'
+    && text.[l + 5] = '\'' ->
+      if text.[l + 3] = '0' && text.[l + 4] = '0' then
+        CharToken '\x00'
+      else
+        ErrorToken UnimplHexEscapeError
 
   | _ -> ErrorToken InvalidCharLitError
 
 let private evalStrLit (text: string) (l: int) (r: int): Token =
   let rec skipVerbatim i =
-    if i + 1 < r && text.[i] <> '\\' then skipVerbatim (i + 1) else i
+    if i + 1 < r && text.[i] <> '\\' then
+      skipVerbatim (i + 1)
+    else
+      i
 
   /// Splits a string to alternating list of unescaped "verbatim" parts
   /// and escape sequences. E.g. "hello\nworld" -> "hello", "\n", "world".
@@ -416,7 +465,10 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
     let endIndex = skipVerbatim i
 
     let acc =
-      if i < endIndex then (text |> S.slice i endIndex) :: acc else acc
+      if i < endIndex then
+        (text |> S.slice i endIndex) :: acc
+      else
+        acc
 
     let i = endIndex
 
@@ -427,10 +479,11 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
       assert (i < r - 1 && text.[i] = '\\')
 
       match text.[i + 1] with
-      | 'x' when i + 4 < r
-                 && text.[i + 2] = '0'
-                 && text.[i + 3] = '0' -> go ("\x00" :: acc) (i + 4)
-      | 't' when i + 2 < r -> go ("\t" :: acc) (i + 2)
+      | 'x' when
+        i + 4 < r
+        && text.[i + 2] = '0'
+        && text.[i + 3] = '0' -> go ("\x00" :: acc) (i + 4)
+      | 't' when i + 2 < r -> go ("	" :: acc) (i + 2)
       | 'r' when i + 2 < r -> go ("\r" :: acc) (i + 2)
       | 'n' when i + 2 < r -> go ("\n" :: acc) (i + 2)
 
@@ -440,9 +493,10 @@ let private evalStrLit (text: string) (l: int) (r: int): Token =
 
       | _ -> ErrorToken UnknownEscapeSequenceError
 
-  if l + 2 <= r && text.[l] = '"' && text.[r - 1] = '"'
-  then go [] (l + 1)
-  else ErrorToken InvalidStrLitError
+  if l + 2 <= r && text.[l] = '"' && text.[r - 1] = '"' then
+    go [] (l + 1)
+  else
+    ErrorToken InvalidStrLitError
 
 let private evalStrLitRaw (text: string) l r =
   if (l + 6 <= r)
@@ -477,7 +531,10 @@ type private Lookahead =
 
 let private lookahead (text: string) (i: int) =
   let at (i: int) =
-    if i < text.Length then text.[i] else '\x00'
+    if i < text.Length then
+      text.[i]
+    else
+      '\x00'
 
   assert (i < text.Length)
   let c = text.[i]
@@ -558,11 +615,16 @@ let private lookahead (text: string) (i: int) =
   | 'z' -> LIdent, 1
 
   | '\'' ->
-      if charIsTyVar (at (i + 1)) && at (i + 2) <> '\''
-      then LTyVar, 2
-      else LChar, 1
+      if charIsTyVar (at (i + 1)) && at (i + 2) <> '\'' then
+        LTyVar, 2
+      else
+        LChar, 1
 
-  | '"' -> if isFollowedByRawQuotes i text then LRawStr, 3 else LStr, 1
+  | '"' ->
+      if isFollowedByRawQuotes i text then
+        LRawStr, 3
+      else
+        LStr, 1
 
   | '`' -> LRawIdent, 1
 
@@ -633,9 +695,12 @@ let private doNext (host: TokenizeHost) (text: string) (index: int): Token * int
 
       // Value can be too large or too small; range should be checked in Typing.
       // m: before suffix
-      if m < r then ErrorToken UnimplNumberSuffixError, r
-      else if isFloat then FloatToken text.[index..r - 1], r
-      else IntToken(S.slice index r text), r
+      if m < r then
+        ErrorToken UnimplNumberSuffixError, r
+      else if isFloat then
+        FloatToken text.[index..r - 1], r
+      else
+        IntToken(S.slice index r text), r
 
   | LNonKeywordIdent ->
       let r = scanIdent text (index + len)
