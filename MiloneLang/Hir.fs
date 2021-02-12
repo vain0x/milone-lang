@@ -282,7 +282,7 @@ type HPatKind =
   | HTuplePN
 
   /// `p1.r`
-  | HNavPN of navR: string
+  | HNavPN of navR: Ident
 
   /// `p1: ty`
   | HAscribePN
@@ -538,7 +538,7 @@ type Log =
 
 let nameCtxEmpty () = NameCtx(mapEmpty compare, 0)
 
-let nameCtxAdd name (NameCtx (map, serial)) =
+let nameCtxAdd (Name (name, _)) (NameCtx (map, serial)) =
   let serial = serial + 1
   let map = map |> mapAdd serial name
   serial, NameCtx(map, serial)

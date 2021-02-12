@@ -19,6 +19,10 @@ open MiloneLang.Util
 /// Identifier. Name of something.
 type Ident = string
 
+/// Name with ID.
+[<NoEquality; NoComparison>]
+type Name = Name of string * Pos
+
 /// Visibility.
 [<NoEquality; NoComparison>]
 type Vis =
@@ -270,13 +274,13 @@ type ATy =
 
   /// Named type with potential qualifiers and type arguments,
   /// e.g. `int`, `M.AssocMap<K, V>`.
-  | AAppTy of quals: Ident list * Ident * ATy list * Pos
+  | AAppTy of quals: Name list * Name * ATy list * Pos
 
   /// Type variable, e.g. `'T`.
-  | AVarTy of Ident * Pos
+  | AVarTy of Name
 
   /// Type suffix, e.g. `T list`.
-  | ASuffixTy of ATy * Ident * Pos
+  | ASuffixTy of ATy * Name
 
   /// Tuple type, e.g. `int * string`.
   | ATupleTy of ATy list * Pos
@@ -293,13 +297,13 @@ type APat =
 
   /// Pattern that is non-keyword identifier.
   /// Variable (`x`), wildcard (`_`) or variant (`None`).
-  | AIdentPat of Ident * Pos
+  | AIdentPat of Name
 
   /// E.g. `[x; y; z]`.
   | AListPat of APat list * Pos
 
   /// Navigation, e.g. `Foo.Bar`.
-  | ANavPat of APat * Ident * Pos
+  | ANavPat of APat * Name * Pos
 
   /// Application. e.g. `Some x`.
   ///
@@ -314,7 +318,7 @@ type APat =
   | ATuplePat of APat list * Pos
 
   /// E.g. `(Some x) as opt`.
-  | AAsPat of APat * Ident * Pos
+  | AAsPat of APat * Name * Pos
 
   /// Type ascription, e.g. `x: int`.
   | AAscribePat of APat * ATy * Pos
@@ -324,7 +328,7 @@ type APat =
 
   /// Function declaration pattern, e.g. `f x y`.
   /// Syntactically distinct from the app pattern for technically reason.
-  | AFunDeclPat of Ident * APat list * Pos
+  | AFunDeclPat of Name * APat list
 
 /// Arm of match expression in AST.
 ///
@@ -339,18 +343,18 @@ type AArm = AArm of pat: APat * guard: AExpr option * body: AExpr * Pos
 /// or `| Joker` (without `of`).
 [<Struct>]
 [<NoEquality; NoComparison>]
-type AVariant = AVariant of Ident * payloadTyOpt: ATy option * Pos
+type AVariant = AVariant of Name * payloadTyOpt: ATy option * Pos
 
 /// Field declaration in AST.
 ///
 /// E.g. `Name: string`.
-type AFieldDecl = Ident * ATy * Pos
+type AFieldDecl = Name * ATy * Pos
 
 /// Let expression in AST.
 [<NoEquality; NoComparison>]
 type ALet =
   | ALetVal of IsRec * Vis * APat * AExpr * AExpr * Pos
-  | ALetFun of IsRec * Vis * Ident * args: APat list * AExpr * AExpr * Pos
+  | ALetFun of IsRec * Vis * Name * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
 [<NoEquality; NoComparison>]
@@ -370,13 +374,13 @@ type AExpr =
   | ALitExpr of Lit * Pos
 
   /// E.g. `x`.
-  | AIdentExpr of Ident * Pos
+  | AIdentExpr of Name
 
   /// List literal, e.g. `[]`, `[2; 3]`.
   | AListExpr of AExpr list * Pos
 
   /// Record literal, e.g. `{}`, `{ X = 1; Y = 2 }`.
-  | ARecordExpr of AExpr option * (Ident * AExpr * Pos) list * Pos
+  | ARecordExpr of AExpr option * (Name * AExpr * Pos) list * Pos
 
   /// `if cond then body else alt`.
   | AIfExpr of cond: AExpr * body: AExpr * alt: AExpr option * Pos
@@ -388,7 +392,7 @@ type AExpr =
   | AFunExpr of APat list * AExpr * Pos
 
   /// Navigation, e.g. `str.Length`.
-  | ANavExpr of AExpr * Ident * Pos
+  | ANavExpr of AExpr * Name * Pos
 
   /// E.g. `str.[i]`.
   | AIndexExpr of AExpr * AExpr * Pos
@@ -419,7 +423,7 @@ type AExpr =
 
 [<NoEquality; NoComparison>]
 type ALetDecl =
-  | ALetFunDecl of IsRec * Vis * Ident * APat list * AExpr * Pos
+  | ALetFunDecl of IsRec * Vis * Name * APat list * AExpr * Pos
   | ALetValDecl of IsRec * Vis * APat * AExpr * Pos
 
 [<NoEquality; NoComparison>]
@@ -429,22 +433,22 @@ type ADecl =
   | ALetDecl of IsRec * Vis * APat * AExpr * Pos
 
   /// Type synonym declaration, e.g. `type UserId = int`.
-  | ATySynonymDecl of Vis * Ident * tyArgs: Ident list * ATy * Pos
+  | ATySynonymDecl of Vis * Name * tyArgs: Name list * ATy * Pos
 
   /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
-  | AUnionTyDecl of Vis * Ident * AVariant list * Pos
+  | AUnionTyDecl of Vis * Name * AVariant list * Pos
 
   /// Record type declaration, e.g. `type Pos = { X: int; Y: int }`.
-  | ARecordTyDecl of Vis * Ident * AFieldDecl list * Pos
+  | ARecordTyDecl of Vis * Name * AFieldDecl list * Pos
 
   /// Open statement, e.g. `open System.IO`.
-  | AOpenDecl of Ident list * Pos
+  | AOpenDecl of Name list * Pos
 
   /// Module synonym statement, e.g. `module T = System.Text`.
-  | AModuleSynonymDecl of Ident * Ident list * Pos
+  | AModuleSynonymDecl of Name * Name list * Pos
 
   /// Module statement, e.g. `module Pos = let zero () = ...`.
-  | AModuleDecl of IsRec * Vis * Ident * ADecl list * Pos
+  | AModuleDecl of IsRec * Vis * Name * ADecl list * Pos
 
   /// Expression with some attribute.
   | AAttrDecl of contents: AExpr * next: ADecl * Pos
@@ -453,7 +457,7 @@ type ADecl =
 [<NoEquality; NoComparison>]
 type ARoot =
   | AExprRoot of ADecl list
-  | AModuleRoot of Ident * ADecl list * Pos
+  | AModuleRoot of Name * ADecl list * Pos
 
 // -----------------------------------------------
 // Literals
@@ -666,8 +670,8 @@ let tokenizeHostNew (): TokenizeHost =
 let findDependentModules ast =
   let rec onDecl decl =
     match decl with
-    | AOpenDecl ([ p; m ], pos) -> Some(p, m, pos)
-    | AModuleSynonymDecl (_, [ p; m ], pos) -> Some(p, m, pos)
+    | AOpenDecl ([ Name(p, _); Name(m, _) ], pos) -> Some(p, m, pos)
+    | AModuleSynonymDecl (_, [ Name(p, _); Name(m, _) ], pos) -> Some(p, m, pos)
     | AAttrDecl (_, next, _) -> onDecl next
     | _ -> None
 

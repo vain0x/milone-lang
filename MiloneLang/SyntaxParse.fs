@@ -335,11 +335,11 @@ let private parseTyArgs basePos (tokens, errors) =
 let private parseNavTy basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
-    | (IdentToken qual, _) :: (DotToken, _) :: tokens -> go (qual :: acc) (tokens, errors)
+    | (IdentToken qual, qualPos) :: (DotToken, _) :: tokens -> go (Name (qual, qualPos) :: acc) (tokens, errors)
 
     | (IdentToken ident, pos) :: tokens ->
         let argTys, tokens, errors = parseTyArgs basePos (tokens, errors)
-        AAppTy(List.rev acc, ident, argTys, pos), tokens, errors
+        AAppTy(List.rev acc, Name (ident, pos), argTys, pos), tokens, errors
 
     | _ ->
         let (_: ATy list), tokens, errors = parseTyArgs basePos (tokens, errors)
@@ -353,7 +353,7 @@ let private parseTyAtom basePos (tokens, errors) =
 
   | (IdentToken _, _) :: _ -> parseNavTy basePos (tokens, errors)
 
-  | (TyVarToken name, pos) :: tokens -> AVarTy(name, pos), tokens, errors
+  | (TyVarToken name, pos) :: tokens -> AVarTy(Name(name, pos)), tokens, errors
 
   | (LeftParenToken, _) :: tokens ->
       let ty, tokens, errors = parseTy basePos (tokens, errors)
@@ -368,7 +368,7 @@ let private parseTySuffix basePos (tokens, errors) =
     let inside = nextInside basePos tokens
 
     match tokens with
-    | (IdentToken ident, pos) :: tokens when inside -> go (ASuffixTy(ty, ident, pos), tokens, errors)
+    | (IdentToken ident, pos) :: tokens when inside -> go (ASuffixTy(ty, Name(ident, pos)), tokens, errors)
 
     | _ -> ty, tokens, errors
 
@@ -413,10 +413,10 @@ let private parseTy basePos (tokens, errors) = parseTyFun basePos (tokens, error
 let private parseNavPatBody head headPos (tokens, errors) =
   let rec go acc tokens =
     match tokens with
-    | (DotToken, dotPos) :: (IdentToken ident, _) :: tokens -> go (ANavPat(acc, ident, dotPos)) tokens
+    | (DotToken, dotPos) :: (IdentToken ident, identPos) :: tokens -> go (ANavPat(acc, Name(ident, identPos), dotPos)) tokens
     | _ -> acc, tokens, errors
 
-  go (AIdentPat(head, headPos)) tokens
+  go (AIdentPat(Name(head, headPos))) tokens
 
 /// `pat ')'`
 let private parsePatParenBody basePos (tokens, errors) =
@@ -474,7 +474,7 @@ let private parsePatNav basePos (tokens, errors) =
   let pat, tokens, errors = parsePatAtom basePos (tokens, errors)
 
   match tokens with
-  | (DotToken, pos) :: (IdentToken ident, _) :: tokens -> ANavPat(pat, ident, pos), tokens, errors
+  | (DotToken, pos) :: (IdentToken ident, identPos) :: tokens -> ANavPat(pat, Name(ident, identPos), pos), tokens, errors
 
   | (DotToken, _) :: tokens -> parsePatError "Expected identifier" (tokens, errors)
 
@@ -557,7 +557,7 @@ let private parsePatAs basePos (tokens, errors) =
   let pat, tokens, errors = parsePatTuple basePos (tokens, errors)
 
   match tokens with
-  | (AsToken, pos) :: (IdentToken ident, _) :: tokens -> AAsPat(pat, ident, pos), tokens, errors
+  | (AsToken, pos) :: (IdentToken ident, identPos) :: tokens -> AAsPat(pat, Name(ident, identPos), pos), tokens, errors
 
   | (AsToken, _) :: tokens ->
       let errors =
@@ -587,7 +587,7 @@ let private parsePatLet basePos (tokens, errors) =
       let args, tokens, errors =
         parsePatCallArgs basePos (tokens, errors)
 
-      let pat = AFunDeclPat(callee, args, calleePos)
+      let pat = AFunDeclPat(Name(callee, calleePos), args)
 
       match tokens with
       | (ColonToken, pos) :: tokens ->
@@ -628,7 +628,7 @@ let private parseAtom basePos (tokens, errors) =
   | (FloatToken text, pos) :: tokens -> ALitExpr(FloatLit text, pos), tokens, errors
   | (CharToken value, pos) :: tokens -> ALitExpr(CharLit value, pos), tokens, errors
   | (StrToken value, pos) :: tokens -> ALitExpr(StrLit value, pos), tokens, errors
-  | (IdentToken ident, pos) :: tokens -> AIdentExpr(ident, pos), tokens, errors
+  | (IdentToken ident, pos) :: tokens -> AIdentExpr(Name(ident, pos)), tokens, errors
 
   | (LeftParenToken, pos) :: (RightParenToken, _) :: tokens -> ATupleExpr([], pos), tokens, errors
   | (LeftParenToken, parenPos) :: tokens -> parseParenBody basePos parenPos (tokens, errors)
@@ -657,7 +657,7 @@ let private parseSuffix basePos (tokens, errors) =
 
         go (AIndexExpr(acc, r, pos)) (tokens, errors)
 
-    | (DotToken, pos) :: (IdentToken r, _) :: tokens -> go (ANavExpr(acc, r, pos)) (tokens, errors)
+    | (DotToken, pos) :: (IdentToken ident, identPos) :: tokens -> go (ANavExpr(acc, Name(ident, identPos), pos)) (tokens, errors)
 
     | (DotToken, _) :: tokens ->
         let errors =
@@ -809,11 +809,11 @@ let private parseRecordExpr bracePos (tokens, errors) =
 
     | (SemiToken, _) :: tokens -> go acc (nextPos tokens) (tokens, errors)
 
-    | (IdentToken ident, fieldPos) :: (EqualToken, _) :: tokens when fieldPos |> posIsSameColumn alignPos ->
+    | (IdentToken ident, identPos) :: (EqualToken, eqPos) :: tokens when identPos |> posIsSameColumn alignPos ->
         let init, tokens, errors =
-          parseExpr (fieldPos |> posAddX 1) (tokens, errors)
+          parseExpr (identPos |> posAddX 1) (tokens, errors)
 
-        go ((ident, init, fieldPos) :: acc) alignPos (tokens, errors)
+        go ((Name(ident, identPos), init, eqPos) :: acc) alignPos (tokens, errors)
 
     | (_, pos) :: tokens when pos |> posInside alignPos ->
         let errors =
@@ -1011,12 +1011,12 @@ let private parsePayloadTy basePos (tokens, errors) =
 let private parseTyDeclUnion basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
-    | (PipeToken, _) :: (IdentToken variantIdent, pos) :: (OfToken, _) :: tokens ->
+    | (PipeToken, pos) :: (IdentToken ident, identPos) :: (OfToken, _) :: tokens ->
         let payloadTy, tokens, errors = parsePayloadTy basePos (tokens, errors)
-        go (AVariant(variantIdent, Some payloadTy, pos) :: acc) (tokens, errors)
+        go (AVariant(Name(ident, identPos), Some payloadTy, pos) :: acc) (tokens, errors)
 
-    | (PipeToken, _) :: (IdentToken variantIdent, pos) :: tokens ->
-        go (AVariant(variantIdent, None, pos) :: acc) (tokens, errors)
+    | (PipeToken, pos) :: (IdentToken ident, identPos) :: tokens ->
+        go (AVariant(Name(ident, identPos), None, identPos) :: acc) (tokens, errors)
 
     | _ -> List.rev acc, tokens, errors
 
@@ -1031,11 +1031,11 @@ let private parseTyDeclRecord basePos (tokens, errors) =
 
     | (SemiToken, _) :: tokens -> go acc (nextPos tokens) (tokens, errors)
 
-    | (IdentToken ident, fieldPos) :: (ColonToken, _) :: tokens when fieldPos |> posIsSameColumn alignPos ->
+    | (IdentToken ident, identPos) :: (ColonToken, colonPos) :: tokens when identPos |> posIsSameColumn alignPos ->
         let ty, tokens, errors =
-          parseTy (fieldPos |> posAddX 1) (tokens, errors)
+          parseTy (identPos |> posAddX 1) (tokens, errors)
 
-        go ((ident, ty, fieldPos) :: acc) alignPos (tokens, errors)
+        go ((Name(ident, identPos), ty, colonPos) :: acc) alignPos (tokens, errors)
 
     | (_, pos) :: tokens when pos |> posInside basePos ->
         let errors =
@@ -1149,11 +1149,11 @@ let private parseTyDecl typePos (tokens, errors) =
   let vis, tokens = eatVis tokens
 
   match tokens with
-  | (IdentToken tyIdent, _) :: (LeftAngleToken, _) :: tokens ->
+  | (IdentToken tyIdent, tyIdentPos) :: (LeftAngleToken, _) :: tokens ->
       let rec go acc tokens =
         match tokens with
-        | (TyVarToken ident, _) :: tokens ->
-            let acc = ident :: acc
+        | (TyVarToken ident, identPos) :: tokens ->
+            let acc = Name(ident, identPos) :: acc
 
             match tokens with
             | (CommaToken, _) :: tokens -> go acc tokens
@@ -1173,19 +1173,23 @@ let private parseTyDecl typePos (tokens, errors) =
             | (EqualToken, _) :: tokens -> parseTy basePos (tokens, errors)
             | _ -> parseTyError "Expected '='." (tokens, errors)
 
-          Some(ATySynonymDecl(vis, tyIdent, tyArgs, ty, typePos)), tokens, errors
+          Some(ATySynonymDecl(vis, Name(tyIdent, tyIdentPos), tyArgs, ty, typePos)), tokens, errors
 
-  | (IdentToken tyIdent, _) :: tokens ->
+  | (IdentToken tyIdent, tyIdentPos) :: tokens ->
+      let tyName = Name(tyIdent, tyIdentPos)
+
       match tokens with
       | (EqualToken, _) :: tokens ->
+
           let tyDecl, tokens, errors =
             parseTyDeclBody basePos (tokens, errors)
 
           let decl =
+
             match tyDecl with
-            | ATySynonymDeclBody ty -> ATySynonymDecl(vis, tyIdent, [], ty, typePos)
-            | AUnionTyDeclBody variants -> AUnionTyDecl(vis, tyIdent, variants, typePos)
-            | ARecordTyDeclBody fields -> ARecordTyDecl(vis, tyIdent, fields, typePos)
+            | ATySynonymDeclBody ty -> ATySynonymDecl(vis, tyName, [], ty, typePos)
+            | AUnionTyDeclBody variants -> AUnionTyDecl(vis, tyName, variants, typePos)
+            | ARecordTyDeclBody fields -> ARecordTyDecl(vis, tyName, fields, typePos)
 
           Some decl, tokens, errors
 
@@ -1193,14 +1197,14 @@ let private parseTyDecl typePos (tokens, errors) =
           let ty, tokens, errors =
             parseTyError "Expected '='" (tokens, errors)
 
-          Some(ATySynonymDecl(vis, tyIdent, [], ty, typePos)), tokens, errors
+          Some(ATySynonymDecl(vis, tyName, [], ty, typePos)), tokens, errors
 
   | _ -> parseDeclError "Expected identifier" (tokens, errors)
 
 let private parsePath (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
-    | (DotToken, _) :: (IdentToken ident, _) :: tokens -> go (ident :: acc) (tokens, errors)
+    | (DotToken, _) :: (IdentToken ident, identPos) :: tokens -> go (Name(ident, identPos) :: acc) (tokens, errors)
 
     | (DotToken, _) :: tokens ->
         let errors =
@@ -1211,7 +1215,7 @@ let private parsePath (tokens, errors) =
     | _ -> List.rev acc, tokens, errors
 
   match tokens with
-  | (IdentToken ident, _) :: tokens -> go [ ident ] (tokens, errors)
+  | (IdentToken ident, identPos) :: tokens -> go [ Name(ident, identPos) ] (tokens, errors)
 
   | _ ->
       let errors =
@@ -1230,13 +1234,13 @@ let private parseModuleDecl modulePos (tokens, errors) =
 
   let moduleName, tokens, errors =
     match tokens with
-    | (IdentToken moduleName, _) :: tokens -> moduleName, tokens, errors
+    | (IdentToken moduleName, pos) :: tokens -> Name(moduleName, pos), tokens, errors
 
     | _ ->
         let errors =
           parseNewError "Expected identifier" (tokens, errors)
 
-        "_", tokens, errors
+        Name("_", modulePos), tokens, errors
 
   match tokens with
   | (EqualToken, _) :: (((IdentToken _, _) :: _) as tokens) ->
@@ -1313,17 +1317,17 @@ let private parseTopLevel (tokens, errors) =
   match tokens with
   | [] -> AExprRoot [], tokens, errors
 
-  | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, _) :: tokens ->
+  | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken _, _) :: (DotToken, _) :: (IdentToken ident, identPos) :: tokens ->
       let decls, tokens, errors =
         parseModuleBody modulePos (tokens, errors)
 
-      AModuleRoot(ident, decls, modulePos), tokens, errors
+      AModuleRoot(Name(ident, identPos), decls, modulePos), tokens, errors
 
-  | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken ident, _) :: tokens ->
+  | (ModuleToken, modulePos) :: (RecToken, _) :: (IdentToken ident, identPos) :: tokens ->
       let decls, tokens, errors =
         parseModuleBody modulePos (tokens, errors)
 
-      AModuleRoot(ident, decls, modulePos), tokens, errors
+      AModuleRoot(Name(ident, identPos), decls, modulePos), tokens, errors
 
   | (ModuleToken, _) :: tokens ->
       let errors =
