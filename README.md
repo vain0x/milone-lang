@@ -4,7 +4,7 @@
 
 The initial goal was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself. It was achieved at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
 
-Currently, working toward initial release (v0.2.0).
+Currently, working toward initial release.
 
 This is a hobby project. Don't use in production. Pull requests and issues etc. are welcome.
 
