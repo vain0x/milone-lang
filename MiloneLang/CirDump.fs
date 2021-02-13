@@ -8,6 +8,8 @@ open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Cir
 
+module S = MiloneStd.StdString
+
 let private eol = "\n"
 
 let private deeper (indent: string) = "    " + indent
@@ -385,7 +387,20 @@ let private cpStmt indent stmt acc: string list =
       |> cons "}"
       |> cons eol
 
-  | CNativeStmt code -> acc |> cons code
+  | CNativeStmt (code, args) ->
+      let code =
+        List.fold (fun (i, code) arg ->
+            let arg = [] |> cpExpr arg |> List.rev |> S.concat ""
+
+            let code =
+              let placeholder = "{" + string i + "}"
+              code |> S.replace placeholder arg
+
+            i + 1, code
+        ) (0, code) args
+        |> snd
+
+      acc |> cons code
 
 let private cpStmtList indent stmts acc: string list =
   stmts

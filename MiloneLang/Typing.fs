@@ -770,6 +770,13 @@ let private inferNavExpr ctx l (r: Ident) loc =
   | _ -> fail ctx
 
 let private inferAppExpr ctx itself callee arg loc =
+  let inferUntypedExprs ctx exprs =
+    (exprs, ctx)
+    |> stMap
+         (fun (expr, ctx) ->
+           let exprs, _, ctx = inferExpr ctx None expr
+           exprs, ctx)
+
   // Special forms must be handled before recursion.
   match callee, arg with
   // printfn "..."
@@ -795,13 +802,7 @@ let private inferAppExpr ctx itself callee arg loc =
   | HPrimExpr (HPrim.NativeFun, _, loc), HNodeExpr (HTupleEN, HLitExpr (StrLit funName, _) :: args, _, _) ->
       // Type of native function is unchecked. Type ascriptions must be written correctly.
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-
-      let args, ctx =
-        (args, ctx)
-        |> stMap
-             (fun (arg, ctx) ->
-               let arg, _, ctx = inferExpr ctx None arg
-               arg, ctx)
+      let args, ctx = inferUntypedExprs ctx args
 
       HNodeExpr(HCallNativeEN funName, args, targetTy, loc), targetTy, ctx
 
@@ -813,6 +814,11 @@ let private inferAppExpr ctx itself callee arg loc =
   // __nativeStmt "code"
   | HPrimExpr (HPrim.NativeStmt, _, loc), HLitExpr (StrLit code, _) ->
       HNodeExpr(HNativeStmtEN code, [], tyUnit, loc), tyUnit, ctx
+
+  // __nativeStmt ("code", args...)
+  | HPrimExpr (HPrim.NativeStmt, _, loc), HNodeExpr (HTupleEN, HLitExpr (StrLit code, _) :: args, _, _) ->
+      let args, ctx = inferUntypedExprs ctx args
+      HNodeExpr(HNativeStmtEN code, args, tyUnit, loc), tyUnit, ctx
 
   // __nativeDecl "code"
   | HPrimExpr (HPrim.NativeDecl, _, loc), HLitExpr (StrLit code, _) ->

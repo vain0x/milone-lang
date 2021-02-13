@@ -1309,8 +1309,9 @@ let private mirifyExprInf ctx itself kind args ty loc =
 
   | HNativeExprEN code, _, _ -> MNativeExpr(code, ty, loc), ctx
 
-  | HNativeStmtEN code, _, _ ->
-      let ctx = addStmt ctx (MNativeStmt(code, loc))
+  | HNativeStmtEN code, args, _ ->
+      let args, ctx = mirifyExprs ctx args
+      let ctx = addStmt ctx (MNativeStmt(code, args, loc))
       MDefaultExpr(tyUnit, loc), ctx
 
   | HNativeDeclEN code, _, _ ->

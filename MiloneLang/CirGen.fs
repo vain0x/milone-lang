@@ -1208,7 +1208,11 @@ let private cgStmt ctx stmt =
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
   | MTerminatorStmt (terminator, _loc) -> cgTerminatorStmt ctx terminator
-  | MNativeStmt (code, _) -> addStmt ctx (CNativeStmt code)
+
+  | MNativeStmt (code, args, _) ->
+      let args, ctx = cgExprList ctx args
+
+      addStmt ctx (CNativeStmt (code, args))
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx: CirCtx = cgStmts (enterBlock ctx) stmts

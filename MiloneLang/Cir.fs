@@ -136,7 +136,7 @@ type CStmt =
   | CSwitchStmt of cond: CExpr * clauses: (CExpr list * bool * CStmt list) list
 
   | CReturnStmt of CExpr option
-  | CNativeStmt of string
+  | CNativeStmt of string * args: CExpr list
 
 /// Directive or definition in CIR.
 [<NoEquality; NoComparison>]

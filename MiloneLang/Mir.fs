@@ -208,7 +208,7 @@ type MStmt =
 
   | MTerminatorStmt of MTerminator * Loc
 
-  | MNativeStmt of string * Loc
+  | MNativeStmt of string * MExpr list * Loc
 
 [<NoEquality; NoComparison>]
 type MBlock = { Stmts: MStmt list }
