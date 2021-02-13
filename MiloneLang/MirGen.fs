@@ -827,9 +827,7 @@ let private mirifyCallStrIndexExpr ctx l r ty loc =
 let private mirifyCallStrGetSliceExpr ctx args loc =
   assert (List.length args = 3)
 
-  let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+  let args, ctx = mirifyExprs ctx args
 
   let temp, tempSerial, ctx = freshVar ctx "slice" tyStr loc
 
@@ -900,9 +898,7 @@ let private mirifyExprRecord (ctx: MirCtx) args ty loc =
 
   let _, tempSerial, ctx = freshVar ctx name ty loc
 
-  let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+  let args, ctx = mirifyExprs ctx args
 
   let ctx =
     addStmt ctx (MPrimStmt(MRecordPrim, args, tempSerial, loc))
@@ -1078,9 +1074,7 @@ let private mirifyCallInRegionExpr ctx arg loc =
   temp, ctx
 
 let private mirifyCallPrintfnExpr ctx args loc =
-  let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+  let args, ctx = mirifyExprs ctx args
 
   let ctx =
     addStmt ctx (MActionStmt(MPrintfnAction, args, loc))
@@ -1090,9 +1084,7 @@ let private mirifyCallPrintfnExpr ctx args loc =
 let private mirifyCallProcExpr ctx callee args ty loc =
   let callee, ctx = mirifyExpr ctx callee
 
-  let (args, ctx) =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+  let args, ctx = mirifyExprs ctx args
 
   let temp, tempSerial, ctx = freshVar ctx "call" ty loc
 
@@ -1114,9 +1106,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     MBinaryExpr(binary, l, r, ty, loc), ctx
 
   let regularPrim hint prim =
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+    let args, ctx = mirifyExprs ctx args
 
     let tempExpr, temp, ctx = freshVar ctx hint ty loc
 
@@ -1126,9 +1116,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     tempExpr, ctx
 
   let regularAction action =
-    let args, ctx =
-      (args, ctx)
-      |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+    let args, ctx = mirifyExprs ctx args
 
     let ctx =
       addStmt ctx (MActionStmt(action, args, loc))
@@ -1208,9 +1196,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee
 
-  let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+  let args, ctx = mirifyExprs ctx args
 
   let tempRef, tempSerial, ctx = freshVar ctx "app" resultTy loc
 
@@ -1279,9 +1265,7 @@ let private mirifyExprInfClosure ctx funSerial env funTy loc =
   tempRef, ctx
 
 let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
-  let args, ctx =
-    (args, ctx)
-    |> stMap (fun (arg, ctx) -> mirifyExpr ctx arg)
+  let args, ctx = mirifyExprs ctx args
 
   // No result if result type is unit.
   if ty |> tyIsUnit then
@@ -1473,6 +1457,10 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
       mirifyExpr (doArm ()) next
 
   | _ -> mirifyOtherExprWrapper ctx expr
+
+let private mirifyExprs ctx exprs =
+  (exprs, ctx)
+  |> stMap (fun (expr, ctx) -> mirifyExpr ctx expr)
 
 let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = ofTyCtx tyCtx
