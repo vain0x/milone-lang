@@ -472,7 +472,7 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
-  | CNativeDecl code -> acc |> cons code |> cons eol
+  | CNativeDecl _ -> acc
 
   | CStaticVarDecl _
   | CFunForwardDecl _ -> acc
@@ -480,8 +480,7 @@ let private cpDecl decl acc =
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
   match decl with
-  | CErrorDecl _
-  | CNativeDecl _ -> acc
+  | CErrorDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc
@@ -539,6 +538,8 @@ let private cpForwardDecl decl acc =
       |> cons ");"
       |> cons eol
       |> cons eol
+
+  | CNativeDecl code -> acc |> cons code |> cons eol
 
 let private cpForwardDecls decls acc =
   decls

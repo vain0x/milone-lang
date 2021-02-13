@@ -1,13 +1,5 @@
 #include "milone.h"
 
-void write_line(struct String);
-
-int writeLine_(struct String msg_);
-
-int getWriteCount_(int arg_);
-
-int milone_main();
-
 
       // Embedded by __nativeDecl.
       #include <stdio.h>
@@ -18,6 +10,14 @@ int milone_main();
           fprintf(stdout, "%s\n", s.str);
       }
   
+void write_line(struct String);
+
+int writeLine_(struct String msg_);
+
+int getWriteCount_(int arg_);
+
+int milone_main();
+
 
 int writeLine_(struct String msg_) {
 
