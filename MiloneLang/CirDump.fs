@@ -561,8 +561,6 @@ let private cpForwardDecls decls acc =
   |> List.fold (fun acc decl -> cpForwardDecl decl acc) acc
 
 let private cpDecls decls acc =
-  let acc = acc |> cpForwardDecls decls
-
   decls
   |> List.fold
        (fun (first, acc) decl ->
@@ -591,6 +589,14 @@ let private cpHeader acc =
 let cirDump (decls: CDecl list): string =
   []
   |> cpHeader
+  |> cpForwardDecls decls
   |> cpDecls decls
+  |> List.rev
+  |> strConcat
+
+let cirDumpHeader (decls: CDecl list): string =
+  []
+  |> cpHeader
+  |> cpForwardDecls decls
   |> List.rev
   |> strConcat

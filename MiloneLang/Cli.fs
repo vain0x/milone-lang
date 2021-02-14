@@ -59,6 +59,9 @@ SUBCOMMANDS
         If error, exits with non-zero code.
         Errors are written to STDOUT. (FIXME: use STDERR)
 
+    milone header <PROJECT-DIR>
+        Compiles to C only declarations.
+
 OPTIONS
     -h, --help      Print help text.
     -V, --version   Print compiler version.
@@ -270,6 +273,8 @@ type CompileCtx =
     TokenizeHost: TokenizeHost
     FetchModule: ProjectName -> ProjectDir -> ModuleName -> ModuleSyntaxData option
 
+    HeaderOnly: bool
+
     Verbosity: Verbosity
     Host: CliHost }
 
@@ -329,6 +334,7 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
     Projects = projects
     TokenizeHost = tokenizeHost
     FetchModule = fetchModule
+    HeaderOnly = false
     Verbosity = verbosity
     Host = host }
 
@@ -559,7 +565,7 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
+let codeGenHirViaMir (host: CliHost) v headerOnly (expr, tyCtx) =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (expr, tyCtx)
 
@@ -570,7 +576,7 @@ let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
     let ok, cir = genCir (stmts, mirCtx)
 
     writeLog host v "CirDump"
-    let output = cirDump cir
+    let output = if headerOnly then cirDumpHeader cir else cirDump cir
 
     writeLog host v "Finish"
     ok, output
@@ -604,7 +610,7 @@ let compile (ctx: CompileCtx): bool * string =
 
     | SemaAnalysisOk (expr, tyCtx) ->
         let expr, tyCtx = transformHir host v (expr, tyCtx)
-        codeGenHirViaMir host v (expr, tyCtx)
+        codeGenHirViaMir host v ctx.HeaderOnly (expr, tyCtx)
 
 // -----------------------------------------------
 // Actions
@@ -651,10 +657,12 @@ let cliCheck (host: CliHost) verbosity projectDir =
   printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
   exitCode
 
-let cliCompile (host: CliHost) verbosity projectDir =
+let cliCompile (host: CliHost) verbosity headerOnly projectDir =
   let ctx =
     compileCtxNew host verbosity projectDir
     |> compileCtxReadProjectFile
+
+  let ctx = { ctx with HeaderOnly = headerOnly }
 
   let ok, output = compile ctx
   let exitCode = if ok then 0 else 1
@@ -718,6 +726,7 @@ type private CliCmd =
   | VersionCmd
   | CheckCmd
   | CompileCmd
+  | HeaderCmd
   | ParseCmd
   | BadCmd of string
 
@@ -744,6 +753,8 @@ let private parseArgs args =
 
       | "build"
       | "compile" -> CompileCmd, args
+
+      | "header" -> HeaderCmd, args
 
       // for debug
       | "parse" -> ParseCmd, args
@@ -778,11 +789,21 @@ let cli (host: CliHost) =
           printfn "ERROR: Unknown argument: '%s'." arg
           1
 
+  | HeaderCmd, args ->
+      let verbosity, args = parseVerbosity host args
+
+      match args with
+      | projectDir :: _ -> cliCompile host verbosity true projectDir
+
+      | [] ->
+          printfn "ERROR: Expected project dir."
+          1
+
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
       match args with
-      | projectDir :: _ -> cliCompile host verbosity projectDir
+      | projectDir :: _ -> cliCompile host verbosity false projectDir
 
       | [] ->
           printfn "ERROR: Expected project dir."
