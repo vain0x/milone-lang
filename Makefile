@@ -43,5 +43,8 @@ uninstall:
 # misc
 # ------------------------------------------------
 
+bin/milone:
+	scripts/dev-install-milone
+
 bin/ninja:
 	scripts/install-ninja

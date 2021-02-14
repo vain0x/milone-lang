@@ -1,0 +1,37 @@
+#!/bin/sh
+# Install milone-lang compiler locally for development.
+#
+# USAGE: scripts/dev-install-milone
+#
+# Prerequisites:
+#   - busybox (which is likely pre-installed)
+#       `apt install -y busybox-static`
+#
+# Remark: This doesn't affect outside the repository.
+
+set -eu
+
+URL='https://github.com/vain0x/milone-lang/releases/download/v0.2.0/milone-0.2.0.tar.gz'
+
+mkdir -p bin
+
+cd bin
+rm -rf milone milone-0.2.0
+
+# Download package.
+busybox wget -q "$URL" -O - | tar -xz
+
+# Create intermediate script to specify MILONE_HOME.
+cat >milone <<'END'
+#!/bin/sh
+
+set -eu
+
+MILONE_HOME="{{ PWD }}/milone-0.2.0/.milone"
+MILONE_BIN="{{ PWD }}/milone-0.2.0/bin/milone"
+
+MILONE_HOME="$MILONE_HOME" "$MILONE_BIN" "$@"
+END
+
+sed -i "s;{{ PWD }};$PWD;g" milone
+chmod +x milone
