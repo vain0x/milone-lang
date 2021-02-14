@@ -45,6 +45,7 @@ mkdir -p "$MILONE_HOME"
 
 # Install native executable.
 scripts/build-milone-native
+strip -s target/milone
 cp target/milone "$BIN_DIR/milone"
 
 # Install .NET executable.
