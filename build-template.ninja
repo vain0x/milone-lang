@@ -13,6 +13,15 @@ milone_dotnet_debug = MiloneLang/bin/Debug/net5.0/MiloneLang
 milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 
 # ------------------------------------------------
+# misc
+# ------------------------------------------------
+
+rule dev_install_milone
+  command = scripts/dev-install-milone
+
+build bin/milone: dev_install_milone
+
+# ------------------------------------------------
 # dotnet restore
 # ------------------------------------------------
 
@@ -62,13 +71,12 @@ rule build_cc
   description = build_cc in=$in
   command = MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-gcc
 
-# .fs -> .c (with .NET)
+# .fs -> .c (with bin/milone)
 
 build target/milone_gen2.c: $
   build_milone $
-    | {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
-    $milone_dotnet_debug
-  milone = $milone_dotnet_debug
+    | {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }}
+  milone = bin/milone
   verbosity = -q
 
 # .c -> .exe
