@@ -12,6 +12,7 @@ open MiloneLang.AutoBoxing
 open MiloneLang.Bundling
 open MiloneLang.NameRes
 open MiloneLang.Typing
+open MiloneLang.DeriveRecordOps
 open MiloneLang.MainHoist
 open MiloneLang.RecordRes
 open MiloneLang.ClosureConversion
@@ -539,6 +540,9 @@ let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAn
 
 /// Transforms HIR. The result can be converted to MIR.
 let transformHir (host: CliHost) v (expr, tyCtx) =
+  writeLog host v "DeriveRecordOps"
+  let expr, tyCtx = deriveRecordOps (expr, tyCtx)
+
   writeLog host v "MainHoist"
   let expr, tyCtx = hoistMain (expr, tyCtx)
 

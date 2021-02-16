@@ -17,6 +17,7 @@
     <Compile Include="Bundling.fs" />
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
+    <Compile Include="DeriveRecordOps.fs" />
     <Compile Include="Hoist.fs" />
     <Compile Include="MainHoist.fs" />
     <Compile Include="AutoBoxing.fs" />
