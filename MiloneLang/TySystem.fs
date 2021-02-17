@@ -394,7 +394,7 @@ type private MetaTyUnifyResult =
   | DidBind of TyContext
   | DidRecurse
 
-let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
+let private unifyMetaTy tySerial otherTy (ctx: TyContext) =
   match ctx.Tys |> TMap.tryFind tySerial with
   | Some (MetaTyDef ty) -> DidExpand ty
 
@@ -467,14 +467,14 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
     match lTy, rTy with
     | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> logAcc, ctx
 
-    | Ty (MetaTk (lSerial, loc), _), _ ->
-        match unifyMetaTy lSerial rTy loc ctx with
+    | Ty (MetaTk (lSerial, _), _), _ ->
+        match unifyMetaTy lSerial rTy ctx with
         | DidExpand ty -> go ty rTy (logAcc, ctx)
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
 
-    | _, Ty (MetaTk (rSerial, loc), _) ->
-        match unifyMetaTy rSerial lTy loc ctx with
+    | _, Ty (MetaTk (rSerial, _), _) ->
+        match unifyMetaTy rSerial lTy ctx with
         | DidExpand ty -> go lTy ty (logAcc, ctx)
         | DidBind ctx -> logAcc, ctx
         | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
