@@ -13,7 +13,7 @@ open MiloneLang.Typing
 
 module Int = MiloneStd.StdInt
 module TSet = MiloneStd.StdSet
-module M = MiloneStd.StdMap
+module TMap = MiloneStd.StdMap
 
 let private tyIsRecord ty =
   match ty with
@@ -44,11 +44,11 @@ type private TrdCtx =
     RecordTyMemo: AssocMap<TySerial, Status> }
 
 let private trdVariant (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef option) =
-  match ctx.VariantMemo |> M.tryFind variantSerial with
+  match ctx.VariantMemo |> TMap.tryFind variantSerial with
   | Some Recursive ->
       // printfn "// trd variant %s is now boxed" (ctx.Variants |> mapFind variantSerial).Name
       { ctx with
-          VariantMemo = ctx.VariantMemo |> M.add variantSerial Boxed }
+          VariantMemo = ctx.VariantMemo |> TMap.add variantSerial Boxed }
 
   | Some t ->
       // printfn "// trd variant %s is done: %s" (ctx.Variants |> mapFind variantSerial).Name (objToString t)
@@ -59,7 +59,7 @@ let private trdVariant (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef op
 
       let ctx =
         { ctx with
-            VariantMemo = ctx.VariantMemo |> M.add variantSerial Recursive }
+            VariantMemo = ctx.VariantMemo |> TMap.add variantSerial Recursive }
 
       let ctx: TrdCtx =
         let variantDef =
@@ -70,11 +70,11 @@ let private trdVariant (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef op
         trdTy ctx variantDef.PayloadTy
 
       let ctx =
-        match ctx.VariantMemo |> M.tryFind variantSerial with
+        match ctx.VariantMemo |> TMap.tryFind variantSerial with
         | Some Recursive
         | None ->
             { ctx with
-                VariantMemo = ctx.VariantMemo |> M.add variantSerial Unboxed }
+                VariantMemo = ctx.VariantMemo |> TMap.add variantSerial Unboxed }
 
         | Some _ -> ctx
 
@@ -87,11 +87,11 @@ let private trdVariant (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef op
       ctx
 
 let private trdRecordTyDef (ctx: TrdCtx) tySerial tyDef =
-  match ctx.RecordTyMemo |> M.tryFind tySerial with
+  match ctx.RecordTyMemo |> TMap.tryFind tySerial with
   | Some Recursive ->
       // printfn "// trd tyDef %s is now boxed" (tyDefToName tyDef)
       { ctx with
-          RecordTyMemo = ctx.RecordTyMemo |> M.add tySerial Boxed }
+          RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial Boxed }
 
   | Some t ->
       // printfn "// trd tyDef %s is done: %s" (tyDefToName tyDef) (objToString t)
@@ -102,7 +102,7 @@ let private trdRecordTyDef (ctx: TrdCtx) tySerial tyDef =
 
       let ctx =
         { ctx with
-            RecordTyMemo = ctx.RecordTyMemo |> M.add tySerial Recursive }
+            RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial Recursive }
 
       let ctx: TrdCtx =
         match tyDef with
@@ -113,11 +113,11 @@ let private trdRecordTyDef (ctx: TrdCtx) tySerial tyDef =
         | _ -> failwith "NEVER"
 
       let ctx =
-        match ctx.RecordTyMemo |> M.tryFind tySerial with
+        match ctx.RecordTyMemo |> TMap.tryFind tySerial with
         | Some Recursive
         | None ->
             { ctx with
-                RecordTyMemo = ctx.RecordTyMemo |> M.add tySerial Unboxed }
+                RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial Unboxed }
 
         | Some _ -> ctx
 
@@ -174,13 +174,13 @@ let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
   let ctx: TrdCtx =
     { Variants = tyCtx.Variants
       Tys = tyCtx.Tys
-      VariantMemo = M.empty variantSerialCompare
-      RecordTyMemo = M.empty compare }
+      VariantMemo = TMap.empty variantSerialCompare
+      RecordTyMemo = TMap.empty compare }
 
-  let ctx = tyCtx.Tys |> M.fold trdTyDef ctx
+  let ctx = tyCtx.Tys |> TMap.fold trdTyDef ctx
 
   tyCtx.Variants
-  |> M.fold (fun ctx variantSerial varDef -> trdVariant ctx variantSerial (Some varDef)) ctx
+  |> TMap.fold (fun ctx variantSerial varDef -> trdVariant ctx variantSerial (Some varDef)) ctx
 
 // -----------------------------------------------
 // Type size measurement
@@ -197,7 +197,7 @@ type private TsmCtx =
     RecordTyMemo: AssocMap<TySerial, int> }
 
 let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef option) =
-  match ctx.VariantMemo |> M.tryFind variantSerial with
+  match ctx.VariantMemo |> TMap.tryFind variantSerial with
   | Some size ->
       // printfn "// measure variant %s cached: size=%d" (ctx.Variants |> mapFind variantSerial).Name size
       assert (size >= 0)
@@ -213,7 +213,7 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
       // Prevent infinite recursion, just in case. (Recursive variants are already boxed.)
       let ctx =
         { ctx with
-            VariantMemo = ctx.VariantMemo |> M.add variantSerial (-1) }
+            VariantMemo = ctx.VariantMemo |> TMap.add variantSerial (-1) }
 
       let size, (ctx: TsmCtx) =
         let variantDef =
@@ -231,11 +231,11 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
 
       let ctx =
         assert ((ctx.VariantMemo
-                 |> M.tryFind variantSerial
+                 |> TMap.tryFind variantSerial
                  |> Option.defaultValue (-1)) < 0)
 
         { ctx with
-            VariantMemo = ctx.VariantMemo |> M.add variantSerial size
+            VariantMemo = ctx.VariantMemo |> TMap.add variantSerial size
             BoxedVariants =
               if isBoxed then
                 ctx.BoxedVariants |> TSet.add variantSerial
@@ -251,7 +251,7 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
       size, ctx
 
 let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
-  match ctx.RecordTyMemo |> M.tryFind tySerial with
+  match ctx.RecordTyMemo |> TMap.tryFind tySerial with
   | Some size ->
       // printfn "// measure record %s: cached %d" (tyDefToName tyDef) size
       assert (size >= 1)
@@ -267,7 +267,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
       // Just in case of recursion was not detected correctly.
       let ctx =
         { ctx with
-            RecordTyMemo = ctx.RecordTyMemo |> M.add tySerial (-1) }
+            RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial (-1) }
 
       let size, (ctx: TsmCtx) =
         match tyDef with
@@ -290,11 +290,11 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
 
       let ctx =
         assert ((ctx.RecordTyMemo
-                 |> M.tryFind tySerial
+                 |> TMap.tryFind tySerial
                  |> Option.defaultValue (-1)) < 0)
 
         { ctx with
-            RecordTyMemo = ctx.RecordTyMemo |> M.add tySerial size
+            RecordTyMemo = ctx.RecordTyMemo |> TMap.add tySerial size
             BoxedRecordTys =
               if isBoxed then
                 ctx.BoxedRecordTys |> TSet.add tySerial
@@ -370,7 +370,7 @@ let private tsmTy (ctx: TsmCtx) ty =
 let private measureTys (trdCtx: TrdCtx): TsmCtx =
   let boxedVariants =
     trdCtx.VariantMemo
-    |> M.fold
+    |> TMap.fold
          (fun set variantSerial status ->
            match status with
            | Boxed -> set |> TSet.add variantSerial
@@ -380,7 +380,7 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
 
   let boxedRecordTys =
     trdCtx.RecordTyMemo
-    |> M.fold
+    |> TMap.fold
          (fun set tySerial status ->
            match status with
            | Boxed -> set |> TSet.add tySerial
@@ -393,15 +393,15 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
       Tys = trdCtx.Tys
       BoxedVariants = boxedVariants
       BoxedRecordTys = boxedRecordTys
-      VariantMemo = M.empty variantSerialCompare
-      RecordTyMemo = M.empty compare }
+      VariantMemo = TMap.empty variantSerialCompare
+      RecordTyMemo = TMap.empty compare }
 
   let ctx =
     ctx.Tys
-    |> M.fold (fun ctx tySerial tyDef -> tsmTyDef ctx tySerial tyDef |> snd) ctx
+    |> TMap.fold (fun ctx tySerial tyDef -> tsmTyDef ctx tySerial tyDef |> snd) ctx
 
   ctx.Variants
-  |> M.fold (fun ctx variantSerial varDef -> tsmVariant ctx variantSerial (Some varDef) |> snd) ctx
+  |> TMap.fold (fun ctx variantSerial varDef -> tsmVariant ctx variantSerial (Some varDef) |> snd) ctx
 
 // -----------------------------------------------
 // Context
@@ -422,8 +422,8 @@ let private ofTyCtx (tyCtx: TyCtx): AbCtx =
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
-    BoxedVariants = M.empty variantSerialCompare
-    BoxedRecordTys = M.empty compare }
+    BoxedVariants = TMap.empty variantSerialCompare
+    BoxedRecordTys = TMap.empty compare }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
   { tyCtx with
@@ -701,7 +701,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
   let vars =
     ctx.Vars
-    |> M.map
+    |> TMap.map
          (fun _ varDef ->
            match varDef with
            | VarDef (name, sm, ty, loc) ->
@@ -710,7 +710,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
   let funs =
     ctx.Funs
-    |> M.map
+    |> TMap.map
          (fun _ (funDef: FunDef) ->
            let (TyScheme (tyVars, ty)) = funDef.Ty
            let ty = ty |> abTy ctx
@@ -720,7 +720,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
   let variants =
     ctx.Variants
-    |> M.map
+    |> TMap.map
          (fun variantSerial (variantDef: VariantDef) ->
            let payloadTy =
              erasePayloadTy ctx variantSerial variantDef.PayloadTy
@@ -733,7 +733,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
 
   let tys =
     ctx.Tys
-    |> M.map
+    |> TMap.map
          (fun _ tyDef ->
            match tyDef with
            | SynonymTyDef (name, tyArgs, bodyTy, loc) ->

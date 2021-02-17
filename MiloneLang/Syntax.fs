@@ -12,7 +12,7 @@ module rec MiloneLang.Syntax
 
 open MiloneLang.Util
 
-module M = MiloneStd.StdMap
+module TMap = MiloneStd.StdMap
 
 // -----------------------------------------------
 // Vocabulary types
@@ -275,7 +275,7 @@ type ATy =
   | AMissingTy of Pos
 
   /// Named type with potential qualifiers and type arguments,
-  /// e.g. `int`, `M.AssocMap<K, V>`.
+  /// e.g. `int`, `TMap.AssocMap<K, V>`.
   | AAppTy of quals: Name list * Name * ATy list * Pos
 
   /// Type variable, e.g. `'T`.
@@ -633,23 +633,23 @@ let private keywordMapBuild (): KeywordMap =
 
   let reservedToken = ErrorToken ReservedWordError
 
-  let map = M.empty compare
+  let map = TMap.empty compare
 
   let map =
     miloneKeywords
-    |> List.fold (fun map (name, token) -> M.add name token map) map
+    |> List.fold (fun map (name, token) -> TMap.add name token map) map
 
   let map =
     fsharpKeywords
-    |> List.fold (fun map name -> M.add name reservedToken map) map
+    |> List.fold (fun map name -> TMap.add name reservedToken map) map
 
   let map =
     ocamlKeywords
-    |> List.fold (fun map name -> M.add name reservedToken map) map
+    |> List.fold (fun map name -> TMap.add name reservedToken map) map
 
   let map =
     reservedWords
-    |> List.fold (fun map name -> M.add name reservedToken map) map
+    |> List.fold (fun map name -> TMap.add name reservedToken map) map
 
   map
 
@@ -662,7 +662,7 @@ type TokenizeHost = { FindKeyword: string -> Token option }
 let tokenizeHostNew (): TokenizeHost =
   let keywordMap = keywordMapBuild ()
 
-  { FindKeyword = fun ident -> keywordMap |> M.tryFind ident }
+  { FindKeyword = fun ident -> keywordMap |> TMap.tryFind ident }
 
 // -----------------------------------------------
 // Module dependencies

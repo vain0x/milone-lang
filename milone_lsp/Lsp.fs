@@ -7,7 +7,7 @@ open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLsp.Util
 
-module M = MiloneStd.StdMap
+module TMap = MiloneStd.StdMap
 
 let private defaultTimeout = 5 * 1000
 
@@ -170,7 +170,7 @@ let private parseWithCache (ls: LangServiceState) docId =
 let private tyDisplayFn (tyCtx: Typing.TyCtx) ty =
   let getTyName tySerial =
     tyCtx.Tys
-    |> M.tryFind tySerial
+    |> TMap.tryFind tySerial
     |> Option.map Hir.tyDefToName
 
   TySystem.tyDisplay getTyName ty
@@ -198,7 +198,7 @@ let private doBundle (ls: LangServiceState) projectDir =
         // FIXME: read .milone_project
         Projects =
           compileCtx.Projects
-          |> M.add "MiloneStd" (ls.Host.MiloneHome + "/milone_libs/MiloneStd")
+          |> TMap.add "MiloneStd" (ls.Host.MiloneHome + "/milone_libs/MiloneStd")
 
         FetchModule = fetchModule }
 
@@ -460,15 +460,15 @@ let private symbolToName (tyCtx: Typing.TyCtx) symbol =
       match valueSymbol with
       | VarSymbol varSerial ->
           tyCtx.Vars
-          |> M.tryFind varSerial
+          |> TMap.tryFind varSerial
           |> Option.map varDefToName
       | FunSymbol funSerial ->
           tyCtx.Funs
-          |> M.tryFind funSerial
+          |> TMap.tryFind funSerial
           |> Option.map (fun (def: FunDef) -> def.Name)
       | VariantSymbol variantSerial ->
           tyCtx.Variants
-          |> M.tryFind variantSerial
+          |> TMap.tryFind variantSerial
           |> Option.map (fun (def: VariantDef) -> def.Name)
 
   | TySymbol tySymbol ->
@@ -480,7 +480,7 @@ let private symbolToName (tyCtx: Typing.TyCtx) symbol =
       | UnionTySymbol tySerial
       | RecordTySymbol tySerial ->
           tyCtx.Tys
-          |> M.tryFind tySerial
+          |> TMap.tryFind tySerial
           |> Option.map tyDefToName
 
 let private doCollectSymbolOccurrences

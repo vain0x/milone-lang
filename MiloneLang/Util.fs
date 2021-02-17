@@ -4,14 +4,14 @@ module rec MiloneLang.Util
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
-module M = MiloneStd.StdMap
+module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // Collections
 // -----------------------------------------------
 
-type AssocMap<'K, 'V> = M.TreeMap<'K, 'V>
+type AssocMap<'K, 'V> = TMap.TreeMap<'K, 'V>
 
 type AssocSet<'T> = TSet.TreeSet<'T>
 
@@ -187,7 +187,7 @@ let assocTryFind compare key assoc =
 // -----------------------------------------------
 
 let mapFind key map =
-  match M.tryFind key map with
+  match TMap.tryFind key map with
   | Some value -> value
 
   | None -> failwithf "mapFind: missing key (%A)" key

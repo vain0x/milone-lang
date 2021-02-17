@@ -22,7 +22,7 @@ open MiloneLang.Syntax
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 
-module M = MiloneStd.StdMap
+module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 /// Unique serial number to identify something
@@ -537,11 +537,11 @@ type Log =
 // Name context
 // -----------------------------------------------
 
-let nameCtxEmpty () = NameCtx(M.empty compare, 0)
+let nameCtxEmpty () = NameCtx(TMap.empty compare, 0)
 
 let nameCtxAdd (Name (name, _)) (NameCtx (map, serial)) =
   let serial = serial + 1
-  let map = map |> M.add serial name
+  let map = map |> TMap.add serial name
   serial, NameCtx(map, serial)
 
 // -----------------------------------------------

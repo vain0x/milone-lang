@@ -25,7 +25,7 @@ open MiloneLang.CirGen
 open MiloneLang.CirDump
 
 module C = MiloneStd.StdChar
-module M = MiloneStd.StdMap
+module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
@@ -238,17 +238,17 @@ let resolveMiloneCoreDeps tokens ast =
     let moduleNames = go [] tokens
 
     let add acc (moduleName, pos) =
-      if (acc |> M.containsKey moduleName |> not)
+      if (acc |> TMap.containsKey moduleName |> not)
          && isKnownName moduleName then
-        acc |> M.add moduleName pos
+        acc |> TMap.add moduleName pos
       else
         acc
 
-    moduleNames |> List.fold add (M.empty compare)
+    moduleNames |> List.fold add (TMap.empty compare)
 
   let insertOpenDecls decls =
     moduleMap
-    |> M.fold
+    |> TMap.fold
          (fun decls moduleName pos ->
            AModuleSynonymDecl(Name(moduleName, pos), [ Name("MiloneCore", pos); Name(moduleName, pos) ], pos)
            :: decls)
@@ -291,10 +291,10 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
       host.Home + "/.milone"
 
   let projects =
-    M.empty compare
-    |> M.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
-    |> M.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
-    |> M.add projectName projectDir
+    TMap.empty compare
+    |> TMap.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
+    |> TMap.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
+    |> TMap.add projectName projectDir
 
   let readModuleFile (_: string) (projectDir: string) (moduleName: string) =
     let read (ext: string) =
@@ -357,7 +357,7 @@ let private compileCtxReadProjectFile (ctx: CompileCtx) =
             refs
             |> List.fold
                  (fun projects (projectName, projectDir) ->
-                   if projects |> M.containsKey projectName then
+                   if projects |> TMap.containsKey projectName then
                      failwithf "Project name is duplicated: '%s'" projectName
 
                    let projectDir =
@@ -366,7 +366,7 @@ let private compileCtxReadProjectFile (ctx: CompileCtx) =
                      else
                        projectDir
 
-                   projects |> M.add projectName projectDir)
+                   projects |> TMap.add projectName projectDir)
                  ctx.Projects
 
           { ctx with Projects = projects }
@@ -382,10 +382,10 @@ let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
            let projectDir = projectDir |> pathStrTrimEndPathSep
            let projectName = projectDir |> pathStrToStem
 
-           if projects |> M.containsKey projectName then
+           if projects |> TMap.containsKey projectName then
              failwithf "Project name is duplicated: '%s'" projectName
 
-           projects |> M.add projectName projectDir)
+           projects |> TMap.add projectName projectDir)
          ctx.Projects
 
   { ctx with Projects = projects }
@@ -398,11 +398,11 @@ let private toBundleHost parse (ctx: CompileCtx): BundleHost =
     let ast, errors = parse docId text
     Some(docId, ast, errors)
 
-  { ProjectRefs = ctx.Projects |> M.toKeys
+  { ProjectRefs = ctx.Projects |> TMap.toKeys
 
     FetchModule =
       fun projectName moduleName ->
-        match ctx.Projects |> M.tryFind projectName with
+        match ctx.Projects |> TMap.tryFind projectName with
         | None -> None
         | Some projectDir -> ctx.FetchModule projectName projectDir moduleName }
 
@@ -452,7 +452,7 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
     let getTyName tySerial =
       tyCtx.Tys
-      |> M.tryFind tySerial
+      |> TMap.tryFind tySerial
       |> Option.map tyDefToName
 
     tyDisplay getTyName ty

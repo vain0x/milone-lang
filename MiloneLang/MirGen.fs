@@ -13,7 +13,7 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Mir
 
-module M = MiloneStd.StdMap
+module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
 let private unwrapListTy ty =
@@ -60,7 +60,7 @@ let private ofTyCtx (tyCtx: TyCtx): MirCtx =
     Logs = tyCtx.Logs }
 
 let private isNewtypeVariant (ctx: MirCtx) variantSerial =
-  match ctx.Variants |> M.tryFind variantSerial with
+  match ctx.Variants |> TMap.tryFind variantSerial with
   | Some variantDef ->
       match ctx.Tys |> mapFind variantDef.UnionTySerial with
       | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
@@ -114,7 +114,7 @@ let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> M.add varSerial (VarDef(name, AutoSM, ty, loc)) }
+          |> TMap.add varSerial (VarDef(name, AutoSM, ty, loc)) }
 
   let varExpr = MVarExpr(varSerial, ty, loc)
   varExpr, varSerial, ctx
@@ -408,7 +408,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
 // -----------------------------------------------
 
 let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
-  match ctx.Variants |> M.tryFind serial with
+  match ctx.Variants |> TMap.tryFind serial with
   | Some variantDef -> MVariantExpr(variantDef.UnionTySerial, serial, ty, loc), ctx
   | _ -> failwithf "NEVER: Illegal HVariantExpr. %A" itself
 
