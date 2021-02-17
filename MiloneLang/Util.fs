@@ -6,13 +6,15 @@ module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
 module M = MiloneStd.StdMap
 
+module TS = MiloneStd.StdSet
+
 // -----------------------------------------------
 // Collections
 // -----------------------------------------------
 
 type AssocMap<'K, 'V> = M.TreeMap<'K, 'V>
 
-type AssocSet<'K> = M.TreeMap<'K, unit>
+type AssocSet<'T> = TS.TreeSet<'T>
 
 // -----------------------------------------------
 // Pair
@@ -195,35 +197,21 @@ let mapFind key map =
 // AssocSet
 // -----------------------------------------------
 
-let setEmpty funs: AssocSet<_> = M.empty funs
+let setEmpty compare: AssocSet<_> = TS.empty compare
 
-let setIsEmpty (set: AssocSet<_>): bool = set |> M.isEmpty
+let setIsEmpty (set: AssocSet<_>): bool = TS.isEmpty set
 
-let setContains key (set: AssocSet<_>) = set |> M.containsKey key
+let setContains key (set: AssocSet<_>) = TS.contains key set
 
-let setToList (set: AssocSet<_>) = set |> M.toKeys
+let setToList (set: AssocSet<_>) = TS.toList set
 
-let setOfList compare xs: AssocSet<_> =
-  xs
-  |> List.map (fun key -> key, ())
-  |> M.ofList compare
+let setOfList compare xs: AssocSet<_> = TS.ofList compare xs
 
-let setAdd key set: AssocSet<_> = M.add key () set
+let setAdd item set: AssocSet<_> = TS.add item set
 
-let setRemove key set: bool * AssocSet<_> =
-  let opt, set = set |> M.remove key
-  Option.isSome opt, set
+let setRemove item set: bool * AssocSet<_> = TS.remove item set
 
-let setFold folder state (set: AssocSet<_>) =
-  set |> setToList |> List.fold folder state
-
-// TODO: make it more efficient
-let setExists pred (set: AssocSet<_>) = set |> setToList |> List.exists pred
-
-// TODO: make it more efficient
-let setUnion first second =
-  first
-  |> setFold (fun set item -> set |> setAdd item) second
+let setFold folder state (set: AssocSet<_>) = TS.fold folder state set
 
 // -----------------------------------------------
 // Int
