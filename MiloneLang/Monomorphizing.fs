@@ -127,7 +127,11 @@ let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
 
   monoCtx |> withTyContext tyCtx logAcc
 
-let private markAsSomethingHappened (ctx: MonoCtx) = { ctx with SomethingHappened = true }
+let private markAsSomethingHappened (ctx: MonoCtx) =
+  if ctx.SomethingHappened then
+    ctx
+  else
+    { ctx with SomethingHappened = true }
 
 let private findFun (ctx: MonoCtx) funSerial = ctx.Funs |> mapFind funSerial
 
