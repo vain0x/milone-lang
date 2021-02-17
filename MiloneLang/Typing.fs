@@ -18,6 +18,7 @@ open MiloneLang.NameRes
 open MiloneLang.Hir
 
 module StdInt = MiloneStd.StdInt
+module M = MiloneStd.StdMap
 
 // -----------------------------------------------
 // Context
@@ -84,7 +85,7 @@ let private freshVar (ctx: TyCtx) hint ty loc =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> mapAdd varSerial (VarDef(hint, AutoSM, ty, loc)) }
+          |> M.add varSerial (VarDef(hint, AutoSM, ty, loc)) }
 
   varSerial, ctx
 
@@ -94,7 +95,7 @@ let private freshTySerial (ctx: TyCtx) =
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
+        TyLevels = ctx.TyLevels |> M.add serial ctx.Level }
 
   serial, ctx
 
@@ -175,7 +176,7 @@ let private substTy (ctx: TyCtx) ty: Ty = typingSubst (toTyContext ctx) ty
 /// Unbound meta tys are degenerated, i.e. replaced with unit.
 let private substOrDegenerateTy (ctx: TyCtx) ty =
   let substMeta tySerial =
-    match ctx.Tys |> mapTryFind tySerial with
+    match ctx.Tys |> M.tryFind tySerial with
     | Some (MetaTyDef (_, ty, _)) -> Some ty
 
     | Some (UniversalTyDef _) -> None
@@ -183,7 +184,7 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | _ ->
         let level =
           ctx.TyLevels
-          |> mapTryFind tySerial
+          |> M.tryFind tySerial
           |> Option.defaultValue 0
         // Degenerate unless quantified.
         if level < 1000000000 then
@@ -276,7 +277,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
       let isOwned tySerial =
         let level =
           ctx.TyLevels
-          |> mapTryFind tySerial
+          |> M.tryFind tySerial
           |> Option.defaultValue 0
 
         level > outerLevel
@@ -288,7 +289,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
         { ctx with
             Funs =
               ctx.Funs
-              |> mapAdd funSerial { funDef with Ty = funTyScheme } }
+              |> M.add funSerial { funDef with Ty = funTyScheme } }
 
       // Mark generalized meta tys (universally quantified vars),
       // by increasing their level to infinite (10^9).
@@ -298,7 +299,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
         { ctx with
             TyLevels =
               fvs
-              |> List.fold (fun tyLevels fv -> tyLevels |> mapAdd fv 1000000000) ctx.TyLevels }
+              |> List.fold (fun tyLevels fv -> tyLevels |> M.add fv 1000000000) ctx.TyLevels }
 
       ctx
 
@@ -312,7 +313,7 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
     { ctx with
         Funs =
           ctx.Funs
-          |> mapAdd funSerial { funDef with Abi = CAbi } }
+          |> M.add funSerial { funDef with Abi = CAbi } }
 
 
   let nativeFunTy =
@@ -334,10 +335,10 @@ let private resolveAscriptionTy ctx ascriptionTy =
     match ty with
     | Ty (ErrorTk _, _) -> ty, ctx
 
-    | Ty (MetaTk (serial, loc), _) when ctx.TyLevels |> mapContainsKey serial |> not ->
+    | Ty (MetaTk (serial, loc), _) when ctx.TyLevels |> M.containsKey serial |> not ->
         let ctx =
           { ctx with
-              TyLevels = ctx.TyLevels |> mapAdd serial ctx.Level }
+              TyLevels = ctx.TyLevels |> M.add serial ctx.Level }
 
         tyMeta serial loc, ctx
 
@@ -657,14 +658,14 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
         let fieldDefs =
           fieldDefs
           |> List.map (fun (name, ty, _) -> name, ty)
-          |> mapOfList compare
+          |> M.ofList compare
 
         (fields, (fieldDefs, ctx))
         |> stMap
              (fun (field, (fieldDefs, ctx)) ->
                let name, init, loc = field
 
-               match fieldDefs |> mapRemove name with
+               match fieldDefs |> M.remove name with
                | None, _ ->
                    let ctx = ctx |> addRedundantErr name loc
                    let init, _, ctx = inferExpr ctx None init
@@ -678,10 +679,10 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
       // Unless base expr is specified, set of field initializers must be complete.
       let ctx =
         if baseOpt |> Option.isNone
-           && fieldDefs |> mapIsEmpty |> not then
+           && fieldDefs |> M.isEmpty |> not then
           let fields =
             fieldDefs
-            |> mapToList
+            |> M.toList
             |> List.map (fun (name, _) -> name)
 
           ctx |> addIncompleteErr fields
@@ -1057,10 +1058,10 @@ type private SynonymCycleCtx =
 
 let private setTyState tySerial state (ctx: SynonymCycleCtx) =
   { ctx with
-      TyState = ctx.TyState |> mapAdd tySerial state }
+      TyState = ctx.TyState |> M.add tySerial state }
 
 let private rcsSynonymTy (ctx: SynonymCycleCtx) tySerial =
-  match ctx.TyState |> mapTryFind tySerial with
+  match ctx.TyState |> M.tryFind tySerial with
   | Some State.Recursive -> setTyState tySerial State.Cyclic ctx
 
   | Some _ -> ctx
@@ -1073,7 +1074,7 @@ let private rcsSynonymTy (ctx: SynonymCycleCtx) tySerial =
         | Some bodyTy -> rcsTy ctx bodyTy
         | None -> ctx
 
-      match ctx.TyState |> mapTryFind tySerial with
+      match ctx.TyState |> M.tryFind tySerial with
       | Some State.Recursive -> setTyState tySerial State.Acyclic ctx
       | _ -> ctx
 
@@ -1104,11 +1105,11 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
           | SynonymTyDef (_, _, bodyTy, _) -> Some bodyTy
           | _ -> None
 
-      TyState = mapEmpty compare }
+      TyState = M.empty compare }
 
   let ctx =
     tyCtx.Tys
-    |> mapFold
+    |> M.fold
          (fun ctx tySerial (tyDef: TyDef) ->
            match tyDef with
            | SynonymTyDef _ -> rcsSynonymTy ctx tySerial
@@ -1117,7 +1118,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 
   let tys, logs =
     ctx.TyState
-    |> mapFold
+    |> M.fold
          (fun (tys, logs) tySerial state ->
            match state with
            | State.Cyclic ->
@@ -1127,7 +1128,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
                    // from running into stack overflow.
                    let tys =
                      tys
-                     |> mapAdd tySerial (SynonymTyDef(ident, tyArgs, tyUnit, loc))
+                     |> M.add tySerial (SynonymTyDef(ident, tyArgs, tyUnit, loc))
 
                    let logs = (Log.TySynonymCycleError, loc) :: logs
                    tys, logs
@@ -1150,7 +1151,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       Variants = scopeCtx.Variants
       MainFunOpt = scopeCtx.MainFunOpt
       Tys = scopeCtx.Tys
-      TyLevels = mapEmpty compare
+      TyLevels = M.empty compare
       Level = 0
       TraitBounds = []
       Logs = [] }
@@ -1163,7 +1164,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     let vars, ctx =
       ctx.Vars
-      |> mapFold
+      |> M.fold
            (fun (acc, ctx: TyCtx) varSerial varDef ->
              let ctx =
                { ctx with
@@ -1177,16 +1178,16 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                    let ty, ctx = freshMetaTy loc ctx
                    VarDef(name, storageModifier, ty, loc), ctx
 
-             let acc = acc |> mapAdd varSerial varDef
+             let acc = acc |> M.add varSerial varDef
 
              acc, ctx)
-           (mapEmpty varSerialCompare, ctx)
+           (M.empty varSerialCompare, ctx)
 
     { ctx with Vars = vars }
 
   let funs, ctx =
     ctx.Funs
-    |> mapFold
+    |> M.fold
          (fun (acc, ctx: TyCtx) funSerial (funDef: FunDef) ->
            let ctx =
              { ctx with
@@ -1197,16 +1198,16 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
            let ty, ctx = freshMetaTy funDef.Loc ctx
 
            acc
-           |> mapAdd funSerial { funDef with Ty = TyScheme([], ty) },
+           |> M.add funSerial { funDef with Ty = TyScheme([], ty) },
            ctx)
-         (mapEmpty funSerialCompare, ctx)
+         (M.empty funSerialCompare, ctx)
 
   let ctx = { ctx with Funs = funs }
 
   let ctx =
     let variants =
       ctx.Variants
-      |> mapMap
+      |> M.map
            (fun _ (variantDef: VariantDef) ->
              // Pre-compute the type of variant.
              let variantTy =
@@ -1247,7 +1248,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     let vars =
       ctx.Vars
-      |> mapMap
+      |> M.map
            (fun _ varDef ->
              match varDef with
              | VarDef (name, storageModifier, ty, loc) ->
@@ -1256,7 +1257,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
     let funs =
       ctx.Funs
-      |> mapMap
+      |> M.map
            (fun _ (funDef: FunDef) ->
              let (TyScheme (tyVars, ty)) = funDef.Ty
              let ty = substOrDegenerate ty
@@ -1266,7 +1267,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
     let variants =
       ctx.Variants
-      |> mapMap
+      |> M.map
            (fun _ (variantDef: VariantDef) ->
              { variantDef with
                  PayloadTy = substOrDegenerate variantDef.PayloadTy
@@ -1280,7 +1281,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     let tys =
       ctx.Tys
-      |> mapFold
+      |> M.fold
            (fun acc tySerial tyDef ->
              match tyDef with
              | MetaTyDef _ -> acc
@@ -1289,7 +1290,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                  let bodyTy = bodyTy |> substOrDegenerate
 
                  acc
-                 |> mapAdd tySerial (SynonymTyDef(name, tyArgs, bodyTy, loc))
+                 |> M.add tySerial (SynonymTyDef(name, tyArgs, bodyTy, loc))
 
              | RecordTyDef (recordName, fields, loc) ->
                  let fields =
@@ -1300,10 +1301,10 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                           name, ty, loc)
 
                  acc
-                 |> mapAdd tySerial (RecordTyDef(recordName, fields, loc))
+                 |> M.add tySerial (RecordTyDef(recordName, fields, loc))
 
-             | _ -> acc |> mapAdd tySerial tyDef)
-           (mapEmpty compare)
+             | _ -> acc |> M.add tySerial tyDef)
+           (M.empty compare)
 
     { ctx with Tys = tys }
 

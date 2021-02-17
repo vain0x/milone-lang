@@ -12,6 +12,8 @@ module rec MiloneLang.Syntax
 
 open MiloneLang.Util
 
+module M = MiloneStd.StdMap
+
 // -----------------------------------------------
 // Vocabulary types
 // -----------------------------------------------
@@ -631,23 +633,23 @@ let private keywordMapBuild (): KeywordMap =
 
   let reservedToken = ErrorToken ReservedWordError
 
-  let map = mapEmpty compare
+  let map = M.empty compare
 
   let map =
     miloneKeywords
-    |> List.fold (fun map (name, token) -> mapAdd name token map) map
+    |> List.fold (fun map (name, token) -> M.add name token map) map
 
   let map =
     fsharpKeywords
-    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+    |> List.fold (fun map name -> M.add name reservedToken map) map
 
   let map =
     ocamlKeywords
-    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+    |> List.fold (fun map name -> M.add name reservedToken map) map
 
   let map =
     reservedWords
-    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+    |> List.fold (fun map name -> M.add name reservedToken map) map
 
   map
 
@@ -660,7 +662,7 @@ type TokenizeHost = { FindKeyword: string -> Token option }
 let tokenizeHostNew (): TokenizeHost =
   let keywordMap = keywordMapBuild ()
 
-  { FindKeyword = fun ident -> keywordMap |> mapTryFind ident }
+  { FindKeyword = fun ident -> keywordMap |> M.tryFind ident }
 
 // -----------------------------------------------
 // Module dependencies

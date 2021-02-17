@@ -86,6 +86,8 @@ open MiloneLang.Syntax
 open MiloneLang.Typing
 open MiloneLang.Hir
 
+module M = MiloneStd.StdMap
+
 // -----------------------------------------------
 // KnownCtx
 // -----------------------------------------------
@@ -198,8 +200,8 @@ let private ofTyCtx (tyCtx: TyCtx): CcCtx =
     Tys = tyCtx.Tys
 
     Current = knownCtxEmpty ()
-    FunKnowns = mapEmpty funSerialCompare
-    FunUpvars = mapEmpty funSerialCompare }
+    FunKnowns = M.empty funSerialCompare
+    FunUpvars = M.empty funSerialCompare }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: CcCtx) =
   { tyCtx with
@@ -213,7 +215,7 @@ let private addLocal varSerial (ctx: CcCtx) =
       Current = ctx.Current |> knownCtxAddLocal varSerial }
 
 let private useVar varSerial (ctx: CcCtx) =
-  match ctx.Vars |> mapTryFind varSerial with
+  match ctx.Vars |> M.tryFind varSerial with
   | Some (VarDef (_, StaticSM, _, _)) ->
       // Don't count static vars as used.
       ctx
@@ -231,11 +233,11 @@ let private saveKnownCtxToFun funSerial (ctx: CcCtx) =
   // Don't update in the second traversal for transformation.
   let funKnowns = ctx.FunKnowns
 
-  if funKnowns |> mapContainsKey funSerial then
+  if funKnowns |> M.containsKey funSerial then
     ctx
   else
     { ctx with
-        FunKnowns = funKnowns |> mapAdd funSerial ctx.Current }
+        FunKnowns = funKnowns |> M.add funSerial ctx.Current }
 
 let private enterFunDecl (ctx: CcCtx) =
   { ctx with
@@ -252,7 +254,7 @@ let private leaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
 /// Gets a list of captured variables for a function.
 let private genFunCaps funSerial (ctx: CcCtx): Caps =
   let varSerials =
-    match ctx.FunUpvars |> mapTryFind funSerial with
+    match ctx.FunUpvars |> M.tryFind funSerial with
     | Some it -> it |> setToList
     | None -> []
 
@@ -260,7 +262,7 @@ let private genFunCaps funSerial (ctx: CcCtx): Caps =
   varSerials
   |> List.choose
        (fun varSerial ->
-         match ctx.Vars |> mapTryFind varSerial with
+         match ctx.Vars |> M.tryFind varSerial with
          | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
 
          | _ -> None)
@@ -292,14 +294,14 @@ let private closureRefs (ctx: CcCtx): CcCtx =
     if modified then
       true,
       funUpvarsMap
-      |> mapAdd funSerial (upvars, localVars, funs)
+      |> M.add funSerial (upvars, localVars, funs)
     else
       totalModified, funUpvarsMap
 
   let rec makeTransitive funUpvarsMap =
     let modified, funUpvarsMap =
       funUpvarsMap
-      |> mapFold visitFun (false, funUpvarsMap)
+      |> M.fold visitFun (false, funUpvarsMap)
 
     if modified then
       makeTransitive funUpvarsMap
@@ -308,11 +310,11 @@ let private closureRefs (ctx: CcCtx): CcCtx =
 
   let funUpvars =
     ctx.FunKnowns
-    |> mapMap
+    |> M.map
          (fun (_: FunSerial) (knownCtx: KnownCtx) ->
            knownCtxToNonlocalVars knownCtx, knownCtx.Locals, setToList knownCtx.UseFuns)
     |> makeTransitive
-    |> mapMap (fun (_: FunSerial) (upvars: AssocSet<VarSerial>, _: AssocSet<VarSerial>, _: FunSerial list) -> upvars)
+    |> M.map (fun (_: FunSerial) (upvars: AssocSet<VarSerial>, _: AssocSet<VarSerial>, _: FunSerial list) -> upvars)
 
   { ctx with FunUpvars = funUpvars }
 
@@ -320,7 +322,7 @@ let private closureRefs (ctx: CcCtx): CcCtx =
 let private updateFunDefs (ctx: CcCtx) =
   let funs =
     ctx.FunKnowns
-    |> mapFold
+    |> M.fold
          (fun funs funSerial (_: KnownCtx) ->
            match ctx |> genFunCaps funSerial with
            | [] -> funs
@@ -335,7 +337,7 @@ let private updateFunDefs (ctx: CcCtx) =
                let ty = TyScheme(tyVars, funTy)
 
                funs
-               |> mapAdd funSerial { funDef with Arity = arity; Ty = ty })
+               |> M.add funSerial { funDef with Arity = arity; Ty = ty })
          ctx.Funs
 
   { ctx with Funs = funs }

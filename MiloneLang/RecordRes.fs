@@ -8,6 +8,8 @@ open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLang.Typing
 
+module M = MiloneStd.StdMap
+
 let private hxIsVarOrUnboxingVar expr =
   match expr with
   | HVarExpr _
@@ -33,7 +35,7 @@ let private ofTyCtx (tyCtx: TyCtx): RrCtx =
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
-    RecordMap = mapEmpty compare }
+    RecordMap = M.empty compare }
 
 let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
 
@@ -91,7 +93,7 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
 
 let private buildRecordMap (ctx: RrCtx) =
   ctx.Tys
-  |> mapFold
+  |> M.fold
        (fun acc tySerial tyDef ->
          match tyDef with
          | RecordTyDef (_, fields, _) ->
@@ -101,18 +103,18 @@ let private buildRecordMap (ctx: RrCtx) =
              let fieldMap =
                fields
                |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
-               |> mapOfList compare
+               |> M.ofList compare
 
-             acc |> mapAdd tySerial (fieldTys, fieldMap)
+             acc |> M.add tySerial (fieldTys, fieldMap)
 
          | _ -> acc)
-       (mapEmpty compare)
+       (M.empty compare)
 
 let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   let fieldTys, fieldMap =
     match ty with
     | Ty (RecordTk tySerial, _) ->
-        match ctx.RecordMap |> mapTryFind tySerial with
+        match ctx.RecordMap |> M.tryFind tySerial with
         | Some (fieldTys, fieldMap) -> fieldTys, fieldMap
         | _ -> failwithf "NEVER: %A" itself
     | _ -> failwithf "NEVER: %A" itself

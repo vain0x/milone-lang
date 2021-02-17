@@ -11,6 +11,7 @@ open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
+module M = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 // -----------------------------------------------
@@ -280,7 +281,7 @@ type TyContext =
 
 let private addTyDef tySerial tyDef (ctx: TyContext) =
   { ctx with
-      Tys = ctx.Tys |> mapAdd tySerial tyDef }
+      Tys = ctx.Tys |> M.add tySerial tyDef }
 
 // -----------------------------------------------
 // Type inference algorithm
@@ -300,7 +301,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
       let tyLevels =
         let level =
           ctx.TyLevels
-          |> mapTryFind tySerial
+          |> M.tryFind tySerial
           |> Option.defaultValue 0
 
         ty
@@ -309,7 +310,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
              (fun tyLevels tySerial ->
                let currentLevel =
                  ctx.TyLevels
-                 |> mapTryFind tySerial
+                 |> M.tryFind tySerial
                  |> Option.defaultValue 0
 
                if currentLevel <= level then
@@ -317,7 +318,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
                  tyLevels
                else
                  // Prevent this meta ty from getting generalized until level of the bound meta ty.
-                 tyLevels |> mapAdd tySerial level)
+                 tyLevels |> M.add tySerial level)
              ctx.TyLevels
 
       let ctx =
@@ -330,7 +331,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 /// with their results.
 let typingSubst (ctx: TyContext) ty: Ty =
   let substMeta tySerial =
-    match ctx.Tys |> mapTryFind tySerial with
+    match ctx.Tys |> M.tryFind tySerial with
     | Some (MetaTyDef (_, ty, _)) -> Some ty
     | _ -> None
 
@@ -370,7 +371,7 @@ let typingExpandSynonyms (ctx: TyContext) ty =
   let rec go ty =
     match ty with
     | Ty (SynonymTk tySerial, useTyArgs) ->
-        match ctx.Tys |> mapTryFind tySerial with
+        match ctx.Tys |> M.tryFind tySerial with
         | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
             tyExpandSynonym useTyArgs defTySerials bodyTy
             |> go
@@ -388,7 +389,7 @@ type private MetaTyUnifyResult =
   | DidRecurse
 
 let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
-  match ctx.Tys |> mapTryFind tySerial with
+  match ctx.Tys |> M.tryFind tySerial with
   | Some (MetaTyDef (_, ty, _)) -> DidExpand ty
 
   | _ ->
@@ -402,12 +403,12 @@ let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
       | otherTy -> DidBind(typingBind ctx tySerial otherTy loc)
 
 let private isSynonym (ctx: TyContext) tySerial =
-  match ctx.Tys |> mapTryFind tySerial with
+  match ctx.Tys |> M.tryFind tySerial with
   | Some (SynonymTyDef _) -> true
   | _ -> false
 
 let private asSynonym (ctx: TyContext) tySerial =
-  match ctx.Tys |> mapTryFind tySerial with
+  match ctx.Tys |> M.tryFind tySerial with
   | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
   | _ -> failwith "Expected synonym. Check with isSynonym first."
 
@@ -430,7 +431,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
 
              let ctx =
                let tyLevels =
-                 ctx.TyLevels |> mapAdd newTySerial ctx.Level
+                 ctx.TyLevels |> M.add newTySerial ctx.Level
 
                { ctx with
                    Serial = newTySerial

@@ -20,6 +20,8 @@ open MiloneLang.Mir
 open MiloneLang.MirGen
 open MiloneLang.Cir
 
+module M = MiloneStd.StdMap
+
 let private valueSymbolCompare l r =
   let encode symbol =
     match symbol with
@@ -45,19 +47,19 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
         let ident = toIdent def
 
         let serials =
-          acc |> mapTryFind ident |> Option.defaultValue []
+          acc |> M.tryFind ident |> Option.defaultValue []
 
         let acc =
-          acc |> mapAdd ident ((serial, def) :: serials)
+          acc |> M.add ident ((serial, def) :: serials)
 
         go acc xs
 
   let serialsMap =
-    go (mapEmpty compare) (defMap |> mapToList)
+    go (M.empty compare) (defMap |> M.toList)
 
   let addIdent ident (identMap, index) serial =
     identMap
-    |> mapAdd (toKey serial) (rename ident index),
+    |> M.add (toKey serial) (rename ident index),
     index + 1
 
   let addIdents identMap ident serials =
@@ -66,7 +68,7 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
     |> List.fold (addIdent ident) (identMap, 0)
     |> fst
 
-  serialsMap |> mapFold addIdents (mapEmpty mapFuns)
+  serialsMap |> M.fold addIdents (M.empty mapFuns)
 
 let private tupleField (i: int) = "t" + string i
 
@@ -94,26 +96,26 @@ type private CirCtx =
 
 let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   let valueUniqueNames =
-    let m = mapEmpty valueSymbolCompare
+    let m = M.empty valueSymbolCompare
 
     let m =
       mirCtx.Vars
-      |> mapFold
+      |> M.fold
            (fun acc varSerial varDef ->
              acc
-             |> mapAdd (VarSymbol varSerial) (varDefToName varDef))
+             |> M.add (VarSymbol varSerial) (varDefToName varDef))
            m
 
     let m =
       mirCtx.Funs
-      |> mapFold (fun acc funSerial (funDef: FunDef) -> acc |> mapAdd (FunSymbol funSerial) funDef.Name) m
+      |> M.fold (fun acc funSerial (funDef: FunDef) -> acc |> M.add (FunSymbol funSerial) funDef.Name) m
 
     let m =
       mirCtx.Variants
-      |> mapFold
+      |> M.fold
            (fun acc variantSerial (variantDef: VariantDef) ->
              acc
-             |> mapAdd (VariantSymbol variantSerial) variantDef.Name)
+             |> M.add (VariantSymbol variantSerial) variantDef.Name)
            m
 
     m |> renameIdents id fst valueSymbolCompare
@@ -136,7 +138,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
     Variants = mirCtx.Variants
     MainFunOpt = mirCtx.MainFunOpt
     ValueUniqueNames = valueUniqueNames
-    TyEnv = mapEmpty tyCompare
+    TyEnv = M.empty tyCompare
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []
@@ -144,7 +146,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
     Logs = mirCtx.Logs }
 
 let private findStorageModifier (ctx: CirCtx) varSerial =
-  match ctx.Vars |> mapTryFind varSerial with
+  match ctx.Vars |> M.tryFind varSerial with
   | Some (VarDef (_, storageModifier, _, _)) -> storageModifier
 
   | _ -> StaticSM
@@ -173,7 +175,7 @@ let private addDecl (ctx: CirCtx) decl = { ctx with Decls = decl :: ctx.Decls }
 let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
 
-  match ctx.TyEnv |> mapTryFind funTy with
+  match ctx.TyEnv |> M.tryFind funTy with
   | Some (_, ty) -> ty, ctx
 
   | None ->
@@ -184,14 +186,14 @@ let private genIncompleteFunTyDecl (ctx: CirCtx) sTy tTy =
         { ctx with
             TyEnv =
               ctx.TyEnv
-              |> mapAdd funTy (CTyDeclared, funStructTy) }
+              |> M.add funTy (CTyDeclared, funStructTy) }
 
       funStructTy, ctx
 
 let private genFunTyDef (ctx: CirCtx) sTy tTy =
   let funTy = tyFun sTy tTy
 
-  match ctx.TyEnv |> mapTryFind funTy with
+  match ctx.TyEnv |> M.tryFind funTy with
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
@@ -214,14 +216,14 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
       let ctx =
         { ctx with
             Decls = CStructDecl(structName, fields, []) :: ctx.Decls
-            TyEnv = ctx.TyEnv |> mapAdd funTy (CTyDefined, selfTy) }
+            TyEnv = ctx.TyEnv |> M.add funTy (CTyDefined, selfTy) }
 
       selfTy, ctx
 
 let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
 
-  match ctx.TyEnv |> mapTryFind listTy with
+  match ctx.TyEnv |> M.tryFind listTy with
   | Some (_, ty) -> ty, ctx
 
   | None ->
@@ -230,14 +232,14 @@ let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
 
       let ctx =
         { ctx with
-            TyEnv = ctx.TyEnv |> mapAdd listTy (CTyDeclared, selfTy) }
+            TyEnv = ctx.TyEnv |> M.add listTy (CTyDeclared, selfTy) }
 
       selfTy, ctx
 
 let private genListTyDef (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
 
-  match ctx.TyEnv |> mapTryFind listTy with
+  match ctx.TyEnv |> M.tryFind listTy with
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
@@ -250,14 +252,14 @@ let private genListTyDef (ctx: CirCtx) itemTy =
       let ctx =
         { ctx with
             Decls = CStructDecl(structName, fields, []) :: ctx.Decls
-            TyEnv = ctx.TyEnv |> mapAdd listTy (CTyDefined, selfTy) }
+            TyEnv = ctx.TyEnv |> M.add listTy (CTyDefined, selfTy) }
 
       selfTy, ctx
 
 let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
   let tupleTy = tyTuple itemTys
 
-  match ctx.TyEnv |> mapTryFind tupleTy with
+  match ctx.TyEnv |> M.tryFind tupleTy with
   | Some (_, ty) -> ty, ctx
 
   | None ->
@@ -266,14 +268,14 @@ let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
 
       let ctx =
         { ctx with
-            TyEnv = ctx.TyEnv |> mapAdd tupleTy (CTyDeclared, selfTy) }
+            TyEnv = ctx.TyEnv |> M.add tupleTy (CTyDeclared, selfTy) }
 
       selfTy, ctx
 
 let private genTupleTyDef (ctx: CirCtx) itemTys =
   let tupleTy = tyTuple itemTys
 
-  match ctx.TyEnv |> mapTryFind tupleTy with
+  match ctx.TyEnv |> M.tryFind tupleTy with
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
@@ -299,14 +301,14 @@ let private genTupleTyDef (ctx: CirCtx) itemTys =
       let ctx =
         { ctx with
             Decls = tupleDecl :: ctx.Decls
-            TyEnv = ctx.TyEnv |> mapAdd tupleTy (CTyDefined, selfTy) }
+            TyEnv = ctx.TyEnv |> M.add tupleTy (CTyDefined, selfTy) }
 
       selfTy, ctx
 
 let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
   let unionTyRef = tyUnion tySerial
 
-  match ctx.TyEnv |> mapTryFind unionTyRef with
+  match ctx.TyEnv |> M.tryFind unionTyRef with
   | Some (_, ty) -> ty, ctx
 
   | None ->
@@ -317,14 +319,14 @@ let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
         { ctx with
             TyEnv =
               ctx.TyEnv
-              |> mapAdd unionTyRef (CTyDeclared, selfTy) }
+              |> M.add unionTyRef (CTyDeclared, selfTy) }
 
       selfTy, ctx
 
 let private genUnionTyDef (ctx: CirCtx) tySerial variants =
   let unionTyRef = tyUnion tySerial
 
-  match ctx.TyEnv |> mapTryFind unionTyRef with
+  match ctx.TyEnv |> M.tryFind unionTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
@@ -369,14 +371,14 @@ let private genUnionTyDef (ctx: CirCtx) tySerial variants =
             Decls = structDecl :: discriminantEnumDecl :: ctx.Decls
             TyEnv =
               ctx.TyEnv
-              |> mapAdd unionTyRef (CTyDefined, selfTy) }
+              |> M.add unionTyRef (CTyDefined, selfTy) }
 
       selfTy, ctx
 
 let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
   let recordTyRef = tyRecord tySerial
 
-  match ctx.TyEnv |> mapTryFind recordTyRef with
+  match ctx.TyEnv |> M.tryFind recordTyRef with
   | Some (_, ty) -> ty, ctx
 
   | None ->
@@ -387,7 +389,7 @@ let private genIncompleteRecordTyDecl (ctx: CirCtx) tySerial =
         { ctx with
             TyEnv =
               ctx.TyEnv
-              |> mapAdd recordTyRef (CTyDeclared, selfTy) }
+              |> M.add recordTyRef (CTyDeclared, selfTy) }
 
       selfTy, ctx
 
@@ -396,7 +398,7 @@ let private genRecordTyDef ctx tySerial fields =
   let structName, ctx = getUniqueTyName ctx recordTyRef
   let selfTy, ctx = genIncompleteRecordTyDecl ctx tySerial
 
-  match ctx.TyEnv |> mapTryFind recordTyRef with
+  match ctx.TyEnv |> M.tryFind recordTyRef with
   | Some (CTyDefined, ty) -> ty, ctx
 
   | _ ->
@@ -416,7 +418,7 @@ let private genRecordTyDef ctx tySerial fields =
             Decls = CStructDecl(structName, fields, []) :: ctx.Decls
             TyEnv =
               ctx.TyEnv
-              |> mapAdd recordTyRef (CTyDefined, selfTy) }
+              |> M.add recordTyRef (CTyDefined, selfTy) }
 
       selfTy, ctx
 
@@ -426,19 +428,19 @@ let private genRecordTyDef ctx tySerial fields =
 
 let private getUniqueVarName (ctx: CirCtx) varSerial =
   match ctx.ValueUniqueNames
-        |> mapTryFind (VarSymbol varSerial) with
+        |> M.tryFind (VarSymbol varSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown var serial=%s" (objToString varSerial)
 
 let private getUniqueFunName (ctx: CirCtx) funSerial =
   match ctx.ValueUniqueNames
-        |> mapTryFind (FunSymbol funSerial) with
+        |> M.tryFind (FunSymbol funSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown fun serial=%s" (objToString funSerial)
 
 let private getUniqueVariantName (ctx: CirCtx) variantSerial =
   match ctx.ValueUniqueNames
-        |> mapTryFind (VariantSymbol variantSerial) with
+        |> M.tryFind (VariantSymbol variantSerial) with
   | Some name -> name
   | None -> failwithf "Never: Unknown variant serial=%s" (objToString variantSerial)
 
@@ -530,7 +532,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
           failwithf "/* unknown ty %A */" ty
 
     // Memoization.
-    match ctx.TyUniqueNames |> mapTryFind ty with
+    match ctx.TyUniqueNames |> M.tryFind ty with
     | Some name -> name, ctx
 
     | None ->
@@ -538,7 +540,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
         let ctx =
           { ctx with
-              TyUniqueNames = ctx.TyUniqueNames |> mapAdd ty name }
+              TyUniqueNames = ctx.TyUniqueNames |> M.add ty name }
 
         name, ctx
 
@@ -592,7 +594,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
 
   | Ty (SynonymTk serial, useTyArgs) ->
-      match ctx.Tys |> mapTryFind serial with
+      match ctx.Tys |> M.tryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
             tyExpandSynonym useTyArgs defTySerials bodyTy
@@ -634,7 +636,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
         |> List.map
              (fun ty ->
                let substMeta tySerial =
-                 match ctx.Tys |> mapTryFind tySerial with
+                 match ctx.Tys |> M.tryFind tySerial with
                  | Some (MetaTyDef (_, ty, _)) -> Some ty
                  | Some (UniversalTyDef _)
                  | None -> Some tyObj
@@ -642,7 +644,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
                ty
                |> tySubst substMeta
-               |> tyExpandSynonyms (fun tySerial -> ctx.Tys |> mapTryFind tySerial))
+               |> tyExpandSynonyms (fun tySerial -> ctx.Tys |> M.tryFind tySerial))
 
       genTupleTyDef ctx itemTys
 
@@ -655,7 +657,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
 
   | Ty (SynonymTk serial, useTyArgs) ->
-      match ctx.Tys |> mapTryFind serial with
+      match ctx.Tys |> M.tryFind serial with
       | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
           let ty =
             tyExpandSynonym useTyArgs defTySerials bodyTy
@@ -665,13 +667,13 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
       | _ -> failwithf "NEVER: synonym type undefined?"
 
   | Ty (UnionTk serial, _) ->
-      match ctx.Tys |> mapTryFind serial with
+      match ctx.Tys |> M.tryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
 
       | _ -> failwithf "NEVER: union type undefined?"
 
   | Ty (RecordTk serial, _) ->
-      match ctx.Tys |> mapTryFind serial with
+      match ctx.Tys |> M.tryFind serial with
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
       | _ -> failwithf "NEVER: record type undefined?"
@@ -1274,7 +1276,7 @@ let private genLogs (ctx: CirCtx) =
   let tyDisplayFn ty =
     let getTyName tySerial =
       ctx.Tys
-      |> mapTryFind tySerial
+      |> M.tryFind tySerial
       |> Option.map tyDefToName
 
     tyDisplay getTyName ty

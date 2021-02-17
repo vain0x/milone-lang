@@ -3,16 +3,16 @@ module rec MiloneLang.Util
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
-module TreeMap = MiloneStd.StdMap
 module Int = MiloneStd.StdInt
+module M = MiloneStd.StdMap
 
 // -----------------------------------------------
 // Collections
 // -----------------------------------------------
 
-type AssocMap<'K, 'V> = TreeMap.TreeMap<'K, 'V>
+type AssocMap<'K, 'V> = M.TreeMap<'K, 'V>
 
-type AssocSet<'K> = TreeMap.TreeMap<'K, unit>
+type AssocSet<'K> = M.TreeMap<'K, unit>
 
 // -----------------------------------------------
 // Pair
@@ -185,59 +185,33 @@ let assocTryFind compare key assoc =
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty compare: AssocMap<_, _> = TreeMap.empty compare
-
-let mapIsEmpty (map: AssocMap<_, _>) = TreeMap.isEmpty map
-
-let mapAdd key value (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.add key value map
-
-let mapRemove key (map: AssocMap<_, _>): _ option * AssocMap<_, _> = TreeMap.remove key map
-
-let mapTryFind key (map: AssocMap<_, _>): _ option = TreeMap.tryFind key map
-
 let mapFind key map =
-  match mapTryFind key map with
+  match M.tryFind key map with
   | Some value -> value
 
   | None -> failwithf "mapFind: missing key (%A)" key
-
-let mapContainsKey key map = TreeMap.containsKey key map
-
-let mapFold folder state (map: AssocMap<_, _>) = TreeMap.fold folder state map
-
-let mapMap f (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.map f map
-
-let mapFilter pred (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.filter pred map
-
-let mapToKeys (map: AssocMap<_, _>) = TreeMap.toKeys map
-
-let mapToList (map: AssocMap<_, _>) = TreeMap.toList map
-
-let mapOfKeys compare value keys: AssocMap<_, _> =
-  keys
-  |> List.map (fun key -> key, value)
-  |> TreeMap.ofList compare
-
-let mapOfList compare assoc: AssocMap<_, _> = TreeMap.ofList compare assoc
 
 // -----------------------------------------------
 // AssocSet
 // -----------------------------------------------
 
-let setEmpty funs: AssocSet<_> = mapEmpty funs
+let setEmpty funs: AssocSet<_> = M.empty funs
 
-let setIsEmpty (set: AssocSet<_>): bool = set |> mapIsEmpty
+let setIsEmpty (set: AssocSet<_>): bool = set |> M.isEmpty
 
-let setContains key (set: AssocSet<_>) = set |> mapContainsKey key
+let setContains key (set: AssocSet<_>) = set |> M.containsKey key
 
-let setToList (set: AssocSet<_>) = set |> mapToKeys
+let setToList (set: AssocSet<_>) = set |> M.toKeys
 
-let setOfList compare xs: AssocSet<_> = mapOfKeys compare () xs
+let setOfList compare xs: AssocSet<_> =
+  xs
+  |> List.map (fun key -> key, ())
+  |> M.ofList compare
 
-let setAdd key set: AssocSet<_> = mapAdd key () set
+let setAdd key set: AssocSet<_> = M.add key () set
 
 let setRemove key set: bool * AssocSet<_> =
-  let opt, set = set |> mapRemove key
+  let opt, set = set |> M.remove key
   Option.isSome opt, set
 
 let setFold folder state (set: AssocSet<_>) =
