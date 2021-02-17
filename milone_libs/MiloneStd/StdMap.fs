@@ -174,6 +174,11 @@ let tryFind (key: 'K) (map: TreeMap<'K, 'T>): 'T option =
   | Some kv -> Some(snd (unbox kv: 'K * 'T))
   | None -> None
 
+let containsKey (key: 'K) (map: TreeMap<'K, _>): bool =
+  match tryFind key map with
+  | Some _ -> true
+  | None -> false
+
 let add (key: 'K) (value: 'T) (map: TreeMap<'K, 'T>): TreeMap<'K, 'T> =
   let node, keyCompare, none = map
 

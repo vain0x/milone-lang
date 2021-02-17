@@ -201,11 +201,7 @@ let mapFind key map =
 
   | None -> failwithf "mapFind: missing key (%A)" key
 
-let mapContainsKey key map =
-  match mapTryFind key map with
-  | Some _ -> true
-
-  | None -> false
+let mapContainsKey key map = TreeMap.containsKey key map
 
 let mapFold folder state (map: AssocMap<_, _>) = TreeMap.fold folder state map
 
