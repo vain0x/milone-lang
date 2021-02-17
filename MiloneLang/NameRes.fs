@@ -14,12 +14,6 @@ module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
-let private mapAddList key value map =
-  let values =
-    map |> TMap.tryFind key |> Option.defaultValue []
-
-  TMap.add key (value :: values) map
-
 let private isNoTy ty =
   match ty with
   | Ty (ErrorTk _, _) -> true
@@ -128,18 +122,10 @@ let private nsAdd (key: NsOwner) (ident: Ident) value (ns: Ns<_>): Ns<_> =
   |> TMap.add key (ns |> nsFind key |> TMap.add ident value)
 
 let private nsMerge (key: NsOwner) (ident: Ident) value (ns: Ns<_>): Ns<_> =
-  let submap = ns |> nsFind key
+  let submap =
+    ns |> nsFind key |> multimapAdd ident value
 
-  ns
-  |> TMap.add
-       key
-       (submap
-        |> TMap.add
-             ident
-             (value
-              :: (submap
-                  |> TMap.tryFind ident
-                  |> Option.defaultValue [])))
+  ns |> TMap.add key submap
 
 // --------------------------------------------
 // Scopes
@@ -255,7 +241,9 @@ let private findFun funSerial (scopeCtx: ScopeCtx) =
   scopeCtx.Funs |> mapFind funSerial
 
 let private findVariant variantSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Variants |> TMap.containsKey variantSerial)
+  assert (scopeCtx.Variants
+          |> TMap.containsKey variantSerial)
+
   scopeCtx.Variants |> mapFind variantSerial
 
 let private findTy tySerial (scopeCtx: ScopeCtx) =
@@ -263,7 +251,9 @@ let private findTy tySerial (scopeCtx: ScopeCtx) =
   scopeCtx.Tys |> mapFind tySerial
 
 let private findModuleTy moduleSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.ModuleTys |> TMap.containsKey moduleSerial)
+  assert (scopeCtx.ModuleTys
+          |> TMap.containsKey moduleSerial)
+
   scopeCtx.ModuleTys |> mapFind moduleSerial
 
 let private findModuleSynonym serial (scopeCtx: ScopeCtx) =
@@ -328,7 +318,9 @@ let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
 
 let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      ModuleTys = scopeCtx.ModuleTys |> TMap.add moduleTySerial tyDef }
+      ModuleTys =
+        scopeCtx.ModuleTys
+        |> TMap.add moduleTySerial tyDef }
 
 let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
@@ -393,7 +385,7 @@ let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx): S
 
         let nsMap =
           nsMap
-          |> mapAddList alias (nsOwnerOfTySymbol symbol)
+          |> multimapAdd alias (nsOwnerOfTySymbol symbol)
 
         kinds, varScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
@@ -501,13 +493,14 @@ let private resolveScopedVarName nsOwner name (scopeCtx: ScopeCtx): ValueSymbol 
 
 // Find from namespace of type (not local).
 let private resolveScopedTyName nsOwner name (scopeCtx: ScopeCtx): TySymbol option =
-  scopeCtx.TyNs |> nsFind nsOwner |> TMap.tryFind name
+  scopeCtx.TyNs
+  |> nsFind nsOwner
+  |> TMap.tryFind name
 
 let private resolveSubNsOwners nsOwner name (scopeCtx: ScopeCtx): NsOwner list =
   scopeCtx.NsNs
   |> nsFind nsOwner
-  |> TMap.tryFind name
-  |> Option.defaultValue []
+  |> multimapFind name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
   let _, varScopes, _, _ = scopeCtx.Local

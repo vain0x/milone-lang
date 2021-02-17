@@ -47,11 +47,8 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
     | (serial, def) :: xs ->
         let ident = toIdent def
 
-        let serials =
-          acc |> TMap.tryFind ident |> Option.defaultValue []
-
         let acc =
-          acc |> TMap.add ident ((serial, def) :: serials)
+          acc |> multimapAdd ident (serial, def)
 
         go acc xs
 
