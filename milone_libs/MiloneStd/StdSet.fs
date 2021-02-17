@@ -14,14 +14,14 @@ let contains (item: 'T) (set: TreeSet<'T>): bool = TMap.containsKey item set
 let add (item: 'T) (set: TreeSet<'T>): TreeSet<'T> = TMap.add item () set
 
 let remove (item: 'T) (set: TreeSet<'T>): bool * TreeSet<'T> =
-  let itemOpt, set = TMap.remove item set
+  let unitOpt, set = TMap.remove item set
 
-  let ok =
-    match itemOpt with
+  let isRemoved =
+    match unitOpt with
     | Some () -> true
     | None -> false
 
-  ok, set
+  isRemoved, set
 
 let fold (folder: 'S -> 'T -> 'S) (state: 'S) (set: TreeSet<'T>): 'S =
   TMap.fold (fun state item () -> folder state item) state set
