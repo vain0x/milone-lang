@@ -11,6 +11,7 @@ open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
 module M = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
 let private mapAddList key value map =
@@ -1142,7 +1143,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
     lScope
     |> M.toList
     |> List.map (fun (_: string, (varSerial, _, _)) -> varSerial)
-    |> setOfList varSerialCompare
+    |> TSet.ofList varSerialCompare
 
   let pats, ctx =
     (pats, ctx)
@@ -1161,13 +1162,13 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
                     (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
                       match usedLocs with
                       | [ _ ] when ok ->
-                          let removed, set = set |> setRemove varSerial
+                          let removed, set = set |> TSet.remove varSerial
                           ok && removed, set
 
                       | _ -> false, set)
                     (true, varSerialSet)
 
-             ok && setIsEmpty set
+             ok && TSet.isEmpty set
 
            let ctx =
              if ok then
@@ -1180,7 +1181,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
   // PENDING: MirGen generates illegal code for binding OR patterns, so reject here.
   let ctx =
     if not (List.isEmpty pats)
-       && not (setIsEmpty varSerialSet) then
+       && not (TSet.isEmpty varSerialSet) then
       ctx |> addLog UnimplOrPatBindingError loc
     else
       ctx

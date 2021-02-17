@@ -87,6 +87,7 @@ open MiloneLang.Typing
 open MiloneLang.Hir
 
 module M = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // KnownCtx
@@ -100,15 +101,15 @@ type private KnownCtx =
     UseFuns: AssocSet<FunSerial> }
 
 let private knownCtxEmpty (): KnownCtx =
-  { Locals = setEmpty varSerialCompare
-    UseVars = setEmpty varSerialCompare
-    UseFuns = setEmpty funSerialCompare }
+  { Locals = TSet.empty varSerialCompare
+    UseVars = TSet.empty varSerialCompare
+    UseFuns = TSet.empty funSerialCompare }
 
 let private knownCtxEnterFunDecl (ctx: KnownCtx) =
   { ctx with
-      UseVars = setEmpty varSerialCompare
-      UseFuns = setEmpty funSerialCompare
-      Locals = setEmpty varSerialCompare }
+      UseVars = TSet.empty varSerialCompare
+      UseFuns = TSet.empty funSerialCompare
+      Locals = TSet.empty varSerialCompare }
 
 let private knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
   { ctx with
@@ -118,25 +119,25 @@ let private knownCtxLeaveFunDecl (baseCtx: KnownCtx) (ctx: KnownCtx) =
 
 let private knownCtxAddLocal serial (ctx: KnownCtx) =
   { ctx with
-      Locals = ctx.Locals |> setAdd serial }
+      Locals = ctx.Locals |> TSet.add serial }
 
 let private knownCtxUseVar serial (ctx: KnownCtx) =
   { ctx with
-      UseVars = ctx.UseVars |> setAdd serial }
+      UseVars = ctx.UseVars |> TSet.add serial }
 
 let private knownCtxUseFun funSerial (ctx: KnownCtx) =
   { ctx with
-      UseFuns = ctx.UseFuns |> setAdd funSerial }
+      UseFuns = ctx.UseFuns |> TSet.add funSerial }
 
 let private knownCtxToNonlocalVars (ctx: KnownCtx): AssocSet<VarSerial> =
   ctx.UseVars
-  |> setFold
+  |> TSet.fold
        (fun acc varSerial ->
-         if ctx.Locals |> setContains varSerial |> not then
-           acc |> setAdd varSerial
+         if ctx.Locals |> TSet.contains varSerial |> not then
+           acc |> TSet.add varSerial
          else
            acc)
-       (setEmpty varSerialCompare)
+       (TSet.empty varSerialCompare)
 
 // -----------------------------------------------
 // Caps
@@ -255,7 +256,7 @@ let private leaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
 let private genFunCaps funSerial (ctx: CcCtx): Caps =
   let varSerials =
     match ctx.FunUpvars |> M.tryFind funSerial with
-    | Some it -> it |> setToList
+    | Some it -> it |> TSet.toList
     | None -> []
 
   // FIXME: List.rev here is just to reduce diff. Remove later.
@@ -271,13 +272,13 @@ let private genFunCaps funSerial (ctx: CcCtx): Caps =
 let private closureRefs (ctx: CcCtx): CcCtx =
   let mergeUpvars localVars newUpvars (modified, upvars): bool * AssocSet<VarSerial> =
     newUpvars
-    |> setFold
+    |> TSet.fold
          (fun (modified, upvars) varSerial ->
-           if upvars |> setContains varSerial
-              || localVars |> setContains varSerial then
+           if upvars |> TSet.contains varSerial
+              || localVars |> TSet.contains varSerial then
              modified, upvars
            else
-             true, upvars |> setAdd varSerial)
+             true, upvars |> TSet.add varSerial)
          (modified, upvars)
 
   let visitFun (totalModified, funUpvarsMap) funSerial (upvars, localVars, funs) =
@@ -312,7 +313,7 @@ let private closureRefs (ctx: CcCtx): CcCtx =
     ctx.FunKnowns
     |> M.map
          (fun (_: FunSerial) (knownCtx: KnownCtx) ->
-           knownCtxToNonlocalVars knownCtx, knownCtx.Locals, setToList knownCtx.UseFuns)
+           knownCtxToNonlocalVars knownCtx, knownCtx.Locals, TSet.toList knownCtx.UseFuns)
     |> makeTransitive
     |> M.map (fun (_: FunSerial) (upvars: AssocSet<VarSerial>, _: AssocSet<VarSerial>, _: FunSerial list) -> upvars)
 

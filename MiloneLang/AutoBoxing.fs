@@ -12,6 +12,7 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 
 module Int = MiloneStd.StdInt
+module TSet = MiloneStd.StdSet
 module M = MiloneStd.StdMap
 
 let private tyIsRecord ty =
@@ -202,7 +203,7 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
       assert (size >= 0)
       size, ctx
 
-  | _ when ctx.BoxedVariants |> setContains variantSerial ->
+  | _ when ctx.BoxedVariants |> TSet.contains variantSerial ->
       // printfn "// measure variant: %s is boxed" (ctx.Variants |> mapFind variantSerial).Name
       12, ctx
 
@@ -237,7 +238,7 @@ let private tsmVariant (ctx: TsmCtx) variantSerial (variantDefOpt: VariantDef op
             VariantMemo = ctx.VariantMemo |> M.add variantSerial size
             BoxedVariants =
               if isBoxed then
-                ctx.BoxedVariants |> setAdd variantSerial
+                ctx.BoxedVariants |> TSet.add variantSerial
               else
                 ctx.BoxedVariants }
 
@@ -256,7 +257,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
       assert (size >= 1)
       size, ctx
 
-  | _ when ctx.BoxedRecordTys |> setContains tySerial ->
+  | _ when ctx.BoxedRecordTys |> TSet.contains tySerial ->
       // printfn "// measure record %s: boxed" (tyDefToName tyDef)
       8, ctx
 
@@ -296,7 +297,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
             RecordTyMemo = ctx.RecordTyMemo |> M.add tySerial size
             BoxedRecordTys =
               if isBoxed then
-                ctx.BoxedRecordTys |> setAdd tySerial
+                ctx.BoxedRecordTys |> TSet.add tySerial
               else
                 ctx.BoxedRecordTys }
 
@@ -372,20 +373,20 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
     |> M.fold
          (fun set variantSerial status ->
            match status with
-           | Boxed -> set |> setAdd variantSerial
+           | Boxed -> set |> TSet.add variantSerial
            | Unboxed -> set
            | Recursive -> failwith "NEVER")
-         (setEmpty variantSerialCompare)
+         (TSet.empty variantSerialCompare)
 
   let boxedRecordTys =
     trdCtx.RecordTyMemo
     |> M.fold
          (fun set tySerial status ->
            match status with
-           | Boxed -> set |> setAdd tySerial
+           | Boxed -> set |> TSet.add tySerial
            | Unboxed -> set
            | Recursive -> failwith "NEVER")
-         (setEmpty compare)
+         (TSet.empty compare)
 
   let ctx: TsmCtx =
     { Variants = trdCtx.Variants
@@ -431,10 +432,10 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
       Tys = ctx.Tys }
 
 let private needsBoxedVariant (ctx: AbCtx) variantSerial =
-  ctx.BoxedVariants |> setContains variantSerial
+  ctx.BoxedVariants |> TSet.contains variantSerial
 
 let private needsBoxedRecordTySerial (ctx: AbCtx) tySerial =
-  ctx.BoxedRecordTys |> setContains tySerial
+  ctx.BoxedRecordTys |> TSet.contains tySerial
 
 let private needsBoxedRecordTy ctx ty =
   match ty with

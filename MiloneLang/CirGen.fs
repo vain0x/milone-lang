@@ -21,6 +21,7 @@ open MiloneLang.MirGen
 open MiloneLang.Cir
 
 module M = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 
 let private valueSymbolCompare l r =
   let encode symbol =

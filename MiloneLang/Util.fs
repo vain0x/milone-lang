@@ -5,8 +5,7 @@ module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
 module M = MiloneStd.StdMap
-
-module TS = MiloneStd.StdSet
+module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // Collections
@@ -14,7 +13,7 @@ module TS = MiloneStd.StdSet
 
 type AssocMap<'K, 'V> = M.TreeMap<'K, 'V>
 
-type AssocSet<'T> = TS.TreeSet<'T>
+type AssocSet<'T> = TSet.TreeSet<'T>
 
 // -----------------------------------------------
 // Pair
@@ -192,26 +191,6 @@ let mapFind key map =
   | Some value -> value
 
   | None -> failwithf "mapFind: missing key (%A)" key
-
-// -----------------------------------------------
-// AssocSet
-// -----------------------------------------------
-
-let setEmpty compare: AssocSet<_> = TS.empty compare
-
-let setIsEmpty (set: AssocSet<_>): bool = TS.isEmpty set
-
-let setContains key (set: AssocSet<_>) = TS.contains key set
-
-let setToList (set: AssocSet<_>) = TS.toList set
-
-let setOfList compare xs: AssocSet<_> = TS.ofList compare xs
-
-let setAdd item set: AssocSet<_> = TS.add item set
-
-let setRemove item set: bool * AssocSet<_> = TS.remove item set
-
-let setFold folder state (set: AssocSet<_>) = TS.fold folder state set
 
 // -----------------------------------------------
 // Int

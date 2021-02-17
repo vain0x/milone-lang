@@ -19,6 +19,7 @@ open MiloneLang.Hir
 
 module StdInt = MiloneStd.StdInt
 module M = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // Context

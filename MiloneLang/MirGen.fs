@@ -14,6 +14,7 @@ open MiloneLang.Typing
 open MiloneLang.Mir
 
 module M = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 
 let private unwrapListTy ty =
   match ty with

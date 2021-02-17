@@ -26,6 +26,7 @@ open MiloneLang.CirDump
 
 module C = MiloneStd.StdChar
 module M = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
 let private currentVersion () = "0.2.0"
