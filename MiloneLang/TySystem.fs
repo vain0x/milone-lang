@@ -292,7 +292,7 @@ let private addTyDef tySerial tyDef (ctx: TyContext) =
 // -----------------------------------------------
 
 /// Adds type-var/type binding.
-let typingBind (ctx: TyContext) tySerial ty loc =
+let typingBind (ctx: TyContext) tySerial ty =
   // Don't bind itself.
   match typingSubst ctx ty with
   | Ty (MetaTk (s, _), _) when s = tySerial -> ctx
@@ -401,7 +401,7 @@ let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
           // ^ Occurrence check.
           DidRecurse
 
-      | otherTy -> DidBind(typingBind ctx tySerial otherTy loc)
+      | otherTy -> DidBind(typingBind ctx tySerial otherTy)
 
 let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
   let defTySerials, bodyTy =

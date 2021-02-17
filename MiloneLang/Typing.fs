@@ -167,8 +167,8 @@ let private resolveTraitBounds (ctx: TyCtx) =
 
   withTyContext ctx logAcc tyCtx
 
-let private bindTy (ctx: TyCtx) tySerial ty loc =
-  typingBind (toTyContext ctx) tySerial ty loc
+let private bindTy (ctx: TyCtx) tySerial ty =
+  typingBind (toTyContext ctx) tySerial ty
   |> withTyContext ctx ctx.Logs
 
 let private substTy (ctx: TyCtx) ty: Ty = typingSubst (toTyContext ctx) ty
@@ -241,7 +241,7 @@ let private instantiateTyScheme ctx (tyScheme: TyScheme) loc =
       let ty =
         let extendedCtx =
           mapping
-          |> List.fold (fun ctx (src, target) -> bindTy ctx src (tyMeta target loc) loc) ctx
+          |> List.fold (fun ctx (src, target) -> bindTy ctx src (tyMeta target loc)) ctx
 
         substTy extendedCtx ty
 
