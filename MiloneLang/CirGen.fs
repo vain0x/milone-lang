@@ -1356,7 +1356,7 @@ let private genLogs (ctx: CirCtx) =
     match logs with
     | [] -> ctx
     | (log, loc) :: logs ->
-        let _, y, _ = loc
+        let (Loc (_, y, _)) = loc
 
         let msg =
           locToString loc

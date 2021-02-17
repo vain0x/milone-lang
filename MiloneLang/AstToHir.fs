@@ -36,7 +36,7 @@ let private nameToPos (Name (_, pos)): Pos = pos
 /// Convert pos to loc.
 let private toLoc (doc: DocId) (pos: Pos): Loc =
   let row, column = pos
-  doc, row, column
+  Loc (doc, row, column)
 
 let private opToPrim op =
   match op with

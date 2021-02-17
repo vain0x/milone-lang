@@ -262,7 +262,7 @@ let private doValidateWorkspace projects =
 
   for project in projects do
     for msg, loc in validateProject project do
-      let docId, y, x = loc
+      let (Loc.Loc (docId, y, x)) = loc
       map |> MutMultimap.insert docId (msg, (y, x))
 
   let diagnostics =
