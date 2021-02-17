@@ -18,9 +18,9 @@ void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
 
 bool str_to_int_checked(struct String, int*);
 
-struct IntList;
+struct IntOption;
 
-struct IntList const* __intOfStr_(struct String s_19);
+struct IntOption __intOfStr_(struct String s_19);
 
 int milone_get_arg_count();
 
@@ -30,11 +30,11 @@ struct String milone_get_arg(int);
 
 struct String __argGet_(int index_5);
 
-struct CharList;
+struct CharOption;
 
-bool isNone_2(struct CharList const* opt_1);
+bool isNone_2(struct CharOption opt_1);
 
-bool isNone_1(struct IntList const* opt_1);
+bool isNone_1(struct IntOption opt_1);
 
 struct StringList const* listRevLoop_1(struct StringList const* acc_3, struct StringList const* xs_6);
 
@@ -72,7 +72,7 @@ int intClamp_(int minValue_, int maxValue_, int value_1);
 
 bool isEmpty_(struct String str_);
 
-struct CharList const* tryItem_(int index_, struct String str_1);
+struct CharOption tryItem_(int index_, struct String str_1);
 
 bool occursAtLoop_(int start_, struct String substr_, struct String s_, int i_);
 
@@ -82,13 +82,13 @@ bool startsWith_(struct String prefix_, struct String s_1);
 
 bool endsWith_(struct String suffix_, struct String s_2);
 
-struct IntList const* stringFindIndexLoop_(struct String substr_1, struct String s_3, int r_, int i_1);
+struct IntOption stringFindIndexLoop_(struct String substr_1, struct String s_3, int r_, int i_1);
 
-struct IntList const* findIndex_(struct String substr_1, struct String s_3);
+struct IntOption findIndex_(struct String substr_1, struct String s_3);
 
-struct IntList const* stringFindLastIndexLoop_(struct String substr_2, struct String s_4, int r_1);
+struct IntOption stringFindLastIndexLoop_(struct String substr_2, struct String s_4, int r_1);
 
-struct IntList const* findLastIndex_(struct String substr_2, struct String s_4);
+struct IntOption findLastIndex_(struct String substr_2, struct String s_4);
 
 bool contains_(struct String substr_3, struct String s_5);
 
@@ -132,9 +132,11 @@ struct String replace_(struct String pattern_, struct String target_, struct Str
 
 int findNewline_(int start_3, struct String s_16);
 
-struct StringStringListStringTuple3;
+struct StringOption;
 
-struct StringStringListStringTuple3 scanLine_(struct String s_17);
+struct StringStringOptionStringTuple3;
+
+struct StringStringOptionStringTuple3 scanLine_(struct String s_17);
 
 struct StringList const* stringToLinesLoop_(struct String s_18, int l_4, struct StringList const* acc_1);
 
@@ -142,9 +144,9 @@ struct StringList const* toLines_(struct String s_18);
 
 struct String concat_(struct String sep_1, struct StringList const* xs_);
 
-char unwrap_2(struct CharList const* opt_);
+char unwrap_2(struct CharOption opt_);
 
-int unwrap_1(struct IntList const* opt_);
+int unwrap_1(struct IntOption opt_);
 
 int isEmptyTest_(int arg_42);
 
@@ -200,17 +202,17 @@ void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
     return memcpy_result_;
 }
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct IntOption {
+    bool some;
+    int value;
 };
 
-struct IntList const* __intOfStr_(struct String s_19) {
+struct IntOption __intOfStr_(struct String s_19) {
     void* call_ = memAlloc_(1, ((uintptr_t)sizeof(int)));
     int* valueRef_ = ((int*)call_);
     bool str_to_int_checked_result_ = str_to_int_checked(s_19, valueRef_);
     bool ok_ = str_to_int_checked_result_;
-    struct IntList const* if_;
+    struct IntOption if_;
     if (ok_) {
         goto then_2;
     } else {
@@ -219,12 +221,11 @@ struct IntList const* __intOfStr_(struct String s_19) {
 then_2:;
     int const* call_1 = __ptrAsConst_1(valueRef_);
     int read_ = (*(call_1));
-    struct IntList const* some_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)some_))) = (struct IntList){.head = read_, .tail = NULL};
+    struct IntOption some_ = (struct IntOption){.some = true, .value = read_};
     if_ = some_;
     goto if_next_1;
 else_3:;
-    if_ = NULL;
+    if_ = ((struct IntOption){});
     goto if_next_1;
 if_next_1:;
     return if_;
@@ -240,18 +241,18 @@ struct String __argGet_(int index_5) {
     return milone_get_arg_result_;
 }
 
-struct CharList {
-    char head;
-    struct CharList const* tail;
+struct CharOption {
+    bool some;
+    char value;
 };
 
-bool isNone_2(struct CharList const* opt_1) {
+bool isNone_2(struct CharOption opt_1) {
     bool match_;
-    if ((!((!(opt_1))))) goto next_5;
+    if (opt_1.some) goto next_5;
     match_ = true;
     goto end_match_4;
 next_5:;
-    if ((!(opt_1))) goto next_6;
+    if ((!(opt_1.some))) goto next_6;
     match_ = false;
     goto end_match_4;
 next_6:;
@@ -260,13 +261,13 @@ end_match_4:;
     return match_;
 }
 
-bool isNone_1(struct IntList const* opt_1) {
+bool isNone_1(struct IntOption opt_1) {
     bool match_1;
-    if ((!((!(opt_1))))) goto next_8;
+    if (opt_1.some) goto next_8;
     match_1 = true;
     goto end_match_7;
 next_8:;
-    if ((!(opt_1))) goto next_9;
+    if ((!(opt_1.some))) goto next_9;
     match_1 = false;
     goto end_match_7;
 next_9:;
@@ -718,7 +719,7 @@ bool isEmpty_(struct String str_) {
     return (str_.len == 0);
 }
 
-struct CharList const* tryItem_(int index_, struct String str_1) {
+struct CharOption tryItem_(int index_, struct String str_1) {
     bool if_27;
     if ((index_ >= 0)) {
         goto then_93;
@@ -732,19 +733,18 @@ else_94:;
     if_27 = false;
     goto if_next_92;
 if_next_92:;
-    struct CharList const* if_28;
+    struct CharOption if_28;
     if (if_27) {
         goto then_96;
     } else {
         goto else_97;
     }
 then_96:;
-    struct CharList const* some_1 = milone_mem_alloc(1, sizeof(struct CharList));
-    (*(((struct CharList*)some_1))) = (struct CharList){.head = str_1.str[index_], .tail = NULL};
+    struct CharOption some_1 = (struct CharOption){.some = true, .value = str_1.str[index_]};
     if_28 = some_1;
     goto if_next_95;
 else_97:;
-    if_28 = NULL;
+    if_28 = ((struct CharOption){});
     goto if_next_95;
 if_next_95:;
     return if_28;
@@ -831,28 +831,27 @@ bool endsWith_(struct String suffix_, struct String s_2) {
     return call_14;
 }
 
-struct IntList const* stringFindIndexLoop_(struct String substr_1, struct String s_3, int r_, int i_1) {
+struct IntOption stringFindIndexLoop_(struct String substr_1, struct String s_3, int r_, int i_1) {
 tailrec_111:;
-    struct IntList const* if_33;
+    struct IntOption if_33;
     if ((i_1 >= r_)) {
         goto then_113;
     } else {
         goto else_114;
     }
 then_113:;
-    if_33 = NULL;
+    if_33 = ((struct IntOption){});
     goto if_next_112;
 else_114:;
     bool call_15 = occursAt_(i_1, substr_1, s_3);
-    struct IntList const* if_34;
+    struct IntOption if_34;
     if (call_15) {
         goto then_116;
     } else {
         goto else_117;
     }
 then_116:;
-    struct IntList const* some_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)some_2))) = (struct IntList){.head = i_1, .tail = NULL};
+    struct IntOption some_2 = (struct IntOption){.some = true, .value = i_1};
     if_34 = some_2;
     goto if_next_115;
 else_117:;
@@ -865,7 +864,7 @@ else_117:;
     r_ = arg_12;
     i_1 = arg_13;
     goto tailrec_111;
-    if_34 = NULL;
+    if_34 = ((struct IntOption){});
     goto if_next_115;
 if_next_115:;
     if_33 = if_34;
@@ -874,34 +873,33 @@ if_next_112:;
     return if_33;
 }
 
-struct IntList const* findIndex_(struct String substr_1, struct String s_3) {
+struct IntOption findIndex_(struct String substr_1, struct String s_3) {
     int r_ = ((s_3.len - substr_1.len) + 1);
-    struct IntList const* call_16 = stringFindIndexLoop_(substr_1, s_3, r_, 0);
+    struct IntOption call_16 = stringFindIndexLoop_(substr_1, s_3, r_, 0);
     return call_16;
 }
 
-struct IntList const* stringFindLastIndexLoop_(struct String substr_2, struct String s_4, int r_1) {
+struct IntOption stringFindLastIndexLoop_(struct String substr_2, struct String s_4, int r_1) {
 tailrec_118:;
-    struct IntList const* if_35;
+    struct IntOption if_35;
     if ((0 >= r_1)) {
         goto then_120;
     } else {
         goto else_121;
     }
 then_120:;
-    if_35 = NULL;
+    if_35 = ((struct IntOption){});
     goto if_next_119;
 else_121:;
     bool call_17 = occursAt_((r_1 - 1), substr_2, s_4);
-    struct IntList const* if_36;
+    struct IntOption if_36;
     if (call_17) {
         goto then_123;
     } else {
         goto else_124;
     }
 then_123:;
-    struct IntList const* some_3 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)some_3))) = (struct IntList){.head = (r_1 - 1), .tail = NULL};
+    struct IntOption some_3 = (struct IntOption){.some = true, .value = (r_1 - 1)};
     if_36 = some_3;
     goto if_next_122;
 else_124:;
@@ -912,7 +910,7 @@ else_124:;
     s_4 = arg_15;
     r_1 = arg_16;
     goto tailrec_118;
-    if_36 = NULL;
+    if_36 = ((struct IntOption){});
     goto if_next_122;
 if_next_122:;
     if_35 = if_36;
@@ -921,20 +919,20 @@ if_next_119:;
     return if_35;
 }
 
-struct IntList const* findLastIndex_(struct String substr_2, struct String s_4) {
+struct IntOption findLastIndex_(struct String substr_2, struct String s_4) {
     int r_2 = ((s_4.len - substr_2.len) + 1);
-    struct IntList const* call_18 = stringFindLastIndexLoop_(substr_2, s_4, r_2);
+    struct IntOption call_18 = stringFindLastIndexLoop_(substr_2, s_4, r_2);
     return call_18;
 }
 
 bool contains_(struct String substr_3, struct String s_5) {
     bool match_3;
-    struct IntList const* call_19 = findIndex_(substr_3, s_5);
-    if ((!(call_19))) goto next_126;
+    struct IntOption call_19 = findIndex_(substr_3, s_5);
+    if ((!(call_19.some))) goto next_126;
     match_3 = true;
     goto end_match_125;
 next_126:;
-    if ((!((!(call_19))))) goto next_127;
+    if (call_19.some) goto next_127;
     match_3 = false;
     goto end_match_125;
 next_127:;
@@ -1295,16 +1293,16 @@ struct StringList const* replaceLoop_(struct String pattern_, struct String s_15
 tailrec_180:;
     struct StringList const* match_4;
     struct String call_32 = skip_(i_2, s_15);
-    struct IntList const* call_33 = findIndex_(pattern_, call_32);
-    if ((!((!(call_33))))) goto next_182;
+    struct IntOption call_33 = findIndex_(pattern_, call_32);
+    if (call_33.some) goto next_182;
     struct String call_34 = skip_(i_2, s_15);
     struct StringList const* list_1 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_1))) = (struct StringList){.head = call_34, .tail = acc_};
     match_4 = list_1;
     goto end_match_181;
 next_182:;
-    if ((!(call_33))) goto next_183;
-    int n_ = call_33->head;
+    if ((!(call_33.some))) goto next_183;
+    int n_ = call_33.value;
     struct String arg_30 = pattern_;
     struct String arg_31 = s_15;
     struct String call_35 = skip_(i_2, s_15);
@@ -1409,13 +1407,18 @@ if_next_197:;
     return if_57;
 }
 
-struct StringStringListStringTuple3 {
+struct StringOption {
+    bool some;
+    struct String value;
+};
+
+struct StringStringOptionStringTuple3 {
     struct String t0;
-    struct StringList const* t1;
+    struct StringOption t1;
     struct String t2;
 };
 
-struct StringStringListStringTuple3 scanLine_(struct String s_17) {
+struct StringStringOptionStringTuple3 scanLine_(struct String s_17) {
     int call_40 = findNewline_(0, s_17);
     int m_ = call_40;
     struct String if_58;
@@ -1433,14 +1436,14 @@ else_202:;
     goto if_next_200;
 if_next_200:;
     struct String lineContents_ = if_58;
-    struct StringStringListStringTuple3 if_59;
+    struct StringStringOptionStringTuple3 if_59;
     if ((m_ == s_17.len)) {
         goto then_204;
     } else {
         goto else_205;
     }
 then_204:;
-    struct StringStringListStringTuple3 tuple_ = (struct StringStringListStringTuple3){.t0 = lineContents_, .t1 = NULL, .t2 = (struct String){.str = "", .len = 0}};
+    struct StringStringOptionStringTuple3 tuple_ = (struct StringStringOptionStringTuple3){.t0 = lineContents_, .t1 = ((struct StringOption){}), .t2 = (struct String){.str = "", .len = 0}};
     if_59 = tuple_;
     goto if_next_203;
 else_205:;
@@ -1529,9 +1532,8 @@ else_223:;
     goto if_next_221;
 if_next_221:;
     struct String rest_ = if_65;
-    struct StringList const* some_4 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)some_4))) = (struct StringList){.head = sep_, .tail = NULL};
-    struct StringStringListStringTuple3 tuple_1 = (struct StringStringListStringTuple3){.t0 = lineContents_, .t1 = some_4, .t2 = rest_};
+    struct StringOption some_4 = (struct StringOption){.some = true, .value = sep_};
+    struct StringStringOptionStringTuple3 tuple_1 = (struct StringStringOptionStringTuple3){.t0 = lineContents_, .t1 = some_4, .t2 = rest_};
     if_59 = tuple_1;
     goto if_next_203;
 if_next_203:;
@@ -1653,14 +1655,14 @@ struct String concat_(struct String sep_1, struct StringList const* xs_) {
     return call_44;
 }
 
-char unwrap_2(struct CharList const* opt_) {
+char unwrap_2(struct CharOption opt_) {
     char match_5;
-    if ((!(opt_))) goto next_244;
-    char value_ = opt_->head;
+    if ((!(opt_.some))) goto next_244;
+    char value_ = opt_.value;
     match_5 = value_;
     goto end_match_243;
 next_244:;
-    if ((!((!(opt_))))) goto next_245;
+    if (opt_.some) goto next_245;
     printf("Can\'t unwrap None.\n");
     exit(1);
     match_5 = 0;
@@ -1671,14 +1673,14 @@ end_match_243:;
     return match_5;
 }
 
-int unwrap_1(struct IntList const* opt_) {
+int unwrap_1(struct IntOption opt_) {
     int match_6;
-    if ((!(opt_))) goto next_247;
-    int value_ = opt_->head;
+    if ((!(opt_.some))) goto next_247;
+    int value_ = opt_.value;
     match_6 = value_;
     goto end_match_246;
 next_247:;
-    if ((!((!(opt_))))) goto next_248;
+    if (opt_.some) goto next_248;
     printf("Can\'t unwrap None.\n");
     exit(1);
     match_6 = 0;
@@ -1698,16 +1700,16 @@ int isEmptyTest_(int arg_42) {
 }
 
 int tryItemTest_(int arg_43) {
-    struct CharList const* call_47 = tryItem_(0, (struct String){.str = "", .len = 0});
+    struct CharOption call_47 = tryItem_(0, (struct String){.str = "", .len = 0});
     bool call_48 = isNone_2(call_47);
     milone_assert(call_48, 19, 2);
-    struct CharList const* call_49 = tryItem_(-1, (struct String){.str = "a", .len = 1});
+    struct CharOption call_49 = tryItem_(-1, (struct String){.str = "a", .len = 1});
     bool call_50 = isNone_2(call_49);
     milone_assert(call_50, 20, 2);
-    struct CharList const* call_51 = tryItem_(1, (struct String){.str = "a", .len = 1});
+    struct CharOption call_51 = tryItem_(1, (struct String){.str = "a", .len = 1});
     bool call_52 = isNone_2(call_51);
     milone_assert(call_52, 21, 2);
-    struct CharList const* call_53 = tryItem_(2, (struct String){.str = "abc", .len = 3});
+    struct CharOption call_53 = tryItem_(2, (struct String){.str = "abc", .len = 3});
     char call_54 = unwrap_2(call_53);
     milone_assert((call_54 == 'c'), 22, 2);
     return 0;
@@ -1734,38 +1736,38 @@ int endsWithTest_(int arg_45) {
 }
 
 int findIndexTest_(int arg_46) {
-    struct IntList const* call_61 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
+    struct IntOption call_61 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
     bool call_62 = isNone_1(call_61);
     milone_assert(call_62, 35, 2);
-    struct IntList const* call_63 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
+    struct IntOption call_63 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
     bool call_64 = isNone_1(call_63);
     milone_assert(call_64, 36, 2);
-    struct IntList const* call_65 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "abcc", .len = 4});
+    struct IntOption call_65 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "abcc", .len = 4});
     int call_66 = unwrap_1(call_65);
     milone_assert((call_66 == 0), 38, 2);
-    struct IntList const* call_67 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
+    struct IntOption call_67 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
     int call_68 = unwrap_1(call_67);
     milone_assert((call_68 == 2), 39, 2);
-    struct IntList const* call_69 = findIndex_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    struct IntOption call_69 = findIndex_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
     int call_70 = unwrap_1(call_69);
     milone_assert((call_70 == 0), 40, 2);
     return 0;
 }
 
 int findLastIndexTest_(int arg_47) {
-    struct IntList const* call_71 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
+    struct IntOption call_71 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
     bool call_72 = isNone_1(call_71);
     milone_assert(call_72, 43, 2);
-    struct IntList const* call_73 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
+    struct IntOption call_73 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
     bool call_74 = isNone_1(call_73);
     milone_assert(call_74, 44, 2);
-    struct IntList const* call_75 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccab", .len = 4});
+    struct IntOption call_75 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccab", .len = 4});
     int call_76 = unwrap_1(call_75);
     milone_assert((call_76 == 2), 46, 2);
-    struct IntList const* call_77 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
+    struct IntOption call_77 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
     int call_78 = unwrap_1(call_77);
     milone_assert((call_78 == 6), 47, 2);
-    struct IntList const* call_79 = findLastIndex_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    struct IntOption call_79 = findLastIndex_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
     int call_80 = unwrap_1(call_79);
     milone_assert((call_80 == 0), 48, 2);
     return 0;

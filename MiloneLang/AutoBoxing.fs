@@ -156,6 +156,7 @@ let private trdTy (ctx: TrdCtx) ty =
           assert (List.isEmpty tyArgs)
           ctx
 
+      | OptionTk
       | ListTk
       | FunTk
       | TupleTk
@@ -344,6 +345,14 @@ let private tsmTy (ctx: TsmCtx) ty =
 
       | StrTk
       | FunTk -> 16, ctx
+
+      | OptionTk ->
+          match tyArgs with
+          | [ itemTy ] ->
+             let size, ctx = tsmTy ctx itemTy
+             1 + size, ctx
+
+          | _ -> failwith "NEVER"
 
       | TupleTk ->
           let size, ctx =

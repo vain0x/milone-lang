@@ -58,9 +58,9 @@ struct IntConstPtrIntTuple2 __constArraySlice_1(int start_3, int endIndex_3, str
 
 bool str_to_int_checked(struct String, int*);
 
-struct IntList;
+struct IntOption;
 
-struct IntList const* __intOfStr_(struct String s_);
+struct IntOption __intOfStr_(struct String s_);
 
 int milone_get_arg_count();
 
@@ -96,7 +96,7 @@ int length_2(struct UnitConstPtrIntTuple2 array_3);
 
 int length_1(struct IntConstPtrIntTuple2 array_3);
 
-struct IntList const* tryItem_1(int i_6, struct IntConstPtrIntTuple2 array_5);
+struct IntOption tryItem_1(int i_6, struct IntConstPtrIntTuple2 array_5);
 
 struct IntConstPtrIntTuple2 slice_1(int start_, int endIndex_, struct IntConstPtrIntTuple2 array_6);
 
@@ -104,9 +104,9 @@ struct IntConstPtrIntTuple2 skip_1(int skipLen_, struct IntConstPtrIntTuple2 arr
 
 struct IntIntConstPtrIntTuple2Tuple2;
 
-struct IntIntConstPtrIntTuple2Tuple2List;
+struct IntIntConstPtrIntTuple2Tuple2Option;
 
-struct IntIntConstPtrIntTuple2Tuple2List const* uncons_1(struct IntConstPtrIntTuple2 array_10);
+struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 array_10);
 
 struct IntIntIntFun2;
 
@@ -118,15 +118,17 @@ int fun_24(void const* env_2, int arg_3);
 
 struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_11);
 
-struct IntIntListFun1;
+struct IntIntOptionFun1;
 
-int chooseLoop_1(struct IntIntListFun1 f_3, struct IntConstPtrIntTuple2 src_, int len_5, struct IntMutPtrIntTuple2 dest_, int di_, int si_);
+int chooseLoop_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_, int len_5, struct IntMutPtrIntTuple2 dest_, int di_, int si_);
 
-struct IntConstPtrIntTuple2 choose_1(struct IntIntListFun1 f_3, struct IntConstPtrIntTuple2 src_);
+struct IntConstPtrIntTuple2 choose_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_);
 
 int arrayFoldLoop_1(struct IntIntIntFun2 folder_, struct IntConstPtrIntTuple2 array_13, int len_6, int state_2, int i_9);
 
 int fold_1(struct IntIntIntFun2 folder_, int state_1, struct IntConstPtrIntTuple2 array_13);
+
+struct IntList;
 
 int listLengthLoop_1(int acc_, struct IntList const* xs_1);
 
@@ -170,13 +172,13 @@ int fun_20(void const* env_8, int arg_14, int arg_15);
 
 int mapTest_(int arg_63);
 
-struct IntList const* fun_4(int n_3);
+struct IntOption fun_4(int n_3);
 
-struct IntList const* fun_21(void const* env_9, int arg_16);
+struct IntOption fun_21(void const* env_9, int arg_16);
 
-struct IntList const* fun_5(int arg_64);
+struct IntOption fun_5(int arg_64);
 
-struct IntList const* fun_22(void const* env_10, int arg_17);
+struct IntOption fun_22(void const* env_10, int arg_17);
 
 int chooseTest_(int arg_65);
 
@@ -425,17 +427,17 @@ if_next_16:;
     return tuple_7;
 }
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
+struct IntOption {
+    bool some;
+    int value;
 };
 
-struct IntList const* __intOfStr_(struct String s_) {
+struct IntOption __intOfStr_(struct String s_) {
     void* call_11 = memAlloc_(1, ((uintptr_t)sizeof(int)));
     int* valueRef_ = ((int*)call_11);
     bool str_to_int_checked_result_ = str_to_int_checked(s_, valueRef_);
     bool ok_ = str_to_int_checked_result_;
-    struct IntList const* if_6;
+    struct IntOption if_6;
     if (ok_) {
         goto then_20;
     } else {
@@ -444,12 +446,11 @@ struct IntList const* __intOfStr_(struct String s_) {
 then_20:;
     int const* call_12 = __ptrAsConst_1(valueRef_);
     int read_1 = (*(call_12));
-    struct IntList const* some_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)some_))) = (struct IntList){.head = read_1, .tail = NULL};
+    struct IntOption some_ = (struct IntOption){.some = true, .value = read_1};
     if_6 = some_;
     goto if_next_19;
 else_21:;
-    if_6 = NULL;
+    if_6 = ((struct IntOption){});
     goto if_next_19;
 if_next_19:;
     return if_6;
@@ -620,9 +621,9 @@ int length_1(struct IntConstPtrIntTuple2 array_3) {
     return call_30;
 }
 
-struct IntList const* tryItem_1(int i_6, struct IntConstPtrIntTuple2 array_5) {
+struct IntOption tryItem_1(int i_6, struct IntConstPtrIntTuple2 array_5) {
     int call_31 = length_1(array_5);
-    struct IntList const* if_11;
+    struct IntOption if_11;
     if ((((uint32_t)i_6) < ((uint32_t)call_31))) {
         goto then_37;
     } else {
@@ -630,12 +631,11 @@ struct IntList const* tryItem_1(int i_6, struct IntConstPtrIntTuple2 array_5) {
     }
 then_37:;
     int call_32 = __constArrayGet_1(i_6, array_5);
-    struct IntList const* some_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)some_1))) = (struct IntList){.head = call_32, .tail = NULL};
+    struct IntOption some_1 = (struct IntOption){.some = true, .value = call_32};
     if_11 = some_1;
     goto if_next_36;
 else_38:;
-    if_11 = NULL;
+    if_11 = ((struct IntOption){});
     goto if_next_36;
 if_next_36:;
     return if_11;
@@ -701,22 +701,22 @@ struct IntIntConstPtrIntTuple2Tuple2 {
     struct IntConstPtrIntTuple2 t1;
 };
 
-struct IntIntConstPtrIntTuple2Tuple2List {
-    struct IntIntConstPtrIntTuple2Tuple2 head;
-    struct IntIntConstPtrIntTuple2Tuple2List const* tail;
+struct IntIntConstPtrIntTuple2Tuple2Option {
+    bool some;
+    struct IntIntConstPtrIntTuple2Tuple2 value;
 };
 
-struct IntIntConstPtrIntTuple2Tuple2List const* uncons_1(struct IntConstPtrIntTuple2 array_10) {
+struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 array_10) {
     int call_38 = length_1(array_10);
     int len_4 = call_38;
-    struct IntIntConstPtrIntTuple2Tuple2List const* if_15;
+    struct IntIntConstPtrIntTuple2Tuple2Option if_15;
     if ((len_4 == 0)) {
         goto then_49;
     } else {
         goto else_50;
     }
 then_49:;
-    if_15 = NULL;
+    if_15 = ((struct IntIntConstPtrIntTuple2Tuple2Option){});
     goto if_next_48;
 else_50:;
     int call_39 = __constArrayGet_1(0, array_10);
@@ -724,8 +724,7 @@ else_50:;
     struct IntConstPtrIntTuple2 call_40 = __constArraySlice_1(1, len_4, array_10);
     struct IntConstPtrIntTuple2 tail_ = call_40;
     struct IntIntConstPtrIntTuple2Tuple2 tuple_8 = (struct IntIntConstPtrIntTuple2Tuple2){.t0 = head_, .t1 = tail_};
-    struct IntIntConstPtrIntTuple2Tuple2List const* some_2 = milone_mem_alloc(1, sizeof(struct IntIntConstPtrIntTuple2Tuple2List));
-    (*(((struct IntIntConstPtrIntTuple2Tuple2List*)some_2))) = (struct IntIntConstPtrIntTuple2Tuple2List){.head = tuple_8, .tail = NULL};
+    struct IntIntConstPtrIntTuple2Tuple2Option some_2 = (struct IntIntConstPtrIntTuple2Tuple2Option){.some = true, .value = tuple_8};
     if_15 = some_2;
     goto if_next_48;
 if_next_48:;
@@ -765,12 +764,12 @@ struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrI
     return call_44;
 }
 
-struct IntIntListFun1 {
-    struct IntList const*(*fun)(void const*, int);
+struct IntIntOptionFun1 {
+    struct IntOption(*fun)(void const*, int);
     void const* env;
 };
 
-int chooseLoop_1(struct IntIntListFun1 f_3, struct IntConstPtrIntTuple2 src_, int len_5, struct IntMutPtrIntTuple2 dest_, int di_, int si_) {
+int chooseLoop_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_, int len_5, struct IntMutPtrIntTuple2 dest_, int di_, int si_) {
 tailrec_51:;
     int if_16;
     if ((si_ == len_5)) {
@@ -784,11 +783,11 @@ then_53:;
 else_54:;
     int match_;
     int call_45 = __constArrayGet_1(si_, src_);
-    struct IntList const* app_3 = f_3.fun(f_3.env, call_45);
-    if ((!(app_3))) goto next_56;
-    int value_ = app_3->head;
+    struct IntOption app_3 = f_3.fun(f_3.env, call_45);
+    if ((!(app_3.some))) goto next_56;
+    int value_ = app_3.value;
     int call_46 = __mutArraySet_1(di_, value_, dest_);
-    struct IntIntListFun1 arg_31 = f_3;
+    struct IntIntOptionFun1 arg_31 = f_3;
     struct IntConstPtrIntTuple2 arg_32 = src_;
     int arg_33 = len_5;
     struct IntMutPtrIntTuple2 arg_34 = dest_;
@@ -804,8 +803,8 @@ else_54:;
     match_ = 0;
     goto end_match_55;
 next_56:;
-    if ((!((!(app_3))))) goto next_57;
-    struct IntIntListFun1 arg_37 = f_3;
+    if (app_3.some) goto next_57;
+    struct IntIntOptionFun1 arg_37 = f_3;
     struct IntConstPtrIntTuple2 arg_38 = src_;
     int arg_39 = len_5;
     struct IntMutPtrIntTuple2 arg_40 = dest_;
@@ -829,7 +828,7 @@ if_next_52:;
     return if_16;
 }
 
-struct IntConstPtrIntTuple2 choose_1(struct IntIntListFun1 f_3, struct IntConstPtrIntTuple2 src_) {
+struct IntConstPtrIntTuple2 choose_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_) {
     int call_47 = length_1(src_);
     int len_5 = call_47;
     struct IntMutPtrIntTuple2 call_48 = __mutArrayCreate_1(len_5);
@@ -892,6 +891,11 @@ int fold_1(struct IntIntIntFun2 folder_, int state_1, struct IntConstPtrIntTuple
     int call_55 = arrayFoldLoop_1(folder_, array_13, len_6, state_1, 0);
     return call_55;
 }
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
 
 int listLengthLoop_1(int acc_, struct IntList const* xs_1) {
 tailrec_65:;
@@ -990,13 +994,13 @@ struct IntList const* toList_1(struct IntConstPtrIntTuple2 array_14) {
 
 int get_1(int i_, struct IntConstPtrIntTuple2 array_) {
     int match_3;
-    struct IntList const* call_64 = tryItem_1(i_, array_);
-    if ((!(call_64))) goto next_78;
-    int it_ = call_64->head;
+    struct IntOption call_64 = tryItem_1(i_, array_);
+    if ((!(call_64.some))) goto next_78;
+    int it_ = call_64.value;
     match_3 = it_;
     goto end_match_77;
 next_78:;
-    if ((!((!(call_64))))) goto next_79;
+    if (call_64.some) goto next_79;
     int call_65 = length_1(array_);
     printf("out of range: i=%d len=%d\n", i_, call_65);
     milone_assert(false, 9, 6);
@@ -1068,13 +1072,13 @@ int rangeTest_(int arg_59) {
 
 int at_(int bad_, int i_1, struct IntConstPtrIntTuple2 array_1) {
     int match_4;
-    struct IntList const* call_80 = tryItem_1(i_1, array_1);
-    if ((!(call_80))) goto next_81;
-    int it_1 = call_80->head;
+    struct IntOption call_80 = tryItem_1(i_1, array_1);
+    if ((!(call_80.some))) goto next_81;
+    int it_1 = call_80.value;
     match_4 = it_1;
     goto end_match_80;
 next_81:;
-    if ((!((!(call_80))))) goto next_82;
+    if (call_80.some) goto next_82;
     match_4 = bad_;
     goto end_match_80;
 next_82:;
@@ -1146,39 +1150,39 @@ int unconsTest_(int arg_62) {
     struct IntConstPtrIntTuple2 call_101 = init_1(3, fun_30);
     struct IntConstPtrIntTuple2 a123_ = call_101;
     int match_5;
-    struct IntIntConstPtrIntTuple2Tuple2List const* call_102 = uncons_1(a123_);
-    if ((!((!(call_102))))) goto next_84;
+    struct IntIntConstPtrIntTuple2Tuple2Option call_102 = uncons_1(a123_);
+    if (call_102.some) goto next_84;
     milone_assert(false, 70, 12);
     match_5 = 0;
     goto end_match_83;
 next_84:;
-    if ((!(call_102))) goto next_85;
-    int n1_ = call_102->head.t0;
-    struct IntConstPtrIntTuple2 a23_ = call_102->head.t1;
+    if ((!(call_102.some))) goto next_85;
+    int n1_ = call_102.value.t0;
+    struct IntConstPtrIntTuple2 a23_ = call_102.value.t1;
     milone_assert((n1_ == 1), 72, 6);
     int call_103 = length_1(a23_);
     milone_assert((call_103 == 2), 73, 6);
     int match_6;
     struct IntConstPtrIntTuple2 call_104 = skip_1(1, a23_);
-    struct IntIntConstPtrIntTuple2Tuple2List const* call_105 = uncons_1(call_104);
-    if ((!((!(call_105))))) goto next_87;
+    struct IntIntConstPtrIntTuple2Tuple2Option call_105 = uncons_1(call_104);
+    if (call_105.some) goto next_87;
     milone_assert(false, 76, 16);
     match_6 = 0;
     goto end_match_86;
 next_87:;
-    if ((!(call_105))) goto next_88;
-    int n3_ = call_105->head.t0;
-    struct IntConstPtrIntTuple2 empty_ = call_105->head.t1;
+    if ((!(call_105.some))) goto next_88;
+    int n3_ = call_105.value.t0;
+    struct IntConstPtrIntTuple2 empty_ = call_105.value.t1;
     milone_assert((n3_ == 3), 78, 10);
     int call_106 = length_1(empty_);
     milone_assert((call_106 == 0), 79, 10);
     int match_7;
-    struct IntIntConstPtrIntTuple2Tuple2List const* call_107 = uncons_1(empty_);
-    if ((!((!(call_107))))) goto next_90;
+    struct IntIntConstPtrIntTuple2Tuple2Option call_107 = uncons_1(empty_);
+    if (call_107.some) goto next_90;
     match_7 = 0;
     goto end_match_89;
 next_90:;
-    if ((!(call_107))) goto next_91;
+    if ((!(call_107.some))) goto next_91;
     milone_assert(false, 83, 22);
     match_7 = 0;
     goto end_match_89;
@@ -1225,43 +1229,42 @@ int mapTest_(int arg_63) {
     return 0;
 }
 
-struct IntList const* fun_4(int n_3) {
-    struct IntList const* if_20;
+struct IntOption fun_4(int n_3) {
+    struct IntOption if_20;
     if (((n_3 % 2) == 0)) {
         goto then_93;
     } else {
         goto else_94;
     }
 then_93:;
-    struct IntList const* some_3 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)some_3))) = (struct IntList){.head = (n_3 * 2), .tail = NULL};
+    struct IntOption some_3 = (struct IntOption){.some = true, .value = (n_3 * 2)};
     if_20 = some_3;
     goto if_next_92;
 else_94:;
-    if_20 = NULL;
+    if_20 = ((struct IntOption){});
     goto if_next_92;
 if_next_92:;
     return if_20;
 }
 
-struct IntList const* fun_21(void const* env_9, int arg_16) {
-    struct IntList const* call_115 = fun_4(arg_16);
+struct IntOption fun_21(void const* env_9, int arg_16) {
+    struct IntOption call_115 = fun_4(arg_16);
     return call_115;
 }
 
-struct IntList const* fun_5(int arg_64) {
-    return NULL;
+struct IntOption fun_5(int arg_64) {
+    return ((struct IntOption){});
 }
 
-struct IntList const* fun_22(void const* env_10, int arg_17) {
-    struct IntList const* call_116 = fun_5(arg_17);
+struct IntOption fun_22(void const* env_10, int arg_17) {
+    struct IntOption call_116 = fun_5(arg_17);
     return call_116;
 }
 
 int chooseTest_(int arg_65) {
     void const* box_6 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_6))) = 0;
-    struct IntIntListFun1 fun_32 = (struct IntIntListFun1){.fun = fun_21, .env = box_6};
+    struct IntIntOptionFun1 fun_32 = (struct IntIntOptionFun1){.fun = fun_21, .env = box_6};
     struct IntConstPtrIntTuple2 call_117 = range_(6);
     struct IntConstPtrIntTuple2 call_118 = choose_1(fun_32, call_117);
     struct IntConstPtrIntTuple2 chosen_ = call_118;
@@ -1275,7 +1278,7 @@ int chooseTest_(int arg_65) {
     milone_assert((call_122 == 8), 101, 2);
     void const* box_7 = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_7))) = 0;
-    struct IntIntListFun1 fun_33 = (struct IntIntListFun1){.fun = fun_22, .env = box_7};
+    struct IntIntOptionFun1 fun_33 = (struct IntIntOptionFun1){.fun = fun_22, .env = box_7};
     struct IntConstPtrIntTuple2 call_123 = range_(3);
     struct IntConstPtrIntTuple2 call_124 = choose_1(fun_33, call_123);
     struct IntConstPtrIntTuple2 empty_1 = call_124;

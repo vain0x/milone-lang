@@ -47,8 +47,7 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
     | (serial, def) :: xs ->
         let ident = toIdent def
 
-        let acc =
-          acc |> multimapAdd ident (serial, def)
+        let acc = acc |> multimapAdd ident (serial, def)
 
         go acc xs
 
@@ -66,7 +65,8 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
     |> List.fold (addIdent ident) (identMap, 0)
     |> fst
 
-  serialsMap |> TMap.fold addIdents (TMap.empty mapFuns)
+  serialsMap
+  |> TMap.fold addIdents (TMap.empty mapFuns)
 
 let private tupleField (i: int) = "t" + string i
 
@@ -218,6 +218,46 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
 
       selfTy, ctx
 
+let private genIncompleteOptionTyDecl (ctx: CirCtx) itemTy =
+  let optionTy = tyOption itemTy
+
+  match ctx.TyEnv |> TMap.tryFind optionTy with
+  | Some (_, ty) -> ty, ctx
+
+  | None ->
+      let structName, ctx = getUniqueTyName ctx optionTy
+      let selfTy = CStructTy structName
+
+      let ctx =
+        { ctx with
+            TyEnv =
+              ctx.TyEnv
+              |> TMap.add optionTy (CTyDeclared, selfTy) }
+
+      selfTy, ctx
+
+let private genOptionTyDef (ctx: CirCtx) itemTy =
+  let optionTy = tyOption itemTy
+
+  match ctx.TyEnv |> TMap.tryFind optionTy with
+  | Some (CTyDefined, ty) -> ty, ctx
+
+  | _ ->
+      let structName, ctx = getUniqueTyName ctx optionTy
+      let selfTy, ctx = genIncompleteOptionTyDecl ctx itemTy
+
+      let itemTy, (ctx: CirCtx) = cgTyComplete ctx itemTy
+      let fields = [ "some", CBoolTy; "value", itemTy ]
+
+      let ctx =
+        { ctx with
+            Decls = CStructDecl(structName, fields, []) :: ctx.Decls
+            TyEnv =
+              ctx.TyEnv
+              |> TMap.add optionTy (CTyDefined, selfTy) }
+
+      selfTy, ctx
+
 let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
 
@@ -266,7 +306,9 @@ let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
 
       let ctx =
         { ctx with
-            TyEnv = ctx.TyEnv |> TMap.add tupleTy (CTyDeclared, selfTy) }
+            TyEnv =
+              ctx.TyEnv
+              |> TMap.add tupleTy (CTyDeclared, selfTy) }
 
       selfTy, ctx
 
@@ -472,6 +514,11 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
 
           funTy, ctx
 
+      | Ty (OptionTk, [ itemTy ]) ->
+          let itemTy, ctx = ctx |> go itemTy
+          let optionTy = itemTy + "Option"
+          optionTy, ctx
+
       | Ty (ListTk, [ itemTy ]) ->
           let itemTy, ctx = ctx |> go itemTy
           let listTy = itemTy + "List"
@@ -518,6 +565,7 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
           tupleTy, ctx
 
       | Ty (ErrorTk _, _)
+      | Ty (OptionTk, _)
       | Ty (ListTk, _)
       | Ty (FunTk, _)
       | Ty (NativePtrTk _, _)
@@ -579,6 +627,8 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | Ty (FunTk, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
 
+  | Ty (OptionTk, [ itemTy ]) -> genIncompleteOptionTyDecl ctx itemTy
+
   | Ty (ListTk, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
 
   | Ty (TupleTk, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
@@ -624,6 +674,8 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
 
   | Ty (FunTk, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
+
+  | Ty (OptionTk, [ itemTy ]) -> genOptionTyDef ctx itemTy
 
   | Ty (ListTk, [ itemTy ]) -> genListTyDef ctx itemTy
 
@@ -744,6 +796,7 @@ let private genDefault ctx ty =
   | Ty (StrTk, _)
   | Ty (FunTk, _)
   | Ty (TupleTk, _)
+  | Ty (OptionTk _, _)
   | Ty (SynonymTk _, _)
   | Ty (UnionTk _, _)
   | Ty (RecordTk _, _)
@@ -801,6 +854,14 @@ let private genUnaryExpr ctx op arg ty _ =
       CDotExpr(arg, getUniqueVariantName ctx serial), ctx
 
   | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
+
+  | MOptionIsSomeUnary ->
+      let _, ctx = cgTyComplete ctx ty
+      CDotExpr(arg, "some"), ctx
+
+  | MOptionToValueUnary ->
+      let _, ctx = cgTyComplete ctx ty
+      CDotExpr(arg, "value"), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
   | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
@@ -1018,6 +1079,19 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       | [ arg ] -> cgBoxStmt ctx serial arg
       | _ -> failwithf "NEVER: %A" itself
 
+  | MOptionSomePrim ->
+      regularWithTy
+        ctx
+        (fun args optionTy ->
+          match args with
+          | [ item ] ->
+              let fields =
+                [ "some", CVarExpr "true"
+                  "value", item ]
+
+              CInitExpr(fields, optionTy)
+          | _ -> failwithf "NEVER: %A" itself)
+
   | MConsPrim ->
       match args with
       | [ l; r ] -> cgConsStmt ctx serial l r resultTy
@@ -1093,8 +1167,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
           | [ ptr; index ] -> CIndexExpr(ptr, index)
           | _ -> failwith "NEVER")
 
-let private cgCallPrimExpr ctx itself serial prim args =
-  cgPrimStmt ctx itself prim args serial
+let private cgCallPrimExpr ctx itself serial prim args = cgPrimStmt ctx itself prim args serial
 
 let private cgBoxStmt ctx serial arg =
   let argTy, ctx = cgTyComplete ctx (mexprToTy arg)
@@ -1212,7 +1285,7 @@ let private cgStmt ctx stmt =
   | MNativeStmt (code, args, _) ->
       let args, ctx = cgExprList ctx args
 
-      addStmt ctx (CNativeStmt (code, args))
+      addStmt ctx (CNativeStmt(code, args))
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
   let bodyCtx: CirCtx = cgStmts (enterBlock ctx) stmts

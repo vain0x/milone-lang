@@ -34,7 +34,8 @@ let private tkEncode tk =
   | ObjTk -> 6, 0
   | FunTk -> 7, 0
   | TupleTk -> 8, 0
-  | ListTk -> 9, 0
+  | OptionTk -> 9, 0
+  | ListTk -> 10, 0
 
   | VoidTk -> 11, 0
   | NativePtrTk isMut -> 12, isMutToInt isMut
@@ -77,6 +78,7 @@ let tkDisplay getTyName tk =
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
+  | OptionTk -> "option"
   | ListTk -> "list"
   | VoidTk -> "void"
   | NativePtrTk IsMut -> "nativeptr"
@@ -244,6 +246,8 @@ let tyDisplay getTyName ty =
         "("
         + (itemTys |> List.map (go 20) |> S.concat " * ")
         + ")"
+
+    | Ty (OptionTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " option")
 
     | Ty (ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 

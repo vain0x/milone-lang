@@ -68,6 +68,9 @@ type MUnary =
   /// Gets a field of record.
   | MRecordItemUnary of recordItemIndex: int
 
+  | MOptionIsSomeUnary
+  | MOptionToValueUnary
+
   | MListIsEmptyUnary
 
   /// Gets head of list, unchecked.
@@ -132,6 +135,7 @@ type MPrim =
   | MClosurePrim of closureFunSerial: FunSerial
 
   | MBoxPrim
+  | MOptionSomePrim
   | MConsPrim
   | MTuplePrim
   | MVariantPrim of variantSerial: VariantSerial

@@ -16,6 +16,11 @@ open MiloneLang.Mir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
+let private unwrapOptionTy ty =
+  match ty with
+  | Ty (OptionTk, [ it ]) -> it
+  | _ -> failwith "NEVER"
+
 let private unwrapListTy ty =
   match ty with
   | Ty (ListTk, [ it ]) -> it
@@ -249,6 +254,27 @@ let private mirifyPatLit ctx endLabel lit expr loc =
   let ctx = addStmt ctx gotoStmt
   ctx
 
+let private mirifyPatNone ctx endLabel expr loc =
+  let isNoneExpr =
+    mxNot (MUnaryExpr(MOptionIsSomeUnary, expr, tyBool, loc)) loc
+
+  let gotoStmt = msGotoUnless isNoneExpr endLabel loc
+  addStmt ctx gotoStmt
+
+let private mirifyPatSomeApp ctx endLabel item loc expr =
+  let itemTy = patToTy item
+
+  let isSome =
+    MUnaryExpr(MOptionIsSomeUnary, expr, tyBool, loc)
+
+  let gotoStmt = msGotoUnless isSome endLabel loc
+  let ctx = addStmt ctx gotoStmt
+
+  let value =
+    MUnaryExpr(MOptionToValueUnary, expr, itemTy, loc)
+
+  mirifyPat ctx endLabel item value
+
 let private mirifyPatNil ctx endLabel listTy expr loc =
   let itemTy = unwrapListTy listTy
 
@@ -280,15 +306,6 @@ let private mirifyPatCons ctx endLabel l r listTy loc expr =
   let ctx = mirifyPat ctx endLabel l head
   let ctx = mirifyPat ctx endLabel r tail
   ctx
-
-let private mirifyPatNone ctx endLabel listTy expr loc =
-  // None ==> []
-  mirifyPatNil ctx endLabel listTy expr loc
-
-let private mirifyPatSomeApp ctx endLabel payloadPat listTy loc expr =
-  // Some pat ==> pat :: _
-  let r = HDiscardPat(listTy, loc)
-  mirifyPatCons ctx endLabel payloadPat r listTy loc expr
 
 let private mirifyPatVar ctx _endLabel serial ty loc expr =
   addStmt ctx (MLetValStmt(serial, Some expr, ty, loc))
@@ -372,13 +389,14 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
 
   | HNodePat (kind, argPats, ty, loc) ->
       match kind, argPats with
-      | HNilPN, _
-      | HNonePN, _ -> mirifyPatNil ctx endLabel ty expr loc
+      | HNilPN, _ -> mirifyPatNil ctx endLabel ty expr loc
 
       | HConsPN, [ l; r ] -> mirifyPatCons ctx endLabel l r ty loc expr
       | HConsPN, _ -> fail ()
 
-      | HSomeAppPN, [ payloadPat ] -> mirifyPatSomeApp ctx endLabel payloadPat ty loc expr
+      | HNonePN, _ -> mirifyPatNone ctx endLabel expr loc
+
+      | HSomeAppPN, [ payloadPat ] -> mirifyPatSomeApp ctx endLabel payloadPat loc expr
       | HSomeAppPN, _ -> fail ()
 
       | HVariantAppPN variantSerial, [ payloadPat ] ->
@@ -476,13 +494,13 @@ let private mirifyExprMatchAsIfStmt ctx cond arms ty loc =
       |> Some
 
   // | None -> ... | _ -> ...
-  | Ty (ListTk, _),
+  | Ty (OptionTk, _),
     [ HNodePat (HNonePN, _, _, _), HLitExpr (BoolLit true, _), noneCl; HDiscardPat _, HLitExpr (BoolLit true, _), someCl ] ->
       let cond, ctx = mirifyExpr ctx cond
 
       let isNone =
         let ty, loc = mexprExtract cond
-        MUnaryExpr(MListIsEmptyUnary, cond, ty, loc)
+        mxNot (MUnaryExpr(MOptionIsSomeUnary, cond, ty, loc)) loc
 
       doEmitIfStmt ctx isNone "none_cl" noneCl "some_cl" someCl ty loc
       |> Some
@@ -843,10 +861,9 @@ let private mirifyExprCallSome ctx item ty loc =
   let _, tempSerial, ctx = freshVar ctx "some" ty loc
 
   let item, ctx = mirifyExpr ctx item
-  let nil = MDefaultExpr(ty, loc)
 
   let ctx =
-    addStmt ctx (MPrimStmt(MConsPrim, [ item; nil ], tempSerial, loc))
+    addStmt ctx (MPrimStmt(MOptionSomePrim, [ item ], tempSerial, loc))
 
   MVarExpr(tempSerial, ty, loc), ctx
 
@@ -1314,7 +1331,10 @@ let private mirifyExprInf ctx itself kind args ty loc =
 
   | HNativeStmtEN code, args, _ ->
       let args, ctx = mirifyExprs ctx args
-      let ctx = addStmt ctx (MNativeStmt(code, args, loc))
+
+      let ctx =
+        addStmt ctx (MNativeStmt(code, args, loc))
+
       MDefaultExpr(tyUnit, loc), ctx
 
   | HNativeDeclEN code, _, _ ->

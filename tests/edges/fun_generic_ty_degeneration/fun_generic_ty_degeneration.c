@@ -8,9 +8,9 @@ int f_1(void const* boxedPair_, int arg_1);
 
 struct IntStringTuple2;
 
-struct IntStringTuple2List;
+struct IntStringTuple2Option;
 
-int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2List const* phantom_);
+int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_);
 
 int testCase_(struct IntStringTuple2 kv_);
 
@@ -36,12 +36,12 @@ struct IntStringTuple2 {
     struct String t1;
 };
 
-struct IntStringTuple2List {
-    struct IntStringTuple2 head;
-    struct IntStringTuple2List const* tail;
+struct IntStringTuple2Option {
+    bool some;
+    struct IntStringTuple2 value;
 };
 
-int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2List const* phantom_) {
+int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
     int call_1 = f_1(boxedPair_, 0);
     return call_1;
 }
@@ -49,7 +49,7 @@ int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2List const* phantom
 int testCase_(struct IntStringTuple2 kv_) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringTuple2));
     (*(((struct IntStringTuple2*)box_))) = kv_;
-    int call_2 = fstUnbox_1(box_, NULL);
+    int call_2 = fstUnbox_1(box_, ((struct IntStringTuple2Option){}));
     milone_assert((call_2 == 0), 18, 2);
     return 0;
 }

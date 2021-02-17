@@ -51,10 +51,7 @@ let private tyPrimOfName name tys =
   | "string", [] -> Some tyStr
   | "obj", [] -> Some tyObj
 
-  | "option", [ itemTy ] ->
-      // FIXME: option is just an alias of list for now
-      Some(tyList itemTy)
-
+  | "option", [ itemTy ] -> Some(tyOption itemTy)
   | "list", [ itemTy ] -> Some(tyList itemTy)
 
   | "voidptr", [] -> Ty(NativePtrTk IsMut, [ Ty(VoidTk, []) ]) |> Some

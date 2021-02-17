@@ -101,6 +101,7 @@ type Tk =
   | TupleTk
 
   /// Ty args must be `[t]`.
+  | OptionTk
   | ListTk
 
   // FFI types.
@@ -567,6 +568,8 @@ let tyObj = Ty(ObjTk, [])
 
 let tyTuple tys = Ty(TupleTk, tys)
 
+let tyOption ty = Ty(OptionTk, [ ty ])
+
 let tyList ty = Ty(ListTk, [ ty ])
 
 let tyFun sourceTy targetTy = Ty(FunTk, [ sourceTy; targetTy ])
@@ -757,11 +760,11 @@ let primToTySpec prim =
 
   | HPrim.OptionNone ->
       let itemTy = meta 1
-      poly (tyList itemTy) []
+      poly (tyOption itemTy) []
 
   | HPrim.OptionSome ->
       let itemTy = meta 1
-      let listTy = tyList itemTy
+      let listTy = tyOption itemTy
       poly (tyFun itemTy listTy) []
 
   | HPrim.Not -> mono (tyFun tyBool tyBool)

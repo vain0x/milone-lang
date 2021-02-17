@@ -397,16 +397,16 @@ let private inferNilPat ctx pat loc =
 
 let private inferNonePat ctx pat loc =
   let itemTy, ctx = ctx |> freshMetaTyForPat pat
-  let ty = tyList itemTy
-  HNodePat(HNonePN, [], tyList ty, loc), ty, ctx
+  let ty = tyOption itemTy
+  HNodePat(HNonePN, [], tyOption ty, loc), ty, ctx
 
 let private inferSomePat ctx pat loc =
-  let ty, ctx = ctx |> freshMetaTyForPat pat
+  let unknownTy, ctx = ctx |> freshMetaTyForPat pat
 
   let ctx =
     addError ctx "Some pattern must be used in the form of: `Some pattern`." loc
 
-  hpAbort ty loc, ty, ctx
+  hpAbort unknownTy loc, unknownTy, ctx
 
 let private inferDiscardPat ctx pat loc =
   let ty, ctx = ctx |> freshMetaTyForPat pat
@@ -430,7 +430,7 @@ let private inferVariantPat (ctx: TyCtx) variantSerial loc =
 
 let private inferSomeAppPat ctx payloadPat loc =
   let payloadPat, payloadTy, ctx = inferPat ctx payloadPat
-  let targetTy = tyList payloadTy
+  let targetTy = tyOption payloadTy
   HNodePat(HSomeAppPN, [ payloadPat ], targetTy, loc), targetTy, ctx
 
 let private inferVariantAppPat (ctx: TyCtx) variantSerial payloadPat loc =
