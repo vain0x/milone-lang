@@ -244,3 +244,6 @@ let toList (map: TreeMap<'K, 'T>): ('K * 'T) list =
   map
   |> fold (fun acc key value -> (key, value) :: acc) []
   |> List.rev
+
+let toKeys (map: TreeMap<'K, 'T>): 'K list =
+  List.map fst (toList map)

@@ -209,7 +209,7 @@ let mapMap f (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.map f map
 
 let mapFilter pred (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.filter pred map
 
-let mapToKeys (map: AssocMap<_, _>) = TreeMap.toList map |> List.map fst
+let mapToKeys (map: AssocMap<_, _>) = TreeMap.toKeys map
 
 let mapToList (map: AssocMap<_, _>) = TreeMap.toList map
 
