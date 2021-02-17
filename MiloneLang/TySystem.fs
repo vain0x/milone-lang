@@ -291,42 +291,47 @@ let private addTyDef tySerial tyDef (ctx: TyContext) =
 // Type inference algorithm
 // -----------------------------------------------
 
+let private isMetaOf tySerial ty =
+  match ty with
+  | Ty (MetaTk (s, _), _) -> s = tySerial
+  | _ -> false
+
 /// Adds type-var/type binding.
 let typingBind (ctx: TyContext) tySerial ty =
-  // Don't bind itself.
-  match typingSubst ctx ty with
-  | Ty (MetaTk (s, _), _) when s = tySerial -> ctx
+  let ty = typingSubst ctx ty
 
-  | ty ->
-      // Reduce level of meta tys in the referent ty to the meta ty's level at most.
-      let tyLevels =
-        let level =
-          ctx.TyLevels
-          |> TMap.tryFind tySerial
-          |> Option.defaultValue 0
+  // Self-binding never occurs due to occurrence check.
+  assert (isMetaOf tySerial ty |> not)
 
-        ty
-        |> tyCollectFreeVars
-        |> List.fold
-             (fun tyLevels tySerial ->
-               let currentLevel =
-                 ctx.TyLevels
-                 |> TMap.tryFind tySerial
-                 |> Option.defaultValue 0
+  // Reduce level of meta tys in the referent ty to the meta ty's level at most.
+  let tyLevels =
+    let level =
+      ctx.TyLevels
+      |> TMap.tryFind tySerial
+      |> Option.defaultValue 0
 
-               if currentLevel <= level then
-                 // Already non-deep enough.
-                 tyLevels
-               else
-                 // Prevent this meta ty from getting generalized until level of the bound meta ty.
-                 tyLevels |> TMap.add tySerial level)
+    ty
+    |> tyCollectFreeVars
+    |> List.fold
+         (fun tyLevels tySerial ->
+           let currentLevel =
              ctx.TyLevels
+             |> TMap.tryFind tySerial
+             |> Option.defaultValue 0
 
-      let ctx =
-        ctx
-        |> addTyDef tySerial (MetaTyDef ty)
+           if currentLevel <= level then
+             // Already non-deep enough.
+             tyLevels
+           else
+             // Prevent this meta ty from getting generalized until level of the bound meta ty.
+             tyLevels |> TMap.add tySerial level)
+         ctx.TyLevels
 
-      { ctx with TyLevels = tyLevels }
+  let ctx =
+    ctx
+    |> addTyDef tySerial (MetaTyDef ty)
+
+  { ctx with TyLevels = tyLevels }
 
 /// Substitutes occurrences of already-inferred type vars
 /// with their results.
