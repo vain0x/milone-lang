@@ -178,7 +178,7 @@ let private substTy (ctx: TyCtx) ty: Ty = typingSubst (toTyContext ctx) ty
 let private substOrDegenerateTy (ctx: TyCtx) ty =
   let substMeta tySerial =
     match ctx.Tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef (_, ty, _)) -> Some ty
+    | Some (MetaTyDef ty) -> Some ty
 
     | Some (UniversalTyDef _) -> None
 
@@ -1102,7 +1102,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
     { ExpandMetaOrSynonymTy =
         fun tySerial ->
           match findTy tySerial tyCtx with
-          | MetaTyDef (_, bodyTy, _) -> Some bodyTy
+          | MetaTyDef bodyTy -> Some bodyTy
           | SynonymTyDef (_, _, bodyTy, _) -> Some bodyTy
           | _ -> None
 

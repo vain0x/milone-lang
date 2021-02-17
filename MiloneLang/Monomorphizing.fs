@@ -276,7 +276,7 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
 
             let substMeta tySerial =
               match extendedCtx.Tys |> TMap.tryFind tySerial with
-              | Some (MetaTyDef (_, ty, _)) -> Some ty
+              | Some (MetaTyDef ty) -> Some ty
               | _ -> Some tyUnit
 
             let substOrDegenerateTy ty = tySubst substMeta ty

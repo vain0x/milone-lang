@@ -687,7 +687,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
              (fun ty ->
                let substMeta tySerial =
                  match ctx.Tys |> TMap.tryFind tySerial with
-                 | Some (MetaTyDef (_, ty, _)) -> Some ty
+                 | Some (MetaTyDef ty) -> Some ty
                  | Some (UniversalTyDef _)
                  | None -> Some tyObj
                  | _ -> None

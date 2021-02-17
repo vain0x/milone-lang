@@ -293,9 +293,6 @@ let private addTyDef tySerial tyDef (ctx: TyContext) =
 
 /// Adds type-var/type binding.
 let typingBind (ctx: TyContext) tySerial ty loc =
-  // FIXME: track identifier
-  let noIdent = "unknown"
-
   // Don't bind itself.
   match typingSubst ctx ty with
   | Ty (MetaTk (s, _), _) when s = tySerial -> ctx
@@ -327,7 +324,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 
       let ctx =
         ctx
-        |> addTyDef tySerial (MetaTyDef(noIdent, ty, loc))
+        |> addTyDef tySerial (MetaTyDef ty)
 
       { ctx with TyLevels = tyLevels }
 
@@ -336,7 +333,7 @@ let typingBind (ctx: TyContext) tySerial ty loc =
 let typingSubst (ctx: TyContext) ty: Ty =
   let substMeta tySerial =
     match ctx.Tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef (_, ty, _)) -> Some ty
+    | Some (MetaTyDef ty) -> Some ty
     | _ -> None
 
   tySubst substMeta ty
@@ -394,7 +391,7 @@ type private MetaTyUnifyResult =
 
 let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
   match ctx.Tys |> TMap.tryFind tySerial with
-  | Some (MetaTyDef (_, ty, _)) -> DidExpand ty
+  | Some (MetaTyDef ty) -> DidExpand ty
 
   | _ ->
       match typingSubst ctx otherTy with
