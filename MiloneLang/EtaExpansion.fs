@@ -83,6 +83,7 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Hir
 
+module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
 
@@ -423,7 +424,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Funs = ctx.Funs |> mapAdd funSerial funDef }
+        Funs = ctx.Funs |> TMap.add funSerial funDef }
 
   let funExpr = HFunExpr(funSerial, ty, loc)
   funExpr, funSerial, ctx
@@ -436,7 +437,7 @@ let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> mapAdd serial (VarDef(name, AutoSM, ty, loc)) }
+          |> TMap.add serial (VarDef(name, AutoSM, ty, loc)) }
 
   HVarExpr(serial, ty, loc), serial, ctx
 

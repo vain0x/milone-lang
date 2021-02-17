@@ -73,6 +73,8 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 
+module TSet = MiloneStd.StdSet
+
 type private ProjectName = string
 
 type private ModuleName = string
@@ -117,7 +119,7 @@ let private newCtx host: BundleCtx =
     ModuleQueue = []
     ModuleAcc = []
     ErrorAcc = []
-    FetchMemo = setEmpty (pairCompare compare compare)
+    FetchMemo = TSet.empty (pairCompare compare compare)
     Host = host }
 
 let private addError msg loc (ctx: BundleCtx) =
@@ -131,12 +133,12 @@ let private addError msg loc (ctx: BundleCtx) =
 /// Returns (true, _, _) if already fetched.
 let private fetchModuleWithMemo projectName moduleName (ctx: BundleCtx) =
   if ctx.FetchMemo
-     |> setContains (projectName, moduleName) then
+     |> TSet.contains (projectName, moduleName) then
     true, None, ctx
   else
     let ctx =
       { ctx with
-          FetchMemo = ctx.FetchMemo |> setAdd (projectName, moduleName) }
+          FetchMemo = ctx.FetchMemo |> TSet.add (projectName, moduleName) }
 
     let result =
       ctx.Host.FetchModule projectName moduleName
@@ -185,7 +187,7 @@ let private resolveAutoInclude (ctx: BundleCtx) =
 
   let fetchedProjects =
     ctx.FetchMemo
-    |> setToList
+    |> TSet.toList
     |> List.map fst
     |> listUnique compare
 

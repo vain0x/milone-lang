@@ -10,13 +10,9 @@ open MiloneLang.Syntax
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
+module TMap = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
-
-let private mapAddList key value map =
-  let values =
-    map |> mapTryFind key |> Option.defaultValue []
-
-  mapAdd key (value :: values) map
 
 let private isNoTy ty =
   match ty with
@@ -117,27 +113,19 @@ let private nsOwnerOfTySymbol (tySymbol: TySymbol): NsOwner = TyNsOwner(tySymbol
 type Ns<'T> = AssocMap<NsOwner, (AssocMap<Ident, 'T>)>
 
 let private nsFind (key: NsOwner) (ns: Ns<_>): AssocMap<Ident, _> =
-  match ns |> mapTryFind key with
+  match ns |> TMap.tryFind key with
   | Some submap -> submap
-  | None -> mapEmpty compare
+  | None -> TMap.empty compare
 
 let private nsAdd (key: NsOwner) (ident: Ident) value (ns: Ns<_>): Ns<_> =
   ns
-  |> mapAdd key (ns |> nsFind key |> mapAdd ident value)
+  |> TMap.add key (ns |> nsFind key |> TMap.add ident value)
 
 let private nsMerge (key: NsOwner) (ident: Ident) value (ns: Ns<_>): Ns<_> =
-  let submap = ns |> nsFind key
+  let submap =
+    ns |> nsFind key |> multimapAdd ident value
 
-  ns
-  |> mapAdd
-       key
-       (submap
-        |> mapAdd
-             ident
-             (value
-              :: (submap
-                  |> mapTryFind ident
-                  |> Option.defaultValue [])))
+  ns |> TMap.add key submap
 
 // --------------------------------------------
 // Scopes
@@ -156,7 +144,7 @@ type private ScopeChain<'T> = AssocMap<Ident, 'T> list
 /// Type has also a list of types that it shadows for namespace merging.
 type private Scope = ScopeKind list * ScopeChain<ValueSymbol> * ScopeChain<TySymbol> * ScopeChain<NsOwner list>
 
-let private scopeMapEmpty (): AssocMap<Ident, _> = mapEmpty compare
+let private scopeMapEmpty (): AssocMap<Ident, _> = TMap.empty compare
 
 let private scopeChainEmpty (): ScopeChain<_> = [ scopeMapEmpty () ]
 
@@ -222,19 +210,19 @@ let private ofNameCtx (nameCtx: NameCtx): ScopeCtx =
 
   { Serial = serial
     NameMap = nameMap
-    Vars = mapEmpty varSerialCompare
-    Funs = mapEmpty funSerialCompare
-    Variants = mapEmpty variantSerialCompare
-    VarLevels = mapEmpty compare
+    Vars = TMap.empty varSerialCompare
+    Funs = TMap.empty funSerialCompare
+    Variants = TMap.empty variantSerialCompare
+    VarLevels = TMap.empty compare
     MainFunOpt = None
-    Tys = mapEmpty compare
-    ModuleTys = mapEmpty moduleTySerialCompare
-    ModuleSynonyms = mapEmpty moduleSynonymSerialCompare
-    VarNs = mapEmpty nsOwnerCompare
-    TyNs = mapEmpty nsOwnerCompare
-    NsNs = mapEmpty nsOwnerCompare
+    Tys = TMap.empty compare
+    ModuleTys = TMap.empty moduleTySerialCompare
+    ModuleSynonyms = TMap.empty moduleSynonymSerialCompare
+    VarNs = TMap.empty nsOwnerCompare
+    TyNs = TMap.empty nsOwnerCompare
+    NsNs = TMap.empty nsOwnerCompare
     Local = scopeEmpty ()
-    PatScope = mapEmpty compare
+    PatScope = TMap.empty compare
     Level = 0
     Logs = [] }
 
@@ -245,27 +233,31 @@ let private addLog (log: NameResLog) (loc: Loc) (ctx: ScopeCtx) =
 let private findName serial (scopeCtx: ScopeCtx): Ident = scopeCtx.NameMap |> mapFind serial
 
 let private findVar varSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Vars |> mapContainsKey varSerial)
+  assert (scopeCtx.Vars |> TMap.containsKey varSerial)
   scopeCtx.Vars |> mapFind varSerial
 
 let private findFun funSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Funs |> mapContainsKey funSerial)
+  assert (scopeCtx.Funs |> TMap.containsKey funSerial)
   scopeCtx.Funs |> mapFind funSerial
 
 let private findVariant variantSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Variants |> mapContainsKey variantSerial)
+  assert (scopeCtx.Variants
+          |> TMap.containsKey variantSerial)
+
   scopeCtx.Variants |> mapFind variantSerial
 
 let private findTy tySerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.Tys |> mapContainsKey tySerial)
+  assert (scopeCtx.Tys |> TMap.containsKey tySerial)
   scopeCtx.Tys |> mapFind tySerial
 
 let private findModuleTy moduleSerial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.ModuleTys |> mapContainsKey moduleSerial)
+  assert (scopeCtx.ModuleTys
+          |> TMap.containsKey moduleSerial)
+
   scopeCtx.ModuleTys |> mapFind moduleSerial
 
 let private findModuleSynonym serial (scopeCtx: ScopeCtx) =
-  assert (scopeCtx.ModuleSynonyms |> mapContainsKey serial)
+  assert (scopeCtx.ModuleSynonyms |> TMap.containsKey serial)
   scopeCtx.ModuleSynonyms |> mapFind serial
 
 let private findVarName varSerial (scopeCtx: ScopeCtx) =
@@ -283,7 +275,7 @@ let private findTySymbolName tySymbol (scopeCtx: ScopeCtx) =
 let private findNsOwnerName nsOwner (scopeCtx: ScopeCtx) =
   match nsOwner with
   | TyNsOwner tySerial ->
-      match scopeCtx.Tys |> mapTryFind tySerial with
+      match scopeCtx.Tys |> TMap.tryFind tySerial with
       | Some a -> a |> tyDefToName
       | None -> "type#" + string tySerial
 
@@ -294,43 +286,45 @@ let private findNsOwnerName nsOwner (scopeCtx: ScopeCtx) =
 let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
   let varDef =
-    match scopeCtx.Vars |> mapTryFind varSerial, varDef with
+    match scopeCtx.Vars |> TMap.tryFind varSerial, varDef with
     | Some (VarDef (_, StaticSM, _, _)), VarDef (name, _, ty, loc) -> VarDef(name, StaticSM, ty, loc)
     | _ -> varDef
 
   { scopeCtx with
-      Vars = scopeCtx.Vars |> mapAdd varSerial varDef
+      Vars = scopeCtx.Vars |> TMap.add varSerial varDef
       VarLevels =
         scopeCtx.VarLevels
-        |> mapAdd (varSerialToInt varSerial) scopeCtx.Level }
+        |> TMap.add (varSerialToInt varSerial) scopeCtx.Level }
 
 let private addFunDef funSerial funDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      Funs = scopeCtx.Funs |> mapAdd funSerial funDef
+      Funs = scopeCtx.Funs |> TMap.add funSerial funDef
       VarLevels =
         scopeCtx.VarLevels
-        |> mapAdd (funSerialToInt funSerial) scopeCtx.Level }
+        |> TMap.add (funSerialToInt funSerial) scopeCtx.Level }
 
 let private addVariantDef variantSerial variantDef (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
       Variants =
         scopeCtx.Variants
-        |> mapAdd variantSerial variantDef }
+        |> TMap.add variantSerial variantDef }
 
 /// Defines a type, without adding to any scope.
 let private addTy tySymbol tyDef (scopeCtx: ScopeCtx): ScopeCtx =
   let tySerial = tySymbolToSerial tySymbol
 
   { scopeCtx with
-      Tys = scopeCtx.Tys |> mapAdd tySerial tyDef }
+      Tys = scopeCtx.Tys |> TMap.add tySerial tyDef }
 
 let private addModuleTyDef moduleTySerial (tyDef: ModuleTyDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      ModuleTys = scopeCtx.ModuleTys |> mapAdd moduleTySerial tyDef }
+      ModuleTys =
+        scopeCtx.ModuleTys
+        |> TMap.add moduleTySerial tyDef }
 
 let private addModuleSynonymDef serial (tyDef: ModuleSynonymDef) (scopeCtx: ScopeCtx): ScopeCtx =
   { scopeCtx with
-      ModuleSynonyms = scopeCtx.ModuleSynonyms |> mapAdd serial tyDef }
+      ModuleSynonyms = scopeCtx.ModuleSynonyms |> TMap.add serial tyDef }
 
 /// Adds a variable to a namespace.
 let private addVarToNs (nsOwner: NsOwner) valueSymbol (scopeCtx: ScopeCtx): ScopeCtx =
@@ -374,7 +368,7 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
     match scopeCtx.Local with
     | kinds, map :: varScopes, tyScopes, nsScopes ->
         let varScopes =
-          (map |> mapAdd varName symbol) :: varScopes
+          (map |> TMap.add varName symbol) :: varScopes
 
         kinds, varScopes, tyScopes, nsScopes
 
@@ -387,11 +381,11 @@ let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx): S
   let scope: Scope =
     match scopeCtx.Local with
     | kinds, varScopes, (tyMap :: tyScopes), (nsMap :: nsScopes) ->
-        let tyMap = tyMap |> mapAdd alias symbol
+        let tyMap = tyMap |> TMap.add alias symbol
 
         let nsMap =
           nsMap
-          |> mapAddList alias (nsOwnerOfTySymbol symbol)
+          |> multimapAdd alias (nsOwnerOfTySymbol symbol)
 
         kinds, varScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
@@ -410,11 +404,11 @@ let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx): ScopeCtx =
     | kinds, varScopes, tyScopes, ((map :: nsScopes) as allNsScopes) ->
         let shadowed =
           allNsScopes
-          |> List.tryPick (fun map -> map |> mapTryFind alias)
+          |> List.tryPick (fun map -> map |> TMap.tryFind alias)
           |> Option.defaultValue []
 
         let map =
-          map |> mapAdd alias (nsOwner :: shadowed)
+          map |> TMap.add alias (nsOwner :: shadowed)
 
         kinds, varScopes, tyScopes, map :: nsScopes
 
@@ -431,19 +425,19 @@ let private openModule moduleSerial (scopeCtx: ScopeCtx) =
   let scopeCtx =
     scopeCtx.VarNs
     |> nsFind (ModuleNsOwner moduleSerial)
-    |> mapFold (fun ctx _ symbol -> ctx |> importVar symbol) scopeCtx
+    |> TMap.fold (fun ctx _ symbol -> ctx |> importVar symbol) scopeCtx
 
   // Import tys.
   let scopeCtx =
     scopeCtx.TyNs
     |> nsFind (ModuleNsOwner moduleSerial)
-    |> mapFold (fun ctx _ symbol -> ctx |> importTy symbol) scopeCtx
+    |> TMap.fold (fun ctx _ symbol -> ctx |> importTy symbol) scopeCtx
 
   // Import subnamespaces.
   let scopeCtx =
     scopeCtx.NsNs
     |> nsFind (ModuleNsOwner moduleSerial)
-    |> mapFold (fun ctx _ nsOwners -> ctx |> forList importNs nsOwners) scopeCtx
+    |> TMap.fold (fun ctx _ nsOwners -> ctx |> forList importNs nsOwners) scopeCtx
 
   scopeCtx
 
@@ -495,35 +489,36 @@ let private isTyDeclScope (scopeCtx: ScopeCtx) =
 let private resolveScopedVarName nsOwner name (scopeCtx: ScopeCtx): ValueSymbol option =
   scopeCtx.VarNs
   |> nsFind nsOwner
-  |> mapTryFind name
+  |> TMap.tryFind name
 
 // Find from namespace of type (not local).
 let private resolveScopedTyName nsOwner name (scopeCtx: ScopeCtx): TySymbol option =
-  scopeCtx.TyNs |> nsFind nsOwner |> mapTryFind name
+  scopeCtx.TyNs
+  |> nsFind nsOwner
+  |> TMap.tryFind name
 
 let private resolveSubNsOwners nsOwner name (scopeCtx: ScopeCtx): NsOwner list =
   scopeCtx.NsNs
   |> nsFind nsOwner
-  |> mapTryFind name
-  |> Option.defaultValue []
+  |> multimapFind name
 
 let private resolveLocalVarName name (scopeCtx: ScopeCtx) =
   let _, varScopes, _, _ = scopeCtx.Local
 
   varScopes
-  |> List.tryPick (fun map -> map |> mapTryFind name)
+  |> List.tryPick (fun map -> map |> TMap.tryFind name)
 
 let private resolveLocalTyName name (scopeCtx: ScopeCtx): TySymbol option =
   let _, _, tyScopes, _ = scopeCtx.Local
 
   tyScopes
-  |> List.tryPick (fun map -> map |> mapTryFind name)
+  |> List.tryPick (fun map -> map |> TMap.tryFind name)
 
 let private resolveLocalNsOwners name (scopeCtx: ScopeCtx): NsOwner list =
   let _, _, _, nsScopes = scopeCtx.Local
 
   nsScopes
-  |> List.tryPick (fun map -> map |> mapTryFind name)
+  |> List.tryPick (fun map -> map |> TMap.tryFind name)
   |> Option.defaultValue []
 
 /// Resolves qualifiers of type.
@@ -601,7 +596,7 @@ let private resolveTy ty loc scopeCtx =
 
         | Some (SynonymTySymbol tySerial) ->
             // Arity check.
-            match scopeCtx.Tys |> mapTryFind tySerial with
+            match scopeCtx.Tys |> TMap.tryFind tySerial with
             | Some (SynonymTyDef (name, defTyArgs, _, _)) when List.length defTyArgs <> arity ->
                 let scopeCtx =
                   scopeCtx
@@ -643,7 +638,7 @@ let private resolveTy ty loc scopeCtx =
 // -----------------------------------------------
 
 let private defineFunUniquely funSerial args ty loc (scopeCtx: ScopeCtx): ScopeCtx =
-  match scopeCtx.Funs |> mapTryFind funSerial with
+  match scopeCtx.Funs |> TMap.tryFind funSerial with
   | Some _ -> scopeCtx
 
   | None ->
@@ -689,7 +684,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
 
   let tyName = ctx |> findName tySerial
 
-  if ctx.Tys |> mapContainsKey tySerial then
+  if ctx.Tys |> TMap.containsKey tySerial then
     ctx
   else
     match tyDecl with
@@ -945,13 +940,13 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 // -----------------------------------------------
 
 let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
-  match ctx.PatScope |> mapTryFind name with
+  match ctx.PatScope |> TMap.tryFind name with
   | None ->
       let varSerial = VarSerial serial
 
       let ctx =
         { ctx with
-            PatScope = ctx.PatScope |> mapAdd name (varSerial, loc, []) }
+            PatScope = ctx.PatScope |> TMap.add name (varSerial, loc, []) }
         |> addLocalVar varSerial (VarDef(name, AutoSM, ty, loc))
 
       varSerial, ctx
@@ -961,7 +956,7 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
         { ctx with
             PatScope =
               ctx.PatScope
-              |> mapAdd name (varSerial, defLoc, loc :: useLocs) }
+              |> TMap.add name (varSerial, defLoc, loc :: useLocs) }
 
       varSerial, ctx
 
@@ -1106,7 +1101,7 @@ let private doWithPatScope patScopeOpt (f: ScopeCtx -> _ * ScopeCtx) (ctx: Scope
     { ctx with
         PatScope =
           patScopeOpt
-          |> Option.defaultValue (mapEmpty compare) }
+          |> Option.defaultValue (TMap.empty compare) }
 
   let result, ctx = f ctx
 
@@ -1129,7 +1124,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let ctx =
     lScope
-    |> mapFold
+    |> TMap.fold
          (fun ctx (_: string) (_, _, useLocs) ->
            match useLocs with
            | [] -> ctx
@@ -1139,9 +1134,9 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
   // Set of variables defined in the left-hand side.
   let varSerialSet =
     lScope
-    |> mapToList
+    |> TMap.toList
     |> List.map (fun (_: string, (varSerial, _, _)) -> varSerial)
-    |> setOfList varSerialCompare
+    |> TSet.ofList varSerialCompare
 
   let pats, ctx =
     (pats, ctx)
@@ -1156,17 +1151,17 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
            let ok =
              let ok, set =
                rScope
-               |> mapFold
+               |> TMap.fold
                     (fun (ok, set) (_: string) (varSerial: VarSerial, _, usedLocs) ->
                       match usedLocs with
                       | [ _ ] when ok ->
-                          let removed, set = set |> setRemove varSerial
+                          let removed, set = set |> TSet.remove varSerial
                           ok && removed, set
 
                       | _ -> false, set)
                     (true, varSerialSet)
 
-             ok && setIsEmpty set
+             ok && TSet.isEmpty set
 
            let ctx =
              if ok then
@@ -1179,7 +1174,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
   // PENDING: MirGen generates illegal code for binding OR patterns, so reject here.
   let ctx =
     if not (List.isEmpty pats)
-       && not (setIsEmpty varSerialSet) then
+       && not (TSet.isEmpty varSerialSet) then
       ctx |> addLog UnimplOrPatBindingError loc
     else
       ctx
@@ -1196,7 +1191,7 @@ let private nameResIrrefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let ctx =
     scope
-    |> mapFold
+    |> TMap.fold
          (fun ctx (_: string) (_, _, useLocs) ->
            match useLocs with
            | [] -> ctx

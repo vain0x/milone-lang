@@ -54,6 +54,8 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Hir
 
+module TMap = MiloneStd.StdMap
+
 let private funSerialTyPairCompare l r =
   pairCompare funSerialCompare tyCompare l r
 
@@ -95,8 +97,8 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
     Funs = tyCtx.Funs
     Tys = tyCtx.Tys
 
-    GenericFunUseSiteTys = mapEmpty funSerialCompare
-    GenericFunMonoSerials = mapEmpty funSerialTyPairCompare
+    GenericFunUseSiteTys = TMap.empty funSerialCompare
+    GenericFunMonoSerials = TMap.empty funSerialTyPairCompare
     Mode = MonoMode.Monify
     SomethingHappened = true
     InfiniteLoopDetector = 0 }
@@ -107,7 +109,7 @@ let private toTyContext (monoCtx: MonoCtx): TyContext =
 
     // Not used.
     Level = 0
-    TyLevels = mapEmpty compare }
+    TyLevels = TMap.empty compare }
 
 let private withTyContext (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
   { monoCtx with
@@ -144,13 +146,13 @@ let private findFunName funSerial (ctx: MonoCtx) = (ctx.Funs |> mapFind funSeria
 let private forceGeneralizeFuns (ctx: MonoCtx) =
   let funs =
     ctx.Funs
-    |> mapFold
+    |> TMap.fold
          (fun funs funSerial (funDef: FunDef) ->
            let (TyScheme (_, ty)) = funDef.Ty
            let fvs = ty |> tyCollectFreeVars
 
            funs
-           |> mapAdd funSerial { funDef with Ty = TyScheme(fvs, ty) })
+           |> TMap.add funSerial { funDef with Ty = TyScheme(fvs, ty) })
          ctx.Funs
 
   { ctx with Funs = funs }
@@ -173,10 +175,10 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Funs = ctx.Funs |> mapAdd monoFunSerial funDef
+        Funs = ctx.Funs |> TMap.add monoFunSerial funDef
         GenericFunMonoSerials =
           ctx.GenericFunMonoSerials
-          |> mapAdd (genericFunSerial, useSiteTy) monoFunSerial }
+          |> TMap.add (genericFunSerial, useSiteTy) monoFunSerial }
 
   let ctx = markAsSomethingHappened ctx
   monoFunSerial, ctx
@@ -184,7 +186,7 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
 /// Tries to find a monomorphized instance of generic function with use-site type.
 let private tryFindMonomorphizedFun (ctx: MonoCtx) funSerial useSiteTy =
   ctx.GenericFunMonoSerials
-  |> mapTryFind (funSerial, useSiteTy)
+  |> TMap.tryFind (funSerial, useSiteTy)
 
 let private markUseSite (ctx: MonoCtx) funSerial useSiteTy =
   let useSiteTyIsMonomorphic = useSiteTy |> tyIsMonomorphic
@@ -201,7 +203,7 @@ let private markUseSite (ctx: MonoCtx) funSerial useSiteTy =
   else
     let useSiteTys =
       let useSiteTys =
-        match ctx.GenericFunUseSiteTys |> mapTryFind funSerial with
+        match ctx.GenericFunUseSiteTys |> TMap.tryFind funSerial with
         | None -> []
         | Some useSiteTys -> useSiteTys
 
@@ -210,11 +212,11 @@ let private markUseSite (ctx: MonoCtx) funSerial useSiteTy =
     { ctx with
         GenericFunUseSiteTys =
           ctx.GenericFunUseSiteTys
-          |> mapAdd funSerial useSiteTys }
+          |> TMap.add funSerial useSiteTys }
     |> markAsSomethingHappened
 
 let private takeMarkedTys (ctx: MonoCtx) funSerial =
-  match ctx.GenericFunUseSiteTys |> mapTryFind funSerial with
+  match ctx.GenericFunUseSiteTys |> TMap.tryFind funSerial with
   | None
   | Some [] -> [], ctx
 
@@ -223,7 +225,7 @@ let private takeMarkedTys (ctx: MonoCtx) funSerial =
         { ctx with
             GenericFunUseSiteTys =
               ctx.GenericFunUseSiteTys
-              |> mapRemove funSerial
+              |> TMap.remove funSerial
               |> snd }
         |> markAsSomethingHappened
 
@@ -269,7 +271,7 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
             let extendedCtx = unifyTy ctx genericFunTy useSiteTy loc
 
             let substMeta tySerial =
-              match extendedCtx.Tys |> mapTryFind tySerial with
+              match extendedCtx.Tys |> TMap.tryFind tySerial with
               | Some (MetaTyDef (_, ty, _)) -> Some ty
               | _ -> Some tyUnit
 
