@@ -167,10 +167,6 @@ let private resolveTraitBounds (ctx: TyCtx) =
 
   withTyContext ctx logAcc tyCtx
 
-let private bindTy (ctx: TyCtx) tySerial ty =
-  typingBind (toTyContext ctx) tySerial ty
-  |> withTyContext ctx ctx.Logs
-
 let private substTy (ctx: TyCtx) ty: Ty = typingSubst (toTyContext ctx) ty
 
 /// Substitutes bound meta tys in a ty.
@@ -235,15 +231,11 @@ let private instantiateTyScheme ctx (tyScheme: TyScheme) loc =
         |> stMap
              (fun (fv, ctx) ->
                let newSerial, ctx = freshTySerial ctx
-               (fv, newSerial), ctx)
+               (fv, tyMeta newSerial loc), ctx)
 
       // Replace bound variables in the type with fresh ones.
       let ty =
-        let extendedCtx =
-          mapping
-          |> List.fold (fun ctx (src, target) -> bindTy ctx src (tyMeta target loc)) ctx
-
-        substTy extendedCtx ty
+        tySubst (fun tySerial -> assocTryFind compare tySerial mapping) ty
 
       ty, ctx
 
