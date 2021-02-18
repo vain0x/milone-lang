@@ -167,7 +167,13 @@ let private resolveTraitBounds (ctx: TyCtx) =
 
   withTyContext ctx logAcc tyCtx
 
-let private substTy (ctx: TyCtx) ty: Ty = typingSubst (toTyContext ctx) ty
+let private substTy (ctx: TyCtx) ty: Ty =
+  let substMeta tySerial =
+    match ctx.Tys |> TMap.tryFind tySerial with
+    | Some (MetaTyDef ty) -> Some ty
+    | _ -> None
+
+  tySubst substMeta ty
 
 /// Substitutes bound meta tys in a ty.
 /// Unbound meta tys are degenerated, i.e. replaced with unit.
