@@ -406,18 +406,11 @@ let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
 
       | otherTy -> DidBind(typingBind ctx tySerial otherTy loc)
 
-let private isSynonym (ctx: TyContext) tySerial =
-  match ctx.Tys |> TMap.tryFind tySerial with
-  | Some (SynonymTyDef _) -> true
-  | _ -> false
-
-let private asSynonym (ctx: TyContext) tySerial =
-  match ctx.Tys |> TMap.tryFind tySerial with
-  | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
-  | _ -> failwith "Expected synonym. Check with isSynonym first."
-
 let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
-  let defTySerials, bodyTy = asSynonym ctx tySerial
+  let defTySerials, bodyTy =
+    match ctx.Tys |> TMap.tryFind tySerial with
+    | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
+    | _ -> failwith "NEVER"
 
   // Checked in NameRes.
   assert (List.length defTySerials = List.length useTyArgs)
@@ -502,11 +495,11 @@ let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
 
         gogo lTyArgs rTyArgs (logAcc, ctx)
 
-    | Ty (SynonymTk tySerial, tyArgs), _ when tySerial |> isSynonym ctx ->
+    | Ty (SynonymTk tySerial, tyArgs), _ ->
         let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
         (logAcc, ctx) |> go ty1 ty2 |> go ty1 rTy
 
-    | _, Ty (SynonymTk tySerial, tyArgs) when tySerial |> isSynonym ctx ->
+    | _, Ty (SynonymTk tySerial, tyArgs) ->
         let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
         (logAcc, ctx) |> go ty1 ty2 |> go ty1 lTy
 
