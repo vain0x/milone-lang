@@ -220,43 +220,32 @@ let tyGeneralize isOwned (ty: Ty) =
 
   TyScheme(fvs, ty)
 
-let private instantiateTyScheme ctx (tyScheme: TyScheme) loc =
+let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc =
   match tyScheme with
-  | TyScheme ([], ty) -> ty, ctx
+  | TyScheme ([], ty) -> ty, [], ctx
 
   | TyScheme (fvs, ty) ->
-      // Generate fresh type variable for each bound type variable.
-      let mapping, ctx =
-        (fvs, ctx)
-        |> stMap
-             (fun (fv, ctx) ->
-               let newSerial, ctx = freshTySerial ctx
-               (fv, tyMeta newSerial loc), ctx)
+      let serial, tyLevels, ty, assignment =
+        doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels fvs ty loc
 
-      // Replace bound variables in the type with fresh ones.
-      let ty =
-        tySubst (fun tySerial -> assocTryFind compare tySerial mapping) ty
+      ty,
+      assignment,
+      { ctx with
+          Serial = serial
+          TyLevels = tyLevels }
 
-      ty, ctx
+let private instantiateTySpec loc (TySpec (polyTy, traits), ctx: TyCtx) =
+  let polyTy, assignment, ctx =
+    let tyScheme =
+      TyScheme(tyCollectFreeVars polyTy, polyTy)
 
-let private instantiateTySpec loc (TySpec (polyTy, traits), ctx) =
-  // Refresh meta types and generate bindings.
-  let oldTySerials = polyTy |> tyCollectFreeVars
+    instantiateTyScheme ctx tyScheme loc
 
-  let bindings, ctx =
-    (oldTySerials, ctx)
-    |> stMap
-         (fun (oldTySerial, ctx) ->
-           let tySerial, ctx = ctx |> freshTySerial
-           (oldTySerial, tyMeta tySerial loc), ctx)
-
-  // Replace meta types in the type and trait bounds.
-  let substMeta tySerial =
-    bindings |> assocTryFind compare tySerial
-
-  let polyTy = polyTy |> tySubst substMeta
-
+  // Replace type variables also in trait bounds.
   let traits =
+    let substMeta tySerial =
+      assocTryFind compare tySerial assignment
+
     traits
     |> List.map (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
 
@@ -556,7 +545,7 @@ let private inferVarExpr (ctx: TyCtx) varSerial loc =
   HVarExpr(varSerial, ty, loc), ty, ctx
 
 let private inferFunExpr (ctx: TyCtx) funSerial loc =
-  let ty, ctx =
+  let ty, _, ctx =
     let funDef = ctx.Funs |> mapFind funSerial
     instantiateTyScheme ctx funDef.Ty loc
 

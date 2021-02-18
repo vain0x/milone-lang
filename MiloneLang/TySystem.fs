@@ -216,6 +216,9 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 
   go ty
 
+let tyAssign assignment ty =
+  tySubst (fun tySerial -> assocTryFind compare tySerial assignment) ty
+
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
   let rec go (outerBp: int) ty =
@@ -327,9 +330,7 @@ let typingBind (ctx: TyContext) tySerial ty =
              tyLevels |> TMap.add tySerial level)
          ctx.TyLevels
 
-  let ctx =
-    ctx
-    |> addTyDef tySerial (MetaTyDef ty)
+  let ctx = ctx |> addTyDef tySerial (MetaTyDef ty)
 
   { ctx with TyLevels = tyLevels }
 
@@ -342,6 +343,30 @@ let typingSubst (ctx: TyContext) ty: Ty =
     | _ -> None
 
   tySubst substMeta ty
+
+let doInstantiateTyScheme
+  (serial: int)
+  (level: Level)
+  (tyLevels: AssocMap<TySerial, Level>)
+  (tySerials: TySerial list)
+  (ty: Ty)
+  (loc: Loc)
+  =
+  let serial, tyLevels, assignment =
+    tySerials
+    |> List.fold
+         (fun (serial, tyLevels, assignment) tySerial ->
+           let serial = serial + 1
+           let tyLevels = tyLevels |> TMap.add serial level
+
+           let assignment =
+             (tySerial, tyMeta serial loc) :: assignment
+
+           serial, tyLevels, assignment)
+         (serial, tyLevels, [])
+
+  let ty = tyAssign assignment ty
+  serial, tyLevels, ty, assignment
 
 let tyExpandSynonym useTyArgs defTySerials bodyTy =
   // Checked in NameRes.
@@ -418,31 +443,13 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
   assert (List.length defTySerials = List.length useTyArgs)
 
   let instantiatedTy, ctx =
-    let assignment, ctx =
-      defTySerials
-      |> List.fold
-           (fun (assignment, ctx: TyContext) defTySerial ->
-             let newTySerial = ctx.Serial + 1
+    let serial, tyLevels, bodyTy, _ =
+      doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels defTySerials bodyTy loc
 
-             let assignment =
-               (defTySerial, (tyMeta newTySerial loc))
-               :: assignment
-
-             let ctx =
-               let tyLevels =
-                 ctx.TyLevels |> TMap.add newTySerial ctx.Level
-
-               { ctx with
-                   Serial = newTySerial
-                   TyLevels = tyLevels }
-
-             assignment, ctx)
-           ([], ctx)
-
-    let substMeta tySerial =
-      assignment |> assocTryFind compare tySerial
-
-    tySubst substMeta bodyTy, ctx
+    bodyTy,
+    { ctx with
+        Serial = serial
+        TyLevels = tyLevels }
 
   let expandedTy =
     let assignment =
