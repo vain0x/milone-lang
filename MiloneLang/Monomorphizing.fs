@@ -117,8 +117,6 @@ let private withTyContext (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
       Logs = logAcc
       Tys = tyCtx.Tys }
 
-let private substTy (monoCtx: MonoCtx) ty: Ty = typingSubst (toTyContext monoCtx) ty
-
 let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
   let tyCtx = toTyContext monoCtx
 
