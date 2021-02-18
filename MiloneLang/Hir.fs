@@ -526,7 +526,7 @@ type Log =
   | NameResLog of NameResLog
   | LiteralRangeError
   | IrrefutablePatNonExhaustiveError
-  | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
+  | TyUnify of TyUnifyLog * Ty * Ty
   | TyBoundError of Trait
   | TySynonymCycleError
   | RedundantFieldError of ty: Ident * field: Ident
@@ -1163,14 +1163,14 @@ let logToString tyDisplay log =
   | Log.IrrefutablePatNonExhaustiveError ->
       "Let expressions cannot contain refutable patterns, which could fail to match for now."
 
-  | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
+  | Log.TyUnify (TyUnifyLog.SelfRec, lTy, rTy) ->
       "Recursive type occurred while unifying '"
       + tyDisplay lTy
       + "' to '"
       + tyDisplay rTy
       + "'."
 
-  | Log.TyUnify (TyUnifyLog.Mismatch, _, _, lTy, rTy) ->
+  | Log.TyUnify (TyUnifyLog.Mismatch, lTy, rTy) ->
       "Type mismatch: '"
       + tyDisplay lTy
       + "' <> '"

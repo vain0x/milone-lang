@@ -458,15 +458,8 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
 let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
-  let lRootTy, rRootTy = lty, rty
-
   let addLog kind lTy rTy logAcc ctx =
-    let lRootTy = typingSubst ctx lRootTy
-    let rRootTy = typingSubst ctx rRootTy
-
-    (Log.TyUnify(kind, lRootTy, rRootTy, lTy, rTy), loc)
-    :: logAcc,
-    ctx
+    (Log.TyUnify(kind, lTy, rTy), loc) :: logAcc, ctx
 
   let rec go lTy rTy (logAcc, ctx) =
     match lTy, rTy with
