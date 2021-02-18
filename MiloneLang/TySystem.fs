@@ -286,6 +286,11 @@ type TyContext =
     Tys: AssocMap<TySerial, TyDef>
     TyLevels: AssocMap<TySerial, Level> }
 
+let private tyContextGetLevel tySerial (ctx: TyContext): Level =
+  ctx.TyLevels
+  |> TMap.tryFind tySerial
+  |> Option.defaultValue 0
+
 let private addTyDef tySerial tyDef (ctx: TyContext) =
   { ctx with
       Tys = ctx.Tys |> TMap.add tySerial tyDef }
@@ -308,19 +313,13 @@ let typingBind (ctx: TyContext) tySerial ty =
 
   // Reduce level of meta tys in the referent ty to the meta ty's level at most.
   let tyLevels =
-    let level =
-      ctx.TyLevels
-      |> TMap.tryFind tySerial
-      |> Option.defaultValue 0
+    let level = tyContextGetLevel tySerial ctx
 
     ty
     |> tyCollectFreeVars
     |> List.fold
          (fun tyLevels tySerial ->
-           let currentLevel =
-             ctx.TyLevels
-             |> TMap.tryFind tySerial
-             |> Option.defaultValue 0
+           let currentLevel = tyContextGetLevel tySerial ctx
 
            if currentLevel <= level then
              // Already non-deep enough.
@@ -448,7 +447,8 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
         Serial = serial
         TyLevels = tyLevels }
 
-  let expandedTy = tyExpandSynonym useTyArgs defTySerials bodyTy
+  let expandedTy =
+    tyExpandSynonym useTyArgs defTySerials bodyTy
 
   expandedTy, instantiatedTy, ctx
 

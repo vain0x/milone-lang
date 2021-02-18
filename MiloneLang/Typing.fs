@@ -65,6 +65,11 @@ let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
+let private getTyLevel tySerial (ctx: TyCtx): Level =
+  ctx.TyLevels
+  |> TMap.tryFind tySerial
+  |> Option.defaultValue 0
+
 let private isNewtypeVariant (ctx: TyCtx) variantSerial =
   match ctx
         |> findTy
@@ -185,10 +190,7 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
     | Some (UniversalTyDef _) -> None
 
     | _ ->
-        let level =
-          ctx.TyLevels
-          |> TMap.tryFind tySerial
-          |> Option.defaultValue 0
+        let level = getTyLevel tySerial ctx
         // Degenerate unless quantified.
         if level < 1000000000 then
           Some tyUnit
@@ -262,11 +264,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
   match funDef.Ty with
   | TyScheme ([], funTy) ->
       let isOwned tySerial =
-        let level =
-          ctx.TyLevels
-          |> TMap.tryFind tySerial
-          |> Option.defaultValue 0
-
+        let level = getTyLevel tySerial ctx
         level > outerLevel
 
       let funTy = substTy ctx funTy
