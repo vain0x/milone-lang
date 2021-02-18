@@ -284,17 +284,33 @@ type TyContext =
   { Serial: Serial
     Level: Level
     Tys: AssocMap<TySerial, TyDef>
-    TyLevels: AssocMap<TySerial, Level> }
+    TyLevels: AssocMap<TySerial, Level>
+
+    /// Binding of meta types made by unification.
+    /// Levels default to the current level.
+    Binding: AssocMap<TySerial, Ty>
+
+    /// Changes of meta type levels by unification.
+    LevelChanges: AssocMap<TySerial, Level> }
+
+let emptyTyLevels: AssocMap<TySerial, Level> = TMap.empty compare
+let emptyBindings: AssocMap<TySerial, Ty> = TMap.empty compare
 
 let private tyContextGetLevel tySerial (ctx: TyContext): Level =
-  ctx.TyLevels
-  |> TMap.tryFind tySerial
-  |> Option.defaultValue 0
+  match ctx.LevelChanges |> TMap.tryFind tySerial with
+  | Some level -> level
+  | _ ->
+      ctx.TyLevels
+      |> TMap.tryFind tySerial
+      |> Option.defaultValue 0
 
 let private tyContextExpandMeta tySerial (ctx: TyContext): Ty option =
-  match ctx.Tys |> TMap.tryFind tySerial with
-  | Some (MetaTyDef ty) -> Some ty
-  | _ -> None
+  match ctx.Binding |> TMap.tryFind tySerial with
+  | (Some _) as it -> it
+  | _ ->
+      match ctx.Tys |> TMap.tryFind tySerial with
+      | Some (MetaTyDef ty) -> Some ty
+      | _ -> None
 
 // -----------------------------------------------
 // Type inference algorithm
@@ -313,28 +329,28 @@ let typingBind (ctx: TyContext) tySerial ty =
   assert (isMetaOf tySerial ty |> not)
 
   // Reduce level of meta tys in the referent ty to the meta ty's level at most.
-  let tyLevels =
+  let levelChanges =
     let level = tyContextGetLevel tySerial ctx
 
     ty
     |> tyCollectFreeVars
     |> List.fold
-         (fun tyLevels tySerial ->
+         (fun levelChanges tySerial ->
            let currentLevel = tyContextGetLevel tySerial ctx
 
            if currentLevel <= level then
              // Already non-deep enough.
-             tyLevels
+             levelChanges
            else
              // Prevent this meta ty from getting generalized until level of the bound meta ty.
-             tyLevels |> TMap.add tySerial level)
-         ctx.TyLevels
+             levelChanges |> TMap.add tySerial level)
+         ctx.LevelChanges
 
   { ctx with
-      TyLevels = tyLevels
-      Tys = ctx.Tys |> TMap.add tySerial (MetaTyDef ty) }
+      Binding = ctx.Binding |> TMap.add tySerial ty
+      LevelChanges = levelChanges }
 
-let typingSubst (ctx: TyContext) ty: Ty =
+let private typingSubst (ctx: TyContext) ty: Ty =
   tySubst (fun tySerial -> tyContextExpandMeta tySerial ctx) ty
 
 let doInstantiateTyScheme
@@ -433,13 +449,13 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
   assert (List.length defTySerials = List.length useTyArgs)
 
   let instantiatedTy, ctx =
-    let serial, tyLevels, bodyTy, _ =
-      doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels defTySerials bodyTy loc
+    let serial, levelChanges, bodyTy, _ =
+      doInstantiateTyScheme ctx.Serial ctx.Level ctx.LevelChanges defTySerials bodyTy loc
 
     bodyTy,
     { ctx with
         Serial = serial
-        TyLevels = tyLevels }
+        LevelChanges = levelChanges }
 
   let expandedTy =
     tyExpandSynonym useTyArgs defTySerials bodyTy

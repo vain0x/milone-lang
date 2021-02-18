@@ -136,17 +136,40 @@ let private validateLit ctx lit loc =
 // Type inference algorithm
 // -----------------------------------------------
 
+let private emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
+
 let private toTyContext (ctx: TyCtx): TyContext =
   { Serial = ctx.Serial
     Level = ctx.Level
     Tys = ctx.Tys
-    TyLevels = ctx.TyLevels }
+    TyLevels = ctx.TyLevels
+    Binding = emptyBinding
+    LevelChanges = emptyTyLevels }
 
 let private withTyContext (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
+  let tys, tyLevels =
+    TMap.fold
+      (fun (tys, tyLevels) tySerial ty ->
+        let tys = tys |> TMap.add tySerial (MetaTyDef ty)
+        let tyLevels = tyLevels |> TMap.add tySerial ctx.Level
+        tys, tyLevels)
+      (ctx.Tys, ctx.TyLevels)
+      tyCtx.Binding
+
+  let tyLevels =
+    TMap.fold
+      (fun tyLevels tySerial level ->
+        if level = 0 then
+          tyLevels |> TMap.remove tySerial |> snd
+        else
+          tyLevels |> TMap.add tySerial level)
+      tyLevels
+      tyCtx.LevelChanges
+
   { ctx with
       Serial = tyCtx.Serial
-      Tys = tyCtx.Tys
-      TyLevels = tyCtx.TyLevels
+      Tys = tys
+      TyLevels = tyLevels
       Logs = logAcc }
 
 let private addTraitBounds traits (ctx: TyCtx) =

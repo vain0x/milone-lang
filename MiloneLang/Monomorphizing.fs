@@ -106,24 +106,22 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
 let private toTyContext (monoCtx: MonoCtx): TyContext =
   { Serial = monoCtx.Serial
     Tys = monoCtx.Tys
+    Binding = emptyBindings
 
     // Not used.
     Level = 0
-    TyLevels = TMap.empty compare }
-
-let private withTyContext (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
-  { monoCtx with
-      Serial = tyCtx.Serial
-      Logs = logAcc
-      Tys = tyCtx.Tys }
+    TyLevels = emptyTyLevels
+    LevelChanges = emptyTyLevels }
 
 let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
   let tyCtx = toTyContext monoCtx
 
-  let logAcc, tyCtx =
+  // NOTE: Unification may fail due to auto boxing.
+  //       This is not fatal problem since all type errors are already handled in typing phase.
+  let _logAcc, tyCtx =
     typingUnify monoCtx.Logs tyCtx lTy rTy loc
 
-  monoCtx |> withTyContext tyCtx logAcc
+  tyCtx.Binding
 
 let private markAsSomethingHappened (ctx: MonoCtx) =
   if ctx.SomethingHappened then
@@ -268,16 +266,20 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
         match tryFindMonomorphizedFun ctx genericFunSerial useSiteTy with
         | Some _ -> go next arity genericFunTy useSiteTys ctx
         | None ->
-            // Within the context where genericFunTy and useSiteTy are unified
-            // resolve all types in args and body.
-            let extendedCtx = unifyTy ctx genericFunTy useSiteTy loc
+            // Unify genericFunTy and useSiteTy to build a mapping
+            // from type variable to use-site type.
+            let binding = unifyTy ctx genericFunTy useSiteTy loc
 
-            let substMeta tySerial =
-              match extendedCtx.Tys |> TMap.tryFind tySerial with
-              | Some (MetaTyDef ty) -> Some ty
-              | _ -> Some tyUnit
+            let substOrDegenerateTy ty =
+              let substMeta tySerial =
+                match binding |> TMap.tryFind tySerial with
+                | (Some _) as it -> it
+                | None ->
+                    match ctx.Tys |> TMap.tryFind tySerial with
+                    | Some (MetaTyDef ty) -> Some ty
+                    | _ -> Some tyUnit
 
-            let substOrDegenerateTy ty = tySubst substMeta ty
+              tySubst substMeta ty
 
             let monoArgs =
               args |> List.map (patMap substOrDegenerateTy id)
