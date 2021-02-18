@@ -279,7 +279,7 @@ let tyDisplay getTyName ty =
 // -----------------------------------------------
 
 /// Type inference context.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TyContext =
   { Serial: Serial
     Level: Level
@@ -296,19 +296,37 @@ type TyContext =
 let emptyTyLevels: AssocMap<TySerial, Level> = TMap.empty compare
 let emptyBindings: AssocMap<TySerial, Ty> = TMap.empty compare
 
-let private tyContextGetLevel tySerial (ctx: TyContext): Level =
-  match ctx.LevelChanges |> TMap.tryFind tySerial with
+let private tyContextUnify lTy rTy loc (logAcc: _ list, ctx: TyContext): _ list * TyContext =
+  let unifyCtx: UnifyCtx =
+    { Serial = ctx.Serial
+      Binding = ctx.Binding
+      LevelChanges = ctx.LevelChanges
+      LogAcc = logAcc }
+
+  let unifyCtx: UnifyCtx =
+    typingUnify ctx.Level ctx.Tys ctx.TyLevels lTy rTy loc unifyCtx
+
+  let ctx: TyContext =
+    { ctx with
+        Serial = unifyCtx.Serial
+        Binding = unifyCtx.Binding
+        LevelChanges = unifyCtx.LevelChanges }
+
+  unifyCtx.LogAcc, ctx
+
+let private tyContextGetLevel tyLevels levelChanges tySerial: Level =
+  match levelChanges |> TMap.tryFind tySerial with
   | Some level -> level
   | _ ->
-      ctx.TyLevels
+      tyLevels
       |> TMap.tryFind tySerial
       |> Option.defaultValue 0
 
-let private tyContextExpandMeta tySerial (ctx: TyContext): Ty option =
-  match ctx.Binding |> TMap.tryFind tySerial with
+let private tyContextExpandMeta tys binding tySerial: Ty option =
+  match binding |> TMap.tryFind tySerial with
   | (Some _) as it -> it
   | _ ->
-      match ctx.Tys |> TMap.tryFind tySerial with
+      match tys |> TMap.tryFind tySerial with
       | Some (MetaTyDef ty) -> Some ty
       | _ -> None
 
@@ -316,27 +334,38 @@ let private tyContextExpandMeta tySerial (ctx: TyContext): Ty option =
 // Type inference algorithm
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type UnifyCtx =
+  { Serial: int
+    Binding: AssocMap<TySerial, Ty>
+    LevelChanges: AssocMap<TySerial, Level>
+    LogAcc: (Log * Loc) list }
+
 let private isMetaOf tySerial ty =
   match ty with
   | Ty (MetaTk (s, _), _) -> s = tySerial
   | _ -> false
 
 /// Adds type-var/type binding.
-let typingBind (ctx: TyContext) tySerial ty =
-  let ty = typingSubst ctx ty
+let private typingBind tys tyLevels binding levelChanges tySerial ty =
+  let ty = typingSubst tys binding ty
 
   // Self-binding never occurs due to occurrence check.
   assert (isMetaOf tySerial ty |> not)
 
+  let binding = binding |> TMap.add tySerial ty
+
   // Reduce level of meta tys in the referent ty to the meta ty's level at most.
   let levelChanges =
-    let level = tyContextGetLevel tySerial ctx
+    let level =
+      tyContextGetLevel tyLevels levelChanges tySerial
 
     ty
     |> tyCollectFreeVars
     |> List.fold
          (fun levelChanges tySerial ->
-           let currentLevel = tyContextGetLevel tySerial ctx
+           let currentLevel =
+             tyContextGetLevel tyLevels levelChanges tySerial
 
            if currentLevel <= level then
              // Already non-deep enough.
@@ -344,14 +373,12 @@ let typingBind (ctx: TyContext) tySerial ty =
            else
              // Prevent this meta ty from getting generalized until level of the bound meta ty.
              levelChanges |> TMap.add tySerial level)
-         ctx.LevelChanges
+         levelChanges
 
-  { ctx with
-      Binding = ctx.Binding |> TMap.add tySerial ty
-      LevelChanges = levelChanges }
+  binding, levelChanges
 
-let private typingSubst (ctx: TyContext) ty: Ty =
-  tySubst (fun tySerial -> tyContextExpandMeta tySerial ctx) ty
+let private typingSubst tys binding ty: Ty =
+  tySubst (tyContextExpandMeta tys binding) ty
 
 let doInstantiateTyScheme
   (serial: int)
@@ -422,26 +449,35 @@ let typingExpandSynonyms (ctx: TyContext) ty =
 [<NoEquality; NoComparison>]
 type private MetaTyUnifyResult =
   | DidExpand of Ty
-  | DidBind of TyContext
+  | DidBind of UnifyCtx
   | DidRecurse
 
-let private unifyMetaTy tySerial otherTy (ctx: TyContext) =
-  match tyContextExpandMeta tySerial ctx with
+let private unifyMetaTy tys tyLevels tySerial otherTy (ctx: UnifyCtx) =
+  match tyContextExpandMeta tys ctx.Binding tySerial with
   | Some ty -> DidExpand ty
 
   | _ ->
-      match typingSubst ctx otherTy with
+      match typingSubst tys ctx.Binding otherTy with
       | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> DidBind ctx
 
       | otherTy when tyIsFreeIn otherTy tySerial |> not ->
           // ^ Occurrence check.
           DidRecurse
 
-      | otherTy -> DidBind(typingBind ctx tySerial otherTy)
+      | otherTy ->
+          let binding, levelChanges =
+            typingBind tys tyLevels ctx.Binding ctx.LevelChanges tySerial otherTy
 
-let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
+          let ctx =
+            { ctx with
+                Binding = binding
+                LevelChanges = levelChanges }
+
+          DidBind ctx
+
+let private unifySynonymTy level tys tySerial useTyArgs loc (ctx: UnifyCtx) =
   let defTySerials, bodyTy =
-    match ctx.Tys |> TMap.tryFind tySerial with
+    match tys |> TMap.tryFind tySerial with
     | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
     | _ -> failwith "NEVER"
 
@@ -450,7 +486,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
 
   let instantiatedTy, ctx =
     let serial, levelChanges, bodyTy, _ =
-      doInstantiateTyScheme ctx.Serial ctx.Level ctx.LevelChanges defTySerials bodyTy loc
+      doInstantiateTyScheme ctx.Serial level ctx.LevelChanges defTySerials bodyTy loc
 
     bodyTy,
     { ctx with
@@ -464,53 +500,62 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
 
 /// Solves type equation `lty = rty` as possible
 /// to add type-var/type bindings.
-let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
-  let addLog kind lTy rTy logAcc ctx =
-    (Log.TyUnify(kind, lTy, rTy), loc) :: logAcc, ctx
+let typingUnify level tys tyLevels (lty: Ty) (rty: Ty) (loc: Loc) (ctx: UnifyCtx) =
+  let addLog kind lTy rTy (ctx: UnifyCtx) =
+    { ctx with
+        LogAcc = (Log.TyUnify(kind, lTy, rTy), loc) :: ctx.LogAcc }
 
-  let rec go lTy rTy (logAcc, ctx) =
+  let rec go lTy rTy (ctx: UnifyCtx) =
     match lTy, rTy with
-    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> logAcc, ctx
+    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> ctx
 
     | Ty (MetaTk (lSerial, _), _), _ ->
-        match unifyMetaTy lSerial rTy ctx with
-        | DidExpand ty -> go ty rTy (logAcc, ctx)
-        | DidBind ctx -> logAcc, ctx
-        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
+        match unifyMetaTy tys tyLevels lSerial rTy ctx with
+        | DidExpand ty -> go ty rTy ctx
+        | DidBind ctx -> ctx
+        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy ctx
 
     | _, Ty (MetaTk (rSerial, _), _) ->
-        match unifyMetaTy rSerial lTy ctx with
-        | DidExpand ty -> go lTy ty (logAcc, ctx)
-        | DidBind ctx -> logAcc, ctx
-        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
+        match unifyMetaTy tys tyLevels rSerial lTy ctx with
+        | DidExpand ty -> go lTy ty ctx
+        | DidBind ctx -> ctx
+        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy ctx
 
     | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
-        let rec gogo lTyArgs rTyArgs (logAcc, ctx) =
+        let rec gogo lTyArgs rTyArgs (ctx: UnifyCtx) =
           match lTyArgs, rTyArgs with
-          | [], [] -> logAcc, ctx
+          | [], [] -> ctx
 
-          | l :: lTyArgs, r :: rTyArgs -> (logAcc, ctx) |> go l r |> gogo lTyArgs rTyArgs
+          | l :: lTyArgs, r :: rTyArgs -> ctx |> go l r |> gogo lTyArgs rTyArgs
 
-          | _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
+          | _ -> addLog TyUnifyLog.Mismatch lTy rTy ctx
 
-        gogo lTyArgs rTyArgs (logAcc, ctx)
+        gogo lTyArgs rTyArgs ctx
 
     | Ty (SynonymTk tySerial, tyArgs), _ ->
-        let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
-        (logAcc, ctx) |> go ty1 ty2 |> go ty1 rTy
+        let ty1, ty2, ctx =
+          unifySynonymTy level tys tySerial tyArgs loc ctx
+
+        ctx |> go ty1 ty2 |> go ty1 rTy
 
     | _, Ty (SynonymTk tySerial, tyArgs) ->
-        let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
-        (logAcc, ctx) |> go ty1 ty2 |> go ty1 lTy
+        let ty1, ty2, ctx =
+          unifySynonymTy level tys tySerial tyArgs loc ctx
 
-    | Ty _, _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
+        ctx |> go ty1 ty2 |> go ty1 lTy
 
-  go lty rty (logAcc, ctx)
+    | Ty _, _ -> addLog TyUnifyLog.Mismatch lTy rTy ctx
+
+  go lty rty ctx
 
 let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
   let theTrait =
     theTrait
-    |> traitMapTys (fun ty -> ty |> typingSubst ctx |> typingExpandSynonyms ctx)
+    |> traitMapTys
+         (fun ty ->
+           ty
+           |> typingSubst ctx.Tys ctx.Binding
+           |> typingExpandSynonyms ctx)
 
   /// integer, bool, char, or string
   let expectBasic ty (logAcc, ctx) =
@@ -536,7 +581,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
       | _ ->
           // Coerce to int by default.
-          typingUnify logAcc ctx ty tyInt loc
+          tyContextUnify ty tyInt loc (logAcc, ctx)
 
   | EqualTrait ty -> (logAcc, ctx) |> expectBasic ty
 
@@ -547,12 +592,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | Ty (ErrorTk _, _) -> [], ctx
 
       | Ty (StrTk, []) ->
-          let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
-
-          let logAcc, ctx =
-            typingUnify logAcc ctx resultTy tyChar loc
-
-          logAcc, ctx
+          (logAcc, ctx)
+          |> tyContextUnify rTy tyInt loc
+          |> tyContextUnify resultTy tyChar loc
 
       | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
 
@@ -563,7 +605,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
       | _ ->
           // Coerce to int by default.
-          typingUnify logAcc ctx ty tyInt loc
+          tyContextUnify ty tyInt loc (logAcc, ctx)
 
   | IsNumberTrait ty ->
       match ty with
@@ -573,7 +615,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
 
       | _ ->
           // Coerce to int by default.
-          typingUnify logAcc ctx ty tyInt loc
+          tyContextUnify ty tyInt loc (logAcc, ctx)
 
   | ToCharTrait ty ->
       match ty with

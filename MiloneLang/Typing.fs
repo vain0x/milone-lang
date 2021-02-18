@@ -223,10 +223,41 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
   tySubst substMeta ty
 
 let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
-  let logAcc, tyCtx =
-    typingUnify ctx.Logs (toTyContext ctx) lty rty loc
+  let unifyCtx: UnifyCtx =
+    { Serial = ctx.Serial
+      Binding = emptyBinding
+      LevelChanges = emptyTyLevels
+      LogAcc = ctx.Logs }
 
-  withTyContext ctx logAcc tyCtx
+  let unifyCtx: UnifyCtx =
+    typingUnify ctx.Level ctx.Tys ctx.TyLevels lty rty loc unifyCtx
+
+  // FIXME: dup with withTyContext
+  let tys, tyLevels =
+    TMap.fold
+      (fun (tys, tyLevels) tySerial ty ->
+        let tys = tys |> TMap.add tySerial (MetaTyDef ty)
+        let tyLevels = tyLevels |> TMap.add tySerial ctx.Level
+        tys, tyLevels)
+      (ctx.Tys, ctx.TyLevels)
+      unifyCtx.Binding
+
+  let tyLevels =
+    TMap.fold
+      (fun tyLevels tySerial level ->
+        if level = 0 then
+          tyLevels |> TMap.remove tySerial |> snd
+        else
+          tyLevels |> TMap.add tySerial level)
+      tyLevels
+      unifyCtx.LevelChanges
+  // /dup
+
+  { ctx with
+      Serial = unifyCtx.Serial
+      Tys = tys
+      TyLevels = tyLevels
+      Logs = unifyCtx.LogAcc }
 
 let private unifyVarTy varSerial tyOpt loc ctx =
   let varTy, ctx =

@@ -103,25 +103,22 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
     SomethingHappened = true
     InfiniteLoopDetector = 0 }
 
-let private toTyContext (monoCtx: MonoCtx): TyContext =
-  { Serial = monoCtx.Serial
-    Tys = monoCtx.Tys
-    Binding = emptyBindings
-
-    // Not used.
-    Level = 0
-    TyLevels = emptyTyLevels
-    LevelChanges = emptyTyLevels }
-
 let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
-  let tyCtx = toTyContext monoCtx
+  // Levels are meaningless in this phase.
+  let level: Level = 0
+
+  let unifyCtx: UnifyCtx =
+    { Serial = monoCtx.Serial
+      Binding = emptyBindings
+      LevelChanges = emptyTyLevels
+      LogAcc = monoCtx.Logs }
 
   // NOTE: Unification may fail due to auto boxing.
   //       This is not fatal problem since all type errors are already handled in typing phase.
-  let _logAcc, tyCtx =
-    typingUnify monoCtx.Logs tyCtx lTy rTy loc
+  let unifyCtx: UnifyCtx =
+    typingUnify level monoCtx.Tys emptyTyLevels lTy rTy loc unifyCtx
 
-  tyCtx.Binding
+  unifyCtx.Binding
 
 let private markAsSomethingHappened (ctx: MonoCtx) =
   if ctx.SomethingHappened then
