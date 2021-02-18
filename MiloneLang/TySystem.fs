@@ -291,6 +291,11 @@ let private tyContextGetLevel tySerial (ctx: TyContext): Level =
   |> TMap.tryFind tySerial
   |> Option.defaultValue 0
 
+let private tyContextExpandMeta tySerial (ctx: TyContext): Ty option =
+  match ctx.Tys |> TMap.tryFind tySerial with
+  | Some (MetaTyDef ty) -> Some ty
+  | _ -> None
+
 let private addTyDef tySerial tyDef (ctx: TyContext) =
   { ctx with
       Tys = ctx.Tys |> TMap.add tySerial tyDef }
@@ -333,15 +338,8 @@ let typingBind (ctx: TyContext) tySerial ty =
 
   { ctx with TyLevels = tyLevels }
 
-/// Substitutes occurrences of already-inferred type vars
-/// with their results.
 let typingSubst (ctx: TyContext) ty: Ty =
-  let substMeta tySerial =
-    match ctx.Tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef ty) -> Some ty
-    | _ -> None
-
-  tySubst substMeta ty
+  tySubst (fun tySerial -> tyContextExpandMeta tySerial ctx) ty
 
 let doInstantiateTyScheme
   (serial: int)
@@ -416,8 +414,8 @@ type private MetaTyUnifyResult =
   | DidRecurse
 
 let private unifyMetaTy tySerial otherTy (ctx: TyContext) =
-  match ctx.Tys |> TMap.tryFind tySerial with
-  | Some (MetaTyDef ty) -> DidExpand ty
+  match tyContextExpandMeta tySerial ctx with
+  | Some ty -> DidExpand ty
 
   | _ ->
       match typingSubst ctx otherTy with
