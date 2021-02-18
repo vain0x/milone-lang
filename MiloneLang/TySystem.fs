@@ -378,10 +378,7 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
     | assignment, [], [] -> assignment
     | _ -> failwith "NEVER"
 
-  let substMeta tySerial =
-    assignment |> assocTryFind compare tySerial
-
-  tySubst substMeta bodyTy
+  tyAssign assignment bodyTy
 
 let tyExpandSynonyms expand ty =
   let rec go ty =

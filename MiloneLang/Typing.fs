@@ -249,11 +249,10 @@ let private instantiateTySpec loc (TySpec (polyTy, traits), ctx: TyCtx) =
 
   // Replace type variables also in trait bounds.
   let traits =
-    let substMeta tySerial =
-      assocTryFind compare tySerial assignment
+    let substMeta = tyAssign assignment
 
     traits
-    |> List.map (fun theTrait -> theTrait |> traitMapTys (tySubst substMeta), loc)
+    |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
 
   polyTy, traits, ctx
 
