@@ -296,10 +296,6 @@ let private tyContextExpandMeta tySerial (ctx: TyContext): Ty option =
   | Some (MetaTyDef ty) -> Some ty
   | _ -> None
 
-let private addTyDef tySerial tyDef (ctx: TyContext) =
-  { ctx with
-      Tys = ctx.Tys |> TMap.add tySerial tyDef }
-
 // -----------------------------------------------
 // Type inference algorithm
 // -----------------------------------------------
@@ -334,9 +330,9 @@ let typingBind (ctx: TyContext) tySerial ty =
              tyLevels |> TMap.add tySerial level)
          ctx.TyLevels
 
-  let ctx = ctx |> addTyDef tySerial (MetaTyDef ty)
-
-  { ctx with TyLevels = tyLevels }
+  { ctx with
+      TyLevels = tyLevels
+      Tys = ctx.Tys |> TMap.add tySerial (MetaTyDef ty) }
 
 let typingSubst (ctx: TyContext) ty: Ty =
   tySubst (fun tySerial -> tyContextExpandMeta tySerial ctx) ty
