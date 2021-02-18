@@ -451,16 +451,7 @@ let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
         Serial = serial
         TyLevels = tyLevels }
 
-  let expandedTy =
-    let assignment =
-      match listTryZip defTySerials useTyArgs with
-      | assignment, [], [] -> assignment
-      | _ -> failwith "NEVER"
-
-    let substMeta tySerial =
-      assignment |> assocTryFind compare tySerial
-
-    tySubst substMeta bodyTy
+  let expandedTy = tyExpandSynonym useTyArgs defTySerials bodyTy
 
   expandedTy, instantiatedTy, ctx
 
