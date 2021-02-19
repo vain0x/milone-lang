@@ -222,6 +222,9 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
 
   tySubst substMeta ty
 
+let private expandSynonyms (ctx: TyCtx) ty: Ty =
+  tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+
 let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
   let unifyCtx: UnifyCtx =
     { Serial = ctx.Serial
@@ -354,12 +357,10 @@ let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
           ctx.Funs
           |> TMap.add funSerial { funDef with Abi = CAbi } }
 
-
   let nativeFunTy =
     let (TyScheme (_, ty)) = funDef.Ty
 
-    let ty =
-      typingExpandSynonyms (toTyContext ctx) ty
+    let ty = expandSynonyms ctx ty
 
     let _, paramTys, resultTy = tyToArgList ty
     tyNativeFun paramTys resultTy
@@ -1280,7 +1281,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let substOrDegenerate ty =
     ty
     |> substOrDegenerateTy ctx
-    |> typingExpandSynonyms (toTyContext ctx)
+    |> expandSynonyms ctx
 
   let expr = exprMap substOrDegenerate id expr
 
