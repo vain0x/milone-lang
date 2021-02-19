@@ -431,20 +431,8 @@ let tyExpandSynonyms expand ty =
 
   go ty
 
-let typingExpandSynonyms (ctx: TyContext) ty =
-  let rec go ty =
-    match ty with
-    | Ty (SynonymTk tySerial, useTyArgs) ->
-        match ctx.Tys |> TMap.tryFind tySerial with
-        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-            tyExpandSynonym useTyArgs defTySerials bodyTy
-            |> go
-
-        | _ -> Ty(SynonymTk tySerial, useTyArgs)
-
-    | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
-
-  go ty
+let private typingExpandSynonyms tys ty =
+  tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty
 
 [<NoEquality; NoComparison>]
 type private MetaTyUnifyResult =
@@ -555,7 +543,7 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
          (fun ty ->
            ty
            |> typingSubst ctx.Tys ctx.Binding
-           |> typingExpandSynonyms ctx)
+           |> typingExpandSynonyms ctx.Tys)
 
   /// integer, bool, char, or string
   let expectBasic ty (logAcc, ctx) =
