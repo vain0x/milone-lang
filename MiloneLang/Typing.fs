@@ -140,45 +140,12 @@ let private validateLit ctx lit loc =
 
 // And meta type resolution by substitution or degeneration.
 
-let private toUnifyCtx (ctx: TyCtx): UnifyCtx =
-  { Serial = ctx.Serial
-    Binding = emptyBinding
-    LevelChanges = emptyTyLevels
-    LogAcc = ctx.Logs }
+let private expandMeta (ctx: TyCtx) tySerial: Ty option =
+  match ctx.Tys |> TMap.tryFind tySerial with
+  | Some (MetaTyDef ty) -> Some ty
+  | _ -> None
 
-let private withUnifyCtx (ctx: TyCtx) (unifyCtx: UnifyCtx): TyCtx =
-  let tys, tyLevels =
-    TMap.fold
-      (fun (tys, tyLevels) tySerial ty ->
-        let tys = tys |> TMap.add tySerial (MetaTyDef ty)
-        let tyLevels = tyLevels |> TMap.add tySerial ctx.Level
-        tys, tyLevels)
-      (ctx.Tys, ctx.TyLevels)
-      unifyCtx.Binding
-
-  let tyLevels =
-    TMap.fold
-      (fun tyLevels tySerial level ->
-        if level = 0 then
-          tyLevels |> TMap.remove tySerial |> snd
-        else
-          tyLevels |> TMap.add tySerial level)
-      tyLevels
-      unifyCtx.LevelChanges
-
-  { ctx with
-      Serial = unifyCtx.Serial
-      Tys = tys
-      TyLevels = tyLevels
-      Logs = unifyCtx.LogAcc }
-
-let private substTy (ctx: TyCtx) ty: Ty =
-  let substMeta tySerial =
-    match ctx.Tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef ty) -> Some ty
-    | _ -> None
-
-  tySubst substMeta ty
+let private substTy (ctx: TyCtx) ty: Ty = tySubst (expandMeta ctx) ty
 
 /// Substitutes bound meta tys in a ty.
 /// Unbound meta tys are degenerated, i.e. replaced with unit.
@@ -202,11 +169,63 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
 let private expandSynonyms (ctx: TyCtx) ty: Ty =
   tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
 
-let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
-  ctx
-  |> toUnifyCtx
-  |> typingUnify ctx.Level ctx.Tys ctx.TyLevels lty rty loc
-  |> withUnifyCtx ctx
+let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty): TyCtx =
+  let levelUp (ctx: TyCtx) tySerial ty =
+    let level = getTyLevel tySerial ctx
+
+    ty
+    |> tyCollectFreeVars
+    |> List.fold
+         (fun tyLevels tySerial ->
+           if getTyLevel tySerial ctx <= level then
+             // Already non-deep enough.
+             tyLevels
+           else
+             // Prevent this meta ty from getting generalized until level of the bound meta ty.
+             tyLevels |> TMap.add tySerial level)
+         ctx.TyLevels
+
+  let rec go lTy rTy loc (ctx: TyCtx) =
+    match unifyNext lTy rTy loc with
+    | UnifyOk -> ctx
+
+    | UnifyOkWithStack stack -> List.fold (fun ctx (l, r) -> go l r loc ctx) ctx stack
+
+    | UnifyError (log, loc) -> addLog ctx log loc
+
+    | UnifyExpandMeta (tySerial, otherTy) ->
+        match expandMeta ctx tySerial with
+        | Some ty -> go ty otherTy loc ctx
+
+        | None ->
+            let otherTy = substTy ctx otherTy
+
+            match unifyAfterExpandMeta lTy rTy tySerial otherTy loc with
+            | UnifyAfterExpandMetaResult.OkNoBind -> ctx
+
+            | UnifyAfterExpandMetaResult.OkBind ->
+                { ctx with
+                    Tys = ctx.Tys |> TMap.add tySerial (MetaTyDef otherTy)
+                    TyLevels = levelUp ctx tySerial otherTy }
+
+            | UnifyAfterExpandMetaResult.Error (log, loc) -> addLog ctx log loc
+
+    | UnifyExpandSynonym (tySerial, useTyArgs, otherTy) ->
+        let expandedTy =
+          // Find def.
+          let defTySerials, bodyTy =
+            match ctx.Tys |> TMap.tryFind tySerial with
+            | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
+            | _ -> failwith "NEVER"
+
+          // Checked in NameRes.
+          assert (List.length defTySerials = List.length useTyArgs)
+
+          tyExpandSynonym useTyArgs defTySerials bodyTy
+
+        go expandedTy otherTy loc ctx
+
+  go lTy rTy loc ctx
 
 let private unifyVarTy varSerial tyOpt loc ctx =
   let varTy, ctx =
@@ -294,16 +313,14 @@ let private addTraitBounds traits (ctx: TyCtx) =
   { ctx with
       TraitBounds = List.append traits ctx.TraitBounds }
 
-let private doResolveTraitBound (tyCtx: TyCtx) theTrait loc (ctx: UnifyCtx): UnifyCtx =
-  let unify lTy rTy loc ctx: UnifyCtx =
-    typingUnify tyCtx.Level tyCtx.Tys tyCtx.TyLevels lTy rTy loc ctx
+let private doResolveTraitBound (ctx: TyCtx) theTrait loc: TyCtx =
+  let unify lTy rTy loc ctx: TyCtx = unifyTy ctx loc lTy rTy
 
-  let addBoundError (ctx: UnifyCtx) =
-    { ctx with
-        LogAcc = (Log.TyBoundError theTrait, loc) :: ctx.LogAcc }
+  let addBoundError (ctx: TyCtx): TyCtx =
+    addLog ctx (Log.TyBoundError theTrait) loc
 
   /// integer, bool, char, or string
-  let expectBasic ty (ctx: UnifyCtx) =
+  let expectBasic ty (ctx: TyCtx) =
     match ty with
     | Ty (ErrorTk _, _)
     | Ty (IntTk _, [])
@@ -406,22 +423,15 @@ let private resolveTraitBounds (ctx: TyCtx) =
   let traits = ctx.TraitBounds |> List.rev
   let ctx = { ctx with TraitBounds = [] }
 
-  let unifyCtx = toUnifyCtx ctx
+  let subst (ctx: TyCtx) ty =
+    ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
 
-  let unifyCtx =
-    let subst (unifyCtx: UnifyCtx) ty =
-      ty
-      |> typingSubst ctx.Tys unifyCtx.Binding
-      |> typingExpandSynonyms ctx.Tys
-
-    traits
-    |> List.fold
-         (fun unifyCtx (theTrait, loc) ->
-           let theTrait = traitMapTys (subst unifyCtx) theTrait
-           doResolveTraitBound ctx theTrait loc unifyCtx)
-         unifyCtx
-
-  withUnifyCtx ctx unifyCtx
+  traits
+  |> List.fold
+       (fun ctx (theTrait, loc) ->
+         let theTrait = traitMapTys (subst ctx) theTrait
+         doResolveTraitBound ctx theTrait loc)
+       ctx
 
 // -----------------------------------------------
 // Others

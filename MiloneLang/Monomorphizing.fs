@@ -104,21 +104,43 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
     InfiniteLoopDetector = 0 }
 
 let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
-  // Levels are meaningless in this phase.
-  let level: Level = 0
+  let ctx = monoCtx
 
-  let unifyCtx: UnifyCtx =
-    { Serial = monoCtx.Serial
-      Binding = emptyBinding
-      LevelChanges = emptyTyLevels
-      LogAcc = monoCtx.Logs }
+  let expandMeta binding tySerial =
+    match binding |> TMap.tryFind tySerial with
+    | (Some _) as it -> it
+    | _ ->
+        match ctx.Tys |> TMap.tryFind tySerial with
+        | Some (MetaTyDef ty) -> Some ty
+        | _ -> None
 
-  // NOTE: Unification may fail due to auto boxing.
-  //       This is not fatal problem since all type errors are already handled in typing phase.
-  let unifyCtx: UnifyCtx =
-    typingUnify level monoCtx.Tys emptyTyLevels lTy rTy loc unifyCtx
+  let substTy binding ty = tySubst (expandMeta binding) ty
 
-  unifyCtx.Binding
+  let rec go lTy rTy loc binding =
+    match unifyNext lTy rTy loc with
+    | UnifyOk
+    | UnifyError _ ->
+        // NOTE: Unification may fail due to auto boxing.
+        //       This is not fatal problem since all type errors are already handled in typing phase.
+        binding
+
+    | UnifyOkWithStack stack -> List.fold (fun binding (l, r) -> go l r loc binding) binding stack
+
+    | UnifyExpandMeta (tySerial, otherTy) ->
+        match expandMeta binding tySerial with
+        | Some ty -> go ty otherTy loc binding
+
+        | None ->
+            match unifyAfterExpandMeta lTy rTy tySerial (substTy binding otherTy) loc with
+            | UnifyAfterExpandMetaResult.OkNoBind -> binding
+
+            | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
+
+            | UnifyAfterExpandMetaResult.Error _ -> binding
+
+    | UnifyExpandSynonym _ -> failwith "NEVER: Synonyms are resolved in Typing."
+
+  go lTy rTy loc emptyBinding
 
 let private markAsSomethingHappened (ctx: MonoCtx) =
   if ctx.SomethingHappened then

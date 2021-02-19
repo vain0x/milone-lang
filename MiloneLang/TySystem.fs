@@ -370,155 +370,63 @@ let doInstantiateTyScheme
 // Unification
 // -----------------------------------------------
 
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type UnifyCtx =
-  { Serial: int
-    LogAcc: (Log * Loc) list
+type UnifyResult =
+  | UnifyOk
+  | UnifyOkWithStack of (Ty * Ty) list
+  | UnifyError of Log * Loc
+  | UnifyExpandMeta of metaSerial: TySerial * other: Ty
+  | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty
 
-    /// Binding of meta types during unification.
-    Binding: AssocMap<TySerial, Ty>
+let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc): UnifyResult =
+  let mismatchError () =
+    UnifyError(Log.TyUnify(TyUnifyLog.Mismatch, lTy, rTy), loc)
 
-    /// For existing meta types: level up during unification.
-    /// For new unbound meta types: set current level.
-    LevelChanges: AssocMap<TySerial, Level> }
+  match lTy, rTy with
+  | Ty (MetaTk _, _), _
+  | _, Ty (MetaTk _, _) ->
+      match lTy, rTy with
+      | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
 
-let private isMetaOf tySerial ty =
-  match ty with
-  | Ty (MetaTk (s, _), _) -> s = tySerial
-  | _ -> false
+      | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
+      | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
+
+      | _ -> failwith "NEVER"
+
+  | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
+      match lTyArgs, rTyArgs with
+      | [], [] -> UnifyOk
+
+      | _ ->
+          match listTryZip lTyArgs rTyArgs with
+          | tyPairs, [], [] -> UnifyOkWithStack(tyPairs)
+          | _ -> mismatchError ()
+
+  | Ty (SynonymTk _, _), _
+  | _, Ty (SynonymTk _, _) ->
+      match lTy, rTy with
+      | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy)
+      | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
+      | _ -> failwith "NEVER"
+
+  | _ -> mismatchError ()
+
+[<RequireQualifiedAccess>]
+type UnifyAfterExpandMetaResult =
+  | OkNoBind
+  | OkBind
+  | Error of Log * Loc
+
+let unifyAfterExpandMeta lTy rTy tySerial otherTy loc =
+  match otherTy with
+  | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> UnifyAfterExpandMetaResult.OkNoBind
+
+  | _ when tyIsFreeIn otherTy tySerial |> not ->
+      // ^ Occurrence check.
+      UnifyAfterExpandMetaResult.Error(Log.TyUnify(TyUnifyLog.SelfRec, lTy, rTy), loc)
+
+  | _ -> UnifyAfterExpandMetaResult.OkBind
 
 let typingSubst tys binding ty: Ty = tySubst (tyExpandMeta tys binding) ty
 
 let typingExpandSynonyms tys ty =
   tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty
-
-/// Adds type-var/type binding.
-let private typingBind tys tyLevels binding levelChanges tySerial ty =
-  assert (tyIsFullySubstituted (metaTyIsBound tys binding) ty)
-
-  // Self-binding never occurs due to occurrence check.
-  assert (isMetaOf tySerial ty |> not)
-
-  let binding = binding |> TMap.add tySerial ty
-
-  // Reduce level of meta tys in the referent ty to the meta ty's level at most.
-  let levelChanges =
-    let level = getLevel tyLevels levelChanges tySerial
-
-    ty
-    |> tyCollectFreeVars
-    |> List.fold
-         (fun levelChanges tySerial ->
-           let currentLevel = getLevel tyLevels levelChanges tySerial
-
-           if currentLevel <= level then
-             // Already non-deep enough.
-             levelChanges
-           else
-             // Prevent this meta ty from getting generalized until level of the bound meta ty.
-             levelChanges |> TMap.add tySerial level)
-         levelChanges
-
-  binding, levelChanges
-
-[<NoEquality; NoComparison>]
-type private MetaTyUnifyResult =
-  | DidExpand of Ty
-  | DidBind of UnifyCtx
-  | DidRecurse
-
-let private unifyMetaTy tys tyLevels tySerial otherTy (ctx: UnifyCtx) =
-  match tyExpandMeta tys ctx.Binding tySerial with
-  | Some ty -> DidExpand ty
-
-  | _ ->
-      match typingSubst tys ctx.Binding otherTy with
-      | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> DidBind ctx
-
-      | otherTy when tyIsFreeIn otherTy tySerial |> not ->
-          // ^ Occurrence check.
-          DidRecurse
-
-      | otherTy ->
-          let binding, levelChanges =
-            typingBind tys tyLevels ctx.Binding ctx.LevelChanges tySerial otherTy
-
-          let ctx =
-            { ctx with
-                Binding = binding
-                LevelChanges = levelChanges }
-
-          DidBind ctx
-
-let private unifySynonymTy level tys tySerial useTyArgs loc (ctx: UnifyCtx) =
-  let defTySerials, bodyTy =
-    match tys |> TMap.tryFind tySerial with
-    | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
-    | _ -> failwith "NEVER"
-
-  // Checked in NameRes.
-  assert (List.length defTySerials = List.length useTyArgs)
-
-  let instantiatedTy, ctx =
-    let serial, levelChanges, bodyTy, _ =
-      doInstantiateTyScheme ctx.Serial level ctx.LevelChanges defTySerials bodyTy loc
-
-    bodyTy,
-    { ctx with
-        Serial = serial
-        LevelChanges = levelChanges }
-
-  let expandedTy =
-    tyExpandSynonym useTyArgs defTySerials bodyTy
-
-  expandedTy, instantiatedTy, ctx
-
-/// Solves type equation `lty = rty` as possible
-/// to add type-var/type bindings.
-let typingUnify level tys tyLevels (lty: Ty) (rty: Ty) (loc: Loc) (ctx: UnifyCtx) =
-  let addLog kind lTy rTy (ctx: UnifyCtx) =
-    { ctx with
-        LogAcc = (Log.TyUnify(kind, lTy, rTy), loc) :: ctx.LogAcc }
-
-  let rec go lTy rTy (ctx: UnifyCtx) =
-    match lTy, rTy with
-    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> ctx
-
-    | Ty (MetaTk (lSerial, _), _), _ ->
-        match unifyMetaTy tys tyLevels lSerial rTy ctx with
-        | DidExpand ty -> go ty rTy ctx
-        | DidBind ctx -> ctx
-        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy ctx
-
-    | _, Ty (MetaTk (rSerial, _), _) ->
-        match unifyMetaTy tys tyLevels rSerial lTy ctx with
-        | DidExpand ty -> go lTy ty ctx
-        | DidBind ctx -> ctx
-        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy ctx
-
-    | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
-        let rec gogo lTyArgs rTyArgs (ctx: UnifyCtx) =
-          match lTyArgs, rTyArgs with
-          | [], [] -> ctx
-
-          | l :: lTyArgs, r :: rTyArgs -> ctx |> go l r |> gogo lTyArgs rTyArgs
-
-          | _ -> addLog TyUnifyLog.Mismatch lTy rTy ctx
-
-        gogo lTyArgs rTyArgs ctx
-
-    | Ty (SynonymTk tySerial, tyArgs), _ ->
-        let ty1, ty2, ctx =
-          unifySynonymTy level tys tySerial tyArgs loc ctx
-
-        ctx |> go ty1 ty2 |> go ty1 rTy
-
-    | _, Ty (SynonymTk tySerial, tyArgs) ->
-        let ty1, ty2, ctx =
-          unifySynonymTy level tys tySerial tyArgs loc ctx
-
-        ctx |> go ty1 ty2 |> go ty1 lTy
-
-    | Ty _, _ -> addLog TyUnifyLog.Mismatch lTy rTy ctx
-
-  go lty rty ctx
