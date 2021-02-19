@@ -136,8 +136,6 @@ let private validateLit ctx lit loc =
 // Type inference algorithm
 // -----------------------------------------------
 
-let private emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
-
 let private addTraitBounds traits (ctx: TyCtx) =
   { ctx with
       TraitBounds = List.append traits ctx.TraitBounds }

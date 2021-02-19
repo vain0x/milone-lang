@@ -280,7 +280,7 @@ let tyDisplay getTyName ty =
 
 let emptyTyLevels: AssocMap<TySerial, Level> = TMap.empty compare
 
-let emptyBindings: AssocMap<TySerial, Ty> = TMap.empty compare
+let emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
 
 let private tyContextGetLevel tyLevels levelChanges tySerial: Level =
   match levelChanges |> TMap.tryFind tySerial with
@@ -521,7 +521,7 @@ let typingResolveTraitBound level tys tyLevels theTrait loc (ctx: UnifyCtx) =
   let unify lTy rTy loc ctx: UnifyCtx =
     typingUnify level tys tyLevels lTy rTy loc ctx
 
-  let addBoundError ctx: UnifyCtx =
+  let addBoundError (ctx: UnifyCtx) =
     { ctx with
         LogAcc = (Log.TyBoundError theTrait, loc) :: ctx.LogAcc }
 

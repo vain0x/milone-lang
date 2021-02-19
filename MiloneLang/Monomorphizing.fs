@@ -109,7 +109,7 @@ let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
 
   let unifyCtx: UnifyCtx =
     { Serial = monoCtx.Serial
-      Binding = emptyBindings
+      Binding = emptyBinding
       LevelChanges = emptyTyLevels
       LogAcc = monoCtx.Logs }
 
