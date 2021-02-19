@@ -2,6 +2,8 @@
 
 struct IntList;
 
+struct IntList;
+
 struct IntList const* go_(struct IntList const* acc_, int i_);
 
 int fun_(int arg_3);
@@ -13,6 +15,7 @@ struct UnitIntFun1;
 int doAction_(int arg_4);
 
 int milone_main();
+
 
 struct IntList {
     int head;

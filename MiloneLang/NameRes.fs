@@ -152,7 +152,7 @@ let private scopeEmpty (): Scope =
 // ScopeCtx
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ScopeCtx =
   {
     /// Last serial number.

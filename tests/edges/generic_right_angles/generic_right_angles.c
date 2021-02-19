@@ -1,27 +1,9 @@
 #include "milone.h"
 
-struct IntList;
-
-struct IntListList;
-
 struct IntListListList;
 
 int milone_main();
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
-
-struct IntListList {
-    struct IntList const* head;
-    struct IntListList const* tail;
-};
-
-struct IntListListList {
-    struct IntListList const* head;
-    struct IntListListList const* tail;
-};
 
 int milone_main() {
     struct IntListListList const* n_ = NULL;

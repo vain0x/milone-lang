@@ -2,6 +2,8 @@
 
 struct StringList;
 
+struct StringList;
+
 struct StringList const* go_(struct StringList const* acc_, struct StringList const* xs_1);
 
 struct StringList const* listRev_(struct StringList const* xs_);
@@ -17,6 +19,7 @@ struct StringList const* go_1(struct String s_, struct StringList const* acc_1, 
 struct StringList const* tokenize_(struct String s_);
 
 int milone_main();
+
 
 struct StringList {
     struct String head;

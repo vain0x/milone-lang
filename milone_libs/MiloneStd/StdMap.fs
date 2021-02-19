@@ -39,10 +39,14 @@ let private doTryFind (keyCompare: obj -> int) node: obj option =
 
   go node
 
-let private balance body =
+let private balanceL body =
   match body with
   | B, T (R, T (R, a, x, b), y, c), z, d -> R, T(B, a, x, b), y, T(B, c, z, d)
   | B, T (R, a, x, T (R, b, y, c)), z, d -> R, T(B, a, x, b), y, T(B, c, z, d)
+  | _ -> body
+
+let private balanceR body =
+  match body with
   | B, a, x, T (R, T (R, b, y, c), z, d) -> R, T(B, a, x, b), y, T(B, c, z, d)
   | B, a, x, T (R, b, y, T (R, c, z, d)) -> R, T(B, a, x, b), y, T(B, c, z, d)
   | _ -> body
@@ -58,13 +62,13 @@ let private doInsert (keyCompare: obj -> int) (newKv: obj) node =
 
         if c < 0 then
           // key < k
-          balance (color, T(go l), kv, r)
+          balanceL (color, T(go l), kv, r)
         else if c > 0 then
           // k < key
-          balance (color, l, kv, T(go r))
+          balanceR (color, l, kv, T(go r))
         else
           // key = k
-          balance (color, l, newKv, r)
+          color, l, newKv, r
 
   let _, y, a, b = go node
   T(B, y, a, b)
@@ -98,11 +102,11 @@ let private doRemove (keyCompare: obj -> int) (keyCompareTo: obj -> obj -> int) 
         if c < 0 then
           // key < k
           let removed, l = go keyCompare l
-          removed, T(balance (color, l, kv, r))
+          removed, T(balanceL (color, l, kv, r))
         else if c > 0 then
           // k < key
           let removed, r = go keyCompare r
-          removed, T(balance (color, l, kv, r))
+          removed, T(balanceR (color, l, kv, r))
         else
           // key = k
           let rest =
@@ -114,7 +118,7 @@ let private doRemove (keyCompare: obj -> int) (keyCompareTo: obj -> obj -> int) 
                 | None -> failwith ""
                 | Some rkv ->
                     let _, r = go (keyCompareTo rkv) r
-                    T(balance (color, l, rkv, r))
+                    T(balanceR (color, l, rkv, r))
 
           Some kv, rest
 

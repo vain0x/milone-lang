@@ -82,17 +82,17 @@ let private posX ((_, x): Pos) = x
 
 let private posY ((y, _): Pos) = y
 
-let private posIsSameRow first second = posY first = posY second
+let private posIsSameRow l r = posY l = posY r
 
-let private posIsSameColumn first second = posX first = posX second
+let private posIsSameColumn l r = posX l = posX r
 
-/// Gets if `secondPos` is inside of the block of `firstPos`.
-let private posInside (firstPos: Pos) (secondPos: Pos) = posX firstPos <= posX secondPos
+/// Gets if `r` is inside of the block of `l`.
+let private posInside (l: Pos) (r: Pos) = posX l <= posX r
 
 let private posAddX dx ((y, x): Pos) = y, x + dx
 
-let private posMax ((firstY, firstX): Pos) ((secondY, secondX): Pos) =
-  Int.max firstY secondY, Int.max firstX secondX
+let private posMax ((lY, lX): Pos) ((rY, rX): Pos) =
+  Int.max lY rY, Int.max lX rX
 
 /// Gets if three tokens can be merged. (Assuming each token is 1-letter.)
 /// That is, no space or comments interleave these positions.
@@ -700,7 +700,7 @@ let private parseNextBp bp basePos (tokens, errors) =
 
   | nextBp -> parseOp nextBp basePos (tokens, errors)
 
-let private parseOps bp basePos first (tokens, errors) =
+let private parseOps bp basePos l (tokens, errors) =
   let nextL expr op opPos (tokens, errors) =
     let second, tokens, errors = parseNextBp bp basePos (tokens, errors)
 
@@ -713,43 +713,43 @@ let private parseOps bp basePos first (tokens, errors) =
     parseOps bp basePos expr (tokens, errors)
 
   match bp, tokens with
-  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL first LogicalOrBinary opPos (tokens, errors)
+  | OrBp, (PipePipeToken, opPos) :: tokens -> nextL l LogicalOrBinary opPos (tokens, errors)
 
-  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL first LogicalAndBinary opPos (tokens, errors)
+  | AndBp, (AmpAmpToken, opPos) :: tokens -> nextL l LogicalAndBinary opPos (tokens, errors)
 
-  | CompareBp, (EqualToken, opPos) :: tokens -> nextL first EqualBinary opPos (tokens, errors)
-  | CompareBp, (LeftRightToken, opPos) :: tokens -> nextL first NotEqualBinary opPos (tokens, errors)
-  | CompareBp, (LeftAngleToken, opPos) :: tokens -> nextL first LessBinary opPos (tokens, errors)
-  | CompareBp, (LeftEqualToken, opPos) :: tokens -> nextL first LessEqualBinary opPos (tokens, errors)
-  | CompareBp, (RightAngleToken, opPos) :: tokens -> nextL first GreaterBinary opPos (tokens, errors)
-  | CompareBp, (RightEqualToken, opPos) :: tokens -> nextL first GreaterEqualBinary opPos (tokens, errors)
+  | CompareBp, (EqualToken, opPos) :: tokens -> nextL l EqualBinary opPos (tokens, errors)
+  | CompareBp, (LeftRightToken, opPos) :: tokens -> nextL l NotEqualBinary opPos (tokens, errors)
+  | CompareBp, (LeftAngleToken, opPos) :: tokens -> nextL l LessBinary opPos (tokens, errors)
+  | CompareBp, (LeftEqualToken, opPos) :: tokens -> nextL l LessEqualBinary opPos (tokens, errors)
+  | CompareBp, (RightAngleToken, opPos) :: tokens -> nextL l GreaterBinary opPos (tokens, errors)
+  | CompareBp, (RightEqualToken, opPos) :: tokens -> nextL l GreaterEqualBinary opPos (tokens, errors)
 
-  | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL first PipeBinary opPos (tokens, errors)
+  | PipeBp, (PipeRightToken, opPos) :: tokens -> nextL l PipeBinary opPos (tokens, errors)
 
-  | XorBp, (HatHatHatToken, opPos) :: tokens -> nextR first BitXorBinary opPos (tokens, errors)
+  | XorBp, (HatHatHatToken, opPos) :: tokens -> nextR l BitXorBinary opPos (tokens, errors)
 
-  | BitBp, (AmpAmpAmpToken, opPos) :: tokens -> nextL first BitAndBinary opPos (tokens, errors)
-  | BitBp, (PipePipePipeToken, opPos) :: tokens -> nextL first BitOrBinary opPos (tokens, errors)
-  | BitBp, (LeftLeftLeftToken, opPos) :: tokens -> nextL first LeftShiftBinary opPos (tokens, errors)
+  | BitBp, (AmpAmpAmpToken, opPos) :: tokens -> nextL l BitAndBinary opPos (tokens, errors)
+  | BitBp, (PipePipePipeToken, opPos) :: tokens -> nextL l BitOrBinary opPos (tokens, errors)
+  | BitBp, (LeftLeftLeftToken, opPos) :: tokens -> nextL l LeftShiftBinary opPos (tokens, errors)
   | BitBp, (RightAngleToken, opPos) :: (RightAngleToken, pos2) :: (RightAngleToken, pos3) :: tokens when
-    canMerge3 opPos pos2 pos3 -> nextL first RightShiftBinary opPos (tokens, errors)
+    canMerge3 opPos pos2 pos3 -> nextL l RightShiftBinary opPos (tokens, errors)
 
-  | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR first ConsBinary opPos (tokens, errors)
+  | ConsBp, (ColonColonToken, opPos) :: tokens -> nextR l ConsBinary opPos (tokens, errors)
 
-  | AddBp, (PlusToken, opPos) :: tokens -> nextL first AddBinary opPos (tokens, errors)
-  | AddBp, (MinusToken, opPos) :: tokens -> nextL first SubBinary opPos (tokens, errors)
+  | AddBp, (PlusToken, opPos) :: tokens -> nextL l AddBinary opPos (tokens, errors)
+  | AddBp, (MinusToken, opPos) :: tokens -> nextL l SubBinary opPos (tokens, errors)
 
-  | MulBp, (StarToken, opPos) :: tokens -> nextL first MulBinary opPos (tokens, errors)
-  | MulBp, (SlashToken, opPos) :: tokens -> nextL first DivBinary opPos (tokens, errors)
-  | MulBp, (PercentToken, opPos) :: tokens -> nextL first ModuloBinary opPos (tokens, errors)
+  | MulBp, (StarToken, opPos) :: tokens -> nextL l MulBinary opPos (tokens, errors)
+  | MulBp, (SlashToken, opPos) :: tokens -> nextL l DivBinary opPos (tokens, errors)
+  | MulBp, (PercentToken, opPos) :: tokens -> nextL l ModuloBinary opPos (tokens, errors)
 
-  | _ -> first, tokens, errors
+  | _ -> l, tokens, errors
 
 /// E.g. `add = mul ( ('+'|'-') mul )*`
 let private parseOp bp basePos (tokens, errors) =
-  let first, tokens, errors = parseNextBp bp basePos (tokens, errors)
+  let l, tokens, errors = parseNextBp bp basePos (tokens, errors)
 
-  parseOps bp basePos first (tokens, errors)
+  parseOps bp basePos l (tokens, errors)
 
 let private parseTupleItem basePos (tokens, errors) = parseOp OrBp basePos (tokens, errors)
 

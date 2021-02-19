@@ -36,6 +36,7 @@ type private Status =
   | Boxed
   | Unboxed
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TrdCtx =
   { Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -59,7 +60,9 @@ let private trdVariant (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef op
 
       let ctx =
         { ctx with
-            VariantMemo = ctx.VariantMemo |> TMap.add variantSerial Recursive }
+            VariantMemo =
+              ctx.VariantMemo
+              |> TMap.add variantSerial Recursive }
 
       let ctx: TrdCtx =
         let variantDef =
@@ -156,8 +159,10 @@ let private trdTy (ctx: TrdCtx) ty =
           assert (List.isEmpty tyArgs)
           ctx
 
+      // Since list introduce indirection, the item type can recursively use it.
+      | ListTk -> ctx
+
       | OptionTk
-      | ListTk
       | FunTk
       | TupleTk
       | NativePtrTk _
@@ -187,6 +192,7 @@ let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
 // Type size measurement
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TsmCtx =
   { Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -349,8 +355,8 @@ let private tsmTy (ctx: TsmCtx) ty =
       | OptionTk ->
           match tyArgs with
           | [ itemTy ] ->
-             let size, ctx = tsmTy ctx itemTy
-             1 + size, ctx
+              let size, ctx = tsmTy ctx itemTy
+              1 + size, ctx
 
           | _ -> failwith "NEVER"
 
@@ -416,7 +422,7 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
 // Context
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>

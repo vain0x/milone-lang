@@ -156,6 +156,8 @@ type CDecl =
   /// ```
   | CStructDecl of Ident * fields: (Ident * CTy) list * variants: (Ident * CTy) list
 
+  | CStructForwardDecl of Ident
+
   /// Definition of enum type.
   | CEnumDecl of Ident * variants: Ident list
 

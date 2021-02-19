@@ -2,6 +2,8 @@
 
 struct IntList;
 
+struct IntList;
+
 int baseCase_(int arg_);
 
 int yodaCase_(int exitCode_);
@@ -13,6 +15,7 @@ struct String proj_1(bool cond_, struct String body_, struct String alt_);
 int polymorphicFunCase_(int arg_1);
 
 int milone_main();
+
 
 struct IntList {
     int head;

@@ -4,6 +4,8 @@ int testTrivialCase_(int arg_);
 
 struct IntList;
 
+struct IntList;
+
 int testListMatching_(int arg_1);
 
 struct IntIntTuple2;
@@ -22,6 +24,7 @@ next_2:;
 end_match_1:;
     return 0;
 }
+
 
 struct IntList {
     int head;

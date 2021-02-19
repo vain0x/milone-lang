@@ -31,7 +31,7 @@ type private IsTail =
 // Helpers
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TailRecCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef>

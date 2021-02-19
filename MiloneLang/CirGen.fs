@@ -32,6 +32,11 @@ let private valueSymbolCompare l r =
 
   compare (encode l) (encode r)
 
+let private unwrapListTy ty =
+  match ty with
+  | Ty (ListTk, [ itemTy ]) -> itemTy
+  | _ -> failwith "NEVER"
+
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then
@@ -77,8 +82,7 @@ let private toDiscriminantEnumName (name: string) = name + "Discriminant"
 // Context
 // -----------------------------------------------
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CirCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
@@ -270,6 +274,7 @@ let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
 
       let ctx =
         { ctx with
+            Decls = CStructForwardDecl structName :: ctx.Decls
             TyEnv = ctx.TyEnv |> TMap.add listTy (CTyDeclared, selfTy) }
 
       selfTy, ctx
@@ -677,7 +682,9 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | Ty (OptionTk, [ itemTy ]) -> genOptionTyDef ctx itemTy
 
-  | Ty (ListTk, [ itemTy ]) -> genListTyDef ctx itemTy
+  | Ty (ListTk, [ itemTy ]) ->
+      // Complete definition of the underlying struct type is unnecessary yet.
+      genIncompleteListTyDecl ctx itemTy
 
   | Ty (TupleTk, itemTys) ->
       // HOTFIX: Remove Undefined meta types. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
@@ -687,7 +694,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
              (fun ty ->
                let substMeta tySerial =
                  match ctx.Tys |> TMap.tryFind tySerial with
-                 | Some (MetaTyDef (_, ty, _)) -> Some ty
+                 | Some (MetaTyDef ty) -> Some ty
                  | Some (UniversalTyDef _)
                  | None -> Some tyObj
                  | _ -> None
@@ -864,8 +871,14 @@ let private genUnaryExpr ctx op arg ty _ =
       CDotExpr(arg, "value"), ctx
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
-  | MListHeadUnary -> CArrowExpr(arg, "head"), ctx
-  | MListTailUnary -> CArrowExpr(arg, "tail"), ctx
+
+  | MListHeadUnary ->
+      let _, ctx = genListTyDef ctx (unwrapListTy argTy)
+      CArrowExpr(arg, "head"), ctx
+
+  | MListTailUnary ->
+      let _, ctx = genListTyDef ctx (unwrapListTy argTy)
+      CArrowExpr(arg, "tail"), ctx
 
   | MNativeCastUnary ->
       let ty, ctx = cgTyComplete ctx ty
@@ -1094,7 +1107,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
   | MConsPrim ->
       match args with
-      | [ l; r ] -> cgConsStmt ctx serial l r resultTy
+      | [ l; r ] -> cgConsStmt ctx serial l r
       | _ -> failwithf "NEVER: %A" itself
 
   | MTuplePrim ->
@@ -1186,10 +1199,10 @@ let private cgBoxStmt ctx serial arg =
 
   addStmt ctx (CSetStmt(left, arg))
 
-let private cgConsStmt ctx serial head tail listTy =
+let private cgConsStmt ctx serial head tail =
   let temp = getUniqueVarName ctx serial
   let storageModifier = findStorageModifier ctx serial
-  let listTy, ctx = cgTyComplete ctx listTy
+  let listTy, ctx = genListTyDef ctx (mexprToTy head)
 
   let listStructTy =
     match listTy with
@@ -1356,7 +1369,7 @@ let private genLogs (ctx: CirCtx) =
     match logs with
     | [] -> ctx
     | (log, loc) :: logs ->
-        let _, y, _ = loc
+        let (Loc (_, y, _)) = loc
 
         let msg =
           locToString loc

@@ -389,15 +389,18 @@ let private cpStmt indent stmt acc: string list =
 
   | CNativeStmt (code, args) ->
       let code =
-        List.fold (fun (i, code) arg ->
-            let arg = [] |> cpExpr arg |> List.rev |> S.concat ""
+        List.fold
+          (fun (i, code) arg ->
+            let arg =
+              [] |> cpExpr arg |> List.rev |> S.concat ""
 
             let code =
               let placeholder = "{" + string i + "}"
               code |> S.replace placeholder arg
 
-            i + 1, code
-        ) (0, code) args
+            i + 1, code)
+          (0, code)
+          args
         |> snd
 
       acc |> cons code
@@ -455,6 +458,8 @@ let private cpDecl decl acc =
       |> cons "};"
       |> cons eol
 
+  | CStructForwardDecl _ -> acc
+
   | CEnumDecl (enumName, variants) ->
       let cpEnumerants variants acc =
         variants
@@ -498,6 +503,14 @@ let private cpForwardDecl decl acc =
   | CErrorDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
+      acc
+      |> cons "struct "
+      |> cons name
+      |> cons ";"
+      |> cons eol
+      |> cons eol
+
+  | CStructForwardDecl name ->
       acc
       |> cons "struct "
       |> cons name

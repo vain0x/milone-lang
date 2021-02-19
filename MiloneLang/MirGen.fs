@@ -30,8 +30,7 @@ let private unwrapListTy ty =
 // Context
 // -----------------------------------------------
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MirCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
@@ -1064,7 +1063,7 @@ let private mirifyCallAssertExpr ctx arg loc =
 
   // Embed the source location information.
   let args =
-    let _, y, x = loc
+    let (Loc (_, y, x)) = loc
 
     [ arg
       MLitExpr(IntLit(string y), loc)

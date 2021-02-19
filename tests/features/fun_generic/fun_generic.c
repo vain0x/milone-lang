@@ -2,7 +2,11 @@
 
 struct IntList;
 
+struct IntList;
+
 struct IntList const* go_2(struct IntList const* acc_, struct IntList const* xs_1);
+
+struct StringList;
 
 struct StringList;
 
@@ -23,6 +27,10 @@ struct IntList const* listMap_2(struct IntIntFun1 f_, struct IntList const* xs_3
 struct StringIntTuple2;
 
 struct IntStringTuple2StringIntTuple2Fun1;
+
+struct IntStringTuple2List;
+
+struct StringIntTuple2List;
 
 struct IntStringTuple2;
 
@@ -47,6 +55,7 @@ struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2);
 struct IntListStringListTuple2;
 
 int milone_main();
+
 
 struct IntList {
     int head;
@@ -77,6 +86,7 @@ next_4:;
 end_match_2:;
     return match_;
 }
+
 
 struct StringList {
     struct String head;
@@ -161,6 +171,8 @@ struct IntStringTuple2StringIntTuple2Fun1 {
     struct StringIntTuple2(*fun)(void const*, struct IntStringTuple2);
     void const* env;
 };
+
+
 
 struct IntStringTuple2 {
     int t0;

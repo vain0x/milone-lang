@@ -1,5 +1,7 @@
 #include "milone.h"
 
+struct UnionA_List;
+
 enum UnionA_Discriminant;
 
 struct UnionA_;
@@ -14,10 +16,6 @@ enum UnionX_Discriminant;
 
 struct UnionX_;
 
-enum RecB_Discriminant;
-
-struct RecB_;
-
 struct RecB_List;
 
 enum RecA_Discriminant;
@@ -25,6 +23,7 @@ enum RecA_Discriminant;
 struct RecA_;
 
 int milone_main();
+
 
 enum UnionA_Discriminant {
     T_3,
@@ -59,21 +58,6 @@ struct UnionX_ {
     enum UnionX_Discriminant discriminant;
 };
 
-enum RecB_Discriminant {
-    T_1,
-};
-
-struct RecB_ {
-    enum RecB_Discriminant discriminant;
-    union {
-        void const* T_1;
-    };
-};
-
-struct RecB_List {
-    struct RecB_ head;
-    struct RecB_List const* tail;
-};
 
 enum RecA_Discriminant {
     T_2,

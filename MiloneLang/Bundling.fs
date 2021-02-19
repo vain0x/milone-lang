@@ -85,7 +85,7 @@ type private ModuleName = string
 
 type ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleHost =
   {
     /// External project references.
@@ -96,7 +96,7 @@ type BundleHost =
     /// The host should locate the module and retrieve its source code, tokenize and parse if exists.
     FetchModule: ProjectName -> ModuleName -> ModuleSyntaxData option }
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private BundleCtx =
   { NameCtx: NameCtx
 
@@ -153,7 +153,7 @@ let private doLoadModule docId ast errors (ctx: BundleCtx) =
       List.append
         ctx.ErrorAcc
         (errors
-         |> List.map (fun (msg, (y, x)) -> msg, (docId, y, x)))
+         |> List.map (fun (msg, (y, x)) -> msg, Loc (docId, y, x)))
 
     let ctx =
       { ctx with
@@ -214,7 +214,7 @@ let private requireModule docId projectName moduleName (ctx: BundleCtx) =
         + "."
         + moduleName
 
-      ctx |> addError msg (docId, 0, 0)
+      ctx |> addError msg (Loc (docId, 0, 0))
 
 /// Returns None if no module is load.
 let bundleProgram (host: BundleHost) (projectName: string): (HExpr list * NameCtx * (string * Loc) list) option =

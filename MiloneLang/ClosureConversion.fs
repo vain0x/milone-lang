@@ -93,8 +93,7 @@ module TSet = MiloneStd.StdSet
 // KnownCtx
 // -----------------------------------------------
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private KnownCtx =
   { Locals: AssocSet<VarSerial>
     UseVars: AssocSet<VarSerial>
@@ -184,7 +183,7 @@ let private capsUpdateFunDef funTy arity (caps: Caps) =
 // -----------------------------------------------
 
 /// Context of closure conversion.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private CcCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>

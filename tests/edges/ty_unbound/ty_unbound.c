@@ -8,10 +8,6 @@ int assertIsEmpty_1(struct UnitList const* xs_);
 
 int milone_main();
 
-struct UnitList {
-    int head;
-    struct UnitList const* tail;
-};
 
 bool isEmpty_1(struct UnitList const* xs_1) {
     bool if_;

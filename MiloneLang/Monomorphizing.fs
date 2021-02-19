@@ -63,7 +63,7 @@ let private funSerialTyPairCompare l r =
 // Context
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MonoCtx =
   { Serial: Serial
     Logs: (Log * Loc) list
@@ -103,31 +103,50 @@ let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
     SomethingHappened = true
     InfiniteLoopDetector = 0 }
 
-let private toTyContext (monoCtx: MonoCtx): TyContext =
-  { Serial = monoCtx.Serial
-    Tys = monoCtx.Tys
-
-    // Not used.
-    Level = 0
-    TyLevels = TMap.empty compare }
-
-let private withTyContext (tyCtx: TyContext) logAcc (monoCtx: MonoCtx) =
-  { monoCtx with
-      Serial = tyCtx.Serial
-      Logs = logAcc
-      Tys = tyCtx.Tys }
-
-let private substTy (monoCtx: MonoCtx) ty: Ty = typingSubst (toTyContext monoCtx) ty
-
 let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
-  let tyCtx = toTyContext monoCtx
+  let ctx = monoCtx
 
-  let logAcc, tyCtx =
-    typingUnify monoCtx.Logs tyCtx lTy rTy loc
+  let expandMeta binding tySerial =
+    match binding |> TMap.tryFind tySerial with
+    | (Some _) as it -> it
+    | _ ->
+        match ctx.Tys |> TMap.tryFind tySerial with
+        | Some (MetaTyDef ty) -> Some ty
+        | _ -> None
 
-  monoCtx |> withTyContext tyCtx logAcc
+  let substTy binding ty = tySubst (expandMeta binding) ty
 
-let private markAsSomethingHappened (ctx: MonoCtx) = { ctx with SomethingHappened = true }
+  let rec go lTy rTy loc binding =
+    match unifyNext lTy rTy loc with
+    | UnifyOk
+    | UnifyError _ ->
+        // NOTE: Unification may fail due to auto boxing.
+        //       This is not fatal problem since all type errors are already handled in typing phase.
+        binding
+
+    | UnifyOkWithStack stack -> List.fold (fun binding (l, r) -> go l r loc binding) binding stack
+
+    | UnifyExpandMeta (tySerial, otherTy) ->
+        match expandMeta binding tySerial with
+        | Some ty -> go ty otherTy loc binding
+
+        | None ->
+            match unifyAfterExpandMeta lTy rTy tySerial (substTy binding otherTy) loc with
+            | UnifyAfterExpandMetaResult.OkNoBind -> binding
+
+            | UnifyAfterExpandMetaResult.OkBind -> binding |> TMap.add tySerial otherTy
+
+            | UnifyAfterExpandMetaResult.Error _ -> binding
+
+    | UnifyExpandSynonym _ -> failwith "NEVER: Synonyms are resolved in Typing."
+
+  go lTy rTy loc emptyBinding
+
+let private markAsSomethingHappened (ctx: MonoCtx) =
+  if ctx.SomethingHappened then
+    ctx
+  else
+    { ctx with SomethingHappened = true }
 
 let private findFun (ctx: MonoCtx) funSerial = ctx.Funs |> mapFind funSerial
 
@@ -266,16 +285,20 @@ let private monifyLetFunExpr (ctx: MonoCtx) callee isRec vis args body next ty l
         match tryFindMonomorphizedFun ctx genericFunSerial useSiteTy with
         | Some _ -> go next arity genericFunTy useSiteTys ctx
         | None ->
-            // Within the context where genericFunTy and useSiteTy are unified
-            // resolve all types in args and body.
-            let extendedCtx = unifyTy ctx genericFunTy useSiteTy loc
+            // Unify genericFunTy and useSiteTy to build a mapping
+            // from type variable to use-site type.
+            let binding = unifyTy ctx genericFunTy useSiteTy loc
 
-            let substMeta tySerial =
-              match extendedCtx.Tys |> TMap.tryFind tySerial with
-              | Some (MetaTyDef (_, ty, _)) -> Some ty
-              | _ -> Some tyUnit
+            let substOrDegenerateTy ty =
+              let substMeta tySerial =
+                match binding |> TMap.tryFind tySerial with
+                | (Some _) as it -> it
+                | None ->
+                    match ctx.Tys |> TMap.tryFind tySerial with
+                    | Some (MetaTyDef ty) -> Some ty
+                    | _ -> Some tyUnit
 
-            let substOrDegenerateTy ty = tySubst substMeta ty
+              tySubst substMeta ty
 
             let monoArgs =
               args |> List.map (patMap substOrDegenerateTy id)

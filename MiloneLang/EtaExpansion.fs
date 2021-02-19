@@ -386,8 +386,7 @@ let arityCheck (expr, tyCtx: Typing.TyCtx) =
 // Context
 // -----------------------------------------------
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private EtaCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>

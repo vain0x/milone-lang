@@ -45,14 +45,14 @@ type LangServiceHost =
 
 let private locOfDocPos (docId: DocId) (pos: Pos): Loc =
   let y, x = pos
-  docId, y, x
+  Loc (docId, y, x)
 
 let private locToDoc (loc: Loc): DocId =
-  let docId, _, _ = loc
+  let (Loc (docId, _, _)) = loc
   docId
 
 let private locToPos (loc: Loc): Pos =
-  let _, y, x = loc
+  let (Loc (_, y, x)) = loc
   y, x
 
 let private tokenizeHost = tokenizeHostNew ()
@@ -617,9 +617,7 @@ module LangService =
             None
 
         | Some (_token, tokenPos) ->
-            let tokenLoc =
-              let y, x = tokenPos
-              docId, y, x
+            let tokenLoc = locOfDocPos docId tokenPos
 
             // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 

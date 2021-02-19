@@ -64,7 +64,7 @@ type Pos = RowIndex * ColumnIndex
 type DocId = string
 
 /// Location.
-type Loc = DocId * RowIndex * ColumnIndex
+type Loc = Loc of DocId * RowIndex * ColumnIndex
 
 // -----------------------------------------------
 // Syntax errors
@@ -503,16 +503,16 @@ let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 // -----------------------------------------------
 
 /// No location information. Should be fixed.
-let noLoc = "<noLoc>", -1, -1
+let noLoc = Loc ("<noLoc>", -1, -1)
 
-let locToString ((docId, y, x): Loc) =
+let locToString (Loc (docId, y, x)) =
   docId
   + ":"
   + string (y + 1)
   + ":"
   + string (x + 1)
 
-let locCompare ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
+let locCompare (Loc (lDoc, ly, lx)) (Loc (rDoc, ry, rx)) =
   let c = compare lDoc rDoc
 
   if c <> 0 then c
