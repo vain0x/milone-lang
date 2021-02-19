@@ -282,7 +282,7 @@ let emptyTyLevels: AssocMap<TySerial, Level> = TMap.empty compare
 
 let emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
 
-let private tyContextGetLevel tyLevels levelChanges tySerial: Level =
+let private getLevel tyLevels levelChanges tySerial: Level =
   match levelChanges |> TMap.tryFind tySerial with
   | Some level -> level
   | _ ->
@@ -290,7 +290,7 @@ let private tyContextGetLevel tyLevels levelChanges tySerial: Level =
       |> TMap.tryFind tySerial
       |> Option.defaultValue 0
 
-let private tyContextExpandMeta tys binding tySerial: Ty option =
+let private tyExpandMeta tys binding tySerial: Ty option =
   match binding |> TMap.tryFind tySerial with
   | (Some _) as it -> it
   | _ ->
@@ -331,14 +331,14 @@ let private typingBind tys tyLevels binding levelChanges tySerial ty =
   // Reduce level of meta tys in the referent ty to the meta ty's level at most.
   let levelChanges =
     let level =
-      tyContextGetLevel tyLevels levelChanges tySerial
+      getLevel tyLevels levelChanges tySerial
 
     ty
     |> tyCollectFreeVars
     |> List.fold
          (fun levelChanges tySerial ->
            let currentLevel =
-             tyContextGetLevel tyLevels levelChanges tySerial
+             getLevel tyLevels levelChanges tySerial
 
            if currentLevel <= level then
              // Already non-deep enough.
@@ -351,7 +351,7 @@ let private typingBind tys tyLevels binding levelChanges tySerial ty =
   binding, levelChanges
 
 let private typingSubst tys binding ty: Ty =
-  tySubst (tyContextExpandMeta tys binding) ty
+  tySubst (tyExpandMeta tys binding) ty
 
 let doInstantiateTyScheme
   (serial: int)
@@ -414,7 +414,7 @@ type private MetaTyUnifyResult =
   | DidRecurse
 
 let private unifyMetaTy tys tyLevels tySerial otherTy (ctx: UnifyCtx) =
-  match tyContextExpandMeta tys ctx.Binding tySerial with
+  match tyExpandMeta tys ctx.Binding tySerial with
   | Some ty -> DidExpand ty
 
   | _ ->
