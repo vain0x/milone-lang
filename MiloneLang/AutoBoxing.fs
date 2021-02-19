@@ -138,7 +138,7 @@ let private trdTyDef (ctx: TrdCtx) tySerial tyDef =
 
   | MetaTyDef _
   | UniversalTyDef _
-  | SynonymTyDef _ -> ctx
+  | SynonymTyDef _ -> failwith "NEVER: Resolved in Typing"
 
 let private trdTy (ctx: TrdCtx) ty =
   match ty with
@@ -172,9 +172,10 @@ let private trdTy (ctx: TrdCtx) ty =
       | UnionTk tySerial -> nominal tySerial
       | RecordTk tySerial -> nominal tySerial
 
-      | SynonymTk _
+      | SynonymTk _ -> failwith "NEVER: Resolved in Typing"
+
       | UnresolvedTk _
-      | UnresolvedVarTk _ -> failwith "NEVER"
+      | UnresolvedVarTk _ -> failwith "NEVER: Resolved in NameRes"
 
 let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
   let ctx: TrdCtx =
@@ -328,7 +329,7 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
   | MetaTyDef _
   | UniversalTyDef _
-  | SynonymTyDef _ -> 1000000, ctx
+  | SynonymTyDef _ -> failwith "NEVER: Resolved in Typing"
 
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
@@ -378,9 +379,10 @@ let private tsmTy (ctx: TsmCtx) ty =
       | MetaTk _
       | NativeTypeTk _ -> 1000000, ctx
 
-      | SynonymTk _
+      | SynonymTk _ -> failwith "NEVER: Resolved in Typing"
+
       | UnresolvedTk _
-      | UnresolvedVarTk _ -> failwith "NEVER"
+      | UnresolvedVarTk _ -> failwith "NEVER: Resolved in NameRes"
 
 let private measureTys (trdCtx: TrdCtx): TsmCtx =
   let boxedVariants =
@@ -751,10 +753,6 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
     |> TMap.map
          (fun _ tyDef ->
            match tyDef with
-           | SynonymTyDef (name, tyArgs, bodyTy, loc) ->
-               let bodyTy = bodyTy |> abTy ctx
-               SynonymTyDef(name, tyArgs, bodyTy, loc)
-
            | RecordTyDef (recordName, fields, loc) ->
                let fields =
                  fields

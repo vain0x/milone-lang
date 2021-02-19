@@ -1414,13 +1414,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       |> TMap.fold
            (fun acc tySerial tyDef ->
              match tyDef with
-             | MetaTyDef _ -> acc
-
-             | SynonymTyDef (name, tyArgs, bodyTy, loc) ->
-                 let bodyTy = bodyTy |> substOrDegenerate
-
-                 acc
-                 |> TMap.add tySerial (SynonymTyDef(name, tyArgs, bodyTy, loc))
+             | MetaTyDef _
+             | UniversalTyDef _
+             | SynonymTyDef _ -> acc
 
              | RecordTyDef (recordName, fields, loc) ->
                  let fields =

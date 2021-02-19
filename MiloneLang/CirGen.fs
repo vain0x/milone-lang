@@ -125,12 +125,12 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   let tyNames =
     let toKey (serial, tyDef) =
       match tyDef with
-      | MetaTyDef _
-      | UniversalTyDef _ -> tyMeta serial noLoc
-
-      | SynonymTyDef _ -> tySynonym serial []
       | UnionTyDef _ -> tyUnion serial
       | RecordTyDef _ -> tyRecord serial
+
+      | MetaTyDef _
+      | UniversalTyDef _
+      | SynonymTyDef _ -> failwith "NEVER: Resolved in Typing"
 
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
@@ -574,13 +574,15 @@ let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
       | Ty (ListTk, _)
       | Ty (FunTk, _)
       | Ty (NativePtrTk _, _)
-      | Ty (SynonymTk _, _)
       | Ty (UnionTk _, _)
-      | Ty (RecordTk _, _)
-      | Ty (UnresolvedTk _, _)
-      | Ty (UnresolvedVarTk _, _) ->
+      | Ty (RecordTk _, _) ->
           // FIXME: collect error
           failwithf "/* unknown ty %A */" ty
+
+      | Ty (SynonymTk _, _) -> failwith "NEVER: Resolved in Typing"
+
+      | Ty (UnresolvedTk _, _)
+      | Ty (UnresolvedVarTk _, _) -> failwith "NEVER: Resolved in NameRes."
 
     // Memoization.
     match ctx.TyUniqueNames |> TMap.tryFind ty with
@@ -646,19 +648,11 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
 
-  | Ty (SynonymTk serial, useTyArgs) ->
-      match ctx.Tys |> TMap.tryFind serial with
-      | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-          let ty =
-            tyExpandSynonym useTyArgs defTySerials bodyTy
-
-          cgTyIncomplete ctx ty
-
-      | _ -> failwithf "NEVER: synonym type undefined?"
-
   | Ty (UnionTk serial, _) -> genIncompleteUnionTyDecl ctx serial
 
   | Ty (RecordTk serial, _) -> genIncompleteRecordTyDecl ctx serial
+
+  | Ty (SynonymTk _, _) -> failwith "NEVER: Resolved in Typing"
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -686,24 +680,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
       // Complete definition of the underlying struct type is unnecessary yet.
       genIncompleteListTyDecl ctx itemTy
 
-  | Ty (TupleTk, itemTys) ->
-      // HOTFIX: Remove Undefined meta types. Without this, undefined meta tys are replaced with obj, duplicated tuple definitions are emitted. I don't know why undefined meta tys exist in this stage...
-      let itemTys =
-        itemTys
-        |> List.map
-             (fun ty ->
-               let substMeta tySerial =
-                 match ctx.Tys |> TMap.tryFind tySerial with
-                 | Some (MetaTyDef ty) -> Some ty
-                 | Some (UniversalTyDef _)
-                 | None -> Some tyObj
-                 | _ -> None
-
-               ty
-               |> tySubst substMeta
-               |> tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial))
-
-      genTupleTyDef ctx itemTys
+  | Ty (TupleTk, itemTys) -> genTupleTyDef ctx itemTys
 
   | Ty (VoidTk, _) -> CVoidTy, ctx
 
@@ -712,16 +689,6 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
 
   | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
-
-  | Ty (SynonymTk serial, useTyArgs) ->
-      match ctx.Tys |> TMap.tryFind serial with
-      | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-          let ty =
-            tyExpandSynonym useTyArgs defTySerials bodyTy
-
-          cgTyComplete ctx ty
-
-      | _ -> failwithf "NEVER: synonym type undefined?"
 
   | Ty (UnionTk serial, _) ->
       match ctx.Tys |> TMap.tryFind serial with
@@ -734,6 +701,8 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
       | _ -> failwithf "NEVER: record type undefined?"
+
+  | Ty (SynonymTk _, _) -> failwith "NEVER: Resolved in Typing"
 
   | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
 
@@ -804,7 +773,6 @@ let private genDefault ctx ty =
   | Ty (FunTk, _)
   | Ty (TupleTk, _)
   | Ty (OptionTk _, _)
-  | Ty (SynonymTk _, _)
   | Ty (UnionTk _, _)
   | Ty (RecordTk _, _)
   | Ty (NativeTypeTk _, _) ->
@@ -813,6 +781,7 @@ let private genDefault ctx ty =
 
   | Ty (ErrorTk _, _)
   | Ty (VoidTk, _)
+  | Ty (SynonymTk _, _)
   | Ty (UnresolvedTk _, _)
   | Ty (UnresolvedVarTk _, _) -> failwithf "Never %A" ty
 

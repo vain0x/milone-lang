@@ -237,7 +237,7 @@ let private containsTailRec expr =
 
   | HRecordExpr _ -> failwith "NEVER: record expr is resolved in type elaborating"
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes."
+  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
 // -----------------------------------------------
 // Pattern
@@ -409,10 +409,10 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
 
       | HAbortPN, _ -> mirifyPatAbort ctx loc
 
-      | HSomePN, _ -> fail () // Resolved in Typing.
+      | HSomePN, _ -> fail () // Resolved in Typing
       | HAppPN, _ -> fail () // Resolved in NameRes.
       | HNavPN _, _ -> fail () // Resolved in NameRes.
-      | HAscribePN, _ -> fail () // Resolved in Typing.
+      | HAscribePN, _ -> fail () // Resolved in Typing
 
   | HAsPat (pat, serial, loc) -> mirifyPatAs ctx endLabel pat serial expr loc
 
@@ -1210,7 +1210,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.NativeExpr, _
   | HPrim.NativeStmt, _
   | HPrim.NativeDecl, _
-  | HPrim.SizeOfVal, _ -> failwith "NEVER: Resolved in Typing."
+  | HPrim.SizeOfVal, _ -> failwith "NEVER: Resolved in Typing"
 
 let private mirifyExprInfCallClosure ctx callee args resultTy loc =
   let callee, ctx = mirifyExpr ctx callee

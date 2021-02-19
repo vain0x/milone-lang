@@ -138,7 +138,7 @@ let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
 
             | UnifyAfterExpandMetaResult.Error _ -> binding
 
-    | UnifyExpandSynonym _ -> failwith "NEVER: Synonyms are resolved in Typing."
+    | UnifyExpandSynonym _ -> failwith "NEVER: Resolved in Typing"
 
   go lTy rTy loc emptyBinding
 
