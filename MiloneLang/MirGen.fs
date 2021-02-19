@@ -30,8 +30,7 @@ let private unwrapListTy ty =
 // Context
 // -----------------------------------------------
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MirCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>

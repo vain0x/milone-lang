@@ -36,6 +36,7 @@ type private Status =
   | Boxed
   | Unboxed
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TrdCtx =
   { Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -187,6 +188,7 @@ let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
 // Type size measurement
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TsmCtx =
   { Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
@@ -416,7 +418,7 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
 // Context
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private AbCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>

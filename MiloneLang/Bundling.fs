@@ -85,7 +85,7 @@ type private ModuleName = string
 
 type ModuleSyntaxData = DocId * ARoot * (string * Pos) list
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleHost =
   {
     /// External project references.
@@ -96,7 +96,7 @@ type BundleHost =
     /// The host should locate the module and retrieve its source code, tokenize and parse if exists.
     FetchModule: ProjectName -> ModuleName -> ModuleSyntaxData option }
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private BundleCtx =
   { NameCtx: NameCtx
 

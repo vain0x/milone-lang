@@ -25,7 +25,7 @@ module TSet = MiloneStd.StdSet
 // Context
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TyCtx =
   {
     /// Next serial number.

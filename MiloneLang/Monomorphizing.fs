@@ -63,7 +63,7 @@ let private funSerialTyPairCompare l r =
 // Context
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private MonoCtx =
   { Serial: Serial
     Logs: (Log * Loc) list
