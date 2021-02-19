@@ -547,7 +547,7 @@ let private inferVarPat (ctx: TyCtx) varSerial loc =
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let variantDef = ctx.Variants |> mapFind variantSerial
-  let ty = variantDef.VariantTy
+  let ty = variantDefToVariantTy variantDef
 
   let ctx =
     if variantDef.HasPayload then
@@ -700,8 +700,7 @@ let private inferFunExpr (ctx: TyCtx) funSerial loc =
   HFunExpr(funSerial, ty, loc), ty, ctx
 
 let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
-  let ty =
-    (ctx.Variants |> mapFind variantSerial).VariantTy
+  let ty = ctx.Variants |> mapFind variantSerial |> variantDefToVariantTy
 
   HVariantExpr(variantSerial, ty, loc), ty, ctx
 
@@ -1332,27 +1331,6 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
            ctx)
          (TMap.empty funSerialCompare, ctx)
 
-  let ctx = { ctx with Funs = funs }
-
-  let ctx =
-    let variants =
-      ctx.Variants
-      |> TMap.map
-           (fun _ (variantDef: VariantDef) ->
-             // Pre-compute the type of variant.
-             let variantTy =
-               let unionTy = tyUnion variantDef.UnionTySerial
-
-               if variantDef.HasPayload then
-                 tyFun variantDef.PayloadTy unionTy
-               else
-                 unionTy
-
-             { variantDef with
-                 VariantTy = variantTy })
-
-    { ctx with Variants = variants }
-
   let ctx = { ctx with Funs = funs; Level = 0 }
 
   let expr, ctx =
@@ -1400,8 +1378,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       |> TMap.map
            (fun _ (variantDef: VariantDef) ->
              { variantDef with
-                 PayloadTy = substOrDegenerate variantDef.PayloadTy
-                 VariantTy = substOrDegenerate variantDef.VariantTy })
+                 PayloadTy = substOrDegenerate variantDef.PayloadTy })
 
     { ctx with
         Vars = vars

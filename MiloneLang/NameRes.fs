@@ -701,7 +701,6 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
               UnionTySerial = tySerial
               HasPayload = hasPayload
               PayloadTy = payloadTy
-              VariantTy = noTy
               Loc = loc }
 
           ctx
@@ -772,7 +771,6 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
       let go ctx variantSerial =
         let def = ctx |> findVariant variantSerial
         let payloadTy, ctx = ctx |> resolveTy def.PayloadTy loc
-        assert (def.VariantTy |> isNoTy)
 
         ctx
         |> addVariantDef variantSerial { def with PayloadTy = payloadTy }

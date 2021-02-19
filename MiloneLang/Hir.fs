@@ -240,7 +240,6 @@ type VariantDef =
     UnionTySerial: TySerial
     HasPayload: bool
     PayloadTy: Ty
-    VariantTy: Ty
     Loc: Loc }
 
 [<Struct; NoComparison>]
@@ -636,6 +635,14 @@ let variantSerialCompare l r =
 let varDefToName varDef =
   match varDef with
   | VarDef (name, _, _, _) -> name
+
+let variantDefToVariantTy (variantDef: VariantDef): Ty =
+  let unionTy = tyUnion variantDef.UnionTySerial
+
+  if variantDef.HasPayload then
+    tyFun variantDef.PayloadTy unionTy
+  else
+    unionTy
 
 // -----------------------------------------------
 // Literals

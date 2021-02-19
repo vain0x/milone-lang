@@ -742,11 +742,8 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
            let payloadTy =
              erasePayloadTy ctx variantSerial variantDef.PayloadTy
 
-           let variantTy = variantDef.VariantTy |> abTy ctx
-
            { variantDef with
-               PayloadTy = payloadTy
-               VariantTy = variantTy })
+               PayloadTy = payloadTy })
 
   let tys =
     ctx.Tys
