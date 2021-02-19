@@ -159,8 +159,10 @@ let private trdTy (ctx: TrdCtx) ty =
           assert (List.isEmpty tyArgs)
           ctx
 
+      // Since list introduce indirection, the item type can recursively use it.
+      | ListTk -> ctx
+
       | OptionTk
-      | ListTk
       | FunTk
       | TupleTk
       | NativePtrTk _
