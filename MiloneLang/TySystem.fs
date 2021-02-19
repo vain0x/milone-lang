@@ -340,7 +340,7 @@ let private typingBind tys tyLevels binding levelChanges tySerial ty =
 
   binding, levelChanges
 
-let private typingSubst tys binding ty: Ty =
+let typingSubst tys binding ty: Ty =
   tySubst (tyExpandMeta tys binding) ty
 
 let doInstantiateTyScheme
@@ -394,7 +394,7 @@ let tyExpandSynonyms (expand: TySerial -> TyDef option) ty =
 
   go ty
 
-let private typingExpandSynonyms tys ty =
+let typingExpandSynonyms tys ty =
   tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty
 
 [<NoEquality; NoComparison>]
@@ -498,119 +498,3 @@ let typingUnify level tys tyLevels (lty: Ty) (rty: Ty) (loc: Loc) (ctx: UnifyCtx
     | Ty _, _ -> addLog TyUnifyLog.Mismatch lTy rTy ctx
 
   go lty rty ctx
-
-let typingResolveTraitBound level tys tyLevels theTrait loc (ctx: UnifyCtx) =
-  let theTrait =
-    theTrait
-    |> traitMapTys
-         (fun ty ->
-           ty
-           |> typingSubst tys ctx.Binding
-           |> typingExpandSynonyms tys)
-
-  let unify lTy rTy loc ctx: UnifyCtx =
-    typingUnify level tys tyLevels lTy rTy loc ctx
-
-  let addBoundError (ctx: UnifyCtx) =
-    { ctx with
-        LogAcc = (Log.TyBoundError theTrait, loc) :: ctx.LogAcc }
-
-  /// integer, bool, char, or string
-  let expectBasic ty (ctx: UnifyCtx) =
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, [])
-    | Ty (FloatTk _, [])
-    | Ty (BoolTk, [])
-    | Ty (CharTk, [])
-    | Ty (StrTk, [])
-    | Ty (NativePtrTk _, _) -> ctx
-
-    | _ -> addBoundError ctx
-
-  match theTrait with
-  | AddTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, [])
-      | Ty (CharTk, [])
-      | Ty (StrTk, []) -> ctx
-
-      // Coerce to int by default.
-      | _ -> unify ty tyInt loc ctx
-
-  | EqualTrait ty -> ctx |> expectBasic ty
-
-  | CompareTrait ty -> ctx |> expectBasic ty
-
-  | IndexTrait (lTy, rTy, resultTy) ->
-      match lTy with
-      | Ty (ErrorTk _, _) -> ctx
-
-      | Ty (StrTk, []) ->
-          ctx
-          |> unify rTy tyInt loc
-          |> unify resultTy tyChar loc
-
-      | _ -> addBoundError ctx
-
-  | IsIntTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, []) -> ctx
-
-      // Coerce to int by default.
-      | _ -> unify ty tyInt loc ctx
-
-  | IsNumberTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, []) -> ctx
-
-      // Coerce to int by default.
-      | _ -> unify ty tyInt loc ctx
-
-  | ToCharTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, [])
-      | Ty (CharTk, [])
-      | Ty (StrTk, []) -> ctx
-
-      | _ -> addBoundError ctx
-
-  | ToIntTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, [])
-      | Ty (CharTk, [])
-      | Ty (StrTk, [])
-      | Ty (NativePtrTk _, _) -> ctx
-
-      | _ -> addBoundError ctx
-
-  | ToFloatTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, [])
-      | Ty (StrTk, []) -> ctx
-
-      | _ -> addBoundError ctx
-
-  | ToStringTrait ty -> expectBasic ty ctx
-
-  | PtrTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk (IntFlavor (_, IPtr)), [])
-      | Ty (ObjTk, [])
-      | Ty (ListTk, _)
-      | Ty (NativePtrTk _, _)
-      | Ty (NativeFunTk, _) -> ctx
-
-      | _ -> addBoundError ctx

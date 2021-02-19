@@ -16,6 +16,8 @@ open MiloneLang.Syntax
 open MiloneLang.TySystem
 open MiloneLang.NameRes
 open MiloneLang.Hir
+open MiloneLang.TypeIntegers
+open MiloneLang.TypeFloat
 
 module StdInt = MiloneStd.StdInt
 module TMap = MiloneStd.StdMap
@@ -133,26 +135,147 @@ let private validateLit ctx lit loc =
   | _ -> ctx
 
 // -----------------------------------------------
-// Type inference algorithm
+// Trait bounds
 // -----------------------------------------------
 
 let private addTraitBounds traits (ctx: TyCtx) =
   { ctx with
       TraitBounds = List.append traits ctx.TraitBounds }
 
+let private doResolveTraitBound (tyCtx: TyCtx) theTrait loc (ctx: UnifyCtx): UnifyCtx =
+  let unify lTy rTy loc ctx: UnifyCtx =
+    typingUnify tyCtx.Level tyCtx.Tys tyCtx.TyLevels lTy rTy loc ctx
+
+  let addBoundError (ctx: UnifyCtx) =
+    { ctx with
+        LogAcc = (Log.TyBoundError theTrait, loc) :: ctx.LogAcc }
+
+  /// integer, bool, char, or string
+  let expectBasic ty (ctx: UnifyCtx) =
+    match ty with
+    | Ty (ErrorTk _, _)
+    | Ty (IntTk _, [])
+    | Ty (FloatTk _, [])
+    | Ty (BoolTk, [])
+    | Ty (CharTk, [])
+    | Ty (StrTk, [])
+    | Ty (NativePtrTk _, _) -> ctx
+
+    | _ -> addBoundError ctx
+
+  match theTrait with
+  | AddTrait ty ->
+      match ty with
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, [])
+      | Ty (CharTk, [])
+      | Ty (StrTk, []) -> ctx
+
+      // Coerce to int by default.
+      | _ -> unify ty tyInt loc ctx
+
+  | EqualTrait ty -> ctx |> expectBasic ty
+
+  | CompareTrait ty -> ctx |> expectBasic ty
+
+  | IndexTrait (lTy, rTy, resultTy) ->
+      match lTy with
+      | Ty (ErrorTk _, _) -> ctx
+
+      | Ty (StrTk, []) ->
+          ctx
+          |> unify rTy tyInt loc
+          |> unify resultTy tyChar loc
+
+      | _ -> addBoundError ctx
+
+  | IsIntTrait ty ->
+      match ty with
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, []) -> ctx
+
+      // Coerce to int by default.
+      | _ -> unify ty tyInt loc ctx
+
+  | IsNumberTrait ty ->
+      match ty with
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, []) -> ctx
+
+      // Coerce to int by default.
+      | _ -> unify ty tyInt loc ctx
+
+  | ToCharTrait ty ->
+      match ty with
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, [])
+      | Ty (CharTk, [])
+      | Ty (StrTk, []) -> ctx
+
+      | _ -> addBoundError ctx
+
+  | ToIntTrait ty ->
+      match ty with
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, [])
+      | Ty (CharTk, [])
+      | Ty (StrTk, [])
+      | Ty (NativePtrTk _, _) -> ctx
+
+      | _ -> addBoundError ctx
+
+  | ToFloatTrait ty ->
+      match ty with
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk _, [])
+      | Ty (FloatTk _, [])
+      | Ty (StrTk, []) -> ctx
+
+      | _ -> addBoundError ctx
+
+  | ToStringTrait ty -> expectBasic ty ctx
+
+  | PtrTrait ty ->
+      match ty with
+      | Ty (ErrorTk _, _)
+      | Ty (IntTk (IntFlavor (_, IPtr)), [])
+      | Ty (ObjTk, [])
+      | Ty (ListTk, _)
+      | Ty (NativePtrTk _, _)
+      | Ty (NativeFunTk, _) -> ctx
+
+      | _ -> addBoundError ctx
+
 let private resolveTraitBounds (ctx: TyCtx) =
-  let rec go traits unifyCtx: UnifyCtx =
-    match traits with
-    | [] -> unifyCtx
-
-    | (theTrait, loc) :: traits ->
-        typingResolveTraitBound ctx.Level ctx.Tys ctx.TyLevels theTrait loc unifyCtx
-        |> go traits
-
   let traits = ctx.TraitBounds |> List.rev
   let ctx = { ctx with TraitBounds = [] }
 
-  ctx |> toUnifyCtx |> go traits |> withUnifyCtx ctx
+  let unifyCtx = toUnifyCtx ctx
+
+  let unifyCtx =
+    let subst (unifyCtx: UnifyCtx) ty =
+      ty
+      |> typingSubst ctx.Tys unifyCtx.Binding
+      |> typingExpandSynonyms ctx.Tys
+
+    traits
+    |> List.fold
+         (fun unifyCtx (theTrait, loc) ->
+           let theTrait = traitMapTys (subst unifyCtx) theTrait
+           doResolveTraitBound ctx theTrait loc unifyCtx)
+         unifyCtx
+
+  withUnifyCtx ctx unifyCtx
+
+// -----------------------------------------------
+// Unification
+// -----------------------------------------------
+
+// And meta type resolution by substitution or degeneration.
 
 let private substTy (ctx: TyCtx) ty: Ty =
   let substMeta tySerial =
@@ -234,6 +357,10 @@ let private unifyVarTy varSerial tyOpt loc ctx =
 
   | None -> varTy, ctx
 
+// -----------------------------------------------
+// Generalization and instantiation
+// -----------------------------------------------
+
 /// Assume all bound type variables are resolved by `substTy`.
 ///
 /// `isOwned` checks if the type variable is introduced by the most recent `let`.
@@ -306,6 +433,10 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
       ctx
 
   | _ -> failwith "Can't generalize already-generalized functions"
+
+// -----------------------------------------------
+// Others
+// -----------------------------------------------
 
 let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
   let funDef = ctx.Funs |> mapFind funSerial
