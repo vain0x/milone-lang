@@ -64,7 +64,7 @@ let private doInsert (keyCompare: obj -> int) (newKv: obj) node =
           balance (color, l, kv, T(go r))
         else
           // key = k
-          balance (color, l, newKv, r)
+          color, l, newKv, r
 
   let _, y, a, b = go node
   T(B, y, a, b)
