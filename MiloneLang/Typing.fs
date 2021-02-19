@@ -73,12 +73,8 @@ let private getTyLevel tySerial (ctx: TyCtx): Level =
   |> Option.defaultValue 0
 
 let private isNewtypeVariant (ctx: TyCtx) variantSerial =
-  match ctx
-        |> findTy
-             (ctx.Variants |> mapFind variantSerial)
-               .UnionTySerial with
-  | UnionTyDef (_, [ _ ], _) -> true
-  | _ -> false
+  let variantDef = ctx.Variants |> mapFind variantSerial
+  variantDef.IsNewtype
 
 let private isMainFun funSerial (ctx: TyCtx) =
   match ctx.MainFunOpt with

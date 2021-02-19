@@ -699,6 +699,7 @@ let private startDefineTy moduleSerialOpt tySerial vis tyArgs tyDecl loc ctx =
           let variantDef: VariantDef =
             { Name = name
               UnionTySerial = tySerial
+              IsNewtype = List.length variants = 1
               HasPayload = hasPayload
               PayloadTy = payloadTy
               Loc = loc }

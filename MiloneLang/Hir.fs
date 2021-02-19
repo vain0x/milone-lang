@@ -238,6 +238,10 @@ type FunDef =
 type VariantDef =
   { Name: Ident
     UnionTySerial: TySerial
+
+    /// Whether this is the only variant of the union.
+    IsNewtype: bool
+
     HasPayload: bool
     PayloadTy: Ty
     Loc: Loc }

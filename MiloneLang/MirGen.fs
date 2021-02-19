@@ -65,12 +65,7 @@ let private ofTyCtx (tyCtx: TyCtx): MirCtx =
 
 let private isNewtypeVariant (ctx: MirCtx) variantSerial =
   match ctx.Variants |> TMap.tryFind variantSerial with
-  | Some variantDef ->
-      match ctx.Tys |> mapFind variantDef.UnionTySerial with
-      | UnionTyDef (_, variantSerials, _) -> variantSerials |> List.length = 1
-
-      | _ -> failwith "Expected union serial"
-
+  | Some variantDef -> variantDef.IsNewtype
   | _ -> failwith "Expected variant serial"
 
 let private addError (ctx: MirCtx) message loc =
