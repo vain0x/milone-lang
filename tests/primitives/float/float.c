@@ -4,6 +4,8 @@ struct F64BoolFun1;
 
 struct F64List;
 
+struct F64List;
+
 bool go_1(struct F64BoolFun1 pred_, struct F64List const* xs_1);
 
 bool all_1(struct F64BoolFun1 pred_, struct F64List const* xs_);
@@ -22,6 +24,7 @@ struct F64BoolFun1 {
     bool(*fun)(void const*, double);
     void const* env;
 };
+
 
 struct F64List {
     double head;

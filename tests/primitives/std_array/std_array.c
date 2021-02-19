@@ -130,6 +130,8 @@ int fold_1(struct IntIntIntFun2 folder_, int state_1, struct IntConstPtrIntTuple
 
 struct IntList;
 
+struct IntList;
+
 int listLengthLoop_1(int acc_, struct IntList const* xs_1);
 
 int ofListLoop_1(int len_7, struct IntMutPtrIntTuple2 dest_1, int i_10, struct IntList const* xs_3);
@@ -194,10 +196,6 @@ int toListTest_(int arg_68);
 
 int milone_main();
 
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_5) {
     struct String str_concat_result_ = str_concat(sep_, xs_5);
@@ -891,6 +889,7 @@ int fold_1(struct IntIntIntFun2 folder_, int state_1, struct IntConstPtrIntTuple
     int call_55 = arrayFoldLoop_1(folder_, array_13, len_6, state_1, 0);
     return call_55;
 }
+
 
 struct IntList {
     int head;

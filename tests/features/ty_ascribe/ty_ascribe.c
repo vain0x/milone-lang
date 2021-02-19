@@ -6,6 +6,10 @@ int g_(int x_1);
 
 struct IntList;
 
+struct IntList;
+
+struct StringList;
+
 struct StringList;
 
 int milone_main();
@@ -18,10 +22,12 @@ int g_(int x_1) {
     return x_1;
 }
 
+
 struct IntList {
     int head;
     struct IntList const* tail;
 };
+
 
 struct StringList {
     struct String head;

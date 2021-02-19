@@ -2,7 +2,11 @@
 
 struct IntList;
 
+struct IntList;
+
 int go_2(int n_, struct IntList const* xs_1);
+
+struct StringList;
 
 struct StringList;
 
@@ -13,6 +17,7 @@ int listToArraySize_2(struct IntList const* xs_);
 int listToArraySize_1(struct StringList const* xs_);
 
 int milone_main();
+
 
 struct IntList {
     int head;
@@ -40,6 +45,7 @@ next_4:;
 end_match_2:;
     return match_;
 }
+
 
 struct StringList {
     struct String head;

@@ -48,10 +48,6 @@ static int MaxValue_;
 
 int milone_main();
 
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     struct String str_concat_result_ = str_concat(sep_, xs_);

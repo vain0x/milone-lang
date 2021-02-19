@@ -6,6 +6,8 @@ int simpleCase_(int arg_);
 
 struct IntList;
 
+struct IntList;
+
 bool startsWithDoubleBits_(struct IntList const* xs_);
 
 int nestedCase_(int arg_1);
@@ -63,6 +65,7 @@ if_next_4:;
     milone_assert((!(call_2)), 13, 2);
     return 0;
 }
+
 
 struct IntList {
     int head;

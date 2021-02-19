@@ -16,6 +16,8 @@ struct StringStringListTuple2;
 
 struct StringStringListTuple2 useTyVarInBody_1(struct String x_1);
 
+struct StringList;
+
 int milone_main();
 
 struct IntIntTuple2 {
@@ -42,10 +44,6 @@ char useStringIndexWithoutAscription_(struct String x_) {
     return x_.str[0];
 }
 
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 struct StringStringListTuple2 {
     struct String t0;
@@ -57,6 +55,11 @@ struct StringStringListTuple2 useTyVarInBody_1(struct String x_1) {
     struct StringStringListTuple2 tuple_1 = (struct StringStringListTuple2){.t0 = x_1, .t1 = xs_};
     return tuple_1;
 }
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
 
 int milone_main() {
     struct IntIntTuple2 tuple_2 = (struct IntIntTuple2){.t0 = 0, .t1 = 0};

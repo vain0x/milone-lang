@@ -2,10 +2,6 @@
 
 bool id_1(bool x_);
 
-enum Space_Discriminant;
-
-struct Space_;
-
 struct Space_List;
 
 struct Space_List const* failwith_3(struct String msg_);
@@ -14,9 +10,17 @@ struct StringList;
 
 struct StringList const* failwith_2(struct String msg_);
 
+enum Space_Discriminant;
+
+struct Space_;
+
 struct Space_ failwith_1(struct String msg_);
 
+struct StringList;
+
 struct StringList const* cons_1(struct String head_, struct StringList const* tail_);
+
+struct Space_List;
 
 struct Space_List const* go_27(struct Space_List const* acc_, struct Space_List const* xs_2);
 
@@ -24,7 +28,11 @@ struct StringList const* go_26(struct StringList const* acc_, struct StringList 
 
 struct BoolList;
 
+struct BoolList;
+
 struct BoolList const* go_29(struct BoolList const* acc_, struct BoolList const* xs_2);
+
+struct Space_Space_Tuple2List;
 
 struct Space_Space_Tuple2;
 
@@ -46,6 +54,8 @@ struct Space_List const* go_25(struct Space_Space_Fun1 f_, struct Space_List con
 
 struct Ty_Space_Fun1;
 
+struct Ty_List;
+
 enum Ty_Discriminant;
 
 struct Ty_;
@@ -55,6 +65,8 @@ struct Ty_List;
 struct Space_List const* go_24(struct Ty_Space_Fun1 f_, struct Space_List const* acc_1, struct Ty_List const* xs_5);
 
 struct Pat_Space_Fun1;
+
+struct Pat_List;
 
 enum Pat_Discriminant;
 
@@ -66,6 +78,8 @@ struct Space_List const* go_23(struct Pat_Space_Fun1 f_, struct Space_List const
 
 struct StringSpace_Tuple2BoolFun1;
 
+struct StringSpace_Tuple2List;
+
 struct StringSpace_Tuple2;
 
 struct StringSpace_Tuple2List;
@@ -73,6 +87,8 @@ struct StringSpace_Tuple2List;
 struct BoolList const* go_22(struct StringSpace_Tuple2BoolFun1 f_, struct BoolList const* acc_1, struct StringSpace_Tuple2List const* xs_5);
 
 struct StringTy_Pat_ListCovering_Tuple4BoolFun1;
+
+struct StringTy_Pat_ListCovering_Tuple4List;
 
 enum Covering_Discriminant;
 
@@ -270,6 +286,20 @@ bool id_1(bool x_) {
     return x_;
 }
 
+
+struct Space_List const* failwith_3(struct String msg_) {
+    printf("ERROR %s\n", str_to_c_str(msg_));
+    exit(1);
+    return NULL;
+}
+
+
+struct StringList const* failwith_2(struct String msg_) {
+    printf("ERROR %s\n", str_to_c_str(msg_));
+    exit(1);
+    return NULL;
+}
+
 enum Space_Discriminant {
     Full_,
     Ctor_,
@@ -286,15 +316,10 @@ struct Space_ {
     };
 };
 
-struct Space_List {
-    struct Space_ head;
-    struct Space_List const* tail;
-};
-
-struct Space_List const* failwith_3(struct String msg_) {
+struct Space_ failwith_1(struct String msg_) {
     printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
-    return NULL;
+    return ((struct Space_){});
 }
 
 struct StringList {
@@ -302,23 +327,16 @@ struct StringList {
     struct StringList const* tail;
 };
 
-struct StringList const* failwith_2(struct String msg_) {
-    printf("ERROR %s\n", str_to_c_str(msg_));
-    exit(1);
-    return NULL;
-}
-
-struct Space_ failwith_1(struct String msg_) {
-    printf("ERROR %s\n", str_to_c_str(msg_));
-    exit(1);
-    return ((struct Space_){});
-}
-
 struct StringList const* cons_1(struct String head_, struct StringList const* tail_) {
     struct StringList const* list_ = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_))) = (struct StringList){.head = head_, .tail = tail_};
     return list_;
 }
+
+struct Space_List {
+    struct Space_ head;
+    struct Space_List const* tail;
+};
 
 struct Space_List const* go_27(struct Space_List const* acc_, struct Space_List const* xs_2) {
 tailrec_1:;
@@ -370,6 +388,7 @@ end_match_6:;
     return match_1;
 }
 
+
 struct BoolList {
     bool head;
     struct BoolList const* tail;
@@ -399,6 +418,7 @@ next_12:;
 end_match_10:;
     return match_2;
 }
+
 
 struct Space_Space_Tuple2 {
     struct Space_ t0;
@@ -494,6 +514,7 @@ struct Ty_Space_Fun1 {
     void const* env;
 };
 
+
 enum Ty_Discriminant {
     Int_,
     Tuple_,
@@ -546,6 +567,7 @@ struct Pat_Space_Fun1 {
     struct Space_(*fun)(void const*, struct Pat_);
     void const* env;
 };
+
 
 enum Pat_Discriminant {
     Discard_,
@@ -603,6 +625,7 @@ struct StringSpace_Tuple2BoolFun1 {
     void const* env;
 };
 
+
 struct StringSpace_Tuple2 {
     struct String t0;
     struct Space_ t1;
@@ -646,6 +669,7 @@ struct StringTy_Pat_ListCovering_Tuple4BoolFun1 {
     bool(*fun)(void const*, struct StringTy_Pat_ListCovering_Tuple4);
     void const* env;
 };
+
 
 enum Covering_Discriminant {
     Covering_,

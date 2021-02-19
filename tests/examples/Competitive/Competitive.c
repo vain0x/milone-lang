@@ -24,8 +24,6 @@ struct StringList;
 
 bool listIsEmpty_1(struct StringList const* xs_);
 
-struct StringStringStringFun2;
-
 struct StringStringStringFun2List;
 
 bool listIsEmpty_4(struct StringStringStringFun2List const* xs_);
@@ -34,29 +32,23 @@ struct IntList;
 
 bool listIsEmpty_3(struct IntList const* xs_);
 
-struct IntIntIntFun2;
-
 struct IntIntIntFun2List;
 
 bool listIsEmpty_2(struct IntIntIntFun2List const* xs_);
-
-enum SegNodeTag_Discriminant;
-
-struct SegNodeTag_;
-
-struct IntIntIntObjectSegNodeTag_Tuple5;
 
 struct IntIntIntObjectSegNodeTag_Tuple5List;
 
 bool listIsEmpty_5(struct IntIntIntObjectSegNodeTag_Tuple5List const* xs_);
 
-struct StringIntIntObjectSegNodeTag_Tuple5;
-
 struct StringIntIntObjectSegNodeTag_Tuple5List;
 
 bool listIsEmpty_6(struct StringIntIntObjectSegNodeTag_Tuple5List const* xs_);
 
+struct StringList;
+
 int go_34(int len_2, struct StringList const* xs_2);
+
+struct IntList;
 
 int go_33(int len_2, struct IntList const* xs_2);
 
@@ -180,6 +172,14 @@ bool intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second
 
 bool intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5);
 
+struct StringStringStringFun2;
+
+enum SegNodeTag_Discriminant;
+
+struct SegNodeTag_;
+
+struct StringIntIntObjectSegNodeTag_Tuple5;
+
 enum SegItemTypeTag_Discriminant;
 
 struct SegItemTypeTag_;
@@ -187,6 +187,10 @@ struct SegItemTypeTag_;
 struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4;
 
 struct StringStringStringFun2 segItemTypeToAppend_2(struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 arg_73);
+
+struct IntIntIntFun2;
+
+struct IntIntIntObjectSegNodeTag_Tuple5;
 
 struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4;
 
@@ -204,9 +208,13 @@ int segItemTypeToEmptyItem_1(struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple
 
 struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tuple2;
 
+struct StringStringStringFun2List;
+
 struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeNew_2(struct String emptyItem_, struct StringStringStringFun2 append_1);
 
 struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2;
+
+struct IntIntIntFun2List;
 
 struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeNew_1(int emptyItem_, struct IntIntIntFun2 append_1);
 
@@ -236,7 +244,11 @@ int segNodeToHeight_1(struct IntIntIntObjectSegNodeTag_Tuple5 node_2);
 
 int segNodeToHeight_2(struct StringIntIntObjectSegNodeTag_Tuple5 node_2);
 
+struct IntIntIntObjectSegNodeTag_Tuple5List;
+
 struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 segNodeToChildren_1(struct IntIntIntObjectSegNodeTag_Tuple5 node_3);
+
+struct StringIntIntObjectSegNodeTag_Tuple5List;
 
 struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tuple2 segNodeToChildren_2(struct StringIntIntObjectSegNodeTag_Tuple5 node_3);
 
@@ -471,10 +483,6 @@ int rawMemoryCopy_(void* dest_1, void* src_1, int size_2) {
     return 0;
 }
 
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 bool listIsEmpty_1(struct StringList const* xs_) {
     bool if_;
@@ -493,15 +501,6 @@ if_next_1:;
     return if_;
 }
 
-struct StringStringStringFun2 {
-    struct String(*fun)(void const*, struct String, struct String);
-    void const* env;
-};
-
-struct StringStringStringFun2List {
-    struct StringStringStringFun2 head;
-    struct StringStringStringFun2List const* tail;
-};
 
 bool listIsEmpty_4(struct StringStringStringFun2List const* xs_) {
     bool if_1;
@@ -520,10 +519,6 @@ if_next_4:;
     return if_1;
 }
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 bool listIsEmpty_3(struct IntList const* xs_) {
     bool if_2;
@@ -542,15 +537,6 @@ if_next_7:;
     return if_2;
 }
 
-struct IntIntIntFun2 {
-    int(*fun)(void const*, int, int);
-    void const* env;
-};
-
-struct IntIntIntFun2List {
-    struct IntIntIntFun2 head;
-    struct IntIntIntFun2List const* tail;
-};
 
 bool listIsEmpty_2(struct IntIntIntFun2List const* xs_) {
     bool if_3;
@@ -569,26 +555,6 @@ if_next_10:;
     return if_3;
 }
 
-enum SegNodeTag_Discriminant {
-    SegNodeTag_,
-};
-
-struct SegNodeTag_ {
-    enum SegNodeTag_Discriminant discriminant;
-};
-
-struct IntIntIntObjectSegNodeTag_Tuple5 {
-    int t0;
-    int t1;
-    int t2;
-    void const* t3;
-    struct SegNodeTag_ t4;
-};
-
-struct IntIntIntObjectSegNodeTag_Tuple5List {
-    struct IntIntIntObjectSegNodeTag_Tuple5 head;
-    struct IntIntIntObjectSegNodeTag_Tuple5List const* tail;
-};
 
 bool listIsEmpty_5(struct IntIntIntObjectSegNodeTag_Tuple5List const* xs_) {
     bool if_4;
@@ -607,18 +573,6 @@ if_next_13:;
     return if_4;
 }
 
-struct StringIntIntObjectSegNodeTag_Tuple5 {
-    struct String t0;
-    int t1;
-    int t2;
-    void const* t3;
-    struct SegNodeTag_ t4;
-};
-
-struct StringIntIntObjectSegNodeTag_Tuple5List {
-    struct StringIntIntObjectSegNodeTag_Tuple5 head;
-    struct StringIntIntObjectSegNodeTag_Tuple5List const* tail;
-};
 
 bool listIsEmpty_6(struct StringIntIntObjectSegNodeTag_Tuple5List const* xs_) {
     bool if_5;
@@ -636,6 +590,11 @@ cons_cl_18:;
 if_next_16:;
     return if_5;
 }
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
 
 int go_34(int len_2, struct StringList const* xs_2) {
 tailrec_19:;
@@ -658,6 +617,11 @@ next_22:;
 end_match_20:;
     return match_;
 }
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
 
 int go_33(int len_2, struct IntList const* xs_2) {
 tailrec_23:;
@@ -1381,6 +1345,27 @@ if_next_87:;
     return if_16;
 }
 
+struct StringStringStringFun2 {
+    struct String(*fun)(void const*, struct String, struct String);
+    void const* env;
+};
+
+enum SegNodeTag_Discriminant {
+    SegNodeTag_,
+};
+
+struct SegNodeTag_ {
+    enum SegNodeTag_Discriminant discriminant;
+};
+
+struct StringIntIntObjectSegNodeTag_Tuple5 {
+    struct String t0;
+    int t1;
+    int t2;
+    void const* t3;
+    struct SegNodeTag_ t4;
+};
+
 enum SegItemTypeTag_Discriminant {
     SegItemTypeTag_,
 };
@@ -1400,6 +1385,19 @@ struct StringStringStringFun2 segItemTypeToAppend_2(struct StringStringStringFun
     struct StringStringStringFun2 append_ = arg_73.t0;
     return append_;
 }
+
+struct IntIntIntFun2 {
+    int(*fun)(void const*, int, int);
+    void const* env;
+};
+
+struct IntIntIntObjectSegNodeTag_Tuple5 {
+    int t0;
+    int t1;
+    int t2;
+    void const* t3;
+    struct SegNodeTag_ t4;
+};
 
 struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 {
     struct IntIntIntFun2 t0;
@@ -1444,6 +1442,11 @@ struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tup
     struct StringIntIntObjectSegNodeTag_Tuple5 t1;
 };
 
+struct StringStringStringFun2List {
+    struct StringStringStringFun2 head;
+    struct StringStringStringFun2List const* tail;
+};
+
 struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeNew_2(struct String emptyItem_, struct StringStringStringFun2 append_1) {
     struct StringIntIntObjectSegNodeTag_Tuple5 call_50 = segNodeNewEmpty_2(emptyItem_);
     struct StringIntIntObjectSegNodeTag_Tuple5 emptyNode_1 = call_50;
@@ -1472,6 +1475,11 @@ struct StringStringStringFun2StringIntIntObjectSegNodeTag_Tuple5ObjectSegItemTyp
 struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 {
     struct IntIntIntObjectSegNodeTag_Tuple5 t0;
     struct IntIntIntObjectSegNodeTag_Tuple5 t1;
+};
+
+struct IntIntIntFun2List {
+    struct IntIntIntFun2 head;
+    struct IntIntIntFun2List const* tail;
 };
 
 struct IntIntIntFun2IntIntIntObjectSegNodeTag_Tuple5ObjectSegItemTypeTag_Tuple4 segItemTypeNew_1(int emptyItem_, struct IntIntIntFun2 append_1) {
@@ -1670,6 +1678,11 @@ int segNodeToHeight_2(struct StringIntIntObjectSegNodeTag_Tuple5 node_2) {
     return height_1;
 }
 
+struct IntIntIntObjectSegNodeTag_Tuple5List {
+    struct IntIntIntObjectSegNodeTag_Tuple5 head;
+    struct IntIntIntObjectSegNodeTag_Tuple5List const* tail;
+};
+
 struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 segNodeToChildren_1(struct IntIntIntObjectSegNodeTag_Tuple5 node_3) {
     int len_14 = node_3.t1;
     void const* children_ = node_3.t3;
@@ -1687,6 +1700,11 @@ struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 se
     struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2 tuple_21 = (struct IntIntIntObjectSegNodeTag_Tuple5IntIntIntObjectSegNodeTag_Tuple5Tuple2){.t0 = left_1, .t1 = right_1};
     return tuple_21;
 }
+
+struct StringIntIntObjectSegNodeTag_Tuple5List {
+    struct StringIntIntObjectSegNodeTag_Tuple5 head;
+    struct StringIntIntObjectSegNodeTag_Tuple5List const* tail;
+};
 
 struct StringIntIntObjectSegNodeTag_Tuple5StringIntIntObjectSegNodeTag_Tuple5Tuple2 segNodeToChildren_2(struct StringIntIntObjectSegNodeTag_Tuple5 node_3) {
     int len_14 = node_3.t1;

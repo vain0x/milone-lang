@@ -60,7 +60,9 @@ let private trdVariant (ctx: TrdCtx) variantSerial (variantDefOpt: VariantDef op
 
       let ctx =
         { ctx with
-            VariantMemo = ctx.VariantMemo |> TMap.add variantSerial Recursive }
+            VariantMemo =
+              ctx.VariantMemo
+              |> TMap.add variantSerial Recursive }
 
       let ctx: TrdCtx =
         let variantDef =
@@ -351,8 +353,8 @@ let private tsmTy (ctx: TsmCtx) ty =
       | OptionTk ->
           match tyArgs with
           | [ itemTy ] ->
-             let size, ctx = tsmTy ctx itemTy
-             1 + size, ctx
+              let size, ctx = tsmTy ctx itemTy
+              1 + size, ctx
 
           | _ -> failwith "NEVER"
 

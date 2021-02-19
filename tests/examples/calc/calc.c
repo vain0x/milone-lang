@@ -12,6 +12,8 @@ bool strStartsWith_(struct String prefix_, struct String s_1);
 
 struct StringList;
 
+struct StringList;
+
 struct String go_2(struct StringList const* xs_1);
 
 struct String strConcat_(struct StringList const* xs_);
@@ -19,6 +21,8 @@ struct String strConcat_(struct StringList const* xs_);
 struct StringList const* go_3(struct StringList const* acc_, struct StringList const* xs_4);
 
 struct StringList const* strListRev_(struct StringList const* xs_3);
+
+struct Token_List;
 
 enum Token_Discriminant;
 
@@ -183,6 +187,7 @@ if_next_15:;
     return if_4;
 }
 
+
 struct StringList {
     struct String head;
     struct StringList const* tail;
@@ -240,6 +245,7 @@ struct StringList const* strListRev_(struct StringList const* xs_3) {
     struct StringList const* call_4 = go_3(NULL, xs_3);
     return call_4;
 }
+
 
 enum Token_Discriminant {
     TkInt_,

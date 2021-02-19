@@ -16,6 +16,8 @@ int usedInOtherSumTypeCase_(int arg_1);
 
 struct MyUnit_List;
 
+struct MyUnit_List;
+
 struct RecordUsingMyUnit_;
 
 int usedInRecordTypeCase_(int arg_2);
@@ -89,6 +91,7 @@ int usedInOtherSumTypeCase_(int arg_1) {
     milone_assert(call_, 27, 2);
     return 0;
 }
+
 
 struct MyUnit_List {
     struct MyUnit_ head;

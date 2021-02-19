@@ -4,6 +4,8 @@ struct IntList;
 
 int nilTest_(int arg_);
 
+struct IntList;
+
 int cons1Test_(int arg_1);
 
 int cons2Test_(int arg_2);
@@ -12,10 +14,6 @@ int literalTest_(int arg_3);
 
 int milone_main();
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 int nilTest_(int arg_) {
     struct IntList const* nil_ = NULL;
@@ -35,6 +33,11 @@ cons_cl_3:;
 if_next_1:;
     return 0;
 }
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
 
 int cons1Test_(int arg_1) {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));

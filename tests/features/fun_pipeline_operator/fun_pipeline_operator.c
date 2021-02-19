@@ -12,6 +12,8 @@ struct IntList;
 
 int len_(struct IntList const* xs_);
 
+struct IntList;
+
 int milone_main();
 
 int inc_(int x_) {
@@ -43,10 +45,6 @@ if_next_1:;
     return if_;
 }
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 int len_(struct IntList const* xs_) {
     int if_1;
@@ -64,6 +62,11 @@ cons_cl_6:;
 if_next_4:;
     return if_1;
 }
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
 
 int milone_main() {
     int call_ = inc_(1);

@@ -36,6 +36,8 @@ bool isNone_2(struct CharOption opt_1);
 
 bool isNone_1(struct IntOption opt_1);
 
+struct StringList;
+
 struct StringList const* listRevLoop_1(struct StringList const* acc_3, struct StringList const* xs_6);
 
 struct StringList const* rev_1(struct StringList const* xs_5);
@@ -178,10 +180,6 @@ int concatTest_(int arg_55);
 
 int milone_main();
 
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 struct String __stringJoin_(struct String sep_2, struct StringList const* xs_54) {
     struct String str_concat_result_ = str_concat(sep_2, xs_54);
@@ -275,6 +273,11 @@ next_9:;
 end_match_7:;
     return match_1;
 }
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
 
 struct StringList const* listRevLoop_1(struct StringList const* acc_3, struct StringList const* xs_6) {
 tailrec_10:;

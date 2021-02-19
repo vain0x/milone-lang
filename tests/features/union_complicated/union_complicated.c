@@ -1,15 +1,5 @@
 #include "milone.h"
 
-enum First_Discriminant;
-
-struct First_;
-
-enum Second_Discriminant;
-
-struct Second_;
-
-struct First_Second_Tuple2;
-
 struct First_Second_Tuple2List;
 
 struct First_List;
@@ -30,7 +20,19 @@ struct Node_;
 
 struct Node_List;
 
+struct Node_List;
+
 struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1;
+
+enum First_Discriminant;
+
+struct First_;
+
+enum Second_Discriminant;
+
+struct Second_;
+
+struct First_Second_Tuple2;
 
 enum Third_Discriminant;
 
@@ -40,49 +42,12 @@ struct IntThird_Tuple2;
 
 struct IntThird_Tuple2List;
 
+struct IntThird_Tuple2List;
+
 int milone_main();
 
-enum First_Discriminant {
-    First_,
-};
 
-struct First_ {
-    enum First_Discriminant discriminant;
-    union {
-        void const* First_;
-    };
-};
 
-enum Second_Discriminant {
-    Second_,
-};
-
-struct Second_ {
-    enum Second_Discriminant discriminant;
-    union {
-        void const* Second_;
-    };
-};
-
-struct First_Second_Tuple2 {
-    struct First_ t0;
-    struct Second_ t1;
-};
-
-struct First_Second_Tuple2List {
-    struct First_Second_Tuple2 head;
-    struct First_Second_Tuple2List const* tail;
-};
-
-struct First_List {
-    struct First_ head;
-    struct First_List const* tail;
-};
-
-struct Second_List {
-    struct Second_ head;
-    struct Second_List const* tail;
-};
 
 struct First_ListSecond_ListTuple2 {
     struct First_List const* t0;
@@ -117,6 +82,7 @@ struct Node_ {
     };
 };
 
+
 struct Node_List {
     struct Node_ head;
     struct Node_List const* tail;
@@ -125,6 +91,33 @@ struct Node_List {
 struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1 {
     struct First_ListSecond_ListTuple2(*fun)(void const*, struct First_Second_Tuple2List const*);
     void const* env;
+};
+
+enum First_Discriminant {
+    First_,
+};
+
+struct First_ {
+    enum First_Discriminant discriminant;
+    union {
+        void const* First_;
+    };
+};
+
+enum Second_Discriminant {
+    Second_,
+};
+
+struct Second_ {
+    enum Second_Discriminant discriminant;
+    union {
+        void const* Second_;
+    };
+};
+
+struct First_Second_Tuple2 {
+    struct First_ t0;
+    struct Second_ t1;
 };
 
 enum Third_Discriminant {
@@ -143,6 +136,7 @@ struct IntThird_Tuple2 {
     int t0;
     struct Third_ t1;
 };
+
 
 struct IntThird_Tuple2List {
     struct IntThird_Tuple2 head;
