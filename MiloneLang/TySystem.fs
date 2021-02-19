@@ -22,39 +22,45 @@ let emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
 // Tk
 // -----------------------------------------------
 
-let private tkEncode tk =
+let private tkEncode tk: int =
+  let pair l r =
+    assert (l < 30 && r < 10000000)
+    l * 10000000 + r
+
+  let just x = pair x 0
+
   let isMutToInt isMut =
     match isMut with
     | IsConst -> 1
     | IsMut -> 2
 
   match tk with
-  | ErrorTk _ -> 0, 0
-  | IntTk flavor -> 1, intFlavorToOrdinary flavor
-  | FloatTk flavor -> 2, floatFlavorToOrdinary flavor
-  | BoolTk -> 3, 0
-  | CharTk -> 4, 0
-  | StrTk -> 5, 0
-  | ObjTk -> 6, 0
-  | FunTk -> 7, 0
-  | TupleTk -> 8, 0
-  | OptionTk -> 9, 0
-  | ListTk -> 10, 0
+  | ErrorTk _ -> just 0
+  | IntTk flavor -> pair 1 (intFlavorToOrdinary flavor)
+  | FloatTk flavor -> pair 2 (floatFlavorToOrdinary flavor)
+  | BoolTk -> just 3
+  | CharTk -> just 4
+  | StrTk -> just 5
+  | ObjTk -> just 6
+  | FunTk -> just 7
+  | TupleTk -> just 8
+  | OptionTk -> just 9
+  | ListTk -> just 10
 
-  | VoidTk -> 11, 0
-  | NativePtrTk isMut -> 12, isMutToInt isMut
-  | NativeFunTk -> 13, 0
+  | VoidTk -> just 11
+  | NativePtrTk isMut -> pair 12 (isMutToInt isMut)
+  | NativeFunTk -> just 13
 
-  | MetaTk (tySerial, _) -> 20, tySerial
-  | SynonymTk tySerial -> 21, tySerial
-  | UnionTk tySerial -> 22, tySerial
-  | RecordTk tySerial -> 23, tySerial
+  | MetaTk (tySerial, _) -> pair 20 tySerial
+  | SynonymTk tySerial -> pair 21 tySerial
+  | UnionTk tySerial -> pair 22 tySerial
+  | RecordTk tySerial -> pair 23 tySerial
 
   | NativeTypeTk _
   | UnresolvedTk _
   | UnresolvedVarTk _ -> failwith "NEVER"
 
-let tkCompare l r =
+let tkCompare l r: int =
   match l, r with
   | NativeTypeTk l, NativeTypeTk r -> compare l r
 
@@ -67,9 +73,9 @@ let tkCompare l r =
   | UnresolvedTk _, _ -> -1
   | _, UnresolvedTk _ -> 1
 
-  | _ -> pairCompare compare compare (tkEncode l) (tkEncode r)
+  | _ -> tkEncode l - tkEncode r
 
-let tkEqual l r = tkCompare l r = 0
+let tkEqual l r: bool = tkCompare l r = 0
 
 let tkDisplay getTyName tk =
   match tk with
