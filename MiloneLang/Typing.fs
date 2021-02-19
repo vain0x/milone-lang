@@ -135,6 +135,158 @@ let private validateLit ctx lit loc =
   | _ -> ctx
 
 // -----------------------------------------------
+// Unification
+// -----------------------------------------------
+
+// And meta type resolution by substitution or degeneration.
+
+let private toUnifyCtx (ctx: TyCtx): UnifyCtx =
+  { Serial = ctx.Serial
+    Binding = emptyBinding
+    LevelChanges = emptyTyLevels
+    LogAcc = ctx.Logs }
+
+let private withUnifyCtx (ctx: TyCtx) (unifyCtx: UnifyCtx): TyCtx =
+  let tys, tyLevels =
+    TMap.fold
+      (fun (tys, tyLevels) tySerial ty ->
+        let tys = tys |> TMap.add tySerial (MetaTyDef ty)
+        let tyLevels = tyLevels |> TMap.add tySerial ctx.Level
+        tys, tyLevels)
+      (ctx.Tys, ctx.TyLevels)
+      unifyCtx.Binding
+
+  let tyLevels =
+    TMap.fold
+      (fun tyLevels tySerial level ->
+        if level = 0 then
+          tyLevels |> TMap.remove tySerial |> snd
+        else
+          tyLevels |> TMap.add tySerial level)
+      tyLevels
+      unifyCtx.LevelChanges
+
+  { ctx with
+      Serial = unifyCtx.Serial
+      Tys = tys
+      TyLevels = tyLevels
+      Logs = unifyCtx.LogAcc }
+
+let private substTy (ctx: TyCtx) ty: Ty =
+  let substMeta tySerial =
+    match ctx.Tys |> TMap.tryFind tySerial with
+    | Some (MetaTyDef ty) -> Some ty
+    | _ -> None
+
+  tySubst substMeta ty
+
+/// Substitutes bound meta tys in a ty.
+/// Unbound meta tys are degenerated, i.e. replaced with unit.
+let private substOrDegenerateTy (ctx: TyCtx) ty =
+  let substMeta tySerial =
+    match ctx.Tys |> TMap.tryFind tySerial with
+    | Some (MetaTyDef ty) -> Some ty
+
+    | Some (UniversalTyDef _) -> None
+
+    | _ ->
+        let level = getTyLevel tySerial ctx
+        // Degenerate unless quantified.
+        if level < 1000000000 then
+          Some tyUnit
+        else
+          None
+
+  tySubst substMeta ty
+
+let private expandSynonyms (ctx: TyCtx) ty: Ty =
+  tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
+
+let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
+  ctx
+  |> toUnifyCtx
+  |> typingUnify ctx.Level ctx.Tys ctx.TyLevels lty rty loc
+  |> withUnifyCtx ctx
+
+let private unifyVarTy varSerial tyOpt loc ctx =
+  let varTy, ctx =
+    match findVar ctx varSerial with
+    | VarDef (_, _, ty, _) -> ty, ctx
+
+  match tyOpt with
+  | Some ty ->
+      let ctx = unifyTy ctx loc varTy ty
+      varTy, ctx
+
+  | None -> varTy, ctx
+
+// -----------------------------------------------
+// Generalization and instantiation
+// -----------------------------------------------
+
+let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc =
+  match tyScheme with
+  | TyScheme ([], ty) -> ty, [], ctx
+
+  | TyScheme (fvs, ty) ->
+      let serial, tyLevels, ty, assignment =
+        doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels fvs ty loc
+
+      ty,
+      assignment,
+      { ctx with
+          Serial = serial
+          TyLevels = tyLevels }
+
+let private instantiateTySpec loc (TySpec (polyTy, traits), ctx: TyCtx) =
+  let polyTy, assignment, ctx =
+    let tyScheme =
+      TyScheme(tyCollectFreeVars polyTy, polyTy)
+
+    instantiateTyScheme ctx tyScheme loc
+
+  // Replace type variables also in trait bounds.
+  let traits =
+    let substMeta = tyAssign assignment
+
+    traits
+    |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
+
+  polyTy, traits, ctx
+
+let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
+  let funDef = ctx.Funs |> mapFind funSerial
+
+  match funDef.Ty with
+  | TyScheme ([], funTy) ->
+      let isOwned tySerial =
+        let level = getTyLevel tySerial ctx
+        level > outerLevel
+
+      let funTy = substTy ctx funTy
+      let funTyScheme = tyGeneralize isOwned funTy
+
+      let ctx =
+        { ctx with
+            Funs =
+              ctx.Funs
+              |> TMap.add funSerial { funDef with Ty = funTyScheme } }
+
+      // Mark generalized meta tys (universally quantified vars),
+      // by increasing their level to infinite (10^9).
+      let ctx =
+        let (TyScheme (fvs, _)) = funTyScheme
+
+        { ctx with
+            TyLevels =
+              fvs
+              |> List.fold (fun tyLevels fv -> tyLevels |> TMap.add fv 1000000000) ctx.TyLevels }
+
+      ctx
+
+  | _ -> failwith "Can't generalize already-generalized functions"
+
+// -----------------------------------------------
 // Trait bounds
 // -----------------------------------------------
 
@@ -270,169 +422,6 @@ let private resolveTraitBounds (ctx: TyCtx) =
          unifyCtx
 
   withUnifyCtx ctx unifyCtx
-
-// -----------------------------------------------
-// Unification
-// -----------------------------------------------
-
-// And meta type resolution by substitution or degeneration.
-
-let private substTy (ctx: TyCtx) ty: Ty =
-  let substMeta tySerial =
-    match ctx.Tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef ty) -> Some ty
-    | _ -> None
-
-  tySubst substMeta ty
-
-/// Substitutes bound meta tys in a ty.
-/// Unbound meta tys are degenerated, i.e. replaced with unit.
-let private substOrDegenerateTy (ctx: TyCtx) ty =
-  let substMeta tySerial =
-    match ctx.Tys |> TMap.tryFind tySerial with
-    | Some (MetaTyDef ty) -> Some ty
-
-    | Some (UniversalTyDef _) -> None
-
-    | _ ->
-        let level = getTyLevel tySerial ctx
-        // Degenerate unless quantified.
-        if level < 1000000000 then
-          Some tyUnit
-        else
-          None
-
-  tySubst substMeta ty
-
-let private expandSynonyms (ctx: TyCtx) ty: Ty =
-  tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
-
-let private toUnifyCtx (ctx: TyCtx): UnifyCtx =
-  { Serial = ctx.Serial
-    Binding = emptyBinding
-    LevelChanges = emptyTyLevels
-    LogAcc = ctx.Logs }
-
-let private withUnifyCtx (ctx: TyCtx) (unifyCtx: UnifyCtx): TyCtx =
-  let tys, tyLevels =
-    TMap.fold
-      (fun (tys, tyLevels) tySerial ty ->
-        let tys = tys |> TMap.add tySerial (MetaTyDef ty)
-        let tyLevels = tyLevels |> TMap.add tySerial ctx.Level
-        tys, tyLevels)
-      (ctx.Tys, ctx.TyLevels)
-      unifyCtx.Binding
-
-  let tyLevels =
-    TMap.fold
-      (fun tyLevels tySerial level ->
-        if level = 0 then
-          tyLevels |> TMap.remove tySerial |> snd
-        else
-          tyLevels |> TMap.add tySerial level)
-      tyLevels
-      unifyCtx.LevelChanges
-
-  { ctx with
-      Serial = unifyCtx.Serial
-      Tys = tys
-      TyLevels = tyLevels
-      Logs = unifyCtx.LogAcc }
-
-let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
-  ctx
-  |> toUnifyCtx
-  |> typingUnify ctx.Level ctx.Tys ctx.TyLevels lty rty loc
-  |> withUnifyCtx ctx
-
-let private unifyVarTy varSerial tyOpt loc ctx =
-  let varTy, ctx =
-    match findVar ctx varSerial with
-    | VarDef (_, _, ty, _) -> ty, ctx
-
-  match tyOpt with
-  | Some ty ->
-      let ctx = unifyTy ctx loc varTy ty
-      varTy, ctx
-
-  | None -> varTy, ctx
-
-// -----------------------------------------------
-// Generalization and instantiation
-// -----------------------------------------------
-
-/// Assume all bound type variables are resolved by `substTy`.
-///
-/// `isOwned` checks if the type variable is introduced by the most recent `let`.
-/// For example, `let f x = (let g = f in g x)` will have too generic type
-/// without this checking (according to TaPL).
-let tyGeneralize isOwned (ty: Ty) =
-  let fvs =
-    tyCollectFreeVars ty |> List.filter isOwned
-
-  TyScheme(fvs, ty)
-
-let private instantiateTyScheme (ctx: TyCtx) (tyScheme: TyScheme) loc =
-  match tyScheme with
-  | TyScheme ([], ty) -> ty, [], ctx
-
-  | TyScheme (fvs, ty) ->
-      let serial, tyLevels, ty, assignment =
-        doInstantiateTyScheme ctx.Serial ctx.Level ctx.TyLevels fvs ty loc
-
-      ty,
-      assignment,
-      { ctx with
-          Serial = serial
-          TyLevels = tyLevels }
-
-let private instantiateTySpec loc (TySpec (polyTy, traits), ctx: TyCtx) =
-  let polyTy, assignment, ctx =
-    let tyScheme =
-      TyScheme(tyCollectFreeVars polyTy, polyTy)
-
-    instantiateTyScheme ctx tyScheme loc
-
-  // Replace type variables also in trait bounds.
-  let traits =
-    let substMeta = tyAssign assignment
-
-    traits
-    |> List.map (fun theTrait -> theTrait |> traitMapTys substMeta, loc)
-
-  polyTy, traits, ctx
-
-let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
-  let funDef = ctx.Funs |> mapFind funSerial
-
-  match funDef.Ty with
-  | TyScheme ([], funTy) ->
-      let isOwned tySerial =
-        let level = getTyLevel tySerial ctx
-        level > outerLevel
-
-      let funTy = substTy ctx funTy
-      let funTyScheme = tyGeneralize isOwned funTy
-
-      let ctx =
-        { ctx with
-            Funs =
-              ctx.Funs
-              |> TMap.add funSerial { funDef with Ty = funTyScheme } }
-
-      // Mark generalized meta tys (universally quantified vars),
-      // by increasing their level to infinite (10^9).
-      let ctx =
-        let (TyScheme (fvs, _)) = funTyScheme
-
-        { ctx with
-            TyLevels =
-              fvs
-              |> List.fold (fun tyLevels fv -> tyLevels |> TMap.add fv 1000000000) ctx.TyLevels }
-
-      ctx
-
-  | _ -> failwith "Can't generalize already-generalized functions"
 
 // -----------------------------------------------
 // Others

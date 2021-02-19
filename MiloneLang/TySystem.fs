@@ -14,6 +14,10 @@ open MiloneLang.Hir
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
+let emptyTyLevels: AssocMap<TySerial, Level> = TMap.empty compare
+
+let emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
+
 // -----------------------------------------------
 // Tk
 // -----------------------------------------------
@@ -209,6 +213,45 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
 let tyAssign assignment ty =
   tySubst (fun tySerial -> assocTryFind compare tySerial assignment) ty
 
+/// Expands a synonym type using its definition and type args.
+let tyExpandSynonym useTyArgs defTySerials bodyTy: Ty =
+  // Checked in NameRes.
+  assert (List.length defTySerials = List.length useTyArgs)
+
+  let assignment =
+    match listTryZip defTySerials useTyArgs with
+    | assignment, [], [] -> assignment
+    | _ -> failwith "NEVER"
+
+  tyAssign assignment bodyTy
+
+/// Expands all synonyms inside of a type.
+let tyExpandSynonyms (expand: TySerial -> TyDef option) ty: Ty =
+  let rec go ty =
+    match ty with
+    | Ty (SynonymTk tySerial, useTyArgs) ->
+        match expand tySerial with
+        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+            tyExpandSynonym useTyArgs defTySerials bodyTy
+            |> go
+
+        | _ -> Ty(SynonymTk tySerial, useTyArgs)
+
+    | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
+
+  go ty
+
+/// Assume all bound type variables are resolved by `substTy`.
+///
+/// `isOwned` checks if the type variable is introduced by the most recent `let`.
+/// For example, `let f x = (let g = f in g x)` will have too generic type
+/// without this checking (according to TaPL).
+let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty): TyScheme =
+  let fvs =
+    tyCollectFreeVars ty |> List.filter isOwned
+
+  TyScheme(fvs, ty)
+
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
   let rec go (outerBp: int) ty =
@@ -265,12 +308,8 @@ let tyDisplay getTyName ty =
   go 0 ty
 
 // -----------------------------------------------
-// Type inference context
+// Context-free functions
 // -----------------------------------------------
-
-let emptyTyLevels: AssocMap<TySerial, Level> = TMap.empty compare
-
-let emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
 
 let private getLevel tyLevels levelChanges tySerial: Level =
   match levelChanges |> TMap.tryFind tySerial with
@@ -288,8 +327,32 @@ let private tyExpandMeta tys binding tySerial: Ty option =
       | Some (MetaTyDef ty) -> Some ty
       | _ -> None
 
+let doInstantiateTyScheme
+  (serial: int)
+  (level: Level)
+  (tyLevels: AssocMap<TySerial, Level>)
+  (tySerials: TySerial list)
+  (ty: Ty)
+  (loc: Loc)
+  =
+  let serial, tyLevels, assignment =
+    tySerials
+    |> List.fold
+         (fun (serial, tyLevels, assignment) tySerial ->
+           let serial = serial + 1
+           let tyLevels = tyLevels |> TMap.add serial level
+
+           let assignment =
+             (tySerial, tyMeta serial loc) :: assignment
+
+           serial, tyLevels, assignment)
+         (serial, tyLevels, [])
+
+  let ty = tyAssign assignment ty
+  serial, tyLevels, ty, assignment
+
 // -----------------------------------------------
-// Type inference algorithm
+// Unification
 // -----------------------------------------------
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -308,6 +371,12 @@ let private isMetaOf tySerial ty =
   match ty with
   | Ty (MetaTk (s, _), _) -> s = tySerial
   | _ -> false
+
+let typingSubst tys binding ty: Ty =
+  tySubst (tyExpandMeta tys binding) ty
+
+let typingExpandSynonyms tys ty =
+  tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty
 
 /// Adds type-var/type binding.
 let private typingBind tys tyLevels binding levelChanges tySerial ty =
@@ -339,63 +408,6 @@ let private typingBind tys tyLevels binding levelChanges tySerial ty =
          levelChanges
 
   binding, levelChanges
-
-let typingSubst tys binding ty: Ty =
-  tySubst (tyExpandMeta tys binding) ty
-
-let doInstantiateTyScheme
-  (serial: int)
-  (level: Level)
-  (tyLevels: AssocMap<TySerial, Level>)
-  (tySerials: TySerial list)
-  (ty: Ty)
-  (loc: Loc)
-  =
-  let serial, tyLevels, assignment =
-    tySerials
-    |> List.fold
-         (fun (serial, tyLevels, assignment) tySerial ->
-           let serial = serial + 1
-           let tyLevels = tyLevels |> TMap.add serial level
-
-           let assignment =
-             (tySerial, tyMeta serial loc) :: assignment
-
-           serial, tyLevels, assignment)
-         (serial, tyLevels, [])
-
-  let ty = tyAssign assignment ty
-  serial, tyLevels, ty, assignment
-
-let tyExpandSynonym useTyArgs defTySerials bodyTy =
-  // Checked in NameRes.
-  assert (List.length defTySerials = List.length useTyArgs)
-
-  // Expand synonym.
-  let assignment =
-    match listTryZip defTySerials useTyArgs with
-    | assignment, [], [] -> assignment
-    | _ -> failwith "NEVER"
-
-  tyAssign assignment bodyTy
-
-let tyExpandSynonyms (expand: TySerial -> TyDef option) ty =
-  let rec go ty =
-    match ty with
-    | Ty (SynonymTk tySerial, useTyArgs) ->
-        match expand tySerial with
-        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-            tyExpandSynonym useTyArgs defTySerials bodyTy
-            |> go
-
-        | _ -> Ty(SynonymTk tySerial, useTyArgs)
-
-    | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
-
-  go ty
-
-let typingExpandSynonyms tys ty =
-  tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty
 
 [<NoEquality; NoComparison>]
 type private MetaTyUnifyResult =
