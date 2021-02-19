@@ -278,41 +278,9 @@ let tyDisplay getTyName ty =
 // Type inference context
 // -----------------------------------------------
 
-/// Type inference context.
-[<RequireQualifiedAccess; NoEquality; NoComparison>]
-type TyContext =
-  { Serial: Serial
-    Level: Level
-    Tys: AssocMap<TySerial, TyDef>
-    TyLevels: AssocMap<TySerial, Level>
-
-    /// Binding of meta types made by unification.
-    /// Levels default to the current level.
-    Binding: AssocMap<TySerial, Ty>
-
-    /// Changes of meta type levels by unification.
-    LevelChanges: AssocMap<TySerial, Level> }
-
 let emptyTyLevels: AssocMap<TySerial, Level> = TMap.empty compare
+
 let emptyBindings: AssocMap<TySerial, Ty> = TMap.empty compare
-
-let private tyContextUnify lTy rTy loc (logAcc: _ list, ctx: TyContext): _ list * TyContext =
-  let unifyCtx: UnifyCtx =
-    { Serial = ctx.Serial
-      Binding = ctx.Binding
-      LevelChanges = ctx.LevelChanges
-      LogAcc = logAcc }
-
-  let unifyCtx: UnifyCtx =
-    typingUnify ctx.Level ctx.Tys ctx.TyLevels lTy rTy loc unifyCtx
-
-  let ctx: TyContext =
-    { ctx with
-        Serial = unifyCtx.Serial
-        Binding = unifyCtx.Binding
-        LevelChanges = unifyCtx.LevelChanges }
-
-  unifyCtx.LogAcc, ctx
 
 let private tyContextGetLevel tyLevels levelChanges tySerial: Level =
   match levelChanges |> TMap.tryFind tySerial with
@@ -337,9 +305,14 @@ let private tyContextExpandMeta tys binding tySerial: Ty option =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type UnifyCtx =
   { Serial: int
+    LogAcc: (Log * Loc) list
+
+    /// Binding of meta types during unification.
     Binding: AssocMap<TySerial, Ty>
-    LevelChanges: AssocMap<TySerial, Level>
-    LogAcc: (Log * Loc) list }
+
+    /// For existing meta types: level up during unification.
+    /// For new unbound meta types: set current level.
+    LevelChanges: AssocMap<TySerial, Level> }
 
 let private isMetaOf tySerial ty =
   match ty with
@@ -416,7 +389,7 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy =
 
   tyAssign assignment bodyTy
 
-let tyExpandSynonyms expand ty =
+let tyExpandSynonyms (expand: TySerial -> TyDef option) ty =
   let rec go ty =
     match ty with
     | Ty (SynonymTk tySerial, useTyArgs) ->
@@ -536,17 +509,24 @@ let typingUnify level tys tyLevels (lty: Ty) (rty: Ty) (loc: Loc) (ctx: UnifyCtx
 
   go lty rty ctx
 
-let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
+let typingResolveTraitBound level tys tyLevels theTrait loc (ctx: UnifyCtx) =
   let theTrait =
     theTrait
     |> traitMapTys
          (fun ty ->
            ty
-           |> typingSubst ctx.Tys ctx.Binding
-           |> typingExpandSynonyms ctx.Tys)
+           |> typingSubst tys ctx.Binding
+           |> typingExpandSynonyms tys)
+
+  let unify lTy rTy loc ctx: UnifyCtx =
+    typingUnify level tys tyLevels lTy rTy loc ctx
+
+  let addBoundError ctx: UnifyCtx =
+    { ctx with
+        LogAcc = (Log.TyBoundError theTrait, loc) :: ctx.LogAcc }
 
   /// integer, bool, char, or string
-  let expectBasic ty (logAcc, ctx) =
+  let expectBasic ty (ctx: UnifyCtx) =
     match ty with
     | Ty (ErrorTk _, _)
     | Ty (IntTk _, [])
@@ -554,9 +534,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
     | Ty (BoolTk, [])
     | Ty (CharTk, [])
     | Ty (StrTk, [])
-    | Ty (NativePtrTk _, _) -> logAcc, ctx
+    | Ty (NativePtrTk _, _) -> ctx
 
-    | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+    | _ -> addBoundError ctx
 
   match theTrait with
   | AddTrait ty ->
@@ -565,45 +545,42 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | Ty (IntTk _, [])
       | Ty (FloatTk _, [])
       | Ty (CharTk, [])
-      | Ty (StrTk, []) -> logAcc, ctx
+      | Ty (StrTk, []) -> ctx
 
-      | _ ->
-          // Coerce to int by default.
-          tyContextUnify ty tyInt loc (logAcc, ctx)
+      // Coerce to int by default.
+      | _ -> unify ty tyInt loc ctx
 
-  | EqualTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | EqualTrait ty -> ctx |> expectBasic ty
 
-  | CompareTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | CompareTrait ty -> ctx |> expectBasic ty
 
   | IndexTrait (lTy, rTy, resultTy) ->
       match lTy with
-      | Ty (ErrorTk _, _) -> [], ctx
+      | Ty (ErrorTk _, _) -> ctx
 
       | Ty (StrTk, []) ->
-          (logAcc, ctx)
-          |> tyContextUnify rTy tyInt loc
-          |> tyContextUnify resultTy tyChar loc
+          ctx
+          |> unify rTy tyInt loc
+          |> unify resultTy tyChar loc
 
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+      | _ -> addBoundError ctx
 
   | IsIntTrait ty ->
       match ty with
       | Ty (ErrorTk _, _)
-      | Ty (IntTk _, []) -> logAcc, ctx
+      | Ty (IntTk _, []) -> ctx
 
-      | _ ->
-          // Coerce to int by default.
-          tyContextUnify ty tyInt loc (logAcc, ctx)
+      // Coerce to int by default.
+      | _ -> unify ty tyInt loc ctx
 
   | IsNumberTrait ty ->
       match ty with
       | Ty (ErrorTk _, _)
       | Ty (IntTk _, [])
-      | Ty (FloatTk _, []) -> logAcc, ctx
+      | Ty (FloatTk _, []) -> ctx
 
-      | _ ->
-          // Coerce to int by default.
-          tyContextUnify ty tyInt loc (logAcc, ctx)
+      // Coerce to int by default.
+      | _ -> unify ty tyInt loc ctx
 
   | ToCharTrait ty ->
       match ty with
@@ -611,9 +588,9 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | Ty (IntTk _, [])
       | Ty (FloatTk _, [])
       | Ty (CharTk, [])
-      | Ty (StrTk, []) -> logAcc, ctx
+      | Ty (StrTk, []) -> ctx
 
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+      | _ -> addBoundError ctx
 
   | ToIntTrait ty ->
       match ty with
@@ -622,20 +599,20 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | Ty (FloatTk _, [])
       | Ty (CharTk, [])
       | Ty (StrTk, [])
-      | Ty (NativePtrTk _, _) -> logAcc, ctx
+      | Ty (NativePtrTk _, _) -> ctx
 
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+      | _ -> addBoundError ctx
 
   | ToFloatTrait ty ->
       match ty with
       | Ty (ErrorTk _, _)
       | Ty (IntTk _, [])
       | Ty (FloatTk _, [])
-      | Ty (StrTk, []) -> logAcc, ctx
+      | Ty (StrTk, []) -> ctx
 
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+      | _ -> addBoundError ctx
 
-  | ToStringTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | ToStringTrait ty -> expectBasic ty ctx
 
   | PtrTrait ty ->
       match ty with
@@ -644,6 +621,6 @@ let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
       | Ty (ObjTk, [])
       | Ty (ListTk, _)
       | Ty (NativePtrTk _, _)
-      | Ty (NativeFunTk, _) -> logAcc, ctx
+      | Ty (NativeFunTk, _) -> ctx
 
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+      | _ -> addBoundError ctx

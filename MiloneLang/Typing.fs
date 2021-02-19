@@ -138,62 +138,23 @@ let private validateLit ctx lit loc =
 
 let private emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
 
-let private toTyContext (ctx: TyCtx): TyContext =
-  { Serial = ctx.Serial
-    Level = ctx.Level
-    Tys = ctx.Tys
-    TyLevels = ctx.TyLevels
-    Binding = emptyBinding
-    LevelChanges = emptyTyLevels }
-
-let private withTyContext (ctx: TyCtx) logAcc (tyCtx: TyContext): TyCtx =
-  let tys, tyLevels =
-    TMap.fold
-      (fun (tys, tyLevels) tySerial ty ->
-        let tys = tys |> TMap.add tySerial (MetaTyDef ty)
-        let tyLevels = tyLevels |> TMap.add tySerial ctx.Level
-        tys, tyLevels)
-      (ctx.Tys, ctx.TyLevels)
-      tyCtx.Binding
-
-  let tyLevels =
-    TMap.fold
-      (fun tyLevels tySerial level ->
-        if level = 0 then
-          tyLevels |> TMap.remove tySerial |> snd
-        else
-          tyLevels |> TMap.add tySerial level)
-      tyLevels
-      tyCtx.LevelChanges
-
-  { ctx with
-      Serial = tyCtx.Serial
-      Tys = tys
-      TyLevels = tyLevels
-      Logs = logAcc }
-
 let private addTraitBounds traits (ctx: TyCtx) =
   { ctx with
       TraitBounds = List.append traits ctx.TraitBounds }
 
 let private resolveTraitBounds (ctx: TyCtx) =
-  let rec go logAcc traits ctx =
+  let rec go traits unifyCtx: UnifyCtx =
     match traits with
-    | [] -> logAcc, ctx
+    | [] -> unifyCtx
 
     | (theTrait, loc) :: traits ->
-        let logAcc, ctx =
-          typingResolveTraitBound logAcc ctx theTrait loc
-
-        ctx |> go logAcc traits
+        typingResolveTraitBound ctx.Level ctx.Tys ctx.TyLevels theTrait loc unifyCtx
+        |> go traits
 
   let traits = ctx.TraitBounds |> List.rev
   let ctx = { ctx with TraitBounds = [] }
 
-  let logAcc, tyCtx =
-    ctx |> toTyContext |> go ctx.Logs traits
-
-  withTyContext ctx logAcc tyCtx
+  ctx |> toUnifyCtx |> go traits |> withUnifyCtx ctx
 
 let private substTy (ctx: TyCtx) ty: Ty =
   let substMeta tySerial =
@@ -225,17 +186,13 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
 let private expandSynonyms (ctx: TyCtx) ty: Ty =
   tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
 
-let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
-  let unifyCtx: UnifyCtx =
-    { Serial = ctx.Serial
-      Binding = emptyBinding
-      LevelChanges = emptyTyLevels
-      LogAcc = ctx.Logs }
+let private toUnifyCtx (ctx: TyCtx): UnifyCtx =
+  { Serial = ctx.Serial
+    Binding = emptyBinding
+    LevelChanges = emptyTyLevels
+    LogAcc = ctx.Logs }
 
-  let unifyCtx: UnifyCtx =
-    typingUnify ctx.Level ctx.Tys ctx.TyLevels lty rty loc unifyCtx
-
-  // FIXME: dup with withTyContext
+let private withUnifyCtx (ctx: TyCtx) (unifyCtx: UnifyCtx): TyCtx =
   let tys, tyLevels =
     TMap.fold
       (fun (tys, tyLevels) tySerial ty ->
@@ -254,13 +211,18 @@ let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
           tyLevels |> TMap.add tySerial level)
       tyLevels
       unifyCtx.LevelChanges
-  // /dup
 
   { ctx with
       Serial = unifyCtx.Serial
       Tys = tys
       TyLevels = tyLevels
       Logs = unifyCtx.LogAcc }
+
+let private unifyTy (ctx: TyCtx) loc (lty: Ty) (rty: Ty): TyCtx =
+  ctx
+  |> toUnifyCtx
+  |> typingUnify ctx.Level ctx.Tys ctx.TyLevels lty rty loc
+  |> withUnifyCtx ctx
 
 let private unifyVarTy varSerial tyOpt loc ctx =
   let varTy, ctx =
