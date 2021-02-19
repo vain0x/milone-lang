@@ -194,6 +194,15 @@ let rec tyToArgList ty =
 
   go 0 [] ty
 
+/// Checks if the type contains no bound meta types.
+let private tyIsFullySubstituted (isBound: TySerial -> bool) ty: bool =
+  let rec go ty =
+    match ty with
+    | Ty (MetaTk (tySerial, _), _) -> isBound tySerial |> not
+    | Ty (_, tyArgs) -> List.forall go tyArgs
+
+  go ty
+
 /// Substitutes meta types in a type as possible.
 let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
@@ -319,6 +328,12 @@ let private getLevel tyLevels levelChanges tySerial: Level =
       |> TMap.tryFind tySerial
       |> Option.defaultValue 0
 
+let private metaTyIsBound tys binding tySerial: bool =
+  TMap.containsKey tySerial binding
+  || (match tys |> TMap.tryFind tySerial with
+      | Some (MetaTyDef _) -> true
+      | _ -> false)
+
 let private tyExpandMeta tys binding tySerial: Ty option =
   match binding |> TMap.tryFind tySerial with
   | (Some _) as it -> it
@@ -372,15 +387,14 @@ let private isMetaOf tySerial ty =
   | Ty (MetaTk (s, _), _) -> s = tySerial
   | _ -> false
 
-let typingSubst tys binding ty: Ty =
-  tySubst (tyExpandMeta tys binding) ty
+let typingSubst tys binding ty: Ty = tySubst (tyExpandMeta tys binding) ty
 
 let typingExpandSynonyms tys ty =
   tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty
 
 /// Adds type-var/type binding.
 let private typingBind tys tyLevels binding levelChanges tySerial ty =
-  let ty = typingSubst tys binding ty
+  assert (tyIsFullySubstituted (metaTyIsBound tys binding) ty)
 
   // Self-binding never occurs due to occurrence check.
   assert (isMetaOf tySerial ty |> not)
@@ -389,15 +403,13 @@ let private typingBind tys tyLevels binding levelChanges tySerial ty =
 
   // Reduce level of meta tys in the referent ty to the meta ty's level at most.
   let levelChanges =
-    let level =
-      getLevel tyLevels levelChanges tySerial
+    let level = getLevel tyLevels levelChanges tySerial
 
     ty
     |> tyCollectFreeVars
     |> List.fold
          (fun levelChanges tySerial ->
-           let currentLevel =
-             getLevel tyLevels levelChanges tySerial
+           let currentLevel = getLevel tyLevels levelChanges tySerial
 
            if currentLevel <= level then
              // Already non-deep enough.
