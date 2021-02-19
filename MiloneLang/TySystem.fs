@@ -65,7 +65,7 @@ let tkCompare l r =
 
   | _ -> pairCompare compare compare (tkEncode l) (tkEncode r)
 
-let tkEqual first second = tkCompare first second = 0
+let tkEqual l r = tkCompare l r = 0
 
 let tkDisplay getTyName tk =
   match tk with
@@ -124,17 +124,17 @@ let tyIsFun ty =
   | Ty (FunTk, _) -> true
   | _ -> false
 
-let tyCompare first second =
-  match first, second with
-  | Ty (firstTk, firstTys), Ty (secondTk, secondTys) ->
-      let c = tkCompare firstTk secondTk
+let tyCompare l r =
+  match l, r with
+  | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) ->
+      let c = tkCompare lTk rTk
 
       if c <> 0 then
         c
       else
-        listCompare tyCompare firstTys secondTys
+        listCompare tyCompare lTyArgs rTyArgs
 
-let tyEqual first second = tyCompare first second = 0
+let tyEqual l r = tyCompare l r = 0
 
 /// Gets if the specified type variable doesn't appear in a type.
 let tyIsFreeIn ty tySerial: bool =
