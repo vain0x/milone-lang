@@ -99,25 +99,15 @@ let tkDisplay getTyName tk =
 let traitMapTys f it =
   match it with
   | AddTrait ty -> AddTrait(f ty)
-
   | EqualTrait ty -> EqualTrait(f ty)
-
   | CompareTrait ty -> CompareTrait(f ty)
-
-  | IndexTrait (lTy, rTy, outputTy) -> IndexTrait(f lTy, f rTy, f outputTy)
-
+  | IndexTrait (lTy, rTy, resultTy) -> IndexTrait(f lTy, f rTy, f resultTy)
   | IsIntTrait ty -> IsIntTrait(f ty)
-
   | IsNumberTrait ty -> IsNumberTrait(f ty)
-
   | ToCharTrait ty -> ToCharTrait(f ty)
-
   | ToIntTrait ty -> ToIntTrait(f ty)
-
   | ToFloatTrait ty -> ToFloatTrait(f ty)
-
   | ToStringTrait ty -> ToStringTrait(f ty)
-
   | PtrTrait ty -> PtrTrait(f ty)
 
 // -----------------------------------------------
