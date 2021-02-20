@@ -11,6 +11,7 @@ set -eu
 
 MILONE_HOME=${MILONE_HOME:-"$HOME/.milone"}
 CFLAGS=${CFLAGS:-'-O2'}
+REST=${REST:-}
 
 CFLAGS_ALL="-std=c11 \
     $CFLAGS \
@@ -23,4 +24,4 @@ CFLAGS_ALL="-std=c11 \
     $MILONE_HOME/runtime/milone.c \
     "
 
-gcc $CFLAGS_ALL $INPUTS -o ${OUTPUT:-'a.out'}
+gcc $CFLAGS_ALL $INPUTS -o ${OUTPUT:-'a.out'} $REST

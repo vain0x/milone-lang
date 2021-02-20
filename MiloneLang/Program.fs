@@ -11,6 +11,9 @@ let private readFile (filePath: string) =
       None
   with _ -> None
 
+let private writeFile (filePath: string) (contents: string): unit =
+  System.IO.File.WriteAllText(filePath, contents)
+
 let dotnetCliHost (): CliHost =
   let args =
     System.Environment.GetCommandLineArgs()
@@ -27,7 +30,8 @@ let dotnetCliHost (): CliHost =
     MiloneHome = miloneHome
     ProfileInit = profileInit
     ProfileLog = profileLog
-    FileReadAllText = readFile }
+    FileReadAllText = readFile
+    FileWriteAllText = writeFile }
 
 [<EntryPoint>]
 let main _ = cli (dotnetCliHost ())

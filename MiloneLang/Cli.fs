@@ -93,6 +93,7 @@ type Verbosity =
 type OutputMode =
   | BundleAll
   | BundleHeader
+  | Split
 
 /// Abstraction layer of CLI program.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
@@ -114,7 +115,10 @@ type CliHost =
     ProfileLog: string -> Profiler -> unit
 
     /// Reads all contents of a file as string.
-    FileReadAllText: string -> string option }
+    FileReadAllText: string -> string option
+
+    /// path -> text -> unit
+    FileWriteAllText: string -> string -> unit }
 
 // -----------------------------------------------
 // Helpers
@@ -173,14 +177,14 @@ let private doInterpretProjectSchema ast =
 
   let asProjectRef expr =
     match expr with
-    | ABinaryExpr (AppBinary, AIdentExpr (Name("Ref", _)), projectDir, _) ->
+    | ABinaryExpr (AppBinary, AIdentExpr (Name ("Ref", _)), projectDir, _) ->
         let projectDir =
           projectDir |> asStr |> pathStrTrimEndPathSep
 
         let projectName = projectDir |> pathStrToStem
         Some(projectName, projectDir)
 
-    | ABinaryExpr (AppBinary, AIdentExpr (Name("AliasedRef", _)), ATupleExpr ([ projectName; projectDir ], _), _) ->
+    | ABinaryExpr (AppBinary, AIdentExpr (Name ("AliasedRef", _)), ATupleExpr ([ projectName; projectDir ], _), _) ->
         let projectName = projectName |> asStr
 
         let projectDir =
@@ -194,7 +198,7 @@ let private doInterpretProjectSchema ast =
     match decl with
     | AExprDecl (ARecordExpr (None, fields, _)) ->
         match fields
-              |> List.tryFind (fun (Name(name, _), _, _) -> name = "Options") with
+              |> List.tryFind (fun ((Name (name, _)), _, _) -> name = "Options") with
         | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
         | _ -> None
 
@@ -255,7 +259,12 @@ let resolveMiloneCoreDeps tokens ast =
     moduleMap
     |> TMap.fold
          (fun decls moduleName pos ->
-           AModuleSynonymDecl(Name(moduleName, pos), [ Name("MiloneCore", pos); Name(moduleName, pos) ], pos)
+           AModuleSynonymDecl(
+             Name(moduleName, pos),
+             [ Name("MiloneCore", pos)
+               Name(moduleName, pos) ],
+             pos
+           )
            :: decls)
          decls
 
@@ -572,24 +581,42 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v outputMode (expr, tyCtx) =
+let codeGenHirViaMir (host: CliHost) v projectDir outputMode (expr, tyCtx) =
   writeLog host v "Mir"
-  let stmts, mirCtx = mirify (expr, tyCtx)
+  let decls, mirCtx = mirify (expr, tyCtx)
 
   if mirCtx.Logs |> List.isEmpty |> not then
     false, mirCtx.Logs |> semanticErrorToString tyCtx
   else
-    writeLog host v "CirGen"
-    let ok, cir = genCir (stmts, mirCtx)
+    let bundle dump =
+      writeLog host v "CirGen"
+      let ok, cir = genCir (decls, mirCtx)
 
-    writeLog host v "CirDump"
-    let output =
-      match outputMode with
-      | BundleHeader -> cirDumpHeader cir
-      | BundleAll -> cirDump cir
+      writeLog host v "CirDump"
+      let output = dump cir
 
-    writeLog host v "Finish"
-    ok, output
+      writeLog host v "Finish"
+      ok, output
+
+    match outputMode with
+    | BundleHeader -> bundle cirDumpHeader
+    | BundleAll -> bundle cirDump
+
+    | Split ->
+        let targetDir = projectDir + "/../target"
+
+        writeLog host v "CirGen (split)"
+        let ok, stdCir, userCir = genCirWithSplit (decls, mirCtx)
+
+        writeLog host v "CirDump"
+        host.FileWriteAllText(targetDir + "/milone_std.h") (cirDumpHeader stdCir)
+        host.FileWriteAllText(targetDir + "/milone_std.c") (cirDump stdCir)
+
+        let output =
+          "#include \"milone_std.h\"\n" + cirDump userCir
+
+        writeLog host v "Finish"
+        ok, output
 
 let check (ctx: CompileCtx): bool * string =
   let host = ctx.Host
@@ -620,7 +647,7 @@ let compile (ctx: CompileCtx): bool * string =
 
     | SemaAnalysisOk (expr, tyCtx) ->
         let expr, tyCtx = transformHir host v (expr, tyCtx)
-        codeGenHirViaMir host v ctx.OutputMode (expr, tyCtx)
+        codeGenHirViaMir host v ctx.ProjectDir ctx.OutputMode (expr, tyCtx)
 
 // -----------------------------------------------
 // Actions
@@ -730,6 +757,16 @@ let private parseVerbosity (host: CliHost) args =
     Quiet
     args
 
+let private parseOutputMode args =
+  parseFlag
+    (fun (_: OutputMode) arg ->
+      match arg with
+      | "--header" -> Some BundleHeader
+      | "--split" -> Some Split
+      | _ -> None)
+    BundleAll
+    args
+
 [<NoEquality; NoComparison>]
 type private CliCmd =
   | HelpCmd
@@ -811,9 +848,10 @@ let cli (host: CliHost) =
 
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
+      let outputMode, args = parseOutputMode args
 
       match args with
-      | projectDir :: _ -> cliCompile host verbosity BundleAll projectDir
+      | projectDir :: _ -> cliCompile host verbosity outputMode projectDir
 
       | [] ->
           printfn "ERROR: Expected project dir."

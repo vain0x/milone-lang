@@ -592,7 +592,7 @@ void file_write_all_text(struct String file_name, struct String content) {
         abort();
     }
 
-    fprintf(fp, "%s", content.str);
+    fprintf(fp, "%.*s", content.len, content.str);
 
     fclose(fp);
 }
