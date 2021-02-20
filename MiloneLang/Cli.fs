@@ -89,8 +89,13 @@ type Verbosity =
   | Profile of Profiler
   | Quiet
 
-/// Abstraction layer of CLI program.
 [<NoEquality; NoComparison>]
+type OutputMode =
+  | BundleAll
+  | BundleHeader
+
+/// Abstraction layer of CLI program.
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type CliHost =
   {
     /// Command line args.
@@ -275,7 +280,7 @@ type CompileCtx =
     TokenizeHost: TokenizeHost
     FetchModule: ProjectName -> ProjectDir -> ModuleName -> ModuleSyntaxData option
 
-    HeaderOnly: bool
+    OutputMode: OutputMode
 
     Verbosity: Verbosity
     Host: CliHost }
@@ -336,7 +341,7 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
     Projects = projects
     TokenizeHost = tokenizeHost
     FetchModule = fetchModule
-    HeaderOnly = false
+    OutputMode = BundleAll
     Verbosity = verbosity
     Host = host }
 
@@ -567,7 +572,7 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v headerOnly (expr, tyCtx) =
+let codeGenHirViaMir (host: CliHost) v outputMode (expr, tyCtx) =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (expr, tyCtx)
 
@@ -578,7 +583,10 @@ let codeGenHirViaMir (host: CliHost) v headerOnly (expr, tyCtx) =
     let ok, cir = genCir (stmts, mirCtx)
 
     writeLog host v "CirDump"
-    let output = if headerOnly then cirDumpHeader cir else cirDump cir
+    let output =
+      match outputMode with
+      | BundleHeader -> cirDumpHeader cir
+      | BundleAll -> cirDump cir
 
     writeLog host v "Finish"
     ok, output
@@ -612,7 +620,7 @@ let compile (ctx: CompileCtx): bool * string =
 
     | SemaAnalysisOk (expr, tyCtx) ->
         let expr, tyCtx = transformHir host v (expr, tyCtx)
-        codeGenHirViaMir host v ctx.HeaderOnly (expr, tyCtx)
+        codeGenHirViaMir host v ctx.OutputMode (expr, tyCtx)
 
 // -----------------------------------------------
 // Actions
@@ -659,12 +667,12 @@ let cliCheck (host: CliHost) verbosity projectDir =
   printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
   exitCode
 
-let cliCompile (host: CliHost) verbosity headerOnly projectDir =
+let cliCompile (host: CliHost) verbosity outputMode projectDir =
   let ctx =
     compileCtxNew host verbosity projectDir
     |> compileCtxReadProjectFile
 
-  let ctx = { ctx with HeaderOnly = headerOnly }
+  let ctx = { ctx with OutputMode = outputMode }
 
   let ok, output = compile ctx
   let exitCode = if ok then 0 else 1
@@ -795,7 +803,7 @@ let cli (host: CliHost) =
       let verbosity, args = parseVerbosity host args
 
       match args with
-      | projectDir :: _ -> cliCompile host verbosity true projectDir
+      | projectDir :: _ -> cliCompile host verbosity BundleHeader projectDir
 
       | [] ->
           printfn "ERROR: Expected project dir."
@@ -805,7 +813,7 @@ let cli (host: CliHost) =
       let verbosity, args = parseVerbosity host args
 
       match args with
-      | projectDir :: _ -> cliCompile host verbosity false projectDir
+      | projectDir :: _ -> cliCompile host verbosity BundleAll projectDir
 
       | [] ->
           printfn "ERROR: Expected project dir."
