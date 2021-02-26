@@ -555,7 +555,7 @@ let private unwrapNewtypeUnionTy (ctx: AbCtx) ty: Ty option =
             let v = ctx.Variants |> mapFind variantSerial
 
             if v.IsNewtype then
-              Some (erasePayloadTy ctx variantSerial v.PayloadTy)
+              Some(erasePayloadTy ctx variantSerial v.PayloadTy)
             else
               None
 
@@ -702,25 +702,23 @@ let private abPat ctx pat =
 
       doArm ()
 
-  | HNodePat (kind, argPats, ty, loc) ->
-      let fail () = failwithf "NEVER: %A" pat
-
-      let argPats = argPats |> List.map (abPat ctx)
+  | HNodePat ((HVariantAppPN variantSerial as kind), [ payloadPat ], ty, loc) ->
+      let payloadPat = payloadPat |> abPat ctx
       let ty = ty |> abTy ctx
 
-      match kind, argPats with
-      | HVariantAppPN variantSerial, [ payloadPat ] ->
-          match postProcessVariantAppPat ctx variantSerial payloadPat with
-          | Some payloadPat ->
-              match unwrapNewtypeVariantAppPat ctx variantSerial payloadPat with
-              | Some payloadPat -> payloadPat
-              | None -> HNodePat(kind, [ payloadPat ], ty, loc)
-          | None ->
-              match unwrapNewtypeVariantAppPat ctx variantSerial payloadPat with
-              | Some payloadPat -> payloadPat
-              | None -> HNodePat(kind, argPats, ty, loc)
+      let payloadPat =
+        match postProcessVariantAppPat ctx variantSerial payloadPat with
+        | Some payloadPat -> payloadPat
+        | None -> payloadPat
 
-      | _ -> HNodePat(kind, argPats, ty, loc)
+      match unwrapNewtypeVariantAppPat ctx variantSerial payloadPat with
+      | Some payloadPat -> payloadPat
+      | None -> HNodePat(kind, [ payloadPat ], ty, loc)
+
+  | HNodePat (kind, argPats, ty, loc) ->
+      let argPats = argPats |> List.map (abPat ctx)
+      let ty = ty |> abTy ctx
+      HNodePat(kind, argPats, ty, loc)
 
   | HAsPat (bodyPat, varSerial, loc) ->
       let bodyPat = bodyPat |> abPat ctx
