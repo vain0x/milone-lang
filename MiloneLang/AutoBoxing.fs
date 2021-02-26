@@ -544,21 +544,21 @@ let private postProcessVariantFunAppExpr ctx variantSerial payload: HExpr option
 /// ### Unwrapping newtype variants
 
 let private unwrapNewtypeUnionTy (ctx: AbCtx) ty: Ty option =
-  match ty with
-  | Ty (UnionTk tySerial, _) ->
-      match ctx.Tys |> mapFind tySerial with
-      | UnionTyDef (_, [ variantSerial ], _) ->
-          if isRecursiveVariant ctx variantSerial then
-            None
-          else
-            let v = ctx.Variants |> mapFind variantSerial
+  let asNewtypeVariant ty =
+    match ty with
+    | Ty (UnionTk tySerial, _) ->
+        match ctx.Tys |> mapFind tySerial with
+        | UnionTyDef (_, [ variantSerial ], _) when not (isRecursiveVariant ctx variantSerial) -> Some variantSerial
+        | _ -> None
+    | _ -> None
 
-            if v.IsNewtype then
-              Some(erasePayloadTy ctx variantSerial v.PayloadTy)
-            else
-              None
+  match asNewtypeVariant ty with
+  | Some variantSerial ->
+      let variantDef = ctx.Variants |> mapFind variantSerial
+      assert variantDef.IsNewtype
 
-      | _ -> None
+      erasePayloadTy ctx variantSerial variantDef.PayloadTy
+      |> Some
 
   | _ -> None
 
