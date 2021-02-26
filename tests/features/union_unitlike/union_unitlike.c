@@ -1,9 +1,5 @@
 #include "milone.h"
 
-enum MyUnit_Discriminant;
-
-struct MyUnit_;
-
 int basicCase_(int arg_);
 
 enum MyBool_Discriminant;
@@ -14,9 +10,9 @@ bool toBool_(struct MyBool_ myBool_1);
 
 int usedInOtherSumTypeCase_(int arg_1);
 
-struct MyUnit_List;
+struct UnitList;
 
-struct MyUnit_List;
+struct UnitList;
 
 struct RecordUsingMyUnit_;
 
@@ -24,28 +20,13 @@ int usedInRecordTypeCase_(int arg_2);
 
 int milone_main();
 
-enum MyUnit_Discriminant {
-    MyUnit_,
-};
-
-struct MyUnit_ {
-    enum MyUnit_Discriminant discriminant;
-};
-
 int basicCase_(int arg_) {
-    struct MyUnit_ myUnit_ = (struct MyUnit_){.discriminant = MyUnit_};
-    int switch_;
-    switch (myUnit_.discriminant) {
-        case MyUnit_:
-            goto clause_2;
-
-        default:
-            exit(1);
-    }
-clause_2:;
-    switch_ = 0;
-    goto switch_next_1;
-switch_next_1:;
+    int myUnit_ = 0;
+    int match_;
+    match_ = 0;
+    goto end_match_1;
+next_2:;
+end_match_1:;
     return 0;
 }
 
@@ -57,35 +38,28 @@ enum MyBool_Discriminant {
 struct MyBool_ {
     enum MyBool_Discriminant discriminant;
     union {
-        struct MyUnit_ MyFalse_;
-        struct MyUnit_ MyTrue_;
+        int MyFalse_;
+        int MyTrue_;
     };
 };
 
 bool toBool_(struct MyBool_ myBool_1) {
-    bool switch_1;
-    switch (myBool_1.discriminant) {
-        case MyFalse_:
-            goto clause_4;
-
-        case MyTrue_:
-            goto clause_5;
-
-        default:
-            exit(1);
-    }
-clause_4:;
-    switch_1 = false;
-    goto switch_next_3;
-clause_5:;
-    switch_1 = true;
-    goto switch_next_3;
-switch_next_3:;
-    return switch_1;
+    bool match_1;
+    if ((myBool_1.discriminant != MyFalse_)) goto next_4;
+    match_1 = false;
+    goto end_match_3;
+next_4:;
+    if ((myBool_1.discriminant != MyTrue_)) goto next_5;
+    match_1 = true;
+    goto end_match_3;
+next_5:;
+    exit(1);
+end_match_3:;
+    return match_1;
 }
 
 int usedInOtherSumTypeCase_(int arg_1) {
-    struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = (struct MyUnit_){.discriminant = MyUnit_}};
+    struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
     struct MyBool_ myBool_ = variant_;
     bool call_ = toBool_(myBool_);
     milone_assert(call_, 27, 2);
@@ -93,30 +67,29 @@ int usedInOtherSumTypeCase_(int arg_1) {
 }
 
 
-struct MyUnit_List {
-    struct MyUnit_ head;
-    struct MyUnit_List const* tail;
+struct UnitList {
+    int head;
+    struct UnitList const* tail;
 };
 
 struct RecordUsingMyUnit_ {
-    struct MyUnit_ t0;
-    struct MyUnit_List const* t1;
+    int t0;
+    struct UnitList const* t1;
 };
 
 int usedInRecordTypeCase_(int arg_2) {
-    struct MyUnit_List const* list_ = milone_mem_alloc(1, sizeof(struct MyUnit_List));
-    (*(((struct MyUnit_List*)list_))) = (struct MyUnit_List){.head = (struct MyUnit_){.discriminant = MyUnit_}, .tail = NULL};
-    struct RecordUsingMyUnit_ RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = (struct MyUnit_){.discriminant = MyUnit_}, .t1 = list_};
+    struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
+    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
+    struct RecordUsingMyUnit_ RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_};
     struct RecordUsingMyUnit_ record_ = RecordUsingMyUnit_;
-    int match_;
+    int match_2;
     if ((!(record_.t1))) goto next_7;
-    if ((record_.t1->head.discriminant != MyUnit_)) goto next_7;
     if ((!((!(record_.t1->tail))))) goto next_7;
-    match_ = 0;
+    match_2 = 0;
     goto end_match_6;
 next_7:;
     milone_assert(false, 37, 9);
-    match_ = 0;
+    match_2 = 0;
     goto end_match_6;
 next_8:;
 end_match_6:;

@@ -14,11 +14,7 @@ int nestedCase_(int arg_1);
 
 struct IntIntTuple2;
 
-enum Expr_Discriminant;
-
-struct Expr_;
-
-bool performComplexMatching_(struct Expr_ expr_);
+bool performComplexMatching_(struct IntIntTuple2 expr_);
 
 int complexCase_(int arg_2);
 
@@ -131,25 +127,14 @@ struct IntIntTuple2 {
     int t1;
 };
 
-enum Expr_Discriminant {
-    Add_,
-};
-
-struct Expr_ {
-    enum Expr_Discriminant discriminant;
-    union {
-        struct IntIntTuple2 Add_;
-    };
-};
-
-bool performComplexMatching_(struct Expr_ expr_) {
+bool performComplexMatching_(struct IntIntTuple2 expr_) {
     bool match_1;
-    if ((expr_.Add_.t0 != 0)) goto next_16;
-    if ((expr_.Add_.t1 != 0)) goto next_16;
+    if ((expr_.t0 != 0)) goto next_16;
+    if ((expr_.t1 != 0)) goto next_16;
     goto match_body_15;
 next_16:;
-    if ((expr_.Add_.t0 != 0)) goto next_17;
-    if ((expr_.Add_.t1 != 1)) goto next_17;
+    if ((expr_.t0 != 0)) goto next_17;
+    if ((expr_.t1 != 1)) goto next_17;
     goto match_body_15;
 match_body_15:;
     match_1 = true;
@@ -164,12 +149,10 @@ end_match_14:;
 
 int complexCase_(int arg_2) {
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 0, .t1 = 1};
-    struct Expr_ variant_ = (struct Expr_){.discriminant = Add_, .Add_ = tuple_};
-    bool call_5 = performComplexMatching_(variant_);
+    bool call_5 = performComplexMatching_(tuple_);
     milone_assert(call_5, 38, 2);
     struct IntIntTuple2 tuple_1 = (struct IntIntTuple2){.t0 = 1, .t1 = 2};
-    struct Expr_ variant_1 = (struct Expr_){.discriminant = Add_, .Add_ = tuple_1};
-    bool call_6 = performComplexMatching_(variant_1);
+    bool call_6 = performComplexMatching_(tuple_1);
     milone_assert((!(call_6)), 39, 2);
     return 0;
 }
