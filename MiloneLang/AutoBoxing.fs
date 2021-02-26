@@ -533,14 +533,13 @@ let private postProcessVariantAppPat (ctx: AbCtx) variantSerial payloadPat =
   else
     None
 
-let private postProcessVariantFunAppExpr ctx kind items =
-  match kind, items with
-  | HAppEN, [ (HVariantExpr (variantSerial, _, _)) as callee; payload ] when needsBoxedVariant ctx variantSerial ->
-      // FIXME: ty is now wrong for the same reason as call-variant pattern.
-      let ty, loc = exprExtract payload
-      Some(callee, hxBox payload ty loc)
-
-  | _ -> None
+let private postProcessVariantFunAppExpr ctx variantSerial payload: HExpr option =
+  if needsBoxedVariant ctx variantSerial then
+    // FIXME: ty is now wrong for the same reason as call-variant pattern.
+    let ty, loc = exprExtract payload
+    Some(hxBox payload ty loc)
+  else
+    None
 
 /// ### Unwrapping newtype variants
 
@@ -592,18 +591,14 @@ let private unwrapNewtypeVariantExpr (ctx: AbCtx) variantSerial loc: HExpr optio
   else
     None
 
-let private unwrapNewtypeVariantAppExpr (ctx: AbCtx) kind items: HExpr option =
-  match kind, items with
-  | HAppEN, [ HVariantExpr (variantSerial, _, _); payload ] ->
-      let variantDef = ctx.Variants |> mapFind variantSerial
+let private unwrapNewtypeVariantAppExpr (ctx: AbCtx) variantSerial payload: HExpr option =
+  let variantDef = ctx.Variants |> mapFind variantSerial
 
-      if not (isRecursiveVariant ctx variantSerial)
-         && variantDef.IsNewtype then
-        Some payload
-      else
-        None
-
-  | _ -> None
+  if not (isRecursiveVariant ctx variantSerial)
+     && variantDef.IsNewtype then
+    Some payload
+  else
+    None
 
 /// ### Boxing of Records
 ///
@@ -779,15 +774,18 @@ let private abExpr ctx expr =
         let items = items |> List.map (abExpr ctx)
         let ty = ty |> abTy ctx
 
-        match postProcessVariantFunAppExpr ctx kind items with
-        | Some (callee, payload) ->
-            match unwrapNewtypeVariantAppExpr ctx kind [ callee; payload ] with
+        match kind, items with
+        | HAppEN, [ (HVariantExpr (variantSerial, _, _) as callee); payload ] ->
+            let payload =
+              match postProcessVariantFunAppExpr ctx variantSerial payload with
+              | Some payload -> payload
+              | None -> payload
+
+            match unwrapNewtypeVariantAppExpr ctx variantSerial payload with
             | Some payload -> payload
             | None -> hxApp callee payload ty loc
-        | None ->
-            match unwrapNewtypeVariantAppExpr ctx kind items with
-            | Some payload -> payload
-            | None -> HNodeExpr(kind, items, ty, loc)
+
+        | _ -> HNodeExpr(kind, items, ty, loc)
 
       doArm ()
 
