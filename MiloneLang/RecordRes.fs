@@ -241,11 +241,11 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
-  | HLetValExpr (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (pat, init, next, ty, loc) ->
       let doArm () =
         let init = init |> teExpr ctx
         let next = next |> teExpr ctx
-        HLetValExpr(vis, pat, init, next, ty, loc)
+        HLetValExpr(pat, init, next, ty, loc)
 
       doArm ()
 

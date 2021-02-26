@@ -226,7 +226,7 @@ let private containsTailRec expr =
 
   | HBlockExpr (_, last) -> last |> containsTailRec
 
-  | HLetValExpr (_, _, _, next, _, _) -> next |> containsTailRec
+  | HLetValExpr (_, _, next, _, _) -> next |> containsTailRec
 
   | HLetFunExpr (_, _, _, _, _, next, _, _) -> next |> containsTailRec
 
@@ -378,7 +378,7 @@ let private mirifyPat ctx (endLabel: string) (pat: HPat) (expr: MExpr): MirCtx =
   match pat with
   | HLitPat (lit, loc) -> mirifyPatLit ctx endLabel lit expr loc
   | HDiscardPat _ -> ctx
-  | HVarPat (serial, ty, loc) -> mirifyPatVar ctx endLabel serial ty loc expr
+  | HVarPat (_, serial, ty, loc) -> mirifyPatVar ctx endLabel serial ty loc expr
   | HVariantPat (serial, ty, loc) -> mirifyPatVariant ctx endLabel serial ty loc expr
 
   | HNodePat (kind, argPats, ty, loc) ->
@@ -1366,7 +1366,7 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
     assert (patsIsCovering ctx [ argPat ])
 
     match argPat with
-    | HVarPat (serial, ty, loc) ->
+    | HVarPat (_, serial, ty, loc) ->
         // NOTE: Optimize for usual cases to not generate redundant local vars.
         (serial, ty, loc), ctx
     | _ ->
@@ -1457,10 +1457,10 @@ let private mirifyExpr (ctx: MirCtx) (expr: HExpr): MExpr * MirCtx =
 
       mirifyExpr ctx last
 
-  | HLetValExpr (_, _, _, next, _, _) ->
+  | HLetValExpr (_, _, next, _, _) ->
       let doArm () =
         match expr with
-        | HLetValExpr (_, pat, init, _, _, _) -> mirifyExprLetValContents ctx pat init
+        | HLetValExpr (pat, init, _, _, _) -> mirifyExprLetValContents ctx pat init
         | _ -> failwith "NEVER"
 
       mirifyExpr (doArm ()) next

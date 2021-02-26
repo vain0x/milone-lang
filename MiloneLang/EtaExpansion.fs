@@ -330,7 +330,7 @@ let private acExpr (expr, ctx: ArityCheckCtx): ArityEx * ArityCheckCtx =
       let ctx = acExprs stmts ctx
       acExpr (last, ctx)
 
-  | HLetValExpr (_, _, init, next, _, _) ->
+  | HLetValExpr (_, init, next, _, _) ->
       let ctx = acExprChecked init ctx
       acExpr (next, ctx)
 
@@ -452,7 +452,10 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
     | n, Ty (FunTk, [ argTy; restTy ]) ->
         let argExpr, argSerial, ctx = freshVar "arg" argTy callLoc ctx
         let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
-        let restArgPat = HVarPat(argSerial, argTy, callLoc)
+
+        let restArgPat =
+          HVarPat(PrivateVis, argSerial, argTy, callLoc)
+
         restArgPat :: restArgPats, argExpr :: restArgs, ctx
 
     | _ -> failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
@@ -468,7 +471,10 @@ let private createEnvPatAndTy items callLoc ctx =
     | item :: items ->
         let itemTy, itemLoc = exprExtract item
         let itemExpr, itemSerial, ctx = freshVar "arg" itemTy itemLoc ctx
-        let itemPat = HVarPat(itemSerial, itemTy, itemLoc)
+
+        let itemPat =
+          HVarPat(PrivateVis, itemSerial, itemTy, itemLoc)
+
         let itemPats, argTys, argExprs, ctx = go items ctx
         itemPat :: itemPats, itemTy :: argTys, itemExpr :: argExprs, ctx
 
@@ -484,14 +490,16 @@ let private createEnvDeconstructLetExpr envPat envTy envArgExpr next callLoc =
   let unboxExpr =
     hxCallProc unboxPrim [ envArgExpr ] envTy callLoc
 
-  HLetValExpr(PrivateVis, envPat, unboxExpr, next, exprToTy next, callLoc)
+  HLetValExpr(envPat, unboxExpr, next, exprToTy next, callLoc)
 
 /// Creates a let expression to define an underlying function.
 /// It takes an environment and rest parameters
 /// and calls the partial-applied callee with full arguments.
 let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
   let envArgExpr, envArgSerial, ctx = freshVar "env" tyObj callLoc ctx
-  let envArgPat = HVarPat(envArgSerial, tyObj, callLoc)
+
+  let envArgPat =
+    HVarPat(PrivateVis, envArgSerial, tyObj, callLoc)
 
   let underlyingFunTy = tyFun envTy funTy
 
@@ -555,10 +563,11 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let calleeExpr, calleeLet, ctx =
     let calleeExpr, calleeSerial, ctx = freshVar "callee" funTy callLoc ctx
 
-    let calleePat = HVarPat(calleeSerial, funTy, callLoc)
+    let calleePat =
+      HVarPat(PrivateVis, calleeSerial, funTy, callLoc)
 
     let calleeLet next =
-      HLetValExpr(PrivateVis, calleePat, callee, next, exprToTy next, callLoc)
+      HLetValExpr(calleePat, callee, next, exprToTy next, callLoc)
 
     calleeExpr, calleeLet, ctx
 
@@ -718,10 +727,10 @@ let private exExpr (expr, ctx) =
 
       doArm ()
 
-  | HLetValExpr (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (pat, init, next, ty, loc) ->
       let init, ctx = (init, ctx) |> exExpr
       let next, ctx = (next, ctx) |> exExpr
-      HLetValExpr(vis, pat, init, next, ty, loc), ctx
+      HLetValExpr(pat, init, next, ty, loc), ctx
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       exLetFunExpr callee isRec vis args body next ty loc ctx

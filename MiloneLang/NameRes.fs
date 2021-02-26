@@ -823,14 +823,14 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
     | _ -> ctx
 
-  let rec goPat vis (pat, ctx) =
+  let rec goPat (pat, ctx) =
     match pat with
     | HLitPat _
     | HDiscardPat _
     | HVariantPat _
     | HOrPat _ -> pat, ctx
 
-    | HVarPat (varSerial, ty, loc) ->
+    | HVarPat (vis, varSerial, ty, loc) ->
         let name =
           ctx |> findName (varSerialToInt varSerial)
 
@@ -846,7 +846,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
             pat, ctx
 
     | HNodePat (kind, argPats, ty, loc) ->
-        let argPats, ctx = (argPats, ctx) |> stMap (goPat vis)
+        let argPats, ctx = (argPats, ctx) |> stMap goPat
         HNodePat(kind, argPats, ty, loc), ctx
 
     | HAsPat (pat, varSerial, loc) ->
@@ -857,15 +857,15 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           ctx
           |> addLocalVar varSerial (VarDef(name, StaticSM, noTy, loc))
 
-        let pat, ctx = (pat, ctx) |> goPat vis
+        let pat, ctx = (pat, ctx) |> goPat
         HAsPat(pat, varSerial, loc), ctx
 
   let rec goExpr (expr, ctx) =
     match expr with
-    | HLetValExpr (vis, pat, init, next, ty, loc) ->
-        let pat, ctx = (pat, ctx) |> goPat vis
+    | HLetValExpr (pat, init, next, ty, loc) ->
+        let pat, ctx = (pat, ctx) |> goPat
         let next, ctx = (next, ctx) |> goExpr
-        HLetValExpr(vis, pat, init, next, ty, loc), ctx
+        HLetValExpr(pat, init, next, ty, loc), ctx
 
     | HLetFunExpr (funSerial, isRec, vis, args, body, next, ty, loc) ->
         let ctx =
@@ -956,7 +956,9 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
 
       varSerial, ctx
 
-let private nameResVarPat serial ty loc ctx =
+let private nameResVarPat vis serial ty loc ctx =
+  // FIXME: report error on `public _`, `public Variant` or `public None`.
+
   let name = ctx |> findName serial
 
   if name = "_" then
@@ -974,7 +976,7 @@ let private nameResVarPat serial ty loc ctx =
             let varSerial, ctx =
               doResolveVarInPat serial name ty loc ctx
 
-            HVarPat(varSerial, ty, loc), ctx
+            HVarPat(vis, varSerial, ty, loc), ctx
 
 let private nameResNavPat pat ctx =
   /// Resolves a pattern as scope.
@@ -984,7 +986,7 @@ let private nameResNavPat pat ctx =
   /// `pat` is also updated by resolving inner qualifiers as possible.
   let rec resolvePatAsNsOwners pat ctx: NsOwner list =
     match pat with
-    | HVarPat (varSerial, _, _) ->
+    | HVarPat (_, varSerial, _, _) ->
         let name = ctx |> findVarName varSerial
         ctx |> resolveLocalNsOwners name
 
@@ -1050,7 +1052,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HDiscardPat _
   | HVariantPat _ -> pat, ctx
 
-  | HVarPat (VarSerial serial, ty, loc) -> nameResVarPat serial ty loc ctx
+  | HVarPat (vis, VarSerial serial, ty, loc) -> nameResVarPat vis serial ty loc ctx
 
   | HNodePat (kind, argPats, ty, loc) ->
       let fail () = failwithf "NEVER: %A" pat
@@ -1385,7 +1387,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
 
       doArm ()
 
-  | HLetValExpr (vis, pat, body, next, ty, loc) ->
+  | HLetValExpr (pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx =
           let ctx = ctx |> startScope ExprScope
@@ -1400,7 +1402,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           let ctx = ctx |> finishScope
           pat, next, ctx
 
-        HLetValExpr(vis, pat, body, next, ty, loc), ctx
+        HLetValExpr(pat, body, next, ty, loc), ctx
 
       doArm ()
 

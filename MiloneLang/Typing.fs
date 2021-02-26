@@ -539,7 +539,7 @@ let private inferDiscardPat ctx pat loc =
 
 let private inferVarPat (ctx: TyCtx) varSerial loc =
   let ty, ctx = ctx |> unifyVarTy varSerial None loc
-  HVarPat(varSerial, ty, loc), ty, ctx
+  HVarPat(PrivateVis, varSerial, ty, loc), ty, ctx
 
 let private inferVariantPat (ctx: TyCtx) variantSerial loc =
   let variantDef = ctx.Variants |> mapFind variantSerial
@@ -625,7 +625,7 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
   match pat with
   | HLitPat (lit, _) -> inferLitPat ctx pat lit
   | HDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
-  | HVarPat (varSerial, _, loc) -> inferVarPat ctx varSerial loc
+  | HVarPat (_, varSerial, _, loc) -> inferVarPat ctx varSerial loc
   | HVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
 
   | HNodePat (kind, argPats, nodeTy, loc) ->
@@ -826,13 +826,15 @@ let private inferRecordExpr ctx expectOpt baseOpt fields loc =
           // { base with fields... } ==> let t = base in { t with fields... }
           let varSerial, ctx = freshVar ctx "base" recordTy loc
 
-          let varPat = HVarPat(varSerial, recordTy, loc)
+          let varPat =
+            HVarPat(PrivateVis, varSerial, recordTy, loc)
+
           let varExpr = HVarExpr(varSerial, recordTy, loc)
 
           let recordExpr =
             HRecordExpr(Some varExpr, fields, recordTy, loc)
 
-          HLetValExpr(PrivateVis, varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
+          HLetValExpr(varPat, baseExpr, recordExpr, recordTy, loc), recordTy, ctx
 
 /// match 'a with ( | 'a -> 'b )*
 let private inferMatchExpr ctx expectOpt itself cond arms loc =
@@ -1037,7 +1039,7 @@ let private inferBlockExpr ctx expectOpt stmts last =
 
   HBlockExpr(stmts, last), lastTy, ctx
 
-let private inferLetValExpr ctx expectOpt vis pat init next loc =
+let private inferLetValExpr ctx expectOpt pat init next loc =
   let init, initTy, ctx =
     let expectOpt = patToAscriptionTy pat
     inferExpr ctx expectOpt init
@@ -1047,7 +1049,7 @@ let private inferLetValExpr ctx expectOpt vis pat init next loc =
   let ctx = unifyTy ctx loc initTy patTy
 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
-  HLetValExpr(vis, pat, init, next, nextTy, loc), nextTy, ctx
+  HLetValExpr(pat, init, next, nextTy, loc), nextTy, ctx
 
 let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next loc =
   // Special treatment for main function.
@@ -1136,7 +1138,7 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
 
   | HBlockExpr (stmts, last) -> inferBlockExpr ctx expectOpt stmts last
 
-  | HLetValExpr (vis, pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt vis pat body next loc
+  | HLetValExpr (pat, body, next, _, loc) -> inferLetValExpr ctx expectOpt pat body next loc
 
   | HLetFunExpr (oldSerial, _, vis, args, body, next, _, loc) ->
       inferLetFunExpr ctx expectOpt oldSerial vis args body next loc

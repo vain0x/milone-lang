@@ -162,7 +162,12 @@ let private inFirstOfPatAndExpr (token: Token) =
   | _ -> false
 
 /// Gets whether a token can be the first of a pattern.
-let private inFirstOfPat (token: Token) = inFirstOfPatAndExpr token
+let private inFirstOfPat (token: Token) =
+  match token with
+  | PublicToken
+  | PrivateToken -> true
+
+  | _ -> inFirstOfPatAndExpr token
 
 /// Gets whether a token can be the first of an expression.
 let private inFirstOfExpr (token: Token) =
@@ -416,7 +421,7 @@ let private parseNavPatBody head headPos (tokens, errors) =
         go (ANavPat(acc, Name(ident, identPos), dotPos)) tokens
     | _ -> acc, tokens, errors
 
-  go (AIdentPat(Name(head, headPos))) tokens
+  go (AIdentPat(PublicVis, Name(head, headPos))) tokens
 
 /// `pat ')'`
 let private parsePatParenBody basePos (tokens, errors) =
@@ -446,6 +451,11 @@ let private parsePatListBody basePos bracketPos (tokens, errors) =
   AListPat(itemPats, bracketPos), tokens, errors
 
 let private parsePatAtom basePos (tokens, errors) =
+  let onVis vis tokens =
+    match tokens with
+    | (IdentToken ident, pos) :: tokens -> AIdentPat(vis, Name(ident, pos)), tokens, errors
+    | _ -> parsePatError "Expected identifier" (tokens, errors)
+
   match tokens with
   | _ when not (nextInside basePos tokens && leadsPat tokens) ->
       parsePatError "Expected a pattern atom" (tokens, errors)
@@ -464,6 +474,9 @@ let private parsePatAtom basePos (tokens, errors) =
 
   | (FalseToken, pos) :: tokens -> ALitPat(BoolLit false, pos), tokens, errors
   | (TrueToken, pos) :: tokens -> ALitPat(BoolLit true, pos), tokens, errors
+
+  | (PublicToken, _) :: tokens -> onVis PublicVis tokens
+  | (PrivateToken, _) :: tokens -> onVis PrivateVis tokens
 
   | (MinusToken, pos) :: (IntToken text, _) :: tokens -> ALitPat(IntLit("-" + text), pos), tokens, errors
 
@@ -580,15 +593,24 @@ let private parsePatOr basePos (tokens, errors) =
   | _ -> lPat, tokens, errors
 
 /// Parse a pattern of let expressions.
-/// `pat-fun = ident pat-nav+ ( ':' ty )?`
+/// `pat-fun = vis? ident pat-nav+ ( ':' ty )?`
 /// `pat-let = pat-fun / pat`
 let private parsePatLet basePos (tokens, errors) =
-  match tokens with
-  | (IdentToken callee, calleePos) :: tokens when posInside basePos calleePos && leadsPat tokens ->
+  let asLetFun () =
+    let vis, tokens = eatVis tokens
+
+    match tokens with
+    | (IdentToken callee, calleePos) :: tokens when posInside basePos calleePos && leadsPat tokens ->
+        Some(vis, callee, calleePos, tokens)
+    | _ -> None
+
+  match asLetFun () with
+  | Some (vis, callee, calleePos, tokens) ->
       let args, tokens, errors =
         parsePatCallArgs basePos (tokens, errors)
 
-      let pat = AFunDeclPat(Name(callee, calleePos), args)
+      let pat =
+        AFunDeclPat(vis, Name(callee, calleePos), args)
 
       match tokens with
       | (ColonToken, pos) :: tokens ->
@@ -956,7 +978,6 @@ let private parseLet letPos (tokens, errors) =
   let innerBasePos = letPos |> posAddX 1
 
   let isRec, tokens = eatRec tokens
-  let vis, tokens = eatVis tokens
 
   let pat, tokens, errors =
     parsePatLet innerBasePos (tokens, errors)
@@ -977,7 +998,7 @@ let private parseLet letPos (tokens, errors) =
 
     | tokens -> ATupleExpr([], letPos), tokens, errors
 
-  ALetExpr(isRec, vis, pat, body, next, letPos), tokens, errors
+  ALetExpr(isRec, pat, body, next, letPos), tokens, errors
 
 /// `payload-ty = labeled-ty ( '*' labeled-ty )*`
 /// `labeled-ty = ( ident ':' )? ty-suffix`
@@ -1140,7 +1161,6 @@ let private parseLetDecl letPos (tokens, errors) =
   let innerBasePos = letPos |> posAddX 1
 
   let isRec, tokens = eatRec tokens
-  let vis, tokens = eatVis tokens
 
   let pat, tokens, errors =
     parsePatLet innerBasePos (tokens, errors)
@@ -1150,7 +1170,7 @@ let private parseLetDecl letPos (tokens, errors) =
     | (EqualToken, equalPos) :: tokens -> parseSemi innerBasePos equalPos (tokens, errors)
     | _ -> parseExprError "Missing '='" (tokens, errors)
 
-  Some(ALetDecl(isRec, vis, pat, init, letPos)), tokens, errors
+  Some(ALetDecl(isRec, pat, init, letPos)), tokens, errors
 
 let private parseTyDecl typePos (tokens, errors) =
   let basePos = typePos |> posAddX 1

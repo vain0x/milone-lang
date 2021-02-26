@@ -821,13 +821,13 @@ let private abExpr ctx expr =
 
       doArm ()
 
-  | HLetValExpr (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (pat, init, next, ty, loc) ->
       let doArm () =
         let pat = pat |> abPat ctx
         let init = init |> abExpr ctx
         let next = next |> abExpr ctx
         let ty = ty |> abTy ctx
-        HLetValExpr(vis, pat, init, next, ty, loc)
+        HLetValExpr(pat, init, next, ty, loc)
 
       doArm ()
 

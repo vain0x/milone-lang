@@ -40,9 +40,9 @@ let private hoistMainExpr mainFunOpt expr =
         let last, f = go last
         HBlockExpr(stmts, last), f
 
-    | HLetValExpr (vis, pat, init, next, ty, loc) ->
+    | HLetValExpr (pat, init, next, ty, loc) ->
         let next, f = go next
-        HLetValExpr(vis, pat, init, next, ty, loc), f
+        HLetValExpr(pat, init, next, ty, loc), f
 
     | HLetFunExpr (serial, isRec, vis, args, body, next, ty, loc) ->
         let next, f = go next

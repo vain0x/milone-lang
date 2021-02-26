@@ -100,11 +100,11 @@ let private troExpr isTail (expr, ctx) =
       let last, ctx = (last, ctx) |> troExpr isTail
       HBlockExpr(stmts, last), ctx
 
-  | HLetValExpr (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (pat, init, next, ty, loc) ->
       let doArm () =
         let init, ctx = troExpr NotTail (init, ctx)
         let next, ctx = troExpr isTail (next, ctx)
-        HLetValExpr(vis, pat, init, next, ty, loc), ctx
+        HLetValExpr(pat, init, next, ty, loc), ctx
 
       doArm ()
 

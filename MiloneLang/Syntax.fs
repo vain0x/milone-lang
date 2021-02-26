@@ -299,7 +299,7 @@ type APat =
 
   /// Pattern that is non-keyword identifier.
   /// Variable (`x`), wildcard (`_`) or variant (`None`).
-  | AIdentPat of Name
+  | AIdentPat of Vis * Name
 
   /// E.g. `[x; y; z]`.
   | AListPat of APat list * Pos
@@ -330,7 +330,7 @@ type APat =
 
   /// Function declaration pattern, e.g. `f x y`.
   /// Syntactically distinct from the app pattern for technically reason.
-  | AFunDeclPat of Name * APat list
+  | AFunDeclPat of Vis * Name * APat list
 
 /// Arm of match expression in AST.
 ///
@@ -355,7 +355,7 @@ type AFieldDecl = Name * ATy * Pos
 /// Let expression in AST.
 [<NoEquality; NoComparison>]
 type ALet =
-  | ALetVal of IsRec * Vis * APat * AExpr * AExpr * Pos
+  | ALetVal of IsRec * APat * AExpr * AExpr * Pos
   | ALetFun of IsRec * Vis * Name * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
@@ -421,18 +421,18 @@ type AExpr =
   | ASemiExpr of AExpr list * AExpr * Pos
 
   /// (pattern, initializer, next). Let-in expression.
-  | ALetExpr of IsRec * Vis * APat * AExpr * AExpr * Pos
+  | ALetExpr of IsRec * APat * AExpr * AExpr * Pos
 
 [<NoEquality; NoComparison>]
 type ALetDecl =
   | ALetFunDecl of IsRec * Vis * Name * APat list * AExpr * Pos
-  | ALetValDecl of IsRec * Vis * APat * AExpr * Pos
+  | ALetValDecl of IsRec * APat * AExpr * Pos
 
 [<NoEquality; NoComparison>]
 type ADecl =
   | AExprDecl of AExpr
 
-  | ALetDecl of IsRec * Vis * APat * AExpr * Pos
+  | ALetDecl of IsRec * APat * AExpr * Pos
 
   /// Type synonym declaration, e.g. `type UserId = int`.
   | ATySynonymDecl of Vis * Name * tyArgs: Name list * ATy * Pos

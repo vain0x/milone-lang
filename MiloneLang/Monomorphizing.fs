@@ -373,11 +373,11 @@ let private monifyExpr (expr, ctx) =
 
       doArm ()
 
-  | HLetValExpr (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (pat, init, next, ty, loc) ->
       let doArm () =
         let init, ctx = (init, ctx) |> monifyExpr
         let next, ctx = (next, ctx) |> monifyExpr
-        HLetValExpr(vis, pat, init, next, ty, loc), ctx
+        HLetValExpr(pat, init, next, ty, loc), ctx
 
       doArm ()
 

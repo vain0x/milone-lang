@@ -219,11 +219,11 @@ let private hoistExprCore (expr, ctx) =
 
       doArm ()
 
-  | HLetValExpr (vis, pat, body, next, ty, loc) ->
+  | HLetValExpr (pat, body, next, ty, loc) ->
       let doArm () =
         let body, ctx = (body, ctx) |> hoistExprLocal
         let next, ctx = (next, ctx) |> hoistExpr
-        HLetValExpr(vis, pat, body, next, ty, loc), ctx
+        HLetValExpr(pat, body, next, ty, loc), ctx
 
       doArm ()
 
