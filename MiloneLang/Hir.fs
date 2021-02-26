@@ -956,9 +956,9 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 // Expressions (HIR)
 // -----------------------------------------------
 
-let hxTrue loc = HLitExpr(litTrue, loc)
+let hxTrue loc = HLitExpr(BoolLit true, loc)
 
-let hxFalse loc = HLitExpr(litFalse, loc)
+let hxFalse loc = HLitExpr(BoolLit false, loc)
 
 let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 

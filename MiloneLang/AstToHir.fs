@@ -67,9 +67,9 @@ let private opToPrim op =
 // APat
 // -----------------------------------------------
 
-let private apFalse pos = ALitPat(litFalse, pos)
+let private apFalse pos = ALitPat(BoolLit false, pos)
 
-let private apTrue pos = ALitPat(litTrue, pos)
+let private apTrue pos = ALitPat(BoolLit true, pos)
 
 // -----------------------------------------------
 // AExpr
@@ -77,9 +77,9 @@ let private apTrue pos = ALitPat(litTrue, pos)
 
 let private axUnit loc = ATupleExpr([], loc)
 
-let private axFalse loc = ALitExpr(litFalse, loc)
+let private axFalse loc = ALitExpr(BoolLit false, loc)
 
-let private axTrue loc = ALitExpr(litTrue, loc)
+let private axTrue loc = ALitExpr(BoolLit true, loc)
 
 /// `not x` ==> `x = false`
 let private axNot arg loc =
