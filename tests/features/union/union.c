@@ -14,14 +14,6 @@ enum ApiResponse_Discriminant;
 
 struct ApiResponse_;
 
-enum Ok_Discriminant;
-
-struct Ok_;
-
-enum OkWrapper_Discriminant;
-
-struct OkWrapper_;
-
 int milone_main();
 
 enum Status_Discriminant {
@@ -64,25 +56,6 @@ struct ApiResponse_ {
     union {
         struct String ARJson_;
         struct IntStringTuple2 ARError_;
-    };
-};
-
-enum Ok_Discriminant {
-    Ok_,
-};
-
-struct Ok_ {
-    enum Ok_Discriminant discriminant;
-};
-
-enum OkWrapper_Discriminant {
-    T_,
-};
-
-struct OkWrapper_ {
-    enum OkWrapper_Discriminant discriminant;
-    union {
-        struct Ok_ T_;
     };
 };
 
@@ -166,7 +139,7 @@ next_11:;
 next_12:;
 end_match_10:;
     struct Status_ ok_1 = (struct Status_){.discriminant = Ok_1};
-    struct Ok_ okOk_ = (struct Ok_){.discriminant = Ok_};
+    int okOk_ = 0;
     struct Status_ statusOk_ = (struct Status_){.discriminant = Ok_1};
     int switch_1;
     switch ((struct Status_){.discriminant = Ok_1}.discriminant) {
@@ -187,7 +160,6 @@ clause_18:;
     switch_1 = 0;
     goto switch_next_16;
 switch_next_16:;
-    struct OkWrapper_ variant_4 = (struct OkWrapper_){.discriminant = T_, .T_ = (struct Ok_){.discriminant = Ok_}};
-    struct OkWrapper_ okWrapper_ = variant_4;
+    int okWrapper_ = 0;
     return 0;
 }
