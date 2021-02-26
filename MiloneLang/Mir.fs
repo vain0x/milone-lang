@@ -180,7 +180,7 @@ type MConst =
   | MLitConst of l: Lit
   | MDiscriminantConst of v: VariantSerial
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MSwitchClause =
   { Cases: MConst list
     IsDefault: bool
@@ -214,7 +214,7 @@ type MStmt =
 
   | MNativeStmt of string * MExpr list * Loc
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type MBlock = { Stmts: MStmt list }
 
 [<NoEquality; NoComparison>]

@@ -200,14 +200,14 @@ type TyDef =
 type ModuleTySerial = ModuleTySerial of Serial
 
 //// Module is a type so that it can be used as namespace.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleTyDef = { Name: Ident; Loc: Loc }
 
 [<Struct; NoComparison>]
 type ModuleSynonymSerial = ModuleSynonymSerial of Serial
 
 //// Module is a type so that it can be used as namespace.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleSynonymDef =
   { Name: Ident
     // Not used.
@@ -226,7 +226,7 @@ type FunAbi =
   /// Compatible with C language.
   | CAbi
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FunDef =
   { Name: Ident
     Arity: Arity
@@ -234,7 +234,7 @@ type FunDef =
     Abi: FunAbi
     Loc: Loc }
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VariantDef =
   { Name: Ident
     UnionTySerial: TySerial

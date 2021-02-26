@@ -27,14 +27,14 @@ type private FilePath = string
 type private ProjectName = string
 type private ModuleName = string
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceDocs =
   { FindDocId: ProjectName -> ModuleName -> DocId option
     GetVersion: DocId -> DocVersion
     GetText: DocId -> DocVersion * string
     GetProjectName: DocId -> ProjectName option }
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceHost =
   { MiloneHome: FilePath
     Docs: LangServiceDocs }
@@ -262,7 +262,7 @@ type private ParseResult = ARoot * (string * Pos) list
 
 type private BundleResult = (HExpr * Typing.TyCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
   private
     { TokenizeFullCache: MutMap<DocId, DocVersion * TokenizeFullResult>
@@ -325,7 +325,7 @@ type private DefOrUse =
   | Def
   | Use
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
     OnVar: VarSerial * DefOrUse * Ty * Loc -> unit

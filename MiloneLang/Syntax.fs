@@ -657,6 +657,7 @@ let private keywordMapBuild (): KeywordMap =
 // Host
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TokenizeHost = { FindKeyword: string -> Token option }
 
 let tokenizeHostNew (): TokenizeHost =

@@ -3,7 +3,7 @@ module rec MiloneLsp.LspDocCache
 open MiloneLsp.Util
 
 /// Text doc that is opened in editor.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type DocData =
   {
     /// String to identify the document. E.g. `file:///home/owner/.../foo.milone`.
@@ -36,7 +36,7 @@ let openDoc (uri: string) (version: int) (text: string) =
 let changeDoc (uri: string) (version: int) (text: string): unit =
   match findDoc uri with
   | Some _ ->
-      let docData =
+      let docData: DocData =
         { Uri = uri
           Version = version
           Text = text }
