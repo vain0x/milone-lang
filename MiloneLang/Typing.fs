@@ -696,7 +696,10 @@ let private inferFunExpr (ctx: TyCtx) funSerial loc =
   HFunExpr(funSerial, ty, loc), ty, ctx
 
 let private inferVariantExpr (ctx: TyCtx) variantSerial loc =
-  let ty = ctx.Variants |> mapFind variantSerial |> variantDefToVariantTy
+  let ty =
+    ctx.Variants
+    |> mapFind variantSerial
+    |> variantDefToVariantTy
 
   HVariantExpr(variantSerial, ty, loc), ty, ctx
 

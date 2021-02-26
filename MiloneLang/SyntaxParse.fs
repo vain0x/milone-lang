@@ -91,8 +91,7 @@ let private posInside (l: Pos) (r: Pos) = posX l <= posX r
 
 let private posAddX dx ((y, x): Pos) = y, x + dx
 
-let private posMax ((lY, lX): Pos) ((rY, rX): Pos) =
-  Int.max lY rY, Int.max lX rX
+let private posMax ((lY, lX): Pos) ((rY, rX): Pos) = Int.max lY rY, Int.max lX rX
 
 /// Gets if three tokens can be merged. (Assuming each token is 1-letter.)
 /// That is, no space or comments interleave these positions.
@@ -335,11 +334,11 @@ let private parseTyArgs basePos (tokens, errors) =
 let private parseNavTy basePos (tokens, errors) =
   let rec go acc (tokens, errors) =
     match tokens with
-    | (IdentToken qual, qualPos) :: (DotToken, _) :: tokens -> go (Name (qual, qualPos) :: acc) (tokens, errors)
+    | (IdentToken qual, qualPos) :: (DotToken, _) :: tokens -> go (Name(qual, qualPos) :: acc) (tokens, errors)
 
     | (IdentToken ident, pos) :: tokens ->
         let argTys, tokens, errors = parseTyArgs basePos (tokens, errors)
-        AAppTy(List.rev acc, Name (ident, pos), argTys, pos), tokens, errors
+        AAppTy(List.rev acc, Name(ident, pos), argTys, pos), tokens, errors
 
     | _ ->
         let (_: ATy list), tokens, errors = parseTyArgs basePos (tokens, errors)
@@ -413,7 +412,8 @@ let private parseTy basePos (tokens, errors) = parseTyFun basePos (tokens, error
 let private parseNavPatBody head headPos (tokens, errors) =
   let rec go acc tokens =
     match tokens with
-    | (DotToken, dotPos) :: (IdentToken ident, identPos) :: tokens -> go (ANavPat(acc, Name(ident, identPos), dotPos)) tokens
+    | (DotToken, dotPos) :: (IdentToken ident, identPos) :: tokens ->
+        go (ANavPat(acc, Name(ident, identPos), dotPos)) tokens
     | _ -> acc, tokens, errors
 
   go (AIdentPat(Name(head, headPos))) tokens
@@ -474,7 +474,8 @@ let private parsePatNav basePos (tokens, errors) =
   let pat, tokens, errors = parsePatAtom basePos (tokens, errors)
 
   match tokens with
-  | (DotToken, pos) :: (IdentToken ident, identPos) :: tokens -> ANavPat(pat, Name(ident, identPos), pos), tokens, errors
+  | (DotToken, pos) :: (IdentToken ident, identPos) :: tokens ->
+      ANavPat(pat, Name(ident, identPos), pos), tokens, errors
 
   | (DotToken, _) :: tokens -> parsePatError "Expected identifier" (tokens, errors)
 
@@ -657,7 +658,8 @@ let private parseSuffix basePos (tokens, errors) =
 
         go (AIndexExpr(acc, r, pos)) (tokens, errors)
 
-    | (DotToken, pos) :: (IdentToken ident, identPos) :: tokens -> go (ANavExpr(acc, Name(ident, identPos), pos)) (tokens, errors)
+    | (DotToken, pos) :: (IdentToken ident, identPos) :: tokens ->
+        go (ANavExpr(acc, Name(ident, identPos), pos)) (tokens, errors)
 
     | (DotToken, _) :: tokens ->
         let errors =
@@ -1013,10 +1015,17 @@ let private parseTyDeclUnion basePos (tokens, errors) =
     match tokens with
     | (PipeToken, pos) :: (IdentToken ident, identPos) :: (OfToken, _) :: tokens ->
         let payloadTy, tokens, errors = parsePayloadTy basePos (tokens, errors)
-        go (AVariant(Name(ident, identPos), Some payloadTy, pos) :: acc) (tokens, errors)
+
+        go
+          (AVariant(Name(ident, identPos), Some payloadTy, pos)
+           :: acc)
+          (tokens, errors)
 
     | (PipeToken, pos) :: (IdentToken ident, identPos) :: tokens ->
-        go (AVariant(Name(ident, identPos), None, identPos) :: acc) (tokens, errors)
+        go
+          (AVariant(Name(ident, identPos), None, identPos)
+           :: acc)
+          (tokens, errors)
 
     | _ -> List.rev acc, tokens, errors
 

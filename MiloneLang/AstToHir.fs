@@ -27,7 +27,7 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.Hir
 
-let private greek (Name (ident, pos)) = Name ("'" + ident, pos)
+let private greek (Name (ident, pos)) = Name("'" + ident, pos)
 
 let private nameToIdent (Name (ident, _)): string = ident
 
@@ -36,7 +36,7 @@ let private nameToPos (Name (_, pos)): Pos = pos
 /// Convert pos to loc.
 let private toLoc (doc: DocId) (pos: Pos): Loc =
   let row, column = pos
-  Loc (doc, row, column)
+  Loc(doc, row, column)
 
 let private opToPrim op =
   match op with
@@ -293,7 +293,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
   | ANavPat (l, r, pos) ->
       let l, nameCtx = (l, nameCtx) |> athPat docId
       let loc = toLoc docId pos
-      HNodePat(HNavPN (nameToIdent r), [ l ], noTy, loc), nameCtx
+      HNodePat(HNavPN(nameToIdent r), [ l ], noTy, loc), nameCtx
 
   | AAppPat (calleePat, argPat, pos) ->
       let calleePat, nameCtx = (calleePat, nameCtx) |> athPat docId
