@@ -46,10 +46,11 @@ type MirCtx =
 
     Stmts: MStmt list
     Blocks: MBlock list
-    Decls: MDecl list
-    Logs: (Log * Loc) list }
+    Decls: MDecl list }
 
 let private ofTyCtx (tyCtx: TyCtx): MirCtx =
+  assert (List.isEmpty tyCtx.Logs)
+
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
     Funs = tyCtx.Funs
@@ -60,17 +61,12 @@ let private ofTyCtx (tyCtx: TyCtx): MirCtx =
     CurrentFun = None
     Stmts = []
     Blocks = []
-    Decls = []
-    Logs = tyCtx.Logs }
+    Decls = [] }
 
 let private isNewtypeVariant (ctx: MirCtx) variantSerial =
   match ctx.Variants |> TMap.tryFind variantSerial with
   | Some variantDef -> variantDef.IsNewtype
   | _ -> failwith "Expected variant serial"
-
-let private addError (ctx: MirCtx) message loc =
-  { ctx with
-      Logs = (Log.Error message, loc) :: ctx.Logs }
 
 let private startBlock (ctx: MirCtx) = { ctx with Stmts = [] }
 

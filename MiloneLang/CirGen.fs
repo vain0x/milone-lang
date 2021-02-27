@@ -95,8 +95,7 @@ type private CirCtx =
     Tys: AssocMap<TySerial, TyDef>
     TyUniqueNames: AssocMap<Ty, Ident>
     Stmts: CStmt list
-    Decls: CDecl list
-    Logs: (Log * Loc) list }
+    Decls: CDecl list }
 
 let private ofMirCtx (mirCtx: MirCtx): CirCtx =
   let valueUniqueNames =
@@ -146,8 +145,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
     Tys = mirCtx.Tys
     TyUniqueNames = tyNames
     Stmts = []
-    Decls = []
-    Logs = mirCtx.Logs }
+    Decls = [] }
 
 let private findStorageModifier (ctx: CirCtx) varSerial =
   match ctx.Vars |> TMap.tryFind varSerial with
@@ -159,10 +157,6 @@ let private isMainFun (ctx: CirCtx) funSerial =
   match ctx.MainFunOpt with
   | Some mainFun -> funSerialCompare mainFun funSerial = 0
   | _ -> false
-
-let private addError (ctx: CirCtx) message loc =
-  { ctx with
-      Logs = (Log.Error message, loc) :: ctx.Logs }
 
 let private enterBlock (ctx: CirCtx) = { ctx with Stmts = [] }
 
@@ -1233,37 +1227,7 @@ let private cgDecls (ctx: CirCtx) decls =
 // Interface
 // -----------------------------------------------
 
-let private genLogs (ctx: CirCtx) =
-  let tyDisplayFn ty =
-    let getTyName tySerial =
-      ctx.Tys
-      |> TMap.tryFind tySerial
-      |> Option.map tyDefToName
-
-    tyDisplay getTyName ty
-
-  let rec go (ctx: CirCtx) logs =
-    match logs with
-    | [] -> ctx
-    | (log, loc) :: logs ->
-        let (Loc (_, y, _)) = loc
-
-        let msg =
-          locToString loc
-          + " "
-          + logToString tyDisplayFn log
-
-        let ctx = addDecl ctx (CErrorDecl(msg, 1 + y))
-        go ctx logs
-
-  let logs = ctx.Logs |> List.rev
-  let ctx = go ctx logs
-  let success = logs |> List.isEmpty
-  success, ctx
-
-let genCir (decls, mirCtx: MirCtx): bool * CDecl list =
+let genCir (decls, mirCtx: MirCtx): CDecl list =
   let ctx = ofMirCtx mirCtx
   let ctx = cgDecls ctx decls
-  let ok, ctx = genLogs ctx
-  let decls = ctx.Decls |> List.rev
-  ok, decls
+  List.rev ctx.Decls

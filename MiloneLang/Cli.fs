@@ -572,26 +572,23 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx) =
+let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx): string =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (decls, tyCtx)
 
-  if mirCtx.Logs |> List.isEmpty |> not then
-    false, mirCtx.Logs |> semanticErrorToString tyCtx
-  else
-    writeLog host v "CirGen"
-    let ok, cir = genCir (stmts, mirCtx)
+  writeLog host v "CirGen"
+  let cir = genCir (stmts, mirCtx)
 
-    writeLog host v "CirDump"
+  writeLog host v "CirDump"
 
-    let output =
-      if headerOnly then
-        cirDumpHeader cir
-      else
-        cirDump cir
+  let output =
+    if headerOnly then
+      cirDumpHeader cir
+    else
+      cirDump cir
 
-    writeLog host v "Finish"
-    ok, output
+  writeLog host v "Finish"
+  output
 
 let check (ctx: CompileCtx): bool * string =
   let host = ctx.Host
@@ -622,7 +619,7 @@ let compile (ctx: CompileCtx): bool * string =
 
     | SemaAnalysisOk (expr, tyCtx) ->
         let decls, tyCtx = transformHir host v (expr, tyCtx)
-        codeGenHirViaMir host v ctx.HeaderOnly (decls, tyCtx)
+        true, codeGenHirViaMir host v ctx.HeaderOnly (decls, tyCtx)
 
 // -----------------------------------------------
 // Actions
