@@ -660,35 +660,38 @@ let private cgConst ctx mConst =
 
 /// `0`, `NULL`, or `(T) {}`
 let private genDefault ctx ty =
-  match ty with
-  | Ty (TupleTk, [])
-  | Ty (IntTk _, _)
-  | Ty (FloatTk _, _)
-  | Ty (CharTk, _) -> CIntExpr "0", ctx
+  let (Ty (tk, tyArgs)) = ty
 
-  | Ty (BoolTk, _) -> CVarExpr "false", ctx
+  match tk, tyArgs with
+  | TupleTk, []
+  | IntTk _, _
+  | FloatTk _, _
+  | CharTk, _ -> CIntExpr "0", ctx
 
-  | Ty (MetaTk _, _)
-  | Ty (ObjTk, _)
-  | Ty (ListTk, _)
-  | Ty (NativePtrTk _, _)
-  | Ty (NativeFunTk, _) -> CVarExpr "NULL", ctx
+  | BoolTk, _ -> CVarExpr "false", ctx
 
-  | Ty (StrTk, _)
-  | Ty (FunTk, _)
-  | Ty (TupleTk, _)
-  | Ty (OptionTk _, _)
-  | Ty (UnionTk _, _)
-  | Ty (RecordTk _, _)
-  | Ty (NativeTypeTk _, _) ->
+  | ObjTk, _
+  | ListTk, _
+  | NativePtrTk _, _
+  | NativeFunTk, _ -> CVarExpr "NULL", ctx
+
+  | StrTk, _
+  | FunTk, _
+  | TupleTk, _
+  | OptionTk _, _
+  | UnionTk _, _
+  | RecordTk _, _
+  | NativeTypeTk _, _ ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
 
-  | Ty (ErrorTk _, _)
-  | Ty (VoidTk, _)
-  | Ty (SynonymTk _, _)
-  | Ty (UnresolvedTk _, _)
-  | Ty (UnresolvedVarTk _, _) -> failwithf "Never %A" ty
+  | VoidTk, _ -> failwith "NEVER: No default value of void."
+
+  | ErrorTk _, _
+  | MetaTk _, _
+  | SynonymTk _, _
+  | UnresolvedTk _, _
+  | UnresolvedVarTk _, _ -> unreachable ()
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
