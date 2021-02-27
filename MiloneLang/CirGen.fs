@@ -559,51 +559,57 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 ///
 /// A type is complete if its definition is visible.
 let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
-  match ty with
-  | Ty (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-  | Ty (IntTk flavor, _) -> CIntTy flavor, ctx
-  | Ty (FloatTk flavor, _) -> CFloatTy flavor, ctx
-  | Ty (BoolTk, _) -> CBoolTy, ctx
-  | Ty (CharTk, _) -> CCharTy, ctx
-  | Ty (StrTk, _) -> CStructTy "String", ctx
+  let (Ty (tk, tyArgs)) = ty
 
-  // FIXME: Unresolved type variables are `obj` for now.
-  | Ty (MetaTk _, _)
-  | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
+  match tk, tyArgs with
+  | IntTk flavor, _ -> CIntTy flavor, ctx
+  | FloatTk flavor, _ -> CFloatTy flavor, ctx
+  | BoolTk, _ -> CBoolTy, ctx
+  | CharTk, _ -> CCharTy, ctx
+  | StrTk, _ -> CStructTy "String", ctx
+  | ObjTk, _ -> CConstPtrTy CVoidTy, ctx
 
-  | Ty (FunTk, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
+  | FunTk, [ sTy; tTy ] -> genFunTyDef ctx sTy tTy
+  | FunTk, _ -> unreachable ()
 
-  | Ty (OptionTk, [ itemTy ]) -> genOptionTyDef ctx itemTy
+  | TupleTk, [] -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | TupleTk, _ -> genTupleTyDef ctx tyArgs
 
-  | Ty (ListTk, [ itemTy ]) ->
-      // Complete definition of the underlying struct type is unnecessary yet.
+  | OptionTk, [ itemTy ] -> genOptionTyDef ctx itemTy
+  | OptionTk, _ -> unreachable ()
+
+  | ListTk, [ itemTy ] ->
+      // Complete definition of the underlying struct type is unnecessary yet
+      // since the struct is hold over pointer.
       genIncompleteListTyDecl ctx itemTy
+  | ListTk, _ -> unreachable ()
 
-  | Ty (TupleTk, itemTys) -> genTupleTyDef ctx itemTys
+  | VoidTk, _ -> CVoidTy, ctx
 
-  | Ty (VoidTk, _) -> CVoidTy, ctx
+  | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
+  | NativePtrTk _, _ -> unreachable ()
 
-  | Ty (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
-  | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
-
-  | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
-
-  | Ty (UnionTk serial, _) ->
+  | UnionTk serial, _ ->
       match ctx.Tys |> TMap.tryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
 
       | _ -> failwithf "NEVER: union type undefined?"
 
-  | Ty (RecordTk serial, _) ->
+  | RecordTk serial, _ ->
       match ctx.Tys |> TMap.tryFind serial with
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
       | _ -> failwithf "NEVER: record type undefined?"
 
-  | Ty (SynonymTk _, _) -> failwith "NEVER: Resolved in Typing"
+  | ErrorTk _, _
+  | MetaTk _, _
+  | SynonymTk _, _ -> failwith "NEVER: Resolved in Typing"
 
-  | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
+  | UnresolvedTk _, _
+  | UnresolvedVarTk _, _ -> failwith "NEVER: Resolved in NameRes"
 
 // -----------------------------------------------
 // Expressions
