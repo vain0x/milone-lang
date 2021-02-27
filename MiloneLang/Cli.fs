@@ -168,14 +168,14 @@ let private doInterpretProjectSchema ast =
 
   let asProjectRef expr =
     match expr with
-    | ABinaryExpr (AppBinary, AIdentExpr (Name("Ref", _)), projectDir, _) ->
+    | ABinaryExpr (AppBinary, AIdentExpr (Name ("Ref", _)), projectDir, _) ->
         let projectDir =
           projectDir |> asStr |> pathStrTrimEndPathSep
 
         let projectName = projectDir |> pathStrToStem
         Some(projectName, projectDir)
 
-    | ABinaryExpr (AppBinary, AIdentExpr (Name("AliasedRef", _)), ATupleExpr ([ projectName; projectDir ], _), _) ->
+    | ABinaryExpr (AppBinary, AIdentExpr (Name ("AliasedRef", _)), ATupleExpr ([ projectName; projectDir ], _), _) ->
         let projectName = projectName |> asStr
 
         let projectDir =
@@ -189,7 +189,7 @@ let private doInterpretProjectSchema ast =
     match decl with
     | AExprDecl (ARecordExpr (None, fields, _)) ->
         match fields
-              |> List.tryFind (fun (Name(name, _), _, _) -> name = "Options") with
+              |> List.tryFind (fun ((Name (name, _)), _, _) -> name = "Options") with
         | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
         | _ -> None
 
@@ -250,7 +250,12 @@ let resolveMiloneCoreDeps tokens ast =
     moduleMap
     |> TMap.fold
          (fun decls moduleName pos ->
-           AModuleSynonymDecl(Name(moduleName, pos), [ Name("MiloneCore", pos); Name(moduleName, pos) ], pos)
+           AModuleSynonymDecl(
+             Name(moduleName, pos),
+             [ Name("MiloneCore", pos)
+               Name(moduleName, pos) ],
+             pos
+           )
            :: decls)
          decls
 
@@ -578,7 +583,12 @@ let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx) =
     let ok, cir = genCir (stmts, mirCtx)
 
     writeLog host v "CirDump"
-    let output = if headerOnly then cirDumpHeader cir else cirDump cir
+
+    let output =
+      if headerOnly then
+        cirDumpHeader cir
+      else
+        cirDump cir
 
     writeLog host v "Finish"
     ok, output
