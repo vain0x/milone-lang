@@ -4,7 +4,7 @@ struct StringList;
 
 struct String str_concat(struct String, struct StringList const*);
 
-struct String __stringJoin_(struct String sep_2, struct StringList const* xs_54);
+struct String __stringJoin_(struct String sep_2, struct StringList const* xs_57);
 
 int const* __ptrAsConst_1(int* mutPtr_);
 
@@ -181,8 +181,8 @@ int concatTest_(int arg_55);
 int milone_main();
 
 
-struct String __stringJoin_(struct String sep_2, struct StringList const* xs_54) {
-    struct String str_concat_result_ = str_concat(sep_2, xs_54);
+struct String __stringJoin_(struct String sep_2, struct StringList const* xs_57) {
+    struct String str_concat_result_ = str_concat(sep_2, xs_57);
     return str_concat_result_;
 }
 

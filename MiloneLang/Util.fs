@@ -62,16 +62,11 @@ let listTryZip (xs: _ list) (ys: _ list): (_ * _) list * _ list * _ list =
 /// `List.map`, modifying context.
 ///
 /// USAGE:
-///   let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
+/// ```fs
+/// let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
+/// ```
 let stMap f (xs, ctx) =
-  let rec go acc (xs, ctx) =
-    match xs with
-    | [] -> List.rev acc, ctx
-    | x :: xs ->
-        let y, ctx = f (x, ctx)
-        go (y :: acc) (xs, ctx)
-
-  go [] (xs, ctx)
+  xs |> List.mapFold (fun ctx x -> f (x, ctx)) ctx
 
 /// `List.bind`, modifying context.
 ///
