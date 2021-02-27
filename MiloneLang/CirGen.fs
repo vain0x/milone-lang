@@ -23,6 +23,8 @@ open MiloneLang.Cir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
+let private unreachable () = failwith "NEVER"
+
 let private valueSymbolCompare l r =
   let encode symbol =
     match symbol with
@@ -490,114 +492,9 @@ let private getUniqueVariantName (ctx: CirCtx) variantSerial =
   | None -> failwithf "Never: Unknown variant serial=%s" (objToString variantSerial)
 
 let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
-  let rec go ty (ctx: CirCtx) =
-    let tyToUniqueName ty =
-      match ty with
-      | Ty (IntTk flavor, _) -> cIntegerTyPascalName flavor, ctx
-      | Ty (FloatTk flavor, _) -> cFloatTyPascalName flavor, ctx
-      | Ty (BoolTk, _) -> "Bool", ctx
-      | Ty (CharTk, _) -> "Char", ctx
-      | Ty (StrTk, _) -> "String", ctx
-
-      | Ty (MetaTk _, _)
-      | Ty (ObjTk, _) -> "Object", ctx
-
-      | Ty (FunTk, _) ->
-          let arity, argTys, resultTy = tyToArgList ty
-
-          let argTys, ctx =
-            (argTys, ctx)
-            |> stMap (fun (argTy, ctx) -> ctx |> go argTy)
-
-          let resultTy, ctx = ctx |> go resultTy
-
-          let funTy =
-            (argTys |> strConcat)
-            + resultTy
-            + "Fun"
-            + string arity
-
-          funTy, ctx
-
-      | Ty (OptionTk, [ itemTy ]) ->
-          let itemTy, ctx = ctx |> go itemTy
-          let optionTy = itemTy + "Option"
-          optionTy, ctx
-
-      | Ty (ListTk, [ itemTy ]) ->
-          let itemTy, ctx = ctx |> go itemTy
-          let listTy = itemTy + "List"
-          listTy, ctx
-
-      | Ty (VoidTk, _) -> "Void", ctx
-
-      | Ty (NativePtrTk isMut, [ itemTy ]) ->
-          let itemTy, ctx = ctx |> go itemTy
-
-          let ptrTy =
-            match isMut with
-            | IsConst -> itemTy + "ConstPtr"
-            | IsMut -> itemTy + "MutPtr"
-
-          ptrTy, ctx
-
-      | Ty (NativeFunTk, tyArgs) ->
-          let tyArgs, ctx =
-            (tyArgs, ctx)
-            |> stMap (fun (ty, ctx) -> ctx |> go ty)
-
-          let funTy =
-            (tyArgs |> strConcat)
-            + "NativeFun"
-            + string (List.length tyArgs - 1)
-
-          funTy, ctx
-
-      | Ty (NativeTypeTk code, _) -> code, ctx
-
-      | Ty (TupleTk, []) -> "Unit", ctx
-
-      | Ty (TupleTk, itemTys) ->
-          let len = itemTys |> List.length
-
-          let itemTys, ctx =
-            (itemTys, ctx)
-            |> stMap (fun (itemTy, ctx) -> ctx |> go itemTy)
-
-          let tupleTy =
-            (itemTys |> strConcat) + "Tuple" + string len
-
-          tupleTy, ctx
-
-      | Ty (ErrorTk _, _)
-      | Ty (OptionTk, _)
-      | Ty (ListTk, _)
-      | Ty (FunTk, _)
-      | Ty (NativePtrTk _, _)
-      | Ty (UnionTk _, _)
-      | Ty (RecordTk _, _) ->
-          // FIXME: collect error
-          failwithf "/* unknown ty %A */" ty
-
-      | Ty (SynonymTk _, _) -> failwith "NEVER: Resolved in Typing"
-
-      | Ty (UnresolvedTk _, _)
-      | Ty (UnresolvedVarTk _, _) -> failwith "NEVER: Resolved in NameRes."
-
-    // Memoization.
-    match ctx.TyUniqueNames |> TMap.tryFind ty with
-    | Some name -> name, ctx
-
-    | None ->
-        let name, ctx = tyToUniqueName ty
-
-        let ctx =
-          { ctx with
-              TyUniqueNames = ctx.TyUniqueNames |> TMap.add ty name }
-
-        name, ctx
-
-  go ty ctx
+  let memo = ctx.TyUniqueNames
+  let name, memo = tyMangle (ty, memo)
+  name, { ctx with TyUniqueNames = memo }
 
 let private cgNativePtrTy ctx isMut itemTy =
   let itemTy, ctx = cgTyIncomplete ctx itemTy
@@ -620,91 +517,99 @@ let private cgNativeFunTy ctx tys =
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
 let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
-  match ty with
-  | Ty (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-  | Ty (IntTk flavor, _) -> CIntTy flavor, ctx
-  | Ty (FloatTk flavor, _) -> CFloatTy flavor, ctx
-  | Ty (BoolTk, _) -> CBoolTy, ctx
-  | Ty (CharTk, _) -> CCharTy, ctx
-  | Ty (StrTk, _) -> CStructTy "String", ctx
+  let (Ty (tk, tyArgs)) = ty
 
-  // FIXME: Unresolved type variables are `obj` for now.
-  | Ty (MetaTk _, _)
-  | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
+  match tk, tyArgs with
+  | IntTk flavor, _ -> CIntTy flavor, ctx
+  | FloatTk flavor, _ -> CFloatTy flavor, ctx
+  | BoolTk, _ -> CBoolTy, ctx
+  | CharTk, _ -> CCharTy, ctx
+  | StrTk, _ -> CStructTy "String", ctx
+  | ObjTk, _ -> CConstPtrTy CVoidTy, ctx
 
-  | Ty (FunTk, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
+  | FunTk, [ sTy; tTy ] -> genIncompleteFunTyDecl ctx sTy tTy
+  | FunTk, _ -> unreachable ()
 
-  | Ty (OptionTk, [ itemTy ]) -> genIncompleteOptionTyDecl ctx itemTy
+  | TupleTk, [] -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | TupleTk, _ -> genIncompleteTupleTyDecl ctx tyArgs
 
-  | Ty (ListTk, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
+  | OptionTk, [ itemTy ] -> genIncompleteOptionTyDecl ctx itemTy
+  | OptionTk, _ -> unreachable ()
 
-  | Ty (TupleTk, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
+  | ListTk, [ itemTy ] -> genIncompleteListTyDecl ctx itemTy
+  | ListTk, _ -> unreachable ()
 
-  | Ty (VoidTk, _) -> CVoidTy, ctx
+  | VoidTk, _ -> CVoidTy, ctx
+  | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
+  | NativePtrTk _, _ -> unreachable ()
+  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
-  | Ty (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+  | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
+  | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
 
-  | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
+  | ErrorTk _, _
+  | MetaTk _, _
+  | SynonymTk _, _ -> failwith "NEVER: Resolved in Typing"
 
-  | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
-
-  | Ty (UnionTk serial, _) -> genIncompleteUnionTyDecl ctx serial
-
-  | Ty (RecordTk serial, _) -> genIncompleteRecordTyDecl ctx serial
-
-  | Ty (SynonymTk _, _) -> failwith "NEVER: Resolved in Typing"
-
-  | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
+  | UnresolvedTk _, _
+  | UnresolvedVarTk _, _ -> failwith "NEVER: Resolved in NameRes"
 
 /// Converts a type to complete C type.
 ///
 /// A type is complete if its definition is visible.
 let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
-  match ty with
-  | Ty (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-  | Ty (IntTk flavor, _) -> CIntTy flavor, ctx
-  | Ty (FloatTk flavor, _) -> CFloatTy flavor, ctx
-  | Ty (BoolTk, _) -> CBoolTy, ctx
-  | Ty (CharTk, _) -> CCharTy, ctx
-  | Ty (StrTk, _) -> CStructTy "String", ctx
+  let (Ty (tk, tyArgs)) = ty
 
-  // FIXME: Unresolved type variables are `obj` for now.
-  | Ty (MetaTk _, _)
-  | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
+  match tk, tyArgs with
+  | IntTk flavor, _ -> CIntTy flavor, ctx
+  | FloatTk flavor, _ -> CFloatTy flavor, ctx
+  | BoolTk, _ -> CBoolTy, ctx
+  | CharTk, _ -> CCharTy, ctx
+  | StrTk, _ -> CStructTy "String", ctx
+  | ObjTk, _ -> CConstPtrTy CVoidTy, ctx
 
-  | Ty (FunTk, [ sTy; tTy ]) -> genFunTyDef ctx sTy tTy
+  | FunTk, [ sTy; tTy ] -> genFunTyDef ctx sTy tTy
+  | FunTk, _ -> unreachable ()
 
-  | Ty (OptionTk, [ itemTy ]) -> genOptionTyDef ctx itemTy
+  | TupleTk, [] -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | TupleTk, _ -> genTupleTyDef ctx tyArgs
 
-  | Ty (ListTk, [ itemTy ]) ->
-      // Complete definition of the underlying struct type is unnecessary yet.
+  | OptionTk, [ itemTy ] -> genOptionTyDef ctx itemTy
+  | OptionTk, _ -> unreachable ()
+
+  | ListTk, [ itemTy ] ->
+      // Complete definition of the underlying struct type is unnecessary yet
+      // since the struct is hold over pointer.
       genIncompleteListTyDecl ctx itemTy
+  | ListTk, _ -> unreachable ()
 
-  | Ty (TupleTk, itemTys) -> genTupleTyDef ctx itemTys
+  | VoidTk, _ -> CVoidTy, ctx
 
-  | Ty (VoidTk, _) -> CVoidTy, ctx
+  | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
+  | NativePtrTk _, _ -> unreachable ()
 
-  | Ty (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
-  | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
-
-  | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
-
-  | Ty (UnionTk serial, _) ->
+  | UnionTk serial, _ ->
       match ctx.Tys |> TMap.tryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
 
       | _ -> failwithf "NEVER: union type undefined?"
 
-  | Ty (RecordTk serial, _) ->
+  | RecordTk serial, _ ->
       match ctx.Tys |> TMap.tryFind serial with
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
       | _ -> failwithf "NEVER: record type undefined?"
 
-  | Ty (SynonymTk _, _) -> failwith "NEVER: Resolved in Typing"
+  | ErrorTk _, _
+  | MetaTk _, _
+  | SynonymTk _, _ -> failwith "NEVER: Resolved in Typing"
 
-  | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
+  | UnresolvedTk _, _
+  | UnresolvedVarTk _, _ -> failwith "NEVER: Resolved in NameRes"
 
 // -----------------------------------------------
 // Expressions
@@ -755,35 +660,38 @@ let private cgConst ctx mConst =
 
 /// `0`, `NULL`, or `(T) {}`
 let private genDefault ctx ty =
-  match ty with
-  | Ty (TupleTk, [])
-  | Ty (IntTk _, _)
-  | Ty (FloatTk _, _)
-  | Ty (CharTk, _) -> CIntExpr "0", ctx
+  let (Ty (tk, tyArgs)) = ty
 
-  | Ty (BoolTk, _) -> CVarExpr "false", ctx
+  match tk, tyArgs with
+  | TupleTk, []
+  | IntTk _, _
+  | FloatTk _, _
+  | CharTk, _ -> CIntExpr "0", ctx
 
-  | Ty (MetaTk _, _)
-  | Ty (ObjTk, _)
-  | Ty (ListTk, _)
-  | Ty (NativePtrTk _, _)
-  | Ty (NativeFunTk, _) -> CVarExpr "NULL", ctx
+  | BoolTk, _ -> CVarExpr "false", ctx
 
-  | Ty (StrTk, _)
-  | Ty (FunTk, _)
-  | Ty (TupleTk, _)
-  | Ty (OptionTk _, _)
-  | Ty (UnionTk _, _)
-  | Ty (RecordTk _, _)
-  | Ty (NativeTypeTk _, _) ->
+  | ObjTk, _
+  | ListTk, _
+  | NativePtrTk _, _
+  | NativeFunTk, _ -> CVarExpr "NULL", ctx
+
+  | StrTk, _
+  | FunTk, _
+  | TupleTk, _
+  | OptionTk _, _
+  | UnionTk _, _
+  | RecordTk _, _
+  | NativeTypeTk _, _ ->
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
 
-  | Ty (ErrorTk _, _)
-  | Ty (VoidTk, _)
-  | Ty (SynonymTk _, _)
-  | Ty (UnresolvedTk _, _)
-  | Ty (UnresolvedVarTk _, _) -> failwithf "Never %A" ty
+  | VoidTk, _ -> failwith "NEVER: No default value of void."
+
+  | ErrorTk _, _
+  | MetaTk _, _
+  | SynonymTk _, _
+  | UnresolvedTk _, _
+  | UnresolvedVarTk _, _ -> unreachable ()
 
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
