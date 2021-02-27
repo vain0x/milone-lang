@@ -1294,8 +1294,8 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
   let ctx =
     let vars, ctx =
       ctx.Vars
-      |> TMap.fold
-           (fun (acc, ctx: TyCtx) varSerial varDef ->
+      |> TMap.mapFold
+           (fun (ctx: TyCtx) varSerial varDef ->
              let ctx =
                { ctx with
                    Level =
@@ -1308,17 +1308,15 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                    let ty, ctx = freshMetaTy loc ctx
                    VarDef(name, storageModifier, ty, loc), ctx
 
-             let acc = acc |> TMap.add varSerial varDef
-
-             acc, ctx)
-           (TMap.empty varSerialCompare, ctx)
+             varDef, ctx)
+           ctx
 
     { ctx with Vars = vars }
 
   let funs, ctx =
     ctx.Funs
-    |> TMap.fold
-         (fun (acc, ctx: TyCtx) funSerial (funDef: FunDef) ->
+    |> TMap.mapFold
+         (fun (ctx: TyCtx) funSerial (funDef: FunDef) ->
            let ctx =
              { ctx with
                  Level =
@@ -1327,10 +1325,8 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
            let ty, ctx = freshMetaTy funDef.Loc ctx
 
-           acc
-           |> TMap.add funSerial { funDef with Ty = TyScheme([], ty) },
-           ctx)
-         (TMap.empty funSerialCompare, ctx)
+           { funDef with Ty = TyScheme([], ty) }, ctx)
+         ctx
 
   let ctx = { ctx with Funs = funs; Level = 0 }
 
