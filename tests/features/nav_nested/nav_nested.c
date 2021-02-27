@@ -12,7 +12,7 @@ int milone_main() {
     struct SubRecord_ SubRecord_ = (struct SubRecord_){.t0 = (struct String){.str = "Hello", .len = 5}};
     struct SubRecord_ text_ = SubRecord_;
     milone_assert((text_.t0.len == 5), 8, 2);
-    int match_;
+    char match_;
     int value_ = 42;
     milone_assert((value_ == 42), 11, 35);
     match_ = 0;

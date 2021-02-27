@@ -2,15 +2,15 @@
 
 struct IntOption;
 
-int basicSomeCase_(int arg_);
+char basicSomeCase_(char arg_);
 
 struct StringOption;
 
-int basicNoneCase_(int arg_1);
+char basicNoneCase_(char arg_1);
 
 struct UnitOption;
 
-int basicMatchCase_(int arg_2);
+char basicMatchCase_(char arg_2);
 
 int milone_main();
 
@@ -19,8 +19,8 @@ struct IntOption {
     int value;
 };
 
-int basicSomeCase_(int arg_) {
-    int match_;
+char basicSomeCase_(char arg_) {
+    char match_;
     struct IntOption some_ = (struct IntOption){.some = true, .value = 1};
     if (some_.some) goto next_2;
     milone_assert(false, 6, 12);
@@ -45,9 +45,9 @@ struct StringOption {
     struct String value;
 };
 
-int basicNoneCase_(int arg_1) {
+char basicNoneCase_(char arg_1) {
     struct StringOption none_ = ((struct StringOption){});
-    int match_1;
+    char match_1;
     if ((!(none_.some))) goto next_6;
     if ((str_compare(none_.value, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
     milone_assert(false, 17, 16);
@@ -68,12 +68,12 @@ end_match_5:;
 
 struct UnitOption {
     bool some;
-    int value;
+    char value;
 };
 
-int basicMatchCase_(int arg_2) {
+char basicMatchCase_(char arg_2) {
     struct UnitOption some_1 = (struct UnitOption){.some = true, .value = 0};
-    int if_;
+    char if_;
     if ((!(some_1.some))) {
         goto none_cl_10;
     } else {
@@ -91,8 +91,8 @@ if_next_9:;
 }
 
 int milone_main() {
-    int call_ = basicSomeCase_(0);
-    int call_1 = basicNoneCase_(0);
-    int call_2 = basicMatchCase_(0);
+    char call_ = basicSomeCase_(0);
+    char call_1 = basicNoneCase_(0);
+    char call_2 = basicMatchCase_(0);
     return 0;
 }

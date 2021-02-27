@@ -1,12 +1,12 @@
 #include "milone.h"
 
-void const* f_(int arg_);
+void const* f_(char arg_);
 
 static void const* boxedValue_;
 
 int milone_main();
 
-void const* f_(int arg_) {
+void const* f_(char arg_) {
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = 1;
     return box_;

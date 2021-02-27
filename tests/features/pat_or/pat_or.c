@@ -2,7 +2,7 @@
 
 bool isZeroOrOne_(int x_);
 
-int simpleCase_(int arg_);
+char simpleCase_(char arg_);
 
 struct IntList;
 
@@ -10,13 +10,13 @@ struct IntList;
 
 bool startsWithDoubleBits_(struct IntList const* xs_);
 
-int nestedCase_(int arg_1);
+char nestedCase_(char arg_1);
 
 struct IntIntTuple2;
 
 bool performComplexMatching_(struct IntIntTuple2 expr_);
 
-int complexCase_(int arg_2);
+char complexCase_(char arg_2);
 
 int milone_main();
 
@@ -40,7 +40,7 @@ switch_next_1:;
     return switch_;
 }
 
-int simpleCase_(int arg_) {
+char simpleCase_(char arg_) {
     bool call_ = isZeroOrOne_(0);
     bool if_;
     if (call_) {
@@ -104,7 +104,7 @@ end_match_7:;
     return match_;
 }
 
-int nestedCase_(int arg_1) {
+char nestedCase_(char arg_1) {
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -147,7 +147,7 @@ end_match_14:;
     return match_1;
 }
 
-int complexCase_(int arg_2) {
+char complexCase_(char arg_2) {
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 0, .t1 = 1};
     bool call_5 = performComplexMatching_(tuple_);
     milone_assert(call_5, 38, 2);
@@ -158,8 +158,8 @@ int complexCase_(int arg_2) {
 }
 
 int milone_main() {
-    int call_7 = simpleCase_(0);
-    int call_8 = nestedCase_(0);
-    int call_9 = complexCase_(0);
+    char call_7 = simpleCase_(0);
+    char call_8 = nestedCase_(0);
+    char call_9 = complexCase_(0);
     return 0;
 }

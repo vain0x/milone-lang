@@ -50,7 +50,7 @@ int milone_main() {
     struct Node_ call_3 = node_(call_1, call_2);
     struct Node_ call_4 = node_(call_, call_3);
     struct Node_ t_ = call_4;
-    int match_;
+    char match_;
     if ((t_.discriminant != Node_)) goto next_2;
     if (((*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.discriminant != Leaf_)) goto next_2;
     int x_ = (*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.Leaf_;

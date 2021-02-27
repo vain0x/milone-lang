@@ -524,7 +524,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | FunTk, [ sTy; tTy ] -> genIncompleteFunTyDecl ctx sTy tTy
   | FunTk, _ -> unreachable ()
 
-  | TupleTk, [] -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> genIncompleteTupleTyDecl ctx tyArgs
 
   | OptionTk, [ itemTy ] -> genIncompleteOptionTyDecl ctx itemTy
@@ -566,7 +566,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | FunTk, [ sTy; tTy ] -> genFunTyDef ctx sTy tTy
   | FunTk, _ -> unreachable ()
 
-  | TupleTk, [] -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> genTupleTyDef ctx tyArgs
 
   | OptionTk, [ itemTy ] -> genOptionTyDef ctx itemTy

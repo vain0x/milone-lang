@@ -24,7 +24,7 @@ struct IntOption __intOfStr_(struct String s_3);
 
 int milone_get_arg_count();
 
-int __argCount_(int arg_);
+int __argCount_(char arg_);
 
 struct String milone_get_arg(int);
 
@@ -40,7 +40,7 @@ int parseOk_(struct String s_);
 
 bool parseError_(struct String s_1);
 
-int tryParseTest_(int arg_1);
+char tryParseTest_(char arg_1);
 
 static int MinValue_;
 
@@ -97,7 +97,7 @@ if_next_1:;
     return if_;
 }
 
-int __argCount_(int arg_) {
+int __argCount_(char arg_) {
     int milone_get_arg_count_result_ = milone_get_arg_count();
     return milone_get_arg_count_result_;
 }
@@ -183,7 +183,7 @@ end_match_13:;
     return match_1;
 }
 
-int tryParseTest_(int arg_1) {
+char tryParseTest_(char arg_1) {
     int call_5 = parseOk_((struct String){.str = "0", .len = 1});
     milone_assert((call_5 == 0), 21, 2);
     int call_6 = parseOk_((struct String){.str = "000", .len = 3});
@@ -231,6 +231,6 @@ int tryParseTest_(int arg_1) {
 int milone_main() {
     MinValue_ = -2147483648;
     MaxValue_ = 2147483647;
-    int call_25 = tryParseTest_(0);
+    char call_25 = tryParseTest_(0);
     return 0;
 }

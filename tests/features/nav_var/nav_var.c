@@ -1,12 +1,12 @@
 #include "milone.h"
 
-int getAnswer_(int arg_);
+int getAnswer_(char arg_);
 
 static int answer_;
 
 int milone_main();
 
-int getAnswer_(int arg_) {
+int getAnswer_(char arg_) {
     return 42;
 }
 

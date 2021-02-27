@@ -64,7 +64,7 @@ struct Token_List const* go_6(struct String source_4, struct Token_ListIntTuple2
 
 struct Token_List const* tokenize_(struct String source_4);
 
-int tokenListPrint_(struct Token_List const* tokens_);
+char tokenListPrint_(struct Token_List const* tokens_);
 
 struct IntToken_ListTuple2;
 
@@ -469,8 +469,8 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
     int i_5 = arg_19.t1;
     bool call_10 = isDigit_(source_3.str[i_5]);
     milone_assert(call_10, 76, 2);
-    void const* box_1 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_1))) = 0;
+    void const* box_1 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_1))) = 0;
     struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_1, .env = box_1};
     struct StringIntTuple2 tuple_4 = (struct StringIntTuple2){.t0 = source_3, .t1 = i_5};
     int call_11 = takeWhile_(fun_3, tuple_4);
@@ -598,9 +598,9 @@ struct Token_List const* tokenize_(struct String source_4) {
     return call_19;
 }
 
-int tokenListPrint_(struct Token_List const* tokens_) {
+char tokenListPrint_(struct Token_List const* tokens_) {
 tailrec_66:;
-    int match_4;
+    char match_4;
     if ((!((!(tokens_))))) goto next_68;
     match_4 = 0;
     goto end_match_67;
@@ -779,7 +779,7 @@ int eval_(struct String str_) {
 next_88:;
     struct Token_List const* tokens_20 = call_30.t1;
     printf("ERROR: couldn\'t parse tokens:\n");
-    int call_31 = tokenListPrint_(tokens_20);
+    char call_31 = tokenListPrint_(tokens_20);
     exit(1);
     match_9 = 0;
     goto end_match_87;
@@ -814,7 +814,7 @@ int milone_main() {
     milone_assert((str_compare(call_37, (struct String){.str = "b,a", .len = 3}) == 0), 161, 2);
     struct String source_5 = (struct String){.str = "2 + 3\r\n    - 4", .len = 14};
     struct Token_List const* call_38 = tokenize_(source_5);
-    int call_39 = tokenListPrint_(call_38);
+    char call_39 = tokenListPrint_(call_38);
     int call_40 = eval_(source_5);
     milone_assert((call_40 == ((2 + 3) - 4)), 168, 2);
     int call_41 = eval_((struct String){.str = "2 - 3 * 4 + 5", .len = 13});

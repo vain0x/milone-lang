@@ -65,7 +65,7 @@ int milone_main() {
     struct Status_ err1_ = variant_;
     struct Status_ variant_1 = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "Access denied.", .len = 14}};
     struct Status_ err2_ = variant_1;
-    int match_;
+    char match_;
     if ((err1_.discriminant != Ok_1)) goto next_2;
     milone_assert(false, 28, 12);
     match_ = 0;
@@ -79,7 +79,7 @@ next_2:;
 next_3:;
     exit(1);
 end_match_1:;
-    int match_1;
+    char match_1;
     struct Limit_ variant_2 = (struct Limit_){.discriminant = LimitVal_, .LimitVal_ = 1};
     if ((variant_2.discriminant != LimitVal_)) goto next_5;
     int x_ = variant_2.LimitVal_;
@@ -94,7 +94,7 @@ next_5:;
 next_6:;
     exit(1);
 end_match_4:;
-    int switch_;
+    char switch_;
     switch ((struct ApiResponse_){.discriminant = ARCancel_}.discriminant) {
         case ARCancel_:
             goto clause_8;
@@ -110,7 +110,7 @@ clause_9:;
     switch_ = 0;
     goto switch_next_7;
 switch_next_7:;
-    int match_2;
+    char match_2;
     struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 404, .t1 = (struct String){.str = "Not Found", .len = 9}};
     struct ApiResponse_ variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = tuple_};
     if ((variant_3.discriminant != ARError_)) goto next_11;
@@ -139,9 +139,9 @@ next_11:;
 next_12:;
 end_match_10:;
     struct Status_ ok_1 = (struct Status_){.discriminant = Ok_1};
-    int okOk_ = 0;
+    char okOk_ = 0;
     struct Status_ statusOk_ = (struct Status_){.discriminant = Ok_1};
-    int switch_1;
+    char switch_1;
     switch ((struct Status_){.discriminant = Ok_1}.discriminant) {
         case Ok_1:
             goto clause_17;
@@ -160,6 +160,6 @@ clause_18:;
     switch_1 = 0;
     goto switch_next_16;
 switch_next_16:;
-    int okWrapper_ = 0;
+    char okWrapper_ = 0;
     return 0;
 }

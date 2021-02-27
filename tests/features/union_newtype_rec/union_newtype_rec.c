@@ -50,7 +50,7 @@ int milone_main() {
     struct MyList_ first_ = variant_1;
     struct MyList_ call_ = myCons_(1, first_);
     struct MyList_ second_ = call_;
-    int match_;
+    char match_;
     if (((*(((struct IntMyList_OptionTuple2 const*)first_.MyList_))).t0 != 0)) goto next_2;
     if ((*(((struct IntMyList_OptionTuple2 const*)first_.MyList_))).t1.some) goto next_2;
     match_ = 0;
@@ -61,7 +61,7 @@ next_2:;
     goto end_match_1;
 next_3:;
 end_match_1:;
-    int match_1;
+    char match_1;
     if ((!((*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.some))) goto next_5;
     int value_ = (*(((struct IntMyList_OptionTuple2 const*)(*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.value.MyList_))).t0;
     milone_assert((value_ == 0), 17, 44);

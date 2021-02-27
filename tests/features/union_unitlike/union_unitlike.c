@@ -1,6 +1,6 @@
 #include "milone.h"
 
-int basicCase_(int arg_);
+char basicCase_(char arg_);
 
 enum MyBool_Discriminant;
 
@@ -8,7 +8,7 @@ struct MyBool_;
 
 bool toBool_(struct MyBool_ myBool_1);
 
-int usedInOtherSumTypeCase_(int arg_1);
+char usedInOtherSumTypeCase_(char arg_1);
 
 struct UnitList;
 
@@ -16,13 +16,13 @@ struct UnitList;
 
 struct RecordUsingMyUnit_;
 
-int usedInRecordTypeCase_(int arg_2);
+char usedInRecordTypeCase_(char arg_2);
 
 int milone_main();
 
-int basicCase_(int arg_) {
-    int myUnit_ = 0;
-    int match_;
+char basicCase_(char arg_) {
+    char myUnit_ = 0;
+    char match_;
     match_ = 0;
     goto end_match_1;
 next_2:;
@@ -38,8 +38,8 @@ enum MyBool_Discriminant {
 struct MyBool_ {
     enum MyBool_Discriminant discriminant;
     union {
-        int MyFalse_;
-        int MyTrue_;
+        char MyFalse_;
+        char MyTrue_;
     };
 };
 
@@ -58,7 +58,7 @@ end_match_3:;
     return match_1;
 }
 
-int usedInOtherSumTypeCase_(int arg_1) {
+char usedInOtherSumTypeCase_(char arg_1) {
     struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
     struct MyBool_ myBool_ = variant_;
     bool call_ = toBool_(myBool_);
@@ -68,21 +68,21 @@ int usedInOtherSumTypeCase_(int arg_1) {
 
 
 struct UnitList {
-    int head;
+    char head;
     struct UnitList const* tail;
 };
 
 struct RecordUsingMyUnit_ {
-    int t0;
+    char t0;
     struct UnitList const* t1;
 };
 
-int usedInRecordTypeCase_(int arg_2) {
+char usedInRecordTypeCase_(char arg_2) {
     struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
     (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
     struct RecordUsingMyUnit_ RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_};
     struct RecordUsingMyUnit_ record_ = RecordUsingMyUnit_;
-    int match_2;
+    char match_2;
     if ((!(record_.t1))) goto next_7;
     if ((!((!(record_.t1->tail))))) goto next_7;
     match_2 = 0;
@@ -97,8 +97,8 @@ end_match_6:;
 }
 
 int milone_main() {
-    int call_1 = basicCase_(0);
-    int call_2 = usedInOtherSumTypeCase_(0);
-    int call_3 = usedInRecordTypeCase_(0);
+    char call_1 = basicCase_(0);
+    char call_2 = usedInOtherSumTypeCase_(0);
+    char call_3 = usedInRecordTypeCase_(0);
     return 0;
 }

@@ -4,7 +4,7 @@ struct StringOption;
 
 struct GitCommitOptions_;
 
-void const* defaultOptions_(int arg_);
+void const* defaultOptions_(char arg_);
 
 int milone_main();
 
@@ -23,7 +23,7 @@ struct GitCommitOptions_ {
     bool t6;
 };
 
-void const* defaultOptions_(int arg_) {
+void const* defaultOptions_(char arg_) {
     struct GitCommitOptions_ GitCommitOptions_ = (struct GitCommitOptions_){.t0 = false, .t1 = false, .t2 = ((struct StringOption){}), .t3 = ((struct StringOption){}), .t4 = ((struct StringOption){}), .t5 = ((struct StringOption){}), .t6 = false};
     void const* box_ = milone_mem_alloc(1, sizeof(struct GitCommitOptions_));
     (*(((struct GitCommitOptions_*)box_))) = GitCommitOptions_;

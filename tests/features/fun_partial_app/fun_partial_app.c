@@ -95,8 +95,8 @@ int milone_main() {
     struct IntIntIntFun2 add2_ = fun_4;
     int app_2 = add2_.fun(add2_.env, 5, 7);
     milone_assert((app_2 == (((2 + 3) + 5) + 7)), 15, 2);
-    void const* box_2 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_2))) = 0;
+    void const* box_2 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_2))) = 0;
     struct IntIntIntIntIntFun4 fun_5 = (struct IntIntIntIntIntFun4){.fun = fun_2, .env = box_2};
     struct IntIntIntIntIntFun4 f_1 = fun_5;
     int app_3 = f_1.fun(f_1.env, 1, 2, 3, 4);

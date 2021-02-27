@@ -2,22 +2,22 @@
 
 struct IntList;
 
-int nilTest_(int arg_);
+char nilTest_(char arg_);
 
 struct IntList;
 
-int cons1Test_(int arg_1);
+char cons1Test_(char arg_1);
 
-int cons2Test_(int arg_2);
+char cons2Test_(char arg_2);
 
-int literalTest_(int arg_3);
+char literalTest_(char arg_3);
 
 int milone_main();
 
 
-int nilTest_(int arg_) {
+char nilTest_(char arg_) {
     struct IntList const* nil_ = NULL;
-    int if_;
+    char if_;
     if ((!(nil_))) {
         goto nil_cl_2;
     } else {
@@ -39,11 +39,11 @@ struct IntList {
     struct IntList const* tail;
 };
 
-int cons1Test_(int arg_1) {
+char cons1Test_(char arg_1) {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* xs_ = list_;
-    int match_;
+    char match_;
     if ((!(xs_))) goto next_5;
     int x_ = xs_->head;
     if ((!((!(xs_->tail))))) goto next_5;
@@ -59,13 +59,13 @@ end_match_4:;
     return 0;
 }
 
-int cons2Test_(int arg_2) {
+char cons2Test_(char arg_2) {
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
     struct IntList const* ys_ = list_1;
-    int match_1;
+    char match_1;
     if ((!(ys_))) goto next_8;
     int y2_ = ys_->head;
     if ((!(ys_->tail))) goto next_8;
@@ -96,7 +96,7 @@ end_match_7:;
     return 0;
 }
 
-int literalTest_(int arg_3) {
+char literalTest_(char arg_3) {
     struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -106,7 +106,7 @@ int literalTest_(int arg_3) {
     struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 2, .tail = list_4};
     struct IntList const* zs_ = list_3;
-    int match_2;
+    char match_2;
     if ((!(zs_))) goto next_14;
     int z2_ = zs_->head;
     if ((!(zs_->tail))) goto next_14;
@@ -132,9 +132,9 @@ end_match_13:;
 }
 
 int milone_main() {
-    int call_ = nilTest_(0);
-    int call_1 = cons1Test_(0);
-    int call_2 = cons2Test_(0);
-    int call_3 = literalTest_(0);
+    char call_ = nilTest_(0);
+    char call_1 = cons1Test_(0);
+    char call_2 = cons2Test_(0);
+    char call_3 = literalTest_(0);
     return 0;
 }

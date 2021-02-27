@@ -4,7 +4,7 @@ struct IntUnitTuple2;
 
 int fst_1(struct IntUnitTuple2 arg_);
 
-int f_1(void const* boxedPair_, int arg_1);
+int f_1(void const* boxedPair_, char arg_1);
 
 struct IntStringTuple2;
 
@@ -12,13 +12,13 @@ struct IntStringTuple2Option;
 
 int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_);
 
-int testCase_(struct IntStringTuple2 kv_);
+char testCase_(struct IntStringTuple2 kv_);
 
 int milone_main();
 
 struct IntUnitTuple2 {
     int t0;
-    int t1;
+    char t1;
 };
 
 int fst_1(struct IntUnitTuple2 arg_) {
@@ -26,7 +26,7 @@ int fst_1(struct IntUnitTuple2 arg_) {
     return x_;
 }
 
-int f_1(void const* boxedPair_, int arg_1) {
+int f_1(void const* boxedPair_, char arg_1) {
     int call_ = fst_1((*(((struct IntUnitTuple2 const*)boxedPair_))));
     return call_;
 }
@@ -46,7 +46,7 @@ int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
     return call_1;
 }
 
-int testCase_(struct IntStringTuple2 kv_) {
+char testCase_(struct IntStringTuple2 kv_) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringTuple2));
     (*(((struct IntStringTuple2*)box_))) = kv_;
     int call_2 = fstUnbox_1(box_, ((struct IntStringTuple2Option){}));
@@ -56,6 +56,6 @@ int testCase_(struct IntStringTuple2 kv_) {
 
 int milone_main() {
     struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 0, .t1 = (struct String){.str = "right", .len = 5}};
-    int call_3 = testCase_(tuple_);
+    char call_3 = testCase_(tuple_);
     return 0;
 }

@@ -6,13 +6,13 @@ struct IntList;
 
 struct IntList const* go_(struct IntList const* acc_, int i_);
 
-int fun_(int arg_3);
+int fun_(char arg_3);
 
-int fun_1(void const* env_, int arg_);
+int fun_1(void const* env_, char arg_);
 
 struct UnitIntFun1;
 
-int doAction_(int arg_4);
+int doAction_(char arg_4);
 
 int milone_main();
 
@@ -47,25 +47,25 @@ if_next_2:;
     return if_;
 }
 
-int fun_(int arg_3) {
+int fun_(char arg_3) {
     struct IntList const* call_ = go_(NULL, 0);
     struct IntList const* result_ = call_;
     return 0;
 }
 
-int fun_1(void const* env_, int arg_) {
+int fun_1(void const* env_, char arg_) {
     int call_1 = fun_(0);
     return call_1;
 }
 
 struct UnitIntFun1 {
-    int(*fun)(void const*, int);
+    int(*fun)(void const*, char);
     void const* env;
 };
 
-int doAction_(int arg_4) {
-    void const* box_ = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_))) = 0;
+int doAction_(char arg_4) {
+    void const* box_ = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_))) = 0;
     struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = box_};
     milone_enter_region();
     int region_result_ = fun_2.fun(fun_2.env, 0);

@@ -1,15 +1,15 @@
 #include "milone.h"
 
-int simpleCase_(int arg_);
+char simpleCase_(char arg_);
 
 struct IntIntTuple2;
 
-int shadowingCase_(int arg_1);
+char shadowingCase_(char arg_1);
 
 int milone_main();
 
-int simpleCase_(int arg_) {
-    int match_;
+char simpleCase_(char arg_) {
+    char match_;
     int x_ = 1;
     if ((x_ != 1)) goto next_2;
     milone_assert((x_ == 1), 6, 14);
@@ -29,9 +29,9 @@ struct IntIntTuple2 {
     int t1;
 };
 
-int shadowingCase_(int arg_1) {
+char shadowingCase_(char arg_1) {
     int x_1 = 1;
-    int match_1;
+    char match_1;
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_1, .t1 = 2};
     struct IntIntTuple2 y_ = tuple_;
     int x_2 = y_.t1;
@@ -72,7 +72,7 @@ end_match_4:;
 }
 
 int milone_main() {
-    int call_ = simpleCase_(0);
-    int call_1 = shadowingCase_(0);
+    char call_ = simpleCase_(0);
+    char call_1 = shadowingCase_(0);
     return 0;
 }

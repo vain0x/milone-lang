@@ -1,18 +1,18 @@
 #include "milone.h"
 
-int f_(int arg_);
+int f_(char arg_);
 
-int g_(int arg_1);
+int g_(char arg_1);
 
 static int success_;
 
 int milone_main();
 
-int f_(int arg_) {
+int f_(char arg_) {
     return success_;
 }
 
-int g_(int arg_1) {
+int g_(char arg_1) {
     int call_ = f_(0);
     return call_;
 }

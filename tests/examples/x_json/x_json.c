@@ -8,7 +8,7 @@ struct StringList const* go_(struct StringList const* acc_, struct StringList co
 
 struct StringList const* listRev_(struct StringList const* xs_);
 
-int printList_(struct StringList const* xs_3);
+char printList_(struct StringList const* xs_3);
 
 bool isDigit_(char c_);
 
@@ -56,9 +56,9 @@ struct StringList const* listRev_(struct StringList const* xs_) {
     return call_;
 }
 
-int printList_(struct StringList const* xs_3) {
+char printList_(struct StringList const* xs_3) {
 tailrec_5:;
-    int match_1;
+    char match_1;
     if ((!((!(xs_3))))) goto next_7;
     match_1 = 0;
     goto end_match_6;
@@ -259,6 +259,6 @@ int milone_main() {
     struct String source_ = (struct String){.str = "[0, 1000000007, 314159]", .len = 23};
     struct StringList const* call_6 = tokenize_(source_);
     struct StringList const* tokens_ = call_6;
-    int call_7 = printList_(tokens_);
+    char call_7 = printList_(tokens_);
     return 0;
 }

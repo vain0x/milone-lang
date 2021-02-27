@@ -4,7 +4,7 @@ struct UnitList;
 
 bool isEmpty_1(struct UnitList const* xs_1);
 
-int assertIsEmpty_1(struct UnitList const* xs_);
+char assertIsEmpty_1(struct UnitList const* xs_);
 
 int milone_main();
 
@@ -26,13 +26,13 @@ if_next_1:;
     return if_;
 }
 
-int assertIsEmpty_1(struct UnitList const* xs_) {
+char assertIsEmpty_1(struct UnitList const* xs_) {
     bool call_ = isEmpty_1(xs_);
     milone_assert(call_, 4, 23);
     return 0;
 }
 
 int milone_main() {
-    int call_1 = assertIsEmpty_1(NULL);
+    char call_1 = assertIsEmpty_1(NULL);
     return 0;
 }

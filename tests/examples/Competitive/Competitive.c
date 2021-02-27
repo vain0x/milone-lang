@@ -10,15 +10,15 @@ void* memCopy_(void* dest_, void const* src_, int size_1);
 
 int scan_int();
 
-int scanInt_(int arg_35);
+int scanInt_(char arg_35);
 
 void* rawIntArrayNew_(int len_1);
 
 int rawIntArrayGet_(void* array_, int index_);
 
-int rawIntArraySet_(void* array_1, int index_1, int value_);
+char rawIntArraySet_(void* array_1, int index_1, int value_);
 
-int rawMemoryCopy_(void* dest_1, void* src_1, int size_2);
+char rawMemoryCopy_(void* dest_1, void* src_1, int size_2);
 
 struct StringList;
 
@@ -130,7 +130,7 @@ void* fun_4(void const* env_1, int arg_1);
 
 int fun_5(void const* env_2, void* arg_2, int arg_3);
 
-int fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6);
+char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6);
 
 struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5;
 
@@ -138,25 +138,25 @@ int vectorToLength_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPt
 
 struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorNew_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_, int len_7);
 
-int vectorCheckIndex_1(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_);
+char vectorCheckIndex_1(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_);
 
 int vectorGet_1(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_1);
 
-int vectorSet_1(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2);
+char vectorSet_1(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2);
 
-int go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_, int i_2, struct IntList const* xs_19);
+char go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_, int i_2, struct IntList const* xs_19);
 
 struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorOfList_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 ty_, struct IntList const* xs_18);
 
-int go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3);
+char go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3);
 
 struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 scanIntVector_(int len_11);
 
-int refCase_(int arg_70);
+char refCase_(char arg_70);
 
-int vectorOfListTest_(int arg_71);
+char vectorOfListTest_(char arg_71);
 
-int vectorTest_(int arg_72);
+char vectorTest_(char arg_72);
 
 struct IntIntTuple2;
 
@@ -210,9 +210,9 @@ struct IntIntIntObjectUnitTuple5 segNodeNewLeaf_1(struct IntIntIntFun2IntIntIntO
 
 struct StringIntIntObjectUnitTuple5 segNodeNewLeaf_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, struct String item_1);
 
-struct IntIntIntObjectUnitTuple5 doNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_, int arg_79);
+struct IntIntIntObjectUnitTuple5 doNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_, char arg_79);
 
-struct StringIntIntObjectUnitTuple5 doNew_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_, int arg_80);
+struct StringIntIntObjectUnitTuple5 doNew_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_, char arg_80);
 
 struct IntIntIntObjectUnitTuple5 segNodeNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_);
 
@@ -352,35 +352,35 @@ bool fun_12(void const* env_9, int arg_17, int arg_18);
 
 bool fun_13(void const* env_10, int arg_19, int arg_20);
 
-int testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_99);
+char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_99);
 
 bool fun_14(void const* env_11, int arg_21, int arg_22);
 
 bool fun_15(void const* env_12, int arg_23, int arg_24);
 
-int testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_100);
+char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_100);
 
-int testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_101);
+char testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_101);
 
 int sum_(int l_1, int r_1, int acc_4, int i_5, struct IntList const* xs_25);
 
-int go_15(struct IntList const* xs_24, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13, int n_1, int l_1, int r_1);
+char go_15(struct IntList const* xs_24, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13, int n_1, int l_1, int r_1);
 
-int testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_117);
+char testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_117);
 
-int testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_118);
+char testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_118);
 
 bool fun_16(void const* env_13, struct String arg_25, struct String arg_26);
 
-int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, int arg_119);
+char testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, char arg_119);
 
-int segTreeTest_(int arg_120);
+char segTreeTest_(char arg_120);
 
 int abc140aSolve_(int n_2);
 
-int abc140aTest_(int arg_121);
+char abc140aTest_(char arg_121);
 
-int abc140aMain_(int arg_122);
+char abc140aMain_(char arg_122);
 
 int fun_22(int arg_123, int arg_124);
 
@@ -392,15 +392,15 @@ int abc140bSolve_(int n_4, struct IntList const* a_, struct IntList const* b_, s
 
 int f_(struct IntList const* a_2, struct IntList const* b_2, struct IntList const* c_2);
 
-bool case1_(int arg_131);
+bool case1_(char arg_131);
 
-bool case2_(int arg_132);
+bool case2_(char arg_132);
 
-bool case3_(int arg_133);
+bool case3_(char arg_133);
 
-int abc140bTest_(int arg_134);
+char abc140bTest_(char arg_134);
 
-int abc140bMain_(int arg_135);
+char abc140bMain_(char arg_135);
 
 int fun_23(int arg_136, int arg_137);
 
@@ -418,9 +418,9 @@ int abc140eSolve_(int n_7, struct IntList const* perm_);
 
 bool solve_(struct IntList const* p_1, int expected_1);
 
-int abc140eTest_(int arg_148);
+char abc140eTest_(char arg_148);
 
-int abc140eMain_(int arg_149);
+char abc140eMain_(char arg_149);
 
 static void const* unitObj_;
 
@@ -438,7 +438,7 @@ void* memCopy_(void* dest_, void const* src_, int size_1) {
     return memcpy_result_;
 }
 
-int scanInt_(int arg_35) {
+int scanInt_(char arg_35) {
     int scan_int_result_ = scan_int();
     return scan_int_result_;
 }
@@ -453,12 +453,12 @@ int rawIntArrayGet_(void* array_, int index_) {
     return read_;
 }
 
-int rawIntArraySet_(void* array_1, int index_1, int value_) {
+char rawIntArraySet_(void* array_1, int index_1, int value_) {
     ((int*)array_1)[index_1] = value_;
     return 0;
 }
 
-int rawMemoryCopy_(void* dest_1, void* src_1, int size_2) {
+char rawMemoryCopy_(void* dest_1, void* src_1, int size_2) {
     void* call_1 = memCopy_(dest_1, ((void const*)src_1), (size_2 * sizeof(int)));
     return 0;
 }
@@ -1010,8 +1010,8 @@ int fun_3(void const* env_, int arg_) {
 }
 
 struct IntList const* scanIntList_(int len_5) {
-    void const* box_ = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_))) = 0;
+    void const* box_ = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_))) = 0;
     struct IntIntFun1 fun_24 = (struct IntIntFun1){.fun = fun_3, .env = box_};
     struct IntList const* call_18 = listInit_1(len_5, fun_24);
     return call_18;
@@ -1028,7 +1028,7 @@ struct VoidMutPtrIntIntFun2 {
 };
 
 struct VoidMutPtrIntIntUnitFun3 {
-    int(*fun)(void const*, void*, int, int);
+    char(*fun)(void const*, void*, int, int);
     void const* env;
 };
 
@@ -1038,24 +1038,24 @@ struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTu
     struct IntVoidMutPtrFun1 t2;
     struct VoidMutPtrIntIntFun2 t3;
     struct VoidMutPtrIntIntUnitFun3 t4;
-    int t5;
+    char t5;
 };
 
 struct IntVoidMutPtrFun1 typeToArrayNew_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59) {
     struct IntVoidMutPtrFun1 arrayNew_ = arg_59.t2;
-    int _typeTag_2 = arg_59.t5;
+    char _typeTag_2 = arg_59.t5;
     return arrayNew_;
 }
 
 struct VoidMutPtrIntIntFun2 typeToArrayGet_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_60) {
     struct VoidMutPtrIntIntFun2 arrayGet_ = arg_60.t3;
-    int _typeTag_3 = arg_60.t5;
+    char _typeTag_3 = arg_60.t5;
     return arrayGet_;
 }
 
 struct VoidMutPtrIntIntUnitFun3 typeToArraySet_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_61) {
     struct VoidMutPtrIntIntUnitFun3 arraySet_ = arg_61.t4;
-    int _typeTag_4 = arg_61.t5;
+    char _typeTag_4 = arg_61.t5;
     return arraySet_;
 }
 
@@ -1069,8 +1069,8 @@ int fun_5(void const* env_2, void* arg_2, int arg_3) {
     return call_20;
 }
 
-int fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6) {
-    int call_21 = rawIntArraySet_(arg_4, arg_5, arg_6);
+char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6) {
+    char call_21 = rawIntArraySet_(arg_4, arg_5, arg_6);
     return 0;
 }
 
@@ -1079,12 +1079,12 @@ struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTu
     void* t1;
     int t2;
     int t3;
-    int t4;
+    char t4;
 };
 
 int vectorToLength_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62) {
     int len_6 = arg_62.t2;
-    int _vectorTag_ = arg_62.t4;
+    char _vectorTag_ = arg_62.t4;
     return len_6;
 }
 
@@ -1096,7 +1096,7 @@ struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTu
     return tuple_6;
 }
 
-int vectorCheckIndex_1(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_) {
+char vectorCheckIndex_1(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_) {
     int call_23 = vectorToLength_1(self_);
     int len_8 = call_23;
     bool if_12;
@@ -1112,7 +1112,7 @@ else_72:;
     if_12 = (index_2 >= len_8);
     goto if_next_70;
 if_next_70:;
-    int if_13;
+    char if_13;
     if (if_12) {
         goto then_74;
     } else {
@@ -1131,28 +1131,28 @@ if_next_73:;
 }
 
 int vectorGet_1(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_1) {
-    int call_24 = vectorCheckIndex_1(index_3, self_1);
+    char call_24 = vectorCheckIndex_1(index_3, self_1);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_1 = self_1.t0;
     void* array_3 = self_1.t1;
-    int _vectorTag_1 = self_1.t4;
+    char _vectorTag_1 = self_1.t4;
     struct VoidMutPtrIntIntFun2 call_25 = typeToArrayGet_1(itemTy_1);
     int app_4 = call_25.fun(call_25.env, array_3, index_3);
     return app_4;
 }
 
-int vectorSet_1(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2) {
-    int call_26 = vectorCheckIndex_1(index_4, self_2);
+char vectorSet_1(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2) {
+    char call_26 = vectorCheckIndex_1(index_4, self_2);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_2 = self_2.t0;
     void* array_4 = self_2.t1;
-    int _vectorTag_2 = self_2.t4;
+    char _vectorTag_2 = self_2.t4;
     struct VoidMutPtrIntIntUnitFun3 call_27 = typeToArraySet_1(itemTy_2);
-    int app_5 = call_27.fun(call_27.env, array_4, index_4, value_1);
+    char app_5 = call_27.fun(call_27.env, array_4, index_4, value_1);
     return 0;
 }
 
-int go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_, int i_2, struct IntList const* xs_19) {
+char go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_, int i_2, struct IntList const* xs_19) {
 tailrec_76:;
-    int match_7;
+    char match_7;
     if ((!((!(xs_19))))) goto next_78;
     milone_assert((i_2 == len_10), 194, 12);
     match_7 = 0;
@@ -1161,7 +1161,7 @@ next_78:;
     if ((!(xs_19))) goto next_79;
     int x_4 = xs_19->head;
     struct IntList const* xs_20 = xs_19->tail;
-    int call_28 = vectorSet_1(i_2, x_4, v_);
+    char call_28 = vectorSet_1(i_2, x_4, v_);
     int arg_63 = len_10;
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_64 = v_;
     int arg_65 = (i_2 + 1);
@@ -1184,13 +1184,13 @@ struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTu
     int len_10 = call_29;
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_30 = vectorNew_1(ty_, len_10);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_ = call_30;
-    int call_31 = go_27(len_10, v_, 0, xs_18);
+    char call_31 = go_27(len_10, v_, 0, xs_18);
     return v_;
 }
 
-int go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3) {
+char go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3) {
 tailrec_80:;
-    int if_14;
+    char if_14;
     if ((i_3 < len_11)) {
         goto then_82;
     } else {
@@ -1199,7 +1199,7 @@ tailrec_80:;
 then_82:;
     int call_32 = scanInt_(0);
     int value_3 = call_32;
-    int call_33 = vectorSet_1(i_3, value_3, v_1);
+    char call_33 = vectorSet_1(i_3, value_3, v_1);
     int arg_67 = len_11;
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_68 = v_1;
     int arg_69 = (i_3 + 1);
@@ -1219,24 +1219,24 @@ if_next_81:;
 struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 scanIntVector_(int len_11) {
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_34 = vectorNew_1(typeInt_, len_11);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1 = call_34;
-    int call_35 = go_7(len_11, v_1, 0);
+    char call_35 = go_7(len_11, v_1, 0);
     return v_1;
 }
 
-int refCase_(int arg_70) {
+char refCase_(char arg_70) {
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_36 = vectorNew_1(typeInt_, 1);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_2 = call_36;
     int call_37 = vectorToLength_1(v_2);
     milone_assert((call_37 == 1), 217, 4);
     int call_38 = vectorGet_1(0, v_2);
     milone_assert((call_38 == 0), 218, 4);
-    int call_39 = vectorSet_1(0, 42, v_2);
+    char call_39 = vectorSet_1(0, 42, v_2);
     int call_40 = vectorGet_1(0, v_2);
     milone_assert((call_40 == 42), 220, 4);
     return 0;
 }
 
-int vectorOfListTest_(int arg_71) {
+char vectorOfListTest_(char arg_71) {
     struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -1256,9 +1256,9 @@ int vectorOfListTest_(int arg_71) {
     return 0;
 }
 
-int vectorTest_(int arg_72) {
-    int call_46 = refCase_(0);
-    int call_47 = vectorOfListTest_(0);
+char vectorTest_(char arg_72) {
+    char call_46 = refCase_(0);
+    char call_47 = vectorOfListTest_(0);
     return 0;
 }
 
@@ -1319,14 +1319,14 @@ struct StringIntIntObjectUnitTuple5 {
     int t1;
     int t2;
     void const* t3;
-    int t4;
+    char t4;
 };
 
 struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 {
     struct StringStringStringFun2 t0;
     struct StringIntIntObjectUnitTuple5 t1;
     void const* t2;
-    int t3;
+    char t3;
 };
 
 struct StringStringStringFun2 segItemTypeToAppend_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_73) {
@@ -1344,14 +1344,14 @@ struct IntIntIntObjectUnitTuple5 {
     int t1;
     int t2;
     void const* t3;
-    int t4;
+    char t4;
 };
 
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 {
     struct IntIntIntFun2 t0;
     struct IntIntIntObjectUnitTuple5 t1;
     void const* t2;
-    int t3;
+    char t3;
 };
 
 struct IntIntIntFun2 segItemTypeToAppend_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_74) {
@@ -1479,7 +1479,7 @@ struct StringIntIntObjectUnitTuple5 segNodeNewLeaf_2(struct StringStringStringFu
     return tuple_14;
 }
 
-struct IntIntIntObjectUnitTuple5 doNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_, int arg_79) {
+struct IntIntIntObjectUnitTuple5 doNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_, char arg_79) {
     int leftItem_ = left_.t0;
     int leftLen_ = left_.t1;
     int leftHeight_ = left_.t2;
@@ -1513,7 +1513,7 @@ if_next_90:;
     return tuple_15;
 }
 
-struct StringIntIntObjectUnitTuple5 doNew_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_, int arg_80) {
+struct StringIntIntObjectUnitTuple5 doNew_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_, char arg_80) {
     struct String leftItem_ = left_.t0;
     int leftLen_ = left_.t1;
     int leftHeight_ = left_.t2;
@@ -2202,7 +2202,7 @@ if_next_169:;
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 {
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 t0;
     struct IntIntIntObjectUnitTuple5 t1;
-    int t2;
+    char t2;
 };
 
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeNew_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11) {
@@ -2215,7 +2215,7 @@ struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnit
 struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 {
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 t0;
     struct StringIntIntObjectUnitTuple5 t1;
-    int t2;
+    char t2;
 };
 
 struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeNew_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11) {
@@ -2270,7 +2270,7 @@ else_187:;
     if_45 = (index_6 >= len_15);
     goto if_next_185;
 if_next_185:;
-    int if_46;
+    char if_46;
     if (if_45) {
         goto then_189;
     } else {
@@ -2347,7 +2347,7 @@ else_200:;
     if_49 = (index_6 >= len_15);
     goto if_next_198;
 if_next_198:;
-    int if_50;
+    char if_50;
     if (if_49) {
         goto then_202;
     } else {
@@ -2516,7 +2516,7 @@ else_221:;
     if_56 = (index_8 >= len_17);
     goto if_next_219;
 if_next_219:;
-    int if_57;
+    char if_57;
     if (if_56) {
         goto then_223;
     } else {
@@ -3037,13 +3037,13 @@ bool fun_13(void const* env_10, int arg_19, int arg_20) {
     return call_255;
 }
 
-int testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_99) {
+char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_99) {
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_256 = segTreeNew_2(segItemTypeInt_);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_257 = segTreePush_1(1, call_256);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_258 = segTreePush_1(2, call_257);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_5 = call_258;
-    void const* box_5 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_5))) = 0;
+    void const* box_5 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_5))) = 0;
     struct IntIntBoolFun2 fun_25 = (struct IntIntBoolFun2){.fun = fun_9, .env = box_5};
     struct IntList const* list_24 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_24))) = (struct IntList){.head = 2, .tail = NULL};
@@ -3054,8 +3054,8 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 s
     milone_assert(call_260, 462, 4);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_261 = segTreePush_1(3, v_5);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_6 = call_261;
-    void const* box_6 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_6))) = 0;
+    void const* box_6 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_6))) = 0;
     struct IntIntBoolFun2 fun_26 = (struct IntIntBoolFun2){.fun = fun_10, .env = box_6};
     struct IntList const* list_27 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_27))) = (struct IntList){.head = 3, .tail = NULL};
@@ -3068,8 +3068,8 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 s
     milone_assert(call_263, 465, 4);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_264 = segTreePop_1(v_6);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_7 = call_264;
-    void const* box_7 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_7))) = 0;
+    void const* box_7 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_7))) = 0;
     struct IntIntBoolFun2 fun_27 = (struct IntIntBoolFun2){.fun = fun_11, .env = box_7};
     struct IntList const* list_29 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_29))) = (struct IntList){.head = 2, .tail = NULL};
@@ -3080,8 +3080,8 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 s
     milone_assert(call_266, 468, 4);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_267 = segTreePop_1(v_7);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_8 = call_267;
-    void const* box_8 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_8))) = 0;
+    void const* box_8 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_8))) = 0;
     struct IntIntBoolFun2 fun_28 = (struct IntIntBoolFun2){.fun = fun_12, .env = box_8};
     struct IntList const* list_30 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_30))) = (struct IntList){.head = 1, .tail = NULL};
@@ -3090,8 +3090,8 @@ int testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 s
     milone_assert(call_269, 471, 4);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_270 = segTreePop_1(v_8);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_9 = call_270;
-    void const* box_9 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_9))) = 0;
+    void const* box_9 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_9))) = 0;
     struct IntIntBoolFun2 fun_29 = (struct IntIntBoolFun2){.fun = fun_13, .env = box_9};
     struct IntList const* call_271 = segTreeToList_2(v_9);
     bool call_272 = listEqual_2(fun_29, NULL, call_271);
@@ -3109,7 +3109,7 @@ bool fun_15(void const* env_12, int arg_23, int arg_24) {
     return call_274;
 }
 
-int testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_100) {
+char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_100) {
     struct IntList const* list_33 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_33))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_32 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3119,8 +3119,8 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segIt
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_275 = segTreeOfList_1(segItemTypeInt_, list_31);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_276 = segTreeSet_1(1, 22, call_275);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_10 = call_276;
-    void const* box_10 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_10))) = 0;
+    void const* box_10 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_10))) = 0;
     struct IntIntBoolFun2 fun_30 = (struct IntIntBoolFun2){.fun = fun_14, .env = box_10};
     struct IntList const* list_36 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_36))) = (struct IntList){.head = 3, .tail = NULL};
@@ -3134,8 +3134,8 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segIt
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_279 = segTreeSet_1(0, 11, v_10);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_280 = segTreeSet_1(2, 33, call_279);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_11 = call_280;
-    void const* box_11 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_11))) = 0;
+    void const* box_11 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_11))) = 0;
     struct IntIntBoolFun2 fun_31 = (struct IntIntBoolFun2){.fun = fun_15, .env = box_11};
     struct IntList const* list_39 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_39))) = (struct IntList){.head = 33, .tail = NULL};
@@ -3149,7 +3149,7 @@ int testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segIt
     return 0;
 }
 
-int testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_101) {
+char testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_101) {
     struct IntList const* list_45 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_45))) = (struct IntList){.head = 9, .tail = NULL};
     struct IntList const* list_44 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3226,16 +3226,16 @@ if_next_280:;
     return if_74;
 }
 
-int go_15(struct IntList const* xs_24, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13, int n_1, int l_1, int r_1) {
+char go_15(struct IntList const* xs_24, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13, int n_1, int l_1, int r_1) {
 tailrec_289:;
-    int if_76;
+    char if_76;
     if ((r_1 == n_1)) {
         goto then_291;
     } else {
         goto else_295;
     }
 then_291:;
-    int if_77;
+    char if_77;
     if ((l_1 < n_1)) {
         goto then_293;
     } else {
@@ -3284,7 +3284,7 @@ if_next_290:;
     return 0;
 }
 
-int testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_117) {
+char testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_117) {
     struct IntList const* list_51 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_51))) = (struct IntList){.head = 9, .tail = NULL};
     struct IntList const* list_50 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3302,11 +3302,11 @@ int testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 s
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13 = call_289;
     int call_290 = listLength_1(xs_24);
     int n_1 = call_290;
-    int call_291 = go_15(xs_24, v_13, n_1, 0, 0);
+    char call_291 = go_15(xs_24, v_13, n_1, 0, 0);
     return 0;
 }
 
-int testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, int arg_118) {
+char testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_118) {
     struct IntList const* call_292 = listReplicate_1(1, 1000);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_293 = segTreeOfList_1(segItemTypeInt_, call_292);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_14 = call_293;
@@ -3320,13 +3320,13 @@ bool fun_16(void const* env_13, struct String arg_25, struct String arg_26) {
     return call_295;
 }
 
-int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, int arg_119) {
+char testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, char arg_119) {
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_296 = segTreeNew_1(segItemTypeStr_);
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_297 = segTreePush_2((struct String){.str = "a", .len = 1}, call_296);
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_298 = segTreePush_2((struct String){.str = "b", .len = 1}, call_297);
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 v_15 = call_298;
-    void const* box_12 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_12))) = 0;
+    void const* box_12 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_12))) = 0;
     struct StringStringBoolFun2 fun_32 = (struct StringStringBoolFun2){.fun = fun_16, .env = box_12};
     struct StringList const* list_53 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_53))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
@@ -3338,23 +3338,23 @@ int testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5Ob
     return 0;
 }
 
-int segTreeTest_(int arg_120) {
-    void const* box_13 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_13))) = 0;
+char segTreeTest_(char arg_120) {
+    void const* box_13 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_13))) = 0;
     struct IntIntIntFun2 fun_33 = (struct IntIntIntFun2){.fun = fun_7, .env = box_13};
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_301 = segItemTypeNew_1(0, fun_33);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_ = call_301;
-    void const* box_14 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_14))) = 0;
+    void const* box_14 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_14))) = 0;
     struct StringStringStringFun2 fun_34 = (struct StringStringStringFun2){.fun = fun_8, .env = box_14};
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 call_302 = segItemTypeNew_2((struct String){.str = "", .len = 0}, fun_34);
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_ = call_302;
-    int call_303 = testPushPop_(segItemTypeInt_, 0);
-    int call_304 = testSet_(segItemTypeInt_, 0);
-    int call_305 = testSum_(segItemTypeInt_, 0);
-    int call_306 = testSumMore_(segItemTypeInt_, 0);
-    int call_307 = testBalance_(segItemTypeInt_, 0);
-    int call_308 = testPolymorphic_(segItemTypeStr_, 0);
+    char call_303 = testPushPop_(segItemTypeInt_, 0);
+    char call_304 = testSet_(segItemTypeInt_, 0);
+    char call_305 = testSum_(segItemTypeInt_, 0);
+    char call_306 = testSumMore_(segItemTypeInt_, 0);
+    char call_307 = testBalance_(segItemTypeInt_, 0);
+    char call_308 = testPolymorphic_(segItemTypeStr_, 0);
     return 0;
 }
 
@@ -3362,7 +3362,7 @@ int abc140aSolve_(int n_2) {
     return ((n_2 * n_2) * n_2);
 }
 
-int abc140aTest_(int arg_121) {
+char abc140aTest_(char arg_121) {
     int call_309 = abc140aSolve_(2);
     milone_assert((call_309 == 8), 8, 2);
     int call_310 = abc140aSolve_(1);
@@ -3370,7 +3370,7 @@ int abc140aTest_(int arg_121) {
     return 0;
 }
 
-int abc140aMain_(int arg_122) {
+char abc140aMain_(char arg_122) {
     int call_311 = scanInt_(0);
     int n_3 = call_311;
     int call_312 = abc140aSolve_(n_3);
@@ -3453,8 +3453,8 @@ if_next_297:;
 }
 
 int abc140bSolve_(int n_4, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_) {
-    void const* box_15 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_15))) = 0;
+    void const* box_15 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_15))) = 0;
     struct IntIntIntFun2 fun_35 = (struct IntIntIntFun2){.fun = fun_17, .env = box_15};
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_318 = segItemTypeNew_1(0, fun_35);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_1 = call_318;
@@ -3479,7 +3479,7 @@ int f_(struct IntList const* a_2, struct IntList const* b_2, struct IntList cons
     return call_326;
 }
 
-bool case1_(int arg_131) {
+bool case1_(char arg_131) {
     struct IntList const* list_56 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_56))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_55 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3503,7 +3503,7 @@ bool case1_(int arg_131) {
     return (call_327 == 14);
 }
 
-bool case2_(int arg_132) {
+bool case2_(char arg_132) {
     struct IntList const* list_65 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_65))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* list_64 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3533,7 +3533,7 @@ bool case2_(int arg_132) {
     return (call_328 == 74);
 }
 
-bool case3_(int arg_133) {
+bool case3_(char arg_133) {
     struct IntList const* list_74 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_74))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_73 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3551,7 +3551,7 @@ bool case3_(int arg_133) {
     return (call_329 == 150);
 }
 
-int abc140bTest_(int arg_134) {
+char abc140bTest_(char arg_134) {
     bool call_330 = case1_(0);
     milone_assert(call_330, 41, 2);
     bool call_331 = case2_(0);
@@ -3561,7 +3561,7 @@ int abc140bTest_(int arg_134) {
     return 0;
 }
 
-int abc140bMain_(int arg_135) {
+char abc140bMain_(char arg_135) {
     int call_333 = scanInt_(0);
     int n_6 = call_333;
     struct IntList const* call_334 = scanIntList_(n_6);
@@ -3701,8 +3701,8 @@ if_next_311:;
 }
 
 int abc140eSolve_(int n_7, struct IntList const* perm_) {
-    void const* box_16 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_16))) = 0;
+    void const* box_16 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_16))) = 0;
     struct IntIntIntFun2 fun_36 = (struct IntIntIntFun2){.fun = fun_18, .env = box_16};
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_350 = segItemTypeNew_1(0, fun_36);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_2 = call_350;
@@ -3713,15 +3713,15 @@ int abc140eSolve_(int n_7, struct IntList const* perm_) {
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 perm_2 = call_353;
     int call_354 = segTreeToLength_1(perm_2);
     milone_assert((call_354 == (n_7 + 2)), 22, 2);
-    void const* box_17 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_17))) = 0;
+    void const* box_17 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_17))) = 0;
     struct IntIntIntFun2 fun_37 = (struct IntIntIntFun2){.fun = fun_19, .env = box_17};
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_355 = segItemTypeNew_1(0, fun_37);
     struct IntList const* call_356 = listReplicate_1(0, (n_7 + 2));
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_357 = segTreeOfList_1(call_355, call_356);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 prev_ = call_357;
-    void const* box_18 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_18))) = 0;
+    void const* box_18 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_18))) = 0;
     struct IntIntIntFun2 fun_38 = (struct IntIntIntFun2){.fun = fun_20, .env = box_18};
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_358 = segItemTypeNew_1((n_7 + 1), fun_38);
     struct IntList const* call_359 = listReplicate_1((n_7 + 1), (n_7 + 2));
@@ -3758,7 +3758,7 @@ if_next_320:;
     return if_85;
 }
 
-int abc140eTest_(int arg_148) {
+char abc140eTest_(char arg_148) {
     struct IntList const* list_80 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_80))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* list_79 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3800,7 +3800,7 @@ int abc140eTest_(int arg_148) {
     return 0;
 }
 
-int abc140eMain_(int arg_149) {
+char abc140eMain_(char arg_149) {
     int call_370 = scanInt_(0);
     int n_9 = call_370;
     struct IntList const* call_371 = scanIntList_(n_9);
@@ -3812,24 +3812,24 @@ int abc140eMain_(int arg_149) {
 }
 
 int milone_main() {
-    void const* box_19 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_19))) = 0;
+    void const* box_19 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_19))) = 0;
     unitObj_ = box_19;
-    void const* box_20 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_20))) = 0;
+    void const* box_20 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_20))) = 0;
     struct IntVoidMutPtrFun1 fun_39 = (struct IntVoidMutPtrFun1){.fun = fun_4, .env = box_20};
-    void const* box_21 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_21))) = 0;
+    void const* box_21 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_21))) = 0;
     struct VoidMutPtrIntIntFun2 fun_40 = (struct VoidMutPtrIntIntFun2){.fun = fun_5, .env = box_21};
-    void const* box_22 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_22))) = 0;
+    void const* box_22 = milone_mem_alloc(1, sizeof(char));
+    (*(((char*)box_22))) = 0;
     struct VoidMutPtrIntIntUnitFun3 fun_41 = (struct VoidMutPtrIntIntUnitFun3){.fun = fun_6, .env = box_22};
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 tuple_43 = (struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6){.t0 = 0, .t1 = 4, .t2 = fun_39, .t3 = fun_40, .t4 = fun_41, .t5 = 0};
     typeInt_ = tuple_43;
-    int call_373 = vectorTest_(0);
-    int call_374 = segTreeTest_(0);
-    int call_375 = abc140aTest_(0);
-    int call_376 = abc140bTest_(0);
-    int call_377 = abc140eTest_(0);
+    char call_373 = vectorTest_(0);
+    char call_374 = segTreeTest_(0);
+    char call_375 = abc140aTest_(0);
+    char call_376 = abc140bTest_(0);
+    char call_377 = abc140eTest_(0);
     return 0;
 }

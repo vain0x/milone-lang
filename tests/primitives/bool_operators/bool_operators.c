@@ -1,14 +1,14 @@
 #include "milone.h"
 
-int test_(bool t_, bool f_);
+char test_(bool t_, bool f_);
 
 struct BoolBoolFun1;
 
-int testShortCircuit_(bool t_1, bool f_1);
+char testShortCircuit_(bool t_1, bool f_1);
 
 int milone_main();
 
-int test_(bool t_, bool f_) {
+char test_(bool t_, bool f_) {
     milone_assert(t_, 6, 2);
     milone_assert((!(f_)), 9, 2);
     milone_assert(t_, 10, 2);
@@ -138,7 +138,7 @@ struct BoolBoolFun1 {
     void const* env;
 };
 
-int testShortCircuit_(bool t_1, bool f_1) {
+char testShortCircuit_(bool t_1, bool f_1) {
     bool if_8;
     if (f_1) {
         goto then_26;
@@ -175,7 +175,7 @@ if_next_28:;
 }
 
 int milone_main() {
-    int call_ = test_(true, false);
-    int call_1 = testShortCircuit_(true, false);
+    char call_ = test_(true, false);
+    char call_1 = testShortCircuit_(true, false);
     return 0;
 }

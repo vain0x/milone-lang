@@ -18,7 +18,7 @@ int milone_main();
 
 
 struct UnitList {
-    int head;
+    char head;
     struct UnitList const* tail;
 };
 
@@ -46,7 +46,7 @@ struct RecA_ {
 int milone_main() {
     struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
     (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
-    int switch_;
+    char switch_;
     switch ((struct UnionX_){.discriminant = VariantY_}.discriminant) {
         case VariantX_:
             goto clause_2;
@@ -64,7 +64,7 @@ clause_3:;
 switch_next_1:;
     struct RecA_ variant_ = (struct RecA_){.discriminant = T_2, .T_2 = NULL};
     struct RecA_ useRecA_ = variant_;
-    int match_;
+    char match_;
     if ((!((!(useRecA_.T_2))))) goto next_5;
     match_ = 0;
     goto end_match_4;

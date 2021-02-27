@@ -67,7 +67,7 @@ int milone_main() {
     void const* box_3 = milone_mem_alloc(1, sizeof(struct StringOdd_OptionTuple2));
     (*(((struct StringOdd_OptionTuple2*)box_3))) = tuple_3;
     void const* four_ = box_3;
-    int match_;
+    char match_;
     struct String s4_ = (*(((struct StringOdd_OptionTuple2 const*)four_))).t0;
     if ((!((*(((struct StringOdd_OptionTuple2 const*)four_))).t1.some))) goto next_2;
     int n3_ = (*(((struct IntObjectOptionTuple2 const*)(*(((struct StringOdd_OptionTuple2 const*)four_))).t1.value.Odd_))).t0;

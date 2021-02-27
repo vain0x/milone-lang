@@ -1,19 +1,19 @@
 #include "milone.h"
 
-int go_(struct String source_, int len_, int i_);
+char go_(struct String source_, int len_, int i_);
 
 int milone_main();
 
-int go_(struct String source_, int len_, int i_) {
+char go_(struct String source_, int len_, int i_) {
 tailrec_1:;
-    int if_;
+    char if_;
     if ((i_ < len_)) {
         goto then_3;
     } else {
         goto else_7;
     }
 then_3:;
-    int if_1;
+    char if_1;
     if ((source_.str[i_] == 'o')) {
         goto then_5;
     } else {
@@ -46,6 +46,6 @@ if_next_2:;
 int milone_main() {
     struct String source_ = (struct String){.str = "hello world", .len = 11};
     int len_ = source_.len;
-    int call_ = go_(source_, len_, 0);
+    char call_ = go_(source_, len_, 0);
     return 0;
 }

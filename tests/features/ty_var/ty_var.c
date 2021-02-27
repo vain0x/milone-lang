@@ -70,7 +70,7 @@ int milone_main() {
     milone_assert((call_2 == 2), 19, 2);
     char call_3 = useStringIndexWithoutAscription_((struct String){.str = "a", .len = 1});
     milone_assert((call_3 == 'a'), 21, 2);
-    int match_;
+    char match_;
     struct StringStringListTuple2 call_4 = useTyVarInBody_1((struct String){.str = "b", .len = 1});
     if ((!(call_4.t1))) goto next_2;
     struct String s_ = call_4.t1->head;
