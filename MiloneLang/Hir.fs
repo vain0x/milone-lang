@@ -214,6 +214,11 @@ type ModuleSynonymDef =
     Bound: ModuleTySerial list
     Loc: Loc }
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type MonoStructDef =
+  { Name: string
+    Fields: (string * Ty) list }
+
 /// Definition of named value in HIR.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =

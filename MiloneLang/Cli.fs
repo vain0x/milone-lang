@@ -19,6 +19,7 @@ open MiloneLang.EtaExpansion
 open MiloneLang.Hoist
 open MiloneLang.TailRecOptimizing
 open MiloneLang.Monomorphizing
+open MiloneLang.MonoTy
 open MiloneLang.MirGen
 open MiloneLang.Cir
 open MiloneLang.CirGen
@@ -553,7 +554,10 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
   let decls, tyCtx = tailRecOptimize (decls, tyCtx)
 
   writeLog host v "Monomorphizing"
-  monify (decls, tyCtx)
+  let decls, tyCtx = monify (decls, tyCtx)
+
+  writeLog host v "MonoTy"
+  monoTy (decls, tyCtx)
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
