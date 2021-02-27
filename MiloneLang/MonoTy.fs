@@ -10,6 +10,8 @@ open MiloneLang.Hir
 
 module TMap = MiloneStd.StdMap
 
+let private tupleField (i: int) = "t" + string i
+
 // -----------------------------------------------
 // Context
 // -----------------------------------------------
@@ -23,7 +25,8 @@ type private MtCtx =
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
 
-    Map: AssocMap<Ty, Ty> }
+    Map: AssocMap<Ty, Ty>
+    NewTys: (TySerial * TyDef) list }
 
 let private ofTyCtx (tyCtx: TyCtx): MtCtx =
   { Serial = tyCtx.Serial
@@ -33,14 +36,8 @@ let private ofTyCtx (tyCtx: TyCtx): MtCtx =
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
 
-    Map = TMap.empty tyCompare }
-
-let private toTyCtx tyCtx (mtCtx: MtCtx): TyCtx =
-  { tyCtx with
-      Vars = mtCtx.Vars
-      Funs = mtCtx.Funs
-      Variants = mtCtx.Variants
-      Tys = mtCtx.Tys }
+    Map = TMap.empty tyCompare
+    NewTys = [] }
 
 // -----------------------------------------------
 // Generation
@@ -54,7 +51,7 @@ let private toTyCtx tyCtx (mtCtx: MtCtx): TyCtx =
 // Control
 // -----------------------------------------------
 
-let private mtTy (ty, ctx): Ty * MtCtx =
+let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
   let (Ty (tk, tyArgs)) = ty
 
   match tk, tyArgs with
@@ -70,8 +67,40 @@ let private mtTy (ty, ctx): Ty * MtCtx =
   | RecordTk _, _
   | _, [] -> ty, ctx
 
+  | TupleTk, _ ->
+      (fun () ->
+        match ctx.Map |> TMap.tryFind ty with
+        | Some ty -> ty, ctx
+
+        | None ->
+            let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
+            let tySerial = ctx.Serial + 1
+
+            let getTyName tySerial =
+              ctx.Tys
+              |> TMap.tryFind tySerial
+              |> Option.map tyDefToName
+
+
+            printfn "// %s -> Tuple_%s" (tyDisplay getTyName ty) (string tySerial)
+            let recordTy = Ty(RecordTk tySerial, [])
+
+            let recordTyDef =
+              let fields =
+                tyArgs
+                |> List.mapi (fun i ty -> tupleField i, ty, noLoc)
+
+              RecordTyDef("Tuple_" + string tySerial, fields, noLoc)
+
+            let ctx =
+              { ctx with
+                  Serial = ctx.Serial + 1
+                  Map = ctx.Map |> TMap.add ty recordTy
+                  NewTys = (tySerial, recordTyDef) :: ctx.NewTys }
+
+            recordTy, ctx) ()
+
   | FunTk, _
-  | TupleTk, _
   | OptionTk, _
   | ListTk, _
   | NativePtrTk _, _
@@ -167,6 +196,12 @@ let private mtExpr (expr, ctx): HExpr * MtCtx =
       (fun () ->
         let args, ctx = (args, ctx) |> stMap mtExpr
         let ty, ctx = (ty, ctx) |> mtTy
+
+        let kind =
+          match kind, args with
+          | HTupleEN, _ when args |> List.isEmpty |> not -> HRecordEN
+          | _ -> kind
+
         HNodeExpr(kind, args, ty, loc), ctx) ()
 
   | HBlockExpr (stmts, last) ->
@@ -215,6 +250,93 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
 
   let decls, mtCtx = (decls, mtCtx) |> stMap mtExpr
 
-  let tyCtx = mtCtx |> toTyCtx tyCtx
+  let vars, mtCtx =
+    tyCtx.Vars
+    |> TMap.fold
+         (fun (vars, ctx) varSerial varDef ->
+           let (VarDef (name, sm, ty, loc)) = varDef
+           let ty, ctx = (ty, ctx) |> mtTy
+
+           let vars =
+             vars
+             |> TMap.add varSerial (VarDef(name, sm, ty, loc))
+
+           vars, ctx)
+         (tyCtx.Vars, mtCtx)
+
+  let funs, mtCtx =
+    tyCtx.Funs
+    |> TMap.fold
+         (fun (funs, ctx) funSerial (funDef: FunDef) ->
+           let (TyScheme (tyVars, ty)) = funDef.Ty
+
+           if tyVars |> List.isEmpty |> not then
+             funs, ctx
+           else
+             let ty, ctx = (ty, ctx) |> mtTy
+
+             let funs =
+               funs
+               |> TMap.add funSerial { funDef with Ty = TyScheme([], ty) }
+
+             funs, ctx)
+         (tyCtx.Funs, mtCtx)
+
+  let variants, mtCtx =
+    tyCtx.Variants
+    |> TMap.fold
+         (fun (variants, ctx) variantSerial (variantDef: VariantDef) ->
+           let ty = variantDef.PayloadTy
+           let ty, ctx = (ty, ctx) |> mtTy
+
+           let variants =
+             variants
+             |> TMap.add variantSerial { variantDef with PayloadTy = ty }
+
+           variants, ctx)
+         (tyCtx.Variants, mtCtx)
+
+  let tys, mtCtx =
+    mtCtx.Tys
+    |> TMap.fold
+         (fun (tys, ctx) tySerial (tyDef: TyDef) ->
+           let modified, tyDef, ctx =
+             match tyDef with
+             | UnionTyDef _ -> false, tyDef, ctx
+
+             | RecordTyDef (ident, fields, loc) ->
+                 let fields, ctx =
+                   (fields, ctx)
+                   |> stMap
+                        (fun ((ident, ty, loc), ctx) ->
+                          let ty, ctx = (ty, ctx) |> mtTy
+                          (ident, ty, loc), ctx)
+
+                 let tyDef = RecordTyDef(ident, fields, loc)
+                 true, tyDef, ctx
+
+             | MetaTyDef _
+             | UniversalTyDef _
+             | SynonymTyDef _ -> failwith "NEVER: Resolved in Typing"
+
+           let tys =
+             if modified then
+               tys |> TMap.add tySerial tyDef
+             else
+               tys
+
+           tys, ctx)
+         (tyCtx.Tys, mtCtx)
+
+  let tys =
+    mtCtx.NewTys
+    |> List.fold (fun tys (tySerial, tyDef) -> tys |> TMap.add tySerial tyDef) tys
+
+  let tyCtx =
+    { tyCtx with
+        Vars = vars
+        Funs = funs
+        Variants = variants
+        Tys = tys }
 
   decls, tyCtx

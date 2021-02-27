@@ -919,7 +919,7 @@ let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let name =
     match ty with
     | Ty (RecordTk tySerial, _) -> ctx.Tys |> mapFind tySerial |> tyDefToName
-    | _ -> unreachable ()
+    | _ -> unreachable ty
 
   let _, tempSerial, ctx = freshVar ctx name ty loc
 
