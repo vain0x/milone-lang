@@ -60,7 +60,7 @@ rule build_milone
 
 rule build_cc
   description = build_cc in=$in
-  command = MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-gcc
+  command = MILONE_HOME="$$PWD" CFLAGS='-O0' INPUTS="$in" OUTPUT="$out" scripts/build-with-gcc
 
 # .fs -> .c (with .NET)
 
