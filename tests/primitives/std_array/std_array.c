@@ -602,9 +602,7 @@ int fun_13(void const* env_1, int arg_2) {
 }
 
 struct IntConstPtrIntTuple2 range_(int len_2) {
-    void const* box_ = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_))) = 0;
-    struct IntIntFun1 fun_26 = (struct IntIntFun1){.fun = fun_13, .env = box_};
+    struct IntIntFun1 fun_26 = (struct IntIntFun1){.fun = fun_13, .env = NULL};
     struct IntConstPtrIntTuple2 call_28 = init_1(len_2, fun_26);
     return call_28;
 }
@@ -755,9 +753,9 @@ int fun_24(void const* env_2, int arg_3) {
 struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_11) {
     int call_43 = length_1(array_11);
     struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 tuple_9 = (struct IntIntIntFun2IntConstPtrIntTuple2Tuple2){.t0 = f_1, .t1 = array_11};
-    void const* box_1 = milone_mem_alloc(1, sizeof(struct IntIntIntFun2IntConstPtrIntTuple2Tuple2));
-    (*(((struct IntIntIntFun2IntConstPtrIntTuple2Tuple2*)box_1))) = tuple_9;
-    struct IntIntFun1 fun_27 = (struct IntIntFun1){.fun = fun_24, .env = box_1};
+    void const* box_ = milone_mem_alloc(1, sizeof(struct IntIntIntFun2IntConstPtrIntTuple2Tuple2));
+    (*(((struct IntIntIntFun2IntConstPtrIntTuple2Tuple2*)box_))) = tuple_9;
+    struct IntIntFun1 fun_27 = (struct IntIntFun1){.fun = fun_24, .env = box_};
     struct IntConstPtrIntTuple2 call_44 = init_1(call_43, fun_27);
     return call_44;
 }
@@ -1032,16 +1030,12 @@ int fun_18(void const* env_6, int arg_12) {
 }
 
 char initTest_(char arg_58) {
-    void const* box_2 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_2))) = 0;
-    struct IntUnitFun1 fun_28 = (struct IntUnitFun1){.fun = fun_17, .env = box_2};
+    struct IntUnitFun1 fun_28 = (struct IntUnitFun1){.fun = fun_17, .env = NULL};
     struct UnitConstPtrIntTuple2 call_68 = init_2(0, fun_28);
     struct UnitConstPtrIntTuple2 emptyArray_ = call_68;
     int call_69 = length_2(emptyArray_);
     milone_assert((call_69 == 0), 14, 2);
-    void const* box_3 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_3))) = 0;
-    struct IntIntFun1 fun_29 = (struct IntIntFun1){.fun = fun_18, .env = box_3};
+    struct IntIntFun1 fun_29 = (struct IntIntFun1){.fun = fun_18, .env = NULL};
     struct IntConstPtrIntTuple2 call_70 = init_1(3, fun_29);
     struct IntConstPtrIntTuple2 a369_ = call_70;
     int call_71 = length_1(a369_);
@@ -1143,9 +1137,7 @@ int fun_19(void const* env_7, int arg_13) {
 }
 
 char unconsTest_(char arg_62) {
-    void const* box_4 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_4))) = 0;
-    struct IntIntFun1 fun_30 = (struct IntIntFun1){.fun = fun_19, .env = box_4};
+    struct IntIntFun1 fun_30 = (struct IntIntFun1){.fun = fun_19, .env = NULL};
     struct IntConstPtrIntTuple2 call_101 = init_1(3, fun_30);
     struct IntConstPtrIntTuple2 a123_ = call_101;
     char match_5;
@@ -1211,9 +1203,7 @@ int fun_20(void const* env_8, int arg_14, int arg_15) {
 }
 
 char mapTest_(char arg_63) {
-    void const* box_5 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_5))) = 0;
-    struct IntIntIntFun2 fun_31 = (struct IntIntIntFun2){.fun = fun_20, .env = box_5};
+    struct IntIntIntFun2 fun_31 = (struct IntIntIntFun2){.fun = fun_20, .env = NULL};
     struct IntConstPtrIntTuple2 call_109 = range_(3);
     struct IntConstPtrIntTuple2 call_110 = mapi_1(fun_31, call_109);
     struct IntConstPtrIntTuple2 mapped_ = call_110;
@@ -1261,9 +1251,7 @@ struct IntOption fun_22(void const* env_10, int arg_17) {
 }
 
 char chooseTest_(char arg_65) {
-    void const* box_6 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_6))) = 0;
-    struct IntIntOptionFun1 fun_32 = (struct IntIntOptionFun1){.fun = fun_21, .env = box_6};
+    struct IntIntOptionFun1 fun_32 = (struct IntIntOptionFun1){.fun = fun_21, .env = NULL};
     struct IntConstPtrIntTuple2 call_117 = range_(6);
     struct IntConstPtrIntTuple2 call_118 = choose_1(fun_32, call_117);
     struct IntConstPtrIntTuple2 chosen_ = call_118;
@@ -1275,9 +1263,7 @@ char chooseTest_(char arg_65) {
     milone_assert((call_121 == 4), 100, 2);
     int call_122 = get_1(2, chosen_);
     milone_assert((call_122 == 8), 101, 2);
-    void const* box_7 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_7))) = 0;
-    struct IntIntOptionFun1 fun_33 = (struct IntIntOptionFun1){.fun = fun_22, .env = box_7};
+    struct IntIntOptionFun1 fun_33 = (struct IntIntOptionFun1){.fun = fun_22, .env = NULL};
     struct IntConstPtrIntTuple2 call_123 = range_(3);
     struct IntConstPtrIntTuple2 call_124 = choose_1(fun_33, call_123);
     struct IntConstPtrIntTuple2 empty_1 = call_124;
@@ -1296,9 +1282,7 @@ int fun_23(void const* env_11, int arg_18, int arg_19) {
 }
 
 char foldTest_(char arg_66) {
-    void const* box_8 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_8))) = 0;
-    struct IntIntIntFun2 fun_34 = (struct IntIntIntFun2){.fun = fun_23, .env = box_8};
+    struct IntIntIntFun2 fun_34 = (struct IntIntIntFun2){.fun = fun_23, .env = NULL};
     struct IntConstPtrIntTuple2 call_127 = range_(3);
     int call_128 = fold_1(fun_34, 0, call_127);
     int sum_ = call_128;

@@ -109,9 +109,7 @@ int milone_main() {
     struct F64List const* list_ = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_))) = (struct F64List){.head = 0.0, .tail = list_1};
     struct F64List const* zeros_ = list_;
-    void const* box_ = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_))) = 0;
-    struct F64BoolFun1 fun_4 = (struct F64BoolFun1){.fun = fun_2, .env = box_};
+    struct F64BoolFun1 fun_4 = (struct F64BoolFun1){.fun = fun_2, .env = NULL};
     bool call_3 = all_1(fun_4, zeros_);
     milone_assert(call_3, 24, 2);
     struct F64List const* list_18 = milone_mem_alloc(1, sizeof(struct F64List));
@@ -137,9 +135,7 @@ int milone_main() {
     struct F64List const* list_8 = milone_mem_alloc(1, sizeof(struct F64List));
     (*(((struct F64List*)list_8))) = (struct F64List){.head = 1.0, .tail = list_9};
     struct F64List const* values_ = list_8;
-    void const* box_1 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_1))) = 0;
-    struct F64BoolFun1 fun_5 = (struct F64BoolFun1){.fun = fun_3, .env = box_1};
+    struct F64BoolFun1 fun_5 = (struct F64BoolFun1){.fun = fun_3, .env = NULL};
     bool call_4 = all_1(fun_5, values_);
     milone_assert(call_4, 39, 2);
     milone_assert((6.0 < (2.3 + 4.5)), 42, 2);

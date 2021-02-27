@@ -44,9 +44,7 @@ int fun_3(void const* env_, int arg_) {
 }
 
 char layoutTest_(char arg_4) {
-    void const* box_ = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_))) = 0;
-    struct IntIntFun1 fun_6 = (struct IntIntFun1){.fun = fun_3, .env = box_};
+    struct IntIntFun1 fun_6 = (struct IntIntFun1){.fun = fun_3, .env = NULL};
     int call_1 = apply_1(fun_6, 2);
     int a_ = call_1;
     milone_assert((a_ == 5), 13, 2);
@@ -84,15 +82,11 @@ struct IntIntIntFun2 {
 };
 
 int milone_main() {
-    void const* box_1 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_1))) = 0;
-    struct IntIntFun1 fun_7 = (struct IntIntFun1){.fun = fun_4, .env = box_1};
+    struct IntIntFun1 fun_7 = (struct IntIntFun1){.fun = fun_4, .env = NULL};
     int call_4 = twice_1(fun_7, 40);
     int x_3 = call_4;
     milone_assert((x_3 == 42), 24, 2);
-    void const* box_2 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_2))) = 0;
-    struct IntIntIntFun2 fun_8 = (struct IntIntIntFun2){.fun = fun_5, .env = box_2};
+    struct IntIntIntFun2 fun_8 = (struct IntIntIntFun2){.fun = fun_5, .env = NULL};
     int app_3 = fun_8.fun(fun_8.env, 84, 2);
     milone_assert((app_3 == 42), 26, 2);
     char call_5 = layoutTest_(0);

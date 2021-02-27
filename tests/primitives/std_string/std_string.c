@@ -1259,9 +1259,7 @@ bool fun_(void const* env_, char arg_) {
 }
 
 struct String trim_(struct String s_12) {
-    void const* box_ = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_))) = 0;
-    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_, .env = box_};
+    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_, .env = NULL};
     struct String call_27 = trimIf_(fun_3, s_12);
     return call_27;
 }
@@ -1272,9 +1270,7 @@ bool fun_1(void const* env_1, char arg_1) {
 }
 
 struct String trimStart_(struct String s_13) {
-    void const* box_1 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_1))) = 0;
-    struct CharBoolFun1 fun_4 = (struct CharBoolFun1){.fun = fun_1, .env = box_1};
+    struct CharBoolFun1 fun_4 = (struct CharBoolFun1){.fun = fun_1, .env = NULL};
     struct String call_29 = trimStartIf_(fun_4, s_13);
     return call_29;
 }
@@ -1285,9 +1281,7 @@ bool fun_2(void const* env_2, char arg_2) {
 }
 
 struct String trimEnd_(struct String s_14) {
-    void const* box_2 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_2))) = 0;
-    struct CharBoolFun1 fun_5 = (struct CharBoolFun1){.fun = fun_2, .env = box_2};
+    struct CharBoolFun1 fun_5 = (struct CharBoolFun1){.fun = fun_2, .env = NULL};
     struct String call_31 = trimEndIf_(fun_5, s_14);
     return call_31;
 }

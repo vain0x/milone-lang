@@ -469,9 +469,7 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
     int i_5 = arg_19.t1;
     bool call_10 = isDigit_(source_3.str[i_5]);
     milone_assert(call_10, 76, 2);
-    void const* box_1 = milone_mem_alloc(1, sizeof(char));
-    (*(((char*)box_1))) = 0;
-    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_1, .env = box_1};
+    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_1, .env = NULL};
     struct StringIntTuple2 tuple_4 = (struct StringIntTuple2){.t0 = source_3, .t1 = i_5};
     int call_11 = takeWhile_(fun_3, tuple_4);
     int r_4 = call_11;

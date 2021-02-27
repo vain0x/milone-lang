@@ -190,6 +190,13 @@ let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
   | Ty (StrTk, _) -> mxStrCompare ctx op l r (ty, loc)
   | _ -> failwithf "unimpl %A" (op, l, ty)
 
+let private mxUnbox expr ty loc: MExpr =
+  // HACK: Remove `unbox obj: unit` because `box ()` is null.
+  if tyIsUnit ty then
+    MDefaultExpr(tyUnit, loc)
+  else
+    MUnaryExpr(MUnboxUnary, expr, ty, loc)
+
 let private mtAbort loc =
   MExitTerminator(MLitExpr(IntLit "1", loc))
 
@@ -352,7 +359,7 @@ let private mirifyPatTuple ctx endLabel itemPats expr loc =
 
 let private mirifyPatBox ctx endLabel itemPat expr loc =
   let ty, _ = patExtract itemPat
-  mirifyPat ctx endLabel itemPat (MUnaryExpr(MUnboxUnary, expr, ty, loc))
+  mirifyPat ctx endLabel itemPat (mxUnbox expr ty loc)
 
 let private mirifyPatAbort ctx loc = addTerminator ctx (mtAbort loc) loc
 
@@ -823,12 +830,21 @@ let private mirifyExprCallExit ctx arg ty loc =
 
 let private mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
-  let temp, tempSerial, ctx = freshVar ctx "box" tyObj loc
 
-  let ctx =
-    addStmt ctx (MPrimStmt(MBoxPrim, [ arg ], tempSerial, loc))
+  // HACK: `box ()` occurs when turning a non-capturing function into function object.
+  if mexprToTy arg |> tyIsUnit then
+    MDefaultExpr(tyObj, loc), ctx
+  else
+    let temp, tempSerial, ctx = freshVar ctx "box" tyObj loc
 
-  temp, ctx
+    let ctx =
+      addStmt ctx (MPrimStmt(MBoxPrim, [ arg ], tempSerial, loc))
+
+    temp, ctx
+
+let private mirifyCallUnbox ctx arg ty loc =
+  let arg, ctx = mirifyExpr ctx arg
+  mxUnbox arg ty loc, ctx
 
 let private mirifyCallStrIndexExpr ctx l r ty loc =
   let l, ctx = mirifyExpr ctx l
@@ -1172,7 +1188,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
   | HPrim.Exit, _ -> fail ()
   | HPrim.Box, [ arg ] -> mirifyExprCallBox ctx arg ty loc
   | HPrim.Box, _ -> fail ()
-  | HPrim.Unbox, [ arg ] -> regularUnary MUnboxUnary arg
+  | HPrim.Unbox, [ arg ] -> mirifyCallUnbox ctx arg ty loc
   | HPrim.Unbox, _ -> fail ()
   | HPrim.StrLength, [ arg ] -> regularUnary MStrLenUnary arg
   | HPrim.StrLength, _ -> fail ()
