@@ -557,19 +557,19 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
   let expr, tyCtx = etaExpansion (expr, tyCtx)
 
   writeLog host v "Hoist"
-  let expr, tyCtx = hoist (expr, tyCtx)
+  let decls, tyCtx = hoist (expr, tyCtx)
 
   writeLog host v "TailRecOptimizing"
-  let expr, tyCtx = tailRecOptimize (expr, tyCtx)
+  let decls, tyCtx = tailRecOptimize (decls, tyCtx)
 
   writeLog host v "Monomorphizing"
-  monify (expr, tyCtx)
+  monify (decls, tyCtx)
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v headerOnly (expr, tyCtx) =
+let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx) =
   writeLog host v "Mir"
-  let stmts, mirCtx = mirify (expr, tyCtx)
+  let stmts, mirCtx = mirify (decls, tyCtx)
 
   if mirCtx.Logs |> List.isEmpty |> not then
     false, mirCtx.Logs |> semanticErrorToString tyCtx
@@ -611,8 +611,8 @@ let compile (ctx: CompileCtx): bool * string =
     | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
 
     | SemaAnalysisOk (expr, tyCtx) ->
-        let expr, tyCtx = transformHir host v (expr, tyCtx)
-        codeGenHirViaMir host v ctx.HeaderOnly (expr, tyCtx)
+        let decls, tyCtx = transformHir host v (expr, tyCtx)
+        codeGenHirViaMir host v ctx.HeaderOnly (decls, tyCtx)
 
 // -----------------------------------------------
 // Actions

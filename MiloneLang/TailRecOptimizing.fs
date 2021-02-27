@@ -124,9 +124,9 @@ let private troExpr isTail (expr, ctx) =
   | HModuleExpr _
   | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
-let tailRecOptimize (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
+let tailRecOptimize (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
   let ctx = ofTyCtx tyCtx
 
-  let expr, _ = troExpr IsTail (expr, ctx)
+  let decls, _ = (decls, ctx) |> stMap (troExpr IsTail)
 
-  expr, tyCtx
+  decls, tyCtx

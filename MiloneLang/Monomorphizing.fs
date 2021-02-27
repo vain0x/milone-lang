@@ -394,13 +394,13 @@ let private monifyExpr (expr, ctx) =
   | HModuleExpr _
   | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
 
-let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
+let monify (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
   let monoCtx = ofTyCtx tyCtx |> forceGeneralizeFuns
 
   // Monomorphization.
-  let rec go (expr, ctx: MonoCtx) =
+  let rec go (decls, ctx: MonoCtx) =
     if not ctx.SomethingHappened then
-      expr, ctx
+      decls, ctx
     else if ctx.InfiniteLoopDetector > 1000000 then
       failwith "Infinite loop in monomorphization"
     else
@@ -409,18 +409,18 @@ let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
             SomethingHappened = false
             InfiniteLoopDetector = ctx.InfiniteLoopDetector + 1 }
 
-      (expr, ctx) |> monifyExpr |> go
+      (decls, ctx) |> stMap monifyExpr |> go
 
-  let expr, monoCtx = go (expr, monoCtx)
+  let decls, monoCtx = go (decls, monoCtx)
 
   // Remove generic function definitions.
   // WARNING: Bad kind of code reuse.
-  let expr, monoCtx =
+  let decls, monoCtx =
     let monoCtx =
       { monoCtx with
           Mode = MonoMode.RemoveGenerics }
 
-    monifyExpr (expr, monoCtx)
+    (decls, monoCtx) |> stMap monifyExpr
 
   let tyCtx =
     { tyCtx with
@@ -428,4 +428,4 @@ let monify (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
         Funs = monoCtx.Funs
         Tys = monoCtx.Tys }
 
-  expr, tyCtx
+  decls, tyCtx

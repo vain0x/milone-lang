@@ -1480,10 +1480,12 @@ let private mirifyExprs ctx exprs =
   (exprs, ctx)
   |> stMap (fun (expr, ctx) -> mirifyExpr ctx expr)
 
-let mirify (expr: HExpr, tyCtx: TyCtx): MDecl list * MirCtx =
+let mirify (decls: HExpr list, tyCtx: TyCtx): MDecl list * MirCtx =
   let ctx = ofTyCtx tyCtx
 
   // OK: It's safe to discard the expression thanks to main hoisting.
-  let _expr, ctx = mirifyExpr ctx expr
+  let _expr, ctx =
+    (decls, ctx)
+    |> stMap (fun (expr, ctx) -> mirifyExpr ctx expr)
 
   takeDecls ctx
