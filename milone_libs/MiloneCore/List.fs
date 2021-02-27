@@ -133,6 +133,23 @@ let fold (folder: _ -> _ -> _) state (xs: _ list) =
 
   listFoldLoop state xs
 
+/// Does `map` and `fold` on a list at the same time.
+///
+/// ```fs
+/// let mappedList, finalState =
+///   items |> List.mapFold (fun state item -> mappedItem, nextState) initialState
+/// ```
+let mapFold (folder: 'S -> 'T -> 'U * 'S) (state: 'S) (xs: 'T list): 'U list * 'S =
+  let rec listMapFoldLoop state acc xs =
+    match xs with
+    | [] -> rev acc, state
+
+    | x :: xs ->
+        let y, state = folder state x
+        listMapFoldLoop state (y :: acc) xs
+
+  listMapFoldLoop state [] xs
+
 let forall (pred: _ -> bool) (xs: _ list): bool =
   let rec listForAllLoop xs =
     match xs with

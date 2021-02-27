@@ -151,6 +151,20 @@ let private doFold folder state node =
 
   go state node
 
+// folder: state kv -> kv * state
+let private doMapFold folder state node =
+  let rec go state node =
+    match node with
+    | E -> E, state
+
+    | T (color, l, kv, r) ->
+        let l, state = go state l
+        let kv, state = folder state kv
+        let r, state = go state r
+        T(color, l, kv, r), state
+
+  go state node
+
 // -----------------------------------------------
 // Interface
 // -----------------------------------------------
@@ -230,6 +244,20 @@ let fold (folder: 'S -> 'K -> 'T -> 'S) (state: 'S) (map: TreeMap<'K, 'T>): 'S =
     state
     node
 
+let mapFold (folder: 'S -> 'K -> 'T -> 'U * 'S) (state: 'S) (map: TreeMap<'K, 'T>): TreeMap<'K, 'U> * 'S =
+  let node, keyCompare, _ = map
+
+  let node, state =
+    doMapFold
+      (fun state kv ->
+        let k, v = unbox kv
+        let v, state = folder state k v
+        box (k, v), state)
+      state
+      node
+
+  (node, keyCompare, None), state
+
 let filter (pred: 'K -> 'T -> bool) (map: TreeMap<'K, 'T>): TreeMap<'K, 'T> =
   let _, keyCompare, _ = map
 
@@ -249,5 +277,4 @@ let toList (map: TreeMap<'K, 'T>): ('K * 'T) list =
   |> fold (fun acc key value -> (key, value) :: acc) []
   |> List.rev
 
-let toKeys (map: TreeMap<'K, 'T>): 'K list =
-  List.map fst (toList map)
+let toKeys (map: TreeMap<'K, 'T>): 'K list = List.map fst (toList map)
