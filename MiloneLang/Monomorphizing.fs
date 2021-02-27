@@ -422,16 +422,6 @@ let monify (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
 
     (decls, monoCtx) |> stMap monifyExpr
 
-  let monoCtx =
-    let funs =
-      monoCtx.Funs
-      |> TMap.filter
-           (fun _ (funDef: FunDef) ->
-             let (TyScheme (tyVars, _)) = funDef.Ty
-             List.isEmpty tyVars)
-
-    { monoCtx with Funs = funs }
-
   let tyCtx =
     { tyCtx with
         Serial = monoCtx.Serial
