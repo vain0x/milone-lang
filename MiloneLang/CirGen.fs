@@ -23,6 +23,8 @@ open MiloneLang.Cir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
+let private unreachable () = failwith "NEVER"
+
 let private valueSymbolCompare l r =
   let encode symbol =
     match symbol with
@@ -515,41 +517,43 @@ let private cgNativeFunTy ctx tys =
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
 let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
-  match ty with
-  | Ty (TupleTk, []) -> CIntTy(IntFlavor(Signed, I32)), ctx
-  | Ty (IntTk flavor, _) -> CIntTy flavor, ctx
-  | Ty (FloatTk flavor, _) -> CFloatTy flavor, ctx
-  | Ty (BoolTk, _) -> CBoolTy, ctx
-  | Ty (CharTk, _) -> CCharTy, ctx
-  | Ty (StrTk, _) -> CStructTy "String", ctx
+  let (Ty (tk, tyArgs)) = ty
 
-  // FIXME: Unresolved type variables are `obj` for now.
-  | Ty (MetaTk _, _)
-  | Ty (ObjTk, _) -> CConstPtrTy CVoidTy, ctx
+  match tk, tyArgs with
+  | IntTk flavor, _ -> CIntTy flavor, ctx
+  | FloatTk flavor, _ -> CFloatTy flavor, ctx
+  | BoolTk, _ -> CBoolTy, ctx
+  | CharTk, _ -> CCharTy, ctx
+  | StrTk, _ -> CStructTy "String", ctx
+  | ObjTk, _ -> CConstPtrTy CVoidTy, ctx
 
-  | Ty (FunTk, [ sTy; tTy ]) -> genIncompleteFunTyDecl ctx sTy tTy
+  | FunTk, [ sTy; tTy ] -> genIncompleteFunTyDecl ctx sTy tTy
+  | FunTk, _ -> unreachable ()
 
-  | Ty (OptionTk, [ itemTy ]) -> genIncompleteOptionTyDecl ctx itemTy
+  | TupleTk, [] -> CIntTy(IntFlavor(Signed, I32)), ctx
+  | TupleTk, _ -> genIncompleteTupleTyDecl ctx tyArgs
 
-  | Ty (ListTk, [ itemTy ]) -> genIncompleteListTyDecl ctx itemTy
+  | OptionTk, [ itemTy ] -> genIncompleteOptionTyDecl ctx itemTy
+  | OptionTk, _ -> unreachable ()
 
-  | Ty (TupleTk, itemTys) -> genIncompleteTupleTyDecl ctx itemTys
+  | ListTk, [ itemTy ] -> genIncompleteListTyDecl ctx itemTy
+  | ListTk, _ -> unreachable ()
 
-  | Ty (VoidTk, _) -> CVoidTy, ctx
+  | VoidTk, _ -> CVoidTy, ctx
+  | NativePtrTk isMut, [ itemTy ] -> cgNativePtrTy ctx isMut itemTy
+  | NativePtrTk _, _ -> unreachable ()
+  | NativeFunTk, _ -> cgNativeFunTy ctx tyArgs
+  | NativeTypeTk code, _ -> CEmbedTy code, ctx
 
-  | Ty (NativePtrTk isMut, [ itemTy ]) -> cgNativePtrTy ctx isMut itemTy
+  | UnionTk tySerial, _ -> genIncompleteUnionTyDecl ctx tySerial
+  | RecordTk tySerial, _ -> genIncompleteRecordTyDecl ctx tySerial
 
-  | Ty (NativeFunTk, tys) -> cgNativeFunTy ctx tys
+  | ErrorTk _, _
+  | MetaTk _, _
+  | SynonymTk _, _ -> failwith "NEVER: Resolved in Typing"
 
-  | Ty (NativeTypeTk code, _) -> CEmbedTy code, ctx
-
-  | Ty (UnionTk serial, _) -> genIncompleteUnionTyDecl ctx serial
-
-  | Ty (RecordTk serial, _) -> genIncompleteRecordTyDecl ctx serial
-
-  | Ty (SynonymTk _, _) -> failwith "NEVER: Resolved in Typing"
-
-  | _ -> CVoidTy, addError ctx "error type" noLoc // FIXME: source location
+  | UnresolvedTk _, _
+  | UnresolvedVarTk _, _ -> failwith "NEVER: Resolved in NameRes"
 
 /// Converts a type to complete C type.
 ///
