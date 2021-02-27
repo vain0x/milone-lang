@@ -165,14 +165,12 @@ let private findFunName funSerial (ctx: MonoCtx) = (ctx.Funs |> mapFind funSeria
 let private forceGeneralizeFuns (ctx: MonoCtx) =
   let funs =
     ctx.Funs
-    |> TMap.fold
-         (fun funs funSerial (funDef: FunDef) ->
+    |> TMap.map
+         (fun funSerial (funDef: FunDef) ->
            let (TyScheme (_, ty)) = funDef.Ty
            let fvs = ty |> tyCollectFreeVars
 
-           funs
-           |> TMap.add funSerial { funDef with Ty = TyScheme(fvs, ty) })
-         ctx.Funs
+           { funDef with Ty = TyScheme(fvs, ty) })
 
   { ctx with Funs = funs }
 
