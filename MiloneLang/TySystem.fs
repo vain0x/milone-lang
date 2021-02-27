@@ -322,6 +322,82 @@ let tyDisplay getTyName ty =
 
   go 0 ty
 
+/// Generates a unique name from a type.
+///
+/// Must be used after successful Typing.
+let tyMangle (ty: Ty, memo: AssocMap<Ty, string>): string * AssocMap<Ty, string> =
+  let rec go ty ctx =
+    let (Ty (tk, tyArgs)) = ty
+
+    let mangleList tys ctx =
+      (tys, ctx)
+      |> stMap (fun (ty, ctx) -> ctx |> go ty)
+
+    let fixedGeneric (name: string) =
+      let tyArgs, ctx = mangleList tyArgs ctx
+      S.concat "" tyArgs + name, ctx
+
+    let variadicGeneric (name: string) =
+      let arity = List.length tyArgs
+      let tyArgs, ctx = mangleList tyArgs ctx
+      S.concat "" tyArgs + (name + string arity), ctx
+
+    let doMangle (): string * AssocMap<_, _> =
+      match tk with
+      | IntTk flavor -> cIntegerTyPascalName flavor, ctx
+      | FloatTk flavor -> cFloatTyPascalName flavor, ctx
+      | BoolTk -> "Bool", ctx
+      | CharTk -> "Char", ctx
+      | StrTk -> "String", ctx
+
+      | MetaTk _
+      | ObjTk -> "Object", ctx
+
+      | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
+      | TupleTk -> variadicGeneric "Tuple"
+
+      | OptionTk -> fixedGeneric "Option"
+      | ListTk -> fixedGeneric "List"
+
+      | VoidTk -> "Void", ctx
+      | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
+      | NativePtrTk IsMut -> fixedGeneric "MutPtr"
+      | NativeFunTk -> variadicGeneric "NativeFun"
+      | NativeTypeTk name -> name, ctx
+
+      | FunTk ->
+          let arity, argTys, resultTy = tyToArgList ty
+
+          let argTys, ctx = mangleList argTys ctx
+          let resultTy, ctx = ctx |> go resultTy
+
+          let funTy =
+            (argTys |> strConcat)
+            + resultTy
+            + "Fun"
+            + string arity
+
+          funTy, ctx
+
+      | UnionTk _
+      | RecordTk _ -> failwith "NEVER" // Must be stored in memo.
+
+      | ErrorTk _
+      | SynonymTk _ -> failwith "NEVER: Resolved in Typing"
+
+      | UnresolvedTk _
+      | UnresolvedVarTk _ -> failwith "NEVER: Resolved in NameRes."
+
+    // Memoization.
+    match TMap.tryFind ty ctx with
+    | Some name -> name, ctx
+
+    | None ->
+        let name, ctx = doMangle ()
+        name, TMap.add ty name ctx
+
+  go ty memo
+
 // -----------------------------------------------
 // Context-free functions
 // -----------------------------------------------
