@@ -10,7 +10,20 @@ open MiloneLang.Hir
 
 module TMap = MiloneStd.StdMap
 
+let private unreachable () = failwith "NEVER"
+
 let private tupleField (i: int) = "t" + string i
+
+type private OptionDef =
+  { UnionTySerial: TySerial
+    NoneSerial: VariantSerial
+    NoneDef: VariantDef
+    SomeSerial: VariantSerial
+    SomeDef: VariantDef }
+
+type private GeneratedTy =
+  | TupleGT
+  | OptionGT of OptionDef
 
 // -----------------------------------------------
 // Context
@@ -25,9 +38,10 @@ type private MtCtx =
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
 
-    Map: AssocMap<Ty, Ty>
+    Map: AssocMap<Ty, Ty * GeneratedTy>
     TyNames: AssocMap<Ty, string>
-    NewTys: (TySerial * TyDef) list }
+    NewTys: (TySerial * TyDef) list
+    NewVariants: (VariantSerial * VariantDef) list }
 
 let private ofTyCtx (tyCtx: TyCtx): MtCtx =
   let tyNames =
@@ -55,7 +69,8 @@ let private ofTyCtx (tyCtx: TyCtx): MtCtx =
 
     Map = TMap.empty tyCompare
     TyNames = tyNames
-    NewTys = [] }
+    NewTys = []
+    NewVariants = [] }
 
 let private mangle (ty: Ty, ctx: MtCtx): string * MtCtx =
   let name, memo = tyMangle (ty, ctx.TyNames)
@@ -76,6 +91,13 @@ let private mangle (ty: Ty, ctx: MtCtx): string * MtCtx =
 let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
   let (Ty (tk, tyArgs)) = ty
 
+  let ty, tyArgs, ctx =
+    match tyArgs with
+    | [] -> ty, tyArgs, ctx
+    | _ ->
+        let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
+        Ty(tk, tyArgs), tyArgs, ctx
+
   match tk, tyArgs with
   | IntTk _, _
   | FloatTk _, _
@@ -92,10 +114,9 @@ let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
   | TupleTk, _ ->
       (fun () ->
         match ctx.Map |> TMap.tryFind ty with
-        | Some ty -> ty, ctx
+        | Some (ty, _) -> ty, ctx
 
         | None ->
-            let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
             let name, ctx = mangle (ty, ctx)
 
             let tySerial = ctx.Serial + 1
@@ -111,18 +132,74 @@ let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
             let ctx =
               { ctx with
                   Serial = ctx.Serial + 1
-                  Map = ctx.Map |> TMap.add ty recordTy
+                  TyNames = ctx.TyNames |> TMap.add recordTy name
+                  Map =
+                    ctx.Map
+                    |> TMap.add ty (recordTy, TupleGT)
+                    |> TMap.add recordTy (recordTy, TupleGT)
                   NewTys = (tySerial, recordTyDef) :: ctx.NewTys }
 
             recordTy, ctx) ()
 
+  | OptionTk, [ itemTy ] ->
+      (fun () ->
+        match ctx.Map |> TMap.tryFind ty with
+        | Some (ty, _) -> ty, ctx
+
+        | None ->
+            let name, ctx = mangle (ty, ctx)
+
+            let tySerial = ctx.Serial + 1
+            let noneSerial = VariantSerial(ctx.Serial + 2)
+            let someSerial = VariantSerial(ctx.Serial + 3)
+            let unionTy = Ty(UnionTk tySerial, [])
+
+            let noneDef: VariantDef =
+              { Name = "None"
+                UnionTySerial = tySerial
+                IsNewtype = false
+                HasPayload = false
+                PayloadTy = tyUnit
+                Loc = noLoc }
+
+            let someDef: VariantDef =
+              { Name = "Some"
+                UnionTySerial = tySerial
+                IsNewtype = false
+                HasPayload = true
+                PayloadTy = itemTy
+                Loc = noLoc }
+
+            let unionTyDef =
+              UnionTyDef(name, [ noneSerial; someSerial ], noLoc)
+
+            let optionDef: OptionDef =
+              { UnionTySerial = tySerial
+                NoneSerial = noneSerial
+                NoneDef = noneDef
+                SomeSerial = someSerial
+                SomeDef = someDef }
+
+            let ctx =
+              { ctx with
+                  Serial = ctx.Serial + 3
+                  TyNames = ctx.TyNames |> TMap.add unionTy name
+                  Map =
+                    ctx.Map
+                    |> TMap.add ty (unionTy, OptionGT optionDef)
+                    |> TMap.add unionTy (unionTy, OptionGT optionDef)
+                  NewTys = (tySerial, unionTyDef) :: ctx.NewTys
+                  NewVariants =
+                    (someSerial, someDef)
+                    :: (noneSerial, noneDef) :: ctx.NewVariants }
+
+            unionTy, ctx) ()
+  | OptionTk, _ -> unreachable ()
+
   | FunTk, _
-  | OptionTk, _
   | ListTk, _
   | NativePtrTk _, _
-  | NativeFunTk, _ ->
-      let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
-      Ty(tk, tyArgs), ctx
+  | NativeFunTk, _ -> ty, ctx
 
   | UnresolvedTk _, _
   | UnresolvedVarTk _, _ -> failwith "NEVER: Resolved in NameRes."
@@ -148,6 +225,23 @@ let private mtPat (pat, ctx): HPat * MtCtx =
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
         HVariantPat(variantSerial, ty, loc), ctx) ()
+
+  | HNodePat (HNonePN, _, ty, loc) ->
+      (fun () ->
+        let ty, ctx = (ty, ctx) |> mtTy
+
+        match ctx.Map |> TMap.tryFind ty with
+        | Some (ty, OptionGT optionDef) -> HVariantPat(optionDef.NoneSerial, ty, loc), ctx
+        | _ -> unreachable ()) ()
+
+  | HNodePat (HSomeAppPN, [ itemPat ], ty, loc) ->
+      (fun () ->
+        let itemPat, ctx = (itemPat, ctx) |> mtPat
+        let ty, ctx = (ty, ctx) |> mtTy
+
+        match ctx.Map |> TMap.tryFind ty with
+        | Some (ty, OptionGT optionDef) -> HNodePat(HVariantAppPN optionDef.SomeSerial, [ itemPat ], ty, loc), ctx
+        | _ -> unreachable ()) ()
 
   | HNodePat (kind, argPats, ty, loc) ->
       (fun () ->
@@ -190,7 +284,26 @@ let private mtExpr (expr, ctx): HExpr * MtCtx =
   | HPrimExpr (prim, ty, loc) ->
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
-        HPrimExpr(prim, ty, loc), ctx) ()
+
+        let regular () = HPrimExpr(prim, ty, loc), ctx
+
+        match prim with
+        | HPrim.OptionNone ->
+            match ctx.Map |> TMap.tryFind ty with
+            | Some (ty, OptionGT def) -> HVariantExpr(def.NoneSerial, ty, loc), ctx
+            | _ -> unreachable ()
+
+        | HPrim.OptionSome ->
+            let optionTy =
+              match ty with
+              | Ty (FunTk, [ _; it ]) -> it
+              | _ -> unreachable ()
+
+            match ctx.Map |> TMap.tryFind optionTy with
+            | Some (_, OptionGT def) -> HVariantExpr(def.SomeSerial, ty, loc), ctx
+            | _ -> unreachable ()
+
+        | _ -> regular ()) ()
 
   | HMatchExpr (cond, arms, ty, loc) ->
       (fun () ->
@@ -348,6 +461,10 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
 
            tys, ctx)
          (tyCtx.Tys, mtCtx)
+
+  let variants =
+    mtCtx.NewVariants
+    |> List.fold (fun variants (variantSerial, variantDef) -> variants |> TMap.add variantSerial variantDef) variants
 
   let tys =
     mtCtx.NewTys

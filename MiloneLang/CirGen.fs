@@ -205,45 +205,45 @@ let private genFunTyDef (ctx: CirCtx) sTy tTy =
 
       selfTy, ctx
 
-let private genIncompleteOptionTyDecl (ctx: CirCtx) itemTy =
-  let optionTy = tyOption itemTy
+// let private genIncompleteOptionTyDecl (ctx: CirCtx) itemTy =
+//   let optionTy = tyOption itemTy
 
-  match ctx.TyEnv |> TMap.tryFind optionTy with
-  | Some (_, ty) -> ty, ctx
+//   match ctx.TyEnv |> TMap.tryFind optionTy with
+//   | Some (_, ty) -> ty, ctx
 
-  | None ->
-      let structName, ctx = getUniqueTyName ctx optionTy
-      let selfTy = CStructTy structName
+//   | None ->
+//       let structName, ctx = getUniqueTyName ctx optionTy
+//       let selfTy = CStructTy structName
 
-      let ctx =
-        { ctx with
-            TyEnv =
-              ctx.TyEnv
-              |> TMap.add optionTy (CTyDeclared, selfTy) }
+//       let ctx =
+//         { ctx with
+//             TyEnv =
+//               ctx.TyEnv
+//               |> TMap.add optionTy (CTyDeclared, selfTy) }
 
-      selfTy, ctx
+//       selfTy, ctx
 
-let private genOptionTyDef (ctx: CirCtx) itemTy =
-  let optionTy = tyOption itemTy
+// let private genOptionTyDef (ctx: CirCtx) itemTy =
+//   let optionTy = tyOption itemTy
 
-  match ctx.TyEnv |> TMap.tryFind optionTy with
-  | Some (CTyDefined, ty) -> ty, ctx
+//   match ctx.TyEnv |> TMap.tryFind optionTy with
+//   | Some (CTyDefined, ty) -> ty, ctx
 
-  | _ ->
-      let structName, ctx = getUniqueTyName ctx optionTy
-      let selfTy, ctx = genIncompleteOptionTyDecl ctx itemTy
+//   | _ ->
+//       let structName, ctx = getUniqueTyName ctx optionTy
+//       let selfTy, ctx = genIncompleteOptionTyDecl ctx itemTy
 
-      let itemTy, (ctx: CirCtx) = cgTyComplete ctx itemTy
-      let fields = [ "some", CBoolTy; "value", itemTy ]
+//       let itemTy, (ctx: CirCtx) = cgTyComplete ctx itemTy
+//       let fields = [ "some", CBoolTy; "value", itemTy ]
 
-      let ctx =
-        { ctx with
-            Decls = CStructDecl(structName, fields, []) :: ctx.Decls
-            TyEnv =
-              ctx.TyEnv
-              |> TMap.add optionTy (CTyDefined, selfTy) }
+//       let ctx =
+//         { ctx with
+//             Decls = CStructDecl(structName, fields, []) :: ctx.Decls
+//             TyEnv =
+//               ctx.TyEnv
+//               |> TMap.add optionTy (CTyDefined, selfTy) }
 
-      selfTy, ctx
+//       selfTy, ctx
 
 let private genIncompleteListTyDecl (ctx: CirCtx) itemTy =
   let listTy = tyList itemTy
@@ -457,7 +457,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> unreachable () // Resolved in MonoTy.
 
-  | OptionTk, [ itemTy ] -> genIncompleteOptionTyDecl ctx itemTy
+  // | OptionTk, [ itemTy ] -> genIncompleteOptionTyDecl ctx itemTy
   | OptionTk, _ -> unreachable ()
 
   | ListTk, [ itemTy ] -> genIncompleteListTyDecl ctx itemTy
@@ -499,7 +499,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | TupleTk, [] -> CCharTy, ctx
   | TupleTk, _ -> unreachable () // Resolved in MonoTy.
 
-  | OptionTk, [ itemTy ] -> genOptionTyDef ctx itemTy
+  // | OptionTk, [ itemTy ] -> genOptionTyDef ctx itemTy
   | OptionTk, _ -> unreachable ()
 
   | ListTk, [ itemTy ] ->
@@ -574,12 +574,17 @@ let private genLit lit =
   | CharLit value -> CCharExpr value
   | StrLit value -> CStrObjExpr value
 
-let private genDiscriminant ctx variantSerial =
-  CVarExpr(getUniqueVariantName ctx variantSerial)
+let private genDiscriminant (ctx: CirCtx) variantSerial: CExpr * CirCtx =
+  // FIXME: refactor
+  let variantDef = ctx.Variants |> mapFind variantSerial
+  let unionTy = tyUnion variantDef.UnionTySerial
+  let _, ctx = cgTyComplete ctx unionTy
+
+  CVarExpr(getUniqueVariantName ctx variantSerial), ctx
 
 let private cgConst ctx mConst =
   match mConst with
-  | MLitConst lit -> genLit lit
+  | MLitConst lit -> genLit lit, ctx
   | MDiscriminantConst variantSerial -> genDiscriminant ctx variantSerial
 
 /// `0`, `NULL`, or `(T) {}`
@@ -601,7 +606,6 @@ let private genDefault ctx ty =
 
   | StrTk, _
   | FunTk, _
-  | OptionTk _, _
   | UnionTk _, _
   | RecordTk _, _
   | NativeTypeTk _, _ ->
@@ -610,7 +614,9 @@ let private genDefault ctx ty =
 
   | VoidTk, _ -> unreachable () // No default value of void..
 
-  | TupleTk, _ // Resolved in MonoTy.
+  | TupleTk, _
+  | OptionTk _, _ // Resolved in MonoTy.
+
   | ErrorTk _, _
   | MetaTk _, _
   | SynonymTk _, _
@@ -662,13 +668,17 @@ let private genUnaryExpr ctx op arg ty _ =
   | MProjUnary index -> CDotExpr(arg, tupleField index), ctx
   | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
 
-  | MOptionIsSomeUnary ->
-      let _, ctx = cgTyComplete ctx ty
-      CDotExpr(arg, "some"), ctx
+  // | MOptionIsSomeUnary ->
+  //     let _, ctx = cgTyComplete ctx ty
+  //     CDotExpr(arg, "some"), ctx
 
-  | MOptionToValueUnary ->
-      let _, ctx = cgTyComplete ctx ty
-      CDotExpr(arg, "value"), ctx
+  // | MOptionToValueUnary ->
+  //     let _, ctx = cgTyComplete ctx ty
+  //     CDotExpr(arg, "value"), ctx
+
+  | MOptionIsSomeUnary
+  | MOptionToValueUnary -> failwithf "NEVER: %s" (objToString (op, arg, ty))
+
 
   | MListIsEmptyUnary -> CUnaryExpr(CNotUnary, arg), ctx
 
@@ -726,7 +736,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
   | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
-  | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
+  | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 
@@ -892,18 +902,24 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       | [ arg ] -> cgBoxStmt ctx serial arg
       | _ -> unreachable itself
 
-  | MOptionSomePrim ->
-      regularWithTy
-        ctx
-        (fun args optionTy ->
-          match args with
-          | [ item ] ->
-              let fields =
-                [ "some", CVarExpr "true"
-                  "value", item ]
+  | MOptionSomePrim -> failwithf "NEVER: %A" itself
+  // | MOptionSomePrim ->
+  //     regularWithTy
+  //       ctx
+  //       (fun args optionTy ->
+  //         match args with
+  //         | [ item ] ->
+  //             let fields =
+  //               [ "some", CVarExpr "true"
+  //                 "value", item ]
 
+<<<<<<< HEAD
               CInitExpr(fields, optionTy)
           | _ -> unreachable itself)
+=======
+  //             CInitExpr(fields, optionTy)
+  //         | _ -> failwithf "NEVER: %A" itself)
+>>>>>>> bc90e24b (wip! option to union; bug (XxxOptionOption is generated for some reason) [skip ci])
 
   | MConsPrim ->
       match args with
@@ -1059,9 +1075,9 @@ let private cgTerminatorStmt ctx stmt =
         (clauses, ctx)
         |> stMap
              (fun (clause: MSwitchClause, ctx) ->
-               let cases =
-                 clause.Cases
-                 |> List.map (fun cond -> cgConst ctx cond)
+               let cases, ctx =
+                 (clause.Cases, ctx)
+                 |> stMap (fun (cond, ctx) -> cgConst ctx cond)
 
                let stmts, ctx =
                  cgTerminatorAsBlock ctx clause.Terminator
