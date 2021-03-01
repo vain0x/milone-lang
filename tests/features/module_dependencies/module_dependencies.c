@@ -2,9 +2,9 @@
 
 int root_(char arg_);
 
-int second_(char arg_1);
+int third_(char arg_1);
 
-int third_(char arg_2);
+int second_(char arg_2);
 
 int milone_main();
 
@@ -12,12 +12,12 @@ int root_(char arg_) {
     return 0;
 }
 
-int second_(char arg_1) {
+int third_(char arg_1) {
     int call_ = root_(0);
     return call_;
 }
 
-int third_(char arg_2) {
+int second_(char arg_2) {
     int call_1 = root_(0);
     return call_1;
 }

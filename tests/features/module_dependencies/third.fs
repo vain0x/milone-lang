@@ -1,5 +1,5 @@
 module rec module_dependencies.third
 
-open root
+open module_dependencies.root
 
 let third () = root ()

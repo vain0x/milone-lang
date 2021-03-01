@@ -1,7 +1,7 @@
 /// Entry point of the milone-lang compiler.
 module rec MiloneLang.EntryPoint
 
-// HACK: "MiloneOnly" module is automatically loaded in Bundling and opened in NameRes.
+// HACK: "MiloneOnly" module is automatically loaded in AstBundle and opened in NameRes.
 // open MiloneLang.MiloneOnly
 
 // See milone_libs for implementations.

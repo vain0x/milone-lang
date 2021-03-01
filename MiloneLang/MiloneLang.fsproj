@@ -14,7 +14,7 @@
     <Compile Include="Hir.fs" />
     <Compile Include="TySystem.fs" />
     <Compile Include="AstToHir.fs" />
-    <Compile Include="Bundling.fs" />
+    <Compile Include="AstBundle.fs" />
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
     <Compile Include="Hoist.fs" />

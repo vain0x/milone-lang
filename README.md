@@ -176,7 +176,7 @@ Program analysis and transformations are written in:
 - [SyntaxTokenize](MiloneLang/SyntaxTokenize.fs) (milone-lang source code -> Token list)
 - [SyntaxParse](MiloneLang/SyntaxParse.fs) (Token list -> AST)
 - [AstToHir](MiloneLang/AstToHir.fs) (AST -> HIR)
-- [Bundling](MiloneLang/Bundling.fs) (\*files\* -> HIR)
+- [AstBundle](MiloneLang/AstBundle.fs) (\*files\* -> HIR)
     - Loads source files of project and concatenates them into single HIR program
 - [NameRes](MiloneLang/NameRes.fs) (Name resolution)
 - [Typing](MiloneLang/Typing.fs) (Type inference)

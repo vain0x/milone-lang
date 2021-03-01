@@ -5,11 +5,11 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.SyntaxTokenize
 open MiloneLang.SyntaxParse
+open MiloneLang.AstBundle
 open MiloneLang.Hir
 open MiloneLang.TySystem
 open MiloneLang.AstToHir
 open MiloneLang.AutoBoxing
-open MiloneLang.Bundling
 open MiloneLang.NameRes
 open MiloneLang.Typing
 open MiloneLang.MainHoist
@@ -395,22 +395,6 @@ let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
 
   { ctx with Projects = projects }
 
-let private toBundleHost parse (ctx: CompileCtx): BundleHost =
-  let host = ctx.Host
-  let readFile = host.FileReadAllText
-
-  let parseModule (docId: DocId) (text: string) =
-    let ast, errors = parse docId text
-    Some(docId, ast, errors)
-
-  { ProjectRefs = ctx.Projects |> TMap.toKeys
-
-    FetchModule =
-      fun projectName moduleName ->
-        match ctx.Projects |> TMap.tryFind projectName with
-        | None -> None
-        | Some projectDir -> ctx.FetchModule projectName projectDir moduleName }
-
 // -----------------------------------------------
 // Write output and logs
 // -----------------------------------------------
@@ -427,7 +411,7 @@ let private writeLog (host: CliHost) verbosity msg =
 
   | Quiet -> ()
 
-let private syntaxHasError syntax =
+let private syntaxHasError (syntax: SyntaxAnalysisResult) =
   let _, _, errors = syntax
   errors |> List.isEmpty |> not
 
@@ -477,6 +461,8 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
 // Processes
 // -----------------------------------------------
 
+type private SyntaxAnalysisResult = HExpr list * NameCtx * (string * Loc) list
+
 let private isErrorToken token =
   match token with
   | ErrorToken _, _ -> true
@@ -492,11 +478,11 @@ let private tokenizeErrors errorTokens =
 
 /// Loads source codes from files, performs tokenization and SyntaxParse,
 /// and transforms them into high-level intermediate representation (HIR).
-let syntacticallyAnalyze (ctx: CompileCtx) =
+let syntacticallyAnalyze (ctx: CompileCtx): SyntaxAnalysisResult =
   let host = ctx.Host
   let v = ctx.Verbosity
 
-  writeLog host v ("Bundling project=" + ctx.ProjectName)
+  writeLog host v ("AstBundle project=" + ctx.ProjectName)
 
   let doParse (_: DocId) (s: string) =
     let tokens = s |> tokenize ctx.TokenizeHost
@@ -508,9 +494,7 @@ let syntacticallyAnalyze (ctx: CompileCtx) =
 
     ast, errors
 
-  match bundleProgram (ctx |> toBundleHost doParse) ctx.ProjectName with
-  | Some syntax -> syntax
-  | None -> failwithf "Entry module file not found: %s" ctx.ProjectName
+  bundleCompatible ctx.Projects ctx.FetchModule ctx.ProjectName
 
 [<NoEquality; NoComparison>]
 type SemaAnalysisResult =
@@ -519,7 +503,8 @@ type SemaAnalysisResult =
   | SemaAnalysisTypingError of TyCtx
 
 /// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAnalysisResult =
+let semanticallyAnalyze (host: CliHost) v (syntax: SyntaxAnalysisResult): SemaAnalysisResult =
+  let exprs, nameCtx, syntaxErrors = syntax
   assert (syntaxErrors |> List.isEmpty)
 
   writeLog host v "NameRes"
@@ -625,35 +610,35 @@ let compile (ctx: CompileCtx): bool * string =
 // Actions
 // -----------------------------------------------
 
-let cliParse (host: CliHost) v (projectDir: string) =
-  let ctx = compileCtxNew host v projectDir
+let cliParse (host: CliHost) v (projectDir: string) = failwith "unimplemented"
+// let ctx = compileCtxNew host v projectDir
 
-  let parseWithLogging moduleName contents =
-    writeLog
-      host
-      v
-      ("\n-------------\nSyntaxParse %s...\n--------------"
-       + moduleName)
+// let parseWithLogging moduleName contents =
+//   writeLog
+//     host
+//     v
+//     ("\n-------------\nSyntaxParse %s...\n--------------"
+//      + moduleName)
 
-    let ast, errors =
-      contents |> tokenize ctx.TokenizeHost |> parse
+//   let ast, errors =
+//     contents |> tokenize ctx.TokenizeHost |> parse
 
-    if errors |> List.isEmpty |> not then
-      printfn "In %s" moduleName
+//   if errors |> List.isEmpty |> not then
+//     printfn "In %s" moduleName
 
-      errors
-      |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
+//     errors
+//     |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
 
-    match v with
-    | Verbose -> printfn "%s" (objToString ast)
-    | _ -> ()
+//   match v with
+//   | Verbose -> printfn "%s" (objToString ast)
+//   | _ -> ()
 
-    ast, errors
+//   ast, errors
 
-  bundleProgram (ctx |> toBundleHost parseWithLogging) ctx.ProjectName
-  |> ignore
+// bundleProgram (ctx |> toBundleHost parseWithLogging) ctx.ProjectName
+// |> ignore
 
-  0
+// 0
 
 let cliCheck (host: CliHost) verbosity projectDir =
   let ctx =

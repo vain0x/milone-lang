@@ -7,7 +7,7 @@
 /// ## Lifecycle
 ///
 /// HIR is generated in `AstToHir` for each file
-/// and all modules of a project are *concatenated* in `Bundling`.
+/// and all modules of a project are *concatenated* in `AstBundle`.
 ///
 /// Most of analysis (for error reporting and soundness)
 /// and transformations (for code generation) are performed on it.
