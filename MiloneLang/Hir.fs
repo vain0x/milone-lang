@@ -640,8 +640,6 @@ let variantSerialToInt (VariantSerial serial) = serial
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
-let varDefToName (varDef: VarDef) = varDef.Name
-
 let variantDefToVariantTy (variantDef: VariantDef): Ty =
   let unionTy = tyUnion variantDef.UnionTySerial
 

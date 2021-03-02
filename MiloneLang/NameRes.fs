@@ -357,7 +357,7 @@ let private addNsToNs (parentNsOwner: NsOwner) (childNsOwner: NsOwner) (scopeCtx
 let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
   let varName =
     match symbol with
-    | VarSymbol varSerial -> scopeCtx |> findVar varSerial |> varDefToName
+    | VarSymbol varSerial -> (scopeCtx |> findVar varSerial).Name
     | FunSymbol funSerial -> (scopeCtx |> findFun funSerial).Name
     | VariantSymbol variantSerial -> (scopeCtx |> findVariant variantSerial).Name
 

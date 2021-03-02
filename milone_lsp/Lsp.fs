@@ -461,7 +461,7 @@ let private symbolToName (tyCtx: Typing.TyCtx) symbol =
       | VarSymbol varSerial ->
           tyCtx.Vars
           |> TMap.tryFind varSerial
-          |> Option.map varDefToName
+          |> Option.map (fun (def: VarDef) -> def.Name)
       | FunSymbol funSerial ->
           tyCtx.Funs
           |> TMap.tryFind funSerial
