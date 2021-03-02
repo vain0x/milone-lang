@@ -147,7 +147,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
 
 let private findStorageModifier (ctx: CirCtx) varSerial =
   match ctx.Vars |> TMap.tryFind varSerial with
-  | Some (VarDef (_, isStatic, _, _)) -> isStatic
+  | Some varDef -> varDef.IsStatic
 
   | _ -> IsStatic
 
@@ -881,7 +881,7 @@ let private doGenLetValStmt ctx serial expr ty =
   addLetStmt ctx name expr cty isStatic
 
 let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
-  let (VarDef (_, _, resultTy, _)) = ctx.Vars |> mapFind serial
+  let resultTy = (ctx.Vars |> mapFind serial).Ty
 
   let conversion ctx makeExpr =
     match args with

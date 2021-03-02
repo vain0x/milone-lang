@@ -431,12 +431,16 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
 let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
   let serial = VarSerial(ctx.Serial + 1)
 
+  let varDef: VarDef =
+    { Name = name
+      IsStatic = NotStatic
+      Ty = ty
+      Loc = loc }
+
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars =
-          ctx.Vars
-          |> TMap.add serial (VarDef(name, NotStatic, ty, loc)) }
+        Vars = ctx.Vars |> TMap.add serial varDef }
 
   HVarExpr(serial, ty, loc), serial, ctx
 

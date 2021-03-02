@@ -870,11 +870,9 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
   let vars =
     ctx.Vars
     |> TMap.map
-         (fun _ varDef ->
-           match varDef with
-           | VarDef (name, isStatic, ty, loc) ->
-               let ty = ty |> abTy ctx
-               VarDef(name, isStatic, ty, loc))
+         (fun _ (varDef: VarDef) ->
+           let ty = varDef.Ty |> abTy ctx
+           { varDef with Ty = ty })
 
   let funs =
     ctx.Funs

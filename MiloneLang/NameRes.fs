@@ -280,11 +280,13 @@ let private findNsOwnerName nsOwner (scopeCtx: ScopeCtx) =
   | ModuleSynonymNsOwner serial -> (scopeCtx.ModuleSynonyms |> mapFind serial).Name
 
 /// Defines a variable, without adding to any scope.
-let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
+let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
   let varDef =
-    match scopeCtx.Vars |> TMap.tryFind varSerial, varDef with
-    | Some (VarDef (_, IsStatic, _, _)), VarDef (name, _, ty, loc) -> VarDef(name, IsStatic, ty, loc)
+    match scopeCtx.Vars |> TMap.tryFind varSerial with
+    | Some oldDef ->
+        { varDef with
+            IsStatic = oldDef.IsStatic }
     | _ -> varDef
 
   { scopeCtx with
@@ -838,9 +840,15 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         | Some (VariantSymbol variantSerial) -> HVariantPat(variantSerial, ty, loc), ctx
 
         | _ ->
+            let varDef: VarDef =
+              { Name = name
+                IsStatic = IsStatic
+                Ty = ty
+                Loc = loc }
+
             let ctx =
               ctx
-              |> addLocalVar varSerial (VarDef(name, IsStatic, ty, loc))
+              |> addLocalVar varSerial varDef
               |> addVarToModule vis (VarSymbol varSerial)
 
             pat, ctx
@@ -853,9 +861,13 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let name =
           ctx |> findName (varSerialToInt varSerial)
 
-        let ctx =
-          ctx
-          |> addLocalVar varSerial (VarDef(name, IsStatic, noTy, loc))
+        let varDef: VarDef =
+          { Name = name
+            IsStatic = IsStatic
+            Ty = noTy
+            Loc = loc }
+
+        let ctx = ctx |> addLocalVar varSerial varDef
 
         let pat, ctx = (pat, ctx) |> goPat
         HAsPat(pat, varSerial, loc), ctx
@@ -940,10 +952,16 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
   | None ->
       let varSerial = VarSerial serial
 
+      let varDef: VarDef =
+        { Name = name
+          IsStatic = NotStatic
+          Ty = ty
+          Loc = loc }
+
       let ctx =
         { ctx with
             PatScope = ctx.PatScope |> TMap.add name (varSerial, loc, []) }
-        |> addLocalVar varSerial (VarDef(name, NotStatic, ty, loc))
+        |> addLocalVar varSerial varDef
 
       varSerial, ctx
 

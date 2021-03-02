@@ -215,8 +215,12 @@ type ModuleSynonymDef =
     Loc: Loc }
 
 /// Definition of named value in HIR.
-[<NoEquality; NoComparison>]
-type VarDef = VarDef of Ident * IsStatic * Ty * Loc
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type VarDef =
+  { Name: Ident
+    IsStatic: IsStatic
+    Ty: Ty
+    Loc: Loc}
 
 /// Assembly binary interface (ABI): how function looks like at machine-code level.
 [<NoEquality; NoComparison>]
@@ -636,9 +640,7 @@ let variantSerialToInt (VariantSerial serial) = serial
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
-let varDefToName varDef =
-  match varDef with
-  | VarDef (name, _, _, _) -> name
+let varDefToName (varDef: VarDef) = varDef.Name
 
 let variantDefToVariantTy (variantDef: VariantDef): Ty =
   let unionTy = tyUnion variantDef.UnionTySerial

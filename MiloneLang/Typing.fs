@@ -84,12 +84,16 @@ let private isMainFun funSerial (ctx: TyCtx) =
 let private freshVar (ctx: TyCtx) hint ty loc =
   let varSerial = VarSerial(ctx.Serial + 1)
 
+  let varDef: VarDef =
+    { Name = hint
+      IsStatic = NotStatic
+      Ty = ty
+      Loc = loc }
+
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars =
-          ctx.Vars
-          |> TMap.add varSerial (VarDef(hint, NotStatic, ty, loc)) }
+        Vars = ctx.Vars |> TMap.add varSerial varDef }
 
   varSerial, ctx
 
@@ -224,9 +228,7 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty): TyCtx =
   go lTy rTy loc ctx
 
 let private unifyVarTy varSerial tyOpt loc ctx =
-  let varTy, ctx =
-    match findVar ctx varSerial with
-    | VarDef (_, _, ty, _) -> ty, ctx
+  let varTy = (findVar ctx varSerial).Ty
 
   match tyOpt with
   | Some ty ->
@@ -1295,7 +1297,7 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
     let vars, ctx =
       ctx.Vars
       |> TMap.mapFold
-           (fun (ctx: TyCtx) varSerial varDef ->
+           (fun (ctx: TyCtx) varSerial (varDef: VarDef) ->
              let ctx =
                { ctx with
                    Level =
@@ -1303,10 +1305,8 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
                      |> mapFind (varSerialToInt varSerial) }
 
              let varDef, ctx =
-               match varDef with
-               | VarDef (name, isStatic, _, loc) ->
-                   let ty, ctx = freshMetaTy loc ctx
-                   VarDef(name, isStatic, ty, loc), ctx
+               let ty, ctx = freshMetaTy varDef.Loc ctx
+               { varDef with Ty = ty }, ctx
 
              varDef, ctx)
            ctx
@@ -1354,11 +1354,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
     let vars =
       ctx.Vars
       |> TMap.map
-           (fun _ varDef ->
-             match varDef with
-             | VarDef (name, isStatic, ty, loc) ->
-                 let ty = substOrDegenerate ty
-                 VarDef(name, isStatic, ty, loc))
+           (fun _ (varDef: VarDef) ->
+             let ty = substOrDegenerate varDef.Ty
+             { varDef with Ty = ty })
 
     let funs =
       ctx.Funs

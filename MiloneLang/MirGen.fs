@@ -102,12 +102,16 @@ let private takeDecls (ctx: MirCtx) =
 let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
   let varSerial = VarSerial(ctx.Serial + 1)
 
+  let varDef: VarDef =
+    { Name = name
+      IsStatic = NotStatic
+      Ty = ty
+      Loc = loc }
+
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars =
-          ctx.Vars
-          |> TMap.add varSerial (VarDef(name, NotStatic, ty, loc)) }
+        Vars = ctx.Vars |> TMap.add varSerial varDef }
 
   let varExpr = MVarExpr(varSerial, ty, loc)
   varExpr, varSerial, ctx
