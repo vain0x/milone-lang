@@ -137,26 +137,20 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
 
   match baseOpt with
   | Some baseExpr ->
-      let itemExpr index =
-        // FIXME: avoid failwith
-        let itemTy =
-          match fieldTys |> List.tryItem index with
-          | Some it -> it
-          | None -> unreachable itself
+      let itemExpr index fieldTy =
+        HNodeExpr(HRecordItemEN index, [ baseExpr ], fieldTy, loc)
 
-        HNodeExpr(HRecordItemEN index, [ baseExpr ], itemTy, loc)
+      let rec go i fields fieldTys =
+        match fields, fieldTys with
+        | [], [] -> []
 
-      let n = fieldTys |> List.length
+        | (index, init) :: fields, _ :: fieldTys when index = i -> init :: go (i + 1) fields fieldTys
 
-      let rec go i fields =
-        match fields with
-        | [] when i = n -> []
+        | _, fieldTy :: fieldTys -> itemExpr i fieldTy :: go (i + 1) fields fieldTys
 
-        | (index, init) :: fields when index = i -> init :: go (i + 1) fields
+        | _, [] -> unreachable ()
 
-        | _ -> itemExpr i :: go (i + 1) fields
-
-      let fields = go 0 fields
+      let fields = go 0 fields fieldTys
       HNodeExpr(HRecordEN, fields, ty, loc)
 
   | None ->
