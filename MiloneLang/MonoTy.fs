@@ -192,8 +192,6 @@ let private mtTy (ty, ctx: MtCtx): MTy * MtCtx =
                 SomeSerial = someSerial
                 SomeDef = someDef }
 
-            printfn "// option %s -> %s" (objToString ty) (objToString itemTy)
-
             let ctx =
               { ctx with
                   Serial = ctx.Serial + 3
@@ -242,7 +240,6 @@ let private mtPat (pat, ctx): HPat * MtCtx =
 
   | HNodePat (HNonePN, _, ty, loc) ->
       (fun () ->
-        printfn "// none pat: %s" (objToString ty)
         let ty, ctx = (ty, ctx) |> mtTy
         let (MTy (tk, tyArgs)) = ty
 
