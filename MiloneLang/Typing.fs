@@ -525,7 +525,7 @@ let private inferNilPat ctx pat loc =
 let private inferNonePat ctx pat loc =
   let itemTy, ctx = ctx |> freshMetaTyForPat pat
   let ty = tyOption itemTy
-  HNodePat(HNonePN, [], tyOption ty, loc), ty, ctx
+  HNodePat(HNonePN, [], ty, loc), ty, ctx
 
 let private inferSomePat ctx pat loc =
   let unknownTy, ctx = ctx |> freshMetaTyForPat pat
