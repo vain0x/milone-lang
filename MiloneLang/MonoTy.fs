@@ -382,8 +382,8 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
   let vars, mtCtx =
     tyCtx.Vars
     |> TMap.fold
-         (fun (vars, ctx) varSerial varDef ->
-           let (VarDef (name, sm, ty, loc)) = varDef
+         (fun (vars, ctx) varSerial (varDef: VarDef) ->
+           let ty = varDef.Ty
 
            if ty |> tyIsMonomorphic |> not then
              // Ignore variables that appeared in generic functions.
@@ -392,8 +392,7 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
              let ty, ctx = (ty, ctx) |> mtTy
 
              let vars =
-               vars
-               |> TMap.add varSerial (VarDef(name, sm, ty, loc))
+               vars |> TMap.add varSerial { varDef with Ty = ty }
 
              vars, ctx)
          (tyCtx.Vars, mtCtx)

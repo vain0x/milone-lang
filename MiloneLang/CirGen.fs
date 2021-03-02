@@ -913,13 +913,8 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
   //               [ "some", CVarExpr "true"
   //                 "value", item ]
 
-<<<<<<< HEAD
-              CInitExpr(fields, optionTy)
-          | _ -> unreachable itself)
-=======
-  //             CInitExpr(fields, optionTy)
-  //         | _ -> failwithf "NEVER: %A" itself)
->>>>>>> bc90e24b (wip! option to union; bug (XxxOptionOption is generated for some reason) [skip ci])
+          //     CInitExpr(fields, optionTy)
+          // | _ -> unreachable itself)
 
   | MConsPrim ->
       match args with
