@@ -10,8 +10,6 @@ open MiloneLang.Hir
 
 module TMap = MiloneStd.StdMap
 
-let private unreachable () = failwith "NEVER"
-
 let private tupleField (i: int) = "t" + string i
 
 type private OptionDef =

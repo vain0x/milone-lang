@@ -913,8 +913,8 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
   //               [ "some", CVarExpr "true"
   //                 "value", item ]
 
-          //     CInitExpr(fields, optionTy)
-          // | _ -> unreachable itself)
+  //     CInitExpr(fields, optionTy)
+  // | _ -> unreachable itself)
 
   | MConsPrim ->
       match args with
