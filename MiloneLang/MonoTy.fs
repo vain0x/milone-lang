@@ -12,6 +12,22 @@ module TMap = MiloneStd.StdMap
 
 let private tupleField (i: int) = "t" + string i
 
+[<Struct; NoEquality; NoComparison>]
+type MTy = MTy of Tk * tyArgs: MTy list
+
+let mTyCompare l r = tyCompare (toTy l) (toTy r)
+
+let tkMTyListPairCompare =
+  pairCompare tkCompare (listCompare mTyCompare)
+
+let toTy mTy =
+  let (MTy (tk, tyArgs)) = mTy
+
+  match tk, tyArgs with
+  | TupleTk, (_ :: _)
+  | OptionTk, [ _ ] -> unreachable mTy
+  | _ -> Ty(tk, List.map toTy tyArgs)
+
 type private OptionDef =
   { UnionTySerial: TySerial
     NoneSerial: VariantSerial
@@ -36,7 +52,7 @@ type private MtCtx =
     Variants: AssocMap<VariantSerial, VariantDef>
     Tys: AssocMap<TySerial, TyDef>
 
-    Map: AssocMap<Ty, Ty * GeneratedTy>
+    Map: AssocMap<Tk * MTy list, MTy * GeneratedTy>
     TyNames: AssocMap<Ty, string>
     NewTys: (TySerial * TyDef) list
     NewVariants: (VariantSerial * VariantDef) list }
@@ -65,13 +81,14 @@ let private ofTyCtx (tyCtx: TyCtx): MtCtx =
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
 
-    Map = TMap.empty tyCompare
+    Map = TMap.empty tkMTyListPairCompare
     TyNames = tyNames
     NewTys = []
     NewVariants = [] }
 
-let private mangle (ty: Ty, ctx: MtCtx): string * MtCtx =
-  let name, memo = tyMangle (ty, ctx.TyNames)
+let private mangle (tk: Tk, tyArgs: MTy list, ctx: MtCtx): string * MtCtx =
+  let tyArgs = List.map toTy tyArgs
+  let name, memo = tyMangle (Ty(tk, tyArgs), ctx.TyNames)
   name, { ctx with TyNames = memo }
 
 // -----------------------------------------------
@@ -86,15 +103,10 @@ let private mangle (ty: Ty, ctx: MtCtx): string * MtCtx =
 // Control
 // -----------------------------------------------
 
-let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
+let private mtTy (ty, ctx: MtCtx): MTy * MtCtx =
   let (Ty (tk, tyArgs)) = ty
 
-  let ty, tyArgs, ctx =
-    match tyArgs with
-    | [] -> ty, tyArgs, ctx
-    | _ ->
-        let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
-        Ty(tk, tyArgs), tyArgs, ctx
+  let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
 
   match tk, tyArgs with
   | IntTk _, _
@@ -107,50 +119,52 @@ let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
   | NativeTypeTk _, _
   | UnionTk _, _
   | RecordTk _, _
-  | _, [] -> ty, ctx
+  | _, [] ->
+      assert (List.isEmpty tyArgs)
+      MTy(tk, []), ctx
 
   | TupleTk, _ ->
       (fun () ->
-        match ctx.Map |> TMap.tryFind ty with
+        match ctx.Map |> TMap.tryFind (tk, tyArgs) with
         | Some (ty, _) -> ty, ctx
 
         | None ->
-            let name, ctx = mangle (ty, ctx)
+            let name, ctx = mangle (tk, tyArgs, ctx)
 
             let tySerial = ctx.Serial + 1
-            let recordTy = Ty(RecordTk tySerial, [])
+            let recordTy = MTy(RecordTk tySerial, [])
 
             let recordTyDef =
               let fields =
                 tyArgs
-                |> List.mapi (fun i ty -> tupleField i, ty, noLoc)
+                |> List.mapi (fun i ty -> tupleField i, toTy ty, noLoc)
 
               RecordTyDef(name, fields, noLoc)
 
             let ctx =
               { ctx with
                   Serial = ctx.Serial + 1
-                  TyNames = ctx.TyNames |> TMap.add recordTy name
+                  TyNames = ctx.TyNames |> TMap.add (toTy recordTy) name
                   Map =
                     ctx.Map
-                    |> TMap.add ty (recordTy, TupleGT)
-                    |> TMap.add recordTy (recordTy, TupleGT)
+                    |> TMap.add (tk, tyArgs) (recordTy, TupleGT)
+                    |> TMap.add (RecordTk tySerial, []) (recordTy, TupleGT)
                   NewTys = (tySerial, recordTyDef) :: ctx.NewTys }
 
             recordTy, ctx) ()
 
   | OptionTk, [ itemTy ] ->
       (fun () ->
-        match ctx.Map |> TMap.tryFind ty with
+        match ctx.Map |> TMap.tryFind (tk, tyArgs) with
         | Some (ty, _) -> ty, ctx
 
         | None ->
-            let name, ctx = mangle (ty, ctx)
+            let name, ctx = mangle (tk, tyArgs, ctx)
 
             let tySerial = ctx.Serial + 1
             let noneSerial = VariantSerial(ctx.Serial + 2)
             let someSerial = VariantSerial(ctx.Serial + 3)
-            let unionTy = Ty(UnionTk tySerial, [])
+            let unionTy = MTy(UnionTk tySerial, [])
 
             let noneDef: VariantDef =
               { Name = "None"
@@ -165,7 +179,7 @@ let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
                 UnionTySerial = tySerial
                 IsNewtype = false
                 HasPayload = true
-                PayloadTy = itemTy
+                PayloadTy = toTy itemTy
                 Loc = noLoc }
 
             let unionTyDef =
@@ -178,14 +192,16 @@ let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
                 SomeSerial = someSerial
                 SomeDef = someDef }
 
+            printfn "// option %s -> %s" (objToString ty) (objToString itemTy)
+
             let ctx =
               { ctx with
                   Serial = ctx.Serial + 3
-                  TyNames = ctx.TyNames |> TMap.add unionTy name
+                  TyNames = ctx.TyNames |> TMap.add (toTy unionTy) name
                   Map =
                     ctx.Map
-                    |> TMap.add ty (unionTy, OptionGT optionDef)
-                    |> TMap.add unionTy (unionTy, OptionGT optionDef)
+                    |> TMap.add (tk, tyArgs) (unionTy, OptionGT optionDef)
+                    |> TMap.add (UnionTk tySerial, []) (unionTy, OptionGT optionDef)
                   NewTys = (tySerial, unionTyDef) :: ctx.NewTys
                   NewVariants =
                     (someSerial, someDef)
@@ -197,7 +213,7 @@ let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
   | FunTk, _
   | ListTk, _
   | NativePtrTk _, _
-  | NativeFunTk, _ -> ty, ctx
+  | NativeFunTk, _ -> MTy(tk, tyArgs), ctx
 
   | UnresolvedTk _, _
   | UnresolvedVarTk _, _ -> failwith "NEVER: Resolved in NameRes."
@@ -212,40 +228,44 @@ let private mtPat (pat, ctx): HPat * MtCtx =
   | HDiscardPat (ty, loc) ->
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
-        HDiscardPat(ty, loc), ctx) ()
+        HDiscardPat(toTy ty, loc), ctx) ()
 
   | HVarPat (vis, varSerial, ty, loc) ->
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
-        HVarPat(vis, varSerial, ty, loc), ctx) ()
+        HVarPat(vis, varSerial, toTy ty, loc), ctx) ()
 
   | HVariantPat (variantSerial, ty, loc) ->
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
-        HVariantPat(variantSerial, ty, loc), ctx) ()
+        HVariantPat(variantSerial, toTy ty, loc), ctx) ()
 
   | HNodePat (HNonePN, _, ty, loc) ->
       (fun () ->
+        printfn "// none pat: %s" (objToString ty)
         let ty, ctx = (ty, ctx) |> mtTy
+        let (MTy (tk, tyArgs)) = ty
 
-        match ctx.Map |> TMap.tryFind ty with
-        | Some (ty, OptionGT optionDef) -> HVariantPat(optionDef.NoneSerial, ty, loc), ctx
+        match ctx.Map |> TMap.tryFind (tk, tyArgs) with
+        | Some (ty, OptionGT optionDef) ->
+          HVariantPat(optionDef.NoneSerial, toTy ty, loc), ctx
         | _ -> unreachable ()) ()
 
   | HNodePat (HSomeAppPN, [ itemPat ], ty, loc) ->
       (fun () ->
         let itemPat, ctx = (itemPat, ctx) |> mtPat
         let ty, ctx = (ty, ctx) |> mtTy
+        let (MTy (tk, tyArgs)) = ty
 
-        match ctx.Map |> TMap.tryFind ty with
-        | Some (ty, OptionGT optionDef) -> HNodePat(HVariantAppPN optionDef.SomeSerial, [ itemPat ], ty, loc), ctx
+        match ctx.Map |> TMap.tryFind (tk, tyArgs) with
+        | Some (ty, OptionGT optionDef) -> HNodePat(HVariantAppPN optionDef.SomeSerial, [ itemPat ], toTy ty, loc), ctx
         | _ -> unreachable ()) ()
 
   | HNodePat (kind, argPats, ty, loc) ->
       (fun () ->
         let argPats, ctx = (argPats, ctx) |> stMap mtPat
         let ty, ctx = (ty, ctx) |> mtTy
-        HNodePat(kind, argPats, ty, loc), ctx) ()
+        HNodePat(kind, argPats, toTy ty, loc), ctx) ()
 
   | HAsPat (bodyPat, varSerial, loc) ->
       (fun () ->
@@ -267,38 +287,41 @@ let private mtExpr (expr, ctx): HExpr * MtCtx =
   | HVarExpr (varSerial, ty, loc) ->
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
-        HVarExpr(varSerial, ty, loc), ctx) ()
+        HVarExpr(varSerial, toTy ty, loc), ctx) ()
 
   | HFunExpr (funSerial, ty, loc) ->
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
-        HFunExpr(funSerial, ty, loc), ctx) ()
+        HFunExpr(funSerial, toTy ty, loc), ctx) ()
 
   | HVariantExpr (variantSerial, ty, loc) ->
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
-        HVariantExpr(variantSerial, ty, loc), ctx) ()
+        HVariantExpr(variantSerial, toTy ty, loc), ctx) ()
 
   | HPrimExpr (prim, ty, loc) ->
       (fun () ->
         let ty, ctx = (ty, ctx) |> mtTy
+        let (MTy (tk, tyArgs)) = ty
 
-        let regular () = HPrimExpr(prim, ty, loc), ctx
+        let regular () = HPrimExpr(prim, toTy ty, loc), ctx
 
         match prim with
         | HPrim.OptionNone ->
-            match ctx.Map |> TMap.tryFind ty with
-            | Some (ty, OptionGT def) -> HVariantExpr(def.NoneSerial, ty, loc), ctx
+            match ctx.Map |> TMap.tryFind (tk, tyArgs) with
+            | Some (ty, OptionGT def) -> HVariantExpr(def.NoneSerial, toTy ty, loc), ctx
             | _ -> unreachable ()
 
         | HPrim.OptionSome ->
             let optionTy =
               match ty with
-              | Ty (FunTk, [ _; it ]) -> it
+              | MTy (FunTk, [ _; it ]) -> it
               | _ -> unreachable ()
 
-            match ctx.Map |> TMap.tryFind optionTy with
-            | Some (_, OptionGT def) -> HVariantExpr(def.SomeSerial, ty, loc), ctx
+            let (MTy (tk, tyArgs)) = optionTy
+
+            match ctx.Map |> TMap.tryFind (tk, tyArgs) with
+            | Some (_, OptionGT def) -> HVariantExpr(def.SomeSerial, toTy ty, loc), ctx
             | _ -> unreachable ()
 
         | _ -> regular ()) ()
@@ -317,7 +340,7 @@ let private mtExpr (expr, ctx): HExpr * MtCtx =
                  (pat, guard, body), ctx)
 
         let ty, ctx = (ty, ctx) |> mtTy
-        HMatchExpr(cond, arms, ty, loc), ctx) ()
+        HMatchExpr(cond, arms, toTy ty, loc), ctx) ()
 
   | HNodeExpr (kind, args, ty, loc) ->
       (fun () ->
@@ -329,7 +352,7 @@ let private mtExpr (expr, ctx): HExpr * MtCtx =
           | HTupleEN, _ when args |> List.isEmpty |> not -> HRecordEN
           | _ -> kind
 
-        HNodeExpr(kind, args, ty, loc), ctx) ()
+        HNodeExpr(kind, args, toTy ty, loc), ctx) ()
 
   | HBlockExpr (stmts, last) ->
       (fun () ->
@@ -348,7 +371,7 @@ let private mtExpr (expr, ctx): HExpr * MtCtx =
         let init, ctx = (init, ctx) |> mtExpr
         let next, ctx = (next, ctx) |> mtExpr
         let ty, ctx = (ty, ctx) |> mtTy
-        HLetValExpr(pat, init, next, ty, loc), ctx) ()
+        HLetValExpr(pat, init, next, toTy ty, loc), ctx) ()
 
   | HLetFunExpr _ ->
       (fun () ->
@@ -361,7 +384,7 @@ let private mtExpr (expr, ctx): HExpr * MtCtx =
         let body, ctx = (body, ctx) |> mtExpr
         let next, ctx = (next, ctx) |> mtExpr
         let ty, ctx = (ty, ctx) |> mtTy
-        HLetFunExpr(callee, isRec, vis, args, body, next, ty, loc), ctx) ()
+        HLetFunExpr(callee, isRec, vis, args, body, next, toTy ty, loc), ctx) ()
 
   | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
   | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
@@ -390,7 +413,8 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
              let ty, ctx = (ty, ctx) |> mtTy
 
              let vars =
-               vars |> TMap.add varSerial { varDef with Ty = ty }
+               vars
+               |> TMap.add varSerial { varDef with Ty = toTy ty }
 
              vars, ctx)
          (tyCtx.Vars, mtCtx)
@@ -408,7 +432,10 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
 
              let funs =
                funs
-               |> TMap.add funSerial { funDef with Ty = TyScheme([], ty) }
+               |> TMap.add
+                    funSerial
+                    { funDef with
+                        Ty = TyScheme([], toTy ty) }
 
              funs, ctx)
          (tyCtx.Funs, mtCtx)
@@ -422,7 +449,7 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
 
            let variants =
              variants
-             |> TMap.add variantSerial { variantDef with PayloadTy = ty }
+             |> TMap.add variantSerial { variantDef with PayloadTy = toTy ty }
 
            variants, ctx)
          (tyCtx.Variants, mtCtx)
@@ -441,7 +468,7 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
                    |> stMap
                         (fun ((ident, ty, loc), ctx) ->
                           let ty, ctx = (ty, ctx) |> mtTy
-                          (ident, ty, loc), ctx)
+                          (ident, toTy ty, loc), ctx)
 
                  let tyDef = RecordTyDef(ident, fields, loc)
                  true, tyDef, ctx
