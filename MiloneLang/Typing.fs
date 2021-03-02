@@ -89,7 +89,7 @@ let private freshVar (ctx: TyCtx) hint ty loc =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> TMap.add varSerial (VarDef(hint, AutoSM, ty, loc)) }
+          |> TMap.add varSerial (VarDef(hint, NotStatic, ty, loc)) }
 
   varSerial, ctx
 
@@ -1304,9 +1304,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
 
              let varDef, ctx =
                match varDef with
-               | VarDef (name, storageModifier, _, loc) ->
+               | VarDef (name, isStatic, _, loc) ->
                    let ty, ctx = freshMetaTy loc ctx
-                   VarDef(name, storageModifier, ty, loc), ctx
+                   VarDef(name, isStatic, ty, loc), ctx
 
              varDef, ctx)
            ctx
@@ -1356,9 +1356,9 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
       |> TMap.map
            (fun _ varDef ->
              match varDef with
-             | VarDef (name, storageModifier, ty, loc) ->
+             | VarDef (name, isStatic, ty, loc) ->
                  let ty = substOrDegenerate ty
-                 VarDef(name, storageModifier, ty, loc))
+                 VarDef(name, isStatic, ty, loc))
 
     let funs =
       ctx.Funs

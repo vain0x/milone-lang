@@ -65,14 +65,14 @@ type Arity = int
 /// Only one exception: recursive function has level higher by 1.
 type Level = int
 
-/// Where variable is stored.
+/// Is static variable?
 [<NoEquality; NoComparison>]
-type StorageModifier =
-  /// On stack.
-  | AutoSM
+type IsStatic =
+  /// Static variable. (This doesn't imply linkage.)
+  | IsStatic
 
-  /// On static storage.
-  | StaticSM
+  /// Local variable.
+  | NotStatic
 
 [<Struct>]
 [<NoEquality; NoComparison>]
@@ -216,7 +216,7 @@ type ModuleSynonymDef =
 
 /// Definition of named value in HIR.
 [<NoEquality; NoComparison>]
-type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
+type VarDef = VarDef of Ident * IsStatic * Ty * Loc
 
 /// Assembly binary interface (ABI): how function looks like at machine-code level.
 [<NoEquality; NoComparison>]

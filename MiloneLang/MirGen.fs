@@ -107,7 +107,7 @@ let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> TMap.add varSerial (VarDef(name, AutoSM, ty, loc)) }
+          |> TMap.add varSerial (VarDef(name, NotStatic, ty, loc)) }
 
   let varExpr = MVarExpr(varSerial, ty, loc)
   varExpr, varSerial, ctx

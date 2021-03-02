@@ -216,7 +216,7 @@ let private addLocal varSerial (ctx: CcCtx) =
 
 let private useVar varSerial (ctx: CcCtx) =
   match ctx.Vars |> TMap.tryFind varSerial with
-  | Some (VarDef (_, StaticSM, _, _)) ->
+  | Some (VarDef (_, IsStatic, _, _)) ->
       // Don't count static vars as used.
       ctx
 
@@ -263,7 +263,7 @@ let private genFunCaps funSerial (ctx: CcCtx): Caps =
   |> List.choose
        (fun varSerial ->
          match ctx.Vars |> TMap.tryFind varSerial with
-         | Some (VarDef (_, AutoSM, ty, loc)) -> Some(varSerial, ty, loc)
+         | Some (VarDef (_, NotStatic, ty, loc)) -> Some(varSerial, ty, loc)
 
          | _ -> None)
   |> List.rev

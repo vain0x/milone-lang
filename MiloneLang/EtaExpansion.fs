@@ -436,7 +436,7 @@ let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
         Serial = ctx.Serial + 1
         Vars =
           ctx.Vars
-          |> TMap.add serial (VarDef(name, AutoSM, ty, loc)) }
+          |> TMap.add serial (VarDef(name, NotStatic, ty, loc)) }
 
   HVarExpr(serial, ty, loc), serial, ctx
 

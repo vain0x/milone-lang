@@ -147,9 +147,9 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
 
 let private findStorageModifier (ctx: CirCtx) varSerial =
   match ctx.Vars |> TMap.tryFind varSerial with
-  | Some (VarDef (_, storageModifier, _, _)) -> storageModifier
+  | Some (VarDef (_, isStatic, _, _)) -> isStatic
 
-  | _ -> StaticSM
+  | _ -> IsStatic
 
 let private isMainFun (ctx: CirCtx) funSerial =
   match ctx.MainFunOpt with
@@ -858,27 +858,27 @@ let private cgPrintfnActionStmt ctx itself args =
 
   | _ -> unreachable itself
 
-let private addLetStmt ctx name expr cty storageModifier =
-  match storageModifier with
-  | StaticSM ->
+let private addLetStmt ctx name expr cty isStatic =
+  match isStatic with
+  | IsStatic ->
       let ctx = addDecl ctx (CStaticVarDecl(name, cty))
 
       match expr with
       | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
       | _ -> ctx
 
-  | AutoSM -> addStmt ctx (CLetStmt(name, expr, cty))
+  | NotStatic -> addStmt ctx (CLetStmt(name, expr, cty))
 
-let private addLetAllocStmt ctx name valTy varTy storageModifier =
-  match storageModifier with
-  | StaticSM -> unreachable () // let-alloc is used only for temporary variables.
-  | AutoSM -> addStmt ctx (CLetAllocStmt(name, valTy, varTy))
+let private addLetAllocStmt ctx name valTy varTy isStatic =
+  match isStatic with
+  | IsStatic -> unreachable () // let-alloc is used only for temporary variables.
+  | NotStatic -> addStmt ctx (CLetAllocStmt(name, valTy, varTy))
 
 let private doGenLetValStmt ctx serial expr ty =
   let name = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
+  let isStatic = findStorageModifier ctx serial
   let cty, ctx = cgTyComplete ctx ty
-  addLetStmt ctx name expr cty storageModifier
+  addLetStmt ctx name expr cty isStatic
 
 let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
   let (VarDef (_, _, resultTy, _)) = ctx.Vars |> mapFind serial
@@ -887,34 +887,34 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
     match args with
     | [ arg ] ->
         let name = getUniqueVarName ctx serial
-        let storageModifier = findStorageModifier ctx serial
+        let isStatic = findStorageModifier ctx serial
         let ty, ctx = cgTyComplete ctx resultTy
         let arg, ctx = cgExpr ctx arg
-        addLetStmt ctx name (Some(makeExpr arg)) ty storageModifier
+        addLetStmt ctx name (Some(makeExpr arg)) ty isStatic
 
     | _ -> unreachable itself
 
   let regular ctx makeExpr =
     let name = getUniqueVarName ctx serial
-    let storageModifier = findStorageModifier ctx serial
+    let isStatic = findStorageModifier ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
-    addLetStmt ctx name (Some(makeExpr args)) ty storageModifier
+    addLetStmt ctx name (Some(makeExpr args)) ty isStatic
 
   let regularWithTy ctx makeExpr =
     let name = getUniqueVarName ctx serial
-    let storageModifier = findStorageModifier ctx serial
+    let isStatic = findStorageModifier ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
-    addLetStmt ctx name (Some(makeExpr args ty)) ty storageModifier
+    addLetStmt ctx name (Some(makeExpr args ty)) ty isStatic
 
   match prim with
   | MIntOfStrPrim flavor ->
@@ -1051,10 +1051,10 @@ let private cgBoxStmt ctx serial arg =
 
   // void const* p = malloc(sizeof T);
   let temp = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
+  let isStatic = findStorageModifier ctx serial
 
   let ctx =
-    addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy) storageModifier
+    addLetAllocStmt ctx temp argTy (CConstPtrTy CVoidTy) isStatic
 
   // *(T*)p = t;
   let left =
@@ -1064,7 +1064,7 @@ let private cgBoxStmt ctx serial arg =
 
 let private cgConsStmt ctx serial head tail =
   let temp = getUniqueVarName ctx serial
-  let storageModifier = findStorageModifier ctx serial
+  let isStatic = findStorageModifier ctx serial
   let listTy, ctx = genListTyDef ctx (mexprToTy head)
 
   let listStructTy =
@@ -1073,7 +1073,7 @@ let private cgConsStmt ctx serial head tail =
     | _ -> unreachable ()
 
   let ctx =
-    addLetAllocStmt ctx temp listStructTy listTy storageModifier
+    addLetAllocStmt ctx temp listStructTy listTy isStatic
 
   let head, ctx = cgExpr ctx head
   let tail, ctx = cgExpr ctx tail

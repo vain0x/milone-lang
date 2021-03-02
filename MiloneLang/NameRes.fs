@@ -284,7 +284,7 @@ let private addVar varSerial varDef (scopeCtx: ScopeCtx): ScopeCtx =
   // Merge into current definition.
   let varDef =
     match scopeCtx.Vars |> TMap.tryFind varSerial, varDef with
-    | Some (VarDef (_, StaticSM, _, _)), VarDef (name, _, ty, loc) -> VarDef(name, StaticSM, ty, loc)
+    | Some (VarDef (_, IsStatic, _, _)), VarDef (name, _, ty, loc) -> VarDef(name, IsStatic, ty, loc)
     | _ -> varDef
 
   { scopeCtx with
@@ -840,7 +840,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         | _ ->
             let ctx =
               ctx
-              |> addLocalVar varSerial (VarDef(name, StaticSM, ty, loc))
+              |> addLocalVar varSerial (VarDef(name, IsStatic, ty, loc))
               |> addVarToModule vis (VarSymbol varSerial)
 
             pat, ctx
@@ -855,7 +855,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
 
         let ctx =
           ctx
-          |> addLocalVar varSerial (VarDef(name, StaticSM, noTy, loc))
+          |> addLocalVar varSerial (VarDef(name, IsStatic, noTy, loc))
 
         let pat, ctx = (pat, ctx) |> goPat
         HAsPat(pat, varSerial, loc), ctx
@@ -943,7 +943,7 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
       let ctx =
         { ctx with
             PatScope = ctx.PatScope |> TMap.add name (varSerial, loc, []) }
-        |> addLocalVar varSerial (VarDef(name, AutoSM, ty, loc))
+        |> addLocalVar varSerial (VarDef(name, NotStatic, ty, loc))
 
       varSerial, ctx
 
