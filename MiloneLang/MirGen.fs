@@ -526,13 +526,11 @@ let private matchExprCanCompileToSwitch cond arms =
 
     | _ -> false
 
-  let rec patIsSimpleAtomic pat =
+  // Irrefutable and no-op.
+  let rec patIsDiscarding pat =
     match pat with
-    | HLitPat _
-    | HDiscardPat _
-    | HVariantPat _ -> true
-
-    | HNodePat (HBoxPN, [ bodyPat ], _, _) -> patIsSimpleAtomic bodyPat
+    | HDiscardPat _ -> true
+    | HNodePat (HBoxPN, [ bodyPat ], _, _) -> patIsDiscarding bodyPat
 
     | _ -> false
 
@@ -543,7 +541,7 @@ let private matchExprCanCompileToSwitch cond arms =
     | HDiscardPat _
     | HVariantPat _ -> true
 
-    | HNodePat (HVariantAppPN _, [ payloadPat ], _, _) -> patIsSimpleAtomic payloadPat
+    | HNodePat (HVariantAppPN _, [ payloadPat ], _, _) -> patIsDiscarding payloadPat
 
     | HOrPat (l, r, _) -> patIsSimple l && patIsSimple r
 
