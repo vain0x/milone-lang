@@ -749,7 +749,7 @@ let private doNext (host: TokenizeHost) (text: string) (index: int): Token * int
   | LToken _ ->
       match look with
       | LToken token -> token, index + len
-      | _ -> failwith "NEVER"
+      | _ -> unreachable ()
 
   | LBad ->
       let r = scanBad text (index + len)
@@ -761,8 +761,6 @@ let tokenize (host: TokenizeHost) (text: string): (Token * Pos) list =
     if i < text.Length then
       let token, r = doNext host text i
 
-      // if i >= r
-      // then failwithf "i=%d r=%d pos=%A text=%s" i r pos text
       assert (i < r)
 
       let acc =

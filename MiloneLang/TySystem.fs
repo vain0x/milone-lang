@@ -58,7 +58,7 @@ let private tkEncode tk: int =
 
   | NativeTypeTk _
   | UnresolvedTk _
-  | UnresolvedVarTk _ -> failwith "NEVER"
+  | UnresolvedVarTk _ -> unreachable ()
 
 let tkCompare l r: int =
   match l, r with
@@ -236,7 +236,7 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy: Ty =
   let assignment =
     match listTryZip defTySerials useTyArgs with
     | assignment, [], [] -> assignment
-    | _ -> failwith "NEVER"
+    | _ -> unreachable ()
 
   tyAssign assignment bodyTy
 
@@ -312,7 +312,7 @@ let tyDisplay getTyName ty =
     | Ty (RecordTk tySerial, args) -> nominal tySerial args
 
     | Ty (tk, args) ->
-        let tk = tkDisplay (fun _ -> failwith "NEVER") tk
+        let tk = tkDisplay (fun _ -> unreachable ()) tk
 
         match args with
         | [] -> tk
@@ -380,13 +380,13 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>): string * AssocMap<Ty, string>
           funTy, ctx
 
       | UnionTk _
-      | RecordTk _ -> failwith "NEVER" // Must be stored in memo.
+      | RecordTk _ -> unreachable () // Must be stored in memo.
 
       | ErrorTk _
-      | SynonymTk _ -> failwith "NEVER: Resolved in Typing"
+      | SynonymTk _ -> unreachable () // Resolved in Typing.
 
       | UnresolvedTk _
-      | UnresolvedVarTk _ -> failwith "NEVER: Resolved in NameRes."
+      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes..
 
     // Memoization.
     match TMap.tryFind ty ctx with
@@ -472,7 +472,7 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc): UnifyResult =
       | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
       | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
 
-      | _ -> failwith "NEVER"
+      | _ -> unreachable ()
 
   | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
       match lTyArgs, rTyArgs with
@@ -488,7 +488,7 @@ let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc): UnifyResult =
       match lTy, rTy with
       | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy)
       | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
-      | _ -> failwith "NEVER"
+      | _ -> unreachable ()
 
   | _ -> mismatchError ()
 

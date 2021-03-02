@@ -462,10 +462,10 @@ let private ccExpr (expr, ctx) =
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       ccLetFunExpr callee isRec vis args body next ty loc ctx
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let closureConversion (expr, tyCtx: TyCtx) =
   let ccCtx = ofTyCtx tyCtx

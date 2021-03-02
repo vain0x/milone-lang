@@ -474,7 +474,7 @@ let private tokenizeErrors errorTokens =
        (fun token ->
          match token with
          | ErrorToken error, pos -> tokenizeErrorToString error, pos
-         | _ -> failwith "NEVER")
+         | _ -> unreachable ())
 
 /// Loads source codes from files, performs tokenization and SyntaxParse,
 /// and transforms them into high-level intermediate representation (HIR).
@@ -610,7 +610,7 @@ let compile (ctx: CompileCtx): bool * string =
 // Actions
 // -----------------------------------------------
 
-let cliParse (host: CliHost) v (projectDir: string) = failwith "unimplemented"
+let cliParse (host: CliHost) v (projectDir: string) = todo ()
 // let ctx = compileCtxNew host v projectDir
 
 // let parseWithLogging moduleName contents =

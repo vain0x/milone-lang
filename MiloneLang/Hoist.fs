@@ -90,7 +90,7 @@ let private hoistExprLetFunForNonMainFun (expr, ctx): HExpr * HoistCtx =
   let callee, isRec, vis, args, body, next, loc =
     match expr with
     | HLetFunExpr (callee, isRec, vis, args, body, next, _, loc) -> callee, isRec, vis, args, body, next, loc
-    | _ -> failwith "NEVER"
+    | _ -> unreachable ()
 
   let body, ctx = (body, ctx) |> hoistBlock
 
@@ -108,14 +108,14 @@ let private isMainFun expr (ctx: HoistCtx): bool =
       | Some mainFun -> funSerialCompare mainFun callee = 0
       | _ -> false
 
-  | _ -> failwith "NEVER"
+  | _ -> unreachable ()
 
 /// Processes a let-fun of the main function.
 let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx): HoistCtx =
   let callee, isRec, vis, args, body, next, loc =
     match expr with
     | HLetFunExpr (callee, isRec, vis, args, body, next, _, loc) -> callee, isRec, vis, args, body, next, loc
-    | _ -> failwith "NEVER"
+    | _ -> unreachable ()
 
   let body, (ctx: HoistCtx) = (body, ctx) |> hoistBlock
 
@@ -170,7 +170,7 @@ let private hoistExpr (expr, ctx): HExpr * HoistCtx =
         let pat, init, next, loc =
           match expr with
           | HLetValExpr (pat, init, next, _, loc) -> pat, init, next, loc
-          | _ -> failwith "NEVER"
+          | _ -> unreachable ()
 
         let init, ctx = (init, ctx) |> hoistExpr
 
@@ -192,10 +192,10 @@ let private hoistExpr (expr, ctx): HExpr * HoistCtx =
       // We can ignore them because these declarations are used only in NameRes.
       hxDummy, ctx
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let private hoistExprToplevel (expr, ctx): HoistCtx =
   match expr with
@@ -211,7 +211,7 @@ let private hoistExprToplevel (expr, ctx): HoistCtx =
         let pat, init, next, loc =
           match expr with
           | HLetValExpr (pat, init, next, _, loc) -> pat, init, next, loc
-          | _ -> failwith "NEVER"
+          | _ -> unreachable ()
 
         let init, ctx = (init, ctx) |> hoistBlock
 
@@ -268,7 +268,7 @@ let hoist (expr: HExpr, tyCtx: TyCtx): HExpr list * TyCtx =
 
   // Toplevel statements should have been moved into the main function.
   if hoistCtx.Stmts |> List.isEmpty |> not then
-    failwith "Main function not found?"
+    unreachable () // Main function not found?
 
   let decls, _ = takeDecls hoistCtx
 

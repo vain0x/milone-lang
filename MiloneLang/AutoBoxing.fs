@@ -145,7 +145,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
             fields
             |> List.fold (fun ctx (_, fieldTy, _) -> trdTy isDirect ctx fieldTy) ctx
 
-        | _ -> failwith "NEVER"
+        | _ -> unreachable ()
 
       let ctx =
         match ctx.RecordTyMemo
@@ -173,7 +173,7 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef: TrdCtx =
 
   | MetaTyDef _
   | UniversalTyDef _
-  | SynonymTyDef _ -> failwith "NEVER: Resolved in Typing"
+  | SynonymTyDef _ -> unreachable () // Resolved in Typing.
 
 let private trdTy isDirect (ctx: TrdCtx) ty: TrdCtx =
   match ty with
@@ -206,10 +206,10 @@ let private trdTy isDirect (ctx: TrdCtx) ty: TrdCtx =
       | UnionTk tySerial -> nominal tySerial
       | RecordTk tySerial -> nominal tySerial
 
-      | SynonymTk _ -> failwith "NEVER: Resolved in Typing"
+      | SynonymTk _ -> unreachable () // Resolved in Typing.
 
       | UnresolvedTk _
-      | UnresolvedVarTk _ -> failwith "NEVER: Resolved in NameRes"
+      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
 
 let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
   let ctx: TrdCtx =
@@ -326,7 +326,7 @@ let private tsmRecordTyDef (ctx: TsmCtx) tySerial tyDef =
                    totalSize + fieldSize, ctx)
                  (0, ctx)
 
-        | _ -> failwith "NEVER"
+        | _ -> unreachable ()
 
       let size, isBoxed =
         if size > 32 then
@@ -367,7 +367,7 @@ let private tsmTyDef (ctx: TsmCtx) tySerial tyDef =
 
   | MetaTyDef _
   | UniversalTyDef _
-  | SynonymTyDef _ -> failwith "NEVER: Resolved in Typing"
+  | SynonymTyDef _ -> unreachable () // Resolved in Typing.
 
 let private tsmTy (ctx: TsmCtx) ty =
   match ty with
@@ -397,7 +397,7 @@ let private tsmTy (ctx: TsmCtx) ty =
               let size, ctx = tsmTy ctx itemTy
               1 + size, ctx
 
-          | _ -> failwith "NEVER"
+          | _ -> unreachable ()
 
       | TupleTk ->
           let size, ctx =
@@ -417,10 +417,10 @@ let private tsmTy (ctx: TsmCtx) ty =
       | MetaTk _
       | NativeTypeTk _ -> 1000000, ctx
 
-      | SynonymTk _ -> failwith "NEVER: Resolved in Typing"
+      | SynonymTk _ -> unreachable () // Resolved in Typing.
 
       | UnresolvedTk _
-      | UnresolvedVarTk _ -> failwith "NEVER: Resolved in NameRes"
+      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
 
 let private measureTys (trdCtx: TrdCtx): TsmCtx =
   let boxedVariants =
@@ -842,7 +842,7 @@ let private abExpr ctx expr =
       doArm ()
 
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let autoBox (expr: HExpr, tyCtx: TyCtx) =
   // Detect recursion.

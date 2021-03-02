@@ -138,7 +138,7 @@ let private unifyTy (monoCtx: MonoCtx) (lTy: Ty) (rTy: Ty) loc =
 
             | UnifyAfterExpandMetaResult.Error _ -> binding
 
-    | UnifyExpandSynonym _ -> failwith "NEVER: Resolved in Typing"
+    | UnifyExpandSynonym _ -> unreachable () // Resolved in Typing.
 
   go lTy rTy loc emptyBinding
 
@@ -387,10 +387,10 @@ let private monifyExpr (expr, ctx) =
 
       doArm ()
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let monify (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
   let monoCtx = ofTyCtx tyCtx |> forceGeneralizeFuns

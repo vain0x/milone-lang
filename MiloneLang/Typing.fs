@@ -212,7 +212,7 @@ let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty): TyCtx =
           let defTySerials, bodyTy =
             match ctx.Tys |> TMap.tryFind tySerial with
             | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
-            | _ -> failwith "NEVER"
+            | _ -> unreachable ()
 
           // Checked in NameRes.
           assert (List.length defTySerials = List.length useTyArgs)
@@ -299,7 +299,7 @@ let private generalizeFun (ctx: TyCtx) (outerLevel: Level) funSerial =
 
       ctx
 
-  | _ -> failwith "Can't generalize already-generalized functions"
+  | _ -> unreachable () // Can't generalize already-generalized functions.
 
 // -----------------------------------------------
 // Trait bounds
@@ -629,7 +629,7 @@ let private inferPat ctx pat: HPat * Ty * TyCtx =
   | HVariantPat (variantSerial, _, loc) -> inferVariantPat ctx variantSerial loc
 
   | HNodePat (kind, argPats, nodeTy, loc) ->
-      let fail () = failwithf "NEVER: %A" pat
+      let fail () = unreachable pat
 
       match kind, argPats with
       | HNilPN, _ -> inferNilPat ctx pat loc
@@ -915,7 +915,7 @@ let private inferAppExpr ctx itself callee arg loc =
       let funTy, targetTy =
         match analyzeFormat format with
         | (Ty (FunTk, [ _; targetTy ])) as funTy -> funTy, targetTy
-        | _ -> failwith "NEVER"
+        | _ -> unreachable ()
 
       hxApp (HPrimExpr(HPrim.Printfn, funTy, loc)) arg targetTy loc, targetTy, ctx
 
@@ -1089,7 +1089,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
     let ctx =
       match (ctx.Funs |> mapFind callee).Ty with
       | TyScheme ([], oldTy) -> unifyTy ctx loc oldTy calleeTy
-      | _ -> failwith "NEVER: It must be a pre-generalized function"
+      | _ -> unreachable () // It must be a pre-generalized function.
 
     calleeTy, ctx
 
@@ -1113,7 +1113,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
   HLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
 
 let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
-  let fail () = failwithf "NEVER: %A" expr
+  let fail () = unreachable expr
 
   match expr with
   | HLitExpr (lit, _) -> inferLitExpr ctx expr lit
@@ -1166,10 +1166,10 @@ let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr *
   | HNodeExpr (HNativeExprEN _, _, _, _)
   | HNodeExpr (HNativeStmtEN _, _, _, _)
   | HNodeExpr (HNativeDeclEN _, _, _, _)
-  | HNodeExpr (HSizeOfValEN, _, _, _) -> failwith "NEVER"
+  | HNodeExpr (HSizeOfValEN, _, _, _) -> unreachable ()
 
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 // -----------------------------------------------
 // Reject cyclic synonyms

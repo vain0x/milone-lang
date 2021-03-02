@@ -369,7 +369,7 @@ let private importVar symbol (scopeCtx: ScopeCtx): ScopeCtx =
 
         kinds, varScopes, tyScopes, nsScopes
 
-    | _ -> failwith "NEVER: Scope can't be empty."
+    | _ -> unreachable () // Scope can't be empty..
 
   { scopeCtx with Local = scope }
 
@@ -386,7 +386,7 @@ let private doImportTyWithAlias alias (symbol: TySymbol) (scopeCtx: ScopeCtx): S
 
         kinds, varScopes, tyMap :: tyScopes, nsMap :: nsScopes
 
-    | _ -> failwith "NEVER: Scope can't be empty."
+    | _ -> unreachable () // Scope can't be empty..
 
   { scopeCtx with Local = scope }
 
@@ -409,7 +409,7 @@ let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx): ScopeCtx =
 
         kinds, varScopes, tyScopes, map :: nsScopes
 
-    | _ -> failwith "NEVER: Scope can't be empty."
+    | _ -> unreachable () // Scope can't be empty..
 
   { scopeCtx with Local = scope }
 
@@ -471,7 +471,7 @@ let private finishScope (scopeCtx: ScopeCtx): ScopeCtx =
   | [], _, _, _
   | _, [], _, _
   | _, _, [], _
-  | _, _, _, [] -> failwith "NEVER: Scope can't be empty."
+  | _, _, _, [] -> unreachable () // Scope can't be empty..
 
   | _ :: kinds, _ :: varScopes, _ :: tyScopes, _ :: nsScopes ->
       { scopeCtx with
@@ -611,7 +611,7 @@ let private resolveTy ty loc scopeCtx =
             assert (List.isEmpty tys)
             tyRecord tySerial, scopeCtx
 
-        | Some (MetaTySymbol _) -> failwithf "NEVER: %A" (serial, name, loc)
+        | Some (MetaTySymbol _) -> unreachable (serial, name, loc)
 
         | None ->
             match tyPrimOfName name tys with
@@ -788,7 +788,7 @@ let private finishDefineTy tySerial tyArgs tyDecl loc ctx =
       ctx
       |> addTy (RecordTySymbol tySerial) (RecordTyDef(tyName, fields, loc))
 
-  | MetaTyDef _ -> failwithf "NEVER: %A" tyDecl // Bound meta types don't happen in NameRes.
+  | MetaTyDef _ -> unreachable tyDecl // Bound meta types don't happen in NameRes.
 
 // -----------------------------------------------
 // Collect declarations
@@ -1000,7 +1000,7 @@ let private nameResNavPat pat ctx =
   let l, r, ty, loc =
     match pat with
     | HNodePat (HNavPN r, [ l ], ty, loc) -> l, r, ty, loc
-    | _ -> failwith "NEVER"
+    | _ -> unreachable ()
 
   let notResolved ctx =
     let ctx = ctx |> addLog UnresolvedNavPatError loc
@@ -1055,7 +1055,7 @@ let private nameResPat (pat: HPat, ctx: ScopeCtx) =
   | HVarPat (vis, VarSerial serial, ty, loc) -> nameResVarPat vis serial ty loc ctx
 
   | HNodePat (kind, argPats, ty, loc) ->
-      let fail () = failwithf "NEVER: %A" pat
+      let fail () = unreachable pat
 
       match kind, argPats with
       | HNilPN, _
@@ -1113,7 +1113,7 @@ let private nameResRefutablePat (pat: HPat, ctx: ScopeCtx) =
 
   let pat, pats =
     match patNormalize pat with
-    | [] -> failwith "NEVER"
+    | [] -> unreachable ()
     | pat :: pats -> pat, pats
 
   let (lScope, pat), ctx =
@@ -1212,7 +1212,7 @@ let private doNameResVarExpr expr ctx =
   let serial, ty, loc =
     match expr with
     | HVarExpr (VarSerial serial, ty, loc) -> serial, ty, loc
-    | _ -> failwith "NEVER"
+    | _ -> unreachable ()
 
   let name = ctx |> findName serial
 
@@ -1234,7 +1234,7 @@ let private nameResVarExpr expr ctx =
       let name, loc =
         match expr with
         | HVarExpr (VarSerial serial, _, loc) -> findName serial ctx, loc
-        | _ -> failwith "NEVER"
+        | _ -> unreachable ()
 
       let ctx =
         ctx |> addLog (UndefinedValueError name) loc
@@ -1467,7 +1467,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           let moduleName =
             match splitLast path with
             | Some (_, last) -> last
-            | _ -> failwith "NEVER: open with empty path emits syntax error."
+            | _ -> unreachable () // open with empty path emits syntax error..
 
           let moduleSerials =
             ctx
@@ -1560,7 +1560,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
       doArm ()
 
   | HFunExpr _
-  | HVariantExpr _ -> failwithf "NEVER: HFunExpr and HVariantExpr is generated in NameRes. %A" expr
+  | HVariantExpr _ -> unreachable expr // HFunExpr and HVariantExpr are generated in NameRes.
 
 let nameRes (exprs: HExpr list, nameCtx: NameCtx): HExpr * ScopeCtx =
   let scopeCtx = ofNameCtx nameCtx

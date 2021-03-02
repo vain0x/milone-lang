@@ -116,8 +116,8 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
     | Ty (RecordTk tySerial, _) ->
         match ctx.RecordMap |> TMap.tryFind tySerial with
         | Some (fieldTys, fieldMap) -> fieldTys, fieldMap
-        | _ -> failwithf "NEVER: %A" itself
-    | _ -> failwithf "NEVER: %A" itself
+        | _ -> unreachable itself
+    | _ -> unreachable itself
 
   // Base expr is guaranteed to be a cheap expr thanks to modification in Typing,
   // so we can freely clone this.
@@ -142,7 +142,7 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
         let itemTy =
           match fieldTys |> List.tryItem index with
           | Some it -> it
-          | None -> failwith "NEVER"
+          | None -> unreachable itself
 
         HNodeExpr(HRecordItemEN index, [ baseExpr ], itemTy, loc)
 
@@ -174,7 +174,7 @@ let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
         let index, _ = fieldMap |> mapFind r
         index
 
-    | _ -> failwithf "NEVER: %A" itself
+    | _ -> unreachable itself
 
   HNodeExpr(HRecordItemEN index, [ l ], ty, loc)
 
@@ -258,7 +258,7 @@ let private teExpr (ctx: RrCtx) expr =
       doArm ()
 
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let recordRes (expr: HExpr, tyCtx: TyCtx) =
   let ctx = ofTyCtx tyCtx

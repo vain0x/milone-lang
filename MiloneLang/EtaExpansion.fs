@@ -339,7 +339,7 @@ let private acExpr (expr, ctx: ArityCheckCtx): ArityEx * ArityCheckCtx =
       acExpr (next, ctx)
 
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let private acExprs exprs ctx =
   exprs
@@ -458,7 +458,7 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
 
         restArgPat :: restArgPats, argExpr :: restArgs, ctx
 
-    | _ -> failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
+    | _ -> unreachable (callLoc, callee, n, restTy) // Type error?
 
   let restTy = callee |> exprToTy |> tyAppliedBy argLen
   go (arity - argLen) restTy ctx
@@ -581,7 +581,7 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let calleeExpr, forwardArgs =
     match List.append envExprs restArgs with
     | calleeExpr :: forwardArgs -> calleeExpr, forwardArgs
-    | _ -> failwith "Never"
+    | _ -> unreachable ()
 
   let forwardExpr =
     hxCallClosure calleeExpr forwardArgs resultTy callLoc
@@ -735,10 +735,10 @@ let private exExpr (expr, ctx) =
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       exLetFunExpr callee isRec vis args body next ty loc ctx
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let etaExpansion (expr, tyCtx: TyCtx) =
   let etaCtx = ofTyCtx tyCtx

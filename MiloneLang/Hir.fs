@@ -822,7 +822,7 @@ let primToTySpec prim =
   | HPrim.NativeStmt
   | HPrim.NativeDecl ->
       // Incorrect use of this primitive is handled as error before instantiating its type.
-      failwith "NEVER"
+      unreachable ()
 
   | HPrim.NativeCast ->
       let srcTy = meta 1

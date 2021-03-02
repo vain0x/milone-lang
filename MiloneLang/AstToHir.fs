@@ -61,7 +61,7 @@ let private opToPrim op =
   | LogicalAndBinary
   | LogicalOrBinary
   | AppBinary
-  | PipeBinary -> failwithf "NEVER: %A" op
+  | PipeBinary -> unreachable ()
 
 // -----------------------------------------------
 // APat
@@ -333,7 +333,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
       let loc = toLoc docId pos
       HOrPat(l, r, loc), nameCtx
 
-  | AFunDeclPat (_, Name (_, pos), _) -> failwithf "Invalid occurrence of fun pattern: %s" (posToString pos)
+  | AFunDeclPat _ -> unreachable () // Invalid occurrence of fun pattern.
 
 let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
   match expr with

@@ -51,8 +51,6 @@ type BundleStatus =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult = { Modules: ModuleInfo list }
 
-let private unreachable () = failwith "unreachable"
-
 let private compareRef (l: int * string) (r: int * string): int =
   let c = compare (fst l) (fst r)
 

@@ -23,8 +23,6 @@ open MiloneLang.Cir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
-let private unreachable () = failwith "NEVER"
-
 let private valueSymbolCompare l r =
   let encode symbol =
     match symbol with
@@ -37,7 +35,7 @@ let private valueSymbolCompare l r =
 let private unwrapListTy ty =
   match ty with
   | Ty (ListTk, [ itemTy ]) -> itemTy
-  | _ -> failwith "NEVER"
+  | _ -> unreachable ()
 
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
@@ -131,7 +129,7 @@ let private ofMirCtx (mirCtx: MirCtx): CirCtx =
 
       | MetaTyDef _
       | UniversalTyDef _
-      | SynonymTyDef _ -> failwith "NEVER: Resolved in Typing"
+      | SynonymTyDef _ -> unreachable () // Resolved in Typing.
 
     mirCtx.Tys
     |> renameIdents tyDefToName toKey tyCompare
@@ -468,22 +466,16 @@ let private genRecordTyDef ctx tySerial fields =
 // -----------------------------------------------
 
 let private getUniqueVarName (ctx: CirCtx) varSerial =
-  match ctx.ValueUniqueNames
-        |> TMap.tryFind (VarSymbol varSerial) with
-  | Some name -> name
-  | None -> failwithf "Never: Unknown var serial=%s" (objToString varSerial)
+  ctx.ValueUniqueNames
+  |> mapFind (VarSymbol varSerial)
 
 let private getUniqueFunName (ctx: CirCtx) funSerial =
-  match ctx.ValueUniqueNames
-        |> TMap.tryFind (FunSymbol funSerial) with
-  | Some name -> name
-  | None -> failwithf "Never: Unknown fun serial=%s" (objToString funSerial)
+  ctx.ValueUniqueNames
+  |> mapFind (FunSymbol funSerial)
 
 let private getUniqueVariantName (ctx: CirCtx) variantSerial =
-  match ctx.ValueUniqueNames
-        |> TMap.tryFind (VariantSymbol variantSerial) with
-  | Some name -> name
-  | None -> failwithf "Never: Unknown variant serial=%s" (objToString variantSerial)
+  ctx.ValueUniqueNames
+  |> mapFind (VariantSymbol variantSerial)
 
 let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
   let memo = ctx.TyUniqueNames
@@ -499,7 +491,7 @@ let private cgNativePtrTy ctx isMut itemTy =
 
 let private cgNativeFunTy ctx tys =
   match splitLast tys with
-  | None -> failwith "NEVER"
+  | None -> unreachable ()
   | Some (paramTys, resultTy) ->
       let paramTys, ctx =
         (paramTys, ctx)
@@ -544,10 +536,10 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 
   | ErrorTk _, _
   | MetaTk _, _
-  | SynonymTk _, _ -> failwith "NEVER: Resolved in Typing"
+  | SynonymTk _, _ -> unreachable () // Resolved in Typing.
 
   | UnresolvedTk _, _
-  | UnresolvedVarTk _, _ -> failwith "NEVER: Resolved in NameRes"
+  | UnresolvedVarTk _, _ -> unreachable () // Resolved in NameRes.
 
 /// Converts a type to complete C type.
 ///
@@ -590,20 +582,20 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
       match ctx.Tys |> TMap.tryFind serial with
       | Some (UnionTyDef (_, variants, _)) -> genUnionTyDef ctx serial variants
 
-      | _ -> failwithf "NEVER: union type undefined?"
+      | _ -> unreachable () // Union type undefined?
 
   | RecordTk serial, _ ->
       match ctx.Tys |> TMap.tryFind serial with
       | Some (RecordTyDef (_, fields, _)) -> genRecordTyDef ctx serial fields
 
-      | _ -> failwithf "NEVER: record type undefined?"
+      | _ -> unreachable () // Record type undefined?
 
   | ErrorTk _, _
   | MetaTk _, _
-  | SynonymTk _, _ -> failwith "NEVER: Resolved in Typing"
+  | SynonymTk _, _ -> unreachable () // Resolved in Typing.
 
   | UnresolvedTk _, _
-  | UnresolvedVarTk _, _ -> failwith "NEVER: Resolved in NameRes"
+  | UnresolvedVarTk _, _ -> unreachable () // Resolved in NameRes.
 
 // -----------------------------------------------
 // Expressions
@@ -633,7 +625,7 @@ let private cBinaryOf op =
   | MUInt64CompareBinary
   | MStrAddBinary
   | MStrCompareBinary
-  | MStrIndexBinary -> failwith "Never"
+  | MStrIndexBinary -> unreachable ()
 
 let private genLit lit =
   match lit with
@@ -679,7 +671,7 @@ let private genDefault ctx ty =
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(CDefaultExpr, ty), ctx
 
-  | VoidTk, _ -> failwith "NEVER: No default value of void."
+  | VoidTk, _ -> unreachable () // No default value of void..
 
   | ErrorTk _, _
   | MetaTk _, _
@@ -841,7 +833,7 @@ let private cgActionStmt ctx itself action args =
       match cgExprList ctx args with
       | [ ptr; CIntExpr "0"; value ], ctx -> addStmt ctx (CSetStmt(CUnaryExpr(CDerefUnary, ptr), value))
       | [ ptr; index; value ], ctx -> addStmt ctx (CSetStmt(CIndexExpr(ptr, index), value))
-      | _ -> failwith "NEVER"
+      | _ -> unreachable ()
 
 let private cgPrintfnActionStmt ctx itself args =
   match args with
@@ -864,7 +856,7 @@ let private cgPrintfnActionStmt ctx itself args =
 
       addStmt ctx (CExprStmt(CCallExpr(CVarExpr "printf", format :: args)))
 
-  | _ -> failwithf "NEVER: %A" itself
+  | _ -> unreachable itself
 
 let private addLetStmt ctx name expr cty storageModifier =
   match storageModifier with
@@ -879,7 +871,7 @@ let private addLetStmt ctx name expr cty storageModifier =
 
 let private addLetAllocStmt ctx name valTy varTy storageModifier =
   match storageModifier with
-  | StaticSM -> failwith "NEVER: let-alloc is used only for temporary variables"
+  | StaticSM -> unreachable () // let-alloc is used only for temporary variables.
   | AutoSM -> addStmt ctx (CLetAllocStmt(name, valTy, varTy))
 
 let private doGenLetValStmt ctx serial expr ty =
@@ -900,7 +892,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
         let arg, ctx = cgExpr ctx arg
         addLetStmt ctx name (Some(makeExpr arg)) ty storageModifier
 
-    | _ -> failwithf "NEVER: %A" itself
+    | _ -> unreachable itself
 
   let regular ctx makeExpr =
     let name = getUniqueVarName ctx serial
@@ -935,7 +927,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
   | MCharOfStrPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_to_char", [ arg ]))
 
-  | MStrOfBoolPrim -> failwithf "unimplemented: %A" itself
+  | MStrOfBoolPrim -> todo ()
   | MStrOfCharPrim -> conversion ctx (fun arg -> CCallExpr(CVarExpr "str_of_char", [ arg ]))
 
   | MStrOfIntPrim flavor ->
@@ -956,12 +948,12 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
           match args with
           | [ env ] -> CInitExpr([ "fun", funExpr; "env", env ], resultTy)
-          | _ -> failwithf "NEVER: %A" itself)
+          | _ -> unreachable itself)
 
   | MBoxPrim ->
       match args with
       | [ arg ] -> cgBoxStmt ctx serial arg
-      | _ -> failwithf "NEVER: %A" itself
+      | _ -> unreachable itself
 
   | MOptionSomePrim ->
       regularWithTy
@@ -974,12 +966,12 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
                   "value", item ]
 
               CInitExpr(fields, optionTy)
-          | _ -> failwithf "NEVER: %A" itself)
+          | _ -> unreachable itself)
 
   | MConsPrim ->
       match args with
       | [ l; r ] -> cgConsStmt ctx serial l r
-      | _ -> failwithf "NEVER: %A" itself
+      | _ -> unreachable itself
 
   | MTuplePrim ->
       regularWithTy
@@ -1004,7 +996,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
               CInitExpr(fields, unionTy)
 
-          | _ -> failwithf "NEVER: %A" itself)
+          | _ -> unreachable itself)
 
   | MRecordPrim ->
       regularWithTy
@@ -1021,7 +1013,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
         (fun args ->
           match args with
           | callee :: args -> CCallExpr(callee, args)
-          | [] -> failwithf "NEVER: %A" itself)
+          | [] -> unreachable itself)
 
   | MCallClosurePrim ->
       regular
@@ -1033,7 +1025,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
               let envArg = CDotExpr(callee, "env")
               CCallExpr(funPtr, envArg :: args)
 
-          | [] -> failwithf "NEVER: %A" itself)
+          | [] -> unreachable itself)
 
   | MCallNativePrim funName ->
       let ctx =
@@ -1049,7 +1041,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
           match args with
           | [ ptr; CIntExpr "0" ] -> CUnaryExpr(CDerefUnary, ptr)
           | [ ptr; index ] -> CIndexExpr(ptr, index)
-          | _ -> failwith "NEVER")
+          | _ -> unreachable ())
 
 let private cgCallPrimExpr ctx itself serial prim args = cgPrimStmt ctx itself prim args serial
 
@@ -1078,7 +1070,7 @@ let private cgConsStmt ctx serial head tail =
   let listStructTy =
     match listTy with
     | CConstPtrTy it -> it
-    | _ -> failwithf "NEVER"
+    | _ -> unreachable ()
 
   let ctx =
     addLetAllocStmt ctx temp listStructTy listTy storageModifier
@@ -1181,7 +1173,7 @@ let private cgBlocks (ctx: CirCtx) (blocks: MBlock list) =
   match blocks with
   | [ block ] -> cgBlock ctx block.Stmts
 
-  | _ -> failwith "unimplemented"
+  | _ -> todo ()
 
 let private cgStmts (ctx: CirCtx) (stmts: MStmt list): CirCtx =
   let rec go ctx stmts =

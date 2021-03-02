@@ -16,6 +16,16 @@ type AssocMap<'K, 'V> = TMap.TreeMap<'K, 'V>
 type AssocSet<'T> = TSet.TreeSet<'T>
 
 // -----------------------------------------------
+// Error
+// -----------------------------------------------
+
+/// Never executed.
+let unreachable context = failwithf "NEVER: %A" context
+
+/// Not implemented.
+let todo context = failwithf "Not implemented: %A" context
+
+// -----------------------------------------------
 // Pair
 // -----------------------------------------------
 
@@ -115,7 +125,7 @@ let listSortCore unique compare xs =
     else
       match xs, ys with
       | [], _
-      | _, [] -> failwith "NEVER: wrong list length"
+      | _, [] -> unreachable () // wrong list length.
 
       | x :: xs1, y :: ys1 ->
           let c = compare x y
@@ -185,7 +195,7 @@ let mapFind key map =
   match TMap.tryFind key map with
   | Some value -> value
 
-  | None -> failwithf "mapFind: missing key (%A)" key
+  | None -> failwithf "mapFind: Missing key: %A." key
 
 // -----------------------------------------------
 // Multimap
@@ -194,7 +204,9 @@ let mapFind key map =
 type Multimap<'K, 'T> = TMap.TreeMap<'K, 'T list>
 
 let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>): 'T list =
-  multimap |> TMap.tryFind key |> Option.defaultValue []
+  multimap
+  |> TMap.tryFind key
+  |> Option.defaultValue []
 
 let multimapAdd (key: 'K) (item: 'T) (multimap: Multimap<'K, 'T>): Multimap<'K, 'T> =
   let items = multimap |> multimapFind key
