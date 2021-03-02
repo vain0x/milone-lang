@@ -45,19 +45,12 @@ let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
       ident + "_" + string index
 
   // Group serials by ident.
-  let rec go acc xs =
-    match xs with
-    | [] -> acc
-
-    | (serial, def) :: xs ->
-        let ident = toIdent def
-
-        let acc = acc |> multimapAdd ident (serial, def)
-
-        go acc xs
-
   let serialsMap =
-    go (TMap.empty compare) (defMap |> TMap.toList)
+    let folder acc serial def =
+      let ident = toIdent def
+      acc |> multimapAdd ident (serial, def)
+
+    defMap |> TMap.fold folder (TMap.empty compare)
 
   let addIdent ident (identMap, index) serial =
     identMap
