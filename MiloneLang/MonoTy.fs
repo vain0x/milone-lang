@@ -493,6 +493,7 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
 
   let tyCtx =
     { tyCtx with
+        Serial = mtCtx.Serial
         Vars = vars
         Funs = funs
         Variants = variants
