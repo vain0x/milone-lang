@@ -26,9 +26,26 @@ type private MtCtx =
     Tys: AssocMap<TySerial, TyDef>
 
     Map: AssocMap<Ty, Ty>
+    TyNames: AssocMap<Ty, string>
     NewTys: (TySerial * TyDef) list }
 
 let private ofTyCtx (tyCtx: TyCtx): MtCtx =
+  let tyNames =
+    tyCtx.Tys
+    |> TMap.fold
+         (fun tyNames tySerial tyDef ->
+           let tk, name =
+             match tyDef with
+             | UnionTyDef (ident, _, _) -> UnionTk tySerial, ident
+             | RecordTyDef (ident, _, _) -> RecordTk tySerial, ident
+
+             | MetaTyDef _
+             | UniversalTyDef _
+             | SynonymTyDef _ -> failwith "NEVER: Resolved in Typing."
+
+           tyNames |> TMap.add (Ty(tk, [])) name)
+         (TMap.empty tyCompare)
+
   { Serial = tyCtx.Serial
 
     Vars = tyCtx.Vars
@@ -37,7 +54,12 @@ let private ofTyCtx (tyCtx: TyCtx): MtCtx =
     Tys = tyCtx.Tys
 
     Map = TMap.empty tyCompare
+    TyNames = tyNames
     NewTys = [] }
+
+let private mangle (ty: Ty, ctx: MtCtx): string * MtCtx =
+  let name, memo = tyMangle (ty, ctx.TyNames)
+  name, { ctx with TyNames = memo }
 
 // -----------------------------------------------
 // Generation
@@ -74,15 +96,9 @@ let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
 
         | None ->
             let tyArgs, ctx = (tyArgs, ctx) |> stMap mtTy
+            let name, ctx = mangle (ty, ctx)
+
             let tySerial = ctx.Serial + 1
-
-            let getTyName tySerial =
-              ctx.Tys
-              |> TMap.tryFind tySerial
-              |> Option.map tyDefToName
-
-
-            printfn "// %s -> Tuple_%s" (tyDisplay getTyName ty) (string tySerial)
             let recordTy = Ty(RecordTk tySerial, [])
 
             let recordTyDef =
@@ -90,7 +106,7 @@ let private mtTy (ty, ctx: MtCtx): Ty * MtCtx =
                 tyArgs
                 |> List.mapi (fun i ty -> tupleField i, ty, noLoc)
 
-              RecordTyDef("Tuple_" + string tySerial, fields, noLoc)
+              RecordTyDef(name, fields, noLoc)
 
             let ctx =
               { ctx with
@@ -255,13 +271,18 @@ let monoTy (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
     |> TMap.fold
          (fun (vars, ctx) varSerial varDef ->
            let (VarDef (name, sm, ty, loc)) = varDef
-           let ty, ctx = (ty, ctx) |> mtTy
 
-           let vars =
-             vars
-             |> TMap.add varSerial (VarDef(name, sm, ty, loc))
+           if ty |> tyIsMonomorphic |> not then
+             // Ignore variables that appeared in generic functions.
+             vars, ctx
+           else
+             let ty, ctx = (ty, ctx) |> mtTy
 
-           vars, ctx)
+             let vars =
+               vars
+               |> TMap.add varSerial (VarDef(name, sm, ty, loc))
+
+             vars, ctx)
          (tyCtx.Vars, mtCtx)
 
   let funs, mtCtx =

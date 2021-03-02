@@ -282,57 +282,6 @@ let private genListTyDef (ctx: CirCtx) itemTy =
 
       selfTy, ctx
 
-let private genIncompleteTupleTyDecl (ctx: CirCtx) itemTys =
-  let tupleTy = tyTuple itemTys
-
-  match ctx.TyEnv |> TMap.tryFind tupleTy with
-  | Some (_, ty) -> ty, ctx
-
-  | None ->
-      let structName, ctx = getUniqueTyName ctx tupleTy
-      let selfTy = CStructTy structName
-
-      let ctx =
-        { ctx with
-            TyEnv =
-              ctx.TyEnv
-              |> TMap.add tupleTy (CTyDeclared, selfTy) }
-
-      selfTy, ctx
-
-let private genTupleTyDef (ctx: CirCtx) itemTys =
-  let tupleTy = tyTuple itemTys
-
-  match ctx.TyEnv |> TMap.tryFind tupleTy with
-  | Some (CTyDefined, ty) -> ty, ctx
-
-  | _ ->
-      let structName, ctx = getUniqueTyName ctx tupleTy
-      let selfTy, ctx = genIncompleteTupleTyDecl ctx itemTys
-
-      let rec go i itemTys =
-        match itemTys with
-        | [] -> []
-
-        | itemTy :: itemTys ->
-            let field = tupleField i, itemTy
-            field :: go (i + 1) itemTys
-
-      let itemTys, (ctx: CirCtx) =
-        (itemTys, ctx)
-        |> stMap (fun (ty, ctx) -> cgTyComplete ctx ty)
-
-      let fields = go 0 itemTys
-
-      let tupleDecl = CStructDecl(structName, fields, [])
-
-      let ctx =
-        { ctx with
-            Decls = tupleDecl :: ctx.Decls
-            TyEnv = ctx.TyEnv |> TMap.add tupleTy (CTyDefined, selfTy) }
-
-      selfTy, ctx
-
 let private genIncompleteUnionTyDecl (ctx: CirCtx) tySerial =
   let unionTyRef = tyUnion tySerial
 
@@ -506,7 +455,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | FunTk, _ -> unreachable ()
 
   | TupleTk, [] -> CCharTy, ctx
-  | TupleTk, _ -> genIncompleteTupleTyDecl ctx tyArgs
+  | TupleTk, _ -> unreachable () // Resolved in MonoTy.
 
   | OptionTk, [ itemTy ] -> genIncompleteOptionTyDecl ctx itemTy
   | OptionTk, _ -> unreachable ()
@@ -548,7 +497,7 @@ let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
   | FunTk, _ -> unreachable ()
 
   | TupleTk, [] -> CCharTy, ctx
-  | TupleTk, _ -> genTupleTyDef ctx tyArgs
+  | TupleTk, _ -> unreachable () // Resolved in MonoTy.
 
   | OptionTk, [ itemTy ] -> genOptionTyDef ctx itemTy
   | OptionTk, _ -> unreachable ()
@@ -652,7 +601,6 @@ let private genDefault ctx ty =
 
   | StrTk, _
   | FunTk, _
-  | TupleTk, _
   | OptionTk _, _
   | UnionTk _, _
   | RecordTk _, _
@@ -662,6 +610,7 @@ let private genDefault ctx ty =
 
   | VoidTk, _ -> unreachable () // No default value of void..
 
+  | TupleTk, _ // Resolved in MonoTy.
   | ErrorTk _, _
   | MetaTk _, _
   | SynonymTk _, _
@@ -704,14 +653,13 @@ let private genUnaryExpr ctx op arg ty _ =
 
       deref, ctx
 
-  | MProjUnary index -> CDotExpr(arg, tupleField index), ctx
-
   | MGetDiscriminantUnary -> CDotExpr(arg, "discriminant"), ctx
 
   | MGetVariantUnary serial ->
       let _, ctx = cgTyComplete ctx ty
       CDotExpr(arg, getUniqueVariantName ctx serial), ctx
 
+  | MProjUnary index -> CDotExpr(arg, tupleField index), ctx
   | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
 
   | MOptionIsSomeUnary ->
@@ -961,15 +909,6 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
       match args with
       | [ l; r ] -> cgConsStmt ctx serial l r
       | _ -> unreachable itself
-
-  | MTuplePrim ->
-      regularWithTy
-        ctx
-        (fun args tupleTy ->
-          let fields =
-            args |> List.mapi (fun i arg -> tupleField i, arg)
-
-          CInitExpr(fields, tupleTy))
 
   | MVariantPrim variantSerial ->
       regularWithTy

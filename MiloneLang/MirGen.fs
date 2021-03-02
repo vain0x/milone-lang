@@ -16,6 +16,8 @@ open MiloneLang.Mir
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 
+let private unreachable () = failwith "NEVER"
+
 let private unwrapOptionTy ty =
   match ty with
   | Ty (OptionTk, [ it ]) -> it
@@ -897,24 +899,6 @@ let private mirifyExprOpCons ctx l r listTy loc =
 
   MVarExpr(tempSerial, listTy, loc), ctx
 
-let private mirifyExprTuple ctx items itemTys loc =
-  let ty = tyTuple itemTys
-  let _, tempSerial, ctx = freshVar ctx "tuple" ty loc
-
-  let rec go acc ctx items =
-    match items with
-    | [] -> List.rev acc, ctx
-    | item :: items ->
-        let item, ctx = mirifyExpr ctx item
-        go (item :: acc) ctx items
-
-  let items, ctx = go [] ctx items
-
-  let ctx =
-    addStmt ctx (MPrimStmt(MTuplePrim, items, tempSerial, loc))
-
-  MVarExpr(tempSerial, ty, loc), ctx
-
 let private mirifyExprRecord (ctx: MirCtx) args ty loc =
   let name =
     match ty with
@@ -1314,7 +1298,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
       MUnaryExpr(MMinusUnary, arg, ty, loc), ctx
 
   | HTupleEN, [], Ty (TupleTk, []) -> MDefaultExpr(tyUnit, loc), ctx
-  | HTupleEN, _, Ty (TupleTk, itemTys) -> mirifyExprTuple ctx args itemTys loc
+  | HTupleEN, _, _ -> unreachable () // Resolved in MonoTy.
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
   | HRecordItemEN index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
 

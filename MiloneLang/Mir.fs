@@ -137,7 +137,6 @@ type MPrim =
   | MBoxPrim
   | MOptionSomePrim
   | MConsPrim
-  | MTuplePrim
   | MVariantPrim of variantSerial: VariantSerial
   | MRecordPrim
 
