@@ -22,6 +22,7 @@ Built-in basic types:
 Built-in container types:
 
 - [tuple types](tuple_types.md)
+- [option type](option_type.md)
 - [list type](list_type.md)
 
 User-defined types:
