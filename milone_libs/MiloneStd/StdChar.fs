@@ -4,7 +4,7 @@ module rec MiloneStd.StdChar
 let subtract (l: char) (r: char): char = char (int l - int r)
 
 /// Gets whether a char is in ASCII range, i.e. `0x00 <= c <= 0x7f`.
-let isAscii (c: char): bool = '\x00' <= c && c <= char 127
+let isAscii (c: char): bool = uint c <= uint 127
 
 // -----------------------------------------------
 // Char class checks
