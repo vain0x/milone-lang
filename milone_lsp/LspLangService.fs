@@ -69,7 +69,6 @@ let private projectsRef: Result<ProjectInfo list, exn> option ref = ref None
 
 /// Finds all projects inside of the workspace.
 let private doFindProjects (rootUri: string): ProjectInfo list =
-  // eprintfn "findProjects: rootUri = %s" rootUri
   let projects = ResizeArray()
 
   let rootDir =
@@ -77,15 +76,12 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
     | Some it -> it
     | None -> failwithf "rootUri: %A" rootUri
 
-  eprintfn "rootDir = '%s'" rootDir
-
   // Find projects recursively.
   let mutable stack = Stack()
   stack.Push((0, rootDir))
 
   while stack.Count <> 0 do
     let depth, dir = stack.Pop()
-    // eprintfn "dir: '%s'" dir
 
     let projectName = Path.GetFileNameWithoutExtension(dir)
 
@@ -96,7 +92,6 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
             ProjectName = projectName
             EntryFileExt = ext }
 
-        eprintfn "project: '%s'" projectName
         projects.Add(project)
 
     tryAddProject ".milone"
@@ -126,7 +121,9 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
   | None, Some rootUri ->
       let projects =
         try
-          Ok(doFindProjects rootUri)
+          let projects = doFindProjects rootUri
+          eprintfn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
+          Ok projects
         with ex ->
           eprintfn "findProjects failed: %A" ex
           Error ex

@@ -5,6 +5,7 @@ open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 open MiloneLsp.JsonRpcWriter
 open MiloneLsp.Lsp
+open MiloneLsp.Util
 
 type private Position = int * int
 
@@ -237,7 +238,7 @@ type private MsgId = JsonValue
 [<NoEquality; NoComparison>]
 type private LspError =
   | CancelledRequestError of msgId: MsgId
-  | MethodNotFoundError of msgId: MsgId
+  | MethodNotFoundError of msgId: MsgId * methodName: string
 
 // -----------------------------------------------
 // LspIncome
@@ -296,38 +297,12 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
 
   | methodName ->
-    eprintfn "[TRACE] Unknown methodName: '%s'." methodName
+      let msgId =
+        jsonValue
+        |> jTryFind "id"
+        |> Option.defaultValue JNull
 
-    let msgId = jsonValue |> jTryFind "id" |> Option.defaultValue JNull
-    ErrorIncome(MethodNotFoundError msgId)
-
-let private doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
-  let diagnostics =
-    errors
-    |> List.map
-         (fun (msg, r1, c1, r2, c2) ->
-           let start = r1, c1
-           let endPos = r2, c2
-
-           jOfObj [ "range", jOfRange (start, endPos)
-                    "message", JString msg
-                    "source", JString "milone-lang" ])
-    |> JArray
-
-  let paramsValue =
-    jOfObj [ "uri", JString uri
-             "diagnostics", diagnostics ]
-
-  jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
-
-let private validateWorkspace (rootUriOpt: string option): unit =
-  for uri, errors in LspLangService.validateWorkspace rootUriOpt do
-    let errors =
-      [ for msg, pos in errors do
-          let row, column = pos
-          yield msg, row, column, row, column ]
-
-    doPublishDiagnostics uri errors
+      ErrorIncome(MethodNotFoundError(msgId, methodName))
 
 let private processNext (): LspIncome -> ProcessResult =
   let mutable exitCode: int = 1
@@ -371,7 +346,20 @@ let private processNext (): LspIncome -> ProcessResult =
         Continue
 
     | DiagnosticsRequest ->
-        validateWorkspace rootUriOpt
+        for uri, errors in LspLangService.validateWorkspace rootUriOpt do
+          let diagnostics =
+            [ for msg, pos in errors do
+                jOfObj [ "range", jOfRange (pos, pos)
+                         "message", JString msg
+                         "source", JString "milone-lang" ] ]
+            |> JArray
+
+          let param =
+            jOfObj [ "uri", JString uri
+                     "diagnostics", diagnostics ]
+
+          jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
+
         Continue
 
     | DefinitionRequest (msgId, p) ->
@@ -461,10 +449,15 @@ let private processNext (): LspIncome -> ProcessResult =
             jsonRpcWriteWithError msgId error
             Continue
 
-        | MethodNotFoundError msgId ->
+        | MethodNotFoundError (JNull, methodName) ->
+            eprintfn "[TRACE] Unknown methodName: '%s'." methodName
+            Continue
+
+        | MethodNotFoundError (msgId, methodName) ->
             let error =
               jOfObj [ "code", jOfInt methodNotFoundCode
-                       "message", JString "Unknown method." ]
+                       "message", JString "Unknown method."
+                       "data", jOfObj [ "methodName", JString methodName ] ]
 
             jsonRpcWriteWithError msgId error
             Continue
@@ -473,7 +466,25 @@ let private processNext (): LspIncome -> ProcessResult =
 // Request preprocess
 // -----------------------------------------------
 
-let private preprocess (incomes: LspIncome list): LspIncome list =
+/// Removes a list of didChange notifications in a line
+/// except for the last one.
+let private dedupChanges (incomes: LspIncome list): LspIncome list =
+  match List.rev incomes with
+  | [] -> []
+
+  | last :: incomes ->
+      incomes
+      |> List.fold
+           (fun (next, acc) income ->
+             match income, next with
+             | DidChangeNotification p, DidChangeNotification q when p.Uri = q.Uri -> next, acc
+             | _ -> income, income :: acc)
+           (last, [ last ])
+      |> snd
+
+/// Automatically update diagnostics by appending diagnostics request
+/// if some document changed.
+let private autoUpdateDiagnostics (incomes: LspIncome list): LspIncome list =
   let doesUpdateDiagnostics income =
     match income with
     | InitializedNotification _
@@ -483,49 +494,52 @@ let private preprocess (incomes: LspIncome list): LspIncome list =
 
     | _ -> false
 
-  // Add diagnostics request if some document changed.
-  let incomes =
-    if incomes |> List.exists doesUpdateDiagnostics then
-      List.append incomes [ DiagnosticsRequest ]
-    else
-      incomes
+  if incomes |> List.exists doesUpdateDiagnostics then
+    List.append incomes [ DiagnosticsRequest ]
+  else
+    incomes
 
-  // Replace request and cancellation with cancellation error.
-  let incomes =
-    let asCancelRequest income =
-      match income with
-      | CancelRequestNotification msgId -> Some msgId
-      | _ -> None
+/// Replaces each pair of request and cancellation with an error.
+let private preprocessCancelRequests (incomes: LspIncome list): LspIncome list =
+  let asCancelRequest income =
+    match income with
+    | CancelRequestNotification msgId -> Some msgId
+    | _ -> None
 
-    let asMsgId income =
-      match income with
-      | DefinitionRequest (msgId, _)
-      | ReferencesRequest (msgId, _)
-      | DocumentHighlightRequest (msgId, _)
-      | HoverRequest (msgId, _) -> Some msgId
+  let asMsgId income =
+    match income with
+    | DefinitionRequest (msgId, _)
+    | ReferencesRequest (msgId, _)
+    | DocumentHighlightRequest (msgId, _)
+    | HoverRequest (msgId, _) -> Some msgId
 
-      | _ -> None
+    | _ -> None
 
-    let cancelledIds =
-      incomes
-      |> List.choose asCancelRequest
-      |> Set.ofList
+  let cancelledIds =
+    incomes
+    |> List.choose asCancelRequest
+    |> Set.ofList
 
-    if Set.isEmpty cancelledIds then
-      incomes
-    else
-      incomes
-      |> List.choose
-           (fun income ->
-             if income |> asCancelRequest |> Option.isSome then
-               None
-             else
-               match asMsgId income with
-               | Some msgId when Set.contains msgId cancelledIds -> ErrorIncome(CancelledRequestError msgId) |> Some
+  if Set.isEmpty cancelledIds then
+    incomes
+  else
+    incomes
+    |> List.choose
+         (fun income ->
+           if income |> asCancelRequest |> Option.isSome then
+             None
+           else
+             match asMsgId income with
+             | Some msgId when Set.contains msgId cancelledIds -> ErrorIncome(CancelledRequestError msgId) |> Some
 
-               | _ -> Some income)
+             | _ -> Some income)
 
+/// Optimizes a bunch of messages.
+let private preprocess (incomes: LspIncome list): LspIncome list =
   incomes
+  |> dedupChanges
+  |> autoUpdateDiagnostics
+  |> preprocessCancelRequests
 
 // -----------------------------------------------
 // Server

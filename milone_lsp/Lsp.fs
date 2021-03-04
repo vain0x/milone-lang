@@ -9,8 +9,6 @@ open MiloneLsp.Util
 
 module TMap = MiloneStd.StdMap
 
-let private defaultTimeout = 5 * 1000
-
 // Re-exports.
 type Pos = Syntax.Pos
 type Loc = Syntax.Loc
@@ -62,37 +60,6 @@ let private tokenAsTriviaOrError (token, pos) =
   | ErrorToken error -> Some(Some(tokenizeErrorToString error, pos))
   | _ when isTrivia token -> Some None
   | _ -> None
-
-// let private doTokenize text =
-//   let result =
-//     doWithTimeout defaultTimeout (fun () -> SyntaxTokenize.tokenize tokenizeHost text)
-
-//   match result with
-//   | Ok it -> it
-
-//   | Error ex ->
-//       eprintfn "[ERROR] doTokenize: %s" (ex.ToString())
-
-//       let msg =
-//         "FATAL: Exception during tokenization. "
-//         + ex.Message
-
-//       [ ErrorToken(OtherTokenizeError msg), (0, 0) ]
-
-// let private doParse tokens =
-//   let result =
-//     doWithTimeout defaultTimeout (fun () -> SyntaxParse.parse tokens)
-
-//   match result with
-//   | Ok it -> it
-
-//   | Error ex ->
-//       eprintfn "[ERROR] doParse: %s" (ex.ToString())
-
-//       let msg =
-//         "FATAL: Exception while parsing. " + ex.Message
-
-//       AExprRoot [], [ msg, (0, 0) ]
 
 let private tokenizeWithCache (ls: LangServiceState) docId =
   let currentVersion = ls.Host.Docs.GetVersion docId
@@ -193,14 +160,8 @@ let private doBundle (ls: LangServiceState) projectDir =
 
         parseWithCache ls docId |> Some
 
-  let compileCtx =
-    { compileCtx with
-        // FIXME: read .milone_project
-        Projects =
-          compileCtx.Projects
-          |> TMap.add "MiloneStd" (ls.Host.MiloneHome + "/milone_libs/MiloneStd")
-
-        FetchModule = fetchModule }
+  // FIXME: read .milone_project
+  let compileCtx = { compileCtx with FetchModule = fetchModule }
 
   let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
 

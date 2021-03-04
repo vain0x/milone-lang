@@ -4,6 +4,10 @@ set -eu
 
 MILONE_LANG_DIR="$(dirname $PWD)/MiloneLang"
 
+dotnet build
+
+CONTENTS=$(cat ${MILONE_LANG_DIR}/MiloneLang.milone | ./json-encode)
+
 {
 ./req <<END
 {"method": "initialize", "id": 1, "params": {
@@ -17,10 +21,40 @@ END
         "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
         "languageId": "milone",
         "version": 1,
-        "text": $(cat ${MILONE_LANG_DIR}/MiloneLang.milone | ./json-encode)
+        "text": $CONTENTS
     }
 }}
 END
+
+./req <<END
+{"method": "textDocument/didChange", "params": {
+    "textDocument": {
+        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
+        "version": 2
+    },
+    "contentChanges": [
+        {
+            "text": $CONTENTS
+        }
+    ]
+}}
+END
+
+./req <<END
+{"method": "textDocument/didChange", "params": {
+    "textDocument": {
+        "uri": "file://${MILONE_LANG_DIR}/MiloneLang.milone",
+        "version": 3
+    },
+    "contentChanges": [
+        {
+            "text": $CONTENTS
+        }
+    ]
+}}
+END
+
+sleep 3s
 
 ./req <<END
 {"method": "shutdown", "id": 1000000000}
