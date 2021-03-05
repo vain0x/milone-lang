@@ -55,7 +55,7 @@ build $milone_dotnet_release: $
 
 rule build_milone
   description = build_milone out=$out
-  command = MILONE_HOME=$$PWD $milone compile $verbosity MiloneLang | scripts/write-if-change $out
+  command = MILONE_HOME=$$PWD $milone compile $verbosity MiloneLang | scripts/write-if-change $out || { cat $out >&2 && false; }
   restat = 1
 
 rule build_cc
