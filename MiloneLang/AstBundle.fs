@@ -218,8 +218,7 @@ let bundleAddModuleInfo (moduleInfo: ModuleInfo) (ctx: BundleCtx): BundleCtx =
 // Compatible with old bundler.
 
 let bundleCompatible
-  (projects: AssocMap<ProjectName, string>)
-  (fetchModule: ProjectName -> string -> ModuleName -> (DocId * ARoot * (string * Pos) list) option)
+  (fetchModule: ProjectName ->  ModuleName -> (DocId * ARoot * (string * Pos) list) option)
   (entryProjectName: string)
   =
   let rec go (serial: int) errorAcc bundleCtx =
@@ -233,14 +232,8 @@ let bundleCompatible
         let moduleName = r.ModuleName
 
         // Fetch module.
-        let syntaxOpt =
-          match projects |> TMap.tryFind projectName with
-          | None -> None
-
-          | Some projectDir -> fetchModule projectName projectDir moduleName
-
         let moduleInfoOpt, serial, errorAcc =
-          match syntaxOpt with
+          match fetchModule projectName moduleName with
           | None -> None, serial, errorAcc
 
           | Some (docId, ast, errors) ->

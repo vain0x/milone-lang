@@ -494,7 +494,12 @@ let syntacticallyAnalyze (ctx: CompileCtx): SyntaxAnalysisResult =
 
     ast, errors
 
-  bundleCompatible ctx.Projects ctx.FetchModule ctx.ProjectName
+  let fetchModule (projectName: ProjectName) (moduleName: ModuleName): ModuleSyntaxData option =
+    match ctx.Projects |> TMap.tryFind projectName with
+    | None -> None
+    | Some projectDir -> ctx.FetchModule projectName projectDir moduleName
+
+  bundleCompatible fetchModule ctx.ProjectName
 
 [<NoEquality; NoComparison>]
 type SemaAnalysisResult =
