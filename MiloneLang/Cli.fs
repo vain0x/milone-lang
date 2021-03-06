@@ -484,16 +484,6 @@ let syntacticallyAnalyze (ctx: CompileCtx): SyntaxAnalysisResult =
 
   writeLog host v ("AstBundle project=" + ctx.ProjectName)
 
-  let doParse (_: DocId) (s: string) =
-    let tokens = s |> tokenize ctx.TokenizeHost
-    let errorTokens, tokens = tokens |> List.partition isErrorToken
-    let ast, parseErrors = tokens |> parse
-
-    let errors =
-      List.append (tokenizeErrors errorTokens) parseErrors
-
-    ast, errors
-
   let fetchModule (projectName: ProjectName) (moduleName: ModuleName): ModuleSyntaxData option =
     match ctx.Projects |> TMap.tryFind projectName with
     | None -> None
