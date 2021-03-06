@@ -65,10 +65,10 @@ type ProjectInfo =
     ProjectName: string
     EntryFileExt: string }
 
-let private projectsRef: Result<ProjectInfo list, exn> option ref = ref None
+let private projectsRef : Result<ProjectInfo list, exn> option ref = ref None
 
 /// Finds all projects inside of the workspace.
-let private doFindProjects (rootUri: string): ProjectInfo list =
+let private doFindProjects (rootUri: string) : ProjectInfo list =
   let projects = ResizeArray()
 
   let rootDir =
@@ -87,7 +87,7 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
 
     let tryAddProject ext =
       if File.Exists(Path.Combine(dir, projectName + ext)) then
-        let project: ProjectInfo =
+        let project : ProjectInfo =
           { ProjectDir = dir
             ProjectName = projectName
             EntryFileExt = ext }
@@ -112,7 +112,7 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
   List.ofSeq projects
 
 /// Finds project directories recursively. Memoized.
-let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
+let findProjects (rootUriOpt: string option) : Result<ProjectInfo list, exn> =
   match !projectsRef, rootUriOpt with
   | Some it, _ -> it
 
@@ -138,7 +138,7 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
 /// (msg, loc) list
 type ProjectValidateResult = (string * Loc) list
 
-let newLangService (project: ProjectInfo): LangServiceState =
+let newLangService (project: ProjectInfo) : LangServiceState =
   let projectDir = project.ProjectDir
 
   let toFilePath moduleName ext =
@@ -207,13 +207,13 @@ let newLangService (project: ProjectInfo): LangServiceState =
           Path.GetDirectoryName(filePath) |> Some
         with _ -> None
 
-  let docs: LangServiceDocs =
+  let docs : LangServiceDocs =
     { FindDocId = findDocId
       GetVersion = getVersion
       GetText = getText
       GetProjectName = getProjectName }
 
-  let langServiceHost: LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
+  let langServiceHost : LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
 
   LangService.create langServiceHost
 
@@ -233,7 +233,7 @@ let newLangServiceWithCache (project: ProjectInfo) =
 
       ls
 
-let validateProject (project: ProjectInfo): ProjectValidateResult =
+let validateProject (project: ProjectInfo) : ProjectValidateResult =
   project
   |> newLangServiceWithCache
   |> LangService.validateProject project.ProjectDir
@@ -286,7 +286,7 @@ let private doValidateWorkspace projects =
   |> DiagnosticsCache.filter diagnostics
 
 /// Validate all projects in workspace to report errors.
-let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
+let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
   match findProjects rootUriOpt with
   | Error _ -> []
 

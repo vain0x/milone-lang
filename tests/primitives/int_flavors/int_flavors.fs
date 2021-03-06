@@ -22,14 +22,11 @@ let signedCases () =
   assert (int (int16 (-4)) = -4)
 
   // Bit operations.
-  assert (int8 (1 + 2 + 4)
-          &&& int8 (2 + 4 + 8) = int8 (2 + 4))
+  assert (int8 (1 + 2 + 4) &&& int8 (2 + 4 + 8) = int8 (2 + 4))
 
-  assert (int16 (1 + 2 + 4)
-          ||| int16 (2 + 4 + 8) = int16 (1 + 2 + 4 + 8))
+  assert (int16 (1 + 2 + 4) ||| int16 (2 + 4 + 8) = int16 (1 + 2 + 4 + 8))
 
-  assert (int64 (1 + 2 + 4)
-          ^^^ int64 (2 + 4 + 8) = int64 (1 + 8))
+  assert (int64 (1 + 2 + 4) ^^^ int64 (2 + 4 + 8) = int64 (1 + 8))
 
   assert ((int8 (1 + 4 + 16) <<< 1) = int8 (2 + 8 + 32))
   assert ((int16 (1 + 4 + 16) >>> 1) = int16 (0 + 2 + 8))
@@ -67,14 +64,11 @@ let unsignedCases () =
   assert (uint16 11 - uint16 7 = uint16 4)
 
   // Bit operations.
-  assert (uint8 (1 + 2 + 4)
-          &&& uint8 (2 + 4 + 8) = uint8 (2 + 4))
+  assert (uint8 (1 + 2 + 4) &&& uint8 (2 + 4 + 8) = uint8 (2 + 4))
 
-  assert (uint16 (1 + 2 + 4)
-          ||| uint16 (2 + 4 + 8) = uint16 (1 + 2 + 4 + 8))
+  assert (uint16 (1 + 2 + 4) ||| uint16 (2 + 4 + 8) = uint16 (1 + 2 + 4 + 8))
 
-  assert (uint64 (1 + 2 + 4)
-          ^^^ uint64 (2 + 4 + 8) = uint64 (1 + 8))
+  assert (uint64 (1 + 2 + 4) ^^^ uint64 (2 + 4 + 8) = uint64 (1 + 8))
 
   assert ((uint8 (1 + 4 + 16) <<< 1) = uint8 (2 + 8 + 32))
   assert ((uint16 (1 + 4 + 16) >>> 1) = uint16 (0 + 2 + 8))

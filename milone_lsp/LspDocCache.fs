@@ -17,7 +17,7 @@ type DocData =
 /// List of docs open in editor, keyed by URI.
 let private docs = MutMap<string, DocData>()
 
-let findDoc (uri: string): DocData option =
+let findDoc (uri: string) : DocData option =
   // eprintfn "INFO: Doc find uri:'%s'" uri
 
   match docs.TryGetValue(uri) with
@@ -25,7 +25,7 @@ let findDoc (uri: string): DocData option =
   | false, _ -> None
 
 let openDoc (uri: string) (version: int) (text: string) =
-  let docData: DocData =
+  let docData : DocData =
     { Uri = uri
       Version = version
       Text = text }
@@ -33,10 +33,10 @@ let openDoc (uri: string) (version: int) (text: string) =
   // eprintfn "INFO: Doc opened uri:'%s' v:%d len:%d" uri version text.Length
   docs.Add(uri, docData)
 
-let changeDoc (uri: string) (version: int) (text: string): unit =
+let changeDoc (uri: string) (version: int) (text: string) : unit =
   match findDoc uri with
   | Some _ ->
-      let docData: DocData =
+      let docData : DocData =
         { Uri = uri
           Version = version
           Text = text }
@@ -45,6 +45,6 @@ let changeDoc (uri: string) (version: int) (text: string): unit =
 
   | None -> openDoc uri version text
 
-let closeDoc (uri: string): unit =
+let closeDoc (uri: string) : unit =
   // eprintfn "INFO: Doc closed uri:'%s'" uri
   docs.Remove(uri) |> ignore

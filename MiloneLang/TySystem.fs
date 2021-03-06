@@ -14,15 +14,15 @@ open MiloneLang.Hir
 module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
-let emptyTyLevels: AssocMap<TySerial, Level> = TMap.empty compare
+let emptyTyLevels : AssocMap<TySerial, Level> = TMap.empty compare
 
-let emptyBinding: AssocMap<TySerial, Ty> = TMap.empty compare
+let emptyBinding : AssocMap<TySerial, Ty> = TMap.empty compare
 
 // -----------------------------------------------
 // Tk
 // -----------------------------------------------
 
-let private tkEncode tk: int =
+let private tkEncode tk : int =
   let pair l r =
     assert (l < 30 && r < 10000000)
     l * 10000000 + r
@@ -60,7 +60,7 @@ let private tkEncode tk: int =
   | UnresolvedTk _
   | UnresolvedVarTk _ -> unreachable ()
 
-let tkCompare l r: int =
+let tkCompare l r : int =
   match l, r with
   | NativeTypeTk l, NativeTypeTk r -> compare l r
 
@@ -75,7 +75,7 @@ let tkCompare l r: int =
 
   | _ -> tkEncode l - tkEncode r
 
-let tkEqual l r: bool = tkCompare l r = 0
+let tkEqual l r : bool = tkCompare l r = 0
 
 let tkDisplay getTyName tk =
   match tk with
@@ -147,7 +147,7 @@ let tyCompare l r =
 let tyEqual l r = tyCompare l r = 0
 
 /// Gets if the specified type variable doesn't appear in a type.
-let tyIsFreeIn ty tySerial: bool =
+let tyIsFreeIn ty tySerial : bool =
   let rec go ty =
     match ty with
     | Ty (MetaTk (s, _), _) -> s <> tySerial
@@ -160,7 +160,7 @@ let tyIsFreeIn ty tySerial: bool =
 
 /// Gets if the type is monomorphic.
 /// Assume all bound type variables are substituted.
-let tyIsMonomorphic ty: bool =
+let tyIsMonomorphic ty : bool =
   let rec go tys =
     match tys with
     | [] -> true
@@ -201,7 +201,7 @@ let rec tyToArgList ty =
   go 0 [] ty
 
 /// Checks if the type contains no bound meta types.
-let private tyIsFullySubstituted (isBound: TySerial -> bool) ty: bool =
+let private tyIsFullySubstituted (isBound: TySerial -> bool) ty : bool =
   let rec go ty =
     match ty with
     | Ty (MetaTk (tySerial, _), _) -> isBound tySerial |> not
@@ -229,7 +229,7 @@ let tyAssign assignment ty =
   tySubst (fun tySerial -> assocTryFind compare tySerial assignment) ty
 
 /// Expands a synonym type using its definition and type args.
-let tyExpandSynonym useTyArgs defTySerials bodyTy: Ty =
+let tyExpandSynonym useTyArgs defTySerials bodyTy : Ty =
   // Checked in NameRes.
   assert (List.length defTySerials = List.length useTyArgs)
 
@@ -241,7 +241,7 @@ let tyExpandSynonym useTyArgs defTySerials bodyTy: Ty =
   tyAssign assignment bodyTy
 
 /// Expands all synonyms inside of a type.
-let tyExpandSynonyms (expand: TySerial -> TyDef option) ty: Ty =
+let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
   let rec go ty =
     match ty with
     | Ty (SynonymTk tySerial, useTyArgs) ->
@@ -261,7 +261,7 @@ let tyExpandSynonyms (expand: TySerial -> TyDef option) ty: Ty =
 /// `isOwned` checks if the type variable is introduced by the most recent `let`.
 /// For example, `let f x = (let g = f in g x)` will have too generic type
 /// without this checking (according to TaPL).
-let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty): TyScheme =
+let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
   let fvs =
     tyCollectFreeVars ty |> List.filter isOwned
 
@@ -325,7 +325,7 @@ let tyDisplay getTyName ty =
 /// Generates a unique name from a type.
 ///
 /// Must be used after successful Typing.
-let tyMangle (ty: Ty, memo: AssocMap<Ty, string>): string * AssocMap<Ty, string> =
+let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string> =
   let rec go ty ctx =
     let (Ty (tk, tyArgs)) = ty
 
@@ -342,7 +342,7 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>): string * AssocMap<Ty, string>
       let tyArgs, ctx = mangleList tyArgs ctx
       S.concat "" tyArgs + (name + string arity), ctx
 
-    let doMangle (): string * AssocMap<_, _> =
+    let doMangle () : string * AssocMap<_, _> =
       match tk with
       | IntTk flavor -> cIntegerTyPascalName flavor, ctx
       | FloatTk flavor -> cFloatTyPascalName flavor, ctx
@@ -402,7 +402,7 @@ let tyMangle (ty: Ty, memo: AssocMap<Ty, string>): string * AssocMap<Ty, string>
 // Context-free functions
 // -----------------------------------------------
 
-let private getLevel tyLevels levelChanges tySerial: Level =
+let private getLevel tyLevels levelChanges tySerial : Level =
   match levelChanges |> TMap.tryFind tySerial with
   | Some level -> level
   | _ ->
@@ -410,13 +410,13 @@ let private getLevel tyLevels levelChanges tySerial: Level =
       |> TMap.tryFind tySerial
       |> Option.defaultValue 0
 
-let private metaTyIsBound tys binding tySerial: bool =
+let private metaTyIsBound tys binding tySerial : bool =
   TMap.containsKey tySerial binding
   || (match tys |> TMap.tryFind tySerial with
       | Some (MetaTyDef _) -> true
       | _ -> false)
 
-let private tyExpandMeta tys binding tySerial: Ty option =
+let private tyExpandMeta tys binding tySerial : Ty option =
   match binding |> TMap.tryFind tySerial with
   | (Some _) as it -> it
   | _ ->
@@ -459,7 +459,7 @@ type UnifyResult =
   | UnifyExpandMeta of metaSerial: TySerial * other: Ty
   | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty
 
-let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc): UnifyResult =
+let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
   let mismatchError () =
     UnifyError(Log.TyUnify(TyUnifyLog.Mismatch, lTy, rTy), loc)
 
@@ -508,7 +508,7 @@ let unifyAfterExpandMeta lTy rTy tySerial otherTy loc =
 
   | _ -> UnifyAfterExpandMetaResult.OkBind
 
-let typingSubst tys binding ty: Ty = tySubst (tyExpandMeta tys binding) ty
+let typingSubst tys binding ty : Ty = tySubst (tyExpandMeta tys binding) ty
 
 let typingExpandSynonyms tys ty =
   tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty

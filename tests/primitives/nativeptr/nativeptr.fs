@@ -6,7 +6,7 @@ module rec nativeptr.Program
 
 // __constptr<T> is equivalent to `T const *` in C. (NOT exists in F#.)
 
-let memAlloc (count: int) (size: int): voidptr =
+let memAlloc (count: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", count, unativeint size)
 
 let memSet (dest: voidptr) (value: uint8) (count: int) =
@@ -15,7 +15,7 @@ let memSet (dest: voidptr) (value: uint8) (count: int) =
 
   ()
 
-let strcpy (dest: nativeptr<char>) (src: __constptr<char>): nativeptr<char> = __nativeFun ("strcpy", dest, src)
+let strcpy (dest: nativeptr<char>) (src: __constptr<char>) : nativeptr<char> = __nativeFun ("strcpy", dest, src)
 
 let main _ =
   let buf = memAlloc 1 8

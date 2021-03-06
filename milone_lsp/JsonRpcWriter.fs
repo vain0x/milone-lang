@@ -5,7 +5,7 @@ open MiloneLsp.JsonSerialization
 
 /// Writes a string (that represents a body of single message)
 /// to STDOUT in the format of JSON-RPC.
-let private jsonRpcWriteString: string -> unit =
+let private jsonRpcWriteString : string -> unit =
   let buf = System.Console.OpenStandardOutput()
   let writer = new System.IO.BinaryWriter(buf)
 
@@ -18,7 +18,7 @@ let private jsonRpcWriteString: string -> unit =
     writer.Flush()
 
 /// Writes a JSON-RPC message with result field. (For LSP responses.)
-let jsonRpcWriteWithResult (id: JsonValue) (result: JsonValue): unit =
+let jsonRpcWriteWithResult (id: JsonValue) (result: JsonValue) : unit =
   let jsonValue =
     [ "jsonrpc", JString "2.0"
       "id", id
@@ -29,7 +29,7 @@ let jsonRpcWriteWithResult (id: JsonValue) (result: JsonValue): unit =
   jsonRpcWriteString (jsonDisplay jsonValue + "\n")
 
 /// Writes a JSON-RPC message with params field. (For LSP notifications.)
-let jsonRpcWriteWithParams (methodName: string) (paramsValue: JsonValue): unit =
+let jsonRpcWriteWithParams (methodName: string) (paramsValue: JsonValue) : unit =
   let jsonValue =
     [ "jsonrpc", JString "2.0"
       "method", JString methodName
@@ -39,7 +39,7 @@ let jsonRpcWriteWithParams (methodName: string) (paramsValue: JsonValue): unit =
 
   jsonRpcWriteString (jsonDisplay jsonValue + "\n")
 
-let jsonRpcWriteWithError (id: JsonValue) (error: JsonValue): unit =
+let jsonRpcWriteWithError (id: JsonValue) (error: JsonValue) : unit =
   let jsonValue =
     [ "jsonrpc", JString "2.0"
       "id", id

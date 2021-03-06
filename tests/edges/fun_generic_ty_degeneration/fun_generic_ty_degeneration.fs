@@ -11,7 +11,7 @@ module rec fun_generic_ty_degeneration.Program
 
 let fst (x, _) = x
 
-let fstUnbox (boxedPair: obj) (phantom: ('S * 'T) option): 'S =
+let fstUnbox (boxedPair: obj) (phantom: ('S * 'T) option) : 'S =
   let f () = fst (unbox boxedPair: 'S * 'T)
   f ()
 

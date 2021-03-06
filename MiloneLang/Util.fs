@@ -59,7 +59,7 @@ let forList folder xs state =
 /// If two lists have different length, some elements have no pair.
 /// These items are returns as third result.
 /// The second result indicates which list is longer.
-let listTryZip (xs: _ list) (ys: _ list): (_ * _) list * _ list * _ list =
+let listTryZip (xs: _ list) (ys: _ list) : (_ * _) list * _ list * _ list =
   let rec listTryZipLoop acc xs ys =
     match xs, ys with
     | _, []
@@ -203,12 +203,12 @@ let mapFind key map =
 
 type Multimap<'K, 'T> = TMap.TreeMap<'K, 'T list>
 
-let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>): 'T list =
+let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>) : 'T list =
   multimap
   |> TMap.tryFind key
   |> Option.defaultValue []
 
-let multimapAdd (key: 'K) (item: 'T) (multimap: Multimap<'K, 'T>): Multimap<'K, 'T> =
+let multimapAdd (key: 'K) (item: 'T) (multimap: Multimap<'K, 'T>) : Multimap<'K, 'T> =
   let items = multimap |> multimapFind key
   TMap.add key (item :: items) multimap
 

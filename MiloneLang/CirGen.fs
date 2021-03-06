@@ -88,7 +88,7 @@ type private CirCtx =
     Stmts: CStmt list
     Decls: CDecl list }
 
-let private ofMirCtx (mirCtx: MirCtx): CirCtx =
+let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
   let valueUniqueNames =
     let m = TMap.empty valueSymbolCompare
 
@@ -466,7 +466,7 @@ let private getUniqueVariantName (ctx: CirCtx) variantSerial =
   ctx.ValueUniqueNames
   |> mapFind (VariantSymbol variantSerial)
 
-let private getUniqueTyName (ctx: CirCtx) ty: _ * CirCtx =
+let private getUniqueTyName (ctx: CirCtx) ty : _ * CirCtx =
   let memo = ctx.TyUniqueNames
   let name, memo = tyMangle (ty, memo)
   name, { ctx with TyUniqueNames = memo }
@@ -491,7 +491,7 @@ let private cgNativeFunTy ctx tys =
 
 /// Converts a type to incomplete type.
 /// whose type definition is not necessary to be visible.
-let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
+let private cgTyIncomplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   let (Ty (tk, tyArgs)) = ty
 
   match tk, tyArgs with
@@ -533,7 +533,7 @@ let private cgTyIncomplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
 /// Converts a type to complete C type.
 ///
 /// A type is complete if its definition is visible.
-let private cgTyComplete (ctx: CirCtx) (ty: Ty): CTy * CirCtx =
+let private cgTyComplete (ctx: CirCtx) (ty: Ty) : CTy * CirCtx =
   let (Ty (tk, tyArgs)) = ty
 
   match tk, tyArgs with
@@ -769,7 +769,7 @@ let private cgExprList ctx exprs =
 
   go [] ctx exprs
 
-let private cgExpr (ctx: CirCtx) (arg: MExpr): CExpr * CirCtx =
+let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   match arg |> mxSugar with
   | MLitExpr (lit, _) -> genLit lit, ctx
   | MDefaultExpr (ty, _) -> genDefault ctx ty
@@ -1095,7 +1095,7 @@ let private cgReturnStmt ctx expr =
   addStmt ctx (CReturnStmt(Some expr))
 
 // FIXME: Without the result type ascription, invalid code is generated for some reason.
-let private cgTerminatorAsBlock ctx terminator: CStmt list * CirCtx =
+let private cgTerminatorAsBlock ctx terminator : CStmt list * CirCtx =
   cgBlock ctx [ MTerminatorStmt(terminator, noLoc) ]
 
 let private cgTerminatorStmt ctx stmt =
@@ -1153,7 +1153,7 @@ let private cgStmt ctx stmt =
       addStmt ctx (CNativeStmt(code, args))
 
 let private cgBlock (ctx: CirCtx) (stmts: MStmt list) =
-  let bodyCtx: CirCtx = cgStmts (enterBlock ctx) stmts
+  let bodyCtx : CirCtx = cgStmts (enterBlock ctx) stmts
   let stmts = bodyCtx.Stmts
   let ctx = rollback ctx bodyCtx
   List.rev stmts, ctx
@@ -1164,7 +1164,7 @@ let private cgBlocks (ctx: CirCtx) (blocks: MBlock list) =
 
   | _ -> todo ()
 
-let private cgStmts (ctx: CirCtx) (stmts: MStmt list): CirCtx =
+let private cgStmts (ctx: CirCtx) (stmts: MStmt list) : CirCtx =
   let rec go ctx stmts =
     match stmts with
     | [] -> ctx
@@ -1208,7 +1208,7 @@ let private cgDecls (ctx: CirCtx) decls =
 // Interface
 // -----------------------------------------------
 
-let genCir (decls, mirCtx: MirCtx): CDecl list =
+let genCir (decls, mirCtx: MirCtx) : CDecl list =
   let ctx = ofMirCtx mirCtx
   let ctx = cgDecls ctx decls
   List.rev ctx.Decls

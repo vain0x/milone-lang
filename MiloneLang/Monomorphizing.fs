@@ -90,7 +90,7 @@ type private MonoCtx =
     SomethingHappened: bool
     InfiniteLoopDetector: int }
 
-let private ofTyCtx (tyCtx: TyCtx): MonoCtx =
+let private ofTyCtx (tyCtx: TyCtx) : MonoCtx =
   { Serial = tyCtx.Serial
     Logs = tyCtx.Logs
 
@@ -178,7 +178,7 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
   assert (tryFindMonomorphizedFun ctx genericFunSerial useSiteTy
           |> Option.isNone)
 
-  let funDef: FunDef =
+  let funDef : FunDef =
     let name = ctx |> findFunName genericFunSerial
 
     { Name = name
@@ -392,7 +392,7 @@ let private monifyExpr (expr, ctx) =
   | HModuleExpr _
   | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
-let monify (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
+let monify (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
   let monoCtx = ofTyCtx tyCtx |> forceGeneralizeFuns
 
   // Monomorphization.

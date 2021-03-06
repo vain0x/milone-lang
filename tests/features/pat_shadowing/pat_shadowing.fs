@@ -10,8 +10,10 @@ let main _ =
 
   let case2 =
     let x = 0
+
     (let x = 1
      assert (x = 1))
+
     assert (x = 0)
 
   0

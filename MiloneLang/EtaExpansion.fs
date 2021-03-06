@@ -253,7 +253,7 @@ let private acExprChecked expr ctx =
   else
     ctx
 
-let private acExpr (expr, ctx: ArityCheckCtx): ArityEx * ArityCheckCtx =
+let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
   match expr with
   | HLitExpr _
   | HTyDeclExpr _
@@ -346,7 +346,7 @@ let private acExprs exprs ctx =
   |> List.fold (fun ctx expr -> acExpr (expr, ctx) |> snd) ctx
 
 let arityCheck (expr, tyCtx: Typing.TyCtx) =
-  let ctx: ArityCheckCtx =
+  let ctx : ArityCheckCtx =
     { GetFunArity =
         fun funSerial ->
           let funDef = tyCtx.Funs |> mapFind funSerial
@@ -393,7 +393,7 @@ type private EtaCtx =
     Funs: AssocMap<FunSerial, FunDef>
     Tys: AssocMap<TySerial, TyDef> }
 
-let private ofTyCtx (tyCtx: TyCtx): EtaCtx =
+let private ofTyCtx (tyCtx: TyCtx) : EtaCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
     Funs = tyCtx.Funs
@@ -409,7 +409,7 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
 let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   let funSerial = FunSerial(ctx.Serial + 1)
 
-  let funDef: FunDef =
+  let funDef : FunDef =
     let tyScheme =
       let isOwned (_: Serial) = true // FIXME: is it okay?
       tyGeneralize isOwned ty
@@ -431,7 +431,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
 let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
   let serial = VarSerial(ctx.Serial + 1)
 
-  let varDef: VarDef =
+  let varDef : VarDef =
     { Name = name
       IsStatic = NotStatic
       Ty = ty

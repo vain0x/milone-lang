@@ -7,6 +7,7 @@ let main _ =
       else if i % 3 = 0 then printfn "Fizz"
       else if i % 5 = 0 then printfn "Buzz"
       else printfn "%d" i
+
       fizzBuzz (i + 1)
 
   fizzBuzz 1

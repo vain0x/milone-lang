@@ -80,7 +80,7 @@ let private cpFunPtrTy name argTys resultTy acc =
   |> join ", " argTys cpTy
   |> cons ")"
 
-let private cpTy ty acc: string list =
+let private cpTy ty acc : string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
   | CIntTy flavor -> acc |> cons (cIntegerTyName flavor)
@@ -100,7 +100,7 @@ let private cpTyWithName name ty acc =
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy name argTys resultTy
   | _ -> acc |> cpTy ty |> cons " " |> cons name
 
-let private cpParams ps acc: string list =
+let private cpParams ps acc : string list =
   let rec go ps acc =
     match ps with
     | [] -> acc
@@ -161,7 +161,7 @@ let private cpStructLit fields ty acc =
 // Expressions
 // -----------------------------------------------
 
-let private cpExpr expr acc: string list =
+let private cpExpr expr acc : string list =
   let rec cpExprList sep exprs acc =
     exprs
     |> List.fold
@@ -251,7 +251,7 @@ let private cpExpr expr acc: string list =
 // Statements
 // -----------------------------------------------
 
-let private cpStmt indent stmt acc: string list =
+let private cpStmt indent stmt acc : string list =
   match stmt with
   | CReturnStmt None -> acc |> cons indent |> cons "return;" |> cons eol
 
@@ -405,7 +405,7 @@ let private cpStmt indent stmt acc: string list =
 
       acc |> cons code
 
-let private cpStmtList indent stmts acc: string list =
+let private cpStmtList indent stmts acc : string list =
   stmts
   |> List.fold (fun acc stmt -> cpStmt indent stmt acc) acc
 
@@ -599,7 +599,7 @@ let private cpHeader acc =
   let header = "#include \"milone.h\""
   acc |> cons header |> cons eol |> cons eol
 
-let cirDump (decls: CDecl list): string =
+let cirDump (decls: CDecl list) : string =
   []
   |> cpHeader
   |> cpForwardDecls decls
@@ -607,7 +607,7 @@ let cirDump (decls: CDecl list): string =
   |> List.rev
   |> strConcat
 
-let cirDumpHeader (decls: CDecl list): string =
+let cirDumpHeader (decls: CDecl list) : string =
   []
   |> cpHeader
   |> cpForwardDecls decls

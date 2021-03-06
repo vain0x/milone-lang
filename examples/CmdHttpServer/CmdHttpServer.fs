@@ -27,7 +27,7 @@ let serverName = "httpd"
 
 let serverVersion = "0.1.0"
 
-let private doHandle (methodName: string) (pathname: string): HttpResult =
+let private doHandle (methodName: string) (pathname: string) : HttpResult =
   let contentType () =
     let ext =
       match S.findLastIndex "." pathname with
@@ -101,7 +101,7 @@ let handler
 
     writeString "Connection: close\r\n"
 
-  let writeBody (content: string) (contentType: string): unit =
+  let writeBody (content: string) (contentType: string) : unit =
     writeString (
       "Content-Length: "
       + string content.Length

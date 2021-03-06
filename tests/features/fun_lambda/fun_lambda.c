@@ -47,7 +47,7 @@ char layoutTest_(char arg_4) {
     struct IntIntFun1 fun_6 = (struct IntIntFun1){.fun = fun_3, .env = NULL};
     int call_1 = apply_1(fun_6, 2);
     int a_ = call_1;
-    milone_assert((a_ == 5), 13, 2);
+    milone_assert((a_ == 5), 14, 2);
     return 0;
 }
 
@@ -85,10 +85,10 @@ int milone_main() {
     struct IntIntFun1 fun_7 = (struct IntIntFun1){.fun = fun_4, .env = NULL};
     int call_4 = twice_1(fun_7, 40);
     int x_3 = call_4;
-    milone_assert((x_3 == 42), 24, 2);
+    milone_assert((x_3 == 42), 26, 2);
     struct IntIntIntFun2 fun_8 = (struct IntIntIntFun2){.fun = fun_5, .env = NULL};
     int app_3 = fun_8.fun(fun_8.env, 84, 2);
-    milone_assert((app_3 == 42), 26, 2);
+    milone_assert((app_3 == 42), 28, 2);
     char call_5 = layoutTest_(0);
     return 0;
 }

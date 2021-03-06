@@ -18,9 +18,10 @@ let abc140bSolve n a b c =
       let eat = b |> segTreeGet (ai - 1) // 0-indexed
 
       let bonus =
-        if i + 1 < n && a |> segTreeGet (i + 1) = ai + 1
-        then c |> segTreeGet (ai - 1)
-        else 0
+        if i + 1 < n && a |> segTreeGet (i + 1) = ai + 1 then
+          c |> segTreeGet (ai - 1)
+        else
+          0
 
       go (sum + eat + bonus) (i + 1)
 

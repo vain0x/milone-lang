@@ -16,8 +16,7 @@ let strContains (c: char) (s: string) =
 
 let strStartsWith (prefix: string) (s: string) =
   let rec go i =
-    i
-    >= prefix.Length
+    i >= prefix.Length
     || (s.[i] = prefix.[i] && go (i + 1))
 
   s.Length >= prefix.Length && go 0
@@ -50,21 +49,26 @@ let isDigit c = '0' <= c && c <= '9'
 
 let takeWhile (pred: char -> bool) (source: string, i) =
   let rec go r =
-    if r < source.Length && pred source.[r] then go (r + 1) else r
+    if r < source.Length && pred source.[r] then
+      go (r + 1)
+    else
+      r
 
   go i
 
 let private readSpace (source: string) (acc: Token list, i) =
   assert (source.[i] = ' ')
-  let r = takeWhile (charEqual ' ') (source, i + 1)
+
+  let r =
+    takeWhile (charEqual ' ') (source, i + 1)
+
   acc, r
 
 let private readEol (source: string) (acc: Token list, i) =
   assert (source.[i] = '\r' || source.[i] = '\n')
 
   let r =
-    if i
-       + 1 < source.Length
+    if i + 1 < source.Length
        && source.[i] = '\r'
        && source.[i + 1] = '\n' then
       i + 2
@@ -79,9 +83,12 @@ let private readInt (source: string) (acc: Token list, i) =
   let n = source.[i..r - 1] |> int
   TkInt n :: acc, r
 
-let tokenize (source: string): Token list =
+let tokenize (source: string) : Token list =
   let at i =
-    if i < source.Length then source.[i] else '\x00'
+    if i < source.Length then
+      source.[i]
+    else
+      '\x00'
 
   let rec go (acc, i) =
     if i >= source.Length then
@@ -91,7 +98,11 @@ let tokenize (source: string): Token list =
       | ' ' -> (acc, i) |> readSpace source |> go
       | '\r' -> (acc, i) |> readEol source |> go
       | '\n' -> (acc, i) |> readEol source |> go
-      | c -> if isDigit c then (acc, i) |> readInt source |> go else (TkOp c :: acc, i + 1) |> go
+      | c ->
+          if isDigit c then
+            (acc, i) |> readInt source |> go
+          else
+            (TkOp c :: acc, i + 1) |> go
 
   go ([], 0)
 
@@ -159,17 +170,13 @@ let main _ =
   assert (strStartsWith "hell" "hello")
   assert (strStartsWith "heaven" "hello" |> not)
   assert (strConcat [ "a"; ","; "b" ] = "a,b")
-  assert ([ "a"; ","; "b" ]
-          |> strListRev
-          |> strConcat = "b,a")
+  assert ([ "a"; ","; "b" ] |> strListRev |> strConcat = "b,a")
 
   let source = "2 + 3\r\n    - 4"
   source |> tokenize |> tokenListPrint
 
   assert (eval source = 2 + 3 - 4)
   assert (eval "2 - 3 * 4 + 5" = 2 - 3 * 4 + 5)
-  assert (eval "(2 - 3) * 4 + (1 + (2 + 2))" = (2 - 3)
-          * 4
-          + (1 + (2 + 2)))
+  assert (eval "(2 - 3) * 4 + (1 + (2 + 2))" = (2 - 3) * 4 + (1 + (2 + 2)))
 
   0

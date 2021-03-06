@@ -44,9 +44,9 @@ open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLang.Typing
 
-let private hxDummy: HExpr = hxUnit noLoc
+let private hxDummy : HExpr = hxUnit noLoc
 
-let private hxBlock stmts last: HExpr =
+let private hxBlock stmts last : HExpr =
   match stmts with
   | [] -> last
   | _ -> HBlockExpr(stmts, last)
@@ -61,23 +61,23 @@ type private HoistCtx =
     Stmts: HExpr list
     MainFunOpt: FunSerial option }
 
-let private hoistCtxEmpty: HoistCtx =
+let private hoistCtxEmpty : HoistCtx =
   { Decls = []
     Stmts = []
     MainFunOpt = None }
 
-let private addDecl decl (ctx: HoistCtx): HoistCtx = { ctx with Decls = decl :: ctx.Decls }
+let private addDecl decl (ctx: HoistCtx) : HoistCtx = { ctx with Decls = decl :: ctx.Decls }
 
-let private addStmt stmt (ctx: HoistCtx): HoistCtx =
+let private addStmt stmt (ctx: HoistCtx) : HoistCtx =
   if hxIsUnitLit stmt then
     ctx
   else
     { ctx with Stmts = stmt :: ctx.Stmts }
 
-let private takeStmts (ctx: HoistCtx): HExpr list * HoistCtx =
+let private takeStmts (ctx: HoistCtx) : HExpr list * HoistCtx =
   List.rev ctx.Stmts, { ctx with Stmts = [] }
 
-let private takeDecls (ctx: HoistCtx): HExpr list * HoistCtx =
+let private takeDecls (ctx: HoistCtx) : HExpr list * HoistCtx =
   List.rev ctx.Decls, { ctx with Decls = [] }
 
 // -----------------------------------------------
@@ -86,7 +86,7 @@ let private takeDecls (ctx: HoistCtx): HExpr list * HoistCtx =
 
 /// Processes a let-fun of non-main function.
 /// Returns `next`, which is not processed.
-let private hoistExprLetFunForNonMainFun (expr, ctx): HExpr * HoistCtx =
+let private hoistExprLetFunForNonMainFun (expr, ctx) : HExpr * HoistCtx =
   let callee, isRec, vis, args, body, next, loc =
     match expr with
     | HLetFunExpr (callee, isRec, vis, args, body, next, _, loc) -> callee, isRec, vis, args, body, next, loc
@@ -101,7 +101,7 @@ let private hoistExprLetFunForNonMainFun (expr, ctx): HExpr * HoistCtx =
   next, ctx
 
 /// Checks if an expression is let-fun of main function.
-let private isMainFun expr (ctx: HoistCtx): bool =
+let private isMainFun expr (ctx: HoistCtx) : bool =
   match expr with
   | HLetFunExpr (callee, _, _, _, _, _, _, _) ->
       match ctx.MainFunOpt with
@@ -111,7 +111,7 @@ let private isMainFun expr (ctx: HoistCtx): bool =
   | _ -> unreachable ()
 
 /// Processes a let-fun of the main function.
-let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx): HoistCtx =
+let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx) : HoistCtx =
   let callee, isRec, vis, args, body, next, loc =
     match expr with
     | HLetFunExpr (callee, isRec, vis, args, body, next, _, loc) -> callee, isRec, vis, args, body, next, loc
@@ -120,7 +120,7 @@ let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx): HoistCtx =
   let body, (ctx: HoistCtx) = (body, ctx) |> hoistBlock
 
   // Go to the end to process all toplevel expressions.
-  let ctx: HoistCtx = (next, ctx) |> hoistExprToplevel
+  let ctx : HoistCtx = (next, ctx) |> hoistExprToplevel
 
   // Body of the main function starts with a sequence of toplevel non-declaration expressions.
   let stmts, ctx = takeStmts ctx
@@ -133,7 +133,7 @@ let private hoistExprLetFunForMainFun (expr, ctx: HoistCtx): HoistCtx =
 // Control
 // -----------------------------------------------
 
-let private hoistExpr (expr, ctx): HExpr * HoistCtx =
+let private hoistExpr (expr, ctx) : HExpr * HoistCtx =
   match expr with
   | HLitExpr _
   | HVarExpr _
@@ -197,7 +197,7 @@ let private hoistExpr (expr, ctx): HExpr * HoistCtx =
   | HModuleExpr _
   | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
-let private hoistExprToplevel (expr, ctx): HoistCtx =
+let private hoistExprToplevel (expr, ctx) : HoistCtx =
   match expr with
   | HBlockExpr (stmts, last) ->
       let doArm () =
@@ -238,14 +238,14 @@ let private hoistExprToplevel (expr, ctx): HoistCtx =
   | _ -> hoistStmt ctx expr
 
 /// Processes an expression, whose value is discarded.
-let private hoistStmt ctx expr: HoistCtx =
+let private hoistStmt ctx expr : HoistCtx =
   let expr, ctx = (expr, ctx) |> hoistExpr
   ctx |> addStmt expr
 
 /// Processes an expression into single block.
 ///
 /// Stmts are unchanged.
-let private hoistBlock (expr, ctx: HoistCtx): HExpr * HoistCtx =
+let private hoistBlock (expr, ctx: HoistCtx) : HExpr * HoistCtx =
   let parent, ctx = ctx.Stmts, { ctx with Stmts = [] }
 
   let expr, ctx = (expr, ctx) |> hoistExpr
@@ -259,7 +259,7 @@ let private hoistBlock (expr, ctx: HoistCtx): HExpr * HoistCtx =
 // Interface
 // -----------------------------------------------
 
-let hoist (expr: HExpr, tyCtx: TyCtx): HExpr list * TyCtx =
+let hoist (expr: HExpr, tyCtx: TyCtx) : HExpr list * TyCtx =
   let hoistCtx =
     { hoistCtxEmpty with
         MainFunOpt = tyCtx.MainFunOpt }

@@ -1143,30 +1143,30 @@ char unconsTest_(char arg_62) {
     char match_5;
     struct IntIntConstPtrIntTuple2Tuple2Option call_102 = uncons_1(a123_);
     if (call_102.some) goto next_84;
-    milone_assert(false, 70, 12);
+    milone_assert(false, 71, 12);
     match_5 = 0;
     goto end_match_83;
 next_84:;
     if ((!(call_102.some))) goto next_85;
     int n1_ = call_102.value.t0;
     struct IntConstPtrIntTuple2 a23_ = call_102.value.t1;
-    milone_assert((n1_ == 1), 72, 6);
+    milone_assert((n1_ == 1), 73, 6);
     int call_103 = length_1(a23_);
-    milone_assert((call_103 == 2), 73, 6);
+    milone_assert((call_103 == 2), 74, 6);
     char match_6;
     struct IntConstPtrIntTuple2 call_104 = skip_1(1, a23_);
     struct IntIntConstPtrIntTuple2Tuple2Option call_105 = uncons_1(call_104);
     if (call_105.some) goto next_87;
-    milone_assert(false, 76, 16);
+    milone_assert(false, 77, 16);
     match_6 = 0;
     goto end_match_86;
 next_87:;
     if ((!(call_105.some))) goto next_88;
     int n3_ = call_105.value.t0;
     struct IntConstPtrIntTuple2 empty_1 = call_105.value.t1;
-    milone_assert((n3_ == 3), 78, 10);
+    milone_assert((n3_ == 3), 79, 10);
     int call_106 = length_1(empty_1);
-    milone_assert((call_106 == 0), 79, 10);
+    milone_assert((call_106 == 0), 80, 10);
     char match_7;
     struct IntIntConstPtrIntTuple2Tuple2Option call_107 = uncons_1(empty_1);
     if (call_107.some) goto next_90;
@@ -1174,7 +1174,7 @@ next_87:;
     goto end_match_89;
 next_90:;
     if ((!(call_107.some))) goto next_91;
-    milone_assert(false, 83, 22);
+    milone_assert(false, 84, 22);
     match_7 = 0;
     goto end_match_89;
 next_91:;
@@ -1208,13 +1208,13 @@ char mapTest_(char arg_63) {
     struct IntConstPtrIntTuple2 call_110 = mapi_1(fun_31, call_109);
     struct IntConstPtrIntTuple2 mapped_ = call_110;
     int call_111 = length_1(mapped_);
-    milone_assert((call_111 == 3), 89, 2);
+    milone_assert((call_111 == 3), 90, 2);
     int call_112 = get_1(0, mapped_);
-    milone_assert((call_112 == 0), 90, 2);
+    milone_assert((call_112 == 0), 91, 2);
     int call_113 = get_1(1, mapped_);
-    milone_assert((call_113 == 11), 91, 2);
+    milone_assert((call_113 == 11), 92, 2);
     int call_114 = get_1(2, mapped_);
-    milone_assert((call_114 == 22), 92, 2);
+    milone_assert((call_114 == 22), 93, 2);
     return 0;
 }
 
@@ -1256,19 +1256,19 @@ char chooseTest_(char arg_65) {
     struct IntConstPtrIntTuple2 call_118 = choose_1(fun_32, call_117);
     struct IntConstPtrIntTuple2 chosen_ = call_118;
     int call_119 = length_1(chosen_);
-    milone_assert((call_119 == 3), 98, 2);
+    milone_assert((call_119 == 3), 99, 2);
     int call_120 = get_1(0, chosen_);
-    milone_assert((call_120 == 0), 99, 2);
+    milone_assert((call_120 == 0), 100, 2);
     int call_121 = get_1(1, chosen_);
-    milone_assert((call_121 == 4), 100, 2);
+    milone_assert((call_121 == 4), 101, 2);
     int call_122 = get_1(2, chosen_);
-    milone_assert((call_122 == 8), 101, 2);
+    milone_assert((call_122 == 8), 102, 2);
     struct IntIntOptionFun1 fun_33 = (struct IntIntOptionFun1){.fun = fun_22, .env = NULL};
     struct IntConstPtrIntTuple2 call_123 = range_(3);
     struct IntConstPtrIntTuple2 call_124 = choose_1(fun_33, call_123);
     struct IntConstPtrIntTuple2 empty_2 = call_124;
     int call_125 = length_1(empty_2);
-    milone_assert((call_125 == 0), 106, 2);
+    milone_assert((call_125 == 0), 107, 2);
     return 0;
 }
 
@@ -1286,7 +1286,7 @@ char foldTest_(char arg_66) {
     struct IntConstPtrIntTuple2 call_127 = range_(3);
     int call_128 = fold_1(fun_34, 0, call_127);
     int sum_ = call_128;
-    milone_assert((sum_ == 123), 112, 2);
+    milone_assert((sum_ == 123), 113, 2);
     return 0;
 }
 
@@ -1300,13 +1300,13 @@ char ofListTest_(char arg_67) {
     struct IntConstPtrIntTuple2 call_129 = ofList_1(list_1);
     struct IntConstPtrIntTuple2 ol_ = call_129;
     int call_130 = length_1(ol_);
-    milone_assert((call_130 == 3), 125, 2);
+    milone_assert((call_130 == 3), 126, 2);
     int call_131 = get_1(0, ol_);
-    milone_assert((call_131 == 2), 126, 2);
+    milone_assert((call_131 == 2), 127, 2);
     int call_132 = get_1(1, ol_);
-    milone_assert((call_132 == 3), 127, 2);
+    milone_assert((call_132 == 3), 128, 2);
     int call_133 = get_1(2, ol_);
-    milone_assert((call_133 == 5), 128, 2);
+    milone_assert((call_133 == 5), 129, 2);
     return 0;
 }
 
@@ -1322,9 +1322,9 @@ char toListTest_(char arg_68) {
     if ((!(tl_->tail->tail))) goto next_96;
     int n2_ = tl_->tail->tail->head;
     if ((!((!(tl_->tail->tail->tail))))) goto next_96;
-    milone_assert((n0_ == 0), 135, 6);
-    milone_assert((n1_1 == 1), 136, 6);
-    milone_assert((n2_ == 2), 137, 6);
+    milone_assert((n0_ == 0), 136, 6);
+    milone_assert((n1_1 == 1), 137, 6);
+    milone_assert((n2_ == 2), 138, 6);
     match_8 = 0;
     goto end_match_95;
 next_96:;

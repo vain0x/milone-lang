@@ -42,10 +42,11 @@ let test (t: bool) (f: bool) =
   ()
 
 let testShortCircuit (t: bool) (f: bool) =
-  assert (not
-            (f
-             && (exit 1
-                 f)))
+  assert (not (
+    f
+    && (exit 1
+        f)
+  ))
 
   assert (t
           || (exit 1

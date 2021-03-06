@@ -285,7 +285,7 @@ type CompileCtx =
     Verbosity: Verbosity
     Host: CliHost }
 
-let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
+let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
@@ -478,13 +478,13 @@ let private tokenizeErrors errorTokens =
 
 /// Loads source codes from files, performs tokenization and SyntaxParse,
 /// and transforms them into high-level intermediate representation (HIR).
-let syntacticallyAnalyze (ctx: CompileCtx): SyntaxAnalysisResult =
+let syntacticallyAnalyze (ctx: CompileCtx) : SyntaxAnalysisResult =
   let host = ctx.Host
   let v = ctx.Verbosity
 
   writeLog host v ("AstBundle project=" + ctx.ProjectName)
 
-  let fetchModule (projectName: ProjectName) (moduleName: ModuleName): ModuleSyntaxData option =
+  let fetchModule (projectName: ProjectName) (moduleName: ModuleName) : ModuleSyntaxData option =
     match ctx.Projects |> TMap.tryFind projectName with
     | None -> None
     | Some projectDir -> ctx.FetchModule projectName projectDir moduleName
@@ -498,7 +498,7 @@ type SemaAnalysisResult =
   | SemaAnalysisTypingError of TyCtx
 
 /// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze (host: CliHost) v (syntax: SyntaxAnalysisResult): SemaAnalysisResult =
+let semanticallyAnalyze (host: CliHost) v (syntax: SyntaxAnalysisResult) : SemaAnalysisResult =
   let exprs, nameCtx, syntaxErrors = syntax
   assert (syntaxErrors |> List.isEmpty)
 
@@ -552,7 +552,7 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx): string =
+let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx) : string =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (decls, tyCtx)
 
@@ -570,7 +570,7 @@ let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx): string =
   writeLog host v "Finish"
   output
 
-let check (ctx: CompileCtx): bool * string =
+let check (ctx: CompileCtx) : bool * string =
   let host = ctx.Host
   let v = ctx.Verbosity
 
@@ -584,7 +584,7 @@ let check (ctx: CompileCtx): bool * string =
     | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
     | SemaAnalysisOk _ -> true, ""
 
-let compile (ctx: CompileCtx): bool * string =
+let compile (ctx: CompileCtx) : bool * string =
   let host = ctx.Host
   let v = ctx.Verbosity
 

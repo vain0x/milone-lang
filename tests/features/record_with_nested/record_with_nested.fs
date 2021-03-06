@@ -9,7 +9,7 @@ type Person =
     Age: int
     Birthday: Date }
 
-let newPerson (): Person =
+let newPerson () : Person =
   { Name = "Jane Doe"
     Age = 16
     Birthday = { Year = 2007; Month = 8; Date = 31 } }

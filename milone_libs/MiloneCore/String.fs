@@ -3,7 +3,7 @@ module rec MiloneCore.String
 // NOTE: Exponentiation by squaring is fast enough, but we should use StringBuilder once available
 //       since just using mutable buffer is ~5x faster.
 
-let init (count: int) (f: int -> string): string =
+let init (count: int) (f: int -> string) : string =
   assert (count >= 0)
 
   let rec stringInitAux l r =
@@ -20,7 +20,7 @@ let init (count: int) (f: int -> string): string =
   | 1 -> f 0
   | _ -> stringInitAux 0 count
 
-let replicate (count: int) (s: string): string =
+let replicate (count: int) (s: string) : string =
   assert (count >= 0)
 
   // n times `s`
@@ -38,4 +38,4 @@ let replicate (count: int) (s: string): string =
   else
     stringReplicateAux count
 
-let length (s: string): int = s.Length
+let length (s: string) : int = s.Length

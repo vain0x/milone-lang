@@ -69,7 +69,7 @@ switch_next_1:;
     match_ = 0;
     goto end_match_4;
 next_5:;
-    milone_assert(false, 25, 9);
+    milone_assert(false, 26, 9);
     match_ = 0;
     goto end_match_4;
 next_6:;

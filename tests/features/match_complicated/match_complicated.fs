@@ -14,6 +14,7 @@ let testListMatching () =
 
 let testMatchArmsMakeScope () =
   let x = 2
+
   match x, 1 with
   | 1, x -> assert false
   | 2, _ -> if x <> 2 then assert false

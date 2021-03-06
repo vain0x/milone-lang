@@ -41,15 +41,15 @@ type LangServiceHost =
 // Syntax
 // -----------------------------------------------
 
-let private locOfDocPos (docId: DocId) (pos: Pos): Loc =
+let private locOfDocPos (docId: DocId) (pos: Pos) : Loc =
   let y, x = pos
-  Loc (docId, y, x)
+  Loc(docId, y, x)
 
-let private locToDoc (loc: Loc): DocId =
+let private locToDoc (loc: Loc) : DocId =
   let (Loc (docId, _, _)) = loc
   docId
 
-let private locToPos (loc: Loc): Pos =
+let private locToPos (loc: Loc) : Pos =
   let (Loc (_, y, x)) = loc
   y, x
 
@@ -161,7 +161,9 @@ let private doBundle (ls: LangServiceState) projectDir =
         parseWithCache ls docId |> Some
 
   // FIXME: read .milone_project
-  let compileCtx = { compileCtx with FetchModule = fetchModule }
+  let compileCtx =
+    { compileCtx with
+        FetchModule = fetchModule }
 
   let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
 
@@ -379,7 +381,7 @@ let private findTyInExpr (ls: LangServiceState) (expr: HExpr) (tyCtx: Typing.TyC
     if loc = tokenLoc then
       contentOpt <- tyOpt
 
-  let visitor: Visitor =
+  let visitor : Visitor =
     { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
       OnVar = fun (_, _, ty, loc) -> onVisit (Some ty) loc
       OnFun = fun (_, tyOpt, loc) -> onVisit tyOpt loc
@@ -401,7 +403,7 @@ let private collectSymbolsInExpr (expr: HExpr) =
 
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
 
-  let visitor: Visitor =
+  let visitor : Visitor =
     { OnDiscardPat = fun (_, loc) -> onVisit DiscardSymbol Def loc
       OnVar = fun (varSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VarSymbol varSerial)) defOrUse loc
       OnFun = fun (funSerial, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) Use loc
@@ -500,7 +502,7 @@ let private doCollectSymbolOccurrences
                   docId, range ]
 
 module LangService =
-  let create (host: LangServiceHost): LangServiceState =
+  let create (host: LangServiceHost) : LangServiceState =
     { TokenizeFullCache = MutMap()
       ParseCache = MutMap()
       BundleCache = MutMap()

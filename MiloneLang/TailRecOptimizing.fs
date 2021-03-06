@@ -37,7 +37,7 @@ type private TailRecCtx =
     Tys: AssocMap<TySerial, TyDef>
     CurrentFun: FunSerial option }
 
-let private ofTyCtx (tyCtx: TyCtx): TailRecCtx =
+let private ofTyCtx (tyCtx: TyCtx) : TailRecCtx =
   { Vars = tyCtx.Vars
     Tys = tyCtx.Tys
     CurrentFun = None }
@@ -124,7 +124,7 @@ let private troExpr isTail (expr, ctx) =
   | HModuleExpr _
   | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
-let tailRecOptimize (decls: HExpr list, tyCtx: TyCtx): HExpr list * TyCtx =
+let tailRecOptimize (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
   let ctx = ofTyCtx tyCtx
 
   let decls, _ = (decls, ctx) |> stMap (troExpr IsTail)

@@ -67,7 +67,7 @@ let private findVar (ctx: TyCtx) serial = ctx.Vars |> mapFind serial
 
 let private findTy tySerial (ctx: TyCtx) = ctx.Tys |> mapFind tySerial
 
-let private getTyLevel tySerial (ctx: TyCtx): Level =
+let private getTyLevel tySerial (ctx: TyCtx) : Level =
   ctx.TyLevels
   |> TMap.tryFind tySerial
   |> Option.defaultValue 0
@@ -84,7 +84,7 @@ let private isMainFun funSerial (ctx: TyCtx) =
 let private freshVar (ctx: TyCtx) hint ty loc =
   let varSerial = VarSerial(ctx.Serial + 1)
 
-  let varDef: VarDef =
+  let varDef : VarDef =
     { Name = hint
       IsStatic = NotStatic
       Ty = ty
@@ -107,7 +107,7 @@ let private freshTySerial (ctx: TyCtx) =
 
   serial, ctx
 
-let private freshMetaTy loc (ctx: TyCtx): Ty * TyCtx =
+let private freshMetaTy loc (ctx: TyCtx) : Ty * TyCtx =
   let serial, ctx = freshTySerial ctx
   let ty = tyMeta serial loc
   ty, ctx
@@ -140,12 +140,12 @@ let private validateLit ctx lit loc =
 
 // And meta type resolution by substitution or degeneration.
 
-let private expandMeta (ctx: TyCtx) tySerial: Ty option =
+let private expandMeta (ctx: TyCtx) tySerial : Ty option =
   match ctx.Tys |> TMap.tryFind tySerial with
   | Some (MetaTyDef ty) -> Some ty
   | _ -> None
 
-let private substTy (ctx: TyCtx) ty: Ty = tySubst (expandMeta ctx) ty
+let private substTy (ctx: TyCtx) ty : Ty = tySubst (expandMeta ctx) ty
 
 /// Substitutes bound meta tys in a ty.
 /// Unbound meta tys are degenerated, i.e. replaced with unit.
@@ -166,10 +166,10 @@ let private substOrDegenerateTy (ctx: TyCtx) ty =
 
   tySubst substMeta ty
 
-let private expandSynonyms (ctx: TyCtx) ty: Ty =
+let private expandSynonyms (ctx: TyCtx) ty : Ty =
   tyExpandSynonyms (fun tySerial -> ctx.Tys |> TMap.tryFind tySerial) ty
 
-let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty): TyCtx =
+let private unifyTy (ctx: TyCtx) loc (lTy: Ty) (rTy: Ty) : TyCtx =
   let levelUp (ctx: TyCtx) tySerial ty =
     let level = getTyLevel tySerial ctx
 
@@ -311,10 +311,10 @@ let private addTraitBounds traits (ctx: TyCtx) =
   { ctx with
       TraitBounds = List.append traits ctx.TraitBounds }
 
-let private doResolveTraitBound (ctx: TyCtx) theTrait loc: TyCtx =
-  let unify lTy rTy loc ctx: TyCtx = unifyTy ctx loc lTy rTy
+let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
+  let unify lTy rTy loc ctx : TyCtx = unifyTy ctx loc lTy rTy
 
-  let addBoundError (ctx: TyCtx): TyCtx =
+  let addBoundError (ctx: TyCtx) : TyCtx =
     addLog ctx (Log.TyBoundError theTrait) loc
 
   /// integer, bool, char, or string
@@ -435,7 +435,7 @@ let private resolveTraitBounds (ctx: TyCtx) =
 // Others
 // -----------------------------------------------
 
-let private castFunAsNativeFun funSerial (ctx: TyCtx): Ty * TyCtx =
+let private castFunAsNativeFun funSerial (ctx: TyCtx) : Ty * TyCtx =
   let funDef = ctx.Funs |> mapFind funSerial
 
   // Mark this function as extern "C".
@@ -623,7 +623,7 @@ let private doInferPats ctx pats =
 
   go ctx [] [] pats
 
-let private inferPat ctx pat: HPat * Ty * TyCtx =
+let private inferPat ctx pat : HPat * Ty * TyCtx =
   match pat with
   | HLitPat (lit, _) -> inferLitPat ctx pat lit
   | HDiscardPat (_, loc) -> inferDiscardPat ctx pat loc
@@ -1114,7 +1114,7 @@ let private inferLetFunExpr (ctx: TyCtx) expectOpt callee vis argPats body next 
   let next, nextTy, ctx = inferExpr ctx expectOpt next
   HLetFunExpr(callee, NotRec, vis, argPats, body, next, nextTy, loc), nextTy, ctx
 
-let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr): HExpr * Ty * TyCtx =
+let private inferExpr (ctx: TyCtx) (expectOpt: Ty option) (expr: HExpr) : HExpr * Ty * TyCtx =
   let fail () = unreachable expr
 
   match expr with
@@ -1229,7 +1229,7 @@ let private rcsTy (ctx: SynonymCycleCtx) (ty: Ty) =
 let private rcsTys ctx tys = List.fold rcsTy ctx tys
 
 let private synonymCycleCheck (tyCtx: TyCtx) =
-  let ctx: SynonymCycleCtx =
+  let ctx : SynonymCycleCtx =
     { ExpandMetaOrSynonymTy =
         fun tySerial ->
           match findTy tySerial tyCtx with
@@ -1275,8 +1275,8 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // Interface
 // -----------------------------------------------
 
-let infer (expr: HExpr, scopeCtx: ScopeCtx, errors): HExpr * TyCtx =
-  let ctx: TyCtx =
+let infer (expr: HExpr, scopeCtx: ScopeCtx, errors) : HExpr * TyCtx =
+  let ctx : TyCtx =
     { Serial = scopeCtx.Serial
       Vars = scopeCtx.Vars
       Funs = scopeCtx.Funs

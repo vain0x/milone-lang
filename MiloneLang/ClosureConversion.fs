@@ -99,7 +99,7 @@ type private KnownCtx =
     UseVars: AssocSet<VarSerial>
     UseFuns: AssocSet<FunSerial> }
 
-let private knownCtxEmpty (): KnownCtx =
+let private knownCtxEmpty () : KnownCtx =
   { Locals = TSet.empty varSerialCompare
     UseVars = TSet.empty varSerialCompare
     UseFuns = TSet.empty funSerialCompare }
@@ -128,7 +128,7 @@ let private knownCtxUseFun funSerial (ctx: KnownCtx) =
   { ctx with
       UseFuns = ctx.UseFuns |> TSet.add funSerial }
 
-let private knownCtxToNonlocalVars (ctx: KnownCtx): AssocSet<VarSerial> =
+let private knownCtxToNonlocalVars (ctx: KnownCtx) : AssocSet<VarSerial> =
   ctx.UseVars
   |> TSet.fold
        (fun acc varSerial ->
@@ -193,7 +193,7 @@ type private CcCtx =
     FunKnowns: AssocMap<FunSerial, KnownCtx>
     FunUpvars: AssocMap<FunSerial, AssocSet<VarSerial>> }
 
-let private ofTyCtx (tyCtx: TyCtx): CcCtx =
+let private ofTyCtx (tyCtx: TyCtx) : CcCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
     Funs = tyCtx.Funs
@@ -252,7 +252,7 @@ let private leaveFunDecl funSerial (baseCtx: CcCtx) (ctx: CcCtx) =
         |> knownCtxLeaveFunDecl baseCtx.Current }
 
 /// Gets a list of captured variables for a function.
-let private genFunCaps funSerial (ctx: CcCtx): Caps =
+let private genFunCaps funSerial (ctx: CcCtx) : Caps =
   let varSerials =
     match ctx.FunUpvars |> TMap.tryFind funSerial with
     | Some it -> it |> TSet.toList
@@ -269,8 +269,8 @@ let private genFunCaps funSerial (ctx: CcCtx): Caps =
          | _ -> None)
   |> List.rev
 
-let private closureRefs (ctx: CcCtx): CcCtx =
-  let mergeUpvars localVars newUpvars (modified, upvars): bool * AssocSet<VarSerial> =
+let private closureRefs (ctx: CcCtx) : CcCtx =
+  let mergeUpvars localVars newUpvars (modified, upvars) : bool * AssocSet<VarSerial> =
     newUpvars
     |> TSet.fold
          (fun (modified, upvars) varSerial ->
@@ -329,7 +329,7 @@ let private updateFunDefs (ctx: CcCtx) =
            | [] -> funs
 
            | caps ->
-               let funDef: FunDef = funs |> mapFind funSerial
+               let funDef : FunDef = funs |> mapFind funSerial
                let (TyScheme (tyVars, funTy)) = funDef.Ty
 
                let funTy, arity =

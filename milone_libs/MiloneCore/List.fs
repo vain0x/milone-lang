@@ -10,13 +10,13 @@ module rec MiloneCore.List
 // Make sure every function is tail-recursive.
 // Inner functions have verbose name for readability of output code.
 
-let isEmpty (xs: _ list): bool =
+let isEmpty (xs: _ list) : bool =
   match xs with
   | [] -> true
 
   | _ -> false
 
-let length (xs: _ list): int =
+let length (xs: _ list) : int =
   let rec listLengthLoop len xs =
     match xs with
     | [] -> len
@@ -25,7 +25,7 @@ let length (xs: _ list): int =
 
   listLengthLoop 0 xs
 
-let rev (xs: _ list): _ list =
+let rev (xs: _ list) : _ list =
   let rec listRevLoop acc xs =
     match xs with
     | [] -> acc
@@ -34,7 +34,7 @@ let rev (xs: _ list): _ list =
 
   listRevLoop [] xs
 
-let map (f: _ -> _) (xs: _ list): _ list =
+let map (f: _ -> _) (xs: _ list) : _ list =
   let rec listMapLoop acc xs =
     match xs with
     | [] -> rev acc
@@ -52,7 +52,7 @@ let mapi (f: int -> _ -> _) (xs: _ list) =
 
   listMapWithIndexLoop [] 0 xs
 
-let filter (pred: _ -> bool) (xs: _ list): _ list =
+let filter (pred: _ -> bool) (xs: _ list) : _ list =
   let rec listFilterLoop acc xs =
     match xs with
     | [] -> rev acc
@@ -63,7 +63,7 @@ let filter (pred: _ -> bool) (xs: _ list): _ list =
 
   listFilterLoop [] xs
 
-let choose (f: _ -> _ option) (xs: _ list): _ list =
+let choose (f: _ -> _ option) (xs: _ list) : _ list =
   let rec listChooseLoop acc xs =
     match xs with
     | [] -> rev acc
@@ -75,7 +75,7 @@ let choose (f: _ -> _ option) (xs: _ list): _ list =
 
   listChooseLoop [] xs
 
-let collect (f: _ -> _ list) (xs: _ list): _ list =
+let collect (f: _ -> _ list) (xs: _ list) : _ list =
   let rec listCollectInnerLoop acc ys =
     match ys with
     | [] -> acc
@@ -92,7 +92,7 @@ let collect (f: _ -> _ list) (xs: _ list): _ list =
 
   listCollectOuterLoop [] xs
 
-let skip (count: int) (xs: _ list): _ list =
+let skip (count: int) (xs: _ list) : _ list =
   let rec listSkipLoop count xs =
     match xs with
     | [] -> []
@@ -103,7 +103,7 @@ let skip (count: int) (xs: _ list): _ list =
 
   listSkipLoop count xs
 
-let truncate (count: int) (xs: _ list): _ list =
+let truncate (count: int) (xs: _ list) : _ list =
   let rec listTruncateLoop acc count xs =
     match xs with
     | [] -> rev acc
@@ -114,7 +114,7 @@ let truncate (count: int) (xs: _ list): _ list =
 
   listTruncateLoop [] count xs
 
-let append (xs: _ list) (ys: _ list): _ list =
+let append (xs: _ list) (ys: _ list) : _ list =
   let rec listAppendLoop acc xs =
     match xs with
     | [] -> acc
@@ -139,7 +139,7 @@ let fold (folder: _ -> _ -> _) state (xs: _ list) =
 /// let mappedList, finalState =
 ///   items |> List.mapFold (fun state item -> mappedItem, nextState) initialState
 /// ```
-let mapFold (folder: 'S -> 'T -> 'U * 'S) (state: 'S) (xs: 'T list): 'U list * 'S =
+let mapFold (folder: 'S -> 'T -> 'U * 'S) (state: 'S) (xs: 'T list) : 'U list * 'S =
   let rec listMapFoldLoop state acc xs =
     match xs with
     | [] -> rev acc, state
@@ -150,7 +150,7 @@ let mapFold (folder: 'S -> 'T -> 'U * 'S) (state: 'S) (xs: 'T list): 'U list * '
 
   listMapFoldLoop state [] xs
 
-let forall (pred: _ -> bool) (xs: _ list): bool =
+let forall (pred: _ -> bool) (xs: _ list) : bool =
   let rec listForAllLoop xs =
     match xs with
     | [] -> true
@@ -159,7 +159,7 @@ let forall (pred: _ -> bool) (xs: _ list): bool =
 
   listForAllLoop xs
 
-let exists (pred: _ -> bool) (xs: _ list): bool =
+let exists (pred: _ -> bool) (xs: _ list) : bool =
   let rec listExistsLoop xs =
     match xs with
     | [] -> false
@@ -168,7 +168,7 @@ let exists (pred: _ -> bool) (xs: _ list): bool =
 
   listExistsLoop xs
 
-let iter (f: _ -> unit) (xs: _ list): unit =
+let iter (f: _ -> unit) (xs: _ list) : unit =
   match xs with
   | [] -> ()
 
@@ -176,7 +176,7 @@ let iter (f: _ -> unit) (xs: _ list): unit =
       f x
       iter f xs
 
-let tryHead (xs: _ list): _ option =
+let tryHead (xs: _ list) : _ option =
   match xs with
   | x :: _ -> Some x
   | _ -> None
@@ -184,9 +184,9 @@ let tryHead (xs: _ list): _ option =
 /// Gets the i'th item if exists.
 ///
 /// Spends O(N) time at worst. Avoid using this as possible.
-let tryItem (i: int) (xs: _ list): _ option = xs |> skip i |> tryHead
+let tryItem (i: int) (xs: _ list) : _ option = xs |> skip i |> tryHead
 
-let tryFind (pred: _ -> bool) (xs: _ list): _ option =
+let tryFind (pred: _ -> bool) (xs: _ list) : _ option =
   let rec listTryFindLoop xs =
     match xs with
     | [] -> None
@@ -197,7 +197,7 @@ let tryFind (pred: _ -> bool) (xs: _ list): _ option =
 
   listTryFindLoop xs
 
-let tryPick (f: _ -> _ option) (xs: _ list): _ option =
+let tryPick (f: _ -> _ option) (xs: _ list) : _ option =
   let rec listTryPickLoop xs =
     match xs with
     | [] -> None
@@ -215,7 +215,7 @@ let tryPick (f: _ -> _ option) (xs: _ list): _ option =
 /// - `falseItems` is the other items, which return `false` for the predicate.
 ///
 /// Ordering is preserved.
-let partition (pred: _ -> bool) (xs: _ list): _ list * _ list =
+let partition (pred: _ -> bool) (xs: _ list) : _ list * _ list =
   let rec listPartitionLoop trueAcc falseAcc xs =
     match xs with
     | [] -> rev trueAcc, rev falseAcc
@@ -230,7 +230,7 @@ let partition (pred: _ -> bool) (xs: _ list): _ list * _ list =
 
 /// Creates a list with specified length. i'th element is filled by `f i`.
 /// That is, `[ f 0; f 1; ...; f (len - 1) ]`.
-let init (len: int) (f: int -> _): _ list =
+let init (len: int) (f: int -> _) : _ list =
   assert (len >= 0)
 
   let rec listInitLoop acc i =
@@ -243,7 +243,7 @@ let init (len: int) (f: int -> _): _ list =
 
 /// Creates a list with specified length. Every element is `item`.
 /// That is, `[ item; item; ...; item ]`.
-let replicate (len: int) item: _ list =
+let replicate (len: int) item : _ list =
   assert (len >= 0)
 
   let rec listReplicateLoop acc i =

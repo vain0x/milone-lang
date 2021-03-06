@@ -15,12 +15,12 @@ type Array<'T> = __ConstArray<'T>
 /// Gets an empty array.
 ///
 /// PERF: O(1) time, no allocation.
-let empty (): Array<_> = __constArrayOfMut (__mutArrayCreate 0)
+let empty () : Array<_> = __constArrayOfMut (__mutArrayCreate 0)
 
 /// Creates an array with specified length. i'th item is `f i`.
 ///
 /// E.g. `init f 3` is `[| f 0; f 1; f 2 |]`.
-let init (len: int) (f: int -> _): Array<_> =
+let init (len: int) (f: int -> _) : Array<_> =
   if len <= 0 then
     assert (len = 0)
     empty ()
@@ -39,12 +39,12 @@ let init (len: int) (f: int -> _): Array<_> =
 /// Creates an array with specified length. Items are all equal to specified value.
 ///
 /// E.g. `replicate 3 x` is `[| x; x; x |]`.
-let replicate (len: int) item: Array<_> = init len (fun (_: int) -> item)
+let replicate (len: int) item : Array<_> = init len (fun (_: int) -> item)
 
 /// Creates an array with specified length. i'th item is `i`.
 ///
 /// E.g. `range 3` is `[| 0; 1; 2 |]`.
-let range (len: int): Array<int> = init len (fun (i: int) -> i)
+let range (len: int) : Array<int> = init len (fun (i: int) -> i)
 
 // -----------------------------------------------
 // Get
@@ -53,17 +53,17 @@ let range (len: int): Array<int> = init len (fun (i: int) -> i)
 /// Gets the length of array.
 ///
 /// O(1) time.
-let length (array: Array<_>): int = __constArrayLength array
+let length (array: Array<_>) : int = __constArrayLength array
 
 /// Gets whether the array is empty (that is, length is zero).
 ///
 /// O(1) time.
-let isEmpty (array: Array<_>): bool = length array = 0
+let isEmpty (array: Array<_>) : bool = length array = 0
 
 /// Gets the i'th item of array.
 ///
 /// O(1) time.
-let tryItem (i: int) (array: Array<_>): _ option =
+let tryItem (i: int) (array: Array<_>) : _ option =
   if uint i < uint (length array) then
     Some(__constArrayGet i array)
   else
@@ -89,7 +89,7 @@ let tryItem (i: int) (array: Array<_>): _ option =
 /// Intersection of (start .. endIndex-1) and (0 .. len-1) is used.
 ///
 /// O(1) time, no allocation.
-let slice (start: int) (endIndex: int) (array: Array<_>): Array<_> =
+let slice (start: int) (endIndex: int) (array: Array<_>) : Array<_> =
   let len = length array
   let start = if start >= 0 then start else 0
   let endIndex = if endIndex < len then endIndex else len
@@ -99,17 +99,17 @@ let slice (start: int) (endIndex: int) (array: Array<_>): Array<_> =
   else
     empty ()
 
-let skip (skipLen: int) (array: Array<_>): Array<_> = slice skipLen (length array) array
+let skip (skipLen: int) (array: Array<_>) : Array<_> = slice skipLen (length array) array
 
-let truncate (takeLen: int) (array: Array<_>): Array<_> = slice 0 takeLen array
+let truncate (takeLen: int) (array: Array<_>) : Array<_> = slice 0 takeLen array
 
-let splitAt (index: int) (array: Array<_>): Array<_> * Array<_> =
+let splitAt (index: int) (array: Array<_>) : Array<_> * Array<_> =
   slice 0 index array, slice index (length array) array
 
 /// Tries to split an array into a pair of head item and tail part.
 ///
 /// E.g. `[| x1; x2; ... |]` => `Some (x1, [| x2; ... |])`
-let uncons (array: Array<_>): (_ * Array<_>) option =
+let uncons (array: Array<_>) : (_ * Array<_>) option =
   let len = length array
 
   if len = 0 then
@@ -123,13 +123,13 @@ let uncons (array: Array<_>): (_ * Array<_>) option =
 // Batch operations
 // -----------------------------------------------
 
-let mapi (f: int -> _ -> _) (array: Array<_>): Array<_> =
+let mapi (f: int -> _ -> _) (array: Array<_>) : Array<_> =
   init (length array) (fun (i: int) -> f i (__constArrayGet i array))
 
-let map (f: _ -> _) (array: Array<_>): Array<_> =
+let map (f: _ -> _) (array: Array<_>) : Array<_> =
   init (length array) (fun (i: int) -> f (__constArrayGet i array))
 
-let choose (f: _ -> _ option) (src: Array<_>): Array<_> =
+let choose (f: _ -> _ option) (src: Array<_>) : Array<_> =
   let len = length src
   let dest = __mutArrayCreate len
 
@@ -153,7 +153,7 @@ let choose (f: _ -> _ option) (src: Array<_>): Array<_> =
   else
     __constArrayOfMut (__mutArraySlice 0 di dest)
 
-let filter (pred: _ -> bool) (src: Array<_>): Array<_> =
+let filter (pred: _ -> bool) (src: Array<_>) : Array<_> =
   choose (fun item -> if pred item then Some item else None) src
 
 let fold folder state (array: Array<_>) =
@@ -171,7 +171,7 @@ let fold folder state (array: Array<_>) =
 
 // let sortWith compare (array: Array<_>): Array<_> =
 
-let ofList (xs: _ list): Array<_> =
+let ofList (xs: _ list) : Array<_> =
   let len =
     let rec listLengthLoop acc xs =
       match xs with
@@ -192,7 +192,7 @@ let ofList (xs: _ list): Array<_> =
   ofListLoop 0 xs
   __constArrayOfMut dest
 
-let toList (array: Array<_>): _ list =
+let toList (array: Array<_>) : _ list =
   let rec toListLoop acc i =
     if i = 0 then
       acc

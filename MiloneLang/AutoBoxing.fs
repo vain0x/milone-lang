@@ -37,7 +37,7 @@ type private IsDirect =
   | IsDirect
   | IsIndirect
 
-let private compareIsDirect l r: int =
+let private compareIsDirect l r : int =
   let toInt isDirect =
     match isDirect with
     | IsDirect -> 0
@@ -87,7 +87,7 @@ let private trdVariant isDirect (ctx: TrdCtx) variantSerial (variantDefOpt: Vari
               ctx.VariantMemo
               |> TMap.add (variantSerial, isDirect) Recursive }
 
-      let ctx: TrdCtx =
+      let ctx : TrdCtx =
         let variantDef =
           match variantDefOpt with
           | Some variantDef -> variantDef
@@ -139,7 +139,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
               ctx.RecordTyMemo
               |> TMap.add (tySerial, isDirect) Recursive }
 
-      let ctx: TrdCtx =
+      let ctx : TrdCtx =
         match tyDef with
         | RecordTyDef (_, fields, _) ->
             fields
@@ -163,7 +163,7 @@ let private trdRecordTyDef isDirect (ctx: TrdCtx) tySerial tyDef =
 
       ctx
 
-let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef: TrdCtx =
+let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef : TrdCtx =
   match tyDef with
   | UnionTyDef (_, variants, _) ->
       variants
@@ -175,7 +175,7 @@ let private trdTyDef isDirect (ctx: TrdCtx) tySerial tyDef: TrdCtx =
   | UniversalTyDef _
   | SynonymTyDef _ -> unreachable () // Resolved in Typing.
 
-let private trdTy isDirect (ctx: TrdCtx) ty: TrdCtx =
+let private trdTy isDirect (ctx: TrdCtx) ty : TrdCtx =
   match ty with
   | Ty (tk, tyArgs) ->
       let nominal tySerial =
@@ -211,8 +211,8 @@ let private trdTy isDirect (ctx: TrdCtx) ty: TrdCtx =
       | UnresolvedTk _
       | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
 
-let private detectTypeRecursion (tyCtx: TyCtx): TrdCtx =
-  let ctx: TrdCtx =
+let private detectTypeRecursion (tyCtx: TyCtx) : TrdCtx =
+  let ctx : TrdCtx =
     { Variants = tyCtx.Variants
       Tys = tyCtx.Tys
       VariantMemo = TMap.empty (pairCompare variantSerialCompare compareIsDirect)
@@ -422,7 +422,7 @@ let private tsmTy (ctx: TsmCtx) ty =
       | UnresolvedTk _
       | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes.
 
-let private measureTys (trdCtx: TrdCtx): TsmCtx =
+let private measureTys (trdCtx: TrdCtx) : TsmCtx =
   let boxedVariants =
     trdCtx.VariantMemo
     |> TMap.fold
@@ -441,7 +441,7 @@ let private measureTys (trdCtx: TrdCtx): TsmCtx =
            | _ -> set)
          (TSet.empty compare)
 
-  let ctx: TsmCtx =
+  let ctx : TsmCtx =
     { Variants = trdCtx.Variants
       Tys = trdCtx.Tys
       BoxedVariants = boxedVariants
@@ -472,7 +472,7 @@ type private AbCtx =
 
     RecursiveVariants: AssocSet<VariantSerial> }
 
-let private ofTyCtx (tyCtx: TyCtx): AbCtx =
+let private ofTyCtx (tyCtx: TyCtx) : AbCtx =
   { Vars = tyCtx.Vars
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
@@ -533,7 +533,7 @@ let private postProcessVariantAppPat (ctx: AbCtx) variantSerial payloadPat =
   else
     None
 
-let private postProcessVariantFunAppExpr ctx variantSerial payload: HExpr option =
+let private postProcessVariantFunAppExpr ctx variantSerial payload : HExpr option =
   if needsBoxedVariant ctx variantSerial then
     // FIXME: ty is now wrong for the same reason as call-variant pattern.
     let ty, loc = exprExtract payload
@@ -543,7 +543,7 @@ let private postProcessVariantFunAppExpr ctx variantSerial payload: HExpr option
 
 /// ### Unwrapping newtype variants
 
-let private unwrapNewtypeUnionTy (ctx: AbCtx) ty: Ty option =
+let private unwrapNewtypeUnionTy (ctx: AbCtx) ty : Ty option =
   let asNewtypeVariant ty =
     match ty with
     | Ty (UnionTk tySerial, _) ->
@@ -562,7 +562,7 @@ let private unwrapNewtypeUnionTy (ctx: AbCtx) ty: Ty option =
 
   | _ -> None
 
-let private unwrapNewtypeVariantPat (ctx: AbCtx) variantSerial loc: HPat option =
+let private unwrapNewtypeVariantPat (ctx: AbCtx) variantSerial loc : HPat option =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
   if not (isRecursiveVariant ctx variantSerial)
@@ -572,7 +572,7 @@ let private unwrapNewtypeVariantPat (ctx: AbCtx) variantSerial loc: HPat option 
   else
     None
 
-let private unwrapNewtypeVariantAppPat (ctx: AbCtx) variantSerial payloadPat: HPat option =
+let private unwrapNewtypeVariantAppPat (ctx: AbCtx) variantSerial payloadPat : HPat option =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
   if not (isRecursiveVariant ctx variantSerial)
@@ -581,7 +581,7 @@ let private unwrapNewtypeVariantAppPat (ctx: AbCtx) variantSerial payloadPat: HP
   else
     None
 
-let private unwrapNewtypeVariantExpr (ctx: AbCtx) variantSerial loc: HExpr option =
+let private unwrapNewtypeVariantExpr (ctx: AbCtx) variantSerial loc : HExpr option =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
   if not (isRecursiveVariant ctx variantSerial)
@@ -591,7 +591,7 @@ let private unwrapNewtypeVariantExpr (ctx: AbCtx) variantSerial loc: HExpr optio
   else
     None
 
-let private unwrapNewtypeVariantAppExpr (ctx: AbCtx) variantSerial payload: HExpr option =
+let private unwrapNewtypeVariantAppExpr (ctx: AbCtx) variantSerial payload : HExpr option =
   let variantDef = ctx.Variants |> mapFind variantSerial
 
   if not (isRecursiveVariant ctx variantSerial)
@@ -849,7 +849,7 @@ let autoBox (expr: HExpr, tyCtx: TyCtx) =
   let trdCtx = detectTypeRecursion tyCtx
 
   // Measure types.
-  let tsmCtx: TsmCtx = measureTys trdCtx
+  let tsmCtx : TsmCtx = measureTys trdCtx
 
   // Auto boxing.
   let ctx =

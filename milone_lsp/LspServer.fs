@@ -15,30 +15,30 @@ type private Range = Position * Position
 // JSON helper
 // -----------------------------------------------
 
-let private jOfInt (value: int): JsonValue = JNumber(float value)
+let private jOfInt (value: int) : JsonValue = JNumber(float value)
 
 let private jOfObj (assoc: (string * JsonValue) list) = JObject(Map.ofList assoc)
 
-let private jOfPos (row: int, column: int): JsonValue =
+let private jOfPos (row: int, column: int) : JsonValue =
   jOfObj [ "line", jOfInt row
            "character", jOfInt column ]
 
-let private jOfRange (start: Position, endValue: Position): JsonValue =
+let private jOfRange (start: Position, endValue: Position) : JsonValue =
   jOfObj [ "start", jOfPos start
            "end", jOfPos endValue ]
 
-let private jAt index jsonValue: JsonValue =
+let private jAt index jsonValue : JsonValue =
   match jsonValue with
   | JArray list -> List.item index list
 
   | _ -> failwithf "Expected a list with index: %d; but was: '%s'" index (jsonDisplay jsonValue)
 
-let private jTryFind key jsonValue: JsonValue option =
+let private jTryFind key jsonValue : JsonValue option =
   match jsonValue with
   | JObject map -> Map.tryFind key map
   | _ -> None
 
-let private jFind key jsonValue: JsonValue =
+let private jFind key jsonValue : JsonValue =
   match jsonValue with
   | JObject map ->
       match map |> Map.tryFind key with
@@ -48,46 +48,46 @@ let private jFind key jsonValue: JsonValue =
 
   | _ -> failwithf "Expected a map with key '%s'; but was '%s'" key (jsonDisplay jsonValue)
 
-let private jFind2 key1 key2 jsonValue: JsonValue = jsonValue |> jFind key1 |> jFind key2
+let private jFind2 key1 key2 jsonValue : JsonValue = jsonValue |> jFind key1 |> jFind key2
 
-let private jFind3 key1 key2 key3 jsonValue: JsonValue =
+let private jFind3 key1 key2 key3 jsonValue : JsonValue =
   jsonValue
   |> jFind key1
   |> jFind key2
   |> jFind key3
 
-let private jFields2 key1 key2 jsonValue: JsonValue * JsonValue =
+let private jFields2 key1 key2 jsonValue : JsonValue * JsonValue =
   jsonValue |> jFind key1, jsonValue |> jFind key2
 
-let private jFields3 key1 key2 key3 jsonValue: JsonValue * JsonValue * JsonValue =
+let private jFields3 key1 key2 key3 jsonValue : JsonValue * JsonValue * JsonValue =
   jsonValue |> jFind key1, jsonValue |> jFind key2, jsonValue |> jFind key3
 
-let private jToString jsonValue: string =
+let private jToString jsonValue : string =
   match jsonValue with
   | JString value -> value
 
   | _ -> failwithf "Expected a string but: %s" (jsonDisplay jsonValue)
 
-let private jToNumber jsonValue: float =
+let private jToNumber jsonValue : float =
   match jsonValue with
   | JNumber value -> value
 
   | _ -> failwithf "Expected a number but: %s" (jsonDisplay jsonValue)
 
-let private jToInt jsonValue: int = jsonValue |> jToNumber |> int
+let private jToInt jsonValue : int = jsonValue |> jToNumber |> int
 
-let private jToBool jsonValue: bool =
+let private jToBool jsonValue : bool =
   match jsonValue with
   | JBoolean value -> value
   | _ -> false
 
-let private jToPos jsonValue: Position =
+let private jToPos jsonValue : Position =
   let row, column =
     jsonValue |> jFields2 "line" "character"
 
   jToInt row, jToInt column
 
-let private jToRange jsonValue: Range =
+let private jToRange jsonValue : Range =
   let start, endPos = jsonValue |> jFields2 "start" "end"
   jToPos start, jToPos endPos
 
@@ -107,7 +107,7 @@ let private jOfMarkdownString (text: string) =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private InitializeParam = { RootUriOpt: string option }
 
-let private parseInitializeParam jsonValue: InitializeParam =
+let private parseInitializeParam jsonValue : InitializeParam =
   let rootUriOpt =
     try
       jsonValue
@@ -144,7 +144,7 @@ type private DidOpenParam =
     Version: int
     Text: string }
 
-let private parseDidOpenParam jsonValue: DidOpenParam =
+let private parseDidOpenParam jsonValue : DidOpenParam =
   let docParam =
     jsonValue |> jFind2 "params" "textDocument"
 
@@ -164,7 +164,7 @@ type private DidChangeParam =
     Version: int
     Text: string }
 
-let private parseDidChangeParam jsonValue: DidChangeParam =
+let private parseDidChangeParam jsonValue : DidChangeParam =
   let uri, version =
     let uri, version =
       jsonValue
@@ -187,7 +187,7 @@ let private parseDidChangeParam jsonValue: DidChangeParam =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DidCloseParam = { Uri: string }
 
-let private parseDidCloseParam jsonValue: DidCloseParam =
+let private parseDidCloseParam jsonValue : DidCloseParam =
   let uri =
     jsonValue
     |> jFind3 "params" "textDocument" "uri"
@@ -198,7 +198,7 @@ let private parseDidCloseParam jsonValue: DidCloseParam =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DocumentPositionParam = { Uri: string; Pos: Pos }
 
-let private parseDocumentPositionParam jsonValue: DocumentPositionParam =
+let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   let uri =
     jsonValue
     |> jFind3 "params" "textDocument" "uri"
@@ -215,7 +215,7 @@ type private ReferencesParam =
     Pos: Pos
     IncludeDecl: bool }
 
-let private parseReferencesParam jsonValue: ReferencesParam =
+let private parseReferencesParam jsonValue : ReferencesParam =
   let uri, pos =
     let p = parseDocumentPositionParam jsonValue
     p.Uri, p.Pos
@@ -274,7 +274,7 @@ type private ProcessResult =
   | Continue
   | Exit of exitCode: int
 
-let private parseIncome (jsonValue: JsonValue): LspIncome =
+let private parseIncome (jsonValue: JsonValue) : LspIncome =
   let getMsgId () = jsonValue |> jFind "id"
 
   let methodName = jsonValue |> jFind "method" |> jToString
@@ -304,9 +304,9 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
 
       ErrorIncome(MethodNotFoundError(msgId, methodName))
 
-let private processNext (): LspIncome -> ProcessResult =
-  let mutable exitCode: int = 1
-  let mutable rootUriOpt: string option = None
+let private processNext () : LspIncome -> ProcessResult =
+  let mutable exitCode : int = 1
+  let mutable rootUriOpt : string option = None
 
   fun (income: LspIncome) ->
     match income with
@@ -468,7 +468,7 @@ let private processNext (): LspIncome -> ProcessResult =
 
 /// Removes a list of didChange notifications in a line
 /// except for the last one.
-let private dedupChanges (incomes: LspIncome list): LspIncome list =
+let private dedupChanges (incomes: LspIncome list) : LspIncome list =
   match List.rev incomes with
   | [] -> []
 
@@ -484,7 +484,7 @@ let private dedupChanges (incomes: LspIncome list): LspIncome list =
 
 /// Automatically update diagnostics by appending diagnostics request
 /// if some document changed.
-let private autoUpdateDiagnostics (incomes: LspIncome list): LspIncome list =
+let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
   let doesUpdateDiagnostics income =
     match income with
     | InitializedNotification _
@@ -500,7 +500,7 @@ let private autoUpdateDiagnostics (incomes: LspIncome list): LspIncome list =
     incomes
 
 /// Replaces each pair of request and cancellation with an error.
-let private preprocessCancelRequests (incomes: LspIncome list): LspIncome list =
+let private preprocessCancelRequests (incomes: LspIncome list) : LspIncome list =
   let asCancelRequest income =
     match income with
     | CancelRequestNotification msgId -> Some msgId
@@ -535,7 +535,7 @@ let private preprocessCancelRequests (incomes: LspIncome list): LspIncome list =
              | _ -> Some income)
 
 /// Optimizes a bunch of messages.
-let private preprocess (incomes: LspIncome list): LspIncome list =
+let private preprocess (incomes: LspIncome list) : LspIncome list =
   incomes
   |> dedupChanges
   |> autoUpdateDiagnostics
@@ -549,7 +549,7 @@ let private preprocess (incomes: LspIncome list): LspIncome list =
 type LspServerHost =
   { DrainRequests: unit -> JsonValue list }
 
-let lspServer (host: LspServerHost): Async<int> =
+let lspServer (host: LspServerHost) : Async<int> =
   async {
     let onRequest = processNext ()
 

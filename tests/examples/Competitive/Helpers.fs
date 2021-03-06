@@ -4,23 +4,23 @@ module rec Competitive.Helpers
 // Native functions
 // -----------------------------------------------
 
-let memAlloc (len: int) (size: int): voidptr =
+let memAlloc (len: int) (size: int) : voidptr =
   __nativeFun ("milone_mem_alloc", len, unativeint size)
 
-let memCopy (dest: voidptr) (src: obj) (size: int): voidptr =
+let memCopy (dest: voidptr) (src: obj) (size: int) : voidptr =
   __nativeFun ("memcpy", dest, src, unativeint size)
 
-let scanInt (): int = __nativeFun "scan_int"
+let scanInt () : int = __nativeFun "scan_int"
 
-let rawIntArrayNew (len: int): voidptr =
+let rawIntArrayNew (len: int) : voidptr =
   memAlloc len (__sizeOfVal 0) |> __nativeCast
 
-let rawIntArrayGet (array: voidptr) (index: int): int = __ptrRead (__nativeCast array) index
+let rawIntArrayGet (array: voidptr) (index: int) : int = __ptrRead (__nativeCast array) index
 
-let rawIntArraySet (array: voidptr) (index: int) (value: int): unit =
+let rawIntArraySet (array: voidptr) (index: int) (value: int) : unit =
   __ptrWrite (__nativeCast array) index value
 
-let rawMemoryCopy (dest: voidptr) (src: voidptr) (size: int): unit =
+let rawMemoryCopy (dest: voidptr) (src: voidptr) (size: int) : unit =
   let _ =
     memCopy dest (__nativeCast src) (size * __sizeOfVal 0)
 
@@ -69,7 +69,10 @@ let listEqual itemEqual xs ys =
 
 let listReplicate item len =
   let rec go acc i =
-    if i = len then acc else go (item :: acc) (i + 1)
+    if i = len then
+      acc
+    else
+      go (item :: acc) (i + 1)
 
   go [] 0
 
@@ -77,7 +80,10 @@ let listInit len gen =
   assert (len >= 0)
 
   let rec go acc i =
-    if i = len then listRev acc else go (gen i :: acc) (i + 1)
+    if i = len then
+      listRev acc
+    else
+      go (gen i :: acc) (i + 1)
 
   go [] 0
 
@@ -108,9 +114,11 @@ let unitObj = box ()
 
 let intEqual (first: int) (second: int) = first = second
 
-let intMin (first: int) (second: int) = if second < first then second else first
+let intMin (first: int) (second: int) =
+  if second < first then second else first
 
-let intMax (first: int) (second: int) = if first < second then second else first
+let intMax (first: int) (second: int) =
+  if first < second then second else first
 
 let strEqual (first: string) (second: string) = first = second
 
@@ -157,6 +165,7 @@ let vectorNew itemTy len =
 
 let vectorCheckIndex index self =
   let len = self |> vectorToLength
+
   if index < 0 || index >= len then
     printfn "ERROR: Out of range (len = %d, index = %d)" len index
     exit 1
@@ -175,11 +184,13 @@ let vectorSet (index: int) value self =
 
 let rec vectorPush value self =
   let itemTy, array, len, capacity, _vectorTag = self
+
   if len = capacity then
     let newCapacity = if len = 0 then 16 else capacity * 2
     let newArray = (itemTy |> typeToArrayNew) (newCapacity)
     let copySize = (itemTy |> typeToSize) * len
     rawMemoryCopy newArray array copySize
+
     (itemTy, newArray, len, newCapacity, VectorTag)
     |> vectorPush value
   else

@@ -23,7 +23,7 @@ type JsonRpcReaderHost =
 [<NoEquality; NoComparison>]
 type private State = State of len: int option
 
-let private readHeader (host: JsonRpcReaderHost) (state: State): int option =
+let private readHeader (host: JsonRpcReaderHost) (state: State) : int option =
   match host.ReadLine() with
   | None -> None
 
@@ -55,7 +55,7 @@ let private readHeader (host: JsonRpcReaderHost) (state: State): int option =
         // ignore unsupported header
         readHeader host state
 
-let private readBody (host: JsonRpcReaderHost) (len: int): JsonValue =
+let private readBody (host: JsonRpcReaderHost) (len: int) : JsonValue =
   match host.ReadBytes len with
   | None -> failwith "ERROR: unexpected EOF in the middle of body"
 
@@ -66,7 +66,7 @@ let private readBody (host: JsonRpcReaderHost) (len: int): JsonValue =
 type DrainFun = unit -> JsonValue list
 
 /// Starts an asynchronous loop to read from stream.
-let startJsonRpcReader (host: JsonRpcReaderHost): Async<unit> * DrainFun =
+let startJsonRpcReader (host: JsonRpcReaderHost) : Async<unit> * DrainFun =
   let queue =
     System.Collections.Concurrent.ConcurrentQueue<JsonValue>()
 

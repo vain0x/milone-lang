@@ -74,6 +74,6 @@ int milone_main() {
     int call_8 = newDay_(20);
     struct DayRange_ call_9 = newDayRange_(call_7, call_8);
     bool call_10 = between_(call_6, call_9);
-    milone_assert(call_10, 25, 2);
+    milone_assert(call_10, 24, 2);
     return 0;
 }

@@ -4,9 +4,9 @@ module FSharpOnly
 
 let objToString (value: _) = string (value :> obj)
 
-let inRegion (f: unit -> int): int = f ()
+let inRegion (f: unit -> int) : int = f ()
 
-let __stringLengthInUtf8Bytes (s: string): int =
+let __stringLengthInUtf8Bytes (s: string) : int =
   System.Text.Encoding.UTF8.GetByteCount(s)
 
 // -----------------------------------------------
@@ -18,8 +18,8 @@ let __stringLengthInUtf8Bytes (s: string): int =
 type __constptr<'T> =
   override _.ToString() = "__constptr is not available in F#"
 
-  static member op_Implicit(_: __constptr<'T>): int = 0
-  static member op_Implicit(_: __constptr<'T>): unativeint = unativeint 0
+  static member op_Implicit(_: __constptr<'T>) : int = 0
+  static member op_Implicit(_: __constptr<'T>) : unativeint = unativeint 0
 
 /// C-ABI function pointer type: `T (*)(params...)` in C.
 ///
@@ -38,11 +38,11 @@ let __nativeCast _ =
   failwith "__nativeCast is not available in F#"
 
 /// Accesses to `ptr[i]` to read a value.
-let __ptrRead (_ptr: __constptr<'a>) (_index: int): 'a =
+let __ptrRead (_ptr: __constptr<'a>) (_index: int) : 'a =
   failwith "__ptrRead is not available in F#"
 
 /// Writes a value to `ptr[i]`.
-let __ptrWrite (_ptr: nativeptr<'a>) (_index: int) (_value: 'a): unit =
+let __ptrWrite (_ptr: nativeptr<'a>) (_index: int) (_value: 'a) : unit =
   failwith "__ptrWrite is not available in F#"
 
 // -----------------------------------------------
@@ -52,14 +52,14 @@ let __ptrWrite (_ptr: nativeptr<'a>) (_index: int) (_value: 'a): unit =
 [<NoEquality; NoComparison>]
 type Profiler = Profiler of System.Diagnostics.Stopwatch * int64 ref
 
-let private getAllocatedBytes (): int64 =
+let private getAllocatedBytes () : int64 =
   System.GC.GetAllocatedBytesForCurrentThread()
 
-let profileInit (): Profiler =
+let profileInit () : Profiler =
   let bytesRef = getAllocatedBytes () |> ref
   Profiler(System.Diagnostics.Stopwatch.StartNew(), bytesRef)
 
-let profileLog (msg: string) (Profiler (stopwatch, bytesRef)): unit =
+let profileLog (msg: string) (Profiler (stopwatch, bytesRef)) : unit =
   let millis = int stopwatch.ElapsedMilliseconds
   let sec = millis / 1000
   let millis = millis % 1000

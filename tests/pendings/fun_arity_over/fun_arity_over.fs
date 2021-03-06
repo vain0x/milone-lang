@@ -1,8 +1,8 @@
 let main _ =
-  let f: int -> int -> int =
+  let f : int -> int -> int =
     // `add` is 1-arity.
-    let add (x: int): int -> int =
-      let inc () (y: int): int = x + y
+    let add (x: int) : int -> int =
+      let inc () (y: int) : int = x + y
       // Return a function object with arity 1.
       inc ()
 
@@ -10,13 +10,13 @@ let main _ =
     //        however, the actual result is 1-arity for now.
     add
 
-    // We need convert `add` to something like this:
-    // let f x y =
-    //   let inc = add x
-    //   inc y
-    // f
+  // We need convert `add` to something like this:
+  // let f x y =
+  //   let inc = add x
+  //   inc y
+  // f
 
-    // exit 0
+  // exit 0
 
   assert (f 2 3 = 5)
 

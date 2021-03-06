@@ -2,8 +2,9 @@ module rec native_code.Program
 
 // Embedding arbitrary C codes.
 
-let writeLine (msg: string): unit =
-  __nativeDecl """
+let writeLine (msg: string) : unit =
+  __nativeDecl
+    """
       // Embedded by __nativeDecl.
       #include <stdio.h>
   """
@@ -15,8 +16,9 @@ let writeLine (msg: string): unit =
     msg
   )
 
-let freshId (): int =
-  __nativeStmt """
+let freshId () : int =
+  __nativeStmt
+    """
     static int s_last;
   """
 

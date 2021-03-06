@@ -12,7 +12,7 @@ type GitCommitOptions =
     ResetAuthor: bool }
 // and more...
 
-let defaultOptions (): GitCommitOptions =
+let defaultOptions () : GitCommitOptions =
   { All = false
     Patch = false
     ReuseMessage = None

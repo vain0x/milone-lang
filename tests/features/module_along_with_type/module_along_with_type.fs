@@ -24,8 +24,8 @@ module rec Range =
 
 let main _ =
   // Type name is not shadowed.
-  let p: Pos = Pos.eol
-  let r: Range = Range(p, Pos.add p p)
+  let p : Pos = Pos.eol
+  let r : Range = Range(p, Pos.add p p)
 
   assert (Pos.toString p = "2:1")
   assert (Pos.toString (Pos.add p p) = "3:1")

@@ -7,14 +7,14 @@ type IntWrapper = { Value: int }
 type IntWrapperEx = { Value: int; Extra: int }
 
 let letWithTypeAscriptionCase n =
-  let w: IntWrapper = { Value = n }
+  let w : IntWrapper = { Value = n }
   assert (w.Value = n)
 
 let typeAscriptionExprCase (n: int) =
   assert (({ Value = n }: IntWrapper).Value = n)
 
 let matchExprCase (n: int) =
-  let t: IntWrapper =
+  let t : IntWrapper =
     match n with
     | 5 -> { Value = 0 }
     | _ -> exit 1

@@ -6,7 +6,7 @@ type L<'T> = 'T list
 
 let main _ =
   // End of type arguments.
-  let n: L<L<L<int>>> = []
+  let n : L<L<L<int>>> = []
   //              ^^^
 
   let ok =

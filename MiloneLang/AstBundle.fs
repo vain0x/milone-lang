@@ -51,7 +51,7 @@ type BundleStatus =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type BundleResult = { Modules: ModuleInfo list }
 
-let private compareRef (l: int * string) (r: int * string): int =
+let private compareRef (l: int * string) (r: int * string) : int =
   let c = compare (fst l) (fst r)
 
   if c <> 0 then
@@ -64,13 +64,13 @@ let private compareRef (l: int * string) (r: int * string): int =
 // ModuleRequest
 // -----------------------------------------------
 
-let private newRootRequest (projectName: ProjectName) (moduleName: string): ModuleRequest =
+let private newRootRequest (projectName: ProjectName) (moduleName: string) : ModuleRequest =
   { ProjectName = projectName
     ModuleName = moduleName
     OriginOpt = None
     Optional = false }
 
-let private newMiloneOnlyRequest (projectName: ProjectName): ModuleRequest =
+let private newMiloneOnlyRequest (projectName: ProjectName) : ModuleRequest =
   { ProjectName = projectName
     ModuleName = "MiloneOnly"
     OriginOpt = None
@@ -91,7 +91,7 @@ let private newDepRequest
 // Context
 // -----------------------------------------------
 
-let private requestDeps (moduleInfo: ModuleInfo) (ctx: BundleCtx): BundleCtx =
+let private requestDeps (moduleInfo: ModuleInfo) (ctx: BundleCtx) : BundleCtx =
   match moduleInfo.AstOpt with
   | None -> ctx
 
@@ -126,7 +126,7 @@ let private requestDeps (moduleInfo: ModuleInfo) (ctx: BundleCtx): BundleCtx =
 ///
 /// You should call `bundleNext` to process requests.
 /// Once it returned `NoRequest`, call `bundleFinish`.
-let bundleStart (): BundleCtx =
+let bundleStart () : BundleCtx =
   { Projects = TSet.empty compare
     Modules = TMap.empty compareRef
     ModuleMap = TMap.empty (pairCompare compare compare)
@@ -134,7 +134,7 @@ let bundleStart (): BundleCtx =
     ModuleStack = []
     ModuleDeps = TMap.empty compareRef }
 
-let bundleFinish (ctx: BundleCtx): BundleResult =
+let bundleFinish (ctx: BundleCtx) : BundleResult =
   assert (ctx.ModuleStack |> List.isEmpty)
 
   let rec folder (doneSet, acc) (moduleRef, deps) =
@@ -167,7 +167,7 @@ let bundleFinish (ctx: BundleCtx): BundleResult =
   { Modules = List.rev acc }
 
 /// Tries to resolve next request from stack.
-let bundleNext (ctx: BundleCtx): BundleStatus * BundleCtx =
+let bundleNext (ctx: BundleCtx) : BundleStatus * BundleCtx =
   match ctx.ModuleStack with
   | [] -> NoRequest, ctx
 
@@ -187,12 +187,12 @@ let bundleNext (ctx: BundleCtx): BundleStatus * BundleCtx =
             let ctx = ctx |> requestDeps moduleInfo
             ModuleBundled moduleInfo.Ref, ctx
 
-let bundleSkip (ctx: BundleCtx): BundleCtx =
+let bundleSkip (ctx: BundleCtx) : BundleCtx =
   match ctx.ModuleStack with
   | [] -> ctx
   | _ :: stack -> { ctx with ModuleStack = stack }
 
-let bundleAddRequest (projectName: ProjectName) (moduleName: ModuleName) (ctx: BundleCtx): BundleCtx =
+let bundleAddRequest (projectName: ProjectName) (moduleName: ModuleName) (ctx: BundleCtx) : BundleCtx =
   let stack =
     newRootRequest projectName moduleName
     :: ctx.ModuleStack
@@ -200,7 +200,7 @@ let bundleAddRequest (projectName: ProjectName) (moduleName: ModuleName) (ctx: B
   { ctx with ModuleStack = stack }
 
 /// Tells module info to the bundler.
-let bundleAddModuleInfo (moduleInfo: ModuleInfo) (ctx: BundleCtx): BundleCtx =
+let bundleAddModuleInfo (moduleInfo: ModuleInfo) (ctx: BundleCtx) : BundleCtx =
   assert (ctx.Modules
           |> TMap.containsKey moduleInfo.Ref
           |> not)
@@ -218,7 +218,7 @@ let bundleAddModuleInfo (moduleInfo: ModuleInfo) (ctx: BundleCtx): BundleCtx =
 // Compatible with old bundler.
 
 let bundleCompatible
-  (fetchModule: ProjectName ->  ModuleName -> (DocId * ARoot * (string * Pos) list) option)
+  (fetchModule: ProjectName -> ModuleName -> (DocId * ARoot * (string * Pos) list) option)
   (entryProjectName: string)
   =
   let rec go (serial: int) errorAcc bundleCtx =
@@ -239,7 +239,7 @@ let bundleCompatible
           | Some (docId, ast, errors) ->
               let serial = serial + 1
 
-              let moduleInfo: ModuleInfo =
+              let moduleInfo : ModuleInfo =
                 { Ref = (serial, moduleName)
                   Project = projectName
                   DocId = docId
@@ -284,7 +284,7 @@ let bundleCompatible
            | None -> moduleAcc, nameCtx
 
            | Some ast ->
-               let docId: DocId = snd moduleInfo.Ref
+               let docId : DocId = snd moduleInfo.Ref
                let exprs, nameCtx = astToHir docId (ast, nameCtx)
                exprs :: moduleAcc, nameCtx)
          ([], nameCtxEmpty ())

@@ -12,7 +12,7 @@ let useStringIndexWithoutAscription x =
   x.[0]
 
 let useTyVarInBody (x: 'T) =
-  let xs: 'T list = []
+  let xs : 'T list = []
   x, xs
 
 let main _ =
@@ -24,4 +24,5 @@ let main _ =
   match useTyVarInBody "b" with
   | _, s :: _ -> assert (s.[0] = 'b')
   | _ -> ()
+
   0

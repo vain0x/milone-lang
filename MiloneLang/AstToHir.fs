@@ -29,12 +29,12 @@ open MiloneLang.Hir
 
 let private greek (Name (ident, pos)) = Name("'" + ident, pos)
 
-let private nameToIdent (Name (ident, _)): string = ident
+let private nameToIdent (Name (ident, _)) : string = ident
 
-let private nameToPos (Name (_, pos)): Pos = pos
+let private nameToPos (Name (_, pos)) : Pos = pos
 
 /// Convert pos to loc.
-let private toLoc (doc: DocId) (pos: Pos): Loc =
+let private toLoc (doc: DocId) (pos: Pos) : Loc =
   let row, column = pos
   Loc(doc, row, column)
 
@@ -227,7 +227,7 @@ let private desugarLetDecl isRec pat body pos =
 
 let private tyUnresolved serial argTys = Ty(UnresolvedTk serial, argTys)
 
-let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
+let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx) : Ty * NameCtx =
   match ty with
   | AMissingTy pos ->
       let loc = toLoc docId pos
@@ -270,7 +270,7 @@ let private athTy (docId: DocId) (ty: ATy, nameCtx: NameCtx): Ty * NameCtx =
 // Control
 // -----------------------------------------------
 
-let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx =
+let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx) : HPat * NameCtx =
   match pat with
   | AMissingPat pos ->
       let loc = toLoc docId pos
@@ -335,7 +335,7 @@ let private athPat (docId: DocId) (pat: APat, nameCtx: NameCtx): HPat * NameCtx 
 
   | AFunDeclPat _ -> unreachable () // Invalid occurrence of fun pattern.
 
-let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx): HExpr * NameCtx =
+let private athExpr (docId: DocId) (expr: AExpr, nameCtx: NameCtx) : HExpr * NameCtx =
   match expr with
   | AMissingExpr pos ->
       // Error is already reported in parsing.
@@ -714,7 +714,7 @@ let private athDecls docId (decls, nameCtx) =
 
   go (decls, nameCtx)
 
-let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx): HExpr list * NameCtx =
+let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx) : HExpr list * NameCtx =
   match root with
   | AExprRoot exprs -> (exprs, nameCtx) |> athDecls docId
 

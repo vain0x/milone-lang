@@ -67,7 +67,7 @@ char testMatchArmsMakeScope_(char arg_2) {
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_, .t1 = 1};
     if ((tuple_.t0 != 1)) goto next_8;
     int x_1 = tuple_.t1;
-    milone_assert(false, 17, 12);
+    milone_assert(false, 18, 12);
     match_2 = 0;
     goto end_match_7;
 next_8:;
@@ -79,7 +79,7 @@ next_8:;
         goto else_13;
     }
 then_12:;
-    milone_assert(false, 18, 27);
+    milone_assert(false, 19, 27);
     if_ = 0;
     goto if_next_11;
 else_13:;
@@ -89,7 +89,7 @@ if_next_11:;
     match_2 = 0;
     goto end_match_7;
 next_9:;
-    milone_assert(false, 19, 9);
+    milone_assert(false, 20, 9);
     match_2 = 0;
     goto end_match_7;
 next_10:;
@@ -106,7 +106,7 @@ char testNestedMatchesParseCorrectly_(char arg_3) {
             goto clause_18;
     }
 clause_18:;
-    milone_assert(false, 25, 13);
+    milone_assert(false, 26, 13);
     switch_ = 0;
     goto switch_next_17;
 switch_next_17:;

@@ -16,4 +16,5 @@ let main _ =
 
     Async.Start(requestReader)
     return! lspServer { DrainRequests = drainRequests }
-  } |> Async.RunSynchronously
+  }
+  |> Async.RunSynchronously

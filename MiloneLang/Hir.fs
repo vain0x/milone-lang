@@ -220,7 +220,7 @@ type VarDef =
   { Name: Ident
     IsStatic: IsStatic
     Ty: Ty
-    Loc: Loc}
+    Loc: Loc }
 
 /// Assembly binary interface (ABI): how function looks like at machine-code level.
 [<NoEquality; NoComparison>]
@@ -640,7 +640,7 @@ let variantSerialToInt (VariantSerial serial) = serial
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
-let variantDefToVariantTy (variantDef: VariantDef): Ty =
+let variantDefToVariantTy (variantDef: VariantDef) : Ty =
   let unionTy = tyUnion variantDef.UnionTySerial
 
   if variantDef.HasPayload then
@@ -652,7 +652,7 @@ let variantDefToVariantTy (variantDef: VariantDef): Ty =
 // Literals
 // -----------------------------------------------
 
-let litToTy (lit: Lit): Ty =
+let litToTy (lit: Lit) : Ty =
   match lit with
   | BoolLit _ -> tyBool
   | IntLit _ -> tyInt
@@ -851,7 +851,7 @@ let hpTuple itemPats loc =
   let tupleTy = itemPats |> List.map patToTy |> tyTuple
   HNodePat(HTuplePN, itemPats, tupleTy, loc)
 
-let patExtract (pat: HPat): Ty * Loc =
+let patExtract (pat: HPat) : Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
   | HDiscardPat (ty, a) -> ty, a
@@ -866,7 +866,7 @@ let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat = pat |> patExtract |> snd
 
-let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
+let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat) : HPat =
   let rec go pat =
     match pat with
     | HLitPat (lit, a) -> HLitPat(lit, g a)
@@ -994,7 +994,7 @@ let hxIsAlwaysTrue expr =
   | HLitExpr (BoolLit true, _) -> true
   | _ -> false
 
-let exprExtract (expr: HExpr): Ty * Loc =
+let exprExtract (expr: HExpr) : Ty * Loc =
   match expr with
   | HLitExpr (lit, a) -> litToTy lit, a
   | HVarExpr (_, ty, a) -> ty, a
@@ -1013,7 +1013,7 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HModuleExpr (_, _, a) -> tyUnit, a
   | HModuleSynonymExpr (_, _, a) -> tyUnit, a
 
-let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
+let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
   let goPat pat = patMap f g pat
 
   let rec go expr =

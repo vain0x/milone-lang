@@ -216,14 +216,14 @@ let private leadsDecl tokens =
   | _ -> false
 
 /// Position of next token.
-let private nextPos tokens: Pos =
+let private nextPos tokens : Pos =
   match tokens with
   | [] -> (-1, 0)
 
   | (_, pos) :: _ -> pos
 
 /// Gets whether next token exists and it is not shallower than `basePos`.
-let private nextInside basePos tokens: bool =
+let private nextInside basePos tokens : bool =
   match tokens with
   | [] -> false
 
@@ -1371,7 +1371,7 @@ let private parseTopLevel (tokens, errors) =
       let exprs, tokens, errors = parseModuleBody pos (tokens, errors)
       AExprRoot exprs, tokens, errors
 
-let parse (tokens: (Token * Pos) list): ARoot * (string * Pos) list =
+let parse (tokens: (Token * Pos) list) : ARoot * (string * Pos) list =
   let expr, tokens, errors = parseTopLevel (tokens, [])
 
   let errors =

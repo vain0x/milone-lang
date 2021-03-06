@@ -30,14 +30,14 @@ type private RrCtx =
     /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
     RecordMap: AssocMap<TySerial, (Ty list * AssocMap<Ident, int * Ty>)> }
 
-let private ofTyCtx (tyCtx: TyCtx): RrCtx =
+let private ofTyCtx (tyCtx: TyCtx) : RrCtx =
   { Vars = tyCtx.Vars
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
     RecordMap = TMap.empty compare }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
+let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx) : TyCtx = tyCtx
 
 /// ## Resolution of records and fields
 ///

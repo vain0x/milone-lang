@@ -5,7 +5,7 @@ module rec MiloneStd.FSharpOnly
 
 open System
 
-let __stringJoin (sep: string) (xs: string list): string = System.String.Join(sep, xs)
+let __stringJoin (sep: string) (xs: string list) : string = System.String.Join(sep, xs)
 
 // -----------------------------------------------
 // MutArray
@@ -21,14 +21,14 @@ type __MutArray<'T> = ArraySegment<'T>
 /// UNSAFE: Note calling this function is NOT pure, causing side-effects
 /// since returned array is distinct value for each calling.
 /// (Only one exception is len = 0.)
-let __mutArrayCreate (len: int): __MutArray<_> = __MutArray (Array.zeroCreate len)
+let __mutArrayCreate (len: int) : __MutArray<_> = __MutArray (Array.zeroCreate len)
 
 let __mutArraySet (index: int) value (array: __MutArray<_>) =
   let mutable array = array
   array.[index] <- value
 
 /// UNSAFE: Gets a contiguous part of mutable array. Contents are shared.
-let __mutArraySlice (start: int) (endIndex: int) (array: __MutArray<_>): __MutArray<_> =
+let __mutArraySlice (start: int) (endIndex: int) (array: __MutArray<_>) : __MutArray<_> =
   assert (0 <= start)
   assert (start <= endIndex)
   assert (endIndex <= array.Count)
@@ -44,14 +44,14 @@ type __ConstArray<'T> = { Inner: __MutArray<'T> }
 
 /// Casts a mutable array to immutable array type.
 /// Contents are shared. Mutation must not be observed.
-let __constArrayOfMut (mutArray: __MutArray<'T>): __ConstArray<'T> = { Inner = mutArray }
+let __constArrayOfMut (mutArray: __MutArray<'T>) : __ConstArray<'T> = { Inner = mutArray }
 
 let __constArrayLength (array: __ConstArray<_>) = array.Inner.Count
 
 let __constArrayGet (index: int) (array: __ConstArray<_>) = array.Inner.[index]
 
 /// Gets a contiguous part of array.
-let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>): __ConstArray<_> =
+let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>) : __ConstArray<_> =
   let array = array.Inner
   assert (0 <= start)
   assert (start <= endIndex)
@@ -62,7 +62,7 @@ let __constArraySlice (start: int) (endIndex: int) (array: __ConstArray<_>): __C
 // StrInt
 // -----------------------------------------------
 
-let __intOfStr (s: string): int option =
+let __intOfStr (s: string) : int option =
   match Int32.TryParse(s) with
   | true, value -> Some value
   | false, _ -> None
@@ -71,7 +71,7 @@ let __intOfStr (s: string): int option =
 // StrEnv
 // -----------------------------------------------
 
-let __argCount (): int = Environment.GetCommandLineArgs().Length
+let __argCount () : int = Environment.GetCommandLineArgs().Length
 
-let __argGet (index: int): string =
+let __argGet (index: int) : string =
   Environment.GetCommandLineArgs().[index]

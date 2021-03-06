@@ -1297,11 +1297,11 @@ struct Space_ spaceDecompose_(struct Space_ space_4) {
     struct Space_ app_13 = thunk_1.fun(thunk_1.env, 0);
     struct Space_ space_5 = app_13;
     bool call_37 = spaceIsEmpty_(space_5);
-    milone_assert((!(call_37)), 234, 4);
+    milone_assert((!(call_37)), 201, 6);
     match_22 = space_5;
     goto end_match_104;
 next_105:;
-    milone_assert(false, 238, 4);
+    milone_assert(false, 205, 6);
     match_22 = space_4;
     goto end_match_104;
 next_106:;
@@ -1494,7 +1494,7 @@ next_120:;
     goto end_match_111;
 next_121:;
     if ((tuple_5.t1.discriminant != Ref_)) goto next_122;
-    milone_assert(false, 345, 4);
+    milone_assert(false, 307, 6);
     struct Space_ arg_90 = first_;
     struct Space_ call_57 = spaceDecompose_(second_);
     struct Space_ arg_91 = call_57;
@@ -1761,7 +1761,7 @@ struct Space_ fun_23(void const* env_14, char arg_26) {
 
 char testSpaceIsEmpty_(char arg_94) {
     bool call_108 = spaceIsEmpty_(spaceEmpty_);
-    milone_assert(call_108, 455, 2);
+    milone_assert(call_108, 398, 2);
     struct Space_List const* list_22 = milone_mem_alloc(1, sizeof(struct Space_List));
     (*(((struct Space_List*)list_22))) = (struct Space_List){.head = spaceEmpty_, .tail = NULL};
     struct Space_ call_109 = spaceUnion_(list_22);
@@ -1771,23 +1771,23 @@ char testSpaceIsEmpty_(char arg_94) {
     (*(((struct Space_List*)list_20))) = (struct Space_List){.head = spaceEmpty_, .tail = list_21};
     struct Space_ call_110 = spaceUnion_(list_20);
     bool call_111 = spaceIsEmpty_(call_110);
-    milone_assert(call_111, 456, 2);
+    milone_assert(call_111, 400, 2);
     bool call_112 = spaceIsEmpty_(spaceFull_);
-    milone_assert((!(call_112)), 458, 2);
+    milone_assert((!(call_112)), 404, 2);
     struct UnitSpace_Fun1 fun_43 = (struct UnitSpace_Fun1){.fun = fun_23, .env = NULL};
     struct Space_ call_113 = spaceRef_((struct String){.str = "ref", .len = 3}, fun_43);
     bool call_114 = spaceIsEmpty_(call_113);
-    milone_assert((!(call_114)), 459, 2);
+    milone_assert((!(call_114)), 406, 2);
     struct Space_List const* list_24 = milone_mem_alloc(1, sizeof(struct Space_List));
     (*(((struct Space_List*)list_24))) = (struct Space_List){.head = spaceFull_, .tail = NULL};
     struct Space_List const* list_23 = milone_mem_alloc(1, sizeof(struct Space_List));
     (*(((struct Space_List*)list_23))) = (struct Space_List){.head = spaceEmpty_, .tail = list_24};
     struct Space_ call_115 = spaceUnion_(list_23);
     bool call_116 = spaceIsEmpty_(call_115);
-    milone_assert((!(call_116)), 460, 2);
+    milone_assert((!(call_116)), 410, 2);
     struct Space_ call_117 = spaceCtor_((struct String){.str = "tuple", .len = 5}, NULL);
     bool call_118 = spaceIsEmpty_(call_117);
-    milone_assert((!(call_118)), 462, 2);
+    milone_assert((!(call_118)), 414, 2);
     struct Space_List const* list_27 = milone_mem_alloc(1, sizeof(struct Space_List));
     (*(((struct Space_List*)list_27))) = (struct Space_List){.head = spaceFull_, .tail = NULL};
     struct Space_List const* list_26 = milone_mem_alloc(1, sizeof(struct Space_List));
@@ -1796,20 +1796,20 @@ char testSpaceIsEmpty_(char arg_94) {
     (*(((struct Space_List*)list_25))) = (struct Space_List){.head = spaceFull_, .tail = list_26};
     struct Space_ call_119 = spaceCtor_((struct String){.str = "tuple", .len = 5}, list_25);
     bool call_120 = spaceIsEmpty_(call_119);
-    milone_assert(call_120, 463, 2);
+    milone_assert(call_120, 416, 2);
     void const* box_6 = milone_mem_alloc(1, sizeof(struct Ty_));
     (*(((struct Ty_*)box_6))) = (struct Ty_){.discriminant = Int_};
     struct Ty_ variant_3 = (struct Ty_){.discriminant = List_, .List_ = box_6};
     struct Space_ call_121 = tyToSpace_(variant_3);
     bool call_122 = spaceIsEmpty_(call_121);
-    milone_assert((!(call_122)), 465, 2);
+    milone_assert((!(call_122)), 419, 2);
     struct Ty_ variant_4 = (struct Ty_){.discriminant = Tuple_, .Tuple_ = NULL};
     void const* box_7 = milone_mem_alloc(1, sizeof(struct Ty_));
     (*(((struct Ty_*)box_7))) = variant_4;
     struct Ty_ variant_5 = (struct Ty_){.discriminant = List_, .List_ = box_7};
     struct Space_ call_123 = tyToSpace_(variant_5);
     bool call_124 = spaceIsEmpty_(call_123);
-    milone_assert((!(call_124)), 466, 2);
+    milone_assert((!(call_124)), 421, 2);
     return 0;
 }
 
@@ -1890,7 +1890,7 @@ char testSpaceToString_(char arg_96) {
     struct BoolList const* call_134 = listMap_2(fun_45, cases_);
     bool call_135 = listForAll_1(fun_44, call_134);
     bool ok_ = call_135;
-    milone_assert(ok_, 497, 2);
+    milone_assert(ok_, 448, 2);
     return 0;
 }
 

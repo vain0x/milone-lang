@@ -474,7 +474,7 @@ let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 // -----------------------------------------------
 
 /// No location information. Should be fixed.
-let noLoc = Loc ("<noLoc>", -1, -1)
+let noLoc = Loc("<noLoc>", -1, -1)
 
 let locToString (Loc (docId, y, x)) =
   docId
@@ -497,7 +497,7 @@ let locCompare (Loc (lDoc, ly, lx)) (Loc (rDoc, ry, rx)) =
 type private KeywordMap = AssocMap<Ident, Token>
 
 // See also <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/keyword-reference>.
-let private keywordMapBuild (): KeywordMap =
+let private keywordMapBuild () : KeywordMap =
   let miloneKeywords =
     [ "as", AsToken
       "else", ElseToken
@@ -631,7 +631,7 @@ let private keywordMapBuild (): KeywordMap =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TokenizeHost = { FindKeyword: string -> Token option }
 
-let tokenizeHostNew (): TokenizeHost =
+let tokenizeHostNew () : TokenizeHost =
   let keywordMap = keywordMapBuild ()
 
   { FindKeyword = fun ident -> keywordMap |> TMap.tryFind ident }
@@ -644,8 +644,8 @@ let tokenizeHostNew (): TokenizeHost =
 let findDependentModules ast =
   let rec onDecl decl =
     match decl with
-    | AOpenDecl ([ Name(p, _); Name(m, _) ], pos) -> Some(p, m, pos)
-    | AModuleSynonymDecl (_, [ Name(p, _); Name(m, _) ], pos) -> Some(p, m, pos)
+    | AOpenDecl ([ Name (p, _); Name (m, _) ], pos) -> Some(p, m, pos)
+    | AModuleSynonymDecl (_, [ Name (p, _); Name (m, _) ], pos) -> Some(p, m, pos)
     | AAttrDecl (_, next, _) -> onDecl next
     | _ -> None
 

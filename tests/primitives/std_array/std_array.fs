@@ -67,6 +67,7 @@ let sliceTest () =
 
 let unconsTest () =
   let a123 = A.init 3 (fun (n: int) -> n + 1)
+
   match A.uncons a123 with
   | None -> assert false
   | Some (n1, a23) ->

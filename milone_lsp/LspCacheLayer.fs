@@ -10,7 +10,7 @@ open MiloneLang.Syntax
 let private md5Hasher =
   new ThreadLocal<MD5>(fun () -> MD5.Create())
 
-let private hashEquals (l: byte array) (r: byte array): bool =
+let private hashEquals (l: byte array) (r: byte array) : bool =
   ReadOnlySpan(l).SequenceEqual(ReadOnlySpan(r))
 
 // -----------------------------------------------
@@ -22,10 +22,10 @@ type Diagnostics = (string * (string * Pos) list) list
 type DiagnosticsCache = { Map: MutMap<string, byte array> }
 
 module DiagnosticsCache =
-  let empty (): DiagnosticsCache = { Map = MutMap() }
+  let empty () : DiagnosticsCache = { Map = MutMap() }
 
   /// Filters to reduce diagnostics by using caches.
-  let filter (diagnostics: Diagnostics) (map: DiagnosticsCache): Diagnostics =
+  let filter (diagnostics: Diagnostics) (map: DiagnosticsCache) : Diagnostics =
     let publish = ResizeArray()
     let sb = StringBuilder()
     let encoding = Encoding.Default
