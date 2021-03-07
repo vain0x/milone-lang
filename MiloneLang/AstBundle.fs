@@ -285,7 +285,7 @@ let bundleCompatible
 
            | Some ast ->
                let docId : DocId = snd moduleInfo.Ref
-               let exprs, nameCtx = astToHir docId (ast, nameCtx)
+               let exprs, nameCtx = astToHir moduleInfo.Project docId (ast, nameCtx)
                exprs :: moduleAcc, nameCtx)
          ([], nameCtxEmpty ())
 
