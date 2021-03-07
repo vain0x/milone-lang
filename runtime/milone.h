@@ -53,6 +53,9 @@ int str_compare(struct String l, struct String r);
 // Create a copy of native C string.
 struct String str_of_raw_parts(char const *ptr, int len);
 
+// Create a copy of native zero-terminated C string.
+struct String str_of_c_str(char const *s);
+
 // Create a concatenation of two string.
 struct String str_add(struct String l, struct String r);
 

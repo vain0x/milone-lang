@@ -305,6 +305,11 @@ struct String str_of_raw_parts(char const *p, int len) {
     return (struct String){.str = str, .len = len};
 }
 
+struct String str_of_c_str(char const *s) {
+    assert(s != NULL);
+    return str_of_raw_parts(s, strlen(s));
+}
+
 _Noreturn static void error_str_add_overflow() {
     fprintf(stderr, "str_add: length overflow.\n");
     exit(1);
@@ -605,7 +610,7 @@ struct String milone_get_env(struct String name) {
         return str_borrow("");
     }
 
-    return str_of_raw_parts(value, strlen(value));
+    return str_of_c_str(value);
 }
 
 // -----------------------------------------------
