@@ -423,7 +423,6 @@ let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
 
 let private importNs nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
   let name = findNsOwnerName nsOwner scopeCtx
-  // printfn "/* importNs %s */" name
   doImportNsWithAlias name nsOwner scopeCtx
 
 let private openModule moduleSerial (scopeCtx: ScopeCtx) =
@@ -500,23 +499,13 @@ let private enterModule moduleTySerial (scopeCtx: ScopeCtx) =
     (scopeCtx.ModuleTys |> mapFind moduleTySerial)
       .Name
 
-  // printfn "/* enterModule %s */" moduleName
-
   let scopeCtx =
     match scopeCtx.CurrentModule with
     | None ->
-        // printfn
-        //   "/* root %s %s */"
-        //   (objToString moduleTySerial)
-        //   (scopeCtx.ModuleTys |> mapFind moduleTySerial)
-        //     .Name
-
         { scopeCtx with
             RootModules = moduleTySerial :: scopeCtx.RootModules }
 
     | Some parent ->
-        // printfn "/* add nsns %s ->%s */" (objToString parent) (objToString moduleTySerial)
-
         scopeCtx
         |> addNsToNs (ModuleNsOwner parent) (ModuleNsOwner moduleTySerial)
 
@@ -531,11 +520,6 @@ let private enterModule moduleTySerial (scopeCtx: ScopeCtx) =
   parent, scopeCtx
 
 let private leaveModule parent (scopeCtx: ScopeCtx) =
-  // printfn
-  //   "/* leaveModule %s */"
-  //   (List.tryLast scopeCtx.CurrentPath
-  //    |> Option.defaultValue "?")
-
   let currentModule, currentPath = parent
 
   { scopeCtx with
@@ -554,26 +538,11 @@ let private resolveModulePath path (scopeCtx: ScopeCtx) : ModuleTySerial list =
 
                moduleDef.Name = head)
 
-      // printfn
-      //   "/* roots: (%s) %s */"
-      //   head
-      //   (roots
-      //    |> List.map (fun s -> s, (scopeCtx.ModuleTys |> mapFind s).Name)
-      //    |> objToString)
-
       let rec go serial path =
         match path with
         | [] -> [ serial ]
 
         | name :: tail ->
-            // printfn
-            //   "/* go %s (tail %s) -> %s */"
-            //   name
-            //   (objToString tail)
-            //   (scopeCtx
-            //    |> resolveSubNsOwners (ModuleNsOwner serial) name
-            //    |> objToString)
-
             scopeCtx
             |> resolveSubNsOwners (ModuleNsOwner serial) name
             |> List.collect
@@ -1586,13 +1555,6 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let ctx =
           let moduleSerials = ctx |> resolveModulePath path
 
-          // printfn
-          //   "/* open %s -> %s */"
-          //   (objToString path)
-          //   (moduleSerials
-          //    |> List.map (fun s -> (ctx.ModuleTys |> mapFind s).Name)
-          //    |> objToString)
-
           if List.isEmpty moduleSerials then
             ctx |> addLog ModulePathNotFoundError loc
           else
@@ -1617,10 +1579,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let ctx = ctx |> startScope ExprScope
 
         let ctx =
-          // printfn "/*  current path = %s */" (objToString (snd parent))
-          // printfn "/*      modules = %s */" (ctx |> resolveModulePath (snd parent) |> List.map (fun s -> (ctx.ModuleTys |> mapFind s).Name) |> objToString)
-
-          // Modules sharing the same path are merged.
+          // Open the parent module (and modules with the same path).
           ctx
           |> forList (fun moduleTySerial ctx -> openModule moduleTySerial ctx) (ctx |> resolveModulePath (snd parent))
 
