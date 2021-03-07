@@ -342,7 +342,7 @@ struct String str_get_slice(int l, int r, struct String s) {
     return (struct String){.str = s.str + l, .len = r - l};
 }
 
-static struct String str_ensure_null_terminated(struct String s) {
+struct String str_ensure_null_terminated(struct String s) {
     // The dereference is safe due to the invariant of existence of null byte.
     if (s.str[s.len] != '\0') {
         s = str_of_raw_parts(s.str, s.len);
