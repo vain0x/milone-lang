@@ -1625,16 +1625,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           | "_", _
           | _, [] -> ctx
 
-          // FIXME: resolve module-name based on path
-          | _, [ _; moduleName ] ->
-              let moduleSerials =
-                ctx
-                |> resolveLocalNsOwners moduleName
-                |> List.choose
-                     (fun nsOwner ->
-                       match nsOwner with
-                       | ModuleNsOwner moduleSerial -> Some moduleSerial
-                       | _ -> None)
+          | _, path ->
+              let moduleSerials = ctx |> resolveModulePath path
 
               if List.isEmpty moduleSerials then
                 ctx |> addLog ModulePathNotFoundError loc
@@ -1648,8 +1640,6 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
                 |> forList
                      (fun moduleSerial ctx -> doImportNsWithAlias name (ModuleNsOwner moduleSerial) ctx)
                      moduleSerials
-
-          | _ -> ctx |> addLog UnimplModuleSynonymError loc
 
         hxUnit loc, ctx
 
