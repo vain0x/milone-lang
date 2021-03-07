@@ -564,7 +564,7 @@ struct String file_read_all_text(struct String file_name) {
     FILE *fp = fopen(file_name.str, "r");
     if (!fp) {
         fprintf(stderr, "File '%s' not found.", file_name.str);
-        abort();
+        exit(1);
     }
 
     fseek(fp, 0, SEEK_END);
@@ -572,7 +572,7 @@ struct String file_read_all_text(struct String file_name) {
     if (size < 0) {
         fclose(fp);
         fprintf(stderr, "%s", "Couldn't retrieve the file size.");
-        abort();
+        exit(1);
     }
     fseek(fp, 0, SEEK_SET);
 
@@ -581,7 +581,7 @@ struct String file_read_all_text(struct String file_name) {
     if (read_size != (size_t)size) {
         fclose(fp);
         fprintf(stderr, "%s", "Couldn't retrieve the file contents");
-        abort();
+        exit(1);
     }
 
     fclose(fp);
@@ -594,7 +594,7 @@ void file_write_all_text(struct String file_name, struct String content) {
     FILE *fp = fopen(file_name.str, "w");
     if (!fp) {
         fprintf(stderr, "File '%s' not found.", file_name.str);
-        abort();
+        exit(1);
     }
 
     fprintf(fp, "%s", content.str);
