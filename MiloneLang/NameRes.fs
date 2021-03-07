@@ -181,6 +181,7 @@ type ScopeCtx =
     ModuleSynonyms: AssocMap<ModuleSynonymSerial, ModuleSynonymDef>
     RootModules: ModuleTySerial list
     CurrentModule: ModuleTySerial option
+    CurrentPath: string list
 
     /// Values contained by types.
     VarNs: Ns<ValueSymbol>
@@ -219,6 +220,7 @@ let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
     ModuleSynonyms = TMap.empty moduleSynonymSerialCompare
     RootModules = []
     CurrentModule = None
+    CurrentPath = []
     VarNs = TMap.empty nsOwnerCompare
     TyNs = TMap.empty nsOwnerCompare
     NsNs = TMap.empty nsOwnerCompare
@@ -421,6 +423,7 @@ let private doImportNsWithAlias alias nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
 
 let private importNs nsOwner (scopeCtx: ScopeCtx) : ScopeCtx =
   let name = findNsOwnerName nsOwner scopeCtx
+  // printfn "/* importNs %s */" name
   doImportNsWithAlias name nsOwner scopeCtx
 
 let private openModule moduleSerial (scopeCtx: ScopeCtx) =
@@ -443,6 +446,10 @@ let private openModule moduleSerial (scopeCtx: ScopeCtx) =
     |> TMap.fold (fun ctx _ nsOwners -> ctx |> forList importNs nsOwners) scopeCtx
 
   scopeCtx
+
+let private openModules moduleSerials ctx =
+  moduleSerials
+  |> List.fold (fun ctx moduleSerial -> ctx |> openModule moduleSerial) ctx
 
 /// Defines a variable in the local scope.
 let private addLocalVar varSerial varDef (scopeCtx: ScopeCtx) : ScopeCtx =
@@ -489,14 +496,14 @@ let private isTyDeclScope (scopeCtx: ScopeCtx) =
   | _ -> false
 
 let private enterModule moduleTySerial (scopeCtx: ScopeCtx) =
-  let parent = scopeCtx.CurrentModule
+  let moduleName =
+    (scopeCtx.ModuleTys |> mapFind moduleTySerial)
+      .Name
+
+  // printfn "/* enterModule %s */" moduleName
 
   let scopeCtx =
-    { scopeCtx with
-        CurrentModule = Some moduleTySerial }
-
-  let scopeCtx =
-    match parent with
+    match scopeCtx.CurrentModule with
     | None ->
         // printfn
         //   "/* root %s %s */"
@@ -513,18 +520,32 @@ let private enterModule moduleTySerial (scopeCtx: ScopeCtx) =
         scopeCtx
         |> addNsToNs (ModuleNsOwner parent) (ModuleNsOwner moduleTySerial)
 
+  let parent =
+    scopeCtx.CurrentModule, scopeCtx.CurrentPath
+
+  let scopeCtx =
+    { scopeCtx with
+        CurrentModule = Some moduleTySerial
+        CurrentPath = List.append scopeCtx.CurrentPath [ moduleName ] }
+
   parent, scopeCtx
 
 let private leaveModule parent (scopeCtx: ScopeCtx) =
-  { scopeCtx with CurrentModule = parent }
+  // printfn
+  //   "/* leaveModule %s */"
+  //   (List.tryLast scopeCtx.CurrentPath
+  //    |> Option.defaultValue "?")
+
+  let currentModule, currentPath = parent
+
+  { scopeCtx with
+      CurrentModule = currentModule
+      CurrentPath = currentPath }
 
 let private resolveModulePath path (scopeCtx: ScopeCtx) : ModuleTySerial list =
-  // HACK: Currently HIR expressions don't have project-level modules, so head of module path can't be resolved, and the root modules are file modules. So here just drop the head of path and use all root modules to resolve the tail part.
   match path with
-  | []
-  | [ _ ]  -> []
-
-  | _ :: head :: tail ->
+  | [] -> []
+  | head :: tail ->
       let roots =
         scopeCtx.RootModules
         |> List.filter
@@ -1575,8 +1596,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           if List.isEmpty moduleSerials then
             ctx |> addLog ModulePathNotFoundError loc
           else
-            moduleSerials
-            |> List.fold (fun ctx moduleSerial -> ctx |> openModule moduleSerial) ctx
+            ctx |> openModules moduleSerials
 
         expr, ctx
 
@@ -1595,6 +1615,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
         let parent, ctx = ctx |> enterModule serial
 
         let ctx = ctx |> startScope ExprScope
+
+        let ctx =
+          // printfn "/*  current path = %s */" (objToString (snd parent))
+          // printfn "/*      modules = %s */" (ctx |> resolveModulePath (snd parent) |> List.map (fun s -> (ctx.ModuleTys |> mapFind s).Name) |> objToString)
+
+          // Modules sharing the same path are merged.
+          ctx
+          |> forList (fun moduleTySerial ctx -> openModule moduleTySerial ctx) (ctx |> resolveModulePath (snd parent))
 
         let body, ctx =
           (body, ctx)

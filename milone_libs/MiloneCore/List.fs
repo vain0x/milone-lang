@@ -181,6 +181,18 @@ let tryHead (xs: _ list) : _ option =
   | x :: _ -> Some x
   | _ -> None
 
+let tryLast (xs: _ list) : _ option =
+  match xs with
+  | [] -> None
+  | x :: xs ->
+      let rec listTryLastLoop xs =
+        match xs with
+        | [] -> x
+        | [ x ] -> x
+        | _ :: xs -> listTryLastLoop xs
+
+      Some(listTryLastLoop xs)
+
 /// Gets the i'th item if exists.
 ///
 /// Spends O(N) time at worst. Avoid using this as possible.
