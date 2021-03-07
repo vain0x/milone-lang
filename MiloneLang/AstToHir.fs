@@ -714,12 +714,25 @@ let private athDecls docId (decls, nameCtx) =
 
   go (decls, nameCtx)
 
-let astToHir (docId: DocId) (root: ARoot, nameCtx: NameCtx) : HExpr list * NameCtx =
+let astToHir (projectName: string) (docId: DocId) (root: ARoot, nameCtx: NameCtx) : HExpr list * NameCtx =
+  let onModuleRoot moduleName body pos =
+    let body, nameCtx = (body, nameCtx) |> athDecls docId
+    let serial, nameCtx = nameCtx |> nameCtxAdd moduleName
+    let loc = toLoc docId pos
+    [ HModuleExpr(ModuleTySerial serial, body, loc) ], nameCtx
+
+  let wrapWithProjectModule (body, nameCtx) =
+    let serial, nameCtx =
+      nameCtx |> nameCtxAdd (Name(projectName, (0, 0)))
+
+    [ HModuleExpr(ModuleTySerial serial, body, noLoc) ], nameCtx
+
   match root with
   | AExprRoot exprs -> (exprs, nameCtx) |> athDecls docId
 
   | AModuleRoot (moduleName, body, pos) ->
-      let body, nameCtx = (body, nameCtx) |> athDecls docId
-      let serial, nameCtx = nameCtx |> nameCtxAdd moduleName
-      let loc = toLoc docId pos
-      [ HModuleExpr(ModuleTySerial serial, body, loc) ], nameCtx
+      if nameToIdent moduleName = "MiloneOnly" then
+        onModuleRoot moduleName body pos
+      else
+        onModuleRoot moduleName body pos
+        |> wrapWithProjectModule

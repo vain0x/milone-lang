@@ -517,7 +517,6 @@ type NameResLog =
   // other
   | ModulePathNotFoundError
 
-  | UnimplModuleSynonymError
   | UnimplOrPatBindingError
   | OtherNameResLog of msg: string
 
@@ -1123,8 +1122,6 @@ let nameResLogToString log =
       + "' here should denote to some type; but is a module name."
 
   | ModulePathNotFoundError -> "Module not found for this path"
-
-  | UnimplModuleSynonymError -> "This kind of module synonym is unimplemented. Hint: `module A = P.M`."
 
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
 
