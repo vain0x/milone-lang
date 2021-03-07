@@ -199,6 +199,15 @@ build integration_tests: $
 {{ TEST_BUILDS }}
 
 # ------------------------------------------------
+# Other tests
+# ------------------------------------------------
+
+rule test_project_reference
+  command = PATH=$$PWD/target:$$PATH MILONE_HOME=$$PWD TARGET_DIR=$builddir scripts/project-reference-example/test
+
+build test_project_reference: test_project_reference target/milone
+
+# ------------------------------------------------
 # Clean
 # ------------------------------------------------
 
@@ -220,7 +229,8 @@ build target/all.timestamp: $
   just $
   dotnet_restore $
   integration_tests $
-  test_self
+  test_self $
+  test_project_reference
 
 build all: $
   phony target/all.timestamp

@@ -1,0 +1,19 @@
+#!/bin/sh
+# USAGE: PATH=$PWD/target:$PATH MILONE_HOME=$PWD TARGET_DIR=$PWD/target scripts/project-reference-example/test
+
+set -eu
+
+PROJECT_DIR="$PWD/scripts/project-reference-example"
+TARGET_DIR=${TARGET_DIR:-$PROJECT_DIR/target}
+
+APP_C="$TARGET_DIR/project_reference_example_app.c"
+APP_EXE="$TARGET_DIR/project_reference_example_app.exe"
+APP_OUT="$TARGET_DIR/project_reference_example_app.txt"
+
+mkdir -p $TARGET_DIR
+
+milone compile "$PROJECT_DIR/App" >$APP_C || { cat $APP_C >&2; false; }
+gcc -std=c11 -O2 -I "$PWD/runtime" "$PWD/runtime/milone.c" "$APP_C" -o "$APP_EXE"
+$APP_EXE >$APP_OUT
+
+diff "$APP_OUT" "$PROJECT_DIR/app.out"
