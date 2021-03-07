@@ -179,6 +179,8 @@ type ScopeCtx =
 
     ModuleTys: AssocMap<ModuleTySerial, ModuleTyDef>
     ModuleSynonyms: AssocMap<ModuleSynonymSerial, ModuleSynonymDef>
+    RootModules: ModuleTySerial list
+    CurrentModule: ModuleTySerial option
 
     /// Values contained by types.
     VarNs: Ns<ValueSymbol>
@@ -215,6 +217,8 @@ let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
     Tys = TMap.empty compare
     ModuleTys = TMap.empty moduleTySerialCompare
     ModuleSynonyms = TMap.empty moduleSynonymSerialCompare
+    RootModules = []
+    CurrentModule = None
     VarNs = TMap.empty nsOwnerCompare
     TyNs = TMap.empty nsOwnerCompare
     NsNs = TMap.empty nsOwnerCompare
@@ -483,6 +487,82 @@ let private isTyDeclScope (scopeCtx: ScopeCtx) =
   match scopeCtx.Local with
   | TyDeclScope :: _, _, _, _ -> true
   | _ -> false
+
+let private enterModule moduleTySerial (scopeCtx: ScopeCtx) =
+  let parent = scopeCtx.CurrentModule
+
+  let scopeCtx =
+    { scopeCtx with
+        CurrentModule = Some moduleTySerial }
+
+  let scopeCtx =
+    match parent with
+    | None ->
+        // printfn
+        //   "/* root %s %s */"
+        //   (objToString moduleTySerial)
+        //   (scopeCtx.ModuleTys |> mapFind moduleTySerial)
+        //     .Name
+
+        { scopeCtx with
+            RootModules = moduleTySerial :: scopeCtx.RootModules }
+
+    | Some parent ->
+        // printfn "/* add nsns %s ->%s */" (objToString parent) (objToString moduleTySerial)
+
+        scopeCtx
+        |> addNsToNs (ModuleNsOwner parent) (ModuleNsOwner moduleTySerial)
+
+  parent, scopeCtx
+
+let private leaveModule parent (scopeCtx: ScopeCtx) =
+  { scopeCtx with CurrentModule = parent }
+
+let private resolveModulePath path (scopeCtx: ScopeCtx) : ModuleTySerial list =
+  // HACK: Currently HIR expressions don't have project-level modules, so head of module path can't be resolved, and the root modules are file modules. So here just drop the head of path and use all root modules to resolve the tail part.
+  match path with
+  | []
+  | [ _ ]  -> []
+
+  | _ :: head :: tail ->
+      let roots =
+        scopeCtx.RootModules
+        |> List.filter
+             (fun serial ->
+               let moduleDef = scopeCtx.ModuleTys |> mapFind serial
+
+               moduleDef.Name = head)
+
+      // printfn
+      //   "/* roots: (%s) %s */"
+      //   head
+      //   (roots
+      //    |> List.map (fun s -> s, (scopeCtx.ModuleTys |> mapFind s).Name)
+      //    |> objToString)
+
+      let rec go serial path =
+        match path with
+        | [] -> [ serial ]
+
+        | name :: tail ->
+            // printfn
+            //   "/* go %s (tail %s) -> %s */"
+            //   name
+            //   (objToString tail)
+            //   (scopeCtx
+            //    |> resolveSubNsOwners (ModuleNsOwner serial) name
+            //    |> objToString)
+
+            scopeCtx
+            |> resolveSubNsOwners (ModuleNsOwner serial) name
+            |> List.collect
+                 (fun nsOwner ->
+                   match nsOwner with
+                   | ModuleNsOwner serial -> go serial tail
+                   | _ -> [])
+
+      roots
+      |> List.collect (fun serial -> go serial tail)
 
 // Find from namespace of type (not local).
 let private resolveScopedVarName nsOwner name (scopeCtx: ScopeCtx) : ValueSymbol option =
@@ -1483,20 +1563,14 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HOpenExpr (path, loc) ->
       let doArm () =
         let ctx =
-          // FIXME: resolve module-name based on path
-          let moduleName =
-            match splitLast path with
-            | Some (_, last) -> last
-            | _ -> unreachable () // open with empty path emits syntax error..
+          let moduleSerials = ctx |> resolveModulePath path
 
-          let moduleSerials =
-            ctx
-            |> resolveLocalNsOwners moduleName
-            |> List.choose
-                 (fun nsOwner ->
-                   match nsOwner with
-                   | ModuleNsOwner moduleSerial -> Some moduleSerial
-                   | _ -> None)
+          // printfn
+          //   "/* open %s -> %s */"
+          //   (objToString path)
+          //   (moduleSerials
+          //    |> List.map (fun s -> (ctx.ModuleTys |> mapFind s).Name)
+          //    |> objToString)
 
           if List.isEmpty moduleSerials then
             ctx |> addLog ModulePathNotFoundError loc
@@ -1518,6 +1592,8 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           |> addModuleTyDef serial ({ Name = moduleName; Loc = loc }: ModuleTyDef)
           |> importNs (ModuleNsOwner serial)
 
+        let parent, ctx = ctx |> enterModule serial
+
         let ctx = ctx |> startScope ExprScope
 
         let body, ctx =
@@ -1525,7 +1601,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           |> stMap (collectDecls (Some serial))
           |> stMap nameResExpr
 
-        let ctx = ctx |> finishScope
+        let ctx = ctx |> finishScope |> leaveModule parent
 
         // HACK: MiloneOnly is auto-open.
         let ctx =
