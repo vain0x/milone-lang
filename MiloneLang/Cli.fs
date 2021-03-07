@@ -148,74 +148,6 @@ let private pathIsRelative (s: string) =
   || (s |> S.startsWith "../")
 
 // -----------------------------------------------
-// Project schema interpreter
-// -----------------------------------------------
-
-// type ProjectSchema =
-//   { Name: string
-//     Version: string
-//     Options: ProjectOption list }
-
-// type ProjectOption =
-//   | Ref of projectDir: string
-//   | AliasedRef of projectName: string * projectDir: string
-
-let private doInterpretProjectSchema ast =
-  let asStr expr =
-    match expr with
-    | ALitExpr (StrLit value, _) -> value
-    | _ -> failwith "Expected a string literal."
-
-  let asProjectRef expr =
-    match expr with
-    | ABinaryExpr (AppBinary, AIdentExpr (Name ("Ref", _)), projectDir, _) ->
-        let projectDir =
-          projectDir |> asStr |> pathStrTrimEndPathSep
-
-        let projectName = projectDir |> pathStrToStem
-        Some(projectName, projectDir)
-
-    | ABinaryExpr (AppBinary, AIdentExpr (Name ("AliasedRef", _)), ATupleExpr ([ projectName; projectDir ], _), _) ->
-        let projectName = projectName |> asStr
-
-        let projectDir =
-          projectDir |> asStr |> pathStrTrimEndPathSep
-
-        Some(projectName, projectDir)
-
-    | _ -> None
-
-  let asProjectSchema decl =
-    match decl with
-    | AExprDecl (ARecordExpr (None, fields, _)) ->
-        match fields
-              |> List.tryFind (fun ((Name (name, _)), _, _) -> name = "Options") with
-        | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
-        | _ -> None
-
-    | _ -> None
-
-  let decls =
-    match ast with
-    | AExprRoot decls -> decls
-    | AModuleRoot (_, decls, _) -> decls
-
-  decls |> List.tryPick asProjectSchema
-
-let private parseProjectSchema tokenizeHost contents =
-  let ast, errors =
-    contents |> tokenize tokenizeHost |> parse
-
-  if errors |> List.isEmpty |> not then
-    errors
-    |> listSort (fun (_, l) (_, r) -> posCompare l r)
-    |> List.iter (fun (msg, loc) -> printfn "ERROR %s %s" (posToString loc) msg)
-
-    failwith "Syntax error in project file."
-
-  doInterpretProjectSchema ast
-
-// -----------------------------------------------
 // MiloneCore resolution
 // -----------------------------------------------
 
@@ -345,40 +277,6 @@ let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
     Verbosity = verbosity
     Host = host }
 
-let private compileCtxReadProjectFile (ctx: CompileCtx) =
-  let host = ctx.Host
-
-  let projectFilePath =
-    ctx.ProjectDir
-    + "/"
-    + ctx.ProjectName
-    + ".milone_project"
-
-  match host.FileReadAllText projectFilePath with
-  | Some contents ->
-      match parseProjectSchema ctx.TokenizeHost contents with
-      | Some refs ->
-          let projects =
-            refs
-            |> List.fold
-                 (fun projects (projectName, projectDir) ->
-                   if projects |> TMap.containsKey projectName then
-                     failwithf "Project name is duplicated: '%s'" projectName
-
-                   let projectDir =
-                     if projectDir |> pathIsRelative then
-                       ctx.ProjectDir + "/" + projectDir
-                     else
-                       projectDir
-
-                   projects |> TMap.add projectName projectDir)
-                 ctx.Projects
-
-          { ctx with Projects = projects }
-
-      | None -> failwith "Project is incomplete: couldn't find project schema."
-  | None -> ctx
-
 let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
   let projects =
     references
@@ -485,9 +383,12 @@ let syntacticallyAnalyze (ctx: CompileCtx) : SyntaxAnalysisResult =
   writeLog host v ("AstBundle project=" + ctx.ProjectName)
 
   let fetchModule (projectName: ProjectName) (moduleName: ModuleName) : ModuleSyntaxData option =
-    match ctx.Projects |> TMap.tryFind projectName with
-    | None -> None
-    | Some projectDir -> ctx.FetchModule projectName projectDir moduleName
+    let projectDir =
+      match ctx.Projects |> TMap.tryFind projectName with
+      | Some it -> it
+      | None -> ctx.ProjectDir + "/../" + projectName
+
+    ctx.FetchModule projectName projectDir moduleName
 
   bundleCompatible fetchModule ctx.ProjectName
 
@@ -636,9 +537,7 @@ let cliParse (host: CliHost) v (projectDir: string) = todo ()
 // 0
 
 let cliCheck (host: CliHost) verbosity projectDir =
-  let ctx =
-    compileCtxNew host verbosity projectDir
-    |> compileCtxReadProjectFile
+  let ctx = compileCtxNew host verbosity projectDir
 
   let ok, output = check ctx
   let exitCode = if ok then 0 else 1
@@ -647,9 +546,7 @@ let cliCheck (host: CliHost) verbosity projectDir =
   exitCode
 
 let cliCompile (host: CliHost) verbosity headerOnly projectDir =
-  let ctx =
-    compileCtxNew host verbosity projectDir
-    |> compileCtxReadProjectFile
+  let ctx = compileCtxNew host verbosity projectDir
 
   let ctx = { ctx with HeaderOnly = headerOnly }
 

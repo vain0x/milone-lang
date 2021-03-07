@@ -21,39 +21,22 @@ Entry module enables the project to be compiled as an executable, and therefore 
 
 Project directory is not recursive. Subdirectories are not member of the project.
 
-### Project manifest file
+### External project references
 
-Project directory may contain a project manifest file. Its name equals to project name followed by `.milone_project`.
-
-Its syntax is subset of milone-lang.
-Top-level is a record expression.
-Specify the current version number of the project and project references as below.
-
-```fsharp
-{
-    Version = "0.1.0"
-    Options = [
-        // Reference to another project,
-        // which is at ../MyLib (relative to this manifest file).
-        Ref "../MyLib"
-    ]
-}
-```
-
-External references enable the project to refer that.
-
-```fsharp
-// Foo.milone
-module Foo.Program
-
-open MyLib.X // denotes to ../MyLib/X.milone
-```
+Projects can refer to other projects in the same directory.
 
 - Foo/
-    - Foo.milone
-- MyLib/
-    - X.milone
+    - A.milone
+- Bar/
+    - Bar.milone : can use `open Foo.A` to import from `../Foo/A.milone`
 
 ## Advanced topics
 
-TODO: specify format of manifest file
+### Comparison to F#
+
+F# uses `.fsproj` file to specify the project:
+
+- list of modules (in the order),
+- external project references,
+- external NuGet package reference,
+- and other MsBuild settings.

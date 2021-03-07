@@ -24,8 +24,7 @@ let private extIsSrc (s: string) =
   match Path.GetExtension(s) with
   | ".fs"
   | ".fsproj"
-  | ".milone"
-  | ".milone_project" -> true
+  | ".milone" -> true
   | _ -> false
 
 let private findFiles pred (rootDir: string) =

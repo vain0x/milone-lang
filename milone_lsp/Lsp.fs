@@ -160,7 +160,6 @@ let private doBundle (ls: LangServiceState) projectDir =
 
         parseWithCache ls docId |> Some
 
-  // FIXME: read .milone_project
   let compileCtx =
     { compileCtx with
         FetchModule = fetchModule }
