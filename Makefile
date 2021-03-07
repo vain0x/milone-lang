@@ -8,14 +8,14 @@
 default: build.ninja bin/ninja
 	bin/ninja
 
-.PHONY: build build.ninja clean default install install-dev test uninstall
+.PHONY: build clean default install install-dev test uninstall
 
 # ------------------------------------------------
 # ninja wrapper
 # ------------------------------------------------
 
-build.ninja:
-	scripts/build-ninja-gen
+build.ninja: bin/ninja build-meta.ninja build-template.ninja
+	bin/ninja -f build-meta.ninja
 
 build: bin/ninja build.ninja
 	bin/ninja test_self
