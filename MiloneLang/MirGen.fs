@@ -240,6 +240,115 @@ let private containsTailRec expr =
   | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 // -----------------------------------------------
+// Basic pattern
+// -----------------------------------------------
+
+/// Pattern that conditional branching never occurs
+/// to perform pattern matching on it.
+type private BasicPat =
+  | DiscardBP
+  | VarBP of VarSerial * Ty * Loc
+  | NewtypeBP of VariantSerial * payloadTy: Ty * Loc * BasicPat
+  | BoxBP of payloadTy: Ty * Loc * BasicPat
+  | TupleBP of (BasicPat * Ty * Loc) list
+  | AliasBP of VarSerial * Ty * Loc * BasicPat
+
+/// Tries to convert a pattern to basic pattern.
+let private patAsBasic ctx pat : BasicPat option =
+  match pat with
+  | HDiscardPat _
+  | HNodePat (HTuplePN, [], _, _) -> Some DiscardBP
+
+  | HVarPat (_, varSerial, ty, loc) -> VarBP(varSerial, ty, loc) |> Some
+
+  | HVariantPat (variantSerial, _, _) when isNewtypeVariant ctx variantSerial -> Some DiscardBP
+
+  | HNodePat (HVariantAppPN variantSerial, [ payloadPat ], _, _) when isNewtypeVariant ctx variantSerial ->
+      match patAsBasic ctx payloadPat with
+      | None -> None
+      | Some p ->
+          let ty, loc = patExtract payloadPat
+          NewtypeBP(variantSerial, ty, loc, p) |> Some
+
+  | HNodePat (HBoxPN, [ itemPat ], _, _) ->
+      match patAsBasic ctx itemPat with
+      | None -> None
+      | Some p ->
+          let ty, loc = patExtract itemPat
+          BoxBP(ty, loc, p) |> Some
+
+  | HNodePat (HTuplePN, itemPats, _, _) ->
+      let rec go acc itemPats =
+        match itemPats with
+        | [] -> Some(List.rev acc)
+
+        | itemPat :: itemPats ->
+            match patAsBasic ctx itemPat with
+            | None -> None
+            | Some p ->
+                let ty, loc = patExtract itemPat
+                go ((p, ty, loc) :: acc) itemPats
+
+      Option.map TupleBP (go [] itemPats)
+
+  | HAsPat (bodyPat, varSerial, loc) ->
+      match patAsBasic ctx bodyPat with
+      | None -> None
+      | Some p ->
+          let ty = patToTy bodyPat
+          AliasBP(varSerial, ty, loc, p) |> Some
+
+  | _ -> None
+
+let private mirifyBasicPatMatch ctx cond basicPat : MirCtx =
+  match basicPat with
+  | DiscardBP -> ctx
+
+  | VarBP (varSerial, ty, loc) -> addStmt ctx (MLetValStmt(varSerial, Some cond, ty, loc))
+
+  | NewtypeBP (variantSerial, payloadTy, payloadLoc, payloadPat) ->
+      let cond =
+        MUnaryExpr(MGetVariantUnary variantSerial, cond, payloadTy, payloadLoc)
+
+      mirifyBasicPatMatch ctx cond payloadPat
+
+  | BoxBP (ty, loc, itemPat) ->
+      let cond = MUnaryExpr(MUnboxUnary, cond, ty, loc)
+      mirifyBasicPatMatch ctx cond itemPat
+
+  | TupleBP itemPats ->
+      itemPats
+      |> List.fold
+           (fun (i, ctx) (itemPat, itemTy, loc) ->
+             let cond =
+               MUnaryExpr(MProjUnary i, cond, itemTy, loc)
+
+             let ctx = mirifyBasicPatMatch ctx cond itemPat
+             i + 1, ctx)
+           (0, ctx)
+      |> snd
+
+  | AliasBP (varSerial, ty, loc, bodyPat) ->
+      let ctx =
+        addStmt ctx (MLetValStmt(varSerial, Some cond, ty, loc))
+
+      let cond = MVarExpr(varSerial, ty, loc)
+      mirifyBasicPatMatch ctx cond bodyPat
+
+let private mirifyExprMatchAsBasic ctx cond arms =
+  match arms with
+  | [ pat, guard, body ] when guard |> hxIsAlwaysTrue ->
+      match patAsBasic ctx pat with
+      | None -> None
+
+      | Some basicPat ->
+          let cond, ctx = mirifyExpr ctx cond
+          let ctx = mirifyBasicPatMatch ctx cond basicPat
+          mirifyExpr ctx body |> Some
+
+  | _ -> None
+
+// -----------------------------------------------
 // Pattern
 // -----------------------------------------------
 
@@ -806,14 +915,18 @@ let private mirifyExprMatchFull ctx cond arms ty loc =
   temp, ctx
 
 let private mirifyExprMatch ctx cond arms ty loc =
-  match mirifyExprMatchAsIfStmt ctx cond arms ty loc with
+  match mirifyExprMatchAsBasic ctx cond arms with
   | Some (result, ctx) -> result, ctx
 
   | None ->
-      if matchExprCanCompileToSwitch cond arms then
-        mirifyExprMatchAsSwitchStmt ctx cond arms ty loc
-      else
-        mirifyExprMatchFull ctx cond arms ty loc
+      match mirifyExprMatchAsIfStmt ctx cond arms ty loc with
+      | Some (result, ctx) -> result, ctx
+
+      | None ->
+          if matchExprCanCompileToSwitch cond arms then
+            mirifyExprMatchAsSwitchStmt ctx cond arms ty loc
+          else
+            mirifyExprMatchFull ctx cond arms ty loc
 
 // -----------------------------------------------
 // Expressions
