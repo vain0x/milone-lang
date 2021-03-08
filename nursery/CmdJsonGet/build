@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -eu
+
+TARGET=../target
+MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
+
+mkdir -p $TARGET
+
+milone compile $PWD >$TARGET/cmd_json_get.c
+
+gcc -std=gnu11 \
+    -I $MILONE_HOME/runtime \
+    ../vendor/pdjson/pdjson.o \
+    $MILONE_HOME/runtime/milone.c \
+    ../LibJson/lib_json_runtime.c \
+    cmd_json_get_runtime.c \
+    $TARGET/cmd_json_get.c \
+    -o $TARGET/json_get

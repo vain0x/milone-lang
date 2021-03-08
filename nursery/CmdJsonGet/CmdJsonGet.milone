@@ -1,0 +1,102 @@
+module rec CmdJsonGet.Program
+
+module E = MiloneStd.StdEnv
+module S = MiloneStd.StdString
+
+open LibJson.Json
+
+let helpText () =
+  """json_get <PATH>
+
+Extracts a value of property in JSON.
+
+EXAMPLE:
+    $ echo '{"foo": 42}' | json_get foo
+    42
+
+    $ echo '{"greets": {"en": "Hello"}}' | json_get greets.en
+    "Hello"
+
+    $ echo '[null, false, true]' | json_get 1
+    false
+
+OPTIONS:
+    PATH: Path to a property to be extracted its value, separated by '.'."""
+
+// -----------------------------------------------
+// Imports
+// -----------------------------------------------
+
+let private stdinReadAll (): string =
+  __nativeFun "stdin_read_all"
+
+// -----------------------------------------------
+// String helpers
+// -----------------------------------------------
+
+let divide (sep: string) (s: string): string * string option =
+  match S.findIndex sep s with
+  | None -> s, None
+  | Some i -> s.[0..i - 1], Some s.[i + sep.Length..s.Length - 1]
+
+let split sep s =
+  let rec go acc s =
+    let part, s = s |> divide sep
+    let acc = part :: acc
+
+    match s with
+    | None -> acc
+    | Some s -> go acc s
+
+  go [] s |> List.rev
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
+
+let main _ =
+  let args = E.commandLineArgs () |> List.skip 1
+
+  match args with
+  | []
+  | "-h" :: _
+  | "--help" :: _ ->
+      printfn "%s" (helpText ())
+      0
+
+  | path :: _ ->
+      let path = path |> split "."
+      // printfn "// path.length: %d\n" (List.length path)
+
+      let root = stdinReadAll () |> jsonParseFromString
+      // printfn "// input: %s\n" (jsonToString root)
+
+      path |> List.fold (fun obj key ->
+        match key, obj with
+        | ".", _ -> obj
+
+        | "length", JArray items ->
+            items |> List.length |> float |> JNumber
+
+        | _, JArray items ->
+            items |> List.tryItem (int key) |> Option.defaultWith (fun () ->
+              // printfn "// %s missing" key
+              JNull)
+
+        | _, JObject entries ->
+            entries
+            |> List.tryPick (fun (k, value) ->
+                if k = key then
+                  Some value
+                else
+                  None)
+            |> Option.defaultWith (fun () ->
+                // printfn "// %s missing" key
+                JNull)
+
+        | _ -> JNull
+      ) root
+      |> jsonToString
+      |> printfn "%s"
+
+      0
