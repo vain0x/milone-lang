@@ -1,0 +1,18 @@
+module rec LibSqlite3.Db
+
+type DbValue =
+  | DNull
+  | DString of string
+  | DInt of int
+
+let dbOpen (fileName: string): unit =
+  __nativeFun ("db_open", fileName)
+
+let dbSelect (sql: string) (params: (string * DbValue) list): DbValue list list =
+  __nativeFun ("db_select", sql, params)
+
+let dbMutate (sql: string) (params: (string * DbValue) list): unit =
+  __nativeFun ("db_mutate", sql, params)
+
+let dbExec (sql: string): unit =
+  __nativeFun ("db_exec", sql)

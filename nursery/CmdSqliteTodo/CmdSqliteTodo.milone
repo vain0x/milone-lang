@@ -1,0 +1,114 @@
+module rec CmdSqliteTodo.Program
+
+module E = MiloneStd.StdEnv
+module S = MiloneStd.StdString
+
+open LibSqlite3.Db
+
+let helpText () =
+  """todo
+
+Tiny TODO app.
+
+EXAMPLE:
+    $ todo add 'wash dishes'
+    $ todo list
+    wash dishes
+    $ todo remove 'wash'
+
+SUBCOMMANDS:
+    add <TEXT>
+        Add an TODO item.
+
+    remove <WORD>
+        Remove a TODO item that contains the word.
+
+    list
+        Show all TODO items."""
+
+let private dbInit () =
+  dbOpen "todo.db"
+
+  dbExec """
+    create table if not exists todos(
+      todo_id integer primary key autoincrement,
+      text text not null
+    );
+  """
+
+// -----------------------------------------------
+// add
+// -----------------------------------------------
+
+let private cmdAdd text =
+  dbInit ()
+  dbMutate """
+    insert into todos(text) values (:text)
+  """ [
+    ":text", DString text
+  ]
+
+// -----------------------------------------------
+// remove
+// -----------------------------------------------
+
+let private cmdRemove word =
+  dbInit ()
+
+  // FIXME: escape '%' and '_'
+  dbMutate """
+    delete from todos
+    where text like :word
+  """ [
+    ":word", DString ("%" + word + "%")
+  ]
+
+// -----------------------------------------------
+// list
+// -----------------------------------------------
+
+let private cmdList () =
+  dbInit ()
+
+  dbSelect """
+    select todo_id, text from todos
+    order by todo_id
+  """ [] |> List.rev |> List.fold (fun () row ->
+    match row with
+    | [ DInt todoId; DString text ] ->
+        printfn "%d: %s" todoId text
+
+    | _ ->
+        assert false
+        exit 1
+  ) ()
+
+// -----------------------------------------------
+// Entrypoint
+// -----------------------------------------------
+
+let main _ =
+  let args = E.commandLineArgs () |> List.skip 1
+
+  match args with
+  | "-h" :: _
+  | "--help" :: _ ->
+      printfn "%s" (helpText ())
+      0
+
+  | [ "add"; text ] ->
+      cmdAdd text
+      0
+
+  | [ "remove"; word ] ->
+      cmdRemove word
+      0
+
+  | []
+  | [ "list" ] ->
+      cmdList ()
+      0
+
+  | _ ->
+      printfn "error: Unknown arguments. Run with --help for usage."
+      1
