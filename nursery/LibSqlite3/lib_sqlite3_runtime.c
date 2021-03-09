@@ -1,5 +1,7 @@
+// sqlite3 adapter for milone-lang
+// <https://www.sqlite.org/cintro.html>
+
 #include <assert.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -170,7 +172,9 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
 
     db_bind_params(stmt, params);
 
-    struct DbValueListCons const *result = NULL;
+    size_t cap = 16;
+    size_t len = 0;
+    struct DbValueCons const **table = malloc(cap * sizeof(struct DbValueCons const *));
 
     while (true) {
         int stat = sqlite3_step(stmt);
@@ -184,11 +188,12 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
             break;
 
         case SQLITE_ROW: {
-            struct DbValueListCons *cons =
-                milone_mem_alloc(1, sizeof(struct DbValueListCons));
-            cons->head = db_read_row(stmt);
-            cons->tail = result;
-            result = cons;
+            if (len == cap) {
+                cap *= 2;
+                table = realloc(table, cap * sizeof(struct DbValueCons const *));
+            }
+            table[len] = db_read_row(stmt);
+            len++;
             continue;
         }
         default:
@@ -204,6 +209,13 @@ db_select(struct String sql, struct StringDbValuePairCons const *params) {
         }
     }
 
+    // Array to list.
+    struct DbValueListCons *result = milone_mem_alloc((int)len, sizeof(struct DbValueListCons));
+    for (size_t i = 0; i < len; i++) {
+        result[i].head = table[i];
+        result[i].tail = i + 1 < len ? &result[i + 1] : NULL;
+    }
+    free(table);
     return result;
 }
 

@@ -73,7 +73,7 @@ let private cmdList () =
   dbSelect """
     select todo_id, text from todos
     order by todo_id
-  """ [] |> List.rev |> List.fold (fun () row ->
+  """ [] |> List.fold (fun () row ->
     match row with
     | [ DInt todoId; DString text ] ->
         printfn "%d: %s" todoId text
