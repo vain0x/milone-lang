@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -eu
+
+TARGET=../target
+MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
+
+mkdir -p $TARGET
+
+{
+    echo '#include "../LibSpan/lib_span_runtime.h"'
+    milone compile $PWD
+}>$TARGET/lib_span_tests.c
+
+gcc -std=gnu11 -fsanitize=address,undefined \
+    -I $MILONE_HOME/runtime \
+    $MILONE_HOME/runtime/milone.c \
+    ../LibSpan/lib_span_runtime.c \
+    $TARGET/lib_span_tests.c \
+    -o $TARGET/lib_span_tests

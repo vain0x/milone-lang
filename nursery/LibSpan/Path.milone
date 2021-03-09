@@ -1,0 +1,92 @@
+module rec LibSpan.Path
+
+module S = MiloneStd.StdString
+
+type Path = Path of string
+
+let asString (Path s) : string = s
+
+let ofString (s: string) : Path = Path s
+
+let isSep (c: char) : bool =
+  match c with
+  | '/'
+  | '\\' -> true
+  | _ -> false
+
+let isAbsolute (path: Path) : bool =
+  let (Path s) = path
+
+  s.Length >= 1 && isSep s.[0]
+
+// let isRelative (path: Path) : bool =
+//   let (Path s) = path
+//
+//   (s |> S.startsWith "./")
+//   || (s |> S.startsWith "../")
+
+let trimEnd (path: Path) : Path =
+  let (Path s) = path
+  s |> S.trimEndIf isSep |> Path
+
+/// Divides to `(dir, base)` by splitting a path by separator.
+///
+/// - Dir is the non-final component. Trailing separators are trimmed.
+/// - Base is the final component if exists.
+let divideBase (path: Path) : Path * Path option =
+  let (Path s) = trimEnd path
+
+  let rec go i =
+    if i = 0 then
+      path, None
+    else if isSep s.[i - 1] then
+      trimEnd (Path s.[0..i - 2]), Some(Path s.[i..s.Length])
+    else
+      go (i - 1)
+
+  go s.Length
+
+/// Gets dirname part of path.
+let toDir (path: Path) : Path =
+  let dir, baseOpt = divideBase path
+
+  match baseOpt with
+  | Some _ -> dir
+  | None ->
+      if isAbsolute path then
+        Path "/"
+      else
+        Path "."
+
+/// Gets basename part of path.
+let toBase (path: Path) : Path option =
+  let _, it = divideBase path
+  it
+
+/// Divides to `(dir, stem, ext)`.
+///
+/// - Stem is the file name excluding the (last) extension, can be empty.
+/// - Extension starts with `.`.
+let divideExt (path: Path) : Path * Path option * string option =
+  let dir, baseOpt = divideBase path
+
+  match baseOpt with
+  | Some(Path ".")
+  | Some(Path "..") -> dir, baseOpt, None
+
+  | Some(Path s) ->
+      match s |> S.findLastIndex "." with
+      | Some i -> dir, Some(Path s.[0..i - 2]), Some s.[i..s.Length]
+      | None -> dir, Some(Path s), None
+
+  | None -> path, None, None
+
+/// Gets the stem part (filename without last extension).
+let toStem (path: Path) : Path option =
+  let _, it, _ = divideExt path
+  it
+
+/// Gets the (last) extension if exists.
+let toExt (path: Path) : string option =
+  let _, _, it = divideExt path
+  it

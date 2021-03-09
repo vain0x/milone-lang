@@ -1,0 +1,18 @@
+module rec LibFileSystemTests.Program
+
+module Path = LibSpan.Path
+module File = LibFileSystem.File
+
+let private failwith (msg: string) =
+  printfn "error: %s" msg
+  exit 1
+
+let main _ =
+  let file =
+    match File.openRead (Path.ofString "assets/hello.txt") with
+    | Some it -> it
+    | None -> failwith "open"
+
+  let text = file |> File.readAllText
+  assert (text = "Hello, world!\n")
+  0

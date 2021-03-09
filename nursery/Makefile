@@ -1,6 +1,6 @@
 default: build
 
-.PHONY: build clean deafult restore run
+.PHONY: build clean default restore run test
 
 build: target/json_get target/todo
 
@@ -22,6 +22,21 @@ target/todo: \
 	vendor/sqlite3/sqlite3.o
 	(cd CmdSqliteTodo; ./build)
 
+target/lib_span_tests: \
+	LibSpan/lib_span_runtime.c \
+	LibSpan/lib_span_runtime.h \
+	$(wildcard LibSpan/*.milone) \
+	$(wildcard LibSpanTests/*.milone)
+	(cd LibSpanTests; ./build)
+
+target/lib_file_system_tests: \
+	LibSpan/lib_span_runtime.c \
+	LibSpan/lib_span_runtime.h \
+	$(wildcard LibSpan/*.milone) \
+	$(wildcard LibFileSystem/*.milone) \
+	$(wildcard LibFileSystemTests/*.milone)
+	(cd LibFileSystemTests; ./build)
+
 run: build
 	cat .vscode/c_cpp_properties.json | target/json_get version
 	cat .vscode/c_cpp_properties.json | target/json_get configurations.length
@@ -32,6 +47,10 @@ run: build
 	target/todo remove 'wash'
 	target/todo remove 'up'
 	target/todo
+
+test: target/lib_span_tests target/lib_file_system_tests
+	if target/lib_span_tests; then echo OK; else echo FAIL=$?; fi
+	if target/lib_file_system_tests; then echo OK; else echo FAIL=$?; fi
 
 # ------------------------------------------------
 # Deps

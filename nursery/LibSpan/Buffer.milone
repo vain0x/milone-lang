@@ -1,0 +1,42 @@
+module rec LibSpan.Buffer
+
+module Span = LibSpan.Span
+module SpanMut = LibSpan.SpanMut
+
+type private Span = Span.Span
+type private SpanMut = SpanMut.SpanMut
+
+type Buffer = __nativeType<``struct Buffer``>
+
+let create (cap: unativeint) (itemSize: unativeint) : Buffer =
+  __nativeFun ("buffer_new", cap, itemSize)
+
+let zeroCreate (len: unativeint) (itemSize: unativeint) : Buffer =
+  __nativeFun ("buffer_new_uninit", len, len, itemSize)
+
+let cap (buffer: Buffer) : unativeint =
+  __nativeStmt ("size_t cap = {0}.cap;", buffer)
+  __nativeExpr "cap"
+
+let length (buffer: Buffer) : unativeint =
+  __nativeStmt ("size_t len = {0}.len;", buffer)
+  __nativeExpr "len"
+
+let addLen (len: unativeint) (buffer: Buffer) : Buffer =
+  __nativeStmt ("{0}.len += {1};", buffer, len)
+  buffer
+
+let grow (requiredLen: unativeint) (itemSize: unativeint) (buffer: Buffer) : Buffer =
+  __nativeFun ("buffer_grow_nonmut", buffer, requiredLen, itemSize)
+
+let append (src: Span) (itemSize: unativeint) (buffer: Buffer) : Buffer =
+  __nativeFun ("buffer_append_nonmut", buffer, src, itemSize)
+
+let slice (start: unativeint) (endIndex: unativeint) (itemSize: unativeint) (buffer: Buffer) : Span =
+  buffer |> sliceMut start endIndex itemSize |> SpanMut.asConst
+
+let sliceMut (start: unativeint) (endIndex: unativeint) (itemSize: unativeint) (buffer: Buffer) : SpanMut =
+  __nativeFun ("buffer_slice_mut", buffer, start, endIndex, itemSize)
+
+let asString (buffer: Buffer) : string =
+  __nativeFun ("buffer_as_string", buffer)

@@ -1,0 +1,9 @@
+module rec LibSpanTests.Program
+
+module Buffer = LibSpan.Buffer
+
+let main _ =
+  let buffer = Buffer.create (unativeint 1000) (unativeint (__sizeOfVal '\x00'))
+
+  assert (Buffer.cap buffer = unativeint 1000)
+  0
