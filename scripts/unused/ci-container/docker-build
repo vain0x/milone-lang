@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+docker build -t local/milone-ci .

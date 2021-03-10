@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eu
+
+mkdir -p vendor
+
+(
+    cd vendor
+    wget -q 'https://github.com/skeeto/pdjson/archive/67108d883061043e55d0fb13961ac1b6fc8a485c.tar.gz' -O - | tar xz
+    mv pdjson-67108d883061043e55d0fb13961ac1b6fc8a485c pdjson
+)

@@ -1,0 +1,16 @@
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1
+
+ENV DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+RUN apt-get update && \
+    apt-get install -y \
+        gcc \
+        make \
+        ninja-build \
+        && \
+    apt-get clean
+
+WORKDIR /mnt/milone-lang
+
+ENTRYPOINT [ "bash" ]

@@ -1,0 +1,30 @@
+#!/bin/sh
+# USAGE: on-build 3a60f20b 'feat: Something improved' feat-something-improved
+
+set -eu
+
+COMMIT_HASH="$1"
+SUBJECT="$2"
+
+BUILD_ID=$(echo $COMMIT_HASH | head -c 8)
+
+if echo "$SUBJECT" | grep -q '[skip ci]'
+then
+    echo "info: build $BUILD_ID: skipped."
+    exit 0
+fi
+
+# ------------------------------------------------
+# Process
+# ------------------------------------------------
+
+echo "info: build $BUILD_ID: checkout."
+git checkout --detach "$COMMIT_HASH" 2>&1
+
+echo "info: build $BUILD_ID: stat."
+git show --stat
+
+echo "info: build $BUILD_ID: make."
+make
+
+echo "info: build $BUILD_ID: done."

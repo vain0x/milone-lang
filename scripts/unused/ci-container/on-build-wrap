@@ -1,0 +1,79 @@
+#!/bin/sh
+
+set -eu
+
+# ------------------------------------------------
+# Args
+# ------------------------------------------------
+
+COMMIT_HASH="$1"
+SUBJECT="$2"
+FILENAME="$SUBJECT"
+
+TIMESTAMP=$(date +%Y-%M-%d-%H-%m-%S)
+BUILD_ID=$(echo $COMMIT_HASH | head -c 8)
+
+# ------------------------------------------------
+# Suppress re-execution.
+# ------------------------------------------------
+
+mkdir -p /root/done
+DONE_FILE="/root/done/$COMMIT_HASH"
+
+if test -f "$DONE_FILE"
+then
+    echo "info: $BUILD_ID: Already done. ($SUBJECT)"
+    exit 0
+fi
+
+# ------------------------------------------------
+# Logs
+# ------------------------------------------------
+
+mkdir -p /var/log/build
+
+STDOUT_LOG="/var/log/build/$TIMESTAMP-$BUILD_ID-$FILENAME-stdout.log"
+STDERR_LOG="/var/log/build/$TIMESTAMP-$BUILD_ID-$FILENAME-stderr.log"
+
+# ------------------------------------------------
+# Process
+# ------------------------------------------------
+
+BEGIN_SEC=$(date +%s)
+echo "BEGIN - $BUILD_ID '$SUBJECT'"
+
+touch $STDOUT_LOG
+# tail -f $STDOUT_LOG | sed "s;^;$BUILD_ID: ;g" &
+# STDOUT_TAIL_PID=$!
+
+touch $STDERR_LOG
+tail -f $STDERR_LOG | sed "s;^;$BUILD_ID! ;g" &
+STDERR_TAIL_PID=$!
+
+(
+    set +e
+    timeout -k 5s 90s sh /etc/on-build "$COMMIT_HASH" "$SUBJECT"
+    CODE=$?
+    set -e
+
+    if test $CODE -eq 124
+    then
+        echo "ERROR: Timeout." >&2
+        sh /etc/on-error "$@"
+    elif test $CODE -ne 0
+    then
+        echo "ERROR: Exit with $CODE." >&2
+        sh /etc/on-error "$@"
+    else
+        echo "info: Exit with $CODE." >&2
+    fi
+) >$STDOUT_LOG 2>$STDERR_LOG
+
+# kill $STDOUT_TAIL_PID
+kill $STDERR_TAIL_PID
+
+touch "$DONE_FILE"
+
+END_SEC=$(date +%s)
+SEC=$(( $END_SEC - $BEGIN_SEC ))
+echo "END - $BUILD_ID ${SEC}sec"

@@ -1,0 +1,7 @@
+**/.ionide/
+**/bin/
+**/obj/
+**/node_modules/
+**/target/
+
+*.generated.*

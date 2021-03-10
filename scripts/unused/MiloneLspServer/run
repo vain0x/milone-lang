@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -eu
+
+sh req-validate | target/milone_lsp_server

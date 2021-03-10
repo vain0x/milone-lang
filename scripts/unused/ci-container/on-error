@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eu
+
+# FIXME: send mail?
+echo 'ERROR: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
