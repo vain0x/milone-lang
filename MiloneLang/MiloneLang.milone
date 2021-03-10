@@ -29,9 +29,6 @@ let private getEnv (name: string): string = __nativeFun ("milone_get_env", name)
 let private readFile filePath =
   if fileExists filePath then fileReadAllText filePath |> Some else None
 
-let private fileWriteAllText (filePath: string) (contents: string): unit =
-  __nativeFun ("file_write_all_text", filePath, contents)
-
 [<EntryPoint>]
 let main _ =
   let args = Env.commandLineArgs ()
@@ -45,7 +42,6 @@ let main _ =
       MiloneHome = miloneHome
       ProfileInit = profileInit
       ProfileLog = profileLog
-      FileReadAllText = readFile
-      FileWriteAllText = fileWriteAllText }
+      FileReadAllText = readFile }
 
   cli host
