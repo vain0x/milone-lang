@@ -143,7 +143,7 @@ let private cpStrObjLit (value: string) acc =
 
 let private cpStructLit fields ty acc =
   acc
-  |> cons "("
+  |> cons "(("
   |> cpTy ty
   |> cons "){"
   |> join
@@ -155,7 +155,7 @@ let private cpStructLit fields ty acc =
          |> cons field
          |> cons " = "
          |> cpExpr value)
-  |> cons "}"
+  |> cons "})"
 
 // -----------------------------------------------
 // Expressions
