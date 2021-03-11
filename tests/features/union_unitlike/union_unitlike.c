@@ -2,8 +2,6 @@
 
 char basicCase_(char arg_);
 
-enum MyBool_Discriminant;
-
 struct MyBool_;
 
 bool toBool_(struct MyBool_ myBool_1);

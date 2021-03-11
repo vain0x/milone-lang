@@ -1,10 +1,6 @@
 #include "milone.h"
 
-enum MyBool_Discriminant;
-
 struct MyBool_;
-
-enum MyOption_Discriminant;
 
 struct MyOption_;
 

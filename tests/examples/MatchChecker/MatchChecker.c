@@ -12,8 +12,6 @@ struct StringList const* failwith_2(struct String msg_);
 
 struct StringSpace_ListTuple2;
 
-enum Space_Discriminant;
-
 struct Space_;
 
 struct Space_ failwith_1(struct String msg_);
@@ -58,8 +56,6 @@ struct Ty_Space_Fun1;
 
 struct Ty_List;
 
-enum Ty_Discriminant;
-
 struct Ty_;
 
 struct Ty_List;
@@ -69,8 +65,6 @@ struct Space_List const* go_17(struct Ty_Space_Fun1 f_, struct Space_List const*
 struct Pat_Space_Fun1;
 
 struct Pat_List;
-
-enum Pat_Discriminant;
 
 struct Pat_;
 
@@ -91,8 +85,6 @@ struct BoolList const* go_15(struct StringSpace_Tuple2BoolFun1 f_, struct BoolLi
 struct StringTy_Pat_ListCovering_Tuple4BoolFun1;
 
 struct StringTy_Pat_ListCovering_Tuple4List;
-
-enum Covering_Discriminant;
 
 struct Covering_;
 

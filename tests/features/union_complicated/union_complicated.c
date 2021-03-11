@@ -16,27 +16,19 @@ struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_
 
 struct Node_List;
 
-enum Node_Discriminant;
-
 struct Node_;
 
 struct Node_List;
 
 struct First_Second_Tuple2ListFirst_ListSecond_ListTuple2Fun1;
 
-enum First_Discriminant;
-
 struct First_;
-
-enum Second_Discriminant;
 
 struct Second_;
 
 struct First_Second_Tuple2;
 
 struct IntThird_Tuple2List;
-
-enum Third_Discriminant;
 
 struct Third_;
 

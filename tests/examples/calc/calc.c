@@ -24,8 +24,6 @@ struct StringList const* strListRev_(struct StringList const* xs_3);
 
 struct Token_List;
 
-enum Token_Discriminant;
-
 struct Token_;
 
 struct Token_List;

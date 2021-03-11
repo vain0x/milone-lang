@@ -2,8 +2,6 @@
 
 int f_1(int x_);
 
-enum Val_Discriminant;
-
 struct Val_;
 
 int milone_main();

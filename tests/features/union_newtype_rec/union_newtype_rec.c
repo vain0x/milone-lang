@@ -1,7 +1,5 @@
 #include "milone.h"
 
-enum MyList_Discriminant;
-
 struct MyList_;
 
 struct MyList_Option;

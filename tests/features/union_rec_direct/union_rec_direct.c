@@ -1,7 +1,5 @@
 #include "milone.h"
 
-enum Expr_Discriminant;
-
 struct Expr_;
 
 struct Expr_Expr_Tuple2;

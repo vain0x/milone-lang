@@ -1,7 +1,5 @@
 #include "milone.h"
 
-enum LazyList_Discriminant;
-
 struct LazyList_;
 
 struct UnitLazyList_Fun1;

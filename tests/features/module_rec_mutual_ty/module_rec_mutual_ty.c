@@ -4,13 +4,9 @@ struct UnitList;
 
 struct UnitList;
 
-enum UnionX_Discriminant;
-
 struct UnionX_;
 
 struct RecA_ListList;
-
-enum RecA_Discriminant;
 
 struct RecA_;
 

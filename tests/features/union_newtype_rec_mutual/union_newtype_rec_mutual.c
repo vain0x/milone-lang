@@ -4,8 +4,6 @@ struct ObjectOption;
 
 struct IntObjectOptionTuple2;
 
-enum Odd_Discriminant;
-
 struct Odd_;
 
 struct Odd_Option;

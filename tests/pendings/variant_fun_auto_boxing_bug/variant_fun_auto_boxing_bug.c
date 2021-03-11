@@ -1,7 +1,5 @@
 #include "milone.h"
 
-enum BoxedVariant_Discriminant;
-
 struct BoxedVariant_;
 
 struct BoxedVariant_OptionBoxedVariant_Fun1;

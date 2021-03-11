@@ -500,7 +500,8 @@ let private cpDecl decl acc =
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
   match decl with
-  | CErrorDecl _ -> acc
+  | CErrorDecl _
+  | CEnumDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc
@@ -513,14 +514,6 @@ let private cpForwardDecl decl acc =
   | CStructForwardDecl name ->
       acc
       |> cons "struct "
-      |> cons name
-      |> cons ";"
-      |> cons eol
-      |> cons eol
-
-  | CEnumDecl (name, _) ->
-      acc
-      |> cons "enum "
       |> cons name
       |> cons ";"
       |> cons eol

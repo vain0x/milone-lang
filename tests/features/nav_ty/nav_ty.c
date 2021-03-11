@@ -1,7 +1,5 @@
 #include "milone.h"
 
-enum Node_Discriminant;
-
 struct Node_;
 
 struct Node_ leaf_(int n_);

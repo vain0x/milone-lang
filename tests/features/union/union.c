@@ -1,16 +1,10 @@
 #include "milone.h"
 
-enum Status_Discriminant;
-
 struct Status_;
-
-enum Limit_Discriminant;
 
 struct Limit_;
 
 struct IntStringTuple2;
-
-enum ApiResponse_Discriminant;
 
 struct ApiResponse_;
 
