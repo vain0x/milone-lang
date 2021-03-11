@@ -1,15 +1,17 @@
 #!/bin/sh
-# Build a milone-lang project (output C code) with GCC.
+# Build a milone-lang project (output C code) to executable with C compiler.
 
 # ENV:
 #   MILONE_HOME: defaults to $HOME/.milone
+#   CC: C compiler, defaults to 'gcc'.
 #   CFLAGS: defaults to -O2
 #   INPUTS: list of C files
-#   OUTPUT: output file name
+#   OUTPUT: output file name, defaults to 'a.out'.
 
 set -eu
 
 MILONE_HOME=${MILONE_HOME:-"$HOME/.milone"}
+CC=${CC:-gcc}
 CFLAGS=${CFLAGS:-'-O2'}
 
 CFLAGS_ALL="-std=c11 \
@@ -19,8 +21,8 @@ CFLAGS_ALL="-std=c11 \
     -Wno-unused-but-set-variable \
     -Wno-unused-label \
     -Wno-unused-variable \
-    -I $MILONE_HOME/runtime \
+    -I$MILONE_HOME/runtime \
     $MILONE_HOME/runtime/milone.c \
     "
 
-gcc $CFLAGS_ALL $INPUTS -o ${OUTPUT:-'a.out'}
+$CC $CFLAGS_ALL $INPUTS -o ${OUTPUT:-'a.out'}
