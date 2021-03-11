@@ -90,6 +90,7 @@ type CExpr =
 
   /// `(struct T){.x = x, ..}` Initializer.
   | CInitExpr of fields: (Ident * CExpr) list * CTy
+  | CBraceExpr of Ident * CExpr
 
   /// `(T)x`
   | CCastExpr of CExpr * CTy

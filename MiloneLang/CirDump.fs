@@ -192,6 +192,14 @@ let private cpExpr expr acc : string list =
 
   | CInitExpr (fields, ty) -> acc |> cpStructLit fields ty
 
+  | CBraceExpr (ident, init) ->
+      acc
+      |> cons "{."
+      |> cons ident
+      |> cons " = "
+      |> cpExpr init
+      |> cons "}"
+
   | CDotExpr (CStrObjExpr value, "len") ->
       acc
       |> cons (string (__stringLengthInUtf8Bytes value))
@@ -444,7 +452,7 @@ let private cpDecl decl acc =
             |> cons "    union {"
             |> cons eol
             |> cpFields "        " variants
-            |> cons "    };"
+            |> cons "    } payload;"
             |> cons eol
 
       acc

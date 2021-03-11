@@ -687,7 +687,7 @@ let private genUnaryExpr ctx op arg ty _ =
 
   | MGetVariantUnary serial ->
       let _, ctx = cgTyComplete ctx ty
-      CDotExpr(arg, getUniqueVariantName ctx serial), ctx
+      CDotExpr(CDotExpr (arg, "payload"), getUniqueVariantName ctx serial), ctx
 
   | MRecordItemUnary index -> CDotExpr(arg, tupleField index), ctx
 
@@ -956,7 +956,7 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
 
               let fields =
                 [ "discriminant", CVarExpr variantName
-                  variantName, payload ]
+                  "payload", CBraceExpr (variantName, payload)  ]
 
               CInitExpr(fields, unionTy)
 
