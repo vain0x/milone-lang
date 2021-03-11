@@ -16,7 +16,7 @@ CFLAGS=${CFLAGS:-'-O2'}
 
 if test "[$CC]" = "[chibicc]"
 then
-    CC="-I/home/owner/repo/local/chibicc/include $CFLAGS"
+    CFLAGS="-I/home/owner/repo/local/chibicc/include $CFLAGS"
 fi
 
 CFLAGS_ALL="-std=c11 \

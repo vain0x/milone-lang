@@ -16,7 +16,7 @@ build {{ EXE_FILE }}: $
     | runtime/milone.h $
       runtime/milone.c
   out_file = {{ OUT_FILE }}
-  cc = gcc
+  cc = chibicc
 
 build {{ OUT_FILE }}: $
   execute_test $
