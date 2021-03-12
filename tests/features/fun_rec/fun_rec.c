@@ -34,8 +34,6 @@ if_next_4:;
     len_ = arg_1;
     i_ = arg_2;
     goto tailrec_1;
-    if_ = 0;
-    goto if_next_2;
 else_7:;
     if_ = 0;
     goto if_next_2;

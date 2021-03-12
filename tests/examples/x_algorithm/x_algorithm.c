@@ -52,8 +52,6 @@ else_7:;
     x_2 = arg_;
     y_ = arg_1;
     goto tailrec_4;
-    if_1 = 0;
-    goto if_next_5;
 if_next_5:;
     return if_1;
 }
@@ -82,8 +80,6 @@ then_13:;
     x_3 = arg_2;
     k_ = arg_3;
     goto tailrec_8;
-    if_3 = false;
-    goto if_next_12;
 else_14:;
     if_3 = false;
     goto if_next_12;

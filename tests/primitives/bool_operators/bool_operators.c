@@ -2,8 +2,6 @@
 
 char test_(bool t_, bool f_);
 
-struct BoolBoolFun1;
-
 char testShortCircuit_(bool t_1, bool f_1);
 
 int milone_main();
@@ -133,11 +131,6 @@ if_next_22:;
     return 0;
 }
 
-struct BoolBoolFun1 {
-    bool(*fun)(void const*, bool);
-    void const* env;
-};
-
 char testShortCircuit_(bool t_1, bool f_1) {
     bool if_8;
     if (f_1) {
@@ -147,9 +140,6 @@ char testShortCircuit_(bool t_1, bool f_1) {
     }
 then_26:;
     exit(1);
-    bool app_ = ((struct BoolBoolFun1){}).fun(((struct BoolBoolFun1){}).env, f_1);
-    if_8 = app_;
-    goto if_next_25;
 else_27:;
     if_8 = false;
     goto if_next_25;
@@ -166,9 +156,6 @@ then_29:;
     goto if_next_28;
 else_30:;
     exit(1);
-    bool app_1 = ((struct BoolBoolFun1){}).fun(((struct BoolBoolFun1){}).env, f_1);
-    if_9 = app_1;
-    goto if_next_28;
 if_next_28:;
     milone_assert(if_9, 50, 2);
     return 0;

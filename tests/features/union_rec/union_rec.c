@@ -74,8 +74,6 @@ next_5:;
     n_1 = arg_3;
     xs_1 = arg_4;
     goto tailrec_1;
-    match_ = 0;
-    goto end_match_4;
 next_6:;
     exit(1);
 end_match_4:;

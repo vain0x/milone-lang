@@ -54,8 +54,6 @@ then_6:;
     pred_ = arg_2;
     xs_1 = arg_3;
     goto tailrec_1;
-    if_ = false;
-    goto if_next_5;
 else_7:;
     if_ = false;
     goto if_next_5;

@@ -83,8 +83,6 @@ else_4:;
     n_ = arg_9;
     f_1 = arg_10;
     goto tailrec_1;
-    if_ = 0;
-    goto if_next_2;
 if_next_2:;
     return 0;
 }

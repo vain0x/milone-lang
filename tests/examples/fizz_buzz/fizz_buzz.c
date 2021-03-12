@@ -59,8 +59,6 @@ if_next_4:;
     int arg_ = (i_ + 1);
     i_ = arg_;
     goto tailrec_1;
-    if_ = 0;
-    goto if_next_2;
 else_13:;
     if_ = 0;
     goto if_next_2;

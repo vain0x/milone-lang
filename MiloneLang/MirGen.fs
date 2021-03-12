@@ -44,6 +44,8 @@ type MirCtx =
     /// For tail-rec (tail-call) optimization.
     CurrentFun: (Label * VarSerial list) option
 
+    IsReachable: bool
+
     Stmts: MStmt list
     Blocks: MBlock list
     Decls: MDecl list }
@@ -59,6 +61,7 @@ let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
     Tys = tyCtx.Tys
     LabelSerial = 0
     CurrentFun = None
+    IsReachable = true
     Stmts = []
     Blocks = []
     Decls = [] }
@@ -68,7 +71,10 @@ let private isNewtypeVariant (ctx: MirCtx) variantSerial =
 
 let private startBlock (ctx: MirCtx) = { ctx with Stmts = [] }
 
-let private rollback (parentCtx: MirCtx) (ctx: MirCtx) = { ctx with Stmts = parentCtx.Stmts }
+let private rollback (parentCtx: MirCtx) (ctx: MirCtx) =
+  { ctx with
+      IsReachable = parentCtx.IsReachable
+      Stmts = parentCtx.Stmts }
 
 let private prependStmt (ctx: MirCtx) stmt =
   { ctx with
@@ -86,7 +92,21 @@ let private addStmtListList (ctx: MirCtx) (stmtListList: MStmt list list) =
 
   { ctx with Stmts = stmts }
 
-let private addStmt (ctx: MirCtx) (stmt: MStmt) = { ctx with Stmts = stmt :: ctx.Stmts }
+let private addStmt (ctx: MirCtx) (stmt: MStmt) =
+  match ctx.IsReachable, stmt with
+  | _, MLabelStmt _ ->
+      { ctx with
+          IsReachable = true
+          Stmts = stmt :: ctx.Stmts }
+
+  | false, _ -> ctx
+
+  | _, MTerminatorStmt _ ->
+      { ctx with
+          IsReachable = false
+          Stmts = stmt :: ctx.Stmts }
+
+  | _ -> { ctx with Stmts = stmt :: ctx.Stmts }
 
 let private addTerminator (ctx: MirCtx) terminator loc =
   addStmt ctx (MTerminatorStmt(terminator, loc))
@@ -821,7 +841,7 @@ let private mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
 
   let ctx =
-    addStmt ctx (MTerminatorStmt(MExitTerminator arg, loc))
+    addTerminator ctx (MExitTerminator arg) loc
 
   MDefaultExpr(ty, loc), ctx
 
