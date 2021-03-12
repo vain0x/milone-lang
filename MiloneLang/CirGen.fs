@@ -679,6 +679,12 @@ let private genVariantNameExpr ctx serial ty =
 
   CInitExpr([ "discriminant", discriminant ], ty), ctx
 
+let private genGenericValue ctx genericValue ty =
+  match genericValue with
+  | MSizeOfGv ->
+      let ty, ctx = cgTyComplete ctx ty
+      CSizeOfExpr ty, ctx
+
 /// Converts a binary expression to a runtime function call.
 let private genBinaryExprAsCall ctx funName l r =
   let l, ctx = cgExpr ctx l
@@ -739,10 +745,6 @@ let private genUnaryExpr ctx op arg ty _ =
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(arg, ty), ctx
 
-  | MSizeOfValUnary ->
-      let argTy, ctx = cgTyComplete ctx argTy
-      CSizeOfExpr argTy, ctx
-
 let private genExprBin ctx op l r =
   match op with
   | MIntCompareBinary -> genBinaryExprAsCall ctx "int_compare" l r
@@ -782,6 +784,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
+  | MGenericValueExpr (genericValue, ty, _) -> genGenericValue ctx genericValue ty
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 

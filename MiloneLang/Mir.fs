@@ -35,6 +35,9 @@ type MatchIR =
   | Guard of guard: HExpr * nextLabel: Label
   | Body of body: HExpr
 
+[<NoEquality; NoComparison>]
+type MGenericValue = | MSizeOfGv
+
 /// Built-in 1-arity operation in middle IR.
 [<Struct>]
 [<NoEquality; NoComparison>]
@@ -80,7 +83,6 @@ type MUnary =
   | MListTailUnary
 
   | MNativeCastUnary
-  | MSizeOfValUnary
 
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
@@ -168,6 +170,7 @@ type MExpr =
   | MVariantExpr of TySerial * VariantSerial * Ty * Loc
 
   | MDiscriminantConstExpr of VariantSerial * Loc
+  | MGenericValueExpr of MGenericValue * Ty * Loc
 
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
@@ -235,6 +238,11 @@ let mexprExtract expr =
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc
   | MDiscriminantConstExpr (_, loc) -> tyInt, loc
+
+  | MGenericValueExpr (genericValue, _, loc) ->
+      match genericValue with
+      | MSizeOfGv -> tyInt, loc
+
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
   | MNativeExpr (_, ty, loc) -> ty, loc
