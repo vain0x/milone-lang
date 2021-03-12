@@ -75,9 +75,6 @@ type CBinary =
 /// Expression in CIR.
 [<NoEquality; NoComparison>]
 type CExpr =
-  /// `(struct K){}`
-  | CDefaultExpr
-
   | CIntExpr of text: string
   | CDoubleExpr of text: string
   | CCharExpr of char
