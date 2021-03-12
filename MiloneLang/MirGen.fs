@@ -1417,6 +1417,16 @@ let private mirifyExprLetFunContents (ctx: MirCtx) calleeSerial argPats body let
 
     let args, ctx = defineArgs [] ctx argPats
     let parentFun, ctx = prepareTailRec ctx args
+
+    let ctx =
+      let funName = (ctx.Funs |> mapFind calleeSerial).Name
+
+      let args =
+        [ MNativeExpr("stderr", Ty(NativeTypeTk "FILE *", []), letLoc)
+          MNativeExpr("\"" + funName + "\"\\n", Ty(NativePtrTk IsConst, [ tyChar ]), letLoc) ]
+
+      addStmt ctx (MActionStmt(MCallNativeAction "fprintf", args, letLoc))
+
     let lastExpr, ctx = mirifyExpr ctx body
 
     let ctx =
