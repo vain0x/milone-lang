@@ -784,6 +784,7 @@ let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   match arg |> mxSugar with
   | MLitExpr (lit, _) -> genLit lit, ctx
   | MDefaultExpr (ty, _) -> genDefault ctx ty
+  | MUnitExpr _ -> CVarExpr "0", ctx
 
   | MVarExpr (serial, _, _) -> CVarExpr(getUniqueVarName ctx serial), ctx
   | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx

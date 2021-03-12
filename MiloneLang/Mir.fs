@@ -159,6 +159,7 @@ type MPrim =
 [<NoEquality; NoComparison>]
 type MExpr =
   | MLitExpr of Lit * Loc
+  | MUnitExpr of Loc
 
   /// Default value of the type.
   | MDefaultExpr of Ty * Loc
@@ -237,6 +238,7 @@ let mexprExtract expr =
   match expr with
   | MDefaultExpr (ty, loc) -> ty, loc
   | MLitExpr (lit, loc) -> litToTy lit, loc
+  | MUnitExpr loc -> tyUnit, loc
   | MVarExpr (_, ty, loc) -> ty, loc
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc
@@ -298,7 +300,7 @@ let rec mxSugar expr =
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MVarExpr (_, Ty (TupleTk, []), loc) -> MDefaultExpr(tyUnit, loc)
+  | MVarExpr (_, Ty (TupleTk, []), loc) -> MUnitExpr loc
 
   | MUnaryExpr (op, l, ty, loc) ->
       let l = mxSugar l
