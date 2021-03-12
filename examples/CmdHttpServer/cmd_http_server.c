@@ -192,6 +192,7 @@ static bool read_header_field(FILE *in, struct Entry *entry) {
 
     entry->name = strdup(buf);
     entry->value = strdup(p);
+    entry->next = NULL;
     return true;
 }
 
@@ -250,7 +251,7 @@ static struct Req *read_req(FILE *in) {
     read_request_line(req, in);
 
     while (true) {
-        struct Entry entry = {};
+        struct Entry entry;
         bool found = read_header_field(in, &entry);
         if (!found) {
             break;

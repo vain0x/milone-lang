@@ -155,7 +155,7 @@ static bool json_parse_to_value(json_stream *json, struct JsonValue *output) {
 }
 
 struct JsonValue json_parse_from_string(struct String s) {
-    json_stream json = {};
+    json_stream json;
     json_open_buffer(&json, str_to_c_str(s), s.len);
     json_set_streaming(&json, false);
 

@@ -93,7 +93,7 @@ struct File milone_file_open(struct String path, struct String mode) {
 void milone_file_close(struct File file) { fclose(file.fp); }
 
 bool milone_file_exists(struct String file_path, bool follow_link) {
-    struct stat st = {};
+    struct stat st;
     bool ok = follow_link ? stat(str_to_c_str(file_path), &st) == 0
                           : lstat(str_to_c_str(file_path), &st) == 0;
     if (!ok) {
@@ -114,7 +114,7 @@ size_t milone_file_write(struct File file, struct SpanMut src) {
 }
 
 bool milone_dir_exists(struct String file_path, bool follow_link) {
-    struct stat st = {};
+    struct stat st;
     bool ok = follow_link ? stat(str_to_c_str(file_path), &st) == 0
                           : lstat(str_to_c_str(file_path), &st) == 0;
     if (!ok) {
