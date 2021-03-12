@@ -710,7 +710,7 @@ struct String scan_str(int capacity) {
     int _n = scanf(fmt, str);
 
     size_t len = strlen(str);
-    assert(len < capacity);
+    assert((long long)len < (long long)capacity);
     return (struct String){.str = str, .len = (int)len};
 }
 
