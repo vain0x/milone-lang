@@ -41,8 +41,6 @@ else_4:;
     acc_ = arg_1;
     i_ = arg_2;
     goto tailrec_1;
-    if_ = NULL;
-    goto if_next_2;
 if_next_2:;
     return if_;
 }

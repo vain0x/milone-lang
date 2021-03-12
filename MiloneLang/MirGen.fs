@@ -44,6 +44,8 @@ type MirCtx =
     /// For tail-rec (tail-call) optimization.
     CurrentFun: (Label * VarSerial list) option
 
+    IsReachable: bool
+
     Stmts: MStmt list
     Blocks: MBlock list
     Decls: MDecl list }
@@ -59,6 +61,7 @@ let private ofTyCtx (tyCtx: TyCtx) : MirCtx =
     Tys = tyCtx.Tys
     LabelSerial = 0
     CurrentFun = None
+    IsReachable = true
     Stmts = []
     Blocks = []
     Decls = [] }
@@ -68,7 +71,10 @@ let private isNewtypeVariant (ctx: MirCtx) variantSerial =
 
 let private startBlock (ctx: MirCtx) = { ctx with Stmts = [] }
 
-let private rollback (parentCtx: MirCtx) (ctx: MirCtx) = { ctx with Stmts = parentCtx.Stmts }
+let private rollback (parentCtx: MirCtx) (ctx: MirCtx) =
+  { ctx with
+      IsReachable = parentCtx.IsReachable
+      Stmts = parentCtx.Stmts }
 
 let private prependStmt (ctx: MirCtx) stmt =
   { ctx with
@@ -86,7 +92,21 @@ let private addStmtListList (ctx: MirCtx) (stmtListList: MStmt list list) =
 
   { ctx with Stmts = stmts }
 
-let private addStmt (ctx: MirCtx) (stmt: MStmt) = { ctx with Stmts = stmt :: ctx.Stmts }
+let private addStmt (ctx: MirCtx) (stmt: MStmt) =
+  match ctx.IsReachable, stmt with
+  | _, MLabelStmt _ ->
+      { ctx with
+          IsReachable = true
+          Stmts = stmt :: ctx.Stmts }
+
+  | false, _ -> ctx
+
+  | _, MTerminatorStmt _ ->
+      { ctx with
+          IsReachable = false
+          Stmts = stmt :: ctx.Stmts }
+
+  | _ -> { ctx with Stmts = stmt :: ctx.Stmts }
 
 let private addTerminator (ctx: MirCtx) terminator loc =
   addStmt ctx (MTerminatorStmt(terminator, loc))
@@ -195,7 +215,7 @@ let private mxCompare ctx (op: MBinary) (l: MExpr) r (ty: Ty) loc =
 let private mxUnbox expr ty loc : MExpr =
   // HACK: Remove `unbox obj: unit` because `box ()` is null.
   if tyIsUnit ty then
-    MDefaultExpr(tyUnit, loc)
+    MUnitExpr loc
   else
     MUnaryExpr(MUnboxUnary, expr, ty, loc)
 
@@ -428,8 +448,8 @@ let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
 
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
-  | HPrim.Nil -> MDefaultExpr(ty, loc), ctx
-  | HPrim.OptionNone -> MDefaultExpr(ty, loc), ctx
+  | HPrim.Nil -> MGenericValueExpr(MNilGv, ty, loc), ctx
+  | HPrim.OptionNone -> MGenericValueExpr(MNoneGv, ty, loc), ctx
 
   | _ -> unreachable () // Primitives must appear as callee.
 
@@ -821,16 +841,16 @@ let private mirifyExprCallExit ctx arg ty loc =
   let arg, ctx = mirifyExpr ctx arg
 
   let ctx =
-    addStmt ctx (MTerminatorStmt(MExitTerminator arg, loc))
+    addTerminator ctx (MExitTerminator arg) loc
 
-  MDefaultExpr(ty, loc), ctx
+  MNeverExpr loc, ctx
 
 let private mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
 
   // HACK: `box ()` occurs when turning a non-capturing function into function object.
   if mexprToTy arg |> tyIsUnit then
-    MDefaultExpr(tyObj, loc), ctx
+    MNativeExpr("NULL", tyObj, loc), ctx
   else
     let temp, tempSerial, ctx = freshVar ctx "box" tyObj loc
 
@@ -1076,7 +1096,7 @@ let private mirifyCallAssertExpr ctx arg loc =
   let ctx =
     addStmt ctx (MActionStmt(MAssertAction, args, loc))
 
-  MDefaultExpr(tyUnit, loc), ctx
+  MUnitExpr loc, ctx
 
 let private mirifyCallInRegionExpr ctx arg loc =
   // arg: closure
@@ -1088,7 +1108,7 @@ let private mirifyCallInRegionExpr ctx arg loc =
     addStmt ctx (MActionStmt(MEnterRegionAction, [], loc))
 
   let ctx =
-    let unit = MDefaultExpr(tyUnit, loc)
+    let unit = MUnitExpr loc
     addStmt ctx (MPrimStmt(MCallClosurePrim, [ arg; unit ], tempSerial, loc))
 
   let ctx =
@@ -1102,7 +1122,7 @@ let private mirifyCallPrintfnExpr ctx args loc =
   let ctx =
     addStmt ctx (MActionStmt(MPrintfnAction, args, loc))
 
-  MDefaultExpr(tyUnit, loc), ctx
+  MUnitExpr loc, ctx
 
 let private mirifyCallProcExpr ctx callee args ty loc =
   let callee, ctx = mirifyExpr ctx callee
@@ -1144,7 +1164,7 @@ let private mirifyCallPrimExpr ctx itself prim args ty loc =
     let ctx =
       addStmt ctx (MActionStmt(action, args, loc))
 
-    MDefaultExpr(tyUnit, loc), ctx
+    MUnitExpr loc, ctx
 
   match prim, args with
   | HPrim.Add, [ l; r ] -> mirifyExprOpArith ctx itself MAddBinary l r ty loc
@@ -1271,7 +1291,7 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args ty loc =
   let ctx =
     addTerminator ctx (MGotoTerminator label) loc
 
-  MDefaultExpr(ty, loc), ctx
+  MNeverExpr loc, ctx
 
 let private mirifyExprInfClosure ctx funSerial env funTy loc =
   let envTy, envLoc = exprExtract env
@@ -1295,7 +1315,7 @@ let private mirifyExprInfCallNative ctx (funName: string) args ty loc =
     let ctx =
       addStmt ctx (MActionStmt(MCallNativeAction funName, args, loc))
 
-    MDefaultExpr(tyUnit, loc), ctx
+    MUnitExpr loc, ctx
   else
     let temp, tempSerial, ctx =
       freshVar ctx (funName + "_result") ty loc
@@ -1311,7 +1331,7 @@ let private mirifyExprInf ctx itself kind args ty loc =
       let arg, ctx = mirifyExpr ctx arg
       MUnaryExpr(MMinusUnary, arg, ty, loc), ctx
 
-  | HTupleEN, [], Ty (TupleTk, []) -> MDefaultExpr(tyUnit, loc), ctx
+  | HTupleEN, [], Ty (TupleTk, []) -> MUnitExpr loc, ctx
   | HTupleEN, _, Ty (TupleTk, itemTys) -> mirifyExprTuple ctx args itemTys loc
   | HRecordEN, _, _ -> mirifyExprRecord ctx args ty loc
   | HRecordItemEN index, [ record ], itemTy -> mirifyExprRecordItem ctx index record itemTy loc
@@ -1338,13 +1358,13 @@ let private mirifyExprInf ctx itself kind args ty loc =
       let ctx =
         addStmt ctx (MNativeStmt(code, args, loc))
 
-      MDefaultExpr(tyUnit, loc), ctx
+      MUnitExpr loc, ctx
 
   | HNativeDeclEN code, _, _ ->
       let ctx = addDecl ctx (MNativeDecl(code, loc))
-      MDefaultExpr(tyUnit, loc), ctx
+      MUnitExpr loc, ctx
 
-  | HSizeOfValEN, [ HNodeExpr (_, _, ty, _) ], _ -> MUnaryExpr(MSizeOfValUnary, MDefaultExpr(ty, loc), tyInt, loc), ctx
+  | HSizeOfValEN, [ HNodeExpr (_, _, ty, _) ], _ -> MGenericValueExpr(MSizeOfGv, ty, loc), ctx
 
   | t -> unreachable t
 
@@ -1438,13 +1458,14 @@ let private mirifyOtherExprWrapper ctx expr =
   | HLetValExpr _
   | HLetFunExpr _ -> unreachable () // See mirifyExpr below.
 
-  | HTyDeclExpr _
-  | HOpenExpr _ -> MDefaultExpr(tyUnit, exprToLoc expr), ctx
-
   | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
   | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
+
   | HModuleExpr _
   | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
+
+  | HTyDeclExpr _
+  | HOpenExpr _ -> unreachable () // Resolved in NameRes and discarded in Hoist.
 
 let private mirifyExpr (ctx: MirCtx) (expr: HExpr) : MExpr * MirCtx =
   // HACK: This function runs into stack overflow easily

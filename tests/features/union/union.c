@@ -83,8 +83,6 @@ end_match_1:;
 next_5:;
     if ((variant_2.discriminant != LimitDiv_)) goto next_6;
     exit(2);
-    match_1 = 0;
-    goto end_match_4;
 next_6:;
     exit(1);
 end_match_4:;

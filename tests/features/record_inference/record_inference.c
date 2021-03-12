@@ -42,8 +42,6 @@ clause_2:;
     goto switch_next_1;
 clause_3:;
     exit(1);
-    switch_ = ((struct IntWrapper_){});
-    goto switch_next_1;
 switch_next_1:;
     struct IntWrapper_ t_ = switch_;
     milone_assert((t_.t0 == 0), 21, 2);

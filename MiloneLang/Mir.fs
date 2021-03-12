@@ -35,6 +35,12 @@ type MatchIR =
   | Guard of guard: HExpr * nextLabel: Label
   | Body of body: HExpr
 
+[<NoEquality; NoComparison>]
+type MGenericValue =
+  | MNoneGv
+  | MNilGv
+  | MSizeOfGv
+
 /// Built-in 1-arity operation in middle IR.
 [<Struct>]
 [<NoEquality; NoComparison>]
@@ -80,7 +86,6 @@ type MUnary =
   | MListTailUnary
 
   | MNativeCastUnary
-  | MSizeOfValUnary
 
 /// Built-in 2-arity operation in middle IR.
 [<NoEquality; NoComparison>]
@@ -154,9 +159,10 @@ type MPrim =
 [<NoEquality; NoComparison>]
 type MExpr =
   | MLitExpr of Lit * Loc
+  | MUnitExpr of Loc
 
-  /// Default value of the type.
-  | MDefaultExpr of Ty * Loc
+  /// Never-evaluated expression.
+  | MNeverExpr of Loc
 
   /// Variable.
   | MVarExpr of VarSerial * Ty * Loc
@@ -168,6 +174,7 @@ type MExpr =
   | MVariantExpr of TySerial * VariantSerial * Ty * Loc
 
   | MDiscriminantConstExpr of VariantSerial * Loc
+  | MGenericValueExpr of MGenericValue * Ty * Loc
 
   | MUnaryExpr of MUnary * arg: MExpr * resultTy: Ty * Loc
   | MBinaryExpr of MBinary * MExpr * MExpr * resultTy: Ty * Loc
@@ -229,12 +236,20 @@ type MDecl =
 
 let mexprExtract expr =
   match expr with
-  | MDefaultExpr (ty, loc) -> ty, loc
   | MLitExpr (lit, loc) -> litToTy lit, loc
+  | MUnitExpr loc -> tyUnit, loc
+  | MNeverExpr loc -> tyUnit, loc
   | MVarExpr (_, ty, loc) -> ty, loc
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc
   | MDiscriminantConstExpr (_, loc) -> tyInt, loc
+
+  | MGenericValueExpr (genericValue, ty, loc) ->
+      match genericValue with
+      | MNoneGv
+      | MNilGv -> ty, loc
+      | MSizeOfGv -> tyInt, loc
+
   | MUnaryExpr (_, _, ty, loc) -> ty, loc
   | MBinaryExpr (_, _, _, ty, loc) -> ty, loc
   | MNativeExpr (_, ty, loc) -> ty, loc
@@ -285,7 +300,7 @@ let rec mxSugar expr =
 
   match expr with
   // SUGAR: `x: unit` ==> `()`
-  | MVarExpr (_, Ty (TupleTk, []), loc) -> MDefaultExpr(tyUnit, loc)
+  | MVarExpr (_, Ty (TupleTk, []), loc) -> MUnitExpr loc
 
   | MUnaryExpr (op, l, ty, loc) ->
       let l = mxSugar l

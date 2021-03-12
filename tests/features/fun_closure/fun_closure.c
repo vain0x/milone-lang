@@ -120,8 +120,6 @@ else_4:;
     step_2 = arg_4;
     n_ = arg_5;
     goto tailrec_1;
-    if_ = false;
-    goto if_next_2;
 if_next_2:;
     return if_;
 }

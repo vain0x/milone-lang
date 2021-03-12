@@ -633,44 +633,6 @@ let private cgConst ctx mConst =
   | MLitConst lit -> genLit lit
   | MDiscriminantConst variantSerial -> genDiscriminant ctx variantSerial
 
-/// `0`, `NULL`, or `(T) {}`
-let private genDefault ctx ty =
-  let (Ty (tk, tyArgs)) = ty
-
-  match tk, tyArgs with
-  | TupleTk, []
-  | IntTk _, _
-  | FloatTk _, _
-  | CharTk, _ -> CIntExpr "0", ctx
-
-  | BoolTk, _ -> CVarExpr "false", ctx
-
-  | ObjTk, _
-  | ListTk, _
-  | NativePtrTk _, _
-  | NativeFunTk, _ -> CVarExpr "NULL", ctx
-
-  | OptionTk _, _ ->
-      let ty, ctx = cgTyComplete ctx ty
-      CInitExpr([ "some", CVarExpr "false" ], ty), ctx
-
-  | StrTk, _
-  | FunTk, _
-  | TupleTk, _
-  | UnionTk _, _
-  | RecordTk _, _
-  | NativeTypeTk _, _ ->
-      let ty, ctx = cgTyComplete ctx ty
-      CCastExpr(CDefaultExpr, ty), ctx
-
-  | VoidTk, _ -> unreachable () // No default value of void..
-
-  | ErrorTk _, _
-  | MetaTk _, _
-  | SynonymTk _, _
-  | UnresolvedTk _, _
-  | UnresolvedVarTk _, _ -> unreachable ()
-
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
 
@@ -678,6 +640,18 @@ let private genVariantNameExpr ctx serial ty =
     CVarExpr(getUniqueVariantName ctx serial)
 
   CInitExpr([ "discriminant", discriminant ], ty), ctx
+
+let private genGenericValue ctx genericValue ty =
+  match genericValue with
+  | MNoneGv ->
+      let ty, ctx = cgTyComplete ctx ty
+      CInitExpr([ "some", CVarExpr "false" ], ty), ctx
+
+  | MNilGv -> CVarExpr "NULL", ctx
+
+  | MSizeOfGv ->
+      let ty, ctx = cgTyComplete ctx ty
+      CSizeOfExpr ty, ctx
 
 /// Converts a binary expression to a runtime function call.
 let private genBinaryExprAsCall ctx funName l r =
@@ -739,10 +713,6 @@ let private genUnaryExpr ctx op arg ty _ =
       let ty, ctx = cgTyComplete ctx ty
       CCastExpr(arg, ty), ctx
 
-  | MSizeOfValUnary ->
-      let argTy, ctx = cgTyComplete ctx argTy
-      CSizeOfExpr argTy, ctx
-
 let private genExprBin ctx op l r =
   match op with
   | MIntCompareBinary -> genBinaryExprAsCall ctx "int_compare" l r
@@ -775,13 +745,15 @@ let private cgExprList ctx exprs =
 let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   match arg |> mxSugar with
   | MLitExpr (lit, _) -> genLit lit, ctx
-  | MDefaultExpr (ty, _) -> genDefault ctx ty
+  | MUnitExpr _ -> CVarExpr "0", ctx
+  | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
 
   | MVarExpr (serial, _, _) -> CVarExpr(getUniqueVarName ctx serial), ctx
   | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx
 
   | MVariantExpr (_, serial, ty, _) -> genVariantNameExpr ctx serial ty
   | MDiscriminantConstExpr (variantSerial, _) -> genDiscriminant ctx variantSerial, ctx
+  | MGenericValueExpr (genericValue, ty, _) -> genGenericValue ctx genericValue ty
   | MUnaryExpr (op, arg, ty, loc) -> genUnaryExpr ctx op arg ty loc
   | MBinaryExpr (op, l, r, _, _) -> genExprBin ctx op l r
 

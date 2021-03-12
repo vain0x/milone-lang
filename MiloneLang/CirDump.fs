@@ -178,7 +178,6 @@ let private cpExpr expr acc : string list =
     |> snd
 
   match expr with
-  | CDefaultExpr -> acc |> cons "{}"
   | CIntExpr value -> acc |> cons (string value)
   | CDoubleExpr value -> acc |> cons (string value)
 
