@@ -161,8 +161,8 @@ type MExpr =
   | MLitExpr of Lit * Loc
   | MUnitExpr of Loc
 
-  /// Default value of the type.
-  | MDefaultExpr of Ty * Loc
+  /// Never-evaluated expression.
+  | MNeverExpr of Loc
 
   /// Variable.
   | MVarExpr of VarSerial * Ty * Loc
@@ -236,9 +236,9 @@ type MDecl =
 
 let mexprExtract expr =
   match expr with
-  | MDefaultExpr (ty, loc) -> ty, loc
   | MLitExpr (lit, loc) -> litToTy lit, loc
   | MUnitExpr loc -> tyUnit, loc
+  | MNeverExpr loc -> tyUnit, loc
   | MVarExpr (_, ty, loc) -> ty, loc
   | MProcExpr (_, ty, loc) -> ty, loc
   | MVariantExpr (_, _, ty, loc) -> ty, loc

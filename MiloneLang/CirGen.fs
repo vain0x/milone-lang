@@ -633,44 +633,6 @@ let private cgConst ctx mConst =
   | MLitConst lit -> genLit lit
   | MDiscriminantConst variantSerial -> genDiscriminant ctx variantSerial
 
-/// `0`, `NULL`, or `(T) {}`
-let private genDefault ctx ty =
-  let (Ty (tk, tyArgs)) = ty
-
-  match tk, tyArgs with
-  | TupleTk, []
-  | IntTk _, _
-  | FloatTk _, _
-  | CharTk, _ -> CIntExpr "0", ctx
-
-  | BoolTk, _ -> CVarExpr "false", ctx
-
-  | ObjTk, _
-  | ListTk, _
-  | NativePtrTk _, _
-  | NativeFunTk, _ -> CVarExpr "NULL", ctx
-
-  | OptionTk _, _ ->
-      let ty, ctx = cgTyComplete ctx ty
-      CInitExpr([ "some", CVarExpr "false" ], ty), ctx
-
-  | StrTk, _
-  | FunTk, _
-  | TupleTk, _
-  | UnionTk _, _
-  | RecordTk _, _
-  | NativeTypeTk _, _ ->
-      let ty, ctx = cgTyComplete ctx ty
-      CCastExpr(CDefaultExpr, ty), ctx
-
-  | VoidTk, _ -> unreachable () // No default value of void..
-
-  | ErrorTk _, _
-  | MetaTk _, _
-  | SynonymTk _, _
-  | UnresolvedTk _, _
-  | UnresolvedVarTk _, _ -> unreachable ()
-
 let private genVariantNameExpr ctx serial ty =
   let ty, ctx = cgTyComplete ctx ty
 
@@ -783,8 +745,8 @@ let private cgExprList ctx exprs =
 let private cgExpr (ctx: CirCtx) (arg: MExpr) : CExpr * CirCtx =
   match arg |> mxSugar with
   | MLitExpr (lit, _) -> genLit lit, ctx
-  | MDefaultExpr (ty, _) -> genDefault ctx ty
   | MUnitExpr _ -> CVarExpr "0", ctx
+  | MNeverExpr loc -> unreachable ("MNeverExpr " + locToString loc)
 
   | MVarExpr (serial, _, _) -> CVarExpr(getUniqueVarName ctx serial), ctx
   | MProcExpr (serial, _, _) -> CVarExpr(getUniqueFunName ctx serial), ctx

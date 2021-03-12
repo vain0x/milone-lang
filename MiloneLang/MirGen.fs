@@ -843,7 +843,7 @@ let private mirifyExprCallExit ctx arg ty loc =
   let ctx =
     addTerminator ctx (MExitTerminator arg) loc
 
-  MDefaultExpr(ty, loc), ctx
+  MNeverExpr loc, ctx
 
 let private mirifyExprCallBox ctx arg _ loc =
   let arg, ctx = mirifyExpr ctx arg
@@ -1291,7 +1291,7 @@ let private mirifyExprInfCallTailRec (ctx: MirCtx) _callee args ty loc =
   let ctx =
     addTerminator ctx (MGotoTerminator label) loc
 
-  MDefaultExpr(ty, loc), ctx
+  MNeverExpr loc, ctx
 
 let private mirifyExprInfClosure ctx funSerial env funTy loc =
   let envTy, envLoc = exprExtract env
