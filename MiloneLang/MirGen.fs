@@ -202,9 +202,7 @@ let private mxUnbox expr ty loc : MExpr =
 let private mtAbort loc =
   MExitTerminator(MLitExpr(IntLit "1", loc))
 
-let private msGotoUnless pred label loc =
-  let notPred = mxNot pred loc
-  MTerminatorStmt(MGotoIfTerminator(notPred, label), loc)
+let private msGotoUnless cond label loc = MGotoIfStmt(mxNot cond loc, label)
 
 // -----------------------------------------------
 // Other helpers

@@ -191,7 +191,6 @@ type MTerminator =
   | MExitTerminator of exitCode: MExpr
   | MReturnTerminator of result: MExpr
   | MGotoTerminator of Label
-  | MGotoIfTerminator of cond: MExpr * Label
   | MIfTerminator of cond: MExpr * thenCl: MTerminator * elseCl: MTerminator
   | MSwitchTerminator of cond: MExpr * MSwitchClause list
 
@@ -209,6 +208,8 @@ type MStmt =
   | MSetStmt of VarSerial * init: MExpr * Loc
 
   | MLabelStmt of Label * Loc
+
+  | MGotoIfStmt of cond: MExpr * Label
 
   | MTerminatorStmt of MTerminator * Loc
 

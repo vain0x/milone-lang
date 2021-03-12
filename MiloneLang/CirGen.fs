@@ -1106,10 +1106,6 @@ let private cgTerminatorStmt ctx stmt =
   | MReturnTerminator expr -> cgReturnStmt ctx expr
   | MGotoTerminator label -> addStmt ctx (CGotoStmt label)
 
-  | MGotoIfTerminator (pred, label) ->
-      let pred, ctx = cgExpr ctx pred
-      addStmt ctx (CGotoIfStmt(pred, label))
-
   | MIfTerminator (cond, thenCl, elseCl) ->
       let cond, ctx = cgExpr ctx cond
       let thenCl, ctx = cgTerminatorAsBlock ctx thenCl
@@ -1148,6 +1144,11 @@ let private cgStmt ctx stmt =
   | MLetValStmt (serial, init, ty, _) -> cgLetValStmt ctx serial init ty
   | MSetStmt (serial, right, _) -> cgSetStmt ctx serial right
   | MLabelStmt (label, _) -> addStmt ctx (CLabelStmt label)
+
+  | MGotoIfStmt (cond, label) ->
+      let cond, ctx = cgExpr ctx cond
+      addStmt ctx (CGotoIfStmt(cond, label))
+
   | MTerminatorStmt (terminator, _loc) -> cgTerminatorStmt ctx terminator
 
   | MNativeStmt (code, args, _) ->
