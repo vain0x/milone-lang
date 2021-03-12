@@ -41,7 +41,7 @@ struct MyList_ myCons_(int head_, struct MyList_ tail_) {
 }
 
 int milone_main() {
-    struct IntMyList_OptionTuple2 tuple_1 = (struct IntMyList_OptionTuple2){.t0 = 0, .t1 = ((struct MyList_Option){})};
+    struct IntMyList_OptionTuple2 tuple_1 = (struct IntMyList_OptionTuple2){.t0 = 0, .t1 = (struct MyList_Option){.some = false}};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntMyList_OptionTuple2));
     (*(((struct IntMyList_OptionTuple2*)box_1))) = tuple_1;
     struct MyList_ variant_1 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_1};

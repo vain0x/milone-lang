@@ -91,7 +91,7 @@ then_2:;
     if_ = some_;
     goto if_next_1;
 else_3:;
-    if_ = ((struct IntOption){});
+    if_ = (struct IntOption){.some = false};
     goto if_next_1;
 if_next_1:;
     return if_;

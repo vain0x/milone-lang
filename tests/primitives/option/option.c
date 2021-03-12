@@ -46,7 +46,7 @@ struct StringOption {
 };
 
 char basicNoneCase_(char arg_1) {
-    struct StringOption none_ = ((struct StringOption){});
+    struct StringOption none_ = (struct StringOption){.some = false};
     char match_1;
     if ((!(none_.some))) goto next_6;
     if ((str_compare(none_.value, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;

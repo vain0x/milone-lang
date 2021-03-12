@@ -650,10 +650,13 @@ let private genDefault ctx ty =
   | NativePtrTk _, _
   | NativeFunTk, _ -> CVarExpr "NULL", ctx
 
+  | OptionTk _, _ ->
+      let ty, ctx = cgTyComplete ctx ty
+      CInitExpr([ "some", CVarExpr "false" ], ty), ctx
+
   | StrTk, _
   | FunTk, _
   | TupleTk, _
-  | OptionTk _, _
   | UnionTk _, _
   | RecordTk _, _
   | NativeTypeTk _, _ ->

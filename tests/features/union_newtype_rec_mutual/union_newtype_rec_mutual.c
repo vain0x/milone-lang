@@ -44,7 +44,7 @@ struct StringOdd_OptionTuple2 {
 };
 
 int milone_main() {
-    struct IntObjectOptionTuple2 tuple_ = (struct IntObjectOptionTuple2){.t0 = 1, .t1 = ((struct ObjectOption){})};
+    struct IntObjectOptionTuple2 tuple_ = (struct IntObjectOptionTuple2){.t0 = 1, .t1 = (struct ObjectOption){.some = false}};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntObjectOptionTuple2));
     (*(((struct IntObjectOptionTuple2*)box_))) = tuple_;
     struct Odd_ variant_ = (struct Odd_){.discriminant = Odd_, .Odd_ = box_};

@@ -448,7 +448,7 @@ then_20:;
     if_6 = some_;
     goto if_next_19;
 else_21:;
-    if_6 = ((struct IntOption){});
+    if_6 = (struct IntOption){.some = false};
     goto if_next_19;
 if_next_19:;
     return if_6;
@@ -631,7 +631,7 @@ then_37:;
     if_11 = some_1;
     goto if_next_36;
 else_38:;
-    if_11 = ((struct IntOption){});
+    if_11 = (struct IntOption){.some = false};
     goto if_next_36;
 if_next_36:;
     return if_11;
@@ -712,7 +712,7 @@ struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 
         goto else_50;
     }
 then_49:;
-    if_15 = ((struct IntIntConstPtrIntTuple2Tuple2Option){});
+    if_15 = (struct IntIntConstPtrIntTuple2Tuple2Option){.some = false};
     goto if_next_48;
 else_50:;
     int call_39 = __constArrayGet_1(0, array_13);
@@ -1230,7 +1230,7 @@ then_93:;
     if_20 = some_3;
     goto if_next_92;
 else_94:;
-    if_20 = ((struct IntOption){});
+    if_20 = (struct IntOption){.some = false};
     goto if_next_92;
 if_next_92:;
     return if_20;
@@ -1242,7 +1242,7 @@ struct IntOption fun_21(void const* env_9, int arg_16) {
 }
 
 struct IntOption fun_10(int arg_64) {
-    return ((struct IntOption){});
+    return (struct IntOption){.some = false};
 }
 
 struct IntOption fun_22(void const* env_10, int arg_17) {

@@ -32,7 +32,7 @@ struct BoxedVariant_Option {
 };
 
 struct BoxedVariant_ feedNil_(struct BoxedVariant_OptionBoxedVariant_Fun1 f_) {
-    struct BoxedVariant_ app_ = f_.fun(f_.env, ((struct BoxedVariant_Option){}));
+    struct BoxedVariant_ app_ = f_.fun(f_.env, (struct BoxedVariant_Option){.some = false});
     return app_;
 }
 
