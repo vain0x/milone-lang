@@ -43,11 +43,11 @@ struct MemoryChunk {
 };
 
 static struct MemoryChunk s_heap;
-static int s_heap_level; // depth of current region
-static int s_heap_size;  // consumed size in all regions
-static int s_heap_alloc; // allocated size in all regions
+static size_t s_heap_level; // depth of current region
+static size_t s_heap_size;  // consumed size in all regions
+static size_t s_heap_alloc; // allocated size in all regions
 
-static void oom(void) {
+_Noreturn static void oom(void) {
     fprintf(stderr, "Out of memory.\n");
     exit(1);
 }
@@ -267,7 +267,7 @@ static void string_builder_append_string(struct StringBuilder *sb,
 
 struct String str_borrow(char const *c_str) {
     assert(c_str != NULL);
-    return (struct String){.str = c_str, .len = strlen(c_str)};
+    return (struct String){.str = c_str, .len = (int)strlen(c_str)};
 }
 
 int str_compare(struct String left, struct String right) {
@@ -307,7 +307,7 @@ struct String str_of_raw_parts(char const *p, int len) {
 
 struct String str_of_c_str(char const *s) {
     assert(s != NULL);
-    return str_of_raw_parts(s, strlen(s));
+    return str_of_raw_parts(s, (int)strlen(s));
 }
 
 _Noreturn static void error_str_add_overflow() {
@@ -320,7 +320,7 @@ struct String str_add(struct String left, struct String right) {
         return right.len == 0 ? left : right;
     }
 
-    if ((uint32_t)left.len + (uint32_t)right.len > (uint32_t)INT32_MAX) {
+    if ((uint32_t)left.len + (uint32_t)right.len >= (uint32_t)INT32_MAX) {
         error_str_add_overflow();
     }
 
@@ -471,22 +471,24 @@ uint64_t str_to_uint64(struct String s) {
     return value;
 }
 
-uintptr_t str_to_uintptr(struct String s) { return str_to_uint64(s); }
+uintptr_t str_to_uintptr(struct String s) {
+    return (uintptr_t)str_to_uint64(s);
+}
 
 struct String str_of_int64(int64_t value) {
-    char buf[21] = {};
-    int n = sprintf(buf, "%ld", value);
+    char buf[21] = {0};
+    int n = sprintf(buf, "%lld", (long long)value);
     return str_of_raw_parts(buf, n);
 }
 
 struct String str_of_uint64(uint64_t value) {
-    char buf[21] = {};
-    int n = sprintf(buf, "%lu", value);
+    char buf[21] = {0};
+    int n = sprintf(buf, "%llu", (unsigned long long)value);
     return str_of_raw_parts(buf, n);
 }
 
 struct String str_of_double(double value) {
-    char buf[64] = {};
+    char buf[64] = {0};
     int n = sprintf(buf, "%f", value);
     return str_of_raw_parts(buf, n);
 }
@@ -494,9 +496,13 @@ struct String str_of_double(double value) {
 char str_to_char(struct String s) { return s.len >= 1 ? *s.str : '\0'; }
 
 struct String str_of_char(char value) {
+    if (value == '\0') {
+        return str_borrow("");
+    }
+
     char *str = milone_mem_alloc(2, sizeof(char));
     str[0] = value;
-    return (struct String){.str = str, .len = strlen(str)};
+    return (struct String){.str = str, .len = 1};
 }
 
 struct MyStringList {
@@ -620,12 +626,12 @@ struct String milone_get_env(struct String name) {
 static long milone_get_time_millis(void) {
     struct timespec t;
     timespec_get(&t, TIME_UTC);
-    return t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L);
+    return (long)(t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L));
 }
 
 struct Profiler {
     long epoch;
-    long heap_size;
+    size_t heap_size;
 };
 
 void *milone_profile_init(void) {
@@ -649,7 +655,7 @@ void milone_profile_log(struct String msg, void *profiler) {
     long sec = millis / 1000;
     millis %= 1000;
 
-    long bytes = s_heap_size - p->heap_size;
+    long bytes = (long)s_heap_size - (long)p->heap_size;
     if (bytes < 0) {
         bytes = 0;
     }
@@ -697,15 +703,15 @@ struct String scan_str(int capacity) {
         exit(1);
     }
 
-    char fmt[16] = {};
+    char fmt[16] = {0};
     sprintf(fmt, "%%%ds", capacity);
     assert(fmt[15] == 0);
 
     int _n = scanf(fmt, str);
 
-    int len = strlen(str);
+    size_t len = strlen(str);
     assert(len < capacity);
-    return (struct String){.str = str, .len = len};
+    return (struct String){.str = str, .len = (int)len};
 }
 
 // -----------------------------------------------
