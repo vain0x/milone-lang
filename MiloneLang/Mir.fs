@@ -36,7 +36,10 @@ type MatchIR =
   | Body of body: HExpr
 
 [<NoEquality; NoComparison>]
-type MGenericValue = | MSizeOfGv
+type MGenericValue =
+  | MNoneGv
+  | MNilGv
+  | MSizeOfGv
 
 /// Built-in 1-arity operation in middle IR.
 [<Struct>]
@@ -239,8 +242,10 @@ let mexprExtract expr =
   | MVariantExpr (_, _, ty, loc) -> ty, loc
   | MDiscriminantConstExpr (_, loc) -> tyInt, loc
 
-  | MGenericValueExpr (genericValue, _, loc) ->
+  | MGenericValueExpr (genericValue, ty, loc) ->
       match genericValue with
+      | MNoneGv
+      | MNilGv -> ty, loc
       | MSizeOfGv -> tyInt, loc
 
   | MUnaryExpr (_, _, ty, loc) -> ty, loc

@@ -681,6 +681,12 @@ let private genVariantNameExpr ctx serial ty =
 
 let private genGenericValue ctx genericValue ty =
   match genericValue with
+  | MNoneGv ->
+      let ty, ctx = cgTyComplete ctx ty
+      CInitExpr([ "some", CVarExpr "false" ], ty), ctx
+
+  | MNilGv -> CVarExpr "NULL", ctx
+
   | MSizeOfGv ->
       let ty, ctx = cgTyComplete ctx ty
       CSizeOfExpr ty, ctx

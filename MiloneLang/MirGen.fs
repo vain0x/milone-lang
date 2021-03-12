@@ -428,8 +428,8 @@ let private mirifyExprVariant (ctx: MirCtx) itself serial ty loc =
 
 let private mirifyExprPrim (ctx: MirCtx) prim ty loc =
   match prim with
-  | HPrim.Nil -> MDefaultExpr(ty, loc), ctx
-  | HPrim.OptionNone -> MDefaultExpr(ty, loc), ctx
+  | HPrim.Nil -> MGenericValueExpr(MNilGv, ty, loc), ctx
+  | HPrim.OptionNone -> MGenericValueExpr(MNoneGv, ty, loc), ctx
 
   | _ -> unreachable () // Primitives must appear as callee.
 
