@@ -16,7 +16,6 @@ char polymorphicFunCase_(char arg_1);
 
 int milone_main();
 
-
 struct IntList {
     int head;
     struct IntList const* tail;

@@ -1186,5 +1186,28 @@ let private cgDecls (ctx: CirCtx) decls =
 
 let genCir (decls, mirCtx: MirCtx) : CDecl list =
   let ctx = ofMirCtx mirCtx
+
   let ctx = cgDecls ctx decls
-  List.rev ctx.Decls
+
+  let decls = List.rev ctx.Decls
+
+  // Sort declarations by kind.
+  // Without this, static variable definition can appear before its type definition.
+  let types, vars, bodies =
+    decls
+    |> List.fold
+         (fun (types, vars, bodies) decl ->
+           match decl with
+           | CErrorDecl _
+           | CStructForwardDecl _
+           | CStructDecl _
+           | CEnumDecl _ -> decl :: types, vars, bodies
+
+           | CStaticVarDecl _ -> types, decl :: vars, bodies
+
+           | CNativeDecl _
+           | CFunForwardDecl _
+           | CFunDecl _ -> types, vars, decl :: bodies)
+         ([], [], [])
+
+  List.collect List.rev [ types; vars; bodies ]

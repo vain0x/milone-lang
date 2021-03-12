@@ -2,14 +2,18 @@
 
 struct IntList;
 
+struct IntList;
+
 bool isEmpty_1(struct IntList const* xs_);
 
 char assertNotEmpty_1(struct IntList const* xs_60);
 
-struct IntList;
-
 int milone_main();
 
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
 
 bool isEmpty_1(struct IntList const* xs_) {
     bool if_;
@@ -33,11 +37,6 @@ char assertNotEmpty_1(struct IntList const* xs_60) {
     milone_assert((!(call_)), 5, 34);
     return 0;
 }
-
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 int milone_main() {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));

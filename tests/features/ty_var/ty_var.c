@@ -2,21 +2,21 @@
 
 struct IntIntTuple2;
 
-int pair_2(struct IntIntTuple2 arg_);
-
 struct StringStringTuple2;
-
-int pair_1(struct StringStringTuple2 arg_1);
-
-char useStringIndexWithoutAscription_(struct String x_);
 
 struct StringList;
 
 struct StringStringListTuple2;
 
-struct StringStringListTuple2 useTyVarInBody_1(struct String x_1);
-
 struct StringList;
+
+int pair_2(struct IntIntTuple2 arg_);
+
+int pair_1(struct StringStringTuple2 arg_1);
+
+char useStringIndexWithoutAscription_(struct String x_);
+
+struct StringStringListTuple2 useTyVarInBody_1(struct String x_1);
 
 int milone_main();
 
@@ -25,14 +25,24 @@ struct IntIntTuple2 {
     int t1;
 };
 
-int pair_2(struct IntIntTuple2 arg_) {
-    return 2;
-}
-
 struct StringStringTuple2 {
     struct String t0;
     struct String t1;
 };
+
+struct StringStringListTuple2 {
+    struct String t0;
+    struct StringList const* t1;
+};
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
+
+int pair_2(struct IntIntTuple2 arg_) {
+    return 2;
+}
 
 int pair_1(struct StringStringTuple2 arg_1) {
     return 2;
@@ -44,22 +54,11 @@ char useStringIndexWithoutAscription_(struct String x_) {
     return x_.str[0];
 }
 
-
-struct StringStringListTuple2 {
-    struct String t0;
-    struct StringList const* t1;
-};
-
 struct StringStringListTuple2 useTyVarInBody_1(struct String x_1) {
     struct StringList const* xs_ = NULL;
     struct StringStringListTuple2 tuple_1 = (struct StringStringListTuple2){.t0 = x_1, .t1 = xs_};
     return tuple_1;
 }
-
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 int milone_main() {
     struct IntIntTuple2 tuple_2 = (struct IntIntTuple2){.t0 = 0, .t1 = 0};

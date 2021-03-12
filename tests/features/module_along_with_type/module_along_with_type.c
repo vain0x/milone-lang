@@ -2,17 +2,15 @@
 
 struct IntIntTuple2;
 
+struct IntIntTuple2IntIntTuple2Tuple2;
+
 struct IntIntTuple2 add_(struct IntIntTuple2 l_, struct IntIntTuple2 r_);
 
 struct String toString_(struct IntIntTuple2 arg_);
 
-struct IntIntTuple2IntIntTuple2Tuple2;
-
 struct IntIntTuple2IntIntTuple2Tuple2 pair_(struct IntIntTuple2 s_, struct IntIntTuple2 t_);
 
 struct String toString_1(struct IntIntTuple2IntIntTuple2Tuple2 arg_1);
-
-static struct IntIntTuple2 eol_;
 
 int milone_main();
 
@@ -20,6 +18,13 @@ struct IntIntTuple2 {
     int t0;
     int t1;
 };
+
+struct IntIntTuple2IntIntTuple2Tuple2 {
+    struct IntIntTuple2 t0;
+    struct IntIntTuple2 t1;
+};
+
+static struct IntIntTuple2 eol_;
 
 struct IntIntTuple2 add_(struct IntIntTuple2 l_, struct IntIntTuple2 r_) {
     int ly_ = l_.t0;
@@ -37,11 +42,6 @@ struct String toString_(struct IntIntTuple2 arg_) {
     struct String call_1 = str_of_int64((column_ + 1));
     return str_add(str_add(call_, (struct String){.str = ":", .len = 1}), call_1);
 }
-
-struct IntIntTuple2IntIntTuple2Tuple2 {
-    struct IntIntTuple2 t0;
-    struct IntIntTuple2 t1;
-};
 
 struct IntIntTuple2IntIntTuple2Tuple2 pair_(struct IntIntTuple2 s_, struct IntIntTuple2 t_) {
     struct IntIntTuple2IntIntTuple2Tuple2 tuple_1 = (struct IntIntTuple2IntIntTuple2Tuple2){.t0 = s_, .t1 = t_};

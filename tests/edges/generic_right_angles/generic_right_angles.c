@@ -4,7 +4,6 @@ struct IntListListList;
 
 int milone_main();
 
-
 int milone_main() {
     struct IntListListList const* n_ = NULL;
     bool if_;

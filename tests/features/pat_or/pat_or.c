@@ -1,24 +1,34 @@
 #include "milone.h"
 
+struct IntList;
+
+struct IntList;
+
+struct IntIntTuple2;
+
 bool isZeroOrOne_(int x_);
 
 char simpleCase_(char arg_);
 
-struct IntList;
-
-struct IntList;
-
 bool startsWithDoubleBits_(struct IntList const* xs_);
 
 char nestedCase_(char arg_1);
-
-struct IntIntTuple2;
 
 bool performComplexMatching_(struct IntIntTuple2 expr_);
 
 char complexCase_(char arg_2);
 
 int milone_main();
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
+
+struct IntIntTuple2 {
+    int t0;
+    int t1;
+};
 
 bool isZeroOrOne_(int x_) {
     bool switch_;
@@ -61,12 +71,6 @@ if_next_4:;
     milone_assert((!(call_2)), 13, 2);
     return 0;
 }
-
-
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 bool startsWithDoubleBits_(struct IntList const* xs_) {
     bool match_;
@@ -121,11 +125,6 @@ char nestedCase_(char arg_1) {
     milone_assert((!(call_4)), 25, 2);
     return 0;
 }
-
-struct IntIntTuple2 {
-    int t0;
-    int t1;
-};
 
 bool performComplexMatching_(struct IntIntTuple2 expr_) {
     bool match_1;

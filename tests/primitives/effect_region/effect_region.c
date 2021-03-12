@@ -4,22 +4,26 @@ struct IntList;
 
 struct IntList;
 
+struct UnitIntFun1;
+
 struct IntList const* go_(struct IntList const* acc_, int i_);
 
 int fun_(char arg_3);
 
 int fun_1(void const* env_, char arg_);
 
-struct UnitIntFun1;
-
 int doAction_(char arg_4);
 
 int milone_main();
 
-
 struct IntList {
     int head;
     struct IntList const* tail;
+};
+
+struct UnitIntFun1 {
+    int(*fun)(void const*, char);
+    void const* env;
 };
 
 struct IntList const* go_(struct IntList const* acc_, int i_) {
@@ -55,11 +59,6 @@ int fun_1(void const* env_, char arg_) {
     int call_1 = fun_(0);
     return call_1;
 }
-
-struct UnitIntFun1 {
-    int(*fun)(void const*, char);
-    void const* env;
-};
 
 int doAction_(char arg_4) {
     struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = NULL};

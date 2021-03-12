@@ -2,6 +2,34 @@
 
 struct StringList;
 
+struct UnitMutPtrIntTuple2;
+
+struct IntMutPtrIntTuple2;
+
+struct UnitConstPtrIntTuple2;
+
+struct IntConstPtrIntTuple2;
+
+struct IntOption;
+
+struct IntUnitFun1;
+
+struct IntIntFun1;
+
+struct IntIntConstPtrIntTuple2Tuple2;
+
+struct IntIntConstPtrIntTuple2Tuple2Option;
+
+struct IntIntIntFun2;
+
+struct IntIntIntFun2IntConstPtrIntTuple2Tuple2;
+
+struct IntIntOptionFun1;
+
+struct IntList;
+
+struct IntList;
+
 struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
@@ -26,11 +54,7 @@ void* memcpy(void*, void const*, uintptr_t);
 
 void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
 
-struct UnitMutPtrIntTuple2;
-
 struct UnitMutPtrIntTuple2 __mutArrayCreate_2(int len_1);
-
-struct IntMutPtrIntTuple2;
 
 struct IntMutPtrIntTuple2 __mutArrayCreate_1(int len_1);
 
@@ -40,11 +64,7 @@ char __mutArraySet_1(int index_2, int value_, struct IntMutPtrIntTuple2 array_);
 
 struct IntMutPtrIntTuple2 __mutArraySlice_1(int start_, int endIndex_, struct IntMutPtrIntTuple2 array_1);
 
-struct UnitConstPtrIntTuple2;
-
 struct UnitConstPtrIntTuple2 __constArrayOfMut_2(struct UnitMutPtrIntTuple2 mutArray_);
-
-struct IntConstPtrIntTuple2;
 
 struct IntConstPtrIntTuple2 __constArrayOfMut_1(struct IntMutPtrIntTuple2 mutArray_);
 
@@ -57,8 +77,6 @@ int __constArrayGet_1(int index_3, struct IntConstPtrIntTuple2 array_3);
 struct IntConstPtrIntTuple2 __constArraySlice_1(int start_1, int endIndex_1, struct IntConstPtrIntTuple2 array_4);
 
 bool str_to_int_checked(struct String, int*);
-
-struct IntOption;
 
 struct IntOption __intOfStr_(struct String s_);
 
@@ -74,11 +92,7 @@ struct IntConstPtrIntTuple2 empty_3(char arg_21);
 
 struct UnitConstPtrIntTuple2 empty_4(char arg_22);
 
-struct IntUnitFun1;
-
 char arrayInitLoop_2(int len_8, struct IntUnitFun1 f_, struct UnitMutPtrIntTuple2 array_5, int i_);
-
-struct IntIntFun1;
 
 char arrayInitLoop_1(int len_8, struct IntIntFun1 f_, struct IntMutPtrIntTuple2 array_5, int i_);
 
@@ -102,23 +116,13 @@ struct IntConstPtrIntTuple2 slice_1(int start_2, int endIndex_2, struct IntConst
 
 struct IntConstPtrIntTuple2 skip_1(int skipLen_, struct IntConstPtrIntTuple2 array_10);
 
-struct IntIntConstPtrIntTuple2Tuple2;
-
-struct IntIntConstPtrIntTuple2Tuple2Option;
-
 struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 array_13);
 
-struct IntIntIntFun2;
-
 int fun_25(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14, int i_3);
-
-struct IntIntIntFun2IntConstPtrIntTuple2Tuple2;
 
 int fun_24(void const* env_2, int arg_3);
 
 struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14);
-
-struct IntIntOptionFun1;
 
 int chooseLoop_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_1, int len_13, struct IntMutPtrIntTuple2 dest_1, int di_, int si_);
 
@@ -127,10 +131,6 @@ struct IntConstPtrIntTuple2 choose_1(struct IntIntOptionFun1 f_3, struct IntCons
 int arrayFoldLoop_1(struct IntIntIntFun2 folder_, struct IntConstPtrIntTuple2 array_16, int len_14, int state_1, int i_5);
 
 int fold_1(struct IntIntIntFun2 folder_, int state_, struct IntConstPtrIntTuple2 array_16);
-
-struct IntList;
-
-struct IntList;
 
 int listLengthLoop_1(int acc_, struct IntList const* xs_2);
 
@@ -196,6 +196,70 @@ char toListTest_(char arg_68);
 
 int milone_main();
 
+struct UnitMutPtrIntTuple2 {
+    char* t0;
+    int t1;
+};
+
+struct IntMutPtrIntTuple2 {
+    int* t0;
+    int t1;
+};
+
+struct UnitConstPtrIntTuple2 {
+    char const* t0;
+    int t1;
+};
+
+struct IntConstPtrIntTuple2 {
+    int const* t0;
+    int t1;
+};
+
+struct IntOption {
+    bool some;
+    int value;
+};
+
+struct IntUnitFun1 {
+    char(*fun)(void const*, int);
+    void const* env;
+};
+
+struct IntIntFun1 {
+    int(*fun)(void const*, int);
+    void const* env;
+};
+
+struct IntIntConstPtrIntTuple2Tuple2 {
+    int t0;
+    struct IntConstPtrIntTuple2 t1;
+};
+
+struct IntIntConstPtrIntTuple2Tuple2Option {
+    bool some;
+    struct IntIntConstPtrIntTuple2Tuple2 value;
+};
+
+struct IntIntIntFun2 {
+    int(*fun)(void const*, int, int);
+    void const* env;
+};
+
+struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 {
+    struct IntIntIntFun2 t0;
+    struct IntConstPtrIntTuple2 t1;
+};
+
+struct IntIntOptionFun1 {
+    struct IntOption(*fun)(void const*, int);
+    void const* env;
+};
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     struct String str_concat_result_ = str_concat(sep_, xs_);
@@ -239,11 +303,6 @@ void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
     return memcpy_result_;
 }
 
-struct UnitMutPtrIntTuple2 {
-    char* t0;
-    int t1;
-};
-
 struct UnitMutPtrIntTuple2 __mutArrayCreate_2(int len_1) {
     struct UnitMutPtrIntTuple2 if_;
     if ((len_1 == 0)) {
@@ -266,11 +325,6 @@ else_3:;
 if_next_1:;
     return if_;
 }
-
-struct IntMutPtrIntTuple2 {
-    int* t0;
-    int t1;
-};
 
 struct IntMutPtrIntTuple2 __mutArrayCreate_1(int len_1) {
     struct IntMutPtrIntTuple2 if_1;
@@ -346,11 +400,6 @@ if_next_10:;
     return tuple_4;
 }
 
-struct UnitConstPtrIntTuple2 {
-    char const* t0;
-    int t1;
-};
-
 struct UnitConstPtrIntTuple2 __constArrayOfMut_2(struct UnitMutPtrIntTuple2 mutArray_) {
     char* mutPtr_4 = mutArray_.t0;
     int len_4 = mutArray_.t1;
@@ -358,11 +407,6 @@ struct UnitConstPtrIntTuple2 __constArrayOfMut_2(struct UnitMutPtrIntTuple2 mutA
     struct UnitConstPtrIntTuple2 tuple_5 = (struct UnitConstPtrIntTuple2){.t0 = call_8, .t1 = len_4};
     return tuple_5;
 }
-
-struct IntConstPtrIntTuple2 {
-    int const* t0;
-    int t1;
-};
 
 struct IntConstPtrIntTuple2 __constArrayOfMut_1(struct IntMutPtrIntTuple2 mutArray_) {
     int* mutPtr_4 = mutArray_.t0;
@@ -425,11 +469,6 @@ if_next_16:;
     return tuple_7;
 }
 
-struct IntOption {
-    bool some;
-    int value;
-};
-
 struct IntOption __intOfStr_(struct String s_) {
     void* call_11 = memAlloc_(1, ((uintptr_t)sizeof(int)));
     int* valueRef_ = ((int*)call_11);
@@ -476,11 +515,6 @@ struct UnitConstPtrIntTuple2 empty_4(char arg_22) {
     return call_16;
 }
 
-struct IntUnitFun1 {
-    char(*fun)(void const*, int);
-    void const* env;
-};
-
 char arrayInitLoop_2(int len_8, struct IntUnitFun1 f_, struct UnitMutPtrIntTuple2 array_5, int i_) {
 tailrec_22:;
     char if_7;
@@ -508,11 +542,6 @@ else_25:;
 if_next_23:;
     return 0;
 }
-
-struct IntIntFun1 {
-    int(*fun)(void const*, int);
-    void const* env;
-};
 
 char arrayInitLoop_1(int len_8, struct IntIntFun1 f_, struct IntMutPtrIntTuple2 array_5, int i_) {
 tailrec_26:;
@@ -688,16 +717,6 @@ struct IntConstPtrIntTuple2 skip_1(int skipLen_, struct IntConstPtrIntTuple2 arr
     return call_37;
 }
 
-struct IntIntConstPtrIntTuple2Tuple2 {
-    int t0;
-    struct IntConstPtrIntTuple2 t1;
-};
-
-struct IntIntConstPtrIntTuple2Tuple2Option {
-    bool some;
-    struct IntIntConstPtrIntTuple2Tuple2 value;
-};
-
 struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 array_13) {
     int call_38 = length_1(array_13);
     int len_12 = call_38;
@@ -723,21 +742,11 @@ if_next_48:;
     return if_15;
 }
 
-struct IntIntIntFun2 {
-    int(*fun)(void const*, int, int);
-    void const* env;
-};
-
 int fun_25(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14, int i_3) {
     int call_41 = __constArrayGet_1(i_3, array_14);
     int app_2 = f_1.fun(f_1.env, i_3, call_41);
     return app_2;
 }
-
-struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 {
-    struct IntIntIntFun2 t0;
-    struct IntConstPtrIntTuple2 t1;
-};
 
 int fun_24(void const* env_2, int arg_3) {
     struct IntIntIntFun2 arg_4 = (*(((struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 const*)env_2))).t0;
@@ -755,11 +764,6 @@ struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrI
     struct IntConstPtrIntTuple2 call_44 = init_1(call_43, fun_27);
     return call_44;
 }
-
-struct IntIntOptionFun1 {
-    struct IntOption(*fun)(void const*, int);
-    void const* env;
-};
 
 int chooseLoop_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_1, int len_13, struct IntMutPtrIntTuple2 dest_1, int di_, int si_) {
 tailrec_51:;
@@ -877,12 +881,6 @@ int fold_1(struct IntIntIntFun2 folder_, int state_, struct IntConstPtrIntTuple2
     int call_55 = arrayFoldLoop_1(folder_, array_16, len_14, state_, 0);
     return call_55;
 }
-
-
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 int listLengthLoop_1(int acc_, struct IntList const* xs_2) {
 tailrec_65:;

@@ -1,5 +1,9 @@
 #include "milone.h"
 
+struct IntTuple1;
+
+struct UnitIntFun1;
+
 int sub_(int step_, int x_);
 
 char basicCase_(char arg_2);
@@ -20,11 +24,7 @@ int lg_(int lx_, char arg_7);
 
 int fun_(int lx_, char arg_8);
 
-struct IntTuple1;
-
 int fun_1(void const* env_, char arg_);
-
-struct UnitIntFun1;
 
 int lf_(int lx_, char arg_9);
 
@@ -66,9 +66,18 @@ int f6_(char arg_22);
 
 int f7_(char arg_23);
 
-static int a_;
-
 int milone_main();
+
+struct IntTuple1 {
+    int t0;
+};
+
+struct UnitIntFun1 {
+    int(*fun)(void const*, char);
+    void const* env;
+};
+
+static int a_;
 
 int sub_(int step_, int x_) {
     return (x_ - step_);
@@ -140,20 +149,11 @@ int fun_(int lx_, char arg_8) {
     return call_6;
 }
 
-struct IntTuple1 {
-    int t0;
-};
-
 int fun_1(void const* env_, char arg_) {
     int arg_1 = (*(((struct IntTuple1 const*)env_))).t0;
     int call_7 = fun_(arg_1, 0);
     return call_7;
 }
-
-struct UnitIntFun1 {
-    int(*fun)(void const*, char);
-    void const* env;
-};
 
 int lf_(int lx_, char arg_9) {
     struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = lx_};

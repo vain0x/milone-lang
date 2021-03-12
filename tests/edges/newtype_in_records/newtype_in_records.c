@@ -1,16 +1,21 @@
 #include "milone.h"
 
+struct DayRange_;
+
 int newDay_(int value_);
 
 int dayToInt_(int value_1);
-
-struct DayRange_;
 
 struct DayRange_ newDayRange_(int start_, int endDay_);
 
 bool between_(int day_, struct DayRange_ range_);
 
 int milone_main();
+
+struct DayRange_ {
+    int t0;
+    int t1;
+};
 
 int newDay_(int value_) {
     bool if_;
@@ -33,11 +38,6 @@ if_next_1:;
 int dayToInt_(int value_1) {
     return value_1;
 }
-
-struct DayRange_ {
-    int t0;
-    int t1;
-};
 
 struct DayRange_ newDayRange_(int start_, int endDay_) {
     int call_ = dayToInt_(endDay_);

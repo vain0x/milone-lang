@@ -2,6 +2,8 @@
 
 struct IntIntFun1;
 
+struct IntIntIntFun2;
+
 int apply_1(struct IntIntFun1 f_, int x_);
 
 int fun_(int x_1);
@@ -20,12 +22,15 @@ int fun_2(int x_5, int y_1);
 
 int fun_5(void const* env_2, int arg_2, int arg_3);
 
-struct IntIntIntFun2;
-
 int milone_main();
 
 struct IntIntFun1 {
     int(*fun)(void const*, int);
+    void const* env;
+};
+
+struct IntIntIntFun2 {
+    int(*fun)(void const*, int, int);
     void const* env;
 };
 
@@ -75,11 +80,6 @@ int fun_5(void const* env_2, int arg_2, int arg_3) {
     int call_3 = fun_2(arg_2, arg_3);
     return call_3;
 }
-
-struct IntIntIntFun2 {
-    int(*fun)(void const*, int, int);
-    void const* env;
-};
 
 int milone_main() {
     struct IntIntFun1 fun_7 = (struct IntIntFun1){.fun = fun_4, .env = NULL};

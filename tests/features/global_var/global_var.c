@@ -4,9 +4,9 @@ int f_(char arg_);
 
 int g_(char arg_1);
 
-static int success_;
-
 int milone_main();
+
+static int success_;
 
 int f_(char arg_) {
     return success_;

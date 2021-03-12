@@ -4,25 +4,11 @@ struct IntList;
 
 struct IntList;
 
-struct IntList const* go_2(struct IntList const* acc_, struct IntList const* xs_1);
-
 struct StringList;
 
 struct StringList;
-
-struct StringList const* go_1(struct StringList const* acc_, struct StringList const* xs_1);
-
-struct IntList const* listRev_2(struct IntList const* xs_);
-
-struct StringList const* listRev_1(struct StringList const* xs_);
-
-int id_2(int x_1);
-
-struct StringList const* id_1(struct StringList const* x_1);
 
 struct IntIntFun1;
-
-struct IntList const* listMap_2(struct IntIntFun1 f_, struct IntList const* xs_3);
 
 struct StringIntTuple2;
 
@@ -38,6 +24,22 @@ struct IntStringTuple2List;
 
 struct StringIntTuple2List;
 
+struct IntListStringListTuple2;
+
+struct IntList const* go_2(struct IntList const* acc_, struct IntList const* xs_1);
+
+struct StringList const* go_1(struct StringList const* acc_, struct StringList const* xs_1);
+
+struct IntList const* listRev_2(struct IntList const* xs_);
+
+struct StringList const* listRev_1(struct StringList const* xs_);
+
+int id_2(int x_1);
+
+struct StringList const* id_1(struct StringList const* x_1);
+
+struct IntList const* listMap_2(struct IntIntFun1 f_, struct IntList const* xs_3);
+
 struct StringIntTuple2List const* listMap_1(struct IntStringTuple2StringIntTuple2Fun1 f_, struct IntStringTuple2List const* xs_3);
 
 int f_1(int x_3);
@@ -52,14 +54,51 @@ struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_8);
 
 struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2);
 
-struct IntListStringListTuple2;
-
 int milone_main();
-
 
 struct IntList {
     int head;
     struct IntList const* tail;
+};
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
+
+struct IntIntFun1 {
+    int(*fun)(void const*, int);
+    void const* env;
+};
+
+struct StringIntTuple2 {
+    struct String t0;
+    int t1;
+};
+
+struct IntStringTuple2StringIntTuple2Fun1 {
+    struct StringIntTuple2(*fun)(void const*, struct IntStringTuple2);
+    void const* env;
+};
+
+struct IntStringTuple2 {
+    int t0;
+    struct String t1;
+};
+
+struct IntStringTuple2List {
+    struct IntStringTuple2 head;
+    struct IntStringTuple2List const* tail;
+};
+
+struct StringIntTuple2List {
+    struct StringIntTuple2 head;
+    struct StringIntTuple2List const* tail;
+};
+
+struct IntListStringListTuple2 {
+    struct IntList const* t0;
+    struct StringList const* t1;
 };
 
 struct IntList const* go_2(struct IntList const* acc_, struct IntList const* xs_1) {
@@ -84,12 +123,6 @@ next_4:;
 end_match_2:;
     return match_;
 }
-
-
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 struct StringList const* go_1(struct StringList const* acc_, struct StringList const* xs_1) {
 tailrec_5:;
@@ -132,11 +165,6 @@ struct StringList const* id_1(struct StringList const* x_1) {
     return x_1;
 }
 
-struct IntIntFun1 {
-    int(*fun)(void const*, int);
-    void const* env;
-};
-
 struct IntList const* listMap_2(struct IntIntFun1 f_, struct IntList const* xs_3) {
     struct IntList const* match_2;
     if ((!((!(xs_3))))) goto next_10;
@@ -157,33 +185,6 @@ next_11:;
 end_match_9:;
     return match_2;
 }
-
-struct StringIntTuple2 {
-    struct String t0;
-    int t1;
-};
-
-struct IntStringTuple2StringIntTuple2Fun1 {
-    struct StringIntTuple2(*fun)(void const*, struct IntStringTuple2);
-    void const* env;
-};
-
-
-
-struct IntStringTuple2 {
-    int t0;
-    struct String t1;
-};
-
-struct IntStringTuple2List {
-    struct IntStringTuple2 head;
-    struct IntStringTuple2List const* tail;
-};
-
-struct StringIntTuple2List {
-    struct StringIntTuple2 head;
-    struct StringIntTuple2List const* tail;
-};
 
 struct StringIntTuple2List const* listMap_1(struct IntStringTuple2StringIntTuple2Fun1 f_, struct IntStringTuple2List const* xs_3) {
     struct StringIntTuple2List const* match_3;
@@ -239,11 +240,6 @@ struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2) {
     struct StringIntTuple2 call_6 = flip_1(arg_2);
     return call_6;
 }
-
-struct IntListStringListTuple2 {
-    struct IntList const* t0;
-    struct StringList const* t1;
-};
 
 int milone_main() {
     int call_7 = id_2(42);

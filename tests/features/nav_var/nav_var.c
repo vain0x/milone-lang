@@ -2,9 +2,9 @@
 
 int getAnswer_(char arg_);
 
-static int answer_;
-
 int milone_main();
+
+static int answer_;
 
 int getAnswer_(char arg_) {
     return 42;

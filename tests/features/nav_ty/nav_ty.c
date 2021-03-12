@@ -2,9 +2,9 @@
 
 struct Node_;
 
-struct Node_ leaf_(int n_);
-
 struct Node_Node_Tuple2;
+
+struct Node_ leaf_(int n_);
 
 struct Node_ node_(struct Node_ l_, struct Node_ r_);
 
@@ -23,15 +23,15 @@ struct Node_ {
     };
 };
 
-struct Node_ leaf_(int n_) {
-    struct Node_ variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = n_};
-    return variant_;
-}
-
 struct Node_Node_Tuple2 {
     struct Node_ t0;
     struct Node_ t1;
 };
+
+struct Node_ leaf_(int n_) {
+    struct Node_ variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = n_};
+    return variant_;
+}
 
 struct Node_ node_(struct Node_ l_, struct Node_ r_) {
     struct Node_Node_Tuple2 tuple_ = (struct Node_Node_Tuple2){.t0 = l_, .t1 = r_};

@@ -8,7 +8,6 @@ char assertIsEmpty_1(struct UnitList const* xs_60);
 
 int milone_main();
 
-
 bool isEmpty_1(struct UnitList const* xs_) {
     bool if_;
     if ((!(xs_))) {

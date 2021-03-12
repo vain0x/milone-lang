@@ -20,7 +20,6 @@ struct StringList const* tokenize_(struct String s_);
 
 int milone_main();
 
-
 struct StringList {
     struct String head;
     struct StringList const* tail;

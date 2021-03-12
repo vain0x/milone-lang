@@ -1,12 +1,6 @@
 #include "milone.h"
 
-char basicCase_(char arg_);
-
 struct MyBool_;
-
-bool toBool_(struct MyBool_ myBool_1);
-
-char usedInOtherSumTypeCase_(char arg_1);
 
 struct UnitList;
 
@@ -14,19 +8,15 @@ struct UnitList;
 
 struct RecordUsingMyUnit_;
 
+char basicCase_(char arg_);
+
+bool toBool_(struct MyBool_ myBool_1);
+
+char usedInOtherSumTypeCase_(char arg_1);
+
 char usedInRecordTypeCase_(char arg_2);
 
 int milone_main();
-
-char basicCase_(char arg_) {
-    char myUnit_ = 0;
-    char match_;
-    match_ = 0;
-    goto end_match_1;
-next_2:;
-end_match_1:;
-    return 0;
-}
 
 enum MyBool_Discriminant {
     MyFalse_,
@@ -40,6 +30,26 @@ struct MyBool_ {
         char MyTrue_;
     };
 };
+
+struct UnitList {
+    char head;
+    struct UnitList const* tail;
+};
+
+struct RecordUsingMyUnit_ {
+    char t0;
+    struct UnitList const* t1;
+};
+
+char basicCase_(char arg_) {
+    char myUnit_ = 0;
+    char match_;
+    match_ = 0;
+    goto end_match_1;
+next_2:;
+end_match_1:;
+    return 0;
+}
 
 bool toBool_(struct MyBool_ myBool_1) {
     bool match_1;
@@ -63,17 +73,6 @@ char usedInOtherSumTypeCase_(char arg_1) {
     milone_assert(call_, 27, 2);
     return 0;
 }
-
-
-struct UnitList {
-    char head;
-    struct UnitList const* tail;
-};
-
-struct RecordUsingMyUnit_ {
-    char t0;
-    struct UnitList const* t1;
-};
 
 char usedInRecordTypeCase_(char arg_2) {
     struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));

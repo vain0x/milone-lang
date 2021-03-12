@@ -25,7 +25,6 @@ struct F64BoolFun1 {
     void const* env;
 };
 
-
 struct F64List {
     double head;
     struct F64List const* tail;

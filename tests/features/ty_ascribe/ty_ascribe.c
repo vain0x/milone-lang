@@ -1,18 +1,28 @@
 #include "milone.h"
 
+struct IntList;
+
+struct IntList;
+
+struct StringList;
+
+struct StringList;
+
 int f_(int x_);
 
 int g_(int x_1);
 
-struct IntList;
-
-struct IntList;
-
-struct StringList;
-
-struct StringList;
-
 int milone_main();
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
 
 int f_(int x_) {
     return x_;
@@ -21,18 +31,6 @@ int f_(int x_) {
 int g_(int x_1) {
     return x_1;
 }
-
-
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
-
-
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 int milone_main() {
     int call_ = f_(1);

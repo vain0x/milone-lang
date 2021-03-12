@@ -1,20 +1,30 @@
 #include "milone.h"
 
-char testTrivialCase_(char arg_);
-
 struct IntList;
 
 struct IntList;
-
-char testListMatching_(char arg_1);
 
 struct IntIntTuple2;
+
+char testTrivialCase_(char arg_);
+
+char testListMatching_(char arg_1);
 
 char testMatchArmsMakeScope_(char arg_2);
 
 char testNestedMatchesParseCorrectly_(char arg_3);
 
 int milone_main();
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
+
+struct IntIntTuple2 {
+    int t0;
+    int t1;
+};
 
 char testTrivialCase_(char arg_) {
     char match_;
@@ -24,12 +34,6 @@ next_2:;
 end_match_1:;
     return 0;
 }
-
-
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 char testListMatching_(char arg_1) {
     char match_1;
@@ -55,11 +59,6 @@ next_6:;
 end_match_3:;
     return 0;
 }
-
-struct IntIntTuple2 {
-    int t0;
-    int t1;
-};
 
 char testMatchArmsMakeScope_(char arg_2) {
     int x_ = 2;

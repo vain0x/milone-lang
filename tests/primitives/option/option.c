@@ -2,13 +2,13 @@
 
 struct IntOption;
 
-char basicSomeCase_(char arg_);
-
 struct StringOption;
 
-char basicNoneCase_(char arg_1);
-
 struct UnitOption;
+
+char basicSomeCase_(char arg_);
+
+char basicNoneCase_(char arg_1);
 
 char basicMatchCase_(char arg_2);
 
@@ -17,6 +17,16 @@ int milone_main();
 struct IntOption {
     bool some;
     int value;
+};
+
+struct StringOption {
+    bool some;
+    struct String value;
+};
+
+struct UnitOption {
+    bool some;
+    char value;
 };
 
 char basicSomeCase_(char arg_) {
@@ -40,11 +50,6 @@ end_match_1:;
     return 0;
 }
 
-struct StringOption {
-    bool some;
-    struct String value;
-};
-
 char basicNoneCase_(char arg_1) {
     struct StringOption none_ = (struct StringOption){.some = false};
     char match_1;
@@ -65,11 +70,6 @@ next_8:;
 end_match_5:;
     return 0;
 }
-
-struct UnitOption {
-    bool some;
-    char value;
-};
 
 char basicMatchCase_(char arg_2) {
     struct UnitOption some_1 = (struct UnitOption){.some = true, .value = 0};

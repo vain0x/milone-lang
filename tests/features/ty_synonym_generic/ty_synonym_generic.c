@@ -2,21 +2,20 @@
 
 struct IntList;
 
-struct IntList const* newStack_1(char arg_);
-
 struct IntList;
 
+struct IntList const* newStack_1(char arg_);
+
 int milone_main();
-
-
-struct IntList const* newStack_1(char arg_) {
-    return NULL;
-}
 
 struct IntList {
     int head;
     struct IntList const* tail;
 };
+
+struct IntList const* newStack_1(char arg_) {
+    return NULL;
+}
 
 int milone_main() {
     struct IntList const* call_ = newStack_1(0);

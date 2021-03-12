@@ -1,12 +1,17 @@
 #include "milone.h"
 
-char simpleCase_(char arg_);
-
 struct IntIntTuple2;
+
+char simpleCase_(char arg_);
 
 char shadowingCase_(char arg_1);
 
 int milone_main();
+
+struct IntIntTuple2 {
+    int t0;
+    int t1;
+};
 
 char simpleCase_(char arg_) {
     char match_;
@@ -23,11 +28,6 @@ next_3:;
 end_match_1:;
     return 0;
 }
-
-struct IntIntTuple2 {
-    int t0;
-    int t1;
-};
 
 char shadowingCase_(char arg_1) {
     int x_1 = 1;

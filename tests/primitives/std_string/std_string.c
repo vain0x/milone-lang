@@ -2,6 +2,18 @@
 
 struct StringList;
 
+struct IntOption;
+
+struct StringList;
+
+struct CharOption;
+
+struct CharBoolFun1;
+
+struct StringOption;
+
+struct StringStringOptionStringTuple3;
+
 struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
@@ -17,8 +29,6 @@ void* memcpy(void*, void const*, uintptr_t);
 void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
 
 bool str_to_int_checked(struct String, int*);
-
-struct IntOption;
 
 struct IntOption __intOfStr_(struct String s_);
 
@@ -58,8 +68,6 @@ char toUpper_(char c_11);
 
 char toLower_(char c_12);
 
-struct StringList;
-
 struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6);
 
 struct StringList const* rev_1(struct StringList const* xs_5);
@@ -67,8 +75,6 @@ struct StringList const* rev_1(struct StringList const* xs_5);
 int intClamp_(int minValue_, int maxValue_, int value_1);
 
 bool isEmpty_1(struct String str_);
-
-struct CharOption;
 
 struct CharOption tryItem_1(int index_5, struct String str_1);
 
@@ -95,8 +101,6 @@ struct String truncate_1(int prefixLen_, struct String s_7);
 struct String skip_1(int prefixLen_1, struct String s_8);
 
 struct String slice_(int start_3, int endIndex_2, struct String s_9);
-
-struct CharBoolFun1;
 
 int stringTrimIfLoop1_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_2);
 
@@ -129,10 +133,6 @@ struct StringList const* replaceLoop_(struct String pattern_, struct String s_16
 struct String replace_(struct String pattern_, struct String target_, struct String s_16);
 
 int findNewline_(int start_5, struct String s_17);
-
-struct StringOption;
-
-struct StringStringOptionStringTuple3;
 
 struct StringStringOptionStringTuple3 scanLine_(struct String s_18);
 
@@ -180,6 +180,36 @@ char concatTest_(char arg_55);
 
 int milone_main();
 
+struct IntOption {
+    bool some;
+    int value;
+};
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
+
+struct CharOption {
+    bool some;
+    char value;
+};
+
+struct CharBoolFun1 {
+    bool(*fun)(void const*, char);
+    void const* env;
+};
+
+struct StringOption {
+    bool some;
+    struct String value;
+};
+
+struct StringStringOptionStringTuple3 {
+    struct String t0;
+    struct StringOption t1;
+    struct String t2;
+};
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     struct String str_concat_result_ = str_concat(sep_, xs_);
@@ -199,11 +229,6 @@ void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
     void* memcpy_result_ = memcpy(dest_, src_, size_1);
     return memcpy_result_;
 }
-
-struct IntOption {
-    bool some;
-    int value;
-};
 
 struct IntOption __intOfStr_(struct String s_) {
     void* call_ = memAlloc_(1, ((uintptr_t)sizeof(int)));
@@ -605,11 +630,6 @@ if_next_70:;
     return if_23;
 }
 
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
-
 struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6) {
 tailrec_73:;
     struct StringList const* match_;
@@ -671,11 +691,6 @@ if_next_77:;
 bool isEmpty_1(struct String str_) {
     return (str_.len == 0);
 }
-
-struct CharOption {
-    bool some;
-    char value;
-};
 
 struct CharOption tryItem_1(int index_5, struct String str_1) {
     bool if_26;
@@ -976,11 +991,6 @@ else_133:;
 if_next_131:;
     return if_40;
 }
-
-struct CharBoolFun1 {
-    bool(*fun)(void const*, char);
-    void const* env;
-};
 
 int stringTrimIfLoop1_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_2) {
 tailrec_134:;
@@ -1340,17 +1350,6 @@ else_190:;
 if_next_188:;
     return if_56;
 }
-
-struct StringOption {
-    bool some;
-    struct String value;
-};
-
-struct StringStringOptionStringTuple3 {
-    struct String t0;
-    struct StringOption t1;
-    struct String t2;
-};
 
 struct StringStringOptionStringTuple3 scanLine_(struct String s_18) {
     int call_40 = findNewline_(0, s_18);

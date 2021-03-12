@@ -2,16 +2,16 @@
 
 struct IntIntTuple2;
 
-static int x_;
-
-static int y_;
-
 int milone_main();
 
 struct IntIntTuple2 {
     int t0;
     int t1;
 };
+
+static int x_;
+
+static int y_;
 
 int milone_main() {
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 2, .t1 = 3};

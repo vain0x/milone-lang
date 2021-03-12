@@ -2,13 +2,13 @@
 
 struct IntUnitTuple2;
 
-int fst_1(struct IntUnitTuple2 arg_);
-
-int f_1(void const* boxedPair_, char arg_1);
-
 struct IntStringTuple2;
 
 struct IntStringTuple2Option;
+
+int fst_1(struct IntUnitTuple2 arg_);
+
+int f_1(void const* boxedPair_, char arg_1);
 
 int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_);
 
@@ -21,16 +21,6 @@ struct IntUnitTuple2 {
     char t1;
 };
 
-int fst_1(struct IntUnitTuple2 arg_) {
-    int x_ = arg_.t0;
-    return x_;
-}
-
-int f_1(void const* boxedPair_, char arg_1) {
-    int call_ = fst_1((*(((struct IntUnitTuple2 const*)boxedPair_))));
-    return call_;
-}
-
 struct IntStringTuple2 {
     int t0;
     struct String t1;
@@ -40,6 +30,16 @@ struct IntStringTuple2Option {
     bool some;
     struct IntStringTuple2 value;
 };
+
+int fst_1(struct IntUnitTuple2 arg_) {
+    int x_ = arg_.t0;
+    return x_;
+}
+
+int f_1(void const* boxedPair_, char arg_1) {
+    int call_ = fst_1((*(((struct IntUnitTuple2 const*)boxedPair_))));
+    return call_;
+}
 
 int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
     int call_1 = f_1(boxedPair_, 0);

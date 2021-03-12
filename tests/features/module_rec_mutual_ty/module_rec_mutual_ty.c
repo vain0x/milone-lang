@@ -12,7 +12,6 @@ struct RecA_;
 
 int milone_main();
 
-
 struct UnitList {
     char head;
     struct UnitList const* tail;
@@ -26,7 +25,6 @@ enum UnionX_Discriminant {
 struct UnionX_ {
     enum UnionX_Discriminant discriminant;
 };
-
 
 enum RecA_Discriminant {
     T_2,

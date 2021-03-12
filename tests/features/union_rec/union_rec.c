@@ -6,13 +6,13 @@ struct UnitLazyList_Fun1;
 
 struct IntUnitLazyList_Fun1Tuple2;
 
+struct IntIntTuple2;
+
 struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_);
 
 char go_(int n_1, struct LazyList_ xs_1);
 
 char lazyListPrint_(int n_, struct LazyList_ xs_);
-
-struct IntIntTuple2;
 
 struct LazyList_ fun_(void const* env_, char arg_);
 
@@ -40,6 +40,11 @@ struct UnitLazyList_Fun1 {
 struct IntUnitLazyList_Fun1Tuple2 {
     int t0;
     struct UnitLazyList_Fun1 t1;
+};
+
+struct IntIntTuple2 {
+    int t0;
+    int t1;
 };
 
 struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
@@ -90,11 +95,6 @@ char lazyListPrint_(int n_, struct LazyList_ xs_) {
     char call_ = go_(n_, xs_);
     return 0;
 }
-
-struct IntIntTuple2 {
-    int t0;
-    int t1;
-};
 
 struct LazyList_ fun_(void const* env_, char arg_) {
     int arg_1 = (*(((struct IntIntTuple2 const*)env_))).t0;

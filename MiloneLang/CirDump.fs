@@ -34,7 +34,7 @@ let private isFirst first =
 
 let private declIsForwardOnly decl =
   match decl with
-  | CStaticVarDecl _
+  | CStructForwardDecl _
   | CFunForwardDecl _ -> true
   | _ -> false
 
@@ -457,8 +457,6 @@ let private cpDecl decl acc =
       |> cons "};"
       |> cons eol
 
-  | CStructForwardDecl _ -> acc
-
   | CEnumDecl (enumName, variants) ->
       let cpEnumerants variants acc =
         variants
@@ -480,6 +478,13 @@ let private cpDecl decl acc =
       |> cons "};"
       |> cons eol
 
+  | CStaticVarDecl (name, ty) ->
+      acc
+      |> cons "static "
+      |> cpTyWithName name ty
+      |> cons ";"
+      |> cons eol
+
   | CFunDecl (name, args, resultTy, body) ->
       acc
       |> cpTyWithName name resultTy
@@ -491,16 +496,16 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
+  | CStructForwardDecl _
+  | CFunForwardDecl _
   | CNativeDecl _ -> acc
-
-  | CStaticVarDecl _
-  | CFunForwardDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
   match decl with
   | CErrorDecl _
-  | CEnumDecl _ -> acc
+  | CEnumDecl _
+  | CStaticVarDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc
@@ -514,14 +519,6 @@ let private cpForwardDecl decl acc =
       acc
       |> cons "struct "
       |> cons name
-      |> cons ";"
-      |> cons eol
-      |> cons eol
-
-  | CStaticVarDecl (name, ty) ->
-      acc
-      |> cons "static "
-      |> cpTyWithName name ty
       |> cons ";"
       |> cons eol
       |> cons eol

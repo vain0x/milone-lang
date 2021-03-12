@@ -2,6 +2,8 @@
 
 struct StringList;
 
+struct IntOption;
+
 struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
@@ -17,8 +19,6 @@ void* memcpy(void*, void const*, uintptr_t);
 void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
 
 bool str_to_int_checked(struct String, int*);
-
-struct IntOption;
 
 struct IntOption __intOfStr_(struct String s_);
 
@@ -42,12 +42,16 @@ bool parseError_(struct String s_3);
 
 char tryParseTest_(char arg_1);
 
+int milone_main();
+
+struct IntOption {
+    bool some;
+    int value;
+};
+
 static int MinValue_;
 
 static int MaxValue_;
-
-int milone_main();
-
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     struct String str_concat_result_ = str_concat(sep_, xs_);
@@ -67,11 +71,6 @@ void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
     void* memcpy_result_ = memcpy(dest_, src_, size_1);
     return memcpy_result_;
 }
-
-struct IntOption {
-    bool some;
-    int value;
-};
 
 struct IntOption __intOfStr_(struct String s_) {
     void* call_ = memAlloc_(1, ((uintptr_t)sizeof(int)));

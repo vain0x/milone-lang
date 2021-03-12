@@ -1,20 +1,20 @@
 #include "milone.h"
 
-char f_(char arg_);
-
 struct UnitUnitTuple2;
 
-int milone_main();
+char f_(char arg_);
 
-char f_(char arg_) {
-    printf("hello\n");
-    return 0;
-}
+int milone_main();
 
 struct UnitUnitTuple2 {
     char t0;
     char t1;
 };
+
+char f_(char arg_) {
+    printf("hello\n");
+    return 0;
+}
 
 int milone_main() {
     char call_ = f_(0);

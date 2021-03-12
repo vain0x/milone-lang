@@ -1,5 +1,73 @@
 #include "milone.h"
 
+struct StringList;
+
+struct StringStringStringFun2List;
+
+struct IntList;
+
+struct IntIntIntFun2List;
+
+struct IntIntIntObjectUnitTuple5List;
+
+struct StringIntIntObjectUnitTuple5List;
+
+struct StringList;
+
+struct IntList;
+
+struct IntIntBoolFun2;
+
+struct IntListIntListTuple2;
+
+struct StringStringBoolFun2;
+
+struct StringListStringListTuple2;
+
+struct IntIntFun1;
+
+struct StringStringListTuple2;
+
+struct IntVoidMutPtrFun1;
+
+struct VoidMutPtrIntIntFun2;
+
+struct VoidMutPtrIntIntUnitFun3;
+
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6;
+
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5;
+
+struct IntIntTuple2;
+
+struct StringStringStringFun2;
+
+struct StringIntIntObjectUnitTuple5;
+
+struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4;
+
+struct IntIntIntFun2;
+
+struct IntIntIntObjectUnitTuple5;
+
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4;
+
+struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2;
+
+struct StringStringStringFun2List;
+
+struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2;
+
+struct IntIntIntFun2List;
+
+struct IntIntIntObjectUnitTuple5List;
+
+struct StringIntIntObjectUnitTuple5List;
+
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3;
+
+struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3;
+
 void* milone_mem_alloc(int, uintptr_t);
 
 void* memAlloc_(int len_, int size_);
@@ -20,35 +88,19 @@ char rawIntArraySet_(void* array_1, int index_1, int value_);
 
 char rawMemoryCopy_(void* dest_1, void* src_1, int size_2);
 
-struct StringList;
-
 bool listIsEmpty_1(struct StringList const* xs_);
-
-struct StringStringStringFun2List;
 
 bool listIsEmpty_4(struct StringStringStringFun2List const* xs_);
 
-struct IntList;
-
 bool listIsEmpty_3(struct IntList const* xs_);
-
-struct IntIntIntFun2List;
 
 bool listIsEmpty_2(struct IntIntIntFun2List const* xs_);
 
-struct IntIntIntObjectUnitTuple5List;
-
 bool listIsEmpty_5(struct IntIntIntObjectUnitTuple5List const* xs_);
-
-struct StringIntIntObjectUnitTuple5List;
 
 bool listIsEmpty_6(struct StringIntIntObjectUnitTuple5List const* xs_);
 
-struct StringList;
-
 int go_22(int len_2, struct StringList const* xs_2);
-
-struct IntList;
 
 int go_21(int len_2, struct IntList const* xs_2);
 
@@ -64,15 +116,7 @@ struct IntList const* listRev_2(struct IntList const* xs_4);
 
 struct StringList const* listRev_1(struct StringList const* xs_4);
 
-struct IntIntBoolFun2;
-
-struct IntListIntListTuple2;
-
 bool go_24(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1);
-
-struct StringStringBoolFun2;
-
-struct StringListStringListTuple2;
 
 bool go_23(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1);
 
@@ -84,13 +128,9 @@ struct IntList const* go_25(int item_, int len_3, struct IntList const* acc_1, i
 
 struct IntList const* listReplicate_1(int item_, int len_3);
 
-struct IntIntFun1;
-
 struct IntList const* go_26(int len_4, struct IntIntFun1 gen_, struct IntList const* acc_2, int i_1);
 
 struct IntList const* listInit_1(int len_4, struct IntIntFun1 gen_);
-
-struct StringStringListTuple2;
 
 struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_);
 
@@ -112,14 +152,6 @@ int fun_3(void const* env_, int arg_);
 
 struct IntList const* scanIntList_(int len_5);
 
-struct IntVoidMutPtrFun1;
-
-struct VoidMutPtrIntIntFun2;
-
-struct VoidMutPtrIntIntUnitFun3;
-
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6;
-
 struct IntVoidMutPtrFun1 typeToArrayNew_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59);
 
 struct VoidMutPtrIntIntFun2 typeToArrayGet_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_60);
@@ -131,8 +163,6 @@ void* fun_4(void const* env_1, int arg_1);
 int fun_5(void const* env_2, void* arg_2, int arg_3);
 
 char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6);
-
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5;
 
 int vectorToLength_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62);
 
@@ -158,25 +188,11 @@ char vectorOfListTest_(char arg_71);
 
 char vectorTest_(char arg_72);
 
-struct IntIntTuple2;
-
 bool intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4);
 
 bool intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5);
 
-struct StringStringStringFun2;
-
-struct StringIntIntObjectUnitTuple5;
-
-struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4;
-
 struct StringStringStringFun2 segItemTypeToAppend_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_73);
-
-struct IntIntIntFun2;
-
-struct IntIntIntObjectUnitTuple5;
-
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4;
 
 struct IntIntIntFun2 segItemTypeToAppend_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_74);
 
@@ -190,15 +206,7 @@ void const* segItemTypeToNoChildren_2(struct StringStringStringFun2StringIntIntO
 
 int segItemTypeToEmptyItem_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_4);
 
-struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2;
-
-struct StringStringStringFun2List;
-
 struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_2(struct String emptyItem_, struct StringStringStringFun2 append_1);
-
-struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2;
-
-struct IntIntIntFun2List;
 
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_1(int emptyItem_, struct IntIntIntFun2 append_1);
 
@@ -228,11 +236,7 @@ int segNodeToHeight_1(struct IntIntIntObjectUnitTuple5 node_2);
 
 int segNodeToHeight_2(struct StringIntIntObjectUnitTuple5 node_2);
 
-struct IntIntIntObjectUnitTuple5List;
-
 struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 segNodeToChildren_1(struct IntIntIntObjectUnitTuple5 node_3);
-
-struct StringIntIntObjectUnitTuple5List;
 
 struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 segNodeToChildren_2(struct StringIntIntObjectUnitTuple5 node_3);
 
@@ -270,11 +274,7 @@ struct IntIntIntObjectUnitTuple5 segNodeMakeBalanced_1(struct IntIntIntFun2IntIn
 
 struct StringIntIntObjectUnitTuple5 segNodeMakeBalanced_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_7);
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3;
-
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeNew_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11);
-
-struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3;
 
 struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeNew_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11);
 
@@ -422,11 +422,170 @@ char abc140aTest_(char arg_148);
 
 char abc140aMain_(char arg_149);
 
+int milone_main();
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
+
+struct IntIntBoolFun2 {
+    bool(*fun)(void const*, int, int);
+    void const* env;
+};
+
+struct IntListIntListTuple2 {
+    struct IntList const* t0;
+    struct IntList const* t1;
+};
+
+struct StringStringBoolFun2 {
+    bool(*fun)(void const*, struct String, struct String);
+    void const* env;
+};
+
+struct StringListStringListTuple2 {
+    struct StringList const* t0;
+    struct StringList const* t1;
+};
+
+struct IntIntFun1 {
+    int(*fun)(void const*, int);
+    void const* env;
+};
+
+struct StringStringListTuple2 {
+    struct String t0;
+    struct StringList const* t1;
+};
+
+struct IntVoidMutPtrFun1 {
+    void*(*fun)(void const*, int);
+    void const* env;
+};
+
+struct VoidMutPtrIntIntFun2 {
+    int(*fun)(void const*, void*, int);
+    void const* env;
+};
+
+struct VoidMutPtrIntIntUnitFun3 {
+    char(*fun)(void const*, void*, int, int);
+    void const* env;
+};
+
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 {
+    int t0;
+    int t1;
+    struct IntVoidMutPtrFun1 t2;
+    struct VoidMutPtrIntIntFun2 t3;
+    struct VoidMutPtrIntIntUnitFun3 t4;
+    char t5;
+};
+
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 {
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 t0;
+    void* t1;
+    int t2;
+    int t3;
+    char t4;
+};
+
+struct IntIntTuple2 {
+    int t0;
+    int t1;
+};
+
+struct StringStringStringFun2 {
+    struct String(*fun)(void const*, struct String, struct String);
+    void const* env;
+};
+
+struct StringIntIntObjectUnitTuple5 {
+    struct String t0;
+    int t1;
+    int t2;
+    void const* t3;
+    char t4;
+};
+
+struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 {
+    struct StringStringStringFun2 t0;
+    struct StringIntIntObjectUnitTuple5 t1;
+    void const* t2;
+    char t3;
+};
+
+struct IntIntIntFun2 {
+    int(*fun)(void const*, int, int);
+    void const* env;
+};
+
+struct IntIntIntObjectUnitTuple5 {
+    int t0;
+    int t1;
+    int t2;
+    void const* t3;
+    char t4;
+};
+
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 {
+    struct IntIntIntFun2 t0;
+    struct IntIntIntObjectUnitTuple5 t1;
+    void const* t2;
+    char t3;
+};
+
+struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 {
+    struct StringIntIntObjectUnitTuple5 t0;
+    struct StringIntIntObjectUnitTuple5 t1;
+};
+
+struct StringStringStringFun2List {
+    struct StringStringStringFun2 head;
+    struct StringStringStringFun2List const* tail;
+};
+
+struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 {
+    struct IntIntIntObjectUnitTuple5 t0;
+    struct IntIntIntObjectUnitTuple5 t1;
+};
+
+struct IntIntIntFun2List {
+    struct IntIntIntFun2 head;
+    struct IntIntIntFun2List const* tail;
+};
+
+struct IntIntIntObjectUnitTuple5List {
+    struct IntIntIntObjectUnitTuple5 head;
+    struct IntIntIntObjectUnitTuple5List const* tail;
+};
+
+struct StringIntIntObjectUnitTuple5List {
+    struct StringIntIntObjectUnitTuple5 head;
+    struct StringIntIntObjectUnitTuple5List const* tail;
+};
+
+struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 {
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 t0;
+    struct IntIntIntObjectUnitTuple5 t1;
+    char t2;
+};
+
+struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 {
+    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 t0;
+    struct StringIntIntObjectUnitTuple5 t1;
+    char t2;
+};
+
 static void const* unitObj_;
 
 static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 typeInt_;
-
-int milone_main();
 
 void* memAlloc_(int len_, int size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(len_, ((uintptr_t)size_));
@@ -463,7 +622,6 @@ char rawMemoryCopy_(void* dest_1, void* src_1, int size_2) {
     return 0;
 }
 
-
 bool listIsEmpty_1(struct StringList const* xs_) {
     bool if_;
     if ((!(xs_))) {
@@ -480,7 +638,6 @@ cons_cl_3:;
 if_next_1:;
     return if_;
 }
-
 
 bool listIsEmpty_4(struct StringStringStringFun2List const* xs_) {
     bool if_1;
@@ -499,7 +656,6 @@ if_next_4:;
     return if_1;
 }
 
-
 bool listIsEmpty_3(struct IntList const* xs_) {
     bool if_2;
     if ((!(xs_))) {
@@ -516,7 +672,6 @@ cons_cl_9:;
 if_next_7:;
     return if_2;
 }
-
 
 bool listIsEmpty_2(struct IntIntIntFun2List const* xs_) {
     bool if_3;
@@ -535,7 +690,6 @@ if_next_10:;
     return if_3;
 }
 
-
 bool listIsEmpty_5(struct IntIntIntObjectUnitTuple5List const* xs_) {
     bool if_4;
     if ((!(xs_))) {
@@ -553,7 +707,6 @@ if_next_13:;
     return if_4;
 }
 
-
 bool listIsEmpty_6(struct StringIntIntObjectUnitTuple5List const* xs_) {
     bool if_5;
     if ((!(xs_))) {
@@ -570,11 +723,6 @@ cons_cl_18:;
 if_next_16:;
     return if_5;
 }
-
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 int go_22(int len_2, struct StringList const* xs_2) {
 tailrec_19:;
@@ -595,11 +743,6 @@ next_22:;
 end_match_20:;
     return match_;
 }
-
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 int go_21(int len_2, struct IntList const* xs_2) {
 tailrec_23:;
@@ -687,16 +830,6 @@ struct StringList const* listRev_1(struct StringList const* xs_4) {
     return call_5;
 }
 
-struct IntIntBoolFun2 {
-    bool(*fun)(void const*, int, int);
-    void const* env;
-};
-
-struct IntListIntListTuple2 {
-    struct IntList const* t0;
-    struct IntList const* t1;
-};
-
 bool go_24(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1) {
 tailrec_35:;
     bool match_4;
@@ -740,16 +873,6 @@ next_39:;
 end_match_36:;
     return match_4;
 }
-
-struct StringStringBoolFun2 {
-    bool(*fun)(void const*, struct String, struct String);
-    void const* env;
-};
-
-struct StringListStringListTuple2 {
-    struct StringList const* t0;
-    struct StringList const* t1;
-};
 
 bool go_23(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1) {
 tailrec_43:;
@@ -837,11 +960,6 @@ struct IntList const* listReplicate_1(int item_, int len_3) {
     return call_8;
 }
 
-struct IntIntFun1 {
-    int(*fun)(void const*, int);
-    void const* env;
-};
-
 struct IntList const* go_26(int len_4, struct IntIntFun1 gen_, struct IntList const* acc_2, int i_1) {
 tailrec_55:;
     struct IntList const* if_9;
@@ -876,11 +994,6 @@ struct IntList const* listInit_1(int len_4, struct IntIntFun1 gen_) {
     struct IntList const* call_10 = go_26(len_4, gen_, NULL, 0);
     return call_10;
 }
-
-struct StringStringListTuple2 {
-    struct String t0;
-    struct StringList const* t1;
-};
 
 struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
     struct StringStringListTuple2 match_6;
@@ -998,30 +1111,6 @@ struct IntList const* scanIntList_(int len_5) {
     return call_18;
 }
 
-struct IntVoidMutPtrFun1 {
-    void*(*fun)(void const*, int);
-    void const* env;
-};
-
-struct VoidMutPtrIntIntFun2 {
-    int(*fun)(void const*, void*, int);
-    void const* env;
-};
-
-struct VoidMutPtrIntIntUnitFun3 {
-    char(*fun)(void const*, void*, int, int);
-    void const* env;
-};
-
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 {
-    int t0;
-    int t1;
-    struct IntVoidMutPtrFun1 t2;
-    struct VoidMutPtrIntIntFun2 t3;
-    struct VoidMutPtrIntIntUnitFun3 t4;
-    char t5;
-};
-
 struct IntVoidMutPtrFun1 typeToArrayNew_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59) {
     struct IntVoidMutPtrFun1 arrayNew_ = arg_59.t2;
     char _typeTag_2 = arg_59.t5;
@@ -1054,14 +1143,6 @@ char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6) {
     char call_21 = rawIntArraySet_(arg_4, arg_5, arg_6);
     return 0;
 }
-
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 {
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 t0;
-    void* t1;
-    int t2;
-    int t3;
-    char t4;
-};
 
 int vectorToLength_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62) {
     int len_6 = arg_62.t2;
@@ -1237,11 +1318,6 @@ char vectorTest_(char arg_72) {
     return 0;
 }
 
-struct IntIntTuple2 {
-    int t0;
-    int t1;
-};
-
 bool intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4) {
     int xl_ = first_4.t0;
     int xr_ = first_4.t1;
@@ -1284,50 +1360,10 @@ if_next_87:;
     return if_16;
 }
 
-struct StringStringStringFun2 {
-    struct String(*fun)(void const*, struct String, struct String);
-    void const* env;
-};
-
-struct StringIntIntObjectUnitTuple5 {
-    struct String t0;
-    int t1;
-    int t2;
-    void const* t3;
-    char t4;
-};
-
-struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 {
-    struct StringStringStringFun2 t0;
-    struct StringIntIntObjectUnitTuple5 t1;
-    void const* t2;
-    char t3;
-};
-
 struct StringStringStringFun2 segItemTypeToAppend_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_73) {
     struct StringStringStringFun2 append_ = arg_73.t0;
     return append_;
 }
-
-struct IntIntIntFun2 {
-    int(*fun)(void const*, int, int);
-    void const* env;
-};
-
-struct IntIntIntObjectUnitTuple5 {
-    int t0;
-    int t1;
-    int t2;
-    void const* t3;
-    char t4;
-};
-
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 {
-    struct IntIntIntFun2 t0;
-    struct IntIntIntObjectUnitTuple5 t1;
-    void const* t2;
-    char t3;
-};
 
 struct IntIntIntFun2 segItemTypeToAppend_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_74) {
     struct IntIntIntFun2 append_ = arg_74.t0;
@@ -1360,16 +1396,6 @@ int segItemTypeToEmptyItem_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5Object
     return call_49;
 }
 
-struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 {
-    struct StringIntIntObjectUnitTuple5 t0;
-    struct StringIntIntObjectUnitTuple5 t1;
-};
-
-struct StringStringStringFun2List {
-    struct StringStringStringFun2 head;
-    struct StringStringStringFun2List const* tail;
-};
-
 struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_2(struct String emptyItem_, struct StringStringStringFun2 append_1) {
     struct StringIntIntObjectUnitTuple5 call_50 = segNodeNewEmpty_2(emptyItem_);
     struct StringIntIntObjectUnitTuple5 emptyNode_1 = call_50;
@@ -1394,16 +1420,6 @@ struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segIte
     milone_assert((!(call_53)), 50, 2);
     return itemTy_5;
 }
-
-struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 {
-    struct IntIntIntObjectUnitTuple5 t0;
-    struct IntIntIntObjectUnitTuple5 t1;
-};
-
-struct IntIntIntFun2List {
-    struct IntIntIntFun2 head;
-    struct IntIntIntFun2List const* tail;
-};
 
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_1(int emptyItem_, struct IntIntIntFun2 append_1) {
     struct IntIntIntObjectUnitTuple5 call_54 = segNodeNewEmpty_1(emptyItem_);
@@ -1601,11 +1617,6 @@ int segNodeToHeight_2(struct StringIntIntObjectUnitTuple5 node_2) {
     return height_1;
 }
 
-struct IntIntIntObjectUnitTuple5List {
-    struct IntIntIntObjectUnitTuple5 head;
-    struct IntIntIntObjectUnitTuple5List const* tail;
-};
-
 struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 segNodeToChildren_1(struct IntIntIntObjectUnitTuple5 node_3) {
     int len_14 = node_3.t1;
     void const* children_ = node_3.t3;
@@ -1623,11 +1634,6 @@ struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 segNodeToChildre
     struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 tuple_21 = (struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2){.t0 = left_1, .t1 = right_1};
     return tuple_21;
 }
-
-struct StringIntIntObjectUnitTuple5List {
-    struct StringIntIntObjectUnitTuple5 head;
-    struct StringIntIntObjectUnitTuple5List const* tail;
-};
 
 struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 segNodeToChildren_2(struct StringIntIntObjectUnitTuple5 node_3) {
     int len_14 = node_3.t1;
@@ -2174,24 +2180,12 @@ if_next_169:;
     return if_40;
 }
 
-struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 {
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 t0;
-    struct IntIntIntObjectUnitTuple5 t1;
-    char t2;
-};
-
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeNew_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11) {
     struct IntIntIntObjectUnitTuple5 call_157 = segItemTypeToEmptyNode_2(itemTy_11);
     struct IntIntIntObjectUnitTuple5 emptyNode_2 = call_157;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 tuple_23 = (struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3){.t0 = itemTy_11, .t1 = emptyNode_2, .t2 = 0};
     return tuple_23;
 }
-
-struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 {
-    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 t0;
-    struct StringIntIntObjectUnitTuple5 t1;
-    char t2;
-};
 
 struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeNew_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11) {
     struct StringIntIntObjectUnitTuple5 call_158 = segItemTypeToEmptyNode_1(itemTy_11);

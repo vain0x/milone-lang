@@ -1,42 +1,110 @@
 #include "milone.h"
 
-bool id_1(bool x_);
-
 struct Space_List;
 
-struct Space_List const* failwith_3(struct String msg_);
-
 struct StringList;
-
-struct StringList const* failwith_2(struct String msg_);
 
 struct StringSpace_ListTuple2;
 
 struct Space_;
 
-struct Space_ failwith_1(struct String msg_);
-
 struct StringList;
-
-struct StringList const* cons_1(struct String head_, struct StringList const* tail_);
 
 struct Space_List;
 
-struct Space_List const* go_13(struct Space_List const* acc_, struct Space_List const* xs_2);
-
-struct StringList const* go_12(struct StringList const* acc_, struct StringList const* xs_2);
-
 struct BoolList;
 
 struct BoolList;
-
-struct BoolList const* go_29(struct BoolList const* acc_, struct BoolList const* xs_2);
 
 struct Space_Space_Tuple2List;
 
 struct Space_Space_Tuple2;
 
 struct Space_Space_Tuple2List;
+
+struct Space_Space_Fun1;
+
+struct Ty_Space_Fun1;
+
+struct Ty_List;
+
+struct Ty_;
+
+struct Ty_List;
+
+struct Pat_Space_Fun1;
+
+struct Pat_List;
+
+struct Pat_;
+
+struct Pat_List;
+
+struct StringSpace_Tuple2BoolFun1;
+
+struct StringSpace_Tuple2List;
+
+struct StringSpace_Tuple2;
+
+struct StringSpace_Tuple2List;
+
+struct StringTy_Pat_ListCovering_Tuple4BoolFun1;
+
+struct StringTy_Pat_ListCovering_Tuple4List;
+
+struct Covering_;
+
+struct StringTy_Pat_ListCovering_Tuple4;
+
+struct StringTy_Pat_ListCovering_Tuple4List;
+
+struct IntSpace_Space_Tuple2Space_Fun2;
+
+struct IntSpace_Space_Fun2;
+
+struct Space_BoolFun1;
+
+struct Space_Space_Tuple2BoolFun1;
+
+struct BoolBoolFun1;
+
+struct Space_Space_Space_Fun2;
+
+struct StringListSpace_StringListFun2;
+
+struct Space_ListSpace_ListTuple2;
+
+struct UnitSpace_Fun1;
+
+struct StringUnitSpace_Fun1Tuple2;
+
+struct IntTuple1;
+
+struct StringSpace_ListSpace_ListTuple3;
+
+struct Space_Tuple1;
+
+struct Pat_Pat_Tuple2;
+
+struct BoolStringTuple2;
+
+struct Covering_Covering_Tuple2;
+
+bool id_1(bool x_);
+
+struct Space_List const* failwith_3(struct String msg_);
+
+struct StringList const* failwith_2(struct String msg_);
+
+struct Space_ failwith_1(struct String msg_);
+
+struct StringList const* cons_1(struct String head_, struct StringList const* tail_);
+
+struct Space_List const* go_13(struct Space_List const* acc_, struct Space_List const* xs_2);
+
+struct StringList const* go_12(struct StringList const* acc_, struct StringList const* xs_2);
+
+struct BoolList const* go_29(struct BoolList const* acc_, struct BoolList const* xs_2);
 
 struct Space_Space_Tuple2List const* go_28(struct Space_Space_Tuple2List const* acc_, struct Space_Space_Tuple2List const* xs_2);
 
@@ -48,49 +116,13 @@ struct BoolList const* listRev_4(struct BoolList const* xs_1);
 
 struct Space_Space_Tuple2List const* listRev_3(struct Space_Space_Tuple2List const* xs_1);
 
-struct Space_Space_Fun1;
-
 struct Space_List const* go_18(struct Space_Space_Fun1 f_, struct Space_List const* acc_1, struct Space_List const* xs_5);
-
-struct Ty_Space_Fun1;
-
-struct Ty_List;
-
-struct Ty_;
-
-struct Ty_List;
 
 struct Space_List const* go_17(struct Ty_Space_Fun1 f_, struct Space_List const* acc_1, struct Ty_List const* xs_5);
 
-struct Pat_Space_Fun1;
-
-struct Pat_List;
-
-struct Pat_;
-
-struct Pat_List;
-
 struct Space_List const* go_16(struct Pat_Space_Fun1 f_, struct Space_List const* acc_1, struct Pat_List const* xs_5);
 
-struct StringSpace_Tuple2BoolFun1;
-
-struct StringSpace_Tuple2List;
-
-struct StringSpace_Tuple2;
-
-struct StringSpace_Tuple2List;
-
 struct BoolList const* go_15(struct StringSpace_Tuple2BoolFun1 f_, struct BoolList const* acc_1, struct StringSpace_Tuple2List const* xs_5);
-
-struct StringTy_Pat_ListCovering_Tuple4BoolFun1;
-
-struct StringTy_Pat_ListCovering_Tuple4List;
-
-struct Covering_;
-
-struct StringTy_Pat_ListCovering_Tuple4;
-
-struct StringTy_Pat_ListCovering_Tuple4List;
 
 struct BoolList const* go_14(struct StringTy_Pat_ListCovering_Tuple4BoolFun1 f_, struct BoolList const* acc_1, struct StringTy_Pat_ListCovering_Tuple4List const* xs_5);
 
@@ -104,11 +136,7 @@ struct BoolList const* listMap_2(struct StringSpace_Tuple2BoolFun1 f_, struct St
 
 struct BoolList const* listMap_1(struct StringTy_Pat_ListCovering_Tuple4BoolFun1 f_, struct StringTy_Pat_ListCovering_Tuple4List const* xs_4);
 
-struct IntSpace_Space_Tuple2Space_Fun2;
-
 struct Space_List const* go_20(struct IntSpace_Space_Tuple2Space_Fun2 f_1, struct Space_List const* acc_2, int i_, struct Space_Space_Tuple2List const* xs_8);
-
-struct IntSpace_Space_Fun2;
 
 struct Space_List const* go_19(struct IntSpace_Space_Fun2 f_1, struct Space_List const* acc_2, int i_, struct Space_List const* xs_8);
 
@@ -116,15 +144,9 @@ struct Space_List const* listMapWithIndex_2(struct IntSpace_Space_Tuple2Space_Fu
 
 struct Space_List const* listMapWithIndex_1(struct IntSpace_Space_Fun2 f_1, struct Space_List const* xs_7);
 
-struct Space_BoolFun1;
-
 bool go_23(struct Space_BoolFun1 p_, struct Space_List const* xs_11);
 
-struct Space_Space_Tuple2BoolFun1;
-
 bool go_22(struct Space_Space_Tuple2BoolFun1 p_, struct Space_Space_Tuple2List const* xs_11);
-
-struct BoolBoolFun1;
 
 bool go_21(struct BoolBoolFun1 p_, struct BoolList const* xs_11);
 
@@ -138,19 +160,13 @@ bool go_24(struct Space_BoolFun1 p_1, struct Space_List const* xs_14);
 
 bool listExists_1(struct Space_BoolFun1 p_1, struct Space_List const* xs_13);
 
-struct Space_Space_Space_Fun2;
-
 struct Space_ go_26(struct Space_Space_Space_Fun2 folder_, struct Space_ state_1, struct Space_List const* xs_17);
-
-struct StringListSpace_StringListFun2;
 
 struct StringList const* go_25(struct StringListSpace_StringListFun2 folder_, struct StringList const* state_1, struct Space_List const* xs_17);
 
 struct Space_ listFold_2(struct Space_Space_Space_Fun2 folder_, struct Space_ state_, struct Space_List const* xs_16);
 
 struct StringList const* listFold_1(struct StringListSpace_StringListFun2 folder_, struct StringList const* state_, struct Space_List const* xs_16);
-
-struct Space_ListSpace_ListTuple2;
 
 struct Space_Space_Tuple2List const* go_27(struct Space_Space_Tuple2List const* acc_3, struct Space_List const* xs_20, struct Space_List const* ys_1);
 
@@ -161,10 +177,6 @@ struct String go_7(struct StringList const* xs_23);
 struct String strConcat_(struct StringList const* xs_22);
 
 struct Space_ spaceCtor_(struct String tag_, struct Space_List const* items_);
-
-struct UnitSpace_Fun1;
-
-struct StringUnitSpace_Fun1Tuple2;
 
 struct Space_ spaceRef_(struct String tag_1, struct UnitSpace_Fun1 thunk_);
 
@@ -186,21 +198,15 @@ bool fun_11(void const* env_2, struct Space_Space_Tuple2 arg_2);
 
 struct Space_ fun_2(int i_1, int j_, struct Space_Space_Tuple2 arg_86);
 
-struct IntTuple1;
-
 struct Space_ fun_12(void const* env_3, int arg_3, struct Space_Space_Tuple2 arg_4);
 
 struct Space_ fun_28(struct String tag_2, struct Space_List const* firsts_, struct Space_List const* seconds_, int i_1, struct Space_ arg_87);
-
-struct StringSpace_ListSpace_ListTuple3;
 
 struct Space_ fun_13(void const* env_4, int arg_6, struct Space_ arg_7);
 
 struct Space_ fun_14(void const* env_5, struct Space_ arg_11, struct Space_ arg_12);
 
 struct Space_ fun_3(struct Space_ second_, struct Space_ first_3);
-
-struct Space_Tuple1;
 
 struct Space_ fun_15(void const* env_6, struct Space_ arg_13);
 
@@ -234,8 +240,6 @@ struct Space_ tyToSpace_(struct Ty_ ty_);
 
 struct Space_ fun_21(void const* env_12, struct Pat_ arg_24);
 
-struct Pat_Pat_Tuple2;
-
 struct Space_ go_11(struct Pat_ pat_1);
 
 struct Space_ patToSpace_(struct Pat_ pat_);
@@ -260,35 +264,11 @@ char testSpaceToString_(char arg_96);
 
 bool fun_26(void const* env_17, bool arg_29);
 
-struct BoolStringTuple2;
-
-struct Covering_Covering_Tuple2;
-
 bool fun_8(struct StringTy_Pat_ListCovering_Tuple4 arg_97);
 
 bool fun_27(void const* env_18, struct StringTy_Pat_ListCovering_Tuple4 arg_30);
 
-static struct Space_ spaceFull_;
-
-static struct Space_ spaceEmpty_;
-
 int milone_main();
-
-bool id_1(bool x_) {
-    return x_;
-}
-
-
-struct Space_List const* failwith_3(struct String msg_) {
-    printf("ERROR %s\n", str_to_c_str(msg_));
-    exit(1);
-}
-
-
-struct StringList const* failwith_2(struct String msg_) {
-    printf("ERROR %s\n", str_to_c_str(msg_));
-    exit(1);
-}
 
 struct StringSpace_ListTuple2 {
     struct String t0;
@@ -311,26 +291,235 @@ struct Space_ {
     };
 };
 
-struct Space_ failwith_1(struct String msg_) {
-    printf("ERROR %s\n", str_to_c_str(msg_));
-    exit(1);
-}
-
 struct StringList {
     struct String head;
     struct StringList const* tail;
 };
+
+struct Space_List {
+    struct Space_ head;
+    struct Space_List const* tail;
+};
+
+struct BoolList {
+    bool head;
+    struct BoolList const* tail;
+};
+
+struct Space_Space_Tuple2 {
+    struct Space_ t0;
+    struct Space_ t1;
+};
+
+struct Space_Space_Tuple2List {
+    struct Space_Space_Tuple2 head;
+    struct Space_Space_Tuple2List const* tail;
+};
+
+struct Space_Space_Fun1 {
+    struct Space_(*fun)(void const*, struct Space_);
+    void const* env;
+};
+
+struct Ty_Space_Fun1 {
+    struct Space_(*fun)(void const*, struct Ty_);
+    void const* env;
+};
+
+enum Ty_Discriminant {
+    Int_,
+    Tuple_,
+    List_,
+};
+
+struct Ty_ {
+    enum Ty_Discriminant discriminant;
+    union {
+        struct Ty_List const* Tuple_;
+        void const* List_;
+    };
+};
+
+struct Ty_List {
+    struct Ty_ head;
+    struct Ty_List const* tail;
+};
+
+struct Pat_Space_Fun1 {
+    struct Space_(*fun)(void const*, struct Pat_);
+    void const* env;
+};
+
+enum Pat_Discriminant {
+    Discard_,
+    IntLit_,
+    TupleLit_,
+    Nil_,
+    Cons_,
+};
+
+struct Pat_ {
+    enum Pat_Discriminant discriminant;
+    union {
+        int IntLit_;
+        struct Pat_List const* TupleLit_;
+        void const* Cons_;
+    };
+};
+
+struct Pat_List {
+    struct Pat_ head;
+    struct Pat_List const* tail;
+};
+
+struct StringSpace_Tuple2BoolFun1 {
+    bool(*fun)(void const*, struct StringSpace_Tuple2);
+    void const* env;
+};
+
+struct StringSpace_Tuple2 {
+    struct String t0;
+    struct Space_ t1;
+};
+
+struct StringSpace_Tuple2List {
+    struct StringSpace_Tuple2 head;
+    struct StringSpace_Tuple2List const* tail;
+};
+
+struct StringTy_Pat_ListCovering_Tuple4BoolFun1 {
+    bool(*fun)(void const*, struct StringTy_Pat_ListCovering_Tuple4);
+    void const* env;
+};
+
+enum Covering_Discriminant {
+    Covering_,
+    Open_,
+};
+
+struct Covering_ {
+    enum Covering_Discriminant discriminant;
+};
+
+struct StringTy_Pat_ListCovering_Tuple4 {
+    struct String t0;
+    struct Ty_ t1;
+    struct Pat_List const* t2;
+    struct Covering_ t3;
+};
+
+struct StringTy_Pat_ListCovering_Tuple4List {
+    struct StringTy_Pat_ListCovering_Tuple4 head;
+    struct StringTy_Pat_ListCovering_Tuple4List const* tail;
+};
+
+struct IntSpace_Space_Tuple2Space_Fun2 {
+    struct Space_(*fun)(void const*, int, struct Space_Space_Tuple2);
+    void const* env;
+};
+
+struct IntSpace_Space_Fun2 {
+    struct Space_(*fun)(void const*, int, struct Space_);
+    void const* env;
+};
+
+struct Space_BoolFun1 {
+    bool(*fun)(void const*, struct Space_);
+    void const* env;
+};
+
+struct Space_Space_Tuple2BoolFun1 {
+    bool(*fun)(void const*, struct Space_Space_Tuple2);
+    void const* env;
+};
+
+struct BoolBoolFun1 {
+    bool(*fun)(void const*, bool);
+    void const* env;
+};
+
+struct Space_Space_Space_Fun2 {
+    struct Space_(*fun)(void const*, struct Space_, struct Space_);
+    void const* env;
+};
+
+struct StringListSpace_StringListFun2 {
+    struct StringList const*(*fun)(void const*, struct StringList const*, struct Space_);
+    void const* env;
+};
+
+struct Space_ListSpace_ListTuple2 {
+    struct Space_List const* t0;
+    struct Space_List const* t1;
+};
+
+struct UnitSpace_Fun1 {
+    struct Space_(*fun)(void const*, char);
+    void const* env;
+};
+
+struct StringUnitSpace_Fun1Tuple2 {
+    struct String t0;
+    struct UnitSpace_Fun1 t1;
+};
+
+struct IntTuple1 {
+    int t0;
+};
+
+struct StringSpace_ListSpace_ListTuple3 {
+    struct String t0;
+    struct Space_List const* t1;
+    struct Space_List const* t2;
+};
+
+struct Space_Tuple1 {
+    struct Space_ t0;
+};
+
+struct Pat_Pat_Tuple2 {
+    struct Pat_ t0;
+    struct Pat_ t1;
+};
+
+struct BoolStringTuple2 {
+    bool t0;
+    struct String t1;
+};
+
+struct Covering_Covering_Tuple2 {
+    struct Covering_ t0;
+    struct Covering_ t1;
+};
+
+static struct Space_ spaceFull_;
+
+static struct Space_ spaceEmpty_;
+
+bool id_1(bool x_) {
+    return x_;
+}
+
+struct Space_List const* failwith_3(struct String msg_) {
+    printf("ERROR %s\n", str_to_c_str(msg_));
+    exit(1);
+}
+
+struct StringList const* failwith_2(struct String msg_) {
+    printf("ERROR %s\n", str_to_c_str(msg_));
+    exit(1);
+}
+
+struct Space_ failwith_1(struct String msg_) {
+    printf("ERROR %s\n", str_to_c_str(msg_));
+    exit(1);
+}
 
 struct StringList const* cons_1(struct String head_, struct StringList const* tail_) {
     struct StringList const* list_ = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_))) = (struct StringList){.head = head_, .tail = tail_};
     return list_;
 }
-
-struct Space_List {
-    struct Space_ head;
-    struct Space_List const* tail;
-};
 
 struct Space_List const* go_13(struct Space_List const* acc_, struct Space_List const* xs_2) {
 tailrec_1:;
@@ -378,12 +567,6 @@ end_match_6:;
     return match_1;
 }
 
-
-struct BoolList {
-    bool head;
-    struct BoolList const* tail;
-};
-
 struct BoolList const* go_29(struct BoolList const* acc_, struct BoolList const* xs_2) {
 tailrec_9:;
     struct BoolList const* match_2;
@@ -406,17 +589,6 @@ next_12:;
 end_match_10:;
     return match_2;
 }
-
-
-struct Space_Space_Tuple2 {
-    struct Space_ t0;
-    struct Space_ t1;
-};
-
-struct Space_Space_Tuple2List {
-    struct Space_Space_Tuple2 head;
-    struct Space_Space_Tuple2List const* tail;
-};
 
 struct Space_Space_Tuple2List const* go_28(struct Space_Space_Tuple2List const* acc_, struct Space_Space_Tuple2List const* xs_2) {
 tailrec_13:;
@@ -461,11 +633,6 @@ struct Space_Space_Tuple2List const* listRev_3(struct Space_Space_Tuple2List con
     return call_3;
 }
 
-struct Space_Space_Fun1 {
-    struct Space_(*fun)(void const*, struct Space_);
-    void const* env;
-};
-
 struct Space_List const* go_18(struct Space_Space_Fun1 f_, struct Space_List const* acc_1, struct Space_List const* xs_5) {
 tailrec_17:;
     struct Space_List const* match_4;
@@ -492,31 +659,6 @@ next_20:;
 end_match_18:;
     return match_4;
 }
-
-struct Ty_Space_Fun1 {
-    struct Space_(*fun)(void const*, struct Ty_);
-    void const* env;
-};
-
-
-enum Ty_Discriminant {
-    Int_,
-    Tuple_,
-    List_,
-};
-
-struct Ty_ {
-    enum Ty_Discriminant discriminant;
-    union {
-        struct Ty_List const* Tuple_;
-        void const* List_;
-    };
-};
-
-struct Ty_List {
-    struct Ty_ head;
-    struct Ty_List const* tail;
-};
 
 struct Space_List const* go_17(struct Ty_Space_Fun1 f_, struct Space_List const* acc_1, struct Ty_List const* xs_5) {
 tailrec_21:;
@@ -545,34 +687,6 @@ end_match_22:;
     return match_5;
 }
 
-struct Pat_Space_Fun1 {
-    struct Space_(*fun)(void const*, struct Pat_);
-    void const* env;
-};
-
-
-enum Pat_Discriminant {
-    Discard_,
-    IntLit_,
-    TupleLit_,
-    Nil_,
-    Cons_,
-};
-
-struct Pat_ {
-    enum Pat_Discriminant discriminant;
-    union {
-        int IntLit_;
-        struct Pat_List const* TupleLit_;
-        void const* Cons_;
-    };
-};
-
-struct Pat_List {
-    struct Pat_ head;
-    struct Pat_List const* tail;
-};
-
 struct Space_List const* go_16(struct Pat_Space_Fun1 f_, struct Space_List const* acc_1, struct Pat_List const* xs_5) {
 tailrec_25:;
     struct Space_List const* match_6;
@@ -600,22 +714,6 @@ end_match_26:;
     return match_6;
 }
 
-struct StringSpace_Tuple2BoolFun1 {
-    bool(*fun)(void const*, struct StringSpace_Tuple2);
-    void const* env;
-};
-
-
-struct StringSpace_Tuple2 {
-    struct String t0;
-    struct Space_ t1;
-};
-
-struct StringSpace_Tuple2List {
-    struct StringSpace_Tuple2 head;
-    struct StringSpace_Tuple2List const* tail;
-};
-
 struct BoolList const* go_15(struct StringSpace_Tuple2BoolFun1 f_, struct BoolList const* acc_1, struct StringSpace_Tuple2List const* xs_5) {
 tailrec_29:;
     struct BoolList const* match_7;
@@ -642,33 +740,6 @@ next_32:;
 end_match_30:;
     return match_7;
 }
-
-struct StringTy_Pat_ListCovering_Tuple4BoolFun1 {
-    bool(*fun)(void const*, struct StringTy_Pat_ListCovering_Tuple4);
-    void const* env;
-};
-
-
-enum Covering_Discriminant {
-    Covering_,
-    Open_,
-};
-
-struct Covering_ {
-    enum Covering_Discriminant discriminant;
-};
-
-struct StringTy_Pat_ListCovering_Tuple4 {
-    struct String t0;
-    struct Ty_ t1;
-    struct Pat_List const* t2;
-    struct Covering_ t3;
-};
-
-struct StringTy_Pat_ListCovering_Tuple4List {
-    struct StringTy_Pat_ListCovering_Tuple4 head;
-    struct StringTy_Pat_ListCovering_Tuple4List const* tail;
-};
 
 struct BoolList const* go_14(struct StringTy_Pat_ListCovering_Tuple4BoolFun1 f_, struct BoolList const* acc_1, struct StringTy_Pat_ListCovering_Tuple4List const* xs_5) {
 tailrec_33:;
@@ -722,11 +793,6 @@ struct BoolList const* listMap_1(struct StringTy_Pat_ListCovering_Tuple4BoolFun1
     return call_13;
 }
 
-struct IntSpace_Space_Tuple2Space_Fun2 {
-    struct Space_(*fun)(void const*, int, struct Space_Space_Tuple2);
-    void const* env;
-};
-
 struct Space_List const* go_20(struct IntSpace_Space_Tuple2Space_Fun2 f_1, struct Space_List const* acc_2, int i_, struct Space_Space_Tuple2List const* xs_8) {
 tailrec_37:;
     struct Space_List const* match_9;
@@ -755,11 +821,6 @@ next_40:;
 end_match_38:;
     return match_9;
 }
-
-struct IntSpace_Space_Fun2 {
-    struct Space_(*fun)(void const*, int, struct Space_);
-    void const* env;
-};
 
 struct Space_List const* go_19(struct IntSpace_Space_Fun2 f_1, struct Space_List const* acc_2, int i_, struct Space_List const* xs_8) {
 tailrec_41:;
@@ -800,11 +861,6 @@ struct Space_List const* listMapWithIndex_1(struct IntSpace_Space_Fun2 f_1, stru
     return call_17;
 }
 
-struct Space_BoolFun1 {
-    bool(*fun)(void const*, struct Space_);
-    void const* env;
-};
-
 bool go_23(struct Space_BoolFun1 p_, struct Space_List const* xs_11) {
 tailrec_45:;
     bool match_11;
@@ -840,11 +896,6 @@ end_match_46:;
     return match_11;
 }
 
-struct Space_Space_Tuple2BoolFun1 {
-    bool(*fun)(void const*, struct Space_Space_Tuple2);
-    void const* env;
-};
-
 bool go_22(struct Space_Space_Tuple2BoolFun1 p_, struct Space_Space_Tuple2List const* xs_11) {
 tailrec_52:;
     bool match_12;
@@ -879,11 +930,6 @@ next_55:;
 end_match_53:;
     return match_12;
 }
-
-struct BoolBoolFun1 {
-    bool(*fun)(void const*, bool);
-    void const* env;
-};
 
 bool go_21(struct BoolBoolFun1 p_, struct BoolList const* xs_11) {
 tailrec_59:;
@@ -975,11 +1021,6 @@ bool listExists_1(struct Space_BoolFun1 p_1, struct Space_List const* xs_13) {
     return call_21;
 }
 
-struct Space_Space_Space_Fun2 {
-    struct Space_(*fun)(void const*, struct Space_, struct Space_);
-    void const* env;
-};
-
 struct Space_ go_26(struct Space_Space_Space_Fun2 folder_, struct Space_ state_1, struct Space_List const* xs_17) {
 tailrec_73:;
     struct Space_ match_15;
@@ -1003,11 +1044,6 @@ next_76:;
 end_match_74:;
     return match_15;
 }
-
-struct StringListSpace_StringListFun2 {
-    struct StringList const*(*fun)(void const*, struct StringList const*, struct Space_);
-    void const* env;
-};
 
 struct StringList const* go_25(struct StringListSpace_StringListFun2 folder_, struct StringList const* state_1, struct Space_List const* xs_17) {
 tailrec_77:;
@@ -1042,11 +1078,6 @@ struct StringList const* listFold_1(struct StringListSpace_StringListFun2 folder
     struct StringList const* call_23 = go_25(folder_, state_, xs_16);
     return call_23;
 }
-
-struct Space_ListSpace_ListTuple2 {
-    struct Space_List const* t0;
-    struct Space_List const* t1;
-};
 
 struct Space_Space_Tuple2List const* go_27(struct Space_Space_Tuple2List const* acc_3, struct Space_List const* xs_20, struct Space_List const* ys_1) {
 tailrec_81:;
@@ -1117,16 +1148,6 @@ struct Space_ spaceCtor_(struct String tag_, struct Space_List const* items_) {
     struct Space_ variant_ = (struct Space_){.discriminant = Ctor_, .Ctor_ = tuple_2};
     return variant_;
 }
-
-struct UnitSpace_Fun1 {
-    struct Space_(*fun)(void const*, char);
-    void const* env;
-};
-
-struct StringUnitSpace_Fun1Tuple2 {
-    struct String t0;
-    struct UnitSpace_Fun1 t1;
-};
 
 struct Space_ spaceRef_(struct String tag_1, struct UnitSpace_Fun1 thunk_) {
     struct StringUnitSpace_Fun1Tuple2 tuple_3 = (struct StringUnitSpace_Fun1Tuple2){.t0 = tag_1, .t1 = thunk_};
@@ -1288,10 +1309,6 @@ if_next_107:;
     return if_4;
 }
 
-struct IntTuple1 {
-    int t0;
-};
-
 struct Space_ fun_12(void const* env_3, int arg_3, struct Space_Space_Tuple2 arg_4) {
     int arg_5 = (*(((struct IntTuple1 const*)env_3))).t0;
     struct Space_ call_41 = fun_2(arg_5, arg_3, arg_4);
@@ -1308,12 +1325,6 @@ struct Space_ fun_28(struct String tag_2, struct Space_List const* firsts_, stru
     struct Space_ call_44 = spaceCtor_(tag_2, call_43);
     return call_44;
 }
-
-struct StringSpace_ListSpace_ListTuple3 {
-    struct String t0;
-    struct Space_List const* t1;
-    struct Space_List const* t2;
-};
 
 struct Space_ fun_13(void const* env_4, int arg_6, struct Space_ arg_7) {
     struct String arg_8 = (*(((struct StringSpace_ListSpace_ListTuple3 const*)env_4))).t0;
@@ -1332,10 +1343,6 @@ struct Space_ fun_3(struct Space_ second_, struct Space_ first_3) {
     struct Space_ call_47 = spaceExclude_(first_3, second_);
     return call_47;
 }
-
-struct Space_Tuple1 {
-    struct Space_ t0;
-};
 
 struct Space_ fun_15(void const* env_6, struct Space_ arg_13) {
     struct Space_ arg_14 = (*(((struct Space_Tuple1 const*)env_6))).t0;
@@ -1627,11 +1634,6 @@ struct Space_ fun_21(void const* env_12, struct Pat_ arg_24) {
     return call_95;
 }
 
-struct Pat_Pat_Tuple2 {
-    struct Pat_ t0;
-    struct Pat_ t1;
-};
-
 struct Space_ go_11(struct Pat_ pat_1) {
     struct Space_ match_26;
     if ((pat_1.discriminant != Discard_)) goto next_139;
@@ -1841,16 +1843,6 @@ bool fun_26(void const* env_17, bool arg_29) {
     bool call_136 = id_1(arg_29);
     return call_136;
 }
-
-struct BoolStringTuple2 {
-    bool t0;
-    struct String t1;
-};
-
-struct Covering_Covering_Tuple2 {
-    struct Covering_ t0;
-    struct Covering_ t1;
-};
 
 bool fun_8(struct StringTy_Pat_ListCovering_Tuple4 arg_97) {
     struct String name_ = arg_97.t0;

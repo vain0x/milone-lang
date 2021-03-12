@@ -8,12 +8,6 @@ struct Second_List;
 
 struct First_ListSecond_ListTuple2;
 
-struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2);
-
-struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_);
-
-struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_Tuple2List const* arg_1);
-
 struct Node_List;
 
 struct Node_;
@@ -36,31 +30,18 @@ struct IntThird_Tuple2;
 
 struct IntThird_Tuple2List;
 
+struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2);
+
+struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_);
+
+struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_Tuple2List const* arg_1);
+
 int milone_main();
-
-
-
 
 struct First_ListSecond_ListTuple2 {
     struct First_List const* t0;
     struct Second_List const* t1;
 };
-
-struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2) {
-    struct First_ListSecond_ListTuple2 tuple_ = (struct First_ListSecond_ListTuple2){.t0 = NULL, .t1 = NULL};
-    return tuple_;
-}
-
-struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_) {
-    struct First_ListSecond_ListTuple2 call_ = f_(arg_);
-    return call_;
-}
-
-struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_Tuple2List const* arg_1) {
-    struct First_ListSecond_ListTuple2 call_1 = f_(arg_1);
-    return call_1;
-}
-
 
 enum Node_Discriminant {
     Leaf_,
@@ -112,7 +93,6 @@ struct First_Second_Tuple2 {
     struct Second_ t1;
 };
 
-
 enum Third_Discriminant {
     Leaf3_,
     Node3_,
@@ -134,6 +114,21 @@ struct IntThird_Tuple2List {
     struct IntThird_Tuple2 head;
     struct IntThird_Tuple2List const* tail;
 };
+
+struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2) {
+    struct First_ListSecond_ListTuple2 tuple_ = (struct First_ListSecond_ListTuple2){.t0 = NULL, .t1 = NULL};
+    return tuple_;
+}
+
+struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_) {
+    struct First_ListSecond_ListTuple2 call_ = f_(arg_);
+    return call_;
+}
+
+struct First_ListSecond_ListTuple2 fun_1(void const* env_1, struct First_Second_Tuple2List const* arg_1) {
+    struct First_ListSecond_ListTuple2 call_1 = f_(arg_1);
+    return call_1;
+}
 
 int milone_main() {
     char match_;
