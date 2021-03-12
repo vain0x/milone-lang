@@ -40,7 +40,7 @@ char assertNotEmpty_1(struct IntList const* xs_60) {
 
 int milone_main() {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = 1, .tail = NULL});
     char call_1 = assertNotEmpty_1(list_);
     return 0;
 }

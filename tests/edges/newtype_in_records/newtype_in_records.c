@@ -43,7 +43,7 @@ struct DayRange_ newDayRange_(int start_, int endDay_) {
     int call_ = dayToInt_(endDay_);
     int call_1 = dayToInt_(start_);
     milone_assert((call_ >= call_1), 16, 2);
-    struct DayRange_ DayRange_ = (struct DayRange_){.t0 = start_, .t1 = endDay_};
+    struct DayRange_ DayRange_ = ((struct DayRange_){.t0 = start_, .t1 = endDay_});
     return DayRange_;
 }
 

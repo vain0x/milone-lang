@@ -244,11 +244,11 @@ struct IntOption __intOfStr_(struct String s_) {
 then_2:;
     int const* call_1 = __ptrAsConst_1(valueRef_);
     int read_ = (*(call_1));
-    struct IntOption some_ = (struct IntOption){.some = true, .value = read_};
+    struct IntOption some_ = ((struct IntOption){.some = true, .value = read_});
     if_ = some_;
     goto if_next_1;
 else_3:;
-    if_ = (struct IntOption){.some = false};
+    if_ = ((struct IntOption){.some = false});
     goto if_next_1;
 if_next_1:;
     return if_;
@@ -641,7 +641,7 @@ next_75:;
     struct String x_ = xs_6->head;
     struct StringList const* xs_7 = xs_6->tail;
     struct StringList const* list_ = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_))) = (struct StringList){.head = x_, .tail = acc_};
+    (*(((struct StringList*)list_))) = ((struct StringList){.head = x_, .tail = acc_});
     struct StringList const* arg_4 = list_;
     struct StringList const* arg_5 = xs_7;
     acc_ = arg_4;
@@ -713,11 +713,11 @@ if_next_83:;
         goto else_88;
     }
 then_87:;
-    struct CharOption some_1 = (struct CharOption){.some = true, .value = str_1.str[index_5]};
+    struct CharOption some_1 = ((struct CharOption){.some = true, .value = str_1.str[index_5]});
     if_27 = some_1;
     goto if_next_86;
 else_88:;
-    if_27 = (struct CharOption){.some = false};
+    if_27 = ((struct CharOption){.some = false});
     goto if_next_86;
 if_next_86:;
     return if_27;
@@ -811,7 +811,7 @@ tailrec_102:;
         goto else_105;
     }
 then_104:;
-    if_32 = (struct IntOption){.some = false};
+    if_32 = ((struct IntOption){.some = false});
     goto if_next_103;
 else_105:;
     bool call_15 = occursAt_(i_5, substr_1, s_4);
@@ -822,7 +822,7 @@ else_105:;
         goto else_108;
     }
 then_107:;
-    struct IntOption some_2 = (struct IntOption){.some = true, .value = i_5};
+    struct IntOption some_2 = ((struct IntOption){.some = true, .value = i_5});
     if_33 = some_2;
     goto if_next_106;
 else_108:;
@@ -857,7 +857,7 @@ tailrec_109:;
         goto else_112;
     }
 then_111:;
-    if_34 = (struct IntOption){.some = false};
+    if_34 = ((struct IntOption){.some = false});
     goto if_next_110;
 else_112:;
     bool call_17 = occursAt_((r_2 - 1), substr_2, s_5);
@@ -868,7 +868,7 @@ else_112:;
         goto else_115;
     }
 then_114:;
-    struct IntOption some_3 = (struct IntOption){.some = true, .value = (r_2 - 1)};
+    struct IntOption some_3 = ((struct IntOption){.some = true, .value = (r_2 - 1)});
     if_35 = some_3;
     goto if_next_113;
 else_115:;
@@ -1210,7 +1210,7 @@ bool fun_(void const* env_, char arg_) {
 }
 
 struct String trim_(struct String s_13) {
-    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_, .env = NULL};
+    struct CharBoolFun1 fun_3 = ((struct CharBoolFun1){.fun = fun_, .env = NULL});
     struct String call_27 = trimIf_(fun_3, s_13);
     return call_27;
 }
@@ -1221,7 +1221,7 @@ bool fun_1(void const* env_1, char arg_1) {
 }
 
 struct String trimStart_(struct String s_14) {
-    struct CharBoolFun1 fun_4 = (struct CharBoolFun1){.fun = fun_1, .env = NULL};
+    struct CharBoolFun1 fun_4 = ((struct CharBoolFun1){.fun = fun_1, .env = NULL});
     struct String call_29 = trimStartIf_(fun_4, s_14);
     return call_29;
 }
@@ -1232,7 +1232,7 @@ bool fun_2(void const* env_2, char arg_2) {
 }
 
 struct String trimEnd_(struct String s_15) {
-    struct CharBoolFun1 fun_5 = (struct CharBoolFun1){.fun = fun_2, .env = NULL};
+    struct CharBoolFun1 fun_5 = ((struct CharBoolFun1){.fun = fun_2, .env = NULL});
     struct String call_31 = trimEndIf_(fun_5, s_15);
     return call_31;
 }
@@ -1245,7 +1245,7 @@ tailrec_171:;
     if (call_33.some) goto next_173;
     struct String call_34 = skip_1(i_6, s_16);
     struct StringList const* list_1 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_1))) = (struct StringList){.head = call_34, .tail = acc_14};
+    (*(((struct StringList*)list_1))) = ((struct StringList){.head = call_34, .tail = acc_14});
     match_2 = list_1;
     goto end_match_172;
 next_173:;
@@ -1256,7 +1256,7 @@ next_173:;
     struct String call_35 = skip_1(i_6, s_16);
     struct String call_36 = truncate_1(n_2, call_35);
     struct StringList const* list_2 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_2))) = (struct StringList){.head = call_36, .tail = acc_14};
+    (*(((struct StringList*)list_2))) = ((struct StringList){.head = call_36, .tail = acc_14});
     struct StringList const* arg_32 = list_2;
     int arg_33 = ((i_6 + n_2) + pattern_.len);
     pattern_ = arg_30;
@@ -1376,7 +1376,7 @@ if_next_191:;
         goto else_196;
     }
 then_195:;
-    struct StringStringOptionStringTuple3 tuple_ = (struct StringStringOptionStringTuple3){.t0 = lineContents_, .t1 = (struct StringOption){.some = false}, .t2 = (struct String){.str = "", .len = 0}};
+    struct StringStringOptionStringTuple3 tuple_ = ((struct StringStringOptionStringTuple3){.t0 = lineContents_, .t1 = ((struct StringOption){.some = false}), .t2 = (struct String){.str = "", .len = 0}});
     if_58 = tuple_;
     goto if_next_194;
 else_196:;
@@ -1465,8 +1465,8 @@ else_214:;
     goto if_next_212;
 if_next_212:;
     struct String rest_ = if_64;
-    struct StringOption some_4 = (struct StringOption){.some = true, .value = sep_1};
-    struct StringStringOptionStringTuple3 tuple_1 = (struct StringStringOptionStringTuple3){.t0 = lineContents_, .t1 = some_4, .t2 = rest_};
+    struct StringOption some_4 = ((struct StringOption){.some = true, .value = sep_1});
+    struct StringStringOptionStringTuple3 tuple_1 = ((struct StringStringOptionStringTuple3){.t0 = lineContents_, .t1 = some_4, .t2 = rest_});
     if_58 = tuple_1;
     goto if_next_194;
 if_next_194:;
@@ -1492,7 +1492,7 @@ else_218:;
     goto if_next_216;
 if_next_216:;
     struct StringList const* list_3 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_3))) = (struct StringList){.head = if_65, .tail = acc_15};
+    (*(((struct StringList*)list_3))) = ((struct StringList){.head = if_65, .tail = acc_15});
     struct StringList const* acc_16 = list_3;
     struct StringList const* if_66;
     if ((r_9 == s_19.len)) {
@@ -1829,11 +1829,11 @@ char splitTest_(char arg_54) {
 
 char concatTest_(char arg_55) {
     struct StringList const* list_6 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_6))) = (struct StringList){.head = (struct String){.str = "ef", .len = 2}, .tail = NULL};
+    (*(((struct StringList*)list_6))) = ((struct StringList){.head = (struct String){.str = "ef", .len = 2}, .tail = NULL});
     struct StringList const* list_5 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_5))) = (struct StringList){.head = (struct String){.str = "cd", .len = 2}, .tail = list_6};
+    (*(((struct StringList*)list_5))) = ((struct StringList){.head = (struct String){.str = "cd", .len = 2}, .tail = list_6});
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "ab", .len = 2}, .tail = list_5};
+    (*(((struct StringList*)list_4))) = ((struct StringList){.head = (struct String){.str = "ab", .len = 2}, .tail = list_5});
     struct String call_119 = concat_((struct String){.str = ", ", .len = 2}, list_4);
     milone_assert((str_compare(call_119, (struct String){.str = "ab, cd, ef", .len = 10}) == 0), 98, 2);
     struct String call_120 = concat_((struct String){.str = "", .len = 0}, NULL);

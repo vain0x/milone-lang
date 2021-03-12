@@ -110,17 +110,17 @@ end_match_7:;
 
 char nestedCase_(char arg_1) {
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = 2, .tail = NULL};
+    (*(((struct IntList*)list_2))) = ((struct IntList){.head = 2, .tail = NULL});
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = 1, .tail = list_2};
+    (*(((struct IntList*)list_1))) = ((struct IntList){.head = 1, .tail = list_2});
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = list_1};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = 0, .tail = list_1});
     bool call_3 = startsWithDoubleBits_(list_);
     milone_assert(call_3, 24, 2);
     struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_4))) = (struct IntList){.head = 2, .tail = NULL};
+    (*(((struct IntList*)list_4))) = ((struct IntList){.head = 2, .tail = NULL});
     struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_3))) = (struct IntList){.head = 1, .tail = list_4};
+    (*(((struct IntList*)list_3))) = ((struct IntList){.head = 1, .tail = list_4});
     bool call_4 = startsWithDoubleBits_(list_3);
     milone_assert((!(call_4)), 25, 2);
     return 0;
@@ -147,10 +147,10 @@ end_match_14:;
 }
 
 char complexCase_(char arg_2) {
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 0, .t1 = 1};
+    struct IntIntTuple2 tuple_ = ((struct IntIntTuple2){.t0 = 0, .t1 = 1});
     bool call_5 = performComplexMatching_(tuple_);
     milone_assert(call_5, 38, 2);
-    struct IntIntTuple2 tuple_1 = (struct IntIntTuple2){.t0 = 1, .t1 = 2};
+    struct IntIntTuple2 tuple_1 = ((struct IntIntTuple2){.t0 = 1, .t1 = 2});
     bool call_6 = performComplexMatching_(tuple_1);
     milone_assert((!(call_6)), 39, 2);
     return 0;

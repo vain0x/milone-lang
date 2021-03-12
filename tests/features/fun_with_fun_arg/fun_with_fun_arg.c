@@ -50,10 +50,10 @@ char fun_(void const* env_, struct String arg_) {
 
 struct StringUnitFun1 bindInt_(struct IntStringUnitFun2 f_, int x_) {
     struct IntStringUnitFun2 callee_ = f_;
-    struct IntStringUnitFun2IntTuple2 tuple_ = (struct IntStringUnitFun2IntTuple2){.t0 = callee_, .t1 = x_};
+    struct IntStringUnitFun2IntTuple2 tuple_ = ((struct IntStringUnitFun2IntTuple2){.t0 = callee_, .t1 = x_});
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringUnitFun2IntTuple2));
     (*(((struct IntStringUnitFun2IntTuple2*)box_))) = tuple_;
-    struct StringUnitFun1 fun_3 = (struct StringUnitFun1){.fun = fun_, .env = box_};
+    struct StringUnitFun1 fun_3 = ((struct StringUnitFun1){.fun = fun_, .env = box_});
     return fun_3;
 }
 
@@ -98,15 +98,15 @@ char fun_2(void const* env_2, int arg_5, struct String arg_6) {
 }
 
 int milone_main() {
-    struct IntStringUnitFun2 fun_4 = (struct IntStringUnitFun2){.fun = fun_1, .env = NULL};
+    struct IntStringUnitFun2 fun_4 = ((struct IntStringUnitFun2){.fun = fun_1, .env = NULL});
     struct StringUnitFun1 call_2 = bindInt_(fun_4, 42);
     struct StringUnitFun1 print42_ = call_2;
     char app_1 = print42_.fun(print42_.env, (struct String){.str = "The answer", .len = 10});
     struct String d_ = (struct String){.str = "\'", .len = 1};
-    struct StringTuple1 tuple_1 = (struct StringTuple1){.t0 = d_};
+    struct StringTuple1 tuple_1 = ((struct StringTuple1){.t0 = d_});
     void const* box_1 = milone_mem_alloc(1, sizeof(struct StringTuple1));
     (*(((struct StringTuple1*)box_1))) = tuple_1;
-    struct IntStringUnitFun2 fun_5 = (struct IntStringUnitFun2){.fun = fun_2, .env = box_1};
+    struct IntStringUnitFun2 fun_5 = ((struct IntStringUnitFun2){.fun = fun_2, .env = box_1});
     struct StringUnitFun1 call_3 = bindInt_(fun_5, 2);
     struct StringUnitFun1 der2_ = call_3;
     char app_2 = der2_.fun(der2_.env, (struct String){.str = "f", .len = 1});

@@ -19,7 +19,7 @@ struct Status_ {
     enum Status_Discriminant discriminant;
     union {
         struct String Err_;
-    };
+    } payload;
 };
 
 enum Limit_Discriminant {
@@ -31,7 +31,7 @@ struct Limit_ {
     enum Limit_Discriminant discriminant;
     union {
         int LimitVal_;
-    };
+    } payload;
 };
 
 struct IntStringTuple2 {
@@ -50,14 +50,14 @@ struct ApiResponse_ {
     union {
         struct String ARJson_;
         struct IntStringTuple2 ARError_;
-    };
+    } payload;
 };
 
 int milone_main() {
-    struct Status_ ok_ = (struct Status_){.discriminant = Ok_1};
-    struct Status_ variant_ = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "No such file or directory.", .len = 26}};
+    struct Status_ ok_ = ((struct Status_){.discriminant = Ok_1});
+    struct Status_ variant_ = ((struct Status_){.discriminant = Err_, .payload = {.Err_ = (struct String){.str = "No such file or directory.", .len = 26}}});
     struct Status_ err1_ = variant_;
-    struct Status_ variant_1 = (struct Status_){.discriminant = Err_, .Err_ = (struct String){.str = "Access denied.", .len = 14}};
+    struct Status_ variant_1 = ((struct Status_){.discriminant = Err_, .payload = {.Err_ = (struct String){.str = "Access denied.", .len = 14}}});
     struct Status_ err2_ = variant_1;
     char match_;
     if ((err1_.discriminant != Ok_1)) goto next_2;
@@ -66,7 +66,7 @@ int milone_main() {
     goto end_match_1;
 next_2:;
     if ((err1_.discriminant != Err_)) goto next_3;
-    struct String e_ = err1_.Err_;
+    struct String e_ = err1_.payload.Err_;
     milone_assert((str_compare(e_, (struct String){.str = "No such file or directory.", .len = 26}) == 0), 29, 15);
     match_ = 0;
     goto end_match_1;
@@ -74,9 +74,9 @@ next_3:;
     exit(1);
 end_match_1:;
     char match_1;
-    struct Limit_ variant_2 = (struct Limit_){.discriminant = LimitVal_, .LimitVal_ = 1};
+    struct Limit_ variant_2 = ((struct Limit_){.discriminant = LimitVal_, .payload = {.LimitVal_ = 1}});
     if ((variant_2.discriminant != LimitVal_)) goto next_5;
-    int x_ = variant_2.LimitVal_;
+    int x_ = variant_2.payload.LimitVal_;
     milone_assert((x_ == 1), 33, 20);
     match_1 = 0;
     goto end_match_4;
@@ -87,7 +87,7 @@ next_6:;
     exit(1);
 end_match_4:;
     char switch_;
-    switch ((struct ApiResponse_){.discriminant = ARCancel_}.discriminant) {
+    switch (((struct ApiResponse_){.discriminant = ARCancel_}).discriminant) {
         case ARCancel_:
             goto clause_8;
 
@@ -103,11 +103,11 @@ clause_9:;
     goto switch_next_7;
 switch_next_7:;
     char match_2;
-    struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 404, .t1 = (struct String){.str = "Not Found", .len = 9}};
-    struct ApiResponse_ variant_3 = (struct ApiResponse_){.discriminant = ARError_, .ARError_ = tuple_};
+    struct IntStringTuple2 tuple_ = ((struct IntStringTuple2){.t0 = 404, .t1 = (struct String){.str = "Not Found", .len = 9}});
+    struct ApiResponse_ variant_3 = ((struct ApiResponse_){.discriminant = ARError_, .payload = {.ARError_ = tuple_}});
     if ((variant_3.discriminant != ARError_)) goto next_11;
-    int statusCode_ = variant_3.ARError_.t0;
-    struct String statusText_ = variant_3.ARError_.t1;
+    int statusCode_ = variant_3.payload.ARError_.t0;
+    struct String statusText_ = variant_3.payload.ARError_.t1;
     bool if_;
     if ((statusCode_ == 404)) {
         goto then_14;
@@ -130,11 +130,11 @@ next_11:;
     goto end_match_10;
 next_12:;
 end_match_10:;
-    struct Status_ ok_1 = (struct Status_){.discriminant = Ok_1};
+    struct Status_ ok_1 = ((struct Status_){.discriminant = Ok_1});
     char okOk_ = 0;
-    struct Status_ statusOk_ = (struct Status_){.discriminant = Ok_1};
+    struct Status_ statusOk_ = ((struct Status_){.discriminant = Ok_1});
     char switch_1;
-    switch ((struct Status_){.discriminant = Ok_1}.discriminant) {
+    switch (((struct Status_){.discriminant = Ok_1}).discriminant) {
         case Ok_1:
             goto clause_17;
 

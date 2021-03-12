@@ -20,7 +20,7 @@ struct Node_ {
     union {
         int Leaf_;
         void const* Node_;
-    };
+    } payload;
 };
 
 struct Node_Node_Tuple2 {
@@ -29,15 +29,15 @@ struct Node_Node_Tuple2 {
 };
 
 struct Node_ leaf_(int n_) {
-    struct Node_ variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = n_};
+    struct Node_ variant_ = ((struct Node_){.discriminant = Leaf_, .payload = {.Leaf_ = n_}});
     return variant_;
 }
 
 struct Node_ node_(struct Node_ l_, struct Node_ r_) {
-    struct Node_Node_Tuple2 tuple_ = (struct Node_Node_Tuple2){.t0 = l_, .t1 = r_};
+    struct Node_Node_Tuple2 tuple_ = ((struct Node_Node_Tuple2){.t0 = l_, .t1 = r_});
     void const* box_ = milone_mem_alloc(1, sizeof(struct Node_Node_Tuple2));
     (*(((struct Node_Node_Tuple2*)box_))) = tuple_;
-    struct Node_ variant_1 = (struct Node_){.discriminant = Node_, .Node_ = box_};
+    struct Node_ variant_1 = ((struct Node_){.discriminant = Node_, .payload = {.Node_ = box_}});
     return variant_1;
 }
 
@@ -50,8 +50,8 @@ int milone_main() {
     struct Node_ t_ = call_4;
     char match_;
     if ((t_.discriminant != Node_)) goto next_2;
-    if (((*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.discriminant != Leaf_)) goto next_2;
-    int x_ = (*(((struct Node_Node_Tuple2 const*)t_.Node_))).t0.Leaf_;
+    if (((*(((struct Node_Node_Tuple2 const*)t_.payload.Node_))).t0.discriminant != Leaf_)) goto next_2;
+    int x_ = (*(((struct Node_Node_Tuple2 const*)t_.payload.Node_))).t0.payload.Leaf_;
     milone_assert((x_ == 2), 22, 24);
     match_ = 0;
     goto end_match_1;

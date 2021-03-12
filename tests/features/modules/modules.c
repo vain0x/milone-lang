@@ -16,7 +16,7 @@ struct Val_ {
     union {
         int Int_;
         struct String Str_;
-    };
+    } payload;
 };
 
 int f_1(int x_) {
@@ -25,9 +25,9 @@ int f_1(int x_) {
 
 int milone_main() {
     int match_;
-    struct Val_ variant_ = (struct Val_){.discriminant = Int_, .Int_ = 0};
+    struct Val_ variant_ = ((struct Val_){.discriminant = Int_, .payload = {.Int_ = 0}});
     if ((variant_.discriminant != Int_)) goto next_2;
-    int x_1 = variant_.Int_;
+    int x_1 = variant_.payload.Int_;
     match_ = x_1;
     goto end_match_1;
 next_2:;

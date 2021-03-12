@@ -25,9 +25,9 @@ char baseCase_(char arg_) {
     int success_ = 0;
     int failure_ = 1;
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = failure_, .tail = NULL};
+    (*(((struct IntList*)list_1))) = ((struct IntList){.head = failure_, .tail = NULL});
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = success_, .tail = list_1};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = success_, .tail = list_1});
     struct IntList const* codes_ = list_;
     milone_assert((success_ == 0), 13, 2);
     return 0;

@@ -27,10 +27,10 @@ end_match_1:;
 }
 
 int milone_main() {
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = 1, .t1 = 1};
+    struct IntIntTuple2 tuple_ = ((struct IntIntTuple2){.t0 = 1, .t1 = 1});
     bool call_ = equal_(tuple_);
     milone_assert(call_, 10, 2);
-    struct IntIntTuple2 tuple_1 = (struct IntIntTuple2){.t0 = 1, .t1 = 2};
+    struct IntIntTuple2 tuple_1 = ((struct IntIntTuple2){.t0 = 1, .t1 = 2});
     bool call_1 = equal_(tuple_1);
     milone_assert((!(call_1)), 11, 2);
     return 0;

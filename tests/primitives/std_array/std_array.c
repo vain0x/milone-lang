@@ -311,7 +311,7 @@ struct UnitMutPtrIntTuple2 __mutArrayCreate_2(int len_1) {
         goto else_3;
     }
 then_2:;
-    struct UnitMutPtrIntTuple2 tuple_ = (struct UnitMutPtrIntTuple2){.t0 = ((char*)((uintptr_t)0)), .t1 = 0};
+    struct UnitMutPtrIntTuple2 tuple_ = ((struct UnitMutPtrIntTuple2){.t0 = ((char*)((uintptr_t)0)), .t1 = 0});
     if_ = tuple_;
     goto if_next_1;
 else_3:;
@@ -319,7 +319,7 @@ else_3:;
     intptr_t call_3 = __pointeeSize_2(nullPtr_);
     void* call_4 = memAlloc_(len_1, ((uintptr_t)call_3));
     char* ptr_1 = ((char*)call_4);
-    struct UnitMutPtrIntTuple2 tuple_1 = (struct UnitMutPtrIntTuple2){.t0 = ptr_1, .t1 = len_1};
+    struct UnitMutPtrIntTuple2 tuple_1 = ((struct UnitMutPtrIntTuple2){.t0 = ptr_1, .t1 = len_1});
     if_ = tuple_1;
     goto if_next_1;
 if_next_1:;
@@ -334,7 +334,7 @@ struct IntMutPtrIntTuple2 __mutArrayCreate_1(int len_1) {
         goto else_6;
     }
 then_5:;
-    struct IntMutPtrIntTuple2 tuple_2 = (struct IntMutPtrIntTuple2){.t0 = ((int*)((uintptr_t)0)), .t1 = 0};
+    struct IntMutPtrIntTuple2 tuple_2 = ((struct IntMutPtrIntTuple2){.t0 = ((int*)((uintptr_t)0)), .t1 = 0});
     if_1 = tuple_2;
     goto if_next_4;
 else_6:;
@@ -342,7 +342,7 @@ else_6:;
     intptr_t call_5 = __pointeeSize_1(nullPtr_);
     void* call_6 = memAlloc_(len_1, ((uintptr_t)call_5));
     int* ptr_1 = ((int*)call_6);
-    struct IntMutPtrIntTuple2 tuple_3 = (struct IntMutPtrIntTuple2){.t0 = ptr_1, .t1 = len_1};
+    struct IntMutPtrIntTuple2 tuple_3 = ((struct IntMutPtrIntTuple2){.t0 = ptr_1, .t1 = len_1});
     if_1 = tuple_3;
     goto if_next_4;
 if_next_4:;
@@ -396,7 +396,7 @@ else_12:;
 if_next_10:;
     milone_assert(if_3, 61, 2);
     int* call_7 = __mutPtrAdd_1(start_, mutPtr_3);
-    struct IntMutPtrIntTuple2 tuple_4 = (struct IntMutPtrIntTuple2){.t0 = call_7, .t1 = (endIndex_ - start_)};
+    struct IntMutPtrIntTuple2 tuple_4 = ((struct IntMutPtrIntTuple2){.t0 = call_7, .t1 = (endIndex_ - start_)});
     return tuple_4;
 }
 
@@ -404,7 +404,7 @@ struct UnitConstPtrIntTuple2 __constArrayOfMut_2(struct UnitMutPtrIntTuple2 mutA
     char* mutPtr_4 = mutArray_.t0;
     int len_4 = mutArray_.t1;
     char const* call_8 = __ptrAsConst_2(mutPtr_4);
-    struct UnitConstPtrIntTuple2 tuple_5 = (struct UnitConstPtrIntTuple2){.t0 = call_8, .t1 = len_4};
+    struct UnitConstPtrIntTuple2 tuple_5 = ((struct UnitConstPtrIntTuple2){.t0 = call_8, .t1 = len_4});
     return tuple_5;
 }
 
@@ -412,7 +412,7 @@ struct IntConstPtrIntTuple2 __constArrayOfMut_1(struct IntMutPtrIntTuple2 mutArr
     int* mutPtr_4 = mutArray_.t0;
     int len_4 = mutArray_.t1;
     int const* call_9 = __ptrAsConst_1(mutPtr_4);
-    struct IntConstPtrIntTuple2 tuple_6 = (struct IntConstPtrIntTuple2){.t0 = call_9, .t1 = len_4};
+    struct IntConstPtrIntTuple2 tuple_6 = ((struct IntConstPtrIntTuple2){.t0 = call_9, .t1 = len_4});
     return tuple_6;
 }
 
@@ -465,7 +465,7 @@ else_18:;
 if_next_16:;
     milone_assert(if_5, 87, 2);
     int const* call_10 = __ptrAdd_1(start_1, ptr_3);
-    struct IntConstPtrIntTuple2 tuple_7 = (struct IntConstPtrIntTuple2){.t0 = call_10, .t1 = (endIndex_1 - start_1)};
+    struct IntConstPtrIntTuple2 tuple_7 = ((struct IntConstPtrIntTuple2){.t0 = call_10, .t1 = (endIndex_1 - start_1)});
     return tuple_7;
 }
 
@@ -483,11 +483,11 @@ struct IntOption __intOfStr_(struct String s_) {
 then_20:;
     int const* call_12 = __ptrAsConst_1(valueRef_);
     int read_1 = (*(call_12));
-    struct IntOption some_ = (struct IntOption){.some = true, .value = read_1};
+    struct IntOption some_ = ((struct IntOption){.some = true, .value = read_1});
     if_6 = some_;
     goto if_next_19;
 else_21:;
-    if_6 = (struct IntOption){.some = false};
+    if_6 = ((struct IntOption){.some = false});
     goto if_next_19;
 if_next_19:;
     return if_6;
@@ -627,7 +627,7 @@ int fun_13(void const* env_1, int arg_2) {
 }
 
 struct IntConstPtrIntTuple2 range_(int len_10) {
-    struct IntIntFun1 fun_26 = (struct IntIntFun1){.fun = fun_13, .env = NULL};
+    struct IntIntFun1 fun_26 = ((struct IntIntFun1){.fun = fun_13, .env = NULL});
     struct IntConstPtrIntTuple2 call_28 = init_1(len_10, fun_26);
     return call_28;
 }
@@ -652,11 +652,11 @@ struct IntOption tryItem_1(int i_2, struct IntConstPtrIntTuple2 array_8) {
     }
 then_37:;
     int call_32 = __constArrayGet_1(i_2, array_8);
-    struct IntOption some_1 = (struct IntOption){.some = true, .value = call_32};
+    struct IntOption some_1 = ((struct IntOption){.some = true, .value = call_32});
     if_11 = some_1;
     goto if_next_36;
 else_38:;
-    if_11 = (struct IntOption){.some = false};
+    if_11 = ((struct IntOption){.some = false});
     goto if_next_36;
 if_next_36:;
     return if_11;
@@ -727,15 +727,15 @@ struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 
         goto else_50;
     }
 then_49:;
-    if_15 = (struct IntIntConstPtrIntTuple2Tuple2Option){.some = false};
+    if_15 = ((struct IntIntConstPtrIntTuple2Tuple2Option){.some = false});
     goto if_next_48;
 else_50:;
     int call_39 = __constArrayGet_1(0, array_13);
     int head_ = call_39;
     struct IntConstPtrIntTuple2 call_40 = __constArraySlice_1(1, len_12, array_13);
     struct IntConstPtrIntTuple2 tail_ = call_40;
-    struct IntIntConstPtrIntTuple2Tuple2 tuple_8 = (struct IntIntConstPtrIntTuple2Tuple2){.t0 = head_, .t1 = tail_};
-    struct IntIntConstPtrIntTuple2Tuple2Option some_2 = (struct IntIntConstPtrIntTuple2Tuple2Option){.some = true, .value = tuple_8};
+    struct IntIntConstPtrIntTuple2Tuple2 tuple_8 = ((struct IntIntConstPtrIntTuple2Tuple2){.t0 = head_, .t1 = tail_});
+    struct IntIntConstPtrIntTuple2Tuple2Option some_2 = ((struct IntIntConstPtrIntTuple2Tuple2Option){.some = true, .value = tuple_8});
     if_15 = some_2;
     goto if_next_48;
 if_next_48:;
@@ -757,10 +757,10 @@ int fun_24(void const* env_2, int arg_3) {
 
 struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14) {
     int call_43 = length_1(array_14);
-    struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 tuple_9 = (struct IntIntIntFun2IntConstPtrIntTuple2Tuple2){.t0 = f_1, .t1 = array_14};
+    struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 tuple_9 = ((struct IntIntIntFun2IntConstPtrIntTuple2Tuple2){.t0 = f_1, .t1 = array_14});
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntIntIntFun2IntConstPtrIntTuple2Tuple2));
     (*(((struct IntIntIntFun2IntConstPtrIntTuple2Tuple2*)box_))) = tuple_9;
-    struct IntIntFun1 fun_27 = (struct IntIntFun1){.fun = fun_24, .env = box_};
+    struct IntIntFun1 fun_27 = ((struct IntIntFun1){.fun = fun_24, .env = box_});
     struct IntConstPtrIntTuple2 call_44 = init_1(call_43, fun_27);
     return call_44;
 }
@@ -954,7 +954,7 @@ else_76:;
     struct IntConstPtrIntTuple2 arg_54 = array_17;
     int call_61 = __constArrayGet_1((i_7 - 1), array_17);
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = call_61, .tail = acc_1};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = call_61, .tail = acc_1});
     struct IntList const* arg_55 = list_;
     int arg_56 = (i_7 - 1);
     array_17 = arg_54;
@@ -1010,12 +1010,12 @@ int fun_18(void const* env_6, int arg_12) {
 }
 
 char initTest_(char arg_58) {
-    struct IntUnitFun1 fun_28 = (struct IntUnitFun1){.fun = fun_17, .env = NULL};
+    struct IntUnitFun1 fun_28 = ((struct IntUnitFun1){.fun = fun_17, .env = NULL});
     struct UnitConstPtrIntTuple2 call_68 = init_2(0, fun_28);
     struct UnitConstPtrIntTuple2 emptyArray_ = call_68;
     int call_69 = length_2(emptyArray_);
     milone_assert((call_69 == 0), 14, 2);
-    struct IntIntFun1 fun_29 = (struct IntIntFun1){.fun = fun_18, .env = NULL};
+    struct IntIntFun1 fun_29 = ((struct IntIntFun1){.fun = fun_18, .env = NULL});
     struct IntConstPtrIntTuple2 call_70 = init_1(3, fun_29);
     struct IntConstPtrIntTuple2 a369_ = call_70;
     int call_71 = length_1(a369_);
@@ -1117,7 +1117,7 @@ int fun_19(void const* env_7, int arg_13) {
 }
 
 char unconsTest_(char arg_62) {
-    struct IntIntFun1 fun_30 = (struct IntIntFun1){.fun = fun_19, .env = NULL};
+    struct IntIntFun1 fun_30 = ((struct IntIntFun1){.fun = fun_19, .env = NULL});
     struct IntConstPtrIntTuple2 call_101 = init_1(3, fun_30);
     struct IntConstPtrIntTuple2 a123_ = call_101;
     char match_5;
@@ -1183,7 +1183,7 @@ int fun_20(void const* env_8, int arg_14, int arg_15) {
 }
 
 char mapTest_(char arg_63) {
-    struct IntIntIntFun2 fun_31 = (struct IntIntIntFun2){.fun = fun_20, .env = NULL};
+    struct IntIntIntFun2 fun_31 = ((struct IntIntIntFun2){.fun = fun_20, .env = NULL});
     struct IntConstPtrIntTuple2 call_109 = range_(3);
     struct IntConstPtrIntTuple2 call_110 = mapi_1(fun_31, call_109);
     struct IntConstPtrIntTuple2 mapped_ = call_110;
@@ -1206,11 +1206,11 @@ struct IntOption fun_9(int n_3) {
         goto else_94;
     }
 then_93:;
-    struct IntOption some_3 = (struct IntOption){.some = true, .value = (n_3 * 2)};
+    struct IntOption some_3 = ((struct IntOption){.some = true, .value = (n_3 * 2)});
     if_20 = some_3;
     goto if_next_92;
 else_94:;
-    if_20 = (struct IntOption){.some = false};
+    if_20 = ((struct IntOption){.some = false});
     goto if_next_92;
 if_next_92:;
     return if_20;
@@ -1222,7 +1222,7 @@ struct IntOption fun_21(void const* env_9, int arg_16) {
 }
 
 struct IntOption fun_10(int arg_64) {
-    return (struct IntOption){.some = false};
+    return ((struct IntOption){.some = false});
 }
 
 struct IntOption fun_22(void const* env_10, int arg_17) {
@@ -1231,7 +1231,7 @@ struct IntOption fun_22(void const* env_10, int arg_17) {
 }
 
 char chooseTest_(char arg_65) {
-    struct IntIntOptionFun1 fun_32 = (struct IntIntOptionFun1){.fun = fun_21, .env = NULL};
+    struct IntIntOptionFun1 fun_32 = ((struct IntIntOptionFun1){.fun = fun_21, .env = NULL});
     struct IntConstPtrIntTuple2 call_117 = range_(6);
     struct IntConstPtrIntTuple2 call_118 = choose_1(fun_32, call_117);
     struct IntConstPtrIntTuple2 chosen_ = call_118;
@@ -1243,7 +1243,7 @@ char chooseTest_(char arg_65) {
     milone_assert((call_121 == 4), 101, 2);
     int call_122 = get_1(2, chosen_);
     milone_assert((call_122 == 8), 102, 2);
-    struct IntIntOptionFun1 fun_33 = (struct IntIntOptionFun1){.fun = fun_22, .env = NULL};
+    struct IntIntOptionFun1 fun_33 = ((struct IntIntOptionFun1){.fun = fun_22, .env = NULL});
     struct IntConstPtrIntTuple2 call_123 = range_(3);
     struct IntConstPtrIntTuple2 call_124 = choose_1(fun_33, call_123);
     struct IntConstPtrIntTuple2 empty_2 = call_124;
@@ -1262,7 +1262,7 @@ int fun_23(void const* env_11, int arg_18, int arg_19) {
 }
 
 char foldTest_(char arg_66) {
-    struct IntIntIntFun2 fun_34 = (struct IntIntIntFun2){.fun = fun_23, .env = NULL};
+    struct IntIntIntFun2 fun_34 = ((struct IntIntIntFun2){.fun = fun_23, .env = NULL});
     struct IntConstPtrIntTuple2 call_127 = range_(3);
     int call_128 = fold_1(fun_34, 0, call_127);
     int sum_ = call_128;
@@ -1272,11 +1272,11 @@ char foldTest_(char arg_66) {
 
 char ofListTest_(char arg_67) {
     struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_3))) = (struct IntList){.head = 5, .tail = NULL};
+    (*(((struct IntList*)list_3))) = ((struct IntList){.head = 5, .tail = NULL});
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = list_3};
+    (*(((struct IntList*)list_2))) = ((struct IntList){.head = 3, .tail = list_3});
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
+    (*(((struct IntList*)list_1))) = ((struct IntList){.head = 2, .tail = list_2});
     struct IntConstPtrIntTuple2 call_129 = ofList_1(list_1);
     struct IntConstPtrIntTuple2 ol_ = call_129;
     int call_130 = length_1(ol_);

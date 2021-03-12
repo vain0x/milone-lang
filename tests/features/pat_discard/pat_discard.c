@@ -19,6 +19,6 @@ char f_(char arg_) {
 int milone_main() {
     char call_ = f_(0);
     char call_1 = f_(0);
-    struct UnitUnitTuple2 tuple_ = (struct UnitUnitTuple2){.t0 = 0, .t1 = 0};
+    struct UnitUnitTuple2 tuple_ = ((struct UnitUnitTuple2){.t0 = 0, .t1 = 0});
     return 0;
 }

@@ -24,14 +24,14 @@ struct MyOption_ {
     enum MyOption_Discriminant discriminant;
     union {
         struct MyBool_ MySome_;
-    };
+    } payload;
 };
 
 int milone_main() {
     char match_;
-    struct MyOption_ variant_ = (struct MyOption_){.discriminant = MySome_, .MySome_ = (struct MyBool_){.discriminant = MyTrue_}};
+    struct MyOption_ variant_ = ((struct MyOption_){.discriminant = MySome_, .payload = {.MySome_ = ((struct MyBool_){.discriminant = MyTrue_})}});
     if ((variant_.discriminant != MySome_)) goto next_2;
-    if ((variant_.MySome_.discriminant != MyTrue_)) goto next_2;
+    if ((variant_.payload.MySome_.discriminant != MyTrue_)) goto next_2;
     match_ = 0;
     goto end_match_1;
 next_2:;

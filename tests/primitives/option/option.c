@@ -31,7 +31,7 @@ struct UnitOption {
 
 char basicSomeCase_(char arg_) {
     char match_;
-    struct IntOption some_ = (struct IntOption){.some = true, .value = 1};
+    struct IntOption some_ = ((struct IntOption){.some = true, .value = 1});
     if (some_.some) goto next_2;
     milone_assert(false, 6, 12);
     match_ = 0;
@@ -51,7 +51,7 @@ end_match_1:;
 }
 
 char basicNoneCase_(char arg_1) {
-    struct StringOption none_ = (struct StringOption){.some = false};
+    struct StringOption none_ = ((struct StringOption){.some = false});
     char match_1;
     if ((!(none_.some))) goto next_6;
     if ((str_compare(none_.value, (struct String){.str = "a", .len = 1}) != 0)) goto next_6;
@@ -72,7 +72,7 @@ end_match_5:;
 }
 
 char basicMatchCase_(char arg_2) {
-    struct UnitOption some_1 = (struct UnitOption){.some = true, .value = 0};
+    struct UnitOption some_1 = ((struct UnitOption){.some = true, .value = 0});
     char if_;
     if ((!(some_1.some))) {
         goto none_cl_10;

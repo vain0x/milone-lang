@@ -28,7 +28,7 @@ struct MyBool_ {
     union {
         char MyFalse_;
         char MyTrue_;
-    };
+    } payload;
 };
 
 struct UnitList {
@@ -67,7 +67,7 @@ end_match_3:;
 }
 
 char usedInOtherSumTypeCase_(char arg_1) {
-    struct MyBool_ variant_ = (struct MyBool_){.discriminant = MyTrue_, .MyTrue_ = 0};
+    struct MyBool_ variant_ = ((struct MyBool_){.discriminant = MyTrue_, .payload = {.MyTrue_ = 0}});
     struct MyBool_ myBool_ = variant_;
     bool call_ = toBool_(myBool_);
     milone_assert(call_, 27, 2);
@@ -76,8 +76,8 @@ char usedInOtherSumTypeCase_(char arg_1) {
 
 char usedInRecordTypeCase_(char arg_2) {
     struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
-    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
-    struct RecordUsingMyUnit_ RecordUsingMyUnit_ = (struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_};
+    (*(((struct UnitList*)list_))) = ((struct UnitList){.head = 0, .tail = NULL});
+    struct RecordUsingMyUnit_ RecordUsingMyUnit_ = ((struct RecordUsingMyUnit_){.t0 = 0, .t1 = list_});
     struct RecordUsingMyUnit_ record_ = RecordUsingMyUnit_;
     char match_2;
     if ((!(record_.t1))) goto next_7;

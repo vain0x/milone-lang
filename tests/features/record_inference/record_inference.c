@@ -15,14 +15,14 @@ struct IntWrapper_ {
 };
 
 char letWithTypeAscriptionCase_(int n_) {
-    struct IntWrapper_ IntWrapper_ = (struct IntWrapper_){.t0 = n_};
+    struct IntWrapper_ IntWrapper_ = ((struct IntWrapper_){.t0 = n_});
     struct IntWrapper_ w_ = IntWrapper_;
     milone_assert((w_.t0 == n_), 10, 2);
     return 0;
 }
 
 char typeAscriptionExprCase_(int n_1) {
-    struct IntWrapper_ IntWrapper_1 = (struct IntWrapper_){.t0 = n_1};
+    struct IntWrapper_ IntWrapper_1 = ((struct IntWrapper_){.t0 = n_1});
     milone_assert((IntWrapper_1.t0 == n_1), 13, 2);
     return 0;
 }
@@ -37,7 +37,7 @@ char matchExprCase_(int n_2) {
             goto clause_3;
     }
 clause_2:;
-    struct IntWrapper_ IntWrapper_2 = (struct IntWrapper_){.t0 = 0};
+    struct IntWrapper_ IntWrapper_2 = ((struct IntWrapper_){.t0 = 0});
     switch_ = IntWrapper_2;
     goto switch_next_1;
 clause_3:;

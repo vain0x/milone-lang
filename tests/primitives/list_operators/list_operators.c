@@ -40,7 +40,7 @@ if_next_1:;
 
 char cons1Test_(char arg_1) {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = 1, .tail = NULL});
     struct IntList const* xs_ = list_;
     char match_;
     if ((!(xs_))) goto next_5;
@@ -60,9 +60,9 @@ end_match_4:;
 
 char cons2Test_(char arg_2) {
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = NULL};
+    (*(((struct IntList*)list_2))) = ((struct IntList){.head = 3, .tail = NULL});
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
+    (*(((struct IntList*)list_1))) = ((struct IntList){.head = 2, .tail = list_2});
     struct IntList const* ys_ = list_1;
     char match_1;
     if ((!(ys_))) goto next_8;
@@ -97,13 +97,13 @@ end_match_7:;
 
 char literalTest_(char arg_3) {
     struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
+    (*(((struct IntList*)list_6))) = ((struct IntList){.head = 7, .tail = NULL});
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_5))) = (struct IntList){.head = 5, .tail = list_6};
+    (*(((struct IntList*)list_5))) = ((struct IntList){.head = 5, .tail = list_6});
     struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_4))) = (struct IntList){.head = 3, .tail = list_5};
+    (*(((struct IntList*)list_4))) = ((struct IntList){.head = 3, .tail = list_5});
     struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_3))) = (struct IntList){.head = 2, .tail = list_4};
+    (*(((struct IntList*)list_3))) = ((struct IntList){.head = 2, .tail = list_4});
     struct IntList const* zs_ = list_3;
     char match_2;
     if ((!(zs_))) goto next_14;

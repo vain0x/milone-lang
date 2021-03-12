@@ -18,7 +18,7 @@ struct MyList_ {
     enum MyList_Discriminant discriminant;
     union {
         void const* MyList_;
-    };
+    } payload;
 };
 
 struct MyList_Option {
@@ -32,25 +32,25 @@ struct IntMyList_OptionTuple2 {
 };
 
 struct MyList_ myCons_(int head_, struct MyList_ tail_) {
-    struct MyList_Option some_ = (struct MyList_Option){.some = true, .value = tail_};
-    struct IntMyList_OptionTuple2 tuple_ = (struct IntMyList_OptionTuple2){.t0 = head_, .t1 = some_};
+    struct MyList_Option some_ = ((struct MyList_Option){.some = true, .value = tail_});
+    struct IntMyList_OptionTuple2 tuple_ = ((struct IntMyList_OptionTuple2){.t0 = head_, .t1 = some_});
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntMyList_OptionTuple2));
     (*(((struct IntMyList_OptionTuple2*)box_))) = tuple_;
-    struct MyList_ variant_ = (struct MyList_){.discriminant = MyList_, .MyList_ = box_};
+    struct MyList_ variant_ = ((struct MyList_){.discriminant = MyList_, .payload = {.MyList_ = box_}});
     return variant_;
 }
 
 int milone_main() {
-    struct IntMyList_OptionTuple2 tuple_1 = (struct IntMyList_OptionTuple2){.t0 = 0, .t1 = (struct MyList_Option){.some = false}};
+    struct IntMyList_OptionTuple2 tuple_1 = ((struct IntMyList_OptionTuple2){.t0 = 0, .t1 = ((struct MyList_Option){.some = false})});
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntMyList_OptionTuple2));
     (*(((struct IntMyList_OptionTuple2*)box_1))) = tuple_1;
-    struct MyList_ variant_1 = (struct MyList_){.discriminant = MyList_, .MyList_ = box_1};
+    struct MyList_ variant_1 = ((struct MyList_){.discriminant = MyList_, .payload = {.MyList_ = box_1}});
     struct MyList_ first_ = variant_1;
     struct MyList_ call_ = myCons_(1, first_);
     struct MyList_ second_ = call_;
     char match_;
-    if (((*(((struct IntMyList_OptionTuple2 const*)first_.MyList_))).t0 != 0)) goto next_2;
-    if ((*(((struct IntMyList_OptionTuple2 const*)first_.MyList_))).t1.some) goto next_2;
+    if (((*(((struct IntMyList_OptionTuple2 const*)first_.payload.MyList_))).t0 != 0)) goto next_2;
+    if ((*(((struct IntMyList_OptionTuple2 const*)first_.payload.MyList_))).t1.some) goto next_2;
     match_ = 0;
     goto end_match_1;
 next_2:;
@@ -60,8 +60,8 @@ next_2:;
 next_3:;
 end_match_1:;
     char match_1;
-    if ((!((*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.some))) goto next_5;
-    int value_ = (*(((struct IntMyList_OptionTuple2 const*)(*(((struct IntMyList_OptionTuple2 const*)second_.MyList_))).t1.value.MyList_))).t0;
+    if ((!((*(((struct IntMyList_OptionTuple2 const*)second_.payload.MyList_))).t1.some))) goto next_5;
+    int value_ = (*(((struct IntMyList_OptionTuple2 const*)(*(((struct IntMyList_OptionTuple2 const*)second_.payload.MyList_))).t1.value.payload.MyList_))).t0;
     milone_assert((value_ == 0), 17, 44);
     match_1 = 0;
     goto end_match_4;

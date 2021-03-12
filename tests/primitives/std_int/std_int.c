@@ -86,11 +86,11 @@ struct IntOption __intOfStr_(struct String s_) {
 then_2:;
     int const* call_1 = __ptrAsConst_1(valueRef_);
     int read_ = (*(call_1));
-    struct IntOption some_ = (struct IntOption){.some = true, .value = read_};
+    struct IntOption some_ = ((struct IntOption){.some = true, .value = read_});
     if_ = some_;
     goto if_next_1;
 else_3:;
-    if_ = (struct IntOption){.some = false};
+    if_ = ((struct IntOption){.some = false});
     goto if_next_1;
 if_next_1:;
     return if_;

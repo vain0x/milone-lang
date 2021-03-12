@@ -108,17 +108,17 @@ end_match_12:;
 
 int milone_main() {
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_2))) = (struct IntList){.head = 5, .tail = NULL};
+    (*(((struct IntList*)list_2))) = ((struct IntList){.head = 5, .tail = NULL});
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_1))) = (struct IntList){.head = 3, .tail = list_2};
+    (*(((struct IntList*)list_1))) = ((struct IntList){.head = 3, .tail = list_2});
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 2, .tail = list_1};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = 2, .tail = list_1});
     int call_2 = listToArraySize_2(list_);
     milone_assert((call_2 == (3 * 4)), 21, 2);
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "y", .len = 1}, .tail = NULL};
+    (*(((struct StringList*)list_4))) = ((struct StringList){.head = (struct String){.str = "y", .len = 1}, .tail = NULL});
     struct StringList const* list_3 = milone_mem_alloc(1, sizeof(struct StringList));
-    (*(((struct StringList*)list_3))) = (struct StringList){.head = (struct String){.str = "x", .len = 1}, .tail = list_4};
+    (*(((struct StringList*)list_3))) = ((struct StringList){.head = (struct String){.str = "x", .len = 1}, .tail = list_4});
     int call_3 = listToArraySize_1(list_3);
     milone_assert((call_3 == (2 * 16)), 22, 2);
     return 0;

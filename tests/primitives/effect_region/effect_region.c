@@ -39,7 +39,7 @@ then_3:;
     goto if_next_2;
 else_4:;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = i_, .tail = acc_};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = i_, .tail = acc_});
     struct IntList const* arg_1 = list_;
     int arg_2 = (i_ + 1);
     acc_ = arg_1;
@@ -61,7 +61,7 @@ int fun_1(void const* env_, char arg_) {
 }
 
 int doAction_(char arg_4) {
-    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = NULL};
+    struct UnitIntFun1 fun_2 = ((struct UnitIntFun1){.fun = fun_1, .env = NULL});
     milone_enter_region();
     int region_result_ = fun_2.fun(fun_2.env, 0);
     milone_leave_region();

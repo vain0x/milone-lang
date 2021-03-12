@@ -156,10 +156,10 @@ int fun_1(void const* env_, char arg_) {
 }
 
 int lf_(int lx_, char arg_9) {
-    struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = lx_};
+    struct IntTuple1 tuple_ = ((struct IntTuple1){.t0 = lx_});
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;
-    struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = box_};
+    struct UnitIntFun1 fun_2 = ((struct UnitIntFun1){.fun = fun_1, .env = box_});
     int app_ = fun_2.fun(fun_2.env, 0);
     return app_;
 }

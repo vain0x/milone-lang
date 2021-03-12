@@ -34,14 +34,14 @@ struct RecA_ {
     enum RecA_Discriminant discriminant;
     union {
         struct RecA_ListList const* T_2;
-    };
+    } payload;
 };
 
 int milone_main() {
     struct UnitList const* list_ = milone_mem_alloc(1, sizeof(struct UnitList));
-    (*(((struct UnitList*)list_))) = (struct UnitList){.head = 0, .tail = NULL};
+    (*(((struct UnitList*)list_))) = ((struct UnitList){.head = 0, .tail = NULL});
     char switch_;
-    switch ((struct UnionX_){.discriminant = VariantY_}.discriminant) {
+    switch (((struct UnionX_){.discriminant = VariantY_}).discriminant) {
         case VariantX_:
             goto clause_2;
 
@@ -56,10 +56,10 @@ clause_3:;
     switch_ = 0;
     goto switch_next_1;
 switch_next_1:;
-    struct RecA_ variant_ = (struct RecA_){.discriminant = T_2, .T_2 = NULL};
+    struct RecA_ variant_ = ((struct RecA_){.discriminant = T_2, .payload = {.T_2 = NULL}});
     struct RecA_ useRecA_ = variant_;
     char match_;
-    if ((!((!(useRecA_.T_2))))) goto next_5;
+    if ((!((!(useRecA_.payload.T_2))))) goto next_5;
     match_ = 0;
     goto end_match_4;
 next_5:;

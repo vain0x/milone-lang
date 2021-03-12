@@ -49,13 +49,13 @@ int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
 char testCase_(struct IntStringTuple2 kv_) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringTuple2));
     (*(((struct IntStringTuple2*)box_))) = kv_;
-    int call_2 = fstUnbox_1(box_, (struct IntStringTuple2Option){.some = false});
+    int call_2 = fstUnbox_1(box_, ((struct IntStringTuple2Option){.some = false}));
     milone_assert((call_2 == 0), 18, 2);
     return 0;
 }
 
 int milone_main() {
-    struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 0, .t1 = (struct String){.str = "right", .len = 5}};
+    struct IntStringTuple2 tuple_ = ((struct IntStringTuple2){.t0 = 0, .t1 = (struct String){.str = "right", .len = 5}});
     char call_3 = testCase_(tuple_);
     return 0;
 }

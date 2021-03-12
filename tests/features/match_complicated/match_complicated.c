@@ -38,7 +38,7 @@ end_match_1:;
 char testListMatching_(char arg_1) {
     char match_1;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = NULL};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = 0, .tail = NULL});
     if ((!(list_))) goto next_4;
     if ((!(list_->tail))) goto next_4;
     milone_assert(false, 10, 19);
@@ -63,7 +63,7 @@ end_match_3:;
 char testMatchArmsMakeScope_(char arg_2) {
     int x_ = 2;
     char match_2;
-    struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_, .t1 = 1};
+    struct IntIntTuple2 tuple_ = ((struct IntIntTuple2){.t0 = x_, .t1 = 1});
     if ((tuple_.t0 != 1)) goto next_8;
     int x_1 = tuple_.t1;
     milone_assert(false, 18, 12);

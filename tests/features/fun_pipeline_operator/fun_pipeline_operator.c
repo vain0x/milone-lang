@@ -77,7 +77,7 @@ int milone_main() {
     bool call_4 = between_(2, 3, call_3);
     milone_assert(call_4, 11, 2);
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
+    (*(((struct IntList*)list_))) = ((struct IntList){.head = 1, .tail = NULL});
     int call_5 = len_(list_);
     milone_assert((call_5 != 0), 19, 2);
     return 0;
