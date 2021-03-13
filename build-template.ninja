@@ -60,7 +60,7 @@ rule build_milone
 
 rule build_cc
   description = build_cc in=$in
-  command = MILONE_HOME="$$PWD" CC="$cc" CFLAGS='-O0' INPUTS="$in" OUTPUT="$out" scripts/build-with-gcc
+  command = MILONE_HOME="$$PWD" CFLAGS='-O0' INPUTS="$in" OUTPUT="$out" scripts/build-with-cc
 
 # .fs -> .c (with .NET)
 
@@ -78,7 +78,6 @@ build target/milone: $
     target/milone_gen2.c $
     | runtime/milone.h $
       runtime/milone.c
-  cc = gcc
 
 # .fs -> .c (with native)
 
@@ -153,7 +152,7 @@ rule build_test
   description = build_test $in
   command = $
     test ! -z "$$(grep '#error' -- $in)" || $
-    MILONE_HOME="$$PWD" CC="$cc" INPUTS="$in" OUTPUT="$out" scripts/build-with-gcc
+    MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-cc
 
 rule execute_test
   description = execute_test $c_file

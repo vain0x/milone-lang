@@ -21,6 +21,7 @@
 set -eu
 
 BIN_DIR="$HOME/bin"
+CC=${CC:-gcc}
 MILONE_HOME="$HOME/.milone"
 
 # ------------------------------------------------
@@ -49,7 +50,7 @@ trap 'on_error "$@"' EXIT
 
 # Check prerequisites.
 dotnet --version >>$LOG
-gcc --version >>$LOG
+$CC --version >>$LOG
 
 # ------------------------------------------------
 # Process

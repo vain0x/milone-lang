@@ -10,9 +10,9 @@
 
 set -eu
 
-MILONE_HOME=${MILONE_HOME:-"$HOME/.milone"}
 CC=${CC:-gcc}
 CFLAGS=${CFLAGS:-'-O2'}
+MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
 
 CFLAGS_ALL="-std=c11 \
     $CFLAGS \

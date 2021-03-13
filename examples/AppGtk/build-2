@@ -2,10 +2,11 @@
 
 set -eu
 
+CC=${CC:-gcc}
 MILONE_HOME=${MILONE_HOME:-"${HOME}/.milone"}
 MILONE_RUNTIME="$MILONE_HOME/runtime"
 
-gcc -std=gnu11 -g \
+$CC -std=gnu11 -g \
     -fsanitize=undefined \
     -Wall \
     -Wextra \
@@ -15,7 +16,7 @@ gcc -std=gnu11 -g \
     -Wno-unused-parameter \
     -Wno-unused-variable \
     $(pkg-config --cflags --libs gtk+-3.0) \
-    -I "$MILONE_RUNTIME" \
+    -I$MILONE_RUNTIME \
     "$MILONE_RUNTIME/milone.c" \
     app_gtk.c \
     target/app_gtk.c \

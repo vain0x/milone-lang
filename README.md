@@ -64,7 +64,7 @@ milone compile tests/examples/hello_world >hello.c
 # Build C. You need to specify runtime directory and link runtime codes.
 gcc -std=c11 \
     -O2 \
-    -I $HOME/.milone/runtime \
+    -I$HOME/.milone/runtime \
     $HOME/.milone/runtime/milone.c \
     hello.c \
     -o hello

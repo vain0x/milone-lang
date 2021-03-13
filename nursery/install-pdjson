@@ -1,6 +1,10 @@
 #!/bin/sh
 # Download and compile pdjson (json parser) from <https://github.com/skeeto/pdjson>.
 
+set -eu
+
+CC=${CC:-gcc}
+
 mkdir -p vendor
 
 (
@@ -9,5 +13,5 @@ mkdir -p vendor
     mv pdjson-67108d883061043e55d0fb13961ac1b6fc8a485c pdjson
     
     cd pdjson
-    gcc -O2 -c pdjson.c
+    $CC -O2 -c pdjson.c
 )
