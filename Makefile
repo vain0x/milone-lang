@@ -14,8 +14,12 @@ default: build.ninja bin/ninja
 # ninja wrapper
 # ------------------------------------------------
 
-build.ninja: bin/ninja build-meta.ninja build-template.ninja
-	bin/ninja -f build-meta.ninja
+build.ninja: \
+		$(wildcard scripts/GenNinjaFile/*.fs) \
+		$(wildcard scripts/GenNinjaFile/*.fsproj) \
+		build-template.ninja \
+		$(wildcard tests/*)
+	scripts/build-ninja-gen
 
 build: bin/ninja build.ninja
 	bin/ninja test_self
