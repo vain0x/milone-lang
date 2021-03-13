@@ -11,16 +11,16 @@ gen_ninja_file = scripts/GenNinjaFile/bin/Release/net5.0/GenNinjaFile
 # ------------------------------------------------
 
 rule build_generator
-    command = dotnet build -c Release scripts/GenNinjaFile
+  command = dotnet build -c Release scripts/GenNinjaFile
 
 build $gen_ninja_file: $
-    build_generator $
-        scripts/GenNinjaFile/Program.fs $
-        scripts/GenNinjaFile/TemplateTestCase.fs $
-        scripts/GenNinjaFile/GenNinjaFile.fsproj
+  build_generator $
+    scripts/GenNinjaFile/Program.fs $
+    scripts/GenNinjaFile/TemplateTestCase.fs $
+    scripts/GenNinjaFile/GenNinjaFile.fsproj
 
 rule generate
-    command = scripts/build-ninja-gen
+  command = scripts/build-ninja-gen
 
 # ------------------------------------------------
 # build.ninja
