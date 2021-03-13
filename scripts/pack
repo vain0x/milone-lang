@@ -9,6 +9,7 @@ RUNTIME_IDENTIFIER=${RUNTIME_IDENTIFIER:-'linux-x64'}
 
 TEMP_DIR="$PWD/milone-$(date +%s)"
 BIN_DIR="$TEMP_DIR/bin"
+CC=${CC-gcc}
 MILONE_HOME="$TEMP_DIR/.milone"
 
 # ------------------------------------------------
@@ -34,7 +35,7 @@ trap 'on_exit' EXIT
 
 # Check prerequisites.
 dotnet --version
-gcc --version
+$CC --version
 
 # ------------------------------------------------
 # Process

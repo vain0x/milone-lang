@@ -2,7 +2,7 @@ module rec pat_or_deep_branches.Program
 
 // Complicated OR patterns.
 // This test doesn't pass because MirGen emits duplicated variable definitions
-// and GCC runs into compile error.
+// and C compiler runs into compile error.
 
 let main _ =
   // match [ 2; 3; 5 ] with

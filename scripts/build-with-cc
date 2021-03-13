@@ -10,9 +10,9 @@
 
 set -eu
 
-MILONE_HOME=${MILONE_HOME:-"$HOME/.milone"}
 CC=${CC:-gcc}
 CFLAGS=${CFLAGS:-'-O2'}
+MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
 
 if test "[$CC]" = "[chibicc]"
 then
@@ -22,9 +22,15 @@ fi
 CFLAGS_ALL="-std=c11 \
     $CFLAGS \
     -Wall \
+    -Wextra \
+    -Wpedantic \
+    -Wno-parentheses-equality \
     -Wno-pointer-to-int-cast \
+    -Wno-unknown-warning-option \
     -Wno-unused-but-set-variable \
+    -Wno-unused-const-variable \
     -Wno-unused-label \
+    -Wno-unused-parameter \
     -Wno-unused-variable \
     -I$MILONE_HOME/runtime \
     $MILONE_HOME/runtime/milone.c \

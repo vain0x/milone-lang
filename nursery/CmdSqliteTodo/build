@@ -2,15 +2,16 @@
 
 set -eu
 
-TARGET=../target
+CC=${CC:-gcc}
 MILONE_HOME=${MILONE_HOME:-$HOME/.milone}
+TARGET="$PWD/target"
 
 mkdir -p $TARGET
 
 milone compile $PWD >$TARGET/cmd_sqlite_todo.c
 
-gcc -std=gnu11 -fsanitize=address,undefined \
-    -I $MILONE_HOME/runtime \
+$CC -std=gnu11 -fsanitize=address,undefined \
+    -I$MILONE_HOME/runtime \
     ../vendor/sqlite3/sqlite3.o \
     $MILONE_HOME/runtime/milone.c \
     ../LibSqlite3/lib_sqlite3_runtime.c \

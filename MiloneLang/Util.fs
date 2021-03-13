@@ -114,7 +114,6 @@ let listSortCore unique compare xs =
   // `merge (xs, xn) (ys, yn) = (zs, zn), d` where
   // `zs.[0..zn - 1]` is the merge of `xs.[0..xn - 1]` and `ys.[0..yn - 1]`,
   // and `d` is the number of duplicated items.
-  // NOTE: It seems not tail-call optimized by GCC?
   let rec merge (zs, zn) d (xs, xn) (ys, yn) =
     if xn = 0 then
       (appendRev ys zs, zn + yn), d
