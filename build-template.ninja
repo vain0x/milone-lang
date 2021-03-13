@@ -40,11 +40,14 @@ rule build_milone_dotnet
 
 build $milone_dotnet_debug: $
   build_milone_dotnet $
-    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }}
+    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
+    | dotnet_restore
   CONFIG = Debug
 
 build $milone_dotnet_release: $
-  build_milone_dotnet
+  build_milone_dotnet $
+    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
+    | dotnet_restore
   CONFIG = Release
 
 # ------------------------------------------------
@@ -225,7 +228,6 @@ rule just
 
 build target/all.timestamp: $
   just $
-  dotnet_restore $
   integration_tests $
   test_self $
   test_project_reference
