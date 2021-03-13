@@ -55,12 +55,12 @@ build $milone_dotnet_release: $
 # ------------------------------------------------
 
 rule build_milone
-  description = build_milone out=$out
+  description = build_milone $out
   command = MILONE_HOME=$$PWD $milone compile $verbosity MiloneLang | scripts/write-if-change $out || { cat $out >&2 && false; }
   restat = 1
 
 rule build_cc
-  description = build_cc in=$in
+  description = build_cc $in
   command = MILONE_HOME="$$PWD" CFLAGS='-O0' INPUTS="$in" OUTPUT="$out" scripts/build-with-cc
 
 # .fs -> .c (with .NET)
@@ -93,7 +93,7 @@ build target/milone_gen3.c: $
 # .c -> .diff
 
 rule diff
-  description = diff out=$out
+  description = diff $out
   command = diff $in | scripts/write-if-change $out
   restat = 1
 
@@ -109,7 +109,7 @@ build target/milone_gen3.diff: $
 #   so the conjunction (`-a`) means that the file exists and is empty.
 
 rule verify_no_diff
-  description = verify_no_diff in=$in
+  description = verify_no_diff $in
   command = $
     test -f $in -a ! -s $in && $
     echo '✔ OK' || $
