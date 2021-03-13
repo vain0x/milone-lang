@@ -222,17 +222,10 @@ build clean: clean
 # Entrypoint
 # ------------------------------------------------
 
-rule just
-  command = :
-  restat = 1
+build test: $
+  phony $
+    test_self $
+    integration_tests $
+    test_project_reference
 
-build target/all.timestamp: $
-  just $
-  integration_tests $
-  test_self $
-  test_project_reference
-
-build all: $
-  phony target/all.timestamp
-
-default all
+default test
