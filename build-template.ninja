@@ -21,9 +21,7 @@ milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 
 rule dotnet_restore
   description = dotnet_restore
-  command = $
-    dotnet restore; $
-    touch target/timestamp.dotnet_restore
+  command = dotnet restore
 
 build target/timestamp.dotnet_restore: $
   dotnet_restore $
