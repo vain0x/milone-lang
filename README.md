@@ -253,7 +253,7 @@ For incremental building and testing, `ninja` command is also used.
 make
 
 # Otherwise:
-bin/ninja -f build-meta.ninja
+scripts/build-ninja-gen
 bin/ninja
 ```
 

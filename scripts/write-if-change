@@ -24,6 +24,12 @@ fi
 OLD_CONTENTS="$(cat $FILENAME)"
 NEW_CONTENTS="$(cat)"
 
+if test -z "$NEW_CONTENTS" && test ! -z "$OLD_CONTENTS"
+then
+    : >$FILENAME
+    exit 0
+fi
+
 if test "$OLD_CONTENTS" != "$NEW_CONTENTS"
 then
     echo "$NEW_CONTENTS" >$FILENAME

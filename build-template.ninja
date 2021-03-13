@@ -23,7 +23,7 @@ rule dotnet_restore
   description = dotnet_restore
   command = $
     dotnet restore; $
-    touch target/timestamp.dotnet_restore
+    touch $out
 
 build target/timestamp.dotnet_restore: $
   dotnet_restore $
@@ -42,11 +42,14 @@ rule build_milone_dotnet
 
 build $milone_dotnet_debug: $
   build_milone_dotnet $
-    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }}
+    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
+    | dotnet_restore
   CONFIG = Debug
 
 build $milone_dotnet_release: $
-  build_milone_dotnet
+  build_milone_dotnet $
+    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
+    | dotnet_restore
   CONFIG = Release
 
 # ------------------------------------------------
@@ -54,12 +57,12 @@ build $milone_dotnet_release: $
 # ------------------------------------------------
 
 rule build_milone
-  description = build_milone out=$out
+  description = build_milone $out
   command = MILONE_HOME=$$PWD $milone compile $verbosity MiloneLang | scripts/write-if-change $out || { cat $out >&2 && false; }
   restat = 1
 
 rule build_cc
-  description = build_cc in=$in
+  description = build_cc $in
   command = MILONE_HOME="$$PWD" CFLAGS='-O0' INPUTS="$in" OUTPUT="$out" scripts/build-with-cc
 
 # .fs -> .c (with .NET)
@@ -92,7 +95,7 @@ build target/milone_gen3.c: $
 # .c -> .diff
 
 rule diff
-  description = diff out=$out
+  description = diff $out
   command = diff $in | scripts/write-if-change $out
   restat = 1
 
@@ -108,11 +111,12 @@ build target/milone_gen3.diff: $
 #   so the conjunction (`-a`) means that the file exists and is empty.
 
 rule verify_no_diff
-  description = verify_no_diff in=$in
+  description = verify_no_diff $in
   command = $
     test -f $in -a ! -s $in && $
     echo '✔ OK' || $
-    { echo '✘ FAILED'; exit 1; }
+    { echo '✘ FAILED'; exit 1; }; $
+    touch $out
 
 build target/test_self.timestamp: $
   verify_no_diff $
@@ -151,19 +155,24 @@ build snapshot_diff: $
 rule build_test
   description = build_test $in
   command = $
-    test ! -z "$$(grep '#error' -- $in)" || $
-    MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-cc
+    if test -z "$$(grep '#error' -- $in)"; then $
+      MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-cc; $
+    else $
+      echo '' | scripts/write-if-change $out; $
+    fi
+  restat = 1
 
 rule execute_test
   description = execute_test $c_file
   command = $
-    test ! -z "$$(grep '#error' -- $c_file)" && $
-    echo 'milone-lang compile error.' | scripts/write-if-change $out || { $
+    if test -z "$$(grep '#error' -- $c_file)"; then $
       $in >$out.tmp ; $
       echo '$$? = '$$? >>$out.tmp ; $
       cat $out.tmp | scripts/write-if-change $out ; $
       rm -f $out.tmp ; $
-    }
+    else $
+      echo 'milone-lang compile error.' | scripts/write-if-change $out; $
+    fi
   restat = 1
 
 rule diff_test_output
@@ -182,7 +191,8 @@ rule verify_test_output
     TOTAL_COUNT=$$(cat $in | wc -l) $
     STATUS=$$(if test $$FAIL_COUNT -eq 0; then echo OK; else echo FAIL; fi); $
     grep ^FAIL -- $in; $
-    echo "$$STATUS - ok $$OK_COUNT / fail $$FAIL_COUNT / total $$TOTAL_COUNT"
+    echo "$$STATUS - ok $$OK_COUNT / fail $$FAIL_COUNT / total $$TOTAL_COUNT"; $
+    touch $out
 
 build target/integration_tests.timestamp: $
   verify_test_output $
@@ -203,9 +213,19 @@ build integration_tests: $
 # ------------------------------------------------
 
 rule test_project_reference
-  command = PATH=$$PWD/target:$$PATH MILONE_HOME=$$PWD TARGET_DIR=$builddir scripts/project-reference-example/test
+  description = test_project_reference
+  command = $
+    PATH=$$PWD/target:$$PATH $
+      MILONE_HOME=$$PWD $
+      TARGET_DIR=$builddir $
+      scripts/project-reference-example/test; $
+    touch $out
 
-build test_project_reference: test_project_reference target/milone
+build target/timestamp.test_project_reference: $
+  test_project_reference target/milone
+
+build test_project_reference: $
+  phony target/timestamp.test_project_reference
 
 # ------------------------------------------------
 # Clean
@@ -221,18 +241,10 @@ build clean: clean
 # Entrypoint
 # ------------------------------------------------
 
-rule just
-  command = :
-  restat = 1
+build test: $
+  phony $
+    test_self $
+    integration_tests $
+    test_project_reference
 
-build target/all.timestamp: $
-  just $
-  dotnet_restore $
-  integration_tests $
-  test_self $
-  test_project_reference
-
-build all: $
-  phony target/all.timestamp
-
-default all
+default test
