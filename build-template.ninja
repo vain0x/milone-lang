@@ -21,7 +21,9 @@ milone_dotnet_release = MiloneLang/bin/Release/net5.0/MiloneLang
 
 rule dotnet_restore
   description = dotnet_restore
-  command = dotnet restore
+  command = $
+    dotnet restore; $
+    touch $out
 
 build target/timestamp.dotnet_restore: $
   dotnet_restore $
@@ -113,7 +115,8 @@ rule verify_no_diff
   command = $
     test -f $in -a ! -s $in && $
     echo '✔ OK' || $
-    { echo '✘ FAILED'; exit 1; }
+    { echo '✘ FAILED'; exit 1; }; $
+    touch $out
 
 build target/test_self.timestamp: $
   verify_no_diff $
@@ -183,7 +186,8 @@ rule verify_test_output
     TOTAL_COUNT=$$(cat $in | wc -l) $
     STATUS=$$(if test $$FAIL_COUNT -eq 0; then echo OK; else echo FAIL; fi); $
     grep ^FAIL -- $in; $
-    echo "$$STATUS - ok $$OK_COUNT / fail $$FAIL_COUNT / total $$TOTAL_COUNT"
+    echo "$$STATUS - ok $$OK_COUNT / fail $$FAIL_COUNT / total $$TOTAL_COUNT"; $
+    touch $out
 
 build target/integration_tests.timestamp: $
   verify_test_output $
@@ -204,9 +208,19 @@ build integration_tests: $
 # ------------------------------------------------
 
 rule test_project_reference
-  command = PATH=$$PWD/target:$$PATH MILONE_HOME=$$PWD TARGET_DIR=$builddir scripts/project-reference-example/test
+  description = test_project_reference
+  command = $
+    PATH=$$PWD/target:$$PATH $
+      MILONE_HOME=$$PWD $
+      TARGET_DIR=$builddir $
+      scripts/project-reference-example/test; $
+    touch $out
 
-build test_project_reference: test_project_reference target/milone
+build target/timestamp.test_project_reference: $
+  test_project_reference target/milone
+
+build test_project_reference: $
+  phony target/timestamp.test_project_reference
 
 # ------------------------------------------------
 # Clean
