@@ -155,19 +155,24 @@ build snapshot_diff: $
 rule build_test
   description = build_test $in
   command = $
-    test ! -z "$$(grep '#error' -- $in)" || $
-    MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-cc
+    if test -z "$$(grep '#error' -- $in)"; then $
+      MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-cc; $
+    else $
+      echo '' | scripts/write-if-change $out; $
+    fi
+  restat = 1
 
 rule execute_test
   description = execute_test $c_file
   command = $
-    test ! -z "$$(grep '#error' -- $c_file)" && $
-    echo 'milone-lang compile error.' | scripts/write-if-change $out || { $
+    if test -z "$$(grep '#error' -- $c_file)"; then $
       $in >$out.tmp ; $
       echo '$$? = '$$? >>$out.tmp ; $
       cat $out.tmp | scripts/write-if-change $out ; $
       rm -f $out.tmp ; $
-    }
+    else $
+      echo 'milone-lang compile error.' | scripts/write-if-change $out; $
+    fi
   restat = 1
 
 rule diff_test_output
