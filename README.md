@@ -2,11 +2,16 @@
 
 `milone-lang` is an F#-subset programming language.
 
-- [About](#about)
-- [Install](#install)
-- [Documentation](docs/refs/)
-- [Examples](tests/examples)
-- [Internals](internals.md)
+- [#About](#about)
+- [#Install](#install)
+    - ~~With package manager~~ (yet)
+    - From binary -> [Releases](https://github.com/vain0x/milone-lang/releases)
+    - [#From sources on Linux](#install-from-sources-on-linux)
+    - [#From sources on Windows](#install-from-sources-on-windows)
+- [#How it works](#how-it-works)
+- Documentation -> [docs/refs](docs/refs)
+- Examples -> [examples](examples)
+- Internals -> [internals.md](internals.md)
 
 ## About
 
@@ -26,15 +31,7 @@ Feel free to ask anything in [discussions](https://github.com/vain0x/milone-lang
 
 ## Install
 
-- ~~With package manager~~ (yet)
-- [From binary](#install-from-binary)
-- [From sources](#install-from-sources)
-
-### Install from binary
-
-Download pre-release binary packages from [Releases](https://github.com/vain0x/milone-lang/releases).
-
-### Install from sources (Linux)
+### Install from sources on Linux
 
 Prerequisites:
 
@@ -57,7 +54,7 @@ scripts/install
 
 - To uninstall, do `scripts/uninstall`.
 
-### Install from sources (Windows)
+### Install from sources on Windows
 
 Prerequisites:
 
