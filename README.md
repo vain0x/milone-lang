@@ -199,3 +199,9 @@ See also:
 - [the docs/refs directory](docs/refs/) for detailed explanation
 - [the tests/examples directory](tests/examples) for working codes
 - [the examples directory](examples) for more practical codes
+
+## License
+
+Milone-lang tools (compiler and LSP server) are distributed under the Apache 2.0 license.
+
+Others including documentation, examples, libraries, runtime code, scripts, tests, etc. are distributed under CC0-1.0.
