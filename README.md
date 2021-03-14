@@ -59,25 +59,40 @@ scripts/install
 Prerequisites:
 
 - Windows 10
-- Intall Git for Windows
+- Install [Git for Windows](https://gitforwindows.org/)
 - Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
-- Install Visual Studio 2019 with "Desktop development with C++" enabled
-- Put MSBuild.exe in PATH
+- Install [Visual Studio 2019](https://visualstudio.microsoft.com/ja/downloads/) with "Desktop development with C++" option
 
 Do with Git Bash:
 
 ```sh
 # Download the source code.
 git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
+cd milone-lang
 
-# Build.
-scripts/build-milone-windows
+# ---- BUILD ----
 
-# Put executable to some directory as you want.
+# Build milone-lang compiler to C code.
+mkdir -p target
+MILONE_HOME=$PWD dotnet run -p MiloneLang -- compile MiloneLang >target/milone_gen2.c
+
+# HACK: MSVC seems to not handle minimum int literal. Replace them with hex notation.
+sed -i 's/-2147483648/0x80000000/' target/milone_gen2.c
+
+# Build for executable.
+# Remark: MSBuild.exe is not in PATH by default.
+#         If you don't know what to do about this,
+#         just open the solution with Visual Studio to build instead.
+MSBuild.exe 'scripts/milone-lang-win10-msvc/milone-lang-win10-msvc.sln' '-p:Configuration=Release;Platform=x64'
+
+# ---- INSTALL ----
+
+# Copy the generated executable to some directory as you want.
 mkdir -p $USERPROFILE/bin
 cp 'scripts/milone-lang-win10-msvc/target/64-Release-bin/milone.exe' $USERPROFILE/bin
 
-# Copy libraries to '.milone' in user directory.
+# Create '.milone' directory in user directory.
+# Copy libraries to it.
 mkdir -p $USERPROFILE/.milone
 cp milone_libs $USERPROFILE/.milone
 ```
