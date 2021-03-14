@@ -133,3 +133,22 @@ In tests, there are some categories of test cases:
     - [MiloneCore](milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
     - [MiloneStd](milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.
 - [nursery](nursery): Experimental projects written in milone-lang
+
+## Deployment
+
+- Update version number in source for `milone --version`
+- Merge to master branch
+
+```sh
+# Make a git tag.
+make target/milone
+git tag v$(target/milone --version)
+git push --tags
+
+# Create package.
+scripts/pack
+```
+
+- Make a release in GitHub
+    - Add the package to release
+    - Build a package on Windows and add it to release too

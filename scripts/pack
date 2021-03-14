@@ -81,7 +81,6 @@ mv "$TEMP_DIR" "$PACK_DIR"
 
 # Make tarball and zip.
 tar -czf "milone-$VERSION.tar.gz" "$PACK_DIR"
-zip -rq "milone-$VERSION.zip" "$PACK_DIR"
 
 # Delete temporary directory.
 rm -rf "$PACK_DIR"
