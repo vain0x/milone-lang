@@ -33,7 +33,7 @@ Feel free to ask anything in [discussions](https://github.com/vain0x/milone-lang
 
 Download pre-release binary packages from [Releases](https://github.com/vain0x/milone-lang/releases).
 
-### Install from sources
+### Install from sources (Linux)
 
 Prerequisites:
 
@@ -56,9 +56,33 @@ scripts/install
 
 - To uninstall, do `scripts/uninstall`.
 
-### Other platforms (Windows/macOS)
+### Install from sources (Windows)
 
-For other platforms, you need to do some tasks: see `scripts/install`.
+Prerequisites:
+
+- Windows 10
+- Intall Git for Windows
+- Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install Visual Studio 2019 with "Desktop development with C++" enabled
+- Put MSBuild.exe in PATH
+
+Do with Git Bash:
+
+```sh
+# Download the source code.
+git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
+
+# Build.
+scripts/build-milone-windows
+
+# Put executable to some directory as you want.
+mkdir -p $USERPROFILE/bin
+cp 'scripts/milone-lang-win10-msvc/target/64-Release-bin/milone.exe' $USERPROFILE/bin
+
+# Copy libraries to '.milone' in user directory.
+mkdir -p $USERPROFILE/.milone
+cp milone_libs $USERPROFILE/.milone
+```
 
 ## How to build a test project
 
