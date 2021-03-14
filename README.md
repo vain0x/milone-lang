@@ -5,7 +5,7 @@
 - [#About](#about)
 - [#Install](#install)
     - ~~With package manager~~ (yet)
-    - From binary -> [Releases](https://github.com/vain0x/milone-lang/releases)
+    - From binary -> [install_from_binary.md](install_from_binary.md)
     - [#From sources on Linux](#install-from-sources-on-linux)
     - [#From sources on Windows](#install-from-sources-on-windows)
 - [#How it works](#how-it-works)

@@ -73,19 +73,7 @@ VERSION=$($BIN_DIR/milone --version)
 echo "$VERSION" >"$MILONE_HOME/version"
 
 # Add documents.
-cp README.md LICENSE "$TEMP_DIR"
-
-cat >$TEMP_DIR/INSTALL.md <<'END'
-# Install
-
-Do the following:
-
-1. Copy .milone to `~/.milone`; or
-    copy .milone to somewhere and set its path to $MILONE_HOME env var.
-2. Create milone command somewhere in $PATH, by either:
-    - `cp bin/milone path/to/milone`; or
-    - `ln -s .milone/bin/milone_dotnet/MiloneLang path/to/milone`.
-END
+cp README.md LICENSE install_from_binary.md "$TEMP_DIR"
 
 # Rename temporary directory.
 PACK_DIR="milone-$VERSION"
