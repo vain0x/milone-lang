@@ -2,11 +2,13 @@
 
 struct StringList;
 
+struct StringList;
+
 struct StringList const* go_(struct StringList const* acc_, struct StringList const* xs_1);
 
 struct StringList const* listRev_(struct StringList const* xs_);
 
-int printList_(struct StringList const* xs_3);
+char printList_(struct StringList const* xs_3);
 
 bool isDigit_(char c_);
 
@@ -40,8 +42,6 @@ next_3:;
     acc_ = arg_;
     xs_1 = arg_1;
     goto tailrec_1;
-    match_ = NULL;
-    goto end_match_2;
 next_4:;
     exit(1);
 end_match_2:;
@@ -53,9 +53,9 @@ struct StringList const* listRev_(struct StringList const* xs_) {
     return call_;
 }
 
-int printList_(struct StringList const* xs_3) {
+char printList_(struct StringList const* xs_3) {
 tailrec_5:;
-    int match_1;
+    char match_1;
     if ((!((!(xs_3))))) goto next_7;
     match_1 = 0;
     goto end_match_6;
@@ -67,8 +67,6 @@ next_7:;
     struct StringList const* arg_2 = xs_4;
     xs_3 = arg_2;
     goto tailrec_5;
-    match_1 = 0;
-    goto end_match_6;
 next_8:;
     exit(1);
 end_match_6:;
@@ -123,8 +121,6 @@ else_18:;
     s_ = arg_3;
     i_ = arg_4;
     goto tailrec_12;
-    if_2 = 0;
-    goto if_next_16;
 if_next_16:;
     return if_2;
 }
@@ -156,8 +152,6 @@ then_24:;
     acc_1 = arg_6;
     i_1 = arg_7;
     goto tailrec_19;
-    if_4 = NULL;
-    goto if_next_23;
 else_25:;
     bool if_5;
     if ((s_.str[i_1] == '[')) {
@@ -203,8 +197,6 @@ then_33:;
     acc_1 = arg_9;
     i_1 = arg_10;
     goto tailrec_19;
-    if_7 = NULL;
-    goto if_next_32;
 else_34:;
     bool call_3 = isDigit_(s_.str[i_1]);
     struct StringList const* if_8;
@@ -227,13 +219,9 @@ then_36:;
     acc_1 = arg_12;
     i_1 = arg_13;
     goto tailrec_19;
-    if_8 = NULL;
-    goto if_next_35;
 else_37:;
     printf("ERROR: Unknown Token \'%c\'\n", s_.str[i_1]);
     exit(1);
-    if_8 = NULL;
-    goto if_next_35;
 if_next_35:;
     if_7 = if_8;
     goto if_next_32;
@@ -256,6 +244,6 @@ int milone_main() {
     struct String source_ = (struct String){.str = "[0, 1000000007, 314159]", .len = 23};
     struct StringList const* call_6 = tokenize_(source_);
     struct StringList const* tokens_ = call_6;
-    int call_7 = printList_(tokens_);
+    char call_7 = printList_(tokens_);
     return 0;
 }

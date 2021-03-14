@@ -8,6 +8,8 @@ open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Cir
 
+module S = MiloneStd.StdString
+
 let private eol = "\n"
 
 let private deeper (indent: string) = "    " + indent
@@ -32,7 +34,7 @@ let private isFirst first =
 
 let private declIsForwardOnly decl =
   match decl with
-  | CStaticVarDecl _
+  | CStructForwardDecl _
   | CFunForwardDecl _ -> true
   | _ -> false
 
@@ -78,7 +80,7 @@ let private cpFunPtrTy name argTys resultTy acc =
   |> join ", " argTys cpTy
   |> cons ")"
 
-let private cpTy ty acc: string list =
+let private cpTy ty acc : string list =
   match ty with
   | CVoidTy -> acc |> cons "void"
   | CIntTy flavor -> acc |> cons (cIntegerTyName flavor)
@@ -98,7 +100,7 @@ let private cpTyWithName name ty acc =
   | CFunPtrTy (argTys, resultTy) -> acc |> cpFunPtrTy name argTys resultTy
   | _ -> acc |> cpTy ty |> cons " " |> cons name
 
-let private cpParams ps acc: string list =
+let private cpParams ps acc : string list =
   let rec go ps acc =
     match ps with
     | [] -> acc
@@ -159,7 +161,7 @@ let private cpStructLit fields ty acc =
 // Expressions
 // -----------------------------------------------
 
-let private cpExpr expr acc: string list =
+let private cpExpr expr acc : string list =
   let rec cpExprList sep exprs acc =
     exprs
     |> List.fold
@@ -176,7 +178,6 @@ let private cpExpr expr acc: string list =
     |> snd
 
   match expr with
-  | CDefaultExpr -> acc |> cons "{}"
   | CIntExpr value -> acc |> cons (string value)
   | CDoubleExpr value -> acc |> cons (string value)
 
@@ -249,7 +250,7 @@ let private cpExpr expr acc: string list =
 // Statements
 // -----------------------------------------------
 
-let private cpStmt indent stmt acc: string list =
+let private cpStmt indent stmt acc : string list =
   match stmt with
   | CReturnStmt None -> acc |> cons indent |> cons "return;" |> cons eol
 
@@ -385,9 +386,25 @@ let private cpStmt indent stmt acc: string list =
       |> cons "}"
       |> cons eol
 
-  | CNativeStmt code -> acc |> cons code
+  | CNativeStmt (code, args) ->
+      let code =
+        List.fold
+          (fun (i, code) arg ->
+            let arg =
+              [] |> cpExpr arg |> List.rev |> S.concat ""
 
-let private cpStmtList indent stmts acc: string list =
+            let code =
+              let placeholder = "{" + string i + "}"
+              code |> S.replace placeholder arg
+
+            i + 1, code)
+          (0, code)
+          args
+        |> snd
+
+      acc |> cons code
+
+let private cpStmtList indent stmts acc : string list =
   stmts
   |> List.fold (fun acc stmt -> cpStmt indent stmt acc) acc
 
@@ -461,6 +478,13 @@ let private cpDecl decl acc =
       |> cons "};"
       |> cons eol
 
+  | CStaticVarDecl (name, ty) ->
+      acc
+      |> cons "static "
+      |> cpTyWithName name ty
+      |> cons ";"
+      |> cons eol
+
   | CFunDecl (name, args, resultTy, body) ->
       acc
       |> cpTyWithName name resultTy
@@ -472,16 +496,16 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
-  | CNativeDecl code -> acc |> cons code |> cons eol
-
-  | CStaticVarDecl _
-  | CFunForwardDecl _ -> acc
+  | CStructForwardDecl _
+  | CFunForwardDecl _
+  | CNativeDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
   match decl with
   | CErrorDecl _
-  | CNativeDecl _ -> acc
+  | CEnumDecl _
+  | CStaticVarDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc
@@ -491,18 +515,10 @@ let private cpForwardDecl decl acc =
       |> cons eol
       |> cons eol
 
-  | CEnumDecl (name, _) ->
+  | CStructForwardDecl name ->
       acc
-      |> cons "enum "
+      |> cons "struct "
       |> cons name
-      |> cons ";"
-      |> cons eol
-      |> cons eol
-
-  | CStaticVarDecl (name, ty) ->
-      acc
-      |> cons "static "
-      |> cpTyWithName name ty
       |> cons ";"
       |> cons eol
       |> cons eol
@@ -540,13 +556,13 @@ let private cpForwardDecl decl acc =
       |> cons eol
       |> cons eol
 
+  | CNativeDecl code -> acc |> cons code |> cons eol
+
 let private cpForwardDecls decls acc =
   decls
   |> List.fold (fun acc decl -> cpForwardDecl decl acc) acc
 
 let private cpDecls decls acc =
-  let acc = acc |> cpForwardDecls decls
-
   decls
   |> List.fold
        (fun (first, acc) decl ->
@@ -572,9 +588,17 @@ let private cpHeader acc =
   let header = "#include \"milone.h\""
   acc |> cons header |> cons eol |> cons eol
 
-let cirDump (decls: CDecl list): string =
+let cirDump (decls: CDecl list) : string =
   []
   |> cpHeader
+  |> cpForwardDecls decls
   |> cpDecls decls
+  |> List.rev
+  |> strConcat
+
+let cirDumpHeader (decls: CDecl list) : string =
+  []
+  |> cpHeader
+  |> cpForwardDecls decls
   |> List.rev
   |> strConcat

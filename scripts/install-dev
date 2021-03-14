@@ -2,7 +2,9 @@
 # Install milone command locally for development.
 #
 # See <scripts/install> for production.
-# Generated files are same as that.
+# Generated files are located as same as that.
+#
+# Installed binaries are symbolic links that point to build outputs.
 #
 # USAGE: scripts/install-dev
 
@@ -32,7 +34,7 @@ mkdir -p "$MILONE_HOME/bin/milone_dotnet"
 mkdir -p "$MILONE_HOME/bin/milone_lsp"
 
 # Make symbolic links.
-ln -fs "$PWD/target/milone" "$MILONE_HOME/milone_native"
+ln -fs "$PWD/target/milone" "$MILONE_HOME/bin/milone_native"
 ln -fs "$PWD/MiloneLang/bin/Debug/net5.0/MiloneLang" "$MILONE_HOME/bin/milone_dotnet/MiloneLang"
 ln -fs "$PWD/milone_lsp/bin/Debug/net5.0/MiloneLsp" "$MILONE_HOME/bin/milone_lsp/MiloneLsp"
 ln -fs "$PWD/runtime" "$MILONE_HOME/runtime"
@@ -52,13 +54,13 @@ cat >"$BIN_DIR/milone" <<'END'
 # Execute milone and fallback to .NET version on error.
 
 # Try run native version.
-MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/milone_native" "$@"
+MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_native" "$@"
 CODE1=$?
 test $CODE1 -eq 0 && exit 0
 
 echo -e '\nmilone: Retrying with .NET version...\n' >&2
 
-MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/milone_dotnet/MiloneLang" "$@"
+MILONE_HOME="{{ MILONE_HOME }}" "{{ MILONE_HOME }}/bin/milone_dotnet/MiloneLang" "$@"
 CODE2=$?
 test $CODE2 -eq 0 && exit 0
 

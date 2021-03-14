@@ -1,19 +1,19 @@
 #include "milone.h"
 
-int arithmeticOperatorsTest_(int arg_);
+char arithmeticOperatorsTest_(char arg_);
 
-int comparisonOperatorsTest_(int arg_1);
+char comparisonOperatorsTest_(char arg_1);
 
-int conversionTest_(int arg_2);
+char conversionTest_(char arg_2);
 
 int milone_main();
 
-int arithmeticOperatorsTest_(int arg_) {
+char arithmeticOperatorsTest_(char arg_) {
     milone_assert((('\r' + '\n') == ((char)(13 + 10))), 6, 2);
     return 0;
 }
 
-int comparisonOperatorsTest_(int arg_1) {
+char comparisonOperatorsTest_(char arg_1) {
     milone_assert(('A' == 'A'), 13, 2);
     milone_assert(('A' != 'B'), 14, 2);
     milone_assert(('A' < 'B'), 16, 2);
@@ -28,7 +28,7 @@ int comparisonOperatorsTest_(int arg_1) {
     return 0;
 }
 
-int conversionTest_(int arg_2) {
+char conversionTest_(char arg_2) {
     milone_assert(('A' == 'A'), 29, 2);
     milone_assert((((char)65) == 'A'), 30, 2);
     milone_assert((((char)((uint32_t)65)) == 'A'), 31, 2);
@@ -39,8 +39,8 @@ int conversionTest_(int arg_2) {
 }
 
 int milone_main() {
-    int call_ = arithmeticOperatorsTest_(0);
-    int call_1 = comparisonOperatorsTest_(0);
-    int call_2 = conversionTest_(0);
+    char call_ = arithmeticOperatorsTest_(0);
+    char call_1 = comparisonOperatorsTest_(0);
+    char call_2 = conversionTest_(0);
     return 0;
 }

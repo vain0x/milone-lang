@@ -13,13 +13,12 @@ let newDay (value: int) =
 
 let dayToInt (Day value) = value
 
-let newDayRange (start: Day) (endDay: Day): DayRange =
+let newDayRange (start: Day) (endDay: Day) : DayRange =
   assert (dayToInt start <= dayToInt endDay)
   { Start = start; End = endDay }
 
 let between (day: Day) (range: DayRange) =
-  dayToInt range.Start
-  <= dayToInt day
+  dayToInt range.Start <= dayToInt day
   && dayToInt day <= dayToInt range.End
 
 let main _ =

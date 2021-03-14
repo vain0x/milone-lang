@@ -1,21 +1,24 @@
+# Makefile as a thin wrapper of ninja.
+#
 # USAGE:
 #    make
 #    make install
 #    make install-dev
 
-# Makefile is a thin-wrapper of ninja.
-
-.PHONY: build build.ninja clean default install install-dev test uninstall
-
-# (This is the first rule in file and therefore it's default.)
 default: build.ninja bin/ninja
 	bin/ninja
+
+.PHONY: build clean default install install-dev test uninstall
 
 # ------------------------------------------------
 # ninja wrapper
 # ------------------------------------------------
 
-build.ninja:
+build.ninja: \
+		$(wildcard scripts/GenNinjaFile/*.fs) \
+		$(wildcard scripts/GenNinjaFile/*.fsproj) \
+		build-template.ninja \
+		$(wildcard tests/*)
 	scripts/build-ninja-gen
 
 build: bin/ninja build.ninja

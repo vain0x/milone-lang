@@ -8,7 +8,7 @@ int intCompare_(void const* l_, void const* r_);
 
 void qsort(void*, uintptr_t, uintptr_t, int(*)(void const*, void const*));
 
-int sortIntArray_(int* array_, int len_1);
+char sortIntArray_(int* array_, int len_1);
 
 int milone_main();
 
@@ -21,7 +21,7 @@ int intCompare_(void const* l_, void const* r_) {
     return int_compare((*(((int const*)((void const*)l_)))), (*(((int const*)((void const*)r_)))));
 }
 
-int sortIntArray_(int* array_, int len_1) {
+char sortIntArray_(int* array_, int len_1) {
     qsort(((void*)array_), ((uintptr_t)len_1), ((uintptr_t)4), intCompare_);
     return 0;
 }
@@ -35,17 +35,17 @@ int milone_main() {
     array_1[2] = 4;
     array_1[3] = 1;
     array_1[4] = 5;
-    int call_1 = sortIntArray_(array_1, len_2);
+    char call_1 = sortIntArray_(array_1, len_2);
     int const* array_2 = ((int const*)array_1);
     int read_ = (*(array_2));
-    milone_assert((read_ == 1), 35, 2);
+    milone_assert((read_ == 1), 40, 2);
     int read_1 = array_2[1];
-    milone_assert((read_1 == 1), 36, 2);
+    milone_assert((read_1 == 1), 41, 2);
     int read_2 = array_2[2];
-    milone_assert((read_2 == 3), 37, 2);
+    milone_assert((read_2 == 3), 42, 2);
     int read_3 = array_2[3];
-    milone_assert((read_3 == 4), 38, 2);
+    milone_assert((read_3 == 4), 43, 2);
     int read_4 = array_2[4];
-    milone_assert((read_4 == 5), 39, 2);
+    milone_assert((read_4 == 5), 44, 2);
     return 0;
 }

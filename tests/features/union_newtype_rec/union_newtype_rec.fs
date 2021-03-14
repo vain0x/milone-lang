@@ -17,4 +17,5 @@ let main _ =
   match second with
   | MyList (_, Some (MyList (value, _))) -> assert (value = 0)
   | _ -> assert false
+
   0

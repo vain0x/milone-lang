@@ -2,9 +2,13 @@
 
 struct IntList;
 
-int go_2(int n_, struct IntList const* xs_1);
+struct IntList;
 
 struct StringList;
+
+struct StringList;
+
+int go_2(int n_, struct IntList const* xs_1);
 
 int go_1(int n_, struct StringList const* xs_1);
 
@@ -17,6 +21,11 @@ int milone_main();
 struct IntList {
     int head;
     struct IntList const* tail;
+};
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
 };
 
 int go_2(int n_, struct IntList const* xs_1) {
@@ -33,18 +42,11 @@ next_3:;
     n_ = arg_;
     xs_1 = arg_1;
     goto tailrec_1;
-    match_ = 0;
-    goto end_match_2;
 next_4:;
     exit(1);
 end_match_2:;
     return match_;
 }
-
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 int go_1(int n_, struct StringList const* xs_1) {
 tailrec_5:;
@@ -60,8 +62,6 @@ next_7:;
     n_ = arg_2;
     xs_1 = arg_3;
     goto tailrec_5;
-    match_1 = 0;
-    goto end_match_6;
 next_8:;
     exit(1);
 end_match_6:;

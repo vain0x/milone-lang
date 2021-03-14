@@ -5,8 +5,8 @@ let buildTemplate = """
 build {{ C_FILE }}: $
   take_snapshot $
     {{ FS_FILE }} $
-    | $milone_dotnet_debug
-  milone = $milone_dotnet_debug
+    | target/milone
+  milone = target/milone
   project = tests/{{ CATEGORY }}/{{ PROJECT }}
   out_file = {{ OUT_FILE }}
 

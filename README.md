@@ -1,55 +1,101 @@
-# MILONE-LANG
+# milone-lang
 
-**Milone-lang** is a F#-subset programming language.
+`milone-lang` is an F#-subset programming language.
 
-The initial goal was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**, i.e. to develop a milone-lang compiler that can compile the compiler itself. It was achieved at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
+- [#About](#about)
+- [#Install](#install)
+    - ~~With package manager~~ (yet)
+    - From binary -> [install_from_binary.md](install_from_binary.md)
+    - [#From sources on Linux](#install-from-sources-on-linux)
+    - [#From sources on Windows](#install-from-sources-on-windows)
+- [#How it works](#how-it-works)
+- Documentation -> [docs/refs](docs/refs)
+- Examples -> [examples](examples)
+- Internals -> [internals.md](internals.md)
 
-Currently, working toward initial release.
+## About
 
-This is a hobby project. Don't use in production. Pull requests and issues etc. are welcome.
+*History*:
+The initial goal of the project was **[self-hosting](https://en.wikipedia.org/wiki/Self-hosting)**.
+That is, I just wanted to write a compiler that can compile the compiler itself.
+I achieved the goal at [v0.1.0](https://github.com/vain0x/milone-lang/tree/v0.1.0).
 
-## Index
+*Current*:
+I'm working toward initial release.
 
-- [Install](#install)
-- [Documentation](docs/refs/)
-- [Examples](tests/examples)
+*Remarks*:
+This is a hobby project.
+Don't use in production.
+Issues and pull requests are welcome.
+Feel free to ask anything in [discussions](https://github.com/vain0x/milone-lang/discussions/4) or something.
 
 ## Install
 
-(Installation from binary or via package manager is not available yet.)
-
-### Install from sources
+### Install from sources on Linux
 
 Prerequisites:
 
 - Ubuntu 18.04 (or similar platform)
-- Install [.NET SDK 5.0.101](https://dotnet.microsoft.com/download/dotnet/5.0)
-- Install GCC 7.5.0 (Note: This is old, current latest version is 10.)
+- Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install some C11-compliant C compiler, typically either:
+    - GCC 7, or
+    - Clang 6
 
 Do:
 
 ```sh
-# Download the source codes. (Or `git clone 'https://github.com/vain0x/milone-lang'`.)
-curl -L 'https://github.com/vain0x/milone-lang/archive/master.zip' | \
-    busybox unzip -q - && \
-    mv milone-lang-master milone-lang
+# Download the source code.
+git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
 
 # Build and install.
 cd milone-lang
-./install
+scripts/install
 ```
 
-- Feel free to ask anything in [discussion](https://github.com/vain0x/milone-lang/discussions/4).
-- To uninstall, run `scripts/uninstall`.
+- To uninstall, do `scripts/uninstall`.
 
-### Other platforms (Windows/macOS)
+### Install from sources on Windows
 
-Installation script is not available yet.
+Prerequisites:
 
-So you need run commands by hand.
-See [./install](./install) for details.
-(The milone-lang compiler should work on these platforms since .NET and C language are cross-platform.
-The milone-lang compiler emits C11-compliant codes and the [runtime codes](runtime/milone.c) are C11-compliant.)
+- Windows 10
+- Install [Git for Windows](https://gitforwindows.org/)
+- Install [.NET SDK 5](https://dotnet.microsoft.com/download/dotnet/5.0)
+- Install [Visual Studio 2019](https://visualstudio.microsoft.com/ja/downloads/) with "Desktop development with C++" option
+
+Do with Git Bash:
+
+```sh
+# Download the source code.
+git clone 'https://github.com/vain0x/milone-lang' --filter=blob:none
+cd milone-lang
+
+# ---- BUILD ----
+
+# Build milone-lang compiler to C code.
+mkdir -p target
+MILONE_HOME=$PWD dotnet run -p MiloneLang -- compile MiloneLang >target/milone_gen2.c
+
+# HACK: MSVC seems to not handle minimum int literal. Replace them with hex notation.
+sed -i 's/-2147483648/0x80000000/' target/milone_gen2.c
+
+# Build for executable.
+# Remark: MSBuild.exe is not in PATH by default.
+#         If you don't know what to do about this,
+#         just open the solution with Visual Studio to build instead.
+MSBuild.exe 'scripts/milone-lang-win10-msvc/milone-lang-win10-msvc.sln' '-p:Configuration=Release;Platform=x64'
+
+# ---- INSTALL ----
+
+# Copy the generated executable to some directory as you want.
+mkdir -p $USERPROFILE/bin
+cp 'scripts/milone-lang-win10-msvc/target/64-Release-bin/milone.exe' $USERPROFILE/bin
+
+# Create '.milone' directory in user directory.
+# Copy libraries to it.
+mkdir -p $USERPROFILE/.milone
+cp milone_libs $USERPROFILE/.milone
+```
 
 ## How to build a test project
 
@@ -58,13 +104,14 @@ TODO: Write in docs and include in test chain.
 These commands build [tests/examples/hello_world](tests/examples/hello_world) project.
 
 ```sh
-# Compile to C.
+# Compile to C code.
 milone compile tests/examples/hello_world >hello.c
 
-# Build C. You need to specify runtime directory and link runtime codes.
+# Build C code with C compiler.
+# You need to specify include directory (-I)
+# and compile runtime code.
 gcc -std=c11 \
-    -O2 \
-    -I $HOME/.milone/runtime \
+    -I$HOME/.milone/runtime \
     $HOME/.milone/runtime/milone.c \
     hello.c \
     -o hello
@@ -129,146 +176,35 @@ Not all of F# features are supported. Features for functional-style programming 
 
 - Compile a CLI application (no libraries)
 - Expressions
-    - Literals: `1`, `"str"`, etc.
-    - Operations: `+`, `::`, etc.
+    - Literals: `42`, `3.14`, `"str"`, `"""raw str"""`
+    - Operations: `a + b`, `s.[i]`, `h :: t`, `(x, y)`, etc.
     - Function calls: `f x y` and `y |> f x`
     - Function definitions: `let f x y = ..` and `fun x y -> ..`
     - Pattern matching
 - Functions
-    - Mutually recursion
+    - Mutual recursion
     - Local variable capturing
     - Partial applications
     - Function objects
 - Types
     - Polymorphic type inference
-    - Primitive types: `int`, `string`, tuples, lists, functions, etc.
+    - Primitive types: int, float, string, tuples, lists, functions, etc.
     - Discriminated unions (non-generic ones only)
-    - Records (non-generic, non-recursive ones only)
+    - Records (non-generic ones only)
 - IO
-    - `printfn` with `%s`, `%d`
-    - Some file IOs
+    - `printfn` (`%s`, `%d`, `%f` only)
 
 See also:
 
+- [the docs/refs directory](docs/refs/) for detailed explanation
 - [the tests/examples directory](tests/examples) for working codes
-- [the docs/refs directory](docs/refs/) for detailed references
+- [the examples directory](examples) for more practical codes
 
-## Internals
+## License
 
-See comments written at the top of each file to describe what it is.
+Milone-lang tools (compiler and LSP server) are distributed under either:
 
-Most of types and functions are defined in:
+- the Apache 2.0 license, or
+- the MIT license.
 
-- [Util](MiloneLang/Util.fs)
-    - Just a set of utility functions for string, list, map etc.
-- [Syntax](MiloneLang/Syntax.fs)
-    - Tokens, abstract syntax tree (AST), source location information etc.
-- [Hir](MiloneLang/Hir.fs):
-    - Functional-style intermediate representation
-- [Mir](MiloneLang/Mir.fs):
-    - Imperative-style intermediate representation
-- [Cir](MiloneLang/Cir.fs)
-    - AST of the C language for pretty-printing
-- [FSharpOnly](MiloneLang/FSharpOnly.fs)
-
-Program analysis and transformations are written in:
-
-- [SyntaxTokenize](MiloneLang/SyntaxTokenize.fs) (milone-lang source code -> Token list)
-- [SyntaxParse](MiloneLang/SyntaxParse.fs) (Token list -> AST)
-- [AstToHir](MiloneLang/AstToHir.fs) (AST -> HIR)
-- [Bundling](MiloneLang/Bundling.fs) (\*files\* -> HIR)
-    - Loads source files of project and concatenates them into single HIR program
-- [NameRes](MiloneLang/NameRes.fs) (Name resolution)
-- [Typing](MiloneLang/Typing.fs) (Type inference)
-- [MainHoist](MiloneLang/MainHoist.fs)
-    - Resolves top-level bindings
-- [AutoBoxing](MiloneLang/AutoBoxing.fs)
-    - Resolves recursive nominal types
-- [RecordRes](MiloneLang/RecordRes.fs)
-    - Resolves use of field names
-- [ClosureConversion](MiloneLang/ClosureConversion.fs)
-    - Resolves non-closed functions
-- [EtaExpansion](MiloneLang/EtaExpansion.fs)
-    - Resolves partial applications and function references
-- [Hoist](MiloneLang/Hoist.fs)
-    - Just a preparation of monomorphization
-- [Monomorphization](MiloneLang/Monomorphization.fs)
-    - Resolves use of generic functions by code cloning
-- [TailRecOptimizing](MiloneLang/TailRecOptimizing.fs)
-    - Marks tail-recursive calls to be optimized
-- [MirGen](MiloneLang/MirGen.fs) (HIR -> MIR)
-    - Resolves pattern matches
-- [CirGen](MiloneLang/CirGen.fs) (MIR -> CIR)
-- [CirDump](MiloneLang/CirDump.fs) (CIR -> C source code)
-
-Entrypoints:
-
-- [Cli.fs](MiloneLang/Cli.fs)
-    - CLI application logic shared by F# and milone-lang
-- [Program.fs](MiloneLang/Program.fs)
-    - Provides `main` function for .NET
-- [MiloneLang.fs](MiloneLang/MiloneLang.fs)
-    - Provides `main` function for milone-lang
-
-## Development
-
-Scripts are written for `bash` because I use a Ubuntu desktop for development. These scripts might work on Windows Subsystem Linux or macOS (not tried).
-
-### Dev: Prerequisites
-
-See the "install from sources" section above.
-
-For incremental building and testing, `ninja` command is also used.
-
-`git` command is used in tests to generate diff.
-
-- Install Git 2.30.0
-- Install [ninja 1.10.2](https://github.com/ninja-build/ninja) (build tool)
-    with `scripts/install-ninja`
-
-### Dev: Build
-
-Generate a build script for ninja and then run ninja command.
-
-```sh
-script/build-ninja-gen && bin/ninja
-```
-
-Or just do `make`.
-
-### Dev: Testing
-
-```
-    tests/*/X/X.fs
-        ↓ compile with milone-lang compiler
-    tests/*/X/X.c       → snapshot test
-        ↓ compile with C compiler
-    tests/*/X/X.exe
-        ↓ execute
-    tests/*/X/X.out     → integration test
-```
-
-The `tests` directory contains projects for testing. Testing consist of two phases.
-
-First, snapshot testing: each test project (at `tests/*/X`) is compiled with milone-lang compiler to C file. C files are committed to Git and you can assume they are verified before commit. OK if unchanged. Otherwise, the project proceeds to the next phase to verify the modified output.
-
-Second, integration testing: each test project is compiled with GCC and executed. The standard output and exit code is written to `tests/*/X/X.generated.out`. The expected result is stored in `tests/*/X/X.out`, which is committed. OK if the two files are same. Otherwise, something wrong. Debug it.
-
-In addition, self compilation is also a kind of testing. The milone-lang compiler (on .NET) compiles the compiler itself (obtaining first C code) and the output compiler also compiles the compiler itself (obtaining second C code). OK if the generated two C codes are same, and the generated compiler passes the all tests described above.
-
-In tests, there are some categories of test cases:
-
-- `features`: Tests for language features
-- `primitives`: Tests for primitive operators, functions, and types
-- `examples`: (should be) meaningful codes
-- `edges`: Tests for exotic cases
-- `errors`: Tests of compile errors
-- `pendings`: Test cases pointing out flaw of the compiler
-
-### Dev: See also
-
-- [TODO list](https://github.com/vain0x/milone-lang/projects/1): TODO list. Feel free to clarify by opening an issue.
-- [notes.md](notes.md): Notes on future works.
-- [milone_libs](milone_libs): Standard library for milone-lang.
-    - [MiloneCore](milone_libs/MiloneCore): Core library that is a subset of F# with compatible behavior.
-    - [MiloneStd](milone_libs/MiloneStd): Standard library for milone-lang, not compatible with F#.
+Others including documentation, examples, libraries, runtime code, scripts, tests, etc. are distributed under CC0-1.0.

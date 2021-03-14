@@ -1,24 +1,22 @@
 #include "milone.h"
 
-enum LazyList_Discriminant;
-
 struct LazyList_;
 
 struct UnitLazyList_Fun1;
 
 struct IntUnitLazyList_Fun1Tuple2;
 
-struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_);
-
-int go_(int n_1, struct LazyList_ xs_1);
-
-int lazyListPrint_(int n_, struct LazyList_ xs_);
-
 struct IntIntTuple2;
 
-struct LazyList_ fun_(void const* env_, int arg_);
+struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_);
 
-struct LazyList_ makeTail_(int n_2, int prev_, int arg_5);
+char go_(int n_1, struct LazyList_ xs_1);
+
+char lazyListPrint_(int n_, struct LazyList_ xs_);
+
+struct LazyList_ fun_(void const* env_, char arg_);
+
+struct LazyList_ makeTail_(int n_2, int prev_, char arg_5);
 
 int milone_main();
 
@@ -35,13 +33,18 @@ struct LazyList_ {
 };
 
 struct UnitLazyList_Fun1 {
-    struct LazyList_(*fun)(void const*, int);
+    struct LazyList_(*fun)(void const*, char);
     void const* env;
 };
 
 struct IntUnitLazyList_Fun1Tuple2 {
     int t0;
     struct UnitLazyList_Fun1 t1;
+};
+
+struct IntIntTuple2 {
+    int t0;
+    int t1;
 };
 
 struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
@@ -52,16 +55,16 @@ struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
     return variant_;
 }
 
-int go_(int n_1, struct LazyList_ xs_1) {
+char go_(int n_1, struct LazyList_ xs_1) {
 tailrec_1:;
-    int if_;
+    char if_;
     if ((0 < n_1)) {
         goto then_3;
     } else {
         goto else_7;
     }
 then_3:;
-    int match_;
+    char match_;
     if ((xs_1.discriminant != Nil_)) goto next_5;
     match_ = 0;
     goto end_match_4;
@@ -76,8 +79,6 @@ next_5:;
     n_1 = arg_3;
     xs_1 = arg_4;
     goto tailrec_1;
-    match_ = 0;
-    goto end_match_4;
 next_6:;
     exit(1);
 end_match_4:;
@@ -90,24 +91,19 @@ if_next_2:;
     return 0;
 }
 
-int lazyListPrint_(int n_, struct LazyList_ xs_) {
-    int call_ = go_(n_, xs_);
+char lazyListPrint_(int n_, struct LazyList_ xs_) {
+    char call_ = go_(n_, xs_);
     return 0;
 }
 
-struct IntIntTuple2 {
-    int t0;
-    int t1;
-};
-
-struct LazyList_ fun_(void const* env_, int arg_) {
+struct LazyList_ fun_(void const* env_, char arg_) {
     int arg_1 = (*(((struct IntIntTuple2 const*)env_))).t0;
     int arg_2 = (*(((struct IntIntTuple2 const*)env_))).t1;
     struct LazyList_ call_1 = makeTail_(arg_1, arg_2, 0);
     return call_1;
 }
 
-struct LazyList_ makeTail_(int n_2, int prev_, int arg_5) {
+struct LazyList_ makeTail_(int n_2, int prev_, char arg_5) {
     int head_2 = (n_2 * prev_);
     struct IntIntTuple2 tuple_1 = (struct IntIntTuple2){.t0 = (n_2 + 1), .t1 = head_2};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntIntTuple2));
@@ -120,6 +116,6 @@ struct LazyList_ makeTail_(int n_2, int prev_, int arg_5) {
 int milone_main() {
     struct LazyList_ call_3 = makeTail_(1, 1, 0);
     struct LazyList_ fact_ = call_3;
-    int call_4 = lazyListPrint_(5, fact_);
+    char call_4 = lazyListPrint_(5, fact_);
     return 0;
 }

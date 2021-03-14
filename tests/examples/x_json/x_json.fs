@@ -21,7 +21,10 @@ let isDigit c = '0' <= c && c <= '9'
 
 let tokenize (s: string) =
   let rec readInt i =
-    if i >= s.Length || not (isDigit s.[i]) then i else readInt (i + 1)
+    if i >= s.Length || not (isDigit s.[i]) then
+      i
+    else
+      readInt (i + 1)
 
   let rec go acc i =
     if i >= s.Length then

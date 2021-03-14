@@ -5,6 +5,7 @@ open MiloneLsp.JsonValue
 open MiloneLsp.JsonSerialization
 open MiloneLsp.JsonRpcWriter
 open MiloneLsp.Lsp
+open MiloneLsp.Util
 
 type private Position = int * int
 
@@ -14,30 +15,30 @@ type private Range = Position * Position
 // JSON helper
 // -----------------------------------------------
 
-let private jOfInt (value: int): JsonValue = JNumber(float value)
+let private jOfInt (value: int) : JsonValue = JNumber(float value)
 
 let private jOfObj (assoc: (string * JsonValue) list) = JObject(Map.ofList assoc)
 
-let private jOfPos (row: int, column: int): JsonValue =
+let private jOfPos (row: int, column: int) : JsonValue =
   jOfObj [ "line", jOfInt row
            "character", jOfInt column ]
 
-let private jOfRange (start: Position, endValue: Position): JsonValue =
+let private jOfRange (start: Position, endValue: Position) : JsonValue =
   jOfObj [ "start", jOfPos start
            "end", jOfPos endValue ]
 
-let private jAt index jsonValue: JsonValue =
+let private jAt index jsonValue : JsonValue =
   match jsonValue with
   | JArray list -> List.item index list
 
   | _ -> failwithf "Expected a list with index: %d; but was: '%s'" index (jsonDisplay jsonValue)
 
-let private jTryFind key jsonValue: JsonValue option =
+let private jTryFind key jsonValue : JsonValue option =
   match jsonValue with
   | JObject map -> Map.tryFind key map
   | _ -> None
 
-let private jFind key jsonValue: JsonValue =
+let private jFind key jsonValue : JsonValue =
   match jsonValue with
   | JObject map ->
       match map |> Map.tryFind key with
@@ -47,46 +48,46 @@ let private jFind key jsonValue: JsonValue =
 
   | _ -> failwithf "Expected a map with key '%s'; but was '%s'" key (jsonDisplay jsonValue)
 
-let private jFind2 key1 key2 jsonValue: JsonValue = jsonValue |> jFind key1 |> jFind key2
+let private jFind2 key1 key2 jsonValue : JsonValue = jsonValue |> jFind key1 |> jFind key2
 
-let private jFind3 key1 key2 key3 jsonValue: JsonValue =
+let private jFind3 key1 key2 key3 jsonValue : JsonValue =
   jsonValue
   |> jFind key1
   |> jFind key2
   |> jFind key3
 
-let private jFields2 key1 key2 jsonValue: JsonValue * JsonValue =
+let private jFields2 key1 key2 jsonValue : JsonValue * JsonValue =
   jsonValue |> jFind key1, jsonValue |> jFind key2
 
-let private jFields3 key1 key2 key3 jsonValue: JsonValue * JsonValue * JsonValue =
+let private jFields3 key1 key2 key3 jsonValue : JsonValue * JsonValue * JsonValue =
   jsonValue |> jFind key1, jsonValue |> jFind key2, jsonValue |> jFind key3
 
-let private jToString jsonValue: string =
+let private jToString jsonValue : string =
   match jsonValue with
   | JString value -> value
 
   | _ -> failwithf "Expected a string but: %s" (jsonDisplay jsonValue)
 
-let private jToNumber jsonValue: float =
+let private jToNumber jsonValue : float =
   match jsonValue with
   | JNumber value -> value
 
   | _ -> failwithf "Expected a number but: %s" (jsonDisplay jsonValue)
 
-let private jToInt jsonValue: int = jsonValue |> jToNumber |> int
+let private jToInt jsonValue : int = jsonValue |> jToNumber |> int
 
-let private jToBool jsonValue: bool =
+let private jToBool jsonValue : bool =
   match jsonValue with
   | JBoolean value -> value
   | _ -> false
 
-let private jToPos jsonValue: Position =
+let private jToPos jsonValue : Position =
   let row, column =
     jsonValue |> jFields2 "line" "character"
 
   jToInt row, jToInt column
 
-let private jToRange jsonValue: Range =
+let private jToRange jsonValue : Range =
   let start, endPos = jsonValue |> jFields2 "start" "end"
   jToPos start, jToPos endPos
 
@@ -106,7 +107,7 @@ let private jOfMarkdownString (text: string) =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private InitializeParam = { RootUriOpt: string option }
 
-let private parseInitializeParam jsonValue: InitializeParam =
+let private parseInitializeParam jsonValue : InitializeParam =
   let rootUriOpt =
     try
       jsonValue
@@ -143,7 +144,7 @@ type private DidOpenParam =
     Version: int
     Text: string }
 
-let private parseDidOpenParam jsonValue: DidOpenParam =
+let private parseDidOpenParam jsonValue : DidOpenParam =
   let docParam =
     jsonValue |> jFind2 "params" "textDocument"
 
@@ -163,7 +164,7 @@ type private DidChangeParam =
     Version: int
     Text: string }
 
-let private parseDidChangeParam jsonValue: DidChangeParam =
+let private parseDidChangeParam jsonValue : DidChangeParam =
   let uri, version =
     let uri, version =
       jsonValue
@@ -186,7 +187,7 @@ let private parseDidChangeParam jsonValue: DidChangeParam =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DidCloseParam = { Uri: string }
 
-let private parseDidCloseParam jsonValue: DidCloseParam =
+let private parseDidCloseParam jsonValue : DidCloseParam =
   let uri =
     jsonValue
     |> jFind3 "params" "textDocument" "uri"
@@ -197,7 +198,7 @@ let private parseDidCloseParam jsonValue: DidCloseParam =
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private DocumentPositionParam = { Uri: string; Pos: Pos }
 
-let private parseDocumentPositionParam jsonValue: DocumentPositionParam =
+let private parseDocumentPositionParam jsonValue : DocumentPositionParam =
   let uri =
     jsonValue
     |> jFind3 "params" "textDocument" "uri"
@@ -214,7 +215,7 @@ type private ReferencesParam =
     Pos: Pos
     IncludeDecl: bool }
 
-let private parseReferencesParam jsonValue: ReferencesParam =
+let private parseReferencesParam jsonValue : ReferencesParam =
   let uri, pos =
     let p = parseDocumentPositionParam jsonValue
     p.Uri, p.Pos
@@ -237,7 +238,7 @@ type private MsgId = JsonValue
 [<NoEquality; NoComparison>]
 type private LspError =
   | CancelledRequestError of msgId: MsgId
-  | MethodNotFoundError of msgId: MsgId
+  | MethodNotFoundError of msgId: MsgId * methodName: string
 
 // -----------------------------------------------
 // LspIncome
@@ -273,7 +274,7 @@ type private ProcessResult =
   | Continue
   | Exit of exitCode: int
 
-let private parseIncome (jsonValue: JsonValue): LspIncome =
+let private parseIncome (jsonValue: JsonValue) : LspIncome =
   let getMsgId () = jsonValue |> jFind "id"
 
   let methodName = jsonValue |> jFind "method" |> jToString
@@ -296,42 +297,16 @@ let private parseIncome (jsonValue: JsonValue): LspIncome =
   | "$/cancelRequest" -> CancelRequestNotification(jsonValue |> jFind2 "params" "id")
 
   | methodName ->
-    eprintfn "[TRACE] Unknown methodName: '%s'." methodName
+      let msgId =
+        jsonValue
+        |> jTryFind "id"
+        |> Option.defaultValue JNull
 
-    let msgId = jsonValue |> jTryFind "id" |> Option.defaultValue JNull
-    ErrorIncome(MethodNotFoundError msgId)
+      ErrorIncome(MethodNotFoundError(msgId, methodName))
 
-let private doPublishDiagnostics (uri: string) (errors: (string * int * int * int * int) list): unit =
-  let diagnostics =
-    errors
-    |> List.map
-         (fun (msg, r1, c1, r2, c2) ->
-           let start = r1, c1
-           let endPos = r2, c2
-
-           jOfObj [ "range", jOfRange (start, endPos)
-                    "message", JString msg
-                    "source", JString "milone-lang" ])
-    |> JArray
-
-  let paramsValue =
-    jOfObj [ "uri", JString uri
-             "diagnostics", diagnostics ]
-
-  jsonRpcWriteWithParams "textDocument/publishDiagnostics" paramsValue
-
-let private validateWorkspace (rootUriOpt: string option): unit =
-  for uri, errors in LspLangService.validateWorkspace rootUriOpt do
-    let errors =
-      [ for msg, pos in errors do
-          let row, column = pos
-          yield msg, row, column, row, column ]
-
-    doPublishDiagnostics uri errors
-
-let private processNext (): LspIncome -> ProcessResult =
-  let mutable exitCode: int = 1
-  let mutable rootUriOpt: string option = None
+let private processNext () : LspIncome -> ProcessResult =
+  let mutable exitCode : int = 1
+  let mutable rootUriOpt : string option = None
 
   fun (income: LspIncome) ->
     match income with
@@ -371,7 +346,20 @@ let private processNext (): LspIncome -> ProcessResult =
         Continue
 
     | DiagnosticsRequest ->
-        validateWorkspace rootUriOpt
+        for uri, errors in LspLangService.validateWorkspace rootUriOpt do
+          let diagnostics =
+            [ for msg, pos in errors do
+                jOfObj [ "range", jOfRange (pos, pos)
+                         "message", JString msg
+                         "source", JString "milone-lang" ] ]
+            |> JArray
+
+          let param =
+            jOfObj [ "uri", JString uri
+                     "diagnostics", diagnostics ]
+
+          jsonRpcWriteWithParams "textDocument/publishDiagnostics" param
+
         Continue
 
     | DefinitionRequest (msgId, p) ->
@@ -461,10 +449,15 @@ let private processNext (): LspIncome -> ProcessResult =
             jsonRpcWriteWithError msgId error
             Continue
 
-        | MethodNotFoundError msgId ->
+        | MethodNotFoundError (JNull, methodName) ->
+            eprintfn "[TRACE] Unknown methodName: '%s'." methodName
+            Continue
+
+        | MethodNotFoundError (msgId, methodName) ->
             let error =
               jOfObj [ "code", jOfInt methodNotFoundCode
-                       "message", JString "Unknown method." ]
+                       "message", JString "Unknown method."
+                       "data", jOfObj [ "methodName", JString methodName ] ]
 
             jsonRpcWriteWithError msgId error
             Continue
@@ -473,7 +466,25 @@ let private processNext (): LspIncome -> ProcessResult =
 // Request preprocess
 // -----------------------------------------------
 
-let private preprocess (incomes: LspIncome list): LspIncome list =
+/// Removes a list of didChange notifications in a line
+/// except for the last one.
+let private dedupChanges (incomes: LspIncome list) : LspIncome list =
+  match List.rev incomes with
+  | [] -> []
+
+  | last :: incomes ->
+      incomes
+      |> List.fold
+           (fun (next, acc) income ->
+             match income, next with
+             | DidChangeNotification p, DidChangeNotification q when p.Uri = q.Uri -> next, acc
+             | _ -> income, income :: acc)
+           (last, [ last ])
+      |> snd
+
+/// Automatically update diagnostics by appending diagnostics request
+/// if some document changed.
+let private autoUpdateDiagnostics (incomes: LspIncome list) : LspIncome list =
   let doesUpdateDiagnostics income =
     match income with
     | InitializedNotification _
@@ -483,49 +494,52 @@ let private preprocess (incomes: LspIncome list): LspIncome list =
 
     | _ -> false
 
-  // Add diagnostics request if some document changed.
-  let incomes =
-    if incomes |> List.exists doesUpdateDiagnostics then
-      List.append incomes [ DiagnosticsRequest ]
-    else
-      incomes
+  if incomes |> List.exists doesUpdateDiagnostics then
+    List.append incomes [ DiagnosticsRequest ]
+  else
+    incomes
 
-  // Replace request and cancellation with cancellation error.
-  let incomes =
-    let asCancelRequest income =
-      match income with
-      | CancelRequestNotification msgId -> Some msgId
-      | _ -> None
+/// Replaces each pair of request and cancellation with an error.
+let private preprocessCancelRequests (incomes: LspIncome list) : LspIncome list =
+  let asCancelRequest income =
+    match income with
+    | CancelRequestNotification msgId -> Some msgId
+    | _ -> None
 
-    let asMsgId income =
-      match income with
-      | DefinitionRequest (msgId, _)
-      | ReferencesRequest (msgId, _)
-      | DocumentHighlightRequest (msgId, _)
-      | HoverRequest (msgId, _) -> Some msgId
+  let asMsgId income =
+    match income with
+    | DefinitionRequest (msgId, _)
+    | ReferencesRequest (msgId, _)
+    | DocumentHighlightRequest (msgId, _)
+    | HoverRequest (msgId, _) -> Some msgId
 
-      | _ -> None
+    | _ -> None
 
-    let cancelledIds =
-      incomes
-      |> List.choose asCancelRequest
-      |> Set.ofList
+  let cancelledIds =
+    incomes
+    |> List.choose asCancelRequest
+    |> Set.ofList
 
-    if Set.isEmpty cancelledIds then
-      incomes
-    else
-      incomes
-      |> List.choose
-           (fun income ->
-             if income |> asCancelRequest |> Option.isSome then
-               None
-             else
-               match asMsgId income with
-               | Some msgId when Set.contains msgId cancelledIds -> ErrorIncome(CancelledRequestError msgId) |> Some
+  if Set.isEmpty cancelledIds then
+    incomes
+  else
+    incomes
+    |> List.choose
+         (fun income ->
+           if income |> asCancelRequest |> Option.isSome then
+             None
+           else
+             match asMsgId income with
+             | Some msgId when Set.contains msgId cancelledIds -> ErrorIncome(CancelledRequestError msgId) |> Some
 
-               | _ -> Some income)
+             | _ -> Some income)
 
+/// Optimizes a bunch of messages.
+let private preprocess (incomes: LspIncome list) : LspIncome list =
   incomes
+  |> dedupChanges
+  |> autoUpdateDiagnostics
+  |> preprocessCancelRequests
 
 // -----------------------------------------------
 // Server
@@ -535,7 +549,7 @@ let private preprocess (incomes: LspIncome list): LspIncome list =
 type LspServerHost =
   { DrainRequests: unit -> JsonValue list }
 
-let lspServer (host: LspServerHost): Async<int> =
+let lspServer (host: LspServerHost) : Async<int> =
   async {
     let onRequest = processNext ()
 

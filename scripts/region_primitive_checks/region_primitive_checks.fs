@@ -13,11 +13,9 @@ let rec produce acc t i =
 // Consume a large list to not optimizer removing the allocation.
 let rec consume h xs =
   match xs with
-  | [] ->
-    h
+  | [] -> h
 
-  | x :: xs ->
-    consume (h + x) xs
+  | x :: xs -> consume (h + x) xs
 
 let stress (i: int) =
   // printfn "stress i=%d" i

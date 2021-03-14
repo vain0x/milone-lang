@@ -31,13 +31,13 @@ type private IsTail =
 // Helpers
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private TailRecCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Tys: AssocMap<TySerial, TyDef>
     CurrentFun: FunSerial option }
 
-let private ofTyCtx (tyCtx: TyCtx): TailRecCtx =
+let private ofTyCtx (tyCtx: TyCtx) : TailRecCtx =
   { Vars = tyCtx.Vars
     Tys = tyCtx.Tys
     CurrentFun = None }
@@ -100,11 +100,11 @@ let private troExpr isTail (expr, ctx) =
       let last, ctx = (last, ctx) |> troExpr isTail
       HBlockExpr(stmts, last), ctx
 
-  | HLetValExpr (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (pat, init, next, ty, loc) ->
       let doArm () =
         let init, ctx = troExpr NotTail (init, ctx)
         let next, ctx = troExpr isTail (next, ctx)
-        HLetValExpr(vis, pat, init, next, ty, loc), ctx
+        HLetValExpr(pat, init, next, ty, loc), ctx
 
       doArm ()
 
@@ -119,14 +119,14 @@ let private troExpr isTail (expr, ctx) =
 
       doArm ()
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
-let tailRecOptimize (expr: HExpr, tyCtx: TyCtx): HExpr * TyCtx =
+let tailRecOptimize (decls: HExpr list, tyCtx: TyCtx) : HExpr list * TyCtx =
   let ctx = ofTyCtx tyCtx
 
-  let expr, _ = troExpr IsTail (expr, ctx)
+  let decls, _ = (decls, ctx) |> stMap (troExpr IsTail)
 
-  expr, tyCtx
+  decls, tyCtx

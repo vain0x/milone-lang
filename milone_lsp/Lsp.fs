@@ -7,7 +7,7 @@ open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLsp.Util
 
-let private defaultTimeout = 5 * 1000
+module TMap = MiloneStd.StdMap
 
 // Re-exports.
 type Pos = Syntax.Pos
@@ -25,14 +25,14 @@ type private FilePath = string
 type private ProjectName = string
 type private ModuleName = string
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceDocs =
   { FindDocId: ProjectName -> ModuleName -> DocId option
     GetVersion: DocId -> DocVersion
     GetText: DocId -> DocVersion * string
     GetProjectName: DocId -> ProjectName option }
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceHost =
   { MiloneHome: FilePath
     Docs: LangServiceDocs }
@@ -41,16 +41,16 @@ type LangServiceHost =
 // Syntax
 // -----------------------------------------------
 
-let private locOfDocPos (docId: DocId) (pos: Pos): Loc =
+let private locOfDocPos (docId: DocId) (pos: Pos) : Loc =
   let y, x = pos
-  docId, y, x
+  Loc(docId, y, x)
 
-let private locToDoc (loc: Loc): DocId =
-  let docId, _, _ = loc
+let private locToDoc (loc: Loc) : DocId =
+  let (Loc (docId, _, _)) = loc
   docId
 
-let private locToPos (loc: Loc): Pos =
-  let _, y, x = loc
+let private locToPos (loc: Loc) : Pos =
+  let (Loc (_, y, x)) = loc
   y, x
 
 let private tokenizeHost = tokenizeHostNew ()
@@ -60,37 +60,6 @@ let private tokenAsTriviaOrError (token, pos) =
   | ErrorToken error -> Some(Some(tokenizeErrorToString error, pos))
   | _ when isTrivia token -> Some None
   | _ -> None
-
-// let private doTokenize text =
-//   let result =
-//     doWithTimeout defaultTimeout (fun () -> SyntaxTokenize.tokenize tokenizeHost text)
-
-//   match result with
-//   | Ok it -> it
-
-//   | Error ex ->
-//       eprintfn "[ERROR] doTokenize: %s" (ex.ToString())
-
-//       let msg =
-//         "FATAL: Exception during tokenization. "
-//         + ex.Message
-
-//       [ ErrorToken(OtherTokenizeError msg), (0, 0) ]
-
-// let private doParse tokens =
-//   let result =
-//     doWithTimeout defaultTimeout (fun () -> SyntaxParse.parse tokens)
-
-//   match result with
-//   | Ok it -> it
-
-//   | Error ex ->
-//       eprintfn "[ERROR] doParse: %s" (ex.ToString())
-
-//       let msg =
-//         "FATAL: Exception while parsing. " + ex.Message
-
-//       AExprRoot [], [ msg, (0, 0) ]
 
 let private tokenizeWithCache (ls: LangServiceState) docId =
   let currentVersion = ls.Host.Docs.GetVersion docId
@@ -168,7 +137,7 @@ let private parseWithCache (ls: LangServiceState) docId =
 let private tyDisplayFn (tyCtx: Typing.TyCtx) ty =
   let getTyName tySerial =
     tyCtx.Tys
-    |> mapTryFind tySerial
+    |> TMap.tryFind tySerial
     |> Option.map Hir.tyDefToName
 
   TySystem.tyDisplay getTyName ty
@@ -193,11 +162,6 @@ let private doBundle (ls: LangServiceState) projectDir =
 
   let compileCtx =
     { compileCtx with
-        // FIXME: read .milone_project
-        Projects =
-          compileCtx.Projects
-          |> mapAdd "MiloneStd" (ls.Host.MiloneHome + "/milone_libs/MiloneStd")
-
         FetchModule = fetchModule }
 
   let expr, nameCtx, errors = Cli.syntacticallyAnalyze compileCtx
@@ -260,7 +224,7 @@ type private ParseResult = ARoot * (string * Pos) list
 
 type private BundleResult = (HExpr * Typing.TyCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
   private
     { TokenizeFullCache: MutMap<DocId, DocVersion * TokenizeFullResult>
@@ -323,7 +287,7 @@ type private DefOrUse =
   | Def
   | Use
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private Visitor =
   { OnDiscardPat: Ty * Loc -> unit
     OnVar: VarSerial * DefOrUse * Ty * Loc -> unit
@@ -335,7 +299,7 @@ let private dfsPat (visitor: Visitor) pat =
   match pat with
   | HLitPat _ -> ()
   | HDiscardPat (ty, loc) -> visitor.OnDiscardPat(ty, loc)
-  | HVarPat (varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
+  | HVarPat (_, varSerial, ty, loc) -> visitor.OnVar(varSerial, Def, ty, loc)
   | HVariantPat (variantSerial, ty, loc) -> visitor.OnVariant(variantSerial, ty, loc)
 
   | HNodePat (_, pats, _, _) ->
@@ -385,7 +349,7 @@ let private dfsExpr (visitor: Visitor) expr =
 
       dfsExpr visitor expr
 
-  | HLetValExpr (_, pat, init, next, _, _) ->
+  | HLetValExpr (pat, init, next, _, _) ->
       dfsPat visitor pat
       dfsExpr visitor init
       dfsExpr visitor next
@@ -416,7 +380,7 @@ let private findTyInExpr (ls: LangServiceState) (expr: HExpr) (tyCtx: Typing.TyC
     if loc = tokenLoc then
       contentOpt <- tyOpt
 
-  let visitor: Visitor =
+  let visitor : Visitor =
     { OnDiscardPat = fun (ty, loc) -> onVisit (Some ty) loc
       OnVar = fun (_, _, ty, loc) -> onVisit (Some ty) loc
       OnFun = fun (_, tyOpt, loc) -> onVisit tyOpt loc
@@ -438,7 +402,7 @@ let private collectSymbolsInExpr (expr: HExpr) =
 
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
 
-  let visitor: Visitor =
+  let visitor : Visitor =
     { OnDiscardPat = fun (_, loc) -> onVisit DiscardSymbol Def loc
       OnVar = fun (varSerial, defOrUse, _, loc) -> onVisit (ValueSymbol(VarSymbol varSerial)) defOrUse loc
       OnFun = fun (funSerial, _, loc) -> onVisit (ValueSymbol(FunSymbol funSerial)) Use loc
@@ -458,15 +422,15 @@ let private symbolToName (tyCtx: Typing.TyCtx) symbol =
       match valueSymbol with
       | VarSymbol varSerial ->
           tyCtx.Vars
-          |> mapTryFind varSerial
-          |> Option.map varDefToName
+          |> TMap.tryFind varSerial
+          |> Option.map (fun (def: VarDef) -> def.Name)
       | FunSymbol funSerial ->
           tyCtx.Funs
-          |> mapTryFind funSerial
+          |> TMap.tryFind funSerial
           |> Option.map (fun (def: FunDef) -> def.Name)
       | VariantSymbol variantSerial ->
           tyCtx.Variants
-          |> mapTryFind variantSerial
+          |> TMap.tryFind variantSerial
           |> Option.map (fun (def: VariantDef) -> def.Name)
 
   | TySymbol tySymbol ->
@@ -478,7 +442,7 @@ let private symbolToName (tyCtx: Typing.TyCtx) symbol =
       | UnionTySymbol tySerial
       | RecordTySymbol tySerial ->
           tyCtx.Tys
-          |> mapTryFind tySerial
+          |> TMap.tryFind tySerial
           |> Option.map tyDefToName
 
 let private doCollectSymbolOccurrences
@@ -537,7 +501,7 @@ let private doCollectSymbolOccurrences
                   docId, range ]
 
 module LangService =
-  let create (host: LangServiceHost): LangServiceState =
+  let create (host: LangServiceHost) : LangServiceState =
     { TokenizeFullCache = MutMap()
       ParseCache = MutMap()
       BundleCache = MutMap()
@@ -615,9 +579,7 @@ module LangService =
             None
 
         | Some (_token, tokenPos) ->
-            let tokenLoc =
-              let y, x = tokenPos
-              docId, y, x
+            let tokenLoc = locOfDocPos docId tokenPos
 
             // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 

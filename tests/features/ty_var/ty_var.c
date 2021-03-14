@@ -2,17 +2,19 @@
 
 struct IntIntTuple2;
 
-int pair_2(struct IntIntTuple2 arg_);
-
 struct StringStringTuple2;
-
-int pair_1(struct StringStringTuple2 arg_1);
-
-char useStringIndexWithoutAscription_(struct String x_);
 
 struct StringList;
 
 struct StringStringListTuple2;
+
+struct StringList;
+
+int pair_2(struct IntIntTuple2 arg_);
+
+int pair_1(struct StringStringTuple2 arg_1);
+
+char useStringIndexWithoutAscription_(struct String x_);
 
 struct StringStringListTuple2 useTyVarInBody_1(struct String x_1);
 
@@ -23,14 +25,24 @@ struct IntIntTuple2 {
     int t1;
 };
 
-int pair_2(struct IntIntTuple2 arg_) {
-    return 2;
-}
-
 struct StringStringTuple2 {
     struct String t0;
     struct String t1;
 };
+
+struct StringStringListTuple2 {
+    struct String t0;
+    struct StringList const* t1;
+};
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
+
+int pair_2(struct IntIntTuple2 arg_) {
+    return 2;
+}
 
 int pair_1(struct StringStringTuple2 arg_1) {
     return 2;
@@ -41,16 +53,6 @@ char useStringIndexWithoutAscription_(struct String x_) {
     int call_ = pair_1(tuple_);
     return x_.str[0];
 }
-
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
-
-struct StringStringListTuple2 {
-    struct String t0;
-    struct StringList const* t1;
-};
 
 struct StringStringListTuple2 useTyVarInBody_1(struct String x_1) {
     struct StringList const* xs_ = NULL;
@@ -67,7 +69,7 @@ int milone_main() {
     milone_assert((call_2 == 2), 19, 2);
     char call_3 = useStringIndexWithoutAscription_((struct String){.str = "a", .len = 1});
     milone_assert((call_3 == 'a'), 21, 2);
-    int match_;
+    char match_;
     struct StringStringListTuple2 call_4 = useTyVarInBody_1((struct String){.str = "b", .len = 1});
     if ((!(call_4.t1))) goto next_2;
     struct String s_ = call_4.t1->head;

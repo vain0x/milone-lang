@@ -1,18 +1,18 @@
 #include "milone.h"
 
-int addTest_(int arg_);
+char addTest_(char arg_);
 
-int compareTest_(int arg_1);
+char compareTest_(char arg_1);
 
 char at_(int i_, struct String s_);
 
-int indexOperatorTest_(int arg_2);
+char indexOperatorTest_(char arg_2);
 
-int subscriptOperatorTest_(int arg_3);
+char subscriptOperatorTest_(char arg_3);
 
 int milone_main();
 
-int addTest_(int arg_) {
+char addTest_(char arg_) {
     struct String hello_ = (struct String){.str = "Hello", .len = 5};
     struct String world_ = (struct String){.str = ", world!", .len = 8};
     milone_assert((str_compare(str_add(hello_, world_), (struct String){.str = "Hello, world!", .len = 13}) == 0), 5, 2);
@@ -20,7 +20,7 @@ int addTest_(int arg_) {
     return 0;
 }
 
-int compareTest_(int arg_1) {
+char compareTest_(char arg_1) {
     milone_assert((str_compare((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0}) == 0), 11, 2);
     milone_assert((str_compare((struct String){.str = "o", .len = 1}, (struct String){.str = "o", .len = 1}) == 0), 12, 2);
     milone_assert((str_compare((struct String){.str = "alpha", .len = 5}, (struct String){.str = "alpha", .len = 5}) == 0), 13, 2);
@@ -38,7 +38,7 @@ char at_(int i_, struct String s_) {
     return s_.str[i_];
 }
 
-int indexOperatorTest_(int arg_2) {
+char indexOperatorTest_(char arg_2) {
     struct String hello_1 = (struct String){.str = "hello", .len = 5};
     bool if_;
     if ((hello_1.str[0] == 'h')) {
@@ -59,7 +59,7 @@ if_next_1:;
     return 0;
 }
 
-int subscriptOperatorTest_(int arg_3) {
+char subscriptOperatorTest_(char arg_3) {
     struct String str_ = (struct String){.str = "Hello, John!", .len = 12};
     struct String slice_ = str_get_slice(0, 4, str_);
     milone_assert((str_compare(slice_, (struct String){.str = "Hello", .len = 5}) == 0), 42, 2);
@@ -71,9 +71,9 @@ int subscriptOperatorTest_(int arg_3) {
 }
 
 int milone_main() {
-    int call_1 = addTest_(0);
-    int call_2 = compareTest_(0);
-    int call_3 = indexOperatorTest_(0);
-    int call_4 = subscriptOperatorTest_(0);
+    char call_1 = addTest_(0);
+    char call_2 = compareTest_(0);
+    char call_3 = indexOperatorTest_(0);
+    char call_4 = subscriptOperatorTest_(0);
     return 0;
 }

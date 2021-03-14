@@ -5,11 +5,11 @@ open MiloneLang.Util
 open MiloneLang.Syntax
 open MiloneLang.SyntaxTokenize
 open MiloneLang.SyntaxParse
+open MiloneLang.AstBundle
 open MiloneLang.Hir
 open MiloneLang.TySystem
 open MiloneLang.AstToHir
 open MiloneLang.AutoBoxing
-open MiloneLang.Bundling
 open MiloneLang.NameRes
 open MiloneLang.Typing
 open MiloneLang.MainHoist
@@ -25,9 +25,11 @@ open MiloneLang.CirGen
 open MiloneLang.CirDump
 
 module C = MiloneStd.StdChar
+module TMap = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
-let private currentVersion () = "0.2.0"
+let private currentVersion () = "0.3.0"
 
 let private helpText () =
   """milone-lang v"""
@@ -58,6 +60,9 @@ SUBCOMMANDS
 
         If error, exits with non-zero code.
         Errors are written to STDOUT. (FIXME: use STDERR)
+
+    milone header <PROJECT-DIR>
+        Compiles to C only declarations.
 
 OPTIONS
     -h, --help      Print help text.
@@ -143,74 +148,6 @@ let private pathIsRelative (s: string) =
   || (s |> S.startsWith "../")
 
 // -----------------------------------------------
-// Project schema interpreter
-// -----------------------------------------------
-
-// type ProjectSchema =
-//   { Name: string
-//     Version: string
-//     Options: ProjectOption list }
-
-// type ProjectOption =
-//   | Ref of projectDir: string
-//   | AliasedRef of projectName: string * projectDir: string
-
-let private doInterpretProjectSchema ast =
-  let asStr expr =
-    match expr with
-    | ALitExpr (StrLit value, _) -> value
-    | _ -> failwith "Expected a string literal."
-
-  let asProjectRef expr =
-    match expr with
-    | ABinaryExpr (AppBinary, AIdentExpr ("Ref", _), projectDir, _) ->
-        let projectDir =
-          projectDir |> asStr |> pathStrTrimEndPathSep
-
-        let projectName = projectDir |> pathStrToStem
-        Some(projectName, projectDir)
-
-    | ABinaryExpr (AppBinary, AIdentExpr ("AliasedRef", _), ATupleExpr ([ projectName; projectDir ], _), _) ->
-        let projectName = projectName |> asStr
-
-        let projectDir =
-          projectDir |> asStr |> pathStrTrimEndPathSep
-
-        Some(projectName, projectDir)
-
-    | _ -> None
-
-  let asProjectSchema decl =
-    match decl with
-    | AExprDecl (ARecordExpr (None, fields, _)) ->
-        match fields
-              |> List.tryFind (fun (name, _, _) -> name = "Options") with
-        | Some (_, AListExpr (items, _), _) -> items |> List.choose asProjectRef |> Some
-        | _ -> None
-
-    | _ -> None
-
-  let decls =
-    match ast with
-    | AExprRoot decls -> decls
-    | AModuleRoot (_, decls, _) -> decls
-
-  decls |> List.tryPick asProjectSchema
-
-let private parseProjectSchema tokenizeHost contents =
-  let ast, errors =
-    contents |> tokenize tokenizeHost |> parse
-
-  if errors |> List.isEmpty |> not then
-    errors
-    |> listSort (fun (_, l) (_, r) -> posCompare l r)
-    |> List.iter (fun (msg, loc) -> printfn "ERROR %s %s" (posToString loc) msg)
-
-    failwith "Syntax error in project file."
-
-  doInterpretProjectSchema ast
-
-// -----------------------------------------------
 // MiloneCore resolution
 // -----------------------------------------------
 
@@ -233,19 +170,24 @@ let resolveMiloneCoreDeps tokens ast =
     let moduleNames = go [] tokens
 
     let add acc (moduleName, pos) =
-      if (acc |> mapContainsKey moduleName |> not)
+      if (acc |> TMap.containsKey moduleName |> not)
          && isKnownName moduleName then
-        acc |> mapAdd moduleName pos
+        acc |> TMap.add moduleName pos
       else
         acc
 
-    moduleNames |> List.fold add (mapEmpty compare)
+    moduleNames |> List.fold add (TMap.empty compare)
 
   let insertOpenDecls decls =
     moduleMap
-    |> mapFold
+    |> TMap.fold
          (fun decls moduleName pos ->
-           AModuleSynonymDecl(moduleName, [ "MiloneCore"; moduleName ], pos)
+           AModuleSynonymDecl(
+             Name(moduleName, pos),
+             [ Name("MiloneCore", pos)
+               Name(moduleName, pos) ],
+             pos
+           )
            :: decls)
          decls
 
@@ -270,10 +212,12 @@ type CompileCtx =
     TokenizeHost: TokenizeHost
     FetchModule: ProjectName -> ProjectDir -> ModuleName -> ModuleSyntaxData option
 
+    HeaderOnly: bool
+
     Verbosity: Verbosity
     Host: CliHost }
 
-let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
+let compileCtxNew (host: CliHost) verbosity projectDir : CompileCtx =
   let projectDir = projectDir |> pathStrTrimEndPathSep
   let projectName = projectDir |> pathStrToStem
 
@@ -284,10 +228,10 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
       host.Home + "/.milone"
 
   let projects =
-    mapEmpty compare
-    |> mapAdd "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
-    |> mapAdd "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
-    |> mapAdd projectName projectDir
+    TMap.empty compare
+    |> TMap.add "MiloneCore" (miloneHome + "/milone_libs/MiloneCore")
+    |> TMap.add "MiloneStd" (miloneHome + "/milone_libs/MiloneStd")
+    |> TMap.add projectName projectDir
 
   let readModuleFile (_: string) (projectDir: string) (moduleName: string) =
     let read (ext: string) =
@@ -329,42 +273,9 @@ let compileCtxNew (host: CliHost) verbosity projectDir: CompileCtx =
     Projects = projects
     TokenizeHost = tokenizeHost
     FetchModule = fetchModule
+    HeaderOnly = false
     Verbosity = verbosity
     Host = host }
-
-let private compileCtxReadProjectFile (ctx: CompileCtx) =
-  let host = ctx.Host
-
-  let projectFilePath =
-    ctx.ProjectDir
-    + "/"
-    + ctx.ProjectName
-    + ".milone_project"
-
-  match host.FileReadAllText projectFilePath with
-  | Some contents ->
-      match parseProjectSchema ctx.TokenizeHost contents with
-      | Some refs ->
-          let projects =
-            refs
-            |> List.fold
-                 (fun projects (projectName, projectDir) ->
-                   if projects |> mapContainsKey projectName then
-                     failwithf "Project name is duplicated: '%s'" projectName
-
-                   let projectDir =
-                     if projectDir |> pathIsRelative then
-                       ctx.ProjectDir + "/" + projectDir
-                     else
-                       projectDir
-
-                   projects |> mapAdd projectName projectDir)
-                 ctx.Projects
-
-          { ctx with Projects = projects }
-
-      | None -> failwith "Project is incomplete: couldn't find project schema."
-  | None -> ctx
 
 let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
   let projects =
@@ -374,29 +285,13 @@ let private compileCtxAddProjectReferences references (ctx: CompileCtx) =
            let projectDir = projectDir |> pathStrTrimEndPathSep
            let projectName = projectDir |> pathStrToStem
 
-           if projects |> mapContainsKey projectName then
+           if projects |> TMap.containsKey projectName then
              failwithf "Project name is duplicated: '%s'" projectName
 
-           projects |> mapAdd projectName projectDir)
+           projects |> TMap.add projectName projectDir)
          ctx.Projects
 
   { ctx with Projects = projects }
-
-let private toBundleHost parse (ctx: CompileCtx): BundleHost =
-  let host = ctx.Host
-  let readFile = host.FileReadAllText
-
-  let parseModule (docId: DocId) (text: string) =
-    let ast, errors = parse docId text
-    Some(docId, ast, errors)
-
-  { ProjectRefs = ctx.Projects |> mapToKeys
-
-    FetchModule =
-      fun projectName moduleName ->
-        match ctx.Projects |> mapTryFind projectName with
-        | None -> None
-        | Some projectDir -> ctx.FetchModule projectName projectDir moduleName }
 
 // -----------------------------------------------
 // Write output and logs
@@ -414,7 +309,7 @@ let private writeLog (host: CliHost) verbosity msg =
 
   | Quiet -> ()
 
-let private syntaxHasError syntax =
+let private syntaxHasError (syntax: SyntaxAnalysisResult) =
   let _, _, errors = syntax
   errors |> List.isEmpty |> not
 
@@ -444,7 +339,7 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
   let tyDisplayFn ty =
     let getTyName tySerial =
       tyCtx.Tys
-      |> mapTryFind tySerial
+      |> TMap.tryFind tySerial
       |> Option.map tyDefToName
 
     tyDisplay getTyName ty
@@ -464,6 +359,8 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
 // Processes
 // -----------------------------------------------
 
+type private SyntaxAnalysisResult = HExpr list * NameCtx * (string * Loc) list
+
 let private isErrorToken token =
   match token with
   | ErrorToken _, _ -> true
@@ -475,29 +372,25 @@ let private tokenizeErrors errorTokens =
        (fun token ->
          match token with
          | ErrorToken error, pos -> tokenizeErrorToString error, pos
-         | _ -> failwith "NEVER")
+         | _ -> unreachable ())
 
 /// Loads source codes from files, performs tokenization and SyntaxParse,
 /// and transforms them into high-level intermediate representation (HIR).
-let syntacticallyAnalyze (ctx: CompileCtx) =
+let syntacticallyAnalyze (ctx: CompileCtx) : SyntaxAnalysisResult =
   let host = ctx.Host
   let v = ctx.Verbosity
 
-  writeLog host v ("Bundling project=" + ctx.ProjectName)
+  writeLog host v ("AstBundle project=" + ctx.ProjectName)
 
-  let doParse (_: DocId) (s: string) =
-    let tokens = s |> tokenize ctx.TokenizeHost
-    let errorTokens, tokens = tokens |> List.partition isErrorToken
-    let ast, parseErrors = tokens |> parse
+  let fetchModule (projectName: ProjectName) (moduleName: ModuleName) : ModuleSyntaxData option =
+    let projectDir =
+      match ctx.Projects |> TMap.tryFind projectName with
+      | Some it -> it
+      | None -> ctx.ProjectDir + "/../" + projectName
 
-    let errors =
-      List.append (tokenizeErrors errorTokens) parseErrors
+    ctx.FetchModule projectName projectDir moduleName
 
-    ast, errors
-
-  match bundleProgram (ctx |> toBundleHost doParse) ctx.ProjectName with
-  | Some syntax -> syntax
-  | None -> failwithf "Entry module file not found: %s" ctx.ProjectName
+  bundleCompatible fetchModule ctx.ProjectName
 
 [<NoEquality; NoComparison>]
 type SemaAnalysisResult =
@@ -506,7 +399,8 @@ type SemaAnalysisResult =
   | SemaAnalysisTypingError of TyCtx
 
 /// Analyzes HIR to validate program and collect information.
-let semanticallyAnalyze (host: CliHost) v (exprs, nameCtx, syntaxErrors): SemaAnalysisResult =
+let semanticallyAnalyze (host: CliHost) v (syntax: SyntaxAnalysisResult) : SemaAnalysisResult =
+  let exprs, nameCtx, syntaxErrors = syntax
   assert (syntaxErrors |> List.isEmpty)
 
   writeLog host v "NameRes"
@@ -549,33 +443,35 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
   let expr, tyCtx = etaExpansion (expr, tyCtx)
 
   writeLog host v "Hoist"
-  let expr, tyCtx = hoist (expr, tyCtx)
+  let decls, tyCtx = hoist (expr, tyCtx)
 
   writeLog host v "TailRecOptimizing"
-  let expr, tyCtx = tailRecOptimize (expr, tyCtx)
+  let decls, tyCtx = tailRecOptimize (decls, tyCtx)
 
   writeLog host v "Monomorphizing"
-  monify (expr, tyCtx)
+  monify (decls, tyCtx)
 
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v (expr, tyCtx) =
+let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx) : string =
   writeLog host v "Mir"
-  let stmts, mirCtx = mirify (expr, tyCtx)
+  let stmts, mirCtx = mirify (decls, tyCtx)
 
-  if mirCtx.Logs |> List.isEmpty |> not then
-    false, mirCtx.Logs |> semanticErrorToString tyCtx
-  else
-    writeLog host v "CirGen"
-    let ok, cir = genCir (stmts, mirCtx)
+  writeLog host v "CirGen"
+  let cir = genCir (stmts, mirCtx)
 
-    writeLog host v "CirDump"
-    let output = cirDump cir
+  writeLog host v "CirDump"
 
-    writeLog host v "Finish"
-    ok, output
+  let output =
+    if headerOnly then
+      cirDumpHeader cir
+    else
+      cirDump cir
 
-let check (ctx: CompileCtx): bool * string =
+  writeLog host v "Finish"
+  output
+
+let check (ctx: CompileCtx) : bool * string =
   let host = ctx.Host
   let v = ctx.Verbosity
 
@@ -589,7 +485,7 @@ let check (ctx: CompileCtx): bool * string =
     | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
     | SemaAnalysisOk _ -> true, ""
 
-let compile (ctx: CompileCtx): bool * string =
+let compile (ctx: CompileCtx) : bool * string =
   let host = ctx.Host
   let v = ctx.Verbosity
 
@@ -603,47 +499,45 @@ let compile (ctx: CompileCtx): bool * string =
     | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
 
     | SemaAnalysisOk (expr, tyCtx) ->
-        let expr, tyCtx = transformHir host v (expr, tyCtx)
-        codeGenHirViaMir host v (expr, tyCtx)
+        let decls, tyCtx = transformHir host v (expr, tyCtx)
+        true, codeGenHirViaMir host v ctx.HeaderOnly (decls, tyCtx)
 
 // -----------------------------------------------
 // Actions
 // -----------------------------------------------
 
-let cliParse (host: CliHost) v (projectDir: string) =
-  let ctx = compileCtxNew host v projectDir
+let cliParse (host: CliHost) v (projectDir: string) = todo ()
+// let ctx = compileCtxNew host v projectDir
 
-  let parseWithLogging moduleName contents =
-    writeLog
-      host
-      v
-      ("\n-------------\nSyntaxParse %s...\n--------------"
-       + moduleName)
+// let parseWithLogging moduleName contents =
+//   writeLog
+//     host
+//     v
+//     ("\n-------------\nSyntaxParse %s...\n--------------"
+//      + moduleName)
 
-    let ast, errors =
-      contents |> tokenize ctx.TokenizeHost |> parse
+//   let ast, errors =
+//     contents |> tokenize ctx.TokenizeHost |> parse
 
-    if errors |> List.isEmpty |> not then
-      printfn "In %s" moduleName
+//   if errors |> List.isEmpty |> not then
+//     printfn "In %s" moduleName
 
-      errors
-      |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
+//     errors
+//     |> List.iter (fun (msg, pos) -> printfn "ERROR: %s %s" (posToString pos) msg)
 
-    match v with
-    | Verbose -> printfn "%s" (objToString ast)
-    | _ -> ()
+//   match v with
+//   | Verbose -> printfn "%s" (objToString ast)
+//   | _ -> ()
 
-    ast, errors
+//   ast, errors
 
-  bundleProgram (ctx |> toBundleHost parseWithLogging) ctx.ProjectName
-  |> ignore
+// bundleProgram (ctx |> toBundleHost parseWithLogging) ctx.ProjectName
+// |> ignore
 
-  0
+// 0
 
 let cliCheck (host: CliHost) verbosity projectDir =
-  let ctx =
-    compileCtxNew host verbosity projectDir
-    |> compileCtxReadProjectFile
+  let ctx = compileCtxNew host verbosity projectDir
 
   let ok, output = check ctx
   let exitCode = if ok then 0 else 1
@@ -651,10 +545,10 @@ let cliCheck (host: CliHost) verbosity projectDir =
   printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
   exitCode
 
-let cliCompile (host: CliHost) verbosity projectDir =
-  let ctx =
-    compileCtxNew host verbosity projectDir
-    |> compileCtxReadProjectFile
+let cliCompile (host: CliHost) verbosity headerOnly projectDir =
+  let ctx = compileCtxNew host verbosity projectDir
+
+  let ctx = { ctx with HeaderOnly = headerOnly }
 
   let ok, output = compile ctx
   let exitCode = if ok then 0 else 1
@@ -718,6 +612,7 @@ type private CliCmd =
   | VersionCmd
   | CheckCmd
   | CompileCmd
+  | HeaderCmd
   | ParseCmd
   | BadCmd of string
 
@@ -744,6 +639,8 @@ let private parseArgs args =
 
       | "build"
       | "compile" -> CompileCmd, args
+
+      | "header" -> HeaderCmd, args
 
       // for debug
       | "parse" -> ParseCmd, args
@@ -778,11 +675,21 @@ let cli (host: CliHost) =
           printfn "ERROR: Unknown argument: '%s'." arg
           1
 
+  | HeaderCmd, args ->
+      let verbosity, args = parseVerbosity host args
+
+      match args with
+      | projectDir :: _ -> cliCompile host verbosity true projectDir
+
+      | [] ->
+          printfn "ERROR: Expected project dir."
+          1
+
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
       match args with
-      | projectDir :: _ -> cliCompile host verbosity projectDir
+      | projectDir :: _ -> cliCompile host verbosity false projectDir
 
       | [] ->
           printfn "ERROR: Expected project dir."

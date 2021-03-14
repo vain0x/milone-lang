@@ -11,44 +11,56 @@ open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 open MiloneLang.Hir
 
+module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
+
+let emptyTyLevels : AssocMap<TySerial, Level> = TMap.empty compare
+
+let emptyBinding : AssocMap<TySerial, Ty> = TMap.empty compare
 
 // -----------------------------------------------
 // Tk
 // -----------------------------------------------
 
-let private tkEncode tk =
+let private tkEncode tk : int =
+  let pair l r =
+    assert (l < 30 && r < 10000000)
+    l * 10000000 + r
+
+  let just x = pair x 0
+
   let isMutToInt isMut =
     match isMut with
     | IsConst -> 1
     | IsMut -> 2
 
   match tk with
-  | ErrorTk _ -> 0, 0
-  | IntTk flavor -> 1, intFlavorToOrdinary flavor
-  | FloatTk flavor -> 2, floatFlavorToOrdinary flavor
-  | BoolTk -> 3, 0
-  | CharTk -> 4, 0
-  | StrTk -> 5, 0
-  | ObjTk -> 6, 0
-  | FunTk -> 7, 0
-  | TupleTk -> 8, 0
-  | ListTk -> 9, 0
+  | ErrorTk _ -> just 0
+  | IntTk flavor -> pair 1 (intFlavorToOrdinary flavor)
+  | FloatTk flavor -> pair 2 (floatFlavorToOrdinary flavor)
+  | BoolTk -> just 3
+  | CharTk -> just 4
+  | StrTk -> just 5
+  | ObjTk -> just 6
+  | FunTk -> just 7
+  | TupleTk -> just 8
+  | OptionTk -> just 9
+  | ListTk -> just 10
 
-  | VoidTk -> 11, 0
-  | NativePtrTk isMut -> 12, isMutToInt isMut
-  | NativeFunTk -> 13, 0
+  | VoidTk -> just 11
+  | NativePtrTk isMut -> pair 12 (isMutToInt isMut)
+  | NativeFunTk -> just 13
 
-  | MetaTk (tySerial, _) -> 20, tySerial
-  | SynonymTk tySerial -> 21, tySerial
-  | UnionTk tySerial -> 22, tySerial
-  | RecordTk tySerial -> 23, tySerial
+  | MetaTk (tySerial, _) -> pair 20 tySerial
+  | SynonymTk tySerial -> pair 21 tySerial
+  | UnionTk tySerial -> pair 22 tySerial
+  | RecordTk tySerial -> pair 23 tySerial
 
   | NativeTypeTk _
   | UnresolvedTk _
-  | UnresolvedVarTk _ -> failwith "NEVER"
+  | UnresolvedVarTk _ -> unreachable ()
 
-let tkCompare l r =
+let tkCompare l r : int =
   match l, r with
   | NativeTypeTk l, NativeTypeTk r -> compare l r
 
@@ -61,9 +73,9 @@ let tkCompare l r =
   | UnresolvedTk _, _ -> -1
   | _, UnresolvedTk _ -> 1
 
-  | _ -> pairCompare compare compare (tkEncode l) (tkEncode r)
+  | _ -> tkEncode l - tkEncode r
 
-let tkEqual first second = tkCompare first second = 0
+let tkEqual l r : bool = tkCompare l r = 0
 
 let tkDisplay getTyName tk =
   match tk with
@@ -76,6 +88,7 @@ let tkDisplay getTyName tk =
   | ObjTk -> "obj"
   | FunTk -> "fun"
   | TupleTk -> "tuple"
+  | OptionTk -> "option"
   | ListTk -> "list"
   | VoidTk -> "void"
   | NativePtrTk IsMut -> "nativeptr"
@@ -96,25 +109,15 @@ let tkDisplay getTyName tk =
 let traitMapTys f it =
   match it with
   | AddTrait ty -> AddTrait(f ty)
-
   | EqualTrait ty -> EqualTrait(f ty)
-
   | CompareTrait ty -> CompareTrait(f ty)
-
-  | IndexTrait (lTy, rTy, outputTy) -> IndexTrait(f lTy, f rTy, f outputTy)
-
+  | IndexTrait (lTy, rTy, resultTy) -> IndexTrait(f lTy, f rTy, f resultTy)
   | IsIntTrait ty -> IsIntTrait(f ty)
-
   | IsNumberTrait ty -> IsNumberTrait(f ty)
-
   | ToCharTrait ty -> ToCharTrait(f ty)
-
   | ToIntTrait ty -> ToIntTrait(f ty)
-
   | ToFloatTrait ty -> ToFloatTrait(f ty)
-
   | ToStringTrait ty -> ToStringTrait(f ty)
-
   | PtrTrait ty -> PtrTrait(f ty)
 
 // -----------------------------------------------
@@ -131,20 +134,20 @@ let tyIsFun ty =
   | Ty (FunTk, _) -> true
   | _ -> false
 
-let tyCompare first second =
-  match first, second with
-  | Ty (firstTk, firstTys), Ty (secondTk, secondTys) ->
-      let c = tkCompare firstTk secondTk
+let tyCompare l r =
+  match l, r with
+  | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) ->
+      let c = tkCompare lTk rTk
 
       if c <> 0 then
         c
       else
-        listCompare tyCompare firstTys secondTys
+        listCompare tyCompare lTyArgs rTyArgs
 
-let tyEqual first second = tyCompare first second = 0
+let tyEqual l r = tyCompare l r = 0
 
 /// Gets if the specified type variable doesn't appear in a type.
-let tyIsFreeIn ty tySerial: bool =
+let tyIsFreeIn ty tySerial : bool =
   let rec go ty =
     match ty with
     | Ty (MetaTk (s, _), _) -> s <> tySerial
@@ -157,7 +160,7 @@ let tyIsFreeIn ty tySerial: bool =
 
 /// Gets if the type is monomorphic.
 /// Assume all bound type variables are substituted.
-let tyIsMonomorphic ty: bool =
+let tyIsMonomorphic ty : bool =
   let rec go tys =
     match tys with
     | [] -> true
@@ -197,6 +200,15 @@ let rec tyToArgList ty =
 
   go 0 [] ty
 
+/// Checks if the type contains no bound meta types.
+let private tyIsFullySubstituted (isBound: TySerial -> bool) ty : bool =
+  let rec go ty =
+    match ty with
+    | Ty (MetaTk (tySerial, _), _) -> isBound tySerial |> not
+    | Ty (_, tyArgs) -> List.forall go tyArgs
+
+  go ty
+
 /// Substitutes meta types in a type as possible.
 let tySubst (substMeta: TySerial -> Ty option) ty =
   let rec go ty =
@@ -212,6 +224,48 @@ let tySubst (substMeta: TySerial -> Ty option) ty =
     | Ty (tk, tys) -> Ty(tk, List.map go tys)
 
   go ty
+
+let tyAssign assignment ty =
+  tySubst (fun tySerial -> assocTryFind compare tySerial assignment) ty
+
+/// Expands a synonym type using its definition and type args.
+let tyExpandSynonym useTyArgs defTySerials bodyTy : Ty =
+  // Checked in NameRes.
+  assert (List.length defTySerials = List.length useTyArgs)
+
+  let assignment =
+    match listTryZip defTySerials useTyArgs with
+    | assignment, [], [] -> assignment
+    | _ -> unreachable ()
+
+  tyAssign assignment bodyTy
+
+/// Expands all synonyms inside of a type.
+let tyExpandSynonyms (expand: TySerial -> TyDef option) ty : Ty =
+  let rec go ty =
+    match ty with
+    | Ty (SynonymTk tySerial, useTyArgs) ->
+        match expand tySerial with
+        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
+            tyExpandSynonym useTyArgs defTySerials bodyTy
+            |> go
+
+        | _ -> Ty(SynonymTk tySerial, useTyArgs)
+
+    | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
+
+  go ty
+
+/// Assume all bound type variables are resolved by `substTy`.
+///
+/// `isOwned` checks if the type variable is introduced by the most recent `let`.
+/// For example, `let f x = (let g = f in g x)` will have too generic type
+/// without this checking (according to TaPL).
+let tyGeneralize (isOwned: TySerial -> bool) (ty: Ty) : TyScheme =
+  let fvs =
+    tyCollectFreeVars ty |> List.filter isOwned
+
+  TyScheme(fvs, ty)
 
 /// Converts a type to human readable string.
 let tyDisplay getTyName ty =
@@ -244,6 +298,8 @@ let tyDisplay getTyName ty =
         + (itemTys |> List.map (go 20) |> S.concat " * ")
         + ")"
 
+    | Ty (OptionTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " option")
+
     | Ty (ListTk, [ itemTy ]) -> paren 30 (go 30 itemTy + " list")
 
     | Ty (MetaTk (tySerial, loc), _) ->
@@ -256,7 +312,7 @@ let tyDisplay getTyName ty =
     | Ty (RecordTk tySerial, args) -> nominal tySerial args
 
     | Ty (tk, args) ->
-        let tk = tkDisplay (fun _ -> failwith "NEVER") tk
+        let tk = tkDisplay (fun _ -> unreachable ()) tk
 
         match args with
         | [] -> tk
@@ -266,356 +322,193 @@ let tyDisplay getTyName ty =
 
   go 0 ty
 
+/// Generates a unique name from a type.
+///
+/// Must be used after successful Typing.
+let tyMangle (ty: Ty, memo: AssocMap<Ty, string>) : string * AssocMap<Ty, string> =
+  let rec go ty ctx =
+    let (Ty (tk, tyArgs)) = ty
+
+    let mangleList tys ctx =
+      (tys, ctx)
+      |> stMap (fun (ty, ctx) -> ctx |> go ty)
+
+    let fixedGeneric (name: string) =
+      let tyArgs, ctx = mangleList tyArgs ctx
+      S.concat "" tyArgs + name, ctx
+
+    let variadicGeneric (name: string) =
+      let arity = List.length tyArgs
+      let tyArgs, ctx = mangleList tyArgs ctx
+      S.concat "" tyArgs + (name + string arity), ctx
+
+    let doMangle () : string * AssocMap<_, _> =
+      match tk with
+      | IntTk flavor -> cIntegerTyPascalName flavor, ctx
+      | FloatTk flavor -> cFloatTyPascalName flavor, ctx
+      | BoolTk -> "Bool", ctx
+      | CharTk -> "Char", ctx
+      | StrTk -> "String", ctx
+
+      | MetaTk _
+      | ObjTk -> "Object", ctx
+
+      | TupleTk when List.isEmpty tyArgs -> "Unit", ctx
+      | TupleTk -> variadicGeneric "Tuple"
+
+      | OptionTk -> fixedGeneric "Option"
+      | ListTk -> fixedGeneric "List"
+
+      | VoidTk -> "Void", ctx
+      | NativePtrTk IsConst -> fixedGeneric "ConstPtr"
+      | NativePtrTk IsMut -> fixedGeneric "MutPtr"
+      | NativeFunTk -> variadicGeneric "NativeFun"
+      | NativeTypeTk name -> name, ctx
+
+      | FunTk ->
+          let arity, argTys, resultTy = tyToArgList ty
+
+          let argTys, ctx = mangleList argTys ctx
+          let resultTy, ctx = ctx |> go resultTy
+
+          let funTy =
+            (argTys |> strConcat)
+            + resultTy
+            + "Fun"
+            + string arity
+
+          funTy, ctx
+
+      | UnionTk _
+      | RecordTk _ -> unreachable () // Must be stored in memo.
+
+      | ErrorTk _
+      | SynonymTk _ -> unreachable () // Resolved in Typing.
+
+      | UnresolvedTk _
+      | UnresolvedVarTk _ -> unreachable () // Resolved in NameRes..
+
+    // Memoization.
+    match TMap.tryFind ty ctx with
+    | Some name -> name, ctx
+
+    | None ->
+        let name, ctx = doMangle ()
+        name, TMap.add ty name ctx
+
+  go ty memo
+
 // -----------------------------------------------
-// Type inference context
+// Context-free functions
 // -----------------------------------------------
 
-/// Type inference context.
-[<NoEquality; NoComparison>]
-type TyContext =
-  { Serial: Serial
-    Level: Level
-    Tys: AssocMap<TySerial, TyDef>
-    TyLevels: AssocMap<TySerial, Level> }
-
-let private addTyDef tySerial tyDef (ctx: TyContext) =
-  { ctx with
-      Tys = ctx.Tys |> mapAdd tySerial tyDef }
-
-// -----------------------------------------------
-// Type inference algorithm
-// -----------------------------------------------
-
-/// Adds type-var/type binding.
-let typingBind (ctx: TyContext) tySerial ty loc =
-  // FIXME: track identifier
-  let noIdent = "unknown"
-
-  // Don't bind itself.
-  match typingSubst ctx ty with
-  | Ty (MetaTk (s, _), _) when s = tySerial -> ctx
-
-  | ty ->
-      // Reduce level of meta tys in the referent ty to the meta ty's level at most.
-      let tyLevels =
-        let level =
-          ctx.TyLevels
-          |> mapTryFind tySerial
-          |> Option.defaultValue 0
-
-        ty
-        |> tyCollectFreeVars
-        |> List.fold
-             (fun tyLevels tySerial ->
-               let currentLevel =
-                 ctx.TyLevels
-                 |> mapTryFind tySerial
-                 |> Option.defaultValue 0
-
-               if currentLevel <= level then
-                 // Already non-deep enough.
-                 tyLevels
-               else
-                 // Prevent this meta ty from getting generalized until level of the bound meta ty.
-                 tyLevels |> mapAdd tySerial level)
-             ctx.TyLevels
-
-      let ctx =
-        ctx
-        |> addTyDef tySerial (MetaTyDef(noIdent, ty, loc))
-
-      { ctx with TyLevels = tyLevels }
-
-/// Substitutes occurrences of already-inferred type vars
-/// with their results.
-let typingSubst (ctx: TyContext) ty: Ty =
-  let substMeta tySerial =
-    match ctx.Tys |> mapTryFind tySerial with
-    | Some (MetaTyDef (_, ty, _)) -> Some ty
-    | _ -> None
-
-  tySubst substMeta ty
-
-let tyExpandSynonym useTyArgs defTySerials bodyTy =
-  // Checked in NameRes.
-  assert (List.length defTySerials = List.length useTyArgs)
-
-  // Expand synonym.
-  let assignment =
-    match listTryZip defTySerials useTyArgs with
-    | assignment, [], [] -> assignment
-    | _ -> failwith "NEVER"
-
-  let substMeta tySerial =
-    assignment |> assocTryFind compare tySerial
-
-  tySubst substMeta bodyTy
-
-let tyExpandSynonyms expand ty =
-  let rec go ty =
-    match ty with
-    | Ty (SynonymTk tySerial, useTyArgs) ->
-        match expand tySerial with
-        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-            tyExpandSynonym useTyArgs defTySerials bodyTy
-            |> go
-
-        | _ -> Ty(SynonymTk tySerial, useTyArgs)
-
-    | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
-
-  go ty
-
-let typingExpandSynonyms (ctx: TyContext) ty =
-  let rec go ty =
-    match ty with
-    | Ty (SynonymTk tySerial, useTyArgs) ->
-        match ctx.Tys |> mapTryFind tySerial with
-        | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) ->
-            tyExpandSynonym useTyArgs defTySerials bodyTy
-            |> go
-
-        | _ -> Ty(SynonymTk tySerial, useTyArgs)
-
-    | Ty (tk, tyArgs) -> Ty(tk, tyArgs |> List.map go)
-
-  go ty
-
-[<NoEquality; NoComparison>]
-type private MetaTyUnifyResult =
-  | DidExpand of Ty
-  | DidBind of TyContext
-  | DidRecurse
-
-let private unifyMetaTy tySerial otherTy loc (ctx: TyContext) =
-  match ctx.Tys |> mapTryFind tySerial with
-  | Some (MetaTyDef (_, ty, _)) -> DidExpand ty
-
+let private getLevel tyLevels levelChanges tySerial : Level =
+  match levelChanges |> TMap.tryFind tySerial with
+  | Some level -> level
   | _ ->
-      match typingSubst ctx otherTy with
-      | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> DidBind ctx
+      tyLevels
+      |> TMap.tryFind tySerial
+      |> Option.defaultValue 0
 
-      | otherTy when tyIsFreeIn otherTy tySerial |> not ->
-          // ^ Occurrence check.
-          DidRecurse
+let private metaTyIsBound tys binding tySerial : bool =
+  TMap.containsKey tySerial binding
+  || (match tys |> TMap.tryFind tySerial with
+      | Some (MetaTyDef _) -> true
+      | _ -> false)
 
-      | otherTy -> DidBind(typingBind ctx tySerial otherTy loc)
+let private tyExpandMeta tys binding tySerial : Ty option =
+  match binding |> TMap.tryFind tySerial with
+  | (Some _) as it -> it
+  | _ ->
+      match tys |> TMap.tryFind tySerial with
+      | Some (MetaTyDef ty) -> Some ty
+      | _ -> None
 
-let private isSynonym (ctx: TyContext) tySerial =
-  match ctx.Tys |> mapTryFind tySerial with
-  | Some (SynonymTyDef _) -> true
-  | _ -> false
+let doInstantiateTyScheme
+  (serial: int)
+  (level: Level)
+  (tyLevels: AssocMap<TySerial, Level>)
+  (tySerials: TySerial list)
+  (ty: Ty)
+  (loc: Loc)
+  =
+  let serial, tyLevels, assignment =
+    tySerials
+    |> List.fold
+         (fun (serial, tyLevels, assignment) tySerial ->
+           let serial = serial + 1
+           let tyLevels = tyLevels |> TMap.add serial level
 
-let private asSynonym (ctx: TyContext) tySerial =
-  match ctx.Tys |> mapTryFind tySerial with
-  | Some (SynonymTyDef (_, defTySerials, bodyTy, _)) -> defTySerials, bodyTy
-  | _ -> failwith "Expected synonym. Check with isSynonym first."
+           let assignment =
+             (tySerial, tyMeta serial loc) :: assignment
 
-let private unifySynonymTy tySerial useTyArgs loc (ctx: TyContext) =
-  let defTySerials, bodyTy = asSynonym ctx tySerial
+           serial, tyLevels, assignment)
+         (serial, tyLevels, [])
 
-  // Checked in NameRes.
-  assert (List.length defTySerials = List.length useTyArgs)
+  let ty = tyAssign assignment ty
+  serial, tyLevels, ty, assignment
 
-  let instantiatedTy, ctx =
-    let assignment, ctx =
-      defTySerials
-      |> List.fold
-           (fun (assignment, ctx: TyContext) defTySerial ->
-             let newTySerial = ctx.Serial + 1
+// -----------------------------------------------
+// Unification
+// -----------------------------------------------
 
-             let assignment =
-               (defTySerial, (tyMeta newTySerial loc))
-               :: assignment
+type UnifyResult =
+  | UnifyOk
+  | UnifyOkWithStack of (Ty * Ty) list
+  | UnifyError of Log * Loc
+  | UnifyExpandMeta of metaSerial: TySerial * other: Ty
+  | UnifyExpandSynonym of synonymSerial: TySerial * synonymArgs: Ty list * other: Ty
 
-             let ctx =
-               let tyLevels =
-                 ctx.TyLevels |> mapAdd newTySerial ctx.Level
+let unifyNext (lTy: Ty) (rTy: Ty) (loc: Loc) : UnifyResult =
+  let mismatchError () =
+    UnifyError(Log.TyUnify(TyUnifyLog.Mismatch, lTy, rTy), loc)
 
-               { ctx with
-                   Serial = newTySerial
-                   TyLevels = tyLevels }
+  match lTy, rTy with
+  | Ty (MetaTk _, _), _
+  | _, Ty (MetaTk _, _) ->
+      match lTy, rTy with
+      | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> UnifyOk
 
-             assignment, ctx)
-           ([], ctx)
+      | Ty (MetaTk (lSerial, _), _), _ -> UnifyExpandMeta(lSerial, rTy)
+      | _, Ty (MetaTk (rSerial, _), _) -> UnifyExpandMeta(rSerial, lTy)
 
-    let substMeta tySerial =
-      assignment |> assocTryFind compare tySerial
+      | _ -> unreachable ()
 
-    tySubst substMeta bodyTy, ctx
-
-  let expandedTy =
-    let assignment =
-      match listTryZip defTySerials useTyArgs with
-      | assignment, [], [] -> assignment
-      | _ -> failwith "NEVER"
-
-    let substMeta tySerial =
-      assignment |> assocTryFind compare tySerial
-
-    tySubst substMeta bodyTy
-
-  expandedTy, instantiatedTy, ctx
-
-/// Solves type equation `lty = rty` as possible
-/// to add type-var/type bindings.
-let typingUnify logAcc (ctx: TyContext) (lty: Ty) (rty: Ty) (loc: Loc) =
-  let lRootTy, rRootTy = lty, rty
-
-  let addLog kind lTy rTy logAcc ctx =
-    let lRootTy = typingSubst ctx lRootTy
-    let rRootTy = typingSubst ctx rRootTy
-
-    (Log.TyUnify(kind, lRootTy, rRootTy, lTy, rTy), loc)
-    :: logAcc,
-    ctx
-
-  let rec go lTy rTy (logAcc, ctx) =
-    match lTy, rTy with
-    | Ty (MetaTk (l, _), _), Ty (MetaTk (r, _), _) when l = r -> logAcc, ctx
-
-    | Ty (MetaTk (lSerial, loc), _), _ ->
-        match unifyMetaTy lSerial rTy loc ctx with
-        | DidExpand ty -> go ty rTy (logAcc, ctx)
-        | DidBind ctx -> logAcc, ctx
-        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
-
-    | _, Ty (MetaTk (rSerial, loc), _) ->
-        match unifyMetaTy rSerial lTy loc ctx with
-        | DidExpand ty -> go lTy ty (logAcc, ctx)
-        | DidBind ctx -> logAcc, ctx
-        | DidRecurse -> addLog TyUnifyLog.SelfRec lTy rTy logAcc ctx
-
-    | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
-        let rec gogo lTyArgs rTyArgs (logAcc, ctx) =
-          match lTyArgs, rTyArgs with
-          | [], [] -> logAcc, ctx
-
-          | l :: lTyArgs, r :: rTyArgs -> (logAcc, ctx) |> go l r |> gogo lTyArgs rTyArgs
-
-          | _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
-
-        gogo lTyArgs rTyArgs (logAcc, ctx)
-
-    | Ty (SynonymTk tySerial, tyArgs), _ when tySerial |> isSynonym ctx ->
-        let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
-        (logAcc, ctx) |> go ty1 ty2 |> go ty1 rTy
-
-    | _, Ty (SynonymTk tySerial, tyArgs) when tySerial |> isSynonym ctx ->
-        let ty1, ty2, ctx = unifySynonymTy tySerial tyArgs loc ctx
-        (logAcc, ctx) |> go ty1 ty2 |> go ty1 lTy
-
-    | Ty _, _ -> addLog TyUnifyLog.Mismatch lTy rTy logAcc ctx
-
-  go lty rty (logAcc, ctx)
-
-let typingResolveTraitBound logAcc (ctx: TyContext) theTrait loc =
-  let theTrait =
-    theTrait
-    |> traitMapTys (fun ty -> ty |> typingSubst ctx |> typingExpandSynonyms ctx)
-
-  /// integer, bool, char, or string
-  let expectBasic ty (logAcc, ctx) =
-    match ty with
-    | Ty (ErrorTk _, _)
-    | Ty (IntTk _, [])
-    | Ty (FloatTk _, [])
-    | Ty (BoolTk, [])
-    | Ty (CharTk, [])
-    | Ty (StrTk, [])
-    | Ty (NativePtrTk _, _) -> logAcc, ctx
-
-    | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
-
-  match theTrait with
-  | AddTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, [])
-      | Ty (CharTk, [])
-      | Ty (StrTk, []) -> logAcc, ctx
+  | Ty (lTk, lTyArgs), Ty (rTk, rTyArgs) when tkEqual lTk rTk ->
+      match lTyArgs, rTyArgs with
+      | [], [] -> UnifyOk
 
       | _ ->
-          // Coerce to int by default.
-          typingUnify logAcc ctx ty tyInt loc
+          match listTryZip lTyArgs rTyArgs with
+          | tyPairs, [], [] -> UnifyOkWithStack(tyPairs)
+          | _ -> mismatchError ()
 
-  | EqualTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | Ty (SynonymTk _, _), _
+  | _, Ty (SynonymTk _, _) ->
+      match lTy, rTy with
+      | Ty (SynonymTk tySerial, tyArgs), _ -> UnifyExpandSynonym(tySerial, tyArgs, rTy)
+      | _, Ty (SynonymTk tySerial, tyArgs) -> UnifyExpandSynonym(tySerial, tyArgs, lTy)
+      | _ -> unreachable ()
 
-  | CompareTrait ty -> (logAcc, ctx) |> expectBasic ty
+  | _ -> mismatchError ()
 
-  | IndexTrait (lTy, rTy, resultTy) ->
-      match lTy with
-      | Ty (ErrorTk _, _) -> [], ctx
+[<RequireQualifiedAccess>]
+type UnifyAfterExpandMetaResult =
+  | OkNoBind
+  | OkBind
+  | Error of Log * Loc
 
-      | Ty (StrTk, []) ->
-          let logAcc, ctx = typingUnify logAcc ctx rTy tyInt loc
+let unifyAfterExpandMeta lTy rTy tySerial otherTy loc =
+  match otherTy with
+  | Ty (MetaTk (otherSerial, _), _) when otherSerial = tySerial -> UnifyAfterExpandMetaResult.OkNoBind
 
-          let logAcc, ctx =
-            typingUnify logAcc ctx resultTy tyChar loc
+  | _ when tyIsFreeIn otherTy tySerial |> not ->
+      // ^ Occurrence check.
+      UnifyAfterExpandMetaResult.Error(Log.TyUnify(TyUnifyLog.SelfRec, lTy, rTy), loc)
 
-          logAcc, ctx
+  | _ -> UnifyAfterExpandMetaResult.OkBind
 
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+let typingSubst tys binding ty : Ty = tySubst (tyExpandMeta tys binding) ty
 
-  | IsIntTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, []) -> logAcc, ctx
-
-      | _ ->
-          // Coerce to int by default.
-          typingUnify logAcc ctx ty tyInt loc
-
-  | IsNumberTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, []) -> logAcc, ctx
-
-      | _ ->
-          // Coerce to int by default.
-          typingUnify logAcc ctx ty tyInt loc
-
-  | ToCharTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, [])
-      | Ty (CharTk, [])
-      | Ty (StrTk, []) -> logAcc, ctx
-
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
-
-  | ToIntTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, [])
-      | Ty (CharTk, [])
-      | Ty (StrTk, [])
-      | Ty (NativePtrTk _, _) -> logAcc, ctx
-
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
-
-  | ToFloatTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk _, [])
-      | Ty (FloatTk _, [])
-      | Ty (StrTk, []) -> logAcc, ctx
-
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
-
-  | ToStringTrait ty -> (logAcc, ctx) |> expectBasic ty
-
-  | PtrTrait ty ->
-      match ty with
-      | Ty (ErrorTk _, _)
-      | Ty (IntTk (IntFlavor (_, IPtr)), [])
-      | Ty (ObjTk, [])
-      | Ty (ListTk, _)
-      | Ty (NativePtrTk _, _)
-      | Ty (NativeFunTk, _) -> logAcc, ctx
-
-      | _ -> (Log.TyBoundError theTrait, loc) :: logAcc, ctx
+let typingExpandSynonyms tys ty =
+  tyExpandSynonyms (fun tySerial -> tys |> TMap.tryFind tySerial) ty

@@ -59,17 +59,16 @@ let private dirIsExcluded (dir: string) =
 // Project
 // ---------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ProjectInfo =
   { ProjectDir: string
     ProjectName: string
     EntryFileExt: string }
 
-let private projectsRef: Result<ProjectInfo list, exn> option ref = ref None
+let private projectsRef : Result<ProjectInfo list, exn> option ref = ref None
 
 /// Finds all projects inside of the workspace.
-let private doFindProjects (rootUri: string): ProjectInfo list =
-  // eprintfn "findProjects: rootUri = %s" rootUri
+let private doFindProjects (rootUri: string) : ProjectInfo list =
   let projects = ResizeArray()
 
   let rootDir =
@@ -77,26 +76,22 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
     | Some it -> it
     | None -> failwithf "rootUri: %A" rootUri
 
-  eprintfn "rootDir = '%s'" rootDir
-
   // Find projects recursively.
   let mutable stack = Stack()
   stack.Push((0, rootDir))
 
   while stack.Count <> 0 do
     let depth, dir = stack.Pop()
-    // eprintfn "dir: '%s'" dir
 
     let projectName = Path.GetFileNameWithoutExtension(dir)
 
     let tryAddProject ext =
       if File.Exists(Path.Combine(dir, projectName + ext)) then
-        let project: ProjectInfo =
+        let project : ProjectInfo =
           { ProjectDir = dir
             ProjectName = projectName
             EntryFileExt = ext }
 
-        eprintfn "project: '%s'" projectName
         projects.Add(project)
 
     tryAddProject ".milone"
@@ -117,7 +112,7 @@ let private doFindProjects (rootUri: string): ProjectInfo list =
   List.ofSeq projects
 
 /// Finds project directories recursively. Memoized.
-let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
+let findProjects (rootUriOpt: string option) : Result<ProjectInfo list, exn> =
   match !projectsRef, rootUriOpt with
   | Some it, _ -> it
 
@@ -126,7 +121,9 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
   | None, Some rootUri ->
       let projects =
         try
-          Ok(doFindProjects rootUri)
+          let projects = doFindProjects rootUri
+          eprintfn "findProjects: %A" (List.map (fun (p: ProjectInfo) -> p.ProjectDir) projects)
+          Ok projects
         with ex ->
           eprintfn "findProjects failed: %A" ex
           Error ex
@@ -141,10 +138,8 @@ let findProjects (rootUriOpt: string option): Result<ProjectInfo list, exn> =
 /// (msg, loc) list
 type ProjectValidateResult = (string * Loc) list
 
-let newLangService (project: ProjectInfo): LangServiceState =
-  let { ProjectDir = projectDir
-        ProjectName = projectName } =
-    project
+let newLangService (project: ProjectInfo) : LangServiceState =
+  let projectDir = project.ProjectDir
 
   let toFilePath moduleName ext =
     Path.Combine(projectDir, moduleName + ext)
@@ -212,13 +207,13 @@ let newLangService (project: ProjectInfo): LangServiceState =
           Path.GetDirectoryName(filePath) |> Some
         with _ -> None
 
-  let docs: LangServiceDocs =
+  let docs : LangServiceDocs =
     { FindDocId = findDocId
       GetVersion = getVersion
       GetText = getText
       GetProjectName = getProjectName }
 
-  let langServiceHost: LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
+  let langServiceHost : LangServiceHost = { MiloneHome = miloneHome; Docs = docs }
 
   LangService.create langServiceHost
 
@@ -238,7 +233,7 @@ let newLangServiceWithCache (project: ProjectInfo) =
 
       ls
 
-let validateProject (project: ProjectInfo): ProjectValidateResult =
+let validateProject (project: ProjectInfo) : ProjectValidateResult =
   project
   |> newLangServiceWithCache
   |> LangService.validateProject project.ProjectDir
@@ -262,7 +257,7 @@ let private doValidateWorkspace projects =
 
   for project in projects do
     for msg, loc in validateProject project do
-      let docId, y, x = loc
+      let (Loc.Loc (docId, y, x)) = loc
       map |> MutMultimap.insert docId (msg, (y, x))
 
   let diagnostics =
@@ -291,7 +286,7 @@ let private doValidateWorkspace projects =
   |> DiagnosticsCache.filter diagnostics
 
 /// Validate all projects in workspace to report errors.
-let validateWorkspace (rootUriOpt: string option): WorkspaceValidateResult =
+let validateWorkspace (rootUriOpt: string option) : WorkspaceValidateResult =
   match findProjects rootUriOpt with
   | Error _ -> []
 

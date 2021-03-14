@@ -3,6 +3,8 @@
 
 set -eu
 
+CC=${CC:-gcc}
+
 MILONE_RUNTIME="$PWD/runtime"
 DIR="$PWD/scripts/region_primitive_checks"
 OUT_C="$DIR/region_primitive_checks.c"
@@ -11,7 +13,11 @@ milone -q "$DIR" >$OUT_C
 
 (
     cd "$DIR"
-    gcc -std=c11 -I "$MILONE_RUNTIME" "$MILONE_RUNTIME/milone.c" -g -fsanitize=undefined,address,leak "$OUT_C"
+    $CC -std=c11 -g \
+        -fsanitize=address,leak,undefined \
+        -I$MILONE_RUNTIME \
+        "$MILONE_RUNTIME/milone.c" \
+        "$OUT_C"
     ./a.out || echo '$?='$?
     echo OK
 )

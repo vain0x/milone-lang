@@ -7,7 +7,7 @@
 /// ## Lifecycle
 ///
 /// HIR is generated in `AstToHir` for each file
-/// and all modules of a project are *concatenated* in `Bundling`.
+/// and all modules of a project are *concatenated* in `AstBundle`.
 ///
 /// Most of analysis (for error reporting and soundness)
 /// and transformations (for code generation) are performed on it.
@@ -22,6 +22,7 @@ open MiloneLang.Syntax
 open MiloneLang.TypeFloat
 open MiloneLang.TypeIntegers
 
+module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 
 /// Unique serial number to identify something
@@ -64,14 +65,14 @@ type Arity = int
 /// Only one exception: recursive function has level higher by 1.
 type Level = int
 
-/// Where variable is stored.
+/// Is static variable?
 [<NoEquality; NoComparison>]
-type StorageModifier =
-  /// On stack.
-  | AutoSM
+type IsStatic =
+  /// Static variable. (This doesn't imply linkage.)
+  | IsStatic
 
-  /// On static storage.
-  | StaticSM
+  /// Local variable.
+  | NotStatic
 
 [<Struct>]
 [<NoEquality; NoComparison>]
@@ -100,6 +101,7 @@ type Tk =
   | TupleTk
 
   /// Ty args must be `[t]`.
+  | OptionTk
   | ListTk
 
   // FFI types.
@@ -184,7 +186,7 @@ type TyDecl =
 [<NoEquality; NoComparison>]
 type TyDef =
   /// Bound type variable.
-  | MetaTyDef of Ident * Ty * Loc
+  | MetaTyDef of Ty
 
   | UniversalTyDef of Ident * Loc
 
@@ -198,14 +200,14 @@ type TyDef =
 type ModuleTySerial = ModuleTySerial of Serial
 
 //// Module is a type so that it can be used as namespace.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleTyDef = { Name: Ident; Loc: Loc }
 
 [<Struct; NoComparison>]
 type ModuleSynonymSerial = ModuleSynonymSerial of Serial
 
 //// Module is a type so that it can be used as namespace.
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type ModuleSynonymDef =
   { Name: Ident
     // Not used.
@@ -213,8 +215,12 @@ type ModuleSynonymDef =
     Loc: Loc }
 
 /// Definition of named value in HIR.
-[<NoEquality; NoComparison>]
-type VarDef = VarDef of Ident * StorageModifier * Ty * Loc
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type VarDef =
+  { Name: Ident
+    IsStatic: IsStatic
+    Ty: Ty
+    Loc: Loc }
 
 /// Assembly binary interface (ABI): how function looks like at machine-code level.
 [<NoEquality; NoComparison>]
@@ -224,7 +230,7 @@ type FunAbi =
   /// Compatible with C language.
   | CAbi
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type FunDef =
   { Name: Ident
     Arity: Arity
@@ -232,13 +238,16 @@ type FunDef =
     Abi: FunAbi
     Loc: Loc }
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VariantDef =
   { Name: Ident
     UnionTySerial: TySerial
+
+    /// Whether this is the only variant of the union.
+    IsNewtype: bool
+
     HasPayload: bool
     PayloadTy: Ty
-    VariantTy: Ty
     Loc: Loc }
 
 [<Struct; NoComparison>]
@@ -282,7 +291,7 @@ type HPatKind =
   | HTuplePN
 
   /// `p1.r`
-  | HNavPN of navR: string
+  | HNavPN of navR: Ident
 
   /// `p1: ty`
   | HAscribePN
@@ -309,7 +318,7 @@ type HPat =
   | HDiscardPat of Ty * Loc
 
   /// Variable pattern.
-  | HVarPat of VarSerial * Ty * Loc
+  | HVarPat of Vis * VarSerial * Ty * Loc
 
   /// Variant name pattern.
   | HVariantPat of VariantSerial * Ty * Loc
@@ -469,7 +478,7 @@ type HExpr =
   /// Evaluate a list of expressions and returns the last, e.g. `x1; x2; ...; y`.
   | HBlockExpr of HExpr list * HExpr
 
-  | HLetValExpr of Vis * pat: HPat * init: HExpr * next: HExpr * Ty * Loc
+  | HLetValExpr of pat: HPat * init: HExpr * next: HExpr * Ty * Loc
   | HLetFunExpr of FunSerial * IsRec * Vis * args: HPat list * body: HExpr * next: HExpr * Ty * Loc
 
   /// Type declaration.
@@ -508,7 +517,6 @@ type NameResLog =
   // other
   | ModulePathNotFoundError
 
-  | UnimplModuleSynonymError
   | UnimplOrPatBindingError
   | OtherNameResLog of msg: string
 
@@ -524,7 +532,7 @@ type Log =
   | NameResLog of NameResLog
   | LiteralRangeError
   | IrrefutablePatNonExhaustiveError
-  | TyUnify of TyUnifyLog * lRootTy: Ty * rRootTy: Ty * lTy: Ty * rTy: Ty
+  | TyUnify of TyUnifyLog * Ty * Ty
   | TyBoundError of Trait
   | TySynonymCycleError
   | RedundantFieldError of ty: Ident * field: Ident
@@ -536,11 +544,11 @@ type Log =
 // Name context
 // -----------------------------------------------
 
-let nameCtxEmpty () = NameCtx(mapEmpty compare, 0)
+let nameCtxEmpty () = NameCtx(TMap.empty compare, 0)
 
-let nameCtxAdd name (NameCtx (map, serial)) =
+let nameCtxAdd (Name (name, _)) (NameCtx (map, serial)) =
   let serial = serial + 1
-  let map = map |> mapAdd serial name
+  let map = map |> TMap.add serial name
   serial, NameCtx(map, serial)
 
 // -----------------------------------------------
@@ -565,6 +573,8 @@ let tyStr = Ty(StrTk, [])
 let tyObj = Ty(ObjTk, [])
 
 let tyTuple tys = Ty(TupleTk, tys)
+
+let tyOption ty = Ty(OptionTk, [ ty ])
 
 let tyList ty = Ty(ListTk, [ ty ])
 
@@ -604,7 +614,7 @@ let moduleSynonymSerialCompare l r =
 
 let tyDefToName tyDef =
   match tyDef with
-  | MetaTyDef (name, _, _) -> name
+  | MetaTyDef _ -> "{bound}"
   | UniversalTyDef (name, _) -> name
   | SynonymTyDef (name, _, _, _) -> name
   | UnionTyDef (name, _, _) -> name
@@ -629,15 +639,19 @@ let variantSerialToInt (VariantSerial serial) = serial
 let variantSerialCompare l r =
   compare (variantSerialToInt l) (variantSerialToInt r)
 
-let varDefToName varDef =
-  match varDef with
-  | VarDef (name, _, _, _) -> name
+let variantDefToVariantTy (variantDef: VariantDef) : Ty =
+  let unionTy = tyUnion variantDef.UnionTySerial
+
+  if variantDef.HasPayload then
+    tyFun variantDef.PayloadTy unionTy
+  else
+    unionTy
 
 // -----------------------------------------------
 // Literals
 // -----------------------------------------------
 
-let litToTy (lit: Lit): Ty =
+let litToTy (lit: Lit) : Ty =
   match lit with
   | BoolLit _ -> tyBool
   | IntLit _ -> tyInt
@@ -756,11 +770,11 @@ let primToTySpec prim =
 
   | HPrim.OptionNone ->
       let itemTy = meta 1
-      poly (tyList itemTy) []
+      poly (tyOption itemTy) []
 
   | HPrim.OptionSome ->
       let itemTy = meta 1
-      let listTy = tyList itemTy
+      let listTy = tyOption itemTy
       poly (tyFun itemTy listTy) []
 
   | HPrim.Not -> mono (tyFun tyBool tyBool)
@@ -807,7 +821,7 @@ let primToTySpec prim =
   | HPrim.NativeStmt
   | HPrim.NativeDecl ->
       // Incorrect use of this primitive is handled as error before instantiating its type.
-      failwith "NEVER"
+      unreachable ()
 
   | HPrim.NativeCast ->
       let srcTy = meta 1
@@ -836,11 +850,11 @@ let hpTuple itemPats loc =
   let tupleTy = itemPats |> List.map patToTy |> tyTuple
   HNodePat(HTuplePN, itemPats, tupleTy, loc)
 
-let patExtract (pat: HPat): Ty * Loc =
+let patExtract (pat: HPat) : Ty * Loc =
   match pat with
   | HLitPat (lit, a) -> litToTy lit, a
   | HDiscardPat (ty, a) -> ty, a
-  | HVarPat (_, ty, a) -> ty, a
+  | HVarPat (_, _, ty, a) -> ty, a
   | HVariantPat (_, ty, a) -> ty, a
 
   | HNodePat (_, _, ty, a) -> ty, a
@@ -851,12 +865,12 @@ let patToTy pat = pat |> patExtract |> fst
 
 let patToLoc pat = pat |> patExtract |> snd
 
-let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat): HPat =
+let patMap (f: Ty -> Ty) (g: Loc -> Loc) (pat: HPat) : HPat =
   let rec go pat =
     match pat with
     | HLitPat (lit, a) -> HLitPat(lit, g a)
     | HDiscardPat (ty, a) -> HDiscardPat(f ty, g a)
-    | HVarPat (serial, ty, a) -> HVarPat(serial, f ty, g a)
+    | HVarPat (vis, serial, ty, a) -> HVarPat(vis, serial, f ty, g a)
     | HVariantPat (serial, ty, a) -> HVariantPat(serial, f ty, g a)
 
     | HNodePat (kind, args, ty, a) -> HNodePat(kind, List.map go args, f ty, g a)
@@ -941,9 +955,9 @@ let patIsClearlyExhaustive isNewtypeVariant pat =
 // Expressions (HIR)
 // -----------------------------------------------
 
-let hxTrue loc = HLitExpr(litTrue, loc)
+let hxTrue loc = HLitExpr(BoolLit true, loc)
 
-let hxFalse loc = HLitExpr(litFalse, loc)
+let hxFalse loc = HLitExpr(BoolLit false, loc)
 
 let hxApp f x ty loc = HNodeExpr(HAppEN, [ f; x ], ty, loc)
 
@@ -979,7 +993,7 @@ let hxIsAlwaysTrue expr =
   | HLitExpr (BoolLit true, _) -> true
   | _ -> false
 
-let exprExtract (expr: HExpr): Ty * Loc =
+let exprExtract (expr: HExpr) : Ty * Loc =
   match expr with
   | HLitExpr (lit, a) -> litToTy lit, a
   | HVarExpr (_, ty, a) -> ty, a
@@ -991,14 +1005,14 @@ let exprExtract (expr: HExpr): Ty * Loc =
   | HNavExpr (_, _, ty, a) -> ty, a
   | HNodeExpr (_, _, ty, a) -> ty, a
   | HBlockExpr (_, last) -> exprExtract last
-  | HLetValExpr (_, _, _, _, ty, a) -> ty, a
+  | HLetValExpr (_, _, _, ty, a) -> ty, a
   | HLetFunExpr (_, _, _, _, _, _, ty, a) -> ty, a
   | HTyDeclExpr (_, _, _, _, a) -> tyUnit, a
   | HOpenExpr (_, a) -> tyUnit, a
   | HModuleExpr (_, _, a) -> tyUnit, a
   | HModuleSynonymExpr (_, _, a) -> tyUnit, a
 
-let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
+let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr) : HExpr =
   let goPat pat = patMap f g pat
 
   let rec go expr =
@@ -1027,7 +1041,7 @@ let exprMap (f: Ty -> Ty) (g: Loc -> Loc) (expr: HExpr): HExpr =
     | HNavExpr (sub, mes, ty, a) -> HNavExpr(go sub, mes, f ty, g a)
     | HNodeExpr (kind, args, resultTy, a) -> HNodeExpr(kind, List.map go args, f resultTy, g a)
     | HBlockExpr (stmts, last) -> HBlockExpr(List.map go stmts, go last)
-    | HLetValExpr (vis, pat, init, next, ty, a) -> HLetValExpr(vis, goPat pat, go init, go next, f ty, g a)
+    | HLetValExpr (pat, init, next, ty, a) -> HLetValExpr(goPat pat, go init, go next, f ty, g a)
     | HLetFunExpr (serial, isRec, vis, args, body, next, ty, a) ->
         HLetFunExpr(serial, isRec, vis, List.map goPat args, go body, go next, f ty, g a)
     | HTyDeclExpr (serial, vis, tyArgs, tyDef, a) -> HTyDeclExpr(serial, vis, tyArgs, tyDef, g a)
@@ -1109,8 +1123,6 @@ let nameResLogToString log =
 
   | ModulePathNotFoundError -> "Module not found for this path"
 
-  | UnimplModuleSynonymError -> "This kind of module synonym is unimplemented. Hint: `module A = P.M`."
-
   | UnimplOrPatBindingError -> "OR pattern including some bindings is unimplemented."
 
   | OtherNameResLog msg -> msg
@@ -1159,14 +1171,14 @@ let logToString tyDisplay log =
   | Log.IrrefutablePatNonExhaustiveError ->
       "Let expressions cannot contain refutable patterns, which could fail to match for now."
 
-  | Log.TyUnify (TyUnifyLog.SelfRec, _, _, lTy, rTy) ->
+  | Log.TyUnify (TyUnifyLog.SelfRec, lTy, rTy) ->
       "Recursive type occurred while unifying '"
       + tyDisplay lTy
       + "' to '"
       + tyDisplay rTy
       + "'."
 
-  | Log.TyUnify (TyUnifyLog.Mismatch, _, _, lTy, rTy) ->
+  | Log.TyUnify (TyUnifyLog.Mismatch, lTy, rTy) ->
       "Type mismatch: '"
       + tyDisplay lTy
       + "' <> '"

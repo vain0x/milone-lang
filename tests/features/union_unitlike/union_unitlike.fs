@@ -31,7 +31,7 @@ let usedInOtherSumTypeCase () =
 type RecordUsingMyUnit = { First: MyUnit; Second: MyUnit list }
 
 let usedInRecordTypeCase () =
-  let record: RecordUsingMyUnit = { First = MyUnit; Second = [ MyUnit ] }
+  let record : RecordUsingMyUnit = { First = MyUnit; Second = [ MyUnit ] }
 
   match record.Second with
   | [ MyUnit ] -> ()

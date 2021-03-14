@@ -83,6 +83,7 @@ open MiloneLang.TySystem
 open MiloneLang.Typing
 open MiloneLang.Hir
 
+module TMap = MiloneStd.StdMap
 module S = MiloneStd.StdString
 module Int = MiloneStd.StdInt
 
@@ -252,7 +253,7 @@ let private acExprChecked expr ctx =
   else
     ctx
 
-let private acExpr (expr, ctx: ArityCheckCtx): ArityEx * ArityCheckCtx =
+let private acExpr (expr, ctx: ArityCheckCtx) : ArityEx * ArityCheckCtx =
   match expr with
   | HLitExpr _
   | HTyDeclExpr _
@@ -329,7 +330,7 @@ let private acExpr (expr, ctx: ArityCheckCtx): ArityEx * ArityCheckCtx =
       let ctx = acExprs stmts ctx
       acExpr (last, ctx)
 
-  | HLetValExpr (_, _, init, next, _, _) ->
+  | HLetValExpr (_, init, next, _, _) ->
       let ctx = acExprChecked init ctx
       acExpr (next, ctx)
 
@@ -338,14 +339,14 @@ let private acExpr (expr, ctx: ArityCheckCtx): ArityEx * ArityCheckCtx =
       acExpr (next, ctx)
 
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let private acExprs exprs ctx =
   exprs
   |> List.fold (fun ctx expr -> acExpr (expr, ctx) |> snd) ctx
 
 let arityCheck (expr, tyCtx: Typing.TyCtx) =
-  let ctx: ArityCheckCtx =
+  let ctx : ArityCheckCtx =
     { GetFunArity =
         fun funSerial ->
           let funDef = tyCtx.Funs |> mapFind funSerial
@@ -385,15 +386,14 @@ let arityCheck (expr, tyCtx: Typing.TyCtx) =
 // Context
 // -----------------------------------------------
 
-[<RequireQualifiedAccess>]
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private EtaCtx =
   { Serial: Serial
     Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
     Tys: AssocMap<TySerial, TyDef> }
 
-let private ofTyCtx (tyCtx: TyCtx): EtaCtx =
+let private ofTyCtx (tyCtx: TyCtx) : EtaCtx =
   { Serial = tyCtx.Serial
     Vars = tyCtx.Vars
     Funs = tyCtx.Funs
@@ -409,7 +409,7 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: EtaCtx) =
 let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   let funSerial = FunSerial(ctx.Serial + 1)
 
-  let funDef: FunDef =
+  let funDef : FunDef =
     let tyScheme =
       let isOwned (_: Serial) = true // FIXME: is it okay?
       tyGeneralize isOwned ty
@@ -423,7 +423,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Funs = ctx.Funs |> mapAdd funSerial funDef }
+        Funs = ctx.Funs |> TMap.add funSerial funDef }
 
   let funExpr = HFunExpr(funSerial, ty, loc)
   funExpr, funSerial, ctx
@@ -431,12 +431,16 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
 let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
   let serial = VarSerial(ctx.Serial + 1)
 
+  let varDef : VarDef =
+    { Name = name
+      IsStatic = NotStatic
+      Ty = ty
+      Loc = loc }
+
   let ctx =
     { ctx with
         Serial = ctx.Serial + 1
-        Vars =
-          ctx.Vars
-          |> mapAdd serial (VarDef(name, AutoSM, ty, loc)) }
+        Vars = ctx.Vars |> TMap.add serial varDef }
 
   HVarExpr(serial, ty, loc), serial, ctx
 
@@ -452,10 +456,13 @@ let private createRestArgsAndPats callee arity argLen callLoc ctx =
     | n, Ty (FunTk, [ argTy; restTy ]) ->
         let argExpr, argSerial, ctx = freshVar "arg" argTy callLoc ctx
         let restArgPats, restArgs, ctx = go (n - 1) restTy ctx
-        let restArgPat = HVarPat(argSerial, argTy, callLoc)
+
+        let restArgPat =
+          HVarPat(PrivateVis, argSerial, argTy, callLoc)
+
         restArgPat :: restArgPats, argExpr :: restArgs, ctx
 
-    | _ -> failwithf "Never: Type error %A" (callLoc, callee, n, restTy)
+    | _ -> unreachable (callLoc, callee, n, restTy) // Type error?
 
   let restTy = callee |> exprToTy |> tyAppliedBy argLen
   go (arity - argLen) restTy ctx
@@ -468,7 +475,10 @@ let private createEnvPatAndTy items callLoc ctx =
     | item :: items ->
         let itemTy, itemLoc = exprExtract item
         let itemExpr, itemSerial, ctx = freshVar "arg" itemTy itemLoc ctx
-        let itemPat = HVarPat(itemSerial, itemTy, itemLoc)
+
+        let itemPat =
+          HVarPat(PrivateVis, itemSerial, itemTy, itemLoc)
+
         let itemPats, argTys, argExprs, ctx = go items ctx
         itemPat :: itemPats, itemTy :: argTys, itemExpr :: argExprs, ctx
 
@@ -484,14 +494,16 @@ let private createEnvDeconstructLetExpr envPat envTy envArgExpr next callLoc =
   let unboxExpr =
     hxCallProc unboxPrim [ envArgExpr ] envTy callLoc
 
-  HLetValExpr(PrivateVis, envPat, unboxExpr, next, exprToTy next, callLoc)
+  HLetValExpr(envPat, unboxExpr, next, exprToTy next, callLoc)
 
 /// Creates a let expression to define an underlying function.
 /// It takes an environment and rest parameters
 /// and calls the partial-applied callee with full arguments.
 let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgPats callLoc ctx =
   let envArgExpr, envArgSerial, ctx = freshVar "env" tyObj callLoc ctx
-  let envArgPat = HVarPat(envArgSerial, tyObj, callLoc)
+
+  let envArgPat =
+    HVarPat(PrivateVis, envArgSerial, tyObj, callLoc)
 
   let underlyingFunTy = tyFun envTy funTy
 
@@ -555,10 +567,11 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let calleeExpr, calleeLet, ctx =
     let calleeExpr, calleeSerial, ctx = freshVar "callee" funTy callLoc ctx
 
-    let calleePat = HVarPat(calleeSerial, funTy, callLoc)
+    let calleePat =
+      HVarPat(PrivateVis, calleeSerial, funTy, callLoc)
 
     let calleeLet next =
-      HLetValExpr(PrivateVis, calleePat, callee, next, exprToTy next, callLoc)
+      HLetValExpr(calleePat, callee, next, exprToTy next, callLoc)
 
     calleeExpr, calleeLet, ctx
 
@@ -572,7 +585,7 @@ let private resolvePartialAppObj callee arity args argLen callLoc ctx =
   let calleeExpr, forwardArgs =
     match List.append envExprs restArgs with
     | calleeExpr :: forwardArgs -> calleeExpr, forwardArgs
-    | _ -> failwith "Never"
+    | _ -> unreachable ()
 
   let forwardExpr =
     hxCallClosure calleeExpr forwardArgs resultTy callLoc
@@ -718,18 +731,18 @@ let private exExpr (expr, ctx) =
 
       doArm ()
 
-  | HLetValExpr (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (pat, init, next, ty, loc) ->
       let init, ctx = (init, ctx) |> exExpr
       let next, ctx = (next, ctx) |> exExpr
-      HLetValExpr(vis, pat, init, next, ty, loc), ctx
+      HLetValExpr(pat, init, next, ty, loc), ctx
 
   | HLetFunExpr (callee, isRec, vis, args, body, next, ty, loc) ->
       exLetFunExpr callee isRec vis args body next ty loc ctx
 
-  | HNavExpr _ -> failwith "NEVER: HNavExpr is resolved in NameRes, Typing, or RecordRes"
-  | HRecordExpr _ -> failwith "NEVER: HRecordExpr is resolved in RecordRes"
+  | HNavExpr _ -> unreachable () // HNavExpr is resolved in NameRes, Typing, or RecordRes.
+  | HRecordExpr _ -> unreachable () // HRecordExpr is resolved in RecordRes.
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let etaExpansion (expr, tyCtx: TyCtx) =
   let etaCtx = ofTyCtx tyCtx

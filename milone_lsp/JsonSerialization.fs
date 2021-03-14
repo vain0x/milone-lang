@@ -143,7 +143,7 @@ type private JsonValueFormatter() =
 
       | token -> failwithf "Invalid JSON input %A." token
 
-let private jsonResolver: IJsonFormatterResolver =
+let private jsonResolver : IJsonFormatterResolver =
   let formatters =
     [| JsonValueFormatter() :> IJsonFormatter |]
 
@@ -152,11 +152,11 @@ let private jsonResolver: IJsonFormatterResolver =
 
   Resolvers.DynamicCompositeResolver.Create(formatters, resolvers)
 
-let jsonDisplay (value: JsonValue): string =
+let jsonDisplay (value: JsonValue) : string =
   JsonSerializer.PrettyPrint(JsonSerializer.Serialize(value, jsonResolver))
 
-let jsonDeserializeBytes (json: byte []): JsonValue =
+let jsonDeserializeBytes (json: byte []) : JsonValue =
   JsonSerializer.Deserialize(json, jsonResolver)
 
-let jsonDeserializeString (json: string): JsonValue =
+let jsonDeserializeString (json: string) : JsonValue =
   JsonSerializer.Deserialize(json, jsonResolver)

@@ -16,7 +16,7 @@ int milone_main() {
     (*(((int*)box_))) = 0;
     void const* intBox_ = box_;
     (*(((int*)intBox_))) = 42;
-    milone_assert(((*(((int const*)intBox_))) == 42), 10, 2);
+    milone_assert(((*(((int const*)intBox_))) == 42), 11, 2);
     void const* box_1 = milone_mem_alloc(1, sizeof(uint64_t));
     (*(((uint64_t*)box_1))) = ((uint64_t)0);
     char* buf_ = ((char*)box_1);
@@ -24,6 +24,6 @@ int milone_main() {
     buf_[1] = 'i';
     struct String call_ = strOfRawParts_(((char const*)buf_), 2);
     struct String s_ = call_;
-    milone_assert((str_compare(s_, (struct String){.str = "Hi", .len = 2}) == 0), 17, 2);
+    milone_assert((str_compare(s_, (struct String){.str = "Hi", .len = 2}) == 0), 18, 2);
     return 0;
 }

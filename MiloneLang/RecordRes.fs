@@ -8,6 +8,8 @@ open MiloneLang.Syntax
 open MiloneLang.Hir
 open MiloneLang.Typing
 
+module TMap = MiloneStd.StdMap
+
 let private hxIsVarOrUnboxingVar expr =
   match expr with
   | HVarExpr _
@@ -18,7 +20,7 @@ let private hxIsVarOrUnboxingVar expr =
 // Context
 // -----------------------------------------------
 
-[<NoEquality; NoComparison>]
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type private RrCtx =
   { Vars: AssocMap<VarSerial, VarDef>
     Funs: AssocMap<FunSerial, FunDef>
@@ -28,14 +30,14 @@ type private RrCtx =
     /// recordTySerial -> (fieldTys, (field -> (fieldIndex, fieldTy)))
     RecordMap: AssocMap<TySerial, (Ty list * AssocMap<Ident, int * Ty>)> }
 
-let private ofTyCtx (tyCtx: TyCtx): RrCtx =
+let private ofTyCtx (tyCtx: TyCtx) : RrCtx =
   { Vars = tyCtx.Vars
     Funs = tyCtx.Funs
     Variants = tyCtx.Variants
     Tys = tyCtx.Tys
-    RecordMap = mapEmpty compare }
+    RecordMap = TMap.empty compare }
 
-let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
+let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx) : TyCtx = tyCtx
 
 /// ## Resolution of records and fields
 ///
@@ -91,7 +93,7 @@ let private toTyCtx (tyCtx: TyCtx) (ctx: RrCtx): TyCtx = tyCtx
 
 let private buildRecordMap (ctx: RrCtx) =
   ctx.Tys
-  |> mapFold
+  |> TMap.fold
        (fun acc tySerial tyDef ->
          match tyDef with
          | RecordTyDef (_, fields, _) ->
@@ -101,21 +103,21 @@ let private buildRecordMap (ctx: RrCtx) =
              let fieldMap =
                fields
                |> List.mapi (fun i (name, ty, _) -> name, (i, ty))
-               |> mapOfList compare
+               |> TMap.ofList compare
 
-             acc |> mapAdd tySerial (fieldTys, fieldMap)
+             acc |> TMap.add tySerial (fieldTys, fieldMap)
 
          | _ -> acc)
-       (mapEmpty compare)
+       (TMap.empty compare)
 
 let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
   let fieldTys, fieldMap =
     match ty with
     | Ty (RecordTk tySerial, _) ->
-        match ctx.RecordMap |> mapTryFind tySerial with
+        match ctx.RecordMap |> TMap.tryFind tySerial with
         | Some (fieldTys, fieldMap) -> fieldTys, fieldMap
-        | _ -> failwithf "NEVER: %A" itself
-    | _ -> failwithf "NEVER: %A" itself
+        | _ -> unreachable itself
+    | _ -> unreachable itself
 
   // Base expr is guaranteed to be a cheap expr thanks to modification in Typing,
   // so we can freely clone this.
@@ -135,26 +137,20 @@ let private rewriteRecordExpr (ctx: RrCtx) itself baseOpt fields ty loc =
 
   match baseOpt with
   | Some baseExpr ->
-      let itemExpr index =
-        // FIXME: avoid failwith
-        let itemTy =
-          match fieldTys |> List.tryItem index with
-          | Some it -> it
-          | None -> failwith "NEVER"
+      let itemExpr index fieldTy =
+        HNodeExpr(HRecordItemEN index, [ baseExpr ], fieldTy, loc)
 
-        HNodeExpr(HRecordItemEN index, [ baseExpr ], itemTy, loc)
+      let rec go i fields fieldTys =
+        match fields, fieldTys with
+        | [], [] -> []
 
-      let n = fieldTys |> List.length
+        | (index, init) :: fields, _ :: fieldTys when index = i -> init :: go (i + 1) fields fieldTys
 
-      let rec go i fields =
-        match fields with
-        | [] when i = n -> []
+        | _, fieldTy :: fieldTys -> itemExpr i fieldTy :: go (i + 1) fields fieldTys
 
-        | (index, init) :: fields when index = i -> init :: go (i + 1) fields
+        | _, [] -> unreachable ()
 
-        | _ -> itemExpr i :: go (i + 1) fields
-
-      let fields = go 0 fields
+      let fields = go 0 fields fieldTys
       HNodeExpr(HRecordEN, fields, ty, loc)
 
   | None ->
@@ -172,7 +168,7 @@ let private rewriteFieldExpr (ctx: RrCtx) itself recordTy l r ty loc =
         let index, _ = fieldMap |> mapFind r
         index
 
-    | _ -> failwithf "NEVER: %A" itself
+    | _ -> unreachable itself
 
   HNodeExpr(HRecordItemEN index, [ l ], ty, loc)
 
@@ -239,11 +235,11 @@ let private teExpr (ctx: RrCtx) expr =
 
       doArm ()
 
-  | HLetValExpr (vis, pat, init, next, ty, loc) ->
+  | HLetValExpr (pat, init, next, ty, loc) ->
       let doArm () =
         let init = init |> teExpr ctx
         let next = next |> teExpr ctx
-        HLetValExpr(vis, pat, init, next, ty, loc)
+        HLetValExpr(pat, init, next, ty, loc)
 
       doArm ()
 
@@ -256,7 +252,7 @@ let private teExpr (ctx: RrCtx) expr =
       doArm ()
 
   | HModuleExpr _
-  | HModuleSynonymExpr _ -> failwith "NEVER: Resolved in NameRes"
+  | HModuleSynonymExpr _ -> unreachable () // Resolved in NameRes.
 
 let recordRes (expr: HExpr, tyCtx: TyCtx) =
   let ctx = ofTyCtx tyCtx

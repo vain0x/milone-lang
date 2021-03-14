@@ -4,7 +4,7 @@ struct Date_;
 
 struct Person_;
 
-struct Person_ newPerson_(int arg_);
+struct Person_ newPerson_(char arg_);
 
 int milone_main();
 
@@ -20,7 +20,7 @@ struct Person_ {
     struct Date_ t2;
 };
 
-struct Person_ newPerson_(int arg_) {
+struct Person_ newPerson_(char arg_) {
     struct Date_ Date_ = (struct Date_){.t0 = 2007, .t1 = 8, .t2 = 31};
     struct Person_ Person_ = (struct Person_){.t0 = (struct String){.str = "Jane Doe", .len = 8}, .t1 = 16, .t2 = Date_};
     return Person_;

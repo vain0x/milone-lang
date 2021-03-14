@@ -1,5 +1,9 @@
 #include "milone.h"
 
+struct IntList;
+
+struct IntList;
+
 int inc_(int x_);
 
 int twice_(int x_1);
@@ -8,11 +12,14 @@ int sub_(int x_2, int y_);
 
 bool between_(int l_, int r_, int x_3);
 
-struct IntList;
-
 int len_(struct IntList const* xs_);
 
 int milone_main();
+
+struct IntList {
+    int head;
+    struct IntList const* tail;
+};
 
 int inc_(int x_) {
     return (x_ + 1);
@@ -42,11 +49,6 @@ else_3:;
 if_next_1:;
     return if_;
 }
-
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
 
 int len_(struct IntList const* xs_) {
     int if_1;

@@ -12,12 +12,18 @@ module rec MiloneLang.Syntax
 
 open MiloneLang.Util
 
+module TMap = MiloneStd.StdMap
+
 // -----------------------------------------------
 // Vocabulary types
 // -----------------------------------------------
 
 /// Identifier. Name of something.
 type Ident = string
+
+/// Name with ID.
+[<NoEquality; NoComparison>]
+type Name = Name of string * Pos
 
 /// Visibility.
 [<NoEquality; NoComparison>]
@@ -58,7 +64,7 @@ type Pos = RowIndex * ColumnIndex
 type DocId = string
 
 /// Location.
-type Loc = DocId * RowIndex * ColumnIndex
+type Loc = Loc of DocId * RowIndex * ColumnIndex
 
 // -----------------------------------------------
 // Syntax errors
@@ -269,14 +275,14 @@ type ATy =
   | AMissingTy of Pos
 
   /// Named type with potential qualifiers and type arguments,
-  /// e.g. `int`, `M.AssocMap<K, V>`.
-  | AAppTy of quals: Ident list * Ident * ATy list * Pos
+  /// e.g. `int`, `TMap.AssocMap<K, V>`.
+  | AAppTy of quals: Name list * Name * ATy list * Pos
 
   /// Type variable, e.g. `'T`.
-  | AVarTy of Ident * Pos
+  | AVarTy of Name
 
   /// Type suffix, e.g. `T list`.
-  | ASuffixTy of ATy * Ident * Pos
+  | ASuffixTy of ATy * Name
 
   /// Tuple type, e.g. `int * string`.
   | ATupleTy of ATy list * Pos
@@ -293,13 +299,13 @@ type APat =
 
   /// Pattern that is non-keyword identifier.
   /// Variable (`x`), wildcard (`_`) or variant (`None`).
-  | AIdentPat of Ident * Pos
+  | AIdentPat of Vis * Name
 
   /// E.g. `[x; y; z]`.
   | AListPat of APat list * Pos
 
   /// Navigation, e.g. `Foo.Bar`.
-  | ANavPat of APat * Ident * Pos
+  | ANavPat of APat * Name * Pos
 
   /// Application. e.g. `Some x`.
   ///
@@ -314,7 +320,7 @@ type APat =
   | ATuplePat of APat list * Pos
 
   /// E.g. `(Some x) as opt`.
-  | AAsPat of APat * Ident * Pos
+  | AAsPat of APat * Name * Pos
 
   /// Type ascription, e.g. `x: int`.
   | AAscribePat of APat * ATy * Pos
@@ -324,7 +330,7 @@ type APat =
 
   /// Function declaration pattern, e.g. `f x y`.
   /// Syntactically distinct from the app pattern for technically reason.
-  | AFunDeclPat of Ident * APat list * Pos
+  | AFunDeclPat of Vis * Name * APat list
 
 /// Arm of match expression in AST.
 ///
@@ -339,18 +345,18 @@ type AArm = AArm of pat: APat * guard: AExpr option * body: AExpr * Pos
 /// or `| Joker` (without `of`).
 [<Struct>]
 [<NoEquality; NoComparison>]
-type AVariant = AVariant of Ident * payloadTyOpt: ATy option * Pos
+type AVariant = AVariant of Name * payloadTyOpt: ATy option * Pos
 
 /// Field declaration in AST.
 ///
 /// E.g. `Name: string`.
-type AFieldDecl = Ident * ATy * Pos
+type AFieldDecl = Name * ATy * Pos
 
 /// Let expression in AST.
 [<NoEquality; NoComparison>]
 type ALet =
-  | ALetVal of IsRec * Vis * APat * AExpr * AExpr * Pos
-  | ALetFun of IsRec * Vis * Ident * args: APat list * AExpr * AExpr * Pos
+  | ALetVal of IsRec * APat * AExpr * AExpr * Pos
+  | ALetFun of IsRec * Vis * Name * args: APat list * AExpr * AExpr * Pos
 
 /// Body of type declaration in AST.
 [<NoEquality; NoComparison>]
@@ -370,13 +376,13 @@ type AExpr =
   | ALitExpr of Lit * Pos
 
   /// E.g. `x`.
-  | AIdentExpr of Ident * Pos
+  | AIdentExpr of Name
 
   /// List literal, e.g. `[]`, `[2; 3]`.
   | AListExpr of AExpr list * Pos
 
   /// Record literal, e.g. `{}`, `{ X = 1; Y = 2 }`.
-  | ARecordExpr of AExpr option * (Ident * AExpr * Pos) list * Pos
+  | ARecordExpr of AExpr option * (Name * AExpr * Pos) list * Pos
 
   /// `if cond then body else alt`.
   | AIfExpr of cond: AExpr * body: AExpr * alt: AExpr option * Pos
@@ -388,7 +394,7 @@ type AExpr =
   | AFunExpr of APat list * AExpr * Pos
 
   /// Navigation, e.g. `str.Length`.
-  | ANavExpr of AExpr * Ident * Pos
+  | ANavExpr of AExpr * Name * Pos
 
   /// E.g. `str.[i]`.
   | AIndexExpr of AExpr * AExpr * Pos
@@ -415,36 +421,36 @@ type AExpr =
   | ASemiExpr of AExpr list * AExpr * Pos
 
   /// (pattern, initializer, next). Let-in expression.
-  | ALetExpr of IsRec * Vis * APat * AExpr * AExpr * Pos
+  | ALetExpr of IsRec * APat * AExpr * AExpr * Pos
 
 [<NoEquality; NoComparison>]
 type ALetDecl =
-  | ALetFunDecl of IsRec * Vis * Ident * APat list * AExpr * Pos
-  | ALetValDecl of IsRec * Vis * APat * AExpr * Pos
+  | ALetFunDecl of IsRec * Vis * Name * APat list * AExpr * Pos
+  | ALetValDecl of IsRec * APat * AExpr * Pos
 
 [<NoEquality; NoComparison>]
 type ADecl =
   | AExprDecl of AExpr
 
-  | ALetDecl of IsRec * Vis * APat * AExpr * Pos
+  | ALetDecl of IsRec * APat * AExpr * Pos
 
   /// Type synonym declaration, e.g. `type UserId = int`.
-  | ATySynonymDecl of Vis * Ident * tyArgs: Ident list * ATy * Pos
+  | ATySynonymDecl of Vis * Name * tyArgs: Name list * ATy * Pos
 
   /// Discriminated union type declaration, e.g. `type Result = | Ok | Err of int`.
-  | AUnionTyDecl of Vis * Ident * AVariant list * Pos
+  | AUnionTyDecl of Vis * Name * AVariant list * Pos
 
   /// Record type declaration, e.g. `type Pos = { X: int; Y: int }`.
-  | ARecordTyDecl of Vis * Ident * AFieldDecl list * Pos
+  | ARecordTyDecl of Vis * Name * AFieldDecl list * Pos
 
   /// Open statement, e.g. `open System.IO`.
-  | AOpenDecl of Ident list * Pos
+  | AOpenDecl of Name list * Pos
 
   /// Module synonym statement, e.g. `module T = System.Text`.
-  | AModuleSynonymDecl of Ident * Ident list * Pos
+  | AModuleSynonymDecl of Name * Name list * Pos
 
   /// Module statement, e.g. `module Pos = let zero () = ...`.
-  | AModuleDecl of IsRec * Vis * Ident * ADecl list * Pos
+  | AModuleDecl of IsRec * Vis * Name * ADecl list * Pos
 
   /// Expression with some attribute.
   | AAttrDecl of contents: AExpr * next: ADecl * Pos
@@ -453,36 +459,7 @@ type ADecl =
 [<NoEquality; NoComparison>]
 type ARoot =
   | AExprRoot of ADecl list
-  | AModuleRoot of Ident * ADecl list * Pos
-
-// -----------------------------------------------
-// Literals
-// -----------------------------------------------
-
-let litTrue = BoolLit true
-
-let litFalse = BoolLit false
-
-// int and float are not ordered by value.
-let litCompare l r =
-  match l, r with
-  | BoolLit l, BoolLit r -> compare l r
-  | BoolLit _, _ -> -1
-  | _, BoolLit _ -> 1
-
-  | IntLit l, IntLit r -> compare l r
-  | IntLit _, _ -> -1
-  | _, IntLit _ -> 1
-
-  | FloatLit l, FloatLit r -> compare l r
-  | FloatLit _, _ -> -1
-  | _, FloatLit _ -> 1
-
-  | CharLit l, CharLit r -> compare l r
-  | CharLit _, _ -> -1
-  | _, CharLit _ -> 1
-
-  | StrLit l, StrLit r -> compare l r
+  | AModuleRoot of Name * ADecl list * Pos
 
 // -----------------------------------------------
 // Position
@@ -497,16 +474,16 @@ let posToString ((y, x): Pos) = string (y + 1) + ":" + string (x + 1)
 // -----------------------------------------------
 
 /// No location information. Should be fixed.
-let noLoc = "<noLoc>", -1, -1
+let noLoc = Loc("<noLoc>", -1, -1)
 
-let locToString ((docId, y, x): Loc) =
+let locToString (Loc (docId, y, x)) =
   docId
   + ":"
   + string (y + 1)
   + ":"
   + string (x + 1)
 
-let locCompare ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
+let locCompare (Loc (lDoc, ly, lx)) (Loc (rDoc, ry, rx)) =
   let c = compare lDoc rDoc
 
   if c <> 0 then c
@@ -520,7 +497,7 @@ let locCompare ((lDoc, ly, lx): Loc) ((rDoc, ry, rx): Loc) =
 type private KeywordMap = AssocMap<Ident, Token>
 
 // See also <https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/keyword-reference>.
-let private keywordMapBuild (): KeywordMap =
+let private keywordMapBuild () : KeywordMap =
   let miloneKeywords =
     [ "as", AsToken
       "else", ElseToken
@@ -627,23 +604,23 @@ let private keywordMapBuild (): KeywordMap =
 
   let reservedToken = ErrorToken ReservedWordError
 
-  let map = mapEmpty compare
+  let map = TMap.empty compare
 
   let map =
     miloneKeywords
-    |> List.fold (fun map (name, token) -> mapAdd name token map) map
+    |> List.fold (fun map (name, token) -> TMap.add name token map) map
 
   let map =
     fsharpKeywords
-    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+    |> List.fold (fun map name -> TMap.add name reservedToken map) map
 
   let map =
     ocamlKeywords
-    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+    |> List.fold (fun map name -> TMap.add name reservedToken map) map
 
   let map =
     reservedWords
-    |> List.fold (fun map name -> mapAdd name reservedToken map) map
+    |> List.fold (fun map name -> TMap.add name reservedToken map) map
 
   map
 
@@ -651,12 +628,13 @@ let private keywordMapBuild (): KeywordMap =
 // Host
 // -----------------------------------------------
 
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
 type TokenizeHost = { FindKeyword: string -> Token option }
 
-let tokenizeHostNew (): TokenizeHost =
+let tokenizeHostNew () : TokenizeHost =
   let keywordMap = keywordMapBuild ()
 
-  { FindKeyword = fun ident -> keywordMap |> mapTryFind ident }
+  { FindKeyword = fun ident -> keywordMap |> TMap.tryFind ident }
 
 // -----------------------------------------------
 // Module dependencies
@@ -666,8 +644,8 @@ let tokenizeHostNew (): TokenizeHost =
 let findDependentModules ast =
   let rec onDecl decl =
     match decl with
-    | AOpenDecl ([ p; m ], pos) -> Some(p, m, pos)
-    | AModuleSynonymDecl (_, [ p; m ], pos) -> Some(p, m, pos)
+    | AOpenDecl ([ Name (p, _); Name (m, _) ], pos) -> Some(p, m, pos)
+    | AModuleSynonymDecl (_, [ Name (p, _); Name (m, _) ], pos) -> Some(p, m, pos)
     | AAttrDecl (_, next, _) -> onDecl next
     | _ -> None
 

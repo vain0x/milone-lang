@@ -23,7 +23,7 @@ let main _ =
   | _ -> assert false
 
   let first, second =
-    let f (_: (First * Second) list): (First list * Second list) = [], []
+    let f (_: (First * Second) list) : (First list * Second list) = [], []
     First f, Second f
 
   match [ 0, Leaf3 ] with

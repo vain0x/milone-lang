@@ -2,7 +2,7 @@ module rec fun_partial_app.Program
 
 // Partial application is allowed.
 
-let twice f (x: int): int = f (f x)
+let twice f (x: int) : int = f (f x)
 
 let dec (y: int) x = x - y
 

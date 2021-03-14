@@ -14,7 +14,10 @@ let main _ =
   let d = "'"
   // Capturing `d`.
   let rec der (n: int) (f: string) =
-    if n = 0 then printfn "%s" f else der (n - 1) (f + d)
+    if n = 0 then
+      printfn "%s" f
+    else
+      der (n - 1) (f + d)
 
   let der2 = bindInt der 2
   der2 "f"

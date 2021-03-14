@@ -11,7 +11,7 @@ let private readFile (filePath: string) =
       None
   with _ -> None
 
-let dotnetCliHost (): CliHost =
+let dotnetCliHost () : CliHost =
   let args =
     System.Environment.GetCommandLineArgs()
     |> Array.toList

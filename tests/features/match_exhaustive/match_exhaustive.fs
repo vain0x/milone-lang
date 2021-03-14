@@ -4,6 +4,7 @@ module rec match_exhaustive.Program
 
 let main _ =
   let f (x: int) = x * x
+
   match f 3 with
   | 1 ->
       assert false

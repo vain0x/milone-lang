@@ -9,6 +9,7 @@ let simpleCase () =
 
 let shadowingCase () =
   let x = 1
+
   match x, 2 with
   | _, x as y ->
       let y1, y2 = y

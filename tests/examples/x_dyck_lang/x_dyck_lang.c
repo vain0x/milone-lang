@@ -32,8 +32,6 @@ then_6:;
     i_ = arg_1;
     d_ = arg_2;
     goto tailrec_1;
-    if_1 = false;
-    goto if_next_5;
 else_7:;
     bool if_2;
     if ((0 >= d_)) {
@@ -52,8 +50,6 @@ else_10:;
     i_ = arg_4;
     d_ = arg_5;
     goto tailrec_1;
-    if_2 = false;
-    goto if_next_8;
 if_next_8:;
     if_1 = if_2;
     goto if_next_5;

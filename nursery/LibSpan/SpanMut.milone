@@ -1,0 +1,19 @@
+module rec LibSpan.SpanMut
+
+open LibSpan.Span
+
+type SpanMut = __nativeType<``struct SpanMut``>
+
+let ofRawParts (ptr: voidptr) (len: unativeint) : SpanMut =
+  __nativeStmt ("struct SpanMut span = {{0}, {1}};", ptr, len)
+  __nativeExpr "span"
+
+let asPtr (span: SpanMut) : voidptr =
+  __nativeStmt ("void *ptr = {0}.ptr;", span)
+  __nativeExpr "ptr"
+
+let length (span: SpanMut) : unativeint =
+  __nativeStmt ("size_t len = {0}.len;", span)
+  __nativeExpr "len"
+
+let asConst (span: SpanMut) : Span = __nativeFun ("span_mut_as_const", span)

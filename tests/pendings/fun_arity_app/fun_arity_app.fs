@@ -2,7 +2,7 @@ module rec fun_arity_app.Program
 
 // See also fun_arity_over.
 
-let add (x: int) (y: int): int = x + y
+let add (x: int) (y: int) : int = x + y
 
 let app f x = f x
 

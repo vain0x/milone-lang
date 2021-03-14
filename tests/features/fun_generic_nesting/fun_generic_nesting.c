@@ -1,16 +1,16 @@
 #include "milone.h"
 
-int aux_2(int x_, int arg_);
+int aux_2(int x_, char arg_);
 
-struct String aux_1(struct String x_, int arg_1);
+struct String aux_1(struct String x_, char arg_1);
 
 int id_2(int x_);
 
 struct String id_1(struct String x_);
 
-int gooAux_2(int x_1, int arg_2);
+int gooAux_2(int x_1, char arg_2);
 
-struct String gooAux_1(struct String x_1, int arg_3);
+struct String gooAux_1(struct String x_1, char arg_3);
 
 int goo_2(int x_1);
 
@@ -18,11 +18,11 @@ struct String goo_1(struct String x_1);
 
 int milone_main();
 
-int aux_2(int x_, int arg_) {
+int aux_2(int x_, char arg_) {
     return x_;
 }
 
-struct String aux_1(struct String x_, int arg_1) {
+struct String aux_1(struct String x_, char arg_1) {
     return x_;
 }
 
@@ -36,12 +36,12 @@ struct String id_1(struct String x_) {
     return call_1;
 }
 
-int gooAux_2(int x_1, int arg_2) {
+int gooAux_2(int x_1, char arg_2) {
     int call_2 = id_2(x_1);
     return call_2;
 }
 
-struct String gooAux_1(struct String x_1, int arg_3) {
+struct String gooAux_1(struct String x_1, char arg_3) {
     struct String call_3 = id_1(x_1);
     return call_3;
 }

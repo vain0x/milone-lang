@@ -4,6 +4,7 @@ let main _ =
   if true then
     printfn "then"
     let hello = "hello"
+
     if true then
       0
     else

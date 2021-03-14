@@ -22,8 +22,7 @@ let bitOperatorsTest (n1: int) =
   let n16 = n8 * 2
 
   assert ((n1 + n2 + n4) &&& (n2 + n4 + n8) = n2 + n4)
-  assert ((n1 + n2 + n4)
-          ||| (n2 + n4 + n8) = n1 + n2 + n4 + n8)
+  assert ((n1 + n2 + n4) ||| (n2 + n4 + n8) = n1 + n2 + n4 + n8)
   assert ((n1 + n2 + n4) ^^^ (n2 + n4 + n8) = n1 + n8)
 
   assert ((n1 <<< 0) = n1)

@@ -1,0 +1,6 @@
+module rec LibSpan.Span
+
+type Span = __nativeType<``struct Span``>
+
+let take (len: unativeint) (itemSize: unativeint) (span: Span) : Span =
+  __nativeFun ("span_take", span, len, itemSize)

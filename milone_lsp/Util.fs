@@ -1,11 +1,9 @@
 module MiloneLsp.Util
 
-open System
 open System.Collections.Generic
 open System.IO
-open System.Threading.Tasks
 
-let partition1 (f: 'T -> 'U option) (items: #seq<'T>): 'U array * 'T array =
+let partition1 (f: 'T -> 'U option) (items: #seq<'T>) : 'U array * 'T array =
   let someItems = ResizeArray()
   let noneItems = ResizeArray()
 
@@ -16,7 +14,7 @@ let partition1 (f: 'T -> 'U option) (items: #seq<'T>): 'U array * 'T array =
 
   someItems.ToArray(), noneItems.ToArray()
 
-let partition2 (f: 'T -> Result<'U, 'E>) (items: #seq<'T>): 'U array * 'E array =
+let partition2 (f: 'T -> Result<'U, 'E>) (items: #seq<'T>) : 'U array * 'E array =
   let ok = ResizeArray()
   let error = ResizeArray()
 
@@ -32,7 +30,7 @@ let partition2 (f: 'T -> Result<'U, 'E>) (items: #seq<'T>): 'U array * 'E array 
 // -----------------------------------------------
 
 module ResizeArray =
-  let assign (items: #seq<_>) (array: ResizeArray<_>): unit =
+  let assign (items: #seq<_>) (array: ResizeArray<_>) : unit =
     array.Clear()
     array.AddRange(items)
 
@@ -43,23 +41,23 @@ module ResizeArray =
 type MutSet<'T when 'T: equality> = HashSet<'T>
 
 module MutSet =
-  let empty<'T when 'T: equality> (): MutSet<'T> = MutSet()
+  let empty<'T when 'T: equality> () : MutSet<'T> = MutSet()
 
-  let isEmpty (set: MutSet<_>): bool = set.Count = 0
+  let isEmpty (set: MutSet<_>) : bool = set.Count = 0
 
-  let length (set: MutSet<_>): int = set.Count
+  let length (set: MutSet<_>) : int = set.Count
 
-  let contains item (set: MutSet<_>): bool = set.Contains(item)
+  let contains item (set: MutSet<_>) : bool = set.Contains(item)
 
-  let ofSeq (items: #seq<_>): MutSet<_> = System.Linq.Enumerable.ToHashSet(items)
+  let ofSeq (items: #seq<_>) : MutSet<_> = System.Linq.Enumerable.ToHashSet(items)
 
-  let toSeq (set: MutSet<_>): seq<_> = set :> seq<_>
+  let toSeq (set: MutSet<_>) : seq<_> = set :> seq<_>
 
   /// Returns true if newly inserted.
-  let insert item (set: MutSet<_>): bool = set.Add(item)
+  let insert item (set: MutSet<_>) : bool = set.Add(item)
 
   /// Returns true if actually removed.
-  let remove item (set: MutSet<_>): bool = set.Remove(item)
+  let remove item (set: MutSet<_>) : bool = set.Remove(item)
 
 // -----------------------------------------------
 // MutMap
@@ -68,24 +66,24 @@ module MutSet =
 type MutMap<'K, 'T> = Dictionary<'K, 'T>
 
 module MutMap =
-  let empty<'K, 'T when 'K: equality> (): MutMap<'K, 'T> = MutMap()
+  let empty<'K, 'T when 'K: equality> () : MutMap<'K, 'T> = MutMap()
 
-  let isEmpty (map: MutMap<_, _>): bool = map.Count = 0
+  let isEmpty (map: MutMap<_, _>) : bool = map.Count = 0
 
-  let length (map: MutMap<_, _>): int = map.Count
+  let length (map: MutMap<_, _>) : int = map.Count
 
-  let containsKey key (map: MutMap<_, _>): bool = map.ContainsKey(key)
+  let containsKey key (map: MutMap<_, _>) : bool = map.ContainsKey(key)
 
-  let tryFind key (map: MutMap<_, _>): _ option =
+  let tryFind key (map: MutMap<_, _>) : _ option =
     match map.TryGetValue(key) with
     | true, value -> Some value
     | false, _ -> None
 
-  let keys (map: MutMap<_, _>): seq<_> = map.Keys :> seq<_>
+  let keys (map: MutMap<_, _>) : seq<_> = map.Keys :> seq<_>
 
-  let values (map: MutMap<_, _>): seq<_> = map.Values :> seq<_>
+  let values (map: MutMap<_, _>) : seq<_> = map.Values :> seq<_>
 
-  let entries (map: MutMap<_, _>): seq<_ * _> =
+  let entries (map: MutMap<_, _>) : seq<_ * _> =
     seq { for KeyValue (key, value) in map -> key, value }
 
   let insert key value (map: MutMap<_, _>) =
@@ -137,29 +135,3 @@ module File =
       else
         None
     with _ -> None
-
-// -----------------------------------------------
-// Timeout
-// -----------------------------------------------
-
-let doWithTimeout (timeoutMs: int) (action: unit -> 'T): Result<'T, exn> =
-  use task = Task.Run(action)
-  use delayTask = Task.Delay(timeoutMs)
-  let index = Task.WaitAny(task, delayTask)
-
-  if index = 0 then
-    assert task.IsCompleted
-
-    match task.Status with
-    | TaskStatus.RanToCompletion -> Ok task.Result
-
-    | TaskStatus.Faulted ->
-        if task.Exception.InnerExceptions.Count = 1 then
-          Error task.Exception.InnerExceptions.[0]
-        else
-          Error(task.Exception :> exn)
-
-    | _ -> failwith "NEVER"
-  else
-    assert (index = 1)
-    Error(Exception(sprintf "Timeout (%d ms)." timeoutMs))

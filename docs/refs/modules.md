@@ -79,3 +79,10 @@ let private innerFun () = ()
 ## Advanced topics
 
 - `module rec` is implemented, but non-recursive `module` isn't.
+
+### Comparison with F#
+
+In F#, each project has a project file (.fsproj). It describes:
+
+- the ordered list of modules in the project
+- and other projects that the project refers to.

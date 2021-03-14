@@ -3,16 +3,27 @@ module rec MiloneLang.Util
 
 module C = MiloneStd.StdChar
 module S = MiloneStd.StdString
-module TreeMap = MiloneStd.StdMap
 module Int = MiloneStd.StdInt
+module TMap = MiloneStd.StdMap
+module TSet = MiloneStd.StdSet
 
 // -----------------------------------------------
 // Collections
 // -----------------------------------------------
 
-type AssocMap<'K, 'V> = TreeMap.TreeMap<'K, 'V>
+type AssocMap<'K, 'V> = TMap.TreeMap<'K, 'V>
 
-type AssocSet<'K> = TreeMap.TreeMap<'K, unit>
+type AssocSet<'T> = TSet.TreeSet<'T>
+
+// -----------------------------------------------
+// Error
+// -----------------------------------------------
+
+/// Never executed.
+let unreachable context = failwithf "NEVER: %A" context
+
+/// Not implemented.
+let todo context = failwithf "Not implemented: %A" context
 
 // -----------------------------------------------
 // Pair
@@ -48,7 +59,7 @@ let forList folder xs state =
 /// If two lists have different length, some elements have no pair.
 /// These items are returns as third result.
 /// The second result indicates which list is longer.
-let listTryZip (xs: _ list) (ys: _ list): (_ * _) list * _ list * _ list =
+let listTryZip (xs: _ list) (ys: _ list) : (_ * _) list * _ list * _ list =
   let rec listTryZipLoop acc xs ys =
     match xs, ys with
     | _, []
@@ -61,16 +72,11 @@ let listTryZip (xs: _ list) (ys: _ list): (_ * _) list * _ list * _ list =
 /// `List.map`, modifying context.
 ///
 /// USAGE:
-///   let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
+/// ```fs
+/// let ys, ctx = (xs, ctx) |> stMap (fun (x, ctx) -> y, ctx)
+/// ```
 let stMap f (xs, ctx) =
-  let rec go acc (xs, ctx) =
-    match xs with
-    | [] -> List.rev acc, ctx
-    | x :: xs ->
-        let y, ctx = f (x, ctx)
-        go (y :: acc) (xs, ctx)
-
-  go [] (xs, ctx)
+  xs |> List.mapFold (fun ctx x -> f (x, ctx)) ctx
 
 /// `List.bind`, modifying context.
 ///
@@ -108,7 +114,6 @@ let listSortCore unique compare xs =
   // `merge (xs, xn) (ys, yn) = (zs, zn), d` where
   // `zs.[0..zn - 1]` is the merge of `xs.[0..xn - 1]` and `ys.[0..yn - 1]`,
   // and `d` is the number of duplicated items.
-  // NOTE: It seems not tail-call optimized by GCC?
   let rec merge (zs, zn) d (xs, xn) (ys, yn) =
     if xn = 0 then
       (appendRev ys zs, zn + yn), d
@@ -119,7 +124,7 @@ let listSortCore unique compare xs =
     else
       match xs, ys with
       | [], _
-      | _, [] -> failwith "NEVER: wrong list length"
+      | _, [] -> unreachable () // wrong list length.
 
       | x :: xs1, y :: ys1 ->
           let c = compare x y
@@ -185,75 +190,26 @@ let assocTryFind compare key assoc =
 // AssocMap
 // -----------------------------------------------
 
-let mapEmpty compare: AssocMap<_, _> = TreeMap.empty compare
-
-let mapIsEmpty (map: AssocMap<_, _>) = TreeMap.isEmpty map
-
-let mapAdd key value (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.add key value map
-
-let mapRemove key (map: AssocMap<_, _>): _ option * AssocMap<_, _> = TreeMap.remove key map
-
-let mapTryFind key (map: AssocMap<_, _>): _ option = TreeMap.tryFind key map
-
 let mapFind key map =
-  match mapTryFind key map with
+  match TMap.tryFind key map with
   | Some value -> value
 
-  | None -> failwithf "mapFind: missing key (%A)" key
-
-let mapContainsKey key map =
-  match mapTryFind key map with
-  | Some _ -> true
-
-  | None -> false
-
-let mapFold folder state (map: AssocMap<_, _>) = TreeMap.fold folder state map
-
-let mapMap f (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.map f map
-
-let mapFilter pred (map: AssocMap<_, _>): AssocMap<_, _> = TreeMap.filter pred map
-
-let mapToKeys (map: AssocMap<_, _>) = TreeMap.toList map |> List.map fst
-
-let mapToList (map: AssocMap<_, _>) = TreeMap.toList map
-
-let mapOfKeys compare value keys: AssocMap<_, _> =
-  keys
-  |> List.map (fun key -> key, value)
-  |> TreeMap.ofList compare
-
-let mapOfList compare assoc: AssocMap<_, _> = TreeMap.ofList compare assoc
+  | None -> failwithf "mapFind: Missing key: %A." key
 
 // -----------------------------------------------
-// AssocSet
+// Multimap
 // -----------------------------------------------
 
-let setEmpty funs: AssocSet<_> = mapEmpty funs
+type Multimap<'K, 'T> = TMap.TreeMap<'K, 'T list>
 
-let setIsEmpty (set: AssocSet<_>): bool = set |> mapIsEmpty
+let multimapFind (key: 'K) (multimap: Multimap<'K, 'T>) : 'T list =
+  multimap
+  |> TMap.tryFind key
+  |> Option.defaultValue []
 
-let setContains key (set: AssocSet<_>) = set |> mapContainsKey key
-
-let setToList (set: AssocSet<_>) = set |> mapToKeys
-
-let setOfList compare xs: AssocSet<_> = mapOfKeys compare () xs
-
-let setAdd key set: AssocSet<_> = mapAdd key () set
-
-let setRemove key set: bool * AssocSet<_> =
-  let opt, set = set |> mapRemove key
-  Option.isSome opt, set
-
-let setFold folder state (set: AssocSet<_>) =
-  set |> setToList |> List.fold folder state
-
-// TODO: make it more efficient
-let setExists pred (set: AssocSet<_>) = set |> setToList |> List.exists pred
-
-// TODO: make it more efficient
-let setUnion first second =
-  first
-  |> setFold (fun set item -> set |> setAdd item) second
+let multimapAdd (key: 'K) (item: 'T) (multimap: Multimap<'K, 'T>) : Multimap<'K, 'T> =
+  let items = multimap |> multimapFind key
+  TMap.add key (item :: items) multimap
 
 // -----------------------------------------------
 // Int

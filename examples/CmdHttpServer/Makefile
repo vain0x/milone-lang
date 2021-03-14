@@ -3,15 +3,25 @@
 
 # Prerequisites: make, milone-lang installed
 
+CC ?= gcc
 MILONE_RUNTIME := ${HOME}/.milone/runtime
 
 default: target/serve
 
 target/serve: target/cmd_http_server.c cmd_http_server.c
-	gcc -std=gnu11 -g \
-		-fsanitize=address,leak,undefined \
-		-Wall -Wextra -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-label -Wno-unused-parameter -Wno-unused-but-set-parameter \
-		-I ${MILONE_RUNTIME} \
+	${CC} -std=gnu11 -g \
+		-fsanitize=address \
+		-Wall \
+		-Wextra \
+		-Wno-parentheses-equality \
+		-Wno-pointer-to-int-cast \
+		-Wno-unknown-warning-option \
+		-Wno-unused-but-set-variable \
+		-Wno-unused-const-variable \
+		-Wno-unused-label \
+		-Wno-unused-parameter \
+		-Wno-unused-variable \
+		-I${MILONE_RUNTIME} \
 		${MILONE_RUNTIME}/milone.c \
 		milone_ext.c \
 		cmd_http_server.c \

@@ -1,6 +1,5 @@
 module rec MiloneLsp.Program
 
-open System.Threading
 open MiloneLsp.JsonRpcReaderForAbstractStream
 open MiloneLsp.JsonRpcReaderForStdIn
 open MiloneLsp.LspServer
@@ -17,4 +16,5 @@ let main _ =
 
     Async.Start(requestReader)
     return! lspServer { DrainRequests = drainRequests }
-  } |> Async.RunSynchronously
+  }
+  |> Async.RunSynchronously

@@ -1,19 +1,19 @@
 #include "milone.h"
 
-int fizzBuzz_(int i_);
+char fizzBuzz_(int i_);
 
 int milone_main();
 
-int fizzBuzz_(int i_) {
+char fizzBuzz_(int i_) {
 tailrec_1:;
-    int if_;
+    char if_;
     if ((15 >= i_)) {
         goto then_3;
     } else {
         goto else_13;
     }
 then_3:;
-    int if_1;
+    char if_1;
     if (((i_ % 15) == 0)) {
         goto then_5;
     } else {
@@ -24,7 +24,7 @@ then_5:;
     if_1 = 0;
     goto if_next_4;
 else_6:;
-    int if_2;
+    char if_2;
     if (((i_ % 3) == 0)) {
         goto then_8;
     } else {
@@ -35,7 +35,7 @@ then_8:;
     if_2 = 0;
     goto if_next_7;
 else_9:;
-    int if_3;
+    char if_3;
     if (((i_ % 5) == 0)) {
         goto then_11;
     } else {
@@ -59,8 +59,6 @@ if_next_4:;
     int arg_ = (i_ + 1);
     i_ = arg_;
     goto tailrec_1;
-    if_ = 0;
-    goto if_next_2;
 else_13:;
     if_ = 0;
     goto if_next_2;
@@ -69,6 +67,6 @@ if_next_2:;
 }
 
 int milone_main() {
-    int call_ = fizzBuzz_(1);
+    char call_ = fizzBuzz_(1);
     return 0;
 }

@@ -2,6 +2,8 @@
 
 struct StringList;
 
+struct IntOption;
+
 struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
@@ -18,13 +20,11 @@ void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
 
 bool str_to_int_checked(struct String, int*);
 
-struct IntList;
-
-struct IntList const* __intOfStr_(struct String s_3);
+struct IntOption __intOfStr_(struct String s_);
 
 int milone_get_arg_count();
 
-int __argCount_(int arg_);
+int __argCount_(char arg_);
 
 struct String milone_get_arg(int);
 
@@ -34,24 +34,24 @@ int min_(int l_, int r_);
 
 int max_(int l_1, int r_1);
 
-struct IntList const* tryParse_(struct String s_2);
+struct IntOption tryParse_(struct String s_1);
 
-int parseOk_(struct String s_);
+int parseOk_(struct String s_2);
 
-bool parseError_(struct String s_1);
+bool parseError_(struct String s_3);
 
-int tryParseTest_(int arg_1);
+char tryParseTest_(char arg_1);
+
+int milone_main();
+
+struct IntOption {
+    bool some;
+    int value;
+};
 
 static int MinValue_;
 
 static int MaxValue_;
-
-int milone_main();
-
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     struct String str_concat_result_ = str_concat(sep_, xs_);
@@ -72,17 +72,12 @@ void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
     return memcpy_result_;
 }
 
-struct IntList {
-    int head;
-    struct IntList const* tail;
-};
-
-struct IntList const* __intOfStr_(struct String s_3) {
+struct IntOption __intOfStr_(struct String s_) {
     void* call_ = memAlloc_(1, ((uintptr_t)sizeof(int)));
     int* valueRef_ = ((int*)call_);
-    bool str_to_int_checked_result_ = str_to_int_checked(s_3, valueRef_);
+    bool str_to_int_checked_result_ = str_to_int_checked(s_, valueRef_);
     bool ok_ = str_to_int_checked_result_;
-    struct IntList const* if_;
+    struct IntOption if_;
     if (ok_) {
         goto then_2;
     } else {
@@ -91,18 +86,17 @@ struct IntList const* __intOfStr_(struct String s_3) {
 then_2:;
     int const* call_1 = __ptrAsConst_1(valueRef_);
     int read_ = (*(call_1));
-    struct IntList const* some_ = milone_mem_alloc(1, sizeof(struct IntList));
-    (*(((struct IntList*)some_))) = (struct IntList){.head = read_, .tail = NULL};
+    struct IntOption some_ = (struct IntOption){.some = true, .value = read_};
     if_ = some_;
     goto if_next_1;
 else_3:;
-    if_ = NULL;
+    if_ = (struct IntOption){.some = false};
     goto if_next_1;
 if_next_1:;
     return if_;
 }
 
-int __argCount_(int arg_) {
+int __argCount_(char arg_) {
     int milone_get_arg_count_result_ = milone_get_arg_count();
     return milone_get_arg_count_result_;
 }
@@ -146,21 +140,21 @@ if_next_7:;
     return if_2;
 }
 
-struct IntList const* tryParse_(struct String s_2) {
-    struct IntList const* call_2 = __intOfStr_(s_2);
+struct IntOption tryParse_(struct String s_1) {
+    struct IntOption call_2 = __intOfStr_(s_1);
     return call_2;
 }
 
-int parseOk_(struct String s_) {
+int parseOk_(struct String s_2) {
     int match_;
-    struct IntList const* call_3 = tryParse_(s_);
-    if ((!(call_3))) goto next_11;
-    int value_ = call_3->head;
-    match_ = value_;
+    struct IntOption call_3 = tryParse_(s_2);
+    if ((!(call_3.some))) goto next_11;
+    int value_1 = call_3.value;
+    match_ = value_1;
     goto end_match_10;
 next_11:;
-    if ((!((!(call_3))))) goto next_12;
-    printf("should parse: %s\n", str_to_c_str(s_));
+    if (call_3.some) goto next_12;
+    printf("should parse: %s\n", str_to_c_str(s_2));
     milone_assert(false, 11, 8);
     match_ = 0;
     goto end_match_10;
@@ -170,16 +164,16 @@ end_match_10:;
     return match_;
 }
 
-bool parseError_(struct String s_1) {
+bool parseError_(struct String s_3) {
     bool match_1;
-    struct IntList const* call_4 = tryParse_(s_1);
-    if ((!((!(call_4))))) goto next_14;
+    struct IntOption call_4 = tryParse_(s_3);
+    if (call_4.some) goto next_14;
     match_1 = true;
     goto end_match_13;
 next_14:;
-    if ((!(call_4))) goto next_15;
-    int value_1 = call_4->head;
-    printf("should not parse: %s -> %d\n", str_to_c_str(s_1), value_1);
+    if ((!(call_4.some))) goto next_15;
+    int value_2 = call_4.value;
+    printf("should not parse: %s -> %d\n", str_to_c_str(s_3), value_2);
     match_1 = false;
     goto end_match_13;
 next_15:;
@@ -188,7 +182,7 @@ end_match_13:;
     return match_1;
 }
 
-int tryParseTest_(int arg_1) {
+char tryParseTest_(char arg_1) {
     int call_5 = parseOk_((struct String){.str = "0", .len = 1});
     milone_assert((call_5 == 0), 21, 2);
     int call_6 = parseOk_((struct String){.str = "000", .len = 3});
@@ -236,6 +230,6 @@ int tryParseTest_(int arg_1) {
 int milone_main() {
     MinValue_ = -2147483648;
     MaxValue_ = 2147483647;
-    int call_25 = tryParseTest_(0);
+    char call_25 = tryParseTest_(0);
     return 0;
 }

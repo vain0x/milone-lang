@@ -16,12 +16,12 @@ let private intClamp (minValue: int) (maxValue: int) (value: int) =
 /// Gets whether a string is empty, i.e. length is zero.
 ///
 /// O(1) time.
-let isEmpty (str: string): bool = str.Length = 0
+let isEmpty (str: string) : bool = str.Length = 0
 
 /// Gets a byte in string at specified index.
 ///
 /// O(1) time.
-let tryItem (index: int) (str: string): char option =
+let tryItem (index: int) (str: string) : char option =
   if 0 <= index && index < str.Length then
     Some str.[index]
   else
@@ -34,7 +34,7 @@ let tryItem (index: int) (str: string): char option =
 /// Gets whether a substring occurs at the specified index in string.
 ///
 /// O(N) time.
-let private occursAt (start: int) (substr: string) (s: string): bool =
+let private occursAt (start: int) (substr: string) (s: string) : bool =
   let rec occursAtLoop i =
     (i = substr.Length)
     || (s.[start + i] = substr.[i] && occursAtLoop (i + 1))
@@ -45,18 +45,18 @@ let private occursAt (start: int) (substr: string) (s: string): bool =
 /// Gets whether a string starts with specified substring.
 ///
 /// O(|P|) time, P: prefix.
-let startsWith (prefix: string) (s: string): bool = occursAt 0 prefix s
+let startsWith (prefix: string) (s: string) : bool = occursAt 0 prefix s
 
 /// Gets whether a string ends with specified substring.
 ///
 /// O(|S|) time, S: suffix.
-let endsWith (suffix: string) (s: string): bool =
+let endsWith (suffix: string) (s: string) : bool =
   occursAt (s.Length - suffix.Length) suffix s
 
 /// Finds first index of string where a substring occurs.
 ///
 /// O(NM) time, N: length of substring, M: length of total string.
-let findIndex (substr: string) (s: string): int option =
+let findIndex (substr: string) (s: string) : int option =
   // Upper bound of the index that could satisfy the predicate.
   let r = s.Length - substr.Length + 1
 
@@ -70,7 +70,7 @@ let findIndex (substr: string) (s: string): int option =
 /// Finds last index of string where a substring occurs.
 ///
 /// O(NM) time, N: length of substring, M: length of total string.
-let findLastIndex (substr: string) (s: string): int option =
+let findLastIndex (substr: string) (s: string) : int option =
   let rec stringFindLastIndexLoop r =
     if r <= 0 then
       None
@@ -87,7 +87,7 @@ let findLastIndex (substr: string) (s: string): int option =
 /// Gets whether a substring occurs in a string.
 ///
 /// O(NM) time, N: length of substring, M: length of total string.
-let contains (substr: string) (s: string): bool =
+let contains (substr: string) (s: string) : bool =
   match findIndex substr s with
   | Some _ -> true
   | None -> false
@@ -103,7 +103,7 @@ let contains (substr: string) (s: string): bool =
 /// This function is tolerant about exceeding the boundary.
 /// If `prefixLen < 0`, returns `""`.
 /// If `prefixLen > s.Length`, returns s itself.
-let truncate (prefixLen: int) (s: string): string =
+let truncate (prefixLen: int) (s: string) : string =
   if prefixLen <= 0 then ""
   else if prefixLen >= s.Length then s
   else s.[0..prefixLen - 1]
@@ -115,7 +115,7 @@ let truncate (prefixLen: int) (s: string): string =
 /// This function is tolerant about exceeding the boundary.
 /// If `prefixLen < 0`, returns `s` itself.
 /// If `prefixLen > s.Length`, returns `""`.
-let skip (prefixLen: int) (s: string): string =
+let skip (prefixLen: int) (s: string) : string =
   if prefixLen <= 0 then s
   else if prefixLen >= s.Length then ""
   else s.[prefixLen..s.Length - 1]
@@ -127,7 +127,7 @@ let skip (prefixLen: int) (s: string): string =
 /// If `end > s.Length`, use `s.Length` as end index instead.
 ///
 /// O(1) time.
-let slice (start: int) (endIndex: int) (s: string): string =
+let slice (start: int) (endIndex: int) (s: string) : string =
   let start = start |> intClamp 0 s.Length
   let endIndex = endIndex |> intClamp start s.Length
 
@@ -240,7 +240,7 @@ let private findNewline (start: int) (s: string) =
 /// - `newlineOpt` is "\n" or "\r\n" (or perhaps "\r"), which is actually found.
 /// - `rest` is the string after the newline.
 ///     Empty if it ends with the newline or no newline found.
-let scanLine (s: string): string * string option * string =
+let scanLine (s: string) : string * string option * string =
   let m = findNewline 0 s
   let lineContents = if m > 0 then s.[0..m - 1] else ""
 
@@ -268,7 +268,7 @@ let scanLine (s: string): string * string option * string =
     lineContents, Some sep, rest
 
 /// Splits a string to lines.
-let toLines (s: string): string list =
+let toLines (s: string) : string list =
   // l: Start index of current line.
   let rec stringToLinesLoop (l: int) acc =
     let r = findNewline l s
@@ -297,4 +297,4 @@ let toLines (s: string): string list =
 ///
 /// This function is almost same as `String.concat` in F#
 /// but takes a list rather than seq, which is unimplemented in milone-lang.
-let concat (sep: string) (xs: string list): string = __stringJoin sep xs
+let concat (sep: string) (xs: string list) : string = __stringJoin sep xs

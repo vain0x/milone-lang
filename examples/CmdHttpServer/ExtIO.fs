@@ -9,11 +9,11 @@ type File = __nativeType<``struct File``>
 type ReadableFileStream = ReadableFileStream of File
 
 module ReadableFileStream =
-  let exists (filePath: string) (followLink: bool): bool =
+  let exists (filePath: string) (followLink: bool) : bool =
     __nativeFun ("milone_file_exists", filePath, followLink)
 
-  let doOpen (filePath: string): ReadableFileStream option =
-    let file: File =
+  let doOpen (filePath: string) : ReadableFileStream option =
+    let file : File =
       __nativeFun ("milone_file_open", filePath, "r")
 
     if __nativeFun ("milone_file_is_null", file) then
@@ -21,13 +21,13 @@ module ReadableFileStream =
     else
       Some(ReadableFileStream file)
 
-  let doClose (ReadableFileStream file): unit = __nativeFun ("milone_file_close", file)
+  let doClose (ReadableFileStream file) : unit = __nativeFun ("milone_file_close", file)
 
   // Returns read size in bytes.
-  let doRead (dest: SpanMut) (ReadableFileStream file): unativeint =
+  let doRead (dest: SpanMut) (ReadableFileStream file) : unativeint =
     __nativeFun ("milone_file_read", file, dest)
 
-  let readAllText (filePath: string): string option =
+  let readAllText (filePath: string) : string option =
     match doOpen filePath with
     | None -> None
     | Some fp ->
@@ -57,5 +57,5 @@ module ReadableFileStream =
         Some contents
 
 module Directory =
-  let exists (path: string) (followLink: bool): bool =
+  let exists (path: string) (followLink: bool) : bool =
     __nativeFun ("milone_dir_exists", path, followLink)

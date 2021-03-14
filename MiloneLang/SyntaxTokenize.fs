@@ -63,11 +63,11 @@ module S = MiloneStd.StdString
 // Char
 // -----------------------------------------------
 
-let private charIsIdent (c: char): bool = c = '_' || C.isAlphanumeric c
+let private charIsIdent (c: char) : bool = c = '_' || C.isAlphanumeric c
 
-let private charIsTyVar (c: char): bool = c = '_' || C.isAlphabetic c
+let private charIsTyVar (c: char) : bool = c = '_' || C.isAlphabetic c
 
-let private charIsOp (c: char): bool =
+let private charIsOp (c: char) : bool =
   match c with
   | '+'
   | '-'
@@ -99,14 +99,14 @@ let private at (text: string) (i: int) =
     '\x00'
 
 /// Followed by `"""`?
-let private isFollowedByRawQuotes (i: int) (s: string): bool =
+let private isFollowedByRawQuotes (i: int) (s: string) : bool =
   (i + 3 <= s.Length)
   && (match s.[i], s.[i + 1], s.[i + 2] with
       | '"', '"', '"' -> true
       | _ -> false)
 
 /// Followed by \`\`?
-let private isFollowedByBackticks (i: int) (s: string): bool =
+let private isFollowedByBackticks (i: int) (s: string) : bool =
   (i + 2 <= s.Length)
   && (match s.[i], s.[i + 1] with
       | '`', '`' -> true
@@ -341,7 +341,7 @@ let private scanStrLitRaw (text: string) (i: int) =
 // Evaluation
 // -----------------------------------------------
 
-let private tokenOfOp (text: string) l r: Token =
+let private tokenOfOp (text: string) l r : Token =
   let s = text |> S.slice l r
 
   let error () = ErrorToken UndefinedOpTokenError
@@ -413,7 +413,7 @@ let private tokenOfOp (text: string) l r: Token =
 
   | _ -> error ()
 
-let private evalCharLit (text: string) (l: int) (r: int): Token =
+let private evalCharLit (text: string) (l: int) (r: int) : Token =
   match r - l with
   // '?'
   | 3 when text.[l] = '\'' && text.[l + 2] = '\'' -> CharToken(text.[l + 1])
@@ -449,7 +449,7 @@ let private evalCharLit (text: string) (l: int) (r: int): Token =
 
   | _ -> ErrorToken InvalidCharLitError
 
-let private evalStrLit (text: string) (l: int) (r: int): Token =
+let private evalStrLit (text: string) (l: int) (r: int) : Token =
   let rec skipVerbatim i =
     if i + 1 < r && text.[i] <> '\\' then
       skipVerbatim (i + 1)
@@ -672,7 +672,7 @@ let private lookahead (text: string) (i: int) =
 
   | _ -> LBad, 1
 
-let private doNext (host: TokenizeHost) (text: string) (index: int): Token * int =
+let private doNext (host: TokenizeHost) (text: string) (index: int) : Token * int =
   let look, len = lookahead text index
 
   match look with
@@ -749,20 +749,18 @@ let private doNext (host: TokenizeHost) (text: string) (index: int): Token * int
   | LToken _ ->
       match look with
       | LToken token -> token, index + len
-      | _ -> failwith "NEVER"
+      | _ -> unreachable ()
 
   | LBad ->
       let r = scanBad text (index + len)
       ErrorToken BadTokenError, r
 
 /// Tokenizes a string. Trivias are removed.
-let tokenize (host: TokenizeHost) (text: string): (Token * Pos) list =
+let tokenize (host: TokenizeHost) (text: string) : (Token * Pos) list =
   let rec go acc (i: int) (pos: Pos) =
     if i < text.Length then
       let token, r = doNext host text i
 
-      // if i >= r
-      // then failwithf "i=%d r=%d pos=%A text=%s" i r pos text
       assert (i < r)
 
       let acc =
@@ -781,7 +779,7 @@ let tokenize (host: TokenizeHost) (text: string): (Token * Pos) list =
   go [] 0 (0, 0) |> List.rev
 
 /// Tokenizes a string. Trivias are preserved.
-let tokenizeAll (host: TokenizeHost) (text: string): (Token * Pos) list =
+let tokenizeAll (host: TokenizeHost) (text: string) : (Token * Pos) list =
   let rec go acc (i: int) (pos: Pos) =
     if i < text.Length then
       let token, r = doNext host text i

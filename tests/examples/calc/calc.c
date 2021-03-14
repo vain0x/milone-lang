@@ -1,5 +1,25 @@
 #include "milone.h"
 
+struct StringList;
+
+struct StringList;
+
+struct Token_List;
+
+struct Token_;
+
+struct Token_List;
+
+struct CharBoolFun1;
+
+struct StringIntTuple2;
+
+struct CharTuple1;
+
+struct Token_ListIntTuple2;
+
+struct IntToken_ListTuple2;
+
 bool charEqual_(char l_, char r_);
 
 bool go_(char c_, struct String s_, int i_);
@@ -10,8 +30,6 @@ bool go_1(struct String prefix_, struct String s_1, int i_1);
 
 bool strStartsWith_(struct String prefix_, struct String s_1);
 
-struct StringList;
-
 struct String go_2(struct StringList const* xs_1);
 
 struct String strConcat_(struct StringList const* xs_);
@@ -20,31 +38,17 @@ struct StringList const* go_3(struct StringList const* acc_, struct StringList c
 
 struct StringList const* strListRev_(struct StringList const* xs_3);
 
-enum Token_Discriminant;
-
-struct Token_;
-
-struct Token_List;
-
 struct Token_List const* go_4(struct Token_List const* acc_1, struct Token_List const* xs_7);
 
 struct Token_List const* tokenListRev_(struct Token_List const* xs_6);
 
 bool isDigit_(char c_1);
 
-struct CharBoolFun1;
-
 int go_5(struct CharBoolFun1 pred_, struct String source_, int r_1);
-
-struct StringIntTuple2;
 
 int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16);
 
-struct CharTuple1;
-
 bool fun_(void const* env_, char arg_);
-
-struct Token_ListIntTuple2;
 
 struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_17);
 
@@ -60,9 +64,7 @@ struct Token_List const* go_6(struct String source_4, struct Token_ListIntTuple2
 
 struct Token_List const* tokenize_(struct String source_4);
 
-int tokenListPrint_(struct Token_List const* tokens_);
-
-struct IntToken_ListTuple2;
+char tokenListPrint_(struct Token_List const* tokens_);
 
 struct IntToken_ListTuple2 evalTerm_(struct Token_List const* tokens_4);
 
@@ -79,6 +81,53 @@ struct IntToken_ListTuple2 evalExpr_(struct Token_List const* tokens_3);
 int eval_(struct String str_);
 
 int milone_main();
+
+struct StringList {
+    struct String head;
+    struct StringList const* tail;
+};
+
+enum Token_Discriminant {
+    TkInt_,
+    TkOp_,
+};
+
+struct Token_ {
+    enum Token_Discriminant discriminant;
+    union {
+        int TkInt_;
+        char TkOp_;
+    };
+};
+
+struct Token_List {
+    struct Token_ head;
+    struct Token_List const* tail;
+};
+
+struct CharBoolFun1 {
+    bool(*fun)(void const*, char);
+    void const* env;
+};
+
+struct StringIntTuple2 {
+    struct String t0;
+    int t1;
+};
+
+struct CharTuple1 {
+    char t0;
+};
+
+struct Token_ListIntTuple2 {
+    struct Token_List const* t0;
+    int t1;
+};
+
+struct IntToken_ListTuple2 {
+    int t0;
+    struct Token_List const* t1;
+};
 
 bool charEqual_(char l_, char r_) {
     return (l_ == r_);
@@ -110,8 +159,6 @@ else_6:;
     s_ = arg_4;
     i_ = arg_5;
     goto tailrec_1;
-    if_1 = false;
-    goto if_next_4;
 if_next_4:;
     if_ = if_1;
     goto if_next_2;
@@ -153,8 +200,6 @@ then_13:;
     s_1 = arg_7;
     i_1 = arg_8;
     goto tailrec_8;
-    if_3 = false;
-    goto if_next_12;
 else_14:;
     if_3 = false;
     goto if_next_12;
@@ -182,11 +227,6 @@ else_17:;
 if_next_15:;
     return if_4;
 }
-
-struct StringList {
-    struct String head;
-    struct StringList const* tail;
-};
 
 struct String go_2(struct StringList const* xs_1) {
     struct String match_;
@@ -228,8 +268,6 @@ next_23:;
     acc_ = arg_9;
     xs_4 = arg_10;
     goto tailrec_21;
-    match_1 = NULL;
-    goto end_match_22;
 next_24:;
     exit(1);
 end_match_22:;
@@ -240,24 +278,6 @@ struct StringList const* strListRev_(struct StringList const* xs_3) {
     struct StringList const* call_4 = go_3(NULL, xs_3);
     return call_4;
 }
-
-enum Token_Discriminant {
-    TkInt_,
-    TkOp_,
-};
-
-struct Token_ {
-    enum Token_Discriminant discriminant;
-    union {
-        int TkInt_;
-        char TkOp_;
-    };
-};
-
-struct Token_List {
-    struct Token_ head;
-    struct Token_List const* tail;
-};
 
 struct Token_List const* go_4(struct Token_List const* acc_1, struct Token_List const* xs_7) {
 tailrec_25:;
@@ -276,8 +296,6 @@ next_27:;
     acc_1 = arg_11;
     xs_7 = arg_12;
     goto tailrec_25;
-    match_2 = NULL;
-    goto end_match_26;
 next_28:;
     exit(1);
 end_match_26:;
@@ -305,11 +323,6 @@ else_31:;
 if_next_29:;
     return if_5;
 }
-
-struct CharBoolFun1 {
-    bool(*fun)(void const*, char);
-    void const* env;
-};
 
 int go_5(struct CharBoolFun1 pred_, struct String source_, int r_1) {
 tailrec_32:;
@@ -341,19 +354,12 @@ then_37:;
     source_ = arg_14;
     r_1 = arg_15;
     goto tailrec_32;
-    if_7 = 0;
-    goto if_next_36;
 else_38:;
     if_7 = r_1;
     goto if_next_36;
 if_next_36:;
     return if_7;
 }
-
-struct StringIntTuple2 {
-    struct String t0;
-    int t1;
-};
 
 int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16) {
     struct String source_ = arg_16.t0;
@@ -362,25 +368,16 @@ int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16) {
     return call_6;
 }
 
-struct CharTuple1 {
-    char t0;
-};
-
 bool fun_(void const* env_, char arg_) {
     char arg_1 = (*(((struct CharTuple1 const*)env_))).t0;
     bool call_7 = charEqual_(arg_1, arg_);
     return call_7;
 }
 
-struct Token_ListIntTuple2 {
-    struct Token_List const* t0;
-    int t1;
-};
-
 struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_17) {
     struct Token_List const* acc_2 = arg_17.t0;
     int i_3 = arg_17.t1;
-    milone_assert((source_1.str[i_3] == ' '), 57, 2);
+    milone_assert((source_1.str[i_3] == ' '), 59, 2);
     struct CharTuple1 tuple_ = (struct CharTuple1){.t0 = ' '};
     void const* box_ = milone_mem_alloc(1, sizeof(struct CharTuple1));
     (*(((struct CharTuple1*)box_))) = tuple_;
@@ -408,7 +405,7 @@ else_41:;
     if_8 = (source_2.str[i_4] == '\n');
     goto if_next_39;
 if_next_39:;
-    milone_assert(if_8, 62, 2);
+    milone_assert(if_8, 67, 2);
     bool if_9;
     if (((i_4 + 1) < source_2.len)) {
         goto then_43;
@@ -462,10 +459,8 @@ struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListInt
     struct Token_List const* acc_4 = arg_19.t0;
     int i_5 = arg_19.t1;
     bool call_10 = isDigit_(source_3.str[i_5]);
-    milone_assert(call_10, 76, 2);
-    void const* box_1 = milone_mem_alloc(1, sizeof(int));
-    (*(((int*)box_1))) = 0;
-    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_1, .env = box_1};
+    milone_assert(call_10, 80, 2);
+    struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_1, .env = NULL};
     struct StringIntTuple2 tuple_4 = (struct StringIntTuple2){.t0 = source_3, .t1 = i_5};
     int call_11 = takeWhile_(fun_3, tuple_4);
     int r_4 = call_11;
@@ -520,8 +515,6 @@ else_57:;
     source_4 = arg_21;
     arg_20 = arg_22;
     goto tailrec_54;
-    match_3 = NULL;
-    goto end_match_58;
 next_59:;
     if ((source_4.str[i_7] != '\r')) goto next_60;
     struct String arg_23 = source_4;
@@ -531,8 +524,6 @@ next_59:;
     source_4 = arg_23;
     arg_20 = arg_24;
     goto tailrec_54;
-    match_3 = NULL;
-    goto end_match_58;
 next_60:;
     if ((source_4.str[i_7] != '\n')) goto next_61;
     struct String arg_25 = source_4;
@@ -542,8 +533,6 @@ next_60:;
     source_4 = arg_25;
     arg_20 = arg_26;
     goto tailrec_54;
-    match_3 = NULL;
-    goto end_match_58;
 next_61:;
     char c_2 = source_4.str[i_7];
     bool call_17 = isDigit_(c_2);
@@ -561,8 +550,6 @@ then_64:;
     source_4 = arg_27;
     arg_20 = arg_28;
     goto tailrec_54;
-    if_14 = NULL;
-    goto if_next_63;
 else_65:;
     struct String arg_29 = source_4;
     struct Token_ variant_1 = (struct Token_){.discriminant = TkOp_, .TkOp_ = c_2};
@@ -573,8 +560,6 @@ else_65:;
     source_4 = arg_29;
     arg_20 = arg_30;
     goto tailrec_54;
-    if_14 = NULL;
-    goto if_next_63;
 if_next_63:;
     match_3 = if_14;
     goto end_match_58;
@@ -592,9 +577,9 @@ struct Token_List const* tokenize_(struct String source_4) {
     return call_19;
 }
 
-int tokenListPrint_(struct Token_List const* tokens_) {
+char tokenListPrint_(struct Token_List const* tokens_) {
 tailrec_66:;
-    int match_4;
+    char match_4;
     if ((!((!(tokens_))))) goto next_68;
     match_4 = 0;
     goto end_match_67;
@@ -607,8 +592,6 @@ next_68:;
     struct Token_List const* arg_31 = tokens_1;
     tokens_ = arg_31;
     goto tailrec_66;
-    match_4 = 0;
-    goto end_match_67;
 next_69:;
     if ((!(tokens_))) goto next_70;
     if ((tokens_->head.discriminant != TkOp_)) goto next_70;
@@ -618,18 +601,11 @@ next_69:;
     struct Token_List const* arg_32 = tokens_2;
     tokens_ = arg_32;
     goto tailrec_66;
-    match_4 = 0;
-    goto end_match_67;
 next_70:;
     exit(1);
 end_match_67:;
     return 0;
 }
-
-struct IntToken_ListTuple2 {
-    int t0;
-    struct Token_List const* t1;
-};
 
 struct IntToken_ListTuple2 evalTerm_(struct Token_List const* tokens_4) {
     struct IntToken_ListTuple2 match_5;
@@ -658,8 +634,6 @@ next_72:;
 next_76:;
     printf("expected \')\'\n");
     exit(1);
-    match_6 = ((struct IntToken_ListTuple2){});
-    goto end_match_75;
 next_77:;
 end_match_75:;
     match_5 = match_6;
@@ -667,8 +641,6 @@ end_match_75:;
 next_73:;
     printf("expected an int\n");
     exit(1);
-    match_5 = ((struct IntToken_ListTuple2){});
-    goto end_match_71;
 next_74:;
 end_match_71:;
     return match_5;
@@ -689,8 +661,6 @@ tailrec_78:;
     acc_6 = arg_33;
     tokens_9 = arg_34;
     goto tailrec_78;
-    match_7 = ((struct IntToken_ListTuple2){});
-    goto end_match_79;
 next_80:;
     struct IntToken_ListTuple2 tuple_14 = (struct IntToken_ListTuple2){.t0 = acc_6, .t1 = tokens_9};
     match_7 = tuple_14;
@@ -723,8 +693,6 @@ tailrec_82:;
     acc_7 = arg_35;
     tokens_14 = arg_36;
     goto tailrec_82;
-    match_8 = ((struct IntToken_ListTuple2){});
-    goto end_match_83;
 next_84:;
     if ((!(tokens_14))) goto next_85;
     if ((tokens_14->head.discriminant != TkOp_)) goto next_85;
@@ -738,8 +706,6 @@ next_84:;
     acc_7 = arg_37;
     tokens_14 = arg_38;
     goto tailrec_82;
-    match_8 = ((struct IntToken_ListTuple2){});
-    goto end_match_83;
 next_85:;
     struct IntToken_ListTuple2 tuple_15 = (struct IntToken_ListTuple2){.t0 = acc_7, .t1 = tokens_14};
     match_8 = tuple_15;
@@ -773,10 +739,8 @@ int eval_(struct String str_) {
 next_88:;
     struct Token_List const* tokens_20 = call_30.t1;
     printf("ERROR: couldn\'t parse tokens:\n");
-    int call_31 = tokenListPrint_(tokens_20);
+    char call_31 = tokenListPrint_(tokens_20);
     exit(1);
-    match_9 = 0;
-    goto end_match_87;
 next_89:;
 end_match_87:;
     return match_9;
@@ -784,11 +748,11 @@ end_match_87:;
 
 int milone_main() {
     bool call_32 = strContains_('+', (struct String){.str = "+-*/", .len = 4});
-    milone_assert(call_32, 157, 2);
+    milone_assert(call_32, 168, 2);
     bool call_33 = strStartsWith_((struct String){.str = "hell", .len = 4}, (struct String){.str = "hello", .len = 5});
-    milone_assert(call_33, 158, 2);
+    milone_assert(call_33, 169, 2);
     bool call_34 = strStartsWith_((struct String){.str = "heaven", .len = 6}, (struct String){.str = "hello", .len = 5});
-    milone_assert((!(call_34)), 159, 2);
+    milone_assert((!(call_34)), 170, 2);
     struct StringList const* list_6 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_6))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_5 = milone_mem_alloc(1, sizeof(struct StringList));
@@ -796,7 +760,7 @@ int milone_main() {
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_5};
     struct String call_35 = strConcat_(list_4);
-    milone_assert((str_compare(call_35, (struct String){.str = "a,b", .len = 3}) == 0), 160, 2);
+    milone_assert((str_compare(call_35, (struct String){.str = "a,b", .len = 3}) == 0), 171, 2);
     struct StringList const* list_9 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_9))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_8 = milone_mem_alloc(1, sizeof(struct StringList));
@@ -805,15 +769,15 @@ int milone_main() {
     (*(((struct StringList*)list_7))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_8};
     struct StringList const* call_36 = strListRev_(list_7);
     struct String call_37 = strConcat_(call_36);
-    milone_assert((str_compare(call_37, (struct String){.str = "b,a", .len = 3}) == 0), 161, 2);
+    milone_assert((str_compare(call_37, (struct String){.str = "b,a", .len = 3}) == 0), 172, 2);
     struct String source_5 = (struct String){.str = "2 + 3\r\n    - 4", .len = 14};
     struct Token_List const* call_38 = tokenize_(source_5);
-    int call_39 = tokenListPrint_(call_38);
+    char call_39 = tokenListPrint_(call_38);
     int call_40 = eval_(source_5);
-    milone_assert((call_40 == ((2 + 3) - 4)), 168, 2);
+    milone_assert((call_40 == ((2 + 3) - 4)), 177, 2);
     int call_41 = eval_((struct String){.str = "2 - 3 * 4 + 5", .len = 13});
-    milone_assert((call_41 == ((2 - (3 * 4)) + 5)), 169, 2);
+    milone_assert((call_41 == ((2 - (3 * 4)) + 5)), 178, 2);
     int call_42 = eval_((struct String){.str = "(2 - 3) * 4 + (1 + (2 + 2))", .len = 27});
-    milone_assert((call_42 == (((2 - 3) * 4) + (1 + (2 + 2)))), 170, 2);
+    milone_assert((call_42 == (((2 - 3) * 4) + (1 + (2 + 2)))), 179, 2);
     return 0;
 }

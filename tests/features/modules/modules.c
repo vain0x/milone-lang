@@ -1,16 +1,10 @@
 #include "milone.h"
 
-int f_1(int x_1);
-
-enum Val_Discriminant;
-
 struct Val_;
 
-int milone_main();
+int f_1(int x_);
 
-int f_1(int x_1) {
-    return x_1;
-}
+int milone_main();
 
 enum Val_Discriminant {
     Int_,
@@ -25,12 +19,16 @@ struct Val_ {
     };
 };
 
+int f_1(int x_) {
+    return x_;
+}
+
 int milone_main() {
     int match_;
     struct Val_ variant_ = (struct Val_){.discriminant = Int_, .Int_ = 0};
     if ((variant_.discriminant != Int_)) goto next_2;
-    int x_ = variant_.Int_;
-    match_ = x_;
+    int x_1 = variant_.Int_;
+    match_ = x_1;
     goto end_match_1;
 next_2:;
     if ((variant_.discriminant != Str_)) goto next_3;

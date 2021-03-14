@@ -43,11 +43,11 @@ struct MemoryChunk {
 };
 
 static struct MemoryChunk s_heap;
-static int s_heap_level; // depth of current region
-static int s_heap_size;  // consumed size in all regions
-static int s_heap_alloc; // allocated size in all regions
+static size_t s_heap_level; // depth of current region
+static size_t s_heap_size;  // consumed size in all regions
+static size_t s_heap_alloc; // allocated size in all regions
 
-static void oom(void) {
+_Noreturn static void oom(void) {
     fprintf(stderr, "Out of memory.\n");
     exit(1);
 }
@@ -267,7 +267,7 @@ static void string_builder_append_string(struct StringBuilder *sb,
 
 struct String str_borrow(char const *c_str) {
     assert(c_str != NULL);
-    return (struct String){.str = c_str, .len = strlen(c_str)};
+    return (struct String){.str = c_str, .len = (int)strlen(c_str)};
 }
 
 int str_compare(struct String left, struct String right) {
@@ -305,6 +305,11 @@ struct String str_of_raw_parts(char const *p, int len) {
     return (struct String){.str = str, .len = len};
 }
 
+struct String str_of_c_str(char const *s) {
+    assert(s != NULL);
+    return str_of_raw_parts(s, (int)strlen(s));
+}
+
 _Noreturn static void error_str_add_overflow() {
     fprintf(stderr, "str_add: length overflow.\n");
     exit(1);
@@ -315,7 +320,7 @@ struct String str_add(struct String left, struct String right) {
         return right.len == 0 ? left : right;
     }
 
-    if ((uint32_t)left.len + (uint32_t)right.len > (uint32_t)INT32_MAX) {
+    if ((uint32_t)left.len + (uint32_t)right.len >= (uint32_t)INT32_MAX) {
         error_str_add_overflow();
     }
 
@@ -337,7 +342,7 @@ struct String str_get_slice(int l, int r, struct String s) {
     return (struct String){.str = s.str + l, .len = r - l};
 }
 
-static struct String str_ensure_null_terminated(struct String s) {
+struct String str_ensure_null_terminated(struct String s) {
     // The dereference is safe due to the invariant of existence of null byte.
     if (s.str[s.len] != '\0') {
         s = str_of_raw_parts(s.str, s.len);
@@ -466,22 +471,24 @@ uint64_t str_to_uint64(struct String s) {
     return value;
 }
 
-uintptr_t str_to_uintptr(struct String s) { return str_to_uint64(s); }
+uintptr_t str_to_uintptr(struct String s) {
+    return (uintptr_t)str_to_uint64(s);
+}
 
 struct String str_of_int64(int64_t value) {
-    char buf[21] = {};
-    int n = sprintf(buf, "%ld", value);
+    char buf[21] = {0};
+    int n = sprintf(buf, "%lld", (long long)value);
     return str_of_raw_parts(buf, n);
 }
 
 struct String str_of_uint64(uint64_t value) {
-    char buf[21] = {};
-    int n = sprintf(buf, "%lu", value);
+    char buf[21] = {0};
+    int n = sprintf(buf, "%llu", (unsigned long long)value);
     return str_of_raw_parts(buf, n);
 }
 
 struct String str_of_double(double value) {
-    char buf[64] = {};
+    char buf[64] = {0};
     int n = sprintf(buf, "%f", value);
     return str_of_raw_parts(buf, n);
 }
@@ -489,9 +496,13 @@ struct String str_of_double(double value) {
 char str_to_char(struct String s) { return s.len >= 1 ? *s.str : '\0'; }
 
 struct String str_of_char(char value) {
+    if (value == '\0') {
+        return str_borrow("");
+    }
+
     char *str = milone_mem_alloc(2, sizeof(char));
     str[0] = value;
-    return (struct String){.str = str, .len = strlen(str)};
+    return (struct String){.str = str, .len = 1};
 }
 
 struct MyStringList {
@@ -559,7 +570,7 @@ struct String file_read_all_text(struct String file_name) {
     FILE *fp = fopen(file_name.str, "r");
     if (!fp) {
         fprintf(stderr, "File '%s' not found.", file_name.str);
-        abort();
+        exit(1);
     }
 
     fseek(fp, 0, SEEK_END);
@@ -567,7 +578,7 @@ struct String file_read_all_text(struct String file_name) {
     if (size < 0) {
         fclose(fp);
         fprintf(stderr, "%s", "Couldn't retrieve the file size.");
-        abort();
+        exit(1);
     }
     fseek(fp, 0, SEEK_SET);
 
@@ -576,7 +587,7 @@ struct String file_read_all_text(struct String file_name) {
     if (read_size != (size_t)size) {
         fclose(fp);
         fprintf(stderr, "%s", "Couldn't retrieve the file contents");
-        abort();
+        exit(1);
     }
 
     fclose(fp);
@@ -589,7 +600,7 @@ void file_write_all_text(struct String file_name, struct String content) {
     FILE *fp = fopen(file_name.str, "w");
     if (!fp) {
         fprintf(stderr, "File '%s' not found.", file_name.str);
-        abort();
+        exit(1);
     }
 
     fprintf(fp, "%s", content.str);
@@ -605,7 +616,7 @@ struct String milone_get_env(struct String name) {
         return str_borrow("");
     }
 
-    return str_of_raw_parts(value, strlen(value));
+    return str_of_c_str(value);
 }
 
 // -----------------------------------------------
@@ -615,12 +626,12 @@ struct String milone_get_env(struct String name) {
 static long milone_get_time_millis(void) {
     struct timespec t;
     timespec_get(&t, TIME_UTC);
-    return t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L);
+    return (long)(t.tv_sec * 1000L + t.tv_nsec / (1000L * 1000L));
 }
 
 struct Profiler {
     long epoch;
-    long heap_size;
+    size_t heap_size;
 };
 
 void *milone_profile_init(void) {
@@ -644,7 +655,7 @@ void milone_profile_log(struct String msg, void *profiler) {
     long sec = millis / 1000;
     millis %= 1000;
 
-    long bytes = s_heap_size - p->heap_size;
+    long bytes = (long)s_heap_size - (long)p->heap_size;
     if (bytes < 0) {
         bytes = 0;
     }
@@ -692,15 +703,15 @@ struct String scan_str(int capacity) {
         exit(1);
     }
 
-    char fmt[16] = {};
+    char fmt[16] = {0};
     sprintf(fmt, "%%%ds", capacity);
     assert(fmt[15] == 0);
 
     int _n = scanf(fmt, str);
 
-    int len = strlen(str);
-    assert(len < capacity);
-    return (struct String){.str = str, .len = len};
+    size_t len = strlen(str);
+    assert((long long)len < (long long)capacity);
+    return (struct String){.str = str, .len = (int)len};
 }
 
 // -----------------------------------------------
