@@ -29,7 +29,7 @@ module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
-let private currentVersion () = "0.2.0"
+let private currentVersion () = "0.3.0"
 
 let private helpText () =
   """milone-lang v"""
