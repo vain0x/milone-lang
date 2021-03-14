@@ -16,6 +16,8 @@ $CC --version >/dev/null
 # Process
 # ------------------------------------------------
 
+mkdir -p target
+
 MILONE_HOME=$PWD \
     dotnet run -p MiloneLang -- \
     compile --quiet MiloneLang \
