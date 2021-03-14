@@ -1,0 +1,17 @@
+#!/bin/sh
+# Format all F# or milone sources with fantomas-tool
+#   <https://github.com/fsprojects/fantomas>
+
+# Install fantomas-tool with dotnet tool command as written in the page.
+# On Linux, add `$HOME/.dotnet/tools` to PATH.
+
+# FIXME: This doesn't format .milone files
+#        because fantomas uses allow list for file extension
+#        and it always use indent_size=4 for --stdin.
+
+find -type f \
+    -and -not -path '*/Debug/*' \
+    -and -not -path '*/Release/*' \
+    -and -name '*.fs' \
+    -print0 | \
+xargs -L1 --null fantomas --check {} \&\& fantomas {} \|\| : \;
