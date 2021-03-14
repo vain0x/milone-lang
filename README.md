@@ -202,6 +202,9 @@ See also:
 
 ## License
 
-Milone-lang tools (compiler and LSP server) are distributed under the Apache 2.0 license.
+Milone-lang tools (compiler and LSP server) are distributed under either:
+
+- the Apache 2.0 license, or
+- the MIT license.
 
 Others including documentation, examples, libraries, runtime code, scripts, tests, etc. are distributed under CC0-1.0.
