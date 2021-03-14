@@ -20,6 +20,191 @@ void str_error(struct String s) {
 }
 
 // -----------------------------------------------
+// MyState
+// -----------------------------------------------
+
+struct IntOption {
+    bool some;
+    int value;
+};
+
+struct IntOptionList {
+    struct IntOption head;
+    struct IntOptionList const *tail;
+};
+
+struct MyState_ {
+    int t0;
+    struct IntOptionList const *t1;
+};
+
+struct PtrChain {
+    void const *ptr;
+    struct PtrChain *prev;
+    struct PtrChain *next;
+};
+
+static struct PtrChain *s_chain = NULL;
+
+static bool p_find(void const *p, struct PtrChain **out_chain) {
+    assert(p != NULL);
+
+    for (struct PtrChain *c = s_chain; c != NULL; c = c->next) {
+        if (c->ptr == p) {
+            *out_chain = c;
+            return true;
+        }
+    }
+
+    *out_chain = NULL;
+    return false;
+}
+
+static bool is_promoted(void const *p) {
+    struct PtrChain *c;
+    return p != NULL && p_find(p, &c);
+}
+
+static void p_link(void *p) {
+    assert(p != NULL);
+    assert(!is_promoted(p));
+
+    struct PtrChain *c = malloc(sizeof(struct PtrChain));
+    *c = (struct PtrChain){.ptr = p, .prev = NULL, .next = s_chain};
+    s_chain = c;
+}
+
+static void p_unlink(void *p) {
+    if (p == NULL) {
+        return;
+    }
+
+    struct PtrChain *c;
+    if (!p_find(p, &c)) {
+        return;
+    }
+
+    // Fix links.
+    if (c->prev != NULL) {
+        assert(c->prev->next == c);
+        c->prev->next = c->next;
+    }
+    if (c->next != NULL) {
+        assert(c->next->prev == c);
+        c->next->prev = c->prev;
+    }
+    if (c == s_chain) {
+        s_chain = c->next;
+    }
+
+    free(c);
+}
+
+void promote_int_option_list(struct IntOptionList const **old_ptr,
+                             struct IntOptionList const **new_ptr) {
+    if (old_ptr == new_ptr) {
+        return;
+    }
+
+    // free or (_, nil)
+    if (new_ptr == NULL || *new_ptr == NULL) {
+        if (*old_ptr != NULL) {
+            // free head: pass.
+
+            // free tail
+            promote_int_option_list(&(*old_ptr)->tail, NULL);
+
+            // free cons
+            free(*old_ptr);
+        }
+        return;
+    }
+
+    // nil, cons
+    if (*old_ptr == NULL) {
+        assert(*new_ptr != NULL);
+
+        // allocate cons
+        struct IntOptionList *cons = malloc(sizeof(struct IntOptionList));
+        cons->head = (*new_ptr)->head;
+        cons->tail = NULL; // set default
+        promote_int_option_list(&cons->tail, &(*new_ptr)->tail);
+        *old_ptr = cons;
+    }
+
+    // cons, cons
+    assert(*old_ptr != NULL);
+    assert(*new_ptr != NULL);
+
+    // promote head (just copy);
+    (*(struct IntOptionList **)old_ptr)->head = (*new_ptr)->head;
+
+    // promote tail
+    promote_int_option_list(&(*old_ptr)->tail, &(*new_ptr)->tail);
+}
+
+void promote_my_state(struct MyState_ *old_ptr, struct MyState_ *new_ptr) {
+    if (old_ptr == new_ptr) {
+        return old_ptr;
+    }
+
+    // free each field
+    if (new_ptr == NULL) {
+        promote_int_option_list(&old_ptr->t1, NULL);
+        return;
+    }
+
+    // promote each field
+    old_ptr->t0 = new_ptr->t0;
+    promote_int_option_list(&old_ptr->t1, &new_ptr->t1);
+}
+
+struct MyStateOption {
+    bool some;
+    struct MyState_ value;
+};
+
+void promote_my_state_option(struct MyStateOption *old_ptr,
+                             struct MyStateOption const *new_ptr) {
+    if (old_ptr == new_ptr) {
+        return;
+    }
+
+    // free
+    if (new_ptr == NULL) {
+        if (old_ptr->some) {
+            promote_my_state(&old_ptr->value, NULL);
+        }
+        return;
+    }
+
+    // none vs. none
+    if (!old_ptr->some && !new_ptr->some) {
+        return;
+    }
+
+    // some vs. none
+    if (old_ptr->some && !new_ptr->some) {
+        old_ptr->some = false;
+        promote_my_state(&old_ptr->value, NULL);
+        return;
+    }
+
+    // none vs. some
+    if (!old_ptr->some) {
+        assert(new_ptr->some);
+
+        old_ptr->some = true;
+        old_ptr->value = (struct MyState_){.t0 = 0, .t1 = NULL}; // set default
+        promote_my_state(&old_ptr->value, &new_ptr->value);
+        return;
+    }
+
+    // some vs. some
+    promote_my_state(&old_ptr->value, &new_ptr->value);
+}
+
+// -----------------------------------------------
 // GTK
 // -----------------------------------------------
 
