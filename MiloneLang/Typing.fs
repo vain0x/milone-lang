@@ -317,6 +317,7 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
 
   let addBoundError (ctx: TyCtx) : TyCtx =
     addLog ctx (Log.TyBoundError theTrait) loc
+    |> addTraitBounds [ theTrait, loc ]
 
   /// integer, bool, char, or string
   let expectBasic ty (ctx: TyCtx) =
@@ -419,18 +420,38 @@ let private doResolveTraitBound (ctx: TyCtx) theTrait loc : TyCtx =
       | _ -> addBoundError ctx
 
 let private resolveTraitBounds (ctx: TyCtx) =
-  let traits = ctx.TraitBounds |> List.rev
-  let ctx = { ctx with TraitBounds = [] }
-
   let subst (ctx: TyCtx) ty =
     ty |> substTy ctx |> typingExpandSynonyms ctx.Tys
 
-  traits
-  |> List.fold
-       (fun ctx (theTrait, loc) ->
-         let theTrait = traitMapTys (subst ctx) theTrait
-         doResolveTraitBound ctx theTrait loc)
-       ctx
+  // Even if a trait bound can't be resolved,
+  // it can become able to resolve after some resolution (unification),
+  // so try to resolve all bounds repeatedly until no bound is resolved.
+  let rec go (ctx: TyCtx) =
+    let traits, ctx =
+      List.rev ctx.TraitBounds, { ctx with TraitBounds = [] }
+
+    let n = List.length traits
+
+    let ctx : TyCtx =
+      traits
+      |> List.fold
+           (fun ctx (theTrait, loc) ->
+             let theTrait = traitMapTys (subst ctx) theTrait
+             doResolveTraitBound ctx theTrait loc)
+           ctx
+
+    if List.length ctx.TraitBounds < n then
+      let ctx = { ctx with Logs = [] }
+      go ctx
+    else
+      ctx
+
+  let logs, ctx = ctx.Logs, { ctx with Logs = [] }
+
+  let ctx = go ctx
+
+  { ctx with
+      Logs = List.append logs ctx.Logs }
 
 // -----------------------------------------------
 // Others
