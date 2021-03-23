@@ -40,13 +40,13 @@ int xf1_(int x1_);
 
 char escapeCase_(char arg_12);
 
-int zf11_1(int x_4, char arg_13);
+static int zf11_1(int x_4, char arg_13);
 
-int zf1_1(int x_4);
+static int zf1_1(int x_4);
 
-int zf22_1(int x_5, char arg_14);
+static int zf22_1(int x_5, char arg_14);
 
-int zf2_1(int x_5);
+static int zf2_1(int x_5);
 
 char innerFunCase_(char arg_15);
 
@@ -236,21 +236,21 @@ char escapeCase_(char arg_12) {
     return 0;
 }
 
-int zf11_1(int x_4, char arg_13) {
+static int zf11_1(int x_4, char arg_13) {
     return x_4;
 }
 
-int zf1_1(int x_4) {
+static int zf1_1(int x_4) {
     int call_14 = zf11_1(x_4, 0);
     return call_14;
 }
 
-int zf22_1(int x_5, char arg_14) {
+static int zf22_1(int x_5, char arg_14) {
     int call_15 = zf1_1(x_5);
     return call_15;
 }
 
-int zf2_1(int x_5) {
+static int zf2_1(int x_5) {
     int call_16 = zf22_1(x_5, 0);
     return call_16;
 }

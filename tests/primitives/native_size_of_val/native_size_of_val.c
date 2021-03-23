@@ -8,13 +8,13 @@ struct StringList;
 
 struct StringList;
 
-int go_2(int n_, struct IntList const* xs_1);
+static int go_2(int n_, struct IntList const* xs_1);
 
-int go_1(int n_, struct StringList const* xs_1);
+static int go_1(int n_, struct StringList const* xs_1);
 
-int listToArraySize_2(struct IntList const* xs_);
+static int listToArraySize_2(struct IntList const* xs_);
 
-int listToArraySize_1(struct StringList const* xs_);
+static int listToArraySize_1(struct StringList const* xs_);
 
 int milone_main();
 
@@ -28,7 +28,7 @@ struct StringList {
     struct StringList const* tail;
 };
 
-int go_2(int n_, struct IntList const* xs_1) {
+static int go_2(int n_, struct IntList const* xs_1) {
 tailrec_1:;
     int match_;
     if ((!((!(xs_1))))) goto next_3;
@@ -48,7 +48,7 @@ end_match_2:;
     return match_;
 }
 
-int go_1(int n_, struct StringList const* xs_1) {
+static int go_1(int n_, struct StringList const* xs_1) {
 tailrec_5:;
     int match_1;
     if ((!((!(xs_1))))) goto next_7;
@@ -68,7 +68,7 @@ end_match_6:;
     return match_1;
 }
 
-int listToArraySize_2(struct IntList const* xs_) {
+static int listToArraySize_2(struct IntList const* xs_) {
     int match_2;
     if ((!((!(xs_))))) goto next_10;
     match_2 = 0;
@@ -87,7 +87,7 @@ end_match_9:;
     return match_2;
 }
 
-int listToArraySize_1(struct StringList const* xs_) {
+static int listToArraySize_1(struct StringList const* xs_) {
     int match_3;
     if ((!((!(xs_))))) goto next_13;
     match_3 = 0;

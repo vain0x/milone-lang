@@ -4,7 +4,7 @@ struct IntIntFun1;
 
 struct IntIntIntFun2;
 
-int apply_1(struct IntIntFun1 f_, int x_);
+static int apply_1(struct IntIntFun1 f_, int x_);
 
 static int fun_(int x_1);
 
@@ -12,7 +12,7 @@ static int fun_3(void const* env_, int arg_);
 
 char layoutTest_(char arg_4);
 
-int twice_1(struct IntIntFun1 f_1, int x_2);
+static int twice_1(struct IntIntFun1 f_1, int x_2);
 
 static int fun_1(int x_4);
 
@@ -34,7 +34,7 @@ struct IntIntIntFun2 {
     void const* env;
 };
 
-int apply_1(struct IntIntFun1 f_, int x_) {
+static int apply_1(struct IntIntFun1 f_, int x_) {
     int app_ = f_.fun(f_.env, x_);
     return app_;
 }
@@ -56,7 +56,7 @@ char layoutTest_(char arg_4) {
     return 0;
 }
 
-int twice_1(struct IntIntFun1 f_1, int x_2) {
+static int twice_1(struct IntIntFun1 f_1, int x_2) {
     int app_1 = f_1.fun(f_1.env, x_2);
     int app_2 = f_1.fun(f_1.env, app_1);
     return app_2;

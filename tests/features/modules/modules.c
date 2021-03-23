@@ -2,7 +2,7 @@
 
 struct Val_;
 
-int f_1(int x_);
+static int f_1(int x_);
 
 int milone_main();
 
@@ -19,7 +19,7 @@ struct Val_ {
     };
 };
 
-int f_1(int x_) {
+static int f_1(int x_) {
     return x_;
 }
 

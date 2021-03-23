@@ -8,9 +8,9 @@ char baseCase_(char arg_);
 
 char yodaCase_(int exitCode_);
 
-int proj_2(bool cond_, int body_, int alt_);
+static int proj_2(bool cond_, int body_, int alt_);
 
-struct String proj_1(bool cond_, struct String body_, struct String alt_);
+static struct String proj_1(bool cond_, struct String body_, struct String alt_);
 
 char polymorphicFunCase_(char arg_1);
 
@@ -38,7 +38,7 @@ char yodaCase_(int exitCode_) {
     return 0;
 }
 
-int proj_2(bool cond_, int body_, int alt_) {
+static int proj_2(bool cond_, int body_, int alt_) {
     int if_;
     if (cond_) {
         goto then_2;
@@ -55,7 +55,7 @@ if_next_1:;
     return if_;
 }
 
-struct String proj_1(bool cond_, struct String body_, struct String alt_) {
+static struct String proj_1(bool cond_, struct String body_, struct String alt_) {
     struct String if_1;
     if (cond_) {
         goto then_5;

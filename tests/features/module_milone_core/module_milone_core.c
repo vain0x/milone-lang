@@ -4,9 +4,9 @@ struct IntList;
 
 struct IntList;
 
-bool isEmpty_1(struct IntList const* xs_);
+static bool isEmpty_1(struct IntList const* xs_);
 
-char assertNotEmpty_1(struct IntList const* xs_60);
+static char assertNotEmpty_1(struct IntList const* xs_60);
 
 int milone_main();
 
@@ -15,7 +15,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-bool isEmpty_1(struct IntList const* xs_) {
+static bool isEmpty_1(struct IntList const* xs_) {
     bool if_;
     if ((!(xs_))) {
         goto nil_cl_2;
@@ -32,7 +32,7 @@ if_next_1:;
     return if_;
 }
 
-char assertNotEmpty_1(struct IntList const* xs_60) {
+static char assertNotEmpty_1(struct IntList const* xs_60) {
     bool call_ = isEmpty_1(xs_60);
     milone_assert((!(call_)), 5, 34);
     return 0;

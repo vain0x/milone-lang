@@ -182,6 +182,7 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
     { def with
         Arity = arity
         Ty = TyScheme([], useSiteTy)
+        Linkage = InternalLinkage // Generic function can't have stable linkage.
         Loc = loc }
 
   let monoFunSerial = FunSerial(ctx.Serial + 1)

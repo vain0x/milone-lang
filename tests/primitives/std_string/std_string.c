@@ -68,9 +68,9 @@ char toUpper_(char c_11);
 
 char toLower_(char c_12);
 
-struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6);
+static struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6);
 
-struct StringList const* rev_1(struct StringList const* xs_5);
+static struct StringList const* rev_1(struct StringList const* xs_5);
 
 static int intClamp_(int minValue_, int maxValue_, int value_1);
 
@@ -142,13 +142,13 @@ struct StringList const* toLines_(struct String s_19);
 
 struct String concat_(struct String sep_2, struct StringList const* xs_61);
 
-bool isNone_2(struct CharOption opt_);
+static bool isNone_2(struct CharOption opt_);
 
-bool isNone_1(struct IntOption opt_);
+static bool isNone_1(struct IntOption opt_);
 
-char unwrap_2(struct CharOption opt_8);
+static char unwrap_2(struct CharOption opt_8);
 
-int unwrap_1(struct IntOption opt_8);
+static int unwrap_1(struct IntOption opt_8);
 
 char isEmptyTest_(char arg_42);
 
@@ -630,7 +630,7 @@ if_next_70:;
     return if_23;
 }
 
-struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6) {
+static struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6) {
 tailrec_73:;
     struct StringList const* match_;
     if ((!((!(xs_6))))) goto next_75;
@@ -653,7 +653,7 @@ end_match_74:;
     return match_;
 }
 
-struct StringList const* rev_1(struct StringList const* xs_5) {
+static struct StringList const* rev_1(struct StringList const* xs_5) {
     struct StringList const* call_11 = listRevLoop_1(NULL, xs_5);
     return call_11;
 }
@@ -1584,7 +1584,7 @@ struct String concat_(struct String sep_2, struct StringList const* xs_61) {
     return call_44;
 }
 
-bool isNone_2(struct CharOption opt_) {
+static bool isNone_2(struct CharOption opt_) {
     bool match_3;
     if (opt_.some) goto next_235;
     match_3 = true;
@@ -1599,7 +1599,7 @@ end_match_234:;
     return match_3;
 }
 
-bool isNone_1(struct IntOption opt_) {
+static bool isNone_1(struct IntOption opt_) {
     bool match_4;
     if (opt_.some) goto next_238;
     match_4 = true;
@@ -1614,7 +1614,7 @@ end_match_237:;
     return match_4;
 }
 
-char unwrap_2(struct CharOption opt_8) {
+static char unwrap_2(struct CharOption opt_8) {
     char match_5;
     if ((!(opt_8.some))) goto next_241;
     char value_2 = opt_8.value;
@@ -1630,7 +1630,7 @@ end_match_240:;
     return match_5;
 }
 
-int unwrap_1(struct IntOption opt_8) {
+static int unwrap_1(struct IntOption opt_8) {
     int match_6;
     if ((!(opt_8.some))) goto next_244;
     int value_2 = opt_8.value;

@@ -6,11 +6,11 @@ struct IntStringTuple2;
 
 struct IntStringTuple2Option;
 
-int fst_1(struct IntUnitTuple2 arg_);
+static int fst_1(struct IntUnitTuple2 arg_);
 
-int f_1(void const* boxedPair_, char arg_1);
+static int f_1(void const* boxedPair_, char arg_1);
 
-int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_);
+static int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_);
 
 char testCase_(struct IntStringTuple2 kv_);
 
@@ -31,17 +31,17 @@ struct IntStringTuple2Option {
     struct IntStringTuple2 value;
 };
 
-int fst_1(struct IntUnitTuple2 arg_) {
+static int fst_1(struct IntUnitTuple2 arg_) {
     int x_ = arg_.t0;
     return x_;
 }
 
-int f_1(void const* boxedPair_, char arg_1) {
+static int f_1(void const* boxedPair_, char arg_1) {
     int call_ = fst_1((*(((struct IntUnitTuple2 const*)boxedPair_))));
     return call_;
 }
 
-int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
+static int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
     int call_1 = f_1(boxedPair_, 0);
     return call_1;
 }
