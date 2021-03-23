@@ -985,8 +985,16 @@ let private inferAppExpr ctx itself callee arg loc =
 
   | _ ->
       let targetTy, ctx = ctx |> freshMetaTyForExpr itself
-      let arg, argTy, ctx = inferExpr ctx None arg
+
       let callee, calleeTy, ctx = inferExpr ctx None callee
+
+      let arg, argTy, ctx =
+        let tyAsFunArg ty =
+          match ty with
+          | Ty (FunTk, it :: _) -> Some it
+          | _ -> None
+
+        inferExpr ctx (tyAsFunArg calleeTy) arg
 
       let ctx =
         unifyTy ctx loc calleeTy (tyFun argTy targetTy)

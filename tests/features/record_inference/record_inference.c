@@ -8,6 +8,10 @@ char record_inference_Program_typeAscriptionExprCase(int n_1);
 
 char record_inference_Program_matchExprCase(int n_2);
 
+static int unwrap_(struct IntWrapper_ w_1);
+
+char record_inference_Program_funAppCase(int n_3);
+
 int milone_main();
 
 struct IntWrapper_ {
@@ -48,9 +52,21 @@ switch_next_1:;
     return 0;
 }
 
+static int unwrap_(struct IntWrapper_ w_1) {
+    return w_1.t0;
+}
+
+char record_inference_Program_funAppCase(int n_3) {
+    struct IntWrapper_ IntWrapper_3 = (struct IntWrapper_){.t0 = n_3};
+    int call_ = unwrap_(IntWrapper_3);
+    milone_assert((call_ == 7), 26, 2);
+    return 0;
+}
+
 int milone_main() {
-    char call_ = record_inference_Program_letWithTypeAscriptionCase(2);
-    char call_1 = record_inference_Program_typeAscriptionExprCase(3);
-    char call_2 = record_inference_Program_matchExprCase(5);
+    char call_1 = record_inference_Program_letWithTypeAscriptionCase(2);
+    char call_2 = record_inference_Program_typeAscriptionExprCase(3);
+    char call_3 = record_inference_Program_matchExprCase(5);
+    char call_4 = record_inference_Program_funAppCase(7);
     return 0;
 }

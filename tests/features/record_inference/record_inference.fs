@@ -21,9 +21,15 @@ let matchExprCase (n: int) =
 
   assert (t.Value = 0)
 
+let funAppCase (n: int) =
+  let unwrap (w: IntWrapper) = w.Value
+
+  assert (unwrap { Value = n } = 7)
+
 let main _ =
   letWithTypeAscriptionCase 2
   typeAscriptionExprCase 3
   matchExprCase 5
+  funAppCase 7
 
   0
