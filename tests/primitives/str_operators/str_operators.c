@@ -1,18 +1,18 @@
 #include "milone.h"
 
-char addTest_(char arg_);
+char str_operators_Program_addTest(char arg_);
 
-char compareTest_(char arg_1);
+char str_operators_Program_compareTest(char arg_1);
 
-char at_(int i_, struct String s_);
+static char at_(int i_, struct String s_);
 
-char indexOperatorTest_(char arg_2);
+char str_operators_Program_indexOperatorTest(char arg_2);
 
-char subscriptOperatorTest_(char arg_3);
+char str_operators_Program_subscriptOperatorTest(char arg_3);
 
 int milone_main();
 
-char addTest_(char arg_) {
+char str_operators_Program_addTest(char arg_) {
     struct String hello_ = (struct String){.str = "Hello", .len = 5};
     struct String world_ = (struct String){.str = ", world!", .len = 8};
     milone_assert((str_compare(str_add(hello_, world_), (struct String){.str = "Hello, world!", .len = 13}) == 0), 5, 2);
@@ -20,7 +20,7 @@ char addTest_(char arg_) {
     return 0;
 }
 
-char compareTest_(char arg_1) {
+char str_operators_Program_compareTest(char arg_1) {
     milone_assert((str_compare((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0}) == 0), 11, 2);
     milone_assert((str_compare((struct String){.str = "o", .len = 1}, (struct String){.str = "o", .len = 1}) == 0), 12, 2);
     milone_assert((str_compare((struct String){.str = "alpha", .len = 5}, (struct String){.str = "alpha", .len = 5}) == 0), 13, 2);
@@ -34,11 +34,11 @@ char compareTest_(char arg_1) {
     return 0;
 }
 
-char at_(int i_, struct String s_) {
+static char at_(int i_, struct String s_) {
     return s_.str[i_];
 }
 
-char indexOperatorTest_(char arg_2) {
+char str_operators_Program_indexOperatorTest(char arg_2) {
     struct String hello_1 = (struct String){.str = "hello", .len = 5};
     bool if_;
     if ((hello_1.str[0] == 'h')) {
@@ -59,7 +59,7 @@ if_next_1:;
     return 0;
 }
 
-char subscriptOperatorTest_(char arg_3) {
+char str_operators_Program_subscriptOperatorTest(char arg_3) {
     struct String str_ = (struct String){.str = "Hello, John!", .len = 12};
     struct String slice_ = str_get_slice(0, 4, str_);
     milone_assert((str_compare(slice_, (struct String){.str = "Hello", .len = 5}) == 0), 42, 2);
@@ -71,9 +71,9 @@ char subscriptOperatorTest_(char arg_3) {
 }
 
 int milone_main() {
-    char call_1 = addTest_(0);
-    char call_2 = compareTest_(0);
-    char call_3 = indexOperatorTest_(0);
-    char call_4 = subscriptOperatorTest_(0);
+    char call_1 = str_operators_Program_addTest(0);
+    char call_2 = str_operators_Program_compareTest(0);
+    char call_3 = str_operators_Program_indexOperatorTest(0);
+    char call_4 = str_operators_Program_subscriptOperatorTest(0);
     return 0;
 }

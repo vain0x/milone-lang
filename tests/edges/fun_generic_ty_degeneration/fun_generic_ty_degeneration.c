@@ -6,13 +6,13 @@ struct IntStringTuple2;
 
 struct IntStringTuple2Option;
 
-static int fst_1(struct IntUnitTuple2 arg_);
+static int fst_(struct IntUnitTuple2 arg_);
 
 static int f_1(void const* boxedPair_, char arg_1);
 
-static int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_);
+static int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option phantom_);
 
-char testCase_(struct IntStringTuple2 kv_);
+char fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2 kv_);
 
 int milone_main();
 
@@ -31,31 +31,31 @@ struct IntStringTuple2Option {
     struct IntStringTuple2 value;
 };
 
-static int fst_1(struct IntUnitTuple2 arg_) {
+static int fst_(struct IntUnitTuple2 arg_) {
     int x_ = arg_.t0;
     return x_;
 }
 
 static int f_1(void const* boxedPair_, char arg_1) {
-    int call_ = fst_1((*(((struct IntUnitTuple2 const*)boxedPair_))));
+    int call_ = fst_((*(((struct IntUnitTuple2 const*)boxedPair_))));
     return call_;
 }
 
-static int fstUnbox_1(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
+static int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
     int call_1 = f_1(boxedPair_, 0);
     return call_1;
 }
 
-char testCase_(struct IntStringTuple2 kv_) {
+char fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2 kv_) {
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntStringTuple2));
     (*(((struct IntStringTuple2*)box_))) = kv_;
-    int call_2 = fstUnbox_1(box_, (struct IntStringTuple2Option){.some = false});
+    int call_2 = fstUnbox_(box_, (struct IntStringTuple2Option){.some = false});
     milone_assert((call_2 == 0), 18, 2);
     return 0;
 }
 
 int milone_main() {
     struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 0, .t1 = (struct String){.str = "right", .len = 5}};
-    char call_3 = testCase_(tuple_);
+    char call_3 = fun_generic_ty_degeneration_Program_testCase(tuple_);
     return 0;
 }

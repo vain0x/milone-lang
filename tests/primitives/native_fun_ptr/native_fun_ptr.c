@@ -2,40 +2,40 @@
 
 void* milone_mem_alloc(int, uintptr_t);
 
-void* memAlloc_(int len_, int size_);
+void* native_fun_ptr_Program_memAlloc(int len_, int size_);
 
-int intCompare_(void const* l_, void const* r_);
+static int intCompare_(void const* l_, void const* r_);
 
 void qsort(void*, uintptr_t, uintptr_t, int(*)(void const*, void const*));
 
-char sortIntArray_(int* array_, int len_1);
+char native_fun_ptr_Program_sortIntArray(int* array_, int len_1);
 
 int milone_main();
 
-void* memAlloc_(int len_, int size_) {
-    void* milone_mem_alloc_result_ = milone_mem_alloc(len_, ((uintptr_t)size_));
-    return milone_mem_alloc_result_;
+void* native_fun_ptr_Program_memAlloc(int len_, int size_) {
+    void* milone_mem_alloc_result = milone_mem_alloc(len_, ((uintptr_t)size_));
+    return milone_mem_alloc_result;
 }
 
-int intCompare_(void const* l_, void const* r_) {
+static int intCompare_(void const* l_, void const* r_) {
     return int_compare((*(((int const*)((void const*)l_)))), (*(((int const*)((void const*)r_)))));
 }
 
-char sortIntArray_(int* array_, int len_1) {
+char native_fun_ptr_Program_sortIntArray(int* array_, int len_1) {
     qsort(((void*)array_), ((uintptr_t)len_1), ((uintptr_t)4), intCompare_);
     return 0;
 }
 
 int milone_main() {
     int len_2 = 5;
-    void* call_ = memAlloc_(len_2, sizeof(int));
+    void* call_ = native_fun_ptr_Program_memAlloc(len_2, sizeof(int));
     int* array_1 = ((int*)call_);
     (*(array_1)) = 3;
     array_1[1] = 1;
     array_1[2] = 4;
     array_1[3] = 1;
     array_1[4] = 5;
-    char call_1 = sortIntArray_(array_1, len_2);
+    char call_1 = native_fun_ptr_Program_sortIntArray(array_1, len_2);
     int const* array_2 = ((int const*)array_1);
     int read_ = (*(array_2));
     milone_assert((read_ == 1), 40, 2);

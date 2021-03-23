@@ -6,7 +6,7 @@ struct BoxedVariant_OptionBoxedVariant_Fun1;
 
 struct BoxedVariant_Option;
 
-struct BoxedVariant_ feedNil_(struct BoxedVariant_OptionBoxedVariant_Fun1 f_);
+struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariant_OptionBoxedVariant_Fun1 f_);
 
 int milone_main();
 
@@ -31,7 +31,7 @@ struct BoxedVariant_Option {
     struct BoxedVariant_ value;
 };
 
-struct BoxedVariant_ feedNil_(struct BoxedVariant_OptionBoxedVariant_Fun1 f_) {
+struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariant_OptionBoxedVariant_Fun1 f_) {
     struct BoxedVariant_ app_ = f_.fun(f_.env, (struct BoxedVariant_Option){.some = false});
     return app_;
 }

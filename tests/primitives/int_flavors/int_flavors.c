@@ -1,12 +1,12 @@
 #include "milone.h"
 
-char signedCases_(char arg_);
+char int_flavors_Program_signedCases(char arg_);
 
-char unsignedCases_(char arg_1);
+char int_flavors_Program_unsignedCases(char arg_1);
 
 int milone_main();
 
-char signedCases_(char arg_) {
+char int_flavors_Program_signedCases(char arg_) {
     milone_assert((1 == 1), 10, 2);
     milone_assert((((int8_t)1) == ((int8_t)1)), 13, 2);
     milone_assert(((((int8_t)2) + ((int8_t)3)) == ((int8_t)5)), 19, 2);
@@ -35,7 +35,7 @@ char signedCases_(char arg_) {
     return 0;
 }
 
-char unsignedCases_(char arg_1) {
+char int_flavors_Program_unsignedCases(char arg_1) {
     milone_assert((((uint8_t)1) == ((uint8_t)1)), 56, 2);
     milone_assert((((uint32_t)1) == ((uint32_t)1)), 59, 2);
     milone_assert(((((uint8_t)2) + ((uint8_t)3)) == ((uint8_t)5)), 62, 2);
@@ -63,7 +63,7 @@ char unsignedCases_(char arg_1) {
 }
 
 int milone_main() {
-    char call_7 = signedCases_(0);
-    char call_8 = unsignedCases_(0);
+    char call_7 = int_flavors_Program_signedCases(0);
+    char call_8 = int_flavors_Program_unsignedCases(0);
     return 0;
 }

@@ -2,13 +2,13 @@
 
 struct String str_of_raw_parts(char const*, int);
 
-struct String strOfRawParts_(char const* p_, int len_);
+struct String native_ptr_write_Program_strOfRawParts(char const* p_, int len_);
 
 int milone_main();
 
-struct String strOfRawParts_(char const* p_, int len_) {
-    struct String str_of_raw_parts_result_ = str_of_raw_parts(p_, len_);
-    return str_of_raw_parts_result_;
+struct String native_ptr_write_Program_strOfRawParts(char const* p_, int len_) {
+    struct String str_of_raw_parts_result = str_of_raw_parts(p_, len_);
+    return str_of_raw_parts_result;
 }
 
 int milone_main() {
@@ -22,7 +22,7 @@ int milone_main() {
     char* buf_ = ((char*)box_1);
     (*(buf_)) = 'H';
     buf_[1] = 'i';
-    struct String call_ = strOfRawParts_(((char const*)buf_), 2);
+    struct String call_ = native_ptr_write_Program_strOfRawParts(((char const*)buf_), 2);
     struct String s_ = call_;
     milone_assert((str_compare(s_, (struct String){.str = "Hi", .len = 2}) == 0), 18, 2);
     return 0;

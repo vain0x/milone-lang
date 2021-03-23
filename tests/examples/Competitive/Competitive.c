@@ -70,93 +70,93 @@ struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringI
 
 void* milone_mem_alloc(int, uintptr_t);
 
-void* memAlloc_(int len_, int size_);
+void* Competitive_Helpers_memAlloc(int len_, int size_);
 
 void* memcpy(void*, void const*, uintptr_t);
 
-void* memCopy_(void* dest_, void const* src_, int size_1);
+void* Competitive_Helpers_memCopy(void* dest_, void const* src_, int size_1);
 
 int scan_int();
 
-int scanInt_(char arg_35);
+int Competitive_Helpers_scanInt(char arg_35);
 
-void* rawIntArrayNew_(int len_1);
+void* Competitive_Helpers_rawIntArrayNew(int len_1);
 
-int rawIntArrayGet_(void* array_, int index_);
+int Competitive_Helpers_rawIntArrayGet(void* array_, int index_);
 
-char rawIntArraySet_(void* array_1, int index_1, int value_);
+char Competitive_Helpers_rawIntArraySet(void* array_1, int index_1, int value_);
 
-char rawMemoryCopy_(void* dest_1, void* src_1, int size_2);
+char Competitive_Helpers_rawMemoryCopy(void* dest_1, void* src_1, int size_2);
 
-static bool listIsEmpty_1(struct StringList const* xs_);
+static bool listIsEmpty_(struct StringList const* xs_);
 
-static bool listIsEmpty_4(struct StringStringStringFun2List const* xs_);
+static bool listIsEmpty_3(struct StringStringStringFun2List const* xs_);
 
-static bool listIsEmpty_3(struct IntList const* xs_);
+static bool listIsEmpty_2(struct IntList const* xs_);
 
-static bool listIsEmpty_2(struct IntIntIntFun2List const* xs_);
+static bool listIsEmpty_1(struct IntIntIntFun2List const* xs_);
 
-static bool listIsEmpty_5(struct IntIntIntObjectUnitTuple5List const* xs_);
+static bool listIsEmpty_4(struct IntIntIntObjectUnitTuple5List const* xs_);
 
-static bool listIsEmpty_6(struct StringIntIntObjectUnitTuple5List const* xs_);
+static bool listIsEmpty_5(struct StringIntIntObjectUnitTuple5List const* xs_);
 
 static int go_22(int len_2, struct StringList const* xs_2);
 
 static int go_21(int len_2, struct IntList const* xs_2);
 
-static int listLength_2(struct StringList const* xs_1);
+static int listLength_1(struct StringList const* xs_1);
 
-static int listLength_1(struct IntList const* xs_1);
+static int listLength_(struct IntList const* xs_1);
 
 static struct IntList const* go_38(struct IntList const* acc_, struct IntList const* xs_5);
 
 static struct StringList const* go_37(struct StringList const* acc_, struct StringList const* xs_5);
 
-static struct IntList const* listRev_2(struct IntList const* xs_4);
+static struct IntList const* listRev_1(struct IntList const* xs_4);
 
-static struct StringList const* listRev_1(struct StringList const* xs_4);
+static struct StringList const* listRev_(struct StringList const* xs_4);
 
 static bool go_24(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_8, struct IntList const* ys_1);
 
 static bool go_23(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_8, struct StringList const* ys_1);
 
-static bool listEqual_2(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_7, struct IntList const* ys_);
+static bool listEqual_1(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_7, struct IntList const* ys_);
 
-static bool listEqual_1(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_7, struct StringList const* ys_);
+static bool listEqual_(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_7, struct StringList const* ys_);
 
 static struct IntList const* go_25(int item_, int len_3, struct IntList const* acc_1, int i_);
 
-static struct IntList const* listReplicate_1(int item_, int len_3);
+static struct IntList const* listReplicate_(int item_, int len_3);
 
 static struct IntList const* go_26(int len_4, struct IntIntFun1 gen_, struct IntList const* acc_2, int i_1);
 
-static struct IntList const* listInit_1(int len_4, struct IntIntFun1 gen_);
+static struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_);
 
-struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_);
+static struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_);
 
-struct String strConcat_(struct StringList const* xs_10);
+struct String Competitive_Helpers_strConcat(struct StringList const* xs_10);
 
-bool intEqual_(int first_, int second_);
+bool Competitive_Helpers_intEqual(int first_, int second_);
 
-int intMin_(int first_1, int second_1);
+int Competitive_Helpers_intMin(int first_1, int second_1);
 
-int intMax_(int first_2, int second_2);
+int Competitive_Helpers_intMax(int first_2, int second_2);
 
-bool strEqual_(struct String first_3, struct String second_3);
+bool Competitive_Helpers_strEqual(struct String first_3, struct String second_3);
 
-static int failwith_1(struct String msg_);
+static int failwith_(struct String msg_);
 
 static int fun_21(int arg_58);
 
 static int fun_3(void const* env_, int arg_);
 
-struct IntList const* scanIntList_(int len_5);
+struct IntList const* Competitive_Helpers_scanIntList(int len_5);
 
-static struct IntVoidMutPtrFun1 typeToArrayNew_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59);
+static struct IntVoidMutPtrFun1 typeToArrayNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59);
 
-static struct VoidMutPtrIntIntFun2 typeToArrayGet_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_60);
+static struct VoidMutPtrIntIntFun2 typeToArrayGet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_60);
 
-static struct VoidMutPtrIntIntUnitFun3 typeToArraySet_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_61);
+static struct VoidMutPtrIntIntUnitFun3 typeToArraySet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_61);
 
 static void* fun_4(void const* env_1, int arg_1);
 
@@ -164,91 +164,91 @@ static int fun_5(void const* env_2, void* arg_2, int arg_3);
 
 static char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6);
 
-static int vectorToLength_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62);
+static int vectorToLength_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62);
 
-static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorNew_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_, int len_7);
+static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_, int len_7);
 
-static char vectorCheckIndex_1(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_);
+static char vectorCheckIndex_(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_);
 
-static int vectorGet_1(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_1);
+static int vectorGet_(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_1);
 
-static char vectorSet_1(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2);
+static char vectorSet_(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2);
 
 static char go_27(int len_10, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_, int i_2, struct IntList const* xs_19);
 
-static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorOfList_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 ty_, struct IntList const* xs_18);
+static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorOfList_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 ty_, struct IntList const* xs_18);
 
-char go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3);
+static char go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3);
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 scanIntVector_(int len_11);
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 Competitive_Helpers_scanIntVector(int len_11);
 
-char refCase_(char arg_70);
+static char refCase_(char arg_70);
 
-char vectorOfListTest_(char arg_71);
+static char vectorOfListTest_(char arg_71);
 
-char vectorTest_(char arg_72);
+char Competitive_Helpers_vectorTest(char arg_72);
 
-bool intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4);
+bool Competitive_SegTree_intervalIsDisjoint(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4);
 
-bool intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5);
+bool Competitive_SegTree_intervalCovers(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5);
 
-static struct StringStringStringFun2 segItemTypeToAppend_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_73);
+static struct StringStringStringFun2 segItemTypeToAppend_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_73);
 
-static struct IntIntIntFun2 segItemTypeToAppend_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_74);
+static struct IntIntIntFun2 segItemTypeToAppend_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_74);
 
-static struct IntIntIntObjectUnitTuple5 segItemTypeToEmptyNode_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_75);
+static struct IntIntIntObjectUnitTuple5 segItemTypeToEmptyNode_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_75);
 
-static struct StringIntIntObjectUnitTuple5 segItemTypeToEmptyNode_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_76);
+static struct StringIntIntObjectUnitTuple5 segItemTypeToEmptyNode_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_76);
 
-static void const* segItemTypeToNoChildren_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_77);
+static void const* segItemTypeToNoChildren_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_77);
 
-static void const* segItemTypeToNoChildren_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_78);
+static void const* segItemTypeToNoChildren_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_78);
 
-static int segItemTypeToEmptyItem_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_4);
+static int segItemTypeToEmptyItem_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_4);
 
-static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_2(struct String emptyItem_, struct StringStringStringFun2 append_1);
+static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_1(struct String emptyItem_, struct StringStringStringFun2 append_1);
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_1(int emptyItem_, struct IntIntIntFun2 append_1);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_(int emptyItem_, struct IntIntIntFun2 append_1);
 
-static struct StringIntIntObjectUnitTuple5 segNodeNewEmpty_2(struct String emptyItem_1);
+static struct StringIntIntObjectUnitTuple5 segNodeNewEmpty_1(struct String emptyItem_1);
 
-static struct IntIntIntObjectUnitTuple5 segNodeNewEmpty_1(int emptyItem_1);
+static struct IntIntIntObjectUnitTuple5 segNodeNewEmpty_(int emptyItem_1);
 
-static struct IntIntIntObjectUnitTuple5 segNodeNewLeaf_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, int item_1);
+static struct IntIntIntObjectUnitTuple5 segNodeNewLeaf_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, int item_1);
 
-static struct StringIntIntObjectUnitTuple5 segNodeNewLeaf_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, struct String item_1);
+static struct StringIntIntObjectUnitTuple5 segNodeNewLeaf_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, struct String item_1);
 
 static struct IntIntIntObjectUnitTuple5 doNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_, char arg_79);
 
 static struct StringIntIntObjectUnitTuple5 doNew_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_, char arg_80);
 
-static struct IntIntIntObjectUnitTuple5 segNodeNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_);
+static struct IntIntIntObjectUnitTuple5 segNodeNew_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_);
 
-static struct StringIntIntObjectUnitTuple5 segNodeNew_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_);
+static struct StringIntIntObjectUnitTuple5 segNodeNew_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_);
 
-static int segNodeToItem_1(struct IntIntIntObjectUnitTuple5 node_);
+static int segNodeToItem_(struct IntIntIntObjectUnitTuple5 node_);
 
-static int segNodeToLength_1(struct IntIntIntObjectUnitTuple5 node_1);
+static int segNodeToLength_(struct IntIntIntObjectUnitTuple5 node_1);
 
-static int segNodeToLength_2(struct StringIntIntObjectUnitTuple5 node_1);
+static int segNodeToLength_1(struct StringIntIntObjectUnitTuple5 node_1);
 
-static int segNodeToHeight_1(struct IntIntIntObjectUnitTuple5 node_2);
+static int segNodeToHeight_(struct IntIntIntObjectUnitTuple5 node_2);
 
-static int segNodeToHeight_2(struct StringIntIntObjectUnitTuple5 node_2);
+static int segNodeToHeight_1(struct StringIntIntObjectUnitTuple5 node_2);
 
-static struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 segNodeToChildren_1(struct IntIntIntObjectUnitTuple5 node_3);
+static struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 segNodeToChildren_(struct IntIntIntObjectUnitTuple5 node_3);
 
-static struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 segNodeToChildren_2(struct StringIntIntObjectUnitTuple5 node_3);
+static struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 segNodeToChildren_1(struct StringIntIntObjectUnitTuple5 node_3);
 
-static bool segNodeIsEmpty_1(struct IntIntIntObjectUnitTuple5 node_4);
+static bool segNodeIsEmpty_(struct IntIntIntObjectUnitTuple5 node_4);
 
-static struct IntIntIntObjectUnitTuple5 segNodeWithLeft_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_8, struct IntIntIntObjectUnitTuple5 newLeft_, struct IntIntIntObjectUnitTuple5 node_5);
+static struct IntIntIntObjectUnitTuple5 segNodeWithLeft_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_8, struct IntIntIntObjectUnitTuple5 newLeft_, struct IntIntIntObjectUnitTuple5 node_5);
 
-static struct StringIntIntObjectUnitTuple5 segNodeWithLeft_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_8, struct StringIntIntObjectUnitTuple5 newLeft_, struct StringIntIntObjectUnitTuple5 node_5);
+static struct StringIntIntObjectUnitTuple5 segNodeWithLeft_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_8, struct StringIntIntObjectUnitTuple5 newLeft_, struct StringIntIntObjectUnitTuple5 node_5);
 
-static struct IntIntIntObjectUnitTuple5 segNodeWithRight_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_9, struct IntIntIntObjectUnitTuple5 newRight_, struct IntIntIntObjectUnitTuple5 node_6);
+static struct IntIntIntObjectUnitTuple5 segNodeWithRight_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_9, struct IntIntIntObjectUnitTuple5 newRight_, struct IntIntIntObjectUnitTuple5 node_6);
 
-static struct StringIntIntObjectUnitTuple5 segNodeWithRight_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_9, struct StringIntIntObjectUnitTuple5 newRight_, struct StringIntIntObjectUnitTuple5 node_6);
+static struct StringIntIntObjectUnitTuple5 segNodeWithRight_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_9, struct StringIntIntObjectUnitTuple5 newRight_, struct StringIntIntObjectUnitTuple5 node_6);
 
 static struct IntIntIntObjectUnitTuple5 rotateLeft_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_8);
 
@@ -270,75 +270,75 @@ static int toBalance_1(struct IntIntIntObjectUnitTuple5 node_12);
 
 static int toBalance_2(struct StringIntIntObjectUnitTuple5 node_12);
 
-static struct IntIntIntObjectUnitTuple5 segNodeMakeBalanced_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_7);
+static struct IntIntIntObjectUnitTuple5 segNodeMakeBalanced_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_7);
 
-static struct StringIntIntObjectUnitTuple5 segNodeMakeBalanced_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_7);
+static struct StringIntIntObjectUnitTuple5 segNodeMakeBalanced_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_7);
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeNew_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11);
 
-static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeNew_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11);
+static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeNew_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11);
 
-static struct IntIntIntObjectUnitTuple5 segTreeToRoot_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_4);
+static struct IntIntIntObjectUnitTuple5 segTreeToRoot_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_4);
 
-static struct StringIntIntObjectUnitTuple5 segTreeToRoot_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_4);
+static struct StringIntIntObjectUnitTuple5 segTreeToRoot_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_4);
 
-static int segTreeToLength_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_5);
+static int segTreeToLength_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_5);
 
-static int segTreeToLength_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_5);
+static int segTreeToLength_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_5);
 
-static int segTreeToHeight_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_6);
+static int segTreeToHeight_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_6);
 
 static int go_28(int index_6, struct IntIntIntObjectUnitTuple5 node_14);
 
 static struct String go_39(int index_6, struct StringIntIntObjectUnitTuple5 node_14);
 
-static int segTreeGet_1(int index_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_8);
+static int segTreeGet_(int index_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_8);
 
-static struct String segTreeGet_2(int index_5, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_8);
+static struct String segTreeGet_1(int index_5, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_8);
 
 static int go_29(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_12, struct IntIntTuple2 e_, struct IntIntTuple2 q_, struct IntIntIntObjectUnitTuple5 node_15);
 
-static int segTreeSum_1(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_9);
+static int segTreeSum_(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_9);
 
 static struct IntIntIntObjectUnitTuple5 go_30(int newItem_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_13, int index_8, struct IntIntIntObjectUnitTuple5 node_16);
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeSet_1(int index_7, int newItem_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_10);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeSet_(int index_7, int newItem_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_10);
 
 static struct IntIntIntObjectUnitTuple5 go_31(int newItem_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_14, int index_10, struct IntIntIntObjectUnitTuple5 node_17);
 
 static struct StringIntIntObjectUnitTuple5 go_35(struct String newItem_1, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_14, int index_10, struct StringIntIntObjectUnitTuple5 node_17);
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeInsert_1(int index_9, int newItem_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_11);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeInsert_(int index_9, int newItem_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_11);
 
-static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeInsert_2(int index_9, struct String newItem_1, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_11);
+static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeInsert_1(int index_9, struct String newItem_1, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_11);
 
 static struct IntIntIntObjectUnitTuple5 go_36(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_15, int index_12, struct IntIntIntObjectUnitTuple5 node_18);
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeRemove_1(int index_11, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_12);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeRemove_(int index_11, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_12);
 
-static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreePush_2(struct String value_4, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_13);
+static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreePush_1(struct String value_4, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_13);
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreePush_1(int value_4, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_13);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreePush_(int value_4, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_13);
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreePop_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_14);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreePop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_14);
 
 static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 go_32(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 t_2, struct IntList const* xs_22);
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeOfList_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_16, struct IntList const* xs_21);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeOfList_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_16, struct IntList const* xs_21);
 
 static struct IntList const* go_34(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_4, int len_20, struct IntList const* acc_3, int i_4);
 
 static struct StringList const* go_33(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 v_4, int len_20, struct StringList const* acc_3, int i_4);
 
-static struct IntList const* segTreeToList_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_4);
+static struct IntList const* segTreeToList_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_4);
 
-static struct StringList const* segTreeToList_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 v_4);
+static struct StringList const* segTreeToList_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 v_4);
 
-int intAdd_(int x_8, int y_3);
+static int intAdd_(int x_8, int y_3);
 
 static int fun_7(void const* env_4, int arg_7, int arg_8);
 
-struct String strAdd_(struct String x_9, struct String y_4);
+static struct String strAdd_(struct String x_9, struct String y_4);
 
 static struct String fun_8(void const* env_5, struct String arg_9, struct String arg_10);
 
@@ -352,29 +352,29 @@ static bool fun_12(void const* env_9, int arg_17, int arg_18);
 
 static bool fun_13(void const* env_10, int arg_19, int arg_20);
 
-char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_99);
+static char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_99);
 
 static bool fun_14(void const* env_11, int arg_21, int arg_22);
 
 static bool fun_15(void const* env_12, int arg_23, int arg_24);
 
-char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_100);
+static char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_100);
 
-char testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_101);
+static char testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_101);
 
-int sum_(int l_1, int r_1, int acc_4, int i_5, struct IntList const* xs_25);
+static int sum_(int l_1, int r_1, int acc_4, int i_5, struct IntList const* xs_25);
 
-char go_15(struct IntList const* xs_24, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13, int n_1, int l_1, int r_1);
+static char go_15(struct IntList const* xs_24, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13, int n_1, int l_1, int r_1);
 
-char testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_117);
+static char testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_117);
 
-char testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_118);
+static char testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_118);
 
 static bool fun_16(void const* env_13, struct String arg_25, struct String arg_26);
 
-char testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, char arg_119);
+static char testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, char arg_119);
 
-char segTreeTest_(char arg_120);
+char Competitive_SegTree_segTreeTest(char arg_120);
 
 static int fun_22(int arg_121, int arg_122);
 
@@ -388,39 +388,39 @@ static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObj
 
 static int go_20(int n_2, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 pos_, int sum_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 prev_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 next_1, int p_);
 
-int abc140eSolve_(int n_2, struct IntList const* perm_);
+int Competitive_ABC140E_abc140eSolve(int n_2, struct IntList const* perm_);
 
-bool solve_(struct IntList const* p_1, int expected_1);
+static bool solve_(struct IntList const* p_1, int expected_1);
 
-char abc140eTest_(char arg_133);
+char Competitive_ABC140E_abc140eTest(char arg_133);
 
-char abc140eMain_(char arg_134);
+char Competitive_ABC140E_abc140eMain(char arg_134);
 
 static int fun_23(int arg_135, int arg_136);
 
 static int fun_20(void const* env_17, int arg_33, int arg_34);
 
-int go_18(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1, int sum_3, int i_8);
+static int go_18(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1, int sum_3, int i_8);
 
-int abc140bSolve_(int n_5, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_);
+int Competitive_ABC140B_abc140bSolve(int n_5, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_);
 
-int f_(struct IntList const* a_2, struct IntList const* b_2, struct IntList const* c_2);
+static int f_(struct IntList const* a_2, struct IntList const* b_2, struct IntList const* c_2);
 
-bool case1_(char arg_143);
+static bool case1_(char arg_143);
 
-bool case2_(char arg_144);
+static bool case2_(char arg_144);
 
-bool case3_(char arg_145);
+static bool case3_(char arg_145);
 
-char abc140bTest_(char arg_146);
+char Competitive_ABC140B_abc140bTest(char arg_146);
 
-char abc140bMain_(char arg_147);
+char Competitive_ABC140B_abc140bMain(char arg_147);
 
-int abc140aSolve_(int n_8);
+int Competitive_ABC140A_abc140aSolve(int n_8);
 
-char abc140aTest_(char arg_148);
+char Competitive_ABC140A_abc140aTest(char arg_148);
 
-char abc140aMain_(char arg_149);
+char Competitive_ABC140A_abc140aMain(char arg_149);
 
 int milone_main();
 
@@ -583,46 +583,46 @@ struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringI
     char t2;
 };
 
-void const* unitObj_;
+void const* Competitive_Helpers_unitObj;
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 typeInt_;
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 Competitive_Helpers_typeInt;
 
-void* memAlloc_(int len_, int size_) {
-    void* milone_mem_alloc_result_ = milone_mem_alloc(len_, ((uintptr_t)size_));
-    return milone_mem_alloc_result_;
+void* Competitive_Helpers_memAlloc(int len_, int size_) {
+    void* milone_mem_alloc_result = milone_mem_alloc(len_, ((uintptr_t)size_));
+    return milone_mem_alloc_result;
 }
 
-void* memCopy_(void* dest_, void const* src_, int size_1) {
-    void* memcpy_result_ = memcpy(dest_, src_, ((uintptr_t)size_1));
-    return memcpy_result_;
+void* Competitive_Helpers_memCopy(void* dest_, void const* src_, int size_1) {
+    void* memcpy_result = memcpy(dest_, src_, ((uintptr_t)size_1));
+    return memcpy_result;
 }
 
-int scanInt_(char arg_35) {
-    int scan_int_result_ = scan_int();
-    return scan_int_result_;
+int Competitive_Helpers_scanInt(char arg_35) {
+    int scan_int_result = scan_int();
+    return scan_int_result;
 }
 
-void* rawIntArrayNew_(int len_1) {
-    void* call_ = memAlloc_(len_1, sizeof(int));
+void* Competitive_Helpers_rawIntArrayNew(int len_1) {
+    void* call_ = Competitive_Helpers_memAlloc(len_1, sizeof(int));
     return ((void*)call_);
 }
 
-int rawIntArrayGet_(void* array_, int index_) {
+int Competitive_Helpers_rawIntArrayGet(void* array_, int index_) {
     int read_ = ((int const*)array_)[index_];
     return read_;
 }
 
-char rawIntArraySet_(void* array_1, int index_1, int value_) {
+char Competitive_Helpers_rawIntArraySet(void* array_1, int index_1, int value_) {
     ((int*)array_1)[index_1] = value_;
     return 0;
 }
 
-char rawMemoryCopy_(void* dest_1, void* src_1, int size_2) {
-    void* call_1 = memCopy_(dest_1, ((void const*)src_1), (size_2 * sizeof(int)));
+char Competitive_Helpers_rawMemoryCopy(void* dest_1, void* src_1, int size_2) {
+    void* call_1 = Competitive_Helpers_memCopy(dest_1, ((void const*)src_1), (size_2 * sizeof(int)));
     return 0;
 }
 
-static bool listIsEmpty_1(struct StringList const* xs_) {
+static bool listIsEmpty_(struct StringList const* xs_) {
     bool if_;
     if ((!(xs_))) {
         goto nil_cl_2;
@@ -639,7 +639,7 @@ if_next_1:;
     return if_;
 }
 
-static bool listIsEmpty_4(struct StringStringStringFun2List const* xs_) {
+static bool listIsEmpty_3(struct StringStringStringFun2List const* xs_) {
     bool if_1;
     if ((!(xs_))) {
         goto nil_cl_5;
@@ -656,7 +656,7 @@ if_next_4:;
     return if_1;
 }
 
-static bool listIsEmpty_3(struct IntList const* xs_) {
+static bool listIsEmpty_2(struct IntList const* xs_) {
     bool if_2;
     if ((!(xs_))) {
         goto nil_cl_8;
@@ -673,7 +673,7 @@ if_next_7:;
     return if_2;
 }
 
-static bool listIsEmpty_2(struct IntIntIntFun2List const* xs_) {
+static bool listIsEmpty_1(struct IntIntIntFun2List const* xs_) {
     bool if_3;
     if ((!(xs_))) {
         goto nil_cl_11;
@@ -690,7 +690,7 @@ if_next_10:;
     return if_3;
 }
 
-static bool listIsEmpty_5(struct IntIntIntObjectUnitTuple5List const* xs_) {
+static bool listIsEmpty_4(struct IntIntIntObjectUnitTuple5List const* xs_) {
     bool if_4;
     if ((!(xs_))) {
         goto nil_cl_14;
@@ -707,7 +707,7 @@ if_next_13:;
     return if_4;
 }
 
-static bool listIsEmpty_6(struct StringIntIntObjectUnitTuple5List const* xs_) {
+static bool listIsEmpty_5(struct StringIntIntObjectUnitTuple5List const* xs_) {
     bool if_5;
     if ((!(xs_))) {
         goto nil_cl_17;
@@ -764,12 +764,12 @@ end_match_24:;
     return match_1;
 }
 
-static int listLength_2(struct StringList const* xs_1) {
+static int listLength_1(struct StringList const* xs_1) {
     int call_2 = go_22(0, xs_1);
     return call_2;
 }
 
-static int listLength_1(struct IntList const* xs_1) {
+static int listLength_(struct IntList const* xs_1) {
     int call_3 = go_21(0, xs_1);
     return call_3;
 }
@@ -820,12 +820,12 @@ end_match_32:;
     return match_3;
 }
 
-static struct IntList const* listRev_2(struct IntList const* xs_4) {
+static struct IntList const* listRev_1(struct IntList const* xs_4) {
     struct IntList const* call_4 = go_38(NULL, xs_4);
     return call_4;
 }
 
-static struct StringList const* listRev_1(struct StringList const* xs_4) {
+static struct StringList const* listRev_(struct StringList const* xs_4) {
     struct StringList const* call_5 = go_37(NULL, xs_4);
     return call_5;
 }
@@ -918,12 +918,12 @@ end_match_44:;
     return match_5;
 }
 
-static bool listEqual_2(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_7, struct IntList const* ys_) {
+static bool listEqual_1(struct IntIntBoolFun2 itemEqual_, struct IntList const* xs_7, struct IntList const* ys_) {
     bool call_6 = go_24(itemEqual_, xs_7, ys_);
     return call_6;
 }
 
-static bool listEqual_1(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_7, struct StringList const* ys_) {
+static bool listEqual_(struct StringStringBoolFun2 itemEqual_, struct StringList const* xs_7, struct StringList const* ys_) {
     bool call_7 = go_23(itemEqual_, xs_7, ys_);
     return call_7;
 }
@@ -955,7 +955,7 @@ if_next_52:;
     return if_8;
 }
 
-static struct IntList const* listReplicate_1(int item_, int len_3) {
+static struct IntList const* listReplicate_(int item_, int len_3) {
     struct IntList const* call_8 = go_25(item_, len_3, NULL, 0);
     return call_8;
 }
@@ -969,7 +969,7 @@ tailrec_55:;
         goto else_58;
     }
 then_57:;
-    struct IntList const* call_9 = listRev_2(acc_2);
+    struct IntList const* call_9 = listRev_1(acc_2);
     if_9 = call_9;
     goto if_next_56;
 else_58:;
@@ -989,13 +989,13 @@ if_next_56:;
     return if_9;
 }
 
-static struct IntList const* listInit_1(int len_4, struct IntIntFun1 gen_) {
+static struct IntList const* listInit_(int len_4, struct IntIntFun1 gen_) {
     milone_assert((len_4 >= 0), 79, 2);
     struct IntList const* call_10 = go_26(len_4, gen_, NULL, 0);
     return call_10;
 }
 
-struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
+static struct StringStringListTuple2 go_5(struct StringList const* xs_11, int xn_) {
     struct StringStringListTuple2 match_6;
     if ((!((!(xs_11))))) goto next_60;
     milone_assert((xn_ == 0), 97, 8);
@@ -1037,22 +1037,22 @@ end_match_59:;
     return match_6;
 }
 
-struct String strConcat_(struct StringList const* xs_10) {
-    int call_13 = listLength_2(xs_10);
+struct String Competitive_Helpers_strConcat(struct StringList const* xs_10) {
+    int call_13 = listLength_1(xs_10);
     int n_ = call_13;
     struct StringStringListTuple2 call_14 = go_5(xs_10, n_);
     struct String s_ = call_14.t0;
     struct StringList const* xs_17 = call_14.t1;
-    bool call_15 = listIsEmpty_1(xs_17);
+    bool call_15 = listIsEmpty_(xs_17);
     milone_assert(call_15, 109, 2);
     return s_;
 }
 
-bool intEqual_(int first_, int second_) {
+bool Competitive_Helpers_intEqual(int first_, int second_) {
     return (first_ == second_);
 }
 
-int intMin_(int first_1, int second_1) {
+int Competitive_Helpers_intMin(int first_1, int second_1) {
     int if_10;
     if ((second_1 < first_1)) {
         goto then_65;
@@ -1069,7 +1069,7 @@ if_next_64:;
     return if_10;
 }
 
-int intMax_(int first_2, int second_2) {
+int Competitive_Helpers_intMax(int first_2, int second_2) {
     int if_11;
     if ((first_2 < second_2)) {
         goto then_68;
@@ -1086,17 +1086,17 @@ if_next_67:;
     return if_11;
 }
 
-bool strEqual_(struct String first_3, struct String second_3) {
+bool Competitive_Helpers_strEqual(struct String first_3, struct String second_3) {
     return (str_compare(first_3, second_3) == 0);
 }
 
-static int failwith_1(struct String msg_) {
+static int failwith_(struct String msg_) {
     printf("ERROR %s\n", str_to_c_str(msg_));
     exit(1);
 }
 
 static int fun_21(int arg_58) {
-    int call_16 = scanInt_(0);
+    int call_16 = Competitive_Helpers_scanInt(0);
     return call_16;
 }
 
@@ -1105,61 +1105,61 @@ static int fun_3(void const* env_, int arg_) {
     return call_17;
 }
 
-struct IntList const* scanIntList_(int len_5) {
+struct IntList const* Competitive_Helpers_scanIntList(int len_5) {
     struct IntIntFun1 fun_24 = (struct IntIntFun1){.fun = fun_3, .env = NULL};
-    struct IntList const* call_18 = listInit_1(len_5, fun_24);
+    struct IntList const* call_18 = listInit_(len_5, fun_24);
     return call_18;
 }
 
-static struct IntVoidMutPtrFun1 typeToArrayNew_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59) {
+static struct IntVoidMutPtrFun1 typeToArrayNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_59) {
     struct IntVoidMutPtrFun1 arrayNew_ = arg_59.t2;
     char _typeTag_2 = arg_59.t5;
     return arrayNew_;
 }
 
-static struct VoidMutPtrIntIntFun2 typeToArrayGet_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_60) {
+static struct VoidMutPtrIntIntFun2 typeToArrayGet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_60) {
     struct VoidMutPtrIntIntFun2 arrayGet_ = arg_60.t3;
     char _typeTag_3 = arg_60.t5;
     return arrayGet_;
 }
 
-static struct VoidMutPtrIntIntUnitFun3 typeToArraySet_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_61) {
+static struct VoidMutPtrIntIntUnitFun3 typeToArraySet_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_61) {
     struct VoidMutPtrIntIntUnitFun3 arraySet_ = arg_61.t4;
     char _typeTag_4 = arg_61.t5;
     return arraySet_;
 }
 
 static void* fun_4(void const* env_1, int arg_1) {
-    void* call_19 = rawIntArrayNew_(arg_1);
+    void* call_19 = Competitive_Helpers_rawIntArrayNew(arg_1);
     return call_19;
 }
 
 static int fun_5(void const* env_2, void* arg_2, int arg_3) {
-    int call_20 = rawIntArrayGet_(arg_2, arg_3);
+    int call_20 = Competitive_Helpers_rawIntArrayGet(arg_2, arg_3);
     return call_20;
 }
 
 static char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6) {
-    char call_21 = rawIntArraySet_(arg_4, arg_5, arg_6);
+    char call_21 = Competitive_Helpers_rawIntArraySet(arg_4, arg_5, arg_6);
     return 0;
 }
 
-static int vectorToLength_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62) {
+static int vectorToLength_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62) {
     int len_6 = arg_62.t2;
-    char _vectorTag_ = arg_62.t4;
+    char _vectorTag = arg_62.t4;
     return len_6;
 }
 
-static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorNew_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_, int len_7) {
-    struct IntVoidMutPtrFun1 call_22 = typeToArrayNew_1(itemTy_);
+static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorNew_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_, int len_7) {
+    struct IntVoidMutPtrFun1 call_22 = typeToArrayNew_(itemTy_);
     void* app_3 = call_22.fun(call_22.env, len_7);
     void* array_2 = app_3;
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 tuple_6 = (struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5){.t0 = itemTy_, .t1 = array_2, .t2 = len_7, .t3 = len_7, .t4 = 0};
     return tuple_6;
 }
 
-static char vectorCheckIndex_1(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_) {
-    int call_23 = vectorToLength_1(self_);
+static char vectorCheckIndex_(int index_2, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_) {
+    int call_23 = vectorToLength_(self_);
     int len_8 = call_23;
     bool if_12;
     if ((index_2 < 0)) {
@@ -1190,22 +1190,22 @@ if_next_73:;
     return 0;
 }
 
-static int vectorGet_1(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_1) {
-    char call_24 = vectorCheckIndex_1(index_3, self_1);
+static int vectorGet_(int index_3, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_1) {
+    char call_24 = vectorCheckIndex_(index_3, self_1);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_1 = self_1.t0;
     void* array_3 = self_1.t1;
     char _vectorTag_1 = self_1.t4;
-    struct VoidMutPtrIntIntFun2 call_25 = typeToArrayGet_1(itemTy_1);
+    struct VoidMutPtrIntIntFun2 call_25 = typeToArrayGet_(itemTy_1);
     int app_4 = call_25.fun(call_25.env, array_3, index_3);
     return app_4;
 }
 
-static char vectorSet_1(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2) {
-    char call_26 = vectorCheckIndex_1(index_4, self_2);
+static char vectorSet_(int index_4, int value_1, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 self_2) {
+    char call_26 = vectorCheckIndex_(index_4, self_2);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 itemTy_2 = self_2.t0;
     void* array_4 = self_2.t1;
     char _vectorTag_2 = self_2.t4;
-    struct VoidMutPtrIntIntUnitFun3 call_27 = typeToArraySet_1(itemTy_2);
+    struct VoidMutPtrIntIntUnitFun3 call_27 = typeToArraySet_(itemTy_2);
     char app_5 = call_27.fun(call_27.env, array_4, index_4, value_1);
     return 0;
 }
@@ -1221,7 +1221,7 @@ next_78:;
     if ((!(xs_19))) goto next_79;
     int x_4 = xs_19->head;
     struct IntList const* xs_20 = xs_19->tail;
-    char call_28 = vectorSet_1(i_2, x_4, v_);
+    char call_28 = vectorSet_(i_2, x_4, v_);
     int arg_63 = len_10;
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_64 = v_;
     int arg_65 = (i_2 + 1);
@@ -1237,16 +1237,16 @@ end_match_77:;
     return 0;
 }
 
-static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorOfList_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 ty_, struct IntList const* xs_18) {
-    int call_29 = listLength_1(xs_18);
+static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 vectorOfList_(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 ty_, struct IntList const* xs_18) {
+    int call_29 = listLength_(xs_18);
     int len_10 = call_29;
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_30 = vectorNew_1(ty_, len_10);
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_30 = vectorNew_(ty_, len_10);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_ = call_30;
     char call_31 = go_27(len_10, v_, 0, xs_18);
     return v_;
 }
 
-char go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3) {
+static char go_7(int len_11, struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1, int i_3) {
 tailrec_80:;
     char if_14;
     if ((i_3 < len_11)) {
@@ -1255,9 +1255,9 @@ tailrec_80:;
         goto else_83;
     }
 then_82:;
-    int call_32 = scanInt_(0);
+    int call_32 = Competitive_Helpers_scanInt(0);
     int value_3 = call_32;
-    char call_33 = vectorSet_1(i_3, value_3, v_1);
+    char call_33 = vectorSet_(i_3, value_3, v_1);
     int arg_67 = len_11;
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_68 = v_1;
     int arg_69 = (i_3 + 1);
@@ -1272,53 +1272,53 @@ if_next_81:;
     return 0;
 }
 
-struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 scanIntVector_(int len_11) {
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_34 = vectorNew_1(typeInt_, len_11);
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 Competitive_Helpers_scanIntVector(int len_11) {
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_34 = vectorNew_(Competitive_Helpers_typeInt, len_11);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_1 = call_34;
     char call_35 = go_7(len_11, v_1, 0);
     return v_1;
 }
 
-char refCase_(char arg_70) {
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_36 = vectorNew_1(typeInt_, 1);
+static char refCase_(char arg_70) {
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_36 = vectorNew_(Competitive_Helpers_typeInt, 1);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_2 = call_36;
-    int call_37 = vectorToLength_1(v_2);
+    int call_37 = vectorToLength_(v_2);
     milone_assert((call_37 == 1), 228, 4);
-    int call_38 = vectorGet_1(0, v_2);
+    int call_38 = vectorGet_(0, v_2);
     milone_assert((call_38 == 0), 229, 4);
-    char call_39 = vectorSet_1(0, 42, v_2);
-    int call_40 = vectorGet_1(0, v_2);
+    char call_39 = vectorSet_(0, 42, v_2);
+    int call_40 = vectorGet_(0, v_2);
     milone_assert((call_40 == 42), 231, 4);
     return 0;
 }
 
-char vectorOfListTest_(char arg_71) {
+static char vectorOfListTest_(char arg_71) {
     struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_5))) = (struct IntList){.head = 2, .tail = list_6};
     struct IntList const* list_4 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_4))) = (struct IntList){.head = 1, .tail = list_5};
-    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_41 = vectorOfList_1(typeInt_, list_4);
+    struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 call_41 = vectorOfList_(Competitive_Helpers_typeInt, list_4);
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 v_3 = call_41;
-    int call_42 = vectorToLength_1(v_3);
+    int call_42 = vectorToLength_(v_3);
     milone_assert((call_42 == 3), 237, 4);
-    int call_43 = vectorGet_1(0, v_3);
+    int call_43 = vectorGet_(0, v_3);
     milone_assert((call_43 == 1), 238, 4);
-    int call_44 = vectorGet_1(1, v_3);
+    int call_44 = vectorGet_(1, v_3);
     milone_assert((call_44 == 2), 239, 4);
-    int call_45 = vectorGet_1(2, v_3);
+    int call_45 = vectorGet_(2, v_3);
     milone_assert((call_45 == 3), 240, 4);
     return 0;
 }
 
-char vectorTest_(char arg_72) {
+char Competitive_Helpers_vectorTest(char arg_72) {
     char call_46 = refCase_(0);
     char call_47 = vectorOfListTest_(0);
     return 0;
 }
 
-bool intervalIsDisjoint_(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4) {
+bool Competitive_SegTree_intervalIsDisjoint(struct IntIntTuple2 first_4, struct IntIntTuple2 second_4) {
     int xl_ = first_4.t0;
     int xr_ = first_4.t1;
     int yl_ = second_4.t0;
@@ -1339,7 +1339,7 @@ if_next_84:;
     return if_15;
 }
 
-bool intervalCovers_(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5) {
+bool Competitive_SegTree_intervalCovers(struct IntIntTuple2 first_5, struct IntIntTuple2 second_5) {
     int xl_1 = first_5.t0;
     int xr_1 = first_5.t1;
     int yl_1 = second_5.t0;
@@ -1360,111 +1360,111 @@ if_next_87:;
     return if_16;
 }
 
-static struct StringStringStringFun2 segItemTypeToAppend_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_73) {
+static struct StringStringStringFun2 segItemTypeToAppend_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_73) {
     struct StringStringStringFun2 append_ = arg_73.t0;
     return append_;
 }
 
-static struct IntIntIntFun2 segItemTypeToAppend_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_74) {
+static struct IntIntIntFun2 segItemTypeToAppend_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_74) {
     struct IntIntIntFun2 append_ = arg_74.t0;
     return append_;
 }
 
-static struct IntIntIntObjectUnitTuple5 segItemTypeToEmptyNode_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_75) {
+static struct IntIntIntObjectUnitTuple5 segItemTypeToEmptyNode_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_75) {
     struct IntIntIntObjectUnitTuple5 emptyNode_ = arg_75.t1;
     return emptyNode_;
 }
 
-static struct StringIntIntObjectUnitTuple5 segItemTypeToEmptyNode_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_76) {
+static struct StringIntIntObjectUnitTuple5 segItemTypeToEmptyNode_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_76) {
     struct StringIntIntObjectUnitTuple5 emptyNode_ = arg_76.t1;
     return emptyNode_;
 }
 
-static void const* segItemTypeToNoChildren_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_77) {
+static void const* segItemTypeToNoChildren_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 arg_77) {
     void const* noChildren_ = arg_77.t2;
     return noChildren_;
 }
 
-static void const* segItemTypeToNoChildren_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_78) {
+static void const* segItemTypeToNoChildren_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 arg_78) {
     void const* noChildren_ = arg_78.t2;
     return noChildren_;
 }
 
-static int segItemTypeToEmptyItem_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_4) {
-    struct IntIntIntObjectUnitTuple5 call_48 = segItemTypeToEmptyNode_2(itemTy_4);
-    int call_49 = segNodeToItem_1(call_48);
+static int segItemTypeToEmptyItem_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_4) {
+    struct IntIntIntObjectUnitTuple5 call_48 = segItemTypeToEmptyNode_1(itemTy_4);
+    int call_49 = segNodeToItem_(call_48);
     return call_49;
 }
 
-static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_2(struct String emptyItem_, struct StringStringStringFun2 append_1) {
-    struct StringIntIntObjectUnitTuple5 call_50 = segNodeNewEmpty_2(emptyItem_);
+static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_1(struct String emptyItem_, struct StringStringStringFun2 append_1) {
+    struct StringIntIntObjectUnitTuple5 call_50 = segNodeNewEmpty_1(emptyItem_);
     struct StringIntIntObjectUnitTuple5 emptyNode_1 = call_50;
     struct String app_6 = append_1.fun(append_1.env, emptyItem_, emptyItem_);
     struct StringList const* list_8 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_8))) = (struct StringList){.head = emptyItem_, .tail = NULL};
     struct StringList const* list_7 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_7))) = (struct StringList){.head = app_6, .tail = list_8};
-    bool call_51 = listIsEmpty_1(list_7);
+    bool call_51 = listIsEmpty_(list_7);
     milone_assert((!(call_51)), 42, 2);
     struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 tuple_8 = (struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2){.t0 = emptyNode_1, .t1 = emptyNode_1};
     void const* box_ = milone_mem_alloc(1, sizeof(struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2));
     (*(((struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2*)box_))) = tuple_8;
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 tuple_7 = (struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4){.t0 = append_1, .t1 = emptyNode_1, .t2 = box_, .t3 = 0};
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_5 = tuple_7;
-    struct StringStringStringFun2 call_52 = segItemTypeToAppend_2(itemTy_5);
+    struct StringStringStringFun2 call_52 = segItemTypeToAppend_1(itemTy_5);
     struct StringStringStringFun2List const* list_10 = milone_mem_alloc(1, sizeof(struct StringStringStringFun2List));
     (*(((struct StringStringStringFun2List*)list_10))) = (struct StringStringStringFun2List){.head = append_1, .tail = NULL};
     struct StringStringStringFun2List const* list_9 = milone_mem_alloc(1, sizeof(struct StringStringStringFun2List));
     (*(((struct StringStringStringFun2List*)list_9))) = (struct StringStringStringFun2List){.head = call_52, .tail = list_10};
-    bool call_53 = listIsEmpty_4(list_9);
+    bool call_53 = listIsEmpty_3(list_9);
     milone_assert((!(call_53)), 50, 2);
     return itemTy_5;
 }
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_1(int emptyItem_, struct IntIntIntFun2 append_1) {
-    struct IntIntIntObjectUnitTuple5 call_54 = segNodeNewEmpty_1(emptyItem_);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeNew_(int emptyItem_, struct IntIntIntFun2 append_1) {
+    struct IntIntIntObjectUnitTuple5 call_54 = segNodeNewEmpty_(emptyItem_);
     struct IntIntIntObjectUnitTuple5 emptyNode_1 = call_54;
     int app_7 = append_1.fun(append_1.env, emptyItem_, emptyItem_);
     struct IntList const* list_12 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_12))) = (struct IntList){.head = emptyItem_, .tail = NULL};
     struct IntList const* list_11 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_11))) = (struct IntList){.head = app_7, .tail = list_12};
-    bool call_55 = listIsEmpty_3(list_11);
+    bool call_55 = listIsEmpty_2(list_11);
     milone_assert((!(call_55)), 42, 2);
     struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 tuple_10 = (struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2){.t0 = emptyNode_1, .t1 = emptyNode_1};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2));
     (*(((struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2*)box_1))) = tuple_10;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 tuple_9 = (struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4){.t0 = append_1, .t1 = emptyNode_1, .t2 = box_1, .t3 = 0};
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_5 = tuple_9;
-    struct IntIntIntFun2 call_56 = segItemTypeToAppend_1(itemTy_5);
+    struct IntIntIntFun2 call_56 = segItemTypeToAppend_(itemTy_5);
     struct IntIntIntFun2List const* list_14 = milone_mem_alloc(1, sizeof(struct IntIntIntFun2List));
     (*(((struct IntIntIntFun2List*)list_14))) = (struct IntIntIntFun2List){.head = append_1, .tail = NULL};
     struct IntIntIntFun2List const* list_13 = milone_mem_alloc(1, sizeof(struct IntIntIntFun2List));
     (*(((struct IntIntIntFun2List*)list_13))) = (struct IntIntIntFun2List){.head = call_56, .tail = list_14};
-    bool call_57 = listIsEmpty_2(list_13);
+    bool call_57 = listIsEmpty_1(list_13);
     milone_assert((!(call_57)), 50, 2);
     return itemTy_5;
 }
 
-static struct StringIntIntObjectUnitTuple5 segNodeNewEmpty_2(struct String emptyItem_1) {
-    struct StringIntIntObjectUnitTuple5 tuple_11 = (struct StringIntIntObjectUnitTuple5){.t0 = emptyItem_1, .t1 = 0, .t2 = -1, .t3 = unitObj_, .t4 = 0};
+static struct StringIntIntObjectUnitTuple5 segNodeNewEmpty_1(struct String emptyItem_1) {
+    struct StringIntIntObjectUnitTuple5 tuple_11 = (struct StringIntIntObjectUnitTuple5){.t0 = emptyItem_1, .t1 = 0, .t2 = -1, .t3 = Competitive_Helpers_unitObj, .t4 = 0};
     return tuple_11;
 }
 
-static struct IntIntIntObjectUnitTuple5 segNodeNewEmpty_1(int emptyItem_1) {
-    struct IntIntIntObjectUnitTuple5 tuple_12 = (struct IntIntIntObjectUnitTuple5){.t0 = emptyItem_1, .t1 = 0, .t2 = -1, .t3 = unitObj_, .t4 = 0};
+static struct IntIntIntObjectUnitTuple5 segNodeNewEmpty_(int emptyItem_1) {
+    struct IntIntIntObjectUnitTuple5 tuple_12 = (struct IntIntIntObjectUnitTuple5){.t0 = emptyItem_1, .t1 = 0, .t2 = -1, .t3 = Competitive_Helpers_unitObj, .t4 = 0};
     return tuple_12;
 }
 
-static struct IntIntIntObjectUnitTuple5 segNodeNewLeaf_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, int item_1) {
-    void const* call_58 = segItemTypeToNoChildren_1(itemTy_6);
+static struct IntIntIntObjectUnitTuple5 segNodeNewLeaf_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, int item_1) {
+    void const* call_58 = segItemTypeToNoChildren_(itemTy_6);
     void const* noChildren_1 = call_58;
     struct IntIntIntObjectUnitTuple5 tuple_13 = (struct IntIntIntObjectUnitTuple5){.t0 = item_1, .t1 = 1, .t2 = 0, .t3 = noChildren_1, .t4 = 0};
     return tuple_13;
 }
 
-static struct StringIntIntObjectUnitTuple5 segNodeNewLeaf_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, struct String item_1) {
-    void const* call_59 = segItemTypeToNoChildren_2(itemTy_6);
+static struct StringIntIntObjectUnitTuple5 segNodeNewLeaf_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_6, struct String item_1) {
+    void const* call_59 = segItemTypeToNoChildren_1(itemTy_6);
     void const* noChildren_1 = call_59;
     struct StringIntIntObjectUnitTuple5 tuple_14 = (struct StringIntIntObjectUnitTuple5){.t0 = item_1, .t1 = 1, .t2 = 0, .t3 = noChildren_1, .t4 = 0};
     return tuple_14;
@@ -1491,11 +1491,11 @@ else_92:;
     goto if_next_90;
 if_next_90:;
     milone_assert(if_17, 73, 4);
-    struct IntIntIntFun2 call_60 = segItemTypeToAppend_1(itemTy_7);
+    struct IntIntIntFun2 call_60 = segItemTypeToAppend_(itemTy_7);
     int app_8 = call_60.fun(call_60.env, leftItem_, rightItem_);
     int item_2 = app_8;
     int len_12 = (leftLen_ + rightLen_);
-    int call_61 = intMax_(leftHeight_, rightHeight_);
+    int call_61 = Competitive_Helpers_intMax(leftHeight_, rightHeight_);
     int height_ = (1 + call_61);
     struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 tuple_16 = (struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2){.t0 = left_, .t1 = right_};
     void const* box_2 = milone_mem_alloc(1, sizeof(struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2));
@@ -1525,11 +1525,11 @@ else_95:;
     goto if_next_93;
 if_next_93:;
     milone_assert(if_18, 73, 4);
-    struct StringStringStringFun2 call_62 = segItemTypeToAppend_2(itemTy_7);
+    struct StringStringStringFun2 call_62 = segItemTypeToAppend_1(itemTy_7);
     struct String app_9 = call_62.fun(call_62.env, leftItem_, rightItem_);
     struct String item_2 = app_9;
     int len_12 = (leftLen_ + rightLen_);
-    int call_63 = intMax_(leftHeight_, rightHeight_);
+    int call_63 = Competitive_Helpers_intMax(leftHeight_, rightHeight_);
     int height_ = (1 + call_63);
     struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 tuple_18 = (struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2){.t0 = left_, .t1 = right_};
     void const* box_3 = milone_mem_alloc(1, sizeof(struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2));
@@ -1538,14 +1538,14 @@ if_next_93:;
     return tuple_17;
 }
 
-static struct IntIntIntObjectUnitTuple5 segNodeNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_) {
+static struct IntIntIntObjectUnitTuple5 segNodeNew_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct IntIntIntObjectUnitTuple5 left_, struct IntIntIntObjectUnitTuple5 right_) {
     struct IntIntIntObjectUnitTuple5 match_8;
-    int call_64 = segNodeToLength_1(left_);
-    int call_65 = segNodeToLength_1(right_);
+    int call_64 = segNodeToLength_(left_);
+    int call_65 = segNodeToLength_(right_);
     struct IntIntTuple2 tuple_19 = (struct IntIntTuple2){.t0 = call_64, .t1 = call_65};
     if ((tuple_19.t0 != 0)) goto next_97;
     if ((tuple_19.t1 != 0)) goto next_97;
-    struct IntIntIntObjectUnitTuple5 call_66 = segItemTypeToEmptyNode_2(itemTy_7);
+    struct IntIntIntObjectUnitTuple5 call_66 = segItemTypeToEmptyNode_1(itemTy_7);
     match_8 = call_66;
     goto end_match_96;
 next_97:;
@@ -1565,14 +1565,14 @@ end_match_96:;
     return match_8;
 }
 
-static struct StringIntIntObjectUnitTuple5 segNodeNew_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_) {
+static struct StringIntIntObjectUnitTuple5 segNodeNew_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_7, struct StringIntIntObjectUnitTuple5 left_, struct StringIntIntObjectUnitTuple5 right_) {
     struct StringIntIntObjectUnitTuple5 match_9;
-    int call_68 = segNodeToLength_2(left_);
-    int call_69 = segNodeToLength_2(right_);
+    int call_68 = segNodeToLength_1(left_);
+    int call_69 = segNodeToLength_1(right_);
     struct IntIntTuple2 tuple_20 = (struct IntIntTuple2){.t0 = call_68, .t1 = call_69};
     if ((tuple_20.t0 != 0)) goto next_102;
     if ((tuple_20.t1 != 0)) goto next_102;
-    struct StringIntIntObjectUnitTuple5 call_70 = segItemTypeToEmptyNode_1(itemTy_7);
+    struct StringIntIntObjectUnitTuple5 call_70 = segItemTypeToEmptyNode_(itemTy_7);
     match_9 = call_70;
     goto end_match_101;
 next_102:;
@@ -1592,32 +1592,32 @@ end_match_101:;
     return match_9;
 }
 
-static int segNodeToItem_1(struct IntIntIntObjectUnitTuple5 node_) {
+static int segNodeToItem_(struct IntIntIntObjectUnitTuple5 node_) {
     int item_3 = node_.t0;
     return item_3;
 }
 
-static int segNodeToLength_1(struct IntIntIntObjectUnitTuple5 node_1) {
+static int segNodeToLength_(struct IntIntIntObjectUnitTuple5 node_1) {
     int len_13 = node_1.t1;
     return len_13;
 }
 
-static int segNodeToLength_2(struct StringIntIntObjectUnitTuple5 node_1) {
+static int segNodeToLength_1(struct StringIntIntObjectUnitTuple5 node_1) {
     int len_13 = node_1.t1;
     return len_13;
 }
 
-static int segNodeToHeight_1(struct IntIntIntObjectUnitTuple5 node_2) {
+static int segNodeToHeight_(struct IntIntIntObjectUnitTuple5 node_2) {
     int height_1 = node_2.t2;
     return height_1;
 }
 
-static int segNodeToHeight_2(struct StringIntIntObjectUnitTuple5 node_2) {
+static int segNodeToHeight_1(struct StringIntIntObjectUnitTuple5 node_2) {
     int height_1 = node_2.t2;
     return height_1;
 }
 
-static struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 segNodeToChildren_1(struct IntIntIntObjectUnitTuple5 node_3) {
+static struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 segNodeToChildren_(struct IntIntIntObjectUnitTuple5 node_3) {
     int len_14 = node_3.t1;
     void const* children_ = node_3.t3;
     milone_assert((len_14 >= 2), 116, 2);
@@ -1629,13 +1629,13 @@ static struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 segNodeTo
     (*(((struct IntIntIntObjectUnitTuple5List*)list_16))) = (struct IntIntIntObjectUnitTuple5List){.head = left_1, .tail = list_17};
     struct IntIntIntObjectUnitTuple5List const* list_15 = milone_mem_alloc(1, sizeof(struct IntIntIntObjectUnitTuple5List));
     (*(((struct IntIntIntObjectUnitTuple5List*)list_15))) = (struct IntIntIntObjectUnitTuple5List){.head = node_3, .tail = list_16};
-    bool call_72 = listIsEmpty_5(list_15);
+    bool call_72 = listIsEmpty_4(list_15);
     milone_assert((!(call_72)), 121, 2);
     struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 tuple_21 = (struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2){.t0 = left_1, .t1 = right_1};
     return tuple_21;
 }
 
-static struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 segNodeToChildren_2(struct StringIntIntObjectUnitTuple5 node_3) {
+static struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 segNodeToChildren_1(struct StringIntIntObjectUnitTuple5 node_3) {
     int len_14 = node_3.t1;
     void const* children_ = node_3.t3;
     milone_assert((len_14 >= 2), 116, 2);
@@ -1647,55 +1647,55 @@ static struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 seg
     (*(((struct StringIntIntObjectUnitTuple5List*)list_19))) = (struct StringIntIntObjectUnitTuple5List){.head = left_1, .tail = list_20};
     struct StringIntIntObjectUnitTuple5List const* list_18 = milone_mem_alloc(1, sizeof(struct StringIntIntObjectUnitTuple5List));
     (*(((struct StringIntIntObjectUnitTuple5List*)list_18))) = (struct StringIntIntObjectUnitTuple5List){.head = node_3, .tail = list_19};
-    bool call_73 = listIsEmpty_6(list_18);
+    bool call_73 = listIsEmpty_5(list_18);
     milone_assert((!(call_73)), 121, 2);
     struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 tuple_22 = (struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2){.t0 = left_1, .t1 = right_1};
     return tuple_22;
 }
 
-static bool segNodeIsEmpty_1(struct IntIntIntObjectUnitTuple5 node_4) {
-    int call_74 = segNodeToLength_1(node_4);
+static bool segNodeIsEmpty_(struct IntIntIntObjectUnitTuple5 node_4) {
+    int call_74 = segNodeToLength_(node_4);
     return (call_74 == 0);
 }
 
-static struct IntIntIntObjectUnitTuple5 segNodeWithLeft_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_8, struct IntIntIntObjectUnitTuple5 newLeft_, struct IntIntIntObjectUnitTuple5 node_5) {
-    int call_75 = segNodeToLength_1(node_5);
+static struct IntIntIntObjectUnitTuple5 segNodeWithLeft_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_8, struct IntIntIntObjectUnitTuple5 newLeft_, struct IntIntIntObjectUnitTuple5 node_5) {
+    int call_75 = segNodeToLength_(node_5);
     milone_assert((call_75 >= 1), 128, 2);
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_76 = segNodeToChildren_1(node_5);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_76 = segNodeToChildren_(node_5);
     struct IntIntIntObjectUnitTuple5 right_2 = call_76.t1;
-    struct IntIntIntObjectUnitTuple5 call_77 = segNodeNew_1(itemTy_8, newLeft_, right_2);
+    struct IntIntIntObjectUnitTuple5 call_77 = segNodeNew_(itemTy_8, newLeft_, right_2);
     return call_77;
 }
 
-static struct StringIntIntObjectUnitTuple5 segNodeWithLeft_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_8, struct StringIntIntObjectUnitTuple5 newLeft_, struct StringIntIntObjectUnitTuple5 node_5) {
-    int call_78 = segNodeToLength_2(node_5);
+static struct StringIntIntObjectUnitTuple5 segNodeWithLeft_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_8, struct StringIntIntObjectUnitTuple5 newLeft_, struct StringIntIntObjectUnitTuple5 node_5) {
+    int call_78 = segNodeToLength_1(node_5);
     milone_assert((call_78 >= 1), 128, 2);
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_79 = segNodeToChildren_2(node_5);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_79 = segNodeToChildren_1(node_5);
     struct StringIntIntObjectUnitTuple5 right_2 = call_79.t1;
-    struct StringIntIntObjectUnitTuple5 call_80 = segNodeNew_2(itemTy_8, newLeft_, right_2);
+    struct StringIntIntObjectUnitTuple5 call_80 = segNodeNew_1(itemTy_8, newLeft_, right_2);
     return call_80;
 }
 
-static struct IntIntIntObjectUnitTuple5 segNodeWithRight_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_9, struct IntIntIntObjectUnitTuple5 newRight_, struct IntIntIntObjectUnitTuple5 node_6) {
-    int call_81 = segNodeToLength_1(node_6);
+static struct IntIntIntObjectUnitTuple5 segNodeWithRight_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_9, struct IntIntIntObjectUnitTuple5 newRight_, struct IntIntIntObjectUnitTuple5 node_6) {
+    int call_81 = segNodeToLength_(node_6);
     milone_assert((call_81 >= 1), 133, 2);
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_82 = segNodeToChildren_1(node_6);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_82 = segNodeToChildren_(node_6);
     struct IntIntIntObjectUnitTuple5 left_2 = call_82.t0;
-    struct IntIntIntObjectUnitTuple5 call_83 = segNodeNew_1(itemTy_9, left_2, newRight_);
+    struct IntIntIntObjectUnitTuple5 call_83 = segNodeNew_(itemTy_9, left_2, newRight_);
     return call_83;
 }
 
-static struct StringIntIntObjectUnitTuple5 segNodeWithRight_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_9, struct StringIntIntObjectUnitTuple5 newRight_, struct StringIntIntObjectUnitTuple5 node_6) {
-    int call_84 = segNodeToLength_2(node_6);
+static struct StringIntIntObjectUnitTuple5 segNodeWithRight_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_9, struct StringIntIntObjectUnitTuple5 newRight_, struct StringIntIntObjectUnitTuple5 node_6) {
+    int call_84 = segNodeToLength_1(node_6);
     milone_assert((call_84 >= 1), 133, 2);
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_85 = segNodeToChildren_2(node_6);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_85 = segNodeToChildren_1(node_6);
     struct StringIntIntObjectUnitTuple5 left_2 = call_85.t0;
-    struct StringIntIntObjectUnitTuple5 call_86 = segNodeNew_2(itemTy_9, left_2, newRight_);
+    struct StringIntIntObjectUnitTuple5 call_86 = segNodeNew_1(itemTy_9, left_2, newRight_);
     return call_86;
 }
 
 static struct IntIntIntObjectUnitTuple5 rotateLeft_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_8) {
-    int call_87 = segNodeToLength_1(node_8);
+    int call_87 = segNodeToLength_(node_8);
     struct IntIntIntObjectUnitTuple5 if_19;
     if ((call_87 < 2)) {
         goto then_107;
@@ -1706,9 +1706,9 @@ then_107:;
     if_19 = node_8;
     goto if_next_106;
 else_108:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_88 = segNodeToChildren_1(node_8);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_88 = segNodeToChildren_(node_8);
     struct IntIntIntObjectUnitTuple5 right_3 = call_88.t1;
-    int call_89 = segNodeToLength_1(right_3);
+    int call_89 = segNodeToLength_(right_3);
     struct IntIntIntObjectUnitTuple5 if_20;
     if ((call_89 < 2)) {
         goto then_110;
@@ -1719,11 +1719,11 @@ then_110:;
     if_20 = node_8;
     goto if_next_109;
 else_111:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_90 = segNodeToChildren_1(right_3);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_90 = segNodeToChildren_(right_3);
     struct IntIntIntObjectUnitTuple5 x_5 = call_90.t0;
-    struct IntIntIntObjectUnitTuple5 call_91 = segNodeWithRight_1(itemTy_10, x_5, node_8);
+    struct IntIntIntObjectUnitTuple5 call_91 = segNodeWithRight_(itemTy_10, x_5, node_8);
     struct IntIntIntObjectUnitTuple5 u_ = call_91;
-    struct IntIntIntObjectUnitTuple5 call_92 = segNodeWithLeft_1(itemTy_10, u_, right_3);
+    struct IntIntIntObjectUnitTuple5 call_92 = segNodeWithLeft_(itemTy_10, u_, right_3);
     struct IntIntIntObjectUnitTuple5 t_ = call_92;
     if_20 = t_;
     goto if_next_109;
@@ -1735,7 +1735,7 @@ if_next_106:;
 }
 
 static struct StringIntIntObjectUnitTuple5 rotateLeft_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_8) {
-    int call_93 = segNodeToLength_2(node_8);
+    int call_93 = segNodeToLength_1(node_8);
     struct StringIntIntObjectUnitTuple5 if_21;
     if ((call_93 < 2)) {
         goto then_113;
@@ -1746,9 +1746,9 @@ then_113:;
     if_21 = node_8;
     goto if_next_112;
 else_114:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_94 = segNodeToChildren_2(node_8);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_94 = segNodeToChildren_1(node_8);
     struct StringIntIntObjectUnitTuple5 right_3 = call_94.t1;
-    int call_95 = segNodeToLength_2(right_3);
+    int call_95 = segNodeToLength_1(right_3);
     struct StringIntIntObjectUnitTuple5 if_22;
     if ((call_95 < 2)) {
         goto then_116;
@@ -1759,11 +1759,11 @@ then_116:;
     if_22 = node_8;
     goto if_next_115;
 else_117:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_96 = segNodeToChildren_2(right_3);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_96 = segNodeToChildren_1(right_3);
     struct StringIntIntObjectUnitTuple5 x_5 = call_96.t0;
-    struct StringIntIntObjectUnitTuple5 call_97 = segNodeWithRight_2(itemTy_10, x_5, node_8);
+    struct StringIntIntObjectUnitTuple5 call_97 = segNodeWithRight_1(itemTy_10, x_5, node_8);
     struct StringIntIntObjectUnitTuple5 u_ = call_97;
-    struct StringIntIntObjectUnitTuple5 call_98 = segNodeWithLeft_2(itemTy_10, u_, right_3);
+    struct StringIntIntObjectUnitTuple5 call_98 = segNodeWithLeft_1(itemTy_10, u_, right_3);
     struct StringIntIntObjectUnitTuple5 t_ = call_98;
     if_22 = t_;
     goto if_next_115;
@@ -1775,7 +1775,7 @@ if_next_112:;
 }
 
 static struct IntIntIntObjectUnitTuple5 rotateRight_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_9) {
-    int call_99 = segNodeToLength_1(node_9);
+    int call_99 = segNodeToLength_(node_9);
     struct IntIntIntObjectUnitTuple5 if_23;
     if ((call_99 < 2)) {
         goto then_119;
@@ -1786,9 +1786,9 @@ then_119:;
     if_23 = node_9;
     goto if_next_118;
 else_120:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_100 = segNodeToChildren_1(node_9);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_100 = segNodeToChildren_(node_9);
     struct IntIntIntObjectUnitTuple5 left_3 = call_100.t0;
-    int call_101 = segNodeToLength_1(left_3);
+    int call_101 = segNodeToLength_(left_3);
     struct IntIntIntObjectUnitTuple5 if_24;
     if ((call_101 < 2)) {
         goto then_122;
@@ -1799,11 +1799,11 @@ then_122:;
     if_24 = node_9;
     goto if_next_121;
 else_123:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_102 = segNodeToChildren_1(left_3);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_102 = segNodeToChildren_(left_3);
     struct IntIntIntObjectUnitTuple5 y_2 = call_102.t1;
-    struct IntIntIntObjectUnitTuple5 call_103 = segNodeWithLeft_1(itemTy_10, y_2, node_9);
+    struct IntIntIntObjectUnitTuple5 call_103 = segNodeWithLeft_(itemTy_10, y_2, node_9);
     struct IntIntIntObjectUnitTuple5 u_1 = call_103;
-    struct IntIntIntObjectUnitTuple5 call_104 = segNodeWithRight_1(itemTy_10, u_1, left_3);
+    struct IntIntIntObjectUnitTuple5 call_104 = segNodeWithRight_(itemTy_10, u_1, left_3);
     struct IntIntIntObjectUnitTuple5 t_1 = call_104;
     if_24 = t_1;
     goto if_next_121;
@@ -1815,7 +1815,7 @@ if_next_118:;
 }
 
 static struct StringIntIntObjectUnitTuple5 rotateRight_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_9) {
-    int call_105 = segNodeToLength_2(node_9);
+    int call_105 = segNodeToLength_1(node_9);
     struct StringIntIntObjectUnitTuple5 if_25;
     if ((call_105 < 2)) {
         goto then_125;
@@ -1826,9 +1826,9 @@ then_125:;
     if_25 = node_9;
     goto if_next_124;
 else_126:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_106 = segNodeToChildren_2(node_9);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_106 = segNodeToChildren_1(node_9);
     struct StringIntIntObjectUnitTuple5 left_3 = call_106.t0;
-    int call_107 = segNodeToLength_2(left_3);
+    int call_107 = segNodeToLength_1(left_3);
     struct StringIntIntObjectUnitTuple5 if_26;
     if ((call_107 < 2)) {
         goto then_128;
@@ -1839,11 +1839,11 @@ then_128:;
     if_26 = node_9;
     goto if_next_127;
 else_129:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_108 = segNodeToChildren_2(left_3);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_108 = segNodeToChildren_1(left_3);
     struct StringIntIntObjectUnitTuple5 y_2 = call_108.t1;
-    struct StringIntIntObjectUnitTuple5 call_109 = segNodeWithLeft_2(itemTy_10, y_2, node_9);
+    struct StringIntIntObjectUnitTuple5 call_109 = segNodeWithLeft_1(itemTy_10, y_2, node_9);
     struct StringIntIntObjectUnitTuple5 u_1 = call_109;
-    struct StringIntIntObjectUnitTuple5 call_110 = segNodeWithRight_2(itemTy_10, u_1, left_3);
+    struct StringIntIntObjectUnitTuple5 call_110 = segNodeWithRight_1(itemTy_10, u_1, left_3);
     struct StringIntIntObjectUnitTuple5 t_1 = call_110;
     if_26 = t_1;
     goto if_next_127;
@@ -1855,7 +1855,7 @@ if_next_124:;
 }
 
 static struct IntIntIntObjectUnitTuple5 doubleLeft_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_10) {
-    int call_111 = segNodeToLength_1(node_10);
+    int call_111 = segNodeToLength_(node_10);
     struct IntIntIntObjectUnitTuple5 if_27;
     if ((call_111 < 2)) {
         goto then_131;
@@ -1866,10 +1866,10 @@ then_131:;
     if_27 = node_10;
     goto if_next_130;
 else_132:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_112 = segNodeToChildren_1(node_10);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_112 = segNodeToChildren_(node_10);
     struct IntIntIntObjectUnitTuple5 right_4 = call_112.t1;
     struct IntIntIntObjectUnitTuple5 call_113 = rotateRight_1(itemTy_10, right_4);
-    struct IntIntIntObjectUnitTuple5 call_114 = segNodeWithRight_1(itemTy_10, call_113, node_10);
+    struct IntIntIntObjectUnitTuple5 call_114 = segNodeWithRight_(itemTy_10, call_113, node_10);
     struct IntIntIntObjectUnitTuple5 call_115 = rotateLeft_1(itemTy_10, call_114);
     if_27 = call_115;
     goto if_next_130;
@@ -1878,7 +1878,7 @@ if_next_130:;
 }
 
 static struct StringIntIntObjectUnitTuple5 doubleLeft_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_10) {
-    int call_116 = segNodeToLength_2(node_10);
+    int call_116 = segNodeToLength_1(node_10);
     struct StringIntIntObjectUnitTuple5 if_28;
     if ((call_116 < 2)) {
         goto then_134;
@@ -1889,10 +1889,10 @@ then_134:;
     if_28 = node_10;
     goto if_next_133;
 else_135:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_117 = segNodeToChildren_2(node_10);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_117 = segNodeToChildren_1(node_10);
     struct StringIntIntObjectUnitTuple5 right_4 = call_117.t1;
     struct StringIntIntObjectUnitTuple5 call_118 = rotateRight_2(itemTy_10, right_4);
-    struct StringIntIntObjectUnitTuple5 call_119 = segNodeWithRight_2(itemTy_10, call_118, node_10);
+    struct StringIntIntObjectUnitTuple5 call_119 = segNodeWithRight_1(itemTy_10, call_118, node_10);
     struct StringIntIntObjectUnitTuple5 call_120 = rotateLeft_2(itemTy_10, call_119);
     if_28 = call_120;
     goto if_next_133;
@@ -1901,7 +1901,7 @@ if_next_133:;
 }
 
 static struct IntIntIntObjectUnitTuple5 doubleRight_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_11) {
-    int call_121 = segNodeToLength_1(node_11);
+    int call_121 = segNodeToLength_(node_11);
     struct IntIntIntObjectUnitTuple5 if_29;
     if ((call_121 < 2)) {
         goto then_137;
@@ -1912,10 +1912,10 @@ then_137:;
     if_29 = node_11;
     goto if_next_136;
 else_138:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_122 = segNodeToChildren_1(node_11);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_122 = segNodeToChildren_(node_11);
     struct IntIntIntObjectUnitTuple5 left_4 = call_122.t0;
     struct IntIntIntObjectUnitTuple5 call_123 = rotateLeft_1(itemTy_10, left_4);
-    struct IntIntIntObjectUnitTuple5 call_124 = segNodeWithLeft_1(itemTy_10, call_123, node_11);
+    struct IntIntIntObjectUnitTuple5 call_124 = segNodeWithLeft_(itemTy_10, call_123, node_11);
     struct IntIntIntObjectUnitTuple5 call_125 = rotateRight_1(itemTy_10, call_124);
     if_29 = call_125;
     goto if_next_136;
@@ -1924,7 +1924,7 @@ if_next_136:;
 }
 
 static struct StringIntIntObjectUnitTuple5 doubleRight_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_11) {
-    int call_126 = segNodeToLength_2(node_11);
+    int call_126 = segNodeToLength_1(node_11);
     struct StringIntIntObjectUnitTuple5 if_30;
     if ((call_126 < 2)) {
         goto then_140;
@@ -1935,10 +1935,10 @@ then_140:;
     if_30 = node_11;
     goto if_next_139;
 else_141:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_127 = segNodeToChildren_2(node_11);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_127 = segNodeToChildren_1(node_11);
     struct StringIntIntObjectUnitTuple5 left_4 = call_127.t0;
     struct StringIntIntObjectUnitTuple5 call_128 = rotateLeft_2(itemTy_10, left_4);
-    struct StringIntIntObjectUnitTuple5 call_129 = segNodeWithLeft_2(itemTy_10, call_128, node_11);
+    struct StringIntIntObjectUnitTuple5 call_129 = segNodeWithLeft_1(itemTy_10, call_128, node_11);
     struct StringIntIntObjectUnitTuple5 call_130 = rotateRight_2(itemTy_10, call_129);
     if_30 = call_130;
     goto if_next_139;
@@ -1947,7 +1947,7 @@ if_next_139:;
 }
 
 static int toBalance_1(struct IntIntIntObjectUnitTuple5 node_12) {
-    int call_131 = segNodeToLength_1(node_12);
+    int call_131 = segNodeToLength_(node_12);
     int if_31;
     if ((call_131 < 2)) {
         goto then_143;
@@ -1958,11 +1958,11 @@ then_143:;
     if_31 = 0;
     goto if_next_142;
 else_144:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_132 = segNodeToChildren_1(node_12);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_132 = segNodeToChildren_(node_12);
     struct IntIntIntObjectUnitTuple5 left_5 = call_132.t0;
     struct IntIntIntObjectUnitTuple5 right_5 = call_132.t1;
-    int call_133 = segNodeToHeight_1(right_5);
-    int call_134 = segNodeToHeight_1(left_5);
+    int call_133 = segNodeToHeight_(right_5);
+    int call_134 = segNodeToHeight_(left_5);
     if_31 = (call_133 - call_134);
     goto if_next_142;
 if_next_142:;
@@ -1970,7 +1970,7 @@ if_next_142:;
 }
 
 static int toBalance_2(struct StringIntIntObjectUnitTuple5 node_12) {
-    int call_135 = segNodeToLength_2(node_12);
+    int call_135 = segNodeToLength_1(node_12);
     int if_32;
     if ((call_135 < 2)) {
         goto then_146;
@@ -1981,18 +1981,18 @@ then_146:;
     if_32 = 0;
     goto if_next_145;
 else_147:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_136 = segNodeToChildren_2(node_12);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_136 = segNodeToChildren_1(node_12);
     struct StringIntIntObjectUnitTuple5 left_5 = call_136.t0;
     struct StringIntIntObjectUnitTuple5 right_5 = call_136.t1;
-    int call_137 = segNodeToHeight_2(right_5);
-    int call_138 = segNodeToHeight_2(left_5);
+    int call_137 = segNodeToHeight_1(right_5);
+    int call_138 = segNodeToHeight_1(left_5);
     if_32 = (call_137 - call_138);
     goto if_next_145;
 if_next_145:;
     return if_32;
 }
 
-static struct IntIntIntObjectUnitTuple5 segNodeMakeBalanced_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_7) {
+static struct IntIntIntObjectUnitTuple5 segNodeMakeBalanced_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct IntIntIntObjectUnitTuple5 node_7) {
     int call_139 = toBalance_1(node_7);
     int selfBalance_ = call_139;
     bool if_33;
@@ -2018,7 +2018,7 @@ then_152:;
     if_34 = node_7;
     goto if_next_151;
 else_153:;
-    int call_140 = segNodeToLength_1(node_7);
+    int call_140 = segNodeToLength_(node_7);
     struct IntIntIntObjectUnitTuple5 if_35;
     if ((call_140 < 2)) {
         goto then_155;
@@ -2029,7 +2029,7 @@ then_155:;
     if_35 = node_7;
     goto if_next_154;
 else_156:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_141 = segNodeToChildren_1(node_7);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_141 = segNodeToChildren_(node_7);
     struct IntIntIntObjectUnitTuple5 left_6 = call_141.t0;
     struct IntIntIntObjectUnitTuple5 right_6 = call_141.t1;
     struct IntIntIntObjectUnitTuple5 if_36;
@@ -2086,7 +2086,7 @@ if_next_151:;
     return if_34;
 }
 
-static struct StringIntIntObjectUnitTuple5 segNodeMakeBalanced_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_7) {
+static struct StringIntIntObjectUnitTuple5 segNodeMakeBalanced_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_10, struct StringIntIntObjectUnitTuple5 node_7) {
     int call_148 = toBalance_2(node_7);
     int selfBalance_ = call_148;
     bool if_39;
@@ -2112,7 +2112,7 @@ then_170:;
     if_40 = node_7;
     goto if_next_169;
 else_171:;
-    int call_149 = segNodeToLength_2(node_7);
+    int call_149 = segNodeToLength_1(node_7);
     struct StringIntIntObjectUnitTuple5 if_41;
     if ((call_149 < 2)) {
         goto then_173;
@@ -2123,7 +2123,7 @@ then_173:;
     if_41 = node_7;
     goto if_next_172;
 else_174:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_150 = segNodeToChildren_2(node_7);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_150 = segNodeToChildren_1(node_7);
     struct StringIntIntObjectUnitTuple5 left_6 = call_150.t0;
     struct StringIntIntObjectUnitTuple5 right_6 = call_150.t1;
     struct StringIntIntObjectUnitTuple5 if_42;
@@ -2180,45 +2180,45 @@ if_next_169:;
     return if_40;
 }
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeNew_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11) {
-    struct IntIntIntObjectUnitTuple5 call_157 = segItemTypeToEmptyNode_2(itemTy_11);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeNew_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11) {
+    struct IntIntIntObjectUnitTuple5 call_157 = segItemTypeToEmptyNode_1(itemTy_11);
     struct IntIntIntObjectUnitTuple5 emptyNode_2 = call_157;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 tuple_23 = (struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3){.t0 = itemTy_11, .t1 = emptyNode_2, .t2 = 0};
     return tuple_23;
 }
 
-static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeNew_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11) {
-    struct StringIntIntObjectUnitTuple5 call_158 = segItemTypeToEmptyNode_1(itemTy_11);
+static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeNew_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_11) {
+    struct StringIntIntObjectUnitTuple5 call_158 = segItemTypeToEmptyNode_(itemTy_11);
     struct StringIntIntObjectUnitTuple5 emptyNode_2 = call_158;
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 tuple_24 = (struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3){.t0 = itemTy_11, .t1 = emptyNode_2, .t2 = 0};
     return tuple_24;
 }
 
-static struct IntIntIntObjectUnitTuple5 segTreeToRoot_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_4) {
+static struct IntIntIntObjectUnitTuple5 segTreeToRoot_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_4) {
     struct IntIntIntObjectUnitTuple5 node_13 = self_4.t1;
     return node_13;
 }
 
-static struct StringIntIntObjectUnitTuple5 segTreeToRoot_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_4) {
+static struct StringIntIntObjectUnitTuple5 segTreeToRoot_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_4) {
     struct StringIntIntObjectUnitTuple5 node_13 = self_4.t1;
     return node_13;
 }
 
-static int segTreeToLength_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_5) {
-    struct IntIntIntObjectUnitTuple5 call_159 = segTreeToRoot_1(self_5);
-    int call_160 = segNodeToLength_1(call_159);
+static int segTreeToLength_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_5) {
+    struct IntIntIntObjectUnitTuple5 call_159 = segTreeToRoot_(self_5);
+    int call_160 = segNodeToLength_(call_159);
     return call_160;
 }
 
-static int segTreeToLength_2(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_5) {
-    struct StringIntIntObjectUnitTuple5 call_161 = segTreeToRoot_2(self_5);
-    int call_162 = segNodeToLength_2(call_161);
+static int segTreeToLength_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_5) {
+    struct StringIntIntObjectUnitTuple5 call_161 = segTreeToRoot_1(self_5);
+    int call_162 = segNodeToLength_1(call_161);
     return call_162;
 }
 
-static int segTreeToHeight_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_6) {
-    struct IntIntIntObjectUnitTuple5 call_163 = segTreeToRoot_1(self_6);
-    int call_164 = segNodeToHeight_1(call_163);
+static int segTreeToHeight_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_6) {
+    struct IntIntIntObjectUnitTuple5 call_163 = segTreeToRoot_(self_6);
+    int call_164 = segNodeToHeight_(call_163);
     return call_164;
 }
 
@@ -2263,10 +2263,10 @@ then_192:;
     if_47 = item_4;
     goto if_next_191;
 else_193:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_165 = segNodeToChildren_1(node_14);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_165 = segNodeToChildren_(node_14);
     struct IntIntIntObjectUnitTuple5 left_7 = call_165.t0;
     struct IntIntIntObjectUnitTuple5 right_7 = call_165.t1;
-    int call_166 = segNodeToLength_1(left_7);
+    int call_166 = segNodeToLength_(left_7);
     int leftLen_1 = call_166;
     int if_48;
     if ((index_6 < leftLen_1)) {
@@ -2334,10 +2334,10 @@ then_205:;
     if_51 = item_4;
     goto if_next_204;
 else_206:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_167 = segNodeToChildren_2(node_14);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_167 = segNodeToChildren_1(node_14);
     struct StringIntIntObjectUnitTuple5 left_7 = call_167.t0;
     struct StringIntIntObjectUnitTuple5 right_7 = call_167.t1;
-    int call_168 = segNodeToLength_2(left_7);
+    int call_168 = segNodeToLength_1(left_7);
     int leftLen_1 = call_168;
     struct String if_52;
     if ((index_6 < leftLen_1)) {
@@ -2364,20 +2364,20 @@ if_next_204:;
     return if_51;
 }
 
-static int segTreeGet_1(int index_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_8) {
-    struct IntIntIntObjectUnitTuple5 call_169 = segTreeToRoot_1(self_8);
+static int segTreeGet_(int index_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_8) {
+    struct IntIntIntObjectUnitTuple5 call_169 = segTreeToRoot_(self_8);
     int call_170 = go_28(index_5, call_169);
     return call_170;
 }
 
-static struct String segTreeGet_2(int index_5, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_8) {
-    struct StringIntIntObjectUnitTuple5 call_171 = segTreeToRoot_2(self_8);
+static struct String segTreeGet_1(int index_5, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_8) {
+    struct StringIntIntObjectUnitTuple5 call_171 = segTreeToRoot_1(self_8);
     struct String call_172 = go_39(index_5, call_171);
     return call_172;
 }
 
 static int go_29(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_12, struct IntIntTuple2 e_, struct IntIntTuple2 q_, struct IntIntIntObjectUnitTuple5 node_15) {
-    bool call_173 = intervalIsDisjoint_(q_, e_);
+    bool call_173 = Competitive_SegTree_intervalIsDisjoint(q_, e_);
     int if_53;
     if (call_173) {
         goto then_211;
@@ -2385,11 +2385,11 @@ static int go_29(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 i
         goto else_212;
     }
 then_211:;
-    int call_174 = segItemTypeToEmptyItem_1(itemTy_12);
+    int call_174 = segItemTypeToEmptyItem_(itemTy_12);
     if_53 = call_174;
     goto if_next_210;
 else_212:;
-    bool call_175 = intervalCovers_(q_, e_);
+    bool call_175 = Competitive_SegTree_intervalCovers(q_, e_);
     int if_54;
     if (call_175) {
         goto then_214;
@@ -2397,18 +2397,18 @@ else_212:;
         goto else_215;
     }
 then_214:;
-    int call_176 = segNodeToItem_1(node_15);
+    int call_176 = segNodeToItem_(node_15);
     if_54 = call_176;
     goto if_next_213;
 else_215:;
-    bool call_177 = segNodeIsEmpty_1(node_15);
+    bool call_177 = segNodeIsEmpty_(node_15);
     milone_assert((!(call_177)), 304, 6);
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_178 = segNodeToChildren_1(node_15);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_178 = segNodeToChildren_(node_15);
     struct IntIntIntObjectUnitTuple5 leftNode_ = call_178.t0;
     struct IntIntIntObjectUnitTuple5 rightNode_ = call_178.t1;
     int el_ = e_.t0;
     int er_ = e_.t1;
-    int call_179 = segNodeToLength_1(leftNode_);
+    int call_179 = segNodeToLength_(leftNode_);
     int m_1 = (el_ + call_179);
     struct IntIntTuple2 tuple_25 = (struct IntIntTuple2){.t0 = el_, .t1 = m_1};
     int call_180 = go_29(itemTy_12, tuple_25, q_, leftNode_);
@@ -2416,7 +2416,7 @@ else_215:;
     struct IntIntTuple2 tuple_26 = (struct IntIntTuple2){.t0 = m_1, .t1 = er_};
     int call_181 = go_29(itemTy_12, tuple_26, q_, rightNode_);
     int vr_ = call_181;
-    struct IntIntIntFun2 call_182 = segItemTypeToAppend_1(itemTy_12);
+    struct IntIntIntFun2 call_182 = segItemTypeToAppend_(itemTy_12);
     int app_10 = call_182.fun(call_182.env, vl_, vr_);
     if_54 = app_10;
     goto if_next_213;
@@ -2427,15 +2427,15 @@ if_next_210:;
     return if_53;
 }
 
-static int segTreeSum_1(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_9) {
+static int segTreeSum_(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_9) {
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_12 = self_9.t0;
     struct IntIntIntObjectUnitTuple5 root_ = self_9.t1;
-    int call_183 = segNodeToLength_1(root_);
+    int call_183 = segNodeToLength_(root_);
     int len_16 = call_183;
     struct IntIntTuple2 tuple_27 = (struct IntIntTuple2){.t0 = ql_, .t1 = qr_};
     struct IntIntTuple2 q_1 = tuple_27;
     struct IntIntTuple2 tuple_28 = (struct IntIntTuple2){.t0 = 0, .t1 = len_16};
-    bool call_184 = intervalIsDisjoint_(q_1, tuple_28);
+    bool call_184 = Competitive_SegTree_intervalIsDisjoint(q_1, tuple_28);
     int if_55;
     if (call_184) {
         goto then_217;
@@ -2443,7 +2443,7 @@ static int segTreeSum_1(int ql_, int qr_, struct IntIntIntFun2IntIntIntObjectUni
         goto else_218;
     }
 then_217:;
-    int call_185 = segItemTypeToEmptyItem_1(itemTy_12);
+    int call_185 = segItemTypeToEmptyItem_(itemTy_12);
     if_55 = call_185;
     goto if_next_216;
 else_218:;
@@ -2498,10 +2498,10 @@ then_226:;
     if_58 = tuple_30;
     goto if_next_225;
 else_227:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_187 = segNodeToChildren_1(node_16);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_187 = segNodeToChildren_(node_16);
     struct IntIntIntObjectUnitTuple5 left_8 = call_187.t0;
     struct IntIntIntObjectUnitTuple5 right_8 = call_187.t1;
-    int call_188 = segNodeToLength_1(left_8);
+    int call_188 = segNodeToLength_(left_8);
     int leftLen_2 = call_188;
     struct IntIntIntObjectUnitTuple5 if_59;
     if ((index_8 < leftLen_2)) {
@@ -2511,12 +2511,12 @@ else_227:;
     }
 then_229:;
     struct IntIntIntObjectUnitTuple5 call_189 = go_30(newItem_, itemTy_13, index_8, left_8);
-    struct IntIntIntObjectUnitTuple5 call_190 = segNodeWithLeft_1(itemTy_13, call_189, node_16);
+    struct IntIntIntObjectUnitTuple5 call_190 = segNodeWithLeft_(itemTy_13, call_189, node_16);
     if_59 = call_190;
     goto if_next_228;
 else_230:;
     struct IntIntIntObjectUnitTuple5 call_191 = go_30(newItem_, itemTy_13, (index_8 - leftLen_2), right_8);
-    struct IntIntIntObjectUnitTuple5 call_192 = segNodeWithRight_1(itemTy_13, call_191, node_16);
+    struct IntIntIntObjectUnitTuple5 call_192 = segNodeWithRight_(itemTy_13, call_191, node_16);
     if_59 = call_192;
     goto if_next_228;
 if_next_228:;
@@ -2526,7 +2526,7 @@ if_next_225:;
     return if_58;
 }
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeSet_1(int index_7, int newItem_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_10) {
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeSet_(int index_7, int newItem_, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_10) {
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_13 = self_10.t0;
     struct IntIntIntObjectUnitTuple5 root_1 = self_10.t1;
     struct IntIntIntObjectUnitTuple5 call_193 = go_30(newItem_, itemTy_13, index_7, root_1);
@@ -2546,7 +2546,7 @@ static struct IntIntIntObjectUnitTuple5 go_31(int newItem_1, struct IntIntIntFun
         goto else_233;
     }
 then_232:;
-    struct IntIntIntObjectUnitTuple5 call_194 = segNodeNewLeaf_1(itemTy_14, newItem_1);
+    struct IntIntIntObjectUnitTuple5 call_194 = segNodeNewLeaf_(itemTy_14, newItem_1);
     if_60 = call_194;
     goto if_next_231;
 else_233:;
@@ -2557,9 +2557,9 @@ else_233:;
         goto else_239;
     }
 then_235:;
-    struct IntIntIntObjectUnitTuple5 call_195 = segNodeNewLeaf_1(itemTy_14, oldItem_);
+    struct IntIntIntObjectUnitTuple5 call_195 = segNodeNewLeaf_(itemTy_14, oldItem_);
     struct IntIntIntObjectUnitTuple5 oldLeaf_ = call_195;
-    struct IntIntIntObjectUnitTuple5 call_196 = segNodeNewLeaf_1(itemTy_14, newItem_1);
+    struct IntIntIntObjectUnitTuple5 call_196 = segNodeNewLeaf_(itemTy_14, newItem_1);
     struct IntIntIntObjectUnitTuple5 newLeaf_ = call_196;
     struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 if_62;
     if ((index_10 == 0)) {
@@ -2579,16 +2579,16 @@ else_238:;
 if_next_236:;
     struct IntIntIntObjectUnitTuple5 left_9 = if_62.t0;
     struct IntIntIntObjectUnitTuple5 right_9 = if_62.t1;
-    struct IntIntIntObjectUnitTuple5 call_197 = segNodeNew_1(itemTy_14, left_9, right_9);
+    struct IntIntIntObjectUnitTuple5 call_197 = segNodeNew_(itemTy_14, left_9, right_9);
     if_61 = call_197;
     goto if_next_234;
 else_239:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_198 = segNodeToChildren_1(node_17);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_198 = segNodeToChildren_(node_17);
     struct IntIntIntObjectUnitTuple5 left_10 = call_198.t0;
     struct IntIntIntObjectUnitTuple5 right_10 = call_198.t1;
-    int call_199 = segNodeToLength_1(left_10);
+    int call_199 = segNodeToLength_(left_10);
     int leftLen_3 = call_199;
-    int call_200 = segNodeToLength_1(right_10);
+    int call_200 = segNodeToLength_(right_10);
     int rightLen_1 = call_200;
     milone_assert(((leftLen_3 + rightLen_1) == len_18), 381, 6);
     struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 if_63;
@@ -2600,7 +2600,7 @@ else_239:;
 then_241:;
     struct IntIntIntObjectUnitTuple5 call_201 = go_31(newItem_1, itemTy_14, index_10, left_10);
     struct IntIntIntObjectUnitTuple5 left_12 = call_201;
-    int call_202 = segNodeToLength_1(left_12);
+    int call_202 = segNodeToLength_(left_12);
     milone_assert((call_202 == (leftLen_3 + 1)), 386, 10);
     struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 tuple_34 = (struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2){.t0 = left_12, .t1 = right_10};
     if_63 = tuple_34;
@@ -2608,7 +2608,7 @@ then_241:;
 else_242:;
     struct IntIntIntObjectUnitTuple5 call_203 = go_31(newItem_1, itemTy_14, (index_10 - leftLen_3), right_10);
     struct IntIntIntObjectUnitTuple5 right_12 = call_203;
-    int call_204 = segNodeToLength_1(right_12);
+    int call_204 = segNodeToLength_(right_12);
     milone_assert((call_204 == (rightLen_1 + 1)), 390, 10);
     struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 tuple_35 = (struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2){.t0 = left_10, .t1 = right_12};
     if_63 = tuple_35;
@@ -2616,8 +2616,8 @@ else_242:;
 if_next_240:;
     struct IntIntIntObjectUnitTuple5 left_11 = if_63.t0;
     struct IntIntIntObjectUnitTuple5 right_11 = if_63.t1;
-    struct IntIntIntObjectUnitTuple5 call_205 = segNodeNew_1(itemTy_14, left_11, right_11);
-    struct IntIntIntObjectUnitTuple5 call_206 = segNodeMakeBalanced_1(itemTy_14, call_205);
+    struct IntIntIntObjectUnitTuple5 call_205 = segNodeNew_(itemTy_14, left_11, right_11);
+    struct IntIntIntObjectUnitTuple5 call_206 = segNodeMakeBalanced_(itemTy_14, call_205);
     if_61 = call_206;
     goto if_next_234;
 if_next_234:;
@@ -2638,7 +2638,7 @@ static struct StringIntIntObjectUnitTuple5 go_35(struct String newItem_1, struct
         goto else_245;
     }
 then_244:;
-    struct StringIntIntObjectUnitTuple5 call_207 = segNodeNewLeaf_2(itemTy_14, newItem_1);
+    struct StringIntIntObjectUnitTuple5 call_207 = segNodeNewLeaf_1(itemTy_14, newItem_1);
     if_64 = call_207;
     goto if_next_243;
 else_245:;
@@ -2649,9 +2649,9 @@ else_245:;
         goto else_251;
     }
 then_247:;
-    struct StringIntIntObjectUnitTuple5 call_208 = segNodeNewLeaf_2(itemTy_14, oldItem_);
+    struct StringIntIntObjectUnitTuple5 call_208 = segNodeNewLeaf_1(itemTy_14, oldItem_);
     struct StringIntIntObjectUnitTuple5 oldLeaf_ = call_208;
-    struct StringIntIntObjectUnitTuple5 call_209 = segNodeNewLeaf_2(itemTy_14, newItem_1);
+    struct StringIntIntObjectUnitTuple5 call_209 = segNodeNewLeaf_1(itemTy_14, newItem_1);
     struct StringIntIntObjectUnitTuple5 newLeaf_ = call_209;
     struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 if_66;
     if ((index_10 == 0)) {
@@ -2671,16 +2671,16 @@ else_250:;
 if_next_248:;
     struct StringIntIntObjectUnitTuple5 left_9 = if_66.t0;
     struct StringIntIntObjectUnitTuple5 right_9 = if_66.t1;
-    struct StringIntIntObjectUnitTuple5 call_210 = segNodeNew_2(itemTy_14, left_9, right_9);
+    struct StringIntIntObjectUnitTuple5 call_210 = segNodeNew_1(itemTy_14, left_9, right_9);
     if_65 = call_210;
     goto if_next_246;
 else_251:;
-    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_211 = segNodeToChildren_2(node_17);
+    struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 call_211 = segNodeToChildren_1(node_17);
     struct StringIntIntObjectUnitTuple5 left_10 = call_211.t0;
     struct StringIntIntObjectUnitTuple5 right_10 = call_211.t1;
-    int call_212 = segNodeToLength_2(left_10);
+    int call_212 = segNodeToLength_1(left_10);
     int leftLen_3 = call_212;
-    int call_213 = segNodeToLength_2(right_10);
+    int call_213 = segNodeToLength_1(right_10);
     int rightLen_1 = call_213;
     milone_assert(((leftLen_3 + rightLen_1) == len_18), 381, 6);
     struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 if_67;
@@ -2692,7 +2692,7 @@ else_251:;
 then_253:;
     struct StringIntIntObjectUnitTuple5 call_214 = go_35(newItem_1, itemTy_14, index_10, left_10);
     struct StringIntIntObjectUnitTuple5 left_12 = call_214;
-    int call_215 = segNodeToLength_2(left_12);
+    int call_215 = segNodeToLength_1(left_12);
     milone_assert((call_215 == (leftLen_3 + 1)), 386, 10);
     struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 tuple_38 = (struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2){.t0 = left_12, .t1 = right_10};
     if_67 = tuple_38;
@@ -2700,7 +2700,7 @@ then_253:;
 else_254:;
     struct StringIntIntObjectUnitTuple5 call_216 = go_35(newItem_1, itemTy_14, (index_10 - leftLen_3), right_10);
     struct StringIntIntObjectUnitTuple5 right_12 = call_216;
-    int call_217 = segNodeToLength_2(right_12);
+    int call_217 = segNodeToLength_1(right_12);
     milone_assert((call_217 == (rightLen_1 + 1)), 390, 10);
     struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2 tuple_39 = (struct StringIntIntObjectUnitTuple5StringIntIntObjectUnitTuple5Tuple2){.t0 = left_10, .t1 = right_12};
     if_67 = tuple_39;
@@ -2708,8 +2708,8 @@ else_254:;
 if_next_252:;
     struct StringIntIntObjectUnitTuple5 left_11 = if_67.t0;
     struct StringIntIntObjectUnitTuple5 right_11 = if_67.t1;
-    struct StringIntIntObjectUnitTuple5 call_218 = segNodeNew_2(itemTy_14, left_11, right_11);
-    struct StringIntIntObjectUnitTuple5 call_219 = segNodeMakeBalanced_2(itemTy_14, call_218);
+    struct StringIntIntObjectUnitTuple5 call_218 = segNodeNew_1(itemTy_14, left_11, right_11);
+    struct StringIntIntObjectUnitTuple5 call_219 = segNodeMakeBalanced_1(itemTy_14, call_218);
     if_65 = call_219;
     goto if_next_246;
 if_next_246:;
@@ -2719,7 +2719,7 @@ if_next_243:;
     return if_64;
 }
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeInsert_1(int index_9, int newItem_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_11) {
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeInsert_(int index_9, int newItem_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_11) {
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_14 = self_11.t0;
     struct IntIntIntObjectUnitTuple5 root_3 = self_11.t1;
     struct IntIntIntObjectUnitTuple5 call_220 = go_31(newItem_1, itemTy_14, index_9, root_3);
@@ -2728,7 +2728,7 @@ static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObj
     return tuple_40;
 }
 
-static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeInsert_2(int index_9, struct String newItem_1, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_11) {
+static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreeInsert_1(int index_9, struct String newItem_1, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_11) {
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_14 = self_11.t0;
     struct StringIntIntObjectUnitTuple5 root_3 = self_11.t1;
     struct StringIntIntObjectUnitTuple5 call_221 = go_35(newItem_1, itemTy_14, index_9, root_3);
@@ -2748,16 +2748,16 @@ static struct IntIntIntObjectUnitTuple5 go_36(struct IntIntIntFun2IntIntIntObjec
         goto else_257;
     }
 then_256:;
-    struct IntIntIntObjectUnitTuple5 call_222 = segItemTypeToEmptyNode_2(itemTy_15);
+    struct IntIntIntObjectUnitTuple5 call_222 = segItemTypeToEmptyNode_1(itemTy_15);
     if_68 = call_222;
     goto if_next_255;
 else_257:;
-    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_223 = segNodeToChildren_1(node_18);
+    struct IntIntIntObjectUnitTuple5IntIntIntObjectUnitTuple5Tuple2 call_223 = segNodeToChildren_(node_18);
     struct IntIntIntObjectUnitTuple5 left_13 = call_223.t0;
     struct IntIntIntObjectUnitTuple5 right_13 = call_223.t1;
-    int call_224 = segNodeToLength_1(left_13);
+    int call_224 = segNodeToLength_(left_13);
     int leftLen_4 = call_224;
-    int call_225 = segNodeToLength_1(right_13);
+    int call_225 = segNodeToLength_(right_13);
     int rightLen_2 = call_225;
     milone_assert(((leftLen_4 + rightLen_2) == len_19), 416, 6);
     struct IntIntIntObjectUnitTuple5 if_69;
@@ -2778,7 +2778,7 @@ then_261:;
     goto if_next_260;
 else_262:;
     struct IntIntIntObjectUnitTuple5 call_226 = go_36(itemTy_15, index_12, left_13);
-    struct IntIntIntObjectUnitTuple5 call_227 = segNodeWithLeft_1(itemTy_15, call_226, node_18);
+    struct IntIntIntObjectUnitTuple5 call_227 = segNodeWithLeft_(itemTy_15, call_226, node_18);
     if_70 = call_227;
     goto if_next_260;
 if_next_260:;
@@ -2796,7 +2796,7 @@ then_265:;
     goto if_next_264;
 else_266:;
     struct IntIntIntObjectUnitTuple5 call_228 = go_36(itemTy_15, (index_12 - leftLen_4), right_13);
-    struct IntIntIntObjectUnitTuple5 call_229 = segNodeWithRight_1(itemTy_15, call_228, node_18);
+    struct IntIntIntObjectUnitTuple5 call_229 = segNodeWithRight_(itemTy_15, call_228, node_18);
     if_71 = call_229;
     goto if_next_264;
 if_next_264:;
@@ -2804,14 +2804,14 @@ if_next_264:;
     goto if_next_258;
 if_next_258:;
     struct IntIntIntObjectUnitTuple5 node_19 = if_69;
-    struct IntIntIntObjectUnitTuple5 call_230 = segNodeMakeBalanced_1(itemTy_15, node_19);
+    struct IntIntIntObjectUnitTuple5 call_230 = segNodeMakeBalanced_(itemTy_15, node_19);
     if_68 = call_230;
     goto if_next_255;
 if_next_255:;
     return if_68;
 }
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeRemove_1(int index_11, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_12) {
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeRemove_(int index_11, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_12) {
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_15 = self_12.t0;
     struct IntIntIntObjectUnitTuple5 root_5 = self_12.t1;
     struct IntIntIntObjectUnitTuple5 call_231 = go_36(itemTy_15, index_11, root_5);
@@ -2820,24 +2820,24 @@ static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObj
     return tuple_42;
 }
 
-static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreePush_2(struct String value_4, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_13) {
-    int call_232 = segTreeToLength_2(self_13);
+static struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 segTreePush_1(struct String value_4, struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 self_13) {
+    int call_232 = segTreeToLength_1(self_13);
     int index_13 = call_232;
-    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_233 = segTreeInsert_2(index_13, value_4, self_13);
+    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_233 = segTreeInsert_1(index_13, value_4, self_13);
     return call_233;
 }
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreePush_1(int value_4, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_13) {
-    int call_234 = segTreeToLength_1(self_13);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreePush_(int value_4, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_13) {
+    int call_234 = segTreeToLength_(self_13);
     int index_13 = call_234;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_235 = segTreeInsert_1(index_13, value_4, self_13);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_235 = segTreeInsert_(index_13, value_4, self_13);
     return call_235;
 }
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreePop_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_14) {
-    int call_236 = segTreeToLength_1(self_14);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreePop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 self_14) {
+    int call_236 = segTreeToLength_(self_14);
     int index_14 = (call_236 - 1);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_237 = segTreeRemove_1(index_14, self_14);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_237 = segTreeRemove_(index_14, self_14);
     return call_237;
 }
 
@@ -2851,7 +2851,7 @@ next_269:;
     if ((!(xs_22))) goto next_270;
     int x_6 = xs_22->head;
     struct IntList const* xs_23 = xs_22->tail;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_238 = segTreePush_1(x_6, t_2);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_238 = segTreePush_(x_6, t_2);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 arg_89 = call_238;
     struct IntList const* arg_90 = xs_23;
     t_2 = arg_89;
@@ -2863,8 +2863,8 @@ end_match_268:;
     return match_10;
 }
 
-static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeOfList_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_16, struct IntList const* xs_21) {
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_239 = segTreeNew_2(itemTy_16);
+static struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 segTreeOfList_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 itemTy_16, struct IntList const* xs_21) {
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_239 = segTreeNew_1(itemTy_16);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_240 = go_32(call_239, xs_21);
     return call_240;
 }
@@ -2878,11 +2878,11 @@ tailrec_271:;
         goto else_274;
     }
 then_273:;
-    struct IntList const* call_241 = listRev_2(acc_3);
+    struct IntList const* call_241 = listRev_1(acc_3);
     if_72 = call_241;
     goto if_next_272;
 else_274:;
-    int call_242 = segTreeGet_1(i_4, v_4);
+    int call_242 = segTreeGet_(i_4, v_4);
     int x_7 = call_242;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 arg_91 = v_4;
     int arg_92 = len_20;
@@ -2908,11 +2908,11 @@ tailrec_275:;
         goto else_278;
     }
 then_277:;
-    struct StringList const* call_243 = listRev_1(acc_3);
+    struct StringList const* call_243 = listRev_(acc_3);
     if_73 = call_243;
     goto if_next_276;
 else_278:;
-    struct String call_244 = segTreeGet_2(i_4, v_4);
+    struct String call_244 = segTreeGet_1(i_4, v_4);
     struct String x_7 = call_244;
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 arg_95 = v_4;
     int arg_96 = len_20;
@@ -2929,21 +2929,21 @@ if_next_276:;
     return if_73;
 }
 
-static struct IntList const* segTreeToList_2(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_4) {
-    int call_245 = segTreeToLength_1(v_4);
+static struct IntList const* segTreeToList_1(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_4) {
+    int call_245 = segTreeToLength_(v_4);
     int len_20 = call_245;
     struct IntList const* call_246 = go_34(v_4, len_20, NULL, 0);
     return call_246;
 }
 
-static struct StringList const* segTreeToList_1(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 v_4) {
-    int call_247 = segTreeToLength_2(v_4);
+static struct StringList const* segTreeToList_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 v_4) {
+    int call_247 = segTreeToLength_1(v_4);
     int len_20 = call_247;
     struct StringList const* call_248 = go_33(v_4, len_20, NULL, 0);
     return call_248;
 }
 
-int intAdd_(int x_8, int y_3) {
+static int intAdd_(int x_8, int y_3) {
     return (x_8 + y_3);
 }
 
@@ -2952,7 +2952,7 @@ static int fun_7(void const* env_4, int arg_7, int arg_8) {
     return call_249;
 }
 
-struct String strAdd_(struct String x_9, struct String y_4) {
+static struct String strAdd_(struct String x_9, struct String y_4) {
     return str_add(x_9, y_4);
 }
 
@@ -2962,44 +2962,44 @@ static struct String fun_8(void const* env_5, struct String arg_9, struct String
 }
 
 static bool fun_9(void const* env_6, int arg_11, int arg_12) {
-    bool call_251 = intEqual_(arg_11, arg_12);
+    bool call_251 = Competitive_Helpers_intEqual(arg_11, arg_12);
     return call_251;
 }
 
 static bool fun_10(void const* env_7, int arg_13, int arg_14) {
-    bool call_252 = intEqual_(arg_13, arg_14);
+    bool call_252 = Competitive_Helpers_intEqual(arg_13, arg_14);
     return call_252;
 }
 
 static bool fun_11(void const* env_8, int arg_15, int arg_16) {
-    bool call_253 = intEqual_(arg_15, arg_16);
+    bool call_253 = Competitive_Helpers_intEqual(arg_15, arg_16);
     return call_253;
 }
 
 static bool fun_12(void const* env_9, int arg_17, int arg_18) {
-    bool call_254 = intEqual_(arg_17, arg_18);
+    bool call_254 = Competitive_Helpers_intEqual(arg_17, arg_18);
     return call_254;
 }
 
 static bool fun_13(void const* env_10, int arg_19, int arg_20) {
-    bool call_255 = intEqual_(arg_19, arg_20);
+    bool call_255 = Competitive_Helpers_intEqual(arg_19, arg_20);
     return call_255;
 }
 
-char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_99) {
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_256 = segTreeNew_2(segItemTypeInt_);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_257 = segTreePush_1(1, call_256);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_258 = segTreePush_1(2, call_257);
+static char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_99) {
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_256 = segTreeNew_1(segItemTypeInt_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_257 = segTreePush_(1, call_256);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_258 = segTreePush_(2, call_257);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_5 = call_258;
     struct IntIntBoolFun2 fun_25 = (struct IntIntBoolFun2){.fun = fun_9, .env = NULL};
     struct IntList const* list_24 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_24))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_23 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_23))) = (struct IntList){.head = 1, .tail = list_24};
-    struct IntList const* call_259 = segTreeToList_2(v_5);
-    bool call_260 = listEqual_2(fun_25, list_23, call_259);
+    struct IntList const* call_259 = segTreeToList_1(v_5);
+    bool call_260 = listEqual_1(fun_25, list_23, call_259);
     milone_assert(call_260, 485, 4);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_261 = segTreePush_1(3, v_5);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_261 = segTreePush_(3, v_5);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_6 = call_261;
     struct IntIntBoolFun2 fun_26 = (struct IntIntBoolFun2){.fun = fun_10, .env = NULL};
     struct IntList const* list_27 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3008,55 +3008,55 @@ char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 
     (*(((struct IntList*)list_26))) = (struct IntList){.head = 2, .tail = list_27};
     struct IntList const* list_25 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_25))) = (struct IntList){.head = 1, .tail = list_26};
-    struct IntList const* call_262 = segTreeToList_2(v_6);
-    bool call_263 = listEqual_2(fun_26, list_25, call_262);
+    struct IntList const* call_262 = segTreeToList_1(v_6);
+    bool call_263 = listEqual_1(fun_26, list_25, call_262);
     milone_assert(call_263, 489, 4);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_264 = segTreePop_1(v_6);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_264 = segTreePop_(v_6);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_7 = call_264;
     struct IntIntBoolFun2 fun_27 = (struct IntIntBoolFun2){.fun = fun_11, .env = NULL};
     struct IntList const* list_29 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_29))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_28 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_28))) = (struct IntList){.head = 1, .tail = list_29};
-    struct IntList const* call_265 = segTreeToList_2(v_7);
-    bool call_266 = listEqual_2(fun_27, list_28, call_265);
+    struct IntList const* call_265 = segTreeToList_1(v_7);
+    bool call_266 = listEqual_1(fun_27, list_28, call_265);
     milone_assert(call_266, 494, 4);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_267 = segTreePop_1(v_7);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_267 = segTreePop_(v_7);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_8 = call_267;
     struct IntIntBoolFun2 fun_28 = (struct IntIntBoolFun2){.fun = fun_12, .env = NULL};
     struct IntList const* list_30 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_30))) = (struct IntList){.head = 1, .tail = NULL};
-    struct IntList const* call_268 = segTreeToList_2(v_8);
-    bool call_269 = listEqual_2(fun_28, list_30, call_268);
+    struct IntList const* call_268 = segTreeToList_1(v_8);
+    bool call_269 = listEqual_1(fun_28, list_30, call_268);
     milone_assert(call_269, 497, 4);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_270 = segTreePop_1(v_8);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_270 = segTreePop_(v_8);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_9 = call_270;
     struct IntIntBoolFun2 fun_29 = (struct IntIntBoolFun2){.fun = fun_13, .env = NULL};
-    struct IntList const* call_271 = segTreeToList_2(v_9);
-    bool call_272 = listEqual_2(fun_29, NULL, call_271);
+    struct IntList const* call_271 = segTreeToList_1(v_9);
+    bool call_272 = listEqual_1(fun_29, NULL, call_271);
     milone_assert(call_272, 500, 4);
     return 0;
 }
 
 static bool fun_14(void const* env_11, int arg_21, int arg_22) {
-    bool call_273 = intEqual_(arg_21, arg_22);
+    bool call_273 = Competitive_Helpers_intEqual(arg_21, arg_22);
     return call_273;
 }
 
 static bool fun_15(void const* env_12, int arg_23, int arg_24) {
-    bool call_274 = intEqual_(arg_23, arg_24);
+    bool call_274 = Competitive_Helpers_intEqual(arg_23, arg_24);
     return call_274;
 }
 
-char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_100) {
+static char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_100) {
     struct IntList const* list_33 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_33))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_32 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_32))) = (struct IntList){.head = 2, .tail = list_33};
     struct IntList const* list_31 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_31))) = (struct IntList){.head = 1, .tail = list_32};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_275 = segTreeOfList_1(segItemTypeInt_, list_31);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_276 = segTreeSet_1(1, 22, call_275);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_275 = segTreeOfList_(segItemTypeInt_, list_31);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_276 = segTreeSet_(1, 22, call_275);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_10 = call_276;
     struct IntIntBoolFun2 fun_30 = (struct IntIntBoolFun2){.fun = fun_14, .env = NULL};
     struct IntList const* list_36 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3065,11 +3065,11 @@ char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segI
     (*(((struct IntList*)list_35))) = (struct IntList){.head = 22, .tail = list_36};
     struct IntList const* list_34 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_34))) = (struct IntList){.head = 1, .tail = list_35};
-    struct IntList const* call_277 = segTreeToList_2(v_10);
-    bool call_278 = listEqual_2(fun_30, list_34, call_277);
+    struct IntList const* call_277 = segTreeToList_1(v_10);
+    bool call_278 = listEqual_1(fun_30, list_34, call_277);
     milone_assert(call_278, 509, 4);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_279 = segTreeSet_1(0, 11, v_10);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_280 = segTreeSet_1(2, 33, call_279);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_279 = segTreeSet_(0, 11, v_10);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_280 = segTreeSet_(2, 33, call_279);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_11 = call_280;
     struct IntIntBoolFun2 fun_31 = (struct IntIntBoolFun2){.fun = fun_15, .env = NULL};
     struct IntList const* list_39 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3078,13 +3078,13 @@ char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segI
     (*(((struct IntList*)list_38))) = (struct IntList){.head = 22, .tail = list_39};
     struct IntList const* list_37 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_37))) = (struct IntList){.head = 11, .tail = list_38};
-    struct IntList const* call_281 = segTreeToList_2(v_11);
-    bool call_282 = listEqual_2(fun_31, list_37, call_281);
+    struct IntList const* call_281 = segTreeToList_1(v_11);
+    bool call_282 = listEqual_1(fun_31, list_37, call_281);
     milone_assert(call_282, 515, 4);
     return 0;
 }
 
-char testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_101) {
+static char testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_101) {
     struct IntList const* list_45 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_45))) = (struct IntList){.head = 9, .tail = NULL};
     struct IntList const* list_44 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3097,16 +3097,16 @@ char testSum_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segI
     (*(((struct IntList*)list_41))) = (struct IntList){.head = 1, .tail = list_42};
     struct IntList const* list_40 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_40))) = (struct IntList){.head = 3, .tail = list_41};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_283 = segTreeOfList_1(segItemTypeInt_, list_40);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_283 = segTreeOfList_(segItemTypeInt_, list_40);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_12 = call_283;
-    int call_284 = segTreeSum_1(0, 6, v_12);
+    int call_284 = segTreeSum_(0, 6, v_12);
     milone_assert((call_284 == (((((3 + 1) + 4) + 1) + 5) + 9)), 525, 4);
-    int call_285 = segTreeSum_1(2, 4, v_12);
+    int call_285 = segTreeSum_(2, 4, v_12);
     milone_assert((call_285 == (4 + 1)), 526, 4);
     return 0;
 }
 
-int sum_(int l_1, int r_1, int acc_4, int i_5, struct IntList const* xs_25) {
+static int sum_(int l_1, int r_1, int acc_4, int i_5, struct IntList const* xs_25) {
 tailrec_279:;
     int if_74;
     if ((i_5 == r_1)) {
@@ -3148,7 +3148,7 @@ if_next_286:;
     xs_25 = arg_106;
     goto tailrec_279;
 next_284:;
-    int call_286 = failwith_1((struct String){.str = "NEVER", .len = 5});
+    int call_286 = failwith_((struct String){.str = "NEVER", .len = 5});
     match_11 = call_286;
     goto end_match_283;
 next_285:;
@@ -3159,7 +3159,7 @@ if_next_280:;
     return if_74;
 }
 
-char go_15(struct IntList const* xs_24, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13, int n_1, int l_1, int r_1) {
+static char go_15(struct IntList const* xs_24, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13, int n_1, int l_1, int r_1) {
 tailrec_289:;
     char if_76;
     if ((r_1 == n_1)) {
@@ -3195,7 +3195,7 @@ if_next_292:;
 else_295:;
     int call_287 = sum_(l_1, r_1, 0, 0, xs_24);
     int expected_ = call_287;
-    int call_288 = segTreeSum_1(l_1, r_1, v_13);
+    int call_288 = segTreeSum_(l_1, r_1, v_13);
     int actual_ = call_288;
     milone_assert((actual_ == expected_), 553, 8);
     struct IntList const* arg_112 = xs_24;
@@ -3213,7 +3213,7 @@ if_next_290:;
     return 0;
 }
 
-char testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_117) {
+static char testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_117) {
     struct IntList const* list_51 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_51))) = (struct IntList){.head = 9, .tail = NULL};
     struct IntList const* list_50 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3227,50 +3227,50 @@ char testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 
     struct IntList const* list_46 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_46))) = (struct IntList){.head = 3, .tail = list_47};
     struct IntList const* xs_24 = list_46;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_289 = segTreeOfList_1(segItemTypeInt_, xs_24);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_289 = segTreeOfList_(segItemTypeInt_, xs_24);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_13 = call_289;
-    int call_290 = listLength_1(xs_24);
+    int call_290 = listLength_(xs_24);
     int n_1 = call_290;
     char call_291 = go_15(xs_24, v_13, n_1, 0, 0);
     return 0;
 }
 
-char testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_118) {
-    struct IntList const* call_292 = listReplicate_1(1, 1000);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_293 = segTreeOfList_1(segItemTypeInt_, call_292);
+static char testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_118) {
+    struct IntList const* call_292 = listReplicate_(1, 1000);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_293 = segTreeOfList_(segItemTypeInt_, call_292);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 v_14 = call_293;
-    int call_294 = segTreeToHeight_1(v_14);
+    int call_294 = segTreeToHeight_(v_14);
     milone_assert((call_294 < 100), 564, 4);
     return 0;
 }
 
 static bool fun_16(void const* env_13, struct String arg_25, struct String arg_26) {
-    bool call_295 = strEqual_(arg_25, arg_26);
+    bool call_295 = Competitive_Helpers_strEqual(arg_25, arg_26);
     return call_295;
 }
 
-char testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, char arg_119) {
-    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_296 = segTreeNew_1(segItemTypeStr_);
-    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_297 = segTreePush_2((struct String){.str = "a", .len = 1}, call_296);
-    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_298 = segTreePush_2((struct String){.str = "b", .len = 1}, call_297);
+static char testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, char arg_119) {
+    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_296 = segTreeNew_(segItemTypeStr_);
+    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_297 = segTreePush_1((struct String){.str = "a", .len = 1}, call_296);
+    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 call_298 = segTreePush_1((struct String){.str = "b", .len = 1}, call_297);
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringIntIntObjectUnitTuple5UnitTuple3 v_15 = call_298;
     struct StringStringBoolFun2 fun_32 = (struct StringStringBoolFun2){.fun = fun_16, .env = NULL};
     struct StringList const* list_53 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_53))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_52 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_52))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_53};
-    struct StringList const* call_299 = segTreeToList_1(v_15);
-    bool call_300 = listEqual_1(fun_32, list_52, call_299);
+    struct StringList const* call_299 = segTreeToList_(v_15);
+    bool call_300 = listEqual_(fun_32, list_52, call_299);
     milone_assert(call_300, 574, 4);
     return 0;
 }
 
-char segTreeTest_(char arg_120) {
+char Competitive_SegTree_segTreeTest(char arg_120) {
     struct IntIntIntFun2 fun_33 = (struct IntIntIntFun2){.fun = fun_7, .env = NULL};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_301 = segItemTypeNew_1(0, fun_33);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_301 = segItemTypeNew_(0, fun_33);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_ = call_301;
     struct StringStringStringFun2 fun_34 = (struct StringStringStringFun2){.fun = fun_8, .env = NULL};
-    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 call_302 = segItemTypeNew_2((struct String){.str = "", .len = 0}, fun_34);
+    struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 call_302 = segItemTypeNew_1((struct String){.str = "", .len = 0}, fun_34);
     struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_ = call_302;
     char call_303 = testPushPop_(segItemTypeInt_, 0);
     char call_304 = testSet_(segItemTypeInt_, 0);
@@ -3291,12 +3291,12 @@ static int fun_17(void const* env_14, int arg_27, int arg_28) {
 }
 
 static int fun_18(void const* env_15, int arg_29, int arg_30) {
-    int call_310 = intMax_(arg_29, arg_30);
+    int call_310 = Competitive_Helpers_intMax(arg_29, arg_30);
     return call_310;
 }
 
 static int fun_19(void const* env_16, int arg_31, int arg_32) {
-    int call_311 = intMin_(arg_31, arg_32);
+    int call_311 = Competitive_Helpers_intMin(arg_31, arg_32);
     return call_311;
 }
 
@@ -3312,8 +3312,8 @@ then_298:;
     if_78 = pos_1;
     goto if_next_297;
 else_299:;
-    int call_312 = segTreeGet_1(i_6, perm_2);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_313 = segTreeSet_1(call_312, i_6, pos_1);
+    int call_312 = segTreeGet_(i_6, perm_2);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_313 = segTreeSet_(call_312, i_6, pos_1);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 pos_2 = call_313;
     int arg_123 = n_2;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 arg_124 = perm_2;
@@ -3340,11 +3340,11 @@ then_302:;
     if_79 = sum_1;
     goto if_next_301;
 else_303:;
-    int call_314 = segTreeGet_1(p_, pos_);
+    int call_314 = segTreeGet_(p_, pos_);
     int i_7 = call_314;
-    int call_315 = segTreeSum_1(0, i_7, prev_1);
+    int call_315 = segTreeSum_(0, i_7, prev_1);
     int x_11 = call_315;
-    int call_316 = segTreeSum_1(0, x_11, prev_1);
+    int call_316 = segTreeSum_(0, x_11, prev_1);
     int w_ = call_316;
     bool if_80;
     if ((x_11 >= w_)) {
@@ -3360,9 +3360,9 @@ else_306:;
     goto if_next_304;
 if_next_304:;
     milone_assert(if_80, 58, 6);
-    int call_317 = segTreeSum_1((i_7 + 1), (n_2 + 2), next_1);
+    int call_317 = segTreeSum_((i_7 + 1), (n_2 + 2), next_1);
     int y_5 = call_317;
-    int call_318 = segTreeSum_1((y_5 + 1), (n_2 + 2), next_1);
+    int call_318 = segTreeSum_((y_5 + 1), (n_2 + 2), next_1);
     int z_ = call_318;
     bool if_81;
     if ((i_7 < y_5)) {
@@ -3380,9 +3380,9 @@ if_next_307:;
     milone_assert(if_81, 62, 6);
     int count_ = (((x_11 - w_) * (y_5 - i_7)) + ((i_7 - x_11) * (z_ - y_5)));
     int sum_2 = (sum_1 + (count_ * p_));
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_319 = segTreeSet_1(i_7, i_7, prev_1);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_319 = segTreeSet_(i_7, i_7, prev_1);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 prev_2 = call_319;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_320 = segTreeSet_1(i_7, i_7, next_1);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_320 = segTreeSet_(i_7, i_7, next_1);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 next_2 = call_320;
     int arg_127 = n_2;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 arg_128 = pos_;
@@ -3401,29 +3401,29 @@ if_next_301:;
     return if_79;
 }
 
-int abc140eSolve_(int n_2, struct IntList const* perm_) {
+int Competitive_ABC140E_abc140eSolve(int n_2, struct IntList const* perm_) {
     struct IntIntIntFun2 fun_35 = (struct IntIntIntFun2){.fun = fun_17, .env = NULL};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_321 = segItemTypeNew_1(0, fun_35);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_321 = segItemTypeNew_(0, fun_35);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_1 = call_321;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_322 = segTreeOfList_1(segItemTypeInt_1, perm_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_322 = segTreeOfList_(segItemTypeInt_1, perm_);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 perm_1 = call_322;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_323 = segTreeInsert_1(0, (n_2 + 1), perm_1);
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_324 = segTreePush_1((n_2 + 2), call_323);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_323 = segTreeInsert_(0, (n_2 + 1), perm_1);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_324 = segTreePush_((n_2 + 2), call_323);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 perm_2 = call_324;
-    int call_325 = segTreeToLength_1(perm_2);
+    int call_325 = segTreeToLength_(perm_2);
     milone_assert((call_325 == (n_2 + 2)), 22, 2);
     struct IntIntIntFun2 fun_36 = (struct IntIntIntFun2){.fun = fun_18, .env = NULL};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_326 = segItemTypeNew_1(0, fun_36);
-    struct IntList const* call_327 = listReplicate_1(0, (n_2 + 2));
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_328 = segTreeOfList_1(call_326, call_327);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_326 = segItemTypeNew_(0, fun_36);
+    struct IntList const* call_327 = listReplicate_(0, (n_2 + 2));
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_328 = segTreeOfList_(call_326, call_327);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 prev_ = call_328;
     struct IntIntIntFun2 fun_37 = (struct IntIntIntFun2){.fun = fun_19, .env = NULL};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_329 = segItemTypeNew_1((n_2 + 1), fun_37);
-    struct IntList const* call_330 = listReplicate_1((n_2 + 1), (n_2 + 2));
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_331 = segTreeOfList_1(call_329, call_330);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_329 = segItemTypeNew_((n_2 + 1), fun_37);
+    struct IntList const* call_330 = listReplicate_((n_2 + 1), (n_2 + 2));
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_331 = segTreeOfList_(call_329, call_330);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 next_ = call_331;
-    struct IntList const* call_332 = listReplicate_1(0, (n_2 + 3));
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_333 = segTreeOfList_1(segItemTypeInt_1, call_332);
+    struct IntList const* call_332 = listReplicate_(0, (n_2 + 3));
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_333 = segTreeOfList_(segItemTypeInt_1, call_332);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 pos_3 = call_333;
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_334 = go_19(n_2, perm_2, pos_3, 0);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 pos_ = call_334;
@@ -3431,10 +3431,10 @@ int abc140eSolve_(int n_2, struct IntList const* perm_) {
     return call_335;
 }
 
-bool solve_(struct IntList const* p_1, int expected_1) {
-    int call_336 = listLength_1(p_1);
+static bool solve_(struct IntList const* p_1, int expected_1) {
+    int call_336 = listLength_(p_1);
     int n_3 = call_336;
-    int call_337 = abc140eSolve_(n_3, p_1);
+    int call_337 = Competitive_ABC140E_abc140eSolve(n_3, p_1);
     int actual_1 = call_337;
     bool if_82;
     if ((actual_1 == expected_1)) {
@@ -3453,7 +3453,7 @@ if_next_310:;
     return if_82;
 }
 
-char abc140eTest_(char arg_133) {
+char Competitive_ABC140E_abc140eTest(char arg_133) {
     struct IntList const* list_56 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_56))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* list_55 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3495,12 +3495,12 @@ char abc140eTest_(char arg_133) {
     return 0;
 }
 
-char abc140eMain_(char arg_134) {
-    int call_341 = scanInt_(0);
+char Competitive_ABC140E_abc140eMain(char arg_134) {
+    int call_341 = Competitive_Helpers_scanInt(0);
     int n_4 = call_341;
-    struct IntList const* call_342 = scanIntList_(n_4);
+    struct IntList const* call_342 = Competitive_Helpers_scanIntList(n_4);
     struct IntList const* p_2 = call_342;
-    int call_343 = abc140eSolve_(n_4, p_2);
+    int call_343 = Competitive_ABC140E_abc140eSolve(n_4, p_2);
     int m_2 = call_343;
     printf("%d\n", m_2);
     return 0;
@@ -3515,7 +3515,7 @@ static int fun_20(void const* env_17, int arg_33, int arg_34) {
     return call_344;
 }
 
-int go_18(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1, int sum_3, int i_8) {
+static int go_18(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1, int sum_3, int i_8) {
 tailrec_313:;
     int if_83;
     if ((i_8 == n_5)) {
@@ -3527,9 +3527,9 @@ then_315:;
     if_83 = sum_3;
     goto if_next_314;
 else_316:;
-    int call_345 = segTreeGet_1(i_8, a_1);
+    int call_345 = segTreeGet_(i_8, a_1);
     int ai_ = call_345;
-    int call_346 = segTreeGet_1((ai_ - 1), b_1);
+    int call_346 = segTreeGet_((ai_ - 1), b_1);
     int eat_ = call_346;
     bool if_84;
     if (((i_8 + 1) < n_5)) {
@@ -3538,7 +3538,7 @@ else_316:;
         goto else_319;
     }
 then_318:;
-    int call_347 = segTreeGet_1((i_8 + 1), a_1);
+    int call_347 = segTreeGet_((i_8 + 1), a_1);
     if_84 = (call_347 == (ai_ + 1));
     goto if_next_317;
 else_319:;
@@ -3552,7 +3552,7 @@ if_next_317:;
         goto else_322;
     }
 then_321:;
-    int call_348 = segTreeGet_1((ai_ - 1), c_1);
+    int call_348 = segTreeGet_((ai_ - 1), c_1);
     if_85 = call_348;
     goto if_next_320;
 else_322:;
@@ -3577,32 +3577,32 @@ if_next_314:;
     return if_83;
 }
 
-int abc140bSolve_(int n_5, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_) {
+int Competitive_ABC140B_abc140bSolve(int n_5, struct IntList const* a_, struct IntList const* b_, struct IntList const* c_) {
     struct IntIntIntFun2 fun_38 = (struct IntIntIntFun2){.fun = fun_20, .env = NULL};
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_349 = segItemTypeNew_1(0, fun_38);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 call_349 = segItemTypeNew_(0, fun_38);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_2 = call_349;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_350 = segTreeOfList_1(segItemTypeInt_2, a_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_350 = segTreeOfList_(segItemTypeInt_2, a_);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1 = call_350;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_351 = segTreeOfList_1(segItemTypeInt_2, b_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_351 = segTreeOfList_(segItemTypeInt_2, b_);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1 = call_351;
-    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_352 = segTreeOfList_1(segItemTypeInt_2, c_);
+    struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 call_352 = segTreeOfList_(segItemTypeInt_2, c_);
     struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1 = call_352;
     int call_353 = go_18(n_5, a_1, b_1, c_1, 0, 0);
     return call_353;
 }
 
-int f_(struct IntList const* a_2, struct IntList const* b_2, struct IntList const* c_2) {
-    int call_354 = listLength_1(a_2);
+static int f_(struct IntList const* a_2, struct IntList const* b_2, struct IntList const* c_2) {
+    int call_354 = listLength_(a_2);
     int n_6 = call_354;
-    int call_355 = listLength_1(b_2);
+    int call_355 = listLength_(b_2);
     milone_assert((call_355 == n_6), 32, 4);
-    int call_356 = listLength_1(c_2);
+    int call_356 = listLength_(c_2);
     milone_assert((call_356 == (n_6 - 1)), 33, 4);
-    int call_357 = abc140bSolve_(n_6, a_2, b_2, c_2);
+    int call_357 = Competitive_ABC140B_abc140bSolve(n_6, a_2, b_2, c_2);
     return call_357;
 }
 
-bool case1_(char arg_143) {
+static bool case1_(char arg_143) {
     struct IntList const* list_72 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_72))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_71 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3626,7 +3626,7 @@ bool case1_(char arg_143) {
     return (call_358 == 14);
 }
 
-bool case2_(char arg_144) {
+static bool case2_(char arg_144) {
     struct IntList const* list_81 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_81))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* list_80 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3656,7 +3656,7 @@ bool case2_(char arg_144) {
     return (call_359 == 74);
 }
 
-bool case3_(char arg_145) {
+static bool case3_(char arg_145) {
     struct IntList const* list_90 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_90))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_89 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -3674,7 +3674,7 @@ bool case3_(char arg_145) {
     return (call_360 == 150);
 }
 
-char abc140bTest_(char arg_146) {
+char Competitive_ABC140B_abc140bTest(char arg_146) {
     bool call_361 = case1_(0);
     milone_assert(call_361, 42, 2);
     bool call_362 = case2_(0);
@@ -3684,53 +3684,53 @@ char abc140bTest_(char arg_146) {
     return 0;
 }
 
-char abc140bMain_(char arg_147) {
-    int call_364 = scanInt_(0);
+char Competitive_ABC140B_abc140bMain(char arg_147) {
+    int call_364 = Competitive_Helpers_scanInt(0);
     int n_7 = call_364;
-    struct IntList const* call_365 = scanIntList_(n_7);
+    struct IntList const* call_365 = Competitive_Helpers_scanIntList(n_7);
     struct IntList const* a_6 = call_365;
-    struct IntList const* call_366 = scanIntList_(n_7);
+    struct IntList const* call_366 = Competitive_Helpers_scanIntList(n_7);
     struct IntList const* b_6 = call_366;
-    struct IntList const* call_367 = scanIntList_((n_7 - 1));
+    struct IntList const* call_367 = Competitive_Helpers_scanIntList((n_7 - 1));
     struct IntList const* c_6 = call_367;
-    int call_368 = abc140bSolve_(n_7, a_6, b_6, c_6);
+    int call_368 = Competitive_ABC140B_abc140bSolve(n_7, a_6, b_6, c_6);
     int m_3 = call_368;
     printf("%d\n", m_3);
     return 0;
 }
 
-int abc140aSolve_(int n_8) {
+int Competitive_ABC140A_abc140aSolve(int n_8) {
     return ((n_8 * n_8) * n_8);
 }
 
-char abc140aTest_(char arg_148) {
-    int call_369 = abc140aSolve_(2);
+char Competitive_ABC140A_abc140aTest(char arg_148) {
+    int call_369 = Competitive_ABC140A_abc140aSolve(2);
     milone_assert((call_369 == 8), 8, 2);
-    int call_370 = abc140aSolve_(1);
+    int call_370 = Competitive_ABC140A_abc140aSolve(1);
     milone_assert((call_370 == 1), 9, 2);
     return 0;
 }
 
-char abc140aMain_(char arg_149) {
-    int call_371 = scanInt_(0);
+char Competitive_ABC140A_abc140aMain(char arg_149) {
+    int call_371 = Competitive_Helpers_scanInt(0);
     int n_9 = call_371;
-    int call_372 = abc140aSolve_(n_9);
+    int call_372 = Competitive_ABC140A_abc140aSolve(n_9);
     int m_4 = call_372;
     printf("%d\n", m_4);
     return 0;
 }
 
 int milone_main() {
-    unitObj_ = NULL;
+    Competitive_Helpers_unitObj = NULL;
     struct IntVoidMutPtrFun1 fun_39 = (struct IntVoidMutPtrFun1){.fun = fun_4, .env = NULL};
     struct VoidMutPtrIntIntFun2 fun_40 = (struct VoidMutPtrIntIntFun2){.fun = fun_5, .env = NULL};
     struct VoidMutPtrIntIntUnitFun3 fun_41 = (struct VoidMutPtrIntIntUnitFun3){.fun = fun_6, .env = NULL};
     struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 tuple_43 = (struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6){.t0 = 0, .t1 = 4, .t2 = fun_39, .t3 = fun_40, .t4 = fun_41, .t5 = 0};
-    typeInt_ = tuple_43;
-    char call_373 = vectorTest_(0);
-    char call_374 = segTreeTest_(0);
-    char call_375 = abc140aTest_(0);
-    char call_376 = abc140bTest_(0);
-    char call_377 = abc140eTest_(0);
+    Competitive_Helpers_typeInt = tuple_43;
+    char call_373 = Competitive_Helpers_vectorTest(0);
+    char call_374 = Competitive_SegTree_segTreeTest(0);
+    char call_375 = Competitive_ABC140A_abc140aTest(0);
+    char call_376 = Competitive_ABC140B_abc140bTest(0);
+    char call_377 = Competitive_ABC140E_abc140eTest(0);
     return 0;
 }

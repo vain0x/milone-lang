@@ -1,10 +1,10 @@
 #include "milone.h"
 
-char go_(struct String source_, int len_, int i_);
+static char go_(struct String source_, int len_, int i_);
 
 int milone_main();
 
-char go_(struct String source_, int len_, int i_) {
+static char go_(struct String source_, int len_, int i_) {
 tailrec_1:;
     char if_;
     if ((i_ < len_)) {

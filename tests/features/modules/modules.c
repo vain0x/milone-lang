@@ -2,7 +2,7 @@
 
 struct Val_;
 
-static int f_1(int x_);
+static int f_(int x_);
 
 int milone_main();
 
@@ -19,7 +19,7 @@ struct Val_ {
     };
 };
 
-static int f_1(int x_) {
+static int f_(int x_) {
     return x_;
 }
 
@@ -38,7 +38,7 @@ next_3:;
     exit(1);
 end_match_1:;
     int n_ = match_;
-    int call_ = f_1(n_);
+    int call_ = f_(n_);
     int m_ = call_;
     return m_;
 }

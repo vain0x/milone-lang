@@ -32,7 +32,7 @@ struct IntList;
 
 struct String str_concat(struct String, struct StringList const*);
 
-struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
+struct String MiloneOnly___stringJoin(struct String sep_, struct StringList const* xs_);
 
 static intptr_t __pointeeSize_2(char const* constPtr_);
 
@@ -50,99 +50,95 @@ void* milone_mem_alloc(int, uintptr_t);
 
 static void* memAlloc_(int len_, uintptr_t size_);
 
-void* memcpy(void*, void const*, uintptr_t);
+static struct UnitMutPtrIntTuple2 __mutArrayCreate_1(int len_1);
 
-static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
+static struct IntMutPtrIntTuple2 __mutArrayCreate(int len_1);
 
-static struct UnitMutPtrIntTuple2 __mutArrayCreate_2(int len_1);
+static char __mutArraySet_1(int index_2, char value_, struct UnitMutPtrIntTuple2 array_);
 
-static struct IntMutPtrIntTuple2 __mutArrayCreate_1(int len_1);
+static char __mutArraySet(int index_2, int value_, struct IntMutPtrIntTuple2 array_);
 
-static char __mutArraySet_2(int index_2, char value_, struct UnitMutPtrIntTuple2 array_);
+static struct IntMutPtrIntTuple2 __mutArraySlice(int start_, int endIndex_, struct IntMutPtrIntTuple2 array_1);
 
-static char __mutArraySet_1(int index_2, int value_, struct IntMutPtrIntTuple2 array_);
+static struct UnitConstPtrIntTuple2 __constArrayOfMut_1(struct UnitMutPtrIntTuple2 mutArray_);
 
-static struct IntMutPtrIntTuple2 __mutArraySlice_1(int start_, int endIndex_, struct IntMutPtrIntTuple2 array_1);
+static struct IntConstPtrIntTuple2 __constArrayOfMut(struct IntMutPtrIntTuple2 mutArray_);
 
-static struct UnitConstPtrIntTuple2 __constArrayOfMut_2(struct UnitMutPtrIntTuple2 mutArray_);
+static int __constArrayLength_1(struct UnitConstPtrIntTuple2 array_2);
 
-static struct IntConstPtrIntTuple2 __constArrayOfMut_1(struct IntMutPtrIntTuple2 mutArray_);
+static int __constArrayLength(struct IntConstPtrIntTuple2 array_2);
 
-static int __constArrayLength_2(struct UnitConstPtrIntTuple2 array_2);
+static int __constArrayGet(int index_3, struct IntConstPtrIntTuple2 array_3);
 
-static int __constArrayLength_1(struct IntConstPtrIntTuple2 array_2);
-
-static int __constArrayGet_1(int index_3, struct IntConstPtrIntTuple2 array_3);
-
-static struct IntConstPtrIntTuple2 __constArraySlice_1(int start_1, int endIndex_1, struct IntConstPtrIntTuple2 array_4);
+static struct IntConstPtrIntTuple2 __constArraySlice(int start_1, int endIndex_1, struct IntConstPtrIntTuple2 array_4);
 
 bool str_to_int_checked(struct String, int*);
 
-struct IntOption __intOfStr_(struct String s_);
+struct IntOption MiloneOnly___intOfStr(struct String s_);
 
 int milone_get_arg_count();
 
-int __argCount_(char arg_20);
+int MiloneOnly___argCount(char arg_20);
 
 struct String milone_get_arg(int);
 
-struct String __argGet_(int index_4);
+struct String MiloneOnly___argGet(int index_4);
 
-static struct IntConstPtrIntTuple2 empty_3(char arg_21);
+static struct IntConstPtrIntTuple2 empty_2(char arg_21);
 
-static struct UnitConstPtrIntTuple2 empty_4(char arg_22);
+static struct UnitConstPtrIntTuple2 empty_3(char arg_22);
 
 static char arrayInitLoop_2(int len_8, struct IntUnitFun1 f_, struct UnitMutPtrIntTuple2 array_5, int i_);
 
 static char arrayInitLoop_1(int len_8, struct IntIntFun1 f_, struct IntMutPtrIntTuple2 array_5, int i_);
 
-static struct UnitConstPtrIntTuple2 init_2(int len_8, struct IntUnitFun1 f_);
+static struct UnitConstPtrIntTuple2 init_1(int len_8, struct IntUnitFun1 f_);
 
-static struct IntConstPtrIntTuple2 init_1(int len_8, struct IntIntFun1 f_);
+static struct IntConstPtrIntTuple2 init_(int len_8, struct IntIntFun1 f_);
 
 static int fun_1(int i_1);
 
 static int fun_13(void const* env_1, int arg_2);
 
-struct IntConstPtrIntTuple2 range_(int len_10);
+struct IntConstPtrIntTuple2 MiloneStd_StdArray_range(int len_10);
 
-static int length_2(struct UnitConstPtrIntTuple2 array_6);
+static int length_1(struct UnitConstPtrIntTuple2 array_6);
 
-static int length_1(struct IntConstPtrIntTuple2 array_6);
+static int length_(struct IntConstPtrIntTuple2 array_6);
 
-static struct IntOption tryItem_1(int i_2, struct IntConstPtrIntTuple2 array_8);
+static struct IntOption tryItem_(int i_2, struct IntConstPtrIntTuple2 array_8);
 
-static struct IntConstPtrIntTuple2 slice_1(int start_2, int endIndex_2, struct IntConstPtrIntTuple2 array_9);
+static struct IntConstPtrIntTuple2 slice_(int start_2, int endIndex_2, struct IntConstPtrIntTuple2 array_9);
 
-static struct IntConstPtrIntTuple2 skip_1(int skipLen_, struct IntConstPtrIntTuple2 array_10);
+static struct IntConstPtrIntTuple2 skip_(int skipLen_, struct IntConstPtrIntTuple2 array_10);
 
-static struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 array_13);
+static struct IntIntConstPtrIntTuple2Tuple2Option uncons_(struct IntConstPtrIntTuple2 array_13);
 
 static int fun_25(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14, int i_3);
 
 static int fun_24(void const* env_2, int arg_3);
 
-static struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14);
+static struct IntConstPtrIntTuple2 mapi_(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14);
 
-static int chooseLoop_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_1, int len_13, struct IntMutPtrIntTuple2 dest_1, int di_, int si_);
+static int chooseLoop_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_, int len_13, struct IntMutPtrIntTuple2 dest_, int di_, int si_);
 
-static struct IntConstPtrIntTuple2 choose_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_1);
+static struct IntConstPtrIntTuple2 choose_(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_);
 
 static int arrayFoldLoop_1(struct IntIntIntFun2 folder_, struct IntConstPtrIntTuple2 array_16, int len_14, int state_1, int i_5);
 
-static int fold_1(struct IntIntIntFun2 folder_, int state_, struct IntConstPtrIntTuple2 array_16);
+static int fold_(struct IntIntIntFun2 folder_, int state_, struct IntConstPtrIntTuple2 array_16);
 
 static int listLengthLoop_1(int acc_, struct IntList const* xs_2);
 
-static char ofListLoop_1(int len_15, struct IntMutPtrIntTuple2 dest_2, int i_6, struct IntList const* xs_4);
+static char ofListLoop_1(int len_15, struct IntMutPtrIntTuple2 dest_1, int i_6, struct IntList const* xs_4);
 
-static struct IntConstPtrIntTuple2 ofList_1(struct IntList const* xs_1);
+static struct IntConstPtrIntTuple2 ofList_(struct IntList const* xs_1);
 
 static struct IntList const* toListLoop_1(struct IntConstPtrIntTuple2 array_17, struct IntList const* acc_1, int i_7);
 
-static struct IntList const* toList_1(struct IntConstPtrIntTuple2 array_17);
+static struct IntList const* toList_(struct IntConstPtrIntTuple2 array_17);
 
-static int get_1(int i_8, struct IntConstPtrIntTuple2 array_18);
+static int get_(int i_8, struct IntConstPtrIntTuple2 array_18);
 
 static char fun_5(int arg_57);
 
@@ -152,27 +148,27 @@ static int fun_6(int n_);
 
 static int fun_18(void const* env_6, int arg_12);
 
-char initTest_(char arg_58);
+char std_array_Program_initTest(char arg_58);
 
-char rangeTest_(char arg_59);
+char std_array_Program_rangeTest(char arg_59);
 
-int at_(int bad_, int i_9, struct IntConstPtrIntTuple2 array_19);
+static int at_(int bad_, int i_9, struct IntConstPtrIntTuple2 array_19);
 
-char tryItemTest_(char arg_60);
+char std_array_Program_tryItemTest(char arg_60);
 
-char sliceTest_(char arg_61);
+char std_array_Program_sliceTest(char arg_61);
 
 static int fun_7(int n_1);
 
 static int fun_19(void const* env_7, int arg_13);
 
-char unconsTest_(char arg_62);
+char std_array_Program_unconsTest(char arg_62);
 
 static int fun_8(int i_10, int n_2);
 
 static int fun_20(void const* env_8, int arg_14, int arg_15);
 
-char mapTest_(char arg_63);
+char std_array_Program_mapTest(char arg_63);
 
 static struct IntOption fun_9(int n_3);
 
@@ -182,17 +178,17 @@ static struct IntOption fun_10(int arg_64);
 
 static struct IntOption fun_22(void const* env_10, int arg_17);
 
-char chooseTest_(char arg_65);
+char std_array_Program_chooseTest(char arg_65);
 
 static int fun_11(int state_2, int i_11);
 
 static int fun_23(void const* env_11, int arg_18, int arg_19);
 
-char foldTest_(char arg_66);
+char std_array_Program_foldTest(char arg_66);
 
-char ofListTest_(char arg_67);
+char std_array_Program_ofListTest(char arg_67);
 
-char toListTest_(char arg_68);
+char std_array_Program_toListTest(char arg_68);
 
 int milone_main();
 
@@ -261,9 +257,9 @@ struct IntList {
     struct IntList const* tail;
 };
 
-struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
-    struct String str_concat_result_ = str_concat(sep_, xs_);
-    return str_concat_result_;
+struct String MiloneOnly___stringJoin(struct String sep_, struct StringList const* xs_) {
+    struct String str_concat_result = str_concat(sep_, xs_);
+    return str_concat_result;
 }
 
 static intptr_t __pointeeSize_2(char const* constPtr_) {
@@ -294,16 +290,11 @@ static int* __mutPtrAdd_1(int index_1, int* mutPtr_1) {
 }
 
 static void* memAlloc_(int len_, uintptr_t size_) {
-    void* milone_mem_alloc_result_ = milone_mem_alloc(len_, size_);
-    return milone_mem_alloc_result_;
+    void* milone_mem_alloc_result = milone_mem_alloc(len_, size_);
+    return milone_mem_alloc_result;
 }
 
-static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
-    void* memcpy_result_ = memcpy(dest_, src_, size_1);
-    return memcpy_result_;
-}
-
-static struct UnitMutPtrIntTuple2 __mutArrayCreate_2(int len_1) {
+static struct UnitMutPtrIntTuple2 __mutArrayCreate_1(int len_1) {
     struct UnitMutPtrIntTuple2 if_;
     if ((len_1 == 0)) {
         goto then_2;
@@ -326,7 +317,7 @@ if_next_1:;
     return if_;
 }
 
-static struct IntMutPtrIntTuple2 __mutArrayCreate_1(int len_1) {
+static struct IntMutPtrIntTuple2 __mutArrayCreate(int len_1) {
     struct IntMutPtrIntTuple2 if_1;
     if ((len_1 == 0)) {
         goto then_5;
@@ -349,7 +340,7 @@ if_next_4:;
     return if_1;
 }
 
-static char __mutArraySet_2(int index_2, char value_, struct UnitMutPtrIntTuple2 array_) {
+static char __mutArraySet_1(int index_2, char value_, struct UnitMutPtrIntTuple2 array_) {
     char* mutPtr_2 = array_.t0;
     int len_2 = array_.t1;
     milone_assert((((uint32_t)index_2) < ((uint32_t)len_2)), 54, 2);
@@ -357,7 +348,7 @@ static char __mutArraySet_2(int index_2, char value_, struct UnitMutPtrIntTuple2
     return 0;
 }
 
-static char __mutArraySet_1(int index_2, int value_, struct IntMutPtrIntTuple2 array_) {
+static char __mutArraySet(int index_2, int value_, struct IntMutPtrIntTuple2 array_) {
     int* mutPtr_2 = array_.t0;
     int len_2 = array_.t1;
     milone_assert((((uint32_t)index_2) < ((uint32_t)len_2)), 54, 2);
@@ -365,7 +356,7 @@ static char __mutArraySet_1(int index_2, int value_, struct IntMutPtrIntTuple2 a
     return 0;
 }
 
-static struct IntMutPtrIntTuple2 __mutArraySlice_1(int start_, int endIndex_, struct IntMutPtrIntTuple2 array_1) {
+static struct IntMutPtrIntTuple2 __mutArraySlice(int start_, int endIndex_, struct IntMutPtrIntTuple2 array_1) {
     int* mutPtr_3 = array_1.t0;
     int len_3 = array_1.t1;
     bool if_2;
@@ -400,7 +391,7 @@ if_next_10:;
     return tuple_4;
 }
 
-static struct UnitConstPtrIntTuple2 __constArrayOfMut_2(struct UnitMutPtrIntTuple2 mutArray_) {
+static struct UnitConstPtrIntTuple2 __constArrayOfMut_1(struct UnitMutPtrIntTuple2 mutArray_) {
     char* mutPtr_4 = mutArray_.t0;
     int len_4 = mutArray_.t1;
     char const* call_8 = __ptrAsConst_2(mutPtr_4);
@@ -408,7 +399,7 @@ static struct UnitConstPtrIntTuple2 __constArrayOfMut_2(struct UnitMutPtrIntTupl
     return tuple_5;
 }
 
-static struct IntConstPtrIntTuple2 __constArrayOfMut_1(struct IntMutPtrIntTuple2 mutArray_) {
+static struct IntConstPtrIntTuple2 __constArrayOfMut(struct IntMutPtrIntTuple2 mutArray_) {
     int* mutPtr_4 = mutArray_.t0;
     int len_4 = mutArray_.t1;
     int const* call_9 = __ptrAsConst_1(mutPtr_4);
@@ -416,17 +407,17 @@ static struct IntConstPtrIntTuple2 __constArrayOfMut_1(struct IntMutPtrIntTuple2
     return tuple_6;
 }
 
-static int __constArrayLength_2(struct UnitConstPtrIntTuple2 array_2) {
+static int __constArrayLength_1(struct UnitConstPtrIntTuple2 array_2) {
     int len_5 = array_2.t1;
     return len_5;
 }
 
-static int __constArrayLength_1(struct IntConstPtrIntTuple2 array_2) {
+static int __constArrayLength(struct IntConstPtrIntTuple2 array_2) {
     int len_5 = array_2.t1;
     return len_5;
 }
 
-static int __constArrayGet_1(int index_3, struct IntConstPtrIntTuple2 array_3) {
+static int __constArrayGet(int index_3, struct IntConstPtrIntTuple2 array_3) {
     int const* ptr_2 = array_3.t0;
     int len_6 = array_3.t1;
     milone_assert((((uint32_t)index_3) < ((uint32_t)len_6)), 81, 2);
@@ -434,7 +425,7 @@ static int __constArrayGet_1(int index_3, struct IntConstPtrIntTuple2 array_3) {
     return read_;
 }
 
-static struct IntConstPtrIntTuple2 __constArraySlice_1(int start_1, int endIndex_1, struct IntConstPtrIntTuple2 array_4) {
+static struct IntConstPtrIntTuple2 __constArraySlice(int start_1, int endIndex_1, struct IntConstPtrIntTuple2 array_4) {
     int const* ptr_3 = array_4.t0;
     int len_7 = array_4.t1;
     bool if_4;
@@ -469,11 +460,11 @@ if_next_16:;
     return tuple_7;
 }
 
-struct IntOption __intOfStr_(struct String s_) {
+struct IntOption MiloneOnly___intOfStr(struct String s_) {
     void* call_11 = memAlloc_(1, ((uintptr_t)sizeof(int)));
     int* valueRef_ = ((int*)call_11);
-    bool str_to_int_checked_result_ = str_to_int_checked(s_, valueRef_);
-    bool ok_ = str_to_int_checked_result_;
+    bool str_to_int_checked_result = str_to_int_checked(s_, valueRef_);
+    bool ok_ = str_to_int_checked_result;
     struct IntOption if_6;
     if (ok_) {
         goto then_20;
@@ -493,25 +484,25 @@ if_next_19:;
     return if_6;
 }
 
-int __argCount_(char arg_20) {
-    int milone_get_arg_count_result_ = milone_get_arg_count();
-    return milone_get_arg_count_result_;
+int MiloneOnly___argCount(char arg_20) {
+    int milone_get_arg_count_result = milone_get_arg_count();
+    return milone_get_arg_count_result;
 }
 
-struct String __argGet_(int index_4) {
-    struct String milone_get_arg_result_ = milone_get_arg(index_4);
-    return milone_get_arg_result_;
+struct String MiloneOnly___argGet(int index_4) {
+    struct String milone_get_arg_result = milone_get_arg(index_4);
+    return milone_get_arg_result;
 }
 
-static struct IntConstPtrIntTuple2 empty_3(char arg_21) {
-    struct IntMutPtrIntTuple2 call_13 = __mutArrayCreate_1(0);
-    struct IntConstPtrIntTuple2 call_14 = __constArrayOfMut_1(call_13);
+static struct IntConstPtrIntTuple2 empty_2(char arg_21) {
+    struct IntMutPtrIntTuple2 call_13 = __mutArrayCreate(0);
+    struct IntConstPtrIntTuple2 call_14 = __constArrayOfMut(call_13);
     return call_14;
 }
 
-static struct UnitConstPtrIntTuple2 empty_4(char arg_22) {
-    struct UnitMutPtrIntTuple2 call_15 = __mutArrayCreate_2(0);
-    struct UnitConstPtrIntTuple2 call_16 = __constArrayOfMut_2(call_15);
+static struct UnitConstPtrIntTuple2 empty_3(char arg_22) {
+    struct UnitMutPtrIntTuple2 call_15 = __mutArrayCreate_1(0);
+    struct UnitConstPtrIntTuple2 call_16 = __constArrayOfMut_1(call_15);
     return call_16;
 }
 
@@ -526,7 +517,7 @@ tailrec_22:;
 then_24:;
     char app_ = f_.fun(f_.env, i_);
     char item_ = 0;
-    char call_17 = __mutArraySet_2(i_, 0, array_5);
+    char call_17 = __mutArraySet_1(i_, 0, array_5);
     int arg_23 = len_8;
     struct IntUnitFun1 arg_24 = f_;
     struct UnitMutPtrIntTuple2 arg_25 = array_5;
@@ -554,7 +545,7 @@ tailrec_26:;
 then_28:;
     int app_1 = f_.fun(f_.env, i_);
     int item_ = app_1;
-    char call_18 = __mutArraySet_1(i_, item_, array_5);
+    char call_18 = __mutArraySet(i_, item_, array_5);
     int arg_27 = len_8;
     struct IntIntFun1 arg_28 = f_;
     struct IntMutPtrIntTuple2 arg_29 = array_5;
@@ -571,7 +562,7 @@ if_next_27:;
     return 0;
 }
 
-static struct UnitConstPtrIntTuple2 init_2(int len_8, struct IntUnitFun1 f_) {
+static struct UnitConstPtrIntTuple2 init_1(int len_8, struct IntUnitFun1 f_) {
     struct UnitConstPtrIntTuple2 if_9;
     if ((0 >= len_8)) {
         goto then_31;
@@ -580,21 +571,21 @@ static struct UnitConstPtrIntTuple2 init_2(int len_8, struct IntUnitFun1 f_) {
     }
 then_31:;
     milone_assert((len_8 == 0), 24, 4);
-    struct UnitConstPtrIntTuple2 call_19 = empty_4(0);
+    struct UnitConstPtrIntTuple2 call_19 = empty_3(0);
     if_9 = call_19;
     goto if_next_30;
 else_32:;
-    struct UnitMutPtrIntTuple2 call_20 = __mutArrayCreate_2(len_8);
+    struct UnitMutPtrIntTuple2 call_20 = __mutArrayCreate_1(len_8);
     struct UnitMutPtrIntTuple2 array_5 = call_20;
     char call_21 = arrayInitLoop_2(len_8, f_, array_5, 0);
-    struct UnitConstPtrIntTuple2 call_22 = __constArrayOfMut_2(array_5);
+    struct UnitConstPtrIntTuple2 call_22 = __constArrayOfMut_1(array_5);
     if_9 = call_22;
     goto if_next_30;
 if_next_30:;
     return if_9;
 }
 
-static struct IntConstPtrIntTuple2 init_1(int len_8, struct IntIntFun1 f_) {
+static struct IntConstPtrIntTuple2 init_(int len_8, struct IntIntFun1 f_) {
     struct IntConstPtrIntTuple2 if_10;
     if ((0 >= len_8)) {
         goto then_34;
@@ -603,14 +594,14 @@ static struct IntConstPtrIntTuple2 init_1(int len_8, struct IntIntFun1 f_) {
     }
 then_34:;
     milone_assert((len_8 == 0), 24, 4);
-    struct IntConstPtrIntTuple2 call_23 = empty_3(0);
+    struct IntConstPtrIntTuple2 call_23 = empty_2(0);
     if_10 = call_23;
     goto if_next_33;
 else_35:;
-    struct IntMutPtrIntTuple2 call_24 = __mutArrayCreate_1(len_8);
+    struct IntMutPtrIntTuple2 call_24 = __mutArrayCreate(len_8);
     struct IntMutPtrIntTuple2 array_5 = call_24;
     char call_25 = arrayInitLoop_1(len_8, f_, array_5, 0);
-    struct IntConstPtrIntTuple2 call_26 = __constArrayOfMut_1(array_5);
+    struct IntConstPtrIntTuple2 call_26 = __constArrayOfMut(array_5);
     if_10 = call_26;
     goto if_next_33;
 if_next_33:;
@@ -626,24 +617,24 @@ static int fun_13(void const* env_1, int arg_2) {
     return call_27;
 }
 
-struct IntConstPtrIntTuple2 range_(int len_10) {
+struct IntConstPtrIntTuple2 MiloneStd_StdArray_range(int len_10) {
     struct IntIntFun1 fun_26 = (struct IntIntFun1){.fun = fun_13, .env = NULL};
-    struct IntConstPtrIntTuple2 call_28 = init_1(len_10, fun_26);
+    struct IntConstPtrIntTuple2 call_28 = init_(len_10, fun_26);
     return call_28;
 }
 
-static int length_2(struct UnitConstPtrIntTuple2 array_6) {
-    int call_29 = __constArrayLength_2(array_6);
+static int length_1(struct UnitConstPtrIntTuple2 array_6) {
+    int call_29 = __constArrayLength_1(array_6);
     return call_29;
 }
 
-static int length_1(struct IntConstPtrIntTuple2 array_6) {
-    int call_30 = __constArrayLength_1(array_6);
+static int length_(struct IntConstPtrIntTuple2 array_6) {
+    int call_30 = __constArrayLength(array_6);
     return call_30;
 }
 
-static struct IntOption tryItem_1(int i_2, struct IntConstPtrIntTuple2 array_8) {
-    int call_31 = length_1(array_8);
+static struct IntOption tryItem_(int i_2, struct IntConstPtrIntTuple2 array_8) {
+    int call_31 = length_(array_8);
     struct IntOption if_11;
     if ((((uint32_t)i_2) < ((uint32_t)call_31))) {
         goto then_37;
@@ -651,7 +642,7 @@ static struct IntOption tryItem_1(int i_2, struct IntConstPtrIntTuple2 array_8) 
         goto else_38;
     }
 then_37:;
-    int call_32 = __constArrayGet_1(i_2, array_8);
+    int call_32 = __constArrayGet(i_2, array_8);
     struct IntOption some_1 = (struct IntOption){.some = true, .value = call_32};
     if_11 = some_1;
     goto if_next_36;
@@ -662,8 +653,8 @@ if_next_36:;
     return if_11;
 }
 
-static struct IntConstPtrIntTuple2 slice_1(int start_2, int endIndex_2, struct IntConstPtrIntTuple2 array_9) {
-    int call_33 = length_1(array_9);
+static struct IntConstPtrIntTuple2 slice_(int start_2, int endIndex_2, struct IntConstPtrIntTuple2 array_9) {
+    int call_33 = length_(array_9);
     int len_11 = call_33;
     int if_12;
     if ((start_2 >= 0)) {
@@ -700,25 +691,25 @@ if_next_42:;
         goto else_47;
     }
 then_46:;
-    struct IntConstPtrIntTuple2 call_34 = __constArraySlice_1(start_3, endIndex_3, array_9);
+    struct IntConstPtrIntTuple2 call_34 = __constArraySlice(start_3, endIndex_3, array_9);
     if_14 = call_34;
     goto if_next_45;
 else_47:;
-    struct IntConstPtrIntTuple2 call_35 = empty_3(0);
+    struct IntConstPtrIntTuple2 call_35 = empty_2(0);
     if_14 = call_35;
     goto if_next_45;
 if_next_45:;
     return if_14;
 }
 
-static struct IntConstPtrIntTuple2 skip_1(int skipLen_, struct IntConstPtrIntTuple2 array_10) {
-    int call_36 = length_1(array_10);
-    struct IntConstPtrIntTuple2 call_37 = slice_1(skipLen_, call_36, array_10);
+static struct IntConstPtrIntTuple2 skip_(int skipLen_, struct IntConstPtrIntTuple2 array_10) {
+    int call_36 = length_(array_10);
+    struct IntConstPtrIntTuple2 call_37 = slice_(skipLen_, call_36, array_10);
     return call_37;
 }
 
-static struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 array_13) {
-    int call_38 = length_1(array_13);
+static struct IntIntConstPtrIntTuple2Tuple2Option uncons_(struct IntConstPtrIntTuple2 array_13) {
+    int call_38 = length_(array_13);
     int len_12 = call_38;
     struct IntIntConstPtrIntTuple2Tuple2Option if_15;
     if ((len_12 == 0)) {
@@ -730,9 +721,9 @@ then_49:;
     if_15 = (struct IntIntConstPtrIntTuple2Tuple2Option){.some = false};
     goto if_next_48;
 else_50:;
-    int call_39 = __constArrayGet_1(0, array_13);
+    int call_39 = __constArrayGet(0, array_13);
     int head_ = call_39;
-    struct IntConstPtrIntTuple2 call_40 = __constArraySlice_1(1, len_12, array_13);
+    struct IntConstPtrIntTuple2 call_40 = __constArraySlice(1, len_12, array_13);
     struct IntConstPtrIntTuple2 tail_ = call_40;
     struct IntIntConstPtrIntTuple2Tuple2 tuple_8 = (struct IntIntConstPtrIntTuple2Tuple2){.t0 = head_, .t1 = tail_};
     struct IntIntConstPtrIntTuple2Tuple2Option some_2 = (struct IntIntConstPtrIntTuple2Tuple2Option){.some = true, .value = tuple_8};
@@ -743,7 +734,7 @@ if_next_48:;
 }
 
 static int fun_25(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14, int i_3) {
-    int call_41 = __constArrayGet_1(i_3, array_14);
+    int call_41 = __constArrayGet(i_3, array_14);
     int app_2 = f_1.fun(f_1.env, i_3, call_41);
     return app_2;
 }
@@ -755,17 +746,17 @@ static int fun_24(void const* env_2, int arg_3) {
     return call_42;
 }
 
-static struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14) {
-    int call_43 = length_1(array_14);
+static struct IntConstPtrIntTuple2 mapi_(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14) {
+    int call_43 = length_(array_14);
     struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 tuple_9 = (struct IntIntIntFun2IntConstPtrIntTuple2Tuple2){.t0 = f_1, .t1 = array_14};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntIntIntFun2IntConstPtrIntTuple2Tuple2));
     (*(((struct IntIntIntFun2IntConstPtrIntTuple2Tuple2*)box_))) = tuple_9;
     struct IntIntFun1 fun_27 = (struct IntIntFun1){.fun = fun_24, .env = box_};
-    struct IntConstPtrIntTuple2 call_44 = init_1(call_43, fun_27);
+    struct IntConstPtrIntTuple2 call_44 = init_(call_43, fun_27);
     return call_44;
 }
 
-static int chooseLoop_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_1, int len_13, struct IntMutPtrIntTuple2 dest_1, int di_, int si_) {
+static int chooseLoop_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_, int len_13, struct IntMutPtrIntTuple2 dest_, int di_, int si_) {
 tailrec_51:;
     int if_16;
     if ((si_ == len_13)) {
@@ -778,36 +769,36 @@ then_53:;
     goto if_next_52;
 else_54:;
     int match_;
-    int call_45 = __constArrayGet_1(si_, src_1);
+    int call_45 = __constArrayGet(si_, src_);
     struct IntOption app_3 = f_3.fun(f_3.env, call_45);
     if ((!(app_3.some))) goto next_56;
     int value_1 = app_3.value;
-    char call_46 = __mutArraySet_1(di_, value_1, dest_1);
+    char call_46 = __mutArraySet(di_, value_1, dest_);
     struct IntIntOptionFun1 arg_31 = f_3;
-    struct IntConstPtrIntTuple2 arg_32 = src_1;
+    struct IntConstPtrIntTuple2 arg_32 = src_;
     int arg_33 = len_13;
-    struct IntMutPtrIntTuple2 arg_34 = dest_1;
+    struct IntMutPtrIntTuple2 arg_34 = dest_;
     int arg_35 = (di_ + 1);
     int arg_36 = (si_ + 1);
     f_3 = arg_31;
-    src_1 = arg_32;
+    src_ = arg_32;
     len_13 = arg_33;
-    dest_1 = arg_34;
+    dest_ = arg_34;
     di_ = arg_35;
     si_ = arg_36;
     goto tailrec_51;
 next_56:;
     if (app_3.some) goto next_57;
     struct IntIntOptionFun1 arg_37 = f_3;
-    struct IntConstPtrIntTuple2 arg_38 = src_1;
+    struct IntConstPtrIntTuple2 arg_38 = src_;
     int arg_39 = len_13;
-    struct IntMutPtrIntTuple2 arg_40 = dest_1;
+    struct IntMutPtrIntTuple2 arg_40 = dest_;
     int arg_41 = di_;
     int arg_42 = (si_ + 1);
     f_3 = arg_37;
-    src_1 = arg_38;
+    src_ = arg_38;
     len_13 = arg_39;
-    dest_1 = arg_40;
+    dest_ = arg_40;
     di_ = arg_41;
     si_ = arg_42;
     goto tailrec_51;
@@ -820,12 +811,12 @@ if_next_52:;
     return if_16;
 }
 
-static struct IntConstPtrIntTuple2 choose_1(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_1) {
-    int call_47 = length_1(src_1);
+static struct IntConstPtrIntTuple2 choose_(struct IntIntOptionFun1 f_3, struct IntConstPtrIntTuple2 src_) {
+    int call_47 = length_(src_);
     int len_13 = call_47;
-    struct IntMutPtrIntTuple2 call_48 = __mutArrayCreate_1(len_13);
-    struct IntMutPtrIntTuple2 dest_1 = call_48;
-    int call_49 = chooseLoop_1(f_3, src_1, len_13, dest_1, 0, 0);
+    struct IntMutPtrIntTuple2 call_48 = __mutArrayCreate(len_13);
+    struct IntMutPtrIntTuple2 dest_ = call_48;
+    int call_49 = chooseLoop_1(f_3, src_, len_13, dest_, 0, 0);
     int di_1 = call_49;
     struct IntConstPtrIntTuple2 if_17;
     if ((di_1 == 0)) {
@@ -834,12 +825,12 @@ static struct IntConstPtrIntTuple2 choose_1(struct IntIntOptionFun1 f_3, struct 
         goto else_60;
     }
 then_59:;
-    struct IntConstPtrIntTuple2 call_50 = empty_3(0);
+    struct IntConstPtrIntTuple2 call_50 = empty_2(0);
     if_17 = call_50;
     goto if_next_58;
 else_60:;
-    struct IntMutPtrIntTuple2 call_51 = __mutArraySlice_1(0, di_1, dest_1);
-    struct IntConstPtrIntTuple2 call_52 = __constArrayOfMut_1(call_51);
+    struct IntMutPtrIntTuple2 call_51 = __mutArraySlice(0, di_1, dest_);
+    struct IntConstPtrIntTuple2 call_52 = __constArrayOfMut(call_51);
     if_17 = call_52;
     goto if_next_58;
 if_next_58:;
@@ -861,7 +852,7 @@ else_64:;
     struct IntIntIntFun2 arg_43 = folder_;
     struct IntConstPtrIntTuple2 arg_44 = array_16;
     int arg_45 = len_14;
-    int call_53 = __constArrayGet_1(i_5, array_16);
+    int call_53 = __constArrayGet(i_5, array_16);
     int app_4 = folder_.fun(folder_.env, state_1, call_53);
     int arg_46 = app_4;
     int arg_47 = (i_5 + 1);
@@ -875,8 +866,8 @@ if_next_62:;
     return if_18;
 }
 
-static int fold_1(struct IntIntIntFun2 folder_, int state_, struct IntConstPtrIntTuple2 array_16) {
-    int call_54 = length_1(array_16);
+static int fold_(struct IntIntIntFun2 folder_, int state_, struct IntConstPtrIntTuple2 array_16) {
+    int call_54 = length_(array_16);
     int len_14 = call_54;
     int call_55 = arrayFoldLoop_1(folder_, array_16, len_14, state_, 0);
     return call_55;
@@ -902,7 +893,7 @@ end_match_66:;
     return match_1;
 }
 
-static char ofListLoop_1(int len_15, struct IntMutPtrIntTuple2 dest_2, int i_6, struct IntList const* xs_4) {
+static char ofListLoop_1(int len_15, struct IntMutPtrIntTuple2 dest_1, int i_6, struct IntList const* xs_4) {
 tailrec_69:;
     char match_2;
     if ((!((!(xs_4))))) goto next_71;
@@ -913,13 +904,13 @@ next_71:;
     if ((!(xs_4))) goto next_72;
     int x_ = xs_4->head;
     struct IntList const* xs_5 = xs_4->tail;
-    char call_56 = __mutArraySet_1(i_6, x_, dest_2);
+    char call_56 = __mutArraySet(i_6, x_, dest_1);
     int arg_50 = len_15;
-    struct IntMutPtrIntTuple2 arg_51 = dest_2;
+    struct IntMutPtrIntTuple2 arg_51 = dest_1;
     int arg_52 = (i_6 + 1);
     struct IntList const* arg_53 = xs_5;
     len_15 = arg_50;
-    dest_2 = arg_51;
+    dest_1 = arg_51;
     i_6 = arg_52;
     xs_4 = arg_53;
     goto tailrec_69;
@@ -929,13 +920,13 @@ end_match_70:;
     return 0;
 }
 
-static struct IntConstPtrIntTuple2 ofList_1(struct IntList const* xs_1) {
+static struct IntConstPtrIntTuple2 ofList_(struct IntList const* xs_1) {
     int call_57 = listLengthLoop_1(0, xs_1);
     int len_15 = call_57;
-    struct IntMutPtrIntTuple2 call_58 = __mutArrayCreate_1(len_15);
-    struct IntMutPtrIntTuple2 dest_2 = call_58;
-    char call_59 = ofListLoop_1(len_15, dest_2, 0, xs_1);
-    struct IntConstPtrIntTuple2 call_60 = __constArrayOfMut_1(dest_2);
+    struct IntMutPtrIntTuple2 call_58 = __mutArrayCreate(len_15);
+    struct IntMutPtrIntTuple2 dest_1 = call_58;
+    char call_59 = ofListLoop_1(len_15, dest_1, 0, xs_1);
+    struct IntConstPtrIntTuple2 call_60 = __constArrayOfMut(dest_1);
     return call_60;
 }
 
@@ -952,7 +943,7 @@ then_75:;
     goto if_next_74;
 else_76:;
     struct IntConstPtrIntTuple2 arg_54 = array_17;
-    int call_61 = __constArrayGet_1((i_7 - 1), array_17);
+    int call_61 = __constArrayGet((i_7 - 1), array_17);
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = call_61, .tail = acc_1};
     struct IntList const* arg_55 = list_;
@@ -965,22 +956,22 @@ if_next_74:;
     return if_19;
 }
 
-static struct IntList const* toList_1(struct IntConstPtrIntTuple2 array_17) {
-    int call_62 = length_1(array_17);
+static struct IntList const* toList_(struct IntConstPtrIntTuple2 array_17) {
+    int call_62 = length_(array_17);
     struct IntList const* call_63 = toListLoop_1(array_17, NULL, call_62);
     return call_63;
 }
 
-static int get_1(int i_8, struct IntConstPtrIntTuple2 array_18) {
+static int get_(int i_8, struct IntConstPtrIntTuple2 array_18) {
     int match_3;
-    struct IntOption call_64 = tryItem_1(i_8, array_18);
+    struct IntOption call_64 = tryItem_(i_8, array_18);
     if ((!(call_64.some))) goto next_78;
     int it_ = call_64.value;
     match_3 = it_;
     goto end_match_77;
 next_78:;
     if (call_64.some) goto next_79;
-    int call_65 = length_1(array_18);
+    int call_65 = length_(array_18);
     printf("out of range: i=%d len=%d\n", i_8, call_65);
     milone_assert(false, 9, 6);
     exit(1);
@@ -1009,43 +1000,43 @@ static int fun_18(void const* env_6, int arg_12) {
     return call_67;
 }
 
-char initTest_(char arg_58) {
+char std_array_Program_initTest(char arg_58) {
     struct IntUnitFun1 fun_28 = (struct IntUnitFun1){.fun = fun_17, .env = NULL};
-    struct UnitConstPtrIntTuple2 call_68 = init_2(0, fun_28);
+    struct UnitConstPtrIntTuple2 call_68 = init_1(0, fun_28);
     struct UnitConstPtrIntTuple2 emptyArray_ = call_68;
-    int call_69 = length_2(emptyArray_);
+    int call_69 = length_1(emptyArray_);
     milone_assert((call_69 == 0), 14, 2);
     struct IntIntFun1 fun_29 = (struct IntIntFun1){.fun = fun_18, .env = NULL};
-    struct IntConstPtrIntTuple2 call_70 = init_1(3, fun_29);
+    struct IntConstPtrIntTuple2 call_70 = init_(3, fun_29);
     struct IntConstPtrIntTuple2 a369_ = call_70;
-    int call_71 = length_1(a369_);
+    int call_71 = length_(a369_);
     milone_assert((call_71 == 3), 17, 2);
-    int call_72 = get_1(0, a369_);
+    int call_72 = get_(0, a369_);
     milone_assert((call_72 == 3), 18, 2);
-    int call_73 = get_1(1, a369_);
+    int call_73 = get_(1, a369_);
     milone_assert((call_73 == 6), 19, 2);
-    int call_74 = get_1(2, a369_);
+    int call_74 = get_(2, a369_);
     milone_assert((call_74 == 9), 20, 2);
     return 0;
 }
 
-char rangeTest_(char arg_59) {
-    struct IntConstPtrIntTuple2 call_75 = range_(3);
+char std_array_Program_rangeTest(char arg_59) {
+    struct IntConstPtrIntTuple2 call_75 = MiloneStd_StdArray_range(3);
     struct IntConstPtrIntTuple2 a012_ = call_75;
-    int call_76 = length_1(a012_);
+    int call_76 = length_(a012_);
     milone_assert((call_76 == 3), 25, 2);
-    int call_77 = get_1(0, a012_);
+    int call_77 = get_(0, a012_);
     milone_assert((call_77 == 0), 26, 2);
-    int call_78 = get_1(1, a012_);
+    int call_78 = get_(1, a012_);
     milone_assert((call_78 == 1), 27, 2);
-    int call_79 = get_1(2, a012_);
+    int call_79 = get_(2, a012_);
     milone_assert((call_79 == 2), 28, 2);
     return 0;
 }
 
-int at_(int bad_, int i_9, struct IntConstPtrIntTuple2 array_19) {
+static int at_(int bad_, int i_9, struct IntConstPtrIntTuple2 array_19) {
     int match_4;
-    struct IntOption call_80 = tryItem_1(i_9, array_19);
+    struct IntOption call_80 = tryItem_(i_9, array_19);
     if ((!(call_80.some))) goto next_81;
     int it_1 = call_80.value;
     match_4 = it_1;
@@ -1060,8 +1051,8 @@ end_match_80:;
     return match_4;
 }
 
-char tryItemTest_(char arg_60) {
-    struct IntConstPtrIntTuple2 call_81 = range_(3);
+char std_array_Program_tryItemTest(char arg_60) {
+    struct IntConstPtrIntTuple2 call_81 = MiloneStd_StdArray_range(3);
     struct IntConstPtrIntTuple2 a012_1 = call_81;
     int bad_ = -127;
     int call_82 = at_(bad_, -1, a012_1);
@@ -1072,37 +1063,37 @@ char tryItemTest_(char arg_60) {
     milone_assert((call_84 == 2), 42, 2);
     int call_85 = at_(bad_, 3, a012_1);
     milone_assert((call_85 == bad_), 43, 2);
-    struct IntConstPtrIntTuple2 call_86 = empty_3(0);
+    struct IntConstPtrIntTuple2 call_86 = empty_2(0);
     struct IntConstPtrIntTuple2 emptyArray_1 = call_86;
     int call_87 = at_(bad_, 0, emptyArray_1);
     milone_assert((call_87 == bad_), 46, 2);
     return 0;
 }
 
-char sliceTest_(char arg_61) {
-    struct IntConstPtrIntTuple2 call_88 = range_(10);
+char std_array_Program_sliceTest(char arg_61) {
+    struct IntConstPtrIntTuple2 call_88 = MiloneStd_StdArray_range(10);
     struct IntConstPtrIntTuple2 ten_ = call_88;
-    struct IntConstPtrIntTuple2 call_89 = slice_1(1, 4, ten_);
+    struct IntConstPtrIntTuple2 call_89 = slice_(1, 4, ten_);
     struct IntConstPtrIntTuple2 three_ = call_89;
-    int call_90 = length_1(three_);
+    int call_90 = length_(three_);
     milone_assert((call_90 == 3), 52, 2);
-    int call_91 = get_1(0, three_);
+    int call_91 = get_(0, three_);
     milone_assert((call_91 == 1), 53, 2);
-    int call_92 = get_1(2, three_);
+    int call_92 = get_(2, three_);
     milone_assert((call_92 == 3), 54, 2);
-    struct IntConstPtrIntTuple2 call_93 = slice_1(-1, 2, ten_);
+    struct IntConstPtrIntTuple2 call_93 = slice_(-1, 2, ten_);
     struct IntConstPtrIntTuple2 behind_ = call_93;
-    int call_94 = length_1(behind_);
+    int call_94 = length_(behind_);
     milone_assert((call_94 == 2), 58, 2);
-    int call_95 = get_1(1, behind_);
+    int call_95 = get_(1, behind_);
     milone_assert((call_95 == 1), 59, 2);
-    struct IntConstPtrIntTuple2 call_96 = slice_1(7, 11, ten_);
+    struct IntConstPtrIntTuple2 call_96 = slice_(7, 11, ten_);
     struct IntConstPtrIntTuple2 beyond_ = call_96;
-    int call_97 = length_1(beyond_);
+    int call_97 = length_(beyond_);
     milone_assert((call_97 == 3), 63, 2);
-    int call_98 = get_1(0, beyond_);
+    int call_98 = get_(0, beyond_);
     milone_assert((call_98 == 7), 64, 2);
-    int call_99 = get_1(2, beyond_);
+    int call_99 = get_(2, beyond_);
     milone_assert((call_99 == 9), 65, 2);
     return 0;
 }
@@ -1116,12 +1107,12 @@ static int fun_19(void const* env_7, int arg_13) {
     return call_100;
 }
 
-char unconsTest_(char arg_62) {
+char std_array_Program_unconsTest(char arg_62) {
     struct IntIntFun1 fun_30 = (struct IntIntFun1){.fun = fun_19, .env = NULL};
-    struct IntConstPtrIntTuple2 call_101 = init_1(3, fun_30);
+    struct IntConstPtrIntTuple2 call_101 = init_(3, fun_30);
     struct IntConstPtrIntTuple2 a123_ = call_101;
     char match_5;
-    struct IntIntConstPtrIntTuple2Tuple2Option call_102 = uncons_1(a123_);
+    struct IntIntConstPtrIntTuple2Tuple2Option call_102 = uncons_(a123_);
     if (call_102.some) goto next_84;
     milone_assert(false, 71, 12);
     match_5 = 0;
@@ -1131,11 +1122,11 @@ next_84:;
     int n1_ = call_102.value.t0;
     struct IntConstPtrIntTuple2 a23_ = call_102.value.t1;
     milone_assert((n1_ == 1), 73, 6);
-    int call_103 = length_1(a23_);
+    int call_103 = length_(a23_);
     milone_assert((call_103 == 2), 74, 6);
     char match_6;
-    struct IntConstPtrIntTuple2 call_104 = skip_1(1, a23_);
-    struct IntIntConstPtrIntTuple2Tuple2Option call_105 = uncons_1(call_104);
+    struct IntConstPtrIntTuple2 call_104 = skip_(1, a23_);
+    struct IntIntConstPtrIntTuple2Tuple2Option call_105 = uncons_(call_104);
     if (call_105.some) goto next_87;
     milone_assert(false, 77, 16);
     match_6 = 0;
@@ -1143,12 +1134,12 @@ next_84:;
 next_87:;
     if ((!(call_105.some))) goto next_88;
     int n3_ = call_105.value.t0;
-    struct IntConstPtrIntTuple2 empty_1 = call_105.value.t1;
+    struct IntConstPtrIntTuple2 empty_ = call_105.value.t1;
     milone_assert((n3_ == 3), 79, 10);
-    int call_106 = length_1(empty_1);
+    int call_106 = length_(empty_);
     milone_assert((call_106 == 0), 80, 10);
     char match_7;
-    struct IntIntConstPtrIntTuple2Tuple2Option call_107 = uncons_1(empty_1);
+    struct IntIntConstPtrIntTuple2Tuple2Option call_107 = uncons_(empty_);
     if (call_107.some) goto next_90;
     match_7 = 0;
     goto end_match_89;
@@ -1182,18 +1173,18 @@ static int fun_20(void const* env_8, int arg_14, int arg_15) {
     return call_108;
 }
 
-char mapTest_(char arg_63) {
+char std_array_Program_mapTest(char arg_63) {
     struct IntIntIntFun2 fun_31 = (struct IntIntIntFun2){.fun = fun_20, .env = NULL};
-    struct IntConstPtrIntTuple2 call_109 = range_(3);
-    struct IntConstPtrIntTuple2 call_110 = mapi_1(fun_31, call_109);
+    struct IntConstPtrIntTuple2 call_109 = MiloneStd_StdArray_range(3);
+    struct IntConstPtrIntTuple2 call_110 = mapi_(fun_31, call_109);
     struct IntConstPtrIntTuple2 mapped_ = call_110;
-    int call_111 = length_1(mapped_);
+    int call_111 = length_(mapped_);
     milone_assert((call_111 == 3), 90, 2);
-    int call_112 = get_1(0, mapped_);
+    int call_112 = get_(0, mapped_);
     milone_assert((call_112 == 0), 91, 2);
-    int call_113 = get_1(1, mapped_);
+    int call_113 = get_(1, mapped_);
     milone_assert((call_113 == 11), 92, 2);
-    int call_114 = get_1(2, mapped_);
+    int call_114 = get_(2, mapped_);
     milone_assert((call_114 == 22), 93, 2);
     return 0;
 }
@@ -1230,24 +1221,24 @@ static struct IntOption fun_22(void const* env_10, int arg_17) {
     return call_116;
 }
 
-char chooseTest_(char arg_65) {
+char std_array_Program_chooseTest(char arg_65) {
     struct IntIntOptionFun1 fun_32 = (struct IntIntOptionFun1){.fun = fun_21, .env = NULL};
-    struct IntConstPtrIntTuple2 call_117 = range_(6);
-    struct IntConstPtrIntTuple2 call_118 = choose_1(fun_32, call_117);
+    struct IntConstPtrIntTuple2 call_117 = MiloneStd_StdArray_range(6);
+    struct IntConstPtrIntTuple2 call_118 = choose_(fun_32, call_117);
     struct IntConstPtrIntTuple2 chosen_ = call_118;
-    int call_119 = length_1(chosen_);
+    int call_119 = length_(chosen_);
     milone_assert((call_119 == 3), 99, 2);
-    int call_120 = get_1(0, chosen_);
+    int call_120 = get_(0, chosen_);
     milone_assert((call_120 == 0), 100, 2);
-    int call_121 = get_1(1, chosen_);
+    int call_121 = get_(1, chosen_);
     milone_assert((call_121 == 4), 101, 2);
-    int call_122 = get_1(2, chosen_);
+    int call_122 = get_(2, chosen_);
     milone_assert((call_122 == 8), 102, 2);
     struct IntIntOptionFun1 fun_33 = (struct IntIntOptionFun1){.fun = fun_22, .env = NULL};
-    struct IntConstPtrIntTuple2 call_123 = range_(3);
-    struct IntConstPtrIntTuple2 call_124 = choose_1(fun_33, call_123);
-    struct IntConstPtrIntTuple2 empty_2 = call_124;
-    int call_125 = length_1(empty_2);
+    struct IntConstPtrIntTuple2 call_123 = MiloneStd_StdArray_range(3);
+    struct IntConstPtrIntTuple2 call_124 = choose_(fun_33, call_123);
+    struct IntConstPtrIntTuple2 empty_1 = call_124;
+    int call_125 = length_(empty_1);
     milone_assert((call_125 == 0), 107, 2);
     return 0;
 }
@@ -1261,38 +1252,38 @@ static int fun_23(void const* env_11, int arg_18, int arg_19) {
     return call_126;
 }
 
-char foldTest_(char arg_66) {
+char std_array_Program_foldTest(char arg_66) {
     struct IntIntIntFun2 fun_34 = (struct IntIntIntFun2){.fun = fun_23, .env = NULL};
-    struct IntConstPtrIntTuple2 call_127 = range_(3);
-    int call_128 = fold_1(fun_34, 0, call_127);
+    struct IntConstPtrIntTuple2 call_127 = MiloneStd_StdArray_range(3);
+    int call_128 = fold_(fun_34, 0, call_127);
     int sum_ = call_128;
     milone_assert((sum_ == 123), 113, 2);
     return 0;
 }
 
-char ofListTest_(char arg_67) {
+char std_array_Program_ofListTest(char arg_67) {
     struct IntList const* list_3 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_3))) = (struct IntList){.head = 5, .tail = NULL};
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = list_3};
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_1))) = (struct IntList){.head = 2, .tail = list_2};
-    struct IntConstPtrIntTuple2 call_129 = ofList_1(list_1);
+    struct IntConstPtrIntTuple2 call_129 = ofList_(list_1);
     struct IntConstPtrIntTuple2 ol_ = call_129;
-    int call_130 = length_1(ol_);
+    int call_130 = length_(ol_);
     milone_assert((call_130 == 3), 126, 2);
-    int call_131 = get_1(0, ol_);
+    int call_131 = get_(0, ol_);
     milone_assert((call_131 == 2), 127, 2);
-    int call_132 = get_1(1, ol_);
+    int call_132 = get_(1, ol_);
     milone_assert((call_132 == 3), 128, 2);
-    int call_133 = get_1(2, ol_);
+    int call_133 = get_(2, ol_);
     milone_assert((call_133 == 5), 129, 2);
     return 0;
 }
 
-char toListTest_(char arg_68) {
-    struct IntConstPtrIntTuple2 call_134 = range_(3);
-    struct IntList const* call_135 = toList_1(call_134);
+char std_array_Program_toListTest(char arg_68) {
+    struct IntConstPtrIntTuple2 call_134 = MiloneStd_StdArray_range(3);
+    struct IntList const* call_135 = toList_(call_134);
     struct IntList const* tl_ = call_135;
     char match_8;
     if ((!(tl_))) goto next_96;
@@ -1316,15 +1307,15 @@ end_match_95:;
 }
 
 int milone_main() {
-    char call_136 = initTest_(0);
-    char call_137 = rangeTest_(0);
-    char call_138 = tryItemTest_(0);
-    char call_139 = sliceTest_(0);
-    char call_140 = unconsTest_(0);
-    char call_141 = mapTest_(0);
-    char call_142 = chooseTest_(0);
-    char call_143 = foldTest_(0);
-    char call_144 = ofListTest_(0);
-    char call_145 = toListTest_(0);
+    char call_136 = std_array_Program_initTest(0);
+    char call_137 = std_array_Program_rangeTest(0);
+    char call_138 = std_array_Program_tryItemTest(0);
+    char call_139 = std_array_Program_sliceTest(0);
+    char call_140 = std_array_Program_unconsTest(0);
+    char call_141 = std_array_Program_mapTest(0);
+    char call_142 = std_array_Program_chooseTest(0);
+    char call_143 = std_array_Program_foldTest(0);
+    char call_144 = std_array_Program_ofListTest(0);
+    char call_145 = std_array_Program_toListTest(0);
     return 0;
 }

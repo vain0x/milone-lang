@@ -218,7 +218,7 @@ type ModuleSynonymDef =
 [<NoEquality; NoComparison>]
 type Linkage =
   | InternalLinkage
-  | ExternalLinkage
+  | ExternalLinkage of name: string
 
 /// Definition of named value in HIR.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]

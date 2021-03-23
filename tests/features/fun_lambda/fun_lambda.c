@@ -10,7 +10,7 @@ static int fun_(int x_1);
 
 static int fun_3(void const* env_, int arg_);
 
-char layoutTest_(char arg_4);
+char fun_lambda_Program_layoutTest(char arg_4);
 
 static int twice_1(struct IntIntFun1 f_1, int x_2);
 
@@ -48,7 +48,7 @@ static int fun_3(void const* env_, int arg_) {
     return call_;
 }
 
-char layoutTest_(char arg_4) {
+char fun_lambda_Program_layoutTest(char arg_4) {
     struct IntIntFun1 fun_6 = (struct IntIntFun1){.fun = fun_3, .env = NULL};
     int call_1 = apply_1(fun_6, 2);
     int a_ = call_1;
@@ -89,6 +89,6 @@ int milone_main() {
     struct IntIntIntFun2 fun_8 = (struct IntIntIntFun2){.fun = fun_5, .env = NULL};
     int app_3 = fun_8.fun(fun_8.env, 84, 2);
     milone_assert((app_3 == 42), 28, 2);
-    char call_5 = layoutTest_(0);
+    char call_5 = fun_lambda_Program_layoutTest(0);
     return 0;
 }

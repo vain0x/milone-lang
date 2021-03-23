@@ -8,9 +8,9 @@ struct StringList;
 
 struct StringList;
 
-int f_(int x_);
+static int f_(int x_);
 
-int g_(int x_1);
+static int g_(int x_1);
 
 int milone_main();
 
@@ -24,11 +24,11 @@ struct StringList {
     struct StringList const* tail;
 };
 
-int f_(int x_) {
+static int f_(int x_) {
     return x_;
 }
 
-int g_(int x_1) {
+static int g_(int x_1) {
     return x_1;
 }
 

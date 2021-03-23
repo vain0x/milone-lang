@@ -31,8 +31,8 @@ let private __mutPtrAdd (index: int) (mutPtr: nativeptr<'T>): nativeptr<'T> =
 let private memAlloc (len: int) (size: unativeint): voidptr =
   __nativeFun ("milone_mem_alloc", len, size)
 
-let private memcpy (dest: voidptr) (src: obj) (size: unativeint): voidptr =
-  __nativeFun ("memcpy", dest, src, size)
+// let private memCopy (dest: voidptr) (src: obj) (size: unativeint): voidptr =
+//   __nativeFun ("memcpy", dest, src, size)
 
 // ptr, len
 type __MutArray<'T> = nativeptr<'T> * int

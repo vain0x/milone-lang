@@ -8,15 +8,15 @@ struct IntUnitLazyList_Fun1Tuple2;
 
 struct IntIntTuple2;
 
-struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_);
+static struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_);
 
-char go_(int n_1, struct LazyList_ xs_1);
+static char go_(int n_1, struct LazyList_ xs_1);
 
-char lazyListPrint_(int n_, struct LazyList_ xs_);
+static char lazyListPrint_(int n_, struct LazyList_ xs_);
 
 static struct LazyList_ fun_(void const* env_, char arg_);
 
-struct LazyList_ makeTail_(int n_2, int prev_, char arg_5);
+static struct LazyList_ makeTail_(int n_2, int prev_, char arg_5);
 
 int milone_main();
 
@@ -47,7 +47,7 @@ struct IntIntTuple2 {
     int t1;
 };
 
-struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
+static struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
     struct IntUnitLazyList_Fun1Tuple2 tuple_ = (struct IntUnitLazyList_Fun1Tuple2){.t0 = head_, .t1 = tail_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntUnitLazyList_Fun1Tuple2));
     (*(((struct IntUnitLazyList_Fun1Tuple2*)box_))) = tuple_;
@@ -55,7 +55,7 @@ struct LazyList_ cons_(struct UnitLazyList_Fun1 tail_, int head_) {
     return variant_;
 }
 
-char go_(int n_1, struct LazyList_ xs_1) {
+static char go_(int n_1, struct LazyList_ xs_1) {
 tailrec_1:;
     char if_;
     if ((0 < n_1)) {
@@ -91,7 +91,7 @@ if_next_2:;
     return 0;
 }
 
-char lazyListPrint_(int n_, struct LazyList_ xs_) {
+static char lazyListPrint_(int n_, struct LazyList_ xs_) {
     char call_ = go_(n_, xs_);
     return 0;
 }
@@ -103,7 +103,7 @@ static struct LazyList_ fun_(void const* env_, char arg_) {
     return call_1;
 }
 
-struct LazyList_ makeTail_(int n_2, int prev_, char arg_5) {
+static struct LazyList_ makeTail_(int n_2, int prev_, char arg_5) {
     int head_2 = (n_2 * prev_);
     struct IntIntTuple2 tuple_1 = (struct IntIntTuple2){.t0 = (n_2 + 1), .t1 = head_2};
     void const* box_1 = milone_mem_alloc(1, sizeof(struct IntIntTuple2));

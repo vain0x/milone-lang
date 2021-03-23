@@ -4,13 +4,13 @@ struct IntList;
 
 struct IntList;
 
-char nilTest_(char arg_);
+char list_operators_Program_nilTest(char arg_);
 
-char cons1Test_(char arg_1);
+char list_operators_Program_cons1Test(char arg_1);
 
-char cons2Test_(char arg_2);
+char list_operators_Program_cons2Test(char arg_2);
 
-char literalTest_(char arg_3);
+char list_operators_Program_literalTest(char arg_3);
 
 int milone_main();
 
@@ -19,7 +19,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-char nilTest_(char arg_) {
+char list_operators_Program_nilTest(char arg_) {
     struct IntList const* nil_ = NULL;
     char if_;
     if ((!(nil_))) {
@@ -38,7 +38,7 @@ if_next_1:;
     return 0;
 }
 
-char cons1Test_(char arg_1) {
+char list_operators_Program_cons1Test(char arg_1) {
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 1, .tail = NULL};
     struct IntList const* xs_ = list_;
@@ -58,7 +58,7 @@ end_match_4:;
     return 0;
 }
 
-char cons2Test_(char arg_2) {
+char list_operators_Program_cons2Test(char arg_2) {
     struct IntList const* list_2 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_2))) = (struct IntList){.head = 3, .tail = NULL};
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -95,7 +95,7 @@ end_match_7:;
     return 0;
 }
 
-char literalTest_(char arg_3) {
+char list_operators_Program_literalTest(char arg_3) {
     struct IntList const* list_6 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_6))) = (struct IntList){.head = 7, .tail = NULL};
     struct IntList const* list_5 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -131,9 +131,9 @@ end_match_13:;
 }
 
 int milone_main() {
-    char call_ = nilTest_(0);
-    char call_1 = cons1Test_(0);
-    char call_2 = cons2Test_(0);
-    char call_3 = literalTest_(0);
+    char call_ = list_operators_Program_nilTest(0);
+    char call_1 = list_operators_Program_cons1Test(0);
+    char call_2 = list_operators_Program_cons2Test(0);
+    char call_3 = list_operators_Program_literalTest(0);
     return 0;
 }

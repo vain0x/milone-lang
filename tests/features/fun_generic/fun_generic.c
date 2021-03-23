@@ -30,9 +30,9 @@ static struct IntList const* go_2(struct IntList const* acc_, struct IntList con
 
 static struct StringList const* go_1(struct StringList const* acc_, struct StringList const* xs_1);
 
-static struct IntList const* listRev_2(struct IntList const* xs_);
+static struct IntList const* listRev_1(struct IntList const* xs_);
 
-static struct StringList const* listRev_1(struct StringList const* xs_);
+static struct StringList const* listRev_(struct StringList const* xs_);
 
 static int id_2(int x_1);
 
@@ -42,7 +42,7 @@ static struct IntList const* listMap_2(struct IntIntFun1 f_, struct IntList cons
 
 static struct StringIntTuple2List const* listMap_1(struct IntStringTuple2StringIntTuple2Fun1 f_, struct IntStringTuple2List const* xs_3);
 
-int f_1(int x_3);
+static int f_1(int x_3);
 
 static int fun_(void const* env_, int arg_);
 
@@ -147,12 +147,12 @@ end_match_6:;
     return match_1;
 }
 
-static struct IntList const* listRev_2(struct IntList const* xs_) {
+static struct IntList const* listRev_1(struct IntList const* xs_) {
     struct IntList const* call_ = go_2(NULL, xs_);
     return call_;
 }
 
-static struct StringList const* listRev_1(struct StringList const* xs_) {
+static struct StringList const* listRev_(struct StringList const* xs_) {
     struct StringList const* call_1 = go_1(NULL, xs_);
     return call_1;
 }
@@ -207,7 +207,7 @@ end_match_12:;
     return match_3;
 }
 
-int f_1(int x_3) {
+static int f_1(int x_3) {
     printf("%d\n", x_3);
     return (x_3 * x_3);
 }
@@ -276,12 +276,12 @@ end_match_15:;
     (*(((struct IntList*)list_9))) = (struct IntList){.head = 2, .tail = NULL};
     struct IntList const* list_8 = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_8))) = (struct IntList){.head = 1, .tail = list_9};
-    struct IntList const* call_14 = listRev_2(list_8);
+    struct IntList const* call_14 = listRev_1(list_8);
     struct StringList const* list_11 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_11))) = (struct StringList){.head = (struct String){.str = "b", .len = 1}, .tail = NULL};
     struct StringList const* list_10 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_10))) = (struct StringList){.head = (struct String){.str = "a", .len = 1}, .tail = list_11};
-    struct StringList const* call_15 = listRev_1(list_10);
+    struct StringList const* call_15 = listRev_(list_10);
     struct IntListStringListTuple2 tuple_3 = (struct IntListStringListTuple2){.t0 = call_14, .t1 = call_15};
     if ((!(tuple_3.t0))) goto next_19;
     if ((tuple_3.t0->head != 2)) goto next_19;

@@ -34,12 +34,12 @@ int milone_main() {
     struct IntStringTuple2 tuple_ = (struct IntStringTuple2){.t0 = 1, .t1 = (struct String){.str = "snd", .len = 3}};
     struct IntStringTuple2 a_ = tuple_;
     int x_ = a_.t0;
-    struct String _x_ = a_.t1;
+    struct String _x = a_.t1;
     printf("%d\n", x_);
     struct StringIntTuple2 tuple_1 = (struct StringIntTuple2){.t0 = (struct String){.str = "fst", .len = 3}, .t1 = 2};
     struct StringIntTuple2 b_ = tuple_1;
     struct String y_ = b_.t0;
-    int _y_ = b_.t1;
+    int _y = b_.t1;
     printf("%s\n", str_to_c_str(y_));
     struct StringStringTuple2 tuple_2 = (struct StringStringTuple2){.t0 = (struct String){.str = "z", .len = 1}, .t1 = (struct String){.str = "w", .len = 1}};
     struct String z_ = tuple_2.t0;

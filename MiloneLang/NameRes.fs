@@ -14,11 +14,6 @@ module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
-let private visToLinkage vis =
-  match vis with
-  | PublicVis -> ExternalLinkage
-  | PrivateVis -> InternalLinkage
-
 let private isNoTy ty =
   match ty with
   | Ty (ErrorTk _, _) -> true
@@ -237,6 +232,11 @@ let private ofNameCtx (nameCtx: NameCtx) : ScopeCtx =
 let private addLog (log: NameResLog) (loc: Loc) (ctx: ScopeCtx) =
   { ctx with
       Logs = (log, loc) :: ctx.Logs }
+
+let private makeLinkage vis name (ctx: ScopeCtx) =
+  match vis with
+  | PublicVis -> ExternalLinkage(S.concat "_" ctx.CurrentPath + "_" + name)
+  | PrivateVis -> InternalLinkage
 
 let private findName serial (scopeCtx: ScopeCtx) : Ident = scopeCtx.NameMap |> mapFind serial
 
@@ -725,7 +725,7 @@ let private defineFunUniquely vis funSerial args ty loc (scopeCtx: ScopeCtx) : S
           Arity = args |> List.length
           Ty = TyScheme([], ty)
           Abi = MiloneAbi
-          Linkage = visToLinkage vis
+          Linkage = makeLinkage vis name scopeCtx
           Loc = loc }
 
       let scopeCtx =
@@ -921,7 +921,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
               { Name = name
                 IsStatic = IsStatic
                 Ty = ty
-                Linkage = visToLinkage vis
+                Linkage = makeLinkage vis name ctx
                 Loc = loc }
 
             let ctx =
@@ -1514,10 +1514,11 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
           match isRec with
           | IsRec ->
               // Define the function itself for recursive referencing.
+              // (If this declaration is not written in module directly, visibility meaning less, so use PrivateVis.)
               let ctx =
                 ctx
                 |> enterLetInit
-                |> defineFunUniquely vis serial pats noTy loc
+                |> defineFunUniquely PrivateVis serial pats noTy loc
                 |> startScope ExprScope
 
               let pats, ctx =
@@ -1539,7 +1540,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
               let ctx =
                 ctx
                 |> finishScope
-                |> defineFunUniquely vis serial pats noTy loc
+                |> defineFunUniquely PrivateVis serial pats noTy loc
                 |> leaveLetInit
 
               pats, body, ctx

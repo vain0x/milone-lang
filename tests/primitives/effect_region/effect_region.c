@@ -6,13 +6,13 @@ struct IntList;
 
 struct UnitIntFun1;
 
-struct IntList const* go_(struct IntList const* acc_, int i_);
+static struct IntList const* go_(struct IntList const* acc_, int i_);
 
 static int fun_(char arg_3);
 
 static int fun_1(void const* env_, char arg_);
 
-int doAction_(char arg_4);
+int effect_region_Program_doAction(char arg_4);
 
 int milone_main();
 
@@ -26,7 +26,7 @@ struct UnitIntFun1 {
     void const* env;
 };
 
-struct IntList const* go_(struct IntList const* acc_, int i_) {
+static struct IntList const* go_(struct IntList const* acc_, int i_) {
 tailrec_1:;
     struct IntList const* if_;
     if ((i_ >= 0)) {
@@ -60,15 +60,15 @@ static int fun_1(void const* env_, char arg_) {
     return call_1;
 }
 
-int doAction_(char arg_4) {
+int effect_region_Program_doAction(char arg_4) {
     struct UnitIntFun1 fun_2 = (struct UnitIntFun1){.fun = fun_1, .env = NULL};
     milone_enter_region();
-    int region_result_ = fun_2.fun(fun_2.env, 0);
+    int region_result = fun_2.fun(fun_2.env, 0);
     milone_leave_region();
-    return region_result_;
+    return region_result;
 }
 
 int milone_main() {
-    int call_2 = doAction_(0);
+    int call_2 = effect_region_Program_doAction(0);
     return 0;
 }

@@ -1,10 +1,10 @@
 #include "milone.h"
 
-char printIntOrStr_(bool isInt_, void const* value_);
+static char printIntOrStr_(bool isInt_, void const* value_);
 
 int milone_main();
 
-char printIntOrStr_(bool isInt_, void const* value_) {
+static char printIntOrStr_(bool isInt_, void const* value_) {
     char if_;
     if (isInt_) {
         goto then_2;

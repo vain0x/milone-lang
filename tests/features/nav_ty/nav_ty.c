@@ -4,9 +4,9 @@ struct Node_;
 
 struct Node_Node_Tuple2;
 
-struct Node_ leaf_(int n_);
+static struct Node_ leaf_(int n_);
 
-struct Node_ node_(struct Node_ l_, struct Node_ r_);
+static struct Node_ node_(struct Node_ l_, struct Node_ r_);
 
 int milone_main();
 
@@ -28,12 +28,12 @@ struct Node_Node_Tuple2 {
     struct Node_ t1;
 };
 
-struct Node_ leaf_(int n_) {
+static struct Node_ leaf_(int n_) {
     struct Node_ variant_ = (struct Node_){.discriminant = Leaf_, .Leaf_ = n_};
     return variant_;
 }
 
-struct Node_ node_(struct Node_ l_, struct Node_ r_) {
+static struct Node_ node_(struct Node_ l_, struct Node_ r_) {
     struct Node_Node_Tuple2 tuple_ = (struct Node_Node_Tuple2){.t0 = l_, .t1 = r_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct Node_Node_Tuple2));
     (*(((struct Node_Node_Tuple2*)box_))) = tuple_;

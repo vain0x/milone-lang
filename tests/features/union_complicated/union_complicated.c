@@ -30,7 +30,7 @@ struct IntThird_Tuple2;
 
 struct IntThird_Tuple2List;
 
-struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2);
+static struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2);
 
 static struct First_ListSecond_ListTuple2 fun_(void const* env_, struct First_Second_Tuple2List const* arg_);
 
@@ -115,7 +115,7 @@ struct IntThird_Tuple2List {
     struct IntThird_Tuple2List const* tail;
 };
 
-struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2) {
+static struct First_ListSecond_ListTuple2 f_(struct First_Second_Tuple2List const* arg_2) {
     struct First_ListSecond_ListTuple2 tuple_ = (struct First_ListSecond_ListTuple2){.t0 = NULL, .t1 = NULL};
     return tuple_;
 }

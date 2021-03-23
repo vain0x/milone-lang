@@ -6,7 +6,7 @@ struct IntWrapper_Tuple1;
 
 struct UnitIntWrapper_Fun1;
 
-static struct IntWrapper_ constant_1(struct IntWrapper_ value_, char arg_2);
+static struct IntWrapper_ constant_(struct IntWrapper_ value_, char arg_2);
 
 static struct IntWrapper_ fun_(void const* env_, char arg_);
 
@@ -25,13 +25,13 @@ struct UnitIntWrapper_Fun1 {
     void const* env;
 };
 
-static struct IntWrapper_ constant_1(struct IntWrapper_ value_, char arg_2) {
+static struct IntWrapper_ constant_(struct IntWrapper_ value_, char arg_2) {
     return value_;
 }
 
 static struct IntWrapper_ fun_(void const* env_, char arg_) {
     struct IntWrapper_ arg_1 = (*(((struct IntWrapper_Tuple1 const*)env_))).t0;
-    struct IntWrapper_ call_ = constant_1(arg_1, 0);
+    struct IntWrapper_ call_ = constant_(arg_1, 0);
     return call_;
 }
 

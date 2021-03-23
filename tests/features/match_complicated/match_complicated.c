@@ -6,13 +6,13 @@ struct IntList;
 
 struct IntIntTuple2;
 
-char testTrivialCase_(char arg_);
+char match_complicated_Program_testTrivialCase(char arg_);
 
-char testListMatching_(char arg_1);
+char match_complicated_Program_testListMatching(char arg_1);
 
-char testMatchArmsMakeScope_(char arg_2);
+char match_complicated_Program_testMatchArmsMakeScope(char arg_2);
 
-char testNestedMatchesParseCorrectly_(char arg_3);
+char match_complicated_Program_testNestedMatchesParseCorrectly(char arg_3);
 
 int milone_main();
 
@@ -26,7 +26,7 @@ struct IntIntTuple2 {
     int t1;
 };
 
-char testTrivialCase_(char arg_) {
+char match_complicated_Program_testTrivialCase(char arg_) {
     char match_;
     match_ = 0;
     goto end_match_1;
@@ -35,7 +35,7 @@ end_match_1:;
     return 0;
 }
 
-char testListMatching_(char arg_1) {
+char match_complicated_Program_testListMatching(char arg_1) {
     char match_1;
     struct IntList const* list_ = milone_mem_alloc(1, sizeof(struct IntList));
     (*(((struct IntList*)list_))) = (struct IntList){.head = 0, .tail = NULL};
@@ -60,7 +60,7 @@ end_match_3:;
     return 0;
 }
 
-char testMatchArmsMakeScope_(char arg_2) {
+char match_complicated_Program_testMatchArmsMakeScope(char arg_2) {
     int x_ = 2;
     char match_2;
     struct IntIntTuple2 tuple_ = (struct IntIntTuple2){.t0 = x_, .t1 = 1};
@@ -96,7 +96,7 @@ end_match_7:;
     return 0;
 }
 
-char testNestedMatchesParseCorrectly_(char arg_3) {
+char match_complicated_Program_testNestedMatchesParseCorrectly(char arg_3) {
     char match_3;
     if (true) goto next_15;
     char switch_;
@@ -120,9 +120,9 @@ end_match_14:;
 }
 
 int milone_main() {
-    char call_ = testTrivialCase_(0);
-    char call_1 = testListMatching_(0);
-    char call_2 = testMatchArmsMakeScope_(0);
-    char call_3 = testNestedMatchesParseCorrectly_(0);
+    char call_ = match_complicated_Program_testTrivialCase(0);
+    char call_1 = match_complicated_Program_testListMatching(0);
+    char call_2 = match_complicated_Program_testMatchArmsMakeScope(0);
+    char call_3 = match_complicated_Program_testNestedMatchesParseCorrectly(0);
     return 0;
 }

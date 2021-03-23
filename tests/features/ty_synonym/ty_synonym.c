@@ -4,15 +4,15 @@ struct IntList;
 
 struct IntList;
 
-char baseCase_(char arg_);
+char ty_synonym_Program_baseCase(char arg_);
 
-char yodaCase_(int exitCode_);
+char ty_synonym_Program_yodaCase(int exitCode_);
 
 static int proj_2(bool cond_, int body_, int alt_);
 
 static struct String proj_1(bool cond_, struct String body_, struct String alt_);
 
-char polymorphicFunCase_(char arg_1);
+char ty_synonym_Program_polymorphicFunCase(char arg_1);
 
 int milone_main();
 
@@ -21,7 +21,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-char baseCase_(char arg_) {
+char ty_synonym_Program_baseCase(char arg_) {
     int success_ = 0;
     int failure_ = 1;
     struct IntList const* list_1 = milone_mem_alloc(1, sizeof(struct IntList));
@@ -33,7 +33,7 @@ char baseCase_(char arg_) {
     return 0;
 }
 
-char yodaCase_(int exitCode_) {
+char ty_synonym_Program_yodaCase(int exitCode_) {
     milone_assert((0 == exitCode_), 16, 36);
     return 0;
 }
@@ -72,7 +72,7 @@ if_next_4:;
     return if_1;
 }
 
-char polymorphicFunCase_(char arg_1) {
+char ty_synonym_Program_polymorphicFunCase(char arg_1) {
     int call_ = proj_2(true, 1, 0);
     milone_assert((call_ == 1), 21, 2);
     struct String call_1 = proj_1(false, (struct String){.str = "T", .len = 1}, (struct String){.str = "F", .len = 1});
@@ -81,8 +81,8 @@ char polymorphicFunCase_(char arg_1) {
 }
 
 int milone_main() {
-    char call_2 = baseCase_(0);
-    char call_3 = yodaCase_(0);
-    char call_4 = polymorphicFunCase_(0);
+    char call_2 = ty_synonym_Program_baseCase(0);
+    char call_3 = ty_synonym_Program_yodaCase(0);
+    char call_4 = ty_synonym_Program_polymorphicFunCase(0);
     return 0;
 }

@@ -2,7 +2,7 @@
 
 struct IntIntTuple2;
 
-int sub_(struct IntIntTuple2 arg_);
+static int sub_(struct IntIntTuple2 arg_);
 
 int milone_main();
 
@@ -11,7 +11,7 @@ struct IntIntTuple2 {
     int t1;
 };
 
-int sub_(struct IntIntTuple2 arg_) {
+static int sub_(struct IntIntTuple2 arg_) {
     int x_ = arg_.t0;
     int y_ = arg_.t1;
     return (x_ - y_);

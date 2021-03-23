@@ -22,6 +22,7 @@ open MiloneLang.Cir
 
 module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
+module S = MiloneStd.StdString
 
 let private valueSymbolCompare l r =
   let encode symbol =
@@ -40,7 +41,10 @@ let private unwrapListTy ty =
 let private renameIdents toIdent toKey mapFuns (defMap: AssocMap<_, _>) =
   let rename (ident: string) (index: int) =
     if index = 0 then
-      ident + "_"
+      if ident |> S.contains "_" then
+        ident
+      else
+        ident + "_"
     else
       ident + "_" + string index
 
@@ -94,11 +98,27 @@ let private ofMirCtx (mirCtx: MirCtx) : CirCtx =
 
     let m =
       mirCtx.Vars
-      |> TMap.fold (fun acc varSerial (varDef: VarDef) -> acc |> TMap.add (VarSymbol varSerial) varDef.Name) m
+      |> TMap.fold
+           (fun acc varSerial (varDef: VarDef) ->
+             let name =
+               match varDef.Linkage with
+               | InternalLinkage -> varDef.Name
+               | ExternalLinkage name -> name
+
+             acc |> TMap.add (VarSymbol varSerial) name)
+           m
 
     let m =
       mirCtx.Funs
-      |> TMap.fold (fun acc funSerial (funDef: FunDef) -> acc |> TMap.add (FunSymbol funSerial) funDef.Name) m
+      |> TMap.fold
+           (fun acc funSerial (funDef: FunDef) ->
+             let name =
+               match funDef.Linkage with
+               | InternalLinkage -> funDef.Name
+               | ExternalLinkage name -> name
+
+             acc |> TMap.add (FunSymbol funSerial) name)
+           m
 
     let m =
       mirCtx.Variants
@@ -833,8 +853,8 @@ let private addLetStmt ctx name expr cty isStatic linkage =
   | IsStatic ->
       let ctx =
         match linkage with
-        | InternalLinkage ->addDecl ctx (CInternalStaticVarDecl(name, cty))
-        | ExternalLinkage -> addDecl ctx (CStaticVarDecl(name, cty))
+        | InternalLinkage -> addDecl ctx (CInternalStaticVarDecl(name, cty))
+        | ExternalLinkage _ -> addDecl ctx (CStaticVarDecl(name, cty))
 
       match expr with
       | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
@@ -1191,7 +1211,7 @@ let private cgDecls (ctx: CirCtx) decls =
       let funDecl =
         match def.Linkage with
         | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
-        | ExternalLinkage -> CFunDecl(funName, args, resultTy, body)
+        | ExternalLinkage _ -> CFunDecl(funName, args, resultTy, body)
 
       let ctx = addDecl ctx funDecl
       cgDecls ctx decls

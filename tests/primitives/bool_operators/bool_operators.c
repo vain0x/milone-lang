@@ -1,12 +1,12 @@
 #include "milone.h"
 
-char test_(bool t_, bool f_);
+char bool_operators_Program_test(bool t_, bool f_);
 
-char testShortCircuit_(bool t_1, bool f_1);
+char bool_operators_Program_testShortCircuit(bool t_1, bool f_1);
 
 int milone_main();
 
-char test_(bool t_, bool f_) {
+char bool_operators_Program_test(bool t_, bool f_) {
     milone_assert(t_, 6, 2);
     milone_assert((!(f_)), 9, 2);
     milone_assert(t_, 10, 2);
@@ -131,7 +131,7 @@ if_next_22:;
     return 0;
 }
 
-char testShortCircuit_(bool t_1, bool f_1) {
+char bool_operators_Program_testShortCircuit(bool t_1, bool f_1) {
     bool if_8;
     if (f_1) {
         goto then_26;
@@ -162,7 +162,7 @@ if_next_28:;
 }
 
 int milone_main() {
-    char call_ = test_(true, false);
-    char call_1 = testShortCircuit_(true, false);
+    char call_ = bool_operators_Program_test(true, false);
+    char call_1 = bool_operators_Program_testShortCircuit(true, false);
     return 0;
 }

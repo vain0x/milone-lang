@@ -1,23 +1,23 @@
 #include "milone.h"
 
-char literalTest_(char arg_);
+char int_operators_Program_literalTest(char arg_);
 
-char arithmeticOperatorsTest_(int two_, int three_, int thirtyNine_);
+char int_operators_Program_arithmeticOperatorsTest(int two_, int three_, int thirtyNine_);
 
-char bitOperatorsTest_(int n1_);
+char int_operators_Program_bitOperatorsTest(int n1_);
 
-char compareTest_(int n2_1, int n3_);
+char int_operators_Program_compareTest(int n2_1, int n3_);
 
-char toIntTest_(char arg_1);
+char int_operators_Program_toIntTest(char arg_1);
 
 int milone_main();
 
-char literalTest_(char arg_) {
+char int_operators_Program_literalTest(char arg_) {
     milone_assert(((-((-2147483648 + 1))) == 2147483647), 4, 2);
     return 0;
 }
 
-char arithmeticOperatorsTest_(int two_, int three_, int thirtyNine_) {
+char int_operators_Program_arithmeticOperatorsTest(int two_, int three_, int thirtyNine_) {
     milone_assert(((two_ + three_) == 5), 7, 2);
     milone_assert(((three_ - two_) == 1), 8, 2);
     milone_assert(((two_ * three_) == 6), 9, 2);
@@ -29,7 +29,7 @@ char arithmeticOperatorsTest_(int two_, int three_, int thirtyNine_) {
     return 0;
 }
 
-char bitOperatorsTest_(int n1_) {
+char int_operators_Program_bitOperatorsTest(int n1_) {
     int n2_ = (n1_ * 2);
     int n4_ = (n2_ * 2);
     int n8_ = (n4_ * 2);
@@ -48,7 +48,7 @@ char bitOperatorsTest_(int n1_) {
     return 0;
 }
 
-char compareTest_(int n2_1, int n3_) {
+char int_operators_Program_compareTest(int n2_1, int n3_) {
     milone_assert((n2_1 == 2), 38, 2);
     milone_assert((n3_ != 2), 39, 2);
     milone_assert((2 >= n2_1), 41, 2);
@@ -61,7 +61,7 @@ char compareTest_(int n2_1, int n3_) {
     return 0;
 }
 
-char toIntTest_(char arg_1) {
+char int_operators_Program_toIntTest(char arg_1) {
     milone_assert((0 == 0), 52, 2);
     milone_assert((((int)'a') == 97), 53, 2);
     int call_ = str_to_int((struct String){.str = "42", .len = 2});
@@ -72,10 +72,10 @@ char toIntTest_(char arg_1) {
 }
 
 int milone_main() {
-    char call_2 = literalTest_(0);
-    char call_3 = arithmeticOperatorsTest_(2, 3, 39);
-    char call_4 = bitOperatorsTest_(1);
-    char call_5 = compareTest_(2, 3);
-    char call_6 = toIntTest_(0);
+    char call_2 = int_operators_Program_literalTest(0);
+    char call_3 = int_operators_Program_arithmeticOperatorsTest(2, 3, 39);
+    char call_4 = int_operators_Program_bitOperatorsTest(1);
+    char call_5 = int_operators_Program_compareTest(2, 3);
+    char call_6 = int_operators_Program_toIntTest(0);
     return 0;
 }

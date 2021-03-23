@@ -16,7 +16,7 @@ struct StringStringOptionStringTuple3;
 
 struct String str_concat(struct String, struct StringList const*);
 
-struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
+struct String MiloneOnly___stringJoin(struct String sep_, struct StringList const* xs_);
 
 static int const* __ptrAsConst_1(int* mutPtr_);
 
@@ -24,159 +24,155 @@ void* milone_mem_alloc(int, uintptr_t);
 
 static void* memAlloc_(int len_, uintptr_t size_);
 
-void* memcpy(void*, void const*, uintptr_t);
-
-static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
-
 bool str_to_int_checked(struct String, int*);
 
-struct IntOption __intOfStr_(struct String s_);
+struct IntOption MiloneOnly___intOfStr(struct String s_);
 
 int milone_get_arg_count();
 
-int __argCount_(char arg_3);
+int MiloneOnly___argCount(char arg_3);
 
 struct String milone_get_arg(int);
 
-struct String __argGet_(int index_4);
+struct String MiloneOnly___argGet(int index_4);
 
-char subtract_(char l_, char r_);
+char MiloneStd_StdChar_subtract(char l_, char r_);
 
-bool isAscii_(char c_);
+bool MiloneStd_StdChar_isAscii(char c_);
 
-bool isControl_(char c_1);
+bool MiloneStd_StdChar_isControl(char c_1);
 
-bool isBlank_(char c_2);
+bool MiloneStd_StdChar_isBlank(char c_2);
 
-bool isSpace_(char c_3);
+bool MiloneStd_StdChar_isSpace(char c_3);
 
-bool isPunctuation_(char c_4);
+bool MiloneStd_StdChar_isPunctuation(char c_4);
 
-bool isDigit_(char c_5);
+bool MiloneStd_StdChar_isDigit(char c_5);
 
-bool isHex_(char c_6);
+bool MiloneStd_StdChar_isHex(char c_6);
 
-bool isUpper_(char c_7);
+bool MiloneStd_StdChar_isUpper(char c_7);
 
-bool isLower_(char c_8);
+bool MiloneStd_StdChar_isLower(char c_8);
 
-bool isAlphabetic_(char c_9);
+bool MiloneStd_StdChar_isAlphabetic(char c_9);
 
-bool isAlphanumeric_(char c_10);
+bool MiloneStd_StdChar_isAlphanumeric(char c_10);
 
-char toUpper_(char c_11);
+char MiloneStd_StdChar_toUpper(char c_11);
 
-char toLower_(char c_12);
+char MiloneStd_StdChar_toLower(char c_12);
 
 static struct StringList const* listRevLoop_1(struct StringList const* acc_, struct StringList const* xs_6);
 
-static struct StringList const* rev_1(struct StringList const* xs_5);
+static struct StringList const* rev_(struct StringList const* xs_5);
 
 static int intClamp_(int minValue_, int maxValue_, int value_1);
 
-bool isEmpty_1(struct String str_);
+bool MiloneStd_StdString_isEmpty(struct String str_);
 
-struct CharOption tryItem_1(int index_5, struct String str_1);
+struct CharOption MiloneStd_StdString_tryItem(int index_5, struct String str_1);
 
-bool occursAtLoop_(int start_2, struct String substr_, struct String s_1, int i_4);
+static bool occursAtLoop_(int start_2, struct String substr_, struct String s_1, int i_4);
 
 static bool occursAt_(int start_2, struct String substr_, struct String s_1);
 
-bool startsWith_(struct String prefix_, struct String s_2);
+bool MiloneStd_StdString_startsWith(struct String prefix_, struct String s_2);
 
-bool endsWith_(struct String suffix_, struct String s_3);
+bool MiloneStd_StdString_endsWith(struct String suffix_, struct String s_3);
 
-struct IntOption stringFindIndexLoop_(struct String substr_1, struct String s_4, int r_1, int i_5);
+static struct IntOption stringFindIndexLoop_(struct String substr_1, struct String s_4, int r_1, int i_5);
 
-struct IntOption findIndex_(struct String substr_1, struct String s_4);
+struct IntOption MiloneStd_StdString_findIndex(struct String substr_1, struct String s_4);
 
-struct IntOption stringFindLastIndexLoop_(struct String substr_2, struct String s_5, int r_2);
+static struct IntOption stringFindLastIndexLoop_(struct String substr_2, struct String s_5, int r_2);
 
-struct IntOption findLastIndex_(struct String substr_2, struct String s_5);
+struct IntOption MiloneStd_StdString_findLastIndex(struct String substr_2, struct String s_5);
 
-bool contains_(struct String substr_3, struct String s_6);
+bool MiloneStd_StdString_contains(struct String substr_3, struct String s_6);
 
-struct String truncate_1(int prefixLen_, struct String s_7);
+struct String MiloneStd_StdString_truncate(int prefixLen_, struct String s_7);
 
-struct String skip_1(int prefixLen_1, struct String s_8);
+struct String MiloneStd_StdString_skip(int prefixLen_1, struct String s_8);
 
-struct String slice_(int start_3, int endIndex_2, struct String s_9);
+struct String MiloneStd_StdString_slice(int start_3, int endIndex_2, struct String s_9);
 
-int stringTrimIfLoop1_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_2);
+static int stringTrimIfLoop1_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_2);
 
-int stringTrimIfLoop2_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_1, int r_5);
+static int stringTrimIfLoop2_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_1, int r_5);
 
-struct String trimIf_(struct CharBoolFun1 isTrimmed_, struct String s_10);
+struct String MiloneStd_StdString_trimIf(struct CharBoolFun1 isTrimmed_, struct String s_10);
 
-int stringTrimStartIfLoop_(struct CharBoolFun1 isTrimmed_1, struct String s_11, int l_4);
+static int stringTrimStartIfLoop_(struct CharBoolFun1 isTrimmed_1, struct String s_11, int l_4);
 
-struct String trimStartIf_(struct CharBoolFun1 isTrimmed_1, struct String s_11);
+struct String MiloneStd_StdString_trimStartIf(struct CharBoolFun1 isTrimmed_1, struct String s_11);
 
-int stringTrimEndIfLoop_(struct CharBoolFun1 isTrimmed_2, struct String s_12, int r_7);
+static int stringTrimEndIfLoop_(struct CharBoolFun1 isTrimmed_2, struct String s_12, int r_7);
 
-struct String trimEndIf_(struct CharBoolFun1 isTrimmed_2, struct String s_12);
+struct String MiloneStd_StdString_trimEndIf(struct CharBoolFun1 isTrimmed_2, struct String s_12);
 
 static bool fun_(void const* env_, char arg_);
 
-struct String trim_(struct String s_13);
+struct String MiloneStd_StdString_trim(struct String s_13);
 
 static bool fun_1(void const* env_1, char arg_1);
 
-struct String trimStart_(struct String s_14);
+struct String MiloneStd_StdString_trimStart(struct String s_14);
 
 static bool fun_2(void const* env_2, char arg_2);
 
-struct String trimEnd_(struct String s_15);
+struct String MiloneStd_StdString_trimEnd(struct String s_15);
 
-struct StringList const* replaceLoop_(struct String pattern_, struct String s_16, struct StringList const* acc_14, int i_6);
+static struct StringList const* replaceLoop_(struct String pattern_, struct String s_16, struct StringList const* acc_14, int i_6);
 
-struct String replace_(struct String pattern_, struct String target_, struct String s_16);
+struct String MiloneStd_StdString_replace(struct String pattern_, struct String target_, struct String s_16);
 
 static int findNewline_(int start_5, struct String s_17);
 
-struct StringStringOptionStringTuple3 scanLine_(struct String s_18);
+struct StringStringOptionStringTuple3 MiloneStd_StdString_scanLine(struct String s_18);
 
-struct StringList const* stringToLinesLoop_(struct String s_19, int l_5, struct StringList const* acc_15);
+static struct StringList const* stringToLinesLoop_(struct String s_19, int l_5, struct StringList const* acc_15);
 
-struct StringList const* toLines_(struct String s_19);
+struct StringList const* MiloneStd_StdString_toLines(struct String s_19);
 
-struct String concat_(struct String sep_2, struct StringList const* xs_61);
+struct String MiloneStd_StdString_concat(struct String sep_2, struct StringList const* xs_61);
 
-static bool isNone_2(struct CharOption opt_);
+static bool isNone_1(struct CharOption opt_);
 
-static bool isNone_1(struct IntOption opt_);
+static bool isNone_(struct IntOption opt_);
 
-static char unwrap_2(struct CharOption opt_8);
+static char unwrap_1(struct CharOption opt_8);
 
-static int unwrap_1(struct IntOption opt_8);
+static int unwrap_(struct IntOption opt_8);
 
-char isEmptyTest_(char arg_42);
+char std_string_Program_isEmptyTest(char arg_42);
 
-char tryItemTest_(char arg_43);
+char std_string_Program_tryItemTest(char arg_43);
 
-char startsWithTest_(char arg_44);
+char std_string_Program_startsWithTest(char arg_44);
 
-char endsWithTest_(char arg_45);
+char std_string_Program_endsWithTest(char arg_45);
 
-char findIndexTest_(char arg_46);
+char std_string_Program_findIndexTest(char arg_46);
 
-char findLastIndexTest_(char arg_47);
+char std_string_Program_findLastIndexTest(char arg_47);
 
-char containsTest_(char arg_48);
+char std_string_Program_containsTest(char arg_48);
 
-char truncateTest_(char arg_49);
+char std_string_Program_truncateTest(char arg_49);
 
-char skipTest_(char arg_50);
+char std_string_Program_skipTest(char arg_50);
 
-char sliceTest_(char arg_51);
+char std_string_Program_sliceTest(char arg_51);
 
-char trimTest_(char arg_52);
+char std_string_Program_trimTest(char arg_52);
 
-char replaceTest_(char arg_53);
+char std_string_Program_replaceTest(char arg_53);
 
-char splitTest_(char arg_54);
+char std_string_Program_splitTest(char arg_54);
 
-char concatTest_(char arg_55);
+char std_string_Program_concatTest(char arg_55);
 
 int milone_main();
 
@@ -211,9 +207,9 @@ struct StringStringOptionStringTuple3 {
     struct String t2;
 };
 
-struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
-    struct String str_concat_result_ = str_concat(sep_, xs_);
-    return str_concat_result_;
+struct String MiloneOnly___stringJoin(struct String sep_, struct StringList const* xs_) {
+    struct String str_concat_result = str_concat(sep_, xs_);
+    return str_concat_result;
 }
 
 static int const* __ptrAsConst_1(int* mutPtr_) {
@@ -221,20 +217,15 @@ static int const* __ptrAsConst_1(int* mutPtr_) {
 }
 
 static void* memAlloc_(int len_, uintptr_t size_) {
-    void* milone_mem_alloc_result_ = milone_mem_alloc(len_, size_);
-    return milone_mem_alloc_result_;
+    void* milone_mem_alloc_result = milone_mem_alloc(len_, size_);
+    return milone_mem_alloc_result;
 }
 
-static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
-    void* memcpy_result_ = memcpy(dest_, src_, size_1);
-    return memcpy_result_;
-}
-
-struct IntOption __intOfStr_(struct String s_) {
+struct IntOption MiloneOnly___intOfStr(struct String s_) {
     void* call_ = memAlloc_(1, ((uintptr_t)sizeof(int)));
     int* valueRef_ = ((int*)call_);
-    bool str_to_int_checked_result_ = str_to_int_checked(s_, valueRef_);
-    bool ok_ = str_to_int_checked_result_;
+    bool str_to_int_checked_result = str_to_int_checked(s_, valueRef_);
+    bool ok_ = str_to_int_checked_result;
     struct IntOption if_;
     if (ok_) {
         goto then_2;
@@ -254,25 +245,25 @@ if_next_1:;
     return if_;
 }
 
-int __argCount_(char arg_3) {
-    int milone_get_arg_count_result_ = milone_get_arg_count();
-    return milone_get_arg_count_result_;
+int MiloneOnly___argCount(char arg_3) {
+    int milone_get_arg_count_result = milone_get_arg_count();
+    return milone_get_arg_count_result;
 }
 
-struct String __argGet_(int index_4) {
-    struct String milone_get_arg_result_ = milone_get_arg(index_4);
-    return milone_get_arg_result_;
+struct String MiloneOnly___argGet(int index_4) {
+    struct String milone_get_arg_result = milone_get_arg(index_4);
+    return milone_get_arg_result;
 }
 
-char subtract_(char l_, char r_) {
+char MiloneStd_StdChar_subtract(char l_, char r_) {
     return ((char)(((int)l_) - ((int)r_)));
 }
 
-bool isAscii_(char c_) {
+bool MiloneStd_StdChar_isAscii(char c_) {
     return (((uint32_t)127) >= ((uint32_t)c_));
 }
 
-bool isControl_(char c_1) {
+bool MiloneStd_StdChar_isControl(char c_1) {
     int n_ = ((int)c_1);
     bool if_1;
     if ((n_ >= 0)) {
@@ -303,7 +294,7 @@ if_next_7:;
     return if_2;
 }
 
-bool isBlank_(char c_2) {
+bool MiloneStd_StdChar_isBlank(char c_2) {
     bool if_3;
     if ((c_2 == ' ')) {
         goto then_11;
@@ -320,7 +311,7 @@ if_next_10:;
     return if_3;
 }
 
-bool isSpace_(char c_3) {
+bool MiloneStd_StdChar_isSpace(char c_3) {
     bool if_4;
     if ((c_3 >= '\t')) {
         goto then_14;
@@ -350,7 +341,7 @@ if_next_16:;
     return if_5;
 }
 
-bool isPunctuation_(char c_4) {
+bool MiloneStd_StdChar_isPunctuation(char c_4) {
     int n_1 = ((int)c_4);
     bool if_6;
     if ((n_1 >= 33)) {
@@ -446,7 +437,7 @@ if_next_34:;
     return if_11;
 }
 
-bool isDigit_(char c_5) {
+bool MiloneStd_StdChar_isDigit(char c_5) {
     bool if_13;
     if ((c_5 >= '0')) {
         goto then_41;
@@ -463,8 +454,8 @@ if_next_40:;
     return if_13;
 }
 
-bool isHex_(char c_6) {
-    bool call_2 = isDigit_(c_6);
+bool MiloneStd_StdChar_isHex(char c_6) {
+    bool call_2 = MiloneStd_StdChar_isDigit(c_6);
     bool if_14;
     if (call_2) {
         goto then_44;
@@ -520,7 +511,7 @@ if_next_49:;
     return if_16;
 }
 
-bool isUpper_(char c_7) {
+bool MiloneStd_StdChar_isUpper(char c_7) {
     bool if_18;
     if ((c_7 >= 'A')) {
         goto then_56;
@@ -537,7 +528,7 @@ if_next_55:;
     return if_18;
 }
 
-bool isLower_(char c_8) {
+bool MiloneStd_StdChar_isLower(char c_8) {
     bool if_19;
     if ((c_8 >= 'a')) {
         goto then_59;
@@ -554,8 +545,8 @@ if_next_58:;
     return if_19;
 }
 
-bool isAlphabetic_(char c_9) {
-    bool call_3 = isUpper_(c_9);
+bool MiloneStd_StdChar_isAlphabetic(char c_9) {
+    bool call_3 = MiloneStd_StdChar_isUpper(c_9);
     bool if_20;
     if (call_3) {
         goto then_62;
@@ -566,15 +557,15 @@ then_62:;
     if_20 = true;
     goto if_next_61;
 else_63:;
-    bool call_4 = isLower_(c_9);
+    bool call_4 = MiloneStd_StdChar_isLower(c_9);
     if_20 = call_4;
     goto if_next_61;
 if_next_61:;
     return if_20;
 }
 
-bool isAlphanumeric_(char c_10) {
-    bool call_5 = isDigit_(c_10);
+bool MiloneStd_StdChar_isAlphanumeric(char c_10) {
+    bool call_5 = MiloneStd_StdChar_isDigit(c_10);
     bool if_21;
     if (call_5) {
         goto then_65;
@@ -585,15 +576,15 @@ then_65:;
     if_21 = true;
     goto if_next_64;
 else_66:;
-    bool call_6 = isAlphabetic_(c_10);
+    bool call_6 = MiloneStd_StdChar_isAlphabetic(c_10);
     if_21 = call_6;
     goto if_next_64;
 if_next_64:;
     return if_21;
 }
 
-char toUpper_(char c_11) {
-    bool call_7 = isLower_(c_11);
+char MiloneStd_StdChar_toUpper(char c_11) {
+    bool call_7 = MiloneStd_StdChar_isLower(c_11);
     char if_22;
     if (call_7) {
         goto then_68;
@@ -601,7 +592,7 @@ char toUpper_(char c_11) {
         goto else_69;
     }
 then_68:;
-    char call_8 = subtract_(c_11, 'a');
+    char call_8 = MiloneStd_StdChar_subtract(c_11, 'a');
     if_22 = (call_8 + 'A');
     goto if_next_67;
 else_69:;
@@ -611,8 +602,8 @@ if_next_67:;
     return if_22;
 }
 
-char toLower_(char c_12) {
-    bool call_9 = isUpper_(c_12);
+char MiloneStd_StdChar_toLower(char c_12) {
+    bool call_9 = MiloneStd_StdChar_isUpper(c_12);
     char if_23;
     if (call_9) {
         goto then_71;
@@ -620,7 +611,7 @@ char toLower_(char c_12) {
         goto else_72;
     }
 then_71:;
-    char call_10 = subtract_(c_12, 'A');
+    char call_10 = MiloneStd_StdChar_subtract(c_12, 'A');
     if_23 = (call_10 + 'a');
     goto if_next_70;
 else_72:;
@@ -653,7 +644,7 @@ end_match_74:;
     return match_;
 }
 
-static struct StringList const* rev_1(struct StringList const* xs_5) {
+static struct StringList const* rev_(struct StringList const* xs_5) {
     struct StringList const* call_11 = listRevLoop_1(NULL, xs_5);
     return call_11;
 }
@@ -688,11 +679,11 @@ if_next_77:;
     return if_24;
 }
 
-bool isEmpty_1(struct String str_) {
+bool MiloneStd_StdString_isEmpty(struct String str_) {
     return (str_.len == 0);
 }
 
-struct CharOption tryItem_1(int index_5, struct String str_1) {
+struct CharOption MiloneStd_StdString_tryItem(int index_5, struct String str_1) {
     bool if_26;
     if ((index_5 >= 0)) {
         goto then_84;
@@ -723,7 +714,7 @@ if_next_86:;
     return if_27;
 }
 
-bool occursAtLoop_(int start_2, struct String substr_, struct String s_1, int i_4) {
+static bool occursAtLoop_(int start_2, struct String substr_, struct String s_1, int i_4) {
 tailrec_89:;
     bool if_28;
     if ((i_4 == substr_.len)) {
@@ -792,17 +783,17 @@ if_next_99:;
     return if_31;
 }
 
-bool startsWith_(struct String prefix_, struct String s_2) {
+bool MiloneStd_StdString_startsWith(struct String prefix_, struct String s_2) {
     bool call_13 = occursAt_(0, prefix_, s_2);
     return call_13;
 }
 
-bool endsWith_(struct String suffix_, struct String s_3) {
+bool MiloneStd_StdString_endsWith(struct String suffix_, struct String s_3) {
     bool call_14 = occursAt_((s_3.len - suffix_.len), suffix_, s_3);
     return call_14;
 }
 
-struct IntOption stringFindIndexLoop_(struct String substr_1, struct String s_4, int r_1, int i_5) {
+static struct IntOption stringFindIndexLoop_(struct String substr_1, struct String s_4, int r_1, int i_5) {
 tailrec_102:;
     struct IntOption if_32;
     if ((i_5 >= r_1)) {
@@ -842,13 +833,13 @@ if_next_103:;
     return if_32;
 }
 
-struct IntOption findIndex_(struct String substr_1, struct String s_4) {
+struct IntOption MiloneStd_StdString_findIndex(struct String substr_1, struct String s_4) {
     int r_1 = ((s_4.len - substr_1.len) + 1);
     struct IntOption call_16 = stringFindIndexLoop_(substr_1, s_4, r_1, 0);
     return call_16;
 }
 
-struct IntOption stringFindLastIndexLoop_(struct String substr_2, struct String s_5, int r_2) {
+static struct IntOption stringFindLastIndexLoop_(struct String substr_2, struct String s_5, int r_2) {
 tailrec_109:;
     struct IntOption if_34;
     if ((0 >= r_2)) {
@@ -886,15 +877,15 @@ if_next_110:;
     return if_34;
 }
 
-struct IntOption findLastIndex_(struct String substr_2, struct String s_5) {
+struct IntOption MiloneStd_StdString_findLastIndex(struct String substr_2, struct String s_5) {
     int r_3 = ((s_5.len - substr_2.len) + 1);
     struct IntOption call_18 = stringFindLastIndexLoop_(substr_2, s_5, r_3);
     return call_18;
 }
 
-bool contains_(struct String substr_3, struct String s_6) {
+bool MiloneStd_StdString_contains(struct String substr_3, struct String s_6) {
     bool match_1;
-    struct IntOption call_19 = findIndex_(substr_3, s_6);
+    struct IntOption call_19 = MiloneStd_StdString_findIndex(substr_3, s_6);
     if ((!(call_19.some))) goto next_117;
     match_1 = true;
     goto end_match_116;
@@ -908,7 +899,7 @@ end_match_116:;
     return match_1;
 }
 
-struct String truncate_1(int prefixLen_, struct String s_7) {
+struct String MiloneStd_StdString_truncate(int prefixLen_, struct String s_7) {
     struct String if_36;
     if ((0 >= prefixLen_)) {
         goto then_120;
@@ -929,8 +920,8 @@ then_123:;
     if_37 = s_7;
     goto if_next_122;
 else_124:;
-    struct String slice_1 = str_get_slice(0, (prefixLen_ - 1), s_7);
-    if_37 = slice_1;
+    struct String slice_ = str_get_slice(0, (prefixLen_ - 1), s_7);
+    if_37 = slice_;
     goto if_next_122;
 if_next_122:;
     if_36 = if_37;
@@ -939,7 +930,7 @@ if_next_119:;
     return if_36;
 }
 
-struct String skip_1(int prefixLen_1, struct String s_8) {
+struct String MiloneStd_StdString_skip(int prefixLen_1, struct String s_8) {
     struct String if_38;
     if ((0 >= prefixLen_1)) {
         goto then_126;
@@ -960,8 +951,8 @@ then_129:;
     if_39 = (struct String){.str = "", .len = 0};
     goto if_next_128;
 else_130:;
-    struct String slice_2 = str_get_slice(prefixLen_1, (s_8.len - 1), s_8);
-    if_39 = slice_2;
+    struct String slice_1 = str_get_slice(prefixLen_1, (s_8.len - 1), s_8);
+    if_39 = slice_1;
     goto if_next_128;
 if_next_128:;
     if_38 = if_39;
@@ -970,7 +961,7 @@ if_next_125:;
     return if_38;
 }
 
-struct String slice_(int start_3, int endIndex_2, struct String s_9) {
+struct String MiloneStd_StdString_slice(int start_3, int endIndex_2, struct String s_9) {
     int call_20 = intClamp_(0, s_9.len, start_3);
     int start_4 = call_20;
     int call_21 = intClamp_(start_4, s_9.len, endIndex_2);
@@ -982,8 +973,8 @@ struct String slice_(int start_3, int endIndex_2, struct String s_9) {
         goto else_133;
     }
 then_132:;
-    struct String slice_3 = str_get_slice(start_4, (endIndex_3 - 1), s_9);
-    if_40 = slice_3;
+    struct String slice_2 = str_get_slice(start_4, (endIndex_3 - 1), s_9);
+    if_40 = slice_2;
     goto if_next_131;
 else_133:;
     if_40 = (struct String){.str = "", .len = 0};
@@ -992,7 +983,7 @@ if_next_131:;
     return if_40;
 }
 
-int stringTrimIfLoop1_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_2) {
+static int stringTrimIfLoop1_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_2) {
 tailrec_134:;
     bool if_41;
     if ((l_2 < s_10.len)) {
@@ -1029,7 +1020,7 @@ if_next_138:;
     return if_42;
 }
 
-int stringTrimIfLoop2_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_1, int r_5) {
+static int stringTrimIfLoop2_(struct CharBoolFun1 isTrimmed_, struct String s_10, int l_1, int r_5) {
 tailrec_141:;
     bool if_43;
     if ((l_1 < r_5)) {
@@ -1068,7 +1059,7 @@ if_next_145:;
     return if_44;
 }
 
-struct String trimIf_(struct CharBoolFun1 isTrimmed_, struct String s_10) {
+struct String MiloneStd_StdString_trimIf(struct CharBoolFun1 isTrimmed_, struct String s_10) {
     int call_22 = stringTrimIfLoop1_(isTrimmed_, s_10, 0);
     int l_1 = call_22;
     int call_23 = stringTrimIfLoop2_(isTrimmed_, s_10, l_1, s_10.len);
@@ -1080,8 +1071,8 @@ struct String trimIf_(struct CharBoolFun1 isTrimmed_, struct String s_10) {
         goto else_150;
     }
 then_149:;
-    struct String slice_4 = str_get_slice(l_1, (r_4 - 1), s_10);
-    if_45 = slice_4;
+    struct String slice_3 = str_get_slice(l_1, (r_4 - 1), s_10);
+    if_45 = slice_3;
     goto if_next_148;
 else_150:;
     if_45 = (struct String){.str = "", .len = 0};
@@ -1090,7 +1081,7 @@ if_next_148:;
     return if_45;
 }
 
-int stringTrimStartIfLoop_(struct CharBoolFun1 isTrimmed_1, struct String s_11, int l_4) {
+static int stringTrimStartIfLoop_(struct CharBoolFun1 isTrimmed_1, struct String s_11, int l_4) {
 tailrec_151:;
     bool if_46;
     if ((l_4 < s_11.len)) {
@@ -1127,7 +1118,7 @@ if_next_155:;
     return if_47;
 }
 
-struct String trimStartIf_(struct CharBoolFun1 isTrimmed_1, struct String s_11) {
+struct String MiloneStd_StdString_trimStartIf(struct CharBoolFun1 isTrimmed_1, struct String s_11) {
     int call_24 = stringTrimStartIfLoop_(isTrimmed_1, s_11, 0);
     int l_3 = call_24;
     struct String if_48;
@@ -1137,8 +1128,8 @@ struct String trimStartIf_(struct CharBoolFun1 isTrimmed_1, struct String s_11) 
         goto else_160;
     }
 then_159:;
-    struct String slice_5 = str_get_slice(l_3, (s_11.len - 1), s_11);
-    if_48 = slice_5;
+    struct String slice_4 = str_get_slice(l_3, (s_11.len - 1), s_11);
+    if_48 = slice_4;
     goto if_next_158;
 else_160:;
     if_48 = (struct String){.str = "", .len = 0};
@@ -1147,7 +1138,7 @@ if_next_158:;
     return if_48;
 }
 
-int stringTrimEndIfLoop_(struct CharBoolFun1 isTrimmed_2, struct String s_12, int r_7) {
+static int stringTrimEndIfLoop_(struct CharBoolFun1 isTrimmed_2, struct String s_12, int r_7) {
 tailrec_161:;
     bool if_49;
     if ((0 < r_7)) {
@@ -1184,7 +1175,7 @@ if_next_165:;
     return if_50;
 }
 
-struct String trimEndIf_(struct CharBoolFun1 isTrimmed_2, struct String s_12) {
+struct String MiloneStd_StdString_trimEndIf(struct CharBoolFun1 isTrimmed_2, struct String s_12) {
     int call_25 = stringTrimEndIfLoop_(isTrimmed_2, s_12, s_12.len);
     int r_6 = call_25;
     struct String if_51;
@@ -1194,8 +1185,8 @@ struct String trimEndIf_(struct CharBoolFun1 isTrimmed_2, struct String s_12) {
         goto else_170;
     }
 then_169:;
-    struct String slice_6 = str_get_slice(0, (r_6 - 1), s_12);
-    if_51 = slice_6;
+    struct String slice_5 = str_get_slice(0, (r_6 - 1), s_12);
+    if_51 = slice_5;
     goto if_next_168;
 else_170:;
     if_51 = (struct String){.str = "", .len = 0};
@@ -1205,45 +1196,45 @@ if_next_168:;
 }
 
 static bool fun_(void const* env_, char arg_) {
-    bool call_26 = isSpace_(arg_);
+    bool call_26 = MiloneStd_StdChar_isSpace(arg_);
     return call_26;
 }
 
-struct String trim_(struct String s_13) {
+struct String MiloneStd_StdString_trim(struct String s_13) {
     struct CharBoolFun1 fun_3 = (struct CharBoolFun1){.fun = fun_, .env = NULL};
-    struct String call_27 = trimIf_(fun_3, s_13);
+    struct String call_27 = MiloneStd_StdString_trimIf(fun_3, s_13);
     return call_27;
 }
 
 static bool fun_1(void const* env_1, char arg_1) {
-    bool call_28 = isSpace_(arg_1);
+    bool call_28 = MiloneStd_StdChar_isSpace(arg_1);
     return call_28;
 }
 
-struct String trimStart_(struct String s_14) {
+struct String MiloneStd_StdString_trimStart(struct String s_14) {
     struct CharBoolFun1 fun_4 = (struct CharBoolFun1){.fun = fun_1, .env = NULL};
-    struct String call_29 = trimStartIf_(fun_4, s_14);
+    struct String call_29 = MiloneStd_StdString_trimStartIf(fun_4, s_14);
     return call_29;
 }
 
 static bool fun_2(void const* env_2, char arg_2) {
-    bool call_30 = isSpace_(arg_2);
+    bool call_30 = MiloneStd_StdChar_isSpace(arg_2);
     return call_30;
 }
 
-struct String trimEnd_(struct String s_15) {
+struct String MiloneStd_StdString_trimEnd(struct String s_15) {
     struct CharBoolFun1 fun_5 = (struct CharBoolFun1){.fun = fun_2, .env = NULL};
-    struct String call_31 = trimEndIf_(fun_5, s_15);
+    struct String call_31 = MiloneStd_StdString_trimEndIf(fun_5, s_15);
     return call_31;
 }
 
-struct StringList const* replaceLoop_(struct String pattern_, struct String s_16, struct StringList const* acc_14, int i_6) {
+static struct StringList const* replaceLoop_(struct String pattern_, struct String s_16, struct StringList const* acc_14, int i_6) {
 tailrec_171:;
     struct StringList const* match_2;
-    struct String call_32 = skip_1(i_6, s_16);
-    struct IntOption call_33 = findIndex_(pattern_, call_32);
+    struct String call_32 = MiloneStd_StdString_skip(i_6, s_16);
+    struct IntOption call_33 = MiloneStd_StdString_findIndex(pattern_, call_32);
     if (call_33.some) goto next_173;
-    struct String call_34 = skip_1(i_6, s_16);
+    struct String call_34 = MiloneStd_StdString_skip(i_6, s_16);
     struct StringList const* list_1 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_1))) = (struct StringList){.head = call_34, .tail = acc_14};
     match_2 = list_1;
@@ -1253,8 +1244,8 @@ next_173:;
     int n_2 = call_33.value;
     struct String arg_30 = pattern_;
     struct String arg_31 = s_16;
-    struct String call_35 = skip_1(i_6, s_16);
-    struct String call_36 = truncate_1(n_2, call_35);
+    struct String call_35 = MiloneStd_StdString_skip(i_6, s_16);
+    struct String call_36 = MiloneStd_StdString_truncate(n_2, call_35);
     struct StringList const* list_2 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_2))) = (struct StringList){.head = call_36, .tail = acc_14};
     struct StringList const* arg_32 = list_2;
@@ -1270,7 +1261,7 @@ end_match_172:;
     return match_2;
 }
 
-struct String replace_(struct String pattern_, struct String target_, struct String s_16) {
+struct String MiloneStd_StdString_replace(struct String pattern_, struct String target_, struct String s_16) {
     struct String if_52;
     if ((pattern_.len == 0)) {
         goto then_176;
@@ -1282,8 +1273,8 @@ then_176:;
     goto if_next_175;
 else_177:;
     struct StringList const* call_37 = replaceLoop_(pattern_, s_16, NULL, 0);
-    struct StringList const* call_38 = rev_1(call_37);
-    struct String call_39 = concat_(target_, call_38);
+    struct StringList const* call_38 = rev_(call_37);
+    struct String call_39 = MiloneStd_StdString_concat(target_, call_38);
     if_52 = call_39;
     goto if_next_175;
 if_next_175:;
@@ -1351,7 +1342,7 @@ if_next_188:;
     return if_56;
 }
 
-struct StringStringOptionStringTuple3 scanLine_(struct String s_18) {
+struct StringStringOptionStringTuple3 MiloneStd_StdString_scanLine(struct String s_18) {
     int call_40 = findNewline_(0, s_18);
     int m_ = call_40;
     struct String if_57;
@@ -1361,8 +1352,8 @@ struct StringStringOptionStringTuple3 scanLine_(struct String s_18) {
         goto else_193;
     }
 then_192:;
-    struct String slice_7 = str_get_slice(0, (m_ - 1), s_18);
-    if_57 = slice_7;
+    struct String slice_6 = str_get_slice(0, (m_ - 1), s_18);
+    if_57 = slice_6;
     goto if_next_191;
 else_193:;
     if_57 = (struct String){.str = "", .len = 0};
@@ -1448,8 +1439,8 @@ if_next_209:;
 if_next_203:;
     int sepLen_ = if_61;
     int r_8 = (m_ + sepLen_);
-    struct String slice_8 = str_get_slice(m_, (r_8 - 1), s_18);
-    struct String sep_1 = slice_8;
+    struct String slice_7 = str_get_slice(m_, (r_8 - 1), s_18);
+    struct String sep_1 = slice_7;
     struct String if_64;
     if ((r_8 < s_18.len)) {
         goto then_213;
@@ -1457,8 +1448,8 @@ if_next_203:;
         goto else_214;
     }
 then_213:;
-    struct String slice_9 = str_get_slice(r_8, (s_18.len - 1), s_18);
-    if_64 = slice_9;
+    struct String slice_8 = str_get_slice(r_8, (s_18.len - 1), s_18);
+    if_64 = slice_8;
     goto if_next_212;
 else_214:;
     if_64 = (struct String){.str = "", .len = 0};
@@ -1473,7 +1464,7 @@ if_next_194:;
     return if_58;
 }
 
-struct StringList const* stringToLinesLoop_(struct String s_19, int l_5, struct StringList const* acc_15) {
+static struct StringList const* stringToLinesLoop_(struct String s_19, int l_5, struct StringList const* acc_15) {
 tailrec_215:;
     int call_41 = findNewline_(l_5, s_19);
     int r_9 = call_41;
@@ -1484,8 +1475,8 @@ tailrec_215:;
         goto else_218;
     }
 then_217:;
-    struct String slice_10 = str_get_slice(l_5, (r_9 - 1), s_19);
-    if_65 = slice_10;
+    struct String slice_9 = str_get_slice(l_5, (r_9 - 1), s_19);
+    if_65 = slice_9;
     goto if_next_216;
 else_218:;
     if_65 = (struct String){.str = "", .len = 0};
@@ -1573,18 +1564,18 @@ if_next_219:;
     return if_66;
 }
 
-struct StringList const* toLines_(struct String s_19) {
+struct StringList const* MiloneStd_StdString_toLines(struct String s_19) {
     struct StringList const* call_42 = stringToLinesLoop_(s_19, 0, NULL);
-    struct StringList const* call_43 = rev_1(call_42);
+    struct StringList const* call_43 = rev_(call_42);
     return call_43;
 }
 
-struct String concat_(struct String sep_2, struct StringList const* xs_61) {
-    struct String call_44 = __stringJoin_(sep_2, xs_61);
+struct String MiloneStd_StdString_concat(struct String sep_2, struct StringList const* xs_61) {
+    struct String call_44 = MiloneOnly___stringJoin(sep_2, xs_61);
     return call_44;
 }
 
-static bool isNone_2(struct CharOption opt_) {
+static bool isNone_1(struct CharOption opt_) {
     bool match_3;
     if (opt_.some) goto next_235;
     match_3 = true;
@@ -1599,7 +1590,7 @@ end_match_234:;
     return match_3;
 }
 
-static bool isNone_1(struct IntOption opt_) {
+static bool isNone_(struct IntOption opt_) {
     bool match_4;
     if (opt_.some) goto next_238;
     match_4 = true;
@@ -1614,7 +1605,7 @@ end_match_237:;
     return match_4;
 }
 
-static char unwrap_2(struct CharOption opt_8) {
+static char unwrap_1(struct CharOption opt_8) {
     char match_5;
     if ((!(opt_8.some))) goto next_241;
     char value_2 = opt_8.value;
@@ -1630,7 +1621,7 @@ end_match_240:;
     return match_5;
 }
 
-static int unwrap_1(struct IntOption opt_8) {
+static int unwrap_(struct IntOption opt_8) {
     int match_6;
     if ((!(opt_8.some))) goto next_244;
     int value_2 = opt_8.value;
@@ -1646,215 +1637,215 @@ end_match_243:;
     return match_6;
 }
 
-char isEmptyTest_(char arg_42) {
-    bool call_45 = isEmpty_1((struct String){.str = "", .len = 0});
+char std_string_Program_isEmptyTest(char arg_42) {
+    bool call_45 = MiloneStd_StdString_isEmpty((struct String){.str = "", .len = 0});
     milone_assert(call_45, 15, 2);
-    bool call_46 = isEmpty_1((struct String){.str = "\0", .len = 1});
+    bool call_46 = MiloneStd_StdString_isEmpty((struct String){.str = "\0", .len = 1});
     milone_assert((!(call_46)), 16, 2);
     return 0;
 }
 
-char tryItemTest_(char arg_43) {
-    struct CharOption call_47 = tryItem_1(0, (struct String){.str = "", .len = 0});
-    bool call_48 = isNone_2(call_47);
+char std_string_Program_tryItemTest(char arg_43) {
+    struct CharOption call_47 = MiloneStd_StdString_tryItem(0, (struct String){.str = "", .len = 0});
+    bool call_48 = isNone_1(call_47);
     milone_assert(call_48, 19, 2);
-    struct CharOption call_49 = tryItem_1(-1, (struct String){.str = "a", .len = 1});
-    bool call_50 = isNone_2(call_49);
+    struct CharOption call_49 = MiloneStd_StdString_tryItem(-1, (struct String){.str = "a", .len = 1});
+    bool call_50 = isNone_1(call_49);
     milone_assert(call_50, 20, 2);
-    struct CharOption call_51 = tryItem_1(1, (struct String){.str = "a", .len = 1});
-    bool call_52 = isNone_2(call_51);
+    struct CharOption call_51 = MiloneStd_StdString_tryItem(1, (struct String){.str = "a", .len = 1});
+    bool call_52 = isNone_1(call_51);
     milone_assert(call_52, 21, 2);
-    struct CharOption call_53 = tryItem_1(2, (struct String){.str = "abc", .len = 3});
-    char call_54 = unwrap_2(call_53);
+    struct CharOption call_53 = MiloneStd_StdString_tryItem(2, (struct String){.str = "abc", .len = 3});
+    char call_54 = unwrap_1(call_53);
     milone_assert((call_54 == 'c'), 22, 2);
     return 0;
 }
 
-char startsWithTest_(char arg_44) {
-    bool call_55 = startsWith_((struct String){.str = "/bin", .len = 4}, (struct String){.str = "/usr/bin", .len = 8});
+char std_string_Program_startsWithTest(char arg_44) {
+    bool call_55 = MiloneStd_StdString_startsWith((struct String){.str = "/bin", .len = 4}, (struct String){.str = "/usr/bin", .len = 8});
     milone_assert((!(call_55)), 25, 2);
-    bool call_56 = startsWith_((struct String){.str = "/bin", .len = 4}, (struct String){.str = "/bin/ls", .len = 7});
+    bool call_56 = MiloneStd_StdString_startsWith((struct String){.str = "/bin", .len = 4}, (struct String){.str = "/bin/ls", .len = 7});
     milone_assert(call_56, 26, 2);
-    bool call_57 = startsWith_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    bool call_57 = MiloneStd_StdString_startsWith((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
     milone_assert(call_57, 27, 2);
     return 0;
 }
 
-char endsWithTest_(char arg_45) {
-    bool call_58 = endsWith_((struct String){.str = "/bin", .len = 4}, (struct String){.str = "/usr/bin", .len = 8});
+char std_string_Program_endsWithTest(char arg_45) {
+    bool call_58 = MiloneStd_StdString_endsWith((struct String){.str = "/bin", .len = 4}, (struct String){.str = "/usr/bin", .len = 8});
     milone_assert(call_58, 30, 2);
-    bool call_59 = endsWith_((struct String){.str = "/bin", .len = 4}, (struct String){.str = "/bin/ls", .len = 7});
+    bool call_59 = MiloneStd_StdString_endsWith((struct String){.str = "/bin", .len = 4}, (struct String){.str = "/bin/ls", .len = 7});
     milone_assert((!(call_59)), 31, 2);
-    bool call_60 = endsWith_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    bool call_60 = MiloneStd_StdString_endsWith((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
     milone_assert(call_60, 32, 2);
     return 0;
 }
 
-char findIndexTest_(char arg_46) {
-    struct IntOption call_61 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
-    bool call_62 = isNone_1(call_61);
+char std_string_Program_findIndexTest(char arg_46) {
+    struct IntOption call_61 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
+    bool call_62 = isNone_(call_61);
     milone_assert(call_62, 35, 2);
-    struct IntOption call_63 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
-    bool call_64 = isNone_1(call_63);
+    struct IntOption call_63 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
+    bool call_64 = isNone_(call_63);
     milone_assert(call_64, 36, 2);
-    struct IntOption call_65 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "abcc", .len = 4});
-    int call_66 = unwrap_1(call_65);
+    struct IntOption call_65 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "abcc", .len = 4});
+    int call_66 = unwrap_(call_65);
     milone_assert((call_66 == 0), 38, 2);
-    struct IntOption call_67 = findIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
-    int call_68 = unwrap_1(call_67);
+    struct IntOption call_67 = MiloneStd_StdString_findIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
+    int call_68 = unwrap_(call_67);
     milone_assert((call_68 == 2), 39, 2);
-    struct IntOption call_69 = findIndex_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
-    int call_70 = unwrap_1(call_69);
+    struct IntOption call_69 = MiloneStd_StdString_findIndex((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    int call_70 = unwrap_(call_69);
     milone_assert((call_70 == 0), 40, 2);
     return 0;
 }
 
-char findLastIndexTest_(char arg_47) {
-    struct IntOption call_71 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
-    bool call_72 = isNone_1(call_71);
+char std_string_Program_findLastIndexTest(char arg_47) {
+    struct IntOption call_71 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "", .len = 0});
+    bool call_72 = isNone_(call_71);
     milone_assert(call_72, 43, 2);
-    struct IntOption call_73 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
-    bool call_74 = isNone_1(call_73);
+    struct IntOption call_73 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
+    bool call_74 = isNone_(call_73);
     milone_assert(call_74, 44, 2);
-    struct IntOption call_75 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccab", .len = 4});
-    int call_76 = unwrap_1(call_75);
+    struct IntOption call_75 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccab", .len = 4});
+    int call_76 = unwrap_(call_75);
     milone_assert((call_76 == 2), 46, 2);
-    struct IntOption call_77 = findLastIndex_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
-    int call_78 = unwrap_1(call_77);
+    struct IntOption call_77 = MiloneStd_StdString_findLastIndex((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
+    int call_78 = unwrap_(call_77);
     milone_assert((call_78 == 6), 47, 2);
-    struct IntOption call_79 = findLastIndex_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
-    int call_80 = unwrap_1(call_79);
+    struct IntOption call_79 = MiloneStd_StdString_findLastIndex((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    int call_80 = unwrap_(call_79);
     milone_assert((call_80 == 0), 48, 2);
     return 0;
 }
 
-char containsTest_(char arg_48) {
-    bool call_81 = contains_((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
+char std_string_Program_containsTest(char arg_48) {
+    bool call_81 = MiloneStd_StdString_contains((struct String){.str = "ab", .len = 2}, (struct String){.str = "cacbc", .len = 5});
     milone_assert((!(call_81)), 51, 2);
-    bool call_82 = contains_((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
+    bool call_82 = MiloneStd_StdString_contains((struct String){.str = "ab", .len = 2}, (struct String){.str = "ccabccabcc", .len = 10});
     milone_assert(call_82, 52, 2);
-    bool call_83 = contains_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
+    bool call_83 = MiloneStd_StdString_contains((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0});
     milone_assert(call_83, 53, 2);
     return 0;
 }
 
-char truncateTest_(char arg_49) {
-    struct String call_84 = truncate_1(-1, (struct String){.str = "ab", .len = 2});
+char std_string_Program_truncateTest(char arg_49) {
+    struct String call_84 = MiloneStd_StdString_truncate(-1, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_84, (struct String){.str = "", .len = 0}) == 0), 56, 2);
-    struct String call_85 = truncate_1(0, (struct String){.str = "ab", .len = 2});
+    struct String call_85 = MiloneStd_StdString_truncate(0, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_85, (struct String){.str = "", .len = 0}) == 0), 57, 2);
-    struct String call_86 = truncate_1(1, (struct String){.str = "ab", .len = 2});
+    struct String call_86 = MiloneStd_StdString_truncate(1, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_86, (struct String){.str = "a", .len = 1}) == 0), 58, 2);
-    struct String call_87 = truncate_1(2, (struct String){.str = "ab", .len = 2});
+    struct String call_87 = MiloneStd_StdString_truncate(2, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_87, (struct String){.str = "ab", .len = 2}) == 0), 59, 2);
-    struct String call_88 = truncate_1(3, (struct String){.str = "ab", .len = 2});
+    struct String call_88 = MiloneStd_StdString_truncate(3, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_88, (struct String){.str = "ab", .len = 2}) == 0), 60, 2);
     return 0;
 }
 
-char skipTest_(char arg_50) {
-    struct String call_89 = skip_1(-1, (struct String){.str = "ab", .len = 2});
+char std_string_Program_skipTest(char arg_50) {
+    struct String call_89 = MiloneStd_StdString_skip(-1, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_89, (struct String){.str = "ab", .len = 2}) == 0), 63, 2);
-    struct String call_90 = skip_1(0, (struct String){.str = "ab", .len = 2});
+    struct String call_90 = MiloneStd_StdString_skip(0, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_90, (struct String){.str = "ab", .len = 2}) == 0), 64, 2);
-    struct String call_91 = skip_1(1, (struct String){.str = "ab", .len = 2});
+    struct String call_91 = MiloneStd_StdString_skip(1, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_91, (struct String){.str = "b", .len = 1}) == 0), 65, 2);
-    struct String call_92 = skip_1(2, (struct String){.str = "ab", .len = 2});
+    struct String call_92 = MiloneStd_StdString_skip(2, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_92, (struct String){.str = "", .len = 0}) == 0), 66, 2);
-    struct String call_93 = skip_1(3, (struct String){.str = "ab", .len = 2});
+    struct String call_93 = MiloneStd_StdString_skip(3, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_93, (struct String){.str = "", .len = 0}) == 0), 67, 2);
     return 0;
 }
 
-char sliceTest_(char arg_51) {
-    struct String call_94 = slice_(-2, -1, (struct String){.str = "ab", .len = 2});
+char std_string_Program_sliceTest(char arg_51) {
+    struct String call_94 = MiloneStd_StdString_slice(-2, -1, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_94, (struct String){.str = "", .len = 0}) == 0), 70, 2);
-    struct String call_95 = slice_(-1, 1, (struct String){.str = "ab", .len = 2});
+    struct String call_95 = MiloneStd_StdString_slice(-1, 1, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_95, (struct String){.str = "a", .len = 1}) == 0), 71, 2);
-    struct String call_96 = slice_(0, 1, (struct String){.str = "ab", .len = 2});
+    struct String call_96 = MiloneStd_StdString_slice(0, 1, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_96, (struct String){.str = "a", .len = 1}) == 0), 72, 2);
-    struct String call_97 = slice_(0, 2, (struct String){.str = "ab", .len = 2});
+    struct String call_97 = MiloneStd_StdString_slice(0, 2, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_97, (struct String){.str = "ab", .len = 2}) == 0), 73, 2);
-    struct String call_98 = slice_(0, 3, (struct String){.str = "ab", .len = 2});
+    struct String call_98 = MiloneStd_StdString_slice(0, 3, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_98, (struct String){.str = "ab", .len = 2}) == 0), 74, 2);
-    struct String call_99 = slice_(1, 2, (struct String){.str = "ab", .len = 2});
+    struct String call_99 = MiloneStd_StdString_slice(1, 2, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_99, (struct String){.str = "b", .len = 1}) == 0), 75, 2);
-    struct String call_100 = slice_(1, 3, (struct String){.str = "ab", .len = 2});
+    struct String call_100 = MiloneStd_StdString_slice(1, 3, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_100, (struct String){.str = "b", .len = 1}) == 0), 76, 2);
-    struct String call_101 = slice_(2, 3, (struct String){.str = "ab", .len = 2});
+    struct String call_101 = MiloneStd_StdString_slice(2, 3, (struct String){.str = "ab", .len = 2});
     milone_assert((str_compare(call_101, (struct String){.str = "", .len = 0}) == 0), 77, 2);
     return 0;
 }
 
-char trimTest_(char arg_52) {
-    struct String call_102 = trim_((struct String){.str = "  ab  ", .len = 6});
+char std_string_Program_trimTest(char arg_52) {
+    struct String call_102 = MiloneStd_StdString_trim((struct String){.str = "  ab  ", .len = 6});
     milone_assert((str_compare(call_102, (struct String){.str = "ab", .len = 2}) == 0), 80, 2);
-    struct String call_103 = trimStart_((struct String){.str = "  ab  ", .len = 6});
+    struct String call_103 = MiloneStd_StdString_trimStart((struct String){.str = "  ab  ", .len = 6});
     milone_assert((str_compare(call_103, (struct String){.str = "ab  ", .len = 4}) == 0), 81, 2);
-    struct String call_104 = trimEnd_((struct String){.str = " ab", .len = 3});
+    struct String call_104 = MiloneStd_StdString_trimEnd((struct String){.str = " ab", .len = 3});
     milone_assert((str_compare(call_104, (struct String){.str = " ab", .len = 3}) == 0), 82, 2);
     return 0;
 }
 
-char replaceTest_(char arg_53) {
-    struct String call_105 = replace_((struct String){.str = "a", .len = 1}, (struct String){.str = "A", .len = 1}, (struct String){.str = "abaca", .len = 5});
+char std_string_Program_replaceTest(char arg_53) {
+    struct String call_105 = MiloneStd_StdString_replace((struct String){.str = "a", .len = 1}, (struct String){.str = "A", .len = 1}, (struct String){.str = "abaca", .len = 5});
     milone_assert((str_compare(call_105, (struct String){.str = "AbAcA", .len = 5}) == 0), 85, 2);
-    struct String call_106 = replace_((struct String){.str = "xy", .len = 2}, (struct String){.str = "yx", .len = 2}, (struct String){.str = "xyxyx", .len = 5});
+    struct String call_106 = MiloneStd_StdString_replace((struct String){.str = "xy", .len = 2}, (struct String){.str = "yx", .len = 2}, (struct String){.str = "xyxyx", .len = 5});
     milone_assert((str_compare(call_106, (struct String){.str = "yxyxx", .len = 5}) == 0), 86, 2);
-    struct String call_107 = replace_((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0}, (struct String){.str = "as is", .len = 5});
+    struct String call_107 = MiloneStd_StdString_replace((struct String){.str = "", .len = 0}, (struct String){.str = "", .len = 0}, (struct String){.str = "as is", .len = 5});
     milone_assert((str_compare(call_107, (struct String){.str = "as is", .len = 5}) == 0), 87, 2);
-    struct String call_108 = replace_((struct String){.str = "aa", .len = 2}, (struct String){.str = "a", .len = 1}, (struct String){.str = "aaaaa", .len = 5});
+    struct String call_108 = MiloneStd_StdString_replace((struct String){.str = "aa", .len = 2}, (struct String){.str = "a", .len = 1}, (struct String){.str = "aaaaa", .len = 5});
     milone_assert((str_compare(call_108, (struct String){.str = "aaa", .len = 3}) == 0), 88, 2);
     return 0;
 }
 
-char splitTest_(char arg_54) {
-    struct StringList const* call_109 = toLines_((struct String){.str = "a\nb\nc", .len = 5});
-    struct String call_110 = concat_((struct String){.str = ";", .len = 1}, call_109);
+char std_string_Program_splitTest(char arg_54) {
+    struct StringList const* call_109 = MiloneStd_StdString_toLines((struct String){.str = "a\nb\nc", .len = 5});
+    struct String call_110 = MiloneStd_StdString_concat((struct String){.str = ";", .len = 1}, call_109);
     milone_assert((str_compare(call_110, (struct String){.str = "a;b;c", .len = 5}) == 0), 91, 2);
-    struct StringList const* call_111 = toLines_((struct String){.str = "a\nb\nc\n", .len = 6});
-    struct String call_112 = concat_((struct String){.str = ";", .len = 1}, call_111);
+    struct StringList const* call_111 = MiloneStd_StdString_toLines((struct String){.str = "a\nb\nc\n", .len = 6});
+    struct String call_112 = MiloneStd_StdString_concat((struct String){.str = ";", .len = 1}, call_111);
     milone_assert((str_compare(call_112, (struct String){.str = "a;b;c;", .len = 6}) == 0), 92, 2);
-    struct StringList const* call_113 = toLines_((struct String){.str = "a", .len = 1});
-    struct String call_114 = concat_((struct String){.str = ";", .len = 1}, call_113);
+    struct StringList const* call_113 = MiloneStd_StdString_toLines((struct String){.str = "a", .len = 1});
+    struct String call_114 = MiloneStd_StdString_concat((struct String){.str = ";", .len = 1}, call_113);
     milone_assert((str_compare(call_114, (struct String){.str = "a", .len = 1}) == 0), 93, 2);
-    struct StringList const* call_115 = toLines_((struct String){.str = "\n", .len = 1});
-    struct String call_116 = concat_((struct String){.str = ";", .len = 1}, call_115);
+    struct StringList const* call_115 = MiloneStd_StdString_toLines((struct String){.str = "\n", .len = 1});
+    struct String call_116 = MiloneStd_StdString_concat((struct String){.str = ";", .len = 1}, call_115);
     milone_assert((str_compare(call_116, (struct String){.str = ";", .len = 1}) == 0), 94, 2);
-    struct StringList const* call_117 = toLines_((struct String){.str = "", .len = 0});
-    struct String call_118 = concat_((struct String){.str = ";", .len = 1}, call_117);
+    struct StringList const* call_117 = MiloneStd_StdString_toLines((struct String){.str = "", .len = 0});
+    struct String call_118 = MiloneStd_StdString_concat((struct String){.str = ";", .len = 1}, call_117);
     milone_assert((str_compare(call_118, (struct String){.str = "", .len = 0}) == 0), 95, 2);
     return 0;
 }
 
-char concatTest_(char arg_55) {
+char std_string_Program_concatTest(char arg_55) {
     struct StringList const* list_6 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_6))) = (struct StringList){.head = (struct String){.str = "ef", .len = 2}, .tail = NULL};
     struct StringList const* list_5 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_5))) = (struct StringList){.head = (struct String){.str = "cd", .len = 2}, .tail = list_6};
     struct StringList const* list_4 = milone_mem_alloc(1, sizeof(struct StringList));
     (*(((struct StringList*)list_4))) = (struct StringList){.head = (struct String){.str = "ab", .len = 2}, .tail = list_5};
-    struct String call_119 = concat_((struct String){.str = ", ", .len = 2}, list_4);
+    struct String call_119 = MiloneStd_StdString_concat((struct String){.str = ", ", .len = 2}, list_4);
     milone_assert((str_compare(call_119, (struct String){.str = "ab, cd, ef", .len = 10}) == 0), 98, 2);
-    struct String call_120 = concat_((struct String){.str = "", .len = 0}, NULL);
+    struct String call_120 = MiloneStd_StdString_concat((struct String){.str = "", .len = 0}, NULL);
     milone_assert((str_compare(call_120, (struct String){.str = "", .len = 0}) == 0), 99, 2);
     return 0;
 }
 
 int milone_main() {
-    char call_121 = isEmptyTest_(0);
-    char call_122 = tryItemTest_(0);
-    char call_123 = startsWithTest_(0);
-    char call_124 = endsWithTest_(0);
-    char call_125 = findIndexTest_(0);
-    char call_126 = findLastIndexTest_(0);
-    char call_127 = containsTest_(0);
-    char call_128 = truncateTest_(0);
-    char call_129 = skipTest_(0);
-    char call_130 = sliceTest_(0);
-    char call_131 = trimTest_(0);
-    char call_132 = replaceTest_(0);
-    char call_133 = splitTest_(0);
-    char call_134 = concatTest_(0);
+    char call_121 = std_string_Program_isEmptyTest(0);
+    char call_122 = std_string_Program_tryItemTest(0);
+    char call_123 = std_string_Program_startsWithTest(0);
+    char call_124 = std_string_Program_endsWithTest(0);
+    char call_125 = std_string_Program_findIndexTest(0);
+    char call_126 = std_string_Program_findLastIndexTest(0);
+    char call_127 = std_string_Program_containsTest(0);
+    char call_128 = std_string_Program_truncateTest(0);
+    char call_129 = std_string_Program_skipTest(0);
+    char call_130 = std_string_Program_sliceTest(0);
+    char call_131 = std_string_Program_trimTest(0);
+    char call_132 = std_string_Program_replaceTest(0);
+    char call_133 = std_string_Program_splitTest(0);
+    char call_134 = std_string_Program_concatTest(0);
     return 0;
 }

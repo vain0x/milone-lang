@@ -81,6 +81,6 @@ else_9:;
 if_next_7:;
     milone_assert(if_2, 6, 2);
     struct IntIntIntIntIntIntIntIntIntIntIntTuple11 tuple_2 = (struct IntIntIntIntIntIntIntIntIntIntIntTuple11){.t0 = 1, .t1 = 2, .t2 = 3, .t3 = 4, .t4 = 5, .t5 = 6, .t6 = 7, .t7 = 8, .t8 = 9, .t9 = 10, .t10 = 11};
-    struct IntIntIntIntIntIntIntIntIntIntIntTuple11 _t11_ = tuple_2;
+    struct IntIntIntIntIntIntIntIntIntIntIntTuple11 _t11 = tuple_2;
     return 0;
 }
