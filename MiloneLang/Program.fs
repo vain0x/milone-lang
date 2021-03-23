@@ -20,7 +20,9 @@ let dotnetCliHost () : CliHost =
     System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile)
 
   let miloneHome =
-    System.Environment.GetEnvironmentVariable("MILONE_HOME")
+    match System.Environment.GetEnvironmentVariable("MILONE_HOME") with
+    | null -> ""
+    | it -> it
 
   { Args = args
     Home = home
