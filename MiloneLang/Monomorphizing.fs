@@ -159,8 +159,6 @@ let private findGenericFun (ctx: MonoCtx) funSerial =
   else
     Some(funDef.Name, funDef.Arity, funTy, funDef.Loc)
 
-let private findFunName funSerial (ctx: MonoCtx) = (ctx.Funs |> mapFind funSerial).Name
-
 /// Generalizes all functions that has type variables.
 let private forceGeneralizeFuns (ctx: MonoCtx) =
   let funs =
@@ -179,13 +177,12 @@ let private addMonomorphizedFun (ctx: MonoCtx) genericFunSerial arity useSiteTy 
           |> Option.isNone)
 
   let funDef : FunDef =
-    let name = ctx |> findFunName genericFunSerial
+    let def : FunDef = ctx.Funs |> mapFind genericFunSerial
 
-    { Name = name
-      Arity = arity
-      Ty = TyScheme([], useSiteTy)
-      Abi = CAbi
-      Loc = loc }
+    { def with
+        Arity = arity
+        Ty = TyScheme([], useSiteTy)
+        Loc = loc }
 
   let monoFunSerial = FunSerial(ctx.Serial + 1)
 

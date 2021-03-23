@@ -88,6 +88,7 @@ let private freshVar (ctx: TyCtx) hint ty loc =
     { Name = hint
       IsStatic = NotStatic
       Ty = ty
+      Linkage = InternalLinkage
       Loc = loc }
 
   let ctx =

@@ -8,17 +8,17 @@ struct StringUnitFun1;
 
 struct StringTuple1;
 
-char fun_(void const* env_, struct String arg_);
+static char fun_(void const* env_, struct String arg_);
 
 struct StringUnitFun1 bindInt_(struct IntStringUnitFun2 f_, int x_);
 
 char printInt_(int value_, struct String label_);
 
-char fun_1(void const* env_1, int arg_3, struct String arg_4);
+static char fun_1(void const* env_1, int arg_3, struct String arg_4);
 
 char der_(struct String d_, int n_, struct String f_1);
 
-char fun_2(void const* env_2, int arg_5, struct String arg_6);
+static char fun_2(void const* env_2, int arg_5, struct String arg_6);
 
 int milone_main();
 
@@ -41,7 +41,7 @@ struct StringTuple1 {
     struct String t0;
 };
 
-char fun_(void const* env_, struct String arg_) {
+static char fun_(void const* env_, struct String arg_) {
     struct IntStringUnitFun2 arg_1 = (*(((struct IntStringUnitFun2IntTuple2 const*)env_))).t0;
     int arg_2 = (*(((struct IntStringUnitFun2IntTuple2 const*)env_))).t1;
     char app_ = arg_1.fun(arg_1.env, arg_2, arg_);
@@ -62,7 +62,7 @@ char printInt_(int value_, struct String label_) {
     return 0;
 }
 
-char fun_1(void const* env_1, int arg_3, struct String arg_4) {
+static char fun_1(void const* env_1, int arg_3, struct String arg_4) {
     char call_ = printInt_(arg_3, arg_4);
     return 0;
 }
@@ -91,7 +91,7 @@ if_next_2:;
     return 0;
 }
 
-char fun_2(void const* env_2, int arg_5, struct String arg_6) {
+static char fun_2(void const* env_2, int arg_5, struct String arg_6) {
     struct String arg_7 = (*(((struct StringTuple1 const*)env_2))).t0;
     char call_1 = der_(arg_7, arg_5, arg_6);
     return 0;

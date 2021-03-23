@@ -8,7 +8,7 @@ struct UnitIntWrapper_Fun1;
 
 struct IntWrapper_ constant_1(struct IntWrapper_ value_, char arg_2);
 
-struct IntWrapper_ fun_(void const* env_, char arg_);
+static struct IntWrapper_ fun_(void const* env_, char arg_);
 
 int milone_main();
 
@@ -29,7 +29,7 @@ struct IntWrapper_ constant_1(struct IntWrapper_ value_, char arg_2) {
     return value_;
 }
 
-struct IntWrapper_ fun_(void const* env_, char arg_) {
+static struct IntWrapper_ fun_(void const* env_, char arg_) {
     struct IntWrapper_ arg_1 = (*(((struct IntWrapper_Tuple1 const*)env_))).t0;
     struct IntWrapper_ call_ = constant_1(arg_1, 0);
     return call_;

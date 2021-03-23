@@ -4,7 +4,7 @@ void const* f_(char arg_);
 
 int milone_main();
 
-static void const* boxedValue_;
+void const* boxedValue_;
 
 void const* f_(char arg_) {
     void const* box_ = milone_mem_alloc(1, sizeof(int));

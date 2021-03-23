@@ -44,15 +44,15 @@ struct StringIntTuple2List const* listMap_1(struct IntStringTuple2StringIntTuple
 
 int f_1(int x_3);
 
-int fun_(void const* env_, int arg_);
+static int fun_(void const* env_, int arg_);
 
-int fun_1(void const* env_1, int arg_1);
+static int fun_1(void const* env_1, int arg_1);
 
 struct IntStringTuple2 flip_2(struct StringIntTuple2 arg_7);
 
 struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_8);
 
-struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2);
+static struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2);
 
 int milone_main();
 
@@ -212,12 +212,12 @@ int f_1(int x_3) {
     return (x_3 * x_3);
 }
 
-int fun_(void const* env_, int arg_) {
+static int fun_(void const* env_, int arg_) {
     int call_4 = f_1(arg_);
     return call_4;
 }
 
-int fun_1(void const* env_1, int arg_1) {
+static int fun_1(void const* env_1, int arg_1) {
     int call_5 = f_1(arg_1);
     return call_5;
 }
@@ -236,7 +236,7 @@ struct StringIntTuple2 flip_1(struct IntStringTuple2 arg_8) {
     return tuple_1;
 }
 
-struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2) {
+static struct StringIntTuple2 fun_2(void const* env_2, struct IntStringTuple2 arg_2) {
     struct StringIntTuple2 call_6 = flip_1(arg_2);
     return call_6;
 }

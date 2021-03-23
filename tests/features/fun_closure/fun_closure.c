@@ -22,9 +22,9 @@ char recursiveCase_(char arg_6);
 
 int lg_(int lx_, char arg_7);
 
-int fun_(int lx_, char arg_8);
+static int fun_(int lx_, char arg_8);
 
-int fun_1(void const* env_, char arg_);
+static int fun_1(void const* env_, char arg_);
 
 int lf_(int lx_, char arg_9);
 
@@ -77,7 +77,7 @@ struct UnitIntFun1 {
     void const* env;
 };
 
-static int a_;
+int a_;
 
 int sub_(int step_, int x_) {
     return (x_ - step_);
@@ -144,12 +144,12 @@ int lg_(int lx_, char arg_7) {
     return lx_;
 }
 
-int fun_(int lx_, char arg_8) {
+static int fun_(int lx_, char arg_8) {
     int call_6 = lg_(lx_, 0);
     return call_6;
 }
 
-int fun_1(void const* env_, char arg_) {
+static int fun_1(void const* env_, char arg_) {
     int arg_1 = (*(((struct IntTuple1 const*)env_))).t0;
     int call_7 = fun_(arg_1, 0);
     return call_7;

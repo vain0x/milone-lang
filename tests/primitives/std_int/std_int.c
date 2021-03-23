@@ -8,15 +8,15 @@ struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
 
-int const* __ptrAsConst_1(int* mutPtr_);
+static int const* __ptrAsConst_1(int* mutPtr_);
 
 void* milone_mem_alloc(int, uintptr_t);
 
-void* memAlloc_(int len_, uintptr_t size_);
+static void* memAlloc_(int len_, uintptr_t size_);
 
 void* memcpy(void*, void const*, uintptr_t);
 
-void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
+static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
 
 bool str_to_int_checked(struct String, int*);
 
@@ -49,25 +49,25 @@ struct IntOption {
     int value;
 };
 
-static int MinValue_;
+int MinValue_;
 
-static int MaxValue_;
+int MaxValue_;
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     struct String str_concat_result_ = str_concat(sep_, xs_);
     return str_concat_result_;
 }
 
-int const* __ptrAsConst_1(int* mutPtr_) {
+static int const* __ptrAsConst_1(int* mutPtr_) {
     return ((int const*)mutPtr_);
 }
 
-void* memAlloc_(int len_, uintptr_t size_) {
+static void* memAlloc_(int len_, uintptr_t size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(len_, size_);
     return milone_mem_alloc_result_;
 }
 
-void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
+static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
     void* memcpy_result_ = memcpy(dest_, src_, size_1);
     return memcpy_result_;
 }

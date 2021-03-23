@@ -10,13 +10,13 @@ bool go_1(struct F64BoolFun1 pred_, struct F64List const* xs_1);
 
 bool all_1(struct F64BoolFun1 pred_, struct F64List const* xs_);
 
-bool fun_(double x_1);
+static bool fun_(double x_1);
 
-bool fun_2(void const* env_, double arg_);
+static bool fun_2(void const* env_, double arg_);
 
-bool fun_1(double x_2);
+static bool fun_1(double x_2);
 
-bool fun_3(void const* env_1, double arg_1);
+static bool fun_3(void const* env_1, double arg_1);
 
 int milone_main();
 
@@ -70,20 +70,20 @@ bool all_1(struct F64BoolFun1 pred_, struct F64List const* xs_) {
     return call_;
 }
 
-bool fun_(double x_1) {
+static bool fun_(double x_1) {
     return (x_1 == 0.0);
 }
 
-bool fun_2(void const* env_, double arg_) {
+static bool fun_2(void const* env_, double arg_) {
     bool call_1 = fun_(arg_);
     return call_1;
 }
 
-bool fun_1(double x_2) {
+static bool fun_1(double x_2) {
     return (0.0 < x_2);
 }
 
-bool fun_3(void const* env_1, double arg_1) {
+static bool fun_3(void const* env_1, double arg_1) {
     bool call_2 = fun_1(arg_1);
     return call_2;
 }

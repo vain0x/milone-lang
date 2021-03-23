@@ -9,7 +9,7 @@ struct IntIntTuple2 {
     int t1;
 };
 
-static int x_;
+int x_;
 
 static int y_;
 

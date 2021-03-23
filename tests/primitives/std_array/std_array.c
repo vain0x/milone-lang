@@ -34,25 +34,25 @@ struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
 
-intptr_t __pointeeSize_2(char const* constPtr_);
+static intptr_t __pointeeSize_2(char const* constPtr_);
 
-intptr_t __pointeeSize_1(int const* constPtr_);
+static intptr_t __pointeeSize_1(int const* constPtr_);
 
-int const* __ptrAsConst_1(int* mutPtr_);
+static int const* __ptrAsConst_1(int* mutPtr_);
 
-char const* __ptrAsConst_2(char* mutPtr_);
+static char const* __ptrAsConst_2(char* mutPtr_);
 
-int const* __ptrAdd_1(int index_, int const* ptr_);
+static int const* __ptrAdd_1(int index_, int const* ptr_);
 
-int* __mutPtrAdd_1(int index_1, int* mutPtr_1);
+static int* __mutPtrAdd_1(int index_1, int* mutPtr_1);
 
 void* milone_mem_alloc(int, uintptr_t);
 
-void* memAlloc_(int len_, uintptr_t size_);
+static void* memAlloc_(int len_, uintptr_t size_);
 
 void* memcpy(void*, void const*, uintptr_t);
 
-void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
+static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
 
 struct UnitMutPtrIntTuple2 __mutArrayCreate_2(int len_1);
 
@@ -100,9 +100,9 @@ struct UnitConstPtrIntTuple2 init_2(int len_8, struct IntUnitFun1 f_);
 
 struct IntConstPtrIntTuple2 init_1(int len_8, struct IntIntFun1 f_);
 
-int fun_1(int i_1);
+static int fun_1(int i_1);
 
-int fun_13(void const* env_1, int arg_2);
+static int fun_13(void const* env_1, int arg_2);
 
 struct IntConstPtrIntTuple2 range_(int len_10);
 
@@ -118,9 +118,9 @@ struct IntConstPtrIntTuple2 skip_1(int skipLen_, struct IntConstPtrIntTuple2 arr
 
 struct IntIntConstPtrIntTuple2Tuple2Option uncons_1(struct IntConstPtrIntTuple2 array_13);
 
-int fun_25(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14, int i_3);
+static int fun_25(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14, int i_3);
 
-int fun_24(void const* env_2, int arg_3);
+static int fun_24(void const* env_2, int arg_3);
 
 struct IntConstPtrIntTuple2 mapi_1(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14);
 
@@ -144,13 +144,13 @@ struct IntList const* toList_1(struct IntConstPtrIntTuple2 array_17);
 
 int get_1(int i_8, struct IntConstPtrIntTuple2 array_18);
 
-char fun_5(int arg_57);
+static char fun_5(int arg_57);
 
-char fun_17(void const* env_5, int arg_11);
+static char fun_17(void const* env_5, int arg_11);
 
-int fun_6(int n_);
+static int fun_6(int n_);
 
-int fun_18(void const* env_6, int arg_12);
+static int fun_18(void const* env_6, int arg_12);
 
 char initTest_(char arg_58);
 
@@ -162,31 +162,31 @@ char tryItemTest_(char arg_60);
 
 char sliceTest_(char arg_61);
 
-int fun_7(int n_1);
+static int fun_7(int n_1);
 
-int fun_19(void const* env_7, int arg_13);
+static int fun_19(void const* env_7, int arg_13);
 
 char unconsTest_(char arg_62);
 
-int fun_8(int i_10, int n_2);
+static int fun_8(int i_10, int n_2);
 
-int fun_20(void const* env_8, int arg_14, int arg_15);
+static int fun_20(void const* env_8, int arg_14, int arg_15);
 
 char mapTest_(char arg_63);
 
-struct IntOption fun_9(int n_3);
+static struct IntOption fun_9(int n_3);
 
-struct IntOption fun_21(void const* env_9, int arg_16);
+static struct IntOption fun_21(void const* env_9, int arg_16);
 
-struct IntOption fun_10(int arg_64);
+static struct IntOption fun_10(int arg_64);
 
-struct IntOption fun_22(void const* env_10, int arg_17);
+static struct IntOption fun_22(void const* env_10, int arg_17);
 
 char chooseTest_(char arg_65);
 
-int fun_11(int state_2, int i_11);
+static int fun_11(int state_2, int i_11);
 
-int fun_23(void const* env_11, int arg_18, int arg_19);
+static int fun_23(void const* env_11, int arg_18, int arg_19);
 
 char foldTest_(char arg_66);
 
@@ -266,39 +266,39 @@ struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     return str_concat_result_;
 }
 
-intptr_t __pointeeSize_2(char const* constPtr_) {
+static intptr_t __pointeeSize_2(char const* constPtr_) {
     return ((intptr_t)sizeof(char));
 }
 
-intptr_t __pointeeSize_1(int const* constPtr_) {
+static intptr_t __pointeeSize_1(int const* constPtr_) {
     return ((intptr_t)sizeof(int));
 }
 
-int const* __ptrAsConst_1(int* mutPtr_) {
+static int const* __ptrAsConst_1(int* mutPtr_) {
     return ((int const*)mutPtr_);
 }
 
-char const* __ptrAsConst_2(char* mutPtr_) {
+static char const* __ptrAsConst_2(char* mutPtr_) {
     return ((char const*)mutPtr_);
 }
 
-int const* __ptrAdd_1(int index_, int const* ptr_) {
+static int const* __ptrAdd_1(int index_, int const* ptr_) {
     intptr_t call_ = __pointeeSize_1(ptr_);
     return ((int const*)(((intptr_t)ptr_) + (((intptr_t)index_) * call_)));
 }
 
-int* __mutPtrAdd_1(int index_1, int* mutPtr_1) {
+static int* __mutPtrAdd_1(int index_1, int* mutPtr_1) {
     int const* call_1 = __ptrAsConst_1(mutPtr_1);
     intptr_t call_2 = __pointeeSize_1(call_1);
     return ((int*)(((intptr_t)mutPtr_1) + (((intptr_t)index_1) * call_2)));
 }
 
-void* memAlloc_(int len_, uintptr_t size_) {
+static void* memAlloc_(int len_, uintptr_t size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(len_, size_);
     return milone_mem_alloc_result_;
 }
 
-void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
+static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
     void* memcpy_result_ = memcpy(dest_, src_, size_1);
     return memcpy_result_;
 }
@@ -617,11 +617,11 @@ if_next_33:;
     return if_10;
 }
 
-int fun_1(int i_1) {
+static int fun_1(int i_1) {
     return i_1;
 }
 
-int fun_13(void const* env_1, int arg_2) {
+static int fun_13(void const* env_1, int arg_2) {
     int call_27 = fun_1(arg_2);
     return call_27;
 }
@@ -742,13 +742,13 @@ if_next_48:;
     return if_15;
 }
 
-int fun_25(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14, int i_3) {
+static int fun_25(struct IntIntIntFun2 f_1, struct IntConstPtrIntTuple2 array_14, int i_3) {
     int call_41 = __constArrayGet_1(i_3, array_14);
     int app_2 = f_1.fun(f_1.env, i_3, call_41);
     return app_2;
 }
 
-int fun_24(void const* env_2, int arg_3) {
+static int fun_24(void const* env_2, int arg_3) {
     struct IntIntIntFun2 arg_4 = (*(((struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 const*)env_2))).t0;
     struct IntConstPtrIntTuple2 arg_5 = (*(((struct IntIntIntFun2IntConstPtrIntTuple2Tuple2 const*)env_2))).t1;
     int call_42 = fun_25(arg_4, arg_5, arg_3);
@@ -990,21 +990,21 @@ end_match_77:;
     return match_3;
 }
 
-char fun_5(int arg_57) {
+static char fun_5(int arg_57) {
     milone_assert(false, 13, 45);
     return 0;
 }
 
-char fun_17(void const* env_5, int arg_11) {
+static char fun_17(void const* env_5, int arg_11) {
     char call_66 = fun_5(arg_11);
     return 0;
 }
 
-int fun_6(int n_) {
+static int fun_6(int n_) {
     return ((n_ + 1) * 3);
 }
 
-int fun_18(void const* env_6, int arg_12) {
+static int fun_18(void const* env_6, int arg_12) {
     int call_67 = fun_6(arg_12);
     return call_67;
 }
@@ -1107,11 +1107,11 @@ char sliceTest_(char arg_61) {
     return 0;
 }
 
-int fun_7(int n_1) {
+static int fun_7(int n_1) {
     return (n_1 + 1);
 }
 
-int fun_19(void const* env_7, int arg_13) {
+static int fun_19(void const* env_7, int arg_13) {
     int call_100 = fun_7(arg_13);
     return call_100;
 }
@@ -1173,11 +1173,11 @@ end_match_83:;
     return 0;
 }
 
-int fun_8(int i_10, int n_2) {
+static int fun_8(int i_10, int n_2) {
     return ((i_10 * 10) + n_2);
 }
 
-int fun_20(void const* env_8, int arg_14, int arg_15) {
+static int fun_20(void const* env_8, int arg_14, int arg_15) {
     int call_108 = fun_8(arg_14, arg_15);
     return call_108;
 }
@@ -1198,7 +1198,7 @@ char mapTest_(char arg_63) {
     return 0;
 }
 
-struct IntOption fun_9(int n_3) {
+static struct IntOption fun_9(int n_3) {
     struct IntOption if_20;
     if (((n_3 % 2) == 0)) {
         goto then_93;
@@ -1216,16 +1216,16 @@ if_next_92:;
     return if_20;
 }
 
-struct IntOption fun_21(void const* env_9, int arg_16) {
+static struct IntOption fun_21(void const* env_9, int arg_16) {
     struct IntOption call_115 = fun_9(arg_16);
     return call_115;
 }
 
-struct IntOption fun_10(int arg_64) {
+static struct IntOption fun_10(int arg_64) {
     return (struct IntOption){.some = false};
 }
 
-struct IntOption fun_22(void const* env_10, int arg_17) {
+static struct IntOption fun_22(void const* env_10, int arg_17) {
     struct IntOption call_116 = fun_10(arg_17);
     return call_116;
 }
@@ -1252,11 +1252,11 @@ char chooseTest_(char arg_65) {
     return 0;
 }
 
-int fun_11(int state_2, int i_11) {
+static int fun_11(int state_2, int i_11) {
     return ((state_2 * 10) + (i_11 + 1));
 }
 
-int fun_23(void const* env_11, int arg_18, int arg_19) {
+static int fun_23(void const* env_11, int arg_18, int arg_19) {
     int call_126 = fun_11(arg_18, arg_19);
     return call_126;
 }

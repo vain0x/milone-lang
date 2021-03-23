@@ -146,9 +146,9 @@ bool strEqual_(struct String first_3, struct String second_3);
 
 int failwith_1(struct String msg_);
 
-int fun_21(int arg_58);
+static int fun_21(int arg_58);
 
-int fun_3(void const* env_, int arg_);
+static int fun_3(void const* env_, int arg_);
 
 struct IntList const* scanIntList_(int len_5);
 
@@ -158,11 +158,11 @@ struct VoidMutPtrIntIntFun2 typeToArrayGet_1(struct IntIntIntVoidMutPtrFun1VoidM
 
 struct VoidMutPtrIntIntUnitFun3 typeToArraySet_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 arg_61);
 
-void* fun_4(void const* env_1, int arg_1);
+static void* fun_4(void const* env_1, int arg_1);
 
-int fun_5(void const* env_2, void* arg_2, int arg_3);
+static int fun_5(void const* env_2, void* arg_2, int arg_3);
 
-char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6);
+static char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6);
 
 int vectorToLength_1(struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6VoidMutPtrIntIntUnitTuple5 arg_62);
 
@@ -336,27 +336,27 @@ struct StringList const* segTreeToList_1(struct StringStringStringFun2StringIntI
 
 int intAdd_(int x_8, int y_3);
 
-int fun_7(void const* env_4, int arg_7, int arg_8);
+static int fun_7(void const* env_4, int arg_7, int arg_8);
 
 struct String strAdd_(struct String x_9, struct String y_4);
 
-struct String fun_8(void const* env_5, struct String arg_9, struct String arg_10);
+static struct String fun_8(void const* env_5, struct String arg_9, struct String arg_10);
 
-bool fun_9(void const* env_6, int arg_11, int arg_12);
+static bool fun_9(void const* env_6, int arg_11, int arg_12);
 
-bool fun_10(void const* env_7, int arg_13, int arg_14);
+static bool fun_10(void const* env_7, int arg_13, int arg_14);
 
-bool fun_11(void const* env_8, int arg_15, int arg_16);
+static bool fun_11(void const* env_8, int arg_15, int arg_16);
 
-bool fun_12(void const* env_9, int arg_17, int arg_18);
+static bool fun_12(void const* env_9, int arg_17, int arg_18);
 
-bool fun_13(void const* env_10, int arg_19, int arg_20);
+static bool fun_13(void const* env_10, int arg_19, int arg_20);
 
 char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_99);
 
-bool fun_14(void const* env_11, int arg_21, int arg_22);
+static bool fun_14(void const* env_11, int arg_21, int arg_22);
 
-bool fun_15(void const* env_12, int arg_23, int arg_24);
+static bool fun_15(void const* env_12, int arg_23, int arg_24);
 
 char testSet_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_100);
 
@@ -370,19 +370,19 @@ char testSumMore_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 
 
 char testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeInt_, char arg_118);
 
-bool fun_16(void const* env_13, struct String arg_25, struct String arg_26);
+static bool fun_16(void const* env_13, struct String arg_25, struct String arg_26);
 
 char testPolymorphic_(struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4 segItemTypeStr_, char arg_119);
 
 char segTreeTest_(char arg_120);
 
-int fun_22(int arg_121, int arg_122);
+static int fun_22(int arg_121, int arg_122);
 
-int fun_17(void const* env_14, int arg_27, int arg_28);
+static int fun_17(void const* env_14, int arg_27, int arg_28);
 
-int fun_18(void const* env_15, int arg_29, int arg_30);
+static int fun_18(void const* env_15, int arg_29, int arg_30);
 
-int fun_19(void const* env_16, int arg_31, int arg_32);
+static int fun_19(void const* env_16, int arg_31, int arg_32);
 
 struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 go_19(int n_2, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 perm_2, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 pos_1, int i_6);
 
@@ -396,9 +396,9 @@ char abc140eTest_(char arg_133);
 
 char abc140eMain_(char arg_134);
 
-int fun_23(int arg_135, int arg_136);
+static int fun_23(int arg_135, int arg_136);
 
-int fun_20(void const* env_17, int arg_33, int arg_34);
+static int fun_20(void const* env_17, int arg_33, int arg_34);
 
 int go_18(int n_5, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 a_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 b_1, struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4IntIntIntObjectUnitTuple5UnitTuple3 c_1, int sum_3, int i_8);
 
@@ -583,9 +583,9 @@ struct StringStringStringFun2StringIntIntObjectUnitTuple5ObjectUnitTuple4StringI
     char t2;
 };
 
-static void const* unitObj_;
+void const* unitObj_;
 
-static struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 typeInt_;
+struct IntIntIntVoidMutPtrFun1VoidMutPtrIntIntFun2VoidMutPtrIntIntUnitFun3UnitTuple6 typeInt_;
 
 void* memAlloc_(int len_, int size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(len_, ((uintptr_t)size_));
@@ -1095,12 +1095,12 @@ int failwith_1(struct String msg_) {
     exit(1);
 }
 
-int fun_21(int arg_58) {
+static int fun_21(int arg_58) {
     int call_16 = scanInt_(0);
     return call_16;
 }
 
-int fun_3(void const* env_, int arg_) {
+static int fun_3(void const* env_, int arg_) {
     int call_17 = fun_21(arg_);
     return call_17;
 }
@@ -1129,17 +1129,17 @@ struct VoidMutPtrIntIntUnitFun3 typeToArraySet_1(struct IntIntIntVoidMutPtrFun1V
     return arraySet_;
 }
 
-void* fun_4(void const* env_1, int arg_1) {
+static void* fun_4(void const* env_1, int arg_1) {
     void* call_19 = rawIntArrayNew_(arg_1);
     return call_19;
 }
 
-int fun_5(void const* env_2, void* arg_2, int arg_3) {
+static int fun_5(void const* env_2, void* arg_2, int arg_3) {
     int call_20 = rawIntArrayGet_(arg_2, arg_3);
     return call_20;
 }
 
-char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6) {
+static char fun_6(void const* env_3, void* arg_4, int arg_5, int arg_6) {
     char call_21 = rawIntArraySet_(arg_4, arg_5, arg_6);
     return 0;
 }
@@ -2947,7 +2947,7 @@ int intAdd_(int x_8, int y_3) {
     return (x_8 + y_3);
 }
 
-int fun_7(void const* env_4, int arg_7, int arg_8) {
+static int fun_7(void const* env_4, int arg_7, int arg_8) {
     int call_249 = intAdd_(arg_7, arg_8);
     return call_249;
 }
@@ -2956,32 +2956,32 @@ struct String strAdd_(struct String x_9, struct String y_4) {
     return str_add(x_9, y_4);
 }
 
-struct String fun_8(void const* env_5, struct String arg_9, struct String arg_10) {
+static struct String fun_8(void const* env_5, struct String arg_9, struct String arg_10) {
     struct String call_250 = strAdd_(arg_9, arg_10);
     return call_250;
 }
 
-bool fun_9(void const* env_6, int arg_11, int arg_12) {
+static bool fun_9(void const* env_6, int arg_11, int arg_12) {
     bool call_251 = intEqual_(arg_11, arg_12);
     return call_251;
 }
 
-bool fun_10(void const* env_7, int arg_13, int arg_14) {
+static bool fun_10(void const* env_7, int arg_13, int arg_14) {
     bool call_252 = intEqual_(arg_13, arg_14);
     return call_252;
 }
 
-bool fun_11(void const* env_8, int arg_15, int arg_16) {
+static bool fun_11(void const* env_8, int arg_15, int arg_16) {
     bool call_253 = intEqual_(arg_15, arg_16);
     return call_253;
 }
 
-bool fun_12(void const* env_9, int arg_17, int arg_18) {
+static bool fun_12(void const* env_9, int arg_17, int arg_18) {
     bool call_254 = intEqual_(arg_17, arg_18);
     return call_254;
 }
 
-bool fun_13(void const* env_10, int arg_19, int arg_20) {
+static bool fun_13(void const* env_10, int arg_19, int arg_20) {
     bool call_255 = intEqual_(arg_19, arg_20);
     return call_255;
 }
@@ -3038,12 +3038,12 @@ char testPushPop_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 
     return 0;
 }
 
-bool fun_14(void const* env_11, int arg_21, int arg_22) {
+static bool fun_14(void const* env_11, int arg_21, int arg_22) {
     bool call_273 = intEqual_(arg_21, arg_22);
     return call_273;
 }
 
-bool fun_15(void const* env_12, int arg_23, int arg_24) {
+static bool fun_15(void const* env_12, int arg_23, int arg_24) {
     bool call_274 = intEqual_(arg_23, arg_24);
     return call_274;
 }
@@ -3244,7 +3244,7 @@ char testBalance_(struct IntIntIntFun2IntIntIntObjectUnitTuple5ObjectUnitTuple4 
     return 0;
 }
 
-bool fun_16(void const* env_13, struct String arg_25, struct String arg_26) {
+static bool fun_16(void const* env_13, struct String arg_25, struct String arg_26) {
     bool call_295 = strEqual_(arg_25, arg_26);
     return call_295;
 }
@@ -3281,21 +3281,21 @@ char segTreeTest_(char arg_120) {
     return 0;
 }
 
-int fun_22(int arg_121, int arg_122) {
+static int fun_22(int arg_121, int arg_122) {
     return 0;
 }
 
-int fun_17(void const* env_14, int arg_27, int arg_28) {
+static int fun_17(void const* env_14, int arg_27, int arg_28) {
     int call_309 = fun_22(arg_27, arg_28);
     return call_309;
 }
 
-int fun_18(void const* env_15, int arg_29, int arg_30) {
+static int fun_18(void const* env_15, int arg_29, int arg_30) {
     int call_310 = intMax_(arg_29, arg_30);
     return call_310;
 }
 
-int fun_19(void const* env_16, int arg_31, int arg_32) {
+static int fun_19(void const* env_16, int arg_31, int arg_32) {
     int call_311 = intMin_(arg_31, arg_32);
     return call_311;
 }
@@ -3506,11 +3506,11 @@ char abc140eMain_(char arg_134) {
     return 0;
 }
 
-int fun_23(int arg_135, int arg_136) {
+static int fun_23(int arg_135, int arg_136) {
     return 0;
 }
 
-int fun_20(void const* env_17, int arg_33, int arg_34) {
+static int fun_20(void const* env_17, int arg_33, int arg_34) {
     int call_344 = fun_23(arg_33, arg_34);
     return call_344;
 }

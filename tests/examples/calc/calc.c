@@ -48,15 +48,15 @@ int go_5(struct CharBoolFun1 pred_, struct String source_, int r_1);
 
 int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16);
 
-bool fun_(void const* env_, char arg_);
+static bool fun_(void const* env_, char arg_);
 
-struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_17);
+static struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_17);
 
-struct Token_ListIntTuple2 readEol_(struct String source_2, struct Token_ListIntTuple2 arg_18);
+static struct Token_ListIntTuple2 readEol_(struct String source_2, struct Token_ListIntTuple2 arg_18);
 
-bool fun_1(void const* env_1, char arg_2);
+static bool fun_1(void const* env_1, char arg_2);
 
-struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_19);
+static struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_19);
 
 char at_(struct String source_4, int i_6);
 
@@ -368,13 +368,13 @@ int takeWhile_(struct CharBoolFun1 pred_, struct StringIntTuple2 arg_16) {
     return call_6;
 }
 
-bool fun_(void const* env_, char arg_) {
+static bool fun_(void const* env_, char arg_) {
     char arg_1 = (*(((struct CharTuple1 const*)env_))).t0;
     bool call_7 = charEqual_(arg_1, arg_);
     return call_7;
 }
 
-struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_17) {
+static struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListIntTuple2 arg_17) {
     struct Token_List const* acc_2 = arg_17.t0;
     int i_3 = arg_17.t1;
     milone_assert((source_1.str[i_3] == ' '), 59, 2);
@@ -389,7 +389,7 @@ struct Token_ListIntTuple2 readSpace_(struct String source_1, struct Token_ListI
     return tuple_2;
 }
 
-struct Token_ListIntTuple2 readEol_(struct String source_2, struct Token_ListIntTuple2 arg_18) {
+static struct Token_ListIntTuple2 readEol_(struct String source_2, struct Token_ListIntTuple2 arg_18) {
     struct Token_List const* acc_3 = arg_18.t0;
     int i_4 = arg_18.t1;
     bool if_8;
@@ -450,12 +450,12 @@ if_next_48:;
     return tuple_3;
 }
 
-bool fun_1(void const* env_1, char arg_2) {
+static bool fun_1(void const* env_1, char arg_2) {
     bool call_9 = isDigit_(arg_2);
     return call_9;
 }
 
-struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_19) {
+static struct Token_ListIntTuple2 readInt_(struct String source_3, struct Token_ListIntTuple2 arg_19) {
     struct Token_List const* acc_4 = arg_19.t0;
     int i_5 = arg_19.t1;
     bool call_10 = isDigit_(source_3.str[i_5]);

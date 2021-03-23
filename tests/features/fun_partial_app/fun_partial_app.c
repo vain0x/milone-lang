@@ -16,11 +16,11 @@ int dec_(int y_, int x_1);
 
 int add4_(int x1_, int x2_, int x3_, int x4_);
 
-int fun_(void const* env_, int arg_);
+static int fun_(void const* env_, int arg_);
 
-int fun_1(void const* env_1, int arg_2, int arg_3);
+static int fun_1(void const* env_1, int arg_2, int arg_3);
 
-int fun_2(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9);
+static int fun_2(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9);
 
 int milone_main();
 
@@ -62,20 +62,20 @@ int add4_(int x1_, int x2_, int x3_, int x4_) {
     return (((x1_ + x2_) + x3_) + x4_);
 }
 
-int fun_(void const* env_, int arg_) {
+static int fun_(void const* env_, int arg_) {
     int arg_1 = (*(((struct IntTuple1 const*)env_))).t0;
     int call_ = dec_(arg_1, arg_);
     return call_;
 }
 
-int fun_1(void const* env_1, int arg_2, int arg_3) {
+static int fun_1(void const* env_1, int arg_2, int arg_3) {
     int arg_4 = (*(((struct IntIntTuple2 const*)env_1))).t0;
     int arg_5 = (*(((struct IntIntTuple2 const*)env_1))).t1;
     int call_1 = add4_(arg_4, arg_5, arg_2, arg_3);
     return call_1;
 }
 
-int fun_2(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
+static int fun_2(void const* env_2, int arg_6, int arg_7, int arg_8, int arg_9) {
     int call_2 = add4_(arg_6, arg_7, arg_8, arg_9);
     return call_2;
 }

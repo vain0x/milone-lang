@@ -4,8 +4,13 @@ module rec global_var.Program
 
 let success = 0
 
+let private failure = 1
+
 let f () = success
 
 let g () = f ()
 
-let main _ = g ()
+let main _ =
+  assert (g () = 0)
+  assert (failure = 1)
+  0

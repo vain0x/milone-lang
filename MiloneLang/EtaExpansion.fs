@@ -418,6 +418,7 @@ let private freshFun name arity (ty: Ty) loc (ctx: EtaCtx) =
       Arity = arity
       Ty = tyScheme
       Abi = MiloneAbi
+      Linkage = InternalLinkage
       Loc = loc }
 
   let ctx =
@@ -435,6 +436,7 @@ let private freshVar name (ty: Ty) loc (ctx: EtaCtx) =
     { Name = name
       IsStatic = NotStatic
       Ty = ty
+      Linkage = InternalLinkage
       Loc = loc }
 
   let ctx =

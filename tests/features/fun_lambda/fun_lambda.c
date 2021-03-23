@@ -6,21 +6,21 @@ struct IntIntIntFun2;
 
 int apply_1(struct IntIntFun1 f_, int x_);
 
-int fun_(int x_1);
+static int fun_(int x_1);
 
-int fun_3(void const* env_, int arg_);
+static int fun_3(void const* env_, int arg_);
 
 char layoutTest_(char arg_4);
 
 int twice_1(struct IntIntFun1 f_1, int x_2);
 
-int fun_1(int x_4);
+static int fun_1(int x_4);
 
-int fun_4(void const* env_1, int arg_1);
+static int fun_4(void const* env_1, int arg_1);
 
-int fun_2(int x_5, int y_1);
+static int fun_2(int x_5, int y_1);
 
-int fun_5(void const* env_2, int arg_2, int arg_3);
+static int fun_5(void const* env_2, int arg_2, int arg_3);
 
 int milone_main();
 
@@ -39,11 +39,11 @@ int apply_1(struct IntIntFun1 f_, int x_) {
     return app_;
 }
 
-int fun_(int x_1) {
+static int fun_(int x_1) {
     return (x_1 + 3);
 }
 
-int fun_3(void const* env_, int arg_) {
+static int fun_3(void const* env_, int arg_) {
     int call_ = fun_(arg_);
     return call_;
 }
@@ -62,21 +62,21 @@ int twice_1(struct IntIntFun1 f_1, int x_2) {
     return app_2;
 }
 
-int fun_1(int x_4) {
+static int fun_1(int x_4) {
     int y_ = (x_4 + 1);
     return y_;
 }
 
-int fun_4(void const* env_1, int arg_1) {
+static int fun_4(void const* env_1, int arg_1) {
     int call_2 = fun_1(arg_1);
     return call_2;
 }
 
-int fun_2(int x_5, int y_1) {
+static int fun_2(int x_5, int y_1) {
     return ((x_5 / y_1) + 0);
 }
 
-int fun_5(void const* env_2, int arg_2, int arg_3) {
+static int fun_5(void const* env_2, int arg_2, int arg_3) {
     int call_3 = fun_2(arg_2, arg_3);
     return call_3;
 }

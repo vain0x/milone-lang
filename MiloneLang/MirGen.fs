@@ -126,6 +126,7 @@ let private freshVar (ctx: MirCtx) (name: Ident) (ty: Ty) loc =
     { Name = name
       IsStatic = NotStatic
       Ty = ty
+      Linkage = InternalLinkage
       Loc = loc }
 
   let ctx =

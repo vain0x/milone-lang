@@ -14,7 +14,7 @@ char go_(int n_1, struct LazyList_ xs_1);
 
 char lazyListPrint_(int n_, struct LazyList_ xs_);
 
-struct LazyList_ fun_(void const* env_, char arg_);
+static struct LazyList_ fun_(void const* env_, char arg_);
 
 struct LazyList_ makeTail_(int n_2, int prev_, char arg_5);
 
@@ -96,7 +96,7 @@ char lazyListPrint_(int n_, struct LazyList_ xs_) {
     return 0;
 }
 
-struct LazyList_ fun_(void const* env_, char arg_) {
+static struct LazyList_ fun_(void const* env_, char arg_) {
     int arg_1 = (*(((struct IntIntTuple2 const*)env_))).t0;
     int arg_2 = (*(((struct IntIntTuple2 const*)env_))).t1;
     struct LazyList_ call_1 = makeTail_(arg_1, arg_2, 0);

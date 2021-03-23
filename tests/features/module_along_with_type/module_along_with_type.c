@@ -24,7 +24,7 @@ struct IntIntTuple2IntIntTuple2Tuple2 {
     struct IntIntTuple2 t1;
 };
 
-static struct IntIntTuple2 eol_;
+struct IntIntTuple2 eol_;
 
 struct IntIntTuple2 add_(struct IntIntTuple2 l_, struct IntIntTuple2 r_) {
     int ly_ = l_.t0;

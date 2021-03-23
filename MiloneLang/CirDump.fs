@@ -480,6 +480,12 @@ let private cpDecl decl acc =
 
   | CStaticVarDecl (name, ty) ->
       acc
+      |> cpTyWithName name ty
+      |> cons ";"
+      |> cons eol
+
+  | CInternalStaticVarDecl(name, ty) ->
+      acc
       |> cons "static "
       |> cpTyWithName name ty
       |> cons ";"
@@ -496,16 +502,38 @@ let private cpDecl decl acc =
       |> cons "}"
       |> cons eol
 
+  | CStaticFunDecl (name, args, resultTy, body) ->
+      acc
+      |> cons "static "
+      |> cpTyWithName name resultTy
+      |> cons "("
+      |> cpParams args
+      |> cons ") {"
+      |> cons eol
+      |> cpStmtList "    " body
+      |> cons "}"
+      |> cons eol
+
   | CStructForwardDecl _
   | CFunForwardDecl _
   | CNativeDecl _ -> acc
 
 /// Prints forward declaration.
 let private cpForwardDecl decl acc =
+  let cpFunForwardDecl name cpParams resultTy acc =
+    acc
+    |> cpTyWithName name resultTy
+    |> cons "("
+    |> cpParams
+    |> cons ");"
+    |> cons eol
+    |> cons eol
+
   match decl with
   | CErrorDecl _
   | CEnumDecl _
-  | CStaticVarDecl _ -> acc
+  | CStaticVarDecl _
+  | CInternalStaticVarDecl _ -> acc
 
   | CStructDecl (name, _, _) ->
       acc
@@ -539,22 +567,16 @@ let private cpForwardDecl decl acc =
              (First, acc)
         |> snd
 
-      acc
-      |> cpTyWithName name resultTy
-      |> cons "("
-      |> cpParamTys
-      |> cons ");"
-      |> cons eol
-      |> cons eol
+      acc |> cpFunForwardDecl name cpParamTys resultTy
 
   | CFunDecl (name, args, resultTy, _) ->
       acc
-      |> cpTyWithName name resultTy
-      |> cons "("
-      |> cpParams args
-      |> cons ");"
-      |> cons eol
-      |> cons eol
+      |> cpFunForwardDecl name (cpParams args) resultTy
+
+  | CStaticFunDecl (name, args, resultTy, _) ->
+      acc
+      |> cons "static "
+      |> cpFunForwardDecl name (cpParams args) resultTy
 
   | CNativeDecl code -> acc |> cons code |> cons eol
 

@@ -18,15 +18,15 @@ struct String str_concat(struct String, struct StringList const*);
 
 struct String __stringJoin_(struct String sep_, struct StringList const* xs_);
 
-int const* __ptrAsConst_1(int* mutPtr_);
+static int const* __ptrAsConst_1(int* mutPtr_);
 
 void* milone_mem_alloc(int, uintptr_t);
 
-void* memAlloc_(int len_, uintptr_t size_);
+static void* memAlloc_(int len_, uintptr_t size_);
 
 void* memcpy(void*, void const*, uintptr_t);
 
-void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
+static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1);
 
 bool str_to_int_checked(struct String, int*);
 
@@ -72,7 +72,7 @@ struct StringList const* listRevLoop_1(struct StringList const* acc_, struct Str
 
 struct StringList const* rev_1(struct StringList const* xs_5);
 
-int intClamp_(int minValue_, int maxValue_, int value_1);
+static int intClamp_(int minValue_, int maxValue_, int value_1);
 
 bool isEmpty_1(struct String str_);
 
@@ -80,7 +80,7 @@ struct CharOption tryItem_1(int index_5, struct String str_1);
 
 bool occursAtLoop_(int start_2, struct String substr_, struct String s_1, int i_4);
 
-bool occursAt_(int start_2, struct String substr_, struct String s_1);
+static bool occursAt_(int start_2, struct String substr_, struct String s_1);
 
 bool startsWith_(struct String prefix_, struct String s_2);
 
@@ -116,15 +116,15 @@ int stringTrimEndIfLoop_(struct CharBoolFun1 isTrimmed_2, struct String s_12, in
 
 struct String trimEndIf_(struct CharBoolFun1 isTrimmed_2, struct String s_12);
 
-bool fun_(void const* env_, char arg_);
+static bool fun_(void const* env_, char arg_);
 
 struct String trim_(struct String s_13);
 
-bool fun_1(void const* env_1, char arg_1);
+static bool fun_1(void const* env_1, char arg_1);
 
 struct String trimStart_(struct String s_14);
 
-bool fun_2(void const* env_2, char arg_2);
+static bool fun_2(void const* env_2, char arg_2);
 
 struct String trimEnd_(struct String s_15);
 
@@ -132,7 +132,7 @@ struct StringList const* replaceLoop_(struct String pattern_, struct String s_16
 
 struct String replace_(struct String pattern_, struct String target_, struct String s_16);
 
-int findNewline_(int start_5, struct String s_17);
+static int findNewline_(int start_5, struct String s_17);
 
 struct StringStringOptionStringTuple3 scanLine_(struct String s_18);
 
@@ -216,16 +216,16 @@ struct String __stringJoin_(struct String sep_, struct StringList const* xs_) {
     return str_concat_result_;
 }
 
-int const* __ptrAsConst_1(int* mutPtr_) {
+static int const* __ptrAsConst_1(int* mutPtr_) {
     return ((int const*)mutPtr_);
 }
 
-void* memAlloc_(int len_, uintptr_t size_) {
+static void* memAlloc_(int len_, uintptr_t size_) {
     void* milone_mem_alloc_result_ = milone_mem_alloc(len_, size_);
     return milone_mem_alloc_result_;
 }
 
-void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
+static void* memcpy_(void* dest_, void const* src_, uintptr_t size_1) {
     void* memcpy_result_ = memcpy(dest_, src_, size_1);
     return memcpy_result_;
 }
@@ -658,7 +658,7 @@ struct StringList const* rev_1(struct StringList const* xs_5) {
     return call_11;
 }
 
-int intClamp_(int minValue_, int maxValue_, int value_1) {
+static int intClamp_(int minValue_, int maxValue_, int value_1) {
     int if_24;
     if ((value_1 < minValue_)) {
         goto then_78;
@@ -761,7 +761,7 @@ if_next_90:;
     return if_28;
 }
 
-bool occursAt_(int start_2, struct String substr_, struct String s_1) {
+static bool occursAt_(int start_2, struct String substr_, struct String s_1) {
     bool if_30;
     if ((start_2 >= 0)) {
         goto then_97;
@@ -1204,7 +1204,7 @@ if_next_168:;
     return if_51;
 }
 
-bool fun_(void const* env_, char arg_) {
+static bool fun_(void const* env_, char arg_) {
     bool call_26 = isSpace_(arg_);
     return call_26;
 }
@@ -1215,7 +1215,7 @@ struct String trim_(struct String s_13) {
     return call_27;
 }
 
-bool fun_1(void const* env_1, char arg_1) {
+static bool fun_1(void const* env_1, char arg_1) {
     bool call_28 = isSpace_(arg_1);
     return call_28;
 }
@@ -1226,7 +1226,7 @@ struct String trimStart_(struct String s_14) {
     return call_29;
 }
 
-bool fun_2(void const* env_2, char arg_2) {
+static bool fun_2(void const* env_2, char arg_2) {
     bool call_30 = isSpace_(arg_2);
     return call_30;
 }
@@ -1290,7 +1290,7 @@ if_next_175:;
     return if_52;
 }
 
-int findNewline_(int start_5, struct String s_17) {
+static int findNewline_(int start_5, struct String s_17) {
 tailrec_178:;
     int i_7 = start_5;
     bool if_53;

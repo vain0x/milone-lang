@@ -14,6 +14,11 @@ module TMap = MiloneStd.StdMap
 module TSet = MiloneStd.StdSet
 module S = MiloneStd.StdString
 
+let private visToLinkage vis =
+  match vis with
+  | PublicVis -> ExternalLinkage
+  | PrivateVis -> InternalLinkage
+
 let private isNoTy ty =
   match ty with
   | Ty (ErrorTk _, _) -> true
@@ -292,7 +297,8 @@ let private addVar varSerial (varDef: VarDef) (scopeCtx: ScopeCtx) : ScopeCtx =
     match scopeCtx.Vars |> TMap.tryFind varSerial with
     | Some oldDef ->
         { varDef with
-            IsStatic = oldDef.IsStatic }
+            IsStatic = oldDef.IsStatic
+            Linkage = oldDef.Linkage }
     | _ -> varDef
 
   { scopeCtx with
@@ -706,7 +712,7 @@ let private resolveTy ty loc scopeCtx =
 // Definitions
 // -----------------------------------------------
 
-let private defineFunUniquely funSerial args ty loc (scopeCtx: ScopeCtx) : ScopeCtx =
+let private defineFunUniquely vis funSerial args ty loc (scopeCtx: ScopeCtx) : ScopeCtx =
   match scopeCtx.Funs |> TMap.tryFind funSerial with
   | Some _ -> scopeCtx
 
@@ -719,6 +725,7 @@ let private defineFunUniquely funSerial args ty loc (scopeCtx: ScopeCtx) : Scope
           Arity = args |> List.length
           Ty = TyScheme([], ty)
           Abi = MiloneAbi
+          Linkage = visToLinkage vis
           Loc = loc }
 
       let scopeCtx =
@@ -914,6 +921,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
               { Name = name
                 IsStatic = IsStatic
                 Ty = ty
+                Linkage = visToLinkage vis
                 Loc = loc }
 
             let ctx =
@@ -935,6 +943,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
           { Name = name
             IsStatic = IsStatic
             Ty = noTy
+            Linkage = InternalLinkage
             Loc = loc }
 
         let ctx = ctx |> addLocalVar varSerial varDef
@@ -962,7 +971,7 @@ let private collectDecls moduleSerialOpt (expr, ctx) =
         let ctx =
           ctx
           |> enterLetInit
-          |> defineFunUniquely funSerial args noTy loc
+          |> defineFunUniquely vis funSerial args noTy loc
           |> leaveLetInit
           |> addVarToModule vis (FunSymbol funSerial)
 
@@ -1026,6 +1035,7 @@ let private doResolveVarInPat serial name ty loc (ctx: ScopeCtx) =
         { Name = name
           IsStatic = NotStatic
           Ty = ty
+          Linkage = InternalLinkage
           Loc = loc }
 
       let ctx =
@@ -1507,7 +1517,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
               let ctx =
                 ctx
                 |> enterLetInit
-                |> defineFunUniquely serial pats noTy loc
+                |> defineFunUniquely vis serial pats noTy loc
                 |> startScope ExprScope
 
               let pats, ctx =
@@ -1529,7 +1539,7 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
               let ctx =
                 ctx
                 |> finishScope
-                |> defineFunUniquely serial pats noTy loc
+                |> defineFunUniquely vis serial pats noTy loc
                 |> leaveLetInit
 
               pats, body, ctx

@@ -8,9 +8,9 @@ struct UnitIntFun1;
 
 struct IntList const* go_(struct IntList const* acc_, int i_);
 
-int fun_(char arg_3);
+static int fun_(char arg_3);
 
-int fun_1(void const* env_, char arg_);
+static int fun_1(void const* env_, char arg_);
 
 int doAction_(char arg_4);
 
@@ -49,13 +49,13 @@ if_next_2:;
     return if_;
 }
 
-int fun_(char arg_3) {
+static int fun_(char arg_3) {
     struct IntList const* call_ = go_(NULL, 0);
     struct IntList const* result_ = call_;
     return 0;
 }
 
-int fun_1(void const* env_, char arg_) {
+static int fun_1(void const* env_, char arg_) {
     int call_1 = fun_(0);
     return call_1;
 }

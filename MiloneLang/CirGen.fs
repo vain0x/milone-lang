@@ -140,6 +140,12 @@ let private findStorageModifier (ctx: CirCtx) varSerial =
 
   | _ -> IsStatic
 
+let private findVarLinkage (ctx: CirCtx) varSerial =
+  match ctx.Vars |> TMap.tryFind varSerial with
+  | Some varDef -> varDef.Linkage
+
+  | _ -> InternalLinkage
+
 let private isMainFun (ctx: CirCtx) funSerial =
   match ctx.MainFunOpt with
   | Some mainFun -> funSerialCompare mainFun funSerial = 0
@@ -822,10 +828,13 @@ let private cgPrintfnActionStmt ctx itself args =
 
   | _ -> unreachable itself
 
-let private addLetStmt ctx name expr cty isStatic =
+let private addLetStmt ctx name expr cty isStatic linkage =
   match isStatic with
   | IsStatic ->
-      let ctx = addDecl ctx (CStaticVarDecl(name, cty))
+      let ctx =
+        match linkage with
+        | InternalLinkage ->addDecl ctx (CInternalStaticVarDecl(name, cty))
+        | ExternalLinkage -> addDecl ctx (CStaticVarDecl(name, cty))
 
       match expr with
       | Some expr -> addStmt ctx (CSetStmt(CVarExpr name, expr))
@@ -841,8 +850,9 @@ let private addLetAllocStmt ctx name valTy varTy isStatic =
 let private doGenLetValStmt ctx serial expr ty =
   let name = getUniqueVarName ctx serial
   let isStatic = findStorageModifier ctx serial
+  let linkage = findVarLinkage ctx serial
   let cty, ctx = cgTyComplete ctx ty
-  addLetStmt ctx name expr cty isStatic
+  addLetStmt ctx name expr cty isStatic linkage
 
 let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
   let resultTy = (ctx.Vars |> mapFind serial).Ty
@@ -852,33 +862,36 @@ let private cgPrimStmt (ctx: CirCtx) itself prim args serial =
     | [ arg ] ->
         let name = getUniqueVarName ctx serial
         let isStatic = findStorageModifier ctx serial
+        let linkage = findVarLinkage ctx serial
         let ty, ctx = cgTyComplete ctx resultTy
         let arg, ctx = cgExpr ctx arg
-        addLetStmt ctx name (Some(makeExpr arg)) ty isStatic
+        addLetStmt ctx name (Some(makeExpr arg)) ty isStatic linkage
 
     | _ -> unreachable itself
 
   let regular ctx makeExpr =
     let name = getUniqueVarName ctx serial
     let isStatic = findStorageModifier ctx serial
+    let linkage = findVarLinkage ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
-    addLetStmt ctx name (Some(makeExpr args)) ty isStatic
+    addLetStmt ctx name (Some(makeExpr args)) ty isStatic linkage
 
   let regularWithTy ctx makeExpr =
     let name = getUniqueVarName ctx serial
     let isStatic = findStorageModifier ctx serial
+    let linkage = findVarLinkage ctx serial
     let ty, ctx = cgTyComplete ctx resultTy
 
     let args, ctx =
       (args, ctx)
       |> stMap (fun (arg, ctx) -> cgExpr ctx arg)
 
-    addLetStmt ctx name (Some(makeExpr args ty)) ty isStatic
+    addLetStmt ctx name (Some(makeExpr args ty)) ty isStatic linkage
 
   match prim with
   | MIntOfStrPrim flavor ->
@@ -1155,6 +1168,8 @@ let private cgDecls (ctx: CirCtx) decls =
   | [] -> ctx
 
   | MProcDecl (callee, args, body, resultTy, _) :: decls ->
+      let def : FunDef = ctx.Funs |> mapFind callee
+
       let funName, args =
         if isMainFun ctx callee then
           "milone_main", []
@@ -1172,7 +1187,12 @@ let private cgDecls (ctx: CirCtx) decls =
       let args, ctx = go [] ctx args
       let body, ctx = cgBlocks ctx body
       let resultTy, ctx = cgTyComplete ctx resultTy
-      let funDecl = CFunDecl(funName, args, resultTy, body)
+
+      let funDecl =
+        match def.Linkage with
+        | InternalLinkage -> CStaticFunDecl(funName, args, resultTy, body)
+        | ExternalLinkage -> CFunDecl(funName, args, resultTy, body)
+
       let ctx = addDecl ctx funDecl
       cgDecls ctx decls
 
@@ -1203,11 +1223,13 @@ let genCir (decls, mirCtx: MirCtx) : CDecl list =
            | CStructDecl _
            | CEnumDecl _ -> decl :: types, vars, bodies
 
-           | CStaticVarDecl _ -> types, decl :: vars, bodies
+           | CStaticVarDecl _
+           | CInternalStaticVarDecl _ -> types, decl :: vars, bodies
 
            | CNativeDecl _
            | CFunForwardDecl _
-           | CFunDecl _ -> types, vars, decl :: bodies)
+           | CFunDecl _
+           | CStaticFunDecl _ -> types, vars, decl :: bodies)
          ([], [], [])
 
   List.collect List.rev [ types; vars; bodies ]

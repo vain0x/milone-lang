@@ -24,6 +24,7 @@ CFLAGS_ALL="-std=c11 \
     -Wno-unknown-warning-option \
     -Wno-unused-but-set-variable \
     -Wno-unused-const-variable \
+    -Wno-unused-function \
     -Wno-unused-label \
     -Wno-unused-parameter \
     -Wno-unused-variable \

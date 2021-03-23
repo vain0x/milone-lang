@@ -214,11 +214,18 @@ type ModuleSynonymDef =
     Bound: ModuleTySerial list
     Loc: Loc }
 
+/// How the symbol looks to linker.
+[<NoEquality; NoComparison>]
+type Linkage =
+  | InternalLinkage
+  | ExternalLinkage
+
 /// Definition of named value in HIR.
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type VarDef =
   { Name: Ident
     IsStatic: IsStatic
+    Linkage: Linkage
     Ty: Ty
     Loc: Loc }
 
@@ -236,6 +243,7 @@ type FunDef =
     Arity: Arity
     Ty: TyScheme
     Abi: FunAbi
+    Linkage: Linkage
     Loc: Loc }
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
