@@ -16,14 +16,14 @@ $CC --version >/dev/null
 # Process
 # ------------------------------------------------
 
-mkdir -p target
+mkdir -p target/gen2
 
 MILONE_HOME=$PWD \
     dotnet run -p MiloneLang -- \
-    compile --quiet MiloneLang \
-    >'target/milone_gen2.c'
+    compile --quiet --target-dir target/gen2 \
+    MiloneLang
 
 MILONE_HOME=$PWD \
-INPUTS='target/milone_gen2.c' \
+INPUTS='target/gen2/MiloneLang.c' \
 OUTPUT='target/milone' \
     scripts/build-with-cc

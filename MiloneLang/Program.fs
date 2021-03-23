@@ -11,6 +11,13 @@ let private readFile (filePath: string) =
       None
   with _ -> None
 
+let private writeFile (filePath: string) (contents: string) : unit =
+  try
+    match readFile filePath with
+    | Some it when it = contents -> ()
+    | _ -> System.IO.File.WriteAllText(filePath, contents)
+  with err -> eprintfn "Couldn't write to file '%s'. '%s'" filePath err.Message
+
 let dotnetCliHost () : CliHost =
   let args =
     System.Environment.GetCommandLineArgs()
@@ -29,7 +36,9 @@ let dotnetCliHost () : CliHost =
     MiloneHome = miloneHome
     ProfileInit = profileInit
     ProfileLog = profileLog
-    FileReadAllText = readFile }
+    FileReadAllText = readFile
+    FileWriteAllText = writeFile
+    WriteStdout = printf "%s" }
 
 [<EntryPoint>]
 let main _ = cli (dotnetCliHost ())

@@ -73,11 +73,11 @@ cd milone-lang
 # ---- BUILD ----
 
 # Build milone-lang compiler to C code.
-mkdir -p target
-MILONE_HOME=$PWD dotnet run -p MiloneLang -- compile MiloneLang >target/milone_gen2.c
+mkdir -p target/gen2
+MILONE_HOME=$PWD dotnet run -p MiloneLang --target-dir target/gen2 -- compile MiloneLang
 
 # HACK: MSVC seems to not handle minimum int literal. Replace them with hex notation.
-sed -i 's/-2147483648/0x80000000/' target/milone_gen2.c
+sed -i 's/-2147483648/0x80000000/' target/gen2/MiloneLang.c
 
 # Build for executable.
 # Remark: MSBuild.exe is not in PATH by default.

@@ -109,7 +109,13 @@ type CliHost =
     ProfileLog: string -> Profiler -> unit
 
     /// Reads all contents of a file as string.
-    FileReadAllText: string -> string option }
+    FileReadAllText: string -> string option
+
+    /// Writes to text file.
+    FileWriteAllText: string -> string -> unit
+
+    /// Writes to standard output.
+    WriteStdout: string -> unit }
 
 // -----------------------------------------------
 // Helpers
@@ -451,9 +457,12 @@ let transformHir (host: CliHost) v (expr, tyCtx) =
   writeLog host v "Monomorphizing"
   monify (decls, tyCtx)
 
+/// (module name, C code) list
+type CodeGenResult = (string * string) list
+
 /// Generates C language codes from transformed HIR,
 /// using mid-level intermediate representation (MIR).
-let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx) : string =
+let codeGenHirViaMir (host: CliHost) v projectName headerOnly (decls, tyCtx) : CodeGenResult =
   writeLog host v "Mir"
   let stmts, mirCtx = mirify (decls, tyCtx)
 
@@ -469,7 +478,7 @@ let codeGenHirViaMir (host: CliHost) v headerOnly (decls, tyCtx) : string =
       cirDump cir
 
   writeLog host v "Finish"
-  output
+  [ projectName + ".c", output ]
 
 let check (ctx: CompileCtx) : bool * string =
   let host = ctx.Host
@@ -485,22 +494,27 @@ let check (ctx: CompileCtx) : bool * string =
     | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
     | SemaAnalysisOk _ -> true, ""
 
-let compile (ctx: CompileCtx) : bool * string =
+[<NoEquality; NoComparison>]
+type CompileResult =
+  | CompileOk of CodeGenResult
+  | CompileError of string
+
+let private compile (ctx: CompileCtx) : CompileResult =
   let host = ctx.Host
   let v = ctx.Verbosity
 
   let syntax = syntacticallyAnalyze ctx
 
   if syntax |> syntaxHasError then
-    false, syntaxErrorToString syntax
+    CompileError(syntaxErrorToString syntax)
   else
     match semanticallyAnalyze host v syntax with
-    | SemaAnalysisNameResError logs -> false, nameResLogsToString logs
-    | SemaAnalysisTypingError tyCtx -> false, semanticErrorToString tyCtx tyCtx.Logs
+    | SemaAnalysisNameResError logs -> CompileError(nameResLogsToString logs)
+    | SemaAnalysisTypingError tyCtx -> CompileError(semanticErrorToString tyCtx tyCtx.Logs)
 
     | SemaAnalysisOk (expr, tyCtx) ->
         let decls, tyCtx = transformHir host v (expr, tyCtx)
-        true, codeGenHirViaMir host v ctx.HeaderOnly (decls, tyCtx)
+        CompileOk(codeGenHirViaMir host v ctx.ProjectName ctx.HeaderOnly (decls, tyCtx))
 
 // -----------------------------------------------
 // Actions
@@ -545,16 +559,31 @@ let cliCheck (host: CliHost) verbosity projectDir =
   printfn "%s" (output |> S.replace "#error " "" |> S.trimEnd)
   exitCode
 
-let cliCompile (host: CliHost) verbosity headerOnly projectDir =
-  let ctx = compileCtxNew host verbosity projectDir
+[<RequireQualifiedAccess; NoEquality; NoComparison>]
+type CompileOptions =
+  { ProjectDir: string
+    TargetDir: string
+    HeaderOnly: bool
+    Verbosity: Verbosity }
 
-  let ctx = { ctx with HeaderOnly = headerOnly }
+let cliCompile (host: CliHost) (options: CompileOptions) =
+  let ctx =
+    compileCtxNew host options.Verbosity options.ProjectDir
 
-  let ok, output = compile ctx
-  let exitCode = if ok then 0 else 1
+  let ctx =
+    { ctx with
+        HeaderOnly = options.HeaderOnly }
 
-  printfn "%s" (output |> S.trimEnd)
-  exitCode
+  let result = compile ctx
+
+  match result with
+  | CompileOk files ->
+      List.fold (fun () (name, contents) -> host.FileWriteAllText(options.TargetDir + "/" + name) contents) () files
+      0
+
+  | CompileError output ->
+      host.WriteStdout output
+      1
 
 // -----------------------------------------------
 // Arg parsing
@@ -579,6 +608,20 @@ let private parseFlag picker state args =
         | None -> go (arg :: acc) state args
 
   go [] state args
+
+/// Parses CLI args for an option with value.
+let private parseOption isFlag args =
+  // acc: args not consumed in reversed order
+  let rec go acc args =
+    match args with
+    | []
+    | [ _ ] -> None, List.append (List.rev acc) args
+
+    | flag :: value :: args when isFlag flag -> Some value, List.append (List.rev acc) args
+
+    | arg :: args -> go (arg :: acc) args
+
+  go [] args
 
 let private containsHelpFlag args =
   let ok, _ =
@@ -679,7 +722,14 @@ let cli (host: CliHost) =
       let verbosity, args = parseVerbosity host args
 
       match args with
-      | projectDir :: _ -> cliCompile host verbosity true projectDir
+      | projectDir :: _ ->
+          let options : CompileOptions =
+            { ProjectDir = projectDir
+              TargetDir = "."
+              HeaderOnly = true
+              Verbosity = verbosity }
+
+          cliCompile host options
 
       | [] ->
           printfn "ERROR: Expected project dir."
@@ -688,8 +738,18 @@ let cli (host: CliHost) =
   | CompileCmd, args ->
       let verbosity, args = parseVerbosity host args
 
+      let targetDir, args =
+        parseOption (fun x -> x = "--target-dir") args
+
       match args with
-      | projectDir :: _ -> cliCompile host verbosity false projectDir
+      | projectDir :: _ ->
+          let options : CompileOptions =
+            { ProjectDir = projectDir
+              TargetDir = Option.defaultValue "." targetDir
+              HeaderOnly = false
+              Verbosity = verbosity }
+
+          cliCompile host options
 
       | [] ->
           printfn "ERROR: Expected project dir."

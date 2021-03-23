@@ -22,6 +22,7 @@ CFLAGS_ALL="-std=c11 \
     -Wno-parentheses-equality \
     -Wno-pointer-to-int-cast \
     -Wno-unknown-warning-option \
+    -Wno-unused-but-set-parameter \
     -Wno-unused-but-set-variable \
     -Wno-unused-const-variable \
     -Wno-unused-function \

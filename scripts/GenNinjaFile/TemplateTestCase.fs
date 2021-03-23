@@ -7,8 +7,10 @@ build {{ C_FILE }}: $
     {{ FS_FILE }} $
     | target/milone
   milone = target/milone
+  name = {{ PROJECT }}
   project = tests/{{ CATEGORY }}/{{ PROJECT }}
   out_file = {{ OUT_FILE }}
+  expected_out_file = {{ EXPECTED_OUT_FILE }}
 
 build {{ EXE_FILE }}: $
   build_test $
@@ -42,6 +44,7 @@ let renderTestCaseBuildStatements category projectName =
     .Replace("{{ PROJECT }}", projectName)
     .Replace("{{ C_FILE }}", file ".c")
     .Replace("{{ FS_FILE }}", file ".fs")
+    .Replace("{{ EXPECTED_OUT_FILE }}", file ".out")
     .Replace("{{ DIFF_FILE }}", file ".generated.diff")
     .Replace("{{ EXE_FILE }}", file ".generated.exe")
     .Replace("{{ OUT_FILE }}", file ".generated.out")

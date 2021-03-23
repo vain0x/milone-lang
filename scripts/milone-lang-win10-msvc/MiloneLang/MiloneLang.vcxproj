@@ -164,7 +164,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\runtime\milone.c" />
-    <ClCompile Include="..\..\..\target\milone_gen2.c" />
+    <ClCompile Include="..\..\..\target\gen2\MiloneLang.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\runtime\milone.h" />

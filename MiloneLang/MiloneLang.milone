@@ -24,6 +24,12 @@ let private fileExists (filePath: string): bool = __nativeFun ("file_exists", fi
 let private fileReadAllText (filePath: string): string =
   __nativeFun ("file_read_all_text", filePath)
 
+let private fileWriteAllText (filePath: string) (contents: string) : unit =
+  __nativeFun ("file_write_all_text", filePath, contents)
+
+let private writeStdout (contents: string) : unit =
+  __nativeStmt ("fwrite({0}.str, sizeof(char), (size_t){0}.len, stdout);", contents)
+
 let private getEnv (name: string): string = __nativeFun ("milone_get_env", name)
 
 let private readFile filePath =
@@ -42,6 +48,8 @@ let main _ =
       MiloneHome = miloneHome
       ProfileInit = profileInit
       ProfileLog = profileLog
-      FileReadAllText = readFile }
+      FileReadAllText = readFile
+      FileWriteAllText = fileWriteAllText
+      WriteStdout = writeStdout }
 
   cli host
