@@ -286,9 +286,9 @@ let bundleCompatible
            | Some ast ->
                let docId : DocId = snd moduleInfo.Ref
                let exprs, nameCtx = astToHir moduleInfo.Project docId (ast, nameCtx)
-               exprs :: moduleAcc, nameCtx)
+               (moduleInfo.Project, snd moduleInfo.Ref, exprs) :: moduleAcc, nameCtx)
          ([], nameCtxEmpty ())
 
-  let exprs = moduleAcc |> List.rev |> List.collect id
+  let modules : HProgram = List.rev moduleAcc
 
-  exprs, nameCtx, errors
+  modules, nameCtx, errors

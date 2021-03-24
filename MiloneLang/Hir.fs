@@ -495,6 +495,9 @@ type HExpr =
   | HModuleExpr of ModuleTySerial * body: HExpr list * Loc
   | HModuleSynonymExpr of ModuleSynonymSerial * path: Ident list * Loc
 
+/// HIR program. (project name, module name, decls) list.
+type HProgram = (string * string * HExpr list) list
+
 [<RequireQualifiedAccess>]
 [<NoEquality; NoComparison>]
 type MonoMode =
@@ -1066,6 +1069,32 @@ let exprToTy expr =
 let exprToLoc expr =
   let _, loc = exprExtract expr
   loc
+
+// -----------------------------------------------
+// HProgram
+// -----------------------------------------------
+
+/// Does something for each module in program, updating a state.
+let hirProgramEachModule (mutator: HExpr list * 'S -> HExpr list * 'S) (modules: HProgram, state: 'S) : HProgram * 'S =
+  (modules, state)
+  |> stMap
+       (fun ((p, m, decls), state) ->
+         let decls, state = (decls, state) |> mutator
+         (p, m, decls), state)
+
+/// Does something for each toplevel expression in program, updating a state.
+let hirProgramEachExpr (mutator: HExpr * 'S -> HExpr * 'S) (modules: HProgram, state: 'S) : HProgram * 'S =
+  (modules, state)
+  |> hirProgramEachModule (stMap mutator)
+
+/// Iterates over toplevel expressions in program to update a state.
+let hirProgramFoldExpr (folder: HExpr * 'S -> 'S) (state: 'S) (modules: HProgram) : 'S =
+  modules
+  |> List.fold
+       (fun state (_, _, decls) ->
+         decls
+         |> List.fold (fun state decl -> folder (decl, state)) state)
+       state
 
 // -----------------------------------------------
 // Print Formats

@@ -1646,12 +1646,18 @@ let private nameResExpr (expr: HExpr, ctx: ScopeCtx) =
   | HFunExpr _
   | HVariantExpr _ -> unreachable expr // HFunExpr and HVariantExpr are generated in NameRes.
 
-let nameRes (exprs: HExpr list, nameCtx: NameCtx) : HExpr * ScopeCtx =
+let nameRes (modules: HProgram, nameCtx: NameCtx) : HProgram * ScopeCtx =
   let scopeCtx = ofNameCtx nameCtx
 
-  let exprs, scopeCtx =
-    (exprs, scopeCtx)
-    |> stMap (collectDecls None)
-    |> stMap nameResExpr
+  let modules, scopeCtx =
+    (modules, scopeCtx)
+    |> stMap
+         (fun ((p, m, decls), scopeCtx) ->
+           let decls, scopeCtx =
+             (decls, scopeCtx)
+             |> stMap (collectDecls None)
+             |> stMap nameResExpr
 
-  hxSemi exprs noLoc, scopeCtx
+           (p, m, decls), scopeCtx)
+
+  modules, scopeCtx

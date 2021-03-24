@@ -1305,7 +1305,7 @@ let private synonymCycleCheck (tyCtx: TyCtx) =
 // Interface
 // -----------------------------------------------
 
-let infer (expr: HExpr, scopeCtx: ScopeCtx, errors) : HExpr * TyCtx =
+let infer (modules: HProgram, scopeCtx: ScopeCtx, errors) : HProgram * TyCtx =
   let ctx : TyCtx =
     { Serial = scopeCtx.Serial
       Vars = scopeCtx.Vars
@@ -1360,13 +1360,13 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors) : HExpr * TyCtx =
 
   let ctx = { ctx with Funs = funs; Level = 0 }
 
-  let expr, ctx =
-    let expr, topLevelTy, ctx = inferExpr ctx None expr
+  let modules, ctx =
+    let inferStmt (expr, ctx) =
+      let expr, ty, ctx = inferExpr ctx (Some tyUnit) expr
+      let ctx = unifyTy ctx (exprToLoc expr) ty tyUnit
+      expr, ctx
 
-    let ctx =
-      unifyTy ctx (exprToLoc expr) topLevelTy tyUnit
-
-    expr, ctx
+    (modules, ctx) |> hirProgramEachExpr inferStmt
 
   let ctx = ctx |> resolveTraitBounds
 
@@ -1378,7 +1378,10 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors) : HExpr * TyCtx =
     |> substOrDegenerateTy ctx
     |> expandSynonyms ctx
 
-  let expr = exprMap substOrDegenerate id expr
+  let modules, ctx =
+    (modules, ctx)
+    |> hirProgramEachExpr (fun (expr, ctx) ->
+      exprMap substOrDegenerate id expr, ctx)
 
   let ctx =
     let vars =
@@ -1436,4 +1439,4 @@ let infer (expr: HExpr, scopeCtx: ScopeCtx, errors) : HExpr * TyCtx =
 
     { ctx with Tys = tys }
 
-  expr, ctx
+  modules, ctx

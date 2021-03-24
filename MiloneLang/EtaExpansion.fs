@@ -345,7 +345,7 @@ let private acExprs exprs ctx =
   exprs
   |> List.fold (fun ctx expr -> acExpr (expr, ctx) |> snd) ctx
 
-let arityCheck (expr, tyCtx: Typing.TyCtx) =
+let arityCheck (modules: HProgram, tyCtx: Typing.TyCtx) : Typing.TyCtx =
   let ctx : ArityCheckCtx =
     { GetFunArity =
         fun funSerial ->
@@ -373,7 +373,13 @@ let arityCheck (expr, tyCtx: Typing.TyCtx) =
 
       Errors = [] }
 
-  let _, ctx = acExpr (expr, ctx)
+  let ctx =
+    modules
+    |> hirProgramFoldExpr
+         (fun (expr, ctx) ->
+           let _, ctx = acExpr (expr, ctx)
+           ctx)
+         ctx
 
   let logs =
     ctx.Errors

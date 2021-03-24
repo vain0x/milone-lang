@@ -365,7 +365,7 @@ let private semanticErrorToString (tyCtx: TyCtx) logs =
 // Processes
 // -----------------------------------------------
 
-type private SyntaxAnalysisResult = HExpr list * NameCtx * (string * Loc) list
+type private SyntaxAnalysisResult = HProgram * NameCtx * (string * Loc) list
 
 let private isErrorToken token =
   match token with
@@ -400,39 +400,46 @@ let syntacticallyAnalyze (ctx: CompileCtx) : SyntaxAnalysisResult =
 
 [<NoEquality; NoComparison>]
 type SemaAnalysisResult =
-  | SemaAnalysisOk of HExpr * TyCtx
+  | SemaAnalysisOk of HProgram * TyCtx
   | SemaAnalysisNameResError of (NameResLog * Loc) list
   | SemaAnalysisTypingError of TyCtx
 
 /// Analyzes HIR to validate program and collect information.
 let semanticallyAnalyze (host: CliHost) v (syntax: SyntaxAnalysisResult) : SemaAnalysisResult =
-  let exprs, nameCtx, syntaxErrors = syntax
+  let modules, nameCtx, syntaxErrors = syntax
   assert (syntaxErrors |> List.isEmpty)
 
   writeLog host v "NameRes"
 
-  let expr, scopeCtx = nameRes (exprs, nameCtx)
+  let modules, scopeCtx = nameRes (modules, nameCtx)
 
   if scopeCtx.Logs |> List.isEmpty |> not then
     SemaAnalysisNameResError scopeCtx.Logs
   else
     writeLog host v "Typing"
 
-    let expr, tyCtx = infer (expr, scopeCtx, [])
+    let modules, tyCtx = infer (modules, scopeCtx, [])
 
     if tyCtx.Logs |> List.isEmpty |> not then
       SemaAnalysisTypingError tyCtx
     else
       writeLog host v "ArityCheck"
-      let tyCtx = arityCheck (expr, tyCtx)
+      let tyCtx = arityCheck (modules, tyCtx)
 
       if tyCtx.Logs |> List.isEmpty |> not then
         SemaAnalysisTypingError tyCtx
       else
-        SemaAnalysisOk(expr, tyCtx)
+        SemaAnalysisOk(modules, tyCtx)
 
 /// Transforms HIR. The result can be converted to MIR.
-let transformHir (host: CliHost) v (expr, tyCtx) =
+let transformHir (host: CliHost) v (modules: HProgram, tyCtx) =
+  let expr =
+    let decls =
+      (modules
+       |> List.collect (fun (_, _, decls) -> decls))
+
+    hxSemi decls noLoc
+
   writeLog host v "MainHoist"
   let expr, tyCtx = hoistMain (expr, tyCtx)
 
@@ -512,8 +519,8 @@ let private compile (ctx: CompileCtx) : CompileResult =
     | SemaAnalysisNameResError logs -> CompileError(nameResLogsToString logs)
     | SemaAnalysisTypingError tyCtx -> CompileError(semanticErrorToString tyCtx tyCtx.Logs)
 
-    | SemaAnalysisOk (expr, tyCtx) ->
-        let decls, tyCtx = transformHir host v (expr, tyCtx)
+    | SemaAnalysisOk (modules, tyCtx) ->
+        let decls, tyCtx = transformHir host v (modules, tyCtx)
         CompileOk(codeGenHirViaMir host v ctx.ProjectName ctx.HeaderOnly (decls, tyCtx))
 
 // -----------------------------------------------
