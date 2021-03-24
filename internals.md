@@ -34,8 +34,6 @@ Program analysis:
 
 Transformations:
 
-- [MainHoist](MiloneLang/MainHoist.fs) (HIR)
-    - Resolves top-level bindings
 - [AutoBoxing](MiloneLang/AutoBoxing.fs)
     - Resolves recursive nominal types
 - [RecordRes](MiloneLang/RecordRes.fs)

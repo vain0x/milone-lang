@@ -217,7 +217,7 @@ let private hoistExprToplevel (expr, ctx) : HoistCtx =
 
         let ctx =
           ctx
-          |> addDecl (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
+          |> addStmt (HLetValExpr(pat, init, hxDummy, tyUnit, loc))
 
         next, ctx
 

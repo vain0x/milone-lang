@@ -12,7 +12,6 @@ open MiloneLang.AstToHir
 open MiloneLang.AutoBoxing
 open MiloneLang.NameRes
 open MiloneLang.Typing
-open MiloneLang.MainHoist
 open MiloneLang.RecordRes
 open MiloneLang.ClosureConversion
 open MiloneLang.EtaExpansion
@@ -439,9 +438,6 @@ let transformHir (host: CliHost) v (modules: HProgram, tyCtx) =
        |> List.collect (fun (_, _, decls) -> decls))
 
     hxSemi decls noLoc
-
-  writeLog host v "MainHoist"
-  let expr, tyCtx = hoistMain (expr, tyCtx)
 
   writeLog host v "AutoBoxing"
   let expr, tyCtx = autoBox (expr, tyCtx)

@@ -18,7 +18,6 @@
     <Compile Include="NameRes.fs" />
     <Compile Include="Typing.fs" />
     <Compile Include="Hoist.fs" />
-    <Compile Include="MainHoist.fs" />
     <Compile Include="AutoBoxing.fs" />
     <Compile Include="RecordRes.fs" />
     <Compile Include="ClosureConversion.fs" />
