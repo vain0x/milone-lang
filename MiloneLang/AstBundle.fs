@@ -284,7 +284,9 @@ let bundleCompatible
            | None -> moduleAcc, nameCtx
 
            | Some ast ->
-               let docId : DocId = snd moduleInfo.Ref
+               // Compute docId.
+               let docId : DocId = moduleInfo.Project + "." + snd moduleInfo.Ref
+
                let exprs, nameCtx = astToHir moduleInfo.Project docId (ast, nameCtx)
                (moduleInfo.Project, snd moduleInfo.Ref, exprs) :: moduleAcc, nameCtx)
          ([], nameCtxEmpty ())
