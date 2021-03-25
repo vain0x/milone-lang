@@ -348,8 +348,6 @@ let private updateFunDefs (ctx: CcCtx) =
 // -----------------------------------------------
 
 let private ccFunExpr funSerial funTy funLoc ctx =
-  // NOTE: No need to check whether it's a function
-  //       because non-function caps are empty.
   ctx
   |> genFunCaps funSerial
   |> capsMakeApp funSerial funTy funLoc
