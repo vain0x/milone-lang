@@ -513,10 +513,10 @@ let private createUnderlyingFunDef funTy arity envPat envTy forwardCall restArgP
   let envArgPat =
     HVarPat(PrivateVis, envArgSerial, tyObj, callLoc)
 
-  let underlyingFunTy = tyFun envTy funTy
+  let underlyingFunTy = tyFun tyObj funTy
 
   let _, funSerial, ctx =
-    freshFun "fun" arity underlyingFunTy callLoc ctx
+    freshFun "fun" (arity + 1) underlyingFunTy callLoc ctx
 
   let argPats = envArgPat :: restArgPats
 
