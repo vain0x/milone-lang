@@ -18,4 +18,5 @@ target
 
 
 # Build outputs.
-a.out
+*.o
+*.out
