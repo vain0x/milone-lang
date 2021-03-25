@@ -484,6 +484,7 @@ let private ofTyCtx (tyCtx: TyCtx) : AbCtx =
 let private toTyCtx (tyCtx: TyCtx) (ctx: AbCtx) =
   { tyCtx with
       Vars = ctx.Vars
+      Funs = ctx.Funs
       Variants = ctx.Variants
       Tys = ctx.Tys }
 
