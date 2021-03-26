@@ -1,0 +1,50 @@
+#!/bin/sh
+# Executes 'milone compile' to generate files for incremental update.
+#
+# This command avoids to writing to unchanged files (to preserve timestamp)
+# and deletes unnecessary outputs.
+#
+# Command line arguments are forwarded to milone command.
+#
+# Environment variables:
+#   MILONE: Milone command. Defaults to 'milone'.
+#   TARGET_DIR: Directory of generated files. Defaults to $PWD.
+
+set -eu
+
+MILONE=${MILONE:-milone}
+TARGET_DIR=${TARGET_DIR:-$PWD}
+OUTPUTS=${OUTPUTS:-''}
+
+ORIG_DIR=$TARGET_DIR.orig
+rm -rf $ORIG_DIR
+
+# Backup the target directory.
+mv -f $TARGET_DIR $ORIG_DIR
+mkdir -p $TARGET_DIR
+
+$MILONE compile --target-dir $TARGET_DIR "$@" || {
+    rm -rf $TARGET_DIR
+    mv -f $ORIG_DIR $TARGET_DIR
+    false
+}
+
+# Delete files that exist but are not generated.
+find $ORIG_DIR -type f -name '*.c' -exec basename {} \; | \
+    xargs -I{} -P4 sh -c "if test ! -f $TARGET_DIR/{}; then rm -f $TARGET_DIR/{}; echo 'deleted {}'; fi"
+
+# Create files that are expected to generate but doesn't exist.
+echo $OUTPUTS | xargs -n1 basename | \
+    xargs -I{} -P4 sh -c "if test ! -f $TARGET_DIR/{}; then : >$TARGET_DIR/{}; echo 'created {} (empty)'; fi"
+
+# Create files that are generated but doesn't exist before.
+find $TARGET_DIR -type f -name '*.c' -exec basename {} \; | \
+    xargs -I{} -P4 sh -c "if test ! -f $ORIG_DIR/{}; then mv -f $TARGET_DIR/{} $ORIG_DIR/{}; echo 'created {}'; fi"
+
+# Update files.
+find $ORIG_DIR -type f -name '*.c' -exec basename {} \; | \
+    xargs -I{} -P4 sh -c "if test -f $TARGET_DIR/{}; then cat $TARGET_DIR/{} | scripts/write-if-change $ORIG_DIR/{}; fi"
+
+# Restore target directory.
+rm -rf $TARGET_DIR
+mv -f $ORIG_DIR $TARGET_DIR
