@@ -67,13 +67,6 @@ let private generate (solutionDir: string) (ninjaTemplate: string) =
     findFiles extIsSrc (solutionDir + "/MiloneLang")
     |> Seq.toList
 
-  let ninjaTemplate =
-    TemplateSelfCompilation.templateSelfCompilation
-      { MiloneCoreSrc = miloneCoreSrc
-        MiloneStdSrc = miloneStdSrc
-        MiloneLangSrc = miloneLangSrc
-        NinjaTemplate = ninjaTemplate }
-
   let testProjects = findTestProjects testsDir
 
   let testCFiles =

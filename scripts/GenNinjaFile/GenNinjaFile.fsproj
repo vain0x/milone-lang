@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TemplateSelfCompilation.fs" />
     <Compile Include="TemplateTestCase.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
