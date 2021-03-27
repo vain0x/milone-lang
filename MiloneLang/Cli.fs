@@ -592,7 +592,13 @@ let cliCompile (host: CliHost) (options: CompileOptions) =
 
   match result with
   | CompileOk files ->
-      List.fold (fun () (name, contents) -> host.FileWriteAllText(options.TargetDir + "/" + name) contents) () files
+      List.fold
+        (fun () (name, contents) ->
+          printfn "%s" name
+          host.FileWriteAllText(options.TargetDir + "/" + name) contents)
+        ()
+        files
+
       0
 
   | CompileError output ->
