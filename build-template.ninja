@@ -53,7 +53,9 @@ build dotnet_restore: $
 
 rule build_milone_dotnet
   description = build_milone_dotnet ($CONFIG)
-  command = CONFIG=$CONFIG scripts/build-milone-dotnet
+  command = $
+    CONFIG=$CONFIG scripts/build-milone-dotnet && $
+    touch $out
 
 build $milone_dotnet_debug: $
   build_milone_dotnet $
