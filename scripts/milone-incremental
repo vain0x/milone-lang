@@ -8,18 +8,19 @@
 #
 # Environment variables:
 #   MILONE: Milone command. Defaults to 'milone'.
-#   TARGET_DIR: Directory of generated files. Defaults to $PWD.
+#   TARGET_DIR: Directory of generated files.
 
 set -eu
 
 MILONE=${MILONE:-milone}
-TARGET_DIR=${TARGET_DIR:-$PWD}
-OUTPUTS=${OUTPUTS:-''}
+
+: $TARGET_DIR
 
 ORIG_DIR=$TARGET_DIR.orig
 rm -rf $ORIG_DIR
 
 # Backup the target directory.
+mkdir -p $TARGET_DIR
 mv -f $TARGET_DIR $ORIG_DIR
 mkdir -p $TARGET_DIR
 
@@ -31,15 +32,11 @@ $MILONE compile --target-dir $TARGET_DIR "$@" || {
 
 # Delete files that exist but are not generated.
 find $ORIG_DIR -type f -name '*.c' -exec basename {} \; | \
-    xargs -I{} -P4 sh -c "if test ! -f $TARGET_DIR/{}; then rm -f $TARGET_DIR/{}; echo 'deleted {}'; fi"
-
-# Create files that are expected to generate but doesn't exist.
-echo $OUTPUTS | xargs -n1 basename | \
-    xargs -I{} -P4 sh -c "if test ! -f $TARGET_DIR/{}; then : >$TARGET_DIR/{}; echo 'created {} (empty)'; fi"
+    xargs -I{} -P4 sh -c "if test ! -f $TARGET_DIR/{}; then rm -f $TARGET_DIR/{}; echo 'deleted {}' >&2; fi"
 
 # Create files that are generated but doesn't exist before.
 find $TARGET_DIR -type f -name '*.c' -exec basename {} \; | \
-    xargs -I{} -P4 sh -c "if test ! -f $ORIG_DIR/{}; then mv -f $TARGET_DIR/{} $ORIG_DIR/{}; echo 'created {}'; fi"
+    xargs -I{} -P4 sh -c "if test ! -f $ORIG_DIR/{}; then mv -f $TARGET_DIR/{} $ORIG_DIR/{}; echo 'created {}' >&2; fi"
 
 # Update files.
 find $ORIG_DIR -type f -name '*.c' -exec basename {} \; | \

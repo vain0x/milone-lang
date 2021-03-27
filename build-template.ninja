@@ -27,6 +27,10 @@ warning_flags = $
   -Wno-unused-parameter $
   -Wno-unused-variable
 
+rule subninja
+  description = subninja $file
+  command = ninja -f $file
+
 # ------------------------------------------------
 # dotnet restore
 # ------------------------------------------------
@@ -77,16 +81,15 @@ build $milone_dotnet_release: $
 
 rule compile_milone_to_c
   description = compile_milone_to_c $name
-  command = MILONE_HOME=$$PWD MILONE=$milone TARGET_DIR=$target_dir OUTPUTS="$out" scripts/milone-incremental $verbosity $project
+  command = $
+    MILONE_HOME=$$PWD MILONE=$milone TARGET_DIR=$target_dir scripts/milone-incremental $verbosity $project | $
+      ID=$name EXE=$exe TARGET_DIR=$target_dir scripts/build-ninja-dyn | $
+      scripts/write-if-change $out
   restat = 1
 
 rule compile_c_to_obj
   description = compile_c_to_obj $$(basename $in .c)
   command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -Iruntime $in -o $out
-
-rule link_objs_to_exe
-  description = link_objs_to_exe
-  command = $${CC:-gcc} $in -o $out
 
 build runtime/milone.o: $
   compile_c_to_obj $
@@ -97,22 +100,26 @@ build runtime/milone.o: $
 # gen2 build
 # ------------------------------------------------
 
-build {{ GEN2_C_FILES }}: $
+# This statement doesn't need to have source files as input
+# because $milone_dotnet_debug is updated on change.
+build target/gen2.ninja: $
   compile_milone_to_c $
-    {{ MILONE_CORE_SRC }} {{ MILONE_STD_SRC }} {{ MILONE_LANG_SRC }} $
-    | $milone_dotnet_debug
+    | $milone_dotnet_debug $
+      scripts/build-ninja-dyn $
+      scripts/milone-incremental
+  exe = target/milone
   milone = $milone_dotnet_debug
   name = gen2
   project = MiloneLang
   target_dir = target/gen2
   verbosity = --quiet
 
-{{ GEN2_OBJ_BUILD }}
-
 build target/milone: $
-  link_objs_to_exe $
-    runtime/milone.o $
-    {{ GEN2_OBJ_FILES }}
+  subninja $
+    | target/gen2.ninja $
+      runtime/milone.o
+  file = target/gen2.ninja
+  pool = console
 
 build gen2: phony target/milone
 
@@ -120,9 +127,10 @@ build gen2: phony target/milone
 # gen3 build
 # ------------------------------------------------
 
-build {{ GEN3_C_FILES }}: $
+build target/gen3.ninja: $
   compile_milone_to_c $
     | target/milone
+  exe = target/milone_gen3
   milone = target/milone
   name = gen3
   project = MiloneLang
@@ -130,7 +138,8 @@ build {{ GEN3_C_FILES }}: $
   verbosity = --profile
   pool = console
 
-build gen3: phony {{ GEN3_C_FILES }}
+build gen3: $
+  phony | target/gen3.ninja
 
 # ------------------------------------------------
 # gen3 verification
@@ -143,15 +152,14 @@ rule diff_self
     ls -1 target/gen3/*.c | xargs -I{} basename {} .c | sort >target/gen3_files.txt; $
     { $
       diff target/gen2_files.txt target/gen3_files.txt; $
-      echo $c_files | $
+      cat target/gen2_files.txt | $
         xargs -n1 basename | $
-        xargs -I{} diff target/gen2/{} target/gen3/{}; $
+        xargs -I{} diff target/gen2/{}.c target/gen3/{}.c; $
     } | scripts/write-if-change $out
 
 build target/self.diff: $
   diff_self $
     | gen2 gen3
-  c_files = {{ GEN2_C_FILES }}
 
 build self: phony target/self.diff
 build test_self: phony target/self.diff
