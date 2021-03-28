@@ -174,11 +174,16 @@ rule take_snapshot
   description = take_snapshot $project
   command = $
     if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
-      MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project; $
+      MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project | $
+        ID=$name EXE=$exe_file TARGET_DIR=$project scripts/build-ninja-dyn | $
+        scripts/write-if-change $out; $
     else $
-      if ! env MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project >$out; then $
+      if ! env MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project >/dev/null; then $
         echo 'milone-lang compile error.' | scripts/write-if-change $out_file; $
-      fi $
+      else $
+        echo 'Compile success (expected compile error.)' | scripts/write-if-change $out_file; $
+      fi; $
+      echo "build $exe_file: phony" | scripts/write-if-change $out; $
     fi
   restat = 1
 
@@ -197,34 +202,34 @@ build snapshot_diff: $
 # ------------------------------------------------
 
 rule build_test
-  description = build_test $in
+  description = build_test $project
   command = $
-    if test -z "$$(grep '#error' -- $in)"; then $
-      MILONE_HOME="$$PWD" INPUTS="$in" OUTPUT="$out" scripts/build-with-cc; $
+    if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
+      ninja -f $in; $
     else $
       echo '' | scripts/write-if-change $out; $
     fi
   restat = 1
 
 rule execute_test
-  description = execute_test $c_file
+  description = execute_test $project
   command = $
-    if test -z "$$(grep '#error' -- $c_file)"; then $
-      $in >$out.tmp ; $
-      echo '$$? = '$$? >>$out.tmp ; $
-      cat $out.tmp | scripts/write-if-change $out ; $
-      rm -f $out.tmp ; $
+    if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
+      $in >$out.tmp; $
+      echo '$$? = '$$? >>$out.tmp; $
+      cat $out.tmp | scripts/write-if-change $out; $
+      rm -f $out.tmp; $
     else $
       echo 'milone-lang compile error.' | scripts/write-if-change $out; $
     fi
   restat = 1
 
 rule diff_test_output
-  description = diff_test_output $test
+  description = diff_test_output $name
   command = $
     diff -q $in && $
-      echo OK $test >$out || $
-      echo FAILED $test >$out
+      echo OK $name >$out || $
+      echo FAILED $name >$out
 
 # Verify outputs.
 rule verify_test_output

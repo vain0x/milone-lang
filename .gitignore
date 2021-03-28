@@ -20,3 +20,6 @@ target
 # Build outputs.
 *.o
 *.out
+
+tests/**/MiloneCore_*.c
+tests/**/MiloneStd_*.c
