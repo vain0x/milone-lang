@@ -4,7 +4,7 @@ struct Expr_;
 
 struct Expr_Expr_Tuple2;
 
-static int eval_(struct Expr_ expr_);
+int eval_(struct Expr_ expr_);
 
 int milone_main();
 
@@ -26,7 +26,7 @@ struct Expr_Expr_Tuple2 {
     struct Expr_ t1;
 };
 
-static int eval_(struct Expr_ expr_) {
+int eval_(struct Expr_ expr_) {
     int match_;
     if ((expr_.discriminant != Int_)) goto next_2;
     int value_ = expr_.Int_;

@@ -6,7 +6,7 @@ struct MyList_Option;
 
 struct IntMyList_OptionTuple2;
 
-static struct MyList_ myCons_(int head_, struct MyList_ tail_);
+struct MyList_ myCons_(int head_, struct MyList_ tail_);
 
 int milone_main();
 
@@ -31,7 +31,7 @@ struct IntMyList_OptionTuple2 {
     struct MyList_Option t1;
 };
 
-static struct MyList_ myCons_(int head_, struct MyList_ tail_) {
+struct MyList_ myCons_(int head_, struct MyList_ tail_) {
     struct MyList_Option some_ = (struct MyList_Option){.some = true, .value = tail_};
     struct IntMyList_OptionTuple2 tuple_ = (struct IntMyList_OptionTuple2){.t0 = head_, .t1 = some_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntMyList_OptionTuple2));

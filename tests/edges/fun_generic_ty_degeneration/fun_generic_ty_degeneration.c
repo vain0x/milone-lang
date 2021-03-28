@@ -6,11 +6,11 @@ struct IntStringTuple2;
 
 struct IntStringTuple2Option;
 
-static int fst_(struct IntUnitTuple2 arg_);
+int fst_(struct IntUnitTuple2 arg_);
 
-static int f_1(void const* boxedPair_, char arg_1);
+int f_1(void const* boxedPair_, char arg_1);
 
-static int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option phantom_);
+int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option phantom_);
 
 char fun_generic_ty_degeneration_Program_testCase(struct IntStringTuple2 kv_);
 
@@ -31,17 +31,17 @@ struct IntStringTuple2Option {
     struct IntStringTuple2 value;
 };
 
-static int fst_(struct IntUnitTuple2 arg_) {
+int fst_(struct IntUnitTuple2 arg_) {
     int x_ = arg_.t0;
     return x_;
 }
 
-static int f_1(void const* boxedPair_, char arg_1) {
+int f_1(void const* boxedPair_, char arg_1) {
     int call_ = fst_((*(((struct IntUnitTuple2 const*)boxedPair_))));
     return call_;
 }
 
-static int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
+int fstUnbox_(void const* boxedPair_, struct IntStringTuple2Option phantom_) {
     int call_1 = f_1(boxedPair_, 0);
     return call_1;
 }

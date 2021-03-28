@@ -4,7 +4,7 @@ struct StringList;
 
 struct StringList;
 
-static struct StringList const* go_(struct StringList const* acc_, struct StringList const* xs_1);
+struct StringList const* go_(struct StringList const* acc_, struct StringList const* xs_1);
 
 struct StringList const* x_json_Program_listRev(struct StringList const* xs_);
 
@@ -12,9 +12,9 @@ char x_json_Program_printList(struct StringList const* xs_3);
 
 bool x_json_Program_isDigit(char c_);
 
-static int readInt_(struct String s_, int i_);
+int readInt_(struct String s_, int i_);
 
-static struct StringList const* go_1(struct String s_, struct StringList const* acc_1, int i_1);
+struct StringList const* go_1(struct String s_, struct StringList const* acc_1, int i_1);
 
 struct StringList const* x_json_Program_tokenize(struct String s_);
 
@@ -25,7 +25,7 @@ struct StringList {
     struct StringList const* tail;
 };
 
-static struct StringList const* go_(struct StringList const* acc_, struct StringList const* xs_1) {
+struct StringList const* go_(struct StringList const* acc_, struct StringList const* xs_1) {
 tailrec_1:;
     struct StringList const* match_;
     if ((!((!(xs_1))))) goto next_3;
@@ -90,7 +90,7 @@ if_next_9:;
     return if_;
 }
 
-static int readInt_(struct String s_, int i_) {
+int readInt_(struct String s_, int i_) {
 tailrec_12:;
     bool if_1;
     if ((i_ >= s_.len)) {
@@ -125,7 +125,7 @@ if_next_16:;
     return if_2;
 }
 
-static struct StringList const* go_1(struct String s_, struct StringList const* acc_1, int i_1) {
+struct StringList const* go_1(struct String s_, struct StringList const* acc_1, int i_1) {
 tailrec_19:;
     struct StringList const* if_3;
     if ((i_1 >= s_.len)) {

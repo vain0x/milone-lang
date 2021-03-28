@@ -1,10 +1,10 @@
 #include "milone.h"
 
-static int f_(int x_);
+int f_(int x_);
 
 int milone_main();
 
-static int f_(int x_) {
+int f_(int x_) {
     return (x_ * x_);
 }
 

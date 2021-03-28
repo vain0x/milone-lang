@@ -1,10 +1,10 @@
 #include "milone.h"
 
-static char fizzBuzz_(int i_);
+char fizzBuzz_(int i_);
 
 int milone_main();
 
-static char fizzBuzz_(int i_) {
+char fizzBuzz_(int i_) {
 tailrec_1:;
     char if_;
     if ((15 >= i_)) {

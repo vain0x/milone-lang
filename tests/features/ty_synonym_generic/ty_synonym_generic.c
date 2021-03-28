@@ -4,7 +4,7 @@ struct IntList;
 
 struct IntList;
 
-static struct IntList const* newStack_(char arg_);
+struct IntList const* newStack_(char arg_);
 
 int milone_main();
 
@@ -13,7 +13,7 @@ struct IntList {
     struct IntList const* tail;
 };
 
-static struct IntList const* newStack_(char arg_) {
+struct IntList const* newStack_(char arg_) {
     return NULL;
 }
 

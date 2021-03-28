@@ -1,14 +1,12 @@
 #include "milone.h"
 
-int nav_var_sub_getAnswer(char arg_);
+int nav_var_sub_getAnswer(char);
 
 int milone_main();
 
 int nav_var_sub_answer;
 
-int nav_var_sub_getAnswer(char arg_) {
-    return 42;
-}
+extern int nav_var_sub_answer;
 
 int milone_main() {
     nav_var_sub_answer = 42;

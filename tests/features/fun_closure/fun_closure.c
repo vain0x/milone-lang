@@ -4,49 +4,49 @@ struct IntTuple1;
 
 struct UnitIntFun1;
 
-static int sub_(int step_, int x_);
+int sub_(int step_, int x_);
 
 char fun_closure_Program_basicCase(char arg_2);
 
-static int inc_(int step_1, int x_1);
+int inc_(int step_1, int x_1);
 
-static int incTwice_(int step_1, int x_2);
+int incTwice_(int step_1, int x_2);
 
 char fun_closure_Program_transitiveCase(char arg_3);
 
-static int inc_1(int step_2, int x_3);
+int inc_1(int step_2, int x_3);
 
-static bool go_(int step_2, int n_);
+bool go_(int step_2, int n_);
 
 char fun_closure_Program_recursiveCase(char arg_6);
 
-static int lg_(int lx_, char arg_7);
+int lg_(int lx_, char arg_7);
 
-static int fun_(int lx_, char arg_8);
+int fun_(int lx_, char arg_8);
 
-static int fun_1(void const* env_, char arg_);
+int fun_1(void const* env_, char arg_);
 
-static int lf_(int lx_, char arg_9);
+int lf_(int lx_, char arg_9);
 
 char fun_closure_Program_lambdaCase(char arg_10);
 
-static int xf4_(int x1_, int x2_, int x3_, char arg_11);
+int xf4_(int x1_, int x2_, int x3_, char arg_11);
 
-static int xf3_(int x1_, int x2_, int x3_);
+int xf3_(int x1_, int x2_, int x3_);
 
-static int xf2_(int x1_, int x2_);
+int xf2_(int x1_, int x2_);
 
-static int xf1_(int x1_);
+int xf1_(int x1_);
 
 char fun_closure_Program_escapeCase(char arg_12);
 
-static int zf11_1(int x_4, char arg_13);
+int zf11_1(int x_4, char arg_13);
 
-static int zf1_1(int x_4);
+int zf1_1(int x_4);
 
-static int zf22_1(int x_5, char arg_14);
+int zf22_1(int x_5, char arg_14);
 
-static int zf2_1(int x_5);
+int zf2_1(int x_5);
 
 char fun_closure_Program_innerFunCase(char arg_15);
 
@@ -77,9 +77,11 @@ struct UnitIntFun1 {
     void const* env;
 };
 
+extern int fun_closure_Program_a;
+
 int fun_closure_Program_a;
 
-static int sub_(int step_, int x_) {
+int sub_(int step_, int x_) {
     return (x_ - step_);
 }
 
@@ -90,11 +92,11 @@ char fun_closure_Program_basicCase(char arg_2) {
     return 0;
 }
 
-static int inc_(int step_1, int x_1) {
+int inc_(int step_1, int x_1) {
     return (x_1 + step_1);
 }
 
-static int incTwice_(int step_1, int x_2) {
+int incTwice_(int step_1, int x_2) {
     int call_1 = inc_(step_1, x_2);
     int call_2 = inc_(step_1, call_1);
     return call_2;
@@ -107,11 +109,11 @@ char fun_closure_Program_transitiveCase(char arg_3) {
     return 0;
 }
 
-static int inc_1(int step_2, int x_3) {
+int inc_1(int step_2, int x_3) {
     return (x_3 + step_2);
 }
 
-static bool go_(int step_2, int n_) {
+bool go_(int step_2, int n_) {
 tailrec_1:;
     bool if_;
     if ((n_ >= 10)) {
@@ -140,22 +142,22 @@ char fun_closure_Program_recursiveCase(char arg_6) {
     return 0;
 }
 
-static int lg_(int lx_, char arg_7) {
+int lg_(int lx_, char arg_7) {
     return lx_;
 }
 
-static int fun_(int lx_, char arg_8) {
+int fun_(int lx_, char arg_8) {
     int call_6 = lg_(lx_, 0);
     return call_6;
 }
 
-static int fun_1(void const* env_, char arg_) {
+int fun_1(void const* env_, char arg_) {
     int arg_1 = (*(((struct IntTuple1 const*)env_))).t0;
     int call_7 = fun_(arg_1, 0);
     return call_7;
 }
 
-static int lf_(int lx_, char arg_9) {
+int lf_(int lx_, char arg_9) {
     struct IntTuple1 tuple_ = (struct IntTuple1){.t0 = lx_};
     void const* box_ = milone_mem_alloc(1, sizeof(struct IntTuple1));
     (*(((struct IntTuple1*)box_))) = tuple_;
@@ -171,12 +173,12 @@ char fun_closure_Program_lambdaCase(char arg_10) {
     return 0;
 }
 
-static int xf4_(int x1_, int x2_, int x3_, char arg_11) {
+int xf4_(int x1_, int x2_, int x3_, char arg_11) {
     int call_9 = xf1_(((x1_ + x2_) + x3_));
     return call_9;
 }
 
-static int xf3_(int x1_, int x2_, int x3_) {
+int xf3_(int x1_, int x2_, int x3_) {
     int if_1;
     if ((x3_ == 3)) {
         goto then_6;
@@ -194,7 +196,7 @@ if_next_5:;
     return if_1;
 }
 
-static int xf2_(int x1_, int x2_) {
+int xf2_(int x1_, int x2_) {
     int if_2;
     if ((x2_ == 2)) {
         goto then_9;
@@ -212,7 +214,7 @@ if_next_8:;
     return if_2;
 }
 
-static int xf1_(int x1_) {
+int xf1_(int x1_) {
     int if_3;
     if ((x1_ == 1)) {
         goto then_12;
@@ -236,21 +238,21 @@ char fun_closure_Program_escapeCase(char arg_12) {
     return 0;
 }
 
-static int zf11_1(int x_4, char arg_13) {
+int zf11_1(int x_4, char arg_13) {
     return x_4;
 }
 
-static int zf1_1(int x_4) {
+int zf1_1(int x_4) {
     int call_14 = zf11_1(x_4, 0);
     return call_14;
 }
 
-static int zf22_1(int x_5, char arg_14) {
+int zf22_1(int x_5, char arg_14) {
     int call_15 = zf1_1(x_5);
     return call_15;
 }
 
-static int zf2_1(int x_5) {
+int zf2_1(int x_5) {
     int call_16 = zf22_1(x_5, 0);
     return call_16;
 }

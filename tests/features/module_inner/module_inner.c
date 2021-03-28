@@ -1,14 +1,10 @@
 #include "milone.h"
 
-int module_inner_sub_Inner_decrement(int x_);
-
 int module_inner_Program_Inner_f(int x_1);
 
-int milone_main();
+int module_inner_sub_Inner_decrement(int);
 
-int module_inner_sub_Inner_decrement(int x_) {
-    return (x_ - 1);
-}
+int milone_main();
 
 int module_inner_Program_Inner_f(int x_1) {
     return (x_1 + 1);

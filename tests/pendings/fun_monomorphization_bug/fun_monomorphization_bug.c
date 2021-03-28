@@ -2,7 +2,7 @@
 
 struct IntIntTuple2;
 
-static void const* fst_(struct IntIntTuple2 pair_);
+void const* fst_(struct IntIntTuple2 pair_);
 
 int milone_main();
 
@@ -11,7 +11,7 @@ struct IntIntTuple2 {
     int t1;
 };
 
-static void const* fst_(struct IntIntTuple2 pair_) {
+void const* fst_(struct IntIntTuple2 pair_) {
     int x_ = pair_.t0;
     void const* box_ = milone_mem_alloc(1, sizeof(int));
     (*(((int*)box_))) = x_;

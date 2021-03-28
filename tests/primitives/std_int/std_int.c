@@ -1,40 +1,12 @@
 #include "milone.h"
 
-struct StringList;
-
 struct IntOption;
 
-struct String str_concat(struct String, struct StringList const*);
+struct IntOption MiloneStd_StdInt_tryParse(struct String);
 
-struct String MiloneOnly___stringJoin(struct String sep_, struct StringList const* xs_);
+int parseOk_(struct String s_2);
 
-static int const* __ptrAsConst_1(int* mutPtr_);
-
-void* milone_mem_alloc(int, uintptr_t);
-
-static void* memAlloc_(int len_, uintptr_t size_);
-
-bool str_to_int_checked(struct String, int*);
-
-struct IntOption MiloneOnly___intOfStr(struct String s_);
-
-int milone_get_arg_count();
-
-int MiloneOnly___argCount(char arg_);
-
-struct String milone_get_arg(int);
-
-struct String MiloneOnly___argGet(int index_4);
-
-int MiloneStd_StdInt_min(int l_, int r_);
-
-int MiloneStd_StdInt_max(int l_1, int r_1);
-
-struct IntOption MiloneStd_StdInt_tryParse(struct String s_1);
-
-static int parseOk_(struct String s_2);
-
-static bool parseError_(struct String s_3);
+bool parseError_(struct String s_3);
 
 char std_int_Program_tryParseTest(char arg_1);
 
@@ -49,94 +21,7 @@ int MiloneStd_StdInt_MinValue;
 
 int MiloneStd_StdInt_MaxValue;
 
-struct String MiloneOnly___stringJoin(struct String sep_, struct StringList const* xs_) {
-    struct String str_concat_result = str_concat(sep_, xs_);
-    return str_concat_result;
-}
-
-static int const* __ptrAsConst_1(int* mutPtr_) {
-    return ((int const*)mutPtr_);
-}
-
-static void* memAlloc_(int len_, uintptr_t size_) {
-    void* milone_mem_alloc_result = milone_mem_alloc(len_, size_);
-    return milone_mem_alloc_result;
-}
-
-struct IntOption MiloneOnly___intOfStr(struct String s_) {
-    void* call_ = memAlloc_(1, ((uintptr_t)sizeof(int)));
-    int* valueRef_ = ((int*)call_);
-    bool str_to_int_checked_result = str_to_int_checked(s_, valueRef_);
-    bool ok_ = str_to_int_checked_result;
-    struct IntOption if_;
-    if (ok_) {
-        goto then_2;
-    } else {
-        goto else_3;
-    }
-then_2:;
-    int const* call_1 = __ptrAsConst_1(valueRef_);
-    int read_ = (*(call_1));
-    struct IntOption some_ = (struct IntOption){.some = true, .value = read_};
-    if_ = some_;
-    goto if_next_1;
-else_3:;
-    if_ = (struct IntOption){.some = false};
-    goto if_next_1;
-if_next_1:;
-    return if_;
-}
-
-int MiloneOnly___argCount(char arg_) {
-    int milone_get_arg_count_result = milone_get_arg_count();
-    return milone_get_arg_count_result;
-}
-
-struct String MiloneOnly___argGet(int index_4) {
-    struct String milone_get_arg_result = milone_get_arg(index_4);
-    return milone_get_arg_result;
-}
-
-int MiloneStd_StdInt_min(int l_, int r_) {
-    int if_1;
-    if ((l_ < r_)) {
-        goto then_5;
-    } else {
-        goto else_6;
-    }
-then_5:;
-    if_1 = l_;
-    goto if_next_4;
-else_6:;
-    if_1 = r_;
-    goto if_next_4;
-if_next_4:;
-    return if_1;
-}
-
-int MiloneStd_StdInt_max(int l_1, int r_1) {
-    int if_2;
-    if ((l_1 < r_1)) {
-        goto then_8;
-    } else {
-        goto else_9;
-    }
-then_8:;
-    if_2 = r_1;
-    goto if_next_7;
-else_9:;
-    if_2 = l_1;
-    goto if_next_7;
-if_next_7:;
-    return if_2;
-}
-
-struct IntOption MiloneStd_StdInt_tryParse(struct String s_1) {
-    struct IntOption call_2 = MiloneOnly___intOfStr(s_1);
-    return call_2;
-}
-
-static int parseOk_(struct String s_2) {
+int parseOk_(struct String s_2) {
     int match_;
     struct IntOption call_3 = MiloneStd_StdInt_tryParse(s_2);
     if ((!(call_3.some))) goto next_11;
@@ -155,7 +40,7 @@ end_match_10:;
     return match_;
 }
 
-static bool parseError_(struct String s_3) {
+bool parseError_(struct String s_3) {
     bool match_1;
     struct IntOption call_4 = MiloneStd_StdInt_tryParse(s_3);
     if (call_4.some) goto next_14;

@@ -1,12 +1,12 @@
 #include "milone.h"
 
-static bool go_(struct String s_, int i_, int d_);
+bool go_(struct String s_, int i_, int d_);
 
-static struct String parse_(struct String s_1);
+struct String parse_(struct String s_1);
 
 int milone_main();
 
-static bool go_(struct String s_, int i_, int d_) {
+bool go_(struct String s_, int i_, int d_) {
 tailrec_1:;
     bool if_;
     if ((i_ >= s_.len)) {
@@ -60,7 +60,7 @@ if_next_2:;
     return if_;
 }
 
-static struct String parse_(struct String s_1) {
+struct String parse_(struct String s_1) {
     bool call_ = go_(s_1, 0, 0);
     struct String if_3;
     if (call_) {

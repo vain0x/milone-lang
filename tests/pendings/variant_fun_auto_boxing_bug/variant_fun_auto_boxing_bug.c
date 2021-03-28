@@ -2,9 +2,9 @@
 
 struct BoxedVariant_;
 
-struct BoxedVariant_OptionBoxedVariant_Fun1;
-
 struct BoxedVariant_Option;
+
+struct BoxedVariant_OptionBoxedVariant_Fun1;
 
 struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariant_OptionBoxedVariant_Fun1 f_);
 
@@ -21,14 +21,14 @@ struct BoxedVariant_ {
     };
 };
 
-struct BoxedVariant_OptionBoxedVariant_Fun1 {
-    struct BoxedVariant_(*fun)(void const*, struct BoxedVariant_Option);
-    void const* env;
-};
-
 struct BoxedVariant_Option {
     bool some;
     struct BoxedVariant_ value;
+};
+
+struct BoxedVariant_OptionBoxedVariant_Fun1 {
+    struct BoxedVariant_(*fun)(void const*, struct BoxedVariant_Option);
+    void const* env;
 };
 
 struct BoxedVariant_ variant_fun_auto_boxing_bug_Program_feedNil(struct BoxedVariant_OptionBoxedVariant_Fun1 f_) {
