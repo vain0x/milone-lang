@@ -29,7 +29,7 @@ warning_flags = $
 
 rule subninja
   description = subninja $file
-  command = ninja -f $file
+  command = ninja -f $file && touch $out
 
 # ------------------------------------------------
 # dotnet restore
