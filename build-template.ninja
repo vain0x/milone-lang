@@ -88,7 +88,7 @@ rule compile_milone_to_c
   restat = 1
 
 rule compile_c_to_obj
-  description = compile_c_to_obj $$(basename $in .c)
+  description = compile_c_to_obj $in
   command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -Iruntime $in -o $out
 
 build runtime/milone.o: $

@@ -39,7 +39,7 @@ warning_flags = $
   -Wno-unused-variable
 
 rule compile_c_to_obj
-  description = compile_c_to_obj $$(basename $in .c)
+  description = compile_c_to_obj $in
   command = $${CC:-gcc} -std=c11 $warning_flags -O1 -g -c -Iruntime $in -o $out
 
 rule link_objs_to_exe
