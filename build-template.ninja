@@ -155,7 +155,7 @@ rule diff_self
       cat target/gen2_files.txt | $
         xargs -n1 basename | $
         xargs -I{} diff target/gen2/{}.c target/gen3/{}.c; $
-    } | scripts/write-if-change $out
+    } >$out
 
 build target/self.diff: $
   diff_self $
@@ -179,18 +179,17 @@ rule take_snapshot
         scripts/write-if-change $out; $
     else $
       if ! env MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project >/dev/null; then $
-        echo 'milone-lang compile error.' | scripts/write-if-change $out_file; $
+        echo 'milone-lang compile error.' >$out_file; $
       else $
-        echo 'Compile success (expected compile error.)' | scripts/write-if-change $out_file; $
+        echo 'Compile success (expected compile error.)' >$out_file; $
       fi; $
-      echo "build $exe_file: phony" | scripts/write-if-change $out; $
+      echo "build $exe_file: phony" >$out; $
     fi
   restat = 1
 
 # Print snapshot diff.
 rule git_diff_snapshot_stats
-  command = git diff --stat -- 'tests/**/*.c' | scripts/write-if-change $out
-  restat = 1
+  command = git diff --stat -- 'tests/**/*.c' >$out
 
 build snapshot_diff: $
   git_diff_snapshot_stats $
@@ -207,9 +206,8 @@ rule build_test
     if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
       ninja -f $in; $
     else $
-      echo '' | scripts/write-if-change $out; $
+      : >$out; $
     fi
-  restat = 1
 
 rule execute_test
   description = execute_test $project
@@ -217,12 +215,11 @@ rule execute_test
     if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
       $in >$out.tmp; $
       echo '$$? = '$$? >>$out.tmp; $
-      cat $out.tmp | scripts/write-if-change $out; $
+      cat $out.tmp >$out; $
       rm -f $out.tmp; $
     else $
-      echo 'milone-lang compile error.' | scripts/write-if-change $out; $
+      echo 'milone-lang compile error.' >$out; $
     fi
-  restat = 1
 
 rule diff_test_output
   description = diff_test_output $name
