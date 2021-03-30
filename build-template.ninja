@@ -83,9 +83,7 @@ rule compile_milone_to_c
   description = compile_milone_to_c $name
   command = $
     MILONE_HOME=$$PWD MILONE=$milone TARGET_DIR=$target_dir scripts/milone-incremental $verbosity $project | $
-      ID=$name EXE=$exe TARGET_DIR=$target_dir scripts/build-ninja-dyn | $
-      scripts/write-if-change $out
-  restat = 1
+      ID=$name EXE=$exe TARGET_DIR=$target_dir scripts/build-ninja-dyn >$out
 
 rule compile_c_to_obj
   description = compile_c_to_obj $in
@@ -175,8 +173,7 @@ rule take_snapshot
   command = $
     if test -z "$$(grep 'milone-lang compile error.' -- $expected_out_file)"; then $
       MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project | $
-        ID=$name EXE=$exe_file TARGET_DIR=$project scripts/build-ninja-dyn | $
-        scripts/write-if-change $out; $
+        ID=$name EXE=$exe_file TARGET_DIR=$project scripts/build-ninja-dyn >$out; $
     else $
       if ! env MILONE_HOME=$$PWD $milone compile --quiet --target-dir $project $project >/dev/null; then $
         echo 'milone-lang compile error.' >$out_file; $
@@ -185,7 +182,6 @@ rule take_snapshot
       fi; $
       echo "build $exe_file: phony" >$out; $
     fi
-  restat = 1
 
 # Print snapshot diff.
 rule git_diff_snapshot_stats
