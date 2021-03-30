@@ -222,7 +222,7 @@ type private TokenizeFullResult = (Token * Pos) list
 
 type private ParseResult = ARoot * (string * Pos) list
 
-type private BundleResult = (HExpr * Typing.TyCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
+type private BundleResult = (HProgram * Typing.TyCtx) option * (string * Loc) list * MutMap<DocId, DocVersion>
 
 [<RequireQualifiedAccess; NoEquality; NoComparison>]
 type LangServiceState =
@@ -397,7 +397,7 @@ type private Symbol =
   | ValueSymbol of ValueSymbol
   | TySymbol of TySymbol
 
-let private collectSymbolsInExpr (expr: HExpr) =
+let private collectSymbolsInExpr (modules: HProgram) =
   let mutable symbols = ResizeArray()
 
   let onVisit symbol defOrUse loc = symbols.Add((symbol, defOrUse, loc))
@@ -409,7 +409,10 @@ let private collectSymbolsInExpr (expr: HExpr) =
       OnVariant = fun (variantSerial, _, loc) -> onVisit (ValueSymbol(VariantSymbol variantSerial)) Use loc
       OnPrim = fun (prim, _, loc) -> onVisit (PrimSymbol prim) Use loc }
 
-  dfsExpr visitor expr
+  for _, _, decls in modules do
+    for expr in decls do
+      dfsExpr visitor expr
+
   symbols
 
 let private symbolToName (tyCtx: Typing.TyCtx) symbol =
@@ -461,7 +464,7 @@ let private doCollectSymbolOccurrences
       eprintfn "%s: no bundle result: errors %d" hint (List.length errors)
       []
 
-  | Some (expr, _tyCtx) ->
+  | Some (modules, _tyCtx) ->
       let tokenOpt = findTokenAt ls docId targetPos
 
       match tokenOpt with
@@ -474,7 +477,7 @@ let private doCollectSymbolOccurrences
 
           let tokenLoc = locOfDocPos docId tokenPos
 
-          let symbols = collectSymbolsInExpr expr
+          let symbols = collectSymbolsInExpr modules
 
           let symbolIndex =
             symbols.FindIndex(fun (_, _, loc) -> loc = tokenLoc)
@@ -570,7 +573,7 @@ module LangService =
         eprintfn "hover: no bundle result: errors %d" (List.length errors)
         None
 
-    | Some (expr, tyCtx) ->
+    | Some (modules, tyCtx) ->
         let tokenOpt = findTokenAt ls docId targetPos
 
         match tokenOpt with
@@ -583,7 +586,11 @@ module LangService =
 
             // eprintfn "hover: %A, tokenLoc=%A" token tokenLoc
 
-            match findTyInExpr ls expr tyCtx tokenLoc with
+            match modules
+                  |> List.tryPick
+                       (fun (_, _, decls) ->
+                         decls
+                         |> List.tryPick (fun expr -> findTyInExpr ls expr tyCtx tokenLoc)) with
             | None -> None
             | Some ty -> Some(tyDisplayFn tyCtx ty)
 
